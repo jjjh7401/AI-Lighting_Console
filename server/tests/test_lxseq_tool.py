@@ -815,3 +815,25 @@ def test_the_source_block_reports_what_the_parser_saw(action):
 
     assert payload["source"]["rows_total"] == 86
     assert payload["source"]["parsed"] == 86
+
+
+def test_a_card_raised_while_resolving_types_is_declared():
+    """t15 MED-4. 타입 해석 중에 뜬 질문카드도 사람 왕복이다.
+
+    runner 는 사람을 기다린 턴을 폭주 예산에서 빼 주는데, 그 장치는 도구가 스스로
+    awaited_human 을 신고해야만 작동한다. 이 도구는 카드를 띄우고 답까지 받고도
+    False 를 냈다. 실측: 카드 4개를 물었는데 신고는 0개, 끝은 loop_limit 에 본문 0자.
+
+    apply 는 타지 않는다. 안쪽 patch_fixtures 경로는 원래 신고하고 있었으므로,
+    그쪽이 결과를 덮어 이 갈래의 누락을 가리지 않도록 preview 로 가른다.
+    """
+    console = FakeConsole()
+    absent = next(iter(console._widths))
+    del console._widths[absent]
+    del console._slots[absent]
+    registry = _toolset(console, question=Answers(ANSWER_CANCEL))
+
+    payload, execution = _call(registry, action="preview")
+
+    assert [u["csv_type"] for u in payload["types"]["unresolved"]] == [absent]
+    assert execution.awaited_human is True

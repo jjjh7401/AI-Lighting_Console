@@ -4471,6 +4471,11 @@ def build_toolset(
             if record.fixture_type not in distinct_types:
                 distinct_types.append(record.fixture_type)
 
+        # 안쪽에서 뜬 질문카드도 사람 왕복이다. 신고하지 않으면 그 턴이 「모델이 혼자
+        # 돈 턴」으로 계산돼 runner 의 폭주 예산을 깎는다 — 사람을 기다린 턴을 예산에서
+        # 빼 주는 장치는 도구가 스스로 신고해야만 작동한다. 이 도구만 신고를 빠뜨려,
+        # 카드를 띄우고 답까지 받고도 `loop_limit` 에 본문 0자로 끝났다(t15 MED-4).
+        awaited_human = False
         type_resolutions: dict[str, dict] = {}
         for index, csv_type in enumerate(distinct_types):
             inner = resolve_fixture_type(
@@ -4488,6 +4493,7 @@ def build_toolset(
             type_resolutions[csv_type] = (
                 resolution if isinstance(resolution, dict) else {"status": "library_unreadable"}
             )
+            awaited_human = awaited_human or inner.awaited_human
 
         resolved_types = {
             csv_type: str(resolution.get("resolved") or csv_type)
@@ -4636,7 +4642,6 @@ def build_toolset(
 
         apply_block: dict[str, object] = {"entered": False, "runs": []}
         outcomes: list[CommandOutcome] = []
-        awaited_human = False
         created_total = 0
         stopped_at: int | None = None
 

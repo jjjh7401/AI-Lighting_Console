@@ -21,7 +21,7 @@ from server.orchestrator.tools import (
     ANSWER_USE_SUGGESTED,
     build_toolset,
 )
-from server.vwx.addressfit import Occupant, evaluate, first_free
+from server.vwx.addressfit import Occupant, Placement, evaluate, first_free
 from server.web.question import UNANSWERED
 
 #: 실측 리그를 본뜬 자리 — 유니버스 3에 16채널 간격으로 20대.
@@ -294,3 +294,65 @@ class TestWhatItRefusesToDo:
         for address in ("3.001", "9.1"):
             payload = _resolve(RecordingQuestionPort(ANSWER_CANCEL), address=address)
             assert payload["blind_spot"]
+
+
+class TestTheRequestedAddressIsNeverMovedSilently:
+    """[t15 HIGH-1] 요청받은 첫 자리를 말없이 다른 유니버스로 옮기지 않는다.
+
+    실측: `evaluate("1.500", count=1, width=32)` 가 `ok=True` 로 `2.1` 을 냈다.
+    폭이 CSV `Ch` 보다 넓어지는 것은 `mode_overrides` 에서 정상인데, 512 천장을
+    보는 유일한 거부(파서)는 CSV 폭으로만 돌아 그 사이가 무검사였다.
+
+    여기서 만드는 것은 **새 천장이 아니다**. `UNIVERSE_CHANNELS` 주석대로 큰 주소를
+    거절하지는 않는다. 금지하는 것은 *바꿔치기* 다 — 요청받은 자리에 실측 폭이 안
+    들어가면 옮기지 말고 그대로 두고 사실을 말한다. 판단은 부르는 쪽 몫이다.
+    """
+
+    def test_a_first_placement_that_overruns_is_not_relocated(self):
+        fit = evaluate("1.500", count=1, width=32, occupants=())
+
+        assert fit.ok is False
+        assert fit.placements[0] == Placement(universe=1, address=500)
+        assert fit.error
+
+    def test_the_width_that_fits_is_untouched(self):
+        fit = evaluate("1.500", count=1, width=8, occupants=())
+
+        assert fit.ok is True
+        assert fit.placements == (Placement(universe=1, address=500),)
+        assert fit.error is None
+
+    def test_an_address_already_past_the_ceiling_keeps_its_address(self):
+        fit = evaluate("1.513", count=1, width=8, occupants=())
+
+        assert fit.placements[0].universe == 1
+        assert fit.placements[0].address == 513
+
+    def test_an_occupant_inside_the_true_span_is_seen(self):
+        """[거짓 음성] 감긴 뒤의 자리로 검사하면 진짜 발자국 안의 장비를 놓친다."""
+        squatter = Occupant(universe=1, address=505, name="이미 여기 있음")
+
+        fit = evaluate("1.500", count=1, width=32, occupants=(squatter,))
+
+        assert squatter in fit.collisions
+
+    def test_an_occupant_in_another_universe_is_not_claimed_as_a_clash(self):
+        """[거짓 양성] 감긴 자리로 검사하면 남의 유니버스 장비를 겹친다고 한다."""
+        elsewhere = Occupant(universe=2, address=1, name="다른 선반")
+
+        fit = evaluate("1.500", count=1, width=32, occupants=(elsewhere,))
+
+        assert elsewhere not in fit.collisions
+
+    def test_a_continuation_may_cross_but_says_so(self):
+        """여럿을 이어 깔 때의 선반 넘김은 정당하다 — 다만 조용해선 안 된다."""
+        fit = evaluate("1.500", count=3, width=8, occupants=())
+
+        assert fit.placements[0] == Placement(universe=1, address=500)
+        assert fit.placements[1].universe == 2
+        assert fit.relocated == (1,)
+
+    def test_nothing_relocated_reports_nothing(self):
+        fit = evaluate("1.1", count=3, width=8, occupants=())
+
+        assert fit.relocated == ()

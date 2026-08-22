@@ -68,6 +68,10 @@ class Fit:
     placements: tuple[Placement, ...] = ()
     #: 요청이 형태부터 틀렸을 때의 사유.
     error: str | None = None
+    #: 등간격에서 벗어나 다음 유니버스로 옮겨진 자리의 번호들.
+    #: 여럿을 이어 깔 때의 선반 넘김은 정당하지만 **조용해선 안 된다** — 부르는 쪽이
+    #: "내가 준 주소 그대로인가"를 물을 수 있어야 한다(t15 HIGH-1).
+    relocated: tuple[int, ...] = ()
     #: 이 판정이 **못 보는 것**. 조용히 지나가지 않기 위해 늘 채운다.
     blind_spot: str = (
         "구간보다 앞에서 시작해 뒤로 뻗어 들어오는 장비는 잡지 못한다 — "
@@ -108,17 +112,30 @@ def occupants_from_patch_values(
     return tuple(seen)
 
 
-def _placements(universe: int, address: int, count: int, width: int) -> tuple[Placement, ...]:
-    """등간격으로 이어 붙인 자리들 — 유니버스 경계를 넘으면 다음 유니버스로."""
+def _placements(
+    universe: int, address: int, count: int, width: int
+) -> tuple[tuple[Placement, ...], tuple[int, ...]]:
+    """등간격으로 이어 붙인 자리들과, 그중 **옮겨진 자리의 번호들**.
+
+    이어 깔다 경계를 넘으면 다음 유니버스로 넘긴다 — 이건 정당하다. 넘길 것이
+    남아 있기 때문이다.
+
+    **첫 자리는 옮기지 않는다.** 거기엔 이어 붙일 앞자리가 없다. 요청받은 주소를
+    말없이 다른 유니버스로 바꿔치기하면 부르는 쪽은 자기가 준 주소가 지켜졌다고
+    믿는다 — 점유 검사는 엉뚱한 선반을 뒤지고, 쓰기 경로는 엉뚱한 자리에 장비를
+    심고서 `created` 를 낸다(t15 HIGH-1). 판정은 :func:`evaluate` 가 낸다.
+    """
     spots: list[Placement] = []
+    moved: list[int] = []
     current_universe, current_address = universe, address
-    for _ in range(count):
-        if current_address + width - 1 > UNIVERSE_CHANNELS:
+    for index in range(count):
+        if index > 0 and current_address + width - 1 > UNIVERSE_CHANNELS:
             current_universe += 1
             current_address = 1
+            moved.append(index)
         spots.append(Placement(universe=current_universe, address=current_address))
         current_address += width
-    return tuple(spots)
+    return tuple(spots), tuple(moved)
 
 
 def _collisions(spots: Sequence[Placement], width: int, occupants: Sequence[Occupant]):
@@ -164,15 +181,26 @@ def evaluate(
             error=parsed.error or "주소를 읽지 못했다",
         )
     assert parsed.universe is not None and parsed.address is not None
-    spots = _placements(parsed.universe, parsed.address, count, width)
+    spots, moved = _placements(parsed.universe, parsed.address, count, width)
     hit = _collisions(spots, width, occupants)
+    last_channel = parsed.address + width - 1
+    overruns = last_channel > UNIVERSE_CHANNELS
     return Fit(
-        ok=not hit,
+        ok=not hit and not overruns,
         requested=f"{parsed.universe}.{parsed.address}",
         count=count,
         width=width,
         collisions=hit,
         placements=spots,
+        relocated=moved,
+        error=(
+            f"요청한 자리에 실측 폭이 들어가지 않는다 — "
+            f"{parsed.universe}.{parsed.address} 에서 {width}채널이면 "
+            f"{last_channel}번 채널까지 뻗어 유니버스 끝({UNIVERSE_CHANNELS})을 넘는다. "
+            "자리를 옮기지 않았다 — 주소를 바꿀지 모드를 바꿀지는 부르는 쪽이 정한다."
+            if overruns
+            else None
+        ),
     )
 
 

@@ -323,3 +323,23 @@ def test_fid_identifier_not_used_in_address_arithmetic_ast_scan():
 
     assert scanned_functions >= 3
     assert violations == []
+
+
+def test_negative_channels_row_is_rejected():
+    """t15 LOW-5. 음수 Ch 는 자리 판정을 무력화한다.
+
+    폭이 음수면 addressfit 은 충돌을 **계산하기도 전에** 사유만 담아 돌아온다.
+    점유 검사는 그때 비어 있는 collisions 를 「자리가 비었다」로 읽어, 이미 찬 자리에
+    계획을 세우고 write_count_planned 를 부풀렸다. 여기서 먼저 끊는다.
+
+    Ch=0 은 여전히 excluded 다. 0 은 DMX 를 안 쓰는 정상 행이고, 음수는 입력 오류다.
+    """
+    rows = _rows_from_text(_load_fixture_text())
+    fieldnames = list(rows[0].keys())
+    negative = _rewrite_row(rows, "101", Ch="-4")
+
+    result = parse_patch_csv(_to_csv_text(negative, fieldnames))
+
+    kinds = [r.kind for r in result.rejected if r.fid_raw == "101"]
+    assert kinds == ["negative_channels"]
+    assert all(r.fid != 101 for r in result.records)

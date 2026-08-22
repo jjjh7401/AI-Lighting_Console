@@ -691,6 +691,11 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     # 자리를 충돌로 거절하고, 사용자는 쓸 수 있는 주소를 못 쓰게 된다.
     _Site("addressfit.py", "numcmp", "count < 1"),
     _Site("addressfit.py", "numcmp", "width < 1"),
+    # t15 HIGH-1 — 첫 자리는 옮기지 않는다. 이 두 자리가 그 규칙이 사는 곳이다:
+    # `index > 0` 이 첫 자리를 선반 넘김에서 빼고, `parsed.address + width - 1` 이
+    # 요청받은 자리에 실측 폭이 들어가는지 잰다. 넘으면 옮기지 않고 사실을 낸다.
+    _Site("addressfit.py", "numcmp", "index > 0"),
+    _Site("addressfit.py", "offby", "parsed.address + width - 1"),
     _Site("addressfit.py", "offby", "current_address + width - 1"),
     _Site("addressfit.py", "offby", "last.address + self.width - 1"),
     _Site("addressfit.py", "offby", "spot.address + width - 1"),
