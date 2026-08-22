@@ -45,6 +45,22 @@ class ModeResolution:
     resolved_by: str | None = None  # width_unique | label_token | override
     measured_modes: tuple[dict[str, Any], ...] = ()
 
+    def __post_init__(self) -> None:
+        """폭 없는 판정은 애초에 만들지 못하게 한다.
+
+        `ModeChoice.width` 는 `int | None` 이고, 콘솔이 `TotalFootprint` 를 답하지
+        못하면 실제로 `None` 이 온다. 그 `None` 이 여기까지 실려 오면 두 갈래로
+        새는데 **둘 다 조용하다**: 하나는 한참 아래 산술에서 TypeError 로 죽고,
+        다른 하나는 `channels_per_fixture=None` 인 런을 `footprint_source=
+        console_measured` 로 내보낸다 — 재지 못한 폭을 「콘솔 실측」이라 적는 것이다.
+        크래시만 막으면 후자만 남는다. 그래서 입구에서 막는다(t15 HIGH-2).
+        """
+        if not isinstance(self.channels, int) or isinstance(self.channels, bool):
+            raise ValueError(
+                f"채널 폭이 정수가 아니다({self.channels!r}) — "
+                f"{self.console_type}: 폭을 재지 못했으면 확정이 아니다"
+            )
+
 
 @dataclass(frozen=True)
 class SkippedRow:
@@ -78,6 +94,18 @@ class PatchRun:
             "fids": list(self.fids),
             "name_prefix": self.name_prefix,
         }
+        # 폭을 빼고 넘기면 `patch_fixtures` 는 스스로 재려 하고, 못 재면
+        # `footprint_unknown` 으로 0대를 만든 뒤 그 런에서 파일 전체가 멈춘다 —
+        # 미리보기는 N대를 약속한 뒤였다(t15 MED-3).
+        #
+        # 다만 **콘솔이 확인해 준 폭일 때만** 넘긴다. `tree_unread` 의 폭은 CSV 가
+        # 주장하는 값이지 콘솔이 재 준 값이 아니고, `patch_fixtures` 의
+        # `footprint_unknown` 은 바로 그런 값으로 쓰지 말라고 있는 문이다. 무턱대고
+        # 넘기면 「거절」이 「배포」로 바뀐다 — 실측: 인자 없이는 commands_sent=0,
+        # 인자를 넣으면 deploy_status='deployed' 로 2건이 나갔다. 검사를 넓혀
+        # 하류 가드를 고아로 만드는 것은 이 커밋이 고치는 결함 계열 그 자체다.
+        if self.footprint_source == "console_measured":
+            args["channels_per_fixture"] = self.channels_per_fixture
         if self.console_mode is not None:
             args["console_mode"] = self.console_mode
         return args
@@ -250,7 +278,10 @@ def _resolve_mode(
             (c for c in mode_read.modes if c.name.lower() == override.lower()),
             None,
         )
-        if matched is not None:
+        # 이름은 찾았는데 폭을 못 쟀으면 확정이 아니다 — override 없는 갈래는
+        # `c.width == channels` 가 None 과 안 맞아 **우연히** 여기서 빠져나갔다.
+        # 이쪽만 그 우연을 못 받아 크래시했다(t15 HIGH-2).
+        if matched is not None and matched.width is not None:
             return ModeResolution(
                 console_type=console_type,
                 channels=matched.width,
@@ -359,6 +390,25 @@ def _occupancy_skip(
             detail=f"FID {record.fid}는 콘솔에 이미 있다",
             occupant=occupant,
             occupied_fid=record.fid,
+        )
+
+    # 판정이 서지 않았으면 「자리가 비었다」가 아니다. 이 함수는 `collisions` 만 보고
+    # 있었는데, `evaluate` 는 요청 자체가 성립하지 않을 때 충돌을 **계산하기도 전에**
+    # 사유만 담아 돌아온다 — 그때 `collisions` 가 비는 것은 자리가 비어서가 아니다.
+    # 실측 폭이 유니버스 끝을 넘는 행이 바로 그 경우이고(t15 HIGH-1), 폭이 음수인
+    # 행도 같은 문에 닿는다(t15 LOW-5). 둘 다 조용히 계획에 실렸다.
+    #
+    # 라벨은 `universe_overflow` 를 **재사용한다**. 파서가 CSV 폭으로 내는 것과 같은
+    # 사실을, 모드가 확정된 뒤 실측 폭으로 다시 발견한 것뿐이다. 새 라벨을 만들면
+    # REQ-LXSEQ-011 의 닫힌 어휘 8종을 깬다 — 툴 계층 단언(`_SKIP_KINDS`)은 `<=`
+    # 라 당장은 조용히 통과하지만, 실제 페이로드가 그 값을 내는 순간 빨개진다.
+    if not fit.ok and not fit.collisions:
+        return SkippedRow(
+            fid=record.fid,
+            address=address,
+            kind="universe_overflow",
+            detail=fit.error or "그 자리에 놓을 수 있는지 판정하지 못했다",
+            occupant=occupant,
         )
 
     if first is not None:

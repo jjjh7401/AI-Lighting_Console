@@ -676,6 +676,10 @@ _SKIP_KINDS = {
     "console_read_incomplete",
     "universe_overflow",
     "rejected_row",
+    # `address_overlap_in_plan` 은 PR #72 가 들여왔는데 이 목록에도, SPEC 의
+    # REQ-LXSEQ-011 닫힌 어휘 8종에도 등재되지 않았다. 여기 적어 목록을 사실과
+    # 맞춘다 — SPEC 쪽 불일치는 별도 항목이다(t15 리뷰 HIGH-4).
+    "address_overlap_in_plan",
 }
 _REJECT_KINDS = {
     "non_integer_field",
@@ -685,6 +689,9 @@ _REJECT_KINDS = {
     "duplicate_fid",
     "address_overlap_in_file",
     "zero_channels",
+    # t15 LOW-5 가 들여온 사유. `rejected[]` 는 SPEC 이 어휘를 닫지 않았다
+    # (닫힌 것은 `skipped[].kind` 8종뿐).
+    "negative_channels",
 }
 
 
@@ -695,10 +702,32 @@ def test_the_payload_carries_exactly_the_closed_top_level_keys():
 
 
 def test_payload_vocabularies_are_closed():
+    """행복 경로만 돌리면 이 가드는 **공허하게** 통과한다.
+
+    t15 리뷰 HIGH-4: 기본 픽스처는 건너뛴 행 0건 · 거부된 행 0건을 낸다. 빈 집합은
+    어떤 어휘의 부분집합이기도 하므로, 새 사유가 들어와도 아무 반응이 없었다.
+    실제로 `address_overlap_in_plan`(PR #72)이 그렇게 등재를 건너뛰었다.
+    그래서 여기서는 **행을 실제로 만들어** 어휘에 닿게 한다.
+    """
     payload, _ = _call(_toolset(FakeConsole()), action="preview")
 
     assert {row["kind"] for row in payload["plan"]["skipped"]} <= _SKIP_KINDS
     assert {row["kind"] for row in payload["source"]["rejected"]} <= _REJECT_KINDS
+
+
+def test_the_vocabulary_guard_actually_sees_rows():
+    """가드가 빈 집합을 보고 통과하지 않는지 — 가드 자신에 대한 가드."""
+    kind = "ETC S4 LED S3 Lustr X8"
+    occupant = dict(
+        name="기존", patch="1.1", fid=101, fixture_type=kind, mode=FakeConsole.mode_name(kind)
+    )
+    console = FakeConsole(fixtures=[occupant])
+    payload, _ = _call(_toolset(console), action="preview")
+
+    skipped = {row["kind"] for row in payload["plan"]["skipped"]}
+
+    assert skipped, "건너뛴 행이 0건이면 위 가드는 아무것도 검사하지 않는다"
+    assert skipped <= _SKIP_KINDS
 
 
 def test_a_partial_apply_summary_never_claims_success():
@@ -815,3 +844,50 @@ def test_the_source_block_reports_what_the_parser_saw(action):
 
     assert payload["source"]["rows_total"] == 86
     assert payload["source"]["parsed"] == 86
+
+
+def test_a_card_raised_while_resolving_types_is_declared():
+    """t15 MED-4. 타입 해석 중에 뜬 질문카드도 사람 왕복이다.
+
+    runner 는 사람을 기다린 턴을 폭주 예산에서 빼 주는데, 그 장치는 도구가 스스로
+    awaited_human 을 신고해야만 작동한다. 이 도구는 카드를 띄우고 답까지 받고도
+    False 를 냈다. 실측: 카드 4개를 물었는데 신고는 0개, 끝은 loop_limit 에 본문 0자.
+
+    apply 는 타지 않는다. 안쪽 patch_fixtures 경로는 원래 신고하고 있었으므로,
+    그쪽이 결과를 덮어 이 갈래의 누락을 가리지 않도록 preview 로 가른다.
+    """
+    console = FakeConsole()
+    absent = next(iter(console._widths))
+    del console._widths[absent]
+    del console._slots[absent]
+    registry = _toolset(console, question=Answers(ANSWER_CANCEL))
+
+    payload, execution = _call(registry, action="preview")
+
+    assert [u["csv_type"] for u in payload["types"]["unresolved"]] == [absent]
+    assert execution.awaited_human is True
+
+
+def test_a_rejected_row_kind_reaches_the_closed_vocabulary():
+    """t15 리뷰 HIGH-4. 어휘에 이름을 적는 것과 그 이름이 지켜지는 것은 다르다.
+
+    negative_channels 를 _REJECT_KINDS 에 적어도, 그 값을 내는 페이로드를 만드는
+    테스트가 없으면 등록은 장식이다. 실제로 address_overlap_in_plan 이 그렇게
+    등재를 건너뛴 채 지나갔다.
+    """
+    text = _csv_bytes().decode("utf-8")
+    lines = text.splitlines()
+    header, first = lines[0], lines[1].split(",")
+    ch_index = header.split(",").index("Ch")
+    first[ch_index] = "-4"
+    lines[1] = ",".join(first)
+    payload, _ = _call(
+        _toolset(FakeConsole()),
+        action="preview",
+        file_content_base64=_b64("\n".join(lines).encode("utf-8")),
+    )
+
+    kinds = set(row["kind"] for row in payload["source"]["rejected"])
+
+    assert "negative_channels" in kinds
+    assert kinds <= _REJECT_KINDS

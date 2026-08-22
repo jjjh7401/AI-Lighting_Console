@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from server.lxseq.mapper import build_import_plan
+from server.lxseq.mapper import ModeResolution, build_import_plan
 from server.lxseq.parser import parse_patch_csv
 from server.prechk.inventory import COMPLETE, INCOMPLETE, Inventory
 from server.prechk.mode_read import ModeChoice, TypeModeRead
@@ -618,10 +618,46 @@ def test_runs_split_when_a_row_in_the_middle_is_skipped():
 
 
 def test_runs_carry_only_patch_fixtures_argument_keys():
+    """키 집합을 **정확히** 대조한다 — 부분집합 비교는 누락을 못 본다.
+
+    t15 MED-3: 이 단언이 `required <= set(...)` 이던 동안 `channels_per_fixture`
+    누락이 그대로 통과했다. 빠진 인자 하나에 tree_unread 런이 0대를 만들고 파일
+    전체가 그 런에서 멈췄는데, 테스트는 내내 초록이었다.
+    """
     plan = _plan()
-    required = {"console_type", "address", "count", "fids", "name_prefix"}
+    base = {"console_type", "address", "count", "fids", "name_prefix"}
     for run in plan.runs:
-        assert required <= set(run.as_tool_arguments())
+        args = run.as_tool_arguments()
+        keys = set(args)
+        assert ("console_mode" in keys) is (run.console_mode is not None)
+
+        measured = run.footprint_source == "console_measured"
+        assert measured, "이 픽스처는 전부 실측 모드다 — 아니면 아래 단언이 갈래를 잘못 본다"
+        assert keys - {"console_mode"} == base | {"channels_per_fixture"}
+
+        # 키만 보면 값이 None 이어도 통과한다. patch_fixtures 는 그 값을
+        # `_positive_int` 로 읽는데, 그 함수가 부재·None·0·음수·bool 을 **전부
+        # 같게** None 으로 접는다 — 런타임 스키마 검증도 없다. 즉 키를 실어도
+        # 값이 None 이면 결함이 그대로 재현된다. 값까지 못 박는다.
+        assert args["channels_per_fixture"] == run.channels_per_fixture
+        assert isinstance(args["channels_per_fixture"], int)
+        assert not isinstance(args["channels_per_fixture"], bool)
+        assert args["channels_per_fixture"] > 0
+
+
+def test_an_unverified_width_is_not_handed_to_the_write_path():
+    """t15 리뷰 MED-2. 콘솔이 확인 안 해 준 폭을 넘기면 거절이 배포로 바뀐다.
+
+    실측: 인자 없이는 `footprint_unknown` 으로 commands_sent=0, 인자를 넣으면
+    `deploy_status='deployed'` 로 2건이 나갔다. `tree_unread` 의 폭은 CSV 가
+    주장하는 값이고, `patch_fixtures` 의 `footprint_unknown` 문은 정확히 그런
+    값으로 쓰지 말라고 있다.
+    """
+    plan = _plan(_override_records(), mode_reads={})
+
+    assert [r.footprint_source for r in plan.runs] == ["caller_unverified"]
+    for run in plan.runs:
+        assert "channels_per_fixture" not in run.as_tool_arguments()
 
 
 # ---------------------------------------------------------------------------
@@ -936,3 +972,162 @@ def test_occupancy_uses_the_measured_width_not_the_csv_width():
 
     assert plan.skipped == ()
     assert [(r.address, r.channels_per_fixture) for r in plan.runs] == [("1.1", 25)]
+
+
+def _unmeasured_mode():
+    """모드 이름은 답했는데 폭 속성은 못 답한 콘솔.
+
+    지어낸 상태가 아니다. read_type_mode_widths 가 속성 읽기 예외, ok False,
+    정수 아님, 1 미만, 네 갈래로 width=None 을 낸다.
+    """
+    return dict(
+        MegaPointe=TypeModeRead(
+            attempted=True,
+            type_found=True,
+            modes=(ModeChoice(name="Mode 2 25ch", width=None, slot=1),),
+        )
+    )
+
+
+def _ceiling_wide_mode():
+    """CSV 8ch 인데 콘솔 실측은 32ch. override 의 정상 상황이고 폭이 넓어진다."""
+    return dict(
+        MegaPointe=TypeModeRead(
+            attempted=True,
+            type_found=True,
+            modes=(ModeChoice(name="Wide 32ch", width=32, slot=1),),
+        )
+    )
+
+
+def _near_ceiling_records():
+    """1.500 에서 시작하는 8채널 한 행. CSV 폭으로는 507 까지라 파서를 통과한다."""
+    return parse_patch_csv(_csv((("MegaPointe", "Basic 8ch", 8, 1, 500),))).records
+
+
+def test_a_widened_row_that_overruns_the_universe_is_not_planned():
+    """t15 HIGH-1. 실측 폭이 512 를 넘기면 계획에서 빠져야 한다.
+
+    실측: 계획서는 1.500 이라 하고 콘솔은 2.1 에 만들었다. 자리를 옮긴 사실이
+    아무 데도 남지 않아, 쓰기 경로가 그대로 다음 유니버스에 심고 created 를 냈다.
+    """
+    plan = _plan(
+        _near_ceiling_records(),
+        mode_reads=_ceiling_wide_mode(),
+        mode_overrides=dict(MegaPointe="Wide 32ch"),
+    )
+
+    assert plan.runs == ()
+    assert [s.kind for s in plan.skipped] == ["universe_overflow"]
+    assert plan.write_count_planned == 0
+
+
+def test_an_occupant_inside_the_widened_span_is_seen():
+    """t15 HIGH-1 거짓 음성. 진짜 발자국 1.500~1.531 안의 장비를 놓치면 안 된다."""
+    squatter = Occupant(universe=1, address=505, name="이미 여기 있음", fixture_type="X")
+
+    plan = _plan(
+        _near_ceiling_records(),
+        mode_reads=_ceiling_wide_mode(),
+        mode_overrides=dict(MegaPointe="Wide 32ch"),
+        occupants=(squatter,),
+    )
+
+    assert plan.runs == ()
+    assert plan.skipped[0].occupant is not None
+    assert plan.skipped[0].occupant["address"] == "1.505"
+
+
+def test_an_occupant_in_another_universe_is_not_blamed():
+    """t15 HIGH-1 거짓 양성. 감긴 자리로 검사하면 남의 선반 장비를 범인으로 지목한다."""
+    elsewhere = Occupant(universe=2, address=1, name="다른 선반", fixture_type="X")
+
+    plan = _plan(
+        _near_ceiling_records(),
+        mode_reads=_ceiling_wide_mode(),
+        mode_overrides=dict(MegaPointe="Wide 32ch"),
+        occupants=(elsewhere,),
+    )
+
+    assert plan.skipped[0].kind == "universe_overflow"
+    assert plan.skipped[0].occupant is None
+
+
+def test_a_row_that_fits_is_still_planned():
+    """대조군. 넓어져도 천장 안이면 그대로 간다. 새 천장을 만든 게 아니다."""
+    records = parse_patch_csv(_csv((("MegaPointe", "Basic 8ch", 8, 1, 1),))).records
+
+    plan = _plan(
+        records, mode_reads=_ceiling_wide_mode(), mode_overrides=dict(MegaPointe="Wide 32ch")
+    )
+
+    assert [(r.address, r.channels_per_fixture) for r in plan.runs] == [("1.1", 32)]
+
+
+def test_an_override_onto_an_unmeasured_width_is_not_called_resolved():
+    """t15 HIGH-2. 폭을 못 잰 모드를 override 로 집으면 TypeError 로 죽었다.
+
+    resolution="resolved" 인데 channels=None 이라는 상태가 만들어졌다. 폭을 재지
+    못했으면 확정이 아니다. override 없는 갈래와 같은 답을 내야 한다.
+    """
+    plan = _plan(
+        _override_records(),
+        mode_reads=_unmeasured_mode(),
+        mode_overrides=dict(MegaPointe="Mode 2 25ch"),
+    )
+
+    assert plan.runs == ()
+    assert [s.kind for s in plan.skipped] == ["mode_unresolved", "mode_unresolved"]
+
+
+def test_the_branch_without_an_override_already_bows_out():
+    """대조군. 이쪽은 c.width == channels 가 None 과 안 맞아 우연히 보호됐다."""
+    plan = _plan(_override_records(), mode_reads=_unmeasured_mode())
+
+    assert plan.runs == ()
+    assert [s.kind for s in plan.skipped] == ["mode_unresolved", "mode_unresolved"]
+
+
+def test_a_resolution_can_never_claim_a_width_it_does_not_have():
+    """t15 사이트 #4. 크래시만 막으면 조용한 거짓 출처로 바뀐다.
+
+    실측: PatchRun(channels_per_fixture=None, footprint_source='console_measured')
+    가 예외 없이 나갔다. 폭을 못 쟀는데 콘솔 실측이라고 적어 내보낸 것이다.
+    폭 없는 확정을 만들 수 없게 막는다.
+    """
+    with pytest.raises(ValueError):
+        ModeResolution(
+            console_type="MegaPointe",
+            channels=None,
+            resolution="resolved",
+            console_mode="Mode 2 25ch",
+            resolved_by="override",
+        )
+
+
+def _zero_width_mode():
+    """콘솔이 폭을 0 으로 답한 모드 — 타입은 int 라 __post_init__ 을 통과한다."""
+    return dict(
+        MegaPointe=TypeModeRead(
+            attempted=True,
+            type_found=True,
+            modes=(ModeChoice(name="Broken 0ch", width=0, slot=1),),
+        )
+    )
+
+
+def test_a_measured_width_of_zero_is_not_read_as_a_free_slot():
+    """t15 LOW-5 경계 못. __post_init__ 은 **형**만 본다 — 0 은 정수라 통과한다.
+
+    그 0 이 evaluate 에 닿으면 충돌을 계산하기 전에 사유만 담아 돌아오고,
+    collisions 만 보던 옛 코드는 그것을 「자리가 비었다」로 읽었다.
+    """
+    plan = _plan(
+        _override_records(),
+        mode_reads=_zero_width_mode(),
+        mode_overrides=dict(MegaPointe="Broken 0ch"),
+    )
+
+    assert plan.runs == ()
+    assert plan.write_count_planned == 0
+    assert [s.kind for s in plan.skipped] == ["universe_overflow", "universe_overflow"]

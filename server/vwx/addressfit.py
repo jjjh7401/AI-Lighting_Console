@@ -24,9 +24,21 @@ from dataclasses import dataclass
 
 from server.prechk.patch import normalize_address
 
-#: 유니버스 하나의 채널 수. 콘솔이 이 값을 알려 주지 않으므로(ASSUMPTION-33) 여기서
-#: 상한으로만 쓴다 — 이보다 큰 주소를 **거절하지 않고**, 자리를 제안할 때만 이 눈금
-#: 안에서 찾는다. 거절에 쓰면 콘솔이 받는 주소를 서버가 막게 된다.
+#: 유니버스 하나의 채널 수.
+#:
+#: **큰 주소 자체는 거절하지 않는다.** 콘솔이 유니버스별 실제 용량을 알려 주지
+#: 않으므로(ASSUMPTION-33), 시작 주소가 이 값을 넘는다는 이유로 막으면 콘솔이
+#: 받는 자리를 서버가 가로막게 된다. 자리를 **제안**할 때도 이 눈금 안에서만 찾는다.
+#:
+#: 거절하는 경우는 하나뿐이다: 요청한 자리에서 **폭이 유니버스 끝을 넘을 때**
+#: :func:`evaluate` 가 `ok=False` 를 낸다(t15). 이것은 주소를 막는 것이 아니라
+#: 「말없이 다른 유니버스로 옮기기」를 막는 것이다 — 옮기면 계획서와 콘솔이 갈리고,
+#: 그 어긋남이 아무 데도 남지 않은 채 쓰기 경로까지 간다(실측: 계획 7.480 → 실제
+#: 8.1, 그런데 `created` 보고). 옮기지 않고 사실을 내면 판단은 부르는 쪽 몫이 된다.
+#:
+#: 형제 파이프라인 `vwx/patchplan.plan_addresses` 는 이 거절을 하지 **않는다**.
+#: 두 파이프라인이 같은 입력에 다른 판정을 낸다는 뜻이고, 이는 t15 에서 의식적으로
+#: 내린 결정이다 — 근거는 `test_autopatch_verify.py` 의 유니버스 끝 표에 적었다.
 UNIVERSE_CHANNELS = 512
 
 
@@ -109,11 +121,20 @@ def occupants_from_patch_values(
 
 
 def _placements(universe: int, address: int, count: int, width: int) -> tuple[Placement, ...]:
-    """등간격으로 이어 붙인 자리들 — 유니버스 경계를 넘으면 다음 유니버스로."""
+    """등간격으로 이어 붙인 자리들.
+
+    이어 깔다 경계를 넘으면 다음 유니버스로 넘긴다 — 이건 정당하다. 넘길 것이
+    남아 있기 때문이다.
+
+    **첫 자리는 옮기지 않는다.** 거기엔 이어 붙일 앞자리가 없다. 요청받은 주소를
+    말없이 다른 유니버스로 바꿔치기하면 부르는 쪽은 자기가 준 주소가 지켜졌다고
+    믿는다 — 점유 검사는 엉뚱한 선반을 뒤지고, 쓰기 경로는 엉뚱한 자리에 장비를
+    심고서 `created` 를 낸다(t15 HIGH-1). 판정은 :func:`evaluate` 가 낸다.
+    """
     spots: list[Placement] = []
     current_universe, current_address = universe, address
-    for _ in range(count):
-        if current_address + width - 1 > UNIVERSE_CHANNELS:
+    for index in range(count):
+        if index > 0 and current_address + width - 1 > UNIVERSE_CHANNELS:
             current_universe += 1
             current_address = 1
         spots.append(Placement(universe=current_universe, address=current_address))
@@ -166,13 +187,23 @@ def evaluate(
     assert parsed.universe is not None and parsed.address is not None
     spots = _placements(parsed.universe, parsed.address, count, width)
     hit = _collisions(spots, width, occupants)
+    last_channel = parsed.address + width - 1
+    overruns = last_channel > UNIVERSE_CHANNELS
     return Fit(
-        ok=not hit,
+        ok=not hit and not overruns,
         requested=f"{parsed.universe}.{parsed.address}",
         count=count,
         width=width,
         collisions=hit,
         placements=spots,
+        error=(
+            f"요청한 자리에 실측 폭이 들어가지 않는다 — "
+            f"{parsed.universe}.{parsed.address} 에서 {width}채널이면 "
+            f"{last_channel}번 채널까지 뻗어 유니버스 끝({UNIVERSE_CHANNELS})을 넘는다. "
+            "자리를 옮기지 않았다 — 주소를 바꿀지 모드를 바꿀지는 부르는 쪽이 정한다."
+            if overruns
+            else None
+        ),
     )
 
 

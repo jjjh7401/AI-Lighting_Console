@@ -221,6 +221,17 @@ def parse_patch_csv(text: str) -> ParseResult:
             )
             continue
 
+        if channels < 0:
+            rejected.append(
+                RowRejection(
+                    row=row_no,
+                    fid_raw=fid_raw,
+                    kind="negative_channels",
+                    detail=f"Ch={channels} — 채널 수는 음수일 수 없다",
+                )
+            )
+            continue
+
         if address < 1 or universe < 1:
             rejected.append(
                 RowRejection(
