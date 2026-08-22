@@ -588,3 +588,126 @@ run 레인이 자기 문서를 자기 판정으로 닫지 않았다.
 **닫히지 않은 채 출하되는 것**(sync 가 지우면 안 되는 것):
 AC 전건 통과 ≠ 실기 D2 해소 · 번짐 3건(C3 diff 거짓 경보 · C4 · C5 서류 인쇄) ·
 C6 · C7 미측정 · N-1 실기 도달성 미측정 · `read_inventory` 나머지 5곳 순증 미측정.
+
+
+---
+
+## §E.2 (이어서) — `/code-review` 지적 처분 · `completed` 되돌림
+
+**`completed` 를 되돌렸다**(`completed → in-progress`, 감독 결정). 감사 5회가 통과시킨
+뒤 코드 리뷰가 HIGH 1건을 잡았고, 그 결함은 **감사가 비준한 테스트가 지키고 있었다.**
+
+### 🔴 #1 — 빈 목록을 「전수 답했다」로 읽던 자리 (형제 모듈 원문 대조)
+
+**인용을 받지 않고 원문을 읽었다.** `server/prechk/footprint.py:317-331` 13줄 주석:
+
+> A listing that reports zero children is INDISTINGUISHABLE from one whose
+> children could not be read: the responder's ``safe_children`` returns an empty
+> table when both ``Children()`` and ``Count()`` fail, and then ``childCount``
+> is derived from that same empty read — so ``childCount == len(children) == 0``
+> and ``truncated`` is unset. ``_listing_is_whole`` therefore says "whole".
+
+`console/lua/copilot_responder.lua:461-475` 에서 그 기제도 확인했다(`Children()` 실패 시
+`Count()` 폴백, 둘 다 실패하면 빈 표).
+
+**형제 순회는 이 경우 `whole = False` 를 강제하는데 내 판독은 안 했다.** 결과:
+콘솔이 타입 트리 판독에 실패하면 `attempted=True · 전수 · 형태 정상` → **`slot_absent`**
+→ 계약이 「answered IN FULL … a rig fact — retrying changes nothing」이다.
+**86대 전부가 「리그 사실」로 나가고 감독은 리그를 손보러 간다.**
+
+**비준된 테스트를 뒤집었다.** `test_an_empty_library_is_still_a_rig_fact` 는 내가 MUT-F
+판별력의 증거로 든 대조군이고 `sync` 가 독립 확인한 것이다. 뒤집는 근거는 취향이 아니라
+**형제 모듈이 같은 페이로드에 정반대 판정을 내리고 그 이유를 주석에 적어 뒀다**는 사실이다.
+두 모듈이 같은 페이로드에 다른 답을 내면 그것이 다음 결함이므로 **맞췄다.**
+
+### 🟡 #2 — 자식 하나가 나쁘면 리그 전체 번역이 꺼지던 자리
+
+**PROTOCOL.md 원문을 읽었다**(리드가 인용만 옮기고 재현하지 않았다고 밝혔다).
+`console/lua/PROTOCOL.md:52-58`(응답기 1.2.0 개정 노트):
+
+> the snapshot child `i` is now the **real pool slot** and is **omitted** when
+> that slot could not be established … `i` becomes optional — the server already
+> degrades an `i`-less child to a name-only rig-context entry
+
+**자식별 격하가 established 관례**이며 `:199-204` 가 서버 측 처리를 다시 명시한다.
+`_named_children` 의 전부-아니면-전무는 그 관례와 어긋났고, 슬롯 미확정 타입이 **하나만**
+있어도 리그 전체 번역이 꺼져 **D2 가 조용히 재발**한다(#3 때문에 경고도 없이).
+
+고친 방식: 쓸 수 있는 쌍은 살리고, **버린 자식이 있으면 목록을 부분집합으로 표시**한다 —
+긍정 증거(도착한 쌍)는 번역하고 부정 결론(그 슬롯은 없다)만 보류한다.
+
+### 세 갈래를 한 플래그로 합쳤다 — 이름도 고쳤다
+
+`truncated` → **`whole_unconfirmed`**, `slot_unseen_truncated_listing` →
+**`slot_unseen_listing_unconfirmed`**. 절단 · 빈 목록 · 부분집합 셋 다 **「전수임을 확인할
+수 없음」**이고 **결과가 같다**(부정 결론 보류).
+
+리드가 앞서 「이름이 실제 집합보다 좁다 — 다만 `_listing_is_whole` 이 공유 술어라
+바꾸지 마라」고 했었다. **바꾼 것은 공유 술어가 아니라 이번 카드가 만든 내 상수·필드뿐**이며,
+집합이 실제로 더 커졌으므로(빈 목록 · 부분집합이 합류) 옛 이름은 이제 **틀린 라벨**이다.
+공유 술어 `_listing_is_whole` 은 **손대지 않았다.**
+
+**사유는 여전히 다섯이다** — 여섯째를 만들지 않았다(리드 [HARD] 정지 조건).
+
+### 🟡 #3 — 다섯 사유가 감독에게 도달하지 않던 자리
+
+```
+$ git grep -n fixture_type_untranslated -- server/ | grep -v /tests/
+inventory.py:291  정의
+inventory.py:499  기록
+                  ← 읽는 곳 0
+```
+사유를 다섯으로 가르는 데 감사 세 라운드를 썼는데 **화면에 안 나왔다.** 판독이 실패하면
+툴은 수정 전과 **똑같이** 86행 `fid_occupied` 를 내보내고 신호가 없다 — 그 침묵이 이
+카드가 고치려는 결함과 같은 모양이다.
+
+페이로드 `console_read.type_translation` 에 실었다: `attempted` · `named` ·
+`whole_unconfirmed` · **`untranslated`(사유별 건수)** · `detail`. 상위 키 집합
+(AC-LXSEQ-014 닫힌 페이로드)은 **불변** — `console_read` 하위에 넣었다.
+
+### LOW 3건
+
+| # | 처분 |
+|---|---|
+| #4 `rig_paths["fixture_types"]` 무조건 인덱싱 | **고침** — 형제 툴(`:2689` · `:2723` · `:4757`)과 같은 `in` 가드. 경로가 없으면 번역만 포기하고 계획은 낸다(전엔 `KeyError` 가 툴 밖으로 나갔다) |
+| #6 `FIXTURE_TYPES_ROOT` 미사용 | **제거** — 배선된 것처럼 읽힌다. 경로는 호출자가 `rig_paths` 로 준다 |
+| #5 핸들 형태 우선 번역 · 정규식 이중화 | **기록만.** `vwx/apply.py:520-535` 는 「이름이면서 핸들 형태」인 모호성을 **거부**하는데 내 번역기는 핸들 해석을 우선한다. 오늘 관측된 형식에서는 결과가 같으나 **판단이 다르다.** 정규식 바이트 동일 중복도 그대로 — 둘 다 후속 재료 |
+
+### 뮤테이션 (비준 테스트를 뒤집었으므로 특히)
+
+| 뮤테이션 | 죽인 것 |
+|---|---|
+| MUT-G 빈 목록을 다시 「전수」로 | `test_an_empty_listing_is_not_a_rig_fact` **1건만** |
+| MUT-H 자식 전부-아니면-전무로 되돌림 | **2건** (형태 불량 · 슬롯 미확정 격하) |
+| MUT-J 사유를 페이로드에서 다시 감춤 | `test_the_payload_says_why_a_type_stayed_untranslated` **1건만** |
+
+복구: `shasum -a 256` `0e9b57e6…` / `fee4bdcf…` 대조 · `grep -c "MUT-"` 두 파일 `0`.
+
+### 측정
+
+| 명령 | 출력 |
+|---|---|
+| `uv run pytest server/tests -q` | `9712 passed, 8 skipped, 1 warning in 143.06s` |
+
+직전 기준선 `9709` 대비 **+3 = 신규 테스트 수 일치**(전수-목록 대조군 · 슬롯 미확정 격하 ·
+페이로드 도달). `test_an_empty_library_is_still_a_rig_fact` 는 **개명·판정 반전**이라
+개수에 안 잡힌다. 봉쇄 구역 `5c988bd..HEAD` 빈 출력.
+
+### 리뷰가 통과시킨 것 (지우지 않는다)
+
+순환 import 없음 · `replace()` 안전 · **절단 처리는 옳다**(절단 창 안의 쌍은 긍정 증거라
+번역이 맞고 부정 결론만 보류) · `by_slot()` 중복 슬롯 first-wins 와 그 전용 테스트는
+공허하지 않음.
+
+### 같은 원인 하나 더 (범위 밖 · 기록)
+
+리뷰가 짚었다 — **M2 가 찾은 `vwx/diff.py` 거짓 경보와 서류 핸들 인쇄는 각 호출부에
+`type_names=` 한 줄씩이면 닫힌다.** #3 과 **같은 배선 간극**이다(대응표를 안 넘기는 경로).
+이번 범위에 넣지 않았고, **원인이 하나라는 사실을 여기 적는다** — 후속 카드가 셋을 따로
+다루지 않도록.
+
+### 이 라운드가 재지 않은 것
+
+- **#5 의 실기 영향** — 「이름이면서 핸들 형태」인 타입이 실제로 있는지 안 쟀다.
+- **콘솔 라이브 0건** · **N-1 · #1 의 실기 도달성** 미측정.
+- 리뷰가 **7형태 이상을 돌렸는지** — 리뷰 범위 자체는 내가 재지 않았다.

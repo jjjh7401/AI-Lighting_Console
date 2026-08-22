@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-PARITY-001
 title: "가짜 콘솔 ↔ 실물 콘솔 괴리 — D2(핸들↔이름) 정합과 번짐 범위 실측"
 version: "0.1.4"
-status: completed
+status: in-progress
 created: 2026-08-22
 updated: 2026-08-22
 author: plan 레인 (칸반 카드 t11)

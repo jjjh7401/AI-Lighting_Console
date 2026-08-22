@@ -95,7 +95,11 @@ from server.prechk.footprint import WalkOutcome, walk_mode_widths
 from server.prechk.inventory import InventoryReadError, read_inventory
 from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_macro
 from server.prechk.macro import groups_from_snapshot as read_group_pool
-from server.prechk.mode_read import read_fixture_type_names, read_type_mode_widths
+from server.prechk.mode_read import (
+    TypeNameRead,
+    read_fixture_type_names,
+    read_type_mode_widths,
+)
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import PropertyRead, bulk_capable, read_properties
 from server.prechk.report import build_report as build_precheck_report
@@ -4521,7 +4525,15 @@ def build_toolset(
         # 판독 결과를 통째로 넘긴다 — .by_slot() 만 넘기면 「트리가 답하지 않았다」와
         # 「트리가 그 슬롯을 선언하지 않는다」가 둘 다 빈 표로 도착해, 재조회하면
         # 될 일이 리그 사실로 보고된다(감사 D-1).
-        type_names = read_fixture_type_names(state_port, root=rig_paths["fixture_types"])
+        # rig_paths 는 부분 override 가 가능하다. 무조건 인덱싱하면 KeyError 가
+        # 툴 밖으로 새어 계획 대신 예외가 나간다 — 형제 툴들과 같은 가드를 쓴다
+        # (:2689 · :2723 · :4757). 경로가 없으면 번역만 포기하고 계획은 낸다.
+        if "fixture_types" in rig_paths:
+            type_names = read_fixture_type_names(state_port, root=rig_paths["fixture_types"])
+        else:
+            type_names = TypeNameRead(
+                attempted=False, detail="rig_paths 에 fixture_types 경로가 없다"
+            )
         inventory_port = _InventoryPort(state_port, property_port)
         try:
             inventory = read_inventory(inventory_port, type_names=type_names)
@@ -4549,11 +4561,27 @@ def build_toolset(
                 "kind": CONSOLE_READ_INCOMPLETE,
                 "detail": str(plan.console_read["reason"]),
             }
+        # 번역이 왜 실패했는지가 페이로드에 실리지 않으면, 판독이 실패해도 툴은
+        # 수정 전과 똑같은 fid_occupied 를 내보내고 감독에게는 아무 신호가 없다.
+        # 사유를 다섯으로 가른 일이 화면에 닿는 자리가 여기다.
+        untranslated: dict[str, int] = {}
+        for record in inventory.fixtures:
+            if record.fixture_type_untranslated:
+                untranslated[record.fixture_type_untranslated] = (
+                    untranslated.get(record.fixture_type_untranslated, 0) + 1
+                )
         console_read = {
             "complete_enough_to_judge_absence": plan.console_read[
                 "complete_enough_to_judge_absence"
             ],
             "caveat": caveat,
+            "type_translation": {
+                "attempted": type_names.attempted,
+                "named": len(type_names.by_slot()),
+                "whole_unconfirmed": type_names.whole_unconfirmed,
+                "untranslated": untranslated,
+                "detail": type_names.detail or None,
+            },
             "fid_read": {
                 "attempted": fid_read.attempted,
                 "known": len(fid_read.fids),

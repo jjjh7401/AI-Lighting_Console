@@ -106,7 +106,7 @@ def test_a_truncated_listing_keeps_the_pairs_that_did_arrive():
 
     assert answer.attempted is True
     assert answer.by_slot() == {4: "Robin Spiider"}
-    assert "절단" in answer.detail
+    assert "전수 확인 불가" in answer.detail and "선언 총계보다 짧다" in answer.detail
 
 
 # --- 번역 계약 -------------------------------------------------------------
@@ -270,7 +270,7 @@ def test_a_slot_missing_from_a_truncated_listing_is_unseen_not_absent():
     whole = read_fixture_type_names(_tree([(10, "Source 4 LED")]), root=ROOT)
     cut = read_fixture_type_names(_tree([(10, "Source 4 LED")], truncated=True), root=ROOT)
 
-    assert whole.truncated is False and cut.truncated is True
+    assert whole.whole_unconfirmed is False and cut.whole_unconfirmed is True
 
     absent = read_inventory(rig, type_names=whole).fixtures[0]
     unseen = read_inventory(rig, type_names=cut).fixtures[0]
@@ -298,7 +298,7 @@ def test_a_malformed_listing_is_not_reported_as_a_rig_fact():
 
     # 판독기 분류는 그대로 — 트리는 답했다.
     assert read.attempted is True
-    assert read.truncated is False
+    assert read.whole_unconfirmed is True
     assert read.pairs == ()
 
     rec = read_inventory(_Rig(["FixtureType 4"]), type_names=read).fixtures[0]
@@ -307,16 +307,73 @@ def test_a_malformed_listing_is_not_reported_as_a_rig_fact():
     assert rec.fixture_type_untranslated == UNTRANSLATED_LISTING_SHAPE_INVALID
 
 
-def test_an_empty_library_is_still_a_rig_fact():
-    """대조군 — 전수 답했고 정말 비어 있으면 slot_absent 가 옳다.
+def test_an_empty_listing_is_not_a_rig_fact():
+    """코드리뷰 #1 — 「자식 0개」를 「전수 답했고 비었다」로 읽던 자리.
 
-    위 테스트가 「형태 불량」을 잡는 것이지 「빈 목록」까지 싸잡는 것이
-    아님을 보인다. 이 대조군이 없으면 다섯째 사유가 넷째를 잡아먹어도 초록이다.
+    **이 테스트는 앞선 판본을 뒤집는다.** 이전에는 빈 목록을 slot_absent 로
+    비준했고 그 판정이 감사 3회를 통과했다. 뒤집는 근거는 형제 모듈의 원문이다 —
+    footprint.py 의 walk_mode_widths 는 같은 페이로드에 whole=False 를 강제하며
+    13줄 주석으로 이유를 적어 뒀다: 응답기의 safe_children 은 Children() 과
+    Count() 가 둘 다 실패하면 빈 표를 돌려주고 childCount 가 그 같은 빈 판독에서
+    파생되므로, childCount == len(children) == 0 이고 truncated 도 안 붙는다.
+    **「비었다」와 「못 읽었다」가 구별되지 않는다.**
+
+    두 모듈이 같은 페이로드에 다른 답을 내면 그것이 다음 결함이므로 맞춘다.
     """
     read = read_fixture_type_names(_tree([]), root=ROOT)
 
     assert read.attempted is True and read.pairs == ()
+    assert read.whole_unconfirmed is True
+
+    rec = read_inventory(_Rig(["FixtureType 4"]), type_names=read).fixtures[0]
+
+    assert rec.fixture_type_untranslated == UNTRANSLATED_SLOT_UNSEEN
+
+
+def test_a_whole_listing_without_the_slot_is_the_only_rig_fact():
+    """대조군 — slot_absent 가 남아 있는 유일한 자리.
+
+    선언 총계와 실제 자식 수가 맞고, 버린 자식이 없고, 그런데도 그 슬롯이
+    없다. 이때만 「리그 사실」이다. 이 대조군이 없으면 위 수정이 slot_absent 를
+    통째로 없애 버려도 초록이다.
+    """
+    read = read_fixture_type_names(_tree([(10, "Source 4 LED")]), root=ROOT)
+
+    assert read.whole_unconfirmed is False and read.pairs == ((10, "Source 4 LED"),)
 
     rec = read_inventory(_Rig(["FixtureType 4"]), type_names=read).fixtures[0]
 
     assert rec.fixture_type_untranslated == UNTRANSLATED_SLOT_ABSENT
+
+
+def test_one_slotless_child_does_not_switch_off_the_whole_rig():
+    """코드리뷰 #2 — 자식 하나가 나쁘면 표 전체를 버리던 자리.
+
+    PROTOCOL.md(응답기 1.2.0)는 i 가 슬롯을 확정 못 하면 **생략된다**고 적고,
+    「서버는 이미 i 없는 자식을 이름-only 항목으로 격하한다」고 한다. 자식별
+    격하가 established 관례다. 표 전체를 버리면 슬롯 미확정 타입이 하나만 있어도
+    리그 전체 번역이 꺼지고 D2 가 조용히 재발한다.
+
+    쓸 수 있는 쌍은 살리되, 버린 자식이 있으므로 목록은 **부분집합**이다 —
+    없는 슬롯에 대한 부정 결론은 보류한다.
+    """
+    payload = {
+        "ok": True,
+        "truncated": False,
+        "node": {"childCount": 2},
+        "children": [{"i": 4, "name": "Robin Spiider"}, {"name": "슬롯 미확정 타입"}],
+    }
+    read = read_fixture_type_names(_Tree(payload), root=ROOT)
+
+    # 좋은 쌍은 살아남는다 — 하나가 나쁘다고 전체가 꺼지지 않는다.
+    assert read.by_slot() == {4: "Robin Spiider"}
+    assert read.shape_invalid is False
+    # 그러나 목록은 부분집합이다.
+    assert read.whole_unconfirmed is True
+
+    named = read_inventory(_Rig(["FixtureType 4"]), type_names=read).fixtures[0]
+    missing = read_inventory(_Rig(["FixtureType 9"]), type_names=read).fixtures[0]
+
+    assert named.fixture_type == "Robin Spiider"
+    assert named.fixture_type_untranslated is None
+    assert missing.fixture_type_untranslated == UNTRANSLATED_SLOT_UNSEEN
