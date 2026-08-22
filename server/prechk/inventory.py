@@ -110,12 +110,21 @@ HANDLE_TEXT = re.compile(r"^FixtureType (\d+)$")
 #:                      part that arrived. Absence is NOT established — this
 #:                      repository already holds that truncation invalidates
 #:                      negative conclusions only.
+#:   - shape invalid  : the listing answered but enumerated nothing usable,
+#:                      so it never met the 'answered IN FULL' condition that
+#:                      makes absence a rig fact. Fix the READ, not the rig.
+#:
+#: The last three all mean 'the tree did not give us a trustworthy list', and
+#: collapsing any of them into ``slot_absent`` sends someone to edit a rig.
+#: This enumeration comes from a measured sweep of the wiring; a sixth reason
+#: needs a new measurement, not a hunch.
 #: Reporting an unreadable tree as "slot absent" sends someone to edit a rig
 #: when what was needed was a re-read.
 UNTRANSLATED_NO_TABLE = "no_type_table"
 UNTRANSLATED_TREE_UNREADABLE = "type_tree_unreadable"
 UNTRANSLATED_SLOT_ABSENT = "slot_absent"
 UNTRANSLATED_SLOT_UNSEEN = "slot_unseen_truncated_listing"
+UNTRANSLATED_LISTING_SHAPE_INVALID = "listing_shape_invalid"
 
 
 def translate_fixture_type(
@@ -474,11 +483,14 @@ def _name_handle_types(
         names = type_names.by_slot()
         unavailable = UNTRANSLATED_NO_TABLE
     # 절단된 목록에서 슬롯이 안 보인 것은 「없다」가 아니라 「못 봤다」다.
-    absent = (
-        UNTRANSLATED_SLOT_UNSEEN
-        if type_names is not None and type_names.truncated
-        else UNTRANSLATED_SLOT_ABSENT
-    )
+    # slot_absent 는 「전수 답했고 없다」는 리그 사실이다. 목록을 믿을 수 없는
+    # 두 경우(절단 · 형태 불량)는 그 계약을 만족하지 않으므로 따로 낸다.
+    absent = UNTRANSLATED_SLOT_ABSENT
+    if type_names is not None:
+        if type_names.shape_invalid:
+            absent = UNTRANSLATED_LISTING_SHAPE_INVALID
+        elif type_names.truncated:
+            absent = UNTRANSLATED_SLOT_UNSEEN
 
     return [
         replace(record, fixture_type=value, fixture_type_untranslated=reason)
