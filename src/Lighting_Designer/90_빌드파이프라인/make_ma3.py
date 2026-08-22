@@ -6,6 +6,12 @@
 """
 import sys, os, html
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 출력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
+# 박아두면 그 기계 밖에서는 돌지 않는다.
+MA3_DIR = os.environ.get("LXSEQ_MA3_OUT") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "04_grandMA3")
+os.makedirs(MA3_DIR, exist_ok=True)
 from rig_data import FIXTURES, FID_BASE, GROUPS, PRESET_DIM, PRESET_COL, PRESET_POS, PRESET_BM, FX_LIB
 from exec_data import CUE_EX, SONG_BPM
 from seq_data import CUES, tc
@@ -172,7 +178,7 @@ for q in by_q:
 rem("Q180은 TC 트리거 아님 — [MANUAL] 곡 종료 확인 후 수동 GO")
 
 # ── 출력: .ma3.txt ──────────────────────────────────────
-txt_path = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.ma3.txt"
+txt_path = os.path.join(MA3_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.ma3.txt")
 with open(txt_path, "w", encoding="utf-8") as f:
     f.write("// LX-SEQ v2.1 → grandMA3 프로그래밍 스크립트 (자동 생성)\n")
     f.write("// RIG: LXSEQ_RIG_01 r3 · SONG: Sugar r3 · SpeedMaster 1 = %d BPM\n" % SONG_BPM)
@@ -187,7 +193,7 @@ ncmds = sum(1 for k, _ in L if k == "C")
 print("ma3.txt:", txt_path, "| 명령", ncmds, "줄")
 
 # ── 출력: 매크로 XML (템플릿) ────────────────────────────
-xml_path = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.macros.xml"
+xml_path = os.path.join(MA3_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.macros.xml")
 macros, cur, curname = [], [], None
 for kind, line in L:
     if kind == "S":
