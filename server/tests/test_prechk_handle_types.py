@@ -9,10 +9,12 @@ from __future__ import annotations
 from server.prechk.inventory import (
     UNTRANSLATED_NO_TABLE,
     UNTRANSLATED_SLOT_ABSENT,
+    UNTRANSLATED_SLOT_UNSEEN,
+    UNTRANSLATED_TREE_UNREADABLE,
     read_inventory,
     translate_fixture_type,
 )
-from server.prechk.mode_read import read_fixture_type_names
+from server.prechk.mode_read import TypeNameRead, read_fixture_type_names
 
 ROOT = "Patch/FixtureTypes"
 
@@ -222,7 +224,9 @@ def test_with_a_table_the_same_rig_translates_and_reads_no_extra_tree():
     # 동작하지 않아서가 아님을 같은 리그로 보인다.
     rig = _Rig(["FixtureType 4", "FixtureType 4"])
 
-    inventory = read_inventory(rig, type_names={4: "Robin Spiider"})
+    inventory = read_inventory(
+        rig, type_names=TypeNameRead(attempted=True, pairs=((4, "Robin Spiider"),))
+    )
 
     assert [record.fixture_type for record in inventory.fixtures] == [
         "Robin Spiider",
@@ -233,3 +237,44 @@ def test_with_a_table_the_same_rig_translates_and_reads_no_extra_tree():
         None,
     ]
     assert not [call for call in rig.state_calls if "FixtureTypes" in call]
+
+
+def test_an_unreadable_tree_is_not_reported_as_a_rig_fact():
+    """감사 D-1 — 판독 실패가 slot_absent 로 보고되던 자리.
+
+    두 사건은 결과가 같다(이름 0건). 그러나 slot_absent 를 읽은 사람은 리그를
+    손보러 가고, 실제로 필요한 것은 재조회다. by_slot() 만 넘기면 두 사건이
+    똑같은 빈 표로 도착해 이 구분이 사라지므로, 판독 결과를 통째로 넘긴다.
+    """
+    rig = _Rig(["FixtureType 4"])
+
+    unreadable = read_inventory(rig, type_names=TypeNameRead(attempted=False))
+    declares_nothing = read_inventory(rig, type_names=TypeNameRead(attempted=True))
+
+    assert unreadable.fixtures[0].fixture_type == "FixtureType 4"
+    assert unreadable.fixtures[0].fixture_type_untranslated == UNTRANSLATED_TREE_UNREADABLE
+    # 대조군 — 같은 「이름 0건」이지만 사유가 다르다.
+    assert declares_nothing.fixtures[0].fixture_type_untranslated == UNTRANSLATED_SLOT_ABSENT
+    assert UNTRANSLATED_TREE_UNREADABLE != UNTRANSLATED_SLOT_ABSENT != UNTRANSLATED_NO_TABLE
+
+
+def test_a_slot_missing_from_a_truncated_listing_is_unseen_not_absent():
+    """절단된 목록에서 안 보인 슬롯을 「없다」로 단정하지 않는다.
+
+    이 저장소는 이미 「절단이 무효화하는 것은 부정 결론뿐이다」를 규약으로 갖고
+    있고(결함 D1 계열), slot_absent 는 바로 그 부정 결론이다. 전수 목록에서
+    안 보이는 것과 잘린 목록에서 안 보이는 것은 다른 사건이다.
+    """
+    rig = _Rig(["FixtureType 4"])
+    whole = read_fixture_type_names(_tree([(10, "Source 4 LED")]), root=ROOT)
+    cut = read_fixture_type_names(_tree([(10, "Source 4 LED")], truncated=True), root=ROOT)
+
+    assert whole.truncated is False and cut.truncated is True
+
+    absent = read_inventory(rig, type_names=whole).fixtures[0]
+    unseen = read_inventory(rig, type_names=cut).fixtures[0]
+
+    assert absent.fixture_type_untranslated == UNTRANSLATED_SLOT_ABSENT
+    assert unseen.fixture_type_untranslated == UNTRANSLATED_SLOT_UNSEEN
+    # 원값은 양쪽 다 보존된다 — 표식만 검사하면 공허하다.
+    assert absent.fixture_type == unseen.fixture_type == "FixtureType 4"

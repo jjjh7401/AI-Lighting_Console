@@ -45,6 +45,7 @@ from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
+from server.prechk.mode_read import TypeNameRead
 from server.prechk.query import read_properties
 from server.prechk.verdicts import validate
 
@@ -96,16 +97,33 @@ FIXTURE_TYPES_ROOT = "Patch/FixtureTypes"
 HANDLE_TEXT = re.compile(r"^FixtureType (\d+)$")
 
 
-#: Why a handle could not be named. The two reasons are kept APART because
-#: they call for different actions: no table means the caller never read the
-#: type tree (an ordering fault, fixable here), while an absent slot means the
-#: tree was read and simply does not declare that slot (a rig fact).
+#: Why a handle could not be named. The three reasons are kept APART because
+#: each calls for a DIFFERENT action, and collapsing any two sends the reader
+#: to the wrong place:
+#:   - no table       : this path never asked for the tree. An ordering fault,
+#:                      fixable in the caller.
+#:   - tree unreadable: the tree was asked and did not answer. Retry the
+#:                      console; the rig is not at fault.
+#:   - slot absent    : the tree answered IN FULL and does not declare that
+#:                      slot. A rig fact — retrying changes nothing.
+#:   - slot unseen    : the listing was TRUNCATED and the slot was not in the
+#:                      part that arrived. Absence is NOT established — this
+#:                      repository already holds that truncation invalidates
+#:                      negative conclusions only.
+#: Reporting an unreadable tree as "slot absent" sends someone to edit a rig
+#: when what was needed was a re-read.
 UNTRANSLATED_NO_TABLE = "no_type_table"
+UNTRANSLATED_TREE_UNREADABLE = "type_tree_unreadable"
 UNTRANSLATED_SLOT_ABSENT = "slot_absent"
+UNTRANSLATED_SLOT_UNSEEN = "slot_unseen_truncated_listing"
 
 
 def translate_fixture_type(
-    raw: str | None, names: Mapping[int, str] | None
+    raw: str | None,
+    names: Mapping[int, str] | None,
+    *,
+    unavailable_reason: str = UNTRANSLATED_NO_TABLE,
+    absent_reason: str = UNTRANSLATED_SLOT_ABSENT,
 ) -> tuple[str | None, str | None]:
     """Return ``(value, untranslated)`` for one FixtureType reading.
 
@@ -129,10 +147,10 @@ def translate_fixture_type(
     if hit is None:
         return raw, None
     if names is None:
-        return raw, UNTRANSLATED_NO_TABLE
+        return raw, unavailable_reason
     name = names.get(int(hit.group(1)))
     if name is None:
-        return raw, UNTRANSLATED_SLOT_ABSENT
+        return raw, absent_reason
     return name, None
 
 
@@ -410,39 +428,71 @@ def _probe_slot(
 
 
 def _name_handle_types(
-    records: list[FixtureRecord], names: Mapping[int, str] | None
+    records: list[FixtureRecord], type_names: TypeNameRead | None
 ) -> list[FixtureRecord]:
     """Name every handle-shaped FixtureType reading, or say why it could not be.
 
-    This pass performs NO read of its own. The slot-to-name table is supplied by
-    the caller, because the callers that need translation are already walking
-    the fixture-type tree for their own reasons - reading it a second time here
-    would add a query to a path that already paid for one, and this repository
-    treats a query-budget guard as ratified rather than adjustable.
+    Takes the READ, not the table it produced. That is deliberate: the table
+    alone cannot distinguish "the tree answered and declares no such slot" from
+    "the tree never answered", because both arrive as an empty mapping. A caller
+    holding only the mapping has already lost the distinction and will report an
+    unreadable tree as a rig fact — which sends someone to edit a rig when what
+    was needed was a re-read. Accepting :class:`TypeNameRead` makes that loss
+    impossible to express.
+
+    This pass performs NO read of its own. The caller supplies it, because the
+    callers that need translation are already walking the fixture-type tree for
+    their own reasons; reading it again here would add a query to a path that
+    already paid for one, and this repository treats a query-budget guard as
+    ratified rather than adjustable.
 
     The cost of consuming instead of reading is an ORDERING dependency: a caller
-    that never walked the tree hands ``None``, and nothing can be named. That is
-    reported, never silent - every handle then carries
-    ``UNTRANSLATED_NO_TABLE``, which reads as "this path did not supply a table"
-    and NOT as "this rig has no such type".
+    that never asked hands ``None``, and nothing can be named. That is reported,
+    never silent.
 
-    A second, subtler limit is worth stating where a reader will meet it: the
-    handle FORM is what triggers translation, so a value in some THIRD form
-    nobody has seen is passed through as if it were a name, unmarked. Testing
-    the value against the set of names the tree declares would catch that, and
-    is possible only on a path that holds the table. Same OUTCOME on the two
-    known forms; DIFFERENT DETECTION on an unknown third. Catching format drift
-    is left to the live-survey card, and this paragraph is where it starts.
+    A second, subtler limit belongs where a reader will meet it: the handle FORM
+    is what triggers translation, so a value in some THIRD form nobody has seen
+    is passed through as if it were a name, unmarked. Testing the value against
+    the set of names the tree declares would catch that, and is possible only on
+    a path that holds the table. Same OUTCOME on the two known forms; DIFFERENT
+    DETECTION on an unknown third. Catching format drift is left to the
+    live-survey card, and this paragraph is where it starts.
     """
     if not any(
         record.fixture_type is not None and HANDLE_TEXT.match(record.fixture_type)
         for record in records
     ):
         return records
+
+    if type_names is None:
+        names: Mapping[int, str] | None = None
+        unavailable = UNTRANSLATED_NO_TABLE
+    elif not type_names.attempted:
+        names = None
+        unavailable = UNTRANSLATED_TREE_UNREADABLE
+    else:
+        names = type_names.by_slot()
+        unavailable = UNTRANSLATED_NO_TABLE
+    # 절단된 목록에서 슬롯이 안 보인 것은 「없다」가 아니라 「못 봤다」다.
+    absent = (
+        UNTRANSLATED_SLOT_UNSEEN
+        if type_names is not None and type_names.truncated
+        else UNTRANSLATED_SLOT_ABSENT
+    )
+
     return [
         replace(record, fixture_type=value, fixture_type_untranslated=reason)
         for record, (value, reason) in (
-            (record, translate_fixture_type(record.fixture_type, names)) for record in records
+            (
+                record,
+                translate_fixture_type(
+                    record.fixture_type,
+                    names,
+                    unavailable_reason=unavailable,
+                    absent_reason=absent,
+                ),
+            )
+            for record in records
         )
     ]
 
@@ -451,7 +501,7 @@ def read_inventory(
     port: InventoryPort,
     policy: InventoryPolicy | None = None,
     *,
-    type_names: Mapping[int, str] | None = None,
+    type_names: TypeNameRead | None = None,
 ) -> Inventory:
     """Enumerate the fixture root, read the whitelisted properties, count.
 
