@@ -1,0 +1,6 @@
+﻿ID,Name,TargetGroup,Value
+BM.01,와이드 워시,MOVER-ALL,Zoom 45° · Gobo OPEN · Prism OFF
+BM.02,미드 빔,MOVER-ALL,Zoom 20° · Gobo OPEN
+BM.03,좁은 빔 + 프리즘,MOVER-U,Zoom 8° · Prism 3-facet ON
+BM.04,소프트 프로스트,KEY,Frost 30%
+BM.05,고보 브레이크업,MOVER-U,Gobo 슬롯2(브레이크업) · Zoom 25° · 예비

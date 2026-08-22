@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LX-SEQ 타임라인 — Maroon 5 / Sugar</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:24px;background:#12151b;color:#e8ecf2;
+ font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","맑은 고딕",sans-serif}
+.wrap{max-width:1440px;margin:0 auto}
+h1{margin:0 0 4px;font-size:22px;letter-spacing:-.3px}
+h1 small{font-weight:400;color:#8b94a3;font-size:14px;margin-left:10px}
+.meta{color:#8b94a3;font-size:12.5px;margin-bottom:14px}
+.meta code{background:#1e2330;padding:1px 6px;border-radius:4px;color:#c8d2e0;font-size:12px}
+.warn{background:#3a1f24;border-left:3px solid #d2506a;padding:9px 13px;border-radius:5px;
+ font-size:12.5px;color:#f0c4cd;margin-bottom:18px}
+.panel{background:#1a1e28;border:1px solid #2a3040;border-radius:9px;padding:16px 18px 10px;margin-bottom:16px}
+.panel h2{margin:0 0 14px;font-size:13px;font-weight:600;color:#9aa5b6;letter-spacing:.6px;text-transform:uppercase}
+.rail{position:relative;height:20px;margin-bottom:2px}
+.tick{position:absolute;top:0;border-left:1px solid #333b4d;height:100%;padding-left:4px}
+.tick span{font:10.5px/1 Consolas,monospace;color:#6b7588;white-space:nowrap}
+.tick.end{border-left:1px solid #d2506a;padding-left:0;padding-right:4px;transform:translateX(-100%)}
+.tick.end span{color:#d2506a}
+.rail{overflow:hidden}
+.band{position:relative;height:44px;margin-bottom:6px}
+.sec{position:absolute;top:0;height:100%;border-radius:4px;overflow:hidden;
+ display:flex;flex-direction:column;justify-content:center;padding:0 7px;border:1px solid rgba(0,0,0,.35)}
+.sec b{font-size:11.5px;color:#fff;letter-spacing:.3px;white-space:nowrap}
+.sec i{font-style:normal;font-size:10px;color:rgba(255,255,255,.72);white-space:nowrap}
+.cband{position:relative;height:34px;margin-bottom:4px}
+.cue{position:absolute;top:0;height:100%;min-width:9px;border-radius:3px;display:flex;align-items:center;
+ justify-content:center;font:600 10.5px/1 Consolas,monospace;border:1px solid rgba(0,0,0,.3);overflow:hidden}
+.cue.snap{border-left:3px solid #fff}
+.cue.tiny{font-size:0}
+.chart{position:relative;height:132px;margin-top:10px}
+.chart svg{width:100%;height:100%;display:block}
+.axis{font:10px Consolas,monospace;fill:#5d6779}
+.lgrow{margin-top:12px;padding-top:11px;border-top:1px solid #2a3040;display:flex;flex-wrap:wrap;gap:14px}
+.lg{font-size:11.5px;color:#98a2b3;display:flex;align-items:center;gap:6px}
+.lg i{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.18)}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{background:#232a38;color:#9aa5b6;font-weight:600;padding:7px 6px;text-align:left;
+ border-bottom:1px solid #333b4d;position:sticky;top:0;font-size:11px;white-space:nowrap}
+td{padding:6px;border-bottom:1px solid #242b39;vertical-align:top}
+td.m{font-family:Consolas,monospace;white-space:nowrap}
+td.fx{font-family:Consolas,monospace;font-size:10.5px;color:#a8b4c6}
+td.nt{color:#8b94a3;font-size:11px}
+td.snapc{color:#ff7d97;font-weight:700}
+tr.s-INTRO td:first-child{border-left:3px solid #8A7A5C}
+tr.s-VERSE1 td:first-child,tr.s-VERSE2 td:first-child{border-left:3px solid #A9925F}
+tr.s-PRE1 td:first-child,tr.s-PRE2 td:first-child{border-left:3px solid #2E8C8C}
+tr.s-CHORUS1 td:first-child,tr.s-CHORUS2 td:first-child{border-left:3px solid #C7307D}
+tr.s-CHORUS3 td:first-child{border-left:3px solid #9E1F63}
+tr.s-BRIDGE td:first-child{border-left:3px solid #5A2BC8}
+tr.s-OUTRO td:first-child{border-left:3px solid #4A5568}
+.foot{color:#616b7d;font-size:11px;margin-top:16px;text-align:center}
+@media print{
+ @page{size:A3 landscape;margin:9mm}
+ body{background:#fff;color:#111;padding:0;font-size:10px}
+ .panel{background:#fff;border:1px solid #999;break-inside:avoid}
+ .panel h2{color:#333}
+ .warn{background:#fff;border-left:3px solid #000;color:#000}
+ .meta,.meta code{color:#333;background:none}
+ th{background:#e8e8e8;color:#000;border-bottom:1px solid #000}
+ td{border-bottom:1px solid #ccc}
+ td.nt,td.fx,.lg{color:#333}
+ h1{color:#000} h1 small{color:#444}
+ .foot{color:#666}
+}
+</style></head><body><div class="wrap">
+<h1>Maroon 5 — Sugar <small>LX-SEQ v2.1 · r3 · 조명연출 시퀀스</small></h1>
+<div class="meta">
+ <code>03:56.0</code> <code>120 BPM</code> <code>4/4</code> <code>D♭ major</code>
+ <code>118마디 · 1마디 2.000s</code> <code>TC_SOURCE: LTC</code> <code>18 cues</code>
+ &nbsp;|&nbsp; TC_ORIGIN: 00:00.0 = 곡 첫 음 (카운트인 없음)
+</div>
+<div class="warn"><b>TC_METHOD: DERIVED</b> — 이 타임라인의 모든 타임코드는 마디 연산(1마디 = 2.000s)으로 도출한 값입니다.
+음원 청취로 검증하지 않았습니다. 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. <b>리허설에서 LTC 대조 필수.</b></div>
+
+<div class="panel"><h2>Timeline</h2>
+ <div class="rail"><div class="tick" style="left:0.0000%"><span>00:00.0</span></div><div class="tick" style="left:6.6667%"><span>00:16.0</span></div><div class="tick" style="left:13.3333%"><span>00:32.0</span></div><div class="tick" style="left:20.0000%"><span>00:48.0</span></div><div class="tick" style="left:26.6667%"><span>01:04.0</span></div><div class="tick" style="left:33.3333%"><span>01:20.0</span></div><div class="tick" style="left:40.0000%"><span>01:36.0</span></div><div class="tick" style="left:46.6667%"><span>01:52.0</span></div><div class="tick" style="left:53.3333%"><span>02:08.0</span></div><div class="tick" style="left:60.0000%"><span>02:24.0</span></div><div class="tick" style="left:66.6667%"><span>02:40.0</span></div><div class="tick" style="left:73.3333%"><span>02:56.0</span></div><div class="tick" style="left:80.0000%"><span>03:12.0</span></div><div class="tick" style="left:86.6667%"><span>03:28.0</span></div><div class="tick end" style="left:98.3333%"><span>03:56.0 ▌곡끝</span></div></div>
+ <div class="band"><div class="sec" style="left:0.0000%;width:3.3333%;background:#8A7A5C"><b>INTRO</b><i>4마디 · 8s</i></div><div class="sec" style="left:3.3333%;width:13.3333%;background:#A9925F"><b>VERSE1</b><i>16마디 · 32s</i></div><div class="sec" style="left:16.6667%;width:6.6667%;background:#2E8C8C"><b>PRE1</b><i>8마디 · 16s</i></div><div class="sec" style="left:23.3333%;width:13.3333%;background:#C7307D"><b>CHORUS1</b><i>16마디 · 32s</i></div><div class="sec" style="left:36.6667%;width:6.6667%;background:#A9925F"><b>VERSE2</b><i>8마디 · 16s</i></div><div class="sec" style="left:43.3333%;width:6.6667%;background:#2E8C8C"><b>PRE2</b><i>8마디 · 16s</i></div><div class="sec" style="left:50.0000%;width:13.3333%;background:#C7307D"><b>CHORUS2</b><i>16마디 · 32s</i></div><div class="sec" style="left:63.3333%;width:6.6667%;background:#5A2BC8"><b>BRIDGE</b><i>8마디 · 16s</i></div><div class="sec" style="left:70.0000%;width:26.6667%;background:#9E1F63"><b>CHORUS3</b><i>32마디 · 64s</i></div><div class="sec" style="left:96.6667%;width:1.6667%;background:#4A5568"><b>OUTRO</b><i>2마디 · 4s</i></div></div>
+ <div class="cband"><div class="cue snap" style="left:0.0000%;width:calc(3.3333% - 2px);background:#FFB43C;color:#20242c" title="Q010 INTRO | 55 | SNAP">Q010</div><div class="cue" style="left:3.3333%;width:calc(6.6667% - 2px);background:#FFE0B0;color:#20242c" title="Q020 VERSE1 | KEY 70 / BACK 35 | XFADE">Q020</div><div class="cue" style="left:10.0000%;width:calc(6.6667% - 2px);background:#FFE0B0;color:#20242c" title="Q030 VERSE1 | KEY 70 / SIDE 40 | XFADE">Q030</div><div class="cue" style="left:16.6667%;width:calc(6.6667% - 2px);background:#2ED8D8;color:#20242c" title="Q040 PRE1 | 60 | FADE">Q040</div><div class="cue snap" style="left:23.3333%;width:calc(6.6667% - 2px);background:#FF3C9E;color:#fff" title="Q050 CHORUS1 | 90 | SNAP">Q050</div><div class="cue" style="left:30.0000%;width:calc(6.6667% - 2px);background:#FF3C9E;color:#fff" title="Q060 CHORUS1 | 90 | XFADE">Q060</div><div class="cue" style="left:36.6667%;width:calc(6.6667% - 2px);background:#FFE0B0;color:#20242c" title="Q070 VERSE2 | KEY 65 / BACK 30 | XFADE">Q070</div><div class="cue" style="left:43.3333%;width:calc(6.6667% - 2px);background:#2ED8D8;color:#20242c" title="Q080 PRE2 | 70 | FADE">Q080</div><div class="cue snap" style="left:50.0000%;width:calc(6.6667% - 2px);background:#FF3C9E;color:#fff" title="Q090 CHORUS2 | 95 | SNAP">Q090</div><div class="cue" style="left:56.6667%;width:calc(6.6667% - 2px);background:#FFB43C;color:#20242c" title="Q100 CHORUS2 | 95 | XFADE">Q100</div><div class="cue" style="left:63.3333%;width:calc(3.3333% - 2px);background:#5A2BC8;color:#fff" title="Q110 BRIDGE | 35 | XFADE">Q110</div><div class="cue" style="left:66.6667%;width:calc(3.3333% - 2px);background:#5A2BC8;color:#fff" title="Q120 BRIDGE | 75 | FADE">Q120</div><div class="cue snap" style="left:70.0000%;width:calc(6.6667% - 2px);background:#FF3C9E;color:#fff" title="Q130 CHORUS3 | 100 | SNAP">Q130</div><div class="cue" style="left:76.6667%;width:calc(6.6667% - 2px);background:#FF6A28;color:#20242c" title="Q140 CHORUS3 | 100 | XFADE">Q140</div><div class="cue snap" style="left:83.3333%;width:calc(6.6667% - 2px);background:#FF3C9E;color:#fff" title="Q150 CHORUS3 | 100 | SNAP">Q150</div><div class="cue" style="left:90.0000%;width:calc(6.6667% - 2px);background:#FFB43C;color:#20242c" title="Q160 CHORUS3 | 85 | XFADE">Q160</div><div class="cue tiny" style="left:96.6667%;width:calc(1.6667% - 2px);background:#FFB43C;color:#20242c" title="Q170 OUTRO | 20 | FADE">Q170</div><div class="cue tiny" style="left:98.3333%;width:calc(1.6667% - 2px);background:#101418;color:#fff" title="Q180 OUTRO | 0 | FADE">Q180</div></div>
+ <div class="chart">
+  <svg viewBox="0 0 1000 132" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+   <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ff3c9e" stop-opacity=".55"/>
+    <stop offset="100%" stop-color="#ff3c9e" stop-opacity=".04"/></linearGradient></defs>
+   <line x1="0" y1="16.0" x2="1000" y2="16.0" stroke="#2f394b" stroke-dasharray="3 4"/>
+   <line x1="0" y1="72.0" x2="1000" y2="72.0" stroke="#2a3243" stroke-dasharray="3 4"/>
+   <polygon points="0,132.0 0.00,128.00 0.00,66.40 33.33,66.40 39.58,49.60 100.00,49.60 108.33,49.60 166.67,49.60 200.00,60.80 233.33,60.80 233.33,27.20 300.00,27.20 304.17,27.20 366.67,27.20 375.00,55.20 433.33,55.20 466.67,49.60 500.00,49.60 500.00,21.60 566.67,21.60 570.83,21.60 633.33,21.60 643.75,88.80 666.67,88.80 695.83,44.00 700.00,44.00 700.00,16.00 766.67,16.00 770.83,16.00 833.33,16.00 833.33,16.00 900.00,16.00 908.33,32.80 966.67,32.80 981.25,105.60 983.33,105.60 989.58,128.00 1000.00,128.00 1000.0,132.0" fill="url(#g)"/>
+   <polyline points="0.00,128.00 0.00,66.40 33.33,66.40 39.58,49.60 100.00,49.60 108.33,49.60 166.67,49.60 200.00,60.80 233.33,60.80 233.33,27.20 300.00,27.20 304.17,27.20 366.67,27.20 375.00,55.20 433.33,55.20 466.67,49.60 500.00,49.60 500.00,21.60 566.67,21.60 570.83,21.60 633.33,21.60 643.75,88.80 666.67,88.80 695.83,44.00 700.00,44.00 700.00,16.00 766.67,16.00 770.83,16.00 833.33,16.00 833.33,16.00 900.00,16.00 908.33,32.80 966.67,32.80 981.25,105.60 983.33,105.60 989.58,128.00 1000.00,128.00" fill="none" stroke="#ff3c9e" stroke-width="2"
+    vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+   <text class="axis" x="4" y="12.0">100%</text>
+   <text class="axis" x="4" y="68.0">50%</text>
+  </svg>
+ </div>
+ <div class="lgrow"><span class="lg"><i style="background:#FFB43C"></i>P1 골드 앰버</span><span class="lg"><i style="background:#FFE0B0"></i>P2 웜 화이트</span><span class="lg"><i style="background:#FF3C9E"></i>P4 핫 핑크</span><span class="lg"><i style="background:#5A2BC8"></i>P5 딥 퍼플</span><span class="lg"><i style="background:#2ED8D8"></i>P6 터쿼이즈</span><span class="lg"><i style="background:#FF6A28"></i>P7 선셋 오렌지</span><span class="lg"><i style="background:#101418"></i>P8 블랙아웃</span>
+  <span class="lg"><i style="background:#fff;border-radius:0;width:3px"></i>흰 좌측선 = SNAP 전환</span>
+  <span class="lg" style="margin-left:auto;color:#d2506a">OUTRO(03:52~) Q170·Q180은 폭이 좁아 라벨 생략 — 하단 표 참조</span>
+ </div>
+</div>
+
+<div class="panel"><h2>Cue Sheet</h2>
+<table><thead><tr>
+<th>Q#</th><th>Section</th><th>TC In</th><th>TC Out</th><th>Dur</th><th>Mood</th>
+<th>Color(주/보조)</th><th>Intensity</th><th>Fixture Group</th><th>Movement</th>
+<th>Effect</th><th>Trans</th><th>Fade</th><th>Note</th>
+</tr></thead><tbody><tr class='s-INTRO'><td class='m'>Q010</td><td class='m'>INTRO</td><td class='m'>00:00.0</td><td class='m'>00:08.0</td><td class='m'>8.0</td><td>화사, 등장</td><td>P1 골드앰버 / P2 웜화이트</td><td class='m'>55</td><td class='fx'>BACK+WASH-U+HAZE</td><td>STATIC</td><td>NONE</td><td class='m snapc'>SNAP</td><td class='m'>0.0</td><td class='nt'>[MANUAL] 헤이즈 곡 시작 30초 전 선투입 · 첫 박에 스냅 인</td></tr><tr class='s-VERSE1'><td class='m'>Q020</td><td class='m'>VERSE1</td><td class='m'>00:08.0</td><td class='m'>00:24.0</td><td class='m'>16.0</td><td>경쾌, 근접</td><td>P2 웜화이트 / P1 골드앰버</td><td class='m'>KEY 70 / BACK 35</td><td class='fx'>KEY+BACK</td><td>STATIC</td><td>NONE</td><td class='m '>XFADE</td><td class='m'>1.5</td><td class='nt'>보컬 인 · 페이스 확보 우선, 백라이트 낮게</td></tr><tr class='s-VERSE1'><td class='m'>Q030</td><td class='m'>VERSE1</td><td class='m'>00:24.0</td><td class='m'>00:40.0</td><td class='m'>16.0</td><td>확장, 그루브</td><td>P2 웜화이트 / P6 터쿼이즈</td><td class='m'>KEY 70 / SIDE 40</td><td class='fx'>KEY+BACK+SIDE-L+SIDE-R</td><td>STATIC</td><td>PULSE @2bar</td><td class='m '>XFADE</td><td class='m'>2.0</td><td class='nt'>사이드 합류로 폭 확보 · 펄스는 2마디 주기 얕게</td></tr><tr class='s-PRE1'><td class='m'>Q040</td><td class='m'>PRE1</td><td class='m'>00:40.0</td><td class='m'>00:56.0</td><td class='m'>16.0</td><td>축적, 상승</td><td>P6 터쿼이즈 / P5 딥퍼플</td><td class='m'>60</td><td class='fx'>SIDE-L+SIDE-R+MOVER-U</td><td>TILT-UP @slow</td><td>BREATHE @1bar</td><td class='m '>FADE</td><td class='m'>8.0</td><td class='nt'>8초에 걸쳐 서서히 · 후렴 직전 60 도달</td></tr><tr class='s-CHORUS1'><td class='m'>Q050</td><td class='m'>CHORUS1</td><td class='m'>00:56.0</td><td class='m'>01:12.0</td><td class='m'>16.0</td><td>개방, 축제</td><td>P4 핫핑크 / P1 골드앰버</td><td class='m'>90</td><td class='fx'>MOVER-U+MOVER-D+BACK+WASH-D</td><td>FAN-OUT @mid</td><td>CHASE @1/8</td><td class='m snapc'>SNAP</td><td class='m'>0.0</td><td class='nt'>후렴 첫 박 정확히 · 1차 웨이브 정점</td></tr><tr class='s-CHORUS1'><td class='m'>Q060</td><td class='m'>CHORUS1</td><td class='m'>01:12.0</td><td class='m'>01:28.0</td><td class='m'>16.0</td><td>유지, 회전</td><td>P4 핫핑크 / P6 터쿼이즈</td><td class='m'>90</td><td class='fx'>MOVER-U+MOVER-D+BACK</td><td>CIRCLE @mid</td><td>CHASE @1/8</td><td class='m '>XFADE</td><td class='m'>1.0</td><td class='nt'>강도 유지, 색만 교체 · 후렴 후반 지루함 방지</td></tr><tr class='s-VERSE2'><td class='m'>Q070</td><td class='m'>VERSE2</td><td class='m'>01:28.0</td><td class='m'>01:44.0</td><td class='m'>16.0</td><td>하강, 근접</td><td>P2 웜화이트 / P5 딥퍼플</td><td class='m'>KEY 65 / BACK 30</td><td class='fx'>KEY+BACK</td><td>STATIC</td><td>NONE</td><td class='m '>XFADE</td><td class='m'>2.0</td><td class='nt'>2차 웨이브 시작 · V1보다 5 낮게 잡아 후속 상승폭 확보</td></tr><tr class='s-PRE2'><td class='m'>Q080</td><td class='m'>PRE2</td><td class='m'>01:44.0</td><td class='m'>02:00.0</td><td class='m'>16.0</td><td>축적, 압박</td><td>P6 터쿼이즈 / P4 핫핑크</td><td class='m'>70</td><td class='fx'>SIDE-L+SIDE-R+MOVER-U+LED-W</td><td>TILT-UP @mid</td><td>PULSE @1beat</td><td class='m '>FADE</td><td class='m'>8.0</td><td class='nt'>PRE1보다 10 높게 · LED월 합류 · 펄스 1박 주기로 조임</td></tr><tr class='s-CHORUS2'><td class='m'>Q090</td><td class='m'>CHORUS2</td><td class='m'>02:00.0</td><td class='m'>02:16.0</td><td class='m'>16.0</td><td>개방, 확산</td><td>P4 핫핑크 / P7 선셋오렌지</td><td class='m'>95</td><td class='fx'>MOVER-U+MOVER-D+BACK+WASH-D+LED-W</td><td>FAN-OUT @fast</td><td>CHASE @1/8</td><td class='m snapc'>SNAP</td><td class='m'>0.0</td><td class='nt'>2차 웨이브 정점 · 1차보다 5 높게</td></tr><tr class='s-CHORUS2'><td class='m'>Q100</td><td class='m'>CHORUS2</td><td class='m'>02:16.0</td><td class='m'>02:32.0</td><td class='m'>16.0</td><td>유지, 확장</td><td>P1 골드앰버 / P4 핫핑크</td><td class='m'>95</td><td class='fx'>MOVER-U+MOVER-D+BACK+WASH-D+LED-W+BLIND</td><td>SWEEP-H @fast</td><td>CHASE @1/8</td><td class='m '>XFADE</td><td class='m'>1.0</td><td class='nt'>블라인더 합류 · 객석 직사 각도 리허설에서 확정</td></tr><tr class='s-BRIDGE'><td class='m'>Q110</td><td class='m'>BRIDGE</td><td class='m'>02:32.0</td><td class='m'>02:40.0</td><td class='m'>8.0</td><td>절제, 집중</td><td>P5 딥퍼플 / —</td><td class='m'>35</td><td class='fx'>KEY+BACK</td><td>STATIC</td><td>NONE</td><td class='m '>XFADE</td><td class='m'>2.5</td><td class='nt'>급강하 · 3차 웨이브 lull 구간, 낙차 확보가 목적</td></tr><tr class='s-BRIDGE'><td class='m'>Q120</td><td class='m'>BRIDGE</td><td class='m'>02:40.0</td><td class='m'>02:48.0</td><td class='m'>8.0</td><td>재점화, 축적</td><td>P5 딥퍼플 / P4 핫핑크</td><td class='m'>75</td><td class='fx'>KEY+BACK+SIDE-L+SIDE-R</td><td>TILT-UP @fast</td><td>BREATHE @1bar</td><td class='m '>FADE</td><td class='m'>7.0</td><td class='nt'>마지막 후렴 직전까지 7초 상승 · 35→75</td></tr><tr class='s-CHORUS3'><td class='m'>Q130</td><td class='m'>CHORUS3</td><td class='m'>02:48.0</td><td class='m'>03:04.0</td><td class='m'>16.0</td><td>폭발, 최대</td><td>P4 핫핑크 / P1 골드앰버</td><td class='m'>100</td><td class='fx'>MOVER-U+MOVER-D+BACK+WASH-D+WASH-U+SIDE-L+SIDE-R+LED-W</td><td>FAN-OUT @fast</td><td>CHASE @1/8</td><td class='m snapc'>SNAP</td><td class='m'>0.0</td><td class='nt'>곡 전체 최고점 · 가용 그룹 전개 (FOH 제외)</td></tr><tr class='s-CHORUS3'><td class='m'>Q140</td><td class='m'>CHORUS3</td><td class='m'>03:04.0</td><td class='m'>03:20.0</td><td class='m'>16.0</td><td>유지, 회전</td><td>P7 선셋오렌지 / P6 터쿼이즈</td><td class='m'>100</td><td class='fx'>MOVER-U+MOVER-D+BACK+WASH-D+WASH-U+SIDE-L+SIDE-R+LED-W</td><td>CIRCLE @fast</td><td>RAINBOW</td><td class='m '>XFADE</td><td class='m'>1.0</td><td class='nt'>더블 후렴 전반부 종료 · 색상만 순환시켜 체감 변화 유지</td></tr><tr class='s-CHORUS3'><td class='m'>Q150</td><td class='m'>CHORUS3</td><td class='m'>03:20.0</td><td class='m'>03:36.0</td><td class='m'>16.0</td><td>최고조, 난반사</td><td>P4 핫핑크 / P6 터쿼이즈</td><td class='m'>100</td><td class='fx'>MOVER-U+MOVER-D+BACK+WASH-D+SIDE-L+SIDE-R+LED-W+BLIND+STROBE</td><td>SWEEP-H @fast</td><td>STROBE @2bar</td><td class='m snapc'>SNAP</td><td class='m'>0.0</td><td class='nt'>스트로브 구간 · 광과민성 사전 고지 필수 · 2마디 주기로 제한</td></tr><tr class='s-CHORUS3'><td class='m'>Q160</td><td class='m'>CHORUS3</td><td class='m'>03:36.0</td><td class='m'>03:52.0</td><td class='m'>16.0</td><td>해소 준비</td><td>P1 골드앰버 / P2 웜화이트</td><td class='m'>85</td><td class='fx'>MOVER-U+MOVER-D+BACK+WASH-D</td><td>CIRCLE @mid</td><td>TWINKLE</td><td class='m '>XFADE</td><td class='m'>2.0</td><td class='nt'>스트로브 해제 · 색온도 회복하며 종료 준비</td></tr><tr class='s-OUTRO'><td class='m'>Q170</td><td class='m'>OUTRO</td><td class='m'>03:52.0</td><td class='m'>03:56.0</td><td class='m'>4.0</td><td>잔향, 종료</td><td>P1 골드앰버 / —</td><td class='m'>20</td><td class='fx'>BACK+WASH-U</td><td>STATIC</td><td>NONE</td><td class='m '>FADE</td><td class='m'>3.5</td><td class='nt'>마지막 음 위에서 하강 · 85→20</td></tr><tr class='s-OUTRO'><td class='m'>Q180</td><td class='m'>OUTRO</td><td class='m'>03:56.0</td><td class='m'>—</td><td class='m'>—</td><td>암전</td><td>P8 블랙아웃 / —</td><td class='m'>0</td><td class='fx'>ALL</td><td>STATIC</td><td>NONE</td><td class='m '>FADE</td><td class='m'>1.5</td><td class='nt'>[MANUAL] 곡 종료 확인 후 · 다음 곡 인계 시 BACK 15% 잔광 유지</td></tr></tbody></table></div>
+
+<div class="foot">LX-SEQ v2.0 · 자체완결 단일 HTML (외부 의존 없음) · A3 가로 인쇄 대응 · 생성 2026-08-21 (r3)</div>
+</div></body></html>

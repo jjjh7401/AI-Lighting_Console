@@ -1,0 +1,650 @@
+// LX-SEQ v2.1 → grandMA3 프로그래밍 스크립트 (자동 생성)
+// RIG: LXSEQ_RIG_01 r3 · SONG: Sugar r3 · SpeedMaster 1 = 120 BPM
+// [VERIFY] = 콘솔 버전에서 구문 확인 · [MANUAL] = 수동 작업 필요
+// 실행 순서: 패치(수동) → §1 → §2 → §3 → §4(현장) → §5 → §6 → §7 → §8
+
+
+// ═══ 1. 그룹 생성 (Group Pool — RIG GROUP 시트와 1:1) ═══
+// 패치 선행 필수: FIXTURE·PATCH 시트대로 Patch 메뉴에서 완료 후 실행
+ClearAll
+Fixture 101 Thru 106 + 111 Thru 118 + 201 Thru 212 + 301 Thru 306 + 311 Thru 316 + 401 Thru 410 + 421 Thru 430 + 501 Thru 508 + 521 Thru 528 + 601 Thru 606 + 611 Thru 614 + 621 Thru 622
+Store Group 1 "ALL" /Overwrite /NoConfirm
+ClearAll
+Fixture 101 Thru 106
+Store Group 2 "KEY" /Overwrite /NoConfirm
+ClearAll
+Fixture 111 Thru 118
+Store Group 3 "FOH" /Overwrite /NoConfirm
+ClearAll
+Fixture 201 Thru 212
+Store Group 4 "BACK" /Overwrite /NoConfirm
+ClearAll
+Fixture 301 Thru 306
+Store Group 5 "SIDE-L" /Overwrite /NoConfirm
+ClearAll
+Fixture 311 Thru 316
+Store Group 6 "SIDE-R" /Overwrite /NoConfirm
+ClearAll
+Fixture 301 Thru 306 + 311 Thru 316
+Store Group 7 "SIDE-ALL" /Overwrite /NoConfirm
+ClearAll
+Fixture 401 Thru 410
+Store Group 8 "WASH-U" /Overwrite /NoConfirm
+ClearAll
+Fixture 421 Thru 430
+Store Group 9 "WASH-D" /Overwrite /NoConfirm
+ClearAll
+Fixture 401 Thru 410 + 421 Thru 430
+Store Group 10 "WASH-ALL" /Overwrite /NoConfirm
+ClearAll
+Fixture 501 Thru 508
+Store Group 11 "MOVER-U" /Overwrite /NoConfirm
+ClearAll
+Fixture 521 Thru 528
+Store Group 12 "MOVER-D" /Overwrite /NoConfirm
+ClearAll
+Fixture 501 Thru 508 + 521 Thru 528
+Store Group 13 "MOVER-ALL" /Overwrite /NoConfirm
+ClearAll
+Fixture 601 Thru 606
+Store Group 14 "BLIND" /Overwrite /NoConfirm
+ClearAll
+Fixture 611 Thru 614
+Store Group 15 "STROBE" /Overwrite /NoConfirm
+ClearAll
+Fixture 621 Thru 622
+Store Group 16 "HAZE" /Overwrite /NoConfirm
+ClearAll
+Fixture 501 + 503 + 505 + 507 + 521 + 523 + 525 + 527
+Store Group 17 "ODD" /Overwrite /NoConfirm
+ClearAll
+Fixture 502 + 504 + 506 + 508 + 522 + 524 + 526 + 528
+Store Group 18 "EVEN" /Overwrite /NoConfirm
+ClearAll
+
+// ═══ 2. 딤머 프리셋 (Pool 1 Dimmer) ═══
+ClearAll
+Group "ALL"
+At 100
+Store Preset 1.1 "DIM.FULL 풀" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+At 85
+Store Preset 1.2 "DIM.SHOW 쇼 하이" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+At 60
+Store Preset 1.3 "DIM.MID 미드" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+At 30
+Store Preset 1.4 "DIM.LOW 로우" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+At 15
+Store Preset 1.5 "DIM.GLOW 잔광" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+At 0
+Store Preset 1.6 "DIM.OUT 아웃" /Universal /Overwrite /NoConfirm
+ClearAll
+
+// ═══ 3. 컬러 프리셋 (Pool 4 Color — RGB는 % 단위 환산값) ═══
+ClearAll
+Group "ALL"
+Attribute "ColorRGB_R" At 100.0
+Attribute "ColorRGB_G" At 70.6
+Attribute "ColorRGB_B" At 23.5
+Store Preset 4.1 "COL.01 골드 앰버" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+// [MANUAL] COL.02 = CCT 3200K — 기종별 CTO/화이트 채널로 설정 후 저장
+Store Preset 4.2 "COL.02 웜 화이트" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+// [MANUAL] COL.03 = CCT 5600K — 기종별 CTO/화이트 채널로 설정 후 저장
+Store Preset 4.3 "COL.03 뉴트럴 화이트" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+Attribute "ColorRGB_R" At 100.0
+Attribute "ColorRGB_G" At 23.5
+Attribute "ColorRGB_B" At 62.0
+Store Preset 4.4 "COL.04 핫 핑크" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+Attribute "ColorRGB_R" At 35.3
+Attribute "ColorRGB_G" At 16.9
+Attribute "ColorRGB_B" At 78.4
+Store Preset 4.5 "COL.05 딥 퍼플" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+Attribute "ColorRGB_R" At 18.0
+Attribute "ColorRGB_G" At 84.7
+Attribute "ColorRGB_B" At 84.7
+Store Preset 4.6 "COL.06 터쿼이즈" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+Attribute "ColorRGB_R" At 100.0
+Attribute "ColorRGB_G" At 41.6
+Attribute "ColorRGB_B" At 15.7
+Store Preset 4.7 "COL.07 선셋 오렌지" /Universal /Overwrite /NoConfirm
+ClearAll
+Group "ALL"
+Attribute "ColorRGB_R" At 11.8
+Attribute "ColorRGB_G" At 23.5
+Attribute "ColorRGB_B" At 100.0
+Store Preset 4.8 "COL.08 딥 블루" /Universal /Overwrite /NoConfirm
+ClearAll
+
+// ═══ 4. 포지션 프리셋 (Pool 2 Position — 현장 레코드 세션) ═══
+// [MANUAL] 각 항목: 그룹 선택 → Pan/Tilt 조준(레코드 가이드 참조) → Store 실행
+// POS.01 보컬 센터 페이스 — 가이드: 센터 마이크 위치 · 얼굴 높이 · 그림자 최소 각
+ClearAll ; Group "KEY"
+//   (조준 후) ↓
+Store Preset 2.1 "POS.01 보컬 센터 페이스" /Merge /NoConfirm
+// POS.02 무대 전체 커버 — 가이드: 밴드 라인 포함 균일 커버 · 겹침 30%
+ClearAll ; Group "MOVER-D"
+//   (조준 후) ↓
+Store Preset 2.2 "POS.02 무대 전체 커버" /Merge /NoConfirm
+// POS.03 밴드 라인 백 — 가이드: 연주자 5인 실루엣 각 · 객석 눈부심 금지
+ClearAll ; Group "BACK"
+//   (조준 후) ↓
+Store Preset 2.3 "POS.03 밴드 라인 백" /Merge /NoConfirm
+// POS.04 틸트업 스타트 (무대 안쪽) — 가이드: 빔 무대 바닥 안쪽 · 상승 시작점
+ClearAll ; Group "MOVER-U"
+//   (조준 후) ↓
+Store Preset 2.4 "POS.04 틸트업 스타트 (무대 안쪽)" /Merge /NoConfirm
+// POS.05 팬아웃 종점 (객석 상단) — 가이드: 객석 상단 45° · 직사 금지선 위 · 좌우 부채꼴
+ClearAll ; Group "MOVER-ALL"
+//   (조준 후) ↓
+Store Preset 2.5 "POS.05 팬아웃 종점 (객석 상단)" /Merge /NoConfirm
+// POS.06 센터 집중 (브리지) — 가이드: 보컬 1인 포커스 · 주변 어둠 유지
+ClearAll ; Group "KEY"
+//   (조준 후) ↓
+Store Preset 2.6 "POS.06 센터 집중 (브리지)" /Merge /NoConfirm
+// POS.07 크로스 빔 — 가이드: 좌우 교차 에어빔 · 예비 (타 곡 대비)
+ClearAll ; Group "MOVER-U"
+//   (조준 후) ↓
+Store Preset 2.7 "POS.07 크로스 빔" /Merge /NoConfirm
+// POS.08 플로어 스캔 — 가이드: 바닥 훑기 시작점 · 예비
+ClearAll ; Group "MOVER-D"
+//   (조준 후) ↓
+Store Preset 2.8 "POS.08 플로어 스캔" /Merge /NoConfirm
+ClearAll
+
+// ═══ 5. 빔 프리셋 (Pool 21 All-type — Zoom은 Focus 계열 어트리뷰트라 단일 피처그룹 풀에 안 담김 [VERIFY]) ═══
+ClearAll ; Group "MOVER-ALL"
+// [MANUAL] BM.01: Zoom 45° · Gobo OPEN · Prism OFF — Zoom/Gobo/Prism/Frost 어트리뷰트명은 기종 GDTF 기준
+Store Preset 21.1 "BM.01 와이드 워시" /Merge /NoConfirm
+ClearAll ; Group "MOVER-ALL"
+// [MANUAL] BM.02: Zoom 20° · Gobo OPEN — Zoom/Gobo/Prism/Frost 어트리뷰트명은 기종 GDTF 기준
+Store Preset 21.2 "BM.02 미드 빔" /Merge /NoConfirm
+ClearAll ; Group "MOVER-U"
+// [MANUAL] BM.03: Zoom 8° · Prism 3-facet ON — Zoom/Gobo/Prism/Frost 어트리뷰트명은 기종 GDTF 기준
+Store Preset 21.3 "BM.03 좁은 빔 + 프리즘" /Merge /NoConfirm
+ClearAll ; Group "KEY"
+// [MANUAL] BM.04: Frost 30% — Zoom/Gobo/Prism/Frost 어트리뷰트명은 기종 GDTF 기준
+Store Preset 21.4 "BM.04 소프트 프로스트" /Merge /NoConfirm
+ClearAll ; Group "MOVER-U"
+// [MANUAL] BM.05: Gobo 슬롯2(브레이크업) · Zoom 25° · 예비 — Zoom/Gobo/Prism/Frost 어트리뷰트명은 기종 GDTF 기준
+Store Preset 21.5 "BM.05 고보 브레이크업" /Merge /NoConfirm
+ClearAll
+
+// ═══ 6. FX Phaser 프리셋 (Pool 22 — SpeedMaster 1 종속) ═══
+Store SpeedMaster 1 /NoConfirm
+Set SpeedMaster 1 Property "BPM" 120
+// [VERIFY] SpeedMaster 설정 구문은 버전별 상이 — Speed 창에서 120BPM 확인
+// FX.01 DIM-CHASE — Dimmer 2-step 100/0 · Rate 240 (@1/8) · Width 50% · Phase 0..360
+//   [MANUAL] Programmer: 대상 그룹 선택 → Dimmer 저값 입력 → Step 2 → 고값 입력
+//   → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →
+Store Preset 22.1 "FX.01 DIM-CHASE" /Merge /NoConfirm
+// FX.02 DIM-PULSE — Dimmer Sine 100↔60 · Rate 120 (@1beat) · Width — · Phase 0..360
+//   [MANUAL] Programmer: 대상 그룹 선택 → Dimmer 저값 입력 → Step 2 → 고값 입력
+//   → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →
+Store Preset 22.2 "FX.02 DIM-PULSE" /Merge /NoConfirm
+// FX.03 DIM-BREATHE — Dimmer Sine 100↔40 · Rate 30 (@1bar) · Width — · Phase 0..360
+//   [MANUAL] Programmer: 대상 그룹 선택 → Dimmer 저값 입력 → Step 2 → 고값 입력
+//   → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →
+Store Preset 22.3 "FX.03 DIM-BREATHE" /Merge /NoConfirm
+// FX.04 COL-RAINBOW — Hue Ramp 0→360° · Rate 15 (@2bar) · Width — · Phase 0..360
+//   [MANUAL] Programmer: 대상 그룹 선택 → Hue 저값 입력 → Step 2 → 고값 입력
+//   → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →
+Store Preset 22.4 "FX.04 COL-RAINBOW" /Merge /NoConfirm
+// FX.05 TILT-SWEEP — Tilt Sine ±25° · Rate 30 (@1bar) · Width — · Phase 0..360
+//   [MANUAL] Programmer: 대상 그룹 선택 → Tilt 저값 입력 → Step 2 → 고값 입력
+//   → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →
+Store Preset 22.5 "FX.05 TILT-SWEEP" /Merge /NoConfirm
+// FX.06 SHUTTER-STROBE — Shutter Strobe · Rate 15 (@2bar) · Width — · Phase 0
+//   [MANUAL] Programmer: 대상 그룹 선택 → Shutter 저값 입력 → Step 2 → 고값 입력
+//   → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →
+Store Preset 22.6 "FX.06 SHUTTER-STROBE" /Merge /NoConfirm
+// FX.07 DIM-TWINKLE — Dimmer Random 100↔30 · Rate 30 (@1bar) · Width — · Phase random
+//   [MANUAL] Programmer: 대상 그룹 선택 → Dimmer 저값 입력 → Step 2 → 고값 입력
+//   → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →
+Store Preset 22.7 "FX.07 DIM-TWINKLE" /Merge /NoConfirm
+// FX.08 PT-CIRCLE — Pan+Tilt Circle Ø소 · Rate 30 (@1bar) · Width — · Phase 0..360
+//   [MANUAL] Programmer: 대상 그룹 선택 → Pan+Tilt 저값 입력 → Step 2 → 고값 입력
+//   → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →
+Store Preset 22.8 "FX.08 PT-CIRCLE" /Merge /NoConfirm
+ClearAll
+
+// ═══ 7. 메인 시퀀스 — Sugar (Cue 번호 = Q# 뒤 3자리, CueFade = CUE Fade) ═══
+Store Sequence 1 "SUGAR — Maroon5 120BPM" /NoConfirm
+
+// ═══   Q010 — TC 00:00.0 · 화사, 등장 · Fade 0.0 ═══
+ClearAll
+Group "BACK"
+At 55
+At Preset 4.1
+At Preset 2.3
+Group "WASH-U"
+At 55
+At Preset 4.1
+Group "HAZE"
+At 40
+Store Cue 10 "Q010 INTRO 화사" CueFade 0.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): BACK[I0.0/C0.0] · WASH-U[I0.0/C0.0] · HAZE[I0.0]
+
+// ═══   Q020 — TC 00:08.0 · 경쾌, 근접 · Fade 1.5 ═══
+ClearAll
+Group "KEY"
+At 70
+At Preset 4.2
+At Preset 2.1
+Group "BACK"
+At 35
+Group "WASH-U"
+At 0
+Store Cue 20 "Q020 VERSE1 경쾌" CueFade 1.5 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): KEY[I1.5/C1.5] · BACK[I1.5] · WASH-U[I1.5]
+
+// ═══   Q030 — TC 00:24.0 · 확장, 그루브 · Fade 2.0 ═══
+ClearAll
+Group "SIDE-L"
+At 40
+At Preset 4.6
+At Preset 22.2
+//   FX.02 Rate 15 BPM · Phase 0..360 · Width —
+Group "SIDE-R"
+At 40
+At Preset 4.6
+At Preset 22.2
+//   FX.02 Rate 15 BPM · Phase 0..360 · Width —
+Store Cue 30 "Q030 VERSE1 확장" CueFade 2.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): SIDE-L[I2.0/C2.0] · SIDE-R[I2.0/C2.0]
+
+// ═══   Q040 — TC 00:40.0 · 축적, 상승 · Fade 8.0 ═══
+ClearAll
+Group "SIDE-L"
+At 60
+At Preset 22.3
+//   FX.03 Rate 30 BPM · Phase 0..360 · Width —
+Group "SIDE-R"
+At 60
+At Preset 22.3
+//   FX.03 Rate 30 BPM · Phase 0..360 · Width —
+Group "MOVER-U"
+At 45
+At Preset 4.6
+At Preset 2.4
+At Preset 21.2
+Group "KEY"
+At 60
+At Preset 4.6
+Store Cue 40 "Q040 PRE1 축적" CueFade 8.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): SIDE-L[I8.0] · SIDE-R[I8.0] · MOVER-U[I8.0/Id0.0/P8.0/C4.0/B2.0] · KEY[I8.0/C8.0]
+
+// ═══   Q050 — TC 00:56.0 · 개방, 축제 · Fade 0.0 ═══
+ClearAll
+Group "MOVER-U"
+At 90
+At Preset 4.4
+At Preset 2.5
+At Preset 21.3
+At Preset 22.1
+//   FX.01 Rate 240 BPM · Phase 0..360 · Width 50
+Group "MOVER-D"
+At 90
+At Preset 4.1
+At Preset 2.2
+At Preset 21.1
+At Preset 22.1
+//   FX.01 Rate 240 BPM · Phase 180..540 · Width 50
+Group "BACK"
+At 90
+At Preset 4.4
+Group "WASH-D"
+At 90
+At Preset 4.1
+Group "SIDE-L"
+At 0
+//   [MANUAL] SIDE-L: 기존 Phaser 정지 — Stomp 후 저장
+Group "SIDE-R"
+At 0
+//   [MANUAL] SIDE-R: 기존 Phaser 정지 — Stomp 후 저장
+Group "KEY"
+At 80
+Store Cue 50 "Q050 CHORUS1 개방" CueFade 0.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I0.0/P0.6/B0.0] · MOVER-D[I0.0/P0.6/B0.0] · BACK[I0.0/C0.0] · WASH-D[I0.0/C0.0] · SIDE-L[I0.0] · SIDE-R[I0.0] · KEY[I0.0]
+
+// ═══   Q060 — TC 01:12.0 · 유지, 회전 · Fade 1.0 ═══
+ClearAll
+Group "MOVER-U"
+At Preset 4.4
+At Preset 22.8
+//   FX.08 Rate 30 BPM · Phase 0..360 · Width —
+Group "MOVER-D"
+At Preset 4.6
+At Preset 22.8
+//   FX.08 Rate 30 BPM · Phase 180..540 · Width —
+Group "BACK"
+At Preset 4.6
+Store Cue 60 "Q060 CHORUS1 유지" CueFade 1.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[P1.0] · MOVER-D[P1.0] · BACK[C1.0]
+
+// ═══   Q070 — TC 01:28.0 · 하강, 근접 · Fade 2.0 ═══
+ClearAll
+Group "MOVER-U"
+At 0
+//   [MANUAL] MOVER-U: 기존 Phaser 정지 — Stomp 후 저장
+Group "MOVER-D"
+At 0
+//   [MANUAL] MOVER-D: 기존 Phaser 정지 — Stomp 후 저장
+Group "WASH-D"
+At 0
+Group "KEY"
+At 65
+At Preset 4.2
+Group "BACK"
+At 30
+At Preset 4.5
+Store Cue 70 "Q070 VERSE2 하강" CueFade 2.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I2.0] · MOVER-D[I2.0] · WASH-D[I2.0] · KEY[I2.0/C2.0] · BACK[I2.0/C2.0]
+
+// ═══   Q080 — TC 01:44.0 · 축적, 압박 · Fade 8.0 ═══
+ClearAll
+Group "SIDE-L"
+At 70
+At Preset 4.6
+At Preset 22.2
+//   FX.02 Rate 120 BPM · Phase 0..360 · Width —
+Group "SIDE-R"
+At 70
+At Preset 4.6
+At Preset 22.2
+//   FX.02 Rate 120 BPM · Phase 0..360 · Width —
+Group "MOVER-U"
+At 55
+At Preset 4.4
+At Preset 2.4
+At Preset 21.2
+//   [영상팀 콜] LED-W 60% — 영상 큐 LW-02 콜 (조명 콘솔 큐 아님)
+Store Cue 80 "Q080 PRE2 축적" CueFade 8.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): SIDE-L[I8.0/C4.0] · SIDE-R[I8.0/C4.0] · MOVER-U[I8.0/Id0.0/P6.0/C4.0/B2.0]
+
+// ═══   Q090 — TC 02:00.0 · 개방, 확산 · Fade 0.0 ═══
+ClearAll
+Group "MOVER-U"
+At 95
+At Preset 4.4
+At Preset 2.5
+At Preset 21.3
+At Preset 22.1
+//   FX.01 Rate 240 BPM · Phase 0..360 · Width 50
+Group "MOVER-D"
+At 95
+At Preset 4.7
+At Preset 2.2
+At Preset 21.1
+At Preset 22.1
+//   FX.01 Rate 240 BPM · Phase 180..540 · Width 50
+Group "BACK"
+At 95
+At Preset 4.4
+Group "WASH-D"
+At 95
+At Preset 4.7
+//   [영상팀 콜] LED-W 95% — 영상 큐 LW-03 콜 (조명 콘솔 큐 아님)
+Group "SIDE-L"
+At 0
+//   [MANUAL] SIDE-L: 기존 Phaser 정지 — Stomp 후 저장
+Group "SIDE-R"
+At 0
+//   [MANUAL] SIDE-R: 기존 Phaser 정지 — Stomp 후 저장
+Store Cue 90 "Q090 CHORUS2 개방" CueFade 0.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I0.0/P0.5/B0.0] · MOVER-D[I0.0/P0.5/B0.0] · BACK[I0.0/C0.0] · WASH-D[I0.0/C0.0] · SIDE-L[I0.0] · SIDE-R[I0.0]
+
+// ═══   Q100 — TC 02:16.0 · 유지, 확장 · Fade 1.0 ═══
+ClearAll
+Group "MOVER-U"
+At Preset 4.1
+At Preset 22.5
+//   FX.05 Rate 30 BPM · Phase 0..360 · Width —
+Group "MOVER-D"
+At Preset 4.4
+At Preset 22.5
+//   FX.05 Rate 30 BPM · Phase 180..540 · Width —
+Group "BLIND"
+At 70
+Store Cue 100 "Q100 CHORUS2 유지" CueFade 1.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[P1.0] · MOVER-D[P1.0] · BLIND[I1.0/Id0.0]
+
+// ═══   Q110 — TC 02:32.0 · 절제, 집중 · Fade 2.5 ═══
+ClearAll
+Group "MOVER-U"
+At 0
+//   [MANUAL] MOVER-U: 기존 Phaser 정지 — Stomp 후 저장
+Group "MOVER-D"
+At 0
+//   [MANUAL] MOVER-D: 기존 Phaser 정지 — Stomp 후 저장
+Group "WASH-D"
+At 0
+Group "BLIND"
+At 0
+//   [영상팀 콜] LED-W 20% — 영상 큐 LW-04(로우) 콜 (조명 콘솔 큐 아님)
+Group "KEY"
+At 35
+At Preset 4.5
+At Preset 2.6
+At Preset 21.4
+Group "BACK"
+At 20
+At Preset 4.5
+At Preset 2.6
+Group "HAZE"
+At 20
+Store Cue 110 "Q110 BRIDGE 절제" CueFade 2.5 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I2.5] · MOVER-D[I2.5] · WASH-D[I2.5] · BLIND[I1.0] · KEY[I2.5/P2.5/C2.5/B2.5] · BACK[I2.5/P2.5/C2.5] · HAZE[I2.5]
+
+// ═══   Q120 — TC 02:40.0 · 재점화, 축적 · Fade 7.0 ═══
+ClearAll
+Group "KEY"
+At 75
+Group "BACK"
+At 60
+At Preset 4.4
+At Preset 22.3
+//   FX.03 Rate 30 BPM · Phase 0..360 · Width —
+Group "SIDE-L"
+At 60
+At Preset 4.5
+At Preset 22.3
+//   FX.03 Rate 30 BPM · Phase 0..360 · Width —
+Group "SIDE-R"
+At 60
+At Preset 4.5
+At Preset 22.3
+//   FX.03 Rate 30 BPM · Phase 180..540 · Width —
+Store Cue 120 "Q120 BRIDGE 재점화" CueFade 7.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): KEY[I7.0] · BACK[I7.0/C7.0] · SIDE-L[I7.0/C7.0] · SIDE-R[I7.0/C7.0]
+
+// ═══   Q130 — TC 02:48.0 · 폭발, 최대 · Fade 0.0 ═══
+ClearAll
+Group "MOVER-U"
+At 100
+At Preset 4.4
+At Preset 2.5
+At Preset 21.3
+At Preset 22.1
+//   FX.01 Rate 240 BPM · Phase 0..360 · Width 50
+Group "MOVER-D"
+At 100
+At Preset 4.1
+At Preset 2.2
+At Preset 21.1
+At Preset 22.1
+//   FX.01 Rate 240 BPM · Phase 180..540 · Width 50
+Group "BACK"
+At 100
+At Preset 4.4
+Group "WASH-D"
+At 100
+At Preset 4.1
+Group "WASH-U"
+At 100
+At Preset 4.4
+Group "SIDE-L"
+At 100
+At Preset 4.1
+At Preset 22.1
+//   FX.01 Rate 240 BPM · Phase 0..360 · Width 50
+Group "SIDE-R"
+At 100
+At Preset 4.1
+At Preset 22.1
+//   FX.01 Rate 240 BPM · Phase 180..540 · Width 50
+//   [영상팀 콜] LED-W 100% — 영상 큐 LW-05(피크) 콜 (조명 콘솔 큐 아님)
+Store Cue 130 "Q130 CHORUS3 폭발" CueFade 0.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I0.0/P0.5/B0.0] · MOVER-D[I0.0/P0.5/B0.0] · BACK[I0.0/C0.0] · WASH-D[I0.0/C0.0] · WASH-U[I0.0/C0.0] · SIDE-L[I0.0/C0.0] · SIDE-R[I0.0/C0.0]
+
+// ═══   Q140 — TC 03:04.0 · 유지, 회전 · Fade 1.0 ═══
+ClearAll
+Group "MOVER-U"
+At Preset 22.8
+//   FX.08 Rate 30 BPM · Phase 0..360 · Width —
+Group "MOVER-D"
+At Preset 22.8
+//   FX.08 Rate 30 BPM · Phase 180..540 · Width —
+Group "BACK"
+At Preset 22.4
+//   FX.04 Rate 15 BPM · Phase 0..360 · Width —
+Group "WASH-U"
+At Preset 22.4
+//   FX.04 Rate 15 BPM · Phase 180..540 · Width —
+Store Cue 140 "Q140 CHORUS3 유지" CueFade 1.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[P1.0] · MOVER-D[P1.0] · BACK[C1.0] · WASH-U[C1.0]
+
+// ═══   Q150 — TC 03:20.0 · 최고조, 난반사 · Fade 0.0 ═══
+ClearAll
+Group "STROBE"
+At 100
+At Preset 22.6
+//   FX.06 Rate 15 BPM · Phase 0 · Width —
+Group "BLIND"
+At 80
+Group "MOVER-U"
+At Preset 4.4
+At Preset 22.5
+//   FX.05 Rate 30 BPM · Phase 0..360 · Width —
+Group "MOVER-D"
+At Preset 4.6
+At Preset 22.5
+//   FX.05 Rate 30 BPM · Phase 180..540 · Width —
+Group "BACK"
+At Preset 4.4
+//   [MANUAL] BACK: 기존 Phaser 정지 — Stomp 후 저장
+Group "WASH-U"
+At Preset 4.6
+//   [MANUAL] WASH-U: 기존 Phaser 정지 — Stomp 후 저장
+Store Cue 150 "Q150 CHORUS3 최고조" CueFade 0.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): STROBE[I0.0] · BLIND[I0.0] · MOVER-U[P0.5] · MOVER-D[P0.5] · BACK[C0.0] · WASH-U[C0.0]
+
+// ═══   Q160 — TC 03:36.0 · 해소 준비 · Fade 2.0 ═══
+ClearAll
+Group "STROBE"
+At 0
+//   [MANUAL] STROBE: 기존 Phaser 정지 — Stomp 후 저장
+Group "BLIND"
+At 0
+Group "SIDE-L"
+At 0
+//   [MANUAL] SIDE-L: 기존 Phaser 정지 — Stomp 후 저장
+Group "SIDE-R"
+At 0
+//   [MANUAL] SIDE-R: 기존 Phaser 정지 — Stomp 후 저장
+Group "MOVER-U"
+At 85
+At Preset 4.1
+At Preset 21.2
+At Preset 22.7
+//   FX.07 Rate 30 BPM · Phase 0..360 · Width —
+Group "MOVER-D"
+At 85
+At Preset 4.2
+At Preset 22.8
+//   FX.08 Rate 15 BPM · Phase 0..360 · Width —
+Group "BACK"
+At 85
+At Preset 4.1
+Group "WASH-D"
+At 85
+At Preset 4.2
+Group "WASH-U"
+At 85
+At Preset 4.1
+//   [영상팀 콜] LED-W 60% — 영상 큐 LW-06 콜 (조명 콘솔 큐 아님)
+Store Cue 160 "Q160 CHORUS3 해소 준비" CueFade 2.0 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): STROBE[I0.5] · BLIND[I1.0] · SIDE-L[I2.0] · SIDE-R[I2.0] · MOVER-U[I2.0/C2.0/B2.0] · MOVER-D[I2.0/C2.0] · BACK[I2.0/C2.0] · WASH-D[I2.0/C2.0] · WASH-U[I2.0/C2.0]
+
+// ═══   Q170 — TC 03:52.0 · 잔향, 종료 · Fade 3.5 ═══
+ClearAll
+Group "MOVER-U"
+At 0
+//   [MANUAL] MOVER-U: 기존 Phaser 정지 — Stomp 후 저장
+Group "MOVER-D"
+At 0
+//   [MANUAL] MOVER-D: 기존 Phaser 정지 — Stomp 후 저장
+Group "WASH-D"
+At 0
+Group "KEY"
+At 0
+//   [영상팀 콜] LED-W 0% — 영상 페이드아웃 동기 (조명 콘솔 큐 아님)
+Group "BACK"
+At 20
+At Preset 4.1
+//   [MANUAL] BACK: 기존 Phaser 정지 — Stomp 후 저장
+Group "WASH-U"
+At 20
+At Preset 4.1
+Store Cue 170 "Q170 OUTRO 잔향" CueFade 3.5 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I3.5] · MOVER-D[I3.5] · WASH-D[I3.5] · KEY[I3.5] · BACK[I3.5/C3.5] · WASH-U[I3.5/C3.5]
+
+// ═══   Q180 — TC 03:56.0 · 암전 · Fade 1.5 ═══
+ClearAll
+Group "ALL"
+At 0
+//   [MANUAL] ALL: 기존 Phaser 정지 — Stomp 후 저장
+Store Cue 180 "Q180 OUTRO 암전" CueFade 1.5 Sequence 1 /Merge /NoConfirm
+//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): ALL[I1.5]
+
+// ═══ 8. 타임코드 트리거 (LTC → TC Slot 1) ═══
+// [MANUAL] Timecode 에디터에서 Sequence 1 GO 이벤트를 아래 시각에 배치 (TC_METHOD: DERIVED — 리허설 LTC 대조 후 확정)
+//   Cue 10   ← 00:00.0  (INTRO)
+//   Cue 20   ← 00:08.0  (VERSE1)
+//   Cue 30   ← 00:24.0  (VERSE1)
+//   Cue 40   ← 00:40.0  (PRE1)
+//   Cue 50   ← 00:56.0  (CHORUS1)
+//   Cue 60   ← 01:12.0  (CHORUS1)
+//   Cue 70   ← 01:28.0  (VERSE2)
+//   Cue 80   ← 01:44.0  (PRE2)
+//   Cue 90   ← 02:00.0  (CHORUS2)
+//   Cue 100  ← 02:16.0  (CHORUS2)
+//   Cue 110  ← 02:32.0  (BRIDGE)
+//   Cue 120  ← 02:40.0  (BRIDGE)
+//   Cue 130  ← 02:48.0  (CHORUS3)
+//   Cue 140  ← 03:04.0  (CHORUS3)
+//   Cue 150  ← 03:20.0  (CHORUS3)
+//   Cue 160  ← 03:36.0  (CHORUS3)
+//   Cue 170  ← 03:52.0  (OUTRO)
+//   Cue 180  ← 03:56.0  (OUTRO)
+// Q180은 TC 트리거 아님 — [MANUAL] 곡 종료 확인 후 수동 GO

@@ -1,0 +1,7 @@
+﻿ID,Name,Level,Purpose
+DIM.FULL,풀,100%,정점 · 테스트
+DIM.SHOW,쇼 하이,85%,일반 최고 운용 레벨 (풀 대비 여유 확보)
+DIM.MID,미드,60%,벌스 · 중간 구간
+DIM.LOW,로우,30%,브리지 · 절제 구간
+DIM.GLOW,잔광,15%,곡 간 인계 · 대기
+DIM.OUT,아웃,0%,소등
