@@ -40,10 +40,12 @@ selection, and renders any fixture id through :func:`fid_note`
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
+from server.prechk.mode_read import TypeNameRead
 from server.prechk.query import read_properties
 from server.prechk.verdicts import validate
 
@@ -76,6 +78,89 @@ POINTER_TEXT = re.compile(r"^(?:function|table|userdata|thread): 0x[0-9a-fA-F]+$
 ABSENT_VALUE_TEXTS = frozenset({"None"})
 
 FID_UNRESOLVED_MARK = "미확정"
+
+
+#: The console hands back an object HANDLE where a fixture type name belongs -
+#: measured live as ``FixtureType 10`` (SPEC-COPILOT-LXSEQ-001 progress.md:621),
+#: with all 86 rows of one read carrying the same form across 8 slots. Code that
+#: compares this against a NAME is always false, so the already-patched branch
+#: never fires on real hardware while the fake, which answers with names, hides
+#: the branch entirely (defect D2).
+#:
+#: The FORM is an assumption, not a measurement of every path (acceptance.md
+#: [HARD]). A different form does not translate, falls to the untranslated path
+#: below, and is therefore never silently wrong - only unresolved.
+HANDLE_TEXT = re.compile(r"^FixtureType (\d+)$")
+
+
+#: Why a handle could not be named. The three reasons are kept APART because
+#: each calls for a DIFFERENT action, and collapsing any two sends the reader
+#: to the wrong place:
+#:   - no table       : this path never asked for the tree. An ordering fault,
+#:                      fixable in the caller.
+#:   - tree unreadable: the tree was asked and did not answer. Retry the
+#:                      console; the rig is not at fault.
+#:   - slot absent    : the tree answered IN FULL and does not declare that
+#:                      slot. A rig fact — retrying changes nothing.
+#:   - slot unseen    : the listing could not be confirmed WHOLE (truncated,
+#:                      or empty and so indistinguishable from unreadable, or
+#:                      a subset because slot-less children were dropped) and
+#:                      the slot was not in what arrived. Absence is NOT
+#:                      established — this repository already holds that an
+#:                      unconfirmed listing invalidates negative conclusions
+#:                      only. Positive pairs from it still translate.
+#:   - shape invalid  : the listing answered but enumerated nothing usable,
+#:                      so it never met the 'answered IN FULL' condition that
+#:                      makes absence a rig fact. Fix the READ, not the rig.
+#:
+#: The last three all mean 'the tree did not give us a trustworthy list', and
+#: collapsing any of them into ``slot_absent`` sends someone to edit a rig.
+#: This enumeration comes from a measured sweep of the wiring; a sixth reason
+#: needs a new measurement, not a hunch.
+#: Reporting an unreadable tree as "slot absent" sends someone to edit a rig
+#: when what was needed was a re-read.
+UNTRANSLATED_NO_TABLE = "no_type_table"
+UNTRANSLATED_TREE_UNREADABLE = "type_tree_unreadable"
+UNTRANSLATED_SLOT_ABSENT = "slot_absent"
+UNTRANSLATED_SLOT_UNSEEN = "slot_unseen_listing_unconfirmed"
+UNTRANSLATED_LISTING_SHAPE_INVALID = "listing_shape_invalid"
+
+
+def translate_fixture_type(
+    raw: str | None,
+    names: Mapping[int, str] | None,
+    *,
+    unavailable_reason: str = UNTRANSLATED_NO_TABLE,
+    absent_reason: str = UNTRANSLATED_SLOT_ABSENT,
+) -> tuple[str | None, str | None]:
+    """Return ``(value, untranslated)`` for one FixtureType reading.
+
+    Identity on a name (REQ-PARITY-006): anything not handle-shaped comes back
+    unchanged, INCLUDING a name absent from the library. This is a translator,
+    not a validator - rejecting unknown names here would invent a second,
+    silent failure mode (AC-PARITY-008).
+
+    Forward only (REQ-PARITY-007): slot to name, never name to slot. That is
+    what makes a name duplicated across two slots cost nothing - both slots
+    carry the same name, so there is nothing to disambiguate.
+
+    ``untranslated`` is True ONLY for a handle that could not be resolved: the
+    tree did not answer, or its slot is absent from the table. The raw value is
+    returned untouched in that case, because a guessed name is forbidden
+    (REQ-PARITY-005, AC-PARITY-009).
+    """
+    if raw is None:
+        return None, None
+    hit = HANDLE_TEXT.match(raw)
+    if hit is None:
+        return raw, None
+    if names is None:
+        return raw, unavailable_reason
+    name = names.get(int(hit.group(1)))
+    if name is None:
+        return raw, absent_reason
+    return name, None
+
 
 COMPLETE = validate("completeness", "complete")
 INCOMPLETE = validate("completeness", "incomplete")
@@ -191,6 +276,15 @@ class FixtureRecord:
     fid_note: str = FID_UNRESOLVED_MARK
     recovered: bool = False
     read_failures: tuple[ReadFailure, ...] = ()
+    #: WHY the FixtureType reading is still a handle, or ``None`` when it was
+    #: named or needed no naming. Carries the reason rather than a bare flag so
+    #: an ordering fault (``UNTRANSLATED_NO_TABLE`` - nobody read the type tree
+    #: on this path) is not mistaken for a rig fact (``UNTRANSLATED_SLOT_ABSENT``
+    #: - the tree was read and does not declare that slot). The raw handle stays
+    #: in :attr:`fixture_type` untouched either way; a guessed name is forbidden
+    #: (REQ-PARITY-005).
+    #: Appended LAST on purpose: every positional construction stays valid.
+    fixture_type_untranslated: str | None = None
 
     def failed_properties(self) -> tuple[str, ...]:
         return tuple(failure.property for failure in self.read_failures)
@@ -341,7 +435,85 @@ def _probe_slot(
     return payload, None
 
 
-def read_inventory(port: InventoryPort, policy: InventoryPolicy | None = None) -> Inventory:
+def _name_handle_types(
+    records: list[FixtureRecord], type_names: TypeNameRead | None
+) -> list[FixtureRecord]:
+    """Name every handle-shaped FixtureType reading, or say why it could not be.
+
+    Takes the READ, not the table it produced. That is deliberate: the table
+    alone cannot distinguish "the tree answered and declares no such slot" from
+    "the tree never answered", because both arrive as an empty mapping. A caller
+    holding only the mapping has already lost the distinction and will report an
+    unreadable tree as a rig fact — which sends someone to edit a rig when what
+    was needed was a re-read. Accepting :class:`TypeNameRead` makes that loss
+    impossible to express.
+
+    This pass performs NO read of its own. The caller supplies it, because the
+    callers that need translation are already walking the fixture-type tree for
+    their own reasons; reading it again here would add a query to a path that
+    already paid for one, and this repository treats a query-budget guard as
+    ratified rather than adjustable.
+
+    The cost of consuming instead of reading is an ORDERING dependency: a caller
+    that never asked hands ``None``, and nothing can be named. That is reported,
+    never silent.
+
+    A second, subtler limit belongs where a reader will meet it: the handle FORM
+    is what triggers translation, so a value in some THIRD form nobody has seen
+    is passed through as if it were a name, unmarked. Testing the value against
+    the set of names the tree declares would catch that, and is possible only on
+    a path that holds the table. Same OUTCOME on the two known forms; DIFFERENT
+    DETECTION on an unknown third. Catching format drift is left to the
+    live-survey card, and this paragraph is where it starts.
+    """
+    if not any(
+        record.fixture_type is not None and HANDLE_TEXT.match(record.fixture_type)
+        for record in records
+    ):
+        return records
+
+    if type_names is None:
+        names: Mapping[int, str] | None = None
+        unavailable = UNTRANSLATED_NO_TABLE
+    elif not type_names.attempted:
+        names = None
+        unavailable = UNTRANSLATED_TREE_UNREADABLE
+    else:
+        names = type_names.by_slot()
+        unavailable = UNTRANSLATED_NO_TABLE
+    # 전수임을 확인 못 한 목록에서 슬롯이 안 보인 것은 「없다」가 아니라 「못 봤다」다.
+    # slot_absent 는 「전수 답했고 없다」는 리그 사실이다. 목록을 믿을 수 없는
+    # 두 경우(절단 · 형태 불량)는 그 계약을 만족하지 않으므로 따로 낸다.
+    absent = UNTRANSLATED_SLOT_ABSENT
+    if type_names is not None:
+        if type_names.shape_invalid:
+            absent = UNTRANSLATED_LISTING_SHAPE_INVALID
+        elif type_names.whole_unconfirmed:
+            absent = UNTRANSLATED_SLOT_UNSEEN
+
+    return [
+        replace(record, fixture_type=value, fixture_type_untranslated=reason)
+        for record, (value, reason) in (
+            (
+                record,
+                translate_fixture_type(
+                    record.fixture_type,
+                    names,
+                    unavailable_reason=unavailable,
+                    absent_reason=absent,
+                ),
+            )
+            for record in records
+        )
+    ]
+
+
+def read_inventory(
+    port: InventoryPort,
+    policy: InventoryPolicy | None = None,
+    *,
+    type_names: TypeNameRead | None = None,
+) -> Inventory:
     """Enumerate the fixture root, read the whitelisted properties, count.
 
     Raises :class:`InventoryReadError` when the root itself is unreadable --
@@ -464,6 +636,8 @@ def read_inventory(port: InventoryPort, policy: InventoryPolicy | None = None) -
                 read_failures=slot_failures,
             )
         )
+
+    records = _name_handle_types(records, type_names)
 
     observed_count = len(records)
     if observed_count > child_count:

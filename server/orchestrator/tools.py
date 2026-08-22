@@ -95,7 +95,10 @@ from server.prechk.footprint import WalkOutcome, walk_mode_widths
 from server.prechk.inventory import InventoryReadError, read_inventory
 from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_macro
 from server.prechk.macro import groups_from_snapshot as read_group_pool
-from server.prechk.mode_read import read_type_mode_widths
+from server.prechk.mode_read import (
+    read_fixture_type_names,
+    read_type_mode_widths,
+)
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import PropertyRead, bulk_capable, read_properties
 from server.prechk.report import build_report as build_precheck_report
@@ -4504,19 +4507,42 @@ def build_toolset(
             ],
         }
 
+        # rig_paths 는 부분 override 가 가능하므로 무조건 인덱싱하면 KeyError 가
+        # 툴 밖으로 새어 계획 대신 예외가 나간다. 형제 툴들과 같은 가드를 쓴다
+        # (`missing = [... not in rig_paths]` — :1984 · :2106 · :2327 · :2692).
+        # 이 자리는 아래 두 판독보다 **앞**이어야 한다: 모드 판독이 먼저 인덱싱하면
+        # 뒤에 가드를 둬도 그 전에 터진다.
+        types_root = rig_paths.get("fixture_types")
+
         # 폭은 콘솔이 안다. 확정된 타입에 대해서만 모드 트리를 실측한다.
         mode_reads: dict[str, object] = {}
-        for csv_type, console_type in resolved_types.items():
-            mode_reads[csv_type] = read_type_mode_widths(
-                state_port,
-                property_port,
-                root=rig_paths["fixture_types"],
-                type_name=console_type,
-            )
+        if types_root is not None:
+            for csv_type, console_type in resolved_types.items():
+                mode_reads[csv_type] = read_type_mode_widths(
+                    state_port,
+                    property_port,
+                    root=types_root,
+                    type_name=console_type,
+                )
 
+        # 실기 콘솔은 픽스처의 FixtureType 으로 이름이 아니라 'FixtureType <슬롯>'
+        # 핸들을 돌려준다(결함 D2). 매퍼는 이름과 대조하므로, 대응표를 여기서
+        # 한 번 읽어 판독 경계에 넘긴다 — read_inventory 는 스스로 읽지 않는다.
+        # 표를 안 넘기면 번역이 조용히 사라지는 것이 아니라 미번역 표식이 켜진다.
+        # 판독 결과를 통째로 넘긴다 — .by_slot() 만 넘기면 「트리가 답하지 않았다」와
+        # 「트리가 그 슬롯을 선언하지 않는다」가 둘 다 빈 표로 도착해, 재조회하면
+        # 될 일이 리그 사실로 보고된다(감사 D-1).
+        # 경로가 없으면 아무것도 묻지 않았으므로 `None` 을 넘긴다 — 판독 실패가
+        # 아니다. 형제 툴이 같은 자리에 적어 둔 규칙이다(:2696):
+        # "nothing was queried, so nothing may be called unreadable."
+        # `TypeNameRead(attempted=False)` 를 넘기면 「재조회하라」가 지시되는데
+        # 재조회할 판독 자체가 없었다.
+        type_names = (
+            read_fixture_type_names(state_port, root=types_root) if types_root is not None else None
+        )
         inventory_port = _InventoryPort(state_port, property_port)
         try:
-            inventory = read_inventory(inventory_port)
+            inventory = read_inventory(inventory_port, type_names=type_names)
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
         occupants = occupants_from_patch_values(
@@ -4541,11 +4567,29 @@ def build_toolset(
                 "kind": CONSOLE_READ_INCOMPLETE,
                 "detail": str(plan.console_read["reason"]),
             }
+        # 번역이 왜 실패했는지가 페이로드에 실리지 않으면, 판독이 실패해도 툴은
+        # 수정 전과 똑같은 fid_occupied 를 내보내고 감독에게는 아무 신호가 없다.
+        # 사유를 다섯으로 가른 일이 화면에 닿는 자리가 여기다.
+        untranslated: dict[str, int] = {}
+        for record in inventory.fixtures:
+            if record.fixture_type_untranslated:
+                untranslated[record.fixture_type_untranslated] = (
+                    untranslated.get(record.fixture_type_untranslated, 0) + 1
+                )
         console_read = {
             "complete_enough_to_judge_absence": plan.console_read[
                 "complete_enough_to_judge_absence"
             ],
             "caveat": caveat,
+            "type_translation": {
+                "attempted": type_names is not None and type_names.attempted,
+                "named": len(type_names.by_slot()) if type_names is not None else 0,
+                "whole_unconfirmed": (
+                    type_names.whole_unconfirmed if type_names is not None else False
+                ),
+                "untranslated": untranslated,
+                "detail": (type_names.detail or None) if type_names is not None else None,
+            },
             "fid_read": {
                 "attempted": fid_read.attempted,
                 "known": len(fid_read.fids),
