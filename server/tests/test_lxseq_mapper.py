@@ -625,18 +625,39 @@ def test_runs_carry_only_patch_fixtures_argument_keys():
     전체가 그 런에서 멈췄는데, 테스트는 내내 초록이었다.
     """
     plan = _plan()
-    expected = {
-        "console_type",
-        "address",
-        "count",
-        "fids",
-        "name_prefix",
-        "channels_per_fixture",
-    }
+    base = {"console_type", "address", "count", "fids", "name_prefix"}
     for run in plan.runs:
-        keys = set(run.as_tool_arguments())
-        assert keys - {"console_mode"} == expected
+        args = run.as_tool_arguments()
+        keys = set(args)
         assert ("console_mode" in keys) is (run.console_mode is not None)
+
+        measured = run.footprint_source == "console_measured"
+        assert measured, "이 픽스처는 전부 실측 모드다 — 아니면 아래 단언이 갈래를 잘못 본다"
+        assert keys - {"console_mode"} == base | {"channels_per_fixture"}
+
+        # 키만 보면 값이 None 이어도 통과한다. patch_fixtures 는 그 값을
+        # `_positive_int` 로 읽는데, 그 함수가 부재·None·0·음수·bool 을 **전부
+        # 같게** None 으로 접는다 — 런타임 스키마 검증도 없다. 즉 키를 실어도
+        # 값이 None 이면 결함이 그대로 재현된다. 값까지 못 박는다.
+        assert args["channels_per_fixture"] == run.channels_per_fixture
+        assert isinstance(args["channels_per_fixture"], int)
+        assert not isinstance(args["channels_per_fixture"], bool)
+        assert args["channels_per_fixture"] > 0
+
+
+def test_an_unverified_width_is_not_handed_to_the_write_path():
+    """t15 리뷰 MED-2. 콘솔이 확인 안 해 준 폭을 넘기면 거절이 배포로 바뀐다.
+
+    실측: 인자 없이는 `footprint_unknown` 으로 commands_sent=0, 인자를 넣으면
+    `deploy_status='deployed'` 로 2건이 나갔다. `tree_unread` 의 폭은 CSV 가
+    주장하는 값이고, `patch_fixtures` 의 `footprint_unknown` 문은 정확히 그런
+    값으로 쓰지 말라고 있다.
+    """
+    plan = _plan(_override_records(), mode_reads={})
+
+    assert [r.footprint_source for r in plan.runs] == ["caller_unverified"]
+    for run in plan.runs:
+        assert "channels_per_fixture" not in run.as_tool_arguments()
 
 
 # ---------------------------------------------------------------------------
@@ -997,7 +1018,7 @@ def test_a_widened_row_that_overruns_the_universe_is_not_planned():
     )
 
     assert plan.runs == ()
-    assert [s.kind for s in plan.skipped] == ["address_unfittable"]
+    assert [s.kind for s in plan.skipped] == ["universe_overflow"]
     assert plan.write_count_planned == 0
 
 
@@ -1028,7 +1049,7 @@ def test_an_occupant_in_another_universe_is_not_blamed():
         occupants=(elsewhere,),
     )
 
-    assert plan.skipped[0].kind == "address_unfittable"
+    assert plan.skipped[0].kind == "universe_overflow"
     assert plan.skipped[0].occupant is None
 
 
@@ -1082,3 +1103,31 @@ def test_a_resolution_can_never_claim_a_width_it_does_not_have():
             console_mode="Mode 2 25ch",
             resolved_by="override",
         )
+
+
+def _zero_width_mode():
+    """콘솔이 폭을 0 으로 답한 모드 — 타입은 int 라 __post_init__ 을 통과한다."""
+    return dict(
+        MegaPointe=TypeModeRead(
+            attempted=True,
+            type_found=True,
+            modes=(ModeChoice(name="Broken 0ch", width=0, slot=1),),
+        )
+    )
+
+
+def test_a_measured_width_of_zero_is_not_read_as_a_free_slot():
+    """t15 LOW-5 경계 못. __post_init__ 은 **형**만 본다 — 0 은 정수라 통과한다.
+
+    그 0 이 evaluate 에 닿으면 충돌을 계산하기 전에 사유만 담아 돌아오고,
+    collisions 만 보던 옛 코드는 그것을 「자리가 비었다」로 읽었다.
+    """
+    plan = _plan(
+        _override_records(),
+        mode_reads=_zero_width_mode(),
+        mode_overrides=dict(MegaPointe="Broken 0ch"),
+    )
+
+    assert plan.runs == ()
+    assert plan.write_count_planned == 0
+    assert [s.kind for s in plan.skipped] == ["universe_overflow", "universe_overflow"]

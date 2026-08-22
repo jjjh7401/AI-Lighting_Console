@@ -322,11 +322,31 @@ class TestTheRequestedAddressIsNeverMovedSilently:
         assert fit.placements == (Placement(universe=1, address=500),)
         assert fit.error is None
 
-    def test_an_address_already_past_the_ceiling_keeps_its_address(self):
+    def test_an_address_already_past_the_ceiling_is_refused_but_not_moved(self):
+        """이름이 약속하는 것을 **전부** 단언한다 — 자리와 판정 둘 다.
+
+        이전 이름(`..._keeps_its_address`)은 자리만 봤다. 그러면 `ok` 가 무엇이든
+        통과해서, ASSUMPTION-33 트립와이어처럼 읽히지만 실제로는 아무 판정도
+        지키지 않는다(t15 리뷰 MED-1).
+        """
         fit = evaluate("1.513", count=1, width=8, occupants=())
 
         assert fit.placements[0].universe == 1
         assert fit.placements[0].address == 513
+        assert fit.ok is False
+        assert fit.error
+
+    def test_a_single_channel_high_up_is_also_refused(self):
+        """폭 1채널짜리도 끝을 넘으면 거절이다 — 옮길 뒷자리가 없어도 마찬가지다.
+
+        이 단언이 이 변경의 정직한 얼굴이다: 「옮기기를 막는 것」이라 설명했지만
+        여기에는 옮길 일이 애초에 없다. 그런데도 거절한다 — 512 를 넘는 채널은
+        유니버스에 존재하지 않기 때문이다. 감독 결정으로 유지한다(t15).
+        """
+        fit = evaluate("1.600", count=1, width=1, occupants=())
+
+        assert fit.ok is False
+        assert fit.placements[0].address == 600
 
     def test_an_occupant_inside_the_true_span_is_seen(self):
         """[거짓 음성] 감긴 뒤의 자리로 검사하면 진짜 발자국 안의 장비를 놓친다."""
@@ -344,15 +364,89 @@ class TestTheRequestedAddressIsNeverMovedSilently:
 
         assert elsewhere not in fit.collisions
 
-    def test_a_continuation_may_cross_but_says_so(self):
-        """여럿을 이어 깔 때의 선반 넘김은 정당하다 — 다만 조용해선 안 된다."""
+    def test_a_continuation_still_crosses_into_the_next_universe(self):
+        """여럿을 이어 깔 때의 선반 넘김은 **원래 설계된 동작**이라 그대로 둔다.
+
+        고친 것은 첫 자리뿐이다. 이어 붙일 앞자리가 있는 두 번째부터는 넘기는 것이
+        맞다 — 이 단언은 그 구분이 지켜지는지를 본다(첫 자리는 요청대로, 뒤는 이어서).
+        """
         fit = evaluate("1.500", count=3, width=8, occupants=())
 
         assert fit.placements[0] == Placement(universe=1, address=500)
         assert fit.placements[1].universe == 2
-        assert fit.relocated == (1,)
+        assert fit.placements[1].address == 1
 
-    def test_nothing_relocated_reports_nothing(self):
+    def test_a_run_that_never_reaches_the_end_stays_in_one_universe(self):
         fit = evaluate("1.1", count=3, width=8, occupants=())
 
-        assert fit.relocated == ()
+        assert [p.universe for p in fit.placements] == [1, 1, 1]
+
+    def test_the_last_channel_of_the_universe_is_usable(self):
+        """경계를 양쪽에서 못 박는다 — 512 는 **쓸 수 있는** 마지막 칸이다.
+
+        `505 + 8 - 1 = 512`. 여기서 거절하면 콘솔이 받는 자리를 서버가 막는 것이라
+        ASSUMPTION-33 위반이다. 이 단언이 없으면 `>` 를 `>=` 로 바꿔도 아무도 모른다.
+        """
+        fit = evaluate("1.505", count=1, width=8, occupants=())
+
+        assert fit.ok is True
+        assert fit.error is None
+        assert fit.placements == (Placement(universe=1, address=505),)
+
+    def test_one_channel_past_the_end_is_refused(self):
+        """반대쪽 못 — `506 + 8 - 1 = 513` 은 한 칸 넘는다. 옮기지 않고 사실을 낸다."""
+        fit = evaluate("1.506", count=1, width=8, occupants=())
+
+        assert fit.ok is False
+        assert fit.placements[0] == Placement(universe=1, address=506)
+        assert "513" in (fit.error or "")
+
+    def test_a_width_that_exactly_fills_the_universe_is_usable(self):
+        """`1.1` 에 512채널 — 유니버스를 꽉 채운다. 넘지 않았으므로 통과다."""
+        fit = evaluate("1.1", count=1, width=512, occupants=())
+
+        assert fit.ok is True
+        assert fit.placements == (Placement(universe=1, address=1),)
+
+
+class TestAnOverrunAsksInsteadOfErroring:
+    """t15 리뷰 HIGH-1. 폭이 안 들어가는 것과 주소를 못 읽는 것은 다른 일이다.
+
+    처음 고쳤을 때 초과 판정이 `fit.error` 를 세웠고, 그 앞의 「error 면
+    unreadable_request 로 즉시 반환」 분기에 걸렸다. 결과가 셋 다 틀렸다 —
+    멀쩡히 읽힌 주소에 「못 읽었다」 라벨, 질문카드 0개, `is_error=True`.
+    이 모듈이 생긴 이유가 「산문으로 묻고 턴을 끝내면 사용자가 처음부터 다시
+    친다」였는데 그 실수를 되살린 것이다.
+    """
+
+    def test_it_is_not_filed_as_an_unreadable_address(self):
+        port = RecordingQuestionPort(ANSWER_CANCEL)
+
+        payload = _resolve(port, address="1.500", count=1, width=20, occupants=())
+
+        assert payload["status"] == "does_not_fit"
+        assert payload["status"] != "unreadable_request"
+
+    def test_it_actually_asks_the_user(self):
+        port = RecordingQuestionPort(ANSWER_CANCEL)
+
+        _resolve(port, address="1.500", count=1, width=20, occupants=())
+
+        assert len(port.asked) == 1
+
+    def test_it_does_not_blame_an_occupant_that_does_not_exist(self):
+        port = RecordingQuestionPort(ANSWER_CANCEL)
+
+        payload = _resolve(port, address="1.500", count=1, width=20, occupants=())
+
+        assert payload["collisions"] == []
+        assert payload["reason"]
+
+    def test_a_genuinely_unreadable_address_still_says_so(self):
+        """대조군 — 이 갈래까지 같이 옮기면 진짜 파싱 실패가 질문카드로 샌다."""
+        port = RecordingQuestionPort(ANSWER_CANCEL)
+
+        payload = _resolve(port, address="세 점 일", count=1, width=8, occupants=())
+
+        assert payload["status"] == "unreadable_request"
+        assert port.asked == []

@@ -3204,6 +3204,26 @@ def test_the_universe_end_is_an_unguarded_boundary_and_this_pins_that_fact(
 
     가드를 넣기로 결정하면 `ends_one_past_512`·`single_channel_past_512` 두 행이 실패한다 —
     그때 **의식적으로** 이 표를 고쳐야 한다(조용한 통과가 아니라 강제 재결정).
+
+    ---
+    **[t15 재결정 기록 — 이 표는 그대로 두기로 했다]**
+
+    형제 모듈 `server/vwx/addressfit.evaluate` 에는 t15 에서 가드가 **들어갔다**.
+    요청한 자리에서 폭이 512 를 넘으면 `ok=False` 를 낸다. 이 표는 `plan_addresses`
+    를 묶으므로 기계적으로 깨지지 않았고, 그래서 이 기록을 남긴다 — 트립와이어가
+    요구한 재결정이 침묵으로 지나가지 않도록.
+
+    같은 입력에 두 파이프라인이 다르게 답한다(실측):
+        plan_addresses(1.498, footprint 16)   -> end_address=513, exclusions=()
+        addressfit.evaluate("1.498", width=16) -> ok=False, "유니버스 끝(512)을 넘는다"
+
+    **왜 addressfit 에서만 거절하는가.** 그쪽은 자리를 정해 **쓰기 경로로 넘기는**
+    문이고, 거절하지 않으면 말없이 다음 유니버스로 옮긴 좌표가 그대로 콘솔에 써진다
+    (실측: 계획 7.480 → 콘솔 8.1, 그런데 `created` 로 보고). `plan_addresses` 에는
+    그 자동 이동이 없으므로 같은 사고가 나지 않는다. 감독 결정(2026-08-22).
+
+    **다음 라운드가 이 표를 건드릴 때 알아야 할 것.** 두 파이프라인의 불일치는
+    사고가 아니라 선택이다. 통일하려면 이 표를 고치는 별도 카드가 필요하다.
     """
     from server.vwx.patchplan import plan_addresses
 

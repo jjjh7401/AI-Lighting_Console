@@ -343,3 +343,14 @@ def test_negative_channels_row_is_rejected():
     kinds = [r.kind for r in result.rejected if r.fid_raw == "101"]
     assert kinds == ["negative_channels"]
     assert all(r.fid != 101 for r in result.records)
+
+
+def test_minus_one_channel_is_rejected_too():
+    """경계 못 — `-4` 만 시험하면 가드를 `< -1` 로 좁혀도 아무도 모른다."""
+    rows = _rows_from_text(_load_fixture_text())
+    fieldnames = list(rows[0].keys())
+    negative = _rewrite_row(rows, "101", Ch="-1")
+
+    result = parse_patch_csv(_to_csv_text(negative, fieldnames))
+
+    assert [r.kind for r in result.rejected if r.fid_raw == "101"] == ["negative_channels"]

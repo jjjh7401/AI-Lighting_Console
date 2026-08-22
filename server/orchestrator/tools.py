@@ -3697,7 +3697,13 @@ def build_toolset(
             "blind_spot": fit.blind_spot,
         }
 
-        if fit.error:
+        # 주소를 **못 읽은** 것과 읽었는데 **폭이 안 들어가는** 것은 다른 일이다.
+        # 판별자는 `placements` 다 — 파싱이 실패하면 자리를 계산하기 전에 돌아오므로
+        # 비어 있고, 초과는 자리를 계산한 뒤라 채워져 있다. 둘을 한 문에 넣으면
+        # 멀쩡히 읽힌 주소에 「주소를 못 읽었다」라는 라벨이 붙고, 질문카드 없이
+        # 산문으로 "사용자에게 물어라"만 남긴 채 턴이 끝난다 — 이 모듈이 생긴
+        # 이유가 바로 그 실수였다(모듈 헤더 독스트링).
+        if fit.error and not fit.placements:
             payload["status"] = "unreadable_request"
             payload["guidance"] = f"{fit.error} — 사용자에게 주소를 다시 물어라."
             return ToolExecution(
@@ -3738,16 +3744,25 @@ def build_toolset(
             }
             for occupant in fit.collisions
         ]
-        payload["status"] = "occupied"
+        # 초과(폭이 유니버스 끝을 넘음)와 점유는 사유가 다르지만 **필요한 다음 행동이
+        # 같다** — 사용자에게 자리를 물어야 한다. 그래서 라벨만 가르고 문은 공유한다.
+        does_not_fit = bool(fit.error) and not clash
+        payload["status"] = "does_not_fit" if does_not_fit else "occupied"
         payload["collisions"] = clash
         payload["would_have_occupied"] = fit.span_text
+        if does_not_fit:
+            payload["reason"] = fit.error
         suggestion = first_free_address(count=count, width=width, occupants=occupants)
         payload["suggestion"] = suggestion.requested if suggestion else None
 
         if question_port is None:
             payload["guidance"] = (
-                f"{requested}에 이미 {len(clash)}대가 있다. 자리가 겹치면 출력이 틀린다 — "
-                "덮어쓰지 말고 사용자에게 새 주소를 물어라. 명령을 보내지 마라."
+                f"{fit.error} 자리를 옮기지 말고 사용자에게 새 주소를 물어라. 명령을 보내지 마라."
+                if does_not_fit
+                else (
+                    f"{requested}에 이미 {len(clash)}대가 있다. 자리가 겹치면 출력이 틀린다 — "
+                    "덮어쓰지 말고 사용자에게 새 주소를 물어라. 명령을 보내지 마라."
+                )
             )
             return ToolExecution(
                 result=ToolResult(
@@ -3776,25 +3791,36 @@ def build_toolset(
             QuestionOption(label=ANSWER_CANCEL, description="이 요청을 여기서 멈춥니다.")
         )
 
-        first = clash[0]["address"]
-        answer = question_port.ask(
-            QuestionRequest(
-                prompt=(
-                    f"{requested}부터 {count}대를 놓으면 이미 있는 장비 "
-                    f"{len(clash)}대와 겹칩니다. 어디에 놓을까요?"
-                ),
-                why=(
-                    f"{fit.span_text} 구간에 {first}을(를) 비롯한 장비가 이미 있습니다. "
-                    "주소가 겹치면 두 장비가 같은 채널을 받아 출력이 어긋납니다."
-                ),
-                steps=(
-                    f"놓으려는 것: {count}대 × {width}채널 = {count * width}채널",
-                    f"요청한 자리: {fit.span_text}",
-                    f"겹치는 장비: {', '.join(item['address'] for item in clash[:6])}"
-                    + (" 외" if len(clash) > 6 else ""),
-                ),
-                options=tuple(options),
+        if does_not_fit:
+            prompt = f"{requested}부터 {count}대를 놓으면 유니버스 끝을 넘습니다. 어디에 놓을까요?"
+            why = (
+                f"{fit.error} 자리를 임의로 옮기지 않았습니다 — 옮기면 계획서와 콘솔이 "
+                "달라지고, 그 어긋남이 아무 데도 남지 않습니다."
             )
+            steps = (
+                f"놓으려는 것: {count}대 × {width}채널 = {count * width}채널",
+                f"요청한 자리: {fit.span_text}",
+                "유니버스 하나는 512채널입니다.",
+            )
+        else:
+            first = clash[0]["address"]
+            prompt = (
+                f"{requested}부터 {count}대를 놓으면 이미 있는 장비 "
+                f"{len(clash)}대와 겹칩니다. 어디에 놓을까요?"
+            )
+            why = (
+                f"{fit.span_text} 구간에 {first}을(를) 비롯한 장비가 이미 있습니다. "
+                "주소가 겹치면 두 장비가 같은 채널을 받아 출력이 어긋납니다."
+            )
+            steps = (
+                f"놓으려는 것: {count}대 × {width}채널 = {count * width}채널",
+                f"요청한 자리: {fit.span_text}",
+                f"겹치는 장비: {', '.join(item['address'] for item in clash[:6])}"
+                + (" 외" if len(clash) > 6 else ""),
+            )
+
+        answer = question_port.ask(
+            QuestionRequest(prompt=prompt, why=why, steps=steps, options=tuple(options))
         )
         payload["answer"] = None if answer == UNANSWERED else answer
 
@@ -4040,13 +4066,22 @@ def build_toolset(
         if not fit.ok:
             # 겹친 채로 만들면 되돌리기 어려운 쓰기가 남는다. 여기서 멈추고
             # 자리 해결 도구로 돌려보낸다 — 이 도구가 임의로 옮기지 않는다.
-            payload["status"] = "address_not_free"
+            # 「비어 있지 않다」는 겹쳤을 때만 참이다. 폭이 유니버스 끝을 넘어 거부된
+            # 경우 그 자리는 비어 있고 `collisions` 도 빈 목록이다 — 같은 문장을 쓰면
+            # 도구가 자기 페이로드와 모순되는 말을 한다(t15 리뷰 HIGH-2).
+            payload["status"] = "address_not_free" if fit.collisions else "does_not_fit"
             payload["collisions"] = [
                 f"{occupant.universe}.{occupant.address}" for occupant in fit.collisions
             ]
             payload["guidance"] = (
                 f"{address}는 비어 있지 않다({fit.error or '겹침'}). resolve_patch_address로 "
                 "사용자와 자리를 정한 뒤 그 주소로 다시 불러라. 임의로 옮기지 마라."
+                if fit.collisions
+                else (
+                    f"{address}는 비어 있다 — 다만 {fit.error} "
+                    "resolve_patch_address로 사용자와 자리를 정한 뒤 그 주소로 다시 "
+                    "불러라. 임의로 옮기지 마라."
+                )
             )
             return ToolExecution(
                 result=ToolResult(

@@ -96,8 +96,16 @@ class PatchRun:
         }
         # 폭을 빼고 넘기면 `patch_fixtures` 는 스스로 재려 하고, 못 재면
         # `footprint_unknown` 으로 0대를 만든 뒤 그 런에서 파일 전체가 멈춘다 —
-        # 미리보기는 N대를 약속한 뒤였다(t15 MED-3). 폭은 우리가 아는 값이다.
-        args["channels_per_fixture"] = self.channels_per_fixture
+        # 미리보기는 N대를 약속한 뒤였다(t15 MED-3).
+        #
+        # 다만 **콘솔이 확인해 준 폭일 때만** 넘긴다. `tree_unread` 의 폭은 CSV 가
+        # 주장하는 값이지 콘솔이 재 준 값이 아니고, `patch_fixtures` 의
+        # `footprint_unknown` 은 바로 그런 값으로 쓰지 말라고 있는 문이다. 무턱대고
+        # 넘기면 「거절」이 「배포」로 바뀐다 — 실측: 인자 없이는 commands_sent=0,
+        # 인자를 넣으면 deploy_status='deployed' 로 2건이 나갔다. 검사를 넓혀
+        # 하류 가드를 고아로 만드는 것은 이 커밋이 고치는 결함 계열 그 자체다.
+        if self.footprint_source == "console_measured":
+            args["channels_per_fixture"] = self.channels_per_fixture
         if self.console_mode is not None:
             args["console_mode"] = self.console_mode
         return args
@@ -389,11 +397,16 @@ def _occupancy_skip(
     # 사유만 담아 돌아온다 — 그때 `collisions` 가 비는 것은 자리가 비어서가 아니다.
     # 실측 폭이 유니버스 끝을 넘는 행이 바로 그 경우이고(t15 HIGH-1), 폭이 음수인
     # 행도 같은 문에 닿는다(t15 LOW-5). 둘 다 조용히 계획에 실렸다.
+    #
+    # 라벨은 `universe_overflow` 를 **재사용한다**. 파서가 CSV 폭으로 내는 것과 같은
+    # 사실을, 모드가 확정된 뒤 실측 폭으로 다시 발견한 것뿐이다. 새 라벨을 만들면
+    # REQ-LXSEQ-011 의 닫힌 어휘 8종을 깬다 — 툴 계층 단언(`_SKIP_KINDS`)은 `<=`
+    # 라 당장은 조용히 통과하지만, 실제 페이로드가 그 값을 내는 순간 빨개진다.
     if not fit.ok and not fit.collisions:
         return SkippedRow(
             fid=record.fid,
             address=address,
-            kind="address_unfittable",
+            kind="universe_overflow",
             detail=fit.error or "그 자리에 놓을 수 있는지 판정하지 못했다",
             occupant=occupant,
         )

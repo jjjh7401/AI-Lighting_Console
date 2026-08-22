@@ -914,3 +914,40 @@ class TestTheGateScreensTheAutomatedRun:
         assert payload["status"] != "created"
         # UI에는 게이트 판정이 올라간다 — 검증 결과(0건)로 덮지 않는다.
         assert [row.status for row in execution.command_outcomes] == ["blocked"]
+
+
+class TestItDoesNotContradictItsOwnPayload:
+    """t15 리뷰 HIGH-2. 「비어 있지 않다」는 겹쳤을 때만 참이다.
+
+    폭이 유니버스 끝을 넘어 거부된 경우 그 자리는 **비어 있고** `collisions` 도
+    빈 목록이다. 그런데 같은 문장을 쓰면 도구가 자기 페이로드와 모순되는 말을
+    한다 — 모델은 없는 장비를 찾으러 가고, 사용자는 없는 겹침을 듣는다.
+    """
+
+    def test_an_overrun_is_not_reported_as_occupied(self):
+        payload, _deploy, runner = _patch(
+            _EMPTY,
+            _EMPTY,
+            arguments=dict(
+                console_type="RLB",
+                address="1.500",
+                count=1,
+                channels_per_fixture=40,
+                console_mode="RLB std",
+                name_prefix="RLB",
+            ),
+        )
+
+        assert payload["collisions"] == []
+        assert payload["status"] != "address_not_free"
+        assert "비어 있지 않다" not in payload["guidance"]
+        assert runner.sent == []
+
+    def test_a_real_clash_still_says_it_is_occupied(self):
+        """대조군 — 진짜 겹침까지 문구를 바꾸면 반대쪽으로 거짓말하게 된다."""
+        payload, _deploy, _runner = _patch(
+            [("RLB 1", "4.001")], [("RLB 1", "4.001")], address="4.1"
+        )
+
+        assert payload["status"] == "address_not_free"
+        assert "비어 있지 않다" in payload["guidance"]
