@@ -23,7 +23,9 @@ gate:
     test: 120
   ast_grep_gate:
     enabled: true
-    # rules_dir defaults to .moai/config/astgrep-rules when empty.
-    rules_dir: ""
+    # 이 프로젝트의 ast-grep 규칙이 사는 곳. 코드에 폴백 기본값은 없다 —
+    # 비워 두면 "no rules directory configured" 로 규칙 0개를 훑는다. 실측:
+    # 빈 값이면 `no rules to apply`, 아래 값이면 `rules to apply (11)`.
+    rules_dir: ".moai/config/astgrep-rules"
     block_on_error: false
     warn_only_mode: true
