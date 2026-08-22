@@ -16,4 +16,4 @@ project:
   # Optimization status (true if project structure has been optimized)
   optimized: false
   # Template version used to create/update this project
-  template_version: "3.1.0"
+  template_version: "3.1.1"
