@@ -287,7 +287,7 @@ server/prechk/inventory.py     HANDLE_TEXT         = re.compile(r"^FixtureType (
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-sync_commit_sha: pending-backfill-sync
+sync_commit_sha: d6b1c49
 측정자: run 레인 (sync 단계) · 트리 `t11-m1` · `WT-handle-to-name` · base `581a1fb`
 
 **M1·M2 의 증거는 §E.2 에 있다 — 여기 옮겨 적지 않고 가리킨다.** 이 절은 sync 가
