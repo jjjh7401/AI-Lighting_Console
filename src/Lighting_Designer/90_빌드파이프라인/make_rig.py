@@ -135,16 +135,35 @@ ws.column_dimensions["C"].width = 40
 sheet("NOTE", "NOTE — 확인 필요 항목",
       ["구분", "대상", "내용", "기록일", "상태"], RIG_NOTES, [12, 16, 76, 12, 10])
 
-out = "/home/claude/plugin-run/out/LXSEQ_RIG_01_ShowBase_r3.xlsx"
+# ── 출력 ───────────────────────────────────────────────────
+# 출력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
+# 박아두면 그 기계 밖에서는 돌지 않는다.
+OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "02_RIG팩")
+STEM = "LXSEQ_RIG_01_ShowBase_r3"
+os.makedirs(OUT_DIR, exist_ok=True)
+
+out = os.path.join(OUT_DIR, STEM + ".xlsx")
 wb.save(out)
 print("saved:", out, "| sheets:", wb.sheetnames)
 
-# 패치 CSV (기계 정본)
-csv_path = "/home/claude/plugin-run/out/LXSEQ_RIG_01_ShowBase_r3.patch.csv"
-with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
-    w = csv.writer(f)
-    w.writerow(["FID", "Group", "FixtureType", "Mode", "Ch", "Universe", "Address", "AddrRange", "Position"])
-    for r in patch_rows:
-        w.writerow(r)
-print("csv:", csv_path, len(patch_rows), "fixtures")
+# ── CSV (기계 정본) ────────────────────────────────────────
+# 규약: 확장자 앞 접미사로 시트를 구분 · 헤더는 ASCII · utf-8-sig
+# (기존 patch.csv · cue-ex.csv 와 동일)
+def write_csv(suffix, header, rows):
+    path = os.path.join(OUT_DIR, "%s.%s.csv" % (STEM, suffix))
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(header)
+        for r in rows:
+            w.writerow(r)
+    print("csv:", path, len(rows), "rows")
+    return path
+
+write_csv("patch", ["FID", "Group", "FixtureType", "Mode", "Ch", "Universe", "Address", "AddrRange", "Position"], patch_rows)
+write_csv("group", ["GroupNo", "Name", "Members", "Purpose"], GROUPS)
+write_csv("preset-dim", ["ID", "Name", "Level", "Purpose"], PRESET_DIM)
+write_csv("preset-col", ["ID", "Name", "Value", "Purpose"], PRESET_COL)
+write_csv("preset-pos", ["ID", "StageMeaning", "TargetGroup", "RecordGuide"], PRESET_POS)
+write_csv("preset-bm", ["ID", "Name", "TargetGroup", "Value"], PRESET_BM)
+write_csv("fx", ["ID", "Name", "Attribute", "WaveSteps", "BaseRate", "Width", "Phase", "Note"], FX_LIB)
 print("universe usage:", uni_usage)

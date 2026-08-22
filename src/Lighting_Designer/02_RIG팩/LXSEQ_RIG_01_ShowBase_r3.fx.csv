@@ -1,0 +1,9 @@
+﻿ID,Name,Attribute,WaveSteps,BaseRate,Width,Phase,Note
+FX.01,DIM-CHASE,Dimmer,2-step 100/0,240 (@1/8),50%,0..360,런 체이스 · ODD/EVEN 분리 가능
+FX.02,DIM-PULSE,Dimmer,Sine 100↔60,120 (@1beat),—,0..360,얕은 맥동
+FX.03,DIM-BREATHE,Dimmer,Sine 100↔40,30 (@1bar),—,0..360,느린 호흡
+FX.04,COL-RAINBOW,Hue,Ramp 0→360°,15 (@2bar),—,0..360,색상 순환
+FX.05,TILT-SWEEP,Tilt,Sine ±25°,30 (@1bar),—,0..360,수평 스윕
+FX.06,SHUTTER-STROBE,Shutter,Strobe,15 (@2bar),—,0,광과민 고지 필수 · Rate 상한 15
+FX.07,DIM-TWINKLE,Dimmer,Random 100↔30,30 (@1bar),—,random,반짝임
+FX.08,PT-CIRCLE,Pan+Tilt,Circle Ø소,30 (@1bar),—,0..360,원형 무브

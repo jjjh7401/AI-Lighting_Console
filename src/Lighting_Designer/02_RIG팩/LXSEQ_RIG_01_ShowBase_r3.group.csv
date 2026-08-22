@@ -1,0 +1,19 @@
+﻿GroupNo,Name,Members,Purpose
+1,ALL,전 픽스처 (FOLLOW 제외),글로벌 · 블랙아웃
+2,KEY,KEY 6대,인물광
+3,FOH,FOH 8대,전면 워시
+4,BACK,BACK 12대,실루엣
+5,SIDE-L,SIDE-L 6대,하수 사이드
+6,SIDE-R,SIDE-R 6대,상수 사이드
+7,SIDE-ALL,SIDE-L + SIDE-R,사이드 일괄
+8,WASH-U,WASH-U 10대,업 워시
+9,WASH-D,WASH-D 10대,다운 워시
+10,WASH-ALL,WASH-U + WASH-D,워시 일괄
+11,MOVER-U,MOVER-U 8대,에어빔
+12,MOVER-D,MOVER-D 8대,무빙 워시
+13,MOVER-ALL,MOVER-U + MOVER-D,무빙 일괄
+14,BLIND,BLIND 6대,블라인더
+15,STROBE,STROBE 4대,스트로브
+16,HAZE,HAZE 2대,헤이저
+17,ODD,MOVER-ALL 홀수 FID,체이스 A조
+18,EVEN,MOVER-ALL 짝수 FID,체이스 B조
