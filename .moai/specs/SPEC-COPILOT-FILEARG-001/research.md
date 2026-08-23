@@ -383,6 +383,6 @@ $ sed -n '358,362p' server/vwx/reader.py
             return ReadResult(
 ```
 
-`PK` 매직이면 `_read_xlsx` 경로로 갈라지므로 `_process_rows`가 호출되지 않는다. 그래서 술어는 **두 갈래 전역 함수**여야 한다(D1 · `spec.md` §G.4). 미설치 시 `return ReadResult(...)` — **예외가 아니라 구조적 정상 반환**이며, 이것이 §G.4 표의 결과 ④(`unapproved_dependency`)다.
+`PK` 매직이면 `_read_xlsx` 경로로 갈라지므로 `_process_rows`가 호출되지 않는다. 그래서 술어는 **두 갈래 전역 함수**여야 한다(D1 · `design.md` §4). 미설치 시 `return ReadResult(...)` — **예외가 아니라 구조적 정상 반환**이며, 이것이 `design.md` §4 표의 결과 ④(`unapproved_dependency`)다.
 
-소유자는 `server/orchestrator/tools.py:2860-2861`과 `server/vwx/mvr.py`다. v0.3.0이 "판독기에 위임한다"고 쓴 것은 **그 판독기가 무엇을 판정하는지 재지 않고 쓴 문장**이며, B3와 같은 부류의 오귀속이 **두 번째**였다. 위임 계약의 전체 형상(두 갈래 · 결과 4종 · openpyxl 두 경로)은 `spec.md` §G.4와 `REQ-FILEARG-021`이 소유한다.
+소유자는 `server/orchestrator/tools.py:2860-2861`과 `server/vwx/mvr.py`다. v0.3.0이 "판독기에 위임한다"고 쓴 것은 **그 판독기가 무엇을 판정하는지 재지 않고 쓴 문장**이며, B3와 같은 부류의 오귀속이 **두 번째**였다. 위임 계약의 전체 형상(두 갈래 · 결과 4종 · openpyxl 두 경로)은 `design.md` §4와 `REQ-FILEARG-021`이 소유한다(v0.7.0에서 `spec.md` §G.4가 `design.md` §4로 이동했다 — 이 문장은 v0.8.0에서 그 이동을 반영해 고쳤다).
