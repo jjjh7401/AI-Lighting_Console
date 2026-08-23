@@ -18,6 +18,12 @@
 # 저장소 루트에서 돌린다. 이 디렉터리로 cd 해서 돌리면 여기 `.moai/state/`
 # stray 가 생긴다 — 루트 아닌 cwd 에서 하네스를 돌린 부작용이다.
 #
+# 픽스처는 이 디렉터리 **밖**(`.moai/config/astgrep-rule-tests/`)에 둔다 (t37).
+# t8 이 처음엔 여기 `rule-tests/` 로 뒀는데, `sgconfig.yml` 의 `ruleDirs` 는 그걸
+# 제외해도 `moai ast-grep` 은 `rules_dir` 를 통째로 훑는다. 그래서 픽스처가
+# **규칙으로 로드**돼 심각도도 언어도 없는 유령 규칙 1개가 생겼다
+# (`rules to apply (27)` 중 `[] go-error-ignored-blank - (all)`). 옮기니 26 이 됐다.
+#
 # 픽스처가 있는 규칙은 rule-tests/ 아래 파일이 말해 준다. 없는 규칙은
 # 미검증이다 — 없다는 사실을 여기 적어 두는 편이, 있다고 적어 두는 것보다 낫다.
 ruleDirs:
@@ -25,4 +31,4 @@ ruleDirs:
   - security
 
 testConfigs:
-  - testDir: rule-tests
+  - testDir: ../astgrep-rule-tests
