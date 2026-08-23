@@ -198,11 +198,43 @@ $ grep -rln "lifecycle-dormant" . --exclude-dir=.git
 
 ---
 
+## U-7 (MED) — 템플릿이 같은 게이트 설정을 두 곳에 서로 반대값으로 배포한다
+
+`ast_grep_gate` 블록이 배포 템플릿의 `gate.yaml` 과 `quality.yaml` 양쪽에 있고,
+`block_on_error` 가 서로 반대값이다.
+
+```
+$ grep -n "block_on_error" <template-snapshot>/gate.yaml
+32:    block_on_error: false
+
+$ sed -n "89,96p" <template-snapshot>/quality.yaml
+  ast_grep_gate:
+    enabled: true
+    rules_dir: ".moai/config/astgrep-rules"
+    block_on_error: true
+```
+
+로컬이 만든 것이 아니다. 미머지 하네스 브랜치(49c235a)의 `quality.yaml` 89행과
+템플릿 스냅샷의 같은 구간이 **바이트 동일**하다. `main` 의 `quality.yaml` 에는 그
+블록이 아예 없다 — 즉 `main` 이 옛 템플릿 판이고, 새 템플릿이 중복을 들여온다.
+
+로컬에서 지울 수 없다. `.moai/config` 는 삭제+재배포가 아니라 백업 후 3-way 병합으로
+복원되므로, 지워도 다음 `moai update` 가 템플릿 쪽 값을 다시 들여온다.
+
+미검증: 코드가 둘 중 어느 쪽을 읽는지는 확인하지 못했다. `moai` 바이너리 소스가 이
+저장소에 없어 판독할 대상이 없다. 따라서 "어느 값이 실제로 적용되는가"는 상류만
+답할 수 있다.
+
+상류에 청하는 것: 한 곳으로 통일하거나, 둘 다 유지해야 한다면 어느 쪽이 우선인지
+명시. 지금은 같은 이름의 설정이 두 파일에서 반대를 지시한다.
+
+---
+
 ## 이 문서가 담지 않는 것
 
 - **발사하지 않았다.** `/moai feedback` 은 상류 프로젝트에 GitHub 이슈를 만든다. 저장소 밖으로
   나가고 공개되는 일이라 감독 결정 사항이다.
 - **U-2 의 설정 절반은 손대지 않았다.** 설정 키를 추가하는 것 자체가 동작 변경이다. 지금
   호출되지 않는 백엔드를 발화시킬 수 있어 측정만 하고 수정하지 않았다.
-- **카드 t16 의 3번 항목(quality.yaml 중복 설정)은 여기 없다.** 그 결함은 `main` 이 아니라
-  미머지 하네스 브랜치에만 존재해 카드 t19 로 이관됐다.
+- **카드 t16 의 3번 항목(quality.yaml 중복 설정)은 U-7 로 실렸다.** 카드 t19 가 출처를 재서
+  템플릿산임을 확정했다 — 로컬 결함이 아니라 상류 건이다.
