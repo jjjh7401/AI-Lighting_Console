@@ -92,7 +92,6 @@ def test_validators_read_the_override(regenerated, script):
 def test_no_hardcoded_output_paths():
     """The defect family this card drained: one site left is the whole bug back."""
     offenders = [
-        p.name for p in SCRIPTS.glob("*.py")
-        if "/home/claude/" in p.read_text(encoding="utf-8")
+        p.name for p in SCRIPTS.glob("*.py") if "/home/claude/" in p.read_text(encoding="utf-8")
     ]
     assert offenders == []
