@@ -6,7 +6,14 @@ message: The returned error is discarded with _. Handle it or mark the intention
 note: Ignoring an error can cause data corruption or silent failures. At
   minimum, log the error or add a // nolint:errcheck comment.
 rule:
-  pattern: $_, $ERR = $FUNC($$$ARGS)
+  # `_` 가 **둘째 자리**여야 한다. 메타변수는 무엇이든 맞으므로 옛 패턴
+  # `$_, $ERR = ...` 은 자리를 가리지 못해 `v, err = g()` 까지 잡았다.
+  # `:=` 와 `=` 를 둘 다 둔다 — 옛 패턴은 `=` 만 있어 Go 에서 가장 흔한
+  # 짧은 선언을 통째로 놓쳤다. 우변을 호출로 묶어 comma-ok 관용구
+  # (`v, _ := m[k]`, `v, _ := x.(T)`)는 잡지 않는다 — 그건 에러가 아니다.
+  any:
+    - pattern: $VAL, _ := $FUNC($$$ARGS)
+    - pattern: $VAL, _ = $FUNC($$$ARGS)
 ---
 id: go-error-not-wrapped
 language: go

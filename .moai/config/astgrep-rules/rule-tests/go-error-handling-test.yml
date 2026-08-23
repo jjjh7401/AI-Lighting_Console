@@ -1,0 +1,53 @@
+# 규칙이 **도는가**와 규칙이 **맞는 것을 잡는가**는 다른 문장이다.
+#
+# 옛 패턴 `$_, $ERR = $FUNC($$$ARGS)` 는 두 가지가 어긋나 있었다.
+#   1) 메타변수는 무엇이든 맞으므로 **어느 자리가 `_` 인지 가리지 않는다** —
+#      에러를 받는 `v, err = g()` 도 그대로 잡았다.
+#   2) `=` 만 쓰므로 Go 에서 가장 흔한 `v, _ := f()` 를 못 잡았다.
+# 그래서 「규칙이 돈다」는 확인으로는 안 걸렸다: 돌긴 도는데 판별력이 0이었다.
+# 잡아야 할 것과 **잡으면 안 되는 것**을 둘 다 둬야 이 축이 시험된다.
+id: go-error-ignored-blank
+valid:
+  - |
+    func handledShort() (int, error) {
+        v, err := g()
+        if err != nil {
+            return 0, err
+        }
+        return v, nil
+    }
+  - |
+    func handledAssign() error {
+        var v int
+        var err error
+        v, err = g()
+        _ = v
+        return err
+    }
+  - |
+    func valueDiscarded() error {
+        _, err := g()
+        return err
+    }
+  - |
+    func commaOk(m map[string]int) int {
+        v, _ := m["k"]
+        return v
+    }
+  - |
+    func typeAssert(x interface{}) int {
+        v, _ := x.(int)
+        return v
+    }
+invalid:
+  - |
+    func shortDecl() int {
+        v, _ := f()
+        return v
+    }
+  - |
+    func plainAssign() int {
+        var v int
+        v, _ = f()
+        return v
+    }

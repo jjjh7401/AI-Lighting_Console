@@ -1,14 +1,28 @@
 # ast-grep project configuration for the MoAI curated ruleset.
 #
 # ruleDirs lists ONLY directories that ship at least one production-vetted rule.
-# Every rule under these directories has been verified against a positive fixture
-# (it matches its intended construct) and a negative fixture (a clean sample
-# produces zero findings).
 #
 # Language coverage is intentionally partial and treated with equal opportunity:
 # a language that does not yet appear in a rule directory is an equal-priority
 # future addition, never an unsupported one. New languages are added by shipping
 # a vetted rule for that language under the relevant directory.
+#
+# 검증 주장에 대하여 (t29): 이 자리에는 원래 "모든 규칙이 양성·음성 픽스처로
+# 검증됐다"고 적혀 있었다. 그 문장은 사실이 아니었다 — `go-error-ignored-blank`
+# 의 패턴은 정반대를 잡고 있었고, 양성 픽스처를 한 번이라도 돌렸다면 걸렸을
+# 결함이었다. 관측하지 않은 검증을 적어 둔 주석은 검증이 아니라 그 반대다.
+# 그래서 주장을 지우고 **돌릴 수 있는 검사**를 대신 둔다:
+#
+#     ast-grep test --config .moai/config/astgrep-rules/sgconfig.yml --skip-snapshot-tests
+#
+# 저장소 루트에서 돌린다. 이 디렉터리로 cd 해서 돌리면 여기 `.moai/state/`
+# stray 가 생긴다 — 루트 아닌 cwd 에서 하네스를 돌린 부작용이다.
+#
+# 픽스처가 있는 규칙은 rule-tests/ 아래 파일이 말해 준다. 없는 규칙은
+# 미검증이다 — 없다는 사실을 여기 적어 두는 편이, 있다고 적어 두는 것보다 낫다.
 ruleDirs:
   - go
   - security
+
+testConfigs:
+  - testDir: rule-tests
