@@ -35,7 +35,7 @@ jobs:
           fetch-depth: 0
 
       # 파이썬 버전은 저장소의 .python-version(3.11.15)을 그대로 따른다.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
 
