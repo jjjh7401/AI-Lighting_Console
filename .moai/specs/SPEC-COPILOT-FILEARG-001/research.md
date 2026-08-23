@@ -324,7 +324,7 @@ reader.read(b"milk\t2\t3000\neggs\t1\t5000\nbread\t3\t2500\n")
 
 ### 11.3 무엇이 결정을 갈랐나 — 헤더 없는 VW 파일은 살아 있는 능력이 아니다 `[리드]`
 
-`server/tests/fixtures/vwx/README.md:85-95`(본 세션 `[코드]` 직접 확인):
+`server/tests/fixtures/vwx/README.md:84-95`(본 세션 `[코드]` 직접 확인):
 
 > 헤더 없는 경로 A 파일이 … 이제는 파일 단위 판정 1건(`headerless_path_a_export`) + 실행 가능한 해결책("Export field names as first record"를 켜고 재수출)으로 압축된다. … **긍정** 증거로 기록한다 — 실패가 아니다.
 
