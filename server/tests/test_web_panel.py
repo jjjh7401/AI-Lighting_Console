@@ -393,6 +393,7 @@ class TestPinStoreSecurity:
         path = tmp_path / PIN_FILE_NAME
         store = PinStore(path)
         with pytest.raises(PinStoreError):
+            # ast-grep-ignore: sec-hardcoded-credential-python
             store.add({**_pin(), "api_key": "sk-live-secret"})
         assert not path.exists()
         assert store.items() == []
@@ -412,7 +413,9 @@ class TestPinStoreSecurity:
     def test_a_file_carrying_a_credential_key_is_not_loaded(self, tmp_path):
         path = tmp_path / PIN_FILE_NAME
         path.write_text(
-            json.dumps({"version": 1, "pins": [], "api_key": "sk-live"}), encoding="utf-8"
+            # ast-grep-ignore: sec-hardcoded-credential-python
+            json.dumps({"version": 1, "pins": [], "api_key": "sk-live"}),
+            encoding="utf-8",
         )
         assert PinStore(path).items() == []
 

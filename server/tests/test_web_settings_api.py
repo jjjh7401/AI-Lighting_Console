@@ -31,7 +31,9 @@ from server.deploy.settings import UserSettings, resolve_effective_settings, sav
 from server.web.settings_api import SettingsDeps, build_settings_router
 
 # Obviously-fake, unique key strings so the "no key value leaked" scans are meaningful.
+# ast-grep-ignore: sec-hardcoded-credential-python
 _FAKE_GEMINI_KEY = "AIzaFAKE-SETTINGS-API-GEMINI-000111222333"
+# ast-grep-ignore: sec-hardcoded-credential-python
 _FAKE_ANTHROPIC_KEY = "sk-ant-FAKE-SETTINGS-API-000111222333"
 
 

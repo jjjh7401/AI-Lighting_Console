@@ -42,6 +42,7 @@ from server.deploy.settings import UserSettings, save_user_settings
 from server.llm.config import ConfigError, _reject_credentials
 
 # Obviously-fake, unique key strings so the plaintext-scan greps are meaningful.
+# ast-grep-ignore: sec-hardcoded-credential-python
 _FAKE_ANTHROPIC_KEY = "sk-ant-FAKE-KEYSTORE-TEST-000111222333"
 _FAKE_GEMINI_KEY = "AIzaFAKEGEMINIKEYSTORETEST000111222333"
 
