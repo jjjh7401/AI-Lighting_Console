@@ -47,12 +47,12 @@ G=docs/user-guide.html
 
 ```bash
 grep -oE '^            name="[a-z_]+",$' "$T" | sed 's/.*name="//;s/",//' | sort > /tmp/tools.txt
-wc -l < /tmp/tools.txt        # 33
+wc -l < /tmp/tools.txt        # 34
 ```
 
 ## §1. 도구 배정표
 
-등록 도구 33종 전량을 감독의 9단계에 1:1 배정한다. 배정 근거는 **등록 위치**이며,
+등록 도구 34종 전량을 감독의 9단계에 1:1 배정한다. 배정 근거는 **등록 위치**이며,
 판단이 갈릴 수 있는 행은 `비고`에 이유를 적었다.
 
 각 행의 `명령` 열은 아래 형태의 재현 명령이다:
@@ -96,11 +96,12 @@ grep -n '^            name="<도구명>",$' "$T"
 | E-31 | `deploy_plugin` | 8 | `grep -n 'name="deploy_plugin",' $T` | `6443:            name="deploy_plugin",` |
 | E-32 | `build_handover_pack` | 9 | `grep -n 'name="build_handover_pack",' $T` ; `grep -n 'truncated' server/web/messages.py` | `7840:            name="build_handover_pack",` ; `602:    truncated: bool = False,` `613:    - ``truncated`` — the responder itself said the listing was cut short.` — 불완전성 배지 3종의 정의부(나머지 2종은 §5) |
 | E-33 | `ask_user` | 공통 | `grep -n 'name="ask_user",' $T` | `7013:            name="ask_user",` |
+| E-34 | `import_lxseq_patch` | 2 | `grep -n 'name="import_lxseq_patch",' $T` | `9264:            name="import_lxseq_patch",` |
 
 행 수 검증:
 
 ```bash
-grep -c '^| E-' .moai/specs/SPEC-COPILOT-LDGUIDE-001/evidence.md   # 33 == wc -l < /tmp/tools.txt
+grep -c '^| E-' .moai/specs/SPEC-COPILOT-LDGUIDE-001/evidence.md   # 34 == wc -l < /tmp/tools.txt
 ```
 
 ### §1.1 배정 판단이 갈릴 수 있는 행 — 이유 명시
