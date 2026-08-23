@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "cp ../docs/user-guide.html public/user-guide.html",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run"
