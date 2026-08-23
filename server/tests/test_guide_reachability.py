@@ -28,6 +28,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ORIGINAL = PROJECT_ROOT / "docs" / "user-guide.html"
 STAGED = PROJECT_ROOT / "ui" / "public" / "user-guide.html"
@@ -81,14 +83,14 @@ class TestTheDeployedCopyIsNotStale:
 
     def test_a_staged_copy_matches_the_original(self) -> None:
         if not STAGED.exists():
-            return
+            pytest.skip("ui/public 사본 없음 — 아직 빌드 전 트리다")
         assert _digest(STAGED) == _digest(ORIGINAL), (
             "ui/public 사본이 원본과 다르다 — prebuild 없이 원본만 갱신됐다"
         )
 
     def test_a_built_bundle_carries_a_fresh_guide(self) -> None:
         if not DIST_DIR.is_dir():
-            return
+            pytest.skip("ui/dist 없음 — 이 트리에서 빌드가 돈 적이 없다")
         assert DIST_COPY.is_file(), "빌드 산출물이 있는데 가이드가 없다 — 복사 스텝이 건너뛰어졌다"
         assert _digest(DIST_COPY) == _digest(ORIGINAL), (
             "빌드된 가이드가 원본과 다르다 — 감독이 낡은 문서를 본다"
