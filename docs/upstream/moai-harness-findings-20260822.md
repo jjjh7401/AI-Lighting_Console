@@ -359,6 +359,60 @@ t13 이 `package.json` 의 `pretest` 훅으로 ui 툴체인의 구체적 실패�
 
 ---
 
+## U-12 (최우선) — 조회 verb 가 파일시스템을 파괴적으로 바꾼다
+
+`moai session list --json` 은 이름과 `--json` 플래그가 모두 조회를 가리키는데, 실행하면
+**머지된 워크트리를 디스크에서 제거한다.**
+
+2026-08-23 카드 t3 조사 중 관측:
+
+```
+$ moai session list --json
+moai: removed by PR-merge cleanup: [WT] worktree …/.claude/worktrees/t13 (branch WT-worktree-gate-deps merged)
+moai: PR-merge cleanup failed (fatal: cannot remove a locked working tree, lock reason: claude session t14 …
+use 'remove -f -f' to override or unlock first (exited with status 128)): worktree …/t14 left on disk
+moai: removed by PR-merge cleanup: [WT] worktree …/.claude/worktrees/t19 (branch WT-harness-branch-triage merged)
+moai: removed by PR-merge cleanup: [WT] worktree …/.claude/worktrees/t21 (branch WT-stale-pr-triage merged)
+[]
+```
+
+워크트리 **3개가 사라졌다.** 요청한 것은 세션 목록이고, 반환값은 빈 배열이다.
+
+같은 동작을 카드 t16 sync 레인도 관측했다. 그때는 잠금 덕에 제거가 실패했다 — 위
+출력의 `cannot remove a locked working tree` 가 그 흔적이다.
+
+### 왜 최우선인가
+
+이번에는 손실이 없었다. 제거된 셋이 전부 머지 완료분이었기 때문이다. **그건 운이다.**
+
+- 판정 기준은 «브랜치가 머지됐는가» 이지 «작업트리가 깨끗한가» 가 아니다
+- 머지된 브랜치의 워크트리에 **미커밋 작업**이 있으면 그대로 사라진다
+- 이 저장소는 워크트리에 미추적 파일이 쌓이는 것이 실제로 관측된다 — 같은 날
+  `src/Lighting_Designer/` 26개가 어느 브랜치에도 없이 작업트리에만 있었다
+- 잠긴 워크트리만 살아남는데, 잠금은 세션이 붙어 있을 때만 걸린다. 세션을 닫고
+  나온 워크트리는 무방비다
+
+### 왜 로컬에서 못 고치는가
+
+`moai` 바이너리의 동작이다. 이 저장소에 소스가 없어 고칠 대상 파일이 없다.
+
+### 상류에 청하는 것
+
+둘 중 하나:
+
+1. **조회 verb 가 파일시스템을 바꾸지 않게 할 것.** `list` 는 읽기만 하고, 정리는
+   `moai worktree clean` 같은 전용 verb 가 맡는다
+2. 또는 이 동작을 **문서화하고 옵트인으로** 바꿀 것 (`--prune` 플래그 등).
+   그리고 제거 전에 해당 워크트리의 미커밋·미추적 여부를 확인할 것
+
+### 미검증
+
+- 제거 판정에 작업트리 상태(미커밋·미추적)가 반영되는지 코드로 확인하지 못했다.
+  위 추론은 «머지된 셋이 제거되고 잠긴 하나가 남았다» 는 관측에서 나온 것이다
+- `moai session list` 외의 다른 조회 verb 도 같은 정리를 도는지 재지 않았다
+
+---
+
 ## 이 문서가 담지 않는 것
 
 - **발사하지 않았다.** `/moai feedback` 은 상류 프로젝트에 GitHub 이슈를 만든다. 저장소 밖으로
