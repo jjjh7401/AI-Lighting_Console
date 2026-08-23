@@ -164,6 +164,40 @@ $ grep -rln "lifecycle-dormant" . --exclude-dir=.git
 
 ---
 
+## U-6 (MED) — pre-commit 훅이 위험한 우회를 힌트로 광고한다
+
+`moai gate` 가 실패할 때마다 `.git/hooks/pre-commit` 은 세 자리에서 같은 문장을 찍는다.
+
+```
+.git/hooks/pre-commit:28   [pre-commit] Override: SKIP_MOAI_PRECOMMIT=1 git commit
+.git/hooks/pre-commit:54   (동일)
+.git/hooks/pre-commit:68   (동일)
+```
+
+세 자리 모두 우회 방법만 알려주고, **그 우회가 무엇을 남기는지는 어디에도 없다.**
+`SKIP_MOAI_PRECOMMIT=1` 로 만든 커밋은 게이트를 통과한 커밋과 겉보기로 구분되지
+않는다. 나중에 그 커밋을 보는 사람은 검사가 돌았다고 믿는다. 트리에도 커밋 메시지에도,
+검사가 건너뛰어졌다는 기록이 어디에도 남지 않는다.
+
+이것이 가설이 아니라는 증거가 이 카드에서 나왔다. t13 의 수정 커밋은 pre-commit
+게이트를 **통과했는데**, 같은 시점 전량 스위트는 빨갰다(t20 산출물의 서식 결함,
+`6296af3`). 즉 게이트 통과와 검사 초록은 이미 갈려 있고, 훅은 그 간극을 넓히는
+쪽만 안내한다.
+
+근거 파일:행 — `.git/hooks/pre-commit:28, 54, 68`
+
+로컬 불가 사유: 이 훅은 `moai update` 가 설치한다. `moai update --no-hooks` 플래그의
+설명이 "Skip git hook installation" 인 것이 그 증거다. 로컬에서 문면을 고쳐도 다음
+동기화가 덮는다.
+
+상류에 청하는 것
+- (a) 힌트 문면에 그 우회가 남기는 것을 명시할 것 — 게이트가 돌지 않은 커밋이 되며
+  이력에 아무 표시도 남지 않는다는 사실
+- (b) 또는 우회 커밋에 기계로 읽을 수 있는 표식(커밋 트레일러 등)을 남길 것. 그래야
+  나중에 검사된 커밋과 갈라볼 수 있다
+
+---
+
 ## 이 문서가 담지 않는 것
 
 - **발사하지 않았다.** `/moai feedback` 은 상류 프로젝트에 GitHub 이슈를 만든다. 저장소 밖으로
