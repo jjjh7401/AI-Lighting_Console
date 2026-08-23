@@ -85,6 +85,16 @@ class PatchRun:
     footprint_source: str
     console_mode: str | None = None
 
+    @property
+    def width_confirmed(self) -> bool:
+        """폭을 쓰기 경로에 넘길 수 있는가.
+
+        `as_tool_arguments` 가 폭을 넘기는 조건과 **같은 술어**다. 계수를 이
+        술어로 세지 않고 따로 판별하면, 미리보기가 세는 수와 실제로 나가는
+        인자가 갈린다 — 그 갈림이 바로 이 카드가 고치는 결함이다.
+        """
+        return self.footprint_source == "console_measured"
+
     def as_tool_arguments(self) -> dict[str, Any]:
         """`patch_fixtures` 호출 인자 그대로 — 스키마 밖 키를 만들지 않는다."""
         args: dict[str, Any] = {
@@ -104,7 +114,7 @@ class PatchRun:
         # 넘기면 「거절」이 「배포」로 바뀐다 — 실측: 인자 없이는 commands_sent=0,
         # 인자를 넣으면 deploy_status='deployed' 로 2건이 나갔다. 검사를 넓혀
         # 하류 가드를 고아로 만드는 것은 이 커밋이 고치는 결함 계열 그 자체다.
-        if self.footprint_source == "console_measured":
+        if self.width_confirmed:
             args["channels_per_fixture"] = self.channels_per_fixture
         if self.console_mode is not None:
             args["console_mode"] = self.console_mode
@@ -124,6 +134,24 @@ class ImportPlan:
     console_read: dict[str, Any]
     blind_spot: str = ""
     name_prefix_mode: str = "group"
+
+    # 계수는 하나로 뭉치지 않는다. 폭이 `tree_unread` 인 런은 `as_tool_arguments`
+    # 가 폭을 빼고 넘기고, `patch_fixtures` 가 `footprint_unknown` 으로 거절하며,
+    # 그 런에서 파일 전체가 멈춘다. 거절은 의도된 안전장치다 — 고칠 것은 거절이
+    # 아니라 **미리보기가 그 사실을 고지하지 않는 것**이다. N대를 약속하고
+    # 0대를 만든다.
+    #
+    # 두 수는 `runs` 에서 **계산**한다. 따로 들고 다니면 런 목록과 갈린다.
+
+    @property
+    def write_count_applicable(self) -> int:
+        """폭이 확인돼 실제로 나갈 수 있는 대수."""
+        return sum(run.count for run in self.runs if run.width_confirmed)
+
+    @property
+    def write_count_width_unconfirmed(self) -> int:
+        """폭 미확정이라 거절될 대수. 0이 아니면 미리보기가 그대로 말해야 한다."""
+        return sum(run.count for run in self.runs if not run.width_confirmed)
 
 
 def _address_text(record: LxseqPatchRecord) -> str:
