@@ -18,6 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    # 러너는 UTC 다. UI 테스트가 화면에 찍히는 현지 시각을 단언하는데
+    # (CueMonitor 이력 행), 개발 기계가 KST 라 UTC 에서는 09:00:00 이
+    # 00:00:00 로 나와 깨졌다. 테스트의 의미를 바꾸는 대신 CI 가 개발
+    # 환경을 재현하게 한다.
+    env:
+      TZ: Asia/Seoul
+
     steps:
       # fetch-depth 0 이 필요하다. 이 저장소의 PRESERVE 계열 테스트가
       # git diff <고정 SHA>..HEAD 로 불변식을 검사하는데, 기본 얕은
