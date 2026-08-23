@@ -1,6 +1,6 @@
 # SPEC-COPILOT-FILEARG-001 — 인수 기준 (acceptance)
 
-문서 상태: draft (v0.6.0, 2026-08-23 — 분할 A가 신고한 경계 공백 보완: REQ-024 · AC-030 신설) · **Tier L · 통과 임계 0.85** · AC **20건**(전부 오프라인 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
+문서 상태: draft (v0.7.0, 2026-08-23 — 감사 FAIL 0.81 시정: design.md 신설(§G.1~§G.4 이동) · AC-030 ③ 범위 축소 · 뮤테이션 대상 지정) · **Tier L · 통과 임계 0.85** · AC **20건**(전부 오프라인 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
 
 > **참조 규약**: 정본(spec.md · 본 문서)은 줄번호로 인용하지 않고 안정 토큰만 쓴다. `파일:줄`은 코드·타 SPEC 아티팩트에만 쓴다.
 >
@@ -264,23 +264,43 @@ bread	3	2500
 
 ### AC-FILEARG-030 — 경계 게이트 · **커밋 뒤에** 돌린다 (REQ-FILEARG-024)
 
-**Given** M1 완료 후의 트리, **When** 보존 대상 경로의 변경을 기계로 확인하면, **Then** ① `server/sheets/**`와 `server/tests/test_sheets_registry.py` **밖의 파일 변경이 0건**이다 · ② 특히 `server/lxseq/**` · `server/vwx/**` · `server/orchestrator/**` · `server/web/**` · `ui/**` · `console/lua/**` · `server/safety/**` · `server/prechk/**` · `server/paperwork/**` · `server/rulebook/assets/**`가 **한 줄도 바뀌지 않았다**(A는 이것들을 **읽기만** 한다) · ③ 저장소의 PRESERVE 가드 스위트가 초록이다.
+**Given** M1 완료 후의 트리, **When** 보존 대상 변경을 기계로 확인하면, **Then**
 
-**[HARD] 실행 순서 — 커밋 → 게이트 → 보고.** 이 순서는 취향이 아니라 **정확성 조건**이다. `server/tests/test_overlap_preserve.py`는 고정 base와 **`HEAD`**를 diff한다(`:427` `body = _git("diff", f"{base}..HEAD", ...)` · `:446` · `:456` 등). 그러므로 **작업 트리의 미커밋 변경은 그 진단의 시야 밖**이고, **커밋 전 초록은 운이 아니라 구조적으로 보장된 거짓 신호**다. 이 보드에서 오늘 두 번 표면화했고(t20 · t31), t31에서는 동결 PRECHK 문서의 **실제 위반**을 이 가드가 잡았으나 **커밋 뒤에야** 잡았다 — 미커밋 상태에서는 `41 passed`였다. 저장소 메모리의 "게이트는 미추적 파일을 못 본다"와 같은 계열이다.
+**① 직접 diff — 이것이 ②의 트리 전부에 대한 유일한 검사다.** `server/sheets/**`와 `server/tests/test_sheets_registry.py` **밖의 파일 변경이 0건**이다(아래 검증 3단계).
+
+**② 대상 트리.** `server/lxseq/**` · `server/vwx/**` · `server/orchestrator/**` · `server/web/**` · `ui/**` · `console/lua/**` · `server/safety/**` · `server/prechk/**` · `server/paperwork/**` · `server/rulebook/assets/**` 가 한 줄도 바뀌지 않았다(A는 읽기만 한다).
+
+**③ 저장소 PRESERVE 가드가 초록이다 — 단, 그 가드가 덮는 범위는 좁다.** `server/tests/test_overlap_preserve.py:52 _PRESERVE_PATHS`가 실제로 지키는 것은 **열 항목뿐**이다:
+
+```
+server/looks/{schema,loader,roles,resolver,instantiate,matching}.py
+server/looks/library/   server/web/preview.py
+console/lua/            server/rulebook/assets/v2.4.2/
+```
+
+> **[HARD] ③은 ②를 증명하지 않는다(감사 A3).** ②가 열거한 트리 중 `server/lxseq/` · `server/vwx/` · `server/orchestrator/` · `server/web/`(트리 전체) · `ui/` · `server/paperwork/`는 **`_PRESERVE_PATHS`에 없다**. 실측: 그 트리들에서 가드 base 대비 **22,796줄**이 바뀐 상태에서도 스위트는 `41 passed`였다. 그러므로 ③은 자기 열 항목에 대한 검사일 뿐이며, **그 밖의 모든 트리에 대해서는 ①의 직접 diff가 유일한 검사다.** ①은 건전하고, 과대 주장이었던 것은 ③이다. 여기서도 구분은 같다 — **"가드가 초록이다"와 "그 가드가 이 트리를 본다"는 다른 문장이다.**
+
+**[HARD] 실행 순서 — 커밋 → 게이트 → 보고.** 취향이 아니라 **정확성 조건**이다. `test_overlap_preserve.py`는 고정 base와 **`HEAD`**를 diff한다(`:427` `body = _git("diff", f"{base}..HEAD", ...)` · `:446` · `:456`). 그러므로 **작업 트리의 미커밋 변경은 그 진단의 시야 밖**이고, **커밋 전 초록은 운이 아니라 구조적으로 보장된 거짓 신호**다. 오늘 이 보드에서 두 번 표면화했고(t20 · t31), t31에서는 동결 PRECHK 문서의 **실제 위반**을 이 가드가 잡았으나 **커밋 뒤에야** 잡았다(미커밋 상태에서는 `41 passed`). 저장소 메모리의 "게이트는 미추적 파일을 못 본다"와 같은 계열이다.
 
 > **나중에 읽는 사람에게**: 이 단계를 "커밋 전에 미리 돌려 두면 빠르다"로 되돌리지 마라. `base..HEAD` 스코핑 때문에 그 최적화는 **검사를 없애는 것과 같다**.
 
 **검증**(이 순서 그대로):
 
 ```
-1) git add <A가 만든 파일들> && git commit    # 반드시 먼저
-2) uv run pytest server/tests/test_overlap_preserve.py -q
-3) git diff --stat <착수 SHA>..HEAD -- server/lxseq server/vwx server/orchestrator server/web ui console/lua server/safety server/prechk server/paperwork server/rulebook/assets
+1) git add <A가 만든 파일들> && git commit          # 반드시 먼저
+2) uv run pytest server/tests/test_overlap_preserve.py -q     # ③ (좁은 범위)
+3) git diff --stat <착수 SHA>..HEAD -- server/lxseq server/vwx server/orchestrator server/web ui console/lua server/safety server/prechk server/paperwork server/rulebook/assets     # ① (②의 전 트리)
 ```
 
-3)이 **빈 출력**이고 2)가 초록일 것. 커밋 전에 잰 결과는 **증거로 인정하지 않는다** — `progress.md`에는 **커밋 SHA와 함께** 적는다(SHA가 없으면 언제 잰 것인지 확인할 방법이 없다).
+3)이 **빈 출력**이고 2)가 초록일 것. **3)이 본 검사이고 2)는 보조다** — 위 [HARD] 주석대로 2)는 ②의 대부분을 보지 못한다. 커밋 전에 잰 결과는 증거로 인정하지 않으며, `progress.md`에는 **커밋 SHA와 함께** 적는다.
 
-**뮤테이션**: 보존 대상 중 아무 파일이나 한 줄 고쳐 **커밋한 뒤** 돌리면 ①과 ③이 **빨개져야 한다**. 같은 수정을 **커밋하지 않고** 돌리면 초록이 나오는데 — **그 초록이 바로 이 AC가 막는 거짓 신호**이며, 뮤테이션 기록에 두 상태를 모두 적는다.
+**뮤테이션 — 대상은 `server/web/preview.py` 하나로 지정한다.**
+
+이 파일을 고른 이유는 **`_PRESERVE_PATHS`에 실제로 들어 있는 것을 확인했기 때문**이다(`:60`). "보존 대상 중 아무 파일이나"로 두면 안 된다 — 구현자가 ②의 첫 트리(`server/lxseq/`)를 집으면 ③이 **초록**으로 나오고, 그것을 *"내 뮤테이션이 실패했다"*로 읽어 대상을 바꿔 가며 헤매다 결국 흘려보내게 된다. 그 초록은 뮤테이션 실패가 아니라 **가드의 사각지대**다.
+
+- `server/web/preview.py`를 한 줄 고쳐 **커밋한 뒤** 돌리면 ①과 ③이 **빨개져야 한다**.
+- 같은 수정을 **커밋하지 않고** 돌리면 **초록**이 나온다 — 그 초록이 이 AC가 막는 거짓 신호이며, **두 상태를 모두** 기록한다.
+- 참고(기록만, 판정 아님): `server/lxseq/`처럼 `_PRESERVE_PATHS` 밖 트리를 고치면 커밋 뒤에도 ③은 초록이고 **①만 빨개진다**. 그것이 ①이 본 검사인 이유다.
 
 ## §D. Definition of Done
 
@@ -294,6 +314,8 @@ grep -c "^### AC-FILEARG-"   acceptance.md   → 20
 ```
 
 이 줄을 두는 이유는 분명하다 — **오늘 이 보드에서 같은 혼동이 네 번, 서로 다른 모습으로 나왔고** 다음 감사자도 같은 자리에 걸린다. **숫자만 적고 그 숫자를 만든 명령을 적지 않으면 틀린 명령을 부른다.**
+
+**[HARD] 그리고 부정 grep 결과는 부재의 증거가 아니다.** 이 문서 묶음에서 **인라인 강조가 문자열을 쪼갠다** — `정본을 **참조**한다`는 `정본을 참조`로 검색해도 **걸리지 않는다**. 실제로 `columns.py` 오귀속이 세 번째로 살아남은 경로가 이것이었다(감사 A2): 문구를 grep으로 훑었는데 강조 마크업이 중간에 끼어 있어 매치되지 않았고, 빈 결과를 "없다"로 읽었다. 그러므로 문구 존재 여부를 확인할 때는 ① 강조를 걷어낸 **짧은 핵심 토큰**으로 훑고(예: `정본을` 또는 `columns.py`) ② 히트를 **눈으로 판독**해 문맥을 가른다. **빈 grep 결과를 근거로 "고쳤다"고 적지 않는다** — 그것은 이 SPEC이 §F 속성과 `AC-FILEARG-030`에서 반복해 온 구분(검사가 초록인 것과 그 검사가 대상을 보는 것)의 문자열 판본이다.
 
 **Tier L · 통과 임계 0.85** (§A.5 — 성격이 티어를 정하고, 티어가 임계를 정한다).
 

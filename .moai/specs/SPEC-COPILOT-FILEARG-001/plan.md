@@ -1,6 +1,6 @@
 # SPEC-COPILOT-FILEARG-001 — 구현 계획 (plan)
 
-문서 상태: draft (v0.6.0, 2026-08-23 — 분할 A가 신고한 경계 공백 보완: REQ-024 · AC-030 신설) · **Tier L · 통과 임계 0.85** · 칸반 카드 t10
+문서 상태: draft (v0.7.0, 2026-08-23 — 감사 FAIL 0.81 시정: design.md 신설 · plan §E·M1 오귀속 교정 · §A.4 수치 갱신) · **Tier L · 통과 임계 0.85** · 칸반 카드 t10
 
 > **v0.6.0 — A가 스스로 신고한 경계 공백을 메운다.** 분할로 PRESERVE 요구와 게이트가 B로 넘어가면서 **A에는 경계를 지키는 요구도 기계 검사도 없었다**. B의 것을 빌려 쓸 수 없다 — 둘은 **서로 다른 트리를 지킨다**. 신설 **REQ-FILEARG-024**(경계 보존) · **AC-FILEARG-030**(경계 게이트, **커밋 뒤 실행**이 정확성 조건 — `test_overlap_preserve.py`가 `base..HEAD`를 진단하므로 미커밋 변경은 시야 밖이고, 커밋 전 초록은 **구조적으로 보장된 거짓 신호**다). 예산 기록: 천장은 과잉 형식화를 막으려 있고 **경계 게이트는 그 반대**다 — 일을 만드는 요구와 일이 번지는 것을 막는 요구는 다른 행위다. REQ **16** · AC **20**(Tier L 25/25). `acceptance.md` §D에 **계수 규약**(정의 앵커 grep) 명시.
 >
@@ -123,7 +123,9 @@ v0.1.0에 한 건 있었다. 지금은 없다.
 
 ### M1 — 판별기 + 레지스트리 (cycle_type=tdd)
 
-- **요구·설계 지시**: `REQ-FILEARG-001`~`REQ-FILEARG-005` · `REQ-FILEARG-007` · `REQ-FILEARG-008` · `REQ-FILEARG-016`~`REQ-FILEARG-018` 구현. `server/sheets/registry.py` — 레지스트리 표(`patch` + `vectorworks` 두 행), 서명 **형식**(정확 열 집합 · 포함·배제 쌍), 전수 계수 판별기. 순수 함수이며 콘솔·네트워크 접촉 0. 서명은 정본을 **참조**한다(`patch` → `CANONICAL_COLUMNS`, `vectorworks` → `server/vwx/columns.py`) — 사본 금지.
+- **요구·설계 지시**: `REQ-FILEARG-001`~`REQ-FILEARG-005` · `REQ-FILEARG-007` · `REQ-FILEARG-008` · `REQ-FILEARG-016`~`REQ-FILEARG-024` 구현. `server/sheets/registry.py` — 레지스트리 표(`patch` + `vectorworks` 두 행), 술어 두 갈래(열 집합 술어 · 신원 술어), 전수 계수 판별기. 순수 함수이며 콘솔·네트워크 접촉 0. **술어는 정본을 호출한다 — `patch` → `CANONICAL_COLUMNS`(`server/lxseq/parser.py:18`), `vectorworks` → `_best_header_candidate`(`server/vwx/reader.py:158`, 임계 `_MIN_HEADER_ALIAS_MATCHES` at `:43`) + zip 갈래의 `SCENE_ENTRY` 판정(`server/orchestrator/tools.py:2861`). 사본 금지.**
+
+  > **[HARD] `columns.py`를 VW 술어의 정본으로 쓰지 마라 — 이 줄은 세 번 되살아났다.** 결정 K가 오귀속으로 판정하고 결정 L이 `reader.py`로 옮긴 문장이며, v0.6.0까지 이 줄의 꼬리에 다시 붙어 있었다(감사 A2). **같은 파일 §E는 반대로 적고 있었으므로 plan.md가 60줄 간격으로 자기모순 상태였고, 구현자가 먼저 여는 쪽은 이 M1 지시다.** 게다가 `AC-FILEARG-006` ③이 **`columns.py`를 서명 정본으로 삼지 않을 것**을 인수 조건으로 걸고 있으므로, 이 줄을 그대로 구현하면 그 AC가 빨개진다. 설계 근거는 `design.md` §4가 소유한다.
 - **실측 과제 둘**: ① **VW 위임 술어의 내구성** — 대상은 `server/tests/fixtures/vwx/` **전량**이며 **`.mvr`을 포함한다**(디렉터리 12개 항목 · 업로드 페이로드 10개 = `.csv` 8 + `.txt` 1 + `.mvr` 1; `README.md`와 `stage1_contract_snapshot.json`은 페이로드가 아니다). 헤더가 없는 `vectorworks_export_instrument_data_no_header.txt`와 zip인 `demoshow_grandma3.mvr`(315,155 B)이 **핵심 표본**이다 — 열 집합 서명이라면 둘 다 떨어졌을 것이고, 그것이 감사 B1이 지적한 회수였다. 흡수하지 못하는 변형이 있으면 안전판 `REQ-FILEARG-018`로 가고 그 사실을 `plan.md` §D.1에 기록한다. ② **형식 충분성** — 확장 형식이 프리셋 4종을 실제로 가르는지 **합성 서명 픽스처**로 증명한다(`AC-FILEARG-018`). 레지스트리 행을 만들어 증명하지 않는다.
 - **표본 경로 규약**: 테스트는 **`server/tests/fixtures/`**만 읽는다. `drop_dk_rigging_not_a_vectorworks_export.csv`는 **이미 있는 음성 대조군**이므로 새로 만들지 않는다. `src/Lighting_Designer/02_RIG팩/`(형제 시트 7종)과 `03_곡파일_Sugar/`(cue-ex)는 **상위 집합 충돌을 실물로 재현**하는 데 쓸 수 있으나 파이프라인 산출물이지 테스트 픽스처가 아니다 — 테스트가 읽는 경로로 삼지 않는다.
 - **baseline**: 착수 직전 전체 스위트 실측(M0의 원인별 분리 규약을 그대로 따른다).
