@@ -8,6 +8,23 @@
 > **측정 기준**: HEAD `c82087b` · base `f30ab4c`(`git merge-base HEAD origin/main`)
 > **측정일**: 2026-08-17
 
+
+## §0. 인용 규약 [HARD] (t8 신설)
+
+**명령과 출력을 나란히 적을 때, 출력을 손질하지 않는다.** 손질한 인용은 거짓이 아니지만
+— 인용된 행은 전부 실재하고 주장을 뒷받침한다 — 읽는 사람은 그 명령을 돌리면 그 출력이
+나오리라 기대한다. 실제로는 10행 중 3행만 적혀 있으면, 재현하는 사람은 자기가 틀린
+줄 안다. 그리고 그 불일치가 **원장 전체의 신뢰를 깎는다.**
+
+세 가지를 지킨다:
+
+1. **전량을 셀 수 없으면 개수를 적는다** — `grep -n` 의 일부를 고르지 말고 `grep -c` 로
+   전량을 세고, 주장을 뒷받침하는 행은 **부분 인용임을 밝혀** 따로 적는다.
+2. **측정 시점을 붙인다** — 행 번호는 코드가 움직이면 무효가 된다. t8 재측정에서
+   `childCount` 는 원장의 `819·846·875` 가 아니라 `828·832·836` 이었다. 개수와
+   `[<short-sha>]` 를 함께 적으면 다음 사람이 드리프트를 드리프트로 읽는다.
+3. **부분집합이면 그렇게 쓴다** — "존재" 나 "→ A B C" 는 전량처럼 읽힌다.
+
 ## §0. 이 원장이 증거로 인정하지 않는 것
 
 plan.md §A.4의 [HARD] 규정을 승계한다.
@@ -295,10 +312,10 @@ RunbookMode.test.tsx
 
 | 위험 | 단계 | 근거 (명령 → 관측) | 부착 앵커 | 판정 |
 |---|---|---|---|---|
-| 그룹 멤버십을 판독할 수 없어, 점유된 슬롯을 덮어쓰면 복구할 수 없다 | 4 | `grep -n "childCount" $T` → `819` `846` `875` (응답기의 childCount를 총계로 승격하지 않는 처리) ; `grep -n "Delete\|Remove" server/safety/blacklist.yaml` → `63:  - "Delete"` `64:  - "Remove"` (승인 필수) ; 복원 경로 부재는 §12 B3이 "되돌릴 수 없다"로 기록 | E-14 | 배치 |
-| 프리셋 덮어쓰기 확인 카드는 승낙 어휘가 좁아, 다르게 답하면 저장이 조용히 멈춘다 | 4 | `grep -n "승낙" server/web/session.py` → `2157` `2161` `2167` `2194` (승낙 어절 집합 + "부분 문자열 매칭은 쓰지 않는다") | E-18 | 배치 |
-| 씬을 룩과 이펙트로 나눠 만들면 조용히 실패한다 | 5 | `ls server/tests \| grep scene` → `test_scene_compile.py` `test_scene_boundary.py` 존재 ; (보조) `tools.py:7637-7645` 설명 원문 | E-23 | 배치 |
-| 서버는 Vectorworks 패치를 실행하지 않는다 — 사람이 콘솔에서 Lua를 실행해야 한다 | 1·2 | `ls server/tests \| grep autopatch` → `test_autopatch_execute.py` `test_autopatch_verify.py` `test_autopatch_contract.py` 존재 ; (보조) `tools.py:6893-6900` 설명 원문 | E-4 | 배치 |
+| 그룹 멤버십을 판독할 수 없어, 점유된 슬롯을 덮어쓰면 복구할 수 없다 | 4 | `grep -c "childCount" $T` → **20행** [cf86dad] · 그중 총계 승격을 막는 처리는 828·832·836 (부분 인용임을 밝힌다) ; `grep -n "Delete\|Remove" server/safety/blacklist.yaml` → `63:  - "Delete"` `64:  - "Remove"` (승인 필수) ; 복원 경로 부재는 §12 B3이 "되돌릴 수 없다"로 기록 | E-14 | 배치 |
+| 프리셋 덮어쓰기 확인 카드는 승낙 어휘가 좁아, 다르게 답하면 저장이 조용히 멈춘다 | 4 | `grep -c "승낙" server/web/session.py` → **26행** [cf86dad] · 그중 어절 집합 정의와 "부분 문자열 매칭은 쓰지 않는다"는 2676·2680·2681·2686 (부분 인용임을 밝힌다) | E-18 | 배치 |
+| 씬을 룩과 이펙트로 나눠 만들면 조용히 실패한다 | 5 | `ls server/tests | grep scene | wc -l` → **7개** [cf86dad] · 이 주장을 직접 뒷받침하는 것은 `test_scene_compile.py` `test_scene_boundary.py` (부분 인용임을 밝힌다) ; (보조) `tools.py:7637-7645` 설명 원문 | E-23 | 배치 |
+| 서버는 Vectorworks 패치를 실행하지 않는다 — 사람이 콘솔에서 Lua를 실행해야 한다 | 1·2 | `ls server/tests | grep autopatch | wc -l` → **9개** [cf86dad] · 이 주장을 직접 뒷받침하는 것은 `test_autopatch_execute.py` `test_autopatch_verify.py` `test_autopatch_contract.py` (부분 인용임을 밝힌다) ; (보조) `tools.py:6893-6900` 설명 원문 | E-4 | 배치 |
 
 **제외분 없음.** 4건 모두 근거가 코드·테스트에 귀속됐다.
 
