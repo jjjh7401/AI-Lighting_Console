@@ -32,6 +32,7 @@ from .test_safety_gate import FakeConsole
 
 _PREFIX = "PREFIX"
 # A secret-shaped raw SDK original that must NEVER reach the chat surface.
+# ast-grep-ignore: sec-hardcoded-credential-python
 _SECRET_KEY = "sk-ant-SECRET-abcdef0123456789"
 _RAW_SDK_DETAIL = (
     f"AuthenticationError(401): invalid x-api-key {_SECRET_KEY} — "

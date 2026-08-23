@@ -438,6 +438,7 @@ class TestM10DeployShellWiring:
 
 # --- REQ-DEPLOY-028 / AC-DEPLOY-019 startup key-injection harness -------------
 # Obviously-fake key strings + a sentinel so any leak is grep-visible.
+# ast-grep-ignore: sec-hardcoded-credential-python
 _FAKE_ANTHROPIC_KEY = "sk-ant-FAKE-SERVE-STARTUP-000111222333"
 _PRESET_ENV_SENTINEL = "preset-operator-env-key-DO-NOT-OVERWRITE"
 
