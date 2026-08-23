@@ -13,11 +13,11 @@
 
 1. `spec.md` §A.4(분할 — 무엇이 어디로 갔나) → **§A.5(A가 Tier L인 이유)** → **§G.1(축이 다르다 — 감사 FAIL의 뿌리)** → §G.4(위임 계약 두 갈래) → §F(세 성질)
 2. `plan.md` §A.1(뒤집힐 수 있는 결정) → §A.3 **결정 K · L** → §A.4(열린 결정 **0건**)
-3. `acceptance.md` §C(AC **19건**과 검증 명령 · 표 밖 4건의 이유)
+3. `acceptance.md` §C(AC **20건**과 검증 명령 · 표 밖 4건의 이유)
 4. `research.md` **§11**(F2 뿌리 · 신원 열 재계산) → §10 → §9 → §7(갭)
 
 
-### 인수인계 시 반드시 알아야 할 함정 6건
+### 인수인계 시 반드시 알아야 할 함정 8건
 
 1. **툴 등재는 4지점이 아니라 6지점이다.** `_TOOL_TASKS`(`server/orchestrator/runner.py:137`)와 `test_tools.py`의 닫힌 집합 상수를 빠뜨리면 `test_runner_progress.py`의 전단사 단언이 빨갛게 된다. 정본 열거는 `research.md` §6이며, `test_runner_progress`는 **지점이 아니라 누락 검출 가드**다.
 2. **판별기가 첫 일치에서 멈춰도 오늘은 테스트가 통과한다** — 등록 행이 둘뿐이고 둘은 서로 겹치지 않기 때문이다. 그래서 충돌 시험은 **주입한 표**로 돌린다(`AC-FILEARG-003`). 충돌은 이론이 아니다 — 프리셋 4종에서 반드시 발화한다(`research.md` §9 (c)).
@@ -25,6 +25,8 @@
 4. **이 저장소에는 테스트 CI가 없다.** `.github/workflows/`는 라벨 동기화 하나뿐이라 로컬 전체 스위트(pytest + vitest)가 유일한 회귀 증거다. 그리고 **착수 시점에 이미 실패 1건이 있다**(`test_pipeline_out_paths.py` / t20 귀속) — 이 SPEC 것이 아니고 여기서 고치지 않는다(§E.1 `known_baseline_failure`).
 5. **열 집합으로 Vectorworks를 재려 하지 마라 — 1차 감사 FAIL의 뿌리였다.** `.mvr`·`.xlsx`는 zip이라 헤더 행이 없고(`reader.py:350-360`), 헤더는 1행이라는 보장도 없다(`reader.py:158`이 **탐색**한다). 행이 드는 것은 열 목록이 아니라 **술어**다(결정 K · `spec.md` §G.1).
 6. **그리고 술어는 "무엇인가"를 물어야 한다 — 2차(델타) 감사 FAIL의 뿌리였다.** `has_address_family`는 **"패치를 뽑을 수 있는가"**를 묻는다. 축이 다르므로 **양방향으로 틀린다**: LX-SEQ 패치 CSV가 `True`(9열 중 **7열이 VW 별칭**으로 해소 — LX-SEQ는 VW 어휘의 **부분집합**이다)이고, 주소 열 없는 진짜 VW 파일은 `False`다. 사용성 함수를 판별에 끌어들이는 순간 같은 결함이 재발한다(결정 L · REQ-FILEARG-022 · `research.md` §11.1). 그리고 **대조군을 한 축으로만 세우지 마라** — 쉼표 전용 대조군이 전부 초록인 동안 탭 축이 열려 있었고, 장바구니 목록이 실패 0건으로 Vectorworks가 됐다(`AC-FILEARG-028`).
+7. **경계 게이트는 커밋 뒤에 돌린다 — 커밋 전 초록은 거짓이다.** `server/tests/test_overlap_preserve.py`는 고정 base와 **`HEAD`**를 diff하므로(`:427` · `:446` · `:456`) **작업 트리의 미커밋 변경은 그 진단의 시야 밖**이다. 커밋 전에 재서 초록이 나오는 것은 운이 아니라 **구조적으로 보장된 결과**다 — 오늘 이 보드에서 두 번 나왔고(t20 · t31), t31에서는 동결 문서의 실제 위반을 **커밋 뒤에야** 잡았다(미커밋 상태에서는 `41 passed`). 순서는 **커밋 → 게이트 → 보고**이며, "미리 돌려 두면 빠르다"로 되돌리는 것은 **검사를 없애는 것과 같다**(`AC-FILEARG-030`).
+8. **수를 셀 때는 정의 앵커 grep을 쓴다.** 이 SPEC은 `006` · `009~015`를 **비운 자리로 문서화**하므로 맨 ID 패턴 grep은 참조까지 세어 과대 보고한다. `grep -c "^- \*\*REQ-FILEARG-" spec.md` → **16**, `grep -c "^### AC-FILEARG-" acceptance.md` → **20**(`acceptance.md` §D 계수 규약). 오늘 이 보드에서 같은 혼동이 네 번 나왔다.
 
 ### 다음 담당자가 먼저 결정할 것
 
@@ -76,13 +78,13 @@
 plan_status: audit-pending   # plan-audit 미실시 · Implementation Kickoff Approval 미통과(M0 착수 전제)
 plan_complete_at: 2026-08-22
 plan_audit: "미실시"
-spec_version: "0.5.0"
+spec_version: "0.6.0"
 tier: L                     # 분할 A는 constitutional (레지스트리 계약 정의) — 크기가 아니라 성격. 통과 임계 0.85
 base_sha: 6296af3
 baseline_measured: "미측정 — 의도적으로 비워 둔 칸이다(미완성이 아니다). plan 세션은 전체 스위트를 실행하지 않았고, 이 트리를 두고 돌던 수치 중 최소 하나는 틀렸다(0 failed 로 전달됐으나 실제로는 실패 1건). 다른 트리·다른 시점의 값을 이월하지 않는다 — M0가 이 워크트리 6296af3에서 직접 잰다."
 artifacts: [spec.md, plan.md, acceptance.md, research.md, progress.md]
-requirements: 15            # REQ-FILEARG-001~005 · 007 · 008 · 016~023 (006 · 009~015는 분할로 SHEETPIPE로 이동 — 번호 재사용 금지)
-acceptance_criteria: 19     # AC-FILEARG-001~006 · 009(순서 구간) · 018~029 (조건부 1: AC-021 · 앱 실기 0 — B가 소유)
+requirements: 16            # 정의 앵커: grep -c "^- \*\*REQ-FILEARG-" spec.md → 16 (001~005 · 007 · 008 · 016~024; 006 · 009~015는 SHEETPIPE로 이동 — 번호 재사용 금지)
+acceptance_criteria: 20     # 정의 앵커: grep -c "^### AC-FILEARG-" acceptance.md → 20 (001~006 · 009(순서 구간) · 018~030; 조건부 1: AC-021 · 앱 실기 0 — B가 소유)
 milestones: 2               # M0(게이트, cycle_type=none) · M1(판별기·레지스트리, tdd). M2~M5는 SHEETPIPE로 이동
 assumptions_open: 2         # ASSUMPTION-75(재개방 — 75-b 미검증) · 76. 77은 7,258 B 실측으로 POSITIVE 닫힘
 decisions_closed: 12        # plan.md §A.3 A~L (I·J = 리드 재정 · K = 감사 FAIL 시정 · L = 델타 감사 FAIL 시정)
