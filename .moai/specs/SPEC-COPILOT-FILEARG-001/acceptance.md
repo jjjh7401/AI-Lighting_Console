@@ -1,6 +1,6 @@
 # SPEC-COPILOT-FILEARG-001 — 인수 기준 (acceptance)
 
-문서 상태: draft (v0.2.0, 2026-08-23 — 리드 재정 반영) · Tier M · AC **21건**(오프라인 20 + 앱 실기 1 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
+문서 상태: draft (v0.3.0, 2026-08-23 — 독립 감사 FAIL 시정) · Tier M · AC **24건**(오프라인 23 + 앱 실기 1 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
 
 > **참조 규약**: 정본(spec.md · 본 문서)은 줄번호로 인용하지 않고 안정 토큰만 쓴다. `파일:줄`은 코드·타 SPEC 아티팩트에만 쓴다.
 >
@@ -46,7 +46,7 @@
 | REQ-FILEARG-005 | AC-FILEARG-002 (별 구간) · AC-FILEARG-009 | M1 · M2 |
 | REQ-FILEARG-006 | AC-FILEARG-007 | M2 |
 | REQ-FILEARG-007 | AC-FILEARG-006 · AC-FILEARG-019 | M1 |
-| REQ-FILEARG-008 | AC-FILEARG-006 (별 구간) | M1 |
+| REQ-FILEARG-008 | AC-FILEARG-006 (별 구간) · AC-FILEARG-023 | M1 |
 | REQ-FILEARG-009 | AC-FILEARG-008 | M2 |
 | REQ-FILEARG-010 | AC-FILEARG-009 | M2 |
 | REQ-FILEARG-011 | AC-FILEARG-010 · AC-FILEARG-013 | M3 |
@@ -57,21 +57,23 @@
 | REQ-FILEARG-016 | AC-FILEARG-018 | M1 |
 | REQ-FILEARG-017 | AC-FILEARG-020 | M1 |
 | REQ-FILEARG-018 | AC-FILEARG-021 | M1 |
+| REQ-FILEARG-019 | AC-FILEARG-022 | M1 |
+| REQ-FILEARG-020 | AC-FILEARG-024 | M1 |
 
-**REQ 18/18 커버, 누락 0.** 역추적표에 없는 AC는 2건이며 의도다 — **AC-FILEARG-001**(M0 계약 확인 게이트) · **AC-FILEARG-017**(M5 앱 실기 — 형상 전체).
+**REQ 20/20 커버, 누락 0.** 역추적표에 없는 AC는 2건이며 의도다 — **AC-FILEARG-001**(M0 계약 확인 게이트) · **AC-FILEARG-017**(M5 앱 실기 — 형상 전체).
 
 ### §C.0a 마일스톤별 AC 배정 (정본)
 
 | M | AC | 수 |
 |---|---|---|
 | M0 | AC-FILEARG-001 | 1 |
-| M1 | AC-FILEARG-002 · 003 · 004 · 005 · 006 · 018 · 019 · 020 · 021 | 9 |
+| M1 | AC-FILEARG-002 · 003 · 004 · 005 · 006 · 018 · 019 · 020 · 021 · 022 · 023 · 024 | 12 |
 | M2 | AC-FILEARG-007 · 008 · 009 | 3 |
 | M3 | AC-FILEARG-010 · 011 · 012 · 013 | 4 |
 | M4 | AC-FILEARG-014 · 015 · 016 | 3 |
 | M5 | AC-FILEARG-017 | 1 |
 
-합 **21 · 중복 0 · 누락 0**.
+합 **24 · 중복 0 · 누락 0**.
 
 ### AC-FILEARG-001 — M0 계약 대조 게이트
 
@@ -112,7 +114,7 @@
 
 ### AC-FILEARG-006 — 레지스트리 표 (REQ-FILEARG-007 · REQ-FILEARG-008)
 
-**Given** 레지스트리, **When** 표를 읽으면, **Then** ① 채워진 행이 **정확히 둘**(`patch` · `vectorworks`)이고 그 밖의 종류 행은 **없다**(결정 I) · ② `patch` 행의 서명이 `server/lxseq/parser.py`의 `CANONICAL_COLUMNS`를 **참조**하며 열 이름 사본이 아니다(참조 동일성 단언) · ③ `vectorworks` 행의 서명이 `server/vwx/columns.py`의 열 계약을 참조하며 사본이 아니다 · ④ 두 행의 대상이 각각 등록된 툴 집합 / 기존 세션 업로드 경로로 실제 해소된다 · ⑤ 표에 없는 종류 이름은 판별에서 `unknown_sheet_kind`로 떨어지고 통과하는 경로가 없다.
+**Given** 레지스트리, **When** 표를 읽으면, **Then** ① 채워진 행이 **정확히 둘**(`patch` · `vectorworks`)이고 그 밖의 종류 행은 **없다**(결정 I) · ② 각 행이 드는 것은 열 목록이 아니라 **판별 술어**다(결정 K) — `patch`는 **열 집합 술어**이고 그 정본은 `server/lxseq/parser.py`의 `CANONICAL_COLUMNS`를 **참조**하며 사본이 아니다(참조 동일성 단언) · ③ `vectorworks`는 **위임 술어**이며 `server/vwx/reader.py`의 판정을 **호출**한다 — 판정 논리를 이 모듈에 옮겨 적지 않았고(사본 0건), `columns.py`를 서명 정본으로 삼지 않는다(v0.2.0의 오귀속 교정) · ④ 두 행의 대상이 각각 등록된 툴 집합 / 기존 세션 업로드 경로로 실제 해소된다 · ⑤ 표에 없는 종류 이름은 판별에서 `unknown_sheet_kind`로 떨어지고 통과하는 경로가 없다.
 
 **검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "registry"`
 
@@ -154,7 +156,11 @@
 
 ### AC-FILEARG-013 — 6지점 등재 (REQ-FILEARG-011 별 구간)
 
-**Given** 착수 후 트리, **When** 등재를 확인하면, **Then** ① `TOOL_NAMES`에 래퍼 이름이 있다 · ② `ToolDefinition`이 있다 · ③ `handlers` 맵에 있다 · ④ `_TOOL_TASKS`에 있다 · ⑤ `server/tests/test_tools.py`의 닫힌 집합 상수가 35다 · ⑥ `server/tests/test_runner_progress.py`의 전단사 단언이 통과한다. `_TOOL_TASKS` 등재를 빼면 ⑥이 죽어야 한다(뮤테이션 확인 — 6지점 중 가장 자주 빠지는 자리다).
+**용어 고정(감사 D1).** "6지점"은 **편집 지점 6곳**을 뜻하며 그 정본은 `research.md` §6이다. 가드는 지점이 아니다 — `test_runner_progress.py`는 **누락을 검출하는 가드**이지 편집 지점이 아니므로 아래 열거에서 지점으로 세지 않는다.
+
+**Given** 착수 후 트리, **When** 등재를 확인하면, **Then** 편집 지점 **6곳**이 모두 채워져 있다 — ① `TOOL_NAMES`에 래퍼 이름 · ② **핸들러 클로저**(v0.2.0 열거에서 빠져 있었다 — 감사 D1) · ③ `ToolDefinition` · ④ `handlers` 맵 · ⑤ `server/orchestrator/runner.py`의 `_TOOL_TASKS` · ⑥ `server/tests/test_tools.py`의 닫힌 집합 상수 35.
+
+**가드 확인(지점 아님)**: `server/tests/test_runner_progress.py`의 전단사 단언이 통과한다. `_TOOL_TASKS` 등재(⑤)를 빼면 이 가드가 죽어야 한다 — 6지점 중 가장 자주 빠지는 자리이므로 뮤테이션으로 확인한다.
 
 **검증**: `uv run pytest server/tests/test_tools.py server/tests/test_runner_progress.py -q`
 
@@ -205,7 +211,7 @@ git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/sa
 
 ### AC-FILEARG-019 — 실물 교차 분류 (REQ-FILEARG-007 · 결정 I)
 
-**Given** `server/tests/fixtures/`의 실물 표본, **When** 각각을 판별하면, **Then** ① `lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv` → `patch` 단일 일치 · ② `vwx/vectorworks_export_sample_with_data.csv` → `vectorworks` 단일 일치이며 `patch`에는 **맞지 않는다**(정규 9열 중 3개만 가진다 — `research.md` §9 (b)) · ③ `vwx/drop_dk_rigging_not_a_vectorworks_export.csv`(**이미 있는 음성 대조군**, 새로 만들지 않는다) → `unknown_sheet_kind` · ④ `vwx/` 나머지 표본 전량에 대해 VW 서명의 적중/불발을 **표로 기록**한다 — 흡수하지 못하는 변형이 있으면 그 사실이 `AC-FILEARG-021`의 발동 근거가 된다(숨기지 않는다).
+**Given** `server/tests/fixtures/`의 실물 표본 — 대상은 `vwx/` **디렉터리 전량**이며 **`.mvr`을 포함한다**(12개 항목 중 업로드 페이로드 **10개**: `.csv` 8 · `.txt` 1 · `.mvr` 1; `README.md`와 `stage1_contract_snapshot.json`은 페이로드가 아니므로 제외한다 — v0.2.0의 "7종"은 형제 시트 수에서 옮겨 붙은 추정값이었고 폐기한다), **When** 각각을 판별하면, **Then** ① `lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv` → `patch` 단일 일치 · ② `vwx/vectorworks_export_sample_with_data.csv` → `vectorworks` 단일 일치이며 `patch`에는 **맞지 않는다**(정규 9열 중 3개만 가진다 — `research.md` §9 (b)) · ③ `vwx/drop_dk_rigging_not_a_vectorworks_export.csv`(**이미 있는 음성 대조군**, 새로 만들지 않는다) → `unknown_sheet_kind` · ④ **페이로드 10개 전량**에 대해 위임 술어의 적중/불발을 **표로 기록**한다 — 흡수하지 못하는 변형이 있으면 그 사실이 `AC-FILEARG-021`의 발동 근거가 된다(숨기지 않는다). `.mvr`과 헤더 없는 `.txt`의 판정은 `AC-FILEARG-022`가 별도로 못박는다.
 
 **검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "cross_classify"` · 표는 `progress.md` M1 절에 남긴다.
 
@@ -215,18 +221,50 @@ git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/sa
 
 **검증**: `grep -rn "preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex" server/sheets/` — **빈 출력**이어야 한다(합성 픽스처는 `server/tests/`에 있으므로 이 grep에 걸리지 않는다). 아울러 `uv run pytest server/tests/test_sheets_registry.py -q -k "registry"`의 ① 항(행 정확히 둘)이 통과할 것.
 
-### AC-FILEARG-021 — 안전판을 타면 선언되고 고지된다 (REQ-FILEARG-018)
+### AC-FILEARG-021 — 안전판을 타면 선언되고 고지된다 (REQ-FILEARG-018 · 조건부)
 
-**조건부 AC.** `AC-FILEARG-019` ④가 "VW 서명이 실물 변형을 흡수한다"로 나오면 이 AC는 **발동하지 않으며**, 그 사실을 명령·출력과 함께 `progress.md`에 **N/A로 명시 기록**한다 — 판정하지 않은 것을 통과로 적지 않는다.
+**조건부 AC.** `AC-FILEARG-019` ④가 "위임 술어가 실물 변형을 전부 흡수한다"로 나오면 이 AC는 **발동하지 않으며**, 그 사실을 명령·출력과 함께 `progress.md`에 **N/A로 명시 기록**한다 — 판정하지 않은 것을 통과로 적지 않는다.
 
-**Given** M1이 VW 서명으로 실물 변형을 흡수할 수 없다고 실측한 경우, **When** 폴백을 구현하면, **Then** ① 폴백이 **레지스트리 항목으로 선언**돼 있다 — 판별 코드에 암묵적 `else` 가지가 없다(`grep -n "else" server/sheets/registry.py`로 확인하고 남은 `else`가 있으면 그것이 폴백 경로가 아님을 근거와 함께 밝힌다) · ② 그 경로로 흐른 파일에 대해 UI가 **"Vectorworks export로 읽는 중"임을 소리 내어 말한다**(문구가 화면에 있다) · ③ `plan.md` §D.1에 "`unknown_sheet_kind` 거절 규칙에 살아 있는 경로가 없어졌다"가 **기록돼 있다**.
+> **분할 교정(감사 B5).** v0.2.0은 "판별기에 암묵적 `else`가 없다"를 이 조건부 AC 안에 두었다. 그것은 **폴백이 발화하지 않는 동안 아무도 확인하지 않는다**는 뜻이었다. 그 절은 `AC-FILEARG-024`로 **분리했고 무조건 검사**한다. 여기 남는 것은 폴백이 실제로 발동했을 때만 성립할 수 있는 두 가지다.
 
-**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "declared_fallback"` · `npm --prefix ui run test -- --run App` · `grep -n "거절 규칙에 살아 있는 경로가 없어진다" .moai/specs/SPEC-COPILOT-FILEARG-001/plan.md`
+**Given** M1이 위임 술어로 실물 변형을 흡수할 수 없다고 실측한 경우, **When** 폴백을 구현하면, **Then** ① 폴백이 **레지스트리 항목으로 선언**돼 있다 — 표에 그 행이 있고, 판별 결과가 그 행의 술어에서 나온다 · ② 그 경로로 흐른 파일에 대해 UI가 **"Vectorworks export로 읽는 중"임을 소리 내어 말한다**(문구가 화면에 있다) · ③ `plan.md` §D.1의 안전판 문단이 **`발동함`으로 갱신**돼 있고 "`unknown_sheet_kind` 거절 규칙에 살아 있는 경로가 없어졌다"가 적혀 있다.
+
+**③의 검증 토큰(감사 B5 교정)**: `grep -n "발동함" .moai/specs/SPEC-COPILOT-FILEARG-001/plan.md`. v0.2.0은 §D.1에 **이미 있는** 문장을 grep해 **오늘도 통과하는** 검사를 걸어 두었다 — 기능 코드가 한 줄도 없는 SPEC에서 통과하는 검사는 검사가 아니다. `발동함`은 폴백이 실제로 발동해 문단을 갱신했을 때만 나타나므로 **판별력이 있다**. 이 AC가 N/A일 때 이 grep은 **빈 출력이어야 하며**, 빈 출력이 곧 N/A의 증거다.
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "declared_fallback"` · `npm --prefix ui run test -- --run App` · 위 `발동함` grep.
+
+### AC-FILEARG-022 — 실물 `.mvr`이 Vectorworks로 간다 (REQ-FILEARG-019 · 감사 B1)
+
+이 AC가 없으면 SPEC은 `.mvr`·`.xlsx`의 처분에 대해 **한 줄도 말하지 않는 상태**로 남는다. 그것이 B1이 들어온 경로였다.
+
+**Given** 실물 `server/tests/fixtures/vwx/demoshow_grandma3.mvr`(ZIP 아카이브, **315,155 바이트** — `wc -c`로 실측), **When** 판별기에 그 바이트를 넣으면, **Then** ① 결과가 `unknown_sheet_kind`가 **아니다** · ② `vectorworks` 단일 일치이며 대상이 기존 세션 업로드 경로로 해소된다 · ③ 판별 과정에서 그 바이트를 CSV 텍스트로 해석하려는 시도가 없다(ZIP 매직으로 갈린다) · ④ 헤더 없는 텍스트 표본 `vectorworks_export_instrument_data_no_header.txt`도 같은 방식으로 `vectorworks`에 도달한다 — 헤더 1행을 전제하지 않는다는 증거다.
+
+**비공허성**: `vectorworks` 행의 술어를 열 집합 술어로 바꿔 놓으면 ①과 ④가 **반드시 죽어야 한다**(그것이 v0.2.0의 상태였다). 뮤테이션으로 확인하고 `progress.md`에 적는다.
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "mvr or headerless"`
+
+### AC-FILEARG-023 — 대상이 없는 행은 판별 시점에 후보에서 빠진다 (REQ-FILEARG-008 · 감사 B4)
+
+**Given** 레지스트리에 대상 툴 이름이 등록 툴 집합에 **없는** 행을 주입한 표, **When** 아무 바이트나 판별하면, **Then** ① 그 행은 **판별 시점에** 후보에서 제외된다 — 일치 계수에 들어가지 않는다 · ② 제외 사실이 **오류로 보고**된다(조용한 무시가 아니다) · ③ 그 오류가 판별 결과에 실려 올라와, 나중에 래퍼 툴이 `no_target_tool`로 발견하기 **전에** 드러난다 · ④ 정상 행들의 판별은 그 오류와 무관하게 그대로 진행된다.
+
+**왜 판별 시점인가**: 대상 부재를 실행 시점에 발견하면 운영자는 파일을 올리고, 기다리고, 시켜 본 뒤에야 안다. 판별 시점에 걸면 업로드 응답에서 바로 안다. `AC-FILEARG-011`의 `no_target_tool`은 **래퍼 호출 시점**의 방어이고 이 AC는 **판별 시점**의 방어다 — 둘은 다른 지점이며 서로를 대신하지 않는다.
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "missing_target"`
+
+### AC-FILEARG-024 — 판별기에 암묵적 `else`가 없다 (REQ-FILEARG-020 · 무조건)
+
+**Given** 착수 후 트리, **When** 판별 경로를 훑으면, **Then** ① 어떤 바이트가 어느 종류로 가는지가 **선언된 술어의 결과로만** 정해진다 · ② 표 어디에도 없는 경로로 흘러가는 분기가 없다 · ③ 술어가 전부 거짓이면 결과는 `unknown_sheet_kind` 하나뿐이며, 그것은 암묵적 `else`가 아니라 **REQ-FILEARG-003이 선언한 결과**다.
+
+**이 AC는 조건과 무관하게 언제나 검사한다.** 안전판(`AC-FILEARG-021`)이 발동하든 하지 않든 같다 — 조건부 안에 두면 폴백이 없는 동안 아무도 보지 않는다(감사 B5).
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "no_implicit_else"`. 아울러 판별 함수 본문에 남은 `else`가 있으면 그것이 **선언된 술어의 결과 분기**임을 `progress.md`에 근거와 함께 밝힌다(있다/없다를 세는 grep은 근거가 되지 못하므로 테스트가 정본이다).
+
 
 ## §D. Definition of Done
 
-1. AC 21건 중 **오프라인 20건 전부 PASS**(`AC-FILEARG-021`은 조건부 — 발동하지 않으면 N/A로 명시 기록하고 그것을 PASS로 세지 않는다).
+1. AC 24건 중 **오프라인 23건 전부 PASS**(`AC-FILEARG-021`은 조건부 — 발동하지 않으면 N/A로 명시 기록하고 그것을 PASS로 세지 않는다. `AC-FILEARG-024`는 조건부가 아니며 **언제나** 판정한다).
 2. 전체 스위트 2종(`uv run pytest server/tests -q` · `npm --prefix ui run test`)이 착수 기준선 대비 **감소 0 · 신규 실패 0**. 착수 시점의 기존 실패(`test_pipeline_out_paths.py` / t20 귀속)는 **이 SPEC의 델타가 아니며 여기서 고치지 않는다** — 원인별로 나눠 적는다(plan.md M0).
-3. plan.md §A.4의 열린 결정 마커가 **0건**이고, 결정 I·J의 답이 `progress.md`에 기록돼 있다.
-4. 뮤테이션 확인 **5건**(AC-003 조기 반환 · AC-006 서명 사본 · AC-012 스키마 추가 · AC-013 `_TOOL_TASKS` 누락 · AC-018 포함 검사 대조군)이 각각 해당 테스트를 죽이는 것을 실측하고 `progress.md`에 적었다.
+3. plan.md §A.4의 열린 결정 마커가 **0건**이고, 결정 I·J·K의 답이 `progress.md`에 기록돼 있다.
+4. 뮤테이션 확인 **6건**(AC-003 조기 반환 · AC-006 서명 사본 · AC-012 스키마 추가 · AC-013 `_TOOL_TASKS` 누락 · AC-018 포함 검사 대조군 · **AC-022 위임 술어를 열 집합 술어로 되돌리기**)이 각각 해당 테스트를 죽이는 것을 실측하고 `progress.md`에 적었다.
 5. AC-FILEARG-017(앱 실기)이 PASS면 `completed`, 미수행·부분 수행이면 `implemented`에서 멈추고 잔여를 카드로 남긴다.
+6. **감사가 강점으로 지목한 것은 손대지 않았다** — 결정 ① 계수 요구의 5중 고정 · `AC-FILEARG-003`의 **주입 표** 기법 · 좌표 인용 · `addr_range_mismatch` 오인용 봉쇄. 이 넷 중 하나라도 약해졌으면 시정이 아니라 퇴행이다.
