@@ -7119,6 +7119,11 @@ class TestPositionFxIntentFrame:
     빌더는 저장 0건으로 빠진다, (4) 포지션을 고르면 기존 몸통이 그대로
     돈다, (5) 방향·형상 해석은 회신에 근거가 실린다(FID 순서가 아니라
     좌표).
+
+    (2)는 t34에서 개정됐다. 원래는 「포지션 축 단어가 없으면」이 조건이었으나,
+    배제 문장이 배제하려는 바로 그 낱말을 쓰기 때문에 낱말의 존재로 카드를
+    건너뛰면 배제가 긍정으로 뒤집힌다. 이제 경쟁 축이 주체로 지목되면 낱말과
+    무관하게 카드로 확정한다 — 받아들인 비용은 아래 (4) 참조.
     """
 
     _SWEEP = "좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터"
@@ -7192,16 +7197,28 @@ class TestPositionFxIntentFrame:
         assert len(self._spatial_reads(calls)) == 1
         assert len(self._store_writes(calls)) == 1
 
-    # ---- (4) 포지션 축 단어가 함께 있으면 카드 없이 기존 경로 ----
+    # ---- (4) 두 축이 다 나오면 카드로 확정한다 — 받아들인 비용 ----
 
-    def test_an_explicit_position_word_needs_no_card(self, tmp_path):
+    def test_an_explicit_position_word_still_gets_the_card(self, tmp_path):
+        """머리말이 분명한 문장에도 카드가 뜬다 — 알고 받은 비용이다(t34).
+
+        이 문장은 모호하지 않다. 머리말이 `포지션 이펙트` 이고 `컬러 프리셋도
+        쓰는` 은 그것을 꾸민다. 그런데도 묻는 이유는, 낱말의 존재로 카드를
+        건너뛰면 **배제 문장이 같은 낱말을 쓰기 때문에** 배제가 긍정으로
+        뒤집히기 때문이다 — 원본 대비 16문장 중 13문장이 그렇게 샜다.
+
+        두 실패의 값이 대칭이 아니다: 여기서 지는 비용은 질문 한 장이고,
+        반대 방향은 사용자가 배제한 축으로 조용히 저장되는 것이며 실패
+        신호가 없어 리허설에서야 드러난다. 이 테스트를 「없애야 할 과잉」으로
+        읽지 말 것 — 개정된 REQ-INTENT-008 이 명시한 비용이다.
+        """
         _event, calls, chan = self._run(
             tmp_path,
             "컬러 프리셋도 쓰는 포지션 이펙트 서클 시퀀스 201 만들어줘, FX 프리셋 41번부터",
-            answers=["걸기"],
+            answers=["빔이 움직인다 (포지션 이펙트)", "걸기"],
         )
 
-        assert [q for q in chan.asked if "무엇이" in q.prompt] == []
+        assert len([q for q in chan.asked if "무엇이" in q.prompt]) == 1
         assert len(self._store_writes(calls)) == 1
 
     # ---- (5) 해석 근거를 회신에 싣는다 ----

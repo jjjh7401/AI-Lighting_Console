@@ -1810,13 +1810,28 @@ _POSITION_FX_VETO = re.compile(
     re.IGNORECASE,
 )
 
-# M2 — 비-포지션 속성축이 이펙트의 **주체**로 명시된 문장. 이 단어가 있고
-# 포지션 축 단어(`_POSITION_AXIS_CLAIM`)가 **없으면** 어휘 후보 둘이 맞서는
-# 상태이므로, 조용히 포지션을 택하지 말고 카드 1장으로 축을 확정한다.
+# M2 — 비-포지션 속성축이 이펙트의 **주체**로 명시된 문장. 이 단어가 있으면
+# 어휘 후보 둘이 맞서는 상태이므로, 조용히 포지션을 택하지 말고 카드 1장으로
+# 축을 확정한다.
+#
+# 여기서 「포지션 낱말이 나오는가」로 카드를 건너뛰지 않는다(t34). 그 물음은
+# 「사용자가 이 축을 원하는가」와 다르고, 배제 문장은 배제하려는 바로 그 낱말을
+# 쓰기 때문에 낱말 판정이 배제를 긍정으로 뒤집는다 — `포지션 빼고 컬러 스윕` 이
+# 축 확인 없이 포지션으로 진행했다. 극성을 어휘로 잡아 보려는 시도는 수렴하지
+# 않았다(3라운드 실측, 커밋 메시지 참조): 매 라운드 새 어법이 새고 동시에 긍정
+# 문장이 막히기 시작했다. 그래서 판정을 어휘에 두지 않고 카드에 넘긴다.
+#
+# 두 실패의 값이 대칭이 아닌 것이 근거다. 누출은 사용자가 배제한 축으로 조용히
+# 시퀀스가 저장되는 것이고(실패 신호 없음, 콘솔 쓰기는 되돌리기 어렵다), 과잉은
+# 질문 한 장이다.
 _NON_POSITION_ATTRIBUTE: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("색(컬러)", re.compile(r"컬러|색깔|색상|색이|색을|색만|colou?r|rgb", re.IGNORECASE)),
     ("밝기(디머)", re.compile(r"디머|밝기|dimmer", re.IGNORECASE)),
 )
+#: **통제된 선택지 문자열 전용**이다. `_ask_one` 이 돌려준 답에서는 「포지션
+#: 낱말이 나오는가」가 곧 「사용자가 포지션을 골랐는가」다 — 선택지를 이 파일이
+#: 직접 만들었으니 어휘와 의도가 같은 것을 가리킨다. 사용자가 자유롭게 쓴
+#: 문장에는 쓰지 말 것: 거기서는 같은 물음이 배제를 긍정으로 뒤집는다(t34).
 _POSITION_AXIS_CLAIM = re.compile(
     r"포지션|무빙|빔|팬|틸트|position|pan|tilt|조준|겨[누냥]", re.IGNORECASE
 )
@@ -4458,7 +4473,7 @@ class ChatSession:
             (name for name, pattern in _NON_POSITION_ATTRIBUTE if pattern.search(text) is not None),
             None,
         )
-        if conflict is not None and _POSITION_AXIS_CLAIM.search(text) is None:
+        if conflict is not None:
             answer = self._ask_one(
                 f"'{conflict}'을(를) 말씀하셨는데 이 경로는 빔을 움직입니다 — "
                 "무엇이 움직이는 이펙트인가요?",

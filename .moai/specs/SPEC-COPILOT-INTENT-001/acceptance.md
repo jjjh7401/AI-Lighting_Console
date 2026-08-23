@@ -17,7 +17,7 @@ updated: 2026-08-19
 | AC-INTENT-002 | 축 충돌 시 카드 정확히 1장, 선택지에 `색`·`빔`이 각각 등장 | `test_a_non_position_attribute_asks_one_axis_card` | PASS |
 | AC-INTENT-003 | 카드에서 속성축을 고르면 저장 0건 + 좌표 판독 0회 | 위 동일 테스트 | PASS |
 | AC-INTENT-004 | 카드에서 빔축을 고르면 좌표 판독 1회 + 저장 1건 (기존 몸통 보존) | `test_choosing_the_beam_axis_keeps_the_position_body` | PASS |
-| AC-INTENT-005 | 포지션 축 단어가 있으면 카드 0장 + 저장 1건 | `test_an_explicit_position_word_needs_no_card` | PASS |
+| AC-INTENT-005 | (t34 개정) 포지션 축 단어가 있어도 경쟁 축이 지목되면 카드 1장 + 저장 1건 — 개정 REQ-INTENT-008 이 명시한 **받아들인 비용**의 실례다. 원 기대치는 「카드 0장」이었고, 그 동작이 배제 문장을 긍정으로 뒤집는 것이 t34에서 측정됐다(원본 대비 16문장 중 13문장 누출) | `test_an_explicit_position_word_still_gets_the_card` | PASS |
 | AC-INTENT-006 | 회신에 `좌표 해석` · `FID 순서` · 실측 X 범위가 실린다 | `test_the_reply_states_how_the_geometry_was_derived` | PASS |
 
 측정: `8 passed` (parametrize 4 + 개별 4), 1.08s.
