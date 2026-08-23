@@ -88,6 +88,33 @@ class Fit:
     )
 
     @property
+    def unreadable(self) -> bool:
+        """주소를 **못 읽었는가**. 읽었는데 폭이 안 들어가는 것과 다른 일이다.
+
+        판별자는 `placements` 다 — 파싱이 실패하면 자리를 계산하기 전에 돌아오므로
+        비어 있고, 초과는 자리를 계산한 뒤라 채워져 있다. 둘을 한 문에 넣으면
+        멀쩡히 읽힌 주소에 「주소를 못 읽었다」가 붙거나, 반대로 못 읽은 주소를
+        두고 「자리가 비어 있다」고 말한다 — 읽지도 못한 자리의 점유는 알 수 없다.
+
+        판정하는 자리가 셋이라(요청 · 답변 · patch_fixtures) 각자 쓰면 갈린다.
+        한 곳만 고친 전례가 이미 있어(t15 → t26) 술어를 여기 한 번만 둔다.
+
+        계약 — 이 술어는 **전역**이다. 모든 `Fit` 에 대해 True 아니면 False 를
+        내며 「판별 불가」 상태가 없다. `ok` 가 참이면 error 가 없으므로 False,
+        거짓이면 아래 셋 중 정확히 하나에 속한다:
+
+          - error 있고 placements 없음   → 못 읽음   (이 술어가 True)
+          - error 있고 placements 있음   → 읽었으나 폭 초과
+          - collisions 있음              → 자리 점유
+
+        셋은 서로 배타적이고 `not ok` 전체를 덮는다. 그래서 라벨을 정하는 쪽은
+        이 술어 하나와 `collisions` 만 보면 되고, 제3의 상태를 새로 만들 필요가
+        없다 — A2 의 「못 읽은 것을 비었다고 말한다」는 상태가 없어서가 아니라
+        이 술어를 안 물어서 났다.
+        """
+        return bool(self.error) and not self.placements
+
+    @property
     def span_text(self) -> str:
         if not self.placements:
             return self.requested

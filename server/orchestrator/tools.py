@@ -3703,7 +3703,7 @@ def build_toolset(
         # 멀쩡히 읽힌 주소에 「주소를 못 읽었다」라는 라벨이 붙고, 질문카드 없이
         # 산문으로 "사용자에게 물어라"만 남긴 채 턴이 끝난다 — 이 모듈이 생긴
         # 이유가 바로 그 실수였다(모듈 헤더 독스트링).
-        if fit.error and not fit.placements:
+        if fit.unreadable:
             payload["status"] = "unreadable_request"
             payload["guidance"] = f"{fit.error} — 사용자에게 주소를 다시 물어라."
             return ToolExecution(
@@ -3841,11 +3841,19 @@ def build_toolset(
             payload["answered_address"] = picked
             if rechecked.ok:
                 _settle(rechecked)
-            elif rechecked.error:
+            elif rechecked.unreadable:
                 payload["status"] = "unreadable_answer"
                 payload["guidance"] = (
                     f"사용자가 준 {picked!r}을(를) 주소로 읽지 못했다({rechecked.error}). "
                     "«4.001» 형태로 다시 물어라 — 임의로 고쳐 쓰지 마라."
+                )
+            elif not rechecked.collisions:
+                # 읽히긴 했는데 폭이 유니버스 끝을 넘는다. 겹친 것이 없으므로
+                # 「겹친다」고 말하면 페이로드와 모순된다(요청 경로와 같은 구분).
+                payload["status"] = "does_not_fit"
+                payload["guidance"] = (
+                    f"사용자가 고른 {picked}는 {rechecked.error} "
+                    "겹친 것은 없다 — 자리를 옮기지 말고 다시 물어라."
                 )
             else:
                 payload["status"] = "still_occupied"
@@ -4069,6 +4077,23 @@ def build_toolset(
             # 「비어 있지 않다」는 겹쳤을 때만 참이다. 폭이 유니버스 끝을 넘어 거부된
             # 경우 그 자리는 비어 있고 `collisions` 도 빈 목록이다 — 같은 문장을 쓰면
             # 도구가 자기 페이로드와 모순되는 말을 한다(t15 리뷰 HIGH-2).
+            # 못 읽은 주소는 셋째 갈래다 — 읽지도 못한 자리의 점유는 알 수 없으므로
+            # 「비어 있다」도 「비어 있지 않다」도 말할 수 없다(t26).
+            if fit.unreadable:
+                payload["status"] = "unreadable_request"
+                payload["collisions"] = []
+                payload["guidance"] = (
+                    f"{address!r}을(를) 주소로 읽지 못했다({fit.error}). 자리가 비었는지도 "
+                    "판정하지 못했다 — «4.001» 형태로 다시 물어라. 임의로 고쳐 쓰지 마라."
+                )
+                return ToolExecution(
+                    result=ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=json.dumps(payload, ensure_ascii=False),
+                        is_error=True,
+                    )
+                )
             payload["status"] = "address_not_free" if fit.collisions else "does_not_fit"
             payload["collisions"] = [
                 f"{occupant.universe}.{occupant.address}" for occupant in fit.collisions
