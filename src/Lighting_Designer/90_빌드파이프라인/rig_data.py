@@ -132,7 +132,7 @@ FX_LIB = [
 # 콘솔 기본설정 (grandMA3)
 CONSOLE_SETUP = [
     ("소프트웨어",    "grandMA3 v2.x (버전 확인필요) · 쇼파일명 = RIG_ID 동일"),
-    ("출력 프로토콜", "sACN · Universe 1–4 · Priority 100 · 백업 노드 확인필요"),
+    ("출력 프로토콜", "sACN · Universe 1–5 (+U6 예비) · Priority 100 · 백업 노드 확인필요"),
     ("트래킹",       "Tracking ON (시퀀스 기본) — CUE-EX 빈칸=트래킹 규칙과 일치"),
     ("Speed Master", "SpeedMaster 1 = 120 BPM (Sugar) · 모든 Phaser는 SpeedMaster 1 종속 · 곡별로 BPM 재설정"),
     ("타임코드",     "LTC IN → TC Slot 1 · 메인 시퀀스 TC 트리거 · TC 유실 시 수동 GO 폴백 (오퍼레이터 대기 필수)"),
