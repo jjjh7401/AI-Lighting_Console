@@ -1,0 +1,50 @@
+# 이 저장소에는 테스트 CI 가 없었다. PR #74~#85 열두 건이 연속으로
+# reviews=0 checks=0 으로 머지됐고, 외부 감사가 결함 9건을 찾은 자리가 거기다.
+#
+# 범위는 최소다 — pytest 전량 + vitest 전량. 실측 근거는 커밋 메시지에 있다.
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 파이썬 버전은 저장소의 .python-version(3.11.15)을 그대로 따른다.
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        run: pip install uv
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install ui dependencies
+        run: npm --prefix ui ci --no-audit --no-fund
+
+      # 빌드는 2초대이고(로컬 실측 2.19s), 그 대가로 가이드 신선도 검사 2건이
+      # skip 에서 실제 단언으로 바뀐다. 빌드가 없으면 그 둘은 매 실행 skip 이다.
+      - name: Build ui
+        run: npm --prefix ui run build
+
+      - name: Python tests
+        run: uv run pytest -q
+
+      - name: UI tests
+        run: npm --prefix ui run test
