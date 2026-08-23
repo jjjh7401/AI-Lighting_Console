@@ -1,6 +1,6 @@
 # SPEC-COPILOT-FILEARG-001 — 조사 기록 (research)
 
-문서 상태: draft (v0.3.0, 2026-08-23 — §10 감사 FAIL 시정 근거 추가 · §7 갭 갱신) · Tier M · 본 문서는 **저장소 정적 조사**의 기록이다. 라이브 콘솔 관측은 0건(M5가 사용자 수행 앱 실기 1회를 소유). 근거 등급: `[코드]`(이 워크트리에서 직접 읽음) · `[리드]`(칸반 리드가 이 워크트리에서 읽어 확정해 넘긴 좌표) · `[문서]`(타 SPEC 아티팩트) · `[미확정]`.
+문서 상태: draft (v0.4.0, 2026-08-23 — §11 델타 재감사 F2 뿌리 · 신원 열 재계산 추가) · Tier M · 본 문서는 **저장소 정적 조사**의 기록이다. 라이브 콘솔 관측은 0건(M5가 사용자 수행 앱 실기 1회를 소유). 근거 등급: `[코드]`(이 워크트리에서 직접 읽음) · `[리드]`(칸반 리드가 이 워크트리에서 읽어 확정해 넘긴 좌표) · `[문서]`(타 SPEC 아티팩트) · `[미확정]`.
 
 > **참조 규약.** 정본(spec.md · acceptance.md)은 안정 토큰만. 코드는 `파일:줄`. 줄번호는 plan 작성 시점 트리 `eb436e8`(워크트리는 그 뒤 `6296af3`으로 fast-forward됐다 — 줄번호는 한 세대 낡았다) 기준이며 **드리프트한다** — M0가 토큰 앵커로 재확인한다.
 
@@ -274,3 +274,94 @@ $ wc -c server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv
 ```
 
 약 **7 KB**. 8 MiB 상한은 그 약 **1,150배**다. v0.2.0의 "수십 KB 규모"는 한 자릿수 오차였고, 정정하면 결론이 바뀌는 것이 아니라 **더 강해진다**. `ASSUMPTION-77`을 **POSITIVE로 닫는다**.
+
+---
+
+## 11. 델타 재감사 FAIL 0.62 — F2의 뿌리 (2026-08-23)
+
+> **귀속.** F2 측정과 두 후보 비교, 장바구니 대조군, README 확인은 리드가 이 워크트리에서 실행한 것이다 — `[리드]`. `.mvr` 소유자 좌표와 임계 상수는 본 세션이 직접 확인했다 — `[코드]`.
+
+### 11.1 우리는 다른 물음에 답하는 함수를 판별자로 썼다 — 관대함이 아니라 축이 다르다 `[리드]`
+
+`has_address_family`가 답하는 물음은 **"이 바이트에서 패치를 뽑을 수 있는가"**(사용성)이고, 레지스트리가 묻는 물음은 **"이것은 무엇인가"**(신원)다. 축이 다르므로 술어는 **양쪽으로 다 틀린다**.
+
+| 파일 | 패치 가능? | 무엇인가? | `has_address_family` | 결과 |
+|---|---|---|---|---|
+| LX-SEQ 패치 CSV | 그래 보인다(9열 중 7열 해소) | **LX-SEQ** | **True** | **F2 — 남의 종류 파일을 자기 것이라 주장** |
+| `vwx_worksheet_grid_from_screenshot.csv` | 아니다(주소 계열 열 없음) | **Vectorworks** | **False** | 진짜 VW 파일을 놓친다 |
+
+측정:
+
+```
+LX-SEQ header: FID,Group,FixtureType,Mode,Ch,Universe,Address,AddrRange,Position
+has_address_family = True   match_count = 7   rows = 86
+  FID→fixture_id  FixtureType→instrument_type  Mode→mode  Ch→channel
+  Universe→universe  Address→absolute_address  Position→position
+  Group→None  AddrRange→None          ← LX-SEQ 고유는 이 둘뿐
+```
+
+**우연한 유사가 아니다.** 둘 다 픽스처·유니버스·주소·모드를 기술하므로 LX-SEQ는 VW **어휘의 부분집합**이다. 그러므로 **어떤 주소 계열 검사로도 둘을 가를 수 없다** — 임계를 올리든 열을 더하든 같은 축 위에 있는 한 결과는 같다.
+
+### 11.2 두 후보를 실측했다 — 정확히 한 파일 부류에서 갈린다 `[리드]`
+
+```
+vectorworks_export_instrument_data_no_header.txt
+  _best_header_candidate → idx = -1        (신원 후보: False)
+  ReadResult.header      → 비어 있지 않음    (느슨한 후보: True)
+  records = 17, delimiter = '\t'
+```
+
+원인은 `_process_rows`(`reader.py:253-266`)의 **균일폭 폴백**이다 — 헤더 탐색이 실패해도 탭 구분 + 균일폭이면 `col_0..` 헤더를 지어내고 전 행을 데이터로 삼는다.
+
+**날조 대조군을 느슨한 후보에 쏜 결과:**
+
+```
+reader.read(b"milk\t2\t3000\neggs\t1\t5000\nbread\t3\t2500\n")
+  header 비어 있음 = False    records = 3    path_kind = A    failures = []
+```
+
+**장바구니 목록이 실패 0건으로 Vectorworks가 된다.** 균일폭 폴백은 VW 어휘가 아니라 **모양**(탭 + 균일폭)으로 받으므로 `_MIN_HEADER_ALIAS_MATCHES`(`reader.py:43`, 값 **2** — 본 세션 `[코드]` 확인)를 **통과하는 것이 아니라 우회한다**. 그래서 임계 고정(AC-027)만으로는 이 구멍이 막히지 않으며, 탭 축 날조 대조군(AC-028)이 따로 필요하다.
+
+### 11.3 무엇이 결정을 갈랐나 — 헤더 없는 VW 파일은 살아 있는 능력이 아니다 `[리드]`
+
+`server/tests/fixtures/vwx/README.md:85-95`(본 세션 `[코드]` 직접 확인):
+
+> 헤더 없는 경로 A 파일이 … 이제는 파일 단위 판정 1건(`headerless_path_a_export`) + 실행 가능한 해결책("Export field names as first record"를 켜고 재수출)으로 압축된다. … **긍정** 증거로 기록한다 — 실패가 아니다.
+
+그 파일은 **오늘 패치를 만들어 내지 못한다**. 시스템의 올바른 답은 재수출 안내다. 장바구니 목록과 그 실물 VW 파일은 **바이트 동일한 `headerless_path_a_export` 판정**을 받는다(해소 열 0/28 · 0/3).
+
+**그러므로 좁히기는 능력을 잃지 않는다 — 문구 하나를 잃는다.** 그 문구를 `unknown_sheet_kind` 경로의 **조건부 힌트**로 복원한다(REQ-FILEARG-023). 조건절이 없으면 오늘처럼 **장바구니 목록에게도 Vectorworks에서 재수출하라고 말한다**.
+
+**기각 근거.** (ㄱ) 느슨한 술어 유지 — 전제가 "장바구니 목록은 VW 안에서 안전하게 죽는다"였으나 **진짜 VW 파일도 같은 자리에서 같은 이유로 죽는다**. 둘 다 받아 얻는 것이 없고 판별만 뒤로 미룬다. (ㄷ) 운영자 선택 — 입력이 **어느 쪽이든 쓸 수 없는데** 두 종류 중 고르라고 하는 것이다. 필요한 것은 메뉴가 아니라 재수출 지시다.
+
+### 11.4 12개 표의 신원 열 재계산 — 이전 표는 무효다
+
+v0.3.0의 시뮬레이션 표는 **사용성 술어**로 계산한 값이라 무효다. 신원 축(`_best_header_candidate >= 0` **AND NOT** 다른 행 서명)으로 다시 계산한다.
+
+| 파일 | 신원 술어 | 분류 | 비고 |
+|---|---|---|---|
+| `demoshow_grandma3.mvr` | zip 경로(`tools.py:2860`) | `vectorworks` | 315,155 B `[코드]` |
+| `vectorworks_export_sample_with_data.csv` | True | `vectorworks` | 정상 경로 |
+| `vectorworks_worksheet_absolute_address_only.csv` | True 기대 | `vectorworks` | M1 실측 |
+| `vectorworks_worksheet_grid_ma3_patch.csv` | True 기대 | `vectorworks` | M1 실측 |
+| `vectorworks_worksheet_multisystem_full.csv` | True 기대 | `vectorworks` | M1 실측 |
+| `vwx_worksheet_grid_from_screenshot.csv` | True 기대 | `vectorworks` | **사용성 술어로는 False였다**(11.1) |
+| `vwx_worksheet_grid_patch_ready.csv` | True 기대 | `vectorworks` | M1 실측 |
+| `synthetic_path_b_worksheet_grid.csv` | True 기대 | `vectorworks` | M1 실측 |
+| `drop_dk_rigging_not_a_vectorworks_export.csv` | False | `unknown_sheet_kind` | 음성 대조군 |
+| `vectorworks_export_instrument_data_no_header.txt` | **False**(idx = -1) | **`unknown_sheet_kind`** | **문구는 조건부 힌트로 보존**(AC-029) — 결정 L의 의도된 결과 |
+| `README.md` · `stage1_contract_snapshot.json` | — | 페이로드 아님 | 대상 제외 |
+
+"기대"로 표시한 칸은 **아직 재지 않았다** — M1이 실측하며, 여기 적힌 것은 예측이지 관측이 아니다.
+
+### 11.5 F1 — `.mvr` 분기는 `reader.py`에 없다 `[코드]`
+
+```
+$ grep -c "mvr\|MVR" server/vwx/reader.py
+0
+$ sed -n '2859,2860p' server/orchestrator/tools.py
+            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
+                is_mvr = SCENE_ENTRY in archive.namelist()
+```
+
+소유자는 `server/orchestrator/tools.py:2859-2860`과 `server/vwx/mvr.py`다. v0.3.0이 "판독기에 위임한다"고 쓴 것은 **그 판독기가 무엇을 판정하는지 재지 않고 쓴 문장**이며, B3와 같은 부류의 오귀속이 **두 번째**다. 위임 계약의 전체 형상(3결과 + openpyxl 두 경로)은 `spec.md` §G.4와 `REQ-FILEARG-021`이 소유한다.

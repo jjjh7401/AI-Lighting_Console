@@ -16,17 +16,18 @@
 3. `acceptance.md` §C(AC **24건**과 검증 명령)
 4. `research.md` **§10**(감사 시정 근거) → §9(리드 실측) → §7(갭)
 
-### 인수인계 시 반드시 알아야 할 함정 5건
+### 인수인계 시 반드시 알아야 할 함정 6건
 
 1. **툴 등재는 4지점이 아니라 6지점이다.** `_TOOL_TASKS`(`server/orchestrator/runner.py:137`)와 `test_tools.py`의 닫힌 집합 상수를 빠뜨리면 `test_runner_progress.py`의 전단사 단언이 빨갛게 된다. 정본 열거는 `research.md` §6이며, `test_runner_progress`는 **지점이 아니라 누락 검출 가드**다.
 2. **판별기가 첫 일치에서 멈춰도 오늘은 테스트가 통과한다** — 등록 행이 둘뿐이고 둘은 서로 겹치지 않기 때문이다. 그래서 충돌 시험은 **주입한 표**로 돌린다(`AC-FILEARG-003`). 충돌은 이론이 아니다 — 프리셋 4종에서 반드시 발화한다(`research.md` §9 (c)).
 3. **서명을 사본으로 적으면 언젠가 실물을 거절한다.** `patch`는 `CANONICAL_COLUMNS`를 참조하고, `vectorworks`는 `reader.py`의 판정을 **호출**한다. 열 이름도 판정 논리도 옮겨 적지 않는다.
 4. **이 저장소에는 테스트 CI가 없다.** `.github/workflows/`는 라벨 동기화 하나뿐이라 로컬 전체 스위트(pytest + vitest)가 유일한 회귀 증거다. 그리고 **착수 시점에 이미 실패 1건이 있다**(`test_pipeline_out_paths.py` / t20 귀속) — 이 SPEC 것이 아니고 여기서 고치지 않는다(§E.1 `known_baseline_failure`).
-5. **열 집합으로 Vectorworks를 재려 하지 마라 — 그것이 감사 FAIL의 뿌리였다.** `.mvr`·`.xlsx`는 zip이라 헤더 행이 없고(`reader.py:350-360`), 헤더는 1행이라는 보장도 없다(`reader.py:158`이 **탐색**한다). 행이 드는 것은 열 목록이 아니라 **술어**다(결정 K · `spec.md` §G.1). 위임 술어를 열 집합 술어로 "단순화"하는 순간 `.mvr`과 헤더 없는 `.txt`가 다시 떨어진다 — `AC-FILEARG-022`가 그 뮤테이션을 잡는다. **유혹의 형태를 미리 적어 둔다** — 열 집합 술어는 균일하고 표 모양인데 위임 술어 한 행만 결이 다르다. 이 표를 다음에 보는 사람은 "행 하나만 왜 다르지, 정리하자"고 느낀다. **그 느낌이 드는 순간이 바로 이 함정이다.** 그 불균일이 B1을 막고 있고, 표를 통일하는 순간 막던 것이 풀린다.
+5. **열 집합으로 Vectorworks를 재려 하지 마라 — 1차 감사 FAIL의 뿌리였다.** `.mvr`·`.xlsx`는 zip이라 헤더 행이 없고(`reader.py:350-360`), 헤더는 1행이라는 보장도 없다(`reader.py:158`이 **탐색**한다). 행이 드는 것은 열 목록이 아니라 **술어**다(결정 K · `spec.md` §G.1).
+6. **그리고 술어는 "무엇인가"를 물어야 한다 — 2차(델타) 감사 FAIL의 뿌리였다.** `has_address_family`는 **"패치를 뽑을 수 있는가"**를 묻는다. 축이 다르므로 **양방향으로 틀린다**: LX-SEQ 패치 CSV가 `True`(9열 중 **7열이 VW 별칭**으로 해소 — LX-SEQ는 VW 어휘의 **부분집합**이다)이고, 주소 열 없는 진짜 VW 파일은 `False`다. 사용성 함수를 판별에 끌어들이는 순간 같은 결함이 재발한다(결정 L · REQ-FILEARG-022 · `research.md` §11.1). 그리고 **대조군을 한 축으로만 세우지 마라** — 쉼표 전용 대조군이 전부 초록인 동안 탭 축이 열려 있었고, 장바구니 목록이 실패 0건으로 Vectorworks가 됐다(`AC-FILEARG-028`).
 
 ### 다음 담당자가 먼저 결정할 것
 
-열린 결정은 **없다**(결정 I·J는 2026-08-22 리드 재정, 결정 **K**는 2026-08-23 감사 FAIL 시정 — `plan.md` §A.3, 답은 아래 "M0 — Kickoff 결정 기록"). 다음 담당자가 기다리는 것은 결정이 아니라 **운영자의 Implementation Kickoff Approval**이다 — M1은 `cycle_type=tdd` 구현이므로 승인 전에는 M0도 시작하지 않는다. 승인 뒤 M1이 실측할 두 가지: ① **위임 술어**가 `server/tests/fixtures/vwx/` 전량(페이로드 10개 · `.mvr` 포함)을 흡수하는가(못 흡수하면 안전판 REQ-FILEARG-018) ② 확장 형식이 프리셋 4종을 실제로 가르는가(AC-FILEARG-018).
+열린 결정은 **없다**(I·J = 2026-08-22 리드 재정 · **K·L** = 감사 FAIL 시정 2026-08-23 — `plan.md` §A.3, 답은 아래 "M0 — Kickoff 결정 기록"). 다음 담당자가 기다리는 것은 결정이 아니라 **운영자의 Implementation Kickoff Approval**이다 — M1은 `cycle_type=tdd` 구현이므로 승인 전에는 M0도 시작하지 않는다. 승인 뒤 M1이 실측할 것: ① **`ASSUMPTION-75-b`** — LX-SEQ 패치 헤더가 `vectorworks` 신원 술어를 만족하지 **않는가**(F2가 통과한 바로 그 미측정 방향 · `AC-FILEARG-025`) ② 신원 술어가 `server/tests/fixtures/vwx/` 페이로드 10개를 흡수하는가(못 하면 안전판 REQ-FILEARG-018) ③ 확장 형식이 프리셋 4종을 가르는가(`AC-FILEARG-018`).
 
 ---
 
@@ -46,6 +47,10 @@
 | **결정 I** — 서명 미일치 CSV의 처분 | **(나)안 채택** (2026-08-22 리드 재정). Vectorworks export CSV를 레지스트리 행으로 등록하고, 일치 0건이면 거절한다. (가) 폴백 보존은 [HARD] 거절 규칙에 살아 있는 경로를 남기지 않고, (다) 순수 거절은 폐기 지시 없이 살아 있는 기능을 회수하므로 둘 다 기각 |
 | **결정 J** — 무엇을 넓히는가 | **서명 형식의 표현력을 넓히고 레지스트리 행은 넓히지 않는다** (2026-08-22 리드 재정). 형식은 정확 열 집합과 포함·배제 쌍을 표현해야 하며(REQ-016), 프리셋·group·fx·cue-ex의 서명은 쓰지 않는다(REQ-017). 형식 충분성은 합성 서명 픽스처로 증명한다(AC-018) |
 | **결정 K** — 레지스트리 행이 드는 것 | **판별 술어**다 (2026-08-23, 독립 감사 FAIL 시정). `patch`=열 집합 술어 · `vectorworks`=기존 판독기 위임(`server/vwx/reader.py`). 열 집합 서명으로는 zip(`.mvr`·`.xlsx`)도 탐색된 헤더도 표현할 수 없어, 그대로 두면 살아 있는 업로드를 회수한다. 치른 값: 표가 순수 데이터가 아니게 된다(spec.md §G.1) |
+| **결정 L** — 술어가 무엇을 묻는가 | **신원**이다 (2026-08-23, 델타 재감사 FAIL 0.62 시정). `vectorworks` = `_best_header_candidate >= 0` **AND NOT** 다른 행 서명 일치; 사용성(`has_address_family`·`not_patch_source`)은 판별에서 뺀다. 결정 K가 위임한 함수는 **다른 물음**(패치 가능성)에 답하므로 **양방향으로 틀렸다** — LX-SEQ는 VW 어휘의 **부분집합**이라 주소 계열 검사로는 영원히 갈 수 없다 |
+| 결정 K의 위임 대상 | **정정됨** — "판독기에 위임"이 아니라 **`_best_header_candidate`(`reader.py:158`) 호출**이다. `.mvr` 판정은 `reader.py`에 **없다**(`grep -c "mvr\|MVR"` → 0) — `tools.py:2859-2860` + `mvr.py`가 소유(F1) |
+| `ASSUMPTION-75` | **재개방** — v0.2.0이 **한 방향만**(VW 헤더 → patch 서명) 재고 닫은 것이 F2를 통과시켰다. 이제 **75-a**(VW 헤더 ↛ patch 서명, 참) · **75-b**(LX-SEQ 헤더 ↛ vectorworks 술어, **M1 실측 필요**)를 각각 단언한다 — `AC-FILEARG-025` |
+| 헤더 없는 `.txt`의 처분 | **`unknown_sheet_kind`가 정답이다** — 그 파일은 오늘 패치를 만들지 못한다(`fixtures/vwx/README.md:85-95`). 잃는 것은 능력이 아니라 문구 하나이며, **조건부** 재수출 힌트로 보존한다(REQ-023 · AC-029) |
 | 결정 J의 적용 범위 | **열 집합 술어에 한정** — 결정 K 이후 위임 술어는 열을 세지 않으므로 형식 확장의 대상이 아니다 |
 | VW 서명 정본 좌표 | **정정됨** — `server/vwx/columns.py`(v0.2.0 오귀속) → 호출 지점 **`server/vwx/reader.py:286`**(`has_address_family(탐색된 헤더)`) |
 | `ASSUMPTION-77` | **닫힘 · POSITIVE** — 실물 패치 CSV **7,258 B**(≈7 KB), 8 MiB는 약 1,150배. "수십 KB"는 한 자릿수 오차였다 |
@@ -63,16 +68,16 @@
 plan_status: audit-pending   # plan-audit 미실시 · Implementation Kickoff Approval 미통과(M0 착수 전제)
 plan_complete_at: 2026-08-22
 plan_audit: "미실시"
-spec_version: "0.3.0"
+spec_version: "0.4.0"
 tier: M
 base_sha: 6296af3
 baseline_measured: "미측정 — 의도적으로 비워 둔 칸이다(미완성이 아니다). plan 세션은 전체 스위트를 실행하지 않았고, 이 트리를 두고 돌던 수치 중 최소 하나는 틀렸다(0 failed 로 전달됐으나 실제로는 실패 1건). 다른 트리·다른 시점의 값을 이월하지 않는다 — M0가 이 워크트리 6296af3에서 직접 잰다."
 artifacts: [spec.md, plan.md, acceptance.md, research.md, progress.md]
-requirements: 20            # REQ-FILEARG-001~020 (019 입력 경계 · 020 암묵적 else 금지 = 감사 FAIL 시정)
-acceptance_criteria: 24     # AC-FILEARG-001~024 (앱 실기 1: AC-017 · 조건부 1: AC-021 · 신설 022~024)
+requirements: 23            # REQ-FILEARG-001~023 (021 위임 계약 · 022 사용성 술어 금지 · 023 조건부 힌트 = 델타 감사 시정)
+acceptance_criteria: 29     # AC-FILEARG-001~029 (앱 실기 1: AC-017 · 조건부 1: AC-021 · 신설 025~029)
 milestones: 6               # M0~M5 (M0·M5 cycle_type=none)
-assumptions_open: 1         # ASSUMPTION-76만 남음 (75 · 77 모두 닫힘 — 77은 7,258 B 실측으로 POSITIVE)
-decisions_closed: 11        # plan.md §A.3 A~K (I·J = 리드 재정 2026-08-22 · K = 감사 FAIL 시정 2026-08-23)
+assumptions_open: 2         # ASSUMPTION-75(재개방 — 75-b 미검증) · 76. 77은 7,258 B 실측으로 POSITIVE 닫힘
+decisions_closed: 12        # plan.md §A.3 A~L (I·J = 리드 재정 · K = 감사 FAIL 시정 · L = 델타 감사 FAIL 시정)
 clarifications_open: 0      # 결정 I로 닫힘 — 답은 "M0 — Kickoff 결정 기록"
 live_sessions_planned: 1    # M5, 사용자 수행(앱 실기)
 new_runtime_dependencies: 0

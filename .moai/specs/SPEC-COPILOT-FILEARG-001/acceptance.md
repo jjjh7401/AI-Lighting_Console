@@ -1,6 +1,6 @@
 # SPEC-COPILOT-FILEARG-001 — 인수 기준 (acceptance)
 
-문서 상태: draft (v0.3.0, 2026-08-23 — 독립 감사 FAIL 시정) · Tier M · AC **24건**(오프라인 23 + 앱 실기 1 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
+문서 상태: draft (v0.4.0, 2026-08-23 — 델타 재감사 FAIL 0.62 시정) · Tier M · AC **29건**(오프라인 28 + 앱 실기 1 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
 
 > **참조 규약**: 정본(spec.md · 본 문서)은 줄번호로 인용하지 않고 안정 토큰만 쓴다. `파일:줄`은 코드·타 SPEC 아티팩트에만 쓴다.
 >
@@ -59,21 +59,24 @@
 | REQ-FILEARG-018 | AC-FILEARG-021 | M1 |
 | REQ-FILEARG-019 | AC-FILEARG-022 | M1 |
 | REQ-FILEARG-020 | AC-FILEARG-024 | M1 |
+| REQ-FILEARG-021 | AC-FILEARG-022 (④⑤ 구간) | M1 |
+| REQ-FILEARG-022 | AC-FILEARG-028 | M1 |
+| REQ-FILEARG-023 | AC-FILEARG-029 | M1 |
 
-**REQ 20/20 커버, 누락 0.** 역추적표에 없는 AC는 2건이며 의도다 — **AC-FILEARG-001**(M0 계약 확인 게이트) · **AC-FILEARG-017**(M5 앱 실기 — 형상 전체).
+**REQ 23/23 커버, 누락 0.** 역추적표에 없는 AC는 5건이며 의도다 — AC-025~027은 REQ-007의 신원 술어를 여러 축에서 재는 보강 기준이고(정본 커버는 AC-006·AC-019), 나머지 2건은 — **AC-FILEARG-001**(M0 계약 확인 게이트) · **AC-FILEARG-017**(M5 앱 실기 — 형상 전체).
 
 ### §C.0a 마일스톤별 AC 배정 (정본)
 
 | M | AC | 수 |
 |---|---|---|
 | M0 | AC-FILEARG-001 | 1 |
-| M1 | AC-FILEARG-002 · 003 · 004 · 005 · 006 · 018 · 019 · 020 · 021 · 022 · 023 · 024 | 12 |
+| M1 | AC-FILEARG-002 · 003 · 004 · 005 · 006 · 018 · 019 · 020 · 021 · 022 · 023 · 024 · 025 · 026 · 027 · 028 · 029 | 17 |
 | M2 | AC-FILEARG-007 · 008 · 009 | 3 |
 | M3 | AC-FILEARG-010 · 011 · 012 · 013 | 4 |
 | M4 | AC-FILEARG-014 · 015 · 016 | 3 |
 | M5 | AC-FILEARG-017 | 1 |
 
-합 **24 · 중복 0 · 누락 0**.
+합 **29 · 중복 0 · 누락 0**.
 
 ### AC-FILEARG-001 — M0 계약 대조 게이트
 
@@ -211,7 +214,9 @@ git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/sa
 
 ### AC-FILEARG-019 — 실물 교차 분류 (REQ-FILEARG-007 · 결정 I)
 
-**Given** `server/tests/fixtures/`의 실물 표본 — 대상은 `vwx/` **디렉터리 전량**이며 **`.mvr`을 포함한다**(12개 항목 중 업로드 페이로드 **10개**: `.csv` 8 · `.txt` 1 · `.mvr` 1; `README.md`와 `stage1_contract_snapshot.json`은 페이로드가 아니므로 제외한다 — v0.2.0의 "7종"은 형제 시트 수에서 옮겨 붙은 추정값이었고 폐기한다), **When** 각각을 판별하면, **Then** ① `lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv` → `patch` 단일 일치 · ② `vwx/vectorworks_export_sample_with_data.csv` → `vectorworks` 단일 일치이며 `patch`에는 **맞지 않는다**(정규 9열 중 3개만 가진다 — `research.md` §9 (b)) · ③ `vwx/drop_dk_rigging_not_a_vectorworks_export.csv`(**이미 있는 음성 대조군**, 새로 만들지 않는다) → `unknown_sheet_kind` · ④ **페이로드 10개 전량**에 대해 위임 술어의 적중/불발을 **표로 기록**한다 — 흡수하지 못하는 변형이 있으면 그 사실이 `AC-FILEARG-021`의 발동 근거가 된다(숨기지 않는다). `.mvr`과 헤더 없는 `.txt`의 판정은 `AC-FILEARG-022`가 별도로 못박는다.
+**Given** `server/tests/fixtures/`의 실물 표본 — 대상은 `vwx/` **디렉터리 전량**이며 `.mvr`을 포함한다(12개 항목 중 업로드 페이로드 **10개**: `.csv` 8 · `.txt` 1 · `.mvr` 1; `README.md`와 `stage1_contract_snapshot.json`은 페이로드가 아니다), **When** 각각을 판별하면, **Then** ① `lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv` → `patch` 단일 일치이며 `vectorworks`에 **맞지 않는다**(`AC-FILEARG-025`가 소유) · ② `vwx/vectorworks_export_sample_with_data.csv` → `vectorworks` 단일 일치 · ③ `vwx/drop_dk_rigging_not_a_vectorworks_export.csv` → `unknown_sheet_kind`(`AC-FILEARG-026`) · ④ `vwx/vectorworks_export_instrument_data_no_header.txt` → **`unknown_sheet_kind`**(문구는 조건부 힌트로 보존 — `AC-FILEARG-029`) · ⑤ 페이로드 10개 전량에 대해 **신원 술어**의 적중/불발을 표로 기록한다.
+
+**v0.4.0 개정 — 판정 축이 바뀌었다.** v0.3.0의 이 표는 **사용성 술어**(`has_address_family`)로 시뮬레이션한 값이라 **무효다**. 신원 축(`_best_header_candidate >= 0`)으로 다시 계산해야 하며, 그 결과 헤더 없는 `.txt` 한 칸이 `vectorworks` → `unknown_sheet_kind`로 **옮겨간다** — 결정 L의 의도된 결과이지 결함이 아니다. 재계산된 표와 그 근거는 `research.md` §11이 소유한다.
 
 **검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "cross_classify"` · 표는 `progress.md` M1 절에 남긴다.
 
@@ -220,6 +225,8 @@ git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/sa
 **Given** 착수 후 트리, **When** `server/sheets/`를 훑으면, **Then** 프리셋 4종·`group`·`fx`·`cue-ex`의 **서명도 행도 파서도 핸들러도 없다**. 등록 행은 `patch`와 `vectorworks` 둘뿐이다.
 
 **검증**: `grep -rn "preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex" server/sheets/` — **빈 출력**이어야 한다(합성 픽스처는 `server/tests/`에 있으므로 이 grep에 걸리지 않는다). 아울러 `uv run pytest server/tests/test_sheets_registry.py -q -k "registry"`의 ① 항(행 정확히 둘)이 통과할 것.
+
+**grep의 한계를 기록한다(감사 F4).** 위 grep 패턴은 프리셋 4종과 `cue-ex`만 훑고 **`group`과 `fx`는 빠져 있다** — Then 절이 그 둘을 포함하는데 검증 명령이 그것을 재지 않는다. 보완하는 것은 같은 AC의 **행 수 단언**(등록 행이 정확히 둘)이다: `group`이나 `fx` 행이 생기면 행 수가 셋이 되어 그 단언이 죽는다. 그러므로 이 AC는 여전히 비공허하지만, **grep 하나만으로 통과를 주장하지 않는다** — 두 검사가 함께여야 Then 절 전체를 덮는다.
 
 ### AC-FILEARG-021 — 안전판을 타면 선언되고 고지된다 (REQ-FILEARG-018 · 조건부)
 
@@ -237,8 +244,11 @@ git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/sa
 
 이 AC가 없으면 SPEC은 `.mvr`·`.xlsx`의 처분에 대해 **한 줄도 말하지 않는 상태**로 남는다. 그것이 B1이 들어온 경로였다.
 
-**Given** 실물 `server/tests/fixtures/vwx/demoshow_grandma3.mvr`(ZIP 아카이브, **315,155 바이트** — `wc -c`로 실측), **When** 판별기에 그 바이트를 넣으면, **Then** ① 결과가 `unknown_sheet_kind`가 **아니다** · ② `vectorworks` 단일 일치이며 대상이 기존 세션 업로드 경로로 해소된다 · ③ 판별 과정에서 그 바이트를 CSV 텍스트로 해석하려는 시도가 없다(ZIP 매직으로 갈린다) · ④ 헤더 없는 텍스트 표본 `vectorworks_export_instrument_data_no_header.txt`도 같은 방식으로 `vectorworks`에 도달한다 — 헤더 1행을 전제하지 않는다는 증거다.
+**Given** 실물 `server/tests/fixtures/vwx/demoshow_grandma3.mvr`(ZIP 아카이브, **315,155 바이트** — `wc -c` 실측), **When** 판별기에 그 바이트를 넣으면, **Then** ① 결과가 `unknown_sheet_kind`가 **아니다** · ② `vectorworks` 단일 일치이며 대상이 기존 세션 업로드 경로로 해소된다 · ③ 판별 과정에서 그 바이트를 CSV 텍스트로 해석하려는 시도가 없다 · ④ **`.mvr` 판정의 소유자를 정확히 부른다** — `server/vwx/reader.py`가 아니라 `server/orchestrator/tools.py:2859-2860`(`is_mvr = SCENE_ENTRY in archive.namelist()`)와 `server/vwx/mvr.py`다(`grep -c "mvr\|MVR" server/vwx/reader.py` → **0**) · ⑤ `openpyxl` **두 경로 모두** 닫혀 있다 — 설치 시 `KeyError: '[Content_Types].xml'`도, 미설치 시 `unapproved_dependency` 안내도 나오지 않는다(후자가 더 나쁘다: `.mvr`은 xlsx가 아니므로 설치해도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다).
 
+**v0.4.0 개정 — 헤더 없는 `.txt`는 여기서 빠진다.** v0.3.0의 ④는 `vectorworks_export_instrument_data_no_header.txt`도 `vectorworks`에 도달한다고 단언했다. 결정 L 이후 그 파일은 **`unknown_sheet_kind`가 정답이다**(신원 술어 `_best_header_candidate` → `-1`). 그것은 결함이 아니라 **의도된 결과**이며, 잃는 문구는 `AC-FILEARG-029`가 조건부 힌트로 보존한다.
+
+**뮤테이션 ① — 지금은 세지 않는다(F3).** `vectorworks` 술어를 열 집합 술어로 되돌리는 뮤테이션은 F1(위임 계약 · `.mvr` 소유자)이 열려 있는 동안 **판별력이 없다** — 그 단언은 뮤테이션 없이도 이미 빨갛기 때문이다. F1이 닫히고 이 AC가 **뮤테이션 없이 초록**이 된 뒤 재점화하며, 그때 **두 상태를 모두** 기록한다. 그 전까지 §D 원장에서 제외한다.
 **비공허성**: `vectorworks` 행의 술어를 열 집합 술어로 바꿔 놓으면 ①과 ④가 **반드시 죽어야 한다**(그것이 v0.2.0의 상태였다). 뮤테이션으로 확인하고 `progress.md`에 적는다.
 
 **검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "mvr or headerless"`
@@ -260,11 +270,65 @@ git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/sa
 **검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "no_implicit_else"`. 아울러 판별 함수 본문에 남은 `else`가 있으면 그것이 **선언된 술어의 결과 분기**임을 `progress.md`에 근거와 함께 밝힌다(있다/없다를 세는 grep은 근거가 되지 못하므로 테스트가 정본이다).
 
 
+### AC-FILEARG-025 — 패치 CSV는 자기 종류로만 간다 (REQ-FILEARG-007 · ASSUMPTION-75-b · F2)
+
+**Given** 실물 `server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv`, **When** 판별하면, **Then** `count == 1`이고 종류는 `patch`다 — `vectorworks`에는 **맞지 않는다**.
+
+**확장 뮤테이션(필수)**: `vectorworks` 술어에서 **배제 절**(`AND NOT 다른 행 서명 일치`)을 빼면 이 AC가 **빨개져야 한다**. 배제 절이 없으면 패치 CSV는 헤더가 찾아지므로 신원 술어를 만족해 `count == 2`가 되고 `ambiguous_sheet_kind`로 떨어진다. 이 뮤테이션이 통과하면 배제 절이 아무것도 지키지 않는다는 뜻이다.
+
+**이 AC가 `ASSUMPTION-75-b`를 소유한다.** v0.2.0은 75를 "VW 헤더 → patch 서명" **한 방향만** 재고 닫았고, 묻지 않은 반대 방향이 F2를 통과시켰다.
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "patch_identity"`
+
+### AC-FILEARG-026 — 음성 대조군은 거절된다 (REQ-FILEARG-003 · 좁히기 대조군)
+
+**Given** `server/tests/fixtures/vwx/drop_dk_rigging_not_a_vectorworks_export.csv`(**이미 있는** 음성 대조군, 새로 만들지 않는다), **When** 판별하면, **Then** `unknown_sheet_kind`다 — 신원 술어가 헤더를 찾지 못하거나 임계에 못 미쳐 `vectorworks`가 되지 않는다.
+
+**왜 필요한가**: AC-025가 "너무 넓지 않은가"를 재는 반면 이 AC는 **"너무 좁히다 아무거나 받지는 않는가"**의 반대편을 고정한다. 둘이 같이 있어야 술어가 한쪽으로 무너지는 것을 잡는다.
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "negative_control"`
+
+### AC-FILEARG-027 — 별칭 임계 2가 고정된다 (REQ-FILEARG-007 · 신원 술어의 민감도)
+
+**Given** `server/vwx/reader.py:43`의 `_MIN_HEADER_ALIAS_MATCHES = 2`, **When** 판별기가 신원 술어를 부르면, **Then** 그 임계가 유효하게 작동한다 — 별칭이 1개만 맞는 헤더는 `vectorworks`가 되지 않는다.
+
+**뮤테이션**: 임계를 **1로 낮추면** 무관한 대조군 하나가 `vectorworks`로 새어 들어와 이 AC가 **빨개져야 한다**.
+
+**[HARD] 이 AC가 덮지 못하는 것을 함께 적는다.** 이 임계는 **균일폭 폴백 구멍을 막지 못한다** — `_process_rows`(`reader.py:253-266`)의 탭·균일폭 폴백은 임계를 **통과하는 것이 아니라 우회한다**(헤더 탐색 실패 후 `col_0..`를 지어낸다). 그 구멍은 `AC-FILEARG-028`이 따로 막는다. 임계 고정만으로 "새는 곳이 없다"고 적으면 그것이 곧 이번 라운드에서 잡힌 종류의 착각이다.
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "alias_threshold"`
+
+### AC-FILEARG-028 — 날조 대조군을 **두 축**으로 쏜다 (REQ-FILEARG-022 · 균일폭 폴백 구멍)
+
+**Given** VW와 무관한 날조 입력 **두 가지** — **탭 축**은 아래 바이트를 그대로 픽스처로 쓴다:
+
+```
+milk	2	3000
+eggs	1	5000
+bread	3	2500
+```
+
+**쉼표 축**은 같은 내용을 쉼표로 구분한 변형이다. **When** 각각을 판별하면, **Then** **둘 다 `vectorworks`가 아니다**(`unknown_sheet_kind`).
+
+**왜 두 축인가 — 한 축만 세운 대조군이 이번 결함을 통과시켰다.** 앞선 라운드의 대조군은 **쉼표 전용**이었고, 그래서 대조군 전체가 초록인 채로 **탭 축이 활짝 열려 있었다**: 위 장바구니 바이트는 느슨한 술어에서 `header 비어 있음 = False · records = 3 · path_kind = A · failures = []`로 **Vectorworks가 됐다**. 대조군을 한 축으로만 세우면 그 축 밖은 전혀 재지 않는다 — 이 한 문장이 이 AC의 존재 이유다.
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "fabricated_control"`
+
+### AC-FILEARG-029 — 재수출 안내 문구가 보존된다 (REQ-FILEARG-023 · 좁히기로 잃는 유일한 것)
+
+**Given** 헤더 행이 없는 균일폭 입력(실물 `vwx/vectorworks_export_instrument_data_no_header.txt` 및 AC-028의 탭 날조 대조군), **When** 판별이 `unknown_sheet_kind`로 끝나면, **Then** ① 재수출 힌트가 함께 나온다 — "헤더 행이 없는 균일폭 표로 보인다. **Vectorworks에서 내보낸 것이라면** 'Export field names as first record'를 켜고 다시 내보내라." · ② 그 문구에 **조건절이 있다**(무조건 단정이 아니다) · ③ 힌트가 나와도 분류는 여전히 `unknown_sheet_kind`이며 `vectorworks`로 바뀌지 않는다 — 힌트는 **형상 관측**이지 신원 주장이 아니다.
+
+**뮤테이션(필수)**: 힌트를 **제거하면** 이 AC가 **빨개져야 한다**. 좁히기로 잃는 것은 능력이 아니라 이 문구 하나뿐이므로, 그 하나를 잃지 않았음을 기계로 지킨다.
+
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "reexport_hint"`
+
 ## §D. Definition of Done
 
-1. AC 24건 중 **오프라인 23건 전부 PASS**(`AC-FILEARG-021`은 조건부 — 발동하지 않으면 N/A로 명시 기록하고 그것을 PASS로 세지 않는다. `AC-FILEARG-024`는 조건부가 아니며 **언제나** 판정한다).
+1. AC 29건 중 **오프라인 28건 전부 PASS**(`AC-FILEARG-021`은 조건부 — 발동하지 않으면 N/A로 명시 기록하고 PASS로 세지 않는다. `AC-FILEARG-024`는 조건부가 아니며 **언제나** 판정한다).
 2. 전체 스위트 2종(`uv run pytest server/tests -q` · `npm --prefix ui run test`)이 착수 기준선 대비 **감소 0 · 신규 실패 0**. 착수 시점의 기존 실패(`test_pipeline_out_paths.py` / t20 귀속)는 **이 SPEC의 델타가 아니며 여기서 고치지 않는다** — 원인별로 나눠 적는다(plan.md M0).
-3. plan.md §A.4의 열린 결정 마커가 **0건**이고, 결정 I·J·K의 답이 `progress.md`에 기록돼 있다.
-4. 뮤테이션 확인 **6건**(AC-003 조기 반환 · AC-006 서명 사본 · AC-012 스키마 추가 · AC-013 `_TOOL_TASKS` 누락 · AC-018 포함 검사 대조군 · **AC-022 위임 술어를 열 집합 술어로 되돌리기**)이 각각 해당 테스트를 죽이는 것을 실측하고 `progress.md`에 적었다.
+3. plan.md §A.4의 열린 결정 마커가 **0건**이고, 결정 I·J·K·L의 답이 `progress.md`에 기록돼 있다.
+4. **뮤테이션 원장 — 5건**(F3으로 6→5). AC-003 조기 반환 · AC-006 서명 사본 · AC-012 스키마 추가 · AC-013 `_TOOL_TASKS` 누락 · AC-018 포함 검사 대조군. 각각 해당 테스트를 죽이는 것을 실측하고 `progress.md`에 적었다.
+   - **AC-022 뮤테이션 ①은 지금 세지 않는다(F3).** F1(위임 계약 · `.mvr` 소유자)이 열려 있는 동안 그 단언은 **뮤테이션을 걸지 않아도 이미 빨갛다** — 이미 빨간 단언에 뮤테이션을 걸어 빨간 것을 확인하는 일에는 **판별력이 없다**. F1이 닫히고 ①이 **뮤테이션 없이 초록**이 된 뒤에 재점화하며, 그때 **두 상태(뮤테이션 전 초록 · 뮤테이션 후 빨강)를 모두** 기록한다. 그 시점에 원장은 6건이 된다.
+   - v0.4.0에서 새로 선 뮤테이션 4건(AC-025 배제 절 제거 · AC-027 임계 1로 하향 · AC-029 힌트 제거 · AC-022 ① 재점화 예정)은 각각 해당 AC가 소유하며, 위 원장은 **이미 판별력이 확인된 것만** 센다.
 5. AC-FILEARG-017(앱 실기)이 PASS면 `completed`, 미수행·부분 수행이면 `implemented`에서 멈추고 잔여를 카드로 남긴다.
-6. **감사가 강점으로 지목한 것은 손대지 않았다** — 결정 ① 계수 요구의 5중 고정 · `AC-FILEARG-003`의 **주입 표** 기법 · 좌표 인용 · `addr_range_mismatch` 오인용 봉쇄. 이 넷 중 하나라도 약해졌으면 시정이 아니라 퇴행이다.
+6. **감사가 강점으로 지목한 것은 손대지 않았다** — 결정 ① 계수 요구의 5중 고정 · `AC-FILEARG-003`의 **주입 표** 기법 · 좌표 인용 · `addr_range_mismatch` 오인용 봉쇄. 이 넷 중 하나라도 약해졌으면 시정이 아니라 퇴행이다. 결정 L의 배제 절도 계수를 없애지 않는다 — 술어를 배타적으로 만들 뿐이다.
