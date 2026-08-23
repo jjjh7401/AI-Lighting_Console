@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-SHEETPIPE-001
 title: "시트 전달경로 — 판별된 바이트를 세션 슬롯과 래퍼 툴 인자까지 나른다 (분할 B)"
-version: "0.1.0"
+version: "0.2.0"
 status: draft
 created: 2026-08-23
 updated: 2026-08-23
@@ -27,6 +27,7 @@ related_specs: [SPEC-COPILOT-FILEARG-001, SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-V
 
 | 버전 | 날짜 | 작성자 | 변경 |
 |---|---|---|---|
+| 0.2.0 | 2026-08-23 | manager-spec | **열린 결정 1건 닫힘 — A의 `target` 열 태그 재정 반영.** B가 v0.1.0에서 올린 물음(레지스트리 `target` 열이 툴 이름과 세션 메서드 **두 종**을 담는데 A의 `AC-FILEARG-023`은 술어를 한정 없이 적어 `vectorworks` 행을 매번 배제한다)을 **A의 소유자가 재정했다** — 열을 **(종, 대상) 쌍**으로 넓히고 각 항목에 종을 붙인다(`(tool, import_lxseq_patch)` · `(session_method, upload_vectorworks_export)`). 좁히면 A의 결정 I가 뒤집히고, 이름으로 면제하면 후속 SPEC에 규칙이 남지 않는다. 태그가 붙으면 `AC-FILEARG-023`은 여전히 기계적이다(`tool` → `TOOL_NAMES`, `session_method` → `ChatSession`의 속성 — 소유 클래스 `server/web/session.py:3405`, 메서드 `:9655`). B의 변경: **clarification 마커 1건 → 0건**(`plan.md` §A.4) · `AC-SHEETPIPE-005`의 **조건절 제거**(전제가 성립하는 쪽으로 풀렸다 — 재작성 불필요, 성립을 명문화) · `target`을 서술하는 자리 넷을 태그형으로 정렬(§A 사전 확정 사실 10 · `REQ-SHEETPIPE-005` · `REQ-SHEETPIPE-007` · §E) · `plan.md` §A.1 · §A.3 결정 C · M0 5 · §D 위험표 갱신. **A가 이번 패스에서 함께 고치는 것 2건은 B에서 다시 올리지 않는다**: A의 `README.md:85-95` 인용이 `server/tests/fixtures/vwx/README.md:84-95`로 정정되고, `base..HEAD` 지점 수가 **22곳**으로 정정된다 — **내가 적은 `:427 · :456 · :464`도 A가 적은 `:427 · :446 · :456`도 둘 다 부분집합이었다**(각자 자기 변수명만 훑었다). 특히 **`:446`이 그 파일에 없다던 v0.1.0의 정정은 틀렸다** — `_PRECHK_BASE`를 쓰는 진짜 지점이며, 본 세션에서 철회했다. 좁은 패턴의 히트 수는 **총계가 아니라 하한**이다. REQ **9** · AC **11** 불변. |
 | 0.1.0 | 2026-08-23 | manager-spec | 최초 작성 (draft, **Tier M** · 통과 임계 **0.80**). 아티팩트 집합 **3종**(`spec.md` · `plan.md` · `acceptance.md`) + `progress.md`(집합에 **포함되지 않음** — A의 감사 A1이 잡은 오산을 되풀이하지 않기 위해 명시). REQ **9건**(`REQ-SHEETPIPE-001~009` — 리드 배정 8보다 **하나 많고**, 사유는 §B 머리의 [HARD] 주가 소유한다), AC **11건**(`AC-SHEETPIPE-001~011`), 마일스톤 **3개**(M0~M2), clarification 마커 **1건**(plan.md §A.4 ① — A 레지스트리 `target` 열의 두 종). 좌표 **11건**을 본 세션에서 전수 재측정했고(§H), 그중 **2건은 앞선 기록이 한 줄 이르게 적혀 있었다**(`@dataclass` 데코레이터를 시작으로 센 결과) — 정정해 실었다. 등재 지점은 **4지점도 6지점도 아니라 7지점**임을 측정으로 확정하고 §G에 **배제 기준과 측정 명령을 함께** 실었다. |
 
 ---
@@ -46,6 +47,10 @@ related_specs: [SPEC-COPILOT-FILEARG-001, SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-V
 7. **`notice_event`는 모델의 문맥에 들어가지 않는다.** 전사 기록은 `_record_history`(`session.py:9719`)를 거치는데, 그것을 부르는 곳은 `run_instruction` 경로 둘뿐이다(`:9639` · `:9650`). 그러므로 업로드 안내는 **운영자 화면에만** 뜬다 — 모델은 슬롯이 채워진 것을 안내로 알지 못하고, 운영자의 말 또는 래퍼 툴의 **이름 붙은 거절**로 안다. `analyse_layout_image`가 이미 그렇게 산다.
 8. **대상 툴의 인자 집합은 닫혀 있고 경로 인자가 없다.** `import_lxseq_patch` 스키마(`tools.py:9253-9306`)는 `required: ["file_content_base64"]`(`:9304`) · `additionalProperties: False`(`:9305`)이며 형제 인자는 `action`·`name_prefix_mode`·`only_fids`·`mode_overrides`뿐이다. 인자 설명문이 **"이 툴은 파일 경로를 받지 않는다"**를 명시한다(`:9264`).
 9. **오늘 유일한 호출자는 개발용 하네스다.** `server/tools/lxseq_e2e.py`가 파일을 읽어 base64로 만들어 제품 툴 스택을 직접 부른다. 운영자는 앱으로 LX-SEQ 패치 CSV를 넣을 수 없다 — 이것이 본 카드가 고치는 결함이다.
+
+10. **A의 레지스트리 `target` 열은 (종, 대상) 쌍이다** (2026-08-23 A 재정 — 정본은 A가 소유한다). 한 열이 두 종을 담는다 — `(tool, import_lxseq_patch)`와 `(session_method, upload_vectorworks_export)`. **B가 이 물음을 A에 올렸고**(v0.1.0의 clarification 마커), A가 열을 좁히거나 이름으로 면제하는 대신 **넓히고 태그를 붙이는** 쪽으로 재정했다. B에 대한 귀결은 좁다 — 래퍼가 부르는 것은 **`tool` 종뿐**이고(`session_method` 종은 업로드 이음매에서 이미 처분된다), `no_target_tool` 검사는 **태그에 맞는 등록부**를 본다. 본 세션 확인: `TOOL_NAMES`는 34개이며 `upload_vectorworks_export`는 그 안에 없다(`ChatSession`의 메서드다 — 소유 클래스 `server/web/session.py:3405`, 메서드 `:9655`).
+
+    **같은 결함의 데이터판 쌍둥이.** A가 함수 층위에서 이미 기록한 결함과 형태가 같다 — `has_address_family`는 **한 함수가 두 물음**에 답했고, `target` 열은 **한 열이 두 종**을 담았다. 둘 다 *"판별자 없이 한 자리에 두 가지"*다. **짝의 기록은 A가 자기 쪽에 남긴다**(`design.md` §1); B는 교차 참조만 들고 사본을 만들지 않는다.
 
 ### 이 SPEC이 하는 것 / 하지 않는 것
 
@@ -101,9 +106,9 @@ related_specs: [SPEC-COPILOT-FILEARG-001, SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-V
 
 ### B.3 래퍼 툴 (`server/orchestrator/tools.py` · `runner.py`)
 
-- **REQ-SHEETPIPE-005** `[Ubiquitous]` The 시스템 **shall** 래퍼 툴 **1종**을 등재하고, 그 핸들러가 슬롯의 바이트를 **A의 레지스트리가 지목한 대상 툴**의 `file_content_base64` 인자에 넣어 **내부 `ToolCall`**로 형제 툴을 부른다. 형태는 `vectorworks_autopatch`(`tools.py:2944` · 꺼내기 `:2950` · 주입 `:2961`)를 그대로 계승한다. 통과 인자는 A의 레지스트리 행이 정한 **화이트리스트**로 한정하며(오늘 `patch` 행: `action` · `name_prefix_mode` · `only_fids` · `mode_overrides`), 화이트리스트 밖의 인자는 전달하지 않는다. 등재 지점은 **7곳**이며 그 열거와 배제 기준은 §G가 소유한다 — 앞선 SPEC이 "4지점"이라 적어 두 자리를 반복해 빠뜨렸고, 그 둘은 `tools.py`를 읽어서는 보이지 않고 **전체 스위트를 돌려야** 드러난다.
+- **REQ-SHEETPIPE-005** `[Ubiquitous]` The 시스템 **shall** 래퍼 툴 **1종**을 등재하고, 그 핸들러가 슬롯의 바이트를 **A의 레지스트리 행이 지목한 대상**(`target` 쌍의 종이 **`tool`**인 것 — 사전 확정 사실 10)의 `file_content_base64` 인자에 넣어 **내부 `ToolCall`**로 형제 툴을 부른다. 형태는 `vectorworks_autopatch`(`tools.py:2944` · 꺼내기 `:2950` · 주입 `:2961`)를 그대로 계승한다. 통과 인자는 A의 레지스트리 행이 정한 **화이트리스트**로 한정하며(오늘 `patch` 행: `action` · `name_prefix_mode` · `only_fids` · `mode_overrides`), 화이트리스트 밖의 인자는 전달하지 않는다. 등재 지점은 **7곳**이며 그 열거와 배제 기준은 §G가 소유한다 — 앞선 SPEC이 "4지점"이라 적어 두 자리를 반복해 빠뜨렸고, 그 둘은 `tools.py`를 읽어서는 보이지 않고 **전체 스위트를 돌려야** 드러난다.
 - **REQ-SHEETPIPE-006** `[Unwanted]` The 래퍼 툴의 스키마 **shall not** `file_content_base64`를 선언하거나 받아들이며, **파일 시스템 경로 인자도 두지 않는다**. `additionalProperties: False`로 인자 집합을 닫는다. **이것은 구현 세부가 아니라 요구다** — 이 부재가 곧 "모델은 바이트를 한 번도 다루지 않는다"의 보증이고(A `spec.md` §F 속성 C), 편의를 위해 언제든 되돌릴 수 있는 종류의 것이라 못박아 둔다. `REQ-LXSEQ-016`으로 역추적한다 — 그 요구가 금지한 것은 "채팅에 붙여넣은 텍스트로 바이트를 만드는 것"이고, 래퍼가 바이트 인자를 갖는 순간 모델이 그 텍스트를 채워 넣을 자리가 생긴다.
-- **REQ-SHEETPIPE-007** `[Event-driven]` **When** 래퍼 호출이 진행될 수 없으면, the 시스템 **shall** 사유를 **이름으로** 밝히고 조용히 아무것도 하지 않는 경로를 두지 않는다. 사유는 **닫힌 집합 3종**이다 — **`no_uploaded_sheet`**(슬롯이 비었다) · **`kind_action_mismatch`**(슬롯의 종류가 요청된 `action`을 지원하지 않는다) · **`no_target_tool`**(그 종류의 대상 툴이 등록 툴 집합에 없다). 각 사유는 운영자가 **다음에 무엇을 할지 알 수 있는 문장**을 함께 낸다. `no_target_tool`은 **래퍼 호출 시점**의 방어이며 A의 `AC-FILEARG-023`(**판별 시점**의 방어)을 대신하지 않는다 — 둘은 다른 지점이고 서로를 대신하지 않는다. **슬롯이 비었을 때의 거절이 특히 중요하다**: `notice_event`는 모델 문맥에 들어가지 않으므로(사전 확정 사실 7), 모델이 "올라온 시트가 없다"를 아는 유일한 기계적 경로가 이 거절이다.
+- **REQ-SHEETPIPE-007** `[Event-driven]` **When** 래퍼 호출이 진행될 수 없으면, the 시스템 **shall** 사유를 **이름으로** 밝히고 조용히 아무것도 하지 않는 경로를 두지 않는다. 사유는 **닫힌 집합 3종**이다 — **`no_uploaded_sheet`**(슬롯이 비었다) · **`kind_action_mismatch`**(슬롯의 종류가 요청된 `action`을 지원하지 않는다) · **`no_target_tool`**(그 종류의 대상이 자기 **태그에 맞는 등록부**에 없다 — `tool` 종은 `TOOL_NAMES`를, `session_method` 종은 `ChatSession`의 속성을 본다. 사전 확정 사실 10). 각 사유는 운영자가 **다음에 무엇을 할지 알 수 있는 문장**을 함께 낸다. `no_target_tool`은 **래퍼 호출 시점**의 방어이며 A의 `AC-FILEARG-023`(**판별 시점**의 방어)을 대신하지 않는다 — 둘은 다른 지점이고 서로를 대신하지 않는다. **슬롯이 비었을 때의 거절이 특히 중요하다**: `notice_event`는 모델 문맥에 들어가지 않으므로(사전 확정 사실 7), 모델이 "올라온 시트가 없다"를 아는 유일한 기계적 경로가 이 거절이다.
 
 ### B.4 첨부 경로 (`ui/src/**` · `server/web/app.py`)
 
@@ -193,6 +198,7 @@ A가 다섯 라운드에 걸쳐 값을 치르고 얻은 규약이며, B는 **첫
 | 업로드 직후 보고 | `kind` · `sha256` · `byte_length` · **이름 붙은 행 수**(어느 통을 센 수인지 함께) | REQ-SHEETPIPE-004 |
 | 래퍼 거절 사유 | `no_uploaded_sheet` · `kind_action_mismatch` · `no_target_tool` (닫힌 집합 — 래퍼가 낼 수 있는 전부) | REQ-SHEETPIPE-007 |
 | 래퍼 통과 인자 | 레지스트리 행의 화이트리스트 (오늘 `patch`: `action` · `name_prefix_mode` · `only_fids` · `mode_overrides`) | REQ-SHEETPIPE-005 |
+| 레지스트리 `target` (A 소유 — 참조만) | **(종, 대상) 쌍** — 종 ∈ {`tool`, `session_method`}. 래퍼는 `tool` 종만 부른다 | 사전 확정 사실 10 · A `spec.md` §G |
 
 > **여기서 빠진 개체는 A가 소유한다.** `DiscriminationPredicate` · `SheetKindRow` · `Discrimination` · 판별 거절 사유 둘은 A `spec.md` §E가 정의하며, B는 그 정의를 참조만 한다.
 
