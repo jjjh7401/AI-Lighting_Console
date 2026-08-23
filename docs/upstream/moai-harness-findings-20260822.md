@@ -230,6 +230,135 @@ $ sed -n "89,96p" <template-snapshot>/quality.yaml
 
 ---
 
+## U-8 (MED) — 워크트리에서 Write · Edit 도구가 막힌다
+
+**상류: Claude Code** (MoAI 아님)
+
+워크트리 격리 세션에서 `Write` · `Edit` 이 절대경로 · 상대경로 · 스크래치패드 경로 전부
+`Path traversal detected: file is outside project directory` 로 거부한다. 같은 세션에서
+`Read` 는 정상 동작한다 — 읽기는 되고 쓰기만 막힌다.
+
+**재현 6회**: PARITY-001 plan · t15 리드 2회 · t16 sync · t13 sync · t21 sync.
+매번 같은 메시지이고, 대상 경로가 워크트리 안이어도 거부한다.
+
+모순이 있다. 같은 도구가 주 체크아웃에서는 "워크트리 사본을 고쳐라"라고 안내한다 —
+워크트리의 존재를 알면서 그 안에 쓰는 것을 막는다.
+
+**기전**(plan 레인 실측, 2026-08-23): 세션 cwd 는 옮겨간 워크트리인데 **도구가 쥔
+프로젝트 경로는 처음 붙은 워크트리에 고정돼 있다.** `EnterWorktree` 로 이동해도
+그 고정 경로는 따라오지 않으므로, 현재 워크트리 안의 경로가 도구에게는 프로젝트
+밖으로 보인다. 재현 횟수보다 이 한 줄이 원인에 가깝다.
+
+설정으로 못 푼다. `.claude/settings.json` · `settings.local.json` 에
+`additionalDirectories` 류 키가 없다(grep 0건).
+
+**결과**: Bash 가 유일한 쓰기 수단이 되고, 그 우회가 형태별로 또 갈린다(U-9). 우회는
+매번 다른 방식으로 실패했다 — t13 에서 JSON 을 깨뜨렸고 t21 에서 오타를 냈다. 둘 다
+즉시 잡았지만, **잡는 검사를 매번 새로 발명해야 한다**는 것이 이 마찰의 실제 비용이다.
+(그 비용을 줄이려고 `docs/runbooks/writing-files-in-a-worktree.md` 를 만들었다.)
+
+상류에 청하는 것: 워크트리 격리 세션에서 그 워크트리 안의 경로에 대해 `Write` · `Edit`
+을 허용할 것. 최소한 `Read` 가 되는 경로에는 쓸 수 있어야 한다.
+
+---
+
+## U-9 (MED) — 정적 검증이 불가능한 구조를 거부하는 판별이 과도하다
+
+**상류: Claude Code** (MoAI 아님)
+
+**발동 조건**: `EnterWorktree` 로 들어간 격리 세션에서만 무장한다. 범용 Bash 가드가
+아니다. 리드 세션 실측(2026-08-23) — 파일시스템상 워크트리 안이지만 `ExitWorktree` 로
+나온 세션에서는 아래 G 가 통과했다. 거부 메시지 문면도 조건을 말한다:
+*This session is isolated in the worktree … too complex to verify that it stays
+inside the worktree.*
+
+워크트리 세션에서 일부 Bash 명령이
+`this command is too complex to verify that it stays inside the worktree` 로 거부된다.
+기존 기록은 원인을 "중괄호 오독"이라고 적었으나, 대조군으로 재보니 **조건이 둘이고 서로
+독립**이다.
+
+| # | 형태 | 결과 |
+|---|---|---|
+| A | `cat <<EOF > /tmp/f.txt` · 중괄호 없음 | 거부 |
+| B | `cat <<EOF > f.txt` · 워크트리 안 · 중괄호 없음 | 거부 |
+| C | `python3 - <<PY` · 중괄호 리터럴 포함 | 거부 |
+| D | `python3 - <<PY` · 중괄호 없음 · 리다이렉트 없음 | 통과 |
+| E | `cat <<EOF` · 리다이렉트 없음 | 통과 |
+| F | `python3 - <<PY` · `dict()` 호출 | 통과 |
+| G | `python3 - <<PY` · `{"a": 1}` 리터럴 하나만 | 거부 |
+
+F 와 G 는 한 표현만 다르고 결과가 반대다 — 중괄호 리터럴이 독립 트리거임이 확정된다.
+A · B 와 E 를 비교하면 셸 리다이렉트가 또 하나의 독립 트리거다. heredoc 자체는 통과한다.
+
+두 조건 모두 **오탐**이다. B 의 대상은 워크트리 안 상대경로이고 명령문에 그대로 적혀
+있는데도 "확인할 수 없다"고 거부한다. G 의 중괄호는 quoted heredoc 안이라 셸이 확장하지
+않는다.
+
+**실질적 결과**: 격리 세션에서 `Write` · `Edit` 이 막히고(U-8) 이 판별까지 겹치면,
+파일을 쓸 방법이 사실상 `printf` 하나로 좁아진다. 그리고 그 하나가 내용에 따라
+실패한다 — 작은따옴표를 못 담고, 백슬래시 escape 를 틀리기 쉽다. 이 카드를 쓰는
+동안에만 세 번 걸렸다(백슬래시 겹침 2회 · 인용부호 조기 종료 1회).
+
+상류에 청하는 것: (a) quoted heredoc(`<<'EOF'`) 본문은 셸 확장 대상이 아니므로 확장
+검사에서 제외할 것 (b) heredoc 명령의 리다이렉트 대상 경로가 정적으로 읽히면
+워크트리 안인지 판정해 허용할 것 (c) 정적으로 못 읽는 경우에도 거부 대신 경고로
+낮추는 선택지를 둘 것 — 지금은 판별 실패가 곧 금지라 우회를 강제한다.
+
+---
+
+## U-10 (LOW) — pre-commit 훅이 2층이고, 뒷층은 무조건 돈다
+
+**상류: MoAI-ADK**
+
+`.git/hooks/pre-commit` 은 두 층이다.
+
+- 앞층(13~16행): `STAGED_GO` 가 비어 있지 않을 때만 gofmt · go vet 을 돈다.
+- 뒷층(64~65행): `moai gate` 를 **무엇을 스테이징했든 무조건** 돈다.
+
+즉 문서 한 줄만 고친 커밋도 전체 게이트를 탄다. 앞층은 스테이징 내용에 따라 건너뛰는데
+뒷층은 안 건너뛴다 — 같은 파일 안에서 규율이 갈린다.
+
+그리고 계측기 맹점이 하나 있다.
+
+```
+$ grep -in "vitest\|npm\|node_modules" .git/hooks/pre-commit
+(출력 없음)
+```
+
+이 훅이 `npm test` 로 죽는데(카드 t13) 훅을 grep 해서는 그 단어가 하나도 안 나온다.
+원인이 `moai gate` 안에 있기 때문이다. 훅을 읽어 원인을 찾으려는 사람은 빈손으로
+돌아간다.
+
+상류에 청하는 것: 뒷층도 스테이징 내용에 따라 범위를 좁힐 것. 최소한 훅 주석에
+`moai gate` 가 어떤 툴체인을 부르는지 적어 grep 이 닿게 할 것.
+
+---
+
+## U-11 (MED) — moai gate 는 도구가 없으면 건너뛰지 않고 죽는다
+
+**상류: MoAI-ADK**
+
+같은 pre-commit 훅이 Go 에 대해서는 규율을 지킨다.
+
+```
+if command -v gofmt >/dev/null 2>&1; then ...
+if command -v go >/dev/null 2>&1; then ...
+```
+
+도구가 없으면 조용히 건너뛴다. 그런데 `moai gate` 는 같은 상황에서 죽는다 — 카드 t13 에서
+`sh: vitest: command not found` 하나로 게이트 전체가 실패했다.
+
+`gate.yaml` 주석은 "Tools that are not installed are skipped gracefully" 라고 적혀 있어
+실제 동작과 어긋난다.
+
+t13 이 `package.json` 의 `pretest` 훅으로 ui 툴체인의 구체적 실패는 닫았지만, **원리는
+나머지 15개 언어에 그대로 남는다.** 어느 언어든 그 툴체인이 미설치면 같은 자리에서 죽는다.
+
+상류에 청하는 것: 게이트도 훅과 같은 `command -v` 규율을 쓸 것 — 도구 부재는 실패가
+아니라 건너뛰기로 처리하고, 건너뛴 사실을 출력에 남길 것(부재를 통과로 오인하지 않게).
+
+---
+
 ## 이 문서가 담지 않는 것
 
 - **발사하지 않았다.** `/moai feedback` 은 상류 프로젝트에 GitHub 이슈를 만든다. 저장소 밖으로
