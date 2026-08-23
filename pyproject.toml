@@ -42,9 +42,22 @@ testpaths = ["server/tests"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+# 경로를 명시적으로 넘겨도 제외를 적용한다 — PRESERVE 게이트 테스트
+# (`test_ruff_format_reports_no_change`)가 파일 목록을 인자로 넘기기 때문이다.
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+# PRESERVE 핀 파일은 **포매터에서만** 제외한다 (lint는 그대로 받는다).
+# `server/web/preview.py`는 SPEC-COPILOT-PRECHK-001/OVERLAP-001이 바이트
+# 동일성을 요구하는 핀 파일인데, 저장소 전역 `ruff format`이 4행
+# 컴프리헨션을 1행으로 접어 핀을 두 번 깨뜨렸다 (원복 커밋 6d0b58c, 그리고
+# 재발해 이 커밋이 다시 원복한다). 의미는 동일하고 핀의 가치는 바이트
+# 동일성 자체이므로, 포매터가 이 파일을 건드리지 않게 하는 것이 재발을
+# 끊는 최소 조치다.
+[tool.ruff.format]
+exclude = ["server/web/preview.py"]
 
 [tool.coverage.report]
 show_missing = true
