@@ -4,6 +4,7 @@
   "private": true,
   "description": "Stage-2 Tauri v2 desktop shell for the GrandMA3 Copilot (SPEC-COPILOT-DEPLOY-001 M7).",
   "scripts": {
+    "pretest": "[ -d ui/node_modules ] || npm --prefix ui ci --no-audit --no-fund",
     "test": "npm --prefix ui run test",
     "tauri": "tauri",
     "shell:stage": "python3 packaging/stage_sidecar.py",
