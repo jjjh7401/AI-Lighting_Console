@@ -4698,6 +4698,10 @@ def build_toolset(
                 for row in plan.skipped
             ],
             "write_count_planned": plan.write_count_planned,
+            # 총계 하나로 뭉치면 미리보기가 N대를 약속하고 0대를 만든다 —
+            # 폭 미확정 런은 patch_fixtures 가 거절하고 거기서 파일이 멈춘다(t28).
+            "write_count_applicable": plan.write_count_applicable,
+            "write_count_width_unconfirmed": plan.write_count_width_unconfirmed,
         }
 
         apply_block: dict[str, object] = {"entered": False, "runs": []}
@@ -4762,10 +4766,19 @@ def build_toolset(
 
         skipped_count = len(plan.skipped)
         if action == "preview":
+            # 총계만 말하면 N대를 약속하고 0대를 만든다. 폭 미확정이 있으면
+            # 그 수를 문장으로 갈라 말한다 — 조작자가 미리보기만 보고 진행한다.
+            unconfirmed = plan.write_count_width_unconfirmed
             summary = (
                 f"미리보기 — 쓰기 0건. 런 {len(plan.runs)}개 · "
                 f"계획 {plan.write_count_planned}대 · 건너뛴 행 {skipped_count}건."
             )
+            if unconfirmed:
+                summary += (
+                    f" 그중 {unconfirmed}대는 **폭 미확정**이라 적용 시 거절된다"
+                    f"(적용 가능 {plan.write_count_applicable}대). 거절이 나면 그 런에서"
+                    " 파일 전체가 멈춘다 — 폭을 콘솔에서 확인한 뒤 다시 불러라."
+                )
         elif not plan.runs:
             summary = f"할 일 없음 — 새로 만들 행이 없다. 건너뛴 행 {skipped_count}건, 0대 생성."
         elif stopped_at is None and created_total == plan.write_count_planned:
