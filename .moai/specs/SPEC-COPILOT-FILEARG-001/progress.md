@@ -110,11 +110,279 @@ tool_count_delta: "0 (A는 툴을 등재하지 않는다 — 34 → 35 래퍼 �
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+M1 구현 커밋 **`bd21a4c`** · 게이트 실행 HEAD **`e65e1c2`** · 기준선 `1c104f0`.
+
+### M1 — 실측 교차 분류표 (AC-FILEARG-019 ⑤)
+
+`research.md` §11.4에서 "기대"로 표시했던 칸을 M1이 실측했다. **8칸이 예측대로
+관측됐고 뒤집힌 칸은 0개다.** 아래 값은 `_best_header_candidate` 호출 결과이며
+배제 절 적용 **전**의 원시 신원 술어 값이다.
+
+| 파일 | 크기/형태 | idx | score | 신원 술어 | 최종 분류 |
+|---|---|---|---|---|---|
+| `demoshow_grandma3.mvr` | zip 315,155 B | — | — | **True** (SCENE_ENTRY) | `vectorworks` |
+| `vectorworks_export_sample_with_data.csv` | csv `,` | 0 | 17 | True | `vectorworks` |
+| `vectorworks_worksheet_absolute_address_only.csv` | csv `,` | 0 | 18 | True | `vectorworks` |
+| `vectorworks_worksheet_multisystem_full.csv` | csv `,` | 0 | 20 | True | `vectorworks` |
+| `vectorworks_worksheet_grid_ma3_patch.csv` | csv `,` | 1 | 11 | True | `vectorworks` |
+| `vwx_worksheet_grid_from_screenshot.csv` | csv `,` | 1 | 7 | True | `vectorworks` |
+| `vwx_worksheet_grid_patch_ready.csv` | csv `,` | 1 | 9 | True | `vectorworks` |
+| `synthetic_path_b_worksheet_grid.csv` | csv `,` | 1 | 5 | True | `vectorworks` |
+| `drop_dk_rigging_not_a_vectorworks_export.csv` | csv `,` | **-1** | 0 | False | `unknown_sheet_kind` |
+| `vectorworks_export_instrument_data_no_header.txt` | tsv 균일폭 | **-1** | **1** | False | `unknown_sheet_kind` + 힌트 |
+| `LXSEQ_RIG_01_ShowBase_r3.patch.csv` (참고) | csv `,` | 0 | 7 | **True** | `patch` (배제 절이 갈랐다) |
+
+**안전판(REQ-FILEARG-018)은 발동하지 않는다.** 위임 술어가 vwx 페이로드 10개
+전량을 흡수했다 — 흡수하지 못한 변형이 0건이므로 `AC-FILEARG-021`은 **N/A**다
+(사유와 관측은 아래 AC 표에 있다).
+
+**`ASSUMPTION-75-b` 확정 · NEGATIVE 아님.** LX-SEQ 패치 헤더는 원시 신원 술어를
+**만족한다**(idx=0 · score=7). 즉 75-b는 신원 술어 **단독으로는 성립하지 않고**,
+배제 절이 있어야 성립한다. 뮤테이션이 이를 기계로 고정한다 — 배제 절을 빼면
+`count == 2`가 되어 `ambiguous_sheet_kind`로 떨어진다.
+
+### AC-FILEARG-024 — 판별 함수에 남은 `else`의 근거
+
+`discriminate` 본문에 `else` 가지가 **하나** 있다. 그것은 암묵적 폴백이 아니라
+**계수 결과 `count >= 2`** 이며 `REQ-FILEARG-004`가 선언한 결과다.
+
+```
+if count == 0:      outcome = OUTCOME_UNKNOWN     # REQ-FILEARG-003
+elif count == 1:    outcome = OUTCOME_RESOLVED
+else:               outcome = OUTCOME_AMBIGUOUS   # count >= 2 — REQ-FILEARG-004
+```
+
+세 가지가 계수의 전 영역을 덮으므로 표 밖으로 흘러가는 경로가 없다. 술어가 전부
+거짓인 경우는 첫 가지이며, 그것 역시 선언된 결과다.
+
+### AC PASS/FAIL 행렬 (M1 배정 19건)
+
+| AC | 검증 명령 | 실제 출력 | 상태 |
+|---|---|---|---|
+| 001 | `grep -n "_best_header_candidate\|_MIN_HEADER_ALIAS_MATCHES" server/vwx/reader.py` · `grep -c "mvr\|MVR" server/vwx/reader.py` | `43:_MIN_HEADER_ALIAS_MATCHES = 2` · `158:def _best_header_candidate(...)` · `0` | **PASS** (좌표 무드리프트) |
+| 002 | `pytest ... -k "signature"` | `10 passed, 73 deselected` | **PASS** |
+| 003 | `pytest ... -k "superset or count"` | `4 passed, 79 deselected` | **PASS** |
+| 004 | `pytest ... -k "unknown"` · `grep -rn "difflib\|SequenceMatcher\|closest\|best_match" server/sheets/` | `8 passed, 75 deselected` · 빈 출력 (양성 대조군 4행 발화 확인) | **PASS** |
+| 005 | `pytest ... -k "ambiguous"` | `6 passed, 77 deselected` | **PASS** |
+| 006 | `pytest ... -k "registry"` | `83 passed` (선택자 희석 — 아래 관찰 O-1) | **PASS** |
+| 009 | `pytest ... -k "no_trial_parse or parse_once"` | `3 passed, 80 deselected` | **PASS** |
+| 018 | `pytest ... -k "format_sufficiency"` | `9 passed, 74 deselected` | **PASS** |
+| 019 | `pytest ... -k "cross_classify"` | `13 passed, 70 deselected` | **PASS** (표는 위 §E.2) |
+| 020 | `grep -rn "preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex" server/sheets/` + 행 수 단언 | 빈 출력 (양성 대조군 3행 발화 확인) · `len(REGISTRY) == 2` 초록 | **PASS** |
+| 021 | `pytest ... -k "declared_fallback"` · `grep -n "발동함" plan.md` | `83 deselected` (수집 0) · **비어 있지 않음 — plan.md:182** | **N/A** (아래 결함 D-1) |
+| 022 | `pytest ... -k "mvr or headerless"` | `10 passed, 73 deselected` | **PASS** |
+| 023 | `pytest ... -k "handler_resolution"` | `5 passed, 78 deselected` | **PASS** |
+| 024 | `pytest ... -k "no_implicit_else"` | `7 passed, 76 deselected` | **PASS** (`else` 근거 위에 기록) |
+| 025 | `pytest ... -k "patch_identity"` | `3 passed, 80 deselected` | **PASS** |
+| 026 | `pytest ... -k "negative_control"` | `2 passed, 81 deselected` | **PASS** |
+| 027 | `pytest ... -k "alias_threshold"` | `2 passed, 81 deselected` | **PASS** (하한만 주장) |
+| 028 | `pytest ... -k "fabricated_control"` | `4 passed, 79 deselected` | **PASS** (탭·쉼표 두 축) |
+| 029 | `pytest ... -k "reexport_hint"` | `5 passed, 78 deselected` | **PASS** |
+| 030 | 커밋 → 게이트 → 대조 (아래 경계 게이트 절) | 대조 빈 출력 · 게이트 `41 passed` | **PASS** |
+
+합 **19 PASS · 0 FAIL · 1 N/A**(021은 조건 미발동).
+
+### 뮤테이션 원장
+
+계획 §B M1이 지정한 넷 + AC가 필수로 건 넷. **여덟 중 여덟이 대상 테스트를
+죽였다.** 복원은 전부 sha256 대조로 확인했다(초록이 아니라 체크섬으로).
+
+| # | 출처 | 뮤테이션 | 죽은 테스트 | 복원 |
+|---|---|---|---|---|
+| ① | plan | 판별기를 첫 일치에서 중단 | `superset_header_matches_both` · `superset_header_yields_count_two` (`assert 1 == 2`) | sha256 일치 |
+| ② | plan | 서명에서 `AddrRange` 제거 | `signature_rejects_when_one_canonical_column_is_missing` (+ 참조 동일성) | sha256 일치 |
+| ③ | plan | `CANONICAL_COLUMNS` → 내용 동일 하드코딩 사본 | `registry_patch_row_references_canonical_columns_by_identity` **단 1건** — 나머지 82건은 초록 | sha256 일치 |
+| ④ | plan | 확장 형식의 배제 조건 무시 | `format_sufficiency[bm]` 2건 (`ambiguous_sheet_kind != resolved`) | sha256 일치 |
+| ⑤ | AC-022 | `vectorworks` 술어를 열 집합 술어로 되돌림 | `.mvr` 4건 + `cross_classify[demoshow_grandma3.mvr]` | sha256 일치 |
+| ⑥ | AC-023 | 태그 무시하고 `TOOL_NAMES` 하나로만 확인 | `handler_resolution_never_excludes_todays_two_rows` + `.mvr` 5건 | sha256 일치 |
+| ⑦ | AC-025 | 배제 절 제거 | `patch_identity_is_a_single_match` · `patch_identity_excludes_vectorworks` | sha256 일치 |
+| ⑧ | AC-029 | 재수출 힌트 제거 | `reexport_hint` 2건 | sha256 일치 |
+
+**AC-027 임계 뮤테이션(하한 방향)**: `_MIN_HEADER_ALIAS_MATCHES`를 **1**로 낮추면
+실물 `vectorworks_export_instrument_data_no_header.txt`가 `outcome = resolved` ·
+`matched = ('vectorworks',)` · `hint is None = True`로 뒤집힌다 — `AC-FILEARG-019` ④와
+`AC-FILEARG-029`가 함께 죽는다. 인메모리 패치라 복원 대상 파일이 없다.
+
+**③이 이 원장에서 가장 중요한 칸이다.** 내용이 같은 사본은 **행동으로는 보이지
+않는다**(82건 초록). 참조 동일성 단언 하나만이 그 드리프트를 잡는다.
+
+### 경계 게이트 (AC-FILEARG-030)
+
+실행 순서 그대로: 커밋 → 게이트 → 대조.
+
+```
+0) git diff --stat 95687a0e..HEAD -- server/web/preview.py   → 빈 출력 (뮤테이션 전제 충족)
+1) git commit                                                 → bd21a4c
+2) uv run pytest server/tests/test_overlap_preserve.py -q     → 41 passed
+3) git diff --stat 1c104f0..HEAD -- server/lxseq server/vwx server/orchestrator
+   server/web ui console/lua server/safety server/prechk server/paperwork
+   server/rulebook/assets                                     → 빈 출력
+```
+
+3)의 **양성 대조군**: 같은 명령을 `-- server/sheets server/tests`로 겨누면
+`3 files changed, 902 insertions(+)`가 나온다. 빈 출력이 명령이 죽어서 난 것이
+아님을 확인했다.
+
+**뮤테이션 — `server/web/preview.py` 한 줄, 두 상태를 모두 기록한다.**
+
+| 상태 | 검사 2) 게이트 | 검사 3) 대조 |
+|---|---|---|
+| **미커밋** | `41 passed` — **초록** | 빈 출력 — **초록** |
+| **커밋 뒤** (`1b6b60a`) | `1 failed, 40 passed` — `TestPreserveDiffIsEmpty::test_the_preserved_paths_are_unchanged` | `server/web/preview.py \| 1 +` |
+
+미커밋 초록이 이 AC가 막는 거짓 신호이며, 실물로 재현됐다. 뮤테이션 커밋은
+`e65e1c2`로 되돌렸고 되돌린 뒤 `git diff --stat bd21a4c..HEAD`가 빈 출력이다
+(내용이 M1 커밋과 동일).
+
+### 전체 스위트 대조
+
+| 시점 | 명령 | 결과 |
+|---|---|---|
+| 기준선 `1c104f0` | `uv run pytest server/tests -q` | `9885 passed, 12 skipped, 0 failed` (M0 실측, 이 워크트리) |
+| M1 최종 `e65e1c2` | `uv run pytest server/tests -q` | `9968 passed, 12 skipped, 0 failed` (140.88s) |
+
+**증가 +83 · 감소 0.** 신규 테스트가 정확히 83건이므로 델타가 전부 설명된다.
+
+**중간에 잡힌 회귀 1건(기록).** 첫 전체 실행에서 `test_autopatch_contract.py`의
+R24 가드 2건이 빨갛게 나왔다 — `_payloads()`가 `VWX_DIR.iterdir()`로 훑었는데,
+그 가드는 **경로 꼬리가 `vwx`인 모든 순회**를 vwx 모듈 순회로 읽어 공용 순회
+사용이나 등기를 요구한다. 여기서 세는 것은 vwx **모듈**이 아니라 테스트
+**픽스처**이고, 등기처(`_R24_INDEPENDENT_SWEEPS`)는 A의 경계 밖이다. 그래서
+`FIXTURES.rglob("*")`로 훑고 `vwx/` 하위만 고르도록 고쳤다 — 가드가 지키려는
+성질(모듈 순회의 정의는 하나)은 건드리지 않는다. 상세는 아래 관찰 O-2.
+
+### 결함 · 관찰 (run 세션 소인)
+
+**D-1 (주요) — `AC-FILEARG-021`의 N/A 검증 토큰에 판별력이 없다.**
+그 AC는 "N/A일 때 `grep -n "발동함" plan.md`가 **빈 출력이어야 하며**, 빈 출력이
+곧 N/A의 증거"라고 적는다. 그런데 실제 출력은 비어 있지 않다:
+
+```
+$ grep -n "발동함" .moai/specs/SPEC-COPILOT-FILEARG-001/plan.md
+182:… 폴백을 타는 순간 이 문단을 "발동함"으로 갱신하고 …
+```
+
+§D.1의 **지시문 자체가 그 토큰을 인용**하고 있어, 폴백이 발동하든 하지 않든 grep은
+언제나 한 행을 낸다. 이것은 그 AC가 v0.2.0에서 고쳤다고 적은 결함(**이미 있는
+문장을 grep해 오늘도 통과하는 검사**)과 **같은 형태가 한 겹 아래에서 되풀이된
+것**이다 — 토큰만 바꿨고 인용을 지우지 않았다. 코드 결함이 아니라 **검사 결함**이다.
+그러므로 N/A 판정은 이 grep이 아니라 실질 근거로 적는다: 위임 술어가 페이로드
+10/10을 흡수했고(교차 분류표), 레지스트리에 폴백 행이 없으며,
+`pytest -k "declared_fallback"`이 **0건 수집**이다.
+제안 교정: 판별력 있는 토큰은 인용되지 않는 형태여야 한다(예: 문단 머리의
+`상태: 발동함` 같은 **행 앞머리 앵커**를 `^`로 고정해 grep).
+
+**O-1 (관찰) — `-k` 선택자가 모듈 이름에 희석된다.**
+`pytest -k "registry"`는 `83 passed`(deselected 0)를 낸다. pytest의 키워드 매칭이
+**모듈 이름**(`test_sheets_registry`)까지 훑기 때문이며, `AC-FILEARG-006`의 검증
+명령은 실질적으로 파일 전체 실행이다. 같은 이유로 `-k "sheets"`도 전량을 고른다.
+AC의 ①~⑤는 전용 클래스(`TestRegistryTable`)가 따로 덮으므로 덮개에는 구멍이
+없지만, **그 명령이 좁혀 준다고 읽으면 틀린다.**
+
+**O-2 (관찰) — R24 가드가 픽스처 디렉터리를 모듈 순회로 읽는다.**
+`test_autopatch_contract.py`의 R24 가드는 **경로 꼬리가 `vwx`인 모든 순회**를
+vwx 모듈 순회로 판정해 공용 순회(`iter_vwx_modules`) 사용이나
+`_R24_INDEPENDENT_SWEEPS` 등기를 요구한다. 그런데 `server/tests/fixtures/vwx/`는
+모듈이 아니라 **픽스처**이고, 이름이 우연히 같을 뿐이다. 교리대로면 등기가 옳으나
+등기처가 A의 경계(`REQ-FILEARG-024`) 밖이라 이 카드에서는 손댈 수 없다. 그래서
+순회를 `FIXTURES.rglob("*")` + `parent.name == "vwx"` 필터로 바꿨다 — 디스크를
+실제로 읽는 성질은 그대로이고(테스트가 공허해지지 않는다), 가드가 지키는 성질도
+건드리지 않는다. **다음 카드(SHEETPIPE)가 같은 자리에 다시 부딪힌다** — 그때는
+경계가 다르므로 등기가 가능할 수 있다.
+
+### SPEC 공백 (문서가 답하지 않아 판단해야 했던 자리)
+
+이 목록은 실패가 아니라 **인수인계 문서로서의 SPEC이 어디서 침묵했는가**의 기록이다.
+각 항은 (무엇이 필요했나 · 어느 아티팩트가 답했어야 하나 · 무엇을 했나) 셋을 적는다.
+
+**G-1 — 헤더 정규화 함수를 어떻게 가져오는가. 결정 F와 `REQ-FILEARG-024`가 충돌한다.**
+결정 F: private `_normalize_header`를 다른 모듈이 직접 import하지 말고 **공개 별칭 한
+줄**을 `server/lxseq/parser.py`에 더하라(그것이 lxseq에 허용되는 유일한 변경).
+`REQ-FILEARG-024`(v0.6.0 신설): `server/lxseq/**`를 **한 줄도** 고치지 않는다 —
+`AC-FILEARG-030`이 기계로 확인한다. 둘은 같은 줄을 두고 반대를 말한다. 답했어야 할
+곳: `plan.md` §A.3 결정 F(또는 v0.6.0이 REQ-024를 넣으면서 결정 F를 정정했어야 한다).
+**한 것**: 결정 F가 스스로 남긴 탈출구("그마저 없이 될 방법이 있으면 그쪽을 택한다")를
+따라 `_normalize_header`를 직접 import했다. lxseq 파일은 0줄 변경이고 사본도 만들지
+않았으므로 두 요구 중 기계 검사가 있는 쪽을 지켰다.
+
+**G-2 — `.mvr`이 아닌 zip(진짜 `.xlsx`)은 무엇이 되는가.**
+`REQ-FILEARG-019`는 "`.mvr` · `.xlsx` … 는 계속 동작한다 — 이 SPEC은 그 능력을
+회수하지 않는다"고 적는다. 그런데 `REQ-FILEARG-021`의 두 갈래 전역 함수는
+**zip이면 `SCENE_ENTRY` 검사**뿐이므로, `SCENE_ENTRY`가 없는 zip은 False가 되어
+`unknown_sheet_kind`로 떨어진다. `design.md` §4는 결과 ④(`unapproved_dependency`)에
+**True**를 배정하지만 그 결과는 `reader.read()`의 PK 갈래에서만 나오고, 같은 문단이
+"zip 갈래가 먼저 갈라 xlsx 경로에 **들어가지 않게** 막는다"고 적으므로 **④는 명세대로
+구현하면 도달 불가능한 칸**이다. 답했어야 할 곳: `spec.md` REQ-021 / `design.md` §4.
+**한 것**: REQ-021을 문면 그대로 구현했다(zip → `SCENE_ENTRY`만). 코퍼스에 `.xlsx`
+표본이 **0개**라 실측이 바뀌는 칸은 없다 — 그러나 이 자리는 **비어 있는 채로 남았다**.
+
+**G-3 — 해석 불가 술어 형식의 설정 오류 이름.**
+`REQ-FILEARG-016`은 "해석하지 못하는 형태를 표에서 만나면 조용히 건너뛰지 않고 설정
+오류로 보고한다"고 요구하지만, `spec.md` §E의 "판별 시점 설정 오류" 행은
+`no_target_tool` **하나만** 정의한다. 답했어야 할 곳: `spec.md` §E 표.
+**한 것**: `unsupported_predicate_form`을 신설했다(`no_target_tool`과 같은 처분 —
+후보 제외 + 오류 보고).
+
+**G-4 — 배제 절이 무엇에 걸리는가.**
+"레지스트리의 **다른 행의 서명** 일치"에서, 다른 행이 **열 집합 술어**일 때만 세는지
+아니면 어떤 술어든 원시 일치면 세는지가 명시돼 있지 않다. 오늘 행이 둘뿐이라 두 읽기가
+같은 답을 낸다 — 그러나 002가 위임 술어 행을 더하면 갈린다. 답했어야 할 곳:
+`spec.md` REQ-007 / `design.md` §1.
+**한 것**: "사용 가능한 다른 행의 **원시 일치** 아무것이나"로 구현했다.
+
+**G-5 — `SCENE_ENTRY`를 어디서 import하는가.**
+정본으로 지목된 `server/orchestrator/tools.py:2861`은 **툴 핸들러 본문 안의 판정
+줄**이라 import할 수 있는 것이 아니다. 상수 자체는 `server/vwx/mvr.py:30`에 있다.
+답했어야 할 곳: `spec.md` §G / `design.md` §4(둘 다 "결정 줄"과 "소유자"를 구분해
+적지만 **호출자가 무엇을 import해야 하는지**는 적지 않는다). **한 것**:
+`server.vwx.mvr`에서 상수를 가져와 `tools.py:2861`과 **같은 관용구**를 적용했다.
+`server.orchestrator`를 import하면 `sheets → orchestrator` 의존이 생기는데, 그것은
+판별 계층을 무겁게 만들고 순수 함수 요구와 어긋난다.
+
+**G-6 — `AC-FILEARG-009` ②③은 A가 소유한 코드로는 만족시킬 수 없다.**
+"종류가 정해진 **뒤에야** 실제 파싱이 정확히 한 번 돈다(파서 진입점 호출 계수 1) ·
+행 수는 그 파싱에서 파생된다"는 **바이트를 나르는 층**의 성질이고, A의 판별기는
+파서를 **아예 부르지 않는다**(그것이 ①의 요구다). 분할 기록은 "A는 순서 단언을
+가진다"고 적지만 ②③의 문면은 남아 있다. 답했어야 할 곳: `acceptance.md` AC-009.
+**한 것**: A의 범위 안에서 검사 가능한 형태로 읽었다 — 판별 중 파서 호출 **0회**를
+단언하고(①④), 종류가 정해진 **뒤** 파서를 한 번 불러 레코드가 나오는 것을 보였다(②③).
+
+**G-7 — M0 실측값이 `progress.md` §E.1에 반영돼 있지 않다.**
+`baseline_measured`는 여전히 `미측정`이고 `base_sha`는 `6296af3`인데 실제 착수
+기준선은 `1c104f0`이다. M0 기록처가 그 칸을 채우도록 돼 있으나(§E.1 문면이 스스로
+"M0가 이 워크트리에서 직접 재서 채운다"고 적는다) 채워지지 않았다. §E.1은 plan-phase
+소유라 run 세션이 고치지 않았다 — **실측값은 §E.2·§E.3에 적었다.**
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+```yaml
+run_complete_at: 2026-08-24
+run_commit_sha: bd21a4c          # M1 구현 커밋. 게이트 실행 HEAD는 e65e1c2(뮤테이션 커밋 1b6b60a의 revert)
+run_status: complete-with-findings
+ac_pass_count: 19
+ac_fail_count: 0
+ac_na_count: 1                   # AC-021 안전판 — 위임 술어가 페이로드 10/10을 흡수해 조건 미발동
+milestones_complete: "M0(리드 실측) · M1"
+baseline_measured: "9885 passed, 12 skipped, 0 failed @ 1c104f0 (M0가 이 워크트리에서 직접 잼)"
+suite_after_run: "9968 passed, 12 skipped, 0 failed @ e65e1c2 — 증가 +83 · 감소 0"
+new_tests: 83
+new_warnings_or_lints_introduced: 0    # ruff format/check 모두 clean
+preserve_list_post_run_count: 10       # _PRESERVE_PATHS 불변
+boundary_gate: "PASS — 대조 빈 출력(양성 대조군 확인) · test_overlap_preserve 41 passed · 커밋 뒤 실행"
+boundary_mutation: "PASS — server/web/preview.py 전제 빈 출력 확인 후 실행. 미커밋 초록 / 커밋 뒤 빨강 두 상태 모두 기록"
+mutations_fired: 9                     # plan 4 + AC 4 + AC-027 임계(인메모리)
+mutations_killed_target: 9
+mutation_restore_proof: "sha256 대조 — registry.py 5fd78fe9…65b43f 8회 전부 일치"
+assumption_75b: "확정 — LX-SEQ 헤더는 원시 신원 술어를 만족한다(idx=0, score=7). 배제 절이 있어야 75-b가 성립하며, 뮤테이션 ⑦이 그것을 고정한다"
+fallback_req_018: "미발동 — plan.md §D.1은 갱신 대상 아님"
+total_run_phase_files: 3               # server/sheets/__init__.py · registry.py · server/tests/test_sheets_registry.py
+files_outside_boundary_touched: 0
+live_session: 0                        # A는 콘솔도 앱도 건드리지 않는다
+new_runtime_dependencies: 0
+new_data_files: 0
+tool_count_delta: 0                    # A는 툴을 등재하지 않는다
+findings_for_sync: "결함 1(D-1: AC-021의 N/A 검증 토큰이 판별력 없음) · 관찰 2(O-1 -k 선택자 희석 · O-2 R24 가드 이름 충돌) · SPEC 공백 5건(G-1~G-5) — run 세션 보고서 소유"
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
