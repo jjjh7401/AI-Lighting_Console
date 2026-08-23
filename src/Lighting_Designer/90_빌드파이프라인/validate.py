@@ -2,10 +2,15 @@
 """LX-SEQ v2.0 포맷 준수 검증 — 15항목 체크리스트"""
 import sys, os, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 입력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
+# 박아두면 그 기계 밖에서는 돌지 않는다.
+SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar")
 from seq_data import *
 from openpyxl import load_workbook
 
-XLSX = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.xlsx"
+XLSX = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.xlsx")
 wb = load_workbook(XLSX)
 head = {r[0].value: r[1].value for r in wb["HEAD"].iter_rows(min_row=4, max_row=20, max_col=2)}
 cs = wb["CUE"]

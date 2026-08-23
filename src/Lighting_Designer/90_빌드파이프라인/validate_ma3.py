@@ -2,11 +2,16 @@
 """MA3 생성 스크립트 정합 검증 (M1~M5)"""
 import sys, os, re, xml.etree.ElementTree as ET
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 입력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
+# 박아두면 그 기계 밖에서는 돌지 않는다.
+MA3_DIR = os.environ.get("LXSEQ_MA3_OUT") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "04_grandMA3")
 from rig_data import GROUPS, PRESET_DIM, PRESET_COL, PRESET_POS, PRESET_BM, FX_LIB
 from seq_data import CUES
 
-TXT = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.ma3.txt"
-XMLF = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.macros.xml"
+TXT = os.path.join(MA3_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.ma3.txt")
+XMLF = os.path.join(MA3_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.macros.xml")
 lines = open(TXT, encoding="utf-8").read().splitlines()
 cmds = [l for l in lines if l and not l.startswith("//")]
 

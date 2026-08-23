@@ -2,12 +2,18 @@
 """실행 레이어 시트(PATCH/PRESET/CUE-EX) 추가 + CUE-EX CSV 내보내기 (r2)"""
 import sys, os, csv
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 입출력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
+# 박아두면 그 기계 밖에서는 돌지 않는다.
+SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar")
+os.makedirs(SONG_DIR, exist_ok=True)
 from exec_data import PATCH, PRESETS, CUE_EX, EX_HEADERS, EXEC_NOTES
 from seq_data import NOTES
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-SRC = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.xlsx"
+SRC = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.xlsx")
 THIN = Side(style="thin", color="BFBFBF")
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 HDR_FILL = PatternFill("solid", fgColor="1F4E3D")   # 실행 레이어는 녹색 계열로 구분
@@ -110,7 +116,7 @@ wb.save(SRC)
 print("exec sheets added:", wb.sheetnames)
 
 # ---------- CUE-EX CSV (기계 정본) ----------
-csv_path = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.cue-ex.csv"
+csv_path = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.cue-ex.csv")
 with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
     w = csv.writer(f)
     w.writerow(EX_HEADERS)

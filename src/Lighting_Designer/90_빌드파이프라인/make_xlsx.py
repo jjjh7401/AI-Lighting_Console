@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 출력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
+# 박아두면 그 기계 밖에서는 돌지 않는다.
+SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar")
+os.makedirs(SONG_DIR, exist_ok=True)
 from seq_data import *
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -135,7 +141,7 @@ for col, w in zip("ABCDE", [14, 14, 88, 12, 10]):
     ns.column_dimensions[col].width = w
 ns.freeze_panes = "A4"
 
-out = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.xlsx"
+out = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.xlsx")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 wb.save(out)
 print("saved:", out)

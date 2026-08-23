@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 import sys, os, html
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 출력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
+# 박아두면 그 기계 밖에서는 돌지 않는다.
+SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar")
+os.makedirs(SONG_DIR, exist_ok=True)
 from seq_data import *
 
 TOTAL = 240.0  # 차트 x축 (곡 236.0 + 종료 암전 여유)
@@ -191,7 +197,7 @@ tr.s-OUTRO td:first-child{border-left:3px solid #4A5568}
 <div class="foot">LX-SEQ v2.0 · 자체완결 단일 HTML (외부 의존 없음) · A3 가로 인쇄 대응 · 생성 2026-08-21 (r3)</div>
 </div></body></html>"""
 
-out = "/home/claude/plugin-run/out/LXSEQ_SAMPLE_01_Sugar_r3.timeline.html"
+out = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.timeline.html")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 SUBS = {
     "{ticks}": ticks, "{secs}": secs, "{cues}": cues_html,
