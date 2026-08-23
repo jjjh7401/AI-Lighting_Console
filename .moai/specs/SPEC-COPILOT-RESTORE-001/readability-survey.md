@@ -186,3 +186,76 @@ A.2·A.3 이 프로브 목록을 정한다. 전부 **읽기 전용**이다:
 4. Executor 우회 경로 재확인 — 할당 시퀀스 번호가 실제로 나오는가
 
 **쓰기가 필요한 항목은 없다.** 넷 다 판독뿐이다.
+
+---
+
+# 부록 B — 프로브 ① 선행 확인: `introspect` 에 offset 페이징이 **없다** (t5c)
+
+> 리드 지시: *"D-6 이 「introspect offset 인자」를 조건으로 적었으니 offset 페이징이
+> 있는지 먼저 소스에서 확인하십시오. 없으면 ①은 지금 못 합니다."*
+>
+> **없습니다. ①은 지금 못 합니다.** 소스 판독 · 실기 0건 · 콘솔 쓰기 0건.
+
+## B.1 offset 은 있는데 `state` 전용이다
+
+`offset` 자체는 응답기 1.6.0 에 실려 있다:
+
+    :226-231  Paged snapshot requests (responder 1.6.0, PROTOCOL.md §4.2):
+              the **state** rest-of-line may end in one whitespace-separated
+              "offset=<n>" token
+    :233      function M.parse_state_args(rest)
+    :661-662  Paging window (1.6.0): `offset` is the 0-based start; the window
+              is at most CONFIG.max_children wide
+
+**그러나 그 파서는 한 곳에서만 불린다:**
+
+    grep -n 'parse_state_args' → :233 (정의) · :1136 (호출, state 분기)
+
+## B.2 `introspect` 는 offset 을 받지 않는다
+
+    :863   function M.build_introspect_result(id, path)      ← offset 인자 없음
+    :1173-1184  elseif parsed.kind == "introspect" then
+                  … payload = M.build_introspect_result(parsed.id, parsed.rest)
+
+`parsed.rest` 를 **경로로 통째로** 넘긴다. 사용자가 `offset=` 을 붙이면 그것은 경로의
+일부로 해석된다 — 페이징이 아니라 **경로 오류**가 된다.
+
+## B.3 절단이 꼬리를 버린다 — 그래서 뒤쪽 필드는 도달 불가다
+
+    :903-908  while #M.encode_payload(payload) > CONFIG.max_payload and #fields > 0 do
+                  table.remove(fields)      ← 배열 끝에서 제거
+                  payload.truncated = true
+
+`table.remove(fields)` 는 **마지막 원소**를 지운다. 즉 페이로드가 예산을 넘으면 **뒤쪽
+필드부터 사라지고**, 페이징이 없으니 **어떤 호출로도 그 뒤쪽에 도달할 수 없다.**
+
+이것이 D-6 의 「73개 미관측」이 지금도 유효한 이유다 — 응답기가 필드를 **가지고 있어도**
+전송 예산 밖이면 호출자에게 도달하지 않고, 그 창을 옮길 수단이 없다.
+
+## B.4 ⚠️ 「N개가 돌아온다」로 못박지 않는다
+
+리드 경고 그대로다. 절단은 개수가 아니라 **페이로드 예산**이다(t12 실측: Root 22→18/1200B ·
+Fixtures 86→19/1158B · DataPool 16→16/1013B, 경계 `[1200, 1208)`). 위 B.3 의 while 루프가
+그 기전이다 — **인코딩된 바이트 길이**를 보고 자른다. 필드 개수 기준이 아니다.
+
+**그러므로 ①의 검사는 「N개가 보인다」가 아니라 「멤버 열거 필드가 절단 전 구간에
+있는가」여야 한다.** 그리고 그것은 페이징 없이는 **운이다.**
+
+## B.5 판정과 다음
+
+**①은 지금 못 한다.** 두 갈래 중 하나가 선행해야 한다:
+
+- **(a) `introspect` 에 offset 을 붙인다** — `parse_state_args` 를 재사용하면 되고
+  `build_introspect_result` 에 인자 하나가 는다. 응답기 변경이므로 **별도 카드**다.
+- **(b) 대조 필드명을 좁혀 요청한다** — 지금 응답기가 그 형태를 지원하는지 미확인.
+
+**②는 영향받지 않는다.** `Count()` + `Ptr(i)` 경로는 `introspect` 와 무관하고, 리드가
+「②부터」로 순서를 정한 것이 이 확인으로 더 옳아졌다 — **①이 막힌 지금 ②가 유일하게
+바로 잴 수 있는 프로브다.**
+
+## B.6 이 확인이 답하지 않은 것
+
+- **멤버 열거 필드가 실재하는지는 여전히 모른다.** B.3 은 「보이지 않는 이유」를 설명할
+  뿐 「없다」를 뜻하지 않는다. D-6 의 *"그 안에 멤버 열거 필드가 있을 가능성은
+  배제되지 않았다"* 가 그대로 유효하다.
+- **(b) 가 가능한지 재지 않았다** — 필드명 지정 조회의 지원 여부는 미확인이다.
