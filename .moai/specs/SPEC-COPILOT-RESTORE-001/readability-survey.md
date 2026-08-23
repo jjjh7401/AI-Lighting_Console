@@ -343,3 +343,139 @@ Fixtures 86→19/1158B · DataPool 16→16/1013B, 경계 `[1200, 1208)`). 위 B.
     ④  Executor 우회 재확인 — 변경 없음
 
 **넷 다 읽기 전용이고 쓰기 0건이다.**
+
+---
+
+# 부록 D — 실기 프로브 실측 (t46 라운드 1) — **두 채널이 갈린다**
+
+> **콘솔 쓰기 0건.** 읽기 동사(`ping` · `state` · `prop` · `introspect`)만 사용.
+> `--skip-exec` 로 명령 실행 경로를 제거했다.
+
+## D.1 측정 조건 (재현용)
+
+    콘솔        grandMA3 onPC 2.4.2 · pid 99116 (app_gma3)
+    포트        송신 127.0.0.1:8000 · 수신 9005 (둘 다 app_gma3 점유)
+    응답기      CopilotResponder v1.6.1 (ping 실측)
+    도구        server.tools.responder_roundtrip --skip-exec
+                server.tools.introspect_probe
+    쇼파일      픽스처 86 (state 절단 19) · 시퀀스 1 · **그룹 0** · 프리셋 풀 14
+    일시        2026-08-24
+
+## D.2 ② 는 **대상이 없어 못 돌렸다**
+
+    state DataPool/Groups → childCount 0 · children 0
+
+리드 착수 조건 #2 그대로다 — *"비어 있으면 잴 대상이 없다. 없는 그룹에 `Ptr(i)` 를
+물어 나온 실패는 판정이 아니다."*
+
+**그런데 「비었다」와 「안 보인다」를 갈랐다:**
+
+    DataPool/Sequences        childCount 1    ← 판독 채널은 살아 있다
+    Patch/Stages/1/Fixtures   childCount 86   ← 리그는 있다
+    DataPool/PresetPools      childCount 14
+    DataPool/Groups           childCount 0    ← 이 쇼파일에 그룹이 **실제로 없다**
+
+같은 채널이 다른 풀에 대해 0 이 아닌 값을 준다. 그러므로 이 0 은 **판독 실패가 아니라
+쇼파일 상태**다. **②는 그룹이 있는 쇼파일에서 다시 재야 한다.**
+
+## D.3 🔴 그런데 다른 자리에서 두 채널이 **갈렸다**
+
+같은 오브젝트를 `state`(childCount)와 `prop COUNT` 로 각각 물었다:
+
+| 오브젝트 | `state` childCount | `prop COUNT` | 일치? |
+|---|---:|---:|---|
+| `DataPool/Sequences/1` (`Default`) | **2** | **2** | 일치 |
+| `DataPool/PresetPools/1` (`Dimmer`) | **0** | **1000** | **불일치** |
+| `DataPool/PresetPools/2` (`Position`) | **0** | **1000** | **불일치** |
+| `DataPool/PresetPools/3` (`Gobo`) | **0** | **0** | 일치 |
+| `DataPool/PresetPools/4` (`Color`) | **0** | **1000** | **불일치** |
+
+**`childCount 0` 이 「비었다」를 뜻하지 않는 실례를 이 세션에서 직접 관측했다.**
+같은 오브젝트가 다른 채널로 1000 을 답한다.
+
+⚠️ **`COUNT` 가 무엇을 세는지는 확정하지 않는다.** 1000 이라는 값과 `Gobo` 만 0 인
+것을 보면 **저장된 프리셋 수가 아니라 풀 용량/할당**일 가능성이 크다. 이 프로브가
+말할 수 있는 것은 **「두 채널이 다르게 답한다」**뿐이고, `COUNT` 의 의미는 미확정이다.
+
+## D.4 `props` 경로가 산다 — 대조군 양쪽 성립
+
+    ZZFAKE_NO_SUCH_FIELD  → ok=False "property not readable"   ← 날조 대조군
+    Name                  → ok=True  value='Default'           ← 양성 대조군
+
+**부재와 존재가 갈린다.** 부록 C 의 (b) 판정이 실기로 확인됐다 — `props` 는 이름만
+알면 답하고, 없는 이름은 명확히 거부한다.
+
+## D.5 후보 이름 — 무작정 지은 다섯은 전부 부재
+
+    MEMBERS · FIXTURES · OBJECTS · CONTENT · ITEMS   → 전부 ok=False
+
+리드 경고대로였다 — *"무작정 지으면 `ok:false` 만 쌓인다."* 그래서 **명명 규칙을
+먼저 읽었다**(`introspect`, 28/65 수신, truncated):
+
+    IGNORENETWORK STRUCTURELOCKED SYSTEMLOCKED LOCK INDEX COUNT NO NAME
+    USEREXPANDED FADERENABLED OWNED HIDDEN DEPENDENCYEXPORT MEMORYFOOTPRINT
+    GUID SCRIBBLE APPEARANCE NOTE TAGS PREVIEWCOPY CURRENTCUE LOADEDCUE TYPE
+    CUENO CUENAME TRIGGER USER AUTOSTART
+
+전부 **대문자 단일어/복합어**이고 복수형 컬렉션 이름이 없다. 그 목록에서 `COUNT` 를
+골라 쏜 것이 D.3 의 발견이다.
+
+## D.6 이 라운드가 답하지 않은 것
+
+- **②는 미실행이다** — 그룹이 없는 쇼파일이었다. **재측정 필요.**
+- **④ Executor 도 미실행** — `DataPool/Pages/1` `childCount 0`, 페이지가 비어 있다.
+- **`COUNT` 의 의미 미확정** — D.3 ⚠️.
+- **멤버 열거 필드는 여전히 미발견.** 절단된 37개 안에 있을 가능성은 **배제되지
+  않았다**(D-6 문면 그대로). 이 라운드는 그것을 좁히지 못했다.
+- **`Get(name)` 이 목록을 값으로 주는지도 미확정** — 부록 C.5 의 미지수가 그대로다.
+  `COUNT` 는 스칼라라 그 물음에 답하지 않는다.
+
+## D.7 다음 라운드에 필요한 것
+
+    (1) **그룹이 있는 쇼파일** — ②를 돌리려면 필수다. 없으면 영원히 못 잰다
+    (2) 익스큐터가 배정된 페이지 — ④ 용
+    (3) 그룹 오브젝트에 introspect — 시퀀스와 이름 목록이 다를 수 있다
+
+**(1) 이 감독께 부탁드릴 것이다** — 그룹 몇 개가 있는 쇼파일을 열어 주시면 ②가 바로 된다.
+
+## D.8 추가 실측 — `COUNT` 는 **용량**이다 (D.3 ⚠️ 확정)
+
+    state DataPool/Groups            → childCount 0    (이 쇼파일에 그룹 0개)
+    prop  DataPool/Groups COUNT      → 1000
+
+**그룹이 하나도 없는 풀도 `COUNT 1000` 을 답한다.** 그러므로 `COUNT` 는 **저장된
+개수가 아니라 풀 용량/슬롯 수**다. D.3 의 「미확정」을 여기서 닫는다.
+
+**그래서 D.3 의 「두 채널이 갈린다」의 해석이 바뀐다:**
+
+- 갈린 것은 맞지만 **모순이 아니다** — 두 채널이 **다른 것**을 세고 있었다.
+  `state` 는 **실재 자식**, `COUNT` 는 **용량**.
+- 그러므로 `childCount 0` 은 이 쇼파일에서 **실제로 「비었다」가 맞다.**
+- **`COUNT` 는 멤버십 판독에 쓸 수 없다.** 내용을 안 센다.
+
+**자기 발견을 스스로 내린다**: D.3 을 「childCount 0 이 비었다를 뜻하지 않는 실례」로
+읽으면 안 된다. 그 해석은 `COUNT` 를 내용 계수로 가정한 것이고, D.8 이 그 가정을
+반증했다. **D.3 의 표는 유효하고 그 해석만 틀렸다.**
+
+## D.9 🔴 그룹 풀 필드 전량 — **절단 없이 16개, 멤버 열거 필드 없음**
+
+    introspect DataPool/Groups → 받은 16 / 총 16 · truncated **False**
+
+    IGNORENETWORK STRUCTURELOCKED SYSTEMLOCKED LOCK INDEX COUNT NO NAME NOTE
+    USEREXPANDED FADERENABLED OWNED HIDDEN DEPENDENCYEXPORT MEMORYFOOTPRINT
+    DEFAULTSLOADED
+
+**절단이 없다.** 시퀀스(65개, 28 수신, truncated)와 달리 그룹 풀은 **전량이 온다.**
+그리고 **그 16개 안에 멤버/자식 열거 필드가 없다.**
+
+**이것은 「도달 불가」가 아니라 「전량 봤는데 없다」이다.** D-6 이 「73개 미관측」을
+근거로 *"배제되지 않았다"* 라 한 것은 **시퀀스 같은 절단 대상**에 대해 참이고,
+**그룹 풀 노드에 대해서는 이 관측이 배제한다.**
+
+⚠️ **다만 범위를 좁혀 읽어야 한다:**
+
+- 이것은 **풀 노드**(`DataPool/Groups`)의 필드다. **개별 그룹 오브젝트**
+  (`DataPool/Groups/13`)의 필드는 **이 쇼파일에 그룹이 없어 재지 못했다.**
+- GROUPGEN 이 「멤버십을 못 읽는다」고 한 대상은 **개별 그룹**이다. 그러니 이
+  관측은 그 판정을 **직접 반증하지도 확증하지도 않는다.**
+- **개별 그룹에 `introspect` 를 쏘는 것이 다음 라운드의 1순위**다.
