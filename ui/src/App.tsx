@@ -890,6 +890,15 @@ export default function App() {
             {chatCollapsed ? "◂ 채팅" : "▸ 채팅"}
           </button>
           <LockToggle status={state.status} onToggle={sendLock} />
+          <a
+            className="guide-open"
+            href="/user-guide.html"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="사용 가이드 열기"
+          >
+            📖 가이드
+          </a>
           <button
             className="settings-open"
             onClick={() => setSettingsOpen(true)}

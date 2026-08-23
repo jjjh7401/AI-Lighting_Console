@@ -252,3 +252,7 @@ server/**/.moai/
 # 과거 항목은 git 이력에 남아 있고 필요하면 꺼낼 수 있다.
 .moai/lessons-inbox.jsonl
 .moai/harness/usage-log.jsonl
+# 사용 가이드의 빌드 시점 사본. 원본은 docs/user-guide.html 하나뿐이고
+# ui/package.json 의 prebuild 가 매 빌드마다 무조건 새로 복사한다.
+# 커밋하면 사본이 둘이 되어 조용히 어긋난다 — 그래서 추적하지 않는다.
+ui/public/user-guide.html
