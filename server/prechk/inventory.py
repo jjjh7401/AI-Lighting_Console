@@ -56,6 +56,24 @@ FIXTURE_ROOT = "Patch/Stages/1/Fixtures"
 RETIRED_PATHS = ("Patch/Fixtures", "DataPool/Presets")
 
 # The measured-readable property names, and nothing else (REQ-PRECHK-001).
+#
+# @MX:ANCHOR: [AUTO] this list is CLOSED. Widening it requires a live
+#   re-verification (T15) — NOT the presence of an enumeration API.
+# @MX:REASON: REQ-PRECHK-001 justified this whitelist by asserting the
+#   responder cannot enumerate property names
+#   (`console/lua/copilot_responder.lua:204-217`). That premise is NO LONGER
+#   TRUE: SPEC-COPILOT-INTROSPECT-001 (PR #23, reland 2026-08-18) added the
+#   `introspect` verb to responder v1.6.1, which enumerates through
+#   `property_accessors = PropertyCount() + PropertyName(i) + PropertyType(i)`
+#   (`copilot_responder.lua:78-82`); the cited 204-217 range has moved too.
+#   BUT the responder's own note says that reland was never re-verified live
+#   against the current generation — *re-verify before trusting
+#   props/introspect in production (T15)* (`copilot_responder.lua:68-73`).
+#   An enumeration API existing in code is not evidence it can be trusted in
+#   production. The whitelist therefore still stands, on the NEW premise
+#   rather than the old one, and T15 re-verification is the precondition for
+#   widening it. Do not read the enumeration API as permission.
+# @MX:SPEC: SPEC-COPILOT-PRECHK-001 REQ-PRECHK-001 (premise re-measured 2026-08-23)
 PROPERTY_WHITELIST = ("Patch", "FixtureType", "Mode", "Name")
 
 # The discriminator is the PREFIX. The pointer reproduced identically across two
