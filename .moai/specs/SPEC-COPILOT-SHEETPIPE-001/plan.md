@@ -1,6 +1,6 @@
 # SPEC-COPILOT-SHEETPIPE-001 — 구현 계획 (plan)
 
-문서 상태: draft (v0.2.0, 2026-08-23 — A의 `target` 태그 재정 반영 · 열린 결정 0건) · **Tier M · 통과 임계 0.80** · 칸반 카드 t10 · **분할 B(전달경로)**
+문서 상태: draft (v0.3.0, 2026-08-24 — plan-audit 채무 6건 정리 · 열린 결정 0건) · **Tier M · 통과 임계 0.80** · 칸반 카드 t10 · **분할 B(전달경로)**
 
 > **참조 규약.** 정본(`spec.md` · `acceptance.md`)은 줄번호로 인용하지 않고 `REQ-SHEETPIPE-001` · `AC-SHEETPIPE-001` · `ASSUMPTION-78` 같은 안정 토큰만 쓴다. 코드와 타 SPEC 아티팩트는 `파일:줄` 좌표를 쓴다.
 >
@@ -14,7 +14,7 @@
 
 아래 넷은 **데이터 모델과 운영자 눈에 보이는 흐름**을 정하므로 뒤집히면 아래 것들이 전부 따라 움직인다. 기계적인 등재 작업(§B M2)은 맨 뒤에 둔 것이 그래서다.
 
-1. **프레임을 새로 만들지 않는다 (결정 A).** 비이미지 첨부는 계속 `vectorworks_export_upload` 프레임으로 가고, 종류 판정은 **서버**가 한다. UI가 세 번째 프레임을 고를 근거가 없기 때문이다 — 판별기가 서버에 있고 확장자·MIME 분기는 A가 금지했다. **뒤집히면**: 프로토콜 버전 · 빌더 둘 · `messages.py` 검증 · `app.py` 분기 · 기존 테스트가 전부 따라 움직인다.
+1. **프레임을 새로 만들지 않는다 (결정 A).** 비이미지 첨부는 계속 `vectorworks_export_upload` 프레임으로 가고, 종류 판정은 **서버**가 한다. UI가 세 번째 프레임을 고를 근거가 없기 때문이다 — 판별기가 서버에 있고 확장자·MIME 분기는 A가 금지했다. **뒤집히면**: 이름 변경이 **코드·계약 8파일**을 끌고 온다(`git grep -l 'vectorworks_export_upload'` → 16파일 중 8 — 전체 목록은 `spec.md` `REQ-SHEETPIPE-008`이 든다).
 2. **`vectorworks` 판정은 슬롯에 들어가지 않는다 (결정 C).** 판정이 `vectorworks`면 **그 자리에서** 기존 경로로 흘러가고 슬롯은 건드리지 않는다. **뒤집히면**: 래퍼가 `session_method` 종의 행도 부를 수 있어야 하고, 그러면 "형제 툴을 내부 `ToolCall`로 부른다"는 계승 형태(`REQ-SHEETPIPE-005`)가 그 종에는 통하지 않는다 — 세션 메서드는 툴이 아니라서 `ToolCall`로 부를 대상이 아니다.
 3. **슬롯은 불변 + 통째 교체 + 읽기 통과 뷰다 (결정 F).** 가변·제자리 교체를 고르면 뷰가 필요 없지만, **고른 뒤 짝을 어기면 툴이 영원히 빈 슬롯을 본다**(`spec.md` §F 속성 A). **뒤집히면**: `build_toolset` 배선 두 곳과 `AC-SHEETPIPE-003`의 뮤테이션 대상이 함께 바뀐다.
 4. **행 수는 이름 붙은 수다 (결정 E).** `ParseResult`가 세 통으로 나뉘므로 맨 숫자는 어느 통인지 말하지 않는다. **뒤집히면**: 표시 문구와 `AC-SHEETPIPE-006`이 함께 바뀐다.
@@ -38,7 +38,7 @@
 | **E** | 행 수는 이름 붙은 수 | 어느 통(`records`/`rejected`/`excluded`)을 센 수인지 함께 밝힌다 | 맨 숫자는 거부된 행을 감춰 운영자를 잘못 안심시킨다 |
 | **F** | 슬롯은 불변 + 통째 교체 + 읽기 통과 뷰 | `LayoutImageUpload` 쪽 선례를 고른다 | 넷은 함께 정해지고 부분 변경이 없다. 뷰 패턴이 이미 있고 그 docstring이 함정을 적어 두었다 |
 | **G** | 래퍼 툴 이름은 `import_uploaded_sheet` | 종류를 이름에 박지 않는다 — 레지스트리가 행을 더해도 툴 이름이 거짓이 되지 않는다 | 종류별 래퍼를 늘리지 않는다는 제외 범위와 짝이다 |
-| **H** | 전사 문구를 종류 중립으로 | `useCopilotSocket.ts:336`의 `Vectorworks 파일 업로드: …` → 종류를 단정하지 않는 문구 | 그 문구는 **판정 전에** 나가므로 오늘도 절반은 거짓이다 |
+| **H** | 종류를 단정하는 문구 **넷** 전부를 중립으로 | `useCopilotSocket.ts:336` + `App.tsx:551` · `:555` · `:559`(정본 `spec.md` §G.1) | 넷 다 **판정 전에** 나간다. `:555`·`:559`는 오늘의 패치 CSV에서도 도달한다 |
 
 ### §A.4 열린 결정 — **0건** (2026-08-23 재정으로 닫힘)
 
@@ -96,8 +96,8 @@ target: (session_method, upload_vectorworks_export)
 2. **읽기 통과 뷰를 만들고 `build_toolset` 배선 두 곳을 연다**(`tools.py:1609` 시그니처 · `session.py:3508` 호출부). **짝을 어기면 조용히 무너진다**(`REQ-SHEETPIPE-002` · `AC-SHEETPIPE-003`).
 3. **이음매를 연다** — `session.upload_vectorworks_export` 본문에서 A의 판별기를 부르고 판정으로 분기한다. `vectorworks`면 **오늘 두 줄 그대로**, 시트면 슬롯에 담고 표시만, 거절이면 담지 않고 사유를 보인다. `app.py`·`messages.py`는 **열지 않는다**(결정 B).
 4. **넷을 표시한다** — 서버 `notice_event`, 행 수는 **이름 붙은 수**(결정 D·E).
-5. **UI 두 곳** — 전사 문구를 종류 중립으로(결정 H) · 프레임이 더 이상 한 종류만 나르지 않는다는 주석을 라우터 옆에 남긴다(`REQ-SHEETPIPE-008` ①).
-6. 스위트 2종을 돌리고 기준선과 대조한다. **vitest 델타가 0이 아닌 것이 정상이다**(B는 `ui/`를 연다).
+5. **UI 다섯 곳** — 종류를 단정하는 문구 **넷**을 중립화하고(결정 H · 정본은 `spec.md` §G.1: `useCopilotSocket.ts:336` · `App.tsx:551` · `:555` · `:559`), 라우터 옆에 **앵커 토큰 `SPEC-COPILOT-SHEETPIPE-001`을 단 주석**을 남긴다(`REQ-SHEETPIPE-008` ① — `grep`으로 단언된다). **`routeAttachment`의 분기는 건드리지 않는다**(`AC-SHEETPIPE-005` ③).
+6. 스위트 2종을 돌리고 기준선과 대조한다. **vitest 델타가 0이 아닌 것이 정상이다** — B는 `ui/`를 열고, D2 확대로 `App.tsx` 문자열 3건이 더해졌다. **본 세션 실측**: `grep -rln 'Vectorworks export는' ui/src/` → **`App.tsx` 하나**. 그 문구를 단언하는 **기존 vitest는 없으므로** D2 확대가 vitest에 더하는 델타는 **0**이고, 늘어나는 것은 B가 새로 쓰는 테스트뿐이다. M0에서 이 측정을 다시 확인한다 — **0건은 "확인했다"의 결과이지 "안 찾았다"의 결과가 아니다.**
 
 **AC**: `002` · `003` · `004` · `005` · `006`.
 
@@ -124,7 +124,7 @@ target: (session_method, upload_vectorworks_export)
 |---|---|---|
 | `server/web/session.py` | 슬롯 타입 · 읽기 통과 뷰 · 이음매 분기 · 넷 표시 · `build_toolset` 호출부(`:3508`) | M1 |
 | `ui/src/useCopilotSocket.ts` | 전사 문구 종류 중립화(`:336`) | M1 |
-| `ui/src/App.tsx` | 라우터 옆 주석(프레임이 한 종류만 나르지 않음) — 분기 자체는 **안 바꾼다** | M1 |
+| `ui/src/App.tsx` | 라우터 옆 **앵커 주석** + `uploadVectorworksExport` 본문의 종류 단정 문구 **3건**(`:551` · `:555` · `:559`) — `routeAttachment` **분기는 안 바꾼다** | M1 |
 | `server/orchestrator/tools.py` | 등재 1·2·3·4 + `build_toolset` 시그니처(`:1609`) | M2 |
 | `server/orchestrator/runner.py` | 등재 5 — `_TOOL_TASKS` 한국어 이름 | M2 |
 | `server/tests/test_tools.py` | 등재 6 — 리터럴 `34` → `35` | M2 |
@@ -147,7 +147,7 @@ target: (session_method, upload_vectorworks_export)
 
 1. **`ASSUMPTION-79` — 오늘 되던 업로드가 거절될 수 있다.** A의 판별기가 들어오면 `unknown_sheet_kind`로 떨어지는 파일은 **슬롯에도 들어가지 않고 Vectorworks 경로로도 가지 않는다**. A는 그 대상(헤더 없는 경로 A 내보내기)이 오늘도 패치를 만들지 못한다고 판단했고 근거는 `server/tests/fixtures/vwx/README.md:84-95`이지만, **운영자의 실제 업로드 이력으로는 재지 않았다**. **이것은 B의 이음매에서 표면화하지만 A의 결정이다** — B에서 되돌리지 말고 A로 올린다. 완화는 A의 조건부 재수출 안내(`REQ-FILEARG-023`)이며, 그 문구가 살아 있는지는 A의 `AC-FILEARG-029`가 지킨다.
 2. **모델은 슬롯이 채워진 것을 안내로 알지 못한다.** `notice_event`는 `_record_history`를 거치지 않으므로(`spec.md` 사전 확정 사실 7) 모델의 문맥에 들어가지 않는다. 운영자가 말을 꺼내기 전까지 모델은 시트가 올라온 것을 모르고, 잘못 부르면 `no_uploaded_sheet` 거절로 알게 된다. **이것은 결함이 아니라 `analyse_layout_image`와 같은 설계**이며, 그래서 거절 문구가 "다음에 무엇을 할지"를 담아야 한다(`REQ-SHEETPIPE-007`).
-3. **유산 프레임 이름은 남는다.** `vectorworks_export_upload`가 시트도 나르게 되지만 이름은 그대로다. 주석으로 막았을 뿐 **기계 검사는 없다** — 이름을 바꾸는 것이 값보다 비싸다는 판단(결정 A)의 대가다.
+3. **유산 프레임 이름은 남는다.** `vectorworks_export_upload`가 시트도 나르게 되지만 이름은 그대로다(결정 A — 재측정된 비용은 `spec.md` `REQ-SHEETPIPE-008`이 든다). **주석은 `grep`으로 단언한다**(`AC-SHEETPIPE-005` ⑥) — 다만 그 검사가 확인하는 것은 주석의 **존재**이지 **뜻**이 아니다. 이름과 뜻의 어긋남 자체는 문서로만 남고, 그것이 이 결정의 대가다.
 
 ## §E. 후속 SPEC 예약
 

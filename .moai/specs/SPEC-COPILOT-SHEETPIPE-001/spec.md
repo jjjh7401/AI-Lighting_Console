@@ -1,10 +1,10 @@
 ---
 id: SPEC-COPILOT-SHEETPIPE-001
 title: "시트 전달경로 — 판별된 바이트를 세션 슬롯과 래퍼 툴 인자까지 나른다 (분할 B)"
-version: "0.2.0"
+version: "0.3.0"
 status: draft
 created: 2026-08-23
-updated: 2026-08-23
+updated: 2026-08-24
 author: manager-spec (칸반 카드 t10)
 priority: P1
 phase: "v0.3.0 target — 분할 B(전달경로). SPEC-COPILOT-FILEARG-001(A · 판별기)이 통과한 뒤 착수한다"
@@ -27,6 +27,7 @@ related_specs: [SPEC-COPILOT-FILEARG-001, SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-V
 
 | 버전 | 날짜 | 작성자 | 변경 |
 |---|---|---|---|
+| 0.3.0 | 2026-08-24 | manager-spec | **plan-audit PASS-WITH-DEBT 0.91 — 채무 6건 정리(문서 전용 · 코드 변경 0 · REQ 9 · AC 11 불변).** **D1 — "이미 겪은 결함"은 거짓이었다**: `43b1b04`은 `feat` 커밋이고 docstring은 **가정법**("would therefore freeze")이며 IMGLAYOUT 아티팩트의 언급은 **0건**이다 — 뷰를 쓴 사람이 위험을 **미리** 적은 것이지 아무도 당하지 않았다. 두 문장(§F 속성 A · `AC-SHEETPIPE-003`)을 예견으로 정정하고, `REQ-SHEETPIPE-002`를 떠받치는 근거를 **두 형태가 한 `build_toolset` 호출에 동시에 살아 있다는 실측**으로 바꿨다(요구 자체는 그대로 선다). 일반형은 §C.0 **규약 6**으로 등재. **D2 — 종류를 단정하는 문구가 넷이었다**: `useCopilotSocket.ts:336` 하나만 고쳐 두었고 `App.tsx:551` · `:555` · `:559` 셋이 남아 있었다. **`:555`·`:559`는 오늘의 패치 CSV에서도 도달한다**(8 MiB 초과 · 판독 실패). `REQ-SHEETPIPE-008` ②를 넷 전부로 넓히고 §G.1(정본 · 도달성 실측표) 신설, `AC-SHEETPIPE-005` ⑤에 넷을 명시. **③과 충돌하지 않는다** — ⑤는 `uploadVectorworksExport` **본문 문자열**, ③은 `routeAttachment` **분기**로 서로 다른 함수다. vitest 델타 실측 **0**(그 문구를 단언하는 기존 테스트 없음). **D3 — 주석을 진짜 검사로 승격**: `spec.md`는 "기계로 막는다"고, `plan.md`는 "기계 검사는 없다"고 적어 모순이었다. 문면 맞추기 대신 **`grep` 단언**을 택했다 — 주석에 앵커 토큰 `SPEC-COPILOT-SHEETPIPE-001`을 달고 `AC-SHEETPIPE-005` ⑥이 그 존재를 단언한다(오늘 그 파일의 토큰은 **0건**이므로 판별력 있음). 그 검사가 **존재만 단언하고 뜻은 단언하지 못한다**는 한계도 함께 적었다. **D4 — "한 줄도 바꾸지 않는다"는 결정 B와 모순**: 이음매가 그 메서드 본문에 들어가므로 글자는 필연적으로 바뀐다. 사전 확정 사실 3과 §F 속성 B를 **"동작을 회수하지 않는다"**로 정정했다. **D5 — 비용 열거가 미측정이었고 자기 규약을 어겼다**: `git grep -l` 재측정 → **16파일**(코드·계약 **8** + 문서 8). "빌더 둘"은 **하나 많았다**(이 프레임의 빌더는 `protocol.ts:503` 하나). `PROTOCOL.md` · `protocol.test.ts` · 테스트 3종이 빠져 있었다 — 결론은 뒤집히지 않고 **강해진다**. **D6 — "기재가 있을 것"은 실패 기록도 통과시킨다**: `AC-SHEETPIPE-001`에 항별 통과 조건표를 넣고, ①이 "A 없음"으로 확인된 경우는 **성실한 기록이지만 FAIL**임을 명시했다. |
 | 0.2.0 | 2026-08-23 | manager-spec | **열린 결정 1건 닫힘 — A의 `target` 열 태그 재정 반영.** B가 v0.1.0에서 올린 물음(레지스트리 `target` 열이 툴 이름과 세션 메서드 **두 종**을 담는데 A의 `AC-FILEARG-023`은 술어를 한정 없이 적어 `vectorworks` 행을 매번 배제한다)을 **A의 소유자가 재정했다** — 열을 **(종, 대상) 쌍**으로 넓히고 각 항목에 종을 붙인다(`(tool, import_lxseq_patch)` · `(session_method, upload_vectorworks_export)`). 좁히면 A의 결정 I가 뒤집히고, 이름으로 면제하면 후속 SPEC에 규칙이 남지 않는다. 태그가 붙으면 `AC-FILEARG-023`은 여전히 기계적이다(`tool` → `TOOL_NAMES`, `session_method` → `ChatSession`의 속성 — 소유 클래스 `server/web/session.py:3405`, 메서드 `:9655`). B의 변경: **clarification 마커 1건 → 0건**(`plan.md` §A.4) · `AC-SHEETPIPE-005`의 **조건절 제거**(전제가 성립하는 쪽으로 풀렸다 — 재작성 불필요, 성립을 명문화) · `target`을 서술하는 자리 넷을 태그형으로 정렬(§A 사전 확정 사실 10 · `REQ-SHEETPIPE-005` · `REQ-SHEETPIPE-007` · §E) · `plan.md` §A.1 · §A.3 결정 C · M0 5 · §D 위험표 갱신. **A가 이번 패스에서 함께 고치는 것 2건은 B에서 다시 올리지 않는다**: A의 `README.md:85-95` 인용이 `server/tests/fixtures/vwx/README.md:84-95`로 정정되고, `base..HEAD` 지점 수가 **22곳**으로 정정된다 — **내가 적은 `:427 · :456 · :464`도 A가 적은 `:427 · :446 · :456`도 둘 다 부분집합이었다**(각자 자기 변수명만 훑었다). 특히 **`:446`이 그 파일에 없다던 v0.1.0의 정정은 틀렸다** — `_PRECHK_BASE`를 쓰는 진짜 지점이며, 본 세션에서 철회했다. 좁은 패턴의 히트 수는 **총계가 아니라 하한**이다. REQ **9** · AC **11** 불변. |
 | 0.1.0 | 2026-08-23 | manager-spec | 최초 작성 (draft, **Tier M** · 통과 임계 **0.80**). 아티팩트 집합 **3종**(`spec.md` · `plan.md` · `acceptance.md`) + `progress.md`(집합에 **포함되지 않음** — A의 감사 A1이 잡은 오산을 되풀이하지 않기 위해 명시). REQ **9건**(`REQ-SHEETPIPE-001~009` — 리드 배정 8보다 **하나 많고**, 사유는 §B 머리의 [HARD] 주가 소유한다), AC **11건**(`AC-SHEETPIPE-001~011`), 마일스톤 **3개**(M0~M2), clarification 마커 **1건**(plan.md §A.4 ① — A 레지스트리 `target` 열의 두 종). 좌표 **11건**을 본 세션에서 전수 재측정했고(§H), 그중 **2건은 앞선 기록이 한 줄 이르게 적혀 있었다**(`@dataclass` 데코레이터를 시작으로 센 결과) — 정정해 실었다. 등재 지점은 **4지점도 6지점도 아니라 7지점**임을 측정으로 확정하고 §G에 **배제 기준과 측정 명령을 함께** 실었다. |
 
@@ -40,7 +41,7 @@ related_specs: [SPEC-COPILOT-FILEARG-001, SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-V
 
 1. **바이트를 툴 인자에 넣는 선례가 저장소에 있다.** `vectorworks_autopatch` 핸들러(`server/orchestrator/tools.py:2944`)가 세션이 든 바이트를 `content = vectorworks_upload.content_base64`(`:2950`)로 꺼내 `arguments={"file_content_base64": content}`(`:2961`)로 형제 툴을 부른다. 래퍼 자신의 스키마에는 그 인자가 **없다**. B는 이 형태를 계승한다.
 2. **세션 슬롯의 선례는 둘이고, 둘은 서로 다른 물건이다.** `_UploadedVectorworksExport`(`server/web/session.py:2493`)는 **가변** 데이터클래스이며 `.replace()`로 **제자리에서** 바뀌고 `build_toolset`에 **필드가 그대로** 넘어간다(`session.py:3515`). `LayoutImageUpload`(`session.py:2512`)는 **`frozen=True`**이며 업로드마다 **통째로 교체**되므로 필드를 그대로 넘기면 툴 클로저에 업로드 이전의 `None`이 **영구히 얼어붙는다** — 그래서 `_LayoutImageUploadView`(`session.py:3353`)라는 **읽기 통과 뷰**를 거쳐 넘긴다(`session.py:3525`). 이 둘을 섞으면 조용히 무너진다(§F 속성 A).
-3. **업로드가 실행을 부르는가는 이미 갈려 있다.** `upload_vectorworks_export`(`session.py:9655`)는 담은 **직후** `run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)`을 부른다(`:9658`). `upload_layout_image`(`session.py:9660`)는 담고 안내만 낸다. B의 시트 경로는 **후자**를 따르고, `vectorworks` 판정 경로는 **전자를 한 줄도 바꾸지 않는다**.
+3. **업로드가 실행을 부르는가는 이미 갈려 있다.** `upload_vectorworks_export`(`session.py:9655`)는 담은 **직후** `run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)`을 부른다(`:9658`). `upload_layout_image`(`session.py:9660`)는 담고 안내만 낸다. B의 시트 경로는 **후자**를 따른다. `vectorworks` 판정 경로는 **오늘의 동작을 회수하지 않는다** — 이음매가 그 메서드 **본문 안**에 들어가므로(plan.md 결정 B) 그 메서드는 필연적으로 바뀌지만, 판정이 `vectorworks`일 때 흐르는 두 줄(`:9657` 담기 · `:9658` 지시문)은 **그대로 남고 그대로 발화한다**. 불변인 것은 파일의 글자가 아니라 **운영자가 보는 결과**다.
 4. **UI는 툴 호출을 조립하지 않는다.** `sendVectorworksExportUpload`·`sendLayoutImageUpload`(`ui/src/useCopilotSocket.ts:332-351`)는 채팅 메시지 하나를 띄우고 프레임을 보낼 뿐이고, 빌더(`ui/src/protocol.ts:503` · `:519`)도 마찬가지다. 인자를 채우는 일은 전부 서버에서 일어난다 — B도 그 경계를 지킨다.
 5. **첨부 버튼은 하나다.** `routeAttachment`(`ui/src/App.tsx:629`)는 이미지 MIME이면 `uploadLayoutImage`, **그 밖이면 전부** `uploadVectorworksExport`로 보낸다(`:630-634`). 바로 위 주석(`:625-628`)이 **2026-08-15 운영자 결정** — "첨부 버튼은 하나 — 파일 종류가 목적지를 고른다" — 을 기록한다. 그 결정은 유지된다.
 6. **비이미지 프레임은 서버에서 확장자로 한 번 더 걸린다.** `parse_client_message`(`server/web/messages.py:194-203`)가 `vectorworks_export_upload.file_name`을 `VECTORWORKS_UPLOAD_EXTENSIONS`(`.csv`/`.txt`/`.xlsx`/`.mvr`)로 검사하고, 8 MiB 상한과 base64 유효성도 그 자리에서 본다(`:208-219`). 이 검사는 **바이트가 세션에 닿기 전**이며 B는 건드리지 않는다.
@@ -112,7 +113,7 @@ related_specs: [SPEC-COPILOT-FILEARG-001, SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-V
 
 ### B.4 첨부 경로 (`ui/src/**` · `server/web/app.py`)
 
-- **REQ-SHEETPIPE-008** `[Ubiquitous]` The 첨부 경로 **shall** 버튼 **하나**를 유지하고(2026-08-15 운영자 결정 — `ui/src/App.tsx:625-628`), 비이미지 파일은 **프레임 하나**로 서버에 보내며, **종류 판정은 서버가** 한다. UI는 분류하지 않는다 — A의 판별기가 서버에 있고 확장자·MIME 분기는 A가 금지했으므로, UI가 세 번째 프레임 종류를 **고를 수 있는 근거가 없다**. 그러므로 비이미지 가지는 기존 프레임 `vectorworks_export_upload`를 계속 쓰고, 그 이름은 **"Vectorworks 파일"이 아니라 "비이미지 첨부"를 뜻하는 유산 이름**으로 다시 읽힌다. 이름을 바꾸지 않는 이유는 값이 이름보다 크기 때문이다 — 프로토콜 버전 · 빌더 둘 · `messages.py` 검증 · `app.py` 분기 · 기존 테스트 전부가 따라 움직인다. 대신 **두 가지를 기계로 막는다**: ① 그 프레임이 더 이상 한 종류만 나르지 않는다는 사실을 코드 주석으로 남겨, 나중에 읽는 사람이 확장자 라우팅을 "복원"하지 않게 한다 · ② UI가 띄우는 전사 문구(`useCopilotSocket.ts:336`의 `Vectorworks 파일 업로드: …`)는 **판정 전에** 나가므로 종류를 단정하지 않는 문구로 바꾼다 — 판정이 `patch`인 파일에 대고 "Vectorworks 파일"이라 적는 것은 전사에 남는 거짓 문장이다.
+- **REQ-SHEETPIPE-008** `[Ubiquitous]` The 첨부 경로 **shall** 버튼 **하나**를 유지하고(2026-08-15 운영자 결정 — `ui/src/App.tsx:625-628`), 비이미지 파일은 **프레임 하나**로 서버에 보내며, **종류 판정은 서버가** 한다. UI는 분류하지 않는다 — A의 판별기가 서버에 있고 확장자·MIME 분기는 A가 금지했으므로, UI가 세 번째 프레임 종류를 **고를 수 있는 근거가 없다**. 그러므로 비이미지 가지는 기존 프레임 `vectorworks_export_upload`를 계속 쓰고, 그 이름은 **"Vectorworks 파일"이 아니라 "비이미지 첨부"를 뜻하는 유산 이름**으로 다시 읽힌다. 이름을 바꾸지 않는 이유는 값이 이름보다 크기 때문이다 — **`git grep -l 'vectorworks_export_upload'` → 16파일**이며, 그중 코드·계약 **8파일**(`server/web/app.py` · `server/web/messages.py` · `server/web/PROTOCOL.md` · `ui/src/protocol.ts` · `ui/src/protocol.test.ts` · `server/tests/test_web_app.py` · `server/tests/test_web_messages.py` · `server/tests/test_prechk_tool.py`)이 전부 따라 움직인다(나머지 8은 `CHANGELOG.md` · 보고서 2 · SPEC 아티팩트 5). **v0.1.0의 이 문장은 §C.0 규약 1을 스스로 어겼다** — 수치를 명령 없이 적었고, "빌더 둘"은 **하나 많았다**(`ui/src/protocol.ts`에 이 프레임을 만드는 빌더는 `buildVectorworksExportUpload` **하나**뿐이다 — `:503`; 둘로 센 것은 업로드 빌더 둘(vectorworks + layout image)과 혼동한 것이다). 재측정은 결론을 **뒤집지 않고 강화한다** — 빠져 있던 `PROTOCOL.md` · `protocol.test.ts` · 테스트 3종이 비용을 **더 크게** 만든다. 대신 **두 가지를 기계로 막는다**: ① 그 프레임이 더 이상 한 종류만 나르지 않는다는 사실을 `routeAttachment` 옆 주석으로 남겨 나중에 읽는 사람이 확장자 라우팅을 "복원"하지 않게 하되, **그 주석의 존재를 `grep`으로 단언한다** — 주석은 앵커 토큰 `SPEC-COPILOT-SHEETPIPE-001`을 달고, 그 토큰이 `ui/src/App.tsx`에 없으면 검사가 빨개진다(오늘 그 파일에 그 토큰은 **0건**이므로 이 검사는 판별력이 있다). **기대값이 주석에만 있는 검사는 아무것도 단언하지 않으므로**, 의도를 적어 두는 것으로 그치지 않고 적혀 있음 자체를 기계에 건다 · ② UI가 띄우는 **종류를 단정하는 문구 전부**를 종류 중립으로 바꾼다 — 이 문구들은 **판정 전에** 나가므로 어느 것도 종류를 단정할 수 없다(대상은 §G.1이 열거한다).
 
 ### B.5 경계 보존 (PRESERVE)
 
@@ -122,7 +123,7 @@ related_specs: [SPEC-COPILOT-FILEARG-001, SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-V
 
 ## C. 환경 및 전제
 
-### §C.0 [HARD] 계수 규약 — 다섯 줄
+### §C.0 [HARD] 증거 규약 — 여섯 줄
 
 A가 다섯 라운드에 걸쳐 값을 치르고 얻은 규약이며, B는 **첫 판부터** 지킨다.
 
@@ -135,6 +136,7 @@ A가 다섯 라운드에 걸쳐 값을 치르고 얻은 규약이며, B는 **첫
 3. **그 거울상도 같은 실수다.** 무엇을 **옮기거나 지웠으면** 그 이름을 **긍정으로 전수 훑어** 살아남은 포인터를 찾는다. A는 규약 2를 쓴 바로 그 라운드에 이 거울상을 어겨 포인터 19곳을 고아로 만들었다.
 4. **움직이는 대상은 수치로 못박지 않는다.** `origin/main` 대비 규모 같은 값은 이 보드가 커밋하는 동안 달라지므로 **같은 명령이 몇 시간 안에 다른 값**을 낸다. 크기가 논증을 지지하지 않으면 **정성적으로** 적고, 굳이 남기려면 **두 ref와 명령을 함께** 적는다.
 5. **결정적인 줄을 인용하고, 범위는 양끝을 잰다.** 데코레이터를 클래스의 시작으로 세면 좌표가 한 줄 이르게 적힌다(`2492`/`2511` → 실제 **`2493`**/**`2512`**). 본 세션에서도 `sed` 출력에서 눈으로 센 두 좌표가 한 줄씩 어긋났고 `grep`으로 재서야 잡혔다 — **좌표는 눈이 아니라 `grep`이 낸다.**
+6. **가드의 docstring은 예견이지 사고 기록이 아니다 — 도입 커밋을 열어 보기 전까지 역사로 읽지 않는다.** 방어 코드 옆의 설명문은 대개 **가정법**으로 쓰인다("그대로 넘기면 …이 얼어붙**을 것이다**"). 그것은 저자가 위험을 **미리** 적은 것이지 누군가 당했다는 뜻이 아니다. 판별법은 싸다 — `git log -1 --format='%s' <커밋>`이 `fix`인지 `feat`인지 보고, 그 SPEC의 아티팩트가 그 사고를 언급하는지 본다. 본 SPEC이 v0.1.0~v0.2.0에서 이 함정에 걸렸다(`43b1b04`은 `feat`이고 IMGLAYOUT 아티팩트의 언급은 **0건**이다). **요구가 서는 근거를 사고에서 실측으로 바꿔야 한다** — `REQ-SHEETPIPE-002`를 떠받치는 것은 "한 번 당했다"가 아니라 **두 형태가 한 `build_toolset` 호출에 동시에 살아 있다**는 측정이다.
 
 ### 측정된 기준선
 
@@ -215,7 +217,7 @@ A가 다섯 라운드에 걸쳐 값을 치르고 얻은 규약이며, B는 **첫
 | `_UploadedVectorworksExport` (`session.py:2493`) | **가변** · `.replace()`로 제자리 변경 | 필드를 **그대로** (`session.py:3515`) |
 | `LayoutImageUpload` (`session.py:2512`) | **`frozen=True`** · 업로드마다 통째 교체 | **읽기 통과 뷰**를 거쳐 (`session.py:3525`) |
 
-섞으면 무너진다. `_LayoutImageUploadView`의 docstring(`session.py:3353-3364`)이 그 이유를 **이미 겪은 결함으로** 적어 두었다 — 통째 교체되는 필드를 세션 생성 시점에 그대로 넘기면 툴 클로저에 업로드 이전의 `None`이 **영구히 얼어붙어**, 세션 생성 뒤 도착한 업로드가 툴에게 보이지 않는다.
+섞으면 무너진다. 뷰를 쓴 사람이 그 위험을 **미리** 적어 두었다(`43b1b04`, docstring `session.py:3353-3364`) — 통째 교체되는 필드를 세션 생성 시점에 그대로 넘기면 툴 클로저에 업로드 이전의 `None`이 **영구히 얼어붙어**, 세션 생성 뒤 도착한 업로드가 툴에게 보이지 않는다.
 
 **이 결함은 조용하다.** 슬롯은 채워지고, 안내도 뜨고, 운영자 화면은 정상이다. 어긋나는 것은 **툴이 보는 것**뿐이라, 운영자가 실제로 시켜 봐서 `no_uploaded_sheet` 거절을 받기 전까지 아무 신호도 없다. 그래서 이것을 요구로 못박고(`REQ-SHEETPIPE-002`) 뮤테이션으로 지킨다(`AC-SHEETPIPE-003`).
 
@@ -223,7 +225,7 @@ A가 다섯 라운드에 걸쳐 값을 치르고 얻은 규약이며, B는 **첫
 
 `REQ-SHEETPIPE-003`을 문면 그대로 넓게 읽으면 두 가지가 함께 부서진다. 첫째, "업로드 경로에서 `run_instruction` 금지"를 프레임 전체에 걸면 **오늘 살아 있는 Vectorworks 동작이 사라진다** — 그 경로는 담은 직후 지시문을 부르는 것이 설계다(`session.py:9658`). 둘째, "아무것도 실행하지 않는다"를 파싱까지로 넓히면 **행 수를 낼 수 없다**(`REQ-SHEETPIPE-004`). 그러므로 경계선을 두 번 긋는다:
 
-- **어느 경로인가** — 금지는 **시트 판정** 뒤의 경로에만 걸린다. `vectorworks` 판정 경로는 한 줄도 바뀌지 않는다.
+- **어느 경로인가** — 금지는 **시트 판정** 뒤의 경로에만 걸린다. `vectorworks` 판정 경로의 **동작은 회수되지 않는다**(메서드 본문에는 분기가 들어가므로 글자는 바뀐다 — 사전 확정 사실 3).
 - **무엇이 실행인가** — 실행은 **모델 · 콘솔 · 대상 툴에 닿는 호출**이다. 종류가 정해진 뒤 도는 국소 파싱 한 번은 그 셋 중 무엇에도 닿지 않으며, A의 `REQ-FILEARG-005`가 이미 "종류가 정해진 뒤 한 번"으로 허용한 바로 그 호출이다.
 
 ### 속성 C — 래퍼 스키마의 부재는 구현 세부가 아니라 요구다
@@ -274,6 +276,23 @@ grep -n '_TOOLS_EXPECTED_HUNK_OLD_STARTS' server/tests/test_songcue_bundle.py
 
 ---
 
+### G.1 부록 — 종류를 단정하는 UI 문구 (정본 · 실측)
+
+**원칙은 하나다** — 이 문구들은 **판정 전에** 나가므로 **어느 것도 종류를 단정할 수 없다**. v0.1.0은 그 원칙을 세워 놓고 `useCopilotSocket.ts:336` **한 곳에만** 적용했다. 형제 셋이 `uploadVectorworksExport` 본문에 있고, 그 함수는 결정 A 이후 **비이미지 첨부 전부**가 지나는 자리다.
+
+**측정 명령**: `grep -n 'Vectorworks' ui/src/App.tsx ui/src/useCopilotSocket.ts`
+
+| 좌표 | 문구 | 언제 발화하나 | 오늘의 시트 종류(`patch`)에서 도달하나 |
+|---|---|---|---|
+| `useCopilotSocket.ts:336` | `Vectorworks 파일 업로드: {name}` | 비이미지 업로드 **전부** | **도달** — 정상 경로 |
+| `App.tsx:551` | `Vectorworks export는 CSV, TXT, XLSX 또는 MVR 파일만 …` | 확장자가 넷 밖일 때 | **미도달** — `.csv`는 목록 안이다. 다만 `.pdf` 등을 붙인 운영자는 **Vectorworks 문구**를 받는다 |
+| `App.tsx:555` | `Vectorworks export는 비어 있지 않은 8 MiB 이하 …` | 빈 파일 또는 8 MiB 초과(`App.tsx:94`) | **도달** — 8 MiB 넘는 패치 CSV |
+| `App.tsx:559` | `Vectorworks 파일을 읽지 못했습니다.` | `FileReader` 실패 | **도달** — 어느 비이미지 파일이든 |
+
+**넷 모두 바꾼다.** `:551`이 오늘의 `patch`에서 미도달이라는 것은 **면제 사유가 아니다** — 그 문구를 받는 사람은 Vectorworks를 올린 적이 없는 운영자이고, 레지스트리에 행이 하나 더 붙는 순간(LXSEQ-002/003/004) 확장자 목록 밖의 시트가 생기면 그대로 도달한다. 도달 여부는 **오늘의 사실**이지 문구가 참인 이유가 아니다.
+
+**이 넷은 `routeAttachment`(`App.tsx:629-635`)의 분기와 다른 자리다.** 분기는 두 갈래로 남고(`AC-SHEETPIPE-005` ③), 바뀌는 것은 `uploadVectorworksExport` 본문의 **문자열**과 전사 문구다 — 둘은 충돌하지 않는다.
+
 ## H. 참조 구현 — 좌표 (본 세션 `grep` 실측)
 
 | 참조 | 좌표 | 무엇을 계승하는가 |
@@ -286,7 +305,7 @@ grep -n '_TOOLS_EXPECTED_HUNK_OLD_STARTS' server/tests/test_songcue_bundle.py
 | 담기만 하는 업로드 | `server/web/session.py:9660` · 교체 고지 `:9672` · `:9681-9686` | 시트 경로가 따르는 형태 |
 | 전사 미기록 | `_record_history` `server/web/session.py:9719`, 호출부 `:9639` · `:9650` | `notice_event`는 모델 문맥에 들어가지 않는다 |
 | 첨부 라우터 | `ui/src/App.tsx:625-628`(운영자 결정) · `:629-635`(분기) · `:550`(확장자) | 버튼 하나 유지 |
-| 전사 문구 | `ui/src/useCopilotSocket.ts:336` | 판정 전에 나가므로 종류를 단정하지 않는다 |
+| 종류를 단정하는 문구 **넷** | `ui/src/useCopilotSocket.ts:336` · `ui/src/App.tsx:551` · `:555` · `:559` (정본 · 도달성 실측표는 §G.1) | 넷 다 **판정 전에** 나가므로 어느 것도 종류를 단정하지 않는다 |
 | 프레임 빌더 | `ui/src/protocol.ts:503` · `:519` | UI는 툴 호출을 조립하지 않는다 |
 | 프레임 검증 | `server/web/messages.py:194-219` · 분기 `server/web/app.py:494` | 확장자 · 8 MiB · base64 — **바꾸지 않는다** |
 | 대상 툴 스키마 | `server/orchestrator/tools.py:9253-9306` (`:9264` · `:9304` · `:9305`) | 닫힌 인자 집합 · 경로 인자 없음 |

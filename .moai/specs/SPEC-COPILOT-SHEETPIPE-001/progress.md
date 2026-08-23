@@ -1,6 +1,6 @@
 # SPEC-COPILOT-SHEETPIPE-001 — 진행 기록 (progress)
 
-문서 상태: draft (v0.2.0, 2026-08-23) · **Tier M · 통과 임계 0.80** · 칸반 카드 t10 · **분할 B(전달경로)**
+문서 상태: draft (v0.3.0, 2026-08-24) · **Tier M · 통과 임계 0.80** · 칸반 카드 t10 · **분할 B(전달경로)**
 
 > **읽는 순서.** ① `spec.md` §A(개요 · 사전 확정 사실) → ② `spec.md` §F(세 성질 — **함정이 여기 있다**) → ③ `plan.md` §A.1(뒤집힐 수 있는 결정 넷) · §A.4(**닫힌** 결정 ① — A의 `target` 태그 재정) → ④ `spec.md` §G(등재 7지점) → ⑤ `acceptance.md` §C.
 >
@@ -30,7 +30,12 @@ lead_allocation:
   ac: 11      # 일치
 baseline_measured: null      # 의도적으로 비어 있음 — M0가 이 워크트리에서 직접 잰다
 assumptions_open: [ASSUMPTION-78, ASSUMPTION-79]
-mutation_ledger_planned: 6   # AC-003 · 004 · 006 · 009 · 010 · 011
+mutation_ledger_planned: 8   # AC-003 · 004 · 005(문구 :555) · 005(앵커 주석) · 006 · 009 · 010 · 011
+plan_audit:
+  verdict: PASS-WITH-DEBT
+  score: 0.91                # Tier M 임계 0.80
+  must_pass: 7/7
+  debts_closed: 6            # D1~D6 (v0.3.0) — 전부 문서 편집, 코드 변경 0
 ```
 
 ### 좌표 실측 기록 (본 세션 · `grep`)
@@ -61,6 +66,21 @@ grep -cE '\.\.HEAD' server/tests/test_overlap_preserve.py   → 22
 `vectorworks_autopatch`를 추적해 **7지점**으로 확정했다(`spec.md` §G가 표와 배제 기준을 소유). 앞선 SPEC의 "4지점"(`REQ-LXSEQ-010`)은 낡았고, 빠진 셋 중 둘(`test_tools.py`의 리터럴 · 트립와이어)은 **툴 이름을 문자열로 담지 않아 첫 grep에 영원히 걸리지 않는다**.
 
 독립 확인: `TOOL_NAMES` 파싱 결과 **34개**이며 `upload_vectorworks_export`는 **그 안에 없다**. 이 한 번의 측정이 두 가지를 동시에 준다 — `test_tools.py:172`의 리터럴 `34`가 옳다는 것과, A 레지스트리 `target` 열이 **두 종을 담는다**는 것(`plan.md` §A.4 ①의 근거이자, 그 재정의 리드측 독립 확인과 일치한다).
+
+### 채무 정리 실측 (v0.3.0 · plan-audit 0.91)
+
+| 채무 | 명령 | 결과 |
+|---|---|---|
+| **D1** 예견인가 사고인가 | `git log -1 --format='%s' 43b1b04` | `feat(SPEC-COPILOT-IMGLAYOUT-001): M4+M5 …` — **`fix`가 아니다** |
+| **D1** docstring 서법 | `sed -n '3360,3361p' server/web/session.py` | `would therefore freeze` — **가정법** |
+| **D1** 아티팩트 언급 | `grep -rc 'LayoutImageUploadView\|freeze\|얼어' .moai/specs/SPEC-COPILOT-IMGLAYOUT-001/` | `contract.md:0` · `spec.md:0` — **0건** |
+| **D2** 형제 문구 | `grep -n 'Vectorworks' ui/src/App.tsx` | `:551` · `:555` · `:559` — **셋** |
+| **D2** vitest 델타 | `grep -rln 'Vectorworks export는' ui/src/` | `App.tsx` 하나 — 테스트 단언 **0건** |
+| **D3** 앵커 판별력 | `grep -c 'SPEC-COPILOT-SHEETPIPE-001' ui/src/App.tsx` | **0** — 검사가 오늘 빨갛다(판별력 있음) |
+| **D5** 이름 변경 비용 | `git grep -l 'vectorworks_export_upload'` | **16파일**(코드·계약 8 + 문서 8) |
+| **D5** 빌더 수 | `grep -c 'export function buildVectorworksExportUpload' ui/src/protocol.ts` | **1** — "빌더 둘"은 하나 많았다 |
+
+**D1이 남긴 일반형은 §C.0 규약 6이 든다.** 이 카드에서 **세 번째 형태**다 — `columns.py` 오귀속(옮겨간 문서를 가리킴) · `:446` 철회(좁은 패턴을 총계로 읽음) · 그리고 이번(방어 코드의 설명문을 역사로 읽음). 셋 다 **읽은 것의 종류를 잘못 판정한** 결과다.
 
 ### 미해소 항목
 
