@@ -57,7 +57,10 @@ jobs:
         run: npm --prefix ui run build
 
       - name: Python tests
-        run: uv run pytest -q
+        # -rs 가 필요하다. -q 만 쓰면 skip 이 개수로만 남고 어느 검사가
+        # 왜 안 돌았는지가 사라진다 — return 을 pytest.skip 으로 바꾼 값이
+        # 바로 그 출력이었는데 -q 가 그것을 다시 지운다.
+        run: uv run pytest -q -rs
 
       - name: UI tests
         run: npm --prefix ui run test
