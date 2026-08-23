@@ -1,18 +1,18 @@
 ---
 id: SPEC-COPILOT-FILEARG-001
-title: "파일 선택기 → 툴 인자 — 업로드 바이트를 헤더 서명으로 판별해 세션 슬롯에 담고 래퍼 툴이 인자로 주입한다"
-version: "0.4.0"
+title: "시트 판별기 — 업로드 바이트가 무엇인지 판정하는 술어 레지스트리 (분할 A)"
+version: "0.5.0"
 status: draft
 created: 2026-08-22
 updated: 2026-08-23
 author: manager-spec (칸반 카드 t10)
 priority: P1
-phase: "v0.3.0 target — LX-SEQ 연계 전달 경로(패치 1종 등록). 그룹 · 프리셋/FX · 시퀀스는 후속 SPEC이 레지스트리에 행만 더한다"
-module: "ui/src/{App.tsx,useCopilotSocket.ts,protocol.ts}, server/web/{messages.py,app.py,session.py}, server/sheets/ (신규 — 헤더 서명 레지스트리 · 판별기), server/orchestrator/{tools.py,runner.py} (래퍼 툴 등재)"
+phase: "v0.3.0 target — 분할 A(판별기). 전달경로는 SPEC-COPILOT-SHEETPIPE-001이 A 통과 뒤 착수한다. 그룹 · 프리셋/FX · 시퀀스는 후속 SPEC이 레지스트리에 행만 더한다"
+module: "server/sheets/ (신규 — 판별 술어 레지스트리), server/vwx/reader.py · server/orchestrator/tools.py (소비만 — 판정 호출), server/lxseq/parser.py (소비만 — 정규 열 참조)"
 lifecycle: spec-anchored
-tags: "file-picker, upload, header-signature, sheet-kind, registry, session-slot, wrapper-tool, file_content_base64, lxseq, grandma3"
-tier: M
-related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-VWX-001, SPEC-COPILOT-IMGLAYOUT-001, SPEC-COPILOT-AUTOPATCH-001]
+tags: "sheet-discrimination, identity-predicate, registry, header-signature, delegation-contract, mvr, lxseq, grandma3"
+tier: L
+related_specs: [SPEC-COPILOT-SHEETPIPE-001, SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-VWX-001, SPEC-COPILOT-IMGLAYOUT-001, SPEC-COPILOT-AUTOPATCH-001]
 ---
 
 # SPEC-COPILOT-FILEARG-001 — 파일 선택기가 고른 CSV의 바이트를 툴 인자까지 보낸다
@@ -28,7 +28,8 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-VWX-001, SPEC-COPILOT-IMGLA
 | 0.1.0 | 2026-08-22 | manager-spec | 최초 작성 (draft, Tier M). 아티팩트 5종(spec/plan/acceptance/research/progress). REQ **15건**(REQ-FILEARG-001~015), AC **17건**(라이브 1건 포함), 마일스톤 **6개**(M0~M5), clarification 마커 **1건**(plan.md §A.4 ① — 어느 서명과도 맞지 않는 CSV의 처분). 리드 결정 ①②③은 결정 A·B·C로 등록해 마커로 남기지 않는다. |
 | 0.2.0 | 2026-08-23 | manager-spec | **리드 재정 반영 — 마커 0건.** ① 열린 결정 마감: 서명 미일치 CSV의 처분은 **(나)안**(Vectorworks를 레지스트리 행으로 등록하고 0건이면 거절) → plan.md 결정 **I**. ② 리드가 결정 ③의 "행 하나" 문면을 정정 — 행의 개수가 아니라 **파서·핸들러 없는 종류를 만들지 말라**는 뜻(plan.md 결정 D 정정 기록). ③ 리드 실측 3건 반영(`research.md` §9, `origin/main` `e7a8e90` · `6296af3`에서 불변 확인): 표본 실재로 `ASSUMPTION-75` **닫힘**, LX-SEQ↔VW 열 대조 3/9 일치로 비충돌 확정, 후속 시트 7종 헤더로 **프리셋 4종 충돌 실증**(속성 A는 이론이 아니다). ④ 결정 **J** — **서명 형식**의 표현력을 넓히고 **레지스트리 행**은 넓히지 않는다 → REQ **016·017** 신설. ⑤ 결정 I의 안전판(브리틀 시 폴백은 반드시 선언된 레지스트리 항목 + UI 고지) → REQ **018** 신설. REQ 15→**18**, AC 17→**21**(AC-018 형식 충분성 증명 · 019 교차 분류 · 020 행 불증식 · 021 안전판), 결정 8→**10**(A~J), ASSUMPTION 3→**2**(75 닫힘). |
 | 0.3.0 | 2026-08-23 | manager-spec | **독립 감사 FAIL(차단 5건) 시정.** 뿌리는 설계 오류 하나였다 — **열 집합 서명으로는 Vectorworks의 신원을 표현할 수 없다**(B1·B2·B3). zip에는 헤더 행이 없고(`.mvr`·`.xlsx`), 헤더는 1행이라는 보장이 없으며(판독기가 **탐색**한다), 서명 소유자를 `columns.py`로 잘못 적었다(정본은 호출 지점 `reader.py:286`). 그대로 두면 (다)안을 기각한 사유가 (나)안 **안에서** 되살아나 살아 있는 `.mvr`/`.xlsx` 업로드를 회수한다. **결정 K** — 레지스트리 행은 열 집합이 아니라 **판별 술어**를 든다(`patch`=열 집합 술어 · `vectorworks`=기존 판독기 위임). 앞선 네 결정(0건 거절 · 2건 이상 거절 · 파서/핸들러 0건 · 기존 업로드 유지)은 전부 살아남으며, 치른 값(표가 순수 데이터가 아니게 됨)을 §G.1에 명시했다. 신설: **REQ-019**(판별기 입력 경계 — B1의 재발 방지) · **REQ-020**(암묵적 `else` 금지를 조건부에서 **무조건**으로 분리, B5) · **AC-022**(실물 `.mvr` 315,155 B가 `unknown_sheet_kind`가 아님) · **AC-023**(대상 툴 부재는 **판별 시점**에 후보 제외 + 오류, B4) · **AC-024**(암묵적 `else` 부재, 무조건). 개정: REQ-007(행=술어) · REQ-016(열 집합 술어 한정) · REQ-018(안전판에서 ① 분리 · 대상 fixture 전량) · AC-006 · AC-013(6지점 열거에 **핸들러 클로저** 추가, `test_runner_progress`는 편집 지점이 아니라 **누락 검출 가드**로 재분류 — D1) · AC-019(대상 = `server/tests/fixtures/vwx/` **전량 12개 · `.mvr` 포함**, 추정 "7종" 폐기 — D2) · AC-021(③ 검증을 `발동함`이라는 **판별력 있는** 토큰으로 — 기존 grep은 오늘도 통과했다). **ASSUMPTION-77 닫힘 · POSITIVE** — 실물 CSV **7,258 B**(≈7 KB), 8 MiB는 약 1,150배("수십 KB"는 한 자릿수 오차였다). REQ 18→**20**, AC 21→**24**, 결정 10→**11**(A~K), ASSUMPTION 2→**1**. 감사가 강점으로 지목한 것(결정 ① 계수 요구의 5중 고정 · AC-003의 주입 표 · 좌표 27건 무오류 · `addr_range_mismatch` 함정 봉쇄)은 **그대로 두었다**. |
-| 0.4.0 | 2026-08-23 | manager-spec | **델타 재감사 FAIL 0.62(차단 2건) 시정.** 뿌리(F2): **우리는 다른 물음에 답하는 함수를 판별자로 썼다 — 관대함이 아니라 축이 다르다.** `has_address_family`는 "패치를 뽑을 수 있는가"(사용성)를 묻고 레지스트리는 "이것은 무엇인가"(신원)를 묻는다. 축이 다르므로 **양방향으로 틀린다** — LX-SEQ 패치 CSV를 VW라 주장하고(9열 중 **7열이 VW 별칭으로 해소**), 주소 열 없는 진짜 VW 파일(`vwx_worksheet_grid_from_screenshot.csv`)은 놓친다. LX-SEQ는 VW **어휘의 부분집합**이므로 어떤 주소 계열 검사로도 갈 수 없다. **결정 L** — `vectorworks` 술어 = **신원**(`_best_header_candidate >= 0`) **AND NOT** 다른 행 서명 일치; 사용성은 판별에서 뺀다(`not_patch_source`는 대상으로 통과). 배제 절은 레지스트리 참조라 문면 O(1)·N² 없음이며 **우선순위 순서가 아니다**(술어가 배타적이 될 뿐). 좁은 후보를 고른 근거: 느슨한 후보(`ReadResult.header` 비어 있지 않음)는 **장바구니 목록을 VW로 분류**한다(균일폭 폴백이 임계를 **우회**한다) — 두 후보는 `vectorworks_export_instrument_data_no_header.txt` **한 파일 부류에서만** 갈리고, 그 파일은 `README.md:85-95` 기준 **오늘 패치를 만들지 못하는** 파일이라 좁히기는 능력이 아니라 **문구 하나**를 잃는다. 그 문구는 조건부 힌트로 복원(**REQ-023**). 신설: **REQ-021**(위임 계약 3결과 + `.mvr` 소유자 정정 + openpyxl 두 경로) · **REQ-022**(사용성 술어 판별 사용 금지) · **REQ-023**(조건부 재수출 힌트) · **AC-025~029**(패치 CSV 신원 + 확장 뮤테이션 / 음성 대조군 / 임계 2 고정 + 균일폭 구멍 비커버 명시 / **탭·쉼표 양축 날조 대조군** / 문구 보존 + 제거 뮤테이션). 개정: REQ-007 · AC-019 · AC-022(헤더 없는 `.txt`는 이제 `unknown_sheet_kind`가 **정답**) · AC-020(F4 grep 누락 기록) · 뮤테이션 원장 6→**5**(F3: AC-022 ①은 F1 미해결 상태에서 **뮤테이션 없이도 이미 빨갛다** — 판별력이 생긴 뒤 재점화). **F1 오귀속 정정**: `.mvr` 분기는 `reader.py`에 **없다**(`grep -c` → 0) — `tools.py:2859-2860` + `mvr.py`가 소유(B3와 같은 부류, 두 번째). **ASSUMPTION-75 재개방** — 한 방향만 재고 닫은 것이 F2를 통과시켰다; 이제 75-a·75-b **양방향 각각** 단언. REQ 20→**23**, AC 24→**29**, 결정 11→**12**(A~L), ASSUMPTION 1→**2**. |
+| 0.4.0 | 2026-08-23 | manager-spec | **델타 재감사 FAIL 0.62(차단 2건) 시정.** 뿌리(F2): **우리는 다른 물음에 답하는 함수를 판별자로 썼다 — 관대함이 아니라 축이 다르다.** `has_address_family`는 "패치를 뽑을 수 있는가"(사용성)를 묻고 레지스트리는 "이것은 무엇인가"(신원)를 묻는다. 축이 다르므로 **양방향으로 틀린다** — LX-SEQ 패치 CSV를 VW라 주장하고(9열 중 **7열이 VW 별칭으로 해소**), 주소 열 없는 진짜 VW 파일(`vwx_worksheet_grid_from_screenshot.csv`)은 놓친다. LX-SEQ는 VW **어휘의 부분집합**이므로 어떤 주소 계열 검사로도 갈 수 없다. **결정 L** — `vectorworks` 술어 = **신원**(`_best_header_candidate >= 0`) **AND NOT** 다른 행 서명 일치; 사용성은 판별에서 뺀다(`not_patch_source`는 대상으로 통과). 배제 절은 레지스트리 참조라 문면 O(1)·N² 없음이며 **우선순위 순서가 아니다**(술어가 배타적이 될 뿐). 좁은 후보를 고른 근거: 느슨한 후보(`ReadResult.header` 비어 있지 않음)는 **장바구니 목록을 VW로 분류**한다(균일폭 폴백이 임계를 **우회**한다) — 두 후보는 `vectorworks_export_instrument_data_no_header.txt` **한 파일 부류에서만** 갈리고, 그 파일은 `README.md:85-95` 기준 **오늘 패치를 만들지 못하는** 파일이라 좁히기는 능력이 아니라 **문구 하나**를 잃는다. 그 문구는 조건부 힌트로 복원(**REQ-023**). 신설: **REQ-021**(위임 계약 3결과 + `.mvr` 소유자 정정 + openpyxl 두 경로) · **REQ-022**(사용성 술어 판별 사용 금지) · **REQ-023**(조건부 재수출 힌트) · **AC-025~029**(패치 CSV 신원 + 확장 뮤테이션 / 음성 대조군 / 임계 2 고정 + 균일폭 구멍 비커버 명시 / **탭·쉼표 양축 날조 대조군** / 문구 보존 + 제거 뮤테이션). 개정: REQ-007 · AC-019 · AC-022(헤더 없는 `.txt`는 이제 `unknown_sheet_kind`가 **정답**) · AC-020(F4 grep 누락 기록) · 뮤테이션 원장 6→**5**(F3: AC-022 ①은 F1 미해결 상태에서 **뮤테이션 없이도 이미 빨갛다** — 판별력이 생긴 뒤 재점화). **F1 오귀속 정정**: `.mvr` 분기는 `reader.py`에 **없다**(`grep -c` → 0) — `tools.py:2860-2861` + `mvr.py`가 소유(B3와 같은 부류, 두 번째). **ASSUMPTION-75 재개방** — 한 방향만 재고 닫은 것이 F2를 통과시켰다; 이제 75-a·75-b **양방향 각각** 단언. REQ 20→**23**, AC 24→**29**, 결정 11→**12**(A~L), ASSUMPTION 1→**2**. |
+| 0.5.0 | 2026-08-23 | manager-spec | **2차 델타 감사 FAIL 0.79(Tier M 임계 0.80에 0.01 미달) 시정 — 예산 초과이므로 SPEC을 둘로 나눈다.** must-pass 전항 초록 · F2·F3·F4 닫힘. 남은 문제는 **품질이 아니라 예산**이었다: `spec-workflow.md:145-152`가 Tier M을 REQ 16 / AC 16으로 정하고 어느 한쪽이라도 넘으면 **티어를 올리거나 나누라, 예산을 완화하지 말라**고 한다. 합본은 REQ 23 / AC 29였고 **AC 29는 Tier L의 25조차 넘어** 티어 상향만으로는 닫히지 않았다. 궤적이 원인을 말한다 — REQ 15→18→20→23, AC 17→21→24→29. 각 라운드의 시정은 개별적으로는 옳았고 **합이 예산을 넘어섰다**. 한 SPEC이 두 SPEC 몫의 범위를 지고 있었다는 뜻이며, 그것이 바로 천장이 잡으라고 있는 상황이다. **분할선**: 본 SPEC(**A · 판별기**)은 "이것은 무엇인가"에 답한다 — 레지스트리 · 술어 · 신원/사용성 축 · 배제 절 · `.mvr` 계약(REQ **15건**: 001~005 · 007 · 008 · 016~023). **SPEC-COPILOT-SHEETPIPE-001**(**B · 전달경로**)은 "그 바이트를 어떻게 나르는가"에 답한다 — 세션 슬롯 · 래퍼 툴 인자 · UI 선택기 배선(REQ 8건: 006 · 009~015). **감사가 지적한 설계 결함은 전부 A에 있다**; B는 한 번도 지적을 받은 적이 없고 이미 증명된 패턴에 세 번째 흐름을 붙이는 일이다. **A는 Tier L**이며 근거는 크기가 아니라 **성격**이다(§A.5) — 통과 임계가 **0.85**로 오른다. 함께 처리: **D1**(위임 계약을 **두 갈래 전역 함수**로 · 결과 **넷**에 값 배정 · `unapproved_dependency` 신설) · **D5**(좌표 `2859-2860` → **`2860-2861`**, 결정 줄은 **2861** — 7곳 전부) · **D3**(plan §E의 `columns.py` 소유 문구 — 같은 SPEC이 한 문서에서 고치고 다른 문서에서 되살려 놓았다) · **D4**(AC-027은 임계 2 고정이 아니라 **하한만** 고정임을 명시) · D7~D10 문자열 정리. AC-009는 **둘로 쪼갠다** — A는 **순서** 단언, B는 **표시** 단언(§A.4). A: REQ **15** · AC **19**. |
 
 ---
 
@@ -48,17 +49,45 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-VWX-001, SPEC-COPILOT-IMGLA
 
 ### 이 SPEC이 하는 것 / 하지 않는 것
 
-| 하는 것 | 하지 않는 것 |
+| 하는 것 (A · 판별기) | 하지 않는 것 |
 |---|---|
-| 헤더 서명으로 시트 종류 판별(0건·2건 이상은 거절) | 종류를 파일 이름·확장자·MIME으로 분기 |
-| 세션 슬롯 1개(바이트 · sha256 · 종류 · 길이) | 업로드 시점의 자동 실행(`preview` 포함) |
-| `종류 → 대상 툴` 레지스트리(행 1개: `patch`) | 002/003/004용 파서·핸들러 선제 구현 |
-| 바이트를 만지지 않는 래퍼 툴 1종 등재 | 대상 툴의 인자 집합 변경 · 경로 인자 신설 |
-| UI 라우터를 헤더 기반 목적지 선택으로 교체 | 첨부 버튼 2개화 · 2026-08-15 운영자 결정 번복 |
+| 술어로 시트 신원 판별(0건·2건 이상은 거절) | 종류를 파일 이름·확장자·MIME으로 분기 |
+| `kind → 판별 술어 → 대상` 레지스트리(행 2개) | 002/003/004용 술어·파서·핸들러 선제 구현 |
+| 신원/사용성 축 분리 · 배제 절 | 사용성 함수를 판별에 끌어들이기 |
+| `.mvr`·zip을 포함한 위임 계약(두 갈래 전역 함수) | **바이트를 나르는 일 전부** — 세션 슬롯 · 래퍼 툴 · UI 배선은 **SHEETPIPE**가 소유 |
 
+### §A.4 분할 — 무엇이 어디로 갔나 (v0.5.0)
+
+| | A (본 SPEC) | B (`SPEC-COPILOT-SHEETPIPE-001`) |
+|---|---|---|
+| 답하는 물음 | **"이것은 무엇인가"** | **"그 바이트를 어떻게 나르는가"** |
+| REQ | 001~005 · 007 · 008 · 016~023 (**15**) | 006 · 009~015 (**8**) |
+| AC | **19** (§C.0a) | 11 |
+| Tier · 임계 | **L · 0.85** | M · 0.80 |
+| 감사 이력 | **차단 결함 전부 여기** | 지적 0건 |
+
+**번호를 다시 매기지 않는다.** A의 REQ 번호에 빈칸(006 · 009~015)이 남는 것은 의도다 — v0.1.0~v0.4.0의 감사 기록·결정 등록부·뮤테이션 원장이 전부 그 번호로 요구를 지목한다. 재번호는 그 추적을 끊는다.
+
+**`AC-FILEARG-009`는 둘로 쪼갠다.** 그 기준은 두 요구를 동시에 섬기고 있었다 — `REQ-005`(판별하려고 시험 파싱하지 않는다; 행 수는 종류가 **정해진 뒤** 파생된다 → **순서** 속성)와 `REQ-010`(업로드 직후 넷을 보인다 → **표시** 속성). 통째로 한쪽에 주면 다른 쪽이 증거를 잃는다: A는 "판별이 파싱하지 않는다"의 증명을, B는 네 필드 표시 뒤의 행 수 단언을 잃는다. **A는 순서 단언을 가진다**(같은 ID `AC-FILEARG-009` 유지, 범위만 좁힘). **표시 단언은 B가 자기 번호로 가져간다.**
+
+**A는 B를 이름으로만 참조한다.** B는 아직 존재하지 않으므로 A는 B의 내용에 의존하지 않고 B의 요구 번호를 인용하지도 않는다(위 표의 `006 · 009~015`는 **A에서 빠져나간 자리**를 가리키는 것이지 B의 번호 체계를 인용한 것이 아니다).
+
+### §A.5 [HARD] A가 Tier L인 이유 — 크기가 아니라 성격
+
+`spec-workflow.md`는 Tier L을 "**> 1000 LOC 또는 constitutional**"로 정의한다. A는 **constitutional**이라서 Tier L이다: A는 `REQ-FILEARG-017`이 LXSEQ-002/003/004에게 **각각 한 행씩 더하라고 예약해 둔 레지스트리의 계약을 정의한다** — 다른 SPEC들이 따라야 할 규칙을 세우는 문서다.
+
+**이 근거는 AC 수와 무관하다.** A는 **AC가 10건이어도 Tier L이다.** 이 문장을 명시적으로 적는 이유는 하나다 — 예산에 맞추려고 티어를 골랐다고 읽히면, 그것이 바로 이번 감사가 기각한 "예산을 완화하라"와 같은 수가 되기 때문이다. 순서가 반대다: 성격이 Tier L을 정하고, 티어가 임계를 정한다.
+
+**따르는 결과: A의 통과 임계가 0.85로 오른다.** 그것이 옳다 — D1이 A에 있고 두 번의 차단 라운드가 모두 A에서 났다. **높은 기준은 결함이 사는 곳에 있어야 한다.** 아티팩트 5종은 이미 존재하므로 승격의 비용은 0이다.
+
+**B는 Tier M이다** — 이미 증명된 패턴, 지적 0건, constitutional 아님.
+
+---
 ---
 
 ## B. 요구사항 (GEARS)
+
+> **번호에 빈칸이 있는 이유.** `REQ-FILEARG-006` · `009`~`015`는 **분할로 SPEC-COPILOT-SHEETPIPE-001(전달경로)로 옮겨갔다**. 번호를 다시 매기지 않은 것은 의도다 — v0.1.0~v0.4.0의 감사 기록과 결정 등록부가 그 번호로 이 요구들을 지목하고 있어, 재번호는 그 추적을 끊는다. 빈칸은 손실이 아니라 **이사 간 자리**다(§A.4).
 
 ### B.1 판별 — 술어와 계수 (`server/sheets/`)
 
@@ -68,36 +97,30 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-VWX-001, SPEC-COPILOT-IMGLA
 - **REQ-FILEARG-004** `[Event-driven]` **When** 일치 건수가 **2 이상**이면, the 시스템 **shall** `ambiguous_sheet_kind`로 거절하고 일치한 종류를 **전부** 이름으로 밝히며, 그중 하나를 고르지 않는다. 애매함은 추측해도 되는 자리가 아니다 — 잘못 라우팅된 LX-SEQ CSV는 잘못된 패치가 되고, 그것은 무대 사고다.
 - **REQ-FILEARG-005** `[Unwanted]` The 판별기 **shall not** 후보 종류마다 그 종류의 실제 파서를 시험 삼아 돌려 예외 발생 여부로 종류를 정한다. `_resolve_header_map`은 불일치를 `MissingColumnsError` **예외**로 알리므로(`parser.py:122-135`), 후보별 투기적 파싱은 예외를 제어 흐름으로 삼고 라우터를 파서 내부 구현에 묶는다(§F 속성 B). 판별은 `CANONICAL_COLUMNS`와 정규화 함수만 쓰는 가벼운 술어로 하고, 진짜 파싱은 종류가 정해진 **뒤 한 번만** 돈다.
 
-### B.2 슬롯과 레지스트리 (`server/web/session.py` · `server/sheets/`)
+### B.2 레지스트리 (`server/sheets/`)
 
-- **REQ-FILEARG-006** `[Ubiquitous]` The 세션 **shall** 판별에 성공한 업로드를 슬롯 **하나**에 담는다. 슬롯이 싣는 것: `content_base64`(원문 바이트) · `sha256` · `byte_length` · `kind`(판별된 종류) · `file_name`(힌트, 보고용) · `received_at`. 저장 형태는 `_UploadedVectorworksExport`(`session.py:2492-2508`)의 교체형 슬롯을 거울로 삼는다 — 새 업로드는 앞의 것을 **교체**하고, 세션 초기화 시 함께 비워진다(`session.py:3588`의 `clear()` 규약과 같은 자리에서 처리한다). 슬롯은 **하나**이며 종류별로 늘리지 않는다.
 - **REQ-FILEARG-007** `[Ubiquitous]` The 시스템 **shall** 레지스트리를 **표 하나**로 두되, 행의 형태는 **`(kind, 판별 술어, 대상)`**이며 술어는 **신원**을 묻는다(결정 K · L · §G). 오늘 채워진 행은 **둘**이다 — **`patch`**(열 집합 서명, 정본 `server/lxseq/parser.py:18 CANONICAL_COLUMNS`, 대상 툴 `import_lxseq_patch`, 통과 인자 `action`·`name_prefix_mode`·`only_fids`·`mode_overrides`)와 **`vectorworks`**(**신원 술어** = `_best_header_candidate(rows)[0] >= 0`(`server/vwx/reader.py:158`, 임계 `_MIN_HEADER_ALIAS_MATCHES = 2` at `:43`) **AND NOT** 레지스트리의 **다른 행**의 서명에 맞음; 대상은 기존 세션 업로드 경로 `upload_vectorworks_export`, 통과 인자 없음). **배제 절은 레지스트리를 참조하며 종류 이름을 열거하지 않는다** — 002/003/004가 행을 더해도 문면은 O(1)로 그대로이고, 실행의 O(N)은 REQ-FILEARG-002의 전수 계수가 이미 치르는 비용이므로 **N² 증식이 없다**. **이것은 우선순위 순서가 아니다** — 술어를 서로 **배타적**으로 만드는 것이며 순차 평가가 아니다(REQ-FILEARG-002와 §F 속성 A 불변). `vectorworks` 행은 **이미 있는 판정을 호출**할 뿐이며 신규 파서·핸들러·판정 논리는 0건이다. 치른 값: 레지스트리가 더 이상 순수한 데이터 표가 아니다(§G.1).
 - **REQ-FILEARG-008** `[Unwanted]` The 시스템 **shall not** 레지스트리에 없는 종류를 통과시킨다. 이름이 예약만 되어 있고 아직 구현되지 않은 종류는 등록 행이 없으므로 REQ-FILEARG-003의 `unknown_sheet_kind` 거절로 떨어진다 — **미구현이 조용한 통과가 되는 경로는 존재하지 않는다**. 또한 레지스트리 행이 지목하는 대상 툴 이름이 실제 등록된 툴 집합에 없으면 그것은 설정 오류이며, 그 행은 판별 후보에서 제외되고 오류로 보고된다(조용한 무시가 아니다).
 
-### B.3 저장 전용 — 자동 실행 금지
-
-- **REQ-FILEARG-009** `[Unwanted]` The 업로드 처리 **shall not** 어떤 툴이든 자동으로 실행한다 — `action="preview"`도 예외가 아니다. 구체적으로 업로드 경로에서 `run_instruction`으로 고정 지시문을 밀어 넣거나(`session.py:9655-9658`의 Vectorworks 방식), 래퍼 툴·대상 툴을 내부 호출하지 않는다. 근거: LXSEQ-001의 `REQ-LXSEQ-016` 기계적 보루는 `source.sha256`·`byte_length`를 실어 **운영자가 원본 파일과 대조할 수 있게** 하는 데 있는데, 자동 실행은 그 대조가 가능해지기 전에 움직인다. 실행은 운영자가 시키는 나중 턴에 일어난다.
-- **REQ-FILEARG-010** `[Ubiquitous]` The 시스템 **shall** 업로드 직후 다음 **넷**을 운영자에게 보인다: 판별된 **종류** · **sha256** · **byte_length** · **행 수**. 행 수는 종류가 정해진 뒤 도는 **단 한 번의 실제 파싱**에서 나오며(REQ-FILEARG-005), 그 파싱은 파일만 읽는다 — 콘솔 접촉 0(`server.bridge`·`pythonosc`·`execution_port`·`deploy_pipeline`·`run_commands` 호출 0건). 행 수는 `rows_total`을 정본으로 하고 `parsed`·`rejected` 건수를 곁들인다(LXSEQ-001 페이로드 `source`의 어휘를 그대로 쓴다). 이 넷 밖의 해석(패치 가능 여부 · 점유 판정 · 타입 해석)은 이 시점에 말하지 않는다.
-
-### B.4 래퍼 툴 (`server/orchestrator/tools.py` · `server/orchestrator/runner.py`)
-
-- **REQ-FILEARG-011** `[Ubiquitous]` The 시스템 **shall** 래퍼 툴 **1종**을 등재해, 그 핸들러가 세션 슬롯의 바이트를 레지스트리가 지목한 대상 툴의 `file_content_base64` 인자에 넣어 **내부 `ToolCall`로 형제 핸들러를 부른다**(`vectorworks_autopatch`, `tools.py:2944-2964`와 같은 형태). 래퍼는 슬롯의 `kind`로 대상 툴을 고르며, 모델이 준 인자는 그 종류의 통과 화이트리스트에 있는 것만 그대로 전달한다 — 대상 툴의 인자 집합은 닫혀 있으므로(`additionalProperties == False`) 화이트리스트 밖 인자는 전달하지 않고 거절 사유로 밝힌다. 등재는 저장소의 **6지점**을 모두 거친다: `TOOL_NAMES` · 핸들러 클로저 · `ToolDefinition` · `handlers` 맵 · `server/orchestrator/runner.py:137 _TOOL_TASKS` · `server/tests/test_tools.py:172`의 닫힌 집합 단언(`34` → `35`).
-- **REQ-FILEARG-012** `[Unwanted]` The 래퍼 툴 **shall not** 자신의 스키마에 `file_content_base64`를 선언하거나 받는다. 파일 시스템 경로를 받는 인자도 두지 않는다. 이것은 부수적 구현 세부가 아니라 **요구**이며, `SPEC-COPILOT-LXSEQ-001`의 `REQ-LXSEQ-016`을 잇는다 — 모델이 원문 바이트를 한 번도 손에 쥐지 않아야 채팅 본문이 바이트의 출처가 되는 경로가 원리적으로 생기지 않는다. 나중의 편의 개정이 이 성질을 되돌리지 못하도록 요구로 못박는다.
-- **REQ-FILEARG-013** `[Event-driven]` **When** 슬롯이 비어 있거나, 슬롯의 종류가 모델이 요청한 작업과 맞지 않거나, 레지스트리가 그 종류의 대상 툴을 찾지 못하면, the 래퍼 툴 **shall** 이름 있는 사유(`no_uploaded_sheet` · `kind_mismatch` · `no_target_tool`)로 거절하고 **추측하지 않는다** — 직전 업로드를 재사용하거나, 다른 종류의 대상 툴로 대신 보내지 않는다. 사유 어휘는 닫힌 집합이다.
-
-### B.5 UI와 보존
-
-- **REQ-FILEARG-014** `[Ubiquitous]` The UI **shall** 첨부 버튼을 **하나로** 유지한다(2026-08-15 운영자 결정, `App.tsx:625-635` 주석). 라우팅은 그대로 두 갈래로 시작한다 — 이미지 MIME이면 레이아웃 이미지 경로(무변경), 그 밖이면 시트 업로드 경로. 다만 "그 밖"의 목적지는 더 이상 UI가 정하지 않는다: UI는 바이트를 보내고 **서버의 헤더 판별이 목적지를 정한다**. UI는 라우터일 뿐 두 번째 검증 계층이 아니므로, 크기·공백 가드(비어 있지 않을 것 · 8 MiB 이하)만 기존 경로와 같은 문구로 유지하고 헤더는 읽지 않는다. `.csv`·`.txt`는 이미 `<input accept>`에 있으므로(`App.tsx:824`) 받아들이는 확장자 목록은 넓히지 않는다.
-- **REQ-FILEARG-015** `[Unwanted]` The 변경 **shall not** 다음을 수정한다(PRESERVE — §C): `server/lxseq/**` · `server/vwx/**` · `server/prechk/**` · `server/safety/**` · `console/lua/**` · `server/rulebook/assets/**`, 그리고 `server/web/session.py`의 `upload_vectorworks_export`·`upload_layout_image` **본문**과 `server/orchestrator/tools.py`의 **기존 핸들러 본문**. 허용되는 변경은 신규 모듈 추가, 신규 프레임·핸들러·래퍼 툴의 **순수 추가**, UI 라우터 교체, 그리고 툴 수 상수 1건 갱신뿐이다. 특히 `import_lxseq_patch`의 인자 집합·스키마·설명문은 **불변**이다(경로 인자 신설 0건).
-
-### B.6 술어의 표현력 · 입력 경계 · 확장 경계 (`server/sheets/`)
+### B.3 술어의 표현력 · 입력 경계 · 확장 경계 (`server/sheets/`)
 
 - **REQ-FILEARG-016** `[Ubiquitous]` The **열 집합 술어**의 형식 **shall** 최소한 다음 두 형태를 표현할 수 있다: **(i) 정확 열 집합** — 헤더의 정규 열 집합이 명시된 집합과 **정확히 같을 때만** 일치 · **(ii) 포함·배제 쌍** — 명시된 열이 **전부 있고** 배제 열이 **하나도 없을 때만** 일치. 오늘의 포함 검사는 (ii)에서 배제 목록이 빈 경우다(`patch` 행은 그대로 포함 검사로 남는다). The 판별기 **shall** 형식이 허용하는 **모든** 형태를 해석하며, 해석하지 못하는 형태를 표에서 만나면 조용히 건너뛰지 않고 설정 오류로 보고한다(REQ-FILEARG-008과 같은 자세). 넓히는 것은 **열 집합 술어의 표현력**이지 판별 전략이 아니다 — 전체 훑기 · 계수 · 0건·2건 이상 거절은 그대로다. **이 형식은 열 집합 술어에만 적용된다** — 위임 술어(REQ-FILEARG-007 · §G.1)는 열을 세지 않으므로 이 형식의 대상이 아니다.
 - **REQ-FILEARG-017** `[Unwanted]` The 변경 **shall not** LXSEQ-002/003/004가 소유하는 종류의 술어·파서·핸들러·레지스트리 행을 만든다. 특히 프리셋 4종(`preset-dim` · `preset-col` · `preset-bm` · `preset-pos`) · `group` · `fx` · `cue-ex`의 서명을 **쓰지 않는다**. 본 SPEC이 넓히는 것은 형식뿐이고, 그 형식이 실제로 프리셋 4종을 가르는지는 **합성 서명 픽스처**로 증명한다(레지스트리 행이 아니다 — `AC-FILEARG-018`).
 - **REQ-FILEARG-018** `[Where]` **Where** M1이 Vectorworks 위임 술어로는 `server/tests/fixtures/vwx/`의 실제 변형을 흡수할 수 없다고 실측한 경우, the 시스템 **shall** 결정 I의 안전판으로 폴백하되 그 폴백을 **레지스트리 항목으로 선언**한다. 아울러 그 경로로 파일이 흐를 때 the UI **shall** 그 파일을 **Vectorworks export로 읽고 있다고 소리 내어 말한다**. 조용한 폴백과 선언된 폴백은 다른 물건이다 — 전자는 오늘의 결함 그대로이고 후자는 운영자가 볼 수 있는 상태다. 이 경로를 타면 `unknown_sheet_kind` 거절 규칙에 살아 있는 경로가 없어지므로, 그 사실을 plan.md §D.1 잔여 위험에 **반드시 기록한다**. (암묵적 `else` 금지는 이 조건과 무관하게 언제나 성립한다 — REQ-FILEARG-020으로 분리했다.)
 - **REQ-FILEARG-019** `[Ubiquitous]` The 판별기 **shall** 자기 입력 경계를 선언한다. 받는 것은 **바이트 전체와 파일 이름 힌트**이며, 바이트가 CSV 텍스트라고 **가정하지 않는다** — ZIP 아카이브(`.mvr` · `.xlsx`, 매직 바이트 `PK`)와 헤더 행이 1행이 아닌 텍스트, 쉼표가 아닌 구분자를 쓰는 텍스트가 모두 정상 입력이다. 각 술어가 자기 입력 형태를 스스로 판정하며(열 집합 술어는 헤더 행을 읽을 수 있을 때만 참이 될 수 있고, 위임 술어는 바이트 전체를 본다), **어느 술어도 자기 것이라 하지 않은 바이트만** `unknown_sheet_kind`로 떨어진다. 그러므로 `.mvr` · `.xlsx` · 헤더 없는 탭 구분 텍스트는 **오늘 그것들을 분류하는 코드가 술어가 되므로 계속 동작한다** — 이 SPEC은 그 능력을 회수하지 않는다. 판별기가 다룰 수 없는 입력 형태가 생기면 그것은 조용한 거절이 아니라 **선언되지 않은 경계**이며 SPEC 결함으로 다룬다.
 - **REQ-FILEARG-020** `[Unwanted]` The 판별기 **shall not** 암묵적 `else` 가지를 둔다 — 어떤 바이트가 어느 종류로 가는지는 **선언된 술어의 결과로만** 정해지고, 표 어디에도 없는 경로로 흘러가는 분기는 존재하지 않는다. 이 성질은 **조건과 무관하게 언제나** 성립하며, 안전판(REQ-FILEARG-018)이 발동하든 하지 않든 똑같이 검사된다 — 조건부 AC 안에 넣어 두면 폴백이 발화하지 않는 동안 아무도 확인하지 않기 때문이다(`AC-FILEARG-024`).
-- **REQ-FILEARG-021** `[Ubiquitous]` The 위임 술어 **shall** 판독기가 낼 수 있는 **세 가지 결과를 모두** 신원 판정으로 번역한다: **① 헤더 미발견**(`_best_header_candidate` → `-1`) → 신원 **False** · **② 판독기 예외** → 신원 판정으로 번역하며 삼키지도 그대로 터뜨리지도 않는다 · **③ 판독기의 정상 거절**(`not_patch_source`가 구체적 사례) → 이것은 "패치 원본이 아니다"이지 **"Vectorworks가 아니다"가 아니므로** 신원 False로 읽지 않고 대상 툴로 그대로 통과시킨다. 아울러 **`.mvr` 판정의 소유자를 정확히 부른다** — 그 분기는 `server/vwx/reader.py`에 **없고**(`grep -c "mvr\|MVR"` → 0) `server/orchestrator/tools.py:2859-2860`(`is_mvr = SCENE_ENTRY in archive.namelist()`)와 `server/vwx/mvr.py`에 있다. `openpyxl` 두 경로를 모두 닫는다: 설치 시 `KeyError: '[Content_Types].xml'`, 미설치 시 `unapproved_dependency` 안내 — **후자가 더 나쁘다**(`.mvr`은 xlsx가 아니므로 설치해도 아무것도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다). 어느 경로도 `.mvr`을 xlsx로 오인해 들어가지 않는다.
+- **REQ-FILEARG-021** `[Ubiquitous]` The `vectorworks` 신원 술어 **shall** **전역 함수(total function)**로 정의된다 — 어떤 바이트가 들어와도 True 또는 False **하나의 값**을 낸다. 형태는 **두 갈래**다:
+
+  ```
+  vectorworks 술어 = zip 이면  → SCENE_ENTRY 검사 (server/orchestrator/tools.py:2861 소유)
+                     아니면    → _best_header_candidate(rows)[0] >= 0 (server/vwx/reader.py:158)
+  ```
+
+  **두 갈래인 이유(D1)**: `.mvr`은 `_best_header_candidate`에 **도달하지 못한다**. `PK` 매직이 `reader.py:360`에서 `_read_xlsx`로 라우팅하므로 `_process_rows`가 아예 호출되지 않는다. 한 갈래로만 쓴 v0.4.0의 문면은 `.mvr`에 대해 **정의되지 않은 함수**였다.
+
+  판독기 쪽 갈래가 낼 수 있는 결과는 **넷**이며, 각각에 **값을 배정한다**(금지가 아니라 값이다): ① **헤더 미발견**(`_best_header_candidate` → `-1`) → **False** · ② **판독기 예외** → **False**(예외는 "신원을 확인하지 못했다"로 번역한다 — 삼키지도 그대로 터뜨리지도 않으며, 값 없이 통과시키지 않는다) · ③ **판독기의 정상 거절**(`not_patch_source`) → **True**. 이것은 "패치 원본이 아니다"이지 **"Vectorworks가 아니다"가 아니므로** 신원을 부정하지 않고, 그 값은 대상 툴로 그대로 통과시킨다 · ④ **`unapproved_dependency`를 실은 구조적 정상 반환** → **True**. **이것이 오늘 `.mvr`이 실제로 만들어 내는 결과이며** v0.4.0의 REQ-021에는 아예 없던 경우다 — openpyxl 미설치 시 판독기는 예외가 아니라 정중한 안내를 정상 반환으로 낸다. 신원 술어는 이것을 **False로 읽지 않는다**(그렇게 읽으면 `.mvr`이 `unknown_sheet_kind`로 떨어진다).
+
+  **`openpyxl` 두 경로 모두 닫는다**: 설치 시 `KeyError: '[Content_Types].xml'`, 미설치 시 `unapproved_dependency`. **후자가 더 나쁘다** — `.mvr`은 xlsx가 아니므로 설치해도 아무것도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다. 두 경로 다, zip 갈래가 `tools.py:2861`의 `SCENE_ENTRY` 검사로 먼저 갈라서 xlsx 경로에 **들어가지 않게** 막는다.
 - **REQ-FILEARG-022** `[Unwanted]` The 판별기 **shall not** **사용성 술어를 신원 판정에 쓴다**. 구체적으로 `has_address_family`·`match_count`·`not_patch_source` 같은 "패치를 뽑을 수 있는가"를 묻는 함수는 판별의 입력이 아니다 — 그 물음의 **축이 신원과 다르며**, 축이 다른 함수는 느슨한 쪽이 아니라 **양방향으로 틀린다**(§G.1: LX-SEQ 패치 CSV를 VW라 주장하고, 주소 열 없는 진짜 VW 파일을 놓친다). 사용성 판단은 **대상 툴이 한다**.
 - **REQ-FILEARG-023** `[Event-driven]` **When** 입력이 `unknown_sheet_kind`로 거절되면서 **헤더 행이 없는 균일폭 표의 형상**을 보이면, the 시스템 **shall** 조건부 힌트를 함께 낸다 — "헤더 행이 없는 균일폭 표로 보인다. **Vectorworks에서 내보낸 것이라면** 'Export field names as first record'를 켜고 다시 내보내라." **조건절이 핵심이다**: 오늘 이 안내는 **무조건** 나가므로 장바구니 목록에게도 Vectorworks에서 재수출하라고 말한다. 이 힌트는 **형상 관측**이지 **신원 주장이 아니며**, 힌트를 낸다고 해서 그 바이트가 `vectorworks`로 분류되는 것은 아니다(분류는 여전히 `unknown_sheet_kind`다).
 
@@ -128,6 +151,16 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-VWX-001, SPEC-COPILOT-IMGLA
 ---
 
 ## D. 제외 범위 (Out of Scope)
+
+### Out of Scope — 바이트를 나르는 층 전부 (SHEETPIPE가 소유)
+
+v0.5.0 분할선이다(§A.4). A는 "이것은 무엇인가"까지만 답하고, 그 답을 받아 바이트를 옮기는 일은 하지 않는다.
+
+- 세션 슬롯(바이트 · sha256 · 종류 보관 · 교체 · 초기화)을 정의하거나 만들지 않는다.
+- 업로드 프레임 · 세션 핸들러 · 저장 전용 규칙 · 업로드 직후 네 필드 표시를 다루지 않는다.
+- 래퍼 툴 등재 · 인자 화이트리스트 · `file_content_base64` 주입 · 거절 사유 3종을 다루지 않는다.
+- UI 첨부 라우터 · 프로토콜 프레임 · 확장자 목록을 건드리지 않는다.
+- 위 항목들의 요구 번호(`REQ-FILEARG-006` · `009`~`015`)는 A에서 **비어 있는 자리**이며, A는 B의 번호 체계를 인용하지 않는다.
 
 ### Out of Scope — 002/003/004 시트의 파서와 핸들러
 
@@ -162,9 +195,11 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-VWX-001, SPEC-COPILOT-IMGLA
 | `DiscriminationPredicate` | 두 갈래 중 하나. **(A) 열 집합 술어** — `kind` + **(i) 정확 열 집합**(`exact_columns[]`, 헤더의 정규 열 집합이 그것과 정확히 같을 때만 일치) 또는 **(ii) 포함·배제 쌍**(`required_columns[]` + `forbidden_columns[]`); 오늘의 포함 검사는 (ii)에서 배제 목록이 빈 경우다. **(B) 위임 술어** — 기존 판독기의 판정을 호출하는 호출 가능한 것(바이트를 받아 "내 것인가"를 답한다) | REQ-FILEARG-016 · REQ-FILEARG-019 · §G |
 | `SheetKindRow` | `kind`, `predicate`(위 둘 중 하나), `target`(툴 이름 또는 기존 세션 경로), `passthrough_args[]` | REQ-FILEARG-007 · §G |
 | `Discrimination` | `matched[]`, `count`, `header_read[]`, `filename_hint`, `outcome ∈ {resolved, unknown_sheet_kind, ambiguous_sheet_kind}` | REQ-FILEARG-002~004 |
-| `UploadedSheet`(세션 슬롯) | `content_base64`, `sha256`, `byte_length`, `kind`, `file_name`, `received_at` | REQ-FILEARG-006 |
-| 업로드 직후 보고 | `kind`, `sha256`, `byte_length`, `rows_total`(+`parsed`, `rejected`) | REQ-FILEARG-010 |
-| 래퍼 툴 거절 사유 | `no_uploaded_sheet` · `kind_mismatch` · `no_target_tool` · `unknown_sheet_kind` · `ambiguous_sheet_kind` (닫힌 집합) | REQ-FILEARG-013 |
+| 판별 거절 사유 | `unknown_sheet_kind` · `ambiguous_sheet_kind` (닫힌 집합 — 판별기가 낼 수 있는 전부) | REQ-FILEARG-003 · 004 |
+| 판별 시점 설정 오류 | `no_target_tool`(행이 지목한 대상이 등록 툴 집합에 없음 — **판별 후보에서 제외 + 오류 보고**) | REQ-FILEARG-008 · AC-FILEARG-023 |
+| 조건부 힌트 | 헤더 없는 균일폭 형상 관측 시 재수출 안내(신원 주장 아님) | REQ-FILEARG-023 |
+
+> **여기서 빠진 개체는 B가 소유한다.** 세션 슬롯(`UploadedSheet`)과 업로드 직후 보고(넷)와 래퍼 툴 거절 사유는 **바이트를 나르는 층**의 개체이므로 `SPEC-COPILOT-SHEETPIPE-001`이 정의한다. A는 그것들을 참조하지 않는다.
 
 ---
 
@@ -246,23 +281,36 @@ vectorworks  = 신원( _best_header_candidate(rows)[0] >= 0 )
 - **파서·핸들러 0건**도 그대로다. 신원 술어는 `_best_header_candidate`를 **호출**할 뿐이고, 배제 절은 이미 표에 있는 서명을 재사용한다.
 - **`.mvr` · `.xlsx`가 계속 동작한다.** 단, **그 분기는 `reader.py`에 없다**(F1) — 아래 §G.4가 소유한다.
 
-### G.4 위임 계약 — 소유자가 말하는 전체 형상 (F1)
+### G.4 위임 계약 — 두 갈래 전역 함수 (F1 · D1)
 
-**`.mvr` 분기는 `reader.py`에 없다.** 실측: `grep -c "mvr\|MVR" server/vwx/reader.py` → **0**. 판정은 **`server/orchestrator/tools.py:2859-2860`**(`with zipfile.ZipFile(...) as archive:` → `is_mvr = SCENE_ENTRY in archive.namelist()`)와 `server/vwx/mvr.py`에 있다. v0.3.0이 "판독기에 위임한다"고 적은 것은 **그 판독기가 무엇을 판정하는지 재지 않고 쓴 문장**이었다 — B3와 같은 부류의 오귀속이 두 번째다.
+**`.mvr`은 `_best_header_candidate`에 도달하지 못한다.** `PK` 매직이 `server/vwx/reader.py:360`에서 `_read_xlsx`로 라우팅하므로 `_process_rows`가 아예 호출되지 않는다. v0.4.0이 술어를 `_best_header_candidate(rows)[0] >= 0` 한 줄로 적은 것은 **`.mvr`에 대해 정의되지 않은 함수**였다 — 값이 없는 자리가 남아 있었다는 뜻이다.
 
-위임 술어가 마주하는 결과는 **셋**이며, 셋 다 신원 판정의 입력으로 다뤄야 한다.
+**교정: 두 갈래 전역 함수.** 어떤 바이트가 들어와도 True/False 하나가 나온다.
 
-1. **헤더를 못 찾음** — `_best_header_candidate` → `-1`. 신원 술어는 **False**(그 바이트는 VW라고 말할 수 없다).
-2. **판독기가 예외를 던짐** — 예외를 신원 판정으로 번역한다. 삼키지도, 그대로 터뜨리지도 않는다.
-3. **판독기가 정상적으로 거절함** — `not_patch_source`가 구체적 사례다. 이것은 **"패치 원본이 아니다"**라는 뜻이지 **"Vectorworks가 아니다"**가 아니다. 신원 술어는 이 값을 **False로 읽지 않으며**, 대상 툴로 그대로 통과시킨다.
+```
+vectorworks 술어 = zip 이면  → SCENE_ENTRY 검사 (server/orchestrator/tools.py:2861 소유)
+                   아니면    → _best_header_candidate(rows)[0] >= 0 (server/vwx/reader.py:158)
+```
 
-**`openpyxl` 두 경로 모두 닫는다.** `.mvr`을 xlsx 경로로 보내면 — 설치돼 있으면 `KeyError: '[Content_Types].xml'`, 없으면 정중한 `unapproved_dependency`("openpyxl을 설치하라")가 난다. **정중한 실패가 더 나쁘다** — `.mvr`은 xlsx가 아니므로 openpyxl을 깔아도 아무것도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다. 두 경로 다 신원 술어가 `.mvr`을 xlsx로 오인하지 않도록 막는다(§G.4 1항의 zip 판정이 `tools.py:2860`을 거치는 이유다).
+**`.mvr` 판정의 소유자.** 그 분기는 `server/vwx/reader.py`에 **없다** — 실측 `grep -c "mvr\|MVR" server/vwx/reader.py` → **0**. 결정 줄은 `server/orchestrator/tools.py:2861`(`is_mvr = SCENE_ENTRY in archive.namelist()`)이며, 인용 범위는 **`2860-2861`**이다(2860은 `with zipfile.ZipFile(...) as archive:`). v0.4.0이 `2859-2860`으로 적은 것은 **결정 줄을 빗나간 좌표**였고, `AC-FILEARG-022` ④가 그 좌표를 인수 근거로 삼고 있었으므로 **그대로면 통과할 수 없었다**. 나머지는 `server/vwx/mvr.py`가 소유한다.
 
-**서명·술어는 정본을 참조하고 사본을 만들지 않는다.** `patch`는 `CANONICAL_COLUMNS`를, `vectorworks`는 `_best_header_candidate`의 판정을 **호출**한다. 열 이름도 판정 논리도 이 표에 옮겨 적지 않는다.
+**판독기 갈래의 결과는 넷이며, 각각에 값을 배정한다** — 금지가 아니라 **값**이다(v0.4.0의 ②는 "삼키지도 터뜨리지도 않는다"는 **금지문**이라 값이 없었다).
+
+| # | 결과 | 값 | 왜 |
+|---|---|---|---|
+| ① | 헤더 미발견 (`_best_header_candidate` → `-1`) | **False** | 그 바이트를 VW라고 말할 근거가 없다 |
+| ② | 판독기 예외 | **False** | 예외는 "신원을 확인하지 못했다"로 번역한다. 삼키지도 그대로 터뜨리지도 않으며, **값 없이 통과시키지 않는다** |
+| ③ | 정상 거절 (`not_patch_source`) | **True** | "패치 원본이 아니다"이지 **"Vectorworks가 아니다"가 아니다**. 신원을 부정하지 않고 그대로 대상 툴로 통과시킨다 |
+| ④ | `unapproved_dependency`를 실은 **구조적 정상 반환** | **True** | **오늘 `.mvr`이 실제로 만들어 내는 결과**이며 v0.4.0의 REQ-021에는 아예 없던 경우다. openpyxl 미설치 시 판독기는 예외가 아니라 정중한 안내를 정상 반환으로 낸다 — 이것을 False로 읽으면 `.mvr`이 `unknown_sheet_kind`로 떨어진다 |
+
+**`openpyxl` 두 경로 모두 닫는다.** 설치 시 `KeyError: '[Content_Types].xml'`, 미설치 시 `unapproved_dependency`. **후자가 더 나쁘다** — `.mvr`은 xlsx가 아니므로 설치해도 아무것도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다. 두 경로 다, zip 갈래가 `tools.py:2861`에서 먼저 갈라 xlsx 경로에 **들어가지 않게** 막는다.
+
+**서명·술어는 정본을 참조하고 사본을 만들지 않는다.** `patch`는 `CANONICAL_COLUMNS`를, `vectorworks`는 위 두 판정을 **호출**한다. 열 이름도 판정 논리도 이 표에 옮겨 적지 않는다.
 
 **후속 SPEC이 하는 일은 이 표에 행을 더하는 것이다.** 002 · 003 · 004는 각각 자기 파서와 대상 툴을 만들고 `{kind, 술어, 대상}` 줄을 추가한다. 배제 절은 레지스트리를 참조하므로 **문면을 고칠 필요가 없다**. 예약된 이름이 표에 없는 동안 그 종류의 시트는 REQ-FILEARG-008에 따라 `unknown_sheet_kind`로 거절된다.
 
 ---
+
 ## H. 참조 구현
 
 | 참조 | 좌표 | 무엇을 계승하는가 |

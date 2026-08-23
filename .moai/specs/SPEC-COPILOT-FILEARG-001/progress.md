@@ -6,15 +6,16 @@
 
 ## §0 인수인계 — 여기서 시작한다 (2026-08-22)
 
-### 한 문단
-운영자가 앱의 첨부 버튼으로 고른 LX-SEQ 패치 CSV의 바이트가 `import_lxseq_patch`의 `file_content_base64` 인자까지 도달하게 만드는 카드다. 오늘 그 길은 없고, 이미지가 아닌 파일은 전부 Vectorworks 경로로 조용히 흘러간다. 만드는 것은 넷이다 — **판별기**(레지스트리 전체를 훑어 계수; 0건·2건 이상은 거절) · **`종류 → 판별 술어 → 대상` 레지스트리**(오늘 행 둘: `patch`는 열 집합 술어, `vectorworks`는 기존 판독기 위임) · **세션 슬롯 하나**(담기만 하고 실행하지 않는다) · **바이트를 만지지 않는 래퍼 툴**. 후속 카드 002/003/004는 표에 행 하나씩만 더한다.
+
+**분할 A(판별기)** — "이것은 무엇인가"에만 답한다. 업로드된 바이트를 받아 **술어 레지스트리**로 종류를 판정하고, 0건이면 `unknown_sheet_kind` · 2건 이상이면 `ambiguous_sheet_kind`로 거절한다. 술어는 둘이다 — `patch`는 **열 집합 서명**(정규 9열 포함 검사), `vectorworks`는 **신원 술어**(zip이면 `SCENE_ENTRY`, 아니면 `_best_header_candidate >= 0`) **AND NOT** 다른 행 서명 일치. **사용성**("패치를 뽑을 수 있는가")은 판별에 쓰지 않는다 — 대상 툴이 판단한다. 그 바이트를 실제로 **나르는 일**(세션 슬롯 · 래퍼 툴 인자 · UI 배선)은 `SPEC-COPILOT-SHEETPIPE-001`이 **A 통과 뒤** 맡는다. 후속 카드 002/003/004는 레지스트리에 행 하나씩만 더한다.
 
 ### 읽는 순서
 
-1. `spec.md` §A(사전 확정 사실 7건) → **§G.1(왜 열 집합으로는 Vectorworks를 표현할 수 없는가 — 감사 FAIL의 뿌리)** → §F(세 성질) → §G 부록
-2. `plan.md` §A.1(뒤집힐 수 있는 결정) → §A.3 **결정 K** → §A.4(열린 결정 **0건**)
-3. `acceptance.md` §C(AC **24건**과 검증 명령)
-4. `research.md` **§10**(감사 시정 근거) → §9(리드 실측) → §7(갭)
+1. `spec.md` §A.4(분할 — 무엇이 어디로 갔나) → **§A.5(A가 Tier L인 이유)** → **§G.1(축이 다르다 — 감사 FAIL의 뿌리)** → §G.4(위임 계약 두 갈래) → §F(세 성질)
+2. `plan.md` §A.1(뒤집힐 수 있는 결정) → §A.3 **결정 K · L** → §A.4(열린 결정 **0건**)
+3. `acceptance.md` §C(AC **19건**과 검증 명령 · 표 밖 4건의 이유)
+4. `research.md` **§11**(F2 뿌리 · 신원 열 재계산) → §10 → §9 → §7(갭)
+
 
 ### 인수인계 시 반드시 알아야 할 함정 6건
 
@@ -27,7 +28,7 @@
 
 ### 다음 담당자가 먼저 결정할 것
 
-열린 결정은 **없다**(I·J = 2026-08-22 리드 재정 · **K·L** = 감사 FAIL 시정 2026-08-23 — `plan.md` §A.3, 답은 아래 "M0 — Kickoff 결정 기록"). 다음 담당자가 기다리는 것은 결정이 아니라 **운영자의 Implementation Kickoff Approval**이다 — M1은 `cycle_type=tdd` 구현이므로 승인 전에는 M0도 시작하지 않는다. 승인 뒤 M1이 실측할 것: ① **`ASSUMPTION-75-b`** — LX-SEQ 패치 헤더가 `vectorworks` 신원 술어를 만족하지 **않는가**(F2가 통과한 바로 그 미측정 방향 · `AC-FILEARG-025`) ② 신원 술어가 `server/tests/fixtures/vwx/` 페이로드 10개를 흡수하는가(못 하면 안전판 REQ-FILEARG-018) ③ 확장 형식이 프리셋 4종을 가르는가(`AC-FILEARG-018`).
+열린 결정은 **없다**(I·J = 리드 재정 · **K·L** = 감사 FAIL 시정 · **분할** = 2차 델타 감사 시정 — `plan.md` §A.3, 답은 아래 "M0 — Kickoff 결정 기록"). 다음 담당자가 기다리는 것은 결정이 아니라 **운영자의 Implementation Kickoff Approval**이다 — M1은 `cycle_type=tdd` 구현이므로 승인 전에는 M0도 시작하지 않는다. 승인 뒤 M1이 실측할 것: ① **`ASSUMPTION-75-b`** — LX-SEQ 패치 헤더가 `vectorworks` 신원 술어를 만족하지 **않는가**(F2가 통과한 바로 그 미측정 방향 · `AC-FILEARG-025`) ② 신원 술어가 `server/tests/fixtures/vwx/` 페이로드 10개를 흡수하는가(못 하면 안전판 REQ-FILEARG-018) ③ 확장 형식이 프리셋 4종을 가르는가(`AC-FILEARG-018`). **B(`SPEC-COPILOT-SHEETPIPE-001`)는 A가 통과할 때까지 착수하지 않는다.**
 
 ---
 
@@ -48,7 +49,14 @@
 | **결정 J** — 무엇을 넓히는가 | **서명 형식의 표현력을 넓히고 레지스트리 행은 넓히지 않는다** (2026-08-22 리드 재정). 형식은 정확 열 집합과 포함·배제 쌍을 표현해야 하며(REQ-016), 프리셋·group·fx·cue-ex의 서명은 쓰지 않는다(REQ-017). 형식 충분성은 합성 서명 픽스처로 증명한다(AC-018) |
 | **결정 K** — 레지스트리 행이 드는 것 | **판별 술어**다 (2026-08-23, 독립 감사 FAIL 시정). `patch`=열 집합 술어 · `vectorworks`=기존 판독기 위임(`server/vwx/reader.py`). 열 집합 서명으로는 zip(`.mvr`·`.xlsx`)도 탐색된 헤더도 표현할 수 없어, 그대로 두면 살아 있는 업로드를 회수한다. 치른 값: 표가 순수 데이터가 아니게 된다(spec.md §G.1) |
 | **결정 L** — 술어가 무엇을 묻는가 | **신원**이다 (2026-08-23, 델타 재감사 FAIL 0.62 시정). `vectorworks` = `_best_header_candidate >= 0` **AND NOT** 다른 행 서명 일치; 사용성(`has_address_family`·`not_patch_source`)은 판별에서 뺀다. 결정 K가 위임한 함수는 **다른 물음**(패치 가능성)에 답하므로 **양방향으로 틀렸다** — LX-SEQ는 VW 어휘의 **부분집합**이라 주소 계열 검사로는 영원히 갈 수 없다 |
-| 결정 K의 위임 대상 | **정정됨** — "판독기에 위임"이 아니라 **`_best_header_candidate`(`reader.py:158`) 호출**이다. `.mvr` 판정은 `reader.py`에 **없다**(`grep -c "mvr\|MVR"` → 0) — `tools.py:2859-2860` + `mvr.py`가 소유(F1) |
+| **분할 (v0.5.0)** | 합본이 Tier M 예산(REQ 16 / AC 16)을 넘어 **둘로 나눴다** — 본 SPEC = **A(판별기)** REQ 15 · AC 19 · Tier **L** · 임계 **0.85**; **B(전달경로)** = `SPEC-COPILOT-SHEETPIPE-001` REQ 8 · AC 11 · Tier M · **A 통과 뒤 착수**. 감사 차단 결함은 전부 A에 있었고 B는 지적 0건이다 |
+| **A가 Tier L인 근거** | **성격이다, 크기가 아니다.** A는 `REQ-FILEARG-017`이 LXSEQ-002/003/004에게 행 추가를 예약한 **레지스트리 계약을 정의**하므로 constitutional이다. **AC가 10건이어도 Tier L이다** — 예산에 맞춰 티어를 고른 것이 아니다(`spec.md` §A.5) |
+| **`AC-FILEARG-009` 분할** | 두 요구를 동시에 섬기던 기준을 쪼갰다 — **A는 순서 단언**(판별이 파싱하지 않는다; ID 유지), **B는 표시 단언**(업로드 직후 네 필드; B 자기 번호) |
+| **D1 — 위임 계약** | **두 갈래 전역 함수**로 확정. zip이면 `SCENE_ENTRY`(`tools.py:2861`), 아니면 `_best_header_candidate >= 0`. 판독기 결과 **넷**에 값 배정(미발견 F · 예외 F · `not_patch_source` T · **`unapproved_dependency` T** — 넷째는 v0.4.0에 없던 경우이며 오늘 `.mvr`이 실제로 내는 결과다) |
+| **D5 — 좌표 정정** | `tools.py:2859-2860` → **`2860-2861`**, 결정 줄은 **2861**. 문서 7곳 전부 교정(spec 3 · research 2 · acceptance 1 · progress 1). `AC-FILEARG-022` ④가 이 좌표를 인수 근거로 써서, 그대로면 통과 불가였다 |
+| **D3 — 세 번째 오귀속** | `plan.md` §E가 VW 서명 소유자를 `columns.py`로 되살려 두었다 — 결정 K가 오귀속으로 판정하고 L이 `reader.py`로 옮긴 그 문장이다. **같은 SPEC이 한 문서에서 고치고 다른 문서에서 되살린** 자리이며 하필 다음 카드가 먼저 읽는 절이었다. 교정 완료 |
+| **D4 — AC-027 주장 축소** | "임계 2 고정"은 사실이 아니다. T=1로 낮추면 뒤집히는 것은 무관 대조군이 아니라 **진짜 VW 파일**(점수 1)이고, **T=3은 코퍼스 전체가 초록**이다(2~4점 입력 없음). **하한만** 고정된다고 다시 적었다 |
+| 결정 K의 위임 대상 | **정정됨** — "판독기에 위임"이 아니라 **`_best_header_candidate`(`reader.py:158`) 호출**이다. `.mvr` 판정은 `reader.py`에 **없다**(`grep -c "mvr\|MVR"` → 0) — `tools.py:2860-2861` + `mvr.py`가 소유(F1) |
 | `ASSUMPTION-75` | **재개방** — v0.2.0이 **한 방향만**(VW 헤더 → patch 서명) 재고 닫은 것이 F2를 통과시켰다. 이제 **75-a**(VW 헤더 ↛ patch 서명, 참) · **75-b**(LX-SEQ 헤더 ↛ vectorworks 술어, **M1 실측 필요**)를 각각 단언한다 — `AC-FILEARG-025` |
 | 헤더 없는 `.txt`의 처분 | **`unknown_sheet_kind`가 정답이다** — 그 파일은 오늘 패치를 만들지 못한다(`fixtures/vwx/README.md:85-95`). 잃는 것은 능력이 아니라 문구 하나이며, **조건부** 재수출 힌트로 보존한다(REQ-023 · AC-029) |
 | 결정 J의 적용 범위 | **열 집합 술어에 한정** — 결정 K 이후 위임 술어는 열을 세지 않으므로 형식 확장의 대상이 아니다 |
@@ -68,23 +76,23 @@
 plan_status: audit-pending   # plan-audit 미실시 · Implementation Kickoff Approval 미통과(M0 착수 전제)
 plan_complete_at: 2026-08-22
 plan_audit: "미실시"
-spec_version: "0.4.0"
-tier: M
+spec_version: "0.5.0"
+tier: L                     # 분할 A는 constitutional (레지스트리 계약 정의) — 크기가 아니라 성격. 통과 임계 0.85
 base_sha: 6296af3
 baseline_measured: "미측정 — 의도적으로 비워 둔 칸이다(미완성이 아니다). plan 세션은 전체 스위트를 실행하지 않았고, 이 트리를 두고 돌던 수치 중 최소 하나는 틀렸다(0 failed 로 전달됐으나 실제로는 실패 1건). 다른 트리·다른 시점의 값을 이월하지 않는다 — M0가 이 워크트리 6296af3에서 직접 잰다."
 artifacts: [spec.md, plan.md, acceptance.md, research.md, progress.md]
-requirements: 23            # REQ-FILEARG-001~023 (021 위임 계약 · 022 사용성 술어 금지 · 023 조건부 힌트 = 델타 감사 시정)
-acceptance_criteria: 29     # AC-FILEARG-001~029 (앱 실기 1: AC-017 · 조건부 1: AC-021 · 신설 025~029)
-milestones: 6               # M0~M5 (M0·M5 cycle_type=none)
+requirements: 15            # REQ-FILEARG-001~005 · 007 · 008 · 016~023 (006 · 009~015는 분할로 SHEETPIPE로 이동 — 번호 재사용 금지)
+acceptance_criteria: 19     # AC-FILEARG-001~006 · 009(순서 구간) · 018~029 (조건부 1: AC-021 · 앱 실기 0 — B가 소유)
+milestones: 2               # M0(게이트, cycle_type=none) · M1(판별기·레지스트리, tdd). M2~M5는 SHEETPIPE로 이동
 assumptions_open: 2         # ASSUMPTION-75(재개방 — 75-b 미검증) · 76. 77은 7,258 B 실측으로 POSITIVE 닫힘
 decisions_closed: 12        # plan.md §A.3 A~L (I·J = 리드 재정 · K = 감사 FAIL 시정 · L = 델타 감사 FAIL 시정)
 clarifications_open: 0      # 결정 I로 닫힘 — 답은 "M0 — Kickoff 결정 기록"
-live_sessions_planned: 1    # M5, 사용자 수행(앱 실기)
+live_sessions_planned: 0    # A는 콘솔도 앱도 건드리지 않는다 — 실기 확인은 B(SHEETPIPE)가 소유
 new_runtime_dependencies: 0
 new_data_files: 0
 known_baseline_failure: "server/tests/test_overlap_preserve.py::TestTouchedFilesPassLint::test_ruff_format_reports_no_change — 착수 시점 기존 실패 1건. 원인은 t20(6296af3)이 server/tests/test_pipeline_out_paths.py를 ruff format 없이 들여온 것. 이 SPEC 범위 밖이며 여기서 고치지 않는다(다른 레인이 별도 카드로 처리 중). M0가 실행 시점에 이미 고쳐져 있으면 그 상태를 관측한 대로 적는다."
 base_advance: "eb436e8 → 6296af3 (3커밋: e7a8e90 t17 · 6296af3 t20). 문서의 코드 줄번호는 한 세대 낡았다 — M0가 토큰 앵커로 재확인한다."
-tool_count_delta: "34 → 35 (래퍼 툴 1종)"
+tool_count_delta: "0 (A는 툴을 등재하지 않는다 — 34 → 35 래퍼 툴 등재는 SHEETPIPE 몫)"
 ```
 
 ## §E.2 Run-phase Evidence
@@ -101,9 +109,9 @@ _<pending sync-phase>_
 
 ## §F.1 Phase 4 Mode Selection
 
-- **tier**: M · **scope**: 약 15파일(신규 6 · 추가 5 · 수정 4) · **domain**: 2(Python 백엔드 · TypeScript UI) · **parallel benefit**: LOW.
-- 평가: `direct` 미선택(신규 모듈 + 프레임 + 툴 배선, 사소하지 않다) · `fanout` 미선택(조사형이 아니고, 도메인이 둘이지만 UI는 서버 프레임이 확정된 뒤에야 배선된다) · `sweep` 미선택(기계적 일률 변환이 아니다) · **`serial` 선택**.
+- **tier**: **L**(constitutional — 레지스트리 계약 정의; 크기가 아니라 성격, `spec.md` §A.5) · **통과 임계 0.85** · **scope**: 3파일(신규 `server/sheets/__init__.py` · `server/sheets/registry.py` · `server/tests/test_sheets_registry.py`) · **domain**: 1(Python 백엔드 — UI 0) · **parallel benefit**: LOW.
+- 평가: `direct` 미선택(신규 모듈 + 술어 설계, 사소하지 않다) · `fanout` 미선택(도메인 1, 조사형 아님) · `sweep` 미선택(기계적 일률 변환 아님) · **`serial` 선택**.
 - **Decision: serial**
-- **Justification**: M1(판별기·레지스트리) → M2(슬롯·프레임) → M3(래퍼 툴) → M4(UI 배선)가 앞 산출물을 순차로 소비하는 사슬이며 코딩 중심 작업이다. `plan.md` §F의 사전 권고와 일치한다.
+- **Justification**: 분할 후 A는 M0(게이트) → M1(판별기·레지스트리) 둘뿐이고 한 도메인·한 모듈이다. 마일스톤이 둘이므로 병렬화할 사슬 자체가 없다. 분할 전 근거(M1→M2→M3→M4 데이터 사슬)는 **B로 이관**됐다 — 세션 슬롯·래퍼 툴·UI 배선은 `SPEC-COPILOT-SHEETPIPE-001`이 자기 모드 선택을 기록한다.
 
-_M1 이하 — manager-develop 소유, 착수 예정_
+_M1 — manager-develop 소유, Implementation Kickoff Approval 통과 후 착수 예정_

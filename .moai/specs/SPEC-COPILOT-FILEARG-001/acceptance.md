@@ -1,6 +1,6 @@
 # SPEC-COPILOT-FILEARG-001 — 인수 기준 (acceptance)
 
-문서 상태: draft (v0.4.0, 2026-08-23 — 델타 재감사 FAIL 0.62 시정) · Tier M · AC **29건**(오프라인 28 + 앱 실기 1 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
+문서 상태: draft (v0.5.0, 2026-08-23 — 2차 델타 감사 FAIL 0.79 시정: SPEC 분할 · 본 문서는 **분할 A(판별기)**) · **Tier L · 통과 임계 0.85** · AC **19건**(전부 오프라인 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
 
 > **참조 규약**: 정본(spec.md · 본 문서)은 줄번호로 인용하지 않고 안정 토큰만 쓴다. `파일:줄`은 코드·타 SPEC 아티팩트에만 쓴다.
 >
@@ -8,29 +8,32 @@
 
 ---
 
-## §A. 검증의 축
+## §A. 검증의 축 (분할 A)
 
 | 축 | 내용 | 왜 축인가 |
 |---|---|---|
-| ① 판별의 정직성 | 헤더만으로 정하고, 못 정하면 못 정했다고 말한다 | 잘못 라우팅된 패치 CSV는 잘못된 패치이고, 그것은 무대 사고다 |
-| ② 담기만 함 | 업로드는 아무것도 실행하지 않는다 | 대조(sha256)가 가능해지기 전에 움직이면 보루가 무의미해진다 |
-| ③ 모델은 바이트를 만지지 않는다 | 래퍼 스키마에 바이트 인자가 없다 | `REQ-LXSEQ-016` 계승 — 채팅 본문이 바이트 출처가 되는 경로를 원리적으로 막는다 |
+| ① 판별의 정직성 | 술어로만 정하고, 못 정하면 못 정했다고 말한다 | 잘못 라우팅된 패치 CSV는 잘못된 패치이고, 그것은 무대 사고다 |
+| ② 신원과 사용성의 분리 | "무엇인가"와 "패치를 뽑을 수 있는가"를 섞지 않는다 | 축을 섞으면 술어가 **양방향으로** 틀린다(§G.1) |
+| ③ 술어는 전역 함수다 | 어떤 바이트에도 값을 낸다 — zip · 헤더 없음 · 예외 · 정중한 실패 전부 | 정의되지 않은 자리가 남으면 `.mvr`이 조용히 떨어진다(D1) |
 | ④ 한 줄로 늘어남 | 002/003/004는 표에 행 하나만 더한다 | 이 카드의 값어치는 다음 세 카드에서 회수된다 |
+
+> **바이트를 나르는 층의 축(저장 전용 · 모델이 바이트를 만지지 않음)은 `SPEC-COPILOT-SHEETPIPE-001`이 소유한다.** A는 그 축을 검증하지 않는다.
 
 ---
 
-## §B. 대표 시나리오 (Given-When-Then)
+## §B. 대표 시나리오 (Given-When-Then · 분할 A)
 
-**시나리오 1 — LX-SEQ 패치 CSV 첨부**: **Given** 앱이 떠 있고 슬롯이 비어 있으며 운영자가 실물 패치 CSV를 고름, **When** 첨부 버튼으로 올리면, **Then** 종류 `patch` · sha256 · byte_length · 행 수 86이 표시되고, 콘솔 접촉과 툴 실행은 0건이며, 슬롯에 바이트가 담겨 있다.
+**시나리오 1 — 실물 LX-SEQ 패치 CSV**: **Given** 정규 9열을 가진 실물 패치 CSV 바이트, **When** 판별하면, **Then** `count == 1` · 종류 `patch`다. `vectorworks` 신원 술어는 헤더를 찾으므로 **혼자서는 True이지만**, 배제 절이 그것을 걷어내어 `count == 1`이 된다(AC-025).
 
-**시나리오 2 — 열 이름이 하나 어긋난 CSV**: **Given** `FixtureType` 열이 `Fixture Type X`로 바뀐 CSV, **When** 올리면, **Then** `unknown_sheet_kind`로 거절되고 읽은 헤더 원문이 함께 표시되며, 슬롯은 이전 상태 그대로다.
+**시나리오 2 — 열 이름이 하나 어긋난 CSV**: **Given** `FixtureType` 열이 `Fixture Type X`로 바뀐 CSV, **When** 판별하면, **Then** `patch` 서명에 맞지 않는다. VW 신원 술어가 헤더를 찾으면 `vectorworks`가 되고, 못 찾으면 `unknown_sheet_kind`로 거절되며 읽은 헤더 원문이 함께 보고된다.
 
-**시나리오 3 — 상위 집합 충돌**: **Given** 서명 두 개가 등록된 표(시험용)와 한쪽 서명의 상위 집합인 헤더, **When** 판별하면, **Then** `count == 2`이고 `ambiguous_sheet_kind`로 거절되며 두 종류 이름이 모두 보고된다.
+**시나리오 3 — 상위 집합 충돌**: **Given** 서명 두 개를 **주입한 표**(등록 행 수와 무관)와 한쪽의 상위 집합인 헤더, **When** 판별하면, **Then** `count == 2`이고 `ambiguous_sheet_kind`로 거절되며 두 종류 이름이 모두 보고된다.
 
-**시나리오 4 — 업로드 없이 래퍼 호출**: **Given** 슬롯이 빈 세션, **When** 모델이 래퍼 툴을 부르면, **Then** `no_uploaded_sheet`로 거절되고 대상 툴은 호출되지 않는다.
+**시나리오 4 — 실물 `.mvr`**: **Given** ZIP 아카이브인 `demoshow_grandma3.mvr`(315,155 B), **When** 판별하면, **Then** zip 갈래가 `SCENE_ENTRY`를 검사해 `vectorworks`로 간다 — `unknown_sheet_kind`가 **아니고**, xlsx 경로에 들어가 `openpyxl` 오류를 내지도 않는다.
 
-**시나리오 5 — 업로드 뒤 미리보기**: **Given** 시나리오 1의 슬롯, **When** 운영자가 미리보기를 시켜 모델이 래퍼 툴을 `action="preview"`로 부르면, **Then** 래퍼가 `file_content_base64`를 주입해 `import_lxseq_patch`를 내부 호출하고, 모델이 받은 인자에는 base64가 없다.
+**시나리오 5 — 헤더 없는 균일폭 표**: **Given** 헤더 없는 실물 VW `.txt` 또는 탭 구분 장바구니 목록, **When** 판별하면, **Then** 둘 다 `unknown_sheet_kind`다(신원 술어 `idx = -1`). 다만 **조건부** 재수출 힌트가 함께 나가며, 그 힌트는 형상 관측이지 신원 주장이 아니다.
 
+---
 ---
 
 ## §C. 인수 기준
@@ -43,17 +46,9 @@
 | REQ-FILEARG-002 | AC-FILEARG-003 | M1 |
 | REQ-FILEARG-003 | AC-FILEARG-004 | M1 |
 | REQ-FILEARG-004 | AC-FILEARG-005 | M1 |
-| REQ-FILEARG-005 | AC-FILEARG-002 (별 구간) · AC-FILEARG-009 | M1 · M2 |
-| REQ-FILEARG-006 | AC-FILEARG-007 | M2 |
+| REQ-FILEARG-005 | AC-FILEARG-002 (별 구간) · AC-FILEARG-009 (**순서** 구간) | M1 |
 | REQ-FILEARG-007 | AC-FILEARG-006 · AC-FILEARG-019 | M1 |
 | REQ-FILEARG-008 | AC-FILEARG-006 (별 구간) · AC-FILEARG-023 | M1 |
-| REQ-FILEARG-009 | AC-FILEARG-008 | M2 |
-| REQ-FILEARG-010 | AC-FILEARG-009 | M2 |
-| REQ-FILEARG-011 | AC-FILEARG-010 · AC-FILEARG-013 | M3 |
-| REQ-FILEARG-012 | AC-FILEARG-012 | M3 |
-| REQ-FILEARG-013 | AC-FILEARG-011 | M3 |
-| REQ-FILEARG-014 | AC-FILEARG-014 · AC-FILEARG-015 | M4 |
-| REQ-FILEARG-015 | AC-FILEARG-016 | M4 |
 | REQ-FILEARG-016 | AC-FILEARG-018 | M1 |
 | REQ-FILEARG-017 | AC-FILEARG-020 | M1 |
 | REQ-FILEARG-018 | AC-FILEARG-021 | M1 |
@@ -63,33 +58,45 @@
 | REQ-FILEARG-022 | AC-FILEARG-028 | M1 |
 | REQ-FILEARG-023 | AC-FILEARG-029 | M1 |
 
-**REQ 23/23 커버, 누락 0.** 역추적표에 없는 AC는 5건이며 의도다 — AC-025~027은 REQ-007의 신원 술어를 여러 축에서 재는 보강 기준이고(정본 커버는 AC-006·AC-019), 나머지 2건은 — **AC-FILEARG-001**(M0 계약 확인 게이트) · **AC-FILEARG-017**(M5 앱 실기 — 형상 전체).
+**REQ 15/15 커버, 누락 0.**
+
+**[HARD] 표 밖 AC 4건과 그 이유(자기완결).** 이 표에 없는 AC는 넷이며 전부 의도다 — 다음 감사가 이것을 누락으로 세지 않도록 여기서 스스로 밝힌다.
+
+| 표 밖 AC | 왜 표에 없나 |
+|---|---|
+| **AC-FILEARG-001** | M0 **게이트**다 — 특정 요구를 검증하는 것이 아니라 착수 전 계약 대조·기준선·Kickoff 답 기록을 확인한다. A가 먼저 쓰이므로 B의 M0는 "A 통과"를 참조하게 된다 |
+| **AC-FILEARG-025** | `REQ-007`의 신원 술어를 **패치 CSV 축**에서 보강한다(정본 커버는 AC-006·AC-019). `ASSUMPTION-75-b`의 소유자이기도 하다 |
+| **AC-FILEARG-026** | 같은 술어를 **음성 대조군 축**에서 보강한다(좁히기 반대편 고정) |
+| **AC-FILEARG-027** | 같은 술어를 **임계 하한 축**에서 보강한다(상한은 주장하지 않는다 — D4) |
+
+세 보강 AC(025~027)를 REQ-007 행에 몰아 적지 않은 이유: 한 요구에 AC를 여섯 개 매다는 표는 **어느 AC가 그 요구의 정본 증거인지**를 흐린다. 정본은 AC-006(레지스트리 형상)·AC-019(실물 교차 분류)이고, 025~027은 **같은 술어를 서로 다른 축에서 다시 재는** 층이다.
 
 ### §C.0a 마일스톤별 AC 배정 (정본)
 
 | M | AC | 수 |
 |---|---|---|
 | M0 | AC-FILEARG-001 | 1 |
-| M1 | AC-FILEARG-002 · 003 · 004 · 005 · 006 · 018 · 019 · 020 · 021 · 022 · 023 · 024 · 025 · 026 · 027 · 028 · 029 | 17 |
-| M2 | AC-FILEARG-007 · 008 · 009 | 3 |
-| M3 | AC-FILEARG-010 · 011 · 012 · 013 | 4 |
-| M4 | AC-FILEARG-014 · 015 · 016 | 3 |
-| M5 | AC-FILEARG-017 | 1 |
+| M1 | AC-FILEARG-002 · 003 · 004 · 005 · 006 · 009 · 018 · 019 · 020 · 021 · 022 · 023 · 024 · 025 · 026 · 027 · 028 · 029 | 18 |
 
-합 **29 · 중복 0 · 누락 0**.
+합 **19 · 중복 0 · 누락 0**.
 
-### AC-FILEARG-001 — M0 계약 대조 게이트
+> **마일스톤이 둘뿐인 이유.** 분할 전 M2~M5(세션 슬롯 · 래퍼 툴 · UI · 앱 실기)는 전부 **바이트를 나르는 층**이었고 `SPEC-COPILOT-SHEETPIPE-001`로 옮겨갔다. A는 M0(게이트)와 M1(판별기·레지스트리)만 남는다 — 이것이 분할이 예산을 줄이는 방식이다.
 
-**Given** 착수 시점 트리, **When** `research.md` §2의 좌표를 토큰 앵커로 대조하면, **Then** 다음 다섯이 모두 확인되고 드리프트가 `progress.md`에 기록된다.
+### AC-FILEARG-001 — M0 계약 대조 게이트 (분할 A)
 
-① `vectorworks_autopatch` 핸들러가 세션 업로드 바이트를 `file_content_base64` 인자로 실어 형제 툴을 부르는 두 줄이 실재한다.
-② `import_lxseq_patch`의 `required`가 `["file_content_base64"]`이고 경로 인자가 없다.
-③ `_UploadedVectorworksExport`가 실재하고 교체·초기화 규약을 갖는다.
-④ `_TOOL_TASKS`가 `server/orchestrator/runner.py`에 실재하고, `server/tests/test_runner_progress.py`가 등록 툴 이름과의 전단사를 단언한다.
-⑤ `server/tests/test_tools.py`의 닫힌 집합 상수가 착수 시점 툴 수와 같다.
-⑥ `progress.md`의 "M0 — Kickoff 결정 기록"에 결정 **I**(서명 미일치 CSV의 처분)와 결정 **J**(형식을 넓히고 행은 넓히지 않는다)의 답이 적혀 있고, 그 표에 `미정`이 **남아 있지 않다**(남아 있으면 **명시적 FAIL** — 건너뛰기 아님).
+> **v0.5.0 개정.** 분할 전 이 게이트는 래퍼 툴·세션 슬롯·툴 수 상수까지 대조했다. 그 계약들은 `SPEC-COPILOT-SHEETPIPE-001`이 소유하므로 **A의 게이트에서 뺐다**. A가 대조하는 것은 A가 소비하는 계약뿐이다.
 
-**검증**: `grep -n "vectorworks_upload.content_base64" server/orchestrator/tools.py` · `grep -n "_TOOL_TASKS" server/orchestrator/runner.py server/tests/test_runner_progress.py` · `grep -n "len(TOOL_NAMES)" server/tests/test_tools.py` · `grep -n "Kickoff 결정 기록" .moai/specs/SPEC-COPILOT-FILEARG-001/progress.md` — 넷 모두 비어 있지 않을 것. 아울러 `grep -c "미정" .moai/specs/SPEC-COPILOT-FILEARG-001/progress.md`의 결과가 Kickoff 결정 기록 표에 대해 **0**일 것.
+**Given** 착수 시점 트리, **When** `research.md`의 좌표를 토큰 앵커로 대조하면, **Then** 다음이 모두 확인되고 드리프트가 `progress.md`에 기록된다.
+
+① `server/lxseq/parser.py`의 `CANONICAL_COLUMNS`(정규 9열) · `_normalize_header` · `_resolve_header_map`가 실재하고, 정규 열 밖의 열을 관용한다(§F 속성 A의 전제).
+② `server/vwx/reader.py:158 _best_header_candidate`와 `:43 _MIN_HEADER_ALIAS_MATCHES = 2`가 실재한다.
+③ `server/vwx/reader.py:360`의 `PK` 매직 분기가 실재하고, `grep -c "mvr\|MVR" server/vwx/reader.py`가 **0**이다.
+④ `.mvr` 판정이 `server/orchestrator/tools.py:2860-2861`(`is_mvr = SCENE_ENTRY in archive.namelist()`)에 실재한다 — **결정 줄은 2861**이다.
+⑤ `server/tests/fixtures/vwx/` 12개 항목과 `server/tests/fixtures/lxseq/` 패치 CSV가 실재한다.
+⑥ `progress.md`의 "M0 — Kickoff 결정 기록"에 결정 **I · J · K · L**의 답이 적혀 있고, 그 표에 `미정`이 **남아 있지 않다**(남아 있으면 **명시적 FAIL** — 건너뛰기 아님).
+
+**검증**: `grep -n "_best_header_candidate\|_MIN_HEADER_ALIAS_MATCHES" server/vwx/reader.py` · `grep -c "mvr\|MVR" server/vwx/reader.py`(**0**일 것) · `sed -n '2859,2862p' server/orchestrator/tools.py`(2861에 `is_mvr` 줄이 보일 것) · `grep -n "Kickoff 결정 기록" .moai/specs/SPEC-COPILOT-FILEARG-001/progress.md` · `grep -c "미정" .moai/specs/SPEC-COPILOT-FILEARG-001/progress.md`가 Kickoff 표에 대해 **0**일 것.
+
 
 ### AC-FILEARG-002 — 포함 검사 술어 (REQ-FILEARG-001 · REQ-FILEARG-005 별 구간)
 
@@ -121,85 +128,16 @@
 
 **검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "registry"`
 
-### AC-FILEARG-007 — 세션 슬롯 (REQ-FILEARG-006)
+### AC-FILEARG-009 — 판별은 파싱하지 않는다 · **순서** 단언 (REQ-FILEARG-005 · 분할 A 몫)
 
-**Given** 세션, **When** 판별에 성공한 업로드를 처리하면, **Then** ① 슬롯에 `content_base64`·`sha256`·`byte_length`·`kind`·`file_name`·`received_at`이 담긴다 · ② `sha256`이 원본 바이트의 해시와 같다 · ③ 두 번째 업로드가 첫 번째를 **교체**한다(슬롯은 하나) · ④ 세션 초기화 시 슬롯이 비워진다 · ⑤ 판별 실패 시 슬롯은 **직전 상태 그대로**다.
+> **분할 기록(v0.5.0).** 이 기준은 두 요구를 동시에 섬기고 있었다 — `REQ-005`의 **순서** 속성(판별하려고 시험 파싱하지 않는다; 행 수는 종류가 **정해진 뒤** 파생된다)과 `REQ-010`의 **표시** 속성(업로드 직후 네 필드를 보인다). 통째로 한쪽에 주면 다른 쪽이 증거를 잃으므로 **둘로 쪼갰다**. **A는 순서 단언을 가진다**(ID 유지 · 범위 축소). **표시 단언은 `SPEC-COPILOT-SHEETPIPE-001`이 자기 번호로 가져간다** — A는 B의 번호를 인용하지 않는다.
 
-**검증**: `uv run pytest server/tests/test_sheet_upload_session.py -q -k "slot"`
+**Given** 유효한 패치 CSV 바이트, **When** 판별기를 부르면, **Then** ① 판별이 끝나기 **전에는** 어떤 종류의 실제 파서도 호출되지 않는다(후보별 시험 파싱 0회) · ② 종류가 정해진 **뒤에야** 실제 파싱이 **정확히 한 번** 돈다(파서 진입점 호출 계수 1) · ③ 행 수는 그 한 번의 파싱에서 **파생**되며, 판별의 입력이 아니다 · ④ 판별 과정에서 `MissingColumnsError`가 발생하지 않는다(예외를 제어 흐름으로 쓰지 않는다 — §F 속성 B).
 
-### AC-FILEARG-008 — 저장 전용, 자동 실행 0건 (REQ-FILEARG-009)
+**뮤테이션**: 판별기가 후보마다 `parse_patch_csv`를 시험 삼아 부르도록 바꾸면 ①과 ④가 **빨개져야 한다**.
 
-**Given** 세션과 유효한 패치 CSV, **When** 업로드 프레임을 처리하면, **Then** ① `run_instruction`이 호출되지 않는다(호출 계수 0) · ② 래퍼 툴·대상 툴 핸들러가 호출되지 않는다 · ③ 콘솔 접촉이 0이다(`server.bridge`·`pythonosc`·`execution_port`·`deploy_pipeline`·`run_commands` 호출 0). 핸들러에 `run_instruction` 호출을 한 줄 넣으면 이 테스트가 죽어야 한다(뮤테이션 확인).
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "no_trial_parse or parse_once"`
 
-**검증**: `uv run pytest server/tests/test_sheet_upload_session.py -q -k "store_only or no_auto"` · `grep -n "run_instruction" server/web/session.py` 결과에 신규 시트 업로드 핸들러의 줄이 **포함되지 않을 것**(기존 Vectorworks 핸들러의 줄만 남는다).
-
-### AC-FILEARG-009 — 업로드 직후 넷 보고 (REQ-FILEARG-010 · REQ-FILEARG-005)
-
-**Given** 실물 패치 CSV, **When** 업로드가 성공하면, **Then** ① 응답에 `kind`·`sha256`·`byte_length`·`rows_total`이 있고 `rows_total == 86`이다 · ② `parsed`·`rejected` 건수가 함께 있다 · ③ 실제 파싱은 **한 번만** 돈다(파서 진입점 호출 계수 1) · ④ 응답에 점유 판정·타입 해석·"패치 가능" 류의 문구가 없다 · ⑤ 응답 문자열은 한국어다.
-
-**검증**: `uv run pytest server/tests/test_sheet_upload_session.py -q -k "report"`
-
-### AC-FILEARG-010 — 래퍼가 바이트를 주입한다 (REQ-FILEARG-011)
-
-**Given** `patch` 종류가 담긴 슬롯, **When** 래퍼 툴을 `action="preview"`로 부르면, **Then** ① 대상 툴 `import_lxseq_patch` 핸들러가 내부 `ToolCall`로 정확히 한 번 호출된다 · ② 그 호출의 `arguments`에 `file_content_base64`가 슬롯의 바이트와 **동일하게** 실려 있다 · ③ 화이트리스트 인자(`action` 등)가 그대로 전달된다 · ④ 화이트리스트 밖 인자를 주면 전달되지 않고 거절 사유로 보고된다 · ⑤ 대상 툴의 결과가 가공 없이 올라온다.
-
-**검증**: `uv run pytest server/tests/test_sheet_wrapper_tool.py -q -k "inject"`
-
-### AC-FILEARG-011 — 거절 3종 (REQ-FILEARG-013)
-
-**Given** 각각 ① 빈 슬롯 ② 요청과 다른 종류가 담긴 슬롯 ③ 대상 툴 이름이 등록 툴 집합에 없는 표, **When** 래퍼 툴을 부르면, **Then** 각각 `no_uploaded_sheet` · `kind_mismatch` · `no_target_tool`로 거절되고, **어느 경우에도 대상 툴이 호출되지 않으며**, 직전 업로드를 재사용하거나 다른 종류의 툴로 대신 보내는 경로가 없다. 사유 문자열은 닫힌 집합 밖의 값을 낼 수 없다.
-
-**검증**: `uv run pytest server/tests/test_sheet_wrapper_tool.py -q -k "refuse"`
-
-### AC-FILEARG-012 — 래퍼 스키마에 바이트·경로 인자가 없다 (REQ-FILEARG-012)
-
-**Given** 등록된 툴 정의 집합, **When** 래퍼 툴의 입력 스키마를 읽으면, **Then** ① `properties`에 `file_content_base64`가 **없다** · ② `required`에도 없다 · ③ 파일 시스템 경로를 뜻하는 인자(`file_path`·`path`·`filename` 류)가 없다 · ④ 스키마에 `file_content_base64`를 추가하면 이 테스트가 죽는다(뮤테이션 확인 필수 — 이 AC의 비공허성 증명이다).
-
-**검증**: `uv run pytest server/tests/test_sheet_wrapper_tool.py -q -k "schema"`
-
-### AC-FILEARG-013 — 6지점 등재 (REQ-FILEARG-011 별 구간)
-
-**용어 고정(감사 D1).** "6지점"은 **편집 지점 6곳**을 뜻하며 그 정본은 `research.md` §6이다. 가드는 지점이 아니다 — `test_runner_progress.py`는 **누락을 검출하는 가드**이지 편집 지점이 아니므로 아래 열거에서 지점으로 세지 않는다.
-
-**Given** 착수 후 트리, **When** 등재를 확인하면, **Then** 편집 지점 **6곳**이 모두 채워져 있다 — ① `TOOL_NAMES`에 래퍼 이름 · ② **핸들러 클로저**(v0.2.0 열거에서 빠져 있었다 — 감사 D1) · ③ `ToolDefinition` · ④ `handlers` 맵 · ⑤ `server/orchestrator/runner.py`의 `_TOOL_TASKS` · ⑥ `server/tests/test_tools.py`의 닫힌 집합 상수 35.
-
-**가드 확인(지점 아님)**: `server/tests/test_runner_progress.py`의 전단사 단언이 통과한다. `_TOOL_TASKS` 등재(⑤)를 빼면 이 가드가 죽어야 한다 — 6지점 중 가장 자주 빠지는 자리이므로 뮤테이션으로 확인한다.
-
-**검증**: `uv run pytest server/tests/test_tools.py server/tests/test_runner_progress.py -q`
-
-### AC-FILEARG-014 — UI 라우팅 (REQ-FILEARG-014)
-
-**Given** 첨부 버튼 하나, **When** ① 이미지 MIME 파일을 고르면 **Then** 레이아웃 이미지 경로가 불리고(무변경 보증), **When** ② 비이미지 파일을 고르면 **Then** **신규 시트 업로드 프레임**이 나가며 옛 Vectorworks 송신 함수는 호출되지 않는다(단, plan.md §A.4 ①이 (가)안으로 닫힌 경우 서버 폴백이 그 역할을 하며 UI 단언은 그대로다 — UI는 어느 안에서도 목적지를 고르지 않는다). ③ 비어 있거나 8 MiB를 넘는 파일은 기존과 같은 문구로 UI가 먼저 막는다.
-
-**검증**: `npm --prefix ui run test -- --run App` · `npm --prefix ui run test -- --run protocol`
-
-### AC-FILEARG-015 — UI는 두 번째 검증 계층이 아니다 (REQ-FILEARG-014 별 구간 · plan 결정 A)
-
-**Given** `ui/src/`, **When** 훑으면, **Then** ① 정규 열 이름(`FixtureType`·`AddrRange` 등)이 UI 소스에 등장하지 않는다 · ② CSV 헤더를 파싱하는 코드가 없다 · ③ `<input accept>` 목록이 착수 시점과 **같다**(넓히지 않았다) · ④ 2026-08-15 운영자 결정 주석이 남아 있고, 종류를 무엇으로 읽는지가 바뀐 사실이 한 줄로 갱신돼 있다.
-
-**검증**: `grep -rn "FixtureType\|AddrRange\|CANONICAL" ui/src/` — **빈 출력**이어야 한다. `grep -n "accept=" ui/src/App.tsx` — 착수 시점 값과 동일할 것. `grep -n "2026-08-15" ui/src/App.tsx` — 비어 있지 않을 것.
-
-### AC-FILEARG-016 — PRESERVE (REQ-FILEARG-015)
-
-**Given** 착수 SHA `6296af3`와 현재 HEAD, **When** 보존 대상 경로의 변경 통계를 내면, **Then** **빈 출력**이다. 아울러 `import_lxseq_patch`의 스키마 `required`·`properties` 키 집합과 설명문이 착수 시점과 **바이트 동일**하다.
-
-**검증**:
-
-```
-git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/safety server/paperwork console/lua server/rulebook/assets
-```
-
-빈 출력일 것. 결정 F의 공개 별칭 한 줄을 실제로 추가했다면 `server/lxseq` 항목만 예외로 허용하되 그 한 줄임을 `progress.md`에 적고 `git diff` 본문을 인용한다(예외를 조용히 넘기지 않는다).
-
-### AC-FILEARG-017 — 앱으로 실제 넣어 본다 (M5 · 사용자 수행 · 형상 전체)
-
-**Given** 앱이 떠 있고 운영자가 실물 LX-SEQ 패치 CSV를 가지고 있음, **When** 첨부 버튼으로 그 파일을 고르면, **Then** ① 종류 `patch`가 표시된다 · ② 표시된 sha256이 운영자가 로컬에서 잰 값과 **일치한다** · ③ 표시된 행 수가 86이다 · ④ 아무 툴도 자동 실행되지 않았다(채팅에 실행 흔적 0) · ⑤ 그 뒤 미리보기를 시키면 래퍼 툴이 대상 툴을 부르고 결과가 올라온다.
-
-**미통과 시**: 이 AC가 실패하면 M5는 PASS로 닫히지 않으며, SPEC은 `implemented`에서 멈추고 `completed`가 되지 않는다(§D). onPC가 없어 ⑤의 콘솔 판독이 불가능하면 그 부분만 미검증으로 적고, ①~④는 그대로 판정한다 — **"검증 못 했음"을 "통과"로 적지 않는다**.
-
-**검증**: 운영자 관측. 증거는 `progress.md`에 화면 인용과 로컬 sha256 값으로 남긴다.
-
----
 ### AC-FILEARG-018 — [HARD] 확장 형식이 프리셋 4종을 실제로 가른다 (REQ-FILEARG-016 · 결정 J)
 
 형식을 넓혀 놓고 "003에서는 괜찮을 것"이라고 적으면 문제를 푼 것이 아니라 미룬 것이다. 이 AC는 넓힌 형식이 **실제로 충분한지**를 증명한다.
@@ -244,7 +182,7 @@ git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/sa
 
 이 AC가 없으면 SPEC은 `.mvr`·`.xlsx`의 처분에 대해 **한 줄도 말하지 않는 상태**로 남는다. 그것이 B1이 들어온 경로였다.
 
-**Given** 실물 `server/tests/fixtures/vwx/demoshow_grandma3.mvr`(ZIP 아카이브, **315,155 바이트** — `wc -c` 실측), **When** 판별기에 그 바이트를 넣으면, **Then** ① 결과가 `unknown_sheet_kind`가 **아니다** · ② `vectorworks` 단일 일치이며 대상이 기존 세션 업로드 경로로 해소된다 · ③ 판별 과정에서 그 바이트를 CSV 텍스트로 해석하려는 시도가 없다 · ④ **`.mvr` 판정의 소유자를 정확히 부른다** — `server/vwx/reader.py`가 아니라 `server/orchestrator/tools.py:2859-2860`(`is_mvr = SCENE_ENTRY in archive.namelist()`)와 `server/vwx/mvr.py`다(`grep -c "mvr\|MVR" server/vwx/reader.py` → **0**) · ⑤ `openpyxl` **두 경로 모두** 닫혀 있다 — 설치 시 `KeyError: '[Content_Types].xml'`도, 미설치 시 `unapproved_dependency` 안내도 나오지 않는다(후자가 더 나쁘다: `.mvr`은 xlsx가 아니므로 설치해도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다).
+**Given** 실물 `server/tests/fixtures/vwx/demoshow_grandma3.mvr`(ZIP 아카이브, **315,155 바이트** — `wc -c` 실측), **When** 판별기에 그 바이트를 넣으면, **Then** ① 결과가 `unknown_sheet_kind`가 **아니다** · ② `vectorworks` 단일 일치이며 대상이 기존 세션 업로드 경로로 해소된다 · ③ 판별 과정에서 그 바이트를 CSV 텍스트로 해석하려는 시도가 없다 · ④ **`.mvr` 판정의 소유자를 정확히 부른다** — `server/vwx/reader.py`가 아니라 `server/orchestrator/tools.py:2860-2861`(`is_mvr = SCENE_ENTRY in archive.namelist()`)와 `server/vwx/mvr.py`다(`grep -c "mvr\|MVR" server/vwx/reader.py` → **0**) · ⑤ `openpyxl` **두 경로 모두** 닫혀 있다 — 설치 시 `KeyError: '[Content_Types].xml'`도, 미설치 시 `unapproved_dependency` 안내도 나오지 않는다(후자가 더 나쁘다: `.mvr`은 xlsx가 아니므로 설치해도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다).
 
 **v0.4.0 개정 — 헤더 없는 `.txt`는 여기서 빠진다.** v0.3.0의 ④는 `vectorworks_export_instrument_data_no_header.txt`도 `vectorworks`에 도달한다고 단언했다. 결정 L 이후 그 파일은 **`unknown_sheet_kind`가 정답이다**(신원 술어 `_best_header_candidate` → `-1`). 그것은 결함이 아니라 **의도된 결과**이며, 잃는 문구는 `AC-FILEARG-029`가 조건부 힌트로 보존한다.
 
@@ -288,11 +226,13 @@ git diff --stat 6296af3..HEAD -- server/lxseq server/vwx server/prechk server/sa
 
 **검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "negative_control"`
 
-### AC-FILEARG-027 — 별칭 임계 2가 고정된다 (REQ-FILEARG-007 · 신원 술어의 민감도)
+### AC-FILEARG-027 — 별칭 임계의 **하한만** 고정된다 (REQ-FILEARG-007 · 신원 술어의 민감도)
 
-**Given** `server/vwx/reader.py:43`의 `_MIN_HEADER_ALIAS_MATCHES = 2`, **When** 판별기가 신원 술어를 부르면, **Then** 그 임계가 유효하게 작동한다 — 별칭이 1개만 맞는 헤더는 `vectorworks`가 되지 않는다.
+> **v0.5.0 정정(D4).** v0.4.0은 제목과 근거를 "임계 2가 고정된다"로 적었다. **그것은 사실이 아니다.** 임계를 **1로 낮출 때 뒤집히는 것은 무관한 대조군이 아니라 진짜 VW 파일**이고(헤더 없는 `.txt`, 점수 **1**), **`T=3`은 코퍼스 전체에서 초록이다** — 2~4점을 받는 입력이 하나도 없기 때문이다. 그러므로 코퍼스가 고정하는 것은 **하한뿐**이다. 주장은 재는 것에 정확히 맞춘다.
 
-**뮤테이션**: 임계를 **1로 낮추면** 무관한 대조군 하나가 `vectorworks`로 새어 들어와 이 AC가 **빨개져야 한다**.
+**Given** `server/vwx/reader.py:43`의 `_MIN_HEADER_ALIAS_MATCHES = 2`, **When** 판별기가 신원 술어를 부르면, **Then** ① 별칭이 **1개만** 맞는 헤더는 `vectorworks`가 되지 않는다 — 즉 임계의 **하한**(`>= 2`)이 유효하게 작동한다.
+
+**뮤테이션(하한 방향만 판별력이 있다)**: 임계를 **1로 낮추면** 점수 1인 **실물 VW 파일**(`vectorworks_export_instrument_data_no_header.txt`)이 `vectorworks`로 분류되어 `AC-FILEARG-019` ④와 `AC-FILEARG-029`가 **빨개져야 한다**. 반대로 임계를 **3으로 올리면 코퍼스 전체가 그대로 초록이다** — 2~4점 입력이 없어서다. **상한은 이 코퍼스로 고정되지 않으며, 이 AC는 상한을 주장하지 않는다.**
 
 **[HARD] 이 AC가 덮지 못하는 것을 함께 적는다.** 이 임계는 **균일폭 폴백 구멍을 막지 못한다** — `_process_rows`(`reader.py:253-266`)의 탭·균일폭 폴백은 임계를 **통과하는 것이 아니라 우회한다**(헤더 탐색 실패 후 `col_0..`를 지어낸다). 그 구멍은 `AC-FILEARG-028`이 따로 막는다. 임계 고정만으로 "새는 곳이 없다"고 적으면 그것이 곧 이번 라운드에서 잡힌 종류의 착각이다.
 
@@ -324,11 +264,15 @@ bread	3	2500
 
 ## §D. Definition of Done
 
-1. AC 29건 중 **오프라인 28건 전부 PASS**(`AC-FILEARG-021`은 조건부 — 발동하지 않으면 N/A로 명시 기록하고 PASS로 세지 않는다. `AC-FILEARG-024`는 조건부가 아니며 **언제나** 판정한다).
-2. 전체 스위트 2종(`uv run pytest server/tests -q` · `npm --prefix ui run test`)이 착수 기준선 대비 **감소 0 · 신규 실패 0**. 착수 시점의 기존 실패(`test_pipeline_out_paths.py` / t20 귀속)는 **이 SPEC의 델타가 아니며 여기서 고치지 않는다** — 원인별로 나눠 적는다(plan.md M0).
+**Tier L · 통과 임계 0.85** (§A.5 — 성격이 티어를 정하고, 티어가 임계를 정한다).
+
+1. AC **19건 전부 PASS**(`AC-FILEARG-021`은 조건부 — 발동하지 않으면 N/A로 명시 기록하고 PASS로 세지 않는다. `AC-FILEARG-024`는 조건부가 아니며 **언제나** 판정한다).
+2. 전체 스위트 2종(`uv run pytest server/tests -q` · `npm --prefix ui run test`)이 착수 기준선 대비 **감소 0 · 신규 실패 0**. 착수 시점의 기존 실패(`test_pipeline_out_paths.py` / t20 귀속)는 **이 SPEC의 델타가 아니며 여기서 고치지 않는다** — 원인별로 나눠 적는다(plan.md M0). A는 `server/sheets/`만 신설하므로 vitest 델타는 0이어야 한다.
 3. plan.md §A.4의 열린 결정 마커가 **0건**이고, 결정 I·J·K·L의 답이 `progress.md`에 기록돼 있다.
-4. **뮤테이션 원장 — 5건**(F3으로 6→5). AC-003 조기 반환 · AC-006 서명 사본 · AC-012 스키마 추가 · AC-013 `_TOOL_TASKS` 누락 · AC-018 포함 검사 대조군. 각각 해당 테스트를 죽이는 것을 실측하고 `progress.md`에 적었다.
-   - **AC-022 뮤테이션 ①은 지금 세지 않는다(F3).** F1(위임 계약 · `.mvr` 소유자)이 열려 있는 동안 그 단언은 **뮤테이션을 걸지 않아도 이미 빨갛다** — 이미 빨간 단언에 뮤테이션을 걸어 빨간 것을 확인하는 일에는 **판별력이 없다**. F1이 닫히고 ①이 **뮤테이션 없이 초록**이 된 뒤에 재점화하며, 그때 **두 상태(뮤테이션 전 초록 · 뮤테이션 후 빨강)를 모두** 기록한다. 그 시점에 원장은 6건이 된다.
-   - v0.4.0에서 새로 선 뮤테이션 4건(AC-025 배제 절 제거 · AC-027 임계 1로 하향 · AC-029 힌트 제거 · AC-022 ① 재점화 예정)은 각각 해당 AC가 소유하며, 위 원장은 **이미 판별력이 확인된 것만** 센다.
-5. AC-FILEARG-017(앱 실기)이 PASS면 `completed`, 미수행·부분 수행이면 `implemented`에서 멈추고 잔여를 카드로 남긴다.
-6. **감사가 강점으로 지목한 것은 손대지 않았다** — 결정 ① 계수 요구의 5중 고정 · `AC-FILEARG-003`의 **주입 표** 기법 · 좌표 인용 · `addr_range_mismatch` 오인용 봉쇄. 이 넷 중 하나라도 약해졌으면 시정이 아니라 퇴행이다. 결정 L의 배제 절도 계수를 없애지 않는다 — 술어를 배타적으로 만들 뿐이다.
+4. **뮤테이션 원장 — 5건**(F3으로 6→5). AC-003 조기 반환 · AC-006 서명 사본 · AC-018 포함 검사 대조군 · AC-025 배제 절 제거 · AC-029 힌트 제거. 각각 해당 테스트를 죽이는 것을 실측하고 `progress.md`에 적었다.
+   - **AC-022 뮤테이션 ①은 지금 세지 않는다(F3).** F1(위임 계약 · `.mvr` 소유자)이 열려 있는 동안 그 단언은 **뮤테이션을 걸지 않아도 이미 빨갛다** — 이미 빨간 단언에 뮤테이션을 걸어 빨간 것을 확인하는 일에는 **판별력이 없다**. F1이 닫히고 ①이 **뮤테이션 없이 초록**이 된 뒤 재점화하며, 그때 **두 상태(뮤테이션 전 초록 · 뮤테이션 후 빨강)를 모두** 기록한다. 그 시점에 원장은 6건이 된다.
+   - **AC-012·AC-013의 뮤테이션은 A의 원장에서 빠졌다** — 래퍼 툴 스키마와 6지점 등재는 `SPEC-COPILOT-SHEETPIPE-001`이 소유하는 요구이므로 그쪽 원장으로 간다. A가 세지 않는 것은 누락이 아니라 **소유 이전**이다.
+   - **AC-027의 뮤테이션은 하한 방향만 센다**(D4) — 임계를 3으로 올리는 상한 방향은 코퍼스 전체가 초록이라 판별력이 없다.
+5. **A는 앱 실기 AC를 갖지 않는다.** 판별기는 콘솔도 앱도 건드리지 않으므로 라이브 관측 대상이 없다. 실기 확인(`AC-FILEARG-017`)은 바이트를 나르는 층과 함께 **B가 소유한다**. A는 오프라인 19건이 전부 PASS면 `implemented` → `completed`로 닫힌다.
+6. **감사가 강점으로 지목한 것은 손대지 않았다** — 결정 ① 계수 요구의 5중 고정 · `AC-FILEARG-003`의 **주입 표** 기법 · F2 명시성(신원만으로는 패치 CSV가 여전히 TRUE이고 `count == 1`을 만드는 것은 **배제 절**이라는 진술) · F3 원장 처리 · F4 보완 메모 · 조건부 힌트(REQ-023 / AC-029) · 좌표 인용. 이 중 하나라도 약해졌으면 시정이 아니라 퇴행이다.
+7. **B는 A 통과 전에 착수하지 않는다.** A가 레지스트리 계약을 확정해야 B가 그 계약 위에 전달 층을 얹을 수 있다.

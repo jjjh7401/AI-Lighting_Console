@@ -354,14 +354,35 @@ v0.3.0의 시뮬레이션 표는 **사용성 술어**로 계산한 값이라 무
 
 "기대"로 표시한 칸은 **아직 재지 않았다** — M1이 실측하며, 여기 적힌 것은 예측이지 관측이 아니다.
 
-### 11.5 F1 — `.mvr` 분기는 `reader.py`에 없다 `[코드]`
+### 11.5 F1 — `.mvr` 분기는 `reader.py`에 없다 · 좌표 정정 `[코드]`
+
+**아래는 2026-08-23 이 워크트리에서 재실행한 출력이다** — v0.4.0의 블록은 명령과 출력이 어긋나 있었다(`2859,2860p`를 인용하면서 결정 줄인 2861을 출력에 담았다). 명령과 출력을 맞춰 다시 싣는다.
 
 ```
 $ grep -c "mvr\|MVR" server/vwx/reader.py
 0
-$ sed -n '2859,2860p' server/orchestrator/tools.py
+$ sed -n '2859,2862p' server/orchestrator/tools.py
+        try:
             with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
                 is_mvr = SCENE_ENTRY in archive.namelist()
+        except zipfile.BadZipFile:
 ```
 
-소유자는 `server/orchestrator/tools.py:2859-2860`과 `server/vwx/mvr.py`다. v0.3.0이 "판독기에 위임한다"고 쓴 것은 **그 판독기가 무엇을 판정하는지 재지 않고 쓴 문장**이며, B3와 같은 부류의 오귀속이 **두 번째**다. 위임 계약의 전체 형상(3결과 + openpyxl 두 경로)은 `spec.md` §G.4와 `REQ-FILEARG-021`이 소유한다.
+**결정 줄은 `2861`**(`is_mvr = SCENE_ENTRY in archive.namelist()`)이고, 인용 범위는 **`2860-2861`**이다(2860이 `with zipfile.ZipFile(...) as archive:`). v0.4.0이 쓴 `2859-2860`은 결정 줄을 **빗나갔다** — 2859는 `try:`다.
+
+**이 하나가 왜 차단이었나.** 17개 좌표 중 16개가 맞았고 **틀린 하나가 하필 F1이 고치겠다고 약속한 좌표**였으며, `AC-FILEARG-022` ④가 그 좌표를 **인수 근거**로 쓰고 있었다 — 그대로면 그 AC는 통과할 수 없었다. 문서 7곳(spec 3 · research 2 · acceptance 1 · progress 1)을 전부 `2860-2861`로 고쳤다.
+
+**`.mvr`이 `_best_header_candidate`에 도달하지 못하는 이유** — `server/vwx/reader.py:360`:
+
+```
+$ sed -n '358,362p' server/vwx/reader.py
+    """
+    available = OPENPYXL_AVAILABLE if _openpyxl_available is None else _openpyxl_available
+    if data[:2] == _XLSX_MAGIC:
+        if not available:
+            return ReadResult(
+```
+
+`PK` 매직이면 `_read_xlsx` 경로로 갈라지므로 `_process_rows`가 호출되지 않는다. 그래서 술어는 **두 갈래 전역 함수**여야 한다(D1 · `spec.md` §G.4). 미설치 시 `return ReadResult(...)` — **예외가 아니라 구조적 정상 반환**이며, 이것이 §G.4 표의 결과 ④(`unapproved_dependency`)다.
+
+소유자는 `server/orchestrator/tools.py:2860-2861`과 `server/vwx/mvr.py`다. v0.3.0이 "판독기에 위임한다"고 쓴 것은 **그 판독기가 무엇을 판정하는지 재지 않고 쓴 문장**이며, B3와 같은 부류의 오귀속이 **두 번째**였다. 위임 계약의 전체 형상(두 갈래 · 결과 4종 · openpyxl 두 경로)은 `spec.md` §G.4와 `REQ-FILEARG-021`이 소유한다.
