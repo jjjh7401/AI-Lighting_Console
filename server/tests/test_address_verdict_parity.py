@@ -18,7 +18,10 @@ from pathlib import Path
 
 import pytest
 
+from server.orchestrator.tools import ANSWER_CANCEL
 from server.vwx.addressfit import Occupant, evaluate
+
+from .test_vwx_addressfit import RecordingQuestionPort, _resolve
 
 TOOLS = Path(__file__).resolve().parents[1] / "orchestrator" / "tools.py"
 
@@ -99,3 +102,55 @@ def test_the_three_failure_shapes_are_exclusive_and_total(requested, width, occu
         bool(fit.collisions),
     ]
     assert sum(shapes) == 1, (requested, shapes, fit.error, len(fit.placements))
+
+
+class TestBothReadPathsLabelTheSameInputTheSameWay:
+    """The predicate is shared; the branch that consumes it must be too.
+
+    The tests above pin `Fit.unreadable`. They do not watch where a path goes
+    AFTER asking it — so deleting the answer path\x27s `does_not_fit` branch left
+    the suite green while «0대와 겹친다» came back (lead, mutation on #93).
+    These two drive the real handler and compare the label it emits.
+    """
+
+    #: One occupant sitting on the requested address, so the tool asks instead
+    #: of settling — the only way to reach the answer path.
+    OCCUPIED = (Occupant(universe=3, address=1, name="이미 있는 장비"),)
+
+    def test_the_request_path_calls_an_over_width_address_does_not_fit(self):
+        payload = _resolve(
+            RecordingQuestionPort(ANSWER_CANCEL),
+            address=OVER_WIDTH[0],
+            count=1,
+            width=OVER_WIDTH[1],
+            occupants=(),
+        )
+
+        assert payload["status"] == "does_not_fit"
+
+    def test_the_answer_path_calls_the_same_address_the_same_thing(self):
+        """The regression the lead found: this branch had no guard at all."""
+        payload = _resolve(
+            RecordingQuestionPort(OVER_WIDTH[0]),
+            address="3.001",
+            count=1,
+            width=OVER_WIDTH[1],
+            occupants=self.OCCUPIED,
+        )
+
+        assert payload["answered_address"] == OVER_WIDTH[0]
+        assert payload["status"] == "does_not_fit", payload.get("guidance")
+        assert payload["status"] != "still_occupied"
+        assert payload["status"] != "unreadable_answer"
+
+    def test_the_answer_path_still_names_an_unreadable_answer(self):
+        """Control: moving the over-width case must not drag this one with it."""
+        payload = _resolve(
+            RecordingQuestionPort(UNREADABLE[0]),
+            address="3.001",
+            count=1,
+            width=UNREADABLE[1],
+            occupants=self.OCCUPIED,
+        )
+
+        assert payload["status"] == "unreadable_answer"
