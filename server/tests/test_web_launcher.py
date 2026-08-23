@@ -272,6 +272,13 @@ class TestOscReceivePortIsProbedAsUdp:
         with _occupy_osc_receive_port() as port:
             assert launcher.probe_port_available("127.0.0.1", port) is True
 
+    @pytest.mark.skipif(
+        sys.platform != "darwin",
+        reason=(
+            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
+            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
+        ),
+    )
     def test_a_udp_probe_sees_a_duplicate_instance_holding_the_receive_port(self):
         # The case the preflight exists for: a second copy of OUR OWN app already
         # holds the SPECIFIC loopback receive address. Measured on darwin, that
@@ -289,6 +296,13 @@ class TestOscReceivePortIsProbedAsUdp:
             pass  # released on exit — the same number must now read free
         assert launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM) is True
 
+    @pytest.mark.skipif(
+        sys.platform != "darwin",
+        reason=(
+            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
+            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
+        ),
+    )
     def test_require_ports_available_rejects_an_occupied_receive_port(self):
         with (
             _occupy_osc_receive_port() as port,

@@ -160,6 +160,13 @@ class TestReceivePortFailureReachesTheOperator:
     """A receive port that is STILL held after the rebind retries must not
     escape as a raw traceback — and must not lose its bilingual guidance."""
 
+    @pytest.mark.skipif(
+        sys.platform != "darwin",
+        reason=(
+            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
+            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
+        ),
+    )
     def test_build_runtime_raises_the_error_the_launcher_handles(self):
         # server/web catches PortInUseError. The bridge raises its own
         # bridge-local ReceivePortInUseError, which nothing in server/web,
@@ -171,6 +178,13 @@ class TestReceivePortFailureReachesTheOperator:
         err = excinfo.value
         assert str(port) in f"{err} {err.guidance}"
 
+    @pytest.mark.skipif(
+        sys.platform != "darwin",
+        reason=(
+            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
+            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
+        ),
+    )
     def test_main_exits_two_with_operator_guidance_instead_of_a_traceback(self):
         with _occupy_osc_receive_port() as port:
             stderr = io.StringIO()
@@ -185,6 +199,13 @@ class TestReceivePortFailureReachesTheOperator:
         assert "수신 포트" in printed or "receive port" in printed.lower(), printed
         assert str(port) in printed, printed
 
+    @pytest.mark.skipif(
+        sys.platform != "darwin",
+        reason=(
+            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
+            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
+        ),
+    )
     def test_the_shell_is_told_the_cause_on_the_host_channel(self):
         # The other half of the seam: stderr reaches a terminal the packaged app
         # does not have. stdout is the shell's ONLY inbound channel, so without

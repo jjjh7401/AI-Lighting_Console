@@ -44,6 +44,35 @@ _FORBIDDEN_COMMANDS = {
 }
 _RUN_PHASE_BASE = "38a6e7e2157a4862721fcd868056e0dbbb09c4c0"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _run_phase_base_is_reachable() -> bool:
+    """이 base 커밋이 이 클론에 있는가.
+
+    스쿼시 머지로 원본 브랜치가 지워져 어느 원격 ref 에서도 도달할 수 없다
+    (git for-each-ref --contains 가 빈 출력). 그래서 clone --depth=0 로도
+    받아올 수 없고, 그 객체를 이미 가진 클론에서만 아래 두 검사가 성립한다.
+    CI 러너에서는 없으므로 skip 되고, 그 사실이 출력에 남는다.
+    """
+    return (
+        subprocess.run(
+            ["git", "cat-file", "-e", _RUN_PHASE_BASE],
+            cwd=_REPO_ROOT,
+            capture_output=True,
+            check=False,
+        ).returncode
+        == 0
+    )
+
+
+_requires_run_phase_base = pytest.mark.skipif(
+    not _run_phase_base_is_reachable(),
+    reason=(
+        "run-phase base 커밋이 이 클론에 없다 — 스쿼시 머지로 원본 브랜치가 "
+        "지워져 원격에서 받아올 수 없다"
+    ),
+)
+
 _PRESERVE_LOOK_FILES = (
     "server/looks/matching.py",
     "server/looks/instantiate.py",
@@ -430,6 +459,7 @@ def test_preserve_gate_uses_run_phase_base_to_head_range():
     assert tuple(command[5:]) == _PRESERVE_LOOK_FILES
 
 
+@_requires_run_phase_base
 def test_preserve_look_files_are_unchanged_from_run_phase_base():
     result = subprocess.run(
         _preserve_diff_command(),
@@ -443,6 +473,7 @@ def test_preserve_look_files_are_unchanged_from_run_phase_base():
     assert result.stdout == ""
 
 
+@_requires_run_phase_base
 def test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state():
     hunks = _tools_hunks_from_run_phase_base()
 
