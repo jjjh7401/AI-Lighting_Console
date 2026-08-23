@@ -312,6 +312,16 @@ awk '/class="part-app"/{f=1;next} /<h[23]/{f=0} f' "$G" > /tmp/app_region.txt
 grep -cE '<(p|div|li|td)[ >]' /tmp/app_region.txt                     # 텍스트 블록 수 M
 grep -cE '<(p|div|li|td)[^>]*data-ev=' /tmp/app_region.txt            # 기대: M과 일치
 
+# D.20 안전 주장 트립와이어 (t45) — 산문은 못 재지만 주장의 **존재**는 잰다
+#   t43·t44 에서 이 파일의 문장 변경에 뮤테이션을 각각 3·4회 쐈는데 전부 통과했다.
+#   그중 하나는 무대 안전 전제를 「열지 않아도 됩니다」로 **정반대로 뒤집은** 것이다.
+#   §D 전체가 초록이었다 — op-note 는 AC-LDG-018 부착 대상이 아니고, 산문의 의미는
+#   기계가 못 잰다.
+#   이 검사는 참·거짓을 재지 않는다. 가이드의 주장 5개와 그 **코드 출처**를 쌍으로 두고
+#   양쪽의 존재를 잰다: CLAIM-GONE(가이드가 뒤집힘) · SOURCE-GONE(코드가 바뀌어 가이드가
+#   낡음). 한계와 다루지 않는 것은 스크립트 머리에 적혀 있다.
+python3 .moai/scripts/guide-safety-tripwire.py                    # 기대: 0 · exit 0
+
 # D.19 유령 식별자 — 전량 차집합 2단 (2회차 N6 · 3회차 T5 기대값 확정)
 #   허용목록: 비도구이나 코드에 실재하는 정당한 토큰 (§A.4에서 실측 확정)
 printf 'contents_unavailable\ndrilldown_capped\n' | sort > /tmp/allow.txt
