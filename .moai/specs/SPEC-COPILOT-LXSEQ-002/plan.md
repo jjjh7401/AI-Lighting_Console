@@ -1,6 +1,6 @@
 # SPEC-COPILOT-LXSEQ-002 — 구현 계획 (plan)
 
-문서 상태: draft (v0.1.0, 2026-08-24). Tier M. 칸반 카드 t18 (4단계 중 2단계). 마일스톤 5개(M0에서 M4까지), 결정 등록부 9건(K에서 S까지), **열린 결정 2건**(A.4 — plan에서 run으로 넘어가는 착수 승인 때 감독께 올린다). REQ 16건, AC 16건(실기 1건), ASSUMPTION 3건(80에서 82까지).
+문서 상태: draft (v0.1.1, 2026-08-24). Tier M. 칸반 카드 t18 (4단계 중 2단계). 마일스톤 5개(M0에서 M4까지), 결정 등록부 **11건(K에서 U까지)**, **열린 결정 0건**(A.4의 둘은 2026-08-24 감독 착수 승인으로 결정 T·U 가 되어 A.3 으로 옮겨졌다). REQ 16건, AC 16건(실기 1건), ASSUMPTION 3건(80에서 82까지). 진행: M0 는 4항 중 3항 충족 — 전량 baseline 만 남았다(progress.md 6.4).
 
 > **참조 규약.** 정본(spec.md, acceptance.md)은 줄번호로 인용하지 않고 REQ-LXSEQ2-001, AC-LXSEQ2-001, ASSUMPTION-80 같은 안정 토큰만 쓴다. 코드, 룰북, 입력 데이터, 타 SPEC 아티팩트는 파일과 줄 좌표를 쓴다.
 
@@ -85,7 +85,7 @@
 
 - **요구와 설계 지시**: REQ-LXSEQ2-001에서 003까지 구현. `server/lxseq/group_parser.py` — BOM 흡수, 헤더 이름 매칭(위치 금지), 4열 누락 시 파일 단위 실패, 행 검증 5부류(`groupno_not_int`, `groupno_out_of_range`, `groupno_duplicate`, `name_empty`, `name_has_quote`), Members 원문 보존. 순수 함수이며 콘솔과 네트워크 접촉 0. `name_has_quote` 는 `_label_command`(`server/groupgen/write.py:313`)가 작은따옴표와 큰따옴표를 각각 거부하는 것의 **거울**이다 — 툴 계층에서 ValueError로 터지기 전에 파서가 행 단위로 걸러 낸다.
 - **baseline**: 착수 직전 전체 스위트 실측.
-- **뮤테이션**: ① 위치 기반으로 열을 읽으면(열 순서를 섞은 CSV) AC-LXSEQ2-002가 죽어야 한다. ② BOM 흡수를 끄면 첫 열 이름이 안 맞아 AC-LXSEQ2-002가 죽어야 한다. ③ 거부 행에서 예외를 던지면 AC-LXSEQ2-003이 죽어야 한다. ④ Members 를 파싱해 멤버십에 쓰면 AC-LXSEQ2-004가 죽어야 한다.
+- **뮤테이션**: ① 위치 기반으로 열을 읽으면(열 순서를 섞은 CSV) AC-LXSEQ2-002가 죽어야 한다. ② BOM 흡수를 **두 자리 동시에** 끄면 AC-LXSEQ2-002가 죽어야 한다 — 자리는 `parse_group_csv` 머리와 `_normalize_header` 둘이고 **서로를 가리므로 단일 자리 뮤테이션은 판별력이 없다**(M1 실측: 각각 0건 갈림, 동시 3건 갈림). 단일 자리의 안전은 검사가 아니라 리뷰가 보증한다. ③ 거부 행에서 예외를 던지면 AC-LXSEQ2-003이 죽어야 한다. ④ Members 를 파싱해 멤버십에 쓰면 AC-LXSEQ2-004가 죽어야 한다.
 - **파일**: 신규 `server/lxseq/group_parser.py`. 테스트 `server/tests/test_lxseq_group_parser.py`.
 - **AC**: AC-LXSEQ2-002, AC-LXSEQ2-003, AC-LXSEQ2-004.
 
