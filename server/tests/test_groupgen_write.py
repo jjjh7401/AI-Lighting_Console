@@ -161,6 +161,47 @@ def test_build_group_write_plan_always_flags_membership_unverified() -> None:
     assert plan.human_check_commands == ("Group 2",)
 
 
+def test_unverified_reason_states_membership_as_unmeasured_not_impossible() -> None:
+    """사유 문장이 판독 불가를 **단정**하지 않는다 (t49).
+
+    이 문자열은 조작자에게 나가는 고지다. 한때 *"grandMA3 does not expose group
+    membership on any readable channel"* 로 단정형이었는데, 그 판정의 전제가
+    만료됐다 — RESTORE-001 `readability-survey.md` §A.2 가 지적하고 §A.5 가
+    **미측정**으로 하향했으며, 재측정은 그룹이 있는 쇼파일을 기다린다.
+
+    **동작은 이 테스트의 대상이 아니다.** `unverified` 고지도
+    `human_check_commands` 도 그대로여야 하고(위 테스트가 잡는다), 여기서 잡는
+    것은 **사유 문장의 단정도(斷定度)** 하나다. 불가로 못박힌 채 출하되면
+    나중에 판독이 열려도 아무도 다시 열어 보지 않는다.
+    """
+    plan = build_group_write_plan(
+        buckets={"a": (1,)},
+        names={"a": "GEO Downstage"},
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+    )
+    reason = plan.unverified_reason
+
+    # ① 단정형 어휘가 없다 — 되돌리면 여기서 걸린다
+    assert "does not expose" not in reason
+    assert "cannot be read" not in reason
+    assert "impossible" not in reason.replace("'principally impossible' verdict", "")
+
+    # ② 미측정임을 **판정으로** 말한다. 낱말 하나로 잡으면 안 된다 — 뒤쪽
+    #    하향 근거절에도 "unmeasured" 가 또 나와서, 앞 판정절을 통째로 지워도
+    #    통과해 버린다(t49 뮤테이션 M8 에서 실제로 통과했다). 표기 강조는 자유.
+    assert "unmeasured, not settled" in reason.lower()
+
+    # ③ 하향 근거에 도달할 수 있다 — §E.2.8 만 달면 그게 만료 지적을
+    #    받은 기록인 줄 모른다
+    assert "RESTORE-001" in reason
+    assert "§A.2" in reason
+    assert "§A.5" in reason
+
+    # ④ 실무상 결론은 바뀌지 않았다 — 재조회로는 확인 못 한다
+    assert "re-querying after Store cannot" in reason
+
+
 def test_build_group_write_plan_proceeds_on_truncated_fixture_list() -> None:
     """REQ-GROUPGEN-024 amendment (2026-08-04, user decision): the write path
     consumes caller-supplied ``fids``, not the re-queried fixture listing —

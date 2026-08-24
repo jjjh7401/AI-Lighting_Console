@@ -407,8 +407,13 @@ def build_group_write_plan(
         steps=tuple(steps),
         unverified=("membership",),
         unverified_reason=(
-            "grandMA3 does not expose group membership on any readable "
-            "channel (progress.md §E.2.8) — re-querying after Store cannot "
+            "group membership has not been read on any channel this project "
+            "has tried (progress.md §E.2.8); whether grandMA3 exposes it at "
+            "all is UNMEASURED, not settled — the earlier 'principally "
+            "impossible' verdict had its premise expire and was downgraded "
+            "to unmeasured (SPEC-COPILOT-RESTORE-001 readability-survey.md "
+            "§A.2, §A.5), and re-measuring is still blocked on a showfile "
+            "that has groups. Either way, re-querying after Store cannot "
             "confirm which fixtures actually landed in the slot; only the "
             "slot's existence and its label are re-queried as evidence"
         ),
