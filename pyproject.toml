@@ -38,6 +38,21 @@ packages = ["server"]
 
 [tool.pytest.ini_options]
 testpaths = ["server/tests"]
+# t52 — 열거하지 못한 대기까지 덮는 그물. 의존성 0(pytest 내장).
+#
+# 임계값의 근거: 전량 --durations=20 실측에서 최장 테스트가 7.42s 였고
+# 상위 5개가 5초대, 6위가 1.79s 로 뚝 떨어졌다. 60s 는 그 최장의 8배다.
+#
+# 🔴 그 7.42s 는 load averages 4.89~4.99 에서 잰 값이다. 한가한 CI 러너에서는
+# 더 짧을 테니 이 임계값은 **CI 에서 더 느슨하다**. 느슨한 그물이라도 없는
+# 것보다 낫지만, 느슨한 줄 모르고 쓰지 않도록 여기 적어 둔다. 부하가 크게
+# 다른 환경으로 옮기면 --durations 를 다시 재고 이 값을 다시 정할 것.
+#
+# 행(hang)과 느림을 가르는 값이면 된다 — 행은 무한이므로 최장보다 크게만
+# 잡으면 잡힌다. exit_on_timeout 은 프로세스를 통째로 끊으므로 임계값이
+# 측정으로 선 뒤에만 켠다(t52 §5b 6단계).
+faulthandler_timeout = 60
+faulthandler_exit_on_timeout = true
 
 [tool.ruff]
 target-version = "py311"

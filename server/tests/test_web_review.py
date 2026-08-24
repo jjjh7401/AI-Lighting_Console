@@ -35,6 +35,7 @@ from server.web.messages import (
 )
 from server.web.session import ChatSession
 
+from .conftest import drain_until as _receive_until
 from .test_deploy_pipeline import DESTRUCTIVE_SOURCE, SAFE_SOURCE
 from .test_deploy_transport import DeployableFakeConsole
 from .test_runner_self_correction import ScriptedProvider, _final
@@ -265,16 +266,6 @@ def _app_deps(tmp_path, provider):
 
 def _send(ws, **fields):
     ws.send_text(json.dumps({"v": PROTOCOL_VERSION, **fields}, ensure_ascii=False))
-
-
-def _receive_until(ws, event_type: str, *, limit: int = 30) -> dict:
-    seen = []
-    for _ in range(limit):
-        event = ws.receive_json()
-        seen.append(event["type"])
-        if event["type"] == event_type:
-            return event
-    raise AssertionError(f"no {event_type!r} event within {limit} frames: {seen}")
 
 
 class TestAppReviewFlow:

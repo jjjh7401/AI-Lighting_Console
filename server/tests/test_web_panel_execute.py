@@ -43,6 +43,7 @@ from server.web.panel import (
     playback_command,
 )
 
+from .conftest import drain_until, recv_frame
 from .test_runner_self_correction import ScriptedProvider, _final, _run_turn
 from .test_safety_gate import FakeConsole
 
@@ -250,38 +251,13 @@ def _send(ws, **fields) -> None:
 
 
 def _recv(ws, timeout: float = 10.0) -> dict:
-    """One frame, or a failure — never a hang.
-
-    ``TestClient``'s websocket receive has no timeout, so a missing frame would
-    block the whole suite forever. This suite is concurrency-heavy by nature
-    (two lanes, a parked approval, a chat turn in flight), which is exactly the
-    shape where "it hangs" is the most likely failure — so it must be the most
-    visible one.
-    """
-    box: dict[str, object] = {}
-
-    def pump() -> None:
-        try:
-            box["event"] = ws.receive_json()
-        except Exception as error:  # closed socket, decode failure, …
-            box["error"] = error
-
-    worker = threading.Thread(target=pump, daemon=True)
-    worker.start()
-    worker.join(timeout)
-    if "event" not in box:
-        raise AssertionError(f"no websocket frame within {timeout}s ({box.get('error')})")
-    return box["event"]  # type: ignore[return-value]
+    # t52: 이 파일이 원본이었고 conftest 로 승격했다 — 사본을 남기지 않는다.
+    return recv_frame(ws, timeout)
 
 
 def _drain(ws, event_type: str, *, limit: int = 40) -> dict:
-    seen: list[str] = []
-    for _ in range(limit):
-        event = _recv(ws)
-        seen.append(event["type"])
-        if event["type"] == event_type:
-            return event
-    raise AssertionError(f"no {event_type!r} within {limit} frames: {seen}")
+    # limit 40 은 이 스위트의 기존 값이다(conftest 기본값 30 과 다름) — 보존한다.
+    return drain_until(ws, event_type, limit=limit)
 
 
 # -- the command bundle ----------------------------------------------------------
