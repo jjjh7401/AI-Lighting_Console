@@ -32,6 +32,7 @@ from server.web.cue_monitor import (
 )
 from server.web.messages import PROTOCOL_VERSION, cue_executor_entry
 
+from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
 
@@ -473,9 +474,9 @@ class TestCueMonitorRequestDispatch:
     def test_cue_monitor_request_answers_with_a_cue_monitor_event(self, tmp_path):
         deps = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="cue_monitor_request")
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] == "cue_monitor"
         assert isinstance(event["executors"], list)
         assert isinstance(event["history"], list)
@@ -483,9 +484,9 @@ class TestCueMonitorRequestDispatch:
     def test_cue_monitor_request_does_not_fall_through_to_status(self, tmp_path):
         deps = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="cue_monitor_request")
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] != "status"
 
     def test_cue_monitor_request_surfaces_audit_log_history_without_a_console(self, tmp_path):
@@ -495,9 +496,9 @@ class TestCueMonitorRequestDispatch:
         deps = _deps(tmp_path, ScriptedProvider([]))
         deps.audit.log_executed("Go+ Executor 101", ok=True)
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="cue_monitor_request")
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["history"] == [
             {
                 "ts": event["history"][0]["ts"],
@@ -583,7 +584,7 @@ def _fresh_cue_monitor(ws) -> dict:
     THIS tick cost" a deterministic question.
     """
     while True:
-        event = ws.receive_json()
+        event = recv_frame(ws)
         if event["type"] == "cue_monitor" and not event.get("cached"):
             return event
 
@@ -604,9 +605,9 @@ class TestCueMonitorPollCost:
             TestClient(create_app(_poll_deps(tmp_path, console))) as client,
             client.websocket_connect("/ws") as ws,
         ):
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="cue_monitor_request")
-            assert ws.receive_json()["type"] == "cue_monitor"
+            assert recv_frame(ws)["type"] == "cue_monitor"
         for path in _DISCARDED_SECTION_PATHS:
             assert path not in console.state_queries
 

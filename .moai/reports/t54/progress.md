@@ -427,6 +427,11 @@ $ .venv/bin/ruff format --check server/tests --no-respect-gitignore
 `ruff` 범위(229)와 저장소 전역 `git ls-files '*.py'`(433, 리드 실측)는 **다른 것을
 센 값**이다. §9 의 231/229 판정에 세 번째 숫자를 섞지 말 것.
 
+같은 함정을 §12.2 에서 한 번 더 밟았다. 내 `_receive_until` 수는 **21(호출 자리)**
+이고 리드의 `grep -c` 는 **22(매칭 줄 수)** 를 냈다. 차이 1은 `import` 줄이다 —
+**둘 다 맞고 서로 다른 것을 센 것**이다. 그래서 이 문서의 모든 수는 **무엇을 세는지**
+를 함께 적는다(자리 / 줄 / 파일 / 테스트).
+
 ---
 
 ## 11. 배치 t54-c — handshake 6곳
@@ -601,3 +606,106 @@ t57(기대 밖 프레임 경로)이 열리면 이 5곳이 가장 먼저 갈릴 �
 
 전수 67 → **41**. 대상 66 → **40**(cue_monitor 20 · app 20).
 남은 둘은 리드 분할대로 e/f·g/h 네 배치로 쪼갠다.
+
+---
+
+## 13. 배치 t54-e — cue_monitor 앞 **9**곳 (10 아님 — 경계를 한 자리 당겼다)
+
+### 13.1 배치 경계를 바꾼 이유
+
+리드 분할표는 「cue_monitor 앞 10 / 뒤 10」이었다. 그런데 10번째 자리(`:619`)와
+11번째(`:621`)가 **같은 테스트**(`test_a_tick_resolves_the_executors_and_reports_them`)
+안에 있다. 10 에서 끊으면 그 테스트가 **반만 이관된 상태**로 배치 경계를 넘는다.
+
+그래서 경계를 한 자리 당겨 **e = 9곳**(테스트 경계에서 절단)으로 잡았다.
+남는 f 는 11곳이 되어 10 상한을 하나 넘는다 — 리드 판단이 필요하면 f 를 다시
+쪼개면 되고, 그렇지 않으면 11 로 간다. **자리 수보다 테스트를 쪼개지 않는 쪽을
+우선**했다.
+
+### 13.2 대상표 — 9곳
+
+| # | 행(이관 전) | 소속 | 판정 | 판정 근거 |
+|---|---|---|---|---|
+| E1 | `:476` | `test_cue_monitor_request_answers_with_a_cue_monitor_event` | `recv_frame` | 첫 status 한 장 소비 |
+| E2 | `:478` | 〃 | `recv_frame` | 요청 직후 다음 한 장이 `cue_monitor` 임을 단정 |
+| E3 | `:486` | `test_cue_monitor_request_does_not_fall_through_to_status` | `recv_frame` | 첫 status 한 장 소비 |
+| E4 | `:488` | 〃 | `recv_frame` | 회귀 가드 — 다음 한 장이 status **가 아님**을 단정 |
+| E5 | `:498` | `..._surfaces_audit_log_history_without_a_console` | `recv_frame` | 첫 status 한 장 소비 |
+| E6 | `:500` | 〃 | `recv_frame` | 다음 한 장의 `history` 를 단정 |
+| E7 | `:586` | 헬퍼 `_fresh_cue_monitor` 의 `while True:` 안 | `recv_frame` | **드레인 루프의 1회분**. 아래 13.5 참조 |
+| E8 | `:607` | `test_a_tick_never_reads_the_five_discarded_dash_sections` | `recv_frame` | 첫 status 한 장 소비 |
+| E9 | `:609` | 〃 | `recv_frame` | 다음 한 장이 `cue_monitor` 임을 단정 |
+
+미판정: **0건**.
+
+### 13.3 전수 대조
+
+```
+$ grep -rn '\.receive_json(' server/tests --include='*.py' | wc -l
+      32
+```
+
+41 − 9 = 32. `test_web_cue_monitor.py` 는 20 → **11** 로 줄었다(부분 이관 — 이
+파일은 배치가 둘로 쪼개지므로 의도된 중간 상태다). 대상 잔여 **31곳 / 2파일**.
+
+### 13.4 검증 · 뮤테이션
+
+```
+$ .venv/bin/ruff check server/tests          → All checks passed!
+$ pytest server/tests/test_web_cue_monitor.py → 49 passed in 0.44s
+```
+
+**레버 A — 상한 0.0**
+
+```
+E1 2/2  E2 2/2  E3 1/2 → +10회 10/10 (합계 11/12)  E4 2/2
+E5 2/2  E6 2/2  E7 2/2  E8 2/2  E9 2/2
+```
+
+§10 규칙 1 이 또 한 번 작동했다(E3). 경합 재확인이 필요한 자리 누계 4건, **전부
+반복에서 11/12 로 죽었다.** 결정적 KILL 불가로 남은 자리는 여전히 0건.
+
+**레버 B — 분류**: `E1..E9 전부 SURVIVED`. §5.4 표기 적용.
+
+### 13.5 🔴 E7 에서 나온 별도 발견 — 이 헬퍼는 **회수 상한이 없다**
+
+`_fresh_cue_monitor` 는 이렇게 생겼다:
+
+```python
+while True:
+    event = recv_frame(ws)
+    if event["type"] == "cue_monitor" and not event.get("cached"):
+        return event
+```
+
+이관으로 **시간 상한은 생겼다**(프레임 한 장당 10초). 그러나 **회수 상한이 없다** —
+기대 밖 프레임이 계속 도착하면 이 루프는 영원히 돈다. 각 회가 10초 안에
+돌아오므로 t52 가 잡은 「정지」는 아니지만, **끝나지 않는 것은 마찬가지**다.
+
+이것은 conftest 의 `drain_until` 이 `limit=30` 으로 막아 둔 바로 그 구멍이고,
+`recv_frame` 독스트링이 명시한 「둘 다 필요하다」의 나머지 절반이다:
+
+> 회수만 있으면 안 오는 프레임에 멈추고, **시간만 있으면 엉뚱한 프레임이 무한히
+> 오는 경우를 못 끊는다.**
+
+⚠️ **이 카드에서 고치지 않았다.** 이 카드는 「직접 호출을 승격 헬퍼로 이관」이고,
+헬퍼에 회수 상한을 새로 다는 것은 테스트의 대기 의미를 바꾸는 일이라 이관 원칙에
+정면으로 걸린다. **발견으로 보고하고 판단은 리드에게 넘긴다.**
+
+처방 후보(둘 다 이 카드 밖):
+- (a) `_fresh_cue_monitor(ws, *, limit=30)` 로 회수 상한을 추가 — 싸다
+- (b) `drain_until` 에 술어(predicate) 인자를 열어 이 헬퍼를 흡수 — 근본적이지만
+  conftest 공용 헬퍼의 시그니처를 바꾼다
+
+### 13.6 누적
+
+| 배치 | 자리 | 상한 레버 | 분류 레버 |
+|---|---|---|---|
+| 1 | 7 | 전 자리 KILL | 1 KILLED / 6 |
+| b | 8 | 전 자리 KILL (B3 11/12) | 0 / 8 |
+| c | 6 | 전 자리 KILL (C2·C6 11/12) | 0 / 6 |
+| d | 5 | 전 자리 KILL | 0 / 5 |
+| e | 9 | 전 자리 KILL (E3 11/12) | 0 / 9 |
+| **누계** | **35** | **전 자리 KILL 확인** | **1 / 35** |
+
+전수 67 → **32**. 대상 66 → **31**(cue_monitor 11 · app 20).
