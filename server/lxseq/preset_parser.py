@@ -65,6 +65,15 @@ _OUT_OF_SCOPE = ("Gobo", "Position", "Control", "Shapers", "Video")
 #: 시트와 단위가 같다 — 세 시트 중 **해석이 0인 유일한 자리**다.
 _PERCENT = re.compile(r"^\s*(\d+)\s*%\s*$")
 
+#: 보류 사유의 **닫힌 클래스**. 산문만 두면 13건이 한 덩어리로 보이고,
+#: **어느 하나를 풀면 몇 건이 열리는지** 아무도 모른다. 클래스가 있으면
+#: 「스케일 변환만 해결하면 6건」이 바로 읽힌다. 원인마다 처방과 소유자가 다르다.
+HOLD_SCALE_UNCONVERTED = "scale_unconverted"  # col — 255 대 100. 풀 수 있으나 해석이다
+HOLD_NO_RGB_VALUE = "no_rgb_value"  # col — 색온도만. 켈빈 모델이 저장소에 없다
+HOLD_PROBE_REJECTED = "attribute_probe_rejected"  # bm — 라이브 프로브가 거절했다
+HOLD_FAMILY_OUT_OF_SCOPE = "family_out_of_scope"  # bm — 풀 계열이 범위 밖이다
+HOLD_VALUE_NOT_MACHINE_READABLE = "value_not_machine_readable"  # 형태가 아니다
+
 #: 값 문장에서 속성 이름 후보로 읽을 토큰. 숫자·단위·한글은 보지 않는다.
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9]*")
 
@@ -78,6 +87,18 @@ class UnknownPresetSheetError(ValueError):
     def __init__(self, header: tuple[str, ...]) -> None:
         self.header = header
         super().__init__("unknown_preset_sheet: " + ", ".join(header))
+
+
+@dataclass(frozen=True)
+class PresetHoldReason:
+    """한 레코드를 막는 사유 하나 — 클래스와 산문을 **가른다**.
+
+    클래스는 기계가 세고, 산문은 사람이 읽는다. 산문만 두면 「13 보류」가 한
+    덩어리로 보인다.
+    """
+
+    hold_class: str
+    detail: str
 
 
 @dataclass(frozen=True)
@@ -96,9 +117,17 @@ class LxseqPresetRecord:
     value_raw: str
     row: int
     storable: bool
-    hold_reason: str
+    #: 막는 사유 **전부**. 하나만 실으면 한 원인을 풀었을 때 그 행이 열릴 것처럼
+    #: 보이는데 실제로는 다른 사유가 남아 안 열린다 — bm 1행이 Gobo(범위 밖)와
+    #: Prism(거절) 둘 다에 막히는 것이 그 형태다.
+    hold_reasons: tuple[PresetHoldReason, ...] = ()
     target_group: str | None = None
     purpose: str | None = None
+
+    @property
+    def hold_classes(self) -> tuple[str, ...]:
+        """기계가 셀 수 있는 사유 클래스만."""
+        return tuple(reason.hold_class for reason in self.hold_reasons)
 
 
 @dataclass(frozen=True)
@@ -148,41 +177,69 @@ def _attribute_tokens(value: str) -> list[str]:
     return found
 
 
-def classify_storability(kind: str, value_raw: str) -> tuple[bool, str]:
-    """이 값을 지금 콘솔에 넣을 수 있는가, 없으면 왜 없는가.
+def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetHoldReason, ...]]:
+    """이 값을 지금 콘솔에 넣을 수 있는가, 없으면 **무엇들이** 막는가.
 
     **부재가 아니라 판정이다.** 아래 사유는 전부 이 저장소가 이미 실기로 재서
     적어 둔 것이며(server/looks/schema.py), 다시 검색으로 찾아 닫힌 질문을
     열지 마라.
+
+    사유를 **전부** 돌려준다. 하나만 돌려주면 한 원인을 풀었을 때 그 행이 열릴
+    것처럼 보이는데 실제로는 다른 사유가 남아 안 열린다.
     """
     if kind == "dim":
         if _PERCENT.match(value_raw):
-            return True, ""
-        return False, "Level 이 퍼센트 형태가 아니다: " + value_raw.strip()
+            return True, ()
+        return False, (
+            PresetHoldReason(
+                HOLD_VALUE_NOT_MACHINE_READABLE,
+                "Level 이 퍼센트 형태가 아니다: " + value_raw.strip(),
+            ),
+        )
 
     if kind == "col":
         if _HAS_RGB.search(value_raw):
             return False, (
-                "RGB 가 0-255 로 적혔고 콘솔은 0-100 퍼센트다. 두 축의 대응은 "
-                "미측정이라 변환이 해석이 된다 — 값은 되읽을 수 없다"
+                PresetHoldReason(
+                    HOLD_SCALE_UNCONVERTED,
+                    "RGB 가 0-255 로 적혔고 콘솔은 0-100 퍼센트다. 두 축의 대응은 "
+                    "미측정이라 변환이 해석이 된다 — 값은 되읽을 수 없다",
+                ),
             )
         return False, (
-            "색온도만 있고 RGB 가 없다: "
-            + value_raw.strip()
-            + " — 켈빈에서 RGB 를 만드는 모델이 이 저장소에 없다"
+            PresetHoldReason(
+                HOLD_NO_RGB_VALUE,
+                "색온도만 있고 RGB 가 없다: "
+                + value_raw.strip()
+                + " — 켈빈에서 RGB 를 만드는 모델이 이 저장소에 없다",
+            ),
         )
 
     tokens = _attribute_tokens(value_raw)
-    blocked_rejected = [a for a in tokens if a in _PROBE_REJECTED]
-    blocked_scope = [a for a in tokens if a in _OUT_OF_SCOPE]
-    if blocked_rejected or blocked_scope:
-        parts = []
-        if blocked_rejected:
-            parts.append("라이브 프로브가 거절한 속성: " + ", ".join(blocked_rejected))
-        if blocked_scope:
-            parts.append("풀 계열이 범위 밖인 속성: " + ", ".join(blocked_scope))
-        return False, " / ".join(parts) + " (server/looks/schema.py 의 M0 프로브 판정)"
-    return True, ""
+    rejected = [a for a in tokens if a in _PROBE_REJECTED]
+    out_of_scope = [a for a in tokens if a in _OUT_OF_SCOPE]
+    reasons: list[PresetHoldReason] = []
+    if rejected:
+        reasons.append(
+            PresetHoldReason(
+                HOLD_PROBE_REJECTED,
+                "라이브 프로브가 거절한 속성: "
+                + ", ".join(rejected)
+                + " (server/looks/schema.py 의 M0 프로브 판정)",
+            )
+        )
+    if out_of_scope:
+        reasons.append(
+            PresetHoldReason(
+                HOLD_FAMILY_OUT_OF_SCOPE,
+                "풀 계열이 범위 밖인 속성: "
+                + ", ".join(out_of_scope)
+                + " (server/looks/schema.py 의 범위 선언)",
+            )
+        )
+    if reasons:
+        return False, tuple(reasons)
+    return True, ()
 
 
 def parse_preset_csv(text: str) -> PresetParseResult:
@@ -236,7 +293,7 @@ def parse_preset_csv(text: str) -> PresetParseResult:
 
         seen.add(preset_id)
         value_raw = cell[value_column]
-        storable, hold_reason = classify_storability(kind, value_raw)
+        storable, hold_reasons = classify_storability(kind, value_raw)
         records.append(
             LxseqPresetRecord(
                 kind=kind,
@@ -245,7 +302,7 @@ def parse_preset_csv(text: str) -> PresetParseResult:
                 value_raw=value_raw,
                 row=line_no,
                 storable=storable,
-                hold_reason=hold_reason,
+                hold_reasons=hold_reasons,
                 target_group=cell.get("TargetGroup") or None,
                 purpose=cell.get("Purpose") or None,
             )

@@ -16,11 +16,17 @@ AC-002 는 「19 레코드가 나온다」를 요구하는데 그것은 파싱�
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
 from server.lxseq.preset_parser import (
+    HOLD_FAMILY_OUT_OF_SCOPE,
+    HOLD_NO_RGB_VALUE,
+    HOLD_PROBE_REJECTED,
+    HOLD_SCALE_UNCONVERTED,
+    HOLD_VALUE_NOT_MACHINE_READABLE,
     PRESET_SHEET_COLUMNS,
     UnknownPresetSheetError,
     parse_preset_csv,
@@ -39,6 +45,10 @@ def _text(kind: str) -> str:
 
 def _parsed(kind: str):
     return parse_preset_csv(_text(kind))
+
+
+def _held():
+    return [r for k in EXPECTED_ROWS for r in _parsed(k).records if not r.storable]
 
 
 class TestExactColumnSets:
@@ -166,33 +176,66 @@ class TestStorability:
         assert storable == dict([("dim", 6), ("col", 0), ("bm", 0)])
         assert sum(storable.values()) == 6
 
-    def test_every_held_record_carries_a_reason(self):
+    def test_every_held_record_carries_at_least_one_reason(self):
         """보류를 버리지 않는다 — 사유 없이 보류하면 다음 사람이 못 푼다."""
-        held = [r for k in EXPECTED_ROWS for r in _parsed(k).records if not r.storable]
+        held = _held()
         assert len(held) == 13
-        assert all(r.hold_reason.strip() for r in held)
+        assert all(record.hold_reasons for record in held)
+        assert all(reason.detail.strip() for record in held for reason in record.hold_reasons)
 
-    def test_the_beam_reasons_name_the_blocking_attribute(self):
-        """5행 전부가 Zoom 말고 하나 이상을 요구한다 — 그 이름이 사유에 있어야 한다."""
-        for record in _parsed("bm").records:
-            assert (
-                ("Prism" in record.hold_reason)
-                or ("Gobo" in record.hold_reason)
-                or ("Frost" in record.hold_reason)
-            ), record.hold_reason
+    def test_reasons_carry_a_machine_countable_class(self):
+        """산문만 두면 13건이 한 덩어리로 보인다.
 
-    def test_the_colour_reasons_split_rgb_from_temperature_only(self):
-        """색상 8행은 두 사유로 갈린다 — 스케일 미측정 6, 켈빈 모델 부재 2."""
-        reasons = [r.hold_reason for r in _parsed("col").records]
-        assert sum(1 for text in reasons if "0-255" in text) == 6
-        assert sum(1 for text in reasons if "색온도만" in text) == 2
+        클래스가 있어야 **어느 하나를 풀면 몇 건이 열리는지** 읽힌다.
+        """
+        counts = Counter(c for record in _held() for c in record.hold_classes)
+        assert counts == Counter(
+            dict(
+                [
+                    ("scale_unconverted", 6),
+                    ("attribute_probe_rejected", 3),
+                    ("family_out_of_scope", 3),
+                    ("no_rgb_value", 2),
+                ]
+            )
+        )
+
+    def test_every_class_is_from_the_closed_set(self):
+        """비공허성 — 클래스가 열려 있으면 위 개수는 오타를 세고 있을 수 있다."""
+        known = frozenset(
+            [
+                HOLD_SCALE_UNCONVERTED,
+                HOLD_NO_RGB_VALUE,
+                HOLD_PROBE_REJECTED,
+                HOLD_FAMILY_OUT_OF_SCOPE,
+                HOLD_VALUE_NOT_MACHINE_READABLE,
+            ]
+        )
+        seen = set(c for record in _held() for c in record.hold_classes)
+        assert seen <= known
+        assert len(seen) == 4, "정본에서 실제로 나오는 클래스는 넷이다"
+
+    def test_a_row_blocked_twice_carries_both_reasons(self):
+        """한 사유만 실으면 하나를 풀었을 때 그 행이 열릴 것처럼 보인다.
+
+        `BM.01`(Zoom · Gobo OPEN · Prism OFF)은 Gobo(범위 밖)와 Prism(거절)
+        **둘 다**에 막힌다. Gobo 만 풀어도 안 열린다 — 목록이 그것을 말해야 한다.
+        """
+        first = next(r for r in _parsed("bm").records if r.preset_id == "BM.01")
+        assert set(first.hold_classes) == set([HOLD_PROBE_REJECTED, HOLD_FAMILY_OUT_OF_SCOPE])
+
+    def test_solving_one_class_would_not_open_every_beam_row(self):
+        """위 검사의 실질 — 「Gobo 만 풀면 몇 건」이 정직하게 나오는지."""
+        beam = _parsed("bm").records
+        only_gobo = [r for r in beam if set(r.hold_classes) == set([HOLD_FAMILY_OUT_OF_SCOPE])]
+        assert len(only_gobo) == 2, "Gobo 만 풀면 5건 중 2건만 열린다"
 
     def test_a_fabricated_prose_level_is_not_storable(self):
         """날조 대조군 — dim 이 무조건 통과하는 게 아니라 형태를 재는 것이다."""
         text = _text("dim").replace("100%", "아주 밝게", 1)
         record = parse_preset_csv(text).records[0]
         assert record.storable is False
-        assert "퍼센트" in record.hold_reason
+        assert record.hold_classes == (HOLD_VALUE_NOT_MACHINE_READABLE,)
 
     def test_a_fabricated_percent_beam_would_be_storable(self):
         """반대편 — bm 이 무조건 보류인 게 아니라 요구 속성으로 판정하는 것이다.
@@ -203,4 +246,4 @@ class TestStorability:
         """
         text = _text("bm").replace("Zoom 45° · Gobo OPEN · Prism OFF", "Zoom 45", 1)
         record = parse_preset_csv(text).records[0]
-        assert record.storable is True, record.hold_reason
+        assert record.storable is True, record.hold_reasons
