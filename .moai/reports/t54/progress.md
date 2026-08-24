@@ -1196,12 +1196,37 @@ t47 ⑤ 축의 살아 있는 표본이라 지우면 증거가 사라진다.
 
 브랜치를 푸시하고 **PR #122** 를 열었다.
 
+**첫 실행** (head `1f37092`):
+
 ```
 $ git push -u origin WT-recv-migrate      → [new branch]
 $ gh pr create --base main ...            → .../pull/122
 $ gh pr checks 122
 test   pass   5m21s   .../actions/runs/32715319430/job/97395188590
 ```
+
+🟢 **최종 실행 — 머지될 head 에 붙은 것** (t54 리뷰 레인이 갱신):
+
+이후 문서 커밋이 푸시되어 head 가 `1f37092` → **`727dcd6`** 로 옮겨졌다. 이전 head 의
+초록은 이 PR 이 머지할 것에 대한 증거가 아니므로 다시 쟀다.
+
+```
+$ gh pr view 122 --json headRefOid        → 727dcd68f827…
+$ gh pr checks 122 --watch --fail-fast
+test   pass   4m58s   .../actions/runs/32715920533/job/97396995199
+$ gh api .../actions/runs/32715920533 --jq '.head_sha, .conclusion'
+727dcd68f8279d9ddd854924b5c625544c2de405
+success
+```
+
+내용: Python **10013 passed / 22 skipped** · UI **21 files / 500 passed**.
+`1f37092 → 727dcd6` 의 diff 는 `progress.md` 단독(+56/−3)이며 테스트 변경은 0이다.
+
+> **낡음과 거짓은 다르다.** 「첫 실행」이라 명시된 낡은 기록은 읽는 사람을 안 속이므로
+> 다음 커밋에 고치면 되고, 「최신」이라 적힌 낡은 기록은 거짓이라 지금 고쳐야 한다.
+> 문서가 자기 CI 결과를 적으려고 커밋을 만들면 head 가 밀리고 CI 가 다시 돌아 기록이 또
+> 낡는 재귀가 생긴다 — 그래서 최종 실행 기록은 **다음 커밋 사이클**(여기서는 t54 리뷰)에
+> 얹는 것이 맞다.
 
 **CI 가 실제로 무엇을 돌렸는가**(「pass」 한 줄로 세지 않는다 — 로그를 읽었다):
 
