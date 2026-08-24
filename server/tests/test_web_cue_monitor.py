@@ -617,9 +617,9 @@ class TestCueMonitorPollCost:
             TestClient(create_app(_poll_deps(tmp_path, console))) as client,
             client.websocket_connect("/ws") as ws,
         ):
-            ws.receive_json()
+            recv_frame(ws)
             _send(ws, type="cue_monitor_request")
-            event = ws.receive_json()
+            event = recv_frame(ws)
         # The narrower read must not narrow the ANSWER.
         assert [entry["executor_no"] for entry in event["executors"]] == [101]
         assert console.state_queries == [
@@ -635,7 +635,7 @@ class TestCueMonitorPollCost:
             TestClient(create_app(_poll_deps(tmp_path, console))) as client,
             client.websocket_connect("/ws") as ws,
         ):
-            ws.receive_json()
+            recv_frame(ws)
             _send(ws, type="cue_monitor_request")
             _fresh_cue_monitor(ws)
             first_tick = len(console.state_queries)
@@ -651,7 +651,7 @@ class TestCueMonitorPollCost:
         deps = _poll_deps(tmp_path, console)
         deps.executor_nos.ttl_seconds = 0.0  # every tick is a miss
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()
+            recv_frame(ws)
             _send(ws, type="cue_monitor_request")
             _fresh_cue_monitor(ws)
             first_tick = len(console.state_queries)
@@ -667,12 +667,12 @@ class TestCueMonitorPollCost:
             TestClient(create_app(_poll_deps(tmp_path, console))) as client,
             client.websocket_connect("/ws") as ws,
         ):
-            ws.receive_json()
+            recv_frame(ws)
             _send(ws, type="dash_catalog_request")
-            assert ws.receive_json()["type"] == "dash_catalog"
+            assert recv_frame(ws)["type"] == "dash_catalog"
             after_dash = len(console.state_queries)
             _send(ws, type="cue_monitor_request")
-            ws.receive_json()
+            recv_frame(ws)
         assert console.state_queries[after_dash:] == ["Executor 101"]
 
 
@@ -690,16 +690,16 @@ class TestCueMonitorTickCoalesce:
         # the coalesce guard alone.
         deps.executor_nos.ttl_seconds = 0.0
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="cue_monitor_request")
             assert console.entered_hold.wait(timeout=10.0), "the first build never started"
             _send(ws, type="cue_monitor_request")  # must be dropped, not queued
             # The receive loop is sequential, so a status reply proves the
             # second tick has already been dispatched (and dropped).
             _send(ws, type="status_request")
-            assert ws.receive_json()["type"] == "status"
+            assert recv_frame(ws)["type"] == "status"
             console.release_hold.set()
-            assert ws.receive_json()["type"] == "cue_monitor"
+            assert recv_frame(ws)["type"] == "cue_monitor"
         # One build, not two: the dropped tick never re-walked the pages.
         assert console.state_queries.count("DataPool/Pages") == 1
         coalesced = [
@@ -712,7 +712,7 @@ class TestCueMonitorTickCoalesce:
         deps = _poll_deps(tmp_path, console)
         deps.executor_nos.ttl_seconds = 0.0
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()
+            recv_frame(ws)
             for _ in range(3):
                 _send(ws, type="cue_monitor_request")
                 _fresh_cue_monitor(ws)

@@ -679,8 +679,31 @@ while True:
 ```
 
 이관으로 **시간 상한은 생겼다**(프레임 한 장당 10초). 그러나 **회수 상한이 없다** —
-기대 밖 프레임이 계속 도착하면 이 루프는 영원히 돈다. 각 회가 10초 안에
-돌아오므로 t52 가 잡은 「정지」는 아니지만, **끝나지 않는 것은 마찬가지**다.
+기대 밖 프레임이 계속 도착하면 이 루프는 계속 돈다.
+
+⚠️ **정정(리드 반박 수용).** 초판에 「영원히 돈다 · 끝나지 않는 건 마찬가지다」라고
+적었는데 **사실이 아니다.** 직접 확인했다:
+
+```
+$ sed -n '51,55p' pyproject.toml
+# ... exit_on_timeout 은 프로세스를 통째로 끊으므로 임계값이
+# 측정으로 선 뒤에만 켠다(t52 §5b 6단계).
+faulthandler_timeout = 60
+faulthandler_exit_on_timeout = true
+```
+
+`exit_on_timeout` 이 **true** 다. 60초 뒤 **프로세스가 통째로 끊긴다.** 무한이
+아니고, 그물은 있고, 딱딱하다. 게다가 그 그물은 **내가 t52 에서 직접 넣은 것**이고
+그 사실이 같은 파일 51-52행 주석에 이미 적혀 있었다.
+
+정확한 문면은 이것이다:
+
+> 무한 루프가 아니다. **「깨끗한 테스트 실패」 대신 「60초 뒤 런 전체가 죽는 것」**
+> 이다. 고칠 값어치는 **그 대가**(나머지 스위트를 다 잃고 트레이스백 덤프만 남는다)
+> 에 있지, 무한성에 있지 않다.
+
+없는 결함의 크기를 키워 적으면 다음 사람이 **잘못된 급함**으로 온다. 발견 자체는
+유효하지만 등급은 증거를 따라간다.
 
 이것은 conftest 의 `drain_until` 이 `limit=30` 으로 막아 둔 바로 그 구멍이고,
 `recv_frame` 독스트링이 명시한 「둘 다 필요하다」의 나머지 절반이다:
@@ -690,12 +713,15 @@ while True:
 
 ⚠️ **이 카드에서 고치지 않았다.** 이 카드는 「직접 호출을 승격 헬퍼로 이관」이고,
 헬퍼에 회수 상한을 새로 다는 것은 테스트의 대기 의미를 바꾸는 일이라 이관 원칙에
-정면으로 걸린다. **발견으로 보고하고 판단은 리드에게 넘긴다.**
+정면으로 걸린다. 리드가 **t58** 로 별건 등재했다.
 
 처방 후보(둘 다 이 카드 밖):
 - (a) `_fresh_cue_monitor(ws, *, limit=30)` 로 회수 상한을 추가 — 싸다
 - (b) `drain_until` 에 술어(predicate) 인자를 열어 이 헬퍼를 흡수 — 근본적이지만
   conftest 공용 헬퍼의 시그니처를 바꾼다
+
+🔴 t58 착수 조건(리드): **같은 형태의 `while True` + 수신 루프를 전수할 것.**
+한 자리만 고치면 계열이 안 마른다.
 
 ### 13.6 누적
 
@@ -709,3 +735,115 @@ while True:
 | **누계** | **35** | **전 자리 KILL 확인** | **1 / 35** |
 
 전수 67 → **32**. 대상 66 → **31**(cue_monitor 11 · app 20).
+
+---
+
+## 14. 배치 t54-f — cue_monitor 뒤 11곳 (파일 완결)
+
+리드 승인: 「11곳 그대로. 쪼개지 마라. **10 은 작업 단위 눈금이지 불변식이 아니다** —
+자리 수와 의미 단위가 충돌하면 의미 단위를 우선하고 보고만 하라.」
+
+### 14.1 대상표 — 11곳 (단위: **자리**)
+
+| # | 행(이관 전) | 소속 테스트 | 판정 | 판정 근거 |
+|---|---|---|---|---|
+| F1 | `:620` | `test_a_tick_resolves_the_executors_and_reports_them` | `recv_frame` | 첫 status 한 장 소비 |
+| F2 | `:622` | 〃 | `recv_frame` | 요청 직후 다음 한 장의 `executors` 를 단정 |
+| F3 | `:638` | `test_a_second_tick_inside_the_ttl_re_resolves_nothing` | `recv_frame` | 첫 status 한 장 소비 |
+| F4 | `:654` | `test_an_expired_ttl_re_reads_the_executor_section` | `recv_frame` | 〃 |
+| F5 | `:670` | `test_a_dash_refresh_updates_the_cache_without_waiting_out_the_ttl` | `recv_frame` | 〃 |
+| F6 | `:672` | 〃 | `recv_frame` | 다음 한 장이 `dash_catalog` 임을 단정 |
+| F7 | `:675` | 〃 | `recv_frame` | 틱 응답 한 장을 소비해 **동기를 맞추는** 자리. 아래 14.2 참조 |
+| F8 | `:693` | `test_a_tick_arriving_while_a_build_is_in_flight_is_dropped` | `recv_frame` | 첫 status 한 장 소비 |
+| F9 | `:700` | 〃 | `recv_frame` | 🔴 **이 배치에서 판정 근거가 가장 센 자리.** 아래 14.2 |
+| F10 | `:702` | 〃 | `recv_frame` | hold 해제 후 다음 한 장이 `cue_monitor` 임을 단정 |
+| F11 | `:715` | `test_the_guard_is_not_a_latch_and_releases_on_completion` | `recv_frame` | 첫 status 한 장 소비 |
+
+미판정: **0건**.
+
+### 14.2 리드가 지목한 두 후보 — 판정 근거
+
+**`:700` (F9)** — 코드 옆 주석이 판정을 대신 말해 준다:
+
+```python
+_send(ws, type="cue_monitor_request")   # 버려져야 한다(큐에 쌓이면 안 됨)
+_send(ws, type="status_request")
+# The receive loop is sequential, so a status reply proves the
+# second tick has already been dispatched (and dropped).
+assert recv_frame(ws)["type"] == "status"
+```
+
+이 단정의 힘은 **「수신 루프가 순차이므로 status 응답이 곧 두 번째 틱이 이미
+처리(그리고 폐기)되었다는 증명」** 이라는 데 있다. `drain_until` 로 바꾸면 중간
+프레임을 버리므로 **그 증명 자체가 사라진다** — 「언젠가 status 가 왔다」는
+「status 가 다음 차례였다」를 대신하지 못한다. `recv_frame` 이 아니면 안 되는 자리다.
+
+**`:675` (F7)** — 판정이 가장 약한 자리라 근거를 명시한다. 이 자리는 결과를 쓰지
+않고 프레임 한 장을 버려 **동기만 맞춘다**. 기능만 보면 두 헬퍼가 다 동작한다.
+그래서 이관 원칙의 원문으로 판정했다 — **「헬퍼가 그 자리의 대기 의미를 바꾸면
+안 된다」**. 현재 의미는 「한 장 받는다」이고 `recv_frame` 이 그것을 **정확히**
+보존한다. 「동작이 같다」는 이관 사유가 아니다.
+
+`:670`·`:672`·`:675` 의 dash_catalog 혼재는 실제로는 함정이 아니었다. 셋은
+**서로 다른 프레임을 한 장씩** 소비할 뿐이고(status → dash_catalog → cue_monitor),
+같은 대기를 두 의미로 쓰는 자리가 아니다.
+
+### 14.3 전수 대조 (단위: **자리**)
+
+```
+$ grep -c '\.receive_json(' server/tests/test_web_cue_monitor.py
+0
+$ grep -rn '\.receive_json(' server/tests --include='*.py' | wc -l
+      21
+$ grep -rc '\.receive_json(' server/tests --include='*.py' | grep -v ':0$'
+server/tests/test_web_app.py:20
+server/tests/conftest.py:1
+```
+
+32 − 11 = 21. **`test_web_cue_monitor.py` 완결**(20/20 이관). 대상 잔여 **20곳 /
+1파일** — `test_web_app.py` 만 남았다.
+
+### 14.4 검증 · 뮤테이션
+
+```
+$ .venv/bin/ruff check server/tests          → All checks passed!
+$ pytest server/tests/test_web_cue_monitor.py → 49 passed in 0.45s
+```
+
+**레버 A — 상한 0.0**
+
+```
+F1 2/2   F2 2/2   F3 0/2 → +10회 10/10   F4 2/2   F5 2/2   F6 2/2
+F7 2/2   F8 1/2 → +10회 10/10   F9 2/2   F10 2/2  F11 2/2
+```
+
+🔴 **F3 는 2회 시행이 둘 다 SURVIVED 였다**(0/2). 이전 사례(B3·C2·C6·E3)는 전부
+1/2 였는데 F3 는 처음으로 **연속 2회** 살아남았다. 그런데 10회 반복은 10/10 KILLED.
+
+이것이 §10 규칙 1 의 값어치를 가장 크게 보여주는 자리다. 「2회 다 통과했으니
+결함」이라는 판정은 **가장 그럴듯한 오판**이고, 실제로는 12회 중 10회가 죽는 자리다.
+경합이 **독립적이지 않고 시간적으로 뭉쳐서** 일어난다는 뜻이기도 하다 — 연속 2회
+SURVIVED 가 확률적으로 드물지 않다. 규칙을 「2회 중 1회라도」가 아니라
+**「SURVIVED 가 1회라도 나오면」** 으로 쓴 것이 정확했다.
+
+경합 재확인 누계 **6건**(B3·C2·C6·E3·F3·F8), **전부 반복에서 죽었다.** 결정적 KILL
+불가로 남은 자리는 여전히 **0건**.
+
+**레버 B — 분류**: `F1..F11 전부 SURVIVED`. §5.4 표기 적용.
+F9 는 판정 근거가 가장 센 자리인데도 갈리지 않는다 — 배치 b 의 B4 와 같은 모양이고,
+**판정이 옳은 것과 판정이 검사로 지켜지는 것은 별개**라는 것을 다시 보여준다.
+
+### 14.5 누적 (단위: **자리**)
+
+| 배치 | 자리 | 상한 레버 | 분류 레버 |
+|---|---|---|---|
+| 1 | 7 | 전 자리 KILL | 1 KILLED / 6 |
+| b | 8 | 전 자리 KILL (B3) | 0 / 8 |
+| c | 6 | 전 자리 KILL (C2·C6) | 0 / 6 |
+| d | 5 | 전 자리 KILL | 0 / 5 |
+| e | 9 | 전 자리 KILL (E3) | 0 / 9 |
+| f | 11 | 전 자리 KILL (F3·F8) | 0 / 11 |
+| **누계** | **46** | **전 자리 KILL 확인** | **1 / 46** |
+
+전수 67 → **21**. 대상 66 → **20**(`test_web_app.py` 20곳, 1파일).
+미판정 누계 **0건**. 완결된 파일 **9개** / 대상 11파일.
