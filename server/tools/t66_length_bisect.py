@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import json
 import sys
@@ -76,10 +77,9 @@ def _fire(gate, line: str) -> dict:
     detail = result.detail or ""
     if GATE_BLOCK_MARK in detail:
         return dict(bytes=size, observed=False, ok=None, detail=detail)
-    try:
+    # 닫기 실패는 관측을 무효화하지 않는다 — 선택은 이미 답을 받았다.
+    with contextlib.suppress(Exception):
         gate._execute_cleared(CLEAR)
-    except Exception:  # noqa: BLE001 — 닫기 실패는 관측을 무효화하지 않는다
-        pass
     return dict(bytes=size, observed=True, ok=bool(result.ok), detail=detail)
 
 
@@ -151,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         stack.stop()
 
-    out["trace"] = sorted(trace, key=lambda row: row["n"] if "n" in row else 0)
+    out["trace"] = sorted(trace, key=lambda row: row.get("n", 0))
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 

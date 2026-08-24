@@ -350,10 +350,35 @@ class TestLineByteBudget:
         assert measure_command_bytes(chain) == len(chain.encode("utf-8"))
         assert measure_command_bytes(chain) == 1201
 
-    def test_all_group_line_is_measured_and_reported(self):
+    def test_the_compact_builder_is_what_the_mapper_actually_emits(self):
+        """t66 — 위 검사는 **웨이브** 빌더를 잰다. 그룹 경로는 압축 빌더를 쓴다.
+
+        둘을 나란히 두는 이유: 위 1201 만 있으면 매퍼가 어느 빌더를 쓰는지
+        아무 검사도 말하지 않아, 압축을 되돌려도 조용히 통과한다.
+        """
+        from server.spatial.choreography import (
+            build_compact_fixture_selection,
+            build_spatial_selection_chain,
+        )
+
+        fids = _all_fids()
+        compact = build_compact_fixture_selection(fids)
+        verbose = build_spatial_selection_chain(fids)
+        assert measure_command_bytes(compact) == 182
+        assert measure_command_bytes(verbose) == 1201
         result = _map()
         by_name = dict((b.name, b) for batch in result.batches for b in batch.buckets)
-        assert by_name["ALL"].longest_line_bytes == 1201
+        assert by_name["ALL"].longest_line_bytes == measure_command_bytes(compact)
+
+    def test_all_group_line_is_measured_and_reported(self):
+        """t66 — 압축 후 값이다. 압축 전 반복 키워드형은 1201B 였다.
+
+        두 수를 함께 적는 이유: 182 만 적으면 다음 사람이 이 줄이 원래
+        얼마였는지 몰라 압축을 되돌려도 아무것도 빨개지지 않는다.
+        """
+        result = _map()
+        by_name = dict((b.name, b) for batch in result.batches for b in batch.buckets)
+        assert by_name["ALL"].longest_line_bytes == 182
         assert all(b.longest_line_bytes > 0 for b in by_name.values())
 
     def test_the_measured_line_fits_the_transport_ceiling(self):
@@ -361,16 +386,16 @@ class TestLineByteBudget:
 
         result = _map()
         widest = max(b.longest_line_bytes for batch in result.batches for b in batch.buckets)
-        assert widest == 1201
+        assert widest == 182
         assert widest + 42 < MAX_PLUGIN_CALL_BYTES, "프레이밍을 더해도 상한 안이다"
 
     def test_a_group_over_budget_is_skipped(self):
-        """예산을 ALL 아래로 낮추면 ALL 이 빠진다."""
-        result = _map(line_byte_budget=1150)
+        """예산을 ALL(182B) 아래·차순위(53B) 위로 낮추면 ALL 만 빠진다."""
+        result = _map(line_byte_budget=100)
         kinds = [s.kind for s in result.skipped]
-        assert kinds == ["line_over_budget"]
+        assert kinds == ["line_over_budget"], "ALL 하나만 걸려야 한다"
         assert result.skipped[0].name == "ALL"
-        assert "1201" in result.skipped[0].detail
+        assert "182" in result.skipped[0].detail
 
     def test_skipping_slot_one_breaks_the_prefix_and_yields_zero_batches(self):
         """ALL 은 슬롯 1이다. 빠지면 남은 순열이 2..18 인데 엔진은 1..17 을
@@ -378,7 +403,7 @@ class TestLineByteBudget:
 
         이것이 결정 T 의 의도다. 17개를 **틀린 번호로** 쓰느니 0개를 쓴다.
         """
-        result = _map(line_byte_budget=1150)
+        result = _map(line_byte_budget=100)
         assert result.batches == ()
         assert result.slot_divergence is not None
         assert result.slot_divergence.sheet_slots[0] == 2
@@ -536,3 +561,68 @@ class TestSlotMeasurementEquivalence:
         with pytest.raises(GroupSlotError):
             engine_rule(unreadable, count=1)
         assert mapper_rule(unreadable, 1) == (1,)
+
+
+class TestFabricatedOversizeControl:
+    """t66 [HARD] 날조 대조군 — **압축하고도** 예산을 넘는 입력이 발화 전에 걸리나.
+
+    압축(1201B -> 182B)만 보고 「예산 문제는 끝났다」고 적으면, 그 뒤로 예산
+    가드가 실제로 무는지 아무도 모른다. 이 대조군이 없으면 가드를 통째로
+    지워도 이 파일의 어떤 검사도 빨개지지 않는다 — 실제 리그가 예산 근처에
+    가지 않기 때문이다.
+
+    그래서 **예산을 낮추지 않고**(기본 2000 그대로) 입력을 키운다. 낮춘 예산은
+    가드가 무는지를 재지만, 기본값이 실제로 방어선인지는 못 잰다.
+    """
+
+    @staticmethod
+    def _bloated():
+        """`KEY` 라벨에 흩어진 FID 600개를 더한다.
+
+        홀수라 **연속 구간이 없다** — 압축이 한 자리도 못 접는다. 이것이
+        의도다: 압축으로 줄일 수 없는 입력이라야 예산 가드를 시험한다.
+        """
+        extra = list(range(1001, 1001 + 600 * 2, 2))
+        rows = _patch_rows() + [dict(Group="KEY", FID=str(fid)) for fid in extra]
+        return rows, sorted(_all_fids() + extra)
+
+    def test_an_input_that_stays_over_budget_after_compression_is_skipped(self):
+        rows, fids = self._bloated()
+        result = _map(patch_rows=rows, console_fids=fids)
+        over = [s for s in result.skipped if s.kind == "line_over_budget"]
+        assert over, "압축 후에도 예산을 넘는 줄이 하나도 안 걸렸다 — 가드가 안 문다"
+        names = set(s.name for s in over)
+        assert "ALL" in names, "합집합 파생이 예산을 넘겼는데 안 걸렸다"
+        assert result.batches == (), "예산을 넘긴 그룹이 있는데 배치가 나갔다"
+
+        # 부풀린 `KEY` 자체는 예산 검사에 **도달하지 않는다** — 시트가 적은
+        # 개수(6대)와 실제 수(606)가 달라 앞단의 교차검증에서 먼저 걸린다.
+        # 이 사실을 함께 못박는 이유: 적지 않으면 다음 사람이 「KEY 도 예산에
+        # 걸리겠지」로 읽고, 앞단 가드를 지웠을 때 무엇이 달라지는지 모른다.
+        by_name = dict((s.name, s.kind) for s in result.skipped)
+        assert by_name.get("KEY") == "member_count_mismatch"
+
+    def test_the_control_is_genuinely_over_the_default_budget(self):
+        """비공허성 — 위 검사가 「무엇이든 걸린다」가 아님을 잰다.
+
+        걸린 줄의 실제 크기가 기본 예산보다 큰지 직접 센다. 이 단언이 없으면
+        위 검사는 다른 이유(이름 미상 등)로 걸린 것과 구분되지 않는다.
+        """
+        from server.lxseq.group_mapper import DEFAULT_LINE_BYTE_BUDGET
+        from server.spatial.choreography import build_compact_fixture_selection
+
+        rows, _fids = self._bloated()
+        table = build_label_fid_table(rows)
+        line = build_compact_fixture_selection(table["KEY"])
+        assert "1001 Thru" not in line, "날조 구간이 접혔다 — 홀수만 넣었으므로 접히면 안 된다"
+        assert measure_command_bytes(line) > DEFAULT_LINE_BYTE_BUDGET
+
+    def test_the_unbloated_rig_is_comfortably_under_the_same_budget(self):
+        """반대편 — 실제 리그는 같은 예산 아래다. 둘이 함께 있어야 예산이
+        「아무나 거르는 값」이 아님이 관측된다."""
+        from server.lxseq.group_mapper import DEFAULT_LINE_BYTE_BUDGET
+
+        result = _map()
+        widest = max(b.longest_line_bytes for batch in result.batches for b in batch.buckets)
+        assert widest < DEFAULT_LINE_BYTE_BUDGET
+        assert [s.kind for s in result.skipped] == []

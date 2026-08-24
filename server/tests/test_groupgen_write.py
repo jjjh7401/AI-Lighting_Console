@@ -138,7 +138,7 @@ def test_build_group_write_plan_happy_path_emits_the_fixed_chain() -> None:
     assert step.fids == (1, 2)
     assert step.commands == (
         "ClearAll",
-        "Fixture 1 + Fixture 2",
+        "Fixture 1 + 2",
         "Store Group 2",
         "Label Group 2 'GEO Downstage'",
         "ClearAll",
@@ -447,6 +447,11 @@ def test_max_plan_size_is_an_explicit_per_call_override() -> None:
 
 SELECTION_123 = "Fixture 1 + Fixture 2 + Fixture 3"
 
+#: 같은 대상을 규칙서 검증 문법으로 압축한 형태 — 이제 이 모듈이 내는 줄이다.
+#: 반복 키워드형(위)과 달리 `_SELECTION_OPERAND` 가 **매치한다**. 둘을 나란히
+#: 두는 이유는 t66 이 고친 것이 정확히 그 차이이기 때문이다.
+COMPACT_123 = "Fixture 1 Thru 3"
+
 
 def test_guard_bundle_collision_refuses_a_repeated_non_exempt_line() -> None:
     with pytest.raises(GroupSlotError) as excinfo:
@@ -483,17 +488,37 @@ def _two_identical_fid_groups_plan():
     )
 
 
-def test_the_whole_plan_concatenated_into_one_bundle_is_refused() -> None:
-    """Why the tool layer fires ONE BUNDLE PER GROUP, stated as a test: each
-    step is clean on its own, the concatenation is not."""
+def test_the_concatenated_plan_no_longer_collides_because_the_selection_is_exempt() -> None:
+    """t66 — 이 검사는 **뒤집혔다.** 뒤집힌 이유를 함께 못박는다.
+
+    예전에는 두 그룹이 같은 fid 를 고르면 이어 붙인 번들이 거절됐다. 선택 줄이
+    반복 키워드형이라 `is_programmer_state` 의 면제를 못 받았고, 그래서
+    run_commands dedupe 가 둘째 선택을 떨어뜨렸기 때문이다. 지금은 압축형을
+    내고 그 형태는 면제를 받으므로 **둘째 선택이 떨어지지 않는다** — 거절해야
+    할 위험 자체가 사라졌다.
+
+    단언을 약하게 바꾸는 것이므로 **무엇이 그것을 성립시키는지**를 같이 잰다.
+    아래 면제 단언이 False 로 돌아가면 이 검사는 그 자리에서 빨개져야 한다.
+    """
     plan = _two_identical_fid_groups_plan()
     for step in plan.steps:
-        guard_bundle_collision(step.commands)  # every step alone is safe to fire
+        guard_bundle_collision(step.commands)  # 각 단계는 여전히 단독으로 안전하다
+    selections = [c for step in plan.steps for c in step.commands if c.startswith("Fixture")]
+    assert selections == [COMPACT_123, COMPACT_123]
+    assert is_programmer_state(COMPACT_123) is True, (
+        "압축형이 면제를 못 받으면 아래 이어붙임은 다시 위험해진다"
+    )
     concatenated = [command for step in plan.steps for command in step.commands]
+    guard_bundle_collision(concatenated)  # 더는 충돌이 아니다
+
+
+def test_a_genuine_collision_is_still_refused() -> None:
+    """위 검사가 가드를 통째로 무력화한 것이 아님을 반대편에서 잰다 —
+    면제 대상이 아닌 줄이 반복되면 여전히 거절된다."""
     with pytest.raises(GroupSlotError) as excinfo:
-        guard_bundle_collision(concatenated)
+        guard_bundle_collision(["Store Group 2", COMPACT_123, "Store Group 2"])
     assert excinfo.value.code == GROUP_LINE_COLLISION
-    assert SELECTION_123 in excinfo.value.message
+    assert "Store Group 2" in excinfo.value.message
 
 
 def test_two_identical_fid_groups_still_build_a_full_two_step_plan() -> None:
@@ -501,7 +526,7 @@ def test_two_identical_fid_groups_still_build_a_full_two_step_plan() -> None:
     fids are a legitimate request and must still be planned in full."""
     plan = _two_identical_fid_groups_plan()
     assert [step.slot for step in plan.steps] == [2, 3]
-    assert all(SELECTION_123 in step.commands for step in plan.steps)
+    assert all(COMPACT_123 in step.commands for step in plan.steps)
 
 
 def test_build_group_write_plan_screens_every_step_it_builds(monkeypatch) -> None:
@@ -582,7 +607,8 @@ ADVERSARIAL_LINES = (
     "Fixture 1",
     "Fixture 1 Thru 10",
     "Group 2",
-    SELECTION_123,  # the line this whole section exists for
+    SELECTION_123,  # 반복 키워드형 — 면제 밖 (t66 이 고친 그 형태)
+    COMPACT_123,  # 압축형 — 면제 안. 둘을 나란히 둬야 차이가 관측된다
     "ClearAll Sequence 1",  # fullmatch says no; a search would say yes
     "Store Group 2",
     "Label Group 2 'GEO Stage Right'",

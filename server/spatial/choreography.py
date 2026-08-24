@@ -411,6 +411,12 @@ def build_compact_fixture_selection(fids: Iterable[int]) -> str:
 
     길이 2인 구간은 `a + b` 로 둔다. `a Thru b` 와 글자 수가 같고, `Thru` 는
     범위를 뜻하므로 두 자리에 쓰면 읽는 사람에게 구간이 더 길다는 인상을 준다.
+
+    **이 형태는 실기 미검증이다** (t66). 규칙서가 실기 검증한 두 문법
+    (`Fixture 11 Thru 19` · `Fixture 11 + 12 + 13`)을 조립한 것이지, 이 조립된
+    줄 자체를 콘솔에 쏴 본 적은 없다. 「콘솔에서 통과함」으로 읽지 마라. t66 이
+    쏴 볼 기회를 잃은 이유와 언제 닫을지는
+    `.moai/specs/SPEC-COPILOT-LXSEQ-002/t66-verdict.md` §4-2 (카드 t67).
     """
     chain = tuple(fids)
     if not chain:
