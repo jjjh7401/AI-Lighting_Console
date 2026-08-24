@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-SHEETPIPE-001
 title: "시트 전달경로 — 판별된 바이트를 세션 슬롯과 래퍼 툴 인자까지 나른다 (분할 B)"
 version: "0.3.0"
-status: draft
+status: in-progress
 created: 2026-08-23
 updated: 2026-08-24
 author: manager-spec (칸반 카드 t10)

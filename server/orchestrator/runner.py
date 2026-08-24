@@ -153,6 +153,7 @@ _TOOL_TASKS: dict[str, str] = {
     "resolve_patch_address": "DMX 주소 자리 확인",
     "patch_fixtures": "픽스처 패치 후 재확인",
     "import_lxseq_patch": "LX-SEQ 패치표 읽어 패치",
+    "import_uploaded_sheet": "올라온 시트 읽어 넘김",
     "find_fx": "효과 라이브러리 검색",
     "instantiate_fx": "효과를 리그에 적용",
     "compose_fx": "페이저 직접 작성",
