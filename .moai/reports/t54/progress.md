@@ -109,7 +109,7 @@ $ .venv/bin/python -c "import server; print(server.__file__)"
 $ .venv/bin/ruff check server/tests
 All checks passed!
 $ .venv/bin/ruff format --check server/tests
-231 files already formatted
+229 files already formatted   ← 정정, 아래 §9 참조
 ```
 
 ### 4.3 테스트 (카드 범위 — 전량 아님)
@@ -127,6 +127,23 @@ $ .venv/bin/python -m pytest \
 
 `test_ws_wait_guard.py`(t52)를 함께 돌린 것은 승격 헬퍼의 상한 자체가
 살아 있는지를 같은 실행에서 확인하기 위해서다.
+
+### 4.4 전량 스위트 (리드 1회 허가)
+
+```
+$ .venv/bin/python -m pytest server/tests -q -p no:cacheprovider
+10023 passed, 12 skipped in 152.39s (0:02:32)
+```
+
+**어느 트리에서 났는지 대조**(t47 ⑤ 절차 — 수집 총수):
+
+```
+$ .venv/bin/python -m pytest server/tests --collect-only -q -p no:cacheprovider
+10035 tests collected in 3.97s
+```
+
+10023 + 12 = 10035 — 자리 수까지 일치하므로 이 실행은 t54 트리에서 났다.
+배치 1 이 건드린 공유 import 면이 다른 파일을 깨뜨리지 않았다.
 
 ---
 
@@ -192,6 +209,43 @@ $ git diff --stat
 
 (+12 = 새 import 5행 + 수정된 호출 7행, −7 = 수정 전 호출 7행)
 
+### 5.4 분류 뮤테이션 — 헬퍼를 **옳게** 골랐는가 (리드 지적으로 소급)
+
+5.3 까지의 상한 뮤테이션이 죽이는 것은 「이 자리에 상한이 걸렸다」뿐이다.
+「헬퍼를 옳게 골랐다」는 아무것도 안 지킨다. 그래서 자리마다 판정한 헬퍼를
+**다른 헬퍼 의미로 바꿔** 빨개지는지 실측했다.
+
+| # | 자리 | 바꾼 의미 | 결과 |
+|---|---|---|---|
+| 1 | `test_web_review` 첫 status 버리기 | `drain_until(ws, "status")` | **SURVIVED** |
+| 2 | `test_web_review` error 단정 | `drain_until(ws, "error")` | **SURVIVED** |
+| 3 | `test_web_session_progress` 첫 status | `drain_until(ws, "status")` | **SURVIVED** |
+| 4 | `test_web_session_progress` 모으는 루프 | `drain_until(ws, "chat_response", limit=40)` | **KILLED** |
+| 5 | `test_web_reply_discovery` 첫 status | `drain_until(ws, "status")` | **SURVIVED** |
+| 6 | `test_web_console_probe` 첫 status | `drain_until(ws, "status")` | **SURVIVED** |
+| 7 | `test_deploy_tauri_seams` 첫 프레임 | `drain_until(socket, "status")` | **SURVIVED** |
+
+#4 의 실패 메시지:
+
+```
+E  AssertionError: 소켓에 진행 프레임이 0건이다: ['chat_response']
+E  assert []
+```
+
+§3 표에서 산문으로만 적었던 「모으는 루프를 drain_until 로 바꾸면 progress
+0건이어도 통과한다」가 **이제 검사로 확인됐다** — 정확히 그 모양으로 빨개진다.
+
+🔴 **나머지 6자리는 분류가 무방비다.** 전부 프레임 한 장을 읽는 자리라,
+기대 타입을 그대로 넣은 `drain_until` 은 정상 경로에서 첫 프레임이 곧 그
+타입이므로 **행동이 동일**하다. 그래서 뮤테이션이 죽지 않는다.
+
+이것은 이관이 틀렸다는 뜻이 **아니다**. `recv_frame` 이 여전히 옳은 선택이다 —
+`drain_until` 은 중간에 엉뚱한 프레임이 끼어도 조용히 넘어가므로 단정이
+약해진다. 다만 그 옳음은 **리뷰로만 보증돼 있고 검사가 없다.** 리드 규칙 2 에
+따라 6자리를 「리뷰로만 보증됨 · 검사 없음」으로 명시한다. 검증된 것처럼 읽지 말 것.
+
+복원은 전 시행 SHA-256 대조로 확인했다(7/7 restore ok).
+
 ---
 
 ## 6. 남은 59곳 — 분할표 제안 (리드 회신용)
@@ -219,9 +273,13 @@ $ git diff --stat
 
 ## 7. 미검증 · 잔여 위험
 
-- **전량 스위트 미실행**. 리드 상시 제약(plan 레인이 t18 로 돌고 있음)에 따라
-  전량은 돌리지 않았다. 배치 1 의 5파일 + `test_ws_wait_guard.py` 만 돌렸다.
-  다른 파일이 이 5파일의 헬퍼/픽스처를 재사용해 깨질 가능성은 **미검증**이다.
+- ~~전량 스위트 미실행~~ → **해소**. 리드가 1회 허가해 돌렸고 초록이다(§4.4).
+  수집 총수 대조로 이 트리에서 난 실행임도 확인했다. 다음 전량은 **카드 닫을 때
+  한 번만** 돌린다 — 배치마다 돌리면 코드가 아니라 기계를 재는 꼴이 된다.
+- **분류가 검사로 지켜지는 자리는 7곳 중 1곳뿐**(§5.4). 나머지 6곳은 리뷰로만
+  보증된다. 드롭인 교체가 행동 동일이라 뮤테이션으로 가를 수 없는 구조다 —
+  가르려면 「기대 밖 프레임이 먼저 오는」 경로를 만들어야 하고, 그건 테스트를
+  고치는 일이라 이 카드 범위 밖이다.
 - **푸시 성공은 게이트 통과가 아니다**. pre-push 훅의 `ci-local` 갈래는 저장소
   루트에 `Makefile` 이 없어 조용히 건너뛴다(t55). 이 카드의 초록은 위 4·5절의
   명령이 근거이고, 푸시 결과는 근거가 아니다.
@@ -232,3 +290,113 @@ $ git diff --stat
   이 카드 범위 밖이라 제안만 남긴다.
 - **콘솔 쓰기 0** — 이 카드에서 콘솔에 보낸 명령은 없다(테스트 전부 FakeConsole
   / TestClient 기반).
+
+---
+
+## 8. 배치 t54-b — dash 4 + layout_image 4 = 8곳
+
+리드 배차: b → c → d → e → f → g → h 순, 같은 브랜치에서 순차.
+
+### 8.1 대상표
+
+| # | 파일:행(이관 전) | 원문 | 판정 | 판정 근거 |
+|---|---|---|---|---|
+| B1 | `test_web_dash.py:576` | `ws.receive_json()  # initial status` | `recv_frame` | 첫 status 한 장 소비 |
+| B2 | `test_web_dash.py:578` | `event = ws.receive_json()` | `recv_frame` | 요청 직후 **다음 한 장**이 `dash_catalog` 임을 단정 |
+| B3 | `test_web_dash.py:588` | `ws.receive_json()  # initial status` | `recv_frame` | 첫 status 한 장 소비 |
+| B4 | `test_web_dash.py:590` | `event = ws.receive_json()` | `recv_frame` | 회귀 가드 — 다음 한 장이 status **가 아님**을 단정. 중간 프레임을 버리는 의미로 바꾸면 단정 대상 자체가 사라진다 |
+| B5 | `test_web_layout_image.py:166` | `ws.receive_json()  # initial status` | `recv_frame` | 첫 status 한 장 소비 |
+| B6 | `test_web_layout_image.py:174` | `event = ws.receive_json()` | `recv_frame` | 업로드 거부 직후 다음 한 장이 `error` 임을 단정 |
+| B7 | `test_web_layout_image.py:188` | `ws.receive_json()  # initial status` | `recv_frame` | 첫 status 한 장 소비 |
+| B8 | `test_web_layout_image.py:190` | `event = ws.receive_json()` | `recv_frame` | 〃 |
+
+미판정: **0건**. 8곳 전부 `recv_frame`.
+
+### 8.2 전수 대조
+
+```
+$ grep -rn '\.receive_json(' server/tests --include='*.py' | wc -l
+      52
+$ grep -rc '\.receive_json(' server/tests --include='*.py' | grep -v ':0$' | sort -t: -k2 -rn
+server/tests/test_web_cue_monitor.py:20
+server/tests/test_web_app.py:20
+server/tests/test_web_handshake.py:6
+server/tests/test_web_e2e.py:5
+server/tests/conftest.py:1
+```
+
+60 − 8 = 52. dash·layout_image 두 파일은 목록에서 완전히 사라졌다.
+대상 잔여 **51곳 / 4파일**.
+
+### 8.3 검증
+
+```
+$ .venv/bin/ruff check server/tests
+All checks passed!
+$ .venv/bin/ruff format --check server/tests
+229 files already formatted
+$ .venv/bin/python -m pytest server/tests/test_web_dash.py server/tests/test_web_layout_image.py -q
+68 passed in 1.05s
+```
+
+### 8.4 뮤테이션 — 두 레버 (리드 규칙 1·2)
+
+**레버 A — 상한 0.0, 자리마다 2회**
+
+```
+B1 2/2 KILLED   B2 2/2 KILLED   B3 1/2 KILLED   B4 2/2 KILLED
+B5 2/2 KILLED   B6 2/2 KILLED   B7 2/2 KILLED   B8 2/2 KILLED
+```
+
+🔴 **B3 가 1/2 로 갈렸다.** §5.2 에서 기전으로 적은 뒤집힘이 상한 `0.0` 에서도
+실제로 나타난 것이다. 지어내지 않고 같은 자리를 10회 더 반복해 비율을 쟀다:
+
+```
+B3 x10: KKKKKKKKKK  → 10/10 KILLED
+```
+
+합계 B3 는 12회 중 11회 KILLED. 즉 레버 `0.0` 은 **확률적으로 강하지만 결정적이
+아니다** — `recv_frame` 이 `worker.start()` 와 `worker.join(timeout)` 사이에
+pump 스레드에게 선점당하면 상한과 무관하게 프레임이 들어와 있다. 1회 시행으로
+SURVIVED 가 나오면 **결함이 아니라 경합일 수 있으므로 반복해서 확인할 것.**
+
+**레버 B — 분류 (판정한 헬퍼를 다른 의미로 교체)**
+
+```
+B1..B8  전부 SURVIVED
+```
+
+배치 1 §5.4 와 같은 결과다. 8곳 전부 프레임 한 장을 읽는 자리라 기대 타입을 그대로
+넣은 `drain_until` 은 정상 경로에서 행동이 동일하다. 리드 규칙 2 에 따라 8곳 모두
+**「리뷰로만 보증됨 · 검사 없음」** 으로 명시한다.
+
+특히 B4 는 판정 근거가 가장 센 자리인데도(중간 프레임을 버리면 「status 가 아님」을
+잴 대상이 사라진다) 뮤테이션으로는 갈리지 않는다 — **판정이 옳은 것과 판정이
+검사로 지켜지는 것은 별개**라는 것을 이 자리가 잘 보여준다.
+
+---
+
+## 9. 자체 정정 — §4.2 의 `231`
+
+배치 1 §4.2 에 `ruff format --check server/tests` 결과를 **231 files** 로 적었으나
+**재현되지 않는다.** 같은 명령이 지금은 일관되게 229 를 낸다.
+
+대조:
+
+```
+$ find server/tests -name '*.py' -not -path '*/__pycache__/*' | wc -l
+     229
+$ git ls-files server/tests | grep -c '\.py$'
+229
+$ git ls-files --others --exclude-standard server/tests | grep '\.py$' | wc -l
+       0
+$ .venv/bin/ruff format --check server/tests --no-respect-gitignore
+229 files already formatted
+```
+
+`git show --stat 68a57f1` 에 삭제 파일이 없으므로 트리에서 .py 파일이 사라진 것도
+아니다. 기준 커밋 이래 줄곧 229 다. **231 이 어디서 나왔는지는 규명하지 못했다** —
+그럴듯한 이야기를 지어 붙이지 않는다. 확인된 것은 「정확한 수는 229 이고, 231 은
+내 보고의 오기」 하나뿐이다.
+
+이 정정이 바꾸는 판정은 없다(`ruff format --check` 는 두 경우 모두 변경 0건).

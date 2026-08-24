@@ -32,6 +32,7 @@ from server.web.dash import (
 )
 from server.web.messages import PROTOCOL_VERSION
 
+from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
 
@@ -573,9 +574,9 @@ class TestDashCatalogRequestDispatch:
     def test_dash_catalog_request_answers_with_a_dash_catalog_event(self, tmp_path):
         deps = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="dash_catalog_request")
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] == "dash_catalog"
         assert isinstance(event["sections"], list)
 
@@ -585,9 +586,9 @@ class TestDashCatalogRequestDispatch:
         # answer with a status frame instead.
         deps = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="dash_catalog_request")
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] != "status"
 
 
