@@ -1,6 +1,6 @@
 # SPEC-COPILOT-FILEARG-001 — 진행 기록 (progress)
 
-문서 상태: draft (v0.9.0, 2026-08-23 — B 저술이 드러낸 교정 4건(결정 M 외)) · **Tier L · 통과 임계 0.85** · 칸반 카드 t10 · 분할 **A(판별기)**
+문서 상태: **in-progress** (updated 2026-08-24 — M1 실행됨) · 직전 개정 v0.9.0, 2026-08-23 — B 저술이 드러낸 교정 4건(결정 M 외) · **Tier L · 통과 임계 0.85** · 칸반 카드 t10 · 분할 **A(판별기)**
 
 ---
 
@@ -91,8 +91,8 @@ plan_complete_at: 2026-08-22
 plan_audit: "미실시"
 spec_version: "0.9.0"
 tier: L                     # 분할 A는 constitutional (레지스트리 계약 정의) — 크기가 아니라 성격. 통과 임계 0.85
-base_sha: 6296af3
-baseline_measured: "미측정 — 의도적으로 비워 둔 칸이다(미완성이 아니다). plan 세션은 전체 스위트를 실행하지 않았고, 이 트리를 두고 돌던 수치 중 최소 하나는 틀렸다(0 failed 로 전달됐으나 실제로는 실패 1건). 다른 트리·다른 시점의 값을 이월하지 않는다 — M0가 이 워크트리 6296af3에서 직접 잰다."
+base_sha: 1c104f0              # 실제 착수 기준선. 6296af3은 plan 작성 시점 값이며 base가 그 뒤 진행했다(G-7)
+baseline_measured: "9885 passed, 12 skipped, 0 failed @ 1c104f0 — 측정 명령 `.venv/bin/python -m pytest -q`. 콘솔 정지 상태에서 쟀다(`pgrep app_gma3` 빈 출력 → 9005 포트 거짓 빨강 없음). 이월값이 아니라 이 워크트리에서 직접 잰 값이다."
 artifacts: [spec.md, plan.md, acceptance.md, design.md, research.md]   # Tier L 집합 5종. progress.md는 Tier 집합에 없는 별도 파일이다 — v0.6.0까지 이 칸이 progress.md를 세고 design.md를 빠뜨렸다(감사 A1)
 requirements: 16            # 정의 앵커: grep -c "^- \*\*REQ-FILEARG-" spec.md → 16 (001~005 · 007 · 008 · 016~024; 006 · 009~015는 SHEETPIPE로 이동 — 번호 재사용 금지)
 acceptance_criteria: 20     # 정의 앵커: grep -c "^### AC-FILEARG-" acceptance.md → 20 (001~006 · 009(순서 구간) · 018~030; 조건부 1: AC-021 · 앱 실기 0 — B가 소유)
@@ -315,6 +315,8 @@ vwx 모듈 순회로 판정해 공용 순회(`iter_vwx_modules`) 사용이나
 구현하면 도달 불가능한 칸**이다. 답했어야 할 곳: `spec.md` REQ-021 / `design.md` §4.
 **한 것**: REQ-021을 문면 그대로 구현했다(zip → `SCENE_ENTRY`만). 코퍼스에 `.xlsx`
 표본이 **0개**라 실측이 바뀌는 칸은 없다 — 그러나 이 자리는 **비어 있는 채로 남았다**.
+**후속 종결(2026-08-24).** 리드가 재정했다 — zip 두 형상 모두 신원 참이다. 구현·시험·
+미검증 칸은 아래 「M1 후속 — zip 갈래 분기」에 적었다.
 
 **G-3 — 해석 불가 술어 형식의 설정 오류 이름.**
 `REQ-FILEARG-016`은 "해석하지 못하는 형태를 표에서 만나면 조용히 건너뛰지 않고 설정
@@ -352,6 +354,51 @@ vwx 모듈 순회로 판정해 공용 순회(`iter_vwx_modules`) 사용이나
 기준선은 `1c104f0`이다. M0 기록처가 그 칸을 채우도록 돼 있으나(§E.1 문면이 스스로
 "M0가 이 워크트리에서 직접 재서 채운다"고 적는다) 채워지지 않았다. §E.1은 plan-phase
 소유라 run 세션이 고치지 않았다 — **실측값은 §E.2·§E.3에 적었다.**
+**후속 종결(2026-08-24).** 리드 재정으로 두 칸을 채웠다(`base_sha: 1c104f0` ·
+`baseline_measured`). 이월이 아니라 이 워크트리에서 **다시 쟀다**. 함께 관측된 것:
+`known_baseline_failure`에 적힌 실패는 `1c104f0`에서 **관측되지 않는다**(전체 0 failed ·
+`TestTouchedFilesPassLint` 3 passed). 그 칸은 리드가 지정한 두 칸이 아니므로 고치지
+않고 관측만 남긴다.
+
+### M1 후속 — zip 갈래 분기 (리드 재정 · G-2 종결)
+
+**재정.** `PK` 매직이면 **두 형상 모두 신원 참**이다 — `SCENE_ENTRY`가 있으면 `.mvr`,
+없으면 `.xlsx`. 둘 다 Vectorworks가 내보내는 형식이므로 신원은 참이고, *어느* zip인가는
+신원이 아니라 뒷단이 가른다. 판독 **불가능한** 아카이브는 거짓 그대로다(경계 미확장).
+
+**TDD 순서 — RED가 먼저 있었다.**
+
+| 단계 | 명령 | 결과 |
+|---|---|---|
+| RED(수정 전) | `.venv/bin/python -m pytest server/tests/test_sheets_registry.py::TestZipShapes -q` | `3 failed, 3 passed` — 요지 `assert ('unknown_sheet_kind', ()) == ('resolved', ('vectorworks',))` |
+| GREEN(수정 후) | 같은 명령 | `6 passed` |
+| 모듈 전체 | `.venv/bin/python -m pytest server/tests/test_sheets_registry.py -q` | `89 passed` (83 → **+6**) |
+
+RED이 **빨강 3 / 초록 3**으로 갈린 것이 핵심이다. 새로 참이 되는 `.xlsx` 형상 3건만
+빨갛고, 유지돼야 할 `.mvr` 형상 · 판독 불가 아카이브 · 비공허성 대조군 3건은 처음부터
+초록이다 — 한 갈래만 열고 나머지 경계는 건드리지 않았다는 뜻이다.
+
+**뮤테이션 1발 — 이 수정이 무엇을 지키는가.** zip 갈래에서 판독 가능성 검사를 지우고
+`return True`만 남기면 `test_zip_magic_that_is_not_a_readable_archive_is_identity_false`가
+`assert True is False`로 죽는다(`1 failed, 5 passed`). 즉 "두 형상 모두 참"은 "`PK`이면
+무조건 참"과 **기계로 구분된다**. 복원은 sha256 대조로 확인했다(`56c0b74f…451ecf` 일치).
+`git checkout --`가 되돌린 것은 **커밋된 수정 전 파일**이었으므로 수정을 다시 얹은 뒤
+대조했다 — 초록이 아니라 **체크섬**이 복원의 증거다.
+
+**전체 스위트.** 9968 → **9974 passed, 12 skipped, 0 failed**(증가 **+6** · 감소 **0**).
+콘솔 정지 상태에서 쟀다(`pgrep app_gma3` 빈 출력). `ruff check` · `ruff format --check` 모두 clean.
+
+**미검증으로 남긴 것 — 명세에는 있고 코퍼스에는 없다.**
+코퍼스에 `.xlsx` 표본이 **0개**다. 표본을 날조하지 않았고, `SCENE_ENTRY` 유무만 다른
+**인메모리 zip 형상 대조군**으로 술어 갈래만 고정했다. 따라서 셋이 열린 채로 남는다:
+
+1. **실물 `.xlsx` 바이트가 신원 참을 받는가** — 형상은 맞췄으나 실물로 재지 않았다.
+2. **`design.md` §4 결과 ④(`unapproved_dependency`)가 실제로 나오는가** — 이 재정으로
+   `.xlsx`가 뒷단 판독기에 **닿게 되어** 도달 가능해졌으나, 이 저장소는 `openpyxl`을
+   필수 의존으로 두므로 이 환경에서는 발화하지 않는다.
+3. **뒷단이 `.mvr`과 `.xlsx`를 어떻게 가르는가** — 신원이 아니라 `SPEC-COPILOT-SHEETPIPE-001` 몫이다.
+
+`.xlsx` 표본이 하나 생기면 **위 1·2를 그 자리에서 재라.**
 
 ## §E.3 Run-phase Audit-Ready Signal
 

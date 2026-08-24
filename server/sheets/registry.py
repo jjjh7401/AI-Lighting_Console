@@ -7,8 +7,9 @@
 
 * ``patch`` — 열 집합 술어. 정본은 ``server/lxseq/parser.py`` 의
   :data:`CANONICAL_COLUMNS` 이며 **참조로** 들고 있다(사본 금지 · AC-FILEARG-006 ②).
-* ``vectorworks`` — 신원 술어. zip이면 ``server/vwx/mvr.py`` 의 ``SCENE_ENTRY``
-  검사(결정 줄은 ``server/orchestrator/tools.py:2861`` 의 관용구), 아니면
+* ``vectorworks`` — 신원 술어. zip이면 **판독 가능한 아카이브인가**만 묻고
+  (``.mvr``·``.xlsx`` 두 형상 모두 참 — 둘 다 Vectorworks가 내보내는 형식이며,
+  *어느* zip인가는 신원이 아니라 뒷단이 가른다), 아니면
   ``server/vwx/reader.py:158`` 의 ``_best_header_candidate(rows)[0] >= 0``.
   여기에 **레지스트리의 다른 행에 맞지 않을 것**이라는 배제 절이 붙는다(결정 L).
 
@@ -25,7 +26,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from server.lxseq.parser import CANONICAL_COLUMNS, _normalize_header
-from server.vwx.mvr import SCENE_ENTRY
 from server.vwx.reader import (
     _best_header_candidate,
     _choose_delimiter,
@@ -154,15 +154,21 @@ def vectorworks_identity(data: bytes) -> bool:
     REQ-FILEARG-021 · design.md §4. 배제 절은 여기 없다 — 그것은 레지스트리를
     참조해야 하므로 판별기가 두 번째 훑기에서 적용한다.
 
-    판독기 갈래의 네 결과에 값을 배정한다: 헤더 미발견 → False · 판독기 예외 →
+    zip 갈래는 **둘로 갈라지며 둘 다 참이다**: ``SCENE_ENTRY``가 있으면 ``.mvr``,
+    없으면 ``.xlsx`` — 둘 다 Vectorworks가 내보내는 형식이므로 신원은 참이고,
+    *어느* zip인가는 신원이 아니라 뒷단의 판단이다(리드 재정 · G-2). 판독
+    **불가능한** 아카이브만 거짓이다 — 그 경계는 넓히지 않았다.
+
+    판독기 갈래의 결과에 값을 배정한다: 헤더 미발견 → False · 판독기 예외 →
     False("신원을 확인하지 못했다"로 번역한다) · ``not_patch_source`` → True
-    (헤더는 찾았다; 사용성은 대상이 판단한다) · zip은 판독기에 **도달하지 않는다**
-    (그래서 ``unapproved_dependency`` 경로가 열리지 않는다).
+    (헤더는 찾았다; 사용성은 대상이 판단한다). zip은 **신원 단계에서** 판독기에
+    도달하지 않으므로 ``unapproved_dependency``는 여기서 나오지 않는다 — 그것은
+    ``.xlsx``가 뒷단 판독기에 닿을 때 openpyxl 없는 환경에서 나온다.
     """
     if data[:2] == _ZIP_MAGIC:
         try:
-            with zipfile.ZipFile(io.BytesIO(data)) as archive:
-                return SCENE_ENTRY in archive.namelist()
+            with zipfile.ZipFile(io.BytesIO(data)):
+                return True
         except (zipfile.BadZipFile, OSError):
             return False
     try:
@@ -281,7 +287,8 @@ VECTORWORKS_ROW = SheetKindRow(
     predicate=DelegatedPredicate(
         identity=vectorworks_identity,
         source=(
-            "zip이면 server/vwx/mvr.py SCENE_ENTRY, 아니면 "
+            "zip이면 판독 가능한 아카이브인가(.mvr·.xlsx 두 형상 모두 참 — "
+            "어느 zip인가는 뒷단이 가른다), 아니면 "
             "server/vwx/reader.py _best_header_candidate(rows)[0] >= 0 "
             "(임계 _MIN_HEADER_ALIAS_MATCHES) AND NOT 레지스트리의 다른 행 일치"
         ),

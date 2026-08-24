@@ -48,6 +48,21 @@ FABRICATED_TAB = b"milk\t2\t3000\neggs\t1\t5000\nbread\t3\t2500\n"
 FABRICATED_COMMA = b"milk,2,3000\neggs,1,5000\nbread,3,2500\n"
 
 
+#: zip 갈래 대조군 — 코퍼스에 `.xlsx` 표본이 **0개**라 형상만 인메모리로 세운다.
+#: 픽스처가 아니다(실물을 날조하지 않는다) — `SCENE_ENTRY` 유무만 다른 최소 아카이브다.
+MVR_SHAPED_ENTRIES = (SCENE_ENTRY, "Resources/model.3ds")
+XLSX_SHAPED_ENTRIES = ("[Content_Types].xml", "xl/workbook.xml", "xl/worksheets/sheet1.xml")
+
+
+def _zip_bytes(names: tuple[str, ...]) -> bytes:
+    """이름 목록만으로 최소 zip을 만든다 — 항목 내용은 판별의 입력이 아니다."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name in names:
+            archive.writestr(name, "")
+    return buffer.getvalue()
+
+
 def _csv(header: list[str]) -> bytes:
     return (",".join(header) + "\n").encode("utf-8")
 
@@ -366,6 +381,58 @@ class TestMvrAndHeaderless:
     def test_headerless_txt_is_unknown_sheet_kind(self):
         data = (VWX_DIR / "vectorworks_export_instrument_data_no_header.txt").read_bytes()
         assert discriminate(data).outcome == OUTCOME_UNKNOWN
+
+
+class TestZipShapes:
+    """zip 갈래는 **둘로 갈라진다** — 두 형상 모두 신원 참이다.
+
+    `REQ-FILEARG-019`는 `.xlsx`의 계속 동작을 약속하는데, `SCENE_ENTRY`만 묻는
+    술어는 `SCENE_ENTRY` 없는 zip(=진짜 `.xlsx`)을 거짓으로 읽어
+    `unknown_sheet_kind`로 떨어뜨렸다(§E.2 G-2). 리드 재정: **Vectorworks가
+    내보낼 수 있는 형식이면 신원은 참**이고, *어느* zip인가는 신원이 아니라
+    뒷단이 가른다.
+
+    **코퍼스에 `.xlsx` 표본은 0개다.** 여기 쓰는 zip은 픽스처가 아니라 인메모리
+    형상 대조군이며, 실물 `.xlsx` 왕복은 여기서 검증하지 않는다.
+    """
+
+    def test_zip_with_the_scene_entry_is_identity_true(self):
+        """갈래 ① `.mvr` 형상 — 재정 전후로 참이 유지되는 쪽이다."""
+        assert vectorworks_identity(_zip_bytes(MVR_SHAPED_ENTRIES)) is True
+
+    def test_zip_without_the_scene_entry_is_identity_true(self):
+        """갈래 ② `.xlsx` 형상 — 재정으로 **새로 참이 되는** 쪽이다."""
+        assert vectorworks_identity(_zip_bytes(XLSX_SHAPED_ENTRIES)) is True
+
+    def test_zip_without_the_scene_entry_resolves_to_vectorworks(self):
+        result = discriminate(_zip_bytes(XLSX_SHAPED_ENTRIES), filename_hint="book.xlsx")
+        assert (result.outcome, result.matched) == (OUTCOME_RESOLVED, ("vectorworks",))
+
+    def test_zip_magic_that_is_not_a_readable_archive_is_identity_false(self):
+        """재정이 **넓히지 않은** 경계 — 판독 불가 아카이브는 거짓 그대로다.
+
+        이 단언이 없으면 `PK`이면 무조건 참을 내는 구현도 위 둘을 통과시킨다.
+        이 시험이 두 갈래 참을 **판별력 있는** 주장으로 만든다.
+        """
+        assert vectorworks_identity(b"PK\x03\x04" + b"\x00" * 64) is False
+
+    def test_the_two_zip_shapes_are_genuinely_different_inputs(self):
+        """비공허성 — 두 형상이 실제로 `SCENE_ENTRY` 유무로 갈리는가."""
+        with zipfile.ZipFile(io.BytesIO(_zip_bytes(MVR_SHAPED_ENTRIES))) as archive:
+            assert SCENE_ENTRY in archive.namelist()
+        with zipfile.ZipFile(io.BytesIO(_zip_bytes(XLSX_SHAPED_ENTRIES))) as archive:
+            assert SCENE_ENTRY not in archive.namelist()
+
+    def test_neither_zip_shape_enters_the_reader_during_discrimination(self, monkeypatch):
+        """신원 단계에서는 어느 zip도 판독기에 닿지 않는다 — openpyxl은 뒷단 몫이다."""
+
+        def _forbidden(*args, **kwargs):  # pragma: no cover - 회귀 시에만 발화
+            raise AssertionError("판별 중 판독기가 불렸다")
+
+        monkeypatch.setattr("server.vwx.reader.read", _forbidden)
+        monkeypatch.setattr("server.sheets.registry.decode_bytes", _forbidden)
+        for entries in (MVR_SHAPED_ENTRIES, XLSX_SHAPED_ENTRIES):
+            assert discriminate(_zip_bytes(entries)).matched == ("vectorworks",)
 
 
 def _broken_handler_table() -> tuple[SheetKindRow, ...]:
