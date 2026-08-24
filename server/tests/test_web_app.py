@@ -22,6 +22,7 @@ from server.web.approval_bridge import ApprovalChannel
 from server.web.messages import PROTOCOL_VERSION
 
 from .conftest import drain_until as _receive_until
+from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider, _final, _run_turn
 from .test_safety_gate import FakeConsole
 
@@ -50,7 +51,7 @@ class TestWebSocketBasics:
     def test_connect_receives_an_initial_status_event(self, tmp_path):
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            event = ws.receive_json()
+            event = recv_frame(ws)
             assert event["type"] == "status"
             assert event["health"] == "online"
             assert event["live_lock"] is False
@@ -66,8 +67,8 @@ class TestWebSocketBasics:
             "sections": [],
         }
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            assert ws.receive_json()["type"] == "status"
-            event = ws.receive_json()
+            assert recv_frame(ws)["type"] == "status"
+            event = recv_frame(ws)
             assert event["type"] == "song_timeline"
             assert event["timeline"]["sequence_number"] == 210
             assert event["timeline"]["lifecycle"] == "verified"
@@ -75,10 +76,10 @@ class TestWebSocketBasics:
     def test_a_connection_without_a_stored_timeline_gets_no_replay(self, tmp_path):
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            assert ws.receive_json()["type"] == "status"
+            assert recv_frame(ws)["type"] == "status"
             _send(ws, type="status_request")
             # The very next frame is the requested status — no timeline slipped in.
-            assert ws.receive_json()["type"] == "status"
+            assert recv_frame(ws)["type"] == "status"
 
     def test_chat_round_trip(self, tmp_path):
         provider = ScriptedProvider([_run_turn(["Store Group 3"], "c1"), _final("만들었습니다")])
@@ -104,7 +105,7 @@ class TestWebSocketBasics:
         provider = ScriptedProvider([_final("도면과 콘솔을 비교하겠습니다")])
         deps, _console, _gate = _deps(tmp_path, provider)
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()
+            recv_frame(ws)
             _send(
                 ws,
                 type="vectorworks_export_upload",
@@ -124,7 +125,7 @@ class TestWebSocketBasics:
         """
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()
+            recv_frame(ws)
             _send(
                 ws,
                 type="vectorworks_export_upload",
@@ -142,7 +143,7 @@ class TestWebSocketBasics:
         # 회귀 판정은 반드시 WS 왕복으로 한다.
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()
+            recv_frame(ws)
             _send(
                 ws,
                 type="layout_image_upload",
@@ -157,9 +158,9 @@ class TestWebSocketBasics:
     def test_malformed_message_yields_a_korean_protocol_error(self, tmp_path):
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             ws.send_text("this is not json")
-            event = ws.receive_json()
+            event = recv_frame(ws)
             assert event["type"] == "error"
             assert event["kind"] == "protocol"
             assert any("가" <= ch <= "힣" for ch in event["message"])
