@@ -103,6 +103,7 @@ from server.orchestrator.tools import (
     build_toolset,
 )
 from server.prechk.query import read_properties
+from server.presets.store import preset_store_commands as _preset_store_commands
 from server.safety.approval import ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
@@ -2946,32 +2947,6 @@ class _PresetStoreRun:
 
 def _preset_slot_list(slots: Sequence[int], pool_no: int = POSITION_PRESET_POOL) -> str:
     return ", ".join(f"{pool_no}.{no}" for no in slots)
-
-
-def _preset_store_commands(
-    pool_no: int, preset_no: int, label: str | None = None
-) -> tuple[str, ...]:
-    """``Store Preset <pool>.<n>`` (+ ``Label``) — 풀 일반형 저장 명령 빌더.
-
-    ``pointing.position_preset_store_commands``의 문면·규칙(양수 번호, 빈
-    라벨·따옴표 거부)을 임의 풀 번호에 적용한다. spatial은 무접촉이라
-    (REQ-COLORPRESET-007) 일반형은 세션 계층에 산다 — ``pool_no=2``의 출력은
-    포지션 빌더와 문자 단위로 동일하다(REQ-COLORPRESET-006의 근거).
-    """
-    if not isinstance(pool_no, int) or isinstance(pool_no, bool) or pool_no <= 0:
-        # 대칭 검증 — preset_no만 지키고 pool_no(응답기 풀 목록 유래)를
-        # 방치하면 'Store Preset -3.31' 같은 기형 표적이 조립될 수 있다
-        # (2026-08-17 보안 리뷰 SEC-CMD-003).
-        raise SpatialPointingError(f"pool number {pool_no!r} must be a positive integer")
-    if preset_no <= 0:
-        raise SpatialPointingError(f"preset number {preset_no!r} must be positive")
-    commands = [f"Store Preset {pool_no}.{preset_no}"]
-    if label is not None:
-        text = label.strip()
-        if not text or "'" in text or '"' in text:
-            raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
-        commands.append(f"Label Preset {pool_no}.{preset_no} '{text}'")
-    return tuple(commands)
 
 
 def _preset_recall_command(pool_no: int, fids: Sequence[int], preset_no: int) -> str:
