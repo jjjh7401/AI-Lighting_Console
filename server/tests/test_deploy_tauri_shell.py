@@ -684,8 +684,7 @@ class TestTheBundleIsSealedAfterThePayloadLands:
             if isinstance(inner, ast.Call) and isinstance(inner.func, ast.Name)
         ]
         called = [
-            call.func.id
-            for call in sorted(calls, key=lambda node: (node.lineno, node.col_offset))
+            call.func.id for call in sorted(calls, key=lambda node: (node.lineno, node.col_offset))
         ]
 
         # 비공허성 — 가지를 못 찾았거나 호출이 비면 아래 순서 단언은 공허하다.
@@ -693,8 +692,10 @@ class TestTheBundleIsSealedAfterThePayloadLands:
         for name in ("bundle_payload", "seal_bundle", "verify_bundle"):
             assert name in called, f"--bundle 가지가 {name} 을 부르지 않는다: {called}"
 
-        assert called.index("bundle_payload") < called.index("seal_bundle") < called.index(
-            "verify_bundle"
+        assert (
+            called.index("bundle_payload")
+            < called.index("seal_bundle")
+            < called.index("verify_bundle")
         ), f"payload -> 봉인 -> 검증 순서가 깨졌다: {called}"
 
     def test_a_bundle_with_its_payload_but_no_seal_is_rejected(self, tmp_path):
