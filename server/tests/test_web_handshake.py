@@ -46,6 +46,7 @@ from server.web.handshake import (
 from server.web.launcher import LAUNCH_TOKEN_ENV, generate_launch_token
 from server.web.messages import PROTOCOL_VERSION
 
+from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
 
@@ -210,7 +211,7 @@ class TestWebSocketEndpointGate:
         with client.websocket_connect(
             "/ws", headers={"origin": TAURI_ORIGIN}, subprotocols=_protocols(TOKEN)
         ) as ws:
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["v"] == PROTOCOL_VERSION
         assert event["type"] == "status"
 
@@ -218,7 +219,7 @@ class TestWebSocketEndpointGate:
         # The Stage-1 regression guard: the packaged browser app must keep working.
         client = TestClient(_app(tmp_path, handshake=_policy()))
         with client.websocket_connect("/ws", headers={"origin": BROWSER_ORIGIN}) as ws:
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] == "status"
 
     def test_no_policy_configured_leaves_the_endpoint_open(self, tmp_path):
@@ -226,7 +227,7 @@ class TestWebSocketEndpointGate:
         # handshake policy behave exactly as before M7.1.
         client = TestClient(_app(tmp_path, handshake=None))
         with client.websocket_connect("/ws") as ws:
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] == "status"
 
 
@@ -254,9 +255,9 @@ class TestProtocolV1Unchanged:
         with gated.websocket_connect(
             "/ws", headers={"origin": TAURI_ORIGIN}, subprotocols=_protocols(TOKEN)
         ) as ws:
-            gated_event = ws.receive_json()
+            gated_event = recv_frame(ws)
         with open_app.websocket_connect("/ws") as ws:
-            open_event = ws.receive_json()
+            open_event = recv_frame(ws)
         assert sorted(gated_event.keys()) == sorted(open_event.keys())
         assert gated_event == open_event
 
@@ -288,7 +289,7 @@ class TestLaunchTokenSecrecy:
         with client.websocket_connect(
             "/ws", headers={"origin": TAURI_ORIGIN}, subprotocols=_protocols(TOKEN)
         ) as ws:
-            ws.receive_json()
+            recv_frame(ws)
         written = [p for p in tmp_path.rglob("*") if p.is_file()]
         assert written, "no files written — the scan would be vacuously satisfied"
         offenders = [

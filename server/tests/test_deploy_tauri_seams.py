@@ -43,6 +43,7 @@ from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
 from server.web.handshake import BASE_SUBPROTOCOL, TOKEN_SUBPROTOCOL_PREFIX, HandshakePolicy
 
+from .conftest import recv_frame
 from .test_deploy_tauri_shell import RUST_SRC, function_body, rust_string_consts
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
@@ -382,7 +383,7 @@ class TestStage2WindowCanReachTheApi:
             headers={"Origin": handshake.TAURI_ORIGINS[0]},
             subprotocols=[BASE_SUBPROTOCOL, f"{TOKEN_SUBPROTOCOL_PREFIX}{TOKEN}"],
         ) as socket:
-            assert socket.receive_json()["type"]
+            assert recv_frame(socket)["type"]
 
 
 # --------------------------------------- the second control surface (M7.4a residual)

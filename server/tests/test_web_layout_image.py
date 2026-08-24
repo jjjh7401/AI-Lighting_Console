@@ -27,6 +27,7 @@ from server.web.messages import (
 )
 from server.web.session import LayoutImageUpload, _base64_decoded_size
 
+from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider
 from .test_web_app import _deps, _send
 from .test_web_session import _session
@@ -163,7 +164,7 @@ class TestAppLevelRejection:
     def test_a_rejected_upload_answers_with_the_contract_kind_and_reason(self, tmp_path):
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(
                 ws,
                 type="layout_image_upload",
@@ -171,7 +172,7 @@ class TestAppLevelRejection:
                 mime_type="image/gif",
                 content_base64=_payload(16),
             )
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] == "error"
         assert event["kind"] == "layout_image_rejected"
         # The ACTUAL reason travels (contract.md §1) — safe because every
@@ -185,9 +186,9 @@ class TestAppLevelRejection:
         # byte-identical generic answer (kind="protocol", fixed Korean text).
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="chat")  # ProtocolError: chat.text is missing
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] == "error"
         assert event["kind"] == "protocol"
         assert event["message"] == _PROTOCOL_ERROR_MESSAGE

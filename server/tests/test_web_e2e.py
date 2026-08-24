@@ -30,6 +30,7 @@ from server.web.messages import PROTOCOL_VERSION
 from server.web.panel import PanelStore, PinStore
 
 from .conftest import drain_until as _receive_until
+from .conftest import recv_frame
 from .test_runner_self_correction import (
     AlwaysFailingCommandProvider,
     ScriptedProvider,
@@ -193,7 +194,7 @@ class TestLiveLockOverWebSocket:
             [_run_turn(["Store Cue 1"], "c1"), _final("잠금 중이라 제안만 생성했습니다")]
         )
         with _client(stack, provider) as client, client.websocket_connect("/ws") as ws:
-            assert ws.receive_json()["type"] == "status"  # initial snapshot
+            assert recv_frame(ws)["type"] == "status"  # initial snapshot
             _send(ws, type="lock", active=True)
             status = _receive_until(ws, "status")
             assert status["live_lock"] is True
@@ -212,7 +213,7 @@ class TestLiveLockOverWebSocket:
             _client(stack, ScriptedProvider([]), panel=panel) as client,
             client.websocket_connect("/ws") as ws,
         ):
-            assert ws.receive_json()["type"] == "status"
+            assert recv_frame(ws)["type"] == "status"
             _send(ws, type="lock", active=True)
             _receive_until(ws, "status")
             _send(ws, type="panel_stop", target_kind="executor", target=201)
@@ -278,7 +279,7 @@ class TestScenario4PanelOverTheRealWire:
             _client(stack, ScriptedProvider([]), panel=panel) as client,
             client.websocket_connect("/ws") as ws,
         ):
-            assert ws.receive_json()["type"] == "status"
+            assert recv_frame(ws)["type"] == "status"
             _send(ws, type="panel_execute", target_kind="executor", target=201)
             request = _receive_until(ws, "approval_request")
             (item,) = request["items"]
@@ -302,7 +303,7 @@ class TestScenario4PanelOverTheRealWire:
             _client(stack, ScriptedProvider([]), panel=panel) as client,
             client.websocket_connect("/ws") as ws,
         ):
-            assert ws.receive_json()["type"] == "status"
+            assert recv_frame(ws)["type"] == "status"
             _send(ws, type="panel_execute", target_kind="executor", target=201)
             request = _receive_until(ws, "approval_request")
             _send(
@@ -321,7 +322,7 @@ class TestScenario4PanelOverTheRealWire:
             _client(stack, ScriptedProvider([]), panel=panel) as client,
             client.websocket_connect("/ws") as ws,
         ):
-            assert ws.receive_json()["type"] == "status"
+            assert recv_frame(ws)["type"] == "status"
             _send(ws, type="panel_execute", target_kind="executor", target=999)
             event = _receive_until(ws, "error")
         assert event["kind"] == "panel"

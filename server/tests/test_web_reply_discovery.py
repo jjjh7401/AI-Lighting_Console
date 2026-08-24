@@ -546,6 +546,7 @@ class TestMismatchReachesTheStatusSurface:
         from server.web.app import WebDeps, create_app
         from server.web.approval_bridge import ApprovalChannel
 
+        from .conftest import recv_frame
         from .test_runner_self_correction import ScriptedProvider
         from .test_safety_gate import FakeConsole
 
@@ -563,7 +564,7 @@ class TestMismatchReachesTheStatusSurface:
             reply_port_probe=lambda: ReplyPortMismatch(configured=9000, observed=9005),
         )
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["reply_port"] == 9005
         assert event["receive_port"] == 9000
 
