@@ -26,6 +26,8 @@ exactly as the previous real store did for an absent item — with no prompt.
 
 from __future__ import annotations
 
+import threading
+
 import keyring
 import pytest
 from keyring.backend import KeyringBackend
@@ -73,3 +75,55 @@ def _neutralize_os_keyring():
     finally:
         keyring.set_keyring(original)
         keystore.clear_session_keys()
+
+
+def recv_frame(ws, timeout: float = 10.0) -> dict:
+    """웹소켓 프레임 하나 — 아니면 실패. **행(hang)은 없다.**
+
+    ``TestClient`` 의 웹소켓 수신에는 상한이 없다(`WebSocketTestSession.receive`
+    → `portal.call(self._send_rx.receive)`, 인자 없음). 그래서 오지 않는 프레임
+    하나가 **스위트 전체를 영영 멈춘다** — 실패가 아니라 정지다.
+
+    회수 상한(`for _ in range(N)`)은 이것을 못 막는다. **회수는 각 회가 돌아와야
+    세므로**, 1 회차가 안 오면 카운터가 안 올라가고 그 아래 `raise` 는 영영
+    도달하지 못한다. 검사가, 그것이 쓰인 바로 그 경우에 공허해진다.
+
+    실측(t52): 전량이 86% 에서 두 번 섰고 자리는
+    ``test_web_app.py::test_vectorworks_upload_starts_a_guided_chat_turn`` 이었다.
+    SHEETPIPE 판별기가 옛 픽스처 페이로드를 ``unknown_sheet_kind`` 로 판정해
+    서버가 ``notice`` 만 보냈는데, 테스트는 ``chat_response`` 를 기다렸다.
+
+    **이 독스트링이 여기 있는 이유**: 같은 모양의 사본이 세 파일에 생겼던 것은
+    「왜 상한이 필요한가」가 코드 옆에 없었기 때문이다. 이 함수를 지우거나
+    ``timeout`` 을 없애기 전에 위 문단을 먼저 반증해라.
+    """
+    box: dict[str, object] = {}
+
+    def pump() -> None:
+        try:
+            box["event"] = ws.receive_json()
+        except Exception as error:  # closed socket, decode failure, …
+            box["error"] = error
+
+    worker = threading.Thread(target=pump, daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if "event" not in box:
+        raise AssertionError(f"no websocket frame within {timeout}s ({box.get('error')})")
+    return box["event"]  # type: ignore[return-value]
+
+
+def drain_until(ws, event_type: str, *, limit: int = 30) -> dict:
+    """``event_type`` 이 나올 때까지 프레임을 버린다 — **시간 상한 위에서**.
+
+    ``limit`` 은 회수 상한이고, 시간 상한은 :func:`recv_frame` 이 건다. 둘 다
+    필요하다: 회수만 있으면 안 오는 프레임에 멈추고, 시간만 있으면 엉뚱한
+    프레임이 무한히 오는 경우를 못 끊는다.
+    """
+    seen: list[str] = []
+    for _ in range(limit):
+        event = recv_frame(ws)
+        seen.append(event["type"])
+        if event["type"] == event_type:
+            return event
+    raise AssertionError(f"no {event_type!r} event within {limit} frames: {seen}")

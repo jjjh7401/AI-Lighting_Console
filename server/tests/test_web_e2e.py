@@ -29,6 +29,7 @@ from server.web.measure import RoundTripRecorder
 from server.web.messages import PROTOCOL_VERSION
 from server.web.panel import PanelStore, PinStore
 
+from .conftest import drain_until as _receive_until
 from .test_runner_self_correction import (
     AlwaysFailingCommandProvider,
     ScriptedProvider,
@@ -85,16 +86,6 @@ def _client(stack_bundle, provider, *, panel=None):
 
 def _send(ws, **fields):
     ws.send_text(json.dumps({"v": PROTOCOL_VERSION, **fields}, ensure_ascii=False))
-
-
-def _receive_until(ws, event_type: str, *, limit: int = 30) -> dict:
-    seen = []
-    for _ in range(limit):
-        event = ws.receive_json()
-        seen.append(event["type"])
-        if event["type"] == event_type:
-            return event
-    raise AssertionError(f"no {event_type!r} event within {limit} frames: {seen}")
 
 
 class TestScenario1KoreanRoundTrip:
