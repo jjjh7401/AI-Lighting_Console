@@ -296,24 +296,50 @@ class TestOscReceivePortIsProbedAsUdp:
             pass  # released on exit — the same number must now read free
         assert launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM) is True
 
-    @pytest.mark.skipif(
-        sys.platform != "darwin",
-        reason=(
-            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
-            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
-        ),
-    )
-    def test_require_ports_available_rejects_an_occupied_receive_port(self):
-        with (
-            _occupy_osc_receive_port() as port,
-            pytest.raises(launcher.PortInUseError) as excinfo,
-        ):
+    # 이 검사는 한때 darwin 게이트 뒤에 있었다 — 조건을 실물 UDP 점유로 만들었고
+    # 리눅스는 그 조건을 못 만들기 때문이다. 조건을 주입으로 바꾸면 플랫폼과
+    # 무관해진다(t74).
+    #
+    # 🔴 되살리면서 **단언 축을 좁혔다.** 「프리플라이트가 PortInUseError 를 낸다」는
+    # 이미 게이트 없이 도는 형제가 덮는다
+    # (:func:`test_a_three_tuple_spec_still_means_tcp` — TCP 3-튜플). 그것을 그대로
+    # 되살리면 **이미 있는 검사의 사본**이 되고, 「검사가 하나 늘었다」로 세어지는데
+    # 실제로는 안 는다.
+    #
+    # 이 검사의 고유 내용은 **UDP 행이 ``sock_type`` 을 달고 프로브까지 간다**이다.
+    # 표가 SOCK_DGRAM 을 **선언**한다는 것은 `test_web_serve.py` 가 이미 덮지만,
+    # 프리플라이트가 그것을 프로브에 **전달**하는지는 여기서만 잰다 — 안 전달하면
+    # UDP 포트를 TCP 포트 공간에서 재고 점유를 통째로 못 본다.
+    def test_the_udp_row_carries_its_protocol_all_the_way_to_the_probe(self, monkeypatch):
+        seen: list[dict] = []
+
+        def fake(host, port, *, sock_type=socket.SOCK_STREAM):
+            seen.append({"host": host, "port": port, "sock_type": sock_type})
+            return False
+
+        monkeypatch.setattr(launcher, "probe_port_available", fake)
+
+        with pytest.raises(launcher.PortInUseError) as excinfo:
             launcher.require_ports_available(
-                [("127.0.0.1", port, "OSC feedback listen", socket.SOCK_DGRAM)]
+                [("127.0.0.1", 59321, "OSC feedback listen", socket.SOCK_DGRAM)]
             )
+
+        assert seen == [{"host": "127.0.0.1", "port": 59321, "sock_type": socket.SOCK_DGRAM}]
         err = excinfo.value
-        assert str(port) in f"{err} {err.guidance}"
+        assert "59321" in f"{err} {err.guidance}"
         assert "OSC feedback listen" in err.guidance
+
+    def test_a_probe_that_reports_free_does_not_reject(self, monkeypatch):
+        """날조 대조군 — 주입을 뒤집으면 거절이 사라져야 한다.
+
+        이것이 없으면 위 검사는 「주입이 결과를 가르는가」를 증명하지 못한다:
+        거절이 프로브와 무관하게 항상 일어나도 통과한다.
+        """
+        monkeypatch.setattr(launcher, "probe_port_available", lambda *a, **k: True)
+
+        launcher.require_ports_available(
+            [("127.0.0.1", 59321, "OSC feedback listen", socket.SOCK_DGRAM)]
+        )
 
     def test_a_three_tuple_spec_still_means_tcp(self):
         # Backward compatibility: every pre-existing caller passes 3-tuples and

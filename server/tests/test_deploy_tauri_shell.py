@@ -30,6 +30,7 @@ mechanical guard here rather than a review checklist:
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import shutil
@@ -636,6 +637,65 @@ class TestTheBundleIsSealedAfterThePayloadLands:
     def _require_codesign():
         if shutil.which("codesign") is None:
             pytest.skip("codesign unavailable on this host")
+
+    # 🔴 아래 다섯 검사는 codesign 이 있어야 돈다 — 그래서 CI(리눅스)에서는 전부
+    # 건너뛰어진다. 그 결과 이 클래스에서 CI 가 실제로 돌리는 검사는
+    # :func:`test_the_seal_check_skips_where_codesign_does_not_exist` 하나뿐이고,
+    # 그것이 단언하는 것은 「codesign 이 없으면 verify_bundle 이 **0(통과)** 을
+    # 낸다」이다. 즉 **CI 에서 이 파일이 초록인 것은 서명에 대해 아무것도 말하지
+    # 않는다** — 검증이 no-op 인 경로를 통과로 세고 있다(t65 판정).
+    #
+    # 아래 검사는 그 사각 중 **하나**를 codesign 없이 닫는다: 봉인 단계가 번들
+    # 경로에 실재하는지를 **소스 구조**로 고정한다. 실행하지 않으므로 어느
+    # 플랫폼에서나 돈다. 나머지 넷은 실제 codesign 의 수용/거부 행동을 재므로
+    # 여기서 닫을 수 없다 — 「CI 가 안 덮는 자리」로 문서에 남는다.
+
+    def test_the_bundle_branch_seals_between_payload_and_verify(self):
+        """``--bundle`` 경로가 payload -> 봉인 -> 검증 **순서**를 유지한다.
+
+        기존 순서 검사(:func:`test_the_bundle_step_seals_before_it_verifies`)는
+        codesign 게이트 뒤에 있어 CI 에서 안 돈다. 그래서 봉인 호출이 사라져도
+        CI 는 잡지 못한다 — ``:608`` 은 npm 스크립트에 ``--bundle`` **문자열**이
+        있는지만 보기 때문이다. 이 검사가 그 구멍을 닫는다.
+
+        실행이 아니라 구조를 재는 이유: 실제 봉인은 codesign 을 부르고, 그것을
+        가짜로 만들면 codesign 이 아니라 우리 인자 조립을 시험하게 된다.
+        """
+        source = Path(_stage_sidecar().__file__).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+
+        main_fn = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "main"
+        )
+        branch = next(
+            node
+            for node in ast.walk(main_fn)
+            if isinstance(node, ast.If)
+            and isinstance(node.test, ast.Attribute)
+            and node.test.attr == "bundle"
+        )
+        # ⚠️ ``ast.walk`` 는 너비 우선이라 **소스 순서가 아니다.** 순서를 재려면
+        # 줄/열로 정렬해야 한다 — 그러지 않으면 중첩 깊이가 순서를 뒤집는다.
+        calls = [
+            inner
+            for inner in ast.walk(branch)
+            if isinstance(inner, ast.Call) and isinstance(inner.func, ast.Name)
+        ]
+        called = [
+            call.func.id
+            for call in sorted(calls, key=lambda node: (node.lineno, node.col_offset))
+        ]
+
+        # 비공허성 — 가지를 못 찾았거나 호출이 비면 아래 순서 단언은 공허하다.
+        assert called, "--bundle 가지에서 호출을 하나도 못 찾았다"
+        for name in ("bundle_payload", "seal_bundle", "verify_bundle"):
+            assert name in called, f"--bundle 가지가 {name} 을 부르지 않는다: {called}"
+
+        assert called.index("bundle_payload") < called.index("seal_bundle") < called.index(
+            "verify_bundle"
+        ), f"payload -> 봉인 -> 검증 순서가 깨졌다: {called}"
 
     def test_a_bundle_with_its_payload_but_no_seal_is_rejected(self, tmp_path):
         # The exact shipped-and-broken shape this unit fixes: the payload check
