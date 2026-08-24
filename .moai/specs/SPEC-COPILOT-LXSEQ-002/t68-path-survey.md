@@ -29,6 +29,25 @@
 파일도 형태도 범위 밖이다. 즉 이 테스트는 「저장소에 쓰기 지점이 하나」를 지키는 것이 아니라
 **「tools.py 안에서 run_commands 밖으로 새지 않는다」**를 지킨다.
 
+**그러나 이 범위 문제를 안전 구멍으로 읽지 마라 — 불변식은 다른 축이 지킨다.** (리드 지적, 내가 재확인)
+
+- **전송면은 전 트리 fail-closed 다.** `server/tests/test_deploy_safety_invariants.py:340`
+  `test_only_allowlisted_modules_reach_the_osc_send_surface` 가 `_iter_production_modules()`(`:111`)
+  전수를 훑고, `:355` `test_the_allowlist_is_not_vacuous` 가 **양성 대조군**으로 붙어 있다.
+  `execution_port` 호출 자리와는 **다른 축**이다.
+- **점 표기 체인 전체를 잡는 스캐너는 이미 있다.** `server/tests/test_autopatch_execute.py:459`
+  `_attribute_names` 가 그것이고, 독스트링이 그 결함을 이미 고친 기록을 남겼다 —
+  「이전 판은 `Attribute.value` 가 bare `Name` 일 때만 모아 프로덕션의 실제 호출 형태
+  (`gate.execution_port.execute` · `self._gate.execution_port.execute`)를 **전부 놓쳤다**」(round11 M5 N02).
+  비공허성도 심은 형태 **4종**(`bare` · `through_gate` · `through_self` · `through_call`)으로 증명돼 있다.
+  다만 적용 범위는 `VWX_MODULES = _discover_modules(Path("server/vwx"))`(`:90`) — `server/vwx/**` 다.
+- 그리고 `panel.py:831` 은 `self._gate.screen([command])` 심사를 먼저 탄다. `execution_port` 를
+  **게이트에서만 얻으므로** 「게이트를 우회한 쓰기」가 아니다.
+
+그러므로 남은 것은 안전 구멍이 아니라 **「그 테스트 이름이 실제 보장보다 넓게 들린다」는 문서 문제**이고,
+처방은 이 문단 자체다. 전 트리 `execution_port` 스캔을 새로 요구하면 `panel.py` 를 예외 목록에 넣게 되는데,
+**정당한 경로를 예외로 만드는 것**이라 얻는 것보다 잃는 게 크다.
+
 그러므로 「콘솔 쓰기 툴이 있는가」는 잘못된 질문이다. 옳은 질문은 두 개다.
 
 1. **명령을 만들어 `run_commands` 로 보내는 경로가 있는가** (또는 payload 로 내어 호출자가 보내게 하는가)
