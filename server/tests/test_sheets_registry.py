@@ -35,6 +35,7 @@ from server.sheets.registry import (
     vectorworks_identity,
 )
 from server.vwx.mvr import SCENE_ENTRY
+from server.vwx.reader import _best_header_candidate, decode_bytes
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 VWX_DIR = FIXTURES / "vwx"
@@ -424,15 +425,41 @@ class TestZipShapes:
             assert SCENE_ENTRY not in archive.namelist()
 
     def test_neither_zip_shape_enters_the_reader_during_discrimination(self, monkeypatch):
-        """신원 단계에서는 어느 zip도 판독기에 닿지 않는다 — openpyxl은 뒷단 몫이다."""
+        """신원 단계에서 어느 zip도 판독기에 닿지 않는다 — openpyxl은 뒷단 몫이다.
 
-        def _forbidden(*args, **kwargs):  # pragma: no cover - 회귀 시에만 발화
-            raise AssertionError("판별 중 판독기가 불렸다")
+        감시는 **사용 지점 이름**에 건다. `server.vwx.reader.read`에 걸었던 앞선
+        판본은 발화할 수 없었다 — 레지스트리가 그 이름을 수입도 호출도 하지 않는다.
 
-        monkeypatch.setattr("server.vwx.reader.read", _forbidden)
-        monkeypatch.setattr("server.sheets.registry.decode_bytes", _forbidden)
+        그리고 감시는 **던지지 않고 기록한다**. `decode_bytes`는
+        `except Exception: return False` 안쪽이라 예외를 던지는 감시는 삼켜지고,
+        삼켜진 감시는 "안 불렸다"와 구분되지 않는다. 기록형은 그 삼킴을 통과한다.
+
+        마지막 두 줄이 **비공허성 대조군**이다 — 같은 감시가 zip 아닌 CSV에서는
+        반드시 기록돼야 한다. 기록되지 않으면 위의 빈 목록은 증거가 아니다.
+        """
+        seen: list[str] = []
+
+        def _spy(name, target):
+            def _record(*args, **kwargs):
+                seen.append(name)
+                return target(*args, **kwargs)
+
+            return _record
+
+        monkeypatch.setattr(
+            "server.sheets.registry.decode_bytes", _spy("decode_bytes", decode_bytes)
+        )
+        monkeypatch.setattr(
+            "server.sheets.registry._best_header_candidate",
+            _spy("_best_header_candidate", _best_header_candidate),
+        )
+
         for entries in (MVR_SHAPED_ENTRIES, XLSX_SHAPED_ENTRIES):
             assert discriminate(_zip_bytes(entries)).matched == ("vectorworks",)
+        assert seen == []
+
+        discriminate(PATCH_CSV.read_bytes())
+        assert sorted(set(seen)) == ["_best_header_candidate", "decode_bytes"]
 
 
 def _broken_handler_table() -> tuple[SheetKindRow, ...]:

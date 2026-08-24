@@ -22,7 +22,9 @@
 1. **툴 등재는 4지점이 아니라 6지점이다.** `_TOOL_TASKS`(`server/orchestrator/runner.py:137`)와 `test_tools.py`의 닫힌 집합 상수를 빠뜨리면 `test_runner_progress.py`의 전단사 단언이 빨갛게 된다. 정본 열거는 `research.md` §6이며, `test_runner_progress`는 **지점이 아니라 누락 검출 가드**다.
 2. **판별기가 첫 일치에서 멈춰도 오늘은 테스트가 통과한다** — 등록 행이 둘뿐이고 둘은 서로 겹치지 않기 때문이다. 그래서 충돌 시험은 **주입한 표**로 돌린다(`AC-FILEARG-003`). 충돌은 이론이 아니다 — 프리셋 4종에서 반드시 발화한다(`research.md` §9 (c)).
 3. **서명을 사본으로 적으면 언젠가 실물을 거절한다.** `patch`는 `CANONICAL_COLUMNS`를 참조하고, `vectorworks`는 `reader.py`의 판정을 **호출**한다. 열 이름도 판정 논리도 옮겨 적지 않는다.
-4. **이 저장소에는 테스트 CI가 없다.** `.github/workflows/`는 라벨 동기화 하나뿐이라 로컬 전체 스위트(pytest + vitest)가 유일한 회귀 증거다. 그리고 **착수 시점에 이미 실패 1건이 있다**(`test_pipeline_out_paths.py` / t20 귀속) — 이 SPEC 것이 아니고 여기서 고치지 않는다(§E.1 `known_baseline_failure`).
+4. **테스트 CI는 있다 — 다만 카드 안에서는 돌지 않는다.** (v0.9.0까지 이 항목은 "테스트 CI가 없다"고 적었다. 쓰인 시점엔 참이었고 그 뒤 `.github/workflows/test.yml`이 들어왔다.) 그 워크플로는 `on: pull_request` + `push: branches: [main]`이라 **PR이 열려야** 돈다. 실무 지침이 그래서 갈린다 — **카드·마일스톤을 닫을 때는 여전히 로컬 전량(pytest + vitest)이 유일한 증거다**(PR 전에는 CI가 카드 안 회귀를 잡아 주지 않는다). **PR을 연 뒤**로는 독립 증거가 하나 더 붙는다 — 깨끗한 환경에서, 실제 머지 대상 head를 상대로 돈다. 둘은 대체가 아니라 순서다. 그리고 §E.1 `known_baseline_failure`에 적혀 있던 착수 시점 실패 1건도 지금은 재현되지 않는다(그 칸의 이력 주석 참조).
+
+   **이 둘은 같은 계열이다 — 인프라 사실은 여러 곳에 복제되고, 한 곳만 고치면 나머지가 남는다.** 이 낡은 CI 사실은 오늘 **세 곳**에서 나왔다. 특히 **「…가 없다」류 단정은 만들어지는 순간부터 조용히 만료된다** — 참이던 문장이 거짓이 될 때 아무 신호도 나지 않기 때문이다. 인프라를 단정하려거든 **확인 명령을 함께 적어라**(여기서는 `ls .github/workflows/`).
 5. **열 집합으로 Vectorworks를 재려 하지 마라 — 1차 감사 FAIL의 뿌리였다.** `.mvr`·`.xlsx`는 zip이라 헤더 행이 없고(`reader.py:350-360`), 헤더는 1행이라는 보장도 없다(`reader.py:158`이 **탐색**한다). 행이 드는 것은 열 목록이 아니라 **술어**다(결정 K · `design.md` §1).
 6. **그리고 술어는 "무엇인가"를 물어야 한다 — 2차(델타) 감사 FAIL의 뿌리였다.** `has_address_family`는 **"패치를 뽑을 수 있는가"**를 묻는다. 축이 다르므로 **양방향으로 틀린다**: LX-SEQ 패치 CSV가 `True`(9열 중 **7열이 VW 별칭**으로 해소 — LX-SEQ는 VW 어휘의 **부분집합**이다)이고, 주소 열 없는 진짜 VW 파일은 `False`다. 사용성 함수를 판별에 끌어들이는 순간 같은 결함이 재발한다(결정 L · REQ-FILEARG-022 · `research.md` §11.1). 그리고 **대조군을 한 축으로만 세우지 마라** — 쉼표 전용 대조군이 전부 초록인 동안 탭 축이 열려 있었고, 장바구니 목록이 실패 0건으로 Vectorworks가 됐다(`AC-FILEARG-028`).
 7. **경계 게이트는 커밋 뒤에 돌린다 — 커밋 전 초록은 거짓이다.** `server/tests/test_overlap_preserve.py`는 고정 base와 **`HEAD`**를 diff하므로(실측 22개소 — `grep -c "\.\.HEAD"`; 예: `:427` · `:446` · `:456`) **작업 트리의 미커밋 변경은 그 진단의 시야 밖**이다. 커밋 전에 재서 초록이 나오는 것은 운이 아니라 **구조적으로 보장된 결과**다 — 오늘 이 보드에서 두 번 나왔고(t20 · t31), t31에서는 동결 문서의 실제 위반을 **커밋 뒤에야** 잡았다(미커밋 상태에서는 `41 passed`). 순서는 **커밋 → 게이트 → 보고**이며, "미리 돌려 두면 빠르다"로 되돌리는 것은 **검사를 없애는 것과 같다**(`AC-FILEARG-030`).
@@ -103,7 +105,15 @@ clarifications_open: 0      # 결정 I로 닫힘 — 답은 "M0 — Kickoff 결�
 live_sessions_planned: 0    # A는 콘솔도 앱도 건드리지 않는다 — 실기 확인은 B(SHEETPIPE)가 소유
 new_runtime_dependencies: 0
 new_data_files: 0
-known_baseline_failure: "server/tests/test_overlap_preserve.py::TestTouchedFilesPassLint::test_ruff_format_reports_no_change — 착수 시점 기존 실패 1건. 원인은 t20(6296af3)이 server/tests/test_pipeline_out_paths.py를 ruff format 없이 들여온 것. 이 SPEC 범위 밖이며 여기서 고치지 않는다(다른 레인이 별도 카드로 처리 중). M0가 실행 시점에 이미 고쳐져 있으면 그 상태를 관측한 대로 적는다."
+known_baseline_failure: ""
+# ↑ **만료된 기재를 비웠다(이력은 남긴다).** v0.9.0까지 이 칸은
+#   `test_ruff_format_reports_no_change`를 착수 시점 기준선 실패로 적고 원인을
+#   t20(`6296af3`)에 귀속했다. `1c104f0` 전량 실행에서 **재현되지 않는다**
+#   (9885 passed / **0 failed** · `TestTouchedFilesPassLint` 3건 초록).
+#   t20이 닫히면서 사라진 것으로 읽힌다 — **틀린 기재가 아니라 만료된 기재**다.
+#   비우는 이유: 근거 없는 면책 문면이 남으면 다음 실행자가 **진짜 회귀를 그
+#   이름으로 넘긴다**. 지우지 않고 이력을 남기는 이유: 문장 자체를 없애면 옛
+#   커밋에서 그것을 본 사람이 **왜 없어졌는지 찾지 못한다**.
 base_advance: "eb436e8 → 6296af3 (3커밋: e7a8e90 t17 · 6296af3 t20). 문서의 코드 줄번호는 한 세대 낡았다 — M0가 토큰 앵커로 재확인한다."
 tool_count_delta: "0 (A는 툴을 등재하지 않는다 — 34 → 35 래퍼 툴 등재는 SHEETPIPE 몫)"
 ```
