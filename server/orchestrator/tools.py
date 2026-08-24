@@ -121,6 +121,8 @@ from server.scene.matching import match_scene
 from server.scene.report import build_report as build_scene_report
 from server.scene.report import to_korean as scene_report_to_korean
 from server.scene.schema import SceneLibrary
+from server.sheets.registry import HANDLER_TAG_TOOL
+from server.sheets.registry import REGISTRY as SHEET_REGISTRY
 from server.spatial import (
     SpatialAnalysisError,
     analyze_spatial_records,
@@ -248,6 +250,7 @@ TOOL_NAMES = (
     "resolve_patch_address",
     "patch_fixtures",
     "import_lxseq_patch",
+    "import_uploaded_sheet",
     "find_fx",
     "instantiate_fx",
     "compose_fx",
@@ -481,6 +484,61 @@ class LayoutImageUploadPort(Protocol):
     file_name: str | None
     mime_type: str | None
     content_base64: str | None
+
+
+class UploadedSheetPort(Protocol):
+    """Session-local storage for the most recently uploaded sheet.
+
+    SPEC-COPILOT-SHEETPIPE-001 REQ-SHEETPIPE-001. Same session-held-upload
+    pattern as :class:`LayoutImageUploadPort`: the session keeps at most one
+    sheet and a new upload replaces it. Nothing attached is
+    ``content_base64 is None``.
+
+    ``kind`` is whatever A's discriminator decided (server/sheets/registry.py);
+    this module never re-derives it from an extension or a MIME type.
+    """
+
+    file_name: str | None
+    kind: str | None
+    content_base64: str | None
+
+
+#: 래퍼가 낼 수 있는 거절의 닫힌 집합 (REQ-SHEETPIPE-007).
+#:
+#: 조용한 무동작 경로는 없다 — 진행할 수 없으면 반드시 이 셋 중 하나를 이름으로
+#: 낸다. ``notice_event``는 모델 문맥에 들어가지 않으므로(spec.md 사전 확정 사실
+#: 7), 모델이 "올라온 시트가 없다"를 아는 유일한 기계적 경로가 이 거절이다.
+SHEET_WRAPPER_REFUSALS = (
+    "no_uploaded_sheet",
+    "kind_action_mismatch",
+    "no_target_tool",
+)
+
+#: 종류별로 지원되는 ``action`` (REQ-SHEETPIPE-007의 ``kind_action_mismatch``).
+#:
+#: A의 레지스트리 행에는 이 정보가 없다 — 행이 드는 것은 ``target`` 쌍과
+#: ``passthrough_args``뿐이다. 그래서 이 표는 B가 따로 든다. LXSEQ-002/003/004가
+#: A에 행을 더하면 이 표도 함께 늘어나야 하며, 그 사실은 plan.md §E가 적은 "B는
+#: 열리지 않는다"와 어긋난다. 숨기지 않고 여기 적어 둔다.
+SHEET_KIND_ACTIONS = dict()
+SHEET_KIND_ACTIONS["patch"] = ("preview", "apply")
+
+
+def _sheet_refusal(call: ToolCall, reason: str, message: str) -> ToolExecution:
+    """이름 붙은 거절 — ``reason``은 :data:`SHEET_WRAPPER_REFUSALS`의 원소다."""
+    if reason not in SHEET_WRAPPER_REFUSALS:
+        raise AssertionError("closed refusal set violated: " + reason)
+    body = dict()
+    body["error"] = message
+    body["reason"] = reason
+    return ToolExecution(
+        result=ToolResult(
+            tool_call_id=call.id,
+            name=call.name,
+            content=json.dumps(body, ensure_ascii=False),
+            is_error=True,
+        )
+    )
 
 
 # -- analyse_layout_image vision contract (contract.md §3) --------------------
@@ -1626,6 +1684,7 @@ def build_toolset(
     vectorworks_upload: VectorworksUploadPort | None = None,
     vision_provider: LLMProvider | None = None,
     layout_image_upload: LayoutImageUploadPort | None = None,
+    uploaded_sheet: UploadedSheetPort | None = None,
     spatial_memory: SpatialMemory | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
@@ -4427,6 +4486,72 @@ def build_toolset(
                     ),
                 )
             ),
+        )
+
+    # -- import_uploaded_sheet (SPEC-COPILOT-SHEETPIPE-001 M2) -----------------
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry to an uploaded sheet's
+    #   bytes.
+    # @MX:REASON: REQ-SHEETPIPE-005/006. The wrapper's OWN schema declares no
+    #   byte argument and no filesystem argument, so the model never handles
+    #   base64 — the handler reads the session slot and injects it into the
+    #   sibling tool the registry row names. Removing that absence reopens the
+    #   paste path REQ-LXSEQ-016 closed.
+    # @MX:WARN: the target tool name comes from A's registry row, never from a
+    #   literal here. A hardcoded target silently ignores a row edit.
+    # @MX:REASON: REQ-SHEETPIPE-005 · AC-SHEETPIPE-007 ②.
+
+    def import_uploaded_sheet(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """이번 대화에 올라온 시트를 그 종류의 대상 툴로 넘긴다.
+
+        ``vectorworks_autopatch``의 형태를 계승한다 — 래퍼 자신의 스키마에는
+        바이트 인자가 없고, 핸들러가 세션이 든 바이트를 형제 툴의
+        ``file_content_base64``에 넣어 내부 ``ToolCall``로 부른다.
+        """
+        content = uploaded_sheet.content_base64 if uploaded_sheet is not None else None
+        kind = uploaded_sheet.kind if uploaded_sheet is not None else None
+        if not isinstance(content, str) or not content or not isinstance(kind, str) or not kind:
+            return _sheet_refusal(
+                call,
+                "no_uploaded_sheet",
+                "이번 대화에 올라온 시트가 없다 — 운영자에게 첨부 버튼으로 파일을 "
+                "올려 달라고 안내하라. 파일 내용을 채팅에 옮겨 적으라고 요구하지 마라.",
+            )
+
+        supported = SHEET_KIND_ACTIONS.get(kind, ())
+        action = call.arguments.get("action")
+        if action is not None and action not in supported:
+            listed = ", ".join(supported) if supported else "없음"
+            return _sheet_refusal(
+                call,
+                "kind_action_mismatch",
+                f"'{kind}' 시트는 action '{action}'을 지원하지 않는다 — "
+                f"지원하는 것은 {listed}이다.",
+            )
+
+        row = next((entry for entry in SHEET_REGISTRY if entry.kind == kind), None)
+        target = getattr(row, "handler", None)
+        target_name = getattr(target, "name", None)
+        if (
+            row is None
+            or getattr(target, "kind_tag", None) != HANDLER_TAG_TOOL
+            or target_name not in handlers
+        ):
+            return _sheet_refusal(
+                call,
+                "no_target_tool",
+                f"'{kind}' 시트의 대상 '{target_name}'을 등록 툴 집합(TOOL_NAMES)에서 "
+                "찾지 못했다 — 레지스트리 행의 대상이 tool 종으로 등록돼 있어야 한다. "
+                "운영자에게 이 사실을 알리고 다른 툴로 우회하지 마라.",
+            )
+
+        forwarded = dict()
+        forwarded["file_content_base64"] = content
+        for name in row.passthrough_args:
+            if name in call.arguments:
+                forwarded[name] = call.arguments[name]
+        return handlers[target_name](
+            ToolCall(id=call.id, name=target_name, arguments=forwarded), context
         )
 
     # -- import_lxseq_patch (SPEC-COPILOT-LXSEQ-001 M3) ------------------------
@@ -9261,6 +9386,67 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="import_uploaded_sheet",
+            description=(
+                "이번 대화에서 첨부 버튼으로 올라온 시트 한 장을 그 종류의 대상 "
+                "툴에 넘긴다. 바이트는 이미 세션에 있다 — 이 툴은 파일 내용도, "
+                "파일이 어디 있는지도 인자로 받지 않으므로 사용자가 채팅에 "
+                "붙여넣은 본문을 base64로 만들어 넣을 자리가 없다.\n"
+                "\n"
+                "올라온 시트가 없으면 no_uploaded_sheet로 거절한다 — 그때는 첨부 "
+                "버튼으로 파일을 올려 달라고 안내하고, 내용을 채팅에 옮겨 적으라고 "
+                "요구하지 마라. 시트의 종류가 요청한 action을 지원하지 않으면 "
+                "kind_action_mismatch로, 그 종류의 대상 툴이 등록돼 있지 않으면 "
+                "no_target_tool로 거절한다. 조용히 아무것도 하지 않는 경로는 없다.\n"
+                "\n"
+                "그 밖의 인자는 시트 종류가 허용한 것만 대상 툴로 전달된다. patch "
+                "시트에서 action의 기본은 'preview'이며 preview는 콘솔에 아무것도 "
+                "쓰지 않는다 — 사용자가 계획을 보고 동의하기 전에 'apply'를 부르지 "
+                "마라."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["preview", "apply"],
+                        "description": (
+                            "'preview'는 계획만 낸다 — 콘솔 쓰기 0건이며 기본값이다. "
+                            "'apply'는 계획을 다시 세운 뒤 실제로 패치한다. "
+                            "시트 종류가 지원하지 않는 값이면 거절된다."
+                        ),
+                    },
+                    "name_prefix_mode": {
+                        "type": "string",
+                        "enum": ["group", "type"],
+                        "description": (
+                            "픽스처 이름 접두. 'group'이 기본이며 시트의 Group을 "
+                            "쓰고 Group이 런 경계가 된다. 'type'이면 콘솔 타입 "
+                            "이름을 쓴다."
+                        ),
+                    },
+                    "only_fids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": (
+                            "선택. 이 FID들만 대상으로 삼는다. 생략하면 시트의 모든 행이 대상이다."
+                        ),
+                    },
+                    "mode_overrides": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "description": (
+                            "선택. CSV FixtureType 이름을 콘솔 모드 이름으로 바꿔 "
+                            "준다. mode_unresolved로 건너뛴 타입의 모드를 사용자가 "
+                            "고른 뒤 다시 부르는 수단이며, 콘솔 실측 목록에 있는 "
+                            "이름만 받아들여지니 지어내지 마라."
+                        ),
+                    },
+                },
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="import_lxseq_patch",
             description=(
                 "LX-SEQ 패치 CSV 한 장(FID/Group/FixtureType/Mode/Ch/Universe/"
@@ -9363,6 +9549,7 @@ def build_toolset(
         "resolve_patch_address": resolve_patch_address,
         "patch_fixtures": patch_fixtures,
         "import_lxseq_patch": import_lxseq_patch,
+        "import_uploaded_sheet": import_uploaded_sheet,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
         "compose_fx": compose_fx,

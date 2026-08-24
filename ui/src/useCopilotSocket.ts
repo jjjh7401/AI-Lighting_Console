@@ -333,7 +333,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     (fileName: string, contentBase64: string) => {
       const socket = socketRef.current;
       if (socket === null || socket.readyState !== WebSocket.OPEN) return false;
-      dispatch({ kind: "user", text: `Vectorworks 파일 업로드: ${fileName}` });
+      dispatch({ kind: "user", text: `파일 업로드: ${fileName}` });
       socket.send(buildVectorworksExportUpload(fileName, contentBase64));
       return true;
     },

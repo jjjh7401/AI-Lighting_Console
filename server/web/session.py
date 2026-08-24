@@ -19,7 +19,10 @@ thread-safe (the app wraps the WebSocket send accordingly).
 
 from __future__ import annotations
 
+import base64
+import binascii
 import contextlib
+import hashlib
 import json
 import os
 import re
@@ -87,6 +90,7 @@ from server.looks.songcue import (
     build_songcue_timing,
     normalise_start_ms,
 )
+from server.lxseq.parser import parse_patch_csv
 from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.runner import InstructionResult, Orchestrator
@@ -104,6 +108,13 @@ from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
 from server.safety.monitor import HealthMonitor
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
+from server.sheets.registry import (
+    HANDLER_TAG_SESSION_METHOD,
+    OUTCOME_AMBIGUOUS,
+    OUTCOME_RESOLVED,
+    REGISTRY,
+    discriminate,
+)
 from server.spatial.mib import PositionCuePlan, position_cue_bundle, premove_follow_command
 from server.spatial.pointing import (
     BASIC_POSITION_SEQUENCE,
@@ -2598,6 +2609,69 @@ class LayoutImageUpload:
     content_base64: str
 
 
+@dataclass(frozen=True)
+class UploadedSheet:
+    """SPEC-COPILOT-SHEETPIPE-001 M1 — 판별을 통과한 시트 한 장 (REQ-SHEETPIPE-001).
+
+    ``LayoutImageUpload``와 같은 형태다: 불변이고, 새 업로드가 통째로 교체한다.
+    그 선택이 노출 방식을 강제한다(REQ-SHEETPIPE-002) — 이 필드를
+    ``build_toolset``에 그대로 넘기면 세션 생성 시점의 ``None``이 툴 클로저에
+    영구히 얼어붙으므로 반드시 :class:`_UploadedSheetView`를 거쳐야 한다.
+    한 ``build_toolset`` 호출 안에 두 형태가 동시에 살아 있다 — 가변
+    ``_vectorworks_upload``는 필드를 직접 넘기고 불변 ``_layout_image``는 뷰를
+    거친다 — 그래서 짝을 섞기 쉽고, 섞여도 조용하다.
+
+    ``sha256``과 ``byte_length``는 디코드된 바이트 기준이다(base64 문자열이
+    아니다): 운영자가 원본 파일의 ``shasum -a 256`` 값과 대조할 수 있어야 한다.
+    """
+
+    file_name: str
+    kind: str
+    content_base64: str
+    sha256: str
+    byte_length: int
+
+
+def _count_patch_rows(data: bytes) -> str:
+    parsed = parse_patch_csv(data.decode("utf-8-sig"))
+    return (
+        f"records {len(parsed.records)}건 · rejected {len(parsed.rejected)}건 · "
+        f"excluded {len(parsed.excluded)}건"
+    )
+
+
+#: 종류별 행 수 판독기 (REQ-SHEETPIPE-004).
+#:
+#: A의 레지스트리에는 행 수를 세는 훅이 없다 — 행은 ``target``과
+#: ``passthrough_args``만 든다. 그래서 "어느 통을 센 수인지"를 낼 수 있는 표는
+#: B가 따로 들어야 하고, LXSEQ-002/003/004가 A에 행을 더할 때 이 표도 함께
+#: 늘어난다. 그 사실은 plan.md §E의 "B는 열리지 않는다"와 어긋나므로 숨기지 않고
+#: 여기 적어 둔다.
+_SHEET_ROW_COUNTERS = dict()
+_SHEET_ROW_COUNTERS["patch"] = _count_patch_rows
+
+
+def _sheet_row_counts(kind: str, data: bytes) -> str:
+    """행 수는 이름 붙은 수다 (REQ-SHEETPIPE-004).
+
+    ``ParseResult``는 ``records`` · ``rejected`` · ``excluded`` 세 통으로
+    나뉘므로 맨 숫자 하나는 어느 통인지 말하지 않는다 — "행 12건"이라 적고 그중
+    3건이 거부됐다면 그것은 운영자를 잘못 안심시키는 문장이다. 세 통을 전부
+    이름과 함께 낸다.
+
+    파싱은 종류가 정해진 뒤 정확히 한 번 돈다(A의 REQ-FILEARG-005). 모델에도
+    콘솔에도 대상 툴에도 닿지 않는 국소 호출이므로 REQ-SHEETPIPE-003이 금지한
+    "실행"이 아니다 — 그리고 0회여도 안 된다: 행 수를 낼 수 없기 때문이다.
+    """
+    counter = _SHEET_ROW_COUNTERS.get(kind)
+    if counter is None:
+        return "행 수 미상 — 이 종류의 행 수 판독기가 아직 없습니다"
+    try:
+        return counter(data)
+    except Exception:
+        return "행 수 판독 실패 — 파일은 담겼습니다"
+
+
 def _base64_decoded_size(content_base64: str) -> int:
     """Decoded byte count of a PADDED base64 string, by length arithmetic.
 
@@ -3458,6 +3532,39 @@ class _LayoutImageUploadView:
         return image.content_base64 if image is not None else None
 
 
+class _UploadedSheetView:
+    """``ChatSession._uploaded_sheet``를 ``UploadedSheetPort``에 맞춘다.
+
+    ``_LayoutImageUploadView``와 같은 이유로 존재한다: ``_uploaded_sheet``는 새
+    업로드가 통째로 교체하는 필드이므로, 세션 생성 시점에 그 값을 그대로
+    ``build_toolset``에 넘기면 업로드 이전의 ``None``이 ``import_uploaded_sheet``
+    툴 클로저에 얼어붙는다. 이 뷰는 접근할 때마다 현재 필드를 다시 읽으므로
+    세션 생성 뒤 도착한 업로드도 툴에게 보인다(AC-SHEETPIPE-003).
+
+    이 결함은 조용하다 — 슬롯은 채워지고 안내도 뜨고 운영자 화면은 정상이다.
+    어긋나는 것은 툴이 보는 것뿐이라, 운영자가 실제로 시켜 봐서
+    ``no_uploaded_sheet`` 거절을 받기 전까지 아무 신호도 없다.
+    """
+
+    def __init__(self, session: ChatSession) -> None:
+        self._session = session
+
+    @property
+    def file_name(self) -> str | None:
+        sheet = self._session._uploaded_sheet
+        return sheet.file_name if sheet is not None else None
+
+    @property
+    def kind(self) -> str | None:
+        sheet = self._session._uploaded_sheet
+        return sheet.kind if sheet is not None else None
+
+    @property
+    def content_base64(self) -> str | None:
+        sheet = self._session._uploaded_sheet
+        return sheet.content_base64 if sheet is not None else None
+
+
 class _ObservingBundleGate:
     """BundleGate wrapper surfacing every screening decision to the session."""
 
@@ -3568,6 +3675,11 @@ class ChatSession:
         # recent only; a new upload replaces it). M3's ``analyse_layout_image``
         # tool reads this field; M1 only stores it.
         self._layout_image: LayoutImageUpload | None = None
+        # SPEC-COPILOT-SHEETPIPE-001 M1 — the sheet attachment (most recent
+        # only; a new upload replaces it wholesale). M2's
+        # ``import_uploaded_sheet`` wrapper reads this through
+        # ``_UploadedSheetView``; M1 only stores it.
+        self._uploaded_sheet: UploadedSheet | None = None
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -3599,6 +3711,12 @@ class ChatSession:
             # config exists to wire.
             vision_provider=provider,
             layout_image_upload=_LayoutImageUploadView(self),
+            # SPEC-COPILOT-SHEETPIPE-001 M2: the sheet slot goes through a
+            # read-through view for the SAME reason the layout image does —
+            # it is replaced wholesale, so passing the field itself would
+            # freeze the pre-upload None into the wrapper's tool closure
+            # (REQ-SHEETPIPE-002 · AC-SHEETPIPE-003).
+            uploaded_sheet=_UploadedSheetView(self),
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port
@@ -3662,6 +3780,7 @@ class ChatSession:
         if self._question_channel is not None:
             self._question_channel.unbind(session_key=self._session_key)
         self._vectorworks_upload.clear()
+        self._uploaded_sheet = None
 
     # -- event plumbing ----------------------------------------------------------
 
@@ -9779,9 +9898,93 @@ class ChatSession:
             reset_session_key(token)
 
     def upload_vectorworks_export(self, file_name: str, content_base64: str) -> dict:
-        """Replace this session's export and immediately start its guided analysis."""
-        self._vectorworks_upload.replace(file_name, content_base64)
-        return self.run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)
+        """비이미지 첨부 하나를 받아 종류에 따라 갈라 보낸다.
+
+        프레임 이름은 유산이다(SPEC-COPILOT-SHEETPIPE-001 결정 A) — 첨부 버튼은
+        하나이고, 이미지가 아닌 파일은 전부 이 자리로 온다. 무엇인지 정하는 것은
+        A의 판별기이며(``server/sheets/registry.py``), 확장자도 MIME도 분기에
+        쓰이지 않는다. 세 갈래로 갈린다:
+
+        * 세션 메서드가 받는 종류(오늘은 ``vectorworks``) — 오늘 그대로. 기존
+          슬롯에 담고 지시문을 발화한다. 이 두 줄은 회수되지 않는다.
+        * 시트 종류 — 슬롯에 담고 넷을 보이고 아무것도 실행하지 않는다
+          (REQ-SHEETPIPE-003). ``notice_event``는 전사에 들어가지 않으므로 모델은
+          이 안내를 보지 못하고, 래퍼 툴의 이름 붙은 거절로 슬롯 상태를 안다.
+        * 판별 불가 — 슬롯에도 담지 않고 Vectorworks 경로로도 보내지 않으며,
+          사유를 이름으로 밝힌다.
+        """
+        try:
+            data = base64.b64decode(content_base64, validate=True)
+        except (binascii.Error, ValueError):
+            return self._notify(f"'{file_name}'의 내용을 읽지 못했습니다 — base64가 아닙니다.")
+
+        result = discriminate(data, filename_hint=file_name)
+        if result.outcome != OUTCOME_RESOLVED:
+            return self._reject_upload(file_name, result)
+
+        kind = result.matched[0]
+        row = next((entry for entry in REGISTRY if entry.kind == kind), None)
+        handler = getattr(row, "handler", None)
+        if getattr(handler, "kind_tag", None) == HANDLER_TAG_SESSION_METHOD:
+            if getattr(handler, "name", None) != "upload_vectorworks_export":
+                # 이 자리가 받을 수 있는 세션 메서드는 자기 자신뿐이다. 다른
+                # 이름의 session_method 행이 생기면 그 종류를 어디로 보낼지는
+                # 아직 정해진 바가 없으므로, 조용히 삼키지 않고 이름으로 말한다.
+                return self._notify(
+                    f"'{file_name}'은 '{kind}'로 판정됐지만 그 종류를 받는 세션 "
+                    f"메서드가 이 첨부 경로에 배선돼 있지 않습니다."
+                )
+            self._vectorworks_upload.replace(file_name, content_base64)
+            return self.run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)
+
+        return self._store_uploaded_sheet(file_name, kind, content_base64, data)
+
+    def _notify(self, text: str) -> dict:
+        event = notice_event(text)
+        self._send(event)
+        return event
+
+    def _reject_upload(self, file_name: str, result) -> dict:
+        """판별이 종류를 정하지 못했다 — 조용한 무동작 대신 사유를 이름으로 낸다.
+
+        A가 정한 두 결과(``unknown_sheet_kind`` · ``ambiguous_sheet_kind``)를
+        그대로 옮긴다. B는 그 규칙을 다시 정의하지 않고 운영자에게 전달만 한다.
+        """
+        if result.outcome == OUTCOME_AMBIGUOUS:
+            detail = "여러 종류에 동시에 맞습니다: " + ", ".join(result.matched)
+        else:
+            detail = "어느 시트 종류에도, Vectorworks 내보내기에도 맞지 않습니다"
+        text = f"'{file_name}'을 받지 못했습니다 ({result.outcome}) — {detail}."
+        if result.hint:
+            text = text + " " + result.hint
+        return self._notify(text)
+
+    def _store_uploaded_sheet(
+        self, file_name: str, kind: str, content_base64: str, data: bytes
+    ) -> dict:
+        """시트 하나를 슬롯에 담고 넷을 보인다 — 실행은 0건이다.
+
+        ``upload_layout_image``와 같은 형태다: 담기만 하고 지시문을 부르지
+        않는다. 교체 사실을 소리 내어 말하는 것도 같은 이유다 — 침묵하면 운영자가
+        두 장이 붙어 있다고 믿은 채 엉뚱한 시트로 만든 계획을 승인할 수 있다.
+        """
+        replaced = self._uploaded_sheet is not None
+        self._uploaded_sheet = UploadedSheet(
+            file_name=file_name,
+            kind=kind,
+            content_base64=content_base64,
+            sha256=hashlib.sha256(data).hexdigest(),
+            byte_length=len(data),
+        )
+        sheet = self._uploaded_sheet
+        text = (
+            f"'{file_name}' 첨부됨 — 종류 {sheet.kind} · sha256 {sheet.sha256} · "
+            f"{sheet.byte_length}바이트 · {_sheet_row_counts(kind, data)}"
+        )
+        if replaced:
+            text = text + " (이전에 첨부한 시트를 교체했습니다)"
+        text = text + ". 아직 실행한 것은 없습니다 — 무엇을 할지 말씀해 주세요."
+        return self._notify(text)
 
     def upload_layout_image(self, file_name: str, mime_type: str, content_base64: str) -> dict:
         """Replace this session's attached layout image (REQ-IMGLAYOUT-001/003).
