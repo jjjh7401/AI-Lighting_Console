@@ -297,9 +297,29 @@ VECTORWORKS_ROW = SheetKindRow(
     handler=Handler(HANDLER_TAG_SESSION_METHOD, "upload_vectorworks_export"),
 )
 
-#: 표 하나. 오늘 채워진 행은 둘이며, 예약된 종류의 행은 만들지 않는다
+#: `group` — 열 집합 술어. SPEC-COPILOT-LXSEQ-002 M3 이 파서·매퍼·핸들러를
+#: 만들어 이 행을 벌었다(REQ-FILEARG-017 의 조건 — 그 종류의 파서·핸들러가
+#: 있어야 행을 만든다).
+#:
+#: `passthrough_args` 에 `patch_content_base64` 를 **넣지 않았다.** 넣으면
+#: 래퍼 스키마에 파일 내용 인자가 생기고, 「이 툴은 파일 내용을 인자로 받지
+#: 않는다」는 래퍼의 성질이 깨진다 — 사용자가 채팅에 붙여넣은 본문을 넣을
+#: 자리가 다시 생긴다는 뜻이다. 그래서 첨부 경로로 부르면 그룹 시트만
+#: 도착하고 FID 매핑원이 없어 툴이 명시적으로 거절한다. 두 시트를 어떻게
+#: 실어 나를지는 **카드 t53** 이 정한다(감독 답 2026-08-24 — 002 는 비대칭을
+#: 만들되 모양을 못박지 않는다).
+GROUP_ROW = SheetKindRow(
+    kind="group",
+    predicate=RequiredForbidden(
+        required_columns=("GroupNo", "Name", "Members", "Purpose"),
+    ),
+    handler=Handler(HANDLER_TAG_TOOL, "import_lxseq_groups"),
+    passthrough_args=("action",),
+)
+
+#: 표 하나. 오늘 채워진 행은 셋이며, 예약된 종류의 행은 만들지 않는다
 #: (REQ-FILEARG-017 — 그 종류의 파서·핸들러가 아직 없다).
-REGISTRY: tuple[SheetKindRow, ...] = (PATCH_ROW, VECTORWORKS_ROW)
+REGISTRY: tuple[SheetKindRow, ...] = (PATCH_ROW, GROUP_ROW, VECTORWORKS_ROW)
 
 
 def discriminate(

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import csv
 import hashlib
 import io
 import json
@@ -77,6 +78,8 @@ from server.looks.songcue import (
     parse_sections,
 )
 from server.looks.songcue_report import build_songcue_report
+from server.lxseq.group_mapper import map_groups
+from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
 from server.lxseq.parser import MissingColumnsError, parse_patch_csv
 from server.orchestrator.layout_occupancy import check_occupancy
@@ -250,6 +253,7 @@ TOOL_NAMES = (
     "resolve_patch_address",
     "patch_fixtures",
     "import_lxseq_patch",
+    "import_lxseq_groups",
     "import_uploaded_sheet",
     "find_fx",
     "instantiate_fx",
@@ -522,6 +526,7 @@ SHEET_WRAPPER_REFUSALS = (
 #: 열리지 않는다"와 어긋난다. 숨기지 않고 여기 적어 둔다.
 SHEET_KIND_ACTIONS = dict()
 SHEET_KIND_ACTIONS["patch"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["group"] = ("preview", "apply")
 
 
 def _sheet_refusal(call: ToolCall, reason: str, message: str) -> ToolExecution:
@@ -1573,6 +1578,24 @@ def arrange_values_match(expected: float, actual: float) -> bool:
     )
 
 
+def apply_group_batches(batch_indices, run_batch):
+    """배치를 순서대로 위임하고 **첫 실패에서 멈춘다** (REQ-LXSEQ2-012).
+
+    `run_batch(index)` 는 `(status, payload)` 를 돌려주는 호출자 주입이다.
+    자동 재시도는 하지 않는다 — 멤버십은 되읽히지 않으므로 중복 발화가 만든
+    결과를 사후에 가를 수 없다.
+
+    돌려주는 값은 `(적용 기록, 멈춘 배치 index 또는 None)` 이다.
+    """
+    applied: list[dict[str, object]] = []
+    for index in batch_indices:
+        status, payload = run_batch(index)
+        applied.append({"index": index, "status": status, "result": payload})
+        if status != "ok":
+            return applied, index
+    return applied, None
+
+
 def _error_result(call: ToolCall, message: str) -> ToolExecution:
     return ToolExecution(
         result=ToolResult(
@@ -1631,6 +1654,18 @@ def _addressable_groups(groups_section: object) -> list[int]:
         }
     )
 
+
+#: `import_lxseq_groups` 페이로드가 매번 싣는 모델 지시 (REQ-LXSEQ2-015 · 016).
+LXSEQ_GROUPS_GUIDANCE = (
+    "바이트는 파일에서만 온다 — 사용자가 채팅에 붙여넣은 시트 본문으로 "
+    "base64를 만들지 마라. 개행·공백이 조용히 깨진다.\n"
+    "멤버십은 이 프로젝트가 시도한 어느 채널로도 되읽히지 않았고, grandMA3가 "
+    "노출하는지 여부는 **미측정**이다. 그러므로 만든 뒤 「멤버가 맞는지 "
+    "확인했다」고 말하지 마라 — 재조회는 슬롯 존재와 이름만 본다. "
+    "human_check_commands를 사용자에게 그대로 보여 주고 눈으로 대조하게 하라.\n"
+    "batches가 비어 있으면 그 사유가 skipped 또는 slot_divergence에 있다. "
+    "슬롯이 어긋나면 아무것도 만들지 않는다 — 번호를 옮겨 배정하지 않는다."
+)
 
 #: `import_lxseq_patch` 페이로드가 매번 싣는 모델 지시(REQ-LXSEQ-014 · REQ-LXSEQ-016 (b)).
 #: 툴 정의의 금지 문구를 여기서 **한 번 더** 말한다 — 정의는 대화 앞에 한 번 붙고,
@@ -4486,6 +4521,183 @@ def build_toolset(
                     ),
                 )
             ),
+        )
+
+    # -- import_lxseq_groups (SPEC-COPILOT-LXSEQ-002 M3) -----------------------
+    #
+    # 001 이 patch.csv 를 patch_fixtures 에 이었듯, 여기서는 group.csv 와 001 의
+    # FID 매핑원을 create_arrangement_groups 에 잇는다. 쓰기 경로는 그 툴 하나뿐이고
+    # 슬롯 측정·점유 차단·승인 게이트·발화·재조회는 전부 그쪽이 이미 한다.
+    def import_lxseq_groups(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """LX-SEQ GROUP 시트를 콘솔 그룹 계획으로 바꾸고, 원하면 그대로 만든다.
+
+        바이트는 **파일에서만** 온다(REQ-LXSEQ2-015). 멤버십은 이 프로젝트가
+        시도한 어느 채널로도 되읽히지 않았고 grandMA3 가 노출하는지 여부는
+        **미측정**이므로, 만든 뒤 「검증했다」고 말하지 않는다 — 하위 툴이
+        싣는 구조적 미검증 고지를 그대로 실어 나른다.
+        """
+        group_raw = call.arguments.get("group_content_base64")
+        if not isinstance(group_raw, str) or not group_raw.strip():
+            return _error_result(
+                call,
+                "'group_content_base64'가 없다 — GROUP 시트 **파일**에서 읽은 바이트를 "
+                "base64로 넘겨라. 사용자가 채팅에 붙여넣은 본문으로 만들지 마라.",
+            )
+        patch_raw = call.arguments.get("patch_content_base64")
+        if not isinstance(patch_raw, str) or not patch_raw.strip():
+            return _error_result(
+                call,
+                "'patch_content_base64'가 없다 — 그룹의 멤버 FID 는 패치 시트의 Group "
+                "라벨에서만 온다(REQ-LXSEQ2-004). 콘솔 픽스처 열거로 대신할 수 없다: "
+                "그 열거는 절단되고, 잘린 목록으로 만든 그룹은 조용히 불완전해진다. "
+                "첨부 경로로 부른 경우라면 그룹 시트만 도착한 것이다 — 두 시트를 "
+                "실어 나르는 방법은 아직 정해지지 않았다(카드 t53). 지금은 이 툴을 "
+                "직접 부르며 두 인자를 함께 넘겨라.",
+            )
+
+        decoded: list[bytes] = []
+        for label, blob in (("group", group_raw), ("patch", patch_raw)):
+            try:
+                decoded.append(base64.b64decode(blob, validate=True))
+            except (binascii.Error, ValueError):
+                return _error_result(
+                    call,
+                    f"'{label}_content_base64'가 base64가 아니다 — 파일 바이트를 그대로 "
+                    "base64로 인코딩해 넘겨라. 채팅 본문을 옮겨 적지 마라.",
+                )
+        group_bytes, patch_bytes = decoded
+
+        action = call.arguments.get("action", "preview")
+        if action not in ("preview", "apply"):
+            return _error_result(call, "'action'은 'preview' 또는 'apply'여야 한다")
+
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — 콘솔을 읽지 못하면 빈 슬롯이라고 말할 수 "
+                "없다. 읽지 않고는 그룹을 만들지 않는다",
+            )
+
+        try:
+            group_text = group_bytes.decode("utf-8")
+            patch_text = patch_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return _error_result(call, "시트 바이트가 UTF-8이 아니다")
+
+        try:
+            parsed = parse_group_csv(group_text)
+        except MissingGroupColumnsError as error:
+            return _error_result(call, f"GROUP 시트 헤더가 맞지 않다: {error}")
+
+        patch_rows = list(csv.DictReader(io.StringIO(patch_text.lstrip("\ufeff"))))
+
+        groups_path = rig_paths.get("groups")
+        fixtures_path = rig_paths.get("fixtures")
+        if not groups_path or not fixtures_path:
+            return _error_result(
+                call,
+                "rig context has no 'groups'/'fixtures' path configured — 빈 슬롯을 재려면 "
+                "그룹 풀과 픽스처 컨테이너 경로가 둘 다 필요하다",
+            )
+        sections, _resolved, _failed = collect_rig_sections(
+            state_port, {"groups": groups_path, "fixtures": fixtures_path}, frozenset(), 0
+        )
+        fid_read = read_existing_fids(_InventoryPort(state_port, property_port))
+
+        result = map_groups(
+            group_records=parsed.records,
+            patch_rows=patch_rows,
+            console_fids=fid_read.fids,
+            console_fids_complete=fid_read.complete,
+            groups_section=sections["groups"],
+        )
+
+        payload: dict[str, object] = {
+            "action": action,
+            "source": {
+                "group_sha256": hashlib.sha256(group_bytes).hexdigest(),
+                "group_byte_length": len(group_bytes),
+                "patch_sha256": hashlib.sha256(patch_bytes).hexdigest(),
+                "patch_byte_length": len(patch_bytes),
+            },
+            "rejected_rows": [
+                {"row": r.row, "kind": r.kind, "detail": r.detail} for r in parsed.rejected
+            ],
+            "skipped": [
+                {"group_no": s.group_no, "name": s.name, "kind": s.kind, "detail": s.detail}
+                for s in result.skipped
+            ],
+            "console_read_incomplete": result.console_read_incomplete,
+            "console_read_reason": None if fid_read.complete else fid_read.reason(),
+            "slot_divergence": (
+                None
+                if result.slot_divergence is None
+                else {
+                    "sheet_slots": list(result.slot_divergence.sheet_slots),
+                    "measured_slots": list(result.slot_divergence.measured_slots),
+                    "detail": result.slot_divergence.detail,
+                }
+            ),
+            "batches": [
+                {
+                    "index": batch.index,
+                    "groups": [
+                        {
+                            "group_no": b.group_no,
+                            "name": b.name,
+                            "fids": list(b.fids),
+                            "selection_line_bytes": b.longest_line_bytes,
+                        }
+                        for b in batch.buckets
+                    ],
+                }
+                for batch in result.batches
+            ],
+            "guidance": LXSEQ_GROUPS_GUIDANCE,
+        }
+
+        if action == "preview" or not result.batches:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        by_index = {batch.index: batch for batch in result.batches}
+
+        def _run_batch(index: int):
+            batch = by_index[index]
+            inner = ToolCall(
+                id=f"{call.id}-batch{index}",
+                name="create_arrangement_groups",
+                arguments={
+                    "groups": [{"name": b.name, "fids": list(b.fids)} for b in batch.buckets]
+                },
+            )
+            execution = create_arrangement_groups(inner, context)
+            # `ToolResult` 는 status/payload 를 갖지 않는다 — 실패는 `is_error`
+            # 하나로만 알리고(그 함수는 `_error_result` 로 그 갈래를 낸다) 본문은
+            # content 의 JSON 문자열이다. 계약을 그대로 따른다.
+            try:
+                inner_payload = json.loads(execution.result.content)
+            except (json.JSONDecodeError, TypeError):
+                inner_payload = {"raw": execution.result.content}
+            return ("error" if execution.result.is_error else "ok"), inner_payload
+
+        applied, stopped = apply_group_batches([b.index for b in result.batches], _run_batch)
+        if stopped is not None:
+            payload["stopped_after_batch"] = stopped
+        payload["applied"] = applied
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
         )
 
     # -- import_uploaded_sheet (SPEC-COPILOT-SHEETPIPE-001 M2) -----------------
@@ -9402,6 +9614,67 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="import_lxseq_groups",
+            description=(
+                "LX-SEQ GROUP 시트 한 장(GroupNo/Name/Members/Purpose)과 그 RIG의 "
+                "패치 시트를 함께 읽어 콘솔 그룹 계획을 만들고, action='apply'일 "
+                "때만 실제로 만든다. 기본은 'preview'이며 preview는 콘솔에 "
+                "**아무것도 쓰지 않는다**.\n"
+                "\n"
+                "바이트는 **파일에서만** 온다. 사용자가 채팅에 붙여넣은 시트 본문을 "
+                "base64로 만들어 넣지 마라 — 개행·공백이 조용히 깨진다.\n"
+                "\n"
+                "패치 시트가 함께 필요한 이유는 그룹의 멤버 FID가 거기 Group 열에서만 "
+                "오기 때문이다. 콘솔 픽스처 열거로 대신할 수 없다 — 그 열거는 절단되고, "
+                "잘린 목록으로 만든 그룹은 조용히 불완전해진다.\n"
+                "\n"
+                "Members 열은 산문이라 해석하지 않는다. 12개 기본 그룹은 패치 라벨에서, "
+                "6개 파생 그룹(ALL/SIDE-ALL/WASH-ALL/MOVER-ALL/ODD/EVEN)은 코드의 닫힌 "
+                "규칙에서 온다. 그 밖의 이름은 추측하지 않고 건너뛴다.\n"
+                "\n"
+                "**멤버십은 되읽히지 않는다 — 그리고 grandMA3가 노출하는지 여부는 "
+                "미측정이다.** 만든 뒤 재조회는 슬롯 존재와 이름만 본다. 그러므로 "
+                "「멤버가 맞는지 확인했다」고 보고하지 말고, human_check_commands를 "
+                "사용자에게 보여 눈으로 대조하게 하라.\n"
+                "\n"
+                "시트가 선언한 슬롯 번호와 콘솔이 답한 빈 슬롯이 어긋나면 **아무것도 "
+                "만들지 않고** 대조표를 돌려준다. 번호를 옮겨 배정하지 않는다 — 곡 "
+                "파일이 그룹 번호를 참조한다."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "group_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "GROUP 시트 **파일**의 바이트를 base64로 인코딩한 값. "
+                            "채팅에 붙여넣은 본문으로 만들지 마라. 이 툴은 파일 "
+                            "경로를 받지 않는다."
+                        ),
+                    },
+                    "patch_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "같은 RIG의 패치 시트 **파일** 바이트를 base64로 인코딩한 값. "
+                            "그룹의 멤버 FID가 이 시트의 Group 열에서 온다."
+                        ),
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["preview", "apply"],
+                        "description": (
+                            "'preview'(기본)는 계획만 낸다 — 콘솔 쓰기 0건. "
+                            "'apply'는 그 호출에서 계획을 다시 세운 뒤 배치를 순서대로 "
+                            "create_arrangement_groups에 위임한다. 사용자가 계획을 보고 "
+                            "동의하기 전에 apply를 부르지 마라."
+                        ),
+                    },
+                },
+                "required": ["group_content_base64", "patch_content_base64"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="import_uploaded_sheet",
             description=(
                 "이번 대화에서 첨부 버튼으로 올라온 시트 한 장을 그 종류의 대상 "
@@ -9565,6 +9838,7 @@ def build_toolset(
         "resolve_patch_address": resolve_patch_address,
         "patch_fixtures": patch_fixtures,
         "import_lxseq_patch": import_lxseq_patch,
+        "import_lxseq_groups": import_lxseq_groups,
         "import_uploaded_sheet": import_uploaded_sheet,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
