@@ -37,16 +37,23 @@ from dataclasses import dataclass
 from server.looks.schema import CONFIRMED_ATTRIBUTES, PROBE_GATED_ATTRIBUTES
 
 #: 세 종류의 **정확** 열 집합. 정본 실측이며 여기가 유일한 선언 자리다.
+#:
+#: 종류 이름은 `server/sheets/registry.py` 의 행 `kind` 와 **같은 어휘**다.
+#: 짧은 이름(`dim`)을 따로 쓰면 두 어휘가 생기고, 둘이 갈리는 순간 산출물의
+#: `sheet_kind` 가 레지스트리가 말하는 종류와 달라진다 — 이 저장소가 포트
+#: 기본값에서 이미 치른 값이다(t61). 검사가 두 목록의 동일성을 잰다.
 PRESET_SHEET_COLUMNS: dict[str, tuple[str, ...]] = dict(
     [
-        ("dim", ("ID", "Name", "Level", "Purpose")),
-        ("col", ("ID", "Name", "Value", "Purpose")),
-        ("bm", ("ID", "Name", "TargetGroup", "Value")),
+        ("preset-dim", ("ID", "Name", "Level", "Purpose")),
+        ("preset-col", ("ID", "Name", "Value", "Purpose")),
+        ("preset-bm", ("ID", "Name", "TargetGroup", "Value")),
     ]
 )
 
 #: 시트 종류별 ID 접두. 어긋난 행은 거부하고 보고한다(REQ-LXSEQ3-003).
-PRESET_ID_PREFIXES: dict[str, str] = dict([("dim", "DIM."), ("col", "COL."), ("bm", "BM.")])
+PRESET_ID_PREFIXES: dict[str, str] = dict(
+    [("preset-dim", "DIM."), ("preset-col", "COL."), ("preset-bm", "BM.")]
+)
 
 #: 이 저장소가 **실기로 재서** 콘솔이 받는다고 확인한 속성.
 #: `server/looks/schema.py` 가 정본이다 — 여기서 사본을 만들지 않는다.
@@ -187,7 +194,7 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
     사유를 **전부** 돌려준다. 하나만 돌려주면 한 원인을 풀었을 때 그 행이 열릴
     것처럼 보이는데 실제로는 다른 사유가 남아 안 열린다.
     """
-    if kind == "dim":
+    if kind == "preset-dim":
         if _PERCENT.match(value_raw):
             return True, ()
         return False, (
@@ -197,7 +204,7 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
             ),
         )
 
-    if kind == "col":
+    if kind == "preset-col":
         if _HAS_RGB.search(value_raw):
             return False, (
                 PresetHoldReason(
@@ -257,7 +264,7 @@ def parse_preset_csv(text: str) -> PresetParseResult:
     columns = PRESET_SHEET_COLUMNS[kind]
     actual = dict((_normalize(name), name) for name in header)
     prefix = PRESET_ID_PREFIXES[kind]
-    value_column = "Level" if kind == "dim" else "Value"
+    value_column = "Level" if kind == "preset-dim" else "Value"
 
     records: list[LxseqPresetRecord] = []
     rejected: list[PresetRowRejection] = []

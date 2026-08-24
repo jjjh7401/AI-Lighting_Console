@@ -36,11 +36,11 @@ from server.lxseq.preset_parser import (
 RIG = Path("src/Lighting_Designer/02_RIG팩")
 STEM = "LXSEQ_RIG_01_ShowBase_r3.preset-"
 
-EXPECTED_ROWS = dict([("dim", 6), ("col", 8), ("bm", 5)])
+EXPECTED_ROWS = dict([("preset-dim", 6), ("preset-col", 8), ("preset-bm", 5)])
 
 
 def _text(kind: str) -> str:
-    return (RIG / (STEM + kind + ".csv")).read_text(encoding="utf-8-sig")
+    return (RIG / (STEM + kind.removeprefix("preset-") + ".csv")).read_text(encoding="utf-8-sig")
 
 
 def _parsed(kind: str):
@@ -101,12 +101,12 @@ class TestPosIsRefused:
 
     def test_the_pos_header_is_refused(self):
         with pytest.raises(UnknownPresetSheetError):
-            parse_preset_csv(_text("pos"))
+            parse_preset_csv(_text("preset-pos"))
 
     def test_the_refusal_names_the_header_it_saw(self):
         """거절만으로는 부족하다 — 무엇을 보고 거절했는지 말해야 고칠 수 있다."""
         with pytest.raises(UnknownPresetSheetError) as caught:
-            parse_preset_csv(_text("pos"))
+            parse_preset_csv(_text("preset-pos"))
         assert "StageMeaning" in str(caught.value)
 
     def test_it_does_not_refuse_everything(self):
@@ -122,7 +122,7 @@ class TestPosIsRefused:
 class TestRowRejection:
     def test_a_mismatched_id_prefix_is_rejected_and_reported(self):
         """조용히 건너뛰지 않는다 — 행 번호와 사유가 함께 나온다."""
-        text = _text("col").replace("COL.04", "BM.99", 1)
+        text = _text("preset-col").replace("COL.04", "BM.99", 1)
         result = parse_preset_csv(text)
         assert len(result.records) == 7, "한 행만 떨어져야 한다"
         assert len(result.rejected) == 1
@@ -142,7 +142,7 @@ class TestRowRejection:
 class TestProseIsNotInterpreted:
     def test_purpose_is_preserved_but_never_becomes_the_value(self):
         """`Purpose` 에 값처럼 읽히는 문구가 있어도 값 산출에 안 쓴다."""
-        dim = _parsed("dim")
+        dim = _parsed("preset-dim")
         full = next(r for r in dim.records if r.preset_id == "DIM.FULL")
         assert full.purpose is not None and full.purpose != ""
         assert full.value_raw == "100%"
@@ -150,15 +150,15 @@ class TestProseIsNotInterpreted:
 
     def test_target_group_stays_a_string(self):
         """FID 목록으로 확장하지 않는다 — 그룹 멤버십은 읽히지 않아 근거가 없다."""
-        bm = _parsed("bm")
+        bm = _parsed("preset-bm")
         first = bm.records[0]
         assert first.target_group == "MOVER-ALL"
         assert isinstance(first.target_group, str)
 
     def test_sheets_without_that_column_carry_none(self):
         """대조군 — bm 에만 TargetGroup 이 있고 dim/col 에는 없다."""
-        assert all(r.target_group is None for r in _parsed("dim").records)
-        assert all(r.purpose is None for r in _parsed("bm").records)
+        assert all(r.target_group is None for r in _parsed("preset-dim").records)
+        assert all(r.purpose is None for r in _parsed("preset-bm").records)
 
 
 class TestStorability:
@@ -173,7 +173,7 @@ class TestStorability:
     def test_only_the_dimmer_sheet_is_storable_today(self):
         by_kind = dict((k, _parsed(k).records) for k in EXPECTED_ROWS)
         storable = dict((k, sum(1 for r in v if r.storable)) for k, v in by_kind.items())
-        assert storable == dict([("dim", 6), ("col", 0), ("bm", 0)])
+        assert storable == dict([("preset-dim", 6), ("preset-col", 0), ("preset-bm", 0)])
         assert sum(storable.values()) == 6
 
     def test_every_held_record_carries_at_least_one_reason(self):
@@ -221,18 +221,18 @@ class TestStorability:
         `BM.01`(Zoom · Gobo OPEN · Prism OFF)은 Gobo(범위 밖)와 Prism(거절)
         **둘 다**에 막힌다. Gobo 만 풀어도 안 열린다 — 목록이 그것을 말해야 한다.
         """
-        first = next(r for r in _parsed("bm").records if r.preset_id == "BM.01")
+        first = next(r for r in _parsed("preset-bm").records if r.preset_id == "BM.01")
         assert set(first.hold_classes) == set([HOLD_PROBE_REJECTED, HOLD_FAMILY_OUT_OF_SCOPE])
 
     def test_solving_one_class_would_not_open_every_beam_row(self):
         """위 검사의 실질 — 「Gobo 만 풀면 몇 건」이 정직하게 나오는지."""
-        beam = _parsed("bm").records
+        beam = _parsed("preset-bm").records
         only_gobo = [r for r in beam if set(r.hold_classes) == set([HOLD_FAMILY_OUT_OF_SCOPE])]
         assert len(only_gobo) == 2, "Gobo 만 풀면 5건 중 2건만 열린다"
 
     def test_a_fabricated_prose_level_is_not_storable(self):
         """날조 대조군 — dim 이 무조건 통과하는 게 아니라 형태를 재는 것이다."""
-        text = _text("dim").replace("100%", "아주 밝게", 1)
+        text = _text("preset-dim").replace("100%", "아주 밝게", 1)
         record = parse_preset_csv(text).records[0]
         assert record.storable is False
         assert record.hold_classes == (HOLD_VALUE_NOT_MACHINE_READABLE,)
@@ -244,6 +244,6 @@ class TestStorability:
         한다. 이 대조군이 없으면 위 5/5 보류가 「bm 은 전부 막는다」와 구분되지
         않는다.
         """
-        text = _text("bm").replace("Zoom 45° · Gobo OPEN · Prism OFF", "Zoom 45", 1)
+        text = _text("preset-bm").replace("Zoom 45° · Gobo OPEN · Prism OFF", "Zoom 45", 1)
         record = parse_preset_csv(text).records[0]
         assert record.storable is True, record.hold_reasons

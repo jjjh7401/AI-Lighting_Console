@@ -142,15 +142,37 @@ class TestActionTable:
 # -- 3. _SHEET_ROW_COUNTERS (server/web/session.py) ------------------------------
 
 
+#: 🔴 **툴 하나를 등재하면 종류·이름을 키로 잡는 자리가 여섯이다.**
+#:
+#: 이 목록이 여기 있는 이유: 이 저장소에서 같은 실수가 **세 번** 났고, 세 번 다
+#: 「기억해 두자」로는 안 막혔다. 매번 잡은 것은 가드다. **기억은 찾아가야 하고
+#: 가드는 찾아온다** — 그래서 지식을 가드의 실패 메시지로 옮겼다. 걸린 사람이
+#: 나머지를 다시 찾지 않아도 되게.
+CONSUMPTION_SITES = (
+    "1. server/orchestrator/tools.py — TOOL_NAMES",
+    "2. server/orchestrator/tools.py — ToolDefinition (build_toolset 의 definitions)",
+    "3. server/orchestrator/tools.py — 디스패치 표 (이름 -> 핸들러)",
+    "4. server/orchestrator/tools.py — SHEET_KIND_ACTIONS (시트 종류를 받는 툴만)",
+    "5. server/web/session.py — _SHEET_ROW_COUNTERS (시트 종류를 받는 툴만)",
+    "6. server/orchestrator/runner.py — _TOOL_TASKS (진행 표시 라벨)",
+    "그리고 상수 둘: test_tools.py 의 툴 수 · test_sheets_registry.py 의 행 목록",
+)
+
+
+def sites_hint() -> str:
+    """가드가 가르친다 — 실패 메시지에 여섯 지점을 그대로 싣는다."""
+    return "\n종류·이름을 키로 잡는 자리 전수:\n" + "\n".join(CONSUMPTION_SITES)
+
+
 class TestRowCounterTable:
     @pytest.mark.parametrize("row", TOOL_ROWS, ids=_kind_id)
     def test_tool_row_has_a_row_counter(self, row):
         counter = _SHEET_ROW_COUNTERS.get(row.kind)
         assert callable(counter), (
-            f"[소비 지점 3/5] 시트 종류 '{row.kind}'의 행 수 판독기가 "
+            f"[소비 지점 5] 시트 종류 '{row.kind}'의 행 수 판독기가 "
             f"server/web/session.py의 _SHEET_ROW_COUNTERS에 없다 — 첨부 안내가 "
             f"'행 수 미상'으로 나가고, 운영자는 몇 행이 담겼는지 모른 채 계획을 "
-            f"승인하게 된다."
+            f"승인하게 된다." + sites_hint()
         )
 
 

@@ -2664,6 +2664,26 @@ def _count_group_rows(data: bytes) -> str:
 
 _SHEET_ROW_COUNTERS["group"] = _count_group_rows
 
+
+def _count_preset_rows(data: bytes) -> str:
+    """PRESET 시트의 데이터 행 수 — 첨부 안내에 싣는 한 줄.
+
+    **읽는 수이지 넣는 수가 아니다.** 시트의 모든 행이 콘솔에 넣을 수 있는 값은
+    아니어서, 실제 계획 수는 툴이 판정한다. 여기서 「N개」라고만 말하면 운영자가
+    그 수만큼 들어갈 것으로 읽으므로 「행」이라고 적는다.
+    """
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return "행 수를 세지 못했다"
+    rows = [line for line in text.splitlines() if line.strip()]
+    return f"프리셋 시트 {max(len(rows) - 1, 0)}행"
+
+
+_SHEET_ROW_COUNTERS["preset-dim"] = _count_preset_rows
+_SHEET_ROW_COUNTERS["preset-col"] = _count_preset_rows
+_SHEET_ROW_COUNTERS["preset-bm"] = _count_preset_rows
+
 #: 첨부 이음매가 배선한 세션 메서드 이름 (SPEC-COPILOT-SHEETPIPE-001 결정 A).
 #:
 #: 레지스트리의 ``session_method`` 종 행은 이 자리로 온다. 이음매가 보낼 곳을

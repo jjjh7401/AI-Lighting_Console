@@ -82,6 +82,8 @@ from server.lxseq.group_mapper import map_groups
 from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
 from server.lxseq.parser import MissingColumnsError, parse_patch_csv
+from server.lxseq.preset_mapper import map_presets
+from server.lxseq.preset_parser import UnknownPresetSheetError, parse_preset_csv
 from server.orchestrator.layout_occupancy import check_occupancy
 from server.orchestrator.ports import (
     BundleGate,
@@ -105,6 +107,7 @@ from server.prechk.mode_read import (
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import PropertyRead, bulk_capable, read_properties
 from server.prechk.report import build_report as build_precheck_report
+from server.presets.store import preset_store_commands
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
 from server.safety.approval import (
@@ -254,6 +257,7 @@ TOOL_NAMES = (
     "patch_fixtures",
     "import_lxseq_patch",
     "import_lxseq_groups",
+    "import_lxseq_presets",
     "import_uploaded_sheet",
     "find_fx",
     "instantiate_fx",
@@ -527,6 +531,9 @@ SHEET_WRAPPER_REFUSALS = (
 SHEET_KIND_ACTIONS = dict()
 SHEET_KIND_ACTIONS["patch"] = ("preview", "apply")
 SHEET_KIND_ACTIONS["group"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["preset-dim"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["preset-col"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["preset-bm"] = ("preview", "apply")
 
 
 def _sheet_refusal(call: ToolCall, reason: str, message: str) -> ToolExecution:
@@ -1656,6 +1663,38 @@ def _addressable_groups(groups_section: object) -> list[int]:
 
 
 #: `import_lxseq_groups` 페이로드가 매번 싣는 모델 지시 (REQ-LXSEQ2-015 · 016).
+#: 시트 종류에서 콘솔 프리셋 풀 계열로. **번호가 아니라 계열 이름**이다 —
+#: 번호는 콘솔이 답한 목록에서 읽는다(`_preset_pool_number`).
+_PRESET_POOL_FAMILY = dict(
+    [("preset-dim", "Dimmer"), ("preset-col", "Color"), ("preset-bm", "Beam")]
+)
+
+
+def _count_hold_classes(held) -> dict:
+    """보류를 **클래스별로** 센다. 한 건이 여러 클래스에 걸릴 수 있으므로
+    합이 보류 수보다 클 수 있다 — 그 차이가 다중 차단 행의 존재를 말한다."""
+    counts: dict[str, int] = dict()
+    for item in held:
+        for name in item.hold_classes:
+            counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
+#: `import_lxseq_presets` 페이로드가 매번 싣는 모델 지시.
+LXSEQ_PRESETS_GUIDANCE = (
+    "이 산출물의 `planned` 는 **넣을 수 있다고 판정된 것**이고 `held` 는 "
+    "**넣을 수 없어 보류된 것**이다. 둘을 합쳐 보고하라 — 「N건 성공」이 아니라 "
+    "「읽은 수 중 계획 수 성공 · 보류 수 보류(클래스별)」로 말하라. 보류를 빼고 "
+    "말하면 사용자는 나머지가 어디로 갔는지 알 수 없다.\n"
+    "\n"
+    "**값이 맞는지는 되읽지 못한다.** 슬롯이 찼다는 것은 「무언가 저장됐다」까지만 "
+    "말한다. 「검증된 N건」이라고 보고하지 마라 — 틀린 값이 조용히 영속한다.\n"
+    "\n"
+    "`command_bytes` 는 **기록**이지 통과 조건이 아니다. 콘솔 거절은 길이가 아니라 "
+    "내용에 달려 있다 — 「짧으니 안전」이라고 말하지 마라."
+)
+
+
 LXSEQ_GROUPS_GUIDANCE = (
     "바이트는 파일에서만 온다 — 사용자가 채팅에 붙여넣은 시트 본문으로 "
     "base64를 만들지 마라. 개행·공백이 조용히 깨진다.\n"
@@ -4691,6 +4730,158 @@ def build_toolset(
         if stopped is not None:
             payload["stopped_after_batch"] = stopped
         payload["applied"] = applied
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
+        )
+
+    # -- import_lxseq_presets (SPEC-COPILOT-LXSEQ-003 M3) ----------------------
+    #
+    # @MX:ANCHOR: [AUTO] 명령 문형은 `server/presets/store.py` 에서만 온다.
+    # @MX:REASON: 이 자리에 `Store Preset` 을 다시 적으면 문형을 아는 자리가 넷이
+    #   되고, 문형이 바뀔 때 어느 자리가 안 고쳐졌는지 아무도 모른다. 그 값을 이
+    #   저장소가 프로브 포트에서 이미 치렀다(t61).
+
+    def _preset_pool_number(family: str):
+        """콘솔이 답한 풀 목록에서 이 계열의 풀 번호를 **읽는다**. 지어내지 않는다."""
+        pools_path = rig_paths.get("preset_pools")
+        if pools_path is None:
+            return None, "rig context 에 프리셋 풀 경로가 없다 — 풀 번호를 잴 수 없다"
+        try:
+            payload = state_port.query_state(pools_path)
+        except Exception as exc:  # noqa: BLE001 — 모든 포트 실패는 하나의 거절이다
+            return None, "프리셋 풀 목록이 오지 않았다: " + str(exc)
+        for child in payload.get("children") or []:
+            if not isinstance(child, dict):
+                continue
+            number = child.get("i") if isinstance(child.get("i"), int) else child.get("no")
+            name = str(child.get("name") or "")
+            if isinstance(number, int) and name.casefold().startswith(family.casefold()):
+                return number, ""
+        return None, ("풀 목록에 '" + family + "' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다")
+
+    def import_lxseq_presets(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """LX-SEQ PRESET 시트를 콘솔 프리셋으로 만든다.
+
+        바이트는 **파일에서만** 온다(001 규약 승계). 19행을 전부 읽되 **넣을 수
+        있는 것만** 계획하고, 못 넣는 행은 **사유 클래스와 함께 그대로 나른다** —
+        버리면 나머지가 어디로 갔는지 아무도 모른다.
+
+        값이 콘솔에 맞게 들어갔는지는 **되읽을 수 없다.** 슬롯 점유는 확인되고
+        값 일치는 안 된다 — 「검증된 N건」이라고 보고하지 마라.
+        """
+        raw = call.arguments.get("file_content_base64")
+        if not isinstance(raw, str) or not raw.strip():
+            return _error_result(
+                call,
+                "'file_content_base64'가 없다 — PRESET 시트 **파일**에서 읽은 바이트를 "
+                "base64로 넘겨라. 채팅에 붙여넣은 본문으로 만들지 마라.",
+            )
+        try:
+            sheet_bytes = base64.b64decode(raw, validate=True)
+        except (binascii.Error, ValueError):
+            return _error_result(call, "'file_content_base64'가 base64가 아니다")
+        action = call.arguments.get("action", "preview")
+        if action not in ("preview", "apply"):
+            return _error_result(call, "'action'은 'preview' 또는 'apply'여야 한다")
+        try:
+            text = sheet_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return _error_result(call, "시트 바이트가 UTF-8이 아니다")
+        try:
+            parsed = parse_preset_csv(text)
+        except UnknownPresetSheetError as error:
+            return _error_result(call, "PRESET 시트 헤더가 맞지 않다: " + str(error))
+
+        pool_no, pool_error = _preset_pool_number(_PRESET_POOL_FAMILY[parsed.sheet_kind])
+        pool_section: dict[str, object] = dict(objects=[], truncated=False)
+        if pool_no is not None:
+            try:
+                slots = state_port.query_state(
+                    str(rig_paths.get("preset_pools")) + "/" + str(pool_no)
+                )
+            except Exception as exc:  # noqa: BLE001
+                pool_section = dict(ok=False, reason=str(exc))
+            else:
+                pool_section = dict(
+                    objects=[c for c in (slots.get("children") or []) if isinstance(c, dict)],
+                    truncated=bool(slots.get("truncated")),
+                )
+
+        result = map_presets(parsed.records, pool_section=pool_section)
+        payload: dict[str, object] = {
+            "action": action,
+            "sheet_kind": parsed.sheet_kind,
+            "source": {
+                "sha256": hashlib.sha256(sheet_bytes).hexdigest(),
+                "byte_length": len(sheet_bytes),
+            },
+            "pool_no": pool_no,
+            "pool_error": pool_error or None,
+            "rejected_rows": [
+                {"row": r.row, "kind": r.kind, "detail": r.detail} for r in parsed.rejected
+            ],
+            "read": len(parsed.records),
+            "planned": [
+                {"preset_id": p.preset_id, "name": p.name, "slot": p.slot, "value": p.value_raw}
+                for p in result.planned
+            ],
+            "held": [
+                {
+                    "preset_id": h.preset_id,
+                    "classes": list(h.hold_classes),
+                    "details": list(h.details),
+                }
+                for h in result.held
+            ],
+            "held_by_class": _count_hold_classes(result.held),
+            "refusal": result.refusal,
+            "refusal_detail": result.refusal_detail or None,
+            "unverified": list(result.unverified),
+            "unverified_reason": result.unverified_reason,
+            "guidance": LXSEQ_PRESETS_GUIDANCE,
+        }
+        if result.shortfall is not None:
+            payload["shortfall"] = {
+                "needed": result.shortfall.needed,
+                "available": result.shortfall.available,
+                "missing": result.shortfall.missing,
+            }
+
+        if action == "preview" or not result.planned or pool_no is None:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        commands: list[str] = []
+        for placement in result.planned:
+            commands.extend(preset_store_commands(pool_no, placement.slot, placement.name))
+        # 바이트는 **기록 대상**이지 판정 근거가 아니다 — 콘솔 거절이 길이가
+        # 아니라 내용에 달려 있다(t72: 2044B 거절 · 2080B 통과). 상한을 안전
+        # 근거로 쓰지 않는다.
+        payload["command_bytes"] = [len(c.encode("utf-8")) for c in commands]
+        payload["longest_command_bytes"] = max(payload["command_bytes"])
+
+        inner = ToolCall(
+            id=f"{call.id}-presets",
+            name="run_commands",
+            arguments={"commands": commands},
+        )
+        execution = run_commands(inner, context)
+        try:
+            payload["applied"] = json.loads(execution.result.content)
+        except (json.JSONDecodeError, TypeError):
+            payload["applied"] = {"raw": execution.result.content}
+        payload["applied_is_error"] = bool(execution.result.is_error)
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -9614,6 +9805,44 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="import_lxseq_presets",
+            description=(
+                "LX-SEQ PRESET 시트 한 장(dim/col/bm)을 읽어 콘솔 프리셋 계획을 "
+                "만들고, action='apply'일 때만 실제로 만든다. 기본은 'preview'이며 "
+                "preview는 콘솔에 **아무것도 쓰지 않는다**.\n"
+                "\n"
+                "바이트는 **파일에서만** 온다. 채팅에 붙여넣은 본문을 base64로 만들지 "
+                "마라 — 개행·공백이 조용히 깨진다.\n"
+                "\n"
+                "**시트의 모든 행이 콘솔에 넣을 수 있는 값은 아니다.** 이 툴은 전부 "
+                "읽되 넣을 수 있는 것만 계획하고, 나머지를 `held` 에 **사유 클래스와 "
+                "함께** 싣는다. 보고할 때 둘을 합쳐 말하라 — 「N건 성공」이 아니라 "
+                "「읽은 수 중 계획 수 성공 · 보류 수 보류」다.\n"
+                "\n"
+                "**값이 맞는지는 되읽지 못한다.** 슬롯 점유는 확인되고 값 일치는 안 "
+                "된다. 「검증된 N건」이라고 보고하지 마라.\n"
+                "\n"
+                "풀·슬롯이 어긋나면 **아무것도 만들지 않고** 대조표를 낸다. 부분 계획은 "
+                "내지 않는다 — 반쯤 맞는 프리셋이 남고 다음 단계가 그것을 참조한다."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_content_base64": {
+                        "type": "string",
+                        "description": "PRESET 시트 **파일**의 바이트를 base64로 인코딩한 값",
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["preview", "apply"],
+                        "description": "기본 'preview'. 'apply'만 콘솔에 쓴다",
+                    },
+                },
+                "required": ["file_content_base64"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="import_lxseq_groups",
             description=(
                 "LX-SEQ GROUP 시트 한 장(GroupNo/Name/Members/Purpose)과 그 RIG의 "
@@ -9839,6 +10068,7 @@ def build_toolset(
         "patch_fixtures": patch_fixtures,
         "import_lxseq_patch": import_lxseq_patch,
         "import_lxseq_groups": import_lxseq_groups,
+        "import_lxseq_presets": import_lxseq_presets,
         "import_uploaded_sheet": import_uploaded_sheet,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
