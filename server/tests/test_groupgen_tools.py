@@ -572,20 +572,27 @@ def _writable_console(slots: dict[int, str]) -> FakeConsole:
     return console
 
 
-#: The selection line for fids (1, 2, 3) — the multi-fixture form, which is
-#: NOT dedupe-exempt (only a single bare `Fixture <operand>` is).
+#: 옛 형태 — 반복 키워드형. dedupe 면제를 **못 받는다.** t66 까지 이 모듈이
+#: 실제로 내던 줄이고, 지금은 대조용으로만 남는다.
 SELECTION_123 = "Fixture 1 + Fixture 2 + Fixture 3"
+
+#: 지금 내는 줄 — 규칙서 검증 문법의 압축형. 면제를 **받는다.**
+COMPACT_123 = "Fixture 1 Thru 3"
 
 
 class TestCreateArrangementGroupsFiresOneBundlePerGroup:
-    def test_the_multi_fixture_selection_line_is_not_dedupe_exempt(self):
-        # The premise every test below rests on, asserted rather than assumed:
-        # a ONE-fixture group was never affected (its `Fixture 1` IS exempt),
-        # so a fixture-count-blind reading of these tests would misread them.
+    def test_the_emitted_selection_line_is_now_dedupe_exempt(self):
+        """t66 — 아래 모든 검사가 딛는 전제. 가정하지 않고 **잰다.**
+
+        옛 반복 키워드형은 면제를 못 받았고(그래서 둘째 선택이 조용히
+        떨어질 수 있었다), 지금 내는 압축형은 받는다. 둘을 나란히 재야
+        「몇 대짜리 그룹이냐」와 무관한 **문법의 문제**였음이 보인다.
+        """
         from server.orchestrator.tools import _is_programmer_state
 
         assert _is_programmer_state("Fixture 1") is True
         assert _is_programmer_state(SELECTION_123) is False
+        assert _is_programmer_state(COMPACT_123) is True
 
     def test_two_groups_over_identical_fids_both_reach_the_console(self):
         """`classify_arrangement_topology` emits byte-identical fid tuples for
@@ -614,12 +621,12 @@ class TestCreateArrangementGroupsFiresOneBundlePerGroup:
         # duplicated line all fail here.
         assert port.executed == [
             "ClearAll",
-            SELECTION_123,
+            COMPACT_123,
             "Store Group 1",
             "Label Group 1 'GEO Stage Right'",
             "ClearAll",
             "ClearAll",
-            SELECTION_123,
+            COMPACT_123,
             "Store Group 2",
             "Label Group 2 'GEO Stage Left'",
             "ClearAll",
@@ -668,11 +675,11 @@ class TestCreateArrangementGroupsFiresOneBundlePerGroup:
         )
         execution = registry.dispatch(
             _call(CREATE, arguments={"groups": [{"name": "GEO Stage Right", "fids": [1, 2, 3]}]}),
-            ExecutionContext(executed_ok=frozenset({SELECTION_123})),
+            ExecutionContext(executed_ok=frozenset({COMPACT_123})),
         )
         assert port.executed == [
             "ClearAll",
-            SELECTION_123,
+            COMPACT_123,
             "Store Group 1",
             "Label Group 1 'GEO Stage Right'",
             "ClearAll",
@@ -715,7 +722,7 @@ class TestCreateArrangementGroupsFiresOneBundlePerGroup:
             "Label Group 2 'GEO B'",
             "ClearAll",
             "ClearAll",
-            "Fixture 3 + Fixture 4",
+            "Fixture 3 + 4",
             "Store Group 3",
             "Label Group 3 'GEO C'",
             "ClearAll",
