@@ -117,6 +117,15 @@ def _probe_preconditions(state_port) -> dict:
 
     channel_trustworthy = (not fabricated["ok"]) and fixtures["ok"] and groups["ok"]
 
+    # @MX:ANCHOR: [AUTO] `channel_trustworthy` 는 아래 `all_pass` 안에 **반드시**
+    #   남아 있어야 한다. 「대조군은 앞에서 한 번 보면 되지」로 빼지 마라.
+    # @MX:REASON: P4 는 「0이면 통과」다. 그러므로 **판독 채널이 죽어서 0을 답해도
+    #   통과로 읽힌다** — 빈 풀과 안 읽히는 풀이 같은 값을 낸다. 대조군 결과가
+    #   all_pass 안에 있어야 그 거짓 통과가 막힌다. 이것을 앞단의 일회성 점검으로
+    #   옮기면, 채널이 그 사이에 죽었을 때 「전부 0이니 발사해도 된다」가 성립한다.
+    #   그리고 이 발사는 되돌릴 수 없다(그룹 멤버십은 되읽히지 않고 Delete 는
+    #   블랙리스트다).
+
     checks = {
         "P3_patched_fixtures": {
             "observed_child_count": fixtures["child_count"],
