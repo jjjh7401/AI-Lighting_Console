@@ -77,15 +77,19 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILOT-
 
 네 문법을 한 파서로 받으면 규칙이 늘 때마다 파서가 늘고, 오해석이 **조용히** 잘못된 그룹을 만든다. 멤버십을 못 읽으므로 사후 적발도 안 된다. 그래서 **파싱하지 않는다.** 멤버십은 001의 FID 매핑표에서 오고, 파생 6종은 코드의 닫힌 규칙이며, Members 는 개수를 적은 행에 한해 **교차검증에만** 쓴다. 이것이 카드가 말한 "12는 옮기고 6은 규칙으로 만든다"의 정확한 형태다.
 
-**둘째. 18개는 한 호출로 못 쓴다. 상한이 16이다 (실측).**
+**둘째. 18개는 한 호출로 못 쓴다. 상한이 16이다 (실측). 그리고 분할 지점은 12가 아니라 16이다.**
 
     server/groupgen/write.py:66        DEFAULT_GROUP_PLAN_CAP = 16
     server/groupgen/write.py:222       guard_plan_size 가 GROUP_PLAN_TOO_LARGE 를 던진다
     server/orchestrator/tools.py:7101  build_group_write_plan 호출에 max_plan_size 인자 없음
 
-`create_arrangement_groups` 는 max_plan_size 를 노출하지 않으므로 18개를 한 번에 넘기면 GROUP_PLAN_TOO_LARGE 로 거부된다. 이는 결함이 아니라 설계된 슬롯 경제 가드다. `guard_plan_size` 독스트링이 부분 계획을 최악의 결과라고 적는다. 따라서 **기본 12와 파생 6, 두 배치**로 나눠 순서대로 위임한다. 각 호출이 풀을 다시 재므로 2차 호출은 1차가 만든 12개를 점유로 본다. 올바른 동작이다.
+`create_arrangement_groups` 는 max_plan_size 를 노출하지 않으므로 18개를 한 번에 넘기면 GROUP_PLAN_TOO_LARGE 로 거부된다. 이는 결함이 아니라 설계된 슬롯 경제 가드다. `guard_plan_size` 독스트링이 부분 계획을 최악의 결과라고 적는다. 따라서 두 배치로 나눈다.
 
-**셋째. ALL 그룹의 선택 줄이 1201바이트다. 상한까지의 여백은 미측정이다.**
+**분할은 GroupNo 1..16 과 17..18 이다.** plan-phase 는 「기본 12와 파생 6」으로 적었는데 **그것은 틀렸고 M2 구현에서 드러났다.** 엔진이 빈 슬롯을 준 순서대로 짝지으므로, 기본을 먼저 넘기면 KEY(GroupNo 2)가 슬롯 1을 받는 식으로 18개 전부 밀린다. 카드의 "12는 옮기고 6은 규칙으로 만든다"는 멤버십의 **출처**에 대한 말이지 배치 순서에 대한 말이 아니었는데, 내가 배치 규칙으로 과독했다.
+
+각 호출이 풀을 다시 재므로 2차 호출은 1차가 만든 16개를 점유로 보고 17·18을 받는다. 올바른 동작이다.
+
+**셋째. ALL 그룹의 선택 줄이 1201바이트다. 여백은 M2 에서 측정했고, 전송층은 이 경로를 검사하지 않는다.**
 
     server/spatial/choreography.py:341
         선택 줄은 Fixture N 을 플러스 기호로 이어 붙인다. 구간 압축 없음
@@ -97,7 +101,20 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILOT-
         "Live-measured 2026-07-24 (onPC 2.4.2): the cmd_keyword transport rides
          the MA3 command line, which silently drops commands past ~2048 bytes"
 
-**미측정이다.** 조립된 번들 전체(ClearAll, 선택 줄, Store Group, Label Group, ClearAll 에 플러그인 호출 프레이밍을 더한 것)의 실제 인코딩 길이가 상한 안인지 **재지 않았다.** 1201이 2048보다 작다는 사실은 **안전하다는 근거가 아니다** — 프레이밍 여백이 측정된 적이 없기 때문이다. 실패 형태가 **조용한 누락**이고 멤버십은 되읽히지 않으므로, 넘칠 경우 사람도 기계도 적발하지 못한다. 그래서 ASSUMPTION-81과 발화 전 바이트 측정 게이트(REQ-LXSEQ2-011)를 둔다.
+**M2 에서 측정했다. 두 가지가 바뀌었다.**
+
+**첫째, 예산은 번들이 아니라 줄 단위다.** `run_commands` 가 `for command in commands:` 로 **한 줄씩** 발화한다(`server/orchestrator/tools.py:1821`). 그러므로 5줄을 합친 길이가 아니라 **가장 긴 한 줄**이 상한에 걸린다.
+
+**둘째, 이 리그의 최장 줄은 상한 안이다.**
+
+    ALL 선택 줄                    1201 bytes
+    build_exec_request 로 감싼 뒤    1243 bytes   (프레이밍 42 bytes)
+    MAX_PLUGIN_CALL_BYTES           2048 bytes
+    여백                             805 bytes
+
+**그런데 게이트는 여전히 필요하고, 오히려 더 필요하다.** 전송층의 예산 검사기 `_validate_plugin_call_budget` 이 `introspect` 와 `props` 에만 걸려 있고 **`exec` 에는 안 걸려 있다**(`server/bridge/protocol.py:217·233`). 실측했다 — 5475바이트 명령을 `build_exec_request` 에 넣으니 예외 없이 5517바이트 줄이 나왔고, **같은 크기에서 `build_introspect_query` 는 ProtocolError 를 던졌다**(양성 대조군). 즉 그룹 쓰기가 타는 경로에는 **아무 검사도 없다.**
+
+그러므로 이 리그는 오늘 안전하지만 **더 큰 리그는 조용히 깨진다.** 실패 형태가 조용한 누락이고 멤버십은 되읽히지 않으므로 사람도 기계도 적발하지 못한다. REQ-LXSEQ2-011 의 발화 전 측정이 **이 경로의 유일한 방어선**이다.
 
 **넷째. 「원리적 불가」 판정은 미측정으로 하향됐다. 문면을 되살리지 않는다.**
 
@@ -162,8 +179,8 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILOT-
 - **REQ-LXSEQ2-007** [State] — **While** Members 가 라벨 뒤에 개수를 적은 행을 다루는 동안, 매퍼는 **shall** 그 개수를 실제 FID 수와 대조하고 다르면 `member_count_mismatch` 로 건너뛴다. 이 대조는 **교차검증**이며 멤버십의 근거가 아니다.
 - **REQ-LXSEQ2-008** [Unwanted] — 매퍼는 **shall not** 콘솔 실측에 없는 FID를 그룹에 넣는다. FID 실측이 전수가 아니면(`console_read_incomplete`) **shall** 0배치를 낸다.
 - **REQ-LXSEQ2-009** [State] — **While** 측정된 빈 슬롯 순열이 시트의 GroupNo 순열과 다른 동안, 매퍼는 **shall** 계획을 내지 않고 `slot_number_divergence` 대조표를 보고한다.
-- **REQ-LXSEQ2-010** [Ubiquitous] — 계획은 **shall** DEFAULT_GROUP_PLAN_CAP(16) 이하가 되도록 **기본 12와 파생 6** 두 배치로 나뉜다. 배치 순서는 GroupNo 오름차순이 아니라 **기본 먼저**다. 파생이 기본의 FID를 참조하므로 사람이 읽을 때 순서가 뜻을 갖는다.
-- **REQ-LXSEQ2-011** [Unwanted] — 매퍼와 툴은 **shall not** 조립된 번들의 인코딩 바이트 길이가 선언된 예산을 넘는 상태로 발화한다. 넘으면 `bundle_over_budget` 으로 그 그룹을 건너뛰고 목록에 바이트 수를 적는다.
+- **REQ-LXSEQ2-010** [Ubiquitous] — 계획은 **shall** **GroupNo 오름차순**으로 정렬된 뒤 DEFAULT_GROUP_PLAN_CAP(16) 이하 배치로 나뉜다. 이 시트에서는 **16과 2**다. 순서가 GroupNo 여야 하는 이유는 `build_group_write_plan` 이 `measure_empty_slots` 가 낸 빈 슬롯을 **준 순서대로** 짝짓기 때문이다 — 다른 순서로 넘기면 18개 전부 번호가 밀리고, 곡 파일이 그룹 번호를 참조하므로 그것은 쇼의 의미를 조용히 깨는 변경이다. REQ-LXSEQ2-009(슬롯을 시트대로)와 양립하는 순서는 GroupNo 하나뿐이다.
+- **REQ-LXSEQ2-011** [Unwanted] — 매퍼와 툴은 **shall not** 조립된 명령 **한 줄**의 인코딩 바이트 길이가 선언된 예산을 넘는 상태로 발화한다. 단위가 줄인 이유는 `run_commands` 가 한 줄씩 발화하기 때문이다. 넘으면 `line_over_budget` 으로 그 그룹을 건너뛰고 목록에 최장 줄의 바이트 수를 적는다.
 
 ### D.3 툴과 배선 (M3)
 
@@ -180,7 +197,7 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILOT-
 | 번호 | 가정 | 부정 시 |
 |---|---|---|
 | **ASSUMPTION-80** | onPC의 그룹 풀이 비어 있다(실측 2026-08-22와 08-24, `DataPool/Groups` childCount 0). 그래서 측정된 빈 슬롯이 1부터 18까지로 나와 시트의 GroupNo 와 일치한다 | REQ-LXSEQ2-009가 발동해 0배치와 대조표. 코드 변경 없음 |
-| **ASSUMPTION-81** | 조립된 그룹 번들이 전송 상한 안에 들어간다. **미측정**이다 (A.2 셋째) | REQ-LXSEQ2-011이 그 그룹을 `bundle_over_budget` 으로 건너뛴다. ALL 이 첫 후보다 |
+| **ASSUMPTION-81** | ~~조립된 그룹 번들이 전송 상한 안에 들어간다. 미측정~~ → **M2 에서 측정해 참으로 판정**(A.2 셋째). 이 리그의 최장 줄은 exec 로 감싸 1243 bytes, 상한 2048. 단위는 번들이 아니라 **줄**이다 | 판정 완료. 더 큰 리그에서는 다시 참이 아닐 수 있고, 전송층이 exec 을 검사하지 않으므로 REQ-LXSEQ2-011 이 유일한 방어선이다 |
 | **ASSUMPTION-82** | 001의 name_prefix_mode 가 group 이었던 결과로 콘솔 픽스처 이름이 「그룹 라벨에 FID」 꼴이다. 사람이 `human_check_commands` 로 눈으로 대조할 때의 유일한 단서다 | 대조가 어려워질 뿐 계획은 성립한다. 코드 변경 없음 |
 
 ---
@@ -196,7 +213,7 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILOT-
 | 위험 | 성질 | 완화 |
 |---|---|---|
 | 잘못된 멤버십이 조용히 영속 | **탐지 불가**. 되읽기 없음, Delete 블랙리스트, restore 부재 | 멤버십을 데이터에서 유추하지 않고 닫힌 규칙과 실측 FID로만 만든다(REQ-004, 005, 008). 개수 교차검증(REQ-007). 미검증 고지 상속 |
-| 번들이 상한을 넘어 조용히 누락 | **탐지 불가**, 미측정 | 발화 전 바이트 측정 게이트(REQ-011) |
+| 명령 줄이 상한을 넘어 조용히 누락 | **탐지 불가**. 전송층이 exec 을 검사하지 않는다(실측) | 발화 전 줄 단위 바이트 게이트(REQ-011) — 이 경로의 유일한 방어선 |
 | 슬롯 번호가 어긋나 곡 파일 참조가 깨짐 | 조용함 | 어긋나면 0배치와 대조표(REQ-009) |
 | 점유 슬롯 덮어쓰기 | 조작자가 OK를 누르면 성립, 복구 불가 | 기존 `select_group_slot` 정적 차단을 그대로 탄다. 002는 우회로를 만들지 않는다 |
 | 시트 종류를 늘리며 동반 지점을 빠뜨림 | 조용함 | t51의 함께 자라는 검사가 기계적으로 4지점을 요구한다(REQ-014) |
