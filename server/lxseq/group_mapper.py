@@ -20,7 +20,6 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from server.bridge.protocol import MAX_PLUGIN_CALL_BYTES, build_exec_request
 from server.groupgen.write import DEFAULT_GROUP_PLAN_CAP
 from server.lxseq.group_parser import LxseqGroupRecord
 from server.spatial.choreography import build_spatial_selection_chain
@@ -50,7 +49,19 @@ __all__ = [
 #   build_introspect_query 는 ProtocolError 를 던졌다. 그러므로 이 게이트가
 #   그룹 쓰기 경로의 유일한 방어선이다. 넘으면 조용히 버려지고, 멤버십은
 #   되읽히지 않으므로 사후 적발 수단이 없다.
-DEFAULT_LINE_BYTE_BUDGET = MAX_PLUGIN_CALL_BYTES
+# 값의 유래: 전송 상한은 `server/bridge/protocol.py` 의 MAX_PLUGIN_CALL_BYTES
+# = 2048 이고, exec 프레이밍(`Plugin "<이름>" "exec <요청id> ..."`)이 실측
+# 42바이트를 더한다. 여유를 48로 잡아 2000 을 기본값으로 둔다.
+#
+# @MX:ANCHOR: [AUTO] 이 상수와 프레이밍 여유는 전송층을 임포트하지 않고
+#   선언된 값이다. `server/lxseq/` 는 `server.bridge` 를 임포트할 수 없다
+#   (server/tests/test_lxseq_mapper.py 의 _FORBIDDEN_IMPORTS — 001이 세운
+#   경계다).
+# @MX:REASON: 그래서 이 값이 실제 상한·프레이밍과 맞는지는 **테스트가**
+#   양쪽을 임포트해 잰다. 여기 적어 두기만 하면 드리프트하고, 그 드리프트는
+#   조용하다 — 넘친 명령은 응답기가 에러 없이 버리고 멤버십은 되읽히지
+#   않아 사후 적발 수단이 없다.
+DEFAULT_LINE_BYTE_BUDGET = 2000
 
 # 파생 6종의 닫힌 어휘. 이 여섯 밖은 만들지 않는다.
 DERIVED_GROUP_NAMES: tuple[str, ...] = (
@@ -142,13 +153,14 @@ def build_label_fid_table(patch_rows: Sequence[Mapping[str, str]]) -> dict[str, 
 
 
 def measure_command_bytes(command: str) -> int:
-    """이 명령 한 줄이 전송층에서 차지할 실제 바이트 수.
+    """이 명령 한 줄이 차지하는 바이트 수 — **프레이밍 제외**.
 
-    추정이 아니라 실제 인코더(`build_exec_request`)를 통과시켜 잰다.
-    request_id 는 실제 것과 같은 길이의 자리표시자다 — 길이만 쓰므로
-    값 자체는 중요하지 않고, 길이가 다르면 측정이 틀어진다.
+    프레이밍을 여기서 더하지 않는 이유는 그 값이 전송층에 있고 이 층이
+    전송층을 임포트할 수 없기 때문이다(위 ANCHOR). 예산
+    `DEFAULT_LINE_BYTE_BUDGET` 이 프레이밍 여유를 이미 뺀 값이므로 둘을
+    함께 쓰면 같은 판정이 나온다. 그 등가성은 테스트가 잰다.
     """
-    return len(build_exec_request("req-0000", command).encode("utf-8"))
+    return len(command.encode("utf-8"))
 
 
 def _derived_fids(name: str, table: Mapping[str, tuple[int, ...]]) -> tuple[int, ...] | None:

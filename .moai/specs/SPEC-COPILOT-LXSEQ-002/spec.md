@@ -112,6 +112,8 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILOT-
     MAX_PLUGIN_CALL_BYTES           2048 bytes
     여백                             805 bytes
 
+**매퍼는 이 상한을 임포트하지 못한다.** `server/lxseq/` 가 `server.bridge` 를 임포트하는 것은 001이 세운 경계가 막는다(`server/tests/test_lxseq_mapper.py` 의 `_FORBIDDEN_IMPORTS`). M2 전량이 실제로 그것을 잡았다. 그래서 매퍼는 **체인 바이트만 재고** 예산은 프레이밍 여유를 미리 뺀 값으로 **선언**하며, 「선언된 예산 + 실측 프레이밍 ≤ 상한」은 양쪽을 임포트할 수 있는 **테스트가** 잰다.
+
 **그런데 게이트는 여전히 필요하고, 오히려 더 필요하다.** 전송층의 예산 검사기 `_validate_plugin_call_budget` 이 `introspect` 와 `props` 에만 걸려 있고 **`exec` 에는 안 걸려 있다**(`server/bridge/protocol.py:217·233`). 실측했다 — 5475바이트 명령을 `build_exec_request` 에 넣으니 예외 없이 5517바이트 줄이 나왔고, **같은 크기에서 `build_introspect_query` 는 ProtocolError 를 던졌다**(양성 대조군). 즉 그룹 쓰기가 타는 경로에는 **아무 검사도 없다.**
 
 그러므로 이 리그는 오늘 안전하지만 **더 큰 리그는 조용히 깨진다.** 실패 형태가 조용한 누락이고 멤버십은 되읽히지 않으므로 사람도 기계도 적발하지 못한다. REQ-LXSEQ2-011 의 발화 전 측정이 **이 경로의 유일한 방어선**이다.

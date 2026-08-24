@@ -116,10 +116,7 @@ class TestLabelTable:
         산술은 시작 번호에 순번을 더하므로 101..106 을 내고, 라벨 표는
         패치가 실제로 적은 101,102,104,105,106,107 을 낸다.
         """
-        gapped = [
-            dict(FID=str(f), Group="KEY")
-            for f in (101, 102, 104, 105, 106, 107)
-        ]
+        gapped = [dict(FID=str(f), Group="KEY") for f in (101, 102, 104, 105, 106, 107)]
         table = build_label_fid_table(gapped)
         assert table["KEY"] == (101, 102, 104, 105, 106, 107)
         assert table["KEY"] != tuple(range(101, 107)), "산술이면 이 값이 나온다"
@@ -325,20 +322,38 @@ class TestBatching:
 class TestLineByteBudget:
     """AC-LXSEQ2-012 — 결정 N. 발화 전 줄 단위 측정."""
 
-    def test_measure_matches_the_real_transport_encoding(self):
-        """추정이 아니라 실제 인코딩과 같은지 잰다 — 드리프트는 테스트가 잡는다."""
-        from server.bridge.protocol import build_exec_request
+    def test_the_declared_budget_survives_the_real_framing(self):
+        """매퍼는 전송층을 임포트할 수 없다 — 그래서 등가성을 **여기서** 잰다.
+
+        `server/lxseq/` 는 `server.bridge` 를 임포트하면 안 된다(001이 세운
+        경계, test_lxseq_mapper.py 의 _FORBIDDEN_IMPORTS). 그래서 매퍼는
+        프레이밍 여유를 뺀 예산을 **선언**만 하고, 그 선언이 실제 상한·
+        프레이밍과 맞는지는 양쪽을 임포트할 수 있는 테스트가 잰다.
+        """
+        from server.bridge.protocol import MAX_PLUGIN_CALL_BYTES, build_exec_request
+        from server.lxseq.group_mapper import DEFAULT_LINE_BYTE_BUDGET
         from server.spatial.choreography import build_spatial_selection_chain
 
-        fids = _all_fids()
-        chain = build_spatial_selection_chain(fids)
-        real = len(build_exec_request("req-0001", chain).encode("utf-8"))
-        assert measure_command_bytes(chain) == real
+        chain = build_spatial_selection_chain(_all_fids())
+        framing = len(build_exec_request("req-0001", chain).encode("utf-8")) - len(
+            chain.encode("utf-8")
+        )
+        assert framing == 42, "프레이밍이 바뀌면 선언된 예산의 여유를 다시 잡아야 한다"
+        assert DEFAULT_LINE_BYTE_BUDGET + framing <= MAX_PLUGIN_CALL_BYTES, (
+            "예산에 프레이밍을 더한 값이 전송 상한을 넘으면 게이트를 통과한 줄이 조용히 버려진다"
+        )
+
+    def test_measure_counts_the_chain_without_framing(self):
+        from server.spatial.choreography import build_spatial_selection_chain
+
+        chain = build_spatial_selection_chain(_all_fids())
+        assert measure_command_bytes(chain) == len(chain.encode("utf-8"))
+        assert measure_command_bytes(chain) == 1201
 
     def test_all_group_line_is_measured_and_reported(self):
         result = _map()
         by_name = dict((b.name, b) for batch in result.batches for b in batch.buckets)
-        assert by_name["ALL"].longest_line_bytes == 1243
+        assert by_name["ALL"].longest_line_bytes == 1201
         assert all(b.longest_line_bytes > 0 for b in by_name.values())
 
     def test_the_measured_line_fits_the_transport_ceiling(self):
@@ -346,16 +361,16 @@ class TestLineByteBudget:
 
         result = _map()
         widest = max(b.longest_line_bytes for batch in result.batches for b in batch.buckets)
-        assert widest == 1243
-        assert widest < MAX_PLUGIN_CALL_BYTES
+        assert widest == 1201
+        assert widest + 42 < MAX_PLUGIN_CALL_BYTES, "프레이밍을 더해도 상한 안이다"
 
     def test_a_group_over_budget_is_skipped(self):
         """예산을 ALL 아래로 낮추면 ALL 이 빠진다."""
-        result = _map(line_byte_budget=1200)
+        result = _map(line_byte_budget=1150)
         kinds = [s.kind for s in result.skipped]
         assert kinds == ["line_over_budget"]
         assert result.skipped[0].name == "ALL"
-        assert "1243" in result.skipped[0].detail
+        assert "1201" in result.skipped[0].detail
 
     def test_skipping_slot_one_breaks_the_prefix_and_yields_zero_batches(self):
         """ALL 은 슬롯 1이다. 빠지면 남은 순열이 2..18 인데 엔진은 1..17 을
@@ -363,7 +378,7 @@ class TestLineByteBudget:
 
         이것이 결정 T 의 의도다. 17개를 **틀린 번호로** 쓰느니 0개를 쓴다.
         """
-        result = _map(line_byte_budget=1200)
+        result = _map(line_byte_budget=1150)
         assert result.batches == ()
         assert result.slot_divergence is not None
         assert result.slot_divergence.sheet_slots[0] == 2
@@ -394,6 +409,38 @@ class TestLineByteBudget:
 
 
 class TestPurityBoundary:
+    def test_my_forbidden_set_is_not_weaker_than_the_repo_guard(self):
+        """내 스캐너가 저장소가 이미 막던 것을 놓치지 않는지 잰다.
+
+        M2 전량에서 이게 실제로 났다 — 내 순수성 검사는 통과했는데
+        `server/tests/test_lxseq_mapper.py` 의 경계 가드가
+        `server.bridge.protocol` 임포트를 잡았다. 내 목록이 이름만 보고
+        **임포트 경로를 안 봤다.** 저장소 목록을 정본으로 삼아 대조한다.
+        """
+        from server.tests.test_lxseq_mapper import _FORBIDDEN_IMPORTS, _FORBIDDEN_NAMES
+
+        source = Path("server/lxseq/group_mapper.py").read_text(encoding="utf-8")
+        import ast
+
+        offenders: list[str] = []
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if any(alias.name.startswith(pre) for pre in _FORBIDDEN_IMPORTS):
+                        offenders.append(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                if any(module.startswith(pre) for pre in _FORBIDDEN_IMPORTS):
+                    offenders.append(module)
+            elif isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES:
+                offenders.append(node.id)
+            elif isinstance(node, ast.Attribute) and node.attr in _FORBIDDEN_NAMES:
+                offenders.append(node.attr)
+        assert offenders == []
+        # 비공허성 — 저장소 목록이 비어 있으면 위 0건은 아무 뜻이 없다.
+        assert len(_FORBIDDEN_IMPORTS) >= 3
+        assert "server.bridge" in _FORBIDDEN_IMPORTS
+
     def test_mapper_names_no_write_surface(self):
         import ast
 

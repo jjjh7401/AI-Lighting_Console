@@ -396,16 +396,46 @@ plan-phase 는 배치를 「기본 12 먼저, 파생 6 나중」으로 적었다
 
 복원은 백업 사본과 sha256 대조로 했고 일치를 확인했다(`bba46523…`).
 
-### 8.5 M2 GREEN
+### 8.5 🔴 전량이 빨간불이었다 — 저장소 가드가 내 경계 위반을 잡았다
+
+첫 전량은 **5건 실패**였다. 「스위트 초록」이라고 미리 쓰지 않은 것이 여기서 값을 했다.
+
+    5 failed, 10072 passed, 12 skipped
+
+    server/lxseq/group_mapper.py: server.bridge.protocol
+      test_lxseq_mapper.py::test_no_write_surface_in_lxseq_module
+      test_deploy_safety_invariants.py 2건
+      test_overlap_preserve.py 포맷 1건
+
+`measure_command_bytes` 가 실제 인코더를 쓰려고 `server.bridge.protocol` 을 임포트했다. **001이 세운 계층 경계가 그것을 금지한다** — `server/tests/test_lxseq_mapper.py` 의 `_FORBIDDEN_IMPORTS` 는 `server.bridge` · `pythonosc` · `server.vwx.luagen` · `server.vwx.stagedpatch` · `server.deploy` 를 프리픽스로 막는다.
+
+**그리고 내 순수성 검사는 통과했다.** 이게 이 절의 요점이다 — 내 목록은 **이름만** 봤고(`run_commands`, `deploy_pipeline`, …) **임포트 경로를 안 봤다.** 저장소가 이미 그 경계를 갖고 있었는데 나는 그것을 읽지 않고 내 목록을 새로 지었다. 새 빌더가 저장소가 이미 막던 패턴을 놓치는 형태이고, 이 보드에서 처음이 아니다.
+
+**고친 것 셋.**
+
+1. 임포트를 걷어냈다. 매퍼는 **체인 바이트만** 재고 프레이밍을 더하지 않는다.
+2. 예산은 프레이밍 여유를 미리 뺀 값으로 **선언**한다(`DEFAULT_LINE_BYTE_BUDGET = 2000`). 「선언된 예산 + 실측 프레이밍 42 ≤ 상한 2048」은 **테스트가** 잰다 — 테스트는 양쪽을 임포트할 수 있다. `_label_command` 등가성과 같은 방식이다.
+3. **내 검사가 저장소 가드보다 약하지 않은지 재는 검사를 넣었다.** 저장소의 `_FORBIDDEN_IMPORTS` 와 `_FORBIDDEN_NAMES` 를 **정본으로 임포트해** 대조한다 — 목록을 따로 짓지 않는다. 비공허성으로 그 목록이 비어 있지 않음도 함께 단언한다. 뮤테이션 ⑩(임포트 되돌리기)으로 판별력을 확인했다.
+
+### 8.5b M2 GREEN
 
     server/lxseq/group_mapper.py             신규
-    server/tests/test_lxseq_group_mapper.py  신규 30건
-    파서와 합쳐                              54 passed
+    server/tests/test_lxseq_group_mapper.py  신규 32건
+    파서·001 매퍼와 합쳐                     109 passed
     uv run ruff check server/lxseq/ server/tests/   All checks passed!
+
+**전량 (경계 위반 수정 후, 단독 실행)**
+
+    uv run pytest -q            10079 passed, 12 skipped, 1 warning in 145.24s
+    uv run pytest --collect-only -q                    10091 tests collected
+    대조                        10079 + 12 = 10091 — 자리수까지 일치
+
+**어느 트리에서 난 초록인지**: 수집 총수와 `passed + skipped` 가 정확히 맞는다. 신규 파일이 없는 트리는 이 총수를 못 낸다(t47 ⑤ 판별 절차). 그리고 내역도 맞는다 — M0 기준 10035 + 파서 24 + 매퍼 32 = 10091.
+
+**M1 이 남긴 틈도 이 1회로 닫혔다** — 등가성 검사 3건이 전량에 실렸다(파서 24건에 포함).
 
 ### 8.6 M2 가 답하지 않는 것
 
-- **전량 회귀를 아직 안 돌렸다.** 리드가 창을 run 레인에 넘겼고 나는 M2 끝에 1회를 청하기로 했다. 그 전까지 「스위트 초록」이라고 쓰지 않는다. M1 의 남은 틈(등가성 검사 3건)도 그 1회로 함께 닫는다.
 - `_measure_empty_slots` 가 `server/groupgen/write.py` 의 `measure_empty_slots` 와 **같은 규칙인지**는 두 함수를 나란히 돌려 대조하지 않았다. 같은 규칙으로 적었고 독스트링에 왜 안 부르는지 적었으나, 등가성 자체는 **안 쟀다.** M3 에서 툴 계층이 둘을 함께 쓰므로 그때 대조한다.
 - 파생 규칙이 **다른 RIG 팩**에도 맞는지. 이 시트의 6종에 맞췄고 닫힌 어휘라 다른 이름은 건너뛴다. 다른 팩이 다른 파생을 쓰면 그 이름들은 전부 `unknown_group_name` 이 된다 — 조용히 틀리지는 않지만 아무것도 안 만든다.
 
