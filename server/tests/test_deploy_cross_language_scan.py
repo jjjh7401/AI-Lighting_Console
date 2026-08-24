@@ -445,6 +445,25 @@ def sink():
         yield s
 
 
+def _settings_body(console_port: int) -> str:
+    """The settings file this layer's fixture writes, for any valid console port.
+
+    `receive_port` is **not** what this file exercises — both stacks below pass
+    `receive_port=0` explicitly and never read the resolved value. It is written
+    only so the file is well-formed, so it is pinned to the app default rather
+    than derived from `console_port`.
+
+    Deriving it (the former `console_port + 1`) made the fixture die whenever the
+    OS handed out **65535**: the `+1` left the valid range and
+    `resolve_effective_settings` refused the file. That failure is a property of
+    the port the OS happened to pick, so it surfaced once and then hid again —
+    see `TestTheSettingsBodyHoldsAtThePortCeiling`.
+    """
+    from server.deploy.settings import DEFAULT_RECEIVE_PORT
+
+    return f"[settings]\nconsole_port = {console_port}\nreceive_port = {DEFAULT_RECEIVE_PORT}\n"
+
+
 @pytest.fixture()
 def configured_send_port(tmp_path, sink):
     """The send port as the app resolves it: through effective settings.
@@ -456,10 +475,7 @@ def configured_send_port(tmp_path, sink):
     from server.deploy.settings import DEFAULT_CONSOLE_PORT, resolve_effective_settings
 
     user_file = tmp_path / "settings.toml"
-    user_file.write_text(
-        f"[settings]\nconsole_port = {sink.port}\nreceive_port = {sink.port + 1}\n",
-        encoding="utf-8",
-    )
+    user_file.write_text(_settings_body(sink.port), encoding="utf-8")
     settings = resolve_effective_settings(user_path=user_file, seed_path=tmp_path / "absent.toml")
     assert settings.console_port == sink.port
     assert settings.console_port != DEFAULT_CONSOLE_PORT, (
@@ -517,6 +533,46 @@ def deploying_stack(tmp_path, configured_send_port):
         yield stack
     finally:
         stack.stop()
+
+
+class TestTheSettingsBodyHoldsAtThePortCeiling:
+    """The fixture must survive **every** port the OS can hand it, 65535 included.
+
+    The former body derived `receive_port` as `console_port + 1`, so a sink that
+    landed on the ceiling produced 65536 and the whole layer failed to set up.
+    Reverting `_settings_body` to that form turns `65535` below red — that is what
+    makes this a guard rather than decoration.
+    """
+
+    @pytest.mark.parametrize("console_port", [1, 8001, 65534, 65535])
+    def test_every_port_in_range_yields_resolvable_settings(self, tmp_path, console_port):
+        from server.deploy.settings import resolve_effective_settings
+
+        user_file = tmp_path / "settings.toml"
+        user_file.write_text(_settings_body(console_port), encoding="utf-8")
+
+        settings = resolve_effective_settings(
+            user_path=user_file, seed_path=tmp_path / "absent.toml"
+        )
+
+        assert settings.console_port == console_port
+
+    def test_the_body_does_not_derive_receive_port_from_console_port(self):
+        """The negative control: two different console ports keep the same receive port.
+
+        Without this, a fix that merely clamps the ceiling (`+1` except at the top)
+        would pass the parametrised test above while leaving the derivation in place.
+        """
+        low = _settings_body(10000)
+        high = _settings_body(65535)
+
+        assert "receive_port = 10001" not in low
+        assert "receive_port = 65536" not in high
+
+        receive_lines = {
+            line for line in (low + high).splitlines() if line.startswith("receive_port")
+        }
+        assert len(set(receive_lines)) == 1, receive_lines
 
 
 class TestLayer2SinkBindsTheConfiguredPort:
