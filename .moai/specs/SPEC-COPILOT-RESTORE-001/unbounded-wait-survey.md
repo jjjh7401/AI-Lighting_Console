@@ -164,7 +164,7 @@ t50 과 같은 이유다. `while True` 로 시작해 AST 로 좁혔지만, **대
 
 실행 순서(전부 t10 B 머지 뒤):
 
-    1  uv run pytest --durations=20        임계값의 근거
+    1  uv run pytest --durations=20        임계값의 근거  ← **측정 완료, 아래 §5c**
     2  conftest 승격 + 사본 3 이관          독스트링을 같이 옮긴다
     3  사본 소멸을 **바이트로** 확인         하나만 남아도 다음 사람이 그걸 복사한다
     4  뮤테이션 — 상한을 무한대로 되돌리면 빨개지는가
@@ -174,6 +174,32 @@ t50 과 같은 이유다. `while True` 로 시작해 AST 로 좁혔지만, **대
 
 `exit_on_timeout` 은 pytest 프로세스를 통째로 끊는다 — 임계값이 낮으면 **느리기만 한
 정상 테스트 하나가 전량 결과를 다 날린다.** 그래서 5 가 1 뒤에, 6 이 5 뒤에 온다.
+
+## 5c. 임계값의 근거 — 실측 (2026-08-24)
+
+    측정 조건   load averages 4.89 → 4.99 (측정 전/후)  ·  t46 워크트리
+                pytest 10010 passed / 12 skipped / 146.54s
+    검증 트리   python · server 패키지 · cwd · .venv/*.pth  네 축 전부 t46
+                (다른 트리의 .venv 를 빌려 쓰면 엉뚱한 트리에서 초록을 받는다)
+
+| 순위 | 초 | 테스트 |
+|---:|---:|---|
+| 1 | **7.42** | `test_autopatch_types.py::test_r24_the_equivalence_disclosure_is_not_vacuous` |
+| 2 | 5.51 | `test_web_serve.py::…::test_settings_and_provision_endpoints_are_served` |
+| 3 | 5.51 | `test_web_serve.py::…::test_builds_a_servable_app_from_the_repo_config` |
+| 4 | 5.06 | `test_web_launcher.py::…::test_reaps_a_child_and_its_grandchild` |
+| 5 | 5.01 | `test_deploy_safety_invariants.py::…::test_blacklist_delete_is_held_for_human_approval` |
+| 6 | 1.79 | ← **여기서 뚝 떨어진다** |
+
+**상위 5개가 5초대이고 6위부터 1.79 초다.** 상한을 고를 때 5~7 초대 다섯 개만 넘기면 된다.
+
+🔴 **이 숫자는 load ≈ 4.9 에서의 값이다.** 한가한 기계에서 3초인 테스트가 여기선 8초일 수
+있고, 반대로 이 값을 그대로 CI 임계값으로 쓰면 **CI 에서 과하게 느슨해진다.** 부하를 함께
+적는 이유가 그것이다 — 숫자만 옮기면 다음 사람이 어느 조건에서 잰 값인지 모른다.
+
+임계값은 **행(hang)과 느림을 가르는** 값이면 된다. 행은 무한이므로 최장(7.42초)보다 크게
+잡으면 잡히고, 정상 테스트를 오탐하지 않으려면 넉넉해야 한다 — 이 실측이 그 하한을 준다.
+**구체 수치는 실행 카드에서 정한다**(이 표는 근거만 제공한다).
 
 ## 6. 미검증
 
