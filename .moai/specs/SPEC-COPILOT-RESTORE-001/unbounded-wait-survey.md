@@ -2,7 +2,8 @@
 
 > **설정을 고치지 않았다.** plan 레인이 t10 B 마무리로 전량 스위트를 곧 돌린다 —
 > 지금 전역 pytest 설정을 건드리면 그 레인의 초록이 누구 것인지 갈리지 않는다.
-> 🔴 **10곳 상한에 걸렸다** — 아래 §4 가 왜 걸렸고 어느 계층이 안 걸리는지 적는다.
+> 🔴 **10곳 상한에 걸렸다가 풀렸다** — §4 에서 호출 지점으로 69 였는데, §4c 에서
+> 저장소에 이미 있는 해답을 세니 **4곳**이 됐다. 신설이 아니라 승격이다.
 
 ## 1. 어떻게 쟀나 — grep 으로 시작해 AST 로 좁혔다
 
@@ -78,6 +79,66 @@
 **둘 다 거는 것이 맞다고 본다** — 전역이 그물, conftest 가 진단이다. 다만 **결정과 실행은
 t10 B 머지 뒤**다.
 
+## 4b. 특정됐다 — 「후보 69」가 아니라 **「확인된 1건 + 같은 모양 68」**
+
+멈춘 그 테스트는 `server/tests/test_web_app.py::test_vectorworks_upload_starts_a_guided_chat_turn`
+이다. 근거는 `origin/WT-sheetpipe`(`02b5b56`) 의 픽스처 수정이고 **읽기만 했다**(plan 레인 것).
+
+    옛 페이로드  content_base64="c2FmZQ=="        ("safe" 4바이트)
+    SHEETPIPE M1 뒤  판별기가 unknown_sheet_kind 로 판정 → 서버는 notice 만 보낸다
+    테스트        _receive_until(ws, "chat_response")   ← 영영 안 오는 것을 기다린다
+
+그 브랜치의 수정 주석이 그대로 적는다 — *"예전의 `c2FmZQ==`는 unknown_sheet_kind로
+떨어져 안내만 나가고 chat_response는 오지 않는다."*
+
+### 🔴 상한도 실패 메시지도 **써 있는데 발화할 수 없다**
+
+    def _receive_until(ws, event_type, *, limit=30):
+        for _ in range(limit):
+            event = ws.receive_json()          ← 1회차에서 막힌다
+            ...
+        raise AssertionError(f"no {event_type!r} event within {limit} frames: {seen}")
+
+작성자는 실패 경우를 **생각했고** 메시지까지 썼다. 그런데 **회수 상한은 각 회가 돌아와야
+센다** — 1 회차가 안 돌아오면 카운터가 안 올라가고 그 `raise` 는 영영 도달하지 못한다.
+**검사가, 그것이 쓰인 바로 그 경우에 공허하다.**
+
+이것이 §3 의 「`range` 는 회수 상한이지 시간 상한이 아니다」를 **구조 추론이 아니라 사건으로**
+확정한다.
+
+### 같은 모양 — 세 사본이 바이트 동일하다
+
+    test_web_app.py:48   test_web_e2e.py:90   test_web_review.py:270
+    sha256 앞 12자리  3dbfce1ce84c  — 셋 다 같다.  호출 36곳
+
+## 4c. 🔴 저장소가 이미 답을 갖고 있다 — 신설이 아니라 승격이다
+
+`server/tests/test_web_panel_execute.py` 는 **시간 상한을 가진 변형**을 이미 쓴다.
+그 독스트링이 문제를 그대로 적어 뒀다:
+
+> ``TestClient``'s websocket receive has no timeout, so a missing frame would
+> block the whole suite forever.
+
+    _recv(ws, timeout)   데몬 스레드로 pump → worker.join(timeout)
+                         → 못 받으면 AssertionError("no websocket frame within Ns")
+    _drain(ws, kind)     그 _recv 위에 회수 상한을 얹는다
+
+**세 사본은 이 해답을 놓친 복사본**이다. 처방은 「conftest 에 새 가드를 짓는다」가 아니라
+**「이미 도는 `_recv`/`_drain` 을 conftest 로 올리고 세 사본이 그것을 쓰게 한다」**이다.
+
+    고칠 자리  conftest 1 (이동) + 사본 3 (삭제·이관) = **4**   ← 10 아래다
+
+앞서 「69 아니면 1」로 갈렸던 것은 **저장소에 이미 있는 것을 안 세었기 때문**이다.
+
+### 내장 시간 상한 — 실재한다 (실측)
+
+    $ uv run pytest --help | grep -i faulthandler
+      faulthandler_timeout (string):          시간 초과 시 전 스레드 스택 덤프
+      faulthandler_exit_on_timeout (bool):    시간 초과 시 테스트 프로세스 종료
+
+**둘 다 내장이다** — 의존성 0. 덤프만 하는 게 아니라 `exit_on_timeout` 으로 끊을 수도
+있다. `pytest-timeout` 을 사기 전에 이것으로 그물이 선다.
+
 ## 5. 🔴 이 조사도 하계다
 
 t50 과 같은 이유다. `while True` 로 시작해 AST 로 좁혔지만, **대기는 어휘가 아니라
@@ -90,8 +151,8 @@ t50 과 같은 이유다. `while True` 로 시작해 AST 로 좁혔지만, **대
 ## 6. 미검증
 
 - **`app.py:428` `lane.acquire()` 가 실제로 걸린 적이 있는지는 모른다.** 구조만 봤다.
-- **86% 에서 두 번 선 그 테스트가 이 69 중 어느 것인지 특정하지 않았다.** t10 B 가
-  자기 자리에서 해소했다고 들었을 뿐, 그 커밋을 대조하지 않았다.
+- ~~86% 에서 선 그 테스트 특정~~ → **닫혔다**(§4b). `origin/WT-sheetpipe` 대조.
+- **그 테스트가 「두 번」 선 것이 같은 원인인지는 모른다.** 한 번의 기전만 확인했다.
 - **`for _ in range(N)` 7곳이 실제로 멈춘 적이 있는지는 모른다.** 구조상 가능하다는 것뿐.
 - **웹소켓 밖의 대기**(파일 읽기 18건 · 서브프로세스 · 잠금)는 이번에 **분류만 하고
   전수하지 않았다.**
