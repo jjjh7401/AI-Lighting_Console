@@ -2650,6 +2650,14 @@ def _count_patch_rows(data: bytes) -> str:
 _SHEET_ROW_COUNTERS = dict()
 _SHEET_ROW_COUNTERS["patch"] = _count_patch_rows
 
+#: 첨부 이음매가 배선한 세션 메서드 이름 (SPEC-COPILOT-SHEETPIPE-001 결정 A).
+#:
+#: 레지스트리의 ``session_method`` 종 행은 이 자리로 온다. 이음매가 보낼 곳을
+#: 아는 이름만 여기 있으며, 여기 없는 이름은 조용히 삼키지 않고 이름으로
+#: 거절한다. 리터럴이 아니라 표로 두는 이유는 종류를 더하는 사람이 만져야 하는
+#: 자리를 검사가 셀 수 있어야 하기 때문이다 (server/tests/test_sheet_kind_consumers.py).
+_ATTACH_ROUTED_SESSION_METHODS = ("upload_vectorworks_export",)
+
 
 def _sheet_row_counts(kind: str, data: bytes) -> str:
     """행 수는 이름 붙은 수다 (REQ-SHEETPIPE-004).
@@ -9926,7 +9934,7 @@ class ChatSession:
         row = next((entry for entry in REGISTRY if entry.kind == kind), None)
         handler = getattr(row, "handler", None)
         if getattr(handler, "kind_tag", None) == HANDLER_TAG_SESSION_METHOD:
-            if getattr(handler, "name", None) != "upload_vectorworks_export":
+            if getattr(handler, "name", None) not in _ATTACH_ROUTED_SESSION_METHODS:
                 # 이 자리가 받을 수 있는 세션 메서드는 자기 자신뿐이다. 다른
                 # 이름의 session_method 행이 생기면 그 종류를 어디로 보낼지는
                 # 아직 정해진 바가 없으므로, 조용히 삼키지 않고 이름으로 말한다.

@@ -4518,6 +4518,22 @@ def build_toolset(
                 "올려 달라고 안내하라. 파일 내용을 채팅에 옮겨 적으라고 요구하지 마라.",
             )
 
+        # @MX:DEBT: [AUTO] action을 생략한 호출은 종류별 유효 action 표를
+        #   우회한다 — 아래 가드가 `action is not None`으로 단락 평가하므로,
+        #   종류가 SHEET_KIND_ACTIONS에 없어 supported가 빈 튜플이어도
+        #   action 없는 호출은 그대로 대상 툴로 넘어간다.
+        # @MX:CEILING: 오늘 무해한 이유는 유일한 대상 툴
+        #   (import_lxseq_patch)이 'preview'를 기본값으로 두기 때문이다.
+        #   쓰기 동작을 기본값으로 두는 종류가 생기면 조용히 쓴다.
+        #   server/tests/test_sheet_kind_consumers.py는 「표 누락」이라는
+        #   **원인**은 닫지만 이 잔여 위험은 닫지 못한다 — 대상 툴의
+        #   기본값은 표와 무관하기 때문이다. 「테스트가 있으니 됐다」로
+        #   읽지 마라.
+        # @MX:UPGRADE: t53 — 종류별 기본 action을 표에 실어 생략 호출을 그
+        #   기본값으로 해소한 뒤 이 가드를 조일 것. 지금 조이면
+        #   (supported가 비면 즉시 거절) session_method 행이 래퍼에 닿았을
+        #   때의 진단이 no_target_tool에서 kind_action_mismatch로 바뀌어
+        #   test_sheet_pipe.py의 비준된 거절 우선순위를 깬다.
         supported = SHEET_KIND_ACTIONS.get(kind, ())
         action = call.arguments.get("action")
         if action is not None and action not in supported:
