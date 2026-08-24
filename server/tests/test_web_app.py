@@ -99,6 +99,16 @@ class TestWebSocketBasics:
             assert event["text"] == "만들었습니다"
         assert console.executed == ["Store Group 3"]
 
+    # SPEC-COPILOT-SHEETPIPE-001 M1: 이 프레임은 이제 비이미지 첨부 전부를
+    # 나르고, 무엇인지는 서버의 판별기가 정한다. 그러므로 페이로드가 실제로
+    # Vectorworks로 판정되는 바이트여야 이 가지가 도달한다 — 예전의 "c2FmZQ=="
+    # ("safe" 4바이트)는 unknown_sheet_kind로 떨어져 안내만 나가고 chat_response는
+    # 오지 않는다. 그것이 이 SPEC이 의도한 동작 변화이므로 픽스처를 바꾼다.
+    _VECTORWORKS_EXPORT_B64 = (
+        "UG9zaXRpb24JSW5zdHJ1bWVudCBUeXBlCUNoYW5uZWwJVW5pdCBOdW1iZXIJUHVycG9zZQpG"
+        "T0gJRVRDIFM0CTEJMQlLZXkKRk9ICUVUQyBTNAkyCTIJS2V5Cg=="
+    )
+
     def test_vectorworks_upload_starts_a_guided_chat_turn(self, tmp_path):
         provider = ScriptedProvider([_final("도면과 콘솔을 비교하겠습니다")])
         deps, _console, _gate = _deps(tmp_path, provider)
@@ -108,11 +118,30 @@ class TestWebSocketBasics:
                 ws,
                 type="vectorworks_export_upload",
                 file_name="design.xlsx",
-                content_base64="c2FmZQ==",
+                content_base64=self._VECTORWORKS_EXPORT_B64,
             )
             event = _receive_until(ws, "chat_response")
         assert event["text"] == "도면과 콘솔을 비교하겠습니다"
-        assert "c2FmZQ==" not in json.dumps(event, ensure_ascii=False)
+        assert self._VECTORWORKS_EXPORT_B64 not in json.dumps(event, ensure_ascii=False)
+
+    def test_unrecognised_upload_is_named_not_silently_routed(self, tmp_path):
+        """판별 불가는 조용히 Vectorworks 경로로 흘러가지 않는다.
+
+        SPEC-COPILOT-SHEETPIPE-001 plan.md §D.1 1의 잔여 위험이 WS 왕복에서
+        보이는 모습이다 — 오늘 Vectorworks 경로로 흘러가던 바이트 중 판별기가
+        종류를 정하지 못하는 것은 이제 이름 붙은 안내를 받는다.
+        """
+        deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            _send(
+                ws,
+                type="vectorworks_export_upload",
+                file_name="design.xlsx",
+                content_base64="c2FmZQ==",
+            )
+            event = _receive_until(ws, "notice")
+        assert "unknown_sheet_kind" in json.dumps(event, ensure_ascii=False)
 
     def test_layout_image_upload_is_stored_and_acked_over_the_wire(self, tmp_path):
         # 2026-08-16 사용자 관측 회귀 — parse_client_message는 이 타입을

@@ -548,15 +548,15 @@ export default function App() {
 
   const uploadVectorworksExport = (file: File) => {
     if (![".csv", ".txt", ".xlsx", ".mvr"].some((extension) => file.name.toLowerCase().endsWith(extension))) {
-      setVectorworksUploadError("Vectorworks export는 CSV, TXT, XLSX 또는 MVR 파일만 올릴 수 있습니다.");
+      setVectorworksUploadError("첨부 파일은 CSV, TXT, XLSX 또는 MVR 파일만 올릴 수 있습니다.");
       return;
     }
     if (file.size === 0 || file.size > MAX_VECTORWORKS_UPLOAD_BYTES) {
-      setVectorworksUploadError("Vectorworks export는 비어 있지 않은 8 MiB 이하 파일이어야 합니다.");
+      setVectorworksUploadError("첨부 파일은 비어 있지 않은 8 MiB 이하 파일이어야 합니다.");
       return;
     }
     const reader = new FileReader();
-    reader.onerror = () => setVectorworksUploadError("Vectorworks 파일을 읽지 못했습니다.");
+    reader.onerror = () => setVectorworksUploadError("첨부 파일을 읽지 못했습니다.");
     reader.onload = () => {
       const result = reader.result;
       if (typeof result !== "string") {
@@ -623,9 +623,15 @@ export default function App() {
   };
 
   // 사용자 결정 (2026-08-15): 첨부 버튼은 하나 — 파일 종류가 목적지를 고른다.
-  // 이미지 MIME(계약 §1)은 layout_image_upload로, 나머지는 기존 Vectorworks
-  // 경로로 보낸다. 각 경로의 검증·오류 문구는 그대로다: 여기는 라우터일 뿐
-  // 두 번째 검증 계층이 아니다.
+  // 이미지 MIME(계약 §1)은 layout_image_upload로, 나머지는 전부 비이미지
+  // 첨부 경로로 보낸다. 각 경로의 검증·오류 문구는 그대로다: 여기는 라우터일
+  // 뿐 두 번째 검증 계층이 아니다.
+  //
+  // SPEC-COPILOT-SHEETPIPE-001 결정 A: 비이미지 가지가 쓰는 프레임 이름
+  // (vectorworks_export_upload)은 유산이다 — 그 프레임은 더 이상 한 종류만
+  // 나르지 않고, 무엇인지 정하는 것은 서버의 판별기다
+  // (server/sheets/registry.py). 확장자나 MIME으로 시트 종류를 가르는
+  // 라우팅을 여기에 '복원'하지 마라: UI는 분류하지 않는다.
   const routeAttachment = (file: File) => {
     if (layoutImageMimeFor(file) !== null) {
       uploadLayoutImage(file);
