@@ -4608,7 +4608,7 @@ def build_toolset(
             group_records=parsed.records,
             patch_rows=patch_rows,
             console_fids=fid_read.fids,
-            console_fids_complete=fid_read.complete(),
+            console_fids_complete=fid_read.complete,
             groups_section=sections["groups"],
         )
 
@@ -4628,7 +4628,7 @@ def build_toolset(
                 for s in result.skipped
             ],
             "console_read_incomplete": result.console_read_incomplete,
-            "console_read_reason": None if fid_read.complete() else fid_read.reason(),
+            "console_read_reason": None if fid_read.complete else fid_read.reason(),
             "slot_divergence": (
                 None
                 if result.slot_divergence is None
@@ -4671,13 +4671,21 @@ def build_toolset(
         def _run_batch(index: int):
             batch = by_index[index]
             inner = ToolCall(
+                id=f"{call.id}-batch{index}",
                 name="create_arrangement_groups",
                 arguments={
                     "groups": [{"name": b.name, "fids": list(b.fids)} for b in batch.buckets]
                 },
             )
             execution = create_arrangement_groups(inner, context)
-            return execution.result.status, execution.result.payload
+            # `ToolResult` 는 status/payload 를 갖지 않는다 — 실패는 `is_error`
+            # 하나로만 알리고(그 함수는 `_error_result` 로 그 갈래를 낸다) 본문은
+            # content 의 JSON 문자열이다. 계약을 그대로 따른다.
+            try:
+                inner_payload = json.loads(execution.result.content)
+            except (json.JSONDecodeError, TypeError):
+                inner_payload = {"raw": execution.result.content}
+            return ("error" if execution.result.is_error else "ok"), inner_payload
 
         applied, stopped = apply_group_batches([b.index for b in result.batches], _run_batch)
         if stopped is not None:
