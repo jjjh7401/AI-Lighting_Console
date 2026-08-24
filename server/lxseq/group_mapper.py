@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from server.groupgen.write import DEFAULT_GROUP_PLAN_CAP
 from server.lxseq.group_parser import LxseqGroupRecord
-from server.spatial.choreography import build_spatial_selection_chain
+from server.spatial.choreography import build_compact_fixture_selection
 
 __all__ = [
     "DEFAULT_LINE_BYTE_BUDGET",
@@ -282,7 +282,7 @@ def map_groups(
             )
             continue
 
-        chain = build_spatial_selection_chain(present)
+        chain = build_compact_fixture_selection(present)
         line_bytes = measure_command_bytes(chain)
         if line_bytes > line_byte_budget:
             skipped.append(

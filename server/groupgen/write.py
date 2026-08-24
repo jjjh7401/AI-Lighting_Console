@@ -21,7 +21,7 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from server.spatial.choreography import build_spatial_selection_chain
+from server.spatial.choreography import build_compact_fixture_selection
 
 __all__ = [
     "DEFAULT_GROUP_PLAN_CAP",
@@ -280,16 +280,27 @@ def guard_bundle_collision(commands: Sequence[str]) -> None:
     ``run_commands`` drops the second occurrence of a line that already
     succeeded in the same bundle or earlier in the same instruction turn
     (``skipped_already_executed``), unless the line establishes programmer
-    state. A group chain's SELECTION line is not exempt: only a single bare
-    ``Fixture <operand>`` matches, never the multi-fixture
-    ``Fixture 1 + Fixture 2 + Fixture 3`` form this module emits
-    (``build_spatial_selection_chain``). So if one bundle carries two groups
-    that select the same fids, the second selection is dropped, the following
-    ``Store Group N`` fires against a programmer holding nothing (the chain's
-    own ``ClearAll`` ran first), and the console still answers ok. grandMA3
-    exposes no channel to read group membership back (progress.md §E.2.8), so
-    that outcome is neither detectable nor repairable afterwards — refusing to
-    build such a bundle is the only honest move.
+    state.
+
+    **This module's SELECTION line used to fall outside that exemption, and
+    that was a live defect (t66).** ``_SELECTION_OPERAND`` matches a bare
+    operand list (``Fixture 101 + 102``, ``Fixture 101 Thru 106 + 111``), but
+    the emitted form repeated the keyword (``Fixture 101 + Fixture 102``),
+    which the pattern does not match — measured: ``is_programmer_state``答
+    False on the repeated form and True on the bare/compressed one. So if one
+    turn carried two groups selecting the same fids, the second selection was
+    dropped, the following ``Store Group N`` fired against a programmer
+    holding nothing (the chain's own ``ClearAll`` ran first), and the console
+    still answered ok. grandMA3 exposes no channel to read group membership
+    back (progress.md §E.2.8), so that outcome was neither detectable nor
+    repairable afterwards.
+
+    The chain now emits ``build_compact_fixture_selection``, whose output the
+    exemption pattern DOES match, so the drop can no longer happen. This guard
+    stays because it is the builder-side classifier for every OTHER line in
+    the bundle (``Store``/``Label``), and because the equality asserted by the
+    ANCHOR above is what keeps the two exemption sets from drifting apart
+    again.
 
     Pass EXACTLY the list about to be handed to one ``run_commands`` call.
     Concatenating several groups' chains into one bundle is the shape this
@@ -374,7 +385,7 @@ def build_group_write_plan(
         selected = select_group_slot(groups_section, requested=slot)
         fids = tuple(buckets[key])
         name = names[key]
-        selection_line = build_spatial_selection_chain(fids)
+        selection_line = build_compact_fixture_selection(fids)
         commands = (
             _CLEAR,
             selection_line,

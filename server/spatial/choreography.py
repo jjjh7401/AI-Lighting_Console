@@ -51,6 +51,7 @@ __all__ = [
     "SPATIAL_WAVE_LOW",
     "SPATIAL_WAVE_PHASE_SPAN",
     "SpatialQualifierMatch",
+    "build_compact_fixture_selection",
     "build_spatial_selection_chain",
     "build_spatial_wave_commands",
     "match_spatial_qualifier",
@@ -380,3 +381,50 @@ def build_spatial_wave_commands(
         f"Attribute '{attribute}' At Speed {speed}",
         "ClearAll",
     )
+
+
+# @MX:ANCHOR: [AUTO] 그룹 쓰기 경로의 선택 줄은 반드시 이 빌더를 쓴다 —
+#   `build_spatial_selection_chain` 이 아니다.
+# @MX:REASON: 둘은 같은 대상을 고르지만 계약이 다르다. 웨이브 체인은 **선택
+#   순서가 곧 방향**이라 한 자리도 접으면 안 되고, 그룹은 멤버십이 집합이라
+#   접어도 같다. 그리고 반복 키워드형(`Fixture a + Fixture b`)은
+#   `is_programmer_state()` 가 **면제해 주지 않는다**(실측: 반복형 False,
+#   압축형 True) — 면제를 못 받으면 한 턴 안에서 같은 선택이 두 번 나올 때
+#   둘째가 dedupe 로 조용히 사라지고, 뒤따르는 `Store Group N` 이 빈
+#   프로그래머에 대해 실행된다. 멤버십은 되읽히지 않으므로 그 오염은 사후
+#   적발도 복구도 안 된다(`server/groupgen/write.py` `guard_bundle_collision`).
+def build_compact_fixture_selection(fids: Iterable[int]) -> str:
+    """규칙서 검증 문법의 선택 줄 — `Fixture a Thru b + c + d`.
+
+    `build_spatial_selection_chain` 과 세 가지가 다르다.
+
+    1. **키워드가 한 번만 나온다.** 규칙서
+       `server/rulebook/assets/v2.4.2/31_choreography_patterns.md:28` 이 실기
+       검증한 목록 문법은 `Fixture 11 + 12 + 13` 이다. 우리가 내던
+       `Fixture 11 + Fixture 12` 는 규칙서에 없는 형태다(콘솔은 받지만
+       — 실측: 86개 1201B 가 `OK`).
+    2. **오름차순 연속 구간을 `Thru` 로 접는다.** 같은 규칙서 :27 의 검증
+       문법이다. 이 리그의 FID 는 구간이 촘촘해 86개가 1201B -> 182B 가 된다.
+    3. **순서를 바꾸지 않는다.** 정렬도 중복 제거도 하지 않고, 주어진 순서에서
+       오름차순으로 이어지는 구간만 접는다 — 접힌 구간은 콘솔에서 같은 순서로
+       펼쳐지므로 순서가 보존된다. 내림차순이나 건너뛴 자리는 접지 않는다.
+
+    길이 2인 구간은 `a + b` 로 둔다. `a Thru b` 와 글자 수가 같고, `Thru` 는
+    범위를 뜻하므로 두 자리에 쓰면 읽는 사람에게 구간이 더 길다는 인상을 준다.
+    """
+    chain = tuple(fids)
+    if not chain:
+        raise SpatialAnalysisError("a selection chain needs at least one fixture")
+    parts: list[str] = []
+    index = 0
+    while index < len(chain):
+        end = index
+        while end + 1 < len(chain) and chain[end + 1] == chain[end] + 1:
+            end += 1
+        if end - index >= 2:
+            parts.append(str(chain[index]) + " Thru " + str(chain[end]))
+            index = end + 1
+            continue
+        parts.append(str(chain[index]))
+        index += 1
+    return "Fixture " + " + ".join(parts)
