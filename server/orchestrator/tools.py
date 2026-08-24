@@ -4807,8 +4807,15 @@ def build_toolset(
             except Exception as exc:  # noqa: BLE001
                 pool_section = dict(ok=False, reason=str(exc))
             else:
+                # 응답기는 `{"i": <슬롯>, "name": …}` 를 내고 슬롯을 확정 못 한
+                # 자식은 `i` 없이 온다 — `rig_object` 가 그것을 `no` 로 정규화하며
+                # **부재를 보존한다**(번호 없는 항목은 번호 없이 온다). 여기서
+                # 직접 읽으면 그 계약을 두 번째로 구현하는 것이고, 실제로 그렇게
+                # 했다가 매퍼가 `pool_unreadable` 로 fail-closed 했다.
                 pool_section = dict(
-                    objects=[c for c in (slots.get("children") or []) if isinstance(c, dict)],
+                    objects=[
+                        rig_object(c) for c in (slots.get("children") or []) if isinstance(c, dict)
+                    ],
                     truncated=bool(slots.get("truncated")),
                 )
 

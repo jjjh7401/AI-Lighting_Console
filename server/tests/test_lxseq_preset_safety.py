@@ -140,3 +140,62 @@ class TestHarnessRefusesWithoutApprove:
                 ]
             )
         assert exit_info.value.code != 0
+
+
+class TestPoolListingNormalisation:
+    """응답기의 `i` 를 `no` 로 정규화하지 않으면 **fail-closed 로 막힌다**.
+
+    실기에서 실제로 났다: 툴이 `children` 을 그대로 `objects` 로 넘겨 매퍼가
+    슬롯 번호를 못 읽고 `pool_unreadable` 로 거절했다. **막힌 것이 옳다** —
+    번호를 못 읽었는데 배정했으면 점유 슬롯을 덮어썼을 것이고, 프리셋 값은
+    되읽을 수 없어 복구도 못 한다.
+
+    정규화기(`rig_object`)는 이미 있었다. 두 번째로 구현한 것이 defect 였다.
+    """
+
+    @staticmethod
+    def _dispatch_with(children):
+        approval = _Approval(approve=True)
+
+        class _Pool(_RecordingPort):
+            def query_state(self, path: str) -> dict:
+                if path.endswith("PresetPools"):
+                    return dict(children=[dict(i=1, name="Dimmer")], node=dict(childCount=1))
+                if path.endswith("PresetPools/1"):
+                    return dict(children=children, node=dict(childCount=len(children)))
+                return dict(children=[], node=dict(childCount=0), truncated=False)
+
+        pool = _Pool()
+        registry = build_toolset(
+            execution_port=pool,
+            state_port=pool,
+            property_port=pool,
+            group_approval_port=approval,
+        )
+        execution = registry.dispatch(
+            ToolCall(
+                id="norm",
+                name=TOOL,
+                arguments=dict(
+                    file_content_base64=base64.b64encode(DIM.read_bytes()).decode("ascii"),
+                    action="preview",
+                ),
+            )
+        )
+        return json.loads(execution.result.content)
+
+    def test_a_responder_slot_key_is_understood(self):
+        """`i` 로 온 점유 슬롯을 읽고 **그 슬롯을 피한다**."""
+        payload = self._dispatch_with([dict(i=1, name="풀")])
+        assert payload["refusal"] is None, payload["refusal_detail"]
+        slots = [p["slot"] for p in payload["planned"]]
+        assert 1 not in slots, slots
+        assert slots[0] == 2
+
+    def test_an_entry_without_a_slot_still_refuses(self):
+        """대조군 — 정규화가 **부재를 보존**하는지. 번호 없는 항목이 오면
+        여전히 fail-closed 여야 한다. 정규화가 없는 번호를 지어내면 이 검사가
+        빨개진다."""
+        payload = self._dispatch_with([dict(name="번호를 확정 못 한 항목")])
+        assert payload["refusal"] == "pool_unreadable", payload["refusal"]
+        assert payload["planned"] == []
