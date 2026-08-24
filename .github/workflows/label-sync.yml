@@ -43,7 +43,11 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Sync labels
-        uses: EndBug/label-sync@v2
+        # SHA 고정 (t82). 이 커밋은 `v2` 와 `v2.3.3`(최신 릴리스, 2024-02-13)이
+        # 둘 다 가리키는 자리다 — 지금 도는 코드와 같다. `v2` 는 움직이는 태그라
+        # 고정하지 않으면 우리가 아무것도 안 해도 엔진이 바뀔 수 있다(t81 §3).
+        # 갱신은 자동이 아니라 의도적 카드로 한다.
+        uses: EndBug/label-sync@52074158190acb45f3077f9099fea818aa43f97a # v2.3.3
         with:
           config-file: .github/labels.yml
           # delete-other-labels: false — preserve labels not in labels.yml (e.g., bot-managed labels)
