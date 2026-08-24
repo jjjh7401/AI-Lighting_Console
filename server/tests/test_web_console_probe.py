@@ -46,6 +46,7 @@ from server.web.messages import (
 )
 from server.web.session import ChatSession
 
+from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
 
@@ -372,7 +373,7 @@ class TestCompositionWiring:
             console_input_probe=lambda: CONSOLE_INPUT_LISTENING,
         )
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            event = ws.receive_json()
+            event = recv_frame(ws)
         assert event["type"] == "status"
         assert event["health"] == "console_offline"
         assert event["console_input"] == CONSOLE_INPUT_LISTENING

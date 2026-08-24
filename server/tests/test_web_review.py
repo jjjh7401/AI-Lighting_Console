@@ -36,6 +36,7 @@ from server.web.messages import (
 from server.web.session import ChatSession
 
 from .conftest import drain_until as _receive_until
+from .conftest import recv_frame
 from .test_deploy_pipeline import DESTRUCTIVE_SOURCE, SAFE_SOURCE
 from .test_deploy_transport import DeployableFakeConsole
 from .test_runner_self_correction import ScriptedProvider, _final
@@ -294,9 +295,9 @@ class TestAppReviewFlow:
     def test_stale_review_decision_yields_a_korean_error(self, tmp_path):
         deps, _ = _app_deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            ws.receive_json()  # initial status
+            recv_frame(ws)  # initial status
             _send(ws, type="review_decision", request_id="review-999", approved=True)
-            event = ws.receive_json()
+            event = recv_frame(ws)
             assert event["type"] == "error"
             assert event["kind"] == "protocol"
             assert any("가" <= ch <= "힣" for ch in event["message"])

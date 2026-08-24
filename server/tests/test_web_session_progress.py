@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 from server.web.app import create_app
 from server.web.messages import PROTOCOL_VERSION
 
+from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider, _final, _run_turn
 from .test_web_app import _deps, _send
 from .test_web_session import _session
@@ -121,11 +122,11 @@ class TestTheFramesReachTheWire:
         provider = ScriptedProvider([_run_turn(["Store Group 3"], "c1"), _final()])
         deps, console, _gate = _deps(tmp_path, provider)
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            assert ws.receive_json()["type"] == "status"
+            assert recv_frame(ws)["type"] == "status"
             _send(ws, type="chat", text="3번 그룹 저장해줘")
             frames: list[dict] = []
             for _ in range(40):
-                frames.append(ws.receive_json())
+                frames.append(recv_frame(ws))
                 if frames[-1]["type"] == "chat_response":
                     break
         streamed = [f for f in frames if f["type"] == "progress"]
