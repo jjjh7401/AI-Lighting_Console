@@ -13,6 +13,7 @@ import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from server.safety.audit import AuditLog
@@ -575,18 +576,94 @@ _DISCARDED_SECTION_PATHS = (
 )
 
 
-def _fresh_cue_monitor(ws) -> dict:
-    """The next FRESHLY BUILT cue_monitor event.
+#: 회수 상한 — conftest 의 :func:`drain_until` 과 같은 값이다.
+#:
+#: 근거(t58 실측): 이 헬퍼의 호출 7회 전부가 **1회 또는 2회**에 끝났다
+#: (1회 ×3 · 2회 ×4). 관측 최대의 **15배**라 정상 경로에서는 절대 안 걸리고,
+#: 기대 밖 프레임이 계속 오는 경우만 잡는다. 형제와 같은 값을 쓰는 것은
+#: 둘이 같은 성질의 상한이기 때문이다 — 다른 값을 쓰면 왜 다른지를 설명해야 한다.
+_FRESH_FRAME_LIMIT = 30
+
+
+def _fresh_cue_monitor(ws, *, limit: int = _FRESH_FRAME_LIMIT) -> dict:
+    """The next FRESHLY BUILT cue_monitor event — **회수 상한 위에서**.
 
     A tick whose predecessor already produced a snapshot gets an immediate
     stale-while-revalidate repaint first (``cached: True``, app.py's
     SnapshotCache). Skipping those is what makes "how many round trips did
     THIS tick cost" a deterministic question.
+
+    시간 상한은 :func:`recv_frame` 이 걸고(프레임당 10초), **회수 상한은 여기서**
+    건다. 둘 다 필요하다는 것은 ``recv_frame`` 독스트링이 이미 적어 뒀고, 이 헬퍼는
+    t54 이관 때 앞의 절반만 받았다 — 기대 밖 프레임이 계속 오면 루프가 안 끝났다.
+    무한은 아니다(프레임마다 10초 상한이 있다). **무한이 아니라 느리다**, 그리고
+    느린 채로 끝나지 않는다.
+
+    초과하면 **무엇을 버렸는지 말하고** 죽는다. 조용히 멈추면 상한이 있으나 마나다 —
+    「왜 안 끝나는가」가 「왜 빈 값인가」로 바뀔 뿐이다.
     """
-    while True:
+    seen: list[str] = []
+    for _ in range(limit):
         event = recv_frame(ws)
+        kind = event["type"]
+        if kind == "cue_monitor":
+            kind += "(cached)" if event.get("cached") else "(fresh)"
+        seen.append(kind)
         if event["type"] == "cue_monitor" and not event.get("cached"):
             return event
+    raise AssertionError(
+        f"no freshly-built cue_monitor within {limit} frames: {seen}"
+    )
+
+
+class TestTheFreshFrameLoopIsCapped:
+    """상한이 장식이 아님을 증명한다 — 안 걸리면 없는 것과 같다."""
+
+    class _EndlessCached:
+        """기대 밖 프레임만 영원히 내는 가짜 소켓.
+
+        `recv_frame` 은 `ws.receive_json()` 만 부르므로 이 표면이면 충분하다.
+        실제 소켓을 쓰면 이 상황을 만들 수 없다 — 그게 이 결함이 여태 안 잡힌 이유다.
+        """
+
+        def __init__(self):
+            self.reads = 0
+
+        def receive_json(self):
+            self.reads += 1
+            return {"type": "cue_monitor", "cached": True}
+
+    def test_endless_unwanted_frames_are_cut_not_followed(self):
+        ws = self._EndlessCached()
+
+        with pytest.raises(AssertionError) as excinfo:
+            _fresh_cue_monitor(ws, limit=5)
+
+        # 상한에서 정확히 멈춘다 — 하나 더 읽지도, 덜 읽지도 않는다.
+        assert ws.reads == 5, ws.reads
+        message = str(excinfo.value)
+        # 🔴 진단이어야 한다. 「멈췄다」만 말하면 t61 의 침묵과 같은 병이다.
+        assert "5 frames" in message, message
+        assert "cue_monitor(cached)" in message, message
+        assert message.count("cue_monitor(cached)") >= 1, message
+
+    def test_the_wanted_frame_still_returns_before_the_cap(self):
+        """비공허성 — 상한이 정상 경로까지 자르면 그건 상한이 아니라 고장이다."""
+
+        class _CachedThenFresh:
+            def __init__(self):
+                self.reads = 0
+
+            def receive_json(self):
+                self.reads += 1
+                cached = self.reads == 1
+                return {"type": "cue_monitor", "cached": cached}
+
+        ws = _CachedThenFresh()
+        event = _fresh_cue_monitor(ws, limit=5)
+
+        assert event == {"type": "cue_monitor", "cached": False}
+        assert ws.reads == 2, ws.reads
 
 
 class TestCueMonitorPollCost:
