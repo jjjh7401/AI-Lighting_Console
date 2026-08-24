@@ -611,9 +611,7 @@ def _fresh_cue_monitor(ws, *, limit: int = _FRESH_FRAME_LIMIT) -> dict:
         seen.append(kind)
         if event["type"] == "cue_monitor" and not event.get("cached"):
             return event
-    raise AssertionError(
-        f"no freshly-built cue_monitor within {limit} frames: {seen}"
-    )
+    raise AssertionError(f"no freshly-built cue_monitor within {limit} frames: {seen}")
 
 
 class TestTheFreshFrameLoopIsCapped:
