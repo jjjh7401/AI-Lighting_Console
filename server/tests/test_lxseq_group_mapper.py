@@ -480,3 +480,59 @@ class TestPurityBoundary:
 
         assert [f for f in FORBIDDEN if f in names] == []
         assert "map_groups" in names
+
+
+class TestSlotMeasurementEquivalence:
+    """매퍼의 빈 슬롯 규칙이 엔진의 것과 같은가.
+
+    매퍼는 `server/groupgen/write.py` 의 `measure_empty_slots` 를 부르지
+    않는다 — 그 함수는 풀 판독 실패에 예외를 던지고, 이 층은 어긋남을
+    **보고**해야지 던지면 안 되기 때문이다. 그래서 같은 규칙을 따로 적었다.
+
+    **둘이 갈리면 아무도 안 본다.** 매퍼가 계획한 슬롯과 엔진이 배정한
+    슬롯이 달라지는데, REQ-009 의 대조는 매퍼 안에서만 일어나므로 그
+    어긋남을 잡지 못한다. 그래서 등가성을 여기서 잰다.
+
+    **뮤테이션 예고**: 매퍼의 시작 후보를 1이 아니라 0으로 바꾸면 이
+    검사가 죽는다고 본다.
+    """
+
+    CASES = (
+        (),
+        (1,),
+        (3,),
+        (1, 2, 3),
+        (2, 4, 6),
+        (5, 1, 9),
+        tuple(range(1, 17)),
+    )
+
+    @pytest.mark.parametrize("occupied", CASES)
+    @pytest.mark.parametrize("count", [1, 3, 12, 18])
+    def test_both_rules_pick_the_same_empty_slots(self, occupied, count):
+        from server.groupgen.write import measure_empty_slots as engine_rule
+        from server.lxseq.group_mapper import _measure_empty_slots as mapper_rule
+
+        section = dict(objects=[dict(no=n) for n in occupied], truncated=False)
+        assert mapper_rule(section, count) == engine_rule(section, count=count)
+
+    def test_the_two_rules_are_not_the_same_object(self):
+        """비공허성 — 같은 함수를 두 이름으로 부르면 위 대조는 자동 참이다."""
+        from server.groupgen.write import measure_empty_slots as engine_rule
+        from server.lxseq.group_mapper import _measure_empty_slots as mapper_rule
+
+        assert engine_rule is not mapper_rule
+
+    def test_the_engine_raises_where_the_mapper_reports(self):
+        """왜 그 함수를 안 부르는지 — 실패 처리가 다르다.
+
+        엔진은 판독 실패에 예외를 던진다. 이 층은 던지면 안 된다.
+        """
+        from server.groupgen.write import GroupSlotError
+        from server.groupgen.write import measure_empty_slots as engine_rule
+        from server.lxseq.group_mapper import _measure_empty_slots as mapper_rule
+
+        unreadable = dict(objects=[], truncated=True)
+        with pytest.raises(GroupSlotError):
+            engine_rule(unreadable, count=1)
+        assert mapper_rule(unreadable, 1) == (1,)

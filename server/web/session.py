@@ -2650,6 +2650,19 @@ def _count_patch_rows(data: bytes) -> str:
 _SHEET_ROW_COUNTERS = dict()
 _SHEET_ROW_COUNTERS["patch"] = _count_patch_rows
 
+
+def _count_group_rows(data: bytes) -> str:
+    """GROUP 시트의 데이터 행 수 — 첨부 안내에 싣는 한 줄."""
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return "행 수를 세지 못했다"
+    rows = [line for line in text.splitlines() if line.strip()]
+    return f"그룹 {max(len(rows) - 1, 0)}개"
+
+
+_SHEET_ROW_COUNTERS["group"] = _count_group_rows
+
 #: 첨부 이음매가 배선한 세션 메서드 이름 (SPEC-COPILOT-SHEETPIPE-001 결정 A).
 #:
 #: 레지스트리의 ``session_method`` 종 행은 이 자리로 온다. 이음매가 보낼 곳을

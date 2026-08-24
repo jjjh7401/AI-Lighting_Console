@@ -170,9 +170,11 @@ class TestUnknownSheetKind:
         assert result.header_read == ("Nope", " Nothing ")
 
     def test_unknown_report_lists_every_registered_signature(self):
+        """등재된 종류가 늘면 이 목록도 함께 자란다 — 개수를 못박지 않는다."""
         result = discriminate(_csv(["Nope", "Nothing"]))
-        assert [kind for kind, _ in result.signatures] == ["patch", "vectorworks"]
+        assert [kind for kind, _ in result.signatures] == [row.kind for row in REGISTRY]
         assert all(description for _, description in result.signatures)
+        assert len(result.signatures) >= 2, "비공허성 — 표가 비면 위 대조가 자동 참이다"
 
     def test_unknown_records_the_filename_hint_without_branching_on_it(self):
         header = _csv(["Nope", "Nothing"])
@@ -182,8 +184,14 @@ class TestUnknownSheetKind:
 
 
 class TestRegistryTable:
-    def test_registry_holds_exactly_two_filled_rows(self):
-        assert [row.kind for row in REGISTRY] == ["patch", "vectorworks"]
+    def test_registry_rows_are_the_kinds_that_have_an_owner(self):
+        """행 목록. **개수가 아니라 소유자 유무**가 이 표의 불변식이다.
+
+        LXSEQ-002 M3 이 `group` 을 더했다 — 그 종류의 파서·매퍼·핸들러가
+        생겼기 때문이다. 아래 `test_registry_has_no_row_reserved_for_a_later_spec`
+        가 그 조건을 기계로 잰다.
+        """
+        assert [row.kind for row in REGISTRY] == ["patch", "group", "vectorworks"]
 
     def test_registry_patch_row_references_canonical_columns_by_identity(self):
         patch = next(row for row in REGISTRY if row.kind == "patch")
@@ -198,6 +206,7 @@ class TestRegistryTable:
         tags = {row.kind: (row.handler.kind_tag, row.handler.name) for row in REGISTRY}
         assert tags == {
             "patch": (HANDLER_TAG_TOOL, "import_lxseq_patch"),
+            "group": (HANDLER_TAG_TOOL, "import_lxseq_groups"),
             "vectorworks": (HANDLER_TAG_SESSION_METHOD, "upload_vectorworks_export"),
         }
 
@@ -211,7 +220,21 @@ class TestRegistryTable:
         )
 
     def test_registry_has_no_row_reserved_for_a_later_spec(self):
-        assert len(REGISTRY) == 2
+        """예약 행 금지 — 개수가 아니라 **핸들러가 실재하는가**로 잰다.
+
+        원래 이 검사는 `len(REGISTRY) == 2` 였다. 그 숫자는 「그 종류의
+        파서·핸들러가 아직 없는 행을 만들지 마라」(REQ-FILEARG-017)를 그
+        시점의 값으로 못박은 것이고, 조건이 충족돼 행이 늘면 숫자만 올리게
+        된다 — 그러면 검사가 지키던 것이 사라진다. 조건 자체를 잰다.
+
+        판별기는 대상 툴이 없는 행에 `no_target_tool` 설정 오류를 낸다.
+        어떤 시트를 넣어도 그 오류가 0건이면 예약 행이 없다는 뜻이다.
+        """
+        result = discriminate(_csv(["Nope", "Nothing"]))
+        reserved = [error.kind for error in result.config_errors]
+        assert reserved == [], f"핸들러가 없는 행: {reserved}"
+        # 비공허성 — 표가 비면 위 0건은 아무 뜻이 없다.
+        assert len(REGISTRY) >= 2
 
 
 class TestDiscriminationOrder:
