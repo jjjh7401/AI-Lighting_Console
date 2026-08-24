@@ -156,6 +156,9 @@ CONSUMPTION_SITES = (
     "5. server/web/session.py — _SHEET_ROW_COUNTERS (시트 종류를 받는 툴만)",
     "6. server/orchestrator/runner.py — _TOOL_TASKS (진행 표시 라벨)",
     "그리고 상수 둘: test_tools.py 의 툴 수 · test_sheets_registry.py 의 행 목록",
+    "7. server/tests/test_songcue_bundle.py — _TOOLS_EXPECTED_HUNK_OLD_STARTS",
+    "   (tools.py 를 건드리는 모든 SPEC 이 갱신해 온 diff 트립와이어. 순수 추가면",
+    "    hunk 가 늘기만 하고 사라지지 않는다 — 사라진 게 있으면 그건 삭제이므로 확인해라)",
 )
 
 

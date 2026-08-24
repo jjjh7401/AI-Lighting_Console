@@ -4865,6 +4865,48 @@ def build_toolset(
         commands: list[str] = []
         for placement in result.planned:
             commands.extend(preset_store_commands(pool_no, placement.slot, placement.name))
+
+        # [HARD] 승인 통로를 **반드시** 거친다. 게이트는 `Store Preset` /
+        # `Label Preset` 을 위험으로 분류하지 않으므로, 이 단계가 없으면 프리셋
+        # 쓰기는 **어떤 승인도 안 거치고** 콘솔에 나간다. 형제
+        # `create_arrangement_groups` 가 같은 이유로 같은 단계를 둔다(:7352-7358 —
+        # "Store Group/Label Group are classified safe there and would otherwise
+        # never see ANY approval stage").
+        #
+        # 2026-08-25 사고: 이 단계가 없어 `--approve` 없이 돈 하네스가 콘솔에
+        # 프리셋을 실제로 만들었다. 이 검사를 지우는 것은 조용한 동작 변경이
+        # 아니라 **빨간 뮤테이션**이다(`test_lxseq_preset_safety.py`).
+        approved = group_approval.request_approval(
+            ApprovalRequest(
+                items=tuple(
+                    ApprovalItem(
+                        command=command,
+                        risk_reasons=(
+                            "preset write — 값이 맞는지는 저장 후 되읽을 수 없다"
+                            "(슬롯 점유만 읽힌다). 덮어쓰면 복구 수단이 없다",
+                        ),
+                    )
+                    for command in commands
+                )
+            )
+        )
+        if not approved:
+            # fail-closed — 승인 거절·미확인·통로 부재(DenyAll)가 전부 여기로
+            # 모인다. 콘솔 발화 0줄이고 계획은 제안으로 강등된다.
+            payload["approval"] = "declined"
+            payload["notice"] = (
+                "승인이 나지 않아 콘솔에 아무것도 보내지 않았다. 위 계획을 사람이 "
+                "확인한 뒤 같은 시트로 다시 부르면 된다."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+        payload["approval"] = "granted"
         # 바이트는 **기록 대상**이지 판정 근거가 아니다 — 콘솔 거절이 길이가
         # 아니라 내용에 달려 있다(t72: 2044B 거절 · 2080B 통과). 상한을 안전
         # 근거로 쓰지 않는다.
