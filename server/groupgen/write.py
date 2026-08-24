@@ -183,8 +183,10 @@ def select_group_slot(groups_section: Mapping[str, object], *, requested: int) -
     """Measure one target slot's availability from the re-queried pool.
 
     Never counts a "next" number — an occupied slot is a static, unconditional
-    block (research.md §2.1): membership cannot be read back, so an overwrite
-    can be neither backed up nor restored.
+    block (research.md §2.1): membership has not been read back on any channel
+    tried, and whether it can be is UNMEASURED, not settled
+    (SPEC-COPILOT-RESTORE-001 readability-survey.md §A.2, §A.5). Either way an
+    overwrite can be neither backed up nor restored today, so the block stands.
     """
     _guard_pool_readable(groups_section)
     occupied = _group_numbers(groups_section)
@@ -192,8 +194,9 @@ def select_group_slot(groups_section: Mapping[str, object], *, requested: int) -
         raise GroupSlotError(
             GROUP_SLOT_OCCUPIED,
             f"group {requested} is already occupied; group writes never target "
-            "an existing slot (membership cannot be read back for backup — "
-            "research.md §2.1)",
+            "an existing slot (membership has not been read back on any "
+            "channel tried, so no backup exists; whether it can be read is "
+            "unmeasured — research.md §2.1, RESTORE-001 survey §A.2/§A.5)",
         )
     return requested
 

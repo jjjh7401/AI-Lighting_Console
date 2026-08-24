@@ -36,7 +36,7 @@ plan 단계에서 저장소를 실측한 결과 **넷 중 둘은 이미 다른 S
 
 | 값 | plan 단계 판정 | 근거(명령 → 관측) |
 |---|---|---|
-| 그룹 멤버십 | **측정 완료 · NEGATIVE — 승계** | `grep -n "게이트 A — 멤버십은 읽을 수 없다" .moai/specs/SPEC-COPILOT-GROUPGEN-001/progress.md` → `232:` ; `grep -n "grandMA3 does not expose group membership" server/groupgen/write.py` → `410:` |
+| 그룹 멤버십 | **측정 완료 · NEGATIVE — 승계** | `grep -n "게이트 A — 멤버십은 읽을 수 없다" .moai/specs/SPEC-COPILOT-GROUPGEN-001/progress.md` → `232:` ; `grep -n "group membership has not been read on any channel" server/groupgen/write.py` → `413:` (t49 정정 전 토큰은 `grandMA3 does not expose group membership` — 그 문자열은 이제 0을 낸다. 판정이 「원리적 불가」에서 **미측정**으로 하향됐다: RESTORE-001 `readability-survey.md` §A.2·§A.5) |
 | 채널폭 | **부분 승계 · 현행 읽기 표면 한정 미성립** — 미측정 경로 2건 잔존 | `sed -n '644,652p' .moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` → 소유 SPEC이 "전건 부정"을 **P2-5로 철회**하고 미측정 후보 I-14·I-15를 열거 |
 | 페이드 | **측정 완료 · 부분 GO — 승계** | `grep -n "CueInFade" .moai/specs/SPEC-COPILOT-CUETIME-001/progress.md` → `16:` `Part CueInFade = 5.0 (Cue의 CueFade prop은 not readable — Part 레벨이 정답)`, M1 완료 2026-08-14 |
 | 큐 내용 | **미측정 — M0 대상** | `grep -n "CURRENT_CUE_PROPERTY_CANDIDATES" server/web/cue_monitor.py` → `62:` (시퀀스 핸들 `CurrentCue`는 라이브 확정, 큐 노드 내부는 미측정) |
