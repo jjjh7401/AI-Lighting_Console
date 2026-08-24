@@ -122,6 +122,18 @@ class TestNoCommandSyntaxIsBuiltHere:
     그래서 **소스를 파싱해 문자열 리터럴만 본다.** 독스트링은 제외하고, 코드가
     실제로 들고 있는 문자열에 명령 문형이 없는지 잰다. 설명은 살고 검사는 정확해진다.
     부재를 재는 grep 보다 강하다 — 문자열을 바꿔 우회할 수 없다.
+
+    **airtight 은 아니다. 무엇이 남는지 알고 받아들인다.** 접두어를 통짜
+    (`"Store Preset"`)가 아니라 **`"Store "` 로** 재기 때문에 조립해도 리터럴이
+    남는다 — 실측:
+
+        "Store " + kind        -> 리터럴 'Store ' 가 남는다        잡힘
+        f"Store {pool}.{n}"    -> JoinedStr 조각 'Store ' 가 보인다  잡힘
+        "Sto" + "re Preset 1"  -> 'Sto' · 're Preset 1'             **샌다**
+
+    남는 우회는 **접두어 자체를 쪼개는 것** 하나이고, 그것은 사고가 아니라
+    의도적 은폐다. 검사는 실수를 잡지 은폐를 잡지 않는다 — 통짜 문자열로
+    쟀다면 위 셋 중 둘이 샜을 것이므로, 접두어로 재는 선택이 그 차이를 만든다.
     """
 
     MODULES = ("server/lxseq/preset_mapper.py", "server/lxseq/preset_parser.py")
@@ -167,6 +179,35 @@ class TestNoCommandSyntaxIsBuiltHere:
             if isinstance(n, ast.Constant) and isinstance(n.value, str)
         ]
         assert any("Store " in s for s in planted)
+
+    def test_an_assembled_command_is_still_caught(self):
+        """조립 우회 — 접두어를 통짜가 아니라 `"Store "` 로 재는 이유.
+
+        이 검사가 없으면 다음 사람이 「전체 문자열로 재는 게 정확하지」 하고
+        바꾸고, 그 순간 연결·f-string 조립이 전부 샌다.
+        """
+        for source in ('x = "Store " + kind', 'x = f"Store {pool}.{n}"'):
+            strings = [
+                n.value
+                for n in ast.walk(ast.parse(source))
+                if isinstance(n, ast.Constant) and isinstance(n.value, str)
+            ]
+            assert any("Store " in s for s in strings), source
+
+    def test_the_known_escape_is_recorded_not_claimed_closed(self):
+        """남는 우회를 **검사로 못박는다** — 「막았다」고 적지 않기 위해서다.
+
+        접두어 자체를 쪼개면 샌다. 그것은 실수가 아니라 은폐이고, 이 검사는
+        실수를 잡는 도구다. 이 사실이 검사에 없으면 다음 사람이 airtight 로
+        읽는다.
+        """
+        source = 'x = "Sto" + "re Preset 1"'
+        strings = [
+            n.value
+            for n in ast.walk(ast.parse(source))
+            if isinstance(n, ast.Constant) and isinstance(n.value, str)
+        ]
+        assert not any("Store " in s for s in strings), "이 우회는 실제로 샌다"
 
     def test_docstrings_are_excluded_on_purpose(self):
         """이 검사가 왜 grep 보다 나은지를 검사로 못박는다.
