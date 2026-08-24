@@ -425,6 +425,69 @@ The `--team` flag and its four launch patterns are retired. Entering a worktree 
 
 **Recommended**: Claude Code **2.1.186 or later** for current background-agent permission-prompt semantics, Opus 4.7+ / 4.8 / Opus 5 support, MCP doctor warnings, and Windows CLAUDE_ENV_FILE parity. Minimum baseline: **2.1.97** for worktree isolation.
 
+## The per-worktree Python environment
+
+A worktree is a full checkout, so an editable install inside one worktree's virtual
+environment pins that worktree's sources: the `.pth` written by the install names the
+tree it was created in, and it keeps naming it no matter where the interpreter is later
+invoked from. Borrowing a sibling worktree's interpreter therefore does not merely use
+another tree's dependencies — it can import another tree's code, with no warning.
+
+Whether it actually does depends on what sits at the front of `sys.path`, which is set
+by the invocation shape rather than by the interpreter:
+
+| Invocation | What wins | Borrowing is |
+|---|---|---|
+| `python -c …` / `python -m …` from the tree root | the current directory shadows the `.pth` | harmless |
+| `python <dir>/<script>.py` where that dir holds no package | the `.pth` | **silent cross-tree import** |
+| `python -c …` from a subdirectory of the tree | the `.pth` | **silent cross-tree import** |
+| `pytest` on tests that live inside the package | the test's base directory | harmless |
+| `uv run …` | the project environment resolved from the current directory | harmless — a mismatched `VIRTUAL_ENV` is reported and ignored |
+
+[HARD] **The interpreter is part of the evidence.** Where a result is produced by running
+a script by path — a measurement tool, a one-off probe, anything outside the test runner —
+the record names the interpreter that produced it, and that interpreter is the tree's own.
+A result whose interpreter is unnamed cannot be attributed to a tree, and an unattributable
+measurement is not evidence (`verification-claim-integrity.md` §2).
+
+The check is one command, and it is cheap enough to run rather than reason about:
+
+```bash
+<interpreter> -c "import <package>; print(<package>.__file__)"
+```
+
+Run it from a subdirectory, not the tree root — at the root the current directory shadows
+the `.pth` and the check passes even when the interpreter belongs to another tree.
+
+**Measured example — an observation, not a claim about your checkout.**
+`jjjh7401/AI-Lighting_Console`, 2026-08-25, worktrees `t47` and `t56`: from `t47/server`,
+the tree's own interpreter resolved `server` to `t47`, and `t56`'s interpreter resolved it
+to `t56` — same directory, same command, only the interpreter differed, and neither printed
+a warning. The same pair run through `pytest` both resolved to `t47`. At that moment the
+board held 35 worktrees and 28 virtual environments. Re-measure rather than carrying these
+numbers forward.
+
+## The write boundary is the session's launch directory
+
+A session launched from one checkout and then moved into a worktree of another checkout
+can find its file-writing tools refusing paths that plainly exist and are plainly inside
+the worktree. The refusal is about which project the tools resolve, not about the path.
+
+Three things separate this from a broken path, and all three are measurable in one turn:
+a read of the same file succeeds, a shell write to the same path succeeds, and only the
+dedicated write tool refuses. Where that pattern holds, the work proceeds through shell
+writes; entering the worktree again does not change it, because the launch directory is
+fixed for the life of the session.
+
+[HARD] A dispatch that assigns work in a worktree does not assume the receiving session can
+write there. Where the assigned session was launched from a different checkout, say so in
+the dispatch, or launch the session from the checkout that owns the worktree.
+
+**Measured example.** Same repository and date as above: in worktree `t47`, `Read` on a
+file in the tree succeeded, a heredoc write to the tree succeeded, and `Write` to a new
+file in the same tree was refused as a path traversal. The session had been launched from
+a sibling checkout.
+
 ## Troubleshooting
 
 | Issue | Cause | Solution |
