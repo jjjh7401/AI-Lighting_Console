@@ -30,6 +30,23 @@ PROTOCOL_VERSION = 1
 PLUGIN_NAME = "CopilotResponder"
 
 MAX_PROPS_NAMES = 16
+
+#: 요청 한 줄의 바이트 상한 — **이 값은 실측이 아니다.** 이 프로토콜이 스스로
+#: 정한 프레이밍 상한이고, 콘솔이 받아 주는 한계와 대응하지 않는다.
+#:
+#: t60 이 실기로 잰 것 (방향·대상·단위를 함께 읽어라 — 이 셋이 빠져서
+#: 이 저장소가 이미 두 번 오진했다):
+#:   방향: 서버 -> 콘솔 (요청)    대상: exec 로 나가는 명령 한 줄
+#:   단위: UTF-8 바이트 (전선에 실제로 나간 값)
+#:   결과: **어떤 길이 축으로도 단조 임계값이 없다.**
+#:     `Fixture 101` x142 (2026B) 통과 / x143 (2040B) 거절 — 3회 재현
+#:     그러나 2065B · 2080B · 2167B 짜리 다른 줄은 통과하고,
+#:     같은 계열 안에서 2044B 거절 / 2053B 통과 (2회 재현, 비단조).
+#:
+#: 회신 방향 절단 경계 `[1200, 1208)` 와 **섞지 마라** — 그건 콘솔 -> 서버
+#: 스냅샷 payload 값이다(`docs/runbooks/fake-real-parity-method.md` §3).
+#:
+#: 판정 전문: `.moai/specs/SPEC-COPILOT-LXSEQ-002/t60-verdict.md`
 MAX_PLUGIN_CALL_BYTES = 2048
 
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -141,6 +158,21 @@ def _validate_props_names(property_names: Sequence[str]) -> tuple[str, ...]:
     return names
 
 
+# @MX:WARN: [AUTO] 이 검사를 다른 요청 빌더로 **퍼뜨리지 마라.** 특히 exec 로.
+# @MX:REASON: `MAX_PLUGIN_CALL_BYTES = 2048` 은 이 프로토콜이 스스로 정한 값이지
+#   콘솔이 받아 주는 실측 상한이 아니다. t60 이 실기로 쟀고(판정:
+#   `.moai/specs/SPEC-COPILOT-LXSEQ-002/t60-verdict.md`), 콘솔의 거절은 **어떤
+#   길이 축으로도 단조 임계값이 아니었다**:
+#     `Fixture 101` x142 (전선 2026B) 통과 / x143 (2040B) 거절 — 3회 재현
+#     그런데 2065B·2080B·2167B 짜리 다른 줄들은 통과하고,
+#     같은 계열 안에서도 2044B 는 거절인데 2053B 는 통과다(2회 재현, 비단조).
+#   그러므로 바이트 예산 검사는 양방향으로 틀린다 — 2048 로 두면 위 2040B 실패를
+#   못 막고, 실패 지점 근처로 낮추면 콘솔에서 멀쩡히 도는 2167B 명령을 막는다.
+#   introspect/props 에 남아 있는 이 검사도 어떤 실측에도 대응하지 않는다. 읽기
+#   질의라 잘못 거절돼도 파급이 작아 t60 이 건드리지 않았을 뿐이다 — 「돌고 있으니
+#   맞는 값」으로 읽지 마라.
+#   긴 명령에 대한 방어는 검사가 아니라 **호출부가 명령을 짧게 유지하는 것**이다
+#   (t66: 그룹 선택 줄 86 FID 1201B -> 182B).
 def _validate_plugin_call_budget(command_line: str, *, field: str) -> None:
     size = len(command_line.encode("utf-8"))
     if size > MAX_PLUGIN_CALL_BYTES:
