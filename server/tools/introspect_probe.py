@@ -7,6 +7,7 @@ from pathlib import Path
 
 from server.safety.bootstrap import build_console_stack
 from server.safety.console import LinkTimeouts, StateQueryError
+from server.tools.probe_preflight import add_listen_port_argument
 
 
 def _names_arg(value: str) -> tuple[str, ...]:
@@ -31,7 +32,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--host", default="127.0.0.1", help="Console OSC send host.")
     parser.add_argument("--port", type=int, default=8000, help="Console OSC send port.")
     parser.add_argument("--listen-host", default="127.0.0.1", help="Local OSC reply host.")
-    parser.add_argument("--listen-port", type=int, default=9000, help="Local OSC reply port.")
+    add_listen_port_argument(parser)
     parser.add_argument(
         "--timeout-seconds",
         type=float,

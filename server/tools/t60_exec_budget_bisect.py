@@ -34,6 +34,7 @@ import sys
 
 import server.safety.console as console_module
 from server.safety.bootstrap import build_console_stack
+from server.tools.probe_preflight import add_listen_port_argument
 
 # `server/tools/` 는 OSC 송신면(`server.bridge`)을 임포트하면 안 된다 —
 # REQ-MVP-029 단일 초크포인트, `test_architecture.py` 가 전수로 막는다. 래핑
@@ -135,12 +136,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000, help="onPC OSC 입력 포트")
-    parser.add_argument(
-        "--listen-port",
-        type=int,
-        required=True,
-        help="회신 수신 포트. 기본값 없음 — 틀린 포트의 침묵을 응답기 사망으로 오독한다",
-    )
+    add_listen_port_argument(parser)
     parser.add_argument("--max-repeats", type=int, default=MAX_REPEATS)
     parser.add_argument("--approve", action="store_true")
     args = parser.parse_args(argv)

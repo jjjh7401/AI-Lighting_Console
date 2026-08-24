@@ -57,6 +57,7 @@ from server.llm.types import ToolCall
 from server.orchestrator.tools import build_toolset
 from server.safety.approval import ApprovalRequest
 from server.safety.bootstrap import build_console_stack
+from server.tools.probe_preflight import add_listen_port_argument
 
 #: 판독 채널 날조 대조군이 물어보는 경로. 콘솔에 있을 수 없는 이름이라
 #: **`ok=False`가 정답**이다. `ok=True`가 오면 채널이 아무 말에나 «있다»고
@@ -225,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode-overrides", default=None, help='JSON: {"<CSV타입>": "<콘솔모드>"}')
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--listen-port", type=int, default=9005)
+    add_listen_port_argument(parser)
     parser.add_argument("--plugin-import-dir", default=None)
     parser.add_argument(
         "--approve",

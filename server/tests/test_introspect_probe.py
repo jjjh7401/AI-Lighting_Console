@@ -67,6 +67,11 @@ def test_main_without_names_sends_introspect_and_prints_payload(monkeypatch, cap
         [
             "--path",
             "DataPool/Sequences/Sequence 101",
+            # t61 — `--listen-port` 는 필수다. 예전엔 이 호출이 침묵의 9000 을
+            # 받았고, 그래서 **이 도구가 어느 포트로 쏘는지 아무 검사도 안
+            # 재고 있었다**(현장은 9005 다). 명시가 그 구멍을 닫는다.
+            "--listen-port",
+            "9005",
             "--timeout-seconds",
             "1.25",
             "--audit-dir",
@@ -95,7 +100,14 @@ def test_main_with_names_sends_props_and_prints_payload(monkeypatch, capsys):
     state_port = FakeStatePort()
     _install_stack(monkeypatch, state_port)
     code = introspect_probe.main(
-        ["--path", "DataPool/Sequences/Sequence 101", "--names", " CURRENTCUE, NAME "]
+        [
+            "--path",
+            "DataPool/Sequences/Sequence 101",
+            "--listen-port",
+            "9005",
+            "--names",
+            " CURRENTCUE, NAME ",
+        ]
     )
     output = json.loads(capsys.readouterr().out)
     assert code == 0
@@ -120,10 +132,64 @@ def test_main_returns_one_and_stops_stack_on_query_error(monkeypatch, capsys):
     state_port = FakeStatePort(StateQueryError("no reply"))
     stacks = _install_stack(monkeypatch, state_port)
     code = introspect_probe.main(
-        ["--path", "DataPool/Sequences/Sequence 101", "--names", "CURRENTCUE"]
+        [
+            "--path",
+            "DataPool/Sequences/Sequence 101",
+            "--listen-port",
+            "9005",
+            "--names",
+            "CURRENTCUE",
+        ]
     )
     captured = capsys.readouterr()
     assert code == 1
     assert captured.out == ""
     assert "props failed: no reply" in captured.err
     assert stacks[0].stopped is True
+
+
+def test_the_listen_port_actually_reaches_the_stack(monkeypatch, capsys, tmp_path):
+    """t61 — **넘긴 포트가 실제로 쓰이는지** 잰다.
+
+    이 카드 전까지 이 도구의 세 검사는 `--listen-port` 를 아예 안 넘겼고 침묵의
+    9000 이 채워 줬다. 즉 **어떤 검사도 이 도구가 어느 포트로 쏘는지 재고 있지
+    않았다** — 값이 틀렸던 것이 아니라 값이 관측되지 않고 있었다. 인자를
+    넘기기만 하고 단언하지 않으면 그 상태 그대로다.
+    """
+    state_port = FakeStatePort()
+    stacks = _install_stack(monkeypatch, state_port)
+    code = introspect_probe.main(
+        [
+            "--path",
+            "DataPool/Sequences/Sequence 101",
+            "--listen-port",
+            "9005",
+            "--audit-dir",
+            str(tmp_path),
+        ]
+    )
+    capsys.readouterr()
+    assert code == 0
+    assert stacks[0].kwargs["receive_port"] == 9005
+
+
+def test_a_different_listen_port_reaches_the_stack_too(monkeypatch, capsys, tmp_path):
+    """비공허 — 위 단언이 9005 를 어딘가에 박아 둔 것과 구분되지 않으면 안 된다.
+
+    다른 값을 넘겨 다른 값이 도착하는 것까지 봐야 「전달된다」를 잰 것이다.
+    """
+    state_port = FakeStatePort()
+    stacks = _install_stack(monkeypatch, state_port)
+    code = introspect_probe.main(
+        [
+            "--path",
+            "DataPool/Sequences/Sequence 101",
+            "--listen-port",
+            "9123",
+            "--audit-dir",
+            str(tmp_path),
+        ]
+    )
+    capsys.readouterr()
+    assert code == 0
+    assert stacks[0].kwargs["receive_port"] == 9123

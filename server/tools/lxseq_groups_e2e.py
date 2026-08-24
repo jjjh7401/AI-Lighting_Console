@@ -34,6 +34,7 @@ from server.llm.types import ToolCall
 from server.orchestrator.tools import build_toolset
 from server.safety.approval import ApprovalRequest
 from server.safety.bootstrap import build_console_stack
+from server.tools.probe_preflight import add_listen_port_argument, preflight
 
 #: 판독 채널 날조 대조군. 있을 수 없는 이름이라 **`ok=False` 가 정답**이다.
 #: `ok=True` 가 오면 채널이 아무 말에나 「있다」고 답한다는 뜻이고, 그때는 이
@@ -165,16 +166,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--action", choices=["preview", "apply"], default="preview")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000, help="onPC OSC 입력 포트")
-    parser.add_argument(
-        "--listen-port",
-        type=int,
-        required=True,
-        help=(
-            "응답이 돌아올 로컬 포트. **기본값 없음 — 반드시 적어라.** 이 저장소의 "
-            "하네스들이 9005 와 9000 으로 갈려 있고(t61), 틀린 포트로 쏘면 침묵이 "
-            "돌아오는데 그 침묵은 「응답기가 죽었다」와 구분되지 않는다. 현장은 9005"
-        ),
-    )
+    add_listen_port_argument(parser)
     parser.add_argument(
         "--probe-only",
         action="store_true",
@@ -207,6 +199,15 @@ def main(argv: list[str] | None = None) -> int:
 
     exit_code = 0
     try:
+        # 응답기가 답하는지, 안 답하면 **왜 안 답하는지** 먼저 이름 붙인다.
+        # 틀린 포트의 침묵과 죽은 응답기의 침묵은 구분되지 않는다(t61) —
+        # 아래 전제 판독이 조용히 실패하기 전에 그 구분을 세운다.
+        out["preflight"] = preflight(
+            stack.gate,
+            receive_host="127.0.0.1",
+            receive_port=args.listen_port,
+            console_port=args.port,
+        )
         preconditions = _probe_preconditions(stack.gate.state_port)
         out["preconditions"] = preconditions
 
