@@ -1,6 +1,6 @@
 # SPEC-COPILOT-SHEETPIPE-001 — 구현 계획 (plan)
 
-문서 상태: draft (v0.4.0, 2026-08-24 — run 이후 문면 정정 3건: §E 재작성 · 정본은 `spec.md` HISTORY) · **Tier M · 통과 임계 0.80** · 칸반 카드 t10 · **분할 B(전달경로)**
+문서 상태: **in-progress** (updated 2026-08-24 — M1+M2 실행됨) · 직전 개정 (v0.4.0, 2026-08-24 — run 이후 문면 정정 3건: §E 재작성 · 정본은 `spec.md` HISTORY) · **Tier M · 통과 임계 0.80** · 칸반 카드 t10 · **분할 B(전달경로)**
 
 > **참조 규약.** 정본(`spec.md` · `acceptance.md`)은 줄번호로 인용하지 않고 `REQ-SHEETPIPE-001` · `AC-SHEETPIPE-001` · `ASSUMPTION-78` 같은 안정 토큰만 쓴다. 코드와 타 SPEC 아티팩트는 `파일:줄` 좌표를 쓴다.
 >
