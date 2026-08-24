@@ -973,3 +973,121 @@ G5 는 근거가 가장 센 자리인데도 갈리지 않는다 — 이 테스�
 | **누계** | **56** | **0** | **1 / 56** |
 
 전수 67 → **11**. 대상 66 → **10**. 미판정 누계 **0건**. 완결 파일 **9 / 11**.
+
+---
+
+## 16. 배치 t54-h — app 뒤 10곳 (대상 완결)
+
+### 16.1 대상표 — 10자리
+
+| # | 행(이관 전) | 소속 테스트 | 판정 | 판정 근거 |
+|---|---|---|---|---|
+| H1 | `:171` | `test_status_request_returns_a_status_event` | `recv_frame` | 첫 status 한 장 소비 |
+| H2 | `:173` | 〃 | `recv_frame` | 요청 직후 다음 한 장이 status |
+| H3 | `:178` | `test_lock_toggle_round_trip` | `recv_frame` | 첫 status 한 장 소비 (이후 대기는 `_receive_until`) |
+| H4 | `:190` | `test_stale_approval_decision_is_reported` | `recv_frame` | 첫 status 한 장 소비 |
+| H5 | `:192` | 〃 | `recv_frame` | 만료된 결정 직후 다음 한 장이 `error` |
+| H6 | `:214` | `test_disconnect_does_not_deny_another_sessions_pending_approval` | `recv_frame(ws_a)` | 세션 A 의 첫 status |
+| H7 | `:222` | 〃 | `recv_frame(ws_b)` | 세션 B 의 첫 status. **두 소켓이 한 테스트에 있다** — 변수만 다르고 의미는 같다 |
+| H8 | `:246` | `test_own_disconnect_still_denies_own_pending_approval` | `recv_frame` | 첫 status 한 장 소비 |
+| H9 | `:274` | `test_second_chat_while_busy_gets_a_busy_event` | `recv_frame` | 첫 status 한 장 소비 |
+| H10 | `:322` | `test_heartbeat_loop_pushes_status_changes` | `recv_frame` | 첫 프레임이 status 임을 단정하고, **그 뒤 드레인 루프는 이미 `_receive_until`(limit=30)** 이다 — 원저자가 두 의미를 한 블록 안에서 갈라 쓴 자리 |
+
+미판정: **0건**.
+
+### 16.2 전수 대조 — 대상 **완결**
+
+```
+$ grep -rn '\.receive_json(' server/tests --include='*.py'
+server/tests/conftest.py:104:            box["event"] = ws.receive_json()
+$ grep -rn '\.receive_json(' server/tests --include='*.py' | wc -l
+       1
+```
+
+11 − 10 = 1. 남은 **1자리는 승격 헬퍼 `recv_frame` 자신의 수신 호출**이며 §1 에서
+처음부터 배제 기준으로 명시한 자리다.
+
+**대상 66자리 → 0. 11파일 전부 완결.**
+
+### 16.3 검증
+
+```
+$ .venv/bin/ruff check server/tests          → All checks passed!
+$ .venv/bin/ruff format --check server/tests → 229 files already formatted
+$ pytest server/tests/test_web_app.py        → 21 passed in 0.95s
+```
+
+### 16.4 뮤테이션 — 개정 규칙(KILL ≥ 1)으로 처음 돌린 배치
+
+| 자리 | 결과 |
+|---|---|
+| H1·H2·H3·H5·H6·H7·H8 | 닫힘 (시행 1회에 KILL) |
+| H4·H10 | 닫힘 (시행 2회) |
+| H9 | 닫힘 (시행 3회) |
+
+**gap(KILL 을 한 번도 못 본 자리): 0건.**
+
+개정 규칙은 **판정이 더 정확할 뿐 아니라 훨씬 싸다.** 초판대로면 SURVIVED 가 난
+자리마다 10회를 더 돌려 이 배치에서만 30회 이상을 태웠을 텐데, 개정 규칙에서는
+총 시행이 **14회**로 끝났다. 「비율을 재려는 것」이 비용의 원인이었고, 그 비율은
+애초에 코드가 아니라 스케줄러를 재던 값이다(§10).
+
+**레버 B — 분류**: `H1..H10 전부 SURVIVED`. §5.4 표기 적용.
+
+---
+
+## 17. 카드 종합 — t54 대상 완결
+
+### 17.1 최종 수치 (단위를 함께 적는다)
+
+| 항목 | 착수 시 | 종료 시 |
+|---|---|---|
+| `.receive_json(` **자리** (server/tests 전체) | 67 | **1** |
+| 그중 **이관 대상 자리** (conftest 헬퍼 1 제외) | 66 | **0** |
+| 대상 **파일** | 11 | **0** |
+| **미판정 자리** | — | **0** |
+
+### 17.2 배치별
+
+| 배치 | 파일 | 자리 | 상한 레버 gap | 분류 레버 KILL |
+|---|---|---|---|---|
+| 1 | review · session_progress · reply_discovery · console_probe · tauri_seams | 7 | 0 | **1** |
+| b | dash · layout_image | 8 | 0 | 0 |
+| c | handshake | 6 | 0 | 0 |
+| d | e2e | 5 | 0 | 0 |
+| e | cue_monitor (앞) | 9 | 0 | 0 |
+| f | cue_monitor (뒤) | 11 | 0 | 0 |
+| g | app (앞) | 10 | 0 | 0 |
+| h | app (뒤) | 10 | 0 | 0 |
+| **합계** | **11파일** | **66** | **0** | **1 / 66** |
+
+### 17.3 이 카드가 실제로 산 것 — 과장 없이
+
+**샀다**: 66자리의 웹소켓 수신이 이제 **시간 상한 아래**에 있다. 오지 않는 프레임
+하나가 스위트를 세우는 일은 이 자리들에서 일어나지 않는다. 66자리 전부에서
+「상한이 실재한다」를 KILL 로 관측했다(gap 0).
+
+**안 샀다**: 「헬퍼를 옳게 골랐다」는 66자리 중 **1자리**에서만 검사가 지킨다.
+나머지 65자리는 두 헬퍼가 **오늘의 경로로는 구별 불가**하다(§5.4). 이것은 결함이
+아니라 관측 가능성의 한계이고, **t57**(기대 밖 프레임 경로)이 열려야 갈린다.
+
+**남겼다**: `_fresh_cue_monitor` 의 회수 상한 부재 → **t58**. 무한 루프가 아니라
+「깨끗한 테스트 실패 대신 60초 뒤 런 전체가 죽는 것」이다(§13.5).
+
+### 17.4 이 카드에서 규칙이 두 번 고쳐졌다 — 둘 다 오판을 막았다
+
+1. **초판(0.001s)**: 판별력 0. 7/7 통과 → 「이관이 헛것」이라 적을 뻔했다.
+   실측으로 프레임 도착이 10µs~100µs 임을 확인하고 레버를 내렸다(§5.1).
+2. **2판(0.0, 2회 → 비율)**: 재는 대상이 틀렸다. `F3`·`G7` 의 **0/2 → 10/10** 이
+   드러냈다 — 경합이 시간적으로 뭉치므로 비율은 스케줄러 측정치다.
+   **3판: KILL ≥ 1 이면 닫힘**(§10).
+
+두 번 다 **「자를 먼저 의심한 것」** 이 오판을 막았다. 통과가 나왔을 때 결론을
+내리기 전에 레버를 검산한 것, 그것이 이 카드에서 가장 값어치 있는 절차였다.
+
+### 17.5 아직 안 한 것
+
+- **전량 스위트 재실행**: 배치 1 시점에 1회 초록(10023 passed / 12 skipped, §4.4)을
+  받았고, 그 뒤 b~h 8배치가 더 들어갔다. **카드 닫기 전 전량 1회가 남았다** —
+  창(window)이 plan 레인에 있어 리드 허가를 기다린다.
+- 배치별로는 대상 파일 테스트를 매번 돌려 초록을 확인했다(각 §).
