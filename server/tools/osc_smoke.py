@@ -25,6 +25,7 @@ import queue
 import sys
 
 from server.bridge.osc import BridgeConfig, OscBridge, QueueFeedbackConsumer
+from server.tools.probe_preflight import add_listen_port_argument
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -34,12 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--port", type=int, default=8000, help="onPC OSC UDP input port (default: %(default)s)"
     )
-    parser.add_argument(
-        "--listen-port",
-        type=int,
-        default=9000,
-        help="local port to listen on for /copilot/feedback (default: %(default)s)",
-    )
+    add_listen_port_argument(parser)
     parser.add_argument(
         "--wait",
         type=float,

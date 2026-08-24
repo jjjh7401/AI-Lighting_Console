@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 
 from server.safety.bootstrap import build_console_stack
+from server.tools.probe_preflight import add_listen_port_argument
 
 CLEAR = "ClearAll"
 GATE_BLOCK_MARK = "not cleared by the safety gate"
@@ -88,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--patch-csv", type=Path, required=True)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--listen-port", type=int, required=True)
+    add_listen_port_argument(parser)
     parser.add_argument("--approve", action="store_true")
     args = parser.parse_args(argv)
 

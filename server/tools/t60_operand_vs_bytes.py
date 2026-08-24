@@ -21,12 +21,14 @@
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import json
 import sys
 
 import server.safety.console as console_module
 from server.safety.bootstrap import build_console_stack
+from server.tools.probe_preflight import add_listen_port_argument
 
 CLEAR = "ClearAll"
 GATE_BLOCK_MARK = "not cleared by the safety gate"
@@ -86,11 +88,11 @@ def main(argv: list[str] | None = None) -> int:
     if "--approve" not in (argv if argv is not None else sys.argv[1:]):
         print("--approve 없이는 아무것도 쏘지 않는다")
         return 0
-    port_args = argv if argv is not None else sys.argv[1:]
-    listen = 9005
-    for index, token in enumerate(port_args):
-        if token == "--listen-port":
-            listen = int(port_args[index + 1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_listen_port_argument(parser)
+    parser.add_argument("--approve", action="store_true")
+    known, _rest = parser.parse_known_args(argv if argv is not None else sys.argv[1:])
+    listen = known.listen_port
 
     _install_wire_spy()
     stack = build_console_stack(

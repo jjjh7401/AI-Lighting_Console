@@ -16,12 +16,14 @@
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import json
 import sys
 
 import server.safety.console as console_module
 from server.safety.bootstrap import build_console_stack
+from server.tools.probe_preflight import add_listen_port_argument
 
 CLEAR = "ClearAll"
 FABRICATED = "Zzzblah Foo 1"
@@ -79,10 +81,11 @@ def main() -> int:
     if "--approve" not in args:
         print("--approve 없이는 아무것도 쏘지 않는다")
         return 0
-    listen = 9005
-    for index, token in enumerate(args):
-        if token == "--listen-port":
-            listen = int(args[index + 1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_listen_port_argument(parser)
+    parser.add_argument("--approve", action="store_true")
+    known, _rest = parser.parse_known_args(args)
+    listen = known.listen_port
 
     _spy_on()
     stack = build_console_stack(

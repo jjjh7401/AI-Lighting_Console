@@ -27,6 +27,7 @@ from server.llm.types import ToolCall
 from server.orchestrator.tools import build_toolset
 from server.safety.approval import ApprovalRequest
 from server.safety.bootstrap import build_console_stack
+from server.tools.probe_preflight import add_listen_port_argument
 
 
 class _AutoApprove:
@@ -53,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--genre", default="록")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--listen-port", type=int, default=9005)
+    add_listen_port_argument(parser)
     parser.add_argument("--approve", action="store_true")
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)

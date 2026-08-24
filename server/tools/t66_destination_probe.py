@@ -28,6 +28,7 @@ import json
 import sys
 
 from server.safety.bootstrap import build_console_stack
+from server.tools.probe_preflight import add_listen_port_argument
 
 #: exec 채널 날조 대조군. 순수 쓰레기라 **실패가 정답**이다.
 FABRICATED_COMMAND = "Zzzblah Foo 1"
@@ -142,12 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000, help="onPC OSC 입력 포트")
-    parser.add_argument(
-        "--listen-port",
-        type=int,
-        required=True,
-        help="회신 수신 포트. 기본값 없음 — 틀린 포트의 침묵을 응답기 사망으로 오독한다",
-    )
+    add_listen_port_argument(parser)
     parser.add_argument(
         "--approve",
         action="store_true",
