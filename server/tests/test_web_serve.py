@@ -160,66 +160,96 @@ class TestReceivePortFailureReachesTheOperator:
     """A receive port that is STILL held after the rebind retries must not
     escape as a raw traceback — and must not lose its bilingual guidance."""
 
-    @pytest.mark.skipif(
-        sys.platform != "darwin",
-        reason=(
-            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
-            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
-        ),
-    )
-    def test_build_runtime_raises_the_error_the_launcher_handles(self):
+    # 이 세 검사는 한때 ``sys.platform != "darwin"`` 게이트 뒤에 있었다. 조건을
+    # **실물 소켓 점유**로 만들었기 때문이고, 리눅스는 SO_REUSEADDR 로 두 번째
+    # bind 가 성공해 그 조건을 못 만든다 — 그래서 CI 에서 매 실행 건너뛰어졌다.
+    #
+    # 조건을 **주입**으로 바꾸면 플랫폼과 무관해진다. 가짜는 「수신 포트가 끝내
+    # 안 잡힌다」는 입력만 만들고, 단언 대상은 그 뒤의 프로덕션 배선이다.
+    #
+    # 🔴 seam 은 프리플라이트가 **아니다**(t74 실측). ``main()`` 의 프리플라이트는
+    # ``real_serve = run is None`` 뒤에 있어서, 테스트가 ``run=`` 을 주입하는 한
+    # **아예 돌지 않는다.** 세 검사가 공유하는 실제 seam 은 ``bridge.start()`` 이고,
+    # ``server/safety/bootstrap.py`` 가 거기서 bridge-local 타입을 launcher 타입으로
+    # **번역**한다. 프로브를 가짜로 만들면 exit 0 이 나온다(측정으로 확인).
+    #
+    # 「darwin 에서 이중 bind 가 실제로 충돌한다」는 주장 **자체**는 주입으로 만들
+    # 수 없다 — 만드는 순간 자기 가짜를 시험한다. 그 검사
+    # (``test_web_launcher.py`` 의 UDP 프로브)는 게이트를 그대로 둔다.
+
+    @staticmethod
+    def _refuse_receive_port(monkeypatch, port: int) -> None:
+        """수신 포트가 재시도 끝에도 안 잡히는 상황을 주입한다.
+
+        bridge 는 자기 타입(``ReceivePortInUseError``)을 던진다 — 그것이 번역의
+        **입력**이고, 번역 자체는 건드리지 않는다.
+        """
+        from server.bridge import osc as osc_module
+        from server.bridge.osc import ReceivePortInUseError
+
+        def refuse(_self):
+            raise ReceivePortInUseError("127.0.0.1", port)
+
+        monkeypatch.setattr(osc_module.OscBridge, "start", refuse)
+
+    def test_build_runtime_raises_the_error_the_launcher_handles(self, monkeypatch):
         # server/web catches PortInUseError. The bridge raises its own
         # bridge-local ReceivePortInUseError, which nothing in server/web,
         # ui/src or src-tauri has ever referenced — so it escaped uncaught.
-        with _occupy_osc_receive_port() as port:
-            args = parse_args(["--receive-port", str(port), "--no-session-backup", "--port", "0"])
-            with pytest.raises(PortInUseError) as excinfo:
-                build_runtime(args)
+        port = 59999
+        self._refuse_receive_port(monkeypatch, port)
+        args = parse_args(["--receive-port", str(port), "--no-session-backup", "--port", "0"])
+
+        with pytest.raises(PortInUseError) as excinfo:
+            build_runtime(args)
+
         err = excinfo.value
         assert str(port) in f"{err} {err.guidance}"
 
-    @pytest.mark.skipif(
-        sys.platform != "darwin",
-        reason=(
-            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
-            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
-        ),
-    )
-    def test_main_exits_two_with_operator_guidance_instead_of_a_traceback(self):
-        with _occupy_osc_receive_port() as port:
-            stderr = io.StringIO()
-            with contextlib.redirect_stderr(stderr):
-                code = main(
-                    ["--receive-port", str(port), "--no-session-backup", "--port", "0"],
-                    run=lambda *a, **k: None,
-                )
+    def test_the_bridge_local_type_is_not_a_launcher_type(self):
+        """비공허성 — 번역이 없으면 무엇이 새는가.
+
+        두 타입이 상속으로 이어져 있으면 위 검사는 번역을 재지 않는다: 번역이
+        통째로 빠져도 ``pytest.raises(PortInUseError)`` 가 그대로 통과한다.
+        """
+        from server.bridge.osc import ReceivePortInUseError
+
+        assert not issubclass(ReceivePortInUseError, PortInUseError), (
+            "bridge-local 타입이 launcher 타입의 하위가 되면 위 검사가 공허해진다"
+        )
+
+    def test_main_exits_two_with_operator_guidance_instead_of_a_traceback(self, monkeypatch):
+        port = 59998
+        self._refuse_receive_port(monkeypatch, port)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            code = main(
+                ["--receive-port", str(port), "--no-session-backup", "--port", "0"],
+                run=lambda *a, **k: None,
+            )
+
         assert code == 2
         printed = stderr.getvalue()
         # Bilingual: the operator may be reading either half.
         assert "수신 포트" in printed or "receive port" in printed.lower(), printed
         assert str(port) in printed, printed
 
-    @pytest.mark.skipif(
-        sys.platform != "darwin",
-        reason=(
-            "UDP 이중 bind 충돌은 darwin 실측 동작이다 — 리눅스는 "
-            "SO_REUSEADDR 로 두 번째 bind 가 성공해 점유를 못 본다"
-        ),
-    )
-    def test_the_shell_is_told_the_cause_on_the_host_channel(self):
+    def test_the_shell_is_told_the_cause_on_the_host_channel(self, monkeypatch):
         # The other half of the seam: stderr reaches a terminal the packaged app
         # does not have. stdout is the shell's ONLY inbound channel, so without
         # this line the shell falls back to its hardcoded "runtime files are
         # missing" guess for what is really an occupied port.
         from server.web.host_channel import ERROR_PREFIX
 
-        with _occupy_osc_receive_port() as port:
-            stdout = io.StringIO()
-            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(io.StringIO()):
-                code = main(
-                    ["--receive-port", str(port), "--no-session-backup", "--port", "0"],
-                    run=lambda *a, **k: None,
-                )
+        port = 59997
+        self._refuse_receive_port(monkeypatch, port)
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(io.StringIO()):
+            code = main(
+                ["--receive-port", str(port), "--no-session-backup", "--port", "0"],
+                run=lambda *a, **k: None,
+            )
+
         assert code == 2
         printed = stdout.getvalue()
         assert ERROR_PREFIX in printed, printed
@@ -227,6 +257,27 @@ class TestReceivePortFailureReachesTheOperator:
         assert str(port) in reported, reported
         # One line, so the guidance cannot forge a second protocol line.
         assert printed.count(ERROR_PREFIX) == 1, printed
+
+    def test_a_bridge_that_starts_does_not_take_the_refusal_path(self, monkeypatch):
+        """날조 대조군 — 주입을 걷으면 거절 경로가 발화하면 안 된다.
+
+        이것이 없으면 위 검사들은 「주입이 실제로 결과를 가르는가」를 증명하지
+        못한다 — 거절이 주입과 무관하게 항상 일어나도 통과한다.
+        """
+        from server.web.host_channel import ERROR_PREFIX
+
+        with _occupy_osc_receive_port() as port:
+            pass  # released on exit — 이 번호는 이제 실제로 비어 있다
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = main(
+                ["--receive-port", str(port), "--no-session-backup", "--port", "0"],
+                run=lambda *a, **k: None,
+            )
+
+        assert code == 0, stderr.getvalue()
+        assert ERROR_PREFIX not in stdout.getvalue()
 
     def test_the_bilingual_guidance_is_what_str_of_the_error_shows(self):
         # The guidance was built but unreachable: __init__ handed super() a
