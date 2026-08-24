@@ -102,7 +102,7 @@
 - **요구와 설계 지시**: REQ-LXSEQ2-012에서 016까지 구현. `tools.py` 에 `import_lxseq_groups` 를 순수 추가하고(인자는 Kickoff 답 ②에 따라 확정), `SHEET_KIND_ACTIONS` 에 group 항목을 넣고, 래퍼 스키마의 passthrough 인자와 action enum 을 동조시킨다. `server/sheets/registry.py` 에 GROUP_ROW 를 추가한다 — 열 집합 술어(GroupNo, Name, Members, Purpose)와 툴 태그. `server/web/session.py` 에 행 계수기를 추가한다. preview 는 파싱, 매핑, 풀 읽기, 배치 산출까지 하고 쓰기 0이다. apply 는 같은 계획을 **그 호출에서 다시** 만든 뒤 배치를 순서대로 `create_arrangement_groups` 내부 ToolCall로 위임하고, 첫 배치가 실패하면 멈춘다. 미검증 고지는 하위 툴 반환값을 그대로 전달하며 002가 문장을 새로 짓지 않는다.
 - **baseline**: 착수 직전 전체 스위트 실측.
 - **뮤테이션**: ① 동반 4지점 중 하나를 빼면 t51의 함께 자라는 검사가 죽어야 한다(각 지점을 하나씩 뺀 4회). ② preview 에서 콘솔 쓰기가 한 번이라도 일어나면 AC-LXSEQ2-013이 죽어야 한다. ③ 첫 배치가 실패했는데 둘째 배치를 실행하면 AC-LXSEQ2-013이 죽어야 한다. ④ 미검증 고지 문면에서 unverified 목록을 비우면 AC-LXSEQ2-015가 죽어야 한다. ⑤ 산출물 어디든 「원리적 불가」 문자열을 넣으면 AC-LXSEQ2-015가 죽어야 한다. ⑥ PRESERVE 경로에 변경을 주입하면 acceptance.md D절의 PRESERVE 무변경 조건이 적발해야 한다.
-- **파일**: 수정 `server/orchestrator/tools.py`, `server/sheets/registry.py`, `server/web/session.py`, `server/tests/test_tools.py`(상수 1). 테스트 `server/tests/test_lxseq_group_tool.py`.
+- **파일**: 수정 `server/orchestrator/tools.py`, `server/sheets/registry.py`, `server/web/session.py`, `server/tests/test_tools.py`(상수 1). 테스트 `server/tests/test_lxseq_group_tool.py`. **그리고 툴 등재가 끌고 오는 저장소 전역 가드 2자리** — `server/orchestrator/runner.py` 의 `_TOOL_TASKS`(툴별 한국어 작업 이름; 빠지면 사용자 화면에 「도구 실행(tool_name)」이 샌다)와 `server/tests/test_songcue_bundle.py` 의 `_TOOLS_EXPECTED_HUNK_OLD_STARTS`(tools.py 헝크 트립와이어). **둘 다 tools.py 를 읽어서는 안 보이고 전량 스위트를 돌려야 드러난다.** 트립와이어의 진짜 불변식은 `_TOOLS_PROTECTED_OLD_RANGES` 침범 0이고 시작점 목록은 갱신 대상이지 결함이 아니다 — `git diff --unified=0 <BASE>..HEAD -- server/orchestrator/tools.py` 의 `@@ -start` 를 다시 뽑아 통째로 교체하고 침범 0을 함께 확인한다. 즉 M3 은 5파일이 아니라 **7파일**이다.
 - **AC**: AC-LXSEQ2-013, AC-LXSEQ2-014, AC-LXSEQ2-015.
 
 ### M4 — onPC 실기 확인 (cycle_type=none, 사용자 수행 라이브 세션 1회)
@@ -133,7 +133,12 @@
 6. **status 재명명 금지.** `create_arrangement_groups` 가 낸 status 문자열을 그대로 전달한다.
 7. **문면 금지어와 그 검사 범위.** 하향 이전 단정형 문면은 run 단계 산출물 — `server/lxseq/` 의 코드와 주석, 툴 설명문과 `guidance`, 페이로드 문자열 — 어디에도 넣지 않는다. grep 으로 기계 검사한다(AC-LXSEQ2-015). **검사 범위에서 SPEC 문서 넷은 제외한다** — 금지어를 정의하려면 인용해야 하므로 포함시키면 검사가 구조적으로 0을 못 낸다. 범위를 넓히고 싶어지면 그 순간 검사가 무의미해진다는 것을 먼저 떠올릴 것.
 8. **안 갈린 뮤테이션을 「통과」로 적지 않는다.** 뮤테이션을 심었는데 AC가 안 빨개지면 그것은 통과가 아니라 **판별력 없음**이다. 사유를 두 갈래로 갈라 적는다 — **교체 불가**(그 코드를 바꿀 방법이 없다)와 **교체는 되는데 관측 불가**(정상 경로에서 두 선택지의 행동이 같아 어느 AC도 차이를 못 본다). 뒤엣것이 훨씬 흔하다. 판별력 없는 자리는 「그 성질은 리뷰로만 보증됨」으로 등급을 낮춰 적고, 검사가 보증한 것처럼 두지 않는다. 근거: run 레인 실측 2026-08-24 — 15자리 중 14자리가 판정이 옳은데도 관측 불가로 안 갈렸다.
-9. **시간 추정 없음.** 우선순위와 순서만 적는다.
+9. **`tools.py` 를 건드렸으면 그 자리에서 두 검사를 돌린다.**
+
+       uv run pytest server/tests/test_runner_progress.py server/tests/test_songcue_bundle.py -q
+
+   툴 등재가 끌고 오는 저장소 전역 가드 둘은 `tools.py` 를 **읽어서는 안 보인다**. 그러나 「전량을 돌려야 안다」는 뜻이 아니다 — 검사 이름이 알려져 있으니 직접 부르면 2초다. 마일스톤 **끝**의 전량으로 발견하면 145초 왕복이 한 번 더 붙는다. 이 카드가 실제로 그렇게 태웠다(9.5b). 툴을 건드리는 마일스톤은 이 두 줄을 **작업 중간 검증**에 넣는다.
+10. **시간 추정 없음.** 우선순위와 순서만 적는다.
 
 ---
 

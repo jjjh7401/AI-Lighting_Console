@@ -498,11 +498,41 @@ plan-phase 는 배치를 「기본 12 먼저, 파생 6 나중」으로 적었다
 
 **②는 「교체 불가」다.** preview 경로는 실행 포트를 아예 들지 않는다 — 위임은 `action == "apply"` 뒤에만 있고 preview 는 그 전에 반환한다. 「발화한다」는 뮤테이션을 심을 자리가 없다. 이것은 「관측 불가」가 아니라 **구조적으로 그 상태가 될 수 없음**이고, 등급이 다르다.
 
+### 9.5b 🔴 전량이 빨간불이었다 — 그리고 그 함정을 예고한 메모리가 이미 있었다
+
+    2 failed, 10127 passed, 12 skipped
+
+    test_runner_progress.py::test_every_registered_tool_name_has_a_korean_task_name
+      assert ['import_lxseq_groups'] == []
+    test_songcue_bundle.py::test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state
+      헝크 시작점 튜플 불일치 — 내 삽입이 tools.py 줄번호를 밀었다
+
+**둘 다 「툴 등재의 나머지 2지점」이다.** 이 보드의 메모리 항목 `registering-a-tool-drags-two-repo-guards` 가 제목부터 그것을 말한다 — *"툴 등재는 SPEC 이 말하는 4지점 말고도 저장소 전역 가드 2자리가 반드시 따라온다"* 며 두 검사를 **이름까지** 적어 뒀다. 그리고 이렇게도 적는다 — *"SPEC/plan 의 파일 목록은 이 둘을 반복적으로 빠뜨린다(t9 M3 에서 실제로 빠져 있었다)"*.
+
+**내 plan.md M3 파일 목록에도 없었다. 예고된 함정을 예고된 그대로 밟았다.** 나는 그 항목을 안 읽고 M3 에 들어갔다.
+
+**고친 것 둘.**
+
+1. `server/orchestrator/runner.py` 의 `_TOOL_TASKS` 에 한국어 작업 이름 추가. 빠지면 사용자 화면에 「도구 실행(import_lxseq_groups)」이 샌다.
+2. `_TOOLS_EXPECTED_HUNK_OLD_STARTS` 갱신. **진짜 불변식은 시작점 목록이 아니라 `_TOOLS_PROTECTED_OLD_RANGES` 침범 0**이고, 시작점은 갱신 대상이지 결함이 아니다(메모리가 그 구분을 적어 뒀다). 절차대로 `git diff --unified=0 <BASE>..HEAD` 의 `@@ -start` 를 다시 뽑아 68개를 통째로 교체하고 **침범 0건**을 확인했다.
+
+**plan.md 의 M3 파일 목록을 5파일에서 7파일로 고쳤다** — 다음 사람이 같은 것을 밟지 않도록, 두 가드와 그 갱신 절차, 그리고 「tools.py 를 읽어서는 안 보이고 전량을 돌려야 드러난다」는 성질까지 적었다.
+
 ### 9.6 M3 GREEN
 
     server/tests/test_lxseq_group_tool.py      신규 16건
     LXSEQ-002 3종 + 시트 그물 + 툴 표          247 passed
     uv run ruff check server/                  All checks passed!
+
+**전량 (두 가드 수정 후, 단독 실행)**
+
+    uv run pytest -q                  10129 passed, 12 skipped, 144.10s
+    uv run pytest --collect-only -q   10141 tests collected
+    대조                              10129 + 12 = 10141   자리수까지 일치
+
+내역도 맞는다 — 직전 기준 10091 + 툴 검사 16 + 매퍼 등가성 34 = 10141. 신규 파일이 없는 트리는 이 총수를 못 낸다(t47 ⑤).
+
+**중간 검증을 앞당겼다.** 리드 지시로 `tools.py` 를 건드린 자리에서 두 가드를 직접 돌리는 규율을 plan.md D절 9 로 세웠다 — 그 두 검사는 **2초**다. 이 카드는 145초짜리 전량으로 발견해 왕복을 한 번 더 태웠고, 다음 사람은 그러지 않아도 된다.
 
 ### 9.7 M3 가 답하지 않는 것
 
