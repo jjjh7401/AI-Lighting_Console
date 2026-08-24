@@ -1192,12 +1192,65 @@ $ .venv/bin/python -m pytest server/tests --collect-only -q -p no:cacheprovider
 (`%CPU 0.0`, `TIME 0:02.53` 불변) 이 측정을 오염시키지 않는다. 죽이지 않고 남겼다 —
 t47 ⑤ 축의 살아 있는 표본이라 지우면 증거가 사라진다.
 
+### 17.7 푸시 · PR · CI
+
+브랜치를 푸시하고 **PR #122** 를 열었다.
+
+```
+$ git push -u origin WT-recv-migrate      → [new branch]
+$ gh pr create --base main ...            → .../pull/122
+$ gh pr checks 122
+test   pass   5m21s   .../actions/runs/32715319430/job/97395188590
+```
+
+**CI 가 실제로 무엇을 돌렸는가**(「pass」 한 줄로 세지 않는다 — 로그를 읽었다):
+
+```
+$ gh run view 32715319430 --log | grep -iE 'passed|skipped'
+test  Python tests  10013 passed, 22 skipped, 1 warning in 278.38s (0:04:38)
+test  UI tests      Test Files  21 passed (21)
+test  UI tests      Tests      500 passed (500)
+```
+
+🔴 **로컬과 숫자가 정확히 같지 않다 — 그대로 적는다.**
+
+| | passed | skipped | 합 |
+|---|---|---|---|
+| 로컬(t54 트리) | 10023 | 12 | **10035** |
+| CI | 10013 | 22 | **10035** |
+
+**합계는 자리 수까지 같고**(수집 총수 10035 와도 일치), **passed/skipped 배분만
+10개 어긋난다.** 즉 CI 에서 10개가 더 건너뛰어진다.
+
+저장소에 환경 조건부 `skipif` 가 실재한다(`test_web_launcher.py` 4 ·
+`test_web_serve.py` 3 · `test_deploy_cross_language_scan.py` 3 ·
+`test_deploy_runtime_data_path.py` 1 · `test_songcue_bundle.py` 1 — 조건은 POSIX
+`killpg` 유무, root 여부, `SRC_TAURI_DIR` 존재 등). 그러나 ⚠️ **그 10개가 정확히
+어느 것인지는 재지 않았다.** 그럴듯한 대응을 지어 붙이지 않는다 — 확인된 것은
+「합계 동일, 배분 10 차이, 환경 조건부 skip 이 존재함」 셋뿐이다.
+
+이 차이는 이 카드의 변경과 무관하다: 이 카드는 테스트를 추가·삭제하지 않았고
+(diff 형태 전수 66/66/11/0), 수집 총수가 양쪽 모두 10035 다.
+
+**CodeRabbit 절은 이 PR 에 N/A 다** — 미충족이 아니다:
+
+```
+$ gh api "repos/.../commits/<HEAD_SHA>/status" --jq '{state,count:(.statuses|length),contexts:[.statuses[].context]}'
+{"contexts":[],"count":0,"state":"pending"}
+```
+
+`statuses` 가 **0건**이다. t48 이 실측으로 고정한 그대로 — 이 저장소에는 legacy
+status 를 올리는 앱이 없다. `gh pr checks` 에도 CodeRabbit 행이 없다.
+**`statuses=0` 은 N/A 이지 미충족이 아니다.**
+
+⚠️ 그리고 **CI 초록도 푸시 성공과는 별개의 증거**다. pre-push 훅의 `ci-local`
+갈래는 여전히 `Makefile` 부재로 조용히 건너뛴다(**t55**) — 푸시가 통과시킨 것은
+아무것도 없다.
+
 ### 17.6 아직 안 한 것 (카드 종료 시점)
 
 - **sync**: 리뷰 렌즈 + PR. Class B 라 plan 은 건너뛰었지만 sync 는 건너뛰지 않는다.
   렌즈는 리드가 dispatch 로 지정한다.
-- **푸시 안 함**: 브랜치 `WT-recv-migrate` 는 미푸시이고 워크트리가 이 작업의
-  유일한 사본이다. 그리고 푸시 성공은 게이트 통과가 아니다 — pre-push 훅의
-  `ci-local` 갈래는 `Makefile` 부재로 조용히 건너뛴다(**t55**).
+- ~~푸시 안 함~~ → **해소**(§17.7). PR #122 open, CI 초록. 머지는 sync 뒤.
 - **분류 축 미해결**: 65자리는 오늘의 경로로 잴 수 없다(§5.4) → **t57**.
 - **`_fresh_cue_monitor` 회수 상한 부재**: 대가가 미측정이다(§13.5) → **t58**.
