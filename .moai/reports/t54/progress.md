@@ -507,3 +507,97 @@ C4·C5 는 한 가지를 덧붙일 만하다: 두 자리가 **바이트 동일**
 | **누계** | **21** | 전 자리 KILL 확인 | **1 / 21** 만 분류가 갈린다 |
 
 전수 67 → **46**. 대상 기준 66 → **45**.
+
+---
+
+## 12. 배치 t54-d — e2e 5곳 (두 헬퍼가 공존하는 첫 파일)
+
+리드 경고: 「d 부터가 진짜다 — `drain_until` 이 이미 쓰이는 파일이라 두 의미가
+한 파일에 공존한다. 전부 `recv_frame` 으로 끝나면 오히려 한 번 더 의심해 봐라.」
+
+### 12.1 대상표
+
+5곳 전부 같은 모양이다 — 접속 직후 **첫 프레임이 `status` 임을 단정**하는 자리.
+
+| # | 파일:행(이관 전) | 소속 테스트 | 판정 |
+|---|---|---|---|
+| D1 | `:196` | `test_lock_yields_proposal_cards_and_zero_wire_sends` | `recv_frame` |
+| D2 | `:215` | `test_panel_stop_is_also_demoted_to_a_proposal` | `recv_frame` |
+| D3 | `:281` | `test_a_tile_press_reaches_the_console_wire_after_approval` | `recv_frame` |
+| D4 | `:305` | `test_a_rejected_tile_press_reaches_nothing` | `recv_frame` |
+| D5 | `:324` | `test_an_unknown_tile_never_reaches_the_wire` | `recv_frame` |
+
+미판정: **0건**.
+
+### 12.2 「전부 recv_frame」을 의심한 결과 — 오히려 근거가 세졌다
+
+이 파일은 두 의미가 섞여 있는 게 맞다. 실측:
+
+```
+$ grep -c '_receive_until(' server/tests/test_web_e2e.py     → 21   (= drain_until)
+$ grep -c 'recv_frame(ws)'  server/tests/test_web_e2e.py     →  5
+$ grep -c 'websocket_connect' server/tests/test_web_e2e.py   → 11
+```
+
+11개의 접속 블록 중 **6개는 초기 status 를 아예 읽지 않고** 곧장
+`_receive_until(ws, "chat_response")` 등으로 넘어간다(예: `:100-102`, `:122-124`,
+`:149-151`, `:171-173`, `:181-183`). 즉 그 6개는 drain 이 초기 status 를 흡수한다.
+
+**원저자가 이미 두 의미를 갈라 놓았다는 뜻이다.** 그리고 내가 옮긴 5곳은 그중
+「첫 프레임이 status 임을 **명시적으로 단정**」하기로 선택한 자리들이다. 이 단정은
+「언젠가 status 가 온다」보다 엄격하고, 그 엄격함이 바로 `recv_frame` 이 맡는 의미다.
+
+따라서 「전부 `recv_frame`」은 판정을 안 한 결과가 아니라, **이 파일에서 직접 호출로
+남아 있던 자리가 마침 전부 그 계열이었기 때문**이다. drain 계열 21곳은 애초에
+직접 호출이 아니어서 이 카드의 대상이 아니었다.
+
+### 12.3 전수 대조
+
+```
+$ grep -rn '\.receive_json(' server/tests --include='*.py' | wc -l
+      41
+$ grep -rc '\.receive_json(' server/tests --include='*.py' | grep -v ':0$' | sort -t: -k2 -rn
+server/tests/test_web_cue_monitor.py:20
+server/tests/test_web_app.py:20
+server/tests/conftest.py:1
+```
+
+46 − 5 = 41. e2e 는 목록에서 사라졌다. 대상 잔여 **40곳 / 2파일**.
+
+### 12.4 검증
+
+```
+$ .venv/bin/ruff check server/tests
+All checks passed!
+$ .venv/bin/python -m pytest server/tests/test_web_e2e.py -q
+11 passed in 11.51s
+```
+
+이 파일은 실제 UDP 루프백 + 가짜 콘솔 서버를 띄우는 진짜 E2E 라 느리다(11.5s).
+
+### 12.5 뮤테이션 — §10 규칙
+
+**레버 A — 상한 0.0**: `D1..D5 전부 2/2 KILLED`. 경합 재확인이 필요한 자리 0건.
+
+**레버 B — 분류**(`_receive_until(ws, "status")` 로 교체): `D1..D5 전부 SURVIVED`.
+
+§5.4 표기 적용 — **「오늘의 경로로는 잴 수 없다 · `recv_frame` 이 더 엄격한 쪽 ·
+엄격함은 미관측」**.
+
+다만 이 파일에서는 그 「미관측」이 조금 다르게 읽힌다. 여기서는 **같은 파일 안에
+두 선택이 공존하고 그 차이가 의도적**이므로, 구별 불가는 「둘 중 아무거나 써도
+된다」가 아니라 「의도한 엄격함이 오늘 경로에서 발현되지 않는다」에 가깝다.
+t57(기대 밖 프레임 경로)이 열리면 이 5곳이 가장 먼저 갈릴 후보다.
+
+### 12.6 누적
+
+| 배치 | 자리 | 상한 레버 | 분류 레버 |
+|---|---|---|---|
+| 1 | 7 | 전 자리 KILL | 1 KILLED / 6 구별 불가 |
+| b | 8 | 전 자리 KILL (B3 11/12) | 0 / 8 구별 불가 |
+| c | 6 | 전 자리 KILL (C2·C6 각 11/12) | 0 / 6 구별 불가 |
+| d | 5 | 전 자리 KILL (재확인 불필요) | 0 / 5 구별 불가 |
+| **누계** | **26** | **전 자리 KILL 확인** | **1 / 26** |
+
+전수 67 → **41**. 대상 66 → **40**(cue_monitor 20 · app 20).
+남은 둘은 리드 분할대로 e/f·g/h 네 배치로 쪼갠다.
