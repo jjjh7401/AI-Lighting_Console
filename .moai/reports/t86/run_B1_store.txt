@@ -1,0 +1,217 @@
+........................................................................ [  0%]
+........................................................................ [  1%]
+........................................................................ [  2%]
+........................................................................ [  2%]
+........................................................................ [  3%]
+........................................................................ [  4%]
+........................................................................ [  4%]
+........................................................................ [  5%]
+........................................................................ [  6%]
+........................................................................ [  7%]
+........................................................................ [  7%]
+........................................................................ [  8%]
+........................................................................ [  9%]
+........................................................................ [  9%]
+........................................................................ [ 10%]
+........................................................................ [ 11%]
+........................................................................ [ 12%]
+........................................................................ [ 12%]
+........................................................................ [ 13%]
+........................................................................ [ 14%]
+........................................................................ [ 14%]
+........................................................................ [ 15%]
+........................................................................ [ 16%]
+........................................................................ [ 16%]
+........................................................................ [ 17%]
+........................................................................ [ 18%]
+........................................................................ [ 19%]
+........................................................................ [ 19%]
+........................................................................ [ 20%]
+........................................................................ [ 21%]
+........................................................................ [ 21%]
+........................................................................ [ 22%]
+......sss............................................................... [ 23%]
+.............................ss......................................... [ 24%]
+.............................F.......................................... [ 24%]
+...............F........................................................ [ 25%]
+..................FFF................................................... [ 26%]
+........................................................................ [ 26%]
+.......ss............................................................... [ 27%]
+........................................................................ [ 28%]
+........................................................................ [ 28%]
+........................................................................ [ 29%]
+................F........F.............................................. [ 30%]
+........................................................................ [ 31%]
+........................................................................ [ 31%]
+........................................................................ [ 32%]
+........................................................................ [ 33%]
+........................................................................ [ 33%]
+........................................................................ [ 34%]
+........................................................................ [ 35%]
+...........................................................ss........... [ 36%]
+........................................................................ [ 36%]
+........................................................................ [ 37%]
+..........................................FFFFF.......F................. [ 38%]
+........................................................................ [ 38%]
+........................................................................ [ 39%]
+........................................................................ [ 40%]
+........................................................................ [ 41%]
+........................................................................ [ 41%]
+........................................................................ [ 42%]
+........................................................................ [ 43%]
+........................................................................ [ 43%]
+........................................................................ [ 44%]
+......................................F..F..FF.......................... [ 45%]
+........................................................................ [ 45%]
+........................................................................ [ 46%]
+........................................................................ [ 47%]
+........................................................................ [ 48%]
+........................................................................ [ 48%]
+........................................................................ [ 49%]
+........................................................................ [ 50%]
+........................................................................ [ 50%]
+........................................................................ [ 51%]
+........................................................................ [ 52%]
+........................................................................ [ 53%]
+........................................................................ [ 53%]
+........................................................................ [ 54%]
+........................................................................ [ 55%]
+........................................................................ [ 55%]
+........................................................................ [ 56%]
+........................................................................ [ 57%]
+........................................................................ [ 57%]
+..............................................F.................F.F..... [ 58%]
+.................F............FF...F.................................... [ 59%]
+........................................................................ [ 60%]
+........................................................................ [ 60%]
+..................................................................F..... [ 61%]
+..F.F....F.............FF..F..................F.F..F..FFF..F.FF...FF.... [ 62%]
+....................................F................................... [ 62%]
+...F.................................................................... [ 63%]
+........................................................................ [ 64%]
+........................................................................ [ 65%]
+........................................................................ [ 65%]
+........................................................................ [ 66%]
+........................................................................ [ 67%]
+........................................................................ [ 67%]
+........................................................................ [ 68%]
+...................................................................FF... [ 69%]
+F....................................................................... [ 69%]
+ss...................................................................... [ 70%]
+........................................................................ [ 71%]
+........................................................................ [ 72%]
+........................................................................ [ 72%]
+........................................................................ [ 73%]
+........................................................................ [ 74%]
+........................................................................ [ 74%]
+........................................................................ [ 75%]
+........................................................................ [ 76%]
+........................................................................ [ 77%]
+........................................................................ [ 77%]
+........................................................................ [ 78%]
+........................................................................ [ 79%]
+........................................................................ [ 79%]
+........................................................................ [ 80%]
+........................................................................ [ 81%]
+........................................................................ [ 82%]
+........................................................................ [ 82%]
+........................................................................ [ 83%]
+........................................................................ [ 84%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 86%]
+.....................s.........F........................................ [ 86%]
+........................................................................ [ 87%]
+.......................................................F..F............. [ 88%]
+........................................................................ [ 89%]
+........................................................................ [ 89%]
+........................................................................ [ 90%]
+........................................................................ [ 91%]
+........................................................................ [ 91%]
+........................................................................ [ 92%]
+........................................................................ [ 93%]
+........................................................................ [ 94%]
+........................................................................ [ 94%]
+.........................................................FF.......F..... [ 95%]
+.....FFFF............................................................... [ 96%]
+........................................................................ [ 96%]
+........................................................................ [ 97%]
+........................................................................ [ 98%]
+........................................................................ [ 98%]
+......................................F.F............................... [ 99%]
+....FFFFF........FF...F........                                          [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t86/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED server/tests/test_deploy_gate_e2e.py::TestSafeDeployThenInvoke::test_registered_non_destructive_plugin_passes_audited
+FAILED server/tests/test_deploy_pipeline.py::TestApprovedDeploy::test_non_destructive_plugin_registers_unflagged
+FAILED server/tests/test_deploy_scan.py::TestBlacklistedFindings::test_multiple_findings_report_each_line
+FAILED server/tests/test_deploy_scan.py::TestSafeAndNonDestructive::test_safe_commands_yield_no_findings
+FAILED server/tests/test_deploy_scan.py::TestSafeAndNonDestructive::test_quoted_object_name_never_matches
+FAILED server/tests/test_fx_boundary.py::TestFxInstantiationUnderLiveLock::test_the_unlocked_control_actually_sends
+FAILED server/tests/test_fx_boundary.py::TestSafetyInvariantsAreInherited::test_a_real_fx_bundle_clears_the_real_gate_with_no_hold
+FAILED server/tests/test_looks_instantiate.py::TestSessionWiring::test_a_look_bundle_flows_through_the_gate_and_reaches_the_console
+FAILED server/tests/test_looks_instantiate.py::TestSessionWiring::test_the_trailing_clearall_reaches_the_console
+FAILED server/tests/test_looks_instantiate.py::TestSessionWiring::test_the_next_bundle_still_starts_clean
+FAILED server/tests/test_looks_instantiate.py::TestSessionWiring::test_the_per_family_shape_runs_with_its_cycles_intact
+FAILED server/tests/test_looks_instantiate.py::TestSessionWiring::test_every_per_family_store_keeps_its_own_capture_cycle
+FAILED server/tests/test_looks_instantiate.py::TestLookBundleUnderLiveLock::test_unlocking_restores_the_console_path_for_the_same_bundle
+FAILED server/tests/test_measurement_runner.py::TestHappyPathCounting::test_happy_path_produces_no_gate_anomalies
+FAILED server/tests/test_measurement_runner.py::TestFirstGenerationErrorAccounting::test_retry_turn_is_segregated_from_the_judged_corpus
+FAILED server/tests/test_measurement_runner.py::TestRoundTripStats::test_judged_median_p95_and_warm_cache_exclusion
+FAILED server/tests/test_measurement_runner.py::TestRoundTripStats::test_query_turns_are_unjudged_but_plugin_turns_are_judged
+FAILED server/tests/test_safety_bootstrap.py::TestConsoleStack::test_gate_round_trip_over_udp_loopback
+FAILED server/tests/test_safety_classify.py::TestBlacklistMatching::test_plain_store_is_safe
+FAILED server/tests/test_safety_classify.py::TestBlacklistMatching::test_store_with_quoted_overwrite_text_is_safe
+FAILED server/tests/test_safety_classify.py::TestInvokingDetection::test_plain_commands_are_not_invoking
+FAILED server/tests/test_safety_classify.py::TestExecutorRenameInvariance::test_screening_result_is_identical_across_rename[before-rename]
+FAILED server/tests/test_safety_classify.py::TestExecutorRenameInvariance::test_screening_result_is_identical_across_rename[after-rename]
+FAILED server/tests/test_safety_classify.py::TestExecutorSinglePressClearance::test_benign_executor_body_clears_with_no_approval_and_no_saveshow
+FAILED server/tests/test_safety_corpus.py::TestInvokingVerbFnCorpus::test_clean_expandable_body_is_not_held
+FAILED server/tests/test_safety_e2e_audit.py::TestAuditCompletenessE2E::test_every_send_reconciles_with_a_gate_passage_record
+FAILED server/tests/test_safety_expand.py::TestExpansion::test_clean_body_passes
+FAILED server/tests/test_safety_expand.py::TestExpansion::test_nested_clean_chain_within_depth_limit_passes
+FAILED server/tests/test_safety_gate.py::TestSafePath::test_safe_bundle_clears_and_executes
+FAILED server/tests/test_safety_gate.py::TestSafePath::test_safe_bundle_needs_no_approval_and_no_backup
+FAILED server/tests/test_safety_gate.py::TestPipelineOrder::test_safe_bundle_stops_after_classification
+FAILED server/tests/test_safety_gate.py::TestLiveLock::test_unlock_restores_the_normal_path
+FAILED server/tests/test_safety_gate.py::TestLiveLock::test_executor_rechecks_the_lock_before_every_send
+FAILED server/tests/test_safety_gate.py::TestHealthBlocking::test_executor_rechecks_health_before_every_send
+FAILED server/tests/test_safety_gate.py::TestUnconfirmedExecution::test_unconfirmed_result_is_reported_and_never_auto_resent
+FAILED server/tests/test_safety_gate.py::TestUnconfirmedBoundedGrowth::test_unconfirmed_set_never_exceeds_the_cap
+FAILED server/tests/test_safety_gate.py::TestUnconfirmedBoundedGrowth::test_oldest_entry_is_evicted_newest_still_forces_a_hold
+FAILED server/tests/test_safety_gate.py::TestClearanceEnforcement::test_a_clearance_is_consumed_by_execution
+FAILED server/tests/test_safety_gate.py::TestConcurrentSessionClearanceIsolation::test_a_sessions_screen_does_not_invalidate_anothers_clearance
+FAILED server/tests/test_safety_gate.py::TestConcurrentSessionClearanceIsolation::test_concurrent_sessions_both_execute_their_own_cleared_bundle
+FAILED server/tests/test_safety_gate.py::TestOrchestratorWiring::test_grammar_block_reason_feeds_the_self_correction_loop
+FAILED server/tests/test_safety_gate.py::TestOrchestratorWiring::test_bundle_partial_failure_atomicity
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_blacklist_is_exactly_the_shipped_closed_set
+FAILED server/tests/test_scene_boundary.py::TestSceneCompilationUnderLiveLock::test_the_unlocked_control_actually_sends
+FAILED server/tests/test_showfile_replacement_gate.py::TestNoCollateralWidening::test_classification_did_not_move[Store Group 3]
+FAILED server/tests/test_showfile_replacement_gate.py::TestNoCollateralWidening::test_classification_did_not_move[Store Cue 12]
+FAILED server/tests/test_showfile_replacement_gate.py::TestNonVacuity::test_the_probe_can_report_safe
+FAILED server/tests/test_web_app.py::TestWebSocketBasics::test_chat_round_trip
+FAILED server/tests/test_web_e2e.py::TestScenario1KoreanRoundTrip::test_korean_instruction_round_trip
+FAILED server/tests/test_web_e2e.py::TestScenario3KoreanReporting::test_completion_report_is_korean
+FAILED server/tests/test_web_session.py::TestHappyPath::test_korean_instruction_executes_and_reports_in_korean
+FAILED server/tests/test_web_session.py::TestHappyPath::test_failure_is_reported_in_korean_after_retries_exhausted
+FAILED server/tests/test_web_session.py::TestFailureModeSurfaces::test_unconfirmed_execution_reports_and_never_claims_success
+FAILED server/tests/test_web_session.py::TestLastCreatedSessionTracking::test_creating_a_look_captures_last_created_state
+FAILED server/tests/test_web_session.py::TestLastCreatedSessionTracking::test_followup_turn_injects_the_last_created_target_and_regeneration_steer
+FAILED server/tests/test_web_session.py::TestLastCreatedSessionTracking::test_last_created_snapshot_is_not_an_accumulating_history
+FAILED server/tests/test_web_session.py::TestLastCreatedSessionTracking::test_non_creating_turn_preserves_the_prior_snapshot
+FAILED server/tests/test_web_session_progress.py::TestTheTurnStreamsBeforeItEnds::test_progress_adds_no_console_round_trip
+FAILED server/tests/test_web_session_progress.py::TestTheFramesReachTheWire::test_a_chat_turn_streams_progress_frames_then_the_response
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_form_stays_non_risky[Store Group 3-descoped: DEPLOY's canonical SAFE_SOURCE literal]
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_form_stays_non_risky[Store Preset 4.1-descoped: measurement corpus representative]
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_form_stays_non_risky[Store Cue 12-descoped: measurement corpus representative]
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_form_stays_non_risky[Store Page 3-descoped: measurement corpus representative]
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_form_stays_non_risky[Store Macro 21-descoped: measurement corpus representative]
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_measurement_corpus_cannot_collide_with_this_entry
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_corpus_collision_check_can_actually_fail
+FAILED server/tests/test_writegate.py::TestIndirectRoutes::test_the_deploy_scan_still_passes_a_genuinely_safe_source
+67 failed, 10104 passed, 12 skipped, 1 warning in 203.43s (0:03:23)

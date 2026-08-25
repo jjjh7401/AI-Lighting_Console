@@ -222,3 +222,137 @@ PRESETGUARD 가 이미 그 층에 있으므로, 확장 지점은 게이트가 �
 같은 경로에 대해 **Bash 의 쓰기는 통과했다.** 이 문서와 프로브 스크립트도 전부 Bash 로 썼다.
 도구 층 가드와 Bash 사이의 이 비대칭은 t86 과 무관하지만, 가드를 신뢰하는 다른 카드에는
 영향이 있다.
+
+---
+
+# 2차 측정 (리드 지시 — 방향 결정 전에 어느 갈래에서도 안 버려지는 값 3건)
+
+기준 커밋·트리 동일. 콘솔 발사 여전히 0.
+
+## 7. B 의 테스트 파괴 수 — A 와 같은 단위로
+
+A 는 두 항목(`Store Preset` + `Label Preset`)의 쌍으로 쟀으므로, B 도 대응하는 쌍
+(`Store` + `Label`)까지 재고 각 항목을 단독으로도 격리했다.
+
+| 형태 | 넣은 항목 | 코퍼스 | 전량 스위트 | 소요 |
+|---|---|---|---|---|
+| 기준선 | — | 0/21 | **0 실패** (10167 통과) | 162.66s |
+| A | `Store Preset`, `Label Preset` | 2/21 | **13 실패** (10162 통과) | 145.96s |
+| B1 | `Store` | 10/21 | **67 실패** (10104 통과) | 203.43s |
+| B2 | `Label` | 9/21 | **17 실패** (10154 통과) | 145.74s |
+| B3 | `Store` + `Label` | 10/21 | **70 실패** (10105 통과) | 208.71s |
+
+원문 출력은 `run_B1_store.txt` · `run_B2_label.txt` · `run_B3_store_label.txt` 로 남겼다.
+B1 은 두 번 돌려 67 을 재현했다(첫 실행에서 내가 `tail` 로 이름을 잘라 먹어 다시 잡았다).
+
+### 갈래별 분해
+
+**B1 (`Store`) 67건** — safety_gate 14 · writegate 8 · web_session 7 · safety_classify 6 ·
+looks_instantiate 6 · measurement_runner 4 · showfile_replacement_gate 3 · deploy_scan 3 ·
+web_session_progress 2 · web_e2e 2 · safety_expand 2 · fx_boundary 2 · 나머지 8파일 각 1
+
+**B2 (`Label`) 17건** — looks_instantiate 6 · measurement_runner 4 · writegate 2 ·
+fx_boundary 2 · showfile_replacement_gate 1 · safety_ruleset 1 · safety_classify 1
+
+**B3 (`Store`+`Label`) 70건** — B1 의 분포에 writegate +1, safety_classify +1,
+showfile_replacement_gate +1
+
+### 이 표에서 읽히는 것 — 코퍼스 지표가 비용을 못 잰다
+
+`blacklist.yaml` 헤더의 descope 판단은 **코퍼스 충돌 시나리오 수**를 비용 척도로 쓴다.
+그런데 `Store` 10/21 과 `Label` 9/21 은 거의 같은 값인데 테스트 파괴는 **67 대 17**,
+약 4배 차이다. 코퍼스 21 시나리오는 이 앱의 쓰기 어휘를 대표하지 못하며,
+`Store` 가 `test_safety_gate`(14) · `test_web_session`(7) 같은 **핵심 경로 테스트**를
+무너뜨린다는 사실은 코퍼스 숫자에 전혀 나타나지 않는다.
+
+즉 헤더가 2026-08-05 에 「10/21 이라 비싸다」고 판단한 것은 방향은 맞았으나
+**비용을 오히려 과소평가한 값으로 판단했다.** 실제 비용은 그보다 크다.
+이것은 descope 결정을 **강화**하는 방향의 발견이다.
+
+`test_web_session::TestHappyPath::test_korean_instruction_executes_and_reports_in_korean`
+이 B1 에서 깨진다는 것은, 이 앱의 **정상 대화 한 턴**이 승인 카드를 타게 된다는 뜻이다.
+테스트를 고쳐서 넘길 문제가 아니라 제품 동작이 바뀐다는 신호다.
+
+## 8. Assign · Copy 비용 (코퍼스만, 전량 스위트 미실행)
+
+| 후보 | 걸리는 줄 | 시나리오 | 새로 걸리는 시나리오 |
+|---|---|---|---|
+| `Assign` | 2 | 2/21 | sequence-assign-1/2 |
+| `Assign Sequence` | 2 | 2/21 | sequence-assign-1/2 |
+| `Copy` | 1 | 1/21 | page-setup-2 |
+| `Copy Page` | 1 | 1/21 | page-setup-2 |
+| `Store`+`Label`+`Assign`+`Copy` | 22 | 13/21 | 위 전부 + B 의 10 |
+
+`Assign` 은 동사 전체와 `Assign Sequence` 의 비용이 **같다** — 코퍼스에 `Assign` 이
+`Sequence` 대상으로만 나온다. `Copy` 도 마찬가지(`Copy Page` 뿐). 즉 이 둘은
+좁히기와 넓히기의 비용 차이가 코퍼스상 0 이다. 단 §7 이 보여주듯 코퍼스가 0 차이라고
+테스트 파괴가 0 차이라는 뜻은 아니다 — 전량 스위트는 안 돌렸다.
+
+## 9. 동사 축약 — 그리고 현재 게이트에서 발견된 후보 구멍
+
+`/o` 가 `/overwrite` 에 닿으니 `Sto` 가 `Store` 에 닿는지도 물어야 공평하다는 지시.
+`probe_abbrev.py` 로 각 문형을 **출하 룰셋**과 **가상 룰셋(+Store,+Label)** 양쪽에 돌렸다.
+
+| 문형 | 출하 룰셋 (v3) | 가상 +Store,+Label |
+|---|---|---|
+| `Store Preset 1.1` | safe | blacklisted `<Store>` |
+| `Stor Preset 1.1` | safe | blacklisted `<Store>` |
+| `Sto Preset 1.1` | safe | blacklisted `<Store>` |
+| `St Preset 1.1` | safe | **safe** |
+| `S Preset 1.1` | safe | **safe** |
+| `STORE Preset 1.1` | safe | blacklisted `<Store>` |
+| `sto preset 1.1` | safe | blacklisted `<Store>` |
+| `Store Preset 1.1 /o` | blacklisted `<Store /overwrite>` | blacklisted |
+| `Sto Preset 1.1 /o` | blacklisted `<Store /overwrite>` | blacklisted |
+| **`St Preset 1.1 /o`** | **safe** | **safe** |
+| `Label Preset 4.7 "x"` | safe | blacklisted `<Label>` |
+| `Lab Preset 4.7 "x"` | safe | blacklisted `<Label>` |
+| `La Preset 4.7 "x"` | safe | **safe** |
+
+세 가지가 나온다.
+
+**① 동사도 축약된다 — 3자까지.** `Sto`/`Stor` 는 `Store` 에 닿고 대소문자도 무관하다.
+따라서 갈래 B 를 택하면 축약형도 함께 잡힌다. 이 축에서 B 는 완전하다.
+
+**② 2자 이하는 바닥을 못 넘는다.** `_keyword_match` 가 3자 미만을 거부하므로
+`St`·`S`·`La` 는 어떤 항목을 넣어도 안 걸린다. 이건 설계된 바닥이고
+`test_writegate.py` 가 `Set` 에 대해 이미 같은 말을 적어 뒀다
+(「measured: `Se Fixture 11 Posx '1.0'` -> safe」).
+
+**③ 그런데 그 바닥이 지금 게이트에 후보 구멍을 낸다.**
+`St Preset 1.1 /o` 가 **출하 룰셋에서 safe** 다. `Store /overwrite` 는 지금 존재하는
+유일한 덮어쓰기 방어인데, 2자 축약이 그것을 지나간다. 이 문형이 위험한 이유는
+`/o` 가 붙어 있다는 것 — 즉 **덮어쓰기 의도가 명시된 명령**이 승인 없이 통과한다.
+
+**다만 도달 가능한지는 미확인이다.** MA3 가 `St` 를 `Store` 로 받아들이는지 이 트리에서
+확인할 방법이 없고, 확인하려면 콘솔에 쏴야 하는데 이 카드에서는 금지다.
+MA3 가 3자 이상을 요구한다면 이 구멍은 도달 불가이고, 2자를 받는다면 실재하는
+위양성이다. **분류 결과는 실측, 도달 가능성은 미측정** — 이 둘을 섞어 읽지 말 것.
+
+`Set` 에 대해서는 이 바닥이 문서화돼 있으나 `Store /overwrite` 에 대해서는 어디에도
+적혀 있지 않다. 최소한 주석은 필요하다.
+
+## 10. 2차 측정 후 갱신된 처방
+
+§4 의 권고(**C 우선 + 게이트는 A 로 최소화**)는 **바뀌지 않고 오히려 강해졌다.**
+
+- B 의 실제 비용이 코퍼스 지표가 시사한 것보다 크다(67~70건, 핵심 경로 포함).
+- B 를 택하면 정상 대화 한 턴이 승인 카드를 탄다 — 승인 피로 논거가 추측이 아니라
+  깨진 테스트 이름으로 확인됐다.
+- `Label` 단독은 17건으로 `Store` 보다 훨씬 싸다. `Label` 을 별건으로 다루자는 §4 의
+  제안은 비용 면에서도 분리 가능하다.
+- 축약 축에서 B 는 완전하고 A 도 완전하다(둘 다 3자 바닥까지). 이 축은 갈래 선택의
+  근거가 되지 않는다.
+- 다만 §9 ③ 은 **갈래와 무관하게** 별도 처리가 필요하다. A 를 택하든 B 를 택하든
+  `St ... /o` 는 그대로 남는다.
+
+## 11. 2차 측정의 미검증 (Gaps)
+
+- `Assign`·`Copy` 의 전량 스위트 미실행. 코퍼스 값만 있다 — §7 이 그 지표의 한계를
+  보여줬으므로 이 둘의 실제 비용도 코퍼스 값보다 클 수 있다.
+- `St Preset 1.1 /o` 의 **MA3 도달 가능성 미확인**. 콘솔 발사가 필요하고 이 카드에서는
+  금지다. 별도 카드 + 감독 승인 사안.
+- 축약 프로브는 `Store`/`Label` 두 동사만 봤다. `Delete`(`Del` 은 3자) 등 기존 항목의
+  축약 경계는 안 쟀다.
+- 세 번의 전량 실행 모두 같은 기계·같은 부하 조건이 아니다(145~209s 편차). 실패 **개수**는
+  결정적이지만 소요 시간은 비교 대상이 아니다.

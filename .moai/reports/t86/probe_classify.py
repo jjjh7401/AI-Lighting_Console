@@ -38,8 +38,8 @@ ROW = "%-16s %-32s %-14s %-6s %s"
 
 def main():
     ruleset = load_ruleset()
-    print("ruleset version = %s" % ruleset.version)
-    print("blacklist       = %s" % list(ruleset.blacklist))
+    print(f"ruleset version = {ruleset.version}")
+    print(f"blacklist       = {list(ruleset.blacklist)}")
     print("")
     print(ROW % ("group", "command", "category", "risky", "matched_entry"))
     print("-" * 92)

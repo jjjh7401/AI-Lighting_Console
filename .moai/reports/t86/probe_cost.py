@@ -2,7 +2,7 @@
 
 Re-runs the `_would_be_held` over `load_corpus()` procedure that
 blacklist.yaml's header establishes, in THIS tree at THIS head.
-No console send. Round 2 adds Assign/Copy and the combined B shape.
+No console send. Round 2 adds Assign/Copy and the combined B shapes.
 """
 
 import dataclasses
@@ -37,7 +37,7 @@ CANDIDATES = [
 
 class NoBody:
     def fetch_body(self, reference):
-        raise Exception("no body fetcher configured")
+        raise RuntimeError("no body fetcher configured")
 
 
 def would_be_held(command, ruleset):
@@ -68,22 +68,20 @@ def offenders(ruleset):
 
 total_scenarios = len(SCENARIOS)
 total_lines = sum(len(s.mock.commands) for s in SCENARIOS)
-print("corpus: %d scenarios, %d command lines" % (total_scenarios, total_lines))
+print("corpus: " + str(total_scenarios) + " scenarios, " + str(total_lines) + " command lines")
 print("")
-print("%-30s %-8s %-12s %s" % ("candidate", "lines", "scenarios", "newly-held scenario ids"))
+print("candidate".ljust(30) + "lines".ljust(8) + "scenarios".ljust(12) + "newly-held scenario ids")
 print("-" * 110)
 
 baseline = set()
 for label, entries in CANDIDATES:
     ruleset = dataclasses.replace(BASE, blacklist=BASE.blacklist + tuple(entries))
     found = offenders(ruleset)
-    ids = sorted(set(i for i, _ in found))
+    ids = sorted({i for i, _ in found})
     if not entries:
         baseline = set(found)
         new_ids = []
     else:
-        new_ids = sorted(set(i for i, c in found if (i, c) not in baseline))
-    print(
-        "%-30s %-8s %-12s %s"
-        % (label, len(found), "%d/%d" % (len(ids), total_scenarios), ",".join(new_ids) or "-")
-    )
+        new_ids = sorted({i for i, c in found if (i, c) not in baseline})
+    scope = str(len(ids)) + "/" + str(total_scenarios)
+    print(label.ljust(30) + str(len(found)).ljust(8) + scope.ljust(12) + (",".join(new_ids) or "-"))

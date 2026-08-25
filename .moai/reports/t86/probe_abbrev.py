@@ -2,8 +2,8 @@
 
 `/o` reaches `/overwrite`, so the fair question is whether `Sto` reaches
 `Store`. Runs each form twice: against the shipped ruleset, and against a
-hypothetical ruleset carrying entry "Store" (branch B), because B's
-completeness depends on whether abbreviated verbs are caught too.
+hypothetical ruleset carrying entries "Store"/"Label" (branch B), because
+B's completeness depends on whether abbreviated verbs are caught too.
 No console send.
 """
 
@@ -36,16 +36,14 @@ FORMS = [
 def verdict_of(command, ruleset):
     grammar = validate(command)
     if not grammar.ok:
-        return "GRAMMAR-REJECT", None
+        return "GRAMMAR-REJECT"
     finding = classify_command(grammar.parsed, ruleset)
-    return finding.category, finding.matched_entry
+    if finding.matched_entry is None:
+        return finding.category
+    return finding.category + " <" + finding.matched_entry + ">"
 
 
-print("%-26s %-24s %s" % ("form", "shipped ruleset (v3)", "hypothetical +Store,+Label"))
+print("form".ljust(24) + "shipped ruleset (v3)".ljust(34) + "hypothetical +Store,+Label")
 print("-" * 92)
 for form in FORMS:
-    a_cat, a_entry = verdict_of(form, BASE)
-    b_cat, b_entry = verdict_of(form, WITH_STORE)
-    a = a_cat if a_entry is None else "%s <%s>" % (a_cat, a_entry)
-    b = b_cat if b_entry is None else "%s <%s>" % (b_cat, b_entry)
-    print("%-26s %-24s %s" % (form, a, b))
+    print(form.ljust(24) + verdict_of(form, BASE).ljust(34) + verdict_of(form, WITH_STORE))
