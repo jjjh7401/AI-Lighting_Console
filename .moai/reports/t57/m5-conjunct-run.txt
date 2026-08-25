@@ -1,0 +1,19 @@
+CASE 607-cue_monitor
+  line 607 reads: '        event = recv_frame(ws)'
+  baseline: 51 passed, 1 warning in 0.54s
+  applied=True  now reads: '        event = drain_until(ws, "cue_monitor")'
+  -> KILLED  |  5 failed, 46 passed, 1 warning in 0.54s
+     FAILED server/tests/test_web_cue_monitor.py::TestTheFreshFrameLoopIsCapped::test_endless_unwanted_frames_are_cut_not_followed
+     FAILED server/tests/test_web_cue_monitor.py::TestTheFreshFrameLoopIsCapped::test_the_wanted_frame_still_returns_before_the_cap
+     FAILED server/tests/test_web_cue_monitor.py::TestCueMonitorPollCost::test_a_second_tick_inside_the_ttl_re_resolves_nothing
+     FAILED server/tests/test_web_cue_monitor.py::TestCueMonitorPollCost::test_an_expired_ttl_re_reads_the_executor_section
+     FAILED server/tests/test_web_cue_monitor.py::TestCueMonitorTickCoalesce::test_the_guard_is_not_a_latch_and_releases_on_completion
+  restored sha256 match = True
+CASE 255-chat_response
+  line 255 reads: '    return recv_frame(ws, timeout)'
+  baseline: 76 passed, 1 warning in 0.93s
+  applied=True  now reads: '    return drain_until(ws, "chat_response")'
+  -> KILLED  |  2 failed, 74 passed, 1 warning in 21.08s
+     FAILED server/tests/test_web_panel_execute.py::TestSerialization::test_the_chat_turn_lock_is_not_shared_with_the_panel
+     FAILED server/tests/test_web_panel_execute.py::TestCatalogAndPinRouting::test_panel_messages_no_longer_fall_through_to_the_status_snapshot
+  restored sha256 match = True

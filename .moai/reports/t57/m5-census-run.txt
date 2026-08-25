@@ -1,0 +1,11 @@
+COLLECTING (직접 반복문 안) = 6
+    test_web_cue_monitor.py:607
+    test_web_session_progress.py:129
+    test_ws_wait_guard.py:229
+    test_ws_wait_guard.py:265
+    test_ws_wait_guard.py:266
+    test_ws_wait_guard.py:248
+COLLECTING (래퍼 경유) = 1
+    test_web_panel_execute.py:255  (via _recv @ test_web_panel_execute.py:1012)
+SINGLE = 70
+TOTAL = 77
