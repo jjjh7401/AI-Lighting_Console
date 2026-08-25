@@ -133,7 +133,9 @@ run 단계 진입 전에 적어 둔 「다섯 번째가 있을 수 있다」는 
 - **Claim**: 트리거가 출하 형태에서 결정적으로 동작한다.
 - **Evidence**: `.venv/bin/python -m pytest server/tests/test_ws_wait_guard.py -q` → `9 passed`,
   3회 반복 동일(`.moai/reports/t57/m1-gate-run.txt`). 몽키패치 0 · 초과를 삼키는 감싸개 0.
-- **Baseline-attribution**: 이 트리, 이번 실행, HEAD 는 `4e1d816` 시점.
+- **Baseline-attribution**: 이 트리, 이번 실행, HEAD `4e1d816` 시점에 잰 값이다.
+  이후 커밋들은 가드 파일을 안 건드렸고(sha256 `fa505d60…` 불변), sync 감사가
+  `e758fc1` 에서 독립 재실행해 같은 값을 얻었다 — 커밋은 다르되 대상은 등가다.
 - **Gaps**: 이 초록만으로는 검사가 **죽을 수 있는지**를 모른다 — M4 가 잰다.
 
 ### M4 — 뮤테이션 증거 🟢

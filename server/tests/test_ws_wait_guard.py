@@ -213,8 +213,12 @@ class TestTheStrictnessIsObservable:
             _provoke_error(ws)
             frame = recv_frame(ws)
         # drain_until(ws, "error") 로 바꾸면 이 status 가 조용히 버려지고 단정이 깨진다.
+        # 진단을 단정하지 않는다 — 이 단정은 세 원인으로 깨질 수 있다(실측):
+        # 레버 치환(drain_until 이 버림) · 트리거 미발사 · 트리거 헬퍼 무동작.
+        # 하나로 못 박으면 빨간불을 만난 사람이 엉뚱한 곳을 먼저 판다.
         assert frame["type"] == "status", (
-            "기대 밖 프레임이 버려졌다 — drain_until 의 행동이다: " + frame["type"]
+            "첫 프레임이 status 가 아니다(받은 것: " + frame["type"] + "). "
+            "후보: 레버 치환 / 트리거 미발사 / 트리거 헬퍼 무동작"
         )
 
     def test_the_pushed_frame_appears_in_the_collected_sequence(self, tmp_path):
