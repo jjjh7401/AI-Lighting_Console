@@ -218,7 +218,7 @@ probe-inject 네 칸 표 그대로. **고친 스크립트가 기록과 안 맞�
 
 sync_status: audit-ready
 sync_complete_at: 2026-08-26T00:00:00+09:00
-sync_commit_sha: pending-backfill-sync
+sync_commit_sha: b115c58
 changelog_entry_position: `CHANGELOG.md` `[Unreleased]` › `### Added` 첫 항목
 
 b12_self_test_a (중복 방지): `grep -c 'RECVOBS' CHANGELOG.md` → `0` (append 직전 실행). 삽입 후 `SPEC-COPILOT-RECVOBS-001` 문자열 count = 1 로 재확인.
@@ -231,4 +231,4 @@ frontmatter_status_transitions.other_artifacts: `plan.md`·`acceptance.md`·`pro
 
 canary_compliance_check: 해당 없음 — 본 SPEC 은 자기 sync 가 검증할 전방향 정책을 정의하지 않는다.
 
-미해결로 남기는 것: `sync_commit_sha` 는 자기참조 불가라 `pending-backfill-sync` 로 둔다 — sync 커밋 생성 후 오케스트레이터가 백필한다. push·PR 은 본 단계 밖이며 `manager-git` 이 이어받는다.
+`sync_commit_sha` 는 자기참조 불가라 sync 커밋 안에서는 `pending-backfill-sync` 였고, 후속 커밋에서 실제 SHA `b115c58` 로 백필했다(기록된 패턴). push·PR 은 본 단계 밖이며 `manager-git` 이 이어받는다.
