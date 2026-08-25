@@ -468,3 +468,49 @@ await 경로**로 온 프레임이라, `send_event` 의 **크로스 스레드 �
   **루프가 미는 것**이다 — 축이 같지 않다. 「A′ 가 서면 309 도 풀린다」로 읽지 마라.
 - **고아 펌프가 실제 스위트에서 재현되는지 안 쟀다.** 프로브에서만 봤다.
 - 코드를 한 줄도 안 고쳤다. 임시 프로브는 삭제했다.
+
+---
+
+## 10. main 통합 + 재측정 (2026-08-25, 두 번째 세션)
+
+SPEC 을 쓰기 전에 기준을 갱신했다. 실측 전 `origin/main` 이 **28커밋 앞서 있었다**
+(`git rev-list --count --left-right origin/main...HEAD` → `28 3`). 흐르는 기준 위에
+SPEC 을 쓰지 않으려고 먼저 들여왔다.
+
+### 10.1 무엇이 바뀌었나 — 이 카드에 걸리는 것만
+
+| 파일 | 변화 | 이 카드에의 의미 |
+|---|---|---|
+| `server/tests/conftest.py` | **무변경** | §9 측정의 대상. 그대로다 |
+| `server/web/app.py` | **무변경** | §9 측정의 대상. 그대로다 |
+| `server/tests/test_ws_wait_guard.py` | **+104줄** | 🔴 브리프가 「자연스러운 이웃」이라 지목한 파일. 아래 §10.2 |
+| `server/tests/test_web_cue_monitor.py` | +81줄 | 65자리 중 20자리가 있는 파일. 자리 선택 시 재확인 필요 |
+
+머지는 충돌 0(`ee52468`). 내 커밋 3개가 전부 `.moai/reports/` 문서였다.
+
+### 10.2 🔴 t56 이 이미 착륙했다 — 후보 E 는 끝났다
+
+`test_ws_wait_guard.py` 의 +104줄은 **t56 그 자체**다. 현재 그 파일의 거주자:
+
+    test_recv_frame_fails_instead_of_hanging_when_no_frame_arrives   (t52)
+    test_drain_until_stops_on_the_frame_count_when_frames_keep_arriving (t52)
+    class TestDirectReceiveJsonDoesNotGrow                            (t56)
+      - test_no_direct_call_outside_the_promoted_helper
+      - test_the_scanner_catches_a_planted_call
+      - test_the_scanner_ignores_definitions_and_prose
+
+즉 §7.4 의 「E 는 이미 t56 이다」는 이제 **과거형**이다 — 배치까지 끝났다.
+t57 의 새 검사가 이 파일에 들어간다면 **세 번째 거주자**가 되고, 파일은 158줄이다.
+SPEC 은 「여기에 넣을 것인가, 새 파일인가」를 근거와 함께 정해야 한다.
+
+### 10.3 머지된 트리에서 §9 를 다시 쟀다 — **전부 동일**
+
+    PROBE-CONTROL cross_thread_schedules=6 of 6
+    PROBE-NEG     ARRIVED=None
+    PROBE-ORPHAN  first=None second=None third=None
+    PROBE-REPEAT  arrivals=20/20 scheduled=20 entered=20 errors=[]
+    PROBE-ORDER   status_first=20/20
+    9 passed in 9.21s
+
+트리가 바뀌었으므로 이전 값을 그대로 들고 오지 않고 다시 쟀다. `conftest.py` 와
+`app.py` 가 무변경이라는 §10.1 과도 일치한다. 프로브는 다시 삭제했다.
