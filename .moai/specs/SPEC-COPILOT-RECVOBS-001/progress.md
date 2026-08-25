@@ -6,7 +6,7 @@
 
 - Tier **M** · 산출물 4종(spec / plan / acceptance / progress)
 - 대상: `server/tests/conftest.py`(트리거 헬퍼 승격) · `server/tests/test_ws_wait_guard.py`(관측 검사)
-- 기존 65자리는 **0곳** 개조 — 범위 선택이 아니라 **구조적 강제**(spec.md §C.4)
+- 기존 65자리는 **0곳** 개조 — 🔴 **범위 결정**이다. 이전 판의 「구조적 강제」는 run M5 에서 **취소**됐다(spec.md §C.4 · §C.6). 65자리 재측정은 카드 **`t99`**
 - 미해소 질문 **0건**
 
 ## §E.1 Plan-phase Audit-Ready Signal
@@ -61,6 +61,10 @@ AST 실측 v2(`census-run.txt`): **COLLECTING 직접 2 + 래퍼 경유 1** · SI
 문맥으로 분류했고 `:255` 를 SINGLE 로 셌다. v2 가 호출자를 한 단계 추적해 잡았다.
 `:255` 는 t54 의 11파일 배치표에 **없으므로** 66 바깥이고, 따라서 **65자리에 대한 영구 미관측
 판단은 뒤집히지 않는다** — 정정이 뒤집는 것은 계기의 완전성과 §C.4 의 개수다.
+
+🔴 **위 문단은 run M5 이전의 서술이며, M5 가 그것을 뒤집었다.** `:255` 가 66 바깥인 것은
+여전히 맞지만, **`:607` 은 66 안에 있고 KILLED 로 측정됐다** — 그래서 65자리에 대한 판단도
+결국 뒤집혔다(spec.md §C.6). 이 문단은 시점 기록으로 남긴다.
 
 그래서 **영구 미관측 확정을 반증 가능하게 바꿨다**(재정을 뒤집지 않고): `AC-RECVOBS-016` 과
 `REQ-RECVOBS-016` 이 종료 시점에 인구조사를 다시 돌리고 연언 ①②를 치환해 판정하도록 강제하며,
@@ -145,13 +149,16 @@ run 단계 진입 전에 적어 둔 「다섯 번째가 있을 수 있다」는 
   `unmutated → 9 passed` · `site1-lever → KILLED` · `site2-lever → KILLED` ·
   `site1-degenerate → SURVIVED`(무동작 치환, 결함 아님) · 복원 체크섬 12/12 일치.
 - **Baseline-attribution**: 원본 sha256 `fa505d601d58a2db…`, 매 회 복원 후 대조.
-- **Gaps**: 전량 스위트 미실행(AC-014). 독립 판독자 없음.
+- **Gaps**: 전량 스위트 미실행(**AC-RECVOBS-008**). 독립 판독자 없음.
 
 ### M5 — 미관측 표기 🔴 **AC-016 발동**
 
 - **Claim**: 열린 후보 둘이 **연언을 만족하고 KILLED 된다.**
 - **Evidence**(`m5-census-run.txt` · `m5-conjunct-run.txt`):
   census 재실행 → 모으는 자리 직접 6 · 래퍼 경유 1 · SINGLE 70 · TOTAL 77.
+  (`spec.md §C.3.1` 의 2+1 / 65 / 68 과 다른 것은 **트리가 다르기 때문**이다 —
+  이 카드가 심은 검사 4자리가 새 `recv_frame` 자리이고 그중 검사 2는 모으는
+  자리다. 모순이 아니라 측정 시점 차이다.)
   `test_web_cue_monitor.py:607` + `drain_until(ws, "cue_monitor")` → **KILLED**(5 failed / 기준선 51 passed).
   `test_web_panel_execute.py:255` + `drain_until(ws, "chat_response")` → **KILLED**(2 failed / 기준선 76 passed).
   둘 다 치환 적용을 되읽어 단언, 복원 후 sha256 일치.
@@ -171,13 +178,19 @@ run 단계 진입 전에 적어 둔 「다섯 번째가 있을 수 있다」는 
 - run_complete_at: 2026-08-25
 - run_status: audit-ready
 
-### AC-014 — 전량 스위트 🟢
+### AC-RECVOBS-008 — 전량 스위트 🟢
 
     $ .venv/bin/python -m pytest server/tests -q
     10337 passed, 12 skipped, 1 warning in 151.55s
 
 `.moai/reports/t57/ac014-full-suite.txt`. **이 카드가 심은 검사 때문에 빨개진
 다른 테스트 0건.**
+
+⚠️ **번호 정정**: 이 절은 처음에 「AC-014」로 적혀 있었다. D5 통합이 그 기준을
+**AC-RECVOBS-008** 로 재번호했는데 내가 통합 **이전** 라벨을 물려받아 쓰고 재확인을 안 했다.
+현재 AC 번호는 001~013 + 016 이고 **014 는 존재하지 않는다.** 증거 파일명
+(`ac014-full-suite.txt`)은 그 시점 이름 그대로 둔다 — 파일명을 바꾸면 커밋 이력의 인용이
+고아가 된다.
 
 **1차 실행은 2건 빨간불이었고 원인이 내 것이었다** — 다만 검사 코드가 아니라
 **증거 스크립트**다. `.moai/reports/t57/` 에 `git add -f` 로 넣은 `.py` 5개가
