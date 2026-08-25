@@ -154,9 +154,16 @@ M2·M3 이 지어진 **뒤에** 그 산출물에 대고 잰다. 깨지면 M2·M3
 
 모듈 독스트링을 먼저 갱신한다.
 
-공통 배치: `_deps(tmp_path, ScriptedProvider([]))` → `TestClient(create_app(deps))` →
+공통 배치: `deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))` → `TestClient(create_app(deps))` →
 `client.websocket_connect("/ws")`. 초기 스냅샷 `status` 한 장을 먼저 소비한다.
 (`_deps` 는 `.test_web_app` 에서 임포트 — 교차 임포트 선례 다수: `test_deploy_gate_e2e.py:21-23`.)
+🔴 **`_deps` 는 3-튜플을 돌려준다**(`test_web_app.py:44` `return deps, console, gate`). 언패킹 없이
+`deps = _deps(...)` 로 받으면 `create_app()` 에 튜플이 들어가고 `deps.status_listeners` 가
+`AttributeError` 를 낸다 — 네 검사가 **한꺼번에** 넘어진다. 교차 임포트 호출 3곳 전부 언패킹한다
+(`test_web_session_progress.py:123` · `test_web_layout_image.py:165` · `:187`). 같은 이름의 지역
+`_deps` 가 세 파일에 더 있고 그것들은 단일 값을 돌려주므로, **임포트한 것이 어느 쪽인지**가 관건이다.
+`ScriptedProvider` 는 `.test_runner_self_correction` 에서 임포트한다 — `.test_web_app` 경유로도
+닿기는 하지만 그건 우연이다.
 응답은 §D.1 의 파싱 오류로 조달한다.
 
 | # | 검사 | 형태 |

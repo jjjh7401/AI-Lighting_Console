@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-RECVOBS-001
 title: "승격 헬퍼의 엄격함을 관측 가능하게 — 기대 밖 프레임을 결정적으로 먼저 도착시킨다"
 version: "0.2.0"
-status: draft
+status: in-progress
 created: 2026-08-25
 updated: 2026-08-25
 author: plan 레인 (칸반 카드 t57)

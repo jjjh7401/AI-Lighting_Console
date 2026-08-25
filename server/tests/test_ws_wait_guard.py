@@ -1,8 +1,17 @@
-"""`recv_frame` 이 실제로 상한을 거는지 잰다 (t52).
+"""승격 헬퍼의 **계약**을 잰다 — 이 파일의 헌장이다.
 
-이 파일이 없으면 승격은 **아무것도 안 지킨다**. 옮긴 것과 지키는 것은 다른
-작업이고, 상한을 지우면 실패가 아니라 **정지**로 나타나므로 평범한 테스트로는
-안 잡힌다 — 그래서 「안 끝나는 것」을 바깥에서 재는 형태가 필요하다.
+계약에는 축이 둘 있고, 이 파일은 셋을 담는다.
+
+1. **시간 상한** (t52) — `recv_frame` 이 실제로 상한을 거는가. 이 파일이 없으면
+   승격은 아무것도 안 지킨다. 상한을 지우면 실패가 아니라 **정지**로 나타나므로
+   평범한 테스트로는 안 잡힌다 — 「안 끝나는 것」을 바깥에서 재는 형태가 필요하다.
+2. **이관의 비준** (t56) — 직접 `.receive_json(` 호출 허용목록이 줄어들기만 하는가.
+3. **엄격함** (t57) — `recv_frame` 이 `drain_until` 보다 엄격하다는 것이 **관측되는가.**
+   두 헬퍼는 기대 밖 프레임이 먼저 도착할 때만 갈리고, 오늘의 경로에는 그런 프레임이
+   없어 66자리 중 1자리만 뮤테이션으로 갈렸다. 아래 세 번째 블록은 그 프레임을
+   **결정적으로** 만들어, 갈림을 이 파일 안에서 한 번 관측 가능하게 만든다.
+
+축 1·2 는 헬퍼가 **무엇을 하는가**를, 축 3 은 **왜 그것이 더 나은가**를 잰다.
 """
 
 from __future__ import annotations
@@ -13,8 +22,13 @@ import time
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
-from .conftest import drain_until, recv_frame
+from server.web.app import create_app
+
+from .conftest import drain_until, fire_status_listeners, recv_frame
+from .test_runner_self_correction import ScriptedProvider
+from .test_web_app import _deps
 
 
 class _NeverAnswers:
@@ -156,3 +170,100 @@ class TestDirectReceiveJsonDoesNotGrow:
         )
 
         assert _direct_receive_json_calls(not_a_call) == set()
+
+
+# -- 축 3: 엄격함이 관측되는가 (t57) ------------------------------------------------
+
+
+def _live_socket(tmp_path):
+    """소켓 하나 — 초기 status 스냅샷은 호출부가 소비한다.
+
+    `_deps` 는 **3-튜플**을 돌려준다(`test_web_app.py:44`). 언패킹 없이 받으면
+    `create_app()` 에 튜플이 들어가 `deps.status_listeners` 가 AttributeError 를 낸다.
+    """
+    deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
+    return deps, TestClient(create_app(deps))
+
+
+def _provoke_error(ws) -> None:
+    """서버가 `error` 한 장으로 답하게 한다 — 파싱 오류로.
+
+    앱 기능이 아니라 **프로토콜 층**에 묶는다. 기능이 바뀌어도 검사가 고아가 되지
+    않는다. 대가: 오류-응답 동작 자체가 바뀌면 깨진다 — 그건 프로토콜 변경이므로
+    깨지는 것이 맞다.
+    """
+    ws.send_text("{ not json")
+
+
+class TestTheStrictnessIsObservable:
+    """`recv_frame` 이 기대 밖 프레임을 **돌려준다** — `drain_until` 은 버린다.
+
+    두 검사가 갈릴 수 있는 것은 모양을 그렇게 골랐기 때문이다. 각 단정은
+    ① `drain_until` 이 **버렸을** 프레임에 의존하고, ② 버려지는 타입(`status`)이
+    기다리는 타입(`error`)과 **다르다**. 연언 **둘 다** 필요하다 — ①만 만족하는
+    자리는 치환해도 안 죽는다.
+    """
+
+    def test_the_unexpected_frame_is_returned_not_discarded(self, tmp_path):
+        """자리 1 — 한 장 읽기. 그 한 장이 밀어넣은 `status` 다."""
+        deps, client = _live_socket(tmp_path)
+        with client, client.websocket_connect("/ws") as ws:
+            assert recv_frame(ws)["type"] == "status"  # 초기 스냅샷
+            fire_status_listeners(deps)
+            _provoke_error(ws)
+            frame = recv_frame(ws)
+        # drain_until(ws, "error") 로 바꾸면 이 status 가 조용히 버려지고 단정이 깨진다.
+        assert frame["type"] == "status", (
+            "기대 밖 프레임이 버려졌다 — drain_until 의 행동이다: " + frame["type"]
+        )
+
+    def test_the_pushed_frame_appears_in_the_collected_sequence(self, tmp_path):
+        """자리 2 — 모아 읽기. 계열 안에 밀어넣은 `status` 가 있다."""
+        deps, client = _live_socket(tmp_path)
+        seen: list[str] = []
+        with client, client.websocket_connect("/ws") as ws:
+            assert recv_frame(ws)["type"] == "status"
+            fire_status_listeners(deps)
+            _provoke_error(ws)
+            for _ in range(10):
+                event = recv_frame(ws)
+                seen.append(event["type"])
+                if event["type"] == "error":
+                    break
+        assert "status" in seen, "밀어넣은 프레임이 계열에 없다: " + str(seen)
+        assert "error" in seen, "응답이 계열에 없다: " + str(seen)
+
+    def test_without_the_trigger_the_first_frame_is_the_reply(self, tmp_path):
+        """음성 대조군 — 트리거를 안 부르면 첫 장은 `status` 가 **아니다**.
+
+        이 검사가 없으면 위 두 단정의 `status` 가 트리거의 효과인지 주변 잡음인지
+        구분되지 않는다. 20회를 재는 이유도 같다 — 표본 1이면 귀속도 표본 1이다.
+        """
+        _unused, client = _live_socket(tmp_path)
+        kinds: list[str] = []
+        with client, client.websocket_connect("/ws") as ws:
+            assert recv_frame(ws)["type"] == "status"
+            for _ in range(20):
+                _provoke_error(ws)
+                kinds.append(recv_frame(ws)["type"])
+        assert sorted(set(kinds)) == ["error"], "트리거 없이 status 가 왔다: " + str(kinds)
+
+    def test_the_pushed_frame_always_precedes_the_reply(self, tmp_path):
+        """결정성 — 20회 전부 같은 순서다. 두 순서를 흡수하지 않는다.
+
+        순서가 서는 기전은 큐 FIFO 다: `notify()` 가 `call_soon_threadsafe` 로 루프의
+        준비 큐에 먼저 들어가고 `send_text` 가 그 뒤에 들어간다. 20회는 그 기전의
+        **확인**이지 근거가 아니다 — 어긋나면 회수를 올리지 말고 기전을 다시 봐라.
+        """
+        deps, client = _live_socket(tmp_path)
+        orders: list[tuple[str, str]] = []
+        with client, client.websocket_connect("/ws") as ws:
+            assert recv_frame(ws)["type"] == "status"
+            for _ in range(20):
+                fire_status_listeners(deps)
+                _provoke_error(ws)
+                first = recv_frame(ws)["type"]
+                second = recv_frame(ws)["type"]
+                orders.append((first, second))
+        expected = [("status", "error")]
+        assert sorted(set(orders)) == expected, "순서가 갈렸다: " + str(sorted(set(orders)))
