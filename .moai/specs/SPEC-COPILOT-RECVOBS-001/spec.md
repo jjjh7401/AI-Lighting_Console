@@ -7,7 +7,7 @@ created: 2026-08-25
 updated: 2026-08-25
 author: plan 레인 (칸반 카드 t57)
 priority: P2
-phase: "카드 t57 — 승격 헬퍼 엄격함의 관측"
+phase: "v0.3.0 target — 승격 헬퍼 엄격함의 관측(카드 t57)"
 module: "server/tests/conftest.py (트리거 헬퍼 승격), server/tests/test_ws_wait_guard.py (헬퍼 계약 검사의 세 번째 거주 블록)"
 lifecycle: spec-anchored
 tags: "websocket, test-helper, mutation-testing, determinism, recv-frame, drain-until, observability, status-listener"
