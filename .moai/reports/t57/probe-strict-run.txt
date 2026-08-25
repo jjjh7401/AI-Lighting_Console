@@ -1,7 +1,7 @@
-CLEAN pairs=[('status', 'error')]
-CLEAN status_first=20/20
-.CLEAN-NEG first_frames=['error']
-CLEAN-NEG status_count=0/20
+STRICT pairs=[('status', 'error')]
+STRICT status_first=20/20
+.STRICT-NEG first_frames=['error']
+STRICT-NEG status_count=0/20
 .
 =============================== warnings summary ===============================
 .venv/lib/python3.11/site-packages/fastapi/testclient.py:1
@@ -9,11 +9,11 @@ CLEAN-NEG status_count=0/20
     from starlette.testclient import TestClient as TestClient  # noqa
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2 passed, 1 warning in 0.43s
-CLEAN pairs=[('status', 'error')]
-CLEAN status_first=20/20
-.CLEAN-NEG first_frames=['error']
-CLEAN-NEG status_count=0/20
+2 passed, 1 warning in 0.42s
+STRICT pairs=[('status', 'error')]
+STRICT status_first=20/20
+.STRICT-NEG first_frames=['error']
+STRICT-NEG status_count=0/20
 .
 =============================== warnings summary ===============================
 .venv/lib/python3.11/site-packages/fastapi/testclient.py:1
@@ -21,11 +21,11 @@ CLEAN-NEG status_count=0/20
     from starlette.testclient import TestClient as TestClient  # noqa
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2 passed, 1 warning in 0.37s
-CLEAN pairs=[('status', 'error')]
-CLEAN status_first=20/20
-.CLEAN-NEG first_frames=['error']
-CLEAN-NEG status_count=0/20
+2 passed, 1 warning in 0.31s
+STRICT pairs=[('status', 'error')]
+STRICT status_first=20/20
+.STRICT-NEG first_frames=['error']
+STRICT-NEG status_count=0/20
 .
 =============================== warnings summary ===============================
 .venv/lib/python3.11/site-packages/fastapi/testclient.py:1
