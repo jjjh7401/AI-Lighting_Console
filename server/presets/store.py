@@ -8,7 +8,31 @@ from __future__ import annotations
 
 from server.spatial.pointing import SpatialPointingError
 
-__all__ = ["preset_store_commands"]
+__all__ = ["preset_label_refusal", "preset_store_commands"]
+
+
+def preset_label_refusal(label: str | None) -> str | None:
+    """이 라벨을 `Label Preset` 에 실을 수 없는 이유. 실을 수 있으면 ``None``.
+
+    `preset_store_commands` 가 던지기 **전에** 같은 판정을 물어볼 수 있게 술어를
+    밖으로 낸다. 계획을 내는 쪽(`lxseq.preset_mapper`)이 이걸 부르면, 못 보내는
+    이름이 「보낼 수 있다」고 계획에 실리는 일이 없다(t97).
+
+    술어를 부르는 쪽에 **다시 적지 마라** — 사본이 늘면 판정기와 발사기가 갈라져,
+    한쪽만 바뀐 날에 계획이 통과시킨 이름에서 빌더가 터진다. 이 파일이 문형을 아는
+    유일한 자리라는 규율(모듈 docstring)이 술어에도 그대로 걸린다.
+    """
+    if label is None:
+        return None
+    text = label.strip()
+    if not text:
+        return "라벨이 비었다 — 이름 없는 프리셋은 나중에 무엇인지 알 수 없다"
+    if "'" in text or '"' in text:
+        # 홑따옴표가 `Label Preset <pool>.<n> '<text>'` 의 구분자다. 이름 안의
+        # 따옴표는 구분자를 조기에 닫아 문법을 깬다. 겹따옴표도 같이 막는 이유는
+        # 콘솔 파서가 어느 쪽을 구분자로 볼지 이 채널로는 확인되지 않아서다.
+        return "이름에 따옴표가 있다 — 따옴표가 명령의 구분자라서 문법이 깨진다"
+    return None
 
 
 def preset_store_commands(
@@ -29,7 +53,9 @@ def preset_store_commands(
     commands = [f"Store Preset {pool_no}.{preset_no}"]
     if label is not None:
         text = label.strip()
-        if not text or "'" in text or '"' in text:
+        # 판정은 `preset_label_refusal` 하나가 한다 — 여기에 사본을 두면 계획
+        # 단계와 발사 단계의 술어가 갈라진다(t97).
+        if preset_label_refusal(label) is not None:
             raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
         commands.append(f"Label Preset {pool_no}.{preset_no} '{text}'")
     return tuple(commands)

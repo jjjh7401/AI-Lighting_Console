@@ -34,6 +34,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from server.lxseq.preset_parser import LxseqPresetRecord
+from server.presets.store import preset_label_refusal
 
 #: 풀을 못 읽었다 — 빈 슬롯을 잴 수 없으므로 계획을 내지 않는다.
 POOL_UNREADABLE = "pool_unreadable"
@@ -50,6 +51,10 @@ NAME_TAKEN = "name_taken"
 
 #: 확인 한계 — 점유 슬롯 중 이름을 못 읽은 것이 있어 그 슬롯과는 대조하지 못했다.
 NAME_COLLISION_UNVERIFIED = "name_collision"
+
+#: 이름을 명령에 실을 수 없다 — 따옴표가 `Label Preset` 의 구분자라 문법이 깨진다.
+#: 거절 사유가 아니라 보류 사유다: 나머지 레코드는 멀쩡히 나갈 수 있다.
+NAME_UNSENDABLE = "name_unsendable"
 
 _VALUE_MATCH_REASON = (
     "슬롯 점유는 되읽어 확인할 수 있지만 **값이 맞는지는 이 채널로 읽히지 "
@@ -131,6 +136,32 @@ def _held_from(record: LxseqPresetRecord) -> PresetHold:
         kind=record.kind,
         hold_classes=record.hold_classes,
         details=tuple(reason.detail for reason in record.hold_reasons),
+    )
+
+
+def _unsendable_name_from(record: LxseqPresetRecord, reason: str) -> PresetHold:
+    """이름을 명령에 실을 수 없어 보류된 한 건.
+
+    거르는 자리는 **배정 전**이다 — 배정 후에 거르면 쓰지도 않을 슬롯을 예약해
+    없는 부족분이 생긴다(`name_taken` 이 같은 이유로 같은 자리에 있다).
+
+    판정은 `preset_label_refusal` 이 한다. 여기서 다시 세지 않는 이유는, 술어가
+    갈라지면 계획이 통과시킨 이름에서 빌더가 터지기 때문이다 — 그것이 이 보류가
+    막으려는 결함 그 자체다(t97).
+    """
+    return PresetHold(
+        preset_id=record.preset_id,
+        kind=record.kind,
+        hold_classes=(NAME_UNSENDABLE,),
+        details=(
+            "이 이름은 콘솔에 못 보낸다: "
+            + record.name
+            + " — "
+            + reason
+            + ". 계획에 넣지 않는 이유는 넣으면 사용자가 「보낼 수 있다」고 적힌 "
+            "목록을 승인한 **뒤에** 예외를 보기 때문이다. 시트에서 이름을 고쳐 "
+            "다시 부르면 된다",
+        ),
     )
 
 
@@ -218,8 +249,19 @@ def map_presets(
     두 번 돌릴 때 전부 복제된다. 거르는 자리는 **배정 전**이다 — 배정 후에 거르면
     쓰지도 않을 슬롯을 예약해 없는 부족분이 생긴다.
     """
-    held = tuple(_held_from(r) for r in records if not r.storable)
-    storable = [r for r in records if r.storable]
+    held_list = [_held_from(r) for r in records if not r.storable]
+    # 못 보내는 이름은 **여기서** 걸러진다 — 배정 전이자 거절 판정 전이다.
+    # 거절 경로도 `held` 를 그대로 나르므로, 풀을 못 읽어 0건이 된 회신에도
+    # 이 보류가 실린다. 사용자가 시트를 고칠 근거는 콘솔 상태와 무관하다(t97).
+    storable: list[LxseqPresetRecord] = []
+    for record in records:
+        if not record.storable:
+            continue
+        if (reason := preset_label_refusal(record.name)) is not None:
+            held_list.append(_unsendable_name_from(record, reason))
+            continue
+        storable.append(record)
+    held = tuple(held_list)
 
     if section_reason := section_refusal(pool_section):
         return PresetMapResult(
