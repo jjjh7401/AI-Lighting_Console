@@ -216,4 +216,19 @@ probe-inject 네 칸 표 그대로. **고친 스크립트가 기록과 안 맞�
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+sync_status: audit-ready
+sync_complete_at: 2026-08-26T00:00:00+09:00
+sync_commit_sha: pending-backfill-sync
+changelog_entry_position: `CHANGELOG.md` `[Unreleased]` › `### Added` 첫 항목
+
+b12_self_test_a (중복 방지): `grep -c 'RECVOBS' CHANGELOG.md` → `0` (append 직전 실행). 삽입 후 `SPEC-COPILOT-RECVOBS-001` 문자열 count = 1 로 재확인.
+b12_self_test_b (AC 수 대조): `grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' acceptance.md | sort -u | wc -l` → `23`. 이 23 은 정규 식별자 수가 아니다 — `AC-RECVOBS-001`~`013` + `016` 의 **14개**가 정규 표제이고, 나머지 9개(`AC-001`·`004`·`005`·`007`·`010`·`011`·`012`·`016`·`017`)는 본문이 도메인 없이 줄여 쓴 같은 것들의 참조다. CHANGELOG 항목은 개별 번호를 열거하지 않고 `AC-RECVOBS-016` 하나만 명시한다 — 그 하나가 카드의 범위 주장을 좌우하기 때문이고, 전량 판정은 §E.2·§E.3 이 SSOT 다.
+🔴 **여기서 하나 걸렸다.** `acceptance.md:26` 은 「**16개 표제**」라고 적는데 정규 `AC-RECVOBS-*` 토큰은 **14개**뿐이고 `AC-RECVOBS-014`·`015` 는 그 파일 어디에도 없다(같은 grep 으로 전수 확인). 본문 수정은 이 단계의 권한 밖이라 **고치지 않고 기록만 남긴다** — 판정은 manager-spec 몫이다.
+b12_self_test_c (경로 실재): CHANGELOG 항목이 이름을 대는 `server/tests/conftest.py`·`server/tests/test_ws_wait_guard.py`·`.moai/reports/t57/` 세 경로를 `ls` 로 확인했다.
+
+frontmatter_status_transitions.spec_md: `in-progress → implemented → completed` (단일 sync 커밋에서 병합), `updated: 2026-08-25 → 2026-08-26`.
+frontmatter_status_transitions.other_artifacts: `plan.md`·`acceptance.md`·`progress.md` 는 본문·프런트매터 미변경 — 이번 sync 의 쓰기 범위는 CHANGELOG·`spec.md` 프런트매터·본 §E.4 세 자리로 제한됐다.
+
+canary_compliance_check: 해당 없음 — 본 SPEC 은 자기 sync 가 검증할 전방향 정책을 정의하지 않는다.
+
+미해결로 남기는 것: `sync_commit_sha` 는 자기참조 불가라 `pending-backfill-sync` 로 둔다 — sync 커밋 생성 후 오케스트레이터가 백필한다. push·PR 은 본 단계 밖이며 `manager-git` 이 이어받는다.
