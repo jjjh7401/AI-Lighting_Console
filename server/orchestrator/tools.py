@@ -1682,10 +1682,16 @@ def _count_hold_classes(held) -> dict:
 
 #: `import_lxseq_presets` 페이로드가 매번 싣는 모델 지시.
 LXSEQ_PRESETS_GUIDANCE = (
-    "이 산출물의 `planned` 는 **넣을 수 있다고 판정된 것**이고 `held` 는 "
-    "**넣을 수 없어 보류된 것**이다. 둘을 합쳐 보고하라 — 「N건 성공」이 아니라 "
-    "「읽은 수 중 계획 수 성공 · 보류 수 보류(클래스별)」로 말하라. 보류를 빼고 "
-    "말하면 사용자는 나머지가 어디로 갔는지 알 수 없다.\n"
+    "이 산출물의 바구니는 **셋**이다. `planned` 는 넣을 수 있다고 판정된 것, "
+    "`held` 는 시트 자체가 넣을 수 없어 보류된 것, `already_present` 는 **같은 "
+    "이름이 콘솔에 이미 있어** 계획에 안 들어간 것이다. 셋을 합쳐 보고하라 — "
+    "「N건 성공」이 아니라 「읽은 수 중 계획 수 계획 · 보류 수 보류(클래스별) · "
+    "이미 있음 수」로 말하라. 하나라도 빼면 사용자는 나머지가 어디로 갔는지 "
+    "알 수 없다.\n"
+    "\n"
+    "`already_present` 는 실패가 아니라 **수렴**이다. 같은 시트를 다시 돌리면 "
+    "계획이 0건인 것이 정상이다. 다만 **「이미 있음」은 「맞게 있음」이 아니다** "
+    "— 이름만 대조했고 값은 안 읽힌다.\n"
     "\n"
     "**값이 맞는지는 되읽지 못한다.** 슬롯이 찼다는 것은 「무언가 저장됐다」까지만 "
     "말한다. 「검증된 N건」이라고 보고하지 마라 — 틀린 값이 조용히 영속한다.\n"
@@ -4844,6 +4850,14 @@ def build_toolset(
                     "details": list(h.details),
                 }
                 for h in result.held
+            ],
+            "already_present": [
+                {
+                    "preset_id": h.preset_id,
+                    "classes": list(h.hold_classes),
+                    "details": list(h.details),
+                }
+                for h in result.already_present
             ],
             "held_by_class": _count_hold_classes(result.held),
             "refusal": result.refusal,

@@ -14,13 +14,18 @@
 적었다. 같은 이유로 REQ-LXSEQ3-010(번들 바이트 계측)도 툴 층이 한다 — 명령이
 있어야 바이트를 잴 수 있다. 문면 정정은 카드 t75, 판정 근거는 progress.md §E.2.
 
-## 보류를 버리지 않는다
+## 보류를 버리지 않는다 — 바구니는 셋이다
 
 파서가 19행을 전부 읽고 그중 6건만 저장 가능하다고 판정한다. 매퍼는 저장
 가능한 것만 계획하되 **보류 13건을 사유 클래스와 함께 그대로 나른다.** 그래야
 최종 보고가 「6건 성공」이 아니라 **「19 중 6 계획 · 13 보류(클래스별)」**로 나온다.
 버리면 나머지가 어디로 갔는지 아무도 모르고, 다음 사람이 무엇을 풀어야 하는지도
 모른다.
+
+**세 번째 바구니가 있다**(SPEC-COPILOT-PRESETIDEM-001, 카드 t87): 이름이 이미
+풀에 있어 계획에 안 들어간 것은 `already_present` 로 나른다. `held` 에 섞지
+않는다 — 섞으면 「19 중 6 계획 · 13 보류」 집계가 **콘솔 상태 의존**이 되어
+같은 CSV 가 날마다 다른 수를 보고한다(REQ-IDEM-003).
 """
 
 from __future__ import annotations
@@ -38,6 +43,25 @@ POOL_TRUNCATED = "pool_truncated"
 
 #: 필요한 만큼 빈 슬롯이 없다 — 부분 계획을 내지 않는다.
 SLOT_SHORTFALL = "slot_shortfall"
+
+#: 같은 이름이 이미 있다 — 그 레코드의 **목표 상태가 이미 달성돼 있다**.
+#: 거절 사유가 아니라 보류 사유다. 부분 계획이 아니라 수렴이기 때문이다.
+NAME_TAKEN = "name_taken"
+
+#: 확인 한계 — 점유 슬롯 중 이름을 못 읽은 것이 있어 그 슬롯과는 대조하지 못했다.
+NAME_COLLISION_UNVERIFIED = "name_collision"
+
+_VALUE_MATCH_REASON = (
+    "슬롯 점유는 되읽어 확인할 수 있지만 **값이 맞는지는 이 채널로 읽히지 "
+    "않는다**. 「슬롯이 찼다」는 「무언가 저장됐다」까지만 말한다 — "
+    "「검증된 N건」으로 읽으면 틀린 값이 조용히 영속한다"
+)
+
+_NAME_UNREADABLE_REASON = (
+    "점유 슬롯 중 **이름을 못 읽은 것**이 있어 그 슬롯과는 이름을 대조하지 "
+    "못했다. 같은 이름이 이미 있는데도 계획에 들어갔을 수 있다 — 「중복은 "
+    "없다」로 읽지 마라"
+)
 
 
 @dataclass(frozen=True)
@@ -81,6 +105,10 @@ class PresetMapResult:
 
     `refusal` 이 있으면 `planned` 는 반드시 비어 있다 — 어긋나면 0건이다.
     `held` 는 `refusal` 과 무관하게 항상 실린다.
+
+    `refusal` 이 없을 때 **세 바구니의 합이 읽은 수와 같다**(REQ-IDEM-004):
+    `planned` + `held` + `already_present`. 이 합이 깨지면 세 번째 바구니를
+    안 읽는 소비자가 생겼다는 신호다.
     """
 
     planned: tuple[PresetPlacement, ...]
@@ -88,13 +116,13 @@ class PresetMapResult:
     refusal: str | None
     refusal_detail: str
     shortfall: SlotShortfall | None
+    #: 이름이 이미 풀에 있어 계획에 안 들어간 것. `held` 와 **섞지 않는다** —
+    #: 섞으면 파서 판정 집계가 콘솔 상태에 따라 달라진다(REQ-IDEM-003).
+    #: 풀을 못 읽은 거절 경로에서는 비어 있다 — 이름을 알 수 없기 때문이다.
+    already_present: tuple[PresetHold, ...] = ()
     #: 확인 한계 — 산출물이 스스로 말한다(REQ-LXSEQ3-014).
     unverified: tuple[str, ...] = ("value_match",)
-    unverified_reason: str = (
-        "슬롯 점유는 되읽어 확인할 수 있지만 **값이 맞는지는 이 채널로 읽히지 "
-        "않는다**. 「슬롯이 찼다」는 「무언가 저장됐다」까지만 말한다 — "
-        "「검증된 N건」으로 읽으면 틀린 값이 조용히 영속한다"
-    )
+    unverified_reason: str = _VALUE_MATCH_REASON
 
 
 def _held_from(record: LxseqPresetRecord) -> PresetHold:
@@ -103,6 +131,27 @@ def _held_from(record: LxseqPresetRecord) -> PresetHold:
         kind=record.kind,
         hold_classes=record.hold_classes,
         details=tuple(reason.detail for reason in record.hold_reasons),
+    )
+
+
+def _already_present_from(record: LxseqPresetRecord) -> PresetHold:
+    """이름이 이미 있어 보류된 한 건.
+
+    **「이미 있음」은 「맞게 있음」이 아니다.** 값은 되읽히지 않으므로 이름만
+    같고 값이 다른 프리셋이 그대로 남는다. 그 한계를 산문에 적어 둔다.
+    """
+    return PresetHold(
+        preset_id=record.preset_id,
+        kind=record.kind,
+        hold_classes=(NAME_TAKEN,),
+        details=(
+            "같은 이름이 이미 있다: "
+            + record.name
+            + " — 목표 상태가 이미 달성돼 있어 계획에 넣지 않는다. 덮어쓰지 "
+            "않는 이유는 프리셋이 경고 없이 덮이고 값을 되읽을 수 없어 복구 "
+            "수단이 없기 때문이다(REQ-LXSEQ3-007). **값이 맞는지는 확인 못 "
+            "한다** — 이름만 같고 값이 다를 수 있다",
+        ),
     )
 
 
@@ -122,6 +171,33 @@ def _occupied_slots(section: Mapping[str, object]) -> set[int] | None:
     return occupied
 
 
+def _occupied_names(section: Mapping[str, object]) -> tuple[set[str], bool]:
+    """콘솔이 답한 점유 **이름** 집합과 「못 읽은 이름이 있었나」.
+
+    이름은 이미 와 있다 — `rig_object` 가 `no` 와 `name` 을 둘 다 내고 툴이
+    그대로 싣는다. 안 볼 뿐이었다(SPEC-COPILOT-PRESETIDEM-001 §A.3).
+
+    **번호와 달리 이름은 못 읽어도 거절하지 않는다.** 번호를 틀리면 점유 슬롯을
+    덮어써 복구가 불가능하지만, 이름을 모르면 생기는 것은 **중복**이다. 무게가
+    달라 처방도 다르다 — 거절 대신 `unverified` 에 한계를 싣는다(REQ-IDEM-005).
+    잘 도는 임포트를 한 번도 본 적 없는 상태를 근거로 통째로 막지 않는다.
+    """
+    listed = section.get("objects")
+    names: set[str] = set()
+    if not isinstance(listed, list):
+        return names, True
+    incomplete = False
+    for entry in listed:
+        raw = entry.get("name") if isinstance(entry, Mapping) else None
+        text = raw if isinstance(raw, str) else ""
+        if not text:
+            # 이름 없는 점유 슬롯 — 이 슬롯과는 대조 자체가 성립하지 않는다.
+            incomplete = True
+            continue
+        names.add(text)
+    return names, incomplete
+
+
 def map_presets(
     records: Sequence[LxseqPresetRecord],
     *,
@@ -136,6 +212,11 @@ def map_presets(
     풀을 못 읽었거나 빈 슬롯이 모자라면 **부분 계획 대신 0건**을 낸다
     (REQ-LXSEQ3-008). 반쯤 맞는 프리셋이 쇼파일에 남고 다음 단계(큐)가 그것을
     참조하는 것이 최악이기 때문이다.
+
+    **이름이 이미 있으면 그 레코드만 보류한다**(REQ-IDEM-001). 점유 슬롯을 피하는
+    것은 **슬롯 보증**이지 **동일성 보증**이 아니어서, 이름을 안 보면 같은 시트를
+    두 번 돌릴 때 전부 복제된다. 거르는 자리는 **배정 전**이다 — 배정 후에 거르면
+    쓰지도 않을 슬롯을 예약해 없는 부족분이 생긴다.
     """
     held = tuple(_held_from(r) for r in records if not r.storable)
     storable = [r for r in records if r.storable]
@@ -162,19 +243,39 @@ def map_presets(
             shortfall=None,
         )
 
+    pool_names, names_incomplete = _occupied_names(pool_section)
+    unverified: tuple[str, ...] = ("value_match",)
+    unverified_reason = _VALUE_MATCH_REASON
+    if names_incomplete:
+        unverified = unverified + (NAME_COLLISION_UNVERIFIED,)
+        unverified_reason = _VALUE_MATCH_REASON + "\n\n" + _NAME_UNREADABLE_REASON
+
+    # 한 CSV 안의 중복도 같은 술어로 막는다 — 파서는 `duplicate_id` 만 보고
+    # 이름은 안 본다(REQ-IDEM-006). 안 막으면 이 가드가 **첫 실행에서** 복제한다.
+    taken = set(pool_names)
+    to_plan: list[LxseqPresetRecord] = []
+    already: list[PresetHold] = []
+    for record in storable:
+        if record.name in taken:
+            already.append(_already_present_from(record))
+            continue
+        taken.add(record.name)
+        to_plan.append(record)
+    already_present = tuple(already)
+
     ceiling = int(pool_section.get("capacity") or 0) or None
     empty: list[int] = []
     candidate = 1
-    while len(empty) < len(storable):
+    while len(empty) < len(to_plan):
         if ceiling is not None and candidate > ceiling:
             break
         if candidate not in occupied:
             empty.append(candidate)
         candidate += 1
 
-    if len(empty) < len(storable):
+    if len(empty) < len(to_plan):
         shortfall = SlotShortfall(
-            needed=len(storable), available=len(empty), missing=len(storable) - len(empty)
+            needed=len(to_plan), available=len(empty), missing=len(to_plan) - len(empty)
         )
         return PresetMapResult(
             planned=(),
@@ -188,6 +289,9 @@ def map_presets(
                 + " — 부분 계획을 내지 않는다"
             ),
             shortfall=shortfall,
+            already_present=already_present,
+            unverified=unverified,
+            unverified_reason=unverified_reason,
         )
 
     planned = tuple(
@@ -198,10 +302,17 @@ def map_presets(
             value_raw=record.value_raw,
             slot=slot,
         )
-        for record, slot in zip(storable, empty, strict=True)
+        for record, slot in zip(to_plan, empty, strict=True)
     )
     return PresetMapResult(
-        planned=planned, held=held, refusal=None, refusal_detail="", shortfall=None
+        planned=planned,
+        held=held,
+        refusal=None,
+        refusal_detail="",
+        shortfall=None,
+        already_present=already_present,
+        unverified=unverified,
+        unverified_reason=unverified_reason,
     )
 
 
