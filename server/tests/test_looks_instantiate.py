@@ -40,6 +40,7 @@ from server.orchestrator.tools import (
     rig_section,
 )
 from server.safety.lock import LiveLock
+from server.web.approval_bridge import ApprovalChannel
 
 # -- rig assembly -------------------------------------------------------------
 #
@@ -837,6 +838,32 @@ class TestShippedLibrary:
 # =============================================================================
 
 
+class _AutoApprovingChannel(ApprovalChannel):
+    """An ``ApprovalChannel`` that answers its own card.
+
+    NOT a convenience shim. Ruleset v4 (SPEC-COPILOT-UNREQ-001, card t86)
+    blacklists ``Store Preset``, and a look bundle stores presets — so from v4
+    on a look bundle raises an approval card on EVERY run, including one the
+    user explicitly asked for. The gate cannot tell a requested preset write
+    from an unrequested one because it reads command SYNTAX only
+    (``classify.py`` module docstring), which is the friction that revision
+    knowingly buys.
+
+    The tests below are about the console WIRING, not about the card, so they
+    approve explicitly rather than route around the gate — and
+    ``test_the_v4_gate_actually_raises_a_card_for_a_look_bundle`` asserts the
+    card really fires, so this approval can never become an invisible bypass.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(timeout_seconds=1.0)
+        self.approved: list = []
+
+    def request_approval(self, request) -> bool:
+        self.approved.append(request)
+        return True
+
+
 class TestSessionWiring:
     """REQ-LOOKLIB-010/019 — a look reaches the console the one existing way."""
 
@@ -845,7 +872,28 @@ class TestSessionWiring:
         from .test_runner_self_correction import ScriptedProvider
         from .test_web_session import _session
 
-        return _session(tmp_path, ScriptedProvider([]))
+        return _session(tmp_path, ScriptedProvider([]), channel=_AutoApprovingChannel())
+
+    def test_the_v4_gate_actually_raises_a_card_for_a_look_bundle(self, tmp_path):
+        """The approval above must be VISIBLE, or it is a silent bypass.
+
+        SPEC-COPILOT-UNREQ-001 M4 blacklisted `Store Preset`, and a look bundle
+        stores presets — so a bundle the user explicitly asked for now costs one
+        approval card. That is the friction the revision knowingly bought, and
+        it is asserted here rather than left to be inferred from a fixture: if a
+        later change stops raising the card, this test fails instead of the
+        approval quietly guarding nothing.
+        """
+        session, console, _audit, _sent, channel = self._session(tmp_path)
+        plan = _plan(_look(attributes=(("Dimmer", 50),)), _groups((11, "Back")), _pools())
+        session.run_look_bundle(plan)
+        assert channel.approved, (
+            "a look bundle no longer raises an approval card — either ruleset v4 "
+            "lost its `Store Preset` entry, or the bundle stopped storing presets"
+        )
+        held = [item.command for item in channel.approved[0].items]
+        assert any(c.startswith("Store Preset ") for c in held), held
+        assert console.executed, "approved bundle must still reach the console"
 
     def test_a_look_bundle_flows_through_the_gate_and_reaches_the_console(self, tmp_path):
         session, console, _audit, sent, _channel = self._session(tmp_path)
@@ -956,7 +1004,7 @@ class TestLookBundleUnderLiveLock:
         lock = LiveLock()
         lock.activate()
         session, console, audit, sent, _channel = _session(
-            tmp_path, ScriptedProvider([]), lock=lock
+            tmp_path, ScriptedProvider([]), lock=lock, channel=_AutoApprovingChannel()
         )
         return session, console, audit, sent, lock
 
