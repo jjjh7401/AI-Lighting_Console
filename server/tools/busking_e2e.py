@@ -28,6 +28,9 @@ from server.orchestrator.tools import build_toolset
 from server.safety.approval import ApprovalRequest
 from server.safety.bootstrap import build_console_stack
 from server.tools.probe_preflight import add_listen_port_argument
+from server.tools.tree_identity import assert_same_tree
+
+assert_same_tree(__file__)
 
 
 class _AutoApprove:

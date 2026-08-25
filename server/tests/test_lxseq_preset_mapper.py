@@ -12,9 +12,12 @@ AC-LXSEQ3-014  확인 한계가 산출물에 적힌다
 from __future__ import annotations
 
 import ast
+import unicodedata
 from pathlib import Path
 
 from server.lxseq.preset_mapper import (
+    NAME_COLLISION_UNVERIFIED,
+    NAME_TAKEN,
     POOL_TRUNCATED,
     POOL_UNREADABLE,
     SLOT_SHORTFALL,
@@ -233,3 +236,236 @@ class TestConfirmationLimitIsStated:
         table = dict((p.preset_id, p.slot) for p in result.planned)
         assert table["DIM.FULL"] == 1
         assert len(table) == 6
+
+
+# --- SPEC-COPILOT-PRESETIDEM-001 (카드 t87) — 이름을 봐야 멱등이다 -------------
+#
+# 위 검사들은 **슬롯**만 본다. 아래는 **이름**을 본다. 매퍼가 점유 슬롯을 피하는
+# 것은 슬롯 보증이지 동일성 보증이 아니어서, 이름을 안 보면 같은 시트를 두 번
+# 돌릴 때 전부 복제된다. 콘솔 접촉 0 — 매퍼는 순수하고 풀 단면은 손으로 짓는다.
+
+DIM_NAMES = ("풀", "쇼 하이", "미드", "로우", "잔광", "아웃")
+
+
+def _named_pool(names=(), truncated=False, **extra):
+    """이름이 실린 풀 단면. 슬롯은 1 부터 순서대로 준다.
+
+    위 `_pool` 은 점유 항목에 이름을 안 싣는다 — 그래서 기존 검사들이 이 변경에
+    영향받지 않는다. 이름을 재려면 이 헬퍼를 쓴다.
+    """
+    section = dict(
+        objects=[dict(no=i, name=n) for i, n in enumerate(names, start=1)],
+        truncated=truncated,
+    )
+    section.update(extra)
+    return section
+
+
+class TestRerunningTheSameSheetIsANoOp:
+    """AC-IDEM-001 — 헤드라인. 같은 CSV 재실행은 무동작이다."""
+
+    def test_all_six_names_present_plans_nothing(self):
+        result = map_presets(_records(), pool_section=_named_pool(DIM_NAMES))
+        assert result.planned == ()
+        assert len(result.already_present) == 6
+        assert result.refusal is None, "거절이 아니라 **수렴**이다"
+
+    def test_the_hold_reason_is_name_taken(self):
+        result = map_presets(_records(), pool_section=_named_pool(DIM_NAMES))
+        assert all(h.hold_classes == (NAME_TAKEN,) for h in result.already_present)
+
+    def test_parser_holds_are_untouched(self):
+        """AC-IDEM-003 — 파서 판정 13건은 콘솔 상태와 무관하게 그대로다.
+
+        섞였다면 이 수가 콘솔 상태에 따라 달라지고, 「19 중 6 계획 · 13 보류」
+        회귀 기준이 날마다 흔들린다.
+        """
+        for section in (_named_pool(), _named_pool(DIM_NAMES), _named_pool(DIM_NAMES[:3])):
+            assert len(map_presets(_records(), pool_section=section).held) == 13
+
+    def test_an_empty_pool_is_the_control(self):
+        """대조군 — 풀이 비면 6건이 계획된다.
+
+        이게 없으면 위 0건이 「이름을 봤다」인지 「무조건 0건」인지 모른다.
+        """
+        result = map_presets(_records(), pool_section=_named_pool())
+        assert len(result.planned) == 6
+        assert result.already_present == ()
+
+
+class TestOnlyTheMatchingRecordIsHeld:
+    """AC-IDEM-002 — 비공허성. 이름 하나만 달라도 그 하나만 계획된다."""
+
+    def test_one_changed_name_plans_exactly_that_record(self):
+        altered = ("풀", "쇼 하이", "미드", "로우", "잔광", "아웃X")
+        result = map_presets(_records(), pool_section=_named_pool(altered))
+        assert [p.preset_id for p in result.planned] == ["DIM.OUT"]
+        assert len(result.already_present) == 5
+
+    def test_the_planned_slot_is_the_first_free_one(self):
+        """6개가 점유돼 있으니 남은 1건은 7번으로 간다 — 배정은 여전히 콘솔 유래."""
+        altered = ("풀", "쇼 하이", "미드", "로우", "잔광", "아웃X")
+        result = map_presets(_records(), pool_section=_named_pool(altered))
+        assert [p.slot for p in result.planned] == [7]
+
+
+class TestTheComparisonIsExact:
+    """AC-IDEM-003 — 관대한 비교를 쓰지 않는다.
+
+    근거는 착수 게이트의 바이트 일치 실측이다(SPEC §A.4: 6/6 `byte_equal`,
+    공백을 품은 `쇼 하이` 가 `0x20` 유지, 단음절 `풀` 이 NFC 조합형 유지).
+    양쪽이 이미 트림된다는 것도 쟀다(§A.5) — 파서 `preset_parser.py:274` 와
+    명령 빌더 `store.py:31`.
+
+    그러므로 가장 엄격한 규칙이 성립하고, 관대한 비교는 **미측정 변환**이라
+    사용자가 넣으려던 레코드를 조용히 떨어뜨린다. 아래 셋은 전부 **불일치**여야
+    한다 — 즉 그 레코드는 계획되어야 한다.
+    """
+
+    @staticmethod
+    def _first_planned_ids(first_name):
+        section = _named_pool((first_name,) + DIM_NAMES[1:])
+        return [p.preset_id for p in map_presets(_records(), pool_section=section).planned]
+
+    def test_a_decomposed_name_is_not_a_match(self):
+        """NFD 분해형 — 눈에 같아 보여도 바이트가 다르다."""
+        assert self._first_planned_ids(unicodedata.normalize("NFD", "풀")) == ["DIM.FULL"]
+
+    def test_an_inner_space_removed_name_is_not_a_match(self):
+        section = _named_pool(("풀", "쇼하이") + DIM_NAMES[2:])
+        planned = [p.preset_id for p in map_presets(_records(), pool_section=section).planned]
+        assert planned == ["DIM.SHOW"]
+
+    def test_a_padded_name_is_not_a_match_either(self):
+        """콘솔이 패딩된 이름을 답하면 대조가 성립하지 않는다.
+
+        우리 쪽은 파서가 트림하지만 **콘솔 답을 트림하지는 않는다** — 재지 않은
+        변환을 넣지 않는다는 뜻이다. 이 검사가 그 선택을 못박는다.
+        """
+        assert self._first_planned_ids(" 풀 ") == ["DIM.FULL"]
+
+    def test_the_exact_name_is_the_control(self):
+        """양성 대조군 — 정확히 같으면 계획에서 빠진다.
+
+        이게 없으면 위 셋이 「엄격해서 안 맞다」인지 「무조건 계획된다」인지 모른다.
+        """
+        assert self._first_planned_ids("풀") == []
+
+
+class TestFilteringHappensBeforeAllocation:
+    """AC-IDEM-004 — 배정 후에 걸렀다면 없는 부족분이 생긴다."""
+
+    def test_no_false_shortfall_when_five_are_already_present(self):
+        section = _named_pool(DIM_NAMES[:5], capacity=6)
+        result = map_presets(_records(), pool_section=section)
+        assert result.refusal is None, "1건만 필요한데 부족분이 나오면 배정 후에 거른 것이다"
+        assert [p.preset_id for p in result.planned] == ["DIM.OUT"]
+        assert [p.slot for p in result.planned] == [6]
+
+    def test_a_real_shortfall_still_refuses(self):
+        """대조군 — 진짜로 모자라면 여전히 0건이다. 이름 검사가 그 갈래를 못 지운다."""
+        result = map_presets(_records(), pool_section=_named_pool(capacity=3))
+        assert result.planned == ()
+        assert result.refusal == SLOT_SHORTFALL
+        assert result.shortfall.needed == 6
+
+
+class TestTheThreeBasketsAccountForEveryRow:
+    """AC-IDEM-005 — `refusal` 이 없으면 셋의 합이 읽은 수와 같다.
+
+    거절 경로는 대상이 아니다: 그때는 저장 가능분이 어느 바구니에도 안 들어간다
+    (변경 전에도 그랬다). 세 번째 바구니를 안 읽는 소비자가 생기면 이 합이 깨진다.
+    """
+
+    def test_every_readable_pool_state_conserves_the_row_count(self):
+        records = _records()
+        for section in (
+            _named_pool(),
+            _named_pool(DIM_NAMES),
+            _named_pool(DIM_NAMES[:3]),
+            _named_pool(("풀", "없는이름", "미드")),
+            _named_pool(DIM_NAMES[:5], capacity=6),
+        ):
+            result = map_presets(records, pool_section=section)
+            assert result.refusal is None
+            total = len(result.planned) + len(result.held) + len(result.already_present)
+            assert total == len(records), section
+
+
+class TestAnUnreadableNameIsALimitNotARefusal:
+    """AC-IDEM-006 — 이름을 못 읽어도 거절하지 않는다. 대신 한계를 말한다.
+
+    번호와 무게가 다르다: 번호를 틀리면 점유 슬롯을 **덮어써** 복구가 불가능하고
+    (`_occupied_slots` 가 그래서 fail-closed 다), 이름을 모르면 생기는 것은
+    **중복**이다. 저장소가 이미 그 차이를 `refusal` 과 `unverified` 로 갈라 뒀다.
+    """
+
+    @staticmethod
+    def _pool_with_a_nameless_slot():
+        return dict(
+            objects=[dict(no=1, name=""), dict(no=2, name="풀")],
+            truncated=False,
+        )
+
+    def test_it_does_not_refuse(self):
+        result = map_presets(_records(), pool_section=self._pool_with_a_nameless_slot())
+        assert result.refusal is None
+
+    def test_the_limit_is_stated_in_the_result(self):
+        result = map_presets(_records(), pool_section=self._pool_with_a_nameless_slot())
+        assert NAME_COLLISION_UNVERIFIED in result.unverified
+        assert "이름을 못 읽은 것" in result.unverified_reason
+
+    def test_the_readable_names_are_still_compared(self):
+        """한 칸을 못 읽었다고 나머지 대조를 포기하지 않는다."""
+        result = map_presets(_records(), pool_section=self._pool_with_a_nameless_slot())
+        assert [h.preset_id for h in result.already_present] == ["DIM.FULL"]
+
+    def test_a_fully_named_pool_carries_no_such_marker(self):
+        """대조군 — 이름이 전부 있으면 마커가 없다.
+
+        이게 없으면 위 마커가 「못 읽어서」인지 「항상 붙어서」인지 모른다.
+        """
+        result = map_presets(_records(), pool_section=_named_pool(DIM_NAMES))
+        assert result.unverified == ("value_match",)
+
+    def test_value_match_survives_alongside_it(self):
+        """기존 한계를 밀어내지 않는다 — 더한다."""
+        result = map_presets(_records(), pool_section=self._pool_with_a_nameless_slot())
+        assert "value_match" in result.unverified
+        assert "값이 맞는지는" in result.unverified_reason
+
+
+class TestDuplicateNamesInsideOneSheet:
+    """AC-IDEM-007 — 파서는 `duplicate_id` 만 막고 이름은 안 본다.
+
+    안 막으면 이 가드가 **첫 실행에서** 중복을 만든다 — 빈 풀에 같은 이름 두 행을
+    쏘면 서로 다른 슬롯에 같은 이름이 둘 생긴다.
+    """
+
+    @staticmethod
+    def _two_rows_one_name():
+        text = "ID,Name,Level,Purpose\nDIM.FULL,같은이름,100%,t\nDIM.MID,같은이름,60%,t\n"
+        return parse_preset_csv(text).records
+
+    def test_the_second_row_is_held_not_planned(self):
+        records = self._two_rows_one_name()
+        result = map_presets(records, pool_section=_named_pool())
+        assert [p.preset_id for p in result.planned] == ["DIM.FULL"]
+        assert [h.preset_id for h in result.already_present] == ["DIM.MID"]
+
+    def test_distinct_names_are_the_control(self):
+        text = "ID,Name,Level,Purpose\nDIM.FULL,이름하나,100%,t\nDIM.MID,이름둘,60%,t\n"
+        result = map_presets(parse_preset_csv(text).records, pool_section=_named_pool())
+        assert len(result.planned) == 2
+        assert result.already_present == ()
+
+    def test_the_parser_does_not_catch_this_itself(self):
+        """이 검사가 왜 매퍼에 있는지를 못박는다 — 파서는 ID 만 본다.
+
+        파서가 나중에 이름 중복을 잡게 되면 이 검사가 빨개지고, 그때 매퍼 쪽
+        중복 방지가 남아도는지 다시 판단하면 된다.
+        """
+        records = self._two_rows_one_name()
+        assert len(records) == 2, "파서는 같은 Name 두 행을 그대로 통과시킨다"
+        assert all(r.storable for r in records)

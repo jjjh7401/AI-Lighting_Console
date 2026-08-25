@@ -63,6 +63,9 @@ from server.bridge.protocol import (
     decode_payload,
 )
 from server.tools.probe_preflight import add_listen_port_argument
+from server.tools.tree_identity import assert_same_tree
+
+assert_same_tree(__file__)
 
 DEFAULT_PATH = "DataPool/Sequences"
 DEFAULT_EXEC_COMMAND = "List"

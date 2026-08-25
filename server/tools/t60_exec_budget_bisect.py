@@ -35,6 +35,9 @@ import sys
 import server.safety.console as console_module
 from server.safety.bootstrap import build_console_stack
 from server.tools.probe_preflight import add_listen_port_argument
+from server.tools.tree_identity import assert_same_tree
+
+assert_same_tree(__file__)
 
 # `server/tools/` 는 OSC 송신면(`server.bridge`)을 임포트하면 안 된다 —
 # REQ-MVP-029 단일 초크포인트, `test_architecture.py` 가 전수로 막는다. 래핑

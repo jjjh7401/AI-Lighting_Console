@@ -22,7 +22,10 @@ from __future__ import annotations
 import argparse
 
 from server.safety.monitor import HealthMonitor
+from server.tools.tree_identity import assert_same_tree
 from server.web.reply_discovery import discover_reply_port
+
+assert_same_tree(__file__)
 
 #: 현장 실측값. **기본값으로 쓰지 않는다** — 도구는 말하게 한다(아래 참조).
 #: 도움말에만 실어 조작자가 무엇을 적어야 할지 알게 한다.

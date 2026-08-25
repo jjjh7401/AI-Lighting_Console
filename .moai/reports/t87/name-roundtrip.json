@@ -1,0 +1,118 @@
+{
+  "csv": "src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-dim.csv",
+  "listen_port": 9005,
+  "fabricated_control": {
+    "ok": false,
+    "raw": {
+      "ok": false,
+      "raised": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    }
+  },
+  "pool": {
+    "path": "DataPool/PresetPools/1",
+    "ok": true,
+    "truncated": false,
+    "child_count": null,
+    "children_in_reply": 6,
+    "objects": [
+      {
+        "no": 1,
+        "name": "풀"
+      },
+      {
+        "no": 2,
+        "name": "쇼 하이"
+      },
+      {
+        "no": 3,
+        "name": "미드"
+      },
+      {
+        "no": 4,
+        "name": "로우"
+      },
+      {
+        "no": 5,
+        "name": "잔광"
+      },
+      {
+        "no": 6,
+        "name": "아웃"
+      }
+    ]
+  },
+  "comparison": [
+    {
+      "index": 0,
+      "csv_name": "풀",
+      "csv_bytes": "ed9280",
+      "console_name": "풀",
+      "console_bytes": "ed9280",
+      "byte_equal": true,
+      "nfc_equal": true,
+      "casefold_equal": true,
+      "strip_equal": true
+    },
+    {
+      "index": 1,
+      "csv_name": "쇼 하이",
+      "csv_bytes": "ec87bc20ed9598ec9db4",
+      "console_name": "쇼 하이",
+      "console_bytes": "ec87bc20ed9598ec9db4",
+      "byte_equal": true,
+      "nfc_equal": true,
+      "casefold_equal": true,
+      "strip_equal": true
+    },
+    {
+      "index": 2,
+      "csv_name": "미드",
+      "csv_bytes": "ebafb8eb939c",
+      "console_name": "미드",
+      "console_bytes": "ebafb8eb939c",
+      "byte_equal": true,
+      "nfc_equal": true,
+      "casefold_equal": true,
+      "strip_equal": true
+    },
+    {
+      "index": 3,
+      "csv_name": "로우",
+      "csv_bytes": "eba19cec9ab0",
+      "console_name": "로우",
+      "console_bytes": "eba19cec9ab0",
+      "byte_equal": true,
+      "nfc_equal": true,
+      "casefold_equal": true,
+      "strip_equal": true
+    },
+    {
+      "index": 4,
+      "csv_name": "잔광",
+      "csv_bytes": "ec9e94eab491",
+      "console_name": "잔광",
+      "console_bytes": "ec9e94eab491",
+      "byte_equal": true,
+      "nfc_equal": true,
+      "casefold_equal": true,
+      "strip_equal": true
+    },
+    {
+      "index": 5,
+      "csv_name": "아웃",
+      "csv_bytes": "ec9584ec9b83",
+      "console_name": "아웃",
+      "console_bytes": "ec9584ec9b83",
+      "byte_equal": true,
+      "nfc_equal": true,
+      "casefold_equal": true,
+      "strip_equal": true
+    }
+  ],
+  "verdict": {
+    "compared": 6,
+    "byte_equal": 6,
+    "nfc_equal": 6,
+    "gate_pass": true
+  }
+}

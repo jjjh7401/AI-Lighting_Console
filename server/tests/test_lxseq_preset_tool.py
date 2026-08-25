@@ -265,3 +265,80 @@ class TestOneVocabulary:
         from server.orchestrator.tools import _PRESET_POOL_FAMILY
 
         assert set(_PRESET_POOL_FAMILY) == set(PRESET_KINDS)
+
+
+class TestTheThirdBasketReachesThePayload:
+    """AC-IDEM-008 (SPEC-COPILOT-PRESETIDEM-001, 카드 t87).
+
+    매퍼가 `already_present` 를 내도 툴이 안 실으면 모델은 그 6건이 어디로 갔는지
+    모른 채 「0건 계획」만 본다 — 매퍼 독스트링이 경고하는 바로 그 결함이다.
+    """
+
+    DIM_NAMES = ("풀", "쇼 하이", "미드", "로우", "잔광", "아웃")
+
+    @classmethod
+    def _dispatch_with_pool(cls, names):
+        import base64
+        import json
+
+        from server.llm.types import ToolCall
+        from server.orchestrator.tools import build_toolset
+
+        class _Console:
+            def execute(self, command):
+                raise AssertionError("preview 는 발화하면 안 된다: " + command)
+
+            def query_state(self, path):
+                if path.endswith("/1"):
+                    return dict(
+                        children=[dict(i=i, name=n) for i, n in enumerate(names, start=1)],
+                        truncated=False,
+                    )
+                return dict(
+                    children=[dict(i=1, name="Dimmer")],
+                    node=dict(childCount=1),
+                    truncated=False,
+                )
+
+        console = _Console()
+        registry = build_toolset(execution_port=console, state_port=console)
+        execution = registry.dispatch(
+            ToolCall(
+                id="idem1",
+                name=TOOL,
+                arguments=dict(
+                    file_content_base64=base64.b64encode(_bytes("dim")).decode("ascii"),
+                    action="preview",
+                ),
+            )
+        )
+        return json.loads(execution.result.content)
+
+    def test_a_full_pool_yields_zero_planned_and_six_already_present(self):
+        payload = self._dispatch_with_pool(self.DIM_NAMES)
+        assert payload["pool_no"] == 1
+        assert payload["planned"] == []
+        assert len(payload["already_present"]) == 6
+        assert payload["refusal"] is None
+
+    def test_each_entry_carries_its_class_and_prose(self):
+        payload = self._dispatch_with_pool(self.DIM_NAMES)
+        assert all(e["classes"] == ["name_taken"] for e in payload["already_present"])
+        assert all(e["details"] for e in payload["already_present"])
+
+    def test_an_empty_pool_is_the_control(self):
+        payload = self._dispatch_with_pool(())
+        assert len(payload["planned"]) == 6
+        assert payload["already_present"] == []
+
+    def test_the_three_baskets_account_for_every_row(self):
+        for names in (self.DIM_NAMES, (), self.DIM_NAMES[:3]):
+            payload = self._dispatch_with_pool(names)
+            total = len(payload["planned"]) + len(payload["held"]) + len(payload["already_present"])
+            assert total == payload["read"], names
+
+    def test_the_guidance_names_the_third_basket(self):
+        payload = self._dispatch_with_pool(self.DIM_NAMES)
+        assert "already_present" in payload["guidance"]
+        assert "수렴" in payload["guidance"]
+        assert "「이미 있음」은 「맞게 있음」이 아니다" in payload["guidance"]

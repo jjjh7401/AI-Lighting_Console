@@ -58,6 +58,9 @@ from server.orchestrator.tools import build_toolset
 from server.safety.approval import ApprovalRequest
 from server.safety.bootstrap import build_console_stack
 from server.tools.probe_preflight import add_listen_port_argument
+from server.tools.tree_identity import assert_same_tree
+
+assert_same_tree(__file__)
 
 #: 판독 채널 날조 대조군이 물어보는 경로. 콘솔에 있을 수 없는 이름이라
 #: **`ok=False`가 정답**이다. `ok=True`가 오면 채널이 아무 말에나 «있다»고

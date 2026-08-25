@@ -21,6 +21,9 @@ from server.llm.errors import ProviderError
 from server.llm.factory import build_provider
 from server.llm.types import LLMProvider, UserMessage
 from server.rulebook.assembly import assemble_prefix
+from server.tools.tree_identity import assert_same_tree
+
+assert_same_tree(__file__)
 
 _DEFAULT_PROMPT = "간단히 '준비 완료'라고만 답해줘. 도구는 호출하지 마."
 
