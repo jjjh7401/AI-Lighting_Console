@@ -115,7 +115,46 @@ AST 실측 v2(`census-run.txt`): **COLLECTING 직접 2 + 래퍼 경유 1** · SI
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+실행 주체: 오케스트레이터 직접. `manager-develop` 은 frontmatter `isolation: worktree` 때문에
+자기 트리로 격리돼 이 워크트리에 못 들어왔고, 격리 트리엔 `.venv` 가 없어 M1 을 잴 수 없다.
+그 에이전트는 쓰기 전에 멈춰 `plan.md §F M3` 의 실행 불가 결함(`_deps` arity)을 판독으로
+잡았다 — 헛수고가 아니었다.
+
+### M1 — 출하 형태 관문 🟢
+
+- **Claim**: 트리거가 출하 형태에서 결정적으로 동작한다.
+- **Evidence**: `.venv/bin/python -m pytest server/tests/test_ws_wait_guard.py -q` → `9 passed`,
+  3회 반복 동일(`.moai/reports/t57/m1-gate-run.txt`). 몽키패치 0 · 초과를 삼키는 감싸개 0.
+- **Baseline-attribution**: 이 트리, 이번 실행, HEAD 는 `4e1d816` 시점.
+- **Gaps**: 이 초록만으로는 검사가 **죽을 수 있는지**를 모른다 — M4 가 잰다.
+
+### M4 — 뮤테이션 증거 🟢
+
+- **Claim**: 자리 1·2 가 정본 레버로 KILLED 된다(양면).
+- **Evidence**(`m4-mutation-run.txt`, 3회 동일):
+  `unmutated → 9 passed` · `site1-lever → KILLED` · `site2-lever → KILLED` ·
+  `site1-degenerate → SURVIVED`(무동작 치환, 결함 아님) · 복원 체크섬 12/12 일치.
+- **Baseline-attribution**: 원본 sha256 `fa505d601d58a2db…`, 매 회 복원 후 대조.
+- **Gaps**: 전량 스위트 미실행(AC-014). 독립 판독자 없음.
+
+### M5 — 미관측 표기 🔴 **AC-016 발동**
+
+- **Claim**: 열린 후보 둘이 **연언을 만족하고 KILLED 된다.**
+- **Evidence**(`m5-census-run.txt` · `m5-conjunct-run.txt`):
+  census 재실행 → 모으는 자리 직접 6 · 래퍼 경유 1 · SINGLE 70 · TOTAL 77.
+  `test_web_cue_monitor.py:607` + `drain_until(ws, "cue_monitor")` → **KILLED**(5 failed / 기준선 51 passed).
+  `test_web_panel_execute.py:255` + `drain_until(ws, "chat_response")` → **KILLED**(2 failed / 기준선 76 passed).
+  둘 다 치환 적용을 되읽어 단언, 복원 후 sha256 일치.
+- **Baseline-attribution**: 각 케이스마다 무뮤테이션 기준선을 먼저 재고 기록했다.
+- **Gaps**: 나머지 자리들의 「타입인가 술어인가」는 안 쟀다. t54 의 0 KILLED 와의 불일치도
+  설명하지 못했다 — 가설 둘(t58 의 모양 변경 · t54 의 고정 타입 레버) 모두 미측정.
+- **Residual-risk**: 「타입이 아니라 술어를 기다리는」 자리가 더 있을 수 있고, 그렇다면
+  t54 의 0 KILLED 는 자리 성질이 아니라 레버 선택의 산물이다. 후속 카드 **t99**.
+
+### 이 구간이 뒤집은 것
+
+`AC-RECVOBS-016` 이 재기술을 불합격으로 정하므로, 「65자리 영구 미관측」은 유지될 수
+없다. 리드 재정(2026-08-25): **철회 + 후속 카드 t99.** 재판정이지 재기술이 아니다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
