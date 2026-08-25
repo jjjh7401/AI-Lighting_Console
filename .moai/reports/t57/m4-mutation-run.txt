@@ -1,0 +1,45 @@
+BASELINE sha256 = fa505d601d58a2db71312f9fe31bb3722ff2a1cad31400b7e460036a46176de7
+CASE unmutated applied=n/a (원본)
+  -> SURVIVED  |  9 passed, 1 warning in 1.42s
+  restored sha256 match = True
+CASE site1-lever applied=True
+  -> KILLED  |  1 failed, 8 passed, 1 warning in 1.26s
+     FAILED server/tests/test_ws_wait_guard.py::TestTheStrictnessIsObservable::test_the_unexpected_frame_is_returned_not_discarded
+  restored sha256 match = True
+CASE site2-lever applied=True
+  -> KILLED  |  1 failed, 8 passed, 1 warning in 1.23s
+     FAILED server/tests/test_ws_wait_guard.py::TestTheStrictnessIsObservable::test_the_pushed_frame_appears_in_the_collected_sequence
+  restored sha256 match = True
+CASE site1-degenerate applied=True
+  -> SURVIVED  |  9 passed, 1 warning in 1.21s
+  restored sha256 match = True
+BASELINE sha256 = fa505d601d58a2db71312f9fe31bb3722ff2a1cad31400b7e460036a46176de7
+CASE unmutated applied=n/a (원본)
+  -> SURVIVED  |  9 passed, 1 warning in 1.29s
+  restored sha256 match = True
+CASE site1-lever applied=True
+  -> KILLED  |  1 failed, 8 passed, 1 warning in 1.27s
+     FAILED server/tests/test_ws_wait_guard.py::TestTheStrictnessIsObservable::test_the_unexpected_frame_is_returned_not_discarded
+  restored sha256 match = True
+CASE site2-lever applied=True
+  -> KILLED  |  1 failed, 8 passed, 1 warning in 1.24s
+     FAILED server/tests/test_ws_wait_guard.py::TestTheStrictnessIsObservable::test_the_pushed_frame_appears_in_the_collected_sequence
+  restored sha256 match = True
+CASE site1-degenerate applied=True
+  -> SURVIVED  |  9 passed, 1 warning in 1.22s
+  restored sha256 match = True
+BASELINE sha256 = fa505d601d58a2db71312f9fe31bb3722ff2a1cad31400b7e460036a46176de7
+CASE unmutated applied=n/a (원본)
+  -> SURVIVED  |  9 passed, 1 warning in 1.28s
+  restored sha256 match = True
+CASE site1-lever applied=True
+  -> KILLED  |  1 failed, 8 passed, 1 warning in 1.22s
+     FAILED server/tests/test_ws_wait_guard.py::TestTheStrictnessIsObservable::test_the_unexpected_frame_is_returned_not_discarded
+  restored sha256 match = True
+CASE site2-lever applied=True
+  -> KILLED  |  1 failed, 8 passed, 1 warning in 1.23s
+     FAILED server/tests/test_ws_wait_guard.py::TestTheStrictnessIsObservable::test_the_pushed_frame_appears_in_the_collected_sequence
+  restored sha256 match = True
+CASE site1-degenerate applied=True
+  -> SURVIVED  |  9 passed, 1 warning in 1.24s
+  restored sha256 match = True

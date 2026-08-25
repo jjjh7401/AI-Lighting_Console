@@ -127,3 +127,50 @@ def drain_until(ws, event_type: str, *, limit: int = 30) -> dict:
         if event["type"] == event_type:
             return event
     raise AssertionError(f"no {event_type!r} event within {limit} frames: {seen}")
+
+
+def fire_status_listeners(deps) -> int:
+    """등록된 status 리스너를 **지금** 부른다 — 타이머를 기다리지 않고.
+
+    **왜 지어낸 경로가 아닌가.** ``_heartbeat_loop`` 은 게이트 health 상태가 바뀔 때마다
+    ``for notify in tuple(deps.status_listeners): notify()`` 로 이 집합을 돈다(app.py:255-256).
+    이 함수는 **같은 집합의 같은 콜러블**을 부른다 — 재구현이 아니라 동일 객체다. 프레임 내용도
+    테스트가 짓지 않는다 — ``push_status`` → ``send_event(session.status_snapshot())``
+    (app.py:381-382).
+    다른 것은 **호출 원인 하나**뿐이다: 저기서는 타이머, 여기서는 이 문장.
+
+    **실서비스에서 이 발사가 실제로 일어난다.** 다만 근거는 하트비트 주기가 아니다 —
+    ``_heartbeat_loop`` 은 5초마다 돌지만(``serve.py:103`` 기본값 5.0 → ``:382`` →
+    ``app.py:279-281``) ``notify()`` 는 **health 가 바뀔 때만** 발사한다(``app.py:253``
+    ``if state != last_state:``). 조건 없는 생산 호출자는 따로 있다 — ``serve.py:438``
+    ``reply_diagnostic.set_on_complete(lambda: [notify() for notify in tuple(...)])`` 가
+    응답 진단이 끝날 때마다 **무조건** 같은 집합을 순회한다. 그래서 요청과 응답 사이에
+    예상 밖 ``status`` 가 끼는 일은 가정이 아니라 운영 사실이고, 이 함수는 지어낸 경로가 아니다.
+
+    (초판 독스트링은 「5초마다 도니까 운영 사실」이라고 적었다. **틀렸다** — 주기는 루프가
+    도는 주기이지 프레임이 밀리는 주기가 아니다. 반증은 ``serve.py:435-437`` 주석에 평문으로
+    있었다. 참인 결론을 안 잰 인과 위에 세운 것이라 근거를 교체했다.)
+
+    반면 테스트의 ``_deps`` 는 하트비트 간격을 안 주므로(``app.py:175`` 기본값 ``None``)
+    검사 중에는 루프가 **안 돈다** — 그래서 음성 대조군이 결정적이고, 그래서 이 함수가 필요하다.
+
+    **미는 프레임은 ``status`` 한 종류뿐이다.** ``push_status`` 가 보내는 것이
+    ``session.status_snapshot()`` 이기 때문이다. 기대 타입이 ``status`` 인 자리 앞에 이것을 밀면
+    두 헬퍼는 여전히 행동이 같다 — 그런 자리를 이 함수로 가르려 하지 마라.
+
+    🔴 **고아 펌프 함정(t94).** ``recv_frame`` 은 시간이 초과돼도 자기 펌프 스레드를 안 죽인다.
+    그 고아가 소켓에 매달려 **다음 프레임 한 장을 먹는다.** 그러므로 이 함수를 쓰는 검사에서
+    「초과를 삼켜 ``None`` 으로 바꾸는」 판독을 쓰면, 그 뒤 읽기가 전부 거짓 0 이 된다.
+    초과가 예정된 읽기를 이 함수 근처에 두지 마라.
+
+    Returns: 부른 리스너 수.
+    """
+    listeners = tuple(deps.status_listeners)
+    # 0 이면 이 함수는 조용히 아무것도 안 한 셈이 된다. 오늘의 검사들은 그 경우에도
+    # 빨개지므로 공허해지지는 않는다 — 이 단언의 이유는 **재사용 안전**이다.
+    # 다른 문맥(소켓을 아직 안 열었거나, 이미 닫힌 뒤)에서 이 함수를 부르면
+    # 침묵이 통과로 읽힐 수 있고, 그때는 잡아줄 단정이 없다.
+    assert listeners, "status 리스너가 0개다 — 소켓이 연결된 뒤에 불러야 한다"
+    for notify in listeners:
+        notify()
+    return len(listeners)
