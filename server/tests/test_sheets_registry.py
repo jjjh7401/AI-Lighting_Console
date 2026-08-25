@@ -189,9 +189,18 @@ class TestRegistryTable:
 
         LXSEQ-002 M3 이 `group` 을 더했다 — 그 종류의 파서·매퍼·핸들러가
         생겼기 때문이다. 아래 `test_registry_has_no_row_reserved_for_a_later_spec`
-        가 그 조건을 기계로 잰다.
+        가 그 조건을 기계로 잰다. LXSEQ-003 M3 이 프리셋 3종을 더했고, 그
+        검사가 **핸들러 없는 행을 심으면 실제로 빨개지는지** 다시 쏴서 확인했다 —
+        행을 더해 초록이 된 것과 검사를 약화시켜 초록이 된 것은 결과가 같아 보인다.
         """
-        assert [row.kind for row in REGISTRY] == ["patch", "group", "vectorworks"]
+        assert [row.kind for row in REGISTRY] == [
+            "patch",
+            "group",
+            "preset-dim",
+            "preset-col",
+            "preset-bm",
+            "vectorworks",
+        ]
 
     def test_registry_patch_row_references_canonical_columns_by_identity(self):
         patch = next(row for row in REGISTRY if row.kind == "patch")
@@ -207,6 +216,9 @@ class TestRegistryTable:
         assert tags == {
             "patch": (HANDLER_TAG_TOOL, "import_lxseq_patch"),
             "group": (HANDLER_TAG_TOOL, "import_lxseq_groups"),
+            "preset-dim": (HANDLER_TAG_TOOL, "import_lxseq_presets"),
+            "preset-col": (HANDLER_TAG_TOOL, "import_lxseq_presets"),
+            "preset-bm": (HANDLER_TAG_TOOL, "import_lxseq_presets"),
             "vectorworks": (HANDLER_TAG_SESSION_METHOD, "upload_vectorworks_export"),
         }
 
@@ -533,7 +545,13 @@ class TestHandlerResolution:
         result = discriminate(FABRICATED_COMMA, registry=_broken_handler_table())
         assert result.config_errors, "판별 결과가 설정 오류를 싣고 올라오지 않았다"
 
-    def test_handler_resolution_never_excludes_todays_two_rows(self):
+    def test_handler_resolution_never_excludes_todays_rows(self):
+        """이름에 **행 수를 박지 않는다.**
+
+        원래 이름은 `…_todays_two_rows` 였는데 행이 다섯이 되자 이름이 「두 행」
+        이라 말하면서 다섯을 재는 상태가 됐다. 숫자는 본문이 재고 이름은 조건만
+        말한다 — 이름에 박은 숫자는 행이 늘 때마다 거짓이 된다.
+        """
         result = discriminate(PATCH_CSV.read_bytes())
         assert result.config_errors == ()
         assert discriminate((VWX_DIR / "demoshow_grandma3.mvr").read_bytes()).config_errors == ()
