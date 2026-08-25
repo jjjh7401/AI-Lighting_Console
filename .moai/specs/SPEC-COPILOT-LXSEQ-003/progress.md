@@ -433,3 +433,91 @@ fail-fast 다.
 
 REQ-009/010 을 툴 층으로 · AC-002 가 저장 가능성을 못 재서 관측을 만듦 · AC-003 과
 AC-009 를 부재(grep) 대신 동작·AST 검사로. **문면 정정은 t75·t76·t77 로 이미 반영됐다.**
+
+---
+
+## §E.2 (이어서) M4 ⑤⑥ 실기 — DIM.SHOW 한 건 (2026-08-25)
+
+### 결론 먼저
+
+**19 중 6 계획 · 13 보류(클래스별)** 중 **이번에 넣은 것은 1건**이다.
+`DIM.SHOW('쇼 하이', 85%) → Dimmer 풀 슬롯 2`. 「1건 성공」이 아니라
+**「19 중 6 계획 · 13 보류 · 그중 이번 발사 1건」**이다.
+
+**값이 맞는지는 확인하지 못했다.** 채널이 슬롯 점유만 답한다 — 「슬롯이 찼다」는
+「무언가 저장됐다」까지만 말한다(`unverified: ["value_match"]`).
+
+### 발사 전 → 발사 후 (양쪽 다 실측)
+
+| | 발사 전 | 발사 후 | 독립 재조회(별도 프로세스) |
+|---|---|---|---|
+| `Patch/Stages/1/Fixtures` | 86 | 86 | **86** |
+| `DataPool/Groups` | 18 | 18 | **18** |
+| `DataPool/PresetPools/1` | **1** | **2** | **2** |
+| 날조 대조군 | 거절 | 거절 | 거절("path segment not found") |
+
+범위 밖은 안 건드렸다. 날조 대조군이 **이유를 대며** 거절했으므로 이 관측은 증거다
+— 침묵으로 인한 `ok=false` 가 아니다.
+
+### 승인 통로가 실제로 물었다 — 사고와의 차이
+
+```
+approval: "granted"
+approval_requests: [ ["Store Preset 1.2", "Label Preset 1.2 '쇼 하이'"] ]
+applied.commands: Store Preset 1.2      executed_ok "OK"
+                  Label Preset 1.2 '쇼 하이'  executed_ok "OK"
+```
+2026-08-25 사고 때는 `approval_requests: []` 였다 — **한 번도 안 물었다**. 이번엔
+번들이 통로를 거쳤다. 발사 직전 `--approve` 없이 `apply` 를 쏴 `parser.error` 로
+exit 2 하는 것도 확인했다(콘솔 스택 세우기 **전**이라 콘솔에 안 닿는다).
+
+### 바이트 (t72 — 기록이지 판정 근거가 아니다)
+
+`command_bytes: [16, 29]` · `longest_command_bytes: 29` ·
+시트 조각 `byte_length: 101` · `sha256: da9f580e…`
+**짧다고 안전한 것이 아니다.** 2044B 거절 · 2080B 통과가 재현된 축이라
+대응은 fail-fast 이고 바이트는 기록만 한다.
+
+### 🔴 배차서 전제 두 개가 실측으로 반증됐다
+
+**1. 「DIM.02 한 건」을 그때의 하네스로는 못 쐈다.**
+`preview --limit 1` 실측이 `DIM.FULL → 슬롯 2` 를 냈다. `--limit` 은 앞에서 N행을
+자를 뿐이고 dim 시트 1행이 `DIM.FULL` 이다. 매퍼(`preset_mapper.py:166-202`)는
+**이름 중복을 안 본다** — 점유 안 된 슬롯을 오름차순으로 고를 뿐이라 사고로 슬롯 1에
+있던 `DIM.FULL` 이 슬롯 2에 하나 더 생겼을 것이다. `--limit 2` 는 2건이라
+「한 건만」을 깬다. **능력 공백이지 설정 문제가 아니었다.**
+
+처방: `--skip`(오프셋)을 붙여 정본 시트에서 header + 2행만 자른다. 파생 CSV 를
+만들지 않아 출처(sha256)가 정본을 가리킨다. 검사 `test_lxseq_preset_harness_slice.py`
+6건이 지킨다 — RED 6건 확인 후 구현. 뮤테이션 2라운드: `skip` 무시 → **KILL 4/4**,
+경계 +1(off-by-one) → **KILL 4/4**. 복원 체크섬 대조함.
+매퍼의 이름중복 자체는 **t87**(이 SPEC 밖). M4 는 그 결론을 안 기다린다.
+
+**2. ⑥ 「되읽고 보고」가 깨져 있었다.**
+하네스가 `DataPool/Presets/<n>` 을 읽었고 콘솔이 **경로째 거절**했다
+(`"path segment not found: 'Presets'"`). 정본은 `DataPool/PresetPools` 이며
+`server/preshow/checks.py:19` 에 `DEFAULT_PRESET_POOLS_PATH` 로 **이미 있었다**.
+리터럴을 다시 적지 않고 그 상수를 임포트하게 고쳤다. 안 고치고 쐈으면
+**쓰고 나서 확인을 못 했다.**
+
+계열 처방(은퇴 리터럴로 조회 경로를 못 만들게)은 **t88**. 이 저장소에서 5회차다 —
+`server/prechk/inventory.py:56` 의 `RETIRED_PATHS` 가 그 리터럴을 이미 막고 있었는데
+사정권이 rig context 경로 튜플뿐이라 이 툴을 못 봤다.
+
+### 🔴 「응답기 침묵」은 절반이 내 오진이었다
+
+세션 초 `--probe-only` 가 `responder_silent` / `console_offline` 을 냈다. 나는
+`lsof` 에 `app_gma3` 가 UDP 9005 를 잡은 것을 보고 **충돌하겠다고 가정해서**
+`--listen-port 9105` 를 썼다. 9005 는 응답기가 **회신을 보내는 목적지**라 거기서
+들어야 했다. 실측 근거: `settings.toml` → `receive_port = 9005`, `osc_slot = 2`.
+
+같은 창에 감독의 `Enable Input`/`Enable Output` 사이클도 들어갔으므로
+**두 변경의 기여를 못 갈랐다.** 포트 교정만으로 살아났는지는 미측정이다.
+재발 방지 재료로 그대로 남긴다 — 「응답기가 죽었다」로 단정하기 전에
+**내가 어느 포트에서 듣고 있는지**를 먼저 재라.
+
+### 다음 (리드 판단 대기)
+
+남은 4건(`DIM.MID`·`DIM.LOW`·`DIM.GLOW`·`DIM.OUT`)은 이 보고를 읽고 리드가 따로
+정한다. **6건 일괄은 금지** — t72(내용 의존 거절)가 안 풀렸다. 다음 계획을
+미리 재 두면 `--skip 2 --limit 1` → `DIM.MID → 슬롯 3` 이다(preview, 콘솔 쓰기 0).
