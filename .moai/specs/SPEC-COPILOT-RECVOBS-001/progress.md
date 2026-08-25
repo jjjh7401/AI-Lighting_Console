@@ -166,7 +166,38 @@ run 단계 진입 전에 적어 둔 「다섯 번째가 있을 수 있다」는 
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+- run_complete_at: 2026-08-25
+- run_status: audit-ready
+
+### AC-014 — 전량 스위트 🟢
+
+    $ .venv/bin/python -m pytest server/tests -q
+    10337 passed, 12 skipped, 1 warning in 151.55s
+
+`.moai/reports/t57/ac014-full-suite.txt`. **이 카드가 심은 검사 때문에 빨개진
+다른 테스트 0건.**
+
+**1차 실행은 2건 빨간불이었고 원인이 내 것이었다** — 다만 검사 코드가 아니라
+**증거 스크립트**다. `.moai/reports/t57/` 에 `git add -f` 로 넣은 `.py` 5개가
+`test_overlap_preserve.py::TestTouchedFilesPassLint` 의 「손댄 파일」 린트 범위에
+들어왔다. **gitignore 여부와 무관하게 추적되면 걸린다.** 정리 후 재실행이 위 값이다.
+
+포맷을 고치면 스크립트가 바뀌므로 전부 다시 돌려 기록된 출력과 대조했다 —
+census 완전 동일 · m5/m4 판정·개수·실패검사명 동일(벽시계만 다름) ·
+probe-inject 네 칸 표 그대로. **고친 스크립트가 기록과 안 맞으면 증거가 아니라 장식이다.**
+
+### 실행 조건 (사전 기록 — 귀속을 위해)
+
+돌리기 **전에** 쟀다: 부하 5.19 / 57 users · 월요일부터 멈춰 있는 고아 pytest 1건
+(PID 93285, CPU 누적 33초) · **grandMA3 onPC 가 UDP 9005 를 1일 6시간째 점유**
+(PID 47006). 메모리는 그 포트 점유가 빨간불을 만든 전례를 적어 두고 있는데,
+**이번 조건에서는 발동하지 않았다**(전량 초록). 사전에 안 쟀으면 이 문장을 못 쓴다.
+
+### 남은 것
+
+- **sync 미착수** — 리뷰 렌즈 + PR. 렌즈는 리드가 지정한다.
+- **독립 판독자 없음** — 검사도 뮤테이션도 판정도 같은 사람이 했다.
+- **t99 미착수** — 66자리를 자리별 올바른 레버로 재측정.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
