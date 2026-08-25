@@ -521,3 +521,50 @@ exit 2 하는 것도 확인했다(콘솔 스택 세우기 **전**이라 콘솔�
 남은 4건(`DIM.MID`·`DIM.LOW`·`DIM.GLOW`·`DIM.OUT`)은 이 보고를 읽고 리드가 따로
 정한다. **6건 일괄은 금지** — t72(내용 의존 거절)가 안 풀렸다. 다음 계획을
 미리 재 두면 `--skip 2 --limit 1` → `DIM.MID → 슬롯 3` 이다(preview, 콘솔 쓰기 0).
+
+### M4 잔여 4건 — 순차 발사 완료 (2026-08-25, 리드 자율 승인)
+
+리드가 잔여 4건을 자율 승인하며 정지 조건 다섯을 걸었다. **하나도 안 걸렸다.**
+건마다 `--skip` 을 올려 preview → apply → 되읽기를 따로 돌렸다. 일괄 명령으로
+묶지 않았다 — 거절이 나면 그 건에서 멈춰야 하기 때문이다.
+
+| `--skip` | 프리셋 | 슬롯 | 명령 | 최장 바이트 | 풀 |
+|---|---|---|---|---|---|
+| 1 | `DIM.SHOW` 쇼 하이 85% | 2 | `Store/Label Preset 1.2` | 29 | 1 → 2 |
+| 2 | `DIM.MID` 미드 60% | 3 | `Store/Label Preset 1.3` | 25 | 2 → 3 |
+| 3 | `DIM.LOW` 로우 30% | 4 | `Store/Label Preset 1.4` | 25 | 3 → 4 |
+| 4 | `DIM.GLOW` 잔광 15% | 5 | `Store/Label Preset 1.5` | 25 | 4 → 5 |
+| 5 | `DIM.OUT` 아웃 0% | 6 | `Store/Label Preset 1.6` | 25 | 5 → 6 |
+
+건마다 `approval: granted` + `approval_requests` 에 번들이 찍혔고 두 명령 모두
+`executed_ok "OK"`, `all_ok: true`. 매 건 `read 1 · held [] · rejected_rows [] ·
+refusal null` 이었고 풀은 **정확히 +1** 씩 올랐다.
+
+**정지 조건 대조 (다섯 다 통과)**: planned 항상 1건이고 기대한 레코드였다 ·
+refusal/rejected/held 항상 비었다 · childCount 항상 정확히 +1 · 날조 대조군은
+매번 `"path segment not found: 'FixtureTypesZZZNotAThing'"` 로 **이유를 대며**
+거절했다(침묵 아님) · 최장 바이트 **29** 로 세 자리 근처도 안 갔다(t72 구역 밖).
+
+### 최종 상태 — 독립 재조회 (별도 프로세스)
+
+```
+fabricated_control  ok=false  "path segment not found: 'FixtureTypesZZZNotAT…"
+Patch/Stages/1/Fixtures   86      ← 변화 없음
+DataPool/Groups           18      ← 변화 없음
+DataPool/PresetPools/1     6
+--skip 6 preview          read 0 · planned []   ← 시트가 말랐다
+```
+
+`--skip 6` 이 `read 0 · planned []` 를 낸 것이 **정확히 6행을 다 썼고 남은 것이
+없다**는 증거다. 범위 밖(fixtures 86 · groups 18)은 끝까지 안 건드렸다.
+
+### 보고 형태 — 「6건 성공」이라고 쓰지 마라
+
+**「19 중 6 계획 · 13 보류(클래스별) · 저장 계획 6건 발화 · 값 일치 미검증」**이다.
+
+- 저장 가능성 실측: `dim 6/6 · col 0/8 · bm 0/5` = 19 중 6.
+- 슬롯 1 `DIM.FULL('풀')` 은 **사고 산물**이고 정규 발사가 아니다. 풀 6건 중
+  5건만 이 절차를 거쳤다.
+- **값이 맞는지는 아무도 확인 못 했다** — 채널이 슬롯 점유만 답한다
+  (`unverified: ["value_match"]`). 「슬롯이 찼다」는 「무언가 저장됐다」까지만 말한다.
+  AC-002 가 값을 안 재는 것은 SPEC 이 아는 한계이고, 이 미검증은 그대로 안고 간다.
