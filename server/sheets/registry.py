@@ -317,9 +317,47 @@ GROUP_ROW = SheetKindRow(
     passthrough_args=("action",),
 )
 
-#: 표 하나. 오늘 채워진 행은 셋이며, 예약된 종류의 행은 만들지 않는다
-#: (REQ-FILEARG-017 — 그 종류의 파서·핸들러가 아직 없다).
-REGISTRY: tuple[SheetKindRow, ...] = (PATCH_ROW, GROUP_ROW, VECTORWORKS_ROW)
+#: 프리셋 3종 — **정확 열 집합**으로 갈린다(SPEC-COPILOT-LXSEQ-003 REQ-012).
+#:
+#: 포함 검사를 쓰지 않는 이유: `col`(ID·Name·Value·Purpose)의 세 열을 포함
+#: 검사로 두면 `bm`(ID·Name·TargetGroup·Value) 헤더가 그 서명에도 맞아 둘이
+#: 안 갈린다 — `AC-FILEARG-018` 이 그 대조군을 이미 명시했고, 003 은 그 설계를
+#: 다시 유도하지 않고 물려받는다.
+#:
+#: `preset-pos`(ID·StageMeaning·TargetGroup·RecordGuide)의 행은 **만들지 않는다.**
+#: 값 열이 없고 현장 레코드 대상이라 이 경로의 물건이 아니다 — 그래서 그 헤더는
+#: 어느 서명에도 맞지 않고 `unknown_sheet_kind` 로 떨어진다.
+PRESET_DIM_ROW = SheetKindRow(
+    kind="preset-dim",
+    predicate=ExactColumns(columns=("ID", "Name", "Level", "Purpose")),
+    handler=Handler(HANDLER_TAG_TOOL, "import_lxseq_presets"),
+    passthrough_args=("action",),
+)
+
+PRESET_COL_ROW = SheetKindRow(
+    kind="preset-col",
+    predicate=ExactColumns(columns=("ID", "Name", "Value", "Purpose")),
+    handler=Handler(HANDLER_TAG_TOOL, "import_lxseq_presets"),
+    passthrough_args=("action",),
+)
+
+PRESET_BM_ROW = SheetKindRow(
+    kind="preset-bm",
+    predicate=ExactColumns(columns=("ID", "Name", "TargetGroup", "Value")),
+    handler=Handler(HANDLER_TAG_TOOL, "import_lxseq_presets"),
+    passthrough_args=("action",),
+)
+
+#: 표 하나. 예약된 종류의 행은 만들지 않는다 — 그 종류의 파서·핸들러가 있어야
+#: 행을 만든다(REQ-FILEARG-017). 프리셋 3종은 이제 파서와 핸들러가 있다.
+REGISTRY: tuple[SheetKindRow, ...] = (
+    PATCH_ROW,
+    GROUP_ROW,
+    PRESET_DIM_ROW,
+    PRESET_COL_ROW,
+    PRESET_BM_ROW,
+    VECTORWORKS_ROW,
+)
 
 
 def discriminate(
