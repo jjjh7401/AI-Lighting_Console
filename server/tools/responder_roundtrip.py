@@ -62,6 +62,7 @@ from server.bridge.protocol import (
     build_state_query,
     decode_payload,
 )
+from server.tools.probe_preflight import add_listen_port_argument
 
 DEFAULT_PATH = "DataPool/Sequences"
 DEFAULT_EXEC_COMMAND = "List"
@@ -278,12 +279,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--port", type=int, default=8000, help="onPC OSC UDP input port (default: %(default)s)"
     )
-    parser.add_argument(
-        "--listen-port",
-        type=int,
-        default=9000,
-        help="local port for /copilot/state + /copilot/feedback replies (default: %(default)s)",
-    )
+    add_listen_port_argument(parser)
     parser.add_argument(
         "--path", default=DEFAULT_PATH, help="object-tree path to query (default: %(default)s)"
     )

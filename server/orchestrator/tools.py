@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import csv
 import hashlib
 import io
 import json
@@ -77,8 +78,12 @@ from server.looks.songcue import (
     parse_sections,
 )
 from server.looks.songcue_report import build_songcue_report
+from server.lxseq.group_mapper import map_groups
+from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
 from server.lxseq.parser import MissingColumnsError, parse_patch_csv
+from server.lxseq.preset_mapper import map_presets
+from server.lxseq.preset_parser import UnknownPresetSheetError, parse_preset_csv
 from server.orchestrator.layout_occupancy import check_occupancy
 from server.orchestrator.ports import (
     BundleGate,
@@ -102,6 +107,7 @@ from server.prechk.mode_read import (
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import PropertyRead, bulk_capable, read_properties
 from server.prechk.report import build_report as build_precheck_report
+from server.presets.store import preset_store_commands
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
 from server.safety.approval import (
@@ -250,6 +256,8 @@ TOOL_NAMES = (
     "resolve_patch_address",
     "patch_fixtures",
     "import_lxseq_patch",
+    "import_lxseq_groups",
+    "import_lxseq_presets",
     "import_uploaded_sheet",
     "find_fx",
     "instantiate_fx",
@@ -522,6 +530,10 @@ SHEET_WRAPPER_REFUSALS = (
 #: 열리지 않는다"와 어긋난다. 숨기지 않고 여기 적어 둔다.
 SHEET_KIND_ACTIONS = dict()
 SHEET_KIND_ACTIONS["patch"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["group"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["preset-dim"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["preset-col"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["preset-bm"] = ("preview", "apply")
 
 
 def _sheet_refusal(call: ToolCall, reason: str, message: str) -> ToolExecution:
@@ -1573,6 +1585,24 @@ def arrange_values_match(expected: float, actual: float) -> bool:
     )
 
 
+def apply_group_batches(batch_indices, run_batch):
+    """배치를 순서대로 위임하고 **첫 실패에서 멈춘다** (REQ-LXSEQ2-012).
+
+    `run_batch(index)` 는 `(status, payload)` 를 돌려주는 호출자 주입이다.
+    자동 재시도는 하지 않는다 — 멤버십은 되읽히지 않으므로 중복 발화가 만든
+    결과를 사후에 가를 수 없다.
+
+    돌려주는 값은 `(적용 기록, 멈춘 배치 index 또는 None)` 이다.
+    """
+    applied: list[dict[str, object]] = []
+    for index in batch_indices:
+        status, payload = run_batch(index)
+        applied.append({"index": index, "status": status, "result": payload})
+        if status != "ok":
+            return applied, index
+    return applied, None
+
+
 def _error_result(call: ToolCall, message: str) -> ToolExecution:
     return ToolExecution(
         result=ToolResult(
@@ -1631,6 +1661,50 @@ def _addressable_groups(groups_section: object) -> list[int]:
         }
     )
 
+
+#: `import_lxseq_groups` 페이로드가 매번 싣는 모델 지시 (REQ-LXSEQ2-015 · 016).
+#: 시트 종류에서 콘솔 프리셋 풀 계열로. **번호가 아니라 계열 이름**이다 —
+#: 번호는 콘솔이 답한 목록에서 읽는다(`_preset_pool_number`).
+_PRESET_POOL_FAMILY = dict(
+    [("preset-dim", "Dimmer"), ("preset-col", "Color"), ("preset-bm", "Beam")]
+)
+
+
+def _count_hold_classes(held) -> dict:
+    """보류를 **클래스별로** 센다. 한 건이 여러 클래스에 걸릴 수 있으므로
+    합이 보류 수보다 클 수 있다 — 그 차이가 다중 차단 행의 존재를 말한다."""
+    counts: dict[str, int] = dict()
+    for item in held:
+        for name in item.hold_classes:
+            counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
+#: `import_lxseq_presets` 페이로드가 매번 싣는 모델 지시.
+LXSEQ_PRESETS_GUIDANCE = (
+    "이 산출물의 `planned` 는 **넣을 수 있다고 판정된 것**이고 `held` 는 "
+    "**넣을 수 없어 보류된 것**이다. 둘을 합쳐 보고하라 — 「N건 성공」이 아니라 "
+    "「읽은 수 중 계획 수 성공 · 보류 수 보류(클래스별)」로 말하라. 보류를 빼고 "
+    "말하면 사용자는 나머지가 어디로 갔는지 알 수 없다.\n"
+    "\n"
+    "**값이 맞는지는 되읽지 못한다.** 슬롯이 찼다는 것은 「무언가 저장됐다」까지만 "
+    "말한다. 「검증된 N건」이라고 보고하지 마라 — 틀린 값이 조용히 영속한다.\n"
+    "\n"
+    "`command_bytes` 는 **기록**이지 통과 조건이 아니다. 콘솔 거절은 길이가 아니라 "
+    "내용에 달려 있다 — 「짧으니 안전」이라고 말하지 마라."
+)
+
+
+LXSEQ_GROUPS_GUIDANCE = (
+    "바이트는 파일에서만 온다 — 사용자가 채팅에 붙여넣은 시트 본문으로 "
+    "base64를 만들지 마라. 개행·공백이 조용히 깨진다.\n"
+    "멤버십은 이 프로젝트가 시도한 어느 채널로도 되읽히지 않았고, grandMA3가 "
+    "노출하는지 여부는 **미측정**이다. 그러므로 만든 뒤 「멤버가 맞는지 "
+    "확인했다」고 말하지 마라 — 재조회는 슬롯 존재와 이름만 본다. "
+    "human_check_commands를 사용자에게 그대로 보여 주고 눈으로 대조하게 하라.\n"
+    "batches가 비어 있으면 그 사유가 skipped 또는 slot_divergence에 있다. "
+    "슬롯이 어긋나면 아무것도 만들지 않는다 — 번호를 옮겨 배정하지 않는다."
+)
 
 #: `import_lxseq_patch` 페이로드가 매번 싣는 모델 지시(REQ-LXSEQ-014 · REQ-LXSEQ-016 (b)).
 #: 툴 정의의 금지 문구를 여기서 **한 번 더** 말한다 — 정의는 대화 앞에 한 번 붙고,
@@ -4486,6 +4560,384 @@ def build_toolset(
                     ),
                 )
             ),
+        )
+
+    # -- import_lxseq_groups (SPEC-COPILOT-LXSEQ-002 M3) -----------------------
+    #
+    # 001 이 patch.csv 를 patch_fixtures 에 이었듯, 여기서는 group.csv 와 001 의
+    # FID 매핑원을 create_arrangement_groups 에 잇는다. 쓰기 경로는 그 툴 하나뿐이고
+    # 슬롯 측정·점유 차단·승인 게이트·발화·재조회는 전부 그쪽이 이미 한다.
+    def import_lxseq_groups(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """LX-SEQ GROUP 시트를 콘솔 그룹 계획으로 바꾸고, 원하면 그대로 만든다.
+
+        바이트는 **파일에서만** 온다(REQ-LXSEQ2-015). 멤버십은 이 프로젝트가
+        시도한 어느 채널로도 되읽히지 않았고 grandMA3 가 노출하는지 여부는
+        **미측정**이므로, 만든 뒤 「검증했다」고 말하지 않는다 — 하위 툴이
+        싣는 구조적 미검증 고지를 그대로 실어 나른다.
+        """
+        group_raw = call.arguments.get("group_content_base64")
+        if not isinstance(group_raw, str) or not group_raw.strip():
+            return _error_result(
+                call,
+                "'group_content_base64'가 없다 — GROUP 시트 **파일**에서 읽은 바이트를 "
+                "base64로 넘겨라. 사용자가 채팅에 붙여넣은 본문으로 만들지 마라.",
+            )
+        patch_raw = call.arguments.get("patch_content_base64")
+        if not isinstance(patch_raw, str) or not patch_raw.strip():
+            return _error_result(
+                call,
+                "'patch_content_base64'가 없다 — 그룹의 멤버 FID 는 패치 시트의 Group "
+                "라벨에서만 온다(REQ-LXSEQ2-004). 콘솔 픽스처 열거로 대신할 수 없다: "
+                "그 열거는 절단되고, 잘린 목록으로 만든 그룹은 조용히 불완전해진다. "
+                "첨부 경로로 부른 경우라면 그룹 시트만 도착한 것이다 — 두 시트를 "
+                "실어 나르는 방법은 아직 정해지지 않았다(카드 t53). 지금은 이 툴을 "
+                "직접 부르며 두 인자를 함께 넘겨라.",
+            )
+
+        decoded: list[bytes] = []
+        for label, blob in (("group", group_raw), ("patch", patch_raw)):
+            try:
+                decoded.append(base64.b64decode(blob, validate=True))
+            except (binascii.Error, ValueError):
+                return _error_result(
+                    call,
+                    f"'{label}_content_base64'가 base64가 아니다 — 파일 바이트를 그대로 "
+                    "base64로 인코딩해 넘겨라. 채팅 본문을 옮겨 적지 마라.",
+                )
+        group_bytes, patch_bytes = decoded
+
+        action = call.arguments.get("action", "preview")
+        if action not in ("preview", "apply"):
+            return _error_result(call, "'action'은 'preview' 또는 'apply'여야 한다")
+
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — 콘솔을 읽지 못하면 빈 슬롯이라고 말할 수 "
+                "없다. 읽지 않고는 그룹을 만들지 않는다",
+            )
+
+        try:
+            group_text = group_bytes.decode("utf-8")
+            patch_text = patch_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return _error_result(call, "시트 바이트가 UTF-8이 아니다")
+
+        try:
+            parsed = parse_group_csv(group_text)
+        except MissingGroupColumnsError as error:
+            return _error_result(call, f"GROUP 시트 헤더가 맞지 않다: {error}")
+
+        patch_rows = list(csv.DictReader(io.StringIO(patch_text.lstrip("\ufeff"))))
+
+        groups_path = rig_paths.get("groups")
+        fixtures_path = rig_paths.get("fixtures")
+        if not groups_path or not fixtures_path:
+            return _error_result(
+                call,
+                "rig context has no 'groups'/'fixtures' path configured — 빈 슬롯을 재려면 "
+                "그룹 풀과 픽스처 컨테이너 경로가 둘 다 필요하다",
+            )
+        sections, _resolved, _failed = collect_rig_sections(
+            state_port, {"groups": groups_path, "fixtures": fixtures_path}, frozenset(), 0
+        )
+        fid_read = read_existing_fids(_InventoryPort(state_port, property_port))
+
+        result = map_groups(
+            group_records=parsed.records,
+            patch_rows=patch_rows,
+            console_fids=fid_read.fids,
+            console_fids_complete=fid_read.complete,
+            groups_section=sections["groups"],
+        )
+
+        payload: dict[str, object] = {
+            "action": action,
+            "source": {
+                "group_sha256": hashlib.sha256(group_bytes).hexdigest(),
+                "group_byte_length": len(group_bytes),
+                "patch_sha256": hashlib.sha256(patch_bytes).hexdigest(),
+                "patch_byte_length": len(patch_bytes),
+            },
+            "rejected_rows": [
+                {"row": r.row, "kind": r.kind, "detail": r.detail} for r in parsed.rejected
+            ],
+            "skipped": [
+                {"group_no": s.group_no, "name": s.name, "kind": s.kind, "detail": s.detail}
+                for s in result.skipped
+            ],
+            "console_read_incomplete": result.console_read_incomplete,
+            "console_read_reason": None if fid_read.complete else fid_read.reason(),
+            "slot_divergence": (
+                None
+                if result.slot_divergence is None
+                else {
+                    "sheet_slots": list(result.slot_divergence.sheet_slots),
+                    "measured_slots": list(result.slot_divergence.measured_slots),
+                    "detail": result.slot_divergence.detail,
+                }
+            ),
+            "batches": [
+                {
+                    "index": batch.index,
+                    "groups": [
+                        {
+                            "group_no": b.group_no,
+                            "name": b.name,
+                            "fids": list(b.fids),
+                            "selection_line_bytes": b.longest_line_bytes,
+                        }
+                        for b in batch.buckets
+                    ],
+                }
+                for batch in result.batches
+            ],
+            "guidance": LXSEQ_GROUPS_GUIDANCE,
+        }
+
+        if action == "preview" or not result.batches:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        by_index = {batch.index: batch for batch in result.batches}
+
+        def _run_batch(index: int):
+            batch = by_index[index]
+            inner = ToolCall(
+                id=f"{call.id}-batch{index}",
+                name="create_arrangement_groups",
+                arguments={
+                    "groups": [{"name": b.name, "fids": list(b.fids)} for b in batch.buckets]
+                },
+            )
+            execution = create_arrangement_groups(inner, context)
+            # `ToolResult` 는 status/payload 를 갖지 않는다 — 실패는 `is_error`
+            # 하나로만 알리고(그 함수는 `_error_result` 로 그 갈래를 낸다) 본문은
+            # content 의 JSON 문자열이다. 계약을 그대로 따른다.
+            try:
+                inner_payload = json.loads(execution.result.content)
+            except (json.JSONDecodeError, TypeError):
+                inner_payload = {"raw": execution.result.content}
+            return ("error" if execution.result.is_error else "ok"), inner_payload
+
+        applied, stopped = apply_group_batches([b.index for b in result.batches], _run_batch)
+        if stopped is not None:
+            payload["stopped_after_batch"] = stopped
+        payload["applied"] = applied
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
+        )
+
+    # -- import_lxseq_presets (SPEC-COPILOT-LXSEQ-003 M3) ----------------------
+    #
+    # @MX:ANCHOR: [AUTO] 명령 문형은 `server/presets/store.py` 에서만 온다.
+    # @MX:REASON: 이 자리에 `Store Preset` 을 다시 적으면 문형을 아는 자리가 넷이
+    #   되고, 문형이 바뀔 때 어느 자리가 안 고쳐졌는지 아무도 모른다. 그 값을 이
+    #   저장소가 프로브 포트에서 이미 치렀다(t61).
+
+    def _preset_pool_number(family: str):
+        """콘솔이 답한 풀 목록에서 이 계열의 풀 번호를 **읽는다**. 지어내지 않는다."""
+        pools_path = rig_paths.get("preset_pools")
+        if pools_path is None:
+            return None, "rig context 에 프리셋 풀 경로가 없다 — 풀 번호를 잴 수 없다"
+        try:
+            payload = state_port.query_state(pools_path)
+        except Exception as exc:  # noqa: BLE001 — 모든 포트 실패는 하나의 거절이다
+            return None, "프리셋 풀 목록이 오지 않았다: " + str(exc)
+        for child in payload.get("children") or []:
+            if not isinstance(child, dict):
+                continue
+            number = child.get("i") if isinstance(child.get("i"), int) else child.get("no")
+            name = str(child.get("name") or "")
+            if isinstance(number, int) and name.casefold().startswith(family.casefold()):
+                return number, ""
+        return None, ("풀 목록에 '" + family + "' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다")
+
+    def import_lxseq_presets(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """LX-SEQ PRESET 시트를 콘솔 프리셋으로 만든다.
+
+        바이트는 **파일에서만** 온다(001 규약 승계). 19행을 전부 읽되 **넣을 수
+        있는 것만** 계획하고, 못 넣는 행은 **사유 클래스와 함께 그대로 나른다** —
+        버리면 나머지가 어디로 갔는지 아무도 모른다.
+
+        값이 콘솔에 맞게 들어갔는지는 **되읽을 수 없다.** 슬롯 점유는 확인되고
+        값 일치는 안 된다 — 「검증된 N건」이라고 보고하지 마라.
+        """
+        raw = call.arguments.get("file_content_base64")
+        if not isinstance(raw, str) or not raw.strip():
+            return _error_result(
+                call,
+                "'file_content_base64'가 없다 — PRESET 시트 **파일**에서 읽은 바이트를 "
+                "base64로 넘겨라. 채팅에 붙여넣은 본문으로 만들지 마라.",
+            )
+        try:
+            sheet_bytes = base64.b64decode(raw, validate=True)
+        except (binascii.Error, ValueError):
+            return _error_result(call, "'file_content_base64'가 base64가 아니다")
+        action = call.arguments.get("action", "preview")
+        if action not in ("preview", "apply"):
+            return _error_result(call, "'action'은 'preview' 또는 'apply'여야 한다")
+        try:
+            text = sheet_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return _error_result(call, "시트 바이트가 UTF-8이 아니다")
+        try:
+            parsed = parse_preset_csv(text)
+        except UnknownPresetSheetError as error:
+            return _error_result(call, "PRESET 시트 헤더가 맞지 않다: " + str(error))
+
+        pool_no, pool_error = _preset_pool_number(_PRESET_POOL_FAMILY[parsed.sheet_kind])
+        pool_section: dict[str, object] = dict(objects=[], truncated=False)
+        if pool_no is not None:
+            try:
+                slots = state_port.query_state(
+                    str(rig_paths.get("preset_pools")) + "/" + str(pool_no)
+                )
+            except Exception as exc:  # noqa: BLE001
+                pool_section = dict(ok=False, reason=str(exc))
+            else:
+                # 응답기는 `{"i": <슬롯>, "name": …}` 를 내고 슬롯을 확정 못 한
+                # 자식은 `i` 없이 온다 — `rig_object` 가 그것을 `no` 로 정규화하며
+                # **부재를 보존한다**(번호 없는 항목은 번호 없이 온다). 여기서
+                # 직접 읽으면 그 계약을 두 번째로 구현하는 것이고, 실제로 그렇게
+                # 했다가 매퍼가 `pool_unreadable` 로 fail-closed 했다.
+                pool_section = dict(
+                    objects=[
+                        rig_object(c) for c in (slots.get("children") or []) if isinstance(c, dict)
+                    ],
+                    truncated=bool(slots.get("truncated")),
+                )
+
+        result = map_presets(parsed.records, pool_section=pool_section)
+        payload: dict[str, object] = {
+            "action": action,
+            "sheet_kind": parsed.sheet_kind,
+            "source": {
+                "sha256": hashlib.sha256(sheet_bytes).hexdigest(),
+                "byte_length": len(sheet_bytes),
+            },
+            "pool_no": pool_no,
+            "pool_error": pool_error or None,
+            "rejected_rows": [
+                {"row": r.row, "kind": r.kind, "detail": r.detail} for r in parsed.rejected
+            ],
+            "read": len(parsed.records),
+            "planned": [
+                {"preset_id": p.preset_id, "name": p.name, "slot": p.slot, "value": p.value_raw}
+                for p in result.planned
+            ],
+            "held": [
+                {
+                    "preset_id": h.preset_id,
+                    "classes": list(h.hold_classes),
+                    "details": list(h.details),
+                }
+                for h in result.held
+            ],
+            "held_by_class": _count_hold_classes(result.held),
+            "refusal": result.refusal,
+            "refusal_detail": result.refusal_detail or None,
+            "unverified": list(result.unverified),
+            "unverified_reason": result.unverified_reason,
+            "guidance": LXSEQ_PRESETS_GUIDANCE,
+        }
+        if result.shortfall is not None:
+            payload["shortfall"] = {
+                "needed": result.shortfall.needed,
+                "available": result.shortfall.available,
+                "missing": result.shortfall.missing,
+            }
+
+        if action == "preview" or not result.planned or pool_no is None:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        commands: list[str] = []
+        for placement in result.planned:
+            commands.extend(preset_store_commands(pool_no, placement.slot, placement.name))
+
+        # [HARD] 승인 통로를 **반드시** 거친다. 게이트는 `Store Preset` /
+        # `Label Preset` 을 위험으로 분류하지 않으므로, 이 단계가 없으면 프리셋
+        # 쓰기는 **어떤 승인도 안 거치고** 콘솔에 나간다. 형제
+        # `create_arrangement_groups` 가 같은 이유로 같은 단계를 둔다(:7352-7358 —
+        # "Store Group/Label Group are classified safe there and would otherwise
+        # never see ANY approval stage").
+        #
+        # 2026-08-25 사고: 이 단계가 없어 `--approve` 없이 돈 하네스가 콘솔에
+        # 프리셋을 실제로 만들었다. 이 검사를 지우는 것은 조용한 동작 변경이
+        # 아니라 **빨간 뮤테이션**이다(`test_lxseq_preset_safety.py`).
+        approved = group_approval.request_approval(
+            ApprovalRequest(
+                items=tuple(
+                    ApprovalItem(
+                        command=command,
+                        risk_reasons=(
+                            "preset write — 값이 맞는지는 저장 후 되읽을 수 없다"
+                            "(슬롯 점유만 읽힌다). 덮어쓰면 복구 수단이 없다",
+                        ),
+                    )
+                    for command in commands
+                )
+            )
+        )
+        if not approved:
+            # fail-closed — 승인 거절·미확인·통로 부재(DenyAll)가 전부 여기로
+            # 모인다. 콘솔 발화 0줄이고 계획은 제안으로 강등된다.
+            payload["approval"] = "declined"
+            payload["notice"] = (
+                "승인이 나지 않아 콘솔에 아무것도 보내지 않았다. 위 계획을 사람이 "
+                "확인한 뒤 같은 시트로 다시 부르면 된다."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+        payload["approval"] = "granted"
+        # 바이트는 **기록 대상**이지 판정 근거가 아니다 — 콘솔 거절이 길이가
+        # 아니라 내용에 달려 있다(t72: 2044B 거절 · 2080B 통과). 상한을 안전
+        # 근거로 쓰지 않는다.
+        payload["command_bytes"] = [len(c.encode("utf-8")) for c in commands]
+        payload["longest_command_bytes"] = max(payload["command_bytes"])
+
+        inner = ToolCall(
+            id=f"{call.id}-presets",
+            name="run_commands",
+            arguments={"commands": commands},
+        )
+        execution = run_commands(inner, context)
+        try:
+            payload["applied"] = json.loads(execution.result.content)
+        except (json.JSONDecodeError, TypeError):
+            payload["applied"] = {"raw": execution.result.content}
+        payload["applied_is_error"] = bool(execution.result.is_error)
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
         )
 
     # -- import_uploaded_sheet (SPEC-COPILOT-SHEETPIPE-001 M2) -----------------
@@ -9402,6 +9854,105 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="import_lxseq_presets",
+            description=(
+                "LX-SEQ PRESET 시트 한 장(dim/col/bm)을 읽어 콘솔 프리셋 계획을 "
+                "만들고, action='apply'일 때만 실제로 만든다. 기본은 'preview'이며 "
+                "preview는 콘솔에 **아무것도 쓰지 않는다**.\n"
+                "\n"
+                "바이트는 **파일에서만** 온다. 채팅에 붙여넣은 본문을 base64로 만들지 "
+                "마라 — 개행·공백이 조용히 깨진다.\n"
+                "\n"
+                "**시트의 모든 행이 콘솔에 넣을 수 있는 값은 아니다.** 이 툴은 전부 "
+                "읽되 넣을 수 있는 것만 계획하고, 나머지를 `held` 에 **사유 클래스와 "
+                "함께** 싣는다. 보고할 때 둘을 합쳐 말하라 — 「N건 성공」이 아니라 "
+                "「읽은 수 중 계획 수 성공 · 보류 수 보류」다.\n"
+                "\n"
+                "**값이 맞는지는 되읽지 못한다.** 슬롯 점유는 확인되고 값 일치는 안 "
+                "된다. 「검증된 N건」이라고 보고하지 마라.\n"
+                "\n"
+                "풀·슬롯이 어긋나면 **아무것도 만들지 않고** 대조표를 낸다. 부분 계획은 "
+                "내지 않는다 — 반쯤 맞는 프리셋이 남고 다음 단계가 그것을 참조한다."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_content_base64": {
+                        "type": "string",
+                        "description": "PRESET 시트 **파일**의 바이트를 base64로 인코딩한 값",
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["preview", "apply"],
+                        "description": "기본 'preview'. 'apply'만 콘솔에 쓴다",
+                    },
+                },
+                "required": ["file_content_base64"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="import_lxseq_groups",
+            description=(
+                "LX-SEQ GROUP 시트 한 장(GroupNo/Name/Members/Purpose)과 그 RIG의 "
+                "패치 시트를 함께 읽어 콘솔 그룹 계획을 만들고, action='apply'일 "
+                "때만 실제로 만든다. 기본은 'preview'이며 preview는 콘솔에 "
+                "**아무것도 쓰지 않는다**.\n"
+                "\n"
+                "바이트는 **파일에서만** 온다. 사용자가 채팅에 붙여넣은 시트 본문을 "
+                "base64로 만들어 넣지 마라 — 개행·공백이 조용히 깨진다.\n"
+                "\n"
+                "패치 시트가 함께 필요한 이유는 그룹의 멤버 FID가 거기 Group 열에서만 "
+                "오기 때문이다. 콘솔 픽스처 열거로 대신할 수 없다 — 그 열거는 절단되고, "
+                "잘린 목록으로 만든 그룹은 조용히 불완전해진다.\n"
+                "\n"
+                "Members 열은 산문이라 해석하지 않는다. 12개 기본 그룹은 패치 라벨에서, "
+                "6개 파생 그룹(ALL/SIDE-ALL/WASH-ALL/MOVER-ALL/ODD/EVEN)은 코드의 닫힌 "
+                "규칙에서 온다. 그 밖의 이름은 추측하지 않고 건너뛴다.\n"
+                "\n"
+                "**멤버십은 되읽히지 않는다 — 그리고 grandMA3가 노출하는지 여부는 "
+                "미측정이다.** 만든 뒤 재조회는 슬롯 존재와 이름만 본다. 그러므로 "
+                "「멤버가 맞는지 확인했다」고 보고하지 말고, human_check_commands를 "
+                "사용자에게 보여 눈으로 대조하게 하라.\n"
+                "\n"
+                "시트가 선언한 슬롯 번호와 콘솔이 답한 빈 슬롯이 어긋나면 **아무것도 "
+                "만들지 않고** 대조표를 돌려준다. 번호를 옮겨 배정하지 않는다 — 곡 "
+                "파일이 그룹 번호를 참조한다."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "group_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "GROUP 시트 **파일**의 바이트를 base64로 인코딩한 값. "
+                            "채팅에 붙여넣은 본문으로 만들지 마라. 이 툴은 파일 "
+                            "경로를 받지 않는다."
+                        ),
+                    },
+                    "patch_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "같은 RIG의 패치 시트 **파일** 바이트를 base64로 인코딩한 값. "
+                            "그룹의 멤버 FID가 이 시트의 Group 열에서 온다."
+                        ),
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["preview", "apply"],
+                        "description": (
+                            "'preview'(기본)는 계획만 낸다 — 콘솔 쓰기 0건. "
+                            "'apply'는 그 호출에서 계획을 다시 세운 뒤 배치를 순서대로 "
+                            "create_arrangement_groups에 위임한다. 사용자가 계획을 보고 "
+                            "동의하기 전에 apply를 부르지 마라."
+                        ),
+                    },
+                },
+                "required": ["group_content_base64", "patch_content_base64"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="import_uploaded_sheet",
             description=(
                 "이번 대화에서 첨부 버튼으로 올라온 시트 한 장을 그 종류의 대상 "
@@ -9565,6 +10116,8 @@ def build_toolset(
         "resolve_patch_address": resolve_patch_address,
         "patch_fixtures": patch_fixtures,
         "import_lxseq_patch": import_lxseq_patch,
+        "import_lxseq_groups": import_lxseq_groups,
+        "import_lxseq_presets": import_lxseq_presets,
         "import_uploaded_sheet": import_uploaded_sheet,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,

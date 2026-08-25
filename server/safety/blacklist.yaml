@@ -57,7 +57,50 @@
 #     confirm the vocabulary. It is a floor, not a proof of closure.
 #     `Import` is deliberately NOT here -- it is pool data import, not showfile
 #     replacement, and the plugin deploy path depends on it.
-version: 3
+#
+#   v3 -> v4  SPEC-COPILOT-UNREQ-001 (카드 t86) adds "Store Preset".
+#     The SAME false-negative shape v2 and v3 were ratified for -- writes slipping
+#     a healthy gate -- observed once more: SPEC-COPILOT-LXSEQ-003 M4 halted after
+#     an UNREQUESTED preset reached the console with no approval card. The command
+#     shape is `session.py:2951 _preset_store_commands` -> `Store Preset <pool>.<n>`
+#     (+ `Label Preset ...` at :2968), and it classified "safe" because this file's
+#     only Store entry is option-scoped (`Store /overwrite`).
+#
+#     WHY ONLY `Store Preset`, and NOT `Store`: the descope of the `Store` verb
+#     (2026-08-05 user decision) STANDS. t86 re-measured its cost in this tree and
+#     the decision was not merely upheld -- it was made on an UNDERSTATED number.
+#     The corpus-scenario metric this header used compares `Store` 10/21 against
+#     `Label` 9/21, nearly equal; the full suite breaks 67 vs 17, about 4x apart.
+#     Entry `Store` alone takes down `test_safety_gate` (14) and `test_web_session`
+#     (7) -- including
+#     `TestHappyPath::test_korean_instruction_executes_and_reports_in_korean`,
+#     i.e. one ordinary conversational turn would raise an approval card. That is a
+#     product-behaviour change, not a test-fixture change. So this revision widens
+#     by ONE object, not by the verb.
+#
+#     MEASURED cost of THIS entry (same `_would_be_held` over `load_corpus()`
+#     procedure v2 established, plus a full-suite run): corpus 2 of 21 scenarios
+#     (preset-store-1/2); full suite 13 failures out of 10183 -- looks_instantiate 6,
+#     measurement_runner 4, writegate 2, safety_ruleset 1. `Label Preset` was
+#     measured alongside and adds 0 further failures on top of this entry, which is
+#     why it is NOT taken here: `Label` is descoped for a DIFFERENT reason
+#     ("labelling is not a patch write", a semantic judgement, not a cost one) and
+#     needs its own argument. A separate card owns it.
+#
+#     [READ THIS BEFORE QUOTING ANY FAILURE COUNT] The denominator MOVES. Tests in
+#     `test_writegate.py` iterate this file's own blacklist, so every entry added
+#     here CREATES 4 more tests: baseline total 10179, one added entry 10183, two
+#     added entries 10187. "13 failures" is therefore not a value on a fixed
+#     denominator -- always record the total alongside it. The 2026-08-05 descope
+#     was decided on the corpus-scenario metric alone, which is exactly the kind of
+#     unit error this note exists to stop repeating.
+#
+#     NOT closed by this revision: `Store Group`, `Store Cue`, `Store Page`,
+#     `Store Macro`, `Assign`, `Copy` and the whole `Label` family all still
+#     classify "safe" and REMAIN RATIFIED as such in
+#     `test_writegate.py::UNCHANGED_SAFE`. Removing one line from that tuple does
+#     not release the rest.
+version: 4
 
 blacklist:
   - "Delete"
@@ -117,6 +160,16 @@ blacklist:
   # this family this repository has actually executed, is one token.
   - "LoadShow"
   - "NewShow"
+  # UNREQUESTED CREATION (v4). `Store /overwrite` above closes the OVERWRITE half
+  # of the preset hazard, and `SPEC-COPILOT-PRESETGUARD-001` closes it again at the
+  # application layer (occupancy check + read-back). Neither closes the other half:
+  # a write into a FREE slot. PRESETGUARD passes an unoccupied slot BY DESIGN, and
+  # a bare `Store Preset` carries no option for the gate to match on. The
+  # LXSEQ-003 M4 accident took exactly that path, so this entry closes it.
+  #
+  # Scoped to the OBJECT, like `Set Fixture` above and for the same reason: keying
+  # on the verb would be the widening whose cost is recorded in the v4 header.
+  - "Store Preset"
 
 invoking_verbs:
   verbs:

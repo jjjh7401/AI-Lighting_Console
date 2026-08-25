@@ -49,10 +49,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 def _run_phase_base_is_reachable() -> bool:
     """이 base 커밋이 이 클론에 있는가.
 
-    스쿼시 머지로 원본 브랜치가 지워져 어느 원격 ref 에서도 도달할 수 없다
-    (git for-each-ref --contains 가 빈 출력). 그래서 clone --depth=0 로도
-    받아올 수 없고, 그 객체를 이미 가진 클론에서만 아래 두 검사가 성립한다.
-    CI 러너에서는 없으므로 skip 되고, 그 사실이 출력에 남는다.
+    스쿼시 머지로 원본 브랜치가 지워져 어느 **브랜치** ref 에서도 도달할 수 없다
+    (git for-each-ref --contains 가 태그 하나만 낸다). 지금 이 커밋을 붙잡고 있는
+    것은 주석태그 preserve-base-songcue-m0 하나뿐이고, 그 태그는 origin 에 있다.
+
+    CI 의 checkout 은 fetch-depth: 0 일 때만 태그 refspec(+refs/tags/*:refs/tags/*)을
+    발행한다(t64 실측). 얕은 클론으로 되돌리면 태그가 안 오고, 이 함수가 False 를 낸다.
     """
     return (
         subprocess.run(
@@ -65,13 +67,30 @@ def _run_phase_base_is_reachable() -> bool:
     )
 
 
-_requires_run_phase_base = pytest.mark.skipif(
-    not _run_phase_base_is_reachable(),
-    reason=(
-        "run-phase base 커밋이 이 클론에 없다 — 스쿼시 머지로 원본 브랜치가 "
-        "지워져 원격에서 받아올 수 없다"
-    ),
-)
+def _require_run_phase_base() -> None:
+    """기준 커밋이 없으면 **실패한다** — skip 이 아니다.
+
+    한때 이 자리는 skipif 였다. 그 결과 아래 두 검사는 CI 에서 **매 실행 조용히**
+    건너뛰어졌고, PRESERVE 불변식을 아무도 안 보는 상태가 오래 갔다(t59 에서 발견).
+    침묵은 초록으로 읽힌다 — 그래서 원인과 처방을 말하는 실패로 바꾼다.
+
+    이 실패는 되돌릴 이유가 아니라 신호다. 특히 CI 가 이걸 내면 워크플로의
+    fetch-depth 가 얕아졌다는 뜻이고, 그때 같이 죽는 것은 이 두 검사만이 아니다 —
+    PRESERVE 의 git diff <고정 SHA>..HEAD 범위도 함께 죽는다.
+    """
+    if _run_phase_base_is_reachable():
+        return
+    raise AssertionError(
+        "run-phase base 커밋 " + _RUN_PHASE_BASE + " 가 이 클론에 없다 — "
+        "PRESERVE 불변식을 검사할 수 없다.\n"
+        "이 커밋은 어느 브랜치에서도 도달 불가이고, 주석태그 "
+        "preserve-base-songcue-m0 하나가 붙잡고 있다.\n"
+        "처방(로컬): git fetch origin "
+        "refs/tags/preserve-base-songcue-m0:refs/tags/preserve-base-songcue-m0\n"
+        "처방(CI): .github/workflows/test.yml 의 checkout 이 아직 fetch-depth: 0 인지 "
+        "확인해라 — 그 설정이 태그 refspec 을 딸고 온다. 얕은 클론이면 태그가 안 온다."
+    )
+
 
 _PRESERVE_LOOK_FILES = (
     "server/looks/matching.py",
@@ -270,8 +289,12 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     593,
     620,
     952,
+    965,
+    967,
+    971,
+    975,
+    977,
     984,
-    986,
     989,
     993,
     995,
@@ -287,6 +310,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1070,
     1072,
     1081,
+    1088,
     1096,
     1103,
     1110,
@@ -461,8 +485,9 @@ def test_preserve_gate_uses_run_phase_base_to_head_range():
     assert tuple(command[5:]) == _PRESERVE_LOOK_FILES
 
 
-@_requires_run_phase_base
 def test_preserve_look_files_are_unchanged_from_run_phase_base():
+    _require_run_phase_base()
+
     result = subprocess.run(
         _preserve_diff_command(),
         cwd=_REPO_ROOT,
@@ -475,8 +500,9 @@ def test_preserve_look_files_are_unchanged_from_run_phase_base():
     assert result.stdout == ""
 
 
-@_requires_run_phase_base
 def test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state():
+    _require_run_phase_base()
+
     hunks = _tools_hunks_from_run_phase_base()
 
     assert hunks

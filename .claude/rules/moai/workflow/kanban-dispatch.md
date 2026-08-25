@@ -95,7 +95,22 @@ This applies equally to the operator: when the lead reports a column advanced, i
 
 ### CodeRabbit is not read from `gh pr checks`
 
-[HARD] A `gh pr checks` row naming CodeRabbit is not evidence that a review happened: the status is `success` **even when no review ran**, and the row prints `pass` byte-identically in both cases — only the description separates reviewed from unreviewed. A row counts only when BOTH hold:
+**Applies only where a CodeRabbit row exists.** This section governs how to READ a CodeRabbit row in `gh pr checks`. It does not govern a repository that has no such row: where the app is not installed, the section **does not fire**, because there is no signal to read.
+
+[HARD] **A missing row is not a FAIL.** Not-fired is neither PASS nor FAIL — it is the state of having no signal at all, and the card's sync verdict is then decided by the gates the repository actually carries. Reading an absent row as "not yet `Review completed`" holds the card forever; that is not waiting, it is a stall.
+
+[HARD] **Whether the app is installed is measured, never assumed.** This rule file is shared across repositories, so a phrase like "this repository" silently re-points the moment the file is copied. Measure once, before wiring the predicate below into any gate:
+
+```bash
+gh pr list --state all --limit 20 --json statusCheckRollup \
+  --jq '[.[].statusCheckRollup[]? | (.context // .name)] | unique'
+```
+
+CodeRabbit absent from that list means this section does not fire in that repository.
+
+[HARD] **`state` does not separate not-fired from in-progress.** The combined endpoint answers `"state": "pending"` for a commit carrying **zero** statuses, byte-identically to a commit whose statuses are still running. Only `total_count` / `statuses[]` separate the two — never branch on `state` alone.
+
+Where a row **does** exist, it counts only when BOTH hold:
 
 1. The **combined** endpoint `/commits/{sha}/status` shows `state == "success"` **and** description `Review completed`:
 
@@ -107,6 +122,8 @@ This applies equally to the operator: when the lead reports a column advanced, i
 2. A `Merge Risk:` line exists whose `` up to `<prefix>` `` matches the current `headRefOid`.
 
 Anything else is a gap, not a pass. `Review rate limited` means the review never started; a card carrying it does not leave `sync`. (Endpoint choice + why branch protection is not the lever: `kanban-dispatch-detail.md` § CodeRabbit endpoint measurement.)
+
+**Measured example — an observation, not a claim about your repository.** `jjjh7401/AI-Lighting_Console`, measured 2026-08-25 on PRs #115-#134 (20 of 20): PR reviews `0`, rollup contexts `["test"]` and nothing else, combined status `total_count: 0` while `state` still read `"pending"`. Controls on the same token: a Prow-driven pull-request head returned 14 status contexts, and a reviewed pull request returned 1 review — so the zeros above are measured absences, not a blind instrument. Re-measure rather than carrying these numbers forward; they date, and a repository can gain the app after this line was written.
 
 ## Review lens selection
 

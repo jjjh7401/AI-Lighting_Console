@@ -101,7 +101,20 @@ HELD_FORMS = (
 #: type, and the DEPLOY fixture collision is independent of corpus size.
 UNCHANGED_SAFE = (
     ("Store Group 3", "descoped: DEPLOY's canonical SAFE_SOURCE literal"),
-    ("Store Preset 4.1", "descoped: measurement corpus representative"),
+    # `Store Preset 4.1` WAS here, ratified "descoped: measurement corpus
+    # representative". SPEC-COPILOT-UNREQ-001 (card t86) removed that one line
+    # when ruleset v4 took `Store Preset`, on a measured false-negative
+    # observation (the LXSEQ-003 M4 accident) — see blacklist.yaml's v4 header.
+    #
+    # [READ THIS BEFORE REMOVING ANOTHER LINE] Every entry that remains below is
+    # STILL RATIFIED. Taking one line out does not release the rest, and the
+    # reasons are not interchangeable: the `Store *` / `Assign` / `Copy` entries
+    # are descoped on COST (2026-08-05 user decision, re-measured and reinforced
+    # by t86 — entry `Store` breaks 67 of 10183 and puts an approval card on one
+    # ordinary conversational turn), while `Label Group` is descoped on a
+    # SEMANTIC judgement ("labelling is not a patch write"). A cost measurement
+    # can update the first group; it cannot update the second. Removing a line
+    # here without its own argument reopens a hole that someone closed on purpose.
     ("Store Cue 12", "descoped: measurement corpus representative"),
     ("Store Page 3", "descoped: measurement corpus representative"),
     ("Store Macro 21", "descoped: measurement corpus representative"),
@@ -120,6 +133,21 @@ UNCHANGED_SAFE = (
     # protects programmer-state commands from this widening.
     ("Set Selection MAtricks 'PhaseFromX' 0", "programmer state: no arg spells `Fixture`"),
     ("Set Macro 1.1 Property 'Command' 'Group 11 At 0'", "macro authoring with a safe body"),
+)
+
+#: Corpus baseline commands the gate HOLDS at ruleset v4, ratified by
+#: SPEC-COPILOT-UNREQ-001. The corpus header's "non-risky verbs only" invariant
+#: is TRUE for every scenario except these two, and that narrowing is deliberate:
+#: v4 blacklists `Store Preset` because the LXSEQ-003 M4 accident sent exactly
+#: that command with no approval card.
+#:
+#: CONSEQUENCE, stated because it is easy to miss: a live M6a run over the corpus
+#: now raises an approval card on these two scenarios. They are no longer
+#: unattended-runnable. Order matches `_corpus_offenders` iteration (scenario
+#: order in corpus.yaml, command order within a scenario).
+RATIFIED_CORPUS_COLLISIONS = (
+    ("preset-store-1", "Store Preset 4.1"),
+    ("preset-store-2", "Store Preset 4.7"),
 )
 
 
@@ -172,11 +200,21 @@ class TestScopeIsHeldExactly:
         rather than the YAML text, so it keeps holding as scenarios are added. If
         a future revision adds a `Store` entry, THIS is the test that stops it,
         naming the exact scenarios it would break.
+
+        The v4 revision (SPEC-COPILOT-UNREQ-001) DID add a Store entry, and this
+        test caught it — working exactly as the paragraph above promised. The two
+        scenarios it names are recorded below as a RATIFIED exception rather than
+        asserted away, so the tripwire still bites on any collision that was not
+        argued for. The corpus header's own invariant is now narrower than it
+        reads: see the note this revision added to corpus.yaml.
         """
         offenders = _corpus_offenders(load_corpus())
-        assert offenders == [], (
-            "a baseline corpus command is now risky — the corpus header's "
-            f"'non-risky verbs only' invariant is broken by: {offenders}"
+        assert offenders == list(RATIFIED_CORPUS_COLLISIONS), (
+            "the set of corpus commands held by the gate is not the ratified one "
+            f"— expected {list(RATIFIED_CORPUS_COLLISIONS)}, got {offenders}. A "
+            "NEW collision means a ruleset revision broke a baseline scenario "
+            "without arguing for it; a MISSING one means a ratified collision "
+            "silently disappeared."
         )
 
     def test_the_corpus_collision_check_can_actually_fail(self):

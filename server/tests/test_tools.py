@@ -169,7 +169,7 @@ class TestRegistry:
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 35
+        assert len(names) == len(TOOL_NAMES) == 37
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.
