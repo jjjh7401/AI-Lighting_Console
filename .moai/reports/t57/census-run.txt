@@ -1,0 +1,5 @@
+COLLECTING(반복문 안) = 2
+    test_web_cue_monitor.py:607
+    test_web_session_progress.py:129
+SINGLE(한 장) = 66
+TOTAL = 68
