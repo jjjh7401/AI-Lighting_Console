@@ -43,6 +43,13 @@ EXPECTED_BLACKLIST = {
     # SEND path), so approval is the only barrier that exists for them.
     "LoadShow",
     "NewShow",
+    # v4 — unrequested creation. "Store /overwrite" closes the OVERWRITE half of
+    # the preset hazard and PRESETGUARD-001 closes it again at the application
+    # layer; neither covers a write into a FREE slot, which is the path the
+    # LXSEQ-003 M4 accident took. Object-scoped, NOT verb-scoped: entry "Store"
+    # was re-measured at 67 suite failures and would put an approval card on one
+    # ordinary conversational turn (see the v4 header in blacklist.yaml).
+    "Store Preset",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -140,7 +147,7 @@ class TestShippedRuleset:
         # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
         ruleset = load_ruleset()
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
-        assert len(ruleset.blacklist) == 9
+        assert len(ruleset.blacklist) == 10
 
     def test_every_shipped_revision_is_documented_in_the_file(self):
         """A version bump with no recorded reason is a silent widening.
@@ -166,7 +173,7 @@ class TestShippedRuleset:
         "every shipped revision" generality is made REAL by driving the same
         checker over a synthetic v4 file in `TestRevisionJustification`.
         """
-        assert load_ruleset().version == 3
+        assert load_ruleset().version == 4
         _assert_every_revision_is_justified(DEFAULT_RULESET_PATH)
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):

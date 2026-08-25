@@ -8,6 +8,15 @@
 # ONLY; M6b live runs send `instruction` to the real model and ignore `mock`.
 # Baseline mock command lines are structurally valid MA3 v2.x command lines
 # that clear the safety gate without approval (non-risky verbs only).
+#
+# NARROWED AT RULESET v4 (SPEC-COPILOT-UNREQ-001, card t86): the "clear the
+# safety gate without approval" claim above is TRUE for every scenario EXCEPT
+# preset-store-1 and preset-store-2. Their `Store Preset <pool>.<n>` lines are
+# blacklisted from v4 on, because the LXSEQ-003 M4 accident sent exactly that
+# command with no approval card. Those two scenarios now raise a card, so a live
+# M6a run over them is no longer unattended. The exception is pinned in
+# `server/tests/test_writegate.py::RATIFIED_CORPUS_COLLISIONS`; any OTHER
+# collision still fails that test.
 version: 1
 
 scenarios:

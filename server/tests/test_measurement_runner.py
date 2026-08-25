@@ -30,6 +30,19 @@ from server.measurement.runner import (
     run_measurement,
 )
 
+#: Scenarios ruleset v4 holds for approval (SPEC-COPILOT-UNREQ-001 M4, card
+#: t86). Derived from the ratified set rather than hardcoded, so a later
+#: revision that changes which scenarios collide moves these counts with it.
+#:
+#: WHAT THIS COSTS THE MEASUREMENT: an offline M6a run has no approver, so these
+#: turns come back `rejected` instead of `ok`. The judged round-trip corpus
+#: shrinks by exactly this many scenarios, and `gate_anomalies` is no longer
+#: empty. The corpus header's "clears the gate without approval" claim was
+#: narrowed in the same revision — see the note in corpus.yaml.
+from .test_writegate import RATIFIED_CORPUS_COLLISIONS
+
+GATE_HELD_SCENARIOS = frozenset(scenario_id for scenario_id, _ in RATIFIED_CORPUS_COLLISIONS)
+
 
 @pytest.fixture(autouse=True)
 def no_provider_credentials(monkeypatch):
@@ -68,7 +81,12 @@ class TestHappyPathCounting:
         # grammar block, no lock proposal — anomalies would poison the rates.
         session = build_offline_session(corpus, audit_dir=tmp_path)
         report = run_measurement(corpus, session, _quick_config())
-        assert report["gate_anomalies"] == {}
+        # v4 holds the preset-store scenarios; an offline run has no approver,
+        # so they come back rejected. Derived from the ratified set, not pinned.
+        assert report["gate_anomalies"] == dict(rejected=len(GATE_HELD_SCENARIOS))
+        # turn_statuses stays {"ok"}: the turn itself completed, the session just
+        # reported the refusal. Only gate_anomalies records the hold. (Measured —
+        # my first guess that the turn would read "rejected" was wrong.)
         assert set(report["turn_statuses"]) == {"ok"}
 
     def test_per_run_rates_reported_per_repetition(self, corpus, tmp_path):
@@ -116,7 +134,8 @@ class TestFirstGenerationErrorAccounting:
         # The corrected scenario used one retry -> excluded from judgment.
         assert round_trip["retry_turns"]["count"] == 1
         assert len(round_trip["retry_turns"]["durations_seconds"]) == 1
-        assert round_trip["judged_turns"] == result_scenarios - 1
+        # -1 for the retried scenario, minus the ones v4 holds for approval.
+        assert round_trip["judged_turns"] == result_scenarios - 1 - len(GATE_HELD_SCENARIOS)
 
 
 class TestRepetitionEscalation:
@@ -152,8 +171,13 @@ class TestRoundTripStats:
         session = build_offline_session(corpus, audit_dir=tmp_path)
         report = run_measurement(corpus, session, _quick_config(warmup=True))
         round_trip = report["round_trip"]
-        result_scenarios = sum(1 for s in corpus if s.mock.kind in ("commands", "plugin"))
+        result_scenarios = sum(
+            1
+            for s in corpus
+            if s.mock.kind in ("commands", "plugin") and s.id not in GATE_HELD_SCENARIOS
+        )
         # Judged = zero-retry turns with >=1 console result: command scenarios
+        # minus the ones v4 now holds for approval (they are rejected offline),
         # AND deploy scenarios (the confirmed deploy IS the console feedback —
         # closes the M7 gap "deploy turn measurement marking unwired").
         assert round_trip["judged_turns"] == result_scenarios
@@ -173,7 +197,8 @@ class TestRoundTripStats:
         session = build_offline_session(corpus, audit_dir=tmp_path)
         report = run_measurement(corpus, session, _quick_config())
         query_only = sum(1 for s in corpus if s.mock.kind == "query")
-        assert report["round_trip"]["unjudged_turns"] == query_only
+        # v4 adds the held preset scenarios to the unjudged side (rejected offline).
+        assert report["round_trip"]["unjudged_turns"] == query_only + len(GATE_HELD_SCENARIOS)
 
 
 class TestReportSurface:
