@@ -33,6 +33,7 @@ from pathlib import Path
 
 from server.llm.types import ToolCall
 from server.orchestrator.tools import build_toolset
+from server.preshow.checks import DEFAULT_PRESET_POOLS_PATH
 from server.safety.approval import ApprovalRequest
 from server.safety.bootstrap import build_console_stack
 from server.tools.probe_preflight import add_listen_port_argument, preflight
@@ -84,13 +85,21 @@ def _state(state_port, path: str) -> dict:
     )
 
 
-def _sliced(csv_path: Path, limit: int | None) -> bytes:
-    """헤더 + 앞 `limit` 행. `None` 이면 통째."""
+def _sliced(csv_path: Path, limit: int | None, *, skip: int = 0) -> bytes:
+    """헤더 + `skip` 행을 건너뛴 뒤의 `limit` 행. `limit` 가 `None` 이면 나머지 전부.
+
+    매퍼는 이름 중복을 안 본다 — 점유 안 된 슬롯을 오름차순으로 고를 뿐이다.
+    그래서 「이미 들어간 행을 다시 안 쏜다」는 여기서 책임진다. 파생 CSV 를
+    만들지 않는 이유도 같다: 출처(sha256)가 정본 시트를 가리켜야 한다.
+    """
     text = csv_path.read_text(encoding="utf-8-sig")
     lines = [line for line in text.splitlines() if line.strip()]
-    if limit is None:
+    if limit is None and skip == 0:
         return text.encode("utf-8")
-    return ("\n".join(lines[: limit + 1]) + "\n").encode("utf-8")
+    header, rows = lines[0], lines[1 + skip :]
+    if limit is not None:
+        rows = rows[:limit]
+    return ("\n".join([header, *rows]) + "\n").encode("utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -110,6 +119,12 @@ def main(argv: list[str] | None = None) -> int:
         "--probe-only",
         action="store_true",
         help="기준 상태만 읽고 툴은 부르지 않는다. 콘솔 쓰기 0",
+    )
+    parser.add_argument(
+        "--skip",
+        type=int,
+        default=0,
+        help="시트 앞 N 행을 건너뛴다. 이미 들어간 행을 다시 쏘지 않기 위한 오프셋",
     )
     parser.add_argument("--approve", action="store_true", help="없으면 콘솔에 아무것도 닿지 않는다")
     parser.add_argument("--out", type=Path, default=None)
@@ -133,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
         listen_port=args.listen_port,
         preset_csv=str(args.preset_csv),
         limit=limit,
+        skip=args.skip,
     )
 
     approval = _RecordingApproval(approve=args.approve)
@@ -184,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
                     name="import_lxseq_presets",
                     arguments=dict(
                         file_content_base64=base64.b64encode(
-                            _sliced(args.preset_csv, limit)
+                            _sliced(args.preset_csv, limit, skip=args.skip)
                         ).decode("ascii"),
                         action=args.action,
                     ),
@@ -196,7 +212,8 @@ def main(argv: list[str] | None = None) -> int:
             pool_no = out["tool"].get("pool_no")
             if isinstance(pool_no, int):
                 out["pool_after"] = _state(
-                    stack.gate.state_port, "DataPool/Presets/" + str(pool_no)
+                    stack.gate.state_port,
+                    DEFAULT_PRESET_POOLS_PATH + "/" + str(pool_no),
                 )
         out["approval_requests"] = [list(bundle) for bundle in approval.asked]
         out["questions_asked"] = questions.asked
