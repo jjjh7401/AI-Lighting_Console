@@ -92,8 +92,9 @@ related_specs: [SPEC-COPILOT-MVP-001, SPEC-COPILOT-LXSEQ-003]
   (git · 환경변수 · 서브프로세스)에 의존해서는 안 된다.
 - **REQ-TREEID-002** `[Unwanted]` **If** 호출자 파일의 트리와 헬퍼 모듈의 트리가 다르면,
   프로세스는 **경고가 아니라 종료**해야 한다. stderr 에 두 경로를 모두 찍는다.
-- **REQ-TREEID-003** `[Ubiquitous]` 종료 코드는 **2** 여야 한다 — 도구의 일반 실패(1)와
-  구별돼야 검사가 사고 원인을 지목할 수 있다.
+- **REQ-TREEID-003** `[Ubiquitous]` 종료 코드는 **3** 이어야 한다. 1(일반 실패)과
+  **2(argparse 인자 오류)** 둘 다와 달라야 검사가 사고 원인을 지목할 수 있다.
+  실측: `server/tools/` 도구를 인자 없이 부르면 argparse 가 **exit 2** 로 끝난다.
 - **REQ-TREEID-004** `[Ubiquitous]` 메시지는 원인(스크립트 경로 실행 + editable `.pth`)과
   **고칠 형태**(`uv run python -m server.tools.<이름>`)를 담아야 한다.
 - **REQ-TREEID-005** `[Ubiquitous]` 트리 뿌리는 `__file__` 의 상위를 훑어 이름이 `server` 인
@@ -114,7 +115,7 @@ related_specs: [SPEC-COPILOT-MVP-001, SPEC-COPILOT-LXSEQ-003]
 ### B.3 반드시 빨개지는 테스트
 
 - **REQ-TREEID-010** `[Event-driven]` **When** 도구가 다른 트리의 `server` 와 함께 실행되면,
-  테스트는 그 실행이 **exit 2 로 죽는 것**을 단언해야 한다. 로그·경고 문자열이 아니라
+  테스트는 그 실행이 **exit 3 으로 죽는 것**을 단언해야 한다. 로그·경고 문자열이 아니라
   **종료 코드**가 판정 근거다.
 - **REQ-TREEID-011** `[Ubiquitous]` 그 테스트는 **두 번째 venv 없이** 돌아야 한다 — CI 러너에는
   워크트리가 하나뿐이다. `server/` 를 임시 디렉터리로 **복사**하고 `PYTHONPATH` 로 얹어

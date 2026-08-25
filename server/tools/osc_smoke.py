@@ -26,6 +26,9 @@ import sys
 
 from server.bridge.osc import BridgeConfig, OscBridge, QueueFeedbackConsumer
 from server.tools.probe_preflight import add_listen_port_argument
+from server.tools.tree_identity import assert_same_tree
+
+assert_same_tree(__file__)
 
 
 def main(argv: list[str] | None = None) -> int:
