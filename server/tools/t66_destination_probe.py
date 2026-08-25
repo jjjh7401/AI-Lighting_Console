@@ -29,6 +29,9 @@ import sys
 
 from server.safety.bootstrap import build_console_stack
 from server.tools.probe_preflight import add_listen_port_argument
+from server.tools.tree_identity import assert_same_tree
+
+assert_same_tree(__file__)
 
 #: exec 채널 날조 대조군. 순수 쓰레기라 **실패가 정답**이다.
 FABRICATED_COMMAND = "Zzzblah Foo 1"

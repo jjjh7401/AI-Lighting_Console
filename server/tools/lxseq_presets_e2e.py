@@ -37,6 +37,9 @@ from server.preshow.checks import DEFAULT_PRESET_POOLS_PATH
 from server.safety.approval import ApprovalRequest
 from server.safety.bootstrap import build_console_stack
 from server.tools.probe_preflight import add_listen_port_argument, preflight
+from server.tools.tree_identity import assert_same_tree
+
+assert_same_tree(__file__)
 
 #: 판독 채널 날조 대조군. 있을 수 없는 경로라 **`ok=False` 가 정답**이다.
 FABRICATED_PATH = "Patch/FixtureTypesZZZNotAThing/9999"
