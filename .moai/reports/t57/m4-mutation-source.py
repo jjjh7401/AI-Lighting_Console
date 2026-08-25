@@ -1,5 +1,10 @@
 """M4 뮤테이션 매트릭스 — 적용 확인 → 실행 → 복원 → 체크섬. 출력이 증거다."""
-import hashlib, pathlib, shutil, subprocess, sys
+
+import hashlib
+import pathlib
+import shutil
+import subprocess
+import sys
 
 target = pathlib.Path("server/tests/test_ws_wait_guard.py")
 backup = pathlib.Path("/tmp/t57_guard_backup.py")
@@ -9,12 +14,21 @@ print("BASELINE sha256 = " + baseline)
 
 cases = [
     ("unmutated", None, None),
-    ("site1-lever", "            frame = recv_frame(ws)\n",
-     '            frame = drain_until(ws, "error")\n'),
-    ("site2-lever", "                event = recv_frame(ws)\n",
-     '                event = drain_until(ws, "error")\n'),
-    ("site1-degenerate", "            frame = recv_frame(ws)\n",
-     '            frame = drain_until(ws, "status")\n'),
+    (
+        "site1-lever",
+        "            frame = recv_frame(ws)\n",
+        '            frame = drain_until(ws, "error")\n',
+    ),
+    (
+        "site2-lever",
+        "                event = recv_frame(ws)\n",
+        '                event = drain_until(ws, "error")\n',
+    ),
+    (
+        "site1-degenerate",
+        "            frame = recv_frame(ws)\n",
+        '            frame = drain_until(ws, "status")\n',
+    ),
 ]
 
 for name, old, new in cases:
@@ -34,7 +48,8 @@ for name, old, new in cases:
         print("CASE " + name + " applied=n/a (원본)")
     run = subprocess.run(
         [".venv/bin/python", "-m", "pytest", str(target), "-q", "-p", "no:randomly"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     tail = [ln for ln in run.stdout.strip().splitlines() if "passed" in ln or "failed" in ln]
     verdict = "SURVIVED" if run.returncode == 0 else "KILLED"

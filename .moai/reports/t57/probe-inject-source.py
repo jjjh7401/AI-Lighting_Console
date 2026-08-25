@@ -28,10 +28,7 @@ def _case(tmp_path, *, inject: bool, mutated: bool) -> str:
             notify = tuple(deps.status_listeners)[0]
             notify()
         ws.send_text("{ not json")
-        if mutated:
-            frame = drain_until(ws, "error")
-        else:
-            frame = recv_frame(ws, timeout=3.0)
+        frame = drain_until(ws, "error") if mutated else recv_frame(ws, timeout=3.0)
         return "PASS" if frame["type"] == "error" else "FAIL(got " + frame["type"] + ")"
 
 

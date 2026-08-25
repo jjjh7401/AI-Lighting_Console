@@ -12,15 +12,16 @@ v2: SINGLE 로 분류된 자리의 감싼 함수를 찾고, 그 함수가 반복
 - 이름 기준이라 동명 함수가 여러 파일에 있으면 합쳐서 본다(보수적: 과대 분류).
 - 파이썬 동적 호출(getattr, 딕셔너리 디스패치)은 못 본다.
 """
-import ast, pathlib
+
+import ast
+import contextlib
+import pathlib
 
 root = pathlib.Path("server/tests")
 files = {}
 for path in sorted(root.rglob("*.py")):
-    try:
+    with contextlib.suppress(SyntaxError):
         files[path] = ast.parse(path.read_text(encoding="utf-8"))
-    except SyntaxError:
-        pass
 
 for tree in files.values():
     for parent in ast.walk(tree):
@@ -80,7 +81,14 @@ for path, tree in files.items():
             for cpath, cnode in calls_of(holder.name):
                 if in_loop_within_function(cnode):
                     wrapper_mediated.append(
-                        entry + "  (via " + holder.name + " @ " + cpath.name + ":" + str(cnode.lineno) + ")"
+                        entry
+                        + "  (via "
+                        + holder.name
+                        + " @ "
+                        + cpath.name
+                        + ":"
+                        + str(cnode.lineno)
+                        + ")"
                     )
                     promoted = True
                     break

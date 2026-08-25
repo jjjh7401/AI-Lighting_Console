@@ -98,9 +98,16 @@ def _live(tmp_path, provider=None):
         notify = listeners[0]
         loop = _loop_from(notify)
         ident, fired = _loop_thread_ident(loop)
-        print("PROBE loop_callback_fired=" + str(fired) + " loop_thread=" + str(ident)
-              + " loop_is_running=" + str(loop.is_running())
-              + " main_thread=" + str(threading.main_thread().ident))
+        print(
+            "PROBE loop_callback_fired="
+            + str(fired)
+            + " loop_thread="
+            + str(ident)
+            + " loop_is_running="
+            + str(loop.is_running())
+            + " main_thread="
+            + str(threading.main_thread().ident)
+        )
         yield ws, notify, loop, ident
 
 
@@ -119,10 +126,24 @@ def _report(name, rec, loop_ident, arrived):
             continue
         exc = fut.exception()
         states.append("ok" if exc is None else "exc=" + repr(exc))
-    print("PROBE-" + name + " loop_thread=" + str(loop_ident) + " main_thread=" + str(threading.main_thread().ident))
+    print(
+        "PROBE-"
+        + name
+        + " loop_thread="
+        + str(loop_ident)
+        + " main_thread="
+        + str(threading.main_thread().ident)
+    )
     print("PROBE-" + name + " scheduled_from=" + str(rec.scheduled))
     print("PROBE-" + name + " entered_in=" + str(rec.entered))
-    print("PROBE-" + name + " send_errors=" + str(rec.errors) + " caller_errors=" + str(rec.caller_errors))
+    print(
+        "PROBE-"
+        + name
+        + " send_errors="
+        + str(rec.errors)
+        + " caller_errors="
+        + str(rec.caller_errors)
+    )
     print("PROBE-" + name + " future_states=" + str(states))
     print("PROBE-" + name + " ARRIVED=" + str(arrived["type"] if arrived else None))
 
@@ -144,7 +165,12 @@ class TestControlCrossThread:
         _report("CONTROL", rec, loop_ident, frames[-1] if frames else None)
         print("PROBE-CONTROL kinds=" + str(kinds))
         cross = [t for t in rec.scheduled if t != loop_ident]
-        print("PROBE-CONTROL cross_thread_schedules=" + str(len(cross)) + " of " + str(len(rec.scheduled)))
+        print(
+            "PROBE-CONTROL cross_thread_schedules="
+            + str(len(cross))
+            + " of "
+            + str(len(rec.scheduled))
+        )
 
 
 class TestArms:
@@ -193,8 +219,12 @@ class TestControls:
             arrived_before = _try_recv(ws, 0.3)
             notify()
             arrived_after = _try_recv(ws, 2.0)
-        print("PROBE-FAB before=" + str(arrived_before["type"] if arrived_before else None)
-              + " after=" + str(arrived_after["type"] if arrived_after else None))
+        print(
+            "PROBE-FAB before="
+            + str(arrived_before["type"] if arrived_before else None)
+            + " after="
+            + str(arrived_after["type"] if arrived_after else None)
+        )
         _report("FAB", rec, loop_ident, arrived_after)
 
 
@@ -204,14 +234,19 @@ class TestOrphanPump:
 
     def test_a_timed_out_read_steals_the_next_frame(self, tmp_path, rec):
         with _live(tmp_path) as (ws, notify, _loop, loop_ident):
-            first = _try_recv(ws, 0.3)          # 반드시 시간 초과 -> 고아 펌프 1개
-            notify()                             # 이제 프레임을 하나 민다
-            second = _try_recv(ws, 2.0)          # 새 펌프가 받나, 고아가 훔치나
+            first = _try_recv(ws, 0.3)  # 반드시 시간 초과 -> 고아 펌프 1개
+            notify()  # 이제 프레임을 하나 민다
+            second = _try_recv(ws, 2.0)  # 새 펌프가 받나, 고아가 훔치나
             notify()
             third = _try_recv(ws, 2.0)
-        print("PROBE-ORPHAN first=" + str(first) + " second="
-              + str(second["type"] if second else None)
-              + " third=" + str(third["type"] if third else None))
+        print(
+            "PROBE-ORPHAN first="
+            + str(first)
+            + " second="
+            + str(second["type"] if second else None)
+            + " third="
+            + str(third["type"] if third else None)
+        )
         _report("ORPHAN", rec, loop_ident, second)
 
     def test_repeat_loop_reproduces_the_zero(self, tmp_path, rec):
@@ -222,10 +257,17 @@ class TestOrphanPump:
                 notify()
                 if _try_recv(ws, 1.0) is not None:
                     arrivals += 1
-        print("PROBE-REPEAT arrivals=" + str(arrivals) + "/20"
-              + " scheduled=" + str(len(rec.scheduled))
-              + " entered=" + str(len(rec.entered))
-              + " errors=" + str(rec.errors))
+        print(
+            "PROBE-REPEAT arrivals="
+            + str(arrivals)
+            + "/20"
+            + " scheduled="
+            + str(len(rec.scheduled))
+            + " entered="
+            + str(len(rec.entered))
+            + " errors="
+            + str(rec.errors)
+        )
 
 
 class TestOrdering:

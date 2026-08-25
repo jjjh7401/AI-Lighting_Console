@@ -1,15 +1,25 @@
 """M5 — 열린 후보 둘의 연언을 「치환해 돌려서」 판정한다. 읽어서 추정하지 않는다."""
-import hashlib, pathlib, shutil, subprocess
+
+import hashlib
+import pathlib
+import shutil
+import subprocess
 
 cases = [
-    ("607-cue_monitor",
-     "server/tests/test_web_cue_monitor.py", 607,
-     "        event = recv_frame(ws)",
-     '        event = drain_until(ws, "cue_monitor")'),
-    ("255-chat_response",
-     "server/tests/test_web_panel_execute.py", 255,
-     "    return recv_frame(ws, timeout)",
-     '    return drain_until(ws, "chat_response")'),
+    (
+        "607-cue_monitor",
+        "server/tests/test_web_cue_monitor.py",
+        607,
+        "        event = recv_frame(ws)",
+        '        event = drain_until(ws, "cue_monitor")',
+    ),
+    (
+        "255-chat_response",
+        "server/tests/test_web_panel_execute.py",
+        255,
+        "    return recv_frame(ws, timeout)",
+        '    return drain_until(ws, "chat_response")',
+    ),
 ]
 
 for name, path_s, lineno, expect, lever in cases:
@@ -27,8 +37,11 @@ for name, path_s, lineno, expect, lever in cases:
         continue
 
     # 무뮤테이션 기준선
-    pre = subprocess.run([".venv/bin/python", "-m", "pytest", path_s, "-q", "-p", "no:randomly"],
-                         capture_output=True, text=True)
+    pre = subprocess.run(
+        [".venv/bin/python", "-m", "pytest", path_s, "-q", "-p", "no:randomly"],
+        capture_output=True,
+        text=True,
+    )
     pre_line = [x for x in pre.stdout.splitlines() if "passed" in x or "failed" in x]
     print("  baseline: " + (pre_line[-1] if pre_line else "?"))
 
@@ -42,8 +55,11 @@ for name, path_s, lineno, expect, lever in cases:
         print("  APPLIED-CHECK FAILED — 판독하지 않는다")
         continue
 
-    run = subprocess.run([".venv/bin/python", "-m", "pytest", path_s, "-q", "-p", "no:randomly"],
-                         capture_output=True, text=True)
+    run = subprocess.run(
+        [".venv/bin/python", "-m", "pytest", path_s, "-q", "-p", "no:randomly"],
+        capture_output=True,
+        text=True,
+    )
     tail = [x for x in run.stdout.splitlines() if "passed" in x or "failed" in x]
     verdict = "SURVIVED" if run.returncode == 0 else "KILLED"
     print("  -> " + verdict + "  |  " + (tail[-1] if tail else "?"))
@@ -52,4 +68,6 @@ for name, path_s, lineno, expect, lever in cases:
             print("     " + x)
 
     shutil.copy(backup, target)
-    print("  restored sha256 match = " + str(hashlib.sha256(target.read_bytes()).hexdigest() == base))
+    print(
+        "  restored sha256 match = " + str(hashlib.sha256(target.read_bytes()).hexdigest() == base)
+    )
