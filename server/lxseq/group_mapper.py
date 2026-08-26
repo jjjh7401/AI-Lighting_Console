@@ -22,6 +22,7 @@ from dataclasses import dataclass
 
 from server.groupgen.write import DEFAULT_GROUP_PLAN_CAP
 from server.lxseq.group_parser import LxseqGroupRecord
+from server.rig.section import section_refusal
 from server.spatial.choreography import build_compact_fixture_selection
 
 __all__ = [
@@ -210,13 +211,21 @@ def _declared_count(members_raw: str) -> int | None:
 
 
 def _measure_empty_slots(groups_section: Mapping[str, object], count: int) -> tuple[int, ...]:
-    """빈 슬롯을 오름차순으로 count 개 잰다.
+    """빈 슬롯을 오름차순으로 count 개 잰다. **단면이 관측일 때만** 부른다.
 
     `server/groupgen/write.py` 의 `measure_empty_slots` 와 같은 규칙이다.
     그 함수를 부르지 않는 이유는 이 층이 계획을 세우는 곳이지 쓰는 곳이
     아니고, 그 함수는 풀 판독 실패에 예외를 던지기 때문이다 — 여기서는
     어긋남을 **보고**해야 하지 던지면 안 된다. 두 규칙이 같은지는 테스트가
     잰다.
+
+    「관측일 때만」이 호출 규약이다 — 이 함수는 단면의 사용 가능 여부를 **안
+    본다.** 판정은 `map_groups` 가 호출 **전에** `server/rig/section.py` 로
+    한다. 이 함수 안에 검사를 또 두면 술어가 둘이 된다.
+
+    이 규약이 없던 동안 `.get("objects") or ()` 가 판독 실패 단면(키 자체가
+    없다)을 빈 점유 집합으로 읽었고, 슬롯 1..N 이 비었다고 답했다 — 콘솔이
+    답한 적 없는 자리에 그룹을 쓰는 계획이 됐다(t109 C4).
     """
     occupied = set()
     for entry in groups_section.get("objects") or ():
@@ -341,6 +350,21 @@ def map_groups(
             skipped=tuple(skipped),
             slot_divergence=None,
             console_read_incomplete=False,
+        )
+
+    # [HARD] 재기 **전에** 단면이 관측인지 묻는다. 술어는 이 저장소에 하나뿐이고
+    # (`server/rig/section.py`), 슬롯을 재는 자리는 전부 그것을 부른다.
+    #
+    # 여기서 `slot_divergence` 로 보고하면 안 된다 — 「어긋났다」는 시트를 고치러
+    # 가라는 신호인데, 실제로는 콘솔을 못 읽은 것이라 시트를 고쳐도 안 낫는다.
+    # 그래서 이미 있는 `console_read_incomplete` 로 답한다. 그 필드가 원래
+    # 「콘솔 쪽을 못 읽었다」는 뜻이고, 이것이 정확히 그 경우다.
+    if section_refusal(groups_section) is not None:
+        return GroupMapResult(
+            batches=(),
+            skipped=tuple(skipped),
+            slot_divergence=None,
+            console_read_incomplete=True,
         )
 
     sheet_slots = tuple(bucket.group_no for bucket in planned)
