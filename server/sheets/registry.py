@@ -102,6 +102,11 @@ class SheetKindRow:
     predicate: Any
     handler: Any
     passthrough_args: tuple[str, ...] = ()
+    #: 업로드된 바이트를 대상 툴의 **어느 인자**에 실을 것인가 (카드 t112).
+    #: 대상 툴 **이름**과 같은 자리에서 온다 — 래퍼에 하드코딩하면 대상이 안
+    #: 읽는 이름으로 도착하고, 대상은 「파일이 없다」로 거절한다. 파일을
+    #: 줬는데도. 행이 말하지 않으면 예전 그대로다.
+    content_arg: str = "file_content_base64"
 
 
 @dataclass(frozen=True)
@@ -315,6 +320,9 @@ GROUP_ROW = SheetKindRow(
     ),
     handler=Handler(HANDLER_TAG_TOOL, "import_lxseq_groups"),
     passthrough_args=("action",),
+    #: 대상은 `file_content_base64` 를 안 읽는다 — 그룹 시트는 두 시트 중
+    #: 하나라 인자 이름이 갈려 있다(스키마 required 도 이 이름이다).
+    content_arg="group_content_base64",
 )
 
 #: 프리셋 3종 — **정확 열 집합**으로 갈린다(SPEC-COPILOT-LXSEQ-003 REQ-012).
