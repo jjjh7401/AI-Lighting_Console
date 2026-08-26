@@ -312,3 +312,47 @@ REQ-COLORPRESET-004 가 `Warm White` 를 재생성 가족 필터의 `first_label
 ⚠️ 다만 **COLORPRESET-001 의 ASCII 선택이 이 제약을 알고 내린 것인지는 미측정**이다.
 SPEC 본문에 그 이유가 안 적혀 있다. 「선례가 있다」까지가 관측이고 「그래서
 ASCII 로 통일하라」는 이 카드의 판정이 아니다.
+
+---
+
+## 11. t114 의 성과를 정확히 다시 쓴다 — 「새 발견」이 아니라 「잇힘」이다
+
+§9·§10 을 쓰고 나서도 문면이 여전히 발견 쪽으로 기울어 있었다. 정확한 형태는
+이것이고, **코드 두 자리로 확인했다**:
+
+    Position 프리셋 경로   session.py:5325 `_store_position_preset_looks`
+        docstring 그대로:  「룩마다 **적용 → Store → Label → ClearAll** 을
+                           별개 번들로 디스패치한다」
+        commands = [*apply(aims), *_preset_store_commands(...), "ClearAll"]
+        → **이 규율은 원래 있었다.**
+
+    LXSEQ 시트 경로        tools.py:114 `preset_apply_command` 임포트
+                          tools.py:1700 `_lxseq_preset_apply_command`
+                          tools.py:1688 「적용 줄이 겨눌 그룹 번호.
+                                         감독 결정(2026-08-26): dim 은 전 픽스처」
+        → **오늘(t108) 생겼다.**
+
+그리고 `preset_apply_command` 는 `server/presets/store.py` — **문형을 아는 유일한
+일반형 자리**(그 모듈 docstring)에 산다. 즉 t108 은 새 설계를 만든 것이 아니라
+**이미 있던 것을 두 번째 경로에 이었다.**
+
+### 그러므로 t114 가 답한 것은
+
+    ❌ 「프리셋 저장에 값 적용이 필요하다는 것을 발견했다」
+    ✅ **「Position 경로에 있던 적용→저장→ClearAll 규율이 LXSEQ 시트 경로에는
+         없었고, 그 부재가 실제로 값 없는 프리셋 여섯 개를 만들었으며,
+         이제 이어져서 값이 남는다」**
+
+슬롯 2(옛, 값 없음)와 슬롯 7(새, 85%)이 그 **부재와 잇힘을 나란히 보여 주는
+실물**이다. 이것이 이 카드의 실질이다.
+
+### 질문의 형태도 바뀐다
+
+completed SPEC 이 있는 축에서는 물음이 다르다:
+
+    새 SPEC 을 쓸 때           「무엇이 결함인가」
+    completed SPEC 이 있을 때   **「왜 이 경로엔 없나」**
+
+이 카드는 후자였는데 전자처럼 조사했다. `PRESETGUARD-001` 을 착수 1번에 읽었다면
+「Position 에는 있는데 LXSEQ 에는 왜 없나」로 바로 갔을 것이고, §1~§9 의 상당 부분이
+필요 없었다.
