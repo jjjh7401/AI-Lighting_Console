@@ -1,0 +1,44 @@
+{
+  "action": "preview",
+  "approve": false,
+  "listen_port": 9005,
+  "preset_csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t96/src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-pos.csv",
+  "limit": null,
+  "skip": 0,
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "baseline": {
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "ok": false,
+      "child_count": null,
+      "truncated": false,
+      "detail": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "fixtures": {
+      "path": "Patch/Stages/1/Fixtures",
+      "ok": true,
+      "child_count": 86,
+      "children_in_reply": 19,
+      "truncated": true,
+      "detail": null
+    },
+    "groups": {
+      "path": "DataPool/Groups",
+      "ok": true,
+      "child_count": 18,
+      "children_in_reply": 18,
+      "truncated": false,
+      "detail": null
+    },
+    "channel_trustworthy": true
+  },
+  "tool": {
+    "error": "PRESET 시트 헤더가 맞지 않다: unknown_preset_sheet: ID, StageMeaning, TargetGroup, RecordGuide"
+  },
+  "approval_requests": [],
+  "questions_asked": []
+}

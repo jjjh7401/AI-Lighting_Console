@@ -1,0 +1,6 @@
+round-trip against osc.udp://127.0.0.1:8000 (replies on 9005)
+  [FAIL] ping: live responder version '1.6.1' != expected '1.6.2' (the deploy did not take effect -- re-import did not refresh the running plugin; see console/lua/README.md § Deployment Reliability)
+         live version=1.6.1 plugin=CopilotResponder
+  [PASS] state: ok
+         node={'childCount': 1, 'class': 'Sequences', 'name': 'Sequences'} children=1
+result: FAIL
