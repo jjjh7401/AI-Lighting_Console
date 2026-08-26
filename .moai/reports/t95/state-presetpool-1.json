@@ -1,0 +1,46 @@
+{
+  "children": [
+    {
+      "class": "Preset",
+      "i": 1,
+      "name": "풀"
+    },
+    {
+      "class": "Preset",
+      "i": 2,
+      "name": "쇼 하이"
+    },
+    {
+      "class": "Preset",
+      "i": 3,
+      "name": "미드"
+    },
+    {
+      "class": "Preset",
+      "i": 4,
+      "name": "로우"
+    },
+    {
+      "class": "Preset",
+      "i": 5,
+      "name": "잔광"
+    },
+    {
+      "class": "Preset",
+      "i": 6,
+      "name": "아웃"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 6,
+    "class": "Presets",
+    "name": "Dimmer"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/PresetPools/1",
+  "truncated": false,
+  "v": 1
+}

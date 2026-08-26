@@ -1,0 +1,124 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "Preset",
+    "fields": [
+      {
+        "n": "IGNORENETWORK",
+        "t": "UInt64"
+      },
+      {
+        "n": "STRUCTURELOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "SYSTEMLOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "LOCK",
+        "t": "UInt64"
+      },
+      {
+        "n": "INDEX",
+        "t": "UInt32"
+      },
+      {
+        "n": "COUNT",
+        "t": "UInt32"
+      },
+      {
+        "n": "NO",
+        "t": "UInt32"
+      },
+      {
+        "n": "NAME",
+        "t": "String"
+      },
+      {
+        "n": "USEREXPANDED",
+        "t": "UInt64"
+      },
+      {
+        "n": "FADERENABLED",
+        "t": "Bool"
+      },
+      {
+        "n": "OWNED",
+        "t": "Bool"
+      },
+      {
+        "n": "HIDDEN",
+        "t": "UInt64"
+      },
+      {
+        "n": "DEPENDENCYEXPORT",
+        "t": "String"
+      },
+      {
+        "n": "MEMORYFOOTPRINT",
+        "t": "Int64"
+      },
+      {
+        "n": "GUID",
+        "t": "Custom"
+      },
+      {
+        "n": "SCRIBBLE",
+        "t": "Handle"
+      },
+      {
+        "n": "APPEARANCE",
+        "t": "Handle"
+      },
+      {
+        "n": "NOTE",
+        "t": "String"
+      },
+      {
+        "n": "TAGS",
+        "t": "Custom"
+      },
+      {
+        "n": "PREVIEWCOPY",
+        "t": "Handle"
+      },
+      {
+        "n": "ACTIVE",
+        "t": "UInt8"
+      },
+      {
+        "n": "HASANYMATRICKSDATA",
+        "t": "Bool"
+      },
+      {
+        "n": "SHUFFLEMODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "INITIALNAME",
+        "t": "String"
+      },
+      {
+        "n": "INITIALMATRICKS",
+        "t": "Handle"
+      },
+      {
+        "n": "X",
+        "t": "Int32"
+      },
+      {
+        "n": "Y",
+        "t": "Int32"
+      }
+    ],
+    "id": "gate-1",
+    "kind": "introspect",
+    "ok": true,
+    "path": "DataPool/PresetPools/1/3",
+    "source": "property_accessors",
+    "total": 138,
+    "truncated": true,
+    "v": 1
+  }
+}

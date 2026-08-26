@@ -1,0 +1,15 @@
+{
+  "children": [],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 0,
+    "class": "Preset",
+    "name": "미드"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/PresetPools/1/3",
+  "truncated": false,
+  "v": 1
+}

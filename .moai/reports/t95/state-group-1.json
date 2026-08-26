@@ -1,0 +1,15 @@
+{
+  "children": [],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 0,
+    "class": "Group",
+    "name": "ALL"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/Groups/1",
+  "truncated": false,
+  "v": 1
+}
