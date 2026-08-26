@@ -1,0 +1,601 @@
+{
+  "path": "DataPool/PresetPools/1/2",
+  "responder_version": "1.6.2",
+  "windows": [
+    {
+      "requested_offset": 0,
+      "echoed_offset": 0,
+      "received": 27,
+      "truncated": true
+    },
+    {
+      "requested_offset": 27,
+      "echoed_offset": 27,
+      "received": 29,
+      "truncated": true
+    },
+    {
+      "requested_offset": 56,
+      "echoed_offset": 56,
+      "received": 26,
+      "truncated": true
+    },
+    {
+      "requested_offset": 82,
+      "echoed_offset": 82,
+      "received": 26,
+      "truncated": true
+    },
+    {
+      "requested_offset": 108,
+      "echoed_offset": 108,
+      "received": 26,
+      "truncated": true
+    },
+    {
+      "requested_offset": 134,
+      "echoed_offset": 134,
+      "received": 4,
+      "truncated": false
+    }
+  ],
+  "enumerated": 138,
+  "readable": 117,
+  "unreadable": 21,
+  "readable_fields": [
+    {
+      "name": "IGNORENETWORK",
+      "value": "false"
+    },
+    {
+      "name": "STRUCTURELOCKED",
+      "value": "false"
+    },
+    {
+      "name": "SYSTEMLOCKED",
+      "value": "false"
+    },
+    {
+      "name": "LOCK",
+      "value": ""
+    },
+    {
+      "name": "INDEX",
+      "value": "2"
+    },
+    {
+      "name": "COUNT",
+      "value": "0"
+    },
+    {
+      "name": "NO",
+      "value": "2"
+    },
+    {
+      "name": "NAME",
+      "value": "쇼 하이"
+    },
+    {
+      "name": "USEREXPANDED",
+      "value": "false"
+    },
+    {
+      "name": "FADERENABLED",
+      "value": "false"
+    },
+    {
+      "name": "OWNED",
+      "value": "false"
+    },
+    {
+      "name": "HIDDEN",
+      "value": "false"
+    },
+    {
+      "name": "DEPENDENCYEXPORT",
+      "value": ""
+    },
+    {
+      "name": "MEMORYFOOTPRINT",
+      "value": "1536"
+    },
+    {
+      "name": "NOTE",
+      "value": ""
+    },
+    {
+      "name": "TAGS",
+      "value": ""
+    },
+    {
+      "name": "ACTIVE",
+      "value": "false"
+    },
+    {
+      "name": "HASANYMATRICKSDATA",
+      "value": "false"
+    },
+    {
+      "name": "SHUFFLEMODE",
+      "value": "Auto"
+    },
+    {
+      "name": "INITIALNAME",
+      "value": ""
+    },
+    {
+      "name": "X",
+      "value": "None"
+    },
+    {
+      "name": "Y",
+      "value": "None"
+    },
+    {
+      "name": "Z",
+      "value": "None"
+    },
+    {
+      "name": "XBLOCK",
+      "value": "None"
+    },
+    {
+      "name": "YBLOCK",
+      "value": "None"
+    },
+    {
+      "name": "ZBLOCK",
+      "value": "None"
+    },
+    {
+      "name": "XGROUP",
+      "value": "None"
+    },
+    {
+      "name": "YGROUP",
+      "value": "None"
+    },
+    {
+      "name": "ZGROUP",
+      "value": "None"
+    },
+    {
+      "name": "XWINGS",
+      "value": "None"
+    },
+    {
+      "name": "YWINGS",
+      "value": "None"
+    },
+    {
+      "name": "ZWINGS",
+      "value": "None"
+    },
+    {
+      "name": "XWIDTH",
+      "value": "None"
+    },
+    {
+      "name": "YWIDTH",
+      "value": "None"
+    },
+    {
+      "name": "ZWIDTH",
+      "value": "None"
+    },
+    {
+      "name": "XSHUFFLE",
+      "value": "None"
+    },
+    {
+      "name": "YSHUFFLE",
+      "value": "None"
+    },
+    {
+      "name": "ZSHUFFLE",
+      "value": "None"
+    },
+    {
+      "name": "XSHIFT",
+      "value": "None"
+    },
+    {
+      "name": "YSHIFT",
+      "value": "None"
+    },
+    {
+      "name": "ZSHIFT",
+      "value": "None"
+    },
+    {
+      "name": "XINV",
+      "value": "false"
+    },
+    {
+      "name": "XINVB",
+      "value": "false"
+    },
+    {
+      "name": "XINVG",
+      "value": "false"
+    },
+    {
+      "name": "XINVW",
+      "value": "false"
+    },
+    {
+      "name": "YINV",
+      "value": "false"
+    },
+    {
+      "name": "YINVB",
+      "value": "false"
+    },
+    {
+      "name": "YINVG",
+      "value": "false"
+    },
+    {
+      "name": "YINVW",
+      "value": "false"
+    },
+    {
+      "name": "ZINV",
+      "value": "false"
+    },
+    {
+      "name": "ZINVB",
+      "value": "false"
+    },
+    {
+      "name": "ZINVG",
+      "value": "false"
+    },
+    {
+      "name": "ZINVW",
+      "value": "false"
+    },
+    {
+      "name": "INVERTSTYLE",
+      "value": "Pan"
+    },
+    {
+      "name": "INVERTX",
+      "value": "false"
+    },
+    {
+      "name": "INVERTY",
+      "value": "false"
+    },
+    {
+      "name": "INVERTZ",
+      "value": "false"
+    },
+    {
+      "name": "ALIGNRANGEX",
+      "value": "false"
+    },
+    {
+      "name": "ALIGNRANGEY",
+      "value": "false"
+    },
+    {
+      "name": "ALIGNRANGEZ",
+      "value": "false"
+    },
+    {
+      "name": "RELATIVEFADE",
+      "value": "true"
+    },
+    {
+      "name": "RELATIVEDELAY",
+      "value": "true"
+    },
+    {
+      "name": "RELATIVEPHASE",
+      "value": "true"
+    },
+    {
+      "name": "RELATIVESPEED",
+      "value": "false"
+    },
+    {
+      "name": "RELATIVE",
+      "value": "true"
+    },
+    {
+      "name": "PHASERTRANSFORM",
+      "value": "None"
+    },
+    {
+      "name": "FADEFROMX",
+      "value": "None"
+    },
+    {
+      "name": "FADETOX",
+      "value": "None"
+    },
+    {
+      "name": "DELAYFROMX",
+      "value": "None"
+    },
+    {
+      "name": "DELAYTOX",
+      "value": "None"
+    },
+    {
+      "name": "SPEEDFROMX",
+      "value": "None"
+    },
+    {
+      "name": "SPEEDTOX",
+      "value": "None"
+    },
+    {
+      "name": "PHASEFROMX",
+      "value": "None"
+    },
+    {
+      "name": "PHASETOX",
+      "value": "None"
+    },
+    {
+      "name": "FADEFROMY",
+      "value": "None"
+    },
+    {
+      "name": "FADETOY",
+      "value": "None"
+    },
+    {
+      "name": "DELAYFROMY",
+      "value": "None"
+    },
+    {
+      "name": "DELAYTOY",
+      "value": "None"
+    },
+    {
+      "name": "SPEEDFROMY",
+      "value": "None"
+    },
+    {
+      "name": "SPEEDTOY",
+      "value": "None"
+    },
+    {
+      "name": "PHASEFROMY",
+      "value": "None"
+    },
+    {
+      "name": "PHASETOY",
+      "value": "None"
+    },
+    {
+      "name": "FADEFROMZ",
+      "value": "None"
+    },
+    {
+      "name": "FADETOZ",
+      "value": "None"
+    },
+    {
+      "name": "DELAYFROMZ",
+      "value": "None"
+    },
+    {
+      "name": "DELAYTOZ",
+      "value": "None"
+    },
+    {
+      "name": "SPEEDFROMZ",
+      "value": "None"
+    },
+    {
+      "name": "SPEEDTOZ",
+      "value": "None"
+    },
+    {
+      "name": "PHASEFROMZ",
+      "value": "None"
+    },
+    {
+      "name": "PHASETOZ",
+      "value": "None"
+    },
+    {
+      "name": "DOSHUFFLE",
+      "value": "PropertyInvokeMeta: 0x6000005c30c0"
+    },
+    {
+      "name": "MEMORYTYPE",
+      "value": "Compressed"
+    },
+    {
+      "name": "MOVEGRIDCURSOR",
+      "value": "Append X"
+    },
+    {
+      "name": "PRESERVEGRIDPOSITIONS",
+      "value": "false"
+    },
+    {
+      "name": "SELECTIONDATA",
+      "value": "table: 0x6000005c7700"
+    },
+    {
+      "name": "CUEPART",
+      "value": "Default"
+    },
+    {
+      "name": "TYPE",
+      "value": "Preset"
+    },
+    {
+      "name": "USER",
+      "value": ""
+    },
+    {
+      "name": "FEATUREGROUP",
+      "value": "Dimmer"
+    },
+    {
+      "name": "TRIGGER",
+      "value": ""
+    },
+    {
+      "name": "VALUESMODE",
+      "value": "Normal"
+    },
+    {
+      "name": "MAGIC",
+      "value": "false"
+    },
+    {
+      "name": "PRESETMODE",
+      "value": "Universal"
+    },
+    {
+      "name": "STOREDDATA",
+      "value": ""
+    },
+    {
+      "name": "SPEEDMASTER",
+      "value": "None"
+    },
+    {
+      "name": "SPEEDSCALE",
+      "value": "0"
+    },
+    {
+      "name": "PRESETDATA",
+      "value": ""
+    },
+    {
+      "name": "OWNDATAPRESENT",
+      "value": "false"
+    },
+    {
+      "name": "DIRECTPROGRAMMERCOOKING",
+      "value": "false"
+    },
+    {
+      "name": "OWNNONCOOKEDDATAPRESENT",
+      "value": "false"
+    },
+    {
+      "name": "MODE",
+      "value": "0"
+    },
+    {
+      "name": "RECIPETEMPLATE",
+      "value": "false"
+    },
+    {
+      "name": "DELAYTOPHASE",
+      "value": "false"
+    },
+    {
+      "name": "DEPENDENCIES",
+      "value": "table: 0x60000055a7c0"
+    },
+    {
+      "name": "REFERENCES",
+      "value": ""
+    },
+    {
+      "name": "MAXDEPTH",
+      "value": "0"
+    },
+    {
+      "name": "ACTION",
+      "value": "416"
+    }
+  ],
+  "unreadable_fields": [
+    {
+      "name": "GUID",
+      "detail": "property not readable: GUID"
+    },
+    {
+      "name": "SCRIBBLE",
+      "detail": "property not readable: SCRIBBLE"
+    },
+    {
+      "name": "APPEARANCE",
+      "detail": "property not readable: APPEARANCE"
+    },
+    {
+      "name": "PREVIEWCOPY",
+      "detail": "property not readable: PREVIEWCOPY"
+    },
+    {
+      "name": "INITIALMATRICKS",
+      "detail": "property not readable: INITIALMATRICKS"
+    },
+    {
+      "name": "INPUTFILTER",
+      "detail": "property not readable: INPUTFILTER"
+    },
+    {
+      "name": "OFFFADE",
+      "detail": "property not readable: OFFFADE"
+    },
+    {
+      "name": "AUTOSTART",
+      "detail": "property not readable: AUTOSTART"
+    },
+    {
+      "name": "AUTOSTOP",
+      "detail": "property not readable: AUTOSTOP"
+    },
+    {
+      "name": "AUTOFIX",
+      "detail": "property not readable: AUTOFIX"
+    },
+    {
+      "name": "AUTOSTOMP",
+      "detail": "property not readable: AUTOSTOMP"
+    },
+    {
+      "name": "SOFTLTP",
+      "detail": "property not readable: SOFTLTP"
+    },
+    {
+      "name": "SWAPPROTECT",
+      "detail": "property not readable: SWAPPROTECT"
+    },
+    {
+      "name": "KILLPROTECT",
+      "detail": "property not readable: KILLPROTECT"
+    },
+    {
+      "name": "USEEXECUTORTIME",
+      "detail": "property not readable: USEEXECUTORTIME"
+    },
+    {
+      "name": "OFFWHENOVERRIDDEN",
+      "detail": "property not readable: OFFWHENOVERRIDDEN"
+    },
+    {
+      "name": "AUTOPREPOS",
+      "detail": "property not readable: AUTOPREPOS"
+    },
+    {
+      "name": "PRIORITY",
+      "detail": "property not readable: PRIORITY"
+    },
+    {
+      "name": "PLAYBACKMASTER",
+      "detail": "property not readable: PLAYBACKMASTER"
+    },
+    {
+      "name": "OUTPUTFILTER",
+      "detail": "property not readable: OUTPUTFILTER"
+    },
+    {
+      "name": "EXECUTORDISPLAYMODE",
+      "detail": "property not readable: EXECUTORDISPLAYMODE"
+    }
+  ]
+}
