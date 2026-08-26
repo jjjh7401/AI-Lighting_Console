@@ -3713,6 +3713,14 @@ class ChatSession:
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
             bundle_gate=_ObservingBundleGate(gate, self._on_preview, self._on_decision),
+            # 카드 t110 — 프리셋·그룹 쓰기(`Store Preset` · `Store Group`)를
+            # 게이트는 위험으로 분류하지 않으므로, 그 툴들은 자기 승인 통로를
+            # 따로 묻는다. 여기에 안 실으면 `tools.py` 가 `DenyAllApprovalPort`
+            # 로 떨어져 **앱에서는 항상 declined** 였다 — 하네스에서만 돌았다.
+            # 새 통로를 만들지 않고 게이트와 같은 그 채널을 그대로 넘긴다:
+            # `:3703` 에서 이미 이 세션 UI 에 bind 된 물건이라 사람이 답할 수
+            # 있는 유일한 통로다. 통로 부재 시 거절(fail-closed)은 그대로다.
+            group_approval_port=approval_channel,
             rig_paths=self._rig_paths,
             deploy_pipeline=deploy_pipeline,
             question_port=question_channel,
