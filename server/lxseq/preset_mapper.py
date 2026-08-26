@@ -35,6 +35,11 @@ from dataclasses import dataclass
 
 from server.lxseq.preset_parser import LxseqPresetRecord
 from server.presets.store import preset_label_refusal
+from server.rig.section import (
+    SECTION_TRUNCATED,
+    SECTION_UNREAD,
+)
+from server.rig.section import section_refusal as rig_section_refusal
 
 #: 풀을 못 읽었다 — 빈 슬롯을 잴 수 없으므로 계획을 내지 않는다.
 POOL_UNREADABLE = "pool_unreadable"
@@ -358,17 +363,25 @@ def map_presets(
     )
 
 
+#: 공유 술어의 코드 -> 이 도메인의 사유 코드. 술어는 하나지만 어휘는 도메인마다
+#: 다르다 — 하류(`held_by_class`, 산출물 문면)가 이 파일의 코드를 세므로 그대로
+#: 둔다. 판정 로직만 공유하고 어휘는 안 바꾼다.
+_SECTION_REFUSAL_CODES = dict(
+    [(SECTION_UNREAD, POOL_UNREADABLE), (SECTION_TRUNCATED, POOL_TRUNCATED)]
+)
+
+
 def section_refusal(section: Mapping[str, object]) -> tuple[str, str] | None:
-    """풀 단면 자체가 못 쓸 상태인가. 쓸 수 있으면 None."""
-    if section.get("ok") is False or isinstance(section.get("reason"), str):
-        return (
-            POOL_UNREADABLE,
-            "프리셋 풀을 못 읽었다: " + str(section.get("reason") or "not-ok"),
-        )
-    if section.get("truncated"):
-        return (
-            POOL_TRUNCATED,
-            "풀 목록이 절단됐다 — 안 보이는 슬롯이 점유돼 있을 수 있으므로 "
-            "어느 슬롯도 비었다고 말하지 않는다",
-        )
-    return None
+    """풀 단면 자체가 못 쓸 상태인가. 쓸 수 있으면 None.
+
+    판정은 `server/rig/section.py` 하나가 한다 — 이 자리에 사본을 두면 술어가
+    갈라지고, 갈라진 날 한쪽만 고쳐진다. 이 파일이 원래 그 사본이었다(t109).
+
+    여기서 하는 일은 **어휘 번역뿐**이다: 공유 코드를 이 도메인의 사유 코드로
+    옮긴다. 문면은 술어가 낸 것을 그대로 나른다 — 다시 쓰면 두 문면이 갈린다.
+    """
+    verdict = rig_section_refusal(section)
+    if verdict is None:
+        return None
+    code, detail = verdict
+    return (_SECTION_REFUSAL_CODES[code], detail)

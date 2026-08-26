@@ -4853,7 +4853,18 @@ def build_toolset(
             return _error_result(call, "PRESET 시트 헤더가 맞지 않다: " + str(error))
 
         pool_no, pool_error = _preset_pool_number(_PRESET_POOL_FAMILY[parsed.sheet_kind])
-        pool_section: dict[str, object] = dict(objects=[], truncated=False)
+        # [HARD] 못 찾은 풀은 **빈 풀이 아니다.** 여기서 `objects=[]` 로 시작하면
+        # 겉보기 성공 단면이 되어 매퍼의 술어를 그대로 통과하고, 아무것도 안 잰
+        # 것에 대해 슬롯이 배정된 계획이 사람에게 보고된다(t109 C3).
+        #
+        # 지어낸 성공 단면은 **어떤 소비 측 검사로도** 진짜와 구별되지 않는다 —
+        # 그래서 소비 지점의 술어(`server/rig/section.py`)만으로는 부족하고,
+        # 생산 지점이 위조하지 않는 것이 짝으로 필요하다. 둘 중 하나만 있으면
+        # 이 결함이 그대로 남는다.
+        pool_section: dict[str, object] = dict(
+            ok=False,
+            reason=pool_error or "프리셋 풀 번호를 못 읽었다",
+        )
         if pool_no is not None:
             try:
                 slots = state_port.query_state(
