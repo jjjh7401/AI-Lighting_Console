@@ -96,7 +96,7 @@ class FieldEnumerationPort(Protocol):
     needs while staying behind the gate-owned console path.
     """
 
-    def enumerate_fields(self, path: str) -> dict:
+    def enumerate_fields(self, path: str, *, offset: int = 0) -> dict:
         """Enumerate readable field names/types for one object; raises on failure/timeout."""
         ...
 

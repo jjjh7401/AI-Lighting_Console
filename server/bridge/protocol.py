@@ -242,10 +242,36 @@ def build_state_query(request_id: str, path: str, offset: int | None = None) -> 
     return build_plugin_call(f"state {request_id} {path} offset={offset}")
 
 
-def build_introspect_query(request_id: str, path: str) -> str:
+def build_introspect_query(request_id: str, path: str, offset: int | None = None) -> str:
+    """Handle field-name/type discovery; reply arrives on /copilot/state.
+
+    ``offset`` (PROTOCOL.md 4.7 paging, responder 1.6.2) is the 0-based start
+    into the FULL enumerated name list. ``None`` **and** ``0`` both emit the
+    historical request bytes (no token), so a still-deployed 1.6.1 responder
+    keeps answering the unpaged call byte-for-byte. A positive value appends
+    one trailing ``offset=<n>`` token.
+
+    A pre-1.6.2 responder folds that token into the path and replies
+    ``ok:false`` with **no** ``offset`` echo, so a caller that pages MUST read
+    a missing echo as "this responder cannot page" and stop -- never retry the
+    same offset. Same contract as ``build_state_query``, deliberately: two
+    different paging rules for one token shape is how a caller ends up paging
+    one verb correctly and the other into the path.
+
+    Advance ``offset`` by the number of entries actually RECEIVED, never by a
+    fixed page size -- the window width is decided by the responder's payload
+    budget, not by the request.
+    """
     _validate_request_id(request_id)
     _validate_rest(path, field="object path")
-    line = build_plugin_call(f"introspect {request_id} {path}")
+    if isinstance(offset, bool) or (offset is not None and not isinstance(offset, int)):
+        raise ProtocolError(f"offset must be an int or None: {offset!r}")
+    if offset is not None and offset < 0:
+        raise ProtocolError(f"offset must be >= 0: {offset!r}")
+    rest = f"introspect {request_id} {path}"
+    if offset:
+        rest = f"{rest} offset={offset}"
+    line = build_plugin_call(rest)
     _validate_plugin_call_budget(line, field="introspect request")
     return line
 

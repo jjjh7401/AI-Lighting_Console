@@ -173,7 +173,7 @@ class ConsolePort(Protocol):
 
     def query_property(self, path: str, property_name: str) -> dict: ...
 
-    def enumerate_fields(self, path: str) -> dict: ...
+    def enumerate_fields(self, path: str, *, offset: int = 0) -> dict: ...
 
     def query_properties(self, path: str, property_names: Sequence[str]) -> dict: ...
 
@@ -720,17 +720,25 @@ class ConsoleLink:
             )
         return payload
 
-    def enumerate_fields(self, path: str) -> dict:
+    def enumerate_fields(self, path: str, *, offset: int = 0) -> dict:
         """Field enumeration (REQ-INTROSPECT-017); raises on failure/timeout.
 
         Homologous to :meth:`query_state`: same id correlation, same timeout
-        budget, same error type. The responder answers ``introspect`` on the
-        STATE address (``console/lua/PROTOCOL.md`` §4.7), which :meth:`deliver`
-        already accepts, so no new reply channel appears.
+        budget, same error type, and now the same ``offset`` keyword. The
+        responder answers ``introspect`` on the STATE address
+        (``console/lua/PROTOCOL.md`` 4.7), which :meth:`deliver` already
+        accepts, so no new reply channel appears.
+
+        ``offset`` (responder 1.6.2) is the 0-based start into the full
+        enumerated name list; 0 emits the historical request bytes. A caller
+        paging to exhaustion advances by the number of entries it actually
+        RECEIVED -- the window width belongs to the responder's payload budget.
+        Dropping this argument anywhere on the way down does not fail: it
+        re-reads window 1 forever.
         """
         request_id = self._new_id()
         payload = self._round_trip(
-            build_introspect_query(request_id, path),
+            build_introspect_query(request_id, path, offset=offset),
             request_id,
             self._timeouts.state_query_seconds,
         )

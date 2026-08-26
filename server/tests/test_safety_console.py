@@ -354,7 +354,12 @@ class TestIntrospectAndPropsGate:
         gate, _, _ = _make_probe_gate(tmp_path)
         assert hasattr(gate.state_port, "enumerate_fields")
         assert hasattr(gate.state_port, "query_properties")
-        assert list(inspect.signature(gate.state_port.enumerate_fields).parameters) == ["path"]
+        # 1.6.2 paging: the keyword is part of the declared port surface, and
+        # a layer that silently drops it re-reads window 1 forever (t104).
+        assert list(inspect.signature(gate.state_port.enumerate_fields).parameters) == [
+            "path",
+            "offset",
+        ]
         assert list(inspect.signature(gate.state_port.query_properties).parameters) == [
             "path",
             "property_names",
@@ -362,6 +367,7 @@ class TestIntrospectAndPropsGate:
         assert list(inspect.signature(FieldEnumerationPort.enumerate_fields).parameters) == [
             "self",
             "path",
+            "offset",
         ]
         assert list(inspect.signature(BulkPropertyQueryPort.query_properties).parameters) == [
             "self",

@@ -169,9 +169,12 @@ class TestVersionBump:
         # AND (SPEC-COPILOT-INTROSPECT-001 M2, reland T14) the additive
         # props/introspect verbs — bulk property readback and handle field
         # enumeration via the M1-adopted property accessors. 1.6.1 rejects
-        # enumerators missing same-handle prop-readable names. Protocol v1
-        # throughout.
-        assert harness.module["VERSION"] == "1.6.1"
+        # enumerators missing same-handle prop-readable names. 1.6.2 adds the
+        # trailing `offset=<n>` token to `introspect` (the token `state` has
+        # had since 1.6.0) so the names past the first payload-budget window
+        # are reachable at all — measured live at 138 properties of which 27
+        # arrived (t104). Protocol v1 throughout.
+        assert harness.module["VERSION"] == "1.6.2"
         assert harness.module["PROTO"] == 1
 
 

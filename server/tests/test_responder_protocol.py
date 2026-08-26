@@ -141,6 +141,40 @@ class TestRequestBuilders:
         line = build_introspect_query("i-2", "DataPool/Sequences/My Seq")
         assert line.endswith('"introspect i-2 DataPool/Sequences/My Seq"')
 
+    # -- introspect paging (responder 1.6.2, t104) -------------------------
+    #
+    # `state` has carried the trailing token since 1.6.0; `introspect` gets the
+    # same one so the names past the first payload-budget window are reachable.
+    # Default behaviour is unchanged on purpose: a caller that never asks for a
+    # window emits the historical bytes, so a still-deployed 1.6.1 responder
+    # keeps answering it.
+
+    def test_build_introspect_query_offset_none_and_zero_keep_historical_bytes(self):
+        base = f'Plugin "{PLUGIN_NAME}" "introspect 42 DataPool/Sequences"'
+        assert build_introspect_query("42", "DataPool/Sequences") == base
+        assert build_introspect_query("42", "DataPool/Sequences", offset=None) == base
+        assert build_introspect_query("42", "DataPool/Sequences", offset=0) == base
+
+    def test_build_introspect_query_positive_offset_appends_trailing_token(self):
+        line = build_introspect_query("42", "DataPool/PresetPools/1/3", offset=27)
+        assert line == f'Plugin "{PLUGIN_NAME}" "introspect 42 DataPool/PresetPools/1/3 offset=27"'
+
+    def test_build_introspect_query_rejects_negative_offset(self):
+        with pytest.raises(ProtocolError):
+            build_introspect_query("1", "DataPool/Sequences", offset=-1)
+
+    @pytest.mark.parametrize("bad", ["3", 1.5, True, object()])
+    def test_build_introspect_query_rejects_non_int_offset(self, bad):
+        with pytest.raises(ProtocolError):
+            build_introspect_query("1", "DataPool/Sequences", offset=bad)
+
+    def test_build_introspect_query_counts_the_offset_token_against_the_budget(self):
+        """예산 검사는 토큰까지 포함해야 한다 — 토큰이 상한을 넘기는 경로가 열리면
+        회신이 아니라 요청이 조용히 잘린다."""
+        path = "DataPool/" + ("X" * (MAX_PLUGIN_CALL_BYTES - 60))
+        with pytest.raises(ProtocolError):
+            build_introspect_query("1", path, offset=999999)
+
     def test_build_prop_query(self):
         line = build_prop_query("p-1", "DataPool/Sequences/Sequence 101/Cue 2", "TrigTime")
         assert line == (
