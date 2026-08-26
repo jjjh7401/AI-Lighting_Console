@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 from server.spatial.pointing import SpatialPointingError
 
 __all__ = ["preset_apply_command", "preset_label_refusal", "preset_store_commands"]
@@ -32,6 +34,18 @@ def preset_label_refusal(label: str | None) -> str | None:
         # 따옴표는 구분자를 조기에 닫아 문법을 깬다. 겹따옴표도 같이 막는 이유는
         # 콘솔 파서가 어느 쪽을 구분자로 볼지 이 채널로는 확인되지 않아서다.
         return "이름에 따옴표가 있다 — 따옴표가 명령의 구분자라서 문법이 깨진다"
+    for ch in text:
+        if unicodedata.category(ch) in ("Cc", "Zl", "Zp"):
+            # 명령은 한 줄이다. `strip` 은 앞뒤만 걷어내므로 이름 **안**의
+            # 개행·탭·제어문자는 그대로 남아 `Label Preset <p>.<n> '<text>'` 를
+            # 깨뜨린다. 여기서 안 막으면 계획이 「보낼 수 있다」고 답한 이름이
+            # 발사 직전 안전 게이트에서 거절돼 그 런의 나머지가 통째로 멈춘다
+            # (t111 — t97 이 따옴표에만 걸어 둔 원칙을 제어문자까지 넓힌다).
+            #
+            # Cc 밖의 Zl/Zp(U+2028·U+2029)까지 보는 이유: 안전 문법층은
+            # `ord(ch) < 32` 로만 걸러 U+2028 과 C1(0x80-0x9F)을 통과시킨다
+            # (t111 실측). 그 글자들에는 이 술어가 **유일한** 방어다.
+            return "이름에 제어문자가 있다(" + repr(ch) + ") — 명령은 한 줄이라 문형이 깨진다"
     return None
 
 
@@ -55,8 +69,10 @@ def preset_store_commands(
         text = label.strip()
         # 판정은 `preset_label_refusal` 하나가 한다 — 여기에 사본을 두면 계획
         # 단계와 발사 단계의 술어가 갈라진다(t97).
-        if preset_label_refusal(label) is not None:
-            raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
+        if (reason := preset_label_refusal(label)) is not None:
+            # 문면은 술어가 준 이유를 그대로 나른다 — 「empty or carries a
+            # quote」로 굳혀 두면 제어문자 거절에서 문면이 거짓말을 한다(t111).
+            raise SpatialPointingError("preset label " + repr(label) + " rejected: " + reason)
         commands.append(f"Label Preset {pool_no}.{preset_no} '{text}'")
     return tuple(commands)
 
