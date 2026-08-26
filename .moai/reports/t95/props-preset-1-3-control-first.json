@@ -1,0 +1,45 @@
+{
+  "mode": "props",
+  "payload": {
+    "id": "gate-1",
+    "kind": "props",
+    "ok": true,
+    "path": "DataPool/PresetPools/1/3",
+    "reads": [
+      {
+        "e": "property not readable: ZZZFAKE2",
+        "n": "ZZZFAKE2",
+        "ok": false
+      },
+      {
+        "n": "MODE",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      },
+      {
+        "e": "property not readable: HASDATA",
+        "n": "HASDATA",
+        "ok": false
+      },
+      {
+        "e": "property not readable: ISEMPTY",
+        "n": "ISEMPTY",
+        "ok": false
+      },
+      {
+        "e": "property not readable: VALUESTRING",
+        "n": "VALUESTRING",
+        "ok": false
+      },
+      {
+        "n": "PRESETDATA",
+        "ok": true,
+        "t": "string",
+        "v": ""
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  }
+}

@@ -1,0 +1,1 @@
+introspect failed: path segment not found: 'ZZZNoSuchPoolXYZ' (in DataPool/ZZZNoSuchPoolXYZ)

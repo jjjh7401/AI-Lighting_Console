@@ -1,0 +1,46 @@
+{
+  "mode": "props",
+  "payload": {
+    "id": "gate-1",
+    "kind": "props",
+    "ok": true,
+    "path": "DataPool/Groups/1",
+    "reads": [
+      {
+        "e": "property not readable: ZZZFAKE3",
+        "n": "ZZZFAKE3",
+        "ok": false
+      },
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "ALL"
+      },
+      {
+        "n": "COUNT",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      },
+      {
+        "e": "property not readable: PRESETDATA",
+        "n": "PRESETDATA",
+        "ok": false
+      },
+      {
+        "n": "MEMORYFOOTPRINT",
+        "ok": true,
+        "t": "number",
+        "v": "1136"
+      },
+      {
+        "e": "property not readable: SUBFIXTURES",
+        "n": "SUBFIXTURES",
+        "ok": false
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  }
+}
