@@ -31,6 +31,7 @@ from __future__ import annotations
 import hashlib
 import re
 import subprocess
+import tomllib
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +45,10 @@ _PRECHK_BASE = "95687a0e0eba90b325daf76efbd0ac197e69e2fc"
 #: :func:`test_the_predecessor_progress_log_is_untouched` for why it is the only
 #: valid reference point there.
 _OVERLAP_BASE = "85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a"
+
+#: t115 — 게이트가 조용히 못 보던 디렉터리. 경로가 한글이라 `git diff`
+#: 기본값이 따옴표로 감싸 버렸다.
+_T115_PIPELINE_DIR = "src/Lighting_Designer/90_빌드파이프라인"
 
 #: The ten paths the predecessor SPEC locked, inherited unchanged. Files and
 #: directories are NOT separated into two lists: the split is derived
@@ -949,9 +954,28 @@ class TestTouchedFilesPassLint:
     """AC-OVERLAP-019 ⑨ — on the files this SPEC touched, derived not listed."""
 
     def _touched(self) -> list[str]:
+        """이 SPEC 이 손댄 .py 목록. `core.quotePath=false` 가 [HARD] 다.
+
+        기본값이면 git 이 **비ASCII 경로를 따옴표로 감싸고 바이트를 8진 이스케이프**해
+        돌려준다(`"src/Lighting_Designer/90_\353\271\214…"`). 그 문자열은 디스크의
+        어떤 파일과도 안 맞으므로 아래 `is_file()` 이 **조용히 전부 떨어뜨린다** —
+        게이트는 초록인데 그 파일들은 한 번도 검사되지 않는다(t115: 380 중 369 만
+        검사됐고, 빠진 11개가 전부 한글 경로였다).
+
+        구멍을 되읽어 확인한다: 이 플래그를 빼면 `test_the_touched_set_covers_non_ascii_paths`
+        가 빨개진다.
+        """
         return [
             path
-            for path in _git("diff", "--name-only", f"{_OVERLAP_BASE}..HEAD", "--", "*.py")
+            for path in _git(
+                "-c",
+                "core.quotePath=false",
+                "diff",
+                "--name-only",
+                f"{_OVERLAP_BASE}..HEAD",
+                "--",
+                "*.py",
+            )
             .strip()
             .splitlines()
             if (_REPO_ROOT / path).is_file()
@@ -961,6 +985,39 @@ class TestTouchedFilesPassLint:
         touched = self._touched()
         assert touched, "손댄 파일이 0건이면 아래 두 검사가 공허하다"
         assert all(path.endswith(".py") for path in touched)
+
+    def test_the_touched_set_covers_non_ascii_paths(self):
+        """t115 — 구멍을 직접 겨눈다. 「도는가」가 아니라 「몇 개를 덮는가」다.
+
+        `core.quotePath=false` 가 빠지면 한글 경로가 따옴표에 싸여 돌아오고
+        `is_file()` 이 전부 떨어뜨려 이 단언이 빨개진다. 게이트가 초록인 채로
+        검사 범위만 줄어드는 것이 t115 가 잡은 결함이므로, **범위 자체**를 잰다.
+        """
+        touched = self._touched()
+        non_ascii = [path for path in touched if any(ord(ch) > 127 for ch in path)]
+        assert non_ascii, (
+            "비ASCII 경로가 손댄 목록에 하나도 없다 — quotePath 가 다시 기본값이거나, "
+            "이 SPEC 이 그런 파일을 더는 안 건드린다. 후자라면 이 검사를 지워라"
+        )
+        # 계기 검산 — git 이 몇 개를 보고했는지와 게이트가 몇 개를 보는지를 나란히
+        # 둔다. 두 수가 갈리면 그 차이가 곧 조용히 빠진 파일 수다.
+        reported = (
+            _git(
+                "-c",
+                "core.quotePath=false",
+                "diff",
+                "--name-only",
+                f"{_OVERLAP_BASE}..HEAD",
+                "--",
+                "*.py",
+            )
+            .strip()
+            .splitlines()
+        )
+        assert len(touched) == len(reported), (
+            f"git 은 {len(reported)}개를 보고했는데 게이트는 {len(touched)}개만 본다 — "
+            f"빠진 것: {sorted(set(reported) - set(touched))}"
+        )
 
     def test_ruff_check_passes_on_them(self):
         finished = subprocess.run(  # noqa: S603
@@ -981,3 +1038,83 @@ class TestTouchedFilesPassLint:
             check=False,
         )
         assert finished.returncode == 0, finished.stdout + finished.stderr
+
+
+class TestLintDeferralsDidNotGrow:
+    """t115 — 유예가 조용히 자라면 그건 `exclude` 다.
+
+    B 안(게이트를 고쳐 **보이게** 만들고 기존 위반은 명시 유예)의 유일한 정당화는
+    **줄어드는 것이 눈에 보인다**는 점이다. 그 가시성을 사람 눈에 맡기면 유예는
+    자란다 — 그래서 기계가 지킨다. `test_prechk_inventory.py` 의
+    `test_operator_utility_exemptions_did_not_grow` 와 같은 형태다.
+    """
+
+    #: 유예 대상 11개. 후속 카드가 규칙을 실제로 고치며 이 목록을 **줄인다**.
+    #: 늘리는 변경은 이 검사가 막는다.
+    _DEFERRED_FILES = frozenset(
+        f"{_T115_PIPELINE_DIR}/{name}"
+        for name in (
+            "exec_data.py",
+            "make_exec.py",
+            "make_ma3.py",
+            "make_rig.py",
+            "make_timeline.py",
+            "make_xlsx.py",
+            "rig_data.py",
+            "seq_data.py",
+            "validate.py",
+            "validate_ma3.py",
+            "validate_rig.py",
+        )
+    )
+
+    #: t115 착수 시점의 (파일, 규칙) 쌍 수. 상한이지 목표가 아니다.
+    _PAIR_CEILING = 85
+
+    @staticmethod
+    def _config() -> dict:
+        with (_REPO_ROOT / "pyproject.toml").open("rb") as handle:
+            return tomllib.load(handle)
+
+    def _per_file_ignores(self) -> dict:
+        return self._config()["tool"]["ruff"]["lint"]["per-file-ignores"]
+
+    def test_the_ignore_list_is_not_vacuous(self):
+        """공허 방지 먼저 — 목록이 비면 아래 「안 늘었다」가 거저 참이 된다."""
+        ignores = self._per_file_ignores()
+        assert ignores, "per-file-ignores 가 비었다 — 아래 검사들이 공허하다"
+        assert all(codes for codes in ignores.values()), "규칙이 빈 항목이 있다"
+
+    def test_no_file_joined_the_ignore_list(self):
+        """[HARD] 새 파일이 유예에 들어오면 빨개진다.
+
+        이것이 이 검사의 본체다. 쌍 수만 세면 한 파일에서 규칙을 빼고 다른 파일을
+        통째로 넣는 교환이 통과한다 — 파일 집합을 따로 못박는 이유다.
+        """
+        assert set(self._per_file_ignores()) == set(self._DEFERRED_FILES)
+
+    def test_the_pair_count_did_not_grow(self):
+        pairs = sum(len(codes) for codes in self._per_file_ignores().values())
+        assert pairs <= self._PAIR_CEILING, (
+            f"유예 쌍이 {pairs}개로 늘었다(상한 {self._PAIR_CEILING}). "
+            "유예는 줄어들기만 해야 한다 — 늘려야 한다면 그건 별도 판단이다"
+        )
+
+    def test_no_directory_glob_is_used(self):
+        """[HARD] 글롭이면 이 폴더의 **새 파일이 첫날부터 유예**가 된다.
+
+        그것이 t115 가 고치고 있는 결함(조용한 무검사)의 재생산이다. 파일 단위면
+        새 파일은 처음부터 전량 린트를 받는다.
+        """
+        globbed = [key for key in self._per_file_ignores() if "*" in key or "?" in key]
+        assert globbed == [], f"디렉터리 글롭이 섞였다: {globbed}"
+
+    def test_the_format_exclusion_matches_the_same_files(self):
+        """린트 유예와 포맷 유예가 갈리면 한쪽만 줄어도 아무도 모른다.
+
+        포맷 쪽은 저장소가 이미 쓰던 기제(`[tool.ruff.format].exclude` +
+        `force-exclude`)를 그대로 늘렸다 — 두 번째 기제를 만들지 않는다.
+        """
+        excluded = set(self._config()["tool"]["ruff"]["format"]["exclude"])
+        pinned = {"server/web/preview.py"}  # PRESERVE 핀 — t115 와 무관, 그대로 둔다
+        assert excluded - pinned == set(self._DEFERRED_FILES)
