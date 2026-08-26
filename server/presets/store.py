@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from server.spatial.pointing import SpatialPointingError
 
-__all__ = ["preset_label_refusal", "preset_store_commands"]
+__all__ = ["preset_apply_command", "preset_label_refusal", "preset_store_commands"]
 
 
 def preset_label_refusal(label: str | None) -> str | None:
@@ -59,3 +59,30 @@ def preset_store_commands(
             raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
         commands.append(f"Label Preset {pool_no}.{preset_no} '{text}'")
     return tuple(commands)
+
+
+def preset_apply_command(group_no: int, attribute: str, value: int) -> str:
+    """``Group <n> ; Attribute '<attr>' At <v>`` — 저장 **전에** 프로그래머를 채우는
+    한 줄.
+
+    ``Store Preset`` 은 그 순간의 프로그래머 상태를 저장한다. 이 줄이 없으면
+    저장되는 것은 시트 값이 아니라 그 자리에 우연히 있던 것이다(t108 C1).
+
+    대상을 **그룹 번호**로 잡는 이유: 그룹 멤버십은 이 프로젝트가 시도한 어느
+    채널로도 되읽히지 않지만 그룹 **번호**는 멤버십을 몰라도 주소가 된다
+    (``server/web/session.py:900-905`` 이 같은 근거로 같은 문형을 쓴다). 콘솔
+    픽스처 열거로 대상을 만드는 길은 열거가 절단되기 때문에 이 저장소가 이미
+    거절해 뒀다(``server/orchestrator/tools.py`` 의 ``import_lxseq_groups``).
+
+    선택과 값을 ``;`` 로 한 줄에 묶는 것은 ``_color_apply_command`` 의 규율과
+    같다 — 두 줄로 나누면 앞줄(맨몸 선택)이 접힘 면제라 뒤 값 줄만 남는 상황이
+    생길 수 있다.
+    """
+    if not isinstance(group_no, int) or isinstance(group_no, bool) or group_no <= 0:
+        raise SpatialPointingError(f"group number {group_no!r} must be a positive integer")
+    name = attribute.strip()
+    if not name or "'" in name or '"' in name:
+        raise SpatialPointingError(f"attribute {attribute!r} is empty or carries a quote")
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise SpatialPointingError(f"attribute value {value!r} must be an int")
+    return f"Group {group_no} ; Attribute '{name}' At {value}"

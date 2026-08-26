@@ -249,6 +249,23 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
     return True, ()
 
 
+def dim_level_percent(value_raw: str) -> int | None:
+    """dim 의 ``Level`` 원문에서 퍼센트 정수를 꺼낸다. 형태가 아니면 ``None``.
+
+    ``classify_storability`` 가 storable 판정에 쓰는 것과 **같은 정규식**을 쓴다.
+    소비자 쪽에 정규식 사본을 두면 판정기와 판독기가 갈라져, 판정이 통과시킨 값을
+    판독기가 못 읽는 날이 온다 — ``preset_label_refusal`` 이 같은 이유로 술어를
+    밖으로 낸 것과 같은 규율이다(t97).
+
+    명령 문형은 여기서 만들지 않는다. 이 모듈은 파싱만 하고, 번역은 툴 층이 한다
+    (``test_lxseq_preset_tool.py::test_the_preset_modules_do_not_import_the_builder``).
+    """
+    match = _PERCENT.match(value_raw)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
 def parse_preset_csv(text: str) -> PresetParseResult:
     """PRESET 시트 본문을 레코드와 거부로 가른다.
 

@@ -83,7 +83,11 @@ from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
 from server.lxseq.parser import MissingColumnsError, parse_patch_csv
 from server.lxseq.preset_mapper import map_presets
-from server.lxseq.preset_parser import UnknownPresetSheetError, parse_preset_csv
+from server.lxseq.preset_parser import (
+    UnknownPresetSheetError,
+    dim_level_percent,
+    parse_preset_csv,
+)
 from server.orchestrator.layout_occupancy import check_occupancy
 from server.orchestrator.ports import (
     BundleGate,
@@ -107,7 +111,7 @@ from server.prechk.mode_read import (
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import PropertyRead, bulk_capable, read_properties
 from server.prechk.report import build_report as build_precheck_report
-from server.presets.store import preset_store_commands
+from server.presets.store import preset_apply_command, preset_store_commands
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
 from server.safety.approval import (
@@ -1670,6 +1674,46 @@ _PRESET_POOL_FAMILY = dict(
 )
 
 
+#: 시트 종류 -> 프로그래머에 실을 **속성 이름**. 값을 싣는 줄이 없으면
+#: `Store Preset` 은 그 순간의 프로그래머 상태를 저장한다 — 시트 값이 아니라
+#: 그 자리에 우연히 있던 것이다(t108 C1).
+#:
+#: dim 하나뿐인 것은 누락이 아니라 **판정**이다. `classify_storability` 가
+#: col 8행 전부와 bm 5행 전부를 보류로 돌리므로(`preset_parser.py:187-249`),
+#: 오늘 계획에 오르는 종류는 dim 뿐이다. 두 축을 여는 것은 값 문제이지 이 표의
+#: 문제가 아니다 — col 은 0-255 대 0-100 척도, bm 은 산문 복합속성 + 프로브
+#: 거절 속성이다. 표에 없는 종류가 계획에 오르면 저장하지 않고 거절한다.
+LXSEQ_PRESET_APPLY_ATTRIBUTE = dict([("preset-dim", "Dimmer")])
+
+#: 적용 줄이 겨눌 그룹 **번호**. 감독 결정(2026-08-26): dim 은 전 픽스처.
+#: 1 = `ALL`(RIG 팩 group.csv 1행 "전 픽스처 (FOLLOW 제외)", patch.csv 86대).
+#: 시트에 대상 열이 없어 코드가 기본값을 든다 — 시트가 대상을 싣게 되면 이 상수
+#: 대신 행의 값을 쓰면 된다.
+#:
+#: 번호로 겨누는 이유: 그룹 멤버십은 어느 채널로도 되읽히지 않지만 **번호**는
+#: 멤버십을 몰라도 주소가 된다(`server/web/session.py:900-905`). 콘솔 픽스처
+#: 열거로 대상을 만드는 길은 열거가 절단돼 조용히 불완전해지므로 이 파일이 이미
+#: 거절해 뒀다(`import_lxseq_groups` 의 patch 시트 요구).
+LXSEQ_PRESET_APPLY_GROUP_NO = 1
+
+
+def _lxseq_preset_apply_command(placement) -> str | None:
+    """이 배정의 값을 프로그래머에 싣는 한 줄. 번역이 없으면 ``None``.
+
+    ``None`` 은 「값이 없다」가 아니라 **「이 종류를 아직 명령으로 못 옮긴다」**
+    이며, 호출지는 그때 저장 줄도 내보내지 않는다(fail-closed).
+    """
+    attribute = LXSEQ_PRESET_APPLY_ATTRIBUTE.get(placement.kind)
+    if attribute is None:
+        return None
+    level = dim_level_percent(placement.value_raw)
+    if level is None:
+        # 판정기(`classify_storability`)가 통과시킨 값을 판독기가 못 읽었다는 뜻이다.
+        # 추측해서 싣지 않는다.
+        return None
+    return preset_apply_command(LXSEQ_PRESET_APPLY_GROUP_NO, attribute, level)
+
+
 def _count_hold_classes(held) -> dict:
     """보류를 **클래스별로** 센다. 한 건이 여러 클래스에 걸릴 수 있으므로
     합이 보류 수보다 클 수 있다 — 그 차이가 다중 차단 행의 존재를 말한다."""
@@ -1695,6 +1739,11 @@ LXSEQ_PRESETS_GUIDANCE = (
     "\n"
     "**값이 맞는지는 되읽지 못한다.** 슬롯이 찼다는 것은 「무언가 저장됐다」까지만 "
     "말한다. 「검증된 N건」이라고 보고하지 마라 — 틀린 값이 조용히 영속한다.\n"
+    "\n"
+    "저장 전에 **콘솔의 프로그래머를 이 툴이 직접 채운다** — 프리셋마다 "
+    "`Group 1`(RIG 팩의 `ALL`, 전 픽스처)에 값을 싣고, 저장한 뒤 `ClearAll` 로 "
+    "닫는다. 그러니 저장되는 동안 무대의 조명이 실제로 바뀐다. 사용자에게 그 "
+    "사실을 먼저 알려라 — 리허설 중이라면 저장 시점을 사용자가 고르게 하라.\n"
     "\n"
     "`command_bytes` 는 **기록**이지 통과 조건이 아니다. 콘솔 거절은 길이가 아니라 "
     "내용에 달려 있다 — 「짧으니 안전」이라고 말하지 마라."
@@ -4883,9 +4932,58 @@ def build_toolset(
                 )
             )
 
-        commands: list[str] = []
+        # 프리셋 **하나마다 별개 번들**이다. 형제 둘이 같은 모양이다 —
+        # `create_arrangement_groups`(:7578-7596, "[HARD] ONE run_commands bundle
+        # PER GROUP")와 `_store_position_preset_looks`(server/web/session.py:
+        # 5342-5346, "한 룩이 거절돼도 나머지 아홉은 산다").
+        #
+        # 전부 한 번들로 묶으면 `run_commands` 의 접힘이 값을 지운다: `ClearAll`
+        # 과 **맨몸** 선택은 접힘 면제지만(:809-819) 값을 실은 적용 줄은 면제가
+        # 아니다. 같은 레벨이 두 행 있는 시트에서 뒤 적용이 사라지고, 앞에서
+        # `ClearAll` 이 돌았으므로 **빈 프로그래머**가 저장된다.
+        #
+        # 번들 안의 순서도 계약이다: 적용 -> Store -> Label -> ClearAll. `ClearAll`
+        # 을 적용보다 앞에 두면 첫 건은 감독의 프로그래머를 저장하고 나머지는 빈
+        # 프리셋이 된다 — 지금(누적)보다 조용히 더 틀리다.
+        bundles: list[tuple[object, list[str]]] = []
+        untranslatable: list[dict[str, str]] = []
         for placement in result.planned:
-            commands.extend(preset_store_commands(pool_no, placement.slot, placement.name))
+            apply_command = _lxseq_preset_apply_command(placement)
+            if apply_command is None:
+                untranslatable.append({"preset_id": placement.preset_id, "kind": placement.kind})
+                continue
+            bundles.append(
+                (
+                    placement,
+                    [
+                        apply_command,
+                        *preset_store_commands(pool_no, placement.slot, placement.name),
+                        "ClearAll",
+                    ],
+                )
+            )
+
+        if untranslatable:
+            # fail-closed — 값을 못 싣는 종류는 **저장 줄도** 내보내지 않는다.
+            # 저장만 나가면 그 순간의 프로그래머가 그 이름으로 영속하고, 슬롯
+            # 점유만 되읽히므로 아무도 틀린 것을 못 본다(t108 C1 그 자체).
+            payload["refusal"] = "apply_untranslatable"
+            payload["refusal_detail"] = (
+                "계획에 오른 종류 중 값을 명령으로 옮길 수 없는 것이 있어 **한 줄도** "
+                "보내지 않았다. 저장 줄만 내보내면 그 순간의 프로그래머 상태가 그 "
+                "이름으로 저장되고, 값은 되읽을 수 없어 틀린 것이 조용히 남는다."
+            )
+            payload["untranslatable"] = untranslatable
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        commands: list[str] = [command for _placement, bundle in bundles for command in bundle]
 
         # [HARD] 승인 통로를 **반드시** 거친다. 게이트는 `Store Preset` /
         # `Label Preset` 을 위험으로 분류하지 않으므로, 이 단계가 없으면 프리셋
@@ -4934,17 +5032,50 @@ def build_toolset(
         payload["command_bytes"] = [len(c.encode("utf-8")) for c in commands]
         payload["longest_command_bytes"] = max(payload["command_bytes"])
 
-        inner = ToolCall(
-            id=f"{call.id}-presets",
-            name="run_commands",
-            arguments={"commands": commands},
-        )
-        execution = run_commands(inner, context)
-        try:
-            payload["applied"] = json.loads(execution.result.content)
-        except (json.JSONDecodeError, TypeError):
-            payload["applied"] = {"raw": execution.result.content}
-        payload["applied_is_error"] = bool(execution.result.is_error)
+        # 승인은 **계획 전체에 한 번**이었다(사람이 모든 줄을 한 번에 봤다);
+        # 갈라지는 것은 **발화**뿐이다. 번들마다 새 컨텍스트를 주는 이유는
+        # `create_arrangement_groups`(:7690-7699)와 같다 — `executed_ok` 는 한
+        # 지시 턴의 모든 툴 호출에 걸쳐 누적되므로, 앞 호출이 이미 보낸 줄이
+        # 접혀 사라질 수 있다. 각 번들은 `ClearAll` 로 닫혀 앞 상태에 의존하지
+        # 않으니 새 컨텍스트가 안전하기도 하다.
+        applied: list[dict[str, object]] = []
+        applied_is_error = False
+        for placement, bundle in bundles:
+            if applied_is_error:
+                # 먼저 실패한 뒤로는 쏘지 않는다 — 깨진 저장 위에 다음 프리셋을
+                # 얹지 않고, 안 건드렸다는 사실을 **생략이 아니라 기록**으로 남긴다.
+                applied.append(
+                    {
+                        "preset_id": placement.preset_id,
+                        "slot": placement.slot,
+                        "status": "not_attempted",
+                        "commands": list(bundle),
+                    }
+                )
+                continue
+            execution = run_commands(
+                ToolCall(
+                    id=f"{call.id}-preset-{placement.slot}",
+                    name="run_commands",
+                    arguments={"commands": bundle},
+                ),
+                _EMPTY_CONTEXT,
+            )
+            try:
+                result_payload: object = json.loads(execution.result.content)
+            except (json.JSONDecodeError, TypeError):
+                result_payload = {"raw": execution.result.content}
+            entry: dict[str, object] = {
+                "preset_id": placement.preset_id,
+                "slot": placement.slot,
+                "status": "failed" if execution.result.is_error else "executed",
+                "result": result_payload,
+            }
+            applied.append(entry)
+            if execution.result.is_error:
+                applied_is_error = True
+        payload["applied"] = applied
+        payload["applied_is_error"] = applied_is_error
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
