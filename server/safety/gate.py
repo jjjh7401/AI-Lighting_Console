@@ -125,7 +125,12 @@ class _GateStatePort:
     def query_property(self, path: str, property_name: str) -> dict:
         return self._gate._query_property(path, property_name)
 
-    def enumerate_fields(self, path: str) -> dict:
+    def enumerate_fields(self, path: str, *, offset: int = 0) -> dict:
+        # Same shape as query_state above: the keyword is forwarded ONLY when
+        # it carries a window, so a port that predates 1.6.2 paging still
+        # answers the unpaged call rather than raising TypeError.
+        if offset:
+            return self._gate._enumerate_fields(path, offset=offset)
         return self._gate._enumerate_fields(path)
 
     def query_properties(self, path: str, property_names: Sequence[str]) -> dict:
@@ -677,14 +682,17 @@ class SafetyGate:
         self._audit.log_executed(subject, kind="property_query", ok=True)
         return payload
 
-    def _enumerate_fields(self, path: str) -> dict:
+    def _enumerate_fields(self, path: str, *, offset: int = 0) -> dict:
         # Audited on the same 1:1 send↔audit rule as _query_property: an
         # introspection request is one OSC send, and a timeout still sent it.
         # @MX:ANCHOR: [AUTO] introspect audit subject is path-only.
         # @MX:REASON: REQ-INTROSPECT-018 forbids read values from entering audit logs.
         subject = path
         try:
-            payload = self._console.enumerate_fields(path)
+            if offset:
+                payload = self._console.enumerate_fields(path, offset=offset)
+            else:
+                payload = self._console.enumerate_fields(path)
         except Exception:
             self._audit.log_executed(subject, kind="introspect_query", ok=False)
             raise

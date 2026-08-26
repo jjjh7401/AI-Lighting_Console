@@ -63,6 +63,9 @@ local M = {
     -- token (0-based children window start); the reply echoes "offset" (0
     -- when the request carried none) and `truncated` means "more children
     -- AFTER this window". Old-style requests are byte-for-byte unchanged.
+    -- 1.6.2: additive `offset=<n>` paging on introspect (t104) -- the reply
+    -- now echoes `offset`, and `truncated` means "names remain after this
+    -- window". A request without the token behaves exactly as 1.6.1 did.
     -- 1.6.1: additive props + introspect read-only discovery verbs
     -- (SPEC-COPILOT-INTROSPECT-001, PR #23 reland 2026-08-18); introspect
     -- rejects enumerators missing same-handle prop-readable names. Reland
@@ -70,7 +73,7 @@ local M = {
     -- (pre-1.6.0-paging) responder generation only -- this reland has NOT
     -- been re-verified live against the current responder; re-verify before
     -- trusting props/introspect in production (T15).
-    VERSION = "1.6.1",
+    VERSION = "1.6.2",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -224,13 +227,18 @@ function M.parse_props_rest(rest)
     return names, path
 end
 
--- Paged snapshot requests (responder 1.6.0, PROTOCOL.md §4.2): the state
--- rest-of-line may end in one whitespace-separated "offset=<n>" token,
--- naming the 0-based children window start. Paths may contain spaces, so
+-- Paged requests (state: responder 1.6.0; introspect: 1.6.2, PROTOCOL.md
+-- §4.2): the rest-of-line may end in one whitespace-separated "offset=<n>"
+-- token, naming the 0-based window start. Paths may contain spaces, so
 -- ONLY a trailing token is recognized; a negative, fractional, or
 -- non-numeric value degrades to 0 (never an error -- the reply's echoed
 -- `offset` tells the caller what was actually used).
-function M.parse_state_args(rest)
+--
+-- One parser for both verbs on purpose: two copies drift, and the day they
+-- drift a caller that pages `state` correctly pages `introspect` into the
+-- path (which is exactly the pre-1.6.2 failure -- an offset token swallowed
+-- by the path resolves to nothing).
+function M.parse_paged_args(rest)
     local path, raw = rest:match("^(.-)%s+offset=(%S*)%s*$")
     if not path or path == "" then
         return rest, 0
@@ -860,7 +868,8 @@ function M.missing_introspect_contrast_names(handle, fields)
     return missing
 end
 
-function M.build_introspect_result(id, path)
+function M.build_introspect_result(id, path, offset)
+    offset = offset or 0
     local function fail(message)
         return {
             v = M.PROTO,
@@ -869,6 +878,7 @@ function M.build_introspect_result(id, path)
             ok = false,
             path = path,
             error = message,
+            offset = offset,
         }
     end
     local handle, err = M.resolve_path(path)
@@ -888,6 +898,19 @@ function M.build_introspect_result(id, path)
     if #missing_contrast > 0 then
         return fail("property_accessors missing independently readable names: " .. table.concat(missing_contrast, ","))
     end
+    -- Paging window (1.6.2): `offset` is the 0-based start into the FULL
+    -- enumerated name list. Before this, the budget guard below was the only
+    -- bound, so every name past the first window was unreachable on this
+    -- channel -- measured live at 138 properties of which 27 arrived (t95).
+    --
+    -- The window is taken AFTER the contrast gate above, never before: the
+    -- gate contrasts the full pre-window name set against same-handle reads,
+    -- and narrowing it to the window would make it vacuous for any name that
+    -- happens to fall outside the first page.
+    local window = M.array({})
+    for i = offset + 1, #fields do
+        window[#window + 1] = fields[i]
+    end
     local payload = {
         v = M.PROTO,
         kind = "introspect",
@@ -896,17 +919,24 @@ function M.build_introspect_result(id, path)
         path = path,
         class = M.safe_class(handle),
         source = INTROSPECT_SOURCE,
-        fields = fields,
+        fields = window,
         total = total,
+        offset = offset,
+        -- Starts at the LONGER encoding (`false`), so the final assignment
+        -- below can only shrink the payload -- never push it back over budget.
         truncated = false,
     }
-    while #M.encode_payload(payload) > CONFIG.max_payload and #fields > 0 do
-        table.remove(fields)
-        -- @MX:ANCHOR: [AUTO] introspect field truncation signal.
-        -- @MX:REASON: REQ-INTROSPECT-013/014/015 require a visible signal
-        --   while preserving the pre-shrink total field count.
-        payload.truncated = true
+    -- @MX:ANCHOR: [AUTO] introspect field truncation signal.
+    -- @MX:REASON: REQ-INTROSPECT-013/014/015 require a visible signal while
+    --   preserving the pre-shrink total field count. Paging does not replace
+    --   this guard: a window can still exceed the UDP budget on its own.
+    while #M.encode_payload(payload) > CONFIG.max_payload and #window > 0 do
+        table.remove(window)
     end
+    -- `truncated` = names remain AFTER this window (state's 1.6.0 wording).
+    -- On the first window this is exactly the pre-1.6.2 meaning, so a caller
+    -- that never sends an offset reads the same signal it always did.
+    payload.truncated = (offset + #window) < total
     return payload
 end
 
@@ -1133,7 +1163,7 @@ function M.handle_request(request)
                 error = "missing object path (expected: state <id> <path>)",
             }
         else
-            local path, offset = M.parse_state_args(parsed.rest)
+            local path, offset = M.parse_paged_args(parsed.rest)
             payload = M.build_snapshot(parsed.id, path, offset)
         end
         M.send_reply(CONFIG.state_address, payload)
@@ -1181,7 +1211,8 @@ function M.handle_request(request)
                 error = "missing object path (expected: introspect <id> <path>)",
             }
         else
-            payload = M.build_introspect_result(parsed.id, parsed.rest)
+            local path, offset = M.parse_paged_args(parsed.rest)
+            payload = M.build_introspect_result(parsed.id, path, offset)
         end
         M.send_reply(CONFIG.state_address, payload)
     elseif parsed.kind == "exec" then

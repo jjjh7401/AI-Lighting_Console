@@ -132,9 +132,25 @@ _CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
 #: reland task); it has NOT been live-verified against this reland's
 #: responder (see the PROTOCOL.md 2026-08-18 reland note) — that gap is
 #: recorded honestly rather than smoothed over, and is tracked as T15.
+#: 2026-08-26 granted revision (re-pin) — t104: responder 1.6.1 → 1.6.2.
+#: ADDITIVE `offset=<n>` paging on `introspect`, mirroring the token `state`
+#: has carried since 1.6.0, plus the matching PROTOCOL.md §4.7 contract.
+#:
+#: The grant is motivated by a MEASUREMENT, not a preference: t95 read a
+#: preset object that answered 138 properties, of which 27 fit one reply.
+#: `introspect` had no cursor, so the other 111 NAMES were unreachable on this
+#: channel — the single mechanism that left t95 undecided. A request without
+#: the token is byte-for-byte unchanged; its reply changes only by the additive
+#: `offset:0` echo, and `truncated` keeps its old meaning on the first window.
+#:
+#: NOT live-verified against a deployed 1.6.2 responder — the same honest gap
+#: the 2026-08-18 reland recorded above. Deploying the plugin is a console
+#: write and needs operator approval; the live pass (138 names enumerated
+#: across windows, then read with a fabricated control probe) is t104's own
+#: closing condition and is where this grant gets its confirmation.
 _CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
-    "console/lua/copilot_responder.lua": "3232101f95ef8ecf474b8f71d37f68c6377b999f",
-    "console/lua/PROTOCOL.md": "b9443a0965cb711ed1a9680bcc7644c0998bf2f0",
+    "console/lua/copilot_responder.lua": "5555442b6754efb3add61587da4f8f0b3378e417",
+    "console/lua/PROTOCOL.md": "984210533aab40501e32309c4db8cde5bb4f34ba",
 }
 
 #: 2026-08-02 granted exception — the upstream vocabulary extension

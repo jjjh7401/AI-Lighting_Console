@@ -78,7 +78,7 @@ class TestLoading:
         assert config["send_variant"] == "packed"
         assert config["max_props_names"] == 16
         assert harness.module["PROTO"] == 1
-        assert harness.module["VERSION"] == "1.6.1"
+        assert harness.module["VERSION"] == "1.6.2"
 
 
 class TestParseRequest:
@@ -484,6 +484,7 @@ class TestIntrospect:
             ],
             "total": 3,
             "truncated": False,
+            "offset": 0,
         }
 
     def test_introspect_unknown_path_reports_failure(self, harness):
@@ -595,6 +596,130 @@ class TestIntrospect:
         assert props_payload["reads"][0]["t"] == "function"
         assert props_payload["reads"][0]["ok"] is True
         assert introspect_payload["fields"][0] == {"n": "INDEX", "t": "function"}
+
+    # -- introspect paging (responder 1.6.2, t104) -------------------------
+    #
+    # 실측이 이 검사를 부른다: t95 가 DataPool/PresetPools/<pool>/<n> 에서
+    # 프로퍼티 138개 중 27개만 받았다. 페이로드 예산 절단이고 introspect 에는
+    # 페이징이 없어 나머지 111개 **이름이 이 채널로 도달 불가**였다. state 는
+    # 1.6.0 부터 offset 을 갖는다 — 같은 방식을 여기로 옮긴다.
+    #
+    # 「목록에 있다」와 「읽힌다」는 여전히 따로다. 페이징은 전자만 연다.
+
+    @staticmethod
+    def _wide(count: int = 138):
+        """이름이 138개인 핸들 — t95 가 실제로 만난 폭이다."""
+        names = [f"PROP{i:03d}_" + ("N" * 24) for i in range(1, count + 1)]
+        names.append("CURRENTCUE")  # 대조군 게이트가 요구하는 이름
+        values = {name: "value" for name in names}
+        values["CURRENTCUE"] = "Sequence 80.3"
+        return ResponderHarness(extra_env=_sequence_props_env(values, names)), names
+
+    def _reply(self, harness, request):
+        harness.main(None, request)
+        sent = harness.sent()[-1]
+        assert sent.address == STATE_ADDRESS
+        return decode_payload(sent.payload)
+
+    def test_an_unpaged_request_echoes_offset_zero(self):
+        harness, names = self._wide()
+        payload = self._reply(harness, "introspect p1 DataPool/Sequences/Sequence 101")
+        assert payload["ok"] is True
+        assert payload["offset"] == 0
+        assert payload["total"] == len(names)
+        assert payload["truncated"] is True
+        assert 0 < len(payload["fields"]) < payload["total"]
+
+    def test_the_second_window_continues_where_the_first_stopped(self):
+        """🔴 t95 가 막힌 자리다 — 첫 창 다음의 이름은 도달 수단이 없었다."""
+        harness, names = self._wide()
+        first = self._reply(harness, "introspect p2 DataPool/Sequences/Sequence 101")
+        got = len(first["fields"])
+        second = self._reply(harness, f"introspect p3 DataPool/Sequences/Sequence 101 offset={got}")
+        assert second["ok"] is True
+        assert second["offset"] == got
+        assert second["total"] == len(names)
+        assert second["fields"][0]["n"] == names[got]
+        assert first["fields"][-1]["n"] == names[got - 1]
+
+    def test_paging_to_exhaustion_reaches_every_name(self):
+        """닫는 조건의 절반 — 138개가 **전부** 열거되는가. 창 수를 못박지 않는다
+        (예산이 정하므로 개수를 세면 예산을 재는 검사가 된다)."""
+        harness, names = self._wide()
+        seen: list[str] = []
+        offset = 0
+        for _ in range(200):  # 진행이 멈추면 무한 루프 대신 여기서 끝난다
+            payload = self._reply(
+                harness, f"introspect p4 DataPool/Sequences/Sequence 101 offset={offset}"
+            )
+            assert payload["ok"] is True
+            window = [field["n"] for field in payload["fields"]]
+            if not window:
+                break
+            seen.extend(window)
+            offset += len(window)
+            if not payload["truncated"]:
+                break
+        assert seen == names, (len(seen), len(names))
+
+    def test_truncated_means_names_remain_after_this_window(self):
+        harness, names = self._wide()
+        payload = self._reply(
+            harness,
+            f"introspect p5 DataPool/Sequences/Sequence 101 offset={len(names) - 1}",
+        )
+        assert payload["offset"] == len(names) - 1
+        assert [field["n"] for field in payload["fields"]] == [names[-1]]
+        assert payload["truncated"] is False
+
+    def test_an_offset_at_or_past_the_total_is_an_empty_untruncated_window(self):
+        harness, names = self._wide()
+        for offset in (len(names), len(names) + 50):
+            payload = self._reply(
+                harness, f"introspect p6 DataPool/Sequences/Sequence 101 offset={offset}"
+            )
+            assert payload["ok"] is True
+            assert payload["offset"] == offset
+            assert payload["fields"] == []
+            assert payload["truncated"] is False
+            assert payload["total"] == len(names)
+
+    @pytest.mark.parametrize("token", ["offset=-3", "offset=abc", "offset=1.5", "offset="])
+    def test_an_invalid_offset_degrades_to_zero_rather_than_erroring(self, token):
+        harness, names = self._wide()
+        payload = self._reply(harness, f"introspect p7 DataPool/Sequences/Sequence 101 {token}")
+        assert payload["ok"] is True
+        assert payload["offset"] == 0
+        assert payload["total"] == len(names)
+
+    def test_a_spaced_path_survives_the_offset_token_split(self):
+        """경로에 공백이 있다 — 맨 뒤 토큰만 떼어내야 'Sequence 101' 이 산다."""
+        harness, _names = self._wide()
+        payload = self._reply(harness, "introspect p8 DataPool/Sequences/Sequence 101 offset=0")
+        assert payload["ok"] is True
+        assert payload["path"] == "DataPool/Sequences/Sequence 101"
+
+    def test_a_window_still_respects_the_payload_budget(self):
+        """페이징이 예산 가드를 대체하지 않는다 — 창 안에서도 예산이 이긴다."""
+        harness, _names = self._wide()
+        harness.main(None, "introspect p9 DataPool/Sequences/Sequence 101 offset=5")
+        sent = harness.sent()[-1]
+        assert len(sent.payload) <= int(harness.config["max_payload"])
+
+    def test_the_contrast_gate_still_sees_every_name_not_just_the_window(self):
+        """게이트는 창 밖 이름에도 걸려야 한다 — 창으로 좁히면 게이트가 공허해진다.
+
+        CURRENTCUE 를 열거 목록에서 뺀다. 그 이름은 창 밖에 있지만, 게이트는
+        **전수**를 보므로 회신 전체가 실패해야 한다.
+        """
+        names = [f"PROP{i:03d}_" + ("N" * 24) for i in range(1, 139)]
+        values = {name: "value" for name in names}
+        values["CURRENTCUE"] = "Sequence 80.3"  # 읽히지만 열거되지 않는다
+        harness = ResponderHarness(extra_env=_sequence_props_env(values, names))
+        payload = self._reply(harness, "introspect p10 DataPool/Sequences/Sequence 101 offset=120")
+        assert payload["ok"] is False
+        assert "CURRENTCUE" in payload["error"]
+        assert "fields" not in payload
 
     def test_new_read_paths_do_not_reference_cmd(self):
         source = RESPONDER_PATH.read_text(encoding="utf-8")

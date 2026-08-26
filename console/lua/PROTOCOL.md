@@ -16,6 +16,17 @@ version in BOTH implementations and revises this document.
 > against this reland's 1.6.1 responder. Treat `props`/`introspect` as
 > unverified until a fresh live pass (tracked as T15).
 >
+> Revision note (responder 1.6.2): `introspect` gains the SAME trailing
+> `offset=<n>` request token `state` has carried since 1.6.0 (§2), and its
+> reply echoes `offset` as a top-level integer. `truncated` now means "names
+> remain **after** this window" — on the first window (offset 0) that is
+> exactly the pre-1.6.2 meaning, so a caller that never sends the token reads
+> the same signal it always did. Motivation is a live measurement: a preset
+> object answered 138 properties of which 27 fit one reply, and with no cursor
+> the other 111 NAMES were unreachable on this channel. Paging opens the name
+> list only — "enumerated" still does not mean "readable" (§4.7). Wire
+> protocol version stays 1.
+>
 > Revision note (responder 1.6.1): `introspect` now discards the whole
 > enumerator result when it omits a same-handle `prop`-readable contrast name;
 > duplicate `props` request names collapse to their first occurrence. Wire
@@ -93,7 +104,7 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
 | `state` | `state <id> <object-path> [offset=<n>]` | `/copilot/state`, kind=`state` |
 | `prop` | `prop <id> <object-path> <PropertyName>` — name is the **last** token; path is everything before it | `/copilot/state`, kind=`prop` |
 | `props` | `props <id> <PropertyName,...> <object-path>` — name list is the **first** rest token; path is the rest of the line | `/copilot/state`, kind=`props` |
-| `introspect` | `introspect <id> <object-path>` | `/copilot/state`, kind=`introspect` |
+| `introspect` | `introspect <id> <object-path> [offset=<n>]` | `/copilot/state`, kind=`introspect` |
 | `exec` | `exec <id> <ma3-command>` | `/copilot/feedback`, kind=`result` |
 | `deploy` | `deploy <id> <enc-name> <enc-source>` (M7) | `/copilot/feedback`, kind=`deploy` |
 
@@ -305,11 +316,11 @@ the string returned by the console-side property read path; the responder does
 not parse, normalize, or infer semantics. If the property cannot be read, the
 reply is `ok:false` with `error`; callers must not fill defaults.
 
-### 4.7 `introspect` (field-name/type discovery — on `/copilot/state`, responder 1.6.0)
+### 4.7 `introspect` (field-name/type discovery — on `/copilot/state`, responder 1.6.0; paged since 1.6.2)
 
 ```json
-{"v":1,"kind":"introspect","id":"<id>","ok":true,"path":"DataPool/Sequences/80","class":"Sequence","source":"property_accessors","fields":[{"n":"CURRENTCUE","t":"string"}],"total":65,"truncated":false}
-{"v":1,"kind":"introspect","id":"<id>","ok":false,"path":"...","error":"path segment not found: ..."}
+{"v":1,"kind":"introspect","id":"<id>","ok":true,"path":"DataPool/Sequences/80","class":"Sequence","source":"property_accessors","fields":[{"n":"CURRENTCUE","t":"string"}],"total":65,"offset":0,"truncated":false}
+{"v":1,"kind":"introspect","id":"<id>","ok":false,"path":"...","error":"path segment not found: ...","offset":0}
 ```
 
 The responder resolves `<object-path>` through the same path resolver used by
@@ -327,10 +338,27 @@ not read or emit field values for this kind.
   and are never invoked.
 - `total` is the observed field count **before** payload-budget shrinking
   (REQ-INTROSPECT-015). `fields.length` can therefore be smaller than `total`.
-- `truncated:true` means trailing `fields[]` entries were dropped until the
-  encoded reply fit `CONFIG.max_payload` (default 1900 bytes). There is no
-  cursor or paging mechanism for the omitted names; the signal exists so a
-  consumer can see that the list is incomplete.
+- `truncated:true` means names remain **after** this window — either because
+  the window was cut to fit `CONFIG.max_payload` (default 1900 bytes) or
+  because `offset` started mid-list. Formally: `offset + fields.length < total`.
+- **`offset` echo + paging (responder 1.6.2).** `introspect <id> <path>
+  offset=<n>` reads the window starting at the 0-based index `n` into the full
+  enumerated name list; the reply echoes the offset actually used. The token is
+  parsed exactly as `state`'s (§2): only a TRAILING token is peeled off, so
+  paths containing spaces survive, and a negative, fractional, or non-numeric
+  value degrades to 0 rather than erroring. Page by advancing `offset` by the
+  number of entries actually RECEIVED — never by a fixed page size, because the
+  window width is decided by the payload budget. `offset >= total` yields an
+  empty, untruncated window. A pre-1.6.2 responder folds the token into the
+  path and replies `ok:false` with no `offset` echo, so a caller that pages
+  MUST treat a missing `offset` echo as "this responder cannot page" and stop,
+  never retry the same offset.
+- The contrast gate below runs on the FULL enumerated name set, never on the
+  window. Narrowing it to the window would make it vacuous for any readable
+  name that happens to fall outside the requested page.
+- Paging opens the NAME list; it says nothing about readability. A name that
+  pages into view may still answer `not readable` through `prop`/`props` —
+  the two must be measured separately.
 - Failure (`ok:false`) means path resolution or the complete adopted
   enumerator failed. Partial enumerator results are not emitted as a best
   effort list. Responder 1.6.1 also fails the whole reply when the full

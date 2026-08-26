@@ -32,6 +32,24 @@ def _parser() -> argparse.ArgumentParser:
         metavar="A,B,C",
         help="Comma-separated property names; omitted sends introspect.",
     )
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help=(
+            "introspect only: 0-based start into the enumerated name list "
+            "(responder 1.6.2). Ignored with --names."
+        ),
+    )
+    parser.add_argument(
+        "--all-pages",
+        action="store_true",
+        help=(
+            "introspect only: page from --offset until the responder reports no "
+            "more names, then print the merged field list. Advances by entries "
+            "RECEIVED, never by a fixed page size."
+        ),
+    )
     parser.add_argument("--host", default="127.0.0.1", help="Console OSC send host.")
     parser.add_argument("--port", type=int, default=8000, help="Console OSC send port.")
     parser.add_argument("--listen-host", default="127.0.0.1", help="Local OSC reply host.")
@@ -44,6 +62,69 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--audit-dir", type=Path, default=None, help="Audit directory override.")
     return parser
+
+
+def _page_to_exhaustion(state_port, path: str, start: int) -> dict:
+    """Walk every introspect window and merge the field lists.
+
+    Advances by entries RECEIVED, never by a fixed page size: the window width
+    belongs to the responder's payload budget, so a fixed stride skips names.
+
+    Two stop conditions beyond the normal one, both there because the failure
+    they prevent is a silent loop rather than an error:
+
+    - a window that reports no `offset` echo is a pre-1.6.2 responder that
+      folded the token into the path; paging cannot work, so stop and say so
+      instead of re-reading window 1 forever.
+    - a window that returns nothing new also stops -- a responder that ignores
+      the offset answers the same first window every time.
+    """
+    fields: list[dict] = []
+    offset = start
+    windows: list[dict] = []
+    while True:
+        payload = state_port.enumerate_fields(path, offset=offset)
+        echoed = payload.get("offset")
+        windows.append(
+            {
+                "requested_offset": offset,
+                "echoed_offset": echoed,
+                "received": len(payload.get("fields") or []),
+                "truncated": payload.get("truncated"),
+            }
+        )
+        if echoed is None:
+            return {
+                **payload,
+                "paging": "unsupported",
+                "paging_detail": (
+                    "reply carried no `offset` echo -- this responder predates 1.6.2 "
+                    "and folded the token into the path. Not paged."
+                ),
+                "windows": windows,
+            }
+        window = list(payload.get("fields") or [])
+        fields.extend(window)
+        if not window or not payload.get("truncated"):
+            return {
+                **payload,
+                "fields": fields,
+                "offset": start,
+                "paging": "complete",
+                "windows": windows,
+            }
+        if echoed != offset:
+            return {
+                **payload,
+                "fields": fields,
+                "paging": "stalled",
+                "paging_detail": (
+                    f"asked for offset {offset} and the responder answered {echoed} -- "
+                    "stopped rather than loop on the same window."
+                ),
+                "windows": windows,
+            }
+        offset += len(window)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -59,10 +140,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     mode = "props" if args.names is not None else "introspect"
     try:
-        if args.names is None:
-            payload = stack.gate.state_port.enumerate_fields(args.path)
-        else:
+        if args.names is not None:
             payload = stack.gate.state_port.query_properties(args.path, args.names)
+        elif args.all_pages:
+            payload = _page_to_exhaustion(stack.gate.state_port, args.path, args.offset)
+        elif args.offset:
+            payload = stack.gate.state_port.enumerate_fields(args.path, offset=args.offset)
+        else:
+            # Unpaged call stays byte-identical -- a port (or responder) that
+            # predates 1.6.2 paging still answers it.
+            payload = stack.gate.state_port.enumerate_fields(args.path)
     except StateQueryError as error:
         print(f"{mode} failed: {error}", file=sys.stderr)
         return 1
