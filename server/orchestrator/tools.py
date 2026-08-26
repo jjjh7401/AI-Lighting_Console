@@ -5105,9 +5105,12 @@ def build_toolset(
     #   base64 — the handler reads the session slot and injects it into the
     #   sibling tool the registry row names. Removing that absence reopens the
     #   paste path REQ-LXSEQ-016 closed.
-    # @MX:WARN: the target tool name comes from A's registry row, never from a
-    #   literal here. A hardcoded target silently ignores a row edit.
-    # @MX:REASON: REQ-SHEETPIPE-005 · AC-SHEETPIPE-007 ②.
+    # @MX:WARN: the target tool name AND the argument the bytes ride in both
+    #   come from A's registry row, never from a literal here. A hardcoded
+    #   target silently ignores a row edit; a hardcoded argument name makes
+    #   the bytes invisible to a target that reads a different one, and that
+    #   target then refuses with 'no file' — after the user gave one.
+    # @MX:REASON: REQ-SHEETPIPE-005 · AC-SHEETPIPE-007 ② · card t112.
 
     def import_uploaded_sheet(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         """이번 대화에 올라온 시트를 그 종류의 대상 툴로 넘긴다.
@@ -5170,7 +5173,11 @@ def build_toolset(
             )
 
         forwarded = dict()
-        forwarded["file_content_base64"] = content
+        # 바이트를 담는 **인자 이름**도 대상 툴 이름과 같은 자리에서 온다
+        # (카드 t112). 여기에 하드코딩하면 그 이름을 안 읽는 대상에게는
+        # 바이트가 없는 것과 같아지고, 대상은 「파일이 없다」로 거절한다 —
+        # 사용자가 파일을 줬는데도. 거짓 사유가 참 사유를 가린다.
+        forwarded[row.content_arg] = content
         for name in row.passthrough_args:
             if name in call.arguments:
                 forwarded[name] = call.arguments[name]
