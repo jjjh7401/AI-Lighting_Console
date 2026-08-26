@@ -139,7 +139,7 @@ CONSOLE_SETUP = [
     ("MIB",          "Move In Black ON (무빙 계열) — 소등 상태에서 다음 큐 포지션 선이동"),
     ("Grand Master", "GM 100% 고정 운용 · 비상 DBO는 X-keys 지정"),
     ("Inhibit",      "STROBE·BLIND 그룹 Inhibit 페이더 상시 배치 — 광과민·객석 민원 시 즉시 차단"),
-    ("프리셋 풀",     "Pool 번호는 프로그래밍 시 기입 (PRESET 시트 MA3 Pool 열) · 이름은 본 문서 ID와 동일하게"),
+    ("프리셋 풀",     "Pool 번호는 코드가 축별로 정한다 — POS = Preset 2 (pointing.py) · DIM = Preset 1 (실사격) · 시트는 값만 나른다 · 이름은 본 문서 ID와 동일하게"),
     ("백업",         "쇼파일 버전업 시마다 USB + 네트워크 이중 백업 · 리허설 전후 필수"),
 ]
 
