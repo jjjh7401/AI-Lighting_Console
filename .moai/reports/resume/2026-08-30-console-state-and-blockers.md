@@ -75,10 +75,32 @@ t104 가 겪은 그 자리다 — **풀 캐싱**. `Import Plugin` 이 `executed_
 **childCount 5, 슬롯 1 `CopilotResponder` · 2 `CopilotPatchRobinEsprite` ·
 5 `CopilotPatchMacAuraXB`. 사본 얽힘이 없다.**
 
-그러면 **1.6.1 이 물려 있는 이유가 미확정으로 돌아간다.** 사본이 없는데도 옛 버전을
-답한다면 원인은 별칭 잔해가 아니라 **순수 풀 캐싱**이고, 처방은 재임포트다.
-🔴 **재개 시 이 갈래를 먼저 확정해라** — 사본 없음 + 1.6.1 을 둘 다 재확인하고,
-그때 처방이 정해진다.
+### 갈래 확정 (t96 레인 실측, 같은 순간의 두 관측)
+
+    DataPool/Plugins  childCount 5 · truncated false · Responder 이름 슬롯 **1개뿐**
+    ping              live version **1.6.1** · state PASS
+
+**사본이 없는데 옛 버전을 답한다** → 원인은 별칭 잔해가 아니라 **순수 풀 캐싱**이다.
+리드와 레인의 독립 판독이 childCount 5 로 일치했다. **처방은 재임포트다.**
+
+### 슬롯 1 의 Lua 를 읽을 채널은 **없다** (셋이 함께 답한다)
+
+    introspect DataPool/Plugins/1   class UserPlugin · 25/25 · truncated **false**
+                                    = 절단이 아니라 **전수**다. LUA·SOURCE·CODE 류 필드 0개
+    props (대조군 ZZZFAKE9 선행 → 거절 확인)
+        NAME    "CopilotResponder"
+        VERSION **"0.0.0.0"**   ← 🔴 미끼
+        PATH    ""
+
+🔴 **`VERSION` 을 응답기 버전으로 읽지 마라.** MA3 의 **플러그인 메타데이터** 필드이고
+Lua 안의 `CONFIG.VERSION`(1.6.1)과 **다른 층**이다. 이름이 같아 계기를 잘못 고르기 쉽다.
+**구동 중인 코드의 버전을 답하는 채널은 여전히 `ping` 하나뿐이다.**
+
+⚠️ `PATH` 가 빈 문자열인 것을 「경로가 없다」로 읽으면 안 된다 — t95 선례(내용 있는
+오브젝트도 이 채널에서 0·빈값을 답한다). **필드가 비었다는 것과 원본이 없다는 것은
+다른 진술이다.**
+
+**결론: 감독 GUI 재임포트 말고는 확정할 길이 없다.**
 
 ## 5. 그래서 순서가 정해진다
 
