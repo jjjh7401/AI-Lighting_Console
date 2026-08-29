@@ -10,7 +10,28 @@
 
 포트 점유는 응답을 뜻하지 않으므로 매번 이걸 먼저 쏜다.
 
-## 2. 지금 콘솔은 grandMA3 **기본 쇼파일**이다 — 우리 리그가 아니다
+## 2. ~~지금 콘솔은 grandMA3 **기본 쇼파일**이다~~ — **반증됨 (2026-08-30, t98+t105)**
+
+> 🔴 **이 절의 표제 주장은 틀렸다.** 리그 장비 **80대가 이미 패치돼 있다.**
+>
+>     t105 판독   state Patch/Stages/1/Fixtures -> childCount 80, truncated true
+>     t98 판독    preview skipped[fid=521].occupant
+>                 = {"address":"3.1","name":"Robin LEDBeam 350 21",
+>                    "fixture_type":"Robin LEDBeam 350"}
+>
+> 서로 다른 두 채널이 같은 결론을 냈다. 아래 표는 **프리셋·그룹 풀만** 본 것이고,
+> 패치를 안 봤다. **개수와 이름만으로 쇼파일 정체를 판정하면 틀린다** — 그룹 5개의
+> 이름(`Robin Esprite`·`Mac Aura XB` 등)은 MA3 기본값이 아니라 **우리 리그의
+> 장비 종류에서 생성된 이름**일 수 있고, 실제로 그쪽이 맞다.
+>
+> 정확한 상태: **리그는 우리 것, 프리셋은 우리 것이 아닌 혼합 상태.**
+> `preset-dim.csv` 는 `풀`·`쇼 하이`·`미드`·`로우`·`잔광`·`아웃` 6건(한글)인데
+> 콘솔 딤 풀은 `Dim 10`~`Alt Half` 20건으로 **하나도 안 겹친다**(t105 실측).
+> 그 20건이 MA3 기본값인지 제3의 출처인지는 **안 쟀다.**
+>
+> 아래 원문은 무엇을 잘못 읽었는지 남기려고 보존한다.
+
+### (원문 — 반증됨)
 
 이름을 읽어 확정했다(개수만 보고 판단하면 틀린다 — 리드가 한 번 틀렸다):
 
@@ -33,10 +54,27 @@ RIG 팩 이름(`ALL`·`KEY`·`FOH`·`BACK`·`SIDE-L`)도 우리 프리셋 이름
 `lxseq_e2e --action preview` 실측:
 
     런 1개 · 계획 1대 · 건너뛴 행 **85건**
-    skipped[*].kind = "type_unresolved"
+    skipped 원인 분포 (t98 재측정 2026-08-30, 전수):
+        type_unresolved    54   콘솔 라이브러리에 없다        -> 감독 GUI 필요
+        mode_unresolved    24   타입은 있고 모드 이름만 안 맞는다 -> 감독 불필요
+        address_occupied    7   우리 장비가 이미 그 자리에 있다  -> 감독 불필요
     "콘솔 라이브러리에 없다 — 콘솔에서 타입 추가 후 재실행하라"
 
-**점유가 아니다.** 타입이 없어서다.
+🔴 **초판은 여기서 `skipped[*].kind = "type_unresolved"` 라고 적었다 — 틀렸다.**
+표본 몇 건을 보고 `[*]` 를 썼다. 전수를 세면 원인이 셋이고, **31행(24+7)은
+감독을 기다릴 필요가 없다.** 「전부」라고 쓸 때는 전부여야 한다.
+
+    mode_unresolved 24행 상세 (FID 201~316, 전부 동일 사유):
+        CSV 요구      "Martin MAC Aura XB"
+        콘솔 실측 모드 Extended-Extended(25) / Extended-RAW(25) / Extended-RGB(25)
+                      Standard-Extended(14) / Standard-RAW(14) / Standard-RGB(14)
+        처방          --mode-overrides 로 재호출  ->  카드 t128
+
+    address_occupied 7행 (FID 521~527, 유니버스 3):
+        점유자        Robin LEDBeam 350 21 등 — **우리 장비다** (위 §2 반증)
+        물음          기존 패치가 이미 CSV 의도를 만족하는가 -> 카드 t129
+
+**남은 54행만이 감독 작업이다.** 아래 표는 그 54행에 관한 것이다.
 
 | 콘솔에 있는 8종 | RIG 팩이 요구하는데 없는 것 |
 |---|---|
@@ -127,3 +165,43 @@ Lua 안의 `CONFIG.VERSION`(1.6.1)과 **다른 층**이다. 이름이 같아 계
 - 응답기 재임포트 후 페이징이 이 쇼파일에서도 되는지
 - 그룹 임포트 preview (패치가 선행이라 아직 의미 없음)
 - **fx·cue 어댑터의 설계** — 입구가 없다는 것까지만 쟀고 어떻게 만들지는 미착수
+
+---
+
+## 8. 재측정 회차 — 2026-08-30 리드 세션 (t98), 콘솔 쓰기 0
+
+원문 §2·§3 을 반증한 회차다. 쏜 것 전부:
+
+    responder_roundtrip --skip-exec --port 8000 --listen-port 9005
+        ping   PASS   live version **1.6.1**  plugin=CopilotResponder
+        state  PASS   DataPool/Plugins childCount 5 · truncated false
+
+    lxseq_e2e --action preview  (--approve 없음 → 콘솔 쓰기 0)
+        probe.live              Patch/FixtureTypes  child_count **8** · truncated false
+        probe.fabricated_control Patch/FixtureTypesZZZNotAThing/9999  (날조 대조군 선행)
+        summary                 런 1개 · 계획 1대 · 건너뛴 행 85건
+
+### 두 막는 것의 현재 상태 — 둘 다 **아직 안 끝났다**
+
+| 막는 것 | 판정 기준 | 실측값 | 상태 |
+|---|---|---|---|
+| ① 픽스처 타입 | `Patch/FixtureTypes` child_count | **8** (변화 없음) | 미완 — 54행이 여기 걸린다 |
+| ② 응답기 재임포트 | `ping` 이 답하는 live version | **1.6.1** (1.6.2 아님) | 미완 |
+
+**둘 다 「했는지 감독에게 묻는다」가 아니라 이 두 줄로 잰다.** 명령 결과(`executed_ok`)나
+디스크 파일 버전은 판정 기준이 아니다 — §4 가 이미 그 함정을 적었다.
+
+### 콘솔 점유 확인 (쏘기 전)
+
+    lsof -nP -iUDP | grep -E ":8000|:9005"
+        app_gma3 38706 만 바인드 · 레인 프로세스 0
+
+⚠️ 이건 **그 순간의 값**이다. 프로브는 소켓을 잠깐만 열므로 「지금 없다」가 「곧 없다」를
+뜻하지 않는다. 그래서 쏜 뒤 t105 레인에 통보했다.
+
+### 안 잰 것 (이 회차)
+
+- **54행의 타입 8종이 정확히 무엇인지 CSV 쪽 전수** — skipped 상세의 타입 필드를 안 폈다
+- `mode_unresolved` 24행이 CSV 의 어느 채널폭을 요구하는지 — t128 이 답한다
+- `address_occupied` 7행의 점유자 FID 가 CSV FID 와 같은지 — t129 가 답한다
+- 응답기 재임포트 후 페이징이 이 쇼파일에서 되는지 (여전히 미측정)
