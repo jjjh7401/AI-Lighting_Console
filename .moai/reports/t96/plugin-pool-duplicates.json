@@ -1,0 +1,71 @@
+{
+  "children": [
+    {
+      "class": "UserPlugin",
+      "i": 1,
+      "name": "CopilotResponder"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 2,
+      "name": "CopilotPatchSource4LEDSeries3LustrX8"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 3,
+      "name": "CopilotPatchCuePixBlinderWW2"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 4,
+      "name": "CopilotPatchAtomic3000LED"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 5,
+      "name": "CopilotPatchUnique21"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 6,
+      "name": "CopilotPatchRobinMegaPointe"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 7,
+      "name": "CopilotPatchRobinSpiider"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 8,
+      "name": "CopilotPatchMacAuraXB"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 9,
+      "name": "CopilotPatchRushPar2RGBWZoom"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 10,
+      "name": "CopilotResponder#2"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 11,
+      "name": "CopilotResponder_2"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 11,
+    "class": "Plugins",
+    "name": "Plugins"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/Plugins",
+  "truncated": false,
+  "v": 1
+}
