@@ -119,6 +119,7 @@ from server.presets.store import (
 )
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
+from server.rig.paging import paged_children
 from server.safety.approval import (
     ApprovalItem,
     ApprovalPort,
@@ -4879,10 +4880,9 @@ def build_toolset(
             reason=pool_error or "프리셋 풀 번호를 못 읽었다",
         )
         if pool_no is not None:
+            pool_path = str(rig_paths.get("preset_pools")) + "/" + str(pool_no)
             try:
-                slots = state_port.query_state(
-                    str(rig_paths.get("preset_pools")) + "/" + str(pool_no)
-                )
+                slots = state_port.query_state(pool_path)
             except Exception as exc:  # noqa: BLE001
                 pool_section = dict(ok=False, reason=str(exc))
             else:
@@ -4891,11 +4891,21 @@ def build_toolset(
                 # **부재를 보존한다**(번호 없는 항목은 번호 없이 온다). 여기서
                 # 직접 읽으면 그 계약을 두 번째로 구현하는 것이고, 실제로 그렇게
                 # 했다가 매퍼가 `pool_unreadable` 로 fail-closed 했다.
+                #
+                # 첫 창은 풀 전체가 아니다. 응답기는 개수 캡(24)과 페이로드
+                # 예산(~1200B) 중 **먼저 걸리는 쪽**에서 자른다 — t131 실측에서
+                # 86건이 19·18 두 창으로 왔다(19 < 24, 즉 바이트 축). 첫 창만
+                # 쓰면 안 보인 자리의 점유를 모르고, `section_refusal` 이 그것을
+                # `section_truncated` 로 fail-closed 하므로 큰 풀에서는 임포트가
+                # 통째로 거절됐다. 능력을 잃은 것이지 안전이 는 것이 아니다.
+                #
+                # 규율은 `server/rig/paging.py` 하나가 갖는다 — 여기서 루프를
+                # 다시 짜면 세 번째 사본이고, 무진전 방어를 빠뜨린 사본은 실패가
+                # 아니라 **무한 루프**로 나타난다(t104).
+                children, truncated = paged_children(state_port, pool_path, slots)
                 pool_section = dict(
-                    objects=[
-                        rig_object(c) for c in (slots.get("children") or []) if isinstance(c, dict)
-                    ],
-                    truncated=bool(slots.get("truncated")),
+                    objects=[rig_object(c) for c in children],
+                    truncated=truncated,
                 )
 
         result = map_presets(parsed.records, pool_section=pool_section)

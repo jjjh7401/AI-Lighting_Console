@@ -28,6 +28,16 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--listen-host", default="127.0.0.1")
     add_listen_port_argument(parser)
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help=(
+            "children 창의 0-기반 시작점 (PROTOCOL.md 4.2). 기본 0 은 토큰 없는 "
+            "역사적 요청 바이트를 그대로 보낸다. 응답기가 페이징을 알면 회신에 "
+            "offset 을 되돌려 준다 — 에코가 없으면 「진전 없음」이지 「끝」이 아니다."
+        ),
+    )
     parser.add_argument("--timeout-seconds", type=float, default=6.0)
     return parser
 
@@ -42,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
         attempt_session_backup=False,
     )
     try:
-        payload = stack.gate.state_port.query_state(args.path)
+        payload = stack.gate.state_port.query_state(args.path, offset=args.offset)
     except StateQueryError as exc:
         # 거절은 예외로 온다 — 그 문면이 곧 증거다.
         print(f"state failed: {exc}", file=sys.stderr)

@@ -39,6 +39,7 @@ from server.orchestrator.tools import (
     rig_object,
     rig_section,
 )
+from server.rig.paging import PAGE_CAP, claims_more, paged_children
 
 
 class PoolStatePort(Protocol):
@@ -209,56 +210,12 @@ def _with_swatches(objects: list[dict], *, pool_name: str) -> list[dict]:
     return enriched
 
 
-#: 후속 창 상한 — 이미 받은 첫 창에 더해 최대 10창을 더 읽는다(총 11창,
-#: 264슬롯; 세션 판독기는 첫 창 포함 10창이라 한 창 더 여유가 있다). 상한
-#: 초과는 완전 판독 주장 없이 ``truncated``로 남는다.
-_POOL_PAGE_CAP = 10
-
-
-def _claims_more(payload: dict, seen: int) -> bool:
-    """절단 판정 이중 방어 — 응답기 truncated 플래그 또는 childCount 산술
-    (세션 판독기와 동일, TRUNCATE-001)."""
-    node = payload.get("node")
-    child_count = node.get("childCount") if isinstance(node, dict) else None
-    # bool은 int의 서브클래스 — childCount: true(True>0)가 허위 '더 있음'
-    # 판정을 만들지 않게 명시 배제한다(SEC-TYPE-002).
-    if isinstance(child_count, bool):
-        child_count = None
-    return bool(payload.get("truncated")) or (isinstance(child_count, int) and child_count > seen)
-
-
-def _paged_pool_children(
-    state_port: PoolStatePort, path: str, first: dict
-) -> tuple[list[dict], bool]:
-    """``first`` 창 이후를 offset 페이징으로 이어 읽는다 — ``(children, truncated)``.
-
-    세션 판독기(``session._paged_pool_children``)의 무진전 방어를 그대로
-    상속하되, 강등 방향만 다르다: 세션은 부분 판독을 None(판독 불가)으로
-    떨어뜨리지만(저장 검증은 완전성이 전제), 읽기 전용 팝업은 이미 받은
-    창을 보여주면서 ``truncated=True``로 미완을 고지한다 — 부분을 전체로
-    꾸미지 않는 같은 규율의 다른 표현이다. 무진전 갈래: 페이징을 모르는
-    포트(TypeError)·후속 창 오류·에코 부재/불일치(구버전 응답기는 offset을
-    무시하고 항상 첫 창을 돌려준다)·빈 창·페이지 상한.
-    """
-    children = [c for c in first.get("children", []) if isinstance(c, dict)]
-    payload = first
-    seen = len(payload.get("children", [])) if isinstance(payload.get("children"), list) else 0
-    for _page in range(_POOL_PAGE_CAP):
-        if not _claims_more(payload, seen):
-            return children, False
-        try:
-            payload = state_port.query_state(path, offset=seen)
-        except TypeError:
-            return children, True  # 포트가 페이징을 모른다 — 첫 창만, 정직 고지
-        except Exception:
-            return children, True  # 후속 창 실패 — 받은 만큼만, 정직 고지
-        echo = payload.get("offset") if isinstance(payload, dict) else None
-        window = payload.get("children") if isinstance(payload, dict) else None
-        if isinstance(echo, bool) or echo != seen or not isinstance(window, list) or not window:
-            return children, True  # 무진전 — 에코 불일치/빈 창은 전진 불가
-        children.extend(c for c in window if isinstance(c, dict))
-        seen += len(window)
-    return children, _claims_more(payload, seen)  # 상한 도달 — 남은 주장만큼 절단
+# 페이징 규율은 ``server/rig/paging.py`` 하나가 갖는다 (t131). 여기 사본을 두면
+# 무진전 방어가 갈리고, 갈린 날 한쪽만 고쳐진다 — ``rig/section.py``가 술어를 한
+# 자리로 모은 것과 같은 이유다. 이름만 이 모듈의 어휘로 남긴다.
+_POOL_PAGE_CAP = PAGE_CAP
+_claims_more = claims_more
+_paged_pool_children = paged_children
 
 
 def build_presets_router(deps: PresetsDeps) -> APIRouter:
