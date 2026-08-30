@@ -102,6 +102,21 @@ MUTANTS = [
             "        return ExistingFidRead(attempted=True, unreadable_fids=1)"
         ),
     ),
+    (
+        TL,
+        "M9 어댑터 과다적용 — query_state 까지 번역한다 (채택 안 한 오설계)",
+        (
+            "    def query_state(self, path: str) -> dict:\n"
+            "        return self._inner.query_state(path)"
+        ),
+        (
+            "    def query_state(self, path: str) -> dict:\n"
+            "        try:\n"
+            "            return self._inner.query_state(path)\n"
+            "        except StateQueryError:\n"
+            '            return {"ok": False, "path": path, "unreachable": True}'
+        ),
+    ),
 ]
 
 env = dict(os.environ)

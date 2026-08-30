@@ -24,5 +24,8 @@ M7 사유 문구 변경 — 열거된 슬롯 -> 확인된 슬롯  [patchplan.py]
 M8 구별 접기 — 루트 실패도 슬롯 사유로 낸다  [patchplan.py]
     KILL  죽은 검사 6개: ['test_the_tool_raises_before_it_can_report_console_unreachable', 'test_the_tool_survives_and_names_the_console', 'test_both_failure_shapes_arrive_at_the_same_reason', 'test_an_unrelated_bug_is_not_swallowed', 'test_the_slot_reason_is_not_byte_identical_to_the_root_reason', 'test_the_root_failure_still_names_the_root']
 
+M9 어댑터 과다적용 — query_state 까지 번역한다 (채택 안 한 오설계)  [tools.py]
+    🔴 생존  죽은 검사 0개: []
+
 복원 완료: True
-판정: 8/8 KILL
+판정: 8/9 KILL
