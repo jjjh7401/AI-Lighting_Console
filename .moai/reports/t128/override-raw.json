@@ -1,0 +1,553 @@
+{
+  "csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t128/src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.patch.csv",
+  "action": "preview",
+  "approve": false,
+  "local_file": {
+    "sha256": "77a34d4bfd611fc034ce621c9715c1e33129df244a67c7e8dfd75d83816d7ee3",
+    "byte_length": 7258
+  },
+  "plugin_import_dir": "/Users/studiox/MALightingTechnology/gma3_library/datapools/plugins",
+  "plugin_import_dir_source": "site_settings",
+  "probe": {
+    "live": {
+      "path": "Patch/FixtureTypes",
+      "ok": true,
+      "child_count": 8,
+      "children_returned": 8,
+      "truncated": false,
+      "names": [
+        "Robin Esprite",
+        "Robin Forte HP",
+        "Robin LEDBeam 350",
+        "Robin Spiider",
+        "Xtylos",
+        "Sharpy Plus",
+        "Robin MMX Spot",
+        "Mac Aura XB"
+      ]
+    },
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "raised": "StateQueryError: path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "trustworthy": true,
+    "verdict_ko": "판독 채널 신뢰 가능 — 실재 경로는 ok, 날조 경로는 ok가 아니다."
+  },
+  "is_error": false,
+  "awaited_human": false,
+  "payload": {
+    "source": {
+      "sha256": "77a34d4bfd611fc034ce621c9715c1e33129df244a67c7e8dfd75d83816d7ee3",
+      "byte_length": 7258,
+      "rows_total": 86,
+      "parsed": 86,
+      "rejected": [],
+      "excluded": []
+    },
+    "types": {
+      "resolved": {
+        "Martin MAC Aura XB": "Mac Aura XB"
+      },
+      "unresolved": []
+    },
+    "console_read": {
+      "complete_enough_to_judge_absence": true,
+      "caveat": {
+        "kind": "console_read_index_domain_unknown",
+        "label": "열거는 절단됐으나 선언된 자식을 전부 관측했다 — 인덱스 도메인만 미상",
+        "completeness": "incomplete",
+        "child_count": 80,
+        "observed_count": 80,
+        "missing_count": 0,
+        "unreadable_address_count": 0,
+        "unpatched_count": 0,
+        "unread_count": 0,
+        "reason": "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고, 인덱스 도메인만 미상이다."
+      },
+      "type_translation": {
+        "attempted": true,
+        "named": 8,
+        "whole_unconfirmed": false,
+        "untranslated": {},
+        "detail": null
+      },
+      "fid_read": {
+        "attempted": true,
+        "known": 80,
+        "child_count": 80,
+        "unresolved": 0
+      }
+    },
+    "plan": {
+      "runs": [
+        {
+          "index": 0,
+          "group": "BACK",
+          "console_type": "Mac Aura XB",
+          "console_mode": "Extended - RAW",
+          "address": "4.1",
+          "count": 12,
+          "channels_per_fixture": 25,
+          "fids": [
+            201,
+            202,
+            203,
+            204,
+            205,
+            206,
+            207,
+            208,
+            209,
+            210,
+            211,
+            212
+          ],
+          "name_prefix": "BACK",
+          "footprint_source": "console_measured"
+        },
+        {
+          "index": 1,
+          "group": "SIDE-L",
+          "console_type": "Mac Aura XB",
+          "console_mode": "Extended - RAW",
+          "address": "4.301",
+          "count": 6,
+          "channels_per_fixture": 25,
+          "fids": [
+            301,
+            302,
+            303,
+            304,
+            305,
+            306
+          ],
+          "name_prefix": "SIDE-L",
+          "footprint_source": "console_measured"
+        },
+        {
+          "index": 2,
+          "group": "SIDE-R",
+          "console_type": "Mac Aura XB",
+          "console_mode": "Extended - RAW",
+          "address": "5.126",
+          "count": 1,
+          "channels_per_fixture": 25,
+          "fids": [
+            316
+          ],
+          "name_prefix": "SIDE-R",
+          "footprint_source": "console_measured"
+        }
+      ],
+      "fid_map": {
+        "201": {
+          "address": "4.1",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "202": {
+          "address": "4.26",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "203": {
+          "address": "4.51",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "204": {
+          "address": "4.76",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "205": {
+          "address": "4.101",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "206": {
+          "address": "4.126",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "207": {
+          "address": "4.151",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "208": {
+          "address": "4.176",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "209": {
+          "address": "4.201",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "210": {
+          "address": "4.226",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "211": {
+          "address": "4.251",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "212": {
+          "address": "4.276",
+          "console_type": "Mac Aura XB",
+          "run_index": 0
+        },
+        "301": {
+          "address": "4.301",
+          "console_type": "Mac Aura XB",
+          "run_index": 1
+        },
+        "302": {
+          "address": "4.326",
+          "console_type": "Mac Aura XB",
+          "run_index": 1
+        },
+        "303": {
+          "address": "4.351",
+          "console_type": "Mac Aura XB",
+          "run_index": 1
+        },
+        "304": {
+          "address": "4.376",
+          "console_type": "Mac Aura XB",
+          "run_index": 1
+        },
+        "305": {
+          "address": "4.401",
+          "console_type": "Mac Aura XB",
+          "run_index": 1
+        },
+        "306": {
+          "address": "4.426",
+          "console_type": "Mac Aura XB",
+          "run_index": 1
+        },
+        "316": {
+          "address": "5.126",
+          "console_type": "Mac Aura XB",
+          "run_index": 2
+        },
+        "311": {
+          "address": "5.1",
+          "console_type": null,
+          "run_index": null
+        },
+        "312": {
+          "address": "5.26",
+          "console_type": null,
+          "run_index": null
+        },
+        "313": {
+          "address": "5.51",
+          "console_type": null,
+          "run_index": null
+        },
+        "314": {
+          "address": "5.76",
+          "console_type": null,
+          "run_index": null
+        },
+        "315": {
+          "address": "5.101",
+          "console_type": null,
+          "run_index": null
+        }
+      },
+      "skipped": [
+        {
+          "fid": 311,
+          "address": "5.1",
+          "kind": "address_occupied",
+          "detail": "그 자리를 다른 장비가 쓰고 있다",
+          "occupant": {
+            "address": "5.1",
+            "name": "Sharpy Plus 41",
+            "fixture_type": "Sharpy Plus"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 312,
+          "address": "5.26",
+          "kind": "address_occupied",
+          "detail": "그 자리를 다른 장비가 쓰고 있다",
+          "occupant": {
+            "address": "5.32",
+            "name": "Sharpy Plus 42",
+            "fixture_type": "Sharpy Plus"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 313,
+          "address": "5.51",
+          "kind": "address_occupied",
+          "detail": "그 자리를 다른 장비가 쓰고 있다",
+          "occupant": {
+            "address": "5.63",
+            "name": "Sharpy Plus 43",
+            "fixture_type": "Sharpy Plus"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 314,
+          "address": "5.76",
+          "kind": "address_occupied",
+          "detail": "그 자리를 다른 장비가 쓰고 있다",
+          "occupant": {
+            "address": "5.94",
+            "name": "Sharpy Plus 44",
+            "fixture_type": "Sharpy Plus"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 315,
+          "address": "5.101",
+          "kind": "address_occupied",
+          "detail": "그 자리를 다른 장비가 쓰고 있다",
+          "occupant": {
+            "address": "5.125",
+            "name": "Sharpy Plus 45",
+            "fixture_type": "Sharpy Plus"
+          },
+          "occupied_fid": null
+        }
+      ],
+      "write_count_planned": 19,
+      "write_count_applicable": 19,
+      "write_count_width_unconfirmed": 0
+    },
+    "apply": {
+      "entered": false,
+      "runs": []
+    },
+    "summary_ko": "미리보기 — 쓰기 0건. 런 3개 · 계획 19대 · 건너뛴 행 5건.",
+    "guidance": "apply.runs[*].status == created 인 런의 created 합만 성공으로 보고하라 — 위임 호출이 오류 없이 돌아온 것은 생성 증거가 아니다. 점유로 건너뛴 행은 덮어쓰지 말고 plan.skipped 목록을 사용자에게 그대로 보여 줘라. types.unresolved 가 있으면 콘솔에서 타입을 추가해 달라고 사용자에게 청하라. mode_unresolved 로 건너뛴 타입은 mode_overrides 인자로 다시 불러라. 이 툴의 바이트는 파일에서만 온다 — 사용자가 채팅에 붙여넣은 CSV 본문을 base64로 만들어 넣지 마라. 개행·공백이 조용히 깨져 잘못된 자리에 패치된다."
+  },
+  "sha256_matches_local_file": true,
+  "digest": {
+    "runs": 3,
+    "write_count_planned": 19,
+    "skipped_total": 5,
+    "skipped_by_kind": {
+      "address_occupied": 5
+    },
+    "types_unresolved": [],
+    "addresses": [
+      {
+        "index": 0,
+        "group": "BACK",
+        "console_type": "Mac Aura XB",
+        "console_mode": "Extended - RAW",
+        "address": "4.1",
+        "count": 12,
+        "channels_per_fixture": 25,
+        "fids": [
+          201,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          210,
+          211,
+          212
+        ]
+      },
+      {
+        "index": 1,
+        "group": "SIDE-L",
+        "console_type": "Mac Aura XB",
+        "console_mode": "Extended - RAW",
+        "address": "4.301",
+        "count": 6,
+        "channels_per_fixture": 25,
+        "fids": [
+          301,
+          302,
+          303,
+          304,
+          305,
+          306
+        ]
+      },
+      {
+        "index": 2,
+        "group": "SIDE-R",
+        "console_type": "Mac Aura XB",
+        "console_mode": "Extended - RAW",
+        "address": "5.126",
+        "count": 1,
+        "channels_per_fixture": 25,
+        "fids": [
+          316
+        ]
+      }
+    ],
+    "apply_runs": [],
+    "stopped_at": null,
+    "summary_ko": "미리보기 — 쓰기 0건. 런 3개 · 계획 19대 · 건너뛴 행 5건."
+  },
+  "questions_asked": [],
+  "approval_bundles_asked": 0,
+  "deploy_reviews_asked": [],
+  "console_after": {
+    "path": "Patch/Stages/1/Fixtures",
+    "ok": true,
+    "child_count": 80,
+    "children_listed": 17,
+    "truncated": true,
+    "enumeration_complete": false,
+    "fixtures": [
+      {
+        "slot": 1,
+        "name": "Robin Esprite 1",
+        "FID": "1",
+        "Patch": "1.001",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 2,
+        "name": "Robin Esprite 2",
+        "FID": "2",
+        "Patch": "1.043",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 3,
+        "name": "Robin Esprite 3",
+        "FID": "3",
+        "Patch": "1.085",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 4,
+        "name": "Robin Esprite 4",
+        "FID": "4",
+        "Patch": "1.127",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 5,
+        "name": "Robin Esprite 5",
+        "FID": "5",
+        "Patch": "1.169",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 6,
+        "name": "Robin Esprite 6",
+        "FID": "6",
+        "Patch": "1.211",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 7,
+        "name": "Robin Esprite 7",
+        "FID": "7",
+        "Patch": "1.253",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 8,
+        "name": "Robin Esprite 8",
+        "FID": "8",
+        "Patch": "1.295",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 9,
+        "name": "Robin Esprite 9",
+        "FID": "9",
+        "Patch": "1.337",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 10,
+        "name": "Robin Esprite 10",
+        "FID": "10",
+        "Patch": "1.379",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 11,
+        "name": "Robin Esprite 11",
+        "FID": "11",
+        "Patch": "1.421",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 12,
+        "name": "Robin Esprite 12",
+        "FID": "12",
+        "Patch": "1.463",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 13,
+        "name": "Robin Esprite 13",
+        "FID": "13",
+        "Patch": "2.001",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 14,
+        "name": "Robin Esprite 14",
+        "FID": "14",
+        "Patch": "2.043",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 15,
+        "name": "Robin Esprite 15",
+        "FID": "15",
+        "Patch": "2.085",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 16,
+        "name": "Robin Esprite 16",
+        "FID": "16",
+        "Patch": "2.127",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      },
+      {
+        "slot": 17,
+        "name": "Robin Esprite 17",
+        "FID": "17",
+        "Patch": "2.169",
+        "FixtureType": "FixtureType 1",
+        "Mode": "2 Mode 2"
+      }
+    ]
+  }
+}
