@@ -1165,3 +1165,136 @@ class TestPresetDestination:
         )
         assert execution.result.is_error is True
         assert "preset_pools" in payload
+
+
+# -- t150: fx 프리셋 풀을 끝까지 걷는가 ----------------------------------------
+#
+# 위 `_RigStatePort` 는 `offset` 키워드를 **받지 않는다**. 그 더블은 지우지
+# 않는다 — 공용 루프가 TypeError 를 잡아 `truncated` 로 정직하게 강등하므로,
+# 그 자리에 남아 「걷지 못하면 여전히 fail-closed」를 재는 **대조군**이 된다
+# (`test_a_truncated_pool_listing_refuses_automatic_assignment`).
+# 다만 그 더블만으로는 이 수정을 증명할 수 없다: 걷지 못하는 포트는 고치기
+# 전과 뒤가 같은 답을 내기 때문이다. 그래서 페이징을 아는 더블을 새로 만든다.
+
+
+class _PagedRigStatePort(_RigStatePort):
+    """한 경로를 창으로 쪼개 답하는 더블 — `offset` 을 받고 되돌려 준다.
+
+    창 크기를 **불균일**하게 두는 것이 요점이다: 응답기는 개수 캡(24)이 아니라
+    페이로드 예산에서 먼저 잘리므로(t131·t150 실기 실측 19·18·18·18·13),
+    「N개씩 온다」를 가정한 더블은 실기와 다른 것을 잰다.
+    """
+
+    def __init__(
+        self,
+        tree: dict[str, dict],
+        *,
+        paged: str,
+        children: list[dict],
+        sizes: tuple[int, ...],
+    ) -> None:
+        super().__init__(tree)
+        self._paged = paged
+        self._children = list(children)
+        self._windows: dict[int, list[dict]] = dict()
+        cursor = 0
+        for size in sizes:
+            if cursor >= len(self._children):
+                break
+            self._windows[cursor] = self._children[cursor : cursor + size]
+            cursor += size
+        self.offsets: list[int] = []
+
+    def query_state(self, path: str, *, offset: int = 0) -> dict:  # type: ignore[override]
+        if path != self._paged:
+            return super().query_state(path)
+        self.queried.append(path)
+        self.offsets.append(offset)
+        window = self._windows.get(offset, [])
+        payload = _payload(path, window)
+        payload["node"] = dict(childCount=len(self._children))
+        payload["truncated"] = offset + len(window) < len(self._children)
+        payload["offset"] = offset
+        return payload
+
+
+class TestThePresetPoolIsWalkedToTheEnd:
+    """fx 프리셋 목적지는 풀을 **끝까지** 읽는다 (t150).
+
+    첫 창만 읽으면 안 보인 자리의 점유를 모른다. 그 결과는 오발이 아니라
+    `select_preset_number` 의 `preset_pool_truncated` — 즉 슬롯 자동 배정이
+    통째로 거절되는 **fail-closed 능력 상실**이다. t131 이 프리셋 임포트
+    자리(`tools.py` 임포트 경로)에서 닫은 것과 같은 계열이고, 여기가 fx 절반이다.
+    """
+
+    POOL = 21
+    OCCUPIED = 30
+    SIZES = (19, 11)
+
+    def _call(self) -> dict:
+        return dict(
+            pattern="pulse",
+            steps=[dict(Dimmer=10), dict(Dimmer=90)],
+            group=11,
+            speed=24,
+            destination="preset",
+        )
+
+    def _paged(self, port=None, *, occupied: int | None = None, sizes=None):
+        held = self.OCCUPIED if occupied is None else occupied
+        state = _PagedRigStatePort(
+            _preset_tree(),
+            paged=PRESET_POOLS_PATH + "/" + str(self.POOL),
+            children=[_child(n, "P" + str(n)) for n in range(1, held + 1)],
+            sizes=self.SIZES if sizes is None else sizes,
+        )
+        return _registry(port=port, state=state), state
+
+    def test_occupants_beyond_the_first_window_are_seen(self):
+        """단언은 `truncated is False` 가 아니라 **모은 개수**다.
+
+        슬롯 1..30 이 연속 점유이므로 첫 빈 자리는 31 — 하나라도 빠뜨리면 그
+        번호가 「비었다」로 나온다. 첫 창(19)만 읽는 구현은 20 을 고르므로 이
+        검사를 원리적으로 통과할 수 없고, 플래그만 지우는 우회도 안 통한다.
+        """
+        port = _RecordingPort()
+        registry, _state = self._paged(port=port)
+        execution, payload = _compose(registry, self._call())
+        assert execution.result.is_error is False, payload
+        assert payload["report"]["preset"] == self.OCCUPIED + 1, (
+            "2창의 점유를 못 봤다 — 첫 창에서 멈췄다. 고른 슬롯: "
+            + str(payload["report"]["preset"])
+        )
+        assert any(c.startswith("Store Preset 21.31 ") for c in port.executed), port.executed
+
+    def test_the_tool_pages_rather_than_asking_once(self):
+        """전진의 증거는 요청한 offset 이다 — 첫 창 뒤로 창이 이어졌는지."""
+        registry, state = self._paged()
+        execution, payload = _compose(registry, self._call())
+        assert execution.result.is_error is False, payload
+        assert state.offsets == [0, 19], state.offsets
+
+    def test_a_single_window_pool_spends_no_follow_up_query(self):
+        """대조군 — 안 잘린 풀에서 후속 조회를 쏘면 왕복 낭비다.
+
+        없으면 위 검사가 「무조건 한 창 더 쏜다」와 구별되지 않는다.
+        """
+        registry, state = self._paged(occupied=5, sizes=(24,))
+        execution, payload = _compose(registry, self._call())
+        assert execution.result.is_error is False, payload
+        assert state.offsets == [0], state.offsets
+        assert payload["report"]["preset"] == 6, payload["report"]
+
+    def test_a_pool_that_cannot_be_paged_is_still_refused(self):
+        """대조군 — 걷지 **못하면** 여전히 fail-closed 다.
+
+        `_RigStatePort` 는 `offset` 을 안 받아 공용 루프가 TypeError 를 잡고
+        `truncated` 로 강등한다. 이 카드가 안전을 깎지 않았음을 잰다 — 없으면
+        위 검사들이 「절단 방어를 지웠다」와 구별되지 않는다.
+        """
+        port = _RecordingPort()
+        registry = _registry(port=port, tree=_preset_tree(pool_truncated=True))
+        execution, payload = _compose(registry, self._call())
+        assert execution.result.is_error is True
+        assert payload["reason"] == "preset_pool_truncated", payload
+        assert not any(c.startswith("Store Preset") for c in port.executed), port.executed

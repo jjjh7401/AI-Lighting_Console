@@ -5754,17 +5754,29 @@ def build_toolset(
                     preset_pools=pools,
                 )
             pool_no = all_pools[0]["no"]
+        pool_path = f"{pools_path}/{pool_no}"
         try:
-            pool_payload = state_port.query_state(f"{pools_path}/{pool_no}")
+            pool_payload = state_port.query_state(pool_path)
         except Exception as exc:  # noqa: BLE001
             return None, _fx_error_result(call, f"preset pool {pool_no} could not be read: {exc}")
+        # 첫 창은 풀 전체가 아니다. 응답기는 개수 캡(24)과 페이로드 예산(~1200B)
+        # 중 **먼저 걸리는 쪽**에서 자른다 — 실기 실측(t131, t150 재확인)에서
+        # 86건이 19·18·18·18·13 다섯 창으로 왔다(19 < 24, 즉 바이트 축).
+        # 첫 창만 쓰면 안 보인 자리의 점유를 모르고, 아래 `select_preset_number`
+        # 가 그것을 `preset_pool_truncated` 로 fail-closed 하므로 큰 풀에서는
+        # 슬롯 자동 배정이 통째로 거절된다. 능력을 잃은 것이지 안전이 는 것이
+        # 아니다 — t131 이 프리셋 임포트 자리에서 닫은 것과 같은 계열이다.
+        #
+        # 규율은 `server/rig/paging.py` 하나가 갖는다 — 여기서 루프를 다시 짜면
+        # 세 번째 사본이고, 무진전 방어를 빠뜨린 사본은 실패가 아니라 **무한
+        # 루프**로 나타난다(t104).
+        children, truncated = paged_children(state_port, pool_path, pool_payload)
+        # 걸어서 얻은 완전성이 첫 창의 플래그를 대신한다 — `rig_section` 은
+        # payload 의 `truncated` 를 읽으므로, 이어 붙인 결과를 그 자리에 넣지
+        # 않으면 다 모으고도 절단으로 거절한다.
         presets_section = rig_section(
-            [
-                rig_object(child)
-                for child in (pool_payload.get("children") or [])
-                if isinstance(child, dict)
-            ],
-            pool_payload,
+            [rig_object(child) for child in children],
+            dict(pool_payload, truncated=truncated),
         )
         try:
             slot = select_preset_number(presets_section, requested=slot_arg)
