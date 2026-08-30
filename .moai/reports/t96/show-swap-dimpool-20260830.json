@@ -1,0 +1,111 @@
+{
+  "children": [
+    {
+      "class": "Preset",
+      "i": 1,
+      "name": "Dim 10"
+    },
+    {
+      "class": "Preset",
+      "i": 2,
+      "name": "Dim 20"
+    },
+    {
+      "class": "Preset",
+      "i": 3,
+      "name": "Dim 30"
+    },
+    {
+      "class": "Preset",
+      "i": 4,
+      "name": "Dim 40"
+    },
+    {
+      "class": "Preset",
+      "i": 5,
+      "name": "Dim 50"
+    },
+    {
+      "class": "Preset",
+      "i": 6,
+      "name": "Dim 60"
+    },
+    {
+      "class": "Preset",
+      "i": 7,
+      "name": "Dim 70"
+    },
+    {
+      "class": "Preset",
+      "i": 8,
+      "name": "Dim 80"
+    },
+    {
+      "class": "Preset",
+      "i": 9,
+      "name": "Dim 90"
+    },
+    {
+      "class": "Preset",
+      "i": 10,
+      "name": "Full"
+    },
+    {
+      "class": "Preset",
+      "i": 11,
+      "name": "Breathe Soft"
+    },
+    {
+      "class": "Preset",
+      "i": 12,
+      "name": "Breathe Deep"
+    },
+    {
+      "class": "Preset",
+      "i": 13,
+      "name": "Pulse Hard"
+    },
+    {
+      "class": "Preset",
+      "i": 14,
+      "name": "Pulse Half"
+    },
+    {
+      "class": "Preset",
+      "i": 15,
+      "name": "Wave Soft"
+    },
+    {
+      "class": "Preset",
+      "i": 16,
+      "name": "Wave Full"
+    },
+    {
+      "class": "Preset",
+      "i": 17,
+      "name": "Ripple"
+    },
+    {
+      "class": "Preset",
+      "i": 18,
+      "name": "Flash Accent"
+    },
+    {
+      "class": "Preset",
+      "i": 19,
+      "name": "Alt Half"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 20,
+    "class": "Presets",
+    "name": "Dimmer"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/PresetPools/1",
+  "truncated": true,
+  "v": 1
+}
