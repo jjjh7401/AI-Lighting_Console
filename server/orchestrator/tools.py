@@ -4761,7 +4761,14 @@ def build_toolset(
                 for s in result.skipped
             ],
             "console_read_incomplete": result.console_read_incomplete,
+            # 두 축이 두 채널을 갖는다(t167). `console_read_incomplete` 는 FID
+            # 판독 축과 그룹 풀 단면 축 **둘 다**에서 서지만, 아래
+            # `console_read_reason` 은 FID 축만 답한다 — 그래서 단면 축으로
+            # True 가 서면 여기가 반드시 `None` 이었고, 「참 플래그 + 빈 사유」가
+            # 나갔다. 단면 축 사유는 형제(프리셋)와 **같은 이름**으로 싣는다.
             "console_read_reason": None if fid_read.complete else fid_read.reason(),
+            "refusal": result.refusal,
+            "refusal_detail": result.refusal_detail or None,
             "slot_divergence": (
                 None
                 if result.slot_divergence is None

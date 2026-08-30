@@ -149,6 +149,17 @@ class GroupMapResult:
     skipped: tuple[GroupSkip, ...]
     slot_divergence: SlotDivergence | None
     console_read_incomplete: bool
+    #: 단면 축 거절 — 형제 `preset_mapper.PresetMapResult` 와 **같은 이름**이다.
+    #: 공유 술어(`server/rig/section.py`)의 코드를 **그대로** 나른다: 형제가 자기
+    #: 어휘로 번역하는 이유는 `held_by_class` 가 그 코드를 세기 때문인데, 이
+    #: 도메인에는 거절 코드 어휘도 그것을 세는 소비자도 없다. 새 어휘를 만들면
+    #: 소비자 0인 두 번째 어휘가 생기고, 그 갈라짐이 t109 가 없앤 바로 그것이다.
+    #:
+    #: FID 판독 축은 여기 안 실린다 — `map_groups` 는 그 사유를 모르고(불리언
+    #: 하나만 받는다), 페이로드의 `console_read_reason` 이 그 축을 맡는다.
+    #: 두 축이 두 채널을 갖는 것은 지식이 사는 자리가 달라서다.
+    refusal: str | None = None
+    refusal_detail: str = ""
 
 
 def build_label_fid_table(patch_rows: Sequence[Mapping[str, str]]) -> dict[str, tuple[int, ...]]:
@@ -359,12 +370,23 @@ def map_groups(
     # 가라는 신호인데, 실제로는 콘솔을 못 읽은 것이라 시트를 고쳐도 안 낫는다.
     # 그래서 이미 있는 `console_read_incomplete` 로 답한다. 그 필드가 원래
     # 「콘솔 쪽을 못 읽었다」는 뜻이고, 이것이 정확히 그 경우다.
-    if section_refusal(groups_section) is not None:
+    #
+    # 🔴 다만 불리언 하나로는 부족하다(t167). 술어는 (코드, 사유) 쌍을 내는데
+    # 예전에는 널 여부만 보고 그 쌍을 버렸고, 그래서 `path_not_resolved` 와
+    # `console_unreachable` 이 사용자에게 바이트 동일로 나갔다. 더 나쁜 것은,
+    # 이 갈래에 닿았다는 것 자체가 FID 판독이 **전수였다**는 뜻이라는 점이다
+    # (아니면 위 `console_fids_complete` 분기에서 이미 반환됐다). 그래서
+    # 페이로드의 `console_read_reason` 은 이 경우 반드시 `None` 이고,
+    # 「참 플래그 + 빈 사유」가 나갔다. 형제(`preset_mapper`)가 하는 그대로
+    # 쌍을 싣는다 — 이름도 형제와 같다.
+    if (section_reason := section_refusal(groups_section)) is not None:
         return GroupMapResult(
             batches=(),
             skipped=tuple(skipped),
             slot_divergence=None,
             console_read_incomplete=True,
+            refusal=section_reason[0],
+            refusal_detail=section_reason[1],
         )
 
     sheet_slots = tuple(bucket.group_no for bucket in planned)
