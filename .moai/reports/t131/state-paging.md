@@ -164,3 +164,128 @@ offset 19 가 `childCount: 7` 을 답해서 이 값이 창 기준 상대값인�
 
 남은 진짜 구멍은 하나다 — `server/orchestrator/tools.py:4870` 이 그 매개변수를
 **안 쓰는** 것.
+
+---
+
+## 8. 구현 회차 — 루프가 붙었고, 실기에서 끝까지 걷는다
+
+트리 `.claude/worktrees/t131` · 브랜치 `WT-state-paging` · base `215d236`
+콘솔 `app_gma3` **pid 38706** (첫 회차와 동일 — 재기동 없음) · **콘솔 쓰기 0줄**
+
+### 8.1 주장
+
+1. **호출부가 이제 끝까지 걷는다.** `import_lxseq_presets` 의 프리셋 풀 판독이
+   페이징을 탄다.
+2. **실기에서 86건이 전부 모인다** — §6 이 「안 쟀다」고 남긴 축이 닫혔다.
+3. **창 크기는 균일하지 않다**: `19 · 18 · 18 · 18 · 13`. 어느 것도 24가 아니다.
+   §7.1 의 「바이트 예산 축」이 실증됐다.
+4. 🔴 **§7.3 을 정정한다.** 「새 능력 불필요, 구멍 하나」는 맞지만 **짓는 것도
+   불필요했다** — 완성된 페이징 루프가 이미 `server/web/presets_api.py:230` 에
+   있었다(무진전 방어 · 테스트 포함). 「저장소가 이미 갖고 있다」 **열 번째**다.
+5. **결함의 결과는 오발이 아니라 능력 상실이었다.** 첫 창만 읽으면
+   `truncated: True` → `server/rig/section.py:91` 이 `section_truncated` 로
+   **fail-closed** 한다. 큰 풀에서 임포트가 통째로 거절됐다. 안전한 방향으로
+   틀렸지만, 틀린 것은 맞다.
+
+### 8.2 증거 — 실기
+
+계기 신뢰성부터. 날조 대조군이 **거절**한다(계기가 멀지 않았다):
+
+    t131_paged_walk --path 'Patch/Stages/1/ZZZNoSuchNodeXYZ' --listen-port 9005
+    -> state failed: path segment not found: 'ZZZNoSuchNodeXYZ' (in Patch/Stages/1/ZZZNoSuchNodeXYZ)
+
+착수 시점 쇼 지문 재측정 (전제는 노화한다 — 오늘만 쇼가 세 번 바뀌었다):
+
+    t95_state_dump --path 'DataPool/Groups'        -> childCount 18 · children 18 · truncated False
+    t95_state_dump --path 'DataPool/PresetPools/1' -> childCount 7  · truncated False
+       ['풀','쇼 하이 OLD','미드','로우','잔광','아웃','쇼 하이']
+
+첫 회차(08-30 저녁)와 **동일**하다. 같은 쇼다.
+
+본 측정 — 끝까지 걷기:
+
+    t131_paged_walk --path 'Patch/Stages/1/Fixtures' --listen-port 9005
+    -> childCount    : 86
+       collected     : 86
+       truncated     : False
+       offsets sent  : [0, 19, 37, 55, 73]
+       window sizes  : [19, 18, 18, 18, 13]
+       VERDICT       : COMPLETE
+
+대조군 — 안 잘린 작은 풀은 후속 조회를 **안 쏜다**(왕복 낭비 없음):
+
+    t131_paged_walk --path 'DataPool/PresetPools/1' --listen-port 9005
+    -> collected 7 / childCount 7 · offsets sent [0] · VERDICT COMPLETE
+
+### 8.3 증거 — 뮤테이션 6/6 전멸
+
+§7.2 가 지정한 대로 **단언 자체를** 쏘았다. 검사는 고친 뒤에 썼으므로, 뮤테이션
+없이는 「초록」이 아무 증거도 아니다.
+
+| # | 뮤테이션 | 결과 |
+|---|---|---|
+| M1 | 🔴 첫 창만 쓰고 `truncated` 만 지운다 (§7.2 가 경고한 공허한 구현) | **KILL** 7건 |
+| M2 | 호출부를 페이징 없는 원래 코드로 되돌린다 | **KILL** 3건 |
+| M3 | `presets_api` 위임을 옛 사본으로 되살린다 | **KILL** 3건 |
+| M4 | 무진전 방어(offset 에코 검사)를 지운다 | **KILL** 1건 |
+| M5 | 「한 창에 24개씩 온다」 고정 창을 가정한다 | **KILL** 4건 |
+| M6 | 페이지 상한 경계를 한 칸 옮긴다 (`PAGE_CAP + 1`) | **KILL** 1건 |
+
+M1 이 이 표의 이유다. 단언을 `truncated is False` 로 잡았다면 M1 은 **살아남는다**
+— 「안 잘렸다」와 「이어 붙였다」는 다른 말이기 때문이다. 단언을
+`len(모은 자식) == childCount` 로 잡아서 잡혔다.
+
+복원은 `git checkout` 이 아니라 백업+체크섬으로 했다(미커밋분 보호). 세 파일의
+sha256 이 뮤테이션 전후로 동일함을 확인했다.
+
+### 8.4 증거 — 기계 검증
+
+    pytest server/tests -q          -> 10483 passed, 12 skipped  (147s)
+    ruff check server               -> All checks passed!
+    ruff format --check server      -> 458 files already formatted
+
+기준선(착수 시점)도 초록이었다 — 이 초록이 내 변경 덕이라는 주장은 하지 않는다.
+카드가 여는 것은 **거절되던 갈래**이고, 그것은 §8.2·§8.3 이 잰다.
+
+### 8.5 바뀐 것
+
+| 파일 | 무엇 |
+|---|---|
+| `server/rig/paging.py` | **신규** — 페이징 규율의 유일한 자리. 본문은 `presets_api` 사본을 그대로 옮긴 것 |
+| `server/web/presets_api.py` | 사본 삭제 → 위임(이름 유지, 기존 테스트 29건 그대로 바인딩) |
+| `server/orchestrator/tools.py` | 🔴 카드의 구멍 — 프리셋 풀 판독이 페이징을 탄다 |
+| `server/tests/test_state_paging_callsite.py` | **신규** — 회귀 12건 |
+| `server/tools/t131_paged_walk.py` | **신규** — 실기 완전성 프로브(읽기 전용). §8.2 를 다음 사람이 다시 잴 수 있게 |
+
+### 8.6 결함 계열 — 잰 것, 그리고 손대지 않은 것
+
+`query_state` 호출부는 운영 코드에 **40여 곳**이다. 그중 단면을 만들어
+`section_refusal` 계열 술어에 넘기는 자리를 추렸다:
+
+| 자리 | 상태 |
+|---|---|
+| `tools.py` `import_lxseq_presets` 프리셋 풀 | 🟢 이 카드가 고쳤다 |
+| `tools.py` fx 경로 프리셋 풀 (`select_preset_number` 앞) | ⬜ **안 건드렸다** — 같은 모양이지만 `test_fx_tool.py:1152` 가 `preset_pool_truncated` 거절을 **비준**하고 있다. 카드 범위 밖이고, 비준된 검사를 흔드는 일이라 별도 판단이 필요하다 |
+| `tools.py` 그룹 풀 (`read_group_pool`) | ⬜ 안 쟀다 — 단면 경로가 다르다(`groups_from_snapshot`) |
+| `web/session.py` `_paged_pool_children` | 🟡 세 번째 사본이 여기 남아 있다. 강등 방향이 달라(부분→`None`) 단순 위임이 안 된다 |
+
+「점-수정은 결함 계열을 못 말린다」에 따라 표를 만들었다. 표는 **처방이 아니라
+측정**이다 — 남은 세 자리는 각각 별도 결정이 필요하다.
+
+### 8.7 안 잰 것
+
+| 축 | 왜 |
+|---|---|
+| 큰 프리셋 풀에서의 실기 임포트 | 지금 딤 풀이 7건이라 절단이 재현 안 된다. 24건 넘는 풀을 만드는 것은 **콘솔 쓰기**라 리드 승인 밖이다. 페이징 자체는 86건 풀(`Fixtures`)로 실측했다 |
+| 페이로드 예산 경계 `[1200,1208)` | 전달받은 t12 값을 그대로 썼다. **내가 안 쟀다** |
+| 페이지 상한(11창 · 최대 264슬롯)을 넘는 실기 풀 | 그런 풀이 이 쇼에 없다. 넘으면 `truncated` 로 남아 fail-closed 된다 |
+| `session.py` 사본의 동작 | 안 건드렸고 안 쟀다 |
+
+### 8.8 잔여 위험
+
+- **`TypeError` 갈래가 넓다.** 포트 안쪽에서 다른 이유로 난 `TypeError` 도
+  「페이징을 모른다」로 읽혀 첫 창만 쓰게 된다. 옮겨 온 기존 동작 그대로 두었다
+  — 좁히면 `presets_api` 의 동작이 바뀐다.
+- **완전성은 응답기의 `childCount` 를 믿는다.** 그 값이 거짓이면 이 판정도 거짓이다.
+  이 쇼에서는 두 오프셋에서 같은 값이 왔다(§2.2·§6).
+- 이 회차 **콘솔 쓰기 0줄.** 되돌릴 것이 없다.
