@@ -1,0 +1,31 @@
+saturated_total=788
+saturated_AND_totality_question=413
+share=52.4%
+
+=== by totality kind (overlapping) ===
+  grep_lineno    384
+  grep_count      42
+  help            15
+  listing          9
+
+=== samples (saturated AND totality) ===
+  [N=20 grep_lineno] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 grep -n "Main / Floor\|canvasView\|setCanvasView\|'floor'\|\"fl
+  [N=40 help] npx hyperframes --help 2>&1 | head -40
+  [N=20 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "dayParts" -B2 -A 8 src/app/me/page.tsx | 
+  [N=40 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "loadSlotAssignments" -A 30 src/app/_lib/q
+  [N=8 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -rn "주간편성표\|편성표.*업로드\|uploadSchedule\|schedul
+  [N=20 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "tableName\|recordId\|action\|actor\|after
+  [N=40 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "HH:MM\|toMinutes\|parseTime\|형식이 아니라" -B 
+  [N=4 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "export const realVerdictFetcher\|export f
+  [N=6 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "^export" src/app/_lib/ehr/rosterSource.ts
+  [N=3 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "export.*loadPartSchedule\|function loadPa
+  [N=3 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && cat > scripts/_tmp-read.ts <<'EOF' process.loadEnv
+  [N=6 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "loadServiceAccountKey\|exchangeForAccessT
+  [N=20 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" grep -n "deriveActualFromSchedule\|ParsedProgram\|sta
+  [N=15 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" grep -rn "runMonthClose\|runMonthUnclose\|재확정\|closeM
+  [N=20 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "dayParts" -B2 -A 8 src/app/me/page.tsx | 
+  [N=40 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "loadSlotAssignments" -A 30 src/app/_lib/q
+  [N=8 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -rn "주간편성표\|편성표.*업로드\|uploadSchedule\|schedul
+  [N=20 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "tableName\|recordId\|action\|actor\|after
+  [N=40 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "HH:MM\|toMinutes\|parseTime\|형식이 아니라" -B 
+  [N=4 grep_lineno] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && grep -n "export const realVerdictFetcher\|export f
