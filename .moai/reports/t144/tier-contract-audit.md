@@ -80,6 +80,24 @@ TREEID-001 · TRUNCATE-001 · UNREQ-001.
 ⚠️ 다만 그 결과가 무해하지 않다: **PRESERVE 예외가 왜 정당한지 검산하려면 진행
 기록을 봐야 하는데 그게 없다.** 지금은 `spec.md` 의 REQ 문면과 자산 실재로만 검산된다.
 
+> **[정정 고지 — 2026-08-30, t158 이 덧붙였다. 위 문단은 한 글자도 고치지 않았다.]**
+>
+> **위 ⚠️ 문단은 너무 셌다.** 「검산하려면 진행 기록을 봐야 한다」가 참이 아니다 —
+> t158 이 전수하며 그 승인의 **집행 경로**를 읽었다:
+>
+>     _RULEBOOK_GRANTED_ADDITIONS  -> 33_effect_editors.md 를 **경로 이름으로** 고정
+>     _RULEBOOK_GRANTED_APPEND     -> 31_choreography_patterns.md
+>     _RULEBOOK_APPEND_HEADING     -> 추가 블록의 **헤딩 문자열**까지 고정
+>     삭제 0 요구 + test_the_only_rulebook_changes_are_the_granted_ones 가 단언
+>
+> 즉 **집행은 기계적 핀이 하고, REQ 인용은 근거(rationale)일 뿐이다.** 진행 기록이
+> 없어도 그 승인이 무엇을 허용하는지는 바이트 단위로 좁혀져 있다. 게다가 같은 파일의
+> `granted` 28회 중 REQ 를 근거로 드는 것은 3회뿐이다 — **대부분의 승인은 애초에 REQ
+> 없이 정당화된다.**
+>
+> 기록이 있으면 더해지는 것은 **집행이 아니라 서사**(감독이 왜 승인했는지)다.
+> 전수와 근거: `.moai/reports/t158/citation-record-audit.md`.
+
 ## 3. (b) tier 를 낮추나 산출물을 채우나 — **둘 다 단순 적용이 안 된다**
 
 ### 3.1 FXGEN-001 은 **어느 tier 에도 안 맞는다**
