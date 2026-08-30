@@ -260,6 +260,11 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # 사라진 시작점 1029·1129·1179 — 삽입이 이웃 헝크 경계를 unified=0에서 옮긴 결과이며
 # 삭제가 아니다(BASE..HEAD의 tools.py 삭제 줄은 0). 두 보호 구간(234..238 / 524..569)
 # 침범은 ZERO — 실제 불변식은 그대로 성립한다.
+# t134 (SPEC-COPILOT-LXSEQ-003, col 척도)가 import_lxseq_presets 의 col 분기를
+# 배선했다: 임포트 2곳 · _PRESET_POOL_FAMILY 주석 정정 · _lxseq_preset_apply_command
+# 의 col 분기. 실측 델타: 72->73 hunks, 새 시작점 **956** 하나, 사라진 시작점 없음.
+# 커밋 단위 numstat 은 +19/-6 이고, 삭제 6줄은 전부 그 함수와 주석의 제자리 교체다.
+# 두 보호 구간(234..238 / 524..569) 침범은 ZERO — 실제 불변식은 그대로 성립한다.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -289,6 +294,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     593,
     620,
     952,
+    956,
     965,
     967,
     971,
