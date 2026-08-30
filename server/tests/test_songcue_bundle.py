@@ -92,6 +92,19 @@ def _require_run_phase_base() -> None:
     )
 
 
+# SONGCUE 가 §C 에서 선언한 무변경 대상 여섯. **범위 선언이지 이 게이트가 만든
+# 경계가 아니다** (t162) — 출처는
+# `.moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md:182` (REQ-SONGCUE-021) 이고
+# 목록 본문은 같은 문서 `:238` (§C PRESERVE — 무변경 대상) 이다.
+#
+# 이 목록을 읽는 법 — 「SONGCUE 가 안 건드렸다」(역사적 사실)와 「아무도 못
+# 건드린다」(집행되는 경계)의 구별, 그리고 다른 카드가 이 파일을 고쳐야 할 때
+# 선언 층으로 가는 이유 — 은 `server/tests/test_overlap_preserve.py` 의
+# `_PRESERVE_PATHS` 주석에 **한 번만** 적혀 있다. 여기에 복사하지 마라:
+# 술어가 두 곳으로 갈리면 한쪽만 고쳐지고 나머지가 조용히 낡는다.
+#
+# 이 목록에 `console/lua/**` 가 없는 것은 누락이 아니다 — v0.2.0 이 예외를 단
+# 것이 아니라 §C 목록에서 **뺐다**(`spec.md:245-250` · `progress.md` §F 개정 절).
 _PRESERVE_LOOK_FILES = (
     "server/looks/matching.py",
     "server/looks/instantiate.py",
