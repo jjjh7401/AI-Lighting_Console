@@ -131,6 +131,20 @@ StateQueryError 는 이미 tools.py:130 에서 import 돼 있다(t181 이 4295·
 쪽이든 paperwork 모듈이 tools.py 의 StateQueryError 를 알아야 하므로 import
 경계를 하나 더 넘는다 - 이것도 리드 판단이 필요하다.
 
+정정(2026-08-31, 리드 확인 후): 위는 A안(여섯 자리 각각에 형제 except)만
+적었다 - 유일안으로 읽지 마라. 리드가 되읽어 더 강한 원인을 확인했다:
+StateQueryError 가 새는 자리는 사실 하나다(_root_payload, inventory.py:404) -
+여섯이 각자 안 잡는 게 아니라 그 한 자리에서 전부 새어 나온다. 그래서 처방은
+세 갈래로 갈린다:
+
+    A  여섯 자리 각각에 except StateQueryError (위에 적은 안)
+    B  _root_payload 에서 InventoryReadError 로 옮긴다
+       -> t179·t181 레인이 이미 거절한 형태 - 콘솔 침묵과 인벤토리 판독
+          불가가 한 사유로 합쳐진다
+    C  _root_payload 에서 옮기되 구별되는 하위 종류로 - 아무도 검토 안 함
+
+A/B/C 판정과 실제 적용은 별도 카드(t187)다. 이 보고서는 도달 측정까지다.
+
 ---
 
 ## 4. 안 잰 것
