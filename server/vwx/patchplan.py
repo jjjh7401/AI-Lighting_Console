@@ -1392,6 +1392,28 @@ class ExistingFidRead:
         }
 
 
+def unreadable_root() -> ExistingFidRead:
+    """루트를 못 읽었을 때의 판독 결과 — **이 개념의 주인은 이 모듈이다**.
+
+    「아무 것도 모른다」를 어떤 값으로 표현하는지는 `ExistingFidRead` 의 축들이
+    정하고 그 축은 여기 산다. 호출부가 같은 값을 손으로 조립하면 축이 하나 늘 때
+    조용히 어긋난다 — 아래 `ok is not True` 갈래도 이 함수를 부른다.
+
+    **왜 예외를 여기서 안 잡는가.** 콘솔 포트가 던지는 `StateQueryError` 는
+    `server.safety` 의 것이고, 이 모듈이 속한 순수 로직 층(`server/vwx` ·
+    `server/prechk` · `server/rig`)은 그 층을 임포트한 선례가 **0건**이다
+    (2026-08-31 실측). 아키텍처 가드가 막는 것은 아니다 — 그 가드가 지키는 경계는
+    「OSC 전송 표면에 닿는 것은 `server/safety/` 하나」이고 예외 이름을 부르는 것은
+    거기 안 걸린다. 그래도 **선례 없는 방향으로 첫 발을 떼는 값**을 이 수리가 치를
+    이유가 없어서, **개념은 여기 두고 catch 는 호출부**
+    (`server/orchestrator/tools.py`)에 뒀다 — 그쪽은 이미 그 예외를 안다.
+
+    되돌리기 전에 위 문단을 읽어라. 「왜 안쪽에서 안 잡지」는 이미 물어봤고
+    답이 여기 있다.
+    """
+    return ExistingFidRead(attempted=True, root_unreadable=True)
+
+
 def read_existing_fids(fid_property_port: FidPropertyPort | None) -> ExistingFidRead:
     """기존 FID 판독의 **공개 진입점**.
 
@@ -1463,7 +1485,7 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         # [round14 T02] 루트를 못 읽으면 **아무 것도 모른다**. 이전 판은 이 경우에도
         # 계수만 0으로 채워 "선언 None대 중 0대만 열거했고 0대는 FID를 얻지 못했다"는,
         # 조작자에게 **아무 문제 없음으로 읽히는** 문장을 냈다.
-        return ExistingFidRead(attempted=True, root_unreadable=True)
+        return unreadable_root()
 
     node = state.get("node")
     child_count = _optional_int(node.get("childCount")) if isinstance(node, Mapping) else None

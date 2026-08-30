@@ -198,6 +198,7 @@ from server.vwx.patchplan import (
     designed_attributes_by_candidate,
     plan_addresses,
     read_existing_fids,
+    unreadable_root,
     validate_assumption_71,
 )
 from server.vwx.reader import read as read_vwx_export
@@ -4745,7 +4746,16 @@ def build_toolset(
         sections, _resolved, _failed = collect_rig_sections(
             state_port, {"groups": groups_path, "fixtures": fixtures_path}, frozenset(), 0
         )
-        fid_read = read_existing_fids(_InventoryPort(state_port, property_port))
+        try:
+            fid_read = read_existing_fids(_InventoryPort(state_port, property_port))
+        except StateQueryError:
+            # 콘솔이 안 답한 것과 「루트 판독이 실패했다」는 같은 사실이다 —
+            # 포트가 ok=False 를 주면 patchplan 이 이미 그렇게 답한다.
+            # 예외 형태만 그 갈래를 못 타서 이 도구가 죽었고, 사용자는 사유 대신
+            # 「서버 내부 문제가 발생했습니다」를 받았다(t182 실측: session.py 의
+            # except Exception 까지 올라가 kind='unexpected' 로 접혔다).
+            # 개념의 주인은 patchplan 이라 값을 손으로 조립하지 않고 부른다.
+            fid_read = unreadable_root()
 
         result = map_groups(
             group_records=parsed.records,
