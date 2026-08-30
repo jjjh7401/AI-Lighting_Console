@@ -1,0 +1,81 @@
+=== risky sub-forms of pipe-to-head (count / distinct projects) ===
+  2252  in  78 projects   grep_then_head
+   956  in  85 projects   list_then_head
+   111  in  34 projects   help_then_head
+
+grep_with_count_flag_then_head=268
+
+=== head -N value distribution (ALL values, no cap) ===
+total_with_explicit_N=6761
+  N=20       1327
+  N=30        633
+  N=5         619
+  N=3         541
+  N=40        506
+  N=10        441
+  N=60        320
+  N=8         297
+  N=12        290
+  N=1         284
+  N=2         260
+  N=6         218
+  N=25        168
+  N=4         144
+  N=15        124
+  N=50        114
+  N=80        111
+  N=14         60
+  N=100        56
+  N=45         38
+  N=35         25
+  N=22         20
+  N=120        19
+  N=70         19
+  N=18         19
+  N=24         17
+  N=90         16
+  N=16         15
+  N=150        12
+  N=55          9
+  N=32          9
+  N=200         5
+  N=26          5
+  N=28          4
+  N=300         3
+  N=7           3
+  N=0           2
+  N=140         2
+  N=220         1
+  N=180         1
+  N=130         1
+  N=34          1
+  N=75          1
+  N=250         1
+
+=== samples: --help then head ===
+  echo "=== installed_plugins.json ==="; cat ~/.claude/plugins/installed_plugins.json; echo; echo "=== known_marketplaces.json ===";
+  claude plugin marketplace --help 2>&1 | head -30
+  npx hyperframes --help 2>&1 | head -40
+  npx hyperframes tts --help 2>&1 | head -40
+  .venv/bin/python -m server.web.serve --help 2>&1 | head -30
+  .venv/bin/python -m server.web.serve --help 2>&1 | head -25; echo "exit=$?"
+  .venv/bin/python -m server.web.serve --help 2>&1 | head -25; echo "exit=$?"
+  orca --help 2>&1 | head -40; echo ----; orca omp --help 2>&1 | head -30
+  orca computer get-app-state --help 2>&1 | head -30
+  cd /Users/studiox/orca/workspaces/AI-Lighting_Console/e2e-live && uv run python -m server.web.serve --help 2>&1 | head -20
+  which omp 2>&1; ls ~/.local/bin/ | head -30; orca --help 2>&1 | head -40
+  omp --version 2>&1 | head -3; omp --help 2>&1 | head -15
+
+=== samples: grep then head ===
+  cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== propSizes.ts: structure + tall (full mannequin) entries =====" gre
+  cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== onDoubleClickItem (placed-prop dblclick) =====" grep -n "onDoubleC
+  cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== onItemUpdate type signature =====" grep -n "onItemUpdate" componen
+  cd "/Users/studiox/Desktop/ClaudeCode/상세페이지 자동화_v0.1/gs-shop-studio" && grep -n "useEffect" app/projects/\[id\]/visuals/page.tsx |
+  ps -eo pid,rss,command | awk '/next-server|next dev/ && !/grep/ {printf "%s  %dMB  %s\n", $1, $2/1024, $3}' | head -5
+  find /Users/studiox/.claude -name "*.md" | xargs grep -l "seedance" 2>/dev/null | head -20
+  find /Users/studiox/.claude -name "cowork*" -o -name "*cowork*" 2>/dev/null | grep -v ".git" | head -20
+  find /Users/studiox/.claude -name "plugin.json" 2>/dev/null | grep -i moai | head -10 find /Users/studiox/.claude/plugins/cache -m
+  echo "=== 1) 템플릿 스크립트 인자 동작 검증 ===" python3 "/Users/studiox/Documents/Claude/EHR-Manager/scripts/make_template.py" "/private/tmp/c
+  grep -A6 "plan_audit" "/Users/studiox/Documents/Claude/Code/근태관리 시스템/.moai/config/sections/harness.yaml" | head -20; grep -E "defa
+  cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템" && git log --oneline | head -6; echo "=== status 요약 ==="; git status --short | 
+  cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && npx tsx scripts/regression.ts 2>&1 | grep -vE "^\s*\[주조" | head -

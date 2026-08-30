@@ -1,0 +1,52 @@
+head_minus_N_invocations_judgeable=4270  unpaired=0  over=2489
+saturated(lines==N)=788 (18.5% of judgeable)
+under(lines<N, count is trustworthy)=3482 (81.5%)
+
+=== saturated count by N (ALL rows) ===
+  N=20        124
+  N=3          67
+  N=40         63
+  N=1          58
+  N=30         57
+  N=5          46
+  N=8          43
+  N=10         40
+  N=12         39
+  N=6          38
+  N=60         31
+  N=2          31
+  N=25         25
+  N=15         21
+  N=4          17
+  N=50         13
+  N=80         12
+  N=14         11
+  N=100         9
+  N=45          9
+  N=120         7
+  N=70          6
+  N=22          5
+  N=35          4
+  N=90          4
+  N=32          2
+  N=24          2
+  N=18          2
+  N=16          1
+  N=26          1
+
+=== saturated samples ===
+  [N=20] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 grep -n "Main / Floor\|canvasView\|setCanvasView\|'floor'\|\"floor\"
+  [N=20] cd "/Users/studiox/Desktop/ClaudeCode/상세페이지 자동화_v0.1/gs-shop-studio" && find components -name '*.tsx' -exec wc -l {} + |
+  [N=80] gh repo view nateherkai/hyperframes-student-kit 2>&1 | head -80
+  [N=40] npx hyperframes --help 2>&1 | head -40
+  [N=1] ffmpeg -version 2>&1 | head -1
+  [N=20] find /Users/studiox/.claude -name "*.md" | xargs grep -l "seedance" 2>/dev/null | head -20
+  [N=10] # Check how the moai plugins are loaded - they must be somewhere since they appear in system skills find "/Users/studiox
+  [N=50] cat "/Users/studiox/Library/Application Support/Claude/local-agent-mode-sessions/531dd9a8-ab0b-4a08-ad50-69528a117cc5/4f
+  [N=20] grep -A6 "plan_audit" "/Users/studiox/Documents/Claude/Code/근태관리 시스템/.moai/config/sections/harness.yaml" | head -20; gre
+  [N=3] createdb attend_dev 2>&1 || echo "(exists or error)"; psql -d attend_dev -c "SELECT version();" 2>&1 | head -3
+  [N=1] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템" && git add -A && git commit -q -m "feat(core): SPEC-CORE-001 구현 — 17테
+  [N=1] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템" && git add -A && git commit -q -m "fix(core): SPEC-CORE-001 리뷰 결함 수정 
+  [N=10] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템/attend-app" && echo "=== REGRESSION ===" && npm run regression 2>&1 | 
+  [N=1] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템" && git add -A && git commit -q -m "feat(ehr-leave): SPEC-EHR-001 + SP
+  [N=1] cd "/Users/studiox/Documents/Claude/Code/근태관리 시스템" && git add -A && git commit -q -m "feat(verify): SPEC-VERIFY-001 구현 —

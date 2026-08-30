@@ -1,0 +1,130 @@
+files_read=263 unparseable_lines=0
+projects_with_bash=89
+bash_commands_total=27944
+piped_into_head_total=7484 (26.78% of bash commands)
+help_piped_into_head_total=111
+projects_with_at_least_one_pipe_head=88
+
+=== per-project, pipe-head count / bash count (ALL rows, no cap) ===
+  1051 / 3483     -Users-studiox-orca-workspaces-AI-Lighting-Console-LX-SEQ
+   802 / 2278     -Users-studiox-Documents-Claude-Code-VPAI-Agent
+   778 / 2073     -Users-studiox-Documents-Claude-Code-AI-Lighting-Console
+   352 / 965      -Users-studiox-Documents-Claude-Code---------
+   352 / 965      -Users-studiox-Documents-Claude-Code-------------------
+   337 / 702      -Users-studiox-Documents-Claude-Code-AI-StudioX
+   314 / 1429     -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t98
+   308 / 1204     -Users-studiox-orca-workspaces-AI-Lighting-Console-MAcopilotpos
+   288 / 1397     -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t52
+   146 / 448      -Users-studiox-orca-workspaces-AI-Lighting-Console-blocked16
+   140 / 532      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t23
+   127 / 495      -Users-studiox-Documents-Claude-Code-Hiro
+    98 / 508      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-lxseq003
+    91 / 323      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t114
+    86 / 423      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t149
+    76 / 317      -Users-studiox-Documents-Prompt-Studio
+    73 / 358      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t51
+    68 / 294      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t57
+    68 / 169      -Users-studiox-orca-workspaces-AI-Lighting-Console-imglayout-001
+    65 / 226      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t109
+    61 / 113      -Users-studiox-Documents-Claude-Projects-AI-Photobooth-Extention-vu-detail-page-builder
+    60 / 218      -Users-studiox-orca-workspaces-AI-Lighting-Console-groupgen-m0
+    60 / 524      -Users-studiox-orca-workspaces-AI-Lighting-Console-spec-vwx-001
+    58 / 280      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t140
+    57 / 225      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t128
+    54 / 372      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t18
+    52 / 196      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t182
+    51 / 141      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t103
+    51 / 179      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t105
+    50 / 444      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t11-m1
+    48 / 264      -Users-studiox-orca-workspaces-AI-Lighting-Console-exec-state-visual
+    47 / 229      -Users-studiox-Documents-Claude-Code-VPAI-Agent--claude-worktrees-t20
+    45 / 133      -Users-studiox-Documents-Claude-Code-GSSHOP-System-plugins
+    41 / 263      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t86
+    39 / 106      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t96
+    37 / 166      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t146
+    36 / 205      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t167
+    36 / 159      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t174
+    35 / 219      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t113
+    35 / 235      -Users-studiox-Documents-Claude-Code-VPAI-Agent--claude-worktrees-t23
+    35 / 184      -Users-studiox-orca-workspaces-Prompt-Studio-video-generate
+    34 / 173      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-ldguide
+    34 / 178      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t11-plan
+    33 / 103      -Users-studiox-orca-workspaces-AI-Lighting-Console-live-cue-monitor
+    32 / 189      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t131
+    32 / 201      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t147
+    31 / 99       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t157
+    31 / 214      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t177
+    30 / 127      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t55
+    29 / 114      -Users-studiox-orca-workspaces-AI-Lighting-Console-preshow-check
+    27 / 37       -Users-studiox-Desktop-App-gs-shop-----ai-----v2
+    27 / 200      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t80
+    27 / 97       -Users-studiox-orca-workspaces-Prompt-Studio-camera-motion
+    26 / 64       -Users-studiox-Desktop-ClaudeCode-----------v0-1
+    26 / 171      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t11-sync-audit
+    25 / 160      -Users-studiox-Documents-Claude-Code-Obsidian-2-Brain
+    24 / 159      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t93
+    24 / 129      -Users-studiox-Documents-Claude-Code-VPAI-Agent--claude-worktrees-t2
+    23 / 41       -Users-studiox-Documents-Claude
+    22 / 109      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t110
+    22 / 138      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t194
+    21 / 126      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t184
+    21 / 53       -Users-studiox-Documents-Claude-Code-Comfyui
+    21 / 133      -Users-studiox-orca-workspaces-AI-Lighting-Console-preshow-osc-fix
+    21 / 85       -Users-studiox-orca-workspaces-AI-Lighting-Console-snapshot-restore
+    21 / 99       -Users-studiox-orca-workspaces-AI-Lighting-Console-tool-registration
+    20 / 163      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t163
+    19 / 112      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t87
+    19 / 56       -Users-studiox-orca-workspaces-AI-Lighting-Console-executor-layout
+    18 / 87       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t192
+    16 / 152      -Users-studiox-Documents-Claude-Code-TimeTable-Bulder
+    14 / 23       -Users-studiox-Desktop-ClaudeCode-Open-Music-Studio
+    14 / 95       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t97
+    11 / 152      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t111
+    10 / 67       -Users-studiox-Desktop-ClaudeCode-HyperFrame
+    10 / 61       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-cue-ex-columns
+    10 / 42       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t84
+    10 / 49       -Users-studiox-orca-workspaces-AI-Lighting-Console-runbook-mode
+     7 / 36       -Users-studiox-Documents-Claude-Projects-AI-Photobooth-Extention-storyflow-ai
+     7 / 52       -Users-studiox-orca-workspaces-AI-Lighting-Console-audit-crash-fix
+     7 / 44       -Users-studiox-orca-workspaces-AI-Lighting-Console-paperwork
+     5 / 11       -Users-studiox-Documents-Claude-Code-VPAI-Agent--claude-worktrees-t1
+     4 / 11       -Users-studiox-Desktop-App-Seedance2-0-Plugins
+     3 / 18       -Users-studiox-Documents-Claude-Code-GS-Agent
+     3 / 29       -Users-studiox-Documents-Claude-Code-VPAI-Agent--claude-worktrees-t6
+     2 / 15       -Users-studiox-Desktop-ClaudeCode-HyperFrame--claude-worktrees-upbeat-babbage-936db3
+     2 / 15       -Users-studiox-Documents-Claude-Code-----------
+     1 / 1        -Users-studiox-Documents-Claude-Code
+
+projects_with_bash_but_zero_pipe_head=1
+
+=== sample commands (first 30 encountered) ===
+  [-Users-studiox-Desktop-App-Seedance2-0-Plugins] echo "=== installed_plugins.json ==="; cat ~/.claude/plugins/installed_plugins.json; echo; echo "=== known_marketplaces.json ==="; cat ~/.cl
+  [-Users-studiox-Desktop-App-Seedance2-0-Plugins] claude plugin marketplace --help 2>&1 | head -30
+  [-Users-studiox-Desktop-App-Seedance2-0-Plugins] echo "=== existing marketplace.json sample ==="; cat ~/.claude/plugins/marketplaces/gptaku-plugins/.claude-plugin/marketplace.json 2>/dev/nu
+  [-Users-studiox-Desktop-App-Seedance2-0-Plugins] echo "=== plugin details ==="; claude plugin details seedance@seedance-local 2>&1 | head -40 echo; echo "=== verify one skill frontmatter ==
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== zonePositionForGrid (App.tsx) =====" grep -n "zonePositionForGrid\|gridIndex
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== table item / 테이블 definitions =====" grep -n "테이블\|table\|Table" App.tsx | he
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== prop library click → add to stage handler =====" grep -n "onSelectItem\|onAd
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== all places that build a StageItem with a position/gridIndex =====" grep -n "
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== CENTER backdrop / fixed table in StageCanvas =====" grep -n "CENTER\|콘크리트\|c
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] npx tsc --noEmit 2>&1 | head -30 && echo "=== tsc exit: $? ==="
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== PropLibraryPanel: click/add prop handlers =====" grep -n "onClick\|onAdd\|on
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== TextMap drop handlers + dataTransfer format =====" grep -n "onDrop\|dataTran
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== propSizes.ts: structure + tall (full mannequin) entries =====" grep -n "MNK-
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 grep -n "Main / Floor\|canvasView\|setCanvasView\|'floor'\|\"floor\"\|aria-label.*Floor\
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== onDoubleClickItem (placed-prop dblclick) =====" grep -n "onDoubleClickItem\|
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] npx tsc --noEmit 2>&1 | head -20 && echo "=== tsc exit: $? ==="
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] npx tsc --noEmit 2>&1 | head -20 && echo "=== tsc exit: $? ==="
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== StageCanvas: drag mousemove → position update (Y from mouse) =====" grep -n 
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== drag mousemove → writes position (dragOffset usage) =====" grep -n "dragOffs
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== PD app stage rendering (how props are drawn) =====" grep -n "StageCanvas\|pr
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== PdApp.tsx: prop rendering / StageCanvas reuse =====" grep -n "StageCanvas\|p
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== onItemUpdate type signature =====" grep -n "onItemUpdate" components/StageCa
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] npx tsc --noEmit 2>&1 | head -20 && echo "=== tsc exit: $? ==="
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd /Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2 echo "===== package.json scripts =====" cat package.json | python3 -c "import json,sys; 
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd "/Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2" echo "===== 프로젝트 내 모든 .bat 파일 위치 =====" find . -name "*.bat" -not -path "*/node_module
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd "/Users/studiox/Desktop/App" echo "===== __MACOSX / ._ 찌꺼기 존재 여부 (0이어야 정상) =====" unzip -l "gs-shop-app-share.zip" | grep -c "__MACOSX" |
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd "/Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2" echo "===== 정렬(align) 핸들러 함수 위치 =====" grep -n "align\|Align\|정렬\|'top'\|'bottom'\|'mi
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd "/Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2" npx tsc --noEmit 2>&1 | head -15 && echo "=== tsc exit: $? ==="
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] cd "/Users/studiox/Desktop/App/gs-shop-의뢰서-ai-자동화-v2" echo "===== 포트 3000 점유 프로세스 =====" lsof -i:3000 -sTCP:LISTEN 2>/dev/null | head echo "
+  [-Users-studiox-Desktop-App-gs-shop-----ai-----] kill 33407 2>/dev/null; sleep 1; lsof -i:3000 -sTCP:LISTEN 2>/dev/null | head -3 || echo "port 3000 freed"
