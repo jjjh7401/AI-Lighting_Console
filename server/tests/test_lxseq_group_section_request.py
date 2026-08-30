@@ -454,3 +454,106 @@ class TestASilentConsoleIsReportedNotCrashed:
 
         assert payload["console_read_incomplete"] is False
         assert payload["console_read_reason"] is None
+
+
+# ---------------------------------------------------------------------------
+# t194 6절 -- 슬롯 판독 실패는 루트 실패와 **다른 사유**를 낸다
+#
+# 고치기 전 실측(t188): 열거 슬롯의 `query_property` 가 예외를 내면
+# `read_existing_fids` 를 그대로 탈출했고, 한 층 위 `tools.py` 의
+# `except StateQueryError`(t182)가 그것을 `unreadable_root()` 로 접었다. 그래서
+# **루트가 정상 응답했는데도** 5절과 **바이트 동일한** 사유가 나갔다 --
+# t182 가 없앤 거짓 귀속이 한 층 위에서 재현된 것이다.
+#
+# 5절과의 관계: 5절은 "죽지 않는다"를, 이 절은 "**무엇이라고** 말하는가"를 잰다.
+# 5절만 있으면 두 원인을 한 사유로 접는 처방도 초록이 난다 -- 실제로 그랬다.
+#
+# 수용 기준(규약 3.6): 서로 다른 원인이 여전히 서로 다른 사유를 내는가.
+# 두 팔을 각각 죽여 사유 문자열이 바이트 동일이면 그 처방은 구별을 접은 것이다.
+# ---------------------------------------------------------------------------
+
+
+class _RaisingSlotProperty:
+    """루트 state 는 **통과시키고**, 지정 슬롯의 FID 프로퍼티만 예외로 만든다.
+
+    5절의 `_RaisingFixtureRoot` 와 **자극의 축이 다르다**: 저쪽은 경로 전체를
+    죽여 루트 판독부터 실패하고, 이쪽은 루트가 답한 뒤 슬롯 하나에서만 실패한다.
+    축을 갈라야 두 팔 대조가 성립한다(규약 3.3).
+    """
+
+    def __init__(self, base, slot: int, exc_type=StateQueryError) -> None:
+        self._base = base
+        self._slot = slot
+        self._exc_type = exc_type
+
+    def query_state(self, path, *args, **kwargs):
+        return self._base.query_state(path, *args, **kwargs)
+
+    def query_property(self, path, property_name):
+        if path == FIXTURES_PATH + "/" + str(self._slot) and property_name == FID_PROPERTY_NAME:
+            raise self._exc_type("no prop reply for " + repr(path) + " within 5.0s")
+        return self._base.query_property(path, property_name)
+
+    def __getattr__(self, name):
+        return getattr(self._base, name)
+
+
+class TestASlotReadFailureIsNotBlamedOnTheRoot:
+    def test_the_tool_survives_a_dead_slot_property(self):
+        """살아남는다 -- 고치기 전에는 여기서 예외가 도구를 탈출했다."""
+        payload = _payload_of(_RaisingSlotProperty(_Console(_patch_fids()), 2))
+
+        assert payload["console_read_incomplete"] is True
+
+    def test_the_slot_reason_actually_reaches_the_payload(self):
+        """사유가 **실제로 나간다** -- 세고 보고하는 것이지 삼키는 게 아니다.
+
+        이 팔이 없으면 "예외를 잡았다"만 지켜지고, 잡아서 조용히 버리는 처방도
+        초록이 난다. `patchplan` 의 round19 주석이 금지하는 것이 정확히 그것이다.
+        """
+        payload = _payload_of(_RaisingSlotProperty(_Console(_patch_fids()), 2))
+
+        reason = payload["console_read_reason"]
+        assert reason is not None
+        assert "열거된 슬롯" in reason
+        assert "FID 값을 얻지 못했다" in reason
+
+    def test_the_slot_reason_is_not_byte_identical_to_the_root_reason(self):
+        """🔴 이 카드의 수용 기준 -- 두 원인이 여전히 갈리는가.
+
+        고치기 전 이 두 값은 바이트 동일이었다(t188 실측). 한 층 위의 `catch` 가
+        세 자리를 한 사유로 접었기 때문이다. 같아지면 구별이 다시 접힌 것이다.
+        """
+        slot = _payload_of(_RaisingSlotProperty(_Console(_patch_fids()), 2))
+        root = _payload_of(_RaisingFixtureRoot(_Console(_patch_fids()), StateQueryError))
+
+        assert slot["console_read_reason"] != root["console_read_reason"]
+
+    def test_the_root_failure_still_names_the_root(self):
+        """불변식 팔 -- t182 가 세운 것을 안 무너뜨렸다.
+
+        기존 상태에서도 초록인 팔이라 쓸모없어 보이지만, 이 수리가 루트 갈래까지
+        슬롯 사유로 덮어쓰는 오설계를 가르는 유일한 팔이다(규약 3.5).
+        """
+        payload = _payload_of(_RaisingFixtureRoot(_Console(_patch_fids()), StateQueryError))
+
+        assert payload["console_read_reason"] == _ROOT_UNREAD_REASON
+
+    def test_an_unrelated_exception_is_not_swallowed(self):
+        """넓히기 방지 -- `except Exception` 으로 바꾸면 여기서 빨개진다.
+
+        무관한 버그를 "콘솔이 안 답했다"로 보고하면 이 수리가 없앤 거짓 귀속을
+        방향만 바꿔 새로 만든다. 잡는 종류를 못 박고 그 밖은 올려보낸다.
+        """
+        with pytest.raises(ValueError):
+            _dispatch(_RaisingSlotProperty(_Console(_patch_fids()), 2, ValueError))
+
+    def test_a_live_console_carries_no_slot_reason(self):
+        """대조군 -- 이 사유가 늘 붙는 게 아님을 보인다.
+
+        이 팔이 없으면 위 검사들은 사유를 상수로 하드코딩해도 초록이 난다.
+        """
+        payload = _payload_of(_Console(_patch_fids()))
+
+        assert payload["console_read_incomplete"] is False
+        assert payload["console_read_reason"] is None
