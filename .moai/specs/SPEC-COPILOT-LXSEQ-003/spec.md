@@ -164,7 +164,7 @@ run 레인 M1 실측(파서 검사 20 passed):
 |---|---|---|---|
 | dim | 6 | **6** | — |
 | col | 8 | 0 | RGB 0-255 표기 6 · 색온도만 2 |
-| bm | 5 | 0 | Prism·Frost(프로브 거절) 3 · Gobo(계열 범위 밖) 3 |
+| bm | 5 | 0 | Prism·Frost(프로브 거절) 3 · Gobo(계열 범위 밖) 3 — ⚠️ 이 사유 귀속이 반증됐다, §A.4-2b |
 | **합** | **19** | **6** | **13** (합 14 — `BM.01` 이 두 사유에 동시에 막힌다) |
 
 🔴 **bm 의 보류 근거는 「어휘가 저장소에 없다」가 아니다.** run 레인이 처음 그렇게 적었다가
@@ -174,6 +174,42 @@ run 레인 M1 실측(파서 검사 20 passed):
 Gobo 계열은 `:56` 이 **범위 밖**으로 선언한다. 이 트리에서 확인했다.
 
 **「없다」와 「이미 재서 안 된다」는 다르다.** 전자로 적으면 다음 사람이 닫힌 질문을 다시 연다.
+
+#### A.4-2b 위 표의 보류 사유 귀속이 절반 반증됐다 (t135 실측 · 2026-08-30)
+
+⚠️ **위 §A.4-2 표의 숫자는 t76 시점 실측 그대로 둔다** — 그때 19건을 읽어 6건이 저장
+가능했던 것은 그 시점의 사실이고, 지금 고치는 것은 숫자가 아니라 **보류 사유의 귀속**이다.
+
+t135 가 실기로 다시 쟀다(PR #191 → main `fa24d1b`, `.moai/reports/t135/beam-attrs.md`
+§21·§23; 소스 축은 PR #193). Fixture 501 Robin MegaPointe **단독** 선택, `Off Fixture` 로
+해제, Store 없음:
+
+    Attribute 'Frost'  At 50   ok=False  Illegal object   <- 틀린 철자였다
+    Attribute 'Frost1' At 50   ok=True   OK               <- 콘솔 채널명은 Main Module_Frost1
+    Attribute 'Focus1' At 50   ok=True   OK               <- 같은 축
+    Attribute 'Prism'  At 50   ok=False  Illegal object
+    Attribute 'Prism1' At 50   ok=False  Failed           <- 이 기종에 프리즘이 없다
+
+**「Prism·Frost(프로브 거절)」는 두 축을 한 사유로 묶고 있었다:**
+
+| 어휘 | 실제 사유 | 이 근거의 상태 |
+|---|---|---|
+| `Prism` | **진짜 부재** — Robin MegaPointe·MMX Spot 둘 다 Prism 채널이 없다(`Prism1` 발사 → `Failed`) | 유효 |
+| `Frost` · `Focus` | **철자** — 콘솔 채널명이 `Main Module_Frost1` · `Main Module_Focus1` 이다 | **무효** |
+
+즉 위 본문의 「`Focus`/`Frost`/`Prism1`/`Shutter` 는 콘솔이 거절했다」에서 **`Focus`·`Frost`
+부분은 더 이상 근거가 아니다.** 그 M0 거절은 2026-07-26 · 응답기 v1.4.1 · Group 13 **전체**
+선택에서 틀린 철자로 쏜 결과였다. `Prism1` 은 이번에 부재로 확인됐고, `Shutter` 는 이번
+측정의 대상이 아니었다 — **반증되지 않았다는 것과 재확인됐다는 것은 다르다.**
+
+🔴 **그래도 보류가 지금 풀리는 것은 아니다.** 같은 t135 실측: 튜플에서 `Frost` 를 빼면
+`BM.04` 가 열리지만 `LXSEQ_PRESET_APPLY_ATTRIBUTE` 에 bm 항목이 없어 적용 줄이 `None` 이고,
+호출지가 `apply_untranslatable` 로 **한 줄도 안 보낸다** — 열면 bm 임포트가 통째로 0건이 된다.
+**보류를 푸는 것과 내보낼 경로가 있는 것은 다른 축이다.**
+
+🔴 그리고 `server/lxseq/preset_parser.py` 의 `_PROBE_REJECTED` 튜플은 **콘솔 문자열이 아니라
+감독 시트의 토큰을 매칭하는 자리**다(t135 별도 실측). 콘솔 채널명에 맞추면 회귀한다 —
+이 절은 문면만 정정하며 그 튜플을 건드리지 않는다.
 
 #### A.4-3 부재를 재는 AC 는 우회된다 (t77)
 
