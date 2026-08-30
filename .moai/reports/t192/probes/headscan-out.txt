@@ -1,8 +1,8 @@
 files_read=263 unparseable_lines=0
 projects_with_bash=89
-bash_commands_total=27875
-piped_into_head_total=7479 (26.83% of bash commands)
-help_piped_into_head_total=110
+bash_commands_total=27944
+piped_into_head_total=7484 (26.78% of bash commands)
+help_piped_into_head_total=111
 projects_with_at_least_one_pipe_head=88
 
 === per-project, pipe-head count / bash count (ALL rows, no cap) ===
@@ -66,7 +66,7 @@ projects_with_at_least_one_pipe_head=88
     24 / 129      -Users-studiox-Documents-Claude-Code-VPAI-Agent--claude-worktrees-t2
     23 / 41       -Users-studiox-Documents-Claude
     22 / 109      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t110
-    22 / 103      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t188
+    22 / 138      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t194
     21 / 126      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t184
     21 / 53       -Users-studiox-Documents-Claude-Code-Comfyui
     21 / 133      -Users-studiox-orca-workspaces-AI-Lighting-Console-preshow-osc-fix
@@ -75,10 +75,10 @@ projects_with_at_least_one_pipe_head=88
     20 / 163      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t163
     19 / 112      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t87
     19 / 56       -Users-studiox-orca-workspaces-AI-Lighting-Console-executor-layout
+    18 / 87       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t192
     16 / 152      -Users-studiox-Documents-Claude-Code-TimeTable-Bulder
     14 / 23       -Users-studiox-Desktop-ClaudeCode-Open-Music-Studio
     14 / 95       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t97
-    13 / 53       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t192
     11 / 152      -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-t111
     10 / 67       -Users-studiox-Desktop-ClaudeCode-HyperFrame
     10 / 61       -Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-cue-ex-columns

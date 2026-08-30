@@ -1,19 +1,19 @@
-=== risky sub-forms of `| head` (count / distinct projects) ===
-  2251  in  78 projects   grep_then_head
-   955  in  85 projects   list_then_head
-   110  in  33 projects   help_then_head
+=== risky sub-forms of pipe-to-head (count / distinct projects) ===
+  2252  in  78 projects   grep_then_head
+   956  in  85 projects   list_then_head
+   111  in  34 projects   help_then_head
 
-grep_with_count_flag_then_head=267
+grep_with_count_flag_then_head=268
 
-=== `head -N` N distribution (ALL values, no cap) ===
-total_with_explicit_N=6759
+=== head -N value distribution (ALL values, no cap) ===
+total_with_explicit_N=6761
   N=20       1327
   N=30        633
   N=5         619
   N=3         541
   N=40        506
   N=10        441
-  N=60        318
+  N=60        320
   N=8         297
   N=12        290
   N=1         284

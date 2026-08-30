@@ -1,0 +1,13 @@
+head_minus_N_invocations=6761
+of_those_persisted_to_file=35
+persisted_results_overall=68
+
+=== samples: head -N whose output was persisted ===
+  moai todo 2>&1 | head -60
+  echo "--- origin/main top ---"; git log origin/main --oneline -3; echo "--- local HEAD ---"; git log --oneline
+  moai todo 2>&1 | head -60
+  moai todo 2>&1 | head -60
+  moai todo 2>&1 | head -40
+  moai todo 2>&1 | head -60
+  echo "=== P2: test_ 개수 ===" && git show origin/main:server/tests/test_ws_wait_guard.py | grep -c "def test_" ;
+  moai todo 2>&1 | head -60

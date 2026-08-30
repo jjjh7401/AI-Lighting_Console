@@ -76,9 +76,9 @@ python3 .moai/reports/t192/probes/_t192_headscan.py
 ```
 files_read=263 unparseable_lines=0
 projects_with_bash=89
-bash_commands_total=27875
-piped_into_head_total=7479 (26.83% of bash commands)
-help_piped_into_head_total=110
+bash_commands_total=27944
+piped_into_head_total=7484 (26.78% of bash commands)
+help_piped_into_head_total=111
 projects_with_at_least_one_pipe_head=88
 ```
 
@@ -90,10 +90,10 @@ projects_with_at_least_one_pipe_head=88
 하위 형태 (`_t192_subforms.py`):
 
 ```
-  2251  in  78 projects   grep_then_head
-   955  in  85 projects   list_then_head
-   110  in  33 projects   help_then_head
-grep_with_count_flag_then_head=267
+  2252  in  78 projects   grep_then_head
+   956  in  85 projects   list_then_head
+   111  in  34 projects   help_then_head
+grep_with_count_flag_then_head=268
 ```
 
 ### E3. 포화 (C3) — `_t192_saturation.py`
@@ -103,16 +103,16 @@ python3 .moai/reports/t192/probes/_t192_saturation.py
 ```
 
 ```
-head_minus_N_invocations_paired=4268  unpaired=0
-saturated(lines==N)=788 (18.5% of paired)
-under(lines<N, count is trustworthy)=3480 (81.5%)
-over/banner=2486
+head_minus_N_invocations_judgeable=4270  unpaired=0  over=2489
+saturated(lines==N)=788 (18.5% of judgeable)
+under(lines<N, count is trustworthy)=3482 (81.5%)
+
 ```
 
 `unpaired=0` — 모든 호출이 결과와 짝지어졌다(계기 손실 없음).
-`over/banner` 2,486 은 head 가 마지막 단이 아니었거나 배너가 앞에 붙은 경우라
+`over` 2,489 는 head 가 마지막 단이 아니었거나 배너가 앞에 붙은 경우라
 행수로 포화를 판정할 수 없다 — 분모에서 제외했고, 그것이 18.5% 의 분모가
-4,268 인 이유다.
+4,270 인 이유다.
 
 ### E4. 교집합 (C5) — `_t192_intersect.py`
 
@@ -131,7 +131,7 @@ saturated_AND_totality_question=413   (52.4%)
 ### E5. 저장본 교차 (C4) — `_t192_persisted.py`
 
 ```
-head_minus_N_invocations=6759
+head_minus_N_invocations=6761
 of_those_persisted_to_file=35
 persisted_results_overall=68
 ```
@@ -162,10 +162,10 @@ awk 'BEGIN.. 600000 bytes ..'               ->  저장본 600000 전량
 
 - 트리: `.claude/worktrees/t192`, HEAD `822e9bd` (= `origin/main`, `git merge --ff-only` 로 올림)
 - 코퍼스: `/Users/studiox/.claude/projects` — transcript 263개, 1.1G
-- 탐침 4개 전량이 이 보고서와 같은 커밋에 들어간다 (`.moai/reports/t192/probes/`)
+- 탐침 5개 + 공용부 1개 전량이 이 보고서와 같은 커밋에 들어간다 (`.moai/reports/t192/probes/`)
 
 🔴 **코퍼스가 살아 있다.** M5 를 몇 분 간격으로 두 번 돌리자
-`saturated` 785 → **788**, `paired` 4,249 → **4,268** 로 늘었다. 동료 세션 21개가
+`saturated` 785 → **788**, 판정가능분 4,249 → **4,268** → **4,270** 으로 늘었다(세 번 재서 세 값). 동료 세션 21개가
 지금도 transcript 를 쓰고 있다. 처음에 M5(785)와 M6(788)이 어긋났을 때 탐침
 버그를 의심했고, **M5 를 그대로 재실행하는 대조군**으로 갈랐다 — 두 탐침은
 일치하고 움직인 것은 코퍼스다.
@@ -272,3 +272,64 @@ awk 'BEGIN.. 600000 bytes ..'               ->  저장본 600000 전량
   그것이 장점이자 한계다. 넣고 나면 **다음 발생까지 효과를 알 수 없다.**
 - 이 보고서 자체가 **head 함정의 표적**이다. 위 명령을 재현할 때 `| head` 를
   붙이면 같은 자리에 다시 선다.
+
+---
+
+## 8. 부록 — 이 회차에서 추가로 잰 둘
+
+### 8.1 탐침 재작성은 행동을 안 바꿨다 (회귀 확인)
+
+pre-push 게이트가 막았다 — **게이트는 내가 건드린 파일을 린트하고, 탐침 `.py`
+들이 거기 걸린다.** 원인은 내 것이었다(선행 상태에서는 안 나던 실패).
+
+```
+make test-fast
+  -> 2 failed, 314 passed
+     TestTouchedFilesPassLint::test_ruff_check_passes_on_them
+     TestTouchedFilesPassLint::test_ruff_format_reports_no_change
+     "Would reformat: .moai/reports/t192/probes/_t192_subforms.py"
+```
+
+탐침 5개를 공용부(`_t192_common.py`) + f-string + 컨텍스트 매니저로 다시 썼다.
+
+```
+uv run ruff check  .moai/reports/t192/probes/   -> All checks passed!
+uv run ruff format --check .moai/reports/t192/probes/  -> 6 files already formatted
+python3 _t192_saturation.py  -> saturated=788 (재작성 전과 동일)
+```
+
+포화 788 이 재작성 전후로 같다 — **양식 수정이 계기를 안 깨뜨렸다.** 나머지
+값들이 조금씩 움직인 것은 §3 의 코퍼스 생존 때문이고, 방향이 전부 증가라
+일관된다.
+
+⚠️ 이 사실 자체가 관행 하나를 드러낸다: **`.moai/reports/` 아래 탐침도 린트
+대상이다.** 조사 카드가 `.py` 탐침을 커밋하면 게이트에 걸린다 — 다음 레인이
+같은 자리에 선다.
+
+### 8.2 규약 §2 의 「heredoc 방아쇠는 중괄호」가 이 세션에선 재현되지 않았다
+
+§2 는 「Bash 히어독의 방아쇠는 중괄호다 … 정규식 `[0-9]` 세자리 하나로 거절됐다」
+로 적는다. 이 세션에서 **재현되지 않았다.**
+
+```
+cat > .moai/reports/t192/probes/_braceprobe.py <<'EOF'
+x = 3
+print(f"value={x}")
+EOF
+echo wrote     ->  wrote      (중괄호 · f-string 둘 다 통과)
+```
+
+이 회차에서 실제로 거절된 것은 **복합 명령**이었다:
+
+```
+rm ... && cat > ... <<'PYEOF' ... PYEOF && uv run ruff check ...
+  -> "this command is too complex to verify that it stays inside the worktree"
+```
+
+거절 문구가 중괄호가 아니라 **워크트리 이탈 검증 불가**를 말한다. 즉 §2 의
+방아쇠 진단은 최소한 이 세션에서는 **축이 다르다** — 중괄호가 아니라 정적으로
+경로를 못 따라가는 구조(체이닝·`cd`)다.
+
+⚠️ **안 잰 것**: §2 를 낳은 세션과 이 세션의 차이가 무엇인지 안 쟀다. 가드가
+버전·설정·시작 디렉터리에 따라 갈릴 수 있으므로 **§2 를 지우자는 뜻이 아니다** —
+「환경에 따라 갈린다」를 §2 에 붙일 재료로 리드에게 올린다.
