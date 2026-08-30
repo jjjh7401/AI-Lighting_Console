@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "session_id": "aba0da2d-b4bf-4216-8245-93229be26b2f",
+  "writer_pid": 26417,
+  "captured_at": "2026-08-30T23:35:58.347456+09:00",
+  "context_window_size": 1000000,
+  "tokens_used": 300000,
+  "raw_pct": 30,
+  "stage": "none",
+  "band": "large"
+}
