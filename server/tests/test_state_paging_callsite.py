@@ -44,7 +44,7 @@ from pathlib import Path
 
 from server.llm.types import ToolCall
 from server.orchestrator.ports import ExecutionResult
-from server.orchestrator.tools import build_toolset
+from server.orchestrator.tools import build_toolset, collect_rig_sections
 from server.rig.paging import PAGE_CAP, paged_children
 
 RIG = Path("src/Lighting_Designer/02_RIG팩")
@@ -280,3 +280,132 @@ class TestThePagingDisciplineHasOneHome:
         source = Path("server/orchestrator/tools.py").read_text(encoding="utf-8")
         assert "paged_children(" in source
         assert "offset=seen" not in source, "호출부에 루프 사본이 생겼다"
+
+
+# -- t151: `collect_rig_sections` 도 섹션을 끝까지 걷는가 -----------------------
+#
+# t131 이 프리셋 임포트 자리에서, t150 이 fx 프리셋 목적지에서 닫은 것과 같은 결함의
+# 셋째 자리다. 다른 것은 **폭발 반경**이다 — 이 함수는 열 섹션을 한꺼번에 답하므로
+# 한 곳을 고치면 열 판독이 동시에 바뀐다.
+
+
+def _kids(count: int) -> list[dict]:
+    return [dict(i=n, name="Obj " + str(n)) for n in range(1, count + 1)]
+
+
+def _split(children: list[dict], sizes: tuple[int, ...]) -> dict[int, list[dict]]:
+    windows: dict[int, list[dict]] = dict()
+    cursor = 0
+    for size in sizes:
+        if cursor >= len(children):
+            break
+        windows[cursor] = children[cursor : cursor + size]
+        cursor += size
+    return windows
+
+
+class _SectionConsole:
+    """섹션마다 **다른** 창 크기로 답하는 포트 — `offset` 을 받고 되돌려 준다.
+
+    창을 섹션마다 다르게 두는 것이 이 픽스처의 요점이다. 2026-08-30 실기
+    (onPC 2.4.2)에서 `DataPool/Groups` 18건은 한 창에 왔는데
+    `Patch/Stages/1/Fixtures` 86건은 **19**에서 잘렸다 — 18 < 19 인데 결과가 갈린다.
+    개수로는 절단을 예측할 수 없다는 뜻이고(바이트 축), 그래서 「큰 섹션만 페이징」
+    판별기는 지을 수 없다. 픽스처가 그 사실을 그대로 담는다.
+    """
+
+    def __init__(self, tree: dict[str, tuple[list[dict], tuple[int, ...]]]) -> None:
+        self._tree = tree
+        self.calls: list[tuple[str, int]] = []
+
+    def query_state(self, path: str, *, offset: int = 0) -> dict:
+        self.calls.append((path, offset))
+        if path not in self._tree:
+            raise LookupError("unknown object path: " + path)
+        children, sizes = self._tree[path]
+        window = _split(children, sizes).get(offset, [])
+        return dict(
+            ok=True,
+            path=path,
+            children=window,
+            node=dict(childCount=len(children)),
+            truncated=offset + len(window) < len(children),
+            offset=offset,
+        )
+
+
+class _LegacySectionConsole(_SectionConsole):
+    """페이징을 **모르는** 포트 — `offset` 키워드를 아예 안 받는다. 대조군."""
+
+    def query_state(self, path: str) -> dict:  # type: ignore[override]
+        return super().query_state(path)
+
+
+#: 실측 그대로: 86건은 19·18·18·18·13 다섯 창, 18건은 한 창.
+_TREE = dict(
+    fixtures=(_kids(86), (19, 18, 18, 18, 13)),
+    groups=(_kids(18), (24,)),
+)
+_PATHS = dict(fixtures="Patch/Stages/1/Fixtures", groups="DataPool/Groups")
+
+
+def _console(cls=_SectionConsole):
+    return cls({_PATHS[name]: entry for name, entry in _TREE.items()})
+
+
+class TestCollectRigSectionsWalksEverySection:
+    """단언은 `truncated is False` 가 아니라 **모은 개수 == `childCount`** 다.
+
+    첫 창만 쓰고 플래그만 지우는 구현도 앞의 단언은 통과한다 — t131 이 세운 기준
+    (`TestTheLoopCollectsEverything`)을 이 자리에도 그대로 건다.
+    """
+
+    def test_a_truncated_section_arrives_whole(self):
+        console = _console()
+        summary, resolved, failed = collect_rig_sections(console, _PATHS, frozenset(), 0)
+        entry = summary["fixtures"]
+        assert (resolved, failed) == (2, 0)
+        assert len(entry["objects"]) == entry["total"], (
+            "모은 자식이 childCount 에 못 미친다 — 첫 창에서 멈췄다. 모은 "
+            + str(len(entry["objects"]))
+            + " / 총 "
+            + str(entry["total"])
+        )
+        assert entry["truncated"] is False
+        assert [o["no"] for o in entry["objects"]] == list(range(1, 87))
+
+    def test_the_windows_really_were_uneven(self):
+        """대조군 — 창이 균일하면 위 검사가 「고정 창 가정」을 못 잡는다."""
+        sizes = [len(w) for w in _split(*_TREE["fixtures"]).values()]
+        assert len(set(sizes[:-1])) > 1, sizes
+
+    def test_an_untruncated_section_spends_no_follow_up_query(self):
+        """대조군 — 18건짜리 `groups` 는 후속 조회를 쏘지 않는다.
+
+        「전부 페이징」의 비용 논거가 여기 걸린다: 절단이 없으면 왕복이 늘지 않는다.
+        없으면 위 검사가 「무조건 섹션마다 한 창 더 쏜다」와 구별되지 않는다.
+        """
+        console = _console()
+        collect_rig_sections(console, _PATHS, frozenset(), 0)
+        groups_offsets = [off for path, off in console.calls if path == _PATHS["groups"]]
+        assert groups_offsets == [0], groups_offsets
+
+    def test_the_truncated_section_is_the_only_one_that_pages(self):
+        """개수로는 못 고른다 — 18건은 한 창, 86건은 다섯 창. 실측 그대로."""
+        console = _console()
+        collect_rig_sections(console, _PATHS, frozenset(), 0)
+        fixture_offsets = [off for path, off in console.calls if path == _PATHS["fixtures"]]
+        assert fixture_offsets == [0, 19, 37, 55, 73], fixture_offsets
+
+    def test_a_port_that_cannot_page_still_reports_truncated(self):
+        """대조군 — 걷지 **못하면** 정직하게 미완을 고지한다.
+
+        이 카드가 안전을 깎지 않았음을 잰다. 없으면 위 검사들이 「절단 신호를
+        지웠다」와 구별되지 않는다.
+        """
+        console = _console(_LegacySectionConsole)
+        summary, _resolved, _failed = collect_rig_sections(console, _PATHS, frozenset(), 0)
+        entry = summary["fixtures"]
+        assert entry["truncated"] is True
+        assert len(entry["objects"]) == 19
+        assert entry["total"] == 86
