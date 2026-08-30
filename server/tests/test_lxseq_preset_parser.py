@@ -215,6 +215,35 @@ class TestStorability:
             )
         )
 
+    def test_the_class_sum_exceeds_the_row_count_by_the_multi_blocked_rows(self):
+        """t153 표기 규약의 근거 — 클래스 합과 행 수는 **다른 것을 센다.**
+
+        문서가 「3 · 3」과 「5행」을 나란히 적으면 안 맞는 것처럼 보이지만 산수
+        오류가 아니다. 한 행이 사유 둘을 지면 클래스 합이 행 수보다 크고, **그
+        차이가 곧 다중 차단 행의 수**다. 위 두 검사는 각각 행 수(7)와 클래스
+        합(3+3+2=8)을 따로 단언할 뿐 **그 둘의 관계**는 아무 데서도 안 잰다 —
+        그래서 「개수를 맞추는」 정리가 참인 값을 거짓으로 바꿔도 안 걸린다.
+        """
+        held = _held()
+        total_classes = sum(len(record.hold_classes) for record in held)
+        multi = [record.preset_id for record in held if len(record.hold_classes) > 1]
+        assert total_classes > len(held), (
+            "클래스 합이 행 수를 넘지 않는다 — 그러면 문서가 두 값을 구분해 적을 "
+            "이유가 사라지고, 이 표기 규약 자체가 근거를 잃는다: "
+            + str(total_classes)
+            + " vs "
+            + str(len(held))
+        )
+        # 판별력을 지는 것은 아래 단언이다. 위 부등호는 방향만 고정한다 —
+        # 「합 − 행 == 다중 행 수」 형태로 적었다가 뺐다: bm 에서 도달 가능한
+        # 클래스가 둘뿐이라 어느 행도 셋을 못 져서 이 코퍼스에서는 **항등식**이고,
+        # 항등식은 아무것도 안 지킨다.
+        assert multi == ["BM.01"], (
+            "다중 차단 행이 바뀌었다 — 문서의 「합 N > 행 M」 표기도 같이 고쳐야 한다 "
+            "(.moai/specs/SPEC-COPILOT-LXSEQ-003/preset-unify-design.md §5 표기 규약, "
+            "spec.md §A.4-2 합계 행): " + str(multi)
+        )
+
     def test_every_class_is_from_the_closed_set(self):
         """비공허성 — 클래스가 열려 있으면 위 개수는 오타를 세고 있을 수 있다."""
         known = frozenset(
