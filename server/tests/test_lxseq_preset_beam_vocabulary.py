@@ -104,7 +104,12 @@ class TestTheProbeEvidenceIsBoundedNotExhaustive:
 
     def test_the_parser_comment_does_not_claim_the_syntax_is_invalid(self):
         source = Path("server/lxseq/preset_parser.py").read_text(encoding="utf-8")
-        block = source.split("_PROBE_REJECTED = (")[0]
+        # t141 이 선언을 `= tuple(...)` 파생으로 바꿨다. 앵커를 안 따라가면 split 이
+        # 아무것도 못 잘라 **파일 전체**를 훑고, 그러면 이 검사가 「주석 블록에 있다」가
+        # 아니라 「파일 어딘가에 있다」를 재게 된다 — 조용히 약해지는 자리다.
+        anchor = "_PROBE_REJECTED = tuple("
+        assert anchor in source, "선언 형태가 또 바뀌었다 — 앵커를 같이 옮겨라"
+        block = source.split(anchor)[0]
         assert "전수 확정으로도" in block, "한정 문장이 사라졌다"
         assert "관측되지 않았다" in block, "Failed 차이의 미관측이 사라졌다"
 
@@ -151,3 +156,93 @@ class TestThePrefixMatchIsDirectional:
         storable, reasons = parser_module.classify_storability("preset-bm", "Prism 3-facet ON")
         assert storable is False
         assert HOLD_PROBE_REJECTED in [r.hold_class for r in reasons]
+
+
+def _stale_holds(accepted, mapping, rejected) -> tuple[str, ...]:
+    """보류 사유가 **거짓이 된** 항목.
+
+    콘솔 이름이 수용 어휘에 들어갔는데 그 시트 토큰이 아직 보류 목록에 있으면,
+    그 행의 사유 문면("라이브 프로브가 거절한 속성")은 더 이상 참이 아니다.
+    """
+    return tuple(
+        token
+        for token, console_name in mapping.items()
+        if console_name in accepted and token in rejected
+    )
+
+
+def _widened_with(name: str) -> frozenset:
+    """콘솔 어휘가 그 이름만큼 넓어진 세계. t149 가 오는 날의 모양이다."""
+    return frozenset(parser_module._ACCEPTED_ATTRIBUTES).union([name])
+
+
+class TestTheMappingIsTheOnlyJoinBetweenTheTwoVocabularies:
+    """t141 — 두 어휘의 연결을 산문이 아니라 **데이터**로 둔 자리."""
+
+    def test_the_derived_tuple_is_byte_identical_to_the_hand_written_one(self):
+        """파생으로 바꾸면서 동작이 안 바뀌었다는 것을 다음 사람이 검산하는 자리."""
+        assert parser_module._PROBE_REJECTED == ("Focus", "Frost", "Prism", "Shutter")
+        assert tuple(parser_module._SHEET_TO_CONSOLE_ATTRIBUTE) == parser_module._PROBE_REJECTED
+
+    def test_every_console_name_is_strictly_longer_than_its_sheet_token(self):
+        """방향 불변식 — 콘솔 이름이 시트 토큰보다 길다.
+
+        이 부등호가 뒤집히면 「짧은 쪽을 목록에 둔다」는 규칙의 전제가 사라진다.
+        """
+        for token, console_name in parser_module._SHEET_TO_CONSOLE_ATTRIBUTE.items():
+            assert console_name.startswith(token), (token, console_name)
+            assert len(console_name) > len(token), (token, console_name)
+
+    def test_a_console_name_in_the_list_would_stop_matching_its_own_sheet_token(self):
+        """「그냥 맞추면 되잖아」가 닫히는 자리 — 술어를 실제로 돌려서 잰다."""
+        for token, console_name in parser_module._SHEET_TO_CONSOLE_ATTRIBUTE.items():
+            assert token.lower().startswith(token.lower())
+            assert not token.lower().startswith(console_name.lower()), (token, console_name)
+
+
+class TestTheStaleHoldTripwire:
+    """콘솔 어휘가 넓어지는 날(t149) 보류 사유가 조용히 거짓이 되는 것을 잡는다.
+
+    🔴 보류를 자동으로 **풀지는** 않는다. `server/orchestrator/tools.py` 의 소비
+    루프는 종류를 안 가리고, 값을 명령으로 못 옮기는 배정이 하나라도 있으면 만들어
+    둔 번들을 통째로 버린다. bm 에는 적용 줄이 없으므로(`LXSEQ_PRESET_APPLY_ATTRIBUTE`
+    는 `preset-dim` 한 칸) bm 한 행이 저절로 열리면 **프리셋 임포트 전체가 0건**이
+    된다 — 자동 해제는 그 지뢰를 심는 것이다. 그래서 푸는 대신 **빨개진다.**
+    """
+
+    def test_no_hold_reason_is_stale_today(self):
+        stale = _stale_holds(
+            parser_module._ACCEPTED_ATTRIBUTES,
+            parser_module._SHEET_TO_CONSOLE_ATTRIBUTE,
+            parser_module._PROBE_REJECTED,
+        )
+        assert stale == (), (
+            "콘솔 어휘가 넓어져 이 토큰들의 보류 사유가 거짓이 됐다: "
+            + ", ".join(stale)
+            + " — 목록에서 빼기 전에 **적용 경로부터 열어라**. "
+            "bm 에 적용 줄이 없는 채로 열면 프리셋 임포트가 통째로 0건이 된다 "
+            "(server/orchestrator/tools.py 의 apply_untranslatable fail-closed)."
+        )
+
+    def test_the_tripwire_actually_fires_when_a_console_name_becomes_accepted(self):
+        """비공허성 — 「오늘 조용하다」와 「검사가 공허하다」를 가른다.
+
+        위 검사는 빈 튜플을 단언한다. 술어가 무엇을 넣어도 빈 튜플을 낸다면 그
+        단언은 아무것도 안 지킨다. 그래서 넓어진 세계를 만들어 실제로 울리는지 본다.
+        """
+        stale = _stale_holds(
+            _widened_with("Frost1"),
+            parser_module._SHEET_TO_CONSOLE_ATTRIBUTE,
+            parser_module._PROBE_REJECTED,
+        )
+        assert stale == ("Frost",)
+
+    def test_the_tripwire_stays_quiet_when_the_token_left_the_hold_list(self):
+        """반대 방향 — 사유가 사라진 뒤에는 울리면 안 된다(과잉 경보 방지)."""
+        without_frost = tuple(t for t in parser_module._PROBE_REJECTED if t != "Frost")
+        stale = _stale_holds(
+            _widened_with("Frost1"),
+            parser_module._SHEET_TO_CONSOLE_ATTRIBUTE,
+            without_frost,
+        )
+        assert stale == ()

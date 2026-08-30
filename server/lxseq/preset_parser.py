@@ -64,27 +64,51 @@ PRESET_ID_PREFIXES: dict[str, str] = dict(
 #: 다르다(아래 참조). 「정본에서 import 하면 되지 않나」는 여기서 두 번 어긋난다.
 _ACCEPTED_ATTRIBUTES = frozenset(CONFIRMED_ATTRIBUTES + PROBE_GATED_ATTRIBUTES)
 
-#: 라이브 프로브가 거절한 속성 — 다만 **시트 어휘로** 적는다.
+#: 감독 시트 토큰 -> 콘솔에 **쏘는** 어트리뷰트 이름. 두 어휘의 **유일한 연결 지점**이다.
 #:
-#: 🔴 `server/looks/schema.py:16` 의 문면과 **한 글자 다른 것은 고의다.** 정본은
-#: 콘솔에 **쏜** 문자열을 적고("Focus / Frost / Prism1 / Shutter"), 이 튜플은
-#: 감독 **시트에 적힌** 토큰을 매칭한다(`preset-bm.csv`: `Prism OFF` ·
-#: `Prism 3-facet ON`). 두 어휘는 **틀린 것이 아니라 다른 것**이다.
+#: 🔴 둘을 한 목록으로 못 합친다 — 취향이 아니라 `_attribute_tokens` 술어의 **방향**
+#: 때문이다. 그 술어는 목록 항목을 시트 토큰의 **접두사**로 쓴다:
 #:
-#: 정본 문면에 맞춰 `Prism1` 로 "고치면" 술어가 시트 토큰 `Prism` 에 안 걸려
-#: **BM.03 이 storable 로 열린다** — 그리고 그 속성은 프로브가 `Failed` 를 낸
-#: 바로 그것이다(t135 실측). 정합성 개선이 아니라 회귀다.
+#:     목록 `Prism`  · 시트 `Prism`   ->  "prism".startswith("prism")    참
+#:     목록 `Prism1` · 시트 `Prism`   ->  "prism".startswith("prism1")   거짓
+#:     목록 `Prism`  · 시트 `Prism1`  ->  "prism1".startswith("prism")   참
+#:
+#: **짧은 항목이 엄격히 더 관대한데, 콘솔이 받는 이름(값)은 시트 토큰(키)보다 길다** —
+#: 정확히 반대 방향이다. 그래서 매칭은 **키로만** 걸리고 발사는 **값으로만** 된다.
+#: 정본 문면에 맞춰 키를 `Prism1` 로 "고치면" 시트 토큰 `Prism` 에 안 걸려
+#: **BM.03 이 storable 로 열린다** — 정합성 개선이 아니라 회귀다.
 #: `test_lxseq_preset_beam_vocabulary.py` 가 그 치환을 실제로 해서 고정한다.
 #:
-#: 근거의 세기 — 정본 실측표(`SPEC-COPILOT-LOOKLIB-001/progress.md:157-170`)는
-#: 스스로 한정을 달아 뒀다: `Illegal object` 는 (i) 콘솔이 그 이름을 모른다 와
-#: (ii) **선택된 픽스처가 그 속성을 갖지 않는다** 양쪽과 정합한다. 프로브는
-#: `Group 13`(=`All`) 하나로 쐈고 그 그룹이 frost/prism/shutter 를 실제로 보유하는지는
-#: 확립되지 않았다. `Prism1` 만 `Failed` 로 다른 오류 문자열을 냈고 그 차이의 원인은
-#: **관측되지 않았다.** 그러므로 이것은 「이 리그에서 이 선택으로는 안 받았다」이지
-#: 「문법이 무효다」가 아니다 — 부재를 다시 grep 으로 찾을 일은 아니되, 전수 확정으로도
-#: 읽지 마라.
-_PROBE_REJECTED = ("Focus", "Frost", "Prism", "Shutter")
+#: ⚠️ 값은 「콘솔이 **받는** 이름」이 아니라 「콘솔에 **쏘는/쏜** 이름」이며, 넷의
+#: 출처 등급이 셋과 하나로 갈린다: `Focus1`·`Frost1`·`Shutter1` 은 t135 가
+#: `Patch/FixtureTypes` DMX 채널 목록에서 **읽은** 이름이고, `Prism1` 은 **쏴서
+#: `Failed` 를 받은** 이름이다(그 기종에 프리즘 채널이 없다). `Shutter1` 은 읽기만
+#: 했고 값을 쏜 적이 없다 — danger 정책 배제라 승인 범위 밖이었다.
+#:
+#: 근거: `.moai/specs/SPEC-COPILOT-LXSEQ-003/spec.md` §A.4-2b (t146 이 정본에 실었다).
+#: 그 절이 M0 거절 넷을 축으로 가른다 — `Frost`·`Focus` 는 철자, `Prism` 은 부재,
+#: `Shutter` 는 그 측정의 대상이 아니었다(반증되지 않은 것과 재확인된 것은 다르다).
+#:
+#: 그래도 이 표를 **전수 확정으로도** 읽지 마라. `Prism1` 만 `Failed` 로 다른 오류
+#: 문자열을 냈고 그 차이의 원인은 **관측되지 않았다** — 채널 부재가 그 문자열을
+#: 설명하는지까지는 안 쟀다. 이것은 「이 리그에서 이 선택으로는 안 받았다」이지
+#: 「문법이 무효다」가 아니다.
+_SHEET_TO_CONSOLE_ATTRIBUTE: dict[str, str] = dict(
+    [("Focus", "Focus1"), ("Frost", "Frost1"), ("Prism", "Prism1"), ("Shutter", "Shutter1")]
+)
+
+#: 라이브 프로브가 거절한 속성 — **시트 어휘로** 적는다. 정의역은 위 표의 키다.
+#: 파생이라 손으로 두 벌을 맞출 일이 없고, 오늘 값은 이전 튜플과 **바이트 동일**하다
+#: (`("Focus", "Frost", "Prism", "Shutter")` — dict 가 삽입 순서를 지킨다).
+#:
+#: 🔴 보류를 「값이 수용 목록에 들어갔으면 자동으로 푼다」로는 **파생시키지 않는다.**
+#: `server/orchestrator/tools.py` 의 소비 루프는 종류를 안 가리고(`for placement in
+#: result.planned`), 값을 명령으로 못 옮기는 것이 **하나라도** 있으면 만들어 둔 번들을
+#: 통째로 버린다("…한 줄도 보내지 않았다"). bm 에는 적용 줄이 없으므로
+#: (`LXSEQ_PRESET_APPLY_ATTRIBUTE` 는 `preset-dim` 한 칸), bm 한 행이 저절로 열리는 날
+#: **프리셋 임포트 전체가 0건**이 된다 — bm 만이 아니다. 파생은 그 지뢰를 심는 것이다.
+#: 대신 어긋남을 검사가 잡는다(트립와이어 — 위 테스트 파일).
+_PROBE_REJECTED = tuple(_SHEET_TO_CONSOLE_ATTRIBUTE)
 
 #: 풀 계열 자체가 범위 밖인 것. `server/looks/schema.py:55-57` —
 #: "Position/All/Gobo/Control/Shapers/Video are out of scope".
