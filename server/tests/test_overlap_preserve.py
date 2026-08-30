@@ -54,6 +54,39 @@ _T115_PIPELINE_DIR = "src/Lighting_Designer/90_빌드파이프라인"
 #: directories are NOT separated into two lists: the split is derived
 #: mechanically below, so revising this list cannot desynchronise a hand-written
 #: count.
+#:
+#: **이 목록은 범위 선언이다 — 이 게이트가 만든 경계가 아니다.** (t162)
+#:
+#: 항목의 출처는 각 SPEC 이 자기 범위를 선언한 자리이고, 이 파일이 하는 일은 그
+#: 선언을 매 스위트 실행마다 다시 확인하는 것뿐이다. 좌표(둘 다 되읽어 확인했고,
+#: :class:`TestPreserveScopeCitations` 가 트립와이어로 잡는다):
+#:
+#: * ``.moai/specs/SPEC-COPILOT-PRECHK-001/plan.md:89`` — §A.5 PRESERVE 재확인
+#:   표의 첫 행. ``server/looks/*.py`` 여섯과 ``server/looks/library/`` 를
+#:   「PRECHK 는 룩 계층 소비자가 아니다. 변경 0건」으로 선언한다. 이어지는
+#:   행들이 나머지 항목이다.
+#: * ``.moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md:182`` — REQ-SONGCUE-021.
+#:   선례 게이트(``server/tests/test_songcue_bundle.py`` 의
+#:   ``_PRESERVE_LOOK_FILES``)의 여섯 파일이 여기서 온다.
+#:
+#: **읽는 법 — 두 문장은 다르고, 이 게이트는 앞의 것만 잰다.**
+#:
+#: 「그 SPEC 은 이 파일들을 안 건드렸다」는 **역사적 사실**이다. 그 SPEC 이 닫힌
+#: 뒤에도 영원히 참이고, 매 실행 재확인해도 값이 안 변한다. 「아무도 이 파일들을
+#: 못 건드린다」는 **집행되는 경계**이고 미래를 구속한다. 이 게이트가 재확인하는
+#: 것은 앞의 것이다. 뒤의 것으로 읽으면 이미 끝난 SPEC 의 범위 선언이 저장소
+#: 전체의 동결 규칙으로 조용히 승격되고, 그 승격은 아무도 승인한 적이 없다.
+#:
+#: **다른 카드가 이 파일 중 하나를 고쳐야 하면, 처방은 이 게이트가 아니다.**
+#:
+#: 여기에 예외를 다는 것(아래 룰북·console/lua 예외처럼)은 마지막 수단이다.
+#: 먼저 가는 곳은 **선언 층** — 그 항목을 목록에 올린 SPEC 문서다. 선례가 있다:
+#: SONGCUE v0.2.0 은 ``console/lua/**`` 에 예외를 단 것이 아니라 §C PRESERVE
+#: 목록에서 **뺐다**(사유 ``SPEC-COPILOT-SONGCUE-001/spec.md:245-250`` · 승인
+#: 기록 같은 SPEC 의 ``progress.md`` §F 개정 절).
+#:
+#: ⚠️ 그때는 그 SPEC 이 **살아 있었다.** 닫힌 SPEC 의 선언을 사후에 고치는
+#: 경우는 이 선례가 덮지 않는다 — 그 판단은 이 게이트 밖이다.
 _PRESERVE_PATHS = (
     "server/looks/schema.py",
     "server/looks/loader.py",
@@ -519,6 +552,90 @@ class TestPreserveList:
         # And every directory entry ends with a separator, so `--` treats it as a
         # prefix rather than as a missing file.
         assert all(path.endswith("/") for path in directories)
+
+
+class TestPreserveScopeCitations:
+    """t162 — 위 범위 선언 주석이 가리키는 좌표가 아직 그 자리인가.
+
+    주석은 실행되지 않으므로 가리킨 문서가 움직여도 조용히 어긋난다. 이 저장소는
+    그 형태를 이미 한 번 겪었다 — 가리킨 §F 헤딩이 목적지에 아예 없던 「끊어진
+    참조」(``SPEC-COPILOT-SONGCUE-001/progress.md:146``). 그래서 좌표를
+    트립와이어로 잡는다. 여기가 빨개지면 결함이 아니라 **문서가 움직였다**는
+    뜻이고, 처방은 주석의 줄 번호를 다시 박는 것이다.
+
+    이 클래스는 위 목록의 내용에 아무 단정도 하지 않는다 — ``_PRESERVE_PATHS``
+    의 항목·술어·단정은 :class:`TestPreserveList` 이하가 그대로 소유한다.
+    """
+
+    _PRECHK_PLAN = ".moai/specs/SPEC-COPILOT-PRECHK-001/plan.md"
+    _PRECHK_ROW = 89
+    _SONGCUE_SPEC = ".moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md"
+    _SONGCUE_REQ = 182
+
+    @staticmethod
+    def _line(path: str, number: int) -> str:
+        lines = (_REPO_ROOT / path).read_text(encoding="utf-8").splitlines()
+        assert len(lines) >= number, path
+        return lines[number - 1]
+
+    def test_the_prechk_row_still_declares_the_looks_layer(self):
+        row = self._line(self._PRECHK_PLAN, self._PRECHK_ROW)
+        assert "server/looks/" in row
+        assert "변경 0건" in row
+
+    def test_the_songcue_line_is_still_the_preserve_requirement(self):
+        line = self._line(self._SONGCUE_SPEC, self._SONGCUE_REQ)
+        assert "REQ-SONGCUE-021" in line
+        assert "PRESERVE" in line
+
+    def test_a_neighbouring_line_would_not_satisfy_either_check(self):
+        """비공허성 — 두 검사가 아무 줄에나 걸리면 좌표를 안 잰 것과 같다.
+
+        대조군은 빈 줄이 아니라 **닮은 이웃**이다. ``plan.md`` 의 다음 행도
+        「변경 0건」을 적지만 룩 계층이 아니고, ``spec.md`` 의 앞 요구도
+        ``REQ-SONGCUE-02x`` 이지만 PRESERVE 목록을 걸지 않는다. 표가 한 행
+        밀리는 것이 실제 위험이므로 그 형태를 직접 쏜다.
+        """
+        neighbour = self._line(self._PRECHK_PLAN, self._PRECHK_ROW + 2)
+        assert "변경 0건" in neighbour
+        assert "server/looks/" not in neighbour
+
+        earlier = self._line(self._SONGCUE_SPEC, self._SONGCUE_REQ - 3)
+        assert "REQ-SONGCUE-0" in earlier
+        assert "REQ-SONGCUE-021" not in earlier
+
+    def test_the_scope_declaration_block_is_still_written_down(self):
+        """문구 단언 — 위 좌표 검사(성질)와 **다른 행**이고 서로를 못 대신한다.
+
+        좌표만 지키면 주석이 통째로 지워져도 초록이고, 문구만 지키면 좌표가
+        어긋난 채로도 초록이다. 그래서 둘을 갈라 둔다.
+
+        🔴 우주를 **목록 위 주석 구역으로 잘라서** 본다. 파일 전체에 대고 찾으면
+        이 메서드가 들고 있는 단정 리터럴 자신이 매치돼 **검사가 공허해진다** —
+        주석을 통째로 지우는 뮤테이션이 실제로 살아남는 것을 보고 고쳤다.
+        """
+        source = Path(__file__).read_text(encoding="utf-8")
+        anchor = source.index("_PRESERVE_PATHS = (")
+        header = source[:anchor]
+        # 비공허성 — 자른 구역이 비어 있으면 아래 단정이 전부 헛돈다.
+        assert len(header) > 500
+        assert "이 목록은 범위 선언이다" in header
+        assert "집행되는 경계" in header
+        assert self._PRECHK_PLAN + ":" + str(self._PRECHK_ROW) in header
+        assert self._SONGCUE_SPEC + ":" + str(self._SONGCUE_REQ) in header
+
+    def test_the_precedent_gate_points_here_instead_of_copying(self):
+        """선례 게이트는 같은 설명을 복사하지 않고 이 파일을 가리킨다.
+
+        복사하면 술어가 두 곳으로 갈리고 한쪽만 고쳐진다. 그러므로 저쪽에는
+        **포인터가 있고 본문은 없어야** 한다 — 두 조건을 다 잰다.
+        """
+        precedent = (_REPO_ROOT / "server/tests/test_songcue_bundle.py").read_text(encoding="utf-8")
+        assert "범위 선언이지 이 게이트가 만든" in precedent
+        assert "server/tests/test_overlap_preserve.py" in precedent
+        # 본문은 이 파일에만 — 저쪽이 복사본을 갖게 되면 여기서 빨개진다.
+        assert "집행되는 경계)의 구별" in precedent
+        assert "뒤의 것으로 읽으면" not in precedent
 
 
 class TestPreserveDiffIsEmpty:
