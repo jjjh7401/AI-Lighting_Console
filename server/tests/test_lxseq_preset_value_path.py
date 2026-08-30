@@ -198,3 +198,47 @@ class TestAKindWithoutATranslationIsNotStored:
         구분되지 않는다."""
         _payload, port, _approval = _dispatch(DIM.read_bytes())
         assert any(c.startswith("Store Preset ") for c in port.executed), port.executed
+
+
+class TestOneUntranslatableRowStopsTheWholeSheet:
+    """t155 — **섞이면 한 행이 나머지를 죽인다.** 실측으로 고정한다.
+
+    위 검사는 표를 통째로 비워 **전부** 번역 불가인 계획만 잰다. 그러면 「한 행만
+    불가일 때 나머지는 어떻게 되나」가 안 갈린다 — 이 클래스가 그 자리를 연다.
+
+    이것은 결함이 아니라 **설계**다. `REQ-LXSEQ3-008` 과 acceptance 축 ②가 세운
+    「부분 계획이 최악이다 — 반쯤 맞는 프리셋이 쇼파일에 남고 다음 단계(큐)가
+    그것을 참조한다」의 적용 단계 판이다. 다만 그 두 문면은 **매퍼**와 **풀·슬롯
+    어긋남**만 묶고 있어, 적용 단계의 **번역 불가** 축은 문면에 없다(t155 보고서).
+
+    ⚠️ 오늘은 **자연히 도달하지 않는다**: dim·col 은 판정과 판독이 같은 술어를 타고
+    (t155 퍼즈 22,955 값 중 판정 통과 1,444 · 어긋남 0, 날조 대조군으로 검출력 확인),
+    bm 은 전부 보류라 `planned` 에 안 오른다. 그래서 이 검사는 **미래를 위한 가드**다.
+    """
+
+    def test_one_untranslatable_row_stops_every_other_row_in_the_same_sheet(self, monkeypatch):
+        from server.orchestrator import tools as tools_module
+
+        real = tools_module._lxseq_preset_apply_command
+
+        def one_row_untranslatable(placement):
+            if placement.preset_id == "DIM.LOW":
+                return None
+            return real(placement)
+
+        monkeypatch.setattr(tools_module, "_lxseq_preset_apply_command", one_row_untranslatable)
+        payload, port, _approval = _dispatch(DIM.read_bytes())
+
+        assert port.executed == [], (
+            "한 행만 번역 불가인데 나머지가 나갔다 — 부분 적용이다: " + repr(port.executed)
+        )
+        assert payload.get("refusal") == "apply_untranslatable", payload.get("refusal")
+        untranslatable = payload.get("untranslatable") or []
+        assert [item.get("preset_id") for item in untranslatable] == ["DIM.LOW"], untranslatable
+
+    def test_the_control_is_that_the_same_sheet_fires_without_the_patch(self):
+        """대조군 — 패치 없이는 여섯 행이 다 나간다. 없으면 위 검사가
+        「이 시트는 원래 안 나간다」와 구분되지 않는다."""
+        _payload, port, _approval = _dispatch(DIM.read_bytes())
+        applied = [c for c in port.executed if c.startswith("Group 1 ; Attribute")]
+        assert len(applied) == len(DIM_LEVELS), port.executed
