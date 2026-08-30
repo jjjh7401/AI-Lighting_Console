@@ -142,6 +142,18 @@ class TestTheApplyLine:
             " ; Attribute 'ColorRGB_B' At 23.5"
         )
 
+    def test_the_format_is_pinned_to_one_decimal(self):
+        """🔴 이 검사도 뮤테이션이 살아남아서 쓰였다.
+
+        위 검사의 값(100.0 · 70.6 · 23.5)은 `f"{v}"` 와 `f"{v:.1f}"` 가 **우연히
+        같다.** 그래서 `%.1f` 를 떼어내도 아무도 안 잡았다. 두 형태가 갈리는 값으로
+        재야 자리수가 실제로 고정된다.
+        """
+        line = preset_apply_color_command(1, (70.588, 0.0, 100.0))
+        assert "At 70.6 " in line
+        assert "70.588" not in line
+        assert line.endswith("At 100.0")
+
     def test_it_refuses_a_bad_group_number(self):
         import pytest
 
@@ -157,3 +169,113 @@ class TestTheApplyLine:
 
         with pytest.raises(SpatialPointingError):
             preset_apply_color_command(1, (100.1, 0.0, 0.0))
+
+
+class _RecordingPort:
+    """발화를 기록만 한다. `test_lxseq_preset_value_path.py` 의 포트와 같은 모양이되
+    풀 목록이 **Color** 를 답한다 — 풀 번호는 콘솔 목록에서만 온다(AC-LXSEQ3-006)."""
+
+    def __init__(self) -> None:
+        self.executed: list[str] = []
+
+    def execute(self, command: str):
+        from server.orchestrator.ports import ExecutionResult
+
+        self.executed.append(command)
+        return ExecutionResult(ok=True, detail="OK")
+
+    def query_state(self, path: str) -> dict:
+        if path.endswith("PresetPools"):
+            return dict(
+                children=[dict(i=1, name="Dimmer"), dict(i=4, name="Color")],
+                node=dict(childCount=2),
+            )
+        return dict(children=[], node=dict(childCount=0), truncated=False)
+
+    def query_property(self, path: str, name: str) -> dict:
+        return dict(ok=False, error="not readable")
+
+
+class _Approval:
+    def __init__(self) -> None:
+        self.asked: list[tuple[str, ...]] = []
+
+    def request_approval(self, request) -> bool:
+        self.asked.append(tuple(item.command for item in request.items))
+        return True
+
+
+def _dispatch_col():
+    import base64
+    import json
+
+    from server.llm.types import ToolCall
+    from server.orchestrator.tools import build_toolset
+
+    port = _RecordingPort()
+    registry = build_toolset(
+        execution_port=port,
+        state_port=port,
+        property_port=port,
+        group_approval_port=_Approval(),
+    )
+    execution = registry.dispatch(
+        ToolCall(
+            id="t134",
+            name="import_lxseq_presets",
+            arguments=dict(
+                file_content_base64=base64.b64encode(CSV.read_bytes()).decode("ascii"),
+                action="apply",
+            ),
+        )
+    )
+    return json.loads(execution.result.content), port
+
+
+class TestTheColorValueReachesTheConsole:
+    """🔴 이 클래스는 뮤테이션이 살아남아서 쓰였다.
+
+    `_lxseq_preset_apply_command` 의 col 분기를 통째로 꺼도 검사가 전부 초록이었다 —
+    임포터가 **실제로 색 줄을 내보내는지** 아무도 안 재고 있었다. 이 카드의 핵심
+    동작인데 그랬다.
+    """
+
+    def test_every_rgb_row_puts_its_three_components_on_the_wire(self):
+        _payload, port = _dispatch_col()
+        expected = [
+            "Group 1 ; Attribute 'ColorRGB_R' At 100.0"
+            " ; Attribute 'ColorRGB_G' At 70.6 ; Attribute 'ColorRGB_B' At 23.5",
+            "Group 1 ; Attribute 'ColorRGB_R' At 100.0"
+            " ; Attribute 'ColorRGB_G' At 23.5 ; Attribute 'ColorRGB_B' At 62.0",
+            "Group 1 ; Attribute 'ColorRGB_R' At 35.3"
+            " ; Attribute 'ColorRGB_G' At 16.9 ; Attribute 'ColorRGB_B' At 78.4",
+            "Group 1 ; Attribute 'ColorRGB_R' At 18.0"
+            " ; Attribute 'ColorRGB_G' At 84.7 ; Attribute 'ColorRGB_B' At 84.7",
+            "Group 1 ; Attribute 'ColorRGB_R' At 100.0"
+            " ; Attribute 'ColorRGB_G' At 41.6 ; Attribute 'ColorRGB_B' At 15.7",
+            "Group 1 ; Attribute 'ColorRGB_R' At 11.8"
+            " ; Attribute 'ColorRGB_G' At 23.5 ; Attribute 'ColorRGB_B' At 100.0",
+        ]
+        for line in expected:
+            assert line in port.executed, "이 줄이 안 나갔다: " + line + " / " + repr(port.executed)
+
+    def test_the_bundle_order_is_apply_then_store_then_clear(self):
+        """t108 이 세운 계약 — ClearAll 이 적용보다 앞이면 빈 프로그래머가 저장된다."""
+        _payload, port = _dispatch_col()
+        first = next(i for i, c in enumerate(port.executed) if c.startswith("Group 1 ; Attribute"))
+        assert port.executed[first + 1].startswith("Store Preset 4.")
+        assert port.executed[first + 2].startswith("Label Preset 4.")
+        assert port.executed[first + 3] == "ClearAll"
+
+    def test_the_two_kelvin_rows_are_never_stored(self):
+        """**6행이지 8행이 아니다** — 발화에도 그렇게 나타나야 한다."""
+        _payload, port = _dispatch_col()
+        stores = [c for c in port.executed if c.startswith("Store Preset")]
+        assert len(stores) == 6
+        labels = [c for c in port.executed if c.startswith("Label Preset")]
+        assert not [c for c in labels if "화이트" in c]
+
+    def test_the_pool_number_comes_from_the_console_listing(self):
+        """비공허성 — 4 는 상수가 아니라 콘솔이 답한 `Color` 의 번호다."""
+        _payload, port = _dispatch_col()
+        assert all(c.startswith("Store Preset 4.") for c in port.executed if "Store Preset" in c)
