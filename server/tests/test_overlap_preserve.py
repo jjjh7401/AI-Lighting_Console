@@ -24,6 +24,41 @@ pre-change tree, because the boundaries they assert already held. Catching a fix
 is a different job, done by the mutation batteries recorded per milestone. What
 this file catches is a FUTURE edit crossing a boundary nobody re-checks, which is
 the failure mode a one-off manual gate leaves open.
+
+**이 게이트가 지키는 목록은 범위 선언이다 — 이 게이트가 만든 경계가 아니다.** (t162)
+
+``_PRESERVE_PATHS`` 와 선례 게이트의 ``_PRESERVE_LOOK_FILES`` 는 각 SPEC 이 자기
+범위를 선언한 자리에서 왔고, 이 파일이 하는 일은 그 선언을 매 스위트 실행마다
+다시 확인하는 것뿐이다. 좌표(둘 다 되읽어 확인했고
+:class:`TestPreserveScopeCitations` 가 트립와이어로 잡는다):
+
+* ``.moai/specs/SPEC-COPILOT-PRECHK-001/plan.md:89`` — §A.5 PRESERVE 재확인 표의
+  첫 행. ``server/looks/*.py`` 여섯과 ``server/looks/library/`` 를 「PRECHK 는 룩
+  계층 소비자가 아니다. 변경 0건」으로 선언한다. 이어지는 행들이 나머지 항목이다.
+* ``.moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md:182`` — REQ-SONGCUE-021,
+  「The **본 SPEC** shall not …」. 선례 게이트
+  (``server/tests/test_songcue_bundle.py``)의 여섯 파일이 여기서 온다.
+
+**읽는 법 — 두 문장은 다르고, 이 게이트는 앞의 것만 잰다.**
+
+「그 SPEC 은 이 파일들을 안 건드렸다」는 **역사적 사실**이다. 그 SPEC 이 닫힌
+뒤에도 영원히 참이고, 매 실행 재확인해도 값이 안 변한다. 「아무도 이 파일들을 못
+건드린다」는 **집행되는 경계**이고 미래를 구속한다. 이 게이트가 재확인하는 것은
+앞의 것이다. ``git diff`` 가 비었는지만 보므로 게이트 자신은 그 둘을 **구별할 수
+없다** — 구별은 여기 문면에만 있다. 뒤의 것으로 읽으면 이미 끝난 SPEC 의 범위
+선언이 저장소 전체의 동결 규칙으로 조용히 승격되고, 그 승격은 아무도 승인한 적이
+없다.
+
+**다른 카드가 이 파일 중 하나를 고쳐야 하면, 처방은 이 게이트가 아니다.**
+
+여기에 예외를 다는 것(아래 룰북·console/lua 예외처럼)은 마지막 수단이다. 먼저
+가는 곳은 **선언 층** — 그 항목을 목록에 올린 SPEC 문서다. 선례가 있다:
+SONGCUE v0.2.0 은 ``console/lua/**`` 에 예외를 단 것이 아니라 §C PRESERVE 목록에서
+**뺐다**(사유 ``SPEC-COPILOT-SONGCUE-001/spec.md:245-250`` · 승인 기록 같은 SPEC 의
+``progress.md`` §F 개정 절).
+
+⚠️ 그때는 그 SPEC 이 **살아 있었다.** 닫힌 SPEC 의 선언을 사후에 고치는 경우는 이
+선례가 덮지 않는다 — 그 판단은 이 게이트 밖이다.
 """
 
 from __future__ import annotations
@@ -55,38 +90,9 @@ _T115_PIPELINE_DIR = "src/Lighting_Designer/90_빌드파이프라인"
 #: mechanically below, so revising this list cannot desynchronise a hand-written
 #: count.
 #:
-#: **이 목록은 범위 선언이다 — 이 게이트가 만든 경계가 아니다.** (t162)
-#:
-#: 항목의 출처는 각 SPEC 이 자기 범위를 선언한 자리이고, 이 파일이 하는 일은 그
-#: 선언을 매 스위트 실행마다 다시 확인하는 것뿐이다. 좌표(둘 다 되읽어 확인했고,
-#: :class:`TestPreserveScopeCitations` 가 트립와이어로 잡는다):
-#:
-#: * ``.moai/specs/SPEC-COPILOT-PRECHK-001/plan.md:89`` — §A.5 PRESERVE 재확인
-#:   표의 첫 행. ``server/looks/*.py`` 여섯과 ``server/looks/library/`` 를
-#:   「PRECHK 는 룩 계층 소비자가 아니다. 변경 0건」으로 선언한다. 이어지는
-#:   행들이 나머지 항목이다.
-#: * ``.moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md:182`` — REQ-SONGCUE-021.
-#:   선례 게이트(``server/tests/test_songcue_bundle.py`` 의
-#:   ``_PRESERVE_LOOK_FILES``)의 여섯 파일이 여기서 온다.
-#:
-#: **읽는 법 — 두 문장은 다르고, 이 게이트는 앞의 것만 잰다.**
-#:
-#: 「그 SPEC 은 이 파일들을 안 건드렸다」는 **역사적 사실**이다. 그 SPEC 이 닫힌
-#: 뒤에도 영원히 참이고, 매 실행 재확인해도 값이 안 변한다. 「아무도 이 파일들을
-#: 못 건드린다」는 **집행되는 경계**이고 미래를 구속한다. 이 게이트가 재확인하는
-#: 것은 앞의 것이다. 뒤의 것으로 읽으면 이미 끝난 SPEC 의 범위 선언이 저장소
-#: 전체의 동결 규칙으로 조용히 승격되고, 그 승격은 아무도 승인한 적이 없다.
-#:
-#: **다른 카드가 이 파일 중 하나를 고쳐야 하면, 처방은 이 게이트가 아니다.**
-#:
-#: 여기에 예외를 다는 것(아래 룰북·console/lua 예외처럼)은 마지막 수단이다.
-#: 먼저 가는 곳은 **선언 층** — 그 항목을 목록에 올린 SPEC 문서다. 선례가 있다:
-#: SONGCUE v0.2.0 은 ``console/lua/**`` 에 예외를 단 것이 아니라 §C PRESERVE
-#: 목록에서 **뺐다**(사유 ``SPEC-COPILOT-SONGCUE-001/spec.md:245-250`` · 승인
-#: 기록 같은 SPEC 의 ``progress.md`` §F 개정 절).
-#:
-#: ⚠️ 그때는 그 SPEC 이 **살아 있었다.** 닫힌 SPEC 의 선언을 사후에 고치는
-#: 경우는 이 선례가 덮지 않는다 — 그 판단은 이 게이트 밖이다.
+#: **이 목록은 범위 선언이다 — 이 게이트가 만든 경계가 아니다.** 출처 좌표와
+#: 「안 건드렸다」/「못 건드린다」의 구별, 그리고 다른 카드가 이 파일을 고쳐야
+#: 할 때 선언 층으로 가는 이유는 **이 모듈의 독스트링**에 있다 (t162).
 _PRESERVE_PATHS = (
     "server/looks/schema.py",
     "server/looks/loader.py",
@@ -607,22 +613,36 @@ class TestPreserveScopeCitations:
     def test_the_scope_declaration_block_is_still_written_down(self):
         """문구 단언 — 위 좌표 검사(성질)와 **다른 행**이고 서로를 못 대신한다.
 
-        좌표만 지키면 주석이 통째로 지워져도 초록이고, 문구만 지키면 좌표가
+        좌표만 지키면 문면이 통째로 지워져도 초록이고, 문구만 지키면 좌표가
         어긋난 채로도 초록이다. 그래서 둘을 갈라 둔다.
 
-        🔴 우주를 **목록 위 주석 구역으로 잘라서** 본다. 파일 전체에 대고 찾으면
-        이 메서드가 들고 있는 단정 리터럴 자신이 매치돼 **검사가 공허해진다** —
-        주석을 통째로 지우는 뮤테이션이 실제로 살아남는 것을 보고 고쳤다.
+        🔴 우주는 파일이 아니라 **모듈 독스트링**(``__doc__``)이다. 파일 전체에
+        대고 찾으면 이 메서드가 들고 있는 단정 리터럴 자신이 매치돼 **검사가
+        공허해진다** — 문면을 통째로 지우는 뮤테이션이 실제로 살아남는 것을 보고
+        우주를 좁혔다. ``__doc__`` 은 검사 본문을 포함하지 않으므로 그 형태가
+        원리적으로 불가능하다.
+        """
+        assert __doc__ is not None
+        # 비공허성 — 우주가 비면 아래 단정이 전부 헛돈다.
+        assert len(__doc__) > 500
+        assert "범위 선언이다" in __doc__
+        assert "집행되는 경계" in __doc__
+        assert self._PRECHK_PLAN + ":" + str(self._PRECHK_ROW) in __doc__
+        assert self._SONGCUE_SPEC + ":" + str(self._SONGCUE_REQ) in __doc__
+
+    def test_the_list_carries_a_pointer_to_the_docstring(self):
+        """목록 옆에 착지한 독자를 위로 보내는 포인터가 아직 있는가.
+
+        본문은 독스트링에 **한 번만** 둔다(카드 t162 가 지목한 자리). 목록 위에는
+        포인터만 두므로, 그 포인터가 사라지면 목록만 보고 「집행되는 경계」로
+        오독할 자리가 다시 열린다.
         """
         source = Path(__file__).read_text(encoding="utf-8")
-        anchor = source.index("_PRESERVE_PATHS = (")
-        header = source[:anchor]
-        # 비공허성 — 자른 구역이 비어 있으면 아래 단정이 전부 헛돈다.
-        assert len(header) > 500
-        assert "이 목록은 범위 선언이다" in header
-        assert "집행되는 경계" in header
-        assert self._PRECHK_PLAN + ":" + str(self._PRECHK_ROW) in header
-        assert self._SONGCUE_SPEC + ":" + str(self._SONGCUE_REQ) in header
+        header = source[: source.index("_PRESERVE_PATHS = (")]
+        assert "이 모듈의 독스트링" in header
+        # 본문은 복사되지 않았다 — 포인터 구역에 결론 문장이 있으면 두 벌이 된다.
+        pointer_zone = header[header.index("#: The ten paths") :]
+        assert "뒤의 것으로 읽으면" not in pointer_zone
 
     def test_the_precedent_gate_points_here_instead_of_copying(self):
         """선례 게이트는 같은 설명을 복사하지 않고 이 파일을 가리킨다.
