@@ -235,6 +235,27 @@ class TestTheToolActuallyRuns:
         assert "검증된" in payload["guidance"]
         assert "짧으니 안전" in payload["guidance"]
 
+    def test_the_guidance_says_the_class_sum_can_exceed_the_row_count(self):
+        """t156 — 지시가 그 성질을 안 적으면 모델이 합을 건수로 보고한다.
+
+        bm 이 그 자리다: 행은 5인데 클래스 합은 6이다(`BM.01` 이 사유 둘을 겸한다).
+        그 차이는 오류가 아니라 **다중 차단 행이 있다**는 정보인데, 지시가 전하지
+        않으면 사용자는 「6건 보류」를 듣고 있지도 않은 여섯째 행을 찾는다.
+
+        페이로드는 안 고쳤다 — `held` 리스트가 이미 실려 있어 행 수는 그 길이로
+        나온다. `held_rows` 를 따로 실으면 **어긋날 수 있는 중복 상태**가 된다.
+        """
+        payload, _ = self._dispatch("bm")
+        held_rows = len(payload["held"])
+        class_sum = sum(payload["held_by_class"].values())
+        assert class_sum > held_rows, (
+            "이 성질이 사라지면 지시의 그 문장이 무엇을 막는지 안 읽힌다 — "
+            "합 " + str(class_sum) + " vs 행 " + str(held_rows)
+        )
+        assert "행이 아니라 클래스 출현 횟수" in payload["guidance"]
+        assert "있지도 않은 행을 찾는다" in payload["guidance"]
+        assert "그 차이는 오류가 아니라" in payload["guidance"]
+
 
 class TestOneVocabulary:
     """종류 이름이 **한 어휘**인지 — 파서와 레지스트리가 갈리면 조용히 틀린다.
