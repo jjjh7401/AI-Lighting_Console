@@ -164,9 +164,16 @@ class TestStorability:
     """이 SPEC 의 AC 가 재지 않는 자리 — **넣을 수 있는가**.
 
     사유는 전부 이 저장소가 **이미 실기로 재서** 적어 둔 것이다
-    (`server/looks/schema.py`: M0 프로브가 Zoom·Iris 만 받았고 Focus/Frost/
-    Prism1/Shutter 를 거절했으며 Gobo 계열은 범위 밖). **부재가 아니라 판정**이므로
-    다시 검색해서 닫힌 질문을 열지 마라.
+    (`server/looks/schema.py`: M0 프로브가 Zoom·Iris 만 받았고 Gobo 계열은 범위
+    밖). 다만 M0 가 거절한 넷은 **사유가 하나가 아니다** — `Focus`·`Frost` 는 철자가
+    틀렸던 것이고(콘솔 채널명은 `Focus1`·`Frost1`, t135 가 실기로 둘 다 통과시켰다),
+    `Prism` 은 이 리그에 채널 자체가 없으며, `Shutter` 는 danger 정책 배제라 프로브
+    결과와 무관하다. **부재가 아니라 판정**이므로 다시 검색해서 닫힌 질문을 열지
+    마라 — 다만 「콘솔이 못 받는다」로도 읽지 마라.
+
+    정본 `server/looks/schema.py:16-18` 은 아직 옛 사유를 하나로 말한다. PRESERVE
+    게이트 둘이 그 파일을 바이트 단위로 잠그고 있어 t142 가 못 고쳤고, 정정은
+    t149(예외 심사) 뒤로 간다.
     """
 
     def test_dim_and_the_rgb_half_of_col_are_storable(self):

@@ -63,8 +63,15 @@ COLOR_CHANNELS = ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
 # Substring scan, matching the shipped verification grep verbatim. These are API
 # tokens, not topic words, so a plain case-insensitive substring is the right
 # shape — a word boundary would miss ``ColorRGB_Pan``-style compounds. Focus /
-# Frost / Prism1 / Shutter were REJECTED by the M0 probe and are out of scope
-# under every branch (spec.md §D); Pan / Tilt are movement-only.
+# Frost / Prism1 / Shutter did not enter band 3 at M0, for three causes rather
+# than one: Focus / Frost were misspellings of ``Focus1`` / ``Frost1`` (t135
+# fired both live at ok=True), Prism is genuinely absent from this rig, Shutter
+# is danger-policy excluded and was never fired. What this list keys on is the
+# scope boundary, which holds under every branch (spec.md §D) whichever cause
+# applies; Pan / Tilt are movement-only. The canonical docstring at
+# ``server/looks/schema.py:16-18`` still states the old single cause — two
+# PRESERVE gates lock that file, so t142 could not correct it; the correction
+# follows the t149 exception review.
 FORBIDDEN_ATTRIBUTE_TOKENS = ("Pan", "Tilt", "Focus", "Frost", "Prism", "Shutter")
 
 # A per-show value can only reach the assets through a string field (the schema
@@ -188,7 +195,9 @@ class TestAttributeVocabulary:
     def test_no_probe_rejected_beam_string_appears_in_any_asset(self, asset_text):
         # Raw-text scan, not a parsed scan: the loader would reject these names
         # in an attribute payload, but it never sees a comment or a display
-        # name. Focus/Frost/Prism1/Shutter were rejected by the console at M0.
+        # name. Focus/Frost/Prism1/Shutter did not enter band 3 at M0; the cause
+        # differs per name (see FORBIDDEN_ATTRIBUTE_TOKENS above), and what this
+        # scan enforces is the scope boundary, not any one of those causes.
         for name, text in asset_text:
             for token in FORBIDDEN_ATTRIBUTE_TOKENS:
                 assert token.lower() not in text.lower(), (
