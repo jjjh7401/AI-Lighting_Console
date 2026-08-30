@@ -15,6 +15,7 @@ import pytest
 from server.groupgen.write import (
     DEFAULT_GROUP_PLAN_CAP,
     FIXTURE_LIST_TRUNCATED,
+    FIXTURE_LIST_UNREAD,
     GROUP_LINE_COLLISION,
     GROUP_PLAN_TOO_LARGE,
     GROUP_POOL_TRUNCATED,
@@ -37,8 +38,35 @@ MEASURED_GROUPS_SECTION = {
 }
 MEASURED_OCCUPIED = frozenset({1, 11, 12, 13, 15})
 
-UNTRUNCATED_FIXTURES_SECTION = {"ok": True, "truncated": False, "childCount": 19}
-TRUNCATED_FIXTURES_SECTION = {"ok": True, "truncated": True, "childCount": 19}
+# 픽스처 단면 가짜는 `objects` 를 실어야 한다(t179). 이 키가 없으면
+# `section_refusal` 이 단면을 **미판독**으로 읽는다 — 즉 「읽었고 안 잘렸다」를
+# 태우려던 가짜가 실은 「한 줄도 못 읽었다」를 태우고 있었다.
+_FIXTURE_OBJECTS = [{"no": n} for n in range(1, 20)]  # childCount 19 와 일치
+
+UNTRUNCATED_FIXTURES_SECTION = {
+    "ok": True,
+    "truncated": False,
+    "childCount": 19,
+    "objects": _FIXTURE_OBJECTS,
+}
+TRUNCATED_FIXTURES_SECTION = {
+    "ok": True,
+    "truncated": True,
+    "childCount": 19,
+    # 잘린 목록 — 도착 수가 `childCount` 보다 적다
+    "objects": _FIXTURE_OBJECTS[:18],
+}
+
+#: `section_refusal` 이 미판독으로 읽는 세 신호. 셋째는 위 가짜들이
+#: t179 이전까지 **실수로** 갖고 있던 바로 그 모양이다.
+UNREAD_FIXTURES_SECTIONS = (
+    pytest.param({"ok": False, "reason": "console did not answer"}, id="not-ok"),
+    pytest.param(
+        {"ok": True, "truncated": False, "reason": "path_not_resolved"},
+        id="reason-string",
+    ),
+    pytest.param({"ok": True, "truncated": False, "childCount": 19}, id="objects-absent"),
+)
 
 
 # -- select_group_slot -------------------------------------------------------
@@ -120,6 +148,35 @@ def test_guard_fixture_list_truncation_rejects_truncated_list() -> None:
 
 def test_guard_fixture_list_truncation_passes_untruncated_list() -> None:
     guard_fixture_list_truncation(UNTRUNCATED_FIXTURES_SECTION)  # must not raise
+
+
+@pytest.mark.parametrize("section", UNREAD_FIXTURES_SECTIONS)
+def test_guard_fixture_list_truncation_refuses_an_unread_list(section) -> None:
+    """t179 — 이 가드가 막아야 할 **가장 나쁜 입력**을 막는가.
+
+    이 가드는 잠들어 있다(프로덕션 호출자 0). 깨우는 것은 독스트링이 예고한
+    auto-selection caller 하나이고, 그 호출자는 **바로 이 못 읽은 목록에서**
+    ``fids`` 를 뽑는다. t179 이전에는 실패 단면에 `truncated` 키가 아예 없어
+    그냥 통과했다.
+
+    거절 갈래가 이제 둘이므로 「거절됐다」가 아니라 **어느 사유로** 거절됐는지를
+    단언한다(규약 §3) — 거짓 사유로 먼저 거절되면 참 사유가 안 보인다.
+    """
+    with pytest.raises(GroupSlotError) as excinfo:
+        guard_fixture_list_truncation(section)
+    assert excinfo.value.code == FIXTURE_LIST_UNREAD
+    assert excinfo.value.code != FIXTURE_LIST_TRUNCATED, (
+        "미판독을 절단으로 답하면 사람이 페이징을 고치러 가서 안 낫는다"
+    )
+    assert "never read" in excinfo.value.message
+
+
+def test_guard_fixture_list_truncation_still_says_truncated_for_a_read_cut_list() -> None:
+    """대조군 — 두 갈래가 갈린다. 읽었지만 잘린 목록은 절단으로 답한다."""
+    with pytest.raises(GroupSlotError) as excinfo:
+        guard_fixture_list_truncation(TRUNCATED_FIXTURES_SECTION)
+    assert excinfo.value.code == FIXTURE_LIST_TRUNCATED
+    assert "never read" not in excinfo.value.message
 
 
 # -- build_group_write_plan ---------------------------------------------------
@@ -209,7 +266,14 @@ def test_build_group_write_plan_proceeds_on_truncated_fixture_list() -> None:
     explicit-fids group write. This is a LIVE-shape regression: the scenario
     is exactly ``{"ok": True, "truncated": True, "objects": [18 entries]}``
     against a rig whose real ``childCount`` is 39."""
-    live_shape_truncated_fixtures = {"ok": True, "truncated": True, "childCount": 39}
+    live_shape_truncated_fixtures = {
+        "ok": True,
+        "truncated": True,
+        "childCount": 39,
+        # 39 중 18 만 도착 — 위 독스트링이 적은 그 모양이다(t179 전까지
+        # 리터럴엔 `objects` 가 없어 이 검사가 라이브 모양을 안 태웠다)
+        "objects": [{"i": n} for n in range(1, 19)],
+    }
     plan = build_group_write_plan(
         buckets={"a": (1, 2)},
         names={"a": "GEO Downstage"},
@@ -240,6 +304,64 @@ def test_build_group_write_plan_flags_no_truncation_when_list_was_complete() -> 
         names={"a": "GEO Downstage"},
         groups_section=MEASURED_GROUPS_SECTION,
         fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+    )
+    assert plan.fixture_list_truncated is False
+    assert plan.fixture_list_truncated_reason == ""
+
+
+#: 미판독 사유에만 나오는 문면. 절단 사유에는 없다.
+_PRODUCER_UNREAD_PHRASE = "could not be read at all"
+
+
+@pytest.mark.parametrize("section", UNREAD_FIXTURES_SECTIONS)
+def test_build_group_write_plan_never_calls_an_unread_listing_untruncated(section) -> None:
+    """t179 — 생산 지점이 「못 읽었다」를 「안 잘렸다」로 답하지 않는다.
+
+    실패 단면에는 `truncated` 키가 아예 없어 `bool(...)` 이 False 가 됐다. 그
+    False 는 사실의 부재가 아니라 **거짓 사실**이다 — 데이터클래스 독스트링이
+    「a caller that only reads the plan field still receives the truncation
+    fact」라고 약속한 그 필드가, 아무것도 안 읽은 상태에서 「깨끗하게 다
+    읽었다」와 바이트 동일로 나갔다.
+    """
+    plan = build_group_write_plan(
+        buckets={"a": (1, 2)},
+        names={"a": "GEO Downstage"},
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=section,
+    )
+    assert plan.fixture_list_truncated is True
+    assert _PRODUCER_UNREAD_PHRASE in plan.fixture_list_truncated_reason, (
+        "미판독인데 사유가 미판독이라고 말하지 않는다: " + plan.fixture_list_truncated_reason
+    )
+
+
+def test_build_group_write_plan_reports_truncation_as_truncation_not_as_unread() -> None:
+    """대조군 ① — 두 사유가 갈린다. 읽었지만 잘린 목록은 절단으로 보고된다."""
+    plan = build_group_write_plan(
+        buckets={"a": (1, 2)},
+        names={"a": "GEO Downstage"},
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=TRUNCATED_FIXTURES_SECTION,
+    )
+    assert plan.fixture_list_truncated is True
+    assert _PRODUCER_UNREAD_PHRASE not in plan.fixture_list_truncated_reason, (
+        "절단을 미판독 사유로 보고한다 — 두 갈래가 다시 섞였다: "
+        + plan.fixture_list_truncated_reason
+    )
+
+
+def test_build_group_write_plan_passes_a_legitimately_empty_but_read_listing() -> None:
+    """대조군 ② — 「빈 관측」은 「관측 없음」이 아니다.
+
+    콘솔이 답했고 그 답이 「없다」인 단면은 정당한 관측이다
+    (`server/rig/section.py` 계약). 이 팔이 없으면 위 수정이 필드를 True 로
+    굳혀도 초록이 나고, 정상적인 첫 임포트가 영영 「절단」으로 보고된다.
+    """
+    plan = build_group_write_plan(
+        buckets={"a": (1, 2)},
+        names={"a": "GEO Downstage"},
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section={"ok": True, "truncated": False, "objects": []},
     )
     assert plan.fixture_list_truncated is False
     assert plan.fixture_list_truncated_reason == ""
