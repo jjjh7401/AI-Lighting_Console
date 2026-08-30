@@ -700,3 +700,128 @@ class TestBoundariesDidNotMove:
             "type": "integer"
         }
         assert definition.parameters["required"] == ["groups"]
+
+
+# -- t151: 컨테이너를 끝까지 읽게 되면 무엇이 요구되는가 -----------------------
+#
+# `collect_rig_sections` 가 섹션을 페이징으로 끝까지 걷게 되면(t151), 이 파일의
+# 시나리오에서 shortfall 이 **1 에서 0 으로** 바뀐다. 위 배터리는 그 변화를 못 잡는다 —
+# `_write_console`(473행)도 위쪽 리스팅 더블(123행)도 `offset` 키워드를 안 받아
+# 공용 루프가 TypeError 로 강등하기 때문이다. **걷지 못하는 더블은 고치기 전과 뒤가
+# 같은 답을 낸다.** 그래서 여기 `offset` 을 받는 더블을 새로 만든다.
+
+
+def _paged_write_console(*, declared=5, first_window=4, occupied_names=None):
+    """`offset` 을 **받는** 쓰기 콘솔 — 컨테이너를 두 창으로 끝까지 준다.
+
+    `_write_console` 과 같은 쇼를 담되 창으로 쪼갠다: 첫 창 4건, 둘째 창 1건,
+    `childCount` 5. 걸어서 5건을 다 모으면 shortfall 은 0 이다.
+    """
+    names = occupied_names or dict()
+    fixtures = [dict(i=slot, name="Spot " + str(slot)) for slot in range(1, declared + 1)]
+    windows = dict([(0, fixtures[:first_window]), (first_window, fixtures[first_window:])])
+    extra: dict[str, dict] = dict()
+    properties: dict[tuple[str, str], dict] = dict()
+    for slot, name in names.items():
+        extra[GROUPS_PATH + "/" + str(slot)] = dict(ok=True)
+        properties[(GROUPS_PATH + "/" + str(slot), "Name")] = dict(ok=True, value=name)
+
+    class PagedWriteConsole:
+        def query_state(self, path: str, *, offset: int = 0) -> dict:
+            if path == GROUPS_PATH:
+                return dict(ok=True, truncated=False, node=dict(childCount=0), children=[])
+            if path == FIXTURES_PATH:
+                window = windows.get(offset, [])
+                return dict(
+                    ok=True,
+                    path=path,
+                    node=dict(childCount=declared),
+                    children=window,
+                    truncated=offset + len(window) < declared,
+                    offset=offset,
+                )
+            if path in extra:
+                return extra[path]
+            raise LookupError("unknown object path: " + path)
+
+        def query_property(self, path: str, property_name: str) -> dict:
+            key = (path, property_name)
+            if key not in properties:
+                return dict(ok=False, error="property not readable: " + property_name)
+            return properties[key]
+
+    return PagedWriteConsole()
+
+
+def _occupied():
+    return dict([(1, "GEO Stage Left")])
+
+
+def _acknowledged_call():
+    return dict(groups=[_PARTIAL_GROUP], acknowledged_unread_fids=[5])
+
+
+class TestAFullyWalkedContainerRedirectsToReclassification:
+    """페이징 뒤 `topology_partial` 그룹의 거절 **사유**를 잰다 (t151).
+
+    이 검사가 사유를 **문자열까지** 보는 이유: 이 자리는 거절 갈래가 둘이고
+    **둘 다 거절**이라 `is_error is True` 만으로는 원리적으로 구별되지 않는다.
+
+      - `a non-empty list` 갈래 — 인정 목록을 아예 안 냈을 때. **여기로 떨어지면 빨간다.**
+      - `reports 0 unseen … re-run classify_arrangement_topology` 갈래 — 이쪽이 맞다.
+
+    컨테이너를 끝까지 읽게 되면 shortfall 이 0 이 되고, 부분 판독 위에서 만든
+    `topology_partial` 그룹은 그 순간 낡은 것이다. 그때 요구되는 것은 「못 본 fid 를
+    더 대라」가 아니라 **재분류**이며, 코드의 에러 문면이 이미 그 처방을 이름 짓고 있다
+    (`_unread_acknowledgement_refusal`).
+
+    이 단언을 `is_error` 만 보도록 완화하지 마라 — 그러면 두 갈래가 같아 보이고,
+    거짓 사유로 먼저 거절되면 참 사유가 안 보인다.
+    """
+
+    def test_the_refusal_names_reclassification_not_a_longer_list(self):
+        execution, port = _create(
+            _paged_write_console(occupied_names=_occupied()), _acknowledged_call()
+        )
+        content = execution.result.content
+
+        assert execution.result.is_error is True
+        assert "reports 0 unseen" in content, content
+        assert "re-run classify_arrangement_topology" in content, content
+        assert "a non-empty list" not in content, (
+            "7630 갈래로 떨어졌다 — 인정 목록을 냈는데도 「목록을 내라」가 나왔다. "
+            "거절 사유가 뒤바뀌면 참 사유가 안 보인다. " + content
+        )
+        assert port.executed == []
+
+    def test_an_unpaged_console_still_takes_the_enumeration(self):
+        """대조군 — 걷지 **못하는** 포트에서는 옛 동작 그대로다.
+
+        `_write_console` 은 `offset` 을 안 받아 shortfall 이 1 로 남고 `[5]` 가
+        통과한다. 두 검사가 나란히 있어야 「페이징이 사유를 바꿨다」가 관측이 되고,
+        이 카드가 안전을 깎은 것이 아니라 **조인** 것임이 잰 값으로 남는다.
+        """
+        execution, port = _create(_write_console(occupied_names=_occupied()), _acknowledged_call())
+
+        assert execution.result.is_error is False, execution.result.content
+        assert port.executed
+
+    def test_the_paged_container_really_arrived_whole(self):
+        """비공허 — 위 검사가 「페이징이 안 돌아서 우연히 거절」이 아님을 잰다.
+
+        더블이 두 창을 실제로 냈는지(둘째 창 요청이 갔는지)를 본다. 없으면 위 검사가
+        「어떤 이유로든 거절되면 통과」로 읽힌다.
+        """
+        seen: list[int] = []
+        console = _paged_write_console(occupied_names=_occupied())
+        inner = console.query_state
+
+        def spy(path: str, *, offset: int = 0) -> dict:
+            if path == FIXTURES_PATH:
+                seen.append(offset)
+            return inner(path, offset=offset)
+
+        console.query_state = spy  # type: ignore[method-assign]
+        _create(console, _acknowledged_call())
+
+        assert seen == [0, 4], seen

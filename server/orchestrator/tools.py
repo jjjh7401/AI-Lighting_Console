@@ -1016,9 +1016,27 @@ def collect_rig_sections(
         # A resolved path proves the console ANSWERED — even with zero children
         # (a real shape: an empty preset pool).
         resolved += 1
-        children = payload.get("children", [])
-        objects = [rig_object(child) for child in children if isinstance(child, dict)]
-        entry = rig_section(objects, payload)
+        # 첫 창은 섹션 전체가 아니다. 응답기는 개수 캡(24)과 페이로드 예산(~1200B)
+        # 중 **먼저 걸리는 쪽**에서 자르고, 실측상 **개수로는 예측이 안 된다**:
+        # 2026-08-30 실기(onPC 2.4.2)에서 `DataPool/Groups` 18건은 한 창에 왔는데
+        # `Patch/Stages/1/Fixtures` 86건은 19에서 잘렸다(19 < 24, 즉 바이트 축).
+        # 그래서 「N개 이상인 섹션만 페이징한다」는 판별기는 지을 수 없고, 열 섹션을
+        # 모두 같은 규율에 태운다 — 노화하는 판별기를 새로 짓는 것은 이 자리가
+        # 없애려는 결함과 같은 형태다.
+        #
+        # 비용은 절단이 실재하는 섹션에서만 난다: `paged_children` 은 절단 주장이
+        # 없으면 후속 조회를 쏘지 않는다(같은 실측에서 10섹션 중 9섹션이 왕복 0).
+        # `drill_into` 예산과는 축이 다르다 — 그쪽은 자식을 컨테이너로 여는 비용이고
+        # 여기는 섹션 자체를 읽는 비용이라, 상한은 `PAGE_CAP` 하나로 족하다.
+        #
+        # 규율은 `server/rig/paging.py` 하나가 갖는다(t131) — 사본을 지으면 무진전
+        # 방어를 빠뜨린 사본이 실패가 아니라 **무한 루프**로 나타난다(t104).
+        children, truncated = paged_children(state_port, path, payload)
+        objects = [rig_object(child) for child in children]
+        # 걸어서 얻은 완전성이 첫 창의 플래그를 대신한다 — `rig_section` 은 payload 의
+        # `truncated` 를 읽으므로, 이어 붙인 결과를 그 자리에 넣지 않으면 다 모으고도
+        # 절단으로 보고한다.
+        entry = rig_section(objects, dict(payload, truncated=truncated))
         if section in drilldown:
             budget = drill_into(state_port, objects, path, entry, budget)
         summary[section] = entry
