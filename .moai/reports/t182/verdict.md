@@ -140,3 +140,60 @@ t167 이 「두 축이 한 채널로 합쳐졌다」를 막으려고 검사를 �
   보내는 것이 자연스럽지만(형제 실패 형태가 이미 그렇게 돌아간다), 그건 설계 선택이고
   이 측정이 강제하지 않는다.
 - `refusal` 은 두 팔 다 `null` 이다 — (ㄴ)과 정합적이지만 이 회차가 (ㄴ)을 잰 것은 아니다.
+
+---
+
+# 5단계 — 폭발 반경(조건 4) + 수리 자리의 층 문제
+
+## 폭발 반경 — 리드의 읽기가 맞다. 이 트리에서 다시 쟀다
+
+t181 에서 같은 형태를 쟀지만 그건 **수리 전 트리**였다. 지금은 t181 이 들어간 뒤라
+앞자리가 거절로 바뀌었으므로 옮겨 쓰지 않고 다시 쟀다(`probes/_t182_blast.py`).
+자극은 픽스처 경로가 `StateQueryError` 를 던지는 것:
+
+| 호출자 | 도구 | 결과 |
+|---|---|---|
+| `tools.py:4368` | `patch_fixtures` | **거절** — `console did not answer — fixture inventory unread: …` |
+| `tools.py:5447` | `import_lxseq_patch` | **거절** — 동일 |
+| `tools.py:4748` | `import_lxseq_groups` | **죽음** — `patchplan.py:1461` |
+
+**실질 변화는 `4748` 하나다.** 앞의 둘은 t181 이 고친 `read_inventory` 에서 먼저 거절된다.
+
+## 🔴 함수 안 포트 호출이 **셋**이다 — 1461 만 고치면 반쪽이다
+
+    patchplan.py:1461   fid_property_port.query_state(FID_FIXTURE_ROOT)     <- 실측된 크래시
+                :1493   fid_property_port.query_property(...)               <- 슬롯별 판독
+                :1529   fid_property_port.query_property(...)              <- 절단 복구 스윕
+
+1461 만 잡으면 「루트는 읽혔는데 프로퍼티가 안 답한다」에서 여전히 죽는다.
+**이 두 자리의 도달은 안 쟀다** — 루트가 살아야 도달하므로 위 자극으로는 안 걸린다.
+
+## 🔴 층 문제 — 리드가 고른 자리에 선례가 0건이다
+
+`read_existing_fids` 안에서 `except StateQueryError` 를 쓰려면
+`server/vwx/patchplan.py` 가 `server.safety.console` 을 임포트해야 한다.
+
+    grep -rn "from server.safety" server/vwx/ server/prechk/ server/rig/
+      -> 0건
+
+**순수 로직 층(`vwx` · `prechk` · `rig`)은 I/O 게이트(`safety`)를 한 번도 임포트하지 않는다.**
+이 수리가 그 경계를 **처음으로** 넘는다.
+
+- 아키텍처 가드 위반은 **아니다** — `test_architecture.py` 의 금지 접두는
+  `server.bridge` · `pythonosc` 이고 `server.safety` 가 아니며, 검사는 **파일 자신의
+  임포트 줄**만 읽는다. 순환도 없다(`console.py` 는 `vwx`/`prechk` 를 안 부른다).
+- 다만 `console.py` 가 `server.bridge.osc` · `server.bridge.protocol` 을 부르므로,
+  **전이적으로 순수 모듈이 OSC 브리지를 끌어온다.** 문언 위반은 아니고 취지 쪽이다.
+
+## 무너진 대안 하나 — 적어 둔다
+
+`_InventoryPort`(tools.py:2762)가 `read_existing_fids` 로 가는 어댑터이고 tools.py 는
+이미 `StateQueryError` 를 임포트하므로, **어댑터에서 예외를 `ok=False` 로 옮기면**
+patchplan 의 기존 갈래가 그대로 받아 새 개념도 새 임포트도 없다 — 깔끔해 보였다.
+
+**안 된다.** `_InventoryPort` 는 **11군데**에서 쓰이고 그중 다섯(`2911` · `3094` ·
+`3909` · `4294` · `4485`)이 `read_inventory` 자리다. 어댑터가 예외를 삼키면
+t181 이 넣은 `except StateQueryError` 두 자리가 **죽은 코드**가 되고 사용자 문면이
+`fixture inventory unreadable` 로 되돌아간다. 범위도 11자리로 터진다.
+
+**가장 싼 처방이 방금 고친 것을 되돌리는 형태** — t181 에서 한 번 만난 그 모양이다.
