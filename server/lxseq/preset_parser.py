@@ -57,11 +57,33 @@ PRESET_ID_PREFIXES: dict[str, str] = dict(
 
 #: 이 저장소가 **실기로 재서** 콘솔이 받는다고 확인한 속성.
 #: `server/looks/schema.py` 가 정본이다 — 여기서 사본을 만들지 않는다.
+#:
+#: 이 문장은 **이 줄에만** 걸린다. 아래 `_PROBE_REJECTED`·`_OUT_OF_SCOPE` 는 사본이
+#: 맞지만, 정본에 끌어올 튜플이 **없다** — `schema.py` 는 그 이름들을 독스트링
+#: 문장으로만 갖고 있다(튜플 선언 0건). 게다가 `_PROBE_REJECTED` 는 어휘 자체가
+#: 다르다(아래 참조). 「정본에서 import 하면 되지 않나」는 여기서 두 번 어긋난다.
 _ACCEPTED_ATTRIBUTES = frozenset(CONFIRMED_ATTRIBUTES + PROBE_GATED_ATTRIBUTES)
 
-#: 라이브 프로브가 **거절한** 속성. `server/looks/schema.py:15-18` —
-#: "Focus / Frost / Prism1 / Shutter were rejected by the console".
-#: 부재가 아니라 **이미 재서 안 되는 것**이다. grep 으로 다시 찾지 마라.
+#: 라이브 프로브가 거절한 속성 — 다만 **시트 어휘로** 적는다.
+#:
+#: 🔴 `server/looks/schema.py:16` 의 문면과 **한 글자 다른 것은 고의다.** 정본은
+#: 콘솔에 **쏜** 문자열을 적고("Focus / Frost / Prism1 / Shutter"), 이 튜플은
+#: 감독 **시트에 적힌** 토큰을 매칭한다(`preset-bm.csv`: `Prism OFF` ·
+#: `Prism 3-facet ON`). 두 어휘는 **틀린 것이 아니라 다른 것**이다.
+#:
+#: 정본 문면에 맞춰 `Prism1` 로 "고치면" 술어가 시트 토큰 `Prism` 에 안 걸려
+#: **BM.03 이 storable 로 열린다** — 그리고 그 속성은 프로브가 `Failed` 를 낸
+#: 바로 그것이다(t135 실측). 정합성 개선이 아니라 회귀다.
+#: `test_lxseq_preset_beam_vocabulary.py` 가 그 치환을 실제로 해서 고정한다.
+#:
+#: 근거의 세기 — 정본 실측표(`SPEC-COPILOT-LOOKLIB-001/progress.md:157-170`)는
+#: 스스로 한정을 달아 뒀다: `Illegal object` 는 (i) 콘솔이 그 이름을 모른다 와
+#: (ii) **선택된 픽스처가 그 속성을 갖지 않는다** 양쪽과 정합한다. 프로브는
+#: `Group 13`(=`All`) 하나로 쐈고 그 그룹이 frost/prism/shutter 를 실제로 보유하는지는
+#: 확립되지 않았다. `Prism1` 만 `Failed` 로 다른 오류 문자열을 냈고 그 차이의 원인은
+#: **관측되지 않았다.** 그러므로 이것은 「이 리그에서 이 선택으로는 안 받았다」이지
+#: 「문법이 무효다」가 아니다 — 부재를 다시 grep 으로 찾을 일은 아니되, 전수 확정으로도
+#: 읽지 마라.
 _PROBE_REJECTED = ("Focus", "Frost", "Prism", "Shutter")
 
 #: 풀 계열 자체가 범위 밖인 것. `server/looks/schema.py:55-57` —
