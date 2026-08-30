@@ -561,99 +561,156 @@ class TestPreserveList:
 
 
 class TestPreserveScopeCitations:
-    """t162 — 위 범위 선언 주석이 가리키는 좌표가 아직 그 자리인가.
+    """t162·t177 — 독스트링이 가리키는 선언이 아직 그 자리에 그 내용으로 있는가.
 
     주석은 실행되지 않으므로 가리킨 문서가 움직여도 조용히 어긋난다. 이 저장소는
     그 형태를 이미 한 번 겪었다 — 가리킨 §F 헤딩이 목적지에 아예 없던 「끊어진
-    참조」(``SPEC-COPILOT-SONGCUE-001/progress.md:146``). 그래서 좌표를
-    트립와이어로 잡는다. 여기가 빨개지면 결함이 아니라 **문서가 움직였다**는
-    뜻이고, 처방은 주석의 줄 번호를 다시 박는 것이다.
+    참조」(``SPEC-COPILOT-SONGCUE-001/progress.md:146``).
 
-    이 클래스는 위 목록의 내용에 아무 단정도 하지 않는다 — ``_PRESERVE_PATHS``
-    의 항목·술어·단정은 :class:`TestPreserveList` 이하가 그대로 소유한다.
+    🔴 **t177 에서 줄번호를 버리고 내용으로 걸도록 바꿨다.** t162 는 ``plan.md:89``
+    를 줄번호로 읽었는데, 실측해 보니 그 형태가 두 값을 치렀다:
+
+    * **커버리지가 우발적이었다.** 선언 네 행 중 의도적으로 덮인 것은 89 하나뿐이고,
+      91 은 비공허성 대조군이 ``+2`` 를 읽으면서 **우연히** 덮었다(그 대조군을 손대면
+      조용히 사라진다). 90 과 92 는 선언을 통째로 지워도 **초록이었다.**
+    * **삽입에 거짓 경보를 냈다.** 표 위에 빈 줄 하나만 끼면 선언이 멀쩡한데도 두 건이
+      빨개졌다.
+
+    재배열을 못 잡아서가 **아니다** — 줄번호 검사도 재배열은 잡는다(실측). 문제는
+    커버리지와 거짓 경보였다. 그래서 좌표를 **구역 + 내용 동거**로 바꾼다: §A.5 표
+    구역 안에서 경로 조각과 방침 문구가 **같은 줄에** 있는지를 본다. 줄이 밀리거나
+    행이 재배열돼도 안 깨지고, **선언이 사라지거나 문구가 바뀌는 것**은 잡는다.
+
+    그리고 검사가 :data:`_PRESERVE_PATHS` 를 **돌면서** 확인하므로, 목록에 열한 번째
+    경로가 추가되면 그 경로의 선언도 함께 요구된다. 이것은 처방이 아니라 **새 능력**이다.
     """
 
     _PRECHK_PLAN = ".moai/specs/SPEC-COPILOT-PRECHK-001/plan.md"
-    _PRECHK_ROW = 89
+    #: §A.5 표 구역을 여는 내용 앵커. 줄번호가 아니다.
+    _PRECHK_TABLE_HEADING = "### §A.5 PRESERVE 재확인"
     _SONGCUE_SPEC = ".moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md"
-    _SONGCUE_REQ = 182
+    _SONGCUE_REQ_ID = "REQ-SONGCUE-021"
+
+    #: (목록 항목, 그 항목을 든 표 행의 경로 조각, 같은 줄에 있어야 하는 방침 문구).
+    #: 표는 경로를 중괄호 묶음과 ``**`` 글롭으로 적으므로 목록 문자열과 글자가 다르다 —
+    #: 그래서 조각을 손으로 든다. 아래 첫 검사가 이 표의 첫 칸 집합이
+    #: ``_PRESERVE_PATHS`` 와 정확히 같은지를 강제하므로, 손으로 든 것이 목록과
+    #: 어긋날 수는 없다.
+    _DECLARATIONS = (
+        ("server/looks/schema.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
+        ("server/looks/loader.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
+        ("server/looks/roles.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
+        ("server/looks/resolver.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
+        ("server/looks/instantiate.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
+        ("server/looks/matching.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
+        ("server/looks/library/", "server/looks/library/", "PRECHK는 룩 계층 소비자가 아니다"),
+        ("server/web/preview.py", "server/web/preview.py", "웹 미리보기 산출물 없음"),
+        ("console/lua/", "console/lua/", "응답기 변경 0건"),
+        (
+            "server/rulebook/assets/v2.4.2/",
+            "server/rulebook/assets/v2.4.2/",
+            "룰북을 편집하지 않는다",
+        ),
+    )
 
     @staticmethod
-    def _line(path: str, number: int) -> str:
-        lines = (_REPO_ROOT / path).read_text(encoding="utf-8").splitlines()
-        assert len(lines) >= number, path
-        return lines[number - 1]
+    def _read(path: str) -> str:
+        return (_REPO_ROOT / path).read_text(encoding="utf-8")
 
-    def test_the_prechk_row_still_declares_the_looks_layer(self):
-        row = self._line(self._PRECHK_PLAN, self._PRECHK_ROW)
-        assert "server/looks/" in row
-        assert "변경 0건" in row
+    @classmethod
+    def _prechk_table(cls) -> list[str]:
+        """§A.5 표 구역의 행들. 구역은 헤딩부터 다음 ``---`` 까지다."""
+        lines = cls._read(cls._PRECHK_PLAN).splitlines()
+        start = next(i for i, line in enumerate(lines) if cls._PRECHK_TABLE_HEADING in line)
+        rest = lines[start + 1 :]
+        end = next(i for i, line in enumerate(rest) if line.startswith("---"))
+        return [line for line in rest[:end] if line.startswith("|")]
 
-    def test_the_songcue_line_is_still_the_preserve_requirement(self):
-        line = self._line(self._SONGCUE_SPEC, self._SONGCUE_REQ)
-        assert "REQ-SONGCUE-021" in line
-        assert "PRESERVE" in line
+    @staticmethod
+    def _declared(rows: list[str], fragment: str, policy: str) -> bool:
+        """경로 조각과 방침 문구가 **같은 줄에** 있는가.
 
-    def test_a_neighbouring_line_would_not_satisfy_either_check(self):
-        """비공허성 — 두 검사가 아무 줄에나 걸리면 좌표를 안 잰 것과 같다.
-
-        대조군은 빈 줄이 아니라 **닮은 이웃**이다. ``plan.md`` 의 다음 행도
-        「변경 0건」을 적지만 룩 계층이 아니고, ``spec.md`` 의 앞 요구도
-        ``REQ-SONGCUE-02x`` 이지만 PRESERVE 목록을 걸지 않는다. 표가 한 행
-        밀리는 것이 실제 위험이므로 그 형태를 직접 쏜다.
+        술어를 여기 한 번만 두는 것이 [HARD] 다. 아래 대조군이 같은 함수를 쓰므로,
+        「같은 줄」 조건을 「표 어딘가에」로 무르면 대조군이 빨개진다. t177 1회차에는
+        대조군이 술어를 **복사**하고 있었고, 그래서 구현을 무르는 뮤테이션이 살아남았다 —
+        대조군이 자기가 지키려던 조건을 안 지키고 있었다.
         """
-        neighbour = self._line(self._PRECHK_PLAN, self._PRECHK_ROW + 2)
-        assert "변경 0건" in neighbour
-        assert "server/looks/" not in neighbour
+        return any(fragment in row and policy in row for row in rows)
 
-        earlier = self._line(self._SONGCUE_SPEC, self._SONGCUE_REQ - 3)
-        assert "REQ-SONGCUE-0" in earlier
-        assert "REQ-SONGCUE-021" not in earlier
+    def test_the_declaration_table_is_readable_and_not_empty(self):
+        """비공허성 — 구역을 못 찾으면 아래 전부가 헛돈다."""
+        rows = self._prechk_table()
+        assert len(rows) >= 5, rows
+        # 머리 두 줄(제목 · 구분)을 뺀 실제 선언 행이 있어야 한다.
+        assert any("변경 0건" in row for row in rows)
+
+    def test_every_preserved_path_has_a_declaration(self):
+        """🔴 t177 의 본체 — 목록을 **돌면서** 확인하므로 새 항목이 선언을 강제받는다.
+
+        t162 는 네 선언 행 중 하나만 의도적으로 덮었다. 90(``preview.py``)과
+        92(룰북)는 선언을 통째로 지워도 초록이었고, 91 은 대조군이 우연히 덮고
+        있었다. 여기서 넷 다 의도적으로 덮는다.
+        """
+        assert set(entry for entry, _, _ in self._DECLARATIONS) == set(_PRESERVE_PATHS)
+        rows = self._prechk_table()
+        for entry, fragment, policy in self._DECLARATIONS:
+            assert self._declared(rows, fragment, policy), entry
+
+    def test_a_declaration_is_not_satisfied_by_the_wrong_row(self):
+        """비공허성 — 조각과 문구가 **같은 줄에** 있어야 한다.
+
+        둘을 따로 찾으면 표 어딘가에 각각 있기만 해도 통과한다. 실제로
+        ``server/web/preview.py`` 와 ``응답기 변경 0건`` 은 표에 **둘 다 있지만
+        서로 다른 행**이므로, 짝으로는 성립하면 안 된다.
+
+        🔴 이 검사는 구현과 **같은 함수**(:meth:`_declared`)를 부른다. 술어를 복사해
+        두면 구현만 무르는 변경에 이 대조군이 안 반응한다 — t177 1회차에 실제로
+        그 뮤테이션이 살아남았다.
+        """
+        rows = self._prechk_table()
+        assert any("server/web/preview.py" in row for row in rows)
+        assert any("응답기 변경 0건" in row for row in rows)
+        assert not self._declared(rows, "server/web/preview.py", "응답기 변경 0건")
+
+    def test_the_songcue_requirement_still_binds_the_preserve_list(self):
+        """선례 게이트의 여섯 파일이 오는 자리. 여기도 줄번호가 아니라 내용이다."""
+        lines = [
+            line
+            for line in self._read(self._SONGCUE_SPEC).splitlines()
+            if self._SONGCUE_REQ_ID in line
+        ]
+        assert lines, self._SONGCUE_REQ_ID
+        assert any("PRESERVE" in line and "shall not" in line for line in lines)
 
     def test_the_scope_declaration_block_is_still_written_down(self):
-        """문구 단언 — 위 좌표 검사(성질)와 **다른 행**이고 서로를 못 대신한다.
+        """문구 단언 — 위 성질 검사들과 **다른 행**이고 서로를 못 대신한다.
 
-        좌표만 지키면 문면이 통째로 지워져도 초록이고, 문구만 지키면 좌표가
-        어긋난 채로도 초록이다. 그래서 둘을 갈라 둔다.
+        선언이 다 제자리여도 독스트링이 지워지면 읽는 법이 사라지고, 독스트링이
+        멀쩡해도 선언이 사라지면 가리키는 곳이 빈다.
 
-        🔴 우주는 파일이 아니라 **모듈 독스트링**(``__doc__``)이다. 파일 전체에
-        대고 찾으면 이 메서드가 들고 있는 단정 리터럴 자신이 매치돼 **검사가
-        공허해진다** — 문면을 통째로 지우는 뮤테이션이 실제로 살아남는 것을 보고
-        우주를 좁혔다. ``__doc__`` 은 검사 본문을 포함하지 않으므로 그 형태가
-        원리적으로 불가능하다.
+        🔴 우주는 파일이 아니라 **모듈 독스트링**(``__doc__``)이다. 파일 전체에 대고
+        찾으면 이 메서드가 든 리터럴 자신이 매치돼 공허해진다(t162 실측).
         """
         assert __doc__ is not None
-        # 비공허성 — 우주가 비면 아래 단정이 전부 헛돈다.
         assert len(__doc__) > 500
         assert "범위 선언이다" in __doc__
         assert "집행되는 경계" in __doc__
-        assert self._PRECHK_PLAN + ":" + str(self._PRECHK_ROW) in __doc__
-        assert self._SONGCUE_SPEC + ":" + str(self._SONGCUE_REQ) in __doc__
+        assert self._PRECHK_PLAN in __doc__
+        assert self._SONGCUE_SPEC in __doc__
 
     def test_the_list_carries_a_pointer_to_the_docstring(self):
-        """목록 옆에 착지한 독자를 위로 보내는 포인터가 아직 있는가.
-
-        본문은 독스트링에 **한 번만** 둔다(카드 t162 가 지목한 자리). 목록 위에는
-        포인터만 두므로, 그 포인터가 사라지면 목록만 보고 「집행되는 경계」로
-        오독할 자리가 다시 열린다.
-        """
+        """목록 옆에 착지한 독자를 위로 보내는 포인터가 아직 있는가."""
         source = Path(__file__).read_text(encoding="utf-8")
         header = source[: source.index("_PRESERVE_PATHS = (")]
         assert "이 모듈의 독스트링" in header
-        # 본문은 복사되지 않았다 — 포인터 구역에 결론 문장이 있으면 두 벌이 된다.
         pointer_zone = header[header.index("#: The ten paths") :]
         assert "뒤의 것으로 읽으면" not in pointer_zone
 
     def test_the_precedent_gate_points_here_instead_of_copying(self):
-        """선례 게이트는 같은 설명을 복사하지 않고 이 파일을 가리킨다.
-
-        복사하면 술어가 두 곳으로 갈리고 한쪽만 고쳐진다. 그러므로 저쪽에는
-        **포인터가 있고 본문은 없어야** 한다 — 두 조건을 다 잰다.
-        """
+        """선례 게이트는 같은 설명을 복사하지 않고 이 파일을 가리킨다."""
         precedent = (_REPO_ROOT / "server/tests/test_songcue_bundle.py").read_text(encoding="utf-8")
         assert "범위 선언이지 이 게이트가 만든" in precedent
         assert "server/tests/test_overlap_preserve.py" in precedent
-        # 본문은 이 파일에만 — 저쪽이 복사본을 갖게 되면 여기서 빨개진다.
         assert "집행되는 경계)의 구별" in precedent
         assert "뒤의 것으로 읽으면" not in precedent
 
