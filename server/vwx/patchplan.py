@@ -8,7 +8,6 @@ from types import MappingProxyType
 from typing import Protocol
 
 from server.prechk.patch import normalize_address
-from server.safety.console import StateQueryError
 from server.vwx.address import ADDRESS_BASIS_ABS_BACK_CALCULATED
 from server.vwx.diff import MULTI_SYSTEM_MAPPING_ABSENT
 from server.vwx.typemap import is_vacuous_type_name
@@ -239,6 +238,26 @@ UNRESOLVED_TARGET_FIELDS = MappingProxyType(
 
 
 class FidPropertyPort(Protocol):
+    """콘솔 판독의 두 갈래 — 이 층이 콘솔에 대해 아는 전부다.
+
+    **응답 계약** [t194]. 이전 판은 시그니처만 있었고 무엇이 돌아오는지·무엇이
+    던져지는지 아무 데도 안 적혀 있었다 — 이 카드가 고친 거짓 귀속의 뿌리가 거기다.
+
+    - `ok=True` : 판독 성공. `value` 가 그 프로퍼티 값이다.
+    - `ok=False` : **부재** — 그 슬롯에 값이 없다(희소 풀이면 그 자체가 정보다).
+    - `ok=False` + `unreachable=True` : 부재가 **아니라 전송 실패**. 콘솔이 안 답했다는
+      뜻이고 「그 슬롯이 비었다」로 읽으면 안 된다. 프로덕션 포트는 이 형태를
+      `StateQueryError` **예외**로 내므로(`server/safety/console.py` 의
+      `query_property` — 타임아웃 :713, `not ok` :718 이 둘 다 raise 이고 `ok=False` 를
+      돌려주는 경로가 없다), 호출부의 `_SlotReadPort` 어댑터
+      (`server/orchestrator/tools.py`)가 여기로 **번역해** 넣는다. 이 층은
+      `server.safety` 를 임포트할 수 없다 — AC-018③ 이 막는다(`unreadable_root`).
+
+    `query_state` 의 실패는 **번역하지 않는다.** 루트를 못 읽은 것과 슬롯 하나를 못 읽은
+    것은 다른 사실이고, 그 구별이 사용자에게 나가는 사유를 가른다. t188 이 잰 「두 사유가
+    바이트 동일」은 그 구별이 없어서 생긴 것이었다.
+    """
+
     def query_state(self, path: str) -> Mapping[str, object]: ...
 
     def query_property(self, path: str, property_name: str) -> Mapping[str, object]: ...
@@ -1400,25 +1419,23 @@ def unreadable_root() -> ExistingFidRead:
     정하고 그 축은 여기 산다. 호출부가 같은 값을 손으로 조립하면 축이 하나 늘 때
     조용히 어긋난다 — 아래 `ok is not True` 갈래도 이 함수를 부른다.
 
-    **예외를 여기서 잡는다 — [t194]가 그 경계를 열었다.** t182는 안 잡았고 근거를
-    여기 적었다: 콘솔 포트가 던지는 `StateQueryError` 는 `server.safety` 의 것이고,
-    이 모듈이 속한 순수 로직 층(`server/vwx` · `server/prechk` · `server/rig`)이
-    그 층을 임포트한 선례가 0건이라는 것이었다. 아키텍처 가드가 막는 것은 아니다 —
-    그 가드가 지키는 경계는 「OSC 전송 표면에 닿는 것은 `server/safety/` 하나」이고
-    예외 이름을 부르는 것은 거기 안 걸린다. 선례 없는 방향으로 첫 발을 떼는 값을
-    그 수리가 치를 이유가 없다는 **판단**이었다(불변식이 아니었다).
+    **왜 예외를 여기서 안 잡는가 — 가드가 실제로 막는다.** 콘솔 포트가 던지는
+    `StateQueryError` 는 `server.safety` 의 것이고, 이 층이 그것을 임포트하면
+    `server/tests/test_autopatch_execute.py` 의 AC-018③
+    (`test_no_vwx_module_imports_the_console_send_surface`)이 이 파일을 인자로 돌며
+    막는다 — 상대 import · alias · 동적 import 까지 보는 AST 스캐너다.
+    [t194 실측] 이전 판은 "그 가드가 지키는 경계는 OSC 전송 표면이고 예외 이름을
+    부르는 것은 거기 안 걸린다"고 적었다. **그 문장은 반증됐다** — 실제로 걸었다.
 
-    t194가 세 실측으로 그 판단을 뒤집었다(리드 판정). (1) 경계는 처음부터
-    `server.safety` 하나였고, 이 층은 이미 `server.prechk` 를 **다섯 파일**에서
-    임포트한다. (2) 그 경계를 **강제하는 검사가 없다** — 경계 검사는 `fx` · `looks` ·
-    `paperwork` · `scene` 넷이고 `server/vwx` 것이 없다. (3) catch 를 호출부에 두는
-    형태가 실제 피해를 냈다: 호출 **전체**를 감싸므로 루트 실패와 슬롯 실패가
-    **한 사유로 접혔고**, 루트가 멀쩡한데도 "루트를 읽지 못했다"가 나갔다
-    (t188 실측 — 두 사유가 바이트 동일).
+    그래서 개념은 여기 두고, **예외는 호출부에서 응답으로 번역해** 들여보낸다
+    (`server/orchestrator/tools.py` 의 `_SlotReadPort`). 비대칭이 핵심이다 —
+    슬롯 판독 실패는 `{"ok": False, "unreachable": True}` 로 와서 아래
+    `unreadable_fids` 갈래를 타고, 루트 판독 실패는 **번역하지 않아** 예외 그대로
+    호출부의 catch 가 받아 이 함수를 부른다. 두 사유가 갈리는 자리가 그 비대칭이고,
+    t188 이 잰 "두 사유가 바이트 동일"은 번역이 없어서 생긴 것이었다.
 
-    지금 이 모듈이 잡는 것은 **열거 슬롯 판독** 한 자리뿐이다
-    (`_existing_fids_from_console`). 루트 판독의 catch 는 여전히 호출부에 있고,
-    이 함수는 그 호출부가 부르는 개념의 주인으로 남는다.
+    되돌리기 전에 위 문단을 읽어라. 「왜 안쪽에서 안 잡지」는 이미 물어봤고
+    답이 여기 있다.
     """
     return ExistingFidRead(attempted=True, root_unreadable=True)
 
@@ -1521,29 +1538,9 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         if child_index is None or child_index in read_slots:
             unread += 1
             continue
-        try:
-            response = fid_property_port.query_property(
-                f"{FID_FIXTURE_ROOT}/{child_index}", FID_PROPERTY_NAME
-            )
-        except StateQueryError:
-            # [t194] 프로덕션 포트는 프로퍼티 판독 실패를 `ok=False`가 아니라 **예외**로 낸다
-            # (`server/safety/console.py`의 `query_property` — 타임아웃 :713, `not ok` :718이
-            # 둘 다 `raise`이고 `ok=False`를 **반환하는 경로가 없다**). 그 형태만 아래 갈래를
-            # 못 타고 이 함수를 탈출했고, 한 층 위 `tools.py`의 `except StateQueryError`가
-            # 그것을 `unreadable_root()`로 접어 **루트가 멀쩡한데도** "콘솔의 픽스처 루트
-            # 상태를 읽지 못했다"가 나갔다 — t188이 루트 사망 팔과 슬롯 사망 팔의 사유
-            # 문자열이 **바이트 동일**임을 쟀다.
-            #
-            # 위 round19 주석의 "열거된 슬롯의 읽기는 감싸지 않는다"와 부딪히지 않는다.
-            # 그 문장이 막는 것은 **조용히 삼키는 것**이고 — 스윕의 `probe_failures`가 그
-            # 형태다(진단으로만 세고 완전성 판정에 안 들어간다) — `unreadable_fids`는 삼키지
-            # 않는다: `complete` 판정에 들어가고, `reason()`이 "열거된 슬롯 N개의 FID 값을
-            # 얻지 못했다"로 내보내며, `to_dict()`가 페이로드 키로 싣는다. **세고 보고한다.**
-            #
-            # 빈 응답으로 정규화해 **아래 기존 처리기가 그대로** 받게 한다. 새 계수 축을
-            # 만들지 않는 이유는 이미 있기 때문이다 — `_fid_int`가 값을 못 얻은 슬롯을
-            # `unreadable_fids`로 세는 갈래는 살아 있다(값이 깨지면 `ok=True`에서도 온다).
-            response = {}
+        response = fid_property_port.query_property(
+            f"{FID_FIXTURE_ROOT}/{child_index}", FID_PROPERTY_NAME
+        )
         # 조회를 시도해 **결말이 난** 슬롯은 모두 관측 슬롯이다 — 값을 못 읽었어도
         # "그 슬롯을 봤다"는 사실은 총계 대조에 쓰인다. [round13 S05] 이전 판은 실패 슬롯을
         # 관측에서 빼면서 `unread`도 올려 **같은 슬롯을 두 번** 셌고, 그 결과 사용자에게
@@ -1596,7 +1593,11 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
                 # 단정하게 된다. 관측으로 올리지 않고 `unseen`에 남긴다 — fail-closed다.
                 # 응답은 왔지만 값이 FID로 해석되지 않은 경우(원전 독스트링 3번의
                 # 포인터 문자열)도 같은 자리에 남기고, 진단으로만 센다.
-                if probe.get("ok") is True:
+                # [t194] `unreachable` 는 부재가 아니라 **전송 실패**다(`FidPropertyPort`
+                # 독스트링). 그것까지 세지 않으면 열거 슬롯에서 방금 살린 구별이 스윕에서
+                # 그대로 죽는다 — 어댑터가 예외를 응답으로 바꾸므로 위 `except Exception`
+                # 은 더 이상 그 형태를 못 받는다(실측 2 -> 0, probes/sweep-exc-out.txt).
+                if probe.get("ok") is True or probe.get("unreachable") is True:
                     probe_failures += 1
                 continue
             read_slots.add(slot)

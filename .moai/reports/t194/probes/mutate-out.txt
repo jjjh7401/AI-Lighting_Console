@@ -1,0 +1,28 @@
+기준선(수리 적용 상태): rc=0 실패=[]
+
+M1 어댑터 무력화 — 번역을 끄면 슬롯 실패가 다시 루트 사유로 접힌다  [tools.py]
+    KILL  죽은 검사 3개: ['test_the_slot_reason_actually_reaches_the_payload', 'test_the_slot_reason_is_not_byte_identical_to_the_root_reason', 'test_the_adapter_marks_a_transport_failure_as_unreachable']
+
+M2 넓히기 — except StateQueryError -> except Exception  [tools.py]
+    KILL  죽은 검사 1개: ['test_an_unrelated_exception_is_not_swallowed']
+
+M3 표식 제거 — unreachable 없이 ok=False 로만 번역한다  [tools.py]
+    KILL  죽은 검사 2개: ['test_the_adapter_marks_a_transport_failure_as_unreachable', 'test_a_sweep_transport_failure_still_counts_as_a_probe_failure']
+
+M4 값 지어내기 — 못 읽은 슬롯에 가짜 FID 를 준다  [tools.py]
+    KILL  죽은 검사 4개: ['test_the_tool_survives_a_dead_slot_property', 'test_the_slot_reason_actually_reaches_the_payload', 'test_the_adapter_marks_a_transport_failure_as_unreachable', 'test_a_sweep_transport_failure_still_counts_as_a_probe_failure']
+
+M5 스윕 계수 되돌리기 — unreachable 을 안 센다 (수용 기준 3 파괴)  [patchplan.py]
+    KILL  죽은 검사 1개: ['test_a_sweep_transport_failure_still_counts_as_a_probe_failure']
+
+M6 스윕 과다계수 — ok=False(부재)까지 전송 실패로 센다  [patchplan.py]
+    KILL  죽은 검사 1개: ['test_an_absent_slot_is_still_not_counted']
+
+M7 사유 문구 변경 — 열거된 슬롯 -> 확인된 슬롯  [patchplan.py]
+    KILL  죽은 검사 1개: ['test_the_slot_reason_actually_reaches_the_payload']
+
+M8 구별 접기 — 루트 실패도 슬롯 사유로 낸다  [patchplan.py]
+    KILL  죽은 검사 6개: ['test_the_tool_raises_before_it_can_report_console_unreachable', 'test_the_tool_survives_and_names_the_console', 'test_both_failure_shapes_arrive_at_the_same_reason', 'test_an_unrelated_bug_is_not_swallowed', 'test_the_slot_reason_is_not_byte_identical_to_the_root_reason', 'test_the_root_failure_still_names_the_root']
+
+복원 완료: True
+판정: 8/8 KILL
