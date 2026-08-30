@@ -204,10 +204,15 @@ class TestTheStaleHoldTripwire:
     """콘솔 어휘가 넓어지는 날(t149) 보류 사유가 조용히 거짓이 되는 것을 잡는다.
 
     🔴 보류를 자동으로 **풀지는** 않는다. `server/orchestrator/tools.py` 의 소비
-    루프는 종류를 안 가리고, 값을 명령으로 못 옮기는 배정이 하나라도 있으면 만들어
-    둔 번들을 통째로 버린다. bm 에는 적용 줄이 없으므로(`LXSEQ_PRESET_APPLY_ATTRIBUTE`
-    는 `preset-dim` 한 칸) bm 한 행이 저절로 열리면 **프리셋 임포트 전체가 0건**이
+    루프는 값을 명령으로 못 옮기는 배정이 하나라도 있으면 만들어 둔 번들을 통째로
+    버린다. bm 에는 적용 줄이 없으므로(`LXSEQ_PRESET_APPLY_ATTRIBUTE` 는
+    `preset-dim` 한 칸) bm 한 행이 저절로 열리면 **그 bm 임포트가 통째로 0건**이
     된다 — 자동 해제는 그 지뢰를 심는 것이다. 그래서 푸는 대신 **빨개진다.**
+
+    ⚠️ 여기 「프리셋 임포트 **전체**가 0건」이라 적혀 있었으나 t154 가 반증했다 —
+    한 번의 임포트 = 한 시트 = 한 종류라 다른 종류로 번지지 않는다
+    (`parse_preset_csv` 가 종류를 하나로 정하고 프로덕션 호출지가 하나다).
+    막을 이유는 그대로다: 그 시트가 0건이 되는 것만으로 충분하다.
     """
 
     def test_no_hold_reason_is_stale_today(self):
@@ -220,7 +225,7 @@ class TestTheStaleHoldTripwire:
             "콘솔 어휘가 넓어져 이 토큰들의 보류 사유가 거짓이 됐다: "
             + ", ".join(stale)
             + " — 목록에서 빼기 전에 **적용 경로부터 열어라**. "
-            "bm 에 적용 줄이 없는 채로 열면 프리셋 임포트가 통째로 0건이 된다 "
+            "bm 에 적용 줄이 없는 채로 열면 그 bm 임포트가 통째로 0건이 된다 "
             "(server/orchestrator/tools.py 의 apply_untranslatable fail-closed)."
         )
 
