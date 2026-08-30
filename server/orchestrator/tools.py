@@ -120,6 +120,7 @@ from server.presets.store import (
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
 from server.rig.paging import paged_children
+from server.rig.section import SECTION_UNREAD, section_refusal
 from server.safety.approval import (
     ApprovalItem,
     ApprovalPort,
@@ -7739,6 +7740,16 @@ def build_toolset(
         groups_section = sections["groups"]
         fixtures_section = sections["fixtures"]
 
+        # 미판독과 「응답기가 childCount 를 안 줌」을 여기서 가른다. 아래에서 두
+        # 상태가 똑같이 `total is None` 으로 흘러 코드에서 안 갈렸고, 그 갈래가
+        # 하필 부분판독 쓰기 거절의 크기 대조를 면제하는 자리였다(t163 실측 -> t166).
+        # 판별은 저장소가 이미 가진 `section_refusal` 이 한다 - 사본을 지으면
+        # 절단과 미판독을 다시 섞는다. 절단(SECTION_TRUNCATED)은 여기서 걸리지
+        # 않는다: 절단은 관측이고, 이 호출의 fids 는 호출자가 명시한 값이라
+        # 절단이 이 쓰기를 막지 않는다(write.py 계약, 2026-08-04 개정).
+        _fixtures_refusal = section_refusal(fixtures_section)
+        fixtures_unread = _fixtures_refusal is not None and _fixtures_refusal[0] == SECTION_UNREAD
+
         # @MX:ANCHOR: [SPEC] the partial-read write refusal
         #   (SPEC-COPILOT-TRUNCATE-001 REQ-TRUNCATE-008 / AC-TRUNCATE-008,
         #   mutation-required). Deleting this block restores the measured hole:
@@ -7757,15 +7768,39 @@ def build_toolset(
             entry["name"] for entry in groups_arg if entry.get("topology_partial")
         ]
         if partial_group_names:
+            # @MX:ANCHOR: [SPEC] 미판독 단면에서는 부족분을 잴 수 없으므로 거절한다
+            #   (t166 — SPEC-COPILOT-TRUNCATE-001 REQ-TRUNCATE-008 / AC-TRUNCATE-008
+            #   의 면제 범위 정정, mutation-required). 이 분기를 지우면 관측된 구멍이
+            #   그대로 돌아온다: 한 글자도 못 읽은 픽스처 컨테이너에서 부족분에
+            #   미달하는 열거가 통과하고 `Store Group` 이 실제로 발화한다.
+            # @MX:REASON: 건너뛰기가 아니라 거절인 이유 — 이 게이트가 재는 것은
+            #   「안 본 자리를 열거로 이름 붙였는가」이고, 미판독 단면은 그 대조의
+            #   기준 자체가 없는 상태다. 건너뛰면 증거가 가장 적은 자리에서 면제가
+            #   가장 넓어진다. 그룹 쓰기는 멤버십을 되읽을 수 없어 되돌릴 수도
+            #   없다(progress.md §E.2.8).
+            if fixtures_unread:
+                return _error_result(
+                    call,
+                    "픽스처 컨테이너를 못 읽었다("
+                    + _fixtures_refusal[1]
+                    + "). 부분판독 그룹 "
+                    + ", ".join(repr(name) for name in partial_group_names)
+                    + " 을(를) 쓰려면 'acknowledged_unread_fids' 의 길이를 부족분과 "
+                    "대조해야 하는데, 단면을 한 줄도 못 읽어 부족분 자체를 잴 수 "
+                    "없다 — 열거가 맞는지 확인할 방법이 없으므로 거절한다. 연결을 "
+                    "확인하고 get_spatial_context 를 다시 읽어라.",
+                )
             fixtures_total = fixtures_section.get("total")
             arrived = len(fixtures_section.get("objects") or [])  # type: ignore[arg-type]
             refusal = _unread_acknowledgement_refusal(
                 call.arguments.get("acknowledged_unread_fids"),
                 partial_group_names,
                 frozenset(fid for entry in groups_arg for fid in entry["fids"]),
-                # `total` is None when the responder reported no childCount —
-                # `rig_section`'s unknown-total rule. The size check simply
-                # does not apply then; the other three still do.
+                # 여기 도달하는 `total is None` 은 이제 한 갈래뿐이다 — 응답기가
+                # childCount 를 안 준 경우(`rig_section` 의 unknown-total 규칙).
+                # 미판독은 위에서 이미 거절했다. 이 주석이 t163 이전에 두 갈래를
+                # 하나로 설명하던 자리이고, 그 범위 불일치가 안전장치를 껐다.
+                # 이 갈래에서는 크기 대조만 적용되지 않고 나머지 셋은 그대로 산다.
                 max(fixtures_total - arrived, 0) if isinstance(fixtures_total, int) else None,
             )
             if refusal is not None:
@@ -7818,6 +7853,22 @@ def build_toolset(
         except GroupSlotError as error:
             return _error_result(call, f"{error.code}: {error.message}")
 
+        # `build_group_write_plan` 은 단면의 `truncated` 키만 읽는다. 실패 단면에는
+        # 그 키가 아예 없어 False 가 되므로, 한 글자도 못 읽은 상태가 「깨끗하게 다
+        # 읽었다」와 바이트 동일로 나가고 아래 승인 카드의 위험 사유에서도 사라진다
+        # (t163 실측 -> t166). 갈래를 아는 자리가 여기뿐이라 여기서 덮어쓴다 —
+        # `build_group_write_plan` 의 프로덕션 호출자는 이 한 곳이다(전수 확인).
+        fixture_notice = plan.fixture_list_truncated or fixtures_unread
+        fixture_notice_reason = (
+            "픽스처 컨테이너를 한 줄도 못 읽었다("
+            + _fixtures_refusal[1]
+            + ") — 이 그룹들의 멤버십은 호출자가 명시한 fids 로 정해지므로 이 쓰기를 "
+            "막지는 않지만, 리그가 실제로 무엇을 담고 있는지는 이번 호출에서 전혀 "
+            "확인되지 않았다"
+            if fixtures_unread
+            else plan.fixture_list_truncated_reason
+        )
+
         def _plan_payload(**extra: object) -> dict[str, object]:
             payload: dict[str, object] = {
                 "plan": [
@@ -7842,8 +7893,8 @@ def build_toolset(
                 # re-queried fixture listing never blocks this write (the
                 # group's membership is the caller's explicit fids), but the
                 # fact is still surfaced here for a human reviewer.
-                "fixture_list_truncated": plan.fixture_list_truncated,
-                "fixture_list_truncated_reason": plan.fixture_list_truncated_reason,
+                "fixture_list_truncated": fixture_notice,
+                "fixture_list_truncated_reason": fixture_notice_reason,
             }
             payload.update(extra)
             return payload
@@ -7856,11 +7907,7 @@ def build_toolset(
                         "group write — membership cannot be re-verified after "
                         "Store (grandMA3 exposes no membership read channel, "
                         "progress.md §E.2.8)",
-                        *(
-                            (plan.fixture_list_truncated_reason,)
-                            if plan.fixture_list_truncated
-                            else ()
-                        ),
+                        *((fixture_notice_reason,) if fixture_notice else ()),
                     ),
                 )
                 for command in all_commands
