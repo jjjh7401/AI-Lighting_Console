@@ -25,7 +25,13 @@ MEASURED_GROUPS_SECTION = {
     "truncated": False,
     "objects": [{"no": n} for n in (1, 11, 12, 13, 15)],
 }
-UNTRUNCATED_FIXTURES_SECTION = {"ok": True, "truncated": False, "childCount": 19}
+# `objects` 가 없으면 `section_refusal` 이 이 단면을 **미판독**으로 읽는다(t179).
+UNTRUNCATED_FIXTURES_SECTION = {
+    "ok": True,
+    "truncated": False,
+    "childCount": 19,
+    "objects": [{"no": n} for n in range(1, 20)],
+}
 
 
 def _sample_plan():

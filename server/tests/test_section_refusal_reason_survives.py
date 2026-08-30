@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import json
 
+from server.groupgen.write import build_group_write_plan
 from server.llm.types import ToolCall
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.tools import (
@@ -231,6 +232,43 @@ class TestAnUnreadFixtureSectionIsReportedAsUnread:
         assert REASON_UNRESOLVED in blob or REASON_UNREACHABLE in blob, (
             "픽스처 축 사유 코드가 페이로드에 도달하지 않는다"
         )
+
+    def test_the_producer_reason_does_not_leak_into_the_payload(self):
+        """t179 중립성 — 생산 지점이 정직해져도 이 payload 는 안 바뀐다.
+
+        t179 가 `build_group_write_plan` 자체를 미판독에 정직하게 고쳤다.
+        고치기 전 이 자리를 지키던 것은 호출 지점의 OR 뿐이었고, 그 OR 은
+        지금도 이긴다 — 사용자가 보는 사유는 갈래를 아는 호출 지점의 것이다.
+
+        생산 지점 문자열을 리터럴로 복사하지 않는다: 대조군이 술어를 복사하면
+        대조군이 아니다(규약 §3). **실제 생산자를 불러** 얻는다.
+        """
+        producer_reason = build_group_write_plan(
+            buckets=dict(a=(2, 3)),
+            names=dict(a="Plain"),
+            groups_section=dict(ok=True, truncated=False, objects=[]),
+            fixtures_section=dict(ok=False, reason="console did not answer"),
+        ).fixture_list_truncated_reason
+        assert producer_reason, "생산 지점도 이제 미판독에 사유를 든다"
+        assert self._UNREAD_PHRASE not in producer_reason, (
+            "두 문면이 같으면 이 검사가 공허하다 — 무엇이 이겼는지 못 가른다"
+        )
+        # 사유 보간 앞부분만 쓴다. 전체 문자열 비교는 보간된 사유 코드가
+        # 달라 **우연히** 통과한다 — 그건 대조군이 아니다(규약 §3).
+        producer_prefix = producer_reason.split("(")[0].strip()
+        assert producer_prefix, "생산 지점 문면에서 보간 앞부분을 못 잘랐다"
+
+        execution, _port = _dispatch(
+            CREATE,
+            dict(groups=[dict(name="Plain", fids=[2, 3])]),
+            _DEAD_FIXTURES,
+        )
+        payload = json.loads(execution.result.content)
+        reason = payload.get("fixture_list_truncated_reason") or ""
+        assert producer_prefix not in reason, (
+            "생산 지점 사유가 사용자에게 새어 나갔다 — 갈래를 아는 자리는 호출 지점이다: " + reason
+        )
+        assert self._UNREAD_PHRASE in reason
 
     def test_a_truncated_but_readable_container_says_truncated_not_unread(self):
         """대조군 ① — 두 사유가 갈린다. 절단은 절단으로 보고된다."""

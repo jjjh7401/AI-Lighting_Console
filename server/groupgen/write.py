@@ -21,11 +21,13 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from server.rig.section import SECTION_UNREAD, section_refusal
 from server.spatial.choreography import build_compact_fixture_selection
 
 __all__ = [
     "DEFAULT_GROUP_PLAN_CAP",
     "FIXTURE_LIST_TRUNCATED",
+    "FIXTURE_LIST_UNREAD",
     "GROUP_LINE_COLLISION",
     "GROUP_PLAN_TOO_LARGE",
     "GROUP_POOL_TRUNCATED",
@@ -47,6 +49,7 @@ GROUP_POOL_UNAVAILABLE = "GROUP_POOL_UNAVAILABLE"  # the group pool could not be
 GROUP_POOL_TRUNCATED = "GROUP_POOL_TRUNCATED"  # the re-queried pool listing was cut
 GROUP_SLOT_OCCUPIED = "GROUP_SLOT_OCCUPIED"  # the target slot already holds a group
 FIXTURE_LIST_TRUNCATED = "FIXTURE_LIST_TRUNCATED"  # the target fixture list was cut
+FIXTURE_LIST_UNREAD = "FIXTURE_LIST_UNREAD"  # 대상 픽스처 목록을 한 줄도 못 읽었다
 GROUP_PLAN_TOO_LARGE = "GROUP_PLAN_TOO_LARGE"  # the requested plan exceeds the slot-economy cap
 GROUP_LINE_COLLISION = "GROUP_LINE_COLLISION"  # one bundle repeats a non-exempt line
 
@@ -98,7 +101,7 @@ def is_programmer_state(command: str) -> bool:
 class GroupSlotError(Exception):
     """A group slot or fixture list could not be safely used for a write.
 
-    Carries a ``code`` (one of the four module constants above) so a caller
+    Carries a ``code`` (one of the module constants above) so a caller
     can branch on the fact rather than the message text, plus the human
     ``message`` — the same shape as ``server.scene.compile.SceneCompilationError``.
     """
@@ -258,7 +261,29 @@ def guard_fixture_list_truncation(fixtures_section: Mapping[str, object]) -> Non
     auto-selection caller ("group the whole rig for me") that would derive
     ``fids`` FROM the (possibly truncated) fixture listing itself — there,
     REQ-GROUPGEN-024's original rationale still applies unchanged.
+
+    **이 가드는 지금 잠들어 있다 — 프로덕션 호출자가 0 이고 검사 둘만
+    부른다(t179 전수).** 잠들어 있다는 것은 완화 요인이 아니라 결함이
+    발견되지 않는 이유다: 깨우는 순간이 곧 결함이 실행되는 순간이다.
+    깨우는 것은 위 FUTURE auto-selection caller 하나이고, **그 호출자가
+    생기면 이 가드가 두 상태를 가른다** — 잘린 목록
+    (:data:`FIXTURE_LIST_TRUNCATED`)과 한 줄도 못 읽은 목록
+    (:data:`FIXTURE_LIST_UNREAD`). 후자가 이 가드가 막아야 할 **가장
+    나쁜 입력**이다: 그 호출자는 바로 그 못 읽은 목록에서 ``fids`` 를
+    뽑기 때문이다.
     """
+    # 판정 순서가 계약이다 — 판독 실패가 절단보다 먼저다
+    # (`server/rig/section.py` 와 같은 순서). 실패 단면에는 `truncated`
+    # 키가 아예 없어 아래 절단 검사가 미판독을 그냥 통과시킨다(t179 실측).
+    refusal = section_refusal(fixtures_section)
+    if refusal is not None and refusal[0] == SECTION_UNREAD:
+        raise GroupSlotError(
+            FIXTURE_LIST_UNREAD,
+            "the fixture list to be grouped was never read ("
+            + refusal[1]
+            + "), so an auto-selected group would be derived from nothing "
+            "at all; automatic grouping is refused",
+        )
     if fixtures_section.get("truncated"):
         raise GroupSlotError(
             FIXTURE_LIST_TRUNCATED,
@@ -416,7 +441,37 @@ def build_group_write_plan(
         f"write scope {written_slots} exceeds measured empty slots {empty_slots}"
     )
 
-    fixture_list_truncated = bool(fixtures_section.get("truncated"))
+    # 「못 읽었다」를 「안 잘렸다」로 답하지 않는다(t179). 실패 단면에는
+    # `truncated` 키가 아예 없어 `bool(...)` 이 False 가 되고, 그러면 위
+    # 데이터클래스 독스트링이 약속한 계약 — 「a caller that only reads the
+    # plan field still receives the truncation fact」 — 이 미판독 단면에서
+    # 사실의 부재가 아니라 **거짓 사실**로 뒤집힌다. 판별은 저장소가 이미
+    # 가진 `section_refusal` 이 한다; 사본을 지으면 절단과 미판독을 다시
+    # 섞는다(`server/rig/section.py` 계약). 유일한 프로덕션 호출자
+    # (`tools.py`)는 이미 같은 술어로 OR 하므로 payload 는 바이트 동일하다 —
+    # 이 수정이 닫는 것은 **둘째 호출자**가 물려받을 구멍이다.
+    _fixtures_refusal = section_refusal(fixtures_section)
+    fixtures_unread = _fixtures_refusal is not None and _fixtures_refusal[0] == SECTION_UNREAD
+    fixture_list_truncated = fixtures_unread or bool(fixtures_section.get("truncated"))
+    if fixtures_unread:
+        fixture_list_truncated_reason = (
+            "the re-queried fixture container could not be read at all ("
+            + _fixtures_refusal[1]
+            + ") — this does NOT affect this call's groups, which were built "
+            "from caller-supplied fids, not from that listing; recorded "
+            "structurally so a reviewer can see the rig's actual contents "
+            "were never confirmed on this call"
+        )
+    elif fixture_list_truncated:
+        fixture_list_truncated_reason = (
+            "the re-queried fixture container listing was truncated "
+            "(truncated: true) — this does NOT affect this call's groups, "
+            "which were built from caller-supplied fids, not from the "
+            "truncated listing; recorded structurally so a reviewer can see "
+            "the rig may hold more fixtures than any single listing showed"
+        )
+    else:
+        fixture_list_truncated_reason = ""
     return GroupWritePlan(
         steps=tuple(steps),
         unverified=("membership",),
@@ -433,13 +488,5 @@ def build_group_write_plan(
         ),
         human_check_commands=tuple(f"Group {slot}" for slot in written_slots),
         fixture_list_truncated=fixture_list_truncated,
-        fixture_list_truncated_reason=(
-            "the re-queried fixture container listing was truncated "
-            "(truncated: true) — this does NOT affect this call's groups, "
-            "which were built from caller-supplied fids, not from the "
-            "truncated listing; recorded structurally so a reviewer can see "
-            "the rig may hold more fixtures than any single listing showed"
-            if fixture_list_truncated
-            else ""
-        ),
+        fixture_list_truncated_reason=fixture_list_truncated_reason,
     )
