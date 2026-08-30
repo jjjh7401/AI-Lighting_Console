@@ -130,3 +130,55 @@ CopilotPatch* 플러그인이라 순정 기본 쇼도 아니다 — **또 다른
   나왔다. **디렉터리는 무시된다.** 인계문의 "gitignore 라 이 트리에만 있다"가 맞고 내가 틀렸다.
   무시 여부는 **추적된 적 없는 경로**로 재라. 이전 회차들이 증거를 커밋할 수 있었던 건
   `git add -f` 로 강제 추가했기 때문이다 — 이 회차도 같은 방식으로 넣는다.
+
+---
+
+## 7. 붙여넣기 이후 (같은 날, 감독 Option B 완료 후)
+
+감독이 처음엔 Option A(Import)로 갔고 인수가 FAIL 했다 — 파일은 1.6.2 인데 실기는
+1.6.1. README §2.1 이 적어 둔 그 함정이다. Option B(Lua 편집기 전체 붙여넣기) 후 PASS.
+
+**두 채널이 실패와 성공 양쪽에서 다 작동했다.** 아침엔 둘 다 1.6.1 을, 지금은 둘 다
+1.6.2 를 답한다. 문자열 하나였으면 「그 필드만 안 갱신됐나」로 흔들렸을 자리다.
+
+### 7.1 인수 — 두 채널 + 대조군 (리드와 독립으로 각자 측정, 일치)
+
+    responder_roundtrip --skip-exec --expect-version 1.6.2
+    -> [PASS] ping: ok · live version=1.6.2 plugin=CopilotResponder
+    -> [PASS] state: ok
+    -> result: PASS
+
+    introspect_probe --path 'DataPool/ZZZNoSuchPoolXYZ' --listen-port 9005     (대조군)
+    -> introspect failed: path segment not found: 'ZZZNoSuchPoolXYZ'   [exit 1]
+
+    introspect_probe --path 'DataPool/PresetPools/1/3' --offset 27             (아침과 동일 명령)
+    -> ok:true · "offset": 27 · "path": "DataPool/PresetPools/1/3" · total 138 · truncated true
+
+경로를 안 바꾸고 **아침에 실패했던 그 명령 그대로** 쐈다 — 전후 비교가 같은 입력 위에 선다.
+
+| 항목 | 아침 (1.6.1) | 붙여넣기 후 (1.6.2) |
+|---|---|---|
+| `offset` | 경로에 삼켜짐 (`'3 offset=27'`) | `"offset": 27` 로 파싱 |
+| `path` | 오염 | 깨끗 |
+| 도달 가능 프로퍼티 | 27 | **total 138** |
+
+아침 §4 에 「안 잰 것」으로 적었던 **프로퍼티 111개**(138−27)의 도달 경로가 열렸다.
+
+### 7.2 관측 — 프리셋 풀 절단은 **안 풀렸다** (예측 적중)
+
+인수가 아니라 관측으로 쐈다. 예측은 「호출부에 페이징 루프가 없으니 그대로」였다.
+
+    t95_state_dump --path 'DataPool/PresetPools/1' --listen-port 9005
+    -> childCount 20 · children 19 · offset 0 · truncated true
+
+→ `pool-after-162-20260830.json`. **1.6.2 전과 동일하다.**
+
+이로써 t131 의 진단이 확증됐다 — 절단은 응답기 버전이 아니라 **호출부** 결함이다:
+`console/lua/copilot_responder.lua:230`(state 페이징은 1.6.0부터) ·
+`server/orchestrator/tools.py:4870`(오프셋 없이 1회 호출) ·
+`server/rig/section.py:91`(`truncated` → fail-closed).
+
+**여전히 안 잰 것:** 실기 1.6.2 가 `state ... offset=N` 을 실제로 존중하는지. 방금 쏜
+`offset` 은 **introspect** 다. lua 는 두 verb 가 파서 하나(`parse_paged_args`)를 공유한다고
+적어 두었지만 그건 소스 근거다 — `t95_state_dump` 에 `--offset` 이 없어 실측을 못 했다.
+t131 이 그 플래그를 붙이면서 실측으로 승격한다.
