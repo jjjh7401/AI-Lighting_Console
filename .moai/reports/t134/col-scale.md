@@ -315,3 +315,58 @@ COARSE 만 보면 ②와 ③이 둘 다 180 이라 구분되지 않는다. **FIN
 | 값이 프리셋에 맞게 들어갔는지 되읽기 | **여전히 불가** (13.4) |
 
 이 카드가 여는 것은 **6행**이다.
+
+---
+
+# 14. 4단계 — preview 로 6행이 계획에 드는 것을 콘솔에서 확인
+
+`--approve` 없음. `approval_requests: 0` 이 그것을 회신으로 확인해 준다 — **콘솔 쓰기 0.**
+
+    .venv/bin/python -m server.tools.lxseq_presets_e2e \
+      --preset-csv .../LXSEQ_RIG_01_ShowBase_r3.preset-col.csv \
+      --action preview --limit 20 --listen-port 9005 \
+      --out .moai/reports/t134/preview-col.json
+
+## 14.1 결과 — 계획 0 -> 6
+
+| 항목 | t134 이전(리드 실측) | 지금 |
+|---|---|---|
+| read | 8 | 8 |
+| planned | **0** | **6** |
+| held | 8 (`scale_unconverted` 6 · `no_rgb_value` 2) | **2** (`no_rgb_value` 2) |
+| already_present | 0 | 0 |
+| refusal | — | `null` |
+| pool_no | — | **4** (콘솔 목록에서 해석, 하드코딩 아님) |
+
+계획된 배정:
+
+    COL.01 슬롯 1  골드 앰버 (=P1)    R255 G180 B60 / ~2400K
+    COL.04 슬롯 2  핫 핑크 (=P4)      R255 G60 B158
+    COL.05 슬롯 3  딥 퍼플 (=P5)      R90 G43 B200
+    COL.06 슬롯 4  터쿼이즈 (=P6)     R46 G216 B216
+    COL.07 슬롯 5  선셋 오렌지 (=P7)  R255 G106 B40
+    COL.08 슬롯 6  딥 블루            R30 G60 B255
+
+보류 2행은 사유가 그대로다 — 「색온도만 있고 RGB 가 없다」. **6행이지 8행이 아니다.**
+
+## 14.2 점유 슬롯 회피가 지켜졌다
+
+`DataPool/PresetPools/4` 실측: `childCount 1`, 그 하나는 **슬롯 32**(`Preset 32`).
+계획이 1~6 이므로 점유와 겹치지 않는다(REQ-LXSEQ3-007). `truncated false` 라
+목록이 잘려서 비어 보이는 경우도 아니다.
+
+## 14.3 🔴 계기 함정 하나 — `--limit` 기본값이 1이다
+
+첫 실행에서 `planned 1 · held 0 · read 1` 이 나왔다. 결함이 아니라 **인자 누락**이다:
+`--limit` 기본값이 1이라 시트가 첫 행만 잘려 전달됐다(`source.byte_length` 90).
+`--limit 20` 으로 다시 돌려 8행 전체를 읽혔다.
+
+「계기가 무엇을 세는지 먼저 물어라」가 이 자리다 — 하마터면 「6행이 안 열린다」를
+결함으로 보고할 뻔했다.
+
+## 14.4 이 회차가 여전히 증명하지 못하는 것
+
+`unverified: ["value_match"]` 가 회신에 그대로 실려 있다. **슬롯이 찼다는 것은
+「무언가 저장됐다」까지만 말한다** — 값이 맞는지는 이 채널로 못 읽는다(t105·13.4).
+그래서 이 카드는 `--approve` 까지 가지 않는다. 실제 저장과 그 검수는 별건이고,
+색은 눈으로 보면 아는 물건이라 마지막 판정은 감독 육안이 될 것이다.
