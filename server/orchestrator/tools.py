@@ -85,6 +85,7 @@ from server.lxseq.parser import MissingColumnsError, parse_patch_csv
 from server.lxseq.preset_mapper import map_presets
 from server.lxseq.preset_parser import (
     UnknownPresetSheetError,
+    col_rgb_percents,
     dim_level_percent,
     parse_preset_csv,
 )
@@ -111,7 +112,11 @@ from server.prechk.mode_read import (
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import PropertyRead, bulk_capable, read_properties
 from server.prechk.report import build_report as build_precheck_report
-from server.presets.store import preset_apply_command, preset_store_commands
+from server.presets.store import (
+    preset_apply_color_command,
+    preset_apply_command,
+    preset_store_commands,
+)
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
 from server.safety.approval import (
@@ -1678,11 +1683,11 @@ _PRESET_POOL_FAMILY = dict(
 #: `Store Preset` 은 그 순간의 프로그래머 상태를 저장한다 — 시트 값이 아니라
 #: 그 자리에 우연히 있던 것이다(t108 C1).
 #:
-#: dim 하나뿐인 것은 누락이 아니라 **판정**이다. `classify_storability` 가
-#: col 8행 전부와 bm 5행 전부를 보류로 돌리므로(`preset_parser.py:187-249`),
-#: 오늘 계획에 오르는 종류는 dim 뿐이다. 두 축을 여는 것은 값 문제이지 이 표의
-#: 문제가 아니다 — col 은 0-255 대 0-100 척도, bm 은 산문 복합속성 + 프로브
-#: 거절 속성이다. 표에 없는 종류가 계획에 오르면 저장하지 않고 거절한다.
+#: 이 표에 dim 만 남은 것은 누락이 아니라 **판정**이다. col 은 성분이 셋이라
+#: 이 한 칸짜리 표에 안 들어가고 `_lxseq_preset_apply_command` 가 따로 분기한다
+#: (t134 — 척도 축이 실측으로 닫혔다). bm 5행은 여전히 `classify_storability` 가
+#: 전부 보류로 돌린다 — 산문 복합속성 + 프로브 거절 속성이라 값 문제이지 이 표의
+#: 문제가 아니다. 표에도 분기에도 없는 종류가 계획에 오르면 저장하지 않고 거절한다.
 LXSEQ_PRESET_APPLY_ATTRIBUTE = dict([("preset-dim", "Dimmer")])
 
 #: 적용 줄이 겨눌 그룹 **번호**. 감독 결정(2026-08-26): dim 은 전 픽스처.
@@ -1703,6 +1708,14 @@ def _lxseq_preset_apply_command(placement) -> str | None:
     ``None`` 은 「값이 없다」가 아니라 **「이 종류를 아직 명령으로 못 옮긴다」**
     이며, 호출지는 그때 저장 줄도 내보내지 않는다(fail-closed).
     """
+    if placement.kind == "preset-col":
+        percents = col_rgb_percents(placement.value_raw)
+        if percents is None:
+            # 판정기가 통과시킨 값을 판독기가 못 읽었다는 뜻이다. 둘은 같은 술어를
+            # 쓰므로(`_rgb_components`) 여기 오면 술어가 갈라진 것이다 — 추측하지 않는다.
+            return None
+        return preset_apply_color_command(LXSEQ_PRESET_APPLY_GROUP_NO, percents)
+
     attribute = LXSEQ_PRESET_APPLY_ATTRIBUTE.get(placement.kind)
     if attribute is None:
         return None

@@ -254,6 +254,19 @@ def map_presets(
     두 번 돌릴 때 전부 복제된다. 거르는 자리는 **배정 전**이다 — 배정 후에 거르면
     쓰지도 않을 슬롯을 예약해 없는 부족분이 생긴다.
     """
+    # [HARD] 배정은 **한 종류의 시트**에 대해서만 유효하다. 풀 번호는 호출지가
+    # `parsed.sheet_kind` 로 하나 정해 넘기므로(`tools.py` 의 `_PRESET_POOL_FAMILY`),
+    # 저장 가능한 레코드가 두 종류 섞여 들어오면 한쪽이 **남의 풀에** 배정된다.
+    # t134 이전에는 col·bm 이 전부 보류라 이 실수가 무해했다 — col 이 열리면서
+    # 유해해졌으므로 여기서 닫는다. 시트 데이터로는 생길 수 없는 상태이고
+    # (한 파일은 한 종류다) 호출지 결함이므로 예외로 올린다.
+    storable_kinds = set(r.kind for r in records if r.storable)
+    if len(storable_kinds) > 1:
+        raise ValueError(
+            "map_presets received storable records of more than one sheet kind: "
+            + ", ".join(sorted(storable_kinds))
+            + " — one call maps one sheet into one pool"
+        )
     held_list = [_held_from(r) for r in records if not r.storable]
     # 못 보내는 이름은 **여기서** 걸러진다 — 배정 전이자 거절 판정 전이다.
     # 거절 경로도 `held` 를 그대로 나르므로, 풀을 못 읽어 0건이 된 회신에도

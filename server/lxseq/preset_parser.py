@@ -75,7 +75,6 @@ _PERCENT = re.compile(r"^\s*(\d+)\s*%\s*$")
 #: 보류 사유의 **닫힌 클래스**. 산문만 두면 13건이 한 덩어리로 보이고,
 #: **어느 하나를 풀면 몇 건이 열리는지** 아무도 모른다. 클래스가 있으면
 #: 「스케일 변환만 해결하면 6건」이 바로 읽힌다. 원인마다 처방과 소유자가 다르다.
-HOLD_SCALE_UNCONVERTED = "scale_unconverted"  # col — 255 대 100. 풀 수 있으나 해석이다
 HOLD_NO_RGB_VALUE = "no_rgb_value"  # col — 색온도만. 켈빈 모델이 저장소에 없다
 HOLD_PROBE_REJECTED = "attribute_probe_rejected"  # bm — 라이브 프로브가 거절했다
 HOLD_FAMILY_OUT_OF_SCOPE = "family_out_of_scope"  # bm — 풀 계열이 범위 밖이다
@@ -86,6 +85,16 @@ _WORD = re.compile(r"[A-Za-z][A-Za-z0-9]*")
 
 #: col 값에 RGB 삼원색이 적혔는지. 색온도만 있는 행과 가르는 데만 쓴다.
 _HAS_RGB = re.compile(r"R\s*\d")
+
+#: col 값에서 세 성분을 **꺼내는** 술어. `_HAS_RGB` 는 "R 뒤에 숫자"만 보므로
+#: `R2 뭔가` 같은 반쪽 값도 통과시킨다 — 판정에 그것만 쓰면 판정기가 통과시킨 값을
+#: 판독기가 못 읽고, 그러면 임포터가 **한 줄도** 안 보내고 통째로 거절한다
+#: (`_lxseq_preset_apply_command` 의 fail-closed). 그래서 판정과 판독이 **이 하나**를
+#: 같이 쓴다 — `preset_label_refusal` 이 같은 이유로 술어를 밖으로 낸 것과 같다(t97).
+_RGB_TRIPLE = re.compile(r"R\s*(\d+)\s*G\s*(\d+)\s*B\s*(\d+)")
+
+#: 콘솔이 받는 성분의 상한. 시트가 8비트 표기를 쓰므로 그 바깥은 옮길 대상이 아니다.
+_RGB_COMPONENT_MAX = 255
 
 
 class UnknownPresetSheetError(ValueError):
@@ -205,12 +214,20 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
         )
 
     if kind == "preset-col":
+        components = _rgb_components(value_raw)
+        if components is not None:
+            # t134 실측(2026-08-30, MOVER-D 521 3.001): 콘솔은 퍼센트를 16비트로
+            # **선형** 매핑한다 — At 70.6 -> COARSE 180 / FINE 188,
+            # 180*256+188 = 46268 = round(70.6/100*65535), 오차 0.
+            # 그러므로 이 변환은 더 이상 해석이 아니다.
+            return True, ()
         if _HAS_RGB.search(value_raw):
             return False, (
                 PresetHoldReason(
-                    HOLD_SCALE_UNCONVERTED,
-                    "RGB 가 0-255 로 적혔고 콘솔은 0-100 퍼센트다. 두 축의 대응은 "
-                    "미측정이라 변환이 해석이 된다 — 값은 되읽을 수 없다",
+                    HOLD_VALUE_NOT_MACHINE_READABLE,
+                    "RGB 자리가 R·G·B 세 성분으로 읽히지 않거나 0-255 밖이다: "
+                    + value_raw.strip()
+                    + " — 추측해서 옮기지 않는다",
                 ),
             )
         return False, (
@@ -264,6 +281,43 @@ def dim_level_percent(value_raw: str) -> int | None:
     if match is None:
         return None
     return int(match.group(1))
+
+
+def _rgb_components(value_raw: str) -> tuple[int, int, int] | None:
+    """col 원문에서 0-255 세 성분. 세 성분으로 안 읽히거나 범위 밖이면 ``None``.
+
+    판정(`classify_storability`)과 판독(`col_rgb_percents`)이 **이 하나**를 쓴다.
+    사본을 두면 판정이 통과시킨 값을 판독기가 못 읽는 날이 오고, 그날 임포터는
+    한 줄도 안 보내고 통째로 거절한다.
+    """
+    match = _RGB_TRIPLE.search(value_raw)
+    if match is None:
+        return None
+    values = tuple(int(group) for group in match.groups())
+    if any(v > _RGB_COMPONENT_MAX for v in values):
+        return None
+    return values
+
+
+def col_rgb_percents(value_raw: str) -> tuple[float, float, float] | None:
+    """col 원문 -> 콘솔 퍼센트 세 개. 옮길 수 없으면 ``None``.
+
+    **소수 1자리는 형제 생산자와 맞춘 것이다.** `src/Lighting_Designer/
+    90_빌드파이프라인/make_ma3.py:85-87` 이 같은 시트를 `%.1f` 로 방출하므로,
+    같은 자리수를 쓰면 두 경로가 콘솔에 **같은 숫자**를 보낸다. 오늘 이 카드의
+    출발점이 「한쪽은 통과하고 한쪽은 막힌 불일치」였고, 자리수를 늘리면 그
+    불일치가 값 축에서 되살아난다.
+
+    대가를 적어 둔다 — 소수 1자리는 0-255 중 **12개**(7 8 9 10 20 21 234 235
+    245 246 247 248)에서 왕복이 ±1 로 어긋난다. **현재 시트의 18개 값은 그중
+    하나도 안 쓴다(0/18).** 시트를 고쳐 저 값이 들어오면 이 줄이 걸려야 한다.
+    전 구간 무손실이 필요해지면 소수 3자리가 0/256 이지만, **콘솔이 소수 몇
+    자리까지 받는지는 안 쟀다** — 그것이 선행 측정이다.
+    """
+    components = _rgb_components(value_raw)
+    if components is None:
+        return None
+    return tuple(round(v / 255 * 100, 1) for v in components)
 
 
 def parse_preset_csv(text: str) -> PresetParseResult:
