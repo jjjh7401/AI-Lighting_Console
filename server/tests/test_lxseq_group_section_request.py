@@ -47,6 +47,7 @@ from server.orchestrator.tools import (
     collect_rig_sections,
 )
 from server.rig.section import SECTION_UNREAD
+from server.safety.console import StateQueryError
 from server.vwx.patchplan import FID_PROPERTY_NAME
 
 GROUP_CSV = Path("server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.group.csv")
@@ -330,3 +331,126 @@ class TestADeadFixturesPathCrashesInsteadOfRefusing:
         """대조군 -- 위 예외가 「이 가짜는 늘 터진다」가 아님을 보인다."""
         execution = _dispatch(_Console(_patch_fids()))
         assert execution.result.is_error is False, execution.result.content
+
+
+# ---------------------------------------------------------------------------
+# t182 5절 -- 콘솔이 안 답해도 이 도구는 죽지 않고 사유를 낸다
+#
+# 고치기 전 실측: 픽스처 경로가 안 답하면 `read_existing_fids` 가 잡히지 않은
+# 예외로 죽었고, 그 예외는 `session.py` 의 `except Exception` 까지 올라가
+# kind='unexpected' + 「서버 내부 문제가 발생했습니다 … 진단 로그를 확인해
+# 주세요」로 접혔다. 콘솔이 안 답한 것을 서버 문제라 하는 거짓 귀속이다.
+#
+# 4절이 그 죽음을 실측 기록으로 남겼는데, 그 4절은 `LookupError` 를 던지는 가짜로
+# 쟀다. **프로덕션 포트가 던지는 것은 `StateQueryError` 다**
+# (`server/safety/console.py:89`) -- 형태(예외)는 맞고 종류가 틀렸다. 그래서 이
+# 절은 실물 종류로 쏜다. 4절은 그대로 둔다: `LookupError` 는 이 수리가 잡는
+# 종류가 아니므로 여전히 죽는 것이 맞고, 그 초록이 **넓히지 않았다**는 증거다.
+#
+# 수리 자리: 개념(`unreadable_root`)은 `server/vwx/patchplan.py` 에, catch 는
+# 호출부에. 순수 로직 층이 `server.safety` 를 임포트한 선례가 0건이라
+# 그 방향으로 첫 발을 떼지 않았다 -- 근거는 그 헬퍼 독스트링에 있다.
+# ---------------------------------------------------------------------------
+
+
+class _RaisingFixtureRoot:
+    """픽스처 루트만 예외로 만든다. 종류를 밖에서 받는다.
+
+    `FID_FIXTURE_ROOT` 와 `FIXTURES_PATH` 는 **같은 경로**라, 이 하나를 죽이면
+    단면 판독과 FID 판독이 함께 실패한다 -- 실물에서 일어나는 조합이다.
+    """
+
+    def __init__(self, base, exc_type) -> None:
+        self._base = base
+        self._exc_type = exc_type
+
+    def _dead(self, path: str) -> bool:
+        return path == FIXTURES_PATH or path.startswith(FIXTURES_PATH + "/")
+
+    def query_state(self, path, *args, **kwargs):
+        if self._dead(path):
+            raise self._exc_type("no state reply for " + repr(path) + " within 5.0s")
+        return self._base.query_state(path, *args, **kwargs)
+
+    def query_property(self, path, property_name):
+        if self._dead(path):
+            raise self._exc_type("no prop reply for " + repr(path) + " within 5.0s")
+        return self._base.query_property(path, property_name)
+
+    def __getattr__(self, name):
+        return getattr(self._base, name)
+
+
+class _NotOkFixtureRoot(_RaisingFixtureRoot):
+    """팔 B -- 콘솔이 답은 하는데 `ok=False` 다.
+
+    이쪽은 고치기 전에도 정상 동작했다. 같은 사유로 도착해야 두 실패 형태가
+    한 자리로 모였다는 뜻이고, 그게 이 수리의 요지다.
+    """
+
+    def query_state(self, path, *args, **kwargs):
+        if self._dead(path):
+            return dict(ok=False, error="console did not answer")
+        return self._base.query_state(path, *args, **kwargs)
+
+    def query_property(self, path, property_name):
+        if self._dead(path):
+            return dict(ok=False, error="not readable")
+        return self._base.query_property(path, property_name)
+
+
+_ROOT_UNREAD_REASON = "콘솔의 픽스처 루트 상태를 읽지 못했다"
+
+
+def _payload_of(port):
+    execution = _dispatch(port)
+    assert execution.result.is_error is False, execution.result.content
+    return json.loads(execution.result.content)
+
+
+class TestASilentConsoleIsReportedNotCrashed:
+    def test_the_tool_survives_and_names_the_console(self):
+        """거짓 귀속 트립와이어.
+
+        둘이 동시에 걸린다. (1) `_dispatch` 가 **예외를 안 낸다** -- catch 를
+        지우면 여기서 죽어 빨개진다. 그게 고치기 전 상태이고 사용자에게는
+        「서버 내부 문제」로 갔다. (2) 사유 문자열이 **콘솔을 가리킨다**.
+        「살아남았다」만 보면 둘 다 놓친다.
+        """
+        payload = _payload_of(_RaisingFixtureRoot(_Console(_patch_fids()), StateQueryError))
+
+        assert payload["console_read_incomplete"] is True
+        assert payload["console_read_reason"] == _ROOT_UNREAD_REASON
+
+    def test_both_failure_shapes_arrive_at_the_same_reason(self):
+        """팔 B -- 기존 갈래를 안 깨뜨렸고, 두 형태가 한 자리로 모였다.
+
+        `ok=False` 는 고치기 전에도 이 사유로 도착했다. 예외 형태만 그 갈래를
+        못 타서 죽었다. 두 값이 같아야 `unreadable_root()` 하나가 둘의 주인이다.
+        이 팔이 없으면 「한쪽만 덮던 것을 양쪽으로 넓혔다」가 추론이 된다.
+        """
+        raised = _payload_of(_RaisingFixtureRoot(_Console(_patch_fids()), StateQueryError))
+        not_ok = _payload_of(_NotOkFixtureRoot(_Console(_patch_fids()), StateQueryError))
+
+        assert raised["console_read_reason"] == not_ok["console_read_reason"]
+        assert not_ok["console_read_reason"] == _ROOT_UNREAD_REASON
+
+    def test_an_unrelated_bug_is_not_swallowed(self):
+        """넓히기 방지 -- `except Exception` 으로 바꾸면 여기서 빨개진다.
+
+        무관한 버그를 「콘솔이 안 답했다」로 보고하면, 이 수리가 없앤 거짓 귀속을
+        **방향만 뒤집어** 새로 만든다. 감독은 이번엔 콘솔을 뒤지는데 고장난 곳은
+        코드다. 그래서 잡는 종류를 못 박고 그 밖은 올려보낸다.
+        """
+        with pytest.raises(ValueError):
+            _dispatch(_RaisingFixtureRoot(_Console(_patch_fids()), ValueError))
+
+    def test_a_live_console_carries_no_such_reason(self):
+        """대조군 -- 이 사유가 늘 붙는 게 아님을 보인다.
+
+        이 팔이 없으면 위 검사들은 사유를 상수로 하드코딩해도 초록이 난다.
+        """
+        payload = _payload_of(_Console(_patch_fids()))
+
+        assert payload["console_read_incomplete"] is False
+        assert payload["console_read_reason"] is None

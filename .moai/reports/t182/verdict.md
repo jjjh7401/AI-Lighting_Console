@@ -1,0 +1,283 @@
+# t182 — 1단계 측정: 계산되는가, 닿는가
+
+기준: `WT-groups-refusal-path` @ `0fc0439` (origin/main 과 0/0)
+측정일: 2026-08-31 · 실기 콘솔 0회 (전부 가짜)
+프로브: `.moai/reports/t182/probes/` 3개. 워크트리 루트에서 —
+`PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.moai/reports/t182/probes uv run python .moai/reports/t182/probes/<name>.py`
+
+카드가 첫 걸음을 판정이 아니라 측정으로 박았다. 재기 전에 어느 쪽 처방도 쓰지 않았다.
+
+---
+
+## 1. 이 가짜가 무엇을 정하나 (t181 에서 걸린 자리라 먼저 적는다)
+
+기존 `_Console` 은 죽은 경로에서 `LookupError` 를 던진다. 실물 포트는
+`StateQueryError` 다(`server/safety/console.py:89`, `raise` 8자리). t181 에서 이
+차이가 처방을 통째로 바꿀 뻔했다.
+
+그래서 **두 종류를 다 쐈다.** 결과가 갈리지 않았다 — `collect_rig_sections:1012` 가
+`except Exception` 이라 종류를 안 가린다. 읽은 것과 도는 것이 같음을 확인한 것이고,
+**내 가짜의 선택이 이 카드의 결과를 편향시키지 않았다**는 대조군이다.
+
+## 2. 카드의 두 갈래 — 답은 「(가) 그리고 그 뒤에 죽는다」
+
+`collect_rig_sections` 를 스파이로 감싸 반환값을 잡았다:
+
+| 팔 | 죽은 경로 | 종류 | **계산된 분류** | 도구 |
+|---|---|---|---|---|
+| A | 없음 | — | groups·fixtures 둘 다 읽힘 | RETURNED |
+| B | fixtures | `LookupError` | fixtures=`path_not_resolved` | RAISED |
+| C | fixtures | `StateQueryError` | fixtures=`path_not_resolved` | RAISED |
+| D | 둘 다 | `LookupError` | 둘 다 **`console_unreachable`** | RAISED |
+| E | 둘 다 | `StateQueryError` | 둘 다 **`console_unreachable`** | RAISED |
+
+RAISED 는 전부 `patchplan.py:1461` — `read_existing_fids` 안이다(t181 이 자리 B 로
+남긴 그 자리).
+
+**계산은 된다.** 카드가 「계산되는데 안 나가는 것인지, 계산 자체가 없는 것인지」를
+갈랐는데 답은 **전자**이고, 계산 **직후 다음 줄**에서 도구가 죽어 페이로드가
+만들어지지 않는다.
+
+## 3. 🔴 2단계 결론을 철회했다 — 내 스텁이 답을 만들고 있었다
+
+죽음만 고치면 닿는지 보려고 `read_existing_fids` 를 `root_unreadable=True` 로
+흉내 냈다. 그랬더니 `console_unreachable` 이 페이로드 어디에도 안 나왔고
+「채널이 안 흐른다」로 읽었다. **틀렸다.**
+
+`root_unreadable=True` 는 **FID 축**의 상태다. 그 축이 `console_read_reason` 을
+먼저 채워 **섹션 축을 가린다.** 축을 갈라 다시 쟀다:
+
+| 스텁 | 팔 | `refusal` | `refusal_detail` | 페이로드에 `console_unreachable` |
+|---|---|---|---|---|
+| S1 FID 축 시끄러움 | C | `null` | `null` | **없음** |
+| S1 FID 축 시끄러움 | E | `null` | `null` | **없음** |
+| S2 FID 축 조용함 | C | `null` | `null` | 없음 |
+| S2 FID 축 조용함 | E | `section_unread` | `단면을 못 읽었다: console_unreachable` | **있음** |
+
+**S2-E 가 채널이 흐른다는 증거다.** t167 이 연 `refusal` / `refusal_detail` 통로는
+실제로 사용자에게 닿는다 — 죽음만 치우면.
+
+⚠️ **S2 첫 판은 무효였다.** 지어낸 `fids=(1,2,3)` 이 패치 시트와 안 맞아 하류가
+`SpatialAnalysisError` 로 터졌다. 살아있을 때와 같은 FID 를 완전 판독으로 돌려주는
+스텁으로 바꿔서 다시 쟀다. 못 쓴 팔을 조용히 버리지 않고 적는다.
+
+## 4. 그래서 남은 결함은 카드가 적은 것과 다르다
+
+카드는 「매퍼는 두 분류를 가르는데 사용자는 하나만 본다」로 세웠다. 재보니 매퍼 층
+채널은 **흐른다**(S2-E). 실제로 남은 것은 둘이고 **둘 다 카드에 없다**:
+
+**(ㄱ) 죽음이 채널을 막는다.** 현재는 `read_existing_fids` 가 먼저 죽어 어떤
+분류도 안 나간다. t181 자리 B 그대로다.
+
+**(ㄴ) 🔴 FID 축이 섹션 축을 가린다.** S1-E 를 보라 — 섹션 축이
+`console_unreachable` 을 **계산했는데** `refusal` 이 `null` 이고 그 말이 페이로드에
+없다. 그리고 **S1 이 현실적인 조합이다**: 픽스처 경로 하나가 죽으면 섹션 판독과
+FID 판독이 **같은 경로를 읽으므로 둘 다 실패한다.** 즉 (ㄱ)을 고쳐도 현실 경로에서는
+여전히 분류가 안 보인다.
+
+t167 이 「두 축이 한 채널로 합쳐졌다」를 막으려고 검사를 뒀는데, 그 검사가 지키는
+것은 **FID 축 채널에 섹션 사유가 들어가지 않는 것**이다. 반대 방향 —
+**FID 축이 시끄러우면 섹션 사유가 사라지는 것** — 은 아무도 안 지키고 있다.
+
+## 5. 안 잰 것
+
+- **실기 콘솔 0회.** 전부 가짜다.
+- **(ㄴ)의 기전을 안 쟀다.** `map_groups` 안에서 FID 축이 어디서 이기는지 안 따라갔다.
+  「가려진다」는 관측이고 「왜」는 아직 가설도 없다.
+- **S1-C 와 S2-C 가 왜 둘 다 조용한지** 안 쟀다. 픽스처 단면이 `path_not_resolved` 로
+  계산됐는데 어느 스텁에서도 안 나온다 — 이 도구가 `sections["groups"]` 만 읽는다는
+  t152 기록과 맞지만 확인은 안 했다.
+- **처방 없음.** 이 회차는 측정만이다. (ㄴ)이 조이는 방향인지도 아직 모른다.
+
+---
+
+# 4단계 — (ㄱ) 만으로 사용자가 보는 것이 바뀌는가 (리드 물음)
+
+리드가 (ㄱ) 착수 전에 하나를 재라고 했다: **S1(현실 조합)에서 FID 축이
+「콘솔이 안 답했다」를 채우는가(a), 거기도 비어 있는가(b).**
+(a) 면 (ㄱ) 만으로 실질 개선이고, (b) 면 (ㄱ) 의 값이 t186 에 종속된다.
+
+## 스텁을 안 쓰고 쟀다 — 2단계에서 스텁이 답을 만들었기 때문
+
+`patchplan.py:1461-1466` 을 읽으니 실패 반환이 코드에 그대로 있다:
+
+    state = fid_property_port.query_state(FID_FIXTURE_ROOT)
+    if state.get("ok") is not True:
+        return ExistingFidRead(attempted=True, root_unreadable=True)
+
+**3단계 S1 스텁과 바이트 동일하다** — 내가 지어낸 값이 아니라 이 함수 자신의 실패
+반환이었다. 그래도 추론으로 두지 않고, 포트가 **예외 대신 `ok=False`** 를 주게 해서
+**진짜 `read_existing_fids`** 를 그 갈래로 태웠다.
+
+| 팔 | `console_read_reason` | `console_read_incomplete` | `refusal` |
+|---|---|---|---|
+| 대조군 살아있음 | `null` | `false` | `null` |
+| FID 루트 `ok=False` (스텁 없음) | **`콘솔의 픽스처 루트 상태를 읽지 못했다`** | `true` | `null` |
+
+## 답: (a)
+
+**FID 축이 콘솔을 가리키는 말을 채운다.** 그러므로 (ㄱ) 만 고쳐도 사용자가 받는 것이
+바뀐다:
+
+    지금        서버 내부 문제가 발생했습니다. … 진단 로그를 확인해 주세요.   (kind=unexpected)
+    (ㄱ) 이후   콘솔의 픽스처 루트 상태를 읽지 못했다                          (console_read_incomplete=true)
+
+감독이 서버를 뒤지러 가는 대신 콘솔을 본다. **실질 개선이고 t186 에 종속되지 않는다.**
+
+## 두 경로가 같은 답에 닿았다
+
+3단계 S1 은 **예외 + 스텁**, 4단계는 **`ok=False` + 진짜 함수**다. 자극도 경로도
+다른데 문자열이 같다. 한 계기의 답이 아니라는 뜻이고, 2단계에서 한 계기만 믿었다가
+틀린 것에 대한 교정이다.
+
+## 이 회차가 안 정한 것
+
+- ⚠️ **이 자극은 섹션 축도 바꾼다.** `collect_rig_sections:1012` 는 예외만 잡으므로
+  `ok=False` 는 그 갈래를 안 탄다. 그래서 이 회차가 정한 것은 **FID 축 문면 하나**다.
+  섹션 축 거동은 여기서 읽지 않았다 — **자극이 두 축을 건드리는 것을 알고 쐈고**,
+  2단계에서는 모르고 쐈다. 그 차이가 이 회차와 2단계의 차이다.
+- **(ㄱ) 의 실제 수리 형태를 안 정했다.** 예외를 잡아 같은 `root_unreadable=True` 로
+  보내는 것이 자연스럽지만(형제 실패 형태가 이미 그렇게 돌아간다), 그건 설계 선택이고
+  이 측정이 강제하지 않는다.
+- `refusal` 은 두 팔 다 `null` 이다 — (ㄴ)과 정합적이지만 이 회차가 (ㄴ)을 잰 것은 아니다.
+
+---
+
+# 5단계 — 폭발 반경(조건 4) + 수리 자리의 층 문제
+
+## 폭발 반경 — 리드의 읽기가 맞다. 이 트리에서 다시 쟀다
+
+t181 에서 같은 형태를 쟀지만 그건 **수리 전 트리**였다. 지금은 t181 이 들어간 뒤라
+앞자리가 거절로 바뀌었으므로 옮겨 쓰지 않고 다시 쟀다(`probes/_t182_blast.py`).
+자극은 픽스처 경로가 `StateQueryError` 를 던지는 것:
+
+| 호출자 | 도구 | 결과 |
+|---|---|---|
+| `tools.py:4368` | `patch_fixtures` | **거절** — `console did not answer — fixture inventory unread: …` |
+| `tools.py:5447` | `import_lxseq_patch` | **거절** — 동일 |
+| `tools.py:4748` | `import_lxseq_groups` | **죽음** — `patchplan.py:1461` |
+
+**실질 변화는 `4748` 하나다.** 앞의 둘은 t181 이 고친 `read_inventory` 에서 먼저 거절된다.
+
+## 🔴 함수 안 포트 호출이 **셋**이다 — 1461 만 고치면 반쪽이다
+
+    patchplan.py:1461   fid_property_port.query_state(FID_FIXTURE_ROOT)     <- 실측된 크래시
+                :1493   fid_property_port.query_property(...)               <- 슬롯별 판독
+                :1529   fid_property_port.query_property(...)              <- 절단 복구 스윕
+
+1461 만 잡으면 「루트는 읽혔는데 프로퍼티가 안 답한다」에서 여전히 죽는다.
+**이 두 자리의 도달은 안 쟀다** — 루트가 살아야 도달하므로 위 자극으로는 안 걸린다.
+
+## 🔴 층 문제 — 리드가 고른 자리에 선례가 0건이다
+
+`read_existing_fids` 안에서 `except StateQueryError` 를 쓰려면
+`server/vwx/patchplan.py` 가 `server.safety.console` 을 임포트해야 한다.
+
+    grep -rn "from server.safety" server/vwx/ server/prechk/ server/rig/
+      -> 0건
+
+**순수 로직 층(`vwx` · `prechk` · `rig`)은 I/O 게이트(`safety`)를 한 번도 임포트하지 않는다.**
+이 수리가 그 경계를 **처음으로** 넘는다.
+
+- 아키텍처 가드 위반은 **아니다** — `test_architecture.py` 의 금지 접두는
+  `server.bridge` · `pythonosc` 이고 `server.safety` 가 아니며, 검사는 **파일 자신의
+  임포트 줄**만 읽는다. 순환도 없다(`console.py` 는 `vwx`/`prechk` 를 안 부른다).
+- 다만 `console.py` 가 `server.bridge.osc` · `server.bridge.protocol` 을 부르므로,
+  **전이적으로 순수 모듈이 OSC 브리지를 끌어온다.** 문언 위반은 아니고 취지 쪽이다.
+
+## 무너진 대안 하나 — 적어 둔다
+
+`_InventoryPort`(tools.py:2762)가 `read_existing_fids` 로 가는 어댑터이고 tools.py 는
+이미 `StateQueryError` 를 임포트하므로, **어댑터에서 예외를 `ok=False` 로 옮기면**
+patchplan 의 기존 갈래가 그대로 받아 새 개념도 새 임포트도 없다 — 깔끔해 보였다.
+
+**안 된다.** `_InventoryPort` 는 **11군데**에서 쓰이고 그중 다섯(`2911` · `3094` ·
+`3909` · `4294` · `4485`)이 `read_inventory` 자리다. 어댑터가 예외를 삼키면
+t181 이 넣은 `except StateQueryError` 두 자리가 **죽은 코드**가 되고 사용자 문면이
+`fixture inventory unreadable` 로 되돌아간다. 범위도 11자리로 터진다.
+
+**가장 싼 처방이 방금 고친 것을 되돌리는 형태** — t181 에서 한 번 만난 그 모양이다.
+
+---
+
+# 6단계 — 구현 (B', 리드 승인)
+
+커밋 `28998de`. 리드가 **근거 2를 철회**했다 — 「호출자가 셋이니 안에서 고치면 한 번에
+낫는다」는 내 5단계 측정으로 실익 0 임이 드러났다(관측되는 자리는 `4748` 하나).
+
+## 무엇을 고쳤나
+
+**개념은 `patchplan`, catch 는 `tools`.**
+
+    server/vwx/patchplan.py     def unreadable_root() -> ExistingFidRead
+                                  return ExistingFidRead(attempted=True, root_unreadable=True)
+                                ok=False 갈래도 이 함수를 부른다 -> 두 형태가 한 자리로 모인다
+
+    server/orchestrator/tools.py:4748
+                                try:  read_existing_fids(...)
+                                except StateQueryError:  fid_read = unreadable_root()
+
+`vwx` → `safety` 임포트를 안 만든 이유는 헬퍼 독스트링에 적었다 — 다음 사람이
+「왜 안쪽에서 안 잡지」로 되돌리지 않게. 리드가 가드 문언을 다시 읽어 **A 도 위반이
+아님**을 확인했고(가드가 지키는 경계는 「OSC 전송 표면에 닿는 것은 `server/safety/` 하나」),
+그런데도 **선례 0 인 방향으로 첫 발을 떼는 값을 이 카드가 치를 이유가 없어** B' 로 갔다.
+
+## ⚠️ 반쪽인 것을 알고 한다
+
+`1461` 만 감쌌다. 같은 함수의 `1493`(슬롯별 판독) · `1529`(절단 복구 스윕)도 포트를
+부르지만 **루트가 살아야 도달**하므로 이 자극으로는 안 걸렸고 **도달 미측정**이다.
+→ **t188** 로 갈랐다. 「재고 도달하는 것만 고친다」를 지켰다.
+
+반쪽이라도 **관측된 사용자 피해**(「서버 내부 문제」 오진)는 사라진다.
+
+## 검사 — 9 → 13 (순증 4, 교체 없음)
+
+| 검사 | 지키는 것 |
+|---|---|
+| `test_the_tool_survives_and_names_the_console` | 안 죽는다 + 사유가 콘솔을 가리킨다 |
+| `test_both_failure_shapes_arrive_at_the_same_reason` | 팔 B — `ok=False` 와 예외가 **같은 사유**로 도착 |
+| `test_an_unrelated_bug_is_not_swallowed` | 넓히기 방지 — `except Exception` 이면 빨강 |
+| `test_a_live_console_carries_no_such_reason` | 대조군 — 사유가 상수가 아니다 |
+
+기존 4절(`LookupError` 로 죽는 것을 기록한 실측)은 **그대로 뒀다.** `LookupError` 는
+이 수리가 잡는 종류가 아니므로 여전히 죽는 것이 맞고, **그 초록이 「넓히지 않았다」의
+증거**다. 4절을 지우면 그 보호가 사라진다.
+
+## 뮤테이션 5/5 KILL
+
+| # | 축 | 예측 | 결과 |
+|---|---|---|---|
+| M1 | 수리 자리 (catch 제거) | 침묵 2건 | KILL 2 |
+| M2 | 예외 종류 (`except Exception`) | 넓히기 방지 1건 | KILL **2** ⚠️ |
+| M3 | 개념의 주인 (헬퍼 대신 손조립) | 사유 2건 | KILL 2 |
+| M4 | 사유 문면 (헬퍼 반환 변경) | 사유 **3건** | KILL **2** ⚠️ |
+| M5 | 두 형태의 수렴 (`ok=False` 만 딴 값) | 팔 B 1건 | KILL 1 |
+
+⚠️ **M2 예측이 좁았다 — 2건이 죽었고 그중 하나가 내가 안 만든 검사다.**
+기존 4절의 `test_the_tool_raises_before_it_can_report_console_unreachable` 이 같이
+빨개진다. `except Exception` 은 `LookupError` 도 삼키므로 그 검사의 `pytest.raises` 가
+깨진다. 즉 **4절이 「넓히기」를 독립적으로 막고 있었다** — 그 파일이 「실측 기록이지
+계약이 아니다」라고 적어 둔 검사인데, 결과적으로 계약 하나를 지키고 있었다.
+「기존 상태에서도 초록인 팔을 지우지 마라」의 새 사례다.
+
+⚠️ **M4 예측이 헐거웠다** — 「사유 단언 3건」이라 썼는데 사유 문자열을 단언하는 검사는
+2개다(대조군은 `None` 을 본다). 억지로 안 맞추고 적는다.
+
+## 이 회차가 안 잰 것
+
+- **실기 콘솔 0회.** 여전히 전부 가짜다.
+- `1493` · `1529` 의 **도달** → t188.
+- **(ㄴ) FID 축이 섹션 축을 가리는 것** → t186. 이 수리 뒤에도 `refusal` 은 `null` 이다
+  (4단계 표 그대로). 즉 **`console_unreachable` 이라는 말 자체는 아직 사용자에게 안 간다** —
+  이 카드가 바꾼 것은 「서버 내부 문제」가 「콘솔의 픽스처 루트 상태를 읽지 못했다」로
+  바뀐 것까지다.
+
+## 규약 후보 — 오늘 세 번째 같은 형태
+
+> **가장 싼 처방이 방금 살린 구별을 죽인다.** 한 자리에서 다 낫는 수리를 찾았을 때,
+> 그것이 **직전 카드가 살린 구별을 되돌리는지** 먼저 재라. t182 에서 `_InventoryPort`
+> 어댑터 변환이 그랬다 — 새 임포트도 새 개념도 없이 일곱 자리가 낫지만, 그 어댑터가
+> 11군데에서 쓰이고 다섯이 t181 이 고친 자리라 **t181 의 `except StateQueryError` 두
+> 자리가 죽은 코드**가 되고 사용자 문면이 되돌아간다.
+> 판별은 **그 공유 지점의 사용처를 세는 것** — 싼 처방일수록 공유 지점에 있고,
+> 공유 지점일수록 남의 수리가 이미 거기 있다.
