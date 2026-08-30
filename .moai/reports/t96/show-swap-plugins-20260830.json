@@ -1,0 +1,41 @@
+{
+  "children": [
+    {
+      "class": "UserPlugin",
+      "i": 1,
+      "name": "CopilotResponder"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 2,
+      "name": "CopilotPatchRobinEsprite"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 3,
+      "name": "CopilotPatchRobinLEDBeam350"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 4,
+      "name": "CopilotPatchSharpyPlus"
+    },
+    {
+      "class": "UserPlugin",
+      "i": 5,
+      "name": "CopilotPatchMacAuraXB"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 5,
+    "class": "Plugins",
+    "name": "Plugins"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/Plugins",
+  "truncated": false,
+  "v": 1
+}

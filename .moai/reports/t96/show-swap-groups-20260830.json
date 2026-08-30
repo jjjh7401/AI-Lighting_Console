@@ -1,0 +1,41 @@
+{
+  "children": [
+    {
+      "class": "Group",
+      "i": 1,
+      "name": "All Fixtures"
+    },
+    {
+      "class": "Group",
+      "i": 2,
+      "name": "Robin Esprite"
+    },
+    {
+      "class": "Group",
+      "i": 3,
+      "name": "Robin LEDBeam 350"
+    },
+    {
+      "class": "Group",
+      "i": 4,
+      "name": "Sharpy Plus"
+    },
+    {
+      "class": "Group",
+      "i": 5,
+      "name": "Mac Aura XB"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 5,
+    "class": "Groups",
+    "name": "Groups"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/Groups",
+  "truncated": false,
+  "v": 1
+}
