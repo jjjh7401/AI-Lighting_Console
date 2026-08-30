@@ -95,6 +95,7 @@ changes directory per match (find -execdir/-okdir) before running git, so its re
 | 중괄호 목록 확장 | echo {1,2} |
 | 중괄호 범위 확장 | echo {1..2} |
 | 중괄호 매개변수 확장 | echo ${HOME} |
+| 중괄호 매개변수 확장, 큰따옴표 안 | echo "${HOME}" — 인용해도 거절 |
 | 명령 치환 | echo $(pwd) |
 | 명령 치환, 큰따옴표로 감싸도 | echo "$(pwd)" |
 | 백틱 치환 | echo `pwd` |
@@ -113,6 +114,8 @@ changes directory per match (find -execdir/-okdir) before running git, so its re
 | 낱말 안 중괄호 쌍 | echo a{b}c |
 | 홑따옴표 구간 (전부) | echo 로 감싼 {1,2} · ${VAR} · $(pwd) — 홑따옴표 안이면 전부 통과 |
 | 단순 매개변수 확장 | echo $HOME |
+| 단순 매개변수 확장, 큰따옴표 안 | echo "$HOME" |
+| git 을 파이프에 태우기 | git log --oneline -3 파이프 wc -l |
 | 변수를 인자로 | R=f.txt; echo $R |
 | 산술 확장 | echo $((1+1)) |
 | glob | echo * |
@@ -195,6 +198,7 @@ This session is isolated in the worktree /Users/studiox/Documents/Claude/Code/AI
 | 목록 순회 | for … do … done | 한 줄씩 따로 실행 |
 | 경로를 변수로 두고 리다이렉트 | R=f; echo x > $R | 리다이렉트 대상을 리터럴로 |
 | 다른 트리의 git 을 보기 | git -C <다른 트리> log | 그 트리로 세션을 옮기거나, 리드에게 물어라 |
+| 변수를 큰따옴표로 감싸기 | echo "${VAR}" | echo "$VAR" — 중괄호만 빼면 통과한다 |
 
 홑따옴표는 스캐너가 접으므로, **인용 안에 들어가는 텍스트는 무엇이든 통과한다.** 중괄호·달러·백틱이 든 내용을 파일에 쓸 때는 홑따옴표 `printf` 가 유일하게 안전한 길이다.
 
@@ -218,7 +222,7 @@ This session is isolated in the worktree /Users/studiox/Documents/Claude/Code/AI
 | 4 | 서브에이전트 축 | 바이너리에 `This agent is isolated in the worktree` 가 따로 있다. `Agent(isolation: worktree)` 로는 안 쐈다 |
 | 5 | claude 2.1.251 외 버전 | t192 표본과의 불일치가 격리 상태 차이가 아니라 **버전 차이**일 가능성을 배제하지 못한다 |
 | 6 | t192 레인 세션의 격리 상태 | 5절 4번 화해 가설의 유일한 미검증 고리 |
-| 7 | 큰따옴표 안 `${VAR}` · glob 을 리다이렉트 대상으로 두는 형태 | 형태 축을 더 넓히지 않았다 |
+| 7 | glob 을 리다이렉트 대상으로 두는 형태 | 형태 축을 더 넓히지 않았다. 큰따옴표 안 ${VAR} 는 이후 측정했다 — 거절 (§3.1) |
 
 ---
 
