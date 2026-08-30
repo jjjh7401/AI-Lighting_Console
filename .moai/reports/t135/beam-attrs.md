@@ -294,3 +294,92 @@ fail-open 계열인지 묶을지는 리드 판단이다.
    로 쪼개진다. col 시트는 앞단에서 갈라져 이 경로에 안 오지만, **그 사실을
    실행으로 확인하지는 않았다**
 5. **뮤테이션 0회** — 여전히 코드를 안 고쳤다. 지킬 수정이 없다
+
+---
+
+# 3회차 — 재측정 승인 이행 (콘솔 발사, 승인 범위 내)
+
+리드 승인 범위: 무버 한 대 선택 + `Attribute` 발화 + 즉시 해제 · `Prism`·`Prism1` 두 철자 따로 · `Frost`. 금지: `Store`·프리셋 풀 접촉·두 대 이상·범위 밖 속성·`ClearAll`.
+
+## 14. 대상 선택 — 콘솔에서 직접 읽었다 (리드 문서 무시)
+
+리드 문서의 픽스처 번호는 만료됐다는 경고를 따라, `query_state`를 offset 페이징으로 돌려 **86개 전량**을 읽었다. `Patch/Stages/1/Fixtures` 인덱스 27 = `MOVER-U 501`.
+
+`query_properties`로 `FIXTURETYPE` 핸들을 해석: **`FixtureType 11` = `Robin MegaPointe`.**
+
+⚠️ 이것은 t98(`fixture-type-shortfall.md`)이 「콘솔에 없는 6종」에 넣었던 그 기종이다 — 오늘 사이에 타입이 들어왔다는 뜻이다. 리드가 경고한 「오늘 콘솔이 바뀌었다」가 이 지점에서 확인된다.
+
+`Patch/FixtureTypes` 전량(15종, `truncated=false`)도 같이 읽었다:
+
+    1 Robin Esprite · 2 Robin Forte HP · 3 Robin LEDBeam 350 · 4 Robin Spiider
+    5 Xtylos · 6 Sharpy Plus · 7 Robin MMX Spot · 8 Mac Aura XB
+    9 Rush Par 2 RGBW Zoom · 10 Source 4 LED Series 3 Lustr X8
+    11 **Robin MegaPointe** · 12 Robin Spiider · 13 CuePix Blinder WW2
+    14 Atomic 3000 LED · 15 Unique 2 1
+
+## 15. 0단계 — baseline (구조적 한계를 먼저 적는다)
+
+`server/web/session.py:4942`가 이미 적어 둔 것을 확인했다: **이 저장소의 응답기 경로엔 `Programmer`/`Selection` 판독 별칭이 없다.** DMX 어트리뷰트 값의 「원래대로 돌아왔다」는 이 채널로 **원리적으로 관측 불가**다.
+
+그래서 0단계는 리드가 요구한 그대로 채우지 못했다 — 대신 **가능한 baseline**(픽스처 오브젝트의 `NAME`·`FIXTURETYPE`·`MODE`)을 발사 전/후로 읽어 구조가 안 변했는지만 확인했다. `id` 필드(요청 일련번호)만 다르고 나머지 값은 동일했다.
+
+## 16. 발사 — 원문 그대로, 순서대로
+
+승인 범위대로 정확히 쐈다: 선택 → 발화 → **`Off Fixture 501` 해제**(리드 지시 문형, `ClearAll` 안 씀). `Store`·풀 접촉 없음. 대상 항상 501 하나.
+
+| 단계 | 명령 | 원문 결과 |
+|---|---|---|
+| select | `Fixture 501` | ok=True, `OK` |
+| **prism** | `Attribute 'Prism' At 50` | **ok=False, `Illegal object`** |
+| release | `Off Fixture 501` | ok=True, `OK` |
+| select | `Fixture 501` | ok=True, `OK` |
+| **prism1** | `Attribute 'Prism1' At 50` | **ok=False, `Failed`** |
+| release | `Off Fixture 501` | ok=True, `OK` |
+| select | `Fixture 501` | ok=True, `OK` |
+| **frost** | `Attribute 'Frost' At 50` | **ok=False, `Illegal object`** |
+| release | `Off Fixture 501` | ok=True, `OK` |
+
+게이트 심사(`screen`)를 먼저 통과시켰다 — `Off Fixture 501`에 `unverifiable reference` 경고가 붙었지만 **cleared** 로 나왔다(빈 목적지가 아니라 그냥 참조 불확실 표기). 9줄 전부 콘솔까지 갔다 — t66 이 지적한 「게이트 공허」가 아니다.
+
+**M0(2026-07-26, v1.4.1, Group 13 전체 선택)와 판정이 정확히 재현된다** — `Prism1`만 다른 오류 문자열(`Failed`)을 낸다는 것까지 동일하다. **응답기가 v1.6.2로 바뀌었어도, 프리즘을 물리적으로 가진 진짜 무버(Robin MegaPointe)를 단독 선택해서 쏴도 결과가 안 바뀐다.**
+
+## 17. 🔴 원인이 밝혀졌다 — 픽스처 보유 여부가 아니라 철자 불일치다
+
+발사와 별개로, `Patch/FixtureTypes/11`(Robin MegaPointe)의 실제 DMX 채널 정의를 **읽기 전용으로** 끝까지 열었다(승인·발사 아님, 트리 조회):
+
+    Patch/FixtureTypes/11/DMXModes/1/DMXChannels  (Mode 1, 32채널 전량)
+
+관련 채널만 추리면:
+
+    Main Module_ZoomMSpeed
+    Main Module_Frost1        <<< "Frost" 가 아니라 "Frost1" 이다
+    Main Module_Zoom
+    Main Module_Focus1        <<< "Focus" 가 아니라 "Focus1" 이다
+    Main Module_Shutter1      <<< "Shutter" 가 아니라 "Shutter1" 이다
+    Main Module_Dimmer
+
+**`Prism` 이라는 채널이 이 기종 이 모드에 아예 없다.** 32채널 전량에 프리즘류는 `EFFECTWHEEL`·`EFFECTWHEEL2`·`EFFECTWHEEL3`(로베 명명 관례 — 이펙트 휠이 프리즘을 담을 수도 아닐 수도 있다, 미확인) 뿐이다.
+
+**progress.md:175 의 가설(「픽스처가 그 속성을 안 가져서 거절됐을 수 있다」)은 이 기종에 대해 절반만 맞다** — `Prism`은 실제로 없는 개념이라 거절이 맞다. 그런데 `Frost` 는 있다, **다만 이름이 `Frost1` 이다.** `_PROBE_REJECTED`의 문자열 자체가 실제 MA3 채널명과 어긋난다.
+
+⚠️ **승인 범위 밖이라 `Frost1` 은 안 쐈다.** 리드가 승인한 철자는 `Prism`·`Prism1`·`Frost` 셋뿐이다. 새 철자는 별도 승인이 필요하다고 판단해 여기서 멈췄다.
+
+## 18. 판정 갱신
+
+전제 2(프로브가 낡았다)의 근거를 다시 정정한다. 1·2회차에서 "픽스처 의존적 결과"(progress.md:175)를 근거로 재측정 가치를 주장했는데, **이번 재측정이 그 가설을 반증했다.** 프리즘을 실제로 가진(것으로 기대한) 무버를 단독으로 쐈는데도 같은 판정이 나왔다 — 변수는 픽스처 선택이 아니라 **어트리뷰트 이름 철자**였다.
+
+**Frost는 이제 열 수 있다** — 정확한 철자(`Frost1`)로 재승인 요청. **Prism은 이 기종에 없다** — 다른 기종(Robin MMX Spot 등, 프리즘 보유 여부 미확인)을 찾아야 하거나, BM.03(`좁은 빔+프리즘`, target `MOVER-U`)이 애초에 이 리그의 어떤 기종도 만족 못 시킬 수 있다.
+
+## 19. 안 잰 것 (3회차)
+
+1. **`Frost1` 로 재발사하지 않았다** — 승인 범위 밖. 다음 승인 대상으로 남긴다
+2. **Robin MMX Spot(FixtureType 7) 이 프리즘을 갖는지** — DMX 채널을 안 열어봤다. 이 리그 패치에 MMX Spot 이 실제로 물려 있는지도 확인 안 함(patch.csv 고유 기종 목록엔 없었다 — 즉 콘솔의 15종 중 다수는 이 프로젝트 패치가 쓰지 않는 라이브러리 잔존일 수 있다)
+3. **EFFECTWHEEL 이 프리즘 등가물인지** — 로베 명명 관례를 확인하지 않았다. 확인하면 BM.03·BM.05 의 처방이 통째로 바뀔 수 있다
+4. **다른 무버(MOVER-D 521 = Robin Spiider)** 는 애초에 빔 워시라 프리즘/프로스트 후보가 아니라고 판단해 안 쐈다 — 그 판단 자체를 검증하지 않았다(Spiider 실제 채널 미확인)
+5. **여전히 원래 값 복귀를 관측할 채널이 없다** — §15. 이건 이 카드가 못 여는 구조적 한계다
+
+## 20. 잔여 위험
+
+- 3회차 발사 3건은 전부 `Off Fixture 501` 로 해제했지만, **복귀를 확인할 채널이 없어 "정확히 원상태"라고는 단언 못 한다.** 구조 판독(NAME·FIXTURETYPE·MODE)만 불변을 확인했다.
+- `Frost1` 로 다시 쏘면 열릴 가능성이 높지만 **아직 실측 아니다** — 채널명이 존재한다는 것과 그 값이 이 모드·이 픽스처에서 받아들여진다는 것은 다른 명제다.
+- Patch/FixtureTypes 의 15종 중 이 프로젝트 패치(patch.csv 8종)와 안 겹치는 7종은 **이전 쇼파일의 잔존일 수 있다** — 이 카드에서 그 출처를 확인하지 않았다.
