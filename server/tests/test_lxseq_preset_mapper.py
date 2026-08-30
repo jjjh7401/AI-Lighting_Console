@@ -29,9 +29,15 @@ RIG = Path("src/Lighting_Designer/02_RIG팩")
 STEM = "LXSEQ_RIG_01_ShowBase_r3.preset-"
 
 
-def _records():
+def _records(*kinds):
+    """기본은 dim + bm — **저장 가능한 것은 한 종류**여야 한다.
+
+    t134 이전에는 세 시트를 다 넣어도 저장 가능한 것이 dim 뿐이라 무해했다.
+    col 이 열리면서 섞으면 한쪽이 남의 풀에 배정되므로 `map_presets` 가 거절한다.
+    bm 을 남겨 두는 이유는 보류가 거절 경로에서도 살아남는지 재기 위해서다.
+    """
     out = []
-    for kind in ("dim", "col", "bm"):
+    for kind in kinds or ("dim", "bm"):
         text = (RIG / (STEM + kind + ".csv")).read_text(encoding="utf-8-sig")
         out.extend(parse_preset_csv(text).records)
     return out
@@ -107,10 +113,15 @@ class TestMismatchYieldsZero:
         assert result.refusal is None
 
     def test_held_records_survive_every_refusal(self):
-        """거절해도 보류는 버리지 않는다 — 버리면 13건이 어디로 갔는지 모른다."""
+        """거절해도 보류는 버리지 않는다 — 버리면 어디로 갔는지 모른다.
+
+        13 -> 5 는 두 이유가 겹친 것이다: t134 가 col RGB 6행을 열었고,
+        픽스처가 col 을 빼서(섞으면 거절된다) 켈빈 2행도 이 호출에 없다.
+        col 쪽 보류는 아래 `TestTheColSheetAllocatesToo` 가 따로 잰다.
+        """
         for section in (_pool(truncated=True), _pool(capacity=3), _pool()):
             result = map_presets(_records(), pool_section=section)
-            assert len(result.held) == 13
+            assert len(result.held) == 5
             assert all(h.hold_classes for h in result.held)
 
 
@@ -275,13 +286,15 @@ class TestRerunningTheSameSheetIsANoOp:
         assert all(h.hold_classes == (NAME_TAKEN,) for h in result.already_present)
 
     def test_parser_holds_are_untouched(self):
-        """AC-IDEM-003 — 파서 판정 13건은 콘솔 상태와 무관하게 그대로다.
+        """AC-IDEM-003 — 파서 판정은 콘솔 상태와 무관하게 그대로다.
 
-        섞였다면 이 수가 콘솔 상태에 따라 달라지고, 「19 중 6 계획 · 13 보류」
-        회귀 기준이 날마다 흔들린다.
+        섞였다면 이 수가 콘솔 상태에 따라 달라지고, 회귀 기준이 날마다 흔들린다.
+        재는 것은 **불변성**이지 특정 숫자가 아니다 — 13 -> 5 는 t134 가 col
+        RGB 6행을 열고 픽스처가 col 을 뺀 결과이며, 세 콘솔 상태에서 같다는
+        성질은 그대로다.
         """
         for section in (_named_pool(), _named_pool(DIM_NAMES), _named_pool(DIM_NAMES[:3])):
-            assert len(map_presets(_records(), pool_section=section).held) == 13
+            assert len(map_presets(_records(), pool_section=section).held) == 5
 
     def test_an_empty_pool_is_the_control(self):
         """대조군 — 풀이 비면 6건이 계획된다.
@@ -469,3 +482,55 @@ class TestDuplicateNamesInsideOneSheet:
         records = self._two_rows_one_name()
         assert len(records) == 2, "파서는 같은 Name 두 행을 그대로 통과시킨다"
         assert all(r.storable for r in records)
+
+
+class TestTheColSheetAllocatesToo:
+    """t134 — col 6행이 열렸다. 위 클래스들이 dim 으로 재는 것을 col 로 재는 미러다.
+
+    픽스처에서 col 을 뺐으므로(섞으면 거절된다) col 쪽 자리는 여기가 잰다.
+    """
+
+    def test_the_six_rgb_rows_take_the_lowest_slots(self):
+        result = map_presets(_records("col"), pool_section=_pool())
+        assert [p.slot for p in result.planned] == [1, 2, 3, 4, 5, 6]
+        assert [p.preset_id for p in result.planned] == [
+            "COL.01",
+            "COL.04",
+            "COL.05",
+            "COL.06",
+            "COL.07",
+            "COL.08",
+        ]
+
+    def test_the_assignment_follows_the_listing(self):
+        """비공허성 — 목록을 바꾸면 배정도 따라 바뀌어야 한다."""
+        result = map_presets(_records("col"), pool_section=_pool(occupied=(1, 2, 3)))
+        assert [p.slot for p in result.planned] == [4, 5, 6, 7, 8, 9]
+
+    def test_the_two_kelvin_rows_stay_held(self):
+        """**6행이지 8행이 아니다.** 스케일을 풀어도 켈빈은 안 열린다(t133)."""
+        result = map_presets(_records("col"), pool_section=_pool())
+        assert [h.preset_id for h in result.held] == ["COL.02", "COL.03"]
+        assert all(h.hold_classes == ("no_rgb_value",) for h in result.held)
+
+
+class TestOneCallMapsOneSheet:
+    """저장 가능한 레코드가 두 종류 섞이면 한쪽이 **남의 풀에** 배정된다.
+
+    t134 이전에는 col·bm 이 전부 보류라 이 실수가 무해했다 — col 이 열리면서
+    유해해졌다. 생산 경로는 시트 하나씩 넘기므로 지금 결함은 아니고, 이 검사는
+    그 계약을 문서가 아니라 **동작으로** 고정한다.
+    """
+
+    def test_mixing_two_storable_kinds_raises(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="more than one sheet kind"):
+            map_presets(_records("dim", "col"), pool_section=_pool())
+
+    def test_one_storable_kind_plus_held_others_is_fine(self):
+        """대조군 — 보류만 섞이는 것은 막지 않는다. 안 막으면 위 예외가
+        「무조건 예외」와 구분되지 않는다."""
+        result = map_presets(_records("dim", "bm"), pool_section=_pool())
+        assert len(result.planned) == 6
+        assert result.refusal is None

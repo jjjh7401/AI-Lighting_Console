@@ -102,3 +102,40 @@ def preset_apply_command(group_no: int, attribute: str, value: int) -> str:
     if not isinstance(value, int) or isinstance(value, bool):
         raise SpatialPointingError(f"attribute value {value!r} must be an int")
     return f"Group {group_no} ; Attribute '{name}' At {value}"
+
+
+#: 콘솔이 받는 퍼센트의 상한. `Attribute 'ColorRGB_R' At 100` 이 두 DMX 칸을
+#: 255/255 로 채우는 것을 실측했다(t134, MOVER-D 521 3.001).
+_COLOR_PERCENT_MAX = 100.0
+
+
+def preset_apply_color_command(group_no: int, percents: tuple[float, float, float]) -> str:
+    """``Group <n> ; Attribute 'ColorRGB_R' At <r> ; ... G ... ; ... B ...`` — 한 줄.
+
+    `preset_apply_command` 의 형제다. 나뉜 이유는 하나뿐 — 그쪽은 값이 ``int`` 이고
+    색은 소수를 쓴다. 그쪽 서명을 넓히면 dim 이 지금 받고 있는 정수 검사가 느슨해져,
+    하류에서 그 검사에 기대던 자리가 조용히 고아가 된다.
+
+    세 성분을 ``;`` 로 한 줄에 묶는 것은 룰북 실측 문형이다
+    (`31_choreography_patterns.md`: "Chain independent sets on ONE line with ``;``").
+    한 줄인 것이 계약이다 — 세 줄로 나누면 `run_commands` 의 접힘이 뒤 두 줄을
+    지우고 R 만 실린 프로그래머가 저장될 수 있다(t108 C1 과 같은 자리).
+
+    숫자 문면은 `%.1f` 다. 형제 생산자 `make_ma3.py:85-87` 과 **바이트 단위로 같은
+    값**을 콘솔에 보내기 위한 것이며, 그 대가(0-255 중 12개에서 ±1)는
+    `col_rgb_percents` 의 독스트링이 나른다.
+    """
+    if not isinstance(group_no, int) or isinstance(group_no, bool) or group_no <= 0:
+        raise SpatialPointingError(f"group number {group_no!r} must be a positive integer")
+    if len(percents) != 3:
+        raise SpatialPointingError(f"color percents {percents!r} must be three values")
+    for value in percents:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise SpatialPointingError(f"color percent {value!r} must be a number")
+        if value < 0 or value > _COLOR_PERCENT_MAX:
+            raise SpatialPointingError(f"color percent {value!r} is outside 0-100")
+    axes = ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
+    sets = " ; ".join(
+        f"Attribute '{axis}' At {value:.1f}" for axis, value in zip(axes, percents, strict=True)
+    )
+    return f"Group {group_no} ; {sets}"

@@ -25,7 +25,6 @@ from server.lxseq.preset_parser import (
     HOLD_FAMILY_OUT_OF_SCOPE,
     HOLD_NO_RGB_VALUE,
     HOLD_PROBE_REJECTED,
-    HOLD_SCALE_UNCONVERTED,
     HOLD_VALUE_NOT_MACHINE_READABLE,
     PRESET_SHEET_COLUMNS,
     UnknownPresetSheetError,
@@ -170,16 +169,26 @@ class TestStorability:
     다시 검색해서 닫힌 질문을 열지 마라.
     """
 
-    def test_only_the_dimmer_sheet_is_storable_today(self):
+    def test_dim_and_the_rgb_half_of_col_are_storable(self):
+        """col 6행이 열렸다 — t134 가 0-255 대 0-100 대응을 실기로 쟀다.
+
+        **8행이 아니라 6행이다.** 켈빈 2행은 사유가 다르고(`no_rgb_value`)
+        소유자가 다르다(t133). bm 5행은 그대로 전부 보류다.
+        """
         by_kind = dict((k, _parsed(k).records) for k in EXPECTED_ROWS)
         storable = dict((k, sum(1 for r in v if r.storable)) for k, v in by_kind.items())
-        assert storable == dict([("preset-dim", 6), ("preset-col", 0), ("preset-bm", 0)])
-        assert sum(storable.values()) == 6
+        assert storable == dict([("preset-dim", 6), ("preset-col", 6), ("preset-bm", 0)])
+        assert sum(storable.values()) == 12
 
     def test_every_held_record_carries_at_least_one_reason(self):
-        """보류를 버리지 않는다 — 사유 없이 보류하면 다음 사람이 못 푼다."""
+        """보류를 버리지 않는다 — 사유 없이 보류하면 다음 사람이 못 푼다.
+
+        13 -> 7 은 t134 가 col RGB 6행을 열었기 때문이다. **막던 사유가 사라진
+        것이지 보류가 조용히 버려진 것이 아니다** — 아래 클래스별 개수가 그것을
+        말한다.
+        """
         held = _held()
-        assert len(held) == 13
+        assert len(held) == 7
         assert all(record.hold_reasons for record in held)
         assert all(reason.detail.strip() for record in held for reason in record.hold_reasons)
 
@@ -192,7 +201,6 @@ class TestStorability:
         assert counts == Counter(
             dict(
                 [
-                    ("scale_unconverted", 6),
                     ("attribute_probe_rejected", 3),
                     ("family_out_of_scope", 3),
                     ("no_rgb_value", 2),
@@ -204,7 +212,6 @@ class TestStorability:
         """비공허성 — 클래스가 열려 있으면 위 개수는 오타를 세고 있을 수 있다."""
         known = frozenset(
             [
-                HOLD_SCALE_UNCONVERTED,
                 HOLD_NO_RGB_VALUE,
                 HOLD_PROBE_REJECTED,
                 HOLD_FAMILY_OUT_OF_SCOPE,
@@ -213,7 +220,7 @@ class TestStorability:
         )
         seen = set(c for record in _held() for c in record.hold_classes)
         assert seen <= known
-        assert len(seen) == 4, "정본에서 실제로 나오는 클래스는 넷이다"
+        assert len(seen) == 3, "정본에서 실제로 나오는 클래스는 셋이다"
 
     def test_a_row_blocked_twice_carries_both_reasons(self):
         """한 사유만 실으면 하나를 풀었을 때 그 행이 열릴 것처럼 보인다.
