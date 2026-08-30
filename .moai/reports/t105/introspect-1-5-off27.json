@@ -1,0 +1,133 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "Preset",
+    "fields": [
+      {
+        "n": "Z",
+        "t": "Int32"
+      },
+      {
+        "n": "XBLOCK",
+        "t": "Int32"
+      },
+      {
+        "n": "YBLOCK",
+        "t": "Int32"
+      },
+      {
+        "n": "ZBLOCK",
+        "t": "Int32"
+      },
+      {
+        "n": "XGROUP",
+        "t": "Int32"
+      },
+      {
+        "n": "YGROUP",
+        "t": "Int32"
+      },
+      {
+        "n": "ZGROUP",
+        "t": "Int32"
+      },
+      {
+        "n": "XWINGS",
+        "t": "Int32"
+      },
+      {
+        "n": "YWINGS",
+        "t": "Int32"
+      },
+      {
+        "n": "ZWINGS",
+        "t": "Int32"
+      },
+      {
+        "n": "XWIDTH",
+        "t": "Int32"
+      },
+      {
+        "n": "YWIDTH",
+        "t": "Int32"
+      },
+      {
+        "n": "ZWIDTH",
+        "t": "Int32"
+      },
+      {
+        "n": "XSHUFFLE",
+        "t": "UInt32"
+      },
+      {
+        "n": "YSHUFFLE",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZSHUFFLE",
+        "t": "UInt32"
+      },
+      {
+        "n": "XSHIFT",
+        "t": "Int32"
+      },
+      {
+        "n": "YSHIFT",
+        "t": "Int32"
+      },
+      {
+        "n": "ZSHIFT",
+        "t": "Int32"
+      },
+      {
+        "n": "XINV",
+        "t": "UInt32"
+      },
+      {
+        "n": "XINVB",
+        "t": "UInt32"
+      },
+      {
+        "n": "XINVG",
+        "t": "UInt32"
+      },
+      {
+        "n": "XINVW",
+        "t": "UInt32"
+      },
+      {
+        "n": "YINV",
+        "t": "UInt32"
+      },
+      {
+        "n": "YINVB",
+        "t": "UInt32"
+      },
+      {
+        "n": "YINVG",
+        "t": "UInt32"
+      },
+      {
+        "n": "YINVW",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZINV",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZINVB",
+        "t": "UInt32"
+      }
+    ],
+    "id": "gate-1",
+    "kind": "introspect",
+    "offset": 27,
+    "ok": true,
+    "path": "DataPool/PresetPools/1/5",
+    "source": "property_accessors",
+    "total": 138,
+    "truncated": true,
+    "v": 1
+  }
+}

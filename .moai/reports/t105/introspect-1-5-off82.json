@@ -1,0 +1,121 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "Preset",
+    "fields": [
+      {
+        "n": "DELAYTOY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDFROMY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDTOY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PHASEFROMY",
+        "t": "Int32"
+      },
+      {
+        "n": "PHASETOY",
+        "t": "Int32"
+      },
+      {
+        "n": "FADEFROMZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "FADETOZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYFROMZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYTOZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDFROMZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDTOZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PHASEFROMZ",
+        "t": "Int32"
+      },
+      {
+        "n": "PHASETOZ",
+        "t": "Int32"
+      },
+      {
+        "n": "DOSHUFFLE",
+        "t": "Method"
+      },
+      {
+        "n": "MEMORYTYPE",
+        "t": "UInt8"
+      },
+      {
+        "n": "MOVEGRIDCURSOR",
+        "t": "UInt8"
+      },
+      {
+        "n": "PRESERVEGRIDPOSITIONS",
+        "t": "UInt32"
+      },
+      {
+        "n": "SELECTIONDATA",
+        "t": "Custom"
+      },
+      {
+        "n": "INPUTFILTER",
+        "t": "Handle"
+      },
+      {
+        "n": "CUEPART",
+        "t": "UInt32"
+      },
+      {
+        "n": "TYPE",
+        "t": "String"
+      },
+      {
+        "n": "USER",
+        "t": "String"
+      },
+      {
+        "n": "FEATUREGROUP",
+        "t": "String"
+      },
+      {
+        "n": "TRIGGER",
+        "t": "String"
+      },
+      {
+        "n": "VALUESMODE",
+        "t": "UInt32"
+      },
+      {
+        "n": "MAGIC",
+        "t": "UInt32"
+      }
+    ],
+    "id": "gate-1",
+    "kind": "introspect",
+    "offset": 82,
+    "ok": true,
+    "path": "DataPool/PresetPools/1/5",
+    "source": "property_accessors",
+    "total": 138,
+    "truncated": true,
+    "v": 1
+  }
+}

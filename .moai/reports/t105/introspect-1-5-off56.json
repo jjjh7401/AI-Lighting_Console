@@ -1,0 +1,121 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "Preset",
+    "fields": [
+      {
+        "n": "ZINVG",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZINVW",
+        "t": "UInt32"
+      },
+      {
+        "n": "INVERTSTYLE",
+        "t": "UInt8"
+      },
+      {
+        "n": "INVERTX",
+        "t": "UInt32"
+      },
+      {
+        "n": "INVERTY",
+        "t": "UInt32"
+      },
+      {
+        "n": "INVERTZ",
+        "t": "UInt32"
+      },
+      {
+        "n": "ALIGNRANGEX",
+        "t": "UInt8"
+      },
+      {
+        "n": "ALIGNRANGEY",
+        "t": "UInt8"
+      },
+      {
+        "n": "ALIGNRANGEZ",
+        "t": "UInt8"
+      },
+      {
+        "n": "RELATIVEFADE",
+        "t": "UInt32"
+      },
+      {
+        "n": "RELATIVEDELAY",
+        "t": "UInt32"
+      },
+      {
+        "n": "RELATIVEPHASE",
+        "t": "UInt32"
+      },
+      {
+        "n": "RELATIVESPEED",
+        "t": "UInt32"
+      },
+      {
+        "n": "RELATIVE",
+        "t": "Bool"
+      },
+      {
+        "n": "PHASERTRANSFORM",
+        "t": "UInt32"
+      },
+      {
+        "n": "FADEFROMX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "FADETOX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYFROMX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYTOX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDFROMX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDTOX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PHASEFROMX",
+        "t": "Int32"
+      },
+      {
+        "n": "PHASETOX",
+        "t": "Int32"
+      },
+      {
+        "n": "FADEFROMY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "FADETOY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYFROMY",
+        "t": "Int64Time"
+      }
+    ],
+    "id": "gate-1",
+    "kind": "introspect",
+    "offset": 56,
+    "ok": true,
+    "path": "DataPool/PresetPools/1/5",
+    "source": "property_accessors",
+    "total": 138,
+    "truncated": true,
+    "v": 1
+  }
+}

@@ -346,3 +346,139 @@ t105 의 판정은 아직 서지 않는다. 갈리려면 「`Dim 50` 이 값을 
 
 **안 잰 것**: 패치 80대와 이전 쇼파일의 86대 차이. 슬롯 20(절단). `Dim 50` 외 프리셋의 `PRESETDATA`.
 `STOREDDATA` 가 답한 `Universal` 이 t100 의 `PRESETMODE` 와 같은 축인지.
+
+## 11. 전수 열거와 값 존재 신호 — t105 의 답
+
+응답기 1.6.2 로 `DataPool/PresetPools/1/5`(`Dim 50`)의 프로퍼티 **138개를 전수 열거**했다.
+콘솔 쓰기 0건.
+
+### 11.1 회차 조건 (전부 내가 잰 값)
+
+    responder_roundtrip --expect-version 1.6.2  →  PASS
+      live version=1.6.2  plugin=CopilotResponder
+      ping ok · state ok · exec ok
+
+앞 회차까지 「1.6.2」는 리드의 관측이었고 내 것이 아니었다. 이 줄로 내 관측이 됐다.
+
+날조 대조군을 **채널마다 따로** 세웠다 — 열거 동사와 판독 동사는 다른 동사이기 때문이다.
+
+    introspect  DataPool/PresetPools/1/FABRICATED_CONTROL_NOPE
+      → path segment not found: 'FABRICATED_CONTROL_NOPE'
+    prop        DataPool/PresetPools/1/5 | OWNDATAPRESENT_NOPE
+      → property not readable: OWNDATAPRESENT_NOPE
+
+콘솔 점유도 잡기 전에 `lsof` 로 확인했다. 리드가 「내 차례다」라고 보낸 뒤였지만,
+같은 날 그 문장이 쓰인 시점에만 참이었던 사례가 있었다.
+
+### 11.2 전수 열거 — 138/138, 절단 없이 닫혔다
+
+`--all-pages` 는 쓰지 않았다(낡은 응답기 무한 루프 기록이 있고 1.6.2 에서 그 술어를
+아무도 안 쟀다). `--offset` 을 손으로 돌렸다.
+
+    offset   0   27 fields   truncated true
+    offset  27   29 fields   truncated true
+    offset  56   26 fields   truncated true
+    offset  82   26 fields   truncated true
+    offset 108   26 fields   truncated true
+    offset 134    4 fields   truncated **false**
+                 ---
+                138 = total
+
+합이 total 과 같고 마지막 페이지가 `truncated: false` 다. 이 둘이 함께 있어야
+「전수를 봤다」가 성립한다. `/5` 의 total 도 **138** 로, t96 이 `/3` 에서 본 값과 같다
+(그것은 안 잰 항목이었다).
+
+### 11.3 🔴 내가 또 표본을 모집단으로 읽었다 — 이번엔 그 실수를 지적하면서
+
+앞 회차에 나는 리드에게 이렇게 보냈다:
+
+> `PRESETDATA` 도 `STOREDDATA` 도 열거에 없다. 열거 채널과 판독 채널은 같은 집합이
+> 아니고 판독 쪽이 넓다.
+
+**틀렸다.** 근거는 t95 산출물의 **첫 페이지 27개**였고, 전수 138 을 보니 셋 다 있다.
+
+    offset 108 페이지:  PRESETMODE · STOREDDATA · SPEEDMASTER · SPEEDSCALE · PRESETDATA
+                        OWNDATAPRESENT · DIRECTPROGRAMMERCOOKING · OWNNONCOOKEDDATAPRESENT · ...
+
+27을 138의 모집단으로 읽었다. 오늘 `head -5` 로 173건을 5건이라 읽은 것과 **같은 기전**이고,
+하필 리드에게 바로 그 형태를 지적하는 메시지 안에서 재현했다. 리드는 그 위에서 배차
+4번 항목을 폐기했으므로 즉시 정정해 보냈다.
+
+**그러므로 「판독 채널이 열거보다 넓다」는 근거가 없다.** 두 채널이 같은 집합인지는
+여전히 안 쟀다 — 반증만 됐고 확증된 것은 아니다.
+
+### 11.4 값 존재 신호는 이 채널에 **있다**
+
+전수 열거가 후보를 냈고, 날조 대조군과 함께 쐈다.
+
+    prop /1/5 OWNDATAPRESENT           ok  "true"
+    prop /1/5 OWNNONCOOKEDDATAPRESENT  ok  "true"
+    prop /1/5 MEMORYTYPE               ok  "Compressed"
+    prop /1/5 VALUESMODE               ok  "Normal"
+    prop /1/5 SELECTIONDATA            ok  "table: 0x6000026b3600"
+
+`MEMORYTYPE = Compressed` 가 `PRESETDATA = ""` 를 설명한다 — 내용이 압축 저장돼 있고
+그 프로퍼티가 직렬화해 주지 않는다. `SELECTIONDATA` 도 값이 아니라 **Lua 테이블 핸들**을
+답한다. 즉 이 채널은 값을 **직렬화해 주지 않을 뿐**, 값의 존재는 답한다.
+
+### 11.5 계기 판별력 — COUNT 에 한 것과 같은 검사
+
+`OWNDATAPRESENT` 가 아무 데서나 true 를 내면 COUNT 와 같은 함정이다. 다른 클래스에 쐈다.
+
+    prop DataPool/PresetPools/1   OWNDATAPRESENT  → ok:false  property not readable
+    prop DataPool/Groups/1        OWNDATAPRESENT  → ok:false  property not readable
+    prop DataPool/Plugins/1       OWNDATAPRESENT  → ok:false  property not readable
+    prop DataPool/Sequences/1     OWNDATAPRESENT  → ok:false  property not readable
+    prop DataPool/PresetPools/2/1 OWNDATAPRESENT  → ok        "true"   (Position "Home")
+
+**Preset 클래스 전용 프로퍼티다.** 어디서나 읽히는 보편 참이 아니다.
+
+**안 잰 것 — 이 계기가 `false` 를 내는 것을 못 봤다.** 시험한 프리셋 둘은 모두 점유
+상태였고, 이 쇼파일에는 주소가 잡히는 빈 프리셋이 없다(`/1/25` → path segment not found).
+따라서 「점유 프리셋과 빈 프리셋을 가른다」는 **미검증**이다. 그것을 세우려면 빈 프리셋을
+하나 만들어야 하고 그것은 쓰기다 — t96 의 쓰기 창에 묶을 일이다.
+
+### 11.6 MEMORYFOOTPRINT — 내용에 반응하는 간접 계기
+
+리드가 제안한 축이다. 열거 안에 있어 추측이 필요 없다.
+
+    Dimmer  /1  Dim 10        2084
+    Dimmer  /5  Dim 50        2084
+    Dimmer  /10 Full          2084
+    Dimmer  /11 Breathe Soft  2104
+    Dimmer  /17 Ripple        2116
+    Dimmer  /20 Slam Run      2100
+    Position /2/1 Home        5988
+    Group    /1 All Fixtures  1096
+
+**같은 클래스 안에서 네 값이 나온다.** 그러므로 고정 구조체 크기가 아니다 —
+리드가 세운 반증 형태(「두 값이 같으면 못 쓴다」)를 통과했다. 평탄한 레벨 셋이 2084 로
+동일하고 효과성 프리셋이 더 크다는 것도 내용 민감성과 맞는다.
+
+**안 잰 것**: 빈 프리셋의 footprint. 2084 가 「구조체 + 값」인지 「구조체뿐」인지는
+빈 대조군 없이는 못 가른다. §11.5 와 같은 벽이다.
+
+### 11.7 판정
+
+**t105 의 물음 — 이 채널이 값을 노출하는가 — 에 답한다.**
+
+| 세운 것 | 근거 |
+|---|---|
+| `PRESETDATA` 의 빈 문자열은 **부재의 증거가 아니다** | 같은 오브젝트가 `OWNDATAPRESENT: true` 를 답한다 |
+| 채널은 값을 **직렬화해 주지 않는다** | `MEMORYTYPE: Compressed` · `SELECTIONDATA` 는 테이블 핸들 |
+| 채널은 값의 **존재는 답한다** | `OWNDATAPRESENT` · `OWNNONCOOKEDDATAPRESENT` · `MEMORYFOOTPRINT` |
+| 이 결론은 **표본이 아니라 전수** 위에 있다 | 138/138, 마지막 페이지 `truncated: false` |
+
+즉 「읽히는데 비었다」의 정확한 뜻은 **「값은 있고, 이 프로퍼티가 그것을 안 내준다」**이다.
+
+**감독 육안 확인은 이제 이 판정에 필요하지 않다.** `Dim 50` 이 값을 들었는지를 채널이
+직접 답했다. 다만 §11.5 의 `false` 대조군이 없으므로, 「`OWNDATAPRESENT` 가 빈 프리셋을
+가른다」는 별도 주장은 아직 못 한다 — 이 판정은 그 주장에 기대지 않는다.
+
+### 11.8 남은 것
+
+- `OWNDATAPRESENT` 의 `false` 사례 (빈 프리셋 필요 → 쓰기 → t96 창)
+- 빈 프리셋의 `MEMORYFOOTPRINT`
+- 열거 채널과 판독 채널이 같은 집합인지 (§11.3 에서 반증만 됐다)
+- `PRESETDATA` 가 어떤 조건에서 비지 않는지 — 다른 클래스·다른 모드에서 안 쟀다
+- `/3` 의 offset 27 이후가 `/5` 와 같은지 (프리셋마다 다를 수 있다)

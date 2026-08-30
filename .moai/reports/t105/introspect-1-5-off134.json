@@ -1,0 +1,33 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "Preset",
+    "fields": [
+      {
+        "n": "PLAYBACKMASTER",
+        "t": "Custom"
+      },
+      {
+        "n": "OUTPUTFILTER",
+        "t": "Handle"
+      },
+      {
+        "n": "EXECUTORDISPLAYMODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "ACTION",
+        "t": "Custom"
+      }
+    ],
+    "id": "gate-1",
+    "kind": "introspect",
+    "offset": 134,
+    "ok": true,
+    "path": "DataPool/PresetPools/1/5",
+    "source": "property_accessors",
+    "total": 138,
+    "truncated": false,
+    "v": 1
+  }
+}

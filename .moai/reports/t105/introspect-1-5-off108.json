@@ -1,0 +1,121 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "Preset",
+    "fields": [
+      {
+        "n": "PRESETMODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "STOREDDATA",
+        "t": "String"
+      },
+      {
+        "n": "SPEEDMASTER",
+        "t": "Custom"
+      },
+      {
+        "n": "SPEEDSCALE",
+        "t": "Int8"
+      },
+      {
+        "n": "PRESETDATA",
+        "t": "Custom"
+      },
+      {
+        "n": "OWNDATAPRESENT",
+        "t": "Bool"
+      },
+      {
+        "n": "DIRECTPROGRAMMERCOOKING",
+        "t": "Bool"
+      },
+      {
+        "n": "OWNNONCOOKEDDATAPRESENT",
+        "t": "UInt64"
+      },
+      {
+        "n": "MODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "OFFFADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "RECIPETEMPLATE",
+        "t": "UInt32"
+      },
+      {
+        "n": "DELAYTOPHASE",
+        "t": "UInt32"
+      },
+      {
+        "n": "DEPENDENCIES",
+        "t": "Custom"
+      },
+      {
+        "n": "REFERENCES",
+        "t": "Custom"
+      },
+      {
+        "n": "MAXDEPTH",
+        "t": "UInt64"
+      },
+      {
+        "n": "AUTOSTART",
+        "t": "UInt32"
+      },
+      {
+        "n": "AUTOSTOP",
+        "t": "UInt32"
+      },
+      {
+        "n": "AUTOFIX",
+        "t": "UInt32"
+      },
+      {
+        "n": "AUTOSTOMP",
+        "t": "UInt32"
+      },
+      {
+        "n": "SOFTLTP",
+        "t": "UInt32"
+      },
+      {
+        "n": "SWAPPROTECT",
+        "t": "UInt32"
+      },
+      {
+        "n": "KILLPROTECT",
+        "t": "UInt32"
+      },
+      {
+        "n": "USEEXECUTORTIME",
+        "t": "UInt32"
+      },
+      {
+        "n": "OFFWHENOVERRIDDEN",
+        "t": "UInt32"
+      },
+      {
+        "n": "AUTOPREPOS",
+        "t": "UInt32"
+      },
+      {
+        "n": "PRIORITY",
+        "t": "UInt8"
+      }
+    ],
+    "id": "gate-1",
+    "kind": "introspect",
+    "offset": 108,
+    "ok": true,
+    "path": "DataPool/PresetPools/1/5",
+    "source": "property_accessors",
+    "total": 138,
+    "truncated": true,
+    "v": 1
+  }
+}
