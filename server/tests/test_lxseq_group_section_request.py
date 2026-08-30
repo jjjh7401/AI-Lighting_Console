@@ -46,6 +46,7 @@ from server.orchestrator.tools import (
     build_toolset,
     collect_rig_sections,
 )
+from server.rig.section import SECTION_UNREAD
 from server.vwx.patchplan import FID_PROPERTY_NAME
 
 GROUP_CSV = Path("server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.group.csv")
@@ -248,36 +249,56 @@ class TestFailureClassificationDependsOnTheSibling:
         )
 
 
-class TestTheClassifiedReasonNeverReachesThePayload:
-    """3절 -- **실측 기록**: 2절이 가른 사유는 이 도구의 출력에 안 나온다.
+class TestTheClassifiedReasonReachesThePayload:
+    """3절 -- **수리 확인(t167)**: 2절이 가른 사유가 이제 이 도구의 출력에 나온다.
 
-    초록이 「그래도 된다」는 뜻이 **아니다**. `map_groups` 가 `section_refusal`
-    의 (코드, 사유) 쌍을 받아 `console_read_incomplete=True` 불리언 하나로
-    접고, 페이로드의 `console_read_reason` 은 섹션이 아니라 `fid_read` 에서
-    온다. 그래서 2절의 두 사유는 이 도구의 사용자에게 **바이트 동일**하다.
+    t152 가 이 자리를 열었고 t163 이 전수로 「접는 자리는 하나」라고 지목했다.
+    t167 이 재보니 **카드 문면이 부정확했다**: `map_groups` 가 튜플을 「버린」
+    것이 맞지만, 페이로드의 `console_read_reason` 은 애초에 **다른 축**(FID
+    판독) 것이었다. `console_read_incomplete` 는 두 축에서 서는데(FID 축과
+    단면 축) 사유 채널은 FID 축에만 걸려 있었고, 단면 축으로 True 가 서려면
+    FID 게이트를 통과해야 하므로 그 조합은 **항상 「참 플래그 + 빈 사유」**였다.
 
-    이 검사가 빨개지는 날은 그 손실이 고쳐진 날이고, 그때 t152 의 판정
-    (요청 집합 축소가 관측 가능한 변화를 만드는가)이 뒤집힌다.
+    수리는 형제(`preset_mapper`)와 **같은 이름** 두 필드를 더하는 것이다.
+    `console_read_reason` 은 안 건드린다 -- 두 축이 두 채널을 갖는 것이 정직하다.
+
+    ⚠️ 이 층에서 관측 가능한 분류는 **하나뿐**이다. 4절이 기록하듯
+    `console_unreachable` 은 이 도구에서 예외로 먼저 죽어 도달하지 못한다.
+    「두 사유가 실제로 갈리는가」는 매퍼 층에서 잰다
+    (`test_unmeasured_is_not_empty.py`).
     """
 
-    def test_a_refused_groups_section_reports_incomplete_with_no_reason(self):
+    def test_a_refused_groups_section_now_carries_the_classified_reason(self):
         console = _Console(_patch_fids(), dead=_DEAD_GROUPS)
         execution = _dispatch(console)
         assert execution.result.is_error is False, execution.result.content
         payload = json.loads(execution.result.content)
         assert payload["console_read_incomplete"] is True
         assert payload["batches"] == [], "못 읽은 단면 위에서 배치를 만들었다"
-        assert payload["console_read_reason"] is None, (
-            "섹션 사유가 페이로드에 도달한다 -- t152 를 다시 열어라"
+        # 성질 단언 -- 공유 술어의 코드를 그대로 나른다(이 도메인은 자기 어휘가 없다).
+        assert payload["refusal"] == SECTION_UNREAD, (
+            "단면 축 사유가 페이로드에 없다 -- t167 수리가 풀렸다: " + str(payload.get("refusal"))
         )
-        # 대조군 -- 사유가 **생산되지 않은** 것이 아니라 **버려진** 것임을 보인다.
-        # 이게 없으면 위 None 이 '분류가 없다'인지 '분류를 안 싣는다'인지 안 갈린다.
-        blob = json.dumps(payload, ensure_ascii=False)
-        for reason in (REASON_UNRESOLVED, REASON_UNREACHABLE):
-            assert reason not in blob, "사유 문자열이 페이로드 어딘가에 있다: " + reason
+        # 문구 단언 -- **어느** 분류인지까지. 성질 단언과 다른 행이다(규약 §3):
+        # 코드는 두 분류에서 같고, 갈리는 것은 detail 이다.
+        assert REASON_UNRESOLVED in (payload["refusal_detail"] or ""), (
+            "거절은 실렸는데 어느 분류인지가 없다: " + str(payload.get("refusal_detail"))
+        )
+
+    def test_the_fid_axis_channel_is_untouched(self):
+        """축 분리 -- 단면 축을 실었다고 FID 축 채널을 뺏지 않았다.
+
+        이 팔이 없으면 위 검사의 초록이 「단면 사유가 도달한다」인지
+        「`console_read_reason` 을 단면 것으로 갈아끼웠다」인지 안 갈린다.
+        """
+        console = _Console(_patch_fids(), dead=_DEAD_GROUPS)
+        payload = json.loads(_dispatch(console).result.content)
+        assert payload["console_read_reason"] is None, (
+            "FID 축 채널에 단면 사유가 들어갔다 -- 두 축이 한 채널로 합쳐졌다"
+        )
 
     def test_the_collector_did_produce_a_reason_for_that_same_failure(self):
-        """위 검사의 반대 팔 -- 생산자는 분류를 냈다. 잃은 자리는 소비자다."""
+        """생산자 팔 -- 분류는 원래 나오고 있었다. 잃던 자리는 소비자였다."""
         summary, _resolved, _failed = collect_rig_sections(
             _DeadPort(_DEAD_GROUPS), _BOTH_SECTIONS, frozenset(), 0
         )

@@ -282,6 +282,39 @@ class TestC4TheConsumerDoesNotReadUnreadAsEmpty:
         assert result.batches == ()
         assert result.console_read_incomplete is True
 
+    def test_the_two_classifications_no_longer_read_the_same(self):
+        """t167 -- 두 사유가 사용자에게 **갈린다**. 카드가 물은 그 자리다.
+
+        도구 층에서는 `console_unreachable` 이 예외로 먼저 죽어 도달하지
+        못한다(`test_lxseq_group_section_request.py` 4절이 그 실측이다).
+        그래서 「두 분류가 실제로 다르게 나오는가」는 여기, 매퍼 층에서 잰다.
+
+        코드는 둘 다 공유 술어의 `section_unread` 로 **같다** -- 갈리는 것은
+        detail 이다. 그 구별을 코드로 옮기려면 이 도메인에 거절 어휘를 새로
+        만들어야 하는데, 그 코드를 세는 소비자가 없어 소비자 0인 두 번째
+        어휘가 된다. 그 갈라짐이 t109 가 없앤 바로 그것이다.
+        """
+        unresolved = self._map(dict(reason="path_not_resolved"))
+        unreachable = self._map(dict(reason="console_unreachable"))
+        assert unresolved.console_read_incomplete is True
+        assert unreachable.console_read_incomplete is True
+        assert unresolved.refusal == SECTION_UNREAD
+        assert unreachable.refusal == SECTION_UNREAD
+        assert unresolved.refusal_detail != unreachable.refusal_detail, (
+            "두 분류가 여전히 바이트 동일이다 -- t167 이 되돌아갔다"
+        )
+        assert "path_not_resolved" in unresolved.refusal_detail
+        assert "console_unreachable" in unreachable.refusal_detail
+
+    def test_a_readable_section_carries_no_refusal(self):
+        """대조군 -- 이 필드가 늘 차 있는 게 아님을 보인다.
+
+        이 팔이 없으면 위 검사는 `refusal` 을 상수로 하드코딩해도 초록이 난다.
+        """
+        result = self._map(dict(objects=[], truncated=False))
+        assert result.refusal is None
+        assert result.refusal_detail == ""
+
     def test_the_control_probe_still_batches_on_a_real_empty_pool(self):
         """대조군 — **정말로** 빈 풀(읽혔고 절단 안 됨)에서는 계획이 선다.
         이게 없으면 위 검사가 「무조건 안 만든다」와 구별되지 않는다."""
