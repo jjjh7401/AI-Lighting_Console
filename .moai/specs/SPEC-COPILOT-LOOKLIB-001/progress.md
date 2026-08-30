@@ -176,6 +176,30 @@ _<pending plan-audit>_
 
 - `Prism1`만 `Failed`로 다른 오류 문자열을 반환했다(나머지 3건은 `Illegal object`). 이 차이의 원인은 **관측되지 않았고 추론하지 않는다** — 원문 그대로 보존한다.
 
+> **[만료 고지 — 2026-08-30, t142 가 덧붙였다. 위 기록은 한 글자도 고치지 않았다.]**
+>
+> 위 표의 값은 **2026-07-26 · 응답기 v1.4.1 · 선택 `Group 13`(=`All`)** 에서 실제로
+> 관측된 것이고 지금도 참이다. 만료된 것은 값이 아니라 **그 넷을 하나의 사유로 읽는
+> 독법**이다.
+>
+> 바로 위 한정(「`Illegal object` 는 (i) MA3가 모르는 이름 과 (ii) 선택된 픽스처가 그
+> 속성을 갖지 않음 **양쪽과 정합**」)이 t135 실기로 갈렸다. 그리고 **이름마다 답이 다르다**:
+>
+> | 후보 | 위 표의 결과 | 갈린 뒤 |
+> |---|---|---|
+> | `Focus` | ok=False, `Illegal object` | **(i) 이름 — 철자였다.** 채널명은 `Focus1`. `Attribute 'Focus1' At 50` → `ok=True, OK` |
+> | `Frost` | ok=False, `Illegal object` | **(i) 이름 — 철자였다.** 채널명은 `Frost1`. `Attribute 'Frost1' At 50` → `ok=True, OK` |
+> | `Prism1` | ok=False, `Failed` | **(ii) 픽스처 — 진짜 부재.** MegaPointe·MMX Spot 어느 모드에도 `Prism` 채널이 없다 |
+> | `Shutter` | ok=False, `Illegal object` | **미확정.** 채널 `Shutter1` 은 존재하지만 값을 쏜 적이 없다. danger 정책 배제라 범위 밖이고, 프로브 결과와 무관하게 보류다 |
+>
+> 근거: t135 4회차 실기 — 2026-08-30, `Fixture 501`(Robin MegaPointe) 단독 선택,
+> 응답기 1.6.2, Store·ClearAll 없이 `Off Fixture 501` 로 해제. 원문은 PR #191 →
+> main `fa24d1b` 의 `.moai/reports/t135/beam-attrs.md` §21·§22·§23.
+>
+> **위 판정 GO 는 안 바뀐다** — 「≥1 수용」은 그대로이고 REQ-LOOKLIB-003 구간 3의
+> 허용 목록도 여전히 `{Zoom, Iris}` 다. 바뀐 것은 **나머지 넷이 왜 안 들어왔는가**
+> 뿐이며, 그 넷을 넣을지는 아직 아무도 결정하지 않았다.
+
 #### 측정 2 — 풀 타입 해석 + 슬롯 탐색 (결정 I·B 실현성) → **GO**
 
 `DataPool/PresetPools` 조회 → `childCount=14`. 반환된 이름 전량:

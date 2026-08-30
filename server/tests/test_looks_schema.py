@@ -184,7 +184,17 @@ class TestAttributeVocabularyBands:
         assert MOVEMENT_ONLY_ATTRIBUTES == ("Pan", "Tilt")
 
     def test_band_three_is_the_m0_resolved_beam_vocabulary(self):
-        # M0 accepted `Zoom` and `Iris`; Focus/Frost/Prism1/Shutter were rejected.
+        # M0 accepted `Zoom` and `Iris`. The other four were rejected for three
+        # different causes, not one: `Focus` / `Frost` were misspellings — the
+        # channels are named `Focus1` / `Frost1`, and t135 fired both live at
+        # ok=True — while `Prism1` is genuinely absent from this rig and
+        # `Shutter` is danger-policy excluded and was never fired. None of that
+        # moves this tuple: widening band 3 is a decision nobody has taken.
+        #
+        # The canonical docstring at `server/looks/schema.py:16-18` still states
+        # the old single cause. Two PRESERVE gates lock that file byte-identical
+        # (test_overlap_preserve.py, test_songcue_bundle.py), so t142 could not
+        # correct it; the correction follows the t149 exception review.
         assert PROBE_GATED_ATTRIBUTES == ("Zoom", "Iris")
 
     def test_pool_families_are_the_four_in_scope_pools(self):
@@ -276,7 +286,11 @@ class TestLoaderRejectsSchemaViolations:
             load_library(_library(_look(attributes={"Shutter": 50})))
 
     def test_a_probe_rejected_beam_string_is_not_in_the_vocabulary(self):
-        # M0 rejected `Frost`; only the accepted strings entered band 3.
+        # Bare `Frost` is not in band 3, and this asserts that boundary — not a
+        # console capability. M0 rejected the string because it was misspelled
+        # (the channel is `Frost1`, accepted live at t135). See the band-3
+        # comment above, including why `server/looks/schema.py` still reads the
+        # old cause.
         with pytest.raises(LookSchemaError, match="attribute"):
             load_library(_library(_look(attributes={"Frost": 20})))
 

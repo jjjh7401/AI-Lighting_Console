@@ -288,7 +288,20 @@ RigProfile:
 |---|---|---|
 | 지금 집행 가능 | Dimmer, ColorRGB, Position 프리셋, 디머/컬러/무빙 페이저(Step/Phase/Speed), Zoom/Iris(프로브 통과), CueFade/Follow/TrigTime/Timecode | 검증 문법 존재 |
 | 부분 (검증 필요) | 무빙 페이저 위치 단위(% vs 도 미확정 — 진폭 소극 정책), 페이저 readback 불가(검증은 3D 픽셀) | ASSUMPTION-40 등 |
-| 장래 계층 | Gobo, 스트로브/셔터(danger 정책), Focus/Frost/Prism(콘솔 거부 실측), At Relative/Accel/Decel, SpeedMaster | 표준에는 규칙 유지, 집행은 보류 |
+| 장래 계층 | Gobo, 스트로브/셔터(danger 정책), Focus/Frost(스코프 판단 — 아래 주), Prism(콘솔 거부 실측), At Relative/Accel/Decel, SpeedMaster | 표준에는 규칙 유지, 집행은 보류 |
+
+> **Focus/Frost 는 콘솔이 못 받는 축이 아니다.** 이 표는 한동안 셋을 한 괄호에
+> 묶어 두었는데 그 묶음이 지금 틀렸다. M0 프로브의 거절은 철자 때문이었고, 실제
+> 채널명 `Focus1`·`Frost1` 은 t135 실기(2026-08-30, Fixture 501 Robin MegaPointe,
+> 응답기 1.6.2)에서 둘 다 `ok=True, OK` 를 받았다. 지금 집행하지 않는 것은 스코프
+> 판단이지 콘솔 한계가 아니다. `Prism` 은 다르다 — 이 리그에서 확인한 두 기종
+> (MegaPointe·MMX Spot) 어느 모드에도 그 채널이 없어 「콘솔 거부 실측」이 여전히
+> 맞다. `Shutter` 는 셋 중 어느 쪽도 아니다: 채널 `Shutter1` 은 존재하지만 값을
+> 쏴 본 적이 없고, danger 정책 배제라 프로브 결과와 무관하게 보류다.
+>
+> 정본 `server/looks/schema.py:16-18` 은 아직 옛 사유를 하나로 말한다. PRESERVE
+> 게이트 둘이 그 파일을 잠그고 있어 t142 가 못 고쳤고, 정정은 t149(예외 심사)
+> 뒤로 간다.
 
 표준의 규칙은 전 계층을 서술하되, 린트·생성기는 "지금 집행 가능" 계층만
 켠다. 장래 축이 열리면 규칙은 이미 준비되어 있다.
