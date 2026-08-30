@@ -127,6 +127,7 @@ from server.safety.approval import (
     ApprovalRequest,
     DenyAllApprovalPort,
 )
+from server.safety.console import StateQueryError
 from server.scene.compile import SceneCompilationError
 from server.scene.compile import compile_scene as build_scene_bundle
 from server.scene.loader import DEFAULT_LIBRARY_DIR as SCENE_LIBRARY_DIR
@@ -4291,6 +4292,15 @@ def build_toolset(
 
         try:
             before = read_inventory(_InventoryPort(state_port, property_port))
+        except StateQueryError as error:
+            # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
+            # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
+            # 준비해 두고도 InventoryReadError 만 알아서 이 갈래를 놓치고 있었다
+            # (실측: read_inventory 는 포트의 StateQueryError 를 그대로 흘린다;
+            #  ok=False 갈래만 InventoryReadError 가 된다).
+            return _error_result(
+                call, f"console did not answer — fixture inventory unread: {error}"
+            )
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
 
@@ -5420,6 +5430,15 @@ def build_toolset(
         inventory_port = _InventoryPort(state_port, property_port)
         try:
             inventory = read_inventory(inventory_port, type_names=type_names)
+        except StateQueryError as error:
+            # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
+            # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
+            # 준비해 두고도 InventoryReadError 만 알아서 이 갈래를 놓치고 있었다
+            # (실측: read_inventory 는 포트의 StateQueryError 를 그대로 흘린다;
+            #  ok=False 갈래만 InventoryReadError 가 된다).
+            return _error_result(
+                call, f"console did not answer — fixture inventory unread: {error}"
+            )
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
         occupants = occupants_from_patch_values(

@@ -20,6 +20,8 @@ import pytest
 from server.llm.types import ToolCall
 from server.lxseq.parser import parse_patch_csv
 from server.orchestrator.tools import ANSWER_CANCEL, ANSWER_RAN_IT, TOOL_NAMES, build_toolset
+from server.prechk.inventory import FIXTURE_ROOT
+from server.safety.console import StateQueryError
 
 FIXTURE_PATH = Path("server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv")
 
@@ -891,3 +893,187 @@ def test_a_rejected_row_kind_reaches_the_closed_vocabulary():
 
     assert "negative_channels" in kinds
     assert kinds <= _REJECT_KINDS
+
+
+# ---------------------------------------------------------------------------
+# t181 — 콘솔 침묵은 거절이지 「서버 내부 오류」가 아니다
+#
+# 고치기 전 실측: 픽스처 경로가 안 답하면 `patch_fixtures` 와 `import_lxseq_patch`
+# 가 거절이 아니라 죽었고, 그 예외는 session.py:9906 의 `except Exception` 까지
+# 올라가 kind='unexpected' + 「서버 내부 문제가 발생했습니다 … 진단 로그를 확인해
+# 주세요」로 접혔다. 콘솔이 안 답한 것을 서버 문제라 하고, 감독은 서버를 뒤지는데
+# 고장난 곳은 콘솔이다. 공연 중이면 그 오진이 시간을 먹는다.
+#
+# 원인: 두 도구 다 `read_inventory` 를 `except InventoryReadError` 로 감싸 두고
+# 거절 문면까지 준비해 놨는데, 포트가 던지는 종류는 `StateQueryError` 라 그
+# except 가 이 갈래를 못 잡았다. 방어가 자매 형태 중 한쪽(ok=False)만 덮고 있었다.
+#
+# 이 검사가 왜 여기 있나 — 두 도구를 **한 가짜(FakeConsole)로** 태울 수 있는
+# 유일한 자리다. 자리마다 다른 가짜를 쓰면 결과가 같은 계기로 잰 값이 아니게 된다.
+# ---------------------------------------------------------------------------
+
+
+class _SilentFixtureRoot:
+    """픽스처 루트만 콘솔 침묵으로 만든다 — 나머지 경로는 살아 있다.
+
+    던지는 종류가 `StateQueryError` 인 것이 이 가짜의 요점이다
+    (`server/safety/console.py:89`). t181 1단계 프로브는 `LookupError` 로 지었고
+    형태(예외)는 맞았지만 종류가 틀렸다 — **가짜가 정한 값을 실물의 성질로 읽을
+    뻔한 자리**다.
+
+    `detail` 을 밖에서 받는 이유: `raise StateQueryError` 자리가 `console.py` 에
+    여덟이라 문면이 하나가 아니다. 「타임아웃과 ok=False 둘만 온다」를 이 검사에
+    심지 않으려고 문면을 인자로 뺐다.
+    """
+
+    def __init__(self, base, detail: str) -> None:
+        self._base = base
+        self._detail = detail
+
+    def _dead(self, path: str) -> bool:
+        return path == FIXTURE_ROOT or path.startswith(FIXTURE_ROOT + "/")
+
+    def query_state(self, path, *args, **kwargs):
+        if self._dead(path):
+            raise StateQueryError(self._detail)
+        return self._base.query_state(path, *args, **kwargs)
+
+    def query_property(self, path, property_name):
+        if self._dead(path):
+            raise StateQueryError(self._detail)
+        return self._base.query_property(path, property_name)
+
+    def __getattr__(self, name):
+        return getattr(self._base, name)
+
+
+class _NotOkFixtureRoot(_SilentFixtureRoot):
+    """팔 B — 콘솔이 답은 하는데 `ok=False` 다. 이쪽은 원래 갈래가 잡아야 한다."""
+
+    def query_state(self, path, *args, **kwargs):
+        if self._dead(path):
+            return dict(ok=False, error=self._detail)
+        return self._base.query_state(path, *args, **kwargs)
+
+    def query_property(self, path, property_name):
+        if self._dead(path):
+            return dict(ok=False, error=self._detail)
+        return self._base.query_property(path, property_name)
+
+
+#: `console.py` 의 여덟 `raise StateQueryError` 중 서로 다른 갈래의 문면들.
+#: 하나만 쓰면 「이 문면에서만 낫는다」와 구별되지 않는다.
+_SILENT_DETAILS = (
+    "no state reply for 'Patch/Stages/1/Fixtures' within 5.0s",  # console.py:689 타임아웃
+    "state query failed: Patch/Stages/1/Fixtures",  # :693 ok=False 승격
+    "no prop reply for 'Patch/Stages/1/Fixtures' 'FID' within 5.0s",  # :713 프로퍼티
+)
+
+#: 두 도구를 **같은 가짜**로 태운다(조건 4). 인자는 각 도구의 최소 형태다.
+_INVENTORY_TOOLS = (
+    ("patch_fixtures", dict(console_type="Robe MegaPointe", address="9.1", count=1)),
+    ("import_lxseq_patch", dict(file_content_base64=_b64())),
+)
+
+_CONSOLE_REFUSAL = "console did not answer"
+_INVENTORY_REFUSAL = "fixture inventory unreadable"
+
+
+def _dispatch_against(wrapper_cls, detail, name, arguments):
+    console = FakeConsole()
+    port = wrapper_cls(console, detail)
+    registry = build_toolset(
+        execution_port=FakeExec(console),
+        state_port=port,
+        property_port=port,
+        deploy_pipeline=FakeDeploy(console),
+        question_port=Answers(),
+    )
+    return registry.dispatch(ToolCall(id="t181", name=name, arguments=arguments))
+
+
+@pytest.mark.parametrize("name,arguments", _INVENTORY_TOOLS)
+@pytest.mark.parametrize("detail", _SILENT_DETAILS)
+def test_a_silent_console_is_refused_and_the_refusal_names_the_console(name, arguments, detail):
+    """거짓 귀속 트립와이어.
+
+    두 가지가 동시에 걸린다. (1) `dispatch` 가 **예외를 안 낸다** — except 를
+    지우면 여기서 죽어 빨개진다. 그게 고치기 전 상태이고 사용자에게는 「서버 내부
+    문제」로 갔다. (2) 사유 문자열이 **콘솔을 가리킨다** — 문면을 인벤토리 쪽으로
+    되돌리면 빨개진다. 「거절됐다」만 보면 둘 다 놓친다(규약 §3).
+    """
+    execution = _dispatch_against(_SilentFixtureRoot, detail, name, arguments)
+
+    assert execution.result.is_error is True, execution.result.content
+    assert _CONSOLE_REFUSAL in execution.result.content, (
+        "콘솔이 안 답한 것을 콘솔이라 말하지 않는다 — 감독이 서버를 뒤지러 간다: "
+        + execution.result.content
+    )
+    assert detail in execution.result.content, (
+        "포트가 준 사유가 사라졌다 — 어느 경로가 안 답했는지 알 수 없다"
+    )
+
+
+@pytest.mark.parametrize("name,arguments", _INVENTORY_TOOLS)
+def test_a_not_ok_console_still_takes_the_inventory_branch(name, arguments):
+    """팔 B — 기존 갈래를 안 깨뜨렸다는 증거(조건 5).
+
+    이 팔이 없으면 「한쪽만 덮던 방어를 양쪽으로 넓혔다」가 추론이 된다.
+    `ok=False` 는 `InventoryReadError` 로 올라와 **원래 문면**으로 거절돼야 하고,
+    콘솔 문면이 여기 섞이면 두 사유가 다시 합쳐진 것이다 — 그게 이 카드가 없애려던
+    상태다.
+    """
+    execution = _dispatch_against(_NotOkFixtureRoot, "enumeration refused", name, arguments)
+
+    assert execution.result.is_error is True, execution.result.content
+    assert _INVENTORY_REFUSAL in execution.result.content
+    assert _CONSOLE_REFUSAL not in execution.result.content, (
+        "두 사유가 한 문면으로 합쳐졌다 — 침묵과 「읽을 수 없는 모양」이 안 갈린다: "
+        + execution.result.content
+    )
+
+
+@pytest.mark.parametrize("name,arguments", _INVENTORY_TOOLS)
+def test_a_live_console_carries_neither_refusal(name, arguments):
+    """대조군 — 이 문면들이 늘 나오는 게 아님을 보인다.
+
+    이 팔이 없으면 위 두 검사는 거절 문면을 상수로 하드코딩해도 초록이 난다.
+    """
+    console = FakeConsole()
+    registry = _toolset(console)
+    execution = registry.dispatch(ToolCall(id="t181", name=name, arguments=arguments))
+
+    assert execution.result.is_error is False, execution.result.content
+    assert _CONSOLE_REFUSAL not in execution.result.content
+    assert _INVENTORY_REFUSAL not in execution.result.content
+
+
+class _BuggyFixtureRoot(_SilentFixtureRoot):
+    """콘솔 침묵이 **아닌** 무관한 버그. 삼켜지면 안 된다."""
+
+    def query_state(self, path, *args, **kwargs):
+        if self._dead(path):
+            raise ValueError(self._detail)
+        return self._base.query_state(path, *args, **kwargs)
+
+    def query_property(self, path, property_name):
+        if self._dead(path):
+            raise ValueError(self._detail)
+        return self._base.query_property(path, property_name)
+
+
+@pytest.mark.parametrize("name,arguments", _INVENTORY_TOOLS)
+def test_an_unrelated_bug_is_not_swallowed_as_a_console_refusal(name, arguments):
+    """넓히기 방지 — `except Exception` 으로 바꾸면 여기서 빨개진다.
+
+    이 카드가 고친 결함은 「거짓 사유로 먼저 거절하면 참 사유가 안 보인다」의
+    한 형태였다. except 를 종류 없이 넓히면 **같은 형태를 새로 만든다** — 무관한
+    버그가 「콘솔이 안 답했다」로 보고되고, 감독은 이번엔 콘솔을 뒤지는데 고장난
+    곳은 코드다. 방향만 뒤집힌 같은 오진이다.
+
+    그래서 잡는 종류를 `StateQueryError` 로 못 박고, 그 밖의 예외는 **그대로
+    올라가야** 한다. 위로 올라간 뒤 무엇이 되는지는 이 검사의 범위가 아니다
+    (session.py:9906 이 일반 오류로 접는다 — 무관한 버그에는 그게 맞는 문면이다).
+    """
+    with pytest.raises(ValueError):
+        _dispatch_against(_BuggyFixtureRoot, "unrelated bug", name, arguments)
