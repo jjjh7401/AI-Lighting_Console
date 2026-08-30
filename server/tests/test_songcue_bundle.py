@@ -265,6 +265,13 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # 의 col 분기. 실측 델타: 72->73 hunks, 새 시작점 **956** 하나, 사라진 시작점 없음.
 # 커밋 단위 numstat 은 +19/-6 이고, 삭제 6줄은 전부 그 함수와 주석의 제자리 교체다.
 # 두 보호 구간(234..238 / 524..569) 침범은 ZERO — 실제 불변식은 그대로 성립한다.
+# t151 (SPEC-COPILOT-LXSEQ-003, rig 섹션 페이징)이 collect_rig_sections 의 섹션 루프를
+# 공용 페이징(server/rig/paging.py paged_children)으로 바꿨다: children/objects/entry
+# 3줄의 제자리 교체 + 근거 주석. 실측 델타: 73->74 hunks, 새 시작점 **410** 하나,
+# 사라진 시작점 없음(순수 삽입). 두 보호 구간(234..238 / 524..569) 침범은 ZERO —
+# 234..238 앞뒤로 가장 가까운 헝크가 184 와 302 이고, 524..569 앞뒤가 479 와 591 이다.
+# 이 트립와이어는 커밋된 HEAD 를 보므로 커밋 **전에** 돌린 스위트로는 안 잡힌다 —
+# t151 은 로컬 전량 초록 뒤 CI 에서 처음 빨갰다. 다음 사람은 커밋 후 한 번 더 돌려라.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -284,6 +291,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     308,
     345,
     367,
+    410,
     425,
     436,
     463,
