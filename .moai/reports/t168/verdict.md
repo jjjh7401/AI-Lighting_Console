@@ -35,15 +35,26 @@ grep 으로 "무대" + 물리적 결과를 뜻하는 동사(바뀐다/반영/나
 
 ### 1.3 실제 3건
 
-| 자리 | 함수 | 게이트 유무 | 게이트 문면에 사실이 있나 |
-|---|---|---|---|
-| tools.py:1784 | import_lxseq_presets (프리셋 저장) | 있다 (risk_reasons, :5062) | 없다 - "값이 맞는지는 되읽을 수 없다"만 있다 |
-| session.py:7726 | 라이브 큐 병합 (포지션 수정) | 있다 (_ask_one, 승인/취소) | 있다 - 프롬프트 문장 자체가 사실이다 |
-| session.py:8490 | 포지션 프리셋 슬롯 확인 | 있다 (_ask_one, why=) | 있다 - why 문장이 사실이다 |
+정정(2026-08-30, 리드 재현 요청 후): 아래 표의 "게이트 유무"란이 원래
+risk_reasons 계열과 _ask_one 확인 계열을 같은 층처럼 적었다 - 부정확했다.
+risk_reasons(ApprovalRequest/ApprovalItem)와 _ask_one(QuestionOption 승인/취소,
+정의 :10109)은 서로 다른 기구다. 리드가 session.py 에서 risk_reasons 를 grep 해
+0건을 확인했는데, 그건 session.py 두 자리가 애초에 risk_reasons 층이 아니었기
+때문이다 - 리드의 재현이 아니라 내 표현이 틀렸다. 정정한 표:
 
-세 자리 중 하나만 어긋난다. 나머지 둘은 이미 올바른 모양이다 - 물리적 결과 사실을
-모델 지시문이 아니라 게이트가 사람에게 보여주는 문면 자체에 싣는다. 이게 이 저장소가
-이미 아는 정답이고, 이번 판정은 그 패턴을 하나가 안 따르고 있다는 것만 새로 짚는다.
+| 자리 | 함수 | 확인 기구 | 문면에 사실이 있나 |
+|---|---|---|---|
+| tools.py:1784 지시문 / :5062 게이트 | import_lxseq_presets (프리셋 저장) | risk_reasons (ApprovalItem) | 없다 - "값이 맞는지는 되읽을 수 없다"만 있다 |
+| session.py:7724-7726 | 라이브 큐 병합 (포지션 수정) | _ask_one (prompt, QuestionOption 승인/취소) | 있다 - prompt 문장 자체가 사실이다 |
+| session.py:8485-8491 | 포지션 프리셋 슬롯 확인 | _ask_one (why=) | 있다 - why 문장이 사실이다 |
+
+세 자리 중 하나만 어긋난다. 다만 어긋난 자리(risk_reasons)와 올바른 두 자리
+(_ask_one)는 같은 기구가 아니다 - "저장 전에 사람을 막고 그 문면에 사실을 싣는다"
+는 설계 의도는 같지만, 코드 층이 다르므로 2절의 "고칠 자리는 risk_reasons(:5062)
+하나"라는 결론은 _ask_one 두 자리를 그 자리로 옮기라는 뜻이 아니다 - risk_reasons
+자체에 문면을 추가하라는 뜻이다. risk_reasons 는 저장소 전체에 정확히 두 자리
+(:5062 프리셋 · :7906 그룹)뿐이고, 둘 다 무대 변화를 안 말한다(그룹은 애초에
+물리적 결과가 없으므로 1.4절의 반증과 정합적이다).
 
 ### 1.4 그룹 쓰기 - 카드가 의심한 축, 반증됨
 
@@ -132,6 +143,6 @@ lane-protocol 3절 "문구를 지키는 검사는 그 문구가 무엇을 막는
     트리          .claude/worktrees/t168 (WT-safety-gate-req)
     좌표          server/orchestrator/tools.py:1784(지시문) · :5047-5065(게이트) ·
                   :7700-7912(create_arrangement_groups) · server/lxseq/group_mapper.py:311
-                  server/web/session.py:7726 · :8490 (대조 - 이미 올바른 모양)
+                  server/web/session.py:7724-7726 · :8485-8491 (_ask_one, 대조 - 이미 올바른 모양)
     콘솔          불필요, 접촉 0
     코드 변경     0행
