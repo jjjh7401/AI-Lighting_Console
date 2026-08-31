@@ -83,6 +83,36 @@ NOTE_PATTERN_NOT_A_DISCRIMINATOR = "LW-"
 #: 이 행들 뒤에 숨는다.
 VIDEO_CALL_SKIP_REASON = "video_call_not_console"
 
+#: 이 하네스가 **원문 그대로** 기대하는 열. 정규화하지 않는다 — 이유는
+#: `CanonicalHeaderRequired` 참조.
+REQUIRED_COLUMNS = ("Q#", "Group")
+
+
+class CanonicalHeaderRequired(ValueError):
+    """정본 헤더가 아닌 시트. 정규화로 받아주지 않는다.
+
+    🔴 **이 하네스는 정본 헤더 전용이다. 관대하게 고치지 마라.**
+
+    파서(`server/lxseq/cue_parser.py:112` `_normalize_header`)는 헤더를
+    소문자화·공백제거·BOM제거해 관대하게 받는다. 이 하네스는 일부러 그러지
+    않는다 — 관대하게 만들면 **정규화가 두 벌**이 되고, 두 벌이 **같이 틀렸을 때
+    대조가 「일치」라고 답한다.** 이 하네스의 인구조사는 툴 응답을 대조할 **독립
+    분모**로 존재하므로, 대조군이 대조 대상의 해석을 베끼는 순간 존재 이유가
+    사라진다.
+
+    그러므로 비표준 헤더는 이 하네스의 **범위 밖**이고, 그 사실을 조용히
+    `KeyError` 로 죽는 대신 **말하고** 죽는다.
+    """
+
+    def __init__(self, missing: tuple[str, ...], found: tuple[str, ...]) -> None:
+        self.missing = missing
+        self.found = found
+        super().__init__(
+            "이 하네스는 정본 헤더 전용이다 — 파서와 달리 정규화하지 않는다"
+            "(정규화가 두 벌이면 대조의 독립성이 사라진다). "
+            "못 찾은 열: " + ", ".join(missing) + " / 시트에 있던 헤더: " + ", ".join(found)
+        )
+
 
 class _RecordingApproval:
     def __init__(self, *, approve: bool) -> None:
@@ -125,8 +155,18 @@ def _state(state_port, path: str) -> dict:
 
 
 def read_rows(csv_path: Path) -> list[dict]:
-    """정본 CSV 를 행 사전 목록으로 읽는다. BOM 을 벗긴다."""
-    return list(csv.DictReader(io.StringIO(csv_path.read_text(encoding="utf-8-sig"))))
+    """정본 CSV 를 행 사전 목록으로 읽는다. BOM 을 벗긴다.
+
+    헤더가 정본이 아니면 `CanonicalHeaderRequired` 로 **사유를 말하며** 실패한다.
+    `KeyError` 로 죽으면 어느 열이 없었는지도, 왜 관대하게 받지 않는지도 아무도
+    모른다.
+    """
+    reader = csv.DictReader(io.StringIO(csv_path.read_text(encoding="utf-8-sig")))
+    found = tuple(reader.fieldnames or ())
+    missing = tuple(name for name in REQUIRED_COLUMNS if name not in found)
+    if missing:
+        raise CanonicalHeaderRequired(missing, found)
+    return list(reader)
 
 
 def census(rows: list[dict]) -> dict:

@@ -13,6 +13,7 @@ import pytest
 
 from server.tools.lxseq_cues_e2e import (
     VIDEO_CALL_GROUP,
+    CanonicalHeaderRequired,
     census,
     leaked_commands,
     read_rows,
@@ -122,3 +123,50 @@ def test_leak_detector_fires_on_a_fabricated_leak() -> None:
 def test_leak_detector_is_silent_on_clean_bundles() -> None:
     clean = [("Group 1 At 55", "Group 2 At 40")]
     assert leaked_commands(clean) == []
+
+
+def _variant_header_csv(tmp_path: Path) -> Path:
+    """헤더만 소문자 + 공백 삽입으로 변형. 데이터 행은 정본 그대로."""
+    lines = CUE_CSV.read_text(encoding="utf-8-sig").splitlines()
+    variant = lines[0].lower().replace("q#", "q #")
+    target = tmp_path / "variant.cue-ex.csv"
+    target.write_text("\n".join([variant] + lines[1:]) + "\n", encoding="utf-8")
+    return target
+
+
+def test_non_canonical_header_fails_with_a_reason(tmp_path: Path) -> None:
+    """조용히 `KeyError` 로 죽지 않는다 — 어느 열이 없고 무엇이 있었는지 말한다.
+
+    파서는 헤더를 정규화해 이 시트를 받아준다(실측: records 89 / cues 18).
+    이 하네스는 일부러 안 받는다 — 정규화가 두 벌이면 두 벌이 같이 틀렸을 때
+    대조가 「일치」라고 답하고, 독립 분모라는 존재 이유가 사라진다.
+    """
+    variant = _variant_header_csv(tmp_path)
+
+    with pytest.raises(CanonicalHeaderRequired) as caught:
+        read_rows(variant)
+
+    error = caught.value
+    assert "Q#" in error.missing
+    assert error.found, "시트에 있던 헤더 목록이 비어 있으면 진단이 안 된다"
+    message = str(error)
+    assert "Q#" in message
+    assert "정규화" in message, "왜 관대하게 받지 않는지가 메시지에 있어야 한다"
+
+
+def test_non_canonical_header_is_not_a_bare_keyerror(tmp_path: Path) -> None:
+    """회귀 방지: 예전에는 `KeyError: 'Q#'` 로 죽었고 아무도 이유를 몰랐다."""
+    variant = _variant_header_csv(tmp_path)
+    with pytest.raises(CanonicalHeaderRequired):
+        read_rows(variant)
+    try:
+        read_rows(variant)
+    except CanonicalHeaderRequired:
+        pass
+    except KeyError:  # pragma: no cover - 회귀했을 때만 도달한다
+        pytest.fail("맨 KeyError 로 되돌아갔다 — 사유를 말하는 실패여야 한다")
+
+
+def test_canonical_header_still_reads(tmp_path: Path) -> None:
+    """대조군. 엄격해진 검사가 정본까지 막으면 아무것도 못 잰다."""
+    assert len(read_rows(CUE_CSV)) == 89
