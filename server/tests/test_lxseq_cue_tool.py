@@ -7,7 +7,11 @@ gracefully rather than reach the missing mapper. Console contact: 0.
 
 from __future__ import annotations
 
+import base64
+import io
 import json
+
+import openpyxl
 
 from server.llm.types import ToolCall
 from server.lxseq.cue_parser import CANONICAL_CUE_COLUMNS
@@ -50,6 +54,7 @@ class TestRegistration:
             "preset_col_content_base64",
             "preset_bm_content_base64",
             "fx_content_base64",
+            "cue_sheet_xlsx_base64",
         }
 
 
@@ -146,3 +151,165 @@ class TestCueBuilderQuoting:
         assert 'f"Group ' + chr(34) not in source
         assert "Store Cue {cueno} " + chr(39) in source
         assert "Store Cue {cueno} " + chr(34) not in source
+
+
+def _cue_sheet_xlsx(rows):
+    """최소 CUE 시트 -- 헤더 4행, 데이터 5행부터(정본과 같은 자리).
+    rows 는 (q, section, mood, fade) 튜플의 목록."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "CUE"
+    ws.append(("머리글 무시 1행",))
+    ws.append(("머리글 무시 2행",))
+    ws.append(())
+    header = ["Q#", "Section", "TC In", "TC Out", "Dur", "Mood"]
+    header += ["Color", "Intensity", "Fixture Group", "Movement", "Effect"]
+    header += ["Transition", "Fade", "Note"]
+    ws.append(header)
+    for q, section, mood, fade in rows:
+        row = [q, section, "", "", "", mood, "", "", "", "", "", "", fade, ""]
+        ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return base64.b64encode(buf.getvalue()).decode("ascii")
+
+
+class _AcceptAllApproval:
+    def __init__(self):
+        self.requests = []
+
+    def request_approval(self, request):
+        self.requests.append(request)
+        return True
+
+
+def _toolset_with_group(group_name, *, approval=None):
+    console = FakeConsole(fixtures=[dict(name=group_name)])
+    return build_toolset(
+        execution_port=FakeExec(console),
+        state_port=console,
+        property_port=console,
+        deploy_pipeline=FakeDeploy(console),
+        question_port=Answers(),
+        group_approval_port=approval,
+    )
+
+
+class TestCueSheetXlsx:
+    """정본 CUE 시트(xlsx) -- 있으면 CueFade 근사 대신 정본 Fade 열,
+    라벨을 Q#+Section+Mood 로 낸다. 없으면 지금 동작 그대로(리드 지시,
+    2026-08-31). Q060/Q140 은 실기에서 근사가 0.0, 정본이 1.0으로 틀렸던
+    두 큐다 -- 이 검사가 그 둘의 유일한 관측 가능한 차이다.
+    """
+
+    def _body(self):
+        header = ",".join(CANONICAL_CUE_COLUMNS)
+        row = ",".join(["Q010", "BACK", "55"] + [""] * 12 + ["", ""])
+        return (header + "\n" + row + "\n").encode("utf-8")
+
+    def test_the_sheet_omitted_keeps_the_approximation(self):
+        registry = _toolset_with_group("BACK")
+        execution = registry.dispatch(
+            ToolCall(
+                id="t209xlsx1",
+                name="import_lxseq_cues",
+                arguments=dict(file_content_base64=_b64(self._body()), sequence_name="TestSeq"),
+            )
+        )
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        note = payload["cue_manual_notes"]["Q010"]
+        assert note["cue_fade_is_approximate"] is True
+        assert "안 줌" in note["cue_fade_source"]
+
+    def test_the_sheet_supplies_the_real_fade_and_label(self):
+        approval = _AcceptAllApproval()
+        registry = _toolset_with_group("BACK", approval=approval)
+        cue_sheet = _cue_sheet_xlsx([("Q010", "CHORUS1", "유지, 회전", 1.0)])
+        execution = registry.dispatch(
+            ToolCall(
+                id="t209xlsx2",
+                name="import_lxseq_cues",
+                arguments=dict(
+                    file_content_base64=_b64(self._body()),
+                    sequence_name="TestSeq",
+                    action="apply",
+                    cue_sheet_xlsx_base64=cue_sheet,
+                ),
+            )
+        )
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        note = payload["cue_manual_notes"]["Q010"]
+        assert note["cue_fade_is_approximate"] is False
+        assert "정본" in note["cue_fade_source"]
+        assert payload["applied"][0]["status"] == "ok"
+        commands = [c["command"] for c in payload["applied"][0]["commands"]]
+        store_cue = next(c for c in commands if c.startswith("Store Cue"))
+        assert (
+            store_cue == "Store Cue 10 'Q010 CHORUS1 유지' CueFade 1 Sequence 2 /Merge /NoConfirm"
+        )
+
+    def test_q060_and_q140_read_one_point_zero_from_the_canonical_sheet(self):
+        """실기에서 틀렸던 정확한 두 큐 -- 근사면 0.0, 정본이면 1.0."""
+        approval = _AcceptAllApproval()
+        registry = _toolset_with_group("BACK", approval=approval)
+        header = ",".join(CANONICAL_CUE_COLUMNS)
+        row = ",".join(["Q060", "BACK", "55"] + [""] * 12 + ["", ""])
+        body = (header + "\n" + row + "\n").encode("utf-8")
+        cue_sheet = _cue_sheet_xlsx([("Q060", "CHORUS1", "유지, 회전", 1.0)])
+        execution = registry.dispatch(
+            ToolCall(
+                id="t209xlsx3",
+                name="import_lxseq_cues",
+                arguments=dict(
+                    file_content_base64=_b64(body),
+                    sequence_name="TestSeq",
+                    action="apply",
+                    cue_sheet_xlsx_base64=cue_sheet,
+                ),
+            )
+        )
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        commands = [c["command"] for c in payload["applied"][0]["commands"]]
+        store_cue = next(c for c in commands if c.startswith("Store Cue"))
+        assert "CueFade 1 " in store_cue
+
+    def test_a_single_quote_in_mood_is_refused_fail_closed(self):
+        registry = _toolset_with_group("BACK")
+        cue_sheet = _cue_sheet_xlsx([("Q010", "INTRO", "Rock'n", 1.0)])
+        execution = registry.dispatch(
+            ToolCall(
+                id="t209xlsx4",
+                name="import_lxseq_cues",
+                arguments=dict(
+                    file_content_base64=_b64(self._body()),
+                    sequence_name="TestSeq",
+                    cue_sheet_xlsx_base64=cue_sheet,
+                ),
+            )
+        )
+        assert execution.result.is_error is True
+        assert chr(39) in execution.result.content
+
+    def test_missing_cue_sheet_tab_is_refused_with_a_reason(self):
+        wb = openpyxl.Workbook()
+        wb.active.title = "NOT_CUE"
+        buf = io.BytesIO()
+        wb.save(buf)
+        bad_sheet = base64.b64encode(buf.getvalue()).decode("ascii")
+        registry = _toolset_with_group("BACK")
+        execution = registry.dispatch(
+            ToolCall(
+                id="t209xlsx5",
+                name="import_lxseq_cues",
+                arguments=dict(
+                    file_content_base64=_b64(self._body()),
+                    sequence_name="TestSeq",
+                    cue_sheet_xlsx_base64=bad_sheet,
+                ),
+            )
+        )
+        assert execution.result.is_error is True
+        assert "CUE" in execution.result.content

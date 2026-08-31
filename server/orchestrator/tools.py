@@ -5289,6 +5289,56 @@ def build_toolset(
         except MissingCueColumnsError as error:
             return _error_result(call, "CUE-EX 시트 헤더가 맞지 않다: " + str(error))
 
+        # 정본 CUE 시트(xlsx) -- 있으면 CueFade 근사(행별 I-Fade 최댓값)를
+        # 정본 Fade 열로, 라벨을 Q# 만에서 Q# + Section + Mood 첫 절로
+        # 바꾼다(ma3.txt:245 형식과 대조 확인, make_ma3.py 의 조립과 같은
+        # 규칙). 안 주면 지금 동작 그대로 -- 새 필수 인자로 만들지 않는다
+        # (리드 지시, 2026-08-31).
+        cue_meta: dict[str, tuple[str, str, float]] = {}
+        raw_cue_sheet = call.arguments.get("cue_sheet_xlsx_base64")
+        if isinstance(raw_cue_sheet, str) and raw_cue_sheet.strip():
+            try:
+                cue_sheet_bytes = base64.b64decode(raw_cue_sheet, validate=True)
+            except (binascii.Error, ValueError):
+                return _error_result(call, "'cue_sheet_xlsx_base64' 가 base64가 아니다")
+            try:
+                import openpyxl
+
+                cue_workbook = openpyxl.load_workbook(
+                    io.BytesIO(cue_sheet_bytes), data_only=True, read_only=True
+                )
+            except Exception as exc:  # noqa: BLE001 -- 못 읽는 xlsx 는 하나의 거절이다
+                return _error_result(call, f"'cue_sheet_xlsx_base64' 를 못 읽었다: {exc}")
+            if "CUE" not in cue_workbook.sheetnames:
+                return _error_result(
+                    call, "'cue_sheet_xlsx_base64' 에 'CUE' 시트가 없다 -- 시트 6개 중 하나다"
+                )
+            cue_ws = cue_workbook["CUE"]
+            for row in cue_ws.iter_rows(min_row=5, values_only=True):
+                q_raw = row[0] if len(row) > 0 else None
+                if not isinstance(q_raw, str) or not q_raw.strip():
+                    continue
+                q = q_raw.strip()
+                section = str(row[1] or "").strip() if len(row) > 1 else ""
+                mood_raw = str(row[5] or "") if len(row) > 5 else ""
+                mood_first = mood_raw.split(",")[0].strip()
+                fade_raw = row[12] if len(row) > 12 else None
+                try:
+                    fade = float(fade_raw)
+                except (TypeError, ValueError):
+                    continue
+                if "'" in section or "'" in mood_first:
+                    # 라벨이 홑따옴표로 감싸지는데(전송 경로 규율, 위
+                    # sequence_name 과 같다) 안에 홑따옴표가 있으면 그
+                    # 자리에서 문자열이 잘린다. 이스케이프 없이 fail-closed.
+                    return _error_result(
+                        call,
+                        f"{q}: 정본 CUE 시트의 Section/Mood 에 홑따옴표(')가 있다 -- "
+                        "라벨이 홑따옴표로 감싸지는데 안에 홑따옴표가 있으면 문자열이 "
+                        "거기서 잘린다. 시트를 고쳐 다시 불러라.",
+                    )
+                cue_meta[q] = (section, mood_first, fade)
+
         from server.lxseq.cue_mapper import map_cues
 
         # 시퀀스 풀 조회 -- map_cues(server/lxseq/cue_mapper.py)가 기대하는
@@ -5686,9 +5736,24 @@ def build_toolset(
                 if timing_parts:
                     per_row_timing[row.group] = "/".join(timing_parts)
             cueno = int(bucket.cue_no.lstrip("Q"))
-            cue_fade = max(fade_candidates) if fade_candidates else 0.0
+            meta = cue_meta.get(bucket.cue_no)
+            if meta is not None:
+                section, mood_first, cue_fade = meta
+                label_parts = [bucket.cue_no] + [p for p in (section, mood_first) if p]
+                cue_label = " ".join(label_parts)
+                fade_is_approx = False
+                fade_source = "정본 CUE 시트 Fade 열"
+            else:
+                cue_label = bucket.cue_no
+                cue_fade = max(fade_candidates) if fade_candidates else 0.0
+                fade_is_approx = True
+                fade_source = (
+                    "max(row I-Fade) -- 정본 CUE 시트에 이 큐가 없다"
+                    if cue_meta
+                    else "max(row I-Fade) -- 정본 CUE 시트 안 줌"
+                )
             commands.append(
-                f"Store Cue {cueno} '{bucket.cue_no}' CueFade {_fmt_num(cue_fade)} "
+                f"Store Cue {cueno} '{cue_label}' CueFade {_fmt_num(cue_fade)} "
                 f"Sequence {sequence_placement_no} /Merge /NoConfirm"
             )
             if sequence_create_command is not None:
@@ -5696,8 +5761,8 @@ def build_toolset(
                 sequence_create_command = None
             cue_bundles.append((bucket.cue_no, commands))
             cue_manual_notes[bucket.cue_no] = dict(
-                cue_fade_is_approximate=True,
-                cue_fade_source="max(row I-Fade) -- base CUE 시트 Fade 열 없음",
+                cue_fade_is_approximate=fade_is_approx,
+                cue_fade_source=fade_source,
                 per_row_timing=per_row_timing,
                 fx_stopped_groups=fx_stopped,
             )
@@ -10835,7 +10900,10 @@ def build_toolset(
                     "action": {
                         "type": "string",
                         "enum": ["preview", "apply"],
-                        "description": "기본 'preview'. 'apply'도 이번 회차에는 콘솔에 쓰지 않는다",
+                        "description": (
+                            "기본 'preview'(콘솔에 아무것도 안 쓴다). 'apply'는 승인 뒤 "
+                            "Store Sequence/Store Cue 명령을 실제로 낸다"
+                        ),
                     },
                     "sequence_name": {
                         "type": "string",
@@ -10866,6 +10934,16 @@ def build_toolset(
                             "있으면 FX.xx 참조 행의 콘솔 슬롯을 이름으로 이어 "
                             "계획에 넣는다(풀은 이름이 'All'로 시작하는 것을 "
                             "찾는다). 없으면 그 행은 held 로 떨어진다"
+                        ),
+                    },
+                    "cue_sheet_xlsx_base64": {
+                        "type": "string",
+                        "description": (
+                            "선택 -- 정본 CUE 시트(xlsx, 'CUE' 탭) 바이트(base64). "
+                            "있으면 CueFade 근사(행별 I-Fade 최댓값) 대신 정본 Fade "
+                            "열을 쓰고, 라벨을 'Q010' 대신 'Q010 INTRO 화사'(Q# + "
+                            "Section + Mood 첫 절) 형태로 낸다. 없으면 지금처럼 "
+                            "근사로 폴백한다(cue_manual_notes 에 그대로 표기)"
                         ),
                     },
                 },
