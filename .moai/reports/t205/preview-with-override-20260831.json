@@ -1,0 +1,1753 @@
+{
+  "csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t205/src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.patch.csv",
+  "action": "preview",
+  "approve": false,
+  "local_file": {
+    "sha256": "77a34d4bfd611fc034ce621c9715c1e33129df244a67c7e8dfd75d83816d7ee3",
+    "byte_length": 7258
+  },
+  "plugin_import_dir": "/Users/studiox/MALightingTechnology/gma3_library/datapools/plugins",
+  "plugin_import_dir_source": "site_settings",
+  "probe": {
+    "live": {
+      "path": "Patch/FixtureTypes",
+      "ok": true,
+      "child_count": 15,
+      "children_returned": 15,
+      "truncated": false,
+      "names": [
+        "Robin Esprite",
+        "Robin Forte HP",
+        "Robin LEDBeam 350",
+        "Robin Spiider",
+        "Xtylos",
+        "Sharpy Plus",
+        "Robin MMX Spot",
+        "Mac Aura XB",
+        "Rush Par 2 RGBW Zoom",
+        "Source 4 LED Series 3 Lustr X8",
+        "Robin MegaPointe",
+        "Robin Spiider",
+        "CuePix Blinder WW2",
+        "Atomic 3000 LED",
+        "Unique 2 1"
+      ]
+    },
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "raised": "StateQueryError: path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "trustworthy": true,
+    "verdict_ko": "판독 채널 신뢰 가능 — 실재 경로는 ok, 날조 경로는 ok가 아니다."
+  },
+  "is_error": false,
+  "awaited_human": false,
+  "payload": {
+    "source": {
+      "sha256": "77a34d4bfd611fc034ce621c9715c1e33129df244a67c7e8dfd75d83816d7ee3",
+      "byte_length": 7258,
+      "rows_total": 86,
+      "parsed": 86,
+      "rejected": [],
+      "excluded": []
+    },
+    "types": {
+      "resolved": {
+        "ETC S4 LED S3 Lustr X8": "Source 4 LED Series 3 Lustr X8",
+        "Elation CUEPIX Blinder WW2": "CuePix Blinder WW2",
+        "Martin Atomic 3000 LED": "Atomic 3000 LED",
+        "Look Unique 2.1": "Unique 2 1",
+        "Robe MegaPointe": "Robin MegaPointe",
+        "Robe Spiider": "Robin Spiider",
+        "Martin MAC Aura XB": "Mac Aura XB",
+        "Martin RUSH PAR 2 RGBW Z": "Rush Par 2 RGBW Zoom"
+      },
+      "unresolved": []
+    },
+    "console_read": {
+      "complete_enough_to_judge_absence": true,
+      "caveat": {
+        "kind": "console_read_index_domain_unknown",
+        "label": "열거는 절단됐으나 선언된 자식을 전부 관측했다 — 인덱스 도메인만 미상",
+        "completeness": "incomplete",
+        "child_count": 86,
+        "observed_count": 86,
+        "missing_count": 0,
+        "unreadable_address_count": 0,
+        "unpatched_count": 0,
+        "unread_count": 0,
+        "reason": "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고, 인덱스 도메인만 미상이다."
+      },
+      "type_translation": {
+        "attempted": true,
+        "named": 15,
+        "whole_unconfirmed": false,
+        "untranslated": {},
+        "detail": null
+      },
+      "fid_read": {
+        "attempted": true,
+        "known": 86,
+        "child_count": 86,
+        "unresolved": 0
+      }
+    },
+    "plan": {
+      "runs": [],
+      "fid_map": {
+        "101": {
+          "address": "1.1",
+          "console_type": null,
+          "run_index": null
+        },
+        "102": {
+          "address": "1.13",
+          "console_type": null,
+          "run_index": null
+        },
+        "103": {
+          "address": "1.25",
+          "console_type": null,
+          "run_index": null
+        },
+        "104": {
+          "address": "1.37",
+          "console_type": null,
+          "run_index": null
+        },
+        "105": {
+          "address": "1.49",
+          "console_type": null,
+          "run_index": null
+        },
+        "106": {
+          "address": "1.61",
+          "console_type": null,
+          "run_index": null
+        },
+        "111": {
+          "address": "1.73",
+          "console_type": null,
+          "run_index": null
+        },
+        "112": {
+          "address": "1.85",
+          "console_type": null,
+          "run_index": null
+        },
+        "113": {
+          "address": "1.97",
+          "console_type": null,
+          "run_index": null
+        },
+        "114": {
+          "address": "1.109",
+          "console_type": null,
+          "run_index": null
+        },
+        "115": {
+          "address": "1.121",
+          "console_type": null,
+          "run_index": null
+        },
+        "116": {
+          "address": "1.133",
+          "console_type": null,
+          "run_index": null
+        },
+        "117": {
+          "address": "1.145",
+          "console_type": null,
+          "run_index": null
+        },
+        "118": {
+          "address": "1.157",
+          "console_type": null,
+          "run_index": null
+        },
+        "601": {
+          "address": "1.169",
+          "console_type": null,
+          "run_index": null
+        },
+        "602": {
+          "address": "1.173",
+          "console_type": null,
+          "run_index": null
+        },
+        "603": {
+          "address": "1.177",
+          "console_type": null,
+          "run_index": null
+        },
+        "604": {
+          "address": "1.181",
+          "console_type": null,
+          "run_index": null
+        },
+        "605": {
+          "address": "1.185",
+          "console_type": null,
+          "run_index": null
+        },
+        "606": {
+          "address": "1.189",
+          "console_type": null,
+          "run_index": null
+        },
+        "611": {
+          "address": "1.193",
+          "console_type": null,
+          "run_index": null
+        },
+        "612": {
+          "address": "1.207",
+          "console_type": null,
+          "run_index": null
+        },
+        "613": {
+          "address": "1.221",
+          "console_type": null,
+          "run_index": null
+        },
+        "614": {
+          "address": "1.235",
+          "console_type": null,
+          "run_index": null
+        },
+        "621": {
+          "address": "1.249",
+          "console_type": null,
+          "run_index": null
+        },
+        "622": {
+          "address": "1.251",
+          "console_type": null,
+          "run_index": null
+        },
+        "501": {
+          "address": "2.1",
+          "console_type": null,
+          "run_index": null
+        },
+        "502": {
+          "address": "2.40",
+          "console_type": null,
+          "run_index": null
+        },
+        "503": {
+          "address": "2.79",
+          "console_type": null,
+          "run_index": null
+        },
+        "504": {
+          "address": "2.118",
+          "console_type": null,
+          "run_index": null
+        },
+        "505": {
+          "address": "2.157",
+          "console_type": null,
+          "run_index": null
+        },
+        "506": {
+          "address": "2.196",
+          "console_type": null,
+          "run_index": null
+        },
+        "507": {
+          "address": "2.235",
+          "console_type": null,
+          "run_index": null
+        },
+        "508": {
+          "address": "2.274",
+          "console_type": null,
+          "run_index": null
+        },
+        "521": {
+          "address": "3.1",
+          "console_type": null,
+          "run_index": null
+        },
+        "522": {
+          "address": "3.50",
+          "console_type": null,
+          "run_index": null
+        },
+        "523": {
+          "address": "3.99",
+          "console_type": null,
+          "run_index": null
+        },
+        "524": {
+          "address": "3.148",
+          "console_type": null,
+          "run_index": null
+        },
+        "525": {
+          "address": "3.197",
+          "console_type": null,
+          "run_index": null
+        },
+        "526": {
+          "address": "3.246",
+          "console_type": null,
+          "run_index": null
+        },
+        "527": {
+          "address": "3.295",
+          "console_type": null,
+          "run_index": null
+        },
+        "528": {
+          "address": "3.344",
+          "console_type": null,
+          "run_index": null
+        },
+        "201": {
+          "address": "4.1",
+          "console_type": null,
+          "run_index": null
+        },
+        "202": {
+          "address": "4.26",
+          "console_type": null,
+          "run_index": null
+        },
+        "203": {
+          "address": "4.51",
+          "console_type": null,
+          "run_index": null
+        },
+        "204": {
+          "address": "4.76",
+          "console_type": null,
+          "run_index": null
+        },
+        "205": {
+          "address": "4.101",
+          "console_type": null,
+          "run_index": null
+        },
+        "206": {
+          "address": "4.126",
+          "console_type": null,
+          "run_index": null
+        },
+        "207": {
+          "address": "4.151",
+          "console_type": null,
+          "run_index": null
+        },
+        "208": {
+          "address": "4.176",
+          "console_type": null,
+          "run_index": null
+        },
+        "209": {
+          "address": "4.201",
+          "console_type": null,
+          "run_index": null
+        },
+        "210": {
+          "address": "4.226",
+          "console_type": null,
+          "run_index": null
+        },
+        "211": {
+          "address": "4.251",
+          "console_type": null,
+          "run_index": null
+        },
+        "212": {
+          "address": "4.276",
+          "console_type": null,
+          "run_index": null
+        },
+        "301": {
+          "address": "4.301",
+          "console_type": null,
+          "run_index": null
+        },
+        "302": {
+          "address": "4.326",
+          "console_type": null,
+          "run_index": null
+        },
+        "303": {
+          "address": "4.351",
+          "console_type": null,
+          "run_index": null
+        },
+        "304": {
+          "address": "4.376",
+          "console_type": null,
+          "run_index": null
+        },
+        "305": {
+          "address": "4.401",
+          "console_type": null,
+          "run_index": null
+        },
+        "306": {
+          "address": "4.426",
+          "console_type": null,
+          "run_index": null
+        },
+        "311": {
+          "address": "5.1",
+          "console_type": null,
+          "run_index": null
+        },
+        "312": {
+          "address": "5.26",
+          "console_type": null,
+          "run_index": null
+        },
+        "313": {
+          "address": "5.51",
+          "console_type": null,
+          "run_index": null
+        },
+        "314": {
+          "address": "5.76",
+          "console_type": null,
+          "run_index": null
+        },
+        "315": {
+          "address": "5.101",
+          "console_type": null,
+          "run_index": null
+        },
+        "316": {
+          "address": "5.126",
+          "console_type": null,
+          "run_index": null
+        },
+        "401": {
+          "address": "5.151",
+          "console_type": null,
+          "run_index": null
+        },
+        "402": {
+          "address": "5.160",
+          "console_type": null,
+          "run_index": null
+        },
+        "403": {
+          "address": "5.169",
+          "console_type": null,
+          "run_index": null
+        },
+        "404": {
+          "address": "5.178",
+          "console_type": null,
+          "run_index": null
+        },
+        "405": {
+          "address": "5.187",
+          "console_type": null,
+          "run_index": null
+        },
+        "406": {
+          "address": "5.196",
+          "console_type": null,
+          "run_index": null
+        },
+        "407": {
+          "address": "5.205",
+          "console_type": null,
+          "run_index": null
+        },
+        "408": {
+          "address": "5.214",
+          "console_type": null,
+          "run_index": null
+        },
+        "409": {
+          "address": "5.223",
+          "console_type": null,
+          "run_index": null
+        },
+        "410": {
+          "address": "5.232",
+          "console_type": null,
+          "run_index": null
+        },
+        "421": {
+          "address": "5.241",
+          "console_type": null,
+          "run_index": null
+        },
+        "422": {
+          "address": "5.250",
+          "console_type": null,
+          "run_index": null
+        },
+        "423": {
+          "address": "5.259",
+          "console_type": null,
+          "run_index": null
+        },
+        "424": {
+          "address": "5.268",
+          "console_type": null,
+          "run_index": null
+        },
+        "425": {
+          "address": "5.277",
+          "console_type": null,
+          "run_index": null
+        },
+        "426": {
+          "address": "5.286",
+          "console_type": null,
+          "run_index": null
+        },
+        "427": {
+          "address": "5.295",
+          "console_type": null,
+          "run_index": null
+        },
+        "428": {
+          "address": "5.304",
+          "console_type": null,
+          "run_index": null
+        },
+        "429": {
+          "address": "5.313",
+          "console_type": null,
+          "run_index": null
+        },
+        "430": {
+          "address": "5.322",
+          "console_type": null,
+          "run_index": null
+        }
+      },
+      "skipped": [
+        {
+          "fid": 101,
+          "address": "1.1",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.1",
+            "name": "KEY 101",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 102,
+          "address": "1.13",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.13",
+            "name": "KEY 102",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 103,
+          "address": "1.25",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.25",
+            "name": "KEY 103",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 104,
+          "address": "1.37",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.37",
+            "name": "KEY 104",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 105,
+          "address": "1.49",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.49",
+            "name": "KEY 105",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 106,
+          "address": "1.61",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.61",
+            "name": "KEY 106",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 111,
+          "address": "1.73",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.73",
+            "name": "FOH 111",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 112,
+          "address": "1.85",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.85",
+            "name": "FOH 112",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 113,
+          "address": "1.97",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.97",
+            "name": "FOH 113",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 114,
+          "address": "1.109",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.109",
+            "name": "FOH 114",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 115,
+          "address": "1.121",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.121",
+            "name": "FOH 115",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 116,
+          "address": "1.133",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.133",
+            "name": "FOH 116",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 117,
+          "address": "1.145",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.145",
+            "name": "FOH 117",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 118,
+          "address": "1.157",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.157",
+            "name": "FOH 118",
+            "fixture_type": "Source 4 LED Series 3 Lustr X8"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 601,
+          "address": "1.169",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.169",
+            "name": "BLIND 601",
+            "fixture_type": "CuePix Blinder WW2"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 602,
+          "address": "1.173",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.173",
+            "name": "BLIND 602",
+            "fixture_type": "CuePix Blinder WW2"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 603,
+          "address": "1.177",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.177",
+            "name": "BLIND 603",
+            "fixture_type": "CuePix Blinder WW2"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 604,
+          "address": "1.181",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.181",
+            "name": "BLIND 604",
+            "fixture_type": "CuePix Blinder WW2"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 605,
+          "address": "1.185",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.185",
+            "name": "BLIND 605",
+            "fixture_type": "CuePix Blinder WW2"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 606,
+          "address": "1.189",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.189",
+            "name": "BLIND 606",
+            "fixture_type": "CuePix Blinder WW2"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 611,
+          "address": "1.193",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.193",
+            "name": "STROBE 611",
+            "fixture_type": "Atomic 3000 LED"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 612,
+          "address": "1.207",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.207",
+            "name": "STROBE 612",
+            "fixture_type": "Atomic 3000 LED"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 613,
+          "address": "1.221",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.221",
+            "name": "STROBE 613",
+            "fixture_type": "Atomic 3000 LED"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 614,
+          "address": "1.235",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.235",
+            "name": "STROBE 614",
+            "fixture_type": "Atomic 3000 LED"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 621,
+          "address": "1.249",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.249",
+            "name": "HAZE 621",
+            "fixture_type": "Unique 2 1"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 622,
+          "address": "1.251",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "1.251",
+            "name": "HAZE 622",
+            "fixture_type": "Unique 2 1"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 501,
+          "address": "2.1",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "2.1",
+            "name": "MOVER-U 501",
+            "fixture_type": "Robin MegaPointe"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 502,
+          "address": "2.40",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "2.40",
+            "name": "MOVER-U 502",
+            "fixture_type": "Robin MegaPointe"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 503,
+          "address": "2.79",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "2.79",
+            "name": "MOVER-U 503",
+            "fixture_type": "Robin MegaPointe"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 504,
+          "address": "2.118",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "2.118",
+            "name": "MOVER-U 504",
+            "fixture_type": "Robin MegaPointe"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 505,
+          "address": "2.157",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "2.157",
+            "name": "MOVER-U 505",
+            "fixture_type": "Robin MegaPointe"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 506,
+          "address": "2.196",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "2.196",
+            "name": "MOVER-U 506",
+            "fixture_type": "Robin MegaPointe"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 507,
+          "address": "2.235",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "2.235",
+            "name": "MOVER-U 507",
+            "fixture_type": "Robin MegaPointe"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 508,
+          "address": "2.274",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "2.274",
+            "name": "MOVER-U 508",
+            "fixture_type": "Robin MegaPointe"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 521,
+          "address": "3.1",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "3.1",
+            "name": "MOVER-D 521",
+            "fixture_type": "Robin Spiider"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 522,
+          "address": "3.50",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "3.50",
+            "name": "MOVER-D 522",
+            "fixture_type": "Robin Spiider"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 523,
+          "address": "3.99",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "3.99",
+            "name": "MOVER-D 523",
+            "fixture_type": "Robin Spiider"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 524,
+          "address": "3.148",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "3.148",
+            "name": "MOVER-D 524",
+            "fixture_type": "Robin Spiider"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 525,
+          "address": "3.197",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "3.197",
+            "name": "MOVER-D 525",
+            "fixture_type": "Robin Spiider"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 526,
+          "address": "3.246",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "3.246",
+            "name": "MOVER-D 526",
+            "fixture_type": "Robin Spiider"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 527,
+          "address": "3.295",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "3.295",
+            "name": "MOVER-D 527",
+            "fixture_type": "Robin Spiider"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 528,
+          "address": "3.344",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "3.344",
+            "name": "MOVER-D 528",
+            "fixture_type": "Robin Spiider"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 201,
+          "address": "4.1",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.1",
+            "name": "BACK 201",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 202,
+          "address": "4.26",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.26",
+            "name": "BACK 202",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 203,
+          "address": "4.51",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.51",
+            "name": "BACK 203",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 204,
+          "address": "4.76",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.76",
+            "name": "BACK 204",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 205,
+          "address": "4.101",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.101",
+            "name": "BACK 205",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 206,
+          "address": "4.126",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.126",
+            "name": "BACK 206",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 207,
+          "address": "4.151",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.151",
+            "name": "BACK 207",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 208,
+          "address": "4.176",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.176",
+            "name": "BACK 208",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 209,
+          "address": "4.201",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.201",
+            "name": "BACK 209",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 210,
+          "address": "4.226",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.226",
+            "name": "BACK 210",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 211,
+          "address": "4.251",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.251",
+            "name": "BACK 211",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 212,
+          "address": "4.276",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.276",
+            "name": "BACK 212",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 301,
+          "address": "4.301",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.301",
+            "name": "SIDE-L 301",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 302,
+          "address": "4.326",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.326",
+            "name": "SIDE-L 302",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 303,
+          "address": "4.351",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.351",
+            "name": "SIDE-L 303",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 304,
+          "address": "4.376",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.376",
+            "name": "SIDE-L 304",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 305,
+          "address": "4.401",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.401",
+            "name": "SIDE-L 305",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 306,
+          "address": "4.426",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "4.426",
+            "name": "SIDE-L 306",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 311,
+          "address": "5.1",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.1",
+            "name": "SIDE-R 311",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 312,
+          "address": "5.26",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.26",
+            "name": "SIDE-R 312",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 313,
+          "address": "5.51",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.51",
+            "name": "SIDE-R 313",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 314,
+          "address": "5.76",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.76",
+            "name": "SIDE-R 314",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 315,
+          "address": "5.101",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.101",
+            "name": "SIDE-R 315",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 316,
+          "address": "5.126",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.126",
+            "name": "SIDE-R 316",
+            "fixture_type": "Mac Aura XB"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 401,
+          "address": "5.151",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.151",
+            "name": "WASH-U 401",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 402,
+          "address": "5.160",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.160",
+            "name": "WASH-U 402",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 403,
+          "address": "5.169",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.169",
+            "name": "WASH-U 403",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 404,
+          "address": "5.178",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.178",
+            "name": "WASH-U 404",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 405,
+          "address": "5.187",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.187",
+            "name": "WASH-U 405",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 406,
+          "address": "5.196",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.196",
+            "name": "WASH-U 406",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 407,
+          "address": "5.205",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.205",
+            "name": "WASH-U 407",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 408,
+          "address": "5.214",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.214",
+            "name": "WASH-U 408",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 409,
+          "address": "5.223",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.223",
+            "name": "WASH-U 409",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 410,
+          "address": "5.232",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.232",
+            "name": "WASH-U 410",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 421,
+          "address": "5.241",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.241",
+            "name": "WASH-D 421",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 422,
+          "address": "5.250",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.250",
+            "name": "WASH-D 422",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 423,
+          "address": "5.259",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.259",
+            "name": "WASH-D 423",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 424,
+          "address": "5.268",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.268",
+            "name": "WASH-D 424",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 425,
+          "address": "5.277",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.277",
+            "name": "WASH-D 425",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 426,
+          "address": "5.286",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.286",
+            "name": "WASH-D 426",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 427,
+          "address": "5.295",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.295",
+            "name": "WASH-D 427",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 428,
+          "address": "5.304",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.304",
+            "name": "WASH-D 428",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 429,
+          "address": "5.313",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.313",
+            "name": "WASH-D 429",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        },
+        {
+          "fid": 430,
+          "address": "5.322",
+          "kind": "already_patched",
+          "detail": "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+          "occupant": {
+            "address": "5.322",
+            "name": "WASH-D 430",
+            "fixture_type": "Rush Par 2 RGBW Zoom"
+          },
+          "occupied_fid": null
+        }
+      ],
+      "write_count_planned": 0,
+      "write_count_applicable": 0,
+      "write_count_width_unconfirmed": 0
+    },
+    "apply": {
+      "entered": false,
+      "runs": []
+    },
+    "summary_ko": "미리보기 — 쓰기 0건. 런 0개 · 계획 0대 · 건너뛴 행 86건.",
+    "guidance": "apply.runs[*].status == created 인 런의 created 합만 성공으로 보고하라 — 위임 호출이 오류 없이 돌아온 것은 생성 증거가 아니다. 점유로 건너뛴 행은 덮어쓰지 말고 plan.skipped 목록을 사용자에게 그대로 보여 줘라. types.unresolved 가 있으면 콘솔에서 타입을 추가해 달라고 사용자에게 청하라. mode_unresolved 로 건너뛴 타입은 mode_overrides 인자로 다시 불러라. 이 툴의 바이트는 파일에서만 온다 — 사용자가 채팅에 붙여넣은 CSV 본문을 base64로 만들어 넣지 마라. 개행·공백이 조용히 깨져 잘못된 자리에 패치된다."
+  },
+  "sha256_matches_local_file": true,
+  "digest": {
+    "runs": 0,
+    "write_count_planned": 0,
+    "skipped_total": 86,
+    "skipped_by_kind": {
+      "already_patched": 86
+    },
+    "types_unresolved": [],
+    "addresses": [],
+    "apply_runs": [],
+    "stopped_at": null,
+    "summary_ko": "미리보기 — 쓰기 0건. 런 0개 · 계획 0대 · 건너뛴 행 86건."
+  },
+  "questions_asked": [],
+  "approval_bundles_asked": 0,
+  "deploy_reviews_asked": [],
+  "console_after": {
+    "path": "Patch/Stages/1/Fixtures",
+    "ok": true,
+    "child_count": 86,
+    "children_listed": 19,
+    "truncated": true,
+    "enumeration_complete": false,
+    "fixtures": [
+      {
+        "slot": 1,
+        "name": "KEY 101",
+        "FID": "101",
+        "Patch": "1.001",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 2,
+        "name": "KEY 102",
+        "FID": "102",
+        "Patch": "1.013",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 3,
+        "name": "KEY 103",
+        "FID": "103",
+        "Patch": "1.025",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 4,
+        "name": "KEY 104",
+        "FID": "104",
+        "Patch": "1.037",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 5,
+        "name": "KEY 105",
+        "FID": "105",
+        "Patch": "1.049",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 6,
+        "name": "KEY 106",
+        "FID": "106",
+        "Patch": "1.061",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 7,
+        "name": "FOH 111",
+        "FID": "111",
+        "Patch": "1.073",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 8,
+        "name": "FOH 112",
+        "FID": "112",
+        "Patch": "1.085",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 9,
+        "name": "FOH 113",
+        "FID": "113",
+        "Patch": "1.097",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 10,
+        "name": "FOH 114",
+        "FID": "114",
+        "Patch": "1.109",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 11,
+        "name": "FOH 115",
+        "FID": "115",
+        "Patch": "1.121",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 12,
+        "name": "FOH 116",
+        "FID": "116",
+        "Patch": "1.133",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 13,
+        "name": "FOH 117",
+        "FID": "117",
+        "Patch": "1.145",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 14,
+        "name": "FOH 118",
+        "FID": "118",
+        "Patch": "1.157",
+        "FixtureType": "FixtureType 10",
+        "Mode": "3 Direct"
+      },
+      {
+        "slot": 15,
+        "name": "BLIND 601",
+        "FID": "601",
+        "Patch": "1.169",
+        "FixtureType": "FixtureType 13",
+        "Mode": "4 4 channel"
+      },
+      {
+        "slot": 16,
+        "name": "BLIND 602",
+        "FID": "602",
+        "Patch": "1.173",
+        "FixtureType": "FixtureType 13",
+        "Mode": "4 4 channel"
+      },
+      {
+        "slot": 17,
+        "name": "BLIND 603",
+        "FID": "603",
+        "Patch": "1.177",
+        "FixtureType": "FixtureType 13",
+        "Mode": "4 4 channel"
+      },
+      {
+        "slot": 18,
+        "name": "BLIND 604",
+        "FID": "604",
+        "Patch": "1.181",
+        "FixtureType": "FixtureType 13",
+        "Mode": "4 4 channel"
+      },
+      {
+        "slot": 19,
+        "name": "BLIND 605",
+        "FID": "605",
+        "Patch": "1.185",
+        "FixtureType": "FixtureType 13",
+        "Mode": "4 4 channel"
+      }
+    ]
+  }
+}
