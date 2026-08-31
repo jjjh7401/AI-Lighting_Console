@@ -5592,6 +5592,12 @@ def build_toolset(
         cue_bundles: list[tuple[str, list[str]]] = []
         cue_manual_notes: dict[str, dict[str, object]] = {}
         pool_lookup_failed: list[str] = []
+        # result.placement 는 새 슬롯(아직 콘솔에 없음) -- already_present 면 만들지 않는다.
+        sequence_create_command: str | None = None
+        if result.placement is not None:
+            sequence_create_command = (
+                f'Store Sequence {sequence_placement_no} "{sequence_name}" /NoConfirm'
+            )
         for bucket in result.planned if sequence_placement_no is not None else ():
             commands: list[str] = ["ClearAll"]
             per_row_timing: dict[str, str] = {}
@@ -5638,6 +5644,9 @@ def build_toolset(
                 f'Store Cue {cueno} "{bucket.cue_no}" CueFade {_fmt_num(cue_fade)} '
                 f"Sequence {sequence_placement_no} /Merge /NoConfirm"
             )
+            if sequence_create_command is not None:
+                commands = [sequence_create_command, *commands]
+                sequence_create_command = None
             cue_bundles.append((bucket.cue_no, commands))
             cue_manual_notes[bucket.cue_no] = dict(
                 cue_fade_is_approximate=True,
@@ -5700,7 +5709,19 @@ def build_toolset(
                         )
                         inner_payload = json.loads(inner.result.content)
                         ok = not inner.result.is_error and inner_payload.get("all_ok", False)
-                        applied.append(dict(cue_no=cue_no, status="ok" if ok else "failed"))
+                        # 사유 노출 -- "failed" 만 찍으면 어느 명령이 어떤 답을 받았는지
+                        # 안 남는다(실기: Sequence 2 미존재로 Store Cue 거절, 되읽기는
+                        # 그 결과일 뿐 원인이 아니었다). run_commands 의 per-command
+                        # detail(콘솔이 실제로 준 응답 문자열)을 그대로 싣는다.
+                        entry: dict[str, object] = dict(
+                            cue_no=cue_no,
+                            status="ok" if ok else "failed",
+                            commands=inner_payload.get("commands", []),
+                        )
+                        if not ok:
+                            entry["gate_status"] = inner_payload.get("gate_status")
+                            entry["notice"] = inner_payload.get("notice")
+                        applied.append(entry)
                         if not ok:
                             applied_is_error = True
                     payload["applied"] = applied
