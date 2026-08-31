@@ -13,6 +13,8 @@ import pytest
 
 from server.tools.lxseq_cues_e2e import (
     VIDEO_CALL_GROUP,
+    main,
+    tool_arguments,
     census,
     leaked_commands,
     read_rows,
@@ -122,3 +124,48 @@ def test_leak_detector_fires_on_a_fabricated_leak() -> None:
 def test_leak_detector_is_silent_on_clean_bundles() -> None:
     clean = [("Group 1 At 55", "Group 2 At 40")]
     assert leaked_commands(clean) == []
+
+
+class TestSequenceName:
+    """`--sequence-name` 은 필수이고 파일명에서 유도하지 않는다.
+
+    `map_cues` 는 시퀀스를 이름으로 찾거나 만드는데 그 이름이 CSV 바이트에 없다.
+    파일명에서 꺼내려면 명명 규약을 가정해야 하고, **그 이름은 콘솔에 영구히
+    남는다** — 틀린 이름이 쇼파일에 박히느니 인자를 요구한다.
+    """
+
+    def test_missing_flag_fails_before_touching_the_console(self, capsys) -> None:
+        with pytest.raises(SystemExit):
+            main(["--cue-csv", str(CUE_CSV), "--listen-port", "9005"])
+        message = capsys.readouterr().err
+        assert "--sequence-name" in message
+
+    def test_blank_value_fails_with_the_reason(self, capsys) -> None:
+        """`required=True` 는 플래그 유무만 본다 — 빈 문자열은 통과한다."""
+        with pytest.raises(SystemExit):
+            main(
+                [
+                    "--cue-csv",
+                    str(CUE_CSV),
+                    "--listen-port",
+                    "9005",
+                    "--sequence-name",
+                    "   ",
+                ]
+            )
+        message = capsys.readouterr().err
+        assert "파일명에서 유도하지 않는" in message, (
+            "왜 유도하지 않는지가 사유에 있어야 한다 — 다음 사람이 유도기를 붙이지 못하게"
+        )
+        assert "영구히" in message
+
+    def test_name_is_carried_into_the_tool_arguments(self) -> None:
+        args = tool_arguments("Ym9keQ==", "preview", "Sugar")
+        assert args["sequence_name"] == "Sugar"
+        assert args["action"] == "preview"
+        assert args["file_content_base64"] == "Ym9keQ=="
+
+    def test_tool_arguments_carries_no_extra_key(self) -> None:
+        """스키마가 `additionalProperties: False` 라 여분 키는 거절된다."""
+        args = tool_arguments("x", "apply", "Sugar")
+        assert sorted(args) == ["action", "file_content_base64", "sequence_name"]
