@@ -108,6 +108,15 @@ SPEC          46개    .moai/specs/
 `prepare_busking` · `plan_executor_layout`
 룩 라이브러리: ballad 7 · edm 9 · rock 8 · worship 8
 
+**추상적인 지시가 이미 통한다.** 「웅장하게」 같은 정서 한정어가 자연어 그대로 들어간다 —
+`spatial/position_moods.py:62` 에 「웅장·장엄·클라이맥스·피날레·대미·수렴」이 한 무드의 정식
+키워드로 등재돼 있고, `find_looks` 의 사용 예시 자체가 `'a grand golden chorus'`
+(`orchestrator/tools.py:8928`)다. 2026-09-01 리드 실측.
+
+🔴 이 항목은 교안이 **「추상적인 지시 — "웅장하게"는 아직」이라고 적어 둔 자리**였다. 문서가
+없다고 적어 둔 능력이 실제로는 출하돼 있었다 — 「없다」의 출처가 코드가 아니라 문서일 때가
+가장 위험하다.
+
 ## ⑥ 큐·시퀀스 — 🔴 연출 표준이 여기 있다
 
 **정본**: `docs/proposals/song-lighting-design-standard.md` (v0.4)
@@ -178,7 +187,8 @@ server/rulebook/assets/v2.4.2/  7장 45KB (약 23K 토큰)
 
 ## 아직 안 본 것 (다음 우선순위)
 
-1. **`docs/curriculum/` 17편 532KB** — 제일 큰 덩어리, 조명감독 지식 체계 가능성
+1. ~~`docs/curriculum/`~~ — **전수 탐색 완료(2026-09-01). 감독 판정으로 이후 작업 중단** — 앱과 무관.
+   건진 것은 위 ⑤ 의 「추상적 지시」 항목 하나. 교안의 능력 표는 여러 자리가 낡아 있었다(PR #265, 미머지).
 2. `docs/handoff/` 7편 — `COLOR_PHASER_SEQUENCE` 가 참조하는 `2026-08-16-session-handoff.md`
 3. Recipe·MATricks 에디터 연구가 `compose_fx` 에 반영됐는지
 4. L1~L14 와 LX-SEQ 스펙 검증 15항목의 정확한 겹침
