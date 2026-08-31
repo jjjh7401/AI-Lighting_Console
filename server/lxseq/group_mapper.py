@@ -269,11 +269,22 @@ def map_groups(
     사후에 갈리지 않는다.
     """
     if not console_fids_complete:
+        # 단면 축 사유는 **이미 입력에 실려 들어와 있다** — 상류가 계산해 둔다.
+        # 여기서 안 읽으면 그 사유는 영영 안 나간다(t186 실측: 이 갈래에서
+        # `section_refusal` 호출 0회). 그러면 FID 문제를 고친 소비자가 단면
+        # 문제를 **그때서야 새 놀람으로** 만난다 — 사유가 한 번에 하나만 나가서다.
+        #
+        # 두 축을 한 사유로 접는 것이 아니다. 페이로드에서 FID 축은
+        # `console_read_reason`, 단면 축은 `refusal` 로 **각자 채널을 갖는다**
+        # (위 151-160 주석). 그래서 둘 다 실어도 두 상태는 안 접힌다.
+        section_reason = section_refusal(groups_section)
         return GroupMapResult(
             batches=(),
             skipped=(),
             slot_divergence=None,
             console_read_incomplete=True,
+            refusal=None if section_reason is None else section_reason[0],
+            refusal_detail="" if section_reason is None else section_reason[1],
         )
 
     table = build_label_fid_table(patch_rows)

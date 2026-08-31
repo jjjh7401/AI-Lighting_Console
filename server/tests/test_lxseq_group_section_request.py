@@ -671,3 +671,72 @@ class TestASweepTransportFailureIsNotFoldedIntoAbsence:
         read = _sweep(_TruncatedSweepPort(exc=TimeoutError, **_SWEEP_BASE))
 
         assert read.probe_failures == 2
+
+
+# ---------------------------------------------------------------------------
+# t186 7절 -- 두 축이 동시에 죽으면 사유가 **둘 다** 나간다
+#
+# 고치기 전 실측: `map_groups` 맨 앞 미완 분기(:271)가 이른 반환을 해서
+# `section_refusal` 이 **한 번도 안 불렸다**(line trace 로 확인: S1 은 :382 에
+# 안 닿는다). 단면 사유는 상류가 이미 계산해 `groups_section` 에 실어 보내는데
+# 소비 지점이 그 입력을 안 읽었다. 그래서 사유가 한 번에 하나만 나갔고,
+# FID 문제를 고친 사용자가 단면 문제를 **그때서야 새 놀람으로** 만났다.
+#
+# 이 절이 없으면 그 갈래를 지키는 검사가 저장소에 0건이다. 실측 근거:
+# 수리 전후로 관련 4파일이 **둘 다 124 passed** 였다 -- 기존 검사는 이 동작
+# 변화를 하나도 안 잡는다. 통과 수 차이 0 이 곧 이 절의 필요성이다.
+# ---------------------------------------------------------------------------
+
+
+class TestBothAxesReportTogetherWhenBothFail:
+    def _both_dead(self):
+        """두 축이 동시에 죽는 팔. 픽스처 루트는 예외로, groups 단면은 미해결로.
+
+        카드가 「현실적인 조합」이라 부른 것이다 -- 픽스처 경로 하나가 죽으면
+        FID 판독과 단면 판독이 같은 경로를 타므로 둘 다 실패한다.
+        """
+        return _RaisingFixtureRoot(_Console(_patch_fids(), dead=_DEAD_GROUPS), StateQueryError)
+
+    def test_the_section_reason_survives_a_noisy_fid_axis(self):
+        payload = _payload_of(self._both_dead())
+
+        assert payload["console_read_incomplete"] is True
+        assert payload["batches"] == [], "못 읽은 단면 위에서 배치를 만들었다"
+        # 성질 단언 -- 공유 술어의 코드를 그대로 나른다.
+        assert payload["refusal"] == SECTION_UNREAD, (
+            "FID 축이 시끄러우니 단면 사유가 사라졌다 -- t186 수리가 풀렸다: "
+            + str(payload.get("refusal"))
+        )
+        # 문구 단언 -- **어느** 분류인지까지. 성질 단언과 다른 행이다(규약 §3.2).
+        assert "console_unreachable" in (payload["refusal_detail"] or ""), (
+            "거절은 실렸는데 어느 분류인지가 없다: " + str(payload.get("refusal_detail"))
+        )
+
+    def test_the_fid_axis_still_speaks_in_the_same_payload(self):
+        """축 분리 -- 단면 사유를 실었다고 FID 축 채널을 뺏지 않았다.
+
+        이 팔이 없으면 위 초록이 「두 사유가 함께 나간다」인지
+        「FID 채널을 단면 것으로 갈아끼웠다」인지 안 갈린다.
+        """
+        payload = _payload_of(self._both_dead())
+
+        assert payload["console_read_reason"] == _ROOT_UNREAD_REASON
+
+    def test_the_two_arms_do_not_collapse_into_one_state(self):
+        """🔴 규약 §3.6 -- 가장 싼 처방이 방금 살린 구별을 죽인다.
+
+        수리 자리(:271)가 공유 지점이라, 두 축을 한 사유로 접는 처방도 위 두
+        검사를 통과한다. 서로 다른 원인이 여전히 **서로 다른 페이로드**를 내는지
+        잰다. 갈리는 채널은 `console_read_reason` 이다 -- 단면만 죽은 팔에서는
+        비어 있고 두 축이 죽은 팔에서는 콘솔을 가리킨다.
+        """
+        both_dead = _payload_of(self._both_dead())
+        section_only = _payload_of(_Console(_patch_fids(), dead=_DEAD_GROUPS))
+
+        assert both_dead["refusal"] == SECTION_UNREAD
+        assert section_only["refusal"] == SECTION_UNREAD
+        assert both_dead["console_read_reason"] == _ROOT_UNREAD_REASON
+        assert section_only["console_read_reason"] is None
+        assert both_dead["console_read_reason"] != section_only["console_read_reason"], (
+            "두 원인이 바이트 동일한 페이로드를 낸다 -- 구별이 접혔다"
+        )
