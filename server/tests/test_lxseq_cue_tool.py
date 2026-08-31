@@ -49,6 +49,7 @@ class TestRegistration:
             "preset_dim_content_base64",
             "preset_col_content_base64",
             "preset_bm_content_base64",
+            "fx_content_base64",
         }
 
 

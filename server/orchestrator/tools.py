@@ -5305,17 +5305,17 @@ def build_toolset(
                     group_slots[name] = slot
 
         # preset_slots -- ID -> Name(시트) + Name -> 슬롯(콘솔) = ID -> 슬롯.
-        # DIM/COL/BM 세 종류만 된다: preset_store_commands(server/presets/
-        # store.py:52-54)가 콘솔 Label 에 싣는 값이 CSV 의 Name(사람이 읽는
-        # 서술)이므로, 그 세 시트가 있으면 ID -> Name -> 슬롯 조인이 선다.
-        # 인자로 넘어오지 않은 종류는 조용히 빈 채로 남는다 -- 그 종류를
-        # 참조하는 행은 "슬롯 미해결"로 held 에 떨어진다(0건이 반쯤 맞는
-        # 값보다 낫다는 원칙, 리드 승인 2026-08-31).
+        # DIM/COL/BM/FX 네 종류가 된다: preset_store_commands(server/
+        # presets/store.py:52-54)/build_fx_preset_bundle 이 콘솔 Label 에
+        # 싣는 값이 CSV 의 Name(사람이 읽는 서술)이므로, 그 시트가 있으면
+        # ID -> Name -> 슬롯 조인이 선다(t209, FX 는 lxseq_fx_e2e.py 로 실기
+        # 확인 -- 풀 "All 1" childCount 0->2). 인자로 넘어오지 않은 종류는
+        # 조용히 빈 채로 남는다 -- 그 종류를 참조하는 행은 "슬롯 미해결"로
+        # held 에 떨어진다(0건이 반쯤 맞는 값보다 낫다는 원칙, 리드 승인
+        # 2026-08-31).
         #
-        # 🔴 POS.xx/FX.xx 는 이 조인이 안 선다 -- POS 시트는 열이
-        # `ID,StageMeaning,TargetGroup,RecordGuide` 라 Name 자체가 없고(§10),
-        # FX 는 그 값을 만드는 파서·툴이 이 저장소에 없다(PRESET_ID_PREFIXES
-        # 는 DIM/COL/BM 셋뿐, server/lxseq/preset_parser.py:54-56). 둘 다
+        # 🔴 POS.xx 만 이 조인이 안 선다 -- POS 시트는 열이
+        # `ID,StageMeaning,TargetGroup,RecordGuide` 라 Name 자체가 없다(§10).
         # 범위 밖이다 -- 리드 확인.
         preset_slots: dict[str, int] = {}
         preset_sheet_args = (
@@ -5389,6 +5389,78 @@ def build_toolset(
                 slot = name_to_slot.get(name)
                 if slot is not None:
                     preset_slots[preset_id] = slot
+
+        # FX.xx -- 같은 ID(시트)->Name(시트)->슬롯(콘솔) 조인이지만 풀 선택이
+        # 다르다: FX 프리셋은 family-prefix 풀이 아니라 이름이 "All" 로
+        # 시작하는 풀에 저장된다(compose_fx 의 _fx_preset_destination 과 같은
+        # 규칙 -- "the first pool whose NAME starts with 'All'", 실기로
+        # 확인: DataPool/PresetPools/21 'All 1'). fx.csv 는 preset_parser.py
+        # 의 3종 exact-column 시트가 아니라서 parse_preset_csv 를 못 쓴다 --
+        # ID/Name 두 열만 직접 읽는다.
+        # pools_path 는 위 DIM/COL/BM 루프가 최소 한 번 실 인자를 받아야만
+        # 대입된다 -- FX 만 단독으로 넘어오면 그 변수가 없을 수 있어 여기서
+        # 독립적으로 다시 구한다(공유 상태에 기대지 않는다).
+        fx_pools_root_path = rig_paths.get(
+            "preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
+        )
+        raw_fx = call.arguments.get("fx_content_base64")
+        if isinstance(raw_fx, str) and raw_fx.strip():
+            try:
+                fx_bytes = base64.b64decode(raw_fx, validate=True)
+                fx_text = fx_bytes.decode("utf-8")
+            except (binascii.Error, ValueError, UnicodeDecodeError):
+                preset_sheet_errors["fx_content_base64"] = "base64 또는 UTF-8이 아니다"
+            else:
+                if fx_text.startswith(chr(0xFEFF)):
+                    fx_text = fx_text[1:]
+                fx_reader = csv.DictReader(io.StringIO(fx_text))
+                fx_id_to_name = {
+                    (row.get("ID") or "").strip(): (row.get("Name") or "").strip()
+                    for row in fx_reader
+                    if (row.get("ID") or "").strip()
+                }
+                fx_pool_path = None
+                try:
+                    fx_pools_first = state_port.query_state(fx_pools_root_path)
+                except Exception:  # noqa: BLE001
+                    fx_pools_first = {"ok": False}
+                if fx_pools_first.get("ok"):
+                    fx_pool_children, _truncated = paged_children(
+                        state_port, fx_pools_root_path, fx_pools_first
+                    )
+                    for child in fx_pool_children:
+                        obj = rig_object(child)
+                        pool_name = str(obj.get("name") or "")
+                        pool_no = obj.get("no")
+                        if isinstance(pool_no, int) and pool_name.casefold().startswith("all"):
+                            fx_pool_path = str(fx_pools_root_path) + "/" + str(pool_no)
+                            break
+                if fx_pool_path is None:
+                    preset_sheet_errors["fx_content_base64"] = "'All' 로 시작하는 풀을 못 찾았다"
+                else:
+                    try:
+                        fx_slots_first = state_port.query_state(fx_pool_path)
+                    except Exception as exc:  # noqa: BLE001
+                        preset_sheet_errors["fx_content_base64"] = str(exc)
+                        fx_slots_first = None
+                    if fx_slots_first is not None:
+                        if not fx_slots_first.get("ok"):
+                            preset_sheet_errors["fx_content_base64"] = "풀 슬롯 목록이 안 왔다"
+                        else:
+                            fx_slot_children, _truncated = paged_children(
+                                state_port, fx_pool_path, fx_slots_first
+                            )
+                            fx_name_to_slot: dict[str, int] = {}
+                            for child in fx_slot_children:
+                                obj = rig_object(child)
+                                name = obj.get("name")
+                                slot = obj.get("no")
+                                if isinstance(name, str) and name and isinstance(slot, int):
+                                    fx_name_to_slot[name] = slot
+                            for fx_id, name in fx_id_to_name.items():
+                                slot = fx_name_to_slot.get(name)
+                                if slot is not None:
+                                    preset_slots[fx_id] = slot
 
         result = map_cues(
             parsed.records,
@@ -10542,6 +10614,15 @@ def build_toolset(
                     "preset_bm_content_base64": {
                         "type": "string",
                         "description": "선택 -- BM 프리셋 시트 바이트(base64). 위와 같은 규칙",
+                    },
+                    "fx_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "선택 -- FX RIG 시트 바이트(base64, ID/Name 열). "
+                            "있으면 FX.xx 참조 행의 콘솔 슬롯을 이름으로 이어 "
+                            "계획에 넣는다(풀은 이름이 'All'로 시작하는 것을 "
+                            "찾는다). 없으면 그 행은 held 로 떨어진다"
+                        ),
                     },
                 },
                 "required": ["file_content_base64", "sequence_name"],
