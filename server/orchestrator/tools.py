@@ -5222,16 +5222,18 @@ def build_toolset(
 
     # -- import_lxseq_cues (SPEC-COPILOT-LXSEQ-004 M3, t209) -------------------
     #
-    # @MX:TODO: [AUTO] apply 실행(콘솔 쓰기)은 이번 회차 범위 밖이다.
-    #   `server.lxseq.cue_mapper.map_cues` 가 sync 레인에서 완성되기 전까지
-    #   이 핸들러는 파싱 + 매핑 미리보기만 낸다 -- action 값과 무관하게 콘솔에
-    #   아무것도 쓰지 않는다. 형제 `import_lxseq_presets`/`import_lxseq_groups`
-    #   의 승인->번들->발화 단계는 그 매퍼가 planned/held 계열을 확정한 뒤,
-    #   별도 배차에서 옮긴다.
+    # @MX:ANCHOR: [AUTO] apply 게이트가 열려 있다(t209, 리드 승인
+    #   2026-08-31). Store Cue 명령 문법은 정본
+    #   src/Lighting_Designer/04_grandMA3/*.ma3.txt 를 그대로 따르되 프리셋
+    #   풀 번호는 실측 preset_pool_no_by_kind 를 쓴다. label/CueFade 는 base
+    #   CUE 시트(§3)가 없어 근사치다 -- 핸들러 본문 주석 참조.
+    # @MX:REASON: cue_manual_notes 로 근사치임을 payload 에 남기지 않으면
+    #   "값이 확정됐다"로 오독된다(t187 계열과 같은 함정 -- 거짓 확신).
 
     def import_lxseq_cues(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         """LX-SEQ CUE-EX 시트 한 장(long format, 한 큐 x 한 그룹 = 한 행)을 읽어
-        콘솔 시퀀스 큐 계획을 만든다.
+        콘솔 시퀀스 큐 계획을 만들고, action='apply'일 때만 실제로 만든다.
+        기본은 'preview'이며 preview는 콘솔에 **아무것도 쓰지 않는다**.
 
         바이트는 **파일에서만** 온다(001 규약 승계). 89행을 전부 읽고, 값 열은
         해석하지 않는다(빈칸 = 트래킹, 명세서 §11.2 HARD) -- 해석은
@@ -5243,8 +5245,8 @@ def build_toolset(
         `Note` 로 판별하면 6건 중 1건("영상 페이드아웃 동기")이 그 문구를
         안 담고 있어 콘솔로 샌다.
 
-        이번 회차는 **등재까지만**이다 -- action 값과 무관하게 콘솔에 아무것도
-        쓰지 않는다(위 @MX:TODO).
+        **값이 맞는지는 되읽지 못한다.** 시퀀스·큐의 존재만 확인된다(형제
+        프리셋 도구와 같은 한계).
         """
         raw = call.arguments.get("file_content_base64")
         if not isinstance(raw, str) or not raw.strip():
@@ -5338,6 +5340,10 @@ def build_toolset(
         # `ID,StageMeaning,TargetGroup,RecordGuide` 라 Name 자체가 없다(§10).
         # 범위 밖이다 -- 리드 확인.
         preset_slots: dict[str, int] = {}
+        # kind 문자(PresetRef.kind, server/lxseq/cue_mapper.py:119 --
+        # POS/COL/BM/FX) -> 콘솔 풀 번호. 'At Preset <pool>.<slot>' 조립에
+        # 슬롯만으로는 부족하다 -- 풀 번호도 필요하다(t209, apply 경로).
+        preset_pool_no_by_kind: dict[str, int] = {}
         preset_sheet_args = (
             ("preset-dim", "preset_dim_content_base64"),
             ("preset-col", "preset_col_content_base64"),
@@ -5367,6 +5373,7 @@ def build_toolset(
             id_to_name = {r.preset_id: r.name for r in preset_parsed.records}
 
             pool_path = None
+            found_pool_no: int | None = None
             try:
                 pools_path = rig_paths.get(
                     "preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
@@ -5385,6 +5392,7 @@ def build_toolset(
                         family.casefold()
                     ):
                         pool_path = str(pools_path) + "/" + str(pool_no)
+                        found_pool_no = pool_no
                         break
             if pool_path is None:
                 preset_sheet_errors[arg_name] = f"'{family}' 로 시작하는 풀을 못 찾았다"
@@ -5409,6 +5417,11 @@ def build_toolset(
                 slot = name_to_slot.get(name)
                 if slot is not None:
                     preset_slots[preset_id] = slot
+            # kind 는 "preset-col" -> "COL" 처럼 접두어를 딴다. "preset-dim"
+            # 은 PresetRef.kind 로 절대 안 쓰인다(dim 은 원문 퍼센트, 프리셋
+            # 참조가 아니다) -- 저장해도 무해하지만 안 쓴다.
+            if found_pool_no is not None:
+                preset_pool_no_by_kind[kind.removeprefix("preset-").upper()] = found_pool_no
 
         # FX.xx -- 같은 ID(시트)->Name(시트)->슬롯(콘솔) 조인이지만 풀 선택이
         # 다르다: FX 프리셋은 family-prefix 풀이 아니라 이름이 "All" 로
@@ -5481,6 +5494,11 @@ def build_toolset(
                                 slot = fx_name_to_slot.get(name)
                                 if slot is not None:
                                     preset_slots[fx_id] = slot
+                            if fx_id_to_name and any(
+                                fx_id in preset_slots for fx_id in fx_id_to_name
+                            ):
+                                fx_pool_no_str = fx_pool_path.rsplit("/", 1)[-1]
+                                preset_pool_no_by_kind["FX"] = int(fx_pool_no_str)
 
         result = map_cues(
             parsed.records,
@@ -5545,10 +5563,147 @@ def build_toolset(
             payload["notice_group_slots"] = (
                 "DataPool/Groups 에서 이름 있는 그룹을 하나도 못 읽었다 -- group_slots 가 비었다."
             )
-        if action == "apply":
-            payload["notice"] = (
-                "apply 실행(콘솔 쓰기)은 이번 회차 범위 밖이다 -- 콘솔에 아무것도 쓰지 않았다."
+
+        # -- apply: Store Cue 번들 조립 --------------------------------------
+        #
+        # 문법은 정본 src/Lighting_Designer/04_grandMA3/*.ma3.txt 를 그대로
+        # 따른다(리드 판정, 2026-08-31): Group "name" -> At <dim> -> At Preset
+        # <pool>.<slot>(col/bm/fx) -> ... -> Store Cue <n> "label" CueFade
+        # <fade> Sequence <seq> /Merge /NoConfirm. 번호는 ma3.txt 가 아니라
+        # 우리가 실측한 preset_slots/preset_pool_no_by_kind 를 쓴다.
+        #
+        # 🔴 두 가지 미해결 입력 -- 산출물에 그대로 남긴다(지어내지 않는다):
+        #   1) label: 정본 라벨(Section/Movement)은 base CUE 시트(§3, 14열)
+        #      에서 오는데 이 툴은 CUE-EX(§11)만 받는다. bare Q# 를 쓴다.
+        #   2) CueFade: 마찬가지로 base CUE 시트의 Fade 열이 정본이다. 그
+        #      시트가 없으므로 그 큐의 행별 I-Fade 중 최댓값을 **근사치**로
+        #      쓴다 -- 진짜 값이 아니다. payload 의 cue_fade_is_approximate
+        #      로 명시한다.
+        # 그룹별 개별 I/P/C/B Fade·Delay 는 ma3.txt 도 명령으로 못 싣는다
+        # (Cue 에디터 수동 입력) -- 우리도 같은 한계이고, per_row_timing 으로
+        # 그 값을 남긴다.
+
+        def _fmt_num(value: float) -> str:
+            if value == int(value):
+                return str(int(value))
+            return str(value)
+
+        sequence_placement_no = placement.slot if placement is not None else None
+        cue_bundles: list[tuple[str, list[str]]] = []
+        cue_manual_notes: dict[str, dict[str, object]] = {}
+        pool_lookup_failed: list[str] = []
+        for bucket in result.planned if sequence_placement_no is not None else ():
+            commands: list[str] = ["ClearAll"]
+            per_row_timing: dict[str, str] = {}
+            fx_stopped: list[str] = []
+            fade_candidates: list[float] = []
+            for row in bucket.rows:
+                commands.append(f'Group "{row.group}"')
+                if row.dim is not None:
+                    commands.append(f"At {_fmt_num(row.dim)}")
+                for ref in (row.col, row.bm):
+                    if ref is None:
+                        continue
+                    pool_no = preset_pool_no_by_kind.get(ref.kind)
+                    if pool_no is None:
+                        pool_lookup_failed.append(f"{bucket.cue_no}/{row.group}: {ref.raw}")
+                        continue
+                    commands.append(f"At Preset {pool_no}.{ref.slot}")
+                if row.fx_stop:
+                    fx_stopped.append(row.group)
+                elif row.fx is not None:
+                    pool_no = preset_pool_no_by_kind.get(row.fx.kind)
+                    if pool_no is None:
+                        pool_lookup_failed.append(f"{bucket.cue_no}/{row.group}: {row.fx.raw}")
+                    else:
+                        commands.append(f"At Preset {pool_no}.{row.fx.slot}")
+                if row.i_fade is not None:
+                    fade_candidates.append(row.i_fade)
+                timing_parts = []
+                if row.i_fade is not None:
+                    timing_parts.append(f"I{_fmt_num(row.i_fade)}")
+                if row.i_delay is not None:
+                    timing_parts.append(f"Id{_fmt_num(row.i_delay)}")
+                if row.p_fade is not None:
+                    timing_parts.append(f"P{_fmt_num(row.p_fade)}")
+                if row.c_fade is not None:
+                    timing_parts.append(f"C{_fmt_num(row.c_fade)}")
+                if row.b_fade is not None:
+                    timing_parts.append(f"B{_fmt_num(row.b_fade)}")
+                if timing_parts:
+                    per_row_timing[row.group] = "/".join(timing_parts)
+            cueno = int(bucket.cue_no.lstrip("Q"))
+            cue_fade = max(fade_candidates) if fade_candidates else 0.0
+            commands.append(
+                f'Store Cue {cueno} "{bucket.cue_no}" CueFade {_fmt_num(cue_fade)} '
+                f"Sequence {sequence_placement_no} /Merge /NoConfirm"
             )
+            cue_bundles.append((bucket.cue_no, commands))
+            cue_manual_notes[bucket.cue_no] = dict(
+                cue_fade_is_approximate=True,
+                cue_fade_source="max(row I-Fade) -- base CUE 시트 Fade 열 없음",
+                per_row_timing=per_row_timing,
+                fx_stopped_groups=fx_stopped,
+            )
+
+        payload["cue_bundles_planned"] = len(cue_bundles)
+        payload["preset_pool_lookup_failed"] = pool_lookup_failed
+        payload["cue_manual_notes"] = cue_manual_notes
+
+        if action == "apply":
+            if result.refusal is not None or not cue_bundles:
+                payload["notice"] = (
+                    "apply 요청이지만 계획이 없다(refusal 또는 0건) -- 콘솔에 아무것도 쓰지 않았다."
+                )
+            elif pool_lookup_failed:
+                payload["notice"] = (
+                    "apply 요청이지만 풀 번호를 못 찾은 참조가 있다 -- fail-closed, "
+                    "콘솔에 아무것도 쓰지 않았다. preset_pool_lookup_failed 를 봐라."
+                )
+            else:
+                all_commands = [c for _cue_no, commands in cue_bundles for c in commands]
+                approved = group_approval.request_approval(
+                    ApprovalRequest(
+                        items=tuple(
+                            ApprovalItem(
+                                command=command,
+                                risk_reasons=(
+                                    "cue write -- 콘솔이 받았는지 값까지는 되읽지 못한다"
+                                    "(번호·이름만 확인된다). 덮어쓰면 복구 수단이 없다",
+                                ),
+                            )
+                            for command in all_commands
+                        )
+                    )
+                )
+                if not approved:
+                    payload["approval"] = "declined"
+                    payload["notice"] = (
+                        "승인이 나지 않아 콘솔에 아무것도 보내지 않았다. 위 계획을 사람이 "
+                        "확인한 뒤 같은 시트로 다시 부르면 된다."
+                    )
+                else:
+                    payload["approval"] = "granted"
+                    applied: list[dict[str, object]] = []
+                    applied_is_error = False
+                    for cue_no, commands in cue_bundles:
+                        if applied_is_error:
+                            applied.append(dict(cue_no=cue_no, status="skipped_after_failure"))
+                            continue
+                        inner = run_commands(
+                            ToolCall(
+                                id=f"{call.id}:cue-{cue_no}",
+                                name="run_commands",
+                                arguments={"commands": commands},
+                            ),
+                            context,
+                        )
+                        inner_payload = json.loads(inner.result.content)
+                        ok = not inner.result.is_error and inner_payload.get("all_ok", False)
+                        applied.append(dict(cue_no=cue_no, status="ok" if ok else "failed"))
+                        if not ok:
+                            applied_is_error = True
+                    payload["applied"] = applied
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -10587,9 +10742,10 @@ def build_toolset(
             name="import_lxseq_cues",
             description=(
                 "LX-SEQ CUE-EX 시트 한 장(long format, 한 큐 x 한 그룹 = 한 행)을 "
-                "읽어 콘솔 시퀀스 큐 계획을 만든다. 기본은 'preview'이며, 이 "
-                "회차의 apply 는 아직 콘솔에 쓰지 않는다(cue_mapper 완성 전 "
-                "임시 상태 -- payload.notice 로 명시된다).\n"
+                "읽어 콘솔 시퀀스 큐 계획을 만들고, action='apply'일 때만 실제로 "
+                "만든다. 기본은 'preview'이며 preview는 콘솔에 **아무것도 쓰지 "
+                "않는다**. preset_dim/col/bm_content_base64·fx_content_base64가 "
+                "없으면 그 프리셋을 참조하는 행은 held로 떨어진다.\n"
                 "\n"
                 "바이트는 **파일에서만** 온다. 채팅에 붙여넣은 본문을 base64로 만들지 "
                 "마라 — 개행·공백이 조용히 깨진다.\n"
