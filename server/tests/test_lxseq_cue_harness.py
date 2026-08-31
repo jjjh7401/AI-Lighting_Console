@@ -13,10 +13,13 @@ import pytest
 
 from server.tools.lxseq_cues_e2e import (
     VIDEO_CALL_GROUP,
+    CanonicalHeaderRequired,
     census,
     leaked_commands,
+    main,
     read_rows,
     slice_by_cue,
+    tool_arguments,
 )
 
 CUE_CSV = (
@@ -122,3 +125,95 @@ def test_leak_detector_fires_on_a_fabricated_leak() -> None:
 def test_leak_detector_is_silent_on_clean_bundles() -> None:
     clean = [("Group 1 At 55", "Group 2 At 40")]
     assert leaked_commands(clean) == []
+
+
+class TestSequenceName:
+    """`--sequence-name` 은 필수이고 파일명에서 유도하지 않는다.
+
+    `map_cues` 는 시퀀스를 이름으로 찾거나 만드는데 그 이름이 CSV 바이트에 없다.
+    파일명에서 꺼내려면 명명 규약을 가정해야 하고, **그 이름은 콘솔에 영구히
+    남는다** — 틀린 이름이 쇼파일에 박히느니 인자를 요구한다.
+    """
+
+    def test_missing_flag_fails_before_touching_the_console(self, capsys) -> None:
+        with pytest.raises(SystemExit):
+            main(["--cue-csv", str(CUE_CSV), "--listen-port", "9005"])
+        message = capsys.readouterr().err
+        assert "--sequence-name" in message
+
+    def test_blank_value_fails_with_the_reason(self, capsys) -> None:
+        """`required=True` 는 플래그 유무만 본다 — 빈 문자열은 통과한다."""
+        with pytest.raises(SystemExit):
+            main(
+                [
+                    "--cue-csv",
+                    str(CUE_CSV),
+                    "--listen-port",
+                    "9005",
+                    "--sequence-name",
+                    "   ",
+                ]
+            )
+        message = capsys.readouterr().err
+        assert "파일명에서 유도하지 않는" in message, (
+            "왜 유도하지 않는지가 사유에 있어야 한다 — 다음 사람이 유도기를 붙이지 못하게"
+        )
+        assert "영구히" in message
+
+    def test_name_is_carried_into_the_tool_arguments(self) -> None:
+        args = tool_arguments("Ym9keQ==", "preview", "Sugar")
+        assert args["sequence_name"] == "Sugar"
+        assert args["action"] == "preview"
+        assert args["file_content_base64"] == "Ym9keQ=="
+
+    def test_tool_arguments_carries_no_extra_key(self) -> None:
+        """스키마가 `additionalProperties: False` 라 여분 키는 거절된다."""
+        args = tool_arguments("x", "apply", "Sugar")
+        assert sorted(args) == ["action", "file_content_base64", "sequence_name"]
+
+
+def _variant_header_csv(tmp_path: Path) -> Path:
+    """헤더만 소문자 + 공백 삽입으로 변형. 데이터 행은 정본 그대로."""
+    lines = CUE_CSV.read_text(encoding="utf-8-sig").splitlines()
+    variant = lines[0].lower().replace("q#", "q #")
+    target = tmp_path / "variant.cue-ex.csv"
+    target.write_text("\n".join([variant] + lines[1:]) + "\n", encoding="utf-8")
+    return target
+
+
+def test_non_canonical_header_fails_with_a_reason(tmp_path: Path) -> None:
+    """조용히 `KeyError` 로 죽지 않는다 — 어느 열이 없고 무엇이 있었는지 말한다.
+
+    파서는 헤더를 정규화해 이 시트를 받아준다(실측: records 89 / cues 18).
+    이 하네스는 일부러 안 받는다 — 정규화가 두 벌이면 두 벌이 같이 틀렸을 때
+    대조가 「일치」라고 답하고, 독립 분모라는 존재 이유가 사라진다.
+    """
+    variant = _variant_header_csv(tmp_path)
+
+    with pytest.raises(CanonicalHeaderRequired) as caught:
+        read_rows(variant)
+
+    error = caught.value
+    assert "Q#" in error.missing
+    assert error.found, "시트에 있던 헤더 목록이 비어 있으면 진단이 안 된다"
+    message = str(error)
+    assert "Q#" in message
+    assert "정규화" in message, "왜 관대하게 받지 않는지가 메시지에 있어야 한다"
+
+
+def test_non_canonical_header_is_not_a_bare_keyerror(tmp_path: Path) -> None:
+    """회귀 방지: 예전에는 `KeyError: 'Q#'` 로 죽었고 아무도 이유를 몰랐다."""
+    variant = _variant_header_csv(tmp_path)
+    with pytest.raises(CanonicalHeaderRequired):
+        read_rows(variant)
+    try:
+        read_rows(variant)
+    except CanonicalHeaderRequired:
+        pass
+    except KeyError:  # pragma: no cover - 회귀했을 때만 도달한다
+        pytest.fail("맨 KeyError 로 되돌아갔다 — 사유를 말하는 실패여야 한다")
+
+
+def test_canonical_header_still_reads(tmp_path: Path) -> None:
+    """대조군. 엄격해진 검사가 정본까지 막으면 아무것도 못 잰다."""
+    assert len(read_rows(CUE_CSV)) == 89
