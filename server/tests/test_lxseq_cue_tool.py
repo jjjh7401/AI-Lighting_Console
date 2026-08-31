@@ -106,3 +106,43 @@ class TestParserReachedButMapperPending:
         assert payload["read"] == 2
         assert payload["cue_numbers"] == ["Q010"]
         assert payload["video_call_rows"] == 1
+
+
+class TestSequenceNameQuoting:
+    """'sequence_name' 은 자유 입력이다 -- 전송 명령이 홑따옴표로 감싸는데
+    (Store Sequence ... '<name>' ...) 안에 홑따옴표가 있으면 그 자리에서
+    문자열이 잘린다. 실기에서 이 실패로 6개 명령이 전멸했었다(리드 재현,
+    2026-08-31) -- 이스케이프 없이 fail-closed.
+    """
+
+    def test_a_single_quote_in_the_sequence_name_is_refused(self):
+        execution = _dispatch(file_content_base64=_b64(b"x"), sequence_name="Sugar's Show")
+        assert execution.result.is_error is True
+        assert "sequence_name" in execution.result.content
+        assert chr(39) in execution.result.content
+
+
+class TestCueBuilderQuoting:
+    """🔴 빌더가 조립하는 명령엔 큰따옴표가 있으면 안 된다.
+
+    server/bridge/protocol.py:_validate_rest 가 큰따옴표를 거절한다(MA3의
+    플러그인 인자 종료 문자라서). ma3.txt 정본은 사람이 콘솔에 붙여넣는
+    스크립트라 큰따옴표를 쓰지만, 우리 전송 경로는 다르다 -- 큐 빌더가
+    ma3.txt 를 그대로 베껴 이 실패를 실기에서 냈다(리드 재현, 2026-08-31:
+    Store Sequence 2 "Sugar" /NoConfirm -> 'command must not contain a
+    double quote'). 소스 레벨로 못박는다 -- 다음 사람이 정본을 보고 다시
+    큰따옴표로 되돌리는 것을 막는다.
+    """
+
+    def test_the_sequence_group_and_cue_store_lines_use_single_quotes(self):
+        import inspect
+
+        from server.orchestrator import tools as tools_module
+
+        source = inspect.getsource(tools_module)
+        assert "Store Sequence {sequence_placement_no} " + chr(39) in source
+        assert "Store Sequence {sequence_placement_no} " + chr(34) not in source
+        assert "Group " + chr(39) in source
+        assert 'f"Group ' + chr(34) not in source
+        assert "Store Cue {cueno} " + chr(39) in source
+        assert "Store Cue {cueno} " + chr(34) not in source
