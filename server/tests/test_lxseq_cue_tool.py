@@ -313,3 +313,109 @@ class TestCueSheetXlsx:
         )
         assert execution.result.is_error is True
         assert "CUE" in execution.result.content
+
+
+class _FailingOnMarkerExec:
+    """모든 명령을 성공시키다가 marker 를 포함한 명령에서만 실패한다 --
+    skipped_after_failure 단락(short-circuit) 검사에 쓴다."""
+
+    def __init__(self, console, marker):
+        self.console = console
+        self.marker = marker
+        self.sent = []
+
+    def execute(self, command):
+        self.sent.append(command)
+        if self.marker in command:
+            return type("R", (), {"command": command, "ok": False, "detail": "조작된 실패"})()
+        return type("R", (), {"command": command, "ok": True, "detail": "OK"})()
+
+
+class TestApplyPathBranches:
+    """action='apply' 의 네 갈래 중 셋 -- 계획 없음 · 승인 거부 ·
+    단락(short-circuit). 네 번째(preset_pool_lookup_failed fail-closed)는
+    preset_slots 와 preset_pool_no_by_kind 가 tools.py 안에서 항상 같은
+    루프로 함께 채워져 정상 입력으로는 못 갈라놓는다 -- 이 방어 분기는
+    현재 도달 경로가 없다(별도 관측, 실행하지 않음)."""
+
+    def _row(self, cue_no, group="BACK"):
+        return ",".join([cue_no, group, "55"] + [""] * 12 + ["", ""])
+
+    def _body(self, *cue_nos, group="BACK"):
+        header = ",".join(CANONICAL_CUE_COLUMNS)
+        rows = [self._row(q, group=group) for q in cue_nos]
+        return (header + "\n" + "\n".join(rows) + "\n").encode("utf-8")
+
+    def test_no_bundles_gives_a_notice_and_writes_nothing(self):
+        """영상 콜만 있는 큐 -- refusal 없이 cue_bundles 가 0건이다."""
+        header = ",".join(CANONICAL_CUE_COLUMNS)
+        row = ",".join(["Q010", "LED-W", ""] + [""] * 11 + ["", "video call"])
+        body = (header + "\n" + row + "\n").encode("utf-8")
+        registry = _toolset_with_group("BACK")
+        execution = registry.dispatch(
+            ToolCall(
+                id="t209apply1",
+                name="import_lxseq_cues",
+                arguments=dict(
+                    file_content_base64=_b64(body), sequence_name="TestSeq", action="apply"
+                ),
+            )
+        )
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["cue_bundles_planned"] == 0
+        assert "계획이 없다" in payload["notice"]
+        assert "applied" not in payload
+
+    def test_declined_approval_writes_nothing(self):
+        """승인 포트를 안 주면 DenyAllApprovalPort 가 기본값이다 -- fail-closed."""
+        registry = _toolset_with_group("BACK")
+        execution = registry.dispatch(
+            ToolCall(
+                id="t209apply2",
+                name="import_lxseq_cues",
+                arguments=dict(
+                    file_content_base64=_b64(self._body("Q010")),
+                    sequence_name="TestSeq",
+                    action="apply",
+                ),
+            )
+        )
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["approval"] == "declined"
+        assert "승인이 나지 않아" in payload["notice"]
+        assert "applied" not in payload
+
+    def test_a_failed_cue_stops_the_rest_without_touching_them(self):
+        """단락 -- 실패한 뒤로는 쏘지 않고 "안 건드렸다"를 기록으로 남긴다."""
+        approval = _AcceptAllApproval()
+        console = FakeConsole(fixtures=[dict(name="BACK")])
+        exec_port = _FailingOnMarkerExec(console, marker="Store Cue 20")
+        registry = build_toolset(
+            execution_port=exec_port,
+            state_port=console,
+            property_port=console,
+            deploy_pipeline=FakeDeploy(console),
+            question_port=Answers(),
+            group_approval_port=approval,
+        )
+        execution = registry.dispatch(
+            ToolCall(
+                id="t209apply3",
+                name="import_lxseq_cues",
+                arguments=dict(
+                    file_content_base64=_b64(self._body("Q010", "Q020", "Q030")),
+                    sequence_name="TestSeq",
+                    action="apply",
+                ),
+            )
+        )
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        applied = {e["cue_no"]: e for e in payload["applied"]}
+        assert applied["Q010"]["status"] == "ok"
+        assert applied["Q020"]["status"] == "failed"
+        assert applied["Q030"]["status"] == "skipped_after_failure"
+        # Q030 에 대해서는 명령을 아예 안 보냈다 -- 확실히 안 건드렸다
+        assert not any("Store Cue 30" in c for c in exec_port.sent)
