@@ -20,4 +20,6 @@ for label, complete in (("S1", False), ("S2", True)):
         console_fids_complete=complete,
         groups_section=DEAD,
     )
-    print(label, "batches =", r.batches, "| 배치수 =", len(r.batches), "| refusal =", repr(r.refusal))
+    print(
+        label, "batches =", r.batches, "| 배치수 =", len(r.batches), "| refusal =", repr(r.refusal)
+    )
