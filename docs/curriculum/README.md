@@ -157,17 +157,37 @@ M5가 가장 어렵다. 미리 쉬운 말로만 보고 가자. 자세한 건 [`g
 
 모든 숫자는 저장소에서 직접 실측했다.
 
-| 항목 | 실측값 | 확인 명령 |
+> **실측 기준: 2026-09-01 · `origin/main` `12846e9`.**
+> 이 표의 값은 **그 시점 스냅숏**이다. 저장소가 계속 자라므로 **시간이 지나면 과소값이 된다** —
+> 강의 전에 아래 명령을 그대로 다시 돌려 갱신하고, 기준 날짜와 커밋도 함께 고쳐라.
+> 명령은 전부 작업트리가 아니라 **`origin/main` 트리**를 세므로 미커밋·미추적 파일에 흔들리지 않는다.
+
+| 항목 | 실측값 | 확인 명령 (세는 규칙까지 명령에 드러나 있다) |
 |---|---|---|
-| 개발 기간 | 2026-07-15 → 08-07 (약 3주) | `git log --reverse` |
-| 누적 커밋 | 443 | `git rev-list --count --all` |
-| 계획 문서(SPEC) | 15건 | `.moai/specs/` |
-| 앱 모듈 | 17개 | `server/` |
-| 테스트 파일 | 131 | `server/tests/` |
-| AI 역할(에이전트) | 10 | `.claude/agents/moai/` |
-| 규칙 파일 | 63 | `.claude/rules/` |
-| 지식 묶음(스킬) | 28 | `.claude/skills/` |
-| 자동 검사(훅) | 25 | `.claude/hooks/moai/` |
+| 개발 기간 | 2026-07-15 → 08-07 (약 3주) | `git log --reverse` — 이번 갱신에서 재판정하지 않았다(표 아래 주석) |
+| 누적 커밋 | 806 | `git rev-list --count origin/main` |
+| 계획 문서(SPEC) | 46건 | `git ls-tree -d --name-only origin/main .moai/specs/ \| wc -l` |
+| 앱 모듈 | 23개 | `git ls-tree -d --name-only origin/main server/ \| grep -v '^server/tests$' \| wc -l` |
+| 테스트 파일 | 251 | `git ls-tree -r --name-only origin/main server/tests/ \| grep -c 'test_.*\.py$'` |
+| AI 역할(에이전트) | 11 | `git ls-tree -r --name-only origin/main .claude/agents/moai/ \| grep -c '\.md$'` |
+| 규칙 파일 | 71 | `git ls-tree -r --name-only origin/main .claude/rules/ \| grep -c '\.md$'` |
+| 지식 묶음(스킬) | 34 | `git ls-tree -r --name-only origin/main .claude/skills/ \| grep -c 'SKILL\.md$'` |
+| 자동 검사(훅) | 43 | `git ls-tree -r --name-only origin/main .claude/hooks/moai/ \| wc -l` |
+
+**세는 규칙을 적어 두는 이유** — 같은 디렉터리도 세는 법에 따라 값이 갈린다.
+
+- **규칙 파일**: `.claude/rules/` 아래 **`.md` 파일 전량, 재귀**로 센다. 이 저장소는 `rules/` 바로 아래
+  항목이 `moai/` 하나뿐이라 「`moai/` 서브트리만」과 「전량 재귀」가 **같은 71**을 낸다. 반면
+  「최상위 항목 수」로 세면 **1**이 나오는데 그건 규칙 개수가 아니라 폴더 개수다 — 쓰지 마라.
+- **앱 모듈**: `server/` 바로 아래 디렉터리에서 `tests` 를 뺀 값(빼지 않으면 24). 테스트는 다음 행에서 따로 센다.
+- **테스트 파일**: `test_` 로 시작하는 `.py` 만 센다. 헬퍼·픽스처까지 넣으면 256 이 된다.
+- **누적 커밋**: `--all` 이 아니라 **`origin/main`** 을 센다. `--all` 은 로컬에 남은 워크트리 브랜치까지
+  세어 **클론마다 값이 달라진다** — 이 갱신 시점 실측으로 `--all` 은 1380, `origin/main` 은 806 이었다.
+  재현되지 않는 숫자는 근거가 아니다.
+
+> **개발 기간 행은 왜 그대로인가.** `origin/main` 의 마지막 커밋은 **2026-08-31** 이지만 08-07 이후의 커밋은
+> 앱이 아니라 하네스·교재 작업이다. 「앱을 만드는 데 걸린 기간」은 커밋 날짜만으로 갈리지 않는 **판단**이라,
+> 세면 답이 나오는 다른 행들과 같이 취급하지 않았다. 재판정이 필요하면 별도로 다뤄라.
 
 ---
 
