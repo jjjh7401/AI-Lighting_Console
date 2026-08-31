@@ -20,6 +20,16 @@
    유출 사고가 났던 자리에서 가장 안 보이는 형태로 새는 것이다.
    `census.note_pattern_hits` 가 이 수를 매 실행마다 다시 재서 남긴다.
 
+## 왜 `--sequence-name` 이 필수이고 파일명에서 유도하지 않는가
+
+`map_cues` 는 시퀀스를 **이름으로** 찾거나 만드는데 그 이름이 **CSV 바이트에
+없다**(곡·쇼 이름). 그래서 발사기가 인자로 받아 넘긴다.
+
+🔴 **파일명에서 유도하지 않는다.** `LXSEQ_SAMPLE_01_Sugar_r3.cue-ex.csv` 에서
+`Sugar` 를 꺼내려면 명명 규약을 가정해야 하고, **그 이름은 콘솔에 영구히
+남는다.** 틀린 이름이 쇼파일에 박히느니 인자를 요구하는 편이 싸다. 규약이 바뀌면
+유도기는 조용히 틀린 이름을 만들고, 되돌리려면 콘솔에서 사람이 지워야 한다.
+
 ## 「안 나갔다」를 어떻게 재는가
 
 스킵 플래그는 **코드가 자기 자신에 대해 하는 말**이다. 이 하네스는 승인 기록기가
@@ -83,6 +93,36 @@ NOTE_PATTERN_NOT_A_DISCRIMINATOR = "LW-"
 #: 이 행들 뒤에 숨는다.
 VIDEO_CALL_SKIP_REASON = "video_call_not_console"
 
+#: 이 하네스가 **원문 그대로** 기대하는 열. 정규화하지 않는다 — 이유는
+#: `CanonicalHeaderRequired` 참조.
+REQUIRED_COLUMNS = ("Q#", "Group")
+
+
+class CanonicalHeaderRequired(ValueError):
+    """정본 헤더가 아닌 시트. 정규화로 받아주지 않는다.
+
+    🔴 **이 하네스는 정본 헤더 전용이다. 관대하게 고치지 마라.**
+
+    파서(`server/lxseq/cue_parser.py:112` `_normalize_header`)는 헤더를
+    소문자화·공백제거·BOM제거해 관대하게 받는다. 이 하네스는 일부러 그러지
+    않는다 — 관대하게 만들면 **정규화가 두 벌**이 되고, 두 벌이 **같이 틀렸을 때
+    대조가 「일치」라고 답한다.** 이 하네스의 인구조사는 툴 응답을 대조할 **독립
+    분모**로 존재하므로, 대조군이 대조 대상의 해석을 베끼는 순간 존재 이유가
+    사라진다.
+
+    그러므로 비표준 헤더는 이 하네스의 **범위 밖**이고, 그 사실을 조용히
+    `KeyError` 로 죽는 대신 **말하고** 죽는다.
+    """
+
+    def __init__(self, missing: tuple[str, ...], found: tuple[str, ...]) -> None:
+        self.missing = missing
+        self.found = found
+        super().__init__(
+            "이 하네스는 정본 헤더 전용이다 — 파서와 달리 정규화하지 않는다"
+            "(정규화가 두 벌이면 대조의 독립성이 사라진다). "
+            "못 찾은 열: " + ", ".join(missing) + " / 시트에 있던 헤더: " + ", ".join(found)
+        )
+
 
 class _RecordingApproval:
     def __init__(self, *, approve: bool) -> None:
@@ -125,8 +165,18 @@ def _state(state_port, path: str) -> dict:
 
 
 def read_rows(csv_path: Path) -> list[dict]:
-    """정본 CSV 를 행 사전 목록으로 읽는다. BOM 을 벗긴다."""
-    return list(csv.DictReader(io.StringIO(csv_path.read_text(encoding="utf-8-sig"))))
+    """정본 CSV 를 행 사전 목록으로 읽는다. BOM 을 벗긴다.
+
+    헤더가 정본이 아니면 `CanonicalHeaderRequired` 로 **사유를 말하며** 실패한다.
+    `KeyError` 로 죽으면 어느 열이 없었는지도, 왜 관대하게 받지 않는지도 아무도
+    모른다.
+    """
+    reader = csv.DictReader(io.StringIO(csv_path.read_text(encoding="utf-8-sig")))
+    found = tuple(reader.fieldnames or ())
+    missing = tuple(name for name in REQUIRED_COLUMNS if name not in found)
+    if missing:
+        raise CanonicalHeaderRequired(missing, found)
+    return list(reader)
 
 
 def census(rows: list[dict]) -> dict:
@@ -188,10 +238,30 @@ def leaked_commands(bundles: list[tuple[str, ...]]) -> list[str]:
     ]
 
 
+def tool_arguments(payload: str, action: str, sequence_name: str) -> dict:
+    """`import_lxseq_cues` 에 넘길 인자. 스키마가 이 셋을 요구한다.
+
+    `additionalProperties: False` 라 여분 키를 넣으면 거절된다.
+    """
+    return dict(
+        file_content_base64=payload,
+        action=action,
+        sequence_name=sequence_name,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cue-csv", type=Path, required=True, help="정본 CUE-EX CSV 절대경로")
     parser.add_argument("--action", choices=["preview", "apply"], default="preview")
+    parser.add_argument(
+        "--sequence-name",
+        required=True,
+        help=(
+            "콘솔에 찾거나 만들 시퀀스 이름(곡·쇼 이름). 필수 — 기본값 없다. "
+            "파일명에서 유도하지 않는 이유는 모듈 docstring 참조"
+        ),
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000, help="onPC OSC 입력 포트")
     add_listen_port_argument(parser)
@@ -226,6 +296,16 @@ def main(argv: list[str] | None = None) -> int:
             "행위이면 그 절차가 사고다."
         )
 
+    # `required=True` 는 **플래그 유무**만 본다 — `--sequence-name ""` 는 통과한다.
+    # 툴은 그걸 거절하지만, 거절을 콘솔 왕복 뒤에 받느니 여기서 사유를 말한다.
+    if not args.sequence_name.strip():
+        parser.error(
+            "--sequence-name 이 비었다. map_cues 는 시퀀스를 이름으로 찾거나 만드는데 "
+            "그 이름이 CSV 바이트에 없다(곡·쇼 이름). "
+            "파일명에서 유도하지 않는 이유: 그 이름은 콘솔에 영구히 남는다 — "
+            "명명 규약을 가정해 틀린 이름을 쇼파일에 박느니 인자를 요구한다."
+        )
+
     limit = None if args.limit == 0 else args.limit
     sheet = census(read_rows(args.cue_csv))
     out: dict[str, object] = dict(
@@ -233,6 +313,7 @@ def main(argv: list[str] | None = None) -> int:
         approve=args.approve,
         listen_port=args.listen_port,
         cue_csv=str(args.cue_csv),
+        sequence_name=args.sequence_name,
         limit=limit,
         skip=args.skip,
         census=sheet,
@@ -291,7 +372,7 @@ def main(argv: list[str] | None = None) -> int:
                     ToolCall(
                         id="lxc1",
                         name="import_lxseq_cues",
-                        arguments=dict(file_content_base64=payload, action=args.action),
+                        arguments=tool_arguments(payload, args.action, args.sequence_name),
                     )
                 )
             except Exception as error:  # noqa: BLE001
