@@ -171,6 +171,29 @@ class TestSequenceName:
         args = tool_arguments("x", "apply", "Sugar")
         assert sorted(args) == ["action", "file_content_base64", "sequence_name"]
 
+    def test_omitted_preset_and_fx_sheets_add_no_keys(self) -> None:
+        """안 준 종류는 조용히 빈 문자열이 아니라 키 자체가 없다."""
+        args = tool_arguments("x", "preview", "Sugar")
+        assert "preset_dim_content_base64" not in args
+        assert "preset_col_content_base64" not in args
+        assert "preset_bm_content_base64" not in args
+        assert "fx_content_base64" not in args
+
+    def test_supplied_preset_and_fx_sheets_are_carried_through(self) -> None:
+        args = tool_arguments(
+            "x",
+            "preview",
+            "Sugar",
+            preset_dim="dGVzdA==",
+            preset_col="dGVzdA==",
+            preset_bm="dGVzdA==",
+            fx="dGVzdA==",
+        )
+        assert args["preset_dim_content_base64"] == "dGVzdA=="
+        assert args["preset_col_content_base64"] == "dGVzdA=="
+        assert args["preset_bm_content_base64"] == "dGVzdA=="
+        assert args["fx_content_base64"] == "dGVzdA=="
+
 
 def _variant_header_csv(tmp_path: Path) -> Path:
     """헤더만 소문자 + 공백 삽입으로 변형. 데이터 행은 정본 그대로."""
