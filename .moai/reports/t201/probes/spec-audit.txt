@@ -1,0 +1,56 @@
+Audit summary
+=============
+Total SPECs:        44
+Grandfathered:      32 (pre-V3R6 — protected)
+Modern-era clean:   11
+Drift findings:     46
+
+Findings:
+  [INFO] SPEC-COPILOT-AUTOPATCH-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-AXISCORE-001 (V3R2-R4) — EraAutoDetected
+  [INFO] SPEC-COPILOT-BLOCKED16-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-BUSKWIZ-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-COLORPRESET-001 (V3R2-R4) — EraAutoDetected
+  [INFO] SPEC-COPILOT-CUETIME-001 (V3R2-R4) — EraAutoDetected
+  [INFO] SPEC-COPILOT-DASHUI-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-DEPLOY-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-EVAL-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-EXECBODY-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-EXECREF-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-FILEARG-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-FXGEN-001 (V2.x) — EraAutoDetected
+  [INFO] SPEC-COPILOT-FXLIB-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-GROUPGEN-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-IMGLAYOUT-001 (V2.x) — EraAutoDetected
+  [INFO] SPEC-COPILOT-INTENT-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-INTROSPECT-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-LDGUIDE-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-LOOKLIB-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-LXSEQ-001 (V3R6) — EraAutoDetected
+  [MUST-FIX] SPEC-COPILOT-LXSEQ-001 (V3R6) — SyncStatusDrift
+             Remediation: moai spec close SPEC-COPILOT-LXSEQ-001 --backfill-only
+             Reason: §E.2 + §E.4 + sync_commit_sha present (sync complete) but status != completed
+  [INFO] SPEC-COPILOT-LXSEQ-002 (V3R2-R4) — EraAutoDetected
+  [INFO] SPEC-COPILOT-LXSEQ-003 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-MCP-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-MVP-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-OVERLAP-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-PARITY-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-PRECHK-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-PRESETGUARD-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-PRESETGUARD-002 (V2.x) — EraAutoDetected
+  [INFO] SPEC-COPILOT-PRESETIDEM-001 (V3R2-R4) — EraAutoDetected
+  [INFO] SPEC-COPILOT-RECVOBS-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-RESTORE-001 — AuditError
+  [INFO] SPEC-COPILOT-SCENE-001 (V3R6) — EraAutoDetected
+  [INFO] SPEC-COPILOT-SHEETPIPE-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-SHOWUI-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-SONGCUE-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-SONGSTD-001 (V2.x) — EraAutoDetected
+  [INFO] SPEC-COPILOT-SPATIAL-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-SPATIALMEM-001 (V2.x) — EraAutoDetected
+  [INFO] SPEC-COPILOT-TREEID-001 (V2.x) — EraAutoDetected
+  [INFO] SPEC-COPILOT-TRUNCATE-001 (V2.x) — EraAutoDetected
+  [INFO] SPEC-COPILOT-UNREQ-001 (V2.x) — EraAutoDetected
+  [INFO] SPEC-COPILOT-VWX-001 (V3R5) — EraAutoDetected
+  [INFO] SPEC-COPILOT-WRITEGATE-001 (V3R5) — EraAutoDetected

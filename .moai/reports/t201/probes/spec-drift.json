@@ -1,0 +1,233 @@
+{
+  "Records": [
+    {
+      "SPECID": "SPEC-COPILOT-AUTOPATCH-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-AXISCORE-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-BLOCKED16-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-BUSKWIZ-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-COLORPRESET-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-DASHUI-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "completed",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-DEPLOY-001",
+      "FrontmatterStatus": "in-progress",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-EVAL-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "in-progress",
+      "Drifted": true
+    },
+    {
+      "SPECID": "SPEC-COPILOT-EXECBODY-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "completed",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-EXECREF-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "in-progress",
+      "Drifted": true
+    },
+    {
+      "SPECID": "SPEC-COPILOT-FILEARG-001",
+      "FrontmatterStatus": "in-progress",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-FXGEN-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-FXLIB-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "implemented",
+      "Drifted": true
+    },
+    {
+      "SPECID": "SPEC-COPILOT-GROUPGEN-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-INTENT-001",
+      "FrontmatterStatus": "in-progress",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-INTROSPECT-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-LDGUIDE-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "in-progress",
+      "Drifted": true
+    },
+    {
+      "SPECID": "SPEC-COPILOT-LOOKLIB-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "in-progress",
+      "Drifted": true
+    },
+    {
+      "SPECID": "SPEC-COPILOT-LXSEQ-002",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-LXSEQ-003",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-MCP-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-MVP-001",
+      "FrontmatterStatus": "in-progress",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-OVERLAP-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-PRECHK-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-PRESETGUARD-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "implemented",
+      "Drifted": true
+    },
+    {
+      "SPECID": "SPEC-COPILOT-PRESETGUARD-002",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-PRESETIDEM-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-SCENE-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "in-progress",
+      "Drifted": true
+    },
+    {
+      "SPECID": "SPEC-COPILOT-SHEETPIPE-001",
+      "FrontmatterStatus": "in-progress",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-SHOWUI-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-SONGCUE-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-SPATIAL-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-SPATIALMEM-001",
+      "FrontmatterStatus": "completed",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-TREEID-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-TRUNCATE-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-UNREQ-001",
+      "FrontmatterStatus": "implemented",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-VWX-001",
+      "FrontmatterStatus": "draft",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    },
+    {
+      "SPECID": "SPEC-COPILOT-WRITEGATE-001",
+      "FrontmatterStatus": "in-progress",
+      "GitImpliedStatus": "era-exempt",
+      "Drifted": false
+    }
+  ],
+  "Count": 7
+}
