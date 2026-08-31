@@ -200,6 +200,7 @@ class TestRegistryTable:
             "preset-col",
             "preset-bm",
             "vectorworks",
+            "cue-ex",
         ]
 
     def test_registry_patch_row_references_canonical_columns_by_identity(self):
@@ -220,6 +221,7 @@ class TestRegistryTable:
             "preset-col": (HANDLER_TAG_TOOL, "import_lxseq_presets"),
             "preset-bm": (HANDLER_TAG_TOOL, "import_lxseq_presets"),
             "vectorworks": (HANDLER_TAG_SESSION_METHOD, "upload_vectorworks_export"),
+            "cue-ex": (HANDLER_TAG_TOOL, "import_lxseq_cues"),
         }
 
     def test_registry_patch_row_carries_the_passthrough_whitelist(self):

@@ -78,6 +78,7 @@ from server.looks.songcue import (
     parse_sections,
 )
 from server.looks.songcue_report import build_songcue_report
+from server.lxseq.cue_parser import MissingCueColumnsError, parse_cue_csv
 from server.lxseq.group_mapper import map_groups
 from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
@@ -272,6 +273,7 @@ TOOL_NAMES = (
     "import_lxseq_patch",
     "import_lxseq_groups",
     "import_lxseq_presets",
+    "import_lxseq_cues",
     "import_uploaded_sheet",
     "find_fx",
     "instantiate_fx",
@@ -548,6 +550,7 @@ SHEET_KIND_ACTIONS["group"] = ("preview", "apply")
 SHEET_KIND_ACTIONS["preset-dim"] = ("preview", "apply")
 SHEET_KIND_ACTIONS["preset-col"] = ("preview", "apply")
 SHEET_KIND_ACTIONS["preset-bm"] = ("preview", "apply")
+SHEET_KIND_ACTIONS["cue-ex"] = ("preview", "apply")
 
 
 def _sheet_refusal(call: ToolCall, reason: str, message: str) -> ToolExecution:
@@ -5213,6 +5216,175 @@ def build_toolset(
                 tool_call_id=call.id,
                 name=call.name,
                 content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
+        )
+
+    # -- import_lxseq_cues (SPEC-COPILOT-LXSEQ-004 M3, t209) -------------------
+    #
+    # @MX:TODO: [AUTO] apply 실행(콘솔 쓰기)은 이번 회차 범위 밖이다.
+    #   `server.lxseq.cue_mapper.map_cues` 가 sync 레인에서 완성되기 전까지
+    #   이 핸들러는 파싱 + 매핑 미리보기만 낸다 -- action 값과 무관하게 콘솔에
+    #   아무것도 쓰지 않는다. 형제 `import_lxseq_presets`/`import_lxseq_groups`
+    #   의 승인->번들->발화 단계는 그 매퍼가 planned/held 계열을 확정한 뒤,
+    #   별도 배차에서 옮긴다.
+
+    def import_lxseq_cues(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """LX-SEQ CUE-EX 시트 한 장(long format, 한 큐 x 한 그룹 = 한 행)을 읽어
+        콘솔 시퀀스 큐 계획을 만든다.
+
+        바이트는 **파일에서만** 온다(001 규약 승계). 89행을 전부 읽고, 값 열은
+        해석하지 않는다(빈칸 = 트래킹, 명세서 §11.2 HARD) -- 해석은
+        `map_cues` 몫이다.
+
+        🔴 `LED-W` 그룹(영상팀 소유 큐 콜)은 **콘솔 명령을 내면 안 된다**(과거
+        유출 사고). 판별은 `parse_cue_csv` 가 이미 정한 `is_video_call`
+        하나뿐이다 -- `Note` 문자열로 다시 판별하지 않는다. 정본 CSV에서
+        `Note` 로 판별하면 6건 중 1건("영상 페이드아웃 동기")이 그 문구를
+        안 담고 있어 콘솔로 샌다.
+
+        이번 회차는 **등재까지만**이다 -- action 값과 무관하게 콘솔에 아무것도
+        쓰지 않는다(위 @MX:TODO).
+        """
+        raw = call.arguments.get("file_content_base64")
+        if not isinstance(raw, str) or not raw.strip():
+            return _error_result(
+                call,
+                "'file_content_base64'가 없다 -- CUE-EX 시트 **파일**에서 읽은 바이트를 "
+                "base64로 넘겨라. 채팅에 붙여넣은 본문으로 만들지 마라.",
+            )
+        try:
+            sheet_bytes = base64.b64decode(raw, validate=True)
+        except (binascii.Error, ValueError):
+            return _error_result(call, "'file_content_base64'가 base64가 아니다")
+        action = call.arguments.get("action", "preview")
+        if action not in ("preview", "apply"):
+            return _error_result(call, "'action'은 'preview' 또는 'apply'여야 한다")
+        sequence_name = call.arguments.get("sequence_name")
+        if not isinstance(sequence_name, str) or not sequence_name.strip():
+            return _error_result(
+                call,
+                "'sequence_name'이 없다 -- map_cues 는 시퀀스를 이름으로 찾거나 만든다. "
+                "곡/쇼 이름을 넘겨라(예: 'Sugar'). CSV 바이트에는 그 이름이 없다.",
+            )
+        try:
+            text = sheet_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return _error_result(call, "시트 바이트가 UTF-8이 아니다")
+        try:
+            parsed = parse_cue_csv(text)
+        except MissingCueColumnsError as error:
+            return _error_result(call, "CUE-EX 시트 헤더가 맞지 않다: " + str(error))
+
+        from server.lxseq.cue_mapper import map_cues
+
+        # 시퀀스 풀 조회 -- import_lxseq_presets 의 _preset_pool_number 와 같은
+        # 형태(ok/reason). 못 읽은 것을 "빈 풀"로 접지 않는다(t109 C3 재발 방지).
+        sequences_path = rig_paths.get("sequences", DEFAULT_RIG_CONTEXT_PATHS["sequences"])
+        try:
+            sequence_section = state_port.query_state(sequences_path)
+        except Exception as exc:  # noqa: BLE001 — 모든 포트 실패는 하나의 거절이다
+            sequence_section = dict(ok=False, reason=str(exc))
+
+        # 그룹 이름 -> 콘솔 그룹 번호. import_lxseq_groups 가 Label 로 그룹
+        # 이름 자체를 그대로 심으므로(server/groupgen/write.py _label_command),
+        # 이름으로 되읽는 것이 맞다.
+        groups_path = rig_paths.get("groups", DEFAULT_RIG_CONTEXT_PATHS["groups"])
+        group_slots: dict[str, int] = {}
+        try:
+            groups_first = state_port.query_state(groups_path)
+        except Exception:  # noqa: BLE001
+            groups_first = {"ok": False}
+        if groups_first.get("ok"):
+            children, _truncated = paged_children(state_port, groups_path, groups_first)
+            for child in children:
+                obj = rig_object(child)
+                name = obj.get("name")
+                slot = obj.get("no")
+                if isinstance(name, str) and name and isinstance(slot, int):
+                    group_slots[name] = slot
+
+        # preset_slots 는 비워 둔다 -- 의도적 공백이다, 결측치가 아니다.
+        # preset_store_commands(server/presets/store.py:52-54)가 콘솔 Label 에
+        # 싣는 값은 CSV 의 Name(사람이 읽는 서술)이지 preset_id("COL.01")가
+        # 아니다 -- 이름으로 되읽어도 preset_id 와 안 맞는다. preset_id -> 콘솔
+        # 슬롯을 잇는 산출물이 이 저장소 어디에도 없다. POS.xx/FX.xx 는 애초에
+        # 그 값을 만드는 파서·툴이 없다(PRESET_ID_PREFIXES 는 DIM/COL/BM 셋뿐,
+        # server/lxseq/preset_parser.py:54-56). 비워 두면 map_cues 가 프리셋을
+        # 참조하는 모든 행을 "슬롯 미해결" 사유로 held 에 담는다 -- 반쯤 맞는
+        # 값보다 0건이 낫다는 이 도메인의 원칙과 같다.
+        preset_slots: dict[str, int] = {}
+
+        result = map_cues(
+            parsed.records,
+            declared_cues=parsed.cue_numbers,
+            sequence_name=sequence_name,
+            sequence_section=sequence_section,
+            group_slots=group_slots,
+            preset_slots=preset_slots,
+        )
+
+        placement = result.placement or result.already_present
+        payload: dict[str, object] = {
+            "action": action,
+            "sequence_name": sequence_name,
+            "source": {
+                "sha256": hashlib.sha256(sheet_bytes).hexdigest(),
+                "byte_length": len(sheet_bytes),
+            },
+            "rejected_rows": [
+                {"row": r.row_no, "reason": r.reason, "detail": r.detail} for r in parsed.rejections
+            ],
+            "read": len(parsed.records),
+            "cue_numbers": list(parsed.cue_numbers),
+            # is_video_call 로만 센다 -- Note 문자열로 다시 판별하지 않는다.
+            "video_call_rows": sum(1 for r in parsed.records if r.is_video_call),
+            "planned_cues": [dict(cue_no=b.cue_no, row_count=len(b.rows)) for b in result.planned],
+            "planned_row_count": sum(len(b.rows) for b in result.planned),
+            "held": [
+                dict(cue_no=h.cue_no, group=h.group, classes=list(h.hold_classes))
+                for h in result.held
+            ],
+            "video_calls": [
+                dict(cue_no=v.cue_no, group=v.group, note=v.note) for v in result.video_calls
+            ],
+            "video_only_cues": list(result.video_only_cues),
+            "coverage_gap": (
+                None
+                if result.coverage_gap is None
+                else dict(
+                    declared=list(result.coverage_gap.declared),
+                    covered=list(result.coverage_gap.covered),
+                    missing=list(result.coverage_gap.missing),
+                )
+            ),
+            "refusal": result.refusal,
+            "refusal_detail": result.refusal_detail or None,
+            "sequence_no": placement.slot if placement is not None else None,
+            "already_present": result.already_present is not None,
+            "unverified": list(result.unverified),
+            "unverified_reason": result.unverified_reason,
+            "group_slots_resolved": len(group_slots),
+            "preset_slots_resolved": len(preset_slots),
+            "notice_preset_slots": (
+                "preset_slots 는 의도적으로 비어 있다 -- preset_id -> 콘솔 슬롯을 "
+                "잇는 산출물이 이 저장소에 아직 없다. 프리셋을 참조하는 행은 전부 "
+                "held 로 떨어진다."
+            ),
+        }
+        if not group_slots:
+            payload["notice_group_slots"] = (
+                "DataPool/Groups 에서 이름 있는 그룹을 하나도 못 읽었다 -- group_slots 가 비었다."
+            )
+        if action == "apply":
+            payload["notice"] = (
+                "apply 실행(콘솔 쓰기)은 이번 회차 범위 밖이다 -- 콘솔에 아무것도 쓰지 않았다."
+            )
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False, default=str),
                 is_error=False,
             )
         )
@@ -10243,6 +10415,47 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="import_lxseq_cues",
+            description=(
+                "LX-SEQ CUE-EX 시트 한 장(long format, 한 큐 x 한 그룹 = 한 행)을 "
+                "읽어 콘솔 시퀀스 큐 계획을 만든다. 기본은 'preview'이며, 이 "
+                "회차의 apply 는 아직 콘솔에 쓰지 않는다(cue_mapper 완성 전 "
+                "임시 상태 -- payload.notice 로 명시된다).\n"
+                "\n"
+                "바이트는 **파일에서만** 온다. 채팅에 붙여넣은 본문을 base64로 만들지 "
+                "마라 — 개행·공백이 조용히 깨진다.\n"
+                "\n"
+                "빈칸은 트래킹이지 0(소등)이 아니다 -- 소등은 시트에 `Dim 0` + "
+                "`I-Fade` 로 명시된 행만 그렇게 다룬다.\n"
+                "\n"
+                "**`LED-W` 그룹 6행은 영상팀 소유 큐 콜이다 -- 콘솔 명령을 내면 "
+                "안 된다**(과거 유출 사고). 버려지지 않고 `video_call_rows` 로 "
+                "센다."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_content_base64": {
+                        "type": "string",
+                        "description": "CUE-EX 시트 **파일**의 바이트를 base64로 인코딩한 값",
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["preview", "apply"],
+                        "description": "기본 'preview'. 'apply'도 이번 회차에는 콘솔에 쓰지 않는다",
+                    },
+                    "sequence_name": {
+                        "type": "string",
+                        "description": (
+                            "시퀀스를 찾거나 만들 이름(곡/쇼 이름, 예 'Sugar'). CSV 바이트에는 없다"
+                        ),
+                    },
+                },
+                "required": ["file_content_base64", "sequence_name"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="import_lxseq_groups",
             description=(
                 "LX-SEQ GROUP 시트 한 장(GroupNo/Name/Members/Purpose)과 그 RIG의 "
@@ -10469,6 +10682,7 @@ def build_toolset(
         "import_lxseq_patch": import_lxseq_patch,
         "import_lxseq_groups": import_lxseq_groups,
         "import_lxseq_presets": import_lxseq_presets,
+        "import_lxseq_cues": import_lxseq_cues,
         "import_uploaded_sheet": import_uploaded_sheet,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,

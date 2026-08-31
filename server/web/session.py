@@ -90,6 +90,7 @@ from server.looks.songcue import (
     build_songcue_timing,
     normalise_start_ms,
 )
+from server.lxseq.cue_parser import parse_cue_csv
 from server.lxseq.parser import parse_patch_csv
 from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
@@ -2683,6 +2684,25 @@ def _count_preset_rows(data: bytes) -> str:
 _SHEET_ROW_COUNTERS["preset-dim"] = _count_preset_rows
 _SHEET_ROW_COUNTERS["preset-col"] = _count_preset_rows
 _SHEET_ROW_COUNTERS["preset-bm"] = _count_preset_rows
+
+
+def _count_cue_rows(data: bytes) -> str:
+    """CUE-EX 시트의 데이터 행 수 -- 첨부 안내에 싣는 한 줄. long format(한 큐
+    x 한 그룹 = 한 행)이라 이 수가 곧 계획할 행 수다. 고유 큐 수도 함께
+    싣는다 -- 행 수만 보이면 부분집합인지 알 수 없다.
+    """
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return "행 수를 세지 못했다"
+    parsed = parse_cue_csv(text)
+    return (
+        f"레코드 {len(parsed.records)}건 · 큐 {len(parsed.cue_numbers)}개 · "
+        f"rejected {len(parsed.rejections)}건"
+    )
+
+
+_SHEET_ROW_COUNTERS["cue-ex"] = _count_cue_rows
 
 #: 첨부 이음매가 배선한 세션 메서드 이름 (SPEC-COPILOT-SHEETPIPE-001 결정 A).
 #:
