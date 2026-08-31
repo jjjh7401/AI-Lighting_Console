@@ -296,6 +296,13 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # (.moai/reports/t194/probes/_t194_preserve.py · preserve-out.txt).
 # 🔴 위 t151 의 경고("커밋 후 한 번 더 돌려라")를 t194 도 그대로 밟았다 — 커밋 전
 # 전량 10571 초록, 커밋 후 CI 에서 처음 빨갛다. 경고가 문면에 있는데도 두 번째다.
+# t209 (SPEC-COPILOT-LXSEQ-004 M3) registered import_lxseq_cues + wired
+# preset_slots (ID(sheet) -> Name(sheet) -> slot(console) join, DIM/COL/BM).
+# Measured delta: 47->48 hunks, one new start point **1190**, no start point
+# disappeared (pure insertion between existing 1183 and 1192).
+# Both protected ranges (234..238 / 524..569) untouched -- nearest hunks
+# around 234..238 are 184 and 302 (unchanged); around 524..569 are 479 and
+# 591 (unchanged).
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -337,6 +344,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1179,
     1181,
     1183,
+    1190,
     1192,
     1196,
     1198,
