@@ -1,0 +1,81 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "FixtureTypes",
+    "fields": [
+      {
+        "n": "IGNORENETWORK",
+        "t": "UInt64"
+      },
+      {
+        "n": "STRUCTURELOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "SYSTEMLOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "LOCK",
+        "t": "UInt64"
+      },
+      {
+        "n": "INDEX",
+        "t": "UInt32"
+      },
+      {
+        "n": "COUNT",
+        "t": "UInt32"
+      },
+      {
+        "n": "NO",
+        "t": "UInt32"
+      },
+      {
+        "n": "NAME",
+        "t": "String"
+      },
+      {
+        "n": "NOTE",
+        "t": "String"
+      },
+      {
+        "n": "USEREXPANDED",
+        "t": "UInt64"
+      },
+      {
+        "n": "FADERENABLED",
+        "t": "Bool"
+      },
+      {
+        "n": "OWNED",
+        "t": "Bool"
+      },
+      {
+        "n": "HIDDEN",
+        "t": "UInt64"
+      },
+      {
+        "n": "DEPENDENCYEXPORT",
+        "t": "String"
+      },
+      {
+        "n": "MEMORYFOOTPRINT",
+        "t": "Int64"
+      },
+      {
+        "n": "SOURCE",
+        "t": "UInt32"
+      }
+    ],
+    "id": "gate-1",
+    "kind": "introspect",
+    "offset": 0,
+    "ok": true,
+    "path": "Patch/FixtureTypes",
+    "source": "property_accessors",
+    "total": 16,
+    "truncated": false,
+    "v": 1
+  }
+}
