@@ -1,0 +1,64 @@
+==============================================================
+MEMORY.md
+==============================================================
+TOTAL bytes=24997 newlines=132
+FORM  entries own=107 sib=16
+      lines own=107 sib=6 nolink=20
+LINEB own=22596 (90.4%)
+      sib=1695 (6.8%)
+      nolink=707 (2.8%)
+OWN   disp=5507 path=4319 syn=428 body=12342
+SIB   disp=249 path=593 syn=64 body=789
+CARDQ path=4912 of 24997 = 19.7%
+OWNBODY min=3 p25=50 med=96 p75=143 max=367 mean=115.3
+OWNLINE min=76 p25=145 med=191 p75=252 max=453 mean=211.2
+SIBITEM min=38 p25=46 med=49 p75=80 max=104 mean=59.6  (link 4B + separator 3B included)
+PATHLEN n=123 min=13 p25=32 med=39 p75=47 max=62 mean=39.9
+DISPLEN n=123 min=4 p25=39 med=49 p75=59 max=97 mean=46.8
+  OPT1 cap path at 24B -> saves 1971 B (7.9% of file)
+  OPT1 cap path at 16B -> saves 2947 B (11.8% of file)
+  OPT1 cap path at 8B -> saves 3928 B (15.7% of file)
+  OPT2 path -> 3B key   -> saves 4543 B (18.2% of file)
+
+==============================================================
+index-overflow-craft-and-tooling.md
+==============================================================
+TOTAL bytes=10241 newlines=75
+FORM  entries own=51 sib=0
+      lines own=51 sib=0 nolink=25
+LINEB own=9499 (92.8%)
+      sib=0 (0.0%)
+      nolink=743 (7.3%)
+OWN   disp=2766 path=2353 syn=204 body=4176
+SIB   disp=0 path=0 syn=0 body=0
+CARDQ path=2353 of 10241 = 23.0%
+OWNBODY min=3 p25=38 med=58 p75=95 max=485 mean=81.9
+OWNLINE min=94 p25=140 med=157 p75=203 max=599 mean=186.3
+PATHLEN n=51 min=30 p25=42 med=46 p75=50 max=62 mean=46.1
+DISPLEN n=51 min=37 p25=48 med=54 p75=61 max=76 mean=54.2
+  OPT1 cap path at 24B -> saves 1129 B (11.0% of file)
+  OPT1 cap path at 16B -> saves 1537 B (15.0% of file)
+  OPT1 cap path at 8B -> saves 1945 B (19.0% of file)
+  OPT2 path -> 3B key   -> saves 2200 B (21.5% of file)
+
+==============================================================
+index-console-grandma3.md
+==============================================================
+TOTAL bytes=3229 newlines=34
+FORM  entries own=18 sib=0
+      lines own=18 sib=0 nolink=17
+LINEB own=2724 (84.4%)
+      sib=0 (0.0%)
+      nolink=506 (15.7%)
+OWN   disp=806 path=717 syn=72 body=1129
+SIB   disp=0 path=0 syn=0 body=0
+CARDQ path=717 of 3229 = 22.2%
+OWNBODY min=3 p25=3 med=3 p75=48 max=416 mean=62.7
+OWNLINE min=67 p25=93 med=112 p75=140 max=520 mean=151.3
+PATHLEN n=18 min=27 p25=34 med=42 p75=44 max=56 mean=39.8
+DISPLEN n=18 min=29 p25=34 med=46 p75=52 max=64 mean=44.8
+  OPT1 cap path at 24B -> saves 285 B (8.8% of file)
+  OPT1 cap path at 16B -> saves 429 B (13.3% of file)
+  OPT1 cap path at 8B -> saves 573 B (17.7% of file)
+  OPT2 path -> 3B key   -> saves 663 B (20.5% of file)
+
