@@ -5278,13 +5278,33 @@ def build_toolset(
 
         from server.lxseq.cue_mapper import map_cues
 
-        # 시퀀스 풀 조회 -- import_lxseq_presets 의 _preset_pool_number 와 같은
-        # 형태(ok/reason). 못 읽은 것을 "빈 풀"로 접지 않는다(t109 C3 재발 방지).
+        # 시퀀스 풀 조회 -- map_cues(server/lxseq/cue_mapper.py)가 기대하는
+        # 단면 모양은 원시 query_state() 응답(children/node/ok)이 아니라
+        # {"objects": [...], "truncated": bool} 다(section_refusal 이 "objects"
+        # 키를 본다, server/rig/section.py:74). import_lxseq_presets 의
+        # pool_section 과 같은 변환을 거친다 -- 이 변환 없이 원시 응답을
+        # 그대로 넘기면 objects 키 부재로 매번 section_unread 거절이 난다
+        # (t209 실기로 잡힌 결함: preset_slots 가 충분히 차서 map_cues 가
+        # 이 검사에 실제로 도달하기 전까지는 안 보였다).
+        # 못 읽은 것을 "빈 풀"로 접지 않는다(t109 C3 재발 방지).
         sequences_path = rig_paths.get("sequences", DEFAULT_RIG_CONTEXT_PATHS["sequences"])
         try:
-            sequence_section = state_port.query_state(sequences_path)
+            sequences_first = state_port.query_state(sequences_path)
         except Exception as exc:  # noqa: BLE001 — 모든 포트 실패는 하나의 거절이다
-            sequence_section = dict(ok=False, reason=str(exc))
+            sequence_section: dict[str, object] = dict(ok=False, reason=str(exc))
+        else:
+            if not sequences_first.get("ok"):
+                sequence_section = dict(
+                    ok=False, reason=sequences_first.get("error") or "시퀀스 풀 조회 실패"
+                )
+            else:
+                sequence_children, sequences_truncated = paged_children(
+                    state_port, sequences_path, sequences_first
+                )
+                sequence_section = dict(
+                    objects=[rig_object(c) for c in sequence_children],
+                    truncated=sequences_truncated,
+                )
 
         # 그룹 이름 -> 콘솔 그룹 번호. import_lxseq_groups 가 Label 로 그룹
         # 이름 자체를 그대로 심으므로(server/groupgen/write.py _label_command),
@@ -5515,10 +5535,10 @@ def build_toolset(
             "preset_slots_resolved": len(preset_slots),
             "preset_sheet_errors": preset_sheet_errors,
             "notice_preset_slots": (
-                "preset_slots 는 넘어온 preset_*_content_base64(DIM/COL/BM)만큼만 "
-                "찬다 -- ID(시트) -> Name(시트) -> 슬롯(콘솔) 조인. POS.xx/FX.xx 는 "
-                "이 조인이 안 선다(POS 시트에 Name 열이 없고, FX 는 만드는 "
-                "파서·툴이 없다). 못 채운 종류를 참조하는 행은 held 로 떨어진다."
+                "preset_slots 는 넘어온 preset_*_content_base64/fx_content_base64"
+                "(DIM/COL/BM/FX)만큼만 찬다 -- ID(시트) -> Name(시트) -> 슬롯(콘솔) "
+                "조인. POS.xx 만 이 조인이 안 선다(POS 시트에 Name 열이 없다). "
+                "못 채운 종류를 참조하는 행은 held 로 떨어진다."
             ),
         }
         if not group_slots:

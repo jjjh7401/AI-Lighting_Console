@@ -238,16 +238,38 @@ def leaked_commands(bundles: list[tuple[str, ...]]) -> list[str]:
     ]
 
 
-def tool_arguments(payload: str, action: str, sequence_name: str) -> dict:
-    """`import_lxseq_cues` 에 넘길 인자. 스키마가 이 셋을 요구한다.
+def tool_arguments(
+    payload: str,
+    action: str,
+    sequence_name: str,
+    *,
+    preset_dim: str | None = None,
+    preset_col: str | None = None,
+    preset_bm: str | None = None,
+    fx: str | None = None,
+) -> dict:
+    """`import_lxseq_cues` 에 넘길 인자.
 
-    `additionalProperties: False` 라 여분 키를 넣으면 거절된다.
+    `additionalProperties: False` 라 여분 키를 넣으면 거절된다 -- 그래서
+    프리셋/FX 시트는 **넘어온 것만** 채운다. 안 준 종류는 툴 쪽에서
+    `preset_slots` 가 비어 held 로 떨어지고, 그 사유는 `payload` 의
+    `preset_sheet_errors`/`preset_slots_resolved` 로 보인다 -- 조용히
+    0 이 되지 않는다.
     """
-    return dict(
+    arguments: dict = dict(
         file_content_base64=payload,
         action=action,
         sequence_name=sequence_name,
     )
+    if preset_dim is not None:
+        arguments["preset_dim_content_base64"] = preset_dim
+    if preset_col is not None:
+        arguments["preset_col_content_base64"] = preset_col
+    if preset_bm is not None:
+        arguments["preset_bm_content_base64"] = preset_bm
+    if fx is not None:
+        arguments["fx_content_base64"] = fx
+    return arguments
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -264,6 +286,30 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000, help="onPC OSC 입력 포트")
+    parser.add_argument(
+        "--preset-dim-csv",
+        type=Path,
+        default=None,
+        help="선택 -- DIM 프리셋 RIG CSV. 없으면 DIM.xx 참조 행은 held 로 떨어진다",
+    )
+    parser.add_argument(
+        "--preset-col-csv",
+        type=Path,
+        default=None,
+        help="선택 -- COL 프리셋 RIG CSV. 없으면 COL.xx 참조 행은 held 로 떨어진다",
+    )
+    parser.add_argument(
+        "--preset-bm-csv",
+        type=Path,
+        default=None,
+        help="선택 -- BM 프리셋 RIG CSV. 없으면 BM.xx 참조 행은 held 로 떨어진다",
+    )
+    parser.add_argument(
+        "--fx-csv",
+        type=Path,
+        default=None,
+        help="선택 -- FX RIG CSV(ID/Name 열). 없으면 FX.xx 참조 행은 held 로 떨어진다",
+    )
     add_listen_port_argument(parser)
     parser.add_argument(
         "--limit",
@@ -308,6 +354,14 @@ def main(argv: list[str] | None = None) -> int:
 
     limit = None if args.limit == 0 else args.limit
     sheet = census(read_rows(args.cue_csv))
+    # 어느 프리셋/FX 시트를 실었는지 -- 안 실은 종류가 조용히 0 이 되지 않게
+    # 산출물에 그대로 남긴다(리드 지시).
+    preset_sheets_supplied = dict(
+        preset_dim_csv=str(args.preset_dim_csv) if args.preset_dim_csv else None,
+        preset_col_csv=str(args.preset_col_csv) if args.preset_col_csv else None,
+        preset_bm_csv=str(args.preset_bm_csv) if args.preset_bm_csv else None,
+        fx_csv=str(args.fx_csv) if args.fx_csv else None,
+    )
     out: dict[str, object] = dict(
         action=args.action,
         approve=args.approve,
@@ -317,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
         limit=limit,
         skip=args.skip,
         census=sheet,
+        preset_sheets_supplied=preset_sheets_supplied,
     )
 
     approval = _RecordingApproval(approve=args.approve)
@@ -367,12 +422,26 @@ def main(argv: list[str] | None = None) -> int:
             payload = base64.b64encode(slice_by_cue(args.cue_csv, limit, skip=args.skip)).decode(
                 "ascii"
             )
+
+            def _b64_or_none(path: Path | None) -> str | None:
+                if path is None:
+                    return None
+                return base64.b64encode(path.read_bytes()).decode("ascii")
+
             try:
                 execution = registry.dispatch(
                     ToolCall(
                         id="lxc1",
                         name="import_lxseq_cues",
-                        arguments=tool_arguments(payload, args.action, args.sequence_name),
+                        arguments=tool_arguments(
+                            payload,
+                            args.action,
+                            args.sequence_name,
+                            preset_dim=_b64_or_none(args.preset_dim_csv),
+                            preset_col=_b64_or_none(args.preset_col_csv),
+                            preset_bm=_b64_or_none(args.preset_bm_csv),
+                            fx=_b64_or_none(args.fx_csv),
+                        ),
                     )
                 )
             except Exception as error:  # noqa: BLE001
