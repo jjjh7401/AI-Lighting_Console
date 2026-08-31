@@ -1,0 +1,15 @@
+=== axis 1: 날 포트 (번역 없음) ===
+TimeoutError    <- 기존 검사가 쏘는 종류        probe_failures=2  unseen=2
+StateQueryError <- 프로덕션 종류             probe_failures=2  unseen=2
+
+=== axis 2: 표식 없는 포트 단위 번역 ===
+TimeoutError    + 번역                   probe_failures=2  unseen=2
+StateQueryError + 번역                   probe_failures=0  unseen=2
+
+=== 판정 ===
+기존 검사 종류(TimeoutError) 가 변하나?  False
+  probe_failures 2 -> 2
+프로덕션 종류(StateQueryError) 가 변하나? True
+  probe_failures 2 -> 0
+안전 결과(complete) 가 변하나?           False
+unseen 이 변하나?                        False

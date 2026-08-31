@@ -238,6 +238,26 @@ UNRESOLVED_TARGET_FIELDS = MappingProxyType(
 
 
 class FidPropertyPort(Protocol):
+    """콘솔 판독의 두 갈래 — 이 층이 콘솔에 대해 아는 전부다.
+
+    **응답 계약** [t194]. 이전 판은 시그니처만 있었고 무엇이 돌아오는지·무엇이
+    던져지는지 아무 데도 안 적혀 있었다 — 이 카드가 고친 거짓 귀속의 뿌리가 거기다.
+
+    - `ok=True` : 판독 성공. `value` 가 그 프로퍼티 값이다.
+    - `ok=False` : **부재** — 그 슬롯에 값이 없다(희소 풀이면 그 자체가 정보다).
+    - `ok=False` + `unreachable=True` : 부재가 **아니라 전송 실패**. 콘솔이 안 답했다는
+      뜻이고 「그 슬롯이 비었다」로 읽으면 안 된다. 프로덕션 포트는 이 형태를
+      `StateQueryError` **예외**로 내므로(`server/safety/console.py` 의
+      `query_property` — 타임아웃 :713, `not ok` :718 이 둘 다 raise 이고 `ok=False` 를
+      돌려주는 경로가 없다), 호출부의 `_SlotReadPort` 어댑터
+      (`server/orchestrator/tools.py`)가 여기로 **번역해** 넣는다. 이 층은
+      `server.safety` 를 임포트할 수 없다 — AC-018③ 이 막는다(`unreadable_root`).
+
+    `query_state` 의 실패는 **번역하지 않는다.** 루트를 못 읽은 것과 슬롯 하나를 못 읽은
+    것은 다른 사실이고, 그 구별이 사용자에게 나가는 사유를 가른다. t188 이 잰 「두 사유가
+    바이트 동일」은 그 구별이 없어서 생긴 것이었다.
+    """
+
     def query_state(self, path: str) -> Mapping[str, object]: ...
 
     def query_property(self, path: str, property_name: str) -> Mapping[str, object]: ...
@@ -1399,14 +1419,20 @@ def unreadable_root() -> ExistingFidRead:
     정하고 그 축은 여기 산다. 호출부가 같은 값을 손으로 조립하면 축이 하나 늘 때
     조용히 어긋난다 — 아래 `ok is not True` 갈래도 이 함수를 부른다.
 
-    **왜 예외를 여기서 안 잡는가.** 콘솔 포트가 던지는 `StateQueryError` 는
-    `server.safety` 의 것이고, 이 모듈이 속한 순수 로직 층(`server/vwx` ·
-    `server/prechk` · `server/rig`)은 그 층을 임포트한 선례가 **0건**이다
-    (2026-08-31 실측). 아키텍처 가드가 막는 것은 아니다 — 그 가드가 지키는 경계는
-    「OSC 전송 표면에 닿는 것은 `server/safety/` 하나」이고 예외 이름을 부르는 것은
-    거기 안 걸린다. 그래도 **선례 없는 방향으로 첫 발을 떼는 값**을 이 수리가 치를
-    이유가 없어서, **개념은 여기 두고 catch 는 호출부**
-    (`server/orchestrator/tools.py`)에 뒀다 — 그쪽은 이미 그 예외를 안다.
+    **왜 예외를 여기서 안 잡는가 — 가드가 실제로 막는다.** 콘솔 포트가 던지는
+    `StateQueryError` 는 `server.safety` 의 것이고, 이 층이 그것을 임포트하면
+    `server/tests/test_autopatch_execute.py` 의 AC-018③
+    (`test_no_vwx_module_imports_the_console_send_surface`)이 이 파일을 인자로 돌며
+    막는다 — 상대 import · alias · 동적 import 까지 보는 AST 스캐너다.
+    [t194 실측] 이전 판은 "그 가드가 지키는 경계는 OSC 전송 표면이고 예외 이름을
+    부르는 것은 거기 안 걸린다"고 적었다. **그 문장은 반증됐다** — 실제로 걸었다.
+
+    그래서 개념은 여기 두고, **예외는 호출부에서 응답으로 번역해** 들여보낸다
+    (`server/orchestrator/tools.py` 의 `_SlotReadPort`). 비대칭이 핵심이다 —
+    슬롯 판독 실패는 `{"ok": False, "unreachable": True}` 로 와서 아래
+    `unreadable_fids` 갈래를 타고, 루트 판독 실패는 **번역하지 않아** 예외 그대로
+    호출부의 catch 가 받아 이 함수를 부른다. 두 사유가 갈리는 자리가 그 비대칭이고,
+    t188 이 잰 "두 사유가 바이트 동일"은 번역이 없어서 생긴 것이었다.
 
     되돌리기 전에 위 문단을 읽어라. 「왜 안쪽에서 안 잡지」는 이미 물어봤고
     답이 여기 있다.
@@ -1567,7 +1593,11 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
                 # 단정하게 된다. 관측으로 올리지 않고 `unseen`에 남긴다 — fail-closed다.
                 # 응답은 왔지만 값이 FID로 해석되지 않은 경우(원전 독스트링 3번의
                 # 포인터 문자열)도 같은 자리에 남기고, 진단으로만 센다.
-                if probe.get("ok") is True:
+                # [t194] `unreachable` 는 부재가 아니라 **전송 실패**다(`FidPropertyPort`
+                # 독스트링). 그것까지 세지 않으면 열거 슬롯에서 방금 살린 구별이 스윕에서
+                # 그대로 죽는다 — 어댑터가 예외를 응답으로 바꾸므로 위 `except Exception`
+                # 은 더 이상 그 형태를 못 받는다(실측 2 -> 0, probes/sweep-exc-out.txt).
+                if probe.get("ok") is True or probe.get("unreachable") is True:
                     probe_failures += 1
                 continue
             read_slots.add(slot)

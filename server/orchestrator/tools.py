@@ -194,6 +194,7 @@ from server.vwx.mvr import read as read_mvr
 from server.vwx.patchplan import (
     ASSUMPTION_71_GO,
     ASSUMPTION_71_NEGATIVE,
+    FidPropertyPort,
     build_patch_plan,
     designed_attributes_by_candidate,
     plan_addresses,
@@ -1814,6 +1815,51 @@ _LXSEQ_GUIDANCE = (
     "이 툴의 바이트는 파일에서만 온다 — 사용자가 채팅에 붙여넣은 CSV 본문을 base64로 "
     "만들어 넣지 마라. 개행·공백이 조용히 깨져 잘못된 자리에 패치된다."
 )
+
+
+class _SlotReadPort:
+    """`read_existing_fids` 전용 — 슬롯 판독 실패를 **응답으로 번역한다** [t194].
+
+    프로덕션 포트는 프로퍼티 판독 실패를 `ok=False` 가 아니라 **예외**로 낸다
+    (`server/safety/console.py` 의 `query_property` — 타임아웃 :713, `not ok` :718
+    이 둘 다 raise 이고 `ok=False` 를 돌려주는 경로가 **없다**). 그 형태만
+    `patchplan` 의 슬롯 갈래를 못 타고 `read_existing_fids` 를 통째로 탈출했고,
+    아래 `except StateQueryError` 가 그것을 `unreadable_root()` 로 접어 **루트가
+    멀쩡한데도** "콘솔의 픽스처 루트 상태를 읽지 못했다"가 나갔다 — t188 이 루트
+    사망 팔과 슬롯 사망 팔의 사유 문자열이 **바이트 동일**임을 쟀다.
+
+    **왜 `patchplan` 안에서 안 잡는가.** AC-018③
+    (`test_no_vwx_module_imports_the_console_send_surface`)이 `server/vwx` 의
+    `server.safety` 임포트를 막는다. round17 적대 감사가 13가지 우회를 실증해 막은
+    AST 스캐너이고, 등기부가 아니라 **금지**라 우회 대상이 아니다.
+
+    **왜 `query_state` 는 안 감싸는가.** 감싸면 루트 실패가 `ok=False` 로 바뀌어
+    아래 `except StateQueryError` 가 죽은 코드가 된다. 루트 실패는 예외 그대로
+    흘려야 두 사유가 갈린다 — 이 **비대칭**이 이 클래스의 요점이다.
+
+    **왜 `unreachable` 표식을 다는가.** 열거 판독과 스윕 프로브가 **같은 포트
+    객체**를 쓴다. 표식 없이 `ok=False` 로만 번역하면 스윕이 전송 실패를 **부재와
+    구별하지 못해** `probe_failures` 가 그것을 안 센다 — 실측 2 -> 0
+    (`.moai/reports/t194/probes/sweep-exc-out.txt`). 그러면 이 카드가 고치려는
+    거짓 귀속이 한 층 아래에서 그대로 재현된다.
+    """
+
+    def __init__(self, inner: FidPropertyPort) -> None:
+        self._inner = inner
+
+    def query_state(self, path: str) -> dict:
+        return self._inner.query_state(path)
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        try:
+            return self._inner.query_property(path, property_name)
+        except StateQueryError:
+            return {
+                "ok": False,
+                "path": path,
+                "property": property_name,
+                "unreachable": True,
+            }
 
 
 class ToolRegistry:
@@ -4366,7 +4412,7 @@ def build_toolset(
             # 그대로 적었다: "이미 쓰이는 번호를 배정하게 되고 … MA3는 조용히 받아들여
             # 엉뚱한 픽스처를 덮는다. 이 앱에는 실행 취소가 없다."
             # 그래서 정식 판독기를 쓰고, **전수가 아니면 배정하지 않는다.**
-            fid_read = read_existing_fids(_InventoryPort(state_port, property_port))
+            fid_read = read_existing_fids(_SlotReadPort(_InventoryPort(state_port, property_port)))
             gaps = (
                 (fid_read.unseen or 0)
                 + fid_read.unreadable_fids
@@ -4747,7 +4793,7 @@ def build_toolset(
             state_port, {"groups": groups_path, "fixtures": fixtures_path}, frozenset(), 0
         )
         try:
-            fid_read = read_existing_fids(_InventoryPort(state_port, property_port))
+            fid_read = read_existing_fids(_SlotReadPort(_InventoryPort(state_port, property_port)))
         except StateQueryError:
             # 콘솔이 안 답한 것과 「루트 판독이 실패했다」는 같은 사실이다 —
             # 포트가 ok=False 를 주면 patchplan 이 이미 그렇게 답한다.
@@ -5454,7 +5500,7 @@ def build_toolset(
         occupants = occupants_from_patch_values(
             (record.patch_raw, record.name, record.fixture_type) for record in inventory.fixtures
         )
-        fid_read = read_existing_fids(inventory_port)
+        fid_read = read_existing_fids(_SlotReadPort(inventory_port))
 
         plan = build_import_plan(
             records=records,

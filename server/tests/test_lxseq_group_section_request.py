@@ -43,12 +43,13 @@ from server.orchestrator.tools import (
     DEFAULT_RIG_CONTEXT_PATHS,
     REASON_UNREACHABLE,
     REASON_UNRESOLVED,
+    _SlotReadPort,
     build_toolset,
     collect_rig_sections,
 )
 from server.rig.section import SECTION_UNREAD
 from server.safety.console import StateQueryError
-from server.vwx.patchplan import FID_PROPERTY_NAME
+from server.vwx.patchplan import FID_PROPERTY_NAME, _existing_fids_from_console
 
 GROUP_CSV = Path("server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.group.csv")
 PATCH_CSV = Path("server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv")
@@ -454,3 +455,219 @@ class TestASilentConsoleIsReportedNotCrashed:
 
         assert payload["console_read_incomplete"] is False
         assert payload["console_read_reason"] is None
+
+
+# ---------------------------------------------------------------------------
+# t194 6절 -- 슬롯 판독 실패는 루트 실패와 **다른 사유**를 낸다
+#
+# 고치기 전 실측(t188): 열거 슬롯의 `query_property` 가 예외를 내면
+# `read_existing_fids` 를 그대로 탈출했고, 한 층 위 `tools.py` 의
+# `except StateQueryError`(t182)가 그것을 `unreadable_root()` 로 접었다. 그래서
+# **루트가 정상 응답했는데도** 5절과 **바이트 동일한** 사유가 나갔다 --
+# t182 가 없앤 거짓 귀속이 한 층 위에서 재현된 것이다.
+#
+# 5절과의 관계: 5절은 "죽지 않는다"를, 이 절은 "**무엇이라고** 말하는가"를 잰다.
+# 5절만 있으면 두 원인을 한 사유로 접는 처방도 초록이 난다 -- 실제로 그랬다.
+#
+# 수용 기준(규약 3.6): 서로 다른 원인이 여전히 서로 다른 사유를 내는가.
+# 두 팔을 각각 죽여 사유 문자열이 바이트 동일이면 그 처방은 구별을 접은 것이다.
+# ---------------------------------------------------------------------------
+
+
+class _RaisingSlotProperty:
+    """루트 state 는 **통과시키고**, 지정 슬롯의 FID 프로퍼티만 예외로 만든다.
+
+    5절의 `_RaisingFixtureRoot` 와 **자극의 축이 다르다**: 저쪽은 경로 전체를
+    죽여 루트 판독부터 실패하고, 이쪽은 루트가 답한 뒤 슬롯 하나에서만 실패한다.
+    축을 갈라야 두 팔 대조가 성립한다(규약 3.3).
+    """
+
+    def __init__(self, base, slot: int, exc_type=StateQueryError) -> None:
+        self._base = base
+        self._slot = slot
+        self._exc_type = exc_type
+
+    def query_state(self, path, *args, **kwargs):
+        return self._base.query_state(path, *args, **kwargs)
+
+    def query_property(self, path, property_name):
+        if path == FIXTURES_PATH + "/" + str(self._slot) and property_name == FID_PROPERTY_NAME:
+            raise self._exc_type("no prop reply for " + repr(path) + " within 5.0s")
+        return self._base.query_property(path, property_name)
+
+    def __getattr__(self, name):
+        return getattr(self._base, name)
+
+
+class TestASlotReadFailureIsNotBlamedOnTheRoot:
+    def test_the_tool_survives_a_dead_slot_property(self):
+        """살아남는다 -- 고치기 전에는 여기서 예외가 도구를 탈출했다."""
+        payload = _payload_of(_RaisingSlotProperty(_Console(_patch_fids()), 2))
+
+        assert payload["console_read_incomplete"] is True
+
+    def test_the_slot_reason_actually_reaches_the_payload(self):
+        """사유가 **실제로 나간다** -- 세고 보고하는 것이지 삼키는 게 아니다.
+
+        이 팔이 없으면 "예외를 잡았다"만 지켜지고, 잡아서 조용히 버리는 처방도
+        초록이 난다. `patchplan` 의 round19 주석이 금지하는 것이 정확히 그것이다.
+        """
+        payload = _payload_of(_RaisingSlotProperty(_Console(_patch_fids()), 2))
+
+        reason = payload["console_read_reason"]
+        assert reason is not None
+        assert "열거된 슬롯" in reason
+        assert "FID 값을 얻지 못했다" in reason
+
+    def test_the_slot_reason_is_not_byte_identical_to_the_root_reason(self):
+        """🔴 이 카드의 수용 기준 -- 두 원인이 여전히 갈리는가.
+
+        고치기 전 이 두 값은 바이트 동일이었다(t188 실측). 한 층 위의 `catch` 가
+        세 자리를 한 사유로 접었기 때문이다. 같아지면 구별이 다시 접힌 것이다.
+        """
+        slot = _payload_of(_RaisingSlotProperty(_Console(_patch_fids()), 2))
+        root = _payload_of(_RaisingFixtureRoot(_Console(_patch_fids()), StateQueryError))
+
+        assert slot["console_read_reason"] != root["console_read_reason"]
+
+    def test_the_root_failure_still_names_the_root(self):
+        """불변식 팔 -- t182 가 세운 것을 안 무너뜨렸다.
+
+        기존 상태에서도 초록인 팔이라 쓸모없어 보이지만, 이 수리가 루트 갈래까지
+        슬롯 사유로 덮어쓰는 오설계를 가르는 유일한 팔이다(규약 3.5).
+        """
+        payload = _payload_of(_RaisingFixtureRoot(_Console(_patch_fids()), StateQueryError))
+
+        assert payload["console_read_reason"] == _ROOT_UNREAD_REASON
+
+    def test_an_unrelated_exception_is_not_swallowed(self):
+        """넓히기 방지 -- `except Exception` 으로 바꾸면 여기서 빨개진다.
+
+        무관한 버그를 "콘솔이 안 답했다"로 보고하면 이 수리가 없앤 거짓 귀속을
+        방향만 바꿔 새로 만든다. 잡는 종류를 못 박고 그 밖은 올려보낸다.
+        """
+        with pytest.raises(ValueError):
+            _dispatch(_RaisingSlotProperty(_Console(_patch_fids()), 2, ValueError))
+
+    def test_a_live_console_carries_no_slot_reason(self):
+        """대조군 -- 이 사유가 늘 붙는 게 아님을 보인다.
+
+        이 팔이 없으면 위 검사들은 사유를 상수로 하드코딩해도 초록이 난다.
+        """
+        payload = _payload_of(_Console(_patch_fids()))
+
+        assert payload["console_read_incomplete"] is False
+        assert payload["console_read_reason"] is None
+
+
+# ---------------------------------------------------------------------------
+# t194 7절 -- 스윕 전송 실패는 **부재로 접히지 않는다** (수용 기준 3)
+#
+# 6절의 수리는 슬롯 판독 실패를 예외 대신 **응답**으로 받는다. 그런데 열거 판독과
+# 스윕 프로브는 **같은 포트 객체**를 쓰므로, 그 번역은 그냥 두면 스윕까지 덮는다.
+# 덮이면 전송 실패가 `ok=False`(부재)와 구별 불가가 되어 `probe_failures` 가 그것을
+# 안 센다 -- 실측 2 -> 0 (`.moai/reports/t194/probes/sweep-exc-out.txt`).
+# 이 카드가 고치는 거짓 귀속이 **한 층 아래에서 그대로 재현**되는 형태다.
+#
+# 처방: 어댑터가 `unreachable=True` 표식을 달고, 스윕이 그 표식을 센다.
+#
+# 🔴 기존 검사는 이 회귀를 **못 잡는다.** `test_autopatch_fid.py` 의 R19 스윕 검사
+# (`probe_failure_count == 2`)가 스윕 예외를 쏘긴 하는데, 그것이 쏘는 종류는
+# `_R19SweepPort.hidden_mode="raise"` -> **`TimeoutError`** 다. 프로덕션이 던지는
+# 것은 `StateQueryError` 이고 어댑터는 그것만 번역한다 -- 그래서 회귀가 나도 그
+# 검사는 2 -> 2 로 초록이다. 한 입력 계열에만 맞춰진 방어가 그 계열의 형제를
+# 놓치는 형태다. 그 검사는 **자매지 대체가 아니라 그대로 두고**, 이 절이 더해진다.
+# ---------------------------------------------------------------------------
+
+
+class _TruncatedSweepPort:
+    """열거는 앞부분만 -- 나머지는 스윕이 찔러 본다. 실물 절단 형태다.
+
+    `present` 밖의 슬롯은 `exc` 를 던진다. 이 포트는 **어댑터를 안 거친** 날것이고,
+    검사가 `_SlotReadPort` 로 감싸서 프로덕션 경로를 만든다.
+    """
+
+    def __init__(self, *, total: int, rows, present, exc) -> None:
+        self.total = total
+        self.rows = rows
+        self.present = present
+        self.exc = exc
+
+    def query_state(self, path: str) -> dict:
+        return dict(
+            ok=True,
+            path=path,
+            node={"name": "Fixtures", "class": "Fixtures", "childCount": self.total},
+            children=[{"i": slot, "name": f"f{slot}"} for slot in self.rows],
+        )
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        slot = int(path.rsplit("/", 1)[1])
+        if slot in self.present:
+            return dict(ok=True, path=path, property=property_name, value=str(self.present[slot]))
+        raise self.exc("no prop reply for " + repr(path) + " within 5.0s")
+
+
+class _AbsentSweepPort(_TruncatedSweepPort):
+    """대조군 -- 콘솔이 답은 하는데 그 슬롯이 **비어 있다**(희소 풀이면 그게 정보다)."""
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        slot = int(path.rsplit("/", 1)[1])
+        if slot in self.present:
+            return dict(ok=True, path=path, property=property_name, value=str(self.present[slot]))
+        return dict(ok=False, path=path, property=property_name)
+
+
+_SWEEP_BASE = dict(total=3, rows=[1], present={1: 101})
+
+
+def _sweep(port):
+    """프로덕션 경로 -- 어댑터를 끼운 채 판독한다."""
+    return _existing_fids_from_console(_SlotReadPort(port))
+
+
+class TestASweepTransportFailureIsNotFoldedIntoAbsence:
+    def test_the_adapter_marks_a_transport_failure_as_unreachable(self):
+        """어댑터 계약 -- 예외가 **표식 붙은 응답**으로 번역된다.
+
+        표식이 없으면 아래 두 검사는 `ok=False` 만 보고 부재와 구별하지 못한다.
+        표식이 포트 계약의 일부라는 것을 여기서 못박는다(`FidPropertyPort` 독스트링).
+        """
+        port = _SlotReadPort(_TruncatedSweepPort(exc=StateQueryError, **_SWEEP_BASE))
+
+        response = port.query_property(FIXTURES_PATH + "/2", FID_PROPERTY_NAME)
+
+        assert response["ok"] is False
+        assert response["unreachable"] is True
+
+    def test_a_sweep_transport_failure_still_counts_as_a_probe_failure(self):
+        """🔴 수용 기준 3 -- **프로덕션 예외 종류**로 쏜다.
+
+        어댑터를 끼운 뒤에도 `probe_failures` 가 는다. 표식 검사를 빼면 2 -> 0 으로
+        떨어지고 전송 실패가 부재와 한 바구니에 들어간다.
+        """
+        read = _sweep(_TruncatedSweepPort(exc=StateQueryError, **_SWEEP_BASE))
+
+        assert read.probe_failures == 2
+
+    def test_an_absent_slot_is_still_not_counted(self):
+        """🔴 넓히기 방지 -- `ok=False` 전부를 세는 처방을 가른다.
+
+        위 검사만 있으면 "`ok is True` 조건을 지운다"가 가장 싼 통과법이다. 그러면
+        희소 풀의 **부재**까지 전송 실패로 세어 `patchplan` round19 주석이 지키는
+        구별(부재인지 판독 실패인지 알 수 없으니 fail-closed)을 죽인다.
+        """
+        read = _sweep(_AbsentSweepPort(exc=StateQueryError, **_SWEEP_BASE))
+
+        assert read.probe_failures == 0
+        assert read.unseen == 2
+
+    def test_the_timeout_arm_is_not_replaced(self):
+        """자매 팔 -- 어댑터가 번역하지 않는 종류는 여전히 스윕의 `except` 가 센다.
+
+        `test_autopatch_fid.py` 의 R19 검사가 쏘는 종류가 이것이다. 이 절이 그것을
+        **대체하지 않는다**는 것을 여기서 보인다 -- 두 종류는 자매다.
+        """
+        read = _sweep(_TruncatedSweepPort(exc=TimeoutError, **_SWEEP_BASE))
+
+        assert read.probe_failures == 2
