@@ -5304,16 +5304,91 @@ def build_toolset(
                 if isinstance(name, str) and name and isinstance(slot, int):
                     group_slots[name] = slot
 
-        # preset_slots 는 비워 둔다 -- 의도적 공백이다, 결측치가 아니다.
-        # preset_store_commands(server/presets/store.py:52-54)가 콘솔 Label 에
-        # 싣는 값은 CSV 의 Name(사람이 읽는 서술)이지 preset_id("COL.01")가
-        # 아니다 -- 이름으로 되읽어도 preset_id 와 안 맞는다. preset_id -> 콘솔
-        # 슬롯을 잇는 산출물이 이 저장소 어디에도 없다. POS.xx/FX.xx 는 애초에
-        # 그 값을 만드는 파서·툴이 없다(PRESET_ID_PREFIXES 는 DIM/COL/BM 셋뿐,
-        # server/lxseq/preset_parser.py:54-56). 비워 두면 map_cues 가 프리셋을
-        # 참조하는 모든 행을 "슬롯 미해결" 사유로 held 에 담는다 -- 반쯤 맞는
-        # 값보다 0건이 낫다는 이 도메인의 원칙과 같다.
+        # preset_slots -- ID -> Name(시트) + Name -> 슬롯(콘솔) = ID -> 슬롯.
+        # DIM/COL/BM 세 종류만 된다: preset_store_commands(server/presets/
+        # store.py:52-54)가 콘솔 Label 에 싣는 값이 CSV 의 Name(사람이 읽는
+        # 서술)이므로, 그 세 시트가 있으면 ID -> Name -> 슬롯 조인이 선다.
+        # 인자로 넘어오지 않은 종류는 조용히 빈 채로 남는다 -- 그 종류를
+        # 참조하는 행은 "슬롯 미해결"로 held 에 떨어진다(0건이 반쯤 맞는
+        # 값보다 낫다는 원칙, 리드 승인 2026-08-31).
+        #
+        # 🔴 POS.xx/FX.xx 는 이 조인이 안 선다 -- POS 시트는 열이
+        # `ID,StageMeaning,TargetGroup,RecordGuide` 라 Name 자체가 없고(§10),
+        # FX 는 그 값을 만드는 파서·툴이 이 저장소에 없다(PRESET_ID_PREFIXES
+        # 는 DIM/COL/BM 셋뿐, server/lxseq/preset_parser.py:54-56). 둘 다
+        # 범위 밖이다 -- 리드 확인.
         preset_slots: dict[str, int] = {}
+        preset_sheet_args = (
+            ("preset-dim", "preset_dim_content_base64"),
+            ("preset-col", "preset_col_content_base64"),
+            ("preset-bm", "preset_bm_content_base64"),
+        )
+        preset_sheet_errors: dict[str, str] = {}
+        for kind, arg_name in preset_sheet_args:
+            raw_preset = call.arguments.get(arg_name)
+            if not isinstance(raw_preset, str) or not raw_preset.strip():
+                continue
+            try:
+                preset_bytes = base64.b64decode(raw_preset, validate=True)
+                preset_text = preset_bytes.decode("utf-8")
+            except (binascii.Error, ValueError, UnicodeDecodeError):
+                preset_sheet_errors[arg_name] = "base64 또는 UTF-8이 아니다"
+                continue
+            try:
+                preset_parsed = parse_preset_csv(preset_text)
+            except UnknownPresetSheetError as error:
+                preset_sheet_errors[arg_name] = str(error)
+                continue
+            if preset_parsed.sheet_kind != kind:
+                preset_sheet_errors[arg_name] = (
+                    f"헤더가 '{kind}' 가 아니라 '{preset_parsed.sheet_kind}' 로 읽혔다"
+                )
+                continue
+            id_to_name = {r.preset_id: r.name for r in preset_parsed.records}
+
+            pool_path = None
+            try:
+                pools_path = rig_paths.get(
+                    "preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
+                )
+                pools_first = state_port.query_state(pools_path)
+            except Exception:  # noqa: BLE001
+                pools_first = {"ok": False}
+            if pools_first.get("ok"):
+                pool_children, _truncated = paged_children(state_port, pools_path, pools_first)
+                family = _PRESET_POOL_FAMILY[kind]
+                for child in pool_children:
+                    obj = rig_object(child)
+                    pool_name = str(obj.get("name") or "")
+                    pool_no = obj.get("no")
+                    if isinstance(pool_no, int) and pool_name.casefold().startswith(
+                        family.casefold()
+                    ):
+                        pool_path = str(pools_path) + "/" + str(pool_no)
+                        break
+            if pool_path is None:
+                preset_sheet_errors[arg_name] = f"'{family}' 로 시작하는 풀을 못 찾았다"
+                continue
+            try:
+                slots_first = state_port.query_state(pool_path)
+            except Exception as exc:  # noqa: BLE001
+                preset_sheet_errors[arg_name] = str(exc)
+                continue
+            if not slots_first.get("ok"):
+                preset_sheet_errors[arg_name] = "풀 슬롯 목록이 안 왔다"
+                continue
+            slot_children, _truncated = paged_children(state_port, pool_path, slots_first)
+            name_to_slot: dict[str, int] = {}
+            for child in slot_children:
+                obj = rig_object(child)
+                name = obj.get("name")
+                slot = obj.get("no")
+                if isinstance(name, str) and name and isinstance(slot, int):
+                    name_to_slot[name] = slot
+            for preset_id, name in id_to_name.items():
+                slot = name_to_slot.get(name)
+                if slot is not None:
+                    preset_slots[preset_id] = slot
 
         result = map_cues(
             parsed.records,
@@ -5366,10 +5441,12 @@ def build_toolset(
             "unverified_reason": result.unverified_reason,
             "group_slots_resolved": len(group_slots),
             "preset_slots_resolved": len(preset_slots),
+            "preset_sheet_errors": preset_sheet_errors,
             "notice_preset_slots": (
-                "preset_slots 는 의도적으로 비어 있다 -- preset_id -> 콘솔 슬롯을 "
-                "잇는 산출물이 이 저장소에 아직 없다. 프리셋을 참조하는 행은 전부 "
-                "held 로 떨어진다."
+                "preset_slots 는 넘어온 preset_*_content_base64(DIM/COL/BM)만큼만 "
+                "찬다 -- ID(시트) -> Name(시트) -> 슬롯(콘솔) 조인. POS.xx/FX.xx 는 "
+                "이 조인이 안 선다(POS 시트에 Name 열이 없고, FX 는 만드는 "
+                "파서·툴이 없다). 못 채운 종류를 참조하는 행은 held 로 떨어진다."
             ),
         }
         if not group_slots:
@@ -10449,6 +10526,22 @@ def build_toolset(
                         "description": (
                             "시퀀스를 찾거나 만들 이름(곡/쇼 이름, 예 'Sugar'). CSV 바이트에는 없다"
                         ),
+                    },
+                    "preset_dim_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "선택 -- DIM 프리셋 시트 바이트(base64). 있으면 DIM.xx "
+                            "참조 행의 콘솔 슬롯을 이름으로 이어 계획에 넣는다. "
+                            "없으면 그 행은 held 로 떨어진다"
+                        ),
+                    },
+                    "preset_col_content_base64": {
+                        "type": "string",
+                        "description": "선택 -- COL 프리셋 시트 바이트(base64). 위와 같은 규칙",
+                    },
+                    "preset_bm_content_base64": {
+                        "type": "string",
+                        "description": "선택 -- BM 프리셋 시트 바이트(base64). 위와 같은 규칙",
                     },
                 },
                 "required": ["file_content_base64", "sequence_name"],

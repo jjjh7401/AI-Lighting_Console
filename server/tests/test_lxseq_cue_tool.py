@@ -46,6 +46,9 @@ class TestRegistration:
             "file_content_base64",
             "action",
             "sequence_name",
+            "preset_dim_content_base64",
+            "preset_col_content_base64",
+            "preset_bm_content_base64",
         }
 
 
