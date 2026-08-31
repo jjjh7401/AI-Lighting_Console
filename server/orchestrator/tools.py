@@ -5269,6 +5269,17 @@ def build_toolset(
                 "'sequence_name'이 없다 -- map_cues 는 시퀀스를 이름으로 찾거나 만든다. "
                 "곡/쇼 이름을 넘겨라(예: 'Sugar'). CSV 바이트에는 그 이름이 없다.",
             )
+        if "'" in sequence_name:
+            # 전송 명령은 홑따옴표로 감싼다(protocol.py 는 큰따옴표만 막지만,
+            # MA3 문법에서 홑따옴표 문자열은 홑따옴표로 닫힌다 -- 이름 안에
+            # 홑따옴표가 있으면 문자열이 거기서 조기 종료된다). 이스케이프
+            # 없이 fail-closed -- 잘못 자른 이름이 콘솔에 박히는 것보다 낫다.
+            return _error_result(
+                call,
+                "'sequence_name'에 홑따옴표(')가 있다 -- 전송 명령이 이름을 홑따옴표로 "
+                "감싸는데(Store Sequence ... '<name>' ...) 안에 홑따옴표가 있으면 문자열이 "
+                "거기서 잘린다. 홑따옴표를 빼고 다시 불러라.",
+            )
         try:
             text = sheet_bytes.decode("utf-8")
         except UnicodeDecodeError:
@@ -5596,7 +5607,7 @@ def build_toolset(
         sequence_create_command: str | None = None
         if result.placement is not None:
             sequence_create_command = (
-                f'Store Sequence {sequence_placement_no} "{sequence_name}" /NoConfirm'
+                f"Store Sequence {sequence_placement_no} '{sequence_name}' /NoConfirm"
             )
         for bucket in result.planned if sequence_placement_no is not None else ():
             commands: list[str] = ["ClearAll"]
@@ -5604,7 +5615,7 @@ def build_toolset(
             fx_stopped: list[str] = []
             fade_candidates: list[float] = []
             for row in bucket.rows:
-                commands.append(f'Group "{row.group}"')
+                commands.append(f"Group '{row.group}'")
                 if row.dim is not None:
                     commands.append(f"At {_fmt_num(row.dim)}")
                 for ref in (row.col, row.bm):
@@ -5641,7 +5652,7 @@ def build_toolset(
             cueno = int(bucket.cue_no.lstrip("Q"))
             cue_fade = max(fade_candidates) if fade_candidates else 0.0
             commands.append(
-                f'Store Cue {cueno} "{bucket.cue_no}" CueFade {_fmt_num(cue_fade)} '
+                f"Store Cue {cueno} '{bucket.cue_no}' CueFade {_fmt_num(cue_fade)} "
                 f"Sequence {sequence_placement_no} /Merge /NoConfirm"
             )
             if sequence_create_command is not None:

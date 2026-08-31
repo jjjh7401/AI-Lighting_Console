@@ -303,6 +303,19 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # Both protected ranges (234..238 / 524..569) untouched -- nearest hunks
 # around 234..238 are 184 and 302 (unchanged); around 524..569 are 479 and
 # 591 (unchanged).
+# t209 (Store Cue command generation) added a single-quote-vs-double-quote
+# fix (protocol.py rejects a literal double quote -- MA3 grammar needs the
+# transport form single-quoted, ma3.txt's own double quotes are for a
+# human pasting into the console, not this wire path -- reproduced live by
+# the lead session on the real console before this fix) plus a fail-closed
+# guard refusing a single quote inside --sequence-name (would prematurely
+# close the single-quoted MA3 string). Measured delta: 48->47 hunks, start
+# point **1190** disappeared (the new guard sits right after the
+# sequence_name validation at old-line ~1183 and merged with what used to
+# be a separate hunk at 1190 into one contiguous hunk), no new start point.
+# Both protected ranges (234..238 / 524..569) untouched -- nearest hunks
+# around 234..238 are 184 and 302 (unchanged); around 524..569 are 479 and
+# 591 (unchanged).
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -344,7 +357,6 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1179,
     1181,
     1183,
-    1190,
     1192,
     1196,
     1198,
