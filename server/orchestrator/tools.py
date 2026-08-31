@@ -2956,6 +2956,15 @@ def build_toolset(
             )
         try:
             inventory = read_inventory(_InventoryPort(state_port, property_port))
+        except StateQueryError as error:
+            # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
+            # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
+            # 준비해 두고도 InventoryReadError 만 알아서 이 갈래를 놓치고 있었다
+            # (t181/t187 5+1: read_inventory 는 포트의 StateQueryError 를 그대로
+            #  흘린다; ok=False 갈래만 InventoryReadError 가 된다).
+            return _error_result(
+                call, f"console did not answer — fixture inventory unread: {error}"
+            )
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
         # ASSUMPTION-27 is NEGATIVE (progress.md §E.2 M0): the EXACT-width
@@ -3139,6 +3148,15 @@ def build_toolset(
 
         try:
             inventory = read_inventory(_InventoryPort(state_port, property_port))
+        except StateQueryError as error:
+            # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
+            # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
+            # 준비해 두고도 InventoryReadError 만 알아서 이 갈래를 놓치고 있었다
+            # (t181/t187 5+1: read_inventory 는 포트의 StateQueryError 를 그대로
+            #  흘린다; ok=False 갈래만 InventoryReadError 가 된다).
+            return _error_result(
+                call, f"console did not answer — fixture inventory unread: {error}"
+            )
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
 
@@ -3321,6 +3339,15 @@ def build_toolset(
         # "없음"은 관측이 아니라 미판독이다. 거부로 끝나는 호출에서도 사용자는 그 이유를 봐야 한다.
         try:
             inventory = read_inventory(inventory_port)
+        except StateQueryError as error:
+            # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
+            # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
+            # 준비해 두고도 InventoryReadError 만 알아서 이 갈래를 놓치고 있었다
+            # (t181/t187 5+1: read_inventory 는 포트의 StateQueryError 를 그대로
+            #  흘린다; ok=False 갈래만 InventoryReadError 가 된다).
+            return _error_result(
+                call, f"console did not answer — fixture inventory unread: {error}"
+            )
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
         caveat = console_read_caveat(inventory)
@@ -3954,6 +3981,15 @@ def build_toolset(
             )
         try:
             inventory = read_inventory(_InventoryPort(state_port, property_port))
+        except StateQueryError as error:
+            # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
+            # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
+            # 준비해 두고도 InventoryReadError 만 알아서 이 갈래를 놓치고 있었다
+            # (t181/t187 5+1: read_inventory 는 포트의 StateQueryError 를 그대로
+            #  흘린다; ok=False 갈래만 InventoryReadError 가 된다).
+            return _error_result(
+                call, f"console did not answer — fixture inventory unread: {error}"
+            )
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
 
@@ -4530,6 +4566,11 @@ def build_toolset(
         def _verify() -> tuple[object | None, str]:
             try:
                 return read_inventory(_InventoryPort(state_port, property_port)), ""
+            except StateQueryError as error:
+                # 재조회 팔은 첫 읽기(위 except StateQueryError)와 같은 비대칭을
+                # 반복한다 — 실행 후 재확인에서도 콘솔 침묵과 인벤토리 불가독을
+                # 갈라야 한다(t187 5+1, 정적 확인; 발사 확인은 나머지 4곳으로 갈음).
+                return None, f"console did not answer — {error}"
             except InventoryReadError as error:
                 return None, str(error)
 
