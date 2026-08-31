@@ -49,7 +49,13 @@ ExitWorktree(action remove) — 최초 t198 진입 때 실행(작업 없음, 안
 
 moai worktree done 브랜치명(--delete-branch 미지정), t198-disposal-test 대상 L1(.claude/worktrees) 경로 — 관측: 성공. 워크트리 디렉터리 제거(git worktree list 에서 사라짐). 브랜치는 남았다(git branch -a 에 잔존, 수동 git branch -D 로 정리).
 
-규약(lane-protocol.md)의 "moai worktree done 은 L2 트리에만 걸린다" 주장은 이 환경에서 반증된다. 실측: moai worktree done 은 L1(.claude/worktrees) 경로에도 정상 동작했다(exit 0, Worktree removed 출력). 부수 확인: 사용자 홈 아래 .moai/worktrees 디렉터리는 이 환경에 존재하지 않고, .moai 아래에도 별도 워크트리 레지스트리 파일이 없다(백업본 스킬 문서만 매치) — done 은 git 자체의 worktree 목록을 브랜치명으로 조회할 뿐, L1/L2 를 가르는 별도 등록부는 이 프로젝트에 실재하지 않는 것으로 보인다.
+규약(lane-protocol.md)의 "moai worktree done 은 L2 트리에만 걸린다" 주장은 두 갈래로 갈라 읽어야 한다 — 리드 재검토로 정정.
+
+(a) 행동 주장 — "done 은 L1 에서 처분이 아니라 범주 오류다" — 반증됨. throwaway 트리(t198-disposal-test)에 실제로 쐈고 exit 0, "Worktree removed" 출력, git worktree list 에서 소멸을 직접 관측했다. 이건 단단한 반증이다.
+
+(b) 등록부 주장 — "L1 은 moai worktree 의 내부 등록부에 없다" — 미측정이다. 이 카드가 확인한 것은 사용자 홈 아래 .moai/worktrees 디렉터리의 부재와 .moai 안에서 찾은 이름의 파일 부재뿐이다. 찾은 파일이 없다고 등록부 자체가 없다는 증거는 아니다(존재는 도달의 증거가 아니듯, 부재도 부존재의 증거가 아니다). moai worktree --help 에 recover(Repair worktree registry) verb 가 실재해 등록부 개념 자체는 있다는 근거가 되고, 반면 list verb 는 없어 help 가 "For inspection, use git directly: git worktree list" 로 안내한다 — 그래서 "등록부에 있나"를 CLI 로 직접 물을 수단이 이 환경엔 없다. 이 카드는 그 수단 부재 때문에 (b)를 검증하지 못한 채 "실재하지 않는 것으로 보인다"로 완화해 썼는데, 완료 보고 요약 메시지에서는 그 완화가 떨어져 나가 "반증됨"으로만 전달됐다 — 요약이 본문보다 세지면 그게 다음 사람에게 가는 값이므로, 요약에도 (a)/(b) 구분을 반드시 실어야 한다.
+
+(b) 를 재는 방법 둘(이 카드에서는 미실행, 다음 카드로 이연): 1) moai 바이너리(moai-adk 3.1.2, ~/.local/bin/moai — 이 저장소 소스가 아니라 별도 설치된 CLI라 이 워크트리에서 소스 직독은 불가, 소스 저장소 위치부터 확인 필요) 의 done 구현을 읽어 L1/L2 분기 로직이 실제로 있는지 확인. 2) recover 를 실행해(recover 는 "scanning disk and running git worktree repair" 라 명시돼 있다) 무엇을 읽고 쓰는지 관측 — 단, recover 는 상태를 바꾸는 동작이라 "확인과 사고가 같은 행위"가 될 위험이 있으므로 실행 전 별도 안전장치(스냅샷 등) 없이는 쏘지 않는다.
 
 두 경로(ExitWorktree remove, moai worktree done)는 관측된 효과가 동일하다: 디렉터리 제거 + 브랜치 존속. 세션 종료 시 TUI 의 keep/remove 프롬프트 자체는 세션을 실제로 끝내야 재현되므로 이 레인에서 직접 재현하지 못했다(갭으로 남김) — ExitWorktree 가 그 프롬프트의 프로그램적 등가물일 가능성이 높다는 것이 근거 있는 추정이지, 확인된 사실은 아니다.
 
@@ -78,6 +84,7 @@ docs/reports/·루트 reports/ 등 인접 인용 경로는 미감사(A절 인접
 세션 종료 시 실제 TUI keep/remove 프롬프트를 직접 재현하지 못함(ExitWorktree 로 대리 측정).
 37개 깨진 경로가 커밋된 적 없음인지 커밋됐다가 유실인지 개별 이력 대조는 안 함(전수 git log 필요, 규모상 이 카드에서 생략).
 0절 사고의 이동 가설(대 지연 등록)은 리드도 확정하지 못한 가설 — 다음 clear 때 전 폴더 동시 관측 필요.
+(b) 등록부 존재 여부 — moai 바이너리 소스 직독 또는 recover 관측으로 재는 방법이 B 절에 있으나 이 카드에서는 미실행(다음 카드로 이연).
 
 ## Residual risk
 
