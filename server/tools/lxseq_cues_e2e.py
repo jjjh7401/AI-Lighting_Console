@@ -247,6 +247,7 @@ def tool_arguments(
     preset_col: str | None = None,
     preset_bm: str | None = None,
     fx: str | None = None,
+    cue_sheet_xlsx: str | None = None,
 ) -> dict:
     """`import_lxseq_cues` 에 넘길 인자.
 
@@ -269,6 +270,8 @@ def tool_arguments(
         arguments["preset_bm_content_base64"] = preset_bm
     if fx is not None:
         arguments["fx_content_base64"] = fx
+    if cue_sheet_xlsx is not None:
+        arguments["cue_sheet_xlsx_base64"] = cue_sheet_xlsx
     return arguments
 
 
@@ -309,6 +312,16 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=None,
         help="선택 -- FX RIG CSV(ID/Name 열). 없으면 FX.xx 참조 행은 held 로 떨어진다",
+    )
+    parser.add_argument(
+        "--cue-sheet-xlsx",
+        type=Path,
+        default=None,
+        help=(
+            "선택 -- 정본 CUE 시트 xlsx('CUE' 탭). 있으면 CueFade 근사 대신 "
+            "정본 Fade 열, 라벨을 Q# 만이 아니라 Q#+Section+Mood 로 낸다. "
+            "없으면 지금처럼 근사로 폴백한다"
+        ),
     )
     add_listen_port_argument(parser)
     parser.add_argument(
@@ -361,6 +374,7 @@ def main(argv: list[str] | None = None) -> int:
         preset_col_csv=str(args.preset_col_csv) if args.preset_col_csv else None,
         preset_bm_csv=str(args.preset_bm_csv) if args.preset_bm_csv else None,
         fx_csv=str(args.fx_csv) if args.fx_csv else None,
+        cue_sheet_xlsx=str(args.cue_sheet_xlsx) if args.cue_sheet_xlsx else None,
     )
     out: dict[str, object] = dict(
         action=args.action,
@@ -441,6 +455,7 @@ def main(argv: list[str] | None = None) -> int:
                             preset_col=_b64_or_none(args.preset_col_csv),
                             preset_bm=_b64_or_none(args.preset_bm_csv),
                             fx=_b64_or_none(args.fx_csv),
+                            cue_sheet_xlsx=_b64_or_none(args.cue_sheet_xlsx),
                         ),
                     )
                 )

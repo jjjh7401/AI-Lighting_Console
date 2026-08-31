@@ -178,6 +178,7 @@ class TestSequenceName:
         assert "preset_col_content_base64" not in args
         assert "preset_bm_content_base64" not in args
         assert "fx_content_base64" not in args
+        assert "cue_sheet_xlsx_base64" not in args
 
     def test_supplied_preset_and_fx_sheets_are_carried_through(self) -> None:
         args = tool_arguments(
@@ -188,11 +189,13 @@ class TestSequenceName:
             preset_col="dGVzdA==",
             preset_bm="dGVzdA==",
             fx="dGVzdA==",
+            cue_sheet_xlsx="dGVzdA==",
         )
         assert args["preset_dim_content_base64"] == "dGVzdA=="
         assert args["preset_col_content_base64"] == "dGVzdA=="
         assert args["preset_bm_content_base64"] == "dGVzdA=="
         assert args["fx_content_base64"] == "dGVzdA=="
+        assert args["cue_sheet_xlsx_base64"] == "dGVzdA=="
 
 
 def _variant_header_csv(tmp_path: Path) -> Path:
