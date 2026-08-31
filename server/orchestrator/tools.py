@@ -5319,6 +5319,40 @@ def build_toolset(
                     truncated=sequences_truncated,
                 )
 
+        # 큐 층 already_present 판정 재료 -- 시퀀스가 이미 있으면 그 안의
+        # 실제 큐 번호(cueNo, 응답기 1.5.0+)를 읽는다. 없으면(새 시퀀스,
+        # 또는 못 읽음) 빈 튜플 -- map_cues 는 새 시퀀스에서는 이 값을 안
+        # 쓴다(cue_mapper.py:is_new_sequence 가드). t209 리드 재현
+        # 2026-08-31: 이 조회 없이는 시퀀스가 있다는 사실 하나로 18큐가
+        # 통째로 안 나갔다 -- 컨테이너 층과 항목 층을 갈라야 한다.
+        existing_cue_numbers: tuple[int, ...] = ()
+        section_objects = sequence_section.get("objects")
+        if isinstance(section_objects, list):
+            existing_sequence_slot = None
+            for obj in section_objects:
+                if (
+                    isinstance(obj, dict)
+                    and obj.get("name") == sequence_name
+                    and isinstance(obj.get("no"), int)
+                ):
+                    existing_sequence_slot = obj["no"]
+                    break
+            if existing_sequence_slot is not None:
+                seq_item_path = str(sequences_path) + "/" + str(existing_sequence_slot)
+                try:
+                    seq_item_first = state_port.query_state(seq_item_path)
+                except Exception:  # noqa: BLE001
+                    seq_item_first = {"ok": False}
+                if seq_item_first.get("ok"):
+                    seq_children, _truncated = paged_children(
+                        state_port, seq_item_path, seq_item_first
+                    )
+                    existing_cue_numbers = tuple(
+                        c.get("cueNo")
+                        for c in seq_children
+                        if isinstance(c, dict) and isinstance(c.get("cueNo"), int)
+                    )
+
         # 그룹 이름 -> 콘솔 그룹 번호. import_lxseq_groups 가 Label 로 그룹
         # 이름 자체를 그대로 심으므로(server/groupgen/write.py _label_command),
         # 이름으로 되읽는 것이 맞다.
@@ -5518,6 +5552,7 @@ def build_toolset(
             sequence_section=sequence_section,
             group_slots=group_slots,
             preset_slots=preset_slots,
+            existing_cue_numbers=existing_cue_numbers,
         )
 
         placement = result.placement or result.already_present
@@ -5558,6 +5593,7 @@ def build_toolset(
             "refusal_detail": result.refusal_detail or None,
             "sequence_no": placement.slot if placement is not None else None,
             "already_present": result.already_present is not None,
+            "cues_already_present": list(result.cues_already_present),
             "unverified": list(result.unverified),
             "unverified_reason": result.unverified_reason,
             "group_slots_resolved": len(group_slots),

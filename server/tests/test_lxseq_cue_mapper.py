@@ -443,11 +443,55 @@ def test_slot_shortfall_refuses_instead_of_overwriting():
 
 
 def test_existing_name_is_convergence_not_refusal():
+    """시퀀스 층 수렴이지 계획 자체를 막지 않는다(t209 리드 재현, 2026-08-31:
+    시퀀스가 이미 있다고 18큐 전체가 안 나갔다) -- existing_cue_numbers 를
+    안 주면(이 시퀀스 안에 뭐가 있는지 안 잰 것과 같다) 큐 층 판단을 못
+    하니 planned 를 낸다. 큐 층 자체 판정은 아래 별도 검사가 확인한다."""
     section = _readable_section([dict(no=4, name="Sugar")])
     result = _map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55")], section=section)
-    assert result.refusal is None  # 거절이 아니다 — 목표 상태가 이미 달성돼 있다
-    assert result.planned == ()
+    assert result.refusal is None  # 거절이 아니다 -- 목표 상태가 이미 달성돼 있다
+    assert len(result.planned) == 1
+    assert result.planned[0].cue_no == "Q010"
+    assert result.placement is None
     assert result.already_present.slot == 4
+    assert result.cues_already_present == ()
+
+
+def test_a_cue_number_already_in_the_sequence_is_skipped_not_replanned():
+    """큐 층 -- 시퀀스가 이미 있고 그 안에 Q010(cueNo=10)이 이미 있으면 그
+    큐만 뺀다. 나머지 선언 큐는 그대로 계획한다(형제 preset_mapper 의 레코드
+    단위 NAME_TAKEN 과 같은 무게, 컨테이너가 아니라 항목 단위)."""
+    section = _readable_section([dict(no=4, name="Sugar")])
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q020", group="BACK", dim_raw="60"),
+        ],
+        declared=("Q010", "Q020"),
+        section=section,
+        existing_cue_numbers=(10,),
+    )
+    assert result.refusal is None
+    assert result.cues_already_present == ("Q010",)
+    assert [b.cue_no for b in result.planned] == ["Q020"]
+    assert result.already_present.slot == 4
+    assert result.placement is None
+
+
+def test_a_new_sequence_ignores_existing_cue_numbers():
+    """새 시퀀스에는 큐가 있을 수 없다 -- existing_cue_numbers 를 실수로
+    넘겨도(예: 다른 호출의 값을 재사용) 무시한다."""
+    section = _readable_section([])
+    result = _map(
+        [StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55")],
+        section=section,
+        existing_cue_numbers=(10,),
+    )
+    assert result.refusal is None
+    assert result.cues_already_present == ()
+    assert len(result.planned) == 1
+    assert result.placement is not None
+    assert result.already_present is None
 
 
 def test_unreadable_name_is_declared_not_refused():
