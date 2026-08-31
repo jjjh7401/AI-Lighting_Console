@@ -168,3 +168,35 @@ per-file-ignores   빌드파이프라인 11개 파일만 — .moai/reports/ 는 
 - **`ExitWorktree` 복귀 자리 3차 확인**: t194 트리에서 나오니 primary 가 아니라
   세션 시작 디렉터리(`~/orca/workspaces/AI-Lighting_Console/LX-SEQ`)로 갔다.
   t197·t198 에 이은 세 번째 독립 관측이다 — t199 의 결함 2 를 지지한다.
+
+### 10.1 정정 — 위 §10 의 예측은 절반만 맞았다 (push 에서 반증됨)
+
+§10 에 「프로브를 규칙에 맞게 다시 썼다」고 적고 push 했더니 **pre-push 게이트가 막았다.**
+지우지 않고 고지한다 — 틀리게 주장했다는 사실이 감사 기록이다(규약 §5).
+
+```
+FAILED server/tests/test_overlap_preserve.py::TestTouchedFilesPassLint::test_ruff_format_reports_no_change
+  Would reformat: .moai/reports/t191/probes/index_budget.py
+  1 file would be reformatted, 411 files already formatted
+```
+
+🔴 **ruff 축이 둘인데 나는 하나만 읽었다.**
+
+| 축 | 명령 | 내 예측 | 실제 |
+|---|---|---|---|
+| 린트 | `uv run ruff check` | 통과 | **통과** (`All checks passed!`) — UP031·E501 회피는 유효했다 |
+| 포매터 | `uv run ruff format --check` | (안 봤다) | **실패** — 게이트가 막음 |
+
+`pyproject.toml` 의 `[tool.ruff.lint] select` 를 읽고 「규칙을 다 봤다」고 여겼는데,
+게이트가 강제하는 것은 `[tool.ruff.lint]` 뿐 아니라 **포매터 축**이기도 하다.
+설정 파일에 `[tool.ruff.format]` 절이 바로 아래 있었는데 린트 절만 읽고 멈췄다.
+
+🔴 **계기 오류가 하나 더 있었다.** `which ruff` 가 not found 를 답하길래 「이 트리에서 못 돌린다,
+push 가 최종 판정이다」로 §10 에 적었다. **틀렸다** — 이 트리에 `.venv` 가 있고 `uv run ruff` 로 돈다.
+우주를 PATH 로 잡았는데 실제 우주는 프로젝트 venv 였다. 오늘 이 세션에서 **같은 형태의 두 번째**다
+(첫 번째: 규약 파일을 primary 절대경로로 물어 「없다」를 얻음 → 실제로는 primary 가 다른 브랜치에 주차).
+**둘 다 술어는 맞았고 우주가 틀렸다.**
+
+📏 수정 후 검산: `uv run ruff format` 이 5줄을 1줄로 접었고(리스트 컴프리헨션),
+프로브 출력은 **바이트 동일**(`diff` 무차이)이라 포매터가 동작을 안 바꿨다.
+`uv run ruff check` 도 `All checks passed!`.

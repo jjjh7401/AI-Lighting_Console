@@ -86,10 +86,7 @@ def report(name):
     print(f"SIB   disp={sd} path={sp} syn={sy} body={stt - sd - sp - sy}")
     print(f"CARDQ path={op + sp} of {total} = {100.0 * (op + sp) / total:.1f}%")
 
-    own_body = [
-        nb(line) + 1 - sum(nb(d) + nb(t) + 4 for d, t in md)
-        for line, md in own
-    ]
+    own_body = [nb(line) + 1 - sum(nb(d) + nb(t) + 4 for d, t in md) for line, md in own]
     if own_body:
         print(f"OWNBODY {spread(own_body)}")
     if own:
