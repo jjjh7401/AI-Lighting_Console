@@ -286,10 +286,15 @@ class CueMapResult:
     refusal_detail: str
     #: 배정된 시퀀스 슬롯. 거절 경로와 already_present 경로에서는 None.
     placement: SequencePlacement | None = None
-    #: 같은 이름의 시퀀스가 이미 있어 계획을 내지 않았다. **거절이 아니다** —
-    #: 목표 상태가 이미 달성돼 있다. refusal 과 섞으면 「고칠 것이 있다」로
-    #: 읽히고, 두 번째 임포트가 실패로 집계된다.
+    #: 같은 이름의 시퀀스가 이미 있다 -- **거절이 아니다**, 컨테이너가 이미
+    #: 있다는 뜻일 뿐이다. 계획을 막지 않는다(이전엔 막았다 -- 시퀀스 층과
+    #: 큐 층을 안 갈라 18큐가 통째로 안 나갔다, 리드 재현 2026-08-31). 그
+    #: 시퀀스 안에 없는 큐는 그대로 planned 에 들어간다.
     already_present: SequencePlacement | None = None
+    #: 이미 그 시퀀스 안에 있는 큐 번호라서 계획에서 뺀 것들 -- 시퀀스
+    #: 층의 already_present 와는 다른 축이다(형제 preset_mapper 의 레코드
+    #: 단위 NAME_TAKEN 과 같은 무게).
+    cues_already_present: tuple[str, ...] = ()
     #: 콘솔 행이 0인데 **영상 콜만 있어서** 그런 큐. 결함이 아니라 상태다 —
     #: 그 큐는 조명이 할 일이 없다. 보류로 비어 버린 큐와 **다르다**(그쪽은 거절).
     video_only_cues: tuple[str, ...] = ()
@@ -414,6 +419,14 @@ def _occupied_names(section: Mapping[str, object]) -> tuple[dict[str, int], bool
     return names, incomplete
 
 
+def _cue_number(cue_no: str) -> int | None:
+    """ "Q010" -> 10. 콘솔이 답하는 cueNo(정수)와 대조하려면 시트 쪽 번호도
+    정수여야 한다. 자릿수가 아니면 None -- 정본 형식(Q + 숫자)이 아닌 값은
+    대조하지 않는다(추측하지 않는다, 형제 술어들과 같은 규율)."""
+    digits = cue_no.removeprefix("Q")
+    return int(digits) if digits.isdigit() else None
+
+
 def _lowest_free_slot(occupied: set[int], *, capacity: int | None) -> int | None:
     """가장 낮은 빈 슬롯. 상한이 있고 그 안에 빈자리가 없으면 None."""
     candidate = 1
@@ -433,6 +446,7 @@ def map_cues(
     group_slots: Mapping[str, int],
     preset_slots: Mapping[str, int],
     slot_capacity: int | None = None,
+    existing_cue_numbers: Sequence[int] = (),
 ) -> CueMapResult:
     """CUE-EX 레코드를 **시퀀스 하나 + 그 아래 큐들**의 계획으로 바꾼다.
 
@@ -441,6 +455,9 @@ def map_cues(
     groups_section 과 같은 자리다. `group_slots` 는 2단계가 배정한 「그룹 이름
     -> 콘솔 그룹 번호」, `preset_slots` 는 3단계가 배정한 「프리셋 ID -> 콘솔
     슬롯」이다. 뒤 둘은 이 층에서 만들지 않는다 — 만들면 앞 단계와 배정이 갈린다.
+    existing_cue_numbers 는 시퀀스가 이미 있을 때 그 안에 실제로 있는
+    큐 번호(콘솔 cueNo, 응답기 1.5.0+) -- 새 시퀀스에는 못 있을 수밖에 없는
+    값이라 이 층은 already_present 가 아닐 때 이 인자를 쓰지 않는다.
 
     어긋나면 아무것도 만들지 않는다. 반쯤 맞는 큐 스택은 이 도메인에서 최악의
     결과다: 쇼가 도는 도중에 드러나고, 그때는 고칠 시간이 없다.
@@ -590,19 +607,77 @@ def map_cues(
             ),
         )
 
-    # 🔴 보류 때문에 콘솔 행이 0이 된 큐는 **거절**이다. 영상 콜만 있어서 0인
-    # 큐와 갈라야 한다 — 뒤쪽은 「조명이 할 일이 없다」는 정상 상태이고, 앞쪽은
-    # 「할 일이 있었는데 못 세웠다」는 부분 계획이다. 한 이름으로 묶으면 부분
-    # 계획이 정상 상태로 위장한다.
+    names, names_incomplete = _occupied_names(sequence_section)
+    unverified = ["value_match", "tracked_value"]
+    unverified_reason = _VALUE_MATCH_REASON + " / " + _TRACKING_REASON
+    if names_incomplete:
+        unverified.append("name_collision")
+        unverified_reason = unverified_reason + " / " + _NAME_UNREADABLE_REASON
+
+    # [HARD] 슬롯을 재기 전에 단면이 관측인지 묻는다. 술어는 이 저장소에
+    # 하나뿐이고(server/rig/section.py), 슬롯을 재는 자리는 전부 그것을 부른다.
+    if (reason := section_refusal(sequence_section)) is not None:
+        return CueMapResult(
+            planned=(),
+            held=tuple(held),
+            video_calls=tuple(video_calls),
+            coverage_gap=None,
+            refusal=reason[0],
+            refusal_detail=reason[1],
+        )
+
+    # 시퀀스 층: 이미 있으면 그 슬롯을 그대로 쓴다(already_present) -- 새로
+    # 배정하지 않는다. 없으면 빈 슬롯을 골라 새로 만든다(placement). 두
+    # 갈래가 서로 다른 필드에 실리는 이유는 tools.py 가 이 값으로
+    # Store Sequence 명령을 낼지 말지 가르기 때문이다(already_present 면
+    # 안 낸다, placement 면 낸다).
+    existing_slot = names.get(sequence_name)
+    is_new_sequence = existing_slot is None
+
+    if is_new_sequence:
+        occupied = _occupied_slots(sequence_section)
+        slot = None if occupied is None else _lowest_free_slot(occupied, capacity=slot_capacity)
+        if slot is None:
+            return CueMapResult(
+                planned=(),
+                held=tuple(held),
+                video_calls=tuple(video_calls),
+                coverage_gap=None,
+                refusal=SLOT_SHORTFALL,
+                refusal_detail=(
+                    "빈 시퀀스 슬롯을 못 골랐다 -- 번호를 못 읽었거나 상한 "
+                    + str(slot_capacity)
+                    + " 안에 빈자리가 없다. 점유 슬롯에는 쓰지 않는다: 시퀀스는 경고 "
+                    "없이 덮이고 내용은 되읽을 수 없어 복구 수단이 없다"
+                ),
+            )
+    else:
+        slot = existing_slot
+
+    # 큐 층: 시퀀스가 이미 있을 때만 의미가 있다 -- 새 시퀀스엔 큐가 있을
+    # 수 없다(existing_cue_numbers 를 실수로 넘겨도 새 시퀀스에서는 안 쓴다).
+    cues_already_present: tuple[str, ...] = ()
+    if not is_new_sequence and existing_cue_numbers:
+        present = frozenset(existing_cue_numbers)
+        cues_already_present = tuple(cue for cue in declared if _cue_number(cue) in present)
+
+    # 보류 때문에 콘솔 행이 0이 된 큐는 거절이다. 영상 콜만 있어서 0인 큐,
+    # 그리고 이미 콘솔에 있어서 0인 큐와 갈라야 한다 -- 뒤 둘은 정상
+    # 상태이고 앞쪽만 "할 일이 있었는데 못 세웠다"는 부분 계획이다.
     video_only_cues = tuple(
         cue
         for cue in declared
         if not rows_by_cue.get(cue)
+        and cue not in cues_already_present
         and any(call.cue_no == cue for call in video_calls)
         and not any(hold.cue_no == cue for hold in held)
     )
     emptied = tuple(
-        cue for cue in declared if not rows_by_cue.get(cue) and cue not in video_only_cues
+        cue
+        for cue in declared
+        if not rows_by_cue.get(cue)
+        and cue not in video_only_cues
+        and cue not in cues_already_present
     )
     if emptied:
         return CueMapResult(
@@ -614,69 +689,16 @@ def map_cues(
             refusal_detail=(
                 "보류를 걷어내니 큐 "
                 + ", ".join(emptied)
-                + " 의 콘솔 행이 0이 됐다 — 부분 계획을 내지 않는다. "
+                + " 의 콘솔 행이 0이 됐다 -- 부분 계획을 내지 않는다. "
                 "보류 사유를 고쳐 다시 부르면 된다"
             ),
         )
 
-    # [HARD] 슬롯을 재기 **전에** 단면이 관측인지 묻는다. 술어는 이 저장소에
-    # 하나뿐이고(server/rig/section.py), 슬롯을 재는 자리는 전부 그것을 부른다.
-    # 코드를 자기 어휘로 번역하지 않는다 — 형제 둘이 같은 코드를 그대로 나른다.
-    if (reason := section_refusal(sequence_section)) is not None:
-        return CueMapResult(
-            planned=(),
-            held=tuple(held),
-            video_calls=tuple(video_calls),
-            coverage_gap=None,
-            refusal=reason[0],
-            refusal_detail=reason[1],
-        )
-
-    names, names_incomplete = _occupied_names(sequence_section)
-    unverified = ["value_match", "tracked_value"]
-    unverified_reason = _VALUE_MATCH_REASON + " / " + _TRACKING_REASON
-    if names_incomplete:
-        unverified.append("name_collision")
-        unverified_reason = unverified_reason + " / " + _NAME_UNREADABLE_REASON
-
-    # 이름이 이미 있으면 계획하지 않는다 — **거절이 아니라 수렴이다.**
-    # 덮어쓰지 않는 이유는 시퀀스 내용을 되읽을 수 없어 덮어쓴 것을 복구할
-    # 방법이 없기 때문이다(위 _VALUE_MATCH_REASON).
-    if sequence_name in names:
-        return CueMapResult(
-            planned=(),
-            held=tuple(held),
-            video_calls=tuple(video_calls),
-            coverage_gap=None,
-            refusal=None,
-            refusal_detail="",
-            already_present=SequencePlacement(name=sequence_name, slot=names[sequence_name]),
-            video_only_cues=video_only_cues,
-            unverified=tuple(unverified),
-            unverified_reason=unverified_reason,
-        )
-
-    occupied = _occupied_slots(sequence_section)
-    slot = None if occupied is None else _lowest_free_slot(occupied, capacity=slot_capacity)
-    if slot is None:
-        return CueMapResult(
-            planned=(),
-            held=tuple(held),
-            video_calls=tuple(video_calls),
-            coverage_gap=None,
-            refusal=SLOT_SHORTFALL,
-            refusal_detail=(
-                "빈 시퀀스 슬롯을 못 골랐다 — 번호를 못 읽었거나 상한 "
-                + str(slot_capacity)
-                + " 안에 빈자리가 없다. 점유 슬롯에는 쓰지 않는다: 시퀀스는 경고 "
-                "없이 덮이고 내용은 되읽을 수 없어 복구 수단이 없다"
-            ),
-        )
-
+    placement_obj = SequencePlacement(name=sequence_name, slot=slot)
     planned = tuple(
         CueBucket(cue_no=cue, rows=tuple(rows_by_cue[cue]))
         for cue in declared
-        if rows_by_cue.get(cue)
+        if rows_by_cue.get(cue) and cue not in cues_already_present
     )
     return CueMapResult(
         planned=planned,
@@ -685,7 +707,9 @@ def map_cues(
         coverage_gap=None,
         refusal=None,
         refusal_detail="",
-        placement=SequencePlacement(name=sequence_name, slot=slot),
+        placement=placement_obj if is_new_sequence else None,
+        already_present=None if is_new_sequence else placement_obj,
+        cues_already_present=cues_already_present,
         video_only_cues=video_only_cues,
         unverified=tuple(unverified),
         unverified_reason=unverified_reason,
