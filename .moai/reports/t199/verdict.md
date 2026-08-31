@@ -86,3 +86,41 @@ t197 이 낸 셋째 발견 — "워크트리 실행 가드는 cwd 가 아니라 
 - `moai worktree --help` 원문 재확인, 본문에 인용
 - `find /Users/studiox -maxdepth 4 -iname "*moai-adk*" -type d` → 0건
 - `python3 -c "import moai_adk"` → `ModuleNotFoundError`
+
+---
+
+## 2회차 (리드 재배차, 같은 카드) — 결함 3 · 정본 판정
+
+리드가 #243 머지본을 직접 읽고, 정정 두 개는 정확하지만 **셋째 상충이 빠졌고
+(1) 소유권 판정이 아예 안 됐다**고 지적했다. 새 브랜치(`WT-clear-cadence-fix`,
+origin/main `4556b7d` 기준)로 이어서 처리한다.
+
+### 결함 3 — 「카드마다 clear」 대 「이중 임계」
+
+`kanban-dispatch.md`: "The lead's own session is cleared the same way, between
+cards rather than phases" — 무조건("카드마다")으로 읽혔고, 실제로 리드가 오늘 여러
+카드 연속으로 감독에게 매번 `/clear`를 요청해 레인 맥락을 지웠다(비용이 이미
+발생).
+
+`lane-protocol.md` § 9 의 실제 규칙: 컨텍스트 50%·카드 5장 **이중 임계 중 먼저
+오는 쪽**에서만 인계한다. 리드가 직접 측정: `grep -n 'clear' lane-protocol.md` →
+3건(제목·기원 각주·§6 임계 언급)뿐, § 9 본문은 "clear" 단어를 안 쓴다 — 그런데도
+그 §가 실질 규칙이다.
+
+정정: 원문 보존 + 날짜·환경 고지 blockquote 추가(위 패턴과 동일 형식).
+
+### 소유권 판정 (1)
+
+- **companion 세션 위상**(누가 누구에게 clear 를 요청하는가, 배차 흐름) → 정본은
+  `kanban-dispatch.md` § "The `/clear` handoff between phases"
+- **clear 시점/임계값**(언제 clear 하는가) → 정본은 `lane-protocol.md` § 9
+
+완전 통합은 이 카드 범위를 넘는다고 판단해 안 했다 — 대신 양쪽에 상호 포인터를
+추가했다(`kanban-dispatch.md` 절 머리에 "정본은 lane-protocol.md §9", `lane-protocol.md`
+§9 머리에 "정본은 이 절"). 통합이 필요하면 후속 카드로 갈라야 한다.
+
+### 미검증 (추가)
+
+- kanban-dispatch.md 의 classic 3-companion(plan/run/sync) 위상에서도 동일한
+  "카드마다 clear" 과다 적용이 발생했는지는 미확인 — 이번엔 리드 자신의 세션(Factory
+  lane 성격)만 확인됐다.

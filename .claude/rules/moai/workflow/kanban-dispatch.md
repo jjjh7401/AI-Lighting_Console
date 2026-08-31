@@ -133,11 +133,35 @@ Anything else is a gap, not a pass. `Review rate limited` means the review never
 
 ## The `/clear` handoff between phases
 
+> **Ownership pointer, 2026-08-31.** This section governs the companion-session
+> topology (who asks whom to `/clear`, and when a phase hands off). It does
+> NOT set the clearing threshold for a session that carries a card through
+> multiple phases or multiple cards without a topology change (a Factory-mode
+> lane, or the lead's own session across cards). For that cadence, the
+> authoritative rule is `.moai/docs/lane-protocol.md` § 9 — the dual hard
+> trigger (context usage crosses 50% of a 1M window, OR five cards close in
+> one session, whichever comes first). See the correction below the
+> lead's-own-session paragraph.
+
 [HARD] A companion session does not carry one card's context into the next card. When a phase completes and the lead has read its evidence, the lead **asks the operator to `/clear` that session** — `/clear` is a user-typed command and cannot be sent as an instruction. The lead's message states, in order: what closed (card, phase, evidence read), which session to `/clear` (by name), and what happens next (the next column, and which session is instructed once the clear is done).
 
 Where the next phase reuses a just-cleared session, the lead re-sends the full pointer instruction rather than assuming the session remembers.
 
 The lead's own session is cleared the same way, between cards rather than phases: once a card reaches `done`, the operator is asked to `/clear` the lead session, and the next turn presents the queue again.
+
+> **Overstated, corrected 2026-08-31** (environment: claude 2.1.251 / moai-adk
+> 3.1.2, one build, one environment). "Between cards" read as unconditional —
+> clear after every single card — and was applied literally: the lead
+> requested `/clear` from the operator after each of several consecutive
+> cards on 2026-08-31, discarding lane context each time. `lane-protocol.md`
+> § 9 (measured `grep -n 'clear' lane-protocol.md` → 3 literal hits: the
+> title, the origin note, and the § 6 threshold mention — the substantive
+> rule in § 9 itself does not repeat the word) states the actual dual
+> trigger: clear at whichever comes first of context usage crossing 50% of a
+> 1M-token window, or five cards closed in one session. A session under
+> both thresholds is NOT required to clear between cards. This paragraph's
+> "between cards rather than phases" should be read as "at the § 9
+> threshold, not at every phase boundary" — not as "after every card."
 
 ## Isolation is entered, never provisioned
 
