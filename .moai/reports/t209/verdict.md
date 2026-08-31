@@ -160,3 +160,70 @@ BOM제거해 관대하게 받는다. 이 하네스는 원문 그대로 인덱싱
   한다 — 동료가 전달한 승인은 승인이 아니고, 감독 승인은 받은 채널에서만
   유효하다.
 - 발사 후 이 발사기가 `childCount 1 → 2` 와 큐 18 을 재면 그것이 완료 판정이다.
+
+## 9. `server/sheets/registry.py` 의 `cue-ex` 행 — 실측 후 **넣지 않았다**
+
+2026-08-31 리드 배차로 조사했다. 결론: **라우팅 공백은 실재하지만, 지금 행을
+넣으면 열리지 않고 검사만 빨개진다.** 파일 변경 0 · 커밋 0 으로 남겼다.
+
+### 9.1 라우팅 공백은 실재한다
+
+```
+discriminate(cue-ex CSV) -> matched=() · outcome=unknown_sheet_kind
+```
+
+형제 셋(`patch`·`group`·`preset` 3종)은 전부 등재돼 있는데 큐만 없다.
+감독이 시트를 업로드해도 어느 도구로도 가지 않는다.
+
+### 9.2 🔴 그런데 지금 행을 넣어도 안 열린다
+
+`discriminate` 가 `registry` 인자를 받으므로 **파일을 고치지 않고** 후보 행을
+메모리로 먹여 실험했다. 후보: `ExactColumns(CANONICAL_CUE_COLUMNS 17열)` +
+`Handler(HANDLER_TAG_TOOL, "import_lxseq_cues")` + `passthrough_args=("action",)`.
+
+| 시트 | 현재 표 | 후보 행 추가 후 |
+|---|---|---|
+| patch | `('patch',)` | `('patch',)` · errs `['cue-ex']` |
+| group | `('group',)` | `('group',)` · errs `['cue-ex']` |
+| preset-dim | `('preset-dim',)` | `('preset-dim',)` · errs `['cue-ex']` |
+| preset-col | `('preset-col',)` | `('preset-col',)` · errs `['cue-ex']` |
+| preset-bm | `('preset-bm',)` | `('preset-bm',)` · errs `['cue-ex']` |
+| **cue-ex** | `()` | **`()`** · errs `['cue-ex']` |
+
+**cue-ex 는 행을 넣어도 `matched=()` 다.** `import_lxseq_cues` 가 등재 전이라
+판별기가 그 행을 `no_target_tool` 설정오류로 떨어뜨린다.
+
+이건 저장소가 이미 정한 규칙이다:
+- `registry.py:359` — 「예약된 종류의 행은 만들지 않는다 — 그 종류의 **파서·핸들러가
+  있어야** 행을 만든다(REQ-FILEARG-017)」
+- `test_sheets_registry.py:234` `test_registry_has_no_row_reserved_for_a_later_spec`
+  — 개수가 아니라 **핸들러 실재**로 잰다. `assert reserved == []` 인데 위 표대로
+  `['cue-ex']` 가 나오므로 **빨개진다**
+
+### 9.3 ✅ 핵심 위험은 없다 — 6종 전수 대조군
+
+배차가 지목한 진짜 위험은 「네 시트가 같은 라우터를 지나 서로 훔쳐가는가」였다.
+**안 훔쳐간다.** 위 표에서 patch·group·preset 3종이 후보 행 추가 후에도 전부
+자기 종류로 그대로 붙는다. 17열 `ExactColumns` 는 4열 프리셋 서명과 겹칠 수
+없고, 역방향도 실측 0건이다.
+
+🔴 **이 표를 다시 재지 마라.** 행을 넣는 회차는 이 결과를 근거로 쓰고, 행 추가 +
+검사 + push 만 하면 된다.
+
+### 9.4 행이 들어갈 조건 둘
+
+1. `server/lxseq/cue_parser.py` 가 트리에 있을 것 — `CANONICAL_CUE_COLUMNS` 를
+   **참조로** 들어야 한다(사본 금지). 형제 `patch` 행이 `parser.CANONICAL_COLUMNS`
+   를 드는 방식 그대로. 실측: 이 모듈은 조사 시점에 **내 트리에도 `origin/main`
+   에도 없었다** — 미머지 브랜치에만 있었다
+2. `import_lxseq_cues` 가 등재돼 있을 것 — 없으면 행이 죽고 검사가 빨개진다
+
+### 9.5 판정 (리드, 2026-08-31) — (b′)
+
+CI 가 결제로 멈춰 main 이 안 움직이므로, **run 이 `WT-cue-integrate` 를 push 하면
+그 브랜치를 기점으로** 행을 올린다. 그 브랜치에 조건 둘이 다 들어 있다. 파일도
+안 겹친다(run 은 `tools.py`, 이 레인은 `registry.py`).
+
+「지금 넣고 검사를 고친다」는 양쪽 다 반대했다 — 그 검사가 「예약 행 금지」를
+지키는 장치이고, 통과시키려면 장치를 무력화해야 한다. 그러면 다음에 진짜 예약
+행이 들어와도 아무도 못 잡는다.
