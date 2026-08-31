@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LX-SEQ 문서 대비 앱 반영도</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#fff;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard Variable",Pretendard,system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:900px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:48px 24px 80px}
+h1{font-size:30px;line-height:1.3;margin:0 0 8px;letter-spacing:-.02em}
+.sub{color:var(--g500);font-size:14px;margin:0 0 32px}
+h2{font-size:21px;margin:44px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--oat);letter-spacing:-.01em}
+h3{font-size:16px;margin:26px 0 8px}
+p{margin:10px 0}
+code{font-family:var(--mono);font-size:.87em;background:var(--g100);padding:2px 6px;border-radius:4px;word-break:break-all}
+.lead{background:var(--g100);border-left:3px solid var(--clay);padding:12px 16px;border-radius:0 var(--radius-row) var(--radius-row) 0;margin:12px 0 18px;font-size:14.5px;color:var(--g700)}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;background:var(--paper);border-radius:var(--radius-row);overflow:hidden;border:var(--border)}
+th{background:var(--g100);text-align:left;padding:10px 12px;font-weight:700;font-size:13px;color:var(--g700);border-bottom:var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--g300);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0 8px}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px}
+.card .k{font-size:11.5px;color:var(--g500);text-transform:uppercase;letter-spacing:.06em}
+.card .v{font-size:26px;font-weight:700;margin:4px 0 2px;letter-spacing:-.02em}
+.card .n{font-size:12px;color:var(--g500)}
+.ok{color:var(--olive)} .warn{color:var(--clay)}
+.item{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px 18px;margin:12px 0}
+.item.a{border-left:4px solid var(--olive)}
+.item.b{border-left:4px solid var(--clay)}
+.item.c{border-left:4px solid var(--g500)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.03em;margin-right:8px}
+.tag.a{background:#E8EDE1;color:#4A5C36} .tag.b{background:#F8E5DD;color:var(--clay-d)} .tag.c{background:var(--g100);color:var(--g700)}
+.item h3{margin:0 0 6px}
+.item p{font-size:14px;margin:8px 0 0}
+.why{font-size:13px;color:var(--g500);margin-top:8px;padding-top:8px;border-top:1px dashed var(--g300)}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:18px;text-align:center;font-family:var(--mono);font-size:12px;overflow-x:auto}
+noscript p{background:var(--g100);border-radius:var(--radius-row);padding:12px 16px;font-size:13.5px}
+.gate{background:#FDF3EF;border:1.5px solid var(--clay);border-radius:var(--radius-panel);padding:14px 18px;margin:16px 0}
+.gate strong{color:var(--clay-d)}
+.foot{margin-top:56px;padding-top:18px;border-top:var(--border);font-size:12.5px;color:var(--g500)}
+ul{padding-left:20px;margin:8px 0} li{margin:5px 0;font-size:14px}
+@media print{body{background:#fff}.wrap{padding:0}.item,.card,table{break-inside:avoid}}
+</style></head><body><div class="wrap">
+<h1>LX-SEQ 문서 대비 앱 반영도</h1>
+<p class="sub">측정 2026-08-31 · 대상 <code>src/Lighting_Designer/</code> + 스펙 v2.1 · 작업지침 · 문서인덱스 · 판정 기준은 <strong>문서가 정의한 개념이 콘솔에 실제로 닿는가</strong></p>
+
+<div class="lead">조명감독이 만든 <b>문서 체계</b>(포맷 스펙 · 작업지침 · 문서인덱스)와 우리 <b>앱</b>을 나란히 놓고, 문서가 약속한 것 중 무엇이 실제 콘솔까지 도달했는지 잰 것입니다. 「코드에 있다」가 아니라 <b>「콘솔이 답했다」</b>를 기준으로 판정했습니다.</div>
+
+<h2>오늘 도달한 지점</h2>
+<div class="cards">
+<div class="card"><div class="k">1 패치</div><div class="v ok">86/86</div><div class="n">already_patched</div></div>
+<div class="card"><div class="k">2 그룹</div><div class="v ok">18</div><div class="n">group_slots_resolved</div></div>
+<div class="card"><div class="k">3 프리셋</div><div class="v ok">7 + 2</div><div class="n">Color 풀 · FX 풀</div></div>
+<div class="card"><div class="k">4 큐</div><div class="v ok">18/18</div><div class="n">Q010~Q180 되읽기</div></div>
+</div>
+<table><tr><th>층</th><th>결과</th><th>증거 (콘솔이 답한 값)</th></tr>
+<tr><td>1 패치</td><td>86/86</td><td><code>already_patched 86</code></td></tr>
+<tr><td>2 그룹</td><td>18</td><td><code>group_slots_resolved 18</code></td></tr>
+<tr><td>3 프리셋</td><td>Color 7 · FX 2</td><td>풀4 1→7 · 풀21 0→2</td></tr>
+<tr><td>4 큐</td><td><b>18/18</b></td><td>Sequences 1→2 · Q010~Q180 전수</td></tr>
+<tr><td>LED-W 유출</td><td>0건</td><td><code>no_command_emitted true</code></td></tr></table>
+
+<h2>문서 체계와 앱이 갈라지는 지점</h2>
+<p>문서는 <b>4개 층</b>을 정의하고 「아래 층을 고치면 위 층이 자동 재생성된다」를 원칙으로 세웠습니다. 그런데 우리 앱은 마지막 층에서 다른 길을 갑니다.</p>
+<pre class="mermaid">
+flowchart TD
+  L0["Layer 0 · 포맷 스펙"] --> L1["Layer 1 · RIG 팩"]
+  L1 --> L2["Layer 2 · 곡 파일"]
+  L2 --> D{"Layer 3 · 콘솔 반영"}
+  D -->|"문서가 정의한 길"| M["ma3.txt 452줄<br/>사람이 붙여넣기"]
+  D -->|"우리 앱의 길"| O["OSC 직접 발화"]
+  M -.->|"이 분기가 미기록"| O
+</pre>
+<noscript><p><b>흐름</b>: 스펙 → RIG 팩 → 곡 파일 → 콘솔 반영. 마지막 층에서 문서는 ma3.txt 를 사람이 붙여넣는 길을, 앱은 OSC 직접 발화를 갑니다. 같은 목적지에 다른 길인데 그 분기가 기록돼 있지 않습니다.</p></noscript>
+<div class="gate"><strong>왜 위험한가</strong> — 오늘 우리는 <code>ma3.txt</code> 를 문법 정본으로 참조해 명령을 만들었습니다. 그 파일이 개정되면 우리 빌더는 모릅니다. 둘이 조용히 갈라집니다.</div>
+
+<h2>A. 바로 적용 — 결정이 끝났고 재료도 있음</h2>
+<div class="lead">이 넷은 <b>새로 설계할 게 없습니다.</b> 앱에 이미 있는 것을 잇거나, 감독이 이미 결정하신 것을 반영하면 됩니다.</div>
+
+<div class="item a"><h3><span class="tag a">A1</span>기본 프리셋 일괄 설정 입구</h3>
+<p>「기본 프리셋 잡아줘」 한 마디로 DIM·COL·POS·FX 를 한 번에 올리는 입구. 지금은 시트마다 따로 쏴야 합니다.</p>
+<p><b>이미 있는 것</b> — <code>import_lxseq_presets</code>(dim·col·bm) · <code>lxseq_presets_e2e.py</code> · <code>compose_fx</code> · <code>lxseq_fx_e2e.py</code> · <code>_PRESET_POOL_FAMILY</code> · <code>PRESET_ID_PREFIXES</code></p>
+<p><b>빠진 것</b> — 한 번에 부르는 입구 하나</p>
+<p class="why">감독 결정 — <b>되는 것부터 전부</b>: DIM·COL·FX 전량 발사, BM·POS 는 「왜 안 됐는지」를 사유와 함께 보고만.</p></div>
+
+<div class="item a"><h3><span class="tag a">A2</span>POS 를 RIG 팩에서 읽기</h3>
+<p>감독이 <code>preset-pos.csv</code> 에 Pan/Tilt 값 열을 추가하시고, 앱은 COL·BM 과 <b>같은 방식</b>으로 읽어 올립니다.</p>
+<p>현재 <code>preset-pos</code> 는 시트 종류로 <b>등록조차 안 돼</b> 있습니다 — <code>PRESET_ID_PREFIXES</code> 에 dim·col·bm 셋뿐입니다.</p>
+<p class="why">효과 — POS 12행이 열리면 보류가 <b>30 → 18</b> 로 줍니다. 큐 내용이 그만큼 채워집니다.</p></div>
+
+<div class="item a"><h3><span class="tag a">A3</span>큐 라벨을 정본 형식으로</h3>
+<p>지금 콘솔에 올라간 이름은 Q010 뿐입니다. 정본은 「Q010 INTRO 화사」 — 절 이름과 무드가 붙습니다.</p>
+<p class="why">원인은 곡 파일 6시트 중 <code>CUE-EX</code> 하나만 읽고 <code>CUE</code> 시트를 안 읽기 때문입니다. 파일 하나 더 읽으면 닫힙니다.</p></div>
+
+<div class="item a"><h3><span class="tag a">A4</span>TC_METHOD 경고 표시 <span class="warn">· 안전 조항</span></h3>
+<p>스펙은 <code>TC_METHOD: DERIVED</code> 를 <b>「리허설 대조 전까지 실행 확정본으로 취급하지 않는다」</b>로 못 박았습니다. 지금 앱은 그 표시를 <b>모르고 그냥 씁니다.</b></p>
+<p class="why"><code>HEAD</code> 시트 한 줄이면 닫히고, 다른 셋과 달리 <b>안전 조항</b>이라 우선순위가 높습니다.</p></div>
+<h2>B. 다음 단계 — 측정이 먼저</h2>
+<div class="lead">이 다섯은 <b>바로 구현하면 안 됩니다.</b> 「되는지 안 되는지」를 모르는 상태라, 지어내면 반쯤 맞는 결과가 쇼파일에 남습니다.</div>
+
+<div class="item b"><h3><span class="tag b">B1</span>개별 타이밍 I/P/C/B — 측정 카드</h3>
+<p>스펙 §8-3 이 <b>「콘솔급 큐의 본질」</b>이라 부르는 자리입니다. 큐 하나 안에서 밝기·위치·색·빔이 서로 다른 페이드를 갖는 것.</p>
+<p>지금 우리는 큐당 CueFade 하나만 보냅니다. 그룹별 페이드는 <code>cue_manual_notes</code> 에 표로만 남고 사람이 Cue 에디터에 손으로 넣어야 합니다.</p>
+<p class="why">🔴 <b>조명감독 파이프라인도 못 옮겼습니다</b> — <code>make_ma3.py:170</code> 이 [MANUAL] 로 넘깁니다. 미지의 영역이지 우리가 게으른 자리가 아닙니다. <b>질문</b>: MA3 가 그룹별 Fade·Delay 를 명령줄로 받는가. 받으면 자동화가 열리고, 안 받으면 원리적 한계임을 확정하고 「사람이 넣을 표」를 제대로 내는 쪽으로 방향을 바꿉니다. <b>어느 쪽이 나와도 이깁니다.</b></p></div>
+
+<div class="item b"><h3><span class="tag b">B2</span>안전 규칙 fail-closed <span class="warn">· 물리 위험</span></h3>
+<p>스펙 §13-4 가 <b>HARD</b> 로 규정했는데 코드에 흔적이 없습니다.</p>
+<table><tr><th>검색</th><th>결과</th></tr>
+<tr><td>inhibit</td><td class="warn">0건</td></tr>
+<tr><td>MIB</td><td class="warn">0건</td></tr></table>
+<p>문서인덱스도 「BLIND 각도 — <b>객석 직사 금지선</b>」을 미확정으로 걸어뒀습니다. 사람 눈에 직사되는 문제라 다른 미확정과 등급이 다릅니다.</p>
+<p class="why">최소안 — STROBE·BLIND 를 쓰는 큐를 발사할 때 Inhibit 배치를 확인하고 없으면 거절. 오늘 LED-W 유출을 막은 것과 <b>같은 형태</b>라 새 설계가 필요 없습니다.</p></div>
+
+<div class="item b"><h3><span class="tag b">B3</span>검증 15항목을 앱이 실행 <span class="warn">· 현재 4/15</span></h3>
+<p>문서는 「전달 전 필수」 체크리스트를 15개 정의했는데, 우리 코드에 대응물이 있는 건 12·13·14 정도입니다.</p>
+<p>앱이 시트를 읽는 이상 <b>1·3·5·6·8 은 기계가 도는 게 맞습니다</b> — TC 단조증가, Section enum, 그룹 정의 여부, 전환 밀도 8초/1큐.</p>
+<p class="why">제안 — <code>--validate</code> 모드 하나. 콘솔 안 건드리고 PASS/FAIL 표만 냅니다. 지금 <code>--probe-only</code> 가 있는 자리 옆입니다.</p></div>
+
+<div class="item b"><h3><span class="tag b">B4</span>BM 5건 속성 어휘</h3>
+<p>Beam 프리셋은 오늘 발사에서 <b>전량 보류</b>됐습니다. 사유는 <code>attribute_probe_rejected</code> 3건 · <code>family_out_of_scope</code> 3건.</p>
+<p class="why">값 문제가 아니라 <b>어휘 문제</b>입니다 — 시트가 쓰는 이름과 콘솔이 받는 이름이 다릅니다. <code>server/looks/schema.py</code> 가 정본이고, 사본을 만들면 두 어휘가 생깁니다.</p></div>
+
+<div class="item b"><h3><span class="tag b">B5</span>Layer 3 분기와 문서 세대 기록</h3>
+<p>위 다이어그램의 그 분기입니다. 우리가 <code>ma3.txt</code> 를 <b>대체</b>한다는 사실이 어디에도 안 적혀 있습니다.</p>
+<p class="why">덤으로 — 문서인덱스는 r2 기준인데 실물 파일은 r3 입니다. 인덱스가 한 세대 낡았습니다.</p></div>
+
+<h2>C. 반영하면 안 되는 것</h2>
+<div class="lead">이 다섯은 <b>하면 안 됩니다.</b> 그럴듯해 보이지만 스펙이나 저장소가 이미 금지한 자리입니다.</div>
+
+<div class="item c"><h3><span class="tag c">C1</span>POS 를 앱이 자동 계산</h3>
+<p>스펙 §8-1: <b>「Pan/Tilt 절대값은 극장·리깅 종속이라 시트에 쓰지 않는다」</b></p>
+<p class="why">감독이 RIG 팩에 값을 넣으시는 것(A2)과 <b>앱이 지어내는 것은 다릅니다.</b> 후자는 스펙 위반입니다. 오늘 「Ø소 → ±5°」 해석이 이 경계 위에 있었고, 해석임을 명시했기에 통과했습니다.</p></div>
+
+<div class="item c"><h3><span class="tag c">C2</span>FX.04(Hue) · FX.06(Shutter) 강행</h3>
+<p><code>KNOWN_ATTRIBUTES</code> 밖이라 <code>loader.py:119</code> 가 거절합니다.</p>
+<p class="why">그리고 <b>FX.04 없이도 18큐가 섭니다</b> — 큐는 행 하나만 살아도 안 비기 때문입니다. 4단계를 막지 않으므로 별건입니다.</p></div>
+
+<div class="item c"><h3><span class="tag c">C3</span>「예약 행」 미리 만들기</h3>
+<p><code>registry.py:359</code>: 「그 종류의 <b>파서·핸들러가 있어야</b> 행을 만든다」 — <code>test_registry_has_no_row_reserved_for_a_later_spec</code> 이 강제합니다.</p>
+<p class="why">오늘 실제로 걸렸습니다 — 도구 등재 전에 레지스트리 행을 넣으려다 검사가 빨개졌습니다.</p></div>
+
+<div class="item c"><h3><span class="tag c">C4</span>검사를 고쳐서 통과시키기</h3>
+<p>C3 를 우회하려고 그 검사를 무력화하면, <b>다음에 진짜 예약 행이 들어와도 아무도 못 잡습니다.</b></p>
+<p class="why">그 검사는 「예약 행 금지」를 지키는 장치입니다. 장치를 끄고 통과하는 건 통과가 아닙니다.</p></div>
+
+<div class="item c"><h3><span class="tag c">C5</span>정본 문법을 큰따옴표로 되돌리기</h3>
+<p><code>ma3.txt</code> 는 큰따옴표를 씁니다. 하지만 그건 <b>사람이 콘솔에 붙여넣는 스크립트</b>입니다. 우리 전송 경로는 홑따옴표만 받습니다(<code>protocol.py:127</code>).</p>
+<p class="why">오늘 이것 때문에 발화가 한 번 실패했습니다. 정본을 보고 「큰따옴표가 맞네」로 되돌리기 쉬운 자리입니다.</p></div>
+
+<h2>오늘 막았던 벽 셋 — 전부 저장소에 답이 있었음</h2>
+<table><tr><th>벽</th><th>답이 있던 곳</th></tr>
+<tr><td>계획이 0건</td><td>RIG 팩 <code>fx.csv</code> — 아무도 안 쓰고 있었음</td></tr>
+<tr><td>발화 실패</td><td><code>ma3.txt:232</code> Store Sequence 한 줄</td></tr>
+<tr><td>명령 거절</td><td><code>protocol.py:127</code> 주석</td></tr></table>
+<p>「없다」를 결론으로 쓰기 전에 저장소를 훑는 규약이 <b>하루에 세 번</b> 값을 냈습니다.</p>
+
+<h2>안 잰 것</h2>
+<ul>
+<li>개별 타이밍이 명령으로 가능한지 — <b>B1 이 그 측정입니다</b></li>
+<li>BM 속성 어휘의 정확한 경계</li>
+<li><code>ma3.txt</code> 와 우리 빌더가 <b>이미 갈라졌는지</b></li>
+<li>CI 는 결제 문제로 정지 — PR 5건 + <code>WT-cue-integrate</code> 미머지</li>
+</ul>
+
+<div class="foot">LX-SEQ v2.1 · 정본 우선순위: 스펙 &gt; RIG 팩 &gt; 곡 파일 &gt; 생성 산출물 · 이 보고서는 <b>분석이며 스펙·계획에 아무것도 반영하지 않았습니다.</b></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body></html>
