@@ -1,223 +1,111 @@
-# t204 — 픽스처 타입 54종 재측정: **「없음」이 아니라 「못 읽었음」이었다**
+# t204 -- 픽스처 타입 54종 재측정: "없음"이 아니라 "못 읽음"이었다
 
-브랜치 `WT-fixture-type-split` · base `ba9ceaa` · 2026-08-31
-**콘솔 쓰기 0건** (preview 전용) · 코드 변경 0 · 새 카드 0
+- 워크트리: .claude/worktrees/t90 (읽기 전용, 새 워크트리 불필요 -- 카드 지시)
+- 이 세션 3장째 카드 (t199 -> t202(취소) -> t90/t204 연속), 기준: lane-protocol.md 9절
+- 콘솔 안 씀(preview만). 처방 실행 안 함. 새 카드 안 만듦.
 
 ## 0. 한 줄
 
-**감독 지적이 맞다.** 픽스처 타입은 콘솔에 **들어가 있었고**, 8/30 에 우리가 **못 읽었다**.
-지금 재니 **타입 미해석 0행 · 8종 전부 해석**이다. 54는 사라진 것이 아니라 **처음부터
-타입 문제가 아니었다.**
+**type_unresolved 는 지금 0건이다** (8/30 리포트의 54건에서). 원인은 그때 응답기가
+1.6.1(풀 캐싱)을 물고 있어 라이브러리 판독이 절단됐고, `library_unreadable`
+기본값이 리포트에서 `absent`로 단정된 것으로 보인다 -- 코드 자신이 "없다고
+단정하지 않는다"고 말하는 상태를 리포트가 단정했다(감독 지적이 맞았다).
 
-남은 것은 전혀 다른 문제 하나다 — **`Martin MAC Aura XB` 24행의 모드 미확정.**
+## 1. 순서대로 잰 것
 
-## 1. 응답기 버전 — 명령 결과가 아니라 회신 필드로 판정했다
-
-카드가 「`executed_ok` 같은 명령 결과로 판정하지 마라」고 못 박았다. 그대로 했다.
-
-| 단계 | 명령 | 관측 |
-|---|---|---|
-| 살아 있나 | `python -m server.tools.probe_preflight --listen-port 9005` | `verdict: responder_ok` · `health: online` |
-| 버전 | `python -m server.tools.introspect_probe --path Patch/FixtureTypes --offset 0 --listen-port 9005` | 회신에 **`"offset": 0` 에코** · `truncated: false` · `total: 16` · `ok: true` |
-
-판별자는 `introspect_probe.py:96-105` 가 정한 것이다 — **회신에 `offset` 에코가 없으면
-1.6.2 이전**이고 `paging: unsupported` 를 단다. 이번 회신은 **에코가 왔고 그 키가 안 붙었다.**
-
-**따라서 응답기는 1.6.2 이상이다.** (정확한 버전 문자열은 이 채널로 안 온다 — 「1.6.2 이상」
-까지만 주장한다.) 감독이 재임포트한 것이 실제로 반영돼 있다.
-
-⚠️ 첫 시도는 `--path` 를 위치 인자로 줘서 **exit 2 로 죽었고 산출물이 0바이트**였다.
-그 0을 「에코 없음」으로 읽지 않았다 — `wc -c` 로 먼저 갈랐다. 규약 §4.0.
-
-## 2. 8/30 의 54는 어디로 갔나
-
-`console_read` 가 직접 답한다:
+### 1.1 응답기 버전 -- ping 회신으로 (executed_ok 아님)
 
 ```
-complete_enough_to_judge_absence : true          <- 8/30 에는 이것이 서지 않았다
-child_count                      : 86
-observed_count                   : 86
-missing_count                    : 0
-unread_count                     : 0
-unreadable_address_count         : 0
-caveat                           : 열거는 절단됐으나 선언된 자식을 전부 관측했다
-                                   — 수량 비교는 정확하고, 인덱스 도메인만 미상
-type_translation.attempted       : true
-type_translation.named           : 15
-type_translation.untranslated    : {}            <- 미번역 0
-fid_read                         : known 86 · unresolved 0
+$ uv run python -m server.tools.responder_roundtrip --listen-port 9005 --skip-exec --wait 5
+[PASS] ping: ok
+       live version=1.6.2 plugin=CopilotResponder
+[PASS] state: ok
+result: PASS
 ```
 
-**「선언된 자식 86개를 전부 관측했다」**가 핵심이다. 8/30 리포트는 「풀 childCount 20인데
-19개만 회신」을 스스로 적었다 — 그때는 판독이 절단됐고, 그 상태에서 나온 「없다」가
-54행으로 기록됐다.
+**1.6.2 확인.** exec 결과가 아니라 ping 자체로 확인했다(8/30 리포트가 executed_ok로
+판정해서 캐싱을 놓쳤던 실수를 반복하지 않기 위해).
 
-**타입 해석 결과 전문** (`payload.types`):
+### 1.2 `lxseq_e2e --action preview` 재실행 (읽기 전용)
 
-```
-resolved (8종, 전부):
-  ETC S4 LED S3 Lustr X8      ->  Source 4 LED Series 3 Lustr X8
-  Elation CUEPIX Blinder WW2  ->  CuePix Blinder WW2
-  Martin Atomic 3000 LED      ->  Atomic 3000 LED
-  Look Unique 2.1             ->  Unique 2 1
-  Robe MegaPointe             ->  Robin MegaPointe
-  Robe Spiider                ->  Robin Spiider
-  Martin MAC Aura XB          ->  Mac Aura XB
-  Martin RUSH PAR 2 RGBW Z    ->  Rush Par 2 RGBW Zoom
-unresolved: []
-```
-
-이름이 상당히 다른데도 전부 걸렸다 — 제조사 접두 탈락(`Martin` 삭제), `Robe` -> `Robin`,
-`2.1` -> `2 1`. **매칭 계층이 실제로 일하고 있다.** 8/30 에 이 매칭이 실패한 것이 아니라,
-비교할 라이브러리 목록 자체를 못 받았던 것이다.
-
-🔴 **「54종」이라는 말 자체가 두 번 어긋나 있었다.** CSV 가 요청하는 **타입은 8종**이고
-**행이 86개**다. 54는 종 수도 행 수도 아니고, 8/30 회차에 `type_unresolved` 로 스킵된
-**행 수**였다. 감독이 「왜 54종이야?」라고 물으신 것이 정확한 질문이었다 —
-그 수는 종 수가 아니었다.
-
-## 3. 🔴 상태별 전수 표 — 이 카드의 본체
-
-`lxseq_e2e --action preview` 재실행, 86행 전수. **쓰기 0건**(`summary_ko`: 「미리보기 —
-쓰기 0건. 런 0개 · 계획 0대 · 건너뛴 행 86건」).
-
-| 스킵 종류 | 행 수 | 타입 | 뜻 | 처분 |
-|---|---:|---|---|:--:|
-| **`type_unresolved`** | **0** | — | 타입을 못 찾음 | — |
-| ├ `absent` | **0** | — | 콘솔에 없다 | (B) 였을 것 |
-| ├ `ambiguous` | **0** | — | 후보가 여럿 | (A) 였을 것 |
-| └ `library_unreadable` | **0** | — | 라이브러리를 못 읽음 | (B) 였을 것 |
-| `already_patched` | **62** | 7종 | 같은 타입이 같은 자리에 이미 있다 | 할 일 없음 |
-| `mode_unresolved` | **24** | `Martin MAC Aura XB` 1종 | 타입은 찾았고 **모드**를 못 정함 | §4 |
-| 합계 | **86** | 8종 | | |
-
-**세 상태 전부 0이다.** 카드가 요구한 「absent 몇 · ambiguous 몇 · library_unreadable 몇」의
-답은 **0 · 0 · 0** 이다. 8/30 의 54행은 세 상태 중 어느 것으로도 지금 나타나지 않는다.
-
-행 수 산술이 맞는다: CSV 타입별 행 수가 Aura 24 · RUSH PAR 20 · S4 LED 14 · Spiider 8 ·
-MegaPointe 8 · CUEPIX 6 · Atomic 4 · Unique 2 = **86**. Aura 24행이 `mode_unresolved`,
-나머지 7종 62행이 `already_patched` — **24 + 62 = 86**, 남는 행이 없다.
-
-### 3.1 이 0이 다른 신호에 가려진 것이 아님을 확인했다
-
-이 표의 가장 큰 함정은 **`already_patched` 가 타입 판정을 가리는 것**이었다.
-줄번호만 보면 그렇게 보인다 — `already_patched` 는 `:408`, `type_unresolved` 는 `:530` 이다.
-
-**호출 자리를 열어 보니 정반대다:**
+정본 CSV: `src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.patch.csv`
+(86행 전량, `--listen-port 9005`)
 
 ```
-:515  for record in records:                 루프 진입
-:518      if console_type is None:           <- 타입 판정이 먼저
-:530          kind="type_unresolved"
-:534          continue
-:549      if mode.resolution == "unresolved" <- 그다음 모드
-:560          kind="mode_unresolved"
-:567          continue
-:571      occupied = _occupancy_skip(...)    <- 점유 검사는 여기서 처음 불린다
+console_read.complete_enough_to_judge_absence: True
+types.resolved: 8종 전부
+types.unresolved: 0종
+fid_map: 86 (전량 판독)
 ```
 
-`_occupancy_skip` 은 `:370` 에 **정의**돼 있고 `:571` 에서 **호출**된다.
-정의 순서가 실행 순서가 아니다. **86행 전부가 타입 검사를 통과한 뒤에** 62행이
-`already_patched` 로 갈렸다. 가림은 없다.
+### 1.3 상태별 행 분리
 
-### 3.2 검출력 대조군
+| kind | 행 수 |
+|---|---:|
+| already_patched | 62 |
+| mode_unresolved | 24 |
+| (합계) | 86 |
 
-`type_unresolved` 0건이 「없다」인지 「내 술어가 못 본다」인지 갈랐다:
+**`type_unresolved` 계열(absent/ambiguous/library_unreadable) 자체가 이번
+회차에 0행이다.** 카드가 요구한 "상태별 행별 표"는 그래서 만들 대상이 없다 --
+이것 자체가 답이다. `ambiguous`는 8/30 리포트에도 등장한 적이 없어 이 저장소
+에서 실측된 적이 있는 상태인지 자체가 미확인이다(§4).
 
-```
-grep -c type_unresolved  .moai/reports/t204/e2e-preview.json   -> 0
-grep -n type_unresolved  server/lxseq/mapper.py                -> 530  (어휘 실재)
-grep -n already_patched  server/lxseq/mapper.py                -> 408  (같은 술어가 잡는다)
-grep -n mode_unresolved  server/lxseq/mapper.py                -> 560  (같은 술어가 잡는다)
-```
+코드 확인(`server/lxseq/mapper.py:497-534`): 타입 해석(`type_unresolved` 판정)이
+`already_patched`/`mode_unresolved` 판정보다 **먼저** 실행된다(`_occupancy_skip`은
+`console_type`을 인자로 받아 타입이 이미 풀린 뒤에만 호출됨). 그래서 지금의
+62건 `already_patched`는 타입 미해결을 숨기고 있는 게 아니라 **타입이 실제로
+풀린 뒤** 자리 점유로 걸린 것이다.
 
-같은 술어가 형제 둘은 잡고 이것만 0이다. **검출력 있는 0이다.**
+## 2. 54(8/30) 와 나란히 놓기 -- 왜 줄었는가
 
-## 4. 남은 24행 — 타입이 아니라 모드다
+| 시점 | 응답기 ping | type_unresolved | mode_unresolved | address_occupied/already_patched |
+|---|---|---:|---:|---:|
+| 2026-08-30 | **1.6.1**(캐싱, 디스크는 1.6.2) | 54 | 24 | 7 |
+| 2026-08-31(이번) | **1.6.2**(ping 확인) | **0** | 24 | 62(already_patched) |
 
-24행 전부 같은 타입 `Martin MAC Aura XB` (콘솔 `Mac Aura XB`).
-FID `201-212` · `301-306` · `311-316`.
+- **mode_unresolved 24는 완전히 동일하다** -- 이 축은 응답기 버전과 무관하고
+  안 변했다(t128, PR #182 로 이미 닫힌 사안과 무관하게 다시 나타나는 게 아니라
+  같은 24건이 계속 그 자리에 있는 것으로 보인다 -- 개별 FID 재대조는 안 함, §4).
+- **54(type_unresolved) + 7(address_occupied) = 61 ≈ 62(already_patched, 오차 1)**.
+  이전에 "타입이 없다"거나 "자리가 이미 찼다"로 갈라 적혔던 행 대부분이 지금은
+  "타입도 풀리고 그 타입이 이미 그 자리에 패치돼 있다"는 **단일하고 더 강한 정보**로
+  합쳐졌다.
+- **줄어든 이유**: 8/30 시점엔 응답기가 캐싱된 1.6.1을 답하고 있었고, 그 리포트
+  자신이 "풀 childCount 20인데 19개만 회신"(절단)이라고 적어 뒀다. 라이브러리
+  판독이 절단되면 `type_resolutions`에 항목이 없는 타입은 코드 기본값
+  (`mapper.py:505,520`)에 따라 `library_unreadable`로 떨어지는데, 리포트는 이를
+  `absent`로 단정했다. 재임포트 후 1.6.2가 확인되고 라이브러리 판독이 절단 없이
+  완료되면서(§1.2 `complete_enough_to_judge_absence: True`), 그 54건의 타입
+  해석이 정상적으로 이뤄진 것으로 보인다.
+- **"54가 줄었다"를 그 자체로 성과로 쓰지 않는다** -- 위 인과(캐싱->절단->
+  기본값 오분류->재임포트로 해소)가 이 감소의 이유라고 판단하는 근거이고, 이
+  인과 자체는 8/30 리포트와 이번 측정 두 시점의 대조로 재구성한 것이지 그
+  절단-당시 라이브러리 내용을 직접 관측한 것은 아니다(§4).
 
-사유 문자열이 24행 모두 **바이트 동일**하다:
+## 3. 판정 규율 적용 -- (A)/(B)/(C)
 
-```
-모드를 확정하지 못했다 — 실측 모드: [Extended - Extended(25), Extended - RAW(25),
-Extended - RGB(25), Standard - Extended(14), Standard - RAW(14), Standard - RGB(14)].
-mode_overrides: {"Martin MAC Aura XB": "<콘솔 모드 이름>"} 로 재호출하라.
-```
+- **type_unresolved 0건**: 막힌 것 자체가 없다. 분류할 "안 된다"가 없다.
+- **mode_unresolved 24건**: 8/30 리포트가 이미 "우리 코드/문서 매칭 문제"(처방:
+  `--mode-overrides`, PR #182로 t128이 이미 일부 닫음)로 분류해 뒀다 -- 이번
+  회차에서 재검증하지 않았고 t128 처분을 그대로 존중한다.
+- 새로 분류할 것이 없어 (A)/(B)/(C) 표는 이번 카드에서 만들 대상이 없다.
 
-**콘솔이 답한 모드는 6종이고 폭은 두 값뿐이다** — 25가 셋, 14가 셋.
+## 4. 안 잰 것
 
-CSV 가 주는 것:
+- **8/30 당시 절단된 라이브러리의 실제 내용**은 재현 불가(그 순간의 캐시 상태는
+  지나갔다) -- §2의 인과는 재구성이지 직접 관측이 아니다.
+- **mode_unresolved 24건이 8/30의 24건과 같은 FID인지** 개별 대조 안 함 -- 숫자만
+  같고 구성이 같은지는 미확인.
+- **`ambiguous` 상태가 이 저장소에서 실측된 적이 있는지** -- 8/30 리포트에도
+  이번 측정에도 한 번도 안 나왔다. 코드 어휘에는 있지만(mapper.py:30) 실측
+  사례가 아직 없다는 뜻일 수도, 이 CSV/이 콘솔 조합에서 원리적으로 안 나오는
+  상태일 수도 있다 -- 갈리지 않았다.
+- **62건 already_patched가 실제로 의도한 패치와 완전히 일치하는지**(타입뿐 아니라
+  모드·주소까지)는 이번 preview 판정을 그대로 신뢰했고 재확인 안 함.
 
-```
-201,BACK,Martin MAC Aura XB,Extended 25ch,25,4,1,4.001–025,업스테이지 트러스
-                            ^^^^^^^^^^^^^ ^^
-                            Mode 열        Ch 열
-대조군(잘 붙은 타입): 501,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,...
-```
+## 5. 후속 후보 (카드로 안 만듦)
 
-해석 규칙을 직독했다(`mapper.py:278` `_resolve_mode`, `:360` `_match_by_label_token`):
-
-1. `same_width` = 폭 25인 콘솔 모드 -> **3종**. 유일하지 않으니 `width_unique` 실패
-2. 라벨 토큰 매칭 -> 토큰은 `["Extended", "25ch"]`. 후보 3종의 이름이 **셋 다
-   `Extended` 로 시작**하므로 `any(token in name)` 이 셋 다 참 -> `hits=3`
-3. `return hits[0] if len(hits) == 1 else None` -> **`None`** -> `unresolved`
-
-즉 **어떤 규칙으로도 지금 정보로는 못 고른다.** 콘솔 모드 이름이
-`<Extended|Standard> - <Extended|RAW|RGB>` 라는 **두 겹**인데, CSV 는 **앞 겹만** 말한다.
-뒤 겹(색 혼합 방식 Extended/RAW/RGB)은 **CSV 에 아예 없다.**
-
-## 5. 3분류 — 기본값 (C) 를 지켰다
-
-| 항목 | 분류 | 근거 (같은 줄에) |
-|---|:--:|---|
-| 픽스처 타입 8종 전부 해석됨 | 해결됨 | `payload.types.unresolved: []` · `untranslated: {}` |
-| 8/30 의 54행 = 판독 절단의 결과 | **(B) 해소됨** | 응답기 1.6.2+ 회신 에코 · `complete_enough_to_judge_absence: true` · `missing_count: 0` |
-| `Aura XB` 24행 모드 미확정 | 🔴 **(C) 문서 의도 미확인** | CSV `Mode` 열이 「Extended 25ch」로 **앞 겹만** 말하고, 콘솔은 뒤 겹(Extended/RAW/RGB)을 요구한다. **정보가 CSV 에 없다** — 코드 규칙으로는 못 만든다 |
-| 62행 `already_patched` | 할 일 없음 | 같은 타입이 같은 자리에 이미 있다 |
-
-🔴 **`mode_unresolved` 를 (A) 로 분류하지 않은 이유를 적는다.** 카드는 「`ambiguous` 가
-나오면 (A) 후보」라고 했고 이것은 형태가 비슷하다 — 콘솔에 있는데 우리가 못 골랐다.
-그런데 **못 고른 원인이 우리 규칙이 아니라 입력의 정보 부족**이다. 폭도 라벨도 셋을
-가르지 못하고, 가를 수 있는 값이 CSV 에 존재하지 않는다. 코드는 **추측하지 않고 거절했고
-그 자리에서 해법(`mode_overrides`)까지 문자열로 안내한다** — fail-closed 가 설계대로 돈 것이다.
-근거 없이 (A) 로 적으면 감독께 한 줄 여쭈면 끝날 일이 코드 카드가 된다.
-
-**감독께 여쭐 것 하나**: `Martin MAC Aura XB` 24대를 콘솔의 어느 모드로 패치할까요 —
-`Extended - Extended` / `Extended - RAW` / `Extended - RGB` (셋 다 25ch). CSV 의
-「Extended 25ch」는 앞 겹만 지정하고 있습니다. 답을 주시면 `mode_overrides` 로 바로 붙습니다.
-
-## 6. 처방은 정하지 않았다 (카드 지시)
-
-재료만 놓는다. 갈래는 셋으로 보이고 **어느 것도 실행하지 않았다**:
-(a) 감독이 모드를 지정 -> `mode_overrides` 로 재호출 (코드 변경 0) ·
-(b) CSV `Mode` 열에 뒤 겹을 적는다 (정본 데이터 변경) ·
-(c) 매칭 규칙을 바꾼다 — **권하지 않는다.** 정보가 없는데 규칙만 정교하게 하면
-추측이 되고, 이 앱에는 실행 취소가 없다.
-
-## 7. 안 잰 것
-
-- **`apply` 를 안 돌렸다.** 이 회차는 preview 전용이고 콘솔 쓰기 0건이다.
-  62행이 `already_patched` 이므로 남은 대상은 24행뿐인데, 그 24행이 바로 모드 미확정이다
-- **정확한 응답기 버전 문자열을 안 쟀다.** 「1.6.2 이상」까지만 회신으로 판정했다
-- **`Patch/FixtureTypes` 의 실제 타입 목록을 열거하지 않았다.** `introspect` 는 그 클래스의
-  **프로퍼티 접근자 16종**을 답한다(타입 목록이 아니다). 타입 해석 결과는 하네스의
-  `payload.types` 로 읽었다 — 콘솔 라이브러리 전량 열거는 이 회차에 안 했다
-- **8/30 리포트 원본을 열지 않았다.** 「54」와 「childCount 20 중 19 회신」은 카드 본문이
-  전한 값이고 내가 그 파일을 직접 읽어 대조하지 않았다
-- **`already_patched` 62행이 언제 어떻게 패치됐는지 안 쟀다.** 감독 GUI 작업인지 이전
-  `apply` 런인지 이 측정으로는 안 갈린다
-- **뮤테이션 0건.** 코드 변경이 없어 걸 대상이 없다. 대신 0에 검출력 대조군을 붙였다(§3.2)
-
-## 8. 증거 파일
-
-```
-.moai/reports/t204/introspect-probe.json   1,326 B   응답기 버전 판별 회신
-.moai/reports/t204/e2e-preview.json       53,553 B   preview 전수 (stderr 0 B)
-```
-
----
-
-**측정자**: t204 레인 · 콘솔 쓰기 0 · 코드 변경 0 · 새 카드 0 · 처방 미실행
-
+1. mode_unresolved 24건 개별 FID 대조(8/30 대비 구성 동일 여부).
+2. ambiguous 상태를 실제로 유발하는 콘솔/CSV 조합이 있는지 별도 확인(코드
+   어휘가 있는데 실측 사례가 없는 상태라 공허한 분기인지 궁금증만 남김).
