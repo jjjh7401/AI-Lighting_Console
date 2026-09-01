@@ -1,0 +1,1793 @@
+{
+  "sequences": [
+    {
+      "i": 1,
+      "name": "Default",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/1/1/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ab8fc0",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ab9080",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/1/2/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a0cf00",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a0cfc0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        }
+      ],
+      "childCount": 2,
+      "listed": 2
+    },
+    {
+      "i": 2,
+      "name": "Sugar",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/1/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a18580",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a18640",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/2/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a914c0",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a91580",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "Cue 1",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/3/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a940c0",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a94140",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 10,
+          "name": "Q010",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/4/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001abbdc0",
+                "MEMORYFOOTPRINT": "4580",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001abbec0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 20,
+          "name": "Q020",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/5/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a97240",
+                "MEMORYFOOTPRINT": "3368",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a97300",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 30,
+          "name": "Q030",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/6/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a56840",
+                "MEMORYFOOTPRINT": "3896",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a56980",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 40,
+          "name": "Q040",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/7/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ae4740",
+                "MEMORYFOOTPRINT": "4504",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ae4840",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 8,
+          "cueNo": 50,
+          "name": "Q050",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/8/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a1b340",
+                "MEMORYFOOTPRINT": "6208",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a1b480",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 9,
+          "cueNo": 60,
+          "name": "Q060",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/9/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x6000014aa640",
+                "MEMORYFOOTPRINT": "5432",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x6000014aa940",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 10,
+          "cueNo": 70,
+          "name": "Q070",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/10/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001aa4dc0",
+                "MEMORYFOOTPRINT": "7728",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001aa69c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 11,
+          "cueNo": 80,
+          "name": "Q080",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/11/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ae1400",
+                "MEMORYFOOTPRINT": "3896",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ae1000",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 12,
+          "cueNo": 90,
+          "name": "Q090",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/12/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a89b80",
+                "MEMORYFOOTPRINT": "5872",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a89e40",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 13,
+          "cueNo": 100,
+          "name": "Q100",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/13/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001abf2c0",
+                "MEMORYFOOTPRINT": "3064",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001abf380",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 14,
+          "cueNo": 110,
+          "name": "Q110",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/14/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001b1b440",
+                "MEMORYFOOTPRINT": "4160",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001b1b580",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 15,
+          "cueNo": 120,
+          "name": "Q120",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/15/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001b2c540",
+                "MEMORYFOOTPRINT": "3048",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001b2ca40",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 16,
+          "cueNo": 130,
+          "name": "Q130",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/16/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a9de00",
+                "MEMORYFOOTPRINT": "5744",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a9e180",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 17,
+          "cueNo": 140,
+          "name": "Q140",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/17/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a8c700",
+                "MEMORYFOOTPRINT": "3768",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a8c800",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 18,
+          "cueNo": 150,
+          "name": "Q150",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/18/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001aa1fc0",
+                "MEMORYFOOTPRINT": "5748",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001aa22c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 19,
+          "cueNo": 160,
+          "name": "Q160",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/19/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a50200",
+                "MEMORYFOOTPRINT": "6568",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a50440",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 20,
+          "cueNo": 170,
+          "name": "Q170",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/20/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001aea4c0",
+                "MEMORYFOOTPRINT": "9136",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001aea5c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 21,
+          "cueNo": 180,
+          "name": "Q180",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/21/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001aae440",
+                "MEMORYFOOTPRINT": "6312",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001aae500",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        }
+      ],
+      "childCount": 21,
+      "listed": 21
+    },
+    {
+      "i": 3,
+      "name": "Sugar r3",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/1/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a5bf40",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a5f5c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/2/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a98ac0",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a98b80",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "Cue 1",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/3/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a4d380",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a4d440",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 10,
+          "name": "Q010 INTRO 화사",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/4/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a42cc0",
+                "MEMORYFOOTPRINT": "4580",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a42dc0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 20,
+          "name": "Q020 VERSE1 경쾌",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/5/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a49400",
+                "MEMORYFOOTPRINT": "3368",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a494c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 30,
+          "name": "Q030 VERSE1 확장",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/6/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a4ef40",
+                "MEMORYFOOTPRINT": "3896",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a50100",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 40,
+          "name": "Q040 PRE1 축적",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/7/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001aa2280",
+                "MEMORYFOOTPRINT": "4504",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001aa2340",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 8,
+          "cueNo": 50,
+          "name": "Q050 CHORUS1 개방",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/8/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a45400",
+                "MEMORYFOOTPRINT": "6208",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a45540",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 9,
+          "cueNo": 60,
+          "name": "Q060 CHORUS1 유지",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/9/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001aa5880",
+                "MEMORYFOOTPRINT": "5432",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001aa7b40",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 10,
+          "cueNo": 70,
+          "name": "Q070 VERSE2 하강",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/10/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a4af80",
+                "MEMORYFOOTPRINT": "7728",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001aa3ec0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 11,
+          "cueNo": 80,
+          "name": "Q080 PRE2 축적",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/11/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a8c600",
+                "MEMORYFOOTPRINT": "3896",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a8c780",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 12,
+          "cueNo": 90,
+          "name": "Q090 CHORUS2 개방",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/12/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ae98c0",
+                "MEMORYFOOTPRINT": "5872",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ae9a00",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 13,
+          "cueNo": 100,
+          "name": "Q100 CHORUS2 유지",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/13/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a8b2c0",
+                "MEMORYFOOTPRINT": "3064",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a8b380",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 14,
+          "cueNo": 110,
+          "name": "Q110 BRIDGE 절제",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/14/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ae50c0",
+                "MEMORYFOOTPRINT": "4160",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ae4d00",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 15,
+          "cueNo": 120,
+          "name": "Q120 BRIDGE 재점화",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/15/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ae17c0",
+                "MEMORYFOOTPRINT": "3048",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ae1880",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 16,
+          "cueNo": 130,
+          "name": "Q130 CHORUS3 폭발",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/16/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a61380",
+                "MEMORYFOOTPRINT": "5744",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a614c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 17,
+          "cueNo": 140,
+          "name": "Q140 CHORUS3 유지",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/17/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x6000014ab440",
+                "MEMORYFOOTPRINT": "3768",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x6000014ab600",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 18,
+          "cueNo": 150,
+          "name": "Q150 CHORUS3 최고조",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/18/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001b03cc0",
+                "MEMORYFOOTPRINT": "5748",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001b039c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 19,
+          "cueNo": 160,
+          "name": "Q160 CHORUS3 해소 준비",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/19/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001b634c0",
+                "MEMORYFOOTPRINT": "6600",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001b63800",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 20,
+          "cueNo": 170,
+          "name": "Q170 OUTRO 잔향",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/20/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001b4fe40",
+                "MEMORYFOOTPRINT": "9136",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001b4ff40",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 21,
+          "cueNo": 180,
+          "name": "Q180 OUTRO 암전",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/21/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a90040",
+                "MEMORYFOOTPRINT": "6312",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a90140",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        }
+      ],
+      "childCount": 21,
+      "listed": 21
+    },
+    {
+      "i": 4,
+      "name": "eset1Fade",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/1/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a82540",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a82680",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/2/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a96c00",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a96cc0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "T215 SCRATCH",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/3/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a63d40",
+                "MEMORYFOOTPRINT": "6316",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a63e00",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 2,
+          "name": "T215 ALT",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/4/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x60000140f640",
+                "MEMORYFOOTPRINT": "2544",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x60000140f780",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 3,
+          "name": "T215 INDIV",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/5/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a1d4c0",
+                "MEMORYFOOTPRINT": "6428",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a1d480",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 4,
+          "name": "T215 TWOGRP",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/6/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x60000140e340",
+                "MEMORYFOOTPRINT": "6456",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x60000140f900",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 5,
+          "name": "Cue 5",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/7/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a5e940",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a5ea00",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            },
+            {
+              "i": 2,
+              "path": "DataPool/Sequences/4/7/2",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ab12c0",
+                "MEMORYFOOTPRINT": "3076",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ab1380",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 2,
+          "partsListed": 2
+        }
+      ],
+      "childCount": 7,
+      "listed": 7
+    },
+    {
+      "i": 9,
+      "name": "T215 SCRATCH DELETABLE",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/1/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001aae240",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001aae300",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/2/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ab5000",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ab50c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "T215 SCRATCH",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/3/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a9ca40",
+                "MEMORYFOOTPRINT": "6316",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a9c700",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 2,
+          "name": "T215 ALT",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/4/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a85080",
+                "MEMORYFOOTPRINT": "2544",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a85140",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 3,
+          "name": "T215 INDIV",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/5/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a812c0",
+                "MEMORYFOOTPRINT": "6428",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a81440",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 4,
+          "name": "T215 TWOGRP",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/6/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a82940",
+                "MEMORYFOOTPRINT": "6456",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a82f40",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 5,
+          "name": "Cue 5",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/7/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a62b40",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a62c00",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            },
+            {
+              "i": 2,
+              "path": "DataPool/Sequences/9/7/2",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a8a280",
+                "MEMORYFOOTPRINT": "3076",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a8a480",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 2,
+          "partsListed": 2
+        }
+      ],
+      "childCount": 7,
+      "listed": 7
+    },
+    {
+      "i": 2000,
+      "name": "Sequence 2000",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/1/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ab2080",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ab2140",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/2/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a9ef40",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a9e900",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "T215 SCRATCH",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/3/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001a99e40",
+                "MEMORYFOOTPRINT": "6316",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001a99f40",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 2,
+          "name": "T215 ALT",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/4/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ae4340",
+                "MEMORYFOOTPRINT": "2544",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ae40c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 3,
+          "name": "T215 INDIV",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/5/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ae0b00",
+                "MEMORYFOOTPRINT": "6428",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ae0bc0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 4,
+          "name": "T215 TWOGRP",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/6/1",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ad3e40",
+                "MEMORYFOOTPRINT": "6456",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ad37c0",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 5,
+          "name": "Cue 5",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/7/1",
+              "props": {
+                "OWNDATAPRESENT": "false",
+                "OWNNONCOOKEDDATAPRESENT": "false",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001ae3980",
+                "MEMORYFOOTPRINT": "2521",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001ae3a80",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            },
+            {
+              "i": 2,
+              "path": "DataPool/Sequences/2000/7/2",
+              "props": {
+                "OWNDATAPRESENT": "true",
+                "OWNNONCOOKEDDATAPRESENT": "true",
+                "STOREDDATA": "!property not readable: STOREDDATA",
+                "REFERENCES": "",
+                "DEPENDENCIES": "table: 0x600001b39ac0",
+                "MEMORYFOOTPRINT": "3076",
+                "HASANYMATRICKSDATA": "false",
+                "SELECTIONDATA": "table: 0x600001b3a740",
+                "PRESETDATA": "",
+                "COUNT": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 2,
+          "partsListed": 2
+        }
+      ],
+      "childCount": 7,
+      "listed": 7
+    }
+  ]
+}
