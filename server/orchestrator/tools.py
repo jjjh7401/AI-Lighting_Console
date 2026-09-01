@@ -78,7 +78,7 @@ from server.looks.songcue import (
     parse_sections,
 )
 from server.looks.songcue_report import build_songcue_report
-from server.lxseq.cue_parser import MissingCueColumnsError, parse_cue_csv
+from server.lxseq.cue_parser import CueColumnSetError, parse_cue_csv
 from server.lxseq.group_mapper import map_groups
 from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
@@ -5327,7 +5327,7 @@ def build_toolset(
             return _error_result(call, "시트 바이트가 UTF-8이 아니다")
         try:
             parsed = parse_cue_csv(text)
-        except MissingCueColumnsError as error:
+        except CueColumnSetError as error:
             return _error_result(call, "CUE-EX 시트 헤더가 맞지 않다: " + str(error))
 
         # 정본 CUE 시트(xlsx) -- 있으면 CueFade 근사(행별 I-Fade 최댓값)를
@@ -5380,7 +5380,7 @@ def build_toolset(
                     )
                 cue_meta[q] = (section, mood_first, fade)
 
-        from server.lxseq.cue_mapper import map_cues
+        from server.lxseq.cue_mapper import block_report, map_cues
 
         # 시퀀스 풀 조회 -- map_cues(server/lxseq/cue_mapper.py)가 기대하는
         # 단면 모양은 원시 query_state() 응답(children/node/ok)이 아니라
@@ -5682,6 +5682,11 @@ def build_toolset(
             ),
             "refusal": result.refusal,
             "refusal_detail": result.refusal_detail or None,
+            # AC-LXSEQ4-014 -- 막힌 자리를 (A)/(B)/(C) 로 분류해 싣는다.
+            # 기본값은 (C) 이고, 거절 코드만으로는 (A) 가 안 붙는다(근거가
+            # 같은 줄에 있어야 하므로). 분류표는 cue_mapper 에 있다 -- 코드와
+            # 같은 자리에 두어야 코드가 늘 때 분류가 같이 는다.
+            "blocked_by": [dict(item) for item in block_report(result)],
             "sequence_no": placement.slot if placement is not None else None,
             "already_present": result.already_present is not None,
             "cues_already_present": list(result.cues_already_present),
