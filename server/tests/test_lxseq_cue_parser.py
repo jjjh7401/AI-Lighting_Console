@@ -1,4 +1,7 @@
-"""SPEC-COPILOT-LXSEQ-004 M1 -- CUE-EX parser tests (t209).
+"""SPEC-COPILOT-LXSEQ-004 M1 -- CUE-EX parser tests (t209 · t207).
+
+AC-LXSEQ4-002  헤더는 정규 17열 **정확 집합** (모자람 · 남음 둘 다 거부)
+AC-LXSEQ4-012  두 갈래가 서로 다른 사유 문자열을 낸다
 
 Lead's pinned contract requires four assertions:
 1) sample CSV -> records 89 / cue_numbers 18
@@ -17,7 +20,9 @@ import pytest
 
 from server.lxseq.cue_parser import (
     CANONICAL_CUE_COLUMNS,
+    CueColumnSetError,
     MissingCueColumnsError,
+    UnexpectedCueColumnsError,
     parse_cue_csv,
 )
 
@@ -128,12 +133,45 @@ class TestBomHandling:
 
 
 class TestHeaderValidation:
-    def test_missing_columns_is_refused_not_silently_dropped(self):
+    def test_missing_columns_is_refused_not_silently_dropped(self):  # AC-LXSEQ4-002
         header = ",".join(c for c in CANONICAL_CUE_COLUMNS if c != "Snap")
         text = header + "\nQ010,BACK,55,,,,,,,,,,,,,\n"
         with pytest.raises(MissingCueColumnsError) as excinfo:
             parse_cue_csv(text)
         assert "Snap" in str(excinfo.value)
+
+    def test_an_extra_column_is_refused_by_name(self):
+        """AC-LXSEQ4-002 -- 헤더는 **정확 집합**이다.
+
+        재현(2026-09-01, t207): 고치기 전에는 이 시트가 그대로 통과했다.
+        오타 열은 정규 이름이 사라져 모자람 갈래로 이미 잡히므로, 실제로
+        노출돼 있던 것은 **덧붙은 열**이다 -- 작성자가 열을 만들고 파이프라인이
+        그것을 읽는다고 믿는 경우다. 조용히 무시하면 그 믿음이 무대까지 간다.
+        """
+        header = ",".join(CANONICAL_CUE_COLUMNS) + ",EXTRA-JUNK"
+        text = header + "\nQ010,BACK,55,,,,,,,,,,,,,,x\n"
+        with pytest.raises(UnexpectedCueColumnsError) as excinfo:
+            parse_cue_csv(text)
+        assert "EXTRA-JUNK" in str(excinfo.value)
+        assert excinfo.value.unexpected == ("EXTRA-JUNK",)
+
+    def test_both_column_faults_share_one_ancestor(self):
+        """규약 §3.2 -- 부르는 쪽이 한 갈래만 잡으면 다른 갈래가 새어나간다.
+        `tools.py` 가 조상을 잡으므로 둘 다 조상이어야 한다."""
+        assert issubclass(MissingCueColumnsError, CueColumnSetError)
+        assert issubclass(UnexpectedCueColumnsError, CueColumnSetError)
+
+    def test_the_two_column_faults_give_different_reason_strings(self):  # AC-LXSEQ4-012
+        """AC-LXSEQ4-012 -- 거짓 사유가 참 사유를 가리지 않게 문자열로 가른다."""
+        missing = ",".join(c for c in CANONICAL_CUE_COLUMNS if c != "Snap")
+        extra = ",".join(CANONICAL_CUE_COLUMNS) + ",EXTRA-JUNK"
+        with pytest.raises(CueColumnSetError) as a:
+            parse_cue_csv(missing + "\n")
+        with pytest.raises(CueColumnSetError) as b:
+            parse_cue_csv(extra + "\n")
+        assert str(a.value).startswith("missing_columns:")
+        assert str(b.value).startswith("unexpected_columns:")
+        assert str(a.value) != str(b.value)
 
     def test_column_order_does_not_matter(self):
         reversed_columns = tuple(reversed(CANONICAL_CUE_COLUMNS))
