@@ -128,7 +128,7 @@ _PERCENT = re.compile(r"^\s*(\d+)\s*%\s*$")
 #: 보류 사유의 **닫힌 클래스**. 산문만 두면 13건이 한 덩어리로 보이고,
 #: **어느 하나를 풀면 몇 건이 열리는지** 아무도 모른다. 클래스가 있으면
 #: 「스케일 변환만 해결하면 6건」이 바로 읽힌다. 원인마다 처방과 소유자가 다르다.
-HOLD_NO_RGB_VALUE = "no_rgb_value"  # col — 색온도만. 켈빈 모델이 저장소에 없다
+HOLD_NO_RGB_VALUE = "no_rgb_value"  # col — RGB 도, 정의역 안의 색온도도 없다
 HOLD_PROBE_REJECTED = "attribute_probe_rejected"  # bm — 라이브 프로브가 거절했다
 HOLD_FAMILY_OUT_OF_SCOPE = "family_out_of_scope"  # bm — 풀 계열이 범위 밖이다
 HOLD_VALUE_NOT_MACHINE_READABLE = "value_not_machine_readable"  # 형태가 아니다
@@ -267,7 +267,7 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
         )
 
     if kind == "preset-col":
-        components = _rgb_components(value_raw)
+        components = _col_components(value_raw)
         if components is not None:
             # t134 실측(2026-08-30, MOVER-D 521 3.001): 콘솔은 퍼센트를 16비트로
             # **선형** 매핑한다 — At 70.6 -> COARSE 180 / FINE 188,
@@ -286,9 +286,10 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
         return False, (
             PresetHoldReason(
                 HOLD_NO_RGB_VALUE,
-                "색온도만 있고 RGB 가 없다: "
+                "RGB 도 쓸 수 있는 색온도도 없다: "
                 + value_raw.strip()
-                + " — 켈빈에서 RGB 를 만드는 모델이 이 저장소에 없다",
+                + " — 켈빈은 Kim et al. (2002) 정의역 1667K-25000K 안에서만"
+                " 옮긴다(밖은 외삽하지 않는다)",
             ),
         )
 
@@ -352,6 +353,148 @@ def _rgb_components(value_raw: str) -> tuple[int, int, int] | None:
     return values
 
 
+#: col 값에서 색온도를 꺼내는 술어. `~3200K` · `3200K` 둘 다 받는다.
+_KELVIN = re.compile(r"~?\s*(\d{3,5})\s*K\b", re.IGNORECASE)
+
+#: Kim et al. (2002) 근사의 정의역. 밖은 **외삽하지 않고 보류**한다 —
+#: 근사식을 정의역 밖으로 끌면 조용히 틀린 색이 나간다.
+_KELVIN_MIN = 1667.0
+_KELVIN_MAX = 25000.0
+
+
+def planckian_xy(kelvin: float) -> tuple[float, float]:
+    """색온도 -> CIE 1931 xy (플랑크 궤적 위의 점).
+
+    **출처: Kim et al. (2002)**, "Design of Advanced Color Temperature Control
+    System for HDTV Applications", Journal of the Korean Physical Society 41(6).
+    플랑크 궤적의 3차 근사이며 정의역은 1667K-25000K 다. 「대략 이 식」이 아니라
+    이 논문의 계수 그대로다.
+
+    검산 앵커(식을 만드는 데 쓰지 않은 독립 기준):
+
+    * **Illuminant A (2856K)** — CIE 표준광 A 는 **플랑크 복사체**다. 그래서 이
+      식이 가장 정확히 맞아야 하는 자리이고, 실측 오차 dx 0.0005 · dy 0.0001 이다.
+    * **D65 (6504K) · D50 (5003K)** — dy 가 0.005-0.007 어긋난다. 이것은 계수
+      오류가 **아니다**: D 계열은 **주광 궤적** 위에 있고 플랑크 궤적에서 의도적으로
+      떨어져 있다(Duv 약 +0.003). 어긋나야 맞는 자리에서 어긋나고, 맞아야 맞는
+      자리에서 맞는다 — 그 대비가 이 계수의 근거다.
+    """
+    t = kelvin
+    if t <= 4000.0:
+        x = -0.2661239e9 / t**3 - 0.2343589e6 / t**2 + 0.8776956e3 / t + 0.179910
+    else:
+        x = -3.0258469e9 / t**3 + 2.1070379e6 / t**2 + 0.2226347e3 / t + 0.240390
+    if t <= 2222.0:
+        y = -1.1063814 * x**3 - 1.34811020 * x**2 + 2.18555832 * x - 0.20219683
+    elif t <= 4000.0:
+        y = -0.9549476 * x**3 - 1.37418593 * x**2 + 2.09137015 * x - 0.16748867
+    else:
+        y = 3.0817580 * x**3 - 5.87338670 * x**2 + 3.75112997 * x - 0.37001483
+    return x, y
+
+
+def kelvin_to_rgb(kelvin: float) -> tuple[int, int, int]:
+    """색온도 -> sRGB 0-255. **손실 변환이다.**
+
+    **출처: IEC 61966-2-1 (sRGB)** — D65 백색점, 표준 변환 행렬과 전달 함수.
+    xy -> XYZ(Y=1) -> 선형 sRGB -> 감마.
+
+    검산 앵커: D65 백색점 `xy(0.3127, 0.3290)` 을 넣으면 `(255, 255, 255)` 가
+    나온다. D65 가 sRGB 백색이라는 것은 규격의 **정의**이므로, 행렬을 이 사실에
+    맞춰 조정한 것이 아니라 규격 계수가 그 정의를 재현하는 것이다.
+
+    🔴 **밝기는 정규화된다.** 최대 성분을 255 로 맞추므로 이 값은 **색상만**
+    옮기고 광량은 옮기지 않는다. 프리셋이 싣는 것도 색이므로 의도한 범위다.
+
+    🔴 **근사라는 사실을 숨기지 않는다.** 시트가 RGB 와 켈빈을 **둘 다** 싣는
+    유일한 행(`COL.01` `R255 G180 B60 / ~2400K`)에서 저자값과 변환값을 나란히
+    재면 `R 255/255 · G 180/160 · B 60/66` 으로, G 가 20/255 어긋난다. 그래서
+    RGB 가 있으면 **저자값이 이긴다**(`_col_components` 의 순서) — 변환은 RGB 가
+    아예 없는 행에만 쓴다.
+    """
+    return _xy_to_srgb(*planckian_xy(kelvin))
+
+
+def _xy_to_srgb(x: float, y: float) -> tuple[int, int, int]:
+    """CIE 1931 xy -> sRGB 0-255. **출처: IEC 61966-2-1** (D65, 표준 행렬·전달 함수).
+
+    `kelvin_to_rgb` 에서 분리해 둔 이유는 검사다 — 행렬을 재려면 궤적이 아니라
+    **백색점 xy 를 직접** 넣어야 한다(6504K 의 궤적 위 점은 D65 백색점과 미세하게
+    다르다). 합쳐 두면 그 검사를 쓸 수 없다.
+    """
+    big_x, big_y, big_z = x / y, 1.0, (1.0 - x - y) / y
+    linear = [
+        3.2406 * big_x - 1.5372 * big_y - 0.4986 * big_z,
+        -0.9689 * big_x + 1.8758 * big_y + 0.0415 * big_z,
+        0.0557 * big_x - 0.2040 * big_y + 1.0570 * big_z,
+    ]
+    linear = [max(0.0, v) for v in linear]
+    peak = max(linear)
+    if peak > 0.0:
+        linear = [v / peak for v in linear]
+    out: list[int] = []
+    for v in linear:
+        encoded = 12.92 * v if v <= 0.0031308 else 1.055 * (v ** (1 / 2.4)) - 0.055
+        out.append(round(max(0.0, min(1.0, encoded)) * 255))
+    return (out[0], out[1], out[2])
+
+
+def _kelvin_components(value_raw: str) -> tuple[int, int, int] | None:
+    """색온도 단독 값 -> RGB. 정의역 밖이거나 켈빈이 없으면 ``None``."""
+    match = _KELVIN.search(value_raw)
+    if match is None:
+        return None
+    kelvin = float(match.group(1))
+    if not (_KELVIN_MIN <= kelvin <= _KELVIN_MAX):
+        return None
+    return kelvin_to_rgb(kelvin)
+
+
+def _col_components(value_raw: str) -> tuple[int, int, int] | None:
+    """col 원문 -> RGB 성분. **판정기와 판독기가 함께 쓰는 유일한 술어다.**
+
+    🔴 이 함수가 하나인 것이 계약이다. `tools.py:1757` 이 그 자리를 지목한다 —
+    「판정기가 통과시킨 값을 판독기가 못 읽었다는 뜻이다. 둘은 같은 술어를 쓰므로
+    여기 오면 술어가 갈라진 것이다」. 갈라지면 `_lxseq_preset_apply_command` 가
+    `None` 을 내고 소비 루프가 **번들을 통째로 버린다**(`apply_untranslatable`) —
+    2행을 얻으려다 col 8행을 다 잃는다. t229 가 그 형태를 실측으로 재현했다.
+
+    순서가 계약이다: **RGB 가 있으면 저자값이 이긴다.** 켈빈 변환은 근사이므로
+    시트가 명시한 값을 덮지 않는다.
+    """
+    components = _rgb_components(value_raw)
+    if components is not None:
+        return components
+    return _kelvin_components(value_raw)
+
+
+def col_conversion_note(value_raw: str) -> str | None:
+    """켈빈에서 만든 값이면 **원값과 변환값을 나란히** 적은 한 줄. 아니면 ``None``.
+
+    🔴 근사를 조용히 내보내지 않기 위한 자리다. 승인 카드에는 시트 원문(`~3200K`)만
+    뜨는데 콘솔에 나가는 것은 근사된 RGB 다 — 그 둘이 다르다는 사실이 승인하는
+    사람 눈앞에 있어야 한다. 「조용히 틀린 것이 크게 없는 것보다 나쁘다」.
+
+    RGB 가 원문에 있으면 ``None`` 이다 — 그때는 변환이 일어나지 않았고, 알릴 근사도
+    없다.
+    """
+    if _rgb_components(value_raw) is not None:
+        return None
+    components = _kelvin_components(value_raw)
+    if components is None:
+        return None
+    return (
+        value_raw.strip()
+        + " -> R"
+        + str(components[0])
+        + " G"
+        + str(components[1])
+        + " B"
+        + str(components[2])
+        + " (켈빈→sRGB 근사 · Kim et al. 2002 + IEC 61966-2-1)"
+    )
+
+
 def col_rgb_percents(value_raw: str) -> tuple[float, float, float] | None:
     """col 원문 -> 콘솔 퍼센트 세 개. 옮길 수 없으면 ``None``.
 
@@ -367,7 +510,7 @@ def col_rgb_percents(value_raw: str) -> tuple[float, float, float] | None:
     전 구간 무손실이 필요해지면 소수 3자리가 0/256 이지만, **콘솔이 소수 몇
     자리까지 받는지는 안 쟀다** — 그것이 선행 측정이다.
     """
-    components = _rgb_components(value_raw)
+    components = _col_components(value_raw)
     if components is None:
         return None
     return tuple(round(v / 255 * 100, 1) for v in components)
