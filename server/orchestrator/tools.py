@@ -123,6 +123,7 @@ from server.presets.store import (
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
 from server.rig.paging import paged_children
+from server.rig.pool_lookup import resolve_all_pool, resolve_family_pool
 from server.rig.section import SECTION_UNREAD, section_refusal
 from server.safety.approval import (
     ApprovalItem,
@@ -4999,22 +5000,18 @@ def build_toolset(
     #   저장소가 프로브 포트에서 이미 치렀다(t61).
 
     def _preset_pool_number(family: str):
-        """콘솔이 답한 풀 목록에서 이 계열의 풀 번호를 **읽는다**. 지어내지 않는다."""
+        """콘솔이 답한 풀 목록에서 이 계열의 풀 번호를 **읽는다**. 지어내지 않는다.
+
+        술어는 `server/rig/pool_lookup.py` 한 자리다(t231) — 이 함수가 사본
+        다섯 중 하나였고, 다섯이 다 잘림을 부재로 읽고 다중을 안 갈랐다.
+        """
         pools_path = rig_paths.get("preset_pools")
         if pools_path is None:
             return None, "rig context 에 프리셋 풀 경로가 없다 — 풀 번호를 잴 수 없다"
-        try:
-            payload = state_port.query_state(pools_path)
-        except Exception as exc:  # noqa: BLE001 — 모든 포트 실패는 하나의 거절이다
-            return None, "프리셋 풀 목록이 오지 않았다: " + str(exc)
-        for child in payload.get("children") or []:
-            if not isinstance(child, dict):
-                continue
-            number = child.get("i") if isinstance(child.get("i"), int) else child.get("no")
-            name = str(child.get("name") or "")
-            if isinstance(number, int) and name.casefold().startswith(family.casefold()):
-                return number, ""
-        return None, ("풀 목록에 '" + family + "' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다")
+        number, refusal = resolve_family_pool(state_port, str(pools_path), family)
+        if refusal is not None:
+            return None, refusal[1]
+        return number, ""
 
     def import_lxseq_presets(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         """LX-SEQ PRESET 시트를 콘솔 프리셋으로 만든다.
@@ -5562,29 +5559,15 @@ def build_toolset(
 
             pool_path = None
             found_pool_no: int | None = None
-            try:
-                pools_path = rig_paths.get(
-                    "preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
-                )
-                pools_first = state_port.query_state(pools_path)
-            except Exception:  # noqa: BLE001
-                pools_first = {"ok": False}
-            if pools_first.get("ok"):
-                pool_children, _truncated = paged_children(state_port, pools_path, pools_first)
-                family = _PRESET_POOL_FAMILY[kind]
-                for child in pool_children:
-                    obj = rig_object(child)
-                    pool_name = str(obj.get("name") or "")
-                    pool_no = obj.get("no")
-                    if isinstance(pool_no, int) and pool_name.casefold().startswith(
-                        family.casefold()
-                    ):
-                        pool_path = str(pools_path) + "/" + str(pool_no)
-                        found_pool_no = pool_no
-                        break
-            if pool_path is None:
-                preset_sheet_errors[arg_name] = f"'{family}' 로 시작하는 풀을 못 찾았다"
+            pools_path = str(
+                rig_paths.get("preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"])
+            )
+            family = _PRESET_POOL_FAMILY[kind]
+            found_pool_no, pool_refusal = resolve_family_pool(state_port, pools_path, family)
+            if pool_refusal is not None:
+                preset_sheet_errors[arg_name] = pool_refusal[1]
                 continue
+            pool_path = pools_path + "/" + str(found_pool_no)
             try:
                 slots_first = state_port.query_state(pool_path)
             except Exception as exc:  # noqa: BLE001
@@ -5641,25 +5624,15 @@ def build_toolset(
                     if (row.get("ID") or "").strip()
                 }
                 sheet_names_by_kind["FX"] = dict(fx_id_to_name)
+                # `All` 계열은 **다중이 정상**이라 계열 조회와 다른 술어를 쓴다
+                # (t231, `server/rig/pool_lookup.py` 모듈 독스트링 참조).
                 fx_pool_path = None
-                try:
-                    fx_pools_first = state_port.query_state(fx_pools_root_path)
-                except Exception:  # noqa: BLE001
-                    fx_pools_first = {"ok": False}
-                if fx_pools_first.get("ok"):
-                    fx_pool_children, _truncated = paged_children(
-                        state_port, fx_pools_root_path, fx_pools_first
-                    )
-                    for child in fx_pool_children:
-                        obj = rig_object(child)
-                        pool_name = str(obj.get("name") or "")
-                        pool_no = obj.get("no")
-                        if isinstance(pool_no, int) and pool_name.casefold().startswith("all"):
-                            fx_pool_path = str(fx_pools_root_path) + "/" + str(pool_no)
-                            break
-                if fx_pool_path is None:
-                    preset_sheet_errors["fx_content_base64"] = "'All' 로 시작하는 풀을 못 찾았다"
+                fx_pool_no, fx_pool_refusal = resolve_all_pool(state_port, str(fx_pools_root_path))
+                if fx_pool_refusal is not None:
+                    preset_sheet_errors["fx_content_base64"] = fx_pool_refusal[1]
                 else:
+                    fx_pool_path = str(fx_pools_root_path) + "/" + str(fx_pool_no)
+                if fx_pool_path is not None:
                     try:
                         fx_slots_first = state_port.query_state(fx_pool_path)
                     except Exception as exc:  # noqa: BLE001
@@ -5702,28 +5675,14 @@ def build_toolset(
         )
         pos_family = POSITION_POOL_FAMILY
         pos_pool_path = None
-        pos_pool_no: int | None = None
-        try:
-            pos_pools_first = state_port.query_state(pos_pools_root_path)
-        except Exception:  # noqa: BLE001
-            pos_pools_first = dict(ok=False)
-        if pos_pools_first.get("ok"):
-            pos_pool_children, _truncated = paged_children(
-                state_port, pos_pools_root_path, pos_pools_first
-            )
-            for child in pos_pool_children:
-                obj = rig_object(child)
-                pool_name = str(obj.get("name") or "")
-                pool_no = obj.get("no")
-                if isinstance(pool_no, int) and pool_name.casefold().startswith(
-                    pos_family.casefold()
-                ):
-                    pos_pool_path = str(pos_pools_root_path) + "/" + str(pool_no)
-                    pos_pool_no = pool_no
-                    break
-        if pos_pool_path is None:
-            preset_sheet_errors["position_pool"] = f"{pos_family} 로 시작하는 풀을 못 찾았다"
+        pos_pool_no, pos_pool_refusal = resolve_family_pool(
+            state_port, str(pos_pools_root_path), pos_family
+        )
+        if pos_pool_refusal is not None:
+            preset_sheet_errors["position_pool"] = pos_pool_refusal[1]
         else:
+            pos_pool_path = str(pos_pools_root_path) + "/" + str(pos_pool_no)
+        if pos_pool_path is not None:
             try:
                 pos_slots_first = state_port.query_state(pos_pool_path)
             except Exception as exc:  # noqa: BLE001
@@ -6745,20 +6704,18 @@ def build_toolset(
                 )
             pool_no = pool_arg
         else:
-            all_pools = [
-                p
-                for p in pools
-                if isinstance(p.get("no"), int)
-                and str(p.get("name", "")).casefold().startswith("all")
-            ]
-            if not all_pools:
+            # `All` 계열은 다중이 정상이다 — 첫째를 고르는 것이 계약이고,
+            # 잘린 목록은 거절이다 (t231, `server/rig/pool_lookup.py`).
+            resolved_all, all_refusal = resolve_all_pool(state_port, str(pools_path))
+            if all_refusal is not None:
                 return None, _fx_error_result(
                     call,
-                    'no preset pool named "All …" is listed on this rig — pass '
-                    "preset_pool explicitly with one of the pools below",
+                    'no preset pool named "All …" could be measured on this rig '
+                    "(" + all_refusal[0] + ") — pass preset_pool explicitly with "
+                    "one of the pools below",
                     preset_pools=pools,
                 )
-            pool_no = all_pools[0]["no"]
+            pool_no = resolved_all
         pool_path = f"{pools_path}/{pool_no}"
         try:
             pool_payload = state_port.query_state(pool_path)
