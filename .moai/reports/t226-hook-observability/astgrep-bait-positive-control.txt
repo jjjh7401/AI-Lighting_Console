@@ -1,0 +1,4 @@
+findings (1):
+
+ui/src/t226_probe_cred.ts:2: [sec-hardcoded-credential-typescript] A credential appears to be hardcoded in source. Load it from an environment variable or a secret manager instead. (error)
+  note: A hardcoded credential leaks through the source repository, its history, and every clone. Read the value from process.env or a secret manager at runtime.

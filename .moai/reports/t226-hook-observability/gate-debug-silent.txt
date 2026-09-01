@@ -1,0 +1,33 @@
+time=2026-09-01T22:00:23.083+09:00 level=INFO msg="gopls bridge disabled (lsp.yaml: enabled=false)"
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="config cache: HIT (serving cached config)"
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="cwd fallback used (CLAUDE_PROJECT_DIR not set)" cwd_fallback=true caller=loadObservabilityMaster resolved_cwd=/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t226
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=SessionStart handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=SessionEnd handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=SessionStart handler_count=2
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=SessionStart handler_count=3
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=SessionStart handler_count=4
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=Stop handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=PreToolUse handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=PostToolUse handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=PreCompact handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=PostToolUseFailure handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=Notification handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=SubagentStart handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=UserPromptSubmit handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=PermissionRequest handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=TeammateIdle handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=TaskCompleted handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=WorktreeCreate handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=WorktreeRemove handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=PostCompact handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=InstructionsLoaded handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=StopFailure handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=SubagentStop handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=TaskCreated handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=PermissionDenied handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=ConfigChange handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=CwdChanged handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=FileChanged handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=Elicitation handler_count=1
+time=2026-09-01T22:00:23.084+09:00 level=DEBUG msg="handler registered" event=ElicitationResult handler_count=1
+time=2026-09-01T22:00:23.086+09:00 level=INFO msg=SUNSET_CONFIG_DORMANT_NOTICE spec="SPEC-V3R2-MIG-003 REQ-018" yaml_path=/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t226/.moai/config/sections/sunset.yaml advice="SunsetConfig has no runtime hot path; activation requires a new SPEC"
