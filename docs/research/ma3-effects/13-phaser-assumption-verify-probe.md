@@ -73,6 +73,11 @@ introspect SelectedFixtures  → "path segment not found: 'SelectedFixtures'"
 — 예상대로였고 새로운 GAP도 아니다(구조적 한계, `console/lua/copilot_responder.lua`의
 `ROOT_ALIASES`에 Programmer/Selection 별칭이 없다는 12번 문서 인용을 재확인).
 
+> ⚠️ **만료 고지 (t240, 2026-09-02)** — 이 줄이 「구조적 한계」와 「`ROOT_ALIASES` 에
+> 별칭이 없다」를 **같은 것으로** 묶어 적었는데, `t235` 가 그 둘을 갈랐다: 별칭 부재는
+> 원인이고 **제거 가능한 미구현**이며, 「구조적 한계」는 그 원인에 붙인 **해석**이었다.
+> 관측(별칭이 없다)은 지금도 참이다. 해석만 좁혀졌다.
+
 ### A2.2 recall → 재저장 → introspect 대조 — **새로운 반증 신호(부분적 판독 성공)**
 
 ```
