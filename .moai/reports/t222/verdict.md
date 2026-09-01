@@ -177,6 +177,21 @@ exit 0 · `coordinates_read {count: 86, reason: null}` · `derived []` ·
   좌표로는 못 쟀다(저장소에 없다).
 - **큐는 0개 열렸다.** 의도된 것이다.
 
+## 8.5 배차서 전제 하나를 반증한다 — CI 는 죽어 있지 않다
+
+배차서: 「CI is dead repo-wide (billing): a ~3s job with `steps: 0` is that, not you.」
+실측(2026-09-01, PR #271 head `230693f`):
+
+    gh run watch 33472430407 --exit-status
+      ✓ Python tests   ✓ UI tests   ✓ Complete job
+    gh pr checks 271 -> test  pass  5m10s
+    gh pr view 271 --json headRefOid -> 230693f (내 HEAD 와 동일)
+
+`steps: 0` 도 3초도 아니었다 — **5분 10초를 돌고 실제 단계가 전부 초록**이다.
+`mergeable MERGEABLE` · `mergeStateStatus CLEAN`.
+결제가 언제 풀렸는지는 안 쟀다. 다만 「죽어 있다」를 전제로 CI 를 건너뛰는 배차는
+지금 시점에 성립하지 않는다.
+
 ## 9. 컨텍스트
 
 `.moai/state/context-usage.json` 이 **이 워크트리에 없다**(`cat` -> `No such file`).
