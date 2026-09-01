@@ -1,0 +1,943 @@
+{
+  "action": "preview",
+  "approve": false,
+  "listen_port": 9005,
+  "fx_csv": "src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.fx.csv",
+  "group": 13,
+  "only_ids": null,
+  "skipped": [
+    {
+      "fx_id": "FX.04",
+      "name": "COL-RAINBOW",
+      "reason": "attribute 'Hue' 는 KNOWN_ATTRIBUTES 밖이다"
+    },
+    {
+      "fx_id": "FX.06",
+      "name": "SHUTTER-STROBE",
+      "reason": "attribute 'Shutter' 는 KNOWN_ATTRIBUTES 밖이다"
+    }
+  ],
+  "interpreted": [
+    {
+      "fx_id": "FX.08",
+      "name": "PT-CIRCLE",
+      "note": "Ø소 는 시트가 수치를 주지 않는다 -- Pan/Tilt +-5.0도는 우리 해석이다. 감독이 GUI 에서 재녹화할 수 있다."
+    }
+  ],
+  "runnable_count": 6,
+  "skipped_count": 2,
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "baseline": {
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "ok": false,
+      "child_count": null,
+      "truncated": false,
+      "detail": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "fixtures": {
+      "path": "Patch/Stages/1/Fixtures",
+      "ok": true,
+      "child_count": 86,
+      "children_in_reply": 19,
+      "truncated": true,
+      "detail": null
+    },
+    "groups": {
+      "path": "DataPool/Groups",
+      "ok": true,
+      "child_count": 18,
+      "children_in_reply": 18,
+      "truncated": false,
+      "detail": null
+    },
+    "preset_pools_before": {
+      "path": "DataPool/PresetPools",
+      "ok": true,
+      "child_count": 14,
+      "children_in_reply": 14,
+      "truncated": false,
+      "detail": null
+    },
+    "channel_trustworthy": true
+  },
+  "results": [
+    {
+      "fx_id": "FX.01",
+      "name": "DIM-CHASE",
+      "arguments": {
+        "pattern": "chase",
+        "steps": [
+          {
+            "Dimmer": 100.0
+          },
+          {
+            "Dimmer": 0.0
+          }
+        ],
+        "destination": "preset",
+        "speed": 240.0,
+        "label": "DIM-CHASE",
+        "width": 50.0,
+        "phase_from": 0.0,
+        "phase_to": 360.0,
+        "group": 13
+      },
+      "is_error": true,
+      "response": {
+        "all_ok": false,
+        "gate_status": "rejected",
+        "notice": "bundle rejected by the approver — nothing was executed",
+        "commands": [
+          {
+            "command": "ChangeDestination Root",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Group 13",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At 100",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Step 2",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At 0",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At Phase 0 Thru 360",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At Width 50",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At Speed 240",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Store Preset 21.3 'DIM-CHASE' /Universal",
+            "status": "rejected",
+            "reasons": [
+              "blacklisted command (matches closed-set entry 'Store Preset')"
+            ]
+          },
+          {
+            "command": "Label Preset 21.3 'DIM-CHASE'",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          }
+        ],
+        "executed": false,
+        "succeeded": false,
+        "report": {
+          "fx_id": "composed-chase",
+          "display_name": "DIM-CHASE",
+          "pattern": "chase",
+          "group": 13,
+          "sequence": null,
+          "cue": null,
+          "preset_pool": 21,
+          "preset": 3,
+          "label": "DIM-CHASE",
+          "executor": null,
+          "attributes": [
+            "Dimmer"
+          ],
+          "step_count": 2,
+          "speed_bpm": 240.0,
+          "verdict": "planned",
+          "verdict_ko": "계획",
+          "executed": false,
+          "succeeded": false,
+          "command_count": 12,
+          "executed_ok": 0,
+          "failed": [],
+          "not_executed": [],
+          "collided": [],
+          "effect_evidence": "※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.",
+          "requery_limit": "※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+        },
+        "summary_ko": "[chase] 프리셋 21.3 'DIM-CHASE' · 그룹 13 · 커맨드 12개 · 판정 계획\n  ※ 실행 결과를 관측하지 않은 계획 단계 보고입니다.\n상세:\n  패턴 chase · 대상 Dimmer · 스텝 2단\n  속도 240 BPM\n  ※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.\n  ※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+      }
+    },
+    {
+      "fx_id": "FX.02",
+      "name": "DIM-PULSE",
+      "arguments": {
+        "pattern": "pulse",
+        "steps": [
+          {
+            "Dimmer": 100.0
+          },
+          {
+            "Dimmer": 60.0
+          }
+        ],
+        "destination": "preset",
+        "speed": 120.0,
+        "label": "DIM-PULSE",
+        "phase_from": 0.0,
+        "phase_to": 360.0,
+        "group": 13
+      },
+      "is_error": true,
+      "response": {
+        "all_ok": false,
+        "gate_status": "rejected",
+        "notice": "bundle rejected by the approver — nothing was executed",
+        "commands": [
+          {
+            "command": "ChangeDestination Root",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Group 13",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At 100",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Step 2",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At 60",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At Phase 0 Thru 360",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At Speed 120",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Store Preset 21.3 'DIM-PULSE' /Universal",
+            "status": "rejected",
+            "reasons": [
+              "blacklisted command (matches closed-set entry 'Store Preset')"
+            ]
+          },
+          {
+            "command": "Label Preset 21.3 'DIM-PULSE'",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          }
+        ],
+        "executed": false,
+        "succeeded": false,
+        "report": {
+          "fx_id": "composed-pulse",
+          "display_name": "DIM-PULSE",
+          "pattern": "pulse",
+          "group": 13,
+          "sequence": null,
+          "cue": null,
+          "preset_pool": 21,
+          "preset": 3,
+          "label": "DIM-PULSE",
+          "executor": null,
+          "attributes": [
+            "Dimmer"
+          ],
+          "step_count": 2,
+          "speed_bpm": 120.0,
+          "verdict": "planned",
+          "verdict_ko": "계획",
+          "executed": false,
+          "succeeded": false,
+          "command_count": 11,
+          "executed_ok": 0,
+          "failed": [],
+          "not_executed": [],
+          "collided": [],
+          "effect_evidence": "※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.",
+          "requery_limit": "※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+        },
+        "summary_ko": "[pulse] 프리셋 21.3 'DIM-PULSE' · 그룹 13 · 커맨드 11개 · 판정 계획\n  ※ 실행 결과를 관측하지 않은 계획 단계 보고입니다.\n상세:\n  패턴 pulse · 대상 Dimmer · 스텝 2단\n  속도 120 BPM\n  ※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.\n  ※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+      }
+    },
+    {
+      "fx_id": "FX.03",
+      "name": "DIM-BREATHE",
+      "arguments": {
+        "pattern": "pulse",
+        "steps": [
+          {
+            "Dimmer": 100.0
+          },
+          {
+            "Dimmer": 40.0
+          }
+        ],
+        "destination": "preset",
+        "speed": 30.0,
+        "label": "DIM-BREATHE",
+        "phase_from": 0.0,
+        "phase_to": 360.0,
+        "group": 13
+      },
+      "is_error": true,
+      "response": {
+        "all_ok": false,
+        "gate_status": "rejected",
+        "notice": "bundle rejected by the approver — nothing was executed",
+        "commands": [
+          {
+            "command": "ChangeDestination Root",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Group 13",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At 100",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Step 2",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At 40",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At Phase 0 Thru 360",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At Speed 30",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Store Preset 21.3 'DIM-BREATHE' /Universal",
+            "status": "rejected",
+            "reasons": [
+              "blacklisted command (matches closed-set entry 'Store Preset')"
+            ]
+          },
+          {
+            "command": "Label Preset 21.3 'DIM-BREATHE'",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          }
+        ],
+        "executed": false,
+        "succeeded": false,
+        "report": {
+          "fx_id": "composed-pulse",
+          "display_name": "DIM-BREATHE",
+          "pattern": "pulse",
+          "group": 13,
+          "sequence": null,
+          "cue": null,
+          "preset_pool": 21,
+          "preset": 3,
+          "label": "DIM-BREATHE",
+          "executor": null,
+          "attributes": [
+            "Dimmer"
+          ],
+          "step_count": 2,
+          "speed_bpm": 30.0,
+          "verdict": "planned",
+          "verdict_ko": "계획",
+          "executed": false,
+          "succeeded": false,
+          "command_count": 11,
+          "executed_ok": 0,
+          "failed": [],
+          "not_executed": [],
+          "collided": [],
+          "effect_evidence": "※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.",
+          "requery_limit": "※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+        },
+        "summary_ko": "[pulse] 프리셋 21.3 'DIM-BREATHE' · 그룹 13 · 커맨드 11개 · 판정 계획\n  ※ 실행 결과를 관측하지 않은 계획 단계 보고입니다.\n상세:\n  패턴 pulse · 대상 Dimmer · 스텝 2단\n  속도 30 BPM\n  ※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.\n  ※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+      }
+    },
+    {
+      "fx_id": "FX.05",
+      "name": "TILT-SWEEP",
+      "arguments": {
+        "pattern": "sweep",
+        "steps": [
+          {
+            "Tilt": -25.0
+          },
+          {
+            "Tilt": 25.0
+          }
+        ],
+        "destination": "preset",
+        "speed": 30.0,
+        "label": "TILT-SWEEP",
+        "phase_from": 0.0,
+        "phase_to": 360.0,
+        "group": 13
+      },
+      "is_error": true,
+      "response": {
+        "all_ok": false,
+        "gate_status": "rejected",
+        "notice": "bundle rejected by the approver — nothing was executed",
+        "commands": [
+          {
+            "command": "ChangeDestination Root",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Group 13",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Tilt' At -25",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Step 2",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Tilt' At 25",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Tilt' At Phase 0 Thru 360",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Tilt' At Speed 30",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Store Preset 21.3 'TILT-SWEEP' /Universal",
+            "status": "rejected",
+            "reasons": [
+              "blacklisted command (matches closed-set entry 'Store Preset')"
+            ]
+          },
+          {
+            "command": "Label Preset 21.3 'TILT-SWEEP'",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          }
+        ],
+        "executed": false,
+        "succeeded": false,
+        "report": {
+          "fx_id": "composed-sweep",
+          "display_name": "TILT-SWEEP",
+          "pattern": "sweep",
+          "group": 13,
+          "sequence": null,
+          "cue": null,
+          "preset_pool": 21,
+          "preset": 3,
+          "label": "TILT-SWEEP",
+          "executor": null,
+          "attributes": [
+            "Tilt"
+          ],
+          "step_count": 2,
+          "speed_bpm": 30.0,
+          "verdict": "planned",
+          "verdict_ko": "계획",
+          "executed": false,
+          "succeeded": false,
+          "command_count": 11,
+          "executed_ok": 0,
+          "failed": [],
+          "not_executed": [],
+          "collided": [],
+          "effect_evidence": "※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.",
+          "requery_limit": "※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+        },
+        "summary_ko": "[sweep] 프리셋 21.3 'TILT-SWEEP' · 그룹 13 · 커맨드 11개 · 판정 계획\n  ※ 실행 결과를 관측하지 않은 계획 단계 보고입니다.\n상세:\n  패턴 sweep · 대상 Tilt · 스텝 2단\n  속도 30 BPM\n  ※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.\n  ※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+      }
+    },
+    {
+      "fx_id": "FX.07",
+      "name": "DIM-TWINKLE",
+      "arguments": {
+        "pattern": "chase",
+        "steps": [
+          {
+            "Dimmer": 100.0
+          },
+          {
+            "Dimmer": 30.0
+          }
+        ],
+        "destination": "preset",
+        "speed": 30.0,
+        "label": "DIM-TWINKLE",
+        "group": 13
+      },
+      "is_error": true,
+      "response": {
+        "all_ok": false,
+        "gate_status": "rejected",
+        "notice": "bundle rejected by the approver — nothing was executed",
+        "commands": [
+          {
+            "command": "ChangeDestination Root",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Group 13",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At 100",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Step 2",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At 30",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Dimmer' At Speed 30",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Store Preset 21.3 'DIM-TWINKLE' /Universal",
+            "status": "rejected",
+            "reasons": [
+              "blacklisted command (matches closed-set entry 'Store Preset')"
+            ]
+          },
+          {
+            "command": "Label Preset 21.3 'DIM-TWINKLE'",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          }
+        ],
+        "executed": false,
+        "succeeded": false,
+        "report": {
+          "fx_id": "composed-chase",
+          "display_name": "DIM-TWINKLE",
+          "pattern": "chase",
+          "group": 13,
+          "sequence": null,
+          "cue": null,
+          "preset_pool": 21,
+          "preset": 3,
+          "label": "DIM-TWINKLE",
+          "executor": null,
+          "attributes": [
+            "Dimmer"
+          ],
+          "step_count": 2,
+          "speed_bpm": 30.0,
+          "verdict": "planned",
+          "verdict_ko": "계획",
+          "executed": false,
+          "succeeded": false,
+          "command_count": 10,
+          "executed_ok": 0,
+          "failed": [],
+          "not_executed": [],
+          "collided": [],
+          "effect_evidence": "※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.",
+          "requery_limit": "※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+        },
+        "summary_ko": "[chase] 프리셋 21.3 'DIM-TWINKLE' · 그룹 13 · 커맨드 10개 · 판정 계획\n  ※ 실행 결과를 관측하지 않은 계획 단계 보고입니다.\n상세:\n  패턴 chase · 대상 Dimmer · 스텝 2단\n  속도 30 BPM\n  ※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.\n  ※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+      }
+    },
+    {
+      "fx_id": "FX.08",
+      "name": "PT-CIRCLE",
+      "arguments": {
+        "pattern": "circle",
+        "steps": [
+          {
+            "Pan": -5.0,
+            "Tilt": -5.0
+          },
+          {
+            "Pan": 5.0,
+            "Tilt": 5.0
+          }
+        ],
+        "destination": "preset",
+        "speed": 30.0,
+        "label": "PT-CIRCLE",
+        "phase_from": 0.0,
+        "group": 13
+      },
+      "is_error": true,
+      "response": {
+        "all_ok": false,
+        "gate_status": "rejected",
+        "notice": "bundle rejected by the approver — nothing was executed",
+        "commands": [
+          {
+            "command": "ChangeDestination Root",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Group 13",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Pan' At -5",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Tilt' At -5",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Step 2",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Pan' At 5",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Tilt' At 5",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Pan' At Phase 0",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Tilt' At Phase 90",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Attribute 'Pan' At Speed 30 ; Attribute 'Tilt' At Speed 30",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "Store Preset 21.3 'PT-CIRCLE' /Universal",
+            "status": "rejected",
+            "reasons": [
+              "blacklisted command (matches closed-set entry 'Store Preset')"
+            ]
+          },
+          {
+            "command": "Label Preset 21.3 'PT-CIRCLE'",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          },
+          {
+            "command": "ClearAll",
+            "status": "rejected",
+            "reasons": [
+              "bundle rejected (all-or-nothing, REQ-MVP-015)"
+            ]
+          }
+        ],
+        "executed": false,
+        "succeeded": false,
+        "report": {
+          "fx_id": "composed-circle",
+          "display_name": "PT-CIRCLE",
+          "pattern": "circle",
+          "group": 13,
+          "sequence": null,
+          "cue": null,
+          "preset_pool": 21,
+          "preset": 3,
+          "label": "PT-CIRCLE",
+          "executor": null,
+          "attributes": [
+            "Pan",
+            "Tilt"
+          ],
+          "step_count": 2,
+          "speed_bpm": 30.0,
+          "verdict": "planned",
+          "verdict_ko": "계획",
+          "executed": false,
+          "succeeded": false,
+          "command_count": 14,
+          "executed_ok": 0,
+          "failed": [],
+          "not_executed": [],
+          "collided": [],
+          "effect_evidence": "※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.",
+          "requery_limit": "※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+        },
+        "summary_ko": "[circle] 프리셋 21.3 'PT-CIRCLE' · 그룹 13 · 커맨드 14개 · 판정 계획\n  ※ 실행 결과를 관측하지 않은 계획 단계 보고입니다.\n상세:\n  패턴 circle · 대상 Pan, Tilt · 스텝 2단\n  속도 30 BPM\n  ※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.\n  ※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다."
+      }
+    }
+  ],
+  "preset_pools_after": {
+    "path": "DataPool/PresetPools",
+    "ok": true,
+    "child_count": 14,
+    "children_in_reply": 14,
+    "truncated": false,
+    "detail": null
+  },
+  "approval_requests": [
+    [
+      "Store Preset 21.3 'DIM-CHASE' /Universal"
+    ],
+    [
+      "Store Preset 21.3 'DIM-PULSE' /Universal"
+    ],
+    [
+      "Store Preset 21.3 'DIM-BREATHE' /Universal"
+    ],
+    [
+      "Store Preset 21.3 'TILT-SWEEP' /Universal"
+    ],
+    [
+      "Store Preset 21.3 'DIM-TWINKLE' /Universal"
+    ],
+    [
+      "Store Preset 21.3 'PT-CIRCLE' /Universal"
+    ]
+  ],
+  "questions_asked": []
+}
