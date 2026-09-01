@@ -243,7 +243,9 @@ At Preset 4.1
 Group "HAZE"
 At 40
 Store Cue 10 "Q010 INTRO 화사" CueFade 0.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): BACK[I0.0/C0.0] · WASH-U[I0.0/C0.0] · HAZE[I0.0]
+//   Part 0 개별 타이밍 — BACK, WASH-U, HAZE
+Set Cue 10 Sequence 1 Property 'Preset1Fade' 0.0
+Set Cue 10 Sequence 1 Property 'Preset4Fade' 0.0
 
 // ═══   Q020 — TC 00:08.0 · 경쾌, 근접 · Fade 1.5 ═══
 ClearAll
@@ -256,7 +258,9 @@ At 35
 Group "WASH-U"
 At 0
 Store Cue 20 "Q020 VERSE1 경쾌" CueFade 1.5 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): KEY[I1.5/C1.5] · BACK[I1.5] · WASH-U[I1.5]
+//   Part 0 개별 타이밍 — KEY, BACK, WASH-U
+Set Cue 20 Sequence 1 Property 'Preset1Fade' 1.5
+Set Cue 20 Sequence 1 Property 'Preset4Fade' 1.5
 
 // ═══   Q030 — TC 00:24.0 · 확장, 그루브 · Fade 2.0 ═══
 ClearAll
@@ -271,7 +275,9 @@ At Preset 4.6
 At Preset 22.2
 //   FX.02 Rate 15 BPM · Phase 0..360 · Width —
 Store Cue 30 "Q030 VERSE1 확장" CueFade 2.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): SIDE-L[I2.0/C2.0] · SIDE-R[I2.0/C2.0]
+//   Part 0 개별 타이밍 — SIDE-L, SIDE-R
+Set Cue 30 Sequence 1 Property 'Preset1Fade' 2.0
+Set Cue 30 Sequence 1 Property 'Preset4Fade' 2.0
 
 // ═══   Q040 — TC 00:40.0 · 축적, 상승 · Fade 8.0 ═══
 ClearAll
@@ -288,11 +294,21 @@ At 45
 At Preset 4.6
 At Preset 2.4
 At Preset 21.2
+Store Cue 40 "Q040 PRE1 축적" CueFade 8.0 Sequence 1 /Merge /NoConfirm
+//   Part 0 개별 타이밍 — SIDE-L, SIDE-R, MOVER-U
+Set Cue 40 Sequence 1 Property 'Preset1Fade' 8.0
+Set Cue 40 Sequence 1 Property 'Preset1Delay' 0.0
+Set Cue 40 Sequence 1 Property 'Preset2Fade' 8.0
+Set Cue 40 Sequence 1 Property 'Preset4Fade' 4.0
+Set Cue 40 Sequence 1 Property 'Preset5Fade' 2.0
+ClearAll
 Group "KEY"
 At 60
 At Preset 4.6
-Store Cue 40 "Q040 PRE1 축적" CueFade 8.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): SIDE-L[I8.0] · SIDE-R[I8.0] · MOVER-U[I8.0/Id0.0/P8.0/C4.0/B2.0] · KEY[I8.0/C8.0]
+Store Cue 40 Part 1 "Q040 P1" Sequence 1 /Merge /NoConfirm
+//   Part 1 개별 타이밍 — KEY
+Set Cue 40 Part 1 Sequence 1 Property 'Preset1Fade' 8.0
+Set Cue 40 Part 1 Sequence 1 Property 'Preset4Fade' 8.0
 
 // ═══   Q050 — TC 00:56.0 · 개방, 축제 · Fade 0.0 ═══
 ClearAll
@@ -325,7 +341,11 @@ At 0
 Group "KEY"
 At 80
 Store Cue 50 "Q050 CHORUS1 개방" CueFade 0.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I0.0/P0.6/B0.0] · MOVER-D[I0.0/P0.6/B0.0] · BACK[I0.0/C0.0] · WASH-D[I0.0/C0.0] · SIDE-L[I0.0] · SIDE-R[I0.0] · KEY[I0.0]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, BACK, WASH-D, SIDE-L, SIDE-R, KEY
+Set Cue 50 Sequence 1 Property 'Preset1Fade' 0.0
+Set Cue 50 Sequence 1 Property 'Preset2Fade' 0.6
+Set Cue 50 Sequence 1 Property 'Preset4Fade' 0.0
+Set Cue 50 Sequence 1 Property 'Preset5Fade' 0.0
 
 // ═══   Q060 — TC 01:12.0 · 유지, 회전 · Fade 1.0 ═══
 ClearAll
@@ -340,7 +360,9 @@ At Preset 22.8
 Group "BACK"
 At Preset 4.6
 Store Cue 60 "Q060 CHORUS1 유지" CueFade 1.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[P1.0] · MOVER-D[P1.0] · BACK[C1.0]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, BACK
+Set Cue 60 Sequence 1 Property 'Preset2Fade' 1.0
+Set Cue 60 Sequence 1 Property 'Preset4Fade' 1.0
 
 // ═══   Q070 — TC 01:28.0 · 하강, 근접 · Fade 2.0 ═══
 ClearAll
@@ -359,9 +381,12 @@ Group "BACK"
 At 30
 At Preset 4.5
 Store Cue 70 "Q070 VERSE2 하강" CueFade 2.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I2.0] · MOVER-D[I2.0] · WASH-D[I2.0] · KEY[I2.0/C2.0] · BACK[I2.0/C2.0]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, WASH-D, KEY, BACK
+Set Cue 70 Sequence 1 Property 'Preset1Fade' 2.0
+Set Cue 70 Sequence 1 Property 'Preset4Fade' 2.0
 
 // ═══   Q080 — TC 01:44.0 · 축적, 압박 · Fade 8.0 ═══
+//   [영상팀 콜] LED-W 60% — 영상 큐 LW-02 콜 (조명 콘솔 큐 아님)
 ClearAll
 Group "SIDE-L"
 At 70
@@ -378,11 +403,16 @@ At 55
 At Preset 4.4
 At Preset 2.4
 At Preset 21.2
-//   [영상팀 콜] LED-W 60% — 영상 큐 LW-02 콜 (조명 콘솔 큐 아님)
 Store Cue 80 "Q080 PRE2 축적" CueFade 8.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): SIDE-L[I8.0/C4.0] · SIDE-R[I8.0/C4.0] · MOVER-U[I8.0/Id0.0/P6.0/C4.0/B2.0]
+//   Part 0 개별 타이밍 — SIDE-L, SIDE-R, MOVER-U
+Set Cue 80 Sequence 1 Property 'Preset1Fade' 8.0
+Set Cue 80 Sequence 1 Property 'Preset1Delay' 0.0
+Set Cue 80 Sequence 1 Property 'Preset2Fade' 6.0
+Set Cue 80 Sequence 1 Property 'Preset4Fade' 4.0
+Set Cue 80 Sequence 1 Property 'Preset5Fade' 2.0
 
 // ═══   Q090 — TC 02:00.0 · 개방, 확산 · Fade 0.0 ═══
+//   [영상팀 콜] LED-W 95% — 영상 큐 LW-03 콜 (조명 콘솔 큐 아님)
 ClearAll
 Group "MOVER-U"
 At 95
@@ -404,7 +434,6 @@ At Preset 4.4
 Group "WASH-D"
 At 95
 At Preset 4.7
-//   [영상팀 콜] LED-W 95% — 영상 큐 LW-03 콜 (조명 콘솔 큐 아님)
 Group "SIDE-L"
 At 0
 //   [MANUAL] SIDE-L: 기존 Phaser 정지 — Stomp 후 저장
@@ -412,7 +441,11 @@ Group "SIDE-R"
 At 0
 //   [MANUAL] SIDE-R: 기존 Phaser 정지 — Stomp 후 저장
 Store Cue 90 "Q090 CHORUS2 개방" CueFade 0.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I0.0/P0.5/B0.0] · MOVER-D[I0.0/P0.5/B0.0] · BACK[I0.0/C0.0] · WASH-D[I0.0/C0.0] · SIDE-L[I0.0] · SIDE-R[I0.0]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, BACK, WASH-D, SIDE-L, SIDE-R
+Set Cue 90 Sequence 1 Property 'Preset1Fade' 0.0
+Set Cue 90 Sequence 1 Property 'Preset2Fade' 0.5
+Set Cue 90 Sequence 1 Property 'Preset4Fade' 0.0
+Set Cue 90 Sequence 1 Property 'Preset5Fade' 0.0
 
 // ═══   Q100 — TC 02:16.0 · 유지, 확장 · Fade 1.0 ═══
 ClearAll
@@ -427,9 +460,13 @@ At Preset 22.5
 Group "BLIND"
 At 70
 Store Cue 100 "Q100 CHORUS2 유지" CueFade 1.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[P1.0] · MOVER-D[P1.0] · BLIND[I1.0/Id0.0]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, BLIND
+Set Cue 100 Sequence 1 Property 'Preset1Fade' 1.0
+Set Cue 100 Sequence 1 Property 'Preset1Delay' 0.0
+Set Cue 100 Sequence 1 Property 'Preset2Fade' 1.0
 
 // ═══   Q110 — TC 02:32.0 · 절제, 집중 · Fade 2.5 ═══
+//   [영상팀 콜] LED-W 20% — 영상 큐 LW-04(로우) 콜 (조명 콘솔 큐 아님)
 ClearAll
 Group "MOVER-U"
 At 0
@@ -439,9 +476,6 @@ At 0
 //   [MANUAL] MOVER-D: 기존 Phaser 정지 — Stomp 후 저장
 Group "WASH-D"
 At 0
-Group "BLIND"
-At 0
-//   [영상팀 콜] LED-W 20% — 영상 큐 LW-04(로우) 콜 (조명 콘솔 큐 아님)
 Group "KEY"
 At 35
 At Preset 4.5
@@ -454,7 +488,17 @@ At Preset 2.6
 Group "HAZE"
 At 20
 Store Cue 110 "Q110 BRIDGE 절제" CueFade 2.5 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I2.5] · MOVER-D[I2.5] · WASH-D[I2.5] · BLIND[I1.0] · KEY[I2.5/P2.5/C2.5/B2.5] · BACK[I2.5/P2.5/C2.5] · HAZE[I2.5]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, WASH-D, KEY, BACK, HAZE
+Set Cue 110 Sequence 1 Property 'Preset1Fade' 2.5
+Set Cue 110 Sequence 1 Property 'Preset2Fade' 2.5
+Set Cue 110 Sequence 1 Property 'Preset4Fade' 2.5
+Set Cue 110 Sequence 1 Property 'Preset5Fade' 2.5
+ClearAll
+Group "BLIND"
+At 0
+Store Cue 110 Part 1 "Q110 P1" Sequence 1 /Merge /NoConfirm
+//   Part 1 개별 타이밍 — BLIND
+Set Cue 110 Part 1 Sequence 1 Property 'Preset1Fade' 1.0
 
 // ═══   Q120 — TC 02:40.0 · 재점화, 축적 · Fade 7.0 ═══
 ClearAll
@@ -476,9 +520,12 @@ At Preset 4.5
 At Preset 22.3
 //   FX.03 Rate 30 BPM · Phase 180..540 · Width —
 Store Cue 120 "Q120 BRIDGE 재점화" CueFade 7.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): KEY[I7.0] · BACK[I7.0/C7.0] · SIDE-L[I7.0/C7.0] · SIDE-R[I7.0/C7.0]
+//   Part 0 개별 타이밍 — KEY, BACK, SIDE-L, SIDE-R
+Set Cue 120 Sequence 1 Property 'Preset1Fade' 7.0
+Set Cue 120 Sequence 1 Property 'Preset4Fade' 7.0
 
 // ═══   Q130 — TC 02:48.0 · 폭발, 최대 · Fade 0.0 ═══
+//   [영상팀 콜] LED-W 100% — 영상 큐 LW-05(피크) 콜 (조명 콘솔 큐 아님)
 ClearAll
 Group "MOVER-U"
 At 100
@@ -513,9 +560,12 @@ At 100
 At Preset 4.1
 At Preset 22.1
 //   FX.01 Rate 240 BPM · Phase 180..540 · Width 50
-//   [영상팀 콜] LED-W 100% — 영상 큐 LW-05(피크) 콜 (조명 콘솔 큐 아님)
 Store Cue 130 "Q130 CHORUS3 폭발" CueFade 0.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I0.0/P0.5/B0.0] · MOVER-D[I0.0/P0.5/B0.0] · BACK[I0.0/C0.0] · WASH-D[I0.0/C0.0] · WASH-U[I0.0/C0.0] · SIDE-L[I0.0/C0.0] · SIDE-R[I0.0/C0.0]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, BACK, WASH-D, WASH-U, SIDE-L, SIDE-R
+Set Cue 130 Sequence 1 Property 'Preset1Fade' 0.0
+Set Cue 130 Sequence 1 Property 'Preset2Fade' 0.5
+Set Cue 130 Sequence 1 Property 'Preset4Fade' 0.0
+Set Cue 130 Sequence 1 Property 'Preset5Fade' 0.0
 
 // ═══   Q140 — TC 03:04.0 · 유지, 회전 · Fade 1.0 ═══
 ClearAll
@@ -532,7 +582,9 @@ Group "WASH-U"
 At Preset 22.4
 //   FX.04 Rate 15 BPM · Phase 180..540 · Width —
 Store Cue 140 "Q140 CHORUS3 유지" CueFade 1.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[P1.0] · MOVER-D[P1.0] · BACK[C1.0] · WASH-U[C1.0]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, BACK, WASH-U
+Set Cue 140 Sequence 1 Property 'Preset2Fade' 1.0
+Set Cue 140 Sequence 1 Property 'Preset4Fade' 1.0
 
 // ═══   Q150 — TC 03:20.0 · 최고조, 난반사 · Fade 0.0 ═══
 ClearAll
@@ -557,15 +609,27 @@ Group "WASH-U"
 At Preset 4.6
 //   [MANUAL] WASH-U: 기존 Phaser 정지 — Stomp 후 저장
 Store Cue 150 "Q150 CHORUS3 최고조" CueFade 0.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): STROBE[I0.0] · BLIND[I0.0] · MOVER-U[P0.5] · MOVER-D[P0.5] · BACK[C0.0] · WASH-U[C0.0]
+//   Part 0 개별 타이밍 — STROBE, BLIND, MOVER-U, MOVER-D, BACK, WASH-U
+Set Cue 150 Sequence 1 Property 'Preset1Fade' 0.0
+Set Cue 150 Sequence 1 Property 'Preset2Fade' 0.5
+Set Cue 150 Sequence 1 Property 'Preset4Fade' 0.0
 
 // ═══   Q160 — TC 03:36.0 · 해소 준비 · Fade 2.0 ═══
+//   [영상팀 콜] LED-W 60% — 영상 큐 LW-06 콜 (조명 콘솔 큐 아님)
 ClearAll
 Group "STROBE"
 At 0
 //   [MANUAL] STROBE: 기존 Phaser 정지 — Stomp 후 저장
+Store Cue 160 "Q160 CHORUS3 해소 준비" CueFade 2.0 Sequence 1 /Merge /NoConfirm
+//   Part 0 개별 타이밍 — STROBE
+Set Cue 160 Sequence 1 Property 'Preset1Fade' 0.5
+ClearAll
 Group "BLIND"
 At 0
+Store Cue 160 Part 1 "Q160 P1" Sequence 1 /Merge /NoConfirm
+//   Part 1 개별 타이밍 — BLIND
+Set Cue 160 Part 1 Sequence 1 Property 'Preset1Fade' 1.0
+ClearAll
 Group "SIDE-L"
 At 0
 //   [MANUAL] SIDE-L: 기존 Phaser 정지 — Stomp 후 저장
@@ -592,11 +656,14 @@ At Preset 4.2
 Group "WASH-U"
 At 85
 At Preset 4.1
-//   [영상팀 콜] LED-W 60% — 영상 큐 LW-06 콜 (조명 콘솔 큐 아님)
-Store Cue 160 "Q160 CHORUS3 해소 준비" CueFade 2.0 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): STROBE[I0.5] · BLIND[I1.0] · SIDE-L[I2.0] · SIDE-R[I2.0] · MOVER-U[I2.0/C2.0/B2.0] · MOVER-D[I2.0/C2.0] · BACK[I2.0/C2.0] · WASH-D[I2.0/C2.0] · WASH-U[I2.0/C2.0]
+Store Cue 160 Part 2 "Q160 P2" Sequence 1 /Merge /NoConfirm
+//   Part 2 개별 타이밍 — SIDE-L, SIDE-R, MOVER-U, MOVER-D, BACK, WASH-D, WASH-U
+Set Cue 160 Part 2 Sequence 1 Property 'Preset1Fade' 2.0
+Set Cue 160 Part 2 Sequence 1 Property 'Preset4Fade' 2.0
+Set Cue 160 Part 2 Sequence 1 Property 'Preset5Fade' 2.0
 
 // ═══   Q170 — TC 03:52.0 · 잔향, 종료 · Fade 3.5 ═══
+//   [영상팀 콜] LED-W 0% — 영상 페이드아웃 동기 (조명 콘솔 큐 아님)
 ClearAll
 Group "MOVER-U"
 At 0
@@ -608,7 +675,6 @@ Group "WASH-D"
 At 0
 Group "KEY"
 At 0
-//   [영상팀 콜] LED-W 0% — 영상 페이드아웃 동기 (조명 콘솔 큐 아님)
 Group "BACK"
 At 20
 At Preset 4.1
@@ -617,7 +683,9 @@ Group "WASH-U"
 At 20
 At Preset 4.1
 Store Cue 170 "Q170 OUTRO 잔향" CueFade 3.5 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): MOVER-U[I3.5] · MOVER-D[I3.5] · WASH-D[I3.5] · KEY[I3.5] · BACK[I3.5/C3.5] · WASH-U[I3.5/C3.5]
+//   Part 0 개별 타이밍 — MOVER-U, MOVER-D, WASH-D, KEY, BACK, WASH-U
+Set Cue 170 Sequence 1 Property 'Preset1Fade' 3.5
+Set Cue 170 Sequence 1 Property 'Preset4Fade' 3.5
 
 // ═══   Q180 — TC 03:56.0 · 암전 · Fade 1.5 ═══
 ClearAll
@@ -625,7 +693,8 @@ Group "ALL"
 At 0
 //   [MANUAL] ALL: 기존 Phaser 정지 — Stomp 후 저장
 Store Cue 180 "Q180 OUTRO 암전" CueFade 1.5 Sequence 1 /Merge /NoConfirm
-//   [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): ALL[I1.5]
+//   Part 0 개별 타이밍 — ALL
+Set Cue 180 Sequence 1 Property 'Preset1Fade' 1.5
 
 // ═══ 8. 타임코드 트리거 (LTC → TC Slot 1) ═══
 // [MANUAL] Timecode 에디터에서 Sequence 1 GO 이벤트를 아래 시각에 배치 (TC_METHOD: DERIVED — 리허설 LTC 대조 후 확정)
