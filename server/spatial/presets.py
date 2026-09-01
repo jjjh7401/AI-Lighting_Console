@@ -445,3 +445,71 @@ def spatial_preset_placements(
             placements.append(SpatialPlacement(fid=fid, x=x, y=y, z=z))
 
     return SpatialPresetPlan(preset=preset, placements=tuple(placements), resolved=resolved)
+
+
+#: 도형이 아닌 계획의 이름. `SPATIAL_PRESETS` 에 **넣지 않는다** —
+#: 그 튜플의 정의역은 「이 모듈이 계산하는 도형」이고 여기엔 계산이 없다.
+#: `arrange_fixtures` 쪽의 `ARRANGE_PRESETS` 가 둘을 합쳐 어휘를 닫는다.
+EXPLICIT_PRESET_NAME = "explicit"
+
+#: `explicit` 항목 하나가 들 수 있는 키. 양성 목록이라 오타 난 축
+#: (`rotx`·`posx`)이 조용히 무시되는 대신 거절된다 — 무시되면 그 장비만
+#: 원래 자리에 남고, 나머지가 옮겨진 리그에서 그 한 대는 눈에 안 띈다.
+EXPLICIT_ENTRY_KEYS: frozenset[str] = frozenset(("fid", "x", "y", "z"))
+
+
+def _explicit_coordinate(entry: Mapping[str, object], axis: str) -> float:
+    value = entry[axis]
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        # `True` 는 파이썬에서 `int` 라 숫자 검사를 그냥 통과하면 1.0 m 가 된다.
+        raise SpatialPresetError(f"coordinate {axis} must be a number, got {value!r}")
+    return _quantise(float(value))
+
+
+def explicit_placements(entries: Sequence[Mapping[str, object]]) -> SpatialPresetPlan:
+    """호출자가 이미 들고 있는 장비별 좌표를 **그대로** 계획으로 만든다.
+
+    도형 프리셋과 달리 계산이 없다 — 검증과 양자화만 한다. 그래서 이 함수가
+    지는 몫은 하나다: 도형 경로가 지나는 **같은 술어**(`_quantise` 의 유한성·
+    4자리 양자화·음의 0 정규화·`SPATIAL_PRESET_MAX_ABS` 상한, `_target_fids`
+    의 양수·중복 검사)를 이 경로도 지나게 하는 것.
+
+    쓰임: 측량표·CSV 처럼 자리마다 값이 이미 정해진 입력. 값의 **출처**는 이
+    함수가 모른다 — 실측인지 합성인지는 호출자가 자기 산출물에 적어야 한다.
+    """
+    rows = list(entries)
+    if not rows:
+        raise SpatialPresetError("an explicit arrangement needs at least one entry")
+    fids: list[object] = []
+    coordinates: list[tuple[float, float, float]] = []
+    for index, entry in enumerate(rows):
+        if not isinstance(entry, Mapping):
+            raise SpatialPresetError(f"entry {index} is not an object: {entry!r}")
+        keys = set(entry)
+        missing = EXPLICIT_ENTRY_KEYS - keys
+        if missing:
+            raise SpatialPresetError(f"entry {index} is missing {sorted(missing)}")
+        unknown = keys - EXPLICIT_ENTRY_KEYS
+        if unknown:
+            raise SpatialPresetError(
+                f"entry {index} carries {sorted(unknown)}; an explicit placement is "
+                f"exactly {sorted(EXPLICIT_ENTRY_KEYS)}"
+            )
+        fids.append(entry["fid"])
+        coordinates.append(
+            (
+                _explicit_coordinate(entry, "x"),
+                _explicit_coordinate(entry, "y"),
+                _explicit_coordinate(entry, "z"),
+            )
+        )
+    targets = _target_fids(fids)  # type: ignore[arg-type]
+    placements = tuple(
+        SpatialPlacement(fid=fid, x=point[0], y=point[1], z=point[2])
+        for fid, point in zip(targets, coordinates, strict=True)
+    )
+    resolved: dict[str, object] = dict(
+        fid_order=list(targets),
+        count=len(targets),
+    )
+    return SpatialPresetPlan(preset=EXPLICIT_PRESET_NAME, placements=placements, resolved=resolved)

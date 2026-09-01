@@ -83,6 +83,7 @@ from server.lxseq.group_mapper import map_groups
 from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
 from server.lxseq.parser import MissingColumnsError, parse_patch_csv
+from server.lxseq.position_derive import preset_id_from_console_head
 from server.lxseq.preset_mapper import map_presets
 from server.lxseq.preset_parser import (
     UnknownPresetSheetError,
@@ -163,6 +164,7 @@ from server.spatial.presets import (
     SPATIAL_PRESETS,
     SpatialPlacement,
     SpatialPresetError,
+    explicit_placements,
     spatial_placements_to_records,
     spatial_preset_placements,
 )
@@ -1458,7 +1460,16 @@ ARRANGE_AXES: tuple[tuple[str, str], ...] = (("x", "Posx"), ("y", "Posy"), ("z",
 #: measured x/y positions. Unlike the geometric presets it is resolved only
 #: after the backup read, because those positions are live patch data.
 ELEVATION_PRESET = "elevation"
-ARRANGE_PRESETS: tuple[str, ...] = (*SPATIAL_PRESETS, ELEVATION_PRESET)
+
+#: ``explicit`` 는 도형이 아니다 — 호출자가 장비마다 좌표를 직접 싣는다.
+#: 측량표·CSV 처럼 **자리가 이미 정해진** 입력을 위한 자리이고, 그래서
+#: 이 도구의 다른 프리셋과 달리 계산하는 것이 없다. 봉투(백업 → 정적
+#: 범위검사 → 쓰기 → 되읽기)는 한 줄도 우회하지 않는다: 값의 출처가
+#: 무엇이든 콘솔은 똑같이 OK 를 답하고 똑같이 틀린 값을 저장한다
+#: (§E.2.6a). 좌표가 **어디서 왔는지**는 이 도구가 모르고, 알 필요도
+#: 없다 — 출처 표기는 그 값을 만든 쪽이 자기 산출물에 적는다.
+EXPLICIT_PRESET = "explicit"
+ARRANGE_PRESETS: tuple[str, ...] = (*SPATIAL_PRESETS, ELEVATION_PRESET, EXPLICIT_PRESET)
 
 #: The same three axes as the responder wants them for a READ. Property lookup
 #: is case-insensitive live (progress.md §E.2.1); lower case matches the read
@@ -5697,12 +5708,18 @@ def build_toolset(
                         if not isinstance(name, str) or not isinstance(slot, int):
                             continue
                         # 라벨의 **첫 어절만** ID 로 읽는다. 완전 일치로 하면
-                        # 산출 라벨(「POS.01 보컬 센터 페이스 · 산출값」)이 안
+                        # 산출 라벨(「POS01 보컬 센터 페이스 · 합성좌표」)이 안
                         # 걸리고, 접두 일치로 하면 사람이 붙인 꼬리말이 다른
                         # ID 를 삼킬 수 있다.
+                        #
+                        # 콘솔이 라벨에서 `.` 을 지우므로 첫 어절은 `POS01` 로
+                        # 돌아온다(실측·대조군은 `position_derive.py` 의
+                        # `CONSOLE_ID_PREFIX` 주석). 그 변환은 이 파일이 하지
+                        # 않는다 — 쓰기 쪽과 **같은 한 자리**를 부른다.
                         head = name.split(" ")[0].strip()
-                        if head.startswith("POS.") and len(head) == 6 and head[4:].isdigit():
-                            preset_slots[head] = slot
+                        preset_id = preset_id_from_console_head(head)
+                        if preset_id is not None:
+                            preset_slots[preset_id] = slot
                             pos_resolved = True
                     if pos_resolved and pos_pool_no is not None:
                         preset_pool_no_by_kind["POS"] = pos_pool_no
@@ -7846,6 +7863,36 @@ def build_toolset(
             elevation_height = float(raw_height)
             resolved: dict[str, object] = {"height": elevation_height}
             planned: tuple[SpatialPlacement, ...] | None = None
+        elif preset == EXPLICIT_PRESET:
+            if set(params) != {"positions"}:
+                return _error_result(
+                    call,
+                    "explicit needs exactly one 'positions' — a list of "
+                    "{fid, x, y, z} objects in metres. It takes no shape "
+                    "parameters because it computes no shape",
+                )
+            raw_positions = params["positions"]
+            if not isinstance(raw_positions, list):
+                return _error_result(call, "'positions' must be a list of objects")
+            try:
+                plan = explicit_placements(raw_positions)
+            except SpatialPresetError as error:
+                return _error_result(call, f"explicit placements are malformed: {error}")
+            # `fids` 는 여기서 중복이 아니라 **선언**이다. 정적 범위검사
+            # (`arrange_scope_violations`)는 명령문을 이 목록에 대고 검사하는데,
+            # 그 목록을 좌표에서 그대로 뽑아 쓰면 검사가 자기 자신을 검사하게
+            # 된다 — 무엇을 적어 보내든 범위 안에 든다. 두 자리가 **독립적으로**
+            # 같은 집합을 말해야 그 검사가 무언가를 잡는다.
+            if plan.fids != tuple(raw_fid for raw_fid in fids):
+                return _error_result(
+                    call,
+                    "'fids' must repeat exactly the fids in 'positions', in the same "
+                    f"order — declared {list(fids)}, positions carry {list(plan.fids)}. "
+                    "Nothing was read and nothing was written",
+                )
+            targets = plan.fids
+            resolved = plan.resolved
+            planned = plan.placements
         else:
             try:
                 plan = spatial_preset_placements(preset, fids, params)
@@ -10593,8 +10640,9 @@ def build_toolset(
             name="arrange_fixtures",
             description=(
                 "MOVE fixtures in the patch: compute a grid / row / circle / triangle "
-                "arrangement, or set their absolute elevation while preserving "
-                "each fixture's measured x/y, then WRITE 3D stage coordinates "
+                "arrangement, set their absolute elevation while preserving "
+                "each fixture's measured x/y, or place each one at coordinates "
+                "you supply outright ('explicit'), then WRITE 3D stage coordinates "
                 "(metres) onto the fixtures you name. This CHANGES THE "
                 "SHOWFILE — call it only when the operator explicitly asked "
                 "for an arrangement ('line these 8 PARs up', 'lay this out as "
@@ -10643,8 +10691,10 @@ def build_toolset(
                             "'triangle' spreads them at equal arc length along "
                             "the perimeter of an equilateral triangle (apex "
                             "first; a count divisible by 3 puts a fixture on "
-                            "every vertex), and 'elevation' changes only their "
-                            "absolute z height."
+                            "every vertex), 'elevation' changes only their "
+                            "absolute z height, and 'explicit' computes no "
+                            "shape at all — it writes the per-fixture "
+                            "coordinates you supply in 'positions'."
                         ),
                     },
                     "fids": {
@@ -10655,6 +10705,31 @@ def build_toolset(
                             "occupy the shape. These are FIDs as the console "
                             "reports them (get_spatial_context returns them), "
                             "not positions in a list."
+                        ),
+                    },
+                    "positions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "fid": {"type": "integer"},
+                                "x": {"type": "number"},
+                                "y": {"type": "number"},
+                                "z": {"type": "number"},
+                            },
+                            "required": ["fid", "x", "y", "z"],
+                            "additionalProperties": False,
+                        },
+                        "description": (
+                            "explicit only. One object per fixture, giving its "
+                            "stage coordinates in metres. 'fids' must repeat "
+                            "the same fids in the same order — that repetition "
+                            "is the scope declaration the write is sealed "
+                            "against, so a mismatch refuses the whole call. "
+                            "Use this when the coordinates come from a survey "
+                            "or a rig sheet; the tool cannot tell a surveyed "
+                            "value from a made-up one, so say which it is when "
+                            "you report the result."
                         ),
                     },
                     "height": {
