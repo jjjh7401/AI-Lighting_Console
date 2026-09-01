@@ -76,6 +76,10 @@ __all__ = [
     "SLOT_SHORTFALL",
     "UNKNOWN_GROUP",
     "UNRESOLVED_PRESET",
+    "UNRESOLVED_CONSOLE_LACKS_NAME",
+    "UNRESOLVED_POOL_UNREADABLE",
+    "UNRESOLVED_SHEET_LACKS_ID",
+    "UNRESOLVED_SHEET_NOT_SUPPLIED",
     "CueBucket",
     "CueCoverageGap",
     "CueHold",
@@ -114,6 +118,25 @@ UNKNOWN_GROUP = "unknown_group"
 
 #: 프리셋 참조가 배정표에 없다 — 정의되지 않은 프리셋은 못 쓴다(§11.2 #5).
 UNRESOLVED_PRESET = "unresolved_preset"
+
+#: `unresolved_preset` 을 **원인별로** 가르는 닫힌 클래스.
+#:
+#: 이 분류를 붙이는 것은 이 층이 아니라 **툴 층**이다 -- 아래
+#: `_HOLD_BLOCK_CLASS` 가 적어 둔 「이 층에서는 안 갈린다」가 그 이유이고,
+#: 시트(정의)와 콘솔 되읽기(조인)를 **둘 다** 쥔 자리는
+#: `import_lxseq_cues` 뿐이다. 그런데 어휘는 여기 둔다: `UNRESOLVED_PRESET`
+#: 을 **세는** 코드와 그것을 **가르는** 어휘가 다른 파일에서 자라면, 한쪽만
+#: 늘어난 날 두 산출물이 같은 것을 다른 이름으로 부른다.
+#:
+#: 셋을 가르는 이유는 처방이 다르기 때문이다 -- 시트를 안 실은 것은 호출
+#: 인자를 고치면 되고, 시트에 ID 가 없는 것은 시트를 고쳐야 하고, 콘솔에
+#: 그 이름이 없는 것은 **프리셋을 먼저 만들어야** 한다. 한 덩어리로 세면
+#: 「어느 하나를 풀면 몇 건이 열리는지」를 아무도 모른다
+#: (`preset_parser` 의 HOLD_* 닫힌 클래스가 같은 이유로 있다).
+UNRESOLVED_SHEET_NOT_SUPPLIED = "sheet_not_supplied"
+UNRESOLVED_SHEET_LACKS_ID = "sheet_lacks_id"
+UNRESOLVED_CONSOLE_LACKS_NAME = "console_lacks_name"
+UNRESOLVED_POOL_UNREADABLE = "pool_unreadable"
 
 #: 수치 열이 수로 안 읽힌다.
 BAD_NUMBER = "bad_number"

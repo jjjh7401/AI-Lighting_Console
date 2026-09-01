@@ -5397,7 +5397,15 @@ def build_toolset(
                     )
                 cue_meta[q] = (section, mood_first, fade)
 
-        from server.lxseq.cue_mapper import block_report, map_cues
+        from server.lxseq.cue_mapper import (
+            PRESET_REF_PATTERN,
+            UNRESOLVED_CONSOLE_LACKS_NAME,
+            UNRESOLVED_POOL_UNREADABLE,
+            UNRESOLVED_SHEET_LACKS_ID,
+            UNRESOLVED_SHEET_NOT_SUPPLIED,
+            block_report,
+            map_cues,
+        )
 
         # 시퀀스 풀 조회 -- map_cues(server/lxseq/cue_mapper.py)가 기대하는
         # 단면 모양은 원시 query_state() 응답(children/node/ok)이 아니라
@@ -5503,6 +5511,11 @@ def build_toolset(
             ("preset-bm", "preset_bm_content_base64"),
         )
         preset_sheet_errors: dict[str, str] = {}
+        # 시트가 실제로 실어 온 ID -> Name. `preset_slots` 는 **조인에
+        # 성공한** 것만 담아서, 빠진 참조가 왜 빠졌는지는 그 표만으로 안
+        # 갈린다. 이 표가 나머지 반쪽이다 -- 아래 unresolved_preset_refs 가
+        # 둘을 맞대어 원인을 붙인다(t225).
+        sheet_names_by_kind: dict[str, dict[str, str]] = dict()
         for kind, arg_name in preset_sheet_args:
             raw_preset = call.arguments.get(arg_name)
             if not isinstance(raw_preset, str) or not raw_preset.strip():
@@ -5524,6 +5537,7 @@ def build_toolset(
                 )
                 continue
             id_to_name = {r.preset_id: r.name for r in preset_parsed.records}
+            sheet_names_by_kind[kind.removeprefix("preset-").upper()] = dict(id_to_name)
 
             pool_path = None
             found_pool_no: int | None = None
@@ -5605,6 +5619,7 @@ def build_toolset(
                     for row in fx_reader
                     if (row.get("ID") or "").strip()
                 }
+                sheet_names_by_kind["FX"] = dict(fx_id_to_name)
                 fx_pool_path = None
                 try:
                     fx_pools_first = state_port.query_state(fx_pools_root_path)
@@ -5734,6 +5749,55 @@ def build_toolset(
             existing_cue_numbers=existing_cue_numbers,
         )
 
+        # -- 미해결 프리셋 참조를 **원인별로** 편다 (t225) ------------------
+        #
+        # 이 표가 없으면 산출물은 「unresolved_preset 이 Q040/MOVER-U 에
+        # 있다」까지만 말하고 **어느 참조인지도 왜인지도** 말하지 않는다.
+        # 그래서 t225 는 콘솔 풀 다섯 개를 손으로 떠서 원인을 갈라야 했다.
+        # 여기서 갈라 두면 다음 사람은 그 왕복을 안 한다.
+        #
+        # 계획에 영향을 주지 않는다 -- 순수하게 산출물 한 칸이다.
+        unresolved_refs: list[dict[str, object]] = []
+        seen_refs: set[str] = set()
+        for record in parsed.records:
+            if record.is_video_call:
+                continue
+            raws = (record.col_raw, record.pos_raw, record.bm_raw, record.fx_raw)
+            for raw in raws:
+                text = raw.strip()
+                # 문법이 아닌 것(빈칸·OFF)은 미해결이 아니다 -- 각각 트래킹과
+                # 정지 명령이고, 판별은 참조 문법 하나가 한다.
+                found = PRESET_REF_PATTERN.match(text)
+                if found is None or text in preset_slots or text in seen_refs:
+                    continue
+                seen_refs.add(text)
+                ref_kind = found.group(1)
+                names = sheet_names_by_kind.get(ref_kind)
+                expected = None if names is None else names.get(text)
+                if ref_kind == "POS":
+                    # POS 는 시트에 Name 열이 없어 조인이 콘솔 라벨에서만 온다
+                    # (§10). 그래서 시트 갈래 둘이 정의역 밖이다.
+                    cause = (
+                        UNRESOLVED_POOL_UNREADABLE
+                        if "position_pool" in preset_sheet_errors
+                        else UNRESOLVED_CONSOLE_LACKS_NAME
+                    )
+                elif names is None:
+                    cause = UNRESOLVED_SHEET_NOT_SUPPLIED
+                elif expected is None:
+                    cause = UNRESOLVED_SHEET_LACKS_ID
+                else:
+                    cause = UNRESOLVED_CONSOLE_LACKS_NAME
+                unresolved_refs.append(
+                    dict(
+                        ref=text,
+                        kind=ref_kind,
+                        cause=cause,
+                        expected_console_name=expected,
+                    )
+                )
+        unresolved_refs.sort(key=lambda item: str(item["ref"]))
+
         placement = result.placement or result.already_present
         payload: dict[str, object] = {
             "action": action,
@@ -5782,6 +5846,7 @@ def build_toolset(
             "unverified_reason": result.unverified_reason,
             "group_slots_resolved": len(group_slots),
             "preset_slots_resolved": len(preset_slots),
+            "unresolved_preset_refs": unresolved_refs,
             "preset_sheet_errors": preset_sheet_errors,
             "notice_preset_slots": (
                 "preset_slots 는 넘어온 preset_*_content_base64/fx_content_base64"
