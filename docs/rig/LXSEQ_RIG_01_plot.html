@@ -1,0 +1,347 @@
+<title>LXSEQ_RIG_01 플롯</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#F7F4EE; --ink:#22201C; --ink-2:#5E574C; --ink-3:#8B8275;
+  --rule:#CFC7B8; --axis:#9A8F7D; --deck:#FFFDF8; --truss:#403A31;
+  --accent:#C4491E; --card:#FFFDF8; --warn-bg:#FBF0E4; --warn-line:#C4491E;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16181A; --ink:#E8E4DC; --ink-2:#A9A296; --ink-3:#726B60;
+  --rule:#2E3236; --axis:#5A5F65; --deck:#1B1E21; --truss:#8A8578;
+  --accent:#E2703F; --card:#1B1E21; --warn-bg:#241C18; --warn-line:#E2703F;
+}}
+:root[data-theme="dark"]{
+  --paper:#16181A; --ink:#E8E4DC; --ink-2:#A9A296; --ink-3:#726B60;
+  --rule:#2E3236; --axis:#5A5F65; --deck:#1B1E21; --truss:#8A8578;
+  --accent:#E2703F; --card:#1B1E21; --warn-bg:#241C18; --warn-line:#E2703F;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+.sheet{max-width:1080px;margin:0 auto;padding:32px 24px 72px}
+.block{border:1.5px solid var(--ink);display:grid;grid-template-columns:1fr auto;
+  gap:0;margin-bottom:28px}
+.block .id{padding:18px 22px}
+.block .meta{border-left:1.5px solid var(--ink);display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+.block .meta div{padding:10px 16px;border-bottom:1px solid var(--rule)}
+.block .meta div:nth-child(-n+2){border-bottom:1px solid var(--rule)}
+.block .meta div:nth-last-child(-n+2){border-bottom:none}
+.block .meta div+div{border-left:1px solid var(--rule)}
+.block .meta div:nth-child(odd){border-left:none}
+h1{font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:31px;
+  letter-spacing:.01em;margin:0;text-wrap:balance}
+.sub{color:var(--ink-2);font-size:14px;margin-top:4px}
+.k{font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;
+  letter-spacing:.09em;font-size:10.5px;color:var(--ink-3);display:block}
+.v{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:500;
+  font-variant-numeric:tabular-nums}
+.warn{background:var(--warn-bg);border-left:3px solid var(--warn-line);
+  padding:14px 18px;margin-bottom:28px;font-size:14px}
+.warn b{color:var(--accent)}
+h2{font-family:"Archivo Narrow",sans-serif;font-weight:600;font-size:13px;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);
+  margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.view{border:1px solid var(--rule);background:var(--card);overflow-x:auto}
+svg{display:block;min-width:860px}
+.vlabel{font-family:"Archivo Narrow",sans-serif;font-size:15px;font-weight:600;
+  fill:var(--ink)}
+.vnote{font-family:"IBM Plex Mono",monospace;font-size:10.5px;fill:var(--ink-3)}
+.tick{font-family:"IBM Plex Mono",monospace;font-size:10px;fill:var(--ink-3);
+  text-anchor:end}
+ul.legend{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px 18px}
+ul.legend li{display:flex;align-items:center;gap:9px;font-size:13px;
+  padding:5px 0;border-bottom:1px solid var(--rule)}
+.sw{width:11px;height:11px;border-radius:50%;flex:none}
+ul.legend b{font-family:"IBM Plex Mono",monospace;font-weight:600;
+  font-size:12.5px;min-width:74px}
+ul.legend .n{font-family:"IBM Plex Mono",monospace;color:var(--ink-2);
+  font-variant-numeric:tabular-nums;min-width:22px;text-align:right}
+ul.legend .ft{color:var(--ink-3);font-size:11.5px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.tw{overflow-x:auto;border:1px solid var(--rule)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;
+  letter-spacing:.07em;font-size:10.5px;color:var(--ink-3);text-align:left;
+  padding:9px 12px;border-bottom:1.5px solid var(--ink);white-space:nowrap;
+  background:var(--card);position:sticky;top:0}
+td{padding:6px 12px;border-bottom:1px solid var(--rule);white-space:nowrap}
+.num,.fid{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.num{text-align:right}
+.pl{font-weight:500}
+.ft{color:var(--ink-2);font-size:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+  margin-right:7px;vertical-align:middle}
+.scroll{max-height:520px;overflow-y:auto}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
+  color:var(--ink-3);font-size:12px}
+</style>
+
+<div class="sheet">
+
+<div class="block">
+  <div class="id">
+    <h1>LXSEQ_RIG_01 ShowBase r3</h1>
+    <div class="sub">합성 리그 플롯 — 콘솔 좌표 투입용 · 실측 아님</div>
+  </div>
+  <div class="meta">
+    <div><span class="k">기구 수</span><span class="v">86</span></div>
+    <div><span class="k">배치</span><span class="v">11</span></div>
+    <div><span class="k">원점</span><span class="v">무대중앙 바닥</span></div>
+    <div><span class="k">단위</span><span class="v">미터</span></div>
+    <div><span class="k">+X</span><span class="v">stage left</span></div>
+    <div><span class="k">+Y</span><span class="v">upstage</span></div>
+  </div>
+</div>
+
+<div class="warn">
+  <b>이 도면은 실측이 아니라 합성입니다.</b> 패치 시트의 배치명 11종(FOH 브리지 · 업 트러스 …)에
+  통상적인 극장 치수를 부여해 만든 것입니다. 목적은 콘솔의 좌표가 86대 전부 (0,0,0)이라
+  포지션 산출이 원리적으로 불가능한 상태를 풀어, 파이프라인을 끝까지 시험하는 것입니다.
+  실제 빔 착지는 현장에서 조명감독이 잡습니다.
+  좌표계 근거: <span class="v">server/spatial/pointing.py:15</span>
+</div>
+
+<h2>평면도 — Plan</h2>
+<div class="view"><svg viewBox="0 0 860 420" width="100%" height="auto" role="img" aria-label="86대 기구 평면 배치도">
+<text x="18" y="26" class="vlabel">위 = 무대 안쪽 (+Y) · 오른쪽 = 하수 (+X, stage left)</text>
+<rect x="141" y="46" width="578" height="408" fill="var(--deck)" stroke="var(--rule)" stroke-dasharray="6 5"/>
+<line x1="141" y1="250" x2="719" y2="250" stroke="var(--axis)" stroke-width="1"/>
+<line x1="430" y1="46" x2="430" y2="583" stroke="var(--axis)" stroke-width="1"/>
+<line x1="260" y1="556" x2="600" y2="556" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="226" y1="471" x2="634" y2="471" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="277" y1="359" x2="583" y2="359" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="243" y1="165" x2="617" y2="165" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="175" y1="233" x2="685" y2="233" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="243" y1="335" x2="617" y2="335" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="226" y1="97" x2="634" y2="97" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="192" y1="148" x2="192" y2="148" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="192" y1="233" x2="192" y2="233" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="668" y1="148" x2="668" y2="148" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="668" y1="233" x2="668" y2="233" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="260" y1="73" x2="600" y2="73" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<line x1="260" y1="284" x2="600" y2="284" stroke="var(--truss)" stroke-width="3" stroke-linecap="round"/>
+<circle cx="260.0" cy="556.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="328.0" cy="556.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="396.0" cy="556.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="556.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="532.0" cy="556.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="600.0" cy="556.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="226.0" cy="471.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="284.1" cy="471.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="342.6" cy="471.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="400.8" cy="471.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="459.2" cy="471.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="517.4" cy="471.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="575.9" cy="471.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="634.0" cy="471.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="358.8" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="338.2" cy="358.8" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="399.4" cy="358.8" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="460.6" cy="358.8" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="521.8" cy="358.8" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="583.0" cy="358.8" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="243.0" cy="165.0" r="5.2" fill="#8C9196" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="165.0" r="5.2" fill="#8C9196" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="311.0" cy="165.0" r="5.2" fill="#8C9196" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="165.0" r="5.2" fill="#8C9196" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="379.0" cy="165.0" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="165.0" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="447.0" cy="165.0" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="481.0" cy="165.0" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="165.0" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="549.0" cy="165.0" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="583.0" cy="165.0" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="617.0" cy="165.0" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="175.0" cy="233.0" r="5.2" fill="#6E7378" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="685.0" cy="233.0" r="5.2" fill="#6E7378" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="243.0" cy="335.0" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="296.4" cy="335.0" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="349.8" cy="335.0" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="403.1" cy="335.0" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="456.9" cy="335.0" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="510.2" cy="335.0" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="563.6" cy="335.0" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="617.0" cy="335.0" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="226.0" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="263.1" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="300.1" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="337.2" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="374.2" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="411.3" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="448.7" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="485.8" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="522.8" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="559.9" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="596.9" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="634.0" cy="97.0" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="192.0" cy="148.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="192.0" cy="148.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="192.0" cy="148.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="192.0" cy="233.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="192.0" cy="233.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="192.0" cy="233.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="668.0" cy="148.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="668.0" cy="148.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="668.0" cy="148.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="668.0" cy="233.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="668.0" cy="233.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="668.0" cy="233.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="260.0" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="297.7" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="335.5" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="373.2" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="411.0" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="449.0" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="486.8" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="524.5" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="562.3" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="600.0" cy="73.2" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="260.0" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="297.7" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="335.5" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="373.2" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="411.0" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="449.0" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="486.8" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="524.5" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="562.3" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="600.0" cy="284.0" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<text x="430" y="405" class="vnote" text-anchor="middle">↓ 객석 (−Y)</text>
+<text x="437" y="243" class="vnote">원점 (0,0,0)</text>
+</svg></div>
+
+<h2>측면도 — Section</h2>
+<div class="view"><svg viewBox="0 0 860 700" width="100%" height="auto" role="img" aria-label="기구 높이 단면도">
+<text x="18" y="26" class="vlabel">오른쪽 = 객석 (−Y) · 위 = 높이 (+Z) · 원은 트러스 단면</text>
+<line x1="226" y1="640" x2="770" y2="640" stroke="var(--axis)" stroke-width="1.5"/>
+<line x1="226" y1="572" x2="770" y2="572" stroke="var(--rule)" stroke-dasharray="3 5"/>
+<text x="196" y="576" class="tick">2</text>
+<line x1="226" y1="504" x2="770" y2="504" stroke="var(--rule)" stroke-dasharray="3 5"/>
+<text x="196" y="508" class="tick">4</text>
+<line x1="226" y1="436" x2="770" y2="436" stroke="var(--rule)" stroke-dasharray="3 5"/>
+<text x="196" y="440" class="tick">6</text>
+<line x1="226" y1="368" x2="770" y2="368" stroke="var(--rule)" stroke-dasharray="3 5"/>
+<text x="196" y="372" class="tick">8</text>
+<circle cx="736" cy="385" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="651" cy="402" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="539" cy="419" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="345" cy="409" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="413" cy="633" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="515" cy="409" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="277" cy="429" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="253" cy="630" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="464" cy="630" r="9" fill="none" stroke="var(--truss)" stroke-width="2.5"/>
+<circle cx="736.0" cy="385.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="736.0" cy="385.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="736.0" cy="385.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="736.0" cy="385.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="736.0" cy="385.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="736.0" cy="385.0" r="5.2" fill="#E08A2B" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="651.0" cy="402.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="651.0" cy="402.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="651.0" cy="402.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="651.0" cy="402.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="651.0" cy="402.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="651.0" cy="402.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="651.0" cy="402.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="651.0" cy="402.0" r="5.2" fill="#C96A1E" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="538.8" cy="419.0" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="538.8" cy="419.0" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="538.8" cy="419.0" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="538.8" cy="419.0" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="538.8" cy="419.0" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="538.8" cy="419.0" r="5.2" fill="#B8A521" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8C9196" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8C9196" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8C9196" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8C9196" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="345.0" cy="408.8" r="5.2" fill="#8A5FC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="633.2" r="5.2" fill="#6E7378" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="633.2" r="5.2" fill="#6E7378" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="408.8" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="408.8" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="408.8" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="408.8" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="408.8" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="408.8" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="408.8" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="515.0" cy="408.8" r="5.2" fill="#2E9E8F" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="277.0" cy="429.2" r="5.2" fill="#3D7EC4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="328.0" cy="599.2" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="328.0" cy="551.6" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="328.0" cy="504.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="599.2" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="551.6" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="504.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="328.0" cy="599.2" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="328.0" cy="551.6" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="328.0" cy="504.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="599.2" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="551.6" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="413.0" cy="504.0" r="5.2" fill="#C4497A" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="253.2" cy="629.8" r="5.2" fill="#4A94C4" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<circle cx="464.0" cy="629.8" r="5.2" fill="#46A88C" stroke="var(--paper)" stroke-width="1.4"/>
+<text x="222" y="676" class="vnote">무대 바닥 Z = 0</text>
+</svg></div>
+
+<h2>그룹 — 12종</h2>
+<ul class="legend"><li><span class="sw" style="background:#E08A2B"></span><b>KEY</b><span class="n">6</span><span class="ft">ETC S4 LED S3 Lustr X8</span></li><li><span class="sw" style="background:#C96A1E"></span><b>FOH</b><span class="n">8</span><span class="ft">ETC S4 LED S3 Lustr X8</span></li><li><span class="sw" style="background:#B8A521"></span><b>BLIND</b><span class="n">6</span><span class="ft">Elation CUEPIX Blinder WW2</span></li><li><span class="sw" style="background:#8C9196"></span><b>STROBE</b><span class="n">4</span><span class="ft">Martin Atomic 3000 LED</span></li><li><span class="sw" style="background:#8A5FC4"></span><b>MOVER-U</b><span class="n">8</span><span class="ft">Robe MegaPointe</span></li><li><span class="sw" style="background:#6E7378"></span><b>HAZE</b><span class="n">2</span><span class="ft">Look Unique 2.1</span></li><li><span class="sw" style="background:#2E9E8F"></span><b>MOVER-D</b><span class="n">8</span><span class="ft">Robe Spiider</span></li><li><span class="sw" style="background:#3D7EC4"></span><b>BACK</b><span class="n">12</span><span class="ft">Martin MAC Aura XB</span></li><li><span class="sw" style="background:#C4497A"></span><b>SIDE-L</b><span class="n">6</span><span class="ft">Martin MAC Aura XB</span></li><li><span class="sw" style="background:#C4497A"></span><b>SIDE-R</b><span class="n">6</span><span class="ft">Martin MAC Aura XB</span></li><li><span class="sw" style="background:#4A94C4"></span><b>WASH-U</b><span class="n">10</span><span class="ft">Martin RUSH PAR 2 RGBW Z</span></li><li><span class="sw" style="background:#46A88C"></span><b>WASH-D</b><span class="n">10</span><span class="ft">Martin RUSH PAR 2 RGBW Z</span></li></ul>
+
+<h2>배치 — 11종</h2>
+<div class="tw"><table>
+<thead><tr><th>배치</th><th class="num">대수</th><th class="num">X 중심</th>
+<th class="num">Y</th><th class="num">Z</th><th>FID</th></tr></thead>
+<tbody><tr><td class="pl">FOH 브리지</td><td class="num">6</td><td class="num">+0.0</td><td class="num">-9.0</td><td class="num">7.5</td><td class="fid">101–106</td></tr><tr><td class="pl">FOH 트러스</td><td class="num">8</td><td class="num">+0.0</td><td class="num">-6.5</td><td class="num">7.0</td><td class="fid">111–118</td></tr><tr><td class="pl">다운 트러스 전면</td><td class="num">6</td><td class="num">+0.0</td><td class="num">-3.2</td><td class="num">6.5</td><td class="fid">601–606</td></tr><tr><td class="pl">업 트러스</td><td class="num">12</td><td class="num">+0.0</td><td class="num">+2.5</td><td class="num">6.8</td><td class="fid">611–508</td></tr><tr><td class="pl">무대 양측 플로어</td><td class="num">2</td><td class="num">+0.0</td><td class="num">+0.5</td><td class="num">0.2</td><td class="fid">621–622</td></tr><tr><td class="pl">다운 트러스</td><td class="num">8</td><td class="num">+0.0</td><td class="num">-2.5</td><td class="num">6.8</td><td class="fid">521–528</td></tr><tr><td class="pl">업스테이지 트러스</td><td class="num">12</td><td class="num">+0.0</td><td class="num">+4.5</td><td class="num">6.2</td><td class="fid">201–212</td></tr><tr><td class="pl">하수 붐 (3단×2)</td><td class="num">6</td><td class="num">-7.0</td><td class="num">+3.0</td><td class="num">1.2</td><td class="fid">301–306</td></tr><tr><td class="pl">상수 붐 (3단×2)</td><td class="num">6</td><td class="num">+7.0</td><td class="num">+3.0</td><td class="num">1.2</td><td class="fid">311–316</td></tr><tr><td class="pl">업스테이지 플로어</td><td class="num">10</td><td class="num">+0.0</td><td class="num">+5.2</td><td class="num">0.3</td><td class="fid">401–410</td></tr><tr><td class="pl">다운스테이지 플로어</td><td class="num">10</td><td class="num">+0.0</td><td class="num">-1.0</td><td class="num">0.3</td><td class="fid">421–430</td></tr></tbody></table></div>
+
+<h2>기구 명세 — 86대</h2>
+<div class="tw scroll"><table>
+<thead><tr><th>FID</th><th>그룹</th><th>기종</th><th class="num">X</th>
+<th class="num">Y</th><th class="num">Z</th></tr></thead>
+<tbody><tr><td class="fid">101</td><td><span class="dot" style="background:#E08A2B"></span>KEY</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">-5.00</td><td class="num">-9.00</td><td class="num">7.50</td></tr><tr><td class="fid">102</td><td><span class="dot" style="background:#E08A2B"></span>KEY</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">-3.00</td><td class="num">-9.00</td><td class="num">7.50</td></tr><tr><td class="fid">103</td><td><span class="dot" style="background:#E08A2B"></span>KEY</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">-1.00</td><td class="num">-9.00</td><td class="num">7.50</td></tr><tr><td class="fid">104</td><td><span class="dot" style="background:#E08A2B"></span>KEY</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">+1.00</td><td class="num">-9.00</td><td class="num">7.50</td></tr><tr><td class="fid">105</td><td><span class="dot" style="background:#E08A2B"></span>KEY</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">+3.00</td><td class="num">-9.00</td><td class="num">7.50</td></tr><tr><td class="fid">106</td><td><span class="dot" style="background:#E08A2B"></span>KEY</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">+5.00</td><td class="num">-9.00</td><td class="num">7.50</td></tr><tr><td class="fid">111</td><td><span class="dot" style="background:#C96A1E"></span>FOH</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">-6.00</td><td class="num">-6.50</td><td class="num">7.00</td></tr><tr><td class="fid">112</td><td><span class="dot" style="background:#C96A1E"></span>FOH</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">-4.29</td><td class="num">-6.50</td><td class="num">7.00</td></tr><tr><td class="fid">113</td><td><span class="dot" style="background:#C96A1E"></span>FOH</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">-2.57</td><td class="num">-6.50</td><td class="num">7.00</td></tr><tr><td class="fid">114</td><td><span class="dot" style="background:#C96A1E"></span>FOH</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">-0.86</td><td class="num">-6.50</td><td class="num">7.00</td></tr><tr><td class="fid">115</td><td><span class="dot" style="background:#C96A1E"></span>FOH</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">+0.86</td><td class="num">-6.50</td><td class="num">7.00</td></tr><tr><td class="fid">116</td><td><span class="dot" style="background:#C96A1E"></span>FOH</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">+2.57</td><td class="num">-6.50</td><td class="num">7.00</td></tr><tr><td class="fid">117</td><td><span class="dot" style="background:#C96A1E"></span>FOH</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">+4.29</td><td class="num">-6.50</td><td class="num">7.00</td></tr><tr><td class="fid">118</td><td><span class="dot" style="background:#C96A1E"></span>FOH</td><td class="ft">ETC S4 LED S3 Lustr X8</td><td class="num">+6.00</td><td class="num">-6.50</td><td class="num">7.00</td></tr><tr><td class="fid">201</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">-6.00</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">202</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">-4.91</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">203</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">-3.82</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">204</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">-2.73</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">205</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">-1.64</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">206</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">-0.55</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">207</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">+0.55</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">208</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">+1.64</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">209</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">+2.73</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">210</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">+3.82</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">211</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">+4.91</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">212</td><td><span class="dot" style="background:#3D7EC4"></span>BACK</td><td class="ft">Martin MAC Aura XB</td><td class="num">+6.00</td><td class="num">+4.50</td><td class="num">6.20</td></tr><tr><td class="fid">301</td><td><span class="dot" style="background:#C4497A"></span>SIDE-L</td><td class="ft">Martin MAC Aura XB</td><td class="num">-7.00</td><td class="num">+3.00</td><td class="num">1.20</td></tr><tr><td class="fid">302</td><td><span class="dot" style="background:#C4497A"></span>SIDE-L</td><td class="ft">Martin MAC Aura XB</td><td class="num">-7.00</td><td class="num">+3.00</td><td class="num">2.60</td></tr><tr><td class="fid">303</td><td><span class="dot" style="background:#C4497A"></span>SIDE-L</td><td class="ft">Martin MAC Aura XB</td><td class="num">-7.00</td><td class="num">+3.00</td><td class="num">4.00</td></tr><tr><td class="fid">304</td><td><span class="dot" style="background:#C4497A"></span>SIDE-L</td><td class="ft">Martin MAC Aura XB</td><td class="num">-7.00</td><td class="num">+0.50</td><td class="num">1.20</td></tr><tr><td class="fid">305</td><td><span class="dot" style="background:#C4497A"></span>SIDE-L</td><td class="ft">Martin MAC Aura XB</td><td class="num">-7.00</td><td class="num">+0.50</td><td class="num">2.60</td></tr><tr><td class="fid">306</td><td><span class="dot" style="background:#C4497A"></span>SIDE-L</td><td class="ft">Martin MAC Aura XB</td><td class="num">-7.00</td><td class="num">+0.50</td><td class="num">4.00</td></tr><tr><td class="fid">311</td><td><span class="dot" style="background:#C4497A"></span>SIDE-R</td><td class="ft">Martin MAC Aura XB</td><td class="num">+7.00</td><td class="num">+3.00</td><td class="num">1.20</td></tr><tr><td class="fid">312</td><td><span class="dot" style="background:#C4497A"></span>SIDE-R</td><td class="ft">Martin MAC Aura XB</td><td class="num">+7.00</td><td class="num">+3.00</td><td class="num">2.60</td></tr><tr><td class="fid">313</td><td><span class="dot" style="background:#C4497A"></span>SIDE-R</td><td class="ft">Martin MAC Aura XB</td><td class="num">+7.00</td><td class="num">+3.00</td><td class="num">4.00</td></tr><tr><td class="fid">314</td><td><span class="dot" style="background:#C4497A"></span>SIDE-R</td><td class="ft">Martin MAC Aura XB</td><td class="num">+7.00</td><td class="num">+0.50</td><td class="num">1.20</td></tr><tr><td class="fid">315</td><td><span class="dot" style="background:#C4497A"></span>SIDE-R</td><td class="ft">Martin MAC Aura XB</td><td class="num">+7.00</td><td class="num">+0.50</td><td class="num">2.60</td></tr><tr><td class="fid">316</td><td><span class="dot" style="background:#C4497A"></span>SIDE-R</td><td class="ft">Martin MAC Aura XB</td><td class="num">+7.00</td><td class="num">+0.50</td><td class="num">4.00</td></tr><tr><td class="fid">401</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-5.00</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">402</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-3.89</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">403</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-2.78</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">404</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-1.67</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">405</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-0.56</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">406</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+0.56</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">407</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+1.67</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">408</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+2.78</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">409</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+3.89</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">410</td><td><span class="dot" style="background:#4A94C4"></span>WASH-U</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+5.00</td><td class="num">+5.20</td><td class="num">0.30</td></tr><tr><td class="fid">421</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-5.00</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">422</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-3.89</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">423</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-2.78</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">424</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-1.67</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">425</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">-0.56</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">426</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+0.56</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">427</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+1.67</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">428</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+2.78</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">429</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+3.89</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">430</td><td><span class="dot" style="background:#46A88C"></span>WASH-D</td><td class="ft">Martin RUSH PAR 2 RGBW Z</td><td class="num">+5.00</td><td class="num">-1.00</td><td class="num">0.30</td></tr><tr><td class="fid">501</td><td><span class="dot" style="background:#8A5FC4"></span>MOVER-U</td><td class="ft">Robe MegaPointe</td><td class="num">-1.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">502</td><td><span class="dot" style="background:#8A5FC4"></span>MOVER-U</td><td class="ft">Robe MegaPointe</td><td class="num">-0.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">503</td><td><span class="dot" style="background:#8A5FC4"></span>MOVER-U</td><td class="ft">Robe MegaPointe</td><td class="num">+0.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">504</td><td><span class="dot" style="background:#8A5FC4"></span>MOVER-U</td><td class="ft">Robe MegaPointe</td><td class="num">+1.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">505</td><td><span class="dot" style="background:#8A5FC4"></span>MOVER-U</td><td class="ft">Robe MegaPointe</td><td class="num">+2.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">506</td><td><span class="dot" style="background:#8A5FC4"></span>MOVER-U</td><td class="ft">Robe MegaPointe</td><td class="num">+3.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">507</td><td><span class="dot" style="background:#8A5FC4"></span>MOVER-U</td><td class="ft">Robe MegaPointe</td><td class="num">+4.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">508</td><td><span class="dot" style="background:#8A5FC4"></span>MOVER-U</td><td class="ft">Robe MegaPointe</td><td class="num">+5.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">521</td><td><span class="dot" style="background:#2E9E8F"></span>MOVER-D</td><td class="ft">Robe Spiider</td><td class="num">-5.50</td><td class="num">-2.50</td><td class="num">6.80</td></tr><tr><td class="fid">522</td><td><span class="dot" style="background:#2E9E8F"></span>MOVER-D</td><td class="ft">Robe Spiider</td><td class="num">-3.93</td><td class="num">-2.50</td><td class="num">6.80</td></tr><tr><td class="fid">523</td><td><span class="dot" style="background:#2E9E8F"></span>MOVER-D</td><td class="ft">Robe Spiider</td><td class="num">-2.36</td><td class="num">-2.50</td><td class="num">6.80</td></tr><tr><td class="fid">524</td><td><span class="dot" style="background:#2E9E8F"></span>MOVER-D</td><td class="ft">Robe Spiider</td><td class="num">-0.79</td><td class="num">-2.50</td><td class="num">6.80</td></tr><tr><td class="fid">525</td><td><span class="dot" style="background:#2E9E8F"></span>MOVER-D</td><td class="ft">Robe Spiider</td><td class="num">+0.79</td><td class="num">-2.50</td><td class="num">6.80</td></tr><tr><td class="fid">526</td><td><span class="dot" style="background:#2E9E8F"></span>MOVER-D</td><td class="ft">Robe Spiider</td><td class="num">+2.36</td><td class="num">-2.50</td><td class="num">6.80</td></tr><tr><td class="fid">527</td><td><span class="dot" style="background:#2E9E8F"></span>MOVER-D</td><td class="ft">Robe Spiider</td><td class="num">+3.93</td><td class="num">-2.50</td><td class="num">6.80</td></tr><tr><td class="fid">528</td><td><span class="dot" style="background:#2E9E8F"></span>MOVER-D</td><td class="ft">Robe Spiider</td><td class="num">+5.50</td><td class="num">-2.50</td><td class="num">6.80</td></tr><tr><td class="fid">601</td><td><span class="dot" style="background:#B8A521"></span>BLIND</td><td class="ft">Elation CUEPIX Blinder WW2</td><td class="num">-4.50</td><td class="num">-3.20</td><td class="num">6.50</td></tr><tr><td class="fid">602</td><td><span class="dot" style="background:#B8A521"></span>BLIND</td><td class="ft">Elation CUEPIX Blinder WW2</td><td class="num">-2.70</td><td class="num">-3.20</td><td class="num">6.50</td></tr><tr><td class="fid">603</td><td><span class="dot" style="background:#B8A521"></span>BLIND</td><td class="ft">Elation CUEPIX Blinder WW2</td><td class="num">-0.90</td><td class="num">-3.20</td><td class="num">6.50</td></tr><tr><td class="fid">604</td><td><span class="dot" style="background:#B8A521"></span>BLIND</td><td class="ft">Elation CUEPIX Blinder WW2</td><td class="num">+0.90</td><td class="num">-3.20</td><td class="num">6.50</td></tr><tr><td class="fid">605</td><td><span class="dot" style="background:#B8A521"></span>BLIND</td><td class="ft">Elation CUEPIX Blinder WW2</td><td class="num">+2.70</td><td class="num">-3.20</td><td class="num">6.50</td></tr><tr><td class="fid">606</td><td><span class="dot" style="background:#B8A521"></span>BLIND</td><td class="ft">Elation CUEPIX Blinder WW2</td><td class="num">+4.50</td><td class="num">-3.20</td><td class="num">6.50</td></tr><tr><td class="fid">611</td><td><span class="dot" style="background:#8C9196"></span>STROBE</td><td class="ft">Martin Atomic 3000 LED</td><td class="num">-5.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">612</td><td><span class="dot" style="background:#8C9196"></span>STROBE</td><td class="ft">Martin Atomic 3000 LED</td><td class="num">-4.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">613</td><td><span class="dot" style="background:#8C9196"></span>STROBE</td><td class="ft">Martin Atomic 3000 LED</td><td class="num">-3.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">614</td><td><span class="dot" style="background:#8C9196"></span>STROBE</td><td class="ft">Martin Atomic 3000 LED</td><td class="num">-2.50</td><td class="num">+2.50</td><td class="num">6.80</td></tr><tr><td class="fid">621</td><td><span class="dot" style="background:#6E7378"></span>HAZE</td><td class="ft">Look Unique 2.1</td><td class="num">-7.50</td><td class="num">+0.50</td><td class="num">0.20</td></tr><tr><td class="fid">622</td><td><span class="dot" style="background:#6E7378"></span>HAZE</td><td class="ft">Look Unique 2.1</td><td class="num">+7.50</td><td class="num">+0.50</td><td class="num">0.20</td></tr></tbody></table></div>
+
+<footer>
+  좌표 출처 <span class="v">합성 (배치명 → 통상 치수)</span> ·
+  생성 2026-09-01 · 콘솔 투입 시 프리셋 라벨에 출처를 표기할 것
+</footer>
+
+</div>

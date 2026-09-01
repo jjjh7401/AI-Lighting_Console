@@ -22,10 +22,12 @@ from server.lxseq.position_derive import (
     DERIVED_LABEL_SUFFIX,
     POSITION_RULES,
     UnknownPositionSheetError,
+    console_label_head,
     derive_position_presets,
     group_members_from_sheets,
     parse_position_sheet,
     position_preset_bundles,
+    preset_id_from_console_head,
 )
 from server.orchestrator.tools import build_toolset
 
@@ -183,8 +185,18 @@ class TestLabelAndCommands:
         return derive_position_presets(_rows(), SYNTHETIC_MEMBERS, SYNTHETIC).derived
 
     def test_the_label_leads_with_the_id_so_the_join_can_key_on_it(self):
+        """t224 정정 — 콘솔이 `.` 을 지우므로 **점 없는 형태로 보낸다.**
+
+        그래야 보낸 라벨과 되읽은 라벨이 바이트 동일해지고, 이 저장소의 유일한
+        판정 수단인 되읽기 대조가 성립한다. 조인은 여전히 첫 어절에 걸린다 —
+        키가 `POS.01` 에서 `POS01` 로 바뀌었을 뿐이고, 그 왕복은
+        `preset_id_from_console_head` 한 자리가 책임진다.
+        """
         for item in self._derived():
-            assert item.label.split(" ")[0] == item.preset_id
+            head = item.label.split(" ")[0]
+            assert head == console_label_head(item.preset_id)
+            assert "." not in head
+            assert preset_id_from_console_head(head) == item.preset_id
 
     def test_the_label_says_the_value_was_computed_not_recorded(self):
         """RIG 노트의 「현장 레코드 필요」는 이 카드 뒤에도 유효하다 — 라벨이
@@ -324,3 +336,51 @@ class TestCueJoin:
         )
         assert payload["refusal"] is None
         assert any("At Preset 12.7" in command for command in exec_port.sent)
+
+
+class TestConsoleDropsTheDotInLabels:
+    """t224 재현 — **콘솔이 저장한 이름**으로 조인이 서야 한다.
+
+    실측(2026-09-01, onPC 2.4.2 · 응답기 1.6.2): 보낸 것과 되읽은 것이 다르다.
+
+        보냄   Label Preset 2.1 'POS.01 보컬 센터 페이스 · 합성좌표'  → executed_ok
+        되읽음 "POS01 보컬 센터 페이스 · 합성좌표"
+
+    같은 판독 채널이 Color 풀의 `"골드 앰버 (=P1)"` 는 괄호·`=` 까지 그대로
+    답하므로 판독기가 문장부호를 지우는 것이 아니다 — **콘솔이 `.` 만** 지운다.
+
+    위 `TestCueJoin` 은 우리가 **보낸** 문자열을 그대로 풀에 심어서 이 갈래를
+    못 봤다. 가짜가 콘솔보다 정직하면 그 가짜로는 이 결함을 볼 수 없다.
+    """
+
+    def test_the_name_the_console_actually_stores_resolves(self):
+        payload, _exec = _run([_obj(3, "POS03 밴드 라인 백 · 합성좌표")])
+
+        assert payload["refusal"] is None
+        assert payload["held"] == []
+        assert payload["preset_slots_resolved"] == 1
+        assert [c["cue_no"] for c in payload["planned_cues"]] == ["Q010"]
+
+    def test_the_dotted_form_still_resolves(self):
+        # 정규화가 기존 갈래를 안 죽인다 — 시트·산출 라벨은 점을 들고 있다.
+        payload, _exec = _run([_obj(3, "POS.03 밴드 라인 백 · 산출값")])
+
+        assert payload["refusal"] is None
+        assert payload["preset_slots_resolved"] == 1
+
+    def test_the_recall_command_uses_the_console_slot(self):
+        payload, exec_port = _run([_obj(3, "POS03 밴드 라인 백 · 합성좌표")], action="apply")
+
+        assert payload["approval"] == "granted"
+        assert any("At Preset 2.3" in command for command in exec_port.sent)
+
+    def test_normalising_the_dot_does_not_widen_the_predicate(self):
+        """팔 2 — 정규화가 인접한 이름까지 삼키지 않는다.
+
+        길이·숫자 검사는 그대로다. 점을 지우는 것이 「POS 로 시작하면 뭐든」이
+        되면 사람이 붙인 라벨이 다른 ID 를 삼킨다.
+        """
+        for label in ("POS001 밴드", "POSA1 밴드", "POS.1 밴드", "POS 03 밴드"):
+            payload, _exec = _run([_obj(3, label)])
+            assert payload["preset_slots_resolved"] == 0, label
+            assert payload["refusal"] == "rows_held", label

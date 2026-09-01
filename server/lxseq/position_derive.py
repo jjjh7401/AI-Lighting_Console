@@ -80,9 +80,64 @@ POSITION_SHEET_COLUMNS: tuple[str, ...] = ("ID", "StageMeaning", "TargetGroup", 
 #: 시트 ID 접두.
 POSITION_ID_PREFIX = "POS."
 
+#: 🔴 **콘솔이 프리셋 라벨에서 `.` 을 지운다.** 2026-09-01 실측
+#: (onPC 2.4.2 · 응답기 1.6.2, t224) — 보낸 것과 되읽은 것이 다르다:
+#:
+#:     보냄   Label Preset 2.1 'POS.01 보컬 센터 페이스 · 합성좌표'  -> executed_ok
+#:     되읽음 state DataPool/PresetPools/2 -> "POS01 보컬 센터 페이스 · 합성좌표"
+#:
+#: 대조군: 같은 판독 채널이 Color 풀의 "골드 앰버 (=P1)" 은 괄호도 `=` 도
+#: 그대로 답한다. 즉 판독기가 문장부호를 지우는 것이 아니라 **콘솔이 `.` 만**
+#: 지운다(추정 원인: `.` 이 pool.slot 구분자).
+#:
+#: 그래서 조인 키는 **콘솔이 안 삼키는 형태로 보낸다.** 비교 시점에만
+#: 정규화하면 「보낸 라벨 == 되읽은 라벨」이 상시 거짓이 되고, 되읽기가
+#: 이 저장소의 유일한 판정 수단이라 그 수단에 노이즈를 심게 된다.
+#:
+#: 시트 정본 키(`POS.01`) ↔ 콘솔 라벨 첫 어절(`POS01`) 의 변환은 아래 두
+#: 함수 **한 자리에서만** 일어난다.
+CONSOLE_ID_PREFIX = "POS"
+
+#: ID 의 숫자 자릿수. `POS.01` 도 `POS01` 도 두 자리다.
+POSITION_ID_DIGITS = 2
+
+
+def console_label_head(preset_id: str) -> str:
+    """시트 ID -> 콘솔 라벨의 첫 어절. `POS.01` -> `POS01`.
+
+    콘솔이 어차피 지울 문자를 **우리가 먼저 빼서** 보낸다. 그래야 보낸 값과
+    되읽은 값이 바이트 동일해지고, 라운드트립 대조가 성립한다.
+    """
+    return preset_id.replace(".", "")
+
+
+def preset_id_from_console_head(head: str) -> str | None:
+    """콘솔 라벨의 첫 어절 -> 시트 ID. 형태가 아니면 ``None``.
+
+    `POS01` 이 정본 왕복 형태이고, 점이 든 `POS.01` 도 받는다 — 우리 쓰기
+    경로로는 나올 수 없지만(콘솔이 지운다) 다른 경로로 붙은 라벨까지 거절할
+    근거는 없다. **느슨해지는 것은 점 하나뿐이다**: 접두·자릿수·숫자 검사는
+    그대로라 `POS001`·`POSA1`·`POS.1`·`POS 03`·`POS01foo` 는 전부 안 걸린다.
+    """
+    bare = head.replace(".", "", 1) if head.startswith(POSITION_ID_PREFIX) else head
+    if not bare.startswith(CONSOLE_ID_PREFIX):
+        return None
+    digits = bare[len(CONSOLE_ID_PREFIX) :]
+    if len(digits) != POSITION_ID_DIGITS or not digits.isdigit():
+        return None
+    return POSITION_ID_PREFIX + digits
+
+
 #: 콘솔 라벨 꼬리. 이 문자열이 「이 값은 사람이 현장에서 잡은 것이 아니다」를
 #: 나른다 — 라벨이 유일하게 콘솔 화면에 남는 자리라서 여기에 붙인다.
 DERIVED_LABEL_SUFFIX = "산출값"
+
+#: **좌표 자체가 합성일 때** 쓰는 꼬리. 「· 산출값」은 조준값이 계산됐다는
+#: 말이라 「좌표는 실측인데 조준만 계산했다」로 읽힌다 — 좌표가 합성이면
+#: 그쪽이 더 강한 주장이고, 그 사실이 라벨에 없으면 계산된 조준이 현장
+#: 레코드로 오독된다. 어느 꼬리를 다는지는 **좌표의 출처를 아는 쪽**,
+#: 즉 호출자가 정한다. 이 모듈은 좌표가 어디서 왔는지 모른다.
+SYNTHETIC_LABEL_SUFFIX = "합성좌표"
 
 
 class UnknownPositionSheetError(ValueError):
@@ -310,12 +365,23 @@ def derive_position_presets(
     rows: Sequence[PositionSheetRow],
     members: Mapping[str, Sequence[int]],
     coordinates: Mapping[int, tuple[float, float, float]],
+    *,
+    label_suffix: str = DERIVED_LABEL_SUFFIX,
 ) -> PositionDerivationResult:
     """시트 행 + 그룹 멤버십 + 리그 좌표 -> 콘솔에 올릴 조준값.
 
     `coordinates` 는 **리그 전체**를 담아야 한다 — 무대 기준틀이 여기서 나온다.
     규칙이 없는 ID(POS.07·08)는 조용히 건너뛴다: 결손이 아니라 범위 밖이다.
+
+    `label_suffix` 는 라벨 꼬리, 곧 **콘솔 화면에 남는 유일한 출처 표기**다.
+    기본값은 조준값이 계산됐다는 뜻의 「산출값」이고, 좌표 자체가 합성이면
+    호출자가 :data:`SYNTHETIC_LABEL_SUFFIX` 를 싣는다. 빈 꼬리는 거절한다 —
+    꼬리를 지우는 것은 출처 표기를 지우는 것이고, 그 라벨은 현장 레코드와
+    바이트 하나 차이 없이 읽힌다. 조인 키는 꼬리와 무관하게 **첫 토큰**이다.
     """
+    suffix = label_suffix.strip()
+    if not suffix:
+        raise ValueError("label_suffix 가 비었다 — 라벨은 좌표의 출처를 반드시 나른다")
     ruled = [row for row in rows if row.preset_id in _RULE_BY_ID]
     if not coordinates:
         return PositionDerivationResult(
@@ -364,7 +430,7 @@ def derive_position_presets(
             DerivedPosition(
                 preset_id=row.preset_id,
                 slot=_slot_of(row.preset_id),
-                label=f"{row.preset_id} {rule.stage_meaning} · {DERIVED_LABEL_SUFFIX}",
+                label=f"{console_label_head(row.preset_id)} {rule.stage_meaning} · {suffix}",
                 target_group=row.target_group,
                 rule_kind=rule.kind,
                 summary=rule.summary,
