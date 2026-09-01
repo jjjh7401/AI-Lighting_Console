@@ -211,6 +211,10 @@ class TestStorability:
                 [
                     ("attribute_probe_rejected", 3),
                     ("family_out_of_scope", 3),
+                    # t236 — BM.05 의 `예비` 조각. 이전에는 `_attribute_tokens` 가
+                    # 한글 토큰을 안 봐서 **조용히 무시**됐다. 무시는 시트가 뜻한
+                    # 것의 일부를 버리는 것이라 보고로 바꿨다.
+                    ("value_not_machine_readable", 1),
                 ]
             )
         )
@@ -238,7 +242,7 @@ class TestStorability:
         # 「합 − 행 == 다중 행 수」 형태로 적었다가 뺐다: bm 에서 도달 가능한
         # 클래스가 둘뿐이라 어느 행도 셋을 못 져서 이 코퍼스에서는 **항등식**이고,
         # 항등식은 아무것도 안 지킨다.
-        assert multi == ["BM.01"], (
+        assert multi == ["BM.01", "BM.05"], (
             "다중 차단 행이 바뀌었다 — 문서의 「합 N > 행 M」 표기도 같이 고쳐야 한다 "
             "(.moai/specs/SPEC-COPILOT-LXSEQ-003/preset-unify-design.md §5 표기 규약, "
             "spec.md §A.4-2 합계 행): " + str(multi)
@@ -256,7 +260,11 @@ class TestStorability:
         )
         seen = set(c for record in _held() for c in record.hold_classes)
         assert seen <= known
-        assert len(seen) == 2, "정본에서 실제로 나오는 클래스는 둘이다 (t229 전에는 셋)"
+        assert len(seen) == 3, (
+            "정본에서 실제로 나오는 클래스는 셋이다 "
+            "(t229 가 켈빈 2행을 열어 둘로 줄었고, t236 이 BM.05 의 안 읽히는 "
+            "조각을 보고로 바꿔 다시 셋이 됐다)"
+        )
 
         # 🔴 `no_rgb_value` 가 정본에서 사라진 것은 **켈빈 2행이 열렸기 때문**이지
         # 그 클래스가 죽은 것이 아니다. 숫자만 3 -> 2 로 낮추면 그 클래스가 조용히
@@ -279,7 +287,10 @@ class TestStorability:
         """위 검사의 실질 — 「Gobo 만 풀면 몇 건」이 정직하게 나오는지."""
         beam = _parsed("preset-bm").records
         only_gobo = [r for r in beam if set(r.hold_classes) == set([HOLD_FAMILY_OUT_OF_SCOPE])]
-        assert len(only_gobo) == 2, "Gobo 만 풀면 5건 중 2건만 열린다"
+        assert [r.preset_id for r in only_gobo] == ["BM.02"], (
+            "Gobo 만 풀면 5건 중 1건만 열린다 — t236 전에는 2건으로 세고 있었고 "
+            "그 2번째(BM.05)는 `예비` 조각을 조용히 버리며 열릴 행이었다"
+        )
 
     def test_a_fabricated_prose_level_is_not_storable(self):
         """날조 대조군 — dim 이 무조건 통과하는 게 아니라 형태를 재는 것이다."""
