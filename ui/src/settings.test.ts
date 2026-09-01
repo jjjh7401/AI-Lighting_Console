@@ -135,16 +135,20 @@ describe("buildSettingsPayload", () => {
   });
 });
 
+// 키 픽스처는 실제 키 접두사(sk- / ghp_ / AKIA / AIza+35자)를 흉내 내지 않는다.
+// 흉내 내면 astgrep 규칙 sec-hardcoded-credential-typescript 가 매 커밋마다 error 를
+// 내고, 매 커밋 울리는 경고는 읽히지 않는 경고가 된다.
+// buildKeyPayload 는 값을 그대로 실어 보내는 패스스루라 값의 "모양"은 아무것도 검증하지 않는다.
 describe("buildKeyPayload", () => {
   it("carries provider + key, no session flag by default", () => {
-    const body = JSON.parse(buildKeyPayload("gemini", "AIza-secret"));
+    const body = JSON.parse(buildKeyPayload("gemini", "gemini-test-key"));
     expect(body.provider).toBe("gemini");
-    expect(body.key).toBe("AIza-secret");
+    expect(body.key).toBe("gemini-test-key");
     expect("session_only" in body).toBe(false);
   });
 
   it("includes session_only when the session fallback is chosen", () => {
-    const body = JSON.parse(buildKeyPayload("anthropic", "sk-ant-x", true));
+    const body = JSON.parse(buildKeyPayload("anthropic", "anthropic-test-key", true));
     expect(body.session_only).toBe(true);
   });
 });
