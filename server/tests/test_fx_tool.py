@@ -1004,9 +1004,14 @@ def _preset_tree(
     all_pool: int = 21,
     presets: tuple[tuple[int | None, str], ...] = ((1, "Warm"),),
     pool_truncated: bool = False,
+    pools_truncated: bool = False,
 ) -> dict[str, dict]:
     tree = _tree()
-    tree[PRESET_POOLS_PATH] = _payload(PRESET_POOLS_PATH, [_child(n, name) for n, name in pools])
+    tree[PRESET_POOLS_PATH] = _payload(
+        PRESET_POOLS_PATH,
+        [_child(n, name) for n, name in pools],
+        truncated=pools_truncated,
+    )
     tree[f"{PRESET_POOLS_PATH}/{all_pool}"] = _payload(
         f"{PRESET_POOLS_PATH}/{all_pool}",
         [_child(n, name) for n, name in presets],
@@ -1083,6 +1088,16 @@ class TestComposeFx:
         assert "both speed and speed_master" in payload["error"]
 
 
+#: preset 목적지로 가는 최소 인자 — t231 검사 둘이 같은 호출을 쓴다.
+_PRESET_ARGS = dict(
+    pattern="pulse",
+    steps=[dict(Dimmer=10), dict(Dimmer=90)],
+    group=11,
+    speed=24,
+    destination="preset",
+)
+
+
 class TestPresetDestination:
     def _preset_registry(self, port=None, **kwargs):
         return _registry(port=port, tree=_preset_tree(**kwargs))
@@ -1120,6 +1135,29 @@ class TestPresetDestination:
         )
         assert execution.result.is_error is False, payload
         assert any(c.startswith("Store Preset 21.") for c in port.executed)
+
+    def test_a_truncated_pool_listing_is_refused_rather_than_read_as_absence(self):
+        """t231 — 잘린 목록에 All 이 없다고 「이 리그에 All 풀이 없다」로 답하면
+        안 된다. 안 보인 자리에 있을 수 있다 — 모름은 거부다.
+
+        `pools` 에서 All 을 빼고 잘림만 켠 것이 아니라, **All 이 있는데도**
+        목록이 잘렸다고 말하게 해서 「일치가 있어도 거부한다」를 잰다.
+        """
+        execution, payload = _compose(self._preset_registry(pools_truncated=True), _PRESET_ARGS)
+        assert execution.result.is_error is True, payload
+
+    def test_several_all_pools_are_normal_and_the_first_still_wins(self):
+        """t231 조건 2 — `All` 조회에서 다중 일치는 **정상**이다.
+
+        계열 조회의 「다중이면 거절」을 여기 적용하면 이 경로가 항상 죽는다.
+        `test_pool_lookup.py` 가 술어 쪽에서, 이 검사가 자리 쪽에서 고정한다.
+        """
+        port = _RecordingPort()
+        pools = ((1, "Dimmer"), (21, "All 1"), (22, "All 2"), (23, "All 3"))
+        registry = self._preset_registry(port=port, pools=pools)
+        execution, payload = _compose(registry, _PRESET_ARGS)
+        assert execution.result.is_error is False, payload
+        assert payload["report"]["preset_pool"] == 21, payload["report"]
 
     def test_an_executor_with_a_preset_destination_is_refused(self):
         execution, payload = _compose(
