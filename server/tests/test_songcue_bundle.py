@@ -316,6 +316,13 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # Both protected ranges (234..238 / 524..569) untouched -- nearest hunks
 # around 234..238 are 184 and 302 (unchanged); around 524..569 are 479 and
 # 591 (unchanged).
+# t220 (POS.xx 산출 + 큐 조인) 은 tools.py 를 세 자리 고쳤다: (1) POS 계열 이름
+# 상수 POSITION_POOL_FAMILY 를 _PRESET_POOL_FAMILY 옆에 신설, (2) preset_slots
+# 뒤에 Position 풀 되읽기 블록 추가, (3) 명령 조립 루프의 (row.col, row.bm) 에
+# row.pos 를 넣었다. Measured delta: 47->48 hunks, 새 시작점 **477**
+# (순수 삽입, count 0), 사라진 시작점 없음. 보호 구간 둘(234..238 / 524..569)
+# 모두 무접촉 -- 524..569 주변 이웃은 479 와 591 로 그대로이고, 새 477 은
+# count 0 이라 524 에 닿지 않는다.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -340,6 +347,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     436,
     463,
     475,
+    477,
     479,
     591,
     593,
