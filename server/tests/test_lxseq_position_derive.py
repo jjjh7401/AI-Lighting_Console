@@ -24,6 +24,7 @@ from server.lxseq.position_derive import (
     DEGENERATE_RIG_REASON,
     DERIVED_LABEL_SUFFIX,
     POSITION_RULES,
+    SYNTHETIC_LABEL_SUFFIX,
     UnknownPositionSheetError,
     _cause_of,
     _skip_for_unaimable,
@@ -528,3 +529,49 @@ class TestConsoleDropsTheDotInLabels:
             payload, _exec = _run([_obj(3, label)])
             assert payload["preset_slots_resolved"] == 0, label
             assert payload["refusal"] == "rows_held", label
+
+
+class TestTheGuardAndTheLabelCompose:
+    """t226 — 두 변경이 **한 함수 안에서** 만나는 자리.
+
+    t222 는 가드를, t224 는 라벨 왕복을 각자 잰다. 아무도 안 잰 것은 둘이 겹치는
+    지점이다: 가드를 통과한 행이 여전히 콘솔이 안 삼키는 라벨을 내는가, 그리고
+    라벨 인자를 바꾸는 것으로 가드가 열리지는 않는가.
+
+    t222 가 자기 gap 절에 「t224 와 같이 돌려 본 적 없다」를 적었다. 이 클래스가
+    그 칸이다.
+    """
+
+    def _origin(self):
+        return dict((fid, (0.0, 0.0, 0.0)) for fid in SYNTHETIC)
+
+    def test_the_label_argument_does_not_open_the_gate(self):
+        """꼬리를 바꿔도 퇴화 리그는 여전히 전 행을 거절한다."""
+        result = derive_position_presets(
+            _rows(), SYNTHETIC_MEMBERS, self._origin(), label_suffix=SYNTHETIC_LABEL_SUFFIX
+        )
+        assert result.derived == ()
+        assert set(item.reason for item in result.skipped) == set([DEGENERATE_RIG_REASON])
+
+    def test_a_row_that_passes_the_guard_still_leads_with_the_console_head(self):
+        """팔 2 — 폭이 있는 리그에서는 6 행이 나오고 라벨이 콘솔 형태다."""
+        result = derive_position_presets(
+            _rows(), SYNTHETIC_MEMBERS, SYNTHETIC, label_suffix=SYNTHETIC_LABEL_SUFFIX
+        )
+        assert result.skipped == ()
+        assert len(result.derived) == len(POSITION_RULES)
+        for item in result.derived:
+            head = item.label.split(" ")[0]
+            assert head == console_label_head(item.preset_id)
+            assert "." not in head, item.label
+            assert item.label.endswith("· " + SYNTHETIC_LABEL_SUFFIX)
+            assert preset_id_from_console_head(head) == item.preset_id
+
+    def test_an_empty_suffix_is_refused_before_the_guard_can_mask_it(self):
+        """빈 꼬리는 프로그래밍 오류다 — 가드의 거절이 그것을 삼키면 안 된다.
+
+        퇴화 리그에서도 `ValueError` 가 먼저 나야 한다. 순서가 뒤집히면 잘못된
+        호출이 `degenerate_rig` 로 조용히 접혀 원인이 안 보인다.
+        """
+        with pytest.raises(ValueError):
+            derive_position_presets(_rows(), SYNTHETIC_MEMBERS, self._origin(), label_suffix="   ")
