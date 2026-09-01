@@ -9,11 +9,13 @@ Patch/Stages 경로는 밟지 않는다(t220·t225 침묵 상관).
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 
 from server.safety.bootstrap import build_console_stack
 from server.safety.console import LinkTimeouts, StateQueryError
+from server.tools.probe_preflight import add_listen_port_argument, preflight
 from server.tools.tree_identity import assert_same_tree
 
 assert_same_tree(__file__)
@@ -85,19 +87,38 @@ def read_props(port, path, names=PROBE_NAMES):
     return out, None
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    """회신 포트는 인자로 받는다 — 박아 두지 않는다.
+
+    앞 회차(t230)가 이 도구를 9005 아닌 포트로 돌려 **전면 침묵**을 만났고,
+    그 침묵은 「응답기가 죽었다」와 바이트 동일이었다. 포트를 박아 두면 그
+    사고가 조용히 반복된다. 그래서 t61 의 공용 선언을 부르고, 프리플라이트로
+    침묵에 이름을 붙인다 — 틀린 포트인지 응답기가 죽은 것인지 갈라 준다.
+    """
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_listen_port_argument(parser)
+    parser.add_argument("--host", default="127.0.0.1", help="콘솔 OSC 입력 호스트")
+    parser.add_argument("--port", type=int, default=8000, help="onPC OSC 입력 포트")
+    args = parser.parse_args(argv)
+
     stack = build_console_stack(
-        send_host="127.0.0.1",
-        send_port=8000,
+        send_host=args.host,
+        send_port=args.port,
         receive_host="127.0.0.1",
-        receive_port=9005,
+        receive_port=args.listen_port,
         audit_dir=None,
         timeouts=LinkTimeouts(state_query_seconds=6.0),
         attempt_session_backup=False,
     )
     port = stack.gate.state_port
-    result = dict(sequences=[])
+    result = dict(listen_port=args.listen_port, sequences=[])
     try:
+        result["preflight"] = preflight(
+            stack.gate,
+            receive_host="127.0.0.1",
+            receive_port=args.listen_port,
+            console_port=args.port,
+        )
         pool, error = read_state(port, "DataPool/Sequences")
         if pool is None:
             print("pool read failed: " + str(error), file=sys.stderr)

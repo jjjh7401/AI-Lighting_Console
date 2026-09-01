@@ -162,6 +162,16 @@
 **따름**: 레인이 여럿이면 이 포트는 **공유 자원 하나**다. 겹치면 서로의 응답을
 가져간다. 조회 창은 겹치지 않게 잡아야 한다.
 
+**후속(같은 PR, CI 가 잡았다)**: 이 조사 도구가 포트를 `receive_port=9005` 로
+**박아 두고** 있었다. t61 이 세운 가드
+(`test_probe_port_discipline.py::test_they_all_use_the_single_shared_declaration`)가
+CI 에서 정확히 그것을 잡았다 — 「공용 선언을 **부르지** 않는 도구」. 위 사고를
+겪고 문서에 적은 그 회차에, 같은 사고의 원인을 도구에 그대로 남겨 둔 것이다.
+고쳤다: `add_listen_port_argument(parser)` 로 포트를 **인자**로 받고
+(`--listen-port` 는 기본값 없는 필수), `preflight` 로 침묵에 이름을 붙인다.
+재측정 — 고치기 전 이 검사는 `1 failed`, 고친 뒤 `7 passed`. 실기 스모크에서
+`preflight.verdict = responder_ok`, 시퀀스 6개 전부 `childCount == listed`.
+
 ### 🔴 4.2 `query_state` 의 자식 목록은 잘린다 — 그리고 조용하다
 
 > **이 항목은 이 카드 범위 밖이다.** 전파용 전문은 아래 § 독립 경고 에 있다.
