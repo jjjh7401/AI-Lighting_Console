@@ -32,12 +32,19 @@
 다음 사람이 「여기도 거절로 통일하자」로 두 번째 함수를 깨지 않도록,
 그 의도를 검사가 고정한다(`test_pool_lookup.py`).
 
-## 잘림은 부재가 아니다
+## 잘림은 부재가 아니다 — 다만 두 함수가 다르게 쓴다
 
-두 함수 다 목록을 `paged_children` 으로 끝까지 걷고, 그래도 미완이면
-:data:`POOL_LIST_TRUNCATED` 로 **거절한다.** 안 보인 자리에 대상 풀이 있을 수
-있으므로 「그런 풀이 없다」고 말할 수 없다 — 대화 쪽 주석 그대로 **모름은
-거부**다.
+둘 다 목록을 `paged_children` 으로 끝까지 걷는다. 그래도 미완이면:
+
+- 계열 조회는 **항상 거절한다.** 보이는 창에 하나만 있어도 뒤에 둘째가 있을 수
+  있어 **유일성을 세울 수 없다.**
+- `All` 조회는 **보이는 창에 하나도 없을 때만** 거절한다. 이 함수가 요구하는
+  것은 유일성이 아니라 **첫째**이고, 페이징이 순서를 보존하므로 보이는 창의 첫
+  `All` 은 전체의 첫 `All` 이다 — 잘렸어도 그 답은 확정이다.
+
+같은 사실(잘림)이 두 질문에 다른 무게를 갖는다. 한쪽 규율을 다른 쪽에 복사하면
+한 번은 과잉 거절이 되고 한 번은 거짓 부재가 된다 — 어느 쪽도 「모름은 거부」가
+아니다.
 """
 
 from __future__ import annotations
@@ -98,25 +105,24 @@ def pool_slot_and_name(child: object) -> tuple[int | None, str]:
 
 
 def _listed_pools(state_port: PoolLookupPort, pools_path: str):
-    """(풀 목록, 사유). 사유가 있으면 목록은 근거로 쓸 수 없다."""
+    """(풀 목록, 잘렸나, 판독실패 사유).
+
+    잘림은 **사유가 아니라 사실**로 돌려준다 — 두 술어가 잘림을 다르게 쓰기
+    때문이다(아래 각 함수 참조). 판독 자체가 실패한 경우만 여기서 거절한다.
+    """
     try:
         first = state_port.query_state(pools_path)
     except Exception as exc:  # noqa: BLE001 — 모든 포트 실패는 하나의 거절이다
-        return [], (POOL_LIST_UNREAD, "프리셋 풀 목록이 오지 않았다: " + str(exc))
+        return [], False, (POOL_LIST_UNREAD, "프리셋 풀 목록이 오지 않았다: " + str(exc))
     if not isinstance(first, dict) or first.get("ok") is False:
-        return [], (POOL_LIST_UNREAD, "프리셋 풀 목록이 오지 않았다")
+        return [], False, (POOL_LIST_UNREAD, "프리셋 풀 목록이 오지 않았다")
     children, truncated = paged_children(state_port, pools_path, first)
-    if truncated:
-        return [], (
-            POOL_LIST_TRUNCATED,
-            "풀 목록이 잘렸다 — 안 보이는 자리에 그 풀이 있을 수 있어 「없다」고 말할 수 없다",
-        )
     pools = []
     for child in children:
         number, name = pool_slot_and_name(child)
         if number is not None:
             pools.append((number, name))
-    return pools, None
+    return pools, truncated, None
 
 
 def resolve_family_pool(state_port: PoolLookupPort, pools_path: str, family: str):
@@ -128,23 +134,38 @@ def resolve_family_pool(state_port: PoolLookupPort, pools_path: str, family: str
     접두 일치를 유지하는 이유: 완전 일치로 좁히면 `Color Presets` 같은 이름에서
     조용히 멈추는데, 그건 사유를 안 말하는 실패다. 접두를 유지하되 **다중을
     거절**하면 「후보가 둘이다」를 말할 수 있다.
+
+    **잘린 목록은 거절한다** — 보이는 창에 하나만 있어도 뒤에 둘째가 있을 수
+    있어 유일성을 세울 수 없기 때문이다. 다만 보이는 것만으로 이미 둘이면
+    잘림과 무관하게 다중이 확정이므로 그쪽 사유가 이긴다(더 구체적인 쪽).
     """
-    pools, refusal = _listed_pools(state_port, pools_path)
+    pools, truncated, refusal = _listed_pools(state_port, pools_path)
     if refusal is not None:
         return None, refusal
     needle = family.casefold()
     matches = [(no, name) for no, name in pools if name.casefold().startswith(needle)]
-    if not matches:
-        return None, (
-            POOL_NOT_FOUND,
-            "풀 목록에 '" + family + "' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다",
-        )
     if len(matches) > 1:
         listed = ", ".join(name + "(" + str(no) + ")" for no, name in matches)
         return None, (
             POOL_AMBIGUOUS,
-            "'" + family + "' 로 시작하는 풀이 " + str(len(matches)) + "개다 — "
-            "어느 것인지 고르지 않는다: " + listed,
+            "'"
+            + family
+            + "' 로 시작하는 풀이 "
+            + str(len(matches))
+            + "개다 — 어느 것인지 고르지 않는다: "
+            + listed,
+        )
+    if truncated:
+        return None, (
+            POOL_LIST_TRUNCATED,
+            "풀 목록이 잘렸다 — 안 보이는 자리에 '"
+            + family
+            + "' 풀이 또 있을 수 있어 유일성을 세울 수 없다",
+        )
+    if not matches:
+        return None, (
+            POOL_NOT_FOUND,
+            "풀 목록에 '" + family + "' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다",
         )
     return matches[0][0], None
 
@@ -157,17 +178,26 @@ def resolve_all_pool(state_port: PoolLookupPort, pools_path: str):
     :func:`resolve_family_pool` 의 「다중이면 거절」을 여기 적용하면
     FX 목적지 해석이 항상 죽는다. 모듈 독스트링 § 술어가 왜 둘인가 참조.
 
-    잘림 거절은 계열 조회와 **같다** — 다중이 정상인 것과 「모름은 거부」는
-    다른 축이다.
+    **잘림을 계열 조회와 다르게 쓴다.** 이 함수가 요구하는 것은 유일성이 아니라
+    **첫째**이고, 페이징은 순서를 보존하므로 보이는 창의 첫 `All` 은 전체의 첫
+    `All` 이다 — 잘렸어도 그 답은 확정이다. 잘림이 하중을 지는 것은 **보이는
+    창에 하나도 없을 때**뿐이다: 그때의 「없다」는 부재가 아니라 모름이다.
     """
-    pools, refusal = _listed_pools(state_port, pools_path)
+    pools, truncated, refusal = _listed_pools(state_port, pools_path)
     if refusal is not None:
         return None, refusal
     needle = ALL_POOL_PREFIX.casefold()
     matches = [no for no, name in pools if name.casefold().startswith(needle)]
-    if not matches:
+    if matches:
+        return matches[0], None
+    if truncated:
         return None, (
-            POOL_NOT_FOUND,
-            "'" + ALL_POOL_PREFIX + "' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다",
+            POOL_LIST_TRUNCATED,
+            "풀 목록이 잘렸고 보이는 창에 '"
+            + ALL_POOL_PREFIX
+            + "' 풀이 없다 — 안 보이는 자리에 있을 수 있어 「없다」고 말할 수 없다",
         )
-    return matches[0], None
+    return None, (
+        POOL_NOT_FOUND,
+        "'" + ALL_POOL_PREFIX + "' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다",
+    )

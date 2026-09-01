@@ -150,9 +150,26 @@ class TestTheAllPredicateIsDeliberatelyDifferent:
         assert resolve_all_pool(_StubPort(pools), POOLS)[0] == 21
         assert resolve_family_pool(_StubPort(pools), POOLS, "All")[1][0] == POOL_AMBIGUOUS
 
-    def test_all_lookup_still_refuses_a_truncated_listing(self):
-        """다중이 정상인 것과 「모름은 거부」는 다른 축이다."""
+    def test_all_lookup_refuses_a_truncated_listing_with_no_visible_all(self):
+        """보이는 창에 하나도 없으면 그 「없다」는 부재가 아니라 모름이다."""
         no, refusal = resolve_all_pool(_StubPort([_child(1, "Dimmer")], truncated=True), POOLS)
+        assert no is None
+        assert refusal[0] == POOL_LIST_TRUNCATED
+
+    def test_all_lookup_accepts_a_visible_first_match_even_when_truncated(self):
+        """🔴 계열 조회와 갈리는 자리 — 여기서 잘림은 답을 흔들지 않는다.
+
+        페이징이 순서를 보존하므로 보이는 창의 첫 `All` 이 전체의 첫 `All` 이다.
+        계열 조회의 「잘리면 무조건 거절」을 여기 복사하면 **과잉 거절**이 된다.
+        """
+        pools = [_child(1, "Dimmer"), _child(21, "All 1")]
+        no, refusal = resolve_all_pool(_StubPort(pools, truncated=True), POOLS)
+        assert (no, refusal) == (21, None)
+
+    def test_the_family_predicate_refuses_that_very_same_truncated_listing(self):
+        """같은 입력, 다른 답 — 유일성을 요구하는 쪽은 잘림을 못 넘긴다."""
+        pools = [_child(1, "Dimmer"), _child(21, "All 1")]
+        no, refusal = resolve_family_pool(_StubPort(pools, truncated=True), POOLS, "All")
         assert no is None
         assert refusal[0] == POOL_LIST_TRUNCATED
 
@@ -334,7 +351,8 @@ class TestSite5718PositionPool:
 
 
 def _fx_sheet() -> str:
-    body = "ID,Name,Attribute,WaveSteps,BaseRate,Width,Phase,Note\nFX.01,DIM-CHASE,Dimmer,2-step,240,50%,0..360,\n"
+    header = "ID,Name,Attribute,WaveSteps,BaseRate,Width,Phase,Note"
+    body = header + "\n" + "FX.01,DIM-CHASE,Dimmer,2-step,240,50%,0..360," + "\n"
     return base64.b64encode(body.encode("utf-8")).decode("ascii")
 
 

@@ -1137,14 +1137,26 @@ class TestPresetDestination:
         assert any(c.startswith("Store Preset 21.") for c in port.executed)
 
     def test_a_truncated_pool_listing_is_refused_rather_than_read_as_absence(self):
-        """t231 — 잘린 목록에 All 이 없다고 「이 리그에 All 풀이 없다」로 답하면
-        안 된다. 안 보인 자리에 있을 수 있다 — 모름은 거부다.
+        """t231 — 잘린 목록에 All 이 안 보인다고 「이 리그에 All 풀이 없다」로
+        답하면 안 된다. 안 보인 자리에 있을 수 있다 — 모름은 거부다.
 
-        `pools` 에서 All 을 빼고 잘림만 켠 것이 아니라, **All 이 있는데도**
-        목록이 잘렸다고 말하게 해서 「일치가 있어도 거부한다」를 잰다.
+        보이는 창에서 All 을 빼고 잘림을 켠다. All 이 **보이면** 그 답은
+        잘려도 확정이므로(페이징이 순서를 보존한다) 그쪽은 거절이 아니다 —
+        아래 검사가 그 갈림을 잰다.
         """
-        execution, payload = _compose(self._preset_registry(pools_truncated=True), _PRESET_ARGS)
+        registry = self._preset_registry(pools=((1, "Dimmer"),), pools_truncated=True)
+        execution, payload = _compose(registry, _PRESET_ARGS)
         assert execution.result.is_error is True, payload
+
+    def test_a_visible_all_pool_still_resolves_when_the_listing_is_truncated(self):
+        """t231 — 잘림이 답을 흔들지 않는 쪽. **과잉 거절도 결함이다.**"""
+        port = _RecordingPort()
+        registry = self._preset_registry(
+            port=port, pools=((1, "Dimmer"), (21, "All 1")), pools_truncated=True
+        )
+        execution, payload = _compose(registry, _PRESET_ARGS)
+        assert execution.result.is_error is False, payload
+        assert payload["report"]["preset_pool"] == 21, payload["report"]
 
     def test_several_all_pools_are_normal_and_the_first_still_wins(self):
         """t231 조건 2 — `All` 조회에서 다중 일치는 **정상**이다.
