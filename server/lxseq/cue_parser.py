@@ -1,4 +1,6 @@
-"""LX-SEQ CUE-EX 시트 파서 (SPEC-COPILOT-LXSEQ-004 M1, t209).
+"""LX-SEQ CUE-EX 시트 파서 (SPEC-COPILOT-LXSEQ-004 M1, t209 · t207).
+
+AC-LXSEQ4-002  헤더는 정규 17열 정확 집합이다 (모자람 · 남음 둘 다 거부).
 
 순수 함수다 -- 콘솔·네트워크 입출력 0. `server/lxseq/group_parser.py`(002 M1)
 의 관용구를 그대로 따른다: 이름 기반 컬럼 매칭(위치 해석 금지), 행 검증
@@ -61,12 +63,37 @@ CANONICAL_CUE_COLUMNS: tuple[str, ...] = (
 _VIDEO_CALL_GROUP = "LED-W"
 
 
-class MissingCueColumnsError(ValueError):
-    """정규 17개 중 하나라도 헤더에 없을 때 -- 파일 단위 판독 실패."""
+class CueColumnSetError(ValueError):
+    """헤더가 정규 17열 **정확 집합**이 아니다 -- 파일 단위 판독 실패.
+
+    두 갈래(모자람 · 남음)의 공통 조상이다. 부르는 쪽이 한 갈래만 잡으면
+    다른 갈래가 잡히지 않은 예외로 새어나가므로 조상을 잡게 한다
+    (규약 §3.2: `try/except` 가 있다는 것이 그 실패 형태를 잡는다는 뜻이
+    아니다 -- 예외 *종류*를 읽어라).
+    """
+
+
+class MissingCueColumnsError(CueColumnSetError):
+    """정규 17개 중 하나라도 헤더에 없을 때."""
 
     def __init__(self, missing: tuple[str, ...]) -> None:
         self.missing = missing
         super().__init__("missing_columns: " + ", ".join(missing))
+
+
+class UnexpectedCueColumnsError(CueColumnSetError):
+    """정규 17개 밖의 열이 헤더에 있을 때 (AC-LXSEQ4-002 -- 정확 집합).
+
+    🔴 **오타 열은 이 갈래가 아니라 모자람 갈래로 잡힌다** -- 정규 이름 하나가
+    사라지기 때문이다. 이 갈래가 실제로 막는 것은 **덧붙은 열**이다: 시트
+    작성자가 열을 하나 더 만들고 파이프라인이 그것을 읽는다고 믿는 경우.
+    조용히 무시하면 그 믿음이 무대까지 간다 -- 시트에는 적혀 있는데 콘솔에는
+    없는 값이 되고, 어디서 사라졌는지 아무도 못 짚는다.
+    """
+
+    def __init__(self, unexpected: tuple[str, ...]) -> None:
+        self.unexpected = unexpected
+        super().__init__("unexpected_columns: " + ", ".join(unexpected))
 
 
 @dataclass(frozen=True)
@@ -127,6 +154,12 @@ def _resolve_header_map(fieldnames: list[str]) -> dict[str, str]:
             resolved[canonical] = actual
     if missing:
         raise MissingCueColumnsError(tuple(missing))
+    # 정확 집합이므로 남는 열도 거부한다(AC-LXSEQ4-002). 정규 이름으로 정규화한
+    # 뒤 비교한다 -- 대소문자·공백·BOM 차이는 같은 열이지 남는 열이 아니다.
+    canonical_keys = frozenset(_normalize_header(name) for name in CANONICAL_CUE_COLUMNS)
+    unexpected = tuple(name for name in fieldnames if _normalize_header(name) not in canonical_keys)
+    if unexpected:
+        raise UnexpectedCueColumnsError(unexpected)
     return resolved
 
 
@@ -134,7 +167,7 @@ def parse_cue_csv(text: str) -> CueParseResult:
     """CUE-EX 시트 본문을 레코드와 거부로 가른다.
 
     행 검증 실패는 예외로 새어나가지 않는다. 파일 단위 실패인
-    missing_columns 만 MissingCueColumnsError 로 올린다. 값 열은 전혀
+    열 집합 어긋남만 CueColumnSetError(모자람/남음)로 올린다. 값 열은 전혀
     해석하지 않는다 -- 파싱과 해석은 다른 일이다.
     """
     if text.startswith(chr(0xFEFF)):

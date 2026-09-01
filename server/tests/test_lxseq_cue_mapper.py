@@ -1,5 +1,13 @@
 """CUE-EX 매퍼 검사 (4단계 큐).
 
+AC-LXSEQ4-005  그룹 이름은 콘솔이 답한 목록에서만 온다
+AC-LXSEQ4-006  페이드는 초 단위 숫자로만 실린다 (빈칸 != 0.0)
+AC-LXSEQ4-007  [HARD] 어긋나면 0건 -- 배치 전체 all-or-nothing
+AC-LXSEQ4-008  [HARD] 시퀀스 층과 큐 층으로 갈라 수렴한다 (멱등)
+AC-LXSEQ4-012  [HARD] 거절 사유를 문자열로 가른다
+AC-LXSEQ4-013  [HARD] 되읽기 한계를 산출물이 스스로 싣는다 (unverified)
+AC-LXSEQ4-014  [HARD] 「안 된다」는 (A)/(B)/(C) 3분류로 보고된다
+
 이 검사가 지키는 것은 **빈칸의 뜻**이다. 이 도메인에서 가장 비싼 결함은 예외가
 아니라 조용한 오독이다: 트래킹이 0으로 접히면 무대에서 조명이 꺼지고, 그것은
 쇼가 도는 도중에 드러난다.
@@ -27,12 +35,16 @@ import pytest
 from server.lxseq.cue_mapper import (
     BAD_NUMBER,
     BAD_SNAP,
+    BLOCK_CONSOLE_STATE,
+    BLOCK_DOC_INTENT,
+    BLOCK_OUR_DEFECT,
     CUE_COVERAGE_GAP,
-    CUE_EMPTIED_BY_HOLD,
     DIM_OUT_OF_RANGE,
+    ROWS_HELD,
     SLOT_SHORTFALL,
     UNKNOWN_GROUP,
     UNRESOLVED_PRESET,
+    block_report,
     map_cues,
 )
 from server.rig.section import SECTION_TRUNCATED, SECTION_UNREAD
@@ -145,7 +157,7 @@ def test_blank_dim_is_tracking_not_zero():
     assert row.dim != 0.0  # 비공허성 — None 과 0.0 이 같은 값이면 위 단언이 공허하다
 
 
-def test_blank_fades_are_tracking_not_zero():
+def test_blank_fades_are_tracking_not_zero():  # AC-LXSEQ4-006
     """페이드 열도 같다 — 빈칸을 0초로 접으면 스냅이 된다."""
     row = _map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55")]).planned[0].rows[0]
     assert row.i_fade is None
@@ -294,8 +306,10 @@ def test_undefined_preset_holds_the_whole_row():
     )
     assert len(result.held) == 1
     assert UNRESOLVED_PRESET in result.held[0].hold_classes
-    planned_groups = [row.group for bucket in result.planned for row in bucket.rows]
-    assert planned_groups == ["KEY"]  # 보류된 행의 Dim 은 어디에도 안 실린다
+    # 🔴 성한 KEY 행도 안 나간다 — 한 행이 보류되면 배치가 0건이다(AC-LXSEQ4-007).
+    # 고치기 전에는 여기가 `["KEY"]` 였고, 그것이 그룹 하나 빠진 큐의 출하였다.
+    assert result.refusal == ROWS_HELD
+    assert result.planned == ()
 
 
 def test_malformed_preset_reference_is_held():
@@ -309,6 +323,7 @@ def test_malformed_preset_reference_is_held():
 
 
 def test_unknown_group_is_held_not_guessed():
+    """AC-LXSEQ4-005."""
     result = _map([StandInCueRecord(cue_no="Q010", group="NOPE", dim_raw="55")])
     assert UNKNOWN_GROUP in result.held[0].hold_classes
     assert result.planned == ()
@@ -351,8 +366,74 @@ def test_missing_cue_refuses_everything():
     assert result.coverage_gap.covered == ("Q010",)
 
 
-def test_cue_emptied_by_hold_refuses_everything():
-    """보류로 비어 버린 큐는 부분 계획이다 — 영상 콜만 있는 큐와 갈린다."""
+def test_one_broken_row_refuses_the_whole_batch():
+    """🔴 AC-LXSEQ4-007 [HARD] — 한 행이라도 못 옮기면 **배치 전체가 0건**이다.
+
+    재현(2026-09-01, t207): 이 입력이 고치기 전에는 `refusal=None` · 큐 1개 ·
+    행 2개를 냈다. WASH-U 한 그룹이 빠진 큐가 그대로 콘솔에 올라간다.
+
+    MA3 는 트래킹하므로 그 큐는 **큐 리스트에서 정상으로 보이고** 발사할 때에야
+    어긋난다 — 관객 앞에서다. 되읽기 채널은 큐 내용을 안 주므로(AC-LXSEQ4-013)
+    사후에 알아챌 수단도 없다. 반면 0건은 적재 전에 보이고, preview 와 멱등성이
+    있으므로 시트를 고쳐 다시 부르면 된다.
+    """
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q010", group="KEY", dim_raw="40"),
+            StandInCueRecord(cue_no="Q010", group="WASH-U", dim_raw="60", col_raw="COL.99"),
+        ]
+    )
+    assert result.refusal == ROWS_HELD
+    assert result.planned == ()
+
+
+def test_the_refusal_names_which_cue_which_row_and_why():
+    """AC-LXSEQ4-007 · AC-LXSEQ4-012.
+
+    맨 「0건」은 다른 침묵일 뿐이다 — 사람이 89행을 눈으로 훑게 만든다.
+
+    사유 문자열은 **기존 보류 어휘를 그대로** 쓴다. 병렬 어휘를 새로 만들면
+    같은 실패가 자리마다 다른 이름으로 불린다.
+    """
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q020", group="WASH-U", dim_raw="60", col_raw="COL.99"),
+            StandInCueRecord(cue_no="Q030", group="NOPE", dim_raw="40"),
+        ],
+        declared=["Q010", "Q020", "Q030"],
+    )
+    assert result.refusal == ROWS_HELD
+    for token in ("Q020", "WASH-U", UNRESOLVED_PRESET, "Q030", "NOPE", UNKNOWN_GROUP):
+        assert token in result.refusal_detail, token
+    # 성한 큐는 사유에 안 실린다 — 고칠 자리만 가리킨다
+    assert "Q010" not in result.refusal_detail
+
+
+def test_held_still_carries_the_rows_for_preview():
+    """거절로 바뀌었어도 `held` 의 preview 역할은 그대로다 — 시트를 고칠 근거는
+    콘솔 상태와 무관하다(형제 preset_mapper 와 같은 규약)."""
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q010", group="WASH-U", dim_raw="60", col_raw="COL.99"),
+        ]
+    )
+    assert result.refusal == ROWS_HELD
+    assert len(result.held) == 1
+    assert result.held[0].group == "WASH-U"
+    assert UNRESOLVED_PRESET in result.held[0].hold_classes
+    assert result.held[0].details  # 산문 사유가 살아 있다
+
+
+def test_a_cue_emptied_by_hold_still_refuses_everything():
+    """선행 갈래 `cue_emptied_by_hold` 가 지키던 시나리오 — 이제 ROWS_HELD 가
+    **더 넓게** 덮는다(그 상수는 이 게이트에 완전히 포함돼 폐기됐다).
+
+    이 검사를 남기는 이유: 좁은 갈래를 넓은 갈래로 갈아끼울 때 좁은 쪽이 실제로
+    덮이는지는 **넓은 검사가 말해 주지 않는다.**
+    """
     result = _map(
         [
             StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
@@ -360,7 +441,7 @@ def test_cue_emptied_by_hold_refuses_everything():
         ],
         declared=["Q010", "Q020"],
     )
-    assert result.refusal == CUE_EMPTIED_BY_HOLD
+    assert result.refusal == ROWS_HELD
     assert result.planned == ()
     assert "Q020" in result.refusal_detail
 
@@ -442,7 +523,7 @@ def test_slot_shortfall_refuses_instead_of_overwriting():
 # ---------------------------------------------------------------------------
 
 
-def test_existing_name_is_convergence_not_refusal():
+def test_existing_name_is_convergence_not_refusal():  # AC-LXSEQ4-008
     """시퀀스 층 수렴이지 계획 자체를 막지 않는다(t209 리드 재현, 2026-08-31:
     시퀀스가 이미 있다고 18큐 전체가 안 나갔다) -- existing_cue_numbers 를
     안 주면(이 시퀀스 안에 뭐가 있는지 안 잰 것과 같다) 큐 층 판단을 못
@@ -457,7 +538,7 @@ def test_existing_name_is_convergence_not_refusal():
     assert result.cues_already_present == ()
 
 
-def test_a_cue_number_already_in_the_sequence_is_skipped_not_replanned():
+def test_a_cue_number_already_in_the_sequence_is_skipped_not_replanned():  # AC-LXSEQ4-008
     """큐 층 -- 시퀀스가 이미 있고 그 안에 Q010(cueNo=10)이 이미 있으면 그
     큐만 뺀다. 나머지 선언 큐는 그대로 계획한다(형제 preset_mapper 의 레코드
     단위 NAME_TAKEN 과 같은 무게, 컨테이너가 아니라 항목 단위)."""
@@ -513,12 +594,27 @@ def test_three_baskets_sum_to_the_rows_read():
     합이 깨지면 어딘가에서 행이 조용히 사라진 것이다."""
     records = [
         StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+        StandInCueRecord(cue_no="Q010", group="KEY", dim_raw="40"),
+        StandInCueRecord(cue_no="Q010", group="LED-W", is_video_call=True),
+    ]
+    result = _map(records)
+    assert result.refusal is None  # 회계는 거절이 없을 때의 성질이다
+    planned_rows = sum(len(bucket.rows) for bucket in result.planned)
+    assert planned_rows + len(result.held) + len(result.video_calls) == len(records)
+
+
+def test_the_three_baskets_still_sum_on_a_refusal():
+    """거절 경로에서도 행이 조용히 사라지지 않는다 — planned 가 0이 될 뿐
+    held + video_calls 가 나머지를 전부 든다."""
+    records = [
+        StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
         StandInCueRecord(cue_no="Q010", group="NOPE", dim_raw="55"),
         StandInCueRecord(cue_no="Q010", group="LED-W", is_video_call=True),
     ]
     result = _map(records)
-    planned_rows = sum(len(bucket.rows) for bucket in result.planned)
-    assert planned_rows + len(result.held) + len(result.video_calls) == len(records)
+    assert result.refusal == ROWS_HELD
+    assert result.planned == ()
+    assert len(result.held) + len(result.video_calls) == len(records) - 1
 
 
 # ---------------------------------------------------------------------------
@@ -684,3 +780,46 @@ def test_canonical_csv_carries_both_phase_shapes():
     ]
     assert len(spreads) == 29
     assert len(singles) == 1
+
+
+# ---------------------------------------------------------------------------
+# AC-LXSEQ4-014 — 「안 된다」는 3분류로 보고된다
+# ---------------------------------------------------------------------------
+
+
+def test_block_report_defaults_to_class_c():  # AC-LXSEQ4-014
+    """기본값은 (C) 다 — 모르는 것을 우리 결함으로 올려 부르지 않는다."""
+    result = _map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="밝게")])
+    report = block_report(result)
+    assert [row["block_class"] for row in report] == [BLOCK_DOC_INTENT]
+    assert report[0]["code"] == BAD_NUMBER
+    assert report[0]["where"] == ["Q010 / BACK"]
+
+
+def test_console_state_is_class_b_not_our_defect():  # AC-LXSEQ4-014
+    """콘솔에 그룹이 없는 것은 우리 코드 결함이 아니다."""
+    result = _map([StandInCueRecord(cue_no="Q010", group="NOPE", dim_raw="55")])
+    report = block_report(result)
+    assert [row["block_class"] for row in report] == [BLOCK_CONSOLE_STATE]
+
+
+def test_no_refusal_code_can_produce_class_a_on_its_own():  # AC-LXSEQ4-014
+    """🔴 (A) 는 근거를 **같은 줄에** 대야 붙는다 — 코드만 보고는 못 붙인다.
+    분류표에 (A) 가 하나도 없는 것은 누락이 아니라 설계다."""
+    seen = set()
+    for records, declared in (
+        ([StandInCueRecord(cue_no="Q010", group="NOPE")], ["Q010"]),
+        ([StandInCueRecord(cue_no="Q010", group="BACK", col_raw="COL.99")], ["Q010"]),
+        ([StandInCueRecord(cue_no="Q010", group="BACK", snap_raw="N")], ["Q010"]),
+        ([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="120")], ["Q010"]),
+        ([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55")], ["Q010", "Q020"]),
+    ):
+        for row in block_report(_map(records, declared=declared)):
+            seen.add(row["block_class"])
+    assert seen  # 공허하지 않다
+    assert BLOCK_OUR_DEFECT not in seen
+
+
+def test_a_clean_sheet_reports_nothing_blocked():
+    """대조군 — 막힌 자리가 없으면 빈 보고다(항상 뭔가를 내는 계기가 아니다)."""
+    assert block_report(_map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55")])) == ()
