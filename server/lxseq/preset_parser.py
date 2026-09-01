@@ -149,6 +149,17 @@ _RGB_TRIPLE = re.compile(r"R\s*(\d+)\s*G\s*(\d+)\s*B\s*(\d+)")
 #: 콘솔이 받는 성분의 상한. 시트가 8비트 표기를 쓰므로 그 바깥은 옮길 대상이 아니다.
 _RGB_COMPONENT_MAX = 255
 
+#: bm 값 한 행이 성분을 나누는 문자. 정본 시트가 실제로 쓰는 것은 U+00B7 MIDDLE DOT
+#: 이다(`hexdump` 로 확인: `c2 b7`). 가운뎃점은 다섯 행 **전부**에 같은 모양으로
+#: 들어 있고, 다른 구분자를 쓰는 행은 없다.
+_BM_SEGMENT_SEPARATOR = "\u00b7"
+
+#: 조각의 **맨 앞** 낱말. 속성 이름은 조각의 첫머리에 온다는 것이 계약이다.
+#: `_WORD` 를 `findall` 로 쓰면 `45° Zoom` 같은 뒤집힌 조각에서도 `Zoom` 을 찾아내
+#: 값 자리에 `45°` 를 남긴다 — 그것은 시트가 뜻한 것이 아니고, 추측이다.
+#: 앞에서 못 찾으면 **읽지 않은 것으로 보고**한다(아래 `_bm_segment_component`).
+_LEADING_WORD = re.compile(r"^\s*([A-Za-z][A-Za-z0-9]*)")
+
 
 class UnknownPresetSheetError(ValueError):
     """헤더가 세 정확 열 집합 중 어느 것과도 같지 않다 — 파일 단위 판독 실패."""
@@ -313,6 +324,18 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
                 "풀 계열이 범위 밖인 속성: "
                 + ", ".join(out_of_scope)
                 + " (server/looks/schema.py 의 범위 선언)",
+            )
+        )
+    if _bm_components(value_raw) is None:
+        # 어휘 축(위 둘)과 **다른 축**이다. 위는 「그 속성을 콘솔에 못 쏜다」이고
+        # 이것은 「이 값을 성분으로 못 가른다」이다 — 한 행이 둘 다에 걸릴 수 있고,
+        # 그때 사유는 둘 다 나와야 한다(이 함수의 독스트링).
+        reasons.append(
+            PresetHoldReason(
+                HOLD_VALUE_NOT_MACHINE_READABLE,
+                "성분으로 못 가르는 조각: "
+                + ", ".join(_bm_unreadable_segments(value_raw))
+                + " — 속성 이름으로 시작하는 조각만 옮긴다(버리지 않고 보고한다)",
             )
         )
     if reasons:
@@ -514,6 +537,93 @@ def col_rgb_percents(value_raw: str) -> tuple[float, float, float] | None:
     if components is None:
         return None
     return tuple(round(v / 255 * 100, 1) for v in components)
+
+
+def _bm_segment_component(segment: str) -> tuple[str, str] | None:
+    """bm 값의 조각 하나 -> ``(속성, 원문값)``. 못 읽으면 ``None``.
+
+    **원자다.** 아래 두 함수가 전부 이것만 부른다 — 조각을 읽는 방법이 한 곳에만
+    있어야 「성분 목록」과 「못 읽은 조각 목록」이 서로 어긋날 수 없다.
+
+    🔴 **어휘를 묻지 않는다.** 첫 낱말을 아는 이름 목록에 대보고 싶어지지만, 그러면
+    이 술어가 **어휘 축과 한 몸**이 된다. 그 둘은 다른 질문이다:
+
+        구조 축 (여기)      이 값을 (속성, 값) 조각으로 가를 수 있는가
+        어휘 축 (아래 분기)  그 속성을 콘솔에 쏠 수 있는가
+
+    실제로 한 몸으로 만들었다가 t135 의 트립와이어를 깼다. 그 검사는 목록을
+    `Prism1` 로 치환하면 BM.03 이 **열린다**는 것을 실제로 쏴서 보여주는데(그것이
+    그 치환이 회귀라는 증명이다), 구조 축이 어휘를 물으면 `Prism` 이 목록에서
+    빠진 순간 조각도 못 읽게 되어 그 행이 **다른 사유로** 막힌다 — 증명이 조용히
+    사라진다. 그래서 여기서는 첫 낱말을 **원문 그대로** 속성 이름으로 나른다.
+
+    값 자리에 또 다른 **아는** 속성 이름이 있으면 ``None`` 이다. `Zoom 45 Iris 50`
+    처럼 구분자 없이 붙은 조각을 통째로 `Zoom` 의 값으로 실으면 `Iris` 가 조용히
+    사라진다 — 그것이 8.1 절이 막으려는 실패 그 자체다. 이쪽은 「아는 이름이
+    값 안에 숨어 있는가」라 어휘 질문이 맞다.
+    """
+    text = segment.strip()
+    match = _LEADING_WORD.match(text)
+    if match is None:
+        return None
+    attribute = match.group(1)
+    value = text[match.end() :].strip()
+    if not value:
+        return None
+    if _attribute_tokens(value):
+        return None
+    return attribute, value
+
+
+def _bm_components(value_raw: str) -> tuple[tuple[str, str], ...] | None:
+    """bm 원문 -> ``(속성, 원문값)`` 목록. **판정기와 판독기가 함께 쓸 유일한 술어다.**
+
+    `_col_components` 의 형제이고 계약도 같다 — 다른 것은 반환형뿐이다::
+
+        col:  value_raw -> (R, G, B)                          3성분 **고정**
+        bm:   value_raw -> (("Zoom", "45°"), ("Prism", "OFF")) **가변** 길이
+
+    🔴 **가변 길이라 col 의 보장이 그대로 서지 않는다.** col 은 개수가 상수라
+    한쪽이 성분을 흘리면 형태가 바로 깨지지만, bm 은 목록에서 하나가 빠져도
+    여전히 목록이다. 그래서 「같은 술어를 부른다」만으로는 부족하고, **성분 수가
+    보존되는지를 검사가 따로 지킨다**(`test_lxseq_preset_beam_components.py`).
+    유실은 `apply_untranslatable` 보다 **조용한** 실패다 — 판정 통과, 명령 발사,
+    콘솔엔 절반, 되읽기는 슬롯 점유만 확인.
+
+    **원문값을 그대로 나르고 해석하지 않는다.** `45°` 의 `45` 가 콘솔에서 도인지
+    퍼센트인지 이 저장소는 모른다 — dim 은 퍼센트, col 은 16비트 선형이 실측으로
+    닫혔지만 `Zoom` 자리는 비어 있고, 프로그래머 판독 채널이 없어 **이 채널로는
+    원리적으로 못 잰다**(t235). 그래서 명령 빌더는 **아직 만들지 않는다**
+    (`.moai/reports/t229-bm/verdict.md` §8.2).
+
+    **all-or-nothing 이다.** 조각 하나라도 못 읽으면 ``None`` — 읽은 것만 돌려주면
+    그것이 곧 성분 유실이고, 이 함수가 막으려는 바로 그 실패다.
+    """
+    segments = value_raw.split(_BM_SEGMENT_SEPARATOR)
+    components: list[tuple[str, str]] = []
+    for segment in segments:
+        component = _bm_segment_component(segment)
+        if component is None:
+            return None
+        components.append(component)
+    if not components:
+        return None
+    return tuple(components)
+
+
+def _bm_unreadable_segments(value_raw: str) -> tuple[str, ...]:
+    """성분으로 못 가른 조각들. 보류 사유 문면에 **그대로** 실린다.
+
+    🔴 **버리지 않고 보고한다.** BM.05 의 `예비` 는 속성이 아니고, 정본 시트 규약
+    (`src/Lighting_Designer/01_스펙/LX-SEQ-SPEC-v2.1.md`)은 주석 토큰을 규정하지
+    않는다 — 실제로 재서 확인했다(그 문서에 `예비` 0건). 규약이 없는 토큰을
+    조용히 무시하면 시트가 뜻한 것의 일부가 소리 없이 사라진다.
+    """
+    return tuple(
+        segment.strip()
+        for segment in value_raw.split(_BM_SEGMENT_SEPARATOR)
+        if _bm_segment_component(segment) is None
+    )
 
 
 def parse_preset_csv(text: str) -> PresetParseResult:
