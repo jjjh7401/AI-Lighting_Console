@@ -28,10 +28,13 @@
 2. **영상 콜 행은 콘솔 명령을 만들지 않는다.** 버리지도 않는다 — 별도 바구니로
    나른다.
 3. **OFF 는 페이저 정지 명령**이다(§11.1 7행). 「이펙트 안 씀」(빈칸)과 다르다.
-4. **부분 계획을 내지 않는다.** 단면을 못 읽었거나 슬롯이 모자라거나 어떤 큐가
-   비면 0건이다.
-5. **이름이 이미 있으면 계획하지 않는다.** 같은 시트를 두 번 돌려도 시퀀스가
-   복제되지 않는다.
+4. **부분 계획을 내지 않는다** (AC-LXSEQ4-007 [HARD]). 단면을 못 읽었거나
+   슬롯이 모자라거나 **한 행이라도 보류되면** 0건이다. 성한 행만 골라 보내면
+   그룹 하나 빠진 큐가 콘솔에 올라가는데, MA3 는 트래킹하므로 그 큐는 큐
+   리스트에서 정상으로 보이고 **발사할 때에야** 어긋난다.
+5. **이미 있으면 수렴한다** (AC-LXSEQ4-008 [HARD]). 시퀀스 층과 큐 층을 갈라,
+   같은 시트를 두 번 돌려도 시퀀스가 복제되지 않고 이미 있는 큐는 다시
+   계획하지 않는다.
 
 ## 왜 파서 타입을 실행 시각에 임포트하지 않는가
 
@@ -62,11 +65,14 @@ __all__ = [
     "BAD_NUMBER",
     "BAD_SNAP",
     "CUE_COVERAGE_GAP",
-    "CUE_EMPTIED_BY_HOLD",
     "DIM_OUT_OF_RANGE",
     "FX_STOP",
     "NAME_TAKEN",
     "PRESET_REF_PATTERN",
+    "BLOCK_CONSOLE_STATE",
+    "BLOCK_DOC_INTENT",
+    "BLOCK_OUR_DEFECT",
+    "ROWS_HELD",
     "SLOT_SHORTFALL",
     "UNKNOWN_GROUP",
     "UNRESOLVED_PRESET",
@@ -79,6 +85,7 @@ __all__ = [
     "PresetRef",
     "SequencePlacement",
     "VideoCall",
+    "block_report",
     "map_cues",
     "resolve_preset_ref",
 ]
@@ -86,11 +93,21 @@ __all__ = [
 #: 시트가 선언한 큐 중 한 행도 없는 것이 있다 — 부분집합 금지(§11.1 1행).
 CUE_COVERAGE_GAP = "cue_coverage_gap"
 
-#: 보류를 걷어낸 뒤 어떤 큐의 콘솔 행이 0이 됐다 — 부분 계획이므로 0건으로 간다.
-CUE_EMPTIED_BY_HOLD = "cue_emptied_by_hold"
-
 #: 빈 시퀀스 슬롯이 없다 — 부분 계획을 내지 않는다.
 SLOT_SHORTFALL = "slot_shortfall"
+
+#: 한 행이라도 계획에 못 들어갔다 — 배치 전체가 0건이다(AC-LXSEQ4-007 [HARD]).
+#:
+#: 선행 상수 ``cue_emptied_by_hold`` 를 **대체한다.** 그쪽은 「보류 때문에 어떤
+#: 큐의 콘솔 행이 0이 된 경우」만 거절했고, 큐에 성한 행이 하나라도 남으면
+#: 그 큐를 **불완전한 채로** 내보냈다. MA3 는 트래킹하므로 그렇게 나간 큐는
+#: 큐 리스트에서 정상으로 보이고 **발사할 때에야** 어긋난다 — 관객 앞에서다.
+#: 되읽기 채널은 큐 내용을 안 주므로(AC-LXSEQ4-013) 사후 탐지 수단도 없다.
+#: 반면 큐가 통째로 빠지면 적재 시점에 보이고, 이 파이프라인은 preview 단계와
+#: 멱등성을 갖췄으므로 시트를 고쳐 다시 부르면 된다. **조용한 오답이 시끄러운
+#: 부재보다 나쁘다** — 정본 §11.1 1행 「부분집합 금지」가 이미 그렇게 적었다.
+ROWS_HELD = "rows_held"
+
 
 #: 그룹 이름이 그룹 배정표에 없다 — 추측하지 않는다.
 UNKNOWN_GROUP = "unknown_group"
@@ -117,6 +134,82 @@ FX_STOP = "OFF"
 #: 프리셋 ID 한 체계 — TYPE 과 2자리 숫자(§10 머리말). TYPE 넷이 닫힌 어휘다.
 #: 종류마다 해석기를 따로 두지 않는 이유는, 갈라지면 한쪽만 고쳐지기 때문이다.
 PRESET_REF_PATTERN = re.compile(r"^(POS|COL|BM|FX)\.([0-9]{2})$")
+
+#: 「안 된다」 3분류 (AC-LXSEQ4-014). **기본값은 (C)** 다.
+#:
+#: (A) 로 분류하려면 왜 우리 코드 문제인지 근거를 **같은 줄에** 대야 하므로,
+#: 거절 코드만 보고는 (A) 를 붙일 수 없다 -- 아래 표에 (A) 항목이 하나도 없는
+#: 것은 누락이 아니라 **설계**다. 근거 없는 (A) 는 감독께 여쭤보면 끝날 일을
+#: 조사 카드로 만드는 형태이고, 그것을 막는 것이 이 AC 의 목적이다.
+BLOCK_OUR_DEFECT = "A_our_code_defect"
+BLOCK_CONSOLE_STATE = "B_console_state"
+BLOCK_DOC_INTENT = "C_doc_intent_unverified"
+
+#: 거절 코드 -> (분류, 왜 그 분류인가).
+_REFUSAL_BLOCK_CLASS: dict[str, tuple[str, str]] = {
+    CUE_COVERAGE_GAP: (
+        BLOCK_DOC_INTENT,
+        "시트가 선언한 큐 중 행이 없는 것이 있다 -- 작성자가 트래킹으로 두려던 "
+        "것인지 빠뜨린 것인지 시트만으로는 안 갈린다",
+    ),
+    SLOT_SHORTFALL: (
+        BLOCK_CONSOLE_STATE,
+        "콘솔의 시퀀스 풀에 빈 슬롯이 없거나 번호를 못 읽었다 -- 쇼 파일 상태다",
+    ),
+}
+
+#: 보류 사유 -> (분류, 왜 그 분류인가). ROWS_HELD 는 행마다 사유가 달라
+#: 한 덩어리로 못 묶는다.
+_HOLD_BLOCK_CLASS: dict[str, tuple[str, str]] = {
+    UNKNOWN_GROUP: (
+        BLOCK_CONSOLE_STATE,
+        "그 이름의 그룹이 콘솔 그룹 배정표에 없다 -- 2단계가 만들지 않았거나 쇼 파일이 다르다",
+    ),
+    UNRESOLVED_PRESET: (
+        BLOCK_DOC_INTENT,
+        "프리셋 참조가 배정표에 없다 -- PRESET 시트에 정의가 없는 것인지, "
+        "정의는 있는데 콘솔 슬롯 조인이 안 선 것인지 이 층에서는 안 갈린다",
+    ),
+    BAD_NUMBER: (BLOCK_DOC_INTENT, "시트 셀이 수로 안 읽힌다 -- 작성 문면 문제다"),
+    BAD_SNAP: (BLOCK_DOC_INTENT, "Snap 셀이 닫힌 어휘(Y·빈칸) 밖이다"),
+    DIM_OUT_OF_RANGE: (BLOCK_DOC_INTENT, "Dim 이 0-100 밖이다(§11.1 3행)"),
+}
+
+
+def block_report(result: CueMapResult) -> tuple[dict[str, object], ...]:
+    """막힌 자리를 (A)/(B)/(C) 로 분류해 편다 (AC-LXSEQ4-014).
+
+    거절이 없어도 보류가 있으면 싣는다 -- 다만 이 층에서는 보류가 곧 거절이라
+    (ROWS_HELD) 실제로는 함께 온다. 분류를 못 찾으면 **기본값 (C)** 다:
+    모르는 것을 우리 결함으로 올려 부르지 않는다.
+    """
+    rows: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
+
+    refusal = result.refusal
+    if refusal is not None and refusal != ROWS_HELD:
+        klass, why = _REFUSAL_BLOCK_CLASS.get(
+            refusal,
+            (BLOCK_DOC_INTENT, "분류표에 없는 거절 코드다 -- 기본값 (C)"),
+        )
+        rows.append(dict(code=refusal, block_class=klass, why=why, where=[]))
+
+    where_by_cause: dict[str, list[str]] = {}
+    for item in result.held:
+        for cause in item.hold_classes:
+            where_by_cause.setdefault(cause, []).append(item.cue_no + " / " + item.group)
+    for cause, where in where_by_cause.items():
+        klass, why = _HOLD_BLOCK_CLASS.get(
+            cause,
+            (BLOCK_DOC_INTENT, "분류표에 없는 보류 사유다 -- 기본값 (C)"),
+        )
+        key = (cause, klass)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(dict(code=cause, block_class=klass, why=why, where=list(where)))
+    return tuple(rows)
+
 
 _VALUE_MATCH_REASON = (
     "이 층은 **놓을 자리와 값을 정할 뿐** 콘솔이 그것을 받았는지 되읽지 않는다. "
@@ -329,6 +422,26 @@ def resolve_preset_ref(
             "바뀐다**"
         )
     return PresetRef(raw=text, kind=found.group(1), slot=preset_slots[text]), None
+
+
+def _held_digest(held: Sequence[CueHold]) -> str:
+    """보류된 행들을 「어느 큐 · 어느 행 · 왜」로 편다.
+
+    맨 「0건」은 **다른 침묵**일 뿐이라 사람이 89행을 눈으로 훑게 만든다. 사유
+    클래스는 이 모듈이 이미 쓰는 어휘를 그대로 쓴다 — 거절 전용 어휘를 따로
+    만들면 같은 실패가 자리마다 다른 이름으로 불린다.
+    """
+    lines = [
+        item.cue_no
+        + " / "
+        + item.group
+        + ": "
+        + ", ".join(item.hold_classes)
+        + " — "
+        + " · ".join(item.details)
+        for item in held
+    ]
+    return "; ".join(lines)
 
 
 def _number(raw: str, *, column: str) -> tuple[float | None, str | None]:
@@ -607,6 +720,31 @@ def map_cues(
             ),
         )
 
+    # 🔴 [HARD] AC-LXSEQ4-007 — 한 행이라도 못 옮기면 배치 전체가 0건이다.
+    #
+    # 이 게이트가 `held` 를 **소비하지 않는다** — 아래 `held=tuple(held)` 로 그대로
+    # 실어 preview 가 고칠 자리를 전부 보여준다. 바뀐 것은 **콘솔에 무엇이 닿는가**
+    # 하나뿐이다: 전에는 성한 행만 골라 그 큐를 불완전한 채로 내보냈다.
+    #
+    # 시트 층의 결함이라 콘솔 단면을 읽기 전에 답한다 — 콘솔이 어떤 상태든 처방이
+    # 같기 때문이다(시트를 고쳐 다시 부른다).
+    if held:
+        return CueMapResult(
+            planned=(),
+            held=tuple(held),
+            video_calls=tuple(video_calls),
+            coverage_gap=None,
+            refusal=ROWS_HELD,
+            refusal_detail=(
+                "행 "
+                + str(len(held))
+                + " 개를 계획에 못 넣어 **아무것도 보내지 않았다** — 부분 투입이 없다"
+                "(§11.1 1행 부분집합 금지). 한 그룹이 빠진 큐는 MA3 트래킹 때문에 큐 "
+                "리스트에서 정상으로 보이고 발사할 때에야 어긋난다. 고칠 자리: "
+                + _held_digest(held)
+            ),
+        )
+
     names, names_incomplete = _occupied_names(sequence_section)
     unverified = ["value_match", "tracked_value"]
     unverified_reason = _VALUE_MATCH_REASON + " / " + _TRACKING_REASON
@@ -661,38 +799,19 @@ def map_cues(
         present = frozenset(existing_cue_numbers)
         cues_already_present = tuple(cue for cue in declared if _cue_number(cue) in present)
 
-    # 보류 때문에 콘솔 행이 0이 된 큐는 거절이다. 영상 콜만 있어서 0인 큐,
-    # 그리고 이미 콘솔에 있어서 0인 큐와 갈라야 한다 -- 뒤 둘은 정상
-    # 상태이고 앞쪽만 "할 일이 있었는데 못 세웠다"는 부분 계획이다.
+    # 콘솔 행이 0인데 영상 콜만 있어서 그런 큐는 **정상 상태**다 -- 그 큐는
+    # 조명이 할 일이 없다. 「보류로 비어 버린 큐」 갈래는 여기 없다: 위의
+    # ROWS_HELD 게이트가 held 가 하나라도 있으면 이미 거절했으므로 이 지점의
+    # held 는 반드시 비어 있다(선행 상수 cue_emptied_by_hold 는 그 게이트에
+    # 완전히 포함돼 폐기됐다).
+    assert not held  # 위 게이트가 보장한다 -- 아래 갈래의 전제다
     video_only_cues = tuple(
         cue
         for cue in declared
         if not rows_by_cue.get(cue)
         and cue not in cues_already_present
         and any(call.cue_no == cue for call in video_calls)
-        and not any(hold.cue_no == cue for hold in held)
     )
-    emptied = tuple(
-        cue
-        for cue in declared
-        if not rows_by_cue.get(cue)
-        and cue not in video_only_cues
-        and cue not in cues_already_present
-    )
-    if emptied:
-        return CueMapResult(
-            planned=(),
-            held=tuple(held),
-            video_calls=tuple(video_calls),
-            coverage_gap=None,
-            refusal=CUE_EMPTIED_BY_HOLD,
-            refusal_detail=(
-                "보류를 걷어내니 큐 "
-                + ", ".join(emptied)
-                + " 의 콘솔 행이 0이 됐다 -- 부분 계획을 내지 않는다. "
-                "보류 사유를 고쳐 다시 부르면 된다"
-            ),
-        )
 
     placement_obj = SequencePlacement(name=sequence_name, slot=slot)
     planned = tuple(
