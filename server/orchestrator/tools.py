@@ -1704,6 +1704,12 @@ _PRESET_POOL_FAMILY = dict(
     [("preset-dim", "Dimmer"), ("preset-col", "Color"), ("preset-bm", "Beam")]
 )
 
+#: POS 는 위 표에 **넣지 않는다.** 그 표의 정의역은 `preset_parser` 가 파싱하는
+#: 시트 종류이고(`test_the_pool_family_table_covers_every_kind` 가 등호로 고정),
+#: `preset-pos` 는 값 열이 없어 그 경로에서 명시적으로 빠져 있다(REQ-LXSEQ3-002).
+#: POS 의 조인은 시트가 아니라 콘솔 라벨에서 오므로 계열 이름만 따로 든다(t220).
+POSITION_POOL_FAMILY = "Position"
+
 
 #: 시트 종류 -> 프로그래머에 실을 **속성 이름**. 값을 싣는 줄이 없으면
 #: `Store Preset` 은 그 순간의 프로그래머 상태를 저장한다 — 시트 값이 아니라
@@ -5472,9 +5478,9 @@ def build_toolset(
         # held 에 떨어진다(0건이 반쯤 맞는 값보다 낫다는 원칙, 리드 승인
         # 2026-08-31).
         #
-        # 🔴 POS.xx 만 이 조인이 안 선다 -- POS 시트는 열이
+        # 🔴 POS.xx 는 이 조인을 **안 쓴다** -- POS 시트는 열이
         # `ID,StageMeaning,TargetGroup,RecordGuide` 라 Name 자체가 없다(§10).
-        # 범위 밖이다 -- 리드 확인.
+        # 대신 아래 POS 블록이 콘솔 라벨의 첫 어절에서 ID 를 직접 읽는다(t220).
         preset_slots: dict[str, int] = {}
         # kind 문자(PresetRef.kind, server/lxseq/cue_mapper.py:119 --
         # POS/COL/BM/FX) -> 콘솔 풀 번호. 'At Preset <pool>.<slot>' 조립에
@@ -5636,6 +5642,71 @@ def build_toolset(
                                 fx_pool_no_str = fx_pool_path.rsplit("/", 1)[-1]
                                 preset_pool_no_by_kind["FX"] = int(fx_pool_no_str)
 
+        # POS.xx -- 다른 셋과 조인의 **방향이 다르다**. POS 시트에는 Name 열이
+        # 없어 ID -> Name -> 슬롯 조인이 설 수 없다(§10). 대신 산출 경로
+        # (server/lxseq/position_derive.py)가 콘솔 라벨의 **첫 어절로 ID 를 실어**
+        # 저장하므로, 여기서는 풀 되읽기 한 번으로 ID -> 슬롯이 바로 선다.
+        #
+        # 시트 인자가 없어 무조건 읽는다: 이 시트가 POS 를 참조하는지는 매핑
+        # 전에 알 수 없고, 못 읽으면 t220 이전과 같은 상태(미해결 -> held)로
+        # 돌아갈 뿐이다 -- 새 실패 갈래를 만들지 않는다.
+        pos_pools_root_path = rig_paths.get(
+            "preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
+        )
+        pos_family = POSITION_POOL_FAMILY
+        pos_pool_path = None
+        pos_pool_no: int | None = None
+        try:
+            pos_pools_first = state_port.query_state(pos_pools_root_path)
+        except Exception:  # noqa: BLE001
+            pos_pools_first = dict(ok=False)
+        if pos_pools_first.get("ok"):
+            pos_pool_children, _truncated = paged_children(
+                state_port, pos_pools_root_path, pos_pools_first
+            )
+            for child in pos_pool_children:
+                obj = rig_object(child)
+                pool_name = str(obj.get("name") or "")
+                pool_no = obj.get("no")
+                if isinstance(pool_no, int) and pool_name.casefold().startswith(
+                    pos_family.casefold()
+                ):
+                    pos_pool_path = str(pos_pools_root_path) + "/" + str(pool_no)
+                    pos_pool_no = pool_no
+                    break
+        if pos_pool_path is None:
+            preset_sheet_errors["position_pool"] = f"{pos_family} 로 시작하는 풀을 못 찾았다"
+        else:
+            try:
+                pos_slots_first = state_port.query_state(pos_pool_path)
+            except Exception as exc:  # noqa: BLE001
+                preset_sheet_errors["position_pool"] = str(exc)
+                pos_slots_first = None
+            if pos_slots_first is not None:
+                if not pos_slots_first.get("ok"):
+                    preset_sheet_errors["position_pool"] = "풀 슬롯 목록이 안 왔다"
+                else:
+                    pos_children, _truncated = paged_children(
+                        state_port, pos_pool_path, pos_slots_first
+                    )
+                    pos_resolved = False
+                    for child in pos_children:
+                        obj = rig_object(child)
+                        name = obj.get("name")
+                        slot = obj.get("no")
+                        if not isinstance(name, str) or not isinstance(slot, int):
+                            continue
+                        # 라벨의 **첫 어절만** ID 로 읽는다. 완전 일치로 하면
+                        # 산출 라벨(「POS.01 보컬 센터 페이스 · 산출값」)이 안
+                        # 걸리고, 접두 일치로 하면 사람이 붙인 꼬리말이 다른
+                        # ID 를 삼킬 수 있다.
+                        head = name.split(" ")[0].strip()
+                        if head.startswith("POS.") and len(head) == 6 and head[4:].isdigit():
+                            preset_slots[head] = slot
+                            pos_resolved = True
+                    if pos_resolved and pos_pool_no is not None:
+                        preset_pool_no_by_kind["POS"] = pos_pool_no
+
         result = map_cues(
             parsed.records,
             declared_cues=parsed.cue_numbers,
@@ -5750,7 +5821,7 @@ def build_toolset(
                 commands.append(f"Group '{row.group}'")
                 if row.dim is not None:
                     commands.append(f"At {_fmt_num(row.dim)}")
-                for ref in (row.col, row.bm):
+                for ref in (row.col, row.pos, row.bm):
                     if ref is None:
                         continue
                     pool_no = preset_pool_no_by_kind.get(ref.kind)
