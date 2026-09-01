@@ -28,9 +28,33 @@ t207 이후 파이프라인이 전부 아니면 전무라서, 한 행이 보류�
 
 ## 못 푸는 행은 건너뛴다
 
-날조보다 결손이 낫다. 그룹을 모르거나(`unknown_group`), 그 그룹에 좌표 확인된
-장비가 없거나(`no_coordinates`), 전부 조준 한계 밖이면(`unaimable`) 그 행은
-`SkippedPosition` 으로 사유와 함께 나온다. 한 행이 못 풀려도 나머지는 산다.
+날조보다 결손이 낫다. 못 푼 행은 `SkippedPosition` 으로 사유와 함께 나오고,
+한 행이 못 풀려도 나머지는 산다. 사유 어휘:
+
+| 사유 | 뜻 |
+|---|---|
+| `unknown_group` | 그룹 이름이 배정표에 없다 |
+| `no_coordinates` | 좌표를 아예 못 읽었다 (그룹 전체 또는 리그 전체) |
+| `degenerate_rig` | **좌표는 읽혔는데 리그가 한 점에 접혀 있다** (t222) |
+| `unaimable` | 필요 tilt 가 조준 상한을 넘는다 |
+| `target_coincides` | 목표점이 장비 자신 — 빔 방향이 정의되지 않는다 |
+| `unaimable_mixed` | 한 행 안에서 위 두 원인이 섞였다 |
+
+## 퇴화한 리그는 **전 행**을 거절한다 (t222)
+
+t221 이 실측한 상태: 콘솔 86대의 `Posx/Posy/Posz` 가 전부 0.0 인데도 세 행
+(POS.01·05·06)이 초록으로 나왔다. 전 대상이 `Pan 180 / Tilt 128.7` 한 값이고
+라벨은 「· 산출값」을 달아 사람이 **출발점으로 읽는다.** 눈으로는 진짜 산출과
+구별되지 않는 그럴듯한 날조다 — 이 모듈이 스스로 세운 「날조보다 결손이 낫다」에
+정면으로 어긋난다.
+
+그래서 `rig_is_degenerate` 가 참이면 한 행도 산출하지 않는다. 술어를 무엇으로
+고를지는 열려 있었고, 후보 둘을 코퍼스에 대고 재서 골랐다 — 근거는 그 함수의
+독스트링에 있다.
+
+**이 가드는 큐를 하나도 열지 않는다.** 사고를 막을 뿐이고, 병목은 여전히 좌표
+데이터다(`arrange_fixtures` 가 `Posx/Posy/Posz` 를 쓸 수 있으니 막힌 것은 능력이
+아니라 값이다).
 """
 
 from __future__ import annotations
@@ -46,13 +70,17 @@ from server.presets.store import preset_store_commands
 from server.spatial.pointing import (
     _VOCAL_DOWNSTAGE_OFFSET,
     _VOCAL_HEIGHT,
+    POINTING_TILT_LIMIT_DEGREES,
     POSITION_PRESET_POOL,
+    PointingTargetCoincidesError,
+    PointingTiltLimitError,
     SpatialPointingError,
     aim_pan_tilt,
     aimed_commands,
     fan_chain,
     fan_pan_tilt,
 )
+from server.spatial.rows import SPATIAL_ROW_NOISE_SPAN
 
 # 보컬 포인트의 위치·높이는 `basic_position_presets` 의 Vocal DSC 와 **같은 점**
 # 이어야 해서 비공개 이름 둘을 직접 든다. 여기에 숫자를 다시 적으면 한쪽만 바뀌는
@@ -67,6 +95,7 @@ __all__ = [
     "PositionSheetRow",
     "SkippedPosition",
     "UnknownPositionSheetError",
+    "rig_is_degenerate",
     "derive_position_presets",
     "group_members_from_sheets",
     "parse_position_sheet",
@@ -280,6 +309,47 @@ def _slot_of(preset_id: str) -> int:
     return int(preset_id.removeprefix(POSITION_ID_PREFIX))
 
 
+#: 퇴화 리그 사유. 「좌표는 읽혔는데 리그가 한 점에 접혀 있다」 — `no_coordinates`
+#: (아예 못 읽었다)와 **다른 상태**라 사유를 갈라 둔다.
+DEGENERATE_RIG_REASON = "degenerate_rig"
+
+
+def rig_is_degenerate(coordinates: Mapping[int, tuple[float, float, float]]) -> bool:
+    """수평면(x·y)에 폭이 없으면 참 — 이 리그에서는 어떤 행도 산출하지 않는다.
+
+    ## 왜 이 술어인가 (두 후보를 코퍼스에 대고 재고 골랐다)
+
+    후보 A(직접 계산한 span)와 후보 B(`get_spatial_context` 응답의
+    `analysis.low_confidence` 신뢰)의 경계는 **겹치지 않는다.** 코퍼스 8종 실측
+    (`.moai/reports/t222/evidence/predicate.txt`):
+
+    - B 는 `weak_gap_separation` 에서도 참이다. 그 리그는 x 폭 4m · y 폭 8m 의
+      **멀쩡한 리그**이고 등분도 조준도 성립한다 — B 를 그대로 쓰면 **거짓 거절**이다.
+      `low_confidence` 가 답하는 질문은 「열 분할이 모호한가」이지 「조준할 폭이
+      있는가」가 아니다.
+    - A 를 span 이 정확히 0 일 때로 잡으면 `vertical_spread_only`(x·y 는 한 점,
+      z 만 벌어짐)와 노이즈 폭 아래 미세 편차를 놓친다. 둘 다 목표점이 한 점으로
+      접혀 산출이 무의미하다.
+
+    그래서 채택한 것은 **수평면만 노이즈 폭에 거는 술어**다. 실측상 이것은
+    `low_confidence and confidence_reason in (no_spatial_spread,
+    vertical_spread_only)` 와 코퍼스 8종에서 **전부 일치**한다 — 즉 B 의 부분집합을
+    순수 함수 안에서 재현한다. 라이브 도구 응답을 이 순수 모듈로 끌고 들어오지 않아도
+    같은 판정이 선다.
+
+    **z 는 일부러 뺀다.** 한 트러스에 매단 리그는 z span 이 0 이고 그것은 정상이다.
+    세 축 전부를 요구하면 가장 흔한 리그를 거절한다(코퍼스 `single_bar_9`).
+
+    임계값은 `server.spatial.rows.SPATIAL_ROW_NOISE_SPAN` 을 **빌려 쓴다** — 여기에
+    숫자를 다시 적으면 한쪽만 바뀌는 날 두 판정이 조용히 갈린다.
+    """
+    if not coordinates:
+        return False
+    xs = [position[0] for position in coordinates.values()]
+    ys = [position[1] for position in coordinates.values()]
+    return max(max(xs) - min(xs), max(ys) - min(ys)) <= SPATIAL_ROW_NOISE_SPAN
+
+
 @dataclass(frozen=True)
 class _StageFrame:
     """무대 기준틀 — **리그 전체** 좌표에서만 나온다(모듈 독스트링 참조)."""
@@ -325,6 +395,25 @@ def derive_position_presets(
                 for row in ruled
             ),
         )
+    if rig_is_degenerate(coordinates):
+        # 좌표는 읽혔지만 리그가 한 점에 접혀 있다. 여기서 한 행이라도 산출하면
+        # 그럴듯한 날조가 나간다 — t221 실측: 전 대상이 Pan 180 / Tilt 128.7 한 값
+        # 이고 라벨은 「· 산출값」을 달아 사람이 출발점으로 읽는다. 전 행을 거절한다.
+        xs = [position[0] for position in coordinates.values()]
+        ys = [position[1] for position in coordinates.values()]
+        detail = (
+            f"좌표 {len(coordinates)}대를 읽었지만 수평 폭이 없다 "
+            f"(x span {max(xs) - min(xs):.3f}m · y span {max(ys) - min(ys):.3f}m "
+            f"<= {SPATIAL_ROW_NOISE_SPAN}m) — 목표점이 한 점으로 접혀 산출값이 "
+            "무의미하다. 리그 좌표를 콘솔에 넣어야 풀린다"
+        )
+        return PositionDerivationResult(
+            (),
+            tuple(
+                SkippedPosition(row.preset_id, row.target_group, DEGENERATE_RIG_REASON, detail)
+                for row in ruled
+            ),
+        )
     frame = _stage_frame(coordinates)
     derived: list[DerivedPosition] = []
     skipped: list[SkippedPosition] = []
@@ -349,16 +438,10 @@ def derive_position_presets(
                 )
             )
             continue
-        aims, unaimable = _aims_for(rule.kind, placed, frame)
+        aims, unaimable, causes = _aims_for(rule.kind, placed, frame)
         if not aims:
-            skipped.append(
-                SkippedPosition(
-                    row.preset_id,
-                    row.target_group,
-                    "unaimable",
-                    f"대상 {len(placed)}대 전부 조준 한계 밖 또는 계산 불가",
-                )
-            )
+            reason, detail = _skip_for_unaimable(len(placed), causes)
+            skipped.append(SkippedPosition(row.preset_id, row.target_group, reason, detail))
             continue
         derived.append(
             DerivedPosition(
@@ -375,19 +458,83 @@ def derive_position_presets(
     return PositionDerivationResult(tuple(derived), tuple(skipped))
 
 
+#: 조준 실패 원인 어휘. 닫힌 집합이고, **사유 문자열이 원인마다 달라야 한다** —
+#: 서로 다른 원인이 같은 사유를 내면 그 사유는 판정을 못 돕는다(t221 실측).
+CAUSE_TILT_LIMIT = "tilt_limit"
+CAUSE_TARGET_COINCIDES = "target_coincides"
+
+#: 사유별 한 줄. `unaimable` 이름은 그대로 둔다 — 이 사유를 이미 읽는 자리가 있고,
+#: 갈라야 할 것은 이름이 아니라 **둘이 한 이름을 쓰던 상태**였다.
+_REASON_BY_CAUSE = dict(
+    [
+        (CAUSE_TILT_LIMIT, "unaimable"),
+        (CAUSE_TARGET_COINCIDES, "target_coincides"),
+    ]
+)
+_MIXED_REASON = "unaimable_mixed"
+
+
+def _cause_of(error: SpatialPointingError) -> str:
+    """예외 **종류**로 원인을 가른다. 문면 매칭이 아니다."""
+    if isinstance(error, PointingTargetCoincidesError):
+        return CAUSE_TARGET_COINCIDES
+    if isinstance(error, PointingTiltLimitError):
+        return CAUSE_TILT_LIMIT
+    # 닫힌 어휘에 없는 새 갈래. 조용히 tilt_limit 로 접으면 이 함수가 다시
+    # 두 원인을 한 이름으로 만든다 — 그래서 자기 이름으로 내보낸다.
+    return "unclassified"
+
+
+def _skip_for_unaimable(count: int, causes: frozenset[str]) -> tuple[str, str]:
+    """(사유, 상세) — 원인 집합이 사유 문자열을 정한다."""
+    if causes == frozenset([CAUSE_TARGET_COINCIDES]):
+        return (
+            _REASON_BY_CAUSE[CAUSE_TARGET_COINCIDES],
+            f"대상 {count}대 전부 목표점이 장비 자신과 같은 자리다 (거리 0) — "
+            "빔 방향이 정의되지 않는다. 조준 한계와는 무관하다",
+        )
+    limit_note = (
+        f"조준 상한 {POINTING_TILT_LIMIT_DEGREES:.0f}° 를 넘는다. "
+        "⚠️ 이 상한은 실측이 아니라 다른 리그 기종(Robe LEDBeam 350 / MMX)에서 온 "
+        "모듈 상수다 — 이 쇼의 기종 가동범위로 다시 재야 한다"
+    )
+    if causes == frozenset([CAUSE_TILT_LIMIT]):
+        return (_REASON_BY_CAUSE[CAUSE_TILT_LIMIT], f"대상 {count}대 전부 {limit_note}")
+    if CAUSE_TILT_LIMIT in causes and CAUSE_TARGET_COINCIDES in causes:
+        return (
+            _MIXED_REASON,
+            f"대상 {count}대가 두 원인으로 갈려 실패했다 — 일부는 거리 0(빔 방향 "
+            f"미정의), 일부는 {limit_note}",
+        )
+    return (
+        _REASON_BY_CAUSE[CAUSE_TILT_LIMIT],
+        f"대상 {count}대 전부 조준 실패 — 분류되지 않은 원인 {sorted(causes)}",
+    )
+
+
 def _aims_for(
     kind: str,
     placed: Sequence[tuple[int, tuple[float, float, float]]],
     frame: _StageFrame,
-) -> tuple[tuple[tuple[int, float, float], ...], tuple[int, ...]]:
-    """한 규칙 갈래의 (aims, 조준 실패 FID). 실패는 클램프하지 않고 이름을 남긴다."""
+) -> tuple[tuple[tuple[int, float, float], ...], tuple[int, ...], frozenset[str]]:
+    """한 규칙 갈래의 (aims, 조준 실패 FID, **실패 원인 집합**).
+
+    실패는 클램프하지 않고 이름을 남긴다. 세 번째 값이 t222 에서 붙었다 —
+    이전에는 서로 다른 두 원인(한계 밖 / 거리 0)이 호출자에서 **바이트 동일한**
+    사유 한 줄로 접혔고, 그것이 t221 의 오진(「물리적 도달 불가인가?」)을 만들었다.
+    원인은 예외 **종류**로 가른다. 문면 매칭이 아니다 — 문면은 조용히 바뀐다.
+    """
     if kind == "fan_out":
         # 팬은 체인 순서의 함수라 한 대라도 한계를 넘으면 부채꼴 전체가 거절된다 —
         # 여기서 부분 조준을 만들면 시트가 요구한 모양이 아니다.
         try:
-            return fan_pan_tilt(fan_chain(list(placed)), mode="out"), ()
-        except SpatialPointingError:
-            return (), tuple(fid for fid, _position in placed)
+            return fan_pan_tilt(fan_chain(list(placed)), mode="out"), (), frozenset()
+        except SpatialPointingError as error:
+            return (
+                (),
+                tuple(fid for fid, _position in placed),
+                frozenset([_cause_of(error)]),
+            )
 
     pairs: list[tuple[int, tuple[float, float, float], tuple[float, float, float]]]
     if kind == "spread_floor":
@@ -420,14 +567,16 @@ def _aims_for(
 
     aims: list[tuple[int, float, float]] = []
     failed: list[int] = []
+    causes: set[str] = set()
     for fid, position, target in pairs:
         try:
             pan, tilt = aim_pan_tilt(position, target)
-        except SpatialPointingError:
+        except SpatialPointingError as error:
             failed.append(fid)
+            causes.add(_cause_of(error))
         else:
             aims.append((fid, pan, tilt))
-    return tuple(aims), tuple(failed)
+    return tuple(aims), tuple(failed), frozenset(causes)
 
 
 def position_preset_bundles(

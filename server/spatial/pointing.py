@@ -48,6 +48,8 @@ __all__ = [
     "POSITION_PRESET_POOL",
     "RADIAL_MODES",
     "PointingTarget",
+    "PointingTargetCoincidesError",
+    "PointingTiltLimitError",
     "SpatialPointingError",
     "aim_pan_tilt",
     "aimed_commands",
@@ -65,6 +67,28 @@ __all__ = [
 
 class SpatialPointingError(ValueError):
     """A pointing request this module refuses to turn into commands."""
+
+
+class PointingTargetCoincidesError(SpatialPointingError):
+    """The target sits on the fixture — no beam direction exists at all.
+
+    Split out from the tilt-ceiling refusal below because the two are
+    DIFFERENT CAUSES with different fixes: this one says the geometry is
+    undefined (usually a degenerate or unpatched coordinate), the other says
+    the geometry is fine and the head cannot physically get there. A caller
+    that folds both into one reason cannot tell a reader which one happened —
+    t221 measured exactly that misdiagnosis. Subclass, not a sibling, so
+    every existing ``except SpatialPointingError`` keeps catching both.
+    """
+
+
+class PointingTiltLimitError(SpatialPointingError):
+    """The required tilt exceeds :data:`POINTING_TILT_LIMIT_DEGREES`.
+
+    ⚠️ That ceiling is an ASSUMED constant, not a per-fixture measurement —
+    see the note on :data:`POINTING_TILT_LIMIT_DEGREES`. Anything that reports
+    this cause must say so rather than let the number read as measured.
+    """
 
 
 #: Refusal ceiling for the computed tilt. The measured rig's heads (Robe
@@ -119,10 +143,12 @@ def aim_pan_tilt(
     vz = target[2] - position[2]
     length = math.sqrt(vx * vx + vy * vy + vz * vz)
     if length < 1e-9:
-        raise SpatialPointingError("fixture and target share a position — no beam direction exists")
+        raise PointingTargetCoincidesError(
+            "fixture and target share a position — no beam direction exists"
+        )
     tilt = math.degrees(math.acos(max(-1.0, min(1.0, -vz / length))))
     if tilt > POINTING_TILT_LIMIT_DEGREES:
-        raise SpatialPointingError(
+        raise PointingTiltLimitError(
             f"required tilt {tilt:.1f}° exceeds the {POINTING_TILT_LIMIT_DEGREES:.0f}° "
             "refusal ceiling — the head cannot reach this target"
         )

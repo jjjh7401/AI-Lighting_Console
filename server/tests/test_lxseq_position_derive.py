@@ -19,15 +19,28 @@ import pytest
 from server.llm.types import ToolCall
 from server.lxseq.cue_parser import CANONICAL_CUE_COLUMNS
 from server.lxseq.position_derive import (
+    CAUSE_TARGET_COINCIDES,
+    CAUSE_TILT_LIMIT,
+    DEGENERATE_RIG_REASON,
     DERIVED_LABEL_SUFFIX,
     POSITION_RULES,
     UnknownPositionSheetError,
+    _cause_of,
+    _skip_for_unaimable,
     derive_position_presets,
     group_members_from_sheets,
     parse_position_sheet,
     position_preset_bundles,
+    rig_is_degenerate,
 )
 from server.orchestrator.tools import build_toolset
+from server.spatial.pointing import (
+    POINTING_TILT_LIMIT_DEGREES,
+    PointingTargetCoincidesError,
+    PointingTiltLimitError,
+    SpatialPointingError,
+)
+from server.spatial.rows import SPATIAL_ROW_NOISE_SPAN
 
 RIG = Path("src/Lighting_Designer/02_RIG팩")
 POS_CSV = RIG / "LXSEQ_RIG_01_ShowBase_r3.preset-pos.csv"
@@ -324,3 +337,134 @@ class TestCueJoin:
         )
         assert payload["refusal"] is None
         assert any("At Preset 12.7" in command for command in exec_port.sent)
+
+
+class TestDegenerateRig:
+    """t222 — 좌표가 한 점에 접힌 리그는 **전 행**을 거절한다.
+
+    재현: t221 이 콘솔에서 실측한 상태(86대 전부 Posx/Posy/Posz = 0.0)를 그대로
+    넣으면 이 가드가 붙기 전에는 POS.01·05·06 이 초록으로 나왔고, 전 대상이
+    `Pan 180 / Tilt 128.7` 한 값이었다. 눈으로는 진짜 산출과 구별되지 않는다.
+    """
+
+    #: t221 실측 상태 — 판독은 성공했고 값이 전부 원점이다.
+    ORIGIN = dict((fid, (0.0, 0.0, 0.0)) for fid in SYNTHETIC)
+
+    def _result(self, coordinates):
+        return derive_position_presets(_rows(), SYNTHETIC_MEMBERS, coordinates)
+
+    def test_a_rig_collapsed_to_one_point_derives_nothing(self):
+        result = self._result(self.ORIGIN)
+        assert result.derived == ()
+        assert set(item.preset_id for item in result.skipped) == set(
+            rule.preset_id for rule in POSITION_RULES
+        )
+        assert set(item.reason for item in result.skipped) == set([DEGENERATE_RIG_REASON])
+
+    def test_the_three_rows_that_used_to_be_green_are_the_ones_this_kills(self):
+        """가드가 실제로 무엇을 껐는지 이름으로 고정한다 — 셋이 아니면 빨개진다."""
+        was_green = set(["POS.01", "POS.05", "POS.06"])
+        skipped = dict((item.preset_id, item.reason) for item in self._result(self.ORIGIN).skipped)
+        assert was_green <= set(skipped)
+        assert set(skipped[preset_id] for preset_id in was_green) == set([DEGENERATE_RIG_REASON])
+
+    def test_the_refusal_says_what_is_missing_not_just_that_it_refused(self):
+        detail = self._result(self.ORIGIN).skipped[0].detail
+        assert "수평 폭이 없다" in detail
+        assert "x span" in detail and "y span" in detail
+        assert "리그 좌표를 콘솔에 넣어야" in detail
+
+    def test_a_rig_with_real_spread_is_untouched_by_the_guard(self):
+        """팔 2 — 기존 상태에서는 이 가드가 아무것도 안 잡는다."""
+        assert rig_is_degenerate(SYNTHETIC) is False
+        assert len(self._result(SYNTHETIC).derived) == len(POSITION_RULES)
+
+    def test_no_coordinates_at_all_keeps_its_own_reason(self):
+        """`degenerate_rig` 는 `no_coordinates` 를 삼키지 않는다 — 다른 상태다."""
+        result = self._result(dict())
+        assert set(item.reason for item in result.skipped) == set(["no_coordinates"])
+        assert rig_is_degenerate(dict()) is False
+
+    def test_a_single_truss_rig_flat_in_z_is_not_degenerate(self):
+        """z span 0 은 정상이다 — 세 축 전부를 요구하면 가장 흔한 리그를 거절한다."""
+        bar = dict((100 + i, (-4.0 + i, 0.0, 6.0)) for i in range(9))
+        assert rig_is_degenerate(bar) is False
+
+    def test_a_vertical_only_rig_is_degenerate(self):
+        """x·y 가 한 점이면 z 가 벌어져 있어도 목표점이 접힌다."""
+        column = dict((100 + i, (0.0, 0.0, 4.0 + 0.5 * i)) for i in range(8))
+        assert rig_is_degenerate(column) is True
+
+    def test_a_spread_below_the_noise_span_is_degenerate(self):
+        """정확히 0 만 잡으면 노이즈 폭 아래 미세 편차를 놓친다."""
+        tiny = dict((100 + i, (0.01 * i, 0.0, 6.0)) for i in range(6))
+        assert max(0.01 * i for i in range(6)) > 0.0
+        assert rig_is_degenerate(tiny) is True
+
+    def test_the_threshold_is_borrowed_not_restated(self):
+        """임계를 여기에 다시 적으면 한쪽만 바뀌는 날 두 판정이 조용히 갈린다."""
+        just_under = dict([(101, (0.0, 0.0, 6.0)), (102, (SPATIAL_ROW_NOISE_SPAN, 0.0, 6.0))])
+        just_over = dict([(101, (0.0, 0.0, 6.0)), (102, (SPATIAL_ROW_NOISE_SPAN * 1.5, 0.0, 6.0))])
+        assert rig_is_degenerate(just_under) is True
+        assert rig_is_degenerate(just_over) is False
+
+
+class TestUnaimableReasonSplit:
+    """t222 — 서로 다른 원인이 **서로 다른 사유**를 낸다.
+
+    t221 이 이 결함을 쓴 대가를 적어 뒀다: 두 원인이 바이트 동일한 사유를 내서
+    리드가 「물리적 도달 불가인가」로 오진하고 레인 하나를 픽스처 기하 측정에
+    보냈다. 원인이 아니었다.
+    """
+
+    def _coordinates(self):
+        """수평 폭은 실값 — 퇴화 가드를 통과시킨 뒤 조준 실패만 남긴다."""
+        coordinates = dict()
+        for index, fid in enumerate(sorted(SYNTHETIC)):
+            coordinates[fid] = (-4.0 + 1.0 * index, 0.0, 6.0)
+        # y 를 전부 0 으로 깔았으니 기준틀 cy 도 0 이다.
+        for fid in SYNTHETIC_MEMBERS["MOVER-U"]:  # floor_inside 목표점 = 장비 자신
+            coordinates[fid] = (coordinates[fid][0], 0.0, 0.0)
+        for fid in SYNTHETIC_MEMBERS["BACK"]:  # silhouette_line 목표점 = 순수 상방
+            coordinates[fid] = (coordinates[fid][0], 0.0, 0.0)
+        return coordinates
+
+    def _skipped(self):
+        result = derive_position_presets(_rows(), SYNTHETIC_MEMBERS, self._coordinates())
+        return dict((item.preset_id, item) for item in result.skipped)
+
+    def test_distance_zero_and_tilt_limit_do_not_share_a_reason(self):
+        skipped = self._skipped()
+        assert skipped["POS.04"].reason == "target_coincides"
+        assert skipped["POS.03"].reason == "unaimable"
+        assert skipped["POS.03"].reason != skipped["POS.04"].reason
+        # 사유가 갈렸다는 것만으로는 부족하다 — 상세도 바이트 동일이면 안 된다.
+        assert skipped["POS.03"].detail != skipped["POS.04"].detail
+
+    def test_the_coincidence_reason_says_it_is_not_a_reach_problem(self):
+        detail = self._skipped()["POS.04"].detail
+        assert "거리 0" in detail
+        assert "조준 한계와는 무관" in detail
+
+    def test_the_tilt_reason_admits_the_ceiling_is_assumed_not_measured(self):
+        """이 사유가 상한을 근거로 든다면 그 상한이 가정임을 같이 말해야 한다."""
+        detail = self._skipped()["POS.03"].detail
+        assert str(int(POINTING_TILT_LIMIT_DEGREES)) in detail
+        assert "실측이 아니라" in detail
+        assert "Robe LEDBeam 350 / MMX" in detail
+
+    def test_the_cause_is_read_from_the_exception_type_not_its_wording(self):
+        """문면 매칭이면 문구를 바꾸는 날 분류가 조용히 무너진다."""
+        assert _cause_of(PointingTargetCoincidesError("문면이 무엇이든")) == (
+            CAUSE_TARGET_COINCIDES
+        )
+        assert _cause_of(PointingTiltLimitError("문면이 무엇이든")) == CAUSE_TILT_LIMIT
+        assert _cause_of(SpatialPointingError("새 갈래")) == "unclassified"
+
+    def test_a_mixed_row_names_both_causes(self):
+        reason, detail = _skip_for_unaimable(
+            5, frozenset([CAUSE_TILT_LIMIT, CAUSE_TARGET_COINCIDES])
+        )
+        assert reason == "unaimable_mixed"
+        assert "거리 0" in detail
+        assert "조준 상한" in detail
