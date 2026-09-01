@@ -481,11 +481,27 @@ def main(argv: list[str] | None = None) -> int:
                     except Exception as error:  # noqa: BLE001
                         out["cues_readback"] = dict(ok=False, detail=str(error))
                     else:
+                        # 🔴 기대치가 **둘**이다(t228, 큐 단위 부분 출하).
+                        # 시트가 든 큐 수와 툴이 실제로 계획한 큐 수는 이제 다를
+                        # 수 있다 -- 보류된 큐가 통째로 빠지기 때문이다. 시트
+                        # 기준만 적으면 정상적인 부분 출하가 「불일치」로 읽히고,
+                        # 계획 기준만 적으면 「시트의 몇 개가 안 갔나」가 사라진다.
+                        # 둘 다 적는다. `--out` 파일이 부분 출하의 durable 기록이다.
+                        planned_cues = out["tool"].get("planned_cues") or []
+                        held_cues = out["tool"].get("cues_held") or []
                         out["cues_readback"] = dict(
                             ok=True,
                             count=len(cues),
                             expected=sheet["cue_count"],
                             matches_expected=len(cues) == sheet["cue_count"],
+                            expected_planned=len(planned_cues),
+                            expected_after=len(planned_cues)
+                            + len(out["tool"].get("cues_already_present") or []),
+                            matches_after=len(cues)
+                            == len(planned_cues)
+                            + len(out["tool"].get("cues_already_present") or []),
+                            partial_ship=bool(out["tool"].get("partial_ship")),
+                            cues_held=held_cues,
                             cues=cues,
                         )
 

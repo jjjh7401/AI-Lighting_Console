@@ -5759,6 +5759,11 @@ def build_toolset(
         # 계획에 영향을 주지 않는다 -- 순수하게 산출물 한 칸이다.
         unresolved_refs: list[dict[str, object]] = []
         seen_refs: set[str] = set()
+        # 큐 -> 그 큐가 든 미해결 참조. 아래 cues_held 가 이 값을 실어, 읽는
+        # 사람이 `unresolved_preset_refs` 표에 `ref` 로 조인해 원인·기대 이름까지
+        # 간다. **병렬 어휘를 만들지 않는다** -- 같은 실패가 자리마다 다른 이름으로
+        # 불리는 것을 막는 것이 t225 가 이 표를 세운 이유다.
+        unresolved_by_cue: dict[str, list[str]] = dict()
         for record in parsed.records:
             if record.is_video_call:
                 continue
@@ -5768,7 +5773,12 @@ def build_toolset(
                 # 문법이 아닌 것(빈칸·OFF)은 미해결이 아니다 -- 각각 트래킹과
                 # 정지 명령이고, 판별은 참조 문법 하나가 한다.
                 found = PRESET_REF_PATTERN.match(text)
-                if found is None or text in preset_slots or text in seen_refs:
+                if found is None or text in preset_slots:
+                    continue
+                by_cue = unresolved_by_cue.setdefault(record.cue_no, [])
+                if text not in by_cue:
+                    by_cue.append(text)
+                if text in seen_refs:
                     continue
                 seen_refs.add(text)
                 ref_kind = found.group(1)
@@ -5823,6 +5833,24 @@ def build_toolset(
                 dict(cue_no=v.cue_no, group=v.group, note=v.note) for v in result.video_calls
             ],
             "video_only_cues": list(result.video_only_cues),
+            # 🔴 부분 출하의 **유일한** 사후 추적 기록이다. 되읽기 채널은 큐
+            # 내용을 안 주므로(AC-LXSEQ4-013) 콘솔을 되읽어 「무엇이 안 올라갔나」를
+            # 알 수단이 없다 -- 이 칸이 비면 사람이 큐를 손으로 열어야 한다.
+            # `preset_refs` 는 위 unresolved_preset_refs 표에 `ref` 로 조인된다.
+            "cues_held": [
+                dict(
+                    cue_no=entry.cue_no,
+                    held_rows=entry.held_rows,
+                    withheld_rows=entry.withheld_rows,
+                    classes=list(entry.hold_classes),
+                    preset_refs=sorted(unresolved_by_cue.get(entry.cue_no, ())),
+                )
+                for entry in result.cues_held
+            ],
+            "cues_held_count": len(result.cues_held),
+            # 성한 큐는 나가고 보류된 큐는 안 나갔다 -- 콘솔이 시트의 **일부만**
+            # 들고 있는 상태다. 이 불리언이 그 상태의 이름이다.
+            "partial_ship": bool(result.cues_held) and bool(result.planned),
             "coverage_gap": (
                 None
                 if result.coverage_gap is None
@@ -5855,6 +5883,17 @@ def build_toolset(
                 "못 채운 종류를 참조하는 행은 held 로 떨어진다."
             ),
         }
+        if payload["partial_ship"]:
+            payload["notice_partial_ship"] = (
+                "성한 큐만 나가고 보류된 큐 "
+                + str(len(result.cues_held))
+                + " 개는 통째로 빠졌다 -- 콘솔이 이 시트의 **일부만** 들게 된다. "
+                "큐 안에서는 여전히 전부 아니면 아무것도다(한 행이라도 보류되면 그 "
+                "큐는 0건). 되읽기 채널은 큐 내용을 안 주므로(AC-LXSEQ4-013) 콘솔 "
+                "상태를 되읽어 확인할 수단이 없다 -- `cues_held` 와 `planned_cues` 가 "
+                "그 기록이다. 시트를 고쳐 다시 부르면 이미 올라간 큐는 다시 계획하지 "
+                "않는다(cues_already_present)."
+            )
         if not group_slots:
             payload["notice_group_slots"] = (
                 "DataPool/Groups 에서 이름 있는 그룹을 하나도 못 읽었다 -- group_slots 가 비었다."
@@ -5990,6 +6029,16 @@ def build_toolset(
                                 risk_reasons=(
                                     "cue write -- 콘솔이 받았는지 값까지는 되읽지 못한다"
                                     "(번호·이름만 확인된다). 덮어쓰면 복구 수단이 없다",
+                                )
+                                + (
+                                    (
+                                        "부분 출하 -- 보류된 큐 "
+                                        + str(len(result.cues_held))
+                                        + " 개는 안 나간다. 콘솔이 시트의 일부만 들게 "
+                                        "된다(cues_held 참조)",
+                                    )
+                                    if payload["partial_ship"]
+                                    else ()
                                 ),
                             )
                             for command in all_commands
