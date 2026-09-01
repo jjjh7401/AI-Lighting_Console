@@ -1,0 +1,31 @@
+{
+  "mode": "props",
+  "payload": {
+    "id": "gate-1",
+    "kind": "props",
+    "ok": true,
+    "path": "Patch/Stages/1/Fixtures/27",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "MOVER-U 501"
+      },
+      {
+        "n": "FIXTURETYPE",
+        "ok": true,
+        "t": "userdata",
+        "v": "FixtureType 11"
+      },
+      {
+        "n": "MODE",
+        "ok": true,
+        "t": "string",
+        "v": "1 Mode 1"
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  }
+}

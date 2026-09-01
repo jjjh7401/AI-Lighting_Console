@@ -1,0 +1,68 @@
+{
+  "csv": "src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.patch.csv",
+  "action": "preview",
+  "approve": false,
+  "local_file": {
+    "sha256": "77a34d4bfd611fc034ce621c9715c1e33129df244a67c7e8dfd75d83816d7ee3",
+    "byte_length": 7258
+  },
+  "plugin_import_dir": "/Users/studiox/MALightingTechnology/gma3_library/datapools/plugins",
+  "plugin_import_dir_source": "site_settings",
+  "probe": {
+    "live": {
+      "path": "Patch/FixtureTypes",
+      "ok": true,
+      "child_count": 15,
+      "children_returned": 15,
+      "truncated": false,
+      "names": [
+        "Robin Esprite",
+        "Robin Forte HP",
+        "Robin LEDBeam 350",
+        "Robin Spiider",
+        "Xtylos",
+        "Sharpy Plus",
+        "Robin MMX Spot",
+        "Mac Aura XB",
+        "Rush Par 2 RGBW Zoom",
+        "Source 4 LED Series 3 Lustr X8",
+        "Robin MegaPointe",
+        "Robin Spiider",
+        "CuePix Blinder WW2",
+        "Atomic 3000 LED",
+        "Unique 2 1"
+      ]
+    },
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "raised": "StateQueryError: path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "trustworthy": true,
+    "verdict_ko": "판독 채널 신뢰 가능 — 실재 경로는 ok, 날조 경로는 ok가 아니다."
+  },
+  "write_probe": {
+    "command": "ZZZNOTACOMMAND",
+    "is_error": true,
+    "outcomes": [
+      {
+        "command": "ZZZNOTACOMMAND",
+        "status": "failed",
+        "detail": "Illegal object"
+      }
+    ],
+    "payload": {
+      "all_ok": false,
+      "commands": [
+        {
+          "command": "ZZZNOTACOMMAND",
+          "status": "failed",
+          "detail": "Illegal object"
+        }
+      ]
+    },
+    "approval_bundles_asked": 0,
+    "trustworthy": true,
+    "verdict_ko": "쓰기 채널 신뢰 가능 — 파싱 불가 명령이 executed_ok 가 아니다."
+  },
+  "stopped": "write_probe"
+}

@@ -1,0 +1,40 @@
+{
+  "fid": "501",
+  "attribute": "Zoom",
+  "value": "45",
+  "steps": [
+    {
+      "command": "Fixture 501",
+      "is_error": false,
+      "outcomes": [
+        {
+          "command": "Fixture 501",
+          "status": "executed_ok",
+          "detail": "OK"
+        }
+      ]
+    },
+    {
+      "command": "Attribute 'Zoom' At 45",
+      "is_error": false,
+      "outcomes": [
+        {
+          "command": "Attribute 'Zoom' At 45",
+          "status": "executed_ok",
+          "detail": "OK"
+        }
+      ]
+    },
+    {
+      "command": "Off Fixture 501",
+      "is_error": true,
+      "outcomes": [
+        {
+          "command": "Off Fixture 501",
+          "status": "rejected",
+          "detail": "reference-invoking command; unverifiable reference: no recognizable target object"
+        }
+      ]
+    }
+  ]
+}
