@@ -30,6 +30,8 @@ from pathlib import Path
 
 from server.llm.types import ToolCall
 from server.lxseq.position_derive import (
+    DERIVED_LABEL_SUFFIX,
+    SYNTHETIC_LABEL_SUFFIX,
     derive_position_presets,
     group_members_from_sheets,
     parse_position_sheet,
@@ -150,6 +152,17 @@ def main(argv: list[str] | None = None) -> int:
         help="산출된 룩 앞 N 개만 쏜다. 기본 1 — 「소수 먼저 넣고 되읽는다」. 0 이면 전부",
     )
     parser.add_argument("--probe-only", action="store_true", help="기준 상태만 읽는다. 콘솔 쓰기 0")
+    # 라벨 꼬리는 **좌표의 출처**를 나른다. 기본값 「산출값」은 조준값이 계산됐다는
+    # 뜻이라 좌표는 실측인 것처럼 읽힌다 — 좌표 자체가 합성이면 그쪽이 더 강한
+    # 주장이고, 그 사실이 라벨에 없으면 계산된 조준이 현장 레코드로 오독된다.
+    parser.add_argument(
+        "--synthetic-coords",
+        action="store_true",
+        help=(
+            "리그 좌표가 합성이면 붙인다. 라벨 꼬리가 "
+            f"「· {DERIVED_LABEL_SUFFIX}」 대신 「· {SYNTHETIC_LABEL_SUFFIX}」 가 된다"
+        ),
+    )
     parser.add_argument("--approve", action="store_true", help="없으면 콘솔에 아무것도 닿지 않는다")
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
@@ -160,6 +173,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--action apply 는 --approve 를 요구한다. 승인 없이는 콘솔에 닿지 않는다.")
 
     limit = None if args.limit == 0 else args.limit
+    label_suffix = SYNTHETIC_LABEL_SUFFIX if args.synthetic_coords else DERIVED_LABEL_SUFFIX
     pool_path = DEFAULT_PRESET_POOLS_PATH + "/" + str(POSITION_PRESET_POOL)
     out: dict[str, object] = dict(
         action=args.action,
@@ -167,6 +181,7 @@ def main(argv: list[str] | None = None) -> int:
         listen_port=args.listen_port,
         limit=limit,
         pool_path=pool_path,
+        label_suffix=label_suffix,
     )
 
     rows = parse_position_sheet(args.pos_csv.read_text(encoding="utf-8-sig"))
@@ -220,7 +235,9 @@ def main(argv: list[str] | None = None) -> int:
                 out["stopped"] = "no_coordinates"
                 exit_code = 2
             else:
-                result = derive_position_presets(rows, members, coordinates)
+                result = derive_position_presets(
+                    rows, members, coordinates, label_suffix=label_suffix
+                )
                 out["derived"] = [
                     dict(
                         preset_id=item.preset_id,

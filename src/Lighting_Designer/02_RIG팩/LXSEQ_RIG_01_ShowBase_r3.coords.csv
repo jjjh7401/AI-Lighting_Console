@@ -1,0 +1,87 @@
+FID,Group,FixtureType,Position,X,Y,Z
+101,KEY,ETC S4 LED S3 Lustr X8,FOH 브리지,-5.0,-9.0,7.5
+102,KEY,ETC S4 LED S3 Lustr X8,FOH 브리지,-3.0,-9.0,7.5
+103,KEY,ETC S4 LED S3 Lustr X8,FOH 브리지,-1.0,-9.0,7.5
+104,KEY,ETC S4 LED S3 Lustr X8,FOH 브리지,1.0,-9.0,7.5
+105,KEY,ETC S4 LED S3 Lustr X8,FOH 브리지,3.0,-9.0,7.5
+106,KEY,ETC S4 LED S3 Lustr X8,FOH 브리지,5.0,-9.0,7.5
+111,FOH,ETC S4 LED S3 Lustr X8,FOH 트러스,-6.0,-6.5,7.0
+112,FOH,ETC S4 LED S3 Lustr X8,FOH 트러스,-4.29,-6.5,7.0
+113,FOH,ETC S4 LED S3 Lustr X8,FOH 트러스,-2.57,-6.5,7.0
+114,FOH,ETC S4 LED S3 Lustr X8,FOH 트러스,-0.86,-6.5,7.0
+115,FOH,ETC S4 LED S3 Lustr X8,FOH 트러스,0.86,-6.5,7.0
+116,FOH,ETC S4 LED S3 Lustr X8,FOH 트러스,2.57,-6.5,7.0
+117,FOH,ETC S4 LED S3 Lustr X8,FOH 트러스,4.29,-6.5,7.0
+118,FOH,ETC S4 LED S3 Lustr X8,FOH 트러스,6.0,-6.5,7.0
+601,BLIND,Elation CUEPIX Blinder WW2,다운 트러스 전면,-4.5,-3.2,6.5
+602,BLIND,Elation CUEPIX Blinder WW2,다운 트러스 전면,-2.7,-3.2,6.5
+603,BLIND,Elation CUEPIX Blinder WW2,다운 트러스 전면,-0.9,-3.2,6.5
+604,BLIND,Elation CUEPIX Blinder WW2,다운 트러스 전면,0.9,-3.2,6.5
+605,BLIND,Elation CUEPIX Blinder WW2,다운 트러스 전면,2.7,-3.2,6.5
+606,BLIND,Elation CUEPIX Blinder WW2,다운 트러스 전면,4.5,-3.2,6.5
+611,STROBE,Martin Atomic 3000 LED,업 트러스,-5.5,2.5,6.8
+612,STROBE,Martin Atomic 3000 LED,업 트러스,-4.5,2.5,6.8
+613,STROBE,Martin Atomic 3000 LED,업 트러스,-3.5,2.5,6.8
+614,STROBE,Martin Atomic 3000 LED,업 트러스,-2.5,2.5,6.8
+501,MOVER-U,Robe MegaPointe,업 트러스,-1.5,2.5,6.8
+502,MOVER-U,Robe MegaPointe,업 트러스,-0.5,2.5,6.8
+503,MOVER-U,Robe MegaPointe,업 트러스,0.5,2.5,6.8
+504,MOVER-U,Robe MegaPointe,업 트러스,1.5,2.5,6.8
+505,MOVER-U,Robe MegaPointe,업 트러스,2.5,2.5,6.8
+506,MOVER-U,Robe MegaPointe,업 트러스,3.5,2.5,6.8
+507,MOVER-U,Robe MegaPointe,업 트러스,4.5,2.5,6.8
+508,MOVER-U,Robe MegaPointe,업 트러스,5.5,2.5,6.8
+621,HAZE,Look Unique 2.1,무대 양측 플로어,-7.5,0.5,0.2
+622,HAZE,Look Unique 2.1,무대 양측 플로어,7.5,0.5,0.2
+521,MOVER-D,Robe Spiider,다운 트러스,-5.5,-2.5,6.8
+522,MOVER-D,Robe Spiider,다운 트러스,-3.93,-2.5,6.8
+523,MOVER-D,Robe Spiider,다운 트러스,-2.36,-2.5,6.8
+524,MOVER-D,Robe Spiider,다운 트러스,-0.79,-2.5,6.8
+525,MOVER-D,Robe Spiider,다운 트러스,0.79,-2.5,6.8
+526,MOVER-D,Robe Spiider,다운 트러스,2.36,-2.5,6.8
+527,MOVER-D,Robe Spiider,다운 트러스,3.93,-2.5,6.8
+528,MOVER-D,Robe Spiider,다운 트러스,5.5,-2.5,6.8
+201,BACK,Martin MAC Aura XB,업스테이지 트러스,-6.0,4.5,6.2
+202,BACK,Martin MAC Aura XB,업스테이지 트러스,-4.91,4.5,6.2
+203,BACK,Martin MAC Aura XB,업스테이지 트러스,-3.82,4.5,6.2
+204,BACK,Martin MAC Aura XB,업스테이지 트러스,-2.73,4.5,6.2
+205,BACK,Martin MAC Aura XB,업스테이지 트러스,-1.64,4.5,6.2
+206,BACK,Martin MAC Aura XB,업스테이지 트러스,-0.55,4.5,6.2
+207,BACK,Martin MAC Aura XB,업스테이지 트러스,0.55,4.5,6.2
+208,BACK,Martin MAC Aura XB,업스테이지 트러스,1.64,4.5,6.2
+209,BACK,Martin MAC Aura XB,업스테이지 트러스,2.73,4.5,6.2
+210,BACK,Martin MAC Aura XB,업스테이지 트러스,3.82,4.5,6.2
+211,BACK,Martin MAC Aura XB,업스테이지 트러스,4.91,4.5,6.2
+212,BACK,Martin MAC Aura XB,업스테이지 트러스,6.0,4.5,6.2
+301,SIDE-L,Martin MAC Aura XB,하수 붐 (3단×2),-7.0,3.0,1.2
+302,SIDE-L,Martin MAC Aura XB,하수 붐 (3단×2),-7.0,3.0,2.6
+303,SIDE-L,Martin MAC Aura XB,하수 붐 (3단×2),-7.0,3.0,4.0
+304,SIDE-L,Martin MAC Aura XB,하수 붐 (3단×2),-7.0,0.5,1.2
+305,SIDE-L,Martin MAC Aura XB,하수 붐 (3단×2),-7.0,0.5,2.6
+306,SIDE-L,Martin MAC Aura XB,하수 붐 (3단×2),-7.0,0.5,4.0
+311,SIDE-R,Martin MAC Aura XB,상수 붐 (3단×2),7.0,3.0,1.2
+312,SIDE-R,Martin MAC Aura XB,상수 붐 (3단×2),7.0,3.0,2.6
+313,SIDE-R,Martin MAC Aura XB,상수 붐 (3단×2),7.0,3.0,4.0
+314,SIDE-R,Martin MAC Aura XB,상수 붐 (3단×2),7.0,0.5,1.2
+315,SIDE-R,Martin MAC Aura XB,상수 붐 (3단×2),7.0,0.5,2.6
+316,SIDE-R,Martin MAC Aura XB,상수 붐 (3단×2),7.0,0.5,4.0
+401,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,-5.0,5.2,0.3
+402,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,-3.89,5.2,0.3
+403,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,-2.78,5.2,0.3
+404,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,-1.67,5.2,0.3
+405,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,-0.56,5.2,0.3
+406,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,0.56,5.2,0.3
+407,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,1.67,5.2,0.3
+408,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,2.78,5.2,0.3
+409,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,3.89,5.2,0.3
+410,WASH-U,Martin RUSH PAR 2 RGBW Z,업스테이지 플로어,5.0,5.2,0.3
+421,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,-5.0,-1.0,0.3
+422,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,-3.89,-1.0,0.3
+423,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,-2.78,-1.0,0.3
+424,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,-1.67,-1.0,0.3
+425,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,-0.56,-1.0,0.3
+426,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,0.56,-1.0,0.3
+427,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,1.67,-1.0,0.3
+428,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,2.78,-1.0,0.3
+429,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,3.89,-1.0,0.3
+430,WASH-D,Martin RUSH PAR 2 RGBW Z,다운스테이지 플로어,5.0,-1.0,0.3
