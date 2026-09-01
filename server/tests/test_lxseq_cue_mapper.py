@@ -2,7 +2,7 @@
 
 AC-LXSEQ4-005  그룹 이름은 콘솔이 답한 목록에서만 온다
 AC-LXSEQ4-006  페이드는 초 단위 숫자로만 실린다 (빈칸 != 0.0)
-AC-LXSEQ4-007  [HARD] 어긋나면 0건 -- 배치 전체 all-or-nothing
+AC-LXSEQ4-007  [HARD] 어긋나면 0건 -- **큐 단위** all-or-nothing (t228 개정)
 AC-LXSEQ4-008  [HARD] 시퀀스 층과 큐 층으로 갈라 수렴한다 (멱등)
 AC-LXSEQ4-012  [HARD] 거절 사유를 문자열로 가른다
 AC-LXSEQ4-013  [HARD] 되읽기 한계를 산출물이 스스로 싣는다 (unverified)
@@ -306,7 +306,8 @@ def test_undefined_preset_holds_the_whole_row():
     )
     assert len(result.held) == 1
     assert UNRESOLVED_PRESET in result.held[0].hold_classes
-    # 🔴 성한 KEY 행도 안 나간다 — 한 행이 보류되면 배치가 0건이다(AC-LXSEQ4-007).
+    # 🔴 성한 KEY 행도 안 나간다 — 한 행이 보류되면 그 큐가 0건이다(AC-LXSEQ4-007).
+    # 이 시트는 큐가 하나뿐이라 그것이 곧 배치 거절이다.
     # 고치기 전에는 여기가 `["KEY"]` 였고, 그것이 그룹 하나 빠진 큐의 출하였다.
     assert result.refusal == ROWS_HELD
     assert result.planned == ()
@@ -367,7 +368,11 @@ def test_missing_cue_refuses_everything():
 
 
 def test_one_broken_row_refuses_the_whole_batch():
-    """🔴 AC-LXSEQ4-007 [HARD] — 한 행이라도 못 옮기면 **배치 전체가 0건**이다.
+    """🔴 AC-LXSEQ4-007 [HARD] — 한 행이라도 못 옮기면 **그 큐가 0건**이다.
+
+    ⚠️ 이 입력은 큐가 Q010 하나뿐이라 「그 큐가 0건」과 「배치가 0건」이 같다 —
+    그래서 이름을 그대로 둔다(인용 주소를 안 흔든다). 큐가 여럿일 때 성한 큐가
+    나가는지는 `test_a_held_row_holds_its_cue_and_only_its_cue` 가 잰다(t228).
 
     재현(2026-09-01, t207): 이 입력이 고치기 전에는 `refusal=None` · 큐 1개 ·
     행 2개를 냈다. WASH-U 한 그룹이 빠진 큐가 그대로 콘솔에 올라간다.
@@ -395,10 +400,18 @@ def test_the_refusal_names_which_cue_which_row_and_why():
 
     사유 문자열은 **기존 보류 어휘를 그대로** 쓴다. 병렬 어휘를 새로 만들면
     같은 실패가 자리마다 다른 이름으로 불린다.
+
+    ⚠️ **개정 (2026-09-01, t228)** — 입력이 바뀌었지 계약이 사라진 것이 아니다.
+    원래 입력은 Q010 이 성했는데, 입도가 큐로 내려온 뒤로는 그 시트가 배치
+    거절이 아니라 **부분 출하**가 된다(Q010 이 나간다). 이 검사가 지키는 것은
+    「배치 거절이 붙을 때 그 사유가 어느 큐·어느 행·왜를 이름으로 대는가」이므로,
+    성한 큐가 하나도 없는 입력으로 옮겼다. 「성한 큐는 사유에 안 실린다」 팔은
+    `test_the_held_cue_record_names_the_cause_and_the_rows_it_took_down` 이
+    큐 단위 기록에 대고 잰다.
     """
     result = _map(
         [
-            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55", bm_raw="BM.99"),
             StandInCueRecord(cue_no="Q020", group="WASH-U", dim_raw="60", col_raw="COL.99"),
             StandInCueRecord(cue_no="Q030", group="NOPE", dim_raw="40"),
         ],
@@ -407,8 +420,6 @@ def test_the_refusal_names_which_cue_which_row_and_why():
     assert result.refusal == ROWS_HELD
     for token in ("Q020", "WASH-U", UNRESOLVED_PRESET, "Q030", "NOPE", UNKNOWN_GROUP):
         assert token in result.refusal_detail, token
-    # 성한 큐는 사유에 안 실린다 — 고칠 자리만 가리킨다
-    assert "Q010" not in result.refusal_detail
 
 
 def test_held_still_carries_the_rows_for_preview():
@@ -427,12 +438,15 @@ def test_held_still_carries_the_rows_for_preview():
     assert result.held[0].details  # 산문 사유가 살아 있다
 
 
-def test_a_cue_emptied_by_hold_still_refuses_everything():
-    """선행 갈래 `cue_emptied_by_hold` 가 지키던 시나리오 — 이제 ROWS_HELD 가
-    **더 넓게** 덮는다(그 상수는 이 게이트에 완전히 포함돼 폐기됐다).
+def test_a_cue_emptied_by_hold_ships_nothing_for_that_cue():
+    """선행 갈래 `cue_emptied_by_hold` 가 지키던 시나리오.
 
-    이 검사를 남기는 이유: 좁은 갈래를 넓은 갈래로 갈아끼울 때 좁은 쪽이 실제로
-    덮이는지는 **넓은 검사가 말해 주지 않는다.**
+    이름이 세 번째다: `cue_emptied_by_hold`(좁음) → `ROWS_HELD`(배치 전체, t207)
+    → 큐 단위(t228). **지키는 것은 처음과 같다** — 보류로 비어 버린 큐는 안
+    나간다. 달라진 것은 그 큐 **말고 다른 큐**가 함께 멈추느냐뿐이다.
+
+    이 검사를 남기는 이유: 갈래를 갈아끼울 때 좁은 쪽이 실제로 덮이는지는
+    **넓은 검사가 말해 주지 않는다.**
     """
     result = _map(
         [
@@ -441,9 +455,9 @@ def test_a_cue_emptied_by_hold_still_refuses_everything():
         ],
         declared=["Q010", "Q020"],
     )
-    assert result.refusal == ROWS_HELD
-    assert result.planned == ()
-    assert "Q020" in result.refusal_detail
+    assert result.refusal is None
+    assert [bucket.cue_no for bucket in result.planned] == ["Q010"]
+    assert [entry.cue_no for entry in result.cues_held] == ["Q020"]
 
 
 def test_holds_survive_a_refusal():
@@ -823,3 +837,148 @@ def test_no_refusal_code_can_produce_class_a_on_its_own():  # AC-LXSEQ4-014
 def test_a_clean_sheet_reports_nothing_blocked():
     """대조군 — 막힌 자리가 없으면 빈 보고다(항상 뭔가를 내는 계기가 아니다)."""
     assert block_report(_map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55")])) == ()
+
+
+# ---------------------------------------------------------------------------
+# 전부 아니면 아무것도 — **큐 단위**로 (감독 판정 2026-09-01 2차, t228)
+#
+# 아침 판정(같은 날 1차)은 「조용한 오답이 시끄러운 부재보다 나쁘다」였고 그것은
+# **큐 안**의 규율이다: 한 그룹이 빠진 큐는 MA3 트래킹 때문에 큐 리스트에서
+# 정상으로 보이고 발사할 때에야 어긋난다. 그 판정은 그대로다.
+#
+# 논쟁된 적이 없던 것은 **입도**다. t207 이 그 판정을 배치 층에 놓아, 시트 어디든
+# 한 행이 안 풀리면 성한 큐 전부가 멈췄다. 정본 `:272` 는 CUE-EX 시트의 `Q#` 열
+# 규격(「CUE 시트 Q# 와 일치 — 부분집합 금지, 모든 큐에 최소 1행」)이라 **입력
+# 시트의 완전성**을 규정하지, 콘솔에 무엇이 닿는지는 말하지 않는다 — 그쪽은 이미
+# `CUE_COVERAGE_GAP` 이 지킨다. 배치 층 적용은 그 조항의 과잉 적용이었다.
+# ---------------------------------------------------------------------------
+
+
+def test_a_held_row_holds_its_cue_and_only_its_cue():
+    """🔴 재현 — t228 의 빨강/초록.
+
+    고치기 전: Q020 의 한 행이 안 풀려 **Q010 까지** 안 나갔다(`refusal=rows_held`,
+    `planned=()`). 고친 뒤: Q010 은 나가고 Q020 만 통째로 빠진다.
+    """
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q020", group="KEY", dim_raw="40"),
+            StandInCueRecord(cue_no="Q020", group="WASH-U", dim_raw="60", col_raw="COL.99"),
+        ],
+        declared=["Q010", "Q020"],
+    )
+    assert result.refusal is None
+    assert [bucket.cue_no for bucket in result.planned] == ["Q010"]
+    assert [entry.cue_no for entry in result.cues_held] == ["Q020"]
+
+
+def test_a_held_cue_ships_zero_rows_not_the_healthy_ones():
+    """🔴 아침 판정이 그대로다 — **큐 안**에서는 전부 아니면 아무것도.
+
+    Q020 의 KEY 행은 멀쩡히 해석됐지만 같은 큐의 WASH-U 가 보류라 함께 빠진다.
+    이 단언이 무르면 그룹 하나가 빠진 큐가 콘솔에 올라가고, 그것은 큐 리스트에서
+    정상으로 보인다.
+    """
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q020", group="KEY", dim_raw="40"),
+            StandInCueRecord(cue_no="Q020", group="WASH-U", dim_raw="60", col_raw="COL.99"),
+        ],
+        declared=["Q010", "Q020"],
+    )
+    shipped = [(bucket.cue_no, row.group) for bucket in result.planned for row in bucket.rows]
+    assert shipped == [("Q010", "BACK")]
+    assert ("Q020", "KEY") not in shipped
+
+
+def test_the_held_cue_record_names_the_cause_and_the_rows_it_took_down():
+    """되읽기 채널이 큐 내용을 안 주므로(AC-LXSEQ4-013) 산출물이 유일한 기록이다.
+
+    사람이 콘솔을 손으로 열지 않고도 「무엇이 안 갔나 · 왜」를 재구성할 수 있어야
+    한다. 어휘는 기존 보류 클래스를 그대로 쓴다 — 병렬 어휘를 만들지 않는다.
+    """
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q020", group="KEY", dim_raw="40"),
+            StandInCueRecord(cue_no="Q020", group="WASH-U", dim_raw="60", col_raw="COL.99"),
+            StandInCueRecord(cue_no="Q030", group="NOPE", dim_raw="40"),
+        ],
+        declared=["Q010", "Q020", "Q030"],
+    )
+    by_cue = dict((entry.cue_no, entry) for entry in result.cues_held)
+    assert sorted(by_cue) == ["Q020", "Q030"]
+    assert by_cue["Q020"].held_rows == 1
+    # 🔴 함께 빠진 성한 행 수 — 이것이 없으면 「Q020 이 안 갔다」는 알아도
+    # 「그래서 KEY 도 안 갔다」는 모른다.
+    assert by_cue["Q020"].withheld_rows == 1
+    assert by_cue["Q020"].hold_classes == (UNRESOLVED_PRESET,)
+    assert by_cue["Q030"].hold_classes == (UNKNOWN_GROUP,)
+    assert by_cue["Q030"].withheld_rows == 0
+    # 성한 큐는 기록에 안 실린다 — 고칠 자리만 가리킨다
+    assert "Q010" not in by_cue
+
+
+def test_every_cue_held_still_refuses_the_whole_batch():
+    """팔 2 — 성한 큐가 하나도 없으면 예전과 **같은** 거절이다.
+
+    입도를 옮긴 것이지 거절을 없앤 것이 아니다. 이 팔이 없으면 「배치 거절이
+    아직 살아 있나」를 아무도 안 잰다.
+    """
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55", col_raw="COL.99"),
+            StandInCueRecord(cue_no="Q020", group="NOPE", dim_raw="55"),
+        ],
+        declared=["Q010", "Q020"],
+    )
+    assert result.refusal == ROWS_HELD
+    assert result.planned == ()
+    assert [entry.cue_no for entry in result.cues_held] == ["Q010", "Q020"]
+
+
+def test_a_held_cue_is_not_reported_as_video_only():
+    """🔴 「조명이 할 일이 없는 큐」와 「보류로 비어 버린 큐」는 다른 상태다.
+
+    앞의 게이트가 사라지면 후자가 전자의 술어(`rows_by_cue` 가 비었다)에 걸린다 —
+    그러면 산출물이 「그 큐는 영상만 있다」고 **거짓으로** 말하고, 읽는 사람은
+    고칠 자리를 못 본다.
+    """
+    result = _map(
+        [
+            StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+            StandInCueRecord(cue_no="Q020", group="WASH-U", dim_raw="60", col_raw="COL.99"),
+            StandInCueRecord(cue_no="Q020", group="LED-W", is_video_call=True),
+        ],
+        declared=["Q010", "Q020"],
+    )
+    assert result.video_only_cues == ()
+    assert [entry.cue_no for entry in result.cues_held] == ["Q020"]
+
+
+def test_a_partial_ship_is_idempotent_on_a_rerun():
+    """부분 출하 뒤 같은 시트를 다시 부르면 나간 큐는 다시 계획하지 않는다.
+
+    멱등성은 부분 출하로 깨지면 안 된다 — 깨지면 재시도가 콘솔에 중복을 얹거나
+    (큐 층), 고친 시트를 다시 못 부른다.
+    """
+    records = [
+        StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55"),
+        StandInCueRecord(cue_no="Q020", group="WASH-U", dim_raw="60", col_raw="COL.99"),
+    ]
+    first = _map(records, declared=["Q010", "Q020"])
+    assert [bucket.cue_no for bucket in first.planned] == ["Q010"]
+
+    # 2회차 — 1회차가 올린 Q010(cueNo=10)이 시퀀스 안에 있다.
+    second = _map(
+        records,
+        declared=["Q010", "Q020"],
+        section=_readable_section([dict(no=4, name="Sugar")]),
+        existing_cue_numbers=(10,),
+    )
+    assert second.refusal is None
+    assert second.planned == ()
+    assert second.cues_already_present == ("Q010",)
+    assert [entry.cue_no for entry in second.cues_held] == ["Q020"]

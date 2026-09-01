@@ -1,0 +1,449 @@
+{
+  "cue_csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a46ee16b834226fa3/src/Lighting_Designer/03_곡파일_Sugar/LXSEQ_SAMPLE_01_Sugar_r3.cue-ex.csv",
+  "read": 89,
+  "declared_cues": [
+    "Q010",
+    "Q020",
+    "Q030",
+    "Q040",
+    "Q050",
+    "Q060",
+    "Q070",
+    "Q080",
+    "Q090",
+    "Q100",
+    "Q110",
+    "Q120",
+    "Q130",
+    "Q140",
+    "Q150",
+    "Q160",
+    "Q170",
+    "Q180"
+  ],
+  "preset_slots_resolved_now": 20,
+  "now": {
+    "planned": [
+      "Q010",
+      "Q030",
+      "Q060",
+      "Q170",
+      "Q180"
+    ],
+    "planned_count": 5,
+    "held_cues": [
+      "Q020",
+      "Q040",
+      "Q050",
+      "Q070",
+      "Q080",
+      "Q090",
+      "Q100",
+      "Q110",
+      "Q120",
+      "Q130",
+      "Q140",
+      "Q150",
+      "Q160"
+    ],
+    "held": {
+      "Q020": [
+        {
+          "group": "KEY",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q040": [
+        {
+          "group": "SIDE-L",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "SIDE-R",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q050": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q070": [
+        {
+          "group": "KEY",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q080": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q090": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q100": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q110": [
+        {
+          "group": "KEY",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q120": [
+        {
+          "group": "BACK",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "SIDE-L",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "SIDE-R",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q130": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "SIDE-L",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "SIDE-R",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q140": [
+        {
+          "group": "BACK",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "WASH-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q150": [
+        {
+          "group": "STROBE",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q160": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "WASH-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ]
+    },
+    "refusal": null
+  },
+  "with_fx": {
+    "planned": [
+      "Q010",
+      "Q030",
+      "Q060",
+      "Q100",
+      "Q120",
+      "Q170",
+      "Q180"
+    ],
+    "planned_count": 7,
+    "held_cues": [
+      "Q020",
+      "Q040",
+      "Q050",
+      "Q070",
+      "Q080",
+      "Q090",
+      "Q110",
+      "Q130",
+      "Q140",
+      "Q150",
+      "Q160"
+    ],
+    "held": {
+      "Q020": [
+        {
+          "group": "KEY",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q040": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q050": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q070": [
+        {
+          "group": "KEY",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q080": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q090": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q110": [
+        {
+          "group": "KEY",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q130": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q140": [
+        {
+          "group": "BACK",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "WASH-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q150": [
+        {
+          "group": "STROBE",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q160": [
+        {
+          "group": "MOVER-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "MOVER-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "WASH-D",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ]
+    },
+    "refusal": null
+  },
+  "all_filled": {
+    "planned": [
+      "Q010",
+      "Q020",
+      "Q030",
+      "Q040",
+      "Q050",
+      "Q060",
+      "Q070",
+      "Q080",
+      "Q090",
+      "Q100",
+      "Q110",
+      "Q120",
+      "Q130",
+      "Q160",
+      "Q170",
+      "Q180"
+    ],
+    "planned_count": 16,
+    "held_cues": [
+      "Q140",
+      "Q150"
+    ],
+    "held": {
+      "Q140": [
+        {
+          "group": "BACK",
+          "classes": [
+            "unresolved_preset"
+          ]
+        },
+        {
+          "group": "WASH-U",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ],
+      "Q150": [
+        {
+          "group": "STROBE",
+          "classes": [
+            "unresolved_preset"
+          ]
+        }
+      ]
+    },
+    "refusal": null
+  }
+}

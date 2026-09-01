@@ -1,0 +1,13 @@
+# t228 재현 — 고치기 전(83661d8 소스 + 새 검사 6개)
+# 명령: PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_lxseq_cue_mapper.py -q
+FAILED server/tests/test_lxseq_cue_mapper.py::test_a_held_row_holds_its_cue_and_only_its_cue
+FAILED server/tests/test_lxseq_cue_mapper.py::test_a_held_cue_ships_zero_rows_not_the_healthy_ones
+FAILED server/tests/test_lxseq_cue_mapper.py::test_the_held_cue_record_names_the_cause_and_the_rows_it_took_down
+FAILED server/tests/test_lxseq_cue_mapper.py::test_every_cue_held_still_refuses_the_whole_batch
+FAILED server/tests/test_lxseq_cue_mapper.py::test_a_held_cue_is_not_reported_as_video_only
+FAILED server/tests/test_lxseq_cue_mapper.py::test_a_partial_ship_is_idempotent_on_a_rerun
+6 failed, 50 passed in 0.14s
+
+# 대표 실패 (test_a_partial_ship_is_idempotent_on_a_rerun)
+>       assert [bucket.cue_no for bucket in first.planned] == ["Q010"]
+E       AssertionError: assert [] == ['Q010']

@@ -28,10 +28,13 @@
 2. **영상 콜 행은 콘솔 명령을 만들지 않는다.** 버리지도 않는다 — 별도 바구니로
    나른다.
 3. **OFF 는 페이저 정지 명령**이다(§11.1 7행). 「이펙트 안 씀」(빈칸)과 다르다.
-4. **부분 계획을 내지 않는다** (AC-LXSEQ4-007 [HARD]). 단면을 못 읽었거나
-   슬롯이 모자라거나 **한 행이라도 보류되면** 0건이다. 성한 행만 골라 보내면
-   그룹 하나 빠진 큐가 콘솔에 올라가는데, MA3 는 트래킹하므로 그 큐는 큐
-   리스트에서 정상으로 보이고 **발사할 때에야** 어긋난다.
+4. **부분 계획을 내지 않는다 — 입도는 큐다** (AC-LXSEQ4-007 [HARD]).
+   한 큐 안에서 **한 행이라도 보류되면 그 큐는 0건**이다. 성한 행만 골라
+   보내면 그룹 하나 빠진 큐가 콘솔에 올라가는데, MA3 는 트래킹하므로 그 큐는
+   큐 리스트에서 정상으로 보이고 **발사할 때에야** 어긋난다. 반면 **다른
+   큐는 서로 독립**이다 — 보류된 큐 하나가 성한 큐를 멈추지 않는다(감독 판정
+   2026-09-01 2차, t228). 단면을 못 읽었거나 슬롯이 모자라면 여전히 배치
+   전체가 0건이고, 성한 큐가 **하나도** 없을 때도 배치 거절이다.
 5. **이미 있으면 수렴한다** (AC-LXSEQ4-008 [HARD]). 시퀀스 층과 큐 층을 갈라,
    같은 시트를 두 번 돌려도 시퀀스가 복제되지 않고 이미 있는 큐는 다시
    계획하지 않는다.
@@ -82,6 +85,7 @@ __all__ = [
     "UNRESOLVED_SHEET_NOT_SUPPLIED",
     "CueBucket",
     "CueCoverageGap",
+    "CueHeldCue",
     "CueHold",
     "CueMapResult",
     "CueRowPlan",
@@ -100,7 +104,13 @@ CUE_COVERAGE_GAP = "cue_coverage_gap"
 #: 빈 시퀀스 슬롯이 없다 — 부분 계획을 내지 않는다.
 SLOT_SHORTFALL = "slot_shortfall"
 
-#: 한 행이라도 계획에 못 들어갔다 — 배치 전체가 0건이다(AC-LXSEQ4-007 [HARD]).
+#: 보류된 행 때문에 **성한 큐가 하나도 남지 않았다** — 배치가 0건이다
+#: (AC-LXSEQ4-007 [HARD]).
+#:
+#: ⚠️ 2026-09-01 2차 판정(t228)으로 **입도가 바뀌었다.** 전에는 시트 어디든
+#: 한 행이 보류되면 이 코드가 붙어 성한 큐까지 전부 멈췄다. 지금은 보류된
+#: 행이 있는 **그 큐만** 빠지고(`cues_held`), 이 코드는 남는 큐가 하나도
+#: 없을 때만 붙는다. 큐 **안**의 all-or-nothing 은 그대로다.
 #:
 #: 선행 상수 ``cue_emptied_by_hold`` 를 **대체한다.** 그쪽은 「보류 때문에 어떤
 #: 큐의 콘솔 행이 0이 된 경우」만 거절했고, 큐에 성한 행이 하나라도 남으면
@@ -355,6 +365,28 @@ class CueHold:
 
 
 @dataclass(frozen=True)
+class CueHeldCue:
+    """보류된 행이 하나라도 있어 **통째로** 빠진 큐 하나.
+
+    🔴 이 기록이 부분 출하의 **유일한** 사후 추적 수단이다. 되읽기 채널은 큐
+    내용을 안 주므로(AC-LXSEQ4-013) 콘솔에 무엇이 올라갔는지 되읽어 알 방법이
+    없다 — 산출물이 말하지 않으면 사람이 큐를 하나하나 손으로 열어야 한다.
+
+    `withheld_rows` 는 **해석은 됐는데 같은 큐가 빠져서 함께 안 나간** 행 수다.
+    이 칸이 없으면 「Q020 이 안 갔다」는 알아도 「그래서 성한 KEY 행도 안 갔다」는
+    모른다 — 그 둘은 콘솔 상태가 다르다.
+    """
+
+    cue_no: str
+    #: 이 큐에서 보류된 행 수(고칠 자리).
+    held_rows: int
+    #: 이 큐에서 성했는데 함께 빠진 행 수(고칠 게 없는데 안 나간 자리).
+    withheld_rows: int
+    #: 이 큐를 세운 보류 사유 클래스들 — 기존 어휘 그대로다.
+    hold_classes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class VideoCall:
     """영상 콜 행 — 콘솔에 안 보내고, 버리지도 않는다.
 
@@ -414,6 +446,10 @@ class CueMapResult:
     #: 콘솔 행이 0인데 **영상 콜만 있어서** 그런 큐. 결함이 아니라 상태다 —
     #: 그 큐는 조명이 할 일이 없다. 보류로 비어 버린 큐와 **다르다**(그쪽은 거절).
     video_only_cues: tuple[str, ...] = ()
+    #: 보류된 행 때문에 통째로 빠진 큐들 -- 부분 출하의 사후 추적 기록이다.
+    #: `held` 는 **행** 단위이고 이쪽은 **큐** 단위다: 콘솔에 무엇이 안 올라갔는지는
+    #: 큐 단위로만 답할 수 있다(큐가 콘솔 객체이고 행은 아니다).
+    cues_held: tuple[CueHeldCue, ...] = ()
     #: 확인 한계 — 산출물이 스스로 말한다(형제 preset_mapper 와 같은 규약).
     unverified: tuple[str, ...] = ("value_match", "tracked_value")
     unverified_reason: str = _VALUE_MATCH_REASON + " / " + _TRACKING_REASON
@@ -720,6 +756,32 @@ def map_cues(
             )
         )
 
+    # -- 보류를 **큐 단위**로 접는다 (감독 판정 2026-09-01 2차, t228) --------
+    #
+    # `held` 는 행 단위인데 콘솔 객체는 큐다. 「무엇이 안 올라갔나」는 큐 단위로만
+    # 답할 수 있으므로, 여기서 한 번 접어 두고 아래 세 자리(거절 판단 · planned
+    # 걸러내기 · video_only 판정)가 **같은 집합**을 본다. 세 자리가 각자 접으면
+    # 한 자리만 고친 변경이 조용히 남는다.
+    held_row_count: dict[str, int] = dict()
+    held_classes_by_cue: dict[str, list[str]] = dict()
+    for item in held:
+        held_row_count[item.cue_no] = held_row_count.get(item.cue_no, 0) + 1
+        bucket_classes = held_classes_by_cue.setdefault(item.cue_no, [])
+        for cause in item.hold_classes:
+            if cause not in bucket_classes:
+                bucket_classes.append(cause)
+    cues_held = tuple(
+        CueHeldCue(
+            cue_no=cue,
+            held_rows=held_row_count[cue],
+            # 해석은 됐는데 그 큐가 빠져서 함께 안 나가는 행들.
+            withheld_rows=len(rows_by_cue.get(cue, ())),
+            hold_classes=tuple(held_classes_by_cue[cue]),
+        )
+        for cue in seen_cues
+        if cue in held_row_count
+    )
+
     declared = tuple(declared_cues)
     covered = tuple(cue for cue in declared if cue in seen_cues)
     missing = tuple(cue for cue in declared if cue not in seen_cues)
@@ -741,17 +803,33 @@ def map_cues(
                 + " — 부분집합은 금지다(§11.1). 빠진 큐는 트래킹으로 지나가는데, "
                 "그 큐에서 무엇이 살아 있어야 하는지 시트가 말한 적이 없다"
             ),
+            cues_held=cues_held,
         )
 
-    # 🔴 [HARD] AC-LXSEQ4-007 — 한 행이라도 못 옮기면 배치 전체가 0건이다.
+    # 🔴 [HARD] AC-LXSEQ4-007 — 전부 아니면 아무것도. **입도는 큐**다.
+    #
+    # 큐 **안**에서는 그대로 all-or-nothing 이다(아래 planned 걸러내기): 한 행이
+    # 보류되면 그 큐는 성한 행까지 통째로 안 나간다. 한 그룹이 빠진 큐는 MA3
+    # 트래킹 때문에 큐 리스트에서 정상으로 보이고 발사할 때에야 어긋난다 —
+    # 관객 앞에서다. 되읽기 채널은 큐 내용을 안 주므로(AC-LXSEQ4-013) 사후 탐지
+    # 수단도 없다.
+    #
+    # 큐 **사이**는 서로 독립이다(감독 판정 2026-09-01 2차, t228). t207 이 이
+    # 판정을 배치 층에 놓은 근거는 정본 `:272` 「부분집합 금지」였는데, 그 조항은
+    # CUE-EX 시트의 `Q#` 열 규격이라 **입력 시트가 CUE 시트의 부분집합이면
+    # 안 된다**는 뜻이다 — 콘솔에 무엇이 닿는지는 말하지 않는다. 그쪽은 위
+    # CUE_COVERAGE_GAP 이 이미 지킨다. 배치 층 적용은 그 조항의 과잉 적용이었고,
+    # 그 대가로 안 풀리는 참조 하나가 성한 큐 전부를 멈췄다(t225 실측: 여덟 큐
+    # 중 전 행 해결이 다섯인데 계획된 큐는 0개).
     #
     # 이 게이트가 `held` 를 **소비하지 않는다** — 아래 `held=tuple(held)` 로 그대로
-    # 실어 preview 가 고칠 자리를 전부 보여준다. 바뀐 것은 **콘솔에 무엇이 닿는가**
-    # 하나뿐이다: 전에는 성한 행만 골라 그 큐를 불완전한 채로 내보냈다.
+    # 실어 preview 가 고칠 자리를 전부 보여준다.
     #
-    # 시트 층의 결함이라 콘솔 단면을 읽기 전에 답한다 — 콘솔이 어떤 상태든 처방이
-    # 같기 때문이다(시트를 고쳐 다시 부른다).
-    if held:
+    # 성한 큐가 **하나도** 없으면 예전과 같은 배치 거절이다. 시트 층의 결함이라
+    # 콘솔 단면을 읽기 전에 답한다 — 콘솔이 어떤 상태든 처방이 같기 때문이다
+    # (시트를 고쳐 다시 부른다).
+    held_cue_names = frozenset(entry.cue_no for entry in cues_held)
+    if held and not any(cue in rows_by_cue and cue not in held_cue_names for cue in declared):
         return CueMapResult(
             planned=(),
             held=tuple(held),
@@ -761,11 +839,12 @@ def map_cues(
             refusal_detail=(
                 "행 "
                 + str(len(held))
-                + " 개를 계획에 못 넣어 **아무것도 보내지 않았다** — 부분 투입이 없다"
-                "(§11.1 1행 부분집합 금지). 한 그룹이 빠진 큐는 MA3 트래킹 때문에 큐 "
-                "리스트에서 정상으로 보이고 발사할 때에야 어긋난다. 고칠 자리: "
-                + _held_digest(held)
+                + " 개를 계획에 못 넣었고 그 결과 **성한 큐가 하나도 남지 않았다** — "
+                "아무것도 보내지 않았다. 큐 안에서는 전부 아니면 아무것도다: 한 그룹이 "
+                "빠진 큐는 MA3 트래킹 때문에 큐 리스트에서 정상으로 보이고 발사할 "
+                "때에야 어긋난다. 고칠 자리: " + _held_digest(held)
             ),
+            cues_held=cues_held,
         )
 
     names, names_incomplete = _occupied_names(sequence_section)
@@ -785,6 +864,7 @@ def map_cues(
             coverage_gap=None,
             refusal=reason[0],
             refusal_detail=reason[1],
+            cues_held=cues_held,
         )
 
     # 시퀀스 층: 이미 있으면 그 슬롯을 그대로 쓴다(already_present) -- 새로
@@ -811,6 +891,7 @@ def map_cues(
                     + " 안에 빈자리가 없다. 점유 슬롯에는 쓰지 않는다: 시퀀스는 경고 "
                     "없이 덮이고 내용은 되읽을 수 없어 복구 수단이 없다"
                 ),
+                cues_held=cues_held,
             )
     else:
         slot = existing_slot
@@ -823,24 +904,29 @@ def map_cues(
         cues_already_present = tuple(cue for cue in declared if _cue_number(cue) in present)
 
     # 콘솔 행이 0인데 영상 콜만 있어서 그런 큐는 **정상 상태**다 -- 그 큐는
-    # 조명이 할 일이 없다. 「보류로 비어 버린 큐」 갈래는 여기 없다: 위의
-    # ROWS_HELD 게이트가 held 가 하나라도 있으면 이미 거절했으므로 이 지점의
-    # held 는 반드시 비어 있다(선행 상수 cue_emptied_by_hold 는 그 게이트에
-    # 완전히 포함돼 폐기됐다).
-    assert not held  # 위 게이트가 보장한다 -- 아래 갈래의 전제다
+    # 조명이 할 일이 없다.
+    #
+    # 🔴 `held_cue_names` 배제가 하중을 진다. 입도가 큐로 내려온 뒤로 이 지점의
+    # held 는 더 이상 비어 있지 않고(전에는 위 게이트가 보장했다), 보류로 비어
+    # 버린 큐는 `rows_by_cue` 가 비었다는 **같은 술어**에 걸린다. 빼지 않으면
+    # 산출물이 「그 큐는 영상만 있다」고 거짓으로 말해 고칠 자리를 감춘다.
     video_only_cues = tuple(
         cue
         for cue in declared
         if not rows_by_cue.get(cue)
         and cue not in cues_already_present
+        and cue not in held_cue_names
         and any(call.cue_no == cue for call in video_calls)
     )
 
     placement_obj = SequencePlacement(name=sequence_name, slot=slot)
+    # 🔴 `held_cue_names` 가 큐 안의 all-or-nothing 이다 -- 보류된 행이 하나라도
+    # 있는 큐는 성한 행까지 통째로 빠진다. 이 조건을 지우면 그룹 하나가 빠진 큐가
+    # 콘솔에 올라간다.
     planned = tuple(
         CueBucket(cue_no=cue, rows=tuple(rows_by_cue[cue]))
         for cue in declared
-        if rows_by_cue.get(cue) and cue not in cues_already_present
+        if rows_by_cue.get(cue) and cue not in cues_already_present and cue not in held_cue_names
     )
     return CueMapResult(
         planned=planned,
@@ -853,6 +939,7 @@ def map_cues(
         already_present=None if is_new_sequence else placement_obj,
         cues_already_present=cues_already_present,
         video_only_cues=video_only_cues,
+        cues_held=cues_held,
         unverified=tuple(unverified),
         unverified_reason=unverified_reason,
     )
