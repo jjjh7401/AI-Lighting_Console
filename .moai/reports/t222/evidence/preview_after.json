@@ -1,0 +1,120 @@
+{
+  "action": "preview",
+  "approve": false,
+  "listen_port": 9005,
+  "limit": null,
+  "pool_path": "DataPool/PresetPools/2",
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "baseline": {
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "ok": false,
+      "child_count": null,
+      "truncated": false,
+      "detail": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "fixtures": {
+      "path": "Patch/Stages/1/Fixtures",
+      "ok": true,
+      "child_count": 86,
+      "children_in_reply": 19,
+      "names": [
+        "KEY 101",
+        "KEY 102",
+        "KEY 103",
+        "KEY 104",
+        "KEY 105",
+        "KEY 106",
+        "FOH 111",
+        "FOH 112",
+        "FOH 113",
+        "FOH 114",
+        "FOH 115",
+        "FOH 116",
+        "FOH 117",
+        "FOH 118",
+        "BLIND 601",
+        "BLIND 602",
+        "BLIND 603",
+        "BLIND 604",
+        "BLIND 605"
+      ],
+      "truncated": true,
+      "detail": null
+    },
+    "pool_before": {
+      "path": "DataPool/PresetPools/2",
+      "ok": true,
+      "child_count": 0,
+      "children_in_reply": 0,
+      "names": [],
+      "truncated": false,
+      "detail": null
+    },
+    "channel_trustworthy": true
+  },
+  "coordinates_read": {
+    "count": 86,
+    "reason": null
+  },
+  "derived": [],
+  "skipped": [
+    {
+      "preset_id": "POS.01",
+      "target_group": "KEY",
+      "reason": "degenerate_rig",
+      "detail": "좌표 86대를 읽었지만 수평 폭이 없다 (x span 0.000m · y span 0.000m <= 0.05m) — 목표점이 한 점으로 접혀 산출값이 무의미하다. 리그 좌표를 콘솔에 넣어야 풀린다"
+    },
+    {
+      "preset_id": "POS.02",
+      "target_group": "MOVER-D",
+      "reason": "degenerate_rig",
+      "detail": "좌표 86대를 읽었지만 수평 폭이 없다 (x span 0.000m · y span 0.000m <= 0.05m) — 목표점이 한 점으로 접혀 산출값이 무의미하다. 리그 좌표를 콘솔에 넣어야 풀린다"
+    },
+    {
+      "preset_id": "POS.03",
+      "target_group": "BACK",
+      "reason": "degenerate_rig",
+      "detail": "좌표 86대를 읽었지만 수평 폭이 없다 (x span 0.000m · y span 0.000m <= 0.05m) — 목표점이 한 점으로 접혀 산출값이 무의미하다. 리그 좌표를 콘솔에 넣어야 풀린다"
+    },
+    {
+      "preset_id": "POS.04",
+      "target_group": "MOVER-U",
+      "reason": "degenerate_rig",
+      "detail": "좌표 86대를 읽었지만 수평 폭이 없다 (x span 0.000m · y span 0.000m <= 0.05m) — 목표점이 한 점으로 접혀 산출값이 무의미하다. 리그 좌표를 콘솔에 넣어야 풀린다"
+    },
+    {
+      "preset_id": "POS.05",
+      "target_group": "MOVER-ALL",
+      "reason": "degenerate_rig",
+      "detail": "좌표 86대를 읽었지만 수평 폭이 없다 (x span 0.000m · y span 0.000m <= 0.05m) — 목표점이 한 점으로 접혀 산출값이 무의미하다. 리그 좌표를 콘솔에 넣어야 풀린다"
+    },
+    {
+      "preset_id": "POS.06",
+      "target_group": "KEY+BACK",
+      "reason": "degenerate_rig",
+      "detail": "좌표 86대를 읽었지만 수평 폭이 없다 (x span 0.000m · y span 0.000m <= 0.05m) — 목표점이 한 점으로 접혀 산출값이 무의미하다. 리그 좌표를 콘솔에 넣어야 풀린다"
+    }
+  ],
+  "unverified": [
+    "field_record"
+  ],
+  "unverified_reason": "좌표 기하에서 산출한 값이다 — 현장에서 실제 빔 착지를 보고 잡은 값이 아니다",
+  "bundles": [],
+  "stopped": "preview",
+  "pool_after": {
+    "path": "DataPool/PresetPools/2",
+    "ok": true,
+    "child_count": 0,
+    "children_in_reply": 0,
+    "names": [],
+    "truncated": false,
+    "detail": null
+  },
+  "approval_requests": [],
+  "questions_asked": []
+}
