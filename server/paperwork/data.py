@@ -32,6 +32,7 @@ from server.prechk.inventory import (
     read_inventory,
 )
 from server.prechk.patch import normalize_address
+from server.safety.console import StateQueryError
 
 # -- patch sheet ----------------------------------------------------------------
 
@@ -97,7 +98,18 @@ def build_patch_sheet(
     ``max`` here — an incomplete mode set would fold to a bound smaller than
     the true one and clear gaps it must not clear).
     """
-    inventory = read_inventory(port, policy)
+    try:
+        inventory = read_inventory(port, policy)
+    except StateQueryError as error:
+        # t187 5+1 (2): the single chokepoint every patch-sheet consumer
+        # (tools.py build_patch_sheet · paperwork_api.py · build_magic_sheet ·
+        # bundle.py) shares. No sibling `except StateQueryError` exists
+        # anywhere in server/paperwork or server/web/paperwork_api.py
+        # (measured), so translating here creates no dead code -- unlike
+        # the tools.py sites that already special-case StateQueryError.
+        # Reuses InventoryReadError (no new exception type) -- t109 already
+        # removed a second vocabulary for the same failure once.
+        raise InventoryReadError(f"patch sheet unread — console did not answer: {error}") from error
     rows = tuple(
         PatchRow(
             slot=fixture.slot,
