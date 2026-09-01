@@ -1,0 +1,14 @@
+좌표 대수: 86
+derived : ['POS.01', 'POS.05', 'POS.06']
+   POS.01 n=6 pan [180.0] tilt [128.7]
+   label: POS.01 보컬 센터 페이스 · 산출값
+   POS.05 n=16 pan [-178.0, -174.0, -170.0, -166.0, -162.0, -158.0, -154.0, -150.0, 150.0, 154.0, 158.0, 162.0, 166.0, 170.0, 174.0, 178.0] tilt [45.0]
+   label: POS.05 팬아웃 종점 (객석 상단) · 산출값
+   POS.06 n=18 pan [180.0] tilt [128.7]
+   label: POS.06 센터 집중 (브리지) · 산출값
+skipped : [('POS.02', 'unaimable'), ('POS.03', 'unaimable'), ('POS.04', 'unaimable')]
+bundle 첫 3줄 (--approve 였다면 콘솔에 나갈 명령):
+    Fixture 101 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 128.7
+    Fixture 102 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 128.7
+    Label Preset 2.1 'POS.01 보컬 센터 페이스 · 산출값'
+    ClearAll

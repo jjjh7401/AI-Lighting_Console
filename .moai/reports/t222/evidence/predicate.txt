@@ -1,0 +1,140 @@
+[
+  {
+    "rig": "live_86_console",
+    "n": 86,
+    "span_x": 0.0,
+    "span_y": 0.0,
+    "span_z": 0.0,
+    "A_span_zero": true,
+    "A_span_noise": true,
+    "B_low_confidence": true,
+    "B_reason": "no_spatial_spread",
+    "A_zero_vs_B": "agree",
+    "A_noise_vs_B": "agree",
+    "C_plane_noise": true,
+    "C_vs_B": "agree",
+    "C_vs_B_subset": "agree"
+  },
+  {
+    "rig": "synthetic_12",
+    "n": 12,
+    "span_x": 6.0,
+    "span_y": 8.0,
+    "span_z": 1.0,
+    "A_span_zero": false,
+    "A_span_noise": false,
+    "B_low_confidence": false,
+    "B_reason": null,
+    "A_zero_vs_B": "agree",
+    "A_noise_vs_B": "agree",
+    "C_plane_noise": false,
+    "C_vs_B": "agree",
+    "C_vs_B_subset": "agree"
+  },
+  {
+    "rig": "weak_gaps_20",
+    "n": 20,
+    "span_x": 8.0,
+    "span_y": 3.0,
+    "span_z": 0.0,
+    "A_span_zero": false,
+    "A_span_noise": false,
+    "B_low_confidence": false,
+    "B_reason": null,
+    "A_zero_vs_B": "agree",
+    "A_noise_vs_B": "agree",
+    "C_plane_noise": false,
+    "C_vs_B": "agree",
+    "C_vs_B_subset": "agree"
+  },
+  {
+    "rig": "vertical_only_8",
+    "n": 8,
+    "span_x": 0.0,
+    "span_y": 0.0,
+    "span_z": 3.5,
+    "A_span_zero": false,
+    "A_span_noise": false,
+    "B_low_confidence": true,
+    "B_reason": "vertical_spread_only",
+    "A_zero_vs_B": "DISAGREE",
+    "A_noise_vs_B": "DISAGREE",
+    "C_plane_noise": true,
+    "C_vs_B": "agree",
+    "C_vs_B_subset": "agree"
+  },
+  {
+    "rig": "even_depth_9",
+    "n": 9,
+    "span_x": 4.0,
+    "span_y": 8.0,
+    "span_z": 0.0,
+    "A_span_zero": false,
+    "A_span_noise": false,
+    "B_low_confidence": true,
+    "B_reason": "weak_gap_separation",
+    "A_zero_vs_B": "DISAGREE",
+    "A_noise_vs_B": "DISAGREE",
+    "C_plane_noise": false,
+    "C_vs_B": "DISAGREE",
+    "C_vs_B_subset": "agree"
+  },
+  {
+    "rig": "single_bar_9",
+    "n": 9,
+    "span_x": 8.0,
+    "span_y": 0.0,
+    "span_z": 0.0,
+    "A_span_zero": false,
+    "A_span_noise": false,
+    "B_low_confidence": false,
+    "B_reason": null,
+    "A_zero_vs_B": "agree",
+    "A_noise_vs_B": "agree",
+    "C_plane_noise": false,
+    "C_vs_B": "agree",
+    "C_vs_B_subset": "agree"
+  },
+  {
+    "rig": "single_fixture_1",
+    "n": 1,
+    "span_x": 0.0,
+    "span_y": 0.0,
+    "span_z": 0.0,
+    "A_span_zero": true,
+    "A_span_noise": true,
+    "B_low_confidence": true,
+    "B_reason": "no_spatial_spread",
+    "A_zero_vs_B": "agree",
+    "A_noise_vs_B": "agree",
+    "C_plane_noise": true,
+    "C_vs_B": "agree",
+    "C_vs_B_subset": "agree"
+  },
+  {
+    "rig": "tiny_spread_6",
+    "n": 6,
+    "span_x": 0.05,
+    "span_y": 0.0,
+    "span_z": 0.0,
+    "A_span_zero": false,
+    "A_span_noise": true,
+    "B_low_confidence": true,
+    "B_reason": "no_spatial_spread",
+    "A_zero_vs_B": "DISAGREE",
+    "A_noise_vs_B": "agree",
+    "C_plane_noise": true,
+    "C_vs_B": "agree",
+    "C_vs_B_subset": "agree"
+  }
+]
+
+rig               A0     Anoise  C      B      B_reason              C~B       C~Bsub
+live_86_console   True   True    True   True   no_spatial_spread     agree     agree
+synthetic_12      False  False   False  False  None                  agree     agree
+weak_gaps_20      False  False   False  False  None                  agree     agree
+vertical_only_8   False  False   True   True   vertical_spread_only  agree     agree
+even_depth_9      False  False   False  True   weak_gap_separation   DISAGREE  agree
+single_bar_9      False  False   False  False  None                  agree     agree
+single_fixture_1  True   True    True   True   no_spatial_spread     agree     agree
+tiny_spread_6     False  True    True   True   no_spatial_spread     agree     agree
