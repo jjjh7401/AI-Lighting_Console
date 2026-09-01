@@ -28,6 +28,7 @@ from server.lxseq.preset_parser import (
     HOLD_VALUE_NOT_MACHINE_READABLE,
     PRESET_SHEET_COLUMNS,
     UnknownPresetSheetError,
+    classify_storability,
     parse_preset_csv,
     resolve_sheet_kind,
 )
@@ -184,18 +185,18 @@ class TestStorability:
         """
         by_kind = dict((k, _parsed(k).records) for k in EXPECTED_ROWS)
         storable = dict((k, sum(1 for r in v if r.storable)) for k, v in by_kind.items())
-        assert storable == dict([("preset-dim", 6), ("preset-col", 6), ("preset-bm", 0)])
-        assert sum(storable.values()) == 12
+        assert storable == dict([("preset-dim", 6), ("preset-col", 8), ("preset-bm", 0)])
+        assert sum(storable.values()) == 14
 
     def test_every_held_record_carries_at_least_one_reason(self):
         """보류를 버리지 않는다 — 사유 없이 보류하면 다음 사람이 못 푼다.
 
-        13 -> 7 은 t134 가 col RGB 6행을 열었기 때문이다. **막던 사유가 사라진
-        것이지 보류가 조용히 버려진 것이 아니다** — 아래 클래스별 개수가 그것을
-        말한다.
+        13 -> 7 은 t134 가 col RGB 6행을 열었기 때문이고, 7 -> 5 는 t229 가 켈빈
+        2행(COL.02·COL.03)을 열었기 때문이다. **막던 사유가 사라진 것이지 보류가
+        조용히 버려진 것이 아니다** — 아래 클래스별 개수가 그것을 말한다.
         """
         held = _held()
-        assert len(held) == 7
+        assert len(held) == 5
         assert all(record.hold_reasons for record in held)
         assert all(reason.detail.strip() for record in held for reason in record.hold_reasons)
 
@@ -210,7 +211,6 @@ class TestStorability:
                 [
                     ("attribute_probe_rejected", 3),
                     ("family_out_of_scope", 3),
-                    ("no_rgb_value", 2),
                 ]
             )
         )
@@ -256,7 +256,15 @@ class TestStorability:
         )
         seen = set(c for record in _held() for c in record.hold_classes)
         assert seen <= known
-        assert len(seen) == 3, "정본에서 실제로 나오는 클래스는 셋이다"
+        assert len(seen) == 2, "정본에서 실제로 나오는 클래스는 둘이다 (t229 전에는 셋)"
+
+        # 🔴 `no_rgb_value` 가 정본에서 사라진 것은 **켈빈 2행이 열렸기 때문**이지
+        # 그 클래스가 죽은 것이 아니다. 숫자만 3 -> 2 로 낮추면 그 클래스가 조용히
+        # 고아가 되고, 다음 사람이 「안 쓰는 클래스」로 읽고 지운다. 도달 가능한지
+        # 여기서 직접 쏴서 고정한다 — 정의역 밖 색온도가 그 자리다.
+        outside_domain, holds = classify_storability("preset-col", "~40000K")
+        assert not outside_domain
+        assert [h.hold_class for h in holds] == [HOLD_NO_RGB_VALUE]
 
     def test_a_row_blocked_twice_carries_both_reasons(self):
         """한 사유만 실으면 하나를 풀었을 때 그 행이 열릴 것처럼 보인다.

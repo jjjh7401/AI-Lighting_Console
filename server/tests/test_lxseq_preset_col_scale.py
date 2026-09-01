@@ -26,6 +26,7 @@ from pathlib import Path
 
 from server.lxseq.preset_parser import (
     HOLD_NO_RGB_VALUE,
+    classify_storability,
     col_rgb_percents,
     parse_preset_csv,
 )
@@ -40,20 +41,31 @@ def _records():
 
 
 class TestTheSixRgbRowsOpen:
-    """여는 것은 **6행이지 8행이 아니다.**"""
+    """t134 가 RGB 6행을, t229 가 켈빈 2행을 열어 **8행 전부**가 열린다."""
 
-    def test_the_rgb_rows_are_storable_and_the_kelvin_rows_are_not(self):
+    def test_every_row_including_the_kelvin_pair_is_storable(self):
+        """t134 가 RGB 6행을, **t229 가 켈빈 2행**을 열어 8행 전부가 열린다."""
         by_id = dict((r.preset_id, r) for r in _records())
         storable = sorted(pid for pid, r in by_id.items() if r.storable)
-        assert storable == ["COL.01", "COL.04", "COL.05", "COL.06", "COL.07", "COL.08"]
-        assert not by_id["COL.02"].storable
-        assert not by_id["COL.03"].storable
+        assert storable == [
+            "COL.01",
+            "COL.02",
+            "COL.03",
+            "COL.04",
+            "COL.05",
+            "COL.06",
+            "COL.07",
+            "COL.08",
+        ]
 
-    def test_the_kelvin_rows_keep_their_own_reason(self):
-        """스케일을 풀어도 켈빈 2행은 안 열린다 — 사유가 다르고 소유자가 다르다(t133)."""
-        by_id = dict((r.preset_id, r) for r in _records())
-        for pid in ("COL.02", "COL.03"):
-            assert by_id[pid].hold_classes == (HOLD_NO_RGB_VALUE,)
+    def test_the_no_rgb_reason_is_still_reachable(self):
+        """정본에서 그 사유가 사라진 것은 **켈빈이 열렸기 때문**이지 클래스가 죽은
+        것이 아니다. 숫자만 바꾸고 여기를 지우면 그 사유가 조용히 고아가 된다 —
+        정의역 밖 색온도로 직접 쏴서 살아 있음을 고정한다."""
+        assert not [r for r in _records() if HOLD_NO_RGB_VALUE in r.hold_classes]
+        storable, holds = classify_storability("preset-col", "~40000K")
+        assert not storable
+        assert [h.hold_class for h in holds] == [HOLD_NO_RGB_VALUE]
 
     def test_no_row_still_carries_the_scale_reason(self):
         """이 카드가 지운 사유가 정말 없어졌는지 — 개수가 아니라 부재로 잰다."""
@@ -69,9 +81,15 @@ class TestTheReaderAndTheJudgeShareOnePredicate:
                 assert col_rgb_percents(record.value_raw) is not None
 
     def test_every_held_row_yields_nothing(self):
+        """정본 col 은 t229 이후 보류가 0이라 이 루프만으로는 **공허하다.**
+        아래 합성 값이 판별력을 진다."""
         for record in _records():
             if not record.storable:
                 assert col_rgb_percents(record.value_raw) is None
+        for value in ("~40000K", "R2 뭔가", "현장 레코드"):
+            storable, _holds = classify_storability("preset-col", value)
+            assert not storable, value
+            assert col_rgb_percents(value) is None, value
 
     def test_a_partial_triplet_is_held_not_passed(self):
         """`R2` 만 있고 G·B 가 없는 값 — 옛 술어(`R\\s*\\d`)는 통과시켰다."""
@@ -106,9 +124,24 @@ class TestTheConversion:
             percents = col_rgb_percents(record.value_raw)
             if percents is None:
                 continue
+            # 시트에 RGB 가 **적힌** 행만 이 왕복의 대상이다. 켈빈 행은 원문에
+            # 숫자 삼원색이 없으므로 아래 별도 검사가 변환값으로 잰다.
             raw = [int(t) for t in __import__("re").findall(r"[RGB]\s*(\d+)", record.value_raw)]
+            if len(raw) != 3:
+                continue
             for original, pct in zip(raw, percents, strict=True):
                 assert round(pct / 100 * 65535) // 256 == original
+
+    def test_the_converted_kelvin_values_round_trip_too(self):
+        """켈빈 행도 같은 척도를 탄다 — 변환값이 저 12개 손실 값에 걸리면 여기서 걸린다."""
+        from server.lxseq.preset_parser import _col_components
+
+        for value in ("~3200K", "~5600K"):
+            components = _col_components(value)
+            percents = col_rgb_percents(value)
+            assert components is not None and percents is not None, value
+            for original, pct in zip(components, percents, strict=True):
+                assert round(pct / 100 * 65535) // 256 == original, (value, original, pct)
 
     def test_the_lossy_values_are_named_not_hidden(self):
         """시트가 바뀌어 저 12개가 들어오면 ±1 이 생긴다 — 그 사실을 검사로 고정한다."""
@@ -267,13 +300,18 @@ class TestTheColorValueReachesTheConsole:
         assert port.executed[first + 2].startswith("Label Preset 4.")
         assert port.executed[first + 3] == "ClearAll"
 
-    def test_the_two_kelvin_rows_are_never_stored(self):
-        """**6행이지 8행이 아니다** — 발화에도 그렇게 나타나야 한다."""
+    def test_the_two_kelvin_rows_are_stored_too(self):
+        """t229 이후 **8행 전부** 나간다 — 발화에도 그렇게 나타나야 한다.
+
+        t134 시점에는 「6행이지 8행이 아니다」였고 두 화이트 행이 라벨에 없는 것이
+        그 증거였다. 켈빈이 열렸으므로 이제 반대가 증거다.
+        """
         _payload, port = _dispatch_col()
         stores = [c for c in port.executed if c.startswith("Store Preset")]
-        assert len(stores) == 6
+        assert len(stores) == 8, port.executed
         labels = [c for c in port.executed if c.startswith("Label Preset")]
-        assert not [c for c in labels if "화이트" in c]
+        white = [c for c in labels if "화이트" in c]
+        assert len(white) == 2, labels
 
     def test_the_pool_number_comes_from_the_console_listing(self):
         """비공허성 — 4 는 상수가 아니라 콘솔이 답한 `Color` 의 번호다."""

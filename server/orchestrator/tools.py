@@ -87,6 +87,7 @@ from server.lxseq.position_derive import preset_id_from_console_head
 from server.lxseq.preset_mapper import map_presets
 from server.lxseq.preset_parser import (
     UnknownPresetSheetError,
+    col_conversion_note,
     col_rgb_percents,
     dim_level_percent,
     parse_preset_csv,
@@ -1768,6 +1769,29 @@ def _lxseq_preset_apply_command(placement) -> str | None:
         # 추측해서 싣지 않는다.
         return None
     return preset_apply_command(LXSEQ_PRESET_APPLY_GROUP_NO, attribute, level)
+
+
+def _lxseq_preset_planned_row(placement) -> dict:
+    """승인 카드에 뜨는 계획 한 줄.
+
+    🔴 `converted` 는 **켈빈에서 만든 값일 때만** 붙는다. 승인 카드에는 시트
+    원문(`~3200K`)만 뜨는데 콘솔에 나가는 것은 근사된 RGB 라서, 그 둘이 다르다는
+    사실이 승인하는 사람 눈앞에 있어야 한다. 근사가 조용히 나가면 「조용히 틀린
+    것이 크게 없는 것보다 나쁘다」에 정면으로 걸린다.
+
+    RGB 가 원문에 있는 행에는 이 키가 **없다** — 변환이 없었으므로 알릴 것도 없다.
+    키를 항상 붙이면 「변환됨」이 의미를 잃는다.
+    """
+    row = dict(
+        preset_id=placement.preset_id,
+        name=placement.name,
+        slot=placement.slot,
+        value=placement.value_raw,
+    )
+    note = col_conversion_note(placement.value_raw)
+    if note is not None:
+        row["converted"] = note
+    return row
 
 
 def _count_hold_classes(held) -> dict:
@@ -5081,10 +5105,7 @@ def build_toolset(
                 {"row": r.row, "kind": r.kind, "detail": r.detail} for r in parsed.rejected
             ],
             "read": len(parsed.records),
-            "planned": [
-                {"preset_id": p.preset_id, "name": p.name, "slot": p.slot, "value": p.value_raw}
-                for p in result.planned
-            ],
+            "planned": [_lxseq_preset_planned_row(p) for p in result.planned],
             "held": [
                 {
                     "preset_id": h.preset_id,
