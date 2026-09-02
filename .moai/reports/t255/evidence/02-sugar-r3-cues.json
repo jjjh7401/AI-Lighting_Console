@@ -1,0 +1,93 @@
+{
+  "children": [
+    {
+      "class": "Cue",
+      "i": 1,
+      "name": "OffCue"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 0,
+      "i": 2,
+      "name": "CueZero"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 1,
+      "i": 3,
+      "name": "Cue 1"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 10,
+      "i": 4,
+      "name": "Q010 INTRO 화사"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 20,
+      "i": 5,
+      "name": "Q020 VERSE1 경쾌"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 30,
+      "i": 6,
+      "name": "Q030 VERSE1 확장"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 40,
+      "i": 7,
+      "name": "Q040 PRE1 축적"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 50,
+      "i": 8,
+      "name": "Q050 CHORUS1 개방"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 60,
+      "i": 9,
+      "name": "Q060 CHORUS1 유지"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 70,
+      "i": 10,
+      "name": "Q070 VERSE2 하강"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 80,
+      "i": 11,
+      "name": "Q080 PRE2 축적"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 90,
+      "i": 12,
+      "name": "Q090 CHORUS2 개방"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 100,
+      "i": 13,
+      "name": "Q100 CHORUS2 유지"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 21,
+    "class": "Sequence",
+    "name": "Sugar r3"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/Sequences/3",
+  "truncated": true,
+  "v": 1
+}
