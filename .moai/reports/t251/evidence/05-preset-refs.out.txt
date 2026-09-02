@@ -1,0 +1,41 @@
+### 참조 총수 (셀 등장 횟수)
+  COL    48 회 · 그 계열을 쓰는 행  48
+  FX     30 회 · 그 계열을 쓰는 행  30
+  POS    12 회 · 그 계열을 쓰는 행  12
+  BM     10 회 · 그 계열을 쓰는 행  10
+
+### Dim 열이 프리셋 참조인가 숫자인가 (앞 8행)
+  cue Q010   BACK       dim='55'       col='COL.01'   fx=''
+  cue Q010   WASH-U     dim='55'       col='COL.01'   fx=''
+  cue Q010   HAZE       dim='40'       col=''         fx=''
+  cue Q020   KEY        dim='70'       col='COL.02'   fx=''
+  cue Q020   BACK       dim='35'       col=''         fx=''
+  cue Q020   WASH-U     dim='0'        col=''         fx=''
+  cue Q030   SIDE-L     dim='40'       col='COL.06'   fx='FX.02'
+  cue Q030   SIDE-R     dim='40'       col='COL.06'   fx='FX.02'
+
+### 시트에 등장하는 프리셋 ID 전체
+  BM.01      3 회
+  BM.02      3 회
+  BM.03      3 회
+  BM.04      1 회
+  COL.01     14 회
+  COL.02     4 회
+  COL.04     13 회
+  COL.05     5 회
+  COL.06     10 회
+  COL.07     2 회
+  FX.01      8 회
+  FX.02      4 회
+  FX.03      5 회
+  FX.04      2 회
+  FX.05      4 회
+  FX.06      1 회
+  FX.07      1 회
+  FX.08      5 회
+  POS.01     1 회
+  POS.02     3 회
+  POS.03     1 회
+  POS.04     2 회
+  POS.05     3 회
+  POS.06     2 회
