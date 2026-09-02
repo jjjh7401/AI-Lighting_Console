@@ -192,8 +192,40 @@ _CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
 #: write and needs operator approval; the live pass (138 names enumerated
 #: across windows, then read with a fabricated control probe) is t104's own
 #: closing condition and is where this grant gets its confirmation.
+#:
+#: 2026-09-02 granted revision (re-pin) — t235/t242: responder 1.6.2 → 1.6.3.
+#: ADDITIVE `ROOT_ALIASES` entries `programmer` / `programmerpart` /
+#: `selection`. Operator-approved 2026-09-02, after the console `HelpLua`
+#: exposure check, and explicitly scoped by that approval to "patch only,
+#: deployment separate" — the deploy is NOT covered here.
+#:
+#: The grant is motivated by a MEASUREMENT, not a preference: three lanes read
+#: `path segment not found: 'Programmer'` as a structural limit of the MA3
+#: API. It was not. Path resolution walks `safe_children`, which returns
+#: `Children()` in full (the 24-child cap binds the reply snapshot only), and
+#: `find_child` compares both sides lowercased — so neither truncation nor
+#: case explains the failure. What remained was the ABSENCE OF AN ALIAS: the
+#: first segment fell through to a `Root()` child-name match. MA Lighting's
+#: Object-Free API lists `Programmer()` / `ProgrammerPart()` / `Selection()`
+#: beside `Root()` / `DataPool()` / `Patch()`.
+#:
+#: The WIRE CONTRACT does NOT change — no new verb, no new token, no new reply
+#: field. `PROTOCOL.md` is untouched by this revision and keeps its existing
+#: digest; only the set of first segments the responder can address grows.
+#: Every alias is a guarded global call (`X and X()`), so a console lacking
+#: the global yields nil, the caller falls through to the `Root()` walk, and
+#: the path fails exactly as in 1.6.2 — `patch` has shipped in that same shape
+#: since before this change, which is where the safety argument comes from.
+#:
+#: NOT live-verified: this rig has not been shown to expose those globals to
+#: the responder, nor that the returned handle answers `Children()` the way
+#: the reply builders need. Deploying the plugin is a console write and is
+#: OUTSIDE this grant. Deployment is confirmed BY VERSION — `ping` must answer
+#: 1.6.3; a rig answering 1.6.2 does not carry the aliases whatever main
+#: contains (this repo has the live-1.6.1 / main-1.6.2 precedent). That is the
+#: reason the version is bumped at all.
 _CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
-    "console/lua/copilot_responder.lua": "5555442b6754efb3add61587da4f8f0b3378e417",
+    "console/lua/copilot_responder.lua": "75ab824876e93c6eef81827a6b85b6ce7af3535b",
     "console/lua/PROTOCOL.md": "984210533aab40501e32309c4db8cde5bb4f34ba",
 }
 

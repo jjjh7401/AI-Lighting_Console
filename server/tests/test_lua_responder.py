@@ -78,7 +78,7 @@ class TestLoading:
         assert config["send_variant"] == "packed"
         assert config["max_props_names"] == 16
         assert harness.module["PROTO"] == 1
-        assert harness.module["VERSION"] == "1.6.2"
+        assert harness.module["VERSION"] == "1.6.3"
 
 
 class TestParseRequest:
@@ -1221,3 +1221,89 @@ class TestStatePaging:
         assert 0 < len(payload["children"]) < 6
         assert payload["truncated"] is True
         assert payload["node"]["childCount"] == 30
+
+
+PROGRAMMER_ENV = r"""
+local node = __NODE
+__PROGRAMMER = node("Programmer", "Programmer", {
+    node("Fixture 101", "Fixture"),
+    node("Fixture 102", "Fixture"),
+})
+__SELECTION = node("Selection", "Selection", {
+    node("Fixture 101", "Fixture"),
+})
+function Programmer() return __PROGRAMMER end
+function Selection() return __SELECTION end
+"""
+
+
+class TestProgrammerAliases:
+    """t235 — 세 레인이 「구조적 한계」로 읽은 것은 별칭의 부재였다.
+
+    `path segment not found: 'Programmer'` 는 `resolve_path` 가 1번 세그먼트를
+    별칭 표에서 못 찾아 `Root()` 자식 이름 대조로 떨어진 결과다. 별칭은
+    **전역 호출**이므로, 전역이 있으면 열리고 없으면 오늘과 똑같이 실패한다.
+
+    두 팔을 다 잰다 — 열리는 팔과, **없을 때 안 깨지는 팔**. 뒤엣것이 이
+    변경의 안전 근거다.
+    """
+
+    def test_the_alias_opens_when_the_console_exposes_the_global(self):
+        harness = ResponderHarness(PROGRAMMER_ENV)
+        harness.main(None, "state 1 Programmer")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        assert payload["node"]["name"] == "Programmer"
+        assert [child["name"] for child in payload["children"]] == [
+            "Fixture 101",
+            "Fixture 102",
+        ]
+
+    def test_the_selection_alias_opens_the_same_way(self):
+        harness = ResponderHarness(PROGRAMMER_ENV)
+        harness.main(None, "state 2 Selection")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        assert payload["node"]["name"] == "Selection"
+
+    def test_the_alias_is_case_insensitive_like_the_others(self):
+        harness = ResponderHarness(PROGRAMMER_ENV)
+        harness.main(None, "state 3 programmer")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+
+    def test_a_console_without_the_global_fails_exactly_as_before(self, harness):
+        """🔴 이 팔이 안전 근거다 — 전역이 없으면 별칭이 nil 로 접히고
+        `Root()` 자식 대조로 떨어져 **오늘과 같은 사유**로 실패한다.
+
+        기본 목 환경에는 `Programmer` 전역이 없다. 즉 이것은 별칭을 넣기 전
+        상태를 그대로 재는 팔이고, 통과한다는 것은 별칭 추가가 그 콘솔에서
+        아무것도 바꾸지 않는다는 뜻이다.
+        """
+        harness.main(None, "state 4 Programmer")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is False, payload
+        assert "Programmer" in str(payload.get("error") or ""), payload
+
+    def test_the_original_aliases_are_untouched(self, harness):
+        """합치기가 아니라 덧붙이기라는 것 — 기존 별칭이 그대로 선다."""
+        for index, path in enumerate(("DataPool", "Root", "ShowData")):
+            harness.main(None, "state " + str(index) + " " + path)
+        payloads = [decode_payload(item.payload) for item in harness.sent()]
+        assert [item["ok"] for item in payloads] == [True, True, True], payloads
+
+    def test_patch_shows_the_same_nil_fallback_and_predates_this_change(self, harness):
+        """🔴 이 팔이 **기존 상태의 대조군**이다.
+
+        기본 목 환경에는 `Patch` 전역이 **없다** — 별칭 표에는 1.6.2 때부터
+        있었는데도. 그래서 `state Patch` 는 `Programmer` 와 **같은 모양**으로
+        실패한다. 즉 「전역 없는 별칭」은 이 변경이 새로 만든 상태가 아니라
+        저장소가 이미 갖고 돌던 상태다.
+
+        이게 없으면 위 팔의 통과가 「내 별칭만 안전하다」로 읽히고, 그 안전이
+        어디서 오는지(별칭이 아니라 `pcall` + nil 폴백) 안 보인다.
+        """
+        harness.main(None, "state 9 Patch")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is False, payload
+        assert "Patch" in str(payload.get("error") or ""), payload

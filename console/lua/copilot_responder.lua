@@ -73,7 +73,13 @@ local M = {
     -- (pre-1.6.0-paging) responder generation only -- this reland has NOT
     -- been re-verified live against the current responder; re-verify before
     -- trusting props/introspect in production (T15).
-    VERSION = "1.6.2",
+    -- 1.6.3: additive ROOT_ALIASES entries programmer/programmerpart/
+    -- selection (t235). Purely additive -- every existing path resolves
+    -- byte-identically, and on a console whose Lua lacks those globals the
+    -- guarded alias yields nil and the path fails exactly as in 1.6.2. The
+    -- bump exists so the wire can TELL the two generations apart: a rig
+    -- answering 1.6.2 does not have the aliases no matter what main says.
+    VERSION = "1.6.3",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -500,11 +506,34 @@ end
 
 -- Root aliases let paths start at well-known MA3 Lua entry points; unknown
 -- first segments fall back to navigation from Root().
+-- Object-Free API roots this responder can address by name.
+--
+-- Every entry is a GLOBAL CALL guarded by `X and X()` -- an alias can only
+-- exist where the console exposes the global. On a console that does not,
+-- the entry evaluates to nil, the caller falls through to the Root() tree
+-- walk, and the path fails exactly as it does today. Adding an alias
+-- therefore cannot break a console that lacks the function (t235).
+--
+-- programmer/programmerpart/selection were added by t235. Three lanes had
+-- reported `path segment not found: 'Programmer'` and read that as a
+-- structural limit; it was the ABSENCE OF AN ALIAS, not the absence of the
+-- API. MA Lighting's Object-Free API lists Programmer(), ProgrammerPart()
+-- and Selection() alongside Root()/DataPool()/ShowData()/Patch().
+--
+-- 🔴 Unmeasured on this rig: whether THIS console version exposes them, and
+-- whether the returned handle answers Children()/property accessors the way
+-- the reply builders need. Settle the first with `HelpLua` on the console
+-- (it writes grandMA3_lua_functions into gma3_library and touches no
+-- showfile); the second needs this plugin deployed, which is an operator
+-- act. See `.moai/reports/t235/verdict.md`.
 local ROOT_ALIASES = {
     datapool = function() return DataPool and DataPool() or nil end,
     root = function() return Root and Root() or nil end,
     showdata = function() return ShowData and ShowData() or nil end,
     patch = function() return Patch and Patch() or nil end,
+    programmer = function() return Programmer and Programmer() or nil end,
+    programmerpart = function() return ProgrammerPart and ProgrammerPart() or nil end,
+    selection = function() return Selection and Selection() or nil end,
 }
 
 function M.find_child(handle, segment)
