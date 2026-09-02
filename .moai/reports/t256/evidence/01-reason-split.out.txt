@@ -1,0 +1,20 @@
+### 같은 입력에 대해 — 거부 여부는 그대로, 사유만 갈렸다
+  Dim='DIM.01'               보류 · classes=['dim_not_a_reference']
+      Dim 은 프리셋 참조가 아니라 숫자다: DIM.01 — 0–100 사이의 수를 적는다(§11.1 3행). 참조는 COL·POS·BM·FX 열의 몫이다(§11.1 4~7행)
+  Dim='COL.01'               보류 · classes=['dim_not_a_reference']
+      Dim 은 프리셋 참조가 아니라 숫자다: COL.01 — 0–100 사이의 수를 적는다(§11.1 3행). 참조는 COL·POS·BM·FX 열의 몫이다(§11.1 4~7행)
+  Dim='확인필요'                 보류 · classes=['bad_number']
+      Dim 열이 수로 안 읽힌다: 확인필요
+  Dim='55'                   계획됨 · dim=55.0
+  Dim='12.5'                 계획됨 · dim=12.5
+  P-Fade='COL.01'            보류 · classes=['bad_number']
+      P-Fade 열이 수로 안 읽힌다: COL.01
+
+### 판별자 자체
+  'DIM.01'     참조꼴=True
+  'DIM.FULL'   참조꼴=True
+  'COL.01'     참조꼴=True
+  '12.5'       참조꼴=False
+  '0.0'        참조꼴=False
+  '55'         참조꼴=False
+  '확인필요'       참조꼴=False

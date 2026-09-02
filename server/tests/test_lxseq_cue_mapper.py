@@ -39,7 +39,9 @@ from server.lxseq.cue_mapper import (
     BLOCK_DOC_INTENT,
     BLOCK_OUR_DEFECT,
     CUE_COVERAGE_GAP,
+    DIM_NOT_A_REFERENCE,
     DIM_OUT_OF_RANGE,
+    DIM_REFERENCE_SHAPE,
     ROWS_HELD,
     SLOT_SHORTFALL,
     UNKNOWN_GROUP,
@@ -186,6 +188,93 @@ def test_blackout_needs_both_zero_and_fade():
     silent = _map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="0")]).planned[0].rows[0]
     assert with_fade.is_blackout is True
     assert silent.is_blackout is False
+
+
+# ---------------------------------------------------------------------------
+# AC-LXSEQ4-003 — `Dim` 은 숫자이지 프리셋 참조가 아니다
+#
+# 거부는 t207 이전부터 됐다. 이 절이 지키는 것은 **사유**다: 참조를 적은 사람에게
+# 「수식이 틀렸다」고 답하면 그 사람은 참조를 쓴 것이 잘못이라는 것을 모른다.
+# ---------------------------------------------------------------------------
+
+
+def _hold(result, cue_no: str = "Q010"):
+    return next(item for item in result.held if item.cue_no == cue_no)
+
+
+def test_a_preset_reference_in_dim_is_named_as_such():  # AC-LXSEQ4-003
+    """🔴 `DIM.01` 은 `bad_number` 가 아니라 **전용 사유**를 받는다."""
+    result = _map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="DIM.01")])
+    held = _hold(result)
+    assert DIM_NOT_A_REFERENCE in held.hold_classes
+    assert BAD_NUMBER not in held.hold_classes, "두 사유가 겹치면 사람이 어느 축인지 못 고른다"
+    detail = " ".join(held.details)
+    assert "참조" in detail and "숫자" in detail, detail
+
+
+def test_a_cue_ex_reference_type_in_dim_is_caught_too():  # AC-LXSEQ4-003
+    """`DIM.*` 만이 아니다 — `COL.01` 을 Dim 에 적는 것도 같은 오작성이다."""
+    held = _hold(_map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="COL.01")]))
+    assert DIM_NOT_A_REFERENCE in held.hold_classes
+
+
+def test_a_decimal_dim_is_a_number_not_a_reference():  # AC-LXSEQ4-003
+    """소수는 정상 값이다 — `12.5` 가 보류되면 유효한 시트가 막힌다.
+
+    ⚠️ 이 검사는 **판별자를 재지 않는다.** `12.5` 는 `float()` 가 먼저 받으므로
+    참조꼴 분기까지 내려오지 않는다 — 판별자를 「점이 있으면 참조」로 넓혀도
+    이 검사는 초록이다(뮤테이션 M2 로 실측). 판별자 자체는 아래
+    `test_the_dim_reference_shape_does_not_claim_numbers` 가 잰다.
+    """
+    result = _map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="12.5")])
+    assert result.held == ()
+    assert result.planned[0].rows[0].dim == 12.5
+
+
+def test_the_dim_reference_shape_does_not_claim_numbers():  # AC-LXSEQ4-003
+    """🔴 판별자를 직접 잰다 — 위 검사가 못 재는 자리다.
+
+    `DIM_REFERENCE_SHAPE` 는 **왼쪽이 글자일 때만** 참조꼴이라고 말해야 한다.
+    「점이 있으면 참조」로 넓히면 이 검사가 빨개진다.
+    """
+    for reference in ("DIM.01", "DIM.FULL", "COL.01", "POS.06", "FX.08"):
+        assert DIM_REFERENCE_SHAPE.match(reference), reference
+    for number in ("12.5", "0", "55", "100", "0.0", "1.25"):
+        assert DIM_REFERENCE_SHAPE.match(number) is None, number
+
+
+def test_a_plain_number_in_dim_still_passes():  # AC-LXSEQ4-003 양성 대조군
+    """양성 대조군 — 정상 숫자는 그대로 통과한다."""
+    result = _map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55")])
+    assert result.held == ()
+    assert result.planned[0].rows[0].dim == 55.0
+
+
+def test_a_non_numeric_non_reference_dim_keeps_bad_number():  # AC-LXSEQ4-003 경계
+    """참조꼴이 아니면서 수도 아닌 값은 **기존 사유 그대로**다.
+
+    새 사유가 「숫자가 아닌 전부」를 삼키면 이 검사가 빨개진다.
+    """
+    held = _hold(_map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="확인필요")]))
+    assert BAD_NUMBER in held.hold_classes
+    assert DIM_NOT_A_REFERENCE not in held.hold_classes
+
+
+def test_other_numeric_columns_keep_their_existing_reason():  # AC-LXSEQ4-003 양성 대조군
+    """🔴 양성 대조군 — Dim 축만 갈랐다. 다른 수치 열의 사유는 **안 바뀐다.**"""
+    held = _hold(
+        _map([StandInCueRecord(cue_no="Q010", group="BACK", dim_raw="55", p_fade_raw="COL.01")])
+    )
+    assert BAD_NUMBER in held.hold_classes
+    assert DIM_NOT_A_REFERENCE not in held.hold_classes
+    assert "P-Fade" in " ".join(held.details)
+
+
+def test_the_dim_reference_reason_is_classified_as_document_intent():  # AC-LXSEQ4-014
+    """3분류에서 (C) 다 — 우리 코드 결함이 아니라 시트 작성 문면 문제다."""
+    from server.lxseq.cue_mapper import _HOLD_BLOCK_CLASS
+
+    assert _HOLD_BLOCK_CLASS[DIM_NOT_A_REFERENCE][0] == BLOCK_DOC_INTENT
 
 
 # ---------------------------------------------------------------------------
