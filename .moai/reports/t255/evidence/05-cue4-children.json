@@ -1,0 +1,21 @@
+{
+  "children": [
+    {
+      "class": "Part",
+      "i": 1,
+      "name": "Q010 INTRO 화사"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 1,
+    "class": "Cue",
+    "name": "Q010 INTRO 화사"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/Sequences/3/4",
+  "truncated": false,
+  "v": 1
+}

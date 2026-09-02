@@ -174,7 +174,7 @@ class TestVersionBump:
         # had since 1.6.0) so the names past the first payload-budget window
         # are reachable at all — measured live at 138 properties of which 27
         # arrived (t104). Protocol v1 throughout.
-        assert harness.module["VERSION"] == "1.6.2"
+        assert harness.module["VERSION"] == "1.6.3"
         assert harness.module["PROTO"] == 1
 
 

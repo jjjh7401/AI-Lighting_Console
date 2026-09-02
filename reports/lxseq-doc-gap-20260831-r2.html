@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LX-SEQ 문서 대비 앱 반영도</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#fff;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard Variable",Pretendard,system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:900px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:48px 24px 80px}
+h1{font-size:30px;line-height:1.3;margin:0 0 8px;letter-spacing:-.02em}
+.sub{color:var(--g500);font-size:14px;margin:0 0 32px}
+h2{font-size:21px;margin:44px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--oat);letter-spacing:-.01em}
+h3{font-size:16px;margin:26px 0 8px}
+p{margin:10px 0}
+code{font-family:var(--mono);font-size:.87em;background:var(--g100);padding:2px 6px;border-radius:4px;word-break:break-all}
+.lead{background:var(--g100);border-left:3px solid var(--clay);padding:12px 16px;border-radius:0 var(--radius-row) var(--radius-row) 0;margin:12px 0 18px;font-size:14.5px;color:var(--g700)}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;background:var(--paper);border-radius:var(--radius-row);overflow:hidden;border:var(--border)}
+th{background:var(--g100);text-align:left;padding:10px 12px;font-weight:700;font-size:13px;color:var(--g700);border-bottom:var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--g300);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0 8px}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px}
+.card .k{font-size:11.5px;color:var(--g500);text-transform:uppercase;letter-spacing:.06em}
+.card .v{font-size:26px;font-weight:700;margin:4px 0 2px;letter-spacing:-.02em}
+.card .n{font-size:12px;color:var(--g500)}
+.ok{color:var(--olive)} .warn{color:var(--clay)}
+.item{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px 18px;margin:12px 0}
+.item.a{border-left:4px solid var(--olive)}
+.item.b{border-left:4px solid var(--clay)}
+.item.c{border-left:4px solid var(--g500)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.03em;margin-right:8px}
+.tag.a{background:#E8EDE1;color:#4A5C36} .tag.b{background:#F8E5DD;color:var(--clay-d)} .tag.c{background:var(--g100);color:var(--g700)}
+.item h3{margin:0 0 6px}
+.item p{font-size:14px;margin:8px 0 0}
+.why{font-size:13px;color:var(--g500);margin-top:8px;padding-top:8px;border-top:1px dashed var(--g300)}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:18px;text-align:center;font-family:var(--mono);font-size:12px;overflow-x:auto}
+noscript p{background:var(--g100);border-radius:var(--radius-row);padding:12px 16px;font-size:13.5px}
+.gate{background:#FDF3EF;border:1.5px solid var(--clay);border-radius:var(--radius-panel);padding:14px 18px;margin:16px 0}
+.gate strong{color:var(--clay-d)}
+.foot{margin-top:56px;padding-top:18px;border-top:var(--border);font-size:12.5px;color:var(--g500)}
+ul{padding-left:20px;margin:8px 0} li{margin:5px 0;font-size:14px}
+@media print{body{background:#fff}.wrap{padding:0}.item,.card,table{break-inside:avoid}}
+</style></head><body><div class="wrap">
+<h1>LX-SEQ 문서 대비 앱 반영도 <span style="font-size:15px;color:var(--clay);font-weight:400">· r2 정정판</span></h1>
+<p class="sub">측정 2026-08-31 · 대상 <code>src/Lighting_Designer/</code> + 스펙 v2.1 · 작업지침 · 문서인덱스 · <code>server/</code> 전체 · 판정 기준은 <strong>문서가 정의한 개념이 콘솔에 실제로 닿는가</strong></p>
+
+<div class="gate"><strong>r1 정정</strong> — 초판에서 「기본 프리셋 일괄 입구가 없다」고 썼는데 <b>틀렸습니다.</b> 카테고리별 기본 프리셋은 <code>server/web/session.py</code> 에 <b>이미 구현돼 있습니다.</b> 제가 시트 임포트 경로(<code>server/lxseq/</code>)만 파고 <b>대화 경로를 안 봤습니다</b> — 「없다」를 쓰기 전에 기존 SPEC 을 훑는 규약을 제가 어겼습니다.</div>
+
+<h2>오늘 도달한 지점</h2>
+<div class="cards">
+<div class="card"><div class="k">1 패치</div><div class="v ok">86/86</div><div class="n">already_patched</div></div>
+<div class="card"><div class="k">2 그룹</div><div class="v ok">18</div><div class="n">group_slots_resolved</div></div>
+<div class="card"><div class="k">3 프리셋</div><div class="v ok">7 + 2</div><div class="n">Color 풀 · FX 풀</div></div>
+<div class="card"><div class="k">4 큐</div><div class="v ok">18/18</div><div class="n">Q010~Q180 되읽기</div></div>
+</div>
+
+<h2>앱에 두 개의 프리셋 경로가 있습니다</h2>
+<div class="lead">이게 초판이 놓친 핵심입니다. 프리셋을 콘솔에 올리는 길이 <b>둘</b>이고, 서로 다른 것을 올립니다.</div>
+<pre class="mermaid">
+flowchart LR
+  A["RIG 팩 CSV<br/>preset-dim/col/bm · fx"] --> B["import_lxseq_presets<br/>server/lxseq/"] --> C["콘솔 풀"]
+  D["감독 한 마디<br/>기본 포지션 잡아줘"] --> E["session.py<br/>BASIC 시퀀스"] --> C
+</pre>
+<noscript><p><b>두 경로</b>: (1) RIG 팩 CSV → import_lxseq_presets → 콘솔 (오늘 종일 쓴 길) · (2) 감독의 한 마디 → session.py 의 BASIC 시퀀스 → 콘솔 (이미 구현된 길)</p></noscript>
+
+<table><tr><th>경로</th><th>입력</th><th>올리는 것</th><th>오늘 쓴 것</th></tr>
+<tr><td>시트 경로</td><td>RIG 팩 CSV</td><td>감독이 곡에 맞춰 정의한 값</td><td>✅ COL 7 · FX 2</td></tr>
+<tr><td>대화 경로</td><td>「기본 컬러 프리셋 저장해줘」</td><td>표준 10종 팔레트</td><td>❌ 안 씀</td></tr></table>
+
+<h2>구현돼 있는 기본 프리셋 — 카테고리별 10종</h2>
+<div class="lead">감독님이 말씀하신 <b>「기본 10 + 페이저 10 = 20」</b> 구조가 컬러축에 그대로 있습니다. 아래는 코드에서 직접 읽은 실물입니다.</div>
+
+<table><tr><th>카테고리</th><th>개수</th><th>실제 항목</th><th>정의 위치</th></tr>
+<tr><td><b>POSITION</b></td><td>10</td><td>Home · Wall · Audience · Center · Vocal DSC · Fan Out · Fan In · Cross · Ring Out · Ring In</td><td><code>spatial/pointing.py</code></td></tr>
+<tr><td><b>COLOR</b></td><td>10</td><td>Warm White · Cool White · Red · Amber · Yellow · Green · Cyan · Blue · Magenta · Lavender</td><td><code>COLOR_PALETTE_SEQUENCE</code></td></tr>
+<tr><td><b>DIMMER</b></td><td>10</td><td>Dim 10 · 20 · 30 · 40 · 50 · 60 · 70 · 80 · 90 · Full</td><td><code>DIMMER_LEVEL_SEQUENCE</code></td></tr>
+<tr><td><b>PHASER</b></td><td>10</td><td>Breathe Warm · Breathe Cool · Chase RB · Chase CM · Wave CM · Wave WA · Rainbow · Pulse RY · Duo GL · Slam RW</td><td><code>COLOR_PHASER_SEQUENCE</code></td></tr></table>
+
+<p>정본 SPEC — <code>SPEC-COPILOT-COLORPRESET-001</code>: 「기본 컬러 프리셋을 N번부터 저장해줘」가 표준 무대 팔레트 10색을 Color 풀에 저장하며, <b>포지션 프리셋(BASIC 10종)과 완전 동형</b>의 안전 장치(점유 검사 → 덮어쓰기 카드 → 룩별 독립 번들 → 페이지드 되읽기 산술 → 라벨 가족 재생성) 위에 섭니다.</p>
+<p class="why">어휘축이 <b>서로소</b>로 설계돼 있습니다(<code>session.py:1748</code>) — 「기본/베이직/basic」과 「이펙트/효과/fx」가 겹치지 않아, 기본 10종과 페이저 10종이 각각 별도 자리를 잡습니다.</p>
+<h2>검토 — 기본 프리셋을 큐의 기본설정으로 둘 수 있나</h2>
+<div class="lead">감독님 질문에 대한 답입니다. <b>컬러·딤머는 됩니다. 포지션은 안 됩니다.</b> 셋이 성질이 다릅니다.</div>
+
+<table><tr><th>카테고리</th><th>값이 절대적인가</th><th>큐 시트가 참조하는 형태</th><th>판정</th></tr>
+<tr><td><b>DIMMER</b></td><td class="ok">✅ Dim 40 = 40%, 극장 무관</td><td>직접값 <code>40</code></td><td class="ok"><b>바로 됨</b></td></tr>
+<tr><td><b>COLOR</b></td><td class="ok">✅ RGB 고정 시퀀스</td><td>참조 <code>COL.01~07</code></td><td class="ok"><b>매핑만 필요</b></td></tr>
+<tr><td><b>POSITION</b></td><td class="warn">🔴 극장·리깅 종속</td><td>참조 <code>POS.01~06</code></td><td class="warn"><b>안 됨</b></td></tr></table>
+
+<div class="item a"><h3><span class="tag a">D1</span>딤머 — 제일 확실합니다</h3>
+<p>큐 시트가 <code>Dim 40</code> 처럼 <b>직접값</b>을 쓰는데, <code>DIMMER_LEVEL_SEQUENCE</code> 가 10·20·…·100 이라 <b>10단위가 그대로 맞습니다.</b></p>
+<p>지금 우리는 <code>At 40</code> 을 직접 보냅니다. <code>At Preset 1.4</code> 로 바꾸면 <b>나중에 감독이 프리셋 하나만 고쳐도 전 큐가 따라옵니다.</b></p>
+<p class="why">⚠️ 10단위가 아닌 값(예: 55·70)은 프리셋에 없습니다. 정본 CSV 의 Dim 값 분포를 먼저 세야 합니다 — 대부분이 10단위면 이득이 크고, 아니면 혼합이 되어 오히려 복잡해집니다. <b>측정이 선행입니다.</b></p></div>
+
+<div class="item a"><h3><span class="tag a">D2</span>컬러 — 매핑 한 장이면 됩니다</h3>
+<p>RIG 팩 <code>COL.01 = 골드 앰버</code> 와 표준 <code>Amber</code> 를 <b>이름으로 잇는 매핑</b>이면 됩니다. 오늘 COL 7건을 올린 것과 <b>같은 조인</b>입니다.</p>
+<p>이득 — 지금 켈빈만 있어 보류된 <code>COL.02 웜화이트</code>·<code>COL.03</code> 2건이 표준 <code>Warm White</code>·<code>Cool White</code> 로 <b>메워집니다.</b></p>
+<p class="why">⚠️ 두 팔레트가 <b>같은 이름을 다르게 정의</b>할 수 있습니다. RIG 팩이 정본이라는 규칙(스펙 §13-2)이 있으므로, <b>충돌 시 RIG 팩 우선</b> · 표준은 빈 자리만 메우는 형태여야 합니다.</p></div>
+
+<div class="item c"><h3><span class="tag c">D3</span>포지션 — 스펙이 막습니다</h3>
+<p>스펙 §8-1: 「Pan/Tilt 절대값은 <b>극장·리깅 종속</b>이라 시트에 쓰지 않는다」</p>
+<p><code>Home</code>·<code>Wall</code>·<code>Audience</code> 같은 표준 10종은 <b>현재 리그에서 계산된 값</b>이라 다른 극장에 못 옮깁니다. 컬러·딤머와 결정적으로 다른 점입니다 — 딤머 40%는 어느 극장에서나 40%지만, <code>Wall</code> 은 그 극장의 벽입니다.</p>
+<p class="why">감독님이 RIG 팩에 Pan/Tilt 값을 넣으시는 것(앞서 결정)은 <b>그 극장 기준으로 감독이 정하신 값</b>이라 다릅니다. 앱의 표준 10종을 큐의 기본값으로 삼는 것과는 별개입니다.</p></div>
+
+<div class="gate"><strong>제안하는 순서</strong> — ① 정본 CSV 의 Dim 값 분포를 센다(10단위 비율) → ② 딤머부터 프리셋 참조로 전환 → ③ 컬러 매핑(RIG 우선·표준이 빈 자리 메움) → ④ 포지션은 손대지 않는다</div>
+
+<h2>A. 바로 적용</h2>
+<div class="item a"><h3><span class="tag a">A1</span>넷을 한 번에 부르는 상위 입구 <span class="ok">· 재료 완비</span></h3>
+<p>카테고리별 입구는 <b>이미 있습니다</b>. 필요한 건 「기본 프리셋 잡아줘」 한 마디로 <b>POSITION·COLOR·DIMMER·PHASER 넷을 순서대로 부르는</b> 상위 입구 하나입니다.</p>
+<p class="why">감독 결정 — <b>되는 것부터 전부</b>: 되는 것은 올리고, 안 되는 것은 「왜 안 됐는지」를 사유와 함께 보고. 오늘 BM 이 <code>attribute_probe_rejected</code> 로 걸린 것과 같은 형태입니다.</p></div>
+
+<div class="item a"><h3><span class="tag a">A2</span>시트 경로에 POS 종류 등록</h3>
+<p><code>PRESET_ID_PREFIXES</code> 에 <code>DIM.</code>·<code>COL.</code>·<code>BM.</code> 셋뿐이고 <code>POS.</code> 가 없습니다. 감독님이 RIG 팩에 Pan/Tilt 값을 넣으시면 읽을 경로가 필요합니다.</p>
+<p class="why">효과 — POS 12행이 열리면 보류가 <b>30 → 18</b> 로 줍니다.</p></div>
+
+<div class="item a"><h3><span class="tag a">A3</span>큐 라벨을 정본 형식으로</h3>
+<p>지금 Q010 뿐, 정본은 「Q010 INTRO 화사」. 곡 파일 <code>CUE</code> 시트를 읽으면 닫힙니다.</p></div>
+
+<div class="item a"><h3><span class="tag a">A4</span>TC_METHOD 경고 <span class="warn">· 안전 조항</span></h3>
+<p>스펙이 <code>DERIVED</code> 를 「실행 확정본으로 취급하지 않는다」로 못 박았는데 앱은 모르고 씁니다. <code>HEAD</code> 한 줄이면 닫힙니다.</p></div>
+
+<h2>B. 다음 단계 — 측정이 먼저</h2>
+<div class="item b"><h3><span class="tag b">B0</span>Dim 값 분포 측정 <span class="ok">· D1 의 전제</span></h3>
+<p>정본 CSV 89행의 Dim 값이 <b>10단위에 얼마나 몰려 있는지</b>. 대부분이면 프리셋 참조 전환의 이득이 크고, 아니면 혼합이 되어 오히려 복잡해집니다.</p></div>
+
+<div class="item b"><h3><span class="tag b">B1</span>개별 타이밍 I/P/C/B</h3>
+<p>스펙 §8-3 「콘솔급 큐의 본질」. 지금 CueFade 근사 하나. <b>조명감독 파이프라인도 <code>make_ma3.py:170</code> 에서 [MANUAL] 로 넘깁니다</b> — 미지이지 태만이 아닙니다.</p>
+<p class="why">질문: MA3 가 그룹별 Fade·Delay 를 명령줄로 받는가. 받으면 자동화, 안 받으면 원리적 한계 확정. <b>어느 쪽이든 이깁니다.</b></p></div>
+
+<div class="item b"><h3><span class="tag b">B2</span>안전 규칙 fail-closed <span class="warn">· 물리 위험</span></h3>
+<p>스펙 §13-4 HARD 인데 <code>inhibit</code> 0건 · <code>MIB</code> 0건. 문서인덱스의 「BLIND 각도 — 객석 직사 금지선」은 사람 눈 문제라 등급이 다릅니다.</p></div>
+
+<div class="item b"><h3><span class="tag b">B3</span>검증 15항목 <span class="warn">· 현재 4/15</span></h3>
+<p><code>--validate</code> 모드 하나. 콘솔 안 건드리고 PASS/FAIL 표만.</p></div>
+
+<div class="item b"><h3><span class="tag b">B4</span>두 경로가 같은 풀에 쓰는지 <span class="warn">· 미측정</span></h3>
+<p>시트 경로와 대화 경로가 <b>같은 콘솔 풀</b>에 씁니다. 감독이 「기본 컬러 잡아줘」로 표준 10색을 올린 뒤 시트 COL 7건을 올리면 <b>어떻게 되는지 안 쟀습니다.</b> 덮어쓰기·번호 충돌 가능성.</p></div>
+
+<div class="item b"><h3><span class="tag b">B5</span>BM 어휘 · Layer 3 분기 기록</h3>
+<p>BM 5건 전량 보류(어휘 문제). 그리고 우리가 <code>ma3.txt</code> 를 대체한다는 사실이 미기록 — 문서인덱스는 r2, 실물은 r3.</p></div>
+
+<h2>C. 반영하면 안 되는 것</h2>
+<div class="item c"><h3><span class="tag c">C1</span>포지션 표준 10종을 큐 기본값으로</h3>
+<p>위 D3. 스펙 §8-1 이 막습니다. 극장이 바뀌면 <code>Wall</code> 은 다른 곳입니다.</p></div>
+<div class="item c"><h3><span class="tag c">C2</span>FX.04(Hue)·FX.06(Shutter) 강행</h3>
+<p><code>KNOWN_ATTRIBUTES</code> 밖. FX.04 없이도 18큐가 섭니다.</p></div>
+<div class="item c"><h3><span class="tag c">C3</span>예약 행 미리 만들기 · <span class="tag c">C4</span>검사 무력화</h3>
+<p><code>registry.py:359</code> 가 「파서·핸들러가 있어야 행을 만든다」. 오늘 실제로 걸렸습니다. 우회하려 검사를 끄면 다음 진짜 예약 행을 아무도 못 잡습니다.</p></div>
+<div class="item c"><h3><span class="tag c">C5</span>큰따옴표 복귀</h3>
+<p><code>ma3.txt</code> 는 사람이 붙여넣는 스크립트. 전송 경로는 홑따옴표만(<code>protocol.py:127</code>). 오늘 이것으로 발화 1회 실패.</p></div>
+
+<h2>오늘 막았던 벽 넷 — 전부 저장소에 답이 있었음</h2>
+<table><tr><th>벽</th><th>답이 있던 곳</th></tr>
+<tr><td>계획이 0건</td><td>RIG 팩 <code>fx.csv</code> — 아무도 안 쓰고 있었음</td></tr>
+<tr><td>발화 실패</td><td><code>ma3.txt:232</code> Store Sequence 한 줄</td></tr>
+<tr><td>명령 거절</td><td><code>protocol.py:127</code> 주석</td></tr>
+<tr><td><b>기본 프리셋이 없다는 내 오판</b></td><td><b><code>SPEC-COPILOT-COLORPRESET-001</code></b></td></tr></table>
+<p>「없다」를 결론으로 쓰기 전에 저장소를 훑는 규약이 <b>하루에 네 번</b> 값을 냈습니다. 마지막 하나는 <b>제가 그 규약을 어겨서</b> 생긴 것입니다.</p>
+
+<h2>안 잰 것</h2>
+<ul>
+<li>정본 CSV 의 Dim 값 분포 — <b>D1 판단의 전제</b></li>
+<li>두 프리셋 경로가 같은 풀에서 충돌하는지</li>
+<li>개별 타이밍이 명령으로 가능한지</li>
+<li>BM 속성 어휘의 경계 · <code>ma3.txt</code> 와 우리 빌더가 이미 갈라졌는지</li>
+<li>CI 는 결제 문제로 정지 — PR 5건 + <code>WT-cue-integrate</code> 미머지</li>
+</ul>
+
+<div class="foot">LX-SEQ v2.1 · 정본 우선순위: 스펙 &gt; RIG 팩 &gt; 곡 파일 &gt; 생성 산출물 · 이 보고서는 <b>분석·검토이며 스펙·계획에 아무것도 반영하지 않았습니다.</b></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body></html>

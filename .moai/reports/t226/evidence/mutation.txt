@@ -1,0 +1,35 @@
+# t226 뮤테이션 — 합쳐진 가드·라벨에 각각 건다
+
+환경: 자체 venv (uv sync --group dev), PYTHONDONTWRITEBYTECODE=1, pyc 캐시 배치 후 삭제
+전제: 매 회차 `assert mutated != original` 로 「적용 안 됨」 갈래를 기계로 배제
+
+## M1 — 가드 술어를 무력화
+
+    - return max(max(xs) - min(xs), max(ys) - min(ys)) <= SPATIAL_ROW_NOISE_SPAN
+    + return False
+
+결과: 6 failed, 30 passed (test_lxseq_position_derive.py)
+죽은 검사: TestDegenerateRig 6 건 전부
+-> t222 의 가드는 병합 뒤에도 살아 있다.
+
+## M2 — 라벨을 t224 이전 형태로 되돌림
+
+    - label=f"{console_label_head(row.preset_id)} {rule.stage_meaning} · {suffix}"
+    + label=f"{row.preset_id} {rule.stage_meaning} · {suffix}"
+
+결과: 3 failed, 63 passed (position_derive + spatial_explicit_arrange)
+죽은 검사: TestLabelAndCommands 1 · TestLabelProvenance 2
+-> t224 의 왕복 형태는 가드가 든 함수 안에서도 지켜진다.
+
+## M3 — 빈 꼬리 검사를 퇴화 가드 **뒤로** 옮김 (t226 이 새로 단 단언)
+
+    suffix 검사 3줄을 `frame = _stage_frame(coordinates)` 직전으로 이동
+
+결과: 1 failed, 68 passed
+죽은 검사: TestTheGuardAndTheLabelCompose::
+  test_an_empty_suffix_is_refused_before_the_guard_can_mask_it
+
+대조 두 팔이 한 번에 잡힌다:
+  팔 1) 새 검사가 잡는다 — 위 1 건
+  팔 2) 기존 상태는 못 잡는다 — 나머지 68 건 전부 통과
+즉 이 순서(빈 꼬리 -> 퇴화 가드)는 t226 이전에 아무도 안 지키고 있었다.

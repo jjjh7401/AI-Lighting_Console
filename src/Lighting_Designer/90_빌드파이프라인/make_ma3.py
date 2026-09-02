@@ -134,6 +134,45 @@ by_q = OrderedDict()
 for row in CUE_EX:
     by_q.setdefault(row[0], []).append(row)
 
+# ── 개별 타이밍 → 큐 파트 (t215 실측: onPC · 응답기 1.6.2 · 2026-09-01) ──
+# I/P/C/B Fade·Delay 는 큐가 아니라 큐 **파트**의 속성이다.
+#   Set Cue <n> [Part <p>] Sequence <s> Property 'Preset<타입>Fade' <초>
+# 프리셋 타입 번호는 콘솔에서 읽었다 — 1 Dimmer · 2 Position · 3 Gobo ·
+# 4 Color · 5 Beam · 6 Focus (DataPool/PresetPools/1..6 의 name).
+# 한 파트는 타입당 값을 하나만 갖는다. 그래서 같은 큐에서 값이 충돌하는
+# 그룹은 파트를 갈라야 한다. 증거: .moai/reports/t215/verdict.md
+TIMING_PROP = (
+    ("Preset1Fade", 10),    # I  — 인텐시티 페이드
+    ("Preset1Delay", 11),   # Id — 인텐시티 딜레이
+    ("Preset2Fade", 12),    # P  — 포지션
+    ("Preset4Fade", 13),    # C  — 컬러
+    ("Preset5Fade", 14),    # B  — 빔
+)
+
+
+def row_timing(r):
+    """행의 개별 타이밍을 속성명→값으로. 빈 칸은 담지 않는다(콘솔 기본값 CueTiming)."""
+    return dict((prop, r[idx]) for prop, idx in TIMING_PROP if r[idx] not in ("", None))
+
+
+def split_parts(rows):
+    """값이 충돌하지 않는 그룹끼리 한 파트로 묶는다. 반환 0번이 Part 0."""
+    plain, buckets = [], []
+    for r in rows:
+        timing = row_timing(r)
+        if not timing:
+            plain.append(r)         # 개별 타이밍이 없으면 큐 타이밍을 따른다
+            continue
+        for b_rows, b_timing in buckets:
+            if all(b_timing.get(k, v) == v for k, v in timing.items()):
+                b_timing.update(timing)
+                b_rows.append(r)
+                break
+        else:
+            buckets.append(([r], dict(timing)))
+    return ([(plain, dict())] if plain else []) + buckets
+
+
 for q, rows in by_q.items():
     meta = cue_meta[q]
     cueno = int(q[1:])
@@ -141,33 +180,38 @@ for q, rows in by_q.items():
     label = "%s %s %s" % (q, meta[1], meta[4].split(",")[0])
     tcin = tc(meta[2])
     sec("  %s — TC %s · %s · Fade %s" % (q, tcin, meta[4], fade))
-    cmd("ClearAll")
-    itimes = []
     for r in rows:
-        _, grp, dim, col, pos, bm, fx, rate, phase, width, i_f, i_d, p_f, c_f, b_f, snap, note = r
-        if grp == "LED-W":
-            rem("  [영상팀 콜] LED-W %s%% — %s (조명 콘솔 큐 아님)" % (dim or "trk", note or "레벨 동기"))
-            continue
-        cmd('Group "%s"' % grp)
-        if dim != "": cmd("At %s" % dim)
-        if col not in ("",): cmd("At Preset %s" % pool_ref(col))
-        if pos not in ("",): cmd("At Preset %s" % pool_ref(pos))
-        if bm  not in ("",): cmd("At Preset %s" % pool_ref(bm))
-        if fx == "OFF":
-            rem("  [MANUAL] %s: 기존 Phaser 정지 — Stomp 후 저장" % grp)
-        elif fx != "":
-            cmd("At Preset %s" % pool_ref(fx))
-            rem("  %s Rate %s BPM · Phase %s · Width %s" % (fx, rate, phase, width or "—"))
-        it = []
-        if i_f != "": it.append("I%s" % i_f)
-        if i_d not in ("", None): it.append("Id%s" % i_d)
-        if p_f != "": it.append("P%s" % p_f)
-        if c_f != "": it.append("C%s" % c_f)
-        if b_f != "": it.append("B%s" % b_f)
-        if it and grp != "LED-W": itimes.append("%s[%s]" % (grp, "/".join(it)))
-    cmd('Store Cue %d "%s" CueFade %s Sequence 1 /Merge /NoConfirm' % (cueno, label, fade))
-    if itimes:
-        rem("  [MANUAL] 개별 타이밍(Cue 에디터에서 그룹별 I/P/C/B Fade·Delay 입력): " + " · ".join(itimes))
+        if r[1] == "LED-W":
+            rem("  [영상팀 콜] LED-W %s%% — %s (조명 콘솔 큐 아님)"
+                % (r[2] or "trk", r[16] or "레벨 동기"))
+    lit_rows = [r for r in rows if r[1] != "LED-W"]
+    for pi, (prows, timing) in enumerate(split_parts(lit_rows)):
+        cmd("ClearAll")
+        for r in prows:
+            _, grp, dim, col, pos, bm, fx, rate, phase, width = r[:10]
+            cmd('Group "%s"' % grp)
+            if dim != "": cmd("At %s" % dim)
+            if col not in ("",): cmd("At Preset %s" % pool_ref(col))
+            if pos not in ("",): cmd("At Preset %s" % pool_ref(pos))
+            if bm  not in ("",): cmd("At Preset %s" % pool_ref(bm))
+            if fx == "OFF":
+                rem("  [MANUAL] %s: 기존 Phaser 정지 — Stomp 후 저장" % grp)
+            elif fx != "":
+                cmd("At Preset %s" % pool_ref(fx))
+                rem("  %s Rate %s BPM · Phase %s · Width %s" % (fx, rate, phase, width or "—"))
+        if pi == 0:
+            cmd('Store Cue %d "%s" CueFade %s Sequence 1 /Merge /NoConfirm'
+                % (cueno, label, fade))
+        else:
+            cmd('Store Cue %d Part %d "%s P%d" Sequence 1 /Merge /NoConfirm'
+                % (cueno, pi, q, pi))
+        if timing:
+            rem("  Part %d 개별 타이밍 — %s" % (pi, ", ".join(r[1] for r in prows)))
+            part = "" if pi == 0 else "Part %d " % pi
+            for prop, _idx in TIMING_PROP:
+                if prop in timing:
+                    cmd("Set Cue %d %sSequence 1 Property '%s' %s"
+                        % (cueno, part, prop, timing[prop]))
 
 # ═══ 8. 타임코드 ═══
 sec("8. 타임코드 트리거 (LTC → TC Slot 1)")

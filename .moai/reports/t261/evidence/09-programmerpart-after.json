@@ -1,0 +1,41 @@
+{
+  "mode": "props",
+  "payload": {
+    "id": "gate-1",
+    "kind": "props",
+    "ok": true,
+    "path": "ProgrammerPart",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "Part Zero"
+      },
+      {
+        "n": "COUNT",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      },
+      {
+        "e": "property not readable: OWNDATAPRESENT",
+        "n": "OWNDATAPRESENT",
+        "ok": false
+      },
+      {
+        "n": "MEMORYFOOTPRINT",
+        "ok": true,
+        "t": "number",
+        "v": "265"
+      },
+      {
+        "e": "property not readable: ACTIVE",
+        "n": "ACTIVE",
+        "ok": false
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  }
+}

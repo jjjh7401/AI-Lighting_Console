@@ -1,0 +1,10 @@
+--- approval_port=None  (기본값 = DenyAllApprovalPort — t233 프로브 배선) ---
+  'Off Fixture 501'            cleared=False status=rejected  reasons=('reference-invoking command', 'unverifiable reference: no recognizable target object')
+  'Clear'                      cleared=True  status=cleared   reasons=()
+  'Fixture 501'                cleared=True  status=cleared   reasons=()
+  "Attribute 'Zoom' At 45"     cleared=True  status=cleared   reasons=()
+--- approval_port=Approve()  (승인 통로 있음 — t135 배선) ---
+  'Off Fixture 501'            cleared=True  status=cleared   reasons=('reference-invoking command', 'unverifiable reference: no recognizable target object')
+  'Clear'                      cleared=True  status=cleared   reasons=()
+  'Fixture 501'                cleared=True  status=cleared   reasons=()
+  "Attribute 'Zoom' At 45"     cleared=True  status=cleared   reasons=()

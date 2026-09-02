@@ -36,10 +36,16 @@ for l in cmds:
 chk("M2", "Preset 참조 풀·번호 유효", not badp, str(sorted(set(badp))) if badp else "풀 매핑 {DIM:1, POS:2, COL:4, BM:21, FX:22} 내 전부 유효")
 
 # M3: Store Cue 개수·번호 = CUES와 일치
-stored = [int(m) for l in cmds for m in re.findall(r'Store Cue (\d+) ', l)]
+# 개별 타이밍이 그룹마다 다른 큐는 파트로 갈린다(t215). 파트 저장은 큐를 새로
+# 만들지 않으므로 큐 목록에서 빼고 세되, 그 번호가 실재 큐인지는 따로 본다.
+stored = [int(m) for l in cmds for m in re.findall(r'Store Cue (\d+) (?!Part )', l)]
+parts = [int(m) for l in cmds for m in re.findall(r'Store Cue (\d+) Part \d+ ', l)]
 expect = [int(c[0][1:]) for c in CUES]
-chk("M3", "Store Cue 번호 = CUE 시트", stored == expect,
-    "누락/불일치 %s" % (set(expect) ^ set(stored)) if stored != expect else "%d큐 (10~180) 순서 일치" % len(stored))
+orphan = sorted(set(parts) - set(expect))
+chk("M3", "Store Cue 번호 = CUE 시트", stored == expect and not orphan,
+    "누락/불일치 %s · 고아 파트 %s" % (set(expect) ^ set(stored), orphan)
+    if (stored != expect or orphan)
+    else "%d큐 (10~180) 순서 일치 · 파트 %d개 전부 실재 큐" % (len(stored), len(parts)))
 
 # M4: SNAP 큐는 CueFade 0.0
 snapq = {int(c[0][1:]) for c in CUES if c[10] == "SNAP"}

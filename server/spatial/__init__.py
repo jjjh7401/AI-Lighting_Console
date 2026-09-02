@@ -46,6 +46,8 @@ from server.spatial.pointing import (
     pointing_commands,
 )
 from server.spatial.presets import (
+    EXPLICIT_ENTRY_KEYS,
+    EXPLICIT_PRESET_NAME,
     SPATIAL_PRESET_DECIMALS,
     SPATIAL_PRESET_DEFAULTS,
     SPATIAL_PRESET_MAX_ABS,
@@ -54,6 +56,7 @@ from server.spatial.presets import (
     SpatialPlacement,
     SpatialPresetError,
     SpatialPresetPlan,
+    explicit_placements,
     spatial_placements_to_records,
     spatial_preset_placements,
 )
@@ -79,6 +82,8 @@ from server.spatial.schema import (
 from server.spatial.sorting import spatial_sorted_fids, spatial_sorted_fixtures
 
 __all__ = [
+    "EXPLICIT_ENTRY_KEYS",
+    "EXPLICIT_PRESET_NAME",
     "POINTING_TILT_LIMIT_DEGREES",
     "SPATIAL_LOW_CONFIDENCE_REASONS",
     "SPATIAL_PRESETS",
@@ -121,6 +126,7 @@ __all__ = [
     "spatial_analysis_to_dict",
     "spatial_fixture_from_record",
     "spatial_fixtures_from_records",
+    "explicit_placements",
     "spatial_placements_to_records",
     "spatial_preset_placements",
     "spatial_sorted_fids",

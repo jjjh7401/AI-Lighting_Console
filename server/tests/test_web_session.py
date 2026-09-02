@@ -38,6 +38,7 @@ from server.llm.gemini_adapter import GeminiAdapter
 from server.llm.types import ModelTurn, ToolCall, ToolResult, UserMessage
 from server.orchestrator.last_created import LastCreated
 from server.orchestrator.tools import CommandOutcome, ToolExecution
+from server.safety.approval import ApprovalItem, ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
 from server.spatial.mib import PositionCuePlan, position_cue_bundle
@@ -3736,6 +3737,110 @@ class TestPositionPresetOverwriteGuard:
         ]
         commands = _all_commands(calls)
         assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+
+class TestUnverifiedPoolReachesTheApprovalCard:
+    """t217 — 판독 실패 사실은 **쓰기 전 승인 카드**에 실린다.
+
+    REQ-PRESETGUARD-004는 판독 불가에서 *저장을 진행하되 회신에 명시*하라고
+    한다. 그런데 그 회신은 되돌릴 수 없는 쓰기가 **끝난 뒤**에야 조립된다
+    (``_preset_reply_text``는 완료된 ``_PresetStoreRun``과 되읽기를 받는다).
+    사실은 판단 시점에 이미 있는데 사후에만 전달되는 것 — 이 반의 표적이다.
+
+    REQ-PRESETGUARD-005(마찰은 손실 가능성이 있는 자리에만)는 그대로 산다:
+    새 질문 카드를 띄우지 않고, **이미 뜨는** 승인 카드(`Store Preset`은
+    blacklist 항목이다)에 사실 한 줄을 얹을 뿐이다.
+    """
+
+    class _ApprovingRegistry(_PresetPoolRegistry):
+        """write 번들마다 게이트가 승인 카드를 띄우는 리그.
+
+        실물 게이트는 `Store Preset`을 hold 하고 ``_notify_approval``로 카드를
+        UI에 밀어낸 뒤 사람의 결정을 기다린다. 이 리그는 그 **순간**만 흉내
+        낸다 — 카드가 나가는 자리가 쓰기 **직전**이라는 것이 재려는 축이다.
+        """
+
+        def __init__(self, calls, session, **rig):
+            super().__init__(calls, **rig)
+            self._session = session
+            self.cards = 0
+
+        def dispatch(self, call):
+            if call.name == "run_commands":
+                self.cards += 1
+                self._session._notify_approval(
+                    f"req-{self.cards}",
+                    ApprovalRequest(
+                        items=tuple(
+                            ApprovalItem(
+                                command=command,
+                                risk_reasons=("blacklist: Store Preset",),
+                            )
+                            for command in call.arguments["commands"]
+                            if command.startswith("Store Preset")
+                        )
+                    ),
+                )
+            return super().dispatch(call)
+
+    def _run(self, tmp_path, **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._ApprovingRegistry(calls, session, **rig)
+        session._question_channel = _AnsweringChannel([])
+        event = session.run_instruction("기본 포지션 프리셋을 21번부터 저장해줘")
+        cards = [frame for frame in sent if frame["type"] == "approval_request"]
+        return event, calls, cards
+
+    def test_the_card_carries_the_unreadable_pool_before_the_write(self, tmp_path):
+        event, calls, cards = self._run(tmp_path, pool_error=True, readback=())
+
+        # 오늘의 동작 보존 — 판독 불가는 거절이 아니다(REQ-PRESETGUARD-004).
+        assert len(_writes(calls)) == 10
+        # 카드가 실제로 떴고, 그 카드가 판독 실패를 들고 있다.
+        assert len(cards) == 10
+        for card in cards:
+            warnings = [line for item in card["items"] for line in item["warnings"]]
+            assert any("확인하지 못했습니다" in line for line in warnings), warnings
+        # 회신에도 그대로 남는다 — 카드는 회신을 대체하지 않고 앞선다.
+        assert "확인하지 못했습니다" in event["text"]
+
+    def test_a_verified_empty_span_puts_nothing_extra_on_the_card(self, tmp_path):
+        """대조군 팔 2 — 기존 상태에서는 이 문면이 카드에 없다.
+
+        없으면 위 단정이 "언제나 붙는 문자열"을 재는 공허 단언이 된다.
+        """
+        _event, calls, cards = self._run(
+            tmp_path, pool=(1, 2, 3), readback=(1, 2, 3) + tuple(range(21, 31))
+        )
+
+        assert len(_writes(calls)) == 10
+        assert len(cards) == 10
+        for card in cards:
+            warnings = [line for item in card["items"] for line in item["warnings"]]
+            assert not any("확인하지 못했습니다" in line for line in warnings), warnings
+
+    def test_the_advisory_does_not_leak_past_the_store_loop(self, tmp_path):
+        """자문은 저장 루프 안에서만 산다 — 다음 턴의 카드에 묻어가지 않는다."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._ApprovingRegistry(calls, session, pool_error=True, readback=())
+        session._question_channel = _AnsweringChannel([])
+        session.run_instruction("기본 포지션 프리셋을 21번부터 저장해줘")
+        sent.clear()
+
+        session._notify_approval(
+            "req-later",
+            ApprovalRequest(
+                items=(ApprovalItem(command="Off Fixture 1", risk_reasons=("실행 중지",)),)
+            ),
+        )
+
+        later = [frame for frame in sent if frame["type"] == "approval_request"]
+        assert len(later) == 1
+        assert later[0]["items"][0]["warnings"] == []
 
 
 class TestPositionPresetRegeneration:

@@ -600,9 +600,13 @@ class TestToolRegistration:
 
     def test_its_schema_closes_the_preset_vocabulary(self):
         definition = next(d for d in registry(rig()).definitions() if d.name == "arrange_fixtures")
+        # t224 가 'explicit' 를 더했다 — 도형이 아니라 호출자가 실은 좌표를
+        # 그대로 쓰는 경로다. 어휘는 여전히 닫혀 있고, 목록이 여기 박혀 있어
+        # 다음에 무엇이 늘든 이 줄을 고치지 않고는 못 늘어난다.
         assert definition.parameters["properties"]["preset"]["enum"] == [
             *SPATIAL_PRESETS,
             "elevation",
+            "explicit",
         ]
         assert definition.parameters["required"] == ["preset", "fids"]
         assert definition.parameters["additionalProperties"] is False

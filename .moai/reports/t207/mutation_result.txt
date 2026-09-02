@@ -1,0 +1,6 @@
+M1 게이트 통째 제거: exit=1 | 15 failed, 35 passed in 0.19s
+M2 경계 이동 1행->2행: exit=1 | 14 failed, 36 passed in 0.16s
+M3 사유 요약 공백화: exit=1 | 2 failed, 48 passed in 0.06s
+M4 사유에서 그룹명 제거: exit=1 | 1 failed, 49 passed in 0.05s
+M5 사유에서 클래스 제거: exit=1 | 1 failed, 49 passed in 0.05s
+복원 확인: 원본과 바이트 동일

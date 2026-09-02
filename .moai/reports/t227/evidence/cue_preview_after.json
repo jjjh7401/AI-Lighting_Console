@@ -1,0 +1,744 @@
+{
+  "action": "preview",
+  "approve": false,
+  "listen_port": 9005,
+  "cue_csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a2ac7011dddc00cde/src/Lighting_Designer/03_곡파일_Sugar/LXSEQ_SAMPLE_01_Sugar_r3.cue-ex.csv",
+  "sequence_name": "Sugar r3",
+  "limit": null,
+  "skip": 0,
+  "census": {
+    "total_rows": 89,
+    "cue_count": 18,
+    "cue_numbers": [
+      "Q010",
+      "Q020",
+      "Q030",
+      "Q040",
+      "Q050",
+      "Q060",
+      "Q070",
+      "Q080",
+      "Q090",
+      "Q100",
+      "Q110",
+      "Q120",
+      "Q130",
+      "Q140",
+      "Q150",
+      "Q160",
+      "Q170",
+      "Q180"
+    ],
+    "console_rows": 83,
+    "video_call_rows": 6,
+    "video_call_cues": [
+      "Q080",
+      "Q090",
+      "Q110",
+      "Q130",
+      "Q160",
+      "Q170"
+    ],
+    "video_call_skip_reason": "video_call_not_console",
+    "note_pattern": "LW-",
+    "note_pattern_hits": 5,
+    "note_pattern_would_miss": 1
+  },
+  "preset_sheets_supplied": {
+    "preset_dim_csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a2ac7011dddc00cde/src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-dim.csv",
+    "preset_col_csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a2ac7011dddc00cde/src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-col.csv",
+    "preset_bm_csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a2ac7011dddc00cde/src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-bm.csv",
+    "fx_csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a2ac7011dddc00cde/src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.fx.csv",
+    "cue_sheet_xlsx": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a2ac7011dddc00cde/src/Lighting_Designer/03_곡파일_Sugar/LXSEQ_SAMPLE_01_Sugar_r3.xlsx"
+  },
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "baseline": {
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "ok": false,
+      "child_count": null,
+      "truncated": false,
+      "detail": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "fixtures": {
+      "path": "Patch/Stages/1/Fixtures",
+      "ok": true,
+      "child_count": 86,
+      "children_in_reply": 19,
+      "truncated": true,
+      "detail": null
+    },
+    "groups": {
+      "path": "DataPool/Groups",
+      "ok": true,
+      "child_count": 18,
+      "children_in_reply": 18,
+      "truncated": false,
+      "detail": null
+    },
+    "sequences": {
+      "path": "DataPool/Sequences",
+      "ok": true,
+      "child_count": 6,
+      "children_in_reply": 6,
+      "truncated": false,
+      "detail": null
+    },
+    "channel_trustworthy": true
+  },
+  "tool": {
+    "action": "preview",
+    "sequence_name": "Sugar r3",
+    "source": {
+      "sha256": "e313c31a4cca9a5df640ad0c9e38dbdf932e0a7db82f9edae85ea436afeb5672",
+      "byte_length": 5088
+    },
+    "rejected_rows": [],
+    "read": 89,
+    "cue_numbers": [
+      "Q010",
+      "Q020",
+      "Q030",
+      "Q040",
+      "Q050",
+      "Q060",
+      "Q070",
+      "Q080",
+      "Q090",
+      "Q100",
+      "Q110",
+      "Q120",
+      "Q130",
+      "Q140",
+      "Q150",
+      "Q160",
+      "Q170",
+      "Q180"
+    ],
+    "video_call_rows": 6,
+    "planned_cues": [],
+    "planned_row_count": 0,
+    "held": [
+      {
+        "cue_no": "Q020",
+        "group": "KEY",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q040",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q050",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q050",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q070",
+        "group": "KEY",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q080",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q090",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q090",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q110",
+        "group": "KEY",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q130",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q130",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q140",
+        "group": "BACK",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q140",
+        "group": "WASH-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q150",
+        "group": "STROBE",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q160",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q160",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q160",
+        "group": "WASH-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      }
+    ],
+    "video_calls": [
+      {
+        "cue_no": "Q080",
+        "group": "LED-W",
+        "note": "영상 큐 LW-02 콜"
+      },
+      {
+        "cue_no": "Q090",
+        "group": "LED-W",
+        "note": "영상 큐 LW-03 콜"
+      },
+      {
+        "cue_no": "Q110",
+        "group": "LED-W",
+        "note": "영상 큐 LW-04(로우) 콜"
+      },
+      {
+        "cue_no": "Q130",
+        "group": "LED-W",
+        "note": "영상 큐 LW-05(피크) 콜"
+      },
+      {
+        "cue_no": "Q160",
+        "group": "LED-W",
+        "note": "영상 큐 LW-06 콜"
+      },
+      {
+        "cue_no": "Q170",
+        "group": "LED-W",
+        "note": "영상 페이드아웃 동기"
+      }
+    ],
+    "video_only_cues": [],
+    "cues_held": [
+      {
+        "cue_no": "Q020",
+        "held_rows": 1,
+        "withheld_rows": 2,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "COL.02"
+        ]
+      },
+      {
+        "cue_no": "Q040",
+        "held_rows": 1,
+        "withheld_rows": 3,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.02"
+        ]
+      },
+      {
+        "cue_no": "Q050",
+        "held_rows": 2,
+        "withheld_rows": 5,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.01",
+          "BM.03"
+        ]
+      },
+      {
+        "cue_no": "Q070",
+        "held_rows": 1,
+        "withheld_rows": 4,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "COL.02"
+        ]
+      },
+      {
+        "cue_no": "Q080",
+        "held_rows": 1,
+        "withheld_rows": 2,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.02"
+        ]
+      },
+      {
+        "cue_no": "Q090",
+        "held_rows": 2,
+        "withheld_rows": 4,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.01",
+          "BM.03"
+        ]
+      },
+      {
+        "cue_no": "Q110",
+        "held_rows": 1,
+        "withheld_rows": 6,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.04"
+        ]
+      },
+      {
+        "cue_no": "Q130",
+        "held_rows": 2,
+        "withheld_rows": 5,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.01",
+          "BM.03"
+        ]
+      },
+      {
+        "cue_no": "Q140",
+        "held_rows": 2,
+        "withheld_rows": 2,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "FX.04"
+        ]
+      },
+      {
+        "cue_no": "Q150",
+        "held_rows": 1,
+        "withheld_rows": 5,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "FX.06"
+        ]
+      },
+      {
+        "cue_no": "Q160",
+        "held_rows": 3,
+        "withheld_rows": 6,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.02",
+          "COL.02"
+        ]
+      }
+    ],
+    "cues_held_count": 11,
+    "partial_ship": false,
+    "coverage_gap": null,
+    "refusal": null,
+    "refusal_detail": null,
+    "blocked_by": [
+      {
+        "code": "unresolved_preset",
+        "block_class": "C_doc_intent_unverified",
+        "why": "프리셋 참조가 배정표에 없다 -- PRESET 시트에 정의가 없는 것인지, 정의는 있는데 콘솔 슬롯 조인이 안 선 것인지 이 층에서는 안 갈린다",
+        "where": [
+          "Q020 / KEY",
+          "Q040 / MOVER-U",
+          "Q050 / MOVER-U",
+          "Q050 / MOVER-D",
+          "Q070 / KEY",
+          "Q080 / MOVER-U",
+          "Q090 / MOVER-U",
+          "Q090 / MOVER-D",
+          "Q110 / KEY",
+          "Q130 / MOVER-U",
+          "Q130 / MOVER-D",
+          "Q140 / BACK",
+          "Q140 / WASH-U",
+          "Q150 / STROBE",
+          "Q160 / MOVER-U",
+          "Q160 / MOVER-D",
+          "Q160 / WASH-D"
+        ]
+      }
+    ],
+    "sequence_no": 3,
+    "already_present": true,
+    "cues_already_present": [
+      "Q010",
+      "Q020",
+      "Q030",
+      "Q040",
+      "Q050",
+      "Q060",
+      "Q070",
+      "Q080",
+      "Q090",
+      "Q100",
+      "Q110",
+      "Q120",
+      "Q130",
+      "Q140",
+      "Q150",
+      "Q160",
+      "Q170",
+      "Q180"
+    ],
+    "unverified": [
+      "value_match",
+      "tracked_value"
+    ],
+    "unverified_reason": "이 층은 **놓을 자리와 값을 정할 뿐** 콘솔이 그것을 받았는지 되읽지 않는다. 되읽기 채널(cue_monitor._cue_items)은 번호와 이름까지만 답하고 **큐 내용은 안 준다** — 「시퀀스가 있다」는 「큐가 맞게 들어갔다」가 아니다 / 빈칸은 **트래킹**이라 이 계획에 아무 값도 싣지 않는다. 앞 큐의 값이 그대로 산다는 뜻이고, 그 값이 무엇인지는 이 층이 모른다 — 큐 스택을 따라가야 안다",
+    "group_slots_resolved": 18,
+    "preset_slots_resolved": 24,
+    "unresolved_preset_refs": [
+      {
+        "ref": "BM.01",
+        "kind": "BM",
+        "cause": "console_lacks_name",
+        "expected_console_name": "와이드 워시"
+      },
+      {
+        "ref": "BM.02",
+        "kind": "BM",
+        "cause": "console_lacks_name",
+        "expected_console_name": "미드 빔"
+      },
+      {
+        "ref": "BM.03",
+        "kind": "BM",
+        "cause": "console_lacks_name",
+        "expected_console_name": "좁은 빔 + 프리즘"
+      },
+      {
+        "ref": "BM.04",
+        "kind": "BM",
+        "cause": "console_lacks_name",
+        "expected_console_name": "소프트 프로스트"
+      },
+      {
+        "ref": "COL.02",
+        "kind": "COL",
+        "cause": "console_lacks_name",
+        "expected_console_name": "웜 화이트 (=P2)"
+      },
+      {
+        "ref": "FX.04",
+        "kind": "FX",
+        "cause": "console_lacks_name",
+        "expected_console_name": "COL-RAINBOW"
+      },
+      {
+        "ref": "FX.06",
+        "kind": "FX",
+        "cause": "console_lacks_name",
+        "expected_console_name": "SHUTTER-STROBE"
+      }
+    ],
+    "preset_sheet_errors": {},
+    "notice_preset_slots": "preset_slots 는 넘어온 preset_*_content_base64/fx_content_base64(DIM/COL/BM/FX)만큼만 찬다 -- ID(시트) -> Name(시트) -> 슬롯(콘솔) 조인. POS.xx 만 이 조인이 안 선다(POS 시트에 Name 열이 없다). 못 채운 종류를 참조하는 행은 held 로 떨어진다.",
+    "cue_bundles_planned": 0,
+    "preset_pool_lookup_failed": [],
+    "cue_manual_notes": {}
+  },
+  "sequences_after": {
+    "path": "DataPool/Sequences",
+    "ok": true,
+    "child_count": 6,
+    "children_in_reply": 6,
+    "truncated": false,
+    "detail": null
+  },
+  "sequence_after": {
+    "path": "DataPool/Sequences/3",
+    "ok": true,
+    "child_count": 21,
+    "children_in_reply": 13,
+    "truncated": true,
+    "detail": null
+  },
+  "cues_readback": {
+    "ok": true,
+    "count": 13,
+    "expected": 18,
+    "matches_expected": false,
+    "expected_planned": 0,
+    "expected_after": 18,
+    "matches_after": false,
+    "partial_ship": false,
+    "cues_held": [
+      {
+        "cue_no": "Q020",
+        "held_rows": 1,
+        "withheld_rows": 2,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "COL.02"
+        ]
+      },
+      {
+        "cue_no": "Q040",
+        "held_rows": 1,
+        "withheld_rows": 3,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.02"
+        ]
+      },
+      {
+        "cue_no": "Q050",
+        "held_rows": 2,
+        "withheld_rows": 5,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.01",
+          "BM.03"
+        ]
+      },
+      {
+        "cue_no": "Q070",
+        "held_rows": 1,
+        "withheld_rows": 4,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "COL.02"
+        ]
+      },
+      {
+        "cue_no": "Q080",
+        "held_rows": 1,
+        "withheld_rows": 2,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.02"
+        ]
+      },
+      {
+        "cue_no": "Q090",
+        "held_rows": 2,
+        "withheld_rows": 4,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.01",
+          "BM.03"
+        ]
+      },
+      {
+        "cue_no": "Q110",
+        "held_rows": 1,
+        "withheld_rows": 6,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.04"
+        ]
+      },
+      {
+        "cue_no": "Q130",
+        "held_rows": 2,
+        "withheld_rows": 5,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.01",
+          "BM.03"
+        ]
+      },
+      {
+        "cue_no": "Q140",
+        "held_rows": 2,
+        "withheld_rows": 2,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "FX.04"
+        ]
+      },
+      {
+        "cue_no": "Q150",
+        "held_rows": 1,
+        "withheld_rows": 5,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "FX.06"
+        ]
+      },
+      {
+        "cue_no": "Q160",
+        "held_rows": 3,
+        "withheld_rows": 6,
+        "classes": [
+          "unresolved_preset"
+        ],
+        "preset_refs": [
+          "BM.02",
+          "COL.02"
+        ]
+      }
+    ],
+    "cues": [
+      {
+        "no": 1,
+        "name": "OffCue"
+      },
+      {
+        "no": 2,
+        "name": "CueZero",
+        "cue_no": 0
+      },
+      {
+        "no": 3,
+        "name": "Cue 1",
+        "cue_no": 1
+      },
+      {
+        "no": 4,
+        "name": "Q010 INTRO 화사",
+        "cue_no": 10
+      },
+      {
+        "no": 5,
+        "name": "Q020 VERSE1 경쾌",
+        "cue_no": 20
+      },
+      {
+        "no": 6,
+        "name": "Q030 VERSE1 확장",
+        "cue_no": 30
+      },
+      {
+        "no": 7,
+        "name": "Q040 PRE1 축적",
+        "cue_no": 40
+      },
+      {
+        "no": 8,
+        "name": "Q050 CHORUS1 개방",
+        "cue_no": 50
+      },
+      {
+        "no": 9,
+        "name": "Q060 CHORUS1 유지",
+        "cue_no": 60
+      },
+      {
+        "no": 10,
+        "name": "Q070 VERSE2 하강",
+        "cue_no": 70
+      },
+      {
+        "no": 11,
+        "name": "Q080 PRE2 축적",
+        "cue_no": 80
+      },
+      {
+        "no": 12,
+        "name": "Q090 CHORUS2 개방",
+        "cue_no": 90
+      },
+      {
+        "no": 13,
+        "name": "Q100 CHORUS2 유지",
+        "cue_no": 100
+      }
+    ]
+  },
+  "approval_requests": [],
+  "questions_asked": [],
+  "video_call_containment": {
+    "group": "LED-W",
+    "rows_in_sheet": 6,
+    "commands_referencing_group": 0,
+    "leaked_commands": [],
+    "no_command_emitted": true
+  }
+}

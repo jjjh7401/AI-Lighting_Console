@@ -25,6 +25,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from server.lxseq.cue_parser import CANONICAL_CUE_COLUMNS
 from server.lxseq.parser import CANONICAL_COLUMNS, _normalize_header
 from server.vwx.reader import (
     _best_header_candidate,
@@ -358,6 +359,15 @@ PRESET_BM_ROW = SheetKindRow(
 
 #: 표 하나. 예약된 종류의 행은 만들지 않는다 — 그 종류의 파서·핸들러가 있어야
 #: 행을 만든다(REQ-FILEARG-017). 프리셋 3종은 이제 파서와 핸들러가 있다.
+#: `cue-ex` -- long format(one cue x one group = one row, spec.md 11).
+#: Required-columns predicate, same shape as GROUP_ROW -- t209.
+CUE_ROW = SheetKindRow(
+    kind="cue-ex",
+    predicate=RequiredForbidden(required_columns=CANONICAL_CUE_COLUMNS),
+    handler=Handler(HANDLER_TAG_TOOL, "import_lxseq_cues"),
+    passthrough_args=("action",),
+)
+
 REGISTRY: tuple[SheetKindRow, ...] = (
     PATCH_ROW,
     GROUP_ROW,
@@ -365,6 +375,7 @@ REGISTRY: tuple[SheetKindRow, ...] = (
     PRESET_COL_ROW,
     PRESET_BM_ROW,
     VECTORWORKS_ROW,
+    CUE_ROW,
 )
 
 

@@ -1,0 +1,252 @@
+{
+  "action": "apply",
+  "approve": true,
+  "listen_port": 9005,
+  "coords_csv": "src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.coords.csv",
+  "rows_in_sheet": 86,
+  "targets": 3,
+  "extent": {
+    "x": [
+      -7.5,
+      7.5
+    ],
+    "y": [
+      -9.0,
+      5.2
+    ],
+    "z": [
+      0.2,
+      7.5
+    ]
+  },
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "baseline": {
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "ok": false,
+      "child_count": null,
+      "detail": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "fixtures": {
+      "path": "Patch/Stages/1/Fixtures",
+      "ok": true,
+      "child_count": 86,
+      "children_in_reply": 19,
+      "truncated": true,
+      "detail": null
+    },
+    "channel_trustworthy": true,
+    "sample_before": {
+      "slot": 1,
+      "FID": {
+        "ok": true,
+        "value": "101"
+      },
+      "Posx": {
+        "ok": true,
+        "value": "0.0"
+      },
+      "Posy": {
+        "ok": true,
+        "value": "0.0"
+      },
+      "Posz": {
+        "ok": true,
+        "value": "0.0"
+      }
+    }
+  },
+  "arrange": {
+    "is_error": false,
+    "payload": {
+      "preset": "explicit",
+      "resolved": {
+        "fid_order": [
+          101,
+          102,
+          103
+        ],
+        "count": 3
+      },
+      "targets": [
+        101,
+        102,
+        103
+      ],
+      "planned": [
+        {
+          "fid": 101,
+          "x": -5.0,
+          "y": -9.0,
+          "z": 7.5
+        },
+        {
+          "fid": 102,
+          "x": -3.0,
+          "y": -9.0,
+          "z": 7.5
+        },
+        {
+          "fid": 103,
+          "x": -1.0,
+          "y": -9.0,
+          "z": 7.5
+        }
+      ],
+      "backup": [
+        {
+          "fid": 101,
+          "slot": 1,
+          "name": "KEY 101",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        {
+          "fid": 102,
+          "slot": 2,
+          "name": "KEY 102",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        {
+          "fid": 103,
+          "slot": 3,
+          "name": "KEY 103",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      ],
+      "restore_bundle": [
+        "Set Fixture 101 Posx '0.0'",
+        "Set Fixture 101 Posy '0.0'",
+        "Set Fixture 101 Posz '0.0'",
+        "Set Fixture 102 Posx '0.0'",
+        "Set Fixture 102 Posy '0.0'",
+        "Set Fixture 102 Posz '0.0'",
+        "Set Fixture 103 Posx '0.0'",
+        "Set Fixture 103 Posy '0.0'",
+        "Set Fixture 103 Posz '0.0'"
+      ],
+      "commands": [
+        {
+          "command": "Set Fixture 101 Posx '-5.0'",
+          "status": "executed_ok",
+          "detail": "OK"
+        },
+        {
+          "command": "Set Fixture 101 Posy '-9.0'",
+          "status": "executed_ok",
+          "detail": "OK"
+        },
+        {
+          "command": "Set Fixture 101 Posz '7.5'",
+          "status": "executed_ok",
+          "detail": "OK"
+        },
+        {
+          "command": "Set Fixture 102 Posx '-3.0'",
+          "status": "executed_ok",
+          "detail": "OK"
+        },
+        {
+          "command": "Set Fixture 102 Posy '-9.0'",
+          "status": "executed_ok",
+          "detail": "OK"
+        },
+        {
+          "command": "Set Fixture 102 Posz '7.5'",
+          "status": "executed_ok",
+          "detail": "OK"
+        },
+        {
+          "command": "Set Fixture 103 Posx '-1.0'",
+          "status": "executed_ok",
+          "detail": "OK"
+        },
+        {
+          "command": "Set Fixture 103 Posy '-9.0'",
+          "status": "executed_ok",
+          "detail": "OK"
+        },
+        {
+          "command": "Set Fixture 103 Posz '7.5'",
+          "status": "executed_ok",
+          "detail": "OK"
+        }
+      ],
+      "walk": {
+        "slot_queries": 3,
+        "roundtrip_capped": false,
+        "truncated": true
+      },
+      "executed": true,
+      "readback": [
+        {
+          "fid": 101,
+          "x": -5.0,
+          "y": -9.0,
+          "z": 7.5
+        },
+        {
+          "fid": 102,
+          "x": -3.0,
+          "y": -9.0,
+          "z": 7.5
+        },
+        {
+          "fid": 103,
+          "x": -1.0,
+          "y": -9.0,
+          "z": 7.5
+        }
+      ],
+      "verified": true,
+      "succeeded": true,
+      "status": "arranged",
+      "tolerance": {
+        "relative": 1e-06,
+        "absolute": 1e-06
+      }
+    }
+  },
+  "sample_after": {
+    "slot": 1,
+    "FID": {
+      "ok": true,
+      "value": "101"
+    },
+    "Posx": {
+      "ok": true,
+      "value": "-5.0"
+    },
+    "Posy": {
+      "ok": true,
+      "value": "-9.0"
+    },
+    "Posz": {
+      "ok": true,
+      "value": "7.5"
+    }
+  },
+  "approval_requests": [
+    [
+      "Set Fixture 101 Posx '-5.0'",
+      "Set Fixture 101 Posy '-9.0'",
+      "Set Fixture 101 Posz '7.5'",
+      "Set Fixture 102 Posx '-3.0'",
+      "Set Fixture 102 Posy '-9.0'",
+      "Set Fixture 102 Posz '7.5'",
+      "Set Fixture 103 Posx '-1.0'",
+      "Set Fixture 103 Posy '-9.0'",
+      "Set Fixture 103 Posz '7.5'"
+    ]
+  ],
+  "questions_asked": []
+}

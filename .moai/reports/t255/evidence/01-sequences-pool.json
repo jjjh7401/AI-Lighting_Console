@@ -1,0 +1,46 @@
+{
+  "children": [
+    {
+      "class": "Sequence",
+      "i": 1,
+      "name": "Default"
+    },
+    {
+      "class": "Sequence",
+      "i": 2,
+      "name": "Sugar"
+    },
+    {
+      "class": "Sequence",
+      "i": 3,
+      "name": "Sugar r3"
+    },
+    {
+      "class": "Sequence",
+      "i": 4,
+      "name": "eset1Fade"
+    },
+    {
+      "class": "Sequence",
+      "i": 9,
+      "name": "T215 SCRATCH DELETABLE"
+    },
+    {
+      "class": "Sequence",
+      "i": 2000,
+      "name": "Sequence 2000"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 6,
+    "class": "Sequences",
+    "name": "Sequences"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/Sequences",
+  "truncated": false,
+  "v": 1
+}

@@ -1,0 +1,7 @@
+cwd = /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t237
+classify module file = /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t237/server/safety/classify.py
+ruleset default path = /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t237/server/safety/blacklist.yaml
+'Off Fixture 501'    category=invoking   ref=None           hold=True reasons=('unverifiable reference: no recognizable target object',)
+'Off Group 1'        category=invoking   ref=None           hold=True reasons=('unverifiable reference: no recognizable target object',)
+'Off Sequence 1'     category=invoking   ref='Sequence 1'   hold=True reasons=("unverifiable reference 'Sequence 1': no body fetcher configured — reference bodies unverifiable",)
+'Clear'              category=safe       ref=None          

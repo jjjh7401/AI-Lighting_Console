@@ -1,0 +1,48 @@
+-- FX.01 DIM-CHASE
+    executed_ok | ChangeDestination Root
+    executed_ok | ClearAll
+    executed_ok | Group 13
+    executed_ok | Attribute 'Dimmer' At 100
+    executed_ok | Step 2
+    executed_ok | Attribute 'Dimmer' At 0
+    executed_ok | Attribute 'Dimmer' At Phase 0 Thru 360
+    executed_ok | Attribute 'Dimmer' At Width 50
+    executed_ok | Attribute 'Dimmer' At Speed 240
+    executed_ok | Store Preset 21.3 'DIM-CHASE' /Universal
+    executed_ok | Label Preset 21.3 'DIM-CHASE'
+    executed_ok | ClearAll
+-- FX.03 DIM-BREATHE
+    executed_ok | ChangeDestination Root
+    executed_ok | ClearAll
+    executed_ok | Group 13
+    executed_ok | Attribute 'Dimmer' At 100
+    executed_ok | Step 2
+    executed_ok | Attribute 'Dimmer' At 40
+    executed_ok | Attribute 'Dimmer' At Phase 0 Thru 360
+    executed_ok | Attribute 'Dimmer' At Speed 30
+    executed_ok | Store Preset 21.4 'DIM-BREATHE' /Universal
+    executed_ok | Label Preset 21.4 'DIM-BREATHE'
+    executed_ok | ClearAll
+-- FX.05 TILT-SWEEP
+    executed_ok | ChangeDestination Root
+    executed_ok | ClearAll
+    executed_ok | Group 13
+    executed_ok | Attribute 'Tilt' At -25
+    executed_ok | Step 2
+    executed_ok | Attribute 'Tilt' At 25
+    executed_ok | Attribute 'Tilt' At Phase 0 Thru 360
+    executed_ok | Attribute 'Tilt' At Speed 30
+    executed_ok | Store Preset 21.5 'TILT-SWEEP' /Universal
+    executed_ok | Label Preset 21.5 'TILT-SWEEP'
+    executed_ok | ClearAll
+-- FX.07 DIM-TWINKLE
+    executed_ok | ChangeDestination Root
+    executed_ok | ClearAll
+    executed_ok | Group 13
+    executed_ok | Attribute 'Dimmer' At 100
+    executed_ok | Step 2
+    executed_ok | Attribute 'Dimmer' At 30
+    executed_ok | Attribute 'Dimmer' At Speed 30
+    executed_ok | Store Preset 21.6 'DIM-TWINKLE' /Universal
+    executed_ok | Label Preset 21.6 'DIM-TWINKLE'
+    executed_ok | ClearAll

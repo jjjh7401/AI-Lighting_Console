@@ -1,0 +1,22 @@
+M1 배치 거절로 되돌린다 -> DEAD | 8 failed, 56 passed in 0.39s
+    FAILED server/tests/test_lxseq_cue_mapper.py::test_a_cue_emptied_by_hold_ships_nothing_for_that_cue
+    FAILED server/tests/test_lxseq_cue_mapper.py::test_a_held_row_holds_its_cue_and_only_its_cue
+    FAILED server/tests/test_lxseq_cue_mapper.py::test_a_held_cue_ships_zero_rows_not_the_healthy_ones
+    FAILED server/tests/test_lxseq_cue_mapper.py::test_a_partial_ship_is_idempotent_on_a_rerun
+    FAILED server/tests/test_lxseq_cue_partial_ship.py::TestPartialShip::test_a_held_cue_does_not_stop_the_healthy_one
+    FAILED server/tests/test_lxseq_cue_partial_ship.py::TestPartialShip::test_the_notice_says_the_console_holds_only_part_of_the_sheet
+    FAILED server/tests/test_lxseq_cue_partial_ship.py::TestPartialShip::test_apply_sends_the_healthy_cue_and_not_the_held_one
+    FAILED server/tests/test_lxseq_cue_partial_ship.py::TestRerunAfterAPartialShip::test_the_landed_cue_is_not_replanned
+M2 보류된 큐를 부분 출하시킨다 -> DEAD | 2 failed, 62 passed in 0.33s
+    FAILED server/tests/test_lxseq_cue_mapper.py::test_a_held_row_holds_its_cue_and_only_its_cue
+    FAILED server/tests/test_lxseq_cue_mapper.py::test_a_held_cue_ships_zero_rows_not_the_healthy_ones
+M3 보류로 빈 큐를 video_only 로 오분류한다 -> DEAD | 1 failed, 63 passed in 0.33s
+    FAILED server/tests/test_lxseq_cue_mapper.py::test_a_held_cue_is_not_reported_as_video_only
+M4 함께 빠진 성한 행 수를 안 센다 -> DEAD | 1 failed, 63 passed in 0.33s
+    FAILED server/tests/test_lxseq_cue_mapper.py::test_the_held_cue_record_names_the_cause_and_the_rows_it_took_down
+M5 부분 출하 표식을 끈다 -> DEAD | 3 failed, 61 passed in 0.34s
+    FAILED server/tests/test_lxseq_cue_partial_ship.py::TestPartialShip::test_a_held_cue_does_not_stop_the_healthy_one
+    FAILED server/tests/test_lxseq_cue_partial_ship.py::TestPartialShip::test_the_notice_says_the_console_holds_only_part_of_the_sheet
+    FAILED server/tests/test_lxseq_cue_partial_ship.py::TestPartialShip::test_apply_sends_the_healthy_cue_and_not_the_held_one
+M6 보류 큐의 참조 목록을 비운다 -> DEAD | 1 failed, 63 passed in 0.32s
+    FAILED server/tests/test_lxseq_cue_partial_ship.py::TestPartialShip::test_the_output_names_the_held_cue_its_rows_and_its_refs

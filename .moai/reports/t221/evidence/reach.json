@@ -1,0 +1,1452 @@
+{
+  "coordinate_count": 86,
+  "coordinates": {
+    "101": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "102": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "103": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "104": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "105": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "106": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "111": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "112": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "113": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "114": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "115": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "116": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "117": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "118": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "201": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "202": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "203": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "204": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "205": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "206": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "207": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "208": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "209": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "210": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "211": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "212": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "301": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "302": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "303": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "304": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "305": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "306": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "311": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "312": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "313": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "314": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "315": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "316": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "401": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "402": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "403": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "404": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "405": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "406": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "407": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "408": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "409": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "410": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "421": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "422": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "423": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "424": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "425": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "426": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "427": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "428": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "429": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "430": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "501": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "502": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "503": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "504": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "505": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "506": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "507": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "508": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "521": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "522": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "523": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "524": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "525": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "526": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "527": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "528": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "601": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "602": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "603": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "604": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "605": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "606": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "611": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "612": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "613": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "614": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "621": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "622": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "frame": {
+    "cx": 0.0,
+    "cy": 0.0,
+    "min_x": 0.0,
+    "max_x": 0.0,
+    "vocal_point": [
+      0.0,
+      -2.0,
+      1.6
+    ]
+  },
+  "rig_extent": {
+    "x": [
+      0.0,
+      0.0
+    ],
+    "y": [
+      0.0,
+      0.0
+    ],
+    "z": [
+      0.0,
+      0.0
+    ]
+  },
+  "tilt_limit": 135.0,
+  "rows": [
+    {
+      "preset_id": "POS.01",
+      "group": "KEY",
+      "kind": "focus_vocal",
+      "member_count": 6,
+      "placed_count": 6,
+      "fixtures": [
+        {
+          "fid": 101,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 102,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 103,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 104,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 105,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 106,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        }
+      ]
+    },
+    {
+      "preset_id": "POS.02",
+      "group": "MOVER-D",
+      "kind": "spread_floor",
+      "member_count": 8,
+      "placed_count": 8,
+      "fixtures": [
+        {
+          "fid": 521,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 522,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 523,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 524,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 525,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 526,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 527,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 528,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        }
+      ]
+    },
+    {
+      "preset_id": "POS.03",
+      "group": "BACK",
+      "kind": "silhouette_line",
+      "member_count": 12,
+      "placed_count": 12,
+      "fixtures": [
+        {
+          "fid": 201,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 202,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 203,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 204,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 205,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 206,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 207,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 208,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 209,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 210,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 211,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        },
+        {
+          "fid": 212,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            1.6
+          ],
+          "pan": 0.0,
+          "tilt": 180.0,
+          "distance": 1.6,
+          "over_by": 45.0,
+          "degenerate": false
+        }
+      ]
+    },
+    {
+      "preset_id": "POS.04",
+      "group": "MOVER-U",
+      "kind": "floor_inside",
+      "member_count": 8,
+      "placed_count": 8,
+      "fixtures": [
+        {
+          "fid": 501,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 502,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 503,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 504,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 505,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 506,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 507,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        },
+        {
+          "fid": 508,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pan": null,
+          "tilt": null,
+          "distance": 0.0,
+          "over_by": null,
+          "degenerate": true
+        }
+      ]
+    },
+    {
+      "preset_id": "POS.05",
+      "group": "MOVER-ALL",
+      "kind": "fan_out",
+      "member_count": 16,
+      "placed_count": 16,
+      "fixtures": []
+    },
+    {
+      "preset_id": "POS.06",
+      "group": "KEY+BACK",
+      "kind": "focus_vocal",
+      "member_count": 18,
+      "placed_count": 18,
+      "fixtures": [
+        {
+          "fid": 101,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 102,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 103,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 104,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 105,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 106,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 201,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 202,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 203,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 204,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 205,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 206,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 207,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 208,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 209,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 210,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 211,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        },
+        {
+          "fid": 212,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target": [
+            0.0,
+            -2.0,
+            1.6
+          ],
+          "pan": -180.0,
+          "tilt": 128.66,
+          "distance": 2.561,
+          "over_by": -6.34,
+          "degenerate": false
+        }
+      ]
+    }
+  ]
+}
