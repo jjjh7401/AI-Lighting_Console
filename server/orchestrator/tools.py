@@ -1744,6 +1744,17 @@ LXSEQ_PRESET_APPLY_ATTRIBUTE = dict([("preset-dim", "Dimmer")])
 #: 멤버십을 몰라도 주소가 된다(`server/web/session.py:900-905`). 콘솔 픽스처
 #: 열거로 대상을 만드는 길은 열거가 절단돼 조용히 불완전해지므로 이 파일이 이미
 #: 거절해 뒀다(`import_lxseq_groups` 의 patch 시트 요구).
+#:
+#: 🔴 **대상 열을 싣는 시트 종류는 이 상수를 쓰면 안 된다.** dim·col 시트에는
+#: `TargetGroup` 열이 **없으므로** 상수 그룹으로 쏘는 것이 그 시트에 대해 유일하게
+#: 가능한 해석이고 시트와 모순되지 않는다. bm 시트는 그 열을 **싣는다** — 거기에
+#: 이 상수를 쓰면 시트가 `MOVER-ALL`(16대)을 적었는데 명령은 `ALL`(86대 중 그 속성을
+#: 가진 전부)로 나가고, 값은 되읽을 수 없어 조용히 틀린다(t241 실측 · t108 C1 계열).
+#: 그러므로 bm 을 여는 회차는 이 상수가 아니라 **행의 대상**을 쓰는 경로를 먼저
+#: 만들어야 한다(t244 소유). 그때까지 bm 은 아래 표에도 분기에도 없어서
+#: `_lxseq_preset_apply_command` 가 `None` 을 내고 호출지가 저장 줄도 안 낸다 —
+#: **fail-closed 는 이미 그 자리에 있다.** 이 문장을 지키는 검사는
+#: `server/tests/test_lxseq_preset_target_column.py` 다(t243).
 LXSEQ_PRESET_APPLY_GROUP_NO = 1
 
 
