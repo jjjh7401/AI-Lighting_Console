@@ -1,0 +1,9 @@
+기준 (뮤턴트 없음): 0 32 passed in 0.23s
+M1 가드 자체를 없앤다 (rig_is_degenerate 가 늘 거짓) -> 죽었다 | 6 failed, 26 passed in 0.21s
+M2 임계를 정확히 0 으로 (노이즈 폭 아래 미세 편차를 놓친다) -> 죽었다 | 2 failed, 30 passed in 0.20s
+M3 z 축까지 요구한다 (한 트러스 리그를 거절한다) -> 죽었다 | 1 failed, 31 passed in 0.20s
+M4 두 원인을 다시 한 사유로 접는다 -> 죽었다 | 1 failed, 31 passed in 0.20s
+M5 원인 분류를 없앤다 (늘 tilt_limit) -> 죽었다 | 3 failed, 29 passed in 0.22s
+M6 tilt 사유에서 「상한은 가정」 고지를 뺀다 -> 죽었다 | 1 failed, 31 passed in 0.20s
+
+생존/미적용: 0 / 6

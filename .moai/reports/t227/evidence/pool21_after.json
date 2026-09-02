@@ -1,0 +1,46 @@
+{
+  "children": [
+    {
+      "class": "Preset",
+      "i": 1,
+      "name": "DIM-PULSE"
+    },
+    {
+      "class": "Preset",
+      "i": 2,
+      "name": "PT-CIRCLE"
+    },
+    {
+      "class": "Preset",
+      "i": 3,
+      "name": "DIM-CHASE"
+    },
+    {
+      "class": "Preset",
+      "i": 4,
+      "name": "DIM-BREATHE"
+    },
+    {
+      "class": "Preset",
+      "i": 5,
+      "name": "TILT-SWEEP"
+    },
+    {
+      "class": "Preset",
+      "i": 6,
+      "name": "DIM-TWINKLE"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 6,
+    "class": "Presets",
+    "name": "All 1"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/PresetPools/21",
+  "truncated": false,
+  "v": 1
+}

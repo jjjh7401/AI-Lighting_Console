@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LX-SEQ 문서 대비 앱 반영도</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#fff;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard Variable",Pretendard,system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:900px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:48px 24px 80px}
+h1{font-size:30px;line-height:1.3;margin:0 0 8px;letter-spacing:-.02em}
+.sub{color:var(--g500);font-size:14px;margin:0 0 32px}
+h2{font-size:21px;margin:44px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--oat);letter-spacing:-.01em}
+h3{font-size:16px;margin:26px 0 8px}
+p{margin:10px 0}
+code{font-family:var(--mono);font-size:.87em;background:var(--g100);padding:2px 6px;border-radius:4px;word-break:break-all}
+.lead{background:var(--g100);border-left:3px solid var(--clay);padding:12px 16px;border-radius:0 var(--radius-row) var(--radius-row) 0;margin:12px 0 18px;font-size:14.5px;color:var(--g700)}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;background:var(--paper);border-radius:var(--radius-row);overflow:hidden;border:var(--border)}
+th{background:var(--g100);text-align:left;padding:10px 12px;font-weight:700;font-size:13px;color:var(--g700);border-bottom:var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--g300);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0 8px}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px}
+.card .k{font-size:11.5px;color:var(--g500);text-transform:uppercase;letter-spacing:.06em}
+.card .v{font-size:26px;font-weight:700;margin:4px 0 2px;letter-spacing:-.02em}
+.card .n{font-size:12px;color:var(--g500)}
+.ok{color:var(--olive)} .warn{color:var(--clay)}
+.item{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px 18px;margin:12px 0}
+.item.a{border-left:4px solid var(--olive)}
+.item.b{border-left:4px solid var(--clay)}
+.item.c{border-left:4px solid var(--g500)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.03em;margin-right:8px}
+.tag.a{background:#E8EDE1;color:#4A5C36} .tag.b{background:#F8E5DD;color:var(--clay-d)} .tag.c{background:var(--g100);color:var(--g700)}
+.item h3{margin:0 0 6px}
+.item p{font-size:14px;margin:8px 0 0}
+.why{font-size:13px;color:var(--g500);margin-top:8px;padding-top:8px;border-top:1px dashed var(--g300)}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:18px;text-align:center;font-family:var(--mono);font-size:12px;overflow-x:auto}
+noscript p{background:var(--g100);border-radius:var(--radius-row);padding:12px 16px;font-size:13.5px}
+.gate{background:#FDF3EF;border:1.5px solid var(--clay);border-radius:var(--radius-panel);padding:14px 18px;margin:16px 0}
+.gate strong{color:var(--clay-d)}
+.foot{margin-top:56px;padding-top:18px;border-top:var(--border);font-size:12.5px;color:var(--g500)}
+ul{padding-left:20px;margin:8px 0} li{margin:5px 0;font-size:14px}
+@media print{body{background:#fff}.wrap{padding:0}.item,.card,table{break-inside:avoid}}
+</style></head><body><div class="wrap">
+<h1>조명 연출 기능 라이브러리 <span style="font-size:15px;color:var(--clay);font-weight:400">· 전수 조사</span></h1>
+<p class="sub">측정 2026-08-31 · <code>server/</code> 전체 + <code>.moai/specs/</code> · SPEC <b>46</b>개 · 등재 도구 <b>38</b>개 · 연출 모듈 <b>60+</b></p>
+
+<div class="gate"><strong>왜 이 문서가 필요한가</strong> — 오늘 하루에 <b>이미 있는 기능을 세 번 다시 찾았습니다.</b> RIG 팩 <code>fx.csv</code>(아무도 안 씀) · 기본 프리셋 6축(제가 「없다」고 오판) · 배치 기반 시퀀스(<code>spatial/</code> 15모듈). 도구를 두고 손으로 일한 것이 맞습니다. 이 문서는 <b>능력의 정본 색인</b>입니다.</div>
+
+<h2>능력 지도 — 7개 계층</h2>
+<pre class="mermaid">
+flowchart TD
+  A["① 리그 이해<br/>패치·인벤토리·공간"] --> B["② 그룹·토폴로지<br/>배치가 그룹이 된다"]
+  B --> C["③ 프리셋 자산<br/>6축 × 10종"]
+  C --> D["④ 이펙트·페이저<br/>라이브러리 + 조합"]
+  D --> E["⑤ 룩·씬<br/>장르별 조합 단위"]
+  E --> F["⑥ 큐·시퀀스<br/>곡 구조로 배치"]
+  F --> G["⑦ 안전·게이트<br/>모든 쓰기가 여기를 지난다"]
+</pre>
+<noscript><p><b>7계층</b>: 리그 이해 → 그룹·토폴로지 → 프리셋 자산 → 이펙트·페이저 → 룩·씬 → 큐·시퀀스 → 안전 게이트</p></noscript>
+
+<h2>① 리그 이해 — 무엇이 어디에 달렸나</h2>
+<table><tr><th>기능</th><th>도구 / 모듈</th><th>무엇을 하나</th></tr>
+<tr><td>패치 임포트</td><td><code>import_lxseq_patch</code></td><td>RIG 팩 CSV → 콘솔 패치 (오늘 86/86)</td></tr>
+<tr><td>패치 사전점검</td><td><code>precheck_patch</code> · <code>prechk/</code> 8모듈</td><td>주소 충돌 · 512ch · 풋프린트 산술 · 모드 판독</td></tr>
+<tr><td>인벤토리 판독</td><td><code>prechk/inventory.py</code></td><td>콘솔에 실제로 뭐가 있나 · 완전성 판정</td></tr>
+<tr><td>픽스처 타입 해석</td><td><code>resolve_fixture_type</code></td><td>기종명 → 콘솔 타입</td></tr>
+<tr><td>주소 해석</td><td><code>resolve_patch_address</code></td><td>Universe.Address 정규화</td></tr>
+<tr><td>Vectorworks 연동</td><td><code>vectorworks_autopatch</code> · <code>precheck_vectorworks_diff</code> · <code>apply_vectorworks_patch</code></td><td>도면에서 패치 자동 생성 · 차이 검토</td></tr>
+<tr><td>도면 이미지 분석</td><td><code>analyse_layout_image</code></td><td>리깅 도면 이미지 → 배치 추정</td></tr>
+<tr><td>공간 기억</td><td><code>get_spatial_context</code> · <code>spatial_memory.py</code></td><td>리그 기하를 세션 넘어 기억</td></tr>
+<tr><td>리그 문맥</td><td><code>get_rig_context</code></td><td>현재 리그 요약</td></tr></table>
+
+<h2>② 그룹·토폴로지 — 🔴 감독님이 찾으신 그것</h2>
+<div class="lead"><b>「장비의 배치와 그룹을 고려해서 시퀀스 큐를 잡는 방식」</b>이 여기 있습니다. <code>server/spatial/</code> 15모듈이 그 계열입니다.</div>
+<table><tr><th>기능</th><th>모듈</th><th>핵심 문장 (코드 원문)</th></tr>
+<tr><td><b>공간 안무</b></td><td><code>spatial/choreography.py</code></td><td><b>「한정어가 정렬이 되고, 정렬이 순서가 된다」</b></td></tr>
+<tr><td>토폴로지 분류</td><td><code>spatial/topology.py</code> · <code>classify_arrangement_topology</code></td><td>픽스처 좌표에서 배치 구조를 순수 검출</td></tr>
+<tr><td>행 검출</td><td><code>spatial/rows.py</code></td><td>y축 간격 클러스터링으로 열 찾기</td></tr>
+<tr><td>정렬 4종</td><td><code>spatial/sorting.py</code></td><td>REQ-SPATIAL-009 의 네 가지 정렬 순서</td></tr>
+<tr><td>그룹 자동 명명</td><td><code>spatial/naming.py</code> · <code>create_arrangement_groups</code></td><td>토폴로지 버킷 → 폐쇄 어휘 그룹명</td></tr>
+<tr><td>배치 실행</td><td><code>arrange_fixtures</code> · <code>spatial/presets.py</code></td><td>목표 좌표로 픽스처를 배열</td></tr>
+<tr><td>빔 조준</td><td><code>spatial/pointing.py</code></td><td>무빙헤드를 3D 무대 좌표로 겨냥</td></tr>
+<tr><td>한국어 배치 어휘</td><td><code>spatial/vocabulary.py</code></td><td>「좌우로 펼쳐」 같은 말 → 결정적 배치</td></tr>
+<tr><td>픽스처 타입 축</td><td><code>spatial/fixture_type.py</code></td><td>기종별 그룹핑</td></tr>
+<tr><td>그룹 시트 임포트</td><td><code>import_lxseq_groups</code> · <code>groupgen/write.py</code></td><td>RIG 팩 GROUP 시트 → 콘솔 (오늘 18)</td></tr></table>
+<h2>③ 프리셋 자산 — 6축 × 10종, 대화로 부른다</h2>
+<div class="lead">각 축마다 <b>저장 + 재생성</b> 트리거가 쌍으로 있습니다. 「다시 잡아줘」는 <b>이미 저장된 자리를 찾아 제자리에 다시</b> 씁니다 — 큐가 프리셋 번호를 참조하니 새 자리에 쓰면 재생성이 성립하지 않기 때문입니다.</div>
+<table><tr><th>축</th><th>부르는 말</th><th>10종</th></tr>
+<tr><td><b>BASIC 포지션</b></td><td>기본/베이직 + 포지션</td><td>Home · Wall · Audience · Center · Vocal DSC · Fan Out · Fan In · Cross · Ring Out · Ring In</td></tr>
+<tr><td><b>BASIC 컬러</b></td><td>기본 + 컬러/색</td><td>Warm White · Cool White · Red · Amber · Yellow · Green · Cyan · Blue · Magenta · Lavender</td></tr>
+<tr><td><b>BASIC 딤머</b></td><td>기본 + 디머/밝기</td><td>Dim 10 ~ Dim 90 · Full</td></tr>
+<tr><td><b>컬러 페이저</b></td><td>멀티컬러 / 컬러 이펙트 / 컬러 페이저</td><td>Breathe Warm · Breathe Cool · Chase RB · Chase CM · Wave CM · Wave WA · Rainbow · Pulse RY · Duo GL · Slam RW</td></tr>
+<tr><td><b>디머 페이저</b></td><td>디머 이펙트 / 디머 페이저</td><td>Breathe Soft · Breathe Deep · Pulse Hard · Pulse Half · Wave Soft · Wave Full · Ripple · Flash Accent · Alt Half · Slam Run</td></tr>
+<tr><td><b>콤보 페이저</b></td><td>콤보 / 복합 / 컬러디머 / 드롭 프리셋</td><td>Club Duo · Finale Slam 등 (컬러+디머 혼합, All 1 풀)</td></tr>
+<tr><td>FX 포지션</td><td>이펙트 + 포지션</td><td>sweep · flyout · circle · ballyhoo · wave (5종)</td></tr></table>
+<p class="why">정본 SPEC — <code>COLORPRESET-001</code> · <code>PRESETGUARD-001/002</code> · <code>PRESETIDEM-001</code>. 안전 장치가 동형입니다: 점유 검사 → 덮어쓰기 카드 → 룩별 독립 번들 → 페이지드 되읽기 산술 → 라벨 가족 재생성.</p>
+<div class="gate"><strong>축 충돌을 이미 풀어놨습니다</strong> — 「포지션 빼고 컬러 스윕」처럼 <b>배제 문장이 배제하려는 낱말을 쓰는</b> 경우, 낱말 판정은 배제를 긍정으로 뒤집습니다. 3라운드 실측 끝에 어휘 판정을 버리고 <b>카드 한 장으로 축을 확정</b>하는 쪽을 택했습니다(<code>session.py:1826</code>). 근거: 누출은 되돌리기 어려운 콘솔 쓰기이고, 과잉은 질문 한 장입니다.</div>
+
+<h2>④ 이펙트·페이저 — 라이브러리와 생성</h2>
+<table><tr><th>기능</th><th>도구 / 모듈</th><th>무엇을 하나</th></tr>
+<tr><td>FX 검색</td><td><code>find_fx</code> · <code>fx/matching.py</code></td><td>자연어 → 큐레이션 라이브러리 조회</td></tr>
+<tr><td>FX 라이브러리</td><td><code>fx/library/</code></td><td>dimmer 5 · color 3 · movement 11</td></tr>
+<tr><td>FX 적용</td><td><code>instantiate_fx</code> · <code>fx/instantiate.py</code></td><td>🔴 기본은 시퀀스 생성 — <b><code>destination=preset</code></b> 필요</td></tr>
+<tr><td><b>FX 작성</b></td><td><code>compose_fx</code></td><td><b>라이브러리에 없는 페이저를 인자로 만든다</b> — 오늘 FX.02·FX.08 이 길로 발사</td></tr>
+<tr><td>포지션 FX 시퀀스</td><td><code>spatial/position_fx.py</code></td><td>저장된 FX 포지션 프리셋을 <b>소비하는</b> 시퀀스</td></tr>
+<tr><td>MIB</td><td><code>spatial/mib.py</code></td><td>Move In Black — 어두울 때 미리 조준</td></tr></table>
+
+<h2>⑤ 룩·씬 — 조합 단위</h2>
+<table><tr><th>기능</th><th>도구 / 모듈</th><th>무엇을 하나</th></tr>
+<tr><td>룩 검색·적용</td><td><code>find_looks</code> · <code>instantiate_look</code></td><td>장르별 룩 라이브러리 (ballad 7 · edm 9 · rock 8 · worship 8)</td></tr>
+<tr><td>포지션 역할 결속</td><td><code>looks/resolver.py</code> · <code>roles.py</code></td><td>6개 포지션 역할 → 리그의 실제 그룹</td></tr>
+<tr><td>씬 컴파일</td><td><code>find_scene</code> · <code>compile_scene</code></td><td><b>룩 + FX = 씬</b> — 한 명령 묶음으로</td></tr>
+<tr><td>버스킹 마법사</td><td><code>prepare_busking</code> · <code>looks/busking.py</code></td><td>장르만 고르면 준비 완료</td></tr>
+<tr><td>이그제큐터 배치</td><td><code>plan_executor_layout</code> · <code>looks/layout.py</code></td><td>시퀀스 → 이그제큐터 → 라벨 배선</td></tr></table>
+
+<h2>⑥ 큐·시퀀스 — 곡 구조로 배치</h2>
+<table><tr><th>기능</th><th>도구 / 모듈</th><th>무엇을 하나</th></tr>
+<tr><td><b>연출 표준 엔진</b></td><td><code>design/</code> 6모듈</td><td><code>energy</code>(D1-D5 예산) · <code>profile</code>(곡 정체성) · <code>rig</code>(리그 조건) · <code>interview</code>(5문항 소크라테스) · <code>lint</code>(L1-L14 기계 검사) · <code>position_sheet</code></td></tr>
+<tr><td>곡 큐 준비</td><td><code>prepare_songcue</code></td><td>곡 구조 → 큐 리스트</td></tr>
+<tr><td>포지션 큐시트</td><td><code>spatial/position_cuesheet.py</code></td><td>절별 무드 → 프리셋 참조 큐</td></tr>
+<tr><td>포지션 무드</td><td><code>spatial/position_moods.py</code></td><td>연출 의도(자연어) → 기본 포지션 추천</td></tr>
+<tr><td><b>LX-SEQ 큐 임포트</b></td><td><code>import_lxseq_cues</code></td><td>CUE-EX 시트 → 콘솔 큐 <b>(오늘 18/18)</b></td></tr>
+<tr><td>큐 되읽기</td><td><code>web/cue_monitor.py</code></td><td>시퀀스의 큐 번호·이름 판독</td></tr>
+<tr><td>리허설 편집</td><td><code>_REHEARSAL_EDIT_REQUEST</code></td><td>「지금 이 큐를 무대 중앙으로」 — 재생 중인 큐</td></tr>
+<tr><td>셋리스트</td><td><code>_SETLIST_REQUEST</code></td><td>곡들을 연속 시퀀스·이그제큐터에 배정</td></tr>
+</table>
+
+<h2>⑦ 안전 — 모든 쓰기가 지나는 곳</h2>
+<table><tr><th>단계</th><th>모듈</th><th>역할</th></tr>
+<tr><td>①문법</td><td><code>safety/grammar.py</code></td><td>명령 문법 검증</td></tr>
+<tr><td>②위험분류</td><td><code>safety/classify.py</code></td><td><code>Store Preset</code>·<code>Store Cue</code> 는 위험 — 승인 없이 무조건 차단</td></tr>
+<tr><td>③사람 승인</td><td><code>safety/approval.py</code></td><td>승인 카드</td></tr>
+<tr><td>백업</td><td><code>safety/backup.py</code></td><td>쇼파일 백업 정책</td></tr>
+<tr><td>라이브 잠금</td><td><code>safety/lock.py</code></td><td>읽기 전용 모드</td></tr>
+<tr><td>감사 로그</td><td><code>safety/audit.py</code></td><td>JSONL · 90일 보존</td></tr>
+<tr><td>사전 점검</td><td><code>preshow_check</code> · <code>preshow/</code> 5모듈</td><td>OSC 연결 · 시퀀스·프리셋 무결성 · <b>알려진 함정 진단</b></td></tr>
+<tr><td>인계 문서</td><td><code>build_handover_pack</code> · <code>paperwork/</code></td><td>패치시트 + 큐시트 + 프리셋목록 + 매직시트</td></tr></table>
+<h2>🔴 왜 이 기능들이 잊히나 — 구조적 원인 셋</h2>
+<div class="lead">오늘 세 번 다시 찾은 것은 우연이 아닙니다. 찾기 어렵게 되어 있습니다.</div>
+
+<div class="item b"><h3><span class="tag b">원인 1</span>경로가 둘인데 서로 모릅니다</h3>
+<p><b>시트 경로</b>(<code>server/lxseq/</code>)와 <b>대화 경로</b>(<code>server/web/session.py</code>)가 같은 콘솔 풀에 씁니다. 그런데 어느 쪽도 상대를 참조하지 않습니다.</p>
+<p class="why">오늘 제가 「기본 프리셋이 없다」고 오판한 것이 정확히 이것입니다 — 시트 경로만 보고 대화 경로를 안 봤습니다.</p></div>
+
+<div class="item b"><h3><span class="tag b">원인 2</span>능력이 SPEC 46개에 흩어져 있습니다</h3>
+<p><code>COLORPRESET-001</code> · <code>SPATIAL-001</code> · <code>LOOKLIB-001</code> · <code>FXLIB-001</code> · <code>SCENE-001</code> · <code>SONGSTD-001</code> — 각각이 자기 능력을 정의하지만 <b>「우리 앱이 무엇을 할 수 있나」를 한 장으로 답하는 문서가 없습니다.</b></p>
+<p class="why">SPEC 은 <b>만들 때</b>의 문서이지 <b>쓸 때</b>의 문서가 아닙니다. 이 라이브러리가 그 자리를 메웁니다.</p></div>
+
+<div class="item b"><h3><span class="tag b">원인 3</span>트리거가 정규식이라 목록이 없습니다</h3>
+<p>「기본 컬러 프리셋 저장해줘」가 되는지 알려면 <code>_BASIC_COLORS_REQUEST</code> 정규식을 읽어야 합니다. <b>어떤 말이 통하는지 나열한 곳이 없습니다.</b></p>
+<p class="why">감독님도 저도 「그거 있었는데 뭐라고 불렀더라」가 됩니다.</p></div>
+
+<h2>제안 — 체계화 세 단계</h2>
+
+<div class="item a"><h3><span class="tag a">1</span>능력 색인을 저장소 안에 둡니다</h3>
+<p>이 문서를 <code>docs/</code> 에 넣고 <b>기능이 추가될 때 같이 갱신</b>합니다. SPEC 은 만들 때, 색인은 쓸 때.</p>
+<p class="why">지금은 이 보고서가 <code>reports/</code> 에 있어 다음 세션이 못 찾습니다 — 같은 문제의 재생산입니다.</p></div>
+
+<div class="item a"><h3><span class="tag a">2</span>「무슨 말이 통하나」 목록을 만듭니다</h3>
+<p>정규식에서 <b>대표 문장을 추출</b>해 표로 냅니다. 예: 「기본 컬러 프리셋 21번부터 저장해줘」 · 「컬러 페이저 저장」 · 「지금 이 큐를 무대 중앙으로」.</p>
+<p class="why">기계적으로 뽑을 수 있습니다 — <code>_*_REQUEST</code> 정규식이 이미 어휘를 담고 있습니다.</p></div>
+
+<div class="item a"><h3><span class="tag a">3</span>두 경로의 충돌을 잽니다 <span class="warn">· 미측정</span></h3>
+<p>대화 경로로 표준 10색을 올린 뒤 시트 경로로 COL 7건을 올리면 어떻게 되는지 <b>아무도 안 쟀습니다.</b> 덮어쓰기·번호 충돌 가능성.</p>
+<p class="why">두 경로가 공존하는 이상 이건 언젠가 터집니다. 잰 뒤에 「어느 쪽이 정본인가」를 문면에 박아야 합니다.</p></div>
+
+<h2>지금 바로 쓸 수 있는 것 — 오늘 안 쓴 능력</h2>
+<table><tr><th>능력</th><th>부르는 법</th><th>왜 지금 값이 있나</th></tr>
+<tr><td><b>컬러 페이저 10종</b></td><td>「컬러 페이저 저장해줘」</td><td>FX 풀에 지금 2종뿐 — 10종이 들어오면 큐가 참조할 대상이 늘어남</td></tr>
+<tr><td><b>디머 페이저 10종</b></td><td>「디머 이펙트 저장해줘」</td><td>같은 이유. 딤머축은 극장 무관이라 안전</td></tr>
+<tr><td><b>사전 점검</b></td><td><code>preshow_check</code></td><td>OSC·시퀀스·프리셋 무결성 + <b>알려진 함정 진단</b> — 오늘 우리가 하나씩 손으로 밟은 것들</td></tr>
+<tr><td><b>인계 문서 팩</b></td><td><code>build_handover_pack</code></td><td>패치시트+큐시트+프리셋목록+매직시트를 한 번에 — 현장 반입 문서</td></tr>
+<tr><td><b>연출 표준 엔진</b></td><td><code>design/</code></td><td>D1-D5 에너지 예산 · L1-L14 큐시트 린트 — 스펙 검증 15항목의 상당수가 여기 이미 있을 가능성</td></tr>
+</table>
+<div class="gate"><strong>제일 아까운 것</strong> — <code>preshow/pitfalls.py</code> 는 <b>「이 프로젝트가 현장에서 관측한 실패 모드」</b>를 진단합니다. 오늘 우리가 만난 벽 넷(프리셋 부재 · Store Sequence 누락 · 큰따옴표 · 멱등성) 중 일부가 이미 여기 등록돼 있을 수 있는데 <b>한 번도 안 돌렸습니다.</b></div>
+
+<h2>안 잰 것</h2>
+<ul>
+<li><code>preshow/pitfalls.py</code> 가 실제로 무엇을 진단하는지 — <b>다음 회차 1순위</b></li>
+<li><code>design/lint.py</code> 의 L1-L14 가 스펙 검증 15항목과 얼마나 겹치는지</li>
+<li>두 경로(시트·대화)의 풀 충돌 — 위 제안 3</li>
+<li>콤보 페이저의 정확한 종수 · FX 포지션 5종의 실기 동작</li>
+<li>등재 도구 38개 중 <b>한 번도 안 불러본 것</b>이 몇 개인지</li>
+</ul>
+
+<div class="foot">서버 모듈 60+ · SPEC 46 · 등재 도구 38 · 이 문서는 <b>능력의 색인이며 스펙·계획에 아무것도 반영하지 않았습니다.</b></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body></html>

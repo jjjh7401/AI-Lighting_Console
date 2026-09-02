@@ -1,0 +1,1453 @@
+{
+  "sequences": [
+    {
+      "i": 1,
+      "name": "Default",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/1/1/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": " P 0 P 0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/1/2/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        }
+      ],
+      "childCount": 2,
+      "listed": 2
+    },
+    {
+      "i": 2,
+      "name": "Sugar",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/1/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": " P 0 P 0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/2/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "Cue 1",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/3/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "1"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 10,
+          "name": "Q010",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/4/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "10"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 20,
+          "name": "Q020",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/5/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "20"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 30,
+          "name": "Q030",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/6/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "30"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 40,
+          "name": "Q040",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/7/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "40"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 8,
+          "cueNo": 50,
+          "name": "Q050",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/8/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "50"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 9,
+          "cueNo": 60,
+          "name": "Q060",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/9/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "60"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 10,
+          "cueNo": 70,
+          "name": "Q070",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/10/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "70"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 11,
+          "cueNo": 80,
+          "name": "Q080",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/11/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "80"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 12,
+          "cueNo": 90,
+          "name": "Q090",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/12/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "90"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 13,
+          "cueNo": 100,
+          "name": "Q100",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/13/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "100"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 14,
+          "cueNo": 110,
+          "name": "Q110",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/14/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "110"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 15,
+          "cueNo": 120,
+          "name": "Q120",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/15/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "120"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 16,
+          "cueNo": 130,
+          "name": "Q130",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/16/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "130"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 17,
+          "cueNo": 140,
+          "name": "Q140",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/17/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "140"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 18,
+          "cueNo": 150,
+          "name": "Q150",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/18/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "150"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 19,
+          "cueNo": 160,
+          "name": "Q160",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/19/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "160"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 20,
+          "cueNo": 170,
+          "name": "Q170",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/20/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "170"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 21,
+          "cueNo": 180,
+          "name": "Q180",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2/21/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "180"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        }
+      ],
+      "childCount": 21,
+      "listed": 21
+    },
+    {
+      "i": 3,
+      "name": "Sugar r3",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/1/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": " P 0 P 0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/2/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "Cue 1",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/3/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "1"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 10,
+          "name": "Q010 INTRO 화사",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/4/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "10"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 20,
+          "name": "Q020 VERSE1 경쾌",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/5/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "20"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 30,
+          "name": "Q030 VERSE1 확장",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/6/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "30"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 40,
+          "name": "Q040 PRE1 축적",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/7/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "40"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 8,
+          "cueNo": 50,
+          "name": "Q050 CHORUS1 개방",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/8/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "50"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 9,
+          "cueNo": 60,
+          "name": "Q060 CHORUS1 유지",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/9/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "60"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 10,
+          "cueNo": 70,
+          "name": "Q070 VERSE2 하강",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/10/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "70"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 11,
+          "cueNo": 80,
+          "name": "Q080 PRE2 축적",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/11/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "80"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 12,
+          "cueNo": 90,
+          "name": "Q090 CHORUS2 개방",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/12/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "90"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 13,
+          "cueNo": 100,
+          "name": "Q100 CHORUS2 유지",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/13/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "100"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 14,
+          "cueNo": 110,
+          "name": "Q110 BRIDGE 절제",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/14/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "110"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 15,
+          "cueNo": 120,
+          "name": "Q120 BRIDGE 재점화",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/15/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "120"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 16,
+          "cueNo": 130,
+          "name": "Q130 CHORUS3 폭발",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/16/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "130"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 17,
+          "cueNo": 140,
+          "name": "Q140 CHORUS3 유지",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/17/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "140"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 18,
+          "cueNo": 150,
+          "name": "Q150 CHORUS3 최고조",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/18/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "150"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 19,
+          "cueNo": 160,
+          "name": "Q160 CHORUS3 해소 준비",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/19/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "160"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 20,
+          "cueNo": 170,
+          "name": "Q170 OUTRO 잔향",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/20/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "170"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 21,
+          "cueNo": 180,
+          "name": "Q180 OUTRO 암전",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/3/21/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "180"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        }
+      ],
+      "childCount": 21,
+      "listed": 21
+    },
+    {
+      "i": 4,
+      "name": "eset1Fade",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/1/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": " P 0 P 0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/2/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "T215 SCRATCH",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/3/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "1"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 2,
+          "name": "T215 ALT",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/4/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "2"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 3,
+          "name": "T215 INDIV",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/5/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "3"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 4,
+          "name": "T215 TWOGRP",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/6/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "4"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 5,
+          "name": "Cue 5",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/4/7/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "5"
+              },
+              "error": null
+            },
+            {
+              "i": 2,
+              "path": "DataPool/Sequences/4/7/2",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "5"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 2,
+          "partsListed": 2
+        }
+      ],
+      "childCount": 7,
+      "listed": 7
+    },
+    {
+      "i": 9,
+      "name": "T215 SCRATCH DELETABLE",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/1/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": " P 0 P 0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/2/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "T215 SCRATCH",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/3/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "1"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 2,
+          "name": "T215 ALT",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/4/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "2"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 3,
+          "name": "T215 INDIV",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/5/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "3"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 4,
+          "name": "T215 TWOGRP",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/6/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "4"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 5,
+          "name": "Cue 5",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/9/7/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "5"
+              },
+              "error": null
+            },
+            {
+              "i": 2,
+              "path": "DataPool/Sequences/9/7/2",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "5"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 2,
+          "partsListed": 2
+        }
+      ],
+      "childCount": 7,
+      "listed": 7
+    },
+    {
+      "i": 2000,
+      "name": "Sequence 2000",
+      "cues": [
+        {
+          "i": 1,
+          "cueNo": null,
+          "name": "OffCue",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/1/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": " P 0 P 0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 2,
+          "cueNo": 0,
+          "name": "CueZero",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/2/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "0"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 3,
+          "cueNo": 1,
+          "name": "T215 SCRATCH",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/3/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "1"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 4,
+          "cueNo": 2,
+          "name": "T215 ALT",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/4/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "2"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 5,
+          "cueNo": 3,
+          "name": "T215 INDIV",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/5/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "3"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 6,
+          "cueNo": 4,
+          "name": "T215 TWOGRP",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/6/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "4"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 1,
+          "partsListed": 1
+        },
+        {
+          "i": 7,
+          "cueNo": 5,
+          "name": "Cue 5",
+          "parts": [
+            {
+              "i": 1,
+              "path": "DataPool/Sequences/2000/7/1",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "5"
+              },
+              "error": null
+            },
+            {
+              "i": 2,
+              "path": "DataPool/Sequences/2000/7/2",
+              "props": {
+                "COUNT": "0",
+                "PRESETDATA": "",
+                "VALUESMODE": "Normal",
+                "PRESETMODE": "Selective",
+                "CUEPART": "5"
+              },
+              "error": null
+            }
+          ],
+          "partCount": 2,
+          "partsListed": 2
+        }
+      ],
+      "childCount": 7,
+      "listed": 7
+    }
+  ]
+}

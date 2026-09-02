@@ -1077,3 +1077,75 @@ def test_an_unrelated_bug_is_not_swallowed_as_a_console_refusal(name, arguments)
     """
     with pytest.raises(ValueError):
         _dispatch_against(_BuggyFixtureRoot, "unrelated bug", name, arguments)
+
+
+# ---------------------------------------------------------------------------
+# t187 5+1 — the five direct `read_inventory` call sites (precheck_patch ·
+# precheck_vectorworks_diff · apply_vectorworks_patch · resolve_patch_address ·
+# patch_fixtures/_verify's re-query is covered separately below) plus the
+# single `build_patch_sheet` chokepoint (server/paperwork/data.py) that
+# `build_patch_sheet`(tool) shares with paperwork_api.py/build_magic_sheet/
+# bundle.py. Measured (not inferred): none of these carried a sibling
+# `except StateQueryError` before this card, unlike patch_fixtures's first
+# read and import_lxseq_patch above (t181) -- so they died with a raw
+# StateQueryError escaping `dispatch()` rather than a clean refusal.
+# ---------------------------------------------------------------------------
+
+_INVENTORY_TOOLS_T187 = (
+    ("precheck_patch", dict(create_macro=False)),
+    ("precheck_vectorworks_diff", dict(file_content_base64=base64.b64encode(b"x").decode())),
+    ("apply_vectorworks_patch", dict(report={})),
+    ("resolve_patch_address", dict(address="9.001", count=1, channels_per_fixture=1)),
+    ("build_patch_sheet", dict()),
+)
+
+
+@pytest.mark.parametrize("name,arguments", _INVENTORY_TOOLS_T187)
+@pytest.mark.parametrize("detail", _SILENT_DETAILS)
+def test_t187_a_silent_console_is_refused_and_the_refusal_names_the_console(
+    name, arguments, detail
+):
+    """t187 확장 — 위 6건과 같은 트립와이어를 5+1 자리에 겁니다.
+
+    이전에는 `StateQueryError` 가 `dispatch()` 밖으로 그대로 새서 여기서 죽었다
+    (실측: 이 카드 착수 시점에 이 5곳 전부와 `build_patch_sheet` 확인). 이제는
+    깨끗한 거절이 나오고, 사유가 콘솔을 가리켜야 한다.
+    """
+    execution = _dispatch_against(_SilentFixtureRoot, detail, name, arguments)
+
+    assert execution.result.is_error is True, execution.result.content
+    assert _CONSOLE_REFUSAL in execution.result.content, (
+        "콘솔이 안 답한 것을 콘솔이라 말하지 않는다: " + execution.result.content
+    )
+    assert detail in execution.result.content, "포트가 준 사유가 사라졌다"
+
+
+@pytest.mark.parametrize("name,arguments", _INVENTORY_TOOLS_T187)
+def test_t187_a_not_ok_console_still_takes_the_inventory_branch(name, arguments):
+    """t187 확장 — 팔 B. `ok=False` 갈래를 안 건드렸다는 증거."""
+    execution = _dispatch_against(_NotOkFixtureRoot, "enumeration refused", name, arguments)
+
+    assert execution.result.is_error is True, execution.result.content
+    assert _INVENTORY_REFUSAL in execution.result.content
+    assert _CONSOLE_REFUSAL not in execution.result.content, (
+        "두 사유가 한 문면으로 합쳐졌다: " + execution.result.content
+    )
+
+
+@pytest.mark.parametrize("name,arguments", _INVENTORY_TOOLS_T187)
+def test_t187_a_live_console_carries_neither_refusal(name, arguments):
+    """t187 확장 — 대조군. 거절 문면이 늘 나오는 게 아님을 보인다."""
+    console = FakeConsole()
+    registry = _toolset(console)
+    execution = registry.dispatch(ToolCall(id="t187", name=name, arguments=arguments))
+
+    assert execution.result.is_error is False, execution.result.content
+    assert _CONSOLE_REFUSAL not in execution.result.content
+    assert _INVENTORY_REFUSAL not in execution.result.content
+
+
+@pytest.mark.parametrize("name,arguments", _INVENTORY_TOOLS_T187)
+def test_t187_an_unrelated_bug_is_not_swallowed_as_a_console_refusal(name, arguments):
+    """t187 확장 — 넓히기 방지. 무관한 버그가 콘솔 침묵으로 둔갑하면 안 된다."""
+    with pytest.raises(ValueError):
+        _dispatch_against(_BuggyFixtureRoot, "unrelated bug", name, arguments)

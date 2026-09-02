@@ -1,0 +1,61 @@
+
+### AC-002 missing_columns  → 12 건
+    Binary file server/lxseq/__pycache__/cue_parser.cpython-311.pyc matches
+    Binary file server/lxseq/__pycache__/group_parser.cpython-311.pyc matches
+    Binary file server/lxseq/__pycache__/parser.cpython-311.pyc matches
+
+### AC-002 unexpected_columns  → 4 건
+    Binary file server/lxseq/__pycache__/cue_parser.cpython-311.pyc matches
+    server/lxseq/cue_parser.py:96:        super().__init__("unexpected_columns: " + ", ".join(unexpected))
+    Binary file server/tests/__pycache__/test_lxseq_cue_parser.cpython-311-pytest-9.1.1.pyc matches
+
+### AC-003 bad_number  → 0 건
+
+### AC-003 「참조가 아니라 숫자」 문면  → 1 건
+    server/lxseq/cue_mapper.py:678:        # FX 열만 어휘가 하나 더 있다 — OFF 는 참조가 아니라 **정지 명령**이다.
+
+### AC-005 unknown_group  → 1 건
+    server/lxseq/cue_mapper.py:127:UNKNOWN_GROUP = "unknown_group"
+
+### AC-006 fade 검사  → 2 건
+    server/tests/test_lxseq_cue_mapper.py:160:def test_blank_fades_are_tracking_not_zero():  # AC-LXSEQ4-006
+    server/tests/test_lxseq_cue_mapper.py:179:def test_blackout_needs_both_zero_and_fade():
+
+### AC-007 partial_ship  → 4 건
+    server/orchestrator/tools.py:5844:            "partial_ship": bool(result.cues_held) and bool(result.planned),
+    server/orchestrator/tools.py:5877:        if payload["partial_ship"]:
+    server/orchestrator/tools.py:5878:            payload["notice_partial_ship"] = (
+
+### AC-007 cues_held  → 9 건
+    server/lxseq/cue_mapper.py:112:#: 행이 있는 **그 큐만** 빠지고(`cues_held`), 이 코드는 남는 큐가 하나도
+    server/lxseq/cue_mapper.py:452:    cues_held: tuple[CueHeldCue, ...] = ()
+    server/lxseq/cue_mapper.py:773:    cues_held = tuple(
+
+### AC-008 지정 검사  → 3 건
+    server/tests/test_lxseq_cue_mapper.py:540:def test_existing_name_is_convergence_not_refusal():  # AC-LXSEQ4-008
+    server/tests/test_lxseq_cue_mapper.py:555:def test_a_cue_number_already_in_the_sequence_is_skipped_not_replanned():  # AC-LXSEQ4-008
+    Binary file server/tests/__pycache__/test_lxseq_cue_mapper.cpython-311-pytest-9.1.1.pyc matches
+
+### AC-010 등재  → 3 건
+    server/orchestrator/tools.py:280:    "import_lxseq_cues",
+    server/orchestrator/tools.py:11170:            name="import_lxseq_cues",
+    server/orchestrator/tools.py:11476:        "import_lxseq_cues": import_lxseq_cues,
+
+### AC-010 prepare_songcue 인자 미수용 검사  → 0 건
+
+### AC-011 OSC/전송 임포트  → 0 건
+  AC-012 사유 missing_columns        검사에서 4 건 단언
+  AC-012 사유 unexpected_columns     검사에서 2 건 단언
+  AC-012 사유 unknown_group          검사에서 8 건 단언
+  AC-012 사유 unresolved_preset      검사에서 10 건 단언
+  AC-012 사유 slot_shortfall         검사에서 2 건 단언
+
+### AC-013 unverified  → 10 건
+    server/lxseq/cue_mapper.py:179:BLOCK_DOC_INTENT = "C_doc_intent_unverified"
+    server/lxseq/cue_mapper.py:454:    unverified: tuple[str, ...] = ("value_match", "tracked_value")
+    server/lxseq/cue_mapper.py:455:    unverified_reason: str = _VALUE_MATCH_REASON + " / " + _TRACKING_REASON
+
+### AC-014 block_report  → 14 건
+    server/lxseq/cue_mapper.py:75:    "BLOCK_CONSOLE_STATE",
+    server/lxseq/cue_mapper.py:76:    "BLOCK_DOC_INTENT",
+    server/lxseq/cue_mapper.py:178:BLOCK_CONSOLE_STATE = "B_console_state"

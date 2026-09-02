@@ -28,6 +28,7 @@ from server.lxseq.preset_parser import (
     HOLD_VALUE_NOT_MACHINE_READABLE,
     PRESET_SHEET_COLUMNS,
     UnknownPresetSheetError,
+    classify_storability,
     parse_preset_csv,
     resolve_sheet_kind,
 )
@@ -184,18 +185,18 @@ class TestStorability:
         """
         by_kind = dict((k, _parsed(k).records) for k in EXPECTED_ROWS)
         storable = dict((k, sum(1 for r in v if r.storable)) for k, v in by_kind.items())
-        assert storable == dict([("preset-dim", 6), ("preset-col", 6), ("preset-bm", 0)])
-        assert sum(storable.values()) == 12
+        assert storable == dict([("preset-dim", 6), ("preset-col", 8), ("preset-bm", 0)])
+        assert sum(storable.values()) == 14
 
     def test_every_held_record_carries_at_least_one_reason(self):
         """보류를 버리지 않는다 — 사유 없이 보류하면 다음 사람이 못 푼다.
 
-        13 -> 7 은 t134 가 col RGB 6행을 열었기 때문이다. **막던 사유가 사라진
-        것이지 보류가 조용히 버려진 것이 아니다** — 아래 클래스별 개수가 그것을
-        말한다.
+        13 -> 7 은 t134 가 col RGB 6행을 열었기 때문이고, 7 -> 5 는 t229 가 켈빈
+        2행(COL.02·COL.03)을 열었기 때문이다. **막던 사유가 사라진 것이지 보류가
+        조용히 버려진 것이 아니다** — 아래 클래스별 개수가 그것을 말한다.
         """
         held = _held()
-        assert len(held) == 7
+        assert len(held) == 5
         assert all(record.hold_reasons for record in held)
         assert all(reason.detail.strip() for record in held for reason in record.hold_reasons)
 
@@ -210,7 +211,10 @@ class TestStorability:
                 [
                     ("attribute_probe_rejected", 3),
                     ("family_out_of_scope", 3),
-                    ("no_rgb_value", 2),
+                    # t236 — BM.05 의 `예비` 조각. 이전에는 `_attribute_tokens` 가
+                    # 한글 토큰을 안 봐서 **조용히 무시**됐다. 무시는 시트가 뜻한
+                    # 것의 일부를 버리는 것이라 보고로 바꿨다.
+                    ("value_not_machine_readable", 1),
                 ]
             )
         )
@@ -238,7 +242,7 @@ class TestStorability:
         # 「합 − 행 == 다중 행 수」 형태로 적었다가 뺐다: bm 에서 도달 가능한
         # 클래스가 둘뿐이라 어느 행도 셋을 못 져서 이 코퍼스에서는 **항등식**이고,
         # 항등식은 아무것도 안 지킨다.
-        assert multi == ["BM.01"], (
+        assert multi == ["BM.01", "BM.05"], (
             "다중 차단 행이 바뀌었다 — 문서의 「합 N > 행 M」 표기도 같이 고쳐야 한다 "
             "(.moai/specs/SPEC-COPILOT-LXSEQ-003/preset-unify-design.md §5 표기 규약, "
             "spec.md §A.4-2 합계 행): " + str(multi)
@@ -256,7 +260,19 @@ class TestStorability:
         )
         seen = set(c for record in _held() for c in record.hold_classes)
         assert seen <= known
-        assert len(seen) == 3, "정본에서 실제로 나오는 클래스는 셋이다"
+        assert len(seen) == 3, (
+            "정본에서 실제로 나오는 클래스는 셋이다 "
+            "(t229 가 켈빈 2행을 열어 둘로 줄었고, t236 이 BM.05 의 안 읽히는 "
+            "조각을 보고로 바꿔 다시 셋이 됐다)"
+        )
+
+        # 🔴 `no_rgb_value` 가 정본에서 사라진 것은 **켈빈 2행이 열렸기 때문**이지
+        # 그 클래스가 죽은 것이 아니다. 숫자만 3 -> 2 로 낮추면 그 클래스가 조용히
+        # 고아가 되고, 다음 사람이 「안 쓰는 클래스」로 읽고 지운다. 도달 가능한지
+        # 여기서 직접 쏴서 고정한다 — 정의역 밖 색온도가 그 자리다.
+        outside_domain, holds = classify_storability("preset-col", "~40000K")
+        assert not outside_domain
+        assert [h.hold_class for h in holds] == [HOLD_NO_RGB_VALUE]
 
     def test_a_row_blocked_twice_carries_both_reasons(self):
         """한 사유만 실으면 하나를 풀었을 때 그 행이 열릴 것처럼 보인다.
@@ -271,7 +287,10 @@ class TestStorability:
         """위 검사의 실질 — 「Gobo 만 풀면 몇 건」이 정직하게 나오는지."""
         beam = _parsed("preset-bm").records
         only_gobo = [r for r in beam if set(r.hold_classes) == set([HOLD_FAMILY_OUT_OF_SCOPE])]
-        assert len(only_gobo) == 2, "Gobo 만 풀면 5건 중 2건만 열린다"
+        assert [r.preset_id for r in only_gobo] == ["BM.02"], (
+            "Gobo 만 풀면 5건 중 1건만 열린다 — t236 전에는 2건으로 세고 있었고 "
+            "그 2번째(BM.05)는 `예비` 조각을 조용히 버리며 열릴 행이었다"
+        )
 
     def test_a_fabricated_prose_level_is_not_storable(self):
         """날조 대조군 — dim 이 무조건 통과하는 게 아니라 형태를 재는 것이다."""

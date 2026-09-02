@@ -1,0 +1,19 @@
+{
+  "fid_count": 86,
+  "live_coordinate_count": 86,
+  "rig_is_degenerate": true,
+  "derived_count": 0,
+  "skipped_count": 6,
+  "reasons": [
+    "degenerate_rig"
+  ],
+  "skipped_ids": [
+    "POS.01",
+    "POS.02",
+    "POS.03",
+    "POS.04",
+    "POS.05",
+    "POS.06"
+  ],
+  "first_detail": "좌표 86대를 읽었지만 수평 폭이 없다 (x span 0.000m · y span 0.000m <= 0.05m) — 목표점이 한 점으로 접혀 산출값이 무의미하다. 리그 좌표를 콘솔에 넣어야 풀린다"
+}

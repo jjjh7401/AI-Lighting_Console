@@ -90,6 +90,7 @@ from server.looks.songcue import (
     build_songcue_timing,
     normalise_start_ms,
 )
+from server.lxseq.cue_parser import parse_cue_csv
 from server.lxseq.parser import parse_patch_csv
 from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
@@ -2684,6 +2685,25 @@ _SHEET_ROW_COUNTERS["preset-dim"] = _count_preset_rows
 _SHEET_ROW_COUNTERS["preset-col"] = _count_preset_rows
 _SHEET_ROW_COUNTERS["preset-bm"] = _count_preset_rows
 
+
+def _count_cue_rows(data: bytes) -> str:
+    """CUE-EX 시트의 데이터 행 수 -- 첨부 안내에 싣는 한 줄. long format(한 큐
+    x 한 그룹 = 한 행)이라 이 수가 곧 계획할 행 수다. 고유 큐 수도 함께
+    싣는다 -- 행 수만 보이면 부분집합인지 알 수 없다.
+    """
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return "행 수를 세지 못했다"
+    parsed = parse_cue_csv(text)
+    return (
+        f"레코드 {len(parsed.records)}건 · 큐 {len(parsed.cue_numbers)}개 · "
+        f"rejected {len(parsed.rejections)}건"
+    )
+
+
+_SHEET_ROW_COUNTERS["cue-ex"] = _count_cue_rows
+
 #: 첨부 이음매가 배선한 세션 메서드 이름 (SPEC-COPILOT-SHEETPIPE-001 결정 A).
 #:
 #: 레지스트리의 ``session_method`` 종 행은 이 자리로 온다. 이음매가 보낼 곳을
@@ -2932,6 +2952,19 @@ class _PresetSpanVerdict:
     @property
     def proceed(self) -> bool:
         return self.state in ("clear", "unverified", "confirmed")
+
+    @property
+    def approval_advisory(self) -> str:
+        """**쓰기 전** 승인 카드에 실을 사실 — 판정 시점에 이미 아는 것만.
+
+        ``unverified``만 여기 실린다. 판독 실패는 되돌릴 수 없는 쓰기를 승인할지
+        고르는 사람이 **누르기 전에** 알아야 하는 사실인데, ``note``는 완료된
+        저장 결과와 함께 조립되므로(``_preset_reply_text``) 쓰기가 끝난 뒤에야
+        닿는다. ``confirmed``는 방금 그 운영자가 승낙한 사실이라 카드에 되싣지
+        않고, ``clear``는 실을 것이 없다 — 마찰은 손실 가능성이 있는 자리에만
+        놓인다(REQ-PRESETGUARD-005).
+        """
+        return self.note if self.state == "unverified" else ""
 
     @property
     def note(self) -> str:
@@ -3680,6 +3713,10 @@ class ChatSession:
         self._question_channel = question_channel
         self._recorder = recorder
         self._turn_decisions: list[ScreenDecision] = []
+        # 지금 디스패치 중인 쓰기에 대해 **판정 시점에 이미 아는** 사실.
+        # 승인 카드의 warnings로 흘러 들어간다(_notify_approval) — 회신에만
+        # 실으면 되돌릴 수 없는 쓰기가 끝난 뒤에야 운영자에게 닿는다.
+        self._approval_advisories: tuple[str, ...] = ()
         self._preview_counter = 0
         self._rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
         # REQ-DEPLOY-030 (#4): the single most-recent created look, persisted
@@ -3808,8 +3845,47 @@ class ChatSession:
 
     # -- event plumbing ----------------------------------------------------------
 
+    @contextlib.contextmanager
+    def _approval_advisory(self, note: str):
+        """``note``를 이 블록 안에서 뜨는 모든 승인 카드에 얹는다.
+
+        범위가 블록인 이유: 자문은 **이 쓰기**에 대한 사실이라 루프를 벗어난
+        다음 턴의 카드에 묻어가면 거짓이 된다. 빈 문자열이면 아무것도 안 한다.
+        """
+        if not note:
+            yield
+            return
+        previous = self._approval_advisories
+        self._approval_advisories = previous + (note,)
+        try:
+            yield
+        finally:
+            self._approval_advisories = previous
+
+    def _with_approval_advisories(self, request: ApprovalRequest) -> ApprovalRequest:
+        """승인 카드의 ``warnings``에 현재 자문을 덧댄다 (UI 무수정 — 카드는
+        이미 warnings를 렌더한다: ``ui/src/components/ApprovalCard.tsx``)."""
+        if not self._approval_advisories:
+            return request
+        return ApprovalRequest(
+            items=tuple(
+                replace(
+                    item,
+                    warnings=item.warnings
+                    + tuple(
+                        note for note in self._approval_advisories if note not in item.warnings
+                    ),
+                )
+                for item in request.items
+            )
+        )
+
     def _notify_approval(self, request_id: str, request: ApprovalRequest) -> None:
-        self._send(approval_request_event(request_id=request_id, request=request))
+        self._send(
+            approval_request_event(
+                request_id=request_id, request=self._with_approval_advisories(request)
+            )
+        )
 
     def _notify_review(self, request_id: str, request: ReviewRequest) -> None:
         self._send(review_request_event(request_id=request_id, request=request))
@@ -5228,9 +5304,11 @@ class ChatSession:
             looks = build(fixtures)
         except SpatialPointingError as error:
             return self._pointing_refusal(f"{noun}을 계산할 수 없습니다: {error}")
-        run = self._store_position_preset_looks(
-            looks, start_no, before=pool_slots, bundle=bundle, pool_no=pool_no, apply=apply
-        )
+        # 판독 실패는 승인 카드가 들고 나간다 — 회신은 쓰기 뒤에야 조립된다.
+        with self._approval_advisory(verdict.approval_advisory):
+            run = self._store_position_preset_looks(
+                looks, start_no, before=pool_slots, bundle=bundle, pool_no=pool_no, apply=apply
+            )
         if not run.stored:
             return self._pointing_refusal(
                 "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
@@ -5630,9 +5708,11 @@ class ChatSession:
             looks = build(fixtures)
         except SpatialPointingError as error:
             return self._pointing_refusal(f"{noun}을 계산할 수 없습니다: {error}")
-        run = self._store_position_preset_looks(
-            looks, start_no, before=pool_slots, bundle=bundle, pool_no=pool_no, apply=apply
-        )
+        # 판독 실패는 승인 카드가 들고 나간다 — 회신은 쓰기 뒤에야 조립된다.
+        with self._approval_advisory(verdict.approval_advisory):
+            run = self._store_position_preset_looks(
+                looks, start_no, before=pool_slots, bundle=bundle, pool_no=pool_no, apply=apply
+            )
         if not run.stored:
             return self._pointing_refusal(
                 "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."

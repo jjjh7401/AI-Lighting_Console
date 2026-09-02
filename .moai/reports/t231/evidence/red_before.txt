@@ -1,0 +1,99 @@
+...........FF.FF.FFF.                                                    [100%]
+=================================== FAILURES ===================================
+_ TestSite5015PresetImport.test_a_truncated_listing_does_not_become_no_such_pool _
+
+self = <server.tests.test_pool_lookup.TestSite5015PresetImport object at 0x10bb83810>
+
+    def test_a_truncated_listing_does_not_become_no_such_pool(self):
+        payload = _import_presets(_TreePort([_child(4, "Color")], pools_truncated=True))
+        assert payload["pool_no"] is None
+>       assert "잘렸" in str(payload.get("pool_error") or ""), payload.get("pool_error")
+E       AssertionError: 풀 목록에 'Dimmer' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다
+E       assert '잘렸' in "풀 목록에 'Dimmer' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다"
+E        +  where "풀 목록에 'Dimmer' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다" = str(("풀 목록에 'Dimmer' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다"))
+E        +    where "풀 목록에 'Dimmer' 로 시작하는 풀이 없다 — 번호를 지어내지 않는다" = <built-in method get of dict object at 0x10bc0f000>('pool_error')
+E        +      where <built-in method get of dict object at 0x10bc0f000> = {'action': 'preview', 'sheet_kind': 'preset-dim', 'source': {'sha256': '12ade8c82e9bdf0c491ee323d5d17651c3bdde3cdaa53e4217aa9aec8fd2d0bf', 'byte_length': 308}, 'pool_no': None, ...}.get
+
+server/tests/test_pool_lookup.py:254: AssertionError
+_ TestSite5015PresetImport.test_two_matching_pools_are_refused_rather_than_first_won _
+
+self = <server.tests.test_pool_lookup.TestSite5015PresetImport object at 0x10bb832d0>
+
+    def test_two_matching_pools_are_refused_rather_than_first_won(self):
+        payload = _import_presets(_TreePort([_child(1, "Dimmer"), _child(7, "DimmerFX")]))
+>       assert payload["pool_no"] is None, payload["pool_no"]
+E       AssertionError: 1
+E       assert 1 is None
+
+server/tests/test_pool_lookup.py:258: AssertionError
+_ TestSite5579CueSheetJoin.test_a_truncated_listing_does_not_become_no_such_pool _
+
+self = <server.tests.test_pool_lookup.TestSite5579CueSheetJoin object at 0x10bb83dd0>
+
+    def test_a_truncated_listing_does_not_become_no_such_pool(self):
+        payload = _import_cues(_TreePort([_child(1, "Dimmer")], pools_truncated=True), col="COL.01")
+        errors = str(payload.get("preset_sheet_errors") or dict())
+>       assert "잘렸" in errors, errors
+E       AssertionError: {'preset_col_content_base64': "'Color' 로 시작하는 풀을 못 찾았다", 'position_pool': 'Position 로 시작하는 풀을 못 찾았다'}
+E       assert '잘렸' in '{\'preset_col_content_base64\': "\'Color\' 로 시작하는 풀을 못 찾았다", \'position_pool\': \'Position 로 시작하는 풀을 못 찾았다\'}'
+
+server/tests/test_pool_lookup.py:305: AssertionError
+_________ TestSite5579CueSheetJoin.test_two_matching_pools_are_refused _________
+
+self = <server.tests.test_pool_lookup.TestSite5579CueSheetJoin object at 0x10bb90110>
+
+    def test_two_matching_pools_are_refused(self):
+        payload = _import_cues(_TreePort([_child(4, "Color"), _child(9, "ColorFX")]), col="COL.01")
+        errors = str(payload.get("preset_sheet_errors") or dict())
+>       assert "ColorFX" in errors, errors
+E       AssertionError: {'position_pool': 'Position 로 시작하는 풀을 못 찾았다'}
+E       assert 'ColorFX' in "{'position_pool': 'Position 로 시작하는 풀을 못 찾았다'}"
+
+server/tests/test_pool_lookup.py:310: AssertionError
+_ TestSite5718PositionPool.test_a_truncated_listing_does_not_become_no_such_pool _
+
+self = <server.tests.test_pool_lookup.TestSite5718PositionPool object at 0x10bb907d0>
+
+    def test_a_truncated_listing_does_not_become_no_such_pool(self):
+        payload = _import_cues(_TreePort([_child(1, "Dimmer")], pools_truncated=True), pos="POS.01")
+        errors = str(payload.get("preset_sheet_errors") or dict())
+>       assert "잘렸" in errors, errors
+E       AssertionError: {'position_pool': 'Position 로 시작하는 풀을 못 찾았다'}
+E       assert '잘렸' in "{'position_pool': 'Position 로 시작하는 풀을 못 찾았다'}"
+
+server/tests/test_pool_lookup.py:326: AssertionError
+_________ TestSite5718PositionPool.test_two_matching_pools_are_refused _________
+
+self = <server.tests.test_pool_lookup.TestSite5718PositionPool object at 0x10bb90c50>
+
+    def test_two_matching_pools_are_refused(self):
+        payload = _import_cues(
+            _TreePort([_child(2, "Position"), _child(8, "PositionFX")]), pos="POS.01"
+        )
+        errors = str(payload.get("preset_sheet_errors") or dict())
+>       assert "PositionFX" in errors, errors
+E       AssertionError: {}
+E       assert 'PositionFX' in '{}'
+
+server/tests/test_pool_lookup.py:333: AssertionError
+_ TestSite5657CueSheetFxAllPool.test_a_truncated_listing_does_not_become_no_such_pool _
+
+self = <server.tests.test_pool_lookup.TestSite5657CueSheetFxAllPool object at 0x10bb91350>
+
+    def test_a_truncated_listing_does_not_become_no_such_pool(self):
+        payload = _import_cues_with_fx(_TreePort([_child(1, "Dimmer")], pools_truncated=True))
+        errors = str(payload.get("preset_sheet_errors") or dict())
+>       assert "잘렸" in errors, errors
+E       AssertionError: {'fx_content_base64': "'All' 로 시작하는 풀을 못 찾았다", 'position_pool': 'Position 로 시작하는 풀을 못 찾았다'}
+E       assert '잘렸' in '{\'fx_content_base64\': "\'All\' 로 시작하는 풀을 못 찾았다", \'position_pool\': \'Position 로 시작하는 풀을 못 찾았다\'}'
+
+server/tests/test_pool_lookup.py:373: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_pool_lookup.py::TestSite5015PresetImport::test_a_truncated_listing_does_not_become_no_such_pool
+FAILED server/tests/test_pool_lookup.py::TestSite5015PresetImport::test_two_matching_pools_are_refused_rather_than_first_won
+FAILED server/tests/test_pool_lookup.py::TestSite5579CueSheetJoin::test_a_truncated_listing_does_not_become_no_such_pool
+FAILED server/tests/test_pool_lookup.py::TestSite5579CueSheetJoin::test_two_matching_pools_are_refused
+FAILED server/tests/test_pool_lookup.py::TestSite5718PositionPool::test_a_truncated_listing_does_not_become_no_such_pool
+FAILED server/tests/test_pool_lookup.py::TestSite5718PositionPool::test_two_matching_pools_are_refused
+FAILED server/tests/test_pool_lookup.py::TestSite5657CueSheetFxAllPool::test_a_truncated_listing_does_not_become_no_such_pool
+7 failed, 14 passed in 0.18s

@@ -128,7 +128,7 @@ _PERCENT = re.compile(r"^\s*(\d+)\s*%\s*$")
 #: 보류 사유의 **닫힌 클래스**. 산문만 두면 13건이 한 덩어리로 보이고,
 #: **어느 하나를 풀면 몇 건이 열리는지** 아무도 모른다. 클래스가 있으면
 #: 「스케일 변환만 해결하면 6건」이 바로 읽힌다. 원인마다 처방과 소유자가 다르다.
-HOLD_NO_RGB_VALUE = "no_rgb_value"  # col — 색온도만. 켈빈 모델이 저장소에 없다
+HOLD_NO_RGB_VALUE = "no_rgb_value"  # col — RGB 도, 정의역 안의 색온도도 없다
 HOLD_PROBE_REJECTED = "attribute_probe_rejected"  # bm — 라이브 프로브가 거절했다
 HOLD_FAMILY_OUT_OF_SCOPE = "family_out_of_scope"  # bm — 풀 계열이 범위 밖이다
 HOLD_VALUE_NOT_MACHINE_READABLE = "value_not_machine_readable"  # 형태가 아니다
@@ -148,6 +148,17 @@ _RGB_TRIPLE = re.compile(r"R\s*(\d+)\s*G\s*(\d+)\s*B\s*(\d+)")
 
 #: 콘솔이 받는 성분의 상한. 시트가 8비트 표기를 쓰므로 그 바깥은 옮길 대상이 아니다.
 _RGB_COMPONENT_MAX = 255
+
+#: bm 값 한 행이 성분을 나누는 문자. 정본 시트가 실제로 쓰는 것은 U+00B7 MIDDLE DOT
+#: 이다(`hexdump` 로 확인: `c2 b7`). 가운뎃점은 다섯 행 **전부**에 같은 모양으로
+#: 들어 있고, 다른 구분자를 쓰는 행은 없다.
+_BM_SEGMENT_SEPARATOR = "\u00b7"
+
+#: 조각의 **맨 앞** 낱말. 속성 이름은 조각의 첫머리에 온다는 것이 계약이다.
+#: `_WORD` 를 `findall` 로 쓰면 `45° Zoom` 같은 뒤집힌 조각에서도 `Zoom` 을 찾아내
+#: 값 자리에 `45°` 를 남긴다 — 그것은 시트가 뜻한 것이 아니고, 추측이다.
+#: 앞에서 못 찾으면 **읽지 않은 것으로 보고**한다(아래 `_bm_segment_component`).
+_LEADING_WORD = re.compile(r"^\s*([A-Za-z][A-Za-z0-9]*)")
 
 
 class UnknownPresetSheetError(ValueError):
@@ -267,7 +278,7 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
         )
 
     if kind == "preset-col":
-        components = _rgb_components(value_raw)
+        components = _col_components(value_raw)
         if components is not None:
             # t134 실측(2026-08-30, MOVER-D 521 3.001): 콘솔은 퍼센트를 16비트로
             # **선형** 매핑한다 — At 70.6 -> COARSE 180 / FINE 188,
@@ -286,9 +297,10 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
         return False, (
             PresetHoldReason(
                 HOLD_NO_RGB_VALUE,
-                "색온도만 있고 RGB 가 없다: "
+                "RGB 도 쓸 수 있는 색온도도 없다: "
                 + value_raw.strip()
-                + " — 켈빈에서 RGB 를 만드는 모델이 이 저장소에 없다",
+                + " — 켈빈은 Kim et al. (2002) 정의역 1667K-25000K 안에서만"
+                " 옮긴다(밖은 외삽하지 않는다)",
             ),
         )
 
@@ -312,6 +324,18 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
                 "풀 계열이 범위 밖인 속성: "
                 + ", ".join(out_of_scope)
                 + " (server/looks/schema.py 의 범위 선언)",
+            )
+        )
+    if _bm_components(value_raw) is None:
+        # 어휘 축(위 둘)과 **다른 축**이다. 위는 「그 속성을 콘솔에 못 쏜다」이고
+        # 이것은 「이 값을 성분으로 못 가른다」이다 — 한 행이 둘 다에 걸릴 수 있고,
+        # 그때 사유는 둘 다 나와야 한다(이 함수의 독스트링).
+        reasons.append(
+            PresetHoldReason(
+                HOLD_VALUE_NOT_MACHINE_READABLE,
+                "성분으로 못 가르는 조각: "
+                + ", ".join(_bm_unreadable_segments(value_raw))
+                + " — 속성 이름으로 시작하는 조각만 옮긴다(버리지 않고 보고한다)",
             )
         )
     if reasons:
@@ -352,6 +376,148 @@ def _rgb_components(value_raw: str) -> tuple[int, int, int] | None:
     return values
 
 
+#: col 값에서 색온도를 꺼내는 술어. `~3200K` · `3200K` 둘 다 받는다.
+_KELVIN = re.compile(r"~?\s*(\d{3,5})\s*K\b", re.IGNORECASE)
+
+#: Kim et al. (2002) 근사의 정의역. 밖은 **외삽하지 않고 보류**한다 —
+#: 근사식을 정의역 밖으로 끌면 조용히 틀린 색이 나간다.
+_KELVIN_MIN = 1667.0
+_KELVIN_MAX = 25000.0
+
+
+def planckian_xy(kelvin: float) -> tuple[float, float]:
+    """색온도 -> CIE 1931 xy (플랑크 궤적 위의 점).
+
+    **출처: Kim et al. (2002)**, "Design of Advanced Color Temperature Control
+    System for HDTV Applications", Journal of the Korean Physical Society 41(6).
+    플랑크 궤적의 3차 근사이며 정의역은 1667K-25000K 다. 「대략 이 식」이 아니라
+    이 논문의 계수 그대로다.
+
+    검산 앵커(식을 만드는 데 쓰지 않은 독립 기준):
+
+    * **Illuminant A (2856K)** — CIE 표준광 A 는 **플랑크 복사체**다. 그래서 이
+      식이 가장 정확히 맞아야 하는 자리이고, 실측 오차 dx 0.0005 · dy 0.0001 이다.
+    * **D65 (6504K) · D50 (5003K)** — dy 가 0.005-0.007 어긋난다. 이것은 계수
+      오류가 **아니다**: D 계열은 **주광 궤적** 위에 있고 플랑크 궤적에서 의도적으로
+      떨어져 있다(Duv 약 +0.003). 어긋나야 맞는 자리에서 어긋나고, 맞아야 맞는
+      자리에서 맞는다 — 그 대비가 이 계수의 근거다.
+    """
+    t = kelvin
+    if t <= 4000.0:
+        x = -0.2661239e9 / t**3 - 0.2343589e6 / t**2 + 0.8776956e3 / t + 0.179910
+    else:
+        x = -3.0258469e9 / t**3 + 2.1070379e6 / t**2 + 0.2226347e3 / t + 0.240390
+    if t <= 2222.0:
+        y = -1.1063814 * x**3 - 1.34811020 * x**2 + 2.18555832 * x - 0.20219683
+    elif t <= 4000.0:
+        y = -0.9549476 * x**3 - 1.37418593 * x**2 + 2.09137015 * x - 0.16748867
+    else:
+        y = 3.0817580 * x**3 - 5.87338670 * x**2 + 3.75112997 * x - 0.37001483
+    return x, y
+
+
+def kelvin_to_rgb(kelvin: float) -> tuple[int, int, int]:
+    """색온도 -> sRGB 0-255. **손실 변환이다.**
+
+    **출처: IEC 61966-2-1 (sRGB)** — D65 백색점, 표준 변환 행렬과 전달 함수.
+    xy -> XYZ(Y=1) -> 선형 sRGB -> 감마.
+
+    검산 앵커: D65 백색점 `xy(0.3127, 0.3290)` 을 넣으면 `(255, 255, 255)` 가
+    나온다. D65 가 sRGB 백색이라는 것은 규격의 **정의**이므로, 행렬을 이 사실에
+    맞춰 조정한 것이 아니라 규격 계수가 그 정의를 재현하는 것이다.
+
+    🔴 **밝기는 정규화된다.** 최대 성분을 255 로 맞추므로 이 값은 **색상만**
+    옮기고 광량은 옮기지 않는다. 프리셋이 싣는 것도 색이므로 의도한 범위다.
+
+    🔴 **근사라는 사실을 숨기지 않는다.** 시트가 RGB 와 켈빈을 **둘 다** 싣는
+    유일한 행(`COL.01` `R255 G180 B60 / ~2400K`)에서 저자값과 변환값을 나란히
+    재면 `R 255/255 · G 180/160 · B 60/66` 으로, G 가 20/255 어긋난다. 그래서
+    RGB 가 있으면 **저자값이 이긴다**(`_col_components` 의 순서) — 변환은 RGB 가
+    아예 없는 행에만 쓴다.
+    """
+    return _xy_to_srgb(*planckian_xy(kelvin))
+
+
+def _xy_to_srgb(x: float, y: float) -> tuple[int, int, int]:
+    """CIE 1931 xy -> sRGB 0-255. **출처: IEC 61966-2-1** (D65, 표준 행렬·전달 함수).
+
+    `kelvin_to_rgb` 에서 분리해 둔 이유는 검사다 — 행렬을 재려면 궤적이 아니라
+    **백색점 xy 를 직접** 넣어야 한다(6504K 의 궤적 위 점은 D65 백색점과 미세하게
+    다르다). 합쳐 두면 그 검사를 쓸 수 없다.
+    """
+    big_x, big_y, big_z = x / y, 1.0, (1.0 - x - y) / y
+    linear = [
+        3.2406 * big_x - 1.5372 * big_y - 0.4986 * big_z,
+        -0.9689 * big_x + 1.8758 * big_y + 0.0415 * big_z,
+        0.0557 * big_x - 0.2040 * big_y + 1.0570 * big_z,
+    ]
+    linear = [max(0.0, v) for v in linear]
+    peak = max(linear)
+    if peak > 0.0:
+        linear = [v / peak for v in linear]
+    out: list[int] = []
+    for v in linear:
+        encoded = 12.92 * v if v <= 0.0031308 else 1.055 * (v ** (1 / 2.4)) - 0.055
+        out.append(round(max(0.0, min(1.0, encoded)) * 255))
+    return (out[0], out[1], out[2])
+
+
+def _kelvin_components(value_raw: str) -> tuple[int, int, int] | None:
+    """색온도 단독 값 -> RGB. 정의역 밖이거나 켈빈이 없으면 ``None``."""
+    match = _KELVIN.search(value_raw)
+    if match is None:
+        return None
+    kelvin = float(match.group(1))
+    if not (_KELVIN_MIN <= kelvin <= _KELVIN_MAX):
+        return None
+    return kelvin_to_rgb(kelvin)
+
+
+def _col_components(value_raw: str) -> tuple[int, int, int] | None:
+    """col 원문 -> RGB 성분. **판정기와 판독기가 함께 쓰는 유일한 술어다.**
+
+    🔴 이 함수가 하나인 것이 계약이다. `tools.py:1757` 이 그 자리를 지목한다 —
+    「판정기가 통과시킨 값을 판독기가 못 읽었다는 뜻이다. 둘은 같은 술어를 쓰므로
+    여기 오면 술어가 갈라진 것이다」. 갈라지면 `_lxseq_preset_apply_command` 가
+    `None` 을 내고 소비 루프가 **번들을 통째로 버린다**(`apply_untranslatable`) —
+    2행을 얻으려다 col 8행을 다 잃는다. t229 가 그 형태를 실측으로 재현했다.
+
+    순서가 계약이다: **RGB 가 있으면 저자값이 이긴다.** 켈빈 변환은 근사이므로
+    시트가 명시한 값을 덮지 않는다.
+    """
+    components = _rgb_components(value_raw)
+    if components is not None:
+        return components
+    return _kelvin_components(value_raw)
+
+
+def col_conversion_note(value_raw: str) -> str | None:
+    """켈빈에서 만든 값이면 **원값과 변환값을 나란히** 적은 한 줄. 아니면 ``None``.
+
+    🔴 근사를 조용히 내보내지 않기 위한 자리다. 승인 카드에는 시트 원문(`~3200K`)만
+    뜨는데 콘솔에 나가는 것은 근사된 RGB 다 — 그 둘이 다르다는 사실이 승인하는
+    사람 눈앞에 있어야 한다. 「조용히 틀린 것이 크게 없는 것보다 나쁘다」.
+
+    RGB 가 원문에 있으면 ``None`` 이다 — 그때는 변환이 일어나지 않았고, 알릴 근사도
+    없다.
+    """
+    if _rgb_components(value_raw) is not None:
+        return None
+    components = _kelvin_components(value_raw)
+    if components is None:
+        return None
+    return (
+        value_raw.strip()
+        + " -> R"
+        + str(components[0])
+        + " G"
+        + str(components[1])
+        + " B"
+        + str(components[2])
+        + " (켈빈→sRGB 근사 · Kim et al. 2002 + IEC 61966-2-1)"
+    )
+
+
 def col_rgb_percents(value_raw: str) -> tuple[float, float, float] | None:
     """col 원문 -> 콘솔 퍼센트 세 개. 옮길 수 없으면 ``None``.
 
@@ -367,10 +533,99 @@ def col_rgb_percents(value_raw: str) -> tuple[float, float, float] | None:
     전 구간 무손실이 필요해지면 소수 3자리가 0/256 이지만, **콘솔이 소수 몇
     자리까지 받는지는 안 쟀다** — 그것이 선행 측정이다.
     """
-    components = _rgb_components(value_raw)
+    components = _col_components(value_raw)
     if components is None:
         return None
     return tuple(round(v / 255 * 100, 1) for v in components)
+
+
+def _bm_segment_component(segment: str) -> tuple[str, str] | None:
+    """bm 값의 조각 하나 -> ``(속성, 원문값)``. 못 읽으면 ``None``.
+
+    **원자다.** 아래 두 함수가 전부 이것만 부른다 — 조각을 읽는 방법이 한 곳에만
+    있어야 「성분 목록」과 「못 읽은 조각 목록」이 서로 어긋날 수 없다.
+
+    🔴 **어휘를 묻지 않는다.** 첫 낱말을 아는 이름 목록에 대보고 싶어지지만, 그러면
+    이 술어가 **어휘 축과 한 몸**이 된다. 그 둘은 다른 질문이다:
+
+        구조 축 (여기)      이 값을 (속성, 값) 조각으로 가를 수 있는가
+        어휘 축 (아래 분기)  그 속성을 콘솔에 쏠 수 있는가
+
+    실제로 한 몸으로 만들었다가 t135 의 트립와이어를 깼다. 그 검사는 목록을
+    `Prism1` 로 치환하면 BM.03 이 **열린다**는 것을 실제로 쏴서 보여주는데(그것이
+    그 치환이 회귀라는 증명이다), 구조 축이 어휘를 물으면 `Prism` 이 목록에서
+    빠진 순간 조각도 못 읽게 되어 그 행이 **다른 사유로** 막힌다 — 증명이 조용히
+    사라진다. 그래서 여기서는 첫 낱말을 **원문 그대로** 속성 이름으로 나른다.
+
+    값 자리에 또 다른 **아는** 속성 이름이 있으면 ``None`` 이다. `Zoom 45 Iris 50`
+    처럼 구분자 없이 붙은 조각을 통째로 `Zoom` 의 값으로 실으면 `Iris` 가 조용히
+    사라진다 — 그것이 8.1 절이 막으려는 실패 그 자체다. 이쪽은 「아는 이름이
+    값 안에 숨어 있는가」라 어휘 질문이 맞다.
+    """
+    text = segment.strip()
+    match = _LEADING_WORD.match(text)
+    if match is None:
+        return None
+    attribute = match.group(1)
+    value = text[match.end() :].strip()
+    if not value:
+        return None
+    if _attribute_tokens(value):
+        return None
+    return attribute, value
+
+
+def _bm_components(value_raw: str) -> tuple[tuple[str, str], ...] | None:
+    """bm 원문 -> ``(속성, 원문값)`` 목록. **판정기와 판독기가 함께 쓸 유일한 술어다.**
+
+    `_col_components` 의 형제이고 계약도 같다 — 다른 것은 반환형뿐이다::
+
+        col:  value_raw -> (R, G, B)                          3성분 **고정**
+        bm:   value_raw -> (("Zoom", "45°"), ("Prism", "OFF")) **가변** 길이
+
+    🔴 **가변 길이라 col 의 보장이 그대로 서지 않는다.** col 은 개수가 상수라
+    한쪽이 성분을 흘리면 형태가 바로 깨지지만, bm 은 목록에서 하나가 빠져도
+    여전히 목록이다. 그래서 「같은 술어를 부른다」만으로는 부족하고, **성분 수가
+    보존되는지를 검사가 따로 지킨다**(`test_lxseq_preset_beam_components.py`).
+    유실은 `apply_untranslatable` 보다 **조용한** 실패다 — 판정 통과, 명령 발사,
+    콘솔엔 절반, 되읽기는 슬롯 점유만 확인.
+
+    **원문값을 그대로 나르고 해석하지 않는다.** `45°` 의 `45` 가 콘솔에서 도인지
+    퍼센트인지 이 저장소는 모른다 — dim 은 퍼센트, col 은 16비트 선형이 실측으로
+    닫혔지만 `Zoom` 자리는 비어 있고, 프로그래머 판독 채널이 없어 **지금은 이 채널로
+    못 잰다**(t235). 「원리적으로」가 아니다 — t235 가 그 벽을 **응답기 `ROOT_ALIASES` 에
+    별칭이 없는 것**으로 좁혔고, 그것은 제거 가능한 미구현이다(다만 여는 것은 감독 승인
+    사안이고 아직 안 열렸다). 그래서 명령 빌더는 **아직 만들지 않는다**
+    (`.moai/reports/t229-bm/verdict.md` §8.2).
+
+    **all-or-nothing 이다.** 조각 하나라도 못 읽으면 ``None`` — 읽은 것만 돌려주면
+    그것이 곧 성분 유실이고, 이 함수가 막으려는 바로 그 실패다.
+    """
+    segments = value_raw.split(_BM_SEGMENT_SEPARATOR)
+    components: list[tuple[str, str]] = []
+    for segment in segments:
+        component = _bm_segment_component(segment)
+        if component is None:
+            return None
+        components.append(component)
+    if not components:
+        return None
+    return tuple(components)
+
+
+def _bm_unreadable_segments(value_raw: str) -> tuple[str, ...]:
+    """성분으로 못 가른 조각들. 보류 사유 문면에 **그대로** 실린다.
+
+    🔴 **버리지 않고 보고한다.** BM.05 의 `예비` 는 속성이 아니고, 정본 시트 규약
+    (`src/Lighting_Designer/01_스펙/LX-SEQ-SPEC-v2.1.md`)은 주석 토큰을 규정하지
+    않는다 — 실제로 재서 확인했다(그 문서에 `예비` 0건). 규약이 없는 토큰을
+    조용히 무시하면 시트가 뜻한 것의 일부가 소리 없이 사라진다.
+    """
+    return tuple(
+        segment.strip()
+        for segment in value_raw.split(_BM_SEGMENT_SEPARATOR)
+        if _bm_segment_component(segment) is None
+    )
 
 
 def parse_preset_csv(text: str) -> PresetParseResult:

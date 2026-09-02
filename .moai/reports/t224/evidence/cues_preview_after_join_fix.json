@@ -1,0 +1,429 @@
+{
+  "action": "preview",
+  "approve": false,
+  "listen_port": 9005,
+  "cue_csv": "src/Lighting_Designer/03_곡파일_Sugar/LXSEQ_SAMPLE_01_Sugar_r3.cue-ex.csv",
+  "sequence_name": "t224 PREVIEW",
+  "limit": null,
+  "skip": 0,
+  "census": {
+    "total_rows": 89,
+    "cue_count": 18,
+    "cue_numbers": [
+      "Q010",
+      "Q020",
+      "Q030",
+      "Q040",
+      "Q050",
+      "Q060",
+      "Q070",
+      "Q080",
+      "Q090",
+      "Q100",
+      "Q110",
+      "Q120",
+      "Q130",
+      "Q140",
+      "Q150",
+      "Q160",
+      "Q170",
+      "Q180"
+    ],
+    "console_rows": 83,
+    "video_call_rows": 6,
+    "video_call_cues": [
+      "Q080",
+      "Q090",
+      "Q110",
+      "Q130",
+      "Q160",
+      "Q170"
+    ],
+    "video_call_skip_reason": "video_call_not_console",
+    "note_pattern": "LW-",
+    "note_pattern_hits": 5,
+    "note_pattern_would_miss": 1
+  },
+  "preset_sheets_supplied": {
+    "preset_dim_csv": "src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-dim.csv",
+    "preset_col_csv": "src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-col.csv",
+    "preset_bm_csv": "src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-bm.csv",
+    "fx_csv": "src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.fx.csv",
+    "cue_sheet_xlsx": "src/Lighting_Designer/03_곡파일_Sugar/LXSEQ_SAMPLE_01_Sugar_r3.xlsx"
+  },
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "baseline": {
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "ok": false,
+      "child_count": null,
+      "truncated": false,
+      "detail": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "fixtures": {
+      "path": "Patch/Stages/1/Fixtures",
+      "ok": true,
+      "child_count": 86,
+      "children_in_reply": 19,
+      "truncated": true,
+      "detail": null
+    },
+    "groups": {
+      "path": "DataPool/Groups",
+      "ok": true,
+      "child_count": 18,
+      "children_in_reply": 18,
+      "truncated": false,
+      "detail": null
+    },
+    "sequences": {
+      "path": "DataPool/Sequences",
+      "ok": true,
+      "child_count": 6,
+      "children_in_reply": 6,
+      "truncated": false,
+      "detail": null
+    },
+    "channel_trustworthy": true
+  },
+  "tool": {
+    "action": "preview",
+    "sequence_name": "t224 PREVIEW",
+    "source": {
+      "sha256": "e313c31a4cca9a5df640ad0c9e38dbdf932e0a7db82f9edae85ea436afeb5672",
+      "byte_length": 5088
+    },
+    "rejected_rows": [],
+    "read": 89,
+    "cue_numbers": [
+      "Q010",
+      "Q020",
+      "Q030",
+      "Q040",
+      "Q050",
+      "Q060",
+      "Q070",
+      "Q080",
+      "Q090",
+      "Q100",
+      "Q110",
+      "Q120",
+      "Q130",
+      "Q140",
+      "Q150",
+      "Q160",
+      "Q170",
+      "Q180"
+    ],
+    "video_call_rows": 6,
+    "planned_cues": [],
+    "planned_row_count": 0,
+    "held": [
+      {
+        "cue_no": "Q020",
+        "group": "KEY",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q040",
+        "group": "SIDE-L",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q040",
+        "group": "SIDE-R",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q040",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q050",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q050",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q070",
+        "group": "KEY",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q080",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q090",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q090",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q100",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q100",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q110",
+        "group": "KEY",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q120",
+        "group": "BACK",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q120",
+        "group": "SIDE-L",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q120",
+        "group": "SIDE-R",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q130",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q130",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q130",
+        "group": "SIDE-L",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q130",
+        "group": "SIDE-R",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q140",
+        "group": "BACK",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q140",
+        "group": "WASH-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q150",
+        "group": "STROBE",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q150",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q150",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q160",
+        "group": "MOVER-U",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q160",
+        "group": "MOVER-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      },
+      {
+        "cue_no": "Q160",
+        "group": "WASH-D",
+        "classes": [
+          "unresolved_preset"
+        ]
+      }
+    ],
+    "video_calls": [
+      {
+        "cue_no": "Q080",
+        "group": "LED-W",
+        "note": "영상 큐 LW-02 콜"
+      },
+      {
+        "cue_no": "Q090",
+        "group": "LED-W",
+        "note": "영상 큐 LW-03 콜"
+      },
+      {
+        "cue_no": "Q110",
+        "group": "LED-W",
+        "note": "영상 큐 LW-04(로우) 콜"
+      },
+      {
+        "cue_no": "Q130",
+        "group": "LED-W",
+        "note": "영상 큐 LW-05(피크) 콜"
+      },
+      {
+        "cue_no": "Q160",
+        "group": "LED-W",
+        "note": "영상 큐 LW-06 콜"
+      },
+      {
+        "cue_no": "Q170",
+        "group": "LED-W",
+        "note": "영상 페이드아웃 동기"
+      }
+    ],
+    "video_only_cues": [],
+    "coverage_gap": null,
+    "refusal": "rows_held",
+    "refusal_detail": "행 28 개를 계획에 못 넣어 **아무것도 보내지 않았다** — 부분 투입이 없다(§11.1 1행 부분집합 금지). 한 그룹이 빠진 큐는 MA3 트래킹 때문에 큐 리스트에서 정상으로 보이고 발사할 때에야 어긋난다. 고칠 자리: Q020 / KEY: unresolved_preset — COL: 프리셋 COL.02 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q040 / SIDE-L: unresolved_preset — FX: 프리셋 FX.03 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q040 / SIDE-R: unresolved_preset — FX: 프리셋 FX.03 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q040 / MOVER-U: unresolved_preset — BM: 프리셋 BM.02 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q050 / MOVER-U: unresolved_preset — BM: 프리셋 BM.03 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다** · FX: 프리셋 FX.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q050 / MOVER-D: unresolved_preset — BM: 프리셋 BM.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다** · FX: 프리셋 FX.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q070 / KEY: unresolved_preset — COL: 프리셋 COL.02 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q080 / MOVER-U: unresolved_preset — BM: 프리셋 BM.02 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q090 / MOVER-U: unresolved_preset — BM: 프리셋 BM.03 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다** · FX: 프리셋 FX.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q090 / MOVER-D: unresolved_preset — BM: 프리셋 BM.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다** · FX: 프리셋 FX.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q100 / MOVER-U: unresolved_preset — FX: 프리셋 FX.05 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q100 / MOVER-D: unresolved_preset — FX: 프리셋 FX.05 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q110 / KEY: unresolved_preset — BM: 프리셋 BM.04 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q120 / BACK: unresolved_preset — FX: 프리셋 FX.03 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q120 / SIDE-L: unresolved_preset — FX: 프리셋 FX.03 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q120 / SIDE-R: unresolved_preset — FX: 프리셋 FX.03 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q130 / MOVER-U: unresolved_preset — BM: 프리셋 BM.03 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다** · FX: 프리셋 FX.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q130 / MOVER-D: unresolved_preset — BM: 프리셋 BM.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다** · FX: 프리셋 FX.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q130 / SIDE-L: unresolved_preset — FX: 프리셋 FX.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q130 / SIDE-R: unresolved_preset — FX: 프리셋 FX.01 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q140 / BACK: unresolved_preset — FX: 프리셋 FX.04 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q140 / WASH-U: unresolved_preset — FX: 프리셋 FX.04 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q150 / STROBE: unresolved_preset — FX: 프리셋 FX.06 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q150 / MOVER-U: unresolved_preset — FX: 프리셋 FX.05 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q150 / MOVER-D: unresolved_preset — FX: 프리셋 FX.05 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q160 / MOVER-U: unresolved_preset — BM: 프리셋 BM.02 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다** · FX: 프리셋 FX.07 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q160 / MOVER-D: unresolved_preset — COL: 프리셋 COL.02 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**; Q160 / WASH-D: unresolved_preset — COL: 프리셋 COL.02 가 배정표에 없다 — PRESET 시트에 정의된 것만 쓴다(§11.2 #5). 정의되지 않은 참조를 빈칸처럼 넘기면 그 행이 **트래킹으로 조용히 바뀐다**",
+    "blocked_by": [
+      {
+        "code": "unresolved_preset",
+        "block_class": "C_doc_intent_unverified",
+        "why": "프리셋 참조가 배정표에 없다 -- PRESET 시트에 정의가 없는 것인지, 정의는 있는데 콘솔 슬롯 조인이 안 선 것인지 이 층에서는 안 갈린다",
+        "where": [
+          "Q020 / KEY",
+          "Q040 / SIDE-L",
+          "Q040 / SIDE-R",
+          "Q040 / MOVER-U",
+          "Q050 / MOVER-U",
+          "Q050 / MOVER-D",
+          "Q070 / KEY",
+          "Q080 / MOVER-U",
+          "Q090 / MOVER-U",
+          "Q090 / MOVER-D",
+          "Q100 / MOVER-U",
+          "Q100 / MOVER-D",
+          "Q110 / KEY",
+          "Q120 / BACK",
+          "Q120 / SIDE-L",
+          "Q120 / SIDE-R",
+          "Q130 / MOVER-U",
+          "Q130 / MOVER-D",
+          "Q130 / SIDE-L",
+          "Q130 / SIDE-R",
+          "Q140 / BACK",
+          "Q140 / WASH-U",
+          "Q150 / STROBE",
+          "Q150 / MOVER-U",
+          "Q150 / MOVER-D",
+          "Q160 / MOVER-U",
+          "Q160 / MOVER-D",
+          "Q160 / WASH-D"
+        ]
+      }
+    ],
+    "sequence_no": null,
+    "already_present": false,
+    "cues_already_present": [],
+    "unverified": [
+      "value_match",
+      "tracked_value"
+    ],
+    "unverified_reason": "이 층은 **놓을 자리와 값을 정할 뿐** 콘솔이 그것을 받았는지 되읽지 않는다. 되읽기 채널(cue_monitor._cue_items)은 번호와 이름까지만 답하고 **큐 내용은 안 준다** — 「시퀀스가 있다」는 「큐가 맞게 들어갔다」가 아니다 / 빈칸은 **트래킹**이라 이 계획에 아무 값도 싣지 않는다. 앞 큐의 값이 그대로 산다는 뜻이고, 그 값이 무엇인지는 이 층이 모른다 — 큐 스택을 따라가야 안다",
+    "group_slots_resolved": 18,
+    "preset_slots_resolved": 20,
+    "preset_sheet_errors": {},
+    "notice_preset_slots": "preset_slots 는 넘어온 preset_*_content_base64/fx_content_base64(DIM/COL/BM/FX)만큼만 찬다 -- ID(시트) -> Name(시트) -> 슬롯(콘솔) 조인. POS.xx 만 이 조인이 안 선다(POS 시트에 Name 열이 없다). 못 채운 종류를 참조하는 행은 held 로 떨어진다.",
+    "cue_bundles_planned": 0,
+    "preset_pool_lookup_failed": [],
+    "cue_manual_notes": {}
+  },
+  "sequences_after": {
+    "path": "DataPool/Sequences",
+    "ok": true,
+    "child_count": 6,
+    "children_in_reply": 6,
+    "truncated": false,
+    "detail": null
+  },
+  "approval_requests": [],
+  "questions_asked": [],
+  "video_call_containment": {
+    "group": "LED-W",
+    "rows_in_sheet": 6,
+    "commands_referencing_group": 0,
+    "leaked_commands": [],
+    "no_command_emitted": true
+  }
+}

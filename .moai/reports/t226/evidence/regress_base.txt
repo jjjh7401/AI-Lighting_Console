@@ -1,0 +1,7 @@
+baseline origin/main 45a8307 (this tree, own venv, PYTHONDONTWRITEBYTECODE=1)
+10779 passed, 12 skipped
+
+after merge 3ae0f7c
+10793 passed, 12 skipped
+
+delta +14 = t222 가 더한 검사 수. t224 의 34 는 이미 baseline 에 들어 있다.

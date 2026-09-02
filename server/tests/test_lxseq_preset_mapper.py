@@ -485,16 +485,19 @@ class TestDuplicateNamesInsideOneSheet:
 
 
 class TestTheColSheetAllocatesToo:
-    """t134 — col 6행이 열렸다. 위 클래스들이 dim 으로 재는 것을 col 로 재는 미러다.
+    """t134 가 col RGB 6행을, t229 가 켈빈 2행을 열어 **8행 전부**가 배정된다.
 
-    픽스처에서 col 을 뺐으므로(섞으면 거절된다) col 쪽 자리는 여기가 잰다.
+    위 클래스들이 dim 으로 재는 것을 col 로 재는 미러다. 픽스처에서 col 을
+    뺐으므로(섞으면 거절된다) col 쪽 자리는 여기가 잰다.
     """
 
-    def test_the_six_rgb_rows_take_the_lowest_slots(self):
+    def test_every_row_takes_the_lowest_slots(self):
         result = map_presets(_records("col"), pool_section=_pool())
-        assert [p.slot for p in result.planned] == [1, 2, 3, 4, 5, 6]
+        assert [p.slot for p in result.planned] == [1, 2, 3, 4, 5, 6, 7, 8]
         assert [p.preset_id for p in result.planned] == [
             "COL.01",
+            "COL.02",
+            "COL.03",
             "COL.04",
             "COL.05",
             "COL.06",
@@ -505,13 +508,22 @@ class TestTheColSheetAllocatesToo:
     def test_the_assignment_follows_the_listing(self):
         """비공허성 — 목록을 바꾸면 배정도 따라 바뀌어야 한다."""
         result = map_presets(_records("col"), pool_section=_pool(occupied=(1, 2, 3)))
-        assert [p.slot for p in result.planned] == [4, 5, 6, 7, 8, 9]
+        assert [p.slot for p in result.planned] == [4, 5, 6, 7, 8, 9, 10, 11]
 
-    def test_the_two_kelvin_rows_stay_held(self):
-        """**6행이지 8행이 아니다.** 스케일을 풀어도 켈빈은 안 열린다(t133)."""
-        result = map_presets(_records("col"), pool_section=_pool())
-        assert [h.preset_id for h in result.held] == ["COL.02", "COL.03"]
-        assert all(h.hold_classes == ("no_rgb_value",) for h in result.held)
+    def test_a_held_row_still_takes_no_slot(self):
+        """정본 col 은 이제 보류가 0이다 — 그래서 **합성 행**으로 이 자리를 지킨다.
+
+        보류가 없다고 이 검사를 지우면 「보류에도 슬롯을 준다」는 회귀를 아무도
+        못 잡는다. 정의역 밖 색온도가 여전히 보류되는 자리다(t229).
+        """
+        records = _records("col")
+        held_kind = [r for r in records if not r.storable]
+        assert held_kind == [], "정본에 보류가 생겼다 — 이 검사의 전제를 다시 봐라"
+
+        outside = parse_preset_csv("ID,Name,Value,Purpose\nCOL.99,정의역 밖,~40000K,합성\n").records
+        result = map_presets(records + list(outside), pool_section=_pool())
+        assert [h.preset_id for h in result.held] == ["COL.99"]
+        assert [p.preset_id for p in result.planned][-1] == "COL.08"
 
 
 class TestOneCallMapsOneSheet:

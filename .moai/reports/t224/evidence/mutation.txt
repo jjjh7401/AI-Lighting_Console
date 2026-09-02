@@ -1,0 +1,12 @@
+M1 선언 대조 제거: arm1 failed=2 · arm2 failed=0
+M2 미지 키 검사 제거: arm1 failed=1 · arm2 failed=0
+M3 bool 좌표 검사 제거: arm1 failed=1 · arm2 failed=0
+M4 양자화 우회: arm1 failed=3 · arm2 failed=0
+M5 빈 꼬리 거절 제거: arm1 failed=1 · arm2 failed=0
+M6 꼬리 인자 무시: arm1 failed=1 · arm2 failed=0
+M7 조인 술어를 접두 일치로 무름: arm1 failed=1 · arm2 failed=0
+M8 콘솔 형태 인식 제거 (점 필수로 되돌림): arm1 failed=8 · arm2 failed=0
+M9 쓰기 라벨에서 점 제거를 되돌림: arm1 failed=3 · arm2 failed=0
+
+arm1 에서 살아남은 뮤턴트: 없음
+arm2 가 이미 잡던 뮤턴트: 없음

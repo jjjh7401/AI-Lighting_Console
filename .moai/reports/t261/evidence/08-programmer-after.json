@@ -1,0 +1,43 @@
+{
+  "mode": "props",
+  "payload": {
+    "id": "gate-1",
+    "kind": "props",
+    "ok": true,
+    "path": "Selection",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "Selection"
+      },
+      {
+        "n": "COUNTTOTALSELECTED",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      },
+      {
+        "n": "COUNTFULLYSELECTED",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      },
+      {
+        "n": "COUNT",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      },
+      {
+        "n": "ACTIVE",
+        "ok": true,
+        "t": "boolean",
+        "v": "false"
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  }
+}

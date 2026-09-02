@@ -1,0 +1,595 @@
+{
+  "action": "preview",
+  "approve": false,
+  "listen_port": 9005,
+  "limit": null,
+  "pool_path": "DataPool/PresetPools/2",
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "baseline": {
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "ok": false,
+      "child_count": null,
+      "truncated": false,
+      "detail": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "fixtures": {
+      "path": "Patch/Stages/1/Fixtures",
+      "ok": true,
+      "child_count": 86,
+      "children_in_reply": 19,
+      "names": [
+        "KEY 101",
+        "KEY 102",
+        "KEY 103",
+        "KEY 104",
+        "KEY 105",
+        "KEY 106",
+        "FOH 111",
+        "FOH 112",
+        "FOH 113",
+        "FOH 114",
+        "FOH 115",
+        "FOH 116",
+        "FOH 117",
+        "FOH 118",
+        "BLIND 601",
+        "BLIND 602",
+        "BLIND 603",
+        "BLIND 604",
+        "BLIND 605"
+      ],
+      "truncated": true,
+      "detail": null
+    },
+    "pool_before": {
+      "path": "DataPool/PresetPools/2",
+      "ok": true,
+      "child_count": 0,
+      "children_in_reply": 0,
+      "names": [],
+      "truncated": false,
+      "detail": null
+    },
+    "channel_trustworthy": true
+  },
+  "coordinates_read": {
+    "count": 86,
+    "reason": null
+  },
+  "derived": [
+    {
+      "preset_id": "POS.01",
+      "slot": 1,
+      "label": "POS.01 보컬 센터 페이스 · 산출값",
+      "target_group": "KEY",
+      "rule_kind": "focus_vocal",
+      "summary": "리그 중심 x · 최전열보다 2m 앞 · 높이 1.6m 의 센터 마이크 지점을 대상 전원이 조준",
+      "aim_count": 6,
+      "aims": [
+        [
+          101,
+          -111.8,
+          42.4
+        ],
+        [
+          102,
+          -123.7,
+          31.4
+        ],
+        [
+          103,
+          -153.4,
+          20.8
+        ],
+        [
+          104,
+          153.4,
+          20.8
+        ],
+        [
+          105,
+          123.7,
+          31.4
+        ],
+        [
+          106,
+          111.8,
+          42.4
+        ]
+      ],
+      "skipped_fids": []
+    },
+    {
+      "preset_id": "POS.02",
+      "slot": 2,
+      "label": "POS.02 무대 전체 커버 · 산출값",
+      "target_group": "MOVER-D",
+      "rule_kind": "spread_floor",
+      "summary": "리그 x 폭을 대상 대수로 등분한 착지점을 무대 중앙 깊이 바닥에 한 줄로",
+      "aim_count": 8,
+      "aims": [
+        [
+          521,
+          38.3,
+          25.4
+        ],
+        [
+          522,
+          29.4,
+          23.1
+        ],
+        [
+          523,
+          18.6,
+          21.5
+        ],
+        [
+          524,
+          6.3,
+          20.5
+        ],
+        [
+          525,
+          -6.3,
+          20.5
+        ],
+        [
+          526,
+          -18.6,
+          21.5
+        ],
+        [
+          527,
+          -29.4,
+          23.1
+        ],
+        [
+          528,
+          -38.3,
+          25.4
+        ]
+      ],
+      "skipped_fids": []
+    },
+    {
+      "preset_id": "POS.03",
+      "slot": 3,
+      "label": "POS.03 밴드 라인 백 · 산출값",
+      "target_group": "BACK",
+      "rule_kind": "silhouette_line",
+      "summary": "각 장비 x 를 유지한 채 무대 중앙 깊이 · 머리 높이 1.6m — 실루엣 각이고 착지점이 무대 위라 객석 직사가 없다",
+      "aim_count": 12,
+      "aims": [
+        [
+          201,
+          180.0,
+          44.2
+        ],
+        [
+          202,
+          180.0,
+          44.2
+        ],
+        [
+          203,
+          180.0,
+          44.2
+        ],
+        [
+          204,
+          180.0,
+          44.2
+        ],
+        [
+          205,
+          180.0,
+          44.2
+        ],
+        [
+          206,
+          180.0,
+          44.2
+        ],
+        [
+          207,
+          180.0,
+          44.2
+        ],
+        [
+          208,
+          180.0,
+          44.2
+        ],
+        [
+          209,
+          180.0,
+          44.2
+        ],
+        [
+          210,
+          180.0,
+          44.2
+        ],
+        [
+          211,
+          180.0,
+          44.2
+        ],
+        [
+          212,
+          180.0,
+          44.2
+        ]
+      ],
+      "skipped_fids": []
+    },
+    {
+      "preset_id": "POS.04",
+      "slot": 4,
+      "label": "POS.04 틸트업 스타트 (무대 안쪽) · 산출값",
+      "target_group": "MOVER-U",
+      "rule_kind": "floor_inside",
+      "summary": "각 장비 x 를 유지한 채 무대 중앙 깊이 바닥 — 상승 시작점",
+      "aim_count": 8,
+      "aims": [
+        [
+          501,
+          180.0,
+          19.9
+        ],
+        [
+          502,
+          180.0,
+          19.9
+        ],
+        [
+          503,
+          180.0,
+          19.9
+        ],
+        [
+          504,
+          180.0,
+          19.9
+        ],
+        [
+          505,
+          180.0,
+          19.9
+        ],
+        [
+          506,
+          180.0,
+          19.9
+        ],
+        [
+          507,
+          180.0,
+          19.9
+        ],
+        [
+          508,
+          180.0,
+          19.9
+        ]
+      ],
+      "skipped_fids": []
+    },
+    {
+      "preset_id": "POS.05",
+      "slot": 5,
+      "label": "POS.05 팬아웃 종점 (객석 상단) · 산출값",
+      "target_group": "MOVER-ALL",
+      "rule_kind": "fan_out",
+      "summary": "다운스테이지 기준 tilt 45도에서 좌우 30도 부채꼴 (fan_pan_tilt out)",
+      "aim_count": 16,
+      "aims": [
+        [
+          521,
+          150.0,
+          45.0
+        ],
+        [
+          522,
+          154.0,
+          45.0
+        ],
+        [
+          523,
+          158.0,
+          45.0
+        ],
+        [
+          501,
+          162.0,
+          45.0
+        ],
+        [
+          524,
+          166.0,
+          45.0
+        ],
+        [
+          502,
+          170.0,
+          45.0
+        ],
+        [
+          503,
+          174.0,
+          45.0
+        ],
+        [
+          525,
+          178.0,
+          45.0
+        ],
+        [
+          504,
+          -178.0,
+          45.0
+        ],
+        [
+          526,
+          -174.0,
+          45.0
+        ],
+        [
+          505,
+          -170.0,
+          45.0
+        ],
+        [
+          506,
+          -166.0,
+          45.0
+        ],
+        [
+          527,
+          -162.0,
+          45.0
+        ],
+        [
+          507,
+          -158.0,
+          45.0
+        ],
+        [
+          508,
+          -154.0,
+          45.0
+        ],
+        [
+          528,
+          -150.0,
+          45.0
+        ]
+      ],
+      "skipped_fids": []
+    },
+    {
+      "preset_id": "POS.06",
+      "slot": 6,
+      "label": "POS.06 센터 집중 (브리지) · 산출값",
+      "target_group": "KEY+BACK",
+      "rule_kind": "focus_vocal",
+      "summary": "POS.01 과 같은 보컬 포인트를 KEY+BACK 이 함께 조준 — 1인 포커스",
+      "aim_count": 18,
+      "aims": [
+        [
+          101,
+          -111.8,
+          42.4
+        ],
+        [
+          102,
+          -123.7,
+          31.4
+        ],
+        [
+          103,
+          -153.4,
+          20.8
+        ],
+        [
+          104,
+          153.4,
+          20.8
+        ],
+        [
+          105,
+          123.7,
+          31.4
+        ],
+        [
+          106,
+          111.8,
+          42.4
+        ],
+        [
+          201,
+          -158.8,
+          74.5
+        ],
+        [
+          202,
+          -162.4,
+          74.2
+        ],
+        [
+          203,
+          -166.2,
+          73.9
+        ],
+        [
+          204,
+          -170.0,
+          73.7
+        ],
+        [
+          205,
+          -174.0,
+          73.6
+        ],
+        [
+          206,
+          -178.0,
+          73.5
+        ],
+        [
+          207,
+          178.0,
+          73.5
+        ],
+        [
+          208,
+          174.0,
+          73.6
+        ],
+        [
+          209,
+          170.0,
+          73.7
+        ],
+        [
+          210,
+          166.2,
+          73.9
+        ],
+        [
+          211,
+          162.4,
+          74.2
+        ],
+        [
+          212,
+          158.8,
+          74.5
+        ]
+      ],
+      "skipped_fids": []
+    }
+  ],
+  "skipped": [],
+  "unverified": [
+    "field_record"
+  ],
+  "unverified_reason": "좌표 기하에서 산출한 값이다 — 현장에서 실제 빔 착지를 보고 잡은 값이 아니다",
+  "bundles": [
+    [
+      "Fixture 101 ; Attribute 'Pan' At -111.8 ; Attribute 'Tilt' At 42.4",
+      "Fixture 102 ; Attribute 'Pan' At -123.7 ; Attribute 'Tilt' At 31.4",
+      "Fixture 103 ; Attribute 'Pan' At -153.4 ; Attribute 'Tilt' At 20.8",
+      "Fixture 104 ; Attribute 'Pan' At 153.4 ; Attribute 'Tilt' At 20.8",
+      "Fixture 105 ; Attribute 'Pan' At 123.7 ; Attribute 'Tilt' At 31.4",
+      "Fixture 106 ; Attribute 'Pan' At 111.8 ; Attribute 'Tilt' At 42.4",
+      "Store Preset 2.1",
+      "Label Preset 2.1 'POS.01 보컬 센터 페이스 · 산출값'",
+      "ClearAll"
+    ],
+    [
+      "Fixture 521 ; Attribute 'Pan' At 38.3 ; Attribute 'Tilt' At 25.4",
+      "Fixture 522 ; Attribute 'Pan' At 29.4 ; Attribute 'Tilt' At 23.1",
+      "Fixture 523 ; Attribute 'Pan' At 18.6 ; Attribute 'Tilt' At 21.5",
+      "Fixture 524 ; Attribute 'Pan' At 6.3 ; Attribute 'Tilt' At 20.5",
+      "Fixture 525 ; Attribute 'Pan' At -6.3 ; Attribute 'Tilt' At 20.5",
+      "Fixture 526 ; Attribute 'Pan' At -18.6 ; Attribute 'Tilt' At 21.5",
+      "Fixture 527 ; Attribute 'Pan' At -29.4 ; Attribute 'Tilt' At 23.1",
+      "Fixture 528 ; Attribute 'Pan' At -38.3 ; Attribute 'Tilt' At 25.4",
+      "Store Preset 2.2",
+      "Label Preset 2.2 'POS.02 무대 전체 커버 · 산출값'",
+      "ClearAll"
+    ],
+    [
+      "Fixture 201 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 202 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 203 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 204 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 205 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 206 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 207 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 208 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 209 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 210 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 211 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Fixture 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 44.2",
+      "Store Preset 2.3",
+      "Label Preset 2.3 'POS.03 밴드 라인 백 · 산출값'",
+      "ClearAll"
+    ],
+    [
+      "Fixture 501 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 19.9",
+      "Fixture 502 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 19.9",
+      "Fixture 503 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 19.9",
+      "Fixture 504 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 19.9",
+      "Fixture 505 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 19.9",
+      "Fixture 506 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 19.9",
+      "Fixture 507 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 19.9",
+      "Fixture 508 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 19.9",
+      "Store Preset 2.4",
+      "Label Preset 2.4 'POS.04 틸트업 스타트 (무대 안쪽) · 산출값'",
+      "ClearAll"
+    ],
+    [
+      "Fixture 521 ; Attribute 'Pan' At 150 ; Attribute 'Tilt' At 45",
+      "Fixture 522 ; Attribute 'Pan' At 154 ; Attribute 'Tilt' At 45",
+      "Fixture 523 ; Attribute 'Pan' At 158 ; Attribute 'Tilt' At 45",
+      "Fixture 501 ; Attribute 'Pan' At 162 ; Attribute 'Tilt' At 45",
+      "Fixture 524 ; Attribute 'Pan' At 166 ; Attribute 'Tilt' At 45",
+      "Fixture 502 ; Attribute 'Pan' At 170 ; Attribute 'Tilt' At 45",
+      "Fixture 503 ; Attribute 'Pan' At 174 ; Attribute 'Tilt' At 45",
+      "Fixture 525 ; Attribute 'Pan' At 178 ; Attribute 'Tilt' At 45",
+      "Fixture 504 ; Attribute 'Pan' At -178 ; Attribute 'Tilt' At 45",
+      "Fixture 526 ; Attribute 'Pan' At -174 ; Attribute 'Tilt' At 45",
+      "Fixture 505 ; Attribute 'Pan' At -170 ; Attribute 'Tilt' At 45",
+      "Fixture 506 ; Attribute 'Pan' At -166 ; Attribute 'Tilt' At 45",
+      "Fixture 527 ; Attribute 'Pan' At -162 ; Attribute 'Tilt' At 45",
+      "Fixture 507 ; Attribute 'Pan' At -158 ; Attribute 'Tilt' At 45",
+      "Fixture 508 ; Attribute 'Pan' At -154 ; Attribute 'Tilt' At 45",
+      "Fixture 528 ; Attribute 'Pan' At -150 ; Attribute 'Tilt' At 45",
+      "Store Preset 2.5",
+      "Label Preset 2.5 'POS.05 팬아웃 종점 (객석 상단) · 산출값'",
+      "ClearAll"
+    ],
+    [
+      "Fixture 101 ; Attribute 'Pan' At -111.8 ; Attribute 'Tilt' At 42.4",
+      "Fixture 102 ; Attribute 'Pan' At -123.7 ; Attribute 'Tilt' At 31.4",
+      "Fixture 103 ; Attribute 'Pan' At -153.4 ; Attribute 'Tilt' At 20.8",
+      "Fixture 104 ; Attribute 'Pan' At 153.4 ; Attribute 'Tilt' At 20.8",
+      "Fixture 105 ; Attribute 'Pan' At 123.7 ; Attribute 'Tilt' At 31.4",
+      "Fixture 106 ; Attribute 'Pan' At 111.8 ; Attribute 'Tilt' At 42.4",
+      "Fixture 201 ; Attribute 'Pan' At -158.8 ; Attribute 'Tilt' At 74.5",
+      "Fixture 202 ; Attribute 'Pan' At -162.4 ; Attribute 'Tilt' At 74.2",
+      "Fixture 203 ; Attribute 'Pan' At -166.2 ; Attribute 'Tilt' At 73.9",
+      "Fixture 204 ; Attribute 'Pan' At -170 ; Attribute 'Tilt' At 73.7",
+      "Fixture 205 ; Attribute 'Pan' At -174 ; Attribute 'Tilt' At 73.6",
+      "Fixture 206 ; Attribute 'Pan' At -178 ; Attribute 'Tilt' At 73.5",
+      "Fixture 207 ; Attribute 'Pan' At 178 ; Attribute 'Tilt' At 73.5",
+      "Fixture 208 ; Attribute 'Pan' At 174 ; Attribute 'Tilt' At 73.6",
+      "Fixture 209 ; Attribute 'Pan' At 170 ; Attribute 'Tilt' At 73.7",
+      "Fixture 210 ; Attribute 'Pan' At 166.2 ; Attribute 'Tilt' At 73.9",
+      "Fixture 211 ; Attribute 'Pan' At 162.4 ; Attribute 'Tilt' At 74.2",
+      "Fixture 212 ; Attribute 'Pan' At 158.8 ; Attribute 'Tilt' At 74.5",
+      "Store Preset 2.6",
+      "Label Preset 2.6 'POS.06 센터 집중 (브리지) · 산출값'",
+      "ClearAll"
+    ]
+  ],
+  "stopped": "preview",
+  "pool_after": {
+    "path": "DataPool/PresetPools/2",
+    "ok": true,
+    "child_count": 0,
+    "children_in_reply": 0,
+    "names": [],
+    "truncated": false,
+    "detail": null
+  },
+  "approval_requests": [],
+  "questions_asked": []
+}

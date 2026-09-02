@@ -1,0 +1,848 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "Part",
+    "fields": [
+      {
+        "n": "IGNORENETWORK",
+        "t": "UInt64"
+      },
+      {
+        "n": "STRUCTURELOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "SYSTEMLOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "LOCK",
+        "t": "UInt64"
+      },
+      {
+        "n": "INDEX",
+        "t": "UInt32"
+      },
+      {
+        "n": "COUNT",
+        "t": "UInt32"
+      },
+      {
+        "n": "NO",
+        "t": "UInt32"
+      },
+      {
+        "n": "NAME",
+        "t": "String"
+      },
+      {
+        "n": "USEREXPANDED",
+        "t": "UInt64"
+      },
+      {
+        "n": "FADERENABLED",
+        "t": "Bool"
+      },
+      {
+        "n": "OWNED",
+        "t": "Bool"
+      },
+      {
+        "n": "HIDDEN",
+        "t": "UInt64"
+      },
+      {
+        "n": "DEPENDENCYEXPORT",
+        "t": "String"
+      },
+      {
+        "n": "MEMORYFOOTPRINT",
+        "t": "Int64"
+      },
+      {
+        "n": "GUID",
+        "t": "Custom"
+      },
+      {
+        "n": "SCRIBBLE",
+        "t": "Handle"
+      },
+      {
+        "n": "APPEARANCE",
+        "t": "Handle"
+      },
+      {
+        "n": "NOTE",
+        "t": "String"
+      },
+      {
+        "n": "TAGS",
+        "t": "Custom"
+      },
+      {
+        "n": "PREVIEWCOPY",
+        "t": "Handle"
+      },
+      {
+        "n": "ACTIVE",
+        "t": "UInt8"
+      },
+      {
+        "n": "HASANYMATRICKSDATA",
+        "t": "Bool"
+      },
+      {
+        "n": "SHUFFLEMODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "INITIALNAME",
+        "t": "String"
+      },
+      {
+        "n": "INITIALMATRICKS",
+        "t": "Handle"
+      },
+      {
+        "n": "X",
+        "t": "Int32"
+      },
+      {
+        "n": "Y",
+        "t": "Int32"
+      },
+      {
+        "n": "Z",
+        "t": "Int32"
+      },
+      {
+        "n": "XBLOCK",
+        "t": "Int32"
+      },
+      {
+        "n": "YBLOCK",
+        "t": "Int32"
+      },
+      {
+        "n": "ZBLOCK",
+        "t": "Int32"
+      },
+      {
+        "n": "XGROUP",
+        "t": "Int32"
+      },
+      {
+        "n": "YGROUP",
+        "t": "Int32"
+      },
+      {
+        "n": "ZGROUP",
+        "t": "Int32"
+      },
+      {
+        "n": "XWINGS",
+        "t": "Int32"
+      },
+      {
+        "n": "YWINGS",
+        "t": "Int32"
+      },
+      {
+        "n": "ZWINGS",
+        "t": "Int32"
+      },
+      {
+        "n": "XWIDTH",
+        "t": "Int32"
+      },
+      {
+        "n": "YWIDTH",
+        "t": "Int32"
+      },
+      {
+        "n": "ZWIDTH",
+        "t": "Int32"
+      },
+      {
+        "n": "XSHUFFLE",
+        "t": "UInt32"
+      },
+      {
+        "n": "YSHUFFLE",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZSHUFFLE",
+        "t": "UInt32"
+      },
+      {
+        "n": "XSHIFT",
+        "t": "Int32"
+      },
+      {
+        "n": "YSHIFT",
+        "t": "Int32"
+      },
+      {
+        "n": "ZSHIFT",
+        "t": "Int32"
+      },
+      {
+        "n": "XINV",
+        "t": "UInt32"
+      },
+      {
+        "n": "XINVB",
+        "t": "UInt32"
+      },
+      {
+        "n": "XINVG",
+        "t": "UInt32"
+      },
+      {
+        "n": "XINVW",
+        "t": "UInt32"
+      },
+      {
+        "n": "YINV",
+        "t": "UInt32"
+      },
+      {
+        "n": "YINVB",
+        "t": "UInt32"
+      },
+      {
+        "n": "YINVG",
+        "t": "UInt32"
+      },
+      {
+        "n": "YINVW",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZINV",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZINVB",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZINVG",
+        "t": "UInt32"
+      },
+      {
+        "n": "ZINVW",
+        "t": "UInt32"
+      },
+      {
+        "n": "INVERTSTYLE",
+        "t": "UInt8"
+      },
+      {
+        "n": "INVERTX",
+        "t": "UInt32"
+      },
+      {
+        "n": "INVERTY",
+        "t": "UInt32"
+      },
+      {
+        "n": "INVERTZ",
+        "t": "UInt32"
+      },
+      {
+        "n": "ALIGNRANGEX",
+        "t": "UInt8"
+      },
+      {
+        "n": "ALIGNRANGEY",
+        "t": "UInt8"
+      },
+      {
+        "n": "ALIGNRANGEZ",
+        "t": "UInt8"
+      },
+      {
+        "n": "RELATIVEFADE",
+        "t": "UInt32"
+      },
+      {
+        "n": "RELATIVEDELAY",
+        "t": "UInt32"
+      },
+      {
+        "n": "RELATIVEPHASE",
+        "t": "UInt32"
+      },
+      {
+        "n": "RELATIVESPEED",
+        "t": "UInt32"
+      },
+      {
+        "n": "RELATIVE",
+        "t": "Bool"
+      },
+      {
+        "n": "PHASERTRANSFORM",
+        "t": "UInt32"
+      },
+      {
+        "n": "FADEFROMX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "FADETOX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYFROMX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYTOX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDFROMX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDTOX",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PHASEFROMX",
+        "t": "Int32"
+      },
+      {
+        "n": "PHASETOX",
+        "t": "Int32"
+      },
+      {
+        "n": "FADEFROMY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "FADETOY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYFROMY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYTOY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDFROMY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDTOY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PHASEFROMY",
+        "t": "Int32"
+      },
+      {
+        "n": "PHASETOY",
+        "t": "Int32"
+      },
+      {
+        "n": "FADEFROMZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "FADETOZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYFROMZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "DELAYTOZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDFROMZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SPEEDTOZ",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PHASEFROMZ",
+        "t": "Int32"
+      },
+      {
+        "n": "PHASETOZ",
+        "t": "Int32"
+      },
+      {
+        "n": "DOSHUFFLE",
+        "t": "Method"
+      },
+      {
+        "n": "MEMORYTYPE",
+        "t": "UInt8"
+      },
+      {
+        "n": "MOVEGRIDCURSOR",
+        "t": "UInt8"
+      },
+      {
+        "n": "PRESERVEGRIDPOSITIONS",
+        "t": "UInt32"
+      },
+      {
+        "n": "SELECTIONDATA",
+        "t": "Custom"
+      },
+      {
+        "n": "INPUTFILTER",
+        "t": "Handle"
+      },
+      {
+        "n": "CUEPART",
+        "t": "UInt32"
+      },
+      {
+        "n": "TYPE",
+        "t": "String"
+      },
+      {
+        "n": "USER",
+        "t": "String"
+      },
+      {
+        "n": "FEATUREGROUP",
+        "t": "String"
+      },
+      {
+        "n": "TRIGGER",
+        "t": "String"
+      },
+      {
+        "n": "VALUESMODE",
+        "t": "UInt32"
+      },
+      {
+        "n": "MAGIC",
+        "t": "UInt32"
+      },
+      {
+        "n": "PRESETMODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "STOREDDATA",
+        "t": "String"
+      },
+      {
+        "n": "SPEEDMASTER",
+        "t": "Custom"
+      },
+      {
+        "n": "SPEEDSCALE",
+        "t": "Int8"
+      },
+      {
+        "n": "PRESETDATA",
+        "t": "Custom"
+      },
+      {
+        "n": "OWNDATAPRESENT",
+        "t": "Bool"
+      },
+      {
+        "n": "DIRECTPROGRAMMERCOOKING",
+        "t": "Bool"
+      },
+      {
+        "n": "OWNNONCOOKEDDATAPRESENT",
+        "t": "UInt64"
+      },
+      {
+        "n": "MODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "OFFFADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "RECIPETEMPLATE",
+        "t": "UInt32"
+      },
+      {
+        "n": "DELAYTOPHASE",
+        "t": "UInt32"
+      },
+      {
+        "n": "DEPENDENCIES",
+        "t": "Custom"
+      },
+      {
+        "n": "REFERENCES",
+        "t": "Custom"
+      },
+      {
+        "n": "MAXDEPTH",
+        "t": "UInt64"
+      },
+      {
+        "n": "AUTOSTART",
+        "t": "UInt32"
+      },
+      {
+        "n": "AUTOSTOP",
+        "t": "UInt32"
+      },
+      {
+        "n": "AUTOFIX",
+        "t": "UInt32"
+      },
+      {
+        "n": "AUTOSTOMP",
+        "t": "UInt32"
+      },
+      {
+        "n": "SOFTLTP",
+        "t": "UInt32"
+      },
+      {
+        "n": "SWAPPROTECT",
+        "t": "UInt32"
+      },
+      {
+        "n": "KILLPROTECT",
+        "t": "UInt32"
+      },
+      {
+        "n": "USEEXECUTORTIME",
+        "t": "UInt32"
+      },
+      {
+        "n": "OFFWHENOVERRIDDEN",
+        "t": "UInt32"
+      },
+      {
+        "n": "AUTOPREPOS",
+        "t": "UInt32"
+      },
+      {
+        "n": "PRIORITY",
+        "t": "UInt8"
+      },
+      {
+        "n": "PLAYBACKMASTER",
+        "t": "Custom"
+      },
+      {
+        "n": "OUTPUTFILTER",
+        "t": "Handle"
+      },
+      {
+        "n": "EXECUTORDISPLAYMODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "ACTION",
+        "t": "Custom"
+      },
+      {
+        "n": "TRACKINGDISTANCE",
+        "t": "RelCueNumber"
+      },
+      {
+        "n": "DURATION",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PART",
+        "t": "UInt32"
+      },
+      {
+        "n": "SYNC",
+        "t": "UInt32"
+      },
+      {
+        "n": "MORPH",
+        "t": "UInt32"
+      },
+      {
+        "n": "CUEFADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "CUEDELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "CUEINFADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "CUEINDELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "CUEOUTFADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "CUEOUTDELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "SNAPDELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "TRANSITION",
+        "t": "UInt8"
+      },
+      {
+        "n": "INDIVIDUALTIMING",
+        "t": "UInt32"
+      },
+      {
+        "n": "PRESET1FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET1DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET2FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET2DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET3FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET3DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET4FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET4DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET5FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET5DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET6FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET6DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET7FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET7DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET8FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET8DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET9FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET9DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET10FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET10DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET11FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET11DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET12FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET12DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET13FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET13DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET14FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET14DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET15FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET15DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET16FADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "PRESET16DELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "COMMANDDELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "COMMANDENABLED",
+        "t": "UInt32"
+      },
+      {
+        "n": "COMMAND",
+        "t": "String"
+      },
+      {
+        "n": "MIBMODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "MIBTARGET",
+        "t": "RelCueNumber"
+      },
+      {
+        "n": "MIBMULTISTEP",
+        "t": "UInt32"
+      },
+      {
+        "n": "MIBFADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "MIBDELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "INDIVFADE",
+        "t": "Int64Time"
+      },
+      {
+        "n": "INDIVDELAY",
+        "t": "Int64Time"
+      },
+      {
+        "n": "INDIVDURATION",
+        "t": "Int64Time"
+      }
+    ],
+    "id": "gate-8",
+    "kind": "introspect",
+    "offset": 0,
+    "ok": true,
+    "path": "DataPool/Sequences/3/4/1",
+    "source": "property_accessors",
+    "total": 195,
+    "truncated": false,
+    "v": 1,
+    "paging": "complete",
+    "windows": [
+      {
+        "requested_offset": 0,
+        "echoed_offset": 0,
+        "received": 27,
+        "truncated": true
+      },
+      {
+        "requested_offset": 27,
+        "echoed_offset": 27,
+        "received": 29,
+        "truncated": true
+      },
+      {
+        "requested_offset": 56,
+        "echoed_offset": 56,
+        "received": 26,
+        "truncated": true
+      },
+      {
+        "requested_offset": 82,
+        "echoed_offset": 82,
+        "received": 26,
+        "truncated": true
+      },
+      {
+        "requested_offset": 108,
+        "echoed_offset": 108,
+        "received": 26,
+        "truncated": true
+      },
+      {
+        "requested_offset": 134,
+        "echoed_offset": 134,
+        "received": 25,
+        "truncated": true
+      },
+      {
+        "requested_offset": 159,
+        "echoed_offset": 159,
+        "received": 24,
+        "truncated": true
+      },
+      {
+        "requested_offset": 183,
+        "echoed_offset": 183,
+        "received": 12,
+        "truncated": false
+      }
+    ]
+  }
+}

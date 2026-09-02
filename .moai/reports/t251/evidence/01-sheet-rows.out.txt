@@ -1,0 +1,40 @@
+
+### preset-dim  (sheet_kind=preset-dim)
+  레코드 6 · 거절행 0
+    [저장가능] DIM.FULL 풀                      
+    [저장가능] DIM.SHOW 쇼 하이                   
+    [저장가능] DIM.MID  미드                     
+    [저장가능] DIM.LOW  로우                     
+    [저장가능] DIM.GLOW 잔광                     
+    [저장가능] DIM.OUT  아웃                     
+  => 저장가능 6 / 6
+
+### preset-col  (sheet_kind=preset-col)
+  레코드 8 · 거절행 0
+    [저장가능] COL.01   골드 앰버 (=P1)            
+    [저장가능] COL.02   웜 화이트 (=P2)            
+    [저장가능] COL.03   뉴트럴 화이트 (=P3)          
+    [저장가능] COL.04   핫 핑크 (=P4)             
+    [저장가능] COL.05   딥 퍼플 (=P5)             
+    [저장가능] COL.06   터쿼이즈 (=P6)             
+    [저장가능] COL.07   선셋 오렌지 (=P7)           
+    [저장가능] COL.08   딥 블루                   
+  => 저장가능 8 / 8
+
+### preset-bm  (sheet_kind=preset-bm)
+  레코드 5 · 거절행 0
+    [보류    ] BM.01    와이드 워시                 attribute_probe_rejected · family_out_of_scope
+    [보류    ] BM.02    미드 빔                   family_out_of_scope
+    [보류    ] BM.03    좁은 빔 + 프리즘             attribute_probe_rejected
+    [보류    ] BM.04    소프트 프로스트               attribute_probe_rejected
+    [보류    ] BM.05    고보 브레이크업               family_out_of_scope · value_not_machine_readable
+  => 저장가능 0 / 5
+
+### preset-pos: 파서 거절 — UnknownPresetSheetError: unknown_preset_sheet: ID, StageMeaning, TargetGroup, RecordGuide
+
+### fx  (레지스트리 행 없음)
+  헤더: ID,Name,Attribute,WaveSteps,BaseRate,Width,Phase,Note
+  데이터행: 8
+
+### cue-ex
+  레코드 89 · 거절 0 · 큐 18
