@@ -1,0 +1,8 @@
+  'Clear'                      programmer_state=True
+  'clear'                      programmer_state=True
+  'ClearAll'                   programmer_state=True
+  'Clear Clear'                programmer_state=False
+  'Fixture 501'                programmer_state=True
+  "Attribute 'Zoom' At 45"     programmer_state=False
+  'Off Fixture 501'            programmer_state=False
+  'Store Preset 4.1'           programmer_state=False
