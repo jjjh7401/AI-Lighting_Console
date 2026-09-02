@@ -1,0 +1,56 @@
+{
+  "children": [
+    {
+      "class": "Preset",
+      "i": 1,
+      "name": "골드 앰버 (=P1)"
+    },
+    {
+      "class": "Preset",
+      "i": 2,
+      "name": "핫 핑크 (=P4)"
+    },
+    {
+      "class": "Preset",
+      "i": 3,
+      "name": "딥 퍼플 (=P5)"
+    },
+    {
+      "class": "Preset",
+      "i": 4,
+      "name": "터쿼이즈 (=P6)"
+    },
+    {
+      "class": "Preset",
+      "i": 5,
+      "name": "선셋 오렌지 (=P7)"
+    },
+    {
+      "class": "Preset",
+      "i": 6,
+      "name": "딥 블루"
+    },
+    {
+      "class": "Preset",
+      "i": 7,
+      "name": "웜 화이트 (=P2)"
+    },
+    {
+      "class": "Preset",
+      "i": 32,
+      "name": "Preset 32"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 8,
+    "class": "Presets",
+    "name": "Color"
+  },
+  "offset": 0,
+  "ok": true,
+  "path": "DataPool/PresetPools/4",
+  "truncated": false,
+  "v": 1
+}

@@ -1,0 +1,142 @@
+{
+  "action": "preview",
+  "approve": false,
+  "listen_port": 9005,
+  "preset_csv": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t261/src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.preset-col.csv",
+  "limit": null,
+  "skip": 0,
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "baseline": {
+    "fabricated_control": {
+      "path": "Patch/FixtureTypesZZZNotAThing/9999",
+      "ok": false,
+      "child_count": null,
+      "truncated": false,
+      "detail": "path segment not found: 'FixtureTypesZZZNotAThing' (in Patch/FixtureTypesZZZNotAThing/9999)"
+    },
+    "fixtures": {
+      "path": "Patch/Stages/1/Fixtures",
+      "ok": true,
+      "child_count": 86,
+      "children_in_reply": 19,
+      "truncated": true,
+      "detail": null
+    },
+    "groups": {
+      "path": "DataPool/Groups",
+      "ok": true,
+      "child_count": 18,
+      "children_in_reply": 18,
+      "truncated": false,
+      "detail": null
+    },
+    "channel_trustworthy": true
+  },
+  "tool": {
+    "action": "preview",
+    "sheet_kind": "preset-col",
+    "source": {
+      "sha256": "7f17c0faeb73dc55649a1d2255aa738f6b4dcd9f45f0c2691421626ca5f52d0c",
+      "byte_length": 489
+    },
+    "pool_no": 4,
+    "pool_error": null,
+    "rejected_rows": [],
+    "read": 8,
+    "planned": [
+      {
+        "preset_id": "COL.02",
+        "name": "웜 화이트 (=P2)",
+        "slot": 7,
+        "value": "~3200K",
+        "converted": "~3200K -> R255 G190 B122 (켈빈→sRGB 근사 · Kim et al. 2002 + IEC 61966-2-1)"
+      },
+      {
+        "preset_id": "COL.03",
+        "name": "뉴트럴 화이트 (=P3)",
+        "slot": 8,
+        "value": "~5600K",
+        "converted": "~5600K -> R255 G239 B228 (켈빈→sRGB 근사 · Kim et al. 2002 + IEC 61966-2-1)"
+      }
+    ],
+    "held": [],
+    "already_present": [
+      {
+        "preset_id": "COL.01",
+        "classes": [
+          "name_taken"
+        ],
+        "details": [
+          "같은 이름이 이미 있다: 골드 앰버 (=P1) — 목표 상태가 이미 달성돼 있어 계획에 넣지 않는다. 덮어쓰지 않는 이유는 프리셋이 경고 없이 덮이고 값을 되읽을 수 없어 복구 수단이 없기 때문이다(REQ-LXSEQ3-007). **값이 맞는지는 확인 못 한다** — 이름만 같고 값이 다를 수 있다"
+        ]
+      },
+      {
+        "preset_id": "COL.04",
+        "classes": [
+          "name_taken"
+        ],
+        "details": [
+          "같은 이름이 이미 있다: 핫 핑크 (=P4) — 목표 상태가 이미 달성돼 있어 계획에 넣지 않는다. 덮어쓰지 않는 이유는 프리셋이 경고 없이 덮이고 값을 되읽을 수 없어 복구 수단이 없기 때문이다(REQ-LXSEQ3-007). **값이 맞는지는 확인 못 한다** — 이름만 같고 값이 다를 수 있다"
+        ]
+      },
+      {
+        "preset_id": "COL.05",
+        "classes": [
+          "name_taken"
+        ],
+        "details": [
+          "같은 이름이 이미 있다: 딥 퍼플 (=P5) — 목표 상태가 이미 달성돼 있어 계획에 넣지 않는다. 덮어쓰지 않는 이유는 프리셋이 경고 없이 덮이고 값을 되읽을 수 없어 복구 수단이 없기 때문이다(REQ-LXSEQ3-007). **값이 맞는지는 확인 못 한다** — 이름만 같고 값이 다를 수 있다"
+        ]
+      },
+      {
+        "preset_id": "COL.06",
+        "classes": [
+          "name_taken"
+        ],
+        "details": [
+          "같은 이름이 이미 있다: 터쿼이즈 (=P6) — 목표 상태가 이미 달성돼 있어 계획에 넣지 않는다. 덮어쓰지 않는 이유는 프리셋이 경고 없이 덮이고 값을 되읽을 수 없어 복구 수단이 없기 때문이다(REQ-LXSEQ3-007). **값이 맞는지는 확인 못 한다** — 이름만 같고 값이 다를 수 있다"
+        ]
+      },
+      {
+        "preset_id": "COL.07",
+        "classes": [
+          "name_taken"
+        ],
+        "details": [
+          "같은 이름이 이미 있다: 선셋 오렌지 (=P7) — 목표 상태가 이미 달성돼 있어 계획에 넣지 않는다. 덮어쓰지 않는 이유는 프리셋이 경고 없이 덮이고 값을 되읽을 수 없어 복구 수단이 없기 때문이다(REQ-LXSEQ3-007). **값이 맞는지는 확인 못 한다** — 이름만 같고 값이 다를 수 있다"
+        ]
+      },
+      {
+        "preset_id": "COL.08",
+        "classes": [
+          "name_taken"
+        ],
+        "details": [
+          "같은 이름이 이미 있다: 딥 블루 — 목표 상태가 이미 달성돼 있어 계획에 넣지 않는다. 덮어쓰지 않는 이유는 프리셋이 경고 없이 덮이고 값을 되읽을 수 없어 복구 수단이 없기 때문이다(REQ-LXSEQ3-007). **값이 맞는지는 확인 못 한다** — 이름만 같고 값이 다를 수 있다"
+        ]
+      }
+    ],
+    "held_by_class": {},
+    "refusal": null,
+    "refusal_detail": null,
+    "unverified": [
+      "value_match"
+    ],
+    "unverified_reason": "슬롯 점유는 되읽어 확인할 수 있지만 **값이 맞는지는 이 채널로 읽히지 않는다**. 「슬롯이 찼다」는 「무언가 저장됐다」까지만 말한다 — 「검증된 N건」으로 읽으면 틀린 값이 조용히 영속한다",
+    "guidance": "이 산출물의 바구니는 **셋**이다. `planned` 는 넣을 수 있다고 판정된 것, `held` 는 시트 자체가 넣을 수 없어 보류된 것, `already_present` 는 **같은 이름이 콘솔에 이미 있어** 계획에 안 들어간 것이다. 셋을 합쳐 보고하라 — 「N건 성공」이 아니라 「읽은 수 중 계획 수 계획 · 보류 수 보류(클래스별) · 이미 있음 수」로 말하라. 하나라도 빼면 사용자는 나머지가 어디로 갔는지 알 수 없다.\n\n⚠️ `held_by_class` 는 **행이 아니라 클래스 출현 횟수**를 센다 — 한 행이 사유 둘을 동시에 지면 그 합이 `held` 의 행 수보다 **크다**. 보류 **건수**는 `held` 의 길이로 말하고, 클래스별 수는 **사유마다** 말하라. 합산해서 건수로 쓰면 사용자가 있지도 않은 행을 찾는다. 그 차이는 오류가 아니라 **정보**다 — 한 행이 여러 사유에 동시에 막혔다는 뜻이다.\n\n`already_present` 는 실패가 아니라 **수렴**이다. 같은 시트를 다시 돌리면 계획이 0건인 것이 정상이다. 다만 **「이미 있음」은 「맞게 있음」이 아니다** — 이름만 대조했고 값은 안 읽힌다.\n\n**값이 맞는지는 되읽지 못한다.** 슬롯이 찼다는 것은 「무언가 저장됐다」까지만 말한다. 「검증된 N건」이라고 보고하지 마라 — 틀린 값이 조용히 영속한다.\n\n저장 전에 **콘솔의 프로그래머를 이 툴이 직접 채운다** — 프리셋마다 `Group 1`(RIG 팩의 `ALL`, 전 픽스처)에 값을 싣고, 저장한 뒤 `ClearAll` 로 닫는다. 그러니 저장되는 동안 무대의 조명이 실제로 바뀐다. 사용자에게 그 사실을 먼저 알려라 — 리허설 중이라면 저장 시점을 사용자가 고르게 하라.\n\n`command_bytes` 는 **기록**이지 통과 조건이 아니다. 콘솔 거절은 길이가 아니라 내용에 달려 있다 — 「짧으니 안전」이라고 말하지 마라."
+  },
+  "pool_after": {
+    "path": "DataPool/PresetPools/4",
+    "ok": true,
+    "child_count": 7,
+    "children_in_reply": 7,
+    "truncated": false,
+    "detail": null
+  },
+  "approval_requests": [],
+  "questions_asked": []
+}
