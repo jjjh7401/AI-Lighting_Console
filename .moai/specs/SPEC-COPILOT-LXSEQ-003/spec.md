@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-LXSEQ-003
 title: "LX-SEQ 연계 3단계 — RIG PRESET 시트 19행 중 저장 가능분을 onPC 프리셋으로"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-09-02
 author: manager-spec
 priority: P1
 phase: "v0.3.0 target — LX-SEQ 연계 3단계(프리셋)"

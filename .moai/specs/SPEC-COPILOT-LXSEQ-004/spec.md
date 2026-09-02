@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-LXSEQ-004
 title: "LX-SEQ 연계 4단계 — cue-ex 시트 89행을 콘솔 큐로 (곡 큐 투입)"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-02
 author: manager-spec
 priority: P1
 phase: "v0.4.0 target — LX-SEQ 연계 4단계(곡 큐)"
@@ -63,6 +63,20 @@ t105 「값 판독 채널은 존재를 답하고 값은 안 준다」.
 
 ⚠️ `cue_no` 는 **응답기 1.5.0+** 에서만 온다. 그 아래면 슬롯 번호만 오고, 이 SPEC 은
 그 경우에도 성립해야 한다(슬롯 번호로 되읽기).
+
+> **후속 실측 (t255, 2026-09-02 · 응답기 1.6.3) — 이 절의 한계가 「완전 열거」로 굳었다.**
+>
+> 위 문단은 `_cue_items` 가 **무엇을 싣는지**를 근거로 삼는다. t255 가 콘솔에 직접 물어
+> 그보다 강한 근거를 얻었다 — `Cue` 클래스는 프로퍼티 **23개**를 완전 열거해도
+> (`truncated: false`, `paging: complete`) **내용 필드가 하나도 없다.** 「우리 판독기가
+> 안 싣는다」가 아니라 **「그 클래스에 그런 필드가 없다」**다.
+>
+> `Part` 층(195필드)의 내용 후보 넷 중 `STOREDDATA` 는 not readable, `PRESETDATA`·
+> `REFERENCES` 는 빈 문자열, 🔴 `SELECTIONDATA`·`DEPENDENCIES` 는 **`table: 0x…` 주소**를
+> 답한다 — 빈값이 아니라 **직렬화가 안 된 것**이고, 그쪽은 제거 가능한 미구현이다.
+>
+> 응답기 **1.6.3** 이 추가한 것은 `ROOT_ALIASES`(프로그래머 축)뿐이라 이 축은 안 바뀌었다.
+> 전문·계기 규율·안 잰 것: **`docs/runbooks/console-channel-facts.md` §4**.
 
 ## 3. `prepare_songcue` 는 확장 대상이 아니다 — 신규 도구다
 
