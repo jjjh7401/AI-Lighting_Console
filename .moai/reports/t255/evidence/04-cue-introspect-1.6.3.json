@@ -1,0 +1,118 @@
+{
+  "mode": "introspect",
+  "payload": {
+    "class": "Cue",
+    "fields": [
+      {
+        "n": "IGNORENETWORK",
+        "t": "UInt64"
+      },
+      {
+        "n": "STRUCTURELOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "SYSTEMLOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "LOCK",
+        "t": "UInt64"
+      },
+      {
+        "n": "INDEX",
+        "t": "UInt32"
+      },
+      {
+        "n": "COUNT",
+        "t": "UInt32"
+      },
+      {
+        "n": "NAME",
+        "t": "String"
+      },
+      {
+        "n": "NOTE",
+        "t": "String"
+      },
+      {
+        "n": "USEREXPANDED",
+        "t": "UInt64"
+      },
+      {
+        "n": "FADERENABLED",
+        "t": "Bool"
+      },
+      {
+        "n": "OWNED",
+        "t": "Bool"
+      },
+      {
+        "n": "HIDDEN",
+        "t": "UInt64"
+      },
+      {
+        "n": "DEPENDENCYEXPORT",
+        "t": "String"
+      },
+      {
+        "n": "MEMORYFOOTPRINT",
+        "t": "Int64"
+      },
+      {
+        "n": "NO",
+        "t": "CueNumber"
+      },
+      {
+        "n": "RELEASE",
+        "t": "UInt32"
+      },
+      {
+        "n": "ASSERT",
+        "t": "UInt32"
+      },
+      {
+        "n": "ALLOWDUPLICATES",
+        "t": "UInt32"
+      },
+      {
+        "n": "TRIGTYPE",
+        "t": "UInt8"
+      },
+      {
+        "n": "TRIGTIME",
+        "t": "Int64Time"
+      },
+      {
+        "n": "TRIGSOUND",
+        "t": "UInt8"
+      },
+      {
+        "n": "MIBPREFERENCE",
+        "t": "UInt8"
+      },
+      {
+        "n": "BREAK",
+        "t": "Handle"
+      }
+    ],
+    "id": "gate-1",
+    "kind": "introspect",
+    "offset": 0,
+    "ok": true,
+    "path": "DataPool/Sequences/3/4",
+    "source": "property_accessors",
+    "total": 23,
+    "truncated": false,
+    "v": 1,
+    "paging": "complete",
+    "windows": [
+      {
+        "requested_offset": 0,
+        "echoed_offset": 0,
+        "received": 23,
+        "truncated": false
+      }
+    ]
+  }
+}

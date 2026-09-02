@@ -1,0 +1,78 @@
+{
+  "mode": "props",
+  "payload": {
+    "id": "gate-1",
+    "kind": "props",
+    "ok": true,
+    "path": "DataPool/Sequences/3/4/1",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "Q010 INTRO 화사"
+      },
+      {
+        "n": "OWNDATAPRESENT",
+        "ok": true,
+        "t": "boolean",
+        "v": "true"
+      },
+      {
+        "n": "MEMORYFOOTPRINT",
+        "ok": true,
+        "t": "number",
+        "v": "4580"
+      },
+      {
+        "e": "property not readable: STOREDDATA",
+        "n": "STOREDDATA",
+        "ok": false
+      },
+      {
+        "n": "PRESETDATA",
+        "ok": true,
+        "t": "string",
+        "v": ""
+      },
+      {
+        "n": "SELECTIONDATA",
+        "ok": true,
+        "t": "table",
+        "v": "table: 0x600000910780"
+      },
+      {
+        "n": "REFERENCES",
+        "ok": true,
+        "t": "string",
+        "v": ""
+      },
+      {
+        "n": "DEPENDENCIES",
+        "ok": true,
+        "t": "table",
+        "v": "table: 0x600000910900"
+      },
+      {
+        "n": "VALUESMODE",
+        "ok": true,
+        "t": "string",
+        "v": "Normal"
+      },
+      {
+        "n": "PRESETMODE",
+        "ok": true,
+        "t": "string",
+        "v": "Selective"
+      },
+      {
+        "n": "COUNT",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  }
+}

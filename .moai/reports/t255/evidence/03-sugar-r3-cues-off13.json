@@ -1,0 +1,64 @@
+{
+  "children": [
+    {
+      "class": "Cue",
+      "cueNo": 110,
+      "i": 14,
+      "name": "Q110 BRIDGE 절제"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 120,
+      "i": 15,
+      "name": "Q120 BRIDGE 재점화"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 130,
+      "i": 16,
+      "name": "Q130 CHORUS3 폭발"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 140,
+      "i": 17,
+      "name": "Q140 CHORUS3 유지"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 150,
+      "i": 18,
+      "name": "Q150 CHORUS3 최고조"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 160,
+      "i": 19,
+      "name": "Q160 CHORUS3 해소 준비"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 170,
+      "i": 20,
+      "name": "Q170 OUTRO 잔향"
+    },
+    {
+      "class": "Cue",
+      "cueNo": 180,
+      "i": 21,
+      "name": "Q180 OUTRO 암전"
+    }
+  ],
+  "id": "gate-1",
+  "kind": "state",
+  "node": {
+    "childCount": 21,
+    "class": "Sequence",
+    "name": "Sugar r3"
+  },
+  "offset": 13,
+  "ok": true,
+  "path": "DataPool/Sequences/3",
+  "truncated": false,
+  "v": 1
+}
