@@ -1,0 +1,85 @@
+### (0) 음성 대조군
+  [PASS] ping: ok
+  [FAIL] state: responder error: path segment not found: 'ZZZNOTREALROOT9' (in ZZZNOTREALROOT9)
+===== (1) 사전 판독 — 쓰기 전 =====
+  [Selection] 양성대조군 NAME='Selection' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = 0
+      COUNTFULLYSELECTED   = 0
+      ACTIVE               = false
+      state: node={'childCount': 0, 'class': 'Selection', 'name': 'Selection'} children=0
+  [ProgrammerPart] 양성대조군 NAME='Part Zero' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = None
+      COUNTFULLYSELECTED   = None
+      ACTIVE               = None
+      state: node={'childCount': 0, 'class': 'ProgPart', 'name': 'Part Zero'} children=0
+
+### (2) 쓰기 1/4: Fixture 501
+         node={'childCount': 0, 'class': 'Selection', 'name': 'Selection'} children=0
+  [PASS] exec: ok
+===== (3) Fixture 501 직후 — 되읽기 넷 =====
+  [Selection] 양성대조군 NAME='Selection' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = 1
+      COUNTFULLYSELECTED   = 1
+      ACTIVE               = false
+      state: node={'childCount': 0, 'class': 'Selection', 'name': 'Selection'} children=0
+  [ProgrammerPart] 양성대조군 NAME='Part Zero' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = None
+      COUNTFULLYSELECTED   = None
+      ACTIVE               = None
+      state: node={'childCount': 0, 'class': 'ProgPart', 'name': 'Part Zero'} children=0
+
+### (4) 쓰기 2/4: Clear
+  [PASS] exec: ok
+===== (5) Clear 직후 — 되읽기 넷 =====
+  [Selection] 양성대조군 NAME='Selection' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = 0
+      COUNTFULLYSELECTED   = 0
+      ACTIVE               = false
+      state: node={'childCount': 0, 'class': 'Selection', 'name': 'Selection'} children=0
+  [ProgrammerPart] 양성대조군 NAME='Part Zero' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = None
+      COUNTFULLYSELECTED   = None
+      ACTIVE               = None
+      state: node={'childCount': 0, 'class': 'ProgPart', 'name': 'Part Zero'} children=0
+
+### (6) 쓰기 3/4: Fixture 27
+  [FAIL] exec: responder error: Illegal object
+===== (7) Fixture 27 직후 — 되읽기 넷 =====
+  [Selection] 양성대조군 NAME='Selection' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = 0
+      COUNTFULLYSELECTED   = 0
+      ACTIVE               = false
+      state: node={'childCount': 0, 'class': 'Selection', 'name': 'Selection'} children=0
+  [ProgrammerPart] 양성대조군 NAME='Part Zero' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = None
+      COUNTFULLYSELECTED   = None
+      ACTIVE               = None
+      state: node={'childCount': 0, 'class': 'ProgPart', 'name': 'Part Zero'} children=0
+
+### (8) 쓰기 4/4: Clear
+  [PASS] exec: ok
+===== (9) 최종 — 되읽기 넷 =====
+  [Selection] 양성대조군 NAME='Selection' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = 0
+      COUNTFULLYSELECTED   = 0
+      ACTIVE               = false
+      state: node={'childCount': 0, 'class': 'Selection', 'name': 'Selection'} children=0
+  [ProgrammerPart] 양성대조군 NAME='Part Zero' -> ok
+      COUNT                = 0
+      COUNTTOTALSELECTED   = None
+      COUNTFULLYSELECTED   = None
+      ACTIVE               = None
+      state: node={'childCount': 0, 'class': 'ProgPart', 'name': 'Part Zero'} children=0
+
+### (10) 계기 생존 재확인
+  [PASS] ping: ok
+  [FAIL] state: responder error: path segment not found: 'ZZZNOTREALROOT9' (in ZZZNOTREALROOT9)
