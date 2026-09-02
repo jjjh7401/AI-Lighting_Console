@@ -1,0 +1,11 @@
+RECOGNIZED_REFERENCE_TYPES = ('Macro', 'Plugin', 'Sequence', 'Executor')
+DEFAULT_BODY_PATHS keys    = ['Macro', 'Plugin', 'Sequence']
+
+--- reference_types = ('Macro', 'Plugin', 'Sequence', 'Executor') ---
+  'Off Fixture 501'    ref=None           hold=True reasons=('unverifiable reference: no recognizable target object',)
+  'Off Group 1'        ref=None           hold=True reasons=('unverifiable reference: no recognizable target object',)
+
+--- reference_types = ('Macro', 'Plugin', 'Sequence', 'Executor', 'Fixture', 'Group') ---
+  'Off Fixture 501'    ref='Fixture 501'  hold=True reasons=("unverifiable reference 'Fixture 501': no body path mapping for 'Fixture 501'",)
+  'Off Group 1'        ref='Group 1'      hold=True reasons=("unverifiable reference 'Group 1': no body path mapping for 'Group 1'",)
+
