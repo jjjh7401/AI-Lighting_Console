@@ -68,7 +68,9 @@ __all__ = [
     "BAD_NUMBER",
     "BAD_SNAP",
     "CUE_COVERAGE_GAP",
+    "DIM_NOT_A_REFERENCE",
     "DIM_OUT_OF_RANGE",
+    "DIM_REFERENCE_SHAPE",
     "FX_STOP",
     "NAME_TAKEN",
     "PRESET_REF_PATTERN",
@@ -157,6 +159,14 @@ BAD_SNAP = "bad_snap"
 #: Dim 이 0–100 밖이다(§11.1 3행).
 DIM_OUT_OF_RANGE = "dim_out_of_range"
 
+#: Dim 열에 **프리셋 참조꼴**을 적었다 (AC-LXSEQ4-003).
+#:
+#: `BAD_NUMBER` 와 갈라 놓는 이유는 사람에게 답이 달라서다. 「수로 안 읽힌다」는
+#: 오타·수식을 의심하게 만들지만, 이 경우 잘못은 **참조를 쓴 것 자체**다 —
+#: 정본 §11.1 3행이 `Dim` 을 `0–100(%)` 로 못박고, 참조는 4~7행(`COL`·`POS`·
+#: `BM`·`FX`)의 몫이다. 사유가 그 축을 안 말하면 다음 사람이 같은 자리에 다시 쓴다.
+DIM_NOT_A_REFERENCE = "dim_not_a_reference"
+
 #: 같은 이름의 시퀀스가 이미 있다 — **목표 상태가 이미 달성돼 있다.**
 #: 거절이 아니라 수렴이다(형제 preset_mapper.NAME_TAKEN 과 같은 규약).
 NAME_TAKEN = "name_taken"
@@ -167,6 +177,16 @@ FX_STOP = "OFF"
 #: 프리셋 ID 한 체계 — TYPE 과 2자리 숫자(§10 머리말). TYPE 넷이 닫힌 어휘다.
 #: 종류마다 해석기를 따로 두지 않는 이유는, 갈라지면 한쪽만 고쳐지기 때문이다.
 PRESET_REF_PATTERN = re.compile(r"^(POS|COL|BM|FX)\.([0-9]{2})$")
+
+#: `Dim` 열에서 「참조를 적었다」를 가르는 판별자 — `PRESET_REF_PATTERN` 보다 **넓다.**
+#:
+#: 넓힌 이유: 오작성자는 유효한 참조만 적지 않는다. 정본 §10 의 넷(`POS`·`COL`·
+#: `BM`·`FX`)뿐 아니라 RIG 팩 딤 풀의 `DIM.FULL`·`DIM.01` 같은 ID 도 같은 실수로
+#: 들어온다. 좁은 쪽으로 잡으면 정작 AC 가 예로 든 `DIM.01` 이 안 걸린다.
+#:
+#: 🔴 왼쪽을 **글자로 한정**하는 것이 이 정규식의 본체다. `12.5` 는 점이 있어도
+#: 정상 값이므로, 「점이 있으면 참조」로 잡으면 유효한 소수를 거절한다.
+DIM_REFERENCE_SHAPE = re.compile(r"^[A-Za-z]+\.[0-9A-Za-z]+$")
 
 #: 「안 된다」 3분류 (AC-LXSEQ4-014). **기본값은 (C)** 다.
 #:
@@ -206,6 +226,10 @@ _HOLD_BLOCK_CLASS: dict[str, tuple[str, str]] = {
     BAD_NUMBER: (BLOCK_DOC_INTENT, "시트 셀이 수로 안 읽힌다 -- 작성 문면 문제다"),
     BAD_SNAP: (BLOCK_DOC_INTENT, "Snap 셀이 닫힌 어휘(Y·빈칸) 밖이다"),
     DIM_OUT_OF_RANGE: (BLOCK_DOC_INTENT, "Dim 이 0-100 밖이다(§11.1 3행)"),
+    DIM_NOT_A_REFERENCE: (
+        BLOCK_DOC_INTENT,
+        "Dim 열에 프리셋 참조꼴을 적었다 -- 그 열은 0-100 숫자다(§11.1 3행)",
+    ),
 }
 
 
@@ -698,8 +722,18 @@ def map_cues(
             value, number_reason = _number(raw, column=column)
             numbers[column] = value
             if number_reason is not None:
-                classes.append(BAD_NUMBER)
-                details.append(number_reason)
+                # `Dim` 축만 갈라 낸다 — 다른 수치 열의 사유는 그대로다(t256).
+                if column == "Dim" and DIM_REFERENCE_SHAPE.match(raw.strip()):
+                    classes.append(DIM_NOT_A_REFERENCE)
+                    details.append(
+                        "Dim 은 프리셋 참조가 아니라 숫자다: "
+                        + raw.strip()
+                        + " — 0–100 사이의 수를 적는다(§11.1 3행). "
+                        "참조는 COL·POS·BM·FX 열의 몫이다(§11.1 4~7행)"
+                    )
+                else:
+                    classes.append(BAD_NUMBER)
+                    details.append(number_reason)
 
         dim = numbers["Dim"]
         if dim is not None and not (0.0 <= dim <= 100.0):
