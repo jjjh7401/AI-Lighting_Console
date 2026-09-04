@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-READBACK-001
 title: "되읽기를 값까지 — 응답기 직렬화와 프리셋 값 측정"
 version: "0.2.0"
-status: in-progress
+status: completed
 created: 2026-09-03
 updated: 2026-09-04
 author: orchestrator (plan session 317272ed)

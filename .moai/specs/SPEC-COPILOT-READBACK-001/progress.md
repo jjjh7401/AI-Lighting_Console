@@ -481,7 +481,53 @@ m3_commit: PENDING — 작업 트리에 미커밋 상태로 남겨 인계한다
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+```yaml
+sync_complete_at: 2026-09-04T11:20:00Z
+sync_commit_sha: pending-backfill-sync   # 커밋은 자기 해시를 모른다 — 후속 커밋에서 채운다
+sync_status: complete
+
+# B12 자체 점검 3건 (커밋 전 수행)
+b12_self_test_a_pre_emission_grep: PASS
+  # grep -c 'SPEC-COPILOT-READBACK-001' CHANGELOG.md → 0 (중복 없음, 신규 항목으로 추가)
+b12_self_test_b_ac_count_match: PASS
+  # grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' acceptance.md | sort -u | wc -l → 16
+  # CHANGELOG 항목이 적은 수 = 16 (PASS 10 + 단서부 3 + 미기록 3 + FAIL 0)
+  # 0 이 아닌 실수이므로 공허한 대조가 아니다
+b12_self_test_c_file_path_verification: PASS
+  # ls 로 확인한 인용 경로 4건 — docs/research/ma3-effects/10-preset-property-readback-sweep.md ·
+  # server/tools/introspect_probe.py · server/web/presets_api.py · progress.md
+  # 인용한 좌표 introspect_probe.py:139 도 되읽어 확인(attempt_session_backup=False)
+
+changelog_entry_position: "[Unreleased] › ### Added › 최상단 (SPEC-COPILOT-READBACK-002 앞)"
+
+frontmatter_status_transitions:
+  spec_md: "in-progress → completed"   # 이 sync 커밋이 운반한다 (3-phase close)
+  plan_md: none                        # 프런트매터 없음 — 본문이 '#' 로 시작한다
+  acceptance_md: none                  # 동일
+  updated_field: 2026-09-04            # 이미 sync 커밋 날짜와 같아 변경 없음
+
+# README 판단
+readme_correction: not_applicable
+  # grep -n -i 'preset|프리셋|value_match' README.md → 되읽기·프리셋 값 판독 관련
+  # 사용자 대상 서술이 없다. PRESETGUARD(쓰기 가드) 절은 이 SPEC 의 판독 축과 다른 주제라
+  # 고치지 않았다. 없는 문장을 고쳤다고 적지 않는다.
+
+# 이 커밋이 만진 파일 (명시 경로 스테이징 — git add -A 금지, §E.3 경고 참조)
+sync_files_touched: 3
+  # CHANGELOG.md · .moai/specs/SPEC-COPILOT-READBACK-001/spec.md · (이 파일) progress.md
+
+# 미검증 (이 sync 회차 기준)
+sync_gaps:
+  - sync_commit_sha 는 플레이스홀더다. 후속 커밋으로 채우기 전까지 이 값은 실제 해시가 아니다.
+  - 원격 CI 미관측 — 이 회차는 푸시하지 않았고 푸시·PR 은 오케스트레이터 소유다.
+  - 이 회차는 테스트를 다시 돌리지 않았다. 위 `10992 passed` 는 §E.2 M3 이 잰 값의 인용이며
+    이 sync 회차의 자기 실측이 아니다(변경분이 마크다운 3개뿐이라 파이썬 표면이 없다).
+  - §E.3 이 남긴 `console_writes_by_test_suite: 4` 는 이 회차가 재검증하지 않았다 — 인용이다.
+
+# MX Tag (sync 하위 단계)
+mx_tag_validation: not_applicable
+  # 이 sync 커밋의 변경분은 마크다운 3개이고 코드 0줄이라 @MX 주석 표면이 없다.
+```
 
 ## Plan Audit-Ready Signal
 
