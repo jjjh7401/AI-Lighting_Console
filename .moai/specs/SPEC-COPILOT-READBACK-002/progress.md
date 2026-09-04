@@ -688,7 +688,7 @@ l44_post_push_fetch: not-run    # 푸시하지 않았다
 
 ```yaml
 sync_complete_at: 2026-09-04T04:10:00Z
-sync_commit_sha: pending-backfill-496322f   # 이 커밋 자신의 SHA — 확정 후 후속 커밋에서 백필한다
+sync_commit_sha: 9808225   # 백필 완료 (2026-09-04). placeholder 는 pending-backfill-496322f 였다
 sync_status: complete
 console_writes: 0                 # sync 회차도 콘솔에 접촉하지 않았다
 
@@ -736,7 +736,7 @@ unverified:
   - "원격 CI — 브랜치 WT-readback-gate 는 원격에 없다. 푸시는 오케스트레이터 소유이며 깨끗한 환경 실행은 관측하지 않았다"
   - "라이브 응답기 버전 — sync 회차도 콘솔 미접촉. 게이트가 실기에서 어느 버전을 보는지는 안 쟀다"
   - "제3 핸들 형태(REQ-READBACK2-011) — 여전히 열린 구멍. 「없다」가 아니라 「안 쟀다」"
-  - "sync_commit_sha — 이 커밋 자신의 SHA 라 쓰는 시점에 알 수 없다. 백필 커밋으로 확정한다"
+  - "sync 커밋 후 핀 재실행은 관측했다(131 passed) — §G-4 의 성질 때문에 커밋 전 초록만으로는 부족했다"
 ```
 
 ## §F Phase 4 Mode Selection
