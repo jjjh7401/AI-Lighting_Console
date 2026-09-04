@@ -20,11 +20,117 @@
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### M0 — R3 응답기 버전 게이트 (2026-09-04, 워크트리 `readback002`, 브랜치 `WT-readback-gate`, base `2488336`)
+
+> M1(R4 `type_names=` 배관 · AC-READBACK2-007~013b)은 **다른 위임이 소유**한다. 아래 표는 M0 이 소유한 AC-READBACK2-001~006 만 판정하며, AC-013a·013b 의 조회 계수표는 M1 이 이 절에 덧붙인다.
+
+**기준 귀속**: 아래 모든 출력은 base `2488336`(== `origin/main`) 위 이 워크트리에서 이 회차에 실행된 것이다. 착수 전 기준 측정 — 같은 네 파일에 대해 `77 passed`, `npm --prefix ui test -- protocol.test.ts` 에 대해 `115 passed` 중 `109 passed`(테스트 추가 전) — 이며 **사전 실패는 0건**이었다.
+
+| AC | 판정 | 검증 명령 | 실측 출력 |
+|---|---|---|---|
+| AC-READBACK2-001 (version 보존 · `ping()` 시그니처 무변경) | **PASS** | `uv run pytest server/tests/test_safety_console.py::TestPingAndState -q` | `TestPingAndState` 전건 통과. `test_ping_preserves_the_reported_version_without_widening_the_port` 가 (a) `link.ping() is True` 이고 `isinstance(result, bool)`, (b) `link.responder_version == "1.6.1"`, (c) `list(inspect.signature(ConsolePort.ping).parameters) == ["self"]` 를 함께 단언 |
+| AC-READBACK2-002 (기대 버전 단일 상수 · Lua 고정) | **PASS** | `uv run pytest server/tests/test_responder_roundtrip.py::TestExpectedVersionIsPinnedToTheResponder -q` | `2 passed`. 테스트가 `console/lua/copilot_responder.lua` 에서 `VERSION` 리터럴을 정규식으로 **1건만** 읽어 `EXPECTED_RESPONDER_VERSION` 과 대조하며, 두 번째 테스트는 `server/safety/**.py` 중 그 문자열을 담은 파일이 `["responder_version.py"]` 뿐임을 단언 |
+| AC-READBACK2-003 [부정 대조군] (낮은 버전 차단) | **PASS** | `uv run pytest server/tests/test_safety_gate.py::TestResponderVersionGate -q` | `cleared is False` · `status == "blocked_responder_version_mismatch"`(≠ `blocked_responder_degraded`) · `notice` 에 `"1.6.1"` 과 `"재임포트"` · `_events(audit, "blocked")` 1건이며 그 `reason` 에 `"1.6.1"` · `gate.status["health"] == "responder_version_mismatch"` · `console.executed == []` |
+| AC-READBACK2-004 [부정 대조군] (미인식 ≠ 낮은 버전) | **PASS** | 같은 명령 + `uv run pytest server/tests/test_safety_lock_monitor.py::TestVersionClassification -q` | 높은 버전(`9.9.9`)·파싱 불가(`dev-build`) 모두 `blocked_responder_version_unrecognized` 이고 `!= blocked_responder_version_mismatch`, `notice` 에 `"재임포트"` **없음**. 분류 술어는 낮음·같음·높음·파싱 불가·빈 문자열·공백·부재 **14 케이스**를 파라메트라이즈해 이진 판정 |
+| AC-READBACK2-005 [부정 대조군] (오프라인 비가림) | **PASS** | 같은 명령 + `::TestHealthMonitorVersionStates` | 버전 불일치가 먼저 성립한 뒤 활동 창(15s)을 넘긴 침묵 → `status == "blocked_console_offline"`, `notice` 에 `"version"`·`"버전"`·`"재임포트"` **없음**. 창 **안**의 침묵은 `responder_degraded` (성공한 ping 자체가 콘솔 트래픽이므로) — 어느 쪽이든 버전 상태는 남지 않는다 |
+| AC-READBACK2-006 (일치 시 무회귀) | **PASS** | 같은 명령 + 전체 스위트 | `cleared is True` · `status == "cleared"` · `health == "online"` · `_events(audit, "blocked") == []`. 전체 스위트 `10951 passed, 12 skipped` — 기존 테스트 회귀 0건 |
+
+**오프라인 명령 전문 (acceptance.md §A)**
+
+```
+$ uv run pytest server/tests/test_safety_gate.py server/tests/test_safety_lock_monitor.py \
+    server/tests/test_deploy_health_ux.py server/tests/test_responder_roundtrip.py \
+    server/tests/test_safety_console.py -q
+150 passed in 15.12s
+
+$ npm --prefix ui test -- protocol.test.ts
+ Test Files  1 passed (1)
+      Tests  115 passed (115)
+
+$ uv run pytest server/tests -q
+10951 passed, 12 skipped, 1 warning in 146.71s
+
+$ cd ui && npx tsc --noEmit ; npm test
+tsc exit=0
+ Test Files  21 passed (21)
+      Tests  506 passed (506)
+
+$ uv run ruff check server/ ; uv run ruff format --check server/ ui/
+All checks passed!
+483 files already formatted
+```
+
+**콘솔 쓰기 0 (AC-READBACK2-014 의 M0 몫)**
+
+- 오프라인: 새 테스트 전부가 `assert console.executed == []` 를 싣는다(`test_safety_gate.py` 의 `TestResponderVersionGate` 6개 지점 — 400·413·424·448·491·507·518·537·551·561 행대). 진단 명령 `git diff 2488336 | grep -nE "^\+.*(\.execute\(|\.deploy_plugin\(|send_command|Cmd\()"` → `NONE`.
+- 라이브: 본 회차는 라이브 세션을 열지 않았다. `server/audit_logs/audit-20260904.jsonl` 4행 전수 판독 결과 `kind` 는 전부 `backup` 이고 `kind:"command"` 는 **0건**이다. 다만 이 파일은 git 추적 대상이 아니어서 본 회차 귀속 여부를 이 계기로는 가릴 수 없다 — 「내 회차가 0건」의 증거는 위 diff grep 쪽이다.
+
+**뮤테이션 7/7 (구현을 일부러 깨서 각 테스트가 RED 가 되는지 확인)**
+
+| # | 뮤테이션 | RED 결과 |
+|---|---|---|
+| 1 | `VERSION_LOW → RESPONDER_DEGRADED` (§C C-1 이 기각한 재사용안) | 4 failed |
+| 2 | `VERSION_UNRECOGNIZED → RESPONDER_VERSION_MISMATCH` (두 팔 붕괴) | 5 failed |
+| 3 | `note_ping_timeout` 이 버전 상태를 보존 (오프라인 가림) | 2 failed |
+| 4 | 일치하는 버전을 `VERSION_LOW` 로 판정 | 6 failed |
+| 5 | `ping` 이 다시 payload 의 `version` 을 폐기 | 1 failed |
+| 6 | 상수를 `1.6.2` 로 드리프트 | 1 failed |
+| 7 | UI 라벨 매핑 2건 삭제 (배너가 원문 status 노출) | 2 failed |
+
+복원 뒤 재확인: `150 passed` / `115 passed`.
+
+**RED 증거 (구현 전, TDD)**
+
+```
+E   ModuleNotFoundError: No module named 'server.safety.responder_version'
+ERROR server/tests/test_safety_gate.py
+ERROR server/tests/test_safety_lock_monitor.py
+ERROR server/tests/test_deploy_health_ux.py
+ERROR server/tests/test_responder_roundtrip.py
+4 errors in 0.32s
+
+# UI 절반
+ × responder version health states > labels a low responder version with the re-import instruction
+ × responder version health states > labels an unrecognized version differently from a low one
+ × responder version health states > directs a low version to re-import
+ × responder version health states > directs an unrecognized version to investigate, NOT to re-import
+      Tests  4 failed | 111 passed (115)
+```
+
+**설계 결정 2건 (SPEC 이 지정하지 않아 구현이 정한 것)**
+
+1. **`version` 부재(`None`)는 차단하지 않는다.** `pong` 에 `version` 이 없는 회신은 이 저장소의 오프라인 하네스가 실제로 보내는 형태다(2026-09-04 실측: `test_safety_console.py` `_echo_send`, `test_responder_import_gate.py:70`, `test_deploy_transport.py:262`, `test_safety_e2e_audit.py:75`). 이 채널로는 「버전 없는 응답기」와 「버전을 재지 않는 호출자」를 구별할 수 없으므로, 구별 불가를 차단 사유로 쓰지 않는다. 열린 구멍으로 §E.2 미검증에 적는다.
+2. **게이트는 `ConsolePort` 를 넓히지 않고 `getattr(self._console, "responder_version", None)` 로 읽는다.** `ping() -> bool` 시그니처 무변경 제약(REQ-READBACK2-001)과 「버전이 게이트에 도달해야 한다」를 동시에 만족시키는 자리다. 속성이 없는 가짜 포트도 그대로 돌아간다는 것을 별도 테스트로 단언했다.
+
+**계획 대비 파일 1건 추가**: `server/tests/test_safety_console.py`. plan.md §E M0 의 테스트 파일 목록 4건에는 없지만, AC-READBACK2-001 이 재는 대상은 `ConsoleLink.ping` 이고 그 테스트 홈이 이 파일이다. 범위 봉투(`server/safety/` + 그 테스트) 안이며 금지 경로가 아니다.
+
+**미검증 (M0)**
+
+- **라이브 응답기 버전** — 본 회차는 콘솔에 접촉하지 않았다. 만든 것은 **탐지 기계**이고, 라이브가 실제로 1.6.1 인지 1.6.3 인지는 재지 않았다(B2 · SPEC-COPILOT-READBACK-001 M3 소유).
+- **`version` 부재 갈래의 실기 빈도** — 오프라인 하네스가 그 형태를 보낸다는 것은 실측했으나, 라이브 응답기가 `version` 을 빠뜨리는 경우가 실제로 있는지는 재지 않았다. 위 설계 결정 1 은 그 미측정 위에 서 있다.
+- **제3 핸들 형태**(REQ-READBACK2-011) — M1 소유이며 M0 에서 재지 않았다.
+- **전체 스위트의 착수 전 기준** — 착수 전 기준은 위임이 지정한 네 파일 + UI 에 대해서만 측정했다. 전체 스위트(10951건)의 사전 기준은 재지 않았으므로, 「전체 초록」은 변경 **후** 관측이다. 회차 중 관측된 실패 2건(`test_overlap_preserve.py` 의 ruff 검사 2건)은 내가 만든 미포맷 파일 2개가 원인임을 확인하고 포맷으로 해소했다.
+- **`_console_input` 프로브 경로** — 두 버전 상태는 `console_offline` 이 아니므로 프로브를 타지 않는다(설계대로). 이 상태에서 `console_input` 이 `undetermined` 로 나가는 것이 UI 에 어떻게 보이는지는 실기로 재지 않았다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+```yaml
+run_phase: M0
+run_complete_at: 2026-09-04T01:52:00Z
+run_commit_sha: pending-backfill-m0
+run_status: ac-pass
+ac_scope: AC-READBACK2-001..006   # M1 이 007..013b 를 별도로 계상한다
+ac_pass_count: 6
+ac_fail_count: 0
+preserve_list_post_run_count: 0   # server/prechk/ · server/vwx/ · console/lua/ · server/lxseq/ · server/orchestrator/ · server/paperwork/ · server/web/presets_api.py 전부 빈 diff
+console_writes: 0
+mutation_checks: 7/7 red
+new_warnings_or_lints_introduced: 0   # ruff check 통과 · ruff format 통과 · tsc exit 0
+total_run_phase_files: 13   # 신규 1 + 수정 12 (progress.md · spec.md frontmatter 제외)
+m1_to_mN_commit_strategy: M0 단일 커밋 + SHA 백필 커밋 1건. 푸시는 오케스트레이터 소유.
+l44_pre_commit_fetch: not-run   # 격리 워크트리 · 브랜치 WT-readback-gate 는 원격에 없다
+l44_post_push_fetch: not-run    # 푸시하지 않았다
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

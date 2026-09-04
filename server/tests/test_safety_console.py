@@ -260,6 +260,52 @@ class TestPingAndState:
         assert link.ping() is False
         assert monitor.state == HealthMonitor.CONSOLE_OFFLINE
 
+    def test_ping_preserves_the_reported_version_without_widening_the_port(self):
+        """AC-READBACK2-001 — 도착한 `version` 이 버려지지 않는다.
+
+        세 가지를 한 번에 단언한다: 반환값은 여전히 `bool` 이고,
+        `ConsolePort.ping()` 시그니처는 넓혀지지 않았으며(모든 `FakeConsole` 로
+        파급되므로), 값은 링크 속성에서 읽힌다.
+        """
+        monitor = HealthMonitor()
+        link = ConsoleLink(timeouts=_FAST, monitor=monitor)
+
+        def send(wire: str) -> None:
+            match = _REQUEST.match(wire)
+            assert match, f"unexpected wire line: {wire!r}"
+            _, rid, _rest = match.groups()
+            _reply(link, {"v": 1, "kind": "pong", "id": rid, "ok": True, "version": "1.6.1"})
+
+        link.bind_send(send)
+
+        result = link.ping()
+
+        assert result is True
+        assert isinstance(result, bool)
+        assert link.responder_version == "1.6.1"
+        # 시그니처 무변경: 인자는 self 하나뿐이다 (Protocol 과 구현 양쪽).
+        from server.safety.console import ConsolePort
+
+        assert list(inspect.signature(ConsolePort.ping).parameters) == ["self"]
+        assert list(inspect.signature(link.ping).parameters) == []
+        # 보존된 값은 health monitor 까지 도달한다 — 버려지면 상태가 online 이다.
+        assert monitor.state == HealthMonitor.RESPONDER_VERSION_MISMATCH
+
+    def test_a_pong_without_a_version_leaves_the_attribute_none(self):
+        # 이 저장소의 오프라인 하네스가 실제로 보내는 형태(_echo_send)다.
+        link = ConsoleLink(timeouts=_FAST)
+        send, _ = _echo_send(link)
+        link.bind_send(send)
+        assert link.ping() is True
+        assert link.responder_version is None
+
+    def test_a_ping_timeout_does_not_invent_a_version(self):
+        link = ConsoleLink(timeouts=_FAST)
+        send, _ = _echo_send(link, silent=True)
+        link.bind_send(send)
+        assert link.ping() is False
+        assert link.responder_version is None
+
     def test_query_state_returns_the_decoded_payload(self):
         link = ConsoleLink(timeouts=_FAST)
         send, _ = _echo_send(link)

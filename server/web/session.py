@@ -208,6 +208,14 @@ _DECISION_SUMMARY: dict[str, str] = {
         "콘솔 응답기가 저하 상태입니다 — 결과 확인이 불가능하여 "
         "부수효과 명령을 시작하지 않았습니다."
     ),
+    # 두 버전 사유를 갈라 적는다 — 낮은 버전은 재임포트로 끝나지만 미인식은
+    # 무엇이 도는지 모른다는 뜻이므로 조사가 먼저다 (REQ-READBACK2-004).
+    "blocked_responder_version_mismatch": (
+        "콘솔 응답기 버전이 기대값과 다릅니다 — 응답기를 다시 임포트해 주세요."
+    ),
+    "blocked_responder_version_unrecognized": (
+        "콘솔 응답기가 알 수 없는 버전을 보고했습니다 — 어떤 응답기가 로드돼 있는지 확인해 주세요."
+    ),
     "blocked_backup_failed": "쇼파일 백업 실패로 실행이 차단되었습니다 (안전 장치).",
     "locked": "라이브 잠금 활성 — 콘솔로 전송하지 않고 제안 카드만 생성했습니다.",
     "rejected": "승인 거부로 번들 전체가 실행되지 않았습니다.",
@@ -3938,7 +3946,14 @@ class ChatSession:
                     "저장 공간과 콘솔 상태를 확인해 주세요."
                 )
             )
-        elif decision.status in ("blocked_console_offline", "blocked_responder_degraded"):
+        elif decision.status in (
+            "blocked_console_offline",
+            "blocked_responder_degraded",
+            # 버전 차단도 health 상태 변화이므로 상태 스냅샷을 밀어 배너가
+            # 사유를 받는다 (REQ-READBACK2-003).
+            "blocked_responder_version_mismatch",
+            "blocked_responder_version_unrecognized",
+        ):
             self._send(self.status_snapshot())
 
     # -- public surface ------------------------------------------------------------

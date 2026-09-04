@@ -1191,6 +1191,10 @@ export const HEALTH_LABELS: Record<string, string> = {
   online: "콘솔 온라인",
   console_offline: "콘솔 오프라인 — 신규 실행 차단",
   responder_degraded: "응답기 저하 — 결과 확인 불가",
+  // 두 버전 상태는 사유가 다르므로 라벨도 갈린다: 낮은 버전은 재임포트로
+  // 끝나지만, 미인식은 무엇이 도는지 모른다는 뜻이다 (REQ-READBACK2-004).
+  responder_version_mismatch: "응답기 버전 불일치 — 재임포트 필요",
+  responder_version_unrecognized: "응답기 버전 미인식 — 확인 필요",
 };
 
 export function healthLabel(health: string): string {
@@ -1204,6 +1208,13 @@ export const HEALTH_GUIDANCE: Record<string, string> = {
   console_offline: "onPC가 실행 중인지, OSC 입력이 켜져 있는지 확인해 주세요.",
   responder_degraded:
     "CopilotResponder를 onPC에서 로드하고, onPC OSC 출력을 앱의 피드백 수신 포트로 설정해 주세요.",
+  // 낮은 버전 — 콘솔에 오래된 플러그인이 남아 있다. 할 일은 재임포트 하나다.
+  responder_version_mismatch:
+    "콘솔에 오래된 CopilotResponder가 로드되어 있습니다. 최신 응답기를 재임포트해 주세요.",
+  // 미인식 — 재임포트를 권하지 않는다. 무엇이 도는지 모르는 상태에서 콘솔을
+  // 건드리게 만들면 안 되므로 확인이 먼저다.
+  responder_version_unrecognized:
+    "콘솔이 보고한 응답기 버전을 알아볼 수 없습니다. onPC에 어떤 CopilotResponder가 로드되어 있는지 확인해 주세요.",
 };
 
 // console_offline is reached by TWO different situations: onPC is genuinely

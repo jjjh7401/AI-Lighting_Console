@@ -23,6 +23,7 @@ import json
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
 from server.safety.monitor import HealthMonitor
+from server.safety.responder_version import EXPECTED_RESPONDER_VERSION
 from server.web.approval_bridge import ApprovalChannel
 from server.web.korean_errors import KOREAN_ERROR_MESSAGES
 from server.web.session import ChatSession
@@ -94,6 +95,26 @@ class TestHealthSurfacingTransitions:
         recovered = session.status_snapshot()
         assert recovered["health"] == HealthMonitor.ONLINE
         assert recovered["executions_blocked"] is False
+
+    def test_the_two_version_states_surface_through_the_status_snapshot(self, tmp_path):
+        # AC-READBACK2-003·004 의 UI 도달 절반: 새 status 문자열이 상태 스냅샷에
+        # 실려 나가지 않으면 배너는 이 상태를 영원히 못 본다.
+        monitor = HealthMonitor()
+        session, _audit, _sent = _session(tmp_path, ScriptedProvider([]), monitor=monitor)
+
+        monitor.note_ping_success(version="1.6.1")
+        low = session.status_snapshot()
+        assert low["health"] == HealthMonitor.RESPONDER_VERSION_MISMATCH
+        assert low["executions_blocked"] is True
+
+        monitor.note_ping_success(version="9.9.9")
+        high = session.status_snapshot()
+        assert high["health"] == HealthMonitor.RESPONDER_VERSION_UNRECOGNIZED
+        assert high["executions_blocked"] is True
+        assert high["health"] != low["health"]
+
+        monitor.note_ping_success(version=EXPECTED_RESPONDER_VERSION)
+        assert session.status_snapshot()["health"] == HealthMonitor.ONLINE
 
     def test_status_snapshot_is_the_status_push_payload(self, tmp_path):
         # REQ-DEPLOY-013: the snapshot the heartbeat loop pushes is a v1 status
