@@ -316,12 +316,49 @@ _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 #: The grant is one FILE with one PINNED deletion, and it widens nothing else.
 #: Another file under the chokepoint, a second deleted line in this one, or any
 #: text other than `version: 1` still fails the gate.
+#:
+#: 2026-09-04 granted exception -- SPEC-COPILOT-READBACK-002 M0 makes the
+#: execution-screen gate READ the responder version that every heartbeat
+#: already carries (REQ-READBACK2-001/003). `ConsoleLink.ping` decoded the full
+#: `pong` payload and returned a bare `bool`, discarding `version`, so a
+#: live-vs-main responder mismatch was undetectable -- and this repository has
+#: the mismatch on record (live 1.6.1 against main 1.6.2, the digest dictionary
+#: below). Two files join the set and console.py's count moves 57 -> 59.
+#:
+#: Why it could not be avoided: all five new deletions belong to ONE function.
+#: `HealthMonitor.note_ping_success` encoded "a heartbeat answered -> ONLINE",
+#: and REQ-READBACK2-003 splits that into "a heartbeat answered -> ONLINE OR
+#: version-mismatch". Its three lines in monitor.py plus its two call sites --
+#: two lines in console.py, two in gate.py -- are the whole delta: seven lines,
+#: three files, one function. Any design satisfying the requirement edits the
+#: health monitor, so the chokepoint is touched BY CONSTRUCTION --
+#: the same "every possible design edits at least one file under
+#: `server/safety/`" reasoning the WRITEGATE-001 grant above records. The new
+#: `responder_version.py` is the single-source expected-version constant, pinned
+#: to `console/lua/copilot_responder.lua:82`; it deletes nothing and is listed
+#: at 0 so that a future deletion there has to come back through this gate.
+#:
+#: Ownership, MEASURED rather than assumed: the WRITEGATE-001 grant above states
+#: that SPEC "owns `server/safety/`", and that sentence was checked before this
+#: grant was taken rather than read as a standing exclusive lock. It is not one.
+#: SPEC-COPILOT-WRITEGATE-001 carries `updated: 2026-08-05` and has been static
+#: since; two later SPECs edited `server/safety/` in the meantime (86fee6c,
+#: SPEC-COPILOT-UNREQ-001, 2026-08-25; 0c0adfa, t104, 2026-08-26) and 053553f
+#: (2026-08-16) adjusted gate grants directly. The sentence is the rationale for
+#: THAT grant, not a lock enforced since -- recorded here so the next reader does
+#: not re-litigate it from the sentence alone.
+#:
+#: This grant widens nothing beyond the seven pinned lines and the two rows.
+#: A third new file under the chokepoint, an eighth deleted line, or any text
+#: other than the seven pinned below still fails the gate.
 _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 10,
     "server/safety/backup.py": 2,
     "server/safety/blacklist.yaml": 1,
-    "server/safety/console.py": 57,
-    "server/safety/gate.py": 6,
+    "server/safety/console.py": 59,
+    "server/safety/gate.py": 8,
+    "server/safety/monitor.py": 3,
+    "server/safety/responder_version.py": 0,
 }
 _SAFETY_ALLOWED_DELETED_LINES = {
     # SCOPE CORRECTION (T-I audit-log crash fix): AuditLog.record() used a
@@ -390,8 +427,17 @@ _SAFETY_ALLOWED_DELETED_LINES = {
     # the old `_deploy_execute` signature and its docstring, the one wire line
     # `execute` no longer builds itself) PLUS the fifteen paging-revision lines
     # granted on 2026-08-16, which the count above now folds in.
+    # 2026-09-04 granted extension — the version-gate read (SPEC-COPILOT-
+    # READBACK-002 M0). `ping` no longer answers a bare `bool` from a decoded
+    # payload it throws away: it preserves `version` as a link attribute and
+    # hands the classification to the health monitor. The two deletions are that
+    # one-line docstring and the `note_ping_success()` call the new
+    # version-aware notify replaces. `ConsolePort.ping()`'s signature is
+    # UNCHANGED — the port contract is not part of this grant.
     "server/safety/console.py": (
         "            wire = build_exec_request(request_id, command)",
+        '        """Responder heartbeat; updates the health monitor when attached."""',
+        "            self._monitor.note_ping_success()",
         "        Idempotent: an existing plugin of the same Name is deleted first so a",
         "        re-deploy updates in place instead of creating a duplicate.",
         "    def _deploy_execute(self, command: str, sends: list[DeploySend]) -> ExecOutcome:",
@@ -458,10 +504,36 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         "from server.safety.backup import BackupError, BackupManager",
         '    """StateQueryPort implementation riding the gate-audited console link."""',
         "    def query_state(self, path: str) -> dict:",
+        # 2026-09-04 granted extension — the same version-gate read
+        # (SPEC-COPILOT-READBACK-002 M0). `_check_health`'s probe returned a
+        # health state derived from reachability alone; it now derives it from
+        # reachability AND the preserved responder version, so the one-line
+        # docstring and the unconditional `note_ping_success()` call are
+        # replaced. Same function, same requirement, third file.
+        '        """Probe the responder once; audited; returns the resulting health state."""',
+        "            self.monitor.note_ping_success()",
         '        """Attach a BackupManager whose action saves the showfile via this gate."""',
         "    def _query_state(self, path: str) -> dict:",
         "            payload = self._console.query_state(path)",
     ),
+    # 2026-09-04 granted exception — monitor.py joins the chokepoint for the
+    # first time (SPEC-COPILOT-READBACK-002 M0). The three deletions are the
+    # WHOLE of `note_ping_success`: its signature, its one-line docstring, and
+    # the single `self._state = self.ONLINE` assignment. That function said "a
+    # heartbeat answered -> ONLINE" unconditionally, which is exactly the claim
+    # REQ-READBACK2-003 has to qualify — a heartbeat from a version-mismatched
+    # responder answered, and the path is NOT healthy. The replacement is
+    # version-aware, so the unconditional form had to go rather than be extended.
+    "server/safety/monitor.py": (
+        "    def note_ping_success(self) -> None:",
+        '        """A responder heartbeat answered — the full path is healthy."""',
+        "        self._state = self.ONLINE",
+    ),
+    # 2026-09-04 — the expected-version constant's own file, pinned at ZERO
+    # deletions rather than omitted. It is a pure addition today; listing it
+    # empty means the first deletion inside it has to come back through this
+    # gate instead of arriving unnoticed under a file nobody pinned.
+    "server/safety/responder_version.py": (),
 }
 
 _HUNK_RE = re.compile(r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? \+\d+(?:,\d+)? @@")
