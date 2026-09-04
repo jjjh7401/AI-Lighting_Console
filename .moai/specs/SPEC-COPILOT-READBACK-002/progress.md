@@ -24,7 +24,7 @@
 
 > M1(R4 `type_names=` 배관 · AC-READBACK2-007~013b)은 **다른 위임이 소유**한다. 아래 표는 M0 이 소유한 AC-READBACK2-001~006 만 판정하며, AC-013a·013b 의 조회 계수표는 M1 이 이 절에 덧붙인다.
 
-**기준 귀속**: 아래 모든 출력은 base `2488336`(== `origin/main`) 위 이 워크트리에서 이 회차에 실행된 것이다. 착수 전 기준 측정 — 같은 네 파일에 대해 `77 passed`, `npm --prefix ui test -- protocol.test.ts` 에 대해 `115 passed` 중 `109 passed`(테스트 추가 전) — 이며 **사전 실패는 0건**이었다.
+**기준 귀속**: 아래 모든 출력은 base `2488336`(== `origin/main`) 위 이 워크트리에서 이 회차에 실행된 것이다. 착수 전 기준 측정은 위임이 지정한 네 파일 `77 passed in 16.92s` 와 `npm --prefix ui test -- protocol.test.ts` → `Tests 109 passed (109)` 이며 **사전 실패는 0건**이었다. 수리 후 같은 계기가 각각 `150 passed`(테스트 파일 1개 추가 포함) 와 `115 passed` 를 답한다.
 
 | AC | 판정 | 검증 명령 | 실측 출력 |
 |---|---|---|---|
