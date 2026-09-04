@@ -48,6 +48,7 @@ from server.paperwork.render import (
 )
 from server.prechk.footprint import WalkOutcome
 from server.prechk.inventory import InventoryReadError
+from server.prechk.mode_read import TypeNameRead, read_fixture_type_names
 
 # Closed status vocabulary (§2.1 of the shared contract) — a document's
 # ``status`` is always one of exactly these three words, never composed
@@ -112,7 +113,10 @@ class _InventoryAdapter:
 
 
 def _patch_sheet_document(
-    state_port, property_port, walk: WalkOutcome | None
+    state_port,
+    property_port,
+    walk: WalkOutcome | None,
+    type_names: TypeNameRead | None = None,
 ) -> tuple[HandoverDocument, PatchSheet | None]:
     doc = HandoverDocument(
         kind="patch_sheet",
@@ -137,7 +141,9 @@ def _patch_sheet_document(
             None,
         )
     try:
-        sheet = build_patch_sheet(_InventoryAdapter(state_port, property_port), walk=walk)
+        sheet = build_patch_sheet(
+            _InventoryAdapter(state_port, property_port), walk=walk, type_names=type_names
+        )
     except InventoryReadError as error:
         return (
             replace(
@@ -169,7 +175,7 @@ def _pool_listing_document(
 
 
 def _magic_sheet_document(
-    state_port, property_port, paths: dict
+    state_port, property_port, paths: dict, type_names: TypeNameRead | None = None
 ) -> tuple[HandoverDocument, MagicSheet | None]:
     doc = HandoverDocument(
         kind="magic_sheet",
@@ -202,6 +208,7 @@ def _magic_sheet_document(
         groups_path=paths.get("groups", DEFAULT_RIG_CONTEXT_PATHS["groups"]),
         preset_pools_path=paths.get("preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]),
         fixtures_path=paths.get("fixtures", DEFAULT_RIG_CONTEXT_PATHS["fixtures"]),
+        type_names=type_names,
     )
     return replace(doc, status=STATUS_GENERATED), sheet
 
@@ -386,7 +393,17 @@ def build_handover_pack(
     paths = rig_paths or {}
     target_dir = directory if directory is not None else resolve_handover_dir()
 
-    patch_doc, patch_sheet = _patch_sheet_document(state_port, property_port, walk)
+    # 타입명 표를 이 팩 전체에 대해 **한 번만** 읽는다. 패치시트와 매직시트가
+    # 둘 다 필요하고, 표는 두 문서 사이에 바뀌지 않는다 — 문서마다 읽으면 한
+    # 요청에서 목록 조회가 두 번 늘어난다(비준된 조회 예산,
+    # server/prechk/inventory.py:469-473). 어느 시트도 스스로 읽지 않는다
+    # (REQ-READBACK2-007): 읽기는 이 자리에 있다.
+    types_root = paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS.get("fixture_types"))
+    type_names = (
+        read_fixture_type_names(state_port, root=types_root) if types_root is not None else None
+    )
+
+    patch_doc, patch_sheet = _patch_sheet_document(state_port, property_port, walk, type_names)
     if patch_sheet is not None:
         patch_path = write_paperwork_html(
             _PATCH_SHEET_FILENAME, render_patch_sheet(patch_sheet), directory=target_dir
@@ -419,7 +436,7 @@ def build_handover_pack(
         )
         preset_doc = replace(preset_doc, path=preset_path)
 
-    magic_doc, magic_sheet = _magic_sheet_document(state_port, property_port, paths)
+    magic_doc, magic_sheet = _magic_sheet_document(state_port, property_port, paths, type_names)
     if magic_sheet is not None:
         magic_path = write_paperwork_html(
             _MAGIC_SHEET_FILENAME, render_magic_sheet(magic_sheet), directory=target_dir

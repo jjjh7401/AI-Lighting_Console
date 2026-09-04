@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 import socket
 import threading
+from pathlib import Path
 
 import pytest
 from pythonosc.dispatcher import Dispatcher
@@ -23,6 +24,7 @@ from pythonosc.osc_server import ThreadingOSCUDPServer
 from pythonosc.udp_client import SimpleUDPClient
 
 from server.bridge.osc import CMD_ADDRESS, BridgeConfig
+from server.safety.responder_version import EXPECTED_RESPONDER_VERSION
 from server.tools.responder_roundtrip import run_diagnose, run_roundtrip
 
 from .lua_mock_env import ResponderHarness
@@ -90,6 +92,39 @@ def loop() -> tuple[FakeConsole, BridgeConfig]:
         yield console, config
 
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_RESPONDER_LUA = _REPO_ROOT / "console" / "lua" / "copilot_responder.lua"
+_SAFETY_DIR = _REPO_ROOT / "server" / "safety"
+_LUA_VERSION = re.compile(r'^\s*VERSION\s*=\s*"([^"]+)"\s*,?\s*$', re.MULTILINE)
+
+
+class TestExpectedVersionIsPinnedToTheResponder:
+    """AC-READBACK2-002 — 기대 버전은 한 자리에만 있고 Lua 에 고정된다.
+
+    이 테스트는 버전 리터럴을 **적지 않는다**. 적으면 그 리터럴이 두 번째
+    출처가 되어 AC 가 막으려는 것을 이 테스트가 만들어 낸다.
+    """
+
+    def _lua_version(self) -> str:
+        matches = _LUA_VERSION.findall(_RESPONDER_LUA.read_text(encoding="utf-8"))
+        assert len(matches) == 1, f"expected exactly one VERSION literal, got {matches}"
+        return matches[0]
+
+    def test_the_constant_equals_the_responders_own_version(self):
+        assert self._lua_version() == EXPECTED_RESPONDER_VERSION
+
+    def test_the_constant_is_the_only_server_side_occurrence(self):
+        # 「한 자리에만 있다」를 기계로 잰다: server/safety/ 전체에서 그 문자열이
+        # 나타나는 파일은 상수 정의 파일 하나뿐이어야 한다.
+        version = self._lua_version()
+        hits = sorted(
+            path.name
+            for path in _SAFETY_DIR.rglob("*.py")
+            if version in path.read_text(encoding="utf-8")
+        )
+        assert hits == ["responder_version.py"], hits
+
+
 class TestRoundtrip:
     def test_full_roundtrip_passes_all_steps(self, loop):
         console, config = loop
@@ -121,11 +156,14 @@ class TestRoundtrip:
     def test_expect_version_match_passes(self, loop):
         # Deployment-reliability check (2026-07-24 finding): a fast,
         # definitive "did my deploy take effect" signal from ping alone.
+        # 기대값은 리터럴이 아니라 단일 상수에서 온다(AC-READBACK2-002).
         _, config = loop
-        report = run_roundtrip(config, wait=_WAIT, skip_exec=True, expect_version="1.6.3")
+        report = run_roundtrip(
+            config, wait=_WAIT, skip_exec=True, expect_version=EXPECTED_RESPONDER_VERSION
+        )
         assert report.ok
         ping = next(step for step in report.steps if step.name == "ping")
-        assert ping.payload["version"] == "1.6.3"
+        assert ping.payload["version"] == EXPECTED_RESPONDER_VERSION
 
     def test_expect_version_mismatch_fails_ping_with_clear_detail(self, loop):
         _, config = loop
@@ -133,7 +171,7 @@ class TestRoundtrip:
         ping = next(step for step in report.steps if step.name == "ping")
         assert ping.ok is False
         assert "9.9.9" in ping.detail
-        assert "1.6.3" in ping.detail
+        assert EXPECTED_RESPONDER_VERSION in ping.detail
         assert report.ok is False
 
     def test_skip_exec_runs_two_steps(self, loop):

@@ -24,6 +24,7 @@ from server.safety.gate import _MAX_UNCONFIRMED, BACKUP_COMMAND, SafetyGate
 from server.safety.lock import LiveLock
 from server.safety.monitor import HealthMonitor
 from server.safety.registry import PluginFlagRegistry
+from server.safety.responder_version import EXPECTED_RESPONDER_VERSION
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 
 
@@ -422,6 +423,22 @@ class TestHealthBlocking:
         assert decision.status == "blocked_responder_degraded"
         assert console.executed == []
 
+    def test_version_mismatch_and_degraded_are_different_statuses(self, tmp_path):
+        # AC-READBACK2-003: 자체 status 여야 한다 — 기존 저하 사유에 얹으면
+        # 운영자가 「기다린다」와 「재임포트한다」를 구별할 수 없다.
+        low = HealthMonitor()
+        low.note_ping_success(version="1.6.1")
+        gate_low, console_low, _ = make_gate(tmp_path / "low", monitor=low)
+        degraded = HealthMonitor()
+        degraded.note_activity()
+        degraded.note_ping_timeout()
+        gate_deg, _console_deg, _ = make_gate(tmp_path / "deg", monitor=degraded)
+
+        low_status = gate_low.screen(["Store Cue 5"]).status
+        assert low_status == "blocked_responder_version_mismatch"
+        assert low_status != gate_deg.screen(["Store Cue 5"]).status
+        assert console_low.executed == []
+
     def test_executor_rechecks_health_before_every_send(self, tmp_path):
         monitor = HealthMonitor()
         gate, console, _ = make_gate(tmp_path, monitor=monitor)
@@ -445,6 +462,120 @@ class TestHealthBlocking:
         gate, console, _ = make_gate(tmp_path)
         console.ping_ok = False
         assert gate.heartbeat() == "console_offline"
+
+
+class TestResponderVersionGate:
+    """AC-READBACK2-003·004·005·006 — 네 갈래를 **사유 문자열로** 이진 판정한다.
+
+    「차단됐다」만 재면 버전 차단과 오프라인 차단이 구별되지 않는다. 이 저장소에는
+    거짓 사유가 참 사유를 가린 전례가 있으므로 status·notice·감사 사유를 단언한다.
+    """
+
+    def test_a_low_version_blocks_with_its_own_reason_and_audits(self, tmp_path):
+        # AC-READBACK2-003 [부정 대조군]
+        monitor = HealthMonitor()
+        monitor.note_ping_success(version="1.6.1")
+        gate, console, audit = make_gate(tmp_path, monitor=monitor)
+
+        decision = gate.screen(["Store Cue 5"])
+
+        assert decision.cleared is False
+        assert decision.status == "blocked_responder_version_mismatch"
+        assert decision.status != "blocked_responder_degraded"
+        assert "1.6.1" in decision.notice
+        assert "재임포트" in decision.notice
+        assert gate.status["health"] == "responder_version_mismatch"
+        blocked = _events(audit, "blocked")
+        assert len(blocked) == 1
+        assert "1.6.1" in blocked[0]["reason"]
+        assert console.executed == []
+
+    def test_an_unrecognized_version_reports_a_different_reason(self, tmp_path):
+        # AC-READBACK2-004 [부정 대조군] — 높은 버전 팔.
+        monitor = HealthMonitor()
+        monitor.note_ping_success(version="9.9.9")
+        gate, console, _ = make_gate(tmp_path, monitor=monitor)
+
+        decision = gate.screen(["Store Cue 5"])
+
+        assert decision.cleared is False
+        assert decision.status == "blocked_responder_version_unrecognized"
+        assert decision.status != "blocked_responder_version_mismatch"
+        # 재임포트를 권하지 않는다 — 무엇이 도는지 모르므로 조사가 먼저다.
+        assert "재임포트" not in decision.notice
+        assert gate.status["health"] == "responder_version_unrecognized"
+        assert console.executed == []
+
+    def test_an_unparseable_version_takes_the_unrecognized_arm(self, tmp_path):
+        # AC-READBACK2-004 [부정 대조군] — 파싱 불가 팔.
+        monitor = HealthMonitor()
+        monitor.note_ping_success(version="dev-build")
+        gate, console, _ = make_gate(tmp_path, monitor=monitor)
+
+        decision = gate.screen(["Store Cue 5"])
+
+        assert decision.status == "blocked_responder_version_unrecognized"
+        assert console.executed == []
+
+    def test_offline_is_not_masked_by_a_version_reason(self, tmp_path):
+        # AC-READBACK2-005 [부정 대조군]: 콘솔이 꺼진 상황에서 재임포트를
+        # 권하면 운영자는 이미 건강한 두 서브시스템을 뒤진다.
+        now = [1000.0]
+        monitor = HealthMonitor(clock=lambda: now[0], activity_window_seconds=15.0)
+        monitor.note_ping_success(version="1.6.1")  # 버전 불일치가 먼저 성립
+        now[0] += 30.0  # 활동 창을 넘긴 침묵 — 진짜 오프라인이다
+        monitor.note_ping_timeout()
+        gate, console, _ = make_gate(tmp_path, monitor=monitor)
+
+        decision = gate.screen(["Store Cue 5"])
+
+        assert decision.status == "blocked_console_offline"
+        assert "version" not in decision.notice
+        assert "버전" not in decision.notice
+        assert "재임포트" not in decision.notice
+        assert gate.status["health"] == "console_offline"
+        assert console.executed == []
+
+    def test_an_exactly_matching_version_is_a_no_op(self, tmp_path):
+        # AC-READBACK2-006 [무회귀]: 일치하면 형상·status 가 기존과 같다.
+        monitor = HealthMonitor()
+        monitor.note_ping_success(version=EXPECTED_RESPONDER_VERSION)
+        gate, console, audit = make_gate(tmp_path, monitor=monitor)
+
+        decision = gate.screen(["Store Cue 5"])
+
+        assert decision.cleared is True
+        assert decision.status == "cleared"
+        assert gate.status["health"] == "online"
+        assert _events(audit, "blocked") == []
+        assert console.executed == []
+
+    def test_a_version_less_pong_does_not_block(self, tmp_path):
+        # 열어 둔 구멍: `version` 없는 pong 은 이 채널로 「버전 미상」과
+        # 「버전을 재지 않는 호출자」를 구별할 수 없으므로 차단하지 않는다.
+        monitor = HealthMonitor()
+        monitor.note_ping_success()
+        gate, console, _ = make_gate(tmp_path, monitor=monitor)
+
+        assert gate.screen(["Store Cue 5"]).cleared is True
+        assert console.executed == []
+
+    def test_heartbeat_carries_the_links_reported_version_into_the_state(self, tmp_path):
+        # ConsolePort.ping() 은 여전히 bool 이므로, 게이트는 링크가 **보존한**
+        # 속성을 읽어 monitor 에 넘긴다. 시그니처를 넓히지 않는 이유가 이것이다.
+        console = FakeConsole()
+        console.responder_version = "1.6.1"
+        gate, _console, _ = make_gate(tmp_path, console=console)
+
+        assert gate.heartbeat() == "responder_version_mismatch"
+
+    def test_a_fake_without_a_version_attribute_still_reports_online(self, tmp_path):
+        # ConsolePort 를 넓히지 않았다는 증거: 속성이 없는 포트도 그대로 돈다.
+        console = FakeConsole()
+        assert not hasattr(console, "responder_version")
+        gate, _console, _ = make_gate(tmp_path, console=console)
+
+        assert gate.heartbeat() == "online"
 
 
 class TestUnconfirmedExecution:

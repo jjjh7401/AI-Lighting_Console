@@ -40,6 +40,21 @@ full loop with:
 uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9000
 ```
 
+The responder reports its version on every heartbeat, and the gate now checks it
+([SPEC-COPILOT-READBACK-002](.moai/specs/SPEC-COPILOT-READBACK-002/spec.md)). The
+one server-side source for the expected value is
+[`server/safety/responder_version.py`](server/safety/responder_version.py), pinned
+to `VERSION` in `console/lua/copilot_responder.lua` — a test reads the Lua file
+rather than restating the literal, so the two cannot drift apart silently. A
+version **below** the expected one blocks with "재임포트 필요" (re-import); an
+unparseable or **higher** version blocks with "확인 필요" and deliberately does not
+suggest a re-import, because what is running is unknown. A reply carrying **no**
+version does not block at all: this repo's offline harness genuinely sends that
+shape, so the channel cannot tell an unversioned responder from a caller that
+never measured — an open gap, recorded rather than papered over. All of this is
+downstream of the offline check, so a console-offline block is never replaced by a
+version reason.
+
 ## LLM provider configuration (M3)
 
 The tool-runner server speaks to exactly ONE active LLM provider behind a
@@ -89,8 +104,9 @@ the file's content, so revisions auto-extend the FN corpora.
 Also part of the gate: **live lock** (read-only proposal cards, lock wins over
 pending approvals), **showfile backups** (session start + periodic 10 min +
 immediately before approved risky commands; backup failure blocks execution),
-**failure modes** (console-offline / responder-degraded / per-command
-"execution unconfirmed" with no auto-resend), and the **audit log**
+**failure modes** (console-offline / responder-degraded / responder-version-mismatch
+/ responder-version-unrecognized / per-command "execution unconfirmed" with no
+auto-resend), and the **audit log**
 (append-only JSONL under `server/audit_logs/`, daily rotation, 90-day
 retention — every console send reconciles 1:1 with an audit record).
 
@@ -295,11 +311,19 @@ tests only, and the handle format itself is an assumption drawn from live reads
 of one rig. Writes stayed at zero either way, before and after; only the label
 was wrong.
 
-Two consumers of the same value are still **untranslated**, because they read
-the inventory without supplying the slot-to-name table: the Vectorworks diff
-counts fixtures by type string, so a handle matches no designed type and every
-type reports a console count of zero even when the rig is patched; and the
-printed patch sheet prints the handle verbatim in the fixture-type column.
+Those two remaining consumers are now translated as well
+([SPEC-COPILOT-READBACK-002](.moai/specs/SPEC-COPILOT-READBACK-002/spec.md), also
+offline-only). They used to read the inventory without supplying the slot-to-name
+table, so the Vectorworks diff counted fixtures by type string — a handle matches
+no designed type, and every type reported a console count of zero even on a
+patched rig — and the printed patch sheet printed the handle verbatim in the
+fixture-type column. All seven `read_inventory` call sites now pass the table
+(counted by AST, not by grep — the 100-column line limit splits five of them
+across lines), each adding at most one extra type-listing query. `build_patch_sheet`
+receives the table rather than reading it itself, and the renderer surfaces
+`fixture_type_untranslated` so a failed translation cannot masquerade as a name.
+The handle-format assumption is unchanged and still open: a value in some third,
+unobserved form passes through unmarked.
 
 Implementation: `server/lxseq/` (parser + mapper) + `server/orchestrator/tools.py`
 (`import_lxseq_patch` tool). Specification:

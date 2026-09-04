@@ -69,6 +69,7 @@ from server.paperwork.render import (
     render_preset_list,
 )
 from server.prechk.inventory import InventoryReadError
+from server.prechk.mode_read import read_fixture_type_names
 
 
 class _InventoryPort:
@@ -141,8 +142,21 @@ def _patch_sheet(deps: PaperworkDeps) -> tuple[str, str, dict]:
                 ),
             },
         )
+    # 타입명 표는 **호출자가** 읽어 넘긴다 — build_patch_sheet 은 자체 조회를
+    # 하지 않는다(REQ-READBACK2-007, 비준된 조회 예산). 경로가 설정되지 않았으면
+    # 아무것도 묻지 않았으므로 None 이며, 그때 핸들은 미번역 표식과 함께 남는다
+    # (조용히 사라지지 않는다).
+    rig_paths = deps.rig_paths or DEFAULT_RIG_CONTEXT_PATHS
+    types_root = rig_paths.get("fixture_types")
+    type_names = (
+        read_fixture_type_names(deps.state_port, root=types_root)
+        if types_root is not None
+        else None
+    )
     try:
-        sheet = _build_patch_sheet_query(_InventoryPort(deps.state_port, property_port))
+        sheet = _build_patch_sheet_query(
+            _InventoryPort(deps.state_port, property_port), type_names=type_names
+        )
     except InventoryReadError as error:
         # Distinct error code from capability_unavailable above (③ vs ④ in
         # the brief): the capability IS wired, but the query itself failed
@@ -234,11 +248,19 @@ def _magic_sheet(deps: PaperworkDeps) -> tuple[str, str, dict]:
     # than raising, so a dead group pool still yields a sheet carrying the
     # placements and saying why the groups are absent. Failing the whole
     # request here would throw away the sections that DID answer.
+    # 매직시트는 패치시트를 품으므로 같은 표가 필요하다 — 안 넘기면 이 시트의
+    # 패치 절이 핸들을 인쇄한다. 읽기는 여기(호출자)에서 1회다.
+    types_root = rig_paths.get("fixture_types")
     sheet = _build_magic_sheet_query(
         _InventoryPort(deps.state_port, property_port),
         groups_path=rig_paths.get("groups", DEFAULT_RIG_CONTEXT_PATHS["groups"]),
         preset_pools_path=rig_paths.get("preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]),
         fixtures_path=rig_paths.get("fixtures", DEFAULT_RIG_CONTEXT_PATHS["fixtures"]),
+        type_names=(
+            read_fixture_type_names(deps.state_port, root=types_root)
+            if types_root is not None
+            else None
+        ),
     )
     summary = {
         "group_count": len(sheet.group_names),

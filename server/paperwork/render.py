@@ -31,6 +31,11 @@ _STYLE = """
   .badge { display: inline-block; padding: 1px 6px; border-radius: 3px;
            font-size: 11px; margin-left: 6px; }
   .badge-truncated { background: #fff3cd; color: #7a5b00; }
+  /* 미번역 핸들 — 번역된 행과 눈으로 갈려야 한다. 색만으로 구별하지 않는다:
+     테두리와 「미번역」이라는 글자가 함께 실려, 흑백 인쇄와 색을 못 가리는
+     독자에게도 남는다. */
+  .badge-untranslated { background: #fdecea; color: #7a1c12; border: 1px solid #d9534f; }
+  td.untranslated { background: #fffafa; }
   @media print {
     body { margin: 0.5in; box-shadow: none; }
     thead { display: table-header-group; }
@@ -76,6 +81,31 @@ def _bound_meta(sheet: PatchSheet) -> str:
     return ""
 
 
+def _fixture_type_cell(row) -> str:
+    """The Fixture Type cell, carrying the untranslated fact when there is one.
+
+    REQ-READBACK2-008: honesty won at the READ boundary is dropped at the
+    PRINT boundary unless it is rendered here — a reader holding the sheet
+    cannot otherwise tell a translated name from a handle nobody could name.
+
+    The badge carries the REASON verbatim, not a generic "failed": the reasons
+    are kept apart upstream precisely because each calls for a different action
+    (re-read the console vs. check the rig), and collapsing them here would
+    undo that at the last step. It is added ONLY to an untranslated row, which
+    is what makes the two kinds of row distinguishable at a glance.
+    """
+    value = escape(row.fixture_type or "")
+    reason = row.fixture_type_untranslated
+    if reason is None:
+        return f"<td>{value}</td>"
+    return (
+        '<td class="untranslated">'
+        f"{value}"
+        f'<span class="badge badge-untranslated">미번역: {escape(reason)}</span>'
+        "</td>"
+    )
+
+
 def render_patch_sheet(sheet: PatchSheet) -> str:
     """Render a PatchSheet to a printable self-contained HTML page."""
     rows_html = "".join(
@@ -84,7 +114,7 @@ def render_patch_sheet(sheet: PatchSheet) -> str:
         f"<td>{escape(row.name or '')}</td>"
         f"<td>{row.universe if row.universe is not None else escape(row.patch_raw or '—')}</td>"
         f"<td>{row.address if row.address is not None else ''}</td>"
-        f"<td>{escape(row.fixture_type or '')}</td>"
+        f"{_fixture_type_cell(row)}"
         f"<td>{escape(row.mode or '')}</td>"
         "</tr>\n"
         for row in sheet.rows

@@ -50,6 +50,7 @@ from server.safety.grammar import validate
 from server.safety.lock import LiveLock, ProposalCard
 from server.safety.monitor import HealthMonitor
 from server.safety.registry import PluginFlagRegistry
+from server.safety.responder_version import EXPECTED_RESPONDER_VERSION
 from server.safety.ruleset import SafetyRuleset, load_ruleset
 from server.safety.session_context import SessionKey, current_session_key
 
@@ -207,10 +208,17 @@ class SafetyGate:
             self._backup.session_start()
 
     def heartbeat(self) -> str:
-        """Probe the responder once; audited; returns the resulting health state."""
+        """Probe the responder once; audited; returns the resulting health state.
+
+        `ConsolePort.ping()` 은 `bool` 이므로(시그니처 무변경 — REQ-READBACK2-001)
+        보고된 버전은 링크가 **보존한 속성**에서 읽는다. 속성이 없는 포트(버전을
+        재지 않는 가짜 콘솔)는 None 이 되어 기존과 똑같이 돈다.
+        """
         ok = self._console.ping()
         if ok:
-            self.monitor.note_ping_success()
+            self.monitor.note_ping_success(
+                version=getattr(self._console, "responder_version", None)
+            )
         else:
             self.monitor.note_ping_timeout()
         self._audit.log_executed("ping", kind="heartbeat", ok=ok)
@@ -417,8 +425,28 @@ class SafetyGate:
         if state == HealthMonitor.ONLINE:
             return None
         if state == HealthMonitor.CONSOLE_OFFLINE:
+            # 오프라인이 먼저다. 두 버전 상태는 성공한 ping 에서만 나오므로 이
+            # 분기와 경합하지 않지만, 순서를 앞에 두어 「콘솔이 꺼졌는데
+            # 재임포트를 권한다」가 코드 순서로도 불가능하게 한다
+            # (REQ-READBACK2-005).
             status = "blocked_console_offline"
             reason = "console offline — new executions are blocked (REQ-MVP-030)"
+        elif state == HealthMonitor.RESPONDER_VERSION_MISMATCH:
+            status = "blocked_responder_version_mismatch"
+            reason = (
+                "응답기 버전 불일치 — 재임포트 필요: 콘솔이 "
+                f"{self.monitor.responder_version} 을 보고했고 기대값은 "
+                f"{EXPECTED_RESPONDER_VERSION} 이다 (REQ-READBACK2-003)"
+            )
+        elif state == HealthMonitor.RESPONDER_VERSION_UNRECOGNIZED:
+            # 재임포트를 권하지 않는다 — 무엇이 도는지 모르는 상태다
+            # (REQ-READBACK2-004).
+            status = "blocked_responder_version_unrecognized"
+            reason = (
+                "응답기 버전 미인식 — 확인 필요: 콘솔이 보고한 "
+                f"{self.monitor.responder_version!r} 은 기대값 "
+                f"{EXPECTED_RESPONDER_VERSION} 과 대조할 수 없다 (REQ-READBACK2-004)"
+            )
         else:
             status = "blocked_responder_degraded"
             reason = (

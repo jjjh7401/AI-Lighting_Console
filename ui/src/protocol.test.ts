@@ -190,6 +190,58 @@ describe("healthLabel", () => {
   });
 });
 
+describe("responder version health states", () => {
+  // AC-READBACK2-003·004 (UI 절반). 매핑이 없으면 healthLabel 은 status 문자열을
+  // 그대로 돌려주므로, 아래 단언들은 「배너가 원문 status 를 노출한다」를 잡는다.
+  const MISMATCH = "responder_version_mismatch";
+  const UNRECOGNIZED = "responder_version_unrecognized";
+
+  it("labels a low responder version with the re-import instruction", () => {
+    const label = healthLabel(MISMATCH);
+    expect(label).not.toBe(MISMATCH); // 매핑 누락이면 여기서 떨어진다
+    expect(label).toBe("응답기 버전 불일치 — 재임포트 필요");
+  });
+
+  it("labels an unrecognized version differently from a low one", () => {
+    const label = healthLabel(UNRECOGNIZED);
+    expect(label).not.toBe(UNRECOGNIZED);
+    expect(label).not.toBe(healthLabel(MISMATCH));
+    expect(label).toContain("응답기 버전");
+  });
+
+  it("directs a low version to re-import", () => {
+    const guidance = healthGuidance(MISMATCH);
+    expect(guidance).not.toBeNull();
+    expect(guidance).toContain("재임포트");
+  });
+
+  it("directs an unrecognized version to investigate, NOT to re-import", () => {
+    // 운영자 행동이 갈리는 자리다. 여기서 재임포트를 권하면 무엇이 도는지
+    // 모르는 상태에서 콘솔을 건드리게 된다.
+    const guidance = healthGuidance(UNRECOGNIZED);
+    expect(guidance).not.toBeNull();
+    expect(guidance).not.toContain("재임포트");
+    expect(guidance).not.toBe(healthGuidance(MISMATCH));
+    expect(guidance).toContain("확인");
+  });
+
+  it("ignores the console-input discriminator for both version states", () => {
+    for (const health of [MISMATCH, UNRECOGNIZED]) {
+      expect(healthGuidance(health, "listening")).toBe(healthGuidance(health));
+      expect(healthGuidance(health, "listening", 9005, 9000)).toBe(healthGuidance(health));
+    }
+  });
+
+  it("never leaks a stack trace or raw-SDK marker in either guidance", () => {
+    for (const health of [MISMATCH, UNRECOGNIZED]) {
+      const guidance = healthGuidance(health) ?? "";
+      for (const marker of ["Traceback", "Error", "Exception", "  at ", "raise "]) {
+        expect(guidance).not.toContain(marker);
+      }
+    }
+  });
+});
+
 describe("healthGuidance", () => {
   // AC-DEPLOY-012 ①②: human-friendly cause+action guidance for the two degraded
   // states — REQ-DEPLOY-018 (console_offline) and REQ-DEPLOY-019 (responder).

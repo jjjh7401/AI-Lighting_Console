@@ -215,6 +215,9 @@ class ConsoleLink:
         self._counter = itertools.count(1)
         self._pending: dict[str, _Waiter] = {}
         self._pending_lock = threading.Lock()
+        # 마지막 성공한 pong 의 version (REQ-READBACK2-001). 타임아웃은 이 값을
+        # 만들어 내지 않는다 — 재지 못한 것을 값으로 쓰면 안 된다.
+        self._responder_version: str | None = None
 
     def bind_send(self, send: Callable[[str], None]) -> None:
         """Attach the bridge's send function (breaks the construction cycle)."""
@@ -294,16 +297,35 @@ class ConsoleLink:
         detail = str(payload.get("result") or payload.get("error") or "")
         return ExecOutcome(status="ok" if ok else "failed", detail=detail)
 
+    @property
+    def responder_version(self) -> str | None:
+        """마지막 성공한 `pong` 이 실어 온 응답기 버전 (없으면 None).
+
+        `pong` 은 매 하트비트마다 `version` 을 실어 오는데
+        (`console/lua/copilot_responder.lua` `build_pong`), 이전 구현은 디코드된
+        payload 를 통째로 버리고 `bool` 만 돌려줘 그 값을 매번 폐기했다
+        (REQ-READBACK2-001). `ConsolePort.ping()` 시그니처를 넓히면 모든
+        `FakeConsole` 로 파급되므로, 값은 반환값이 아니라 **링크 속성**으로
+        보존하고 게이트가 그것을 읽는다.
+        """
+        return self._responder_version
+
     def ping(self) -> bool:
-        """Responder heartbeat; updates the health monitor when attached."""
+        """Responder heartbeat; updates the health monitor when attached.
+
+        반환 형상은 무변경(`bool`)이다 — 보고된 버전은
+        :attr:`responder_version` 으로 보존된다(REQ-READBACK2-001).
+        """
         request_id = self._new_id()
         payload = self._round_trip(build_ping(request_id), request_id, self._timeouts.ping_seconds)
         if payload is None:
             if self._monitor is not None:
                 self._monitor.note_ping_timeout()
             return False
+        reported = payload.get("version")
+        self._responder_version = None if reported is None else str(reported)
         if self._monitor is not None:
-            self._monitor.note_ping_success()
+            self._monitor.note_ping_success(version=self._responder_version)
         return True
 
     def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:

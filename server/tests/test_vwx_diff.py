@@ -149,6 +149,57 @@ class TestThreeDiffCategories:
         assert entry.designed_count == 2
         assert entry.console_count == 1
 
+    def test_a_handle_shaped_type_counts_zero_and_a_translated_one_counts_real(self):
+        """AC-READBACK2-008 — 결함은 매처가 아니라 **비교 대상**이었다.
+
+        `fuzzy_type_equal`(`server/vwx/rig.py:58`, 사용은 `diff.py:180`)은 콘솔
+        타입 문자열과 도면 타입명을 대조한다. 콘솔이 이름 대신
+        `FixtureType <슬롯>` 핸들을 답하는 동안 그 대조는 **모든 타입에서** 거짓이
+        되어 `console_count` 를 0 으로 만들고, 그 0 이 `QuantityMismatchEntry` 로
+        흘러 대수가 맞는 리그를 불일치로 보고한다.
+
+        이 테스트는 같은 리그를 **두 형상**으로 넣어 그 사실을 이진 판정한다 —
+        핸들이면 0, 번역된 이름이면 실제 대수. 매처(`server/vwx/**`)는 한 줄도
+        바뀌지 않고(REQ-READBACK2-010) 넘기는 값만 달라진다.
+        """
+        designed_rig = build_designed_rig([rr(0), rr(1, fields={"unit_number": "2"})])
+
+        # (a) 수리 전 형상: 콘솔이 핸들을 답한다 → 대수가 맞는데도 0 으로 센다.
+        handles = make_inventory(
+            [
+                (1, "1.001", "FixtureType 12", "Mode 1", "A"),
+                (2, "1.002", "FixtureType 12", "Mode 1", "B"),
+            ]
+        )
+        before = compare(designed_rig, handles)
+        assert len(before.quantity_mismatches) == 1
+        assert before.quantity_mismatches[0].console_count == 0, (
+            "핸들 문자열은 도면 타입명과 절대 같지 않다 — 이 0 이 결함의 형태다"
+        )
+
+        # (b) 수리 후 형상: 표를 넘긴 판독이 핸들을 이름으로 바꿔 놓았다.
+        names = make_inventory(
+            [
+                (1, "1.001", "Robin MMX Spot", "Mode 1", "A"),
+                (2, "1.002", "Robin MMX Spot", "Mode 1", "B"),
+            ]
+        )
+        after = compare(designed_rig, names)
+
+        # 타입별 실제 대수 2 이며 **0 이 아니고**, 대수가 맞으니 불일치가 없다.
+        assert after.quantity_mismatches == ()
+
+    def test_a_translated_short_rig_still_reports_the_real_console_count(self):
+        # 비공허성: 위 테스트의 (b) 팔이 「불일치 0」인 것은 대수가 맞기
+        # 때문이지 계기가 눈이 멀어서가 아니다. 한 대만 두면 1 이 나온다.
+        designed_rig = build_designed_rig([rr(0), rr(1, fields={"unit_number": "2"})])
+        console = make_inventory([(1, "1.001", "Robin MMX Spot", "Mode 1", "A")])
+
+        result = compare(designed_rig, console)
+
+        assert len(result.quantity_mismatches) == 1
+        assert result.quantity_mismatches[0].console_count == 1
+
     def test_all_three_categories_are_always_present_even_when_empty(self):
         """비공허성 — 3부류 전부가 항상 응답에 존재한다(비어 있어도)."""
         console = make_inventory([(1, "1.001", "Robin MMX Spot", "Mode 1", "A")])
