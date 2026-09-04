@@ -483,7 +483,7 @@ m3_commit: PENDING — 작업 트리에 미커밋 상태로 남겨 인계한다
 
 ```yaml
 sync_complete_at: 2026-09-04T11:20:00Z
-sync_commit_sha: pending-backfill-sync   # 커밋은 자기 해시를 모른다 — 후속 커밋에서 채운다
+sync_commit_sha: de3b770   # 커밋은 자기 해시를 모른다 — 후속 커밋에서 채운다
 sync_status: complete
 
 # B12 자체 점검 3건 (커밋 전 수행)
