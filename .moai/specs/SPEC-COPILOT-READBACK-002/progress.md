@@ -457,7 +457,7 @@ l44_post_push_fetch: not-run    # 푸시하지 않았다
 ```yaml
 run_phase: M1
 run_complete_at: 2026-09-04T02:45:00Z
-run_commit_sha: pending-backfill-m1
+run_commit_sha: 9626976
 run_status: ac-pass-with-blocker   # AC-007..013b 전부 PASS · 비준된 조회 예산 핀 3건 미해결
 ac_scope: AC-READBACK2-007..013b   # M0 이 001..006 을 별도로 계상했다
 ac_pass_count: 9                   # 007 008 009 010 011 012 013a 013b + 014 의 M1 몫
