@@ -3010,8 +3010,28 @@ def build_toolset(
                 "property reads are not wired — build_toolset needs property_port "
                 "(or a state_port that also implements query_property)",
             )
+        # 실기 콘솔은 픽스처의 FixtureType 으로 이름이 아니라 'FixtureType <슬롯>'
+        # 핸들을 돌려준다. 대응표를 여기서 한 번 읽어 판독 경계에 넘긴다 —
+        # read_inventory 는 스스로 읽지 않는다(비준된 조회 예산,
+        # server/prechk/inventory.py:469-473). 늘어나는 조회는 목록 판독 1회다.
+        #
+        # 이 핸들러는 아래에서 walk_mode_widths 로 이미 같은 루트를 걷지만, 그
+        # 판독을 **재사용할 수 없다**: WalkOutcome 은 queried_paths 로 경로
+        # 문자열만 돌려주고 (슬롯, 이름) 쌍을 호출자에게 주지 않는다. 그 쌍을
+        # 흘리려면 server/prechk/** 를 고쳐야 하고 REQ-READBACK2-010 이 금지한다.
+        # **호출자가 조회를 냈다는 것과 페이로드를 쥐고 있다는 것은 다르다.**
+        #
+        # 경로가 없으면 아무것도 묻지 않았으므로 None 을 넘긴다 — 판독 실패가
+        # 아니다. TypeNameRead(attempted=False) 를 넘기면 「재조회하라」가
+        # 지시되는데 재조회할 판독 자체가 없었다(형제 툴 :6349 와 같은 규약).
+        types_root = rig_paths.get("fixture_types")
+        type_names = (
+            read_fixture_type_names(state_port, root=types_root) if types_root is not None else None
+        )
         try:
-            inventory = read_inventory(_InventoryPort(state_port, property_port))
+            inventory = read_inventory(
+                _InventoryPort(state_port, property_port), type_names=type_names
+            )
         except StateQueryError as error:
             # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
             # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
@@ -3202,8 +3222,19 @@ def build_toolset(
         except zipfile.BadZipFile:
             is_mvr = False
 
+        # 타입명 표를 판독 경계에 넘긴다. 이 자리가 없으면 fuzzy_type_equal
+        # (server/vwx/rig.py:58, 사용은 diff.py:180)이 **핸들 문자열**과 도면
+        # 타입명을 대조해 console_count 를 모든 타입에서 0 으로 만들고, 그 0 이
+        # QuantityMismatchEntry 로 흘러 대수가 맞는 리그를 불일치로 보고한다.
+        # 매처는 옳다 — 넘기는 값이 틀렸다(REQ-READBACK2-009).
+        types_root = rig_paths.get("fixture_types")
+        type_names = (
+            read_fixture_type_names(state_port, root=types_root) if types_root is not None else None
+        )
         try:
-            inventory = read_inventory(_InventoryPort(state_port, property_port))
+            inventory = read_inventory(
+                _InventoryPort(state_port, property_port), type_names=type_names
+            )
         except StateQueryError as error:
             # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
             # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
@@ -3393,8 +3424,16 @@ def build_toolset(
         # 콘솔이 무엇을 보여줬고 무엇을 못 봤는지를 **어느 분기에서든** 먼저 싣는다.
         # 절단은 이 콘솔의 기본 경로이고(픽스처 19대에서 이미 절단 — §E.2 M0 1차) 그 상태의
         # "없음"은 관측이 아니라 미판독이다. 거부로 끝나는 호출에서도 사용자는 그 이유를 봐야 한다.
+        #
+        # 타입명 표를 함께 넘긴다 — 아래 resolve_fixture_types(:3467)는 VWX
+        # **라이브러리** 해석기(server/vwx/typemap)이고 콘솔 트리 조회가 아니므로
+        # 이 판독을 대신할 수 없다. 늘어나는 조회는 목록 판독 1회다.
+        types_root = rig_paths.get("fixture_types")
+        type_names = (
+            read_fixture_type_names(state_port, root=types_root) if types_root is not None else None
+        )
         try:
-            inventory = read_inventory(inventory_port)
+            inventory = read_inventory(inventory_port, type_names=type_names)
         except StateQueryError as error:
             # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
             # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
@@ -4035,8 +4074,18 @@ def build_toolset(
                 call,
                 "property reads are not wired — 주소를 읽을 수 없으면 빈 자리라고 말할 수 없다",
             )
+        # 타입명 표를 판독 경계에 넘긴다 — 아래 occupants_from_patch_values 가
+        # record.fixture_type 을 그대로 실어 내보내므로, 표가 없으면 점유자
+        # 목록이 'FixtureType <슬롯>' 핸들로 인쇄된다. 이 핸들러는 자기 이유로
+        # fixture-type 루트를 걷지 않으므로 늘어나는 조회는 목록 판독 1회다.
+        types_root = rig_paths.get("fixture_types")
+        type_names = (
+            read_fixture_type_names(state_port, root=types_root) if types_root is not None else None
+        )
         try:
-            inventory = read_inventory(_InventoryPort(state_port, property_port))
+            inventory = read_inventory(
+                _InventoryPort(state_port, property_port), type_names=type_names
+            )
         except StateQueryError as error:
             # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
             # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
@@ -4429,8 +4478,27 @@ def build_toolset(
         payload["console_mode"] = console_mode
         payload["channels_per_fixture"] = width
 
+        # ── 타입명 표는 이 핸들러에서 **한 번만** 읽는다. ──
+        # 이 핸들러에는 read_inventory 자리가 둘 있다: 아래의 `before` 와 실행 후
+        # 재조회 팔 `_verify`. 「호출 지점당 조회 1회」를 「자리마다 한 번씩」으로
+        # 읽으면 이 핸들러에서만 목록 조회가 **두 번** 늘어나 조회 예산 상한을
+        # 어긴다(REQ-READBACK2-012). 그래서 여기서 한 번 읽고 두 자리가 이 지역
+        # 변수를 나눠 쓴다 — 표는 실행 전후로 바뀌지 않는다(패치는 픽스처를 만들
+        # 뿐 타입 라이브러리를 건드리지 않는다).
+        #
+        # 위 read_type_mode_widths(:4295 대)가 이미 같은 루트를 걷지만 그 판독은
+        # 재사용할 수 없다: TypeModeRead 는 attempted/type_found/modes/detail 만
+        # 돌려주고 (슬롯, 이름) 쌍을 주지 않으며, 그것을 흘리려면
+        # server/prechk/** 를 고쳐야 하고 REQ-READBACK2-010 이 금지한다.
+        types_root = rig_paths.get("fixture_types")
+        type_names = (
+            read_fixture_type_names(state_port, root=types_root) if types_root is not None else None
+        )
+
         try:
-            before = read_inventory(_InventoryPort(state_port, property_port))
+            before = read_inventory(
+                _InventoryPort(state_port, property_port), type_names=type_names
+            )
         except StateQueryError as error:
             # 콘솔이 안 답한 것을 서버 내부 오류로 흘리면 감독은 서버를 뒤지는데
             # 고장난 곳은 콘솔이다. 바로 아래 except 가 이 상황을 위해 거절 문면을
@@ -4621,7 +4689,12 @@ def build_toolset(
 
         def _verify() -> tuple[object | None, str]:
             try:
-                return read_inventory(_InventoryPort(state_port, property_port)), ""
+                # 위에서 이미 읽은 `type_names` 를 나눠 쓴다 — 여기서 다시 읽으면
+                # 이 핸들러의 목록 조회가 두 번이 되고 상한을 어긴다
+                # (REQ-READBACK2-012 · AC-READBACK2-013b 가 N+2 를 FAIL 로 잡는다).
+                return read_inventory(
+                    _InventoryPort(state_port, property_port), type_names=type_names
+                ), ""
             except StateQueryError as error:
                 # 재조회 팔은 첫 읽기(위 except StateQueryError)와 같은 비대칭을
                 # 반복한다 — 실행 후 재확인에서도 콘솔 침묵과 인벤토리 불가독을
@@ -7442,8 +7515,18 @@ def build_toolset(
                 "property reads are not wired — build_toolset needs property_port "
                 "(or a state_port that also implements query_property)",
             )
+        # 표는 **호출자가 읽어 넘긴다** — build_patch_sheet 은 자체 조회를 하지
+        # 않는다(REQ-READBACK2-007). 표가 없으면 시트의 Fixture Type 열에
+        # 'FixtureType <슬롯>' 핸들이 그대로 인쇄되고, 시트를 읽는 사람은 무슨
+        # 장비인지 알 수 없다.
+        types_root = rig_paths.get("fixture_types")
+        type_names = (
+            read_fixture_type_names(state_port, root=types_root) if types_root is not None else None
+        )
         try:
-            sheet = build_patch_sheet_query(_InventoryPort(state_port, property_port))
+            sheet = build_patch_sheet_query(
+                _InventoryPort(state_port, property_port), type_names=type_names
+            )
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
         try:

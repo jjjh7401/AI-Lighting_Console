@@ -444,3 +444,31 @@ def test_a_type_missing_from_a_subset_listing_is_not_declared_absent():
     assert gone.type_found is False and "목록에 없다" in gone.detail
     assert unsure.type_found is False
     assert "부분집합" in unsure.detail and "단정할 수 없다" in unsure.detail
+
+
+# --- SPEC-COPILOT-READBACK-002 M1 — 번역 기계 무변경 확인 -----------------------
+#
+# REQ-READBACK2-010: 결함은 번역기가 아니라 **호출자가 인자를 안 넘기는 것**이다.
+# 아래 둘은 그 사실을 특성화한다 — 같은 번역기가, 표를 받으면 옳게 답하고
+# 안 받으면 표식을 켠다. `server/prechk/**` 를 고칠 필요가 없다는 실측 근거다.
+
+
+def test_the_translator_needs_only_the_table_no_change_to_its_own_code():
+    """표를 넘기는 것만으로 핸들이 이름이 된다 — 기계는 그대로다."""
+    tree = _tree([(12, "Robe MegaPointe")])
+    table = read_fixture_type_names(tree, root=ROOT)
+
+    assert translate_fixture_type("FixtureType 12", table.by_slot()) == (
+        "Robe MegaPointe",
+        None,
+    )
+    # 조회는 루트 1회로 끝난다 — 「Query count is 1」(mode_read.py:141).
+    assert tree.calls == [ROOT]
+
+
+def test_the_same_translator_marks_the_handle_when_no_table_arrives():
+    """부정 대조군 — 표가 없으면 번역이 **조용히 사라지지 않고** 사유가 남는다."""
+    assert translate_fixture_type("FixtureType 12", None) == (
+        "FixtureType 12",
+        UNTRANSLATED_NO_TABLE,
+    )

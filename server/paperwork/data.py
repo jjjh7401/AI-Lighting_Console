@@ -31,6 +31,7 @@ from server.prechk.inventory import (
     InventoryReadError,
     read_inventory,
 )
+from server.prechk.mode_read import TypeNameRead
 from server.prechk.patch import normalize_address
 from server.safety.console import StateQueryError
 
@@ -53,6 +54,13 @@ class PatchRow:
     patch_raw: str | None
     fixture_type: str | None
     mode: str | None
+    #: 왜 이 핸들이 이름이 되지 못했는가 — `server.prechk.inventory` 의
+    #: `UNTRANSLATED_*` 사유 중 하나, 번역이 성공했으면 ``None``.
+    #: 판독 경계에서 산 정직성을 인쇄 경계까지 나른다(REQ-READBACK2-008):
+    #: 이 값을 여기서 떨어뜨리면 시트를 읽는 사람은 번역 실패와 번역 성공을
+    #: 구별할 수 없다. 사유는 뭉치지 않는다 — 「트리가 안 답했다」와 「트리가
+    #: 그 슬롯을 선언하지 않는다」는 운영자 행동이 다르다(재조회 vs 리그 확인).
+    fixture_type_untranslated: str | None = None
 
 
 @dataclass(frozen=True)
@@ -84,6 +92,7 @@ def build_patch_sheet(
     *,
     policy: InventoryPolicy | None = None,
     walk: WalkOutcome | None = None,
+    type_names: TypeNameRead | None = None,
 ) -> PatchSheet:
     """Build a patch sheet from the fixture inventory reader.
 
@@ -97,9 +106,20 @@ def build_patch_sheet(
     present, the bound is folded via ``footprint.upper_bound`` (never a raw
     ``max`` here — an incomplete mode set would fold to a bound smaller than
     the true one and clear gaps it must not clear).
+
+    ``type_names`` is the caller's ``server.prechk.mode_read.TypeNameRead`` —
+    the (slot, name) pairs that translate the ``FixtureType <slot>`` HANDLE the
+    console hands back where a name belongs. This function performs NO read of
+    its own for it (REQ-READBACK2-007): ``_name_handle_types`` takes the READ,
+    not the table, and this repository treats the query-budget guard as
+    ratified rather than adjustable (``server/prechk/inventory.py:469-473``).
+    So the read is pushed to the caller, which is already holding a rig
+    context. Omitted, every handle-shaped value comes back UNCHANGED and
+    carries ``fixture_type_untranslated`` saying why — translation never
+    disappears silently, and a guessed name is forbidden.
     """
     try:
-        inventory = read_inventory(port, policy)
+        inventory = read_inventory(port, policy, type_names=type_names)
     except StateQueryError as error:
         # t187 5+1 (2): the single chokepoint every patch-sheet consumer
         # (tools.py build_patch_sheet · paperwork_api.py · build_magic_sheet ·
@@ -119,6 +139,7 @@ def build_patch_sheet(
             patch_raw=fixture.patch_raw,
             fixture_type=fixture.fixture_type,
             mode=fixture.mode,
+            fixture_type_untranslated=fixture.fixture_type_untranslated,
         )
         for fixture in inventory.fixtures
     )
@@ -355,6 +376,7 @@ def build_magic_sheet(
     fixtures_path: str = DEFAULT_RIG_CONTEXT_PATHS["fixtures"],
     policy: InventoryPolicy | None = None,
     budget: int = SPATIAL_PROPERTY_QUERY_CAP,
+    type_names: TypeNameRead | None = None,
 ) -> MagicSheet:
     """Build the reduced magic sheet from one inventory-capable port.
 
@@ -363,6 +385,9 @@ def build_magic_sheet(
     and placements still render, mirroring the per-document isolation
     :func:`server.paperwork.bundle.build_handover_pack` applies one level up.
     A page that omits one section silently is the failure this splits to avoid.
+
+    ``type_names`` is forwarded to :func:`build_patch_sheet` unchanged and adds
+    no read here either — same reasoning, same ratified budget.
     """
     group_names, groups_reason = _names_only(port, "groups", groups_path)
     preset_names, presets_reason = _names_only(port, "preset_pools", preset_pools_path)
@@ -370,7 +395,7 @@ def build_magic_sheet(
     patch: PatchSheet | None = None
     patch_unavailable: str | None = None
     try:
-        patch = build_patch_sheet(port, policy=policy)
+        patch = build_patch_sheet(port, policy=policy, type_names=type_names)
     except InventoryReadError as error:
         patch_unavailable = str(error)
 
