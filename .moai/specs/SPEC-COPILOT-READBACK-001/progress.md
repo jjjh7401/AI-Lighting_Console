@@ -38,7 +38,164 @@
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### M0 — R1 오프라인 직렬화 (2026-09-04, cycle_type=tdd)
+
+기준 트리: 워크트리 `.claude/worktrees/agent-ab0e1ec2f318efaf1`, 브랜치
+`worktree-agent-ab0e1ec2f318efaf1`, 베이스 `origin/main 7cdb765`(READBACK-002
+머지 후). 인터프리터: 이 워크트리 자신의 `.venv/bin/python`(`uv run`).
+**콘솔 접촉 0** — 라이브 명령을 한 건도 쏘지 않았다.
+
+#### 1. 주장 (Claim)
+
+| AC | 판정 | 주장 |
+|---|---|---|
+| AC-READBACK-001 | PASS | 테이블 값이 `v` 안 JSON 으로 도착하고, 회신 키 집합이 그대로이며, 두 번 읽으면 바이트 동일하다 |
+| AC-READBACK-002 | PASS | `[1]` 키를 가진 해시가 `name`·`flag` 를 잃지 않는다 |
+| AC-READBACK-003 | PASS | 자기참조 테이블이 회신을 내고 재방문 지점이 `"<cycle>"` 를 담는다 · 깊이 8 초과 노드가 `"<max depth 8 exceeded>"` 로 대체된다 |
+| AC-READBACK-004 | PASS | 절단된 테이블 값이 `json.loads` 를 통과하고 항목이 `truncated:true` 를 단다 |
+| AC-READBACK-005 | PASS | `__index`·`__tostring`·`__pairs`·`__len` 어느 것도 발동하지 않는다 |
+| AC-READBACK-006 | **PASS-WITH-DEBT** | 예산 테스트가 통과하고 `max_payload` 는 `1900` 그대로다. 다만 **값 상한을 올리지 않았다** — AC 의 Given(「상한이 상향된 상태」)이 성립하지 않는다. 사유는 아래 §4 |
+| AC-READBACK-007 | **PASS-WITH-BLOCKER** | 다이제스트 2건 재고정 · 날짜 붙은 승인 블록 · `VERSION`/테스트 리터럴 전부 `1.6.4`. 다만 `EXPECTED_RESPONDER_VERSION` 이 범위 밖이라 전체 스위트가 3건 빨갛다 — 아래 §4 |
+| AC-READBACK-008~014 | 미착수 | M2 소유(읽기 전용 측정 스윕) |
+| AC-READBACK-015 | 미착수 | M3 소유(재임포트 1회) |
+| AC-READBACK-016 | 진행 중 | 이 절이 그 5절 형식이다 |
+
+#### 2. 증거 (Evidence) — 명령과 그 출력
+
+RED 증거(GREEN 이전에 잡은 실패 출력, `.moai/state/verify/readback001/red.txt`):
+
+```
+$ uv run pytest server/tests/test_lua_responder.py::TestTableValueSerialization \
+    server/tests/test_lua_responder.py::TestLoading server/tests/test_responder_deploy.py -q
+FAILED …::test_a_table_value_arrives_as_parseable_json_in_v
+FAILED …::test_two_reads_of_the_same_table_are_byte_identical
+FAILED …::test_a_hash_carrying_key_1_keeps_every_other_key
+FAILED …::test_a_dense_integer_table_is_still_an_array
+FAILED …::test_a_self_referential_table_replies_instead_of_hanging
+FAILED …::test_nesting_past_the_depth_cap_is_cut_and_marked
+FAILED …::test_a_truncated_table_value_still_parses
+FAILED …::test_serialization_never_fires_a_metamethod
+FAILED …::test_a_wide_table_read_still_fits_the_payload_budget
+FAILED …::test_the_prop_verb_carries_the_same_json
+FAILED …::TestLoading::test_module_export_and_defaults
+FAILED server/tests/test_responder_deploy.py::TestVersionBump::…
+12 failed, 12 passed in 0.34s
+```
+
+`acceptance.md §A` 오프라인 3줄(구현 후):
+
+```
+$ uv run pytest server/tests/test_lua_responder.py \
+    server/tests/test_lua_responder_payload_budget.py \
+    server/tests/test_responder_protocol.py -q
+186 passed in 0.71s
+
+$ uv run pytest server/tests/test_overlap_preserve.py -q
+54 passed in 0.62s
+
+$ uv run pytest server/tests/test_lxseq_preset_mapper.py \
+    server/tests/test_web_presets_api.py -q
+73 passed, 1 warning in 0.34s
+```
+
+AC 별 개별 판정(`-v`, 13/13 PASSED):
+
+```
+$ uv run pytest "server/tests/test_lua_responder.py::TestTableValueSerialization" -v
+… test_a_table_value_arrives_as_parseable_json_in_v PASSED
+… test_the_reply_item_key_set_is_unchanged_from_1_6_3 PASSED
+… test_two_reads_of_the_same_table_are_byte_identical PASSED
+… test_a_hash_carrying_key_1_keeps_every_other_key PASSED
+… test_a_dense_integer_table_is_still_an_array PASSED
+… test_a_self_referential_table_replies_instead_of_hanging PASSED
+… test_nesting_past_the_depth_cap_is_cut_and_marked PASSED
+… test_a_truncated_table_value_still_parses PASSED
+… test_a_short_table_value_is_not_marked_truncated PASSED
+… test_serialization_never_fires_a_metamethod PASSED
+… test_the_payload_budget_constant_is_untouched PASSED
+… test_a_wide_table_read_still_fits_the_payload_budget PASSED
+… test_the_prop_verb_carries_the_same_json PASSED
+13 passed in 0.17s
+```
+
+잠금 규약(AC-READBACK-007):
+
+```
+$ git hash-object console/lua/copilot_responder.lua console/lua/PROTOCOL.md
+6c6fa0f25728378a684fddb507781d9b77e01878
+ec08949e5a56511861648fa9311ef28ca20924df
+
+$ uv run pytest "server/tests/test_overlap_preserve.py::TestConsoleLuaReadmeGrantedException" -v
+… test_the_locked_console_lua_assets_are_byte_identical PASSED
+… test_the_revised_assets_match_the_granted_digests_exactly PASSED
+… test_the_only_console_lua_changes_are_the_granted_ones PASSED
+… test_the_grant_is_not_an_empty_exemption PASSED
+4 passed in 0.09s
+```
+
+재고정 전/후 다이제스트: `copilot_responder.lua`
+`75ab824876e93c6eef81827a6b85b6ce7af3535b` → `6c6fa0f25728378a684fddb507781d9b77e01878`,
+`PROTOCOL.md` `984210533aab40501e32309c4db8cde5bb4f34ba` →
+`ec08949e5a56511861648fa9311ef28ca20924df`.
+
+범위 침범 검사(002 소유 디렉터리 5종):
+
+```
+$ git diff --name-only origin/main | grep -E '^(server/prechk/|server/vwx/|server/paperwork/|server/safety/|ui/)'
+(출력 없음, exit 1)
+```
+
+#### 3. 기준 귀속 (Baseline-attribution)
+
+착수 전 대조군: 같은 트리·같은 명령으로 잰 초록 baseline —
+`uv run pytest server/tests/test_lua_responder.py server/tests/test_lua_responder_payload_budget.py server/tests/test_responder_protocol.py server/tests/test_overlap_preserve.py -q`
+→ `227 passed in 2.89s` (베이스 `7cdb765`, 편집 전). 위 숫자는 전부 **이 회차·이
+트리**에서 다시 잰 값이며, 다른 세션의 숫자를 옮겨 온 것이 없다.
+
+#### 4. 미검증 (Gaps)
+
+- **B2 — `SELECTIONDATA`/`DEPENDENCIES` 의 실제 테이블 형상은 여전히 미관측**
+  (`console-channel-facts.md:121`). 오프라인 테스트가 고정한 것은 **아무도 이
+  콘솔에서 본 적 없는 형상** 위에서의 인코더 거동이다. 실제 형상이 어긋나면
+  이 초록은 그 사실을 말해 주지 않는다. M3 3번이 이 구멍을 닫는다.
+- **B3 — 라이브 응답기 버전 미측정.** 이 회차는 `ping` 을 쏘지 않았다. main 이
+  1.6.4 를 담는 것은 배포의 증거가 아니다(live-1.6.1 / main-1.6.2 전례).
+- **프리셋 객체가 테이블 값 프로퍼티를 갖는지 재지 않았다** — R1 은 능력이고
+  그 질문은 R2(M2)다. 능력이 열렸다는 것이 값이 있다는 뜻이 아니다.
+- **값 상한(`max_prop_value = 240`)을 올리지 않았다.** REQ-READBACK-006 은
+  [Where] 조건절이고 그 전건이 성립하지 않는다. 사유는 측정이 아니라 산술이다:
+  회신은 `percent_encode(json_encode(payload))` 로 나가고 JSON 의 `{`·`"`·`:`
+  가 전부 3바이트로 부풀므로, raw 240 은 이미 `max_payload = 1900` 의
+  1/3 지점에 가깝다. 상한을 올리면 항목이 예산 가드에 걸려 **읽기 자체가
+  통째로 버려진다**(`truncated:true` + 빈 `reads`) — 절단보다 나쁜 결과다.
+  다만 이 3배 추정은 **재지 않은 어림**이다; 실제 팽창률은 안 쟀다.
+- **@MX ANCHOR 파일 상한 초과가 1건 늘었다**: `copilot_responder.lua` 는 이
+  변경 **전에 이미 5개**(상한 3)였고 이번에 6개가 됐다. 남의 앵커를 강등하는
+  것은 범위 밖이라 손대지 않았다.
+- **전체 스위트가 3건 빨갛다** — 전부 한 줄이 원인이다:
+  `server/safety/responder_version.py:35` 의 `EXPECTED_RESPONDER_VERSION`
+  이 `"1.6.3"` 에 고정돼 있다. 그 파일은 SPEC-COPILOT-READBACK-002 소유이고
+  본 회차의 PRESERVE 목록에 있어 **손대지 않았다**. 그 파일의 주석이 이
+  인계를 미리 적어 뒀다 — 「001 이 응답기를 1.6.4 로 올리면 바뀌는 것은 이 한
+  줄뿐이다」. 판정은 오케스트레이터 몫이다.
+
+#### 5. 잔여 위험 (Residual-risk)
+
+- 깊이 상한 8 과 순환 표식 문자열(`<cycle>` · `<max depth 8 exceeded>`)은
+  **콘솔 값이 아니라 응답기가 만든 문자열**이다. 소비자가 이 문자열을 값으로
+  오독할 수 있다. 계약은 `PROTOCOL.md` §4.8 에 적었지만 스키마 검증은 없다
+  (`server/bridge/protocol.py:77-113` 에는 원래 없다).
+- 넓은 테이블에서 **절단이 기본 경로**다. 240바이트는 실제 프리셋 테이블에
+  비해 좁으므로, 값이 나오더라도 첫 몇 엔트리만 보일 공산이 크다. 「보였다」와
+  「전부 보였다」를 소비자가 구별하려면 항목의 `truncated` 를 반드시 읽어야
+  한다.
+- 순환 탐지는 **조상 기준**이다(빠져나올 때 표식을 지운다). 같은 테이블을
+  형제 자리에서 여러 번 참조하는 DAG 는 순환이 아니므로 여러 번 인코딩되고,
+  깊이 상한만이 그 폭을 막는다. 병적인 DAG 에서의 인코딩 비용은 안 쟀다.
+- 배열 판정을 `[1]` 휴리스틱에서 「1..n 연속 정수 전체」로 바꿨다. 기존 회신
+  배열은 전부 `M.array()`(ARRAY_MT) 로 표시돼 있어 영향이 없음을 스위트로
+  확인했지만, 표시 없이 배열로 인코딩되기를 기대하던 **외부** 소비자가 있다면
+  그쪽은 안 쟀다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 

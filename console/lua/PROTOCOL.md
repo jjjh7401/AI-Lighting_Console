@@ -314,7 +314,10 @@ The responder resolves `<object-path>` through the same path resolver used by
 `state`, then reads the requested property from the resolved handle. `value` is
 the string returned by the console-side property read path; the responder does
 not parse, normalize, or infer semantics. If the property cannot be read, the
-reply is `ok:false` with `error`; callers must not fill defaults.
+reply is `ok:false` with `error`; callers must not fill defaults. A table-valued
+property (responder 1.6.4) carries JSON TEXT inside that same `value` string —
+the reply shape is unchanged and no sibling field is added, so the caller must
+parse `value` explicitly (see §4.8 for the depth, cycle, and truncation rules).
 
 ### 4.7 `introspect` (field-name/type discovery — on `/copilot/state`, responder 1.6.0; paged since 1.6.2)
 
@@ -386,6 +389,12 @@ rest token. It never has an "all field values" mode.
   does not parse, normalize, or infer semantics.
 - Failed items are `{"n":"<name>","ok":false,"e":"<message>"}` and do not
   stop the rest of the reads.
+- A table-valued read (responder 1.6.4) keeps `t:"table"` and carries JSON TEXT
+  in `v` — no new field: the encoder replaces a revisited table with `"<cycle>"`
+  and a node past depth 8 with `"<max depth 8 exceeded>"`, and truncation is
+  STRUCTURAL (whole trailing entries dropped, never a byte cut), so `v` always
+  parses. For a wide table, truncation is the expected default path, not an
+  exception.
 - If an individual raw value exceeds `CONFIG.max_prop_value` (default 240
   bytes), that item's `v` is shortened and that item carries
   `truncated:true` (REQ-INTROSPECT-008). This item-level marker is separate

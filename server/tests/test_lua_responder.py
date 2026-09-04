@@ -20,8 +20,10 @@ from .lua_mock_env import (
     GAPPED_GROUP_NAMES,
     GAPPED_GROUP_SLOTS,
     RESPONDER_PATH,
+    TABLE_PROBE_PATH,
     ResponderHarness,
     gapped_groups_env,
+    table_props_env,
 )
 
 STATE_ADDRESS = "/copilot/state"
@@ -78,7 +80,7 @@ class TestLoading:
         assert config["send_variant"] == "packed"
         assert config["max_props_names"] == 16
         assert harness.module["PROTO"] == 1
-        assert harness.module["VERSION"] == "1.6.3"
+        assert harness.module["VERSION"] == "1.6.4"
 
 
 class TestParseRequest:
@@ -1307,3 +1309,189 @@ class TestProgrammerAliases:
         payload = decode_payload(harness.sent()[0].payload)
         assert payload["ok"] is False, payload
         assert "Patch" in str(payload.get("error") or ""), payload
+
+
+class TestTableValueSerialization:
+    """R1 — 테이블 값이 주소가 아니라 JSON 으로 도착한다 (responder 1.6.4).
+
+    SPEC-COPILOT-READBACK-001 §B.1. 1.6.3 까지 `M.safe_property` 는 테이블에
+    `tostring` 을 걸어 `table: 0x…` 주소를 회신했다 — 회신은 `t="table"` 로
+    타입을 정직하게 말하면서 값만 못 건네고 있었다. 여기서 재는 것은 「값이
+    실린다」 하나가 아니라 **그 값이 늘 파싱 가능하다**는 것이다: 순환·심층·
+    해시-with-`[1]`·절단·메타메소드 다섯 갈래가 각각 부정 대조군이다.
+    """
+
+    #: 회신 항목의 키 집합 — 1.6.3 과 동일해야 한다(형제 필드 신설 없음).
+    ITEM_KEYS = {"n", "ok", "t", "v"}
+
+    @staticmethod
+    def _read(harness: ResponderHarness, names: str, request_id: str = "t1") -> dict:
+        harness.main(None, f"props {request_id} {names} {TABLE_PROBE_PATH}")
+        return decode_payload(harness.sent()[-1].payload)
+
+    def test_a_table_value_arrives_as_parseable_json_in_v(self):
+        """AC-READBACK-001 — `t` 는 `"table"` 그대로, `v` 는 JSON 텍스트."""
+        harness = ResponderHarness(
+            extra_env=table_props_env('{ TBL = { a = 1, b = "x" } }', order=["TBL"])
+        )
+        payload = self._read(harness, "TBL")
+        assert payload["ok"] is True, payload
+        item = payload["reads"][0]
+        assert item["t"] == "table", item
+        assert "table: 0x" not in item["v"], item
+        assert json.loads(item["v"]) == {"a": 1, "b": "x"}
+
+    def test_the_reply_item_key_set_is_unchanged_from_1_6_3(self):
+        """AC-READBACK-001 — 형제 필드가 하나도 늘지 않았다.
+
+        같은 회신 안에서 문자열 읽기와 테이블 읽기의 키 집합을 나란히 잰다:
+        새 필드가 생겼다면 두 집합이 갈린다.
+        """
+        harness = ResponderHarness(
+            extra_env=table_props_env('{ TBL = { a = 1 }, STR = "plain" }', order=["STR", "TBL"])
+        )
+        payload = self._read(harness, "STR,TBL")
+        assert set(payload) == {"v", "kind", "id", "ok", "path", "reads", "truncated"}
+        string_item, table_item = payload["reads"]
+        assert set(string_item) == self.ITEM_KEYS, string_item
+        assert set(table_item) == self.ITEM_KEYS, table_item
+
+    def test_two_reads_of_the_same_table_are_byte_identical(self):
+        """AC-READBACK-001 — 결정적이다(키 정렬이 해시 순서를 이긴다)."""
+        harness = ResponderHarness(
+            extra_env=table_props_env(
+                "{ TBL = { zulu = 1, alpha = 2, mike = 3, bravo = 4 } }", order=["TBL"]
+            )
+        )
+        first = self._read(harness, "TBL", "d1")["reads"][0]["v"]
+        second = self._read(harness, "TBL", "d2")["reads"][0]["v"]
+        assert first == second
+        assert first == '{"alpha":2,"bravo":4,"mike":3,"zulu":1}'
+
+    def test_a_hash_carrying_key_1_keeps_every_other_key(self):
+        """AC-READBACK-002 [부정 대조군] — 옛 휴리스틱이 키를 소실시키던 자리.
+
+        1.6.3 의 `value[1] ~= nil` 판정은 이 테이블을 배열로 보고 `["first"]`
+        하나만 남겼다. `name` 과 `flag` 가 살아 있어야 한다.
+        """
+        harness = ResponderHarness(
+            extra_env=table_props_env(
+                '{ TBL = { [1] = "first", name = "kept", flag = true } }', order=["TBL"]
+            )
+        )
+        decoded = json.loads(self._read(harness, "TBL")["reads"][0]["v"])
+        assert decoded != ["first"], decoded
+        assert decoded == {"1": "first", "name": "kept", "flag": True}
+
+    def test_a_dense_integer_table_is_still_an_array(self):
+        """양성 대조군 — 배열은 배열로 남는다(판정이 객체로 쏠리지 않았다)."""
+        harness = ResponderHarness(
+            extra_env=table_props_env('{ TBL = { "a", "b", "c" } }', order=["TBL"])
+        )
+        assert json.loads(self._read(harness, "TBL")["reads"][0]["v"]) == ["a", "b", "c"]
+
+    def test_a_self_referential_table_replies_instead_of_hanging(self):
+        """AC-READBACK-003 [부정 대조군] — 순환이 응답기를 멈추지 않는다.
+
+        1.6.3 의 인코더에는 순환 탐지가 없다. 이 프로퍼티를 인코딩하려 들면
+        무한 재귀로 죽고, 운영자는 쇼 도중 회신 없는 응답기를 만난다.
+        """
+        harness = ResponderHarness(
+            extra_env=table_props_env(
+                '{ TBL = { name = "root" } }',
+                order=["TBL"],
+                post_lua="__PROBE._props.TBL.self = __PROBE._props.TBL\n",
+            )
+        )
+        item = self._read(harness, "TBL")["reads"][0]
+        decoded = json.loads(item["v"])
+        assert decoded["name"] == "root"
+        assert decoded["self"] == "<cycle>", decoded
+
+    def test_nesting_past_the_depth_cap_is_cut_and_marked(self):
+        """AC-READBACK-003 — 상한 초과 노드는 값이 아니라 표식을 담는다."""
+        deep = "{ level = 0 }"
+        for level in range(1, 13):
+            deep = f"{{ level = {level}, child = {deep} }}"
+        harness = ResponderHarness(extra_env=table_props_env(f"{{ TBL = {deep} }}", order=["TBL"]))
+        harness.config["max_prop_value"] = 4000
+        decoded = json.loads(self._read(harness, "TBL")["reads"][0]["v"])
+        depth, node = 0, decoded
+        while isinstance(node, dict) and "child" in node:
+            node = node["child"]
+            depth += 1
+        assert isinstance(node, str) and "max depth" in node, node
+        assert depth <= 8, depth
+
+    def test_a_truncated_table_value_still_parses(self):
+        """AC-READBACK-004 [부정 대조군] — 바이트 절단이면 파싱이 깨진다.
+
+        `safe_truncate` 를 테이블 값에 걸면 `{"k00":"…` 같은 조각이 남아
+        절단 고지가 있어도 소비자가 쓸 수 없다. 구조적 절단은 후행 엔트리를
+        통째로 버리고 닫는다.
+        """
+        entries = ", ".join(f'k{i:02d} = "{"V" * 20}"' for i in range(20))
+        harness = ResponderHarness(
+            extra_env=table_props_env(f"{{ TBL = {{ {entries} }} }}", order=["TBL"])
+        )
+        item = self._read(harness, "TBL")["reads"][0]
+        assert item["truncated"] is True, item
+        assert len(item["v"]) <= int(harness.config["max_prop_value"])
+        decoded = json.loads(item["v"])
+        assert 0 < len(decoded) < 20, decoded
+        assert all(value == "V" * 20 for value in decoded.values()), decoded
+
+    def test_a_short_table_value_is_not_marked_truncated(self):
+        """양성 대조군 — 절단 표식이 늘 켜져 있는 것은 아니다."""
+        harness = ResponderHarness(extra_env=table_props_env("{ TBL = { a = 1 } }", order=["TBL"]))
+        assert "truncated" not in self._read(harness, "TBL")["reads"][0]
+
+    def test_serialization_never_fires_a_metamethod(self):
+        """AC-READBACK-005 [부정 대조군] — `__index`/`__tostring`/`__pairs` 미발동.
+
+        1.6.3 은 값에 `tostring` 을 걸었으므로 `__tostring` 이 붙은 테이블은
+        **읽기가 콘솔 동작을 부른다**. 플래그가 서면 그 경계가 뚫린 것이다.
+        """
+        harness = ResponderHarness(
+            extra_env=table_props_env(
+                "{ TBL = { a = 1 } }",
+                order=["TBL"],
+                post_lua=(
+                    "__META_FIRED = {}\n"
+                    "setmetatable(__PROBE._props.TBL, {\n"
+                    '    __index = function() __META_FIRED.index = true return "boom" end,\n'
+                    '    __tostring = function() __META_FIRED.tostring = true return "boom" end,\n'
+                    "    __pairs = function(t) __META_FIRED.pairs = true return next, t, nil end,\n"
+                    "    __len = function() __META_FIRED.len = true return 99 end,\n"
+                    "})\n"
+                ),
+            )
+        )
+        item = self._read(harness, "TBL")["reads"][0]
+        assert json.loads(item["v"]) == {"a": 1}
+        fired = harness.lua.globals()["__META_FIRED"]
+        assert dict(fired.items()) == {}, dict(fired.items())
+
+    def test_the_payload_budget_constant_is_untouched(self):
+        """AC-READBACK-006 — 값 상한을 어떻게 다루든 `max_payload` 는 1900."""
+        harness = ResponderHarness()
+        assert int(harness.config["max_payload"]) == 1900
+
+    def test_a_wide_table_read_still_fits_the_payload_budget(self):
+        """AC-READBACK-006 — 테이블 값이 예산을 뚫지 않는다(2048 산술 안)."""
+        entries = ", ".join(f'k{i:03d} = "{"V" * 40}"' for i in range(200))
+        harness = ResponderHarness(
+            extra_env=table_props_env(f"{{ TBL = {{ {entries} }} }}", order=["TBL"])
+        )
+        harness.main(None, f"props big TBL {TABLE_PROBE_PATH}")
+        sent = harness.sent()[-1]
+        assert len(sent.payload) <= int(harness.config["max_payload"])
+        json.loads(decode_payload(sent.payload)["reads"][0]["v"])
+
+    def test_the_prop_verb_carries_the_same_json(self):
+        """단일 `prop` 회신도 같은 문자열을 준다 — 분기는 한 자리다."""
+        harness = ResponderHarness(extra_env=table_props_env("{ TBL = { a = 1 } }", order=["TBL"]))
+        harness.main(None, f"prop pp1 {TABLE_PROBE_PATH} TBL")
+        payload = decode_payload(harness.sent()[-1].payload)
+        assert payload["ok"] is True, payload
+        assert json.loads(payload["value"]) == {"a": 1}

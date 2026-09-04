@@ -79,7 +79,23 @@ local M = {
     -- guarded alias yields nil and the path fails exactly as in 1.6.2. The
     -- bump exists so the wire can TELL the two generations apart: a rig
     -- answering 1.6.2 does not have the aliases no matter what main says.
-    VERSION = "1.6.3",
+    -- 1.6.4: table-valued property reads answer JSON TEXT instead of the
+    -- `table: 0x…` ADDRESS (SPEC-COPILOT-READBACK-001 R1). The reply SHAPE is
+    -- unchanged -- `t` stays "table", `v` stays a string, no sibling field is
+    -- added -- so every existing decode point and consumer is untouched; only
+    -- the CONTENT of `v` changes for table values. The encoder gains what it
+    -- never had: a depth cap, cycle detection, an explicit array/object
+    -- decision (the old `value[1] ~= nil` heuristic silently dropped every
+    -- other key of a hash carrying `[1]`), and STRUCTURAL truncation -- whole
+    -- trailing entries are dropped and the container re-closed, because a
+    -- byte-cut JSON fragment cannot be parsed even when truncation is
+    -- announced. Serialization touches no metamethod (`next`/`rawget`/
+    -- `rawlen` only), so a value carrying `__tostring` no longer turns a
+    -- diagnostic read into console action. NOT live-verified: this bump is
+    -- offline-only; deployment is confirmed BY VERSION -- `ping` must answer
+    -- 1.6.4, and a rig answering 1.6.3 does not carry this change whatever
+    -- main contains (this repo has the live-1.6.1 / main-1.6.2 precedent).
+    VERSION = "1.6.4",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -130,7 +146,99 @@ local function json_string(s)
     return '"' .. s:gsub('[\0-\31"\\\127]', json_escape_char) .. '"'
 end
 
-function M.json_encode(value)
+-- 깊이 상한과 순환 표식 (SPEC-COPILOT-READBACK-001 REQ-READBACK-003).
+-- 1.6.3 까지의 인코더에는 둘 다 없었다: 자기참조 테이블 하나가 무한 재귀로
+-- 응답기를 멈춰 세울 수 있었고, 회신은 영영 오지 않는다.
+local MAX_JSON_DEPTH = 8
+local DEPTH_MARKER = "<max depth " .. MAX_JSON_DEPTH .. " exceeded>"
+local CYCLE_MARKER = "<cycle>"
+
+-- @MX:ANCHOR: [AUTO] 직렬화는 값의 메타메소드를 절대 발동시키지 않는다 —
+--   `next`/`rawget`/`rawlen` 만 쓰고 `pairs`/`#`/`[]`/`tostring` 을 쓰지 않는다.
+-- @MX:REASON: REQ-READBACK-002 읽기 전용 경계(fan_in >= 3: M.json_encode ·
+--   M.json_encode_bounded · M.safe_property 의 테이블 분기). `__index`·
+--   `__tostring`·`__pairs`·`__len` 중 하나라도 부르면 진단용 읽기가 콘솔
+--   동작으로 바뀐다 — REQ-INTROSPECT-009 가 함수 값에 대해 그은 선과 같다.
+local function json_key_text(key)
+    local t = type(key)
+    if t == "string" then
+        return key
+    elseif t == "number" then
+        if math.type(key) == "integer" then
+            return string.format("%d", key)
+        end
+        return string.format("%.14g", key)
+    elseif t == "boolean" then
+        return key and "true" or "false"
+    end
+    -- 테이블/함수 키에 tostring 을 걸면 그 키의 __tostring 이 발동한다.
+    return "<" .. t .. ">"
+end
+
+-- 배열/객체 판정은 명시적이다(REQ-READBACK-004). 1.6.3 의 `value[1] ~= nil`
+-- 휴리스틱은 `[1]` 키를 가진 해시를 배열로 인코딩해 나머지 키를 소실시켰다.
+local function is_dense_array(value)
+    local n = rawlen(value)
+    if n == 0 then
+        return false
+    end
+    local count = 0
+    for key in next, value do
+        if math.type(key) ~= "integer" or key < 1 or key > n then
+            return false
+        end
+        count = count + 1
+    end
+    return count == n
+end
+
+-- 객체 엔트리를 결정적 순서로 만든다 — 키 정렬은 1.6.3 의 table.sort(keys) 를
+-- 계승하고, 원래 키를 함께 들고 있어 문자열 형태로 재조회하지 않는다.
+local function sorted_entry_keys(value)
+    local keys, originals = {}, {}
+    for key in next, value do
+        local text = json_key_text(key)
+        if originals[text] == nil then
+            keys[#keys + 1] = text
+            originals[text] = key
+        end
+    end
+    table.sort(keys) -- deterministic output for debugging/diffing
+    return keys, originals
+end
+
+local encode_value
+
+local function encode_table(value, depth, seen)
+    if seen[value] then
+        return json_string(CYCLE_MARKER)
+    end
+    if depth >= MAX_JSON_DEPTH then
+        return json_string(DEPTH_MARKER)
+    end
+    seen[value] = true
+    local out
+    if getmetatable(value) == ARRAY_MT or is_dense_array(value) then
+        local parts = {}
+        for i = 1, rawlen(value) do
+            parts[#parts + 1] = encode_value(rawget(value, i), depth + 1, seen)
+        end
+        out = "[" .. table.concat(parts, ",") .. "]"
+    else
+        local keys, originals = sorted_entry_keys(value)
+        local parts = {}
+        for _, text in ipairs(keys) do
+            parts[#parts + 1] = json_string(text)
+                .. ":"
+                .. encode_value(rawget(value, originals[text]), depth + 1, seen)
+        end
+        out = "{" .. table.concat(parts, ",") .. "}"
+    end
+    seen[value] = nil
+    return out
+end
+
+encode_value = function(value, depth, seen)
     local t = type(value)
     if t == "nil" then
         return "null"
@@ -144,25 +252,53 @@ function M.json_encode(value)
     elseif t == "string" then
         return json_string(value)
     elseif t == "table" then
-        if getmetatable(value) == ARRAY_MT or value[1] ~= nil then
-            local parts = {}
-            for i = 1, #value do
-                parts[#parts + 1] = M.json_encode(value[i])
-            end
-            return "[" .. table.concat(parts, ",") .. "]"
-        end
-        local keys = {}
-        for key in pairs(value) do
-            keys[#keys + 1] = tostring(key)
-        end
-        table.sort(keys) -- deterministic output for debugging/diffing
-        local parts = {}
-        for _, key in ipairs(keys) do
-            parts[#parts + 1] = json_string(key) .. ":" .. M.json_encode(value[key])
-        end
-        return "{" .. table.concat(parts, ",") .. "}"
+        return encode_table(value, depth, seen)
     end
     return json_string(tostring(value))
+end
+
+function M.json_encode(value)
+    return encode_value(value, 0, {})
+end
+
+-- 구조적 절단 (REQ-READBACK-005): 후행 엔트리를 **통째로** 버리고 컨테이너를
+-- 다시 닫는다. 바이트 절단(`safe_truncate`)을 테이블 값에 걸면 `{"k00":"VV`
+-- 같은 조각이 남아 절단 고지가 있어도 소비자가 파싱할 수 없다. 넓은 테이블에
+-- 대해 절단은 예외가 아니라 **기본 경로**다.
+-- 반환: (JSON 텍스트, 엔트리를 하나라도 버렸는가)
+function M.json_encode_bounded(value, max_len)
+    local full = M.json_encode(value)
+    if #full <= max_len or type(value) ~= "table" then
+        return full, false
+    end
+    local seen = { [value] = true }
+    local entries = {}
+    local open, close = "{", "}"
+    if getmetatable(value) == ARRAY_MT or is_dense_array(value) then
+        open, close = "[", "]"
+        for i = 1, rawlen(value) do
+            entries[#entries + 1] = encode_value(rawget(value, i), 1, seen)
+        end
+    else
+        local keys, originals = sorted_entry_keys(value)
+        for _, text in ipairs(keys) do
+            entries[#entries + 1] = json_string(text)
+                .. ":"
+                .. encode_value(rawget(value, originals[text]), 1, seen)
+        end
+    end
+    local kept, used = {}, #open + #close
+    for _, entry in ipairs(entries) do
+        local extra = #entry + (#kept > 0 and 1 or 0)
+        if used + extra > max_len then
+            break
+        end
+        kept[#kept + 1] = entry
+        used = used + extra
+    end
+    -- 상한이 빈 컨테이너보다도 좁으면 빈 컨테이너를 낸다: 예산을 2바이트
+    -- 넘기더라도 파싱 가능한 JSON 을 내는 쪽이 계약이다.
+    return open .. table.concat(kept, ",") .. close, #kept < #entries
 end
 
 -- -- percent encoding (comma/quote/space-free wire form) --------------------
@@ -287,6 +423,18 @@ function M.safe_class(handle)
     return "?"
 end
 
+-- 테이블 값은 주소가 아니라 JSON 텍스트로 회신한다(REQ-READBACK-001). 회신
+-- 형상은 그대로다: `t` 는 여전히 `"table"`, `v` 는 여전히 문자열이고 형제
+-- 필드는 신설되지 않는다 — 소비자의 디코드 지점(server/bridge/protocol.py)이
+-- 무변경으로 남는 이유다. 부수 효과로 `tostring` 이 빠지므로 값에 붙은
+-- `__tostring` 도 발동하지 않는다(REQ-READBACK-002).
+local function property_text(value)
+    if type(value) == "table" then
+        return M.json_encode(value)
+    end
+    return tostring(value)
+end
+
 function M.safe_property(handle, property_name)
     if type(property_name) ~= "string" or property_name == "" then
         return nil, "empty property name"
@@ -295,13 +443,15 @@ function M.safe_property(handle, property_name)
     --   type "function"; they are never invoked by discovery reads.
     -- @MX:REASON: REQ-INTROSPECT-009 read-only boundary; calling a method found
     --   during introspection would turn a diagnostic read into console action.
+    -- 네 번째 반환값은 테이블 값일 때의 RAW 테이블이다 — 구조적 절단
+    -- (REQ-READBACK-005)이 인코딩된 문자열이 아니라 원본을 다시 필요로 한다.
     local ok, value = pcall(function() return handle:Get(property_name) end)
     if ok and value ~= nil then
-        return tostring(value), nil, type(value)
+        return property_text(value), nil, type(value), type(value) == "table" and value or nil
     end
     ok, value = pcall(function() return handle[property_name] end)
     if ok and value ~= nil then
-        return tostring(value), nil, type(value)
+        return property_text(value), nil, type(value), type(value) == "table" and value or nil
     end
     return nil, "property not readable: " .. property_name
 end
@@ -814,14 +964,20 @@ function M.build_props_result(id, path, names)
     end
     local reads = M.array({})
     for _, name in ipairs(names) do
-        local value, perr, value_type = M.safe_property(handle, name)
+        local value, perr, value_type, raw_table = M.safe_property(handle, name)
         if value == nil then
             reads[#reads + 1] = { n = name, ok = false, e = perr }
         else
             local item = { n = name, ok = true, t = value_type or "?", v = value }
             if #value > CONFIG.max_prop_value then
-                item.v = safe_truncate(value, CONFIG.max_prop_value)
-                item.truncated = true
+                if raw_table ~= nil then
+                    -- 테이블 값은 구조적으로 자른다(REQ-READBACK-005): 바이트
+                    -- 절단은 파싱 불가한 JSON 조각을 남긴다.
+                    item.v, item.truncated = M.json_encode_bounded(raw_table, CONFIG.max_prop_value)
+                else
+                    item.v = safe_truncate(value, CONFIG.max_prop_value)
+                    item.truncated = true
+                end
             end
             reads[#reads + 1] = item
         end

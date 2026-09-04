@@ -186,6 +186,33 @@ def gapped_groups_env(index_form: str | None = None, ptr_form: str | None = None
     )
 
 
+#: Object path of the probe node built by :func:`table_props_env`.
+TABLE_PROBE_PATH = "DataPool/Probes/Probe"
+
+
+def table_props_env(props_lua: str, *, order: list[str] | None = None, post_lua: str = "") -> str:
+    """Lua env whose ``DataPool/Probes/Probe`` node carries TABLE-shaped props.
+
+    ``__NODE`` already stores whatever Lua value the caller puts in ``_props``,
+    so a table literal is enough for the ordinary cases. Two shapes a literal
+    CANNOT express get their own hook: a self-referential table and a metatable
+    with side-effect metamethods. ``post_lua`` runs after ``__PROBE`` exists and
+    can mutate ``__PROBE._props`` directly — that is where a cycle is wired.
+
+    The node is reachable at :data:`TABLE_PROBE_PATH`.
+    """
+    order_lua = "{ " + ", ".join(f'"{name}"' for name in order) + " }" if order else "nil"
+    return (
+        "local node = __NODE\n"
+        f'__PROBE = node("Probe", "Preset", {{}}, {props_lua}, {order_lua})\n'
+        '__DATAPOOL = node("Default", "DataPool", {\n'
+        '    node("Probes", "Pool", { __PROBE }),\n'
+        "})\n"
+        "function DataPool() return __DATAPOOL end\n"
+        f"{post_lua}\n"
+    )
+
+
 @dataclass(frozen=True)
 class SentMessage:
     """One captured OSC send from the mocked console side."""
