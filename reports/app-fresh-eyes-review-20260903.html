@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI-Lighting_Console 전체 점검 — 2026-09-03</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--ivory:#FAF9F5;--paper:#fff;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;
+--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard",system-ui,-apple-system,sans-serif;--serif:"Noto Serif KR",ui-serif,Georgia,serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+--max:900px;--rp:12px;--rr:8px;--border:1.5px solid var(--g300)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);font-size:15px;line-height:1.65}
+main{max-width:var(--max);margin:0 auto;padding:32px 20px 80px}
+h1{font-family:var(--serif);font-size:28px;line-height:1.3;margin:0 0 6px}
+h2{font-family:var(--serif);font-size:21px;margin:44px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--oat)}
+h3{font-size:16px;margin:24px 0 8px;color:var(--g700)}
+.meta{color:var(--g500);font-family:var(--mono);font-size:12px;margin-bottom:18px}
+.lead{background:var(--paper);border:var(--border);border-left:5px solid var(--clay);border-radius:var(--rp);padding:14px 18px;margin:10px 0 18px}
+.lead strong{color:var(--clay-d)}
+.plain{background:var(--g100);border-radius:var(--rr);padding:10px 14px;margin:8px 0 14px;font-size:14px;color:var(--g700)}
+.plain b{color:var(--slate)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.kpi{background:var(--paper);border:var(--border);border-radius:var(--rp);padding:12px 14px}
+.kpi .v{font-family:var(--mono);font-size:22px;font-weight:600}
+.kpi .l{font-size:12px;color:var(--g500)}
+table{width:100%;border-collapse:collapse;background:var(--paper);border:var(--border);border-radius:var(--rp);overflow:hidden;font-size:13.5px;margin:10px 0 16px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--g100);vertical-align:top;text-align:left}
+th{background:var(--g100);font-weight:600;font-size:12.5px;color:var(--g700)}
+tr:last-child td{border-bottom:0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--g100);padding:1px 5px;border-radius:4px}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.ok{background:#E4EBDA;color:#4E6236}.mid{background:#F6E7C9;color:#8A5A00}.bad{background:#F5D9CF;color:#8E2F14}
+.wrap{overflow-x:auto}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--paper);border:var(--border);border-radius:var(--rp);padding:14px 16px}
+.card h4{margin:0 0 6px;font-size:14px}
+.dont{border-left:5px solid var(--g500)}
+.chart{background:var(--paper);border:var(--border);border-radius:var(--rp);padding:14px;margin:12px 0}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--rp);padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+ul{padding-left:20px}li{margin:4px 0}
+.foot{color:var(--g500);font-size:12.5px;margin-top:40px;border-top:1px solid var(--g300);padding-top:12px}
+@media print{body{background:#fff}main{padding:0}}
+</style>
+</head>
+<body>
+<main>
+<h1>AI-Lighting_Console 전체 점검<br><span style="font-size:18px;color:var(--g500)">새 눈으로 본 현재 상태와 다음 목표</span></h1>
+<div class="meta">2026-09-03 · origin/main adae0ac · 측정 세션 317272ed · 콘솔 쓰기 0 · 근거: UI 코드 전수 · 도구 38개 성숙도 · 음악 연동 경로 · SPEC 46개 · 백로그 121장 · 테스트 실행</div>
+
+<div class="lead">
+<strong>한 줄 결론.</strong> 「콘솔 프로그래밍 보조」로는 이미 현장에 쓸 수 있는 수준이고, 「음악에 맞춘 연출」로는 아직 절반이다.
+곡의 구조(절·후렴·BPM)를 <b>사람이 글자로 넣으면</b> 큐·페이드·자동진행까지 콘솔에 올라간다. 그러나 <b>음악 파일 자체는 앱에 한 바이트도 들어오지 못하고</b>,
+콘솔에 올라간 값이 맞는지 <b>되읽어 확인할 수단이 이름까지</b>뿐이다. 다음 목표는 새 기능 확장이 아니라 이 두 구멍을 메우는 것이다.
+</div>
+
+<div class="kpis">
+<div class="kpi"><div class="v">10,915</div><div class="l">Python 테스트 통과 (실패 1은 환경)</div></div>
+<div class="kpi"><div class="v">500 / 500</div><div class="l">UI 테스트</div></div>
+<div class="kpi"><div class="v">21 · 15 · 2</div><div class="l">도구 38개 = 실기확인 · 오프라인만 · 결함</div></div>
+<div class="kpi"><div class="v">0</div><div class="l">앱에 들어오는 오디오 바이트</div></div>
+<div class="kpi"><div class="v">≈102</div><div class="l">열린 백로그 카드 / 121</div></div>
+</div>
+
+<h2>1. 지금 실제로 되는 것 — 연출 워크플로우 단계별</h2>
+<div class="plain">읽는 법: 「실기 확인」은 실제 grandMA3 onPC 에서 돌려 본 기록이 저장소에 있느냐다. 오프라인 테스트만 통과한 기능은 콘솔에서 처음 돌릴 때 무엇이 나올지 아직 모른다는 뜻이다.</div>
+<div class="wrap"><table>
+<tr><th>단계</th><th>감독이 하는 일</th><th>앱이 하는 일</th><th>실기 확인</th><th>판정</th></tr>
+<tr><td>① 리그 이해</td><td>패치 CSV·Vectorworks·MVR·도면 이미지 첨부</td><td>파싱·주소 충돌 검사·픽스처 타입 해석·패치</td><td>onPC 2.4.2, 86대 생성 확인</td><td><span class="tag ok">쓸 만함</span></td></tr>
+<tr><td>② 그룹·배치</td><td>「2열로 배치」「부채살」 같은 한국어</td><td>좌표 기반 배치 구조 검출·그룹 18개 저장</td><td>라이브 E2E 3배치</td><td><span class="tag ok">쓸 만함</span></td></tr>
+<tr><td>③ 프리셋</td><td>「기본 컬러 잡아줘」, RIG 시트</td><td>6축×10종 저장·덮어쓰기 카드·재생성</td><td>COL 8/8 콘솔에 있음</td><td><span class="tag mid">값 일치 미검증</span></td></tr>
+<tr><td>④ 룩·이펙트</td><td>장르·정서 한정어(「웅장하게」)</td><td>룩 32종·FX 19종·페이저 작성·씬 컴파일</td><td>라이브 E2E 다수</td><td><span class="tag ok">쓸 만함</span></td></tr>
+<tr><td>⑤ 곡 큐</td><td>곡 브리프(구간 m:ss + BPM) 텍스트, 또는 cue-ex CSV</td><td>에너지 D1~D5·린트 L1~L14·큐 저장·CueFade/TrigTime/Follow</td><td>Sugar r3 큐 18개 확인</td><td><span class="tag mid">큐 내용 되읽기 불가</span></td></tr>
+<tr><td>⑥ 음악 연동</td><td>—</td><td><b>없음.</b> 오디오 업로드 0, 분석 라이브러리 0, LTC/MTC 0</td><td>—</td><td><span class="tag bad">미착수</span></td></tr>
+<tr><td>⑦ 쇼 운영</td><td>Go+/Off, 라이브 잠금, 런북 모드</td><td>큐 모니터 5초 폴링·현재 큐 강조·리허설 중 큐 수정</td><td>큐 되읽기 LIVE</td><td><span class="tag mid">진행률·페이드 표시 없음</span></td></tr>
+<tr><td>⑧ 서류·인계</td><td>패치시트·큐시트·프리셋목록·매직시트</td><td>생성·미리보기·다운로드</td><td><b>실기 0회</b></td><td><span class="tag mid">미검증</span></td></tr>
+<tr><td>⑨ 안전</td><td>승인 카드·백업·감사로그</td><td>3단 게이트, 단일 관문(아키텍처 테스트)</td><td>감사로그 94만 행</td><td><span class="tag ok">가장 강한 자산</span></td></tr>
+</table></div>
+
+<h3>도구 38개의 성숙도</h3>
+<div class="chart">
+<svg viewBox="0 0 640 110" width="100%" role="img" aria-label="도구 성숙도: 실기 확인 21, 오프라인만 15, 결함 2">
+<text x="0" y="22" font-size="13" fill="#3D3D3A">실기 확인</text><rect x="110" y="8" width="352" height="20" rx="4" fill="#788C5D"/><text x="470" y="23" font-size="13" font-family="JetBrains Mono" fill="#141413">21</text>
+<text x="0" y="58" font-size="13" fill="#3D3D3A">오프라인만</text><rect x="110" y="44" width="251" height="20" rx="4" fill="#E3DACC"/><text x="370" y="59" font-size="13" font-family="JetBrains Mono" fill="#141413">15</text>
+<text x="0" y="94" font-size="13" fill="#3D3D3A">결함(핸들 미번역)</text><rect x="110" y="80" width="34" height="20" rx="4" fill="#D97757"/><text x="152" y="95" font-size="13" font-family="JetBrains Mono" fill="#141413">2</text>
+</svg>
+<div class="plain" style="margin:8px 0 0">실기 0회 도구 10개: 서류 4종 + 인계팩, <code>preshow_check</code>, <code>plan_executor_layout</code>, <code>classify_arrangement_topology</code>, <code>analyse_layout_image</code>, <code>import_uploaded_sheet</code>, <code>import_lxseq_groups</code>.
+결함 2개(<code>precheck_vectorworks_diff</code>, <code>build_patch_sheet</code>)는 원인이 하나다 — 콘솔이 <code>FixtureType &lt;slot&gt;</code> 핸들을 돌려주는데 이름으로 번역을 안 한다.</div>
+</div>
+
+<h2>2. 강점 — 남기고 키울 것</h2>
+<ol>
+<li><b>안전 설계가 제품이다.</b> 모든 콘솔 쓰기가 한 관문을 지나고, 덮어쓰기는 「어느 슬롯이 사라지는지」를 묻는다. 되돌릴 수 없는 콘솔에 AI 를 붙이는 앱에서 이게 없으면 나머지가 의미가 없다.</li>
+<li><b>연출 표준이 코드다.</b> 곡 조명연출 표준의 린트 14개가 <code>server/design/lint.py</code> 에 전부 있고 큐 작성기가 실제로 부른다. 「효과 나열」이 아니라 「감독 판단」을 검사한다.</li>
+<li><b>입력 문서가 조명감독 문서다.</b> LX-SEQ RIG 팩(패치·그룹·프리셋·큐 CSV)을 그대로 읽는다. 감독이 앱을 위해 새 포맷을 배울 필요가 없다.</li>
+<li><b>오프라인 경로가 있다.</b> 로컬 모델(ollama + gemma4)로 인터넷·API 키 없는 공연장에서도 돈다(문법 오류율 0/188 실측).</li>
+<li><b>측정 규율.</b> 「exec ok 는 효과의 증거가 아니다」「자식 목록은 잘린다」 같은 계기 함정이 런북에 쌓여 있다. 콘솔을 신뢰하지 않는 이 방식이 옳다.</li>
+</ol>
+
+<h2>3. 약점 — 구조적인 것부터</h2>
+
+<h3>3.1 <span class="tag bad">🔴</span> 음악이 앱에 들어오지 않는다</h3>
+<div class="plain">쉽게 말하면: 지금 앱은 곡을 「듣지」 못한다. 감독이 「1절 0:00, 후렴 0:48, BPM 128」처럼 <b>글자로 적어 줘야</b> 그 시각에 큐를 만든다.</div>
+<ul>
+<li>업로드 허용 확장자에 오디오가 없다(<code>ui/src/App.tsx:829</code>). 데스크톱 셸의 권한도 막혀 있다.</li>
+<li>BPM 은 채팅 문장의 정규식이고, 없으면 <b>120 으로 가정</b>한다. 그러면 BPM 격자 린트(L11)가 꺼진다.</li>
+<li>곡 파일 폴더의 <code>.xlsx</code>·타임라인에 있는 <b>TC In/Out · Section 열이 임포트에서 버려진다.</b> 큐 파서의 17열 계약에 시간 열이 없다. 그래서 콘솔의 큐 18개는 페이드는 있는데 <b>시간축 위 위치가 없다.</b></li>
+<li>타임코드 객체는 만들지만 <b>비어 있다.</b> 이벤트 기록·LTC/MTC 입력 코드가 0 이다.</li>
+<li>타당성은 이미 쟀다(librosa BPM 오차 0.9% vs LLM 36% → DSP 채택). <b>코드만 없다.</b></li>
+</ul>
+
+<h3>3.2 <span class="tag bad">🔴</span> 「올렸다」까지만 알고 「맞다」는 모른다</h3>
+<div class="plain">쉽게 말하면: 프리셋을 저장했다는 건 알지만 그 프리셋이 <b>어떤 색인지</b>는 앱이 읽어 오지 못한다. 그래서 잘못 저장돼도 조용히 남는다.</div>
+<ul>
+<li>프리셋 색·큐 내용 어느 축도 값을 못 읽는다. 산출물이 스스로 <code>unverified: ["value_match"]</code> 를 싣는다.</li>
+<li>큐 Part 195필드를 전부 세어 본 결과 <code>SELECTIONDATA</code>·<code>DEPENDENCIES</code> 가 <b>Lua 테이블 주소</b>로 온다 — 값이 없는 게 아니라 <b>응답기가 문자열로 안 풀었다.</b> 고칠 수 있는 미구현이다.</li>
+<li>기존 COL 6개는 컬러 스케일 수정(0-255 → 0-100) <b>이전</b> 저장분일 수 있고, 이름이 같아 파이프라인이 영원히 건너뛴다.</li>
+</ul>
+
+<h3>3.3 <span class="tag mid">🟡</span> 대화 진입로가 정규식 28계열이다</h3>
+<ul>
+<li><code>session.py</code> 10,299줄, 첫 매치 순서가 의미를 정한다. 「포지션 빼고 컬러」 같은 배제문이 뒤집힌 전례가 있어 카드 한 장으로 축을 확정하도록 바꿨다.</li>
+<li>두 계열은 트리거가 상수에 없어 <b>무슨 말이 통하는지 목록이 없다.</b> 의도 라우팅 SPEC(INTENT-001)은 in-progress 로 멈춰 있다.</li>
+</ul>
+
+<h3>3.4 <span class="tag mid">🟡</span> 실기 검증 편차 · 버전 게이트 부재</h3>
+<ul>
+<li>응답기(콘솔 쪽 Lua 플러그인) 버전 검사가 <b>런타임에 없다.</b> 손으로 <code>--expect-version</code> 을 줄 때만 잡힌다. 실기 1.6.1 / main 1.6.2 였던 전례가 이 저장소에 있다.</li>
+<li>VWX 비교는 리그가 패치돼 있어도 <b>전 타입 0대</b>로 보고한다(핸들 미번역).</li>
+</ul>
+
+<h3>3.5 <span class="tag mid">🟡</span> 장부가 성숙도를 말하지 않는다</h3>
+<ul>
+<li><code>completed</code> 인데 실행 증거가 없는 SPEC 2개, <code>draft</code> 인데 라이브 E2E 통과한 SPEC 2개, spec.md 자체가 없는 디렉터리 1개.</li>
+<li>LXSEQ-003 의 완료 조건은 <b>아무도 판정하지 않았다.</b> 백로그 121장은 8월 카드 다수의 전제가 노화했고 전수 정리는 미실시.</li>
+</ul>
+
+<h3>3.6 <span class="tag mid">🟡</span> UI 의 끊긴 선</h3>
+<ul>
+<li>패널 고정(pin) 프로토콜·서버 구현이 있는데 UI 호출 0. 패널 카탈로그는 요청만 하고 그리지 않는다.</li>
+<li>가이드는 「서류 5종」, UI 는 4종. 인계팩은 채팅으로만 도달. 페이더 바는 값 없는 장식. 창 배치는 새로고침마다 초기화.</li>
+<li>RIG 팩의 <code>fx.csv</code>(FX.01~08)·<code>coords.csv</code>·<code>04_grandMA3/</code> 는 <b>읽는 경로가 없다.</b></li>
+</ul>
+
+<h2>4. 개선 방향 — 우선순위와 완료 조건</h2>
+<div class="lead">원칙 셋. <b>① 새 축을 열기 전에 이미 올린 것의 진위를 읽는다. ② 앱은 타임코드 마스터가 되지 않는다 — 콘솔이 한다. ③ 매 항목에 「무엇이 나오면 끝인가」를 단다.</b></div>
+
+<pre class="mermaid">
+flowchart LR
+  P0[P0 감독 결정 셋<br/>코드 0줄] --> P1[P1 되읽기를 값까지<br/>응답기 직렬화·버전 게이트]
+  P1 --> P21[P2-1 cue-ex 시간열 수용<br/>TC In/Out · Section]
+  P21 --> P22[P2-2 오디오 업로드<br/>BPM·구간 후보 → 확인 카드]
+  P22 --> P23[P2-3 콘솔 타임코드 리허설<br/>Record → 되읽기 검증]
+  P1 -.병행.-> P3[P3 부채 정리<br/>실기 0회 도구 · SPEC 상태 · 백로그]
+  P21 --> P4[P4 UI 시간축·통하는 말 목록]
+</pre>
+<noscript><p>흐름: P0(감독 결정) → P1(되읽기 값까지) → P2-1(시간열) → P2-2(오디오 분석) → P2-3(콘솔 타임코드 리허설). P3 부채 정리는 P1 이후 병행, P4 UI 는 P2-1 뒤.</p></noscript>
+
+<h3>P0 — 코드 0줄, 감독 결정 (지금 열려 있음)</h3>
+<div class="wrap"><table>
+<tr><th>#</th><th>할 일</th><th>완료 조건</th></tr>
+<tr><td>P0-1</td><td>COL 8개 색 육안 검산 — 특히 기존 6개</td><td>8슬롯 각각 시트 값과 일치/불일치 기록</td></tr>
+<tr><td>P0-2</td><td>이 곡 큐에서 BM·FX 열을 비울지 결정</td><td>비우면 큐 83행 전부가 COL+POS 로 열린다(t251 실측)</td></tr>
+<tr><td>P0-3</td><td>POS 6개를 콘솔에서 현장 레코드</td><td>정본 §10 이 POS 를 현장 레코드로 규정 · 큐 +40행</td></tr>
+</table></div>
+
+<h3>P1 — 되읽기를 값까지 (음악보다 먼저)</h3>
+<div class="plain">왜 먼저인가: 오디오 분석으로 큐를 더 많이 만들어도, 만든 큐가 맞는지 못 읽으면 틀린 값이 더 빨리 쌓일 뿐이다.</div>
+<div class="wrap"><table>
+<tr><th>#</th><th>할 일</th><th>크기</th><th>완료 조건</th></tr>
+<tr><td>P1-1</td><td>응답기: <code>SELECTIONDATA</code>·<code>DEPENDENCIES</code> 테이블을 JSON 문자열로 직렬화</td><td>Lua 소량 + 재임포트(감독)</td><td>큐 Q010 의 프리셋 참조가 문자열로 돌아온다</td></tr>
+<tr><td>P1-2</td><td>프리셋 값 되읽기(색 RGB/켈빈, 디머 %) 채널 개통</td><td>같은 경로</td><td><code>value_match</code> 미검증 표시가 사라지고 8/8 값 일치가 자동 판정</td></tr>
+<tr><td>P1-3</td><td>서버 기동 시 <code>ping</code> 버전 게이트 — 기대 ≠ 실기면 배너 + 쓰기 차단</td><td>Python 소량</td><td>1.6.2 응답기에 붙이면 UI 에 「응답기 갱신 필요」</td></tr>
+<tr><td>P1-4</td><td><code>FixtureType &lt;slot&gt;</code> 핸들 번역을 VWX 비교·패치시트에 적용</td><td>기존 slot→name 표 재사용</td><td>패치된 리그에서 VWX 비교가 실제 대수를 답한다</td></tr>
+</table></div>
+
+<h3>P2 — 음악 연동, 세 단계로</h3>
+<div class="wrap"><table>
+<tr><th>#</th><th>할 일</th><th>왜 이 순서</th><th>완료 조건</th></tr>
+<tr><td>P2-1</td><td><b>cue-ex 임포트에 Section·TC In/Out 열 수용</b></td><td>재료가 이미 곡 파일 폴더에 있다. 정본 §11 「모든 큐는 Section 과 TC 를 동시에 갖는다」</td><td>큐 18개가 타임라인 위에 시각으로 놓이고 TrigTime 이 시트 값에서 나온다</td></tr>
+<tr><td>P2-2</td><td><b>오디오 파일 업로드 → BPM·구간 경계·악센트 후보 → 확인 카드</b></td><td>타당성 실측 완료. 업로드는 VWX 8MiB 패턴 재사용. LLM 은 정서·컨셉만 맡긴다</td><td>3분 곡 1개 → 사람이 수정 가능한 구간표가 카드로 뜬다. BPM 기본값 120 이 실측값으로 대체</td></tr>
+<tr><td>P2-3</td><td><b>쇼 중 동기는 콘솔 타임코드에 맡긴다</b> — 앱은 Record Timecode 리허설 절차 안내 + 녹화 결과 되읽기 검증</td><td>앱 트랜스포트는 비목표. Store/Assign/Record Timecode 는 실측 GO</td><td>LTC 리허설 1회 뒤 큐 18개가 콘솔 타임코드 트랙에 이벤트로 존재함을 되읽는다</td></tr>
+</table></div>
+
+<div class="card dont"><h4>하지 않을 것</h4>
+앱이 오디오를 실시간 듣고 조명을 자율 발사하는 것(설계에서 원천 배제) · 앱 자체를 타임코드 마스터로 만드는 것(콘솔이 이미 한다) · 값 되읽기 없이 「검증됨」 범위를 넓히는 것.</div>
+
+<h3>P3 — 신뢰성 부채 정리</h3>
+<div class="wrap"><table>
+<tr><th>#</th><th>할 일</th><th>완료 조건</th></tr>
+<tr><td>P3-1</td><td>실기 0회 도구 10개 중 서류 4종 + <code>preshow_check</code> 실기 1회</td><td>각 도구에 실기 판정서 1장</td></tr>
+<tr><td>P3-2</td><td>SPEC 상태 정합 — completed 인데 증거 없음 2 · draft 인데 통과 2 · spec.md 없음 1</td><td><code>moai spec audit</code> 드리프트 0</td></tr>
+<tr><td>P3-3</td><td>LXSEQ-003 완료 조건 전수 판정</td><td>implemented 전이</td></tr>
+<tr><td>P3-4</td><td>백로그 121장 정리 — 전제 만료·중복·폐기</td><td>열린 카드 ≤ 40</td></tr>
+<tr><td>P3-5</td><td>RIG <code>fx.csv</code> 8종 → FX 라이브러리 확장(내장 19종과 이름 교집합 0)</td><td>FX.01~08 이 <code>find_fx</code> 로 검색됨</td></tr>
+</table></div>
+
+<h3>P4 — UI 마무리 (작지만 현장 체감 큼)</h3>
+<ul>
+<li>타임라인에 <b>곡 시각(mm:ss) 축 + 현재 큐 위치</b> — P2-1 뒤에 자연히 열린다. 진행률은 「Go 시각 + TrigTime 누적」으로 표시하고 「추정」 라벨을 단다.</li>
+<li>서류 5종 vs 4종 불일치 정리(인계팩을 패널에), pin 죽은 코드 정리, 분할 위치·타일 크기 저장.</li>
+<li><code>session.py</code> 28계열의 <b>「통하는 말 목록」을 UI 에 노출</b>(가이드 자동 생성). 트리거가 정규식인 이상 목록이 곧 사용성이다.</li>
+</ul>
+
+<h2>5. 성공 기준</h2>
+<div class="lead">제품 정의 Phase 3 그대로: <b>3분 곡 1개 → 검토 가능한 큐리스트 초안 10분 내 → 콘솔에 올린 값이 시트와 일치함을 앱이 되읽어 증명.</b></div>
+<div class="plain"><b>스스로 확인해 볼 것.</b> ① 지금 곡 파일 xlsx 의 TC In 열이 앱 어디에도 안 보이는지 타임라인을 열어 보면 된다(안 보인다). ② 프리셋 팝업에서 COL.01 의 색이 「앱이 기억한 값」인지 「콘솔에서 읽은 값」인지 — 전자다.</div>
+
+<h2>6. 이 보고서가 안 잰 것</h2>
+<ul>
+<li>실기 콘솔에 접촉하지 않았다. 「실기 확인」 열은 저장소의 판정서·런북 기록을 옮긴 값이다.</li>
+<li>실패 테스트 1건(<code>test_guide_reachability</code>)은 이 트리의 <code>ui/dist</code> 가 낡아서다. 빌드 뒤 재실행은 안 했다.</li>
+<li>감사로그는 8월 18일까지만 있다. 도구별 실사용 빈도는 명령 첫 토큰으로만 추정했다.</li>
+<li>LLM 응답 품질(문법 오류율·왕복 시간)은 재지 않았다. 마지막 실측은 Gemini 0.40%, ollama 0/188.</li>
+</ul>
+
+<div class="foot">markdown 쌍둥이: <code>reports/app-fresh-eyes-review-20260903.md</code> · 렌더: moai-domain-html-report · 대상: basic 티어(MoAI-Easy)</div>
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body>
+</html>
