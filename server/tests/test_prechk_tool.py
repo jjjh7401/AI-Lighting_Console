@@ -928,6 +928,28 @@ class TestMissingRigSectionIsAWiringGap:
         assert json.loads(execution.result.content)["macro"]["created"] is True
 
 
+#: 2026-09-04 granted extension -- SPEC-COPILOT-READBACK-002 M1 repairs the
+#: ``read_inventory`` call site at ``precheck_patch``, which now consumes ONE
+#: ``read_fixture_type_names`` list read so the patch payload can print type
+#: NAMES instead of ``FixtureType <n>`` handles (REQ-READBACK2-006/007). That
+#: read targets ``Patch/FixtureTypes``, so the walk filter below counts it too.
+#:
+#: This is an increment to the EQUALITY, not to the ceiling.
+#: ``PRECHK_FOOTPRINT_QUERY_CAP`` is unchanged at 40 and the ``<=`` bound still
+#: holds with wide margin; ``spec.md §D`` places renegotiating the query-budget
+#: guard out of scope, and raising the CAP is what that forbids. REQ-READBACK2-012
+#: explicitly permits +1 additional ``query_state`` per repaired call site, so the
+#: increment is SPEC-approved behaviour and recording it here is the acknowledgment
+#: this pin exists to force -- the sibling ceiling test says it directly:
+#: "Re-provisioning the ceiling is legitimate; doing it without editing this line
+#: is not."
+#:
+#: Named rather than folded into the arithmetic as a bare ``+ 1``: a future reader
+#: has to be able to see WHICH read the extra query is. A second unnamed increment
+#: still fails the gate.
+_TYPE_NAME_LIST_READS = 1
+
+
 class FootprintRigPort(RigPort):
     """``RigPort`` that also answers the three-tier fixture-type walk.
 
@@ -1116,7 +1138,7 @@ class TestFootprintWalkIsWiredThroughRigPaths:
         _dispatch(registry)
         walk_calls = [call for call in rig.state_calls if call.startswith("Patch/FixtureTypes")]
         assert walk_calls, "순회 조회가 0건이면 상한 단정이 공허하다"
-        assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS)
+        assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS) + _TYPE_NAME_LIST_READS
         assert len(walk_calls) <= tools_module.PRECHK_FOOTPRINT_QUERY_CAP
 
 
@@ -1633,7 +1655,7 @@ class TestAuditAndBudgetEndToEnd:
         walk_calls = [call for call in rig.state_calls if call.startswith("Patch/FixtureTypes")]
         # An EQUALITY, not a bound: the repository had no assertion pinning a query
         # count anywhere, so one extra read could be added forever unnoticed.
-        assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS)
+        assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS) + _TYPE_NAME_LIST_READS
         assert len(walk_calls) <= tools_module.PRECHK_FOOTPRINT_QUERY_CAP
 
     def test_the_declared_ceiling_is_pinned_to_a_literal(self):
@@ -1678,5 +1700,11 @@ class TestAuditAndBudgetEndToEnd:
             if event.get("kind") == "state_query" and event.get("ok") is False
         ]
         # A timed-out query still SENT one request, so it still owes one row.
-        assert len(failed) == 1
-        assert failed[0]["command"] == "Patch/FixtureTypes"
+        # 2026-09-04 (SPEC-COPILOT-READBACK-002 M1): TWO requests now reach a dead
+        # type tree -- the walk's own root probe plus the type-name list read the
+        # repaired `precheck_patch` issues -- so two owed rows is the SAME rule at a
+        # new count, not a regression. The count is tied to the named increment
+        # rather than written as a bare 2, and every row is checked rather than only
+        # the first, so a request that stops writing its row still fails here.
+        assert len(failed) == 1 + _TYPE_NAME_LIST_READS
+        assert [event["command"] for event in failed] == ["Patch/FixtureTypes"] * len(failed)
