@@ -447,6 +447,7 @@ console_writes: 0
 mutation_checks: 7/7 red
 new_warnings_or_lints_introduced: 0   # ruff check 통과 · ruff format 통과 · tsc exit 0
 open_blockers: 1   # test_overlap_preserve.py::TestSafetyChokepointFileSet 3 FAIL — §E.2 「미해결 차단」 참조
+                   # [만료 2026-09-04] §G G-1 에서 감독 승인으로 해소(커밋 1f3364d). 이 줄은 M0 시점 기록이다
 full_suite_post_commit: 10948 passed / 3 failed / 12 skipped
 total_run_phase_files: 13   # 신규 1 + 수정 12 (progress.md · spec.md frontmatter 제외)
 m1_to_mN_commit_strategy: M0 단일 커밋 + SHA 백필 커밋 1건. 푸시는 오케스트레이터 소유.
@@ -470,6 +471,7 @@ console_writes: 0                 # 진단 grep NONE · 라이브 세션 미개�
 mutation_checks: 6/6 red
 new_warnings_or_lints_introduced: 0   # ruff check 통과 · ruff format --check 484 files already formatted
 open_blockers: 1   # test_prechk_tool.py 조회 예산 핀 3 FAIL — §E.2 M1 「미해결 차단」 참조
+                   # [만료 2026-09-04] §G G-2 에서 오케스트레이터 판정으로 해소(커밋 c08680b). 이 줄은 M1 시점 기록이다
 full_suite_post_change: 10973 passed / 6 failed / 12 skipped
                    # 6 = M0 의 초크포인트 핀 3 (사전) + 내 조회 예산 핀 3 (귀속 실측)
 total_run_phase_files: 9   # 신규 1 + 수정 8 (progress.md 제외)
@@ -482,6 +484,79 @@ l44_post_push_fetch: not-run    # 푸시하지 않았다
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync-phase>_
+
+## §F Phase 4 Mode Selection
+
+**Decision: serial** — 코딩 중심 작업이라 순차 배차가 기본값이다.
+
+- **입력**: tier M · 범위 17 파일(신규 2 + 수정 15) · 도메인 3(서버 안전 계층 · 오케스트레이터 배관 · UI 프로토콜) · 언어 혼합 Python + TypeScript · 병렬 이득 LOW(코딩 중심)
+- **평가**
+
+| 모드 | 선택 | 사유 |
+|---|---|---|
+| `direct` | 아니오 | 의미 변경이 있고 17 파일이다 |
+| `serial` | **선택** | 코딩 중심 작업이라 순차가 기본값이다. M0·M1 을 마일스톤당 한 에이전트로 순차 배차했다 |
+| `fanout` | 아니오 | 다중 도메인이지만 조사가 아니라 구현이다 |
+| `sweep` | 아니오 | 균일 기계 변환이 아니고 파일 수가 문턱 미달이다 |
+
+- **Decision: serial**
+- **근거**: M0 과 M1 은 파일 집합이 겹치지 않아 병렬 가능하지만, 쓰기 가능한 에이전트를 동시에 둘 돌리는 것은 금지돼 있다(둘 다 `progress.md` 에 쓴다). 순차로 M0 → M1 → 핀 grant 순으로 진행했다.
+- **경계 사례**: 파일 17개는 Tier L 문턱(>15)에 걸치지만 `spec.md` 가 tier M 을 선언하고 REQ 14 / AC 16 이 Tier M 예산 안이라 M 으로 유지했다.
+
+## §G Orchestrator Grant Decisions
+
+M0 과 M1 이 각각 올린 미해결 차단 2건은 **오케스트레이터 판정으로 해소**됐다. 두 에이전트 모두 자체 승인하지 않고 올렸고, 그 판단이 옳았다 — 두 핀 모두 설계상 명시적 인지를 요구한다.
+
+### G-1 안전 초크포인트 파일 집합 핀 — 감독 승인 (2026-09-04)
+
+- **승인 주체**: 감독(사용자). `AskUserQuestion` 으로 세 선택지를 제시하고 「넓히고 사유를 기록」을 선택받았다.
+- **해소 커밋**: `1f3364d`
+- **넓힌 값 (핀 자기 기준 `95687a0e` 에서 오케스트레이터가 재측정)**: `monitor.py` 3 · `responder_version.py` 0 두 행 추가 · `console.py` 57→59 · **`gate.py` 6→8** · 새 삭제 7줄 텍스트 등록.
+- **배차서가 틀렸던 값 1건**: 오케스트레이터의 첫 측정은 `2488336` 기준이라 `gate.py` 의 증가(2줄)를 못 봤고 「5줄 · 두 파일」로 적었다. 핀이 잡아 냈고, 핀 기준으로 재측정해 **7줄 · 세 파일**로 정정했다. 핀이 제 일을 두 번 했다.
+- **소유권 반론 처리**: M1 이 인용한 「WRITEGATE-001 owns `server/safety/`」가 상시 배타 잠금인지 **실측**했다 — 아니었다. 그 SPEC 은 `updated: 2026-08-05` 이후 정지이고, 그 뒤 `86fee6c`(UNREQ-001, 08-25)·`0c0adfa`(t104, 08-26)가 `server/safety/` 를 고쳤으며 `053553f`(08-16)는 게이트 grant 를 직접 조정했다. 그 문장은 2026-08-05 그 grant 의 사유다.
+
+### G-2 비준된 조회 예산 등식 핀 — 오케스트레이터 판정 (2026-09-04)
+
+- **승인 주체**: 오케스트레이터. 감독께 두 번째 라운드를 걸지 않고 판정했고, 근거를 감독에게 보고했다(되돌릴 수 있는 테스트 파일 편집).
+- **해소 커밋**: `c08680b`
+- **판정 근거 4건 (전부 문면 또는 실측)**:
+  1. 핀 주석이 목적을 직접 밝힌다 — 「An EQUALITY, not a bound: … one extra read could be added forever unnoticed」. 조용한 증가를 잡는 장치이고 정확히 그 일을 했다.
+  2. **실제 상한은 안 건드렸다** — `PRECHK_FOOTPRINT_QUERY_CAP == 40` 불변, `5 <= 40`. `spec.md §D` 가 범위 밖으로 둔 「예산 가드 자체의 재협상」은 CAP 올리기다.
+  3. REQ-READBACK2-012 가 지점당 `query_state` **+1 을 명시적으로 허용**한다. 이 +1 은 SPEC 이 승인한 행동이고, 핀 리터럴에 반영하는 것이 핀이 요구하는 인지다.
+  4. 형제 테스트가 규칙을 적는다 — 「Re-provisioning the ceiling is legitimate; doing it without editing this line is not」.
+- **감사행 1→2 는 결함이 아니다**: 그 테스트 주석이 원리를 적어 뒀다 — 「타임아웃된 조회도 요청 하나는 보냈으니 행 하나를 빚진다」. 죽은 타입 트리에 요청이 둘 닿으므로(순회 루트 프로브 + 타입명 목록 판독) 행 둘은 **같은 불변식의 새 값**이다.
+- **등식을 완화하지 않았다**: `<=` 로 바꾸지 않고 단언을 지우지 않았다. `_TYPE_NAME_LIST_READS = 1` 을 신설해 이름으로 더했으므로, 다음 독자가 늘어난 조회가 무엇인지 볼 수 있다. 감사행 단언은 `failed[0]` 만 보던 것을 전 행으로 넓혔다.
+
+### G-3 감도 실측 3건 (핀을 넓히면서 무력화하지 않았음의 증거)
+
+| 뮤테이션 | 결과 |
+|---|---|
+| `gate.py` 계수 8→7 | `test_the_deletion_counts_match` **RED** |
+| 핀 텍스트 `ONLINE`→`OFFLINE` | `test_the_deletions_are_exactly_the_pinned_lines` **RED** |
+| `_TYPE_NAME_LIST_READS` 1→2 | 조회 예산 3건 전부 **RED** |
+
+### G-4 계기 성질 1건 (다음 회차가 재발견하지 않도록)
+
+초크포인트 핀은 `_PRECHK_BASE..HEAD` 를 비교하므로 **커밋된 이력만** 본다. `server/safety/monitor.py` 에서 한 줄을 지운 미커밋 뮤테이션을 쏘았을 때 핀은 `5 passed` 로 통과했다 — 계기 고장이 아니라 계기의 시야가 커밋 경계라는 사실이다. 이 핀의 감도는 리터럴 교란으로 재야 하고, 새 파일·새 삭제줄 검출은 커밋 후에만 관측된다. 같은 이유로 커밋 뒤 핀을 **다시 돌려** 초록을 확인했다(`131 passed`).
+
+### G-5 grant 후 전수 검증 (오케스트레이터 실측, 이 트리 HEAD `c08680b`)
+
+| 계기 | 명령 | 관측 |
+|---|---|---|
+| 전체 Python 스위트 | `uv run pytest server/tests -q` | `10979 passed, 12 skipped` · **실패 0** · 증거 `.moai/state/verify/readback002/pins-full.log` |
+| 두 핀 (커밋 후) | `uv run pytest server/tests/test_overlap_preserve.py server/tests/test_prechk_tool.py -q` | `131 passed` |
+| UI 스위트 | `npm --prefix ui test` | `21 files, 506 passed` |
+| 린트 | `uv run ruff check <두 파일>` | `All checks passed!` |
+| 포맷 | `uv run ruff format --check <두 파일>` | `2 files already formatted` |
+| 범위 | 두 커밋의 누적 변경 통계 | 테스트 2파일만 · `106 insertions, 6 deletions` |
+| 상한 불변 | `PRECHK_FOOTPRINT_QUERY_CAP` 검색 | `tools.py:440` `= 40` · `test_prechk_tool.py:1685` `== 40` |
+
+**미검증 (이 grant 회차)**
+
+- **원격 CI** — 브랜치 `WT-readback-gate` 는 원격에 없다. 푸시하지 않았고, 깨끗한 환경의 전수 실행은 관측하지 않았다. 위 값은 전부 로컬 워크트리 실측이다.
+- **라이브 응답기 버전** — 이 회차도 콘솔에 접촉하지 않았다(§E.2 B2 · READBACK-001 M3 소유).
+- **제3 핸들 형태**(REQ-READBACK2-011) — 여전히 열린 구멍이다. 「없다」가 아니라 「안 쟀다」.
+- **grant 주석의 장기 정확성** — 소유권 실측(WRITEGATE-001 정지 상태)은 2026-09-04 시점 사실이다. 그 SPEC 이 재개하면 만료된다.
 
 ## Plan Audit-Ready Signal
 
