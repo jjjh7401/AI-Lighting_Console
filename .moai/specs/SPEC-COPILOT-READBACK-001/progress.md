@@ -212,6 +212,36 @@ $ git diff --name-only origin/main | grep -E '^(server/prechk/|server/vwx/|serve
   확인했지만, 표시 없이 배열로 인코딩되기를 기대하던 **외부** 소비자가 있다면
   그쪽은 안 쟀다.
 
+### M2 — R2 측정 스윕 (읽기 전용 · 콘솔 쓰기 0건)
+
+**판정: 미발견(measured-absent)** — 판독 가능한 값 프로퍼티 0건. 고정 테스트 3건은 초록 그대로.
+
+| AC | 판정 | 증거(명령 + 관측 출력) |
+|---|---|---|
+| AC-READBACK-009 (음성 대조군) | PASS | `introspect_probe --names "…,__NOSUCHPROP_CONTROL__"` → `{"e":"property not readable: __NOSUCHPROP_CONTROL__","ok":false}`. 노트가 21건을 「0 건」이 아니라 「재지 못함」으로 분류 |
+| AC-READBACK-010 (열거 완전성 산술) | PASS | `introspect_probe --all-pages` → `total:138` · 도착 138(27+28+26+26+26+5) · 마지막 창 `truncated:false` · `paging:"complete"`. 세 값 정합 |
+| AC-READBACK-013 (미발견 경로 표제 grep) | PASS | `grep -c -E '^#{1,6}\s*(시도한 이름\|사유\|대조군\|실행일)\b' docs/research/ma3-effects/10-preset-property-readback-sweep.md` → **4** |
+| AC-READBACK-014 (팔레트 위장 금지) | PASS | `presets_api.py` 무변경 — 콘솔 유래 값 필드를 신설하지 않았다. 근거가 없으므로 만들지 않는다 |
+
+**라이브 계기**: 응답기 `1.6.4`, OSC `127.0.0.1:8000`, 회신 포트 `9005`.
+`responder_roundtrip --expect-version 1.6.4` → `[PASS] ping: ok / live version=1.6.4`.
+
+**마일스톤 도중 응답기 버전이 바뀌었다 (1.6.3 → 1.6.4)**. M2 스윕을 1.6.3 에 대고 한 번
+끝낸 뒤 운영자가 1.6.4 를 재임포트했고(`2026-09-04T10:09:46Z` 에 `ping` 으로 확인),
+**전 구간을 1.6.4 에 대고 다시 쟀다.** 이 재임포트는 M2 가 수행한 행위가 아니다 —
+M2 의 콘솔 쓰기는 여전히 **0건**이다.
+
+**B2 해소**: 1.6.3 에서 주소만 답하던 세 이름이 1.6.4 에서 JSON 을 답했고, 바뀐 값은
+정확히 그 셋뿐이다 — `SELECTIONDATA` `table: 0x…`→`{}`, `DEPENDENCIES` `table: 0x…`→`{}`,
+`DOSHUFFLE` `PropertyInvokeMeta: 0x…`→`{"Property":"DOSHUFFLE","Target":"Preset 4.1"}`.
+Preset 개체에서 두 테이블은 **비어 있다**(Part 등 다른 클래스는 여전히 미관측).
+
+**미검증**: `REFERENCES` 의 `<정수>:<64비트 정수>` 페이로드는 해독하지 않았고 회신에서
+절단된다(`truncated:true`, 240자 관측 — 1.6.3 에서도 동일) · Preset 이외 클래스의 테이블
+형상 · Dimmer·Color 2개체 외 다른 featureGroup 의 열거 목록 동일성.
+
+산출물: `docs/research/ma3-effects/10-preset-property-readback-sweep.md`
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
