@@ -432,6 +432,209 @@ AC-READBACK2-007(「전부 7」)과 **상호 배타**다 — 둘 중 하나만 �
 - **`ScriptedExec` 더블의 배포 행** — 위 「콘솔 쓰기 0」 절 참조. 실물 콘솔 무접촉은
   diff grep 으로 판정했고, 라이브 감사 로그로는 재지 않았다.
 
+### M2 — 전수 대조와 완료 보고 (2026-09-04, 워크트리 `readback002`, 브랜치 `WT-readback-gate`, 끝 커밋 `86f6ae1`)
+
+M2 는 코드를 고치지 않는다. M0·M1 이 남긴 판정을 이 트리에서 다시 재고, 호출
+지점별 조회 증가분을 **일곱 자리 전부**에 대해 계상하고, 완료 보고를 다섯 절로
+적는다. 콘솔 접촉 0건, 구현 파일 변경 0건.
+
+#### 주장
+
+| # | 주장 | 판정 |
+|---|---|---|
+| C1 | `read_inventory` 호출 노드가 정확히 7 이고 전부 `type_names=` 를 넘긴다 (AC-READBACK2-007) | **PASS** |
+| C2 | `server/prechk/` · `server/vwx/` 가 무변경이다 (AC-READBACK2-012 · REQ-READBACK2-010) | **PASS** |
+| C3 | 호출 지점별 조회 증가분이 일곱 자리 전부에 계상되고 어느 핸들러도 상한을 넘지 않는다 (REQ-READBACK2-012) | **PASS** |
+| C4 | `acceptance.md §A` 의 오프라인 명령이 전부 초록이고 회귀가 없다 | **PASS** (전수 `10979 passed / 0 failed`) |
+| C5 | 완료 보고가 다섯 절을 갖추고 미검증 절에 제3 핸들 형태와 라이브 응답기 버전 미판독이 명시돼 있다 (AC-READBACK2-015) | **PASS** (이 절) |
+
+#### 증거
+
+**C1 — 호출자 전수 대조 (AC-READBACK2-007)**
+
+`acceptance.md §A` 의 `ast` 스니펫을 이 트리에서 문면 그대로 실행했다. 줄 단위
+grep 은 쓰지 않았다 — 정본 폭 상한 100 이 다섯 자리를 여러 줄로 쪼개므로 그 수는
+올바른 구현 뒤에도 7 이 되지 않는다(§E.2 M1 「포매터 실측」의 `grep -c` → `2`).
+
+```
+$ uv run python -c "<acceptance.md §A 의 ast 스니펫>"
+calls 7 [3032, 3235, 3436, 4086, 4499, 4695, 6429]
+with type_names 7 [3032, 3235, 3436, 4086, 4499, 4695, 6429]
+PASS
+```
+
+**C2 — 번역 기계 무변경 (AC-READBACK2-012)**
+
+계기 둘을 따로 걸었다. 커밋 이력 쪽과 작업 트리 쪽이다.
+
+(1) 커밋 이력 — 브랜치 끝을 base `2488336` 과 대조:
+
+```
+$ git diff --stat origin/main WT-readback-gate -- server/prechk/ server/vwx/
+(빈 출력 · exit 0 · 출력 0 바이트)
+```
+
+같은 대조를 경로 제한 없이 걸면 26 파일이 나오고 그 목록에 `server/prechk/` ·
+`server/vwx/` 경로가 **한 건도 없다** — 빈 출력이 경로 오타에서 온 것이 아님을
+반대 팔로 확인한 것이다.
+
+(2) 작업 트리 — 커밋되지 않은 변경까지 보는 계기. `2488336` 을 그대로 체크아웃한
+트리와 `readback002` 의 작업 트리를 파일 단위로 대조했다:
+
+```
+$ diff -r -x '__pycache__' <2488336 트리>/server/prechk <readback002>/server/prechk
+prechk exit=0
+$ diff -r -x '__pycache__' <2488336 트리>/server/vwx   <readback002>/server/vwx
+vwx exit=0
+```
+
+`__pycache__` 만 제외했다 — 테스트 실행이 만드는 산출물이고 추적 대상이 아니다.
+`.py` 파일 수는 양쪽 **28** 로 같아 추가도 삭제도 없다.
+
+**계기가 눈멀지 않았다는 대조군**: 같은 명령을 반드시 달라야 하는 디렉터리에 쐈다.
+
+```
+$ diff -rq -x '__pycache__' <2488336 트리>/server/orchestrator <readback002>/server/orchestrator
+Files .../server/orchestrator/tools.py and .../server/orchestrator/tools.py differ
+control exit=1
+```
+
+즉 위 두 `exit=0` 은 실측된 무변경이지 계기의 침묵이 아니다.
+
+**C3 — 호출 지점별 조회 증가분 (REQ-READBACK2-012 · 일곱 자리 전부)**
+
+계기는 **핸들러 본문의 `read_fixture_type_names` 호출 노드 수**다. 이 함수는 루트
+1 회로 끝나므로(`mode_read.py:141` 「Query count is 1」) 그 수가 곧 그 핸들러가 새로
+내는 루트 조회 수다. 각 `read_inventory` 호출 노드에서 AST 부모를 거슬러 올라가
+가장 안쪽 함수 정의를 찾고, 그 부분트리에서 호출 노드를 셌다.
+
+| 수리 전 | 수리 후 | 소유 핸들러 (def 행: 전 → 후) | 전 | 후 | 증가분 |
+|---|---|---|---|---|---|
+| `:3014` | `:3032` | `precheck_patch` (3001 → 3001) | 0 | 1 | **+1** |
+| `:3206` | `:3235` | `precheck_vectorworks_diff` (3182 → 3202) | 0 | 1 | **+1** |
+| `:3397` | `:3436` | `apply_vectorworks_patch` (3373 → 3404) | 0 | 1 | **+1** |
+| `:4039` | `:4086` | `resolve_patch_address` (4009 → 4048) | 0 | 1 | **+1** |
+| `:4433` | `:4499` | `patch_fixtures` (4242 → 4291) | 0 | 1 | **+1** |
+| `:4624` | `:4695` | `_verify` (4622 → 4690 · `patch_fixtures` 안의 중첩 함수) | 0 | 0 | **+0** |
+| `:6356` | `:6429` | `import_lxseq_patch` (6188 → 6261) | 1 | 1 | **+0** |
+
+증가분 0 인 두 자리는 사유가 서로 다르다.
+
+- **`_verify` (+0)** — `patch_fixtures` 가 진입부에서 한 번 읽은 표를 나눠 쓴다.
+  상위 `patch_fixtures` 부분트리의 계수가 **1** 이고 그 안의 `_verify` 부분트리가
+  **0** 이므로, 그 1 회는 `_verify` 바깥에 있다. 두 자리(`:4499` · `:4695`)를 한
+  번이 덮는다 — AC-READBACK2-013b 가 요구하는 상한 그대로다.
+- **`import_lxseq_patch` (+0)** — 이 자리는 수리 대상이 아니었다. 수리 전에 이미
+  `type_names=` 를 넘기고 루트 판독 1 을 갖고 있던 **유일한** 자리다(§E.1 「`:6356`
+  하나뿐」). 이 회차가 더한 조회가 없다.
+
+합계: 수리 대상 여섯 자리 중 다섯 핸들러가 각각 +1, 중첩된 `_verify` 는 상위와
+공유해 +0, 수리 대상이 아니던 일곱째 자리는 +0. **어느 핸들러도 +2 를 넘지 않는다.**
+
+**계기 갈래 주의 (두 표가 다른 것을 센다)**: 이 표는 **구조 계수**다. §E.2 M1 의
+조회 계수표는 **실행 계수**(가짜 포트가 기록한 `query_state("Patch/FixtureTypes")`
+횟수)이고 거기에는 `walk_mode_widths` · `read_type_mode_widths` 가 내부에서 내는
+루트 조회가 함께 잡힌다. 그래서 `:3014` 의 수리 전 값이 M1 표에서는 **1**, 이
+표에서는 **0** 이다 — 두 값은 서로 다른 대상을 센 것이지 모순이 아니다. **증가분은
+두 계기가 일치한다(+1).**
+
+**C4 — 오프라인 명령 전수 (`acceptance.md §A`)**
+
+```
+$ uv run pytest server/tests/test_safety_gate.py server/tests/test_safety_lock_monitor.py \
+    server/tests/test_deploy_health_ux.py server/tests/test_responder_roundtrip.py -q
+112 passed in 16.37s
+
+$ npm --prefix ui test -- protocol.test.ts
+ Test Files  1 passed (1)
+      Tests  115 passed (115)
+
+$ uv run pytest server/tests/test_prechk_handle_types.py server/tests/test_prechk_inventory.py \
+    server/tests/test_vwx_diff.py server/tests/test_vwx_typegap.py \
+    server/tests/test_paperwork_patch_sheet.py -q
+161 passed in 0.68s
+
+$ uv run pytest server/tests/test_readback_type_names_wiring.py server/tests/test_prechk_tool.py \
+    server/tests/test_overlap_preserve.py -q
+143 passed in 1.45s
+
+$ uv run pytest server/tests -q
+10979 passed, 12 skipped, 1 warning in 147.01s (0:02:27)
+
+$ uv run ruff check server/
+All checks passed!
+
+$ uv run ruff format --check server/ ui/
+484 files already formatted
+```
+
+두 핀(초크포인트 · 조회 예산)을 함께 돌린 `143 passed` 와 전수 **실패 0** 은 §G 의
+두 grant 뒤 회귀가 없음을 뜻한다. §G-5 가 `c08680b` 에서 잰 `10979 passed, 12
+skipped` 와 같은 값이 브랜치 끝 `86f6ae1` 에서도 나온다.
+
+#### 기준 귀속
+
+- **트리와 커밋**: `.claude/worktrees/readback002` · 브랜치 `WT-readback-gate` · 끝
+  커밋 `86f6ae1` · base `2488336`(= `origin/main`, 이 회차 실측). 브랜치는 base 대비
+  10 커밋 앞이고 뒤진 커밋은 없다 —
+  `git rev-list --count --left-right origin/main...WT-readback-gate` → `0	10`.
+- **수리 전 원본**: `2488336` 을 체크아웃한 별도 워크트리의
+  `server/orchestrator/tools.py`. 그 트리는 `git status --short` 가 빈 출력이고
+  `git diff --stat origin/main -- server/orchestrator/tools.py` 가 0 바이트다 — base
+  블롭과 바이트 동일함을 **확인한 뒤** 기준으로 썼다. 기억한 값이 아니다.
+- **수리 전 좌표 재확인**: 위 구조 계수가 답한 수리 전 호출 행
+  `[3014, 3206, 3397, 4039, 4433, 4624, 6356]` 과 `type_names=` 보유 1 건(`:6356`)은
+  §E.1 「코드 좌표 실측 확인」이 적어 둔 값과 **일치한다**. 기준이 흐르지 않았다.
+- 위 모든 출력은 이 회차에 이 트리에서 실행된 것이다.
+
+#### 미검증
+
+- **제3 핸들 형태 (REQ-READBACK2-011)** — `^FixtureType (\d+)$` 밖의 **미관측**
+  형태가 실기 콘솔에 실제로 존재하는지 재지 않았다. M1 이 쏜 8 종은 「그 형태가
+  아니면 표식 없이 통과한다」는 현재 동작을 못박은 것이고, 콘솔이 어떤 제3 형태를
+  답하는지는 관측하지 않았다. **「없다」가 아니라 「안 쟀다」다.** 이 SPEC 은 이
+  구멍을 열어 둔 채 명시하기로 설계됐다.
+- **라이브 응답기 버전 미판독** — 이 회차도 콘솔에 접촉하지 않았다. 이 SPEC 은
+  검출 기계를 만들 뿐이고(§E.2 B2), 실기 응답기가 어느 버전을 답하는지 판독하는
+  일은 SPEC-COPILOT-READBACK-001 M3 의 몫이다. 따라서 게이트가 실기에서 어느
+  갈래로 떨어지는지는 이 회차의 증거에 없다.
+- **AC-012 계기의 형태 차이** — `acceptance.md §A` 의 문면은 `readback002` 안에서
+  `git diff --stat origin/main -- …` 을 도는 것이다. 이 회차의 실행 주체는 격리된
+  별도 워크트리라 `readback002` 를 향한 git 명령이 도구 가드에 거절됐다. 그래서
+  (1) 브랜치 끝을 향한 ref 대 ref diff 와 (2) 작업 트리 대 작업 트리 `diff -r` 둘로
+  대신했다. (2)가 커밋되지 않은 변경까지 덮으므로 문면의 계기보다 좁지 않다고
+  본다. 다만 **문면 그대로의 명령은 이 회차에 실행되지 않았다.**
+- **`:3206` · `:3397` 의 실행 경로 도달** — M1 에서와 같이 구조 계수로만 계상했다.
+  두 핸들러는 base64 VWX 아카이브와 diff 리포트 페이로드를 요구해 구동하지 않았다.
+  「본문에 몇 번 적혀 있는가」는 이진 판정되지만 「분기·조기 반환을 지나 실행
+  경로에서 실제로 한 번 도달하는가」는 이 두 자리에서 재지 않았다.
+- **원격 CI** — `WT-readback-gate` 는 원격에 없다. 푸시하지 않았고 깨끗한 환경의
+  전수 실행은 관측하지 않았다. 위 숫자는 전부 로컬 워크트리 실측이다.
+- **`build_patch_sheet` 소비자 4 곳 중 셋** — M1 의 미검증 그대로다.
+  `paperwork_api.py` · `bundle.py` · 시트 핸들러의 표 전달은 코드 경로로만
+  확인했고, 각 경로에서 늘어난 조회를 계수기로 실측하지 않았다.
+- **매직시트 인쇄면** — 미번역 표식이 매직시트 렌더에서 어떻게 보이는지 재지
+  않았다(패치시트 절만 확인).
+
+#### 잔여 위험
+
+- **행 번호는 늙는다.** 위 표의 수리 후 행 번호는 `86f6ae1` 시점 값이고 다음 편집
+  한 번에 흐른다. 흐르지 않는 것은 핸들러 이름과 증가분이며, 계기를 AST 로 둔
+  이유도 그것이다.
+- **구조 계수와 실행 계수의 간극.** 이 절의 증가분은 「호출이 본문에 몇 개
+  있는가」다. 조건 분기 안으로 들어간 호출은 실행 경로에서 0 회가 될 수 있고,
+  반복문 안이면 여러 번이 될 수 있다. 다섯 자리 모두 현재는 조건 없는 직선
+  자리지만, 이 성질은 코드가 바뀌면 함께 바뀐다.
+- **넓힌 두 핀의 수명.** §G 의 두 grant 는 핀 리터럴을 이 회차 실측에 맞춰 넓혔다.
+  다음 회차가 조회를 또 하나 더하면 핀이 다시 걸릴 텐데, 그때 「지난번에도 넓혔다」가
+  넓힐 사유가 되어서는 안 된다. 핀의 값어치는 매번 명시적 인지를 요구하는 데 있다.
+- **전수 초록이 실기 정합의 증거는 아니다.** 10979 건은 전부 오프라인 가짜 포트
+  위에서 돈다. 실기 콘솔이 이름 표를 어떤 형태로 답하는지, 그 표가 매퍼의 기대와
+  맞는지는 이 스위트가 답하지 않는다.
+- **`__pycache__` 제외의 사각.** C2 의 작업 트리 대조는 `__pycache__` 를 제외했다.
+  추적 대상이 아닌 산출물이지만, 그 이름의 디렉터리에 사람이 쓴 파일이 섞이면 이
+  계기는 놓친다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
