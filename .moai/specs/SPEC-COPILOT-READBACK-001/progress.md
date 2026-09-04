@@ -242,9 +242,242 @@ Preset 개체에서 두 테이블은 **비어 있다**(Part 등 다른 클래스
 
 산출물: `docs/research/ma3-effects/10-preset-property-readback-sweep.md`
 
+### M3 — 재임포트 1회 + 라이브 검증 + 사실 문서 갱신 (2026-09-04, 읽기 전용 잔여분)
+
+기준 트리: 워크트리 `.claude/worktrees/agent-ab0e1ec2f318efaf1`, 브랜치
+`WT-table-serialize`. 인터프리터: **그 트리 자신의** `.venv/bin/python` —
+`server.__file__` 이 같은 트리를 가리키는 것을 실행 전에 확인했고
+(`/…/agent-ab0e1ec2f318efaf1/server/__init__.py`), 도구의 `assert_same_tree` 가드도 살아 있었다.
+
+**측정 프로브의 콘솔 쓰기 0건** — 쏜 것은 `ping`·`introspect`·`props` 뿐이다.
+다만 「이 회차가 콘솔에 아무것도 안 보냈다」는 **거짓이다**: 전체 스위트를 2회 돌렸고
+그때마다 `SaveShow` 가 2건씩, 합계 4건 발사됐다(전부 `ok:false`). 이것은 의도한 쓰기가
+아니라 스위트의 부수 효과이고, 실측 근거와 기전은 아래 §4 에 적었다.
+M3-1(계획상 유일한 쓰기인 1.6.4 재임포트)은 이 회차가 아니라 **오케스트레이터가 수행**했고,
+이 절은 그 사실을 인용하되 자기 실측으로 바꿔 적지 않는다.
+
+#### 1. 주장 (Claim)
+
+| AC / 항목 | 판정 | 주장 |
+|---|---|---|
+| AC-READBACK-015 | **PASS-WITH-FINDING** | 두 팔 중 하나만 선다. **버전 팔 PASS**: 라이브가 `1.6.4` 를 답하고 배포 근거는 `ping` 뿐이다(main 문면을 증거로 쓰지 않았다). **쓰기 예산 팔은 반증됐다**: 「쓰기 명령은 재임포트 1건뿐」이 아니다 — 스위트 실행마다 `SaveShow` 2건이 추가로 발사된다(§4 실측) |
+| B2 (Part 클래스 테이블 형상) | **해소** | `SELECTIONDATA` = `{}` · `DEPENDENCIES` = 레코드 배열. Part 7개 실측 |
+| `console-channel-facts.md` §4 갱신 | 완료 | 「테이블 주소」 문단을 실측 형상으로 대체 |
+| AC-READBACK-016 | PASS | 이 절이 그 5절 형식이고 §4 미검증 절이 비어 있지 않다 |
+
+#### 2. 증거 (Evidence) — 명령과 그 출력
+
+배포 확인(읽기 전용 `ping`, 이 회차가 직접 실행):
+
+```
+$ .venv/bin/python server/tools/responder_roundtrip.py \
+    --listen-port 9005 --skip-exec --expect-version 1.6.4 --path DataPool --wait 5
+round-trip against osc.udp://127.0.0.1:8000 (replies on 9005)
+  [PASS] ping: ok
+         live version=1.6.4 plugin=CopilotResponder
+  [PASS] state: ok
+         node={'childCount': 16, 'class': 'Pool', 'name': 'Default'} children=16
+result: PASS
+```
+
+음성 대조군을 **먼저** 쐈다 — 이것이 통과한 뒤에야 아래 `ok` 가 증거로 선다:
+
+```
+$ … introspect_probe.py --listen-port 9005 --path "DataPool/Sequences/3/4/ZZZNOTREAL9"
+introspect failed: path segment not found: 'ZZZNOTREAL9' (in DataPool/Sequences/3/4/ZZZNOTREAL9)
+exit=1
+```
+
+열거 완전성 산술(Part 개체):
+
+```
+$ … introspect_probe.py --listen-port 9005 --path "DataPool/Sequences/3/4/1" --all-pages
+class: Part | total: 195 | 도착: 195 | truncated: False | paging: complete | 이름 중복 0
+```
+
+Part 프로퍼티 판독 — 양성·음성 대조군을 같은 회신에 실었다:
+
+```
+$ … introspect_probe.py --listen-port 9005 --path "DataPool/Sequences/3/4/1" \
+    --names "NAME,OWNDATAPRESENT,MEMORYFOOTPRINT,SELECTIONDATA,DEPENDENCIES,STOREDDATA,PRESETDATA,REFERENCES,__NOSUCHPROP_CONTROL__"
+NAME            t=string  v="Q010 INTRO 화사"      <- 양성 대조군
+OWNDATAPRESENT  t=boolean v="true"                 <- 양성 대조군
+MEMORYFOOTPRINT t=number  v="4580"                 <- 양성 대조군
+SELECTIONDATA   t=table   v="{}"
+DEPENDENCIES    t=table   v="[{\"content_crc\":3271575126602050978,\"key\":\"Preset 4.1\",\"name_crc\":-3774025751232341734}]"
+STOREDDATA      ok=false  e="property not readable: STOREDDATA"
+PRESETDATA      t=string  v=""
+REFERENCES      t=string  v=""
+__NOSUCHPROP_CONTROL__ ok=false e="property not readable: __NOSUCHPROP_CONTROL__"  <- 음성 대조군
+truncated: false
+```
+
+Part 7개 표본(한 개체로 클래스를 일반화하지 않기 위해 넓혔다):
+
+| 경로 | NAME | SELECTIONDATA | DEPENDENCIES | truncated |
+|---|---|---|---|---|
+| `DataPool/Sequences/3/1/1` | `Part 0` | `{}` | `{}` | false |
+| `DataPool/Sequences/3/2/1` | `Part 0` | `{}` | `{}` | false |
+| `DataPool/Sequences/3/4/1` | `Q010 INTRO 화사` | `{}` | 1건 `Preset 4.1` | false |
+| `DataPool/Sequences/3/6/1` | `Q030 VERSE1 확장` | `{}` | 2건 `Preset 4.4`·`Preset 21.1` | false |
+| `DataPool/Sequences/3/7/1` | `Q040 PRE1 축적` | 미조회 | 1건 `Preset 4.4` | false |
+| `DataPool/Sequences/3/10/1` | `Q070 VERSE2 하강` | 미조회 | 1건 `Preset 4.3` | false |
+| `DataPool/Sequences/3/14/1` | `Q110 BRIDGE 절제` | 미조회 | `{}` | false |
+
+값 크기와 상한의 거리(측정):
+
+```
+3/4/1 entries=1 bytes=88  cap=240 headroom=152
+3/6/1 entries=2 bytes=175 cap=240 headroom=65   (엔트리당 약 87바이트)
+```
+
+**콘솔 쓰기 0건의 기계적 근거** — 주장이 아니라 두 갈래로 쟀다:
+
+```
+1) 정적: server/tools/introspect_probe.py:139  attempt_session_backup=False
+   (build_console_stack 의 기본값은 True 이므로 이 인자가 그 발사를 막는다)
+2) 실측: 런타임 감사 로그 server/audit_logs/audit-20260904.jsonl 에서
+   이 회차 구간(10:35~10:37) 19행 전부 kind=introspect_query / props_query.
+   kind=backup 행 0건.
+```
+
+전체 스위트(같은 트리·같은 인터프리터):
+
+```
+$ .venv/bin/python -m pytest server/tests -q
+10992 passed, 12 skipped, 1 warning in 148.77s (0:02:28)
+exit=0
+```
+
+#### 3. 기준 귀속 (Baseline-attribution)
+
+- 라이브 계기: 응답기 `1.6.4`, OSC `127.0.0.1:8000` 송신, 회신 포트 `9005`.
+  버전은 **이 회차가 직접 쏜 `ping`** 으로 잰 값이다(위 §2). 오케스트레이터도
+  같은 결과를 보고했으나, 여기 적은 출력은 이 회차·이 트리에서 다시 잰 것이다.
+- 재임포트 행위 자체는 **오케스트레이터 귀속**이다. 이 회차는 그 실행을 관측하지
+  않았고, 관측한 것은 그 뒤 상태(`ping` 이 1.6.4 를 답함)뿐이다.
+- 스위트 숫자 `10992 passed`는 이 회차에서 다시 잰 값이며 옮겨 온 것이 아니다.
+
+#### 4. 미검증 (Gaps)
+
+- **`SELECTIONDATA` 가 채워지는 조건은 여전히 미관측**(옛 B2 의 남은 절반).
+  Part 7개·Preset 2개 전부 `{}` 였다. 「비어 있다」를 쟀을 뿐 **무엇이 이 축을
+  채우는지는 못 쟀다** — 채워진 표본을 한 번도 못 봤으므로, 이 채널이 선택
+  정보를 실을 수 있는지 자체가 아직 열린 질문이다.
+- **Part·Preset 이외 클래스의 테이블 형상은 미관측.** Cue·Sequence·Group 등은
+  이 회차가 건드리지 않았다.
+- **의존 3건 이상인 Part 를 못 찾아 절단을 재지 못했다.** 3건부터 240바이트를
+  넘는다는 것은 87바이트/엔트리에서 나온 **산술이고 측정이 아니다.**
+- **`REFERENCES` 의 페이로드는 해독하지 않았다.** Part 에서는 빈 문자열이었고,
+  M2 가 Preset 에서 본 `<정수>:<64비트 정수>` 형태와 다르다 — 왜 다른지 안 쟀다.
+- **🔴 전체 스위트 실행이 라이브 콘솔에 `SaveShow` 를 2건 쏜다 — 실측, 원인 호출자는 미특정.**
+  이 회차가 스위트를 **두 번** 돌렸고, 두 번 다 그 실행 구간 끝에 `kind=backup`
+  `command=SaveShow` 행이 **정확히 2행씩** 새로 생겼다 — 1회차 `10:43:17`·`10:43:26`,
+  2회차 `10:51:13`·`10:51:22`. 그 두 구간에 다른 종류의 행은 0건이다. 즉
+  **스위트 1회 = SaveShow 2건**이 재현됐다(2/2). 같은 짝이 이 회차 이전에도
+  하루 종일 남아 있다(08:37·08:43·08:47·10:23) — M0·M2 의 스위트 실행 흔적으로 보인다.
+  두 건 모두 `ok:false`(「5초 안에 결과 확인 없음」)이므로 **효과는 확인되지 않았고**,
+  발사 자체는 일어났다. 기전은 `build_console_stack` 의 `attempt_session_backup`
+  기본값이 **True** 라는 것 — 이 인자를 넘기지 않는 호출자는 스택 조립만으로
+  `SaveShow` 를 쏜다(`server/safety/console.py:291` 이 그 대기 문자열의 출처).
+  **어느 테스트인지는 특정하지 못했다**: 읽어 본 두 곳(`test_web_e2e.py`
+  `test_safety_bootstrap.py`)은 가짜 콘솔·tmp 감사 디렉터리로 격리돼 있어 해당 없다.
+  **AC-READBACK-015 의 「콘솔 쓰기 총계 1」 셈은 이 사실 위에서 다시 봐야 한다** —
+  이 회차의 프로브는 0건이지만, 스위트를 돌리는 행위가 매번 2건을 더한다.
+- **git 검증 일체 미실행** — 이 회차를 실행한 에이전트 세션이 다른 워크트리
+  (`agent-ad6f71aaf77af45e9`)에 격리돼 격리 가드가 대상 트리로의 모든 git 명령을
+  거부했다. 그래서 `git diff --stat`(범위 침범 검사) · `git status` ·
+  PRESERVE 목록 대조 · 커밋을 **하나도 수행하지 못했다.** 아래 §E.3 의 git 계열
+  항목이 `unmeasured` 인 이유가 이것이다.
+
+#### 5. 잔여 위험 (Residual-risk)
+
+- **표본이 한 시퀀스(`Sequences/3`)에 몰려 있다.** Part 7개는 전부 같은 시퀀스의
+  파트다. 「Part 클래스는 이렇다」가 아니라 「이 시퀀스의 Part 는 이렇다」까지가
+  잰 넓이다.
+- **쇼 지문은 노화한다.** 이 저장소에는 쇼가 하루 사이에 바뀐 전례가 있다.
+  위 경로·이름·CRC 는 2026-09-04 10:35~10:37 시점의 값이고, 재현할 때는
+  경로 존재부터 다시 재야 한다.
+- `content_crc` · `name_crc` 는 **부호 있는 64비트로 도착한다**(음수 관측:
+  `-3774025751232341734`). 소비자가 부호 없는 정수로 읽으면 값이 어긋난다.
+- 빈 테이블이 `[]` 가 아니라 `{}` 로 오므로, 소비자가 `DEPENDENCIES` 를 항상
+  배열로 가정하면 빈 경우에 타입이 갈린다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+```yaml
+run_complete_at: 2026-09-04T10:46:35Z
+run_commit_sha: pending-backfill-m3   # 이 회차는 커밋을 수행하지 못했다 — 아래 blocker 참조
+run_status: evidence-complete-commit-blocked
+
+# AC 회계 (정본은 acceptance.md, AC 총 16건)
+ac_total: 16
+ac_pass_count: 10            # 001·002·003·004·005(M0) · 009·010·013·014(M2) · 016(M3)
+ac_pass_with_qualifier: 3    # 006 PASS-WITH-DEBT · 007 PASS-WITH-BLOCKER(M0 기록 그대로) · 015 PASS-WITH-FINDING(M3)
+ac_no_recorded_verdict: 3    # 008 · 011 · 012 — 미발견 경로라 공허 충족이나 명시 판정이 기록에 없다
+ac_fail_count: 0
+
+# M0 이 남긴 blocker 의 현재 상태 (관측만, M0 판정은 고쳐 적지 않는다)
+m0_blocker_expected_responder_version: resolved-observed
+  # M0 시점 3건 빨갛던 원인(server/safety/responder_version.py 의 1.6.3 고정)이
+  # 지금은 안 보인다 — 전체 스위트 10992 passed / 0 failed. READBACK-002 가
+  # 그 한 줄을 옮긴 것으로 보이나, 그 인과는 이 회차가 재지 않았다.
+
+# 이 회차가 만진 파일
+m3_files_touched: 2
+  # docs/runbooks/console-channel-facts.md
+  # .moai/specs/SPEC-COPILOT-READBACK-001/progress.md
+total_run_phase_files: unmeasured   # 누적 집계는 git diff 가 필요하고 아래 사유로 못 했다
+
+# 콘솔 예산
+console_writes_by_probes: 0
+  # 정적 근거: introspect_probe.py:139 attempt_session_backup=False
+  # 실측 근거: audit-20260904.jsonl 10:35~10:37 19행 전부 introspect/props, backup 0행
+console_writes_by_test_suite: 4
+  # 스위트 2회 실행 x SaveShow 2건. 의도한 발사가 아니라 스위트가 부수적으로 쏜 것이고,
+  # 4건 모두 ok:false(결과 미확인)다. 상세와 기전은 §E.2 M3 §4 미검증 참조.
+  # 「프로브는 0건」과 「이 회차가 콘솔에 아무것도 안 보냈다」는 다른 주장이다 — 후자는 거짓이다.
+console_write_budget_total: 1        # M3-1 재임포트 — 오케스트레이터 수행, 이 회차 아님
+console_write_budget_caveat: 스위트 1회 실행마다 SaveShow 2건이 발사된다(실측 2/2, §4 참조). 이 회차 스위트 2회 = 4건
+
+# 품질
+full_suite: "10992 passed, 12 skipped, 1 warning in 148.11s"   # 문서 편집 후 재측정
+full_suite_runs_this_milestone: 2   # 편집 전 148.77s / 편집 후 148.11s, 둘 다 0 failed
+new_warnings_or_lints_introduced: 0
+  # 이 회차 변경은 마크다운 2개뿐이라 파이썬 린트 표면이 없다. ruff 는 돌리지 않았다.
+  # 스위트의 warning 1건은 fastapi/starlette 사전 존재 경고이며 이 회차 유래가 아니다.
+cross_platform_build: not_applicable
+  # 파이썬 프로젝트이고 교차 컴파일 단계가 없다. 대체 증거는 위 전체 스위트다.
+
+# git 계열 — 전부 미수행 (사유 동일)
+l44_pre_commit_fetch: not_performed
+l44_post_push_fetch: not_performed
+preserve_list_post_run_count: unmeasured
+scope_intrusion_check: unmeasured    # server/prechk · vwx · paperwork 대조 못 함
+git_blocked_reason: >
+  이 회차를 실행한 에이전트 세션이 워크트리 agent-ad6f71aaf77af45e9 에 격리됐고,
+  격리 가드가 대상 워크트리(agent-ab0e1ec2f318efaf1)로 향하는 git 명령을 cd 형태와
+  -C 형태 양쪽 모두 거부했다. 파일 쓰기는 되었으나 git 은 한 건도 실행하지 못했다.
+
+m1_to_mN_commit_strategy: 마일스톤별 개별 커밋 · 브랜치 WT-table-serialize · 푸시 없음
+
+# 작업 트리 상태 (git 대신 mtime 으로 잰 것 — git 이 막혀 있어 status 를 못 봤다)
+working_tree_note: >
+  이 회차가 쓴 파일은 정확히 2개다 —
+  docs/runbooks/console-channel-facts.md (10:39:58Z) ·
+  .moai/specs/SPEC-COPILOT-READBACK-001/progress.md (10:53:25Z).
+  그러나 트리에는 이 회차 이전의 미커밋 변경이 이미 있었다:
+  server/lxseq/preset_mapper.py 와 docs/research/ma3-effects/10-preset-property-readback-sweep.md
+  가 둘 다 10:20:36Z — M2 의 산출물이고 이 회차가 건드리지 않았다.
+  또한 스위트 실행이 server/paperwork_output/**.html 과 .pytest_cache · .ruff_cache 를
+  트리에 새로 썼다(예: cue_sheet.html 10:50:40Z, 두 번째 스위트 구간).
+commit_staging_warning: >
+  그러므로 커밋할 때 git add -A 를 쓰면 안 된다. 스위트가 만든 paperwork_output HTML 과
+  캐시가 함께 실린다. 경로를 명시해서 담아라 — 최소한
+  docs/runbooks/console-channel-facts.md 와 progress.md 두 개이며,
+  M2 의 preset_mapper.py 를 이 커밋에 포함할지는 M2 소유자의 판단이다.
+m3_commit: PENDING — 작업 트리에 미커밋 상태로 남겨 인계한다
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
