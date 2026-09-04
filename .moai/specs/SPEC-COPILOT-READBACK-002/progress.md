@@ -117,7 +117,7 @@ ERROR server/tests/test_responder_roundtrip.py
 ```yaml
 run_phase: M0
 run_complete_at: 2026-09-04T01:52:00Z
-run_commit_sha: pending-backfill-m0
+run_commit_sha: 019399b
 run_status: ac-pass
 ac_scope: AC-READBACK2-001..006   # M1 이 007..013b 를 별도로 계상한다
 ac_pass_count: 6
