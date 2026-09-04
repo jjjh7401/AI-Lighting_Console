@@ -104,6 +104,42 @@ ERROR server/tests/test_responder_roundtrip.py
 
 **계획 대비 파일 1건 추가**: `server/tests/test_safety_console.py`. plan.md §E M0 의 테스트 파일 목록 4건에는 없지만, AC-READBACK2-001 이 재는 대상은 `ConsoleLink.ping` 이고 그 테스트 홈이 이 파일이다. 범위 봉투(`server/safety/` + 그 테스트) 안이며 금지 경로가 아니다.
 
+**미해결 차단 1건 — 안전 초크포인트 파일 집합 핀 (`test_overlap_preserve.py::TestSafetyChokepointFileSet`, 3건 FAIL)**
+
+M0 의 커밋이 `server/safety/` 의 **고정된 변경 집합 핀**을 넓혔고, 그 핀은 설계상 **명시적 승인**을 요구한다. 자체 승인하지 않고 차단으로 올린다.
+
+계기: `_SAFETY_EXPECTED_DELETIONS` / `_SAFETY_ALLOWED_DELETED_LINES`(`server/tests/test_overlap_preserve.py:319-325` 및 그 위 주석 `:286-318`). 기준 `_PRECHK_BASE = 95687a0e`.
+
+실측 (`git diff --numstat 95687a0e..HEAD -- server/safety/`):
+
+| 파일 | 핀 (삭제행) | 현재 | 성격 |
+|---|---|---|---|
+| `server/safety/console.py` | 57 | **59** | 내 변경이 2행 삭제 |
+| `server/safety/gate.py` | 6 | **8** | 내 변경이 2행 삭제 |
+| `server/safety/monitor.py` | (행 없음) | **3** | **새 행** |
+| `server/safety/responder_version.py` | (행 없음) | **0** | **새 행** (신규 파일) |
+| audit.py · backup.py · blacklist.yaml | 10 · 2 · 1 | 동일 | 무변경 |
+
+내 변경이 삭제한 6행 전문 (`git diff --unified=0 2488336..HEAD`):
+
+```
+console.py  -        """Responder heartbeat; updates the health monitor when attached."""
+console.py  -            self._monitor.note_ping_success()
+gate.py     -        """Probe the responder once; audited; returns the resulting health state."""
+gate.py     -            self.monitor.note_ping_success()
+monitor.py  -    def note_ping_success(self) -> None:
+monitor.py  -        """A responder heartbeat answered — the full path is healthy."""
+monitor.py  -        self._state = self.ONLINE
+```
+
+**기준 확인**: 이 핀은 base `2488336` 에서 **정확히 초록**이었다(`git diff --numstat 95687a0e..2488336 -- server/safety/` 가 핀 5행과 일치). 즉 이 3건은 내 변경이 만든 것이며 사전 실패가 아니다.
+
+**왜 자체 승인하지 않는가**: 핀 위 주석이 성장 이력을 「granted exception」으로 기록하고 한 건을 **"User-approved after the alternatives were searched and rejected"** 로 적으며, 「Another file under the chokepoint … still fails the gate」라고 못박는다. 내 변경은 **파일 2개 추가 + 삭제 계수 2건 상향 + 핀 텍스트 6행 추가**로, 기존 어떤 grant 보다 넓다. 여기에 이 SPEC 이 답을 갖고 있지 않은 교차 소유권 질문이 겹친다 — 같은 주석이 **「WRITEGATE-001 owns `server/safety/`」** 라고 적는데, 본 SPEC 의 `plan.md §E M0` 표는 `console.py`·`gate.py`·`monitor.py` + `server/safety/` 신규 상수를 M0 의 산출물로 명시한다. 어느 쪽이 이기는지는 감독/오케스트레이터 결정이다.
+
+**필요한 결정**: (a) 핀을 넓히고 사유를 주석에 기록한다(위 6행 + 2개 행 추가), (b) 상수를 `server/safety/` 밖으로 옮겨 신규 행 1개를 없앤다(단 `monitor.py`·`console.py`·`gate.py` 행은 남는다 — 버전 게이트는 원리적으로 초크포인트를 건드린다), (c) WRITEGATE-001 소유로 이관한다.
+
+**계기의 사각**: 이 핀은 `BASE..HEAD` 를 diff 하므로 **커밋 전 테스트 실행에는 보이지 않는다.** 회차 중 커밋 전 전체 스위트가 `10951 passed` 로 초록이었던 것은 참이지만, 이 가드에 대해서는 구조적으로 눈이 먼 관측이었다. 커밋 후 전체 스위트가 `10948 passed, 3 failed` 다.
+
 **미검증 (M0)**
 
 - **라이브 응답기 버전** — 본 회차는 콘솔에 접촉하지 않았다. 만든 것은 **탐지 기계**이고, 라이브가 실제로 1.6.1 인지 1.6.3 인지는 재지 않았다(B2 · SPEC-COPILOT-READBACK-001 M3 소유).
@@ -118,7 +154,7 @@ ERROR server/tests/test_responder_roundtrip.py
 run_phase: M0
 run_complete_at: 2026-09-04T01:52:00Z
 run_commit_sha: 019399b
-run_status: ac-pass
+run_status: ac-pass-with-blocker   # AC-001..006 전부 PASS · 초크포인트 핀 승인 1건 미해결
 ac_scope: AC-READBACK2-001..006   # M1 이 007..013b 를 별도로 계상한다
 ac_pass_count: 6
 ac_fail_count: 0
@@ -126,6 +162,8 @@ preserve_list_post_run_count: 0   # server/prechk/ · server/vwx/ · console/lua
 console_writes: 0
 mutation_checks: 7/7 red
 new_warnings_or_lints_introduced: 0   # ruff check 통과 · ruff format 통과 · tsc exit 0
+open_blockers: 1   # test_overlap_preserve.py::TestSafetyChokepointFileSet 3 FAIL — §E.2 「미해결 차단」 참조
+full_suite_post_commit: 10948 passed / 3 failed / 12 skipped
 total_run_phase_files: 13   # 신규 1 + 수정 12 (progress.md · spec.md frontmatter 제외)
 m1_to_mN_commit_strategy: M0 단일 커밋 + SHA 백필 커밋 1건. 푸시는 오케스트레이터 소유.
 l44_pre_commit_fetch: not-run   # 격리 워크트리 · 브랜치 WT-readback-gate 는 원격에 없다
