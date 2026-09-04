@@ -33,7 +33,7 @@
 | AC-READBACK2-003 [부정 대조군] (낮은 버전 차단) | **PASS** | `uv run pytest server/tests/test_safety_gate.py::TestResponderVersionGate -q` | `cleared is False` · `status == "blocked_responder_version_mismatch"`(≠ `blocked_responder_degraded`) · `notice` 에 `"1.6.1"` 과 `"재임포트"` · `_events(audit, "blocked")` 1건이며 그 `reason` 에 `"1.6.1"` · `gate.status["health"] == "responder_version_mismatch"` · `console.executed == []` |
 | AC-READBACK2-004 [부정 대조군] (미인식 ≠ 낮은 버전) | **PASS** | 같은 명령 + `uv run pytest server/tests/test_safety_lock_monitor.py::TestVersionClassification -q` | 높은 버전(`9.9.9`)·파싱 불가(`dev-build`) 모두 `blocked_responder_version_unrecognized` 이고 `!= blocked_responder_version_mismatch`, `notice` 에 `"재임포트"` **없음**. 분류 술어는 낮음·같음·높음·파싱 불가·빈 문자열·공백·부재 **14 케이스**를 파라메트라이즈해 이진 판정 |
 | AC-READBACK2-005 [부정 대조군] (오프라인 비가림) | **PASS** | 같은 명령 + `::TestHealthMonitorVersionStates` | 버전 불일치가 먼저 성립한 뒤 활동 창(15s)을 넘긴 침묵 → `status == "blocked_console_offline"`, `notice` 에 `"version"`·`"버전"`·`"재임포트"` **없음**. 창 **안**의 침묵은 `responder_degraded` (성공한 ping 자체가 콘솔 트래픽이므로) — 어느 쪽이든 버전 상태는 남지 않는다 |
-| AC-READBACK2-006 (일치 시 무회귀) | **PASS** | 같은 명령 + 전체 스위트 | `cleared is True` · `status == "cleared"` · `health == "online"` · `_events(audit, "blocked") == []`. 전체 스위트 `10951 passed, 12 skipped` — 기존 테스트 회귀 0건 |
+| AC-READBACK2-006 (일치 시 무회귀) | **PASS** | 같은 명령 + `uv run pytest server/tests -q` | `cleared is True` · `status == "cleared"` · `health == "online"` · `_events(audit, "blocked") == []`. **행동 회귀 0건**: 커밋 후 전체 스위트 `10948 passed, 3 failed, 12 skipped` 이고 그 3건은 전부 `TestSafetyChokepointFileSet`(아래 「미해결 차단」) — 즉 범위 핀이며 응답기·게이트 행동 테스트는 하나도 깨지지 않았다. 커밋 **전** 실행은 `10951 passed` 였는데, 그 차이는 코드가 아니라 그 핀이 `BASE..HEAD` 를 diff 한다는 계기 성질에서 온다 |
 
 **오프라인 명령 전문 (acceptance.md §A)**
 
