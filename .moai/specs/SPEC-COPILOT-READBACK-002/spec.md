@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-READBACK-002
 title: "되읽기 채널의 신뢰 — 응답기 버전 게이트와 타입명 번역"
 version: "0.1.1"
-status: in-progress
+status: completed
 created: 2026-09-03
 updated: 2026-09-04
 author: orchestrator (plan session 317272ed)

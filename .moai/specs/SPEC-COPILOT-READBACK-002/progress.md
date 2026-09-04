@@ -686,7 +686,58 @@ l44_post_push_fetch: not-run    # 푸시하지 않았다
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+```yaml
+sync_complete_at: 2026-09-04T04:10:00Z
+sync_commit_sha: pending-backfill-496322f   # 이 커밋 자신의 SHA — 확정 후 후속 커밋에서 백필한다
+sync_status: complete
+console_writes: 0                 # sync 회차도 콘솔에 접촉하지 않았다
+
+# B12 CHANGELOG 방출 규율 — 커밋 전 자체 점검 3건
+b12_self_test_a: pass   # 사전 grep: `grep -c 'SPEC-COPILOT-READBACK-002' CHANGELOG.md` → 0 (중복 없음, 신규 방출)
+b12_self_test_b: pass   # AC 계수 대조: acceptance.md 의 DISTINCT AC-ID 16 개
+                        # (`grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' acceptance.md | sort -u | wc -l` → 16, 0 아님)
+                        # CHANGELOG 항목이 「AC 16건 전건 PASS」로 같은 수를 인용한다
+b12_self_test_c: pass   # 파일 경로 실재 확인: CHANGELOG 가 인용한 경로 전부 `ls` 로 확인
+                        # (server/safety/responder_version.py · server/paperwork/{data,bundle,render}.py ·
+                        #  server/web/paperwork_api.py · ui/src/protocol.ts · server/web/PROTOCOL.md ·
+                        #  console/lua/copilot_responder.lua · .moai/state/verify/readback002/pins-full.log)
+
+changelog_entry_position: "[Unreleased] › ### Added › 첫 항목 (SPEC-COPILOT-RECVOBS-001 앞)"
+
+frontmatter_status_transitions:
+  spec_md: "in-progress → completed"   # `updated:` 는 2026-09-04 로 이미 sync 커밋 날짜와 같아 불변
+  plan_md: n-a          # frontmatter 블록 없음 (본문만)
+  acceptance_md: n-a    # frontmatter 블록 없음 (본문만)
+  progress_md: n-a      # frontmatter 블록 없음 (본문만)
+
+canary_compliance_check: n-a   # 이 SPEC 은 자기 sync 가 검사할 전방위 정책을 정의하지 않는다
+
+# MX 태그 검증 (sync 하위 단계 — 별도 phase 아님)
+mx_validation:
+  scope: "server/safety/ · server/orchestrator/tools.py · server/prechk/inventory.py(읽기 전용)"
+  fan_in_measured: "classify_version 1 · parse_version 0 · EXPECTED_RESPONDER_VERSION 1 (테스트 제외, 생산 호출자만)"
+  anchor_required: 0    # 셋 다 fan_in >= 3 문턱 미달 — @MX:ANCHOR 의무 없음
+  added: 1              # responder_version.py 의 EXPECTED_RESPONDER_VERSION 에 @MX:NOTE+REASON+SPEC
+                        # 사유: 서버측 유일 출처가 console/lua 의 리터럴에 걸려 있는 교차 파일 핀이다
+  prechk_untouched: true   # REQ-READBACK2-010 — 읽기만 했다
+
+# README 동기화 (사용자 표면 3자리)
+readme_sync:
+  - "Console-side Lua responder — 버전 게이트 문단 신설 (낮음/미인식/부재 3갈래 + 오프라인 하류 성질)"
+  - "safety gate failure modes 열거에 responder-version-mismatch · responder-version-unrecognized 추가"
+  - "LX-SEQ 절 「두 소비자가 아직 미번역」 문단이 만료 — 닫힘으로 정정, 제3 핸들 형태 구멍은 열린 채 명시"
+
+sync_verification:
+  ruff_check: pass          # server/safety/responder_version.py
+  ruff_format: pass         # 1 file already formatted
+  suite_scope: "MX 주석 1건은 코드가 아니라 주석 — 동작 변경 0. §G-5 의 전수 실측(10979 passed / 0 failed)이 기준선이다"
+
+unverified:
+  - "원격 CI — 브랜치 WT-readback-gate 는 원격에 없다. 푸시는 오케스트레이터 소유이며 깨끗한 환경 실행은 관측하지 않았다"
+  - "라이브 응답기 버전 — sync 회차도 콘솔 미접촉. 게이트가 실기에서 어느 버전을 보는지는 안 쟀다"
+  - "제3 핸들 형태(REQ-READBACK2-011) — 여전히 열린 구멍. 「없다」가 아니라 「안 쟀다」"
+  - "sync_commit_sha — 이 커밋 자신의 SHA 라 쓰는 시점에 알 수 없다. 백필 커밋으로 확정한다"
+```
 
 ## §F Phase 4 Mode Selection
 

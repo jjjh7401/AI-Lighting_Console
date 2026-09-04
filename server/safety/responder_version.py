@@ -23,6 +23,12 @@ from __future__ import annotations
 
 import re
 
+# @MX:NOTE: [AUTO] cross-file version pin. This literal is the ONLY server-side
+# source for the expected responder version; its counterpart lives in
+# `console/lua/copilot_responder.lua` (`VERSION`), which this SPEC may only read.
+# @MX:REASON: REQ-READBACK2-002 — a second source would let the two drift
+# silently. The test reads the Lua file instead of restating the literal.
+# @MX:SPEC: SPEC-COPILOT-READBACK-002
 #: 기대 응답기 버전. `console/lua/copilot_responder.lua` 의 `VERSION` 에 고정된
 #: 유일한 서버측 출처다 — 여기 말고 어디에도 이 리터럴을 적지 않는다.
 #: 001 이 응답기를 1.6.4 로 올리면 바뀌는 것은 이 한 줄뿐이다.
