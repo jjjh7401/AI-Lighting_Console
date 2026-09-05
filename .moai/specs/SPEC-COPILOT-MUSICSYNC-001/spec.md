@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-MUSICSYNC-001
 title: "음악에 맞춘 연출 — 시간축을 앱에 들여온다 (Music Sync)"
 version: "0.1.3"
-status: draft
+status: in-progress
 created: 2026-09-03
-updated: 2026-09-03
+updated: 2026-09-05
 author: orchestrator (plan session 317272ed)
 priority: P1
 phase: "v1.8.0 target"
@@ -30,9 +30,9 @@ related_specs: [SPEC-COPILOT-LXSEQ-004, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT-S
 | 2026-09-03 | 0.1.0 | 최초 초안. 보고서 `reports/app-fresh-eyes-review-20260903.md` §3.1·§4 P2 를 다섯 요구 모듈(R1 시트 시간열 · R2 분석 코어 · R3 업로드·카드·BPM · R4 콘솔 타임코드 · R5 횡단 규율)로 분해. 조사 근거는 동봉 `research.md`(기준 `origin/main adae0ac`, 읽기 전용, 콘솔 접촉 0). | 보고서 P2 · research.md |
 | 2026-09-03 | 0.1.1 | plan-audit 전 자체 정정. (a) `plan.md §C` 미해결 결정 3건을 **결정 기록표**로 확정(번들 상한 300MB delta · `Record Timecode` 는 앱 미발화 + 운영자 인계 · BPM 정본 「측정 > 시트 > 기본값」) — 결정 대기 표식은 디렉터리 전역 0건. (b) `### Out of Scope —` 기존 8개를 산문에서 `-` 불릿으로 전환하고 blacklist 등재 제외를 1개 신설 — H3 9개, 각 3불릿. (c) 조회 예산 요구 **REQ-MUSICSYNC-025** 신설(REQ 24→25). (d) 프로세스 주어 REQ 5건을 컴포넌트 주어로, 구현 방식 문장 3건을 `plan.md` 로 이관. (e) 인용 행 앵커 11건을 `adae0ac` 에서 되읽어 정정. | 자체 감사 + `adae0ac` 실측 |
 | 2026-09-03 | 0.1.2 | plan-audit 1회차(PASS 0.857) blocking 결함 D1~D7 해소 + optional D8·D9 정리. **REQ 25 · AC 25 는 불변**(Tier L 예산 정확 소진 — 신설 없이 기존 본문만 개정). (a) **D1·D2** §A.4 M3-a 쓰기 칸의 **미정의어**(원문은 감사 보고서 D1 참조)를 **열거**로 대체 — 슬롯 준비 3줄 + 재생 후보 4건 이하 + 해제 1줄 = **8건 이하**, 슬롯은 `_timecode_slot_verdict`(`tools.py:2792`) 3분 판정의 **free** 만; 같은 어휘를 REQ-019·025 · AC-021·030 · `plan.md §D`·M3-a · `design.md §3`·§5 에 전파. (b) **D3** REQ-014 괄호 안의 **축소 추정치 주석 삭제** — `messages.py:218` 이 8 MiB 를 **디코드된 원본**에 걸고 `:26` base64 상한(≈10.7 MiB)은 그로부터 파생되므로 실효 원본 상한은 8 MiB 하나다; `design.md:77` 정정 + `research.md` R6 에 만료 고지. (c) **D6** 음수 `TrigTime` 콘솔 수용 여부를 `plan.md §B` **B9(미측정)** 로 올리고 AC-006 에 거절 시 강등 절, AC-031 미검증 열거에 B9 추가. (d) **D4** GEARS 다섯 이름 밖 표식 2건(REQ-012·017)을 `[Event-driven]` 으로. (e) **D5** AC-007·008·024 를 **리터럴 부분문자열 판정**으로 전환(AC-024 는 부재 증명을 존재 판정으로 반전). (f) **D7** §A.4 M3-a 조회 칸을 프로브 수에서 **`query_state` 12회 이하**(12항목 내역)로 단위 정정, `plan.md` B8 동반 정정. (g) **D8·D9** REQ-015 의 필드 수준 지정을 `plan.md` M2 표로 이관, `plan.md:61` 에 `research.md §1.3` 헤더 실측 인용 추가. | plan-audit review-1 + `adae0ac` 실측 |
+| 2026-09-04 | 0.1.3 | AC-MUSICSYNC-006 둘째 Given 을 계수 판정으로 교체(적용 목록 ∪ 거절 목록 = 시도 전수, 교집합 ∅, 되돌림 쓰기 없음). 근거: plan-audit review-2 D1. REQ/AC 25/25 불변. | review-2 |
 
 ---
-| 2026-09-04 | 0.1.3 | AC-MUSICSYNC-006 둘째 Given 을 계수 판정으로 교체(적용 목록 ∪ 거절 목록 = 시도 전수, 교집합 ∅, 되돌림 쓰기 없음). 근거: plan-audit review-2 D1. REQ/AC 25/25 불변. | review-2 |
 
 ## A. 배경
 

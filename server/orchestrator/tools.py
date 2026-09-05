@@ -68,10 +68,12 @@ from server.looks.resolver import resolve_roles
 from server.looks.schema import LookLibrary
 from server.looks.songcue import (
     EXPLICIT_DYNAMICS_REQUIRED,
+    TRIGGER_TYPE_TIME,
     SectionTimeError,
     SequenceNumberError,
     SongCueBundleError,
     SongCueTimingAxes,
+    _format_seconds,
     build_songcue_bundle,
     build_songcue_timing,
     map_sections_to_looks,
@@ -79,6 +81,13 @@ from server.looks.songcue import (
 )
 from server.looks.songcue_report import build_songcue_report
 from server.lxseq.cue_parser import CueColumnSetError, parse_cue_csv
+from server.lxseq.cue_time import (
+    DERIVED_NOT_FINAL_LITERAL,
+    NO_SHEET_TIME_REASON,
+    CueTime,
+    parse_cue_time,
+    project_cue_timeline,
+)
 from server.lxseq.group_mapper import map_groups
 from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
@@ -5454,9 +5463,23 @@ def build_toolset(
         # 바꾼다(ma3.txt:245 형식과 대조 확인, make_ma3.py 의 조립과 같은
         # 규칙). 안 주면 지금 동작 그대로 -- 새 필수 인자로 만들지 않는다
         # (리드 지시, 2026-08-31).
+        #
+        # SPEC-COPILOT-MUSICSYNC-001 M1: 같은 탭에서 `TC In`(row[2])·`TC Out`
+        # (row[3])도 읽는다. 열 자리 근거는 research.md §1.3 헤더 실측 --
+        # `CUE` 탭 4행 헤더가 `Q#`·`Section`·`TC In`·`TC Out`·`Dur`·`Mood`…
+        # 순이며 오늘 코드가 쓰는 row[0]·row[1]·row[5]·row[12] 와 정합한다.
+        # 인덱스를 재확인할 사람은 그 표부터 봐라.
         cue_meta: dict[str, tuple[str, str, float]] = {}
+        #: 시트 순서 그대로의 (Q#, Section, TC In, TC Out). 단조성 판정과
+        #: 타임라인 투사가 **순서**에 기대므로 dict 가 아니라 목록이다.
+        cue_time_rows: list[tuple[str, str, CueTime, CueTime]] = []
+        #: HEAD 시트의 곡 메타 -- M1 은 **읽기만** 한다. BPM 정본 우선순위
+        #: (plan.md §C 결정 3)는 M2 가 소비한다.
+        head_meta: dict[str, str | None] = {"bpm_raw": None, "tc_source": None, "tc_method": None}
+        cue_sheet_given = False
         raw_cue_sheet = call.arguments.get("cue_sheet_xlsx_base64")
         if isinstance(raw_cue_sheet, str) and raw_cue_sheet.strip():
+            cue_sheet_given = True
             try:
                 cue_sheet_bytes = base64.b64decode(raw_cue_sheet, validate=True)
             except (binascii.Error, ValueError):
@@ -5473,6 +5496,29 @@ def build_toolset(
                 return _error_result(
                     call, "'cue_sheet_xlsx_base64' 에 'CUE' 시트가 없다 -- 시트 6개 중 하나다"
                 )
+            # HEAD 는 선택이다 -- 없으면 세 칸이 None 으로 남는다. 「없음」을
+            # 「비었음」으로 적지 않기 위해 값 없음과 시트 없음을 구분하지
+            # 않고 둘 다 None 으로 두되, 아래 payload 가 그 사실을 말한다.
+            if "HEAD" in cue_workbook.sheetnames:
+                head_keys = {
+                    "BPM": "bpm_raw",
+                    "TC_SOURCE": "tc_source",
+                    "TC_METHOD": "tc_method",
+                }
+                for head_row in cue_workbook["HEAD"].iter_rows(values_only=True):
+                    if not head_row:
+                        continue
+                    field = head_keys.get(str(head_row[0] or "").strip())
+                    if field is None or head_meta[field] is not None:
+                        continue
+                    head_meta[field] = next(
+                        (
+                            str(cell).strip()
+                            for cell in head_row[1:]
+                            if cell is not None and str(cell).strip()
+                        ),
+                        None,
+                    )
             cue_ws = cue_workbook["CUE"]
             for row in cue_ws.iter_rows(min_row=5, values_only=True):
                 q_raw = row[0] if len(row) > 0 else None
@@ -5482,21 +5528,31 @@ def build_toolset(
                 section = str(row[1] or "").strip() if len(row) > 1 else ""
                 mood_raw = str(row[5] or "") if len(row) > 5 else ""
                 mood_first = mood_raw.split(",")[0].strip()
+                tc_in = parse_cue_time(row[2] if len(row) > 2 else None)
+                tc_out = parse_cue_time(row[3] if len(row) > 3 else None)
+                if "'" in section or "'" in mood_first or "'" in tc_in.raw or "'" in tc_out.raw:
+                    # 라벨이 홑따옴표로 감싸지는데(전송 경로 규율, 위
+                    # sequence_name 과 같다) 안에 홑따옴표가 있으면 그
+                    # 자리에서 문자열이 잘린다. 이스케이프 없이 fail-closed.
+                    #
+                    # 시간 열도 **같은 검사**를 탄다(재사용, 새로 쓰지 않는다).
+                    # 그리고 이 검사는 Fade 판독보다 **앞**에 선다 -- 뒤에 두면
+                    # Fade 가 빈 행은 검사를 건너뛰어 조용히 통과한다.
+                    return _error_result(
+                        call,
+                        f"{q}: 정본 CUE 시트의 Section/Mood/TC 열에 홑따옴표(')가 있다 -- "
+                        "라벨이 홑따옴표로 감싸지는데 안에 홑따옴표가 있으면 문자열이 "
+                        "거기서 잘린다. 시트를 고쳐 다시 불러라.",
+                    )
+                # 시간은 Fade 판독보다 **먼저** 적는다 -- Fade 가 없는 행도
+                # 시각은 들고 있을 수 있고, 그 시각을 잃는 것이 이 SPEC 이
+                # 닫는 구멍 자체다.
+                cue_time_rows.append((q, section, tc_in, tc_out))
                 fade_raw = row[12] if len(row) > 12 else None
                 try:
                     fade = float(fade_raw)
                 except (TypeError, ValueError):
                     continue
-                if "'" in section or "'" in mood_first:
-                    # 라벨이 홑따옴표로 감싸지는데(전송 경로 규율, 위
-                    # sequence_name 과 같다) 안에 홑따옴표가 있으면 그
-                    # 자리에서 문자열이 잘린다. 이스케이프 없이 fail-closed.
-                    return _error_result(
-                        call,
-                        f"{q}: 정본 CUE 시트의 Section/Mood 에 홑따옴표(')가 있다 -- "
-                        "라벨이 홑따옴표로 감싸지는데 안에 홑따옴표가 있으면 문자열이 "
-                        "거기서 잘린다. 시트를 고쳐 다시 불러라.",
-                    )
                 cue_meta[q] = (section, mood_first, fade)
 
         from server.lxseq.cue_mapper import (
@@ -5506,6 +5562,7 @@ def build_toolset(
             UNRESOLVED_SHEET_LACKS_ID,
             UNRESOLVED_SHEET_NOT_SUPPLIED,
             block_report,
+            cue_timing_violations,
             map_cues,
         )
 
@@ -5991,6 +6048,37 @@ def build_toolset(
         cue_bundles: list[tuple[str, list[str]]] = []
         cue_manual_notes: dict[str, dict[str, object]] = {}
         pool_lookup_failed: list[str] = []
+
+        # -- M1 시트 시간열 (SPEC-COPILOT-MUSICSYNC-001) ----------------------
+        #
+        # 🔴 `TC_METHOD: DERIVED` 는 시트가 스스로 「음원 청취 미검증」을 자백한
+        # 것이다. 그 자백을 산출물이 삼키면 파생물 전부가 확정본처럼 읽힌다
+        # (표준 §2.4). 문면은 **리터럴 그대로** 세 곳에 실린다 -- 의역하면
+        # AC-MUSICSYNC-007 의 판정이 깨진다.
+        tc_method = head_meta.get("tc_method")
+        timing_warning: str | None = None
+        if isinstance(tc_method, str) and "DERIVED" in tc_method.upper():
+            timing_warning = f"TC_METHOD={tc_method} -- {DERIVED_NOT_FINAL_LITERAL}"
+        cue_times: dict[str, CueTime] = {q: tc_in for q, _s, tc_in, _o in cue_time_rows}
+        timing_violations = cue_timing_violations(
+            [
+                (
+                    q,
+                    tc_in.ms if tc_in.is_determined else None,
+                    tc_out.ms if tc_out.is_determined else None,
+                )
+                for q, _section, tc_in, tc_out in cue_time_rows
+            ]
+        )
+        # 별도 얕은 투사 -- `TimestampedSection` 계약(minimum=0)은 무변경이고,
+        # PRE-ROLL 음수는 좌표를 접는 대신 **빠지고 빠졌다고 말한다**(REQ-006).
+        timing_timeline = project_cue_timeline(
+            [(q, section, tc_in, tc_out) for q, section, tc_in, tc_out in cue_time_rows],
+            warning=timing_warning,
+        )
+        #: 큐별로 실제 실린 두 줄. preview 에서도 보이게 페이로드에 남긴다 --
+        #: 안 남기면 「승인 전에 무엇이 나가는지」를 사람이 못 본다.
+        timing_commands_by_cue: dict[str, list[str]] = {}
         # result.placement 는 새 슬롯(아직 콘솔에 없음) -- already_present 면 만들지 않는다.
         sequence_create_command: str | None = None
         if result.placement is not None:
@@ -6058,6 +6146,20 @@ def build_toolset(
                 f"Store Cue {cueno} '{cue_label}' CueFade {_fmt_num(cue_fade)} "
                 f"Sequence {sequence_placement_no} /Merge /NoConfirm"
             )
+            # M1 -- 시트가 시각을 준 큐에만 두 줄이 붙는다. 미확정 큐는 한 줄도
+            # 안 나간다(REQ-MUSICSYNC-004): 0 으로 접으면 첫 박에 발사된다.
+            # 두 줄은 `Store Cue` 와 **같은 리스트**라서 같은 승인 번들을 탄다.
+            cue_time = cue_times.get(bucket.cue_no)
+            timing_commands: list[str] = []
+            if cue_time is not None and cue_time.is_determined:
+                timing_commands = [
+                    f"Set Cue {cueno} Sequence {sequence_placement_no} "
+                    f"Property 'TrigType' '{TRIGGER_TYPE_TIME}'",
+                    f"Set Cue {cueno} Sequence {sequence_placement_no} "
+                    f"Property 'TrigTime' {_format_seconds(cue_time.ms)}",
+                ]
+                commands.extend(timing_commands)
+            timing_commands_by_cue[bucket.cue_no] = timing_commands
             if sequence_create_command is not None:
                 commands = [sequence_create_command, *commands]
                 sequence_create_command = None
@@ -6068,10 +6170,53 @@ def build_toolset(
                 per_row_timing=per_row_timing,
                 fx_stopped_groups=fx_stopped,
             )
+            if timing_warning is not None:
+                # (c) 큐 라벨 계열 -- 라벨 자체는 ASCII 로 콘솔에 박히므로
+                # 경고는 라벨 **옆**의 노트에 싣는다. 명령 문자열은 안 바뀐다.
+                cue_manual_notes[bucket.cue_no]["cue_label_warning"] = timing_warning
 
         payload["cue_bundles_planned"] = len(cue_bundles)
         payload["preset_pool_lookup_failed"] = pool_lookup_failed
         payload["cue_manual_notes"] = cue_manual_notes
+
+        # -- M1 시간 판독 결과 (SPEC-COPILOT-MUSICSYNC-001) --------------------
+        #
+        # 미확정은 **사유별로** 나뉜 채로 실린다 -- `확인필요`·빈칸·형식 불명은
+        # 사용자가 해야 할 일이 서로 다르다(design §2.2). 단조성 위반은
+        # `cues_held` 와 **다른 목록**이다: 큐 하나의 사실이 아니라 큐 사이의
+        # 사실이기 때문이다(design §2.4).
+        payload["cue_timing"] = {
+            "source": "sheet" if cue_sheet_given else "none",
+            "head": dict(head_meta),
+            "cues": [
+                dict(
+                    cue_no=q,
+                    section=section,
+                    tc_in=tc_in.to_dict(),
+                    tc_out=tc_out.to_dict(),
+                    commands=timing_commands_by_cue.get(q, []),
+                )
+                for q, section, tc_in, tc_out in cue_time_rows
+            ],
+            "undetermined": [
+                dict(cue_no=q, reason=tc_in.kind, raw=tc_in.raw)
+                for q, _section, tc_in, _tc_out in cue_time_rows
+                if not tc_in.is_determined
+            ],
+            "monotonicity_violations": [
+                dict(
+                    kind=v.kind,
+                    cue_no=v.cue_no,
+                    other_cue_no=v.other_cue_no,
+                    detail=v.detail,
+                )
+                for v in timing_violations
+            ],
+            "timeline": timing_timeline.to_dict(),
+            "warning": timing_warning,
+            # 정직한 한계 -- CSV 만 준 호출은 시간을 줄 수 없다(§A.2 의 대가).
+            "reason": None if cue_sheet_given else NO_SHEET_TIME_REASON,
+        }
 
         if action == "apply":
             if result.refusal is not None or not cue_bundles:
@@ -6119,6 +6264,7 @@ def build_toolset(
                     payload["approval"] = "granted"
                     applied: list[dict[str, object]] = []
                     applied_is_error = False
+                    timing_rejected: list[dict[str, object]] = []
                     for cue_no, commands in cue_bundles:
                         if applied_is_error:
                             applied.append(dict(cue_no=cue_no, status="skipped_after_failure"))
@@ -6147,8 +6293,70 @@ def build_toolset(
                             entry["notice"] = inner_payload.get("notice")
                         applied.append(entry)
                         if not ok:
+                            # 🔴 B9 -- 음수 `TrigTime` 인자를 콘솔이 받는지는
+                            # **미측정**이다(M0 는 양수만 실측했다). 콘솔이 그
+                            # 인자를 거절하면 **그 큐 하나만** 시간 미확정으로
+                            # 강등하고 나머지 번들은 계속한다(AC-MUSICSYNC-006).
+                            # 되돌림 쓰기는 발화하지 않는다 -- M1 의 쓰기는
+                            # 기존 승인 번들 안의 명령뿐이다.
+                            failed_command = next(
+                                (
+                                    str(item.get("command", ""))
+                                    for item in inner_payload.get("commands", [])
+                                    if isinstance(item, dict) and item.get("status") == "failed"
+                                ),
+                                "",
+                            )
+                            if "'TrigTime'" in failed_command:
+                                entry["status"] = "timing_rejected"
+                                failed_detail = next(
+                                    (
+                                        str(item.get("detail", ""))
+                                        for item in inner_payload.get("commands", [])
+                                        if isinstance(item, dict) and item.get("status") == "failed"
+                                    ),
+                                    "",
+                                )
+                                timing_rejected.append(
+                                    dict(
+                                        cue_no=cue_no,
+                                        command=failed_command,
+                                        console_response=failed_detail,
+                                    )
+                                )
+                                continue
                             applied_is_error = True
                     payload["applied"] = applied
+                    # 계수 판정용 -- 적용 목록과 거절 목록의 합집합이 시도 전수와
+                    # 같고 교집합이 비어야 한다(AC-MUSICSYNC-006 둘째 Given).
+                    rejected_cue_nos = {str(item["cue_no"]) for item in timing_rejected}
+                    payload["timing_apply"] = {
+                        "attempted": [cue_no for cue_no, _cmds in cue_bundles],
+                        "applied": [str(e["cue_no"]) for e in applied if e["status"] == "ok"],
+                        "rejected": timing_rejected,
+                        "other_failed": [
+                            str(e["cue_no"]) for e in applied if e["status"] == "failed"
+                        ],
+                        "skipped_after_failure": [
+                            str(e["cue_no"])
+                            for e in applied
+                            if e["status"] == "skipped_after_failure"
+                        ],
+                        # 되돌림은 하지 않는다 -- 이 칸이 비어 있는 것이 그 사실이다.
+                        "rollback_commands": [],
+                    }
+                    if rejected_cue_nos:
+                        # 강등 -- 거절된 큐는 AC-MUSICSYNC-003 과 같은 형태로
+                        # 미확정 목록에 오른다.
+                        undetermined = payload["cue_timing"]["undetermined"]
+                        for item in timing_rejected:
+                            undetermined.append(
+                                dict(
+                                    cue_no=item["cue_no"],
+                                    reason="console_rejected",
+                                    raw=item["console_response"],
+                                )
+                            )
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
