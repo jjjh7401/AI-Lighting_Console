@@ -36,6 +36,7 @@ from server.web.messages import (
     SongAudioRejectedError,
     parse_client_message,
 )
+from server.web.question import QuestionChannel
 
 from .conftest import drain_until as _receive_until
 from .conftest import recv_frame
@@ -48,7 +49,7 @@ SMALL_WAV_B64 = base64.b64encode(SMALL_WAV).decode("ascii")
 SMALL_WAV_SHA256 = hashlib.sha256(SMALL_WAV).hexdigest()
 
 
-def _deps(tmp_path):
+def _deps(tmp_path, *, question_channel=None):
     console = FakeConsole()
     audit = AuditLog(tmp_path / "audit")
     channel = ApprovalChannel(timeout_seconds=2.0)
@@ -59,6 +60,7 @@ def _deps(tmp_path):
         system_prefix="PREFIX",
         audit=audit,
         approval_channel=channel,
+        question_channel=question_channel,
     )
 
 
@@ -143,6 +145,76 @@ class TestTheEightMebibyteCapIsMeasuredOnDecodedBytes:
         at_cap = base64.b64encode(b"\x00" * MAX_SONG_AUDIO_BYTES).decode("ascii")
         parsed = parse_client_message(_frame(content_base64=at_cap))
         assert parsed["content_base64"] == at_cap
+
+
+class TestTheAnalyseFrameIsValidatedLikeItsUploadSibling:
+    """``song_audio_analyse`` — 분석을 **요청하는** 프레임 (REQ-MUSICSYNC-015).
+
+    페이로드가 없다. 붙어 있는 곡은 이미 세션에 있고, 이 프레임이 나르는 것은
+    「지금 재라」는 요청과 **대조용 부수 값** 셋뿐이다. 셋 다 선택이라 안 보내도
+    되고, 보내면 종류를 잰다 — 숫자 자리에 문자열이 오면 하류
+    (``resolve_bpm``)에서 터지고, 터진 자리에서는 「운영자가 오타를 냈다」가
+    「분석이 실패했다」로 읽힌다.
+    """
+
+    def test_a_bare_analyse_frame_is_accepted_with_every_option_absent(self):
+        parsed = parse_client_message(
+            json.dumps({"v": PROTOCOL_VERSION, "type": "song_audio_analyse"}, ensure_ascii=False)
+        )
+        assert parsed["type"] == "song_audio_analyse"
+        assert parsed["sheet_bpm"] is None
+        assert parsed["fx_rate"] is None
+        assert parsed["beats_per_cycle"] is None
+
+    def test_the_sheet_tempo_rides_as_the_raw_string_the_importer_read(self):
+        # ``HEAD.BPM`` 은 ``120 (고정)`` 처럼 온다 — 숫자로 미리 깎지 않는다.
+        # 깎는 자리는 ``parse_sheet_bpm`` 하나뿐이어야 한다.
+        parsed = parse_client_message(
+            json.dumps(
+                {
+                    "v": PROTOCOL_VERSION,
+                    "type": "song_audio_analyse",
+                    "sheet_bpm": "120 (고정)",
+                    "fx_rate": 25.0,
+                    "beats_per_cycle": 4,
+                },
+                ensure_ascii=False,
+            )
+        )
+        assert parsed["sheet_bpm"] == "120 (고정)"
+        assert parsed["fx_rate"] == 25.0
+        assert parsed["beats_per_cycle"] == 4.0
+
+    @pytest.mark.parametrize("field", ["fx_rate", "beats_per_cycle"])
+    def test_a_non_numeric_contrast_value_is_refused(self, field):
+        with pytest.raises(ProtocolError):
+            parse_client_message(
+                json.dumps(
+                    {"v": PROTOCOL_VERSION, "type": "song_audio_analyse", field: "빠르게"},
+                    ensure_ascii=False,
+                )
+            )
+
+    @pytest.mark.parametrize("field", ["fx_rate", "beats_per_cycle"])
+    def test_a_boolean_is_not_a_number_here(self, field):
+        # ``bool`` 은 파이썬에서 ``int`` 의 하위형이다 — 먼저 걸러 내지 않으면
+        # ``True`` 가 1.0 으로 흘러 들어간다(``_is_object_number`` 가 세운 이유).
+        with pytest.raises(ProtocolError):
+            parse_client_message(
+                json.dumps(
+                    {"v": PROTOCOL_VERSION, "type": "song_audio_analyse", field: True},
+                    ensure_ascii=False,
+                )
+            )
+
+    def test_a_non_string_sheet_tempo_is_refused(self):
+        with pytest.raises(ProtocolError):
+            parse_client_message(
+                json.dumps(
+                    {"v": PROTOCOL_VERSION, "type": "song_audio_analyse", "sheet_bpm": 120},
+                    ensure_ascii=False,
+                )
+            )
 
 
 # =============================================================================
@@ -457,3 +529,105 @@ class TestTheSheetTempoDisagreementIsReportedThroughTheSession:
         assert "FX-Rate" in event["message"]
         assert session.song_bpm.fx_rate_back_calculated == 100.0
         assert session.song_bpm.bpm == 128.0  # 역산값 100 은 채택되지 않았다
+
+
+# =============================================================================
+# 분석 방아쇠 — app.py 디스패치 (AC-MUSICSYNC-013 · AC-MUSICSYNC-015)
+# =============================================================================
+
+
+class TestTheAnalysisTriggerTravelsTheWholeWire:
+    """M2 후속 — 위 세 클래스가 잰 경로를 **무엇이 부르는가**의 판정자다.
+
+    ``analyse_song_audio`` 는 M2 에서 완성됐지만 실서비스에서 부르는 곳이
+    없었다. 업로드 프레임은 바이트를 담고 멈추고, 분석·카드·BPM 확정은 시험만이
+    부르는 죽은 경로였다 — 즉 REQ-MUSICSYNC-013 → 015 사슬이 끊겨 있었다.
+
+    ⚠️ **판정 방식은 위 업로드 클래스와 같다.** ``server/web/app.py`` 의
+    ``song_audio_analyse`` 디스패치 분기를 지우면 이 클래스의 시험들은
+    **실패한다**(프레임은 파싱되지만 카드가 오지 않아 ``recv_frame`` 이 시간
+    상한에서 끊긴다). ``session.analyse_song_audio`` 를 직접 부르는 시험은 그
+    층을 지나지 않아 분기가 없어도 그대로 통과한다 — 그것이 이 클래스가 WS 왕복
+    형태여야 하는 이유다.
+
+    콘솔 접촉: 0건.
+    """
+
+    def _analysed_over_the_wire(self, tmp_path, answer: str, **analyse_fields):
+        """업로드 → 분석 요청 → 카드 → 답 → 알림, 전부 와이어를 지나서."""
+        channel = QuestionChannel(timeout_seconds=5.0)
+        with (
+            TestClient(create_app(_deps(tmp_path, question_channel=channel))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            recv_frame(ws)  # 최초 status
+            _send(
+                ws,
+                type="song_audio_upload",
+                file_name="track.wav",
+                mime_type="audio/wav",
+                content_base64=SMALL_WAV_B64,
+            )
+            _receive_until(ws, "notice")
+            _send(ws, type="song_audio_analyse", **analyse_fields)
+            card = _receive_until(ws, "question_request")
+            # 답을 주어 분석 스레드를 놓아 준다 — 답이 없으면 상한까지 붙잡힌다.
+            _send(ws, type="question_answer", request_id=card["request_id"], answer=answer)
+            notice = _receive_until(ws, "notice")
+        return card, notice
+
+    def test_the_confirmation_card_arrives_over_the_wire(self, tmp_path):
+        card, _notice = self._analysed_over_the_wire(tmp_path, "확인")
+        # 카드의 모양은 M2 가 정했다(``build_song_confirmation_card``) — 여기서
+        # 재는 것은 그 카드가 **와이어로 도착하는가**다.
+        assert card["multi"] is True
+        assert len(card["options"]) >= 1
+        assert all(option["selected"] for option in card["options"])
+
+    def test_the_answer_confirms_the_tempo_through_the_same_wire(self, tmp_path):
+        _card, notice = self._analysed_over_the_wire(tmp_path, "BPM 130")
+        assert "130" in notice["message"]
+        assert "확정" in notice["message"]
+
+    def test_a_disagreeing_sheet_tempo_is_reported_over_the_wire(self, tmp_path):
+        # AC-MUSICSYNC-018 을 **와이어 위에서** 다시 잰다: 시트 120, 사람이 적은
+        # 128 → 어긋남을 말하고 128 을 채택한다.
+        _card, notice = self._analysed_over_the_wire(tmp_path, "BPM 128", sheet_bpm="120 (고정)")
+        assert "128" in notice["message"]
+        assert "120" in notice["message"]
+        assert "어긋" in notice["message"]
+
+    def test_analysing_with_no_audio_attached_comes_back_as_an_error(self, tmp_path):
+        """첨부가 없으면 분석할 것이 없다 — 터지지 않고, 이유를 한국어로 말한다.
+
+        ⚠️ **``kind`` 를 단언하는 것이 이 시험의 전부다.** 종류를 안 재고
+        ``type == "error"`` 와 「한국어인가」만 재면 이 시험은 **공허하다** —
+        타입이 아예 등록되지 않은 상태에서도 ``kind="protocol"`` 오류가 같은
+        모양으로 돌아오고, 그 문구(``_PROTOCOL_ERROR_MESSAGE``) 또한 한국어다.
+        즉 배선이 하나도 없어도 통과해 버린다(실제로 RED 회차에서 통과했다).
+        이름 붙은 종류를 요구해야 「분기가 있고, 첨부 없음을 알아봤다」를 잰다.
+        """
+        with (
+            TestClient(create_app(_deps(tmp_path, question_channel=QuestionChannel()))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            recv_frame(ws)
+            _send(ws, type="song_audio_analyse")
+            event = recv_frame(ws)
+        assert event["type"] == "error"
+        assert event["kind"] == "song_audio_missing"
+        assert any("가" <= ch <= "힣" for ch in event["message"]), event["message"]
+        # 「무엇을 하라」가 있어야 운영자가 다음 행동을 안다.
+        assert "첨부" in event["message"]
+
+    def test_the_connection_survives_analysing_with_no_audio(self, tmp_path):
+        # 오류가 연결을 끊으면 운영자는 곡을 첨부한 뒤 다시 시도할 수 없다.
+        with (
+            TestClient(create_app(_deps(tmp_path, question_channel=QuestionChannel()))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            recv_frame(ws)
+            _send(ws, type="song_audio_analyse")
+            assert recv_frame(ws)["kind"] == "song_audio_missing"
+            _send(ws, type="status_request")
+            assert recv_frame(ws)["type"] == "status"

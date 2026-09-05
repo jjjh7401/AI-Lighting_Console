@@ -84,6 +84,9 @@ _STALE_APPROVAL_MESSAGE = "만료되었거나 알 수 없는 승인 요청입니
 _STALE_REVIEW_MESSAGE = "만료되었거나 알 수 없는 리뷰 요청입니다."
 _STALE_QUESTION_MESSAGE = "만료되었거나 알 수 없는 질문입니다."
 _BUSY_MESSAGE = "이전 지시를 처리 중입니다 — 완료된 뒤 다시 시도해 주세요."
+# 분석 요청이 왔는데 잴 곡이 없다. 「무엇을 하라」까지 말한다 — 이유만 말하면
+# 운영자는 다음 행동을 모른 채 같은 버튼을 다시 누른다.
+_SONG_AUDIO_MISSING_MESSAGE = "붙어 있는 곡 오디오가 없습니다 — 먼저 곡 파일을 첨부해 주세요."
 _PANEL_TASK_ERROR_MESSAGE = "패널 요청을 처리하지 못했습니다."
 
 
@@ -549,6 +552,41 @@ def create_app(deps: WebDeps) -> FastAPI:
                         message["file_name"],
                         message["mime_type"],
                         message["content_base64"],
+                    )
+                elif message_type == "song_audio_analyse":
+                    # SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 바로 위 분기가 담은
+                    # 바이트를 **실제로 재는** 자리다. 이 분기가 없던 동안
+                    # ``analyse_song_audio`` 는 시험만이 부르는 죽은 경로였고,
+                    # REQ-MUSICSYNC-013 → 015 사슬은 업로드에서 끊겨 있었다.
+                    #
+                    # ⚠️ **``to_thread`` 를 ``await`` 하지 않는다** — 위 두 업로드
+                    # 분기와 갈리는 유일한 지점이고, 갈리는 이유가 이 분기의
+                    # 핵심이다. 분석은 확인 카드를 띄우고 **사람의 답을 기다린다**
+                    # (``QuestionChannel.ask``, 상한 600초). 여기서 await 하면
+                    # 수신 루프가 그 답을 기다리는 동안 멈추고, 답을 나르는
+                    # ``question_answer`` 프레임은 영영 읽히지 못한다 — 카드가
+                    # 자기 답을 막는 교착이다. 그래서 chat 분기와 같은
+                    # ``create_task`` 형태로 띄우고 루프는 계속 돈다.
+                    if session.song_audio is None:
+                        # 첨부가 없으면 잴 것이 없다. 이름 붙은 종류로 내보내
+                        # UI 가 「프레임이 깨졌다」와 가를 수 있게 한다.
+                        await _safe_send(
+                            websocket,
+                            error_event(
+                                message=_SONG_AUDIO_MISSING_MESSAGE, kind="song_audio_missing"
+                            ),
+                        )
+                        continue
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    current_task = asyncio.create_task(
+                        asyncio.to_thread(
+                            session.analyse_song_audio,
+                            sheet_bpm=message["sheet_bpm"],
+                            fx_rate=message["fx_rate"],
+                            beats_per_cycle=message["beats_per_cycle"],
+                        )
                     )
                 elif message_type == "history_restore":
                     # Refresh survival: seed the fresh session's rolling memory

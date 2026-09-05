@@ -1257,6 +1257,11 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # 올려야 통과한다(그게 이 게이트의 전부다).
     "question_answer",
     "review_decision",
+    # SPEC-COPILOT-MUSICSYNC-001 M2 후속 (2026-09-05) — 담아 둔 곡을 **재라**고
+    # 부르는 요청. 업로드는 보관까지이므로(REQ-MUSICSYNC-013) 분석·확인 카드·
+    # BPM 확정(REQ-MUSICSYNC-015)을 부르는 채널이 따로 필요하다. 위와 같은 사유의
+    # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "song_audio_analyse",
     # SPEC-COPILOT-MUSICSYNC-001 M2 (2026-09-05) — 곡 오디오가 세션에 머물게
     # 하는 업로드 채널. layout_image_upload 와 같은 형태이고 PRECHK/OVERLAP 축과
     # 무관한 정당한 확장이다. 손으로 올려야 통과한다는 것이 이 게이트의 전부다.

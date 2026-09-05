@@ -19,6 +19,7 @@ import {
   buildStatusRequest,
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
+  buildSongAudioAnalyse,
   buildSongAudioUpload,
   buildHistoryRestore,
   CHAT_STORAGE_KEY,
@@ -192,6 +193,8 @@ export interface CopilotSocket {
   /** SPEC-COPILOT-IMGLAYOUT-001 M1 — attach a design/reference image. */
   sendLayoutImageUpload: (fileName: string, mimeType: string, contentBase64: string) => boolean;
   sendSongAudioUpload: (fileName: string, mimeType: string, contentBase64: string) => boolean;
+  /** M2 후속 — 담아 둔 곡을 재라고 부른다. 답은 확인 카드로 돌아온다. */
+  sendSongAudioAnalyse: () => void;
   sendLock: (active: boolean) => void;
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
@@ -361,6 +364,13 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     },
     [],
   );
+  // 업로드와 달리 화면 기록(``dispatch``)을 남긴다: 분석은 사람이 **누른**
+  // 행동이고, 뒤이어 뜨는 확인 카드가 무엇 때문에 떴는지가 기록에 없으면
+  // 카드가 맥락 없이 튀어나온 것처럼 읽힌다.
+  const sendSongAudioAnalyse = useCallback(() => {
+    dispatch({ kind: "user", text: "곡 분석 요청" });
+    send(buildSongAudioAnalyse());
+  }, [send]);
   const sendDecision = useCallback(
     (requestId: string, approved: boolean) => send(buildApprovalDecision(requestId, approved)),
     [send],
@@ -412,6 +422,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
     sendSongAudioUpload,
+    sendSongAudioAnalyse,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,

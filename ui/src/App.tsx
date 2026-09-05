@@ -371,6 +371,7 @@ export default function App() {
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
     sendSongAudioUpload,
+    sendSongAudioAnalyse,
     clearChat,
     applySongTimeline,
   } = useCopilotSocket();
@@ -386,6 +387,11 @@ export default function App() {
   // (client-side display only; the server holds the authoritative copy).
   const [layoutImageUploadError, setLayoutImageUploadError] = useState<string | null>(null);
   const [songAudioUploadError, setSongAudioUploadError] = useState<string | null>(null);
+  // SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 이번 연결에서 마지막으로 올린 곡 이름.
+  // 「분석」 버튼을 띄우는 조건 그 이상이 아니다: 서버가 정본을 들고 있고,
+  // 여기 값은 화면 표시용이다. 첨부 전에는 버튼이 아예 없어야 한다 — 누를 수
+  // 있는데 항상 거절당하는 버튼은 운영자에게 무엇을 하라고 알려 주지 않는다.
+  const [songAudioName, setSongAudioName] = useState<string | null>(null);
   const [layoutImage, setLayoutImage] = useState<{ fileName: string; dataUrl: string } | null>(
     null,
   );
@@ -674,6 +680,7 @@ export default function App() {
         return;
       }
       setSongAudioUploadError(null);
+      setSongAudioName(file.name);
     };
     reader.readAsDataURL(file);
   };
@@ -850,6 +857,18 @@ export default function App() {
                 )}
                 {songAudioUploadError && (
                   <div className="composer-status composer-upload-error">{songAudioUploadError}</div>
+                )}
+                {songAudioName !== null && (
+                  <div className="composer-status">
+                    <span>곡 «{songAudioName}» 첨부됨</span>{" "}
+                    <button
+                      type="button"
+                      className="composer-song-analyse"
+                      onClick={sendSongAudioAnalyse}
+                    >
+                      분석
+                    </button>
+                  </div>
                 )}
                 {queue.length > 0 && (
                   <div className="composer-queue" aria-label="대기 중 요청">
