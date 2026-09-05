@@ -150,24 +150,189 @@ server/lxseq/cue_time.py        75      0   100%
 **미검증.** B4 잔여 — 재생 후보 넷은 `ok:true` 였으나 오브젝트 상태 스냅숏이 준비 직후와 동일해 효과를 이 채널로는 못 잰다(재생 상태 필드 부재). 프로브 1판이 낸 「효과=True」 넷은 응답 `id` 를 비교에 넣은 **오판**이며 같은 브랜치에서 정정·회귀검사(`test_a_readback_that_differs_only_by_request_id_is_no_effect`). B5 는 닫혔다(열렸다). B6 는 닫혔다(일치). B8: 실측 조회 11.
 
 **잔여 위험.** (1) **빈 타임코드 풀에서는 앱이 타임코드를 못 쓴다** — `_timecode_slot_verdict` 의 `childCount 0 → unknown` 은 응답기가 빈 풀과 실패 열거를 같은 페이로드로 답하기 때문이며(1회차 무결론, `…-timecode-probe.md`), 이 쇼에서 2회차가 가능했던 것은 감독이 `Timecode 1` 을 손으로 만든 뒤다. M3-b 도 같은 조건. 결정 필요(응답기 1.6.5 실패 표식 / 판정 완화 / 운영 절차). (2) 잔여물 `Timecode 1`·`999` 는 삭제 예산 밖 — 운영자가 정리. (3) 후보 효과 판정은 다른 채널(`query_properties` 재생 속성 등)이 필요하며 예산 밖.
+### M2 — 오디오 업로드 · 분석 · 확인 카드 (2026-09-05, TDD)
+
+기준 트리: 워크트리 `.claude/worktrees/agent-aaf883931452e422d`, 브랜치
+`worktree-agent-aaf883931452e422d`, base `793abb4`. 콘솔 접촉 **쓰기 0건 · 조회 0건** —
+분석 층은 콘솔을 이름조차 부르지 않으며 그 사실이 AST 스캔으로 기계 고정돼 있다.
+
+**변경 집합** (plan.md §E M2 표 그대로. 표 밖 파일은 `server/tests/test_prechk_tool.py`
+한 건 — 웹 표면 동결 등기에 새 메시지 타입을 손으로 올린 것이며, 그 파일 자신의
+규약이 「정당한 추가도 손으로 올려야 통과한다」이다.)
+
+| 파일 | 델타 | 내용 |
+|---|---|---|
+| `server/audio/analyze.py` | NEW | bytes → 여섯 축 순수 함수. librosa 는 함수 안 import |
+| `server/audio/__init__.py` | NEW | 콘솔 무접촉 경계를 문장으로 선언 |
+| `server/tests/fixtures/audio/__init__.py` | NEW | 합성 트랙 생성기 — 표준 라이브러리만 |
+| `server/tests/test_audio_boundary.py` | NEW | 형제 4종과 같은 AST 스캔 형태 |
+| `server/web/messages.py` | MODIFY | `song_audio_upload` 검증 · `SongAudioRejectedError` |
+| `server/web/app.py` | MODIFY | 디스패치 분기 + `song_audio_rejected` 종류 |
+| `server/web/session.py` | MODIFY | `SongAudioUpload` 보관 · `analyse_song_audio` |
+| `server/web/question.py` | MODIFY | 확인 카드 빌더 — `QuestionRequest` 스키마 무변경 |
+| `server/design/profile.py` | MODIFY | `parse_sheet_bpm` · `resolve_bpm` · `BpmResolution` |
+| `ui/src/{App.tsx,protocol.ts,useCopilotSocket.ts}` | MODIFY | accept·검증·프레임 |
+| `pyproject.toml` · `packaging/GrandMA3-Copilot.spec` | MODIFY | librosa + PyInstaller 훅 |
+| `src-tauri/capabilities/default.json` | EXISTING | **무변경**(diff 0줄, 아래 기계 검사) |
+
+**AC 판정표** (전 항목 `.venv/bin/python -m pytest -q -p no:cacheprovider <경로>`)
+
+| AC | 판정 | 검증 노드 | 관측 |
+|---|---|---|---|
+| AC-MUSICSYNC-010 | PASS | `test_audio_boundary.py` + 형제 4종 동시 실행 | `97 passed in 2.26s`. `server/audio/**` 위반 0건 · 뮤테이션 대조군 4종(주입된 `gate.screen` · `query_state` · bridge import · tools import)이 전부 잡힘 · 독스트링/주석 오탐 0건 |
+| AC-MUSICSYNC-011 | PASS | `test_audio_analyze.py` | `23 passed in 1.86s`. bpm **129.199**(정답 128, ±3% = 124.16~131.84 안) · 경계 **(0, 15952, 32020, 36014)** ms(정답 0/16000/32000/36000, ±1000ms 안, 정답 밖 경계 0건) · D 등급 **[1,3,5,2]** 정답 일치 · 온셋 85건 · 실패 4종(빈 바이트열·잘린 RIFF·텍스트·PNG) 전부 `AnalysisFailure` + 사유 문자열 · 데워진 뒤 호출에서 파일 열기 0건 · 소켓 0건 |
+| AC-MUSICSYNC-012 | PASS | `find server/tests/fixtures -type f \( -name '*.wav' -o -name '*.flac' -o -name '*.mp3' -o -name '*.m4a' \) \| wc -l` | `0`. 픽스처는 생성 스크립트로만 존재한다 |
+| AC-MUSICSYNC-013 | PASS | `test_web_song_audio.py::TestTheUploadTravelsTheWholeWireNotJustTheSessionMethod` | 정상 `33 passed`. **뮤테이션 실측**: `app.py` 디스패치 분기를 제거하면 같은 클래스 7건 중 **5건이 실패**(`5 failed, 2 passed in 50.58s`, 증거 `.moai/state/verify/musicsync-m2/ac013-mutation.log`). 통과한 2건은 거절 경로라 분기 이전에 갈린다 |
+| AC-MUSICSYNC-014 | PASS | `test_web_song_audio.py::TestTheEightMebibyteCapIsMeasuredOnDecodedBytes` · `::TestTheFrameIsValidatedBeforeAnythingIsStored` | `33 passed`. 상한 초과 사유에 한국어 + `8 MiB` + `8388608` 동시 포함 · 상한 **정확히** 8 MiB 는 통과(경계 대조군) · 거절 시 `session.song_audio is None` · `git diff --name-only 793abb4..HEAD -- src-tauri` → **0줄** |
+| AC-MUSICSYNC-015 | PASS | `test_song_confirm_card.py` | `30 passed in 0.18s`. `multi=True` · 옵션 수 == 구간 수(1·2·4 셋 다) · DSP 제안 `selected=True`(끈 구간은 `False` — 대조군) · `QuestionRequest` 필드 집합 6개 불변 · 빌더 소스에 `provider`/`complete(`/`ask_user`/`ToolCall`/`llm` **0건** · `ask_user` 툴 스키마에 `selected`/`multi`/`commands` **부재**(툴 자체는 존재 — 대조군) |
+| AC-MUSICSYNC-016 | PASS-WITH-DEBT | `test_song_bpm_priority.py::TestAConfirmedTempoTurnsOffTheDefaultMarker` · `::TestLintL11RunsOnceTheTempoIsReal` · `::TestTheDefaultTempoDisclosureFollowsTheMarker` | `34 passed in 0.04s`. 확정 128 → `bpm_is_default False` · `effective_bpm 128.0` · L11 이 `disabled_rules` 에서 빠짐(기본값일 때는 들어 있음 — 대조군) · 미확정이면 오늘과 동일(`120.0` · `True`). **DEBT**: 「BPM 미지정, 120 기본값」 문구 절은 **생산 지점**에서만 판정했다 — 아래 미검증 절 참조 |
+| AC-MUSICSYNC-017 | PASS | `bash packaging/build.sh` × 2 + `du -sk` | 아래 번들 크기 절 |
+| AC-MUSICSYNC-018 | PASS | `test_song_bpm_priority.py::TestFxRateIsComparedNeverAdopted` · `test_web_song_audio.py::TestTheSheetTempoDisagreementIsReportedThroughTheSession` | `34 passed` · `33 passed`. 시트 `120 (고정)` vs 측정 `128` → 채택 `128`(`source=measured`), 고지에 `128`·`120`·`어긋` 동시 포함 · 일치하면 어긋남 0건(대조군) · `FX-Rate` 역산 `100.0` 은 **측정도 시트도 없는 자리에서도** `source` 가 되지 않고 `default` 가 이김 · 역산의 비-일의성(「사이클당 박수」)이 보고 문자열에 명시 |
+
+**번들 크기 실측 (AC-MUSICSYNC-017)** — 같은 기계 · 같은 명령 · 같은 워크트리
+
+```
+$ bash packaging/build.sh   # 변경 전 (librosa 없음)
+build.sh: done -> dist/GrandMA3 Copilot.app
+$ du -sk "dist/GrandMA3 Copilot.app"
+65564	dist/GrandMA3 Copilot.app
+
+$ bash packaging/build.sh   # 변경 후 (librosa + PyInstaller 훅)
+build.sh: done -> dist/GrandMA3 Copilot.app
+$ du -sk "dist/GrandMA3 Copilot.app"
+274240	dist/GrandMA3 Copilot.app
+```
+
+델타 **208676 KiB = 203.8 MiB = 213.7 MB**. 판정선 **300MB 미만** →
+**폴백은 선택되지 않았다.** 다만 폴백 스위치 자체는 구현·검증돼 있다
+(`analysis_available()` + `test_audio_fallback.py` **11 passed**: 진짜
+`ImportError` 아래에서 확인 카드가 서고, 수동 입력 BPM 128 이
+`bpm_is_default=False` 까지 닿으며, 아무도 안 적으면 기본값 고지가 그대로 산다).
+
+수집 실측: 번들에 `librosa`·`llvmlite`·`numba`·`numpy`·`scipy`·`sklearn`·`soxr`
+트리와 `_soundfile_data/libsndfile_arm64.dylib` 가 들어갔고 수집 오류 0건.
+동결 바이너리 부팅 확인 — `--self-check` → `self-check OK: macOS keyring backend
++ roundtrip verified`.
+
+**RED 증거** (GREEN 이전에 관측한 그대로)
+
+```
+server/tests/test_audio_analyze.py:19: in <module>
+    from server.audio.analyze import AnalysisFailure, AnalysisResult, analysis_available, analyze
+E   ModuleNotFoundError: No module named 'server.audio'
+```
+
+```
+    from server.web.messages import (
+E   ImportError: cannot import name 'MAX_SONG_AUDIO_BYTES' from 'server.web.messages'
+```
+
+```
+E   ImportError: cannot import name 'SongSectionProposal' from 'server.web.question'
+E   ImportError: cannot import name 'BPM_SOURCE_DEFAULT' from 'server.design.profile'
+2 errors in 0.09s
+```
+
+**전량 검사**
+
+```
+$ .venv/bin/python -m pytest -q -p no:cacheprovider server/tests
+11204 passed, 9 skipped, 1 warning in 151.73s (0:02:31)
+
+$ .venv/bin/ruff check server ui
+All checks passed!
+$ .venv/bin/ruff format --check server
+495 files already formatted
+
+$ npx tsc --noEmit   (ui/)
+(출력 없음, exit 0)
+$ npm --prefix ui run test
+Test Files  21 passed (21) · Tests  506 passed (506)
+
+$ git diff --name-only 793abb4..HEAD -- src-tauri server/lxseq server/orchestrator server/safety server/looks
+(출력 없음 — 0줄)
+$ git diff --name-only 793abb4..HEAD -- .moai/specs | wc -l
+0
+```
+
+```
+$ .venv/bin/python -m pytest -q --cov=server.audio --cov=server.web.question --cov=server.design.profile server/tests
+server/audio/__init__.py       1      0   100%
+server/audio/analyze.py      134     12    91%
+server/design/profile.py     220      9    96%
+server/web/question.py       120      2    98%
+```
+
+**설계 판단 기록 — plan.md M2 표와 다른 자리 하나**
+
+확인 카드 빌더를 `server/web/question.py` **안**에 두었다. 표는 그 행을
+「`question.py` 소비 측」이라 적었는데, 소비 측 후보 둘(`tools.py`·`session.py`)
+중 `tools.py` 는 이번 회차의 PRESERVE 목록이고 `session.py` 는 카드를 **세우는**
+자리가 아니라 **부르는** 자리다. 스키마(`QuestionRequest` 데이터클래스)는 한 글자도
+바뀌지 않았고 그 사실을 필드 집합 시험이 고정한다 — 즉 「스키마 무변경」과
+「빌더 추가」가 같은 파일에서 양립한다. `session.py` 는 그 빌더를 부르는
+`analyse_song_audio` 를 갖는다.
+
+**미검증(재지 못한 것 — 「비었음」이 아니다)**
+
+- **동결 앱 안에서 librosa import 와 `analyze` 호출이 실제로 도는지 안 쟀다.**
+  잰 것은 (a) 정적 수집(트리와 dylib 가 번들에 있다) (b) 동결 바이너리 부팅
+  (`--self-check`)까지다. `--self-check` 는 키링만 보고, 동결 앱에 임의 코드를
+  넣을 진입점이 없다. 이 공백은 실기 확인 몫이다.
+- **AC-MUSICSYNC-016 의 「BPM 미지정, 120 기본값」 문구 절은 생산 지점에서만
+  판정했다.** 저장소 전수에서 이 문구를 만드는 자리는 `interview.py`
+  `_tempo_band_texture` 하나뿐이고, 그 사유 문자열은 `_build_q5` 의 중복 제거
+  루프(`for label, _desc, texture`)에서 **버려진다** — 실측: `Q5_TEXTURE` 카드를
+  직렬화하면 기본값 프로필에서도 이 문구가 **미포함**이다. 즉 오늘 이 문구는
+  사용자 출력에 애초에 닿지 않는다. 소비 지점의 그 공백은 이 SPEC 의 범위가
+  아니라 고치지 않았고, 판정은 생산 지점(문구가 붙고/사라진다)에서 했다.
+- **시트 `HEAD.BPM` 과 분석의 실제 접합은 안 배선했다.** `analyse_song_audio` 는
+  `sheet_bpm` 을 인자로 받고 그 경로를 시험이 지나지만, M1 임포터가 읽은 값을
+  이 메서드로 넘기는 호출자는 `server/orchestrator/tools.py` 에 있어야 하고 그
+  파일은 이번 회차의 PRESERVE 목록이다. AC-MUSICSYNC-018 은 `resolve_bpm` 과
+  세션 층에서 판정했다.
+- **실제 곡으로는 분석기를 안 재봤다.** 판정은 전부 합성 트랙이다(설계된 한계,
+  design.md §6 W10). 구간 분절기는 **에너지 기반**이라 세기가 그대로인 음색·화성
+  전환은 못 잡는다 — 합성 픽스처는 세기 계단으로 경계를 만들므로 이 한계가
+  픽스처에서는 드러나지 않는다.
+- **`analyze` 의 「파일 시스템 접촉 0건」은 데워진 뒤의 호출만 잰 값이다.**
+  librosa/numba 의 **최초 import** 는 캐시 파일을 열며, 그것은 분석 행위가 아니라
+  적재 행위라 판정에서 제외했다. 이 제외를 시험 독스트링에도 적어 두었다.
+- 실기 콘솔 왕복 0건 — 이번 회차의 모든 관측은 오프라인이다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
 run_complete_at: 2026-09-05
-run_commit_sha: pending-backfill-m1
+run_commit_sha: pending-backfill-m2
 run_status: audit-ready
-milestone: M1 + M3-a
-ac_pass_count: 8
+milestone: M1 + M3-a + M2
+milestone_evidence_note: "§E.2 는 M1·M3-a·M2 세 절을 담는다(오케스트레이터가 통합 시 합류). 아래 계수는 M2 회차 것"
+ac_pass_count: 8            # M2: AC-MUSICSYNC-010..018 중 9개 판정, 8 PASS
+ac_pass_with_debt_count: 1  # AC-MUSICSYNC-016 (문구 절은 생산 지점 판정)
 ac_fail_count: 0
-ac_scope: AC-MUSICSYNC-001..008 (M1 전량)
-preserve_list_post_run_count: 3   # cue_parser.py · registry.py · song_plan.py — 전부 무변경
+ac_scope: AC-MUSICSYNC-010..018 (M2 전량)
+preserve_list_post_run_count: 5   # src-tauri · server/lxseq · server/orchestrator · server/safety · server/looks — 전부 diff 0줄
 console_writes_emitted: 0
+console_queries_emitted: 0
 new_warnings_or_lints_introduced: 0
-full_suite: "11055 passed, 12 skipped"
-coverage_new_module: "server/lxseq/cue_time.py 100%"
-unverified: [B9, B4]   # B5·B6 는 M3-a 로 닫힘
-m1_to_mN_commit_strategy: "M1 단일 커밋 — M2·M3 는 이 SPEC 의 후속 회차"
+full_suite: "11204 passed, 9 skipped"
+ui_typecheck: "npx tsc --noEmit exit 0"
+ui_tests: "21 files / 506 tests passed"
+coverage_new_module: "server/audio/analyze.py 91% · server/design/profile.py 96% · server/web/question.py 98%"
+bundle_size_before_kib: 65564
+bundle_size_after_kib: 274240
+bundle_delta_mb: 213.7
+bundle_cap_mb: 300
+bundle_fallback_selected: false
+unverified:
+  - 동결 앱 안에서의 librosa import / analyze 호출
+  - AC-016 문구 절의 소비 지점(_build_q5 가 사유 문자열을 버린다)
+  - 시트 HEAD.BPM → analyse_song_audio 접합(호출자가 PRESERVE 파일에 있다)
+  - 실제 곡 파일로의 분석기 검증
+  - B9(음수 TrigTime 콘솔 수용) — M1 에서 넘어온 채 그대로
+  - B4(재생 명령 효과) — M3-a 갈래 B, 이 채널로는 미관측
+m1_to_mN_commit_strategy: "M2 는 논리 단위 5커밋(분석 코어 → 업로드 경로 → 카드/BPM → UI → 패키징)"
 ```
 
 ## §E.4 Sync-phase Audit-Ready Signal
