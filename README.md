@@ -342,7 +342,7 @@ permissions.
    any of them emits no timing lines at all. A negative PRE-ROLL time is emitted
    as `TrigTime -30` but is **excluded from the timeline projection**, and the
    payload says which cues were excluded.
-2. **Upload a song; the DSP measures, you decide.** Attach a WAV or FLAC (max
+2. **Upload a song; the DSP measures, you decide.** Attach a WAV, FLAC, MP3 or M4A (max
    **8 MiB**, measured on decoded bytes) and the analyzer returns BPM, section
    boundaries, onsets, RMS and D-level candidates. Those numbers reach you as a
    **confirmation card** — nothing is adopted until you answer it. BPM priority

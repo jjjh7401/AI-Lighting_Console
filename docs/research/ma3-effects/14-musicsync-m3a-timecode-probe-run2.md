@@ -44,6 +44,8 @@ SPEC-COPILOT-MUSICSYNC-001 · REQ-019·021·023·025 · AC-020·021·022
 
 ## ② 재생 명령 후보 (가설 집합 — 실측 아님)
 
+> ⚠️ **아래 표의 「효과=True」 넷은 오판이다** — 응답 `id` 필드를 비교에 넣은 프로브 1판의 출력이며, 정정된 판정은 문서 끝 「2회차 정정」 절(효과 미관측·미증명)이다. 원본은 증거 보존을 위해 그대로 둔다.
+
 - `Go Timecode 999` — ok=True · **효과=True** · 응답: OK
 - `Go+ Timecode 999` — ok=True · **효과=True** · 응답: OK
 - `Pause Timecode 999` — ok=True · **효과=True** · 응답: OK
