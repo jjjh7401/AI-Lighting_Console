@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-MUSICSYNC-001
 title: "음악에 맞춘 연출 — 시간축을 앱에 들여온다 (Music Sync)"
 version: "0.1.3"
-status: in-progress
+status: completed
 created: 2026-09-03
 updated: 2026-09-05
 author: orchestrator (plan session 317272ed)

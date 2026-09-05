@@ -454,7 +454,8 @@ FAILED …::TestTheAnalysisTriggerTravelsTheWholeWire::test_the_connection_survi
 
 ```yaml
 run_complete_at: 2026-09-05
-run_commit_sha: pending-backfill-m3b
+run_commit_sha: "M1 793abb4 (#309) · M3-a 9f08da7 (#310) · M2 7a8d781 (#311) · M3-b 8788904 (#312)"
+  # sync 회차에서 backfill — 네 마일스톤의 main 머지 SHA. 플레이스홀더 해소.
 run_status: audit-ready
 milestone: M1 + M3-a + M2 + M3-b (offline + live readback) + M2 후속(분석 방아쇠)
 milestone_evidence_note: "§E.2 는 M1·M3-a·M2·M3-b·M2 후속 다섯 절을 담는다(오케스트레이터가 통합 시 합류). 아래 계수는 M3-b 오프라인 회차 것이며, M2 후속 회차 계수는 ac_m2_followup_2026_09_05 블록에 따로 적는다"
@@ -515,7 +516,69 @@ m1_to_mN_commit_strategy: "M2 는 논리 단위 5커밋(분석 코어 → 업로
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+```yaml
+sync_complete_at: 2026-09-05
+sync_commit_sha: pending-backfill-sync   # 커밋은 자기 해시를 모른다 — 후속 커밋에서 채운다
+sync_status: complete
+sync_base: 8788904   # = HEAD, 네 마일스톤 전부 머지된 자리
+
+# B12 자체 점검 3건 (커밋 전 수행)
+b12_self_test_a_pre_emission_grep: PASS
+  # $ grep -c 'SPEC-COPILOT-MUSICSYNC-001' CHANGELOG.md → 0
+  # 중복 없음. 신규 항목으로 추가했다.
+b12_self_test_b_ac_count_match: PASS
+  # $ grep -oE 'AC-MUSICSYNC-[0-9]+' acceptance.md | sort -u | wc -l → 25
+  # CHANGELOG 항목이 적은 수 = 25 (PASS 22 + 단서부 PASS 1 + 판정행 미기록 2 + FAIL 0)
+  # 0 이 아닌 실수이므로 공허한 대조가 아니다.
+  # 내역: PASS 22 = 001~008(8) + 010~015·017·018(8) + 022~025·030·031(6)
+  #       단서부 PASS 1 = 016 (DEBT — 문구 절을 생산 지점에서만 판정)
+  #       판정행 미기록 2 = 020·021 (§E.2 M3-a 절에 AC 판정표가 없다.
+  #         근거는 프로브 노트 14-…-run2.md 이며 요구 항목 셋을 담고 있으나,
+  #         「노트가 있다」와 「판정했다」는 다른 것이라 PASS 로 세지 않았다)
+b12_self_test_c_file_path_verification: PASS
+  # $ ls -la <16 경로> → 전부 존재. 인용한 구현 파일 13건 + 노트 3건.
+  #   server/lxseq/cue_time.py · server/lxseq/cue_mapper.py ·
+  #   server/orchestrator/tools.py · server/orchestrator/songcue_timecode.py ·
+  #   server/audio/analyze.py · server/audio/__init__.py ·
+  #   server/web/{messages,app,session,question}.py · server/design/profile.py ·
+  #   server/tools/musicsync_m3a_probe.py · server/tools/musicsync_m3b_verify.py ·
+  #   docs/research/ma3-effects/14-musicsync-m3a-timecode-probe.md ·
+  #   …-run2.md · 15-musicsync-m3b-rehearsal-verify.md
+  # 인용한 좌표도 되읽어 확인: cue_mapper.py:397 CueTimingViolation ·
+  #   songcue_timecode.py:43 TIMECODE_VERIFY_QUERY_CAP = 4 ·
+  #   profile.py:82 DEFAULT_BPM = 120.0 · messages.py:58 MAX_SONG_AUDIO_BYTES
+
+changelog_entry_position: "[Unreleased] › ### Added › SPEC-COPILOT-READBACK-001 바로 아래 (READBACK-002 앞)"
+
+frontmatter_status_transitions:
+  spec_md: "in-progress → completed"   # 이 sync 커밋이 운반한다 (3-phase close)
+  plan_md: none                        # 프런트매터 없음 — 본문이 '#' 로 시작한다
+  acceptance_md: none                  # 동일
+  design_md: none                      # 동일
+  research_md: none                    # 동일
+  updated_field: 2026-09-05            # 이미 sync 커밋 날짜와 같아 값 변경 없음
+
+# README 판단
+readme_correction: applied
+  # 「LX-SEQ patch import」 절 뒤에 「Music sync」 절 신설. 기존 README 가 전 절
+  # 영문이라 문서 내 일관성을 택해 영문으로 썼다 — conversation_language 는 ko 지만
+  # 한 파일 안에서 언어가 갈리는 쪽이 독자에게 더 나쁘다. 이 판단을 여기 남긴다.
+
+# 이 커밋이 만진 파일 (명시 경로 스테이징 — git add -A 금지)
+sync_files_touched: 4
+  # CHANGELOG.md · README.md ·
+  # .moai/specs/SPEC-COPILOT-MUSICSYNC-001/spec.md · (이 파일) progress.md
+
+# 미검증 (이 sync 회차 기준)
+sync_gaps:
+  - sync_commit_sha 는 플레이스홀더다. 후속 커밋으로 채우기 전까지 실제 해시가 아니다.
+  - 이 회차는 문서만 만졌다 — 코드·테스트를 재실행하지 않았다. CHANGELOG 에 실린
+    수치(전량 스위트 11245 · 번들 델타 213.7 MB · 조회·쓰기 계수)는 §E.2 에서
+    옮긴 값이며 이 회차가 다시 잰 값이 아니다.
+  - AC-020·021 은 이 회차가 판정하지 않았다. 프로브 노트를 읽어 요구 항목이
+    담겨 있음을 확인했을 뿐이고, 판정 자체는 run 단계 소관이다.
+  - 콘솔 접촉 0건 — 이 회차는 실기를 부르지 않았다.
+```
 
 ## Plan Audit-Ready Signal
 
