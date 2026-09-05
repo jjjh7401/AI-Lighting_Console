@@ -18,6 +18,7 @@ import {
   AppShell,
   ATTACHMENT_BUSY_MESSAGE,
   attachmentControlState,
+  attachmentInputDisabled,
   composerViewState,
   dashPressTargetNo,
   readRunbookModeFromStorage,
@@ -215,6 +216,39 @@ describe("attachmentControlState", () => {
 
     expect(state.disabled).toBe(true);
     expect(state.title).toContain("파일 첨부");
+  });
+
+  // t271 — 콘솔이 오프라인이면 명령 입력(composer)은 닫히지만, 첨부는 서버만
+  // 있으면 된다(업로드·곡 분석은 콘솔에 닿지 않는 순수 서버 작업). 브라우저
+  // 실측(reports/musicsync-browser-check-20260906.md 발견 1)에서 첨부 버튼이
+  // 콘솔 상태에 잠겨 곡 분석 자체에 닿을 수 없었다.
+  describe("attachmentInputDisabled (t271)", () => {
+    it("stays closed while the server is disconnected or its status is unknown", () => {
+      expect(attachmentInputDisabled({ connected: false, status: null })).toBe(true);
+      expect(attachmentInputDisabled({ connected: true, status: null })).toBe(true);
+    });
+
+    it("opens when the console is offline — uploads never touch the console", () => {
+      expect(
+        attachmentInputDisabled({
+          connected: true,
+          status: { health: "console_offline", live_lock: false, executions_blocked: true },
+        }),
+      ).toBe(false);
+    });
+
+    it("is what the attach button reads, so console-offline no longer locks it", () => {
+      const state = attachmentControlState({
+        inputDisabled: attachmentInputDisabled({
+          connected: true,
+          status: { health: "console_offline", live_lock: false, executions_blocked: true },
+        }),
+        responding: false,
+        queueLength: 0,
+      });
+      expect(state.disabled).toBe(false);
+      expect(state.title).toContain("WAV");
+    });
   });
 
   it("allows attachment when idle with the default file-format title", () => {
