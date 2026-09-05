@@ -2,7 +2,8 @@
 
 SPEC-COPILOT-MUSICSYNC-001 REQ-021·022·024·025 · AC-024·025·030.
 
-운영자가 콘솔에서 `Record Timecode <n>` 을 실행하고 녹화를 마친 **뒤에** 부른다.
+운영자가 콘솔에서 녹화 무장 명령(인계 목록의 그 한 줄)을 직접 실행하고 녹화를
+마친 **뒤에** 부른다 — 이 파일은 그 명령 문자열을 담지 않는다(AC-MUSICSYNC-022).
 이 도구는 `server.orchestrator.songcue_timecode.verify_songcue_timecode` 를 실기
 상태 포트에 물려 돌리고, 5절 형식 산출물을 `--note` 에 쓴다. 판정 어휘에
 `verified` 는 없다 — 갈래 B(M3-a: 재생 효과 미관측)에서 이벤트 내용 축은
