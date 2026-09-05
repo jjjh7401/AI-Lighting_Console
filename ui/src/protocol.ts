@@ -530,6 +530,33 @@ export function buildLayoutImageUpload(
   });
 }
 
+/**
+ * SPEC-COPILOT-MUSICSYNC-001 M2 — attach a song audio file (REQ-MUSICSYNC-013).
+ * Same shape as `buildLayoutImageUpload`: `mimeType` must be one of the
+ * server's allowed audio MIME types (`server/web/messages.py`
+ * `SONG_AUDIO_MIME_TYPES`) — this builder does not validate, and the server
+ * rejects an unlisted type or an oversized payload with
+ * `error(kind: "song_audio_rejected")` carrying a Korean reason that names the
+ * 8 MiB cap.
+ *
+ * The transport is deliberately unchanged: today's local WebSocket carrying
+ * base64. The Tauri capability file stays byte-identical (`no http, no
+ * websocket, no upload` — AC-DEPLOY-027 Layer 3).
+ */
+export function buildSongAudioUpload(
+  fileName: string,
+  mimeType: string,
+  contentBase64: string,
+): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "song_audio_upload",
+    file_name: fileName,
+    mime_type: mimeType,
+    content_base64: contentBase64,
+  });
+}
+
 export function buildApprovalDecision(requestId: string, approved: boolean): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,

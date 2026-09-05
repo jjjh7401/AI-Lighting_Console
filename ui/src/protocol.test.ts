@@ -6,6 +6,7 @@ import {
   buildChat,
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
+  buildSongAudioUpload,
   buildCueMonitorRequest,
   buildDashCatalogRequest,
   buildLock,
@@ -73,6 +74,17 @@ describe("builders", () => {
       type: "layout_image_upload",
       file_name: "stage-sketch.png",
       mime_type: "image/png",
+      content_base64: "c2FmZQ==",
+    });
+    // SPEC-COPILOT-MUSICSYNC-001 M2 — 서버 허용 목록(server/web/messages.py
+    // CLIENT_MESSAGE_TYPES)에 등록한 것과 **같은 변경에서** 여기도 등록한다.
+    // 한쪽에만 있는 타입은 클라이언트에서 조용히 사라지고 서버에서 시끄럽게
+    // 틀린다.
+    expect(JSON.parse(buildSongAudioUpload("track.wav", "audio/wav", "c2FmZQ=="))).toEqual({
+      v: 1,
+      type: "song_audio_upload",
+      file_name: "track.wav",
+      mime_type: "audio/wav",
       content_base64: "c2FmZQ==",
     });
     expect(JSON.parse(buildApprovalDecision("req-1", true))).toEqual({
