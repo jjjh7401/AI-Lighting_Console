@@ -33,7 +33,59 @@ import pytest
 from keyring.backend import KeyringBackend
 from keyring.errors import PasswordDeleteError
 
+from server.bridge import osc as _osc
 from server.deploy import keystore
+
+# 실기 콘솔(grandMA3 onPC)이 듣는 기본 OSC 입력 포트. serve.py `--console-port` 와
+# bootstrap.build_console_stack `send_port` 의 기본값이 둘 다 이 값이다.
+LIVE_CONSOLE_PORT = 8000
+
+
+class LiveConsoleWriteAttempt(AssertionError):
+    """테스트가 실기 콘솔 포트로 명령을 보내려 했다 — 보내지 않고 여기서 멈춘다."""
+
+
+@pytest.fixture(autouse=True)
+def _refuse_live_console_port(monkeypatch):
+    """Autouse — 어떤 테스트도 127.0.0.1:8000(실기 onPC) 으로는 한 바이트도 못 보낸다.
+
+    t269 실측: 스위트를 돌릴 때마다 `SaveShow` 가 실기 콘솔에 2건씩 닿았다. 원인은
+    `send_port` / `--console-port` 를 안 넘긴 테스트가 기본값 8000 을 그대로 쓰고,
+    게이트의 위험 명령 직전 백업(rule ③)·주기 백업(rule ②)이 그 포트로 `SaveShow` 를
+    쏜 것이다. onPC 가 켜진 개발 기계에선 「가짜 콘솔이라 무해하다」는 전제가 거짓이다.
+
+    이 가드는 전송 표면 하나(`OscBridge.send_command`, REQ-MVP-029 단일 병목)에서
+    목적지 포트만 본다. 가짜 콘솔·빈 포트로 가는 전송은 그대로 통과시키고, 기본 포트로
+    가는 전송만 **보내지 않고** 기록한 뒤 테스트가 끝난 자리에서 실패시킨다.
+
+    왜 그 자리에서 예외를 던지지 않나: 백업 경로는 실패를 `BackupError` 로 감싸
+    「백업 실패 → 차단」이라는 정상 분기로 삼킨다(gate.py rule ③). 던지는 가드는
+    그 분기에 먹혀 테스트를 초록으로 만든다 — 실측했다. 기록 뒤 사후 실패는 안 삼켜진다.
+    """
+    original = _osc.OscBridge.send_command
+    attempts: list[str] = []
+
+    def guarded(self, command: str) -> None:
+        cfg = self._config
+        blank = not command or not command.strip()  # the original rejects these before any send
+        if (
+            not blank
+            and cfg.send_port == LIVE_CONSOLE_PORT
+            and cfg.send_host in ("127.0.0.1", "localhost")
+        ):
+            attempts.append(f"{command!r} -> {cfg.send_host}:{cfg.send_port}")
+            return  # swallowed: not sent
+        return original(self, command)
+
+    monkeypatch.setattr(_osc.OscBridge, "send_command", guarded)
+    yield
+    if attempts:
+        raise LiveConsoleWriteAttempt(
+            "test tried to send to the live console port (not sent): "
+            + "; ".join(attempts)
+            + " — pass an explicit send_port / --console-port nobody listens on "
+            "(see the _free_udp_port helpers)"
+        )
 
 
 class _InMemoryKeyring(KeyringBackend):

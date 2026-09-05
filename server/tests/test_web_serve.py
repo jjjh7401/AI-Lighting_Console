@@ -111,7 +111,12 @@ class TestBuildRuntime:
     def test_builds_a_servable_app_from_the_repo_config(self):
         # The repo config pins the providers; adapters build their SDK clients
         # lazily, so NO key is needed until a completion is attempted.
-        args = parse_args(["--receive-port", "0", "--no-session-backup"])
+        # t269: the app lifespan runs the periodic backup tick (rule ②) whose
+        # first call fires SaveShow at --console-port; the default 8000 is the
+        # live onPC on a dev machine. Aim it at a port nobody listens on.
+        args = parse_args(
+            ["--receive-port", "0", "--no-session-backup", "--console-port", str(_free_udp_port())]
+        )
         app, stack = build_runtime(args)
         try:
             with TestClient(app) as client:
@@ -119,6 +124,14 @@ class TestBuildRuntime:
                 assert payload["ok"] is True
         finally:
             stack.stop()
+
+
+def _free_udp_port() -> int:
+    """A loopback UDP port nobody listens on — a console send target that cannot
+    reach the live onPC (t269)."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
 
 
 @contextlib.contextmanager
@@ -450,7 +463,11 @@ class TestM10DeployShellWiring:
     def test_settings_and_provision_endpoints_are_served(self):
         # The deploy-shell UX (in-app config + provisioning) is entirely these
         # endpoints; if they 404, the packaged app is terminal-config-broken.
-        args = parse_args(["--receive-port", "0", "--no-session-backup"])
+        # t269: lifespan → periodic backup tick → SaveShow at --console-port (see
+        # TestBuildRuntime); keep it off the live default 8000.
+        args = parse_args(
+            ["--receive-port", "0", "--no-session-backup", "--console-port", str(_free_udp_port())]
+        )
         app, stack = build_runtime(args)
         try:
             with TestClient(app) as client:
