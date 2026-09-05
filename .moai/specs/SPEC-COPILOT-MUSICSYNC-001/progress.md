@@ -139,13 +139,25 @@ server/lxseq/cue_time.py        75      0   100%
 - `_format_seconds` 를 사설 이름 그대로 임포트했다 — 중복 구현을 만들지 않으려는
   선택이고, `songcue.py` 는 M1 파일 집합 밖이라 공개화하지 않았다.
 
+### M3-a — 콘솔 타임코드 프로브 (2026-09-05, 실기 2회차)
+
+**주장.** 세 프로브와 대조군 둘을 격리 슬롯 999(시퀀스 9 `T215 SCRATCH DELETABLE`)에서 예산 안에 실행했다. ① `TrackGroup` 아래가 **열렸다** · ② 재생 후보 4종은 **효과 미관측(미증명)** · ③ `rig_paths["timecodes"]` = `DataPool/Timecodes` 로 M0 와 일치. 설계서 §5 기준 **갈래 B**(재생 문법 미증명).
+
+**증거.** `docs/research/ma3-effects/14-musicsync-m3a-timecode-probe-run2.md`(+ 정정 절) · 단계 로그 `docs/research/ma3-effects/evidence/musicsync-m3a-run2-steps.jsonl`(19행). 쓰기 8/8 — `Store Timecode 999` · `Set … 'Name' 'MSYNCPROBE'` · `Assign Sequence 9 At Timecode 999` · `Go`/`Go+`/`Pause`/`Toggle Timecode 999` · `Off Timecode 999`; 열거 밖 0 · 비격리 대상 0. 조회 11/12(프로브별 숫자는 노트) · 프로브 5/5. ①: `DataPool/Timecodes/999/TrackGroup 1` → `childCount 2`, 자식 `MarkerTrack "Marker"` · `Track "<T215 SCRATCH DELETABLE>"`, `truncated:false`. ⑤: 생성 전 `path segment not found: '999' (in DataPool/Timecodes/999)`. ④: 슬롯 이름 `MSYNCPROBE` 일치, 풀 childCount 1→2.
+
+**기준 귀속.** main `793abb4` + 이 브랜치 `WT-timecode-probe`, 응답기 1.6.4, 2026-09-05T10:20Z. 오케스트레이터가 원자료로 되읽어 대조.
+
+**미검증.** B4 잔여 — 재생 후보 넷은 `ok:true` 였으나 오브젝트 상태 스냅숏이 준비 직후와 동일해 효과를 이 채널로는 못 잰다(재생 상태 필드 부재). 프로브 1판이 낸 「효과=True」 넷은 응답 `id` 를 비교에 넣은 **오판**이며 같은 브랜치에서 정정·회귀검사(`test_a_readback_that_differs_only_by_request_id_is_no_effect`). B5 는 닫혔다(열렸다). B6 는 닫혔다(일치). B8: 실측 조회 11.
+
+**잔여 위험.** (1) **빈 타임코드 풀에서는 앱이 타임코드를 못 쓴다** — `_timecode_slot_verdict` 의 `childCount 0 → unknown` 은 응답기가 빈 풀과 실패 열거를 같은 페이로드로 답하기 때문이며(1회차 무결론, `…-timecode-probe.md`), 이 쇼에서 2회차가 가능했던 것은 감독이 `Timecode 1` 을 손으로 만든 뒤다. M3-b 도 같은 조건. 결정 필요(응답기 1.6.5 실패 표식 / 판정 완화 / 운영 절차). (2) 잔여물 `Timecode 1`·`999` 는 삭제 예산 밖 — 운영자가 정리. (3) 후보 효과 판정은 다른 채널(`query_properties` 재생 속성 등)이 필요하며 예산 밖.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
 run_complete_at: 2026-09-05
 run_commit_sha: pending-backfill-m1
 run_status: audit-ready
-milestone: M1
+milestone: M1 + M3-a
 ac_pass_count: 8
 ac_fail_count: 0
 ac_scope: AC-MUSICSYNC-001..008 (M1 전량)
@@ -154,7 +166,7 @@ console_writes_emitted: 0
 new_warnings_or_lints_introduced: 0
 full_suite: "11055 passed, 12 skipped"
 coverage_new_module: "server/lxseq/cue_time.py 100%"
-unverified: [B9]
+unverified: [B9, B4]   # B5·B6 는 M3-a 로 닫힘
 m1_to_mN_commit_strategy: "M1 단일 커밋 — M2·M3 는 이 SPEC 의 후속 회차"
 ```
 
