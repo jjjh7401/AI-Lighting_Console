@@ -222,6 +222,22 @@ export interface AttachmentControlState {
   title: string;
 }
 
+// t271 — 첨부는 composer 와 다른 조건으로 연다. composer 는 콘솔이 오프라인이면
+// (executions_blocked) 닫히는 게 맞지만, 업로드(VWX·이미지·곡)와 곡 분석은
+// 서버만 있으면 되는 작업이라 콘솔 상태와 무관해야 한다. 브라우저 실측
+// (reports/musicsync-browser-check-20260906.md 발견 1)에서 첨부 버튼이 콘솔
+// 상태에 잠겨, 콘솔 없는 자리에서 곡을 미리 분석하는 일이 불가능했다.
+// 서버가 끊겼거나 상태를 아직 모르면 업로드가 닿을 곳이 없으므로 그때만 닫는다.
+export function attachmentInputDisabled({
+  connected,
+  status,
+}: {
+  connected: boolean;
+  status: StatusState | null;
+}): boolean {
+  return !connected || status === null;
+}
+
 export function attachmentControlState({
   inputDisabled,
   responding,
@@ -238,7 +254,7 @@ export function attachmentControlState({
     disabled: inputDisabled || busy,
     title: busy
       ? ATTACHMENT_BUSY_MESSAGE
-      : "파일 첨부 — VWX(CSV·TXT·XLSX·MVR) 또는 배치 이미지(PNG·JPEG·WEBP)",
+      : "파일 첨부 — VWX(CSV·TXT·XLSX·MVR), 배치 이미지(PNG·JPEG·WEBP) 또는 곡(WAV·FLAC·MP3·M4A)",
   };
 }
 
@@ -527,8 +543,9 @@ export default function App() {
     };
   }, [settingsRefresh]);
   const composer = composerViewState({ connected, status: state.status, draft, responding });
+  const attachmentClosed = attachmentInputDisabled({ connected, status: state.status });
   const attachment = attachmentControlState({
-    inputDisabled: composer.inputDisabled,
+    inputDisabled: attachmentClosed,
     responding,
     queueLength: queue.length,
   });
@@ -729,7 +746,7 @@ export default function App() {
     // 첨부 busy-guard에 걸린다.
     event.preventDefault();
     if (attachment.disabled) {
-      if (!composer.inputDisabled) setLayoutImageUploadError(ATTACHMENT_BUSY_MESSAGE);
+      if (!attachmentClosed) setLayoutImageUploadError(ATTACHMENT_BUSY_MESSAGE);
       return;
     }
     routeAttachment(file);
@@ -744,7 +761,7 @@ export default function App() {
       );
       if (hasImage) {
         event.preventDefault();
-        if (!composer.inputDisabled) setLayoutImageUploadError(ATTACHMENT_BUSY_MESSAGE);
+        if (!attachmentClosed) setLayoutImageUploadError(ATTACHMENT_BUSY_MESSAGE);
       }
       return;
     }
