@@ -13,7 +13,7 @@
 | 응답기 정의 | `console/lua/copilot_responder.lua:625-653` | `M.safe_children`. 세 갈래: `Children()` 성공 `:627-638` · `Count()`+`Ptr()` 성공 `:639-651` · **둘 다 실패 → `return {}` `:652`** |
 | 응답기 버전 | `console/lua/copilot_responder.lua:98` | `VERSION = "1.6.4"` |
 | 스냅샷 빌더 | `console/lua/copilot_responder.lua:822`(정의) · `:846-885`(페이로드 조립) | `local children = M.safe_children(handle)` → `total = #children` → `ok = true`, `node.childCount = total`, `children`, `truncated = last < total` |
-| 호출 지점 | `grep -n 'safe_children(' console/lua/copilot_responder.lua` → **4행** | 정의 `:625` + 호출 **3곳**: `:690`(`find_child`) · `:846`(`build_snapshot`) · `:1219`(플러그인 스캔) |
+| 호출 지점 | `grep -n 'safe_children(' console/lua/copilot_responder.lua` → **4행** | 정의 `:625` + 호출 **3곳**: `:690`(`find_child`) · `:846`(`build_snapshot`) · `:1219`(`set_plugin_source`, 정의 `:1217`) |
 | 앱 판정 | `server/orchestrator/tools.py:2814` | `def _timecode_slot_verdict(port, path, wanted)` — 툴셋 빌더 안의 **중첩 함수** |
 | 앱 판정 · 문제 갈래 | `server/orchestrator/tools.py:2876-2880` | `if child_count == 0: return _suppressed("… a failed enumeration and an empty pool are indistinguishable here")` |
 | 앱 판정 · 유일 호출자 | `server/orchestrator/tools.py:2709` | `occupied, axes = _timecode_slot_verdict(...)` |
@@ -122,7 +122,7 @@ plan 단계에서 (나) 들어올리기로 **결정됐다**(B-3, REQ-016). M2 �
 1. `M.safe_children`(`:625-653`)이 두 번째 반환값으로 `"ok"`/`"failed"` 를 답하게 한다(§C-2).
 2. `M.build_snapshot`(`:846`)이 그 값을 `node.enumeration` 으로 싣는다(§C-1).
 3. `VERSION`(`:98`) `1.6.4` → `1.6.5`.
-4. `console/lua/PROTOCOL.md`: 1.6.5 revision note(배너 `:9-50` 계열) + §4.2 `node` 예시·규약에 필드 추가.
+4. `console/lua/PROTOCOL.md`: 1.6.5 revision note(배너 `:19-73` 계열) + §4.2 `node` 예시·규약에 필드 추가.
 5. `server/tests/test_lua_responder.py`: 두 케이스 추가 — (ㄱ) 성공적으로 빈 풀 → `enumeration:"ok"` + `childCount 0`, (ㄴ) `Children()`·`Count()` 가 **둘 다** `error()` 를 던지는 목 노드 → `enumeration:"failed"` + `childCount 0`. (ㄴ)용 목 노드는 `extra_env` 로 주입(B-4).
 6. 회귀: `grep -n 'safe_children(' console/lua/copilot_responder.lua` 가 여전히 4행이고 `:690`·`:1219` 동작이 불변임을 검사로 확인.
 

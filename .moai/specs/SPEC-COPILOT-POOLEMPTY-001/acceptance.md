@@ -51,7 +51,7 @@
 
 - **Given** M1 이 적용된 트리.
 - **When** `grep -n 'safe_children(' console/lua/copilot_responder.lua` 를 실행하고, `server/tests/test_lua_responder.py` 전체를 돌린다.
-- **Then** grep 이 **4행**(정의 1 + 호출 3: `find_child` · `build_snapshot` · 플러그인 스캔)을 답하고, `find_child` 계열(슬롯 대 위치 해석, 갭 풀)과 플러그인 스캔 계열의 **기존 검사 전부가 초록**이며 새 실패 0건이다.
+- **Then** grep 이 **4행**(정의 1 + 호출 3: `find_child` · `build_snapshot` · `set_plugin_source`)을 답하고, `find_child` 계열(슬롯 대 위치 해석, 갭 풀)과 `set_plugin_source` 계열의 **기존 검사 전부가 초록**이며 새 실패 0건이다.
 
 ### AC-POOLEMPTY-005 — 버전과 문서가 함께 움직였다
 
@@ -67,7 +67,7 @@
 
 - **Given** `node.childCount == 0`, `node.enumeration == "ok"`, `children == []`, `truncated == False` 를 답하는 가짜 `StateQueryPort`.
 - **When** `from server.orchestrator.tools import timecode_slot_verdict` 로 들어올린 함수(REQ-016)를 `timecode_slot_verdict(port, path, wanted)` 로 호출한다.
-- **Then** 반환된 점유자가 `None` 이고 반환된 축이 `timecode_go is True`(기본 축), `timecode_skip_reason is None` 이다.
+- **Then** 반환된 점유자가 `None` 이고 반환된 축이 `SongCueTimingAxes()` 기본값과 같다(`axes == SongCueTimingAxes()`, 곧 `timecode_go is True`). `timecode_skip_reason` 은 기본 생성자에서도 문자열(`server/looks/songcue.py:100-102`)이므로 `None` 을 단언하지 않는다.
 
 ### AC-POOLEMPTY-007 — 마커가 없으면 오늘과 동일하게 unknown 이다 (하위 호환)
 
@@ -131,7 +131,7 @@
 
 ## §D.4 완료의 정의 (Definition of Done)
 
-- AC-POOLEMPTY-001..012 전부 통과 (오프라인).
+- AC-POOLEMPTY-001..012, 015 전부 통과 (오프라인).
 - AC-POOLEMPTY-013..014 통과 (실기, 운영자 게이트).
 - `pytest server/tests/` 초록, 새 회귀 0건.
 - 실기 회차 노트가 `docs/research/ma3-effects/` 에 존재하고, free 와 대조군 unknown 두 결과를 **명령줄과 함께** 인용한다.

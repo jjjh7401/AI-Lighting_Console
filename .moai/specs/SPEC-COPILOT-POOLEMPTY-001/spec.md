@@ -68,7 +68,7 @@ depends_on: [SPEC-COPILOT-MUSICSYNC-001, SPEC-COPILOT-READBACK-002]
 - **REQ-POOLEMPTY-002** [Ubiquitous] — the `M.build_snapshot`(정의 `:822`, 페이로드 조립 `:846-885`) **shall** 성공 회신(`ok = true`)의 `node` 객체에 열거 신뢰도 필드를 **한 개** 싣는다. 값은 `"ok"` 또는 `"failed"` 두 가지뿐이며, 최상위 페이로드 형상은 바꾸지 않는다.
 - **REQ-POOLEMPTY-003** [Event-driven] — **When** `handle:Children()` 과 `handle:Count()` 가 **둘 다** pcall 실패하면, the 응답기 **shall** `node.childCount = 0` 과 열거 신뢰도 `"failed"` 를 함께 답한다. `ok`·`children`·`truncated` 의 오늘 값(`true` / `[]` / `false`)은 그대로 둔다.
 - **REQ-POOLEMPTY-004** [Event-driven] — **When** 풀이 성공적으로 **빈 목록**을 답하면, the 응답기 **shall** `node.childCount = 0` 과 열거 신뢰도 `"ok"` 를 함께 답한다.
-- **REQ-POOLEMPTY-005** [Ubiquitous] — the 응답기 **shall** `M.safe_children` 의 나머지 두 호출 지점(`:690` `M.find_child`, `:1219` 플러그인 스캔)에서 관측 가능한 동작을 바꾸지 않는다. `grep -n 'safe_children(' console/lua/copilot_responder.lua` 는 2026-09-06 `f727e11` 에서 **4행**(정의 `:625` + 호출 `:690`·`:846`·`:1219`)을 답한다.
+- **REQ-POOLEMPTY-005** [Ubiquitous] — the 응답기 **shall** `M.safe_children` 의 나머지 두 호출 지점(`:690` `M.find_child`, `:1219` `M.set_plugin_source`, 정의 `:1217`)에서 관측 가능한 동작을 바꾸지 않는다. `grep -n 'safe_children(' console/lua/copilot_responder.lua` 는 2026-09-06 `f727e11` 에서 **4행**(정의 `:625` + 호출 `:690`·`:846`·`:1219`)을 답한다.
 - **REQ-POOLEMPTY-006** [Ubiquitous] — the 응답기 **shall** `VERSION`(`:98`)을 `"1.6.4"` 에서 `"1.6.5"` 로 올리고, `console/lua/PROTOCOL.md` 는 1.6.5 revision note 와 §4.2 의 새 필드 문서를 싣는다.
 
 ### 3.2 앱 (Python)
