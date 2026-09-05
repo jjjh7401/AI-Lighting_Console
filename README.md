@@ -329,6 +329,65 @@ Implementation: `server/lxseq/` (parser + mapper) + `server/orchestrator/tools.p
 (`import_lxseq_patch` tool). Specification:
 [SPEC-COPILOT-LXSEQ-001](.moai/specs/SPEC-COPILOT-LXSEQ-001/spec.md).
 
+## Music sync — sheet times, song analysis, timecode rehearsal (MUSICSYNC)
+
+Three layers of the same axis — time — with three different console-write
+permissions.
+
+1. **Sheet times land on the cue.** A cue-ex sheet's `TC In` / `TC Out` columns
+   are read and emitted as two extra lines (`TrigType 'Time'`, `TrigTime <s>`)
+   inside the **existing** approval bundle — no extra approval, no extra query.
+   A time that cannot be read is never turned into a number: `확인필요`, a blank
+   cell, and a malformed cell are **three distinct reasons**, and a cue carrying
+   any of them emits no timing lines at all. A negative PRE-ROLL time is emitted
+   as `TrigTime -30` but is **excluded from the timeline projection**, and the
+   payload says which cues were excluded.
+2. **Upload a song; the DSP measures, you decide.** Attach a WAV, FLAC, MP3 or M4A (max
+   **8 MiB**, measured on decoded bytes) and the analyzer returns BPM, section
+   boundaries, onsets, RMS and D-level candidates. Those numbers reach you as a
+   **confirmation card** — nothing is adopted until you answer it. BPM priority
+   is confirmed > sheet `HEAD.BPM` > default 120; an `FX-Rate` back-calculation
+   is shown **for comparison only** and is never adopted. The analysis layer
+   touches the console zero times, fixed mechanically by an AST scan.
+3. **Rehearse a timecode; the app never arms the recorder.** The prepare step
+   fires exactly three lines (`Store Timecode <n>`, `Set … Property 'Name' …`,
+   `Assign Sequence <s> At Timecode <n>`). The arming verb `Record Timecode <n>`
+   is handed to **you** through `QuestionRequest.commands[]` and is executed by
+   hand on the console. Read-back verification is capped at **4 `query_state`
+   calls per run** in code; a query past the cap is refused rather than sent.
+
+Console budget, measured per milestone: sheet import — zero writes outside the
+existing approval bundle and zero extra queries; song analysis — zero writes,
+zero queries; the timecode probe — 8 writes / 11 queries, all against one
+isolated slot; read-back verification — zero writes, 3 of 4 queries.
+
+Limits, stated plainly:
+
+- **The playback verbs are unproven.** `Go` / `Go+` / `Pause` / `Toggle` were
+  fired against an isolated slot and returned `ok`, but no state change was
+  observable through this channel, so **no playback command is handed over**.
+- **Event content is not read.** Verification reaches the track list under
+  `TrackGroup 1` and stops. Its verdict vocabulary contains no `verified` — a
+  successful run reports `unverified`, which is the honest answer here.
+- **A negative `TrigTime` has never been offered to a real console.** What was
+  measured is our own behaviour when a write is rejected, not the console's
+  answer.
+- **An empty timecode pool blocks the app** from creating its first timecode
+  (`childCount 0` reads as `unknown`); a slot must already exist.
+- **Song analysis is triggered by the operator** — after a successful upload the
+  UI shows a single "분석" action that sends `song_audio_analyse`; the server then
+  runs the DSP pass and raises the confirmation card (#313). The timecode handoff
+  card still has no production caller (its `Record` line is exposed through the
+  tool payload only), and sheet `HEAD.BPM` is not yet joined to the analysis call.
+- The bundle grows **~213.7 MB** with `librosa` (65,564 KiB → 274,240 KiB,
+  `du -sk`). A librosa-free fallback (manual BPM entry on the same card) is
+  implemented and tested but was not selected.
+
+Implementation: `server/lxseq/cue_time.py`, `server/audio/analyze.py`,
+`server/orchestrator/songcue_timecode.py`, `server/web/{messages,app,session,question}.py`,
+`server/design/profile.py`. Specification:
+[SPEC-COPILOT-MUSICSYNC-001](.moai/specs/SPEC-COPILOT-MUSICSYNC-001/spec.md).
+
 ## Packaged app — build & run (SPEC-COPILOT-DEPLOY-001 Stage 1, M6)
 
 A self-contained PyInstaller **onedir** build lets an operator run the app
