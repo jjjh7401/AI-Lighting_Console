@@ -122,8 +122,19 @@ class TestConsoleStack:
         stack = _stack(tmp_path, fake_console)
         try:
             assert stack.backup is not None
-            assert stack.backup.tick() is True  # first tick performs a backup
-            assert "SaveShow" in fake_console.exec_commands
+            # t272: attempt_session_backup=False means "no boot-time write" —
+            # the periodic timer starts at boot, so the first tick is silent.
+            assert stack.backup.tick() is False
+            assert "SaveShow" not in fake_console.exec_commands
+        finally:
+            stack.stop()
+
+    def test_session_backup_success_starts_the_periodic_timer_too(self, tmp_path, fake_console):
+        stack = _stack(tmp_path, fake_console)
+        try:
+            assert stack.attempt_session_backup() is True
+            assert stack.backup.tick() is False  # timer reset by the boot backup
+            assert fake_console.exec_commands.count("SaveShow") == 1
         finally:
             stack.stop()
 

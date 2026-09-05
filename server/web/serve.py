@@ -114,7 +114,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--no-session-backup",
         action="store_true",
-        help="skip the session-start showfile backup attempt",
+        help="skip the session-start showfile backup attempt (the periodic backup "
+        "timer then starts at boot instead of firing at boot)",
     )
     parser.add_argument(
         "--no-browser",

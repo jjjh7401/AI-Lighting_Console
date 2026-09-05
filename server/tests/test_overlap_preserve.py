@@ -400,6 +400,11 @@ _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/gate.py": 8,
     "server/safety/monitor.py": 3,
     "server/safety/responder_version.py": 0,
+    # t272 (2026-09-06): `bootstrap.py` reopened with an ADD-ONLY 4-line
+    # `else:` branch — when the session-start backup is deliberately skipped,
+    # the periodic timer starts at boot instead of firing SaveShow at boot.
+    # 0 deletions: nothing pinned below is touched.
+    "server/safety/bootstrap.py": 0,
 }
 _SAFETY_ALLOWED_DELETED_LINES = {
     # SCOPE CORRECTION (T-I audit-log crash fix): AuditLog.record() used a
