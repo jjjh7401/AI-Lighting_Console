@@ -2620,6 +2620,24 @@ class LayoutImageUpload:
 
 
 @dataclass(frozen=True)
+class SongAudioUpload:
+    """이 세션에 가장 최근 붙은 곡 오디오 한 개 (SPEC-COPILOT-MUSICSYNC-001 M2).
+
+    ``LayoutImageUpload``·``UploadedSheet`` 와 같은 형태다: 불변이고, 새 업로드가
+    통째로 교체하며, 교체 사실을 소리 내어 말한다.
+
+    ``sha256`` 과 ``byte_length`` 는 **디코드된 바이트** 기준이다(base64 문자열이
+    아니다) — 운영자가 원본 파일의 ``shasum -a 256`` 값과 대조할 수 있어야 한다.
+    """
+
+    file_name: str
+    mime_type: str
+    content_base64: str
+    sha256: str
+    byte_length: int
+
+
+@dataclass(frozen=True)
 class UploadedSheet:
     """SPEC-COPILOT-SHEETPIPE-001 M1 — 판별을 통과한 시트 한 장 (REQ-SHEETPIPE-001).
 
@@ -3741,6 +3759,10 @@ class ChatSession:
         # ``import_uploaded_sheet`` wrapper reads this through
         # ``_UploadedSheetView``; M1 only stores it.
         self._uploaded_sheet: UploadedSheet | None = None
+        # SPEC-COPILOT-MUSICSYNC-001 M2 — 곡 오디오 첨부(가장 최근 하나만;
+        # 새 업로드가 통째로 교체한다). 이 자리는 **보관만** 한다 — 분석은
+        # ``analyse_song_audio`` 가 운영자가 요청했을 때 돈다.
+        self._song_audio: SongAudioUpload | None = None
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -10134,6 +10156,45 @@ class ChatSession:
             event = notice_event(f"이미지 '{file_name}' 첨부됨 ({size_kb}KB)")
         self._send(event)
         return event
+
+    @property
+    def song_audio(self) -> SongAudioUpload | None:
+        """이 세션에 붙어 있는 곡 오디오 — 없으면 ``None``.
+
+        읽기 전용 창이다. 거절된 프레임이 여기 흔적을 남기지 않는다는 것을
+        시험이 이 창으로 확인한다(validate-before-store).
+        """
+        return self._song_audio
+
+    def upload_song_audio(self, file_name: str, mime_type: str, content_base64: str) -> dict:
+        """곡 오디오 한 개를 세션에 담는다 — 보관만 한다 (REQ-MUSICSYNC-013).
+
+        ``upload_layout_image`` 와 같은 형태다: 담기만 하고 지시문을 부르지
+        않는다. 업로드 순간에 분석을 돌리면, 운영자가 무엇을 할지 말하기도 전에
+        수 초를 태운다. 분석은 :meth:`analyse_song_audio` 가 맡는다.
+
+        와이어 검증(확장자·MIME·base64·8 MiB 상한)은 ``parse_client_message`` 에서
+        이미 끝났다 — 여기 닿은 메시지는 이미 받아들여진 것이다.
+
+        교체를 소리 내어 말하는 이유는 ``upload_layout_image`` 와 같다: 침묵하면
+        운영자가 두 곡이 붙어 있다고 믿은 채 엉뚱한 곡으로 만든 계획을 승인할 수
+        있다.
+        """
+        data = base64.b64decode(content_base64, validate=True)
+        replaced = self._song_audio is not None
+        self._song_audio = SongAudioUpload(
+            file_name=file_name,
+            mime_type=mime_type,
+            content_base64=content_base64,
+            sha256=hashlib.sha256(data).hexdigest(),
+            byte_length=len(data),
+        )
+        audio = self._song_audio
+        text = f"'{file_name}' 첨부됨 — 오디오 · sha256 {audio.sha256} · {audio.byte_length}바이트"
+        if replaced:
+            text = text + " (이전에 첨부한 오디오를 교체했습니다)"
+        text = text + ". 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요."
+        return self._notify(text)
 
     # -- internals ------------------------------------------------------------------
 

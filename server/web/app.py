@@ -50,6 +50,7 @@ from server.web.measure import RoundTripRecorder
 from server.web.messages import (
     LayoutImageRejectedError,
     ProtocolError,
+    SongAudioRejectedError,
     approval_request_event,
     approval_resolved_event,
     busy_event,
@@ -478,6 +479,19 @@ def create_app(deps: WebDeps) -> FastAPI:
                         error_event(message=str(rejection), kind="layout_image_rejected"),
                     )
                     continue
+                except SongAudioRejectedError as rejection:
+                    # SPEC-COPILOT-MUSICSYNC-001 M2 — 위 layout_image 와 같은
+                    # 이유로 **이름 붙은 종류**로 나간다: 「파일이 거절됐다,
+                    # 이유는 이것이다」와 「프레임이 깨졌다」는 운영자에게 서로
+                    # 다른 행동을 요구한다. str(rejection) 을 그대로 옮기는 것도
+                    # 같은 근거로 안전하다 — 문구는 messages.py 가 쓴 고정
+                    # 문장이고 끼워 넣는 값은 서버가 가진 허용 목록과 상한
+                    # 숫자뿐이다(REQ-MUSICSYNC-014).
+                    await _safe_send(
+                        websocket,
+                        error_event(message=str(rejection), kind="song_audio_rejected"),
+                    )
+                    continue
                 except ProtocolError:
                     await _safe_send(
                         websocket, error_event(message=_PROTOCOL_ERROR_MESSAGE, kind="protocol")
@@ -515,6 +529,23 @@ def create_app(deps: WebDeps) -> FastAPI:
                         continue
                     await asyncio.to_thread(
                         session.upload_layout_image,
+                        message["file_name"],
+                        message["mime_type"],
+                        message["content_base64"],
+                    )
+                elif message_type == "song_audio_upload":
+                    # SPEC-COPILOT-MUSICSYNC-001 M2 — 바로 위 layout_image 분기가
+                    # 기록한 사고(분기 누락으로 메시지가 조용히 버려짐)의 재발
+                    # 방지가 이 줄의 전부다. 같은 busy-guard 아래 같은 스레드
+                    # 패턴으로 배선하고, 저장 전용이라 모델 호출은 없다.
+                    # 이 분기를 지우면 test_web_song_audio.py 의 WS 왕복 시험이
+                    # 실패한다 — session 메서드 직접 호출 시험은 이 층을 지나지
+                    # 않아 그대로 통과해 버린다(AC-MUSICSYNC-013).
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.upload_song_audio,
                         message["file_name"],
                         message["mime_type"],
                         message["content_base64"],
