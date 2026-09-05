@@ -295,7 +295,7 @@ class TestTheUploadTravelsTheWholeWireNotJustTheSessionMethod:
 # =============================================================================
 
 
-def _session(tmp_path, events: list[dict] | None = None):
+def _session(tmp_path, events: list[dict] | None = None, *, question_channel=None):
     from server.web.session import ChatSession
 
     deps = _deps(tmp_path)
@@ -306,6 +306,7 @@ def _session(tmp_path, events: list[dict] | None = None):
         system_prefix="PREFIX",
         audit=deps.audit,
         send_event=sink.append,
+        question_channel=question_channel,
         approval_channel=deps.approval_channel,
     )
 
@@ -337,3 +338,122 @@ class TestNothingIsStoredWhenTheFrameIsRefused:
         session.upload_song_audio("track.wav", "audio/wav", SMALL_WAV_B64)
         assert session.song_audio.sha256 == hashlib.sha256(SMALL_WAV).hexdigest()
         assert session.song_audio.sha256 != hashlib.sha256(SMALL_WAV_B64.encode()).hexdigest()
+
+
+# =============================================================================
+# 확인 카드 경로 — 분석 → 카드 → 사람 → BPM (AC-MUSICSYNC-015 · 016 · 018)
+# =============================================================================
+
+
+class _AnsweringChannel:
+    """카드를 받아 미리 정한 답을 즉시 돌려주는 가짜 질문 통로.
+
+    실제 :class:`QuestionChannel` 은 사람을 기다린다. 여기서 재려는 것은 기다림이
+    아니라 **카드의 모양과 답이 흐르는 자리**이므로, 답을 고정해 두고 카드만
+    붙잡는다. 붙잡은 카드가 이 시험들의 판정 대상이다.
+    """
+
+    def __init__(self, answer: str) -> None:
+        self.answer = answer
+        self.cards: list = []
+
+    def bind(self, notify, *, session_key=None) -> None:  # pragma: no cover - 배선만
+        pass
+
+    def unbind(self, *, session_key=None) -> None:  # pragma: no cover - 배선만
+        pass
+
+    def ask(self, request, *, session_key=None) -> str:
+        self.cards.append(request)
+        return self.answer
+
+
+class TestTheAnalysisPathAlwaysGoesThroughTheCard:
+    """REQ-MUSICSYNC-015 — 확인 카드가 경로상 필수다.
+
+    DSP 결과가 사람 확인 없이 하류로 흐르는 분기는 없다(design.md §6 W9).
+    """
+
+    def _analysed(self, tmp_path, answer: str, **kwargs):
+        channel = _AnsweringChannel(answer)
+        session = _session(tmp_path, question_channel=channel)
+        session.upload_song_audio("track.wav", "audio/wav", SMALL_WAV_B64)
+        session.analyse_song_audio(**kwargs)
+        return session, channel
+
+    def test_analysing_raises_exactly_one_card(self, tmp_path):
+        _session_obj, channel = self._analysed(tmp_path, "확인")
+        assert len(channel.cards) == 1
+
+    def test_the_card_is_multi_select_with_one_option_per_section(self, tmp_path):
+        _session_obj, channel = self._analysed(tmp_path, "확인")
+        card = channel.cards[0]
+        assert card.multi is True
+        assert len(card.options) >= 1
+        assert all(option.selected for option in card.options)
+
+    def test_accepting_the_card_confirms_the_measured_tempo(self, tmp_path):
+        session, _channel = self._analysed(tmp_path, "확인")
+        assert session.song_bpm is not None
+        assert session.song_bpm.source == "measured"
+        # 3초 합성 트랙이라 정답 폭을 걸지 않는다 — 여기서 재는 것은 **자리**다.
+        assert session.song_bpm.bpm is not None
+
+    def test_a_typed_override_reaches_the_resolution(self, tmp_path):
+        session, _channel = self._analysed(tmp_path, "BPM 130")
+        assert session.song_bpm.bpm == 130.0
+        assert session.song_bpm.source == "measured"
+
+    def test_an_unanswered_card_confirms_nothing_and_the_default_stands(self, tmp_path):
+        from server.web.question import UNANSWERED
+
+        session, _channel = self._analysed(tmp_path, UNANSWERED)
+        assert session.song_bpm.source == "default"
+        assert session.song_bpm.bpm is None
+
+    def test_with_no_channel_bound_nothing_is_confirmed(self, tmp_path):
+        # 볼 사람이 없는 카드는 카드가 아니다 — 확정도 없다.
+        session = _session(tmp_path)
+        session.upload_song_audio("track.wav", "audio/wav", SMALL_WAV_B64)
+        session.analyse_song_audio()
+        assert session.song_bpm.source == "default"
+
+    def test_analysing_with_no_audio_attached_says_so(self, tmp_path):
+        events: list[dict] = []
+        session = _session(tmp_path, events)
+        event = session.analyse_song_audio()
+        assert "오디오가 없습니다" in event["message"]
+        assert session.song_bpm is None
+
+
+class TestTheSheetTempoDisagreementIsReportedThroughTheSession:
+    """AC-MUSICSYNC-018 — 어긋남은 채택 여부와 무관하게 사용자에게 보고된다."""
+
+    def test_a_disagreeing_sheet_value_is_named_in_the_notice(self, tmp_path):
+        events: list[dict] = []
+        channel = _AnsweringChannel("BPM 128")
+        session = _session(tmp_path, events, question_channel=channel)
+        session.upload_song_audio("track.wav", "audio/wav", SMALL_WAV_B64)
+        event = session.analyse_song_audio(sheet_bpm="120 (고정)")
+        assert "128" in event["message"]
+        assert "120" in event["message"]
+        assert "어긋" in event["message"]
+        assert session.song_bpm.bpm == 128.0
+        assert session.song_bpm.source == "measured"
+
+    def test_an_agreeing_sheet_value_raises_no_disagreement(self, tmp_path):
+        # 대조군: 언제나 어긋남을 외치면 위 시험은 공허하다.
+        channel = _AnsweringChannel("BPM 120")
+        session = _session(tmp_path, question_channel=channel)
+        session.upload_song_audio("track.wav", "audio/wav", SMALL_WAV_B64)
+        event = session.analyse_song_audio(sheet_bpm="120 (고정)")
+        assert "어긋" not in event["message"]
+
+    def test_the_fx_rate_back_calculation_is_reported_but_never_adopted(self, tmp_path):
+        channel = _AnsweringChannel("BPM 128")
+        session = _session(tmp_path, question_channel=channel)
+        session.upload_song_audio("track.wav", "audio/wav", SMALL_WAV_B64)
+        event = session.analyse_song_audio(sheet_bpm="120 (고정)", fx_rate=25.0, beats_per_cycle=4)
+        assert "FX-Rate" in event["message"]
+        assert session.song_bpm.fx_rate_back_calculated == 100.0
+        assert session.song_bpm.bpm == 128.0  # 역산값 100 은 채택되지 않았다

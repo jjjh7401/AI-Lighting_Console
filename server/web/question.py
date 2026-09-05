@@ -24,8 +24,9 @@
 from __future__ import annotations
 
 import itertools
+import re
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from server.safety.session_context import DEFAULT_SESSION_KEY, current_session_key
@@ -107,6 +108,134 @@ class QuestionRequest:
             ],
             "multi": self.multi,
         }
+
+
+# ---------------------------------------------------------------------------
+# 곡 분석 확인 카드 (SPEC-COPILOT-MUSICSYNC-001 M2 · REQ-MUSICSYNC-015)
+# ---------------------------------------------------------------------------
+#
+# 위 :class:`QuestionRequest` 스키마는 **한 글자도 바뀌지 않는다.** 아래는 그
+# 스키마로 구간표 카드를 세우는 빌더일 뿐이다 — 구조화 payload 신설은 이 SPEC
+# 밖이다(design.md §4.3).
+#
+# **그리고 이 카드는 모델이 아니라 서버 코드가 세운다.** ``ask_user`` 툴 스키마는
+# 「EXACTLY ONE question」이고 ``selected``·``multi``·``commands`` 를 모델에
+# 노출하지 않는다. 즉 모델에게 구간표 카드를 부탁하는 경로는 **존재하지 않으며**,
+# 존재하는 것처럼 설계하면 런타임에 조용히 축소된 카드가 뜬다.
+
+#: 사람이 템포를 바꿔 적을 때 쓰는 명시적 토큰. 「답 안의 아무 숫자」를 BPM 으로
+#: 읽으면 구간 라벨의 초 단위 숫자(``0:00–0:16``)가 템포가 된다.
+_BPM_OVERRIDE_PATTERN = re.compile(r"bpm\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
+
+#: 사람이 적을 수 있는 템포의 상식적 범위. 밖의 값은 **채택하지 않고** 측정값을
+#: 그대로 둔다 — 0 이나 음수를 그대로 실으면 ``MusicProfile`` 이 터지고, 터진
+#: 자리에서는 「사람이 오타를 냈다」가 「분석이 실패했다」로 읽힌다.
+_BPM_MIN = 20.0
+_BPM_MAX = 400.0
+
+
+@dataclass(frozen=True)
+class SongSectionProposal:
+    """DSP 가 제안한 구간 하나 — 확정이 아니라 **후보**다.
+
+    ``selected`` 가 기본 참인 이유는 design.md §4.3 이다: 미리 켜 두면 사람이
+    **끄는 방식**으로 부분 수정할 수 있고, 카드는 나머지 선택지도 함께 보여
+    준다.
+    """
+
+    start_ms: int
+    end_ms: int
+    d_level: int
+    selected: bool = True
+
+
+def _format_clock(millis: int) -> str:
+    total_seconds = max(0, millis) // 1000
+    return f"{total_seconds // 60}:{total_seconds % 60:02d}"
+
+
+def build_song_confirmation_card(
+    *,
+    proposals: Sequence[SongSectionProposal],
+    measured_bpm: float | None = None,
+    bpm_confidence: float | None = None,
+    sheet_bpm: float | None = None,
+    fallback_reason: str | None = None,
+) -> QuestionRequest:
+    """구간표 확인 카드 하나를 **오늘 스키마로** 세운다.
+
+    ``multi=True`` + 구간당 옵션 1개다. 갈래 셋 중 이것을 택한 근거는
+    design.md §4.3 — 3층 변경(서버 스키마 · 와이어 · 렌더러) 없이 오늘 성립하고,
+    ``selected=True`` 로 제안을 미리 켜 두면 부분 수정이 되며, 세부 수정은 자유
+    입력(:data:`ANSWER_FREEFORM`)이 받는다.
+
+    ``fallback_reason`` 이 있으면 **같은 카드**가 수동 BPM 입력 카드로 선다
+    (plan.md §C 결정 1 폴백). 카드 경로 자체는 어느 쪽에서도 살아 있다.
+    """
+    if not isinstance(proposals, Sequence) or isinstance(proposals, str | bytes):
+        raise TypeError(f"proposals must be a sequence of SongSectionProposal, got {proposals!r}")
+
+    options = tuple(
+        QuestionOption(
+            label=(
+                f"{_format_clock(item.start_ms)}–{_format_clock(item.end_ms)} · D{item.d_level}"
+            ),
+            description=(
+                f"이 구간을 D{item.d_level} 로 잡습니다. "
+                "아니면 체크를 풀고 자유 입력으로 고쳐 주세요."
+            ),
+            selected=item.selected,
+        )
+        for item in proposals
+    )
+
+    lines: list[str] = []
+    if fallback_reason:
+        lines.append(fallback_reason)
+        lines.append("BPM 을 직접 적어 주세요 — 예: 「BPM 128」.")
+    elif measured_bpm is not None:
+        confidence = "" if bpm_confidence is None else f" (확신 {bpm_confidence:.2f})"
+        lines.append(f"측정된 BPM 은 {measured_bpm:g} 입니다{confidence}.")
+        lines.append("다르면 「BPM 130」처럼 적어 주세요. 그대로면 이대로 확정합니다.")
+    else:
+        lines.append("BPM 을 직접 적어 주세요 — 예: 「BPM 128」.")
+
+    if sheet_bpm is not None:
+        # 어긋남은 **항상** 말한다(REQ-MUSICSYNC-017). 채택 우선순위는 여기서
+        # 정하지 않는다 — ``server.design.profile.resolve_bpm`` 이 정본이다.
+        lines.append(f"시트 HEAD.BPM 은 {sheet_bpm:g} 입니다 — 대조용으로 함께 적습니다.")
+
+    prompt = "구간과 BPM 을 확인해 주세요." if options else "BPM 을 확인해 주세요."
+    return QuestionRequest(
+        prompt=prompt,
+        why=" ".join(lines),
+        options=options,
+        multi=True,
+    )
+
+
+def parse_confirmed_bpm(answer: str, *, measured_bpm: float | None = None) -> float | None:
+    """사람의 답 하나에서 **확정된 BPM** 을 읽는다 — 없으면 ``None``.
+
+    규칙은 셋뿐이고 전부 명시적이다.
+
+    * :data:`UNANSWERED` · :data:`ANSWER_FREEFORM` → 확정 없음. 미응답은 거부가
+      아니라 답을 못 받은 것이고, 없는 답을 지어내지 않는 것이 이 통로의 전부다.
+    * ``BPM <숫자>`` 토큰이 있고 상식 범위 안이면 → 그 값(사람의 덮어쓰기).
+    * 그 밖에는 → ``measured_bpm`` 을 **그대로 확정**한다. 카드를 있는 그대로
+      받아들인 것이 곧 확정이다.
+
+    숫자를 토큰으로 잠그는 이유는 구간 라벨 때문이다 — ``0:00–0:16 · D1`` 에는
+    숫자가 셋 들어 있고, 「답 안의 아무 숫자」 규칙이면 그중 하나가 템포가 된다.
+    """
+    if not isinstance(answer, str) or answer in (UNANSWERED, ANSWER_FREEFORM):
+        return None
+    match = _BPM_OVERRIDE_PATTERN.search(answer)
+    if match is not None:
+        typed = float(match.group(1))
+        if _BPM_MIN <= typed <= _BPM_MAX:
+            return typed
+    return measured_bpm
 
 
 class QuestionChannel:
