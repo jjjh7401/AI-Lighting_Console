@@ -237,6 +237,25 @@ class TestEffectIsReadFromTheReadback:
         rows = {row["command"]: row for row in result["probe2_candidates"]}
         assert rows["Go Timecode 998"]["effect"] is True
 
+    def test_a_readback_that_differs_only_by_request_id_is_no_effect(self):
+        """1회차 실기(2026-09-05) 오판의 회귀 — 응답기는 되읽기마다 새 `id`
+        (`gate-12`·`gate-15`…)를 매기므로, 그 필드를 비교에 넣으면 네 후보 전부가
+        「효과 있음」이 된다. 상태 본문이 같으면 효과가 아니어야 한다."""
+        script = healthy_script()
+        port = FakePort(script)
+        same_state_new_id = slot_payload("MSYNCPROBE")
+        same_state_new_id["id"] = "gate-999"  # 상태는 같고 상관 번호만 새것
+        console = FakeConsole(port, effects={"Go Timecode 998": same_state_new_id})
+        result = probe.run_sweep(
+            state_port=port,
+            fire=console,
+            slot=998,
+            sequence=1,
+            candidates=["Go Timecode 998"],
+        )
+        rows = {row["command"]: row for row in result["probe2_candidates"]}
+        assert rows["Go Timecode 998"]["effect"] is False
+
     def test_an_unchanged_readback_is_no_effect_even_when_ok_is_true(self):
         port = FakePort(healthy_script())
         console = FakeConsole(port)  # 효과 대본 없음 — 되읽기가 그대로다

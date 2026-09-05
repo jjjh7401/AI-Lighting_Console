@@ -119,8 +119,21 @@ def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
+# 응답마다 달라지지만 콘솔 상태가 아닌 필드. 1회차 실기(2026-09-05)에서 `id`
+# (요청 상관 번호 `gate-12`·`gate-15`…)가 후보마다 달라 네 후보 전부가 「효과
+# 있음」으로 오판됐다 — 되읽기 본문은 바이트 단위로 같았다. 상태가 아닌 것은
+# 비교에서 뺀다.
+_VOLATILE_READBACK_KEYS = frozenset({"id"})
+
+
 def _canonical(payload) -> str:
-    """되읽기 비교용 정규형. 키 순서가 응답마다 흔들려도 같은 상태는 같은 문자열이다."""
+    """되읽기 비교용 정규형. 키 순서가 응답마다 흔들려도 같은 상태는 같은 문자열이다.
+
+    요청 상관 번호처럼 응답마다 새로 매겨지는 필드는 뺀다 — 그것까지 비교하면
+    아무 명령이나 「효과」를 낸다.
+    """
+    if isinstance(payload, dict):
+        payload = {k: v for k, v in payload.items() if k not in _VOLATILE_READBACK_KEYS}
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
 
 
