@@ -93,6 +93,26 @@ class TestPeriodicRule:
         clock.advance(500.0)  # only 500s since last backup
         assert manager.tick() is False
 
+    def test_first_tick_without_prior_backup_fires_immediately(self):
+        # t272: this is the shape that turned ``--no-session-backup`` into a
+        # boot-time write — kept as the documented default.
+        manager, action, _ = _manager()
+        assert manager.tick() is True
+        assert manager.history[-1][0] == "periodic"
+
+    def test_start_periodic_timer_defers_the_first_tick_by_one_interval(self):
+        # t272: when the session-start backup was deliberately skipped, the
+        # periodic timer starts at boot instead of firing at boot.
+        manager, action, clock = _manager()
+        manager.start_periodic_timer()
+        assert manager.tick() is False
+        assert action.calls == []
+        clock.advance(599.0)
+        assert manager.tick() is False
+        clock.advance(1.0)
+        assert manager.tick() is True
+        assert manager.history == [("periodic", clock.now)]
+
     def test_periodic_failure_raises_backup_error(self):
         manager, action, clock = _manager()
         manager.session_start()

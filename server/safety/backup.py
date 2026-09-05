@@ -121,6 +121,15 @@ class BackupManager:
         """Rule ①: one backup at session start."""
         self._backup("session_start")
 
+    def start_periodic_timer(self) -> None:
+        """세션 시작 백업을 일부러 건너뛴 경우, 주기 타이머를 지금부터 잰다.
+
+        t272: 첫 ``tick()`` 은 ``_last_backup_at`` 이 비어 있으면 무조건 발사해서
+        ``--no-session-backup`` 이 기동 직후 ``SaveShow`` 한 번을 막지 못했다.
+        이 호출은 백업 없이 기준 시각만 찍어 첫 주기 백업을 한 주기 뒤로 미룬다.
+        """
+        self._last_backup_at = self._clock()
+
     def tick(self) -> bool:
         """Rule ②: back up when the interval has elapsed since the last backup.
 

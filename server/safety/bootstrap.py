@@ -187,4 +187,8 @@ def build_console_stack(
         # boot-time attempt is meaningful. Tests with an ephemeral reply port
         # wire it first, then call stack.attempt_session_backup().
         stack.attempt_session_backup()
+    else:
+        # t272: "skip the session-start backup" must mean no boot-time write at
+        # all — without this the periodic loop's first tick fired SaveShow anyway.
+        backup.start_periodic_timer()
     return stack
