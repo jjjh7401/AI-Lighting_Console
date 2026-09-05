@@ -1,0 +1,41 @@
+{
+  "ran_at": "2026-09-05T13:25:12+00:00",
+  "slot": 999,
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "verification": {
+    "verdict": "unverified",
+    "query_count": 3,
+    "axes": [
+      {
+        "axis": "pool_presence",
+        "observed": "DataPool/Timecodes childCount 2, baseline 1 -> 2; slot 999 present as 'MSYNCPROBE'",
+        "matched": true
+      },
+      {
+        "axis": "name_match",
+        "observed": "node name 'MSYNCPROBE' (expected 'MSYNCPROBE')",
+        "matched": true
+      },
+      {
+        "axis": "trackgroup",
+        "observed": "DataPool/Timecodes/999/TrackGroup 1 childCount 2; children: MarkerTrack 'Marker', Track '<T215 SCRATCH DELETABLE>' (expected a Track named '<T215 SCRATCH DELETABLE>')",
+        "matched": true
+      }
+    ],
+    "skipped": [
+      {
+        "axis": "timecode_event_content",
+        "reason": "M3-a 2회차는 TrackGroup 1 아래 트랙 목록까지만 열었다 — 트랙 아래 이벤트 내용은 이 채널로 관측되지 않았으므로(설계서 §5 갈래 B) 이 축은 검증 범위 밖이며, 좁혀진 사실로 보고한다"
+      }
+    ],
+    "reason": "three axes read; the event-content axis is outside the verified scope",
+    "slot": 999,
+    "handoff_commands": [
+      "Record Timecode 999"
+    ]
+  }
+}

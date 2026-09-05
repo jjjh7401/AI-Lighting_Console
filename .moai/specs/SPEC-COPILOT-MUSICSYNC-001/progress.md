@@ -353,22 +353,32 @@ server/web/question.py       120      2    98%
 - `operator_handoff` payload 를 UI 가 실제로 어떻게 렌더하는지 — 카드 빌더는 세웠으나 세션 층 배선(질문 채널로 띄우는 자리)은 이 회차 범위 밖이다. 지금은 tool payload 로만 노출된다.
 - B4(재생 명령 효과) · B9(음수 `TrigTime` 콘솔 수용) 잔여는 그대로.
 
+
+#### M3-b 실기 리허설 되읽기 (2026-09-05T13:25Z, 오케스트레이터)
+
+- 실행: `server/tools/musicsync_m3b_verify.py --slot 999 --expected-name MSYNCPROBE --expected-sequence "<T215 SCRATCH DELETABLE>" --baseline-pool-count 1` · 응답기 1.6.4 · 쓰기 0 · 조회 **3/4**.
+- 판정 **`unverified`** (갈래 B): 풀 childCount 1→2 · 이름 일치 · `TrackGroup 1` 자식 2(Marker + `<T215 SCRATCH DELETABLE>`) — 세 축 일치. 이벤트 내용 축은 `SongCueTimingSkip`.
+- 운영자 인계분(앱 미발화): `Record Timecode 999` — 감독이 콘솔에서 직접 실행. 앱이 발화한 명령 전수에 이 문자열 0건.
+- 산출물: `docs/research/ma3-effects/15-musicsync-m3b-rehearsal-verify.md`(5절 표제 리터럴 · `verdict: unverified`) · 원자료 `docs/research/ma3-effects/evidence/musicsync-m3b-verify-run1.json`.
+- 미검증: 녹화 이벤트가 실제로 찍혔는지는 이 채널로 관측 불가(설계된 좁힘). 예산 밖 추가 조회 1회 `…/TrackGroup 1/Track 2` 는 `path segment not found` — 트랙 하위 주소 방식 자체가 미측정.
+- 잔여물: `Timecode 1`(감독) · `Timecode 999`(프로브) — 삭제는 운영자 몫.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
 run_complete_at: 2026-09-05
 run_commit_sha: pending-backfill-m3b
 run_status: audit-ready
-milestone: M1 + M3-a + M2 + M3-b(offline)
+milestone: M1 + M3-a + M2 + M3-b (offline + live readback)
 milestone_evidence_note: "§E.2 는 M1·M3-a·M2·M3-b 네 절을 담는다(오케스트레이터가 통합 시 합류). 아래 계수는 M3-b 오프라인 회차 것"
 ac_pass_count: 6            # M3-b: AC-MUSICSYNC-022·023·024·025·030(M3-b 몫)·031
 ac_pass_with_debt_count: 0
 ac_fail_count: 0
-ac_scope: "AC-MUSICSYNC-022·023·024·025 + 030·031 의 오프라인 몫. 실기 절은 pending live"
-ac_pending_live:            # 이 회차가 판정하지 않은 절 — 실기 리허설 몫
-  - "AC-MUSICSYNC-022 둘째 절: 리허설 실제 수행 시 운영자 인계 경로 확인"
-  - "AC-MUSICSYNC-025 되읽기 실값(풀 childCount 증가분 · 녹화 뒤 이름 · TrackGroup 실측)"
-  - "AC-MUSICSYNC-030 실기 콘솔 쓰기·조회 계수(운영자 승인분)"
+ac_scope: "AC-MUSICSYNC-022·023·024·025 + 030·031 — 오프라인 몫 + 실기 되읽기 1회(2026-09-05)"
+ac_live_readback_2026_09_05: # 실기 리허설 되읽기(§E.2 M3-b 실기 절) — 오케스트레이터 관측
+  - "AC-MUSICSYNC-025: 풀 childCount 1→2 · 이름 MSYNCPROBE 일치 · TrackGroup 1 자식 2 · 조회 3/4 · verdict unverified(갈래 B, 이벤트 축 SongCueTimingSkip)"
+  - "AC-MUSICSYNC-030: 이 회차 앱 쓰기 0 · 조회 3 · Record 는 운영자 손으로"
+  - "AC-MUSICSYNC-022 둘째 절: 인계 문자열이 세션 카드로 뜨는 생산 배선은 아직 없음(unverified 로 남김)"
 preserve_list_post_run_count: 8   # server/safety · server/audio · server/lxseq · server/design · ui · src-tauri · packaging · pyproject.toml+uv.lock — 전부 diff 0줄
 console_writes_emitted: 0
 console_queries_emitted: 0
