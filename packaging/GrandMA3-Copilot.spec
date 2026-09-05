@@ -54,7 +54,15 @@ hiddenimports: list = []
 
 # Class 2 (statically analyzable, need namespace/submodule collection) + keyring
 # metadata restoration (Class 1). collect_all returns (datas, binaries, hiddenimports).
-for pkg in ("keyring", "google.genai", "anthropic"):
+#
+# SPEC-COPILOT-MUSICSYNC-001 M2 — ``librosa`` / ``soundfile`` join the list.
+# Neither is statically followable: librosa is a ``lazy_loader`` package whose
+# submodules resolve from a ``__init__.pyi`` stub at attribute-access time, and
+# soundfile loads ``libsndfile`` through ``cffi`` at import. ``server/audio/
+# analyze.py`` imports both INSIDE the function (a start-up-time measure, not a
+# size measure), which PyInstaller's analysis does follow — but following the
+# import is not the same as collecting the tree behind it.
+for pkg in ("keyring", "google.genai", "anthropic", "librosa", "soundfile"):
     pkg_datas, pkg_binaries, pkg_hiddenimports = collect_all(pkg)
     datas += pkg_datas
     binaries += pkg_binaries
@@ -72,6 +80,23 @@ hiddenimports += [
     "keyring.backends.fail",
     "keyring.backends.null",
     "keyring.backends.chainer",
+]
+
+# SPEC-COPILOT-MUSICSYNC-001 M2 — librosa 가 attribute 접근 시점에 끌어오는
+# 이웃들. ``collect_all('librosa')`` 는 librosa 자신의 트리만 가져오므로,
+# 그것이 런타임에 부르는 scipy/sklearn/numba 갈래는 여기서 이름으로 못박는다.
+# 정적 분석이 못 따라가는 자리를 이름으로 메우는 것이 이 목록의 전부다.
+hiddenimports += [
+    "lazy_loader",
+    "audioread",
+    "soxr",
+    "numba",
+    "llvmlite",
+    "scipy.signal",
+    "scipy.fft",
+    "scipy.ndimage",
+    "sklearn.utils._typedefs",
+    "sklearn.neighbors._partition_nodes",
 ]
 
 # Bundled asset trees. PyInstaller ``datas`` tuples are ``(src, dest)`` — the

@@ -32,6 +32,33 @@ LAYOUT_IMAGE_MIME_TYPES = ("image/png", "image/jpeg", "image/webp")
 MAX_LAYOUT_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_LAYOUT_IMAGE_BASE64_LENGTH = ((MAX_LAYOUT_IMAGE_BYTES + 2) // 3) * 4
 
+# SPEC-COPILOT-MUSICSYNC-001 M2 — 곡 오디오 첨부 채널 (REQ-MUSICSYNC-013/014).
+# 위 둘과 같은 validate-before-store 형태이고, **전송 수단은 새로 만들지
+# 않는다**: 오늘의 로컬 WebSocket 위 base64 그대로다. Tauri capability 의
+# 「no http, no websocket, no upload」 방어선(AC-DEPLOY-027 Layer 3)을 오디오
+# 한 개를 받자고 뚫지 않는다.
+#
+# 첨부 라우터(``vectorworks_export_upload``)로 보내지 않는 이유는 판별기가
+# **CSV 헤더를 읽어서** 종류를 정하기 때문이다(``server/sheets/registry.py``) —
+# 오디오 바이트에 그 판별기를 걸면 ``unknown_sheet_kind`` 로 떨어진다.
+SONG_AUDIO_UPLOAD_EXTENSIONS = (".wav", ".flac", ".mp3", ".m4a")
+SONG_AUDIO_MIME_TYPES = (
+    "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/flac",
+    "audio/x-flac",
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/x-m4a",
+)
+# 실효 상한은 **디코드된 원본 8 MiB 하나**다(REQ-MUSICSYNC-014). 아래 base64
+# 문자열 길이 상한은 그 8 MiB 에서 파생된 값이지 별도 상한이 아니다 — 두 개의
+# 상한이 있는 것처럼 읽히면 나중에 한쪽만 고쳐진다.
+MAX_SONG_AUDIO_BYTES = 8 * 1024 * 1024
+MAX_SONG_AUDIO_BASE64_LENGTH = ((MAX_SONG_AUDIO_BYTES + 2) // 3) * 4
+_SONG_AUDIO_CAP_PHRASE = f"상한 8 MiB({MAX_SONG_AUDIO_BYTES}바이트)"
+
 # The show-control panel's client messages (SPEC-COPILOT-SHOWUI-001 M1). Like
 # the M7 "review_decision" extension before it this is ADDITIVE: the protocol
 # version stays 1 and every type below is registered on BOTH allowlists — here
@@ -81,6 +108,11 @@ CLIENT_MESSAGE_TYPES = (
     "vectorworks_export_upload",
     # SPEC-COPILOT-IMGLAYOUT-001 M1 — the layout-sketch attachment channel.
     "layout_image_upload",
+    # SPEC-COPILOT-MUSICSYNC-001 M2 — 곡 오디오 첨부 채널. 위 둘과 같은 규약:
+    # v 는 1 그대로이고, ``ui/src/protocol.ts`` 의 허용 목록에도 **같은 변경에서**
+    # 등록한다. 한쪽에만 있는 타입은 클라이언트에서 조용히 사라지고 서버에서
+    # 시끄럽게 틀린다.
+    "song_audio_upload",
     "approval_decision",
     "review_decision",
     # [round24 후속] 모델이 되묻고 사용자가 답하는 통로. 승인·검토와 달리
@@ -154,6 +186,22 @@ class LayoutImageRejectedError(ProtocolError):
     ``ui/src/protocol.ts``) reaches the client instead of the anonymous
     kind="protocol"; the UI needs the name to tell "your image was refused,
     here is why" apart from "your frame was malformed".
+    """
+
+
+class SongAudioRejectedError(ProtocolError):
+    """``song_audio_upload`` 프레임이 검증을 통과하지 못했다 (REQ-MUSICSYNC-014).
+
+    :class:`LayoutImageRejectedError` 와 같은 이유로 ``ProtocolError`` 의
+    **하위 클래스**다 — 상류에서 「처리 전 거절」로 다루는 모든 자리가 그대로
+    동작한다. app 층이 이 클래스를 **먼저** 잡아 이름 붙은 종류
+    (``song_audio_rejected``)로 내보내므로, UI 는 「파일이 거절됐다, 이유는
+    이것이다」를 「프레임이 깨졌다」와 가를 수 있다.
+
+    사유 문자열은 **한국어이고 상한 수치를 명시**한다(AC-MUSICSYNC-014). 그대로
+    사용자에게 전달해도 안전하다 — 모든 문구는 여기서 쓴 고정 문장이고,
+    끼워 넣는 값은 서버가 가진 허용 목록과 상한 숫자뿐이다. 사용자 페이로드는
+    한 바이트도 문구에 들어가지 않는다.
     """
 
 
@@ -264,6 +312,53 @@ def parse_client_message(raw: str) -> dict:
         return {
             "v": PROTOCOL_VERSION,
             "type": "layout_image_upload",
+            "file_name": file_name.strip(),
+            "mime_type": mime_type,
+            "content_base64": content_base64,
+        }
+
+    if message_type == "song_audio_upload":
+        file_name = message.get("file_name")
+        mime_type = message.get("mime_type")
+        content_base64 = message.get("content_base64")
+        # validate-before-store: 아래 어느 줄에서 걸리든 세션 보관은 일어나지
+        # 않는다. 상한 검사가 **두 번** 나오는 것은 중복이 아니다 — 앞의 것은
+        # 디코드 비용 자체를 막는 문자열 길이 검사이고, 판정하는 것은 뒤의
+        # 디코드된 바이트 검사다(``:218`` 의 기존 검사와 같은 형태).
+        if not isinstance(file_name, str) or not file_name.strip():
+            raise SongAudioRejectedError("오디오 파일 이름이 비어 있습니다.")
+        if not file_name.lower().endswith(SONG_AUDIO_UPLOAD_EXTENSIONS):
+            allowed = ", ".join(SONG_AUDIO_UPLOAD_EXTENSIONS)
+            raise SongAudioRejectedError(
+                f"오디오 파일의 확장자가 허용 목록에 없습니다 — 허용: {allowed}"
+            )
+        if mime_type not in SONG_AUDIO_MIME_TYPES:
+            allowed = ", ".join(SONG_AUDIO_MIME_TYPES)
+            raise SongAudioRejectedError(
+                f"오디오 파일의 MIME 종류가 허용 목록에 없습니다 — 허용: {allowed}"
+            )
+        if not isinstance(content_base64, str) or not content_base64:
+            raise SongAudioRejectedError("오디오 파일의 내용이 비어 있습니다.")
+        if len(content_base64) > MAX_SONG_AUDIO_BASE64_LENGTH:
+            raise SongAudioRejectedError(
+                f"오디오 파일이 {_SONG_AUDIO_CAP_PHRASE}를 넘습니다 — 더 짧은 구간을 올려 주세요."
+            )
+        try:
+            payload = base64.b64decode(content_base64, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise SongAudioRejectedError(
+                f"오디오 파일의 내용을 읽지 못했습니다 — base64 가 아닙니다: {error}"
+            ) from error
+        if not payload:
+            raise SongAudioRejectedError("오디오 파일의 내용이 비어 있습니다.")
+        if len(payload) > MAX_SONG_AUDIO_BYTES:
+            raise SongAudioRejectedError(
+                f"오디오 파일이 {_SONG_AUDIO_CAP_PHRASE}를 넘습니다 "
+                f"— 받은 크기 {len(payload)}바이트. 더 짧은 구간을 올려 주세요."
+            )
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "song_audio_upload",
             "file_name": file_name.strip(),
             "mime_type": mime_type,
             "content_base64": content_base64,

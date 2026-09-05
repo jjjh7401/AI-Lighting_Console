@@ -96,6 +96,17 @@ const MAX_VECTORWORKS_UPLOAD_BYTES = 8 * 1024 * 1024;
 // against server/web/messages.py's LAYOUT_IMAGE_MIME_TYPES / MAX_LAYOUT_IMAGE_BYTES.
 const LAYOUT_IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_LAYOUT_IMAGE_BYTES = 5 * 1024 * 1024;
+// SPEC-COPILOT-MUSICSYNC-001 M2 — 곡 오디오 첨부 채널. 위 두 줄과 같은 규약으로
+// server/web/messages.py 의 SONG_AUDIO_UPLOAD_EXTENSIONS / MAX_SONG_AUDIO_BYTES 를
+// 거울처럼 옮긴다. 확장자→MIME 역산 표는 layoutImageMimeFor 와 같은 이유로 있다:
+// macOS WKWebView 계열 파일 선택창이 MIME 을 비워 보낸다.
+const SONG_AUDIO_EXTENSION_MIME_TYPES: ReadonlyArray<readonly [string, string]> = [
+  [".wav", "audio/wav"],
+  [".flac", "audio/flac"],
+  [".mp3", "audio/mpeg"],
+  [".m4a", "audio/mp4"],
+];
+const MAX_SONG_AUDIO_BYTES = 8 * 1024 * 1024;
 
 
 export function readRunbookModeFromStorage(): boolean {
@@ -359,6 +370,7 @@ export default function App() {
     sendCueMonitorRefresh,
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
+    sendSongAudioUpload,
     clearChat,
     applySongTimeline,
   } = useCopilotSocket();
@@ -373,6 +385,7 @@ export default function App() {
   // SPEC-COPILOT-IMGLAYOUT-001 M1 — the attached layout-sketch thumbnail
   // (client-side display only; the server holds the authoritative copy).
   const [layoutImageUploadError, setLayoutImageUploadError] = useState<string | null>(null);
+  const [songAudioUploadError, setSongAudioUploadError] = useState<string | null>(null);
   const [layoutImage, setLayoutImage] = useState<{ fileName: string; dataUrl: string } | null>(
     null,
   );
@@ -622,6 +635,49 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  // SPEC-COPILOT-MUSICSYNC-001 M2 — 확장자로 오디오를 알아본다. layoutImageMimeFor
+  // 와 같은 이유로 MIME 을 믿지 않는다: macOS WKWebView/Safari 계열 파일 선택창과
+  // 일부 드래그 소스가 MIME 을 비워 보낸다.
+  const songAudioMimeFor = (file: File): string | null => {
+    const name = file.name.toLowerCase();
+    for (const [extension, mimeType] of SONG_AUDIO_EXTENSION_MIME_TYPES) {
+      if (name.endsWith(extension)) return mimeType;
+    }
+    return null;
+  };
+
+  const uploadSongAudio = (file: File) => {
+    const mimeType = songAudioMimeFor(file);
+    if (mimeType === null) {
+      setSongAudioUploadError("곡 파일은 WAV, FLAC, MP3 또는 M4A 만 첨부할 수 있습니다.");
+      return;
+    }
+    if (file.size === 0 || file.size > MAX_SONG_AUDIO_BYTES) {
+      setSongAudioUploadError("곡 파일은 비어 있지 않은 8 MiB 이하 파일이어야 합니다.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => setSongAudioUploadError("곡 파일을 읽지 못했습니다.");
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        setSongAudioUploadError("파일을 오디오 프레임으로 변환하지 못했습니다.");
+        return;
+      }
+      const separator = result.indexOf(",");
+      if (separator < 0) {
+        setSongAudioUploadError("파일을 오디오 프레임으로 변환하지 못했습니다.");
+        return;
+      }
+      if (!sendSongAudioUpload(file.name, mimeType, result.slice(separator + 1))) {
+        setSongAudioUploadError("서버 연결이 끊겨 곡을 올릴 수 없습니다.");
+        return;
+      }
+      setSongAudioUploadError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // 사용자 결정 (2026-08-15): 첨부 버튼은 하나 — 파일 종류가 목적지를 고른다.
   // 이미지 MIME(계약 §1)은 layout_image_upload로, 나머지는 전부 비이미지
   // 첨부 경로로 보낸다. 각 경로의 검증·오류 문구는 그대로다: 여기는 라우터일
@@ -632,9 +688,18 @@ export default function App() {
   // 나르지 않고, 무엇인지 정하는 것은 서버의 판별기다
   // (server/sheets/registry.py). 확장자나 MIME으로 시트 종류를 가르는
   // 라우팅을 여기에 '복원'하지 마라: UI는 분류하지 않는다.
+  //
+  // SPEC-COPILOT-MUSICSYNC-001 M2: 오디오 가지가 셋째로 붙는다. 이것은 위
+  // 규율의 예외가 아니다 — 「UI는 분류하지 않는다」가 금지하는 것은 **시트
+  // 종류**를 여기서 가르는 일이고, 여기서 가르는 것은 **목적지**다. 오디오
+  // 바이트를 비이미지 경로로 보내면 서버 판별기가 CSV 헤더를 읽어
+  // unknown_sheet_kind 로 떨어뜨린다(design.md §4.1) — 즉 이 가지가 없으면
+  // 곡 파일은 어디에도 도착하지 못한다.
   const routeAttachment = (file: File) => {
     if (layoutImageMimeFor(file) !== null) {
       uploadLayoutImage(file);
+    } else if (songAudioMimeFor(file) !== null) {
+      uploadSongAudio(file);
     } else {
       uploadVectorworksExport(file);
     }
@@ -783,6 +848,9 @@ export default function App() {
                 {layoutImageUploadError && (
                   <div className="composer-status composer-upload-error">{layoutImageUploadError}</div>
                 )}
+                {songAudioUploadError && (
+                  <div className="composer-status composer-upload-error">{songAudioUploadError}</div>
+                )}
                 {queue.length > 0 && (
                   <div className="composer-queue" aria-label="대기 중 요청">
                     {queue.map((text, index) => (
@@ -827,7 +895,7 @@ export default function App() {
                     ref={vectorworksInputRef}
                     className="composer-file-input"
                     type="file"
-                    accept=".csv,.txt,.xlsx,.mvr,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                    accept=".csv,.txt,.xlsx,.mvr,.png,.jpg,.jpeg,.webp,.wav,.flac,.mp3,.m4a,image/png,image/jpeg,image/webp,audio/wav,audio/flac,audio/mpeg,audio/mp4"
                     onChange={uploadAttachment}
                     disabled={attachment.disabled}
                   />

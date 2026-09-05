@@ -35,12 +35,16 @@ every axis.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from server.spatial.pointing import BASIC_POSITION_SEQUENCE
 from server.spatial.position_moods import POSITION_MOOD_TABLE
 
 __all__ = [
+    "BPM_SOURCE_DEFAULT",
+    "BPM_SOURCE_MEASURED",
+    "BPM_SOURCE_SHEET",
     "CONCEPT_SEED_TABLE",
     "DEFAULT_BPM",
     "GENRE_DEFAULT_TABLE",
@@ -52,6 +56,7 @@ __all__ = [
     "SOURCE_GLOBAL_DEFAULT",
     "SOURCE_SECTION_MOOD",
     "UNIFIED_MOOD_TABLE",
+    "BpmResolution",
     "ConceptSeed",
     "DirectorOverride",
     "GenreDefault",
@@ -60,6 +65,8 @@ __all__ = [
     "ProfileError",
     "SectionMoodResolution",
     "UnresolvedMood",
+    "parse_sheet_bpm",
+    "resolve_bpm",
     "resolve_section",
 ]
 
@@ -310,6 +317,137 @@ class MusicProfile:
         clause): callers that report timing values must disclose when they
         rest on an assumed tempo."""
         return self.bpm is None
+
+
+# ---------------------------------------------------------------------------
+# BPM 정본 우선순위 (SPEC-COPILOT-MUSICSYNC-001 M2 · REQ-MUSICSYNC-016/017)
+# ---------------------------------------------------------------------------
+#
+# **측정(사람이 확인 카드에서 확정한 값) > 시트 ``HEAD.BPM`` > 기본값 120.**
+# ``FX-Rate`` 는 **대조 전용**이며 판정에는 쓰지 않는다(plan.md §C 결정 3).
+#
+# 시트 우선을 기각한 이유: 시트가 스스로 「청취 미검증」을 자백하는 경우
+# (``TC_METHOD: DERIVED``)에도 음원에서 온 값을 밀어낸다.
+#
+# ``FX-Rate`` 역산을 3번째 판정원으로 삼는 것을 기각한 이유:
+# ``FX-Rate = SongBPM ÷ 사이클당 박수`` 인데 **사이클당 박수가 사람의 의도**라
+# 역산이 일의적이지 않다 — 하나의 ``FX-Rate`` 가 여러 BPM 과 양립한다.
+
+BPM_SOURCE_MEASURED = "measured"
+BPM_SOURCE_SHEET = "sheet"
+BPM_SOURCE_DEFAULT = "default"
+
+#: 두 템포가 「어긋났다」고 부를 최소 차이(BPM). 부동소수 잔차와 반올림을 불일치로
+#: 외치면 보고가 늑대 소년이 되고, 그러면 진짜 불일치도 안 읽힌다.
+_BPM_MISMATCH_TOLERANCE = 0.5
+
+#: 시트 ``HEAD.BPM`` 은 주석을 달고 온다(실측: ``120 (고정)``). 첫 숫자 하나만
+#: 읽고 나머지는 사람이 읽을 주석으로 둔다. 부호를 **함께** 읽는 것이 중요하다 —
+#: 부호를 빼고 읽으면 ``-40`` 이 ``40`` 이라는 멀쩡한 템포로 둔갑한다.
+_SHEET_BPM_PATTERN = re.compile(r"-?[0-9]+(?:\.[0-9]+)?")
+
+
+@dataclass(frozen=True)
+class BpmResolution:
+    """어느 템포를 채택했고, 무엇이 어긋났는지.
+
+    ``bpm`` 이 ``None`` 인 것은 「0」이 아니라 **「아무도 안 줬다」**\\ 이다 —
+    그대로 :class:`MusicProfile` 에 실으면 ``bpm_is_default`` 가 ``True`` 로 남아
+    「기본값이다」가 하류 전부에 전달된다. 숫자를 채워 넣으면 그 고지가 사라진다.
+    """
+
+    bpm: float | None
+    source: str
+    reason: str
+    mismatches: tuple[str, ...] = ()
+    fx_rate_back_calculated: float | None = None
+
+
+def parse_sheet_bpm(raw: object) -> float | None:
+    """시트 ``HEAD.BPM`` 문자열에서 템포를 읽는다 — 없으면 ``None``.
+
+    ``None`` 을 돌려주는 것이 ``0.0`` 을 돌려주는 것보다 언제나 낫다. ``0`` 은
+    유효한 템포처럼 생겨서 하류로 흘러가고, 흘러간 자리에서 나눗셈이 터지거나
+    (더 나쁘게) 조용히 첫 박으로 접힌다.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, int | float):
+        value = float(raw)
+        return value if value > 0 else None
+    if not isinstance(raw, str):
+        return None
+    match = _SHEET_BPM_PATTERN.search(raw)
+    if match is None:
+        return None
+    value = float(match.group(0))
+    return value if value > 0 else None
+
+
+def resolve_bpm(
+    *,
+    measured_bpm: float | None = None,
+    sheet_bpm: object = None,
+    fx_rate: float | None = None,
+    beats_per_cycle: float | None = None,
+) -> BpmResolution:
+    """세 후보를 우선순위대로 갈라 하나를 채택하고, 어긋남은 **전부** 보고한다.
+
+    어긋남 보고는 채택 여부와 **무관하다**(REQ-MUSICSYNC-017): 이긴 값이 있어도
+    진 값이 얼마나 달랐는지는 사람이 알아야 한다. 조용한 채택이 바로 이 SPEC 이
+    막으려는 실패다.
+    """
+    sheet_value = parse_sheet_bpm(sheet_bpm)
+    reason = "채택 우선순위: 측정 > 시트 HEAD.BPM > 기본값 120."
+
+    mismatches: list[str] = []
+    if (
+        measured_bpm is not None
+        and sheet_value is not None
+        and abs(measured_bpm - sheet_value) > _BPM_MISMATCH_TOLERANCE
+    ):
+        mismatches.append(
+            f"측정 BPM {measured_bpm:g} 과 시트 HEAD.BPM {sheet_value:g} 이 어긋납니다."
+        )
+
+    back_calculated: float | None = None
+    if fx_rate is not None and beats_per_cycle:
+        # 대조 전용이다. 이 값은 어느 분기에서도 ``source`` 가 되지 않는다.
+        back_calculated = float(fx_rate) * float(beats_per_cycle)
+        others = [v for v in (measured_bpm, sheet_value) if v is not None]
+        if any(abs(back_calculated - other) > _BPM_MISMATCH_TOLERANCE for other in others) or (
+            not others
+        ):
+            mismatches.append(
+                f"FX-Rate 역산값 {back_calculated:g} 은 대조 항목입니다 — "
+                "사이클당 박수가 사람의 의도라 역산이 일의적이지 않아 채택 후보에 오르지 않습니다."
+            )
+
+    if measured_bpm is not None:
+        return BpmResolution(
+            bpm=float(measured_bpm),
+            source=BPM_SOURCE_MEASURED,
+            reason=reason,
+            mismatches=tuple(mismatches),
+            fx_rate_back_calculated=back_calculated,
+        )
+    if sheet_value is not None:
+        return BpmResolution(
+            bpm=sheet_value,
+            source=BPM_SOURCE_SHEET,
+            reason=reason,
+            mismatches=tuple(mismatches),
+            fx_rate_back_calculated=back_calculated,
+        )
+    return BpmResolution(
+        bpm=None,
+        source=BPM_SOURCE_DEFAULT,
+        reason=reason,
+        mismatches=tuple(mismatches),
+        fx_rate_back_calculated=back_calculated,
+    )
 
 
 @dataclass(frozen=True)

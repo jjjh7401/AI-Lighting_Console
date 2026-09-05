@@ -19,6 +19,7 @@ import {
   buildStatusRequest,
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
+  buildSongAudioUpload,
   buildHistoryRestore,
   CHAT_STORAGE_KEY,
   clearPendingRequests,
@@ -190,6 +191,7 @@ export interface CopilotSocket {
   sendVectorworksExportUpload: (fileName: string, contentBase64: string) => boolean;
   /** SPEC-COPILOT-IMGLAYOUT-001 M1 — attach a design/reference image. */
   sendLayoutImageUpload: (fileName: string, mimeType: string, contentBase64: string) => boolean;
+  sendSongAudioUpload: (fileName: string, mimeType: string, contentBase64: string) => boolean;
   sendLock: (active: boolean) => void;
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
@@ -349,6 +351,16 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     },
     [],
   );
+  const sendSongAudioUpload = useCallback(
+    (fileName: string, mimeType: string, contentBase64: string) => {
+      const socket = socketRef.current;
+      if (socket === null || socket.readyState !== WebSocket.OPEN) return false;
+      dispatch({ kind: "user", text: `곡 첨부: ${fileName}` });
+      socket.send(buildSongAudioUpload(fileName, mimeType, contentBase64));
+      return true;
+    },
+    [],
+  );
   const sendDecision = useCallback(
     (requestId: string, approved: boolean) => send(buildApprovalDecision(requestId, approved)),
     [send],
@@ -399,6 +411,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendChat,
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
+    sendSongAudioUpload,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,

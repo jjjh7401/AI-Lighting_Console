@@ -32,6 +32,7 @@ from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from pathlib import Path
 
+from server.audio.analyze import AnalysisResult, analyze
 from server.deploy.review import ReviewRequest
 from server.design.interview import (
     Q1_CONCEPT,
@@ -44,11 +45,15 @@ from server.design.interview import (
     UnresolvedAnswer,
 )
 from server.design.profile import (
+    DEFAULT_BPM,
     SOURCE_GLOBAL_DEFAULT,
+    BpmResolution,
     DirectorOverride,
     MusicProfile,
     SectionMoodResolution,
     UnresolvedMood,
+    parse_sheet_bpm,
+    resolve_bpm,
     resolve_section,
 )
 from server.design.rig import _LAYER_GROUP_ALIASES, build_rig_profile
@@ -165,7 +170,15 @@ from server.web.messages import (
     status_event,
 )
 from server.web.preview import build_execution_preview
-from server.web.question import UNANSWERED, QuestionChannel, QuestionOption, QuestionRequest
+from server.web.question import (
+    UNANSWERED,
+    QuestionChannel,
+    QuestionOption,
+    QuestionRequest,
+    SongSectionProposal,
+    build_song_confirmation_card,
+    parse_confirmed_bpm,
+)
 from server.web.reply_discovery import ReplyPortMismatch
 from server.web.timeline_library import SongTimelineLibrary
 
@@ -2620,6 +2633,24 @@ class LayoutImageUpload:
 
 
 @dataclass(frozen=True)
+class SongAudioUpload:
+    """이 세션에 가장 최근 붙은 곡 오디오 한 개 (SPEC-COPILOT-MUSICSYNC-001 M2).
+
+    ``LayoutImageUpload``·``UploadedSheet`` 와 같은 형태다: 불변이고, 새 업로드가
+    통째로 교체하며, 교체 사실을 소리 내어 말한다.
+
+    ``sha256`` 과 ``byte_length`` 는 **디코드된 바이트** 기준이다(base64 문자열이
+    아니다) — 운영자가 원본 파일의 ``shasum -a 256`` 값과 대조할 수 있어야 한다.
+    """
+
+    file_name: str
+    mime_type: str
+    content_base64: str
+    sha256: str
+    byte_length: int
+
+
+@dataclass(frozen=True)
 class UploadedSheet:
     """SPEC-COPILOT-SHEETPIPE-001 M1 — 판별을 통과한 시트 한 장 (REQ-SHEETPIPE-001).
 
@@ -3741,6 +3772,13 @@ class ChatSession:
         # ``import_uploaded_sheet`` wrapper reads this through
         # ``_UploadedSheetView``; M1 only stores it.
         self._uploaded_sheet: UploadedSheet | None = None
+        # SPEC-COPILOT-MUSICSYNC-001 M2 — 곡 오디오 첨부(가장 최근 하나만;
+        # 새 업로드가 통째로 교체한다). 이 자리는 **보관만** 한다 — 분석은
+        # ``analyse_song_audio`` 가 운영자가 요청했을 때 돈다.
+        self._song_audio: SongAudioUpload | None = None
+        #: 가장 최근 확정된 BPM 해소 결과(``analyse_song_audio``). 오디오와 달리
+        #: 이것은 **사람이 확인한 뒤**에만 채워진다.
+        self._song_bpm: BpmResolution | None = None
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -10134,6 +10172,125 @@ class ChatSession:
             event = notice_event(f"이미지 '{file_name}' 첨부됨 ({size_kb}KB)")
         self._send(event)
         return event
+
+    @property
+    def song_audio(self) -> SongAudioUpload | None:
+        """이 세션에 붙어 있는 곡 오디오 — 없으면 ``None``.
+
+        읽기 전용 창이다. 거절된 프레임이 여기 흔적을 남기지 않는다는 것을
+        시험이 이 창으로 확인한다(validate-before-store).
+        """
+        return self._song_audio
+
+    def upload_song_audio(self, file_name: str, mime_type: str, content_base64: str) -> dict:
+        """곡 오디오 한 개를 세션에 담는다 — 보관만 한다 (REQ-MUSICSYNC-013).
+
+        ``upload_layout_image`` 와 같은 형태다: 담기만 하고 지시문을 부르지
+        않는다. 업로드 순간에 분석을 돌리면, 운영자가 무엇을 할지 말하기도 전에
+        수 초를 태운다. 분석은 :meth:`analyse_song_audio` 가 맡는다.
+
+        와이어 검증(확장자·MIME·base64·8 MiB 상한)은 ``parse_client_message`` 에서
+        이미 끝났다 — 여기 닿은 메시지는 이미 받아들여진 것이다.
+
+        교체를 소리 내어 말하는 이유는 ``upload_layout_image`` 와 같다: 침묵하면
+        운영자가 두 곡이 붙어 있다고 믿은 채 엉뚱한 곡으로 만든 계획을 승인할 수
+        있다.
+        """
+        data = base64.b64decode(content_base64, validate=True)
+        replaced = self._song_audio is not None
+        self._song_audio = SongAudioUpload(
+            file_name=file_name,
+            mime_type=mime_type,
+            content_base64=content_base64,
+            sha256=hashlib.sha256(data).hexdigest(),
+            byte_length=len(data),
+        )
+        audio = self._song_audio
+        text = f"'{file_name}' 첨부됨 — 오디오 · sha256 {audio.sha256} · {audio.byte_length}바이트"
+        if replaced:
+            text = text + " (이전에 첨부한 오디오를 교체했습니다)"
+        text = text + ". 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요."
+        return self._notify(text)
+
+    def analyse_song_audio(
+        self,
+        *,
+        sheet_bpm: object = None,
+        fx_rate: float | None = None,
+        beats_per_cycle: float | None = None,
+    ) -> dict:
+        """붙어 있는 곡을 재고, **사람에게 확인받고**, BPM 정본을 정한다.
+
+        경로 위의 순서가 곧 이 SPEC 의 규율이다 — 측정은 DSP 가, 제안은 카드가,
+        확정은 사람이 한다(REQ-MUSICSYNC-009 · REQ-MUSICSYNC-015). 확인 카드를
+        건너뛰는 분기는 없다: 분석이 실패해도 **같은 카드**가 수동 BPM 입력으로
+        서고(plan.md §C 결정 1 폴백), 카드를 못 띄우면 확정은 일어나지 않는다.
+
+        ``sheet_bpm``\\ 은 호출자가 넘긴다 — 임포터가 읽은 ``HEAD.BPM`` 문자열을
+        그대로 받아도 되고(``120 (고정)``), 없으면 ``None``. ``fx_rate`` 는
+        **대조 전용**이며 어느 분기에서도 채택되지 않는다(plan.md §C 결정 3).
+
+        콘솔 접촉: 0건. 이 메서드는 게이트도 실행 포트도 부르지 않는다.
+        """
+        audio = self._song_audio
+        if audio is None:
+            return self._notify("붙어 있는 곡 오디오가 없습니다 — 먼저 오디오를 첨부해 주세요.")
+
+        outcome = analyze(base64.b64decode(audio.content_base64, validate=True))
+        if isinstance(outcome, AnalysisResult):
+            proposals = tuple(
+                SongSectionProposal(
+                    start_ms=candidate.start_ms,
+                    end_ms=candidate.end_ms,
+                    d_level=candidate.d_level,
+                )
+                for candidate in outcome.d_candidates
+            )
+            measured_bpm: float | None = outcome.bpm
+            confidence: float | None = outcome.bpm_confidence
+            fallback_reason: str | None = None
+        else:
+            proposals, measured_bpm, confidence = (), None, None
+            fallback_reason = outcome.reason
+
+        parsed_sheet_bpm = parse_sheet_bpm(sheet_bpm)
+        card = build_song_confirmation_card(
+            proposals=proposals,
+            measured_bpm=measured_bpm,
+            bpm_confidence=confidence,
+            sheet_bpm=parsed_sheet_bpm,
+            fallback_reason=fallback_reason,
+        )
+        if self._question_channel is None:
+            # 볼 사람이 없는 카드는 카드가 아니다. 확정도 없다.
+            answer = UNANSWERED
+        else:
+            answer = self._question_channel.ask(card, session_key=self._session_key)
+
+        confirmed_bpm = parse_confirmed_bpm(answer, measured_bpm=measured_bpm)
+        resolution = resolve_bpm(
+            measured_bpm=confirmed_bpm,
+            sheet_bpm=sheet_bpm,
+            fx_rate=fx_rate,
+            beats_per_cycle=beats_per_cycle,
+        )
+        self._song_bpm = resolution
+
+        if resolution.bpm is None:
+            lines = [f"BPM 은 확정되지 않았습니다 — 기본값 {DEFAULT_BPM:g} 로 남습니다."]
+        else:
+            lines = [f"BPM {resolution.bpm:g} 로 확정했습니다 ({resolution.source})."]
+        lines.append(resolution.reason)
+        # 어긋남은 채택 여부와 **무관하게** 항상 말한다(REQ-MUSICSYNC-017).
+        lines.extend(resolution.mismatches)
+        if fallback_reason:
+            lines.append(fallback_reason)
+        return self._notify(" ".join(lines))
+
+    @property
+    def song_bpm(self) -> BpmResolution | None:
+        """가장 최근 확정된 BPM 해소 결과 — 아직 없으면 ``None``."""
+        return self._song_bpm
 
     # -- internals ------------------------------------------------------------------
 
