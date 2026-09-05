@@ -36,12 +36,19 @@ those, so the scan keys on real import/call nodes only.
 from __future__ import annotations
 
 import ast
+import socket
 from pathlib import Path
 
 import pytest
 
 SERVER_DIR = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = SERVER_DIR.parent
+
+
+def _free_udp_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
 
 
 # ---------------------------------------------------------------- send-surface scanner
@@ -263,6 +270,9 @@ def packaged_gate(tmp_path):
 
     def _build(approval_port=None):
         stack = build_console_stack(
+            # t269: send_port 를 안 넘기면 기본값 8000 — onPC 가 켜진 기계에선 실기
+            # 콘솔이다. 위험 명령 직전 백업(rule ③)이 그리로 SaveShow 를 쐈다.
+            send_port=_free_udp_port(),  # nobody listening
             receive_port=0,  # ephemeral loopback — no port conflict, no onPC needed
             approval_port=approval_port,
             audit_dir=tmp_path / "audit",
