@@ -1,0 +1,1 @@
+{"label": "slot_verdict", "seq": 1, "kind": "query", "arg": "DataPool/Timecodes", "ts": "2026-09-05T09:55:31+00:00", "payload": {"verdict": "unknown", "detail": "DataPool/Timecodes 가 자식 0 을 답했다 — 빈 풀과 실패한 열거가 여기서는 구별되지 않는다"}}
