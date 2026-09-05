@@ -549,6 +549,9 @@ def render_note(result: dict) -> str:
     add("")
     queries = result.get("queries") or dict(total=0, per_probe=dict())
     add(f"- 합계 {queries.get('total')} / 상한 {MAX_QUERIES}")
+    # 프로브 수와 조회 수는 **단위가 다르다**(`plan.md` B8 — 0.1.1 까지 이 둘을
+    # 섞어 물어 판정선이 안 섰다). 그래서 한 줄에 나란히 적되 상한을 따로 단다.
+    add(f"- 프로브 5건(① ② ③ ④ ⑤) / 상한 {MAX_PROBES} — 조회 수와 단위가 다르다")
     for label, count in (queries.get("per_probe") or dict()).items():
         add(f"- `{label}`: {count}")
     add("")
