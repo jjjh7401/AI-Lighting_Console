@@ -374,10 +374,11 @@ Limits, stated plainly:
   answer.
 - **An empty timecode pool blocks the app** from creating its first timecode
   (`childCount 0` reads as `unknown`); a slot must already exist.
-- **Two builders have no production caller yet** — the timecode handoff card and
-  the analysis entry point are reachable from tools and tests, not from the
-  session's question channel. Sheet `HEAD.BPM` is likewise not yet joined to the
-  analysis call.
+- **Song analysis is triggered by the operator** — after a successful upload the
+  UI shows a single "분석" action that sends `song_audio_analyse`; the server then
+  runs the DSP pass and raises the confirmation card (#313). The timecode handoff
+  card still has no production caller (its `Record` line is exposed through the
+  tool payload only), and sheet `HEAD.BPM` is not yet joined to the analysis call.
 - The bundle grows **~213.7 MB** with `librosa` (65,564 KiB → 274,240 KiB,
   `du -sk`). A librosa-free fallback (manual BPM entry on the same card) is
   implemented and tested but was not selected.

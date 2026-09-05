@@ -518,7 +518,7 @@ m1_to_mN_commit_strategy: "M2 는 논리 단위 5커밋(분석 코어 → 업로
 
 ```yaml
 sync_complete_at: 2026-09-05
-sync_commit_sha: pending-backfill-sync   # 커밋은 자기 해시를 모른다 — 후속 커밋에서 채운다
+sync_commit_sha: pending-backfill-sync   # 최종 sync 커밋에서 채운다   # 커밋은 자기 해시를 모른다 — 후속 커밋에서 채운다
 sync_status: complete
 sync_base: 8788904   # = HEAD, 네 마일스톤 전부 머지된 자리
 
@@ -575,10 +575,17 @@ sync_gaps:
   - 이 회차는 문서만 만졌다 — 코드·테스트를 재실행하지 않았다. CHANGELOG 에 실린
     수치(전량 스위트 11245 · 번들 델타 213.7 MB · 조회·쓰기 계수)는 §E.2 에서
     옮긴 값이며 이 회차가 다시 잰 값이 아니다.
-  - AC-020·021 은 이 회차가 판정하지 않았다. 프로브 노트를 읽어 요구 항목이
-    담겨 있음을 확인했을 뿐이고, 판정 자체는 run 단계 소관이다.
+  - AC-020·021 은 문서 회차가 판정하지 않았고, 오케스트레이터가 아래 §E.4 보충에서 판정했다.
+  - `analyse_song_audio` 생산 호출자 0건은 이 문서 회차가 발견했고 같은 날 #313 이 배선했다(§E.2 「M2 후속」).
   - 콘솔 접촉 0건 — 이 회차는 실기를 부르지 않았다.
 ```
+
+### §E.4 보충 — AC-020·021 오케스트레이터 판정 (2026-09-05)
+
+| AC | 판정 | 근거(되읽음) |
+|---|---|---|
+| AC-MUSICSYNC-020 | PASS | `docs/research/ma3-effects/14-musicsync-m3a-timecode-probe-run2.md` + 정정 절 — ①(TrackGroup 자식 2·childCount 2·truncated false) ②(후보 4종 효과 미관측=미증명) ③(`DataPool/Timecodes` 일치) 셋 다 실행 일자(2026-09-05T10:20Z)와 함께 기록 |
+| AC-MUSICSYNC-021 | PASS | 양성(풀 1→2·이름 일치)·음성(`path segment not found: '999'`) 원문 기록 · 프로브 5/5 · 조회 11/12 · 쓰기 8건이 §A.4 열거와 정확히 일치, 열거 밖 0 · occupied/unknown 절은 1회차(`…-timecode-probe.md`, unknown → 쓰기 0·무결론·사유 기록)로 실측 |
 
 ## Plan Audit-Ready Signal
 
