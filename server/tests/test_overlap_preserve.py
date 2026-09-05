@@ -224,9 +224,50 @@ _CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
 #: 1.6.3; a rig answering 1.6.2 does not carry the aliases whatever main
 #: contains (this repo has the live-1.6.1 / main-1.6.2 precedent). That is the
 #: reason the version is bumped at all.
+#: 2026-09-04 granted revision (re-pin) — SPEC-COPILOT-READBACK-001 M0:
+#: responder 1.6.3 → 1.6.4. Table-valued property reads answer JSON TEXT
+#: instead of the `table: 0x…` ADDRESS, and `PROTOCOL.md` §4.6/§4.8 gain the
+#: sentences that state that contract. Operator-approved through the SPEC's
+#: plan-audit PASS + Implementation Kickoff Approval (plan.md §C decision C-2,
+#: 2026-09-03); the DEPLOY is explicitly NOT covered here — plan.md §E M3-1
+#: owns the single console write and its own approval gate.
+#:
+#: The grant is motivated by a MEASUREMENT, not a preference: `M.safe_property`
+#: put `tostring(value)` on every value, so a table answered its address while
+#: the same reply already said `t="table"` — the responder was not lying, it
+#: was declining to unpack something it had in hand
+#: (`docs/runbooks/console-channel-facts.md:93-101` classifies this as a
+#: removable non-implementation, and Part-level `SELECTIONDATA`/`DEPENDENCIES`
+#: are the observed instances).
+#:
+#: The WIRE CONTRACT's SHAPE does not change — no new verb, no new token, no
+#: new reply field. `t` stays `"table"`, `v` stays a string; only the CONTENT
+#: of `v` changes for table values, so `server/bridge/protocol.py` and every
+#: existing consumer are untouched. What §4.6/§4.8 gain is the statement of
+#: that content, which is why `PROTOCOL.md` leaves its old digest this time
+#: (the 1.6.3 revision left it untouched and kept its digest; this one does
+#: not, because the contract text genuinely changes).
+#:
+#: Three defects the encoder carried since v1 are closed in the same edit,
+#: because each of them is reachable ONLY once a table value is actually
+#: encoded: no depth cap and no cycle detection (a self-referential table
+#: would have recursed forever — the responder would simply never reply), and
+#: an array/object heuristic (`value[1] ~= nil`) that silently dropped every
+#: other key of a hash carrying `[1]`. Truncation of a table value is
+#: STRUCTURAL rather than byte-wise: `safe_truncate` would leave an unparseable
+#: JSON fragment, so the truncation announcement would be true and useless.
+#:
+#: NOT live-verified: no console was touched by this revision, and this rig has
+#: not been shown to expose ANY table-valued property on a preset object — that
+#: measurement is this SPEC's own M2 and is deliberately not assumed here. The
+#: `SELECTIONDATA`/`DEPENDENCIES` shapes remain unobserved
+#: (`console-channel-facts.md:121`), so the offline tests pin the encoder's
+#: behaviour on shapes NOBODY HAS SEEN on this console. Deployment is confirmed
+#: BY VERSION — `ping` must answer 1.6.4; a rig answering 1.6.3 does not carry
+#: this change whatever main contains (live-1.6.1 / main-1.6.2 precedent).
 _CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
-    "console/lua/copilot_responder.lua": "75ab824876e93c6eef81827a6b85b6ce7af3535b",
-    "console/lua/PROTOCOL.md": "984210533aab40501e32309c4db8cde5bb4f34ba",
+    "console/lua/copilot_responder.lua": "6c6fa0f25728378a684fddb507781d9b77e01878",
+    "console/lua/PROTOCOL.md": "ec08949e5a56511861648fa9311ef28ca20924df",
 }
 
 #: 2026-08-02 granted exception — the upstream vocabulary extension

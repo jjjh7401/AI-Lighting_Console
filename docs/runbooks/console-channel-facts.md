@@ -6,6 +6,7 @@
 > 하루에만 그 두 형태가 각각 한 번씩 났다.
 >
 > 측정 조건: onPC · 응답기 **1.6.3** · `osc.udp://127.0.0.1:8000` · 회신 **9005**.
+> 예외로 **§4 의 테이블 값 행은 응답기 1.6.4 로 2026-09-04 에 다시 쟀다** — 그 절에 표기했다.
 > 전부 **콘솔 쓰기 없이** 잰 값이거나, 쓰기가 있었던 경우 그 사실을 각 항에 적었다.
 
 관련 판정서: `.moai/reports/t237` · `t248` · `t255` · `t261`
@@ -84,20 +85,51 @@ introspect DataPool/Sequences/3/4/1   class=Part  total=195  truncated=false  pa
 
 `Cue` 23필드 어디에도 내용 필드가 없다. **「못 찾았다」가 아니라 「다 세어 봤는데 없다」**다.
 
-`Part` 195필드 중 내용 후보 넷:
+`Part` 195필드 중 내용 후보 넷 — **응답기 1.6.4 로 재측정(2026-09-04)**:
 
 ```
 STOREDDATA     property not readable
 PRESETDATA     ""            <- 데이터가 있는 것이 확실한 자리에서도 빈 문자열
 REFERENCES     ""            <- 〃
-SELECTIONDATA  table: 0x…    <- 🔴 빈값이 아니라 **Lua 테이블 주소**
-DEPENDENCIES   table: 0x…    <- 〃
+SELECTIONDATA  {}            <- 잰 Part 7개 전부 빈 테이블
+DEPENDENCIES   [{"content_crc":…,"key":"Preset 4.1","name_crc":…}]
 양성 대조군 NAME = 'Q010 INTRO 화사' · OWNDATAPRESENT = true · MEMORYFOOTPRINT = 4580
+음성 대조군 __NOSUCHPROP_CONTROL__ -> property not readable
 ```
 
-🔴 **빈 문자열과 테이블 주소는 다른 사건이다.** 빈 문자열은 「이 채널이 그 축을
-안 잰다」이고, 테이블 주소는 **「값은 거기 있는데 응답기가 문자열로 안 풀었다」**다.
-후자는 **제거 가능한 미구현**이다 — 다만 그 테이블 안에 무엇이 들었는지는 **안 쟀다**.
+**1.6.3 의 「테이블 주소」는 1.6.4 에서 사라졌다.** 옛 기록의 `table: 0x…` 는 값이 아니라
+응답기가 테이블을 `tostring` 으로 흘린 자국이었다. 1.6.4 가 테이블 값을 `v` 안 JSON 문자열로
+직렬화하면서(SPEC-COPILOT-READBACK-001 M0) 그 자리가 실제 내용으로 바뀌었다.
+
+`DEPENDENCIES` 의 형상은 **레코드 배열**이고 키는 셋으로 고정이다 —
+`content_crc`(Int64) · `key`(참조 대상의 이름 문자열) · `name_crc`(Int64).
+비어 있을 때는 `[]` 가 아니라 **`{}`** 로 온다(빈 테이블은 배열인지 해시인지 구분할 근거가
+없어 객체로 인코딩된다).
+
+| 경로 | NAME | SELECTIONDATA | DEPENDENCIES | truncated |
+|---|---|---|---|---|
+| `…/Sequences/3/1/1` | `Part 0` | `{}` | `{}` | false |
+| `…/Sequences/3/2/1` | `Part 0` | `{}` | `{}` | false |
+| `…/Sequences/3/4/1` | `Q010 INTRO 화사` | `{}` | 1건 — `Preset 4.1` | false |
+| `…/Sequences/3/6/1` | `Q030 VERSE1 확장` | `{}` | 2건 — `Preset 4.4` · `Preset 21.1` | false |
+| `…/Sequences/3/7/1` | `Q040 PRE1 축적` | 미조회 | 1건 — `Preset 4.4` | false |
+| `…/Sequences/3/10/1` | `Q070 VERSE2 하강` | 미조회 | 1건 — `Preset 4.3` | false |
+| `…/Sequences/3/14/1` | `Q110 BRIDGE 절제` | 미조회 | `{}` | false |
+
+즉 `DEPENDENCIES` 가 비어 있는지는 **클래스의 성질이 아니라 그 Part 가 풀 개체를 참조하는지**를
+따라간다. 「Part 는 의존 목록을 답한다」까지가 잰 것이고, 「모든 Part 가 답한다」는 아니다 —
+7개 중 3개는 빈 테이블이었다.
+
+🔴 **`SELECTIONDATA` 는 여전히 안 풀린 축이다.** 주소가 빈 테이블로 바뀌었을 뿐,
+잰 7개 전부 `{}` 였다. Preset 개체에서도 `{}` 였다(같은 SPEC 의 M2). **선택 정보가 이 채널에
+실려 온 것을 아직 한 번도 못 봤다** — 「비어 있다」를 쟀을 뿐 「이 축이 채워지는 조건」은 못 쟀다.
+
+빈 문자열(`PRESETDATA` · `REFERENCES`)은 성격이 다르다. 그쪽은 1.6.4 에서도 빈 문자열이고,
+「이 채널이 그 축을 안 잰다」는 뜻 그대로다.
+
+**값 상한과의 거리**: `max_prop_value = 240` 바이트에 대해 1건 88바이트 · 2건 175바이트
+(엔트리당 약 87바이트)라 관측 범위에서는 절단이 없었다. 산술로는 3건부터 240을 넘지만,
+**의존 3건짜리 Part 를 못 찾아 절단은 재지 못했다** — 이건 계산이지 측정이 아니다.
 
 ---
 
@@ -118,6 +150,7 @@ DEPENDENCIES   table: 0x…    <- 〃
 
 - `COUNT`·`ACTIVE` 가 **무엇에** 움직이는지 (선택에는 안 움직인다는 것만 안다)
 - `COUNTTOTALSELECTED` 와 `COUNTFULLYSELECTED` 의 차이 (부분 선택에서 갈릴 것으로 보이나 미측정)
-- `SELECTIONDATA`·`DEPENDENCIES` 테이블의 **내용**
+- `SELECTIONDATA` 가 **채워지는 조건** — 잰 Part 7개와 Preset 2개 전부 `{}` 였다(§4).
+  「비어 있다」는 쟀고 「무엇이 채우는가」는 못 쟀다. `DEPENDENCIES` 의 내용은 §4 에서 측정됐다
 - 1회째 `Clear` 뒤 값이 실제로 남는지 (룰북 문면 근거이고 이 콘솔에서 미측정 —
   재려면 값을 실어야 하고 그것은 새 승인이다)

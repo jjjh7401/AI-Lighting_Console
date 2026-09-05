@@ -64,7 +64,13 @@ NAME_UNSENDABLE = "name_unsendable"
 _VALUE_MATCH_REASON = (
     "슬롯 점유는 되읽어 확인할 수 있지만 **값이 맞는지는 이 채널로 읽히지 "
     "않는다**. 「슬롯이 찼다」는 「무언가 저장됐다」까지만 말한다 — "
-    "「검증된 N건」으로 읽으면 틀린 값이 조용히 영속한다"
+    "「검증된 N건」으로 읽으면 틀린 값이 조용히 영속한다. "
+    "이것은 미구현이 아니라 **측정된 부재**다(2026-09-04, 응답기 1.6.4): "
+    "프리셋 개체의 프로퍼티 138개를 전수 판독해 117개가 읽혔지만 "
+    "저장된 dim 퍼센트·색 RGB 를 답하는 것은 하나도 없었다. "
+    "`PRESETDATA` 는 데이터가 든 프리셋에서도 빈 문자열이고 "
+    "`SELECTIONDATA`·`DEPENDENCIES` 는 빈 테이블(`{}`)이다. "
+    "근거: docs/research/ma3-effects/10-preset-property-readback-sweep.md"
 )
 
 _NAME_UNREADABLE_REASON = (
