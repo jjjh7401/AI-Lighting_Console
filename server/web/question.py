@@ -29,6 +29,7 @@ import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
+from server.orchestrator.songcue_timecode import operator_handoff_commands
 from server.safety.session_context import DEFAULT_SESSION_KEY, current_session_key
 
 #: 사람이 콘솔 앞에 다녀오는 시간까지 잡아 둔다. 승인(600초)과 같은 눈금.
@@ -211,6 +212,52 @@ def build_song_confirmation_card(
         why=" ".join(lines),
         options=options,
         multi=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 타임코드 녹화 인계 카드 (SPEC-COPILOT-MUSICSYNC-001 M3-b · REQ-MUSICSYNC-020)
+# ---------------------------------------------------------------------------
+#
+# 위 :class:`QuestionRequest` 스키마는 여기서도 **한 글자도 바뀌지 않는다.**
+# 인계 통로는 이미 있는 ``commands`` 필드다 — 「서버가 대신 실행하면 안 되는
+# 명령」을 위해 존재하는 자리이고, 녹화 무장 명령이 정확히 그 부류다.
+#
+# 명령 문자열 자체는 여기서 짓지 않고 :func:`operator_handoff_commands` 에서
+# 받아 온다. 앱 안에서 그 문자열이 만들어지는 자리를 **하나로** 묶어 두어야
+# 「앱이 쏘지 않는다」를 grep 하나로 판정할 수 있다(AC-MUSICSYNC-022).
+
+
+def build_timecode_handoff_card(
+    *,
+    timecode_number: int,
+    timecode_name: str = "",
+    sequence_name: str = "",
+) -> QuestionRequest:
+    """녹화를 **운영자에게 넘기는** 카드 하나를 오늘 스키마로 세운다.
+
+    앱은 이 명령을 발화하지 않는다(REQ-MUSICSYNC-020). 콘솔을 녹화 무장 상태로
+    만드는 명령이고, 해제 경로는 ``Off Timecode`` 실측 1회뿐이기 때문이다.
+
+    갈래 B 이므로 인계 목록은 한 줄뿐이다 — M3-a 가 효과를 증명하지 못한 재생
+    명령은 여기에 **없다**(AC-MUSICSYNC-023 둘째 절).
+    """
+    commands = operator_handoff_commands(timecode_number)
+    named = f" ({timecode_name})" if timecode_name else ""
+    attached = f" 시퀀스 {sequence_name} 가 매달려 있습니다." if sequence_name else ""
+    return QuestionRequest(
+        prompt=f"Timecode {timecode_number}{named} 녹화를 콘솔에서 직접 실행해 주세요.",
+        why=(
+            "이 명령은 콘솔을 녹화 무장 상태로 만들기 때문에 앱이 대신 실행하지 "
+            "않습니다. 슬롯 준비는 끝났고" + attached + " 남은 것은 LTC 에 맞춘 "
+            "녹화뿐입니다. 끝나면 알려 주세요 — 앱이 되읽어 확인합니다."
+        ),
+        steps=(
+            "콘솔 커맨드라인에 아래 명령을 그대로 실행합니다.",
+            "LTC 를 재생해 타임코드를 녹화합니다.",
+            "녹화를 멈춘 뒤 이 창에 「녹화를 마쳤습니다」라고 알려 주세요.",
+        ),
+        commands=commands,
     )
 
 

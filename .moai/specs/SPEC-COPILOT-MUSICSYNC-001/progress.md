@@ -300,39 +300,104 @@ server/web/question.py       120      2    98%
   적재 행위라 판정에서 제외했다. 이 제외를 시험 독스트링에도 적어 두었다.
 - 실기 콘솔 왕복 0건 — 이번 회차의 모든 관측은 오프라인이다.
 
+### M3-b (오프라인 구현) — 인계와 되읽기 검증 (2026-09-05, TDD)
+
+기준 트리: 워크트리 `.claude/worktrees/agent-aa666d5ac1e829790`, 브랜치
+`worktree-agent-aa666d5ac1e829790`, base `7a8d781`(main + #309 M1 + #310 M3-a +
+#311 M2). **콘솔 접촉 0건** — 이번 회차는 가짜 상태 포트만 상대했다. 실기
+리허설(운영자 녹화 + 되읽기 실값)은 **미실행**이며 아래 「실기 대기」로 남는다.
+
+**갈래 판정.** 설계서 §5 기준 **갈래 B** 를 배달했다. M3-a 2회차가 `TrackGroup 1`
+아래는 열었으나(`childCount 2` · `MarkerTrack "Marker"` + `Track "<시퀀스명>"` ·
+`truncated:false`) 재생 후보 4종의 **효과는 관측되지 않았다**. 그래서 인계 목록에
+재생 명령이 **0건**이고, 이벤트 내용 축은 `SongCueTimingSkip` 으로 좁혀졌다.
+
+**변경 집합**
+
+| 파일 | 델타 | 내용 |
+|---|---|---|
+| `server/orchestrator/songcue_timecode.py` | NEW | 인계 명령 생성 · `BudgetedStateReader`(조회 4회 상한) · `verify_songcue_timecode` · 5절 산출물 렌더러 |
+| `server/web/question.py` | MODIFY | `build_timecode_handoff_card` — `QuestionRequest` 스키마 **무변경**, `commands[]` 통로만 씀 |
+| `server/orchestrator/tools.py` | MODIFY | `prepare_songcue` payload 에 `timing.operator_handoff` 추가(+import 1줄). 발화 번들(`command_bundle`)은 무변경 |
+| `server/tests/test_musicsync_timecode_handoff.py` | NEW | 24건 |
+
+**왜 `server/looks/songcue.py` 가 아닌가.** 검증기는 `StateQueryPort` 를 받는데
+`test_looks_boundary.py` 가 `server.orchestrator.ports` 를 `server/looks/**` 의
+**금지 모듈 접두사**로 못박고 있다. 그리고 `tools.py` 는 11,786행이고 형제격인
+`_timecode_slot_verdict` 는 팩토리 안의 중첩 함수라 「그 옆」이라 부를 모듈 수준
+자리가 없다. 그래서 같은 패키지의 새 모듈이다. `_timecode_slot_verdict` 는
+**손대지 않았다**(`childCount 0 → unknown` 규칙은 카드 t270 몫).
+
+**AC 판정표** (전 항목 `.venv/bin/python -m pytest -q -p no:cacheprovider …`)
+
+| AC | 판정 | 검증 노드 | 관측 |
+|---|---|---|---|
+| AC-MUSICSYNC-022 | PASS (오프라인 몫) | `TestTheAppNeverFiresTheRecordVerb` | `grep -rn 'Record Timecode' server --include='*.py' \| grep -v tests/` → **1행**, `songcue_timecode.py:46` 의 인계 서식 하나뿐. 그 모듈 AST 에 실행 표면 식별자(`run_commands`·`send_command`·`screen`·`execution_port`·`ConsoleLink`) **0건**. `prepare_songcue` 가 실제 발화한 명령 목록에 `Record Timecode` **0건**. `server/safety/blacklist.yaml` diff **0줄** |
+| AC-MUSICSYNC-023 | PASS | `TestPrepareSongcueSurfacesTheHandoffWithoutFiringIt` · `TestTheHandoffCarriesTheRecordVerbAndNothingElse` | 준비분은 정확히 3줄 — `Store Timecode 7` · `Set Timecode 7 Property 'Name' 'Song 3 Timecode'` · `Assign Sequence 3 At Timecode 7`(이름 칸은 `'<ascii>'` 규약대로 음역). 인계분은 `["Record Timecode 7"]` 하나. 재생 동사 5종(`Go`/`Go+`/`Pause`/`Toggle`/`Play Timecode`) 카드 전체 직렬화에서 **0건** — 같은 문자열을 실제로 쓰는 `musicsync_m3a_probe.py` 를 양성 대조군으로 걸어 검사가 공허하지 않음을 고정 |
+| AC-MUSICSYNC-024 | PASS | `TestTheArtifactSaysWhatItCouldNotRead` | 존재 판정 셋 전부 참 — (a) 5절 표제 `주장`·`증거`·`기준 귀속`·`미검증`·`잔여 위험` 각각 **≥1** (b) `미검증` 절이 리터럴 `unverified`·`SongCueTimingSkip` 을 **둘 다** 포함 (c) `verdict:` 필드가 **1행**이고 값이 `{unverified, SongCueTimingSkip, inconclusive}` 안이며 `verified` 가 **아님** |
+| AC-MUSICSYNC-025 | PASS (오프라인 몫) | `TestTheVerifierStaysInsideFourQueries` · `TestTruncatedIsNeverReadAsSuccess` · `TestTheOpenAxesAreRecordedWithValues` | 갈래 B 검증 1회 = **조회 3회**(가짜 포트가 받은 경로 수로 실측), 상한 4. 예산 소진 뒤 5번째 조회는 `TimecodeQueryBudgetExceeded` 로 **보내지 않고** 거절되고 장부는 4에 멈춘다. `truncated:true` 를 풀·슬롯·TrackGroup **세 자리 각각**에 넣으면 판정이 `inconclusive` 이고 산출물에 「전부 읽었다」·「all read」 **0건**. 정상 응답이면 세 축이 값과 함께 남는다 — `pool_presence`(풀 childCount + 슬롯 존재) · `name_match`(관측 이름 vs 기대 이름, 불일치도 **값으로** 남음) · `trackgroup`(childCount 2 + `MarkerTrack`·`Track` 나열). 넷째 축은 `SongCueTimingSkip[timecode_event_content]` |
+| AC-MUSICSYNC-030 (M3-b 몫) | PASS (오프라인 몫) | 위 전부 | 이 회차 콘솔 쓰기 **0건** · 조회 **0건**(가짜 포트). 코드가 낼 수 있는 검증당 조회는 상한 4로 **코드에서** 잠겨 있다 |
+| AC-MUSICSYNC-031 | PASS | 이 절 + 완료 보고 | 5절 형식, 미검증 절 비어 있지 않음 |
+
+**실기 대기 (pending live)** — 오케스트레이터가 운영자와 함께 실행할 몫이며 이
+회차가 판정하지 **않은** 것:
+
+- AC-MUSICSYNC-022 둘째 절 「리허설이 실제로 수행되었으면」 — 운영자 인계 경로의 실기 확인.
+- AC-MUSICSYNC-025 의 되읽기 **실값** — 풀 `childCount` 증가분, 녹화 뒤 이름·TrackGroup 실측. 여기 판정은 전부 가짜 포트의 **모양**에 대한 것이다.
+- M3-a 잔여 위험 (1) 이 그대로 산다: **빈 타임코드 풀에서는 앱이 타임코드를 못 쓴다**(`_timecode_slot_verdict` 의 `childCount 0 → unknown`). M3-b 리허설도 같은 조건이며, 이 회차는 그 규칙을 **건드리지 않았다**(카드 t270).
+
+**미검증 (이 회차)**
+
+- 축 (a) 의 「증가」는 기준선을 **안 받으면 판정하지 않는다.** `baseline_pool_child_count` 를 주지 않으면 관측 childCount 만 적고 문자열에 `baseline not supplied — growth not judged` 를 남긴다 — 「재지 못함」을 「비었음」으로 적지 않기 위해서다.
+- 이벤트 내용 축이 열리는 경로(`event_content_probe_note` 를 준 4번째 조회)는 **가짜 포트로만** 지났다. 실기에서 그 경로가 무엇을 답하는지는 M3-a 후속 프로브 몫이며, 그 노트가 없으면 축은 계속 좁혀진 채다.
+- `operator_handoff` payload 를 UI 가 실제로 어떻게 렌더하는지 — 카드 빌더는 세웠으나 세션 층 배선(질문 채널로 띄우는 자리)은 이 회차 범위 밖이다. 지금은 tool payload 로만 노출된다.
+- B4(재생 명령 효과) · B9(음수 `TrigTime` 콘솔 수용) 잔여는 그대로.
+
+
+#### M3-b 실기 리허설 되읽기 (2026-09-05T13:25Z, 오케스트레이터)
+
+- 실행: `server/tools/musicsync_m3b_verify.py --slot 999 --expected-name MSYNCPROBE --expected-sequence "<T215 SCRATCH DELETABLE>" --baseline-pool-count 1` · 응답기 1.6.4 · 쓰기 0 · 조회 **3/4**.
+- 판정 **`unverified`** (갈래 B): 풀 childCount 1→2 · 이름 일치 · `TrackGroup 1` 자식 2(Marker + `<T215 SCRATCH DELETABLE>`) — 세 축 일치. 이벤트 내용 축은 `SongCueTimingSkip`.
+- 운영자 인계분(앱 미발화): `Record Timecode 999` — 감독이 콘솔에서 직접 실행. 앱이 발화한 명령 전수에 이 문자열 0건.
+- 산출물: `docs/research/ma3-effects/15-musicsync-m3b-rehearsal-verify.md`(5절 표제 리터럴 · `verdict: unverified`) · 원자료 `docs/research/ma3-effects/evidence/musicsync-m3b-verify-run1.json`.
+- 미검증: 녹화 이벤트가 실제로 찍혔는지는 이 채널로 관측 불가(설계된 좁힘). 예산 밖 추가 조회 1회 `…/TrackGroup 1/Track 2` 는 `path segment not found` — 트랙 하위 주소 방식 자체가 미측정.
+- 잔여물: `Timecode 1`(감독) · `Timecode 999`(프로브) — 삭제는 운영자 몫.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
 run_complete_at: 2026-09-05
-run_commit_sha: pending-backfill-m2
+run_commit_sha: pending-backfill-m3b
 run_status: audit-ready
-milestone: M1 + M3-a + M2
-milestone_evidence_note: "§E.2 는 M1·M3-a·M2 세 절을 담는다(오케스트레이터가 통합 시 합류). 아래 계수는 M2 회차 것"
-ac_pass_count: 8            # M2: AC-MUSICSYNC-010..018 중 9개 판정, 8 PASS
-ac_pass_with_debt_count: 1  # AC-MUSICSYNC-016 (문구 절은 생산 지점 판정)
+milestone: M1 + M3-a + M2 + M3-b (offline + live readback)
+milestone_evidence_note: "§E.2 는 M1·M3-a·M2·M3-b 네 절을 담는다(오케스트레이터가 통합 시 합류). 아래 계수는 M3-b 오프라인 회차 것"
+ac_pass_count: 6            # M3-b: AC-MUSICSYNC-022·023·024·025·030(M3-b 몫)·031
+ac_pass_with_debt_count: 0
 ac_fail_count: 0
-ac_scope: AC-MUSICSYNC-010..018 (M2 전량)
-preserve_list_post_run_count: 5   # src-tauri · server/lxseq · server/orchestrator · server/safety · server/looks — 전부 diff 0줄
+ac_scope: "AC-MUSICSYNC-022·023·024·025 + 030·031 — 오프라인 몫 + 실기 되읽기 1회(2026-09-05)"
+ac_live_readback_2026_09_05: # 실기 리허설 되읽기(§E.2 M3-b 실기 절) — 오케스트레이터 관측
+  - "AC-MUSICSYNC-025: 풀 childCount 1→2 · 이름 MSYNCPROBE 일치 · TrackGroup 1 자식 2 · 조회 3/4 · verdict unverified(갈래 B, 이벤트 축 SongCueTimingSkip)"
+  - "AC-MUSICSYNC-030: 이 회차 앱 쓰기 0 · 조회 3 · Record 는 운영자 손으로"
+  - "AC-MUSICSYNC-022 둘째 절: 인계 문자열이 세션 카드로 뜨는 생산 배선은 아직 없음(unverified 로 남김)"
+preserve_list_post_run_count: 8   # server/safety · server/audio · server/lxseq · server/design · ui · src-tauri · packaging · pyproject.toml+uv.lock — 전부 diff 0줄
 console_writes_emitted: 0
 console_queries_emitted: 0
 new_warnings_or_lints_introduced: 0
-full_suite: "11204 passed, 9 skipped"
-ui_typecheck: "npx tsc --noEmit exit 0"
-ui_tests: "21 files / 506 tests passed"
-coverage_new_module: "server/audio/analyze.py 91% · server/design/profile.py 96% · server/web/question.py 98%"
-bundle_size_before_kib: 65564
-bundle_size_after_kib: 274240
-bundle_delta_mb: 213.7
-bundle_cap_mb: 300
-bundle_fallback_selected: false
+full_suite: "11245 passed, 12 skipped in 150.16s"
+ruff: "All checks passed! (touched files, exit 0)"
+timecode_verify_query_cap: 4      # 코드 상수 TIMECODE_VERIFY_QUERY_CAP
+timecode_verify_queries_branch_b: 3
+record_verb_app_fired_count: 0    # grep -rn 'Record Timecode' server --include='*.py' | grep -v tests/ → 1행(인계 서식), 발화 목록 0건
+delivered_branch: "B (design.md §5) — TrackGroup 열림 · 재생 문법 미증명 → 재생 명령 인계 0건"
 unverified:
-  - 동결 앱 안에서의 librosa import / analyze 호출
-  - AC-016 문구 절의 소비 지점(_build_q5 가 사유 문자열을 버린다)
-  - 시트 HEAD.BPM → analyse_song_audio 접합(호출자가 PRESERVE 파일에 있다)
-  - 실제 곡 파일로의 분석기 검증
-  - B9(음수 TrigTime 콘솔 수용) — M1 에서 넘어온 채 그대로
+  - 되읽기 실값 — 이 회차 판정은 전부 가짜 포트의 모양에 대한 것이다
+  - 이벤트 내용 축의 실기 응답(event_content_probe_note 경로는 가짜 포트로만 지났다)
+  - operator_handoff 의 UI 렌더·세션 질문채널 배선(지금은 tool payload 노출까지)
+  - 축 (a) 의 증가 판정 — baseline_pool_child_count 미제공 시 값만 적고 판정하지 않는다
+  - "빈 타임코드 풀에서 앱이 타임코드를 못 쓰는 조건(_timecode_slot_verdict childCount 0 → unknown) — 카드 t270, 이 회차 무변경"
   - B4(재생 명령 효과) — M3-a 갈래 B, 이 채널로는 미관측
-m1_to_mN_commit_strategy: "M2 는 논리 단위 5커밋(분석 코어 → 업로드 경로 → 카드/BPM → UI → 패키징)"
+  - B9(음수 TrigTime 콘솔 수용) — M1 에서 넘어온 채 그대로
+m1_to_mN_commit_strategy: "M2 는 논리 단위 5커밋(분석 코어 → 업로드 경로 → 카드/BPM → UI → 패키징). M3-b 오프라인은 1커밋"
 ```
 
 ## §E.4 Sync-phase Audit-Ready Signal

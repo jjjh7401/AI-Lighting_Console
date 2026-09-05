@@ -108,6 +108,7 @@ from server.orchestrator.ports import (
     PropertyQueryPort,
     StateQueryPort,
 )
+from server.orchestrator.songcue_timecode import operator_handoff_commands
 from server.orchestrator.spatial_memory import (
     SpatialMemory,
     freshness_from_console,
@@ -2780,6 +2781,18 @@ def build_toolset(
                 {"axis": skipped.axis, "reason": skipped.reason} for skipped in timing.skipped_axes
             ],
         }
+        # 슬롯이 준비됐으면 녹화는 **운영자의 몫**이다 — 그 명령은 콘솔을 녹화
+        # 무장 상태로 만들고 해제 경로가 실측 1회뿐이라, 앱은 발화하지 않고
+        # 넘긴다(REQ-MUSICSYNC-020). 이 자리는 `run_commands` 로 간 번들
+        # (`command_bundle`) 밖이며, 인계분은 그 번들에 섞이지 않는다.
+        if timing.timecode_commands:
+            payload["timing"]["operator_handoff"] = {
+                "commands": list(operator_handoff_commands(timecode_number)),
+                "note": (
+                    "앱은 이 명령을 발화하지 않습니다 — 콘솔에서 직접 실행해 주세요. "
+                    "끝나면 앱이 되읽어 확인합니다."
+                ),
+            }
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
