@@ -167,3 +167,22 @@ _<pending sync-phase>_
 - plan_complete_at: 2026-09-04T00:02:42Z
 - plan_status: audit-ready
 - plan_audit: PASS 0.923 (iteration 2, .moai/reports/plan-audit/SPEC-COPILOT-MUSICSYNC-001-review-2.md) · review-2 D1 은 0.1.3 에서 문장 교체로 해소
+
+## Run Phase 1 — Plan Audit Gate (2026-09-05)
+
+- audit_verdict: PASS
+- audit_score: 0.973 (iteration 3/3, delta re-check on v0.1.3; trend 0.857 → 0.923 → 0.973)
+- audit_report: .moai/reports/plan-audit/SPEC-COPILOT-MUSICSYNC-001-review-3.md
+- audit_at: 2026-09-05T05:17:07Z
+- auditor_version: plan-auditor (opus, read-only, console contact 0)
+- audit_cache_hit: false (v0.1.3 edit changed the artifact hash after review-2)
+- post-audit fixes (orchestrator-direct, no REQ/AC change): spec.md HISTORY 0.1.3 row moved into the table; frontmatter `updated` → 2026-09-04
+- anchor drift re-measured on main 3df3c06: tools.py anchors +73 lines (5385→5458 · 5404→5477 · 5405-5412→5478-5485 · 5417-5426→5490-5499 · 5427→5500 · 5984-5987→6057-6060); other 12 anchors unchanged
+
+## §F Phase 4 Mode Selection (2026-09-05, M1)
+
+- Input: tier L · M1 scope 7 files (1 new + 2 modify + 4 tests) · domains 1 (Python server) · language mix Python only · concurrency benefit LOW (coding-heavy, sequential TDD)
+- direct: not selected (semantic change, multi-file) · serial: **selected** · fanout: not selected (single domain, coding-heavy) · sweep: not selected (not a mechanical transform)
+- Decision: serial (manager-develop, cycle_type=tdd), Mode 5 envelope "Standard"
+- Justification: M1 is one domain and every file depends on the parser's result-kind set, so per-file parallelism would race on the same contract. Anthropic's coding-task parallelism caveat applies. Implementation Kickoff Approval obtained 2026-09-05 (operator chose M1-first, autonomous progression).
+- Worktree: .claude/worktrees/musicsync-m1 · branch WT-sheet-time-import · base origin/main 3df3c06
