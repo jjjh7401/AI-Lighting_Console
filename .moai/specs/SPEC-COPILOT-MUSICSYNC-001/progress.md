@@ -36,11 +36,127 @@
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### M1 — 시트 시간열 수용 (2026-09-05, TDD)
+
+기준 트리: 워크트리 `.claude/worktrees/agent-a6d3d048bacc1915a`, 브랜치
+`worktree-agent-a6d3d048bacc1915a`, base `3df3c06`(= `origin/main`). 콘솔 접촉 **0건** —
+실기 발화 없음(테스트는 전부 가짜 포트).
+
+**변경 집합** (plan.md §E M1 표 그대로, 그 밖의 파일 0건)
+
+| 파일 | 델타 | 내용 |
+|---|---|---|
+| `server/lxseq/cue_time.py` | NEW | `mm:ss.f` 순수 파서(5갈래) + 타임라인 얕은 투사 + 세 리터럴 상수 |
+| `server/lxseq/cue_mapper.py` | MODIFY | `CueTimingViolation` + `cue_timing_violations()` — `CueHold` 와 **별도 타입** |
+| `server/orchestrator/tools.py` | MODIFY | `TC In`/`TC Out`/`HEAD` 판독 · `TrigType`/`TrigTime` 두 줄을 기존 승인 번들에 · `cue_timing`·`timing_apply` 페이로드 |
+| `server/tests/test_lxseq_cue_time.py` | NEW | 파서·투사 단위 33건 |
+| `server/tests/test_lxseq_cue_tool.py` | MODIFY | AC-001~008 도구 층 22건 |
+| `server/tests/test_lxseq_cue_mapper.py` | MODIFY | 단조성 위반 어휘 5건 |
+| `server/tests/test_lxseq_cue_harness.py` | MODIFY | 정본 곡파일 전량 회귀 3건 |
+
+`server/lxseq/cue_parser.py` · `server/sheets/registry.py` · `server/design/song_plan.py` 는
+**무변경**이며, 그 사실을 `git diff --name-only 3df3c06 -- <두 파일>` 이 비어 있음으로
+기계 검사한다(`TestCsvOnlySaysItsHonestLimit::test_the_two_preserve_files_have_no_diff_against_the_base`,
+PASSED — skip 아님).
+
+**AC 판정표** (전 항목 `.venv/bin/python -m pytest -q -p no:cacheprovider <node-id>`)
+
+| AC | 판정 | 검증 노드 | 관측 |
+|---|---|---|---|
+| AC-MUSICSYNC-001 | PASS | `test_lxseq_cue_tool.py::TestSheetTimeLandsOnTheCue::test_preview_carries_the_two_timing_lines_side_by_side` · `::test_the_trigtime_value_follows_format_seconds_semantics` | `PASSED` ×2. preview 페이로드의 `cue_timing.cues[].commands` 가 `["Set Cue 10 Sequence 2 Property 'TrigType' 'Time'", "Set Cue 10 Sequence 2 Property 'TrigTime' 0"]` |
+| AC-MUSICSYNC-002 | PASS | `::TestOneApprovalBundleAndNoExtraQueries::test_the_three_lines_ride_one_approval_bundle` · `::test_preview_writes_nothing_to_the_console` · `::test_the_query_state_count_does_not_grow_when_times_are_read` | `PASSED` ×3. 승인 요청 **1건**에 `Store Cue`+두 줄 동거 · preview `exec_port.sent == []` · `query_state` 호출 수 시트 준 쪽 == 안 준 쪽 |
+| AC-MUSICSYNC-003 | PASS | `::TestUndeterminedNeverFires::test_needs_check_blank_and_malformed_are_three_distinct_reasons` | `PASSED`. 사유 3종 `needs_check`/`blank`/`malformed` 가 **서로 다른 값** · 세 큐의 `commands == []` · 성한 Q040 은 그대로 나감 |
+| AC-MUSICSYNC-004 | PASS | `::TestNoInventedZero::test_an_undetermined_cue_carries_no_number_and_emits_no_trigtime` · `::test_a_genuine_zero_is_the_only_cue_that_may_say_trigtime_zero` | `PASSED` ×2. 미확정 큐의 `tc_in.ms is None` · 페이로드 전문에 `TrigTime 0` **부재** · 진짜 `00:00.0` 큐에서만 `'TrigTime' 0` |
+| AC-MUSICSYNC-005 | PASS | `::TestMonotonicityViolationsAreASeparateList::test_a_backwards_tc_in_is_listed_and_the_order_is_untouched` · `::test_a_tc_out_past_the_next_tc_in_is_a_separate_item` · `::test_the_violation_is_not_mixed_into_the_cue_hold_vocabulary` | `PASSED` ×3. 별도 목록 `cue_timing.monotonicity_violations` · 시트 순서 보존 · `cues_held`/`held` 에 위반 어휘 0건 |
+| AC-MUSICSYNC-006 | PASS | `::TestPreRollIsCarriedButNotProjected::test_a_negative_tc_in_is_emitted_and_excluded_from_the_timeline` · `::test_a_console_rejection_demotes_only_that_cue_and_writes_no_rollback` · `test_lxseq_cue_time.py::TestTimelineProjection::test_the_projection_raises_no_song_plan_error_on_a_negative_cue` | `PASSED` ×3. `'TrigTime' -30` 발화 · `timeline.excluded_preroll == ["Q005"]` · `SongPlanError` 미발생 · 거절 시 계수 판정 `applied ∪ rejected == attempted`, `applied ∩ rejected == ∅`, `rollback_commands == []` |
+| AC-MUSICSYNC-007 | PASS | `::TestDerivedWarningPropagates::test_the_result_payload_carries_the_literal` · `::test_the_timeline_projection_carries_the_literal` · `::test_the_cue_label_family_carries_the_literal` | `PASSED` ×3(리터럴 `in` 검사 3회). 부정 대조군 `::test_a_non_derived_method_gets_no_warning` 도 `PASSED` — 경고가 늘 켜져 있는 계기가 아님 |
+| AC-MUSICSYNC-008 | PASS | `::TestCsvOnlySaysItsHonestLimit::test_no_timing_lines_and_both_literals_in_the_reason` · `::test_the_seventeen_column_exact_set_is_untouched` · `::test_the_two_preserve_files_have_no_diff_against_the_base` | `PASSED` ×3. `'TrigTime'` 0건 · 사유에 `시간 정보 없음`·`manual_go` 둘 다 · 17열 정확 집합과 `CUE_ROW.predicate.required_columns` 무변경 · 두 PRESERVE 파일 diff 공집합 |
+
+**정본 실물 회귀** — 합성 시트만으로는 실제 열 자리가 증명되지 않아 정본 곡파일
+두 장(`LXSEQ_SAMPLE_01_Sugar_r3.cue-ex.csv` 89행 + 같은 이름 `.xlsx`)을 그대로
+통과시켰다: 18 큐 전부 시각 판독, 미확정 **0건**, 단조성 위반 **0건**, 타임라인
+18구간, PRE-ROLL 제외 0건, `HEAD.TC_METHOD` 가 `DERIVED…` 라 경고 리터럴 점화
+(`test_lxseq_cue_harness.py::test_the_canonical_song_file_yields_a_time_for_every_cue`,
+`::test_the_canonical_song_file_declares_itself_derived`, `::test_the_canonical_csv_alone_still_reads_and_says_its_limit` — 3건 `PASSED`).
+
+**RED 증거**(GREEN 이전에 관측)
+
+```
+server/tests/test_lxseq_cue_time.py:16: in <module>
+    from server.lxseq.cue_time import (
+E   ModuleNotFoundError: No module named 'server.lxseq.cue_time'
+```
+
+```
+>       from server.lxseq.cue_mapper import cue_timing_violations
+E       ImportError: cannot import name 'cue_timing_violations' from 'server.lxseq.cue_mapper'
+5 failed, 64 deselected in 0.06s
+```
+
+```
+>       return next(c for c in payload["cue_timing"]["cues"] if c["cue_no"] == cue_no)
+E       KeyError: 'cue_timing'
+17 failed, 23 passed in 0.44s
+```
+
+**전량 검사**
+
+```
+$ .venv/bin/python -m pytest -q -p no:cacheprovider server/tests
+11055 passed, 12 skipped, 1 warning in 147.63s (0:02:27)
+```
+
+```
+$ .venv/bin/ruff check <touched 7 files>
+All checks passed!
+$ .venv/bin/ruff format --check <touched 7 files>
+7 files already formatted
+```
+
+```
+$ .venv/bin/python -m pytest -q --cov=server.lxseq.cue_time --cov=server.lxseq.cue_mapper ...
+server/lxseq/cue_mapper.py     339      9    97%
+server/lxseq/cue_time.py        75      0   100%
+```
+
+**설계 판단 기록 — plan.md M1 표와 다른 자리 하나**
+
+`cue_mapper.py` 의 `[MODIFY]` 를 `CueRowPlan`·`CueBucket` **필드 추가**가 아니라
+`CueTimingViolation` **신설**로 이행했다. 시각은 xlsx 에서 오고 `map_cues` 는 그
+바이트를 보지 않으므로, 두 데이터클래스에 필드를 더하면 **아무도 채우지 않는
+칸**이 남는다 — 「검사 자신이 공허할 수 있다」와 같은 형태의 결함이다. 대신
+`CueHold` 바로 옆에 별도 타입을 두어 REQ-MUSICSYNC-005 의 「섞지 않는다」가
+정의 자리에서 보이게 했다. 파일 집합은 M1 표 그대로다.
+
+**미검증(재지 못한 것 — 「비었음」이 아니다)**
+
+- **B9 — 음수 `TrigTime` 인자를 콘솔이 받아들이는지는 여전히 미측정이다.** 이번에
+  잰 것은 콘솔의 답이 아니라 **거절을 받았을 때의 우리 거동**이다(가짜 실행 포트로
+  그 큐의 `'TrigTime' -30` 만 실패시켜 관측). 실기 확인은 M3 리허설 몫이다.
+- 실기 콘솔 왕복 0건 — 이번 회차의 모든 관측은 오프라인이다.
+- `HEAD.BPM` 문자열(`120 (고정)`)은 **읽기만** 했다. 파싱·우선순위 채택은 M2 몫이며
+  `server/design/profile.py` 는 무변경이다.
+- `_format_seconds` 를 사설 이름 그대로 임포트했다 — 중복 구현을 만들지 않으려는
+  선택이고, `songcue.py` 는 M1 파일 집합 밖이라 공개화하지 않았다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+```yaml
+run_complete_at: 2026-09-05
+run_commit_sha: pending-backfill-m1
+run_status: audit-ready
+milestone: M1
+ac_pass_count: 8
+ac_fail_count: 0
+ac_scope: AC-MUSICSYNC-001..008 (M1 전량)
+preserve_list_post_run_count: 3   # cue_parser.py · registry.py · song_plan.py — 전부 무변경
+console_writes_emitted: 0
+new_warnings_or_lints_introduced: 0
+full_suite: "11055 passed, 12 skipped"
+coverage_new_module: "server/lxseq/cue_time.py 100%"
+unverified: [B9]
+m1_to_mN_commit_strategy: "M1 단일 커밋 — M2·M3 는 이 SPEC 의 후속 회차"
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

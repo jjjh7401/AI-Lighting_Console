@@ -55,7 +55,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -386,6 +386,77 @@ class CueHold:
     group: str
     hold_classes: tuple[str, ...]
     details: tuple[str, ...]
+
+
+#: 단조성 위반의 두 종류(LX-SEQ-SPEC-v2.1 §3.6 규칙 2).
+CUE_TIMING_TC_IN_NOT_INCREASING = "tc_in_not_increasing"
+CUE_TIMING_TC_OUT_OVERLAPS = "tc_out_overlaps_next_tc_in"
+
+
+@dataclass(frozen=True)
+class CueTimingViolation:
+    """큐 **사이**의 시간 사실 하나 — 앞뒤 두 큐를 함께 지목한다.
+
+    🔴 `CueHold` 와 나란히 있되 **같은 어휘가 아니다**(SPEC-COPILOT-MUSICSYNC-001
+    REQ-MUSICSYNC-005 · design §2.4). `CueHold` 는 큐 하나에 붙는 사유이고,
+    「이 큐가 앞 큐보다 이르다」는 두 큐의 **관계**라 그 어휘에 자리가 없다.
+    억지로 섞으면 어느 큐에 붙일지가 자의적이 되고, 그 자의성이 그대로 사용자
+    혼란이 된다. 그래서 별도 타입이고 페이로드에서도 별도 목록이다.
+    """
+
+    kind: str
+    cue_no: str
+    other_cue_no: str
+    detail: str
+
+
+# @MX:NOTE: [AUTO] 세기만 하고 계획을 바꾸지 않는다 — 재정렬은 시트를 고치는
+#   행위이고 이 앱은 시트의 주인이 아니다(REQ-MUSICSYNC-005). 반환값을 정렬·
+#   필터링에 쓰는 소비자가 생기면 그 규율이 깨진다.
+def cue_timing_violations(
+    entries: Iterable[Sequence[object]],
+) -> tuple[CueTimingViolation, ...]:
+    """`(cue_no, tc_in_ms, tc_out_ms)` 를 **시트 순서 그대로** 받아 위반을 센다.
+
+    밀리초는 판독된 큐만 든다(미확정은 `None`). 🔴 `None` 을 0 으로 접으면
+    미확정 큐 하나가 뒤의 성한 큐 전부를 가짜 위반으로 만든다 — 그래서 건너뛴다.
+    재정렬하지 않는다. 이 함수는 **세기만** 하고 계획을 바꾸지 않는다.
+    """
+    violations: list[CueTimingViolation] = []
+    previous: tuple[str, int, int | None] | None = None
+    for entry in entries:
+        cue_no, tc_in_ms, tc_out_ms = entry
+        cue_no = str(cue_no)
+        if not isinstance(tc_in_ms, int):
+            continue
+        if previous is not None:
+            prev_cue, prev_in, prev_out = previous
+            if tc_in_ms <= prev_in:
+                violations.append(
+                    CueTimingViolation(
+                        kind=CUE_TIMING_TC_IN_NOT_INCREASING,
+                        cue_no=cue_no,
+                        other_cue_no=prev_cue,
+                        detail=(
+                            f"TC In 이 단조 증가하지 않는다 — {prev_cue}={prev_in}ms 뒤에 "
+                            f"{cue_no}={tc_in_ms}ms"
+                        ),
+                    )
+                )
+            if isinstance(prev_out, int) and prev_out > tc_in_ms:
+                violations.append(
+                    CueTimingViolation(
+                        kind=CUE_TIMING_TC_OUT_OVERLAPS,
+                        cue_no=prev_cue,
+                        other_cue_no=cue_no,
+                        detail=(
+                            f"TC Out 이 다음 TC In 을 넘는다 — {prev_cue} out={prev_out}ms > "
+                            f"{cue_no} in={tc_in_ms}ms"
+                        ),
+                    )
+                )
+        previous = (cue_no, tc_in_ms, tc_out_ms if isinstance(tc_out_ms, int) else None)
+    return tuple(violations)
 
 
 @dataclass(frozen=True)

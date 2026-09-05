@@ -1071,3 +1071,66 @@ def test_a_partial_ship_is_idempotent_on_a_rerun():
     assert second.planned == ()
     assert second.cues_already_present == ("Q010",)
     assert [entry.cue_no for entry in second.cues_held] == ["Q020"]
+
+
+# -- SPEC-COPILOT-MUSICSYNC-001 M1 — 단조성 위반 어휘 ------------------------
+#
+# 위반은 큐 하나의 사실이 아니라 **큐 사이**의 사실이라 `CueHold` 에 자리가
+# 없다(design §2.4). 그래서 별도 타입이고, 별도 목록이다. 이 검사가 그 분리를
+# 못 박는다 — 섞는 순간 어느 큐에 붙일지가 자의적이 되고 그 자의성이 그대로
+# 사용자 혼란이 된다.
+
+
+class TestCueTimingViolations:
+    def test_tc_in_going_backwards_is_reported_and_points_at_both_rows(self):
+        from server.lxseq.cue_mapper import cue_timing_violations
+
+        violations = cue_timing_violations([("Q010", 10_000, None), ("Q020", 5_000, None)])
+        assert len(violations) == 1
+        (violation,) = violations
+        assert violation.kind == "tc_in_not_increasing"
+        assert violation.cue_no == "Q020"
+        assert violation.other_cue_no == "Q010"
+
+    def test_tc_out_past_the_next_tc_in_is_a_separate_item(self):
+        from server.lxseq.cue_mapper import cue_timing_violations
+
+        violations = cue_timing_violations([("Q010", 0, 12_000), ("Q020", 8_000, 24_000)])
+        kinds = [v.kind for v in violations]
+        assert "tc_out_overlaps_next_tc_in" in kinds
+        overlap = next(v for v in violations if v.kind == "tc_out_overlaps_next_tc_in")
+        assert overlap.cue_no == "Q010"
+        assert overlap.other_cue_no == "Q020"
+
+    def test_a_clean_sheet_has_no_violations(self):
+        from server.lxseq.cue_mapper import cue_timing_violations
+
+        assert (
+            cue_timing_violations(
+                [("Q010", 0, 8_000), ("Q020", 8_000, 24_000), ("Q030", 24_000, 40_000)]
+            )
+            == ()
+        )
+
+    def test_undetermined_rows_are_skipped_not_treated_as_zero(self):
+        """🔴 미확정을 0 으로 접으면 여기서 가짜 위반이 무더기로 난다."""
+        from server.lxseq.cue_mapper import cue_timing_violations
+
+        assert (
+            cue_timing_violations(
+                [("Q010", 8_000, 24_000), ("Q020", None, None), ("Q030", 24_000, 40_000)]
+            )
+            == ()
+        )
+
+    def test_the_violation_type_is_not_a_cue_hold(self):
+        from server.lxseq.cue_mapper import CueHold, CueTimingViolation
+
+        assert CueTimingViolation is not CueHold
+        assert not issubclass(CueTimingViolation, CueHold)
+        assert {f.name for f in fields(CueTimingViolation)} == {
+            "kind",
+            "cue_no",
+            "other_cue_no",
+            "detail",
+        }
