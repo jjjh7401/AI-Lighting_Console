@@ -225,9 +225,7 @@ def verify_songcue_timecode(
         return _finish(VERDICT_INCONCLUSIVE, failure)
     pool_count = _child_count(pool)
     pool_children = _children(pool)
-    slot_child = next(
-        (child for child in pool_children if child.get("i") == timecode_number), None
-    )
+    slot_child = next((child for child in pool_children if child.get("i") == timecode_number), None)
     growth = ""
     if isinstance(baseline_pool_child_count, int) and isinstance(pool_count, int):
         growth = f", baseline {baseline_pool_child_count} -> {pool_count}"
@@ -390,13 +388,9 @@ def render_timecode_verification_report(
     ]
 
     if verification.verdict == VERDICT_INCONCLUSIVE:
-        lines.append(
-            "되읽기가 결론에 닿지 못했다. 성공도 실패도 아닌 **무결론**으로 남긴다."
-        )
+        lines.append("되읽기가 결론에 닿지 못했다. 성공도 실패도 아닌 **무결론**으로 남긴다.")
     elif verification.verdict == VERDICT_SKIPPED:
-        lines.append(
-            "읽을 대상이 서 있지 않아 검증 범위가 좁혀졌다. 좁혀진 사실을 그대로 적는다."
-        )
+        lines.append("읽을 대상이 서 있지 않아 검증 범위가 좁혀졌다. 좁혀진 사실을 그대로 적는다.")
     else:
         lines.append(
             "타임코드 오브젝트가 존재하고 시퀀스가 매달려 있다는 것까지 관측했다. "
