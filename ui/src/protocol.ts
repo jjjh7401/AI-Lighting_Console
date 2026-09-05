@@ -557,6 +557,24 @@ export function buildSongAudioUpload(
   });
 }
 
+/**
+ * SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 담아 둔 곡을 **재라**고 부른다
+ * (REQ-MUSICSYNC-015). `buildSongAudioUpload` 는 바이트를 담기까지가 전부이고
+ * (REQ-MUSICSYNC-013), 분석 → 확인 카드 → BPM 확정은 이 프레임이 부른다.
+ *
+ * 페이로드가 없다. 잴 곡은 이미 서버 세션에 있고, 서버가 받는 대조값
+ * (`sheet_bpm` / `fx_rate` / `beats_per_cycle`)은 전부 선택이며 **UI 가 가진 적이
+ * 없다** — 시트는 임포터가 읽는다. 여기서 지어내 보내면 UI 가 분류하는 것이 되고,
+ * 그것은 이 저장소가 금지하는 바로 그 일이다.
+ *
+ * 응답은 이 프레임의 반향이 아니라 `question_request` 카드다 — 사람이 구간과
+ * BPM 을 확인해야 확정이 일어난다. 첨부가 없으면 서버는
+ * `error(kind: "song_audio_missing")` 로 답한다.
+ */
+export function buildSongAudioAnalyse(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "song_audio_analyse" });
+}
+
 export function buildApprovalDecision(requestId: string, approved: boolean): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,

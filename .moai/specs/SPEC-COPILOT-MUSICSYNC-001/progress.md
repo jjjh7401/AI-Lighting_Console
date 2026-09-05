@@ -363,14 +363,127 @@ server/web/question.py       120      2    98%
 - 미검증: 녹화 이벤트가 실제로 찍혔는지는 이 채널로 관측 불가(설계된 좁힘). 예산 밖 추가 조회 1회 `…/TrackGroup 1/Track 2` 는 `path segment not found` — 트랙 하위 주소 방식 자체가 미측정.
 - 잔여물: `Timecode 1`(감독) · `Timecode 999`(프로브) — 삭제는 운영자 몫.
 
+### M2 후속 — 분석 방아쇠 배선 (2026-09-05, TDD)
+
+기준 트리: 워크트리 `.claude/worktrees/agent-a833f291fa960b6e5`, 브랜치
+`worktree-agent-a833f291fa960b6e5`, base `8788904`. **콘솔 접촉 0건** — conftest
+가드가 포트 8000 을 거절하고, 이 회차가 만진 층은 전부 `FakeConsole` 위에서 돈다.
+
+**무엇이 빠져 있었나.** M2 는 `analyse_song_audio`(`session.py:10215`) 를 완성했고
+확인 카드 빌더와 BPM 정본 해소까지 배달했지만, **실서비스에서 부르는 곳이
+없었다.** base `8788904` 실측:
+
+```
+$ grep -rn 'analyse_song_audio' server --include='*.py' | grep -v tests/
+server/web/session.py:3777:        # ``analyse_song_audio`` 가 운영자가 요청했을 때 돈다.
+server/web/session.py:3779:        #: 가장 최근 확정된 BPM 해소 결과(``analyse_song_audio``). 오디오와 달리
+server/web/session.py:10190:        수 초를 태운다. 분석은 :meth:`analyse_song_audio` 가 맡는다.
+server/web/session.py:10215:    def analyse_song_audio(
+```
+
+정의 1행 + 주석 3행. 호출 0건이다. 업로드 프레임(`app.py:536`)은 바이트를 담고
+멈추므로 REQ-MUSICSYNC-013 → 015 사슬은 **업로드에서 끊겨 있었다** — 분석·확인
+카드·BPM 확정은 시험만이 부르는 죽은 경로였다.
+
+**변경 집합** (방아쇠 하나. 재설계가 아니다)
+
+| 파일 | 델타 | 내용 |
+|---|---|---|
+| `server/web/messages.py` | MODIFY | `song_audio_analyse` 타입 등록 + 검증 분기(선택 3필드) |
+| `server/web/app.py` | MODIFY | 디스패치 분기 + `song_audio_missing` 오류 종류 |
+| `ui/src/protocol.ts` | MODIFY | `buildSongAudioAnalyse` — 페이로드 없음 |
+| `ui/src/useCopilotSocket.ts` | MODIFY | `sendSongAudioAnalyse` |
+| `ui/src/App.tsx` | MODIFY | 업로드 성공 뒤 「분석」 버튼 하나 |
+| `ui/src/styles.css` | MODIFY | 그 버튼 스타일 |
+| `server/tests/test_web_song_audio.py` | MODIFY | 검증 7건 + WS 왕복 5건 |
+| `ui/src/protocol.test.ts` | MODIFY | 빌더 1건 |
+| `server/tests/test_prechk_tool.py` | MODIFY | 웹 표면 동결 등기에 새 타입을 손으로 등재 |
+
+**`await asyncio.to_thread` 를 쓰지 않은 이유** (형제 업로드 두 분기와 갈리는
+유일한 지점). 분석은 확인 카드를 띄우고 **사람의 답을 기다린다**
+(`QuestionChannel.ask`, 상한 600초). `await` 하면 수신 루프가 그동안 멈추고 답을
+나르는 `question_answer` 프레임을 영영 읽지 못한다 — 카드가 자기 답을 막는
+교착이다. 그래서 chat 분기와 같은 `asyncio.create_task` 형태다.
+
+**AC 판정표** (전 항목 `uv run pytest …`, 이 트리의 `.venv/bin/python`)
+
+| AC | 판정 | 검증 노드 | 관측 |
+|---|---|---|---|
+| AC-MUSICSYNC-013 (사슬 생산 배선) | PASS | `test_web_song_audio.py::TestTheAnalysisTriggerTravelsTheWholeWire` | 정상 `96 passed in 3.03s`(3파일 합산). **뮤테이션 실측**: `app.py` 의 `song_audio_analyse` 분기를 제거하면 이 클래스 **5건 전부 실패**(`5 failed, 40 deselected in 30.51s`) — 실패 형태는 `AssertionError: no websocket frame within 10.0s`, 즉 프레임이 파싱되고 조용히 버려지는 M2 사고와 같은 모양. 복원 뒤 `shasum -a 256 server/web/app.py` 가 제거 전과 동일(`112903d1…b2b4e7`) |
+| AC-MUSICSYNC-015 (카드가 와이어로 도착) | PASS | `::test_the_confirmation_card_arrives_over_the_wire` | 업로드 → `song_audio_analyse` → `question_request` 프레임 도착. `multi` **True** · `options` **≥1** · 전 옵션 `selected` **True**. 카드 모양 자체는 M2 가 정한 것이고(`build_song_confirmation_card`), 이 시험이 재는 것은 **그 카드가 와이어로 나오는가**다 |
+| AC-MUSICSYNC-018 (와이어 위 재판정) | PASS | `::test_a_disagreeing_sheet_tempo_is_reported_over_the_wire` | 시트 `120 (고정)` + 사람이 적은 `BPM 128` → 알림에 `128`·`120`·`어긋` 동시 포함. M2 는 session 메서드 직접 호출로 쟀고, 이번엔 같은 판정을 **WS 왕복 위에서** 다시 쟀다 |
+| 첨부 없는 분석 요청 | PASS | `::test_analysing_with_no_audio_attached_comes_back_as_an_error` · `::test_the_connection_survives_analysing_with_no_audio` | `kind` **`song_audio_missing`** · 한국어 · 「첨부」 포함 · 뒤이은 `status_request` 에 `status` 응답(연결 생존) |
+| 프레임 검증 | PASS | `::TestTheAnalyseFrameIsValidatedLikeItsUploadSibling` | 빈 프레임 → 선택 3필드 전부 `None` · `sheet_bpm` 은 `120 (고정)` 원문 그대로(깎는 자리는 `parse_sheet_bpm` 하나) · `fx_rate`/`beats_per_cycle` 에 문자열·`bool` 넣으면 `ProtocolError` |
+
+**RED 증거** (GREEN 이전에 관측한 그대로)
+
+```
+FAILED …::TestTheAnalyseFrameIsValidatedLikeItsUploadSibling::test_a_bare_analyse_frame_is_accepted_with_every_option_absent
+FAILED …::TestTheAnalyseFrameIsValidatedLikeItsUploadSibling::test_the_sheet_tempo_rides_as_the_raw_string_the_importer_read
+FAILED …::TestTheAnalysisTriggerTravelsTheWholeWire::test_the_confirmation_card_arrives_over_the_wire
+FAILED …::TestTheAnalysisTriggerTravelsTheWholeWire::test_the_answer_confirms_the_tempo_through_the_same_wire
+FAILED …::TestTheAnalysisTriggerTravelsTheWholeWire::test_a_disagreeing_sheet_tempo_is_reported_over_the_wire
+FAILED …::TestTheAnalysisTriggerTravelsTheWholeWire::test_analysing_with_no_audio_attached_comes_back_as_an_error
+FAILED …::TestTheAnalysisTriggerTravelsTheWholeWire::test_the_connection_survives_analysing_with_no_audio
+7 failed, 5 passed, 33 deselected, 1 warning in 30.53s
+```
+
+**RED 1회차에서 공허한 시험 3건을 잡아 조였다.** 첫 RED 는 `5 failed, 7 passed`
+였는데, 통과한 쪽에 「첨부 없이 분석하면 한국어 오류」가 섞여 있었다 — 타입이
+아예 등록되지 않은 상태에서도 `kind="protocol"` 오류가 같은 모양으로 돌아오고
+그 문구(`_PROTOCOL_ERROR_MESSAGE`)도 한국어라, **배선이 하나도 없어도 통과**한다.
+`kind == "song_audio_missing"` 을 단언하도록 조인 뒤 RED 가 `7 failed` 로 늘었다.
+남은 「거절」 파라미터 시험 4건은 지금도 미등록 타입에서 통과하지만, 같은
+클래스의 「빈 프레임 수용」 시험이 그 대조군이라 등록 이후에는 공허하지 않다.
+
+**미검증 (이 회차)**
+
+- **UI 를 사람이 눌러 본 적은 없다.** 「분석」 버튼은 `npx tsc --noEmit` (exit 0) 과
+  기존 UI 시험 `506 passed` 를 지날 뿐, 브라우저에서 렌더·클릭한 관측은 0건이다.
+  버튼이 보내는 프레임 자체는 `protocol.test.ts` 가 잰다.
+- **BPM 값의 정확도는 이 회차 판정 대상이 아니다.** 3초 합성 트랙이라 정답 폭을
+  걸지 않았고, 재는 것은 값이 흐르는 **자리**다(M2 가 세운 규약 그대로).
+- **`song_audio_analyse` 를 모델이 부르는 경로는 없다.** 이번에 연 것은 운영자가
+  UI 에서 누르는 통로 하나뿐이고, 도구 스키마는 건드리지 않았다.
+- **최초 회차 지연 1건.** 같은 시험이 첫 실행에서 26.94s, 이후 1.46s 였다(DSP 적재
+  워밍업으로 보이나 원인 미확정). `recv_frame` 상한이 10s 라, 차가운 환경에서는
+  이 시험군이 시간 상한에 걸릴 수 있다 — 재현되면 상한을 올리는 것이 아니라
+  원인을 재야 한다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
 run_complete_at: 2026-09-05
 run_commit_sha: pending-backfill-m3b
 run_status: audit-ready
-milestone: M1 + M3-a + M2 + M3-b (offline + live readback)
-milestone_evidence_note: "§E.2 는 M1·M3-a·M2·M3-b 네 절을 담는다(오케스트레이터가 통합 시 합류). 아래 계수는 M3-b 오프라인 회차 것"
+milestone: M1 + M3-a + M2 + M3-b (offline + live readback) + M2 후속(분석 방아쇠)
+milestone_evidence_note: "§E.2 는 M1·M3-a·M2·M3-b·M2 후속 다섯 절을 담는다(오케스트레이터가 통합 시 합류). 아래 계수는 M3-b 오프라인 회차 것이며, M2 후속 회차 계수는 ac_m2_followup_2026_09_05 블록에 따로 적는다"
+ac_m2_followup_2026_09_05:   # M2 후속 — 분석 방아쇠 배선(§E.2 해당 절). base 8788904, 콘솔 접촉 0건
+  base_commit: 8788904
+  worktree: .claude/worktrees/agent-a833f291fa960b6e5
+  dead_path_before: "grep -rn 'analyse_song_audio' server --include='*.py' | grep -v tests/ → 정의 1행 + 주석 3행, 호출 0건"
+  live_chain_after: "grep -rn 'analyse_song_audio' server/web/app.py → 주석 1행(:559) + 생산 호출 1행(:585)"
+  ac_pass_count: 5           # AC-013(사슬 배선)·AC-015(카드 도착)·AC-018(와이어 재판정)·첨부부재 오류·프레임 검증
+  ac_fail_count: 0
+  ac_pass_with_debt_count: 0
+  red_before_green: "7 failed, 5 passed, 33 deselected in 30.53s — GREEN 이전 관측"
+  mutation_app_branch_removed: "5 failed, 40 deselected in 30.51s (AssertionError: no websocket frame within 10.0s) — 복원 뒤 app.py sha256 제거 전과 동일"
+  targeted_suite: "96 passed, 1 warning in 3.03s (test_web_song_audio.py + test_song_confirm_card.py + test_web_app.py)"
+  full_suite: "11257 passed, 12 skipped, 1 warning in 162.26s (server/tests)"
+  ruff_check: "All checks passed! (server, exit 0)"
+  ruff_format: "500 files already formatted (server, exit 0)"
+  tsc_noemit: "exit 0 (출력 없음)"
+  ui_suite: "21 test files, 506 passed"
+  console_writes_emitted: 0
+  console_queries_emitted: 0
+  new_warnings_or_lints_introduced: 0
+  preserve_boundary_grep: "git diff --name-only 8788904 -- server/audio server/orchestrator server/safety server/lxseq server/design src-tauri packaging pyproject.toml uv.lock → 0행"
+  diff_stat: "9 files changed, 320 insertions(+), 1 deletion(-)"
+  unverified:
+    - "「분석」 버튼을 브라우저에서 렌더·클릭한 관측 0건 — tsc(exit 0) + 기존 UI 시험 506 passed 까지다"
+    - "BPM 값의 정확도는 판정 대상이 아니다(3초 합성 트랙, 재는 것은 값이 흐르는 자리)"
+    - "모델이 song_audio_analyse 를 부르는 경로는 없다 — 운영자 UI 통로 하나만 열었고 도구 스키마 무변경"
+    - "최초 회차 지연 1건: 같은 시험군이 첫 실행 26.94s → 이후 1.46s. 원인 미확정(DSP 적재 워밍업 가설), recv_frame 상한 10s 와 충돌 가능"
 ac_pass_count: 6            # M3-b: AC-MUSICSYNC-022·023·024·025·030(M3-b 몫)·031
 ac_pass_with_debt_count: 0
 ac_fail_count: 0

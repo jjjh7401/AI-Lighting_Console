@@ -113,6 +113,11 @@ CLIENT_MESSAGE_TYPES = (
     # 등록한다. 한쪽에만 있는 타입은 클라이언트에서 조용히 사라지고 서버에서
     # 시끄럽게 틀린다.
     "song_audio_upload",
+    # SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 「지금 재라」 요청. 업로드 프레임은
+    # 바이트를 담고 멈추므로(REQ-MUSICSYNC-013 은 보관까지다), 분석·확인 카드·
+    # BPM 확정(REQ-MUSICSYNC-015)을 **부르는 것**이 따로 필요하다. 이 타입이
+    # 없으면 ``ChatSession.analyse_song_audio`` 는 시험만이 부르는 죽은 경로다.
+    "song_audio_analyse",
     "approval_decision",
     "review_decision",
     # [round24 후속] 모델이 되묻고 사용자가 답하는 통로. 승인·검토와 달리
@@ -362,6 +367,37 @@ def parse_client_message(raw: str) -> dict:
             "file_name": file_name.strip(),
             "mime_type": mime_type,
             "content_base64": content_base64,
+        }
+
+    if message_type == "song_audio_analyse":
+        # 페이로드가 없다 — 잴 곡은 이미 세션에 있다. 이 프레임이 나르는 것은
+        # **대조용 부수 값** 셋뿐이고 셋 다 선택이다.
+        #
+        # ``sheet_bpm`` 은 임포터가 읽은 ``HEAD.BPM`` 문자열 **그대로** 받는다
+        # (``120 (고정)``). 여기서 미리 숫자로 깎지 않는 이유는 깎는 자리를 하나로
+        # 묶어 두기 위해서다 — 정본은 ``server.design.profile.parse_sheet_bpm``
+        # 하나이고, 두 자리에서 깎으면 두 규칙이 조용히 갈라진다.
+        #
+        # ``bool`` 을 먼저 걸러 내는 것은 ``_is_object_number`` 가 세운 이유와
+        # 같다: 파이썬에서 ``bool`` 은 ``int`` 의 하위형이라, 안 막으면 ``True``
+        # 가 FX-Rate 1.0 으로 흘러 들어가 역산값을 조용히 오염시킨다.
+        sheet_bpm = message.get("sheet_bpm")
+        if sheet_bpm is not None and not isinstance(sheet_bpm, str):
+            raise ProtocolError("song_audio_analyse.sheet_bpm must be a string or null")
+        normalized_contrast: dict[str, float | None] = {}
+        for field_name in ("fx_rate", "beats_per_cycle"):
+            value = message.get(field_name)
+            if value is None:
+                normalized_contrast[field_name] = None
+                continue
+            if isinstance(value, bool) or not isinstance(value, int | float):
+                raise ProtocolError(f"song_audio_analyse.{field_name} must be a number or null")
+            normalized_contrast[field_name] = float(value)
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "song_audio_analyse",
+            "sheet_bpm": sheet_bpm,
+            **normalized_contrast,
         }
 
     if message_type == "question_answer":

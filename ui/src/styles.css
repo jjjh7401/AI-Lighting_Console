@@ -802,6 +802,17 @@ body {
   color: #ff9f43;
 }
 
+/* SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 첨부한 곡을 재라고 부르는 버튼. */
+.composer-song-analyse {
+  border: 1px solid var(--warn);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 1px 8px;
+}
+
 .composer-file-input {
   display: none;
 }

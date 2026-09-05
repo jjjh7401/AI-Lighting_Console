@@ -6,6 +6,7 @@ import {
   buildChat,
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
+  buildSongAudioAnalyse,
   buildSongAudioUpload,
   buildCueMonitorRequest,
   buildDashCatalogRequest,
@@ -86,6 +87,12 @@ describe("builders", () => {
       file_name: "track.wav",
       mime_type: "audio/wav",
       content_base64: "c2FmZQ==",
+    });
+    // M2 후속 — 담아 둔 곡을 **재라**고 부르는 요청. 페이로드가 없다: 잴 곡은
+    // 이미 서버 세션에 있고, 시트 BPM 같은 대조값은 UI 가 가진 적이 없다.
+    expect(JSON.parse(buildSongAudioAnalyse())).toEqual({
+      v: 1,
+      type: "song_audio_analyse",
     });
     expect(JSON.parse(buildApprovalDecision("req-1", true))).toEqual({
       v: 1,
