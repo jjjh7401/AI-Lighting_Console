@@ -518,7 +518,7 @@ m1_to_mN_commit_strategy: "M2 는 논리 단위 5커밋(분석 코어 → 업로
 
 ```yaml
 sync_complete_at: 2026-09-05
-sync_commit_sha: pending-backfill-sync   # 최종 sync 커밋에서 채운다   # 커밋은 자기 해시를 모른다 — 후속 커밋에서 채운다
+sync_commit_sha: 456377e   # PR #314 squash — 후속 커밋에서 백필
 sync_status: complete
 sync_base: 8788904   # = HEAD, 네 마일스톤 전부 머지된 자리
 
