@@ -40,11 +40,12 @@ import json
 import pytest
 
 from server.safety.audit import AuditLog
+from server.safety.gate import SafetyGate
 from server.spatial.pointing import BASIC_POSITION_SEQUENCE
 from server.web.approval_bridge import ApprovalChannel
 
 from .test_runner_self_correction import ScriptedProvider
-from .test_web_session import _session
+from .test_web_session import FakeConsole, _session
 
 # ---------------------------------------------------------------------------
 # 하네스
@@ -354,6 +355,64 @@ class TestWhatWouldGoOutWithoutTheSeal:
         assert _showfile(carried), (
             f"{name}: 카드 없이 나갔을 줄에 쇼파일 쓰기가 없다 — 위험이 없는 자리다"
         )
+
+
+class TestNoOtherGateStageCatchesASealOnlyBundle:
+    """봉합을 뗀 번들을 **게이트 통째로** 통과시킨다 — 카드 t322 의 실측.
+
+    카드 t321 은 `seal-only` 를 분류 층 하나로만 판정했다(`verdict.risky`).
+    그 판정은 「blacklist 가 안 잡는다」까지만 말하는데, 게이트에는 단계가
+    더 있다: grammar · expand(참조 본문 전개) · unconfirmed 이력 · lock ·
+    health. 그중 하나라도 이 번들을 독립으로 세운다면 「봉합이 유일한
+    방어」는 틀린 문장이 된다.
+
+    그래서 표에 묻지 않고 **게이트에 넣는다**: `screen(bundle, risk=None)` 이
+    승인 요청을 아예 안 만들고 `cleared` 로 나오는지. 나오면 그 번들은
+    봉합이 없을 때 카드 한 장 없이 콘솔에 닿는다.
+
+    2026-09-07 실측(`.moai/state/verify/t322/stage_audit.json`): seal-only
+    일곱 자리 전부 `status="cleared"`, 승인 요청 없음, 문법 실패 0건,
+    `invoking` 분류 0건(=expand 가 볼 참조가 애초에 없다). t321 의 표는
+    전 단계 감사에서도 그대로 선다.
+
+    이 검사가 **안 재는 것**: lock 과 health 는 번들 내용과 무관하게 도는
+    단계라 여기서 재지 않는다. 둘은 전원 차단기지 이 번들의 방어가 아니다 —
+    같은 조건에서 blacklist 든 번들도 똑같이 선다는 것을
+    `.moai/state/verify/t322/env_stages.json` 이 잰다.
+    """
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card(
+        self, tmp_path, name, drive, kind
+    ):
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 잡으므로 이 관측의 대상이 아니다")
+
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert _showfile(carried), f"{name}: 카드에 쇼파일 쓰기가 없다 — 이 검사가 공허하다"
+
+        # 선언을 뗀 같은 번들을 **새 게이트**에 넣는다. 콘솔·감사·승인기는 진짜다.
+        fresh = _Channel(True)
+        gate = SafetyGate(
+            console=FakeConsole(),
+            audit=AuditLog(tmp_path / "audit-noseal"),
+            approval_port=fresh,
+        )
+        decision = gate.screen(carried, risk=None)
+
+        assert decision.cleared, (
+            f"{name}: 봉합 없이도 게이트가 세웠다 — status={decision.status!r}. "
+            "다른 단계가 이 번들을 잡는다는 뜻이고, SEAL_DEFENCE 의 'seal-only' 는 "
+            "그만큼 좁혀 다시 적어야 한다."
+        )
+        assert decision.approval_request is None, (
+            f"{name}: 봉합 없이도 승인 카드가 떴다 — "
+            f"{[i.command for i in decision.approval_request.items]}. "
+            "봉합이 유일한 방어라는 기록이 틀렸다."
+        )
+        assert not fresh.requests, f"{name}: 승인기가 호출됐다 — {fresh.requests}"
 
 
 class TestTheDriversAreNotVacuous:
