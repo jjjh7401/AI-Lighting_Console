@@ -29,11 +29,13 @@ SPEC-COPILOT-MUSICSYNC-001 (REQ-019·020·021·023·025 / AC-020·021·022).
 
 ## 슬롯 판정이 모든 쓰기의 관문이다
 
-`slot_verdict` 는 `server/orchestrator/tools.py:2792` `_timecode_slot_verdict` 의
-재구현이다 — 그 함수는 툴셋 빌더 안의 **중첩 함수**라 임포트할 수 없다. 세 갈래를
-원본과 같은 분기로 답하는지는 `server/tests/test_musicsync_m3a_probe.py` 의 특성
-검사가 못박는다. **free 가 아니면 쓰기 0건**이다 — occupied 는 남의 쇼를 덮고,
-unknown 은 덮는지 아닌지를 모르는 상태다.
+`slot_verdict` 는 `server/orchestrator/tools.py` `timecode_slot_verdict` 를 임포트해
+호출하는 어댑터다 — 앱과 프로브의 술어는 **같은 객체 하나**다
+(SPEC-COPILOT-POOLEMPTY-001 REQ-016 이 툴셋 빌더 안의 중첩 함수를 모듈 수준으로
+들어올렸다; 그 전에는 임포트할 수 없어 재구현이었다). 세 갈래를 앱과 같은 판정으로
+답하는지는 `server/tests/test_musicsync_m3a_probe.py` 의 특성 검사가 못박는다.
+**free 가 아니면 쓰기 0건**이다 — occupied 는 남의 쇼를 덮고, unknown 은 덮는지
+아닌지를 모르는 상태다.
 
 ## M0 실측과 그 주의사항
 
@@ -69,7 +71,11 @@ from collections import OrderedDict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from server.orchestrator.tools import DEFAULT_RIG_CONTEXT_PATHS, TIMECODE_POOL_PATH
+from server.orchestrator.tools import (
+    DEFAULT_RIG_CONTEXT_PATHS,
+    TIMECODE_POOL_PATH,
+    timecode_slot_verdict,
+)
 from server.safety.bootstrap import build_console_stack
 from server.safety.console import LinkTimeouts
 from server.tools.probe_preflight import add_listen_port_argument, preflight
@@ -140,36 +146,18 @@ def _canonical(payload) -> str:
 def slot_verdict(port, path: str, wanted: int) -> tuple[str, str | None]:
     """`Timecode <wanted>` 가 비었는가. `("free"|"occupied"|"unknown", 사유)`.
 
-    `server/orchestrator/tools.py:2792` `_timecode_slot_verdict` 의 재구현이다.
-    셋째 갈래(unknown)가 이 함수의 존재 이유다 — 풀이 답을 안 하거나, 열거가
-    잘렸거나, `childCount` 가 없거나 자식 수보다 크거나, 0 이면 **비었음과
-    못 읽었음이 같은 페이로드**다. 그 자리에서 free 로 읽으면 남의 쇼를 덮는다.
+    `server/orchestrator/tools.py` `timecode_slot_verdict` 를 **호출만** 하고 그
+    `(점유자|None, 축)` 을 이 도구의 3분 문자열로 번역한다 — 판독 분기는 여기 없다
+    (SPEC-COPILOT-POOLEMPTY-001 REQ-010·REQ-016: 앱과 프로브의 술어는 같은 객체
+    하나다). 셋째 갈래(unknown)가 이 함수의 존재 이유다 — 풀이 답을 안 하거나,
+    열거가 잘렸거나, 응답기가 열거 성공을 보증하지 않은 자식 0 응답이면 free 로
+    읽지 않는다. 그 자리에서 free 로 읽으면 남의 쇼를 덮는다.
     """
-    try:
-        payload = port.query_state(path)
-    except Exception as error:  # noqa: BLE001 — 어떤 판독 실패도 unknown 이다
-        return "unknown", f"{path} 가 답하지 않았다: {error}"
-    if not isinstance(payload, dict):
-        return "unknown", f"{path} 가 매핑이 아닌 페이로드를 답했다"
-    if payload.get("truncated"):
-        return "unknown", f"{path} 열거가 잘렸다"
-    children = [child for child in (payload.get("children") or ()) if isinstance(child, dict)]
-    node = payload.get("node")
-    child_count = node.get("childCount") if isinstance(node, dict) else None
-    if not isinstance(child_count, int) or isinstance(child_count, bool):
-        return "unknown", f"{path} 가 childCount 를 안 실었다"
-    if child_count > len(children):
-        return "unknown", (
-            f"{path} 열거가 짧다: childCount {child_count} 인데 자식 {len(children)}개"
-        )
-    if child_count == 0:
-        return "unknown", (
-            f"{path} 가 자식 0 을 답했다 — 빈 풀과 실패한 열거가 여기서는 구별되지 않는다"
-        )
-    for child in children:
-        if child.get("i") == wanted:
-            name = child.get("name")
-            return "occupied", f"슬롯 {wanted} 점유: {name or '이름 없음'}"
+    occupant, axes = timecode_slot_verdict(port, path, wanted)
+    if occupant is not None:
+        return "occupied", f"슬롯 {wanted} 점유: {occupant}"
+    if not axes.timecode_go:
+        return "unknown", axes.timecode_skip_reason
     return "free", None
 
 
@@ -554,7 +542,7 @@ def render_note(result: dict) -> str:
     add("## 슬롯 판정")
     add("")
     verdict = result.get("slot_verdict") or dict()
-    add(f"- `_timecode_slot_verdict` 재구현 판정: **{verdict.get('verdict')}**")
+    add(f"- `timecode_slot_verdict` 판정: **{verdict.get('verdict')}**")
     if verdict.get("detail"):
         add(f"- 사유: {verdict['detail']}")
     add("")

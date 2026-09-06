@@ -16,20 +16,23 @@
 5. 효과 판정이 `ok:true` 가 아니라 **되읽기 차이**로 갈린다 — 응답이 그대로면
    `ok` 가 참이어도 효과는 거짓이다 (AC-MUSICSYNC-020 · `spec.md §A.5`).
 
-그리고 `slot_verdict` 특성 검사 — 이 술어는 `server/orchestrator/tools.py:2792`
-`_timecode_slot_verdict` 의 재구현이다(그 함수는 툴셋 빌더 안의 중첩 함수라
-임포트할 수 없다). 세 갈래(free/occupied/unknown)의 페이로드 형태를 원본과
-같은 분기로 답하는지 잰다 — 재구현이 조용히 갈라지면 「남의 쇼를 덮지 않는다」는
-보장이 사라진다.
+그리고 `slot_verdict` 특성 검사 — 이 술어는 `server/orchestrator/tools.py` 의
+모듈 수준 `timecode_slot_verdict` 를 **임포트해서 부르는 어댑터**다
+(SPEC-COPILOT-POOLEMPTY-001 REQ-016 이 툴셋 빌더 안의 중첩 함수를 들어올렸다;
+그 전에는 임포트할 수 없어 재구현이었다). 세 갈래(free/occupied/unknown)의
+페이로드 형태를 앱 술어와 같은 판정으로 답하는지, 그리고 술어 객체가 **하나**인지
+잰다 — 두 술어가 갈리면 「남의 쇼를 덮지 않는다」는 보장이 사라진다.
 """
 
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 
 import pytest
 
+from server.orchestrator.tools import timecode_slot_verdict
 from server.tools import musicsync_m3a_probe as probe
 
 POOL = "DataPool/Timecodes"
@@ -86,10 +89,12 @@ class FakeConsole:
         return rows
 
 
-def pool_payload(children, *, count=None, truncated=False) -> dict:
+def pool_payload(children, *, count=None, truncated=False, enumeration=None) -> dict:
     node: dict[str, object] = {"class": "Timecodes"}
     if count is not None:
         node["childCount"] = count
+    if enumeration is not None:  # 응답기 1.6.5 의 열거 신뢰도 마커 (SPEC-COPILOT-POOLEMPTY-001)
+        node["enumeration"] = enumeration
     return {"node": node, "children": list(children), "truncated": truncated}
 
 
@@ -280,7 +285,7 @@ class TestTheToolNeverNamesTheArmingCommand:
 
 
 class TestSlotVerdictCharacterisation:
-    """`server/orchestrator/tools.py:2792` 의 3분 판정을 같은 분기로 답하는가."""
+    """`server/orchestrator/tools.py` `timecode_slot_verdict` 의 3분 판정을 같은 분기로 답하는가."""
 
     def test_a_free_slot(self):
         port = FakePort({POOL: pool_payload([{"i": 1, "name": "SHOW"}], count=1)})
@@ -299,6 +304,7 @@ class TestSlotVerdictCharacterisation:
             (pool_payload([{"i": 1}], count=None), "childCount 부재"),
             (pool_payload([{"i": 1}], count=9), "childCount > 자식 수"),
             (pool_payload([], count=0), "childCount 0"),
+            (pool_payload([], count=0, enumeration="failed"), "childCount 0 + failed"),
             ("not-a-mapping", "비매핑 페이로드"),
         ],
     )
@@ -313,6 +319,56 @@ class TestSlotVerdictCharacterisation:
         verdict, detail = probe.slot_verdict(port, POOL, 998)
         assert verdict == "unknown"
         assert "no answer" in detail
+
+    def test_an_empty_pool_the_responder_vouches_for_is_free(self):
+        """SPEC-COPILOT-POOLEMPTY-001 — `enumeration:"ok"` + `childCount 0` 은 free 다."""
+        port = FakePort({POOL: pool_payload([], count=0, enumeration="ok")})
+        assert probe.slot_verdict(port, POOL, 998) == ("free", None)
+
+
+class TestSlotVerdictIsTheAppPredicate:
+    """SPEC-COPILOT-POOLEMPTY-001 AC-010 · AC-015 — 술어는 하나다."""
+
+    def test_the_probe_imports_the_very_same_object(self):
+        """AC-POOLEMPTY-015 — 사본이 아니라 같은 객체."""
+        assert probe.timecode_slot_verdict is timecode_slot_verdict
+
+    def test_the_adapter_only_calls_it_and_reimplements_no_branch(self):
+        """AC-POOLEMPTY-015 — `slot_verdict` 본문은 호출 + 형 번역뿐, 자체 판독 분기 0."""
+        source = inspect.getsource(probe.slot_verdict)
+        assert "timecode_slot_verdict(" in source
+        for reimplementation_marker in ("query_state", "childCount", "truncated", "children"):
+            assert reimplementation_marker not in source, reimplementation_marker
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            pool_payload([{"i": 1, "name": "SHOW"}], count=1),
+            pool_payload([{"i": 998, "name": "SHOWTC"}], count=1),
+            pool_payload([{"i": 1}], count=1, truncated=True),
+            pool_payload([{"i": 1}], count=None),
+            pool_payload([{"i": 1}], count=9),
+            pool_payload([], count=0),
+            pool_payload([], count=0, enumeration="ok"),
+            pool_payload([], count=0, enumeration="failed"),
+            pool_payload([{"i": 1}], count=1, truncated=True, enumeration="ok"),
+            pool_payload([{"i": 1}], count=9, enumeration="ok"),
+            "not-a-mapping",
+            FakeStateQueryError("no answer"),
+        ],
+    )
+    def test_the_two_verdicts_agree_on_every_shape(self, payload):
+        """AC-POOLEMPTY-010 — AC-006~009 의 입력 전부에서 프로브 판정 == 앱 판정."""
+        occupant, axes = timecode_slot_verdict(FakePort({POOL: payload}), POOL, 998)
+        expected = (
+            "occupied" if occupant is not None else ("free" if axes.timecode_go else "unknown")
+        )
+        verdict, detail = probe.slot_verdict(FakePort({POOL: payload}), POOL, 998)
+        assert verdict == expected
+        if verdict == "unknown":
+            assert detail == axes.timecode_skip_reason
+        if verdict == "occupied":
+            assert occupant in detail
 
 
 class TestArtifacts:

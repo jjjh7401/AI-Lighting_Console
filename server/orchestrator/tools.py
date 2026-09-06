@@ -368,7 +368,7 @@ DEFAULT_RIG_CONTEXT_PATHS = {
 # ``get_rig_context`` description. This path is neither — it is UNVERIFIED, and
 # the model has no business browsing timecodes.
 #
-# It exists for exactly one caller: ``_timecode_slot_verdict``, the occupancy
+# It exists for exactly one caller: ``timecode_slot_verdict``, the occupancy
 # check that stops ``prepare_songcue`` from storing over an existing timecode
 # track. Overridable through ``rig_paths["timecodes"]`` for a showfile that
 # keeps it elsewhere.
@@ -1946,6 +1946,94 @@ class ToolRegistry:
         return handler(call, context)
 
 
+# @MX:NOTE: [AUTO] 툴셋 빌더 밖으로 들어올린 순수 판정 (SPEC-COPILOT-POOLEMPTY-001
+#   REQ-016). 호출자는 둘 — 아래 `build_toolset` 안의 `prepare_songcue` 핸들러와
+#   `server/tools/musicsync_m3a_probe.py` `slot_verdict`. 프로브가 이 함수를 재구현하던
+#   이중화를 없애려고 올렸다: 클로저가 바깥에서 잡던 이름은 `SongCueTimingAxes`(모듈
+#   임포트) 하나라 본문은 그대로이고, `childCount == 0` 갈래 **하나**만 응답기 1.6.5 의
+#   `node.enumeration` 마커를 읽는다 (PROTOCOL.md §4.2).
+def timecode_slot_verdict(
+    port: StateQueryPort, path: str, wanted: int
+) -> tuple[str | None, SongCueTimingAxes]:
+    """Is ``Timecode <wanted>`` free? Returns ``(occupant_or_None, axes)``.
+
+    ``prepare_songcue`` emits ``Store Timecode <n>`` with a MODEL-SUPPLIED
+    number. Nothing checked it, so a showfile already using that slot lost
+    its timecode track silently — the same defect ``_free_macro_slot``
+    exists to prevent for macros (``REQ-PRECHK-004``'s count-vs-flag
+    discipline, applied to the other path that writes into a pool).
+
+    THREE outcomes, and the third is why this returns axes rather than just
+    a boolean:
+
+    * **free** — ``(None, default axes)``. The write proceeds.
+    * **occupied** — ``(occupant name, …)``. The caller refuses. Unlike the
+      macro helper this does NOT silently pick another slot: the number is
+      part of this tool's schema and the operator asked for a specific one,
+      so substituting it would answer a question nobody asked.
+    * **unknown** — ``(None, axes with timecode_go=False)``. The pool did
+      not answer, the enumeration was short, or it reported zero children
+      WITHOUT the responder vouching for the enumeration. Before responder
+      1.6.5, ``M.safe_children`` returned ``{}`` for a FAILED read too, so an
+      empty pool and a dead pool were one payload — the same trap
+      ``_free_macro_slot`` refuses to walk into. The timecode axis is
+      suppressed and its reason is reported through the EXISTING
+      ``skipped_axes`` channel, which is the designed DESCOPE branch this
+      bundle already ships and tests.
+
+    The unknown branch is not a corner case: ``rig_paths["timecodes"]`` is
+    the one UNVERIFIED path in ``DEFAULT_RIG_CONTEXT_PATHS``. If it is
+    wrong, every call lands here — and the result is that the app stops
+    writing timecode rather than writing it blind. Degrading a feature
+    beats overwriting an operator's show.
+
+    Enumeration-confidence marker (SPEC-COPILOT-POOLEMPTY-001, responder
+    1.6.5, PROTOCOL.md §4.2): ``node.enumeration == "ok"`` is the ONE thing
+    that lets ``childCount 0`` be read as an EMPTY pool (free). A reply
+    without the field (any responder < 1.6.5) or carrying ``"failed"`` is
+    judged exactly as before — strict backward compatibility, in the safe
+    direction only. No other unknown branch consults the marker.
+    """
+
+    def _suppressed(reason: str) -> tuple[None, SongCueTimingAxes]:
+        return None, SongCueTimingAxes(
+            timecode_go=False,
+            timecode_skip_reason=(
+                f"timecode pool occupancy could not be established ({reason}) — "
+                "the timecode write is withheld rather than sent unchecked"
+            ),
+        )
+
+    try:
+        payload = port.query_state(path)
+    except Exception as error:  # noqa: BLE001 - any read failure is "unknown"
+        return _suppressed(f"{path} did not answer: {error}")
+    if not isinstance(payload, dict):
+        return _suppressed(f"{path} returned a non-mapping payload")
+    if payload.get("truncated"):
+        return _suppressed(f"{path} enumeration was truncated")
+    children = [c for c in (payload.get("children") or ()) if isinstance(c, dict)]
+    node = payload.get("node")
+    child_count = node.get("childCount") if isinstance(node, dict) else None
+    if not isinstance(child_count, int) or isinstance(child_count, bool):
+        return _suppressed(f"{path} reported no childCount")
+    if child_count > len(children):
+        return _suppressed(
+            f"{path} enumeration is short: childCount {child_count} "
+            f"but {len(children)} children returned"
+        )
+    if child_count == 0 and node.get("enumeration") != "ok":
+        return _suppressed(
+            f"{path} reported zero children — a failed enumeration and an "
+            "empty pool are indistinguishable here"
+        )
+    for child in children:
+        if child.get("i") == wanted:
+            name = child.get("name")
+            return (str(name) if name else f"slot {wanted}"), SongCueTimingAxes()
+    return None, SongCueTimingAxes()
+
+
 def build_toolset(
     *,
     execution_port: CommandExecutionPort,
@@ -2706,7 +2794,7 @@ def build_toolset(
                 sequences_section=rig_sections["sequences"],  # type: ignore[arg-type]
                 groups_section=rig_sections["groups"],  # type: ignore[arg-type]
             )
-            occupied, axes = _timecode_slot_verdict(
+            occupied, axes = timecode_slot_verdict(
                 state_port,
                 rig_paths.get("timecodes", TIMECODE_POOL_PATH),
                 timecode_number,
@@ -2810,79 +2898,6 @@ def build_toolset(
     #   handler READS the rig and, when it has to speak, calls ``run_commands``
     #   above rather than ``execution_port`` — the gate screens the whole macro
     #   bundle before a single line reaches the console.
-
-    def _timecode_slot_verdict(
-        port: StateQueryPort, path: str, wanted: int
-    ) -> tuple[str | None, SongCueTimingAxes]:
-        """Is ``Timecode <wanted>`` free? Returns ``(occupant_or_None, axes)``.
-
-        ``prepare_songcue`` emits ``Store Timecode <n>`` with a MODEL-SUPPLIED
-        number. Nothing checked it, so a showfile already using that slot lost
-        its timecode track silently — the same defect ``_free_macro_slot``
-        exists to prevent for macros (``REQ-PRECHK-004``'s count-vs-flag
-        discipline, applied to the other path that writes into a pool).
-
-        THREE outcomes, and the third is why this returns axes rather than just
-        a boolean:
-
-        * **free** — ``(None, default axes)``. The write proceeds.
-        * **occupied** — ``(occupant name, …)``. The caller refuses. Unlike the
-          macro helper this does NOT silently pick another slot: the number is
-          part of this tool's schema and the operator asked for a specific one,
-          so substituting it would answer a question nobody asked.
-        * **unknown** — ``(None, axes with timecode_go=False)``. The pool did
-          not answer, the enumeration was short, or it reported zero children
-          (which ``M.safe_children`` also returns when the read FAILS, so an
-          empty pool and a dead pool are one payload — the same trap
-          ``_free_macro_slot`` refuses to walk into). The timecode axis is
-          suppressed and its reason is reported through the EXISTING
-          ``skipped_axes`` channel, which is the designed DESCOPE branch this
-          bundle already ships and tests.
-
-        The unknown branch is not a corner case: ``rig_paths["timecodes"]`` is
-        the one UNVERIFIED path in ``DEFAULT_RIG_CONTEXT_PATHS``. If it is
-        wrong, every call lands here — and the result is that the app stops
-        writing timecode rather than writing it blind. Degrading a feature
-        beats overwriting an operator's show.
-        """
-
-        def _suppressed(reason: str) -> tuple[None, SongCueTimingAxes]:
-            return None, SongCueTimingAxes(
-                timecode_go=False,
-                timecode_skip_reason=(
-                    f"timecode pool occupancy could not be established ({reason}) — "
-                    "the timecode write is withheld rather than sent unchecked"
-                ),
-            )
-
-        try:
-            payload = port.query_state(path)
-        except Exception as error:  # noqa: BLE001 - any read failure is "unknown"
-            return _suppressed(f"{path} did not answer: {error}")
-        if not isinstance(payload, dict):
-            return _suppressed(f"{path} returned a non-mapping payload")
-        if payload.get("truncated"):
-            return _suppressed(f"{path} enumeration was truncated")
-        children = [c for c in (payload.get("children") or ()) if isinstance(c, dict)]
-        node = payload.get("node")
-        child_count = node.get("childCount") if isinstance(node, dict) else None
-        if not isinstance(child_count, int) or isinstance(child_count, bool):
-            return _suppressed(f"{path} reported no childCount")
-        if child_count > len(children):
-            return _suppressed(
-                f"{path} enumeration is short: childCount {child_count} "
-                f"but {len(children)} children returned"
-            )
-        if child_count == 0:
-            return _suppressed(
-                f"{path} reported zero children — a failed enumeration and an "
-                "empty pool are indistinguishable here"
-            )
-        for child in children:
-            if child.get("i") == wanted:
-                name = child.get("name")
-                return (str(name) if name else f"slot {wanted}"), SongCueTimingAxes()
-        return None, SongCueTimingAxes()
 
     class _InventoryPort:
         """The two reads the inventory needs, joined from the wired ports."""

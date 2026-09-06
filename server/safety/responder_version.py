@@ -32,7 +32,7 @@ import re
 #: 기대 응답기 버전. `console/lua/copilot_responder.lua` 의 `VERSION` 에 고정된
 #: 유일한 서버측 출처다 — 여기 말고 어디에도 이 리터럴을 적지 않는다.
 #: 001 이 응답기를 1.6.4 로 올리면 바뀌는 것은 이 한 줄뿐이다.
-EXPECTED_RESPONDER_VERSION = "1.6.4"
+EXPECTED_RESPONDER_VERSION = "1.6.5"
 
 #: 분류 결과. status 문자열이 아니라 **판정**이며, health state 로의 사상은
 #: `server/safety/monitor.py` 가 소유한다.

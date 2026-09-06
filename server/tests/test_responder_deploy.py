@@ -173,8 +173,11 @@ class TestVersionBump:
         # trailing `offset=<n>` token to `introspect` (the token `state` has
         # had since 1.6.0) so the names past the first payload-budget window
         # are reachable at all — measured live at 138 properties of which 27
-        # arrived (t104). Protocol v1 throughout.
-        assert harness.module["VERSION"] == "1.6.4"
+        # arrived (t104). 1.6.5 (SPEC-COPILOT-POOLEMPTY-001 M1) adds the
+        # additive `node.enumeration` ("ok" | "failed") marker to every
+        # successful `state` reply so an EMPTY pool and a DEAD pool stop being
+        # one payload. Protocol v1 throughout.
+        assert harness.module["VERSION"] == "1.6.5"
         assert harness.module["PROTO"] == 1
 
 

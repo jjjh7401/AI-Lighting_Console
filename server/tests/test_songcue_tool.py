@@ -7,8 +7,9 @@ from typing import Any
 
 from server.llm.types import ToolCall
 from server.looks.schema import AttributeValue, Look, LookLibrary
+from server.looks.songcue import SongCueTimingAxes
 from server.orchestrator.ports import ExecutionResult
-from server.orchestrator.tools import TOOL_NAMES, build_toolset
+from server.orchestrator.tools import TOOL_NAMES, build_toolset, timecode_slot_verdict
 from server.safety.gate import SafetyGate
 from server.safety.lock import LiveLock
 from server.tests.test_looks_tool import _RecordingGate, _RecordingPort
@@ -359,6 +360,153 @@ class TestTimecodeSlotOccupancy:
         commands = [entry["command"] for entry in payload["commands"]]
         assert not any(command.startswith("Store Timecode") for command in commands)
 
+    def test_an_empty_pool_the_responder_vouches_for_is_free(self):
+        """SPEC-COPILOT-POOLEMPTY-001 — `enumeration:"ok"` 를 실은 빈 풀은 비었음이다.
+
+        위 `test_an_empty_pool_is_treated_as_unreadable_not_as_free` 는 마커가
+        없는 페이로드(구버전 응답기)라 그대로 unknown 이어야 하고, 이 검사는 같은
+        빈 풀에 마커만 더해 `Store Timecode 7` 이 나가는지를 본다 — 새 쇼의 첫
+        타임코드가 만들어지는 경로다.
+        """
+        tree = _tree(timecodes=())
+        tree[_TIMECODES_PATH]["node"]["enumeration"] = "ok"
+        _execution, payload = _call(_registry(state=_SongCueStatePort(tree)))
+        commands = [entry["command"] for entry in payload["commands"]]
+        assert any(command.startswith("Store Timecode 7") for command in commands)
+        assert payload["timing"]["skipped_axes"] == []
+
+
+# ---------------------------------------------------------------------------
+# SPEC-COPILOT-POOLEMPTY-001 — 들어올린 술어 `timecode_slot_verdict` (REQ-016)
+
+_VERDICT_PATH = "DataPool/Timecodes"
+_ZERO_CHILDREN_REASON = (
+    f"timecode pool occupancy could not be established ({_VERDICT_PATH} reported "
+    "zero children — a failed enumeration and an empty pool are indistinguishable here) "
+    "— the timecode write is withheld rather than sent unchecked"
+)
+
+
+def _wrapped(reason: str) -> str:
+    return (
+        f"timecode pool occupancy could not be established ({reason}) — "
+        "the timecode write is withheld rather than sent unchecked"
+    )
+
+
+class _RaisingPort:
+    def query_state(self, path: str) -> dict:
+        raise LookupError("no answer")
+
+
+class _ScriptedPort:
+    def __init__(self, payload: object) -> None:
+        self._payload = payload
+
+    def query_state(self, path: str) -> object:
+        return self._payload
+
+
+def _verdict_payload(children, *, count=None, truncated=False, enumeration=None) -> dict:
+    node: dict[str, object] = {"name": "Timecodes", "class": "Pool"}
+    if count is not None:
+        node["childCount"] = count
+    if enumeration is not None:
+        node["enumeration"] = enumeration
+    return {"node": node, "children": list(children), "truncated": truncated}
+
+
+class TestTimecodeSlotVerdictMarker:
+    """앱은 마커가 「성공」이라고 말할 때에만 `childCount 0` 을 비었음으로 읽는다."""
+
+    def test_an_empty_pool_with_the_ok_marker_is_free(self):
+        """AC-POOLEMPTY-006."""
+        port = _ScriptedPort(_verdict_payload([], count=0, enumeration="ok"))
+        occupant, axes = timecode_slot_verdict(port, _VERDICT_PATH, 7)
+        assert occupant is None
+        assert axes == SongCueTimingAxes()
+        assert axes.timecode_go is True
+
+    def test_an_empty_pool_without_the_marker_is_unknown_with_todays_exact_reason(self):
+        """AC-POOLEMPTY-007 — 구버전 응답기 형태 그대로. 사유 문자열까지 바이트 동일."""
+        port = _ScriptedPort(_verdict_payload([], count=0))
+        occupant, axes = timecode_slot_verdict(port, _VERDICT_PATH, 7)
+        assert occupant is None
+        assert axes.timecode_go is False
+        assert "reported zero children — a failed enumeration and an empty pool" in (
+            axes.timecode_skip_reason
+        )
+        assert axes.timecode_skip_reason == _ZERO_CHILDREN_REASON
+
+    def test_an_empty_pool_with_the_failed_marker_is_unknown(self):
+        """AC-POOLEMPTY-008."""
+        port = _ScriptedPort(_verdict_payload([], count=0, enumeration="failed"))
+        occupant, axes = timecode_slot_verdict(port, _VERDICT_PATH, 7)
+        assert occupant is None
+        assert axes.timecode_go is False
+        assert axes.timecode_skip_reason == _ZERO_CHILDREN_REASON
+
+    def test_a_marker_that_is_neither_value_is_not_trusted(self):
+        """값은 두 개뿐이다 — `"partial"` 같은 미래 값이나 오타는 「성공」이 아니다."""
+        port = _ScriptedPort(_verdict_payload([], count=0, enumeration="OK"))
+        _occupant, axes = timecode_slot_verdict(port, _VERDICT_PATH, 7)
+        assert axes.timecode_go is False
+
+    def test_the_other_five_unknown_branches_are_not_relaxed_by_the_marker(self):
+        """AC-POOLEMPTY-009 — 마커가 다른 갈래를 뚫지 못한다. 사유는 오늘의 것과 동일.
+
+        (ㄱ) 판독 예외와 (ㄴ) 비-매핑 페이로드는 `node` 자체가 없어 마커를 실을
+        자리가 없다 — 그 둘은 형태 그대로 쏘고, 나머지 셋은 `"ok"` 를 싣는다.
+        """
+        cases = [
+            (_RaisingPort(), _wrapped(f"{_VERDICT_PATH} did not answer: no answer")),
+            (
+                _ScriptedPort("not-a-mapping"),
+                _wrapped(f"{_VERDICT_PATH} returned a non-mapping payload"),
+            ),
+            (
+                _ScriptedPort(
+                    _verdict_payload([_child(1, "T1")], count=1, truncated=True, enumeration="ok")
+                ),
+                _wrapped(f"{_VERDICT_PATH} enumeration was truncated"),
+            ),
+            (
+                _ScriptedPort(_verdict_payload([_child(1, "T1")], enumeration="ok")),
+                _wrapped(f"{_VERDICT_PATH} reported no childCount"),
+            ),
+            (
+                _ScriptedPort(
+                    _verdict_payload(
+                        [_child(1, "T1"), _child(2, "T2"), _child(3, "T3")],
+                        count=5,
+                        enumeration="ok",
+                    )
+                ),
+                _wrapped(
+                    f"{_VERDICT_PATH} enumeration is short: childCount 5 but 3 children returned"
+                ),
+            ),
+        ]
+        for port, expected_reason in cases:
+            occupant, axes = timecode_slot_verdict(port, _VERDICT_PATH, 7)
+            assert occupant is None, expected_reason
+            assert axes.timecode_go is False, expected_reason
+            assert axes.timecode_skip_reason == expected_reason
+
+    def test_occupied_and_free_are_unchanged_by_the_lift(self):
+        children = [_child(1, "Timecode 1"), _child(7, "SHOWTC")]
+        port = _ScriptedPort(_verdict_payload(children, count=2, enumeration="ok"))
+        assert timecode_slot_verdict(port, _VERDICT_PATH, 7) == ("SHOWTC", SongCueTimingAxes())
+        assert timecode_slot_verdict(port, _VERDICT_PATH, 8) == (None, SongCueTimingAxes())
+
+    def test_the_nested_definition_is_gone_and_the_handler_calls_the_lifted_one(self):
+        """AC-POOLEMPTY-015 — 중첩 정의 0행, 유일 호출자는 이름만 바꿨다."""
+        source = _TOOLS_MODULE.read_text(encoding="utf-8")
+        assert "def _timecode_slot_verdict" not in source
+        assert source.count("def timecode_slot_verdict(") == 1
+        assert "timecode_slot_verdict" in _identifiers(_handler_node())
+        assert "_timecode_slot_verdict" not in _identifiers(_handler_node())
+
 
 def _schema_property_names(schema: dict[str, Any]) -> set[str]:
     names: set[str] = set()
@@ -396,7 +544,7 @@ def _tree(
         ),
         # Slot 7 (the number every case here passes) is deliberately FREE, and
         # slots 1/3 are deliberately taken: an empty pool would read as "the
-        # enumeration failed" to `_timecode_slot_verdict` and suppress the
+        # enumeration failed" to `timecode_slot_verdict` and suppress the
         # timecode axis, so a pool with occupants is what proves the check
         # passes on merit rather than on an unreadable pool.
         _TIMECODES_PATH: _payload(

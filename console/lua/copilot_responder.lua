@@ -95,7 +95,20 @@ local M = {
     -- offline-only; deployment is confirmed BY VERSION -- `ping` must answer
     -- 1.6.4, and a rig answering 1.6.3 does not carry this change whatever
     -- main contains (this repo has the live-1.6.1 / main-1.6.2 precedent).
-    VERSION = "1.6.4",
+    -- 1.6.5: every successful `state` reply carries `node.enumeration`
+    -- ("ok" | "failed") — the enumeration-confidence marker
+    -- (SPEC-COPILOT-POOLEMPTY-001). `M.safe_children` already told its three
+    -- branches apart INSIDE the function; the distinction was dropped at the
+    -- return, so an EMPTY pool and a DEAD pool (Children() and Count() both
+    -- failing) left the console as the same payload (`childCount 0`,
+    -- `children []`, `ok true`). Additive: no top-level field changes, wire
+    -- protocol stays 1, and a consumer that never reads the marker sees the
+    -- byte-identical reply plus one extra `node` key. The server relaxes its
+    -- "zero children == unreadable" verdict ONLY when this marker says "ok";
+    -- a reply without it (any responder < 1.6.5) is judged exactly as before.
+    -- NOT live-verified: offline-only bump; deployment is confirmed BY
+    -- VERSION -- `ping` must answer 1.6.5.
+    VERSION = "1.6.5",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -622,6 +635,15 @@ end
 -- Returns an array of { obj = <handle>, slot = <integer|nil> } in console
 -- listing order; `slot` is the real pool slot or nil when it could not be
 -- established. Callers MUST NOT substitute the array position for a nil slot.
+--
+-- SECOND return value (1.6.5, SPEC-COPILOT-POOLEMPTY-001): the enumeration
+-- confidence — "ok" when either accessor path answered (an empty array then
+-- means the pool really IS empty), "failed" when Children() and Count() BOTH
+-- raised (the empty array then means nothing at all). Callers that take only
+-- the first value (`find_child`, `set_plugin_source`) are unaffected — Lua
+-- drops the extra value; only `build_snapshot` reads it, into
+-- `node.enumeration`. The marker is NOT attached to the array itself so that
+-- `#out` and the `[i]` walks stay exactly what they were.
 function M.safe_children(handle)
     local ok, children = pcall(function() return handle:Children() end)
     if ok and type(children) == "table" then
@@ -634,7 +656,7 @@ function M.safe_children(handle)
             end
             out[#out + 1] = { obj = children[i], slot = slot }
         end
-        return out
+        return out, "ok"
     end
     local okc, count = pcall(function() return handle:Count() end)
     if okc and type(count) == "number" then
@@ -647,9 +669,9 @@ function M.safe_children(handle)
                 out[#out + 1] = { obj = child, slot = i }
             end
         end
-        return out
+        return out, "ok"
     end
-    return {}
+    return {}, "failed"
 end
 
 -- -- object-tree path resolution (REQ-MVP-003) ------------------------------
@@ -843,7 +865,7 @@ function M.build_snapshot(id, path, offset)
         end
         return payload
     end
-    local children = M.safe_children(handle)
+    local children, enumeration = M.safe_children(handle)
     local total = #children
     -- Paging window (1.6.0): `offset` is the 0-based start; the window is at
     -- most CONFIG.max_children wide and empty when offset >= childCount.
@@ -875,6 +897,11 @@ function M.build_snapshot(id, path, offset)
             name = M.safe_name(handle),
             class = M.safe_class(handle),
             childCount = total,
+            -- 1.6.5 (PROTOCOL.md §4.2): "ok" | "failed" — whether `total`
+            -- came from a successful enumeration. `childCount 0` with "ok"
+            -- is an EMPTY pool; with "failed" it is a pool that could not be
+            -- read, and the two are no longer the same payload.
+            enumeration = enumeration,
         },
         children = items,
         offset = offset,

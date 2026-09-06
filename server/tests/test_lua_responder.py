@@ -80,7 +80,7 @@ class TestLoading:
         assert config["send_variant"] == "packed"
         assert config["max_props_names"] == 16
         assert harness.module["PROTO"] == 1
-        assert harness.module["VERSION"] == "1.6.4"
+        assert harness.module["VERSION"] == "1.6.5"
 
 
 class TestParseRequest:
@@ -195,10 +195,15 @@ class TestStateSnapshot:
         assert payload["node"]["childCount"] == 3
 
     def test_payload_size_guard_drops_children_to_fit(self, harness):
-        harness.config["max_payload"] = 300
+        # 합성 예산. 1.6.5 가 `node.enumeration` 을 실으면서 자식 0개 회신의
+        # 바닥이 295 → 326 바이트로 올랐다(실측, SPEC-COPILOT-POOLEMPTY-001
+        # plan.md B-5 가 예고한 자리). 자식 1개는 411 바이트라 400 에서도
+        # 가드는 여전히 자식 셋을 전부 떨어뜨린다 — 검사의 뜻(가드가 자식을
+        # 버려 예산에 맞추고, childCount 는 실제 총수를 지킨다)은 그대로다.
+        harness.config["max_payload"] = 400
         harness.main(None, "state 7 DataPool/Sequences")
         sent = harness.sent()[0]
-        assert len(sent.payload) <= 300
+        assert len(sent.payload) <= 400
         payload = decode_payload(sent.payload)
         assert payload["truncated"] is True
         assert payload["node"]["childCount"] == 3
@@ -1495,3 +1500,116 @@ class TestTableValueSerialization:
         payload = decode_payload(harness.sent()[-1].payload)
         assert payload["ok"] is True, payload
         assert json.loads(payload["value"]) == {"a": 1}
+
+
+# ---------------------------------------------------------------------------
+# SPEC-COPILOT-POOLEMPTY-001 — 열거 신뢰도 마커 (`node.enumeration`)
+#
+# `M.safe_children` 은 세 갈래(Children() 성공 / Count()+Ptr() 성공 / 둘 다
+# 실패)를 안에서 구별하지만 그 구별이 함수 경계에서 버려져, 빈 풀과 죽은 풀이
+# **같은 페이로드**(`childCount 0`, `children []`)로 나갔다. 아래는 그 구별이
+# `state` 회신의 `node.enumeration` 으로 살아남는지를 실제 .lua 에 대고 잰다.
+
+_MARKER_POOL_PATH = "DataPool/Timecodes"
+
+
+def _empty_pool_env() -> str:
+    """자식이 0개인 **정상** 풀 — `Children()` 이 빈 테이블을 답한다 (AC-POOLEMPTY-001)."""
+    return (
+        "local node = __NODE\n"
+        '__DATAPOOL = node("Default", "DataPool", {\n'
+        '    node("Timecodes", "Pool", {}),\n'
+        "})\n"
+        "function DataPool() return __DATAPOOL end\n"
+    )
+
+
+def _dead_pool_env() -> str:
+    """`Children()` 과 `Count()` 가 **둘 다** `error()` 를 던지는 풀 (AC-POOLEMPTY-002).
+
+    기존 `__NODE` 는 실패할 줄 모르므로(`lua_mock_env.py`) 노드를 하나 만든 뒤
+    두 메서드만 덮어써서 주입한다 — `__NODE` 자체는 건드리지 않는다 (plan.md B-4).
+    """
+    return (
+        "local node = __NODE\n"
+        'local dead = node("Timecodes", "Pool", {})\n'
+        'function dead:Children() error("mock: Children() unavailable") end\n'
+        'function dead:Count() error("mock: Count() unavailable") end\n'
+        '__DATAPOOL = node("Default", "DataPool", { dead })\n'
+        "function DataPool() return __DATAPOOL end\n"
+    )
+
+
+def _count_only_pool_env() -> str:
+    """`Children()` 은 죽었지만 `Count()`+`Ptr()` 는 사는 풀 — 두 번째 성공 갈래."""
+    return (
+        "local node = __NODE\n"
+        'local pool = node("Timecodes", "Pool", { node("Timecode 1", "Timecode") })\n'
+        'function pool:Children() error("mock: Children() unavailable") end\n'
+        '__DATAPOOL = node("Default", "DataPool", { pool })\n'
+        "function DataPool() return __DATAPOOL end\n"
+    )
+
+
+def _marker_state(harness: ResponderHarness, path: str) -> dict:
+    harness.main(None, f"state em {path}")
+    return decode_payload(harness.sent()[-1].payload)
+
+
+class TestEnumerationMarker:
+    """SPEC-COPILOT-POOLEMPTY-001 — 빈 풀과 죽은 풀은 다른 페이로드다."""
+
+    def test_a_successfully_empty_pool_says_ok(self):
+        """AC-POOLEMPTY-001 — 정상적으로 빈 풀은 `"ok"` + `childCount 0`."""
+        payload = _marker_state(ResponderHarness(extra_env=_empty_pool_env()), _MARKER_POOL_PATH)
+        assert payload["ok"] is True
+        assert payload["node"]["childCount"] == 0
+        assert payload["node"]["enumeration"] == "ok"
+        assert payload["children"] == []
+        assert payload["truncated"] is False
+
+    def test_a_handle_that_cannot_enumerate_says_failed(self):
+        """AC-POOLEMPTY-002 — 둘 다 실패하면 `"failed"`; `ok`/`children`/`truncated` 는 오늘 값."""
+        payload = _marker_state(ResponderHarness(extra_env=_dead_pool_env()), _MARKER_POOL_PATH)
+        assert payload["ok"] is True
+        assert payload["node"]["childCount"] == 0
+        assert payload["node"]["enumeration"] == "failed"
+        assert payload["children"] == []
+        assert payload["truncated"] is False
+
+    def test_the_count_and_ptr_fallback_is_also_a_success(self):
+        """REQ-POOLEMPTY-001 — 두 성공 경로 모두 「성공」을 답한다."""
+        payload = _marker_state(
+            ResponderHarness(extra_env=_count_only_pool_env()), _MARKER_POOL_PATH
+        )
+        assert payload["ok"] is True
+        assert payload["node"]["childCount"] == 1
+        assert payload["node"]["enumeration"] == "ok"
+        assert [child["name"] for child in payload["children"]] == ["Timecode 1"]
+
+    @pytest.mark.parametrize(
+        "env,path",
+        [
+            ("", "DataPool/Sequences"),
+            ("", "Root/ShowData/DataPools"),
+            ("", "DataPool/Sequences/Sequence 1"),
+            ("", "DataPool/Sequences/2"),
+            (gapped_groups_env(index_form="Index"), "DataPool/Groups"),
+            (gapped_groups_env(index_form=None), "DataPool/Groups"),
+            (gapped_groups_env(index_form="Index", ptr_form="positional"), "DataPool/Groups"),
+            (_empty_pool_env(), _MARKER_POOL_PATH),
+            (_dead_pool_env(), _MARKER_POOL_PATH),
+            (_count_only_pool_env(), _MARKER_POOL_PATH),
+        ],
+    )
+    def test_every_successful_state_reply_carries_one_of_two_values(self, env, path):
+        """AC-POOLEMPTY-003 — 값은 두 개뿐이고, 성공 회신에서 누락은 0건이다."""
+        payload = _marker_state(ResponderHarness(extra_env=env), path)
+        assert payload["ok"] is True, payload
+        assert "enumeration" in payload["node"], payload["node"]
+        assert payload["node"]["enumeration"] in {"ok", "failed"}
+
+    def test_the_other_two_call_sites_still_call_the_same_function(self):
+        """AC-POOLEMPTY-004 — 정의 1 + 호출 3 = 4행. 두 번째 반환값은 그쪽에서 무시된다."""
+        source = RESPONDER_PATH.read_text(encoding="utf-8")
+        assert sum("safe_children(" in line for line in source.splitlines()) == 4
