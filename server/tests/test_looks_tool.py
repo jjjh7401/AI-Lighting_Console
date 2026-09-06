@@ -104,9 +104,14 @@ class _RecordingGate:
     status: str = "ok"
     notice: str = ""
     screened: list[list[str]] = field(default_factory=list)
+    #: SPEC-COPILOT-BULKGATE-001 — 이 더블이 본 번들 위험 선언(없으면 None).
+    #: 선언은 게이트의 **입력**이라 더블도 받아야 한다. 값을 버리지 않고
+    #: 기록해서, 선언이 관문까지 실제로 갔는지 검사가 볼 수 있게 한다.
+    risks: list[object] = field(default_factory=list)
 
-    def screen(self, commands):
+    def screen(self, commands, *, risk=None):
         self.screened.append(list(commands))
+        self.risks.append(risk)
         return _ScreenDecision(
             cleared=self.cleared,
             status=self.status,

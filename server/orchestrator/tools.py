@@ -143,6 +143,7 @@ from server.safety.approval import (
     DenyAllApprovalPort,
 )
 from server.safety.console import StateQueryError
+from server.safety.gate import BatchRisk
 from server.scene.compile import SceneCompilationError
 from server.scene.compile import compile_scene as build_scene_bundle
 from server.scene.loader import DEFAULT_LIBRARY_DIR as SCENE_LIBRARY_DIR
@@ -2283,7 +2284,12 @@ def build_toolset(
 
     # -- run_commands (REQ-MVP-001 upstream, REQ-MVP-009/033 semantics) --------
 
-    def run_commands(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+    def run_commands(
+        call: ToolCall, context: ExecutionContext, *, risk: BatchRisk | None = None
+    ) -> ToolExecution:
+        # `risk` 는 **키워드 인자로만** 흐른다 — `call.arguments` 는 모델이
+        # 쓰는 자리라 거기 실린 `risk` 키는 읽지 않는다(REQ-BULKGATE-004).
+        # 모델이 끌 수 있는 안전장치는 안전장치가 아니다.
         commands = call.arguments.get("commands")
         if (
             not isinstance(commands, list)
@@ -2292,7 +2298,15 @@ def build_toolset(
         ):
             return _error_result(call, "'commands' must be a non-empty list of command lines")
         if bundle_gate is not None:
-            decision = bundle_gate.screen(commands)
+            # 선언이 없는 호출은 오늘과 **바이트 동일**하게 인자 하나로 부른다
+            # (REQ-BULKGATE-001) — 게이트를 대신하는 기존 테스트 더블들이
+            # `screen(commands)` 시그니처 그대로 남아 있기 때문이다.
+            # 선언이 있는데 더블이 못 받으면 조용히 흘리지 않고 크게 깨진다.
+            decision = (
+                bundle_gate.screen(commands)
+                if risk is None
+                else bundle_gate.screen(commands, risk=risk)
+            )
             if not decision.cleared:
                 gate_outcomes = tuple(
                     CommandOutcome(command=d.command, status=d.status, detail="; ".join(d.reasons))
@@ -3105,9 +3119,24 @@ def build_toolset(
                 operator_notice=report.to_operator_notice(),
             )
         command_bundle = bundle.commands + timing.commands
+        # SPEC-COPILOT-BULKGATE-001 — 곡 하나가 시퀀스 하나와 타임코드 슬롯
+        # 하나를 통째로 만든다. 명령 텍스트 분류로는 이 묶음이 안 잡히므로
+        # (`Store Sequence` 는 `blacklist.yaml` 에 없다) 호출자가 직접
+        # 선언한다. 새 디스패치 경로가 아니라 오늘과 같은 `run_commands`
+        # 재진입이며, 게이트·LiveLock·중복 제거·감사가 전부 그대로 붙는다.
+        cue_count = len(bundle.stored_sections)
+        songcue_risk = BatchRisk(
+            reason=(
+                f"쇼파일 쓰기 — Sequence {bundle.sequence_number} 에 큐 {cue_count}건을 저장하고 "
+                f"Timecode {timecode_number} 슬롯을 씁니다 "
+                "(이 앱에는 시퀀스·타임코드 복원 경로가 없습니다)."
+            ),
+            kind="songcue",
+        )
         execution = run_commands(
             ToolCall(id=call.id, name="run_commands", arguments={"commands": list(command_bundle)}),
             context,
+            risk=songcue_risk,
         )
         payload = json.loads(execution.result.content)
         is_error = execution.result.is_error
@@ -3138,6 +3167,18 @@ def build_toolset(
             ],
         }
         payload.update(songconfirm_fields)
+        # SPEC-COPILOT-BULKGATE-001 REQ-009 — 감독이 거절하면 「콘솔에 0건
+        # 나갔다」를 문면으로 말하고 **부분 반영을 주장하지 않는다**. 확정
+        # 구간·초안·타임라인은 어느 쪽도 소실되지 않는다.
+        songcue_refusal = ""
+        if payload.get("gate_status") == "rejected":
+            songcue_refusal = (
+                "감독이 승인을 거절해 콘솔에 0건 나갔습니다 — "
+                f"Sequence {bundle.sequence_number} 도 Timecode {timecode_number} 도 "
+                "바뀌지 않았고, 확정 구간과 타임라인은 그대로 남아 있습니다."
+            )
+            payload["console_commands_sent"] = 0
+            payload["summary_ko"] = songcue_refusal
         # 슬롯이 준비됐으면 녹화는 **운영자의 몫**이다 — 그 명령은 콘솔을 녹화
         # 무장 상태로 만들고 해제 경로가 실측 1회뿐이라, 앱은 발화하지 않고
         # 넘긴다(REQ-MUSICSYNC-020). 이 자리는 `run_commands` 로 간 번들
@@ -3161,7 +3202,7 @@ def build_toolset(
             # 카드 t277 — 명령은 다 실행됐는데 구간 하나가 큐를 못 받은 회차가
             # 여기다. 「요청한 명령을 모두 실행했습니다」는 참이고, 그래서 더
             # 위험하다: 보내지 않은 명령은 어느 표에도 안 나타난다.
-            operator_notice=report.to_operator_notice(),
+            operator_notice=songcue_refusal or report.to_operator_notice(),
         )
 
     # -- precheck_patch (REQ-PRECHK-018 — the pre-show rig check) --------------

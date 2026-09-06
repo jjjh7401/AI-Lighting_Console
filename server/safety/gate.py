@@ -87,6 +87,26 @@ class ScreenDecision:
     notice: str = ""
 
 
+@dataclass(frozen=True)
+class BatchRisk:
+    """호출자가 자기 묶음을 「쇼파일 쓰기」로 선언한다 (SPEC-COPILOT-BULKGATE-001).
+
+    명령 텍스트만으로는 무엇이 고쳐지는지 다 안 나온다 —
+    `Store Sequence 210 Cue 1 /Merge` 와 `/Overwrite` 는 같은 큐를 쓰는데
+    분류가 갈린다(`test_writegate_merge_gap.py`). 아는 쪽은 호출자다.
+
+    `reason` 은 감독이 무엇을 수락하는지 적는 문면이고(REQ-BULKGATE-007),
+    `kind` 는 감사 로그에서 어느 통로의 판단이었는지 가르는 태그다
+    (t292 가 세운 `kind="draft_apply"` 어휘를 잇는다).
+
+    선언은 **모델이 못 만지는 자리**에만 흐른다 — `ToolCall.arguments` 가
+    아니라 `build_toolset` 안쪽 클로저의 키워드 인자다(REQ-BULKGATE-004).
+    """
+
+    reason: str
+    kind: str
+
+
 @dataclass
 class _Finding:
     command: str
@@ -319,8 +339,20 @@ class SafetyGate:
     #   pass bundles through this single method
     # @MX:REASON: REQ-MVP-011/029 — exactly ONE screening path may exist; a second
     #   entry would be a gate bypass by construction (fan_in >= 3)
-    def screen(self, commands: Sequence[str]) -> ScreenDecision:
-        """Screen one command bundle; issues clearances only on full clearance."""
+    def screen(self, commands: Sequence[str], *, risk: BatchRisk | None = None) -> ScreenDecision:
+        """Screen one command bundle; issues clearances only on full clearance.
+
+        ``risk`` 는 호출자의 **번들 위험 선언**이다(SPEC-COPILOT-BULKGATE-001).
+        기본값 `None` 에서 이 메서드의 동작은 오늘과 바이트 동일하다 —
+        기존 호출자는 하나도 영향을 받지 않는다(REQ-BULKGATE-001).
+        선언이 있으면 명령 하나하나의 분류와 무관하게 **번들 전체**가
+        보류가 되고, 그 번들의 모든 명령을 담은 `ApprovalRequest` 가
+        **정확히 하나** 만들어진다(REQ-BULKGATE-002).
+
+        선언은 새 분기가 아니라 **보류 판정을 만드는 입력**이다: 승인 뒤의
+        락 재확인(lock-FIRST)과 위험 경로 백업은 선언 경로에서도 같은
+        순서로 지난다(REQ-BULKGATE-005).
+        """
         commands = list(commands)
         session_key = current_session_key()
         with self._clearances_lock:
@@ -344,17 +376,29 @@ class SafetyGate:
 
         approval_request: ApprovalRequest | None = None
         held = [f for f in findings if f.hold]
-        if held:
+        # 선언이 붙은 번들은 분류 결과를 흡수해 **전체**가 하나의 요청이 된다.
+        # `held` 만 담으면 safe 로 분류된 명령이 카드에서 빠지고 감독은
+        # 무엇을 수락하는지 못 본다(REQ-BULKGATE-002). 요청은 여전히 하나다 —
+        # 선언 경로와 분류 경로를 따로 요청하면 카드가 둘로 갈린다.
+        approval_findings = list(findings) if risk is not None else held
+        audit_extra: dict[str, object] = {"kind": risk.kind} if risk is not None else {}
+        if approval_findings:
             self._observe("approval")
             approval_request = ApprovalRequest(
                 items=tuple(
-                    ApprovalItem(command=f.command, risk_reasons=f.reasons, warnings=f.warnings)
-                    for f in held
+                    ApprovalItem(
+                        command=f.command,
+                        # 분류가 준 사유는 잃지 않는다 — 선언의 사유가 앞에 붙을 뿐.
+                        risk_reasons=((risk.reason, *f.reasons) if risk is not None else f.reasons),
+                        warnings=f.warnings,
+                    )
+                    for f in approval_findings
                 )
             )
+            held = approval_findings
             approved = self._approval_port.request_approval(approval_request)
             if not approved:
-                self._audit.log_rejected(commands, held=[f.command for f in held])
+                self._audit.log_rejected(commands, held=[f.command for f in held], **audit_extra)
                 return ScreenDecision(
                     cleared=False,
                     status="rejected",
@@ -370,7 +414,7 @@ class SafetyGate:
                     approval_request=approval_request,
                     notice="bundle rejected by the approver — nothing was executed",
                 )
-            self._audit.log_approved(commands, held=[f.command for f in held])
+            self._audit.log_approved(commands, held=[f.command for f in held], **audit_extra)
 
             # Lock-FIRST (REQ-MVP-035): a lock activated while the approval was
             # pending converts the held commands to non-executable.
