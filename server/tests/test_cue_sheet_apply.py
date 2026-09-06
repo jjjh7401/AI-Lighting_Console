@@ -17,6 +17,7 @@ import pytest
 from server.design.cue_sheet_apply import (
     ROLE_UNADDRESSED,
     UNMAPPED_LOOK,
+    UNSOURCED_FIELD_REASONS,
     ConsoleApplyError,
     changed_cue_numbers,
     plan_console_apply,
@@ -174,7 +175,90 @@ def test_a_change_with_no_console_value_form_is_skipped_as_unmapped_look():
     (skip,) = plan.skipped
     assert skip.cue_number == 20
     assert skip.reason == UNMAPPED_LOOK
-    assert "조도만 콘솔로 나갑니다" in skip.detail
+    # 사유는 「지원 안 함」이 아니라 **그 칸이 왜 안 나가는지**다(t293).
+    assert skip.detail == UNSOURCED_FIELD_REASONS["mood"] + ". 초안과 저장본에는 남아 있습니다."
+
+
+# -- t293: 조도 말고도 나가는 칸 ---------------------------------------------------
+
+
+def _legend_timeline() -> dict:
+    timeline = _timeline()
+    timeline["palette_legend"] = [
+        {"id": "P1", "name": "골드 앰버", "color": "#FFB43C"},
+        {"id": "P4", "name": "핫 핑크", "color": "#FF3C9E"},
+    ]
+    timeline["sections"][1]["palette_primary"] = "P1 골드앰버"
+    timeline["sections"][1]["fade_seconds"] = 2.0
+    return timeline
+
+
+def test_a_colour_edit_emits_the_sourced_colorrgb_line():
+    """컬러는 팔레트 범례의 색을 백분율 ColorRGB 세 축으로 싣는다."""
+    baseline = _legend_timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["palette_primary"] = "P4 핫핑크"
+    plan = plan_console_apply(baseline, current)
+    assert plan.applied == (20,)
+    # #FF3C9E → 255,60,158 → 100,24,62 (백분율 축은 룩 라이브러리와 같다).
+    assert (
+        "Group 11 + 12 ; Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 100 ; "
+        "Attribute 'ColorRGB_G' At 24 ; Attribute 'ColorRGB_B' At 62" in plan.commands
+    )
+    assert plan.summaries[20] == "조도 70% · 컬러 P4 핫핑크"
+
+
+def test_a_colour_name_absent_from_the_legend_is_skipped_not_guessed():
+    baseline = _legend_timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["palette_primary"] = "P9 없는색"
+    plan = plan_console_apply(baseline, current)
+    (skip,) = plan.skipped
+    assert skip.reason == UNMAPPED_LOOK
+    assert "팔레트 범례에 없는 이름입니다" in skip.detail
+    # 컬러는 못 갔지만 큐 자체는 나간다 — 조도는 실을 값이 있다.
+    assert plan.applied == (20,)
+    assert not any("ColorRGB" in command for command in plan.commands)
+
+
+def test_a_fade_edit_rides_the_store_line_as_cuefade():
+    baseline = _legend_timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["fade_seconds"] = 3.5
+    plan = plan_console_apply(baseline, current)
+    assert "Store Sequence 210 Cue 20 CueFade 3.5 /Merge" in plan.commands
+    assert plan.summaries[20] == "조도 70% · 페이드 3.5초"
+
+
+def test_an_unchanged_fade_does_not_reappear_on_the_store_line():
+    """조도만 고친 큐의 Store 줄은 t291 그대로다 — 안 바뀐 페이드를 다시 쓰지 않는다."""
+    baseline = _legend_timeline()
+    plan = plan_console_apply(baseline, _brighten(baseline, 20, 90))
+    assert "Store Sequence 210 Cue 20 /Merge" in plan.commands
+
+
+@pytest.mark.parametrize("field", ["movement", "effect", "trans", "note", "palette_secondary"])
+def test_an_unsourced_column_is_reported_with_its_own_reason(field):
+    """출처 없는 칸은 칸마다 다른 사유로 건너뛴다 — 한 문장으로 뭉뚱그리지 않는다."""
+    baseline = _legend_timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1][field] = "무엇이든"
+    plan = plan_console_apply(baseline, current)
+    assert plan.commands == ()
+    (skip,) = plan.skipped
+    assert skip.reason == UNMAPPED_LOOK
+    assert UNSOURCED_FIELD_REASONS[field] in skip.detail
+
+
+def test_an_unsourced_column_alongside_a_sourced_one_is_still_reported():
+    """조도와 이펙트를 같이 고치면 조도는 나가고 이펙트는 사유와 함께 남는다."""
+    baseline = _legend_timeline()
+    current = _brighten(baseline, 20, 90)
+    current["sections"][1]["effect"] = "스트로브"
+    plan = plan_console_apply(baseline, current)
+    assert plan.applied == (20,)
+    (skip,) = plan.skipped
+    assert UNSOURCED_FIELD_REASONS["effect"] in skip.detail
 
 
 # -- 계획 자체가 불가능한 자리 ---------------------------------------------------

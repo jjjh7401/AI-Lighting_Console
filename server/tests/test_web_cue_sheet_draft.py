@@ -104,7 +104,7 @@ def test_selection_carries_the_cue_when_the_sentence_omits_the_number(harness):
 def test_the_reply_reports_the_change_field_by_field(harness):
     session, _console, _store, sent = harness
     event = session.run_instruction("이 구간 더 밝게 해줘", 1)
-    assert "조도 40 → 60" in event["text"]
+    assert "조도 +20 (그룹 간격 유지) — MOVER-U 40→60" in event["text"]
     assert "초안" in event["text"]
 
 
@@ -115,7 +115,7 @@ def test_the_pushed_timeline_carries_a_draft_badge(harness):
     assert pushed and pushed[-1]["draft"] == {
         "dirty": True,
         "depth": 1,
-        "last_change": ["조도 40 → 60"],
+        "last_change": ["조도 +20 (그룹 간격 유지) — MOVER-U 40→60"],
     }
     assert store.latest["draft"]["dirty"] is True
 
@@ -227,7 +227,7 @@ def test_a_plain_brighter_with_a_selected_cue_edits_the_draft(harness):
     session, console, store, _sent = harness
     event = session.run_instruction("더 밝게", 1)
     assert store.latest["sections"][0]["intensity"] == [{"group": "MOVER-U", "level": 60}]
-    assert "조도 40 → 60" in event["text"]
+    assert "조도 +20 (그룹 간격 유지) — MOVER-U 40→60" in event["text"]
     assert console.executed == []
 
 
