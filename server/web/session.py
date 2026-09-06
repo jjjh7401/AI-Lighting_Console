@@ -135,7 +135,7 @@ from server.prechk.query import read_properties
 from server.presets.store import preset_store_commands as _preset_store_commands
 from server.safety.approval import ApprovalItem, ApprovalRequest
 from server.safety.audit import AuditLog
-from server.safety.gate import SafetyGate, ScreenDecision
+from server.safety.gate import BatchRisk, SafetyGate, ScreenDecision
 from server.safety.monitor import HealthMonitor
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 from server.sheets.registry import (
@@ -4230,9 +4230,18 @@ class _ObservingBundleGate:
         self._on_preview = on_preview
         self._on_decision = on_decision
 
-    def screen(self, commands: Sequence[str]) -> ScreenDecision:
+    def screen(self, commands: Sequence[str], *, risk: BatchRisk | None = None) -> ScreenDecision:
+        # SPEC-COPILOT-BULKGATE-001 — 이 래퍼가 프로덕션의 유일한 게이트 진입
+        # 지점이다. `risk` 를 안 받으면 선언은 여기서 조용히 사라지는 게
+        # 아니라 TypeError 로 터진다(브라우저 실측에서 그렇게 잡혔다). 받아서
+        # **그대로 전달한다** — 관찰만 하고 판단은 게이트가 한다.
         self._on_preview(commands)
-        decision = self._gate.screen(commands)
+        # 선언이 없는 호출은 인자 하나로 넘긴다 — 오늘과 바이트 동일하고,
+        # `screen(commands)` 시그니처만 가진 기존 게이트 더블도 그대로 산다.
+        # 선언이 있는데 아래 게이트가 못 받으면 조용히 흘리지 않고 크게 깨진다.
+        decision = (
+            self._gate.screen(commands) if risk is None else self._gate.screen(commands, risk=risk)
+        )
         self._on_decision(decision)
         return decision
 

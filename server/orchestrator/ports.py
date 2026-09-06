@@ -50,8 +50,17 @@ class GateScreenDecision(Protocol):
 class BundleGate(Protocol):
     """Bundle-level safety screening — implemented by the M4 safety gate."""
 
-    def screen(self, commands: Sequence[str]) -> GateScreenDecision:
-        """Screen one command bundle; a non-cleared decision means zero sends."""
+    def screen(self, commands: Sequence[str], *, risk: object | None = None) -> GateScreenDecision:
+        """Screen one command bundle; a non-cleared decision means zero sends.
+
+        ``risk`` 는 호출자의 번들 위험 선언이다(SPEC-COPILOT-BULKGATE-001,
+        구체 타입은 `server.safety.gate.BatchRisk`). 이 프로토콜이 `object`
+        로 받는 이유는 임포트 방향 때문이다 — `gate.py` 가 이 모듈을
+        임포트하므로 반대 방향은 순환이 된다.
+
+        기본값 `None` 에서 동작은 오늘과 같다. 구현체는 이 인자를 **받아야
+        한다** — 안 받으면 선언을 붙인 호출이 TypeError 로 터진다.
+        """
         ...
 
 

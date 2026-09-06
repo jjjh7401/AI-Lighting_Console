@@ -185,6 +185,41 @@ class TestLockAndBackupStayBetweenApprovalAndClearance:
         # 이 단언이 선언 경로 때문임을 보인다.
         assert backup_calls == ["b"]
 
+    def test_every_production_screen_surface_accepts_the_declaration(self):
+        """부품이 초록이어도 경로는 안 이어질 수 있다 — 실측으로 잡힌 결함.
+
+        `SafetyGate.screen` 만 고치고 브라우저를 돌렸더니
+        `TypeError: _ObservingBundleGate.screen() got an unexpected keyword
+        argument 'risk'` 가 났다. 프로덕션은 게이트를 **감싼 래퍼**를 통해
+        들어가는데 그 래퍼가 선언을 못 받았다. 단위 검사는 날것의 게이트를
+        써서 이 자리를 못 봤다.
+
+        그래서 여기서는 인스턴스가 아니라 **프로덕션 소스 전수**를 본다:
+        `screen(self, commands, ...)` 를 정의하는 모든 자리가 `risk` 를
+        키워드로 받아야 한다. 새 래퍼가 생겨도 같은 자리에서 걸린다.
+        """
+        import ast
+        from pathlib import Path
+
+        offenders: list[str] = []
+        for path in sorted(Path("server").rglob("*.py")):
+            if "tests" in path.parts:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.FunctionDef) or node.name != "screen":
+                    continue
+                positional = [a.arg for a in node.args.args]
+                if positional[:2] != ["self", "commands"]:
+                    continue
+                keyword_only = {a.arg for a in node.args.kwonlyargs}
+                if "risk" not in keyword_only:
+                    offenders.append(f"{path}:{node.lineno}")
+        assert not offenders, (
+            "선언을 못 받는 screen 표면이 있습니다 — 프로덕션 경로에서 "
+            f"TypeError 로 터집니다: {offenders}"
+        )
+
     def test_an_undeclared_safe_bundle_still_skips_the_backup(self, tmp_path):
         backup_calls: list[str] = []
         backup = BackupManager(backup_action=lambda: backup_calls.append("b"))

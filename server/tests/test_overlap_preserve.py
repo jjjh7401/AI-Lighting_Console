@@ -574,7 +574,10 @@ _SAFETY_EXPECTED_DELETIONS = {
     # (StateQueryError 하위형)로 올라가면서 `raise StateQueryError(` 한 줄이
     # 지워진다. 아래 핀에 그 정확한 문면이 함께 들어간다.
     "server/safety/console.py": 60,
-    "server/safety/gate.py": 8,
+    # SPEC-COPILOT-BULKGATE-001 (2026-09-07): 8 → 15. `screen` 이 번들 위험
+    # 선언(`risk: BatchRisk | None`)을 얻으면서 시그니처·독스트링·승인 블록
+    # 일곱 줄이 제자리에서 교체된다. 아래 핀에 그 정확한 문면이 함께 들어간다.
+    "server/safety/gate.py": 15,
     "server/safety/monitor.py": 3,
     "server/safety/responder_version.py": 0,
     # t272 (2026-09-06): `bootstrap.py` reopened with an ADD-ONLY 4-line
@@ -745,6 +748,31 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         '        """Probe the responder once; audited; returns the resulting health state."""',
         "            self.monitor.note_ping_success()",
         '        """Attach a BackupManager whose action saves the showfile via this gate."""',
+        # 2026-09-07 승인된 확장 — SPEC-COPILOT-BULKGATE-001. `screen` 이
+        # 키워드 전용 `risk: BatchRisk | None = None` 을 얻는다. 그래서
+        # 지워지는 다섯 줄은 전부 **제자리 교체**다: 시그니처 한 줄과 한 줄
+        # 독스트링(여러 줄로 늘어난다), `if held:`(선언이 있으면 `held` 가
+        # 아니라 번들 전체가 요청이 되므로 `if approval_findings:` 로 바뀐다),
+        # `ApprovalItem(...)` 한 줄과 `for f in held`(항목 생성이 선언 사유를
+        # 앞에 붙이는 여러 줄로 늘어난다), 그리고 감사 두 줄(`**audit_extra`
+        # 로 `kind` 를 싣는다).
+        #
+        # **없어진 능력은 없다.** 이 SPEC 은 분류를 안 움직이고
+        # `blacklist.yaml`·`classify.py`·`ruleset.py`·`grammar.py` 의 diff 가
+        # 0이다. 락 재확인(lock-FIRST)과 위험 경로 백업의 순서도 그대로다 —
+        # 선언은 별도 분기가 아니라 보류 판정의 **입력**이기 때문이다.
+        "    def screen(self, commands: Sequence[str]) -> ScreenDecision:",
+        '        """Screen one command bundle; issues clearances only on full clearance."""',
+        "        if held:",
+        # 원문이 100자를 넘어 이어붙인다 — 핀은 **문면 그대로**여야 한다.
+        (
+            "                    ApprovalItem(command=f.command, "
+            "risk_reasons=f.reasons, warnings=f.warnings)"
+        ),
+        "                    for f in held",
+        "                self._audit.log_rejected(commands, held=[f.command for f in held])",
+        "            self._audit.log_approved(commands, held=[f.command for f in held])",
+        # 핀은 diff 순서, 곧 **파일 안 순서**다. 아래 둘은 `screen` 뒤에 온다.
         "    def _query_state(self, path: str) -> dict:",
         "            payload = self._console.query_state(path)",
     ),

@@ -160,8 +160,12 @@ class _CountingBundleGate:
         self.numerator = 0
         self.decision_statuses: Counter[str] = Counter()
 
-    def screen(self, commands: Sequence[str]) -> ScreenDecision:
-        decision = self._gate.screen(commands)
+    def screen(self, commands: Sequence[str], *, risk: object | None = None) -> ScreenDecision:
+        # SPEC-COPILOT-BULKGATE-001 — 세는 래퍼도 선언을 받아 그대로 넘긴다.
+        # 코퍼스는 오늘 선언을 안 붙이지만, 안 받으면 붙이는 순간 터진다.
+        decision = (
+            self._gate.screen(commands) if risk is None else self._gate.screen(commands, risk=risk)
+        )
         # Every generated command line counts (regenerated lines included).
         self.denominator += len(commands)
         if decision.status == "blocked_grammar":
