@@ -208,4 +208,35 @@ m1_to_mN_commit_strategy: "마일스톤당 커밋 1건(M1 845658e · M2), 브랜
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+> 실행 주체: manager-docs, 카드 t273. 워크트리 `.claude/worktrees/agent-ab6103b1e18f4ebc7`, 브랜치 `WT-song-confirm-sync`, base `origin/main b216a38`(run PR #321 + CI 복구 #322 포함, `rev-list --left-right 0 0`). 인터프리터 `uv sync --python 3.11` → `.venv/bin/python` 3.11.15(이 트리).
+
+```yaml
+sync_complete_at: 2026-09-06
+sync_commit_sha: 1b9a422   # 백필 — sync 커밋은 자기 해시를 모른다(D3 예외). 이 값은 둘째 커밋이 적었다
+sync_status: completed
+b12_self_test_a: "grep -c 'SONGCONFIRM-001' CHANGELOG.md → 편집 전 0 · 편집 후 1"
+b12_self_test_b: "grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' acceptance.md | sort -u → 전체 ID 16건(AC-SONGCONFIRM-001~016) + 본문 축약 참조 4건(AC-002·004·010·014, 같은 항목의 줄임말) = raw 20; CHANGELOG 는 16 을 적는다 — acceptance.md 기준, progress.md 아님"
+b12_self_test_c: "CHANGELOG 가 든 경로 전부 ls 로 확인 — server/web/question.py · server/web/session.py · server/orchestrator/tools.py · .moai/specs/SPEC-COPILOT-SONGCONFIRM-001/progress.md 존재; reports/musicsync-e2e-song-to-cuelist-20260906.md 는 주 체크아웃에 존재하되 git 미추적(이 트리엔 없음 — CHANGELOG 에 그 사실을 적었다)"
+changelog_entry_position: "[Unreleased] › ### Added 첫 항목(READBACK-001 위)"
+frontmatter_status_transitions:
+  spec_md: "in-progress → implemented → completed (단일 sync 커밋에 병합) · updated 2026-09-06 유지(같은 날)"
+  plan_md: "frontmatter 없음 — 무변경"
+  acceptance_md: "frontmatter 없음 — 무변경"
+  progress_md: "frontmatter 없음 — 이 절만 추가"
+docs_synced:
+  readme: "README.md § Music sync 2번 항목에 확정 뒤 다음 단계 문단 1개 + Implementation 줄에 배관 파일 3개·SPEC 링크"
+  docs_site: "해당 없음 — 이 저장소에 4-locale docs-site 없음; docs/capability-index.md 는 곡 조명 표준 색인이라 이 흐름을 다루지 않아 무변경"
+mx_tag_report:
+  added: 1   # server/web/question.py section_label — @MX:ANCHOR (fan_in 3: build_song_confirmation_card · parse_confirmed_sections · session.analyse_song_audio) + @MX:REASON + @MX:SPEC
+  removed: 0
+  updated: 0
+  scan: "parse_confirmed_sections 생산 호출자 1 · _confirmed_section_input 1 · ConfirmedSongAnalysis( 1 → MUST 아님, 태그 없음"
+sync_verification:
+  tests: ".venv/bin/python -m pytest server/tests/test_song_confirm_sections.py server/tests/test_songcue_confirmed_default.py -q -p no:cacheprovider → 61 passed, 1 warning (MX 태그 추가 전) · 재실행은 커밋 전 아래 5절 보고에"
+  spec_lint: "moai spec lint — 아래 5절 보고에 결과"
+canary_compliance_check:
+  applicable: false   # 이 SPEC 은 자기 sync 가 시험하는 전향 정책을 정의하지 않는다
+spec_body_findings_for_manager_spec:   # 본문 무수정 — 소유권 밖. 차단 아님(sync 산출물에 영향 없음)
+  - "acceptance.md AC-005 (d) 괄호 전제「앞 라벨이 뒤 라벨의 부분문자열」— 실측 False(§E.2 M1 GREEN 1차). Then 절은 통과"
+  - "spec.md §E「tools.py 는 server.web 을 import 하지 않는다」— BASE 에 이미 tools.py:234 import 1행. 이 SPEC 이 지킨 것은 「새 import 를 더하지 않는다」"
+```

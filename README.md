@@ -349,6 +349,11 @@ permissions.
    is confirmed > sheet `HEAD.BPM` > default 120; an `FX-Rate` back-calculation
    is shown **for comparison only** and is never adopted. The analysis layer
    touches the console zero times, fixed mechanically by an AST scan.
+   Once you press **확인**, the checked sections and the BPM are recorded for
+   the session and reach both the model and `prepare_songcue`: say 「이 곡으로
+   큐 리스트 만들어줘, 타임코드 N번」 and the confirmed sections are used as-is.
+   Unchecked sections are dropped, and re-uploading a song invalidates the
+   confirmation (SONGCONFIRM-001).
 3. **Rehearse a timecode; the app never arms the recorder.** The prepare step
    fires exactly three lines (`Store Timecode <n>`, `Set … Property 'Name' …`,
    `Assign Sequence <s> At Timecode <n>`). The arming verb `Record Timecode <n>`
@@ -385,8 +390,11 @@ Limits, stated plainly:
 
 Implementation: `server/lxseq/cue_time.py`, `server/audio/analyze.py`,
 `server/orchestrator/songcue_timecode.py`, `server/web/{messages,app,session,question}.py`,
-`server/design/profile.py`. Specification:
-[SPEC-COPILOT-MUSICSYNC-001](.moai/specs/SPEC-COPILOT-MUSICSYNC-001/spec.md).
+`server/design/profile.py`; the confirmed-analysis plumbing lives in
+`server/web/question.py` (`parse_confirmed_sections`), `server/web/session.py`
+(`song_analysis`) and `server/orchestrator/tools.py` (`SongAnalysisPort`). Specification:
+[SPEC-COPILOT-MUSICSYNC-001](.moai/specs/SPEC-COPILOT-MUSICSYNC-001/spec.md),
+[SPEC-COPILOT-SONGCONFIRM-001](.moai/specs/SPEC-COPILOT-SONGCONFIRM-001/spec.md).
 
 ## Packaged app — build & run (SPEC-COPILOT-DEPLOY-001 Stage 1, M6)
 
