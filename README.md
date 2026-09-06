@@ -74,6 +74,17 @@ active = "anthropic"        # or "gemini" — switching is this one value, no co
 - The MA3 grammar rulebook (fixed system-prompt prefix, incl. the Korean
   field-lighting term dictionary) lives in `server/rulebook/assets/v2.4.2/`.
 
+**Precedence: the user settings file wins over `--config`.** The TOML passed to
+`python -m server.web --config <path>` is a *seed* — it supplies the active
+provider only until a per-user settings file overrides it. Once
+`<user-config-dir>/GrandMA3 Copilot/settings.toml` (on macOS,
+`~/Library/Application Support/GrandMA3 Copilot/settings.toml`) carries an
+`active_provider`, that value wins and `--config` cannot override it, so a run
+launched with a seed naming one provider can legitimately talk to another. The
+full chain is `built-in defaults < --config seed < user settings file <
+explicit overrides`. To change the active provider, use the in-app settings
+screen, or edit that user settings file directly.
+
 With a key present, verify the active provider with one live call (run twice to
 observe a warm cache read):
 
