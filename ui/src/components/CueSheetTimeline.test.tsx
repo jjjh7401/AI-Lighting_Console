@@ -9,13 +9,12 @@ import { SONG_TIMELINE_EXAMPLE } from "./songTimelineExample";
 import { CUE_SHEET_EXAMPLE } from "./cueSheetExample";
 import {
   EMPTY_CELL,
-  SCROLL_SETTLE_MS,
   VISIBLE_CUE_ROWS,
   shouldAdoptScroll,
+  visibleRowRange,
   cell,
   cueIndexAtMs,
   cueLabel,
-  cueWindow,
   derivedBannerText,
   formatDuration,
   formatTc,
@@ -33,24 +32,32 @@ const SECTIONS = CUE_SHEET_EXAMPLE.sections;
 const TOTAL = songTotalMs(CUE_SHEET_EXAMPLE);
 
 describe("두 축의 연동 — 선택은 한 곳에서만 산다", () => {
-  it("큐시트 행을 고르면 그 큐를 가운데 둔 5행 창이 나온다", () => {
-    expect(cueWindow(SECTIONS.length, 7)).toEqual({ start: 5, end: 10 });
-    expect(cueWindow(SECTIONS.length, 7).end - cueWindow(SECTIONS.length, 7).start).toBe(
-      VISIBLE_CUE_ROWS,
-    );
+  // 행 높이 28px 짜리 18행. 창은 다섯 줄(140px)만 보여 준다.
+  const ROW_H = 28;
+  const TOPS = SECTIONS.map((_, i) => i * ROW_H);
+  const BAND = ROW_H * VISIBLE_CUE_ROWS;
+
+  it("보이는 행 범위는 페이지 번호가 아니라 실제 스크롤 위치에서 나온다", () => {
+    expect(visibleRowRange(TOPS, 0, BAND)).toEqual({ start: 0, end: 5 });
+    expect(visibleRowRange(TOPS, ROW_H * 6, BAND)).toEqual({ start: 6, end: 11 });
   });
 
-  it("목록 양끝에서는 창이 잘리지 않고 안쪽으로 붙는다", () => {
-    expect(cueWindow(SECTIONS.length, 0)).toEqual({ start: 0, end: 5 });
-    expect(cueWindow(SECTIONS.length, SECTIONS.length - 1)).toEqual({
-      start: SECTIONS.length - 5,
+  it("반 줄만 걸쳐도 보이는 행으로 센다 — 창 높이가 범위를 정한다", () => {
+    // 반 줄 걸친 6번은 시작으로, 아래로 반 줄 걸친 11번도 보이는 행으로 센다.
+    expect(visibleRowRange(TOPS, ROW_H * 6 + 14, BAND)).toEqual({ start: 6, end: 12 });
+  });
+
+  it("끝까지 내리면 마지막 행에서 멈춘다", () => {
+    const bottom = ROW_H * (SECTIONS.length - VISIBLE_CUE_ROWS);
+    expect(visibleRowRange(TOPS, bottom, BAND)).toEqual({
+      start: SECTIONS.length - VISIBLE_CUE_ROWS,
       end: SECTIONS.length,
     });
   });
 
-  it("큐가 5개보다 적으면 있는 만큼만 그린다", () => {
-    expect(cueWindow(3, 0)).toEqual({ start: 0, end: 3 });
-    expect(cueWindow(0, 0)).toEqual({ start: 0, end: 0 });
+  it("행이 창보다 적으면 있는 만큼만 센다", () => {
+    expect(visibleRowRange([0, 28, 56], 0, BAND)).toEqual({ start: 0, end: 3 });
+    expect(visibleRowRange([], 0, BAND)).toEqual({ start: 0, end: 0 });
   });
 
   it("타임라인을 가로로 스크롤하면 그 위치의 큐가 선택된다 (반대 방향)", () => {
@@ -60,21 +67,30 @@ describe("두 축의 연동 — 선택은 한 곳에서만 산다", () => {
     expect(cueIndexAtMs(SECTIONS, 999_000)).toBe(SECTIONS.length - 1);
   });
 
-  it("큐를 고른 직후의 스크롤은 선택을 되돌리지 않는다", () => {
-    // 실측: 칩을 클릭하면 브라우저가 칩을 보이게 스크롤하고, 그 스크롤이
-    // 선택을 0번으로 되돌렸다. 한 번만 막는 방식으로는 부드러운 스크롤이
-    // 내는 여러 이벤트를 못 막는다.
-    const now = 1_000_000;
-    const until = now + SCROLL_SETTLE_MS;
-    expect(shouldAdoptScroll(now, until)).toBe(false);
-    expect(shouldAdoptScroll(now + SCROLL_SETTLE_MS - 1, until)).toBe(false);
-    expect(shouldAdoptScroll(now + SCROLL_SETTLE_MS, until)).toBe(true);
-    expect(shouldAdoptScroll(now, 0)).toBe(true);
+  it("t288 — 코드가 만든 스크롤은 클릭한 큐를 앞 큐로 되돌리지 못한다", () => {
+    // 재현(2026-09-06, Chrome 실기 · .moai/state/verify/t287/probe-t288b.mjs):
+    // 13번 칩(Q140)을 클릭하고 700ms 억제창이 끝난 뒤 레일에 scroll 이벤트가
+    // 한 번 더 오면 선택이 Q130 으로 밀리고 창이 11–15 가 됐다. 스크롤 위치는
+    // 그대로였다 — 원인은 타이밍이 아니라 「스크롤 위치 → 인덱스」 환산이
+    // 클릭한 큐를 못 되돌린다는 것이다(칩을 창의 1/3 지점에 두므로 좌단은
+    // 언제나 앞 큐다). 그래서 시간이 아니라 출처로 가른다.
+    const clicked = 13;
+    const settledMs = SECTIONS[clicked].start_ms - 1; // 정착 위치가 가리키는 지점
+    expect(cueIndexAtMs(SECTIONS, settledMs)).toBe(clicked - 1); // 환산은 한 칸 앞이다
+
+    let selected = clicked;
+    if (shouldAdoptScroll("program")) selected = cueIndexAtMs(SECTIONS, settledMs);
+    expect(selected).toBe(clicked);
   });
 
-  it("스크롤로 고른 큐가 곧바로 그 큐를 담은 창을 만든다 — 두 축이 어긋나지 않는다", () => {
+  it("사람이 굴린 스크롤만 선택을 옮긴다", () => {
+    expect(shouldAdoptScroll("user")).toBe(true);
+    expect(shouldAdoptScroll("program")).toBe(false);
+  });
+
+  it("스크롤로 고른 큐는 그 행이 보이는 범위 안에 든다 — 두 축이 어긋나지 않는다", () => {
     const index = cueIndexAtMs(SECTIONS, 150_000);
-    const visible = cueWindow(SECTIONS.length, index);
+    const visible = visibleRowRange(TOPS, ROW_H * index, BAND);
     expect(index).toBeGreaterThanOrEqual(visible.start);
     expect(index).toBeLessThan(visible.end);
   });
@@ -156,7 +172,11 @@ describe("없는 필드는 조용히 떨어진다 — undefined 를 그리지 �
   });
 
   it("확장 필드가 하나도 없어도 창 계산이 그대로 돈다", () => {
-    expect(cueWindow(bare.sections.length, 2)).toEqual({ start: 0, end: 4 });
+    const tops = bare.sections.map((_, i) => i * 28);
+    expect(visibleRowRange(tops, 0, 28 * VISIBLE_CUE_ROWS)).toEqual({
+      start: 0,
+      end: bare.sections.length,
+    });
     expect(cueIndexAtMs(bare.sections, 50_000)).toBe(2);
   });
 });
