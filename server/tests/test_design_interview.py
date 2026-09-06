@@ -132,6 +132,118 @@ class TestQ4SpatialStoryOptions:
         assert card.options[0].value.position_candidates[0] == "Cross"
 
 
+# ---------------------------------------------------------------------------
+# 카드 t314 — Q4 가 무대의 실제 모양을 읽는다
+# ---------------------------------------------------------------------------
+
+
+def _rig_with_coords(points: list[tuple[float, float, float]]) -> RigProfile:
+    coords = [
+        {"fid": index + 1, "x": point[0], "y": point[1], "z": point[2]}
+        for index, point in enumerate(points)
+    ]
+    return build_rig_profile(patch=[], groups={}, coords=coords)
+
+
+#: 좌우로 갈라져 같은 깊이 띠에 선 리그 → `grid` 판독(t314 실측).
+_LATERAL_POINTS = [
+    (-5.0, 0.0, 5.0),
+    (-5.0, 1.0, 5.0),
+    (-4.0, 0.0, 5.0),
+    (-4.0, 1.0, 5.0),
+    (5.0, 0.0, 5.0),
+    (5.0, 1.0, 5.0),
+    (4.0, 0.0, 5.0),
+    (4.0, 1.0, 5.0),
+]
+
+#: 전 장비가 한 점에 모인 리그 — SPEC-COPILOT-SPATIAL-001 §E.2.4 가 실기에서
+#: 읽은 모양(19대 전부 `(0,0,0)`)이다.
+_ALL_ZERO_POINTS = [(0.0, 0.0, 0.0) for _ in range(19)]
+
+
+def _q4_labels(rig: RigProfile, profile: MusicProfile | None = None) -> list[str]:
+    card = build_question(Q4_SPATIAL_STORY, profile or MusicProfile(), rig)
+    return [option.label for option in card.options]
+
+
+class TestQ4ReadsTheStageShape:
+    def test_two_rigs_with_the_same_music_and_different_geometry_differ(self):
+        """이 카드가 참으로 만들려던 단언 — 일자 무대와 깊이 열이 다른 답을 낸다."""
+        from server.tests.synthetic_rig import synthetic_fixtures
+
+        lateral = _rig_with_coords(_LATERAL_POINTS)
+        depth = _rig_with_coords(
+            [(fixture.x, fixture.y, fixture.z) for fixture in synthetic_fixtures()]
+        )
+
+        assert lateral.geometry.arrangement == "grid"
+        assert depth.geometry.arrangement == "depth_rows"
+
+        lateral_labels = _q4_labels(lateral)
+        depth_labels = _q4_labels(depth)
+        assert lateral_labels != depth_labels
+        # 폭으로 퍼진 리그는 넓어지는 서사를, 깊이 열은 모이는 서사를 먼저 낸다.
+        assert lateral_labels[0] == "좁음→넓음 (E3 기본)"
+        assert depth_labels[0] == "넓음→좁음 (역순)"
+
+    def test_a_readable_arrangement_names_geometry_in_the_note(self):
+        card = build_question(Q4_SPATIAL_STORY, MusicProfile(), _rig_with_coords(_LATERAL_POINTS))
+        for option in card.options:
+            assert "무대 배치(격자)와 곡 구조를 함께 보고" in option.description
+
+    def test_an_all_zero_rig_falls_back_to_the_music_only_ordering(self):
+        """퇴화 리그는 예외가 아니라 1급 경로다 — 실기 desk 가 이 모양이다."""
+        degenerate = _rig_with_coords(_ALL_ZERO_POINTS)
+        assert degenerate.geometry.arrangement is None
+        assert degenerate.geometry.arrangement_low_confidence is True
+
+        card = build_question(Q4_SPATIAL_STORY, MusicProfile(), degenerate)
+        assert [option.label for option in card.options] == [
+            "좁음→넓음 (E3 기본)",
+            "넓음→좁음 (역순)",
+            "사전 등재 순서",
+        ]
+        for option in card.options:
+            # t312 가 세운 정직한 문면 그대로 — 안 읽은 근거를 대지 않는다.
+            assert "장비 목록 없이 곡 구조만 보고 만든 제안이에요" in option.description
+            assert "무대 배치" not in option.description
+
+    def test_a_confirmed_concept_still_outranks_geometry(self):
+        """감독이 말한 의도가 방을 이긴다.
+
+        기하가 **다른** 순서를 밀고 있을 때만 이 단언이 힘을 가진다: 깊이 열
+        리그는 「넓음→좁음」을 앞으로 밀어내는데, 그래도 1번은 컨셉이어야
+        한다. 밀린 자리는 2번으로 내려온다.
+        """
+        from server.tests.synthetic_rig import synthetic_fixtures
+
+        depth = _rig_with_coords(
+            [(fixture.x, fixture.y, fixture.z) for fixture in synthetic_fixtures()]
+        )
+        assert depth.geometry.arrangement == "depth_rows"
+
+        card = build_question(Q4_SPATIAL_STORY, MusicProfile(concept="네온"), depth)
+        assert card.options[0].label == "네온 컨셉 우선 배치"
+        assert card.options[0].value.position_candidates[0] == "Cross"
+        assert card.options[1].label == "넓음→좁음 (역순)"
+
+    def test_the_no_coordinates_path_is_unchanged(self):
+        """카드 t311 경로 — 좌표가 아예 없는 리그."""
+        no_coords = _rig()
+        assert no_coords.geometry.centroid is None
+        assert no_coords.geometry.dominant_axis is None
+
+        card = build_question(Q4_SPATIAL_STORY, MusicProfile(), no_coords)
+        assert [option.label for option in card.options] == [
+            "좁음→넓음 (E3 기본)",
+            "넓음→좁음 (역순)",
+            "사전 등재 순서",
+        ]
+        for option in card.options:
+            assert "장비 목록 없이 곡 구조만 보고 만든 제안이에요" in option.description
+
+
 class TestQ5TextureOptions:
     def test_genre_texture_is_recommended_when_genre_known(self):
         card = build_question(Q5_TEXTURE, MusicProfile(genre="메탈"), _rig())

@@ -306,7 +306,20 @@ def _rig_note(rig: RigProfile) -> str:
         # (RG5 — no console patch query on this path), so the inventory count
         # is structurally 0 while the stage clearly has fixtures. Showing
         # "장비 0대" reads as a broken rig — say what we actually used.
-        return "무대 좌표를 기준으로 만든 제안이에요"
+        #
+        # 카드 t312 (실측 2026-09-07): the previous wording claimed the
+        # suggestion was built "무대 좌표를 기준으로". It was not.
+        # `RigProfile.geometry` has zero consumers (`grep -rn "\.geometry"
+        # server/ ui/src` → test-only hits), and `_q4_candidates` derives its
+        # candidates from the music profile alone — a straight-line stage and
+        # an arc get the same answer. A note that names a basis the code never
+        # reads is an unobserved claim on the director's screen, so it names
+        # the basis actually used instead.
+        #
+        # 카드 t314: Q4 는 배치가 또렷하게 읽힐 때만 :func:`_q4_rig_note` 로
+        # 기하를 언급한다. 그 외 단계(Q1·Q3·Q5)와 판독 불가 리그는 이 문면
+        # 그대로다 — 안 읽은 근거를 대지 않는다.
+        return "장비 목록 없이 곡 구조만 보고 만든 제안이에요"
     return f"현재 장비 {count}대를 기준으로 만든 제안이에요"
 
 
@@ -616,7 +629,82 @@ def _ascending_positions() -> tuple[str, ...]:
     return tuple(entry.label for _, entry in ranked)
 
 
-def _q4_candidates(profile: MusicProfile) -> list[tuple[str, str, tuple[str, ...]]]:
+#: 카드 t314 — 배치 판독(`RigGeometry.arrangement`) → Q4 에서 **먼저 놓을**
+#: 포지션 진행. 무대 모양이 후보 자체를 만들지는 않는다(후보는 여전히 곡
+#: 프로파일이 만든다). 정하는 것은 **순서**뿐이다.
+#:
+#: `RigGeometry` 가 실제로 들고 있는 것은 넷이다 — `arrangement`,
+#: `arrangement_low_confidence`, `centroid`, `dominant_axis`. **크기는 하나도
+#: 없다**: `_build_geometry` 가 축별 span 을 계산하고서 버린다. 그래서 「지배축
+#: 방향 퍼짐」도 「깊이/폭 비」도 이 자료로는 못 낸다 — 지어내지 않고, 실제로
+#: 들고 있는 축 하나(`arrangement`)만 쓴다. `dominant_axis` 도 안 쓴다:
+#: 전 장비가 한 점에 모인 리그에서도 동률 타이브레이크로 `"x"` 를 답하므로,
+#: 판독 불가와 좌우 배치를 못 가른다.
+#:
+#: 매핑 근거(연출 판단):
+#: * `lateral_split` · `bilateral_pairs` · `grid` — 장비가 무대 폭에 걸쳐
+#:   퍼져 있다. 「좁음→넓음」은 **무대 폭이 열리는** 서사인데, 폭으로 퍼진
+#:   리그만 실제로 열 수 있다. 기존 기본값을 그대로 둔다.
+#: * `depth_rows` · `concentric` — 앞뒤 열이나 동심 링으로 묶인 리그다. 폭을
+#:   넓히는 단계가 같은 좌우 그림을 깊이만 바꿔 반복해 「밝기 변화」로 읽힌다.
+#:   이 리그가 또렷하게 읽는 서사는 **모아 들어가는** 쪽이다.
+#: * `vertical_levels` — 트림 높이로 읽히는 리그인데 포지션 어휘에 높이 축이
+#:   없다. 어느 램프도 더 참이 아니라, 방향을 번갈아 쓰는 사전 등재 순서를
+#:   앞에 둔다.
+_GEOMETRY_PREFERRED_PROGRESSION: dict[str, str] = {
+    "lateral_split": "ascending",
+    "bilateral_pairs": "ascending",
+    "grid": "ascending",
+    "depth_rows": "descending",
+    "concentric": "descending",
+    "vertical_levels": "table",
+}
+
+_GEOMETRY_ARRANGEMENT_LABELS: dict[str, str] = {
+    "lateral_split": "좌우 분할",
+    "bilateral_pairs": "좌우 대칭 쌍",
+    "grid": "격자",
+    "depth_rows": "깊이 열",
+    "concentric": "동심 배치",
+    "vertical_levels": "높이 단",
+}
+
+
+def _readable_arrangement(rig: RigProfile) -> str | None:
+    """Q4 순서를 바꿀 만큼 또렷하게 읽힌 배치, 없으면 ``None``.
+
+    카드 t314 — **퇴화 리그를 예외가 아니라 1급 경로로 다룬다.** 실기에서
+    읽은 값이 그렇다: SPEC-COPILOT-SPATIAL-001 §E.2.4 는 장비 19대가 전부
+    `(0,0,0)` 으로 답했다고 적는다. 좌표는 읽히는데 뜻이 없다. 그런 리그는
+    `classify` 가 `arrangement=None, low_confidence=True` 로 답하므로(t314
+    실측) 이 술어 하나가 세 경우를 함께 막는다 — 전 장비 원점, 좌표 자체가
+    없는 리그(`coords=[]`), 그리고 어느 축으로도 확신이 안 서는 리그.
+    """
+    geometry = rig.geometry
+    if geometry.arrangement is None or geometry.arrangement_low_confidence:
+        return None
+    if geometry.arrangement not in _GEOMETRY_PREFERRED_PROGRESSION:
+        return None
+    return geometry.arrangement
+
+
+def _q4_rig_note(rig: RigProfile) -> str:
+    """Q4 근거 문면. 기하가 **실제로** 순서를 정했을 때만 그렇게 적는다.
+
+    카드 t312 가 「무대 좌표를 기준으로」를 걷어낸 이유가 그대로 남는다:
+    읽지 않은 근거를 대면 감독 화면 위의 미검증 주장이 된다. 배치가 안 읽히면
+    t312 가 세운 정직한 문면(:func:`_rig_note`)으로 되돌아간다.
+    """
+    arrangement = _readable_arrangement(rig)
+    if arrangement is None:
+        return _rig_note(rig)
+    label = _GEOMETRY_ARRANGEMENT_LABELS[arrangement]
+    return f"무대 배치({label})와 곡 구조를 함께 보고 만든 제안이에요"
+
+
+def _q4_candidates(
+    profile: MusicProfile, rig: RigProfile
+) -> list[tuple[str, str, tuple[str, ...]]]:
     ascending = _ascending_positions()
     descending = tuple(reversed(ascending))
     table_order = tuple(entry.label for entry in UNIFIED_MOOD_TABLE)
@@ -633,35 +721,52 @@ def _q4_candidates(profile: MusicProfile) -> list[tuple[str, str, tuple[str, ...
                 biased_first,
             )
         )
-    candidates.append(
+    # 기하와 무관한 후보들. 키(`ascending`/`descending`/`table`)는
+    # `_GEOMETRY_PREFERRED_PROGRESSION` 의 값과 같은 어휘다.
+    generic: list[tuple[str, tuple[str, str, tuple[str, ...]]]] = [
         (
-            "좁음→넓음 (E3 기본)",
-            "처음엔 한곳에 집중하고 뒤로 갈수록 무대를 넓게 보여 줘요.",
-            ascending,
-        )
-    )
-    candidates.append(
+            "ascending",
+            (
+                "좁음→넓음 (E3 기본)",
+                "처음엔 한곳에 집중하고 뒤로 갈수록 무대를 넓게 보여 줘요.",
+                ascending,
+            ),
+        ),
         (
-            "넓음→좁음 (역순)",
-            "처음에는 무대를 넓게 쓰고 마지막에는 한곳에 시선을 모아요.",
-            descending,
-        )
-    )
-    candidates.append(("사전 등재 순서", "장면마다 다른 방향을 골고루 보여 줘요.", table_order))
+            "descending",
+            (
+                "넓음→좁음 (역순)",
+                "처음에는 무대를 넓게 쓰고 마지막에는 한곳에 시선을 모아요.",
+                descending,
+            ),
+        ),
+        (
+            "table",
+            ("사전 등재 순서", "장면마다 다른 방향을 골고루 보여 줘요.", table_order),
+        ),
+    ]
+    arrangement = _readable_arrangement(rig)
+    if arrangement is not None:
+        # 감독이 확정한 컨셉이 기하보다 앞선다 — 사람이 말한 의도가 방을
+        # 이긴다. 그래서 컨셉 후보는 건드리지 않고, 그 **뒤**만 재정렬한다.
+        preferred = _GEOMETRY_PREFERRED_PROGRESSION[arrangement]
+        generic.sort(key=lambda pair: pair[0] != preferred)
+    candidates.extend(entry for _, entry in generic)
     return candidates
 
 
 def _build_q4(profile: MusicProfile, rig: RigProfile) -> QuestionCard:
     seen: set[tuple[str, ...]] = set()
     options: list[QuestionOption] = []
-    for label, desc, sequence in _q4_candidates(profile):
+    note = _q4_rig_note(rig)
+    for label, desc, sequence in _q4_candidates(profile, rig):
         if sequence in seen:
             continue
         seen.add(sequence)
         options.append(
             QuestionOption(
                 label=label,
-                description=f"{desc} ({_rig_note(rig)})",
+                description=f"{desc} ({note})",
                 value=DirectorOverride(position_candidates=sequence),
             )
         )
