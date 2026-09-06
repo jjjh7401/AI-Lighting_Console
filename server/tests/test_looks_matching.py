@@ -682,7 +682,7 @@ class TestReportShape:
         report = match_looks("EDM", library).to_dict()
         assert report["total"] == edm_look_count
         assert len(report["matches"]) == min(edm_look_count, MAX_TOOL_MATCHES)
-        assert report["truncated"] is (MAX_TOOL_MATCHES < edm_look_count)
+        assert report["truncated"] is (edm_look_count > MAX_TOOL_MATCHES)
 
     def test_a_short_result_is_not_flagged_as_truncated(self, library):
         report = match_looks("경건한", library).to_dict()
