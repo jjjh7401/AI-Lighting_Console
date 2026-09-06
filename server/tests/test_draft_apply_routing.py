@@ -260,3 +260,36 @@ def test_no_measured_negative_is_stopped_by_the_length_ceiling_alone():
 @pytest.mark.parametrize("text", FADE_COMMANDS_WITHOUT_AN_EDIT_VERB)
 def test_the_t300_fade_corpus_never_leaks_into_apply(text):
     assert _is_draft_apply_request(text) is False
+
+
+# -- t301 짧은 설계 브리핑이 반영으로 새지 않는다 ---------------------------------
+#
+# 실측(t298, 2026-09-06): 「시퀀스 110에 90초 록 곡 설계, 후렴에서 조금 올리고」
+# 32자가 목적지와 동사를 함께 들고 있어 반영으로 샜다. 40자 한도는 이 계열을
+# 막은 적이 없다 — 긴 변형만 우연히 걸렸을 뿐이라, 짧게 쓰면 그대로 통과했다.
+# 재현 기록: .moai/state/verify/t301/repro.py (변경 전 술어 old=True).
+
+SHORT_SONG_BRIEFS_THAT_LEAKED = (
+    "시퀀스 110에 90초 록 곡 설계, 후렴에서 조금 올리고",
+    "곡 설계해줘, 시퀀스 3에 올려",
+    "노래 조명 설계, 시퀀스 7 후렴만 올려줘",
+)
+
+#: 반대 방향의 보호선. 설계를 **말하면서** 실제로 보내라는 문장은 여전히 반영이다
+#: — 설계 어휘 하나로 통째로 빼면 t295 가 닫은 더 위험한 오라우팅이 다시 열린다.
+SONG_WORDED_APPLY_REQUESTS = (
+    "디자인 큐 시트, 시퀀스 110에 반영",
+    "곡 설계한 거 콘솔에 반영해줘",
+    "연출 인터뷰 결과 데스크로 전송해줘",
+)
+
+
+@pytest.mark.parametrize("text", SHORT_SONG_BRIEFS_THAT_LEAKED)
+def test_a_short_song_design_brief_does_not_reach_the_apply_predicate(text):
+    assert len(text) <= _DRAFT_APPLY_MAX_CHARS  # 길이로는 안 걸린다는 사실 자체를 고정
+    assert _is_draft_apply_request(text) is False
+
+
+@pytest.mark.parametrize("text", SONG_WORDED_APPLY_REQUESTS)
+def test_a_send_verb_still_wins_over_the_design_vocabulary(text):
+    assert _is_draft_apply_request(text) is True

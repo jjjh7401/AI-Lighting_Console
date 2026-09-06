@@ -1095,6 +1095,10 @@ _DRAFT_APPLY_REQUEST = re.compile(
 _DRAFT_APPLY_DESTINATION = re.compile(r"콘솔|데스크|초안|시퀀스\s*\d+")
 _DRAFT_APPLY_VERB = re.compile(r"반영|적용|전송|송출|올려|올리|보내")
 
+#: t301 — 위 동사 중 **보내기 전용**인 것들. 「올려/올리」만 빠져 있다: 그 둘은
+#: 조도를 올리는 뜻을 겸해 곡 브리핑 안의 연출 지시로도 나온다.
+_DRAFT_APPLY_SEND_ONLY_VERB = re.compile(r"반영|적용|전송|송출|보내")
+
 #: 「올려/올리」는 두 뜻을 겸한다 — 데스크에 올리는 것과 조도를 올리는 것.
 #: 올리는 **대상이 큐시트 칸**이면 편집이므로 반영에서 뺀다. 이 축이 없으면
 #: 「시퀀스 3의 큐 2 조도 올려줘」가 반영으로 새고, 그 방향은 조용히 틀린다
@@ -1122,12 +1126,30 @@ _DRAFT_APPLY_MAX_CHARS = 40
 def _is_draft_apply_request(text: str) -> bool:
     """이 문장이 「초안을 콘솔로 보내라」인가.
 
-    참이 되는 조건은 다섯이다: (a) 목적지가 있고, (b) 보내는 동사가 있고,
-    (c) 올리는 대상이 큐시트 칸이 아니고, (d) 그 동사가 부정되지 않았고,
-    (e) 한 줄·40자 이내다. 하나라도 어긋나면 거짓이고, 문장은 기존 라우트
-    사슬(편집·설계 인터뷰 …)로 그대로 흘러내린다.
+    참이 되는 조건은 여섯이다: (a) 설계 요청이 아니고, (b) 목적지가 있고,
+    (c) 보내는 동사가 있고, (d) 올리는 대상이 큐시트 칸이 아니고, (e) 그 동사가
+    부정되지 않았고, (f) 한 줄·40자 이내다. 하나라도 어긋나면 거짓이고, 문장은
+    기존 라우트 사슬(편집·설계 인터뷰 …)로 그대로 흘러내린다.
     """
     stripped = text.strip()
+    # 카드 t301 — 짧은 설계 브리핑이 길이 한도를 통과한다. 실측(t298):
+    # 「시퀀스 110에 90초 록 곡 설계, 후렴에서 조금 올리고」 32자가 목적지
+    # (시퀀스 110)와 동사(올리고)를 함께 들고 있어 반영으로 샜다. 길이는 이
+    # 계열을 막을 축이 아니었다 — 긴 변형만 우연히 걸렸을 뿐이다. 새는 방향은
+    # 감독의 설계 요청이 설계되는 대신 반영 거절을 답으로 받는 것이다.
+    #
+    # 그래서 설계 어휘 하나로 통째로 빼지는 **않는다**. 「곡 설계한 거 콘솔에
+    # 반영해줘」는 진짜 반영이고, 그것까지 빼면 t295 가 닫은 더 위험한 방향
+    # (데스크에 보냈다고 믿는데 아무것도 안 나간다)이 다시 열린다. 가르는 축은
+    # **어느 동사가 그 문장을 반영으로 만들었나**다: 「올려/올리」는 데스크에
+    # 올리는 뜻과 조도를 올리는 뜻을 겸해서 브리핑 안의 연출 지시로도 나오지만,
+    # 「반영·적용·전송·송출·보내」는 브리핑이 쓸 일이 없는 보내기 전용 말이다.
+    # 설계 요청이면서 보내기 전용 동사가 하나도 없으면 반영이 아니다.
+    if (
+        _SONG_DESIGN_REQUEST.search(stripped) is not None
+        and _DRAFT_APPLY_SEND_ONLY_VERB.search(stripped) is None
+    ):
+        return False
     if len(stripped) > _DRAFT_APPLY_MAX_CHARS or "\n" in stripped:
         return False
     if _DRAFT_APPLY_NEGATED.search(stripped) is not None:
@@ -7509,6 +7531,30 @@ class ChatSession:
                         name=matched.group("name").strip(),
                         start_ms=start_ms,
                         mood=matched.group("mood").strip(),
+                    )
+                )
+        # 카드 t302 — 업로드→분석→확인으로 이미 확정한 구간이 세션에 있는데, 이
+        # 경로는 지시문에서만 구간을 읽어서 감독이 같은 구간을 손으로 다시 적어야
+        # 했다. 그래서 분석 절반과 타임라인 절반이 이어지지 않았다. 지시문이 구간을
+        # 하나도 안 들고 있을 때에만 확정 기록을 기본값으로 쓴다 — 명시한 구간이
+        # 조용히 덮이는 일은 없다(prepare_songcue 의 REQ-SONGCONFIRM-009 와 같은 규칙).
+        #
+        # 이름은 `prepare_songcue` 가 이미 쓰는 중립 ASCII `S<n>` 을 그대로 따른다
+        # (`_confirmed_section_input`, plan.md §C D5) — 확정 카드의 라벨은
+        # `0:00–0:24 · D3` 이라 룩 어휘도 아니고 MA3 큐 라벨로도 안 남는다.
+        # 무드는 **비운다**: DSP 는 시각과 D 레벨을 재지, 그 구간이 어떤 느낌인지는
+        # 재지 않는다. 없는 것을 지어내는 대신 비워 두면 기존 미해소(requery) 경로가
+        # 구간마다 감독에게 카드를 띄운다 — 이 경로가 원래 그러라고 있는 자리다.
+        if not sections:
+            confirmed = self._song_analysis
+            for position, section in enumerate(
+                confirmed.accepted if confirmed is not None else (), start=1
+            ):
+                sections.append(
+                    PositionSheetSection(
+                        name=f"S{position}",
+                        start_ms=section.start_ms,
+                        mood="",
                     )
                 )
         if not sections:
