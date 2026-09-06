@@ -71,6 +71,7 @@ from server.web.session import (
     summarize_outcomes,
 )
 
+from .conftest import AutoApproveChannel
 from .test_runner_self_correction import ScriptedProvider, _final, _run_turn
 from .test_safety_gate import FakeConsole
 
@@ -169,7 +170,9 @@ class TestHappyPath:
             [_run_turn(["Store Group 3"], "c1"), _final("보컬 그룹을 만들었습니다")]
         )
         recorder = RoundTripRecorder()
-        session, console, _audit, sent, _ = _session(tmp_path, provider, recorder=recorder)
+        session, console, _audit, sent, _ = _session(
+            tmp_path, provider, channel=AutoApproveChannel(), recorder=recorder
+        )
         event = session.run_instruction("보컬 그룹 만들어줘")
         assert event["type"] == "chat_response"
         assert event["status"] == "ok"
@@ -193,7 +196,9 @@ class TestHappyPath:
         provider = AlwaysFailingCommandProvider("Store Cue 9")
         console = FakeConsole()
         console.fail_on["Store Cue 9"] = "console says no"
-        session, _console, _audit, sent, _ = _session(tmp_path, provider, console=console)
+        session, _console, _audit, sent, _ = _session(
+            tmp_path, provider, channel=AutoApproveChannel(), console=console
+        )
         event = session.run_instruction("큐 9 저장해줘")
         assert event["status"] == "retries_exhausted"
         assert "실패" in event["summary"]
@@ -364,7 +369,9 @@ class TestFailureModeSurfaces:
         )
         console = FakeConsole()
         console.unconfirmed_on.add("Store Cue 2")
-        session, _console, _audit, sent, _ = _session(tmp_path, provider, console=console)
+        session, _console, _audit, sent, _ = _session(
+            tmp_path, provider, channel=AutoApproveChannel(), console=console
+        )
         event = session.run_instruction("큐 2 저장해줘")
         (command,) = [c for c in event["commands"] if c["command"] == "Store Cue 2"]
         assert command["status"] == "unconfirmed"
@@ -583,7 +590,9 @@ class TestLastCreatedSessionTracking:
                 _final("보컬 룩을 만들었습니다"),
             ]
         )
-        session, console, _audit, _sent, _ = _session(tmp_path, provider)
+        session, console, _audit, _sent, _ = _session(
+            tmp_path, provider, channel=AutoApproveChannel()
+        )
         assert session._last_created is None  # nothing created yet
         session.run_instruction("보컬 룩 만들어줘")
         assert console.executed == ["Store Sequence 71", "Assign Sequence 71 At Executor 201"]
@@ -604,7 +613,9 @@ class TestLastCreatedSessionTracking:
                 _final("더 느리게 재생성했습니다"),
             ]
         )
-        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session, _console, _audit, _sent, _ = _session(
+            tmp_path, provider, channel=AutoApproveChannel()
+        )
         session.run_instruction("보컬 룩 만들어줘")
         session.run_instruction("더 느리게")
         followup_conversation = provider.calls[2]
@@ -636,7 +647,9 @@ class TestLastCreatedSessionTracking:
                 _final("둘째 룩"),
             ]
         )
-        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session, _console, _audit, _sent, _ = _session(
+            tmp_path, provider, channel=AutoApproveChannel()
+        )
         session.run_instruction("첫 룩 만들어줘")
         assert session._last_created == LastCreated(sequence=71, executor=201)
         session.run_instruction("둘째 룩 만들어줘")
@@ -651,7 +664,9 @@ class TestLastCreatedSessionTracking:
                 _final("확인만 했습니다"),
             ]
         )
-        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session, _console, _audit, _sent, _ = _session(
+            tmp_path, provider, channel=AutoApproveChannel()
+        )
         session.run_instruction("룩 만들어줘")
         session.run_instruction("지금 상태 어때?")
         assert session._last_created == LastCreated(sequence=71, executor=201)

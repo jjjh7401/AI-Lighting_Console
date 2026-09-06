@@ -99,8 +99,20 @@ class TestScenario1KoreanRoundTrip:
         recorder = stack[2]
         with _client(stack, provider) as client, client.websocket_connect("/ws") as ws:
             _send(ws, type="chat", text="보컬 그룹 만들어줘")
+            # 카드 t323 — `Store Group 3` 은 쇼파일 쓰기라 이제 모델 통로에서도
+            # 카드를 지난다. 감독이 실제로 하는 일을 그대로 한다: 카드를 받고
+            # 수락한다. 백업(`SaveShow`)이 위험 경로 앞에 먼저 나가는 것도
+            # 여기서 처음으로 이 통로에 대해 관측된다.
+            request = _receive_until(ws, "approval_request")
+            _send(
+                ws,
+                type="approval_decision",
+                request_id=request["request_id"],
+                approved=True,
+            )
+            _receive_until(ws, "approval_resolved")
             event = _receive_until(ws, "chat_response")
-        assert fake_console.exec_commands == ["Store Group 3"]
+        assert fake_console.exec_commands == ["SaveShow", "Store Group 3"]
         assert event["status"] == "ok"
         assert event["text"] == "보컬 그룹을 만들었습니다"
         assert any("가" <= ch <= "힣" for ch in event["summary"])
@@ -170,6 +182,15 @@ class TestScenario3KoreanReporting:
         )
         with _client(stack, provider) as client, client.websocket_connect("/ws") as ws:
             _send(ws, type="chat", text="큐 1 저장해줘")
+            # 카드 t323 — `Store Cue 1` 도 쇼파일 쓰기다. 수락 뒤의 보고를 잰다.
+            request = _receive_until(ws, "approval_request")
+            _send(
+                ws,
+                type="approval_decision",
+                request_id=request["request_id"],
+                approved=True,
+            )
+            _receive_until(ws, "approval_resolved")
             event = _receive_until(ws, "chat_response")
         assert event["text"] == "큐 1을 저장했습니다"
         (command,) = event["commands"]

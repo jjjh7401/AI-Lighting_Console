@@ -517,10 +517,21 @@ class ExecutionContext:
     끄거나 붙일 수 없다는 성질이 그대로다(REQ-BULKGATE-004).
 
     기본값 `None` 에서 동작은 오늘과 바이트 동일하다.
+
+    카드 t323 — `approval_owned_by_caller` 는 「이 디스패치의 승인은 **호출자가
+    이미 책임졌다**」는 표시다. `run_commands` 의 레지스트리 등재분은 선언이
+    없는 번들의 선언을 **서버가 나갈 명령에서 읽어** 만드는데(모델 통로 봉합),
+    자기 승인 채널을 따로 가진 서버 쪽 호출자(`_cue_sheet_draft_apply` 의
+    묶음 수락)까지 그 대상이 되면 같은 번들에 카드가 두 장 뜬다. 카드가 겹치면
+    감독은 곧 카드를 안 읽게 되고, 그게 진짜 쓰기를 통과시킨다.
+
+    기본값은 `False` 다 — 새 호출자는 아무것도 안 해도 봉합 대상이 된다.
+    빠뜨렸을 때 카드가 한 장 더 뜨는 쪽으로 틀리고, 안 뜨는 쪽으로는 안 틀린다.
     """
 
     executed_ok: frozenset[str] = frozenset()
     risk: object | None = None
+    approval_owned_by_caller: bool = False
 
 
 class VectorworksUploadPort(Protocol):
@@ -12154,8 +12165,42 @@ def build_toolset(
             },
         ),
     )
+
+    # -- 모델의 입구 (카드 t323) ----------------------------------------------
+    #
+    # @MX:ANCHOR: [AUTO] `run_commands` 의 **레지스트리 등재분**. 모델이 자기
+    #   도구로 부르는 자리는 여기 하나뿐이다.
+    # @MX:REASON: SPEC-COPILOT-WRITEGATE-001. t320 이 `session.py` 의 쇼파일
+    #   쓰기 열 자리를 봉합했지만, 그 봉합은 **서버가 세운 번들**에만 붙었다.
+    #   모델은 같은 게이트를 지나면서도 `Store Cue 1` · `Store Group 3` ·
+    #   `Store Sequence 71 ; Assign …` 을 선언 없이 보낼 수 있었고, 그 줄들은
+    #   `blacklist.yaml` 에서 전부 safe 라 카드 한 장 없이 콘솔에 닿았다
+    #   (t322 실측: 여덟 번들, `matched_entry: None`). 사람의 의도가 가장 옅은
+    #   통로에 게이트가 가장 얇았다.
+    #
+    #   선언은 **나갈 명령에서 서버가 읽는다** — `write_reason.showfile_write_risk`
+    #   가 열 자리와 같은 규율로 만든다. 모델은 이 값을 못 켜고 못 끈다:
+    #   `call.arguments` 는 여기서 `commands` 말고 아무것도 읽지 않는다
+    #   (REQ-BULKGATE-004). 심사받는 당사자가 자기 심사 선언을 만들면 그건
+    #   선언이 아니다.
+    #
+    #   새 심사 통로가 아니다. 만드는 것은 `BatchRisk` 하나이고 그것은 기존
+    #   `run_commands` → `gate.screen(...)` 한 곳으로 간다.
+    #
+    #   쇼파일을 안 고치는 번들에는 **아무것도 안 붙는다** — `showfile_write_risk`
+    #   가 `None` 을 답하면 오늘과 바이트 동일하다. 조회·프로그래머 값에 카드를
+    #   띄우면 감독은 곧 카드를 안 읽게 되고, 그게 진짜 쓰기를 통과시킨다
+    #   (`tools.py` 의 여섯 봉합이 따르는 규율과 같다).
+    def dispatch_run_commands(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        risk = getattr(context, "risk", None)
+        if risk is None and not getattr(context, "approval_owned_by_caller", False):
+            commands = call.arguments.get("commands")
+            if isinstance(commands, list) and all(isinstance(c, str) for c in commands):
+                risk = showfile_write_risk(commands, kind="model_run_commands")
+        return run_commands(call, context, risk=risk)
+
     handlers: dict[str, _Handler] = {
-        "run_commands": run_commands,
+        "run_commands": dispatch_run_commands,
         "query_state": query_state,
         "deploy_plugin": deploy_plugin,
         "get_rig_context": get_rig_context,

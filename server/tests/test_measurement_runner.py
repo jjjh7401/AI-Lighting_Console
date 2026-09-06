@@ -29,6 +29,7 @@ from server.measurement.runner import (
     format_summary,
     run_measurement,
 )
+from server.orchestrator.write_reason import showfile_write_risk
 
 #: Scenarios ruleset v4 holds for approval (SPEC-COPILOT-UNREQ-001 M4, card
 #: t86). Derived from the ratified set rather than hardcoded, so a later
@@ -41,7 +42,22 @@ from server.measurement.runner import (
 #: narrowed in the same revision — see the note in corpus.yaml.
 from .test_writegate import RATIFIED_CORPUS_COLLISIONS
 
-GATE_HELD_SCENARIOS = frozenset(scenario_id for scenario_id, _ in RATIFIED_CORPUS_COLLISIONS)
+#: 카드 t323 — 두 번째 보류 축. 위의 집합이 **분류**(blacklist.yaml)가 잡는
+#: 자리라면, 이쪽은 모델의 `run_commands` 번들에 서버가 붙이는 **선언**이
+#: 잡는 자리다. 코퍼스 시나리오 중 쇼파일을 고치는 것들은 이제 승인 없이
+#: 콘솔에 못 닿는다(오프라인 실행에는 승인자가 없어 rejected 로 온다).
+#: 여기서도 하드코딩하지 않는다 — 봉합이 쓰는 바로 그 함수에 물어본다.
+_DECLARED_WRITE_SCENARIOS = frozenset(
+    scenario.id
+    for scenario in load_corpus()
+    if scenario.mock.kind == "commands"
+    and showfile_write_risk(scenario.mock.commands, kind="model_run_commands") is not None
+)
+
+GATE_HELD_SCENARIOS = (
+    frozenset(scenario_id for scenario_id, _ in RATIFIED_CORPUS_COLLISIONS)
+    | _DECLARED_WRITE_SCENARIOS
+)
 
 
 @pytest.fixture(autouse=True)
@@ -134,8 +150,13 @@ class TestFirstGenerationErrorAccounting:
         # The corrected scenario used one retry -> excluded from judgment.
         assert round_trip["retry_turns"]["count"] == 1
         assert len(round_trip["retry_turns"]["durations_seconds"]) == 1
-        # -1 for the retried scenario, minus the ones v4 holds for approval.
-        assert round_trip["judged_turns"] == result_scenarios - 1 - len(GATE_HELD_SCENARIOS)
+        # 판정에서 빠지는 것은 「재시도한 시나리오」와 「보류된 시나리오」의
+        # **합집합**이다. 카드 t323 이전에는 둘을 그냥 빼도 맞았는데, 선언
+        # 축이 생기면서 재시도 대상(첫 commands 시나리오)이 보류 집합에도
+        # 들어가 같은 자리를 두 번 빼고 있었다.
+        assert round_trip["judged_turns"] == result_scenarios - len(
+            GATE_HELD_SCENARIOS | {target.id}
+        )
 
 
 class TestRepetitionEscalation:

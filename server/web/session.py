@@ -9043,7 +9043,10 @@ class ChatSession:
                 id="cue-sheet-draft-apply",
                 name="run_commands",
                 arguments={"commands": list(plan.commands)},
-            )
+            ),
+            # 카드 t323 — 바로 위 `_accept_draft_apply_batch` 가 묶음 수락을
+            # 이미 받았다. 표시하지 않으면 같은 번들에 카드가 두 장 뜬다.
+            ExecutionContext(approval_owned_by_caller=True),
         )
         failed = [
             outcome
@@ -9990,7 +9993,10 @@ class ChatSession:
         찍는 번들), 그 회차는 선언으로 인한 카드를 띄우지 않는다. 배선 확인은
         그대로 한다 — 선언을 못 싣는 레지스트리는 선언이 있든 없든 사고다.
         """
-        context = ExecutionContext(risk=risk)
+        # 카드 t323 — `risk=None` 이 여기서는 **판단의 결과**다(프로그래머 값만
+        # 찍는 번들). 레지스트리 등재분은 선언 없는 번들의 선언을 스스로 읽어
+        # 만드는데, 그 자동 계산이 이 판단을 덮으면 안 된다.
+        context = ExecutionContext(risk=risk, approval_owned_by_caller=True)
         dispatch = self._registry.dispatch
         try:
             inspect.signature(dispatch).bind(call, context)

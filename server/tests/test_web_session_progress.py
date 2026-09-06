@@ -22,7 +22,7 @@ from server.web.messages import PROTOCOL_VERSION
 from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider, _final, _run_turn
 from .test_web_app import _deps, _send
-from .test_web_session import _session
+from .test_web_session import AutoApproveChannel, _session
 
 
 def _progress(sent: list[dict]) -> list[dict]:
@@ -33,7 +33,9 @@ def _progress(sent: list[dict]) -> list[dict]:
 def turn(tmp_path):
     """하나의 도구 라운드 + 마지막 글로 끝나는 세션 하나."""
     provider = ScriptedProvider([_run_turn(["Store Group 3"], "c1"), _final()])
-    session, console, _audit, sent, _channel = _session(tmp_path, provider)
+    session, console, _audit, sent, _channel = _session(
+        tmp_path, provider, channel=AutoApproveChannel()
+    )
     return session, console, sent
 
 
@@ -66,7 +68,9 @@ class TestTheTurnStreamsBeforeItEnds:
                 _final(),
             ]
         )
-        session, _console, _audit, sent, _channel = _session(tmp_path, provider)
+        session, _console, _audit, sent, _channel = _session(
+            tmp_path, provider, channel=AutoApproveChannel()
+        )
         session.run_instruction("3번 그룹 저장해줘")
         first = [event["seq"] for event in _progress(sent)]
         assert first == list(range(1, len(first) + 1))
@@ -120,7 +124,7 @@ class TestTheFramesReachTheWire:
 
     def test_a_chat_turn_streams_progress_frames_then_the_response(self, tmp_path):
         provider = ScriptedProvider([_run_turn(["Store Group 3"], "c1"), _final()])
-        deps, console, _gate = _deps(tmp_path, provider)
+        deps, console, _gate = _deps(tmp_path, provider, channel=AutoApproveChannel())
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
             assert recv_frame(ws)["type"] == "status"
             _send(ws, type="chat", text="3번 그룹 저장해줘")

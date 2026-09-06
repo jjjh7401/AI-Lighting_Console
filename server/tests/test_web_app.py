@@ -21,8 +21,8 @@ from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
 from server.web.messages import PROTOCOL_VERSION
 
+from .conftest import AutoApproveChannel, recv_frame
 from .conftest import drain_until as _receive_until
-from .conftest import recv_frame
 from .test_runner_self_correction import ScriptedProvider, _final, _run_turn
 from .test_safety_gate import FakeConsole
 
@@ -83,7 +83,7 @@ class TestWebSocketBasics:
 
     def test_chat_round_trip(self, tmp_path):
         provider = ScriptedProvider([_run_turn(["Store Group 3"], "c1"), _final("만들었습니다")])
-        deps, console, _gate = _deps(tmp_path, provider)
+        deps, console, _gate = _deps(tmp_path, provider, channel=AutoApproveChannel())
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
             _send(ws, type="chat", text="보컬 그룹 만들어줘")
             event = _receive_until(ws, "chat_response")
