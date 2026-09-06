@@ -16,6 +16,23 @@ version in BOTH implementations and revises this document.
 > against this reland's 1.6.1 responder. Treat `props`/`introspect` as
 > unverified until a fresh live pass (tracked as T15).
 >
+> Revision note (responder 1.6.5, SPEC-COPILOT-POOLEMPTY-001): every
+> successful `state` reply's `node` object carries one ADDITIVE field,
+> `enumeration`, whose value is exactly `"ok"` or `"failed"` (§4.2). It says
+> whether `childCount` came from an enumeration that answered — `Children()`
+> or the `Count()`+`Ptr()` fallback — or from BOTH accessors raising, in which
+> case the responder still replies `ok:true`, `childCount:0`, `children:[]`
+> exactly as before. Motivation is a live measurement (MUSICSYNC-001 M3-a,
+> 2026-09-05): on a show with no timecodes, `DataPool/Timecodes` answered
+> `childCount 0`, and the server — correctly, given the wire — could not tell
+> an empty pool from a dead one and withheld the timecode write; the first
+> timecode of a new show could never be created. The marker lets the server
+> read `childCount 0` as EMPTY **only** when the responder vouches for the
+> enumeration; a reply without the field (any responder before 1.6.5) is
+> judged exactly as before. Top-level shape unchanged, no field on `prop` /
+> `props` / `introspect` / `pong`, no new ASSUMPTION. Wire protocol version
+> stays 1.
+>
 > Revision note (responder 1.6.2): `introspect` gains the SAME trailing
 > `offset=<n>` request token `state` has carried since 1.6.0 (§2), and its
 > reply echoes `offset` as a top-level integer. `truncated` now means "names
@@ -190,11 +207,24 @@ Success (depth-1 snapshot of the resolved node):
 
 ```json
 {"v":1, "kind":"state", "id":"<id>", "path":"DataPool/Sequences", "ok":true,
- "node": {"name":"Sequences", "class":"Pool", "childCount":12},
+ "node": {"name":"Sequences", "class":"Pool", "childCount":12, "enumeration":"ok"},
  "children": [{"i":1, "name":"Sequence 1", "class":"Sequence"}],
  "offset": 0, "truncated": true}
 ```
 
+- **`node.enumeration`** (additive, responder 1.6.5, SPEC-COPILOT-POOLEMPTY-001):
+  `"ok"` when `childCount` came from an enumeration that answered
+  (`Children()`, or the `Count()`+`Ptr()` fallback); `"failed"` when BOTH
+  accessors raised — the responder then still replies `ok:true`,
+  `childCount:0`, `children:[]`, so without this field an empty pool and an
+  unreadable pool are one payload. Exactly these two values, on every
+  `ok:true` `state` reply, never on the failure branch or on other reply
+  kinds. Consumers MUST treat `childCount 0` as "the pool is empty" ONLY when
+  `enumeration` is `"ok"`; when the field is absent (responder < 1.6.5) or
+  `"failed"`, `childCount 0` means "unknown" exactly as it always did. This
+  is the strict direction of backward compatibility: a new server never
+  becomes MORE permissive against an old responder. Server-side consumer:
+  `server/orchestrator/tools.py` `timecode_slot_verdict`.
 - Each `children` entry is `{"i": <pool slot>, "name": ..., "class": ...}`,
   and **`i` is present only when the responder positively established that
   child's real pool slot**. A pool's `Children()` listing is gap-compacted, so

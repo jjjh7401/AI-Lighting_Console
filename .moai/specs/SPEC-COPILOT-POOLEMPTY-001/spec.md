@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-POOLEMPTY-001
 title: "빈 풀과 죽은 풀을 가른다 — 열거 신뢰도 마커"
 version: "0.1.1"
-status: draft
+status: in-progress
 created: 2026-09-06
 updated: 2026-09-06
 author: manager-spec (plan session, card t270)

@@ -265,9 +265,39 @@ _CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
 #: behaviour on shapes NOBODY HAS SEEN on this console. Deployment is confirmed
 #: BY VERSION — `ping` must answer 1.6.4; a rig answering 1.6.3 does not carry
 #: this change whatever main contains (live-1.6.1 / main-1.6.2 precedent).
+#: 2026-09-06 granted revision (re-pin) — SPEC-COPILOT-POOLEMPTY-001 M1:
+#: responder 1.6.4 → 1.6.5. Every successful `state` reply's `node` gains ONE
+#: ADDITIVE field, `enumeration` ("ok" | "failed"), and `PROTOCOL.md` §4.2
+#: gains the bullet that states its contract. Approved through the SPEC's
+#: plan-audit PASS (0.86) + Implementation Kickoff Approval (card t270); the
+#: DEPLOY is explicitly NOT covered here — plan.md §E M3 is an operator gate.
+#:
+#: The grant is motivated by a MEASUREMENT, not a preference: MUSICSYNC-001
+#: M3-a run 1 (2026-09-05, `docs/research/ma3-effects/14-musicsync-m3a-
+#: timecode-probe.md:9`) read `childCount 0` from `DataPool/Timecodes` on a
+#: show with no timecodes and closed UNKNOWN — `M.safe_children` returned `{}`
+#: for "empty" and for "both accessors raised" alike, so the server could not
+#: tell them apart and the first timecode of a new show could never be
+#: written. The distinction already existed INSIDE `safe_children`; this
+#: revision exports it as a second return value and lets `build_snapshot`
+#: put it on the wire.
+#:
+#: The WIRE CONTRACT changes ADDITIVELY only: no new verb, no new token, no
+#: top-level field, nothing on `prop`/`props`/`introspect`/`pong`, no new
+#: ASSUMPTION, protocol version stays 1. Backward compatibility is strict in
+#: the safe direction — the server relaxes "zero children == unreadable" ONLY
+#: when the marker says "ok"; a reply without the field (any responder
+#: < 1.6.5) is judged byte-identically to before. The one measurable side
+#: effect is the UDP budget: the zero-children `state` floor rises 295 → 326
+#: bytes, so the paging window narrows by that much (plan.md B-5).
+#:
+#: NOT live-verified: no console was touched by this revision; the empty-pool
+#: → free reading and its negative control (unknown) are the SPEC's own M3.
+#: Deployment is confirmed BY VERSION — `ping` must answer 1.6.5; a rig
+#: answering 1.6.4 does not carry the marker whatever main contains.
 _CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
-    "console/lua/copilot_responder.lua": "6c6fa0f25728378a684fddb507781d9b77e01878",
-    "console/lua/PROTOCOL.md": "ec08949e5a56511861648fa9311ef28ca20924df",
+    "console/lua/copilot_responder.lua": "615fdf314d913cf208af479e7cc7116f5de5a224",
+    "console/lua/PROTOCOL.md": "3e97fcda808a1c8e57837240cb557b69acfb5ae4",
 }
 
 #: 2026-08-02 granted exception — the upstream vocabulary extension
