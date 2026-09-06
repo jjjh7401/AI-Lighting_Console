@@ -71,6 +71,7 @@ from server.design.profile import (
     resolve_section,
 )
 from server.design.rig import _LAYER_GROUP_ALIASES, build_rig_profile
+from server.design.rig_preflight import plan_rig_preflight, render_rig_preflight
 from server.design.song_cue_composer import (
     SongCueCompositionResult,
     compose_song_cue_bundle,
@@ -1159,6 +1160,38 @@ def _is_draft_apply_request(text: str) -> bool:
     if _DRAFT_APPLY_DESTINATION.search(stripped) is None:
         return False
     return _DRAFT_APPLY_VERB.search(stripped) is not None
+
+
+#: t303 — 「쇼 전에 이름이 맞는지 봐 달라」. 읽기 전용 사전 점검 요청.
+#:
+#: 축은 둘이고 **함께** 있어야 한다: 점검 대상(리그·그룹 이름·주소·반영 전)과
+#: 점검 동사(점검·확인). 한 축만으로는 안 받는다 — 「확인」은 흔한 말이라
+#: 대상 없이 받으면 아래 사슬의 라우트들을 앞에서 가로챈다.
+#:
+#: 「프리플라이트/preflight」는 그 자체로 대상+동사라 단독으로 받는다.
+_RIG_PREFLIGHT_SUBJECT = re.compile(r"리그|그룹\s*이름|그룹|주소|반영\s*전|쇼\s*전")
+_RIG_PREFLIGHT_VERB = re.compile(r"점검|사전\s*확인|맞는지\s*확인|확인해")
+_RIG_PREFLIGHT_LITERAL = re.compile(r"프리\s*플라이트|preflight", re.IGNORECASE)
+
+#: 점검은 **보내는 말**과 섞이면 안 된다. 「콘솔에 반영하고 확인해줘」는 반영이지
+#: 점검이 아니다 — 보내기 전용 동사가 있으면 이 라우트는 비켜선다(반영이 받는다).
+_RIG_PREFLIGHT_BLOCKED_BY_SEND = re.compile(r"반영해|적용해|전송|송출|보내")
+
+
+def _is_rig_preflight_request(text: str) -> bool:
+    """이 문장이 「쇼 전 리그 점검」인가.
+
+    거짓이면 문장은 기존 라우트 사슬로 그대로 흘러내린다 — 이 술어는 새 문을
+    열 뿐 기존 문의 판정을 바꾸지 않는다.
+    """
+    stripped = text.strip()
+    if _RIG_PREFLIGHT_BLOCKED_BY_SEND.search(stripped) is not None:
+        return False
+    if _RIG_PREFLIGHT_LITERAL.search(stripped) is not None:
+        return True
+    if _RIG_PREFLIGHT_VERB.search(stripped) is None:
+        return False
+    return _RIG_PREFLIGHT_SUBJECT.search(stripped) is not None
 
 
 _SETLIST_SEQ_START = re.compile(r"시퀀스\s*(?P<no>\d+)\s*(?:번)?\s*부터")
@@ -8421,6 +8454,40 @@ class ChatSession:
         if not same_song:
             self._draft_baseline = copy.deepcopy(timeline)
 
+    def _read_console_groups(self, call_id: str) -> tuple[object, str | None]:
+        """``DataPool/Groups`` 읽기 한 번. ``(payload, 못 읽은 사유)``.
+
+        **두 실패를 가른다**(t303): 콘솔이 답을 주지 않은 것과, 답은 줬는데
+        그 답이 이름을 담지 않은 것. 주소록(:meth:`_console_group_address_book`)
+        은 둘 다 「빈 주소록」으로 접어도 되지만, 사전 점검은 접으면 안 된다 —
+        「닿지 못했다」를 「하나도 안 맞았다」로 보고하면 감독이 데스크를 켜는
+        대신 그룹 이름을 고치러 간다.
+
+        읽기는 이 한 자리뿐이다 — 두 번째 리더를 만들지 않는다.
+        """
+        execution = self._registry.dispatch(
+            ToolCall(
+                id=call_id,
+                name="query_state",
+                arguments={"path": "DataPool/Groups"},
+            )
+        )
+        if execution.result.is_error:
+            detail = (execution.result.content or "").strip()
+            # 응답기는 사유를 `{"error": "…"}` 로 싼다. 감독에게는 그 속의 문장만
+            # 보인다 — 감싼 JSON 을 그대로 띄우면 사유가 잡음에 묻힌다.
+            try:
+                unwrapped = json.loads(detail)
+            except (TypeError, ValueError):
+                unwrapped = None
+            if isinstance(unwrapped, Mapping) and unwrapped.get("error"):
+                detail = str(unwrapped["error"]).strip()
+            return None, detail or "콘솔이 응답하지 않았습니다"
+        try:
+            return json.loads(execution.result.content), None
+        except (TypeError, ValueError):
+            return None, "콘솔 응답을 읽지 못했습니다(JSON 아님)"
+
     def _console_group_address_book(self, names: Sequence[str]) -> list[dict[str, object]]:
         """콘솔이 답한 그룹 이름으로 주소록을 만든다 — 없으면 빈 목록.
 
@@ -8429,20 +8496,37 @@ class ChatSession:
         """
         if not names:
             return []
-        execution = self._registry.dispatch(
-            ToolCall(
-                id="draft-apply-group-address",
-                name="query_state",
-                arguments={"path": "DataPool/Groups"},
-            )
-        )
-        if execution.result.is_error:
-            return []
-        try:
-            payload = json.loads(execution.result.content)
-        except (TypeError, ValueError):
+        payload, error = self._read_console_groups("draft-apply-group-address")
+        if error is not None:
             return []
         return layer_mapping_from_console_groups(payload, names)
+
+    # -- t303 리그 사전 점검 (읽기 전용) -----------------------------------------
+
+    def _rig_preflight(self, text: str) -> InstructionResult | None:
+        """쇼 전에 「이 곡의 어느 큐가 실제로 데스크에 닿는가」를 답한다.
+
+        **읽기 전용이다.** 이 경로는 콘솔 쓰기 명령을 한 줄도 만들지 않고
+        디스패치하지도 않는다 — ``run_commands`` 를 부르지 않는다. 나가는
+        것은 주소록이 이미 쓰던 조회(``DataPool/Groups``) 한 번뿐이고, 그
+        읽기도 다른 모든 조회와 같이 게이트가 감사한다.
+
+        판정 규칙은 반영과 **같은 함수**를 쓴다(`rig_preflight` 가
+        `layer_mapping_from_console_groups` 를 그대로 부른다) — 점검은
+        통과했는데 반영이 건너뛰는 어긋남을 만들지 않기 위해서다.
+        """
+        if not _is_rig_preflight_request(text):
+            return None
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if not isinstance(timeline, dict):
+            return self._pointing_refusal(
+                "점검할 큐시트가 없습니다. 곡 설계를 완료하거나 라이브러리에서 "
+                "타임라인을 불러온 뒤 다시 요청해 주세요. 콘솔에는 아무것도 쓰지 않았습니다."
+            )
+        payload, error = self._read_console_groups("rig-preflight-groups")
+        report = plan_rig_preflight(timeline, console_payload=payload, console_error=error)
+        return self._pointing_refusal(render_rig_preflight(report))
 
     def _draft_apply_target(self, timeline: dict, text: str) -> tuple[dict, str]:
         """반영에 쓸 타임라인 사본 + 주소록에 대해 감독에게 말할 한 줄.
@@ -10733,6 +10817,14 @@ class ChatSession:
                     # t291 — 「콘솔에 반영」은 편집보다 **먼저** 본다. 반영
                     # 문장에는 편집 동사('반영해줘'의 해줘)가 섞여 있어서, 뒤에
                     # 두면 지시어 없는 짧은 문장이 편집 라우트에 삼켜진다.
+                    # t303 — 읽기 전용 사전 점검은 반영보다 **먼저** 본다.
+                    # 술어끼리는 서로소다: 점검은 보내기 전용 동사(반영해·
+                    # 적용해·전송·송출·보내)가 하나라도 있으면 비켜서고,
+                    # 반영은 점검 어휘(점검·프리플라이트)를 동사로 쓰지 않는다.
+                    # 순서를 이렇게 두는 이유는 방향이다 — 겹치는 입력이 생기면
+                    # 콘솔에 쓰지 않는 쪽으로 닫힌다.
+                    result = self._rig_preflight(text)
+                if result is None:
                     result = self._cue_sheet_draft_apply(text)
                 if result is None:
                     result = self._cue_sheet_draft_edit(text)
