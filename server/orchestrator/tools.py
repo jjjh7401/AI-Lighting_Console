@@ -541,6 +541,53 @@ class UploadedSheetPort(Protocol):
     content_base64: str | None
 
 
+class ConfirmedSectionPort(Protocol):
+    """사람이 확인 카드에서 채택한 구간 하나 — 이 모듈이 읽는 세 필드만."""
+
+    index: int
+    start_ms: int
+    d_level: int
+
+
+class ConfirmedSongAnalysisPort(Protocol):
+    """확정된 곡 분석 기록의 이 모듈 쪽 창 — 채택 구간만 본다."""
+
+    accepted: tuple[ConfirmedSectionPort, ...]
+
+
+class SongAnalysisPort(Protocol):
+    """세션이 든 확정 곡 분석 기록에 닿는 읽기 투과 창 (SPEC-COPILOT-SONGCONFIRM-001).
+
+    :class:`UploadedSheetPort` 와 같은 자리다 — 세션 객체가 아니라 구조적
+    ``Protocol`` 로 받으므로 이 모듈은 ``server.web`` 을 import 하지 않는다(층 경계).
+    ``current`` 는 접근할 때마다 세션의 **현재** 기록을 다시 읽는다 — 세션 생성
+    시점의 ``None`` 이 툴 클로저에 얼어붙지 않도록. 기록이 없으면 ``None``.
+    """
+
+    current: ConfirmedSongAnalysisPort | None
+
+
+def _confirmed_section_input(position: int, section: ConfirmedSectionPort) -> dict[str, object]:
+    """확정 구간 하나를 ``prepare_songcue`` 의 raw 구간 dict 로 옮긴다 — 손실 0.
+
+    이름은 룩 라이브러리 어휘에 **속하지 않는** 중립 ASCII ``S<n>`` 이다(plan.md §C
+    D5) — 라이브러리 이름으로 번역하면 ``_section_dynamics`` 가 그 이름의 dynamics 를
+    다시 매겨 ``d_level`` 과 두 정본이 된다. 시작은 ``m:ss.mmm`` 문자열이다 —
+    ``normalise_start_ms`` 는 bare int 를 **초**로 읽으므로(plan.md §B B2) 밀리초
+    정수를 그대로 넘기면 1000배 틀어진다. dynamics 는 ``d_level`` 그대로 실어
+    핸들러의 ``sections[].dynamics`` 명시 경로를 탄다.
+    """
+    minutes, remainder = divmod(section.start_ms, 60_000)
+    seconds, millis = divmod(remainder, 1000)
+    return {
+        "name": f"S{position}",
+        "start": f"{minutes}:{seconds:02d}.{millis:03d}",
+        "start_ms": section.start_ms,
+        "dynamics": section.d_level,
+        "confirmed_index": section.index,
+    }
+
+
 #: 래퍼가 낼 수 있는 거절의 닫힌 집합 (REQ-SHEETPIPE-007).
 #:
 #: 조용한 무동작 경로는 없다 — 진행할 수 없으면 반드시 이 셋 중 하나를 이름으로
@@ -1968,6 +2015,7 @@ def build_toolset(
     layout_image_upload: LayoutImageUploadPort | None = None,
     uploaded_sheet: UploadedSheetPort | None = None,
     spatial_memory: SpatialMemory | None = None,
+    song_analysis: SongAnalysisPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -2563,6 +2611,22 @@ def build_toolset(
         ):
             return _error_result(call, "'timecode_number' must be a positive integer")
         raw_sections = call.arguments.get("sections")
+        # SPEC-COPILOT-SONGCONFIRM-001 (REQ-SONGCONFIRM-009/010/011) — 세션이 확정
+        # 기록을 들고 있고 모델이 'sections' 를 **주지 않았으면** 채택 구간이
+        # 기본값이다. 명시 인자가 있으면 그것이 이기고, 확정본과의 불일치는 오류가
+        # 아니라 **보고**다(plan.md §C D4 — 명시한 것이 조용히 버려지는 사고를
+        # 막는다). 기록이 없으면 아래 오늘의 오류가 바이트 동일하게 난다.
+        confirmed = song_analysis.current if song_analysis is not None else None
+        accepted = tuple(confirmed.accepted) if confirmed is not None else ()
+        sections_source = "explicit"
+        confirmed_sections: list[dict[str, object]] | None = None
+        if raw_sections is None and accepted:
+            confirmed_sections = [
+                _confirmed_section_input(position, section)
+                for position, section in enumerate(accepted, start=1)
+            ]
+            raw_sections = confirmed_sections
+            sections_source = "confirmed_analysis"
         if not isinstance(raw_sections, list | tuple) or not raw_sections:
             return _error_result(call, "'sections' must be a non-empty array of song sections")
         raw_explicit = call.arguments.get("explicit_dynamics")
@@ -2607,6 +2671,29 @@ def build_toolset(
             )
         except ValueError as error:
             return _error_result(call, f"song sections cannot be parsed: {error}")
+        # 결과 페이로드는 어느 갈래에서 구간이 왔는지 **항상** 말한다. 둘 다 있었으면
+        # 두 목록을 나란히 놓는다 — 개수와 같은 자리의 시작 시각 쌍(없는 쪽은 null).
+        songconfirm_fields: dict[str, object] = {"sections_source": sections_source}
+        if confirmed_sections is not None:
+            songconfirm_fields["confirmed_sections"] = confirmed_sections
+        elif confirmed is not None:
+            explicit_starts = [section.start_ms for section in sections]
+            confirmed_starts = [section.start_ms for section in accepted]
+            width = max(len(explicit_starts), len(confirmed_starts))
+            start_pairs = [
+                (
+                    explicit_starts[i] if i < len(explicit_starts) else None,
+                    confirmed_starts[i] if i < len(confirmed_starts) else None,
+                )
+                for i in range(width)
+            ]
+            songconfirm_fields["confirmed_analysis_mismatch"] = {
+                "matches": len(explicit_starts) == len(confirmed_starts)
+                and all(left == right for left, right in start_pairs),
+                "explicit_count": len(explicit_starts),
+                "confirmed_count": len(confirmed_starts),
+                "start_pairs": start_pairs,
+            }
         for index, raw_section in enumerate(raw_sections):
             if not isinstance(raw_section, Mapping) or "dynamics" not in raw_section:
                 continue
@@ -2742,6 +2829,7 @@ def build_toolset(
                                 "auto_advance_commands": [],
                                 "skipped_axes": [],
                             },
+                            **songconfirm_fields,
                         },
                         ensure_ascii=False,
                     ),
@@ -2781,6 +2869,7 @@ def build_toolset(
                 {"axis": skipped.axis, "reason": skipped.reason} for skipped in timing.skipped_axes
             ],
         }
+        payload.update(songconfirm_fields)
         # 슬롯이 준비됐으면 녹화는 **운영자의 몫**이다 — 그 명령은 콘솔을 녹화
         # 무장 상태로 만들고 해제 경로가 실측 1회뿐이라, 앱은 발화하지 않고
         # 넘긴다(REQ-MUSICSYNC-020). 이 자리는 `run_commands` 로 간 번들
@@ -9702,7 +9791,13 @@ def build_toolset(
                         },
                         "description": (
                             "Song sections in input order. The tool rejects duplicate or "
-                            "backward start times instead of sorting them."
+                            "backward start times instead of sorting them. OMIT this "
+                            "argument when the operator has confirmed a song analysis in "
+                            "this session: the tool then uses the confirmed sections as-is "
+                            "and reports sections_source = 'confirmed_analysis'. When you do "
+                            "pass sections, they win and any mismatch against the confirmed "
+                            "sections is reported (not an error). With no confirmed "
+                            "analysis, sections are required."
                         ),
                     },
                     "explicit_dynamics": {
@@ -9718,7 +9813,7 @@ def build_toolset(
                         ),
                     },
                 },
-                "required": ["song_title", "genre", "timecode_number", "sections"],
+                "required": ["song_title", "genre", "timecode_number"],
             },
         ),
         ToolDefinition(
