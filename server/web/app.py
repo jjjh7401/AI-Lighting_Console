@@ -506,7 +506,24 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
                         continue
                     current_task = asyncio.create_task(
-                        asyncio.to_thread(session.run_instruction, message["text"])
+                        asyncio.to_thread(
+                            session.run_instruction,
+                            message["text"],
+                            message.get("selected_cue"),
+                        )
+                    )
+                elif message_type in ("timeline_draft_undo", "timeline_draft_redo"):
+                    # t281 — 초안 되돌리기/다시하기. 사전 하나를 바꿔 끼우고
+                    # 화면에 밀어 주는 것이 전부라 모델 호출도 콘솔 왕복도 없다.
+                    # 그래서 busy-guard 아래 **인라인**으로 돌린다(위 layout_image
+                    # 분기와 같은 형태) — 분기를 지우면 프레임이 조용히 버려진다.
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.redo_timeline_draft
+                        if message_type == "timeline_draft_redo"
+                        else session.undo_timeline_draft
                     )
                 elif message_type == "vectorworks_export_upload":
                     if current_task is not None and not current_task.done():

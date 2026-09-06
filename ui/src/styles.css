@@ -3360,6 +3360,84 @@ body {
   color: #6b7588;
 }
 
+/* t281 — 초안 편집 표시줄. 「저장」과 「콘솔 반영」이 한눈에 갈리도록,
+   저장 버튼은 중립색이고 문구가 라이브러리를 명시한다 — 콘솔로 나가는
+   초록/붉은 실행 버튼과 같은 색을 절대 쓰지 않는다. */
+.cst-draft-badge {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #4a3a12;
+  border: 1px solid #7a5f1c;
+  color: #ffcf6b;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.cst-draft-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid #2a3040;
+  border-radius: 6px;
+  background: #171b24;
+}
+
+.cst-draft-scope {
+  font-size: 12px;
+  font-weight: 600;
+  color: #cfd6e2;
+}
+
+.cst-draft-hint {
+  flex: 1 1 240px;
+  font-size: 11px;
+  color: #6b7588;
+}
+
+.cst-draft-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.cst-draft-actions button {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px solid #39415a;
+  background: #222836;
+  color: #cfd6e2;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cst-draft-actions button:hover:not(:disabled) {
+  background: #2b3446;
+}
+
+.cst-draft-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cst-draft-save {
+  border-color: #4a5a7a !important;
+}
+
+.cst-draft-report {
+  margin: 0 0 8px;
+  padding: 6px 10px 6px 26px;
+  border-left: 3px solid #ffcf6b;
+  background: #1b1d16;
+  list-style: disc;
+  font-size: 12px;
+  color: #d8dee9;
+}
+
 .cst-rail {
   overflow-x: auto;
   overflow-y: hidden;

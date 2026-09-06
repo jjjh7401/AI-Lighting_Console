@@ -123,6 +123,10 @@ CLIENT_MESSAGE_TYPES = (
     # [round24 후속] 모델이 되묻고 사용자가 답하는 통로. 승인·검토와 달리
     # 실패가 「거부」가 아니라 **미응답**이다 — 없는 답을 지어내지 않게 하는 것이 목적.
     "question_answer",
+    # t281 — 큐시트 초안 되돌리기/다시하기. 초안만 움직이고 콘솔·라이브러리에는
+    # 닿지 않는다. 페이로드가 없다 — 무엇을 되돌릴지는 서버의 초안 이력이 안다.
+    "timeline_draft_undo",
+    "timeline_draft_redo",
     "lock",
     "status_request",
     # 새로고침 생존: 복원된 화면 기록을 새 세션에 재주입(위 상수 참조).
@@ -242,7 +246,20 @@ def parse_client_message(raw: str) -> dict:
         text = message.get("text")
         if not isinstance(text, str) or not text.strip():
             raise ProtocolError("chat.text must be a non-empty string")
-        return {"v": PROTOCOL_VERSION, "type": "chat", "text": text}
+        # t281 — 화면에서 고른 큐 번호를 요청에 실어 보낸다. 선택 필드이므로
+        # 이 키가 없던 기존 클라이언트 프레임은 그대로 통과한다. bool 을 먼저
+        # 막는다 — 파이썬에서 bool 은 int 의 하위형이라 True 가 큐 1로 샌다.
+        selected = message.get("selected_cue")
+        if selected is not None and (
+            not isinstance(selected, int) or isinstance(selected, bool) or selected < 1
+        ):
+            raise ProtocolError("chat.selected_cue must be a positive integer when present")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "chat",
+            "text": text,
+            "selected_cue": selected,
+        }
 
     if message_type == "vectorworks_export_upload":
         file_name = message.get("file_name")
@@ -508,6 +525,10 @@ def parse_client_message(raw: str) -> dict:
         "panel_catalog_request",
         "dash_catalog_request",
         "cue_monitor_request",
+        # t281 — 초안 되돌리기/다시하기도 페이로드가 없다. 여기 등록하지 않으면
+        # 아래 마지막 줄이 이들을 통째로 ``status_request`` 로 바꿔치기한다.
+        "timeline_draft_undo",
+        "timeline_draft_redo",
     ):
         # Payload-free by design. The pin seed is the server's own
         # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), and the

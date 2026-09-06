@@ -17,6 +17,8 @@ import {
   buildQuestionAnswer,
   buildReviewDecision,
   buildStatusRequest,
+  buildTimelineDraftRedo,
+  buildTimelineDraftUndo,
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
   buildSongAudioAnalyse,
@@ -185,7 +187,9 @@ export interface CopilotSocket {
   connected: boolean;
   /** True from an accepted chat frame until its terminal response/error arrives. */
   responding: boolean;
-  sendChat: (text: string) => void;
+  sendChat: (text: string, selectedCue?: number | null) => void;
+  sendTimelineDraftUndo: () => void;
+  sendTimelineDraftRedo: () => void;
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendQuestionAnswer: (requestId: string, answer: string) => void;
@@ -327,13 +331,17 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     if (socket !== null && socket.readyState === WebSocket.OPEN) socket.send(frame);
   }, []);
 
-  const sendChat = useCallback((text: string) => {
+  // t281 — 선택된 큐를 요청에 실어 보낸다. 생략하면 프레임에 필드가 없다.
+  const sendChat = useCallback((text: string, selectedCue?: number | null) => {
     const socket = socketRef.current;
     if (socket === null || socket.readyState !== WebSocket.OPEN) return;
     dispatch({ kind: "user", text });
     setResponding(true);
-    socket.send(buildChat(text));
+    socket.send(buildChat(text, selectedCue));
   }, []);
+  /** t281 — 큐시트 초안 되돌리기/다시하기. 콘솔·라이브러리와 무관하다. */
+  const sendTimelineDraftUndo = useCallback(() => send(buildTimelineDraftUndo()), [send]);
+  const sendTimelineDraftRedo = useCallback(() => send(buildTimelineDraftRedo()), [send]);
   const sendVectorworksExportUpload = useCallback(
     (fileName: string, contentBase64: string) => {
       const socket = socketRef.current;
@@ -419,6 +427,8 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     connected,
     responding,
     sendChat,
+    sendTimelineDraftUndo,
+    sendTimelineDraftRedo,
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
     sendSongAudioUpload,

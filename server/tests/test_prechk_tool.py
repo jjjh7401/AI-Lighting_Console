@@ -1267,6 +1267,11 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # 무관한 정당한 확장이다. 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
     "song_audio_upload",
     "status_request",
+    # t281 (2026-09-06) — 큐시트 초안 되돌리기/다시하기. 초안 사전만 바꿔 끼우고
+    # 콘솔·라이브러리에는 닿지 않는다. PRECHK/OVERLAP 축과 무관한 정당한 확장이고,
+    # 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "timeline_draft_redo",
+    "timeline_draft_undo",
     # vectorworks_autopatch 대화형 축 (2026-08-12) — 업로드 파일이 세션에
     # 머물게 하는 채널. PRECHK/OVERLAP 축과 무관한 정당한 확장.
     "vectorworks_export_upload",

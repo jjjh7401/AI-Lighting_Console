@@ -404,6 +404,17 @@ export interface SongTimelineView {
   /** tc_method 가 DERIVED 일 때 화면에 띄우는 고지 문구 */
   tc_method_warning?: string;
   palette_legend?: SongTimelinePaletteEntry[];
+
+  /** t281 — 초안 편집 표식. 없으면 「한 번도 안 고친 초안」으로 본다.
+   * `depth` 는 되돌릴 수 있는 걸음 수, `last_change` 는 직전 편집의 칸별 보고. */
+  draft?: SongTimelineDraftState;
+}
+
+/** t281 — 초안이 원본에서 얼마나 벌어졌는지. 서버 `_draft_badge` 가 만든다. */
+export interface SongTimelineDraftState {
+  dirty: boolean;
+  depth: number;
+  last_change: string[];
 }
 
 export type DirectorTimelineView = SongTimelineView;
@@ -563,8 +574,33 @@ export function parseServerEvent(raw: string): ServerEvent | null {
 
 // -- client -> server builders -------------------------------------------------
 
-export function buildChat(text: string): string {
-  return JSON.stringify({ v: PROTOCOL_VERSION, type: "chat", text });
+/**
+ * t281 — `selectedCue` 는 큐시트에서 감독이 고른 큐 번호(`cue_number`)다.
+ *
+ * 선택을 **요청에 실어 보낸다**. 서버가 「지금 선택이 뭐냐」를 되묻는 도구를
+ * 두는 대신 이 한 필드를 얹는 이유는 이 저장소의 구조다: 코파일럿 경로는
+ * 정규식 라우트 사슬 + 모델 폴백이고 LLM 도구 레지스트리가 없다. 되묻는
+ * 도구는 왕복을 하나 더 만들고 모델 제공자가 없으면 아예 못 쓴다 — 이 필드는
+ * 결정적이고 제공자 없이도 동작한다.
+ *
+ * 생략하면 필드 자체가 프레임에 없다(선택 필드) — 기존 서버와 호환된다.
+ */
+export function buildChat(text: string, selectedCue?: number | null): string {
+  const frame: Record<string, unknown> = { v: PROTOCOL_VERSION, type: "chat", text };
+  if (typeof selectedCue === "number" && Number.isInteger(selectedCue) && selectedCue >= 1) {
+    frame.selected_cue = selectedCue;
+  }
+  return JSON.stringify(frame);
+}
+
+/** t281 — 큐시트 초안 한 단계 되돌리기. 페이로드 없음(서버가 이력을 안다). */
+export function buildTimelineDraftUndo(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "timeline_draft_undo" });
+}
+
+/** t281 — 되돌린 초안 한 단계 다시 적용. */
+export function buildTimelineDraftRedo(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "timeline_draft_redo" });
 }
 
 export function buildVectorworksExportUpload(fileName: string, contentBase64: string): string {

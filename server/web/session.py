@@ -35,6 +35,11 @@ from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
 from server.deploy.review import ReviewRequest
+from server.design.cue_sheet_edit import (
+    CueSheetEditError,
+    apply_cue_sheet_edit,
+    parse_cue_sheet_edit_request,
+)
 from server.design.interview import (
     Q1_CONCEPT,
     Q2_PALETTE,
@@ -191,6 +196,7 @@ from server.web.question import (
     section_label,
 )
 from server.web.reply_discovery import ReplyPortMismatch
+from server.web.timeline_draft import TimelineDraftHistory
 from server.web.timeline_library import SongTimelineLibrary
 
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
@@ -3959,6 +3965,11 @@ class ChatSession:
         # Priority 3 (handoff 2026-08-15): approved console stores auto-save a
         # library version ("이름 (자동 vN)"). None (tests, bare deps) = no-op.
         self._timeline_library = timeline_library
+        # t281 — 큐시트 초안 편집. `_draft_history` 는 편집 **직전** 상태만 쌓는
+        # 되돌리기 스택이고, `_selected_cue` 는 화면에서 감독이 고른 큐 번호다
+        # (chat 프레임이 실어 온다). 둘 다 콘솔과 무관하다.
+        self._draft_history = TimelineDraftHistory()
+        self._selected_cue: int | None = None
         # Layout parameters the operator has already established this session
         # (column gap, fixture gap in metres). Persisted ACROSS turns and NOT
         # cleared after a placement, so a follow-up ("나머지도 배치해줘") reuses
@@ -8206,6 +8217,110 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
+    # -- t281 큐시트 초안 편집 (콘솔 무접촉) ---------------------------------
+
+    @staticmethod
+    def _draft_badge(timeline: dict, *, depth: int, report: Sequence[str]) -> dict:
+        """화면이 「수정됨 · 미저장」을 그릴 수 있게 하는 표식을 얹은 사본.
+
+        타임라인 사전에 얹는 **부가 필드 하나**다 — 구간 값은 건드리지 않으므로
+        이 표식이 없던 기존 페이로드도 그대로 파싱된다(선택 필드).
+        """
+        stamped = dict(timeline)
+        stamped["draft"] = {
+            "dirty": depth > 0,
+            "depth": depth,
+            "last_change": list(report),
+        }
+        return stamped
+
+    def _cue_sheet_draft_edit(self, text: str) -> InstructionResult | None:
+        """선택된 큐의 큐시트 칸을 **초안에서** 고친다 — 콘솔 명령 0건.
+
+        이 경로는 명령 문자열을 만들지 않고 ``self._registry.dispatch`` 를 부르지
+        않는다. 하는 일은 (a) 요청 문장 읽기, (b) 순수 함수로 새 타임라인 만들기,
+        (c) 직전 상태를 되돌리기 스택에 쌓기, (d) 화면 갱신 — 넷뿐이다.
+
+        어느 큐인지는 문장의 「큐 N」이 먼저이고, 없으면 화면에서 감독이 고른
+        큐(``self._selected_cue``)를 쓴다. 둘 다 없으면 **지어내지 않고** 거절한다.
+        """
+        request = parse_cue_sheet_edit_request(text)
+        if request is None:
+            return None  # 이 모듈의 어휘가 아니다 — 기존 사슬로 그대로 흘려보낸다
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._pointing_refusal(
+                "수정할 큐시트가 아직 없습니다. 곡 설계를 완료하거나 라이브러리에서 "
+                "타임라인을 불러온 뒤 다시 요청해 주세요. 콘솔에는 아무것도 쓰지 않았습니다."
+            )
+        cue = request["cue"] or self._selected_cue
+        if cue is None:
+            return self._pointing_refusal(
+                "어느 큐를 고칠지 알 수 없습니다 — 큐시트에서 큐를 먼저 선택하거나 "
+                "'큐 3 …' 처럼 번호를 적어 주세요. 콘솔에는 아무것도 쓰지 않았습니다."
+            )
+        try:
+            updated, report = apply_cue_sheet_edit(timeline, cue, request["changes"])
+        except CueSheetEditError as error:
+            # 사유는 한 가지 원인만 지목한다 — 거짓 사유가 참 사유를 가리지
+            # 않게(t112 결함 계열). 시험이 이 문자열을 그대로 단언한다.
+            return self._pointing_refusal(
+                f"큐시트 초안을 수정하지 않았습니다 — {error} 콘솔에는 아무것도 쓰지 않았습니다."
+            )
+        self._draft_history.record(timeline)
+        updated = self._draft_badge(updated, depth=self._draft_history.depth, report=report)
+        store.latest = updated
+        self._send(song_timeline_event(timeline=updated))
+        return self._pointing_refusal(
+            f"큐 {cue} 초안 수정 (콘솔 무접촉): {' · '.join(report)}. "
+            "이 수정은 아직 초안입니다 — 「저장」을 눌러야 라이브러리에 남고, "
+            "콘솔 반영은 별도의 승인 경로입니다."
+        )
+
+    def _draft_step(self, *, redo: bool) -> dict:
+        """되돌리기/다시하기 한 걸음. 콘솔·라이브러리 어느 쪽도 건드리지 않는다."""
+        store = self._timeline_store
+        current = store.latest if store is not None else None
+        label = "다시하기" if redo else "되돌리기"
+        if current is None:
+            return chat_response_event(
+                status="ok",
+                summary=f"{label} 불가",
+                text="되돌릴 큐시트 초안이 없습니다.",
+                commands=[],
+            )
+        restored = self._draft_history.redo(current) if redo else self._draft_history.undo(current)
+        if restored is None:
+            return chat_response_event(
+                status="ok",
+                summary=f"{label} 불가",
+                text=f"{label}할 초안 단계가 없습니다.",
+                commands=[],
+            )
+        restored = self._draft_badge(restored, depth=self._draft_history.depth, report=())
+        store.latest = restored
+        self._send(song_timeline_event(timeline=restored))
+        event = chat_response_event(
+            status="ok",
+            summary=f"초안 {label}",
+            text=(
+                f"큐시트 초안을 한 단계 {label}했습니다 (남은 되돌리기 "
+                f"{self._draft_history.depth}단계). 콘솔과 저장본은 그대로입니다."
+            ),
+            commands=[],
+        )
+        self._send(event)
+        return event
+
+    def undo_timeline_draft(self) -> dict:
+        """초안을 직전 상태로 되돌린다 (콘솔·라이브러리 무접촉)."""
+        return self._draft_step(redo=False)
+
+    def redo_timeline_draft(self) -> dict:
+        """되돌리기로 물러난 초안을 다시 적용한다 (콘솔·라이브러리 무접촉)."""
+        return self._draft_step(redo=True)
+
     def _setlist_mode(self, text: str) -> InstructionResult | None:
         """셋리스트 모드 (priority 4): allocate library songs to consecutive
         setlist sequences (기본 210, 220, …) and page-1 executors (기본 101~).
@@ -10131,8 +10246,14 @@ class ChatSession:
     # @MX:NOTE: [AUTO] one instruction turn — measurement start/finish, gate-truth
     #   summary composition, and the REQ-MVP-044 raw-detail/audit split all funnel
     #   through this single method
-    def run_instruction(self, text: str) -> dict:
-        """Drive one Korean instruction; sends + returns the final event."""
+    def run_instruction(self, text: str, selected_cue: int | None = None) -> dict:
+        """Drive one Korean instruction; sends + returns the final event.
+
+        ``selected_cue`` 는 화면에서 감독이 고른 큐 번호다(t281). 선택을 요청에
+        **실어 보내는** 방식이라, 「지금 선택을 읽어라」 같은 별도 왕복이 없고
+        모델 제공자가 없어도 동작한다. 기본값 None = 선택 없음(기존 동작).
+        """
+        self._selected_cue = selected_cue
         self._turn_decisions = []
         if self._recorder is not None:
             self._recorder.turn_started()
@@ -10240,6 +10361,12 @@ class ChatSession:
                     result = self._timeline_cue_edit(text)
                 if result is None:
                     result = self._setlist_mode(text)
+                if result is None:
+                    # t281 — 큐시트 초안 편집. 위의 콘솔 경로들(`_timeline_cue_edit`
+                    # 등)이 **먼저** 본다: 그쪽은 「타임라인」 리터럴과 포지션 어휘를
+                    # 필수 게이트로 쓰므로 서로소이고, 순서를 이렇게 두면 기존
+                    # 콘솔 편집의 행선지가 이 변경으로 바뀌지 않는다.
+                    result = self._cue_sheet_draft_edit(text)
                 if result is None:
                     result = self._song_design_interview(text)
                 if result is None:
