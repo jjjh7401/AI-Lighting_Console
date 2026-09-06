@@ -154,3 +154,26 @@ looks:
       ColorRGB_B: 100
       Iris: 100
       Zoom: 5
+
+  # --- dynamics 1, 뒤늦게 붙인 칸: 배경막 없는 리그를 위한 것 -----------------
+  # 파일이 다이내믹스 오름차순으로 읽히는 흐름에서 여기만 어긋난다. 정렬은
+  # `looks_for_genre` 가 `(dynamics, look_id)` 로 하므로 파일 위치는 선택에
+  # 영향을 주지 않고, 이 자리에 붙이는 이유는 승인 게이트 쪽이다(옛 EOF 뒤의
+  # 순수 삽입이라 위쪽 줄이 한 줄도 밀리지 않는다).
+  #
+  # `edm-ambient-hold` 는 역할이 `배경` 하나뿐이라, 호리·cyc 계열이 없는 리그에서는
+  # 어느 무리에도 안 묶이고 그 구간이 통째로 침묵했다. 배경막이 없을 때 깊이를
+  # 만드는 빛은 뒤에서 오는 것뿐이므로 역할은 `백라이트` 다 — 헤더 규칙이 `프론트` 를
+  # 배제하고, `탑` 은 실기 리그에서 안 묶인다.
+  - look_id: "edm-haze-shafts"
+    display_name: "헤이즈 샤프트"
+    genre: "edm"
+    dynamics: 1
+    roles: ["백라이트"]
+    aliases: ["헤이즈 샤프트", "haze shafts", "빈 하늘"]
+    mood_keywords: ["어두운", "깊은", "푸른", "잠긴", "haze", "shafts"]
+    attributes:
+      Dimmer: 18
+      ColorRGB_R: 0
+      ColorRGB_G: 40
+      ColorRGB_B: 78

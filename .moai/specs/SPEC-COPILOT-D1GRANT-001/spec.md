@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-D1GRANT-001
 title: "cyc 없는 리그의 조용한 칸 — 룩 라이브러리 확장을 승인된 통로로 연다"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-09-06
 updated: 2026-09-06
 author: manager-spec (plan session, card t282 후속)
