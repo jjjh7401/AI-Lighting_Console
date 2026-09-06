@@ -37,6 +37,16 @@ __all__ = [
     "SectionDecision",
     "SongPlanError",
     "TextureDecision",
+    "CUE_SHEET_SECTION_FIELDS",
+    "CUE_SHEET_VIEW_FIELDS",
+    "CueSheetSectionFields",
+    "CueSheetViewFields",
+    "GroupIntensity",
+    "PaletteEntry",
+    "apply_cue_sheet_section",
+    "apply_cue_sheet_view",
+    "extract_cue_sheet_section",
+    "extract_cue_sheet_view",
     "TimingMode",
     "TimingPlan",
     "TimestampedSection",
@@ -754,3 +764,324 @@ class UnifiedSongLightingPlan:
             accents=decision.accent.accents,
             timing=timing_payload,
         )
+
+
+# ---------------------------------------------------------------------------
+# LX-SEQ 큐시트 확장 (t279 M1 -- 모델 계층만, UI 없음)
+#
+# 정본 산출물 `LXSEQ_SAMPLE_01_Sugar_r3.timeline.html` 이 담고 있는 항목을
+# `SongTimelineSection` / `SongTimelineView` 가 실어 나를 수 있게 넓힌다.
+# 모든 필드는 선택이고 기본값이 "없음"이라, 새 필드를 하나도 담지 않은 기존
+# 페이로드는 직렬화 왕복에서 바이트 단위로 동일하게 남는다(추가만, 변형 없음).
+#
+# ## 정본 CSV 어휘와의 관계 (이름을 새로 만들지 않는다)
+#
+# `server/lxseq/cue_parser.py` 의 `CANONICAL_CUE_COLUMNS` 17열이 이 저장소의
+# 정본 어휘다. 아래 필드는 그 어휘를 대체하지 않고, 감독이 읽는 큐시트
+# 표현(presentation)을 담는다. 대응은 다음과 같다:
+#
+#   intensity(group, level)     -> 정본 `Dim` (그룹별 값, long format 한 행)
+#   palette_primary/_secondary  -> 정본 `COL` 의 이름 표현(P1..P8 팔레트 참조)
+#   movement                    -> 정본 `POS`
+#   effect / trans              -> 정본 `FX` / `Snap`
+#   fade_seconds                -> 정본 `I-Fade`
+#   fixture_groups              -> 정본 `Group` 열의 한 큐 묶음
+#   note / manual               -> 정본 `Note` (+ `[MANUAL]` 표기)
+#
+# 파서 열 이름은 바꾸지 않는다. 여기서 이름이 다른 것은 같은 정보의 다른
+# 표현이라는 뜻이지 새 축이 생겼다는 뜻이 아니다.
+
+
+def _opt_str(name: str, value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise SongPlanError(f"{name} must be a non-empty string or None, got {value!r}")
+    return value
+
+
+def _opt_int(name: str, value: object, *, minimum: int | None = None) -> int | None:
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise SongPlanError(f"{name} must be an int or None, got {value!r}")
+    if minimum is not None and value < minimum:
+        raise SongPlanError(f"{name} must be >= {minimum}, got {value!r}")
+    return value
+
+
+def _opt_number(name: str, value: object) -> float | int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise SongPlanError(f"{name} must be a number or None, got {value!r}")
+    return value
+
+
+@dataclass(frozen=True)
+class GroupIntensity:
+    """구간 안에서 그룹 하나가 받는 값 (정본 `Dim` 의 표현)."""
+
+    group: str
+    level: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.group, str) or not self.group.strip():
+            raise SongPlanError(f"group must be a non-empty string, got {self.group!r}")
+        _validate_int("level", self.level, minimum=0)
+        if self.level > 100:
+            raise SongPlanError(f"level must be 0-100, got {self.level!r}")
+
+    def to_dict(self) -> dict[str, object]:
+        return {"group": self.group, "level": self.level}
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> GroupIntensity:
+        return cls(group=str(payload.get("group", "")), level=int(payload.get("level", -1)))
+
+
+@dataclass(frozen=True)
+class PaletteEntry:
+    """이름 붙은 팔레트 한 칸 (정본 산출물의 P1..P8 범례)."""
+
+    id: str
+    name: str
+    color: str
+
+    def __post_init__(self) -> None:
+        for field_name in ("id", "name", "color"):
+            value = getattr(self, field_name)
+            if not isinstance(value, str) or not value.strip():
+                raise SongPlanError(f"{field_name} must be a non-empty string, got {value!r}")
+
+    def to_dict(self) -> dict[str, object]:
+        return {"id": self.id, "name": self.name, "color": self.color}
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> PaletteEntry:
+        return cls(
+            id=str(payload.get("id", "")),
+            name=str(payload.get("name", "")),
+            color=str(payload.get("color", "")),
+        )
+
+
+CUE_SHEET_SECTION_FIELDS: tuple[str, ...] = (
+    "end_ms",
+    "duration_ms",
+    "bar_start",
+    "bar_count",
+    "mood",
+    "palette_primary",
+    "palette_secondary",
+    "intensity",
+    "fixture_groups",
+    "movement",
+    "effect",
+    "trans",
+    "fade_seconds",
+    "note",
+    "manual",
+)
+
+CUE_SHEET_VIEW_FIELDS: tuple[str, ...] = (
+    "bpm",
+    "time_signature",
+    "musical_key",
+    "total_duration_ms",
+    "bar_count",
+    "seconds_per_bar",
+    "tc_source",
+    "tc_origin",
+    "tc_method",
+    "tc_method_warning",
+    "palette_legend",
+)
+
+
+@dataclass(frozen=True)
+class CueSheetSectionFields:
+    """구간 하나의 큐시트 확장분. 모든 필드가 선택이고 기본값은 '없음'이다."""
+
+    end_ms: int | None = None
+    duration_ms: int | None = None
+    bar_start: int | None = None
+    bar_count: int | None = None
+    mood: str | None = None
+    palette_primary: str | None = None
+    palette_secondary: str | None = None
+    intensity: tuple[GroupIntensity, ...] = ()
+    fixture_groups: tuple[str, ...] = ()
+    movement: str | None = None
+    effect: str | None = None
+    trans: str | None = None
+    fade_seconds: float | int | None = None
+    note: str | None = None
+    manual: bool | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "end_ms", _opt_int("end_ms", self.end_ms, minimum=0))
+        object.__setattr__(
+            self, "duration_ms", _opt_int("duration_ms", self.duration_ms, minimum=0)
+        )
+        object.__setattr__(self, "bar_start", _opt_int("bar_start", self.bar_start, minimum=0))
+        object.__setattr__(self, "bar_count", _opt_int("bar_count", self.bar_count, minimum=0))
+        for field_name in (
+            "mood",
+            "palette_primary",
+            "palette_secondary",
+            "movement",
+            "effect",
+            "trans",
+            "note",
+        ):
+            object.__setattr__(self, field_name, _opt_str(field_name, getattr(self, field_name)))
+        object.__setattr__(self, "fade_seconds", _opt_number("fade_seconds", self.fade_seconds))
+        object.__setattr__(self, "intensity", tuple(self.intensity))
+        for entry in self.intensity:
+            if not isinstance(entry, GroupIntensity):
+                raise SongPlanError("intensity must contain GroupIntensity values")
+        object.__setattr__(
+            self, "fixture_groups", _tuple_of_str("fixture_groups", self.fixture_groups)
+        )
+        if self.manual is not None and not isinstance(self.manual, bool):
+            raise SongPlanError(f"manual must be a bool or None, got {self.manual!r}")
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.to_dict()
+
+    def to_dict(self) -> dict[str, object]:
+        """설정된 필드만 담는다 -- 없는 필드는 키 자체가 나오지 않는다."""
+        payload: dict[str, object] = {}
+        for name in CUE_SHEET_SECTION_FIELDS:
+            value = getattr(self, name)
+            if value is None or value == ():
+                continue
+            if name == "intensity":
+                payload[name] = [entry.to_dict() for entry in value]
+            elif name == "fixture_groups":
+                payload[name] = list(value)
+            else:
+                payload[name] = value
+        return payload
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> CueSheetSectionFields:
+        raw_intensity = payload.get("intensity") or ()
+        raw_groups = payload.get("fixture_groups") or ()
+        known = {
+            name: payload[name]
+            for name in CUE_SHEET_SECTION_FIELDS
+            if name in payload and name not in ("intensity", "fixture_groups")
+        }
+        return cls(
+            intensity=tuple(
+                GroupIntensity.from_dict(entry)
+                for entry in raw_intensity
+                if isinstance(entry, Mapping)
+            ),
+            fixture_groups=tuple(str(group) for group in raw_groups),
+            **known,  # type: ignore[arg-type]
+        )
+
+
+@dataclass(frozen=True)
+class CueSheetViewFields:
+    """타임라인 전체(헤더 메타 + 출처 고지 + 팔레트 범례) 확장분."""
+
+    bpm: float | int | None = None
+    time_signature: str | None = None
+    musical_key: str | None = None
+    total_duration_ms: int | None = None
+    bar_count: int | None = None
+    seconds_per_bar: float | int | None = None
+    tc_source: str | None = None
+    tc_origin: str | None = None
+    tc_method: str | None = None
+    tc_method_warning: str | None = None
+    palette_legend: tuple[PaletteEntry, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "bpm", _opt_number("bpm", self.bpm))
+        object.__setattr__(
+            self, "seconds_per_bar", _opt_number("seconds_per_bar", self.seconds_per_bar)
+        )
+        object.__setattr__(
+            self,
+            "total_duration_ms",
+            _opt_int("total_duration_ms", self.total_duration_ms, minimum=0),
+        )
+        object.__setattr__(self, "bar_count", _opt_int("bar_count", self.bar_count, minimum=0))
+        for field_name in (
+            "time_signature",
+            "musical_key",
+            "tc_source",
+            "tc_origin",
+            "tc_method",
+            "tc_method_warning",
+        ):
+            object.__setattr__(self, field_name, _opt_str(field_name, getattr(self, field_name)))
+        object.__setattr__(self, "palette_legend", tuple(self.palette_legend))
+        for entry in self.palette_legend:
+            if not isinstance(entry, PaletteEntry):
+                raise SongPlanError("palette_legend must contain PaletteEntry values")
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.to_dict()
+
+    def to_dict(self) -> dict[str, object]:
+        payload: dict[str, object] = {}
+        for name in CUE_SHEET_VIEW_FIELDS:
+            value = getattr(self, name)
+            if value is None or value == ():
+                continue
+            if name == "palette_legend":
+                payload[name] = [entry.to_dict() for entry in value]
+            else:
+                payload[name] = value
+        return payload
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> CueSheetViewFields:
+        raw_legend = payload.get("palette_legend") or ()
+        known = {
+            name: payload[name]
+            for name in CUE_SHEET_VIEW_FIELDS
+            if name in payload and name != "palette_legend"
+        }
+        return cls(
+            palette_legend=tuple(
+                PaletteEntry.from_dict(entry) for entry in raw_legend if isinstance(entry, Mapping)
+            ),
+            **known,  # type: ignore[arg-type]
+        )
+
+
+def extract_cue_sheet_section(payload: Mapping[str, object]) -> CueSheetSectionFields:
+    """구간 페이로드에서 확장분만 떼어낸다. 없으면 빈 확장분."""
+    return CueSheetSectionFields.from_dict(payload)
+
+
+def extract_cue_sheet_view(payload: Mapping[str, object]) -> CueSheetViewFields:
+    """타임라인 페이로드에서 확장분만 떼어낸다. 없으면 빈 확장분."""
+    return CueSheetViewFields.from_dict(payload)
+
+
+def apply_cue_sheet_section(
+    payload: Mapping[str, object], fields: CueSheetSectionFields
+) -> dict[str, object]:
+    """구간 페이로드에 확장분을 합친다. 빈 확장분이면 입력과 같은 내용의 사본."""
+    merged = dict(payload)
+    merged.update(fields.to_dict())
+    return merged
+
+
+def apply_cue_sheet_view(
+    payload: Mapping[str, object], fields: CueSheetViewFields
+) -> dict[str, object]:
+    """타임라인 페이로드에 확장분을 합친다. 빈 확장분이면 입력과 같은 내용의 사본."""
+    merged = dict(payload)
+    merged.update(fields.to_dict())
+    return merged
