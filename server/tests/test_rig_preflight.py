@@ -293,3 +293,179 @@ def test_the_preflight_verdict_agrees_with_what_apply_would_actually_skip(tmp_pa
     assert [entry["group_name"] for entry in report.resolved] == [
         entry["group_name"] for entry in mapping
     ]
+
+
+# -- t304: 판정을 재구현하지 않고 반영에게 물어본다 -----------------------------------
+
+
+def _unbound_palette_timeline() -> dict:
+    """주소는 잡히는데 **룩이 안 붙는** 타임라인.
+
+    큐 20 의 ``palette_primary`` 를 팔레트 범례에 없는 이름으로 바꾼다. t303 의
+    판정은 「이 큐의 그룹 이름이 전부 풀리는가」뿐이라 이 큐를 **반영 가능**으로
+    셌지만, 반영은 이 큐에 대해 `UNMAPPED_LOOK` 건너뜀 기록을 남긴다 — 점검이
+    낙관 방향으로 틀리던 자리다.
+    """
+    timeline = build_sugar_timeline()
+    sections = [dict(section) for section in timeline["sections"]]
+    for section in sections:
+        if section["cue_number"] == 20:
+            section["palette_primary"] = "P99 범례에 없는 색"
+    timeline["sections"] = sections
+    return timeline
+
+
+def _payload_for(timeline: dict) -> dict:
+    names = timeline_group_names(timeline)
+    return _groups_payload(*[(name, 10 + i) for i, name in enumerate(names)])
+
+
+def test_a_cue_with_an_address_but_no_binding_look_carries_applys_own_reason() -> None:
+    """이 카드의 요점 — 두 판정이 어긋나던 큐가 이제 반영의 사유와 함께 나온다."""
+    from server.design.cue_sheet_apply import (
+        UNMAPPED_LOOK,
+        layer_mapping_from_console_groups,
+        palette_index,
+        plan_cue_console_apply,
+    )
+
+    timeline = _unbound_palette_timeline()
+    payload = _payload_for(timeline)
+    report = plan_rig_preflight(timeline, console_payload=payload)
+
+    cue20 = next(cue for cue in report.cues if cue.cue_number == 20)
+    # 주소는 잡혔다 — t303 이 「반영 가능」이라고만 적던 상태다.
+    assert cue20.would_apply is True
+    # 이제는 못 나가는 칸이 사유와 함께 붙는다.
+    assert cue20.skips != ()
+    assert cue20.reason == UNMAPPED_LOOK
+    assert cue20 in report.partial_cues
+
+    # 사유는 **반영이 쓴 기록 그대로**다 — 번역본이 아니다.
+    section = next(s for s in timeline["sections"] if s["cue_number"] == 20)
+    mapping = layer_mapping_from_console_groups(payload, timeline_group_names(timeline))
+    decision = plan_cue_console_apply(section, None, mapping, palette_index(timeline))
+    assert cue20.skips == decision.skips
+
+    text = render_rig_preflight(report)
+    assert "P99 범례에 없는 색" in text
+    assert "색을 지어내지 않습니다" in text
+    assert "일부만 나가는 큐 1건" in text
+
+
+def test_every_cue_verdict_matches_what_apply_would_do_with_the_same_rig() -> None:
+    """전수 대조 — 점검의 큐별 판정과 반영의 계획이 큐 단위로 같다.
+
+    반영은 명령 문자열을 지어야 해서 시퀀스 번호를 요구하므로 여기서만 번호를
+    선언한 사본으로 돌린다. 번호가 **판정에 쓰이지 않는다**는 것이 이 대조가
+    보이는 것이다.
+    """
+    from server.design.cue_sheet_apply import (
+        layer_mapping_from_console_groups,
+        plan_console_apply,
+    )
+
+    timeline = _unbound_palette_timeline()
+    payload = _payload_for(timeline)
+    report = plan_rig_preflight(timeline, console_payload=payload)
+
+    target = dict(timeline)
+    target["sequence_number"] = 210
+    target["layer_mapping"] = layer_mapping_from_console_groups(
+        payload, timeline_group_names(timeline)
+    )
+    plan = plan_console_apply({}, target)
+
+    assert [cue.cue_number for cue in report.appliable_cues] == list(plan.applied)
+    assert [skip for cue in report.cues for skip in cue.skips] == list(plan.skipped)
+    assert {cue.cue_number: cue.summary for cue in report.appliable_cues} == dict(plan.summaries)
+
+
+def test_a_fully_mismatched_rig_agrees_with_apply_that_nothing_goes_out() -> None:
+    from server.design.cue_sheet_apply import plan_console_apply
+
+    timeline = build_sugar_timeline()
+    report = plan_rig_preflight(timeline, console_payload=_groups_payload(("무관", 1)))
+
+    target = dict(timeline)
+    target["sequence_number"] = 210
+    target["layer_mapping"] = []
+    plan = plan_console_apply({}, target)
+
+    assert report.appliable_cues == ()
+    assert plan.applied == ()
+    assert plan.is_empty is True
+
+
+# -- t304: 슬롯 점유 ------------------------------------------------------------------
+
+
+def test_slot_occupancy_is_not_claimed_when_no_number_is_declared() -> None:
+    """시드 타임라인은 번호가 없다 — 「비었다」고 적으면 안 된다."""
+    report = plan_rig_preflight(
+        build_sugar_timeline(), console_payload=_groups_payload(("KEY", 11))
+    )
+    assert report.sequence_slot == ""
+    assert report.timecode_number is None
+    text = render_rig_preflight(report)
+    assert "시퀀스 번호가 없어 재지 않았습니다" in text
+    assert "타임코드 번호가 없어 재지 않았습니다" in text
+
+
+@pytest.mark.parametrize(
+    ("state", "phrase"),
+    [
+        ("empty", "비어 있습니다"),
+        ("occupied", "이미 내용이 있습니다"),
+        ("unreadable", "읽지 못했습니다"),
+    ],
+)
+def test_a_declared_slot_reports_all_three_verdicts(state, phrase) -> None:
+    timeline = dict(build_sugar_timeline())
+    timeline["sequence_number"] = 210
+    timeline["timecode_number"] = 7
+    report = plan_rig_preflight(
+        timeline,
+        console_payload=_groups_payload(("KEY", 11)),
+        sequence_slot=state,
+        timecode_slot=state,
+    )
+    text = render_rig_preflight(report)
+    assert f"시퀀스 210번 슬롯: {phrase}" in text
+    assert f"타임코드 7번 슬롯: {phrase}" in text
+
+
+def test_the_session_probes_the_declared_slots_and_still_writes_nothing(tmp_path) -> None:
+    """실제 세션에서 슬롯을 읽는다 — 그리고 **콘솔 쓰기는 여전히 0건**이다."""
+    console = FakeConsole(
+        state_tree={
+            "DataPool/Groups": _groups_payload(("KEY", 11), ("BACK", 12)),
+            "DataPool/Sequences/210": {"ok": True, "node": {"name": "SUGAR"}},
+        }
+    )
+    session, _ = _session(tmp_path, console)
+    timeline = dict(build_sugar_timeline())
+    timeline["sequence_number"] = 210
+    timeline["timecode_number"] = 7
+    session._timeline_store.latest = timeline
+
+    text = session.run_instruction("리그 점검해줘")["text"]
+
+    assert console.executed == []
+    assert "시퀀스 210번 슬롯: 이미 내용이 있습니다" in text
+    assert "타임코드 7번 슬롯" in text
+
+
+def test_no_slot_is_probed_when_the_console_is_unreachable(tmp_path) -> None:
+    """불통이면 슬롯도 안 읽는다 — 못 읽은 것을 「비었다」로 적지 않는다."""
+    console = FakeConsole(state_tree={})
+    session, _ = _session(tmp_path, console)
+    timeline = dict(build_sugar_timeline())
+    timeline["sequence_number"] = 210
+    session._timeline_store.latest = timeline
+
+    text = session.run_instruction("리그 점검해줘")["text"]
+
+    assert console.executed == []
+    assert "콘솔에 닿지 못했습니다" in text
+    assert "슬롯" not in text
