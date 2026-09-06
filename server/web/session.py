@@ -129,6 +129,7 @@ from server.orchestrator.tools import (
     TIMECODE_POOL_PATH,
     CommandOutcome,
     DeployPipelinePort,
+    ExecutionContext,
     build_toolset,
 )
 from server.prechk.query import read_properties
@@ -10111,7 +10112,12 @@ class ChatSession:
             # 는 `blacklist.yaml` 에 없다). 위의 `_ask_one` 리뷰 카드는 **계획**을
             # 승인받는 자리이고, 콘솔에 무엇이 나가는지를 게이트가 묻는 자리는
             # 여기다. 그래서 `prepare_songcue` 가 이미 쓰는 그 선언을 그대로 단다
-            # (BULKGATE 의 `risk=` — 새 심사 통로가 아니라 같은 `gate.screen`).
+            # (BULKGATE 의 `risk` — 새 심사 통로가 아니라 같은 `gate.screen`).
+            #
+            # 선언은 `ExecutionContext.risk` 로 흐른다. `tools.py` 밖에서는
+            # `run_commands` 클로저를 직접 못 부르고 `dispatch` 만 지나기
+            # 때문이고, 컨텍스트는 이미 그 두 번째 인자다 — `call.arguments`
+            # 가 아니라 **코드가 만드는 자리**라 모델이 못 만진다.
             songcue_risk = BatchRisk(
                 reason=_song_write_risk_reason(sequence_no, commands),
                 kind="song_design",
@@ -10122,7 +10128,7 @@ class ChatSession:
                     name="run_commands",
                     arguments={"commands": list(commands)},
                 ),
-                risk=songcue_risk,
+                ExecutionContext(risk=songcue_risk),
             )
             store_failures = [
                 outcome

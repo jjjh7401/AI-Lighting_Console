@@ -88,11 +88,9 @@ class _Recording:
     def definitions(self):
         return self._inner.definitions()
 
-    def dispatch(self, call, context=None, *, risk=None):
+    def dispatch(self, call, context=None):
         if call.name == "run_commands":
             self._log.append(call.id)
-        if risk is not None:
-            return self._inner.dispatch(call, context, risk=risk)
         if context is None:
             return self._inner.dispatch(call)
         return self._inner.dispatch(call, context)
@@ -107,7 +105,7 @@ class _Spatial:
     def definitions(self):
         return self._recording.definitions()
 
-    def dispatch(self, call, context=None, *, risk=None):
+    def dispatch(self, call, context=None):
         if call.name == "get_spatial_context":
             from server.llm.types import ToolResult
             from server.orchestrator.tools import ToolExecution
@@ -127,7 +125,7 @@ class _Spatial:
                     ),
                 )
             )
-        return self._recording.dispatch(call, context, risk=risk)
+        return self._recording.dispatch(call, context)
 
 
 class _Provider:
