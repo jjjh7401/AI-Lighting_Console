@@ -157,38 +157,32 @@ class RigGeometry:
     reuses ``server.spatial.topology.classify`` rather than a second
     classifier — one arrangement verdict, shared.
 
-    카드 t312 — **이 축은 계산되기만 하고 아무도 읽지 않는다.** 지어낸
-    진단이 아니라 실측이다:
+    카드 t312 가 「계산되기만 하고 아무도 읽지 않는다」로 적었던 축이다.
+    카드 t314 에서 **소비자가 붙었다**: `server/design/interview.py` 의
+    `_readable_arrangement` → `_q4_candidates` / `_q4_rig_note` 가
+    SPEC-COPILOT-SONGSTD-001 R1c 의 Q4(공간 스토리)에서 이 값을 읽는다.
 
-    * 생산자는 살아 있다 — `server/web/session.py` 의 유일한
-      `build_rig_profile(...)` 호출이 이미 읽어 둔 픽스처 좌표를 넘긴다.
-    * 소비자는 없다 — `grep -rn "\\.geometry" server/ ui/src` 가 10건을
-      찾고 **전부** `server/tests/test_design_rig.py` 다(2026-09-07 실측).
-    * 소비자가 지워진 것이 아니라 **한 번도 붙은 적이 없다** —
-      `git log -S"RigGeometry" -- server/design/rig.py` 는 도입 커밋
-      `8ecefec` 하나만 답한다.
+    무엇이 쓰이고 무엇이 안 쓰이는지:
 
-    그래서 이것은 죽은 코드가 아니라 **미완의 배선**이다. 붙을 자리는
-    SPEC-COPILOT-SONGSTD-001 R1c 의 Q4(공간 스토리)이고, 지금 그 자리는
-    좌표를 전혀 안 본다:
+    * `arrangement` + `arrangement_low_confidence` — **쓴다.** 판독된 배치가
+      Q4 포지션 진행 후보의 **순서**를 정한다(후보 자체는 여전히 곡
+      프로파일이 만든다). 확정된 컨셉은 기하보다 앞선다.
+    * `centroid` · `dominant_axis` — **안 쓴다.** `dominant_axis` 는 전
+      장비가 한 점에 모인 리그에서도 동률 타이브레이크로 `"x"` 를 답해
+      판독 불가와 좌우 배치를 못 가른다(t314 실측).
 
-    * `server/design/interview.py::_q4_candidates` 는 포지션 후보를
-      음악 프로파일에서만 유도한다 — 무대가 일자든 아치든 같은 답이 나온다.
-    * 같은 파일 `_rig_note` 는 인벤토리 수가 0 일 때 「무대 좌표를 기준으로
-      만든 제안이에요」라고 적는다. 좌표는 실제로 한 값도 읽지 않는다 —
-      **문면이 근거를 과장하고 있다.**
-
-    무엇을 제안에 반영할지(무게중심 기준 중앙성? 지배축을 따라가는 진행?
-    배치 분류별 후보 교체?)는 연출 판단이라 여기서 정하지 않는다. 배선하기
-    전에 그 판단이 먼저 필요하다.
+    이 자료구조가 **들고 있지 않은 것**도 기록해 둔다: `_build_geometry` 는
+    축별 span 을 계산해 지배축만 남기고 크기를 버린다. 그래서 「지배축 방향
+    퍼짐의 크기」와 「깊이/폭 비」는 이 값들로 낼 수 없다 — 그 축이 필요해지면
+    span 을 여기 실어야 하고, 소비자 쪽에서 지어낼 수 없다.
     """
 
-    # @MX:TODO: [AUTO] RigGeometry 를 읽는 생산 소비자가 없다 — Q4 공간 스토리
-    #   제안(interview._q4_candidates)과 그 근거 문면(interview._rig_note)이
-    #   붙을 자리다.
+    # @MX:ANCHOR: [AUTO] Q4 공간 스토리 제안이 이 값을 읽는다 —
+    #   interview._readable_arrangement / _q4_candidates / _q4_rig_note.
+    # @MX:REASON: arrangement 판독이 감독 화면의 제안 순서와 근거 문면을
+    #   동시에 정한다. 판독 불가(전 장비 원점 포함)는 음악 전용 순서와 t312
+    #   의 정직한 문면으로 되돌아가는 1급 경로다.
     # @MX:SPEC: SPEC-COPILOT-SONGSTD-001 R1b/R1c
-    # @MX:PRIORITY: P3 — 기능 결손이 아니라 미사용 축. 다만 _rig_note 의
-    #   「좌표를 기준으로」 문면은 배선 전까지 근거를 과장한다.
 
     arrangement: TopologyKind
     arrangement_low_confidence: bool
