@@ -24,6 +24,15 @@ ROLE_UNADDRESSED = "role_unaddressed"
 VALUE_SKIPPED = "value_skipped"
 VERDICTS = frozenset({COMPLETE, PARTIAL, NONE})
 
+# 큐를 못 받은 구간의 사유를 **감독의 말**로 옮긴 것. 역할 부재만 리그 지문에
+# 달려 있어 역할 이름을 받아 조립하고(``_gap_reason``), 나머지 셋은 코드 하나로
+# 결정되므로 여기서 끝난다.
+_NOTICE_REASONS: dict[str, str] = {
+    DYNAMICS_LOOK_MISSING: "이 장르에 맞는 룩이 없습니다",
+    UNKNOWN_VOCABULARY: "구간 이름에서 세기를 읽지 못했습니다",
+    VALUE_SKIPPED: "앞 구간과 조명 값이 같습니다",
+}
+
 
 @dataclass(frozen=True)
 class SongCueSectionVerdict:
@@ -84,6 +93,36 @@ class SongCueReport:
             "property_unobserved": PROPERTY_UNOBSERVED_NOTE,
             "requery": self.requery,
         }
+
+    def to_operator_notice(self) -> str:
+        """큐를 못 받은 구간을 감독이 읽는 **한 문장**으로. 없으면 빈 문자열.
+
+        ``to_korean`` 과 갈라 두는 이유는 독자가 다르다는 것 하나다. 그쪽은
+        모델이 읽는 전량 보고(구간마다 한 줄 + 판정 코드)이고, 이쪽은 감독이
+        채팅에서 스쳐 읽는 고지다 — 확정 고지 「구간 N건 채택 · M건 제외.」와
+        같은 결이어야 하고, 그 문장 옆에 나란히 서면서 길어지면 안 된다.
+
+        건너뜀이 **0건이면 빈 문자열**이다. 이 값이 조립되는 자리(요약 문면)는
+        오늘의 출력과 바이트 동일해야 하고, 침묵이 결함인 것은 사라진 큐가
+        있을 때뿐이다 — 없을 때 한 줄 더 붙이는 것은 소음이다.
+
+        단위는 「명령」이 아니라 **구간**이다. 감독이 화면에서 센 것이 구간이고,
+        2026-09-06 실기에서 어긋난 것도 「구간 4건 확인 → 큐 3건 저장」이었다.
+        """
+        gaps = [
+            (verdict, section)
+            for verdict, section in zip(self.section_verdicts, self.bundle.sections, strict=True)
+            if not section.commands
+        ]
+        if not gaps:
+            return ""
+        clauses = " · ".join(
+            f"'{verdict.name}': {_gap_reason(verdict, section)}" for verdict, section in gaps
+        )
+        return (
+            f"구간 {len(self.bundle.sections)}건 중 큐 {len(self.generated_cues)}건만 "
+            f"저장했습니다 — {clauses}."
+        )
 
     def to_korean(self) -> str:
         data = self.to_dict()
@@ -165,6 +204,28 @@ def _section_verdict(
         not_executed=not_executed,
         failed=failed,
     )
+
+
+def _gap_reason(verdict: SongCueSectionVerdict, section: SongCueSectionBundle) -> str:
+    """구간 하나가 큐를 못 받은 이유 — 역할 부재면 **없는 역할을 이름으로** 댄다.
+
+    이름을 대는 것이 이 함수의 값이다. 「역할이 안 묶였습니다」는 감독이 할 수
+    있는 일이 없는 문장이지만, 「배경 역할 그룹이 없습니다」는 그룹을 만들거나
+    이름을 고치면 해소된다고 말한다.
+    """
+    if verdict.reason_kind == ROLE_UNADDRESSED:
+        # dict.fromkeys — 같은 역할이 두 번 들어와도 한 번만, 순서는 그대로.
+        roles = " · ".join(dict.fromkeys(entry.role for entry in section.unmapped))
+        if roles:
+            return f"이 리그에 {roles} 역할 그룹이 없습니다"
+        # 역할 목록이 비어 오는 갈래가 있다(리그 구간 자체가 안 온 경우). 지어내지
+        # 않고 범위를 좁히지 않은 채로 말한다.
+        return "이 리그에 필요한 역할 그룹이 없습니다"
+    fixed = _NOTICE_REASONS.get(verdict.reason_kind or "")
+    if fixed is not None:
+        return fixed
+    # 모르는 사유는 원문 그대로 — 지어낸 번역은 감독이 검색할 수 없게 만든다.
+    return reason_label(verdict.reason) if verdict.reason else "사유가 기록되지 않았습니다"
 
 
 def _reason_kind(reason: str | None) -> str | None:

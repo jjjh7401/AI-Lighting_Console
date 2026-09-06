@@ -10582,4 +10582,9 @@ class ChatSession:
         outcome_summary = summarize_outcomes(result.status, views)
         if outcome_summary:
             parts.append(outcome_summary)
+        # 카드 t277 — 도구가 조용히 건너뛴 일은 **명령 표 뒤**에 붙는다. 앞에 두면
+        # 「모두 실행했습니다」가 고지를 반박하는 것처럼 읽힌다: 순서대로 읽으면
+        # 「보낸 것은 다 됐다, 다만 보내지 않은 것이 있다」가 되어 둘 다 참이다.
+        # 건너뜀이 없는 회차에서는 비어 있어 이 줄 이전과 문면이 같다.
+        parts.extend(result.notices)
         return " ".join(parts)
