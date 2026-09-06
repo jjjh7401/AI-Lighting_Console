@@ -29,6 +29,7 @@ import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
+from server.design.profile import BpmResolution
 from server.orchestrator.songcue_timecode import operator_handoff_commands
 from server.safety.session_context import DEFAULT_SESSION_KEY, current_session_key
 
@@ -155,6 +156,60 @@ def _format_clock(millis: int) -> str:
     return f"{total_seconds // 60}:{total_seconds % 60:02d}"
 
 
+def section_label(proposal: SongSectionProposal) -> str:
+    """제안 하나의 카드 라벨 — ``m:ss–m:ss · D<n>``.
+
+    카드 빌더와 답 파서(:func:`parse_confirmed_sections`)가 **같은 문자열**을
+    써야 왕복 대조가 성립한다. 라벨을 만드는 자리는 여기 하나뿐이다.
+    """
+    span = f"{_format_clock(proposal.start_ms)}–{_format_clock(proposal.end_ms)}"
+    return f"{span} · D{proposal.d_level}"
+
+
+# ---------------------------------------------------------------------------
+# 확정 기록 (SPEC-COPILOT-SONGCONFIRM-001 M1 · REQ-SONGCONFIRM-001)
+# ---------------------------------------------------------------------------
+#
+# 카드가 끝난 뒤 남는 **불변 기록**이다. 세션 안에 살고 프로세스를 넘어 저장되지
+# 않는다. BPM 은 ``resolve_bpm`` 의 결과를 **읽기만** 한다 — 세션의 ``song_bpm``
+# 프로퍼티가 돌려주는 것과 같은 객체여야 한다(REQ-SONGCONFIRM-006, 두 정본 금지).
+
+
+@dataclass(frozen=True)
+class ConfirmedSongSection:
+    """확정 카드의 구간 하나 — 제외된 구간도 **남는다**(``selected=False``)."""
+
+    index: int
+    label: str
+    start_ms: int
+    end_ms: int
+    d_level: int
+    selected: bool
+    #: 같은 라벨을 가진 다른 제안이 있어 판정을 **함께** 받았는가(plan.md §B B1 · §F W1).
+    label_shared: bool = False
+
+
+@dataclass(frozen=True)
+class ConfirmedSongAnalysis:
+    """사람이 확인한 곡 분석 하나 — 정체성 · BPM 해소 · 구간 목록."""
+
+    source_sha256: str
+    source_file_name: str
+    #: ISO-8601 UTC. 시험은 값이 아니라 형식만 단언한다(plan.md §F W5).
+    confirmed_at: str
+    bpm: BpmResolution
+    sections: tuple[ConfirmedSongSection, ...]
+
+    @property
+    def accepted(self) -> tuple[ConfirmedSongSection, ...]:
+        """채택된 구간만, ``index`` 순서대로."""
+        return tuple(section for section in self.sections if section.selected)
+
+    @property
+    def dropped_count(self) -> int:
+        return sum(1 for section in self.sections if not section.selected)
+
+
 def build_song_confirmation_card(
     *,
     proposals: Sequence[SongSectionProposal],
@@ -178,9 +233,7 @@ def build_song_confirmation_card(
 
     options = tuple(
         QuestionOption(
-            label=(
-                f"{_format_clock(item.start_ms)}–{_format_clock(item.end_ms)} · D{item.d_level}"
-            ),
+            label=section_label(item),
             description=(
                 f"이 구간을 D{item.d_level} 로 잡습니다. "
                 "아니면 체크를 풀고 자유 입력으로 고쳐 주세요."
@@ -283,6 +336,39 @@ def parse_confirmed_bpm(answer: str, *, measured_bpm: float | None = None) -> fl
         if _BPM_MIN <= typed <= _BPM_MAX:
             return typed
     return measured_bpm
+
+
+#: UI ``joinChosenLabels`` 가 체크된 라벨을 잇는 구분자(``QuestionCard.tsx``).
+_LABEL_JOINER = ", "
+
+
+def parse_confirmed_sections(
+    answer: object, *, proposals: Sequence[SongSectionProposal]
+) -> tuple[bool, ...] | None:
+    """사람의 답 하나에서 **구간 채택 여부**를 제안마다 읽는다 — 판정 없음이면 ``None``.
+
+    답의 문법은 새로 만들지 않는다. 카드가 나갈 때의 라벨이 체크된 채로 ``", "``
+    로 이어져 그대로 돌아오므로(``QuestionCard.tsx`` ``joinChosenLabels``), 판독은
+    **라벨 왕복 대조**다(plan.md §C D1). 규칙은 셋이고 :func:`parse_confirmed_bpm`
+    과 같은 원칙이다.
+
+    * :data:`UNANSWERED` · :data:`ANSWER_FREEFORM` · 문자열 아님 → 판정 없음.
+    * 답에 카드 라벨이 **하나 이상** 들어 있으면 → 들어 있는 라벨의 구간만 채택.
+    * 답에 카드 라벨이 **하나도** 없으면 → 전부 채택. 산문(「두 번째는 빼 줘」)도
+      BPM 덮어쓰기(「BPM 130」)도 여기다 — 카드를 있는 그대로 받아들인 것이다.
+
+    대조는 답을 ``", "`` 로 나눈 **항목 각각과 라벨의 완전 일치**(양끝 공백 제거 뒤
+    ``==``)다. 부분문자열 포함은 대조가 아니다 — ``_format_clock`` 이 분을 0 으로
+    채우지 않아 ``1:00–1:15 · D1`` 이 ``11:00–11:15 · D1`` 의 접두가 되기 때문이다.
+    같은 라벨을 가진 제안들은 같은 판정을 받는다(가를 수 없다 — plan.md §B B1).
+    """
+    if not isinstance(answer, str) or answer in (UNANSWERED, ANSWER_FREEFORM):
+        return None
+    items = {item.strip() for item in answer.split(_LABEL_JOINER)}
+    labels = [section_label(proposal) for proposal in proposals]
+    if not any(label in items for label in labels):
+        return tuple(True for _ in labels)
+    return tuple(label in items for label in labels)
 
 
 class QuestionChannel:

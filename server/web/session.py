@@ -30,6 +30,7 @@ import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
+from datetime import UTC, datetime
 from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
@@ -172,12 +173,16 @@ from server.web.messages import (
 from server.web.preview import build_execution_preview
 from server.web.question import (
     UNANSWERED,
+    ConfirmedSongAnalysis,
+    ConfirmedSongSection,
     QuestionChannel,
     QuestionOption,
     QuestionRequest,
     SongSectionProposal,
     build_song_confirmation_card,
     parse_confirmed_bpm,
+    parse_confirmed_sections,
+    section_label,
 )
 from server.web.reply_discovery import ReplyPortMismatch
 from server.web.timeline_library import SongTimelineLibrary
@@ -3779,6 +3784,11 @@ class ChatSession:
         #: 가장 최근 확정된 BPM 해소 결과(``analyse_song_audio``). 오디오와 달리
         #: 이것은 **사람이 확인한 뒤**에만 채워진다.
         self._song_bpm: BpmResolution | None = None
+        #: SPEC-COPILOT-SONGCONFIRM-001 M1 — 사람이 확인한 곡 분석의 **불변 기록**
+        #: (구간 채택 여부 + BPM 해소). 답이 미응답·자유입력 표식이면 비어 있고,
+        #: 새 오디오 업로드가 무효화한다. ``_song_bpm`` 과 두 정본이 되지 않도록
+        #: 기록의 ``bpm`` 은 ``_song_bpm`` 과 **같은 객체**다(REQ-SONGCONFIRM-006).
+        self._song_analysis: ConfirmedSongAnalysis | None = None
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -10198,6 +10208,11 @@ class ChatSession:
         """
         data = base64.b64decode(content_base64, validate=True)
         replaced = self._song_audio is not None
+        # SPEC-COPILOT-SONGCONFIRM-001 (REQ-SONGCONFIRM-005) — 확정 기록은 그 곡의
+        # 것이다. 다른 곡이 올라오면 기록은 무효고, 기록이 **있었을 때만** 그 사실을
+        # 한 문장으로 말한다. ``_song_bpm`` 은 손대지 않는다(plan.md §C D2-b).
+        invalidated = self._song_analysis is not None
+        self._song_analysis = None
         self._song_audio = SongAudioUpload(
             file_name=file_name,
             mime_type=mime_type,
@@ -10210,6 +10225,8 @@ class ChatSession:
         if replaced:
             text = text + " (이전에 첨부한 오디오를 교체했습니다)"
         text = text + ". 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요."
+        if invalidated:
+            text = text + " 이전 분석 확정은 무효가 됐습니다 — 이 곡은 다시 분석해 주세요."
         return self._notify(text)
 
     def analyse_song_audio(
@@ -10276,6 +10293,35 @@ class ChatSession:
         )
         self._song_bpm = resolution
 
+        # SPEC-COPILOT-SONGCONFIRM-001 M1 (REQ-SONGCONFIRM-002/003) — 답이 미응답도
+        # 자유입력 표식도 아니면 구간 판독을 붙여 확정 기록을 남긴다. 위의
+        # ``_song_bpm`` 대입은 오늘 그대로이고, 기록은 그 **같은 객체**를 든다
+        # (REQ-SONGCONFIRM-006). 같은 라벨을 가진 제안은 판정을 함께 받으며 그
+        # 사실을 ``label_shared`` 로 남긴다(plan.md §F W1).
+        verdict = parse_confirmed_sections(answer, proposals=proposals)
+        if verdict is not None:
+            labels = [section_label(proposal) for proposal in proposals]
+            self._song_analysis = ConfirmedSongAnalysis(
+                source_sha256=audio.sha256,
+                source_file_name=audio.file_name,
+                confirmed_at=datetime.now(UTC).isoformat(),
+                bpm=resolution,
+                sections=tuple(
+                    ConfirmedSongSection(
+                        index=index,
+                        label=label,
+                        start_ms=proposal.start_ms,
+                        end_ms=proposal.end_ms,
+                        d_level=proposal.d_level,
+                        selected=selected,
+                        label_shared=labels.count(label) > 1,
+                    )
+                    for index, (proposal, label, selected) in enumerate(
+                        zip(proposals, labels, verdict, strict=True)
+                    )
+                ),
+            )
+
         if resolution.bpm is None:
             lines = [f"BPM 은 확정되지 않았습니다 — 기본값 {DEFAULT_BPM:g} 로 남습니다."]
         else:
@@ -10291,6 +10337,14 @@ class ChatSession:
     def song_bpm(self) -> BpmResolution | None:
         """가장 최근 확정된 BPM 해소 결과 — 아직 없으면 ``None``."""
         return self._song_bpm
+
+    @property
+    def song_analysis(self) -> ConfirmedSongAnalysis | None:
+        """사람이 확인한 곡 분석의 불변 기록 — 없으면 ``None`` (REQ-SONGCONFIRM-006).
+
+        있을 때 ``song_analysis.bpm is song_bpm`` 이다 — 정본은 하나다.
+        """
+        return self._song_analysis
 
     # -- internals ------------------------------------------------------------------
 

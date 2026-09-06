@@ -21,7 +21,75 @@
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+> 실행 주체: manager-develop(`cycle_type=tdd`), 카드 t273. 워크트리 `.claude/worktrees/agent-a70e9596cb7f1b7e8`, 브랜치 `WT-song-confirm-run`. 모든 명령은 이 워크트리 루트에서 실행했고 출력은 그 실행에서 그대로 옮긴 것이다(잘라 낸 자리는 `…` 로 표시).
+
+### 기준값 (BASE · 인터프리터)
+
+- `git log --oneline -1` → `fc65860 feat(SPEC-COPILOT-SONGCONFIRM-001): 곡 분석 확정의 도달 — … (plan) (#319)`; `git rev-parse --short origin/main` → `fc65860`.
+- **`BASE=$(git merge-base origin/main HEAD)` → `fc658606d91cbd61cdcf68b1c7d27b4b973eef4d`** (M1 착수 시 기록. 이하 모든 diff 술어의 기준).
+- 인터프리터: `uv sync --python 3.11` 로 워크트리 안에 `.venv` 생성(exit=0). `.venv/bin/python --version` → `Python 3.11.15`; `.venv/bin/python -c "import sys; print(sys.executable)"` → `/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a70e9596cb7f1b7e8/.venv/bin/python`; 하위 디렉터리(`server/`)에서 `import server; print(server.__file__)` → `…/agent-a70e9596cb7f1b7e8/server/__init__.py` (이 트리의 소스).
+- 착수 전 기준 회귀(BASE 트리, 변경 0): `.venv/bin/python -m pytest server/tests/test_tree_identity.py server/tests/test_song_confirm_card.py server/tests/test_web_song_audio.py server/tests/test_songcue_tool.py server/tests/test_web_session.py server/tests/test_runner_self_correction.py -q -p no:cacheprovider` → `528 passed, 1 warning in 32.35s`.
+
+### AC-014 대조군 — BASE 트리에서 다섯 grep (변경 0 상태에서 실측)
+
+```
+$ grep -rn 'parse_confirmed_sections(' server --include='*.py' | grep -v /tests/ | grep -v 'def parse_confirmed_sections' | wc -l   → 0
+$ grep -rn 'ConfirmedSongAnalysis(' server --include='*.py' | grep -v /tests/ | grep -v 'class ConfirmedSongAnalysis' | wc -l     → 0
+$ grep -n 'song_analysis=' server/web/session.py | wc -l                                                                           → 0
+$ grep -n 'song_analysis\.current' server/orchestrator/tools.py | grep -v ':[[:space:]]*#' | wc -l                                 → 0
+$ grep -c 'song_analysis: SongAnalysisPort' server/orchestrator/tools.py                                                           → 0
+$ grep -rn '\.song_bpm\b\|_song_bpm' server --include='*.py' | grep -v /tests/ | grep -v ':[[:space:]]*#' | grep -v 'self._song_bpm: BpmResolution' | grep -v 'self._song_bpm = resolution' | grep -v 'return self._song_bpm' | wc -l   → 0
+```
+
+### M1 — 판독과 기록 (AC-001 ~ 006)
+
+**RED (구현 전, 시험 파일 작성 직후 — verbatim)**
+
+```
+$ .venv/bin/python -m pytest server/tests/test_song_confirm_sections.py -q -p no:cacheprovider
+==================================== ERRORS ====================================
+_________ ERROR collecting server/tests/test_song_confirm_sections.py __________
+ImportError while importing test module '…/server/tests/test_song_confirm_sections.py'.
+…
+server/tests/test_song_confirm_sections.py:22: in <module>
+    from server.web.question import (
+E   ImportError: cannot import name 'parse_confirmed_sections' from 'server.web.question' (…/server/web/question.py)
+=========================== short test summary info ============================
+ERROR server/tests/test_song_confirm_sections.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.10s
+```
+
+**GREEN 1차 (구현 후)** — `1 failed, 107 passed`. 실패는 `test_a_label_is_matched_whole_not_as_a_prefix` 의 **시험 쪽 전제 단언** `assert labels[0] in labels[1]` 였다: 실측 `"1:00–1:15 · D1" in "11:00–11:15 · D1"` → `False`(끝 시각 `1:15` ≠ `11:15`). acceptance.md AC-005 (d) 괄호 문장(「앞 라벨이 뒤 라벨의 부분문자열이다 … 부분문자열 대조라면 2」)의 전제는 이 라벨 형식에서 성립하지 않는다 — 유효한 구간(start<end)의 어느 라벨도 다른 라벨의 부분문자열이 될 수 없다. AC 의 **관측 가능한 Then 절**(accepted 길이 1 · index 는 뒤 구간)은 그대로 통과하며, 완전 일치 ↔ 부분문자열을 실제로 가르는 대조군은 `test_a_label_inside_a_longer_item_is_not_a_match`(라벨이 더 긴 항목 안에 통째로 들어 있는 답 → 규칙 ② 전부 채택)로 추가했다. SPEC 본문은 손대지 않았다 — §E.2 끝의 「미검증·잔여 위험」에 적는다.
+
+**GREEN (M1 게이트, acceptance.md §A M1 명령 — verbatim)**
+
+```
+$ .venv/bin/python -m pytest server/tests/test_song_confirm_sections.py server/tests/test_song_confirm_card.py server/tests/test_web_song_audio.py -q -p no:cacheprovider
+109 passed, 1 warning in 2.08s
+```
+
+```
+$ git diff --name-only fc658606d91cbd61cdcf68b1c7d27b4b973eef4d -- server/tests/test_song_confirm_card.py server/tests/test_web_song_audio.py server/tests/test_songcue_tool.py server/tests/test_web_session.py server/tests/test_runner_self_correction.py
+(출력 0행)
+$ git diff --name-only fc658606d91cbd61cdcf68b1c7d27b4b973eef4d -- server/safety server/audio server/looks server/design ui/src src-tauri
+(출력 0행)
+$ .venv/bin/ruff check server/web/question.py server/web/session.py server/tests/test_song_confirm_sections.py
+All checks passed!
+$ .venv/bin/ruff format --check server/web/question.py server/web/session.py server/tests/test_song_confirm_sections.py
+3 files already formatted
+```
+
+| AC | 상태 | 검증 명령 | 실제 출력 |
+|---|---|---|---|
+| AC-SONGCONFIRM-001 | PASS | `pytest server/tests/test_song_confirm_sections.py -q` (`TestAcceptingTheCardRecordsEverySection` 2건) | M1 게이트 `109 passed` 에 포함 |
+| AC-SONGCONFIRM-002 | PASS | 같은 파일 `TestUncheckedSectionsAreDroppedButKept` | 위와 같음 |
+| AC-SONGCONFIRM-003 | PASS | `TestATypedBpmKeepsTheCardSections` 2건(대조군 「두 번째는 빼 줘」 포함) | 위와 같음 |
+| AC-SONGCONFIRM-004 | PASS | `TestNoAnswerMeansNoRecord` (`UNANSWERED` · `ANSWER_FREEFORM`) | 위와 같음 |
+| AC-SONGCONFIRM-005 | PASS | 파서 `TestRuleTwoAcceptsEverythingWhenNoLabelIsPresent` (a)(b)(c)+양성 대조군 · `TestRuleOneKeepsOnlyTheLabelsPresent` (d) 접두 카드 · 세션 `TestLabelsAreMatchedWholeThroughTheSession` | 위와 같음 — (d) 전제 문장의 부정확은 위 GREEN 1차 참조 |
+| AC-SONGCONFIRM-006 | PASS | `TestANewUploadInvalidatesTheRecord` 2건(첫 업로드 고지 문자열 동일 대조군 포함) | 위와 같음 |
+
+M1 변경 파일: `server/web/question.py`(`section_label` · `ConfirmedSongSection` · `ConfirmedSongAnalysis` · `parse_confirmed_sections`; `QuestionRequest` 스키마 무변경, 카드 라벨 문자열 무변경) · `server/web/session.py`(`_song_analysis` 필드 · `analyse_song_audio` 기록 생성 · `upload_song_audio` 무효화+조건부 고지 · `song_analysis` 프로퍼티; `_song_bpm` 대입 무변경) · `server/tests/test_song_confirm_sections.py`(신규). `spec.md` frontmatter `status: draft → in-progress`(`updated: 2026-09-06` 는 M1 커밋일과 같아 그대로).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
