@@ -96,7 +96,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--receive-port", type=int, default=9000, help="OSC feedback listen port")
     parser.add_argument(
-        "--config", default=str(DEFAULT_CONFIG_PATH), help="provider TOML config path"
+        "--config",
+        default=str(DEFAULT_CONFIG_PATH),
+        help=(
+            "provider TOML config path (a SEED: the user settings file's active_provider "
+            "wins over it -- change the provider in the settings screen or that file)"
+        ),
     )
     parser.add_argument("--ui-dist", default=str(DEFAULT_UI_DIST), help="built UI directory")
     parser.add_argument(

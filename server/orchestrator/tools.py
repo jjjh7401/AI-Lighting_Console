@@ -567,25 +567,55 @@ class SongAnalysisPort(Protocol):
     current: ConfirmedSongAnalysisPort | None
 
 
-def _confirmed_section_input(position: int, section: ConfirmedSectionPort) -> dict[str, object]:
+def _confirmed_section_input(
+    position: int, section: ConfirmedSectionPort, name: str | None = None
+) -> dict[str, object]:
     """확정 구간 하나를 ``prepare_songcue`` 의 raw 구간 dict 로 옮긴다 — 손실 0.
 
-    이름은 룩 라이브러리 어휘에 **속하지 않는** 중립 ASCII ``S<n>`` 이다(plan.md §C
-    D5) — 라이브러리 이름으로 번역하면 ``_section_dynamics`` 가 그 이름의 dynamics 를
-    다시 매겨 ``d_level`` 과 두 정본이 된다. 시작은 ``m:ss.mmm`` 문자열이다 —
-    ``normalise_start_ms`` 는 bare int 를 **초**로 읽으므로(plan.md §B B2) 밀리초
-    정수를 그대로 넘기면 1000배 틀어진다. dynamics 는 ``d_level`` 그대로 실어
-    핸들러의 ``sections[].dynamics`` 명시 경로를 탄다.
+    이름의 기본값은 룩 라이브러리 어휘에 **속하지 않는** 중립 ASCII ``S<n>`` 이다
+    (plan.md §C D5). 운영자가 ``section_names`` 로 이름을 주면 그것이 이 자리에
+    들어오는데(카드 t274), 그래도 dynamics 는 **이름에서 오지 않는다**: 아래
+    ``dynamics`` 키가 ``d_level`` 을 그대로 실어 핸들러의 ``sections[].dynamics``
+    명시 경로를 타고, ``_map_section_to_look`` 은 명시 dynamics 를 이름에서 뽑은
+    ``_section_dynamics`` 결과보다 **먼저** 본다. 그래서 ``Chorus`` 라고 이름 붙인
+    D1 구간은 여전히 D1 룩을 고른다 — 두 정본이 생기지 않는다.
+
+    시작은 ``m:ss.mmm`` 문자열이다 — ``normalise_start_ms`` 는 bare int 를 **초**로
+    읽으므로(plan.md §B B2) 밀리초 정수를 그대로 넘기면 1000배 틀어진다.
     """
     minutes, remainder = divmod(section.start_ms, 60_000)
     seconds, millis = divmod(remainder, 1000)
     return {
-        "name": f"S{position}",
+        "name": name if name is not None else f"S{position}",
         "start": f"{minutes}:{seconds:02d}.{millis:03d}",
         "start_ms": section.start_ms,
         "dynamics": section.d_level,
         "confirmed_index": section.index,
     }
+
+
+def _breaks_ma3_quoting(value: str) -> bool:
+    """MA3 홑따옴표 문자열을 이름이 조기 종료시키는가.
+
+    전송 명령은 라벨을 홑따옴표로 감싸고(``Store Sequence n Cue m '<name>'``) MA3
+    문법에서 홑따옴표 문자열은 홑따옴표로 닫힌다 — 이름 안의 홑따옴표는 거기서
+    문자열을 자른다. 이스케이프 없이 fail-closed 로 거절하는 **같은 규칙**을
+    ``map_cues`` 의 ``sequence_name`` 검사와 정본 CUE 시트의 Section/Mood/TC 열
+    검사가 이미 쓰고 있다; 새로 만들지 않고 그 규칙에 이름을 붙였다.
+    """
+    return "'" in value
+
+
+def _label_survives_ma3(value: str) -> bool:
+    """이 이름이 콘솔 큐 라벨로 **남는가**.
+
+    ``server/looks/songcue.py`` 의 ``_ascii_label`` 은 NFKD 정규화 뒤 ascii-ignore 를
+    하므로 한글 이름은 통째로 사라지고 ``Section <n>`` 폴백이 선다(2026-09-06 실측:
+    ``인트로`` → ``Section 1``). 악센트 글자는 조용히 바뀐다(``Café`` → ``Cafe``).
+    둘 다 운영자가 요청한 이름이 아니므로, 라벨에 그대로 남지 않을 이름은 도구
+    경계에서 이름을 대고 거절한다 — 조용히 다른 이름이 콘솔에 박히는 것보다 낫다.
+    """
+    return value.isascii() and any(character.isalnum() for character in value)
 
 
 #: 래퍼가 낼 수 있는 거절의 닫힌 집합 (REQ-SHEETPIPE-007).
@@ -2708,9 +2738,58 @@ def build_toolset(
         accepted = tuple(confirmed.accepted) if confirmed is not None else ()
         sections_source = "explicit"
         confirmed_sections: list[dict[str, object]] | None = None
+        # 카드 t274 — 운영자가 채팅에서 말한 구간 이름. 확정 기본값 경로에만 붙고
+        # (명시 ``sections`` 는 이미 자기 이름을 들고 있다), 라벨에만 닿는다.
+        raw_names = call.arguments.get("section_names")
+        section_names: list[str] | None = None
+        if raw_names is not None:
+            if raw_sections is not None:
+                return _error_result(
+                    call,
+                    "'section_names' is only for the confirmed sections; you passed "
+                    "'sections', which already carries its own names. Drop one of the two.",
+                )
+            if not accepted:
+                return _error_result(
+                    call,
+                    "'section_names' needs a confirmed song analysis in this session; "
+                    "there is none, so there are no sections to name.",
+                )
+            if not isinstance(raw_names, list | tuple) or not all(
+                isinstance(name, str) for name in raw_names
+            ):
+                return _error_result(call, "'section_names' must be an array of strings")
+            if len(raw_names) != len(accepted):
+                return _error_result(
+                    call,
+                    f"'section_names' has {len(raw_names)} name(s) but the confirmed "
+                    f"analysis has {len(accepted)} accepted section(s) — the names are "
+                    "index-aligned, so the counts must match.",
+                )
+            for name in raw_names:
+                if _breaks_ma3_quoting(name):
+                    return _error_result(
+                        call,
+                        f"'section_names' entry {name!r} contains a single quote — the cue "
+                        "label is wrapped in single quotes (Store Sequence ... '<name>' ...) "
+                        "and the string would be cut there. 홑따옴표를 빼고 다시 불러라.",
+                    )
+                if not _label_survives_ma3(name):
+                    return _error_result(
+                        call,
+                        f"'section_names' entry {name!r} would not survive as a cue label: "
+                        "labels are folded to ASCII, so a non-ASCII name is dropped and a "
+                        "'Section <n>' fallback is stored instead. Use an ASCII name with at "
+                        "least one letter or digit (Intro, Chorus, Drop 2).",
+                    )
+            section_names = [name.strip() for name in raw_names]
         if raw_sections is None and accepted:
             confirmed_sections = [
-                _confirmed_section_input(position, section)
+                _confirmed_section_input(
+                    position,
+                    section,
+                    None if section_names is None else section_names[position - 1],
+                )
                 for position, section in enumerate(accepted, start=1)
             ]
             raw_sections = confirmed_sections
@@ -2763,6 +2842,11 @@ def build_toolset(
         # 두 목록을 나란히 놓는다 — 개수와 같은 자리의 시작 시각 쌍(없는 쪽은 null).
         songconfirm_fields: dict[str, object] = {"sections_source": sections_source}
         if confirmed_sections is not None:
+            # 이름이 어디서 왔는지도 **항상** 말한다 — 운영자가 붙였는지 중립
+            # 기본값인지 보고 없이는 구분되지 않는다(카드 t274).
+            songconfirm_fields["section_names_source"] = (
+                "operator" if section_names is not None else "default"
+            )
             songconfirm_fields["confirmed_sections"] = confirmed_sections
         elif confirmed is not None:
             explicit_starts = [section.start_ms for section in sections]
@@ -9813,6 +9897,23 @@ def build_toolset(
                             "pass sections, they win and any mismatch against the confirmed "
                             "sections is reported (not an error). With no confirmed "
                             "analysis, sections are required."
+                        ),
+                    },
+                    "section_names": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Optional operator-chosen names for the CONFIRMED sections, "
+                            "index-aligned to them, used only when 'sections' is omitted. "
+                            "Fill this from the operator's own words in chat when they name "
+                            "the sections (Intro, Chorus, Bridge); omit it and the cue labels "
+                            "stay the neutral S1, S2, S3. Names must be ASCII with at least "
+                            "one letter or digit and no single quote — the console cue label "
+                            "is folded to ASCII and wrapped in single quotes, so anything "
+                            "else is refused rather than silently changed. A name NEVER "
+                            "decides dynamics: the look for each section still comes from the "
+                            "confirmed d_level, so naming a quiet section 'Chorus' does not "
+                            "brighten it."
                         ),
                     },
                     "explicit_dynamics": {
