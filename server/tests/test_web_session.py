@@ -737,7 +737,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -785,7 +785,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 return ToolExecution(
                     ToolResult(
@@ -835,7 +835,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 content = json.dumps(
                     {"fixtures": [{"fid": 20}, {"fid": 21}], "coverage": {"complete": True}}
@@ -867,7 +867,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 fixtures = [
                     *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 21)],
@@ -911,7 +911,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 fixtures = [
                     *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 20)],  # 19
@@ -947,7 +947,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 fixtures = [
                     *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 21)],
@@ -1023,7 +1023,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 fixtures = [
                     *[{"fid": fid, "name": f"Robin MMX Spot {fid}"} for fid in range(1, 26)],
@@ -1061,7 +1061,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 fixtures = [{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 6)]
                 return ToolExecution(
@@ -1092,7 +1092,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 fixtures = [
                     *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 21)],
@@ -1129,7 +1129,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     fixtures = [
@@ -1172,7 +1172,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 fixtures = [{"fid": fid} for fid in range(1, 5)]
                 return ToolExecution(
@@ -1208,7 +1208,7 @@ class TestAllFixturesElevation:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 raise AssertionError("locked layout must not dispatch a rig read or write")
 
@@ -1232,7 +1232,7 @@ class TestPointFixturesAtTarget:
         ]
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -1328,7 +1328,7 @@ class TestPointFixturesAtTarget:
         ]
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -1391,7 +1391,7 @@ class TestPositionMoodSuggestion:
         ]
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -1511,7 +1511,7 @@ class TestBasicPositionPresets:
         ]
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -1677,7 +1677,7 @@ class _PresetPoolRegistry:
             child["name"] = self.names[number]
         return child
 
-    def dispatch(self, call: ToolCall) -> ToolExecution:
+    def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
         self.calls.append(call)
         if call.name == "get_spatial_context":
             return ToolExecution(
@@ -1885,7 +1885,7 @@ class _ColorChannelRegistry:
         self.page_size = page_size
         self.legacy_pager = legacy_pager
 
-    def dispatch(self, call: ToolCall) -> ToolExecution:
+    def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
         self.calls.append(call)
         assert call.name == "query_state", call
         parts = call.arguments["path"].split("/")
@@ -3765,7 +3765,7 @@ class TestUnverifiedPoolReachesTheApprovalCard:
             self._session = session
             self.cards = 0
 
-        def dispatch(self, call):
+        def dispatch(self, call, context=None):
             if call.name == "run_commands":
                 self.cards += 1
                 self._session._notify_approval(
@@ -4467,7 +4467,7 @@ class TestPositionCueStoreSession:
         ]
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -4586,7 +4586,7 @@ class TestPositionCueSheetSession:
         ]
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -5762,7 +5762,7 @@ class TestSongDesignInterviewSession:
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
 
         class RealConsoleRegistry:
-            def dispatch(self, call):
+            def dispatch(self, call, context=None):
                 path = call.arguments["path"]
                 if path.endswith("/110"):  # 실존 시퀀스만 정상 응답
                     return ToolExecution(
@@ -5795,7 +5795,7 @@ class TestSongDesignInterviewSession:
         seen: dict[str, int] = {}
 
         class FlappingRegistry:
-            def dispatch(self, call):
+            def dispatch(self, call, context=None):
                 path = call.arguments["path"]
                 seen[path] = seen.get(path, 0) + 1
                 if seen[path] == 1:  # first touch always times out
@@ -5819,7 +5819,7 @@ class TestSongDesignInterviewSession:
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
 
         class BrokenRegistry:
-            def dispatch(self, call):
+            def dispatch(self, call, context=None):
                 return ToolExecution(
                     ToolResult(
                         tool_call_id=call.id,
@@ -6600,7 +6600,7 @@ class TestRehearsalCueEdit:
         ]
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -6722,7 +6722,7 @@ class TestSetlistMode:
 
     def _registry(self, calls, states):
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "query_state":
                     return ToolExecution(
@@ -6906,7 +6906,7 @@ class TestLookPanTilt:
         ]
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     return ToolExecution(
@@ -7030,7 +7030,7 @@ class TestMultiRingCircle:
         calls: list[ToolCall] = []
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
                 calls.append(call)
                 fixtures = [
                     *[{"fid": f, "name": f"MMX {f}", "x": f, "y": 0.0} for f in range(1, 20)],
@@ -7305,7 +7305,7 @@ class _ExecutorPageRegistry(_PresetPoolRegistry):
         self.page_child_count = page_child_count
         self.assigned = False
 
-    def dispatch(self, call: ToolCall) -> ToolExecution:
+    def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
         if call.name == "query_state" and str(call.arguments.get("path", "")).endswith("Pages/1"):
             self.calls.append(call)
             if self.page_error or (self.assigned and self.page_after_error):
