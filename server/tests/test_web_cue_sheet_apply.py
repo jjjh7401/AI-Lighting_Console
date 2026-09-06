@@ -186,6 +186,96 @@ def test_a_mood_only_edit_is_reported_as_not_appliable(harness):
     assert console.executed == []
 
 
+# -- t292: 반영은 감독의 수락 없이 콘솔에 닿지 못한다 ------------------------------
+
+
+def _approval_events(sent) -> list[dict]:
+    return [event for event in sent if event.get("type") == "approval_request"]
+
+
+def test_apply_cannot_reach_the_console_without_the_operators_acceptance(harness):
+    """수락을 거절하면 명령은 **0건** 나간다.
+
+    t291·t294·t296 실측이 고정한 결함이 이것이다: 반영이
+    `Store Sequence 210 Cue 10 /Merge` 를 보냈는데 감사 로그는
+    `executed 5, blocked 0, approved 0` 이었다. 승인 카드가 아예 뜨지
+    않았기 때문이고, 그 이유는 게이트가 이 명령을 `safe` 로 분류하기
+    때문이다(`test_writegate_merge_gap.py` 가 그 분류를 고정한다).
+    """
+    session, console, _store, sent, channel = harness
+    session.run_instruction("이 구간 더 밝게 해줘", 10)
+    stop = threading.Event()
+
+    def decline():
+        for event in sent:
+            if event.get("type") == "approval_request":
+                channel.resolve(event["request_id"], approved=False)
+                return True
+        return False
+
+    def poller():
+        while not stop.is_set():
+            if decline():
+                return
+            stop.wait(0.01)
+
+    thread = threading.Thread(target=poller)
+    thread.start()
+    try:
+        event = session.run_instruction("초안을 콘솔에 반영해줘")
+    finally:
+        stop.set()
+        thread.join(timeout=2.0)
+
+    assert _approval_events(sent), "수락 카드 자체가 뜨지 않으면 이 결함은 그대로다"
+    assert console.executed == []
+    assert "승인받지 못해" in event["text"]
+    assert "콘솔에는 아무것도 쓰지 않았습니다" in event["text"]
+
+
+def test_no_approval_channel_answer_means_nothing_is_sent(harness):
+    """답이 없으면 거절이다 — 쇼파일 쓰기는 fail-closed."""
+    session, console, _store, _sent, channel = harness
+    session.run_instruction("이 구간 더 밝게 해줘", 10)
+    # 아무도 resolve 하지 않는다 → 채널의 타임아웃이 deny 로 떨어진다.
+    event = session.run_instruction("초안을 콘솔에 반영해줘")
+    assert console.executed == []
+    assert "승인받지 못해" in event["text"]
+
+
+def test_an_accepted_batch_is_asked_once_not_once_per_command(harness):
+    """묶음 하나 = 카드 하나. 명령 수만큼 묻지 않는다.
+
+    이 큐는 명령 여러 줄로 나간다(대상 선택·조도·`Store … /Merge`). 카드가
+    명령마다 뜨면 감독은 한 곡 반영에 프롬프트 벽을 만난다 — 이 카드가
+    분류를 넓히는 대신 반영 경로에서 받은 이유가 그 비용이다.
+    """
+    session, console, _store, sent, channel = harness
+    session.run_instruction("이 구간 더 밝게 해줘", 10)
+    event = _run_with_auto_approval(session, sent, channel, "초안을 콘솔에 반영해줘")
+    cards = _approval_events(sent)
+    assert len(cards) == 1, f"카드 {len(cards)}장 — 묶음당 1장이어야 한다"
+    assert len(cards[0]["items"]) > 1, "여러 명령이 한 장에 실려야 비교가 성립한다"
+    assert len(console.executed) == len(cards[0]["items"])
+    assert "Store Sequence 210 Cue 10 /Merge" in console.executed
+    assert "Sequence 210" in event["text"]
+
+
+def test_the_acceptance_is_written_to_the_audit_log(harness, tmp_path):
+    """감사 로그가 수락을 기록한다 — 「승인 0건인데 실행 N건」이 다시 안 생기게."""
+    session, console, _store, sent, channel = harness
+    session.run_instruction("이 구간 더 밝게 해줘", 10)
+    _run_with_auto_approval(session, sent, channel, "초안을 콘솔에 반영해줘")
+    audit = AuditLog(tmp_path / "audit")
+    events = list(audit.iter_events())
+    approved = [
+        e for e in events if e.get("event") == "approved" and e.get("kind") == "draft_apply"
+    ]
+    assert approved, f"수락 항목이 없다: {[e.get('event') for e in events]}"
+    assert "Store Sequence 210 Cue 10 /Merge" in approved[0]["commands"]
+    assert console.executed
+
+
 def test_applying_twice_does_not_resend_the_same_cue(harness):
     session, console, store, sent, channel = harness
     session.run_instruction("이 구간 더 밝게 해줘", 10)
