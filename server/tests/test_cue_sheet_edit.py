@@ -254,3 +254,72 @@ def test_every_accepted_cue_anchor_opens_the_route(anchor):
 
 def test_an_edit_verb_without_a_cue_anchor_falls_through():
     assert parse_cue_sheet_edit_request("전체적으로 더 밝게 해줘") is None
+
+
+# -- t290: 선택된 큐가 있으면 지시어 없이도 받는다 ------------------------------
+#
+# 판별기는 세 축이다(길이 ≤ 40자 · 한 줄 · 곡 서술 표지 없음). 아래 두 코퍼스가
+# 그 판별기의 정밀도를 **재는** 자리다: 받아야 할 문장 전량과, 선택이 있어도
+# 여전히 거절해야 할 문장 전량.
+
+#: 선택된 큐 하나에 던지는 짧은 명령. 전부 받아야 한다(t290 의 목적).
+ANCHORLESS_CUE_COMMANDS = (
+    "더 밝게",
+    "더 밝게 해줘",
+    "조금 어둡게",
+    "조도 80으로 바꿔줘",
+    "페이드 3초로 바꿔줘",
+    "스냅으로 바꿔줘",
+    "무드를 차분하게로 바꿔줘",
+)
+
+#: 선택이 있어도 **여전히 거절**해야 하는 문장. 셋 계열이다 —
+#: (a) 곡 브리핑, (b) 구간 이름을 쓴 서술, (c) 범위어("전체적으로").
+STILL_REFUSED_WITH_A_SELECTION = (
+    "곡은 약 1분 40초의 밝은 팝 무대야.\n"
+    "0:00 도입은 무대를 어둡게 두고 보컬에게만 시선을 모아줘.\n"
+    "1:32 마지막 후렴은 따뜻하고 환하게, 가장 큰 에너지로 끝내줘.",
+    "0:00 도입은 어둡게 해줘",
+    "마지막 후렴은 환하게 해줘",
+    "전체적으로 더 밝게 해줘",
+    "모든 구간을 밝게 해줘",
+    "곡 전체를 조금 어둡게 해줘",
+)
+
+
+@pytest.mark.parametrize("text", ANCHORLESS_CUE_COMMANDS)
+def test_a_short_command_with_a_selected_cue_edits_without_a_deictic(text):
+    """t290 재현: Q020 을 고른 상태의 「더 밝게」가 편집으로 라우팅된다."""
+    assert parse_cue_sheet_edit_request(text, cue_selected=True) is not None
+
+
+@pytest.mark.parametrize("text", STILL_REFUSED_WITH_A_SELECTION)
+def test_a_song_brief_is_still_refused_even_with_a_cue_selected(text):
+    """선택이 있어도 곡을 서술하는 문장은 이 라우트가 삼키지 않는다.
+
+    「전체적으로 더 밝게 해줘」가 **의도적으로 남긴 거짓양성 거절**이다:
+    짧고 한 줄이지만 한 큐를 가리키지 않으므로, 선택이 있어도 거절한다.
+    """
+    assert parse_cue_sheet_edit_request(text, cue_selected=True) is None
+
+
+def test_without_a_selection_the_anchor_is_still_required():
+    """선택이 없으면 t281 그대로다 — 기본값이 바뀌지 않았다는 실측."""
+    for text in ANCHORLESS_CUE_COMMANDS:
+        assert parse_cue_sheet_edit_request(text) is None
+
+
+def test_the_discriminator_precision_on_the_two_corpora():
+    """판별기 정밀도를 숫자로 남긴다 — 「잘 된다」가 아니라 잰 값으로."""
+    accepted = [
+        text
+        for text in ANCHORLESS_CUE_COMMANDS
+        if parse_cue_sheet_edit_request(text, cue_selected=True) is not None
+    ]
+    leaked = [
+        text
+        for text in STILL_REFUSED_WITH_A_SELECTION
+        if parse_cue_sheet_edit_request(text, cue_selected=True) is not None
+    ]
+    assert len(accepted) == len(ANCHORLESS_CUE_COMMANDS)  # 재현율 7/7
+    assert leaked == []  # 거짓양성 0/6

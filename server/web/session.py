@@ -22,6 +22,7 @@ from __future__ import annotations
 import base64
 import binascii
 import contextlib
+import copy
 import hashlib
 import json
 import os
@@ -35,6 +36,10 @@ from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
 from server.deploy.review import ReviewRequest
+from server.design.cue_sheet_apply import (
+    ConsoleApplyError,
+    plan_console_apply,
+)
 from server.design.cue_sheet_edit import (
     CueSheetEditError,
     apply_cue_sheet_edit,
@@ -1069,6 +1074,12 @@ _REHEARSAL_EDIT_REQUEST = re.compile(r"(?:지금|현재)\s*(?:이|나가는|재�
 # 셋리스트 모드 (handoff 2026-08-15 priority 4): allocate the library's songs
 # to consecutive setlist sequences (210, 220, …) and page-1 executors (101~).
 _SETLIST_REQUEST = re.compile(r"셋\s*리스트|set\s*list", re.IGNORECASE)
+
+#: t291 — 초안을 콘솔로 보내라는 요청. 「저장」(라이브러리)과 어휘가 갈린다:
+#: 저장에는 콘솔이 없고, 반영에는 콘솔이 있다.
+_DRAFT_APPLY_REQUEST = re.compile(
+    r"콘솔[에은는]?\s*(반영|적용|전송|올려|보내)|초안\s*(을|를)?\s*(반영|적용)"
+)
 _SETLIST_SEQ_START = re.compile(r"시퀀스\s*(?P<no>\d+)\s*(?:번)?\s*부터")
 _SETLIST_EXEC_START = re.compile(
     r"(?:executor|익스큐터|이그제큐터|실행기)\s*(?P<no>\d+)\s*(?:번)?\s*부터", re.IGNORECASE
@@ -3970,6 +3981,10 @@ class ChatSession:
         # (chat 프레임이 실어 온다). 둘 다 콘솔과 무관하다.
         self._draft_history = TimelineDraftHistory()
         self._selected_cue: int | None = None
+        # t291 — 콘솔 반영이 「무엇을 보낼지」 정할 때 대는 기준본. 첫 편집
+        # 직전의 타임라인 깊은 사본이다. 이력의 걸음 수가 아니라 **값**을
+        # 비교하므로, 되돌리기로 원래 값이 된 큐는 반영 대상에서 빠진다.
+        self._draft_baseline: dict | None = None
         # Layout parameters the operator has already established this session
         # (column gap, fixture gap in metres). Persisted ACROSS turns and NOT
         # cleared after a placement, so a follow-up ("나머지도 배치해줘") reuses
@@ -8244,7 +8259,10 @@ class ChatSession:
         어느 큐인지는 문장의 「큐 N」이 먼저이고, 없으면 화면에서 감독이 고른
         큐(``self._selected_cue``)를 쓴다. 둘 다 없으면 **지어내지 않고** 거절한다.
         """
-        request = parse_cue_sheet_edit_request(text)
+        # t290 — 화면에서 큐를 이미 고른 상태면 지시어 없는 짧은 명령도 받는다.
+        # 판별기는 `cue_sheet_edit._is_anchorless_cue_command` 하나뿐이고, 곡
+        # 브리핑 회귀(32건)는 그 판별기의 어휘 축이 계속 막는다.
+        request = parse_cue_sheet_edit_request(text, cue_selected=self._selected_cue is not None)
         if request is None:
             return None  # 이 모듈의 어휘가 아니다 — 기존 사슬로 그대로 흘려보낸다
         store = self._timeline_store
@@ -8268,6 +8286,7 @@ class ChatSession:
             return self._pointing_refusal(
                 f"큐시트 초안을 수정하지 않았습니다 — {error} 콘솔에는 아무것도 쓰지 않았습니다."
             )
+        self._remember_draft_baseline(timeline)
         self._draft_history.record(timeline)
         updated = self._draft_badge(updated, depth=self._draft_history.depth, report=report)
         store.latest = updated
@@ -8276,6 +8295,108 @@ class ChatSession:
             f"큐 {cue} 초안 수정 (콘솔 무접촉): {' · '.join(report)}. "
             "이 수정은 아직 초안입니다 — 「저장」을 눌러야 라이브러리에 남고, "
             "콘솔 반영은 별도의 승인 경로입니다."
+        )
+
+    # -- t291 초안 → 콘솔 반영 (기존 승인 게이트 그대로) --------------------------
+
+    def _remember_draft_baseline(self, timeline: dict) -> None:
+        """첫 편집 직전 상태를 기준본으로 잡는다. 곡이 바뀌면 기준도 바뀐다.
+
+        곡을 새로 설계하거나 라이브러리에서 다른 판을 불러오면 예전 기준본은
+        **다른 곡**의 것이다 — 그대로 두면 「달라진 큐」가 곡 전체로 부풀어
+        건드리지도 않은 큐가 콘솔로 나간다. 그래서 곡 이름·시퀀스 번호가
+        어긋나면 기준을 지금 것으로 새로 잡는다.
+        """
+        current = self._draft_baseline
+        same_song = (
+            current is not None
+            and current.get("song_title") == timeline.get("song_title")
+            and current.get("sequence_number") == timeline.get("sequence_number")
+        )
+        if not same_song:
+            self._draft_baseline = copy.deepcopy(timeline)
+
+    def _cue_sheet_draft_apply(self, text: str) -> InstructionResult | None:
+        """초안에서 바뀐 큐를 콘솔에 반영한다 — **기존 승인 경로 그대로**.
+
+        새 경로를 만들지 않는다: 명령은 `server.design.cue_sheet_apply` 가
+        순수하게 세우고, 발사는 다른 모든 콘솔 쓰기와 같은
+        ``run_commands`` 디스패치다. 미리보기 카드·승인·LiveLock·감사 로그가
+        전부 그 경로에 이미 붙어 있으므로 여기에는 우회 플래그가 없다.
+
+        「저장」과는 다른 행위다 — 저장은 라이브러리에만 남기고 콘솔에는 한
+        건도 보내지 않는다(`server/web/timeline_api.py`).
+        """
+        if _DRAFT_APPLY_REQUEST.search(text) is None:
+            return None
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if not isinstance(timeline, dict):
+            return self._pointing_refusal(
+                "반영할 큐시트 초안이 없습니다. 곡 설계를 완료하거나 라이브러리에서 "
+                "타임라인을 불러온 뒤 다시 요청해 주세요. 콘솔에는 아무것도 쓰지 않았습니다."
+            )
+        baseline = self._draft_baseline
+        if baseline is None:
+            return self._pointing_refusal(
+                "초안에서 달라진 큐가 없습니다. 먼저 큐시트를 수정한 뒤 반영해 주세요. "
+                "콘솔에는 아무것도 쓰지 않았습니다."
+            )
+        try:
+            plan = plan_console_apply(baseline, timeline)
+        except ConsoleApplyError as error:
+            return self._pointing_refusal(f"{error} 콘솔에는 아무것도 쓰지 않았습니다.")
+        skipped_note = "".join(
+            f"\n· 큐 {skip.cue_number}({skip.label}) 미반영 [{skip.reason}] — {skip.detail}"
+            for skip in plan.skipped
+        )
+        if plan.is_empty:
+            # 「전부 반영했습니다」를 절대 말하지 않는다 — 0건이 나갔다.
+            return self._pointing_refusal(
+                f"콘솔에 반영한 큐가 0건입니다 (건너뜀 {len(plan.skipped)}건)."
+                f"{skipped_note}\n콘솔에는 아무것도 쓰지 않았습니다."
+            )
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="cue-sheet-draft-apply",
+                name="run_commands",
+                arguments={"commands": list(plan.commands)},
+            )
+        )
+        failed = [
+            outcome
+            for outcome in executed.command_outcomes
+            if outcome.status in ("failed", "blocked", "rejected", "not_executed")
+        ]
+        applied_note = ", ".join(
+            f"큐 {cue}→{plan.targets[cue]}%" for cue in plan.applied if cue in plan.targets
+        )
+        if executed.result.is_error or failed:
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"Sequence {plan.sequence_number} 반영이 완료되지 않았습니다 "
+                    f"(요청 {len(plan.applied)}건 중 미완료 {len(failed)}건). "
+                    "초안은 그대로 남아 있습니다." + skipped_note
+                ),
+                command_outcomes=tuple(executed.command_outcomes),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        # 반영된 값이 새 기준이다 — 같은 큐를 두 번 보내지 않게.
+        self._draft_baseline = copy.deepcopy(timeline)
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"Sequence {plan.sequence_number}에 초안 {len(plan.applied)}건을 "
+                f"병합했습니다 ({applied_note})."
+                f"{skipped_note}"
+            ),
+            command_outcomes=tuple(executed.command_outcomes),
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
         )
 
     def _draft_step(self, *, redo: bool) -> dict:
@@ -10366,6 +10487,11 @@ class ChatSession:
                     # 등)이 **먼저** 본다: 그쪽은 「타임라인」 리터럴과 포지션 어휘를
                     # 필수 게이트로 쓰므로 서로소이고, 순서를 이렇게 두면 기존
                     # 콘솔 편집의 행선지가 이 변경으로 바뀌지 않는다.
+                    # t291 — 「콘솔에 반영」은 편집보다 **먼저** 본다. 반영
+                    # 문장에는 편집 동사('반영해줘'의 해줘)가 섞여 있어서, 뒤에
+                    # 두면 지시어 없는 짧은 문장이 편집 라우트에 삼켜진다.
+                    result = self._cue_sheet_draft_apply(text)
+                if result is None:
                     result = self._cue_sheet_draft_edit(text)
                 if result is None:
                     result = self._song_design_interview(text)

@@ -250,6 +250,9 @@ export interface CueSheetTimelineProps {
   onRedoDraft?: () => void;
   /** 「저장」 — 라이브러리에 새 판을 남긴다. 콘솔 반영이 아니다. */
   onSaveDraft?: () => void;
+  /** t291 「콘솔에 반영」 — 바뀐 큐만 승인 카드를 거쳐 콘솔로 나간다.
+   * 저장과 **다른 행위**다: 저장은 콘솔에 한 건도 보내지 않는다. */
+  onApplyDraft?: () => void;
 }
 
 export function CueSheetTimeline({
@@ -258,6 +261,7 @@ export function CueSheetTimeline({
   onUndoDraft,
   onRedoDraft,
   onSaveDraft,
+  onApplyDraft,
 }: CueSheetTimelineProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [visible, setVisible] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
@@ -535,7 +539,7 @@ export function CueSheetTimeline({
             콘솔에 아무것도 보내지 않는다. 콘솔 반영은 승인 카드를 거치는
             **다른 동작**이고 이 카드에서 만들지 않았다 — 두 버튼을 나란히
             두지 않고 문구로 갈라 놓는 이유가 그것이다. */}
-        {(onUndoDraft || onRedoDraft || onSaveDraft) && (
+        {(onUndoDraft || onRedoDraft || onSaveDraft || onApplyDraft) && (
           <div className="cst-draft-bar">
             <span className="cst-draft-scope">
               선택: {selected ? `${cueLabel(selected)} ${selected.label}` : "없음"}
@@ -562,6 +566,17 @@ export function CueSheetTimeline({
               {onSaveDraft && (
                 <button type="button" className="cst-draft-save" onClick={onSaveDraft}>
                   💾 라이브러리에 저장
+                </button>
+              )}
+              {onApplyDraft && (
+                <button
+                  type="button"
+                  className="cst-draft-apply"
+                  onClick={onApplyDraft}
+                  disabled={(timeline.draft?.depth ?? 0) === 0}
+                  title="바뀐 큐만 콘솔로 보냅니다 — 보내기 전에 승인 카드가 뜹니다."
+                >
+                  ▶ 콘솔에 반영
                 </button>
               )}
             </div>

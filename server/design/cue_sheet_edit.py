@@ -114,19 +114,62 @@ _EDIT_VERB = re.compile(r"(바꿔|변경|수정|해줘|설정|적어|남겨|밝�
 #: **큐 지시어**. 편집 동사만으로는 부족하다 — 실측(2026-09-06): 곡 전체를
 #: 서술하는 설계 브리핑("0:00 도입은 무대를 어둡게 두고 …")이 「어둡게」 하나로
 #: 이 라우트에 삼켜져 곡 설계 인터뷰 32건이 통째로 깨졌다. 한 구간을 가리키는
-#: 지시어를 **필수 게이트**로 두면 브리핑은 그대로 아래로 흘러내린다.
+#: 지시어를 게이트로 두면 브리핑은 그대로 아래로 흘러내린다.
 _CUE_ANCHOR = re.compile(r"큐\s*\d+|이\s*(구간|큐|부분|씬|장면)|선택(한|된)\s*(구간|큐|부분)")
 
+#: 지시어 없는 문장을 받아 주는 한 걸음(t290). 화면에서 큐를 이미 고른 상태라면
+#: 「더 밝게」 넉 자에 지시어를 덧붙이게 하는 것은 감독에게 같은 말을 두 번
+#: 시키는 일이다. 그래서 지시어를 **필수**에서 **판별기의 한 축**으로 낮추되,
+#: 위 브리핑 회귀는 그대로 막아야 한다 — 아래 세 축이 그 일을 한다.
+#:
+#: ① 길이. 한 구간에 던지는 명령은 짧다("더 밝게", "페이드 3초로"). 곡 브리핑은
+#:    길다(위 회귀 문장 89자). 경계 40자는 코퍼스 실측으로 잡았다.
+#: ② 줄 수. 브리핑은 여러 줄·여러 문장이다. 한 구간 명령은 한 줄이다.
+#: ③ 어휘. 곡을 서술하는 표지 — 타임코드(0:00), 구간 이름(도입·후렴·…),
+#:    곡/장르/BPM, 그리고 **범위어**(전체·모든·곡 내내) — 가 하나라도 있으면
+#:    「선택한 한 큐에 대한 명령」이 아니다. 범위어는 특히 중요하다:
+#:    "전체적으로 더 밝게"는 짧고 한 줄이지만 한 큐를 가리키지 않는다.
+_ANCHORLESS_MAX_CHARS = 40
+_SONG_BRIEF_MARKER = re.compile(
+    r"\d{1,2}\s*:\s*\d{2}"  # 타임코드 (0:00, 1:32)
+    r"|도입|인트로|벌스|후렴|코러스|브릿지|간주|아웃트로|드롭|빌드업|엔딩|마지막"
+    r"|곡\s*(은|는|이|전체)|노래|장르|BPM|bpm|무대\s*(는|은)"
+    r"|전체|전부|모든|다\s*같이|내내|처음부터|끝까지"
+)
 
-def parse_cue_sheet_edit_request(text: str) -> dict[str, object] | None:
+
+def _is_anchorless_cue_command(text: str) -> bool:
+    """지시어 없는 문장이 「선택한 큐 하나에 던진 짧은 명령」인가.
+
+    참을 돌려주는 조건은 셋 다 성립할 때뿐이다(위 ①②③). 하나라도 어긋나면
+    거짓이고, 문장은 기존 라우트 사슬로 그대로 흘러내린다.
+    """
+    stripped = text.strip()
+    if len(stripped) > _ANCHORLESS_MAX_CHARS:
+        return False
+    if "\n" in stripped:
+        return False
+    return _SONG_BRIEF_MARKER.search(stripped) is None
+
+
+def parse_cue_sheet_edit_request(
+    text: str, *, cue_selected: bool = False
+) -> dict[str, object] | None:
     """한국어 요청 한 줄에서 큐시트 편집 지시를 읽어낸다.
 
     돌려주는 사전은 ``{"cue": int|None, "changes": {...}}`` 이고, 이 모듈이
     다루는 어휘가 하나도 없으면 ``None`` 이다 — 「내 것이 아니다」와 「내
     것인데 틀렸다」를 가른다. 후자는 :func:`apply_cue_sheet_edit` 가 사유를
     붙여 거절한다.
+
+    ``cue_selected`` 는 화면에서 감독이 이미 큐를 고른 상태인지다(t290).
+    참이면 지시어 없는 **짧은 한 줄 명령**도 받아 준다 —
+    :func:`_is_anchorless_cue_command` 가 그 판별기다. 기본값은 거짓이라
+    호출자가 아무것도 바꾸지 않으면 t281 그대로 동작한다.
     """
-    if _EDIT_VERB.search(text) is None or _CUE_ANCHOR.search(text) is None:
+    if _EDIT_VERB.search(text) is None:
+        return None
+    if _CUE_ANCHOR.search(text) is None and not (cue_selected and _is_anchorless_cue_command(text)):
         return None
     changes: dict[str, object] = {}
 

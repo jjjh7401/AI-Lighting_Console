@@ -218,6 +218,37 @@ def test_no_approval_card_is_raised_by_any_draft_path(harness):
 # -- 프레임 규약 ----------------------------------------------------------------
 
 
+def test_a_plain_brighter_with_a_selected_cue_edits_the_draft(harness):
+    """t290 재현: Q001 을 고른 상태의 「더 밝게」가 지시어 없이 초안을 고친다.
+
+    이 시험은 t290 이전 코드에서 실패한다 — 그때는 「이 구간」 같은 지시어가
+    필수 게이트였고, 이 문장은 편집 라우트로 들어가지도 못했다.
+    """
+    session, console, store, _sent = harness
+    event = session.run_instruction("더 밝게", 1)
+    assert store.latest["sections"][0]["intensity"] == [{"group": "MOVER-U", "level": 60}]
+    assert "조도 40 → 60" in event["text"]
+    assert console.executed == []
+
+
+def test_a_song_brief_still_falls_through_even_with_a_cue_selected(harness):
+    """같은 회귀의 반대 팔: 선택이 있어도 곡 브리핑은 편집이 아니다.
+
+    편집 라우트가 삼켰다면 초안이 바뀌었을 것이다 — 바뀌지 않았고, 초안 배지도
+    붙지 않았음을 잰다(이 브리핑은 위쪽 곡 설계 경로가 받는다).
+    """
+    session, console, store, _sent = harness
+    brief = (
+        "곡은 약 1분 40초의 밝은 팝 무대야.\n"
+        "0:00 도입은 무대를 어둡게 두고 보컬에게만 시선을 모아줘.\n"
+        "1:32 마지막 후렴은 따뜻하고 환하게, 가장 큰 에너지로 끝내줘."
+    )
+    session.run_instruction(brief, 1)
+    assert store.latest["sections"][0]["intensity"] == [{"group": "MOVER-U", "level": 40}]
+    assert "draft" not in store.latest
+    assert console.executed == []
+
+
 def test_chat_frame_carries_an_optional_selected_cue():
     parsed = parse_client_message('{"v":1,"type":"chat","text":"더 밝게","selected_cue":3}')
     assert parsed["selected_cue"] == 3
