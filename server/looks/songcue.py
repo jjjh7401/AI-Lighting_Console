@@ -10,7 +10,7 @@ from typing import NamedTuple
 from server.looks.busking import VALUE_LINE_COLLISION, looks_for_genre
 from server.looks.instantiate import _values_line
 from server.looks.matching import DYNAMICS_TERMS, resolve_dynamics
-from server.looks.resolver import GroupCandidate, UnmappedRole, resolve_roles
+from server.looks.resolver import GroupCandidate, RoleResolution, UnmappedRole, resolve_roles
 from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, Look, LookLibrary
 
 _MILLISECONDS_PER_SECOND = Decimal("1000")
@@ -50,6 +50,14 @@ class SongCueLookSelection:
     requested_dynamics: tuple[int, ...]
     look: Look | None = None
     reason: str | None = None
+    dynamics_matches: tuple[Look, ...] = ()
+    """요청한 다이내믹스에 맞는 룩 **전량**, 버스킹 순서 그대로.
+
+    ``look`` 은 그 선두 — 리그를 모르는 자리에서 고를 수 있는 유일한 답이다.
+    리그에 실제로 묶이는 룩을 이 중에서 고르는 것은 역할 해석을 가진
+    ``_section_bundle`` 의 일이다. 기본값이 빈 튜플이므로, 이 필드 없이 만들어진
+    선택(기존 호출자·테스트)은 예전과 똑같이 ``look`` 하나로 동작한다.
+    """
 
 
 @dataclass(frozen=True)
@@ -383,14 +391,53 @@ def _map_section_to_look(
     else:
         requested_dynamics = section.dynamics
 
-    for look in ordered_looks:
-        if look.dynamics in requested_dynamics:
-            return SongCueLookSelection(
-                section=section, requested_dynamics=requested_dynamics, look=look
-            )
+    matches = tuple(look for look in ordered_looks if look.dynamics in requested_dynamics)
+    if not matches:
+        return SongCueLookSelection(
+            section=section, requested_dynamics=requested_dynamics, reason=UNMAPPED_LOOK
+        )
     return SongCueLookSelection(
-        section=section, requested_dynamics=requested_dynamics, reason=UNMAPPED_LOOK
+        section=section,
+        requested_dynamics=requested_dynamics,
+        look=matches[0],
+        dynamics_matches=matches,
     )
+
+
+# @MX:NOTE: [AUTO] 이 리그에서 룩이 「묶인다」는 것의 **유일한 정의**. 선택
+#   (`_select_bindable`)과 저장(`_section_bundle`)이 같은 술어를 봐야 한다 —
+#   둘이 갈리면 선택기가 고른 룩을 번들이 건너뛰고, 그 상태는 고치기 전보다 나쁘다.
+#   역할 **하나만** 묶여도 참이라는 것이 이 규칙의 핵심이고, ballad 가 cyc 없는
+#   리그에서도 멀쩡했던 이유다(첫 D1 룩이 배경+백라이트를 함께 갖고 있었다).
+def _bound_groups(look: Look, resolution: RoleResolution) -> dict[str, tuple[GroupCandidate, ...]]:
+    """이 룩의 역할 중 이 리그의 그룹에 묶인 것들.
+
+    ``dict()`` 는 취향이 아니다 — 이 모듈은 매핑 리터럴을 **한 개도** 두지 않는
+    규율이 있고(``test_songcue_sections`` 가 AST 로 잰다), 그래야 다이내믹스
+    어휘가 ``matching`` 바깥에서 다시 정의될 자리가 생기지 않는다.
+    """
+    bound: dict[str, tuple[GroupCandidate, ...]] = dict()
+    for role in look.roles:
+        candidates = resolution.groups_for(role)
+        if candidates:
+            bound[role] = candidates
+    return bound
+
+
+def _select_bindable(look: Look, matches: Sequence[Look], resolution: RoleResolution) -> Look:
+    """요청한 다이내믹스 안에서 이 리그에 실제로 묶이는 **첫** 룩.
+
+    하나도 안 묶이면 ``look`` — 오늘의 선택 — 을 그대로 돌려준다. 그래야 큐를 못
+    세우는 구간의 ``role_unmapped`` 보고가 지금과 같은 룩·같은 사유로 남는다.
+
+    cyc 를 갖춘 리그에서는 첫 룩이 이미 묶이므로 이 함수가 그 룩을 돌려주고,
+    저장되는 것은 고치기 전과 같다(무회귀 성질 —
+    ``test_songcue_rig_aware_look.TestCycRigIsUnchanged`` 가 실측한다).
+    """
+    for candidate in matches:
+        if _bound_groups(candidate, resolution):
+            return candidate
+    return look
 
 
 def _section_bundle(
@@ -399,7 +446,7 @@ def _section_bundle(
     cue_number: int,
     cue_name: str,
     sequence_number: int,
-    resolution,
+    resolution: RoleResolution,
     emitted: dict[str, tuple[int, int, str]],
 ) -> SongCueSectionBundle:
     if selection.look is None:
@@ -417,13 +464,14 @@ def _section_bundle(
             skipped=(skipped,),
         )
 
-    look = selection.look
-    bound: dict[str, tuple[GroupCandidate, ...]] = dict()
+    look = _select_bindable(selection.look, selection.dynamics_matches, resolution)
+    if look is not selection.look:
+        # 보고에 실리는 선택과 번들이 실제로 세운 룩이 어긋나지 않게 한다.
+        selection = replace(selection, look=look)
+    bound = _bound_groups(look, resolution)
     unmapped: list[UnmappedRole] = []
     for role in look.roles:
-        candidates = resolution.groups_for(role)
-        if candidates:
-            bound[role] = candidates
+        if role in bound:
             continue
         entry = resolution.unmapped_for(role)
         if entry is not None:
