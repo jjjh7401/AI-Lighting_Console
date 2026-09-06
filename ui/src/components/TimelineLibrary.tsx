@@ -48,6 +48,11 @@ export function TimelineLibraryView({
   onDelete,
 }: TimelineLibraryViewProps) {
   const count = items?.length ?? 0;
+  // 접힌 라벨이 스스로 상태를 말한다 (카드 t309). 기본 화면에서도 보이는
+  // 손잡이라, 여는 클릭 없이도 "몇 개 있나"를 알아야 한다. 아직 못 읽었으면
+  // (items === null) 개수를 꾸며내지 않고 아무 말도 하지 않는다 — 비었다는
+  // 주장과 못 읽었다는 사실은 다르다.
+  const countLabel = items === null ? "" : count > 0 ? ` (${count})` : " — 저장된 것 없음";
   return (
     <section className="timeline-library" aria-label="타임라인 라이브러리">
       <header className="timeline-library-head">
@@ -57,7 +62,7 @@ export function TimelineLibraryView({
           onClick={onToggleOpen}
           aria-expanded={open}
         >
-          {open ? "▾" : "▸"} 타임라인 라이브러리{count > 0 ? ` (${count})` : ""}
+          {open ? "▾" : "▸"} 타임라인 라이브러리{countLabel}
         </button>
         {open && (
           <div className="timeline-library-save">
@@ -130,7 +135,10 @@ export function TimelineLibrary({
   hasTimeline: boolean;
   onLoaded: (timeline: SongTimelineView) => void;
 }) {
-  const [items, setItems] = useState<TimelineLibraryItem[] | null>([]);
+  // null = 아직/못 읽음. 마운트 때 한 번 읽어 접힌 라벨이 개수를 말할 수 있게
+  // 한다 (카드 t309) — 기본 화면의 감독은 펼치기 전에 "저장본이 있나"를 알아야
+  // 여기가 손잡이라는 걸 안다.
+  const [items, setItems] = useState<TimelineLibraryItem[] | null>(null);
   const [open, setOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -141,7 +149,7 @@ export function TimelineLibrary({
   }, []);
 
   useEffect(() => {
-    if (open) void refresh();
+    void refresh();
   }, [open, refresh]);
 
   const handleSave = useCallback(async () => {

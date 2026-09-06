@@ -26,6 +26,7 @@ import {
   writeRunbookModeToStorage,
 } from "./App";
 import { DashBoard } from "./components/DashBoard";
+import { TimelineLibrary } from "./components/TimelineLibrary";
 import { initialState } from "./protocol";
 
 function childArray(element: ReactElement): unknown[] {
@@ -421,5 +422,60 @@ describe("runbook-mode localStorage persistence (T-E)", () => {
   it("never throws when storage is unavailable — degrades to off", () => {
     expect(() => writeRunbookModeToStorage(true)).not.toThrow();
     expect(readRunbookModeFromStorage()).toBe(false);
+  });
+});
+
+// 카드 t309 — 저장된 타임라인에 손잡이가 없던 결함.
+//
+// 억누르던 줄은 App.tsx 의 `{runbookMode ? (` 하나다: 라이브러리는
+// RunbookMode 안에만 있었고, 런북 모드는 fresh 세션에서 꺼져 있다
+// (readRunbookModeFromStorage 는 저장된 키가 없으면 false). 그래서 앱을
+// 처음 연 감독의 화면에는 라이브러리가 아예 mount 되지 않았다 — API 는
+// 저장본을 내주고 있는데도.
+//
+// jsdom 이 없어(파일 머리말) App() 자체는 못 부른다. 대신 기본 화면의
+// 컨테이너인 AppShell 이 슬롯을 실제로 tree 에 싣는지를 잰다. 브라우저
+// 끝단 측정은 .moai/state/verify/t309/ 에 따로 있다.
+describe("AppShell — 타임라인 라이브러리 도달 가능성 (t309)", () => {
+  function libraryIn(children: unknown[]): ReactElement | undefined {
+    for (const child of children) {
+      const el = child as ReactElement | null;
+      if (el?.type === TimelineLibrary) return el;
+      if (el?.props?.className === "dashboard-wrap") {
+        const inner = Array.isArray(el.props.children) ? el.props.children : [el.props.children];
+        const found = inner.find(
+          (c: unknown) => (c as ReactElement | null)?.type === TimelineLibrary,
+        );
+        if (found) return found as ReactElement;
+      }
+    }
+    return undefined;
+  }
+
+  it("타임라인이 없어도(hasTimeline=false) 기본 화면에 라이브러리가 mount 된다", () => {
+    const element = AppShell({
+      chatCollapsed: false,
+      dash: initialState.dash,
+      cueMonitor: initialState.cueMonitor,
+      onToggleChat: vi.fn(),
+      librarySlot: <TimelineLibrary hasTimeline={false} onLoaded={vi.fn()} />,
+      children: CHAT_SENTINEL,
+    }) as ReactElement;
+
+    const lib = libraryIn(childArray(element));
+    expect(lib).toBeDefined();
+    expect(lib!.props.hasTimeline).toBe(false);
+  });
+
+  it("슬롯을 안 주면 라이브러리 노드도 없다 — 슬롯이 실제 렌더 경로다", () => {
+    const element = AppShell({
+      chatCollapsed: false,
+      dash: initialState.dash,
+      cueMonitor: initialState.cueMonitor,
+      onToggleChat: vi.fn(),
+      children: CHAT_SENTINEL,
+    }) as ReactElement;
+
+    expect(libraryIn(childArray(element))).toBeUndefined();
   });
 });

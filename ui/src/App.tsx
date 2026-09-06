@@ -50,6 +50,7 @@ import {
   type DashItem,
   type DashState,
   type PanelTargetKind,
+  type SongTimelineView,
   type StatusState,
 } from "./protocol";
 import { useCopilotSocket } from "./useCopilotSocket";
@@ -292,6 +293,7 @@ export function AppShell({
   dashWidth,
   onDashDividerDown,
   onPresetPoolOpen,
+  librarySlot = null,
   children,
 }: {
   chatCollapsed: boolean;
@@ -322,12 +324,21 @@ export function AppShell({
   onDashDividerDown?: (startX: number) => void;
   /** Opens one preset pool's on-demand popup (read-only fetch, no console press). */
   onPresetPoolOpen?: (item: DashItem) => void;
+  /** 타임라인 라이브러리 자리 (카드 t309).
+   *
+   *  런북 모드는 fresh 세션에서 꺼져 있다(`readRunbookModeFromStorage` 기본 false).
+   *  라이브러리가 런북 창에만 있으면, 앱을 처음 연 감독은 저장된 타임라인에
+   *  손잡이가 없다 — 코파일럿과 대화해 타임라인을 만들기 전까지. 그래서 같은
+   *  슬롯을 기본 화면에도 둔다. 여기 놓인 라이브러리에서 저장본을 불러오면
+   *  App 이 런북 모드로 전환해 두 축 뷰를 보여준다. */
+  librarySlot?: ReactNode;
   children: ReactNode;
 }) {
   const dashStyle = dashWidth !== undefined ? { width: dashWidth, flexShrink: 0 } : undefined;
   return (
     <div className={`app-shell ${chatCollapsed ? "chat-collapsed" : "chat-split"}`}>
       <div className="dashboard-wrap" style={dashStyle}>
+        {librarySlot}
         <DashBoard
           dash={dash}
           onRefresh={onRefresh}
@@ -420,6 +431,13 @@ export default function App() {
   // readRunbookModeFromStorage above) so it survives a refresh; the lazy
   // initializer reads it once on mount.
   const [runbookMode, setRunbookMode] = useState(readRunbookModeFromStorage);
+  // 라이브러리에서 저장본을 불러오면 두 축 뷰가 있는 런북 모드로 옮긴다
+  // (카드 t309). 런북 모드에서 불러온 경우엔 이미 켜져 있어 무해하다.
+  const loadTimelineFromLibrary = (timeline: SongTimelineView) => {
+    applySongTimeline(timeline);
+    setRunbookMode(true);
+    writeRunbookModeToStorage(true);
+  };
   const toggleRunbookMode = () => {
     setRunbookMode((active) => {
       const next = !active;
@@ -847,6 +865,15 @@ export default function App() {
   // composer) — ONE definition shared by the normal split view and runbook
   // mode, so runbook mode keeps the conversation fully usable beside the
   // runbook pane instead of hiding it.
+  // 두 화면이 같은 라이브러리 하나를 쓴다 (카드 t309) — 런북 창에만 두면
+  // fresh 세션(런북 모드 off)에서는 저장된 타임라인에 손잡이가 없다.
+  const timelineLibrarySlot = (
+    <TimelineLibrary
+      hasTimeline={state.songTimeline.timeline !== null}
+      onLoaded={loadTimelineFromLibrary}
+    />
+  );
+
   const chatColumn = (
             <div className="app">
               <main className="main">
@@ -1066,12 +1093,7 @@ export default function App() {
               onRedoDraft={sendTimelineDraftRedo}
               onSaveDraft={() => void saveDraftToLibrary()}
               onApplyDraft={applyDraftToConsole}
-              librarySlot={
-                <TimelineLibrary
-                  hasTimeline={state.songTimeline.timeline !== null}
-                  onLoaded={applySongTimeline}
-                />
-              }
+              librarySlot={timelineLibrarySlot}
             />
           </div>
           {/* The copilot chat rides ALONGSIDE the runbook pane (user request,
@@ -1094,6 +1116,7 @@ export default function App() {
           />
           {settingsOpen && <SettingsPanel onClose={closeSettings} />}
           <AppShell
+            librarySlot={timelineLibrarySlot}
             chatCollapsed={chatCollapsed}
             dash={state.dash}
             cueMonitor={state.cueMonitor}
