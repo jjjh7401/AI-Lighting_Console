@@ -76,6 +76,7 @@ from server.design.rig_preflight import plan_rig_preflight, render_rig_preflight
 from server.design.song_cue_composer import (
     SongCueCompositionResult,
     compose_song_cue_bundle,
+    position_axis_disabled,
 )
 from server.design.song_plan import (
     D_AXIS,
@@ -973,6 +974,30 @@ def _back_layer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) 
 #: auto-snapshots fall back to the sequence name instead of versioning it.
 _DESIGN_INTERVIEW_TITLE = "Design Interview"
 
+#: 카드 t311 — 좌표 판독이 실패한 **두 갈래**. 문면이 아니라 코드다:
+#: 조준 핸들러와 곡 디자인이 같은 실패에 서로 다른 문장을 쓴다.
+_COORD_GAP_UNREADABLE = "unreadable"
+_COORD_GAP_TRUNCATED = "truncated"
+
+#: 좌표 없는 리그에 디자인을 요청했을 때 감독이 읽는 한 줄. 「무엇을 못 만들었고
+#: 왜인지」만 말한다 — 지어낸 좌표도, 지어낸 포지션도 내지 않는다는 규칙의 관측
+#: 가능한 면(카드 t277 의 고지와 같은 결).
+_COORD_GAP_NOTICES: dict[str, str] = {
+    _COORD_GAP_UNREADABLE: (
+        "3D 좌표를 읽지 못해 포지션(무브) 축은 만들지 못했습니다 — "
+        "조도·컬러 큐만 설계했습니다. 콘솔 연결과 패치를 확인해 주세요."
+    ),
+    _COORD_GAP_TRUNCATED: (
+        "3D 좌표 응답이 잘리거나 조회 한도에 도달해 포지션(무브) 축은 "
+        "만들지 못했습니다 — 조도·컬러 큐만 설계했습니다."
+    ),
+    #: 판독은 성공했는데 좌표가 확인된 장비가 0대인 경우(패치 없는 리그).
+    "empty": (
+        "좌표가 확인된 장비가 없어 포지션(무브) 축은 만들지 못했습니다 — "
+        "조도·컬러 큐만 설계했습니다."
+    ),
+}
+
 
 def _requery_card_options(
     section: PositionSheetSection, *, section_index: int, section_count: int
@@ -1462,6 +1487,7 @@ def _build_unified_song_plan(
     fade_overrides: Mapping[int, float] | None = None,
     fx_overrides: Mapping[int, bool] | None = None,
     section_origin: Sequence[int] | None = None,
+    position_disabled_reason: str = "",
 ) -> UnifiedSongLightingPlan:
     arc_positions, head_indexes, units, section_count, climax_index = _section_arc_geometry(
         sections, section_origin
@@ -1596,6 +1622,11 @@ def _build_unified_song_plan(
                     decision, d=DLevelDecision(level=floor, source="section_arc_invariant")
                 )
     disabled = tuple(DisabledNote(axis=FX_AXIS, reason=note) for note in getattr(rig, "notes", ()))
+    # 카드 t311 — 좌표가 없으면 포지션 축은 **전곡** 비활성이다(구간별이 아니라).
+    # 이 노트 하나가 작곡기·리뷰·타임라인 셋 모두의 판별기가 된다 — 축을 끈
+    # 사실과 그 사유가 한 곳에만 적힌다.
+    if position_disabled_reason:
+        disabled = (*disabled, DisabledNote(axis=POSITION_AXIS, reason=position_disabled_reason))
     return UnifiedSongLightingPlan(
         song_title=_DESIGN_INTERVIEW_TITLE,
         sequence_name=f"Sequence {sequence_no}",
@@ -1678,6 +1709,9 @@ def _review_text(
 ) -> str:
     cue_lines: list[str] = []
     any_phaser_proposed = False
+    # 카드 t311 — 축이 꺼졌을 때의 빈 칸은 「포지션 유지」가 아니다. 그 말은
+    # 감독이 고른 결과처럼 읽히는데, 여기서는 고른 적이 없다.
+    empty_position = "포지션 불가(좌표 없음)" if position_axis_disabled(plan) else "포지션 유지"
     if composition.bundle is not None:
         for cue in composition.bundle.cues:
             trigger = _REVIEW_TRIGGER_LABELS.get(
@@ -1689,7 +1723,7 @@ def _review_text(
                 any_phaser_proposed = True
             cue_lines.append(
                 f"큐 {cue.cue_number:g} {cue.cue_name} — D{cue.d_level} · "
-                f"{cue.position.stored or '포지션 유지'} · "
+                f"{cue.position.stored or empty_position} · "
                 f"{'/'.join(cue.color.palette) or '컬러 유지'} · {trigger}{phaser_note}"
             )
     if not composition.lint_findings:
@@ -1836,6 +1870,7 @@ def _song_cue_sheet_section_fields(
     seconds_per_bar: float | None,
     layer_mapping: Sequence[Mapping[str, object]],
     manual_go: bool,
+    position_disabled: bool = False,
 ) -> CueSheetSectionFields:
     """구간 하나의 큐시트 확장분.
 
@@ -1872,7 +1907,10 @@ def _song_cue_sheet_section_fields(
         if back_pct is not None:
             intensity.append(GroupIntensity(group="BACK", level=int(round(back_pct))))
         lit = key_pct is not None and key_pct > 0
-        movement = cue.position.stored or cue.position.requested
+        # 카드 t311 — 축이 꺼졌으면 `requested` 로도 되돌아가지 않는다. 그 값은
+        # 무드 표가 낸 후보일 뿐이고, 앉힐 장비가 없는 이상 큐시트 MOVE 칸에
+        # 적는 순간 지어낸 포지션이 된다.
+        movement = None if position_disabled else (cue.position.stored or cue.position.requested)
         effect = " + ".join(cue.fx.permitted) or None
         fade_seconds = cue.fade_seconds
         # SNAP 은 페이드 0 이라는 사실 그대로다. 정본 어휘의 XFADE 는 내보내지
@@ -1963,6 +2001,10 @@ def _song_timeline_payload(
         if bundle is not None
         else {}
     )
+    # 카드 t311 — 포지션 축이 꺼진 큐시트의 POSITION 칸은 **빈다**. 사유는
+    # `disabled` 노트와 `warnings` 가 들고 있어, 빈 칸이 「모르겠다」가 아니라
+    # 「못 만들었고 이유는 이것」으로 읽힌다.
+    position_disabled = position_axis_disabled(plan)
     seconds_per_bar = _song_seconds_per_bar(plan.music_profile)
     manual_go = plan.timing.mode == MANUAL_GO
     start_ms_by_index = [decision.section.start_ms for decision in plan.sections]
@@ -1999,7 +2041,7 @@ def _song_timeline_payload(
                         ),
                         "d_level": decision.d.level,
                         "palette": list(decision.palette.colors),
-                        "position": decision.position.preset,
+                        "position": "" if position_disabled else decision.position.preset,
                         "texture": decision.texture.label,
                         "fx": list(decision.fx.allowed),
                         "fade_seconds": fade_by_section.get(decision.section.index),
@@ -2020,6 +2062,7 @@ def _song_timeline_payload(
                         seconds_per_bar=seconds_per_bar,
                         layer_mapping=layer_mapping,
                         manual_go=manual_go,
+                        position_disabled=position_disabled,
                     ),
                 )
                 for order, decision in enumerate(plan.sections)
@@ -3321,6 +3364,9 @@ class _SongDesignState:
     #: 목록은 큐마다 원래 구간 번호(0-based)를 들고 있어서 연출 아크가 구간
     #: 단위로 유지된다. 비어 있으면 항등(쪼개기 전과 동일).
     section_origin: list[int] = dataclass_field(default_factory=list)
+    #: 카드 t311 — 좌표를 못 읽어 포지션(무브) 축을 비활성으로 둔 사유. 빈
+    #: 문자열이면 축이 살아 있고 오늘 이전과 문면이 같다.
+    position_disabled_reason: str = ""
 
 
 @dataclass(frozen=True)
@@ -4246,6 +4292,8 @@ class ChatSession:
         # and confirmed by the director ONCE per session. None = not yet asked;
         # [] = declined or nothing inferable (single-layer, disclosed).
         self._song_layer_mapping: list[dict[str, object]] | None = None
+        #: 카드 t311 — 이번 디자인 턴의 좌표 결손 고지(없으면 빈 문자열).
+        self._design_coord_notice: str = ""
         self._timeline_store = timeline_store
         # Priority 3 (handoff 2026-08-15): approved console stores auto-save a
         # library version ("이름 (자동 vN)"). None (tests, bare deps) = no-op.
@@ -4780,23 +4828,23 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
-    def _read_pointing_coordinates(
+    def _try_pointing_coordinates(
         self, call_id: str
-    ) -> list[tuple[int, tuple[float, float, float]]] | InstructionResult:
-        """Every coordinate-confirmed ``(fid, (x, y, z))`` — or the refusal.
+    ) -> tuple[list[tuple[int, tuple[float, float, float]]], str]:
+        """``(fixtures, gap_kind)`` — 좌표를 읽었으면 gap 은 빈 문자열.
 
-        Shared by the FOCUS (point-at) and LOOK (fan/ring) handlers: both
-        compute per-fixture pan/tilt from the console's own patch read, and
-        both must refuse on a partial read rather than aim half a rig.
+        카드 t311 — 이 판독의 **결과**와 「그래서 무엇을 멈출지」는 다른 문제다.
+        조준(FOCUS/LOOK)은 좌표가 곧 그 기능이라 멈추는 것이 옳고, 곡 디자인은
+        조도·색이 좌표와 무관하니 멈추면 안 된다. 그래서 판독은 여기 한 곳에
+        두고, 중단 여부는 호출자가 정한다. gap 은 문면이 아니라 **코드**다
+        (``unreadable`` / ``truncated``) — 호출자마다 감독에게 할 말이 다르고,
+        문면을 여기서 만들면 호출자가 그것을 잘라 붙이게 된다.
         """
         spatial = self._registry.dispatch(
             ToolCall(id=call_id, name="get_spatial_context", arguments={})
         )
         if spatial.result.is_error:
-            return self._pointing_refusal(
-                "3D 좌표를 읽지 못해 조명 방향 변경을 시작하지 않았습니다. "
-                "콘솔 연결을 확인해 주세요."
-            )
+            return [], _COORD_GAP_UNREADABLE
         try:
             payload = json.loads(spatial.result.content)
             records = payload["fixtures"] if "fixtures" in payload else payload["partial_fixtures"]
@@ -4810,12 +4858,31 @@ class ChatSession:
                 if isinstance(record, dict)
                 and isinstance(record.get("fid"), int)
                 and not isinstance(record.get("fid"), bool)
-            ]
+            ], ""
         except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return [], _COORD_GAP_TRUNCATED
+
+    def _read_pointing_coordinates(
+        self, call_id: str
+    ) -> list[tuple[int, tuple[float, float, float]]] | InstructionResult:
+        """Every coordinate-confirmed ``(fid, (x, y, z))`` — or the refusal.
+
+        Shared by the FOCUS (point-at) and LOOK (fan/ring) handlers: both
+        compute per-fixture pan/tilt from the console's own patch read, and
+        both must refuse on a partial read rather than aim half a rig.
+        """
+        fixtures, gap = self._try_pointing_coordinates(call_id)
+        if gap == _COORD_GAP_UNREADABLE:
+            return self._pointing_refusal(
+                "3D 좌표를 읽지 못해 조명 방향 변경을 시작하지 않았습니다. "
+                "콘솔 연결을 확인해 주세요."
+            )
+        if gap:
             return self._pointing_refusal(
                 "3D 좌표 응답이 전송 중 잘렸거나 조회 한도에 도달해 조명 방향 "
                 "변경을 시작하지 않았습니다."
             )
+        return fixtures
 
     def _read_pointing_frames(
         self, call_id: str
@@ -7656,6 +7723,21 @@ class ChatSession:
         return _SongReadbackResult(paths=tuple(paths))
 
     def _song_design_interview(self, text: str) -> InstructionResult | None:
+        """디자인 요청 한 턴 — 본문은 ``_song_design_interview_run``.
+
+        카드 t311 — 좌표 결손 고지는 이 경로의 **모든** 반환 지점에 실려야 한다
+        (재질의 대기, 승인 대기, 저장 완료 …). 반환 지점마다 문장을 붙이면
+        하나를 빠뜨리는 것이 기본값이 되므로, 고지는 여기 한 곳에서 붙인다 —
+        카드 t277 이 연 ``InstructionResult.notices`` 통로를 그대로 쓴다.
+        결손이 없는 회차에서는 빈 문자열이라 문면이 이전과 같다.
+        """
+        self._design_coord_notice = ""
+        result = self._song_design_interview_run(text)
+        if isinstance(result, InstructionResult) and self._design_coord_notice:
+            return replace(result, notices=(*result.notices, self._design_coord_notice))
+        return result
+
+    def _song_design_interview_run(self, text: str) -> InstructionResult | None:
         """M2 R1c/R4: the 5-card director interview → standard profile+rig sheet.
 
         Narrowly gated on the "디자인 큐 시트"/"디자인 인터뷰"/"연출 인터뷰"
@@ -7756,13 +7838,16 @@ class ChatSession:
                 "'디자인 큐 시트, 시퀀스 110, 프리셋 21번부터: 인트로 0:00 잔잔하게, "
                 "후렴 0:40 클럽 드롭'"
             )
-        fixtures = self._read_pointing_coordinates("song-design-read")
-        if isinstance(fixtures, InstructionResult):
-            return fixtures
-        if not fixtures:
-            return self._pointing_refusal(
-                "좌표가 확인된 장비가 없어 연출 인터뷰를 시작하지 않았습니다."
-            )
+        # 카드 t311 — 좌표가 없어도 디자인은 계속한다. 좌표가 못 주는 것은
+        # 포지션(무브) 축 하나뿐이고, 조도와 컬러는 좌표를 보지 않는다. 예전에는
+        # 여기서 통째로 멈춰서 패치 없는 리그에는 큐 시트가 아예 안 나왔다
+        # (2026-09-07 브라우저 실측). 대신 축 하나를 **비활성**으로 표시하고
+        # 사유를 이름 대어 말한다 — 없는 좌표를 지어내는 일은 여전히 없다.
+        fixtures, coord_gap = self._try_pointing_coordinates("song-design-read")
+        if not coord_gap and not fixtures:
+            coord_gap = "empty"
+        position_gap = _COORD_GAP_NOTICES[coord_gap] if coord_gap else ""
+        self._design_coord_notice = position_gap
         # 2026-08-16 사용자 방향: propose numbers the console VERIFIED instead
         # of static examples — an empty sequence slot for the store target,
         # and a preset range that actually holds all 10 basic positions.
@@ -7823,7 +7908,14 @@ class ChatSession:
             pre_specified[Q2_PALETTE] = palette_match.group("palette").strip()
         self._pending_song_requery = None  # a fresh design supersedes a stale one
         self._pending_song_plan = None
-        interview = DirectorInterview(profile, rig, pre_specified=pre_specified)
+        interview = DirectorInterview(
+            profile,
+            rig,
+            pre_specified=pre_specified,
+            # 카드 t311 — Q4 는 포지션 진행 서사를 묻는다. 좌표가 없으면 그
+            # 답이 닿을 축이 없어 묻지 않는다(기본값으로 대신 답하지도 않는다).
+            skipped_steps=(Q4_SPATIAL_STORY,) if position_gap else (),
+        )
         failure = self._song_run_interview(interview)
         if failure is not None:
             return failure
@@ -7831,6 +7923,8 @@ class ChatSession:
         # 결함 5: Q1 concept colors vs Q2 palette — surface the conflict as a
         # director card instead of silently repeating the Q2 palette.
         plan_warnings: list[str] = []
+        if position_gap:
+            plan_warnings.append(position_gap)
         palette_mode = "palette"
         concept_colors = _extract_color_words(_record_value(records, Q1_CONCEPT, ""))
         palette_value = interview.working_profile.palette
@@ -7895,6 +7989,7 @@ class ChatSession:
             plan_warnings=plan_warnings,
             layer_mapping=layer_mapping,
             requery_overrides={},
+            position_disabled_reason=position_gap,
         )
         plan, composition = self._song_compose(state)
         self._song_send_timeline(state, plan, composition)
@@ -8008,6 +8103,7 @@ class ChatSession:
             palette_mode=state.palette_mode,
             concept_colors=state.concept_colors,
             section_origin=state.section_origin or None,
+            position_disabled_reason=state.position_disabled_reason,
         )
         return built, compose_song_cue_bundle(built)
 

@@ -12,7 +12,8 @@
 
     uv run python -m server.tests.fake_console <cmd_port> <reply_port> [rig]
 
-``rig`` 는 ``default`` (기본) 또는 ``full``. 포트 8000 은 감독의 실기
+``rig`` 는 ``default`` (기본) · ``full`` · ``nocoords`` (패치 없는 리그, 카드
+t311). 포트 8000 은 감독의 실기
 grandMA3 데스크라 **절대 쓰지 않는다**.
 """
 
@@ -70,8 +71,22 @@ def full_rig_lua() -> str:
 FULL_RIG_LUA = _FULL_RIG_DATAPOOL_LUA
 
 
+def _rig_env(rig: str) -> str:
+    """리그 이름 → Lua 환경.
+
+    카드 t311 — `nocoords` 는 `full` 에서 **합성 패치만** 뺀 리그다. 그룹·
+    시퀀스·풀은 그대로라 「좌표가 없다」와 「콘솔이 죽었다」가 갈린다: 디자인이
+    끝까지 굴러가되 포지션 축만 비활성으로 나오는지를 이 리그로 몬다.
+    """
+    if rig == "full":
+        return full_rig_lua()
+    if rig == "nocoords":
+        return _FULL_RIG_DATAPOOL_LUA
+    return ""
+
+
 def main(cmd_port: int, reply_port: int, rig: str = "default") -> None:
-    harness = ResponderHarness(extra_env=full_rig_lua() if rig == "full" else "")
+    harness = ResponderHarness(extra_env=_rig_env(rig))
     client = SimpleUDPClient("127.0.0.1", reply_port)
     forwarded = 0
     lock = threading.Lock()

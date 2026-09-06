@@ -4746,7 +4746,10 @@ class TestSongDesignInterviewSession:
         sequence_exists_before_store=False,
         timecode_exists_before_store=False,
         store_fails=False,
+        spatial_fails=False,
     ):
+        # 카드 t311 — `spatial_fails` 는 좌표 판독만 실패시킨다(패치 없는 리그).
+        # 나머지 응답은 그대로라, 「좌표가 없다」와 「콘솔이 죽었다」가 갈린다.
         fixtures = [
             {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
             {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
@@ -4762,6 +4765,15 @@ class TestSongDesignInterviewSession:
             def dispatch(self, call: ToolCall) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
+                    if spatial_fails:
+                        return ToolExecution(
+                            ToolResult(
+                                tool_call_id=call.id,
+                                name=call.name,
+                                content="path segment not found: Patch/Stages/1/Fixtures",
+                                is_error=True,
+                            )
+                        )
                     return ToolExecution(
                         ToolResult(
                             tool_call_id=call.id,
