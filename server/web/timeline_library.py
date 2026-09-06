@@ -21,6 +21,7 @@ import os
 import re
 import tempfile
 import uuid
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -48,8 +49,21 @@ class SongTimelineLibrary:
     """Named timeline saves. Path-less instances (tests, bare WebDeps) stay
     memory-only; serve.py wires the persistent JSON path."""
 
-    def __init__(self, path: Path | str | None = None) -> None:
+    def __init__(
+        self,
+        path: Path | str | None = None,
+        *,
+        seed: Sequence[Mapping[str, object]] = (),
+    ) -> None:
+        """``seed`` 는 앱이 기본으로 싣고 다니는 항목들(예: 정본 Sugar 큐시트).
+
+        저장 파일에 같은 ``id`` 가 이미 있으면 심지 않는다 — 감독이 그 위에 저장한
+        판이 있으면 그 판이 이긴다. 심는 자리는 목록 앞이라 ``items()`` 의
+        최신순 정렬에서 가장 오래된 것으로 내려간다. 읽기 경로의 fail-open 은
+        그대로다: 파일이 없거나 깨져도 예외 없이 시드만 남는다.
+        """
         self._path = Path(path) if path is not None else None
+        self._seed = [dict(entry) for entry in seed]
         self._entries: list[dict] = self._load()
 
     # -- reads -----------------------------------------------------------------
@@ -109,18 +123,23 @@ class SongTimelineLibrary:
 
     # -- internals ---------------------------------------------------------------
 
+    def _seeded(self, entries: list[dict]) -> list[dict]:
+        present = {entry.get("id") for entry in entries}
+        missing = [dict(entry) for entry in self._seed if entry.get("id") not in present]
+        return [*missing, *entries]
+
     def _load(self) -> list[dict]:
         if self._path is None:
-            return []
+            return self._seeded([])
         try:
             data = json.loads(self._path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            return []
+            return self._seeded([])
         if not isinstance(data, dict):
-            return []
+            return self._seeded([])
         entries = data.get("entries")
         if not isinstance(entries, list):
-            return []
+            return self._seeded([])
         kept: list[dict] = []
         for entry in entries:
             if (
@@ -130,7 +149,7 @@ class SongTimelineLibrary:
                 and isinstance(entry.get("timeline"), dict)
             ):
                 kept.append(entry)
-        return kept
+        return self._seeded(kept)
 
     def _persist(self, entries: list[dict]) -> None:
         if self._path is None:
