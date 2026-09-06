@@ -212,7 +212,7 @@ m1_to_mN_commit_strategy: "마일스톤당 커밋 1건(M1 845658e · M2), 브랜
 
 ```yaml
 sync_complete_at: 2026-09-06
-sync_commit_sha: pending-backfill-sync   # D3 예외 — 커밋은 자기 해시를 모른다. 둘째 커밋이 백필한다
+sync_commit_sha: 1b9a422   # 백필 — sync 커밋은 자기 해시를 모른다(D3 예외). 이 값은 둘째 커밋이 적었다
 sync_status: completed
 b12_self_test_a: "grep -c 'SONGCONFIRM-001' CHANGELOG.md → 편집 전 0 · 편집 후 1"
 b12_self_test_b: "grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' acceptance.md | sort -u → 전체 ID 16건(AC-SONGCONFIRM-001~016) + 본문 축약 참조 4건(AC-002·004·010·014, 같은 항목의 줄임말) = raw 20; CHANGELOG 는 16 을 적는다 — acceptance.md 기준, progress.md 아님"
