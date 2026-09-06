@@ -160,16 +160,3 @@ looks:
       ColorRGB_R: 65
       ColorRGB_G: 10
       ColorRGB_B: 22
-
-  - look_id: "rock-probe-second-look"
-    display_name: "심은 변경 둘"
-    genre: "rock"
-    dynamics: 1
-    roles: ["사이드"]
-    aliases: ["심은 변경 둘"]
-    mood_keywords: ["심은"]
-    attributes:
-      Dimmer: 20
-      ColorRGB_R: 50
-      ColorRGB_G: 10
-      ColorRGB_B: 20
