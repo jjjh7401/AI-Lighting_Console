@@ -4,7 +4,7 @@
 # numbers, no movement, percent values).
 #
 # WHAT AN EDM SET NEEDS: a build and a drop, and the drop has to feel like a
-# different room than the build did. Nine looks, weighted toward the top of the
+# different room than the build did. Ten looks, weighted toward the top of the
 # scale — three at dynamics 4-5, because a set plays several drops and they
 # should not all be the same colour.
 #
@@ -171,7 +171,7 @@ looks:
     dynamics: 1
     roles: ["백라이트"]
     aliases: ["헤이즈 샤프트", "haze shafts", "빈 하늘"]
-    mood_keywords: ["어두운", "깊은", "푸른", "잠긴", "haze", "shafts"]
+    mood_keywords: ["어두운", "깊은", "푸른", "파란", "잠긴", "haze", "shafts"]
     attributes:
       Dimmer: 18
       ColorRGB_R: 0

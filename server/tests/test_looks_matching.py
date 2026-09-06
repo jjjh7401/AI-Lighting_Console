@@ -672,10 +672,17 @@ class TestReportShape:
 
     def test_a_long_result_is_truncated_and_says_it_was(self, library):
         # Never present a partial list as a complete one (the rig-context rule).
+        #
+        # 2026-09-06 — SPEC-COPILOT-D1GRANT-001 raised edm 9 → 10 by adding
+        # `edm-haze-shafts`. The three literals below all count the SAME thing
+        # (the edm genre's size), so they move together; the property under
+        # test is unchanged — a result larger than the cap is truncated AND
+        # says so.
+        edm_look_count = 10
         report = match_looks("EDM", library).to_dict()
-        assert report["total"] == 9
-        assert len(report["matches"]) == min(9, MAX_TOOL_MATCHES)
-        assert report["truncated"] is (MAX_TOOL_MATCHES < 9)
+        assert report["total"] == edm_look_count
+        assert len(report["matches"]) == min(edm_look_count, MAX_TOOL_MATCHES)
+        assert report["truncated"] is (MAX_TOOL_MATCHES < edm_look_count)
 
     def test_a_short_result_is_not_flagged_as_truncated(self, library):
         report = match_looks("경건한", library).to_dict()

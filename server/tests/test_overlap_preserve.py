@@ -403,7 +403,7 @@ _LOOKS_GRANTED_D1_APPENDS = {
         "    dynamics: 1",
         '    roles: ["백라이트"]',
         '    aliases: ["헤이즈 샤프트", "haze shafts", "빈 하늘"]',
-        '    mood_keywords: ["어두운", "깊은", "푸른", "잠긴", "haze", "shafts"]',
+        '    mood_keywords: ["어두운", "깊은", "푸른", "파란", "잠긴", "haze", "shafts"]',
         "    attributes:",
         "      Dimmer: 18",
         "      ColorRGB_R: 0",
@@ -435,10 +435,51 @@ _LOOKS_GRANTED_D1_APPENDS = {
     ),
 }
 
-#: The look-library files carrying a granted change of EITHER kind. Derived, not
-#: written down: a hand-kept list would desynchronise from the two grants the
-#: moment either one is revised.
-_LOOKS_GRANTED_FILES = frozenset(_LOOKS_GRANTED_LINE_PAIRS) | frozenset(_LOOKS_GRANTED_D1_APPENDS)
+#: 2026-09-06 granted line pair — SPEC-COPILOT-D1GRANT-001 (REQ-D1GRANT-019),
+#: the count-prose correction that the append above FORCES.
+#:
+#: This one is worth reading slowly, because it is where two of that SPEC's own
+#: requirements pull against each other. REQ-D1GRANT-004 says the SPEC "shall
+#: not change any FIELD of an existing look", and then states a MECHANICAL
+#: PROXY for that intent: zero deleted lines beyond the 2026-08-02 파란 pairs.
+#: REQ-D1GRANT-019 separately REQUIRES that ``edm.yaml``'s header stop saying
+#: "Nine looks", because the append makes that sentence false. A comment is not
+#: a look's field, so the two requirements agree on INTENT — but a one-line
+#: comment edit is a delete plus an add, so it trips the proxy. The proxy
+#: over-reaches its own intent; that is the conflict, and it is recorded here
+#: rather than resolved silently.
+#:
+#: Resolved by PINNING rather than by relaxing: the corrected line is named
+#: below by exact text on both sides, so the gate is exactly as strong as it was
+#: (nothing unpinned passes, and the intent REQ-D1GRANT-004 actually protects —
+#: no existing LOOK is touched — is verifiable by reading this pair). The
+#: alternative was to ship a library asset whose header states a count that its
+#: own contents contradict, which is the defect class REQ-D1GRANT-019 exists to
+#: prevent.
+#:
+#: Only the count word changes. The "weighted toward the top of the scale"
+#: clause and the "three at dynamics 4-5" clause are left exactly as the
+#: original author wrote them: the second is still true (three looks remain at
+#: dynamics 4-5), and the first is a pre-existing characterisation this SPEC
+#: neither introduced nor is required to re-litigate. Widening the edit past
+#: the one word REQ-D1GRANT-019 names would widen the grant for nothing.
+_LOOKS_GRANTED_COUNT_PROSE_PAIRS = {
+    "server/looks/library/edm.yaml": (
+        (
+            "# different room than the build did. Nine looks, weighted toward the top of the",
+            "# different room than the build did. Ten looks, weighted toward the top of the",
+        ),
+    ),
+}
+
+#: The look-library files carrying a granted change of ANY kind. Derived, not
+#: written down: a hand-kept list would desynchronise from the grants the
+#: moment any one of them is revised.
+_LOOKS_GRANTED_FILES = (
+    frozenset(_LOOKS_GRANTED_LINE_PAIRS)
+    | frozenset(_LOOKS_GRANTED_D1_APPENDS)
+    | frozenset(_LOOKS_GRANTED_COUNT_PROSE_PAIRS)
+)
 
 _TOOLS_PATH = "server/orchestrator/tools.py"
 
@@ -1199,14 +1240,36 @@ class TestLooksLibraryGrantedExtension:
 
     def test_every_change_is_a_granted_line_pair_and_every_pair_is_present(self):
         for path in sorted(_LOOKS_GRANTED_FILES):
+            prose = _LOOKS_GRANTED_COUNT_PROSE_PAIRS.get(path, ())
             pairs = _LOOKS_GRANTED_LINE_PAIRS.get(path, ())
             appended = _LOOKS_GRANTED_D1_APPENDS.get(path, ())
             deleted, added = self._diff_lines(path)
             # Exact equality on BOTH sides, deliberately. Relaxing either to a
             # subset test is the cheapest way to make an unsanctioned edit pass
-            # and would void the whole gate — see the grant comment above.
-            assert deleted == [old for old, _new in pairs], path
-            assert added == [new for _old, new in pairs] + list(appended), path
+            # and would void the whole gate — see the grant comments above.
+            #
+            # The concatenation ORDER is diff order, which is file-position
+            # order: the count-prose line (old 7) precedes the 파란 line
+            # (old 74), which precedes the old EOF. That claim is not assumed
+            # here — `test_the_granted_hunks_appear_in_the_order_this_class_
+            # concatenates_them` measures it.
+            assert deleted == [old for old, _new in prose] + [old for old, _new in pairs], path
+            assert added == [new for _old, new in prose] + [new for _old, new in pairs] + list(
+                appended
+            ), path
+
+    def test_the_granted_hunks_appear_in_the_order_this_class_concatenates_them(self):
+        # The assertion above concatenates three grants in a fixed order. If the
+        # diff ever produced them in a different order the equality would fail
+        # confusingly, so pin the ordering claim itself, measured from the diff.
+        for path in sorted(_LOOKS_GRANTED_FILES):
+            starts = [old_start for old_start, _old_count in _hunks(_PRECHK_BASE, path)]
+            assert starts == sorted(starts), path
+            prose_count = len(_LOOKS_GRANTED_COUNT_PROSE_PAIRS.get(path, ()))
+            if prose_count and path in _LOOKS_GRANTED_LINE_PAIRS:
+                # The prose correction sits in the file header, above every
+                # look — so above every 파란 line by construction.
+                assert starts[0] < starts[prose_count], path
 
     def test_each_granted_addition_is_one_appended_hunk_at_the_old_eof(self):
         # Shape, following `TestChoreographyObservedEffectGrantedAppend`: a
