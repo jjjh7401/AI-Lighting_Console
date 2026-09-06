@@ -191,14 +191,15 @@ M2 변경 파일: `server/orchestrator/tools.py`(`ConfirmedSectionPort` · `Conf
 
 ```yaml
 run_complete_at: 2026-09-06
-run_commit_sha: pending-backfill   # M2 커밋 자신의 SHA — 커밋이 자기 해시를 모른다(D3 예외). M1 = 845658e; M2 SHA 는 완료 보고에 적는다
+run_commit_sha: d28ebd6   # M2 커밋(백필 — 커밋은 자기 해시를 모른다, D3 예외). M1 = 845658e
 run_status: implemented-pending-sync
 ac_pass_count: 16
 ac_fail_count: 0
 preserve_list_post_run_count: 0   # git diff --name-only $BASE -- server/safety server/audio server/looks server/design ui/src src-tauri → 0행; git diff --name-only $BASE -- server/tests/conftest.py → 0행
 l44_pre_commit_fetch: "git fetch origin main → origin/main fc65860 (BASE 와 동일)"
-l44_post_push_fetch: "<<POST_PUSH>>"
+l44_post_push_fetch: "git push -u origin WT-song-confirm-run → exit 0, [new branch]; origin/WT-song-confirm-run == HEAD d28ebd6 (rev-list --left-right 0 0). 푸시 직전 fetch: origin/main 은 fc65860 → 4453631 로 1건 전진(SPEC-COPILOT-POOLEMPTY-001 M1·M2 run, #320 — server/orchestrator/tools.py 165행 · server/tests/test_songcue_tool.py 152행 포함, _timecode_slot_verdict → timecode_slot_verdict 개명). 이 브랜치는 BASE fc65860 기준 그대로다 — 나중에 착지하는 쪽이 rebase 한다는 spec.md §A.1 규칙대로 통합은 리드 판단(rebase / merge). 읽기 전용 사전 검사: git merge-tree --write-tree origin/main HEAD → exit 0, CONFLICT 0행(결과 트리 83793cef); 그 트리를 git archive 로 .venv/merged-tree 에 풀어 이 SPEC 의 게이트 8파일을 돌리면 596 passed, 1 failed — 실패 1건은 test_tree_identity.py::test_own_tree_runs_normally 로 풀어 놓은 사본(인터프리터 트리 ≠ 사본 트리)에서 트리 동일성 가드가 맞게 거절한 것이며 이 SPEC 의 코드가 아니다."
 new_warnings_or_lints_introduced: 0   # ruff check server → All checks passed!; ruff format --check server → 502 files already formatted
+prepush_hook: "실행됨 — .git/hooks/pre-push 가 make -C <repo-root> -s ci-local 을 돌렸고(stdout 은 훅이 /dev/null 로 버린다) 훅 자신의 로그 .moai/logs/prepush-bypass.log 에 '1788661294\tstudiox\tWT-song-confirm-run\tpass\t17s'. SKIP_MOAI_PREPUSH 미사용"
 cross_platform_build:
   applicable: false   # Python 서버 — 빌드 단계 없음; 인터프리터 .venv Python 3.11.15
 total_run_phase_files: 5   # server/web/question.py · server/web/session.py · server/orchestrator/tools.py · server/tests/test_song_confirm_sections.py · server/tests/test_songcue_confirmed_default.py (+ spec.md frontmatter, progress.md)
