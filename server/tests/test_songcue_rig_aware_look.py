@@ -76,7 +76,11 @@ _SECTION_BANDS = (
     ("chorus", (4, 5)),
 )
 
-#: 이 카드가 고치는 밴드 — 요청 구간 안에 묶이는 룩이 **존재하는** 경우.
+#: 카드 t278(선택기 수정)이 고친 밴드 — 요청 구간 안에 묶이는 룩이 이미 **존재하던**
+#: 경우. ``ambient`` 가 빠져 있는 것은 그때 이 밴드가 못 닿는 곳이었기 때문이고,
+#: 지금은 아니다 — SPEC-COPILOT-D1GRANT-001 이 라이브러리에 D1 룩 둘을 더해 네 장르
+#: 전부 닿게 만들었다. 그 사실은 여기서 중복해서 재지 않고
+#: :class:`TestWhatThisFixCouldNotReachUntilTheLibraryGrew` 가 잰다.
 _REACHABLE_SECTIONS = ("intro", "verse", "build", "chorus")
 
 
@@ -234,45 +238,78 @@ class TestInstrumentIsNotVacuous:
         assert look_id == _naive_first_match(library, genre, (4,))
 
 
-class TestWhatThisFixCannotReach:
-    """정직한 기록: (1,) 만 요청하는 어휘는 edm·rock 에서 여전히 X 다.
+class TestWhatThisFixCouldNotReachUntilTheLibraryGrew:
+    """t278 의 잔여 기록을 **교체한** 자리 (SPEC-COPILOT-D1GRANT-001).
 
-    선택기가 못 고르는 것이 아니라 **고를 것이 없다** — 두 장르의 D1 룩은 각각
-    하나뿐이고 그 룩의 역할은 ``배경`` 뿐이다. 이것을 O 로 만들려면 라이브러리에
-    룩을 더해야 하는데, 그 대안은 cyc 리그 출력을 바꾸므로 이 카드가 기각했다.
+    삭제가 아니라 교체다. 이 자리에 무엇이 적혀 있었는지가 기록할 값이고, 조용히
+    뒤집힌 핀은 구멍보다 나쁘기 때문이다.
 
-    아래 단언은 **사유까지** 잰다. 라이브러리가 나중에 묶이는 D1 룩을 얻으면 이
-    테스트가 실패하며, 그것이 이 기록을 갱신하라는 신호다.
+    **전 (t278 이 이 클래스를 ``TestWhatThisFixCannotReach`` 로 세웠을 때).**
+    ``(1,)`` 만 요청하는 어휘는 edm·rock 에서 X 였다. 선택기가 못 고른 것이 아니라
+    **고를 것이 없었다** — 두 장르의 D1 룩은 각각 하나뿐이고 그 역할은 ``배경``
+    뿐이라(옛 단언: ``[look.roles for look in d1] == [("배경",)]``), 호리·cyc 계열이
+    없는 실기 리그에서는 어느 무리에도 안 묶였다. 옛 단언은 그래서
+    ``_stored_cues(..., "ambient", _REAL_RIG) == []`` 을 **사유까지** 못박았고, t278 은
+    라이브러리를 고치는 대안이 cyc 리그 출력을 바꿀까 봐 기각했다.
+
+    **후 (지금).** 그 우려는 실측으로 해소됐다 — 정렬 축은 파일 위치가 아니라
+    ``look_id`` 사전순이고, 두 새 룩은 기존 룩보다 뒤로 정렬되므로 cyc 리그의 선택은
+    한 칸도 안 움직인다(``TestCycRigIsUnchanged``). 그래서 edm 은
+    ``edm-haze-shafts``(``백라이트``), rock 은 ``rock-wing-embers``(``사이드``)를 얻었고,
+    ``ambient`` 밴드는 **네 장르 전부** 실기 리그에서 큐를 받는다.
+
+    아래 단언은 그 새 현실을 재되, 근거를 함께 잰다: 큐가 도달한다는 것뿐 아니라
+    **왜** 도달하는지 — 각 장르에 역할이 ``{탑, 배경}`` 의 부분집합이 **아닌** D1 룩이
+    하나 이상 있다는 것 — 을 같이 단언한다. 실기 리그에서 안 묶이는 두 역할이 그
+    둘이므로, 이 성질이 무너지면 큐도 같이 사라진다.
     """
 
-    @pytest.mark.parametrize("genre", ("edm", "rock"))
-    def test_those_genres_have_exactly_one_d1_look_and_it_is_backdrop_only(self, library, genre):
+    @pytest.mark.parametrize("genre", _GENRES)
+    def test_every_genre_has_a_d1_look_whose_roles_are_not_all_unbindable(self, library, genre):
         d1 = [look for look in looks_for_genre(library, genre) if look.dynamics == 1]
 
-        assert [look.roles for look in d1] == [("배경",)]
+        assert d1, genre
+        bindable = [look for look in d1 if set(look.roles) - {"탑", "배경"}]
+        assert bindable, (
+            f"{genre} 의 D1 룩이 전부 탑/배경 뿐이다 — 실기 리그에서 안 묶이는 두 역할이라 "
+            "이 장르의 ambient 구간은 다시 침묵한다"
+        )
 
-    @pytest.mark.parametrize("genre", ("edm", "rock"))
-    def test_the_ambient_only_band_still_has_no_cue(self, library, genre):
-        assert _stored_cues(library, genre, "ambient", _REAL_RIG) == []
-
-    @pytest.mark.parametrize("genre", ("ballad", "worship"))
-    def test_the_ambient_only_band_is_covered_where_a_bindable_d1_exists(self, library, genre):
+    @pytest.mark.parametrize("genre", _GENRES)
+    def test_the_ambient_only_band_now_reaches_the_console(self, library, genre):
         assert _stored_cues(library, genre, "ambient", _REAL_RIG)
 
 
 def test_the_matrix_is_recorded_for_the_report(library):
-    """보고서에 싣는 O/X 행렬을 한 자리에서 만든다 — 요약이 아니라 실측이다."""
-    matrix = {
-        genre: "".join(
-            "O" if _stored_cues(library, genre, name, _REAL_RIG) else "X"
-            for name, _band in _SECTION_BANDS
-        )
-        for genre in _GENRES
+    """보고서에 싣는 O/X 행렬을 한 자리에서 만든다 — 요약이 아니라 실측이다.
+
+    전량 O 인 행렬만 실으면 「쟀는데 통과했다」와 「계측기가 공허하다」가 밖에서
+    구별되지 않는다. 그래서 음성 대조 행렬을 **같은 함수 안에서** 같은 계측기로
+    만들어 나란히 단언한다.
+    """
+
+    def matrix(rig: tuple[str, ...]) -> dict[str, str]:
+        return {
+            genre: "".join(
+                "O" if _stored_cues(library, genre, name, rig) else "X"
+                for name, _band in _SECTION_BANDS
+            )
+            for genre in _GENRES
+        }
+
+    # 실기 리그 — 네 장르 전량 O. edm·rock 의 첫 칸은 이 SPEC 이전까지 X 였다.
+    assert matrix(_REAL_RIG) == {
+        "ballad": "OOOOO",
+        "edm": "OOOOO",
+        "rock": "OOOOO",
+        "worship": "OOOOO",
     }
 
-    assert matrix == {
-        "ballad": "OOOOO",
-        "edm": "XOOOO",
-        "rock": "XOOOO",
-        "worship": "OOOOO",
+    # 음성 대조 — 어느 역할에도 안 걸리는 리그에서는 전량 X. 계측기가 O 를
+    # 찍어내고 있는 것이 아니라는 증거다.
+    assert matrix(_UNBINDABLE_RIG) == {
+        "ballad": "XXXXX",
+        "edm": "XXXXX",
+        "rock": "XXXXX",
+        "worship": "XXXXX",
     }
