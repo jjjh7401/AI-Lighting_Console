@@ -230,18 +230,112 @@ def _find_section(timeline: Mapping[str, object], cue_number: int) -> tuple[int,
     )
 
 
-def _set_intensity(section: dict, percent: int, report: list[str]) -> None:
-    before = section_intensity_percent(section)
+def _group_levels(section: Mapping[str, object]) -> list[tuple[int, str, int]]:
+    """구간의 그룹별 조도 — ``(칸 번호, 그룹 이름, 값)``. 없으면 빈 목록.
+
+    「그룹별 값이 있다」가 **형태가 있다**는 뜻이다. 이 목록이 비면 이 구간에는
+    지킬 간격 자체가 없고, 올림과 지정이 같은 동작이 된다.
+    """
     entries = section.get("intensity")
-    if isinstance(entries, list) and entries:
+    if not isinstance(entries, list):
+        return []
+    levels: list[tuple[int, str, int]] = []
+    for slot, entry in enumerate(entries):
+        if not isinstance(entry, Mapping):
+            continue
+        level = entry.get("level")
+        if isinstance(level, bool) or not isinstance(level, (int, float)):
+            continue
+        levels.append((slot, str(entry.get("group") or f"#{slot + 1}"), int(level)))
+    return levels
+
+
+def _write_d_level(section: dict, percent: int) -> None:
+    # d_level 은 1..5 축이다. 백분율을 그 축으로 환산해 같이 옮긴다 — 한쪽만
+    # 고치면 화면(그룹별 값)과 폴리라인(d_level)이 서로 다른 값을 말한다.
+    section["d_level"] = max(1, min(5, round(percent / _INTENSITY_STEP)))
+
+
+def _per_group_report(levels: list[tuple[int, str, int]], after: dict[int, int]) -> str:
+    return ", ".join(f"{name} {level}→{after[slot]}" for slot, name, level in levels)
+
+
+def _set_intensity(section: dict, percent: int, report: list[str]) -> None:
+    """**지정**: 모든 그룹을 같은 값으로 맞춘다 — 「조도 90으로」.
+
+    그룹 간의 차이는 사라진다. 그것이 이 동사의 뜻이다(감독이 「전부 90」이라고
+    말했으므로). 형태를 지키는 쪽은 :func:`_lift_intensity` 다.
+    """
+    before = section_intensity_percent(section)
+    levels = _group_levels(section)
+    entries = section.get("intensity")
+    if levels and isinstance(entries, list):
         section["intensity"] = [
             {**entry, "level": percent} if isinstance(entry, Mapping) else entry
             for entry in entries
         ]
-    # d_level 은 1..5 축이다. 백분율을 그 축으로 환산해 같이 옮긴다 — 한쪽만
-    # 고치면 화면(그룹별 값)과 폴리라인(d_level)이 서로 다른 값을 말한다.
-    section["d_level"] = max(1, min(5, round(percent / _INTENSITY_STEP)))
-    report.append(f"{EDITABLE_FIELD_LABELS['intensity']} {before} → {percent}")
+        after = {slot: percent for slot, _name, _level in levels}
+        report.append(
+            f"{EDITABLE_FIELD_LABELS['intensity']} 전체 {percent} (그룹 통일) — "
+            + _per_group_report(levels, after)
+        )
+    else:
+        report.append(f"{EDITABLE_FIELD_LABELS['intensity']} {before} → {percent}")
+    _write_d_level(section, percent)
+
+
+def _lift_intensity(section: dict, delta: int, report: list[str]) -> None:
+    """**올림/내림**: 그룹 간 간격을 유지한 채로 통째로 옮긴다 — 「더 밝게」.
+
+    산술은 **고정 오프셋**이다. 비례 배율이 아닌 이유: 비례는 어두운 그룹을
+    거의 안 움직여(35 × 1.3 = 45.5) 감독이 「올렸다」고 느끼는 양과 어긋나고,
+    되돌리기가 정확히 대칭이 아니다. 오프셋은 KEY−BACK 차이를 **글자 그대로**
+    보존하고, 같은 크기의 반대 오프셋으로 정확히 되돌아온다.
+
+    **천장·바닥에서**: 오프셋을 그룹마다 잘라 내면(clamp per group) 천장에 닿은
+    그룹만 멈추고 나머지는 따라와 — 결국 형태가 다시 뭉개진다. 그래서 자르는
+    것은 **한 걸음 전체**다: 가장 밝은 그룹이 100 을 넘게 되는 만큼 걸음을
+    줄여 모두가 같은 양만큼 움직인다. 간격은 천장에서도 그대로 남고, 리포트가
+    「요청 +20 → 천장 100에 맞춰 +10」처럼 줄어든 사실을 적는다. 더 갈 곳이
+    없으면(걸음이 0) 조용히 통과시키지 않고 사유를 붙여 거절한다.
+    """
+    levels = _group_levels(section)
+    if not levels:
+        # 형태가 없다 — 지정과 같은 동작이고, 리포트도 기존 한 줄 그대로다.
+        percent = section_intensity_percent(section) + delta
+        percent = max(_INTENSITY_MIN, min(_INTENSITY_MAX, percent))
+        _set_intensity(section, percent, report)
+        return
+
+    low = min(level for _slot, _name, level in levels)
+    high = max(level for _slot, _name, level in levels)
+    if delta > 0:
+        effective = min(delta, _INTENSITY_MAX - high)
+        limit = f"천장 {_INTENSITY_MAX}"
+    else:
+        effective = max(delta, _INTENSITY_MIN - low)
+        limit = f"바닥 {_INTENSITY_MIN}"
+    if effective == 0:
+        raise CueSheetEditError(
+            f"이 큐는 이미 {limit}에 닿아 있어 더 옮길 수 없습니다 "
+            f"(그룹별 값: {', '.join(f'{name} {level}' for _slot, name, level in levels)})."
+        )
+
+    entries = list(section["intensity"])
+    after: dict[int, int] = {}
+    for slot, _name, level in levels:
+        entry = entries[slot]
+        after[slot] = level + effective
+        entries[slot] = {**entry, "level": after[slot]}
+    section["intensity"] = entries
+    _write_d_level(section, high + effective)
+
+    step = f"{effective:+d}"
+    clipped = "" if effective == delta else f", 요청 {delta:+d} → {limit}에 맞춰 {step}"
+    report.append(
+        f"{EDITABLE_FIELD_LABELS['intensity']} {step} (그룹 간격 유지{clipped}) — "
+        + _per_group_report(levels, after)
+    )
 
 
 def apply_cue_sheet_edit(
@@ -271,21 +365,26 @@ def apply_cue_sheet_edit(
     slot, section = _find_section(timeline, cue_number)
 
     # --- 검증을 전부 끝낸 뒤에 쓴다 (부분 적용 금지) ---
+    # 「지정」과 「올림」은 다른 지시다(t289). 지정은 모든 그룹을 한 값으로
+    # 맞추고, 올림은 그룹 간 간격을 지킨 채 통째로 옮긴다. 둘을 한 숫자로
+    # 합치면 「더 밝게」가 리그를 평평하게 만든다 — 그것이 이 갈래의 이유다.
     target_percent: int | None = None
+    lift_delta: int | None = None
     if "intensity" in changes:
         raw = changes["intensity"]
         if not isinstance(raw, (int, float)) or isinstance(raw, bool):
             raise CueSheetEditError(f"조도는 숫자여야 합니다 (받은 값: {raw!r}).")
         target_percent = int(raw)
+        if not (_INTENSITY_MIN <= target_percent <= _INTENSITY_MAX):
+            raise CueSheetEditError(
+                f"조도는 {_INTENSITY_MIN}~{_INTENSITY_MAX} 사이여야 합니다 "
+                f"(요청값: {target_percent})."
+            )
     elif "intensity_delta" in changes:
         delta = changes["intensity_delta"]
         if not isinstance(delta, (int, float)) or isinstance(delta, bool):
             raise CueSheetEditError(f"조도 증감은 숫자여야 합니다 (받은 값: {delta!r}).")
-        target_percent = section_intensity_percent(section) + int(delta)
-    if target_percent is not None and not (_INTENSITY_MIN <= target_percent <= _INTENSITY_MAX):
-        raise CueSheetEditError(
-            f"조도는 {_INTENSITY_MIN}~{_INTENSITY_MAX} 사이여야 합니다 (요청값: {target_percent})."
-        )
+        lift_delta = int(delta)
 
     if "trans" in changes:
         trans = changes["trans"]
@@ -313,9 +412,13 @@ def apply_cue_sheet_edit(
                 )
 
     # --- 여기부터 쓰기. 위를 전부 통과했으므로 중간에 튀지 않는다. ---
+    # 조도가 맨 앞이다. 「더 옮길 곳이 없다」 거절은 여기서 나며, 그 시점에는
+    # 아직 아무 칸도 쓰지 않았으므로 부분 적용이 생기지 않는다.
     report: list[str] = []
     if target_percent is not None:
         _set_intensity(section, target_percent, report)
+    elif lift_delta is not None:
+        _lift_intensity(section, lift_delta, report)
     if "trans" in changes:
         before = section.get("trans")
         section["trans"] = str(changes["trans"]).upper()

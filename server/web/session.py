@@ -8447,8 +8447,11 @@ class ChatSession:
             for outcome in executed.command_outcomes
             if outcome.status in ("failed", "blocked", "rejected", "not_executed")
         ]
+        # 「무엇이 나갔나」를 칸별로 적는다 — 조도만 나가던 때의 `큐 20→90%` 는
+        # 이제 컬러·페이드가 같이 나갈 수 있어 실제와 어긋난다(t293).
         applied_note = ", ".join(
-            f"큐 {cue}→{plan.targets[cue]}%" for cue in plan.applied if cue in plan.targets
+            f"큐 {cue}({plan.summaries.get(cue) or f'조도 {plan.targets.get(cue)}%'})"
+            for cue in plan.applied
         )
         if executed.result.is_error or failed:
             return InstructionResult(

@@ -75,7 +75,7 @@ def test_absolute_intensity_edit_reports_before_and_after():
     updated, report = apply_cue_sheet_edit(before, 1, {"intensity": 80})
     assert updated["sections"][0]["intensity"] == [{"group": "MOVER-U", "level": 80}]
     assert updated["sections"][0]["d_level"] == 4
-    assert report == ["조도 40 → 80"]
+    assert report == ["조도 전체 80 (그룹 통일) — MOVER-U 40→80"]
     # 원본은 그대로다 — 되돌리기가 「직전 상태 그대로」를 복원할 수 있어야 한다.
     assert before["sections"][0]["intensity"] == [{"group": "MOVER-U", "level": 40}]
 
@@ -85,7 +85,68 @@ def test_relative_brighter_uses_the_sections_own_current_value():
     assert request == {"cue": None, "changes": {"intensity_delta": 20}}
     updated, report = apply_cue_sheet_edit(_timeline(), 1, request["changes"])
     assert section_intensity_percent(updated["sections"][0]) == 60
-    assert report == ["조도 40 → 60"]
+    assert report == ["조도 +20 (그룹 간격 유지) — MOVER-U 40→60"]
+
+
+# -- t289: 올림은 형태를 지키고, 지정은 지키지 않는다 ------------------------------
+
+
+def _shaped() -> dict:
+    """그룹 간 차이가 있는 큐. 이 차이가 곧 조명 디자인이다."""
+    return {
+        "sections": [
+            {
+                "index": 1,
+                "label": "CHORUS",
+                "cue_number": 1,
+                "d_level": 4,
+                "intensity": [{"group": "KEY", "level": 70}, {"group": "BACK", "level": 35}],
+            }
+        ]
+    }
+
+
+def test_a_lift_preserves_the_gap_between_groups():
+    """「더 밝게」는 리그를 통째로 올린다 — KEY 70 / BACK 35 의 35 차이가 남는다."""
+    updated, report = apply_cue_sheet_edit(_shaped(), 1, {"intensity_delta": 20})
+    levels = [entry["level"] for entry in updated["sections"][0]["intensity"]]
+    assert levels == [90, 55]
+    assert levels[0] - levels[1] == 35
+    assert report == ["조도 +20 (그룹 간격 유지) — KEY 70→90, BACK 35→55"]
+
+
+def test_a_set_flattens_the_groups_and_says_so():
+    """「조도 90으로」는 전부 90 이다 — 감독이 그렇게 말했으므로 형태가 사라진다."""
+    updated, report = apply_cue_sheet_edit(_shaped(), 1, {"intensity": 90})
+    assert [entry["level"] for entry in updated["sections"][0]["intensity"]] == [90, 90]
+    assert report == ["조도 전체 90 (그룹 통일) — KEY 70→90, BACK 35→90"]
+
+
+def test_at_the_ceiling_the_whole_step_shrinks_rather_than_the_top_group():
+    """천장에서도 간격은 남는다 — 걸음 전체를 줄이지, 위 그룹만 자르지 않는다."""
+    updated, report = apply_cue_sheet_edit(_shaped(), 1, {"intensity_delta": 60})
+    levels = [entry["level"] for entry in updated["sections"][0]["intensity"]]
+    assert levels == [100, 65]
+    assert levels[0] - levels[1] == 35
+    assert report == [
+        "조도 +30 (그룹 간격 유지, 요청 +60 → 천장 100에 맞춰 +30) — KEY 70→100, BACK 35→65"
+    ]
+
+
+def test_a_lift_with_nowhere_left_to_go_is_refused_by_name():
+    timeline = _shaped()
+    timeline["sections"][0]["intensity"] = [{"group": "KEY", "level": 100}]
+    with pytest.raises(CueSheetEditError) as caught:
+        apply_cue_sheet_edit(timeline, 1, {"intensity_delta": 20})
+    assert str(caught.value) == (
+        "이 큐는 이미 천장 100에 닿아 있어 더 옮길 수 없습니다 (그룹별 값: KEY 100)."
+    )
+
+
+def test_a_lift_is_exactly_reversible():
+    up, _ = apply_cue_sheet_edit(_shaped(), 1, {"intensity_delta": 20})
+    down, _ = apply_cue_sheet_edit(up, 1, {"intensity_delta": -20})
+    assert down["sections"][0]["intensity"] == _shaped()["sections"][0]["intensity"]
 
 
 def test_text_fields_are_parsed_and_applied_with_a_field_by_field_report():
@@ -127,10 +188,17 @@ def test_out_of_range_intensity_is_refused_with_the_requested_value():
     assert str(caught.value) == "조도는 0~100 사이여야 합니다 (요청값: 120)."
 
 
-def test_relative_edit_below_zero_is_refused_rather_than_clamped_silently():
-    with pytest.raises(CueSheetEditError) as caught:
-        apply_cue_sheet_edit(_timeline(), 1, {"intensity_delta": -60})
-    assert str(caught.value) == "조도는 0~100 사이여야 합니다 (요청값: -20)."
+def test_relative_edit_below_zero_shrinks_the_step_and_says_so():
+    """t289 로 뒤집힌 판정. 이전에는 「요청값 -20」 거절이었다.
+
+    거절은 감독에게 「내리지 말라」로 읽히는데, 실제로 내릴 여지는 남아 있었다
+    (40 → 0). 이제 걸음을 바닥에 맞춰 줄이고 **줄였다는 사실을 리포트에 적는다**
+    — 조용한 clamp 가 아니다. 더 갈 곳이 아예 없을 때만 거절한다
+    (`test_a_lift_with_nowhere_left_to_go_is_refused_by_name`).
+    """
+    updated, report = apply_cue_sheet_edit(_timeline(), 1, {"intensity_delta": -60})
+    assert updated["sections"][0]["intensity"] == [{"group": "MOVER-U", "level": 0}]
+    assert report == ["조도 -40 (그룹 간격 유지, 요청 -60 → 바닥 0에 맞춰 -40) — MOVER-U 40→0"]
 
 
 def test_unknown_cue_is_refused_and_names_the_cues_that_exist():

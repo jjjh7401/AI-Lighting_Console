@@ -32,10 +32,24 @@
 
 ## 정직한 부분 성공
 
-콘솔 값으로 옮길 수 있는 칸은 오늘 **조도뿐**이다. 무드·컬러 이름·무브먼트·
-이펙트·전환·페이드·노트는 이 저장소에 실측된 명령 형태가 없어서, 지어내지
-않고 **건너뛴 것으로 보고**한다. 사유 문자열은 새로 만들지 않고 t277 이 이미
-쓰던 두 개를 그대로 쓴다:
+콘솔 값으로 옮기는 칸은 **조도·컬러·페이드** 셋이다(t293). 셋 다 명령 형태를
+지어내지 않고 이 저장소에 **이미 있는 생산자**에서 가져왔다:
+
+* 조도 — ``Attribute 'Dimmer' At <%>``. 줄 형태는 `server/looks/instantiate.py`
+  의 ``_values_line`` (:288), 속성 이름은 `server/looks/library/*.yaml`.
+* 컬러 — ``Attribute 'ColorRGB_R' At <%> ; …``. 같은 줄 형태에 같은 출처의
+  속성 이름. 색값은 감독의 타임라인이 들고 다니는 ``palette_legend``
+  (`server/design/sugar_timeline.py:55-63`)에서 읽고, 이름→색 판독은 화면과
+  같은 규칙이다(`ui/src/components/CueSheetTimeline.tsx` `paletteColorFor`).
+* 페이드 — ``Store … Cue N CueFade <초> /Merge``.
+  `handoff/2026-08-15-timeline-workflow-handoff.md:19` 이 이 형태만 쓰라고
+  적었고(``Property 'Fade'`` 는 금지), ``/Merge`` 와 함께 쓴 실행 기록은
+  `.moai/specs/SPEC-COPILOT-INTENT-001/progress.md:66` 에 있다.
+
+무드·보조컬러·무브먼트·이펙트·전환·노트는 출처를 못 대서 **넓히지 않았다**.
+칸마다 왜 못 보내는지는 :data:`UNSOURCED_FIELD_REASONS` 에 적혀 있고, 그
+문장이 건너뜀 사유로 그대로 나간다. 사유 **코드**는 새로 만들지 않고 t277 이
+이미 쓰던 두 개를 그대로 쓴다:
 
 * :data:`UNMAPPED_LOOK` — 이 큐의 변경이 콘솔 값으로 옮겨지지 않는다.
 * :data:`ROLE_UNADDRESSED` — 옮길 값은 있는데 그 그룹의 콘솔 번호를 모른다.
@@ -43,6 +57,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
@@ -51,8 +66,10 @@ from server.looks.songcue import UNMAPPED_LOOK
 from server.looks.songcue_report import ROLE_UNADDRESSED
 
 __all__ = [
+    "CONSOLE_APPLIABLE_FIELDS",
     "ROLE_UNADDRESSED",
     "UNMAPPED_LOOK",
+    "UNSOURCED_FIELD_REASONS",
     "ConsoleApplyError",
     "ConsoleApplyPlan",
     "CueSkip",
@@ -64,9 +81,45 @@ __all__ = [
 
 _DESTINATION = "ChangeDestination Root"
 _CLEAR = "ClearAll"
+_HEX_COLOR = re.compile(r"#[0-9A-Fa-f]{6}")
 
 #: 콘솔 값으로 옮길 수 있는 칸. 이 표 밖의 변경은 `UNMAPPED_LOOK` 로 보고된다.
-CONSOLE_APPLIABLE_FIELDS: tuple[str, ...] = ("intensity", "d_level")
+#:
+#: 각 칸의 명령 형태는 **이 저장소에 이미 있는 생산자**에서 가져왔다(t293).
+#: 출처를 못 대는 칸은 넓히지 않았다 — 아래 :data:`UNSOURCED_FIELD_REASONS` 가
+#: 그 목록과 사유다.
+CONSOLE_APPLIABLE_FIELDS: tuple[str, ...] = (
+    "intensity",
+    "d_level",
+    "palette_primary",
+    "fade_seconds",
+)
+
+#: 콘솔로 못 보내는 칸과 **그 이유**. 「지원 안 함」이라고만 적으면 감독은 이게
+#: 버그인지 경계인지 알 수 없다. 사유는 칸마다 다르고, 여기 적힌 그대로 나간다.
+UNSOURCED_FIELD_REASONS: dict[str, str] = {
+    "mood": (
+        "무드는 콘솔 값이 아니라 룩을 고르는 말입니다 — 값으로 옮기려면 룩 "
+        "라이브러리를 다시 태워야 하고, 그것은 `prepare_songcue` 의 일입니다"
+    ),
+    "palette_secondary": (
+        "보조 컬러를 실을 두 번째 대상이 이 통로에 없습니다 — 한 큐의 한 그룹 "
+        "선택에는 컬러 한 벌만 올라갑니다"
+    ),
+    "movement": (
+        "무브먼트(Pan/Tilt) 명령 형태가 이 저장소에 없습니다 — 룩 라이브러리는 "
+        "움직임을 담지 않기로 한 설계입니다(`server/looks/library/worship.yaml`)"
+    ),
+    "effect": (
+        "이펙트는 페이저 스텝 축을 요구하고, 그 효과는 이 콘솔에서 기계로 "
+        "되읽히지 않습니다(SPEC-COPILOT-FXLIB-001 M0 실측) — 지어내지 않습니다"
+    ),
+    "trans": (
+        "전환(SNAP/XFADE/FADE)을 페이드 초로 환산하는 근거가 이 저장소에 "
+        "없습니다 — 페이드는 초 값이 적힌 큐만 나갑니다"
+    ),
+    "note": "노트는 콘솔에 값이 없는 칸입니다 — 초안과 저장본에만 남습니다",
+}
 
 
 class ConsoleApplyError(ValueError):
@@ -91,6 +144,8 @@ class ConsoleApplyPlan:
     skipped: tuple[CueSkip, ...] = ()
     #: 큐별 조도 목표값 — 미리보기 문구가 「무엇이 나가는지」를 적을 때 쓴다.
     targets: Mapping[int, int] = field(default_factory=dict)
+    #: 큐별 한 줄 요약 — 조도 말고 무엇이 같이 나갔는지 감독이 읽는 자리(t293).
+    summaries: Mapping[int, str] = field(default_factory=dict)
 
     @property
     def is_empty(self) -> bool:
@@ -265,6 +320,68 @@ def _intensity_changed(
     return previous.get("intensity") != section.get("intensity")
 
 
+def _palette_index(timeline: Mapping[str, object]) -> dict[str, str]:
+    """팔레트 범례 → ``{id 또는 이름(소문자): #RRGGBB}``.
+
+    출처는 감독의 타임라인이 들고 다니는 ``palette_legend`` 하나뿐이다
+    (`server/design/sugar_timeline.py:55-63` 이 만들고 `:482` 가 실어 보낸다).
+    화면이 색을 찾는 규칙과 같은 규칙이다 —
+    `ui/src/components/CueSheetTimeline.tsx` 의 `paletteColorFor`.
+    """
+    legend = timeline.get("palette_legend")
+    index: dict[str, str] = {}
+    if not isinstance(legend, list):
+        return index
+    for entry in legend:
+        if not isinstance(entry, Mapping):
+            continue
+        color = str(entry.get("color") or "").strip()
+        if not _HEX_COLOR.fullmatch(color):
+            continue
+        for key in (entry.get("id"), entry.get("name")):
+            if isinstance(key, str) and key.strip():
+                index.setdefault(key.strip().casefold(), color)
+    return index
+
+
+def _palette_rgb(index: Mapping[str, str], value: object) -> tuple[int, int, int] | None:
+    """``"P4 핫핑크"`` → ``(r, g, b)`` 백분율. 범례에 없으면 ``None``.
+
+    앞 토큰(``P4``)이 범례 id 다 — 화면과 같은 판독이다. 백분율 축인 이유는
+    룩 라이브러리가 그 축으로 적혀 있기 때문이다(`server/looks/library/*.yaml`
+    의 ``ColorRGB_R`` 등은 전부 0..100).
+    """
+    if not isinstance(value, str) or not value.strip():
+        return None
+    token = value.strip().split()[0].casefold()
+    color = index.get(token) or index.get(value.strip().casefold())
+    if color is None:
+        return None
+    raw = color.lstrip("#")
+    channels = tuple(int(raw[offset : offset + 2], 16) for offset in (0, 2, 4))
+    return tuple(round(channel * 100 / 255) for channel in channels)  # type: ignore[return-value]
+
+
+def _color_line(rgb: tuple[int, int, int]) -> str:
+    """``Attribute 'ColorRGB_R' At 100 ; …`` — 독립 세팅은 한 줄에 ``;`` 로 잇는다.
+
+    줄 형태의 출처는 `server/looks/instantiate.py:288` (`_values_line`), 속성
+    이름의 출처는 `server/looks/library/*.yaml` 이다. 라이브 실행 예:
+    ``Group 4 + 5 + 6 + 7 ; Attribute 'Dimmer' At 72 ; ColorRGB…``.
+    """
+    return " ; ".join(
+        f"Attribute 'ColorRGB_{axis}' At {value:g}"
+        for axis, value in zip(("R", "G", "B"), rgb, strict=True)
+    )
+
+
+def _fade_seconds(section: Mapping[str, object]) -> float | None:
+    value = section.get("fade_seconds")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
 def plan_console_apply(
     baseline: Mapping[str, object], current: Mapping[str, object]
 ) -> ConsoleApplyPlan:
@@ -290,28 +407,46 @@ def plan_console_apply(
     layer_mapping = layer_mapping if isinstance(layer_mapping, list) else []
     layer_mapping = [entry for entry in layer_mapping if isinstance(entry, Mapping)]
 
+    palette_index = _palette_index(current)
     before = _by_cue(baseline)
     sections = _by_cue(current)
     commands: list[str] = []
     applied: list[int] = []
     skipped: list[CueSkip] = []
     targets: dict[int, int] = {}
+    summaries: dict[int, str] = {}
     for cue in changed:
         section = sections[cue]
+        previous = before.get(cue)
         label = str(section.get("label") or f"Cue {cue}")
-        if not _intensity_changed(before.get(cue), section):
+
+        # 어느 축이 달라졌나. 축마다 명령 형태의 출처가 다르므로 따로 센다.
+        intensity_changed = _intensity_changed(previous, section)
+        color_changed = previous is None or previous.get("palette_primary") != section.get(
+            "palette_primary"
+        )
+        fade_changed = previous is None or _fade_seconds(previous) != _fade_seconds(section)
+        unsourced = [
+            name
+            for name in UNSOURCED_FIELD_REASONS
+            if previous is not None and previous.get(name) != section.get(name)
+        ]
+
+        if not (intensity_changed or color_changed or fade_changed):
+            reasons = "; ".join(UNSOURCED_FIELD_REASONS[name] for name in unsourced)
             skipped.append(
                 CueSkip(
                     cue_number=cue,
                     label=label,
                     reason=UNMAPPED_LOOK,
                     detail=(
-                        "이 큐의 수정은 콘솔 값으로 옮길 수 있는 칸이 아닙니다 "
-                        "(조도만 콘솔로 나갑니다). 초안과 저장본에는 남아 있습니다."
+                        (reasons or "콘솔 값으로 옮길 수 있는 칸이 이 큐에는 없습니다")
+                        + ". 초안과 저장본에는 남아 있습니다."
                     ),
                 )
             )
             continue
+
         numbers, unresolved = _group_numbers(section, layer_mapping)
         if not numbers:
             skipped.append(
@@ -323,18 +458,60 @@ def plan_console_apply(
                 )
             )
             continue
+
+        # 프로그래머 줄. 조도는 **항상** 싣는다 — 컬러·페이드만 바뀐 큐에도
+        # 실을 값이 있어야 `/Merge` 가 빈 프로그래머를 저장하지 않는다. 싣는
+        # 값은 초안이 말하는 현재 조도라 지어낸 값이 아니고, 값이 그대로면
+        # 그 큐의 조도도 그대로다.
         percent = section_intensity_percent(section)
         targets[cue] = percent
         selection = "Group " + " + ".join(str(number) for number in numbers)
-        commands.extend(
-            (
-                _CLEAR,
-                f"{selection} ; Attribute 'Dimmer' At {percent:g}",
-                f"Store Sequence {sequence_number} Cue {cue} /Merge",
-                _CLEAR,
+        value_line = f"{selection} ; Attribute 'Dimmer' At {percent:g}"
+        parts = [f"조도 {percent}%"]
+
+        rgb = _palette_rgb(palette_index, section.get("palette_primary")) if color_changed else None
+        if color_changed and rgb is None:
+            skipped.append(
+                CueSkip(
+                    cue_number=cue,
+                    label=label,
+                    reason=UNMAPPED_LOOK,
+                    detail=(
+                        "컬러는 못 보냈습니다 — 팔레트 범례에 없는 이름입니다: "
+                        f"{section.get('palette_primary')!r} (색을 지어내지 않습니다)."
+                    ),
+                )
             )
-        )
+        elif rgb is not None:
+            value_line += " ; " + _color_line(rgb)
+            parts.append(f"컬러 {section.get('palette_primary')}")
+
+        store = f"Store Sequence {sequence_number} Cue {cue}"
+        fade = _fade_seconds(section) if fade_changed else None
+        if fade is not None:
+            # `CueFade` 는 이 저장소가 실측한 유일한 페이드 형태다 — `Property
+            # 'Fade'` 는 금지(`handoff/2026-08-15-timeline-workflow-handoff.md:19`),
+            # `/Merge` 와 함께 쓰는 순서는 실행 로그에 있다
+            # (`.moai/specs/SPEC-COPILOT-INTENT-001/progress.md:66`).
+            store += f" CueFade {fade:g}"
+            parts.append(f"페이드 {fade:g}초")
+        commands.extend((_CLEAR, value_line, f"{store} /Merge", _CLEAR))
         applied.append(cue)
+        summaries[cue] = " · ".join(parts)
+
+        if unsourced:
+            skipped.append(
+                CueSkip(
+                    cue_number=cue,
+                    label=label,
+                    reason=UNMAPPED_LOOK,
+                    detail=(
+                        "같은 큐에서 콘솔로 못 보낸 칸이 있습니다 — "
+                        + "; ".join(UNSOURCED_FIELD_REASONS[name] for name in unsourced)
+                        + ". 초안과 저장본에는 남아 있습니다."
+                    ),
+                )
+            )
         if unresolved:
             # 일부만 주소가 잡힌 큐도 **나간 것과 안 나간 것을 같이** 말한다.
             skipped.append(
@@ -354,4 +531,5 @@ def plan_console_apply(
         applied=tuple(applied),
         skipped=tuple(skipped),
         targets=targets,
+        summaries=summaries,
     )
