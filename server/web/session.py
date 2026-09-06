@@ -65,15 +65,19 @@ from server.design.song_cue_composer import (
 from server.design.song_plan import (
     D_AXIS,
     FX_AXIS,
+    MANUAL_GO,
     PALETTE_AXIS,
     POSITION_AXIS,
     TEXTURE_AXIS,
     AccentDecision,
     ApprovalState,
+    CueSheetSectionFields,
+    CueSheetViewFields,
     DirectorDecision,
     DisabledNote,
     DLevelDecision,
     FxDecision,
+    GroupIntensity,
     PaletteDecision,
     PositionDecision,
     SectionDecision,
@@ -82,6 +86,8 @@ from server.design.song_plan import (
     TimingPlan,
     UnifiedSongLightingPlan,
     UnresolvedNote,
+    apply_cue_sheet_section,
+    apply_cue_sheet_view,
 )
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
@@ -1452,6 +1458,173 @@ def _plan_warnings(plan: UnifiedSongLightingPlan, extra: Sequence[str]) -> list[
     return warnings
 
 
+# ---------------------------------------------------------------------------
+# LX-SEQ 큐시트 확장 생산자 (t283 -- t279 가 연 필드를 실제로 채운다)
+#
+# t279 는 모델 계층만 넓혔고 채우는 자리가 없었다. 여기가 그 자리다. 원칙 하나:
+# **없는 것보다 틀린 것이 나쁘다.** 파이프라인이 이미 들고 있는 값에서 나오지
+# 않는 필드는 채우지 않는다 -- 키 자체가 안 나간다.
+#
+# 지금 채우지 못하는 것과 그 이유는 아래 각 헬퍼의 주석에 적어 뒀다.
+
+#: `4/4` 꼴의 박자표에서 마디당 박수를 읽는다. 못 읽으면 없음 -- 추측하지 않는다.
+_METER_PATTERN = re.compile(r"\s*(\d+)\s*/\s*(\d+)\s*\Z")
+
+#: 타임코드가 음원 대조로 **측정**된 구간임을 뜻하는 `TimestampedSection.source`
+#: 값들. 오늘 이 파이프라인의 생산자는 `song_design_interview`(연출 인터뷰가
+#: 받아 적은 시각)와 `song_timeline` 뿐이라 어느 것도 여기 없다 -- 그래서 오늘
+#: 나가는 값은 항상 `DERIVED` 다. 음원 온셋에서 구간을 만드는 생산자가 생기면
+#: 그 source 이름을 여기 더하는 것만으로 `MEASURED` 가 나간다.
+_MEASURED_SECTION_SOURCES: frozenset[str] = frozenset({"confirmed_song_analysis"})
+
+_TC_METHOD_MEASURED = "MEASURED"
+_TC_METHOD_DERIVED = "DERIVED"
+_TC_METHOD_DERIVED_WARNING = (
+    "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. "
+    "음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. "
+    "리허설에서 대조하십시오."
+)
+
+
+def _song_beats_per_bar(meter: object) -> int | None:
+    match = _METER_PATTERN.fullmatch(str(meter or ""))
+    if match is None:
+        return None
+    beats = int(match.group(1))
+    return beats if beats > 0 else None
+
+
+def _song_seconds_per_bar(profile: MusicProfile) -> float | None:
+    """한 마디의 초. **선언된** BPM 이 있을 때만 낸다.
+
+    `effective_bpm` 을 쓰지 않는 것이 요점이다 -- 그 프로퍼티는 BPM 이 없으면
+    기본값 120 을 답하므로, 그 값으로 마디를 계산해 내보내면 재지 않은 템포가
+    실측처럼 보인다.
+    """
+    if profile.bpm is None:
+        return None
+    beats = _song_beats_per_bar(profile.meter)
+    if beats is None:
+        return None
+    return beats * 60.0 / float(profile.bpm)
+
+
+def _song_tc_method(plan: UnifiedSongLightingPlan) -> str:
+    """구간 시각의 출처를 보고 정직하게 답한다.
+
+    한 구간이라도 측정이 아닌 출처에서 왔으면 타임라인 전체가 `DERIVED` 다 --
+    섞인 것을 `MEASURED` 라고 부르면 그 한 구간이 조용히 어긋난다.
+    """
+    if all(decision.section.source in _MEASURED_SECTION_SOURCES for decision in plan.sections):
+        return _TC_METHOD_MEASURED
+    return _TC_METHOD_DERIVED
+
+
+def _song_cue_sheet_view_fields(plan: UnifiedSongLightingPlan) -> CueSheetViewFields:
+    """타임라인 헤더 확장분.
+
+    못 채우는 것: `total_duration_ms`·`bar_count`(곡 전체 길이를 아는 생산자가
+    없다 -- 마지막 구간의 끝을 아무도 안 준다), `tc_source`·`tc_origin`(콘솔
+    타임코드 출처와 0점 기준은 이 경로에 안 들어온다), `palette_legend`(룩
+    라이브러리가 팔레트에 **이름**을 달지 않는다 -- 색값만 있고 `P1 골드앰버`
+    같은 이름이 없어서 지어내지 않는다).
+    """
+    profile = plan.music_profile
+    method = _song_tc_method(plan)
+    return CueSheetViewFields(
+        bpm=profile.bpm,
+        time_signature=profile.meter,
+        musical_key=profile.key_mode,
+        seconds_per_bar=_song_seconds_per_bar(profile),
+        tc_method=method,
+        tc_method_warning=(_TC_METHOD_DERIVED_WARNING if method == _TC_METHOD_DERIVED else None),
+    )
+
+
+def _song_cue_sheet_section_fields(
+    decision: SectionDecision,
+    *,
+    next_start_ms: int | None,
+    cue: object | None,
+    seconds_per_bar: float | None,
+    layer_mapping: Sequence[Mapping[str, object]],
+    manual_go: bool,
+) -> CueSheetSectionFields:
+    """구간 하나의 큐시트 확장분.
+
+    못 채우는 것: `mood`(연출 인터뷰의 시트 구간이 들고 있지만 계획으로 넘어올
+    때 떨어진다 -- `TimestampedSection` 에 자리가 없다), `note`(구간별 메모를
+    담는 필드가 계획에 없다).
+    """
+    section = decision.section
+    end_ms = section.end_ms if section.end_ms is not None else next_start_ms
+    duration_ms = (
+        end_ms - section.start_ms if end_ms is not None and end_ms > section.start_ms else None
+    )
+
+    bar_start: int | None = None
+    bar_count: int | None = None
+    if seconds_per_bar:
+        # 1-based -- 악보와 같은 셈. 구간이 마디 경계에 안 떨어지면 반올림이고,
+        # 그 사실은 헤더의 `tc_method: DERIVED` 가 이미 말하고 있다.
+        bar_start = int(round(section.start_ms / 1000.0 / seconds_per_bar)) + 1
+        if duration_ms is not None:
+            bar_count = int(round(duration_ms / 1000.0 / seconds_per_bar))
+
+    intensity: list[GroupIntensity] = []
+    movement: str | None = None
+    effect: str | None = None
+    trans: str | None = None
+    fade_seconds: float | None = None
+    lit = False
+    if cue is not None:
+        key_pct = cue.dimmer.key_pct
+        back_pct = cue.dimmer.back_pct
+        if key_pct is not None:
+            intensity.append(GroupIntensity(group="KEY", level=int(round(key_pct))))
+        if back_pct is not None:
+            intensity.append(GroupIntensity(group="BACK", level=int(round(back_pct))))
+        lit = key_pct is not None and key_pct > 0
+        movement = cue.position.stored or cue.position.requested
+        effect = " + ".join(cue.fx.permitted) or None
+        fade_seconds = cue.fade_seconds
+        # SNAP 은 페이드 0 이라는 사실 그대로다. 정본 어휘의 XFADE 는 내보내지
+        # 않는다 -- 이 파이프라인은 크로스페이드와 단순 페이드를 구분하지 않아서,
+        # 둘 중 하나를 고르면 그것은 계산이 아니라 추측이다.
+        trans = "SNAP" if fade_seconds == 0 else "FADE"
+
+    # 이 큐가 **그룹 번호로 지목하는** 콘솔 그룹. `_back_layer_value_lines` 와
+    # 같은 조건이다: 불이 켜진 구간 큐에만 back 역할 그룹 줄이 붙는다.
+    fixture_groups = (
+        tuple(
+            str(entry["group_name"])
+            for entry in layer_mapping
+            if entry.get("role") == "back" and entry.get("group_name")
+        )
+        if lit
+        else ()
+    )
+
+    palette = decision.palette.colors
+    return CueSheetSectionFields(
+        end_ms=end_ms,
+        duration_ms=duration_ms,
+        bar_start=bar_start,
+        bar_count=bar_count,
+        # 룩 라이브러리에 팔레트 **이름**이 없다. 가진 것은 색값뿐이라 그것을
+        # 그대로 싣는다 -- `P4 핫핑크` 같은 이름은 지어내지 않는다.
+        palette_primary=palette[0] if palette else None,
+        palette_secondary=palette[1] if len(palette) > 1 else None,
+        intensity=tuple(intensity),
+        fixture_groups=fixture_groups,
+        movement=movement,
+        effect=effect,
+        trans=trans,
+        fade_seconds=fade_seconds,
+        manual=True if manual_go else None,
+    )
+
+
 def _song_timeline_payload(
     plan: UnifiedSongLightingPlan,
     composition: SongCueCompositionResult,
@@ -1491,81 +1664,113 @@ def _song_timeline_payload(
     )
     default_status = _SECTION_STATUS_BY_LIFECYCLE.get(lifecycle, "draft")
     console_stored = lifecycle in ("readback_failed", "verified")
-    return {
-        "song_title": plan.song_title,
-        "sequence_name": plan.sequence_name,
-        "sequence_number": sequence_no,
-        "timing_mode": plan.timing.mode,
-        "timecode_number": plan.timing.timecode_number,
-        "lifecycle": lifecycle,
-        "approval": plan.approval.status,
-        "director_decisions": [
-            {
-                "step": decision.step,
-                "axis": decision.axis,
-                "value": decision.to_dict()["value"],
-                "confirmed": decision.confirmed,
-                "source": decision.source,
-            }
-            for decision in plan.director_decisions
-        ],
-        "sections": [
-            {
-                "index": decision.section.index,
-                "label": decision.section.label,
-                "start_ms": decision.section.start_ms,
-                "cue_number": decision.cue_number or decision.section.index,
-                "plan_status": (
-                    "requires_requery"
-                    if not console_stored and decision.section.index in unresolved_indexes
-                    else default_status
-                ),
-                "d_level": decision.d.level,
-                "palette": list(decision.palette.colors),
-                "position": decision.position.preset,
-                "texture": decision.texture.label,
-                "fx": list(decision.fx.allowed),
-                "fade_seconds": fade_by_section.get(decision.section.index),
-                "accents": list(decision.accent.accents),
-                "mib": decision.section.index in mib_section_indexes,
-                "trig_time_seconds": (
-                    decision.section.start_seconds if plan.timing.uses_trig_time else None
-                ),
-            }
-            for decision in plan.sections
-        ],
-        "lint": [
-            {
-                "rule_id": finding.rule_id,
-                "cue_number": finding.cue_number,
-                "description": finding.description,
-            }
-            for finding in composition.lint_findings
-        ],
-        "unresolved": [
-            {
-                "axis": note.axis,
-                "section_index": note.section_index,
-                "reason": note.reason,
-            }
-            for note in plan.unresolved
-        ],
-        "disabled": [
-            {
-                "axis": note.axis,
-                "section_index": note.section_index,
-                "reason": note.reason,
-            }
-            for note in plan.disabled
-        ],
-        "readback": {"verified": readback_verified, "message": readback_message},
-        "console_stored": console_stored,
-        "warnings": _plan_warnings(plan, warnings),
-        "layer_mapping": [dict(entry) for entry in layer_mapping],
-        # The basic-position preset base the plan was built on — kept so a
-        # later "타임라인 큐 N 수정" edit can rebuild preset references.
-        "preset_start": preset_start,
-    }
+    # t283 -- 큐시트 확장분. 구간 큐를 index 로 집어 와야 `fade_seconds` 말고도
+    # 조도·무브·이펙트를 같이 읽는다(위의 `fade_by_section` 은 이제 이 사전의
+    # 부분집합이지만, 기존 동작을 건드리지 않으려고 그대로 둔다).
+    cue_by_section = (
+        {
+            cue.section_index: cue
+            for cue in bundle.cues
+            if cue.kind == "section" and cue.section_index is not None
+        }
+        if bundle is not None
+        else {}
+    )
+    seconds_per_bar = _song_seconds_per_bar(plan.music_profile)
+    manual_go = plan.timing.mode == MANUAL_GO
+    start_ms_by_index = [decision.section.start_ms for decision in plan.sections]
+    return apply_cue_sheet_view(
+        {
+            "song_title": plan.song_title,
+            "sequence_name": plan.sequence_name,
+            "sequence_number": sequence_no,
+            "timing_mode": plan.timing.mode,
+            "timecode_number": plan.timing.timecode_number,
+            "lifecycle": lifecycle,
+            "approval": plan.approval.status,
+            "director_decisions": [
+                {
+                    "step": decision.step,
+                    "axis": decision.axis,
+                    "value": decision.to_dict()["value"],
+                    "confirmed": decision.confirmed,
+                    "source": decision.source,
+                }
+                for decision in plan.director_decisions
+            ],
+            "sections": [
+                apply_cue_sheet_section(
+                    {
+                        "index": decision.section.index,
+                        "label": decision.section.label,
+                        "start_ms": decision.section.start_ms,
+                        "cue_number": decision.cue_number or decision.section.index,
+                        "plan_status": (
+                            "requires_requery"
+                            if not console_stored and decision.section.index in unresolved_indexes
+                            else default_status
+                        ),
+                        "d_level": decision.d.level,
+                        "palette": list(decision.palette.colors),
+                        "position": decision.position.preset,
+                        "texture": decision.texture.label,
+                        "fx": list(decision.fx.allowed),
+                        "fade_seconds": fade_by_section.get(decision.section.index),
+                        "accents": list(decision.accent.accents),
+                        "mib": decision.section.index in mib_section_indexes,
+                        "trig_time_seconds": (
+                            decision.section.start_seconds if plan.timing.uses_trig_time else None
+                        ),
+                    },
+                    _song_cue_sheet_section_fields(
+                        decision,
+                        next_start_ms=(
+                            start_ms_by_index[order + 1]
+                            if order + 1 < len(start_ms_by_index)
+                            else None
+                        ),
+                        cue=cue_by_section.get(decision.section.index),
+                        seconds_per_bar=seconds_per_bar,
+                        layer_mapping=layer_mapping,
+                        manual_go=manual_go,
+                    ),
+                )
+                for order, decision in enumerate(plan.sections)
+            ],
+            "lint": [
+                {
+                    "rule_id": finding.rule_id,
+                    "cue_number": finding.cue_number,
+                    "description": finding.description,
+                }
+                for finding in composition.lint_findings
+            ],
+            "unresolved": [
+                {
+                    "axis": note.axis,
+                    "section_index": note.section_index,
+                    "reason": note.reason,
+                }
+                for note in plan.unresolved
+            ],
+            "disabled": [
+                {
+                    "axis": note.axis,
+                    "section_index": note.section_index,
+                    "reason": note.reason,
+                }
+                for note in plan.disabled
+            ],
+            "readback": {"verified": readback_verified, "message": readback_message},
+            "console_stored": console_stored,
+            "warnings": _plan_warnings(plan, warnings),
+            "layer_mapping": [dict(entry) for entry in layer_mapping],
+            # The basic-position preset base the plan was built on — kept so a
+            # later "타임라인 큐 N 수정" edit can rebuild preset references.
+            "preset_start": preset_start,
+        },
+        _song_cue_sheet_view_fields(plan),
+    )
 
 
 def _song_trig_time_token(start_ms: int) -> str:
