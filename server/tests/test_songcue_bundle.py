@@ -421,6 +421,11 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     593,
     620,
     952,
+    # SPEC-COPILOT-BULKGATE-001 (2026-09-07): 새 시작점 하나. `run_commands`
+    # 클로저가 키워드 전용 `risk` 를 얻으면서 이 근처의 헝크 경계가 하나 더
+    # 갈라진다. 보호 구간(`_TOOLS_PROTECTED_OLD_RANGES`)은 안 건드린다 —
+    # 그 교차 없음은 같은 검사의 둘째 단언이 따로 잰다.
+    968,
     971,
     975,
     977,

@@ -1042,9 +1042,11 @@ class TestLookBundleUnderLiveLock:
         surface_at_screen_time: list[list[str]] = []
         real_screen = gate.screen
 
-        def _spy(commands):
+        # SPEC-COPILOT-BULKGATE-001 — `screen` 이 키워드 전용 `risk` 를 얻었다.
+        # 스파이도 받아서 그대로 넘긴다(이 경로는 선언을 안 붙이므로 None).
+        def _spy(commands, *, risk=None):
             surface_at_screen_time.append([event.get("type") for event in sent])
-            return real_screen(commands)
+            return real_screen(commands, risk=risk)
 
         gate.screen = _spy
         session.run_look_bundle(self._bundle())
