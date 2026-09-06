@@ -155,7 +155,40 @@ class RigLayers:
 class RigGeometry:
     """Placement facts derived from fixture coordinates. ``arrangement``
     reuses ``server.spatial.topology.classify`` rather than a second
-    classifier — one arrangement verdict, shared."""
+    classifier — one arrangement verdict, shared.
+
+    카드 t312 — **이 축은 계산되기만 하고 아무도 읽지 않는다.** 지어낸
+    진단이 아니라 실측이다:
+
+    * 생산자는 살아 있다 — `server/web/session.py` 의 유일한
+      `build_rig_profile(...)` 호출이 이미 읽어 둔 픽스처 좌표를 넘긴다.
+    * 소비자는 없다 — `grep -rn "\\.geometry" server/ ui/src` 가 10건을
+      찾고 **전부** `server/tests/test_design_rig.py` 다(2026-09-07 실측).
+    * 소비자가 지워진 것이 아니라 **한 번도 붙은 적이 없다** —
+      `git log -S"RigGeometry" -- server/design/rig.py` 는 도입 커밋
+      `8ecefec` 하나만 답한다.
+
+    그래서 이것은 죽은 코드가 아니라 **미완의 배선**이다. 붙을 자리는
+    SPEC-COPILOT-SONGSTD-001 R1c 의 Q4(공간 스토리)이고, 지금 그 자리는
+    좌표를 전혀 안 본다:
+
+    * `server/design/interview.py::_q4_candidates` 는 포지션 후보를
+      음악 프로파일에서만 유도한다 — 무대가 일자든 아치든 같은 답이 나온다.
+    * 같은 파일 `_rig_note` 는 인벤토리 수가 0 일 때 「무대 좌표를 기준으로
+      만든 제안이에요」라고 적는다. 좌표는 실제로 한 값도 읽지 않는다 —
+      **문면이 근거를 과장하고 있다.**
+
+    무엇을 제안에 반영할지(무게중심 기준 중앙성? 지배축을 따라가는 진행?
+    배치 분류별 후보 교체?)는 연출 판단이라 여기서 정하지 않는다. 배선하기
+    전에 그 판단이 먼저 필요하다.
+    """
+
+    # @MX:TODO: [AUTO] RigGeometry 를 읽는 생산 소비자가 없다 — Q4 공간 스토리
+    #   제안(interview._q4_candidates)과 그 근거 문면(interview._rig_note)이
+    #   붙을 자리다.
+    # @MX:SPEC: SPEC-COPILOT-SONGSTD-001 R1b/R1c
+    # @MX:PRIORITY: P3 — 기능 결손이 아니라 미사용 축. 다만 _rig_note 의
+    #   「좌표를 기준으로」 문면은 배선 전까지 근거를 과장한다.
 
     arrangement: TopologyKind
     arrangement_low_confidence: bool

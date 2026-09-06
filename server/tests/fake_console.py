@@ -22,6 +22,8 @@ from __future__ import annotations
 import re
 import sys
 import threading
+import time
+from typing import IO
 
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import ThreadingOSCUDPServer
@@ -32,6 +34,46 @@ from server.tests.lua_mock_env import ResponderHarness
 from server.tests.synthetic_rig import synthetic_patch_lua
 
 _PLUGIN_CALL = re.compile(r'^Plugin "CopilotResponder" "(.*)"$')
+
+#: 준비 완료 배너의 **고정 접두사**. 소켓이 바인드된 뒤에만 나온다 —
+#: 이 줄을 읽기 전에 보낸 명령은 커널이 조용히 버린다(카드 t313).
+READY_BANNER = "fake console on"
+
+
+class FakeConsoleNeverReadyError(RuntimeError):
+    """가짜 콘솔이 제한 시간 안에 준비 배너를 내지 않았다."""
+
+
+# @MX:ANCHOR: [AUTO] 하위 프로세스 가짜 콘솔의 유일한 준비 신호
+# @MX:REASON: 카드 t313 실측 — 이 대기 없이 보낸 첫 명령은 UDP 라 **오류 없이**
+#   사라진다. 프로세스를 띄운 드라이버는 전부 이 함수를 지나야 한다.
+def wait_for_ready(stdout: IO[str], timeout: float = 30.0) -> str:
+    """준비 배너가 나올 때까지 ``stdout`` 을 읽고 그 줄을 돌려준다.
+
+    `python -m server.tests.fake_console` 는 파이썬 기동 + 임포트 +
+    Lua 응답기 구성까지 마쳐야 명령 소켓을 연다. 그 사이에 도착한 UDP
+    패킷은 **버려지고 송신 쪽엔 아무 신호도 없다** — 카드 t313 에서 첫
+    질의만 시간 초과로 죽은 원인이 이것이다(콘솔 stdout 에 그 명령 자체가
+    찍히지 않는다). 고정 지연(`sleep`)은 느린 기계에서 다시 깨지므로
+    쓰지 않는다.
+
+    사용::
+
+        proc = subprocess.Popen([...], stdout=subprocess.PIPE, text=True)
+        wait_for_ready(proc.stdout)
+        # 이 뒤로 보낸 명령만 콘솔에 닿는다
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        line = stdout.readline()
+        if not line:
+            break
+        if line.startswith(READY_BANNER):
+            return line.rstrip()
+    raise FakeConsoleNeverReadyError(
+        f"가짜 콘솔이 {timeout}s 안에 {READY_BANNER!r} 배너를 내지 않았다"
+    )
+
 
 # 곡 → 큐 리스트 끝단 실측용 리그: 룩 역할 6종에 맞는 그룹, 시퀀스 3, **빈** Timecodes 풀
 # (1.6.5 응답기라면 enumeration:"ok" 로 답해 슬롯 판정이 free 가 된다), 빈 Macros 풀.
@@ -106,8 +148,10 @@ def main(cmd_port: int, reply_port: int, rig: str = "default") -> None:
 
     dispatcher = Dispatcher()
     dispatcher.map(CMD_ADDRESS, on_cmd)
+    # 소켓 바인드가 배너보다 **먼저** 일어나야 한다: 배너를 본 드라이버가
+    # 곧바로 보낸 명령이 버려지지 않는다는 보장이 이 순서다(카드 t313).
     server = ThreadingOSCUDPServer(("127.0.0.1", cmd_port), dispatcher)
-    print(f"fake console on {cmd_port} -> replies to {reply_port}", flush=True)
+    print(f"{READY_BANNER} {cmd_port} -> replies to {reply_port}", flush=True)
     server.serve_forever()
 
 
