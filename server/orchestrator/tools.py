@@ -115,6 +115,7 @@ from server.orchestrator.spatial_memory import (
     freshness_from_console,
     freshness_from_memory,
 )
+from server.orchestrator.write_reason import showfile_write_risk
 from server.prechk.footprint import WalkOutcome, walk_mode_widths
 from server.prechk.inventory import InventoryReadError, read_inventory
 from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_macro
@@ -2656,9 +2657,13 @@ def build_toolset(
                     is_error=False,
                 )
             )
+        # 카드 t319 — 룩 하나가 프리셋 풀을 고친다(`Store Preset <풀>.<슬롯>`).
+        # `_song_finalize` 가 세운 규율 그대로: 문면의 숫자·풀 번호는 계획이
+        # 아니라 **나갈 명령 자체**에서 읽는다.
         execution = run_commands(
             ToolCall(id=call.id, name="run_commands", arguments={"commands": list(plan.commands)}),
             context,
+            risk=showfile_write_risk(plan.commands, kind="look_instantiate"),
         )
         payload = json.loads(execution.result.content)
         payload["executed"] = not execution.result.is_error
@@ -2782,11 +2787,13 @@ def build_toolset(
                     is_error=False,
                 )
             )
+        # 카드 t319 — 장르 번들은 룩 여러 개의 `Store Preset` 다발이다.
         execution = run_commands(
             ToolCall(
                 id=call.id, name="run_commands", arguments={"commands": list(bundle.commands)}
             ),
             context,
+            risk=showfile_write_risk(bundle.commands, kind="busking_bundle"),
         )
         payload = json.loads(execution.result.content)
         is_error = execution.result.is_error
@@ -3510,6 +3517,9 @@ def build_toolset(
                     )
         payload = build_precheck_report(evaluation, macro=macro).to_dict()
         if macro is not None and macro.commands:
+            # 카드 t319 — 매크로 풀 쓰기(`Store Macro <슬롯>`). 슬롯 번호는
+            # 나갈 명령에서 읽는다: 자유 슬롯 탐색이 계획과 다른 번호를 고를 수
+            # 있고, 그때 카드가 계획을 말하면 감독은 다른 슬롯을 승인하게 된다.
             inner = run_commands(
                 ToolCall(
                     id=call.id,
@@ -3517,6 +3527,7 @@ def build_toolset(
                     arguments={"commands": list(macro.commands)},
                 ),
                 context,
+                risk=showfile_write_risk(macro.commands, kind="precheck_macro"),
             )
             payload["macro_execution"] = json.loads(inner.result.content)
             # A LiveLock demotion and a gate hold both send NOTHING, yet the
@@ -7428,9 +7439,11 @@ def build_toolset(
                     is_error=False,
                 )
             )
+        # 카드 t319 — FX 계획은 시퀀스 큐와 프리셋을 굳힌다.
         execution = run_commands(
             ToolCall(id=call.id, name="run_commands", arguments={"commands": list(plan.commands)}),
             context,
+            risk=showfile_write_risk(plan.commands, kind="fx_plan"),
         )
         payload = json.loads(execution.result.content)
         # A gate refusal carries per-command DECISIONS, not execution outcomes.
@@ -7984,6 +7997,7 @@ def build_toolset(
                     f"scene {scene.scene_id!r} cannot be compiled: {error}",
                     reason=error.reason,
                 )
+        # 카드 t319 — 씬 컴파일은 씬을 콘솔 오브젝트(시퀀스 큐)로 굳힌다.
         execution = run_commands(
             ToolCall(
                 id=call.id,
@@ -7991,6 +8005,7 @@ def build_toolset(
                 arguments={"commands": list(compilation.commands)},
             ),
             context,
+            risk=showfile_write_risk(compilation.commands, kind="scene_compile"),
         )
         payload = json.loads(execution.result.content)
         # A gate refusal carries per-command DECISIONS, not execution outcomes.
@@ -8945,9 +8960,16 @@ def build_toolset(
                 is_error=True,
             )
 
+        # 카드 t319 — 패치의 3D 좌표를 고친다(`Set Fixture <fid> Pos*`).
+        # 이 자리만 복원 번들을 함께 들고 있으므로(`restore_bundle`), 문면은
+        # 「되돌리기 없음」이 아니라 **가진 것**을 말한다. 앱 전체에 대해
+        # 단정하면 이 자리에서 거짓이 된다.
         execution = run_commands(
             ToolCall(id=call.id, name="run_commands", arguments={"commands": list(commands)}),
             context,
+            risk=showfile_write_risk(
+                commands, kind="arrange_fixtures", restore_commands=restore_bundle
+            ),
         )
         gate_payload = json.loads(execution.result.content)
         gate_status = gate_payload.get("gate_status")

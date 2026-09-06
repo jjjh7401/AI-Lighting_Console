@@ -421,6 +421,19 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     591,
     593,
     620,
+    # 카드 t319 (2026-09-07): 새 시작점 넷. `instantiate_look`·`prepare_busking`·
+    # `precheck_patch`·`_deliver_fx_plan`·`compile_scene`·`arrange_fixtures` 여섯
+    # 자리가 번들 위험 선언(`risk=showfile_write_risk(...)`)을 달면서 이 근처에
+    # 헝크가 넷 늘었다. 여섯인데 넷인 것은 둘이 기존 헝크에 흡수됐기 때문이다.
+    #
+    # 이 목록은 **재고 조사**이지 안전 성질이 아니다. 안전 성질을 지키는 것은
+    # 아래 `_overlaps` 검사이고, 보호 구간 둘(234..238 / 524..569)은 여기서
+    # 800 넘게 떨어져 있어 무접촉이다 — 그 검사로 다시 재어 0 이다. 목록을
+    # 안 늘리면 「봉인하지 말라」는 뜻이 되므로, 사유를 적고 늘린다.
+    797,
+    800,
+    923,
+    928,
     952,
     # SPEC-COPILOT-BULKGATE-001 (2026-09-07): 새 시작점 하나. `run_commands`
     # 클로저가 키워드 전용 `risk` 를 얻으면서 이 근처의 헝크 경계가 하나 더

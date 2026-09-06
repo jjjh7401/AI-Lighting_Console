@@ -172,7 +172,11 @@ class HoldingGate:
     def __init__(self):
         self.screened: list[list[str]] = []
 
-    def screen(self, commands):
+    # 카드 t319 — `precheck_patch` 가 매크로 풀 쓰기를 선언하게 되면서
+    # 더블도 진짜 `SafetyGate.screen` 의 시그니처를 따라간다. 더블이 선언을
+    # 못 받으면 조용히 흘리지 않고 TypeError 로 크게 깨지도록 되어 있고
+    # (t318), 여기서 받아야 할 쪽은 더블이다 — 판정은 그대로 무시한다.
+    def screen(self, commands, *, risk=None):
         self.screened.append(list(commands))
         return _Screen(
             cleared=False,
@@ -188,7 +192,11 @@ class ClearingGate:
     def __init__(self):
         self.screened: list[list[str]] = []
 
-    def screen(self, commands):
+    # 카드 t319 — `precheck_patch` 가 매크로 풀 쓰기를 선언하게 되면서
+    # 더블도 진짜 `SafetyGate.screen` 의 시그니처를 따라간다. 더블이 선언을
+    # 못 받으면 조용히 흘리지 않고 TypeError 로 크게 깨지도록 되어 있고
+    # (t318), 여기서 받아야 할 쪽은 더블이다 — 판정은 그대로 무시한다.
+    def screen(self, commands, *, risk=None):
         self.screened.append(list(commands))
         return _Screen(cleared=True, status="cleared", notice="", commands=())
 
@@ -204,7 +212,11 @@ class LockedGate:
     def __init__(self):
         self.screened: list[list[str]] = []
 
-    def screen(self, commands):
+    # 카드 t319 — `precheck_patch` 가 매크로 풀 쓰기를 선언하게 되면서
+    # 더블도 진짜 `SafetyGate.screen` 의 시그니처를 따라간다. 더블이 선언을
+    # 못 받으면 조용히 흘리지 않고 TypeError 로 크게 깨지도록 되어 있고
+    # (t318), 여기서 받아야 할 쪽은 더블이다 — 판정은 그대로 무시한다.
+    def screen(self, commands, *, risk=None):
         self.screened.append(list(commands))
         return _Screen(
             cleared=False,

@@ -1062,9 +1062,12 @@ class TestGateChokepoint:
         gate = real_gate(tmp_path, locked=False)
         real_screen = gate.screen
 
-        def recording(commands):
+        # 카드 t319 — `arrange_fixtures` 가 선언을 실어 보내므로 이 관찰용
+        # 래퍼도 진짜 `screen` 의 시그니처를 따라가야 한다. 관찰만 하고
+        # 판단은 그대로 진짜 게이트가 한다.
+        def recording(commands, *, risk=None):
             screened.append(list(commands))
-            return real_screen(commands)
+            return real_screen(commands) if risk is None else real_screen(commands, risk=risk)
 
         gate.screen = recording  # type: ignore[method-assign]
         console = rig()
@@ -1185,7 +1188,9 @@ class TestGateChokepoint:
         class RejectingGate:
             status = None
 
-            def screen(self, commands):
+            # 카드 t319 — `arrange_fixtures` 가 선언을 달면서 더블도 진짜
+            # 게이트의 시그니처를 따라간다(판정은 그대로).
+            def screen(self, commands, *, risk=None):
                 return _Decision(commands)
 
         console = rig()

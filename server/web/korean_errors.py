@@ -9,9 +9,15 @@ diagnostic/audit log by the session layer and never appears here.
 from __future__ import annotations
 
 from server.llm.errors import ProviderError
+from server.safety.gate import WriteGateDeclarationError
 
 # Non-provider (unexpected) failures get their own catalog entry.
 UNEXPECTED_KIND = "unexpected"
+
+#: 카드 t318 — 번들 위험 선언이 디스패치 배선을 못 지난 사고. `unexpected` 와
+#: 갈라 두는 이유는 하나다: 이쪽은 **안전장치가 꺼진 상태**라 「다시 시도해
+#: 주세요」가 틀린 안내다.
+WRITE_GATE_DECLARATION_KIND = "write_gate_declaration"
 
 # One Korean message per normalized kind — product language, no SDK vocabulary.
 KOREAN_ERROR_MESSAGES: dict[str, str] = {
@@ -24,6 +30,11 @@ KOREAN_ERROR_MESSAGES: dict[str, str] = {
     "unknown": "AI 서비스 처리 중 알 수 없는 문제가 발생했습니다. 다시 시도해 주세요.",
     UNEXPECTED_KIND: (
         "서버 내부 문제가 발생했습니다. 다시 시도해도 반복되면 진단 로그를 확인해 주세요."
+    ),
+    WRITE_GATE_DECLARATION_KIND: (
+        "안전 승인 선언이 실행 경로를 지나지 못해 콘솔에 아무것도 보내지 않았습니다. "
+        "이 상태로는 승인 카드 없이 쇼파일이 고쳐질 수 있으니 그대로 다시 시도하지 "
+        "마시고 진단 로그를 확인해 주세요."
     ),
 }
 
@@ -50,6 +61,10 @@ def classify_exception(exc: Exception) -> tuple[str, str]:
     The returned message NEVER contains the exception's own text — raw detail
     is the session layer's diagnostic-log concern (REQ-MVP-044b).
     """
+    # 카드 t318 — 선언이 배선을 못 지난 사고는 `unexpected` 로 접히면 안 된다.
+    # ProviderError 검사보다 앞에 둔다: 이 예외는 프로바이더와 무관하다.
+    if isinstance(exc, WriteGateDeclarationError):
+        return WRITE_GATE_DECLARATION_KIND, korean_message_for(WRITE_GATE_DECLARATION_KIND)
     if isinstance(exc, ProviderError):
         return exc.kind, korean_message_for(exc.kind)
     # Defense-in-depth (REQ-DEPLOY-031): the primary normalization of a

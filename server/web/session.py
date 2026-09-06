@@ -24,6 +24,7 @@ import binascii
 import contextlib
 import copy
 import hashlib
+import inspect
 import json
 import os
 import re
@@ -136,7 +137,12 @@ from server.prechk.query import read_properties
 from server.presets.store import preset_store_commands as _preset_store_commands
 from server.safety.approval import ApprovalItem, ApprovalRequest
 from server.safety.audit import AuditLog
-from server.safety.gate import BatchRisk, SafetyGate, ScreenDecision
+from server.safety.gate import (
+    BatchRisk,
+    SafetyGate,
+    ScreenDecision,
+    WriteGateDeclarationError,
+)
 from server.safety.monitor import HealthMonitor
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 from server.sheets.registry import (
@@ -9944,6 +9950,42 @@ class ChatSession:
         state.sequence_no = int(number.group(0))
         return self._song_compose(state)
 
+    # @MX:ANCHOR: [AUTO] 카드 t318 — 번들 위험 선언을 실은 디스패치는 **전부**
+    #   이 자리를 지난다. `tools.py` 밖의 봉합은 `ToolRegistry.dispatch` 만
+    #   지나므로(`ExecutionContext.risk`), 선언이 배선을 못 지나는 사고도 전부
+    #   여기서 잡힌다.
+    # @MX:REASON: 선언이 조용히 사라지면 「0건 나갔다」가 거절·무작업과 구별되지
+    #   않는다(SPEC-COPILOT-WRITEGATE-001). 새 심사 통로가 아니라 기존
+    #   디스패치의 유일한 선언 입구다 — 게이트의 `@MX:ANCHOR` 는 그대로 하나다.
+    def _dispatch_declared(self, call: ToolCall, *, risk: BatchRisk):
+        """선언을 실어 디스패치한다 — 실을 수 없으면 조용한 0건 대신 크게 깨진다.
+
+        배선 확인은 **호출 전** `Signature.bind` 로 한다. 핸들러를 돌리지 않고
+        인자 수만 맞춰 보는 것이라, 핸들러 **안쪽**에서 나는 `TypeError`(진짜
+        버그)는 이 자리가 삼키지 않는다 — 잡는 것은 「이 레지스트리는 선언을
+        받을 수 없다」 하나뿐이다.
+
+        쓸 것이 없는 회차는 여기까지 오지 않는다. 이 함수는 이미 만들어진
+        명령 묶음에만 붙는다.
+        """
+        context = ExecutionContext(risk=risk)
+        dispatch = self._registry.dispatch
+        try:
+            inspect.signature(dispatch).bind(call, context)
+        except TypeError as error:
+            raise WriteGateDeclarationError(
+                f"{type(self._registry).__name__}.dispatch 가 번들 위험 선언"
+                f"(kind={risk.kind!r})을 실은 ExecutionContext 를 받지 못합니다 — "
+                "선언 없이 보내면 승인 카드 없이 쇼파일이 고쳐지므로 아무것도 "
+                f"보내지 않았습니다: {error}"
+            ) from error
+        except (ValueError, AttributeError):
+            # 시그니처를 못 읽는 호출 가능 객체(내장/래퍼)는 확인을 건너뛴다 —
+            # 판단 못 한 것을 실패로 읽지 않는다. 실제로 못 받으면 아래 호출이
+            # TypeError 로 터지고, 그건 여전히 조용한 0건이 아니다.
+            pass
+        return dispatch(call, context)
+
     def _song_finalize(
         self,
         state: _SongDesignState,
@@ -10122,13 +10164,13 @@ class ChatSession:
                 reason=_song_write_risk_reason(sequence_no, commands),
                 kind="song_design",
             )
-            executed = self._registry.dispatch(
+            executed = self._dispatch_declared(
                 ToolCall(
                     id="song-design-reviewed-bundle",
                     name="run_commands",
                     arguments={"commands": list(commands)},
                 ),
-                ExecutionContext(risk=songcue_risk),
+                risk=songcue_risk,
             )
             store_failures = [
                 outcome
@@ -11705,9 +11747,16 @@ class ChatSession:
         kind, message = classify_exception(exc)
         raw_detail = getattr(exc, "raw_detail", None) or repr(exc)
         provider_name = getattr(exc, "provider", "")
+        # 카드 t318 — 선언이 배선을 못 지난 사고를 `provider_error` 로 적으면
+        # 감사 로그가 프로바이더 탓을 한다. 남는 이름이 곧 진단이라 갈라 적는다.
+        event_name = (
+            "write_gate_declaration_error"
+            if isinstance(exc, WriteGateDeclarationError)
+            else "provider_error"
+        )
         self._audit.record(
             {
-                "event": "provider_error",
+                "event": event_name,
                 "kind": kind,
                 "provider": provider_name,
                 "raw_detail": raw_detail,

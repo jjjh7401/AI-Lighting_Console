@@ -420,7 +420,14 @@ class _RefusingConsole:
         raise AssertionError(f"a console send was attempted under the live lock: {command!r}")
 
 
-def _real_gate(tmp_path, *, locked: bool) -> SafetyGate:
+class _ApprovingPort:
+    """승인은 통과 — 이 파일이 재는 축은 라이브 락이다 (카드 t319)."""
+
+    def request_approval(self, request) -> bool:
+        return True
+
+
+def _real_gate(tmp_path, *, locked: bool, approve: bool = False) -> SafetyGate:
     """A REAL SafetyGate. A fake returning the string "locked" proves nothing."""
     lock = LiveLock()
     if locked:
@@ -429,6 +436,12 @@ def _real_gate(tmp_path, *, locked: bool) -> SafetyGate:
         console=_RefusingConsole() if locked else None,
         audit=AuditLog(tmp_path / "audit"),
         lock=lock,
+        # 카드 t319 — `compile_scene` 이 쇼파일 쓰기를 선언하게 되면서 번들
+        # 전체가 승인 대기가 된다. 이 파일이 재는 축은 **라이브 락**이지
+        # 승인이 아니므로 파이프라인 회차에서만 승인을 통과시킨다(잠긴 회차는
+        # lock-FIRST 라 승인이 통과해도 0건). 기본값은 거절 그대로다 —
+        # 블랙리스트 비-공허성 검사가 승인 통과로 무력화되면 안 된다.
+        approval_port=_ApprovingPort() if approve else None,
     )
 
 
@@ -438,7 +451,7 @@ def _compile_first_scene(tmp_path, *, locked: bool):
     registry = build_toolset(
         execution_port=port,
         state_port=_RigStatePort(),
-        bundle_gate=_real_gate(tmp_path, locked=locked),
+        bundle_gate=_real_gate(tmp_path, locked=locked, approve=True),
         scene_library=library,
     )
     scene_id = library.scenes[0].scene_id

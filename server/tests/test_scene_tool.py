@@ -142,7 +142,9 @@ class _RecordingGate:
     notice: str = ""
     screened: list[list[str]] = field(default_factory=list)
 
-    def screen(self, commands):
+    # 카드 t319 — `compile_scene` 이 선언을 달면서 더블도 진짜 게이트의
+    # 시그니처를 따라간다(판정은 그대로).
+    def screen(self, commands, *, risk=None):
         self.screened.append(list(commands))
         return _ScreenDecision(
             cleared=self.cleared,
