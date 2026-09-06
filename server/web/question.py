@@ -156,6 +156,11 @@ def _format_clock(millis: int) -> str:
     return f"{total_seconds // 60}:{total_seconds % 60:02d}"
 
 
+# @MX:ANCHOR: [AUTO] 확인 카드 라벨의 단일 생산자 — 카드 빌더·답 파서·세션 기록이 같은 문자열을 든다
+# @MX:REASON: 생산 호출자 3곳(build_song_confirmation_card · parse_confirmed_sections ·
+#   session.analyse_song_audio). 형식이 바뀌면 라벨 왕복 대조(REQ-SONGCONFIRM-003)와
+#   카드 시험(test_song_confirm_card.py)이 함께 깨진다
+# @MX:SPEC: SPEC-COPILOT-SONGCONFIRM-001
 def section_label(proposal: SongSectionProposal) -> str:
     """제안 하나의 카드 라벨 — ``m:ss–m:ss · D<n>``.
 
