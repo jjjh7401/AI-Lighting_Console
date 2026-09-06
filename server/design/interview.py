@@ -306,7 +306,17 @@ def _rig_note(rig: RigProfile) -> str:
         # (RG5 — no console patch query on this path), so the inventory count
         # is structurally 0 while the stage clearly has fixtures. Showing
         # "장비 0대" reads as a broken rig — say what we actually used.
-        return "무대 좌표를 기준으로 만든 제안이에요"
+        #
+        # 카드 t312 (실측 2026-09-07): the previous wording claimed the
+        # suggestion was built "무대 좌표를 기준으로". It was not.
+        # `RigProfile.geometry` has zero consumers (`grep -rn "\.geometry"
+        # server/ ui/src` → test-only hits), and `_q4_candidates` derives its
+        # candidates from the music profile alone — a straight-line stage and
+        # an arc get the same answer. A note that names a basis the code never
+        # reads is an unobserved claim on the director's screen, so it names
+        # the basis actually used instead. Re-point this the day geometry
+        # gains a consumer.
+        return "장비 목록 없이 곡 구조만 보고 만든 제안이에요"
     return f"현재 장비 {count}대를 기준으로 만든 제안이에요"
 
 
