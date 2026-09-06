@@ -2084,12 +2084,35 @@ class ToolRegistry:
     def definitions(self) -> tuple[ToolDefinition, ...]:
         return self._definitions
 
-    def dispatch(self, call: ToolCall, context: ExecutionContext | None = None) -> ToolExecution:
+    def dispatch(
+        self,
+        call: ToolCall,
+        context: ExecutionContext | None = None,
+        *,
+        risk: BatchRisk | None = None,
+    ) -> ToolExecution:
+        """SPEC-COPILOT-WRITEGATE-001 — `risk` 는 호출자의 번들 위험 선언이다.
+
+        `run_commands` 는 이미 키워드 전용 `risk` 를 받는다(BULKGATE). 그런데
+        `tools.py` **밖**의 호출자는 클로저를 직접 못 부르고 이 레지스트리만
+        지난다 — 감독이 실제로 쓰는 곡 흐름(`session.py::_song_finalize`)이
+        그렇다. 그래서 선언이 여기까지 흐르게 한다. 새 심사 통로가 아니다:
+        선언은 그대로 `run_commands` 로 넘어가 **같은** `gate.screen(...)`
+        한 곳으로 간다(게이트의 `@MX:ANCHOR` — 심사 경로는 하나뿐이다).
+
+        선언은 `call.arguments` 가 아니라 **파이썬 키워드 인자**다 — 모델이
+        못 만지는 자리라는 성질이 그대로 유지된다(REQ-BULKGATE-004).
+
+        선언이 없으면 핸들러를 인자 둘로 부른다 — 오늘과 **바이트 동일**이라
+        `risk` 를 안 받는 나머지 도구는 하나도 영향받지 않는다.
+        """
         context = context if context is not None else _EMPTY_CONTEXT
         handler = self._handlers.get(call.name)
         if handler is None:
             return _error_result(call, f"unknown tool: {call.name!r}")
-        return handler(call, context)
+        if risk is None:
+            return handler(call, context)
+        return handler(call, context, risk=risk)
 
 
 # @MX:NOTE: [AUTO] 툴셋 빌더 밖으로 들어올린 순수 판정 (SPEC-COPILOT-POOLEMPTY-001

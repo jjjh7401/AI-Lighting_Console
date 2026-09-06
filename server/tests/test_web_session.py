@@ -4762,7 +4762,11 @@ class TestSongDesignInterviewSession:
         }
 
         class Registry:
-            def dispatch(self, call: ToolCall) -> ToolExecution:
+            # SPEC-COPILOT-WRITEGATE-001 — `_song_finalize` 이 번들 위험 선언을
+            # 붙여 부르므로 더블도 그 인자를 받아야 한다(진짜 ToolRegistry 와
+            # 같은 시그니처). 여기서는 값을 쓰지 않고 받기만 한다 — 게이트 판정은
+            # 진짜 게이트를 쓰는 `test_writegate_song_finalize.py` 가 잰다.
+            def dispatch(self, call: ToolCall, context=None, *, risk=None) -> ToolExecution:
                 calls.append(call)
                 if call.name == "get_spatial_context":
                     if spatial_fails:
