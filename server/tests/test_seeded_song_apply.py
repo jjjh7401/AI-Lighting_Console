@@ -158,6 +158,88 @@ def test_without_a_declared_sequence_number_nothing_is_written(harness):
     assert console.executed == []
 
 
+# -- t296: 컬러·페이드가 실제로 데스크에 닿는가 ---------------------------------
+#
+# t293 이 컬러·페이드 명령 형태를 더했지만, 브라우저 실측은 조도만 통과시켰다.
+# 아래 두 검사는 2026-09-06 브라우저 실측(가짜 콘솔 9100/9101, 시퀀스 3)에서
+# **받은 줄 그대로**를 고정한다 — 그 실측이 사라져도 형태가 남게.
+
+#: 브라우저 실측에 쓴 리그와 같은 그룹 번호 배정(콘솔이 스스로 보고한 순서).
+_SUGAR_RIG = (
+    ("KEY", 1),
+    ("BACK", 2),
+    ("SIDE-L", 3),
+    ("SIDE-R", 4),
+    ("MOVER-U", 5),
+    ("MOVER-D", 6),
+    ("WASH-U", 7),
+    ("WASH-D", 8),
+    ("HAZE", 9),
+    ("LED-W", 10),
+    ("BLIND", 11),
+    ("STROBE", 12),
+)
+
+
+@pytest.fixture
+def full_rig(tmp_path):
+    """Sugar 가 쓰는 이름을 전부 아는 콘솔. 주소가 잡혀야 명령이 생긴다."""
+    console = FakeConsole(state_tree={"DataPool/Groups": _groups_payload(*_SUGAR_RIG)})
+    audit = AuditLog(tmp_path / "audit")
+    channel = ApprovalChannel(timeout_seconds=2.0)
+    store = SongTimelineStore()
+    store.latest = build_sugar_timeline()
+    sent: list[dict] = []
+    session = ChatSession(
+        gate=SafetyGate(console=console, audit=audit, approval_port=channel),
+        provider=RefusingProvider(),
+        system_prefix="PREFIX",
+        audit=audit,
+        send_event=sent.append,
+        approval_channel=channel,
+        timeline_store=store,
+        timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
+    )
+    return session, console, store, sent, channel
+
+
+def test_a_colour_change_reaches_the_desk_as_a_colour_command(full_rig):
+    """컬러 변경이 컬러 명령으로 나간다 — 실측 줄 그대로.
+
+    큐 10 은 BACK·WASH-U·HAZE 를 쓰고 팔레트가 P1 골드앰버다. P4 핫핑크
+    (#FF3C9E)로 바꾸면 백분율 축으로 (100, 24, 62) 가 된다.
+    """
+    session, console, _store, sent, channel = full_rig
+    session.run_instruction("큐 10 컬러를 P4 핫핑크로 바꿔줘", 10)
+    assert console.executed == []  # 편집만으로는 콘솔 0건
+
+    event = _run_with_auto_approval(session, sent, channel, "시퀀스 3에 초안을 콘솔에 반영해줘")
+
+    assert (
+        "Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; "
+        "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 24 ; "
+        "Attribute 'ColorRGB_B' At 62"
+    ) in console.executed
+    assert "Store Sequence 3 Cue 10 /Merge" in console.executed
+    assert "컬러 P4 핫핑크" in event["text"]
+    assert "미반영" not in event["text"]  # 건너뛴 큐 없음
+
+
+def test_a_fade_change_reaches_the_desk_as_a_fade_command(full_rig):
+    """페이드 변경이 CueFade 로 나간다 — `Property 'Fade'` 는 여전히 안 쓴다."""
+    session, console, _store, sent, channel = full_rig
+    session.run_instruction("큐 20 페이드 3초로 바꿔줘", 20)
+    assert console.executed == []
+
+    event = _run_with_auto_approval(session, sent, channel, "시퀀스 3에 초안을 콘솔에 반영해줘")
+
+    assert "Store Sequence 3 Cue 20 CueFade 3 /Merge" in console.executed
+    assert "Group 1 + 2 ; Attribute 'Dimmer' At 70" in console.executed
+    assert not any("Property 'Fade'" in command for command in console.executed)
+    assert "페이드 3초" in event["text"]
+    assert "미반영" not in event["text"]
+
+
 def test_groups_the_console_never_reported_are_skipped_with_a_reason(harness):
     """콘솔이 모르는 이름은 사유와 함께 건너뛴다 — 번호를 만들지 않는다."""
     session, console, store, sent, channel = harness

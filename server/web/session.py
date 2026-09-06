@@ -1082,6 +1082,62 @@ _SETLIST_REQUEST = re.compile(r"셋\s*리스트|set\s*list", re.IGNORECASE)
 _DRAFT_APPLY_REQUEST = re.compile(
     r"콘솔[에은는]?\s*(반영|적용|전송|올려|보내)|초안\s*(을|를)?\s*(반영|적용)"
 )
+
+#: t295 — 위 술어는 콘솔과 동사가 **붙어** 있어야 맞는다. 실측(2026-09-06):
+#: 「이 곡 큐시트를 콘솔 시퀀스 3에 올려줘」는 사이에 「시퀀스 3에」가 끼어
+#: 안 맞고, 「올려」가 `cue_sheet_edit._BRIGHTER` 에 걸려 **조도 편집**으로
+#: 갔다 — 감독은 데스크에 보냈다고 믿는데 아무것도 안 나가고, 요청하지 않은
+#: 조도가 움직인다. 두 방향 중 더 위험한 쪽이다.
+#:
+#: 그래서 인접을 요구하는 대신 축을 둘로 나눈다: **목적지**와 **보내는 동사**가
+#: 문장 안에 함께 있으면 반영이다. 인접은 요구하지 않는다.
+_DRAFT_APPLY_DESTINATION = re.compile(r"콘솔|데스크|초안|시퀀스\s*\d+")
+_DRAFT_APPLY_VERB = re.compile(r"반영|적용|전송|송출|올려|올리|보내")
+
+#: 「올려/올리」는 두 뜻을 겸한다 — 데스크에 올리는 것과 조도를 올리는 것.
+#: 올리는 **대상이 큐시트 칸**이면 편집이므로 반영에서 뺀다. 이 축이 없으면
+#: 「시퀀스 3의 큐 2 조도 올려줘」가 반영으로 새고, 그 방향은 조용히 틀린다
+#: (감독이 고친 줄 아는 칸이 안 고쳐진다).
+_DRAFT_APPLY_EDIT_OBJECT = re.compile(
+    r"(조도|밝기|인텐시티|레벨|딤|페이드)\s*(를|을)?\s*\d*\s*%?\s*(더\s*)?(올려|올리|높여)"
+)
+
+
+#: 부정. 「아직 콘솔에는 적용하지 말고 …」는 반영 요청이 아니라 그 반대다.
+_DRAFT_APPLY_NEGATED = re.compile(
+    r"(반영|적용|전송|송출|올려|올리|보내)\S*\s*(하)?지\s*(는)?\s*(말|마)"
+)
+
+#: 반영 명령의 길이·줄 수 한도. 축을 넓히면서 실측된 회귀(2026-09-06)가 이
+#: 한도의 근거다: 곡 설계 브리핑 한 건이 「시퀀스 110」(목적지)과 「조금
+#: 올리고」(동사)를 함께 갖고 있어 반영으로 새면서 설계 인터뷰가 깨졌다.
+#: 한 지시를 던지는 반영 문장은 짧다(코퍼스 최장 22자); 브리핑은 길다(그
+#: 회귀 문장 197자). 경계 40자는 t290 편집 판별기와 같은 값으로 맞췄다.
+#:
+#: 넘치면 **거짓**을 답해 사슬로 흘려보낸다 — 콘솔 쓰기 쪽으로 닫는 방향이다.
+_DRAFT_APPLY_MAX_CHARS = 40
+
+
+def _is_draft_apply_request(text: str) -> bool:
+    """이 문장이 「초안을 콘솔로 보내라」인가.
+
+    참이 되는 조건은 다섯이다: (a) 목적지가 있고, (b) 보내는 동사가 있고,
+    (c) 올리는 대상이 큐시트 칸이 아니고, (d) 그 동사가 부정되지 않았고,
+    (e) 한 줄·40자 이내다. 하나라도 어긋나면 거짓이고, 문장은 기존 라우트
+    사슬(편집·설계 인터뷰 …)로 그대로 흘러내린다.
+    """
+    stripped = text.strip()
+    if len(stripped) > _DRAFT_APPLY_MAX_CHARS or "\n" in stripped:
+        return False
+    if _DRAFT_APPLY_NEGATED.search(stripped) is not None:
+        return False
+    if _DRAFT_APPLY_EDIT_OBJECT.search(stripped) is not None:
+        return False
+    if _DRAFT_APPLY_DESTINATION.search(stripped) is None:
+        return False
+    return _DRAFT_APPLY_VERB.search(stripped) is not None
+
+
 _SETLIST_SEQ_START = re.compile(r"시퀀스\s*(?P<no>\d+)\s*(?:번)?\s*부터")
 _SETLIST_EXEC_START = re.compile(
     r"(?:executor|익스큐터|이그제큐터|실행기)\s*(?P<no>\d+)\s*(?:번)?\s*부터", re.IGNORECASE
@@ -8405,7 +8461,7 @@ class ChatSession:
         「저장」과는 다른 행위다 — 저장은 라이브러리에만 남기고 콘솔에는 한
         건도 보내지 않는다(`server/web/timeline_api.py`).
         """
-        if _DRAFT_APPLY_REQUEST.search(text) is None:
+        if not _is_draft_apply_request(text):
             return None
         store = self._timeline_store
         timeline = store.latest if store is not None else None
