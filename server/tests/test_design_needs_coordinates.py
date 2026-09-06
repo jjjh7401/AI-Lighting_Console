@@ -1,17 +1,22 @@
-"""t310 — 디자인 큐 시트는 3D 좌표가 없으면 **통째로** 멈춘다.
+"""t310 — 하네스가 좌표를 답한다 (+ t311 이 걷어낸 통짜 중단의 자리).
 
-두 축을 각각 못으로 박는다.
+원래 이 파일은 두 축을 못으로 박았다. 두 번째(하네스)는 그대로다. 첫 번째는
+카드 t311 이 **의도적으로 뒤집었다** — 아래 그 전후를 남긴다.
 
-1. **제품 현재 동작(핀 고정)** — 좌표를 못 읽으면 연출 인터뷰가 시작조차 하지
-   않고, 사유 문자열이 이유를 그대로 말한다. 이건 「고쳤다」가 아니라 「지금
-   이렇다」를 재는 시험이다: 좌표가 없는 리그라도 조도·색 큐는 나오고 **방향
-   축만** 불가로 보고하는 편이 옳다고 볼 여지가 있고, 그 판단은 이 카드
-   범위 밖이다. 동작을 바꿀 때 이 시험이 먼저 빨개진다.
+1. **t310 이 고정했던 것**: 좌표를 못 읽으면 연출 인터뷰가 시작조차 하지 않고
+   「3D 좌표를 읽지 못해 조명 방향 변경을 시작하지 않았습니다.」로 끝난다.
+   t310 자신이 「방향 축만 불가로 보고하는 편이 옳다고 볼 여지가 있다」고
+   적어 두었고, t311 이 그 판단을 했다. 그래서 이 파일의
+   ``TestTheWholeDesignStops`` 세 시험은 **사라진 것이 아니라 이동했다**:
+   `test_design_without_coordinates.py` 가 같은 리그로 「큐가 나온다」를 잰다.
 
-2. **하네스가 좌표를 답한다** — 가짜 콘솔 `full` 리그의 합성 패치가 응답기를
-   지나 실제로 판독된다. 이게 없으면 「가짜 콘솔로 검증했다」는 말이 디자인
-   단계를 조용히 빼놓는다. 좌표는 **지어낸 값**이고 하네스에만 있다
-   (`server/tests/synthetic_rig.py`).
+   여기 남기는 것은 그 뒤집기가 조용하지 않도록 하는 못 하나다 —
+   ``TestTheAbortIsGone``: 옛 문면이 디자인 응답에 **다시 나타나면** 빨개진다.
+
+2. **하네스가 좌표를 답한다**(t310 원본, 무수정) — 가짜 콘솔 `full` 리그의
+   합성 패치가 응답기를 지나 실제로 판독된다. 이게 없으면 「가짜 콘솔로
+   검증했다」는 말이 디자인 단계를 조용히 빼놓는다. 좌표는 **지어낸 값**이고
+   하네스에만 있다 (`server/tests/synthetic_rig.py`).
 """
 
 from __future__ import annotations
@@ -56,17 +61,27 @@ def session(tmp_path):
     )
 
 
-class TestTheWholeDesignStops:
-    """좌표 부재는 **방향 축만** 막는 게 아니라 디자인 전체를 막는다."""
+class TestTheAbortIsGone:
+    """t311 — 좌표 부재는 이제 디자인 전체를 막지 않는다.
 
-    def test_the_refusal_names_the_missing_coordinates(self, session):
-        event = session.run_instruction(DESIGN_REQUEST, 1)
-        assert COORD_REFUSAL in event["text"]
+    t310 의 세 핀이 무엇을 단언했고 지금은 무엇을 단언하는지:
 
-    def test_no_timeline_is_rendered(self, session):
-        # 대조: 사유만 맞고 타임라인이 나오면 「멈췄다」가 아니다.
+    * ``test_the_refusal_names_the_missing_coordinates`` — **전**: 디자인 응답이
+      조준 거절문(``COORD_REFUSAL``)을 담는다. **후**: 담지 않는다(아래).
+      조준 경로가 같은 문장으로 여전히 거절하는지는
+      `test_design_without_coordinates.py::TestAimingStillRefuses` 가 잰다.
+    * ``test_no_timeline_is_rendered`` — **전**: 타임라인이 안 나온다.
+      **후**: 나온다 —
+      `TestACoordinatelessRigStillGetsCues::test_the_timeline_carries_a_cue_per_section`.
+    * ``test_no_command_reaches_the_console`` — **전후 동일**: 승인 전에는
+      콘솔에 아무것도 안 나간다. 그 단언은 옮겨 간 파일이 그대로 들고 있다
+      (``test_no_console_write_happens_before_approval``). 좌표가 생겨서 쓰기가
+      열린 것이 아니므로 여기서도 계속 참이다 — 그래서 그대로 둔다.
+    """
+
+    def test_the_design_no_longer_borrows_the_aim_refusal(self, session):
         event = session.run_instruction(DESIGN_REQUEST, 1)
-        assert "큐 1" not in event["text"]
+        assert COORD_REFUSAL not in event["text"]
 
     def test_no_command_reaches_the_console(self, session):
         event = session.run_instruction(DESIGN_REQUEST, 1)

@@ -88,6 +88,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
@@ -851,10 +852,21 @@ class DirectorInterview:
         rig: RigProfile,
         *,
         pre_specified: dict[str, str] | None = None,
+        skipped_steps: Sequence[str] = (),
     ) -> None:
         self._base_profile = profile
         self.rig = rig
         self.answers: dict[str, AnswerRecord] = {}
+        # 카드 t311 — 답을 쓸 데가 없는 카드는 **묻지 않는다**. 좌표가 없는
+        # 리그에서 Q4(공간 스토리)가 그렇다: 프리셋을 앉힐 장비가 없어 어떤
+        # 답을 받아도 큐에 닿지 못한다. 기본값으로 조용히 답하는 것(DI4의
+        # auto-draft)은 금지다 — 감독이 고르지 않은 것을 고른 것처럼 남긴다.
+        # 건너뛴 단계는 `answers` 에 들어가지 않으므로 `audit_trail` 에도,
+        # 재질의 요구에도 나타나지 않는다.
+        unknown_skips = set(skipped_steps) - set(STEP_ORDER)
+        if unknown_skips:
+            raise InterviewError(f"unknown interview step(s) {sorted(unknown_skips)!r}")
+        self.skipped_steps = frozenset(skipped_steps)
         pre_specified = pre_specified or {}
         unknown = set(pre_specified) - set(STEP_ORDER)
         if unknown:
@@ -907,7 +919,7 @@ class DirectorInterview:
         answered (whether by option, free text, pre-specification, or
         auto-draft)."""
         for step in STEP_ORDER:
-            if step not in self.answers:
+            if step not in self.answers and step not in self.skipped_steps:
                 return step
         return None
 

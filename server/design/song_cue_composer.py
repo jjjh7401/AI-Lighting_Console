@@ -17,6 +17,7 @@ from server.design.lint import (
 )
 from server.design.song_plan import (
     MANUAL_GO,
+    POSITION_AXIS,
     TIMECODE,
     TRIG_TIME,
     CueTimingPayload,
@@ -38,6 +39,7 @@ __all__ = [
     "ComposedCue",
     "SongCueBundle",
     "SongCueComposerError",
+    "position_axis_disabled",
     "SongCueCompositionResult",
     "build_song_cue_bundle",
     "compose_song_cue_bundle",
@@ -566,6 +568,18 @@ def _director_prompt(decision) -> str:
     return f"Re-ask {decision.step} for {target} and require an explicit confirmation."
 
 
+def position_axis_disabled(plan: UnifiedSongLightingPlan) -> bool:
+    """전곡 포지션 축이 꺼져 있는가 (카드 t311).
+
+    좌표를 못 읽은 리그에는 프리셋을 불러 앉힐 장비 자체가 없다. 그때
+    ``stored`` 를 비우는 것이 이 함수의 전부다 — 없는 포지션을 지어내는 대신
+    **빈 칸**을 남기고, 사유는 같은 노트가 들고 있어 리뷰·타임라인이 읽는다.
+    구간 노트(``section_index`` 가 있는 것)는 여기서 보지 않는다: 축을 통째로
+    끄는 것은 전곡 노트뿐이다.
+    """
+    return any(note.axis == POSITION_AXIS and note.section_index is None for note in plan.disabled)
+
+
 def _section_cue(
     plan: UnifiedSongLightingPlan,
     decision: SectionDecision,
@@ -580,7 +594,7 @@ def _section_cue(
         if decision.fade_override is not None
         else _fade_seconds(budget)
     )
-    position_label = None if blackout else decision.position.preset
+    position_label = None if blackout or position_axis_disabled(plan) else decision.position.preset
     return ComposedCue(
         kind="section",
         section_index=decision.section.index,
