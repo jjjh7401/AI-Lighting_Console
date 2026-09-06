@@ -78,6 +78,7 @@ from server.looks.songcue import (
     build_songcue_timing,
     map_sections_to_looks,
     parse_sections,
+    split_selections_for_density,
 )
 from server.looks.songcue_report import build_songcue_report
 from server.lxseq.cue_parser import CueColumnSetError, parse_cue_csv
@@ -542,17 +543,35 @@ class UploadedSheetPort(Protocol):
 
 
 class ConfirmedSectionPort(Protocol):
-    """사람이 확인 카드에서 채택한 구간 하나 — 이 모듈이 읽는 세 필드만."""
+    """사람이 확인 카드에서 채택한 구간 하나 — 이 모듈이 읽는 네 필드만.
+
+    ``end_ms`` 는 카드 t306 이 더했다: 마지막 구간의 끝을 알아야 그 구간도
+    마디 경계에서 쪼갤 수 있다.
+    """
 
     index: int
     start_ms: int
+    end_ms: int
     d_level: int
 
 
+class ConfirmedBpmPort(Protocol):
+    """확정 기록이 든 BPM 해소 결과 — 이 모듈이 읽는 두 필드만 (카드 t306).
+
+    ``bpm`` 이 ``None`` 인 것은 「측정도 시트도 아무것도 안 줬다」이고, 그때
+    하류가 쓰는 기본값 120 은 **잰 값이 아니다**. 안 잰 템포로 계산한 마디는
+    큐를 틀린 자리에 놓으므로, 그 경우 이 경로는 한 건도 쪼개지 않는다.
+    """
+
+    bpm: float | None
+    source: str
+
+
 class ConfirmedSongAnalysisPort(Protocol):
-    """확정된 곡 분석 기록의 이 모듈 쪽 창 — 채택 구간만 본다."""
+    """확정된 곡 분석 기록의 이 모듈 쪽 창 — 채택 구간과 BPM 해소."""
 
     accepted: tuple[ConfirmedSectionPort, ...]
+    bpm: ConfirmedBpmPort
 
 
 class SongAnalysisPort(Protocol):
@@ -592,6 +611,48 @@ def _confirmed_section_input(
         "dynamics": section.d_level,
         "confirmed_index": section.index,
     }
+
+
+def _confirmed_density_bpm(confirmed: ConfirmedSongAnalysisPort | None) -> float | None:
+    """마디 산술에 쓸 BPM — 확정 기록이 **실제로 채택한** 값만 (카드 t306).
+
+    ``None`` 을 돌려주는 갈래가 셋이고 셋 다 같은 뜻이다: 「이 곡의 템포를 아무도
+    안 줬다」. 그때 :func:`plan_cue_density` 는 한 건도 쪼개지 않는다 — 하류의
+    기본값 120 은 잰 값이 아니라 자리 채우개이고, 틀린 마디에 놓인 큐는 통째로
+    남은 구간보다 나쁘다.
+
+    ``source`` 로 거르지 않는다. 측정값이든 시트 ``HEAD.BPM`` 이든 **사람이 확인
+    카드에서 보고 확정한** 템포라는 점이 같고, 감독 인터뷰 경로도 선언된 BPM 을
+    같은 자격으로 쓴다(``MusicProfile.bpm``). 여기서만 측정값을 요구하면 두 경로가
+    같은 곡에 다른 큐 수를 낸다.
+
+    ``getattr`` 로 읽는 것은 방어가 아니라 **경계**다: 이 모듈은 세션 객체가 아니라
+    구조적 ``Protocol`` 을 받으므로, 필드를 갖지 않는 기록이 오면 「안 줬다」로
+    접는다 — 없는 값을 지어내는 것보다 안 쪼개는 쪽이 언제나 낫다.
+    """
+    resolution = getattr(confirmed, "bpm", None)
+    bpm = getattr(resolution, "bpm", None)
+    if isinstance(bpm, bool) or not isinstance(bpm, int | float) or bpm <= 0:
+        return None
+    return float(bpm)
+
+
+def _confirmed_song_end_ms(accepted: Sequence[ConfirmedSectionPort]) -> int | None:
+    """채택 구간이 끝나는 시각 — 마지막 구간을 쪼갤 수 있게 하는 유일한 재료.
+
+    감독 인터뷰 경로는 이 값을 가진 적이 없어 마지막 구간을 늘 통째로 둔다.
+    확정 분석 기록은 구간마다 ``end_ms`` 를 들고 있으므로 이 경로에서는 알 수
+    있고, 알면서 안 쓰면 곡의 마지막 후렴만 정적인 큐 한 장으로 끝난다.
+
+    끝 시각은 분석이 그 오디오 파일에서 읽은 값이라 곡보다 길 수 없다. 반대로
+    짧게 잡히면 덜 쪼개질 뿐이다 — 틀리는 방향이 안전한 쪽이다.
+    """
+    if not accepted:
+        return None
+    end_ms = getattr(accepted[-1], "end_ms", None)
+    if isinstance(end_ms, bool) or not isinstance(end_ms, int):
+        return None
+    return end_ms if end_ms > accepted[-1].start_ms else None
 
 
 def _breaks_ma3_quoting(value: str) -> bool:
@@ -2930,6 +2991,31 @@ def build_toolset(
                     tool_call_id=call.id, name=call.name, content=content, is_error=True
                 )
             )
+        # 카드 t306 — 여기까지는 구간 하나에 큐 하나였다(2026-09-06 실기: 4구간
+        # → 3큐). 감독 인터뷰 경로는 t305 에서 이미 마디 경계로 쪼개는데 업로드
+        # 경로만 안 쪼개면, 같은 앱이 어느 문으로 들어왔느냐에 따라 설계 품질이
+        # 달라진다. 규칙은 `plan_cue_density` 하나를 **공유**한다.
+        #
+        # 이 자리인 이유: `EXPLICIT_DYNAMICS_REQUIRED` 오류는 위에서 이미
+        # 갈렸으므로 그 갈래는 바이트 동일하고, 아래 번들·타이밍·보고는 모두
+        # 「선택 목록」만 보므로 넓힌 목록이 그대로 흘러간다.
+        density_bpm = _confirmed_density_bpm(confirmed)
+        density_end_ms = (
+            _confirmed_song_end_ms(accepted) if sections_source == "confirmed_analysis" else None
+        )
+        selections, density_notes = split_selections_for_density(
+            selections,
+            bpm=density_bpm,
+            song_end_ms=density_end_ms,
+        )
+        songconfirm_fields["cue_density"] = {
+            "cue_count": len(selections),
+            "section_count": len(sections),
+            "bpm": density_bpm,
+            "bpm_source": getattr(getattr(confirmed, "bpm", None), "source", None),
+            "song_end_ms": density_end_ms,
+            "notes": list(density_notes),
+        }
         missing = [section for section in SONGCUE_RIG_SECTIONS if section not in rig_paths]
         if missing:
             return _error_result(

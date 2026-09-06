@@ -75,6 +75,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TypeVar
 
 #: 분할 단위. 정본이 8마디에 큐 하나를 놓는다(위 표의 여덟 줄).
 BAR_UNIT_BARS = 8
@@ -85,7 +86,14 @@ MIN_UNITS_TO_SPLIT = 2
 #: 팔레트가 이 색 수 미만이면 회전이 항등이라 쪼갠 큐가 서로 같아진다.
 MIN_PALETTE_COLORS_TO_SPLIT = 2
 
+#: 쪼갠 큐를 서로 다르게 만드는 것의 이름. 경로마다 다르다 — 감독 인터뷰 경로는
+#: 팔레트의 「색」을 돌리고, 업로드 경로는 같은 다이내믹스의 「쓸 수 있는 룩」을
+#: 돌린다. 규칙은 하나인데 사유 문면이 거짓말을 하지 않도록 이 낱말만 갈아 끼운다.
+DEFAULT_VARIANT_LABEL = "색"
+
 _METER_PATTERN = re.compile(r"\s*(\d+)\s*/\s*(\d+)\s*\Z")
+
+_T = TypeVar("_T")
 
 _MILLISECONDS_PER_MINUTE = 60_000.0
 
@@ -151,14 +159,16 @@ def plan_cue_density(
     meter: object = "4/4",
     palette_sizes: Sequence[int] | None = None,
     song_end_ms: int | None = None,
+    variant_label: str = DEFAULT_VARIANT_LABEL,
 ) -> SplitPlan:
     """구간 시작 시각 목록을 큐 목록으로 바꾼다.
 
     :param starts_ms: 구간 시작 시각. 오름차순 가정(호출자가 이미 정렬한다).
     :param bpm: **선언된** BPM. ``None`` 이면 분할 없음.
     :param meter: 박자표 문자열. 못 읽으면 분할 없음.
-    :param palette_sizes: 구간별 팔레트 색 수. 2 미만인 구간은 쪼개지 않는다.
+    :param palette_sizes: 구간별 변주 가짓수. 2 미만인 구간은 쪼개지 않는다.
     :param song_end_ms: 곡 끝. 주면 마지막 구간도 길이를 알아 쪼갤 수 있다.
+    :param variant_label: 사유 문면에 쓰는 변주의 이름(:data:`DEFAULT_VARIANT_LABEL`).
     """
     starts = list(starts_ms)
     if not starts:
@@ -184,9 +194,21 @@ def plan_cue_density(
     for index, start in enumerate(starts):
         end = starts[index + 1] if index + 1 < len(starts) else song_end_ms
         units = _unit_count(start, end, unit_ms)
+        # @MX:WARN: [AUTO] 단위 수가 변주 수보다 많으면 회전이 한 바퀴 돌아
+        #   **앞 큐와 같은 큐**가 나온다(카드 t306 실측: 3단위 · 변주 2가지 →
+        #   셋째 큐가 첫 큐와 같은 값 줄).
+        # @MX:REASON: 「같은 큐 둘은 큐 하나보다 나쁘다」는 t305 의 규칙이
+        #   ``하나뿐일 때``만 걸리고 ``모자랄 때``는 안 걸린다. 상한을 씌우면
+        #   고쳐지지만 그것은 t305 가 시험으로 못박은 판단
+        #   (``test_a_two_colour_section_is_split``: 4단위 · 2색 → 큐 4건)을
+        #   뒤집는 일이라, 업로드 경로를 나란히 놓는 이 카드의 범위 밖이다.
+        #   업로드 경로에서는 중복 큐가 값 줄 충돌로 접히고 그 사실이 감독 고지에
+        #   수로 나온다(``test_songcue_cue_density`` 참조) — 조용히 사라지지는
+        #   않는다. 인터뷰 경로에는 그 방어가 없다.
         if units >= MIN_UNITS_TO_SPLIT and not _palette_can_differ(palette_sizes, index):
             notes.append(
-                f"구간 {index + 1}: 색이 하나뿐이라 쪼갠 큐가 서로 같아집니다 — 큐 하나로 둡니다"
+                f"구간 {index + 1}: {variant_label}이 하나뿐이라 쪼갠 큐가 "
+                "서로 같아집니다 — 큐 하나로 둡니다"
             )
             units = 1
         for unit_index in range(units):
@@ -200,10 +222,14 @@ def plan_cue_density(
     return SplitPlan(splits=tuple(splits), notes=tuple(notes))
 
 
-def rotate_palette(colors: Sequence[str], unit_index: int) -> tuple[str, ...]:
-    """이어지는 큐의 팔레트 — 색 목록을 ``unit_index`` 만큼 돌린다.
+def rotate_palette(colors: Sequence[_T], unit_index: int) -> tuple[_T, ...]:
+    """이어지는 큐의 변주 — 목록을 ``unit_index`` 만큼 돌린다.
 
-    색이 하나면 항등이다. ``plan_cue_density`` 가 그런 구간을 애초에 쪼개지
+    감독 인터뷰 경로는 팔레트의 색 목록을, 업로드 경로는 같은 다이내믹스의 룩
+    목록을 넘긴다. **회전 규칙은 하나**여야 두 경로가 갈리지 않으므로 원소
+    타입만 열어 두고 몸통은 공유한다.
+
+    원소가 하나면 항등이다. ``plan_cue_density`` 가 그런 구간을 애초에 쪼개지
     않으므로 이 함수가 같은 큐를 만들어 내는 일은 없지만, 다른 호출자가
     생겨도 안전하도록 항등을 그대로 돌려준다.
     """
