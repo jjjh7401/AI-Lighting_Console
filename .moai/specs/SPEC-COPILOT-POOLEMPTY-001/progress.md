@@ -115,6 +115,29 @@ console_writes: 0
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
+> **[갱신 2026-09-06 12:0x — M3 실기 완료, 이 SPEC 은 이제 닫힌다]** 아래 「부분 sync」 판단은
+> 그 시점의 정직한 기록이며 그대로 보존한다. M3 회차가 끝나 `AC-POOLEMPTY-013`·`014` 가
+> 충족됐으므로 이 커밋이 `in-progress → implemented → completed` 종결 전이를 수행한다.
+> 실기 증거: `docs/research/ma3-effects/16-poolempty-m3-live-verdict.md` ·
+> `.moai/state/verify/t270-m3/verdict.json`.
+>
+> ```yaml
+> m3_live_round:
+>   date: 2026-09-06
+>   responder_version_live: "1.6.5"        # responder_roundtrip --expect-version 1.6.5 → PASS
+>   raw_state: '{"childCount": 0, "class": "Timecodes", "enumeration": "ok", "name": "Timecodes"}'
+>   positive: "DataPool/Timecodes → free (점유자 None, timecode_go True)"
+>   negative_control: "DataPool/NoSuchPool → unknown (did not answer …)"
+>   negative_control_kind: "판독-예외 갈래 — enumeration:\"failed\" 갈래가 아니다(오프라인 lupa 검사가 덮는다)"
+>   console_writes: 0                       # ping 1 + state 조회 3, 쓰기 명령 0
+>   operator_note: "Delete Timecode 1 은 Illegal object — 풀이 이미 비어 있었다"
+>   ac_013: PASS
+>   ac_014_live_half: PASS
+> sync_status: complete                     # 위 partial 을 대체
+> ```
+>
+> **아래는 M3 전(부분 sync) 시점의 기록 — 보존.**
+>
 > **부분 sync 다 — 3단계 종결(plan→run→sync)은 M3 실기 뒤로 미룬다.**
 > 이 회차가 닫은 것은 **오프라인 M1·M2** 뿐이다. M3 은 운영자 게이트(응답기 1.6.5 재임포트 +
 > `DataPool/Timecodes` 비우기)라 실행되지 않았고, 따라서 `AC-POOLEMPTY-013` 과
