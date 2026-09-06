@@ -26,6 +26,7 @@ from server.deploy.keystore import (
 )
 from server.deploy.pipeline import DeployPipeline
 from server.deploy.settings import resolve_effective_settings
+from server.design.sugar_timeline import sugar_library_entry
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
 from server.llm.runtime import ProviderSlot
@@ -421,7 +422,13 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         # survives server restarts, not just page refreshes.
         song_timeline_store=SongTimelineStore(pin_store_path("song_timeline.json")),
         # Timeline library: named/versioned saves, persisted alongside.
-        timeline_library=SongTimelineLibrary(pin_store_path("song_timeline_library.json")),
+        # 시드로 정본 Sugar 큐시트 한 판을 싣는다 — 감독이 설계를 돌리기 전에도
+        # 라이브러리에서 바로 열어 볼 수 있는 실곡 하나. 감독이 같은 id 로 저장한
+        # 판이 있으면 그 판이 이긴다(timeline_library.SongTimelineLibrary 참조).
+        timeline_library=SongTimelineLibrary(
+            pin_store_path("song_timeline_library.json"),
+            seed=(sugar_library_entry(),),
+        ),
     )
     # REQ-DEPLOY-018/026 follow-up: a grandMA3 OSC entry has ONE port for BOTH
     # directions, so the port the console replies THROUGH and the port the app
