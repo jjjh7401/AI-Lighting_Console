@@ -216,23 +216,34 @@ def test_a_single_colour_section_is_not_split_and_says_why():
     assert any("색이 하나뿐" in note for note in plan.notes)
 
 
-def test_a_two_colour_section_is_split():
+def test_a_two_colour_section_is_split_up_to_its_variant_count():
+    """색이 둘이면 큐도 둘까지다 — 셋째 큐부터는 회전이 돌아 첫 큐와 같아진다.
+
+    **판단이 바뀐 자리다.** t305 는 이 시험으로 「4단위 · 2색 → 큐 4건」을
+    못박았다. t306 이 그 결과를 실측했더니 셋째 큐가 첫 큐와 값 줄까지 같았고,
+    그것은 t305 자신이 세운 전제(같은 큐 둘은 큐 하나보다 나쁘다)를 깬다.
+    t307 이 상한을 씌워 **4건 → 2건**으로 바꿨다. 시험을 코드에 맞춘 것이 아니라,
+    시험이 못박고 있던 판단이 자기 전제와 모순이라 명세가 움직인 것이다.
+    """
     plan = plan_cue_density(
         [0, 64_000],
         bpm=120.0,
         meter="4/4",
         palette_sizes=[2, 2],
     )
-    assert _cue_counts(plan)[0] == 4
+    assert _cue_counts(plan)[0] == 2
     assert not any("색이 하나뿐" in note for note in plan.notes)
+    # 줄였다는 사실은 사유로 나간다 — 조용히 얇아지지 않는다.
+    assert any("2건으로" in note for note in plan.notes)
 
 
 def test_source_origins_maps_every_cue_back_to_its_section():
+    # 첫 구간은 4단위지만 색이 둘이라 큐 둘로 상한이 걸린다(t307).
     plan = plan_cue_density(
         [0, 64_000, 96_000],
         bpm=120.0,
         meter="4/4",
         palette_sizes=[2, 2, 2],
     )
-    assert plan.source_origins == (0, 0, 0, 0, 1, 1, 2)
+    assert plan.source_origins == (0, 0, 1, 1, 2)
     assert len(plan.source_origins) == plan.cue_count
