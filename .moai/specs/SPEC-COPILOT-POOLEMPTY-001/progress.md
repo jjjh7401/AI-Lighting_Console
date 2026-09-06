@@ -126,7 +126,7 @@ console_writes: 0
 sync_status: partial               # M1·M2 오프라인만 닫힘; M3 실기 대기
 sync_scope: "CHANGELOG [Unreleased] 항목 1건 + §E.4 (부분 신호)"
 sync_complete_at: 2026-09-06
-sync_commit_sha: pending-backfill-poolempty-sync
+sync_commit_sha: 2fce40d491098e3233c687fa19fbf92b72e41aba   # 부분 sync 커밋; M3 회차가 §E.4 를 다시 쓰면 종결 커밋 SHA 로 갱신
 frontmatter_status_transitions:
   spec_md: "in-progress → in-progress (전이 없음 — M3 실기 미실행)"
   plan_md: n/a                     # Tier M plan.md 는 status 프론트매터 없음
