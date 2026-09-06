@@ -30,6 +30,7 @@ import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
+from datetime import UTC, datetime
 from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
@@ -172,12 +173,16 @@ from server.web.messages import (
 from server.web.preview import build_execution_preview
 from server.web.question import (
     UNANSWERED,
+    ConfirmedSongAnalysis,
+    ConfirmedSongSection,
     QuestionChannel,
     QuestionOption,
     QuestionRequest,
     SongSectionProposal,
     build_song_confirmation_card,
     parse_confirmed_bpm,
+    parse_confirmed_sections,
+    section_label,
 )
 from server.web.reply_discovery import ReplyPortMismatch
 from server.web.timeline_library import SongTimelineLibrary
@@ -3620,6 +3625,23 @@ class _LayoutImageUploadView:
         return image.content_base64 if image is not None else None
 
 
+class _SongAnalysisView:
+    """``ChatSession._song_analysis`` 를 ``SongAnalysisPort`` 에 맞춘다 (SONGCONFIRM-001).
+
+    ``_UploadedSheetView`` 와 같은 이유로 존재한다: 확정 기록은 카드가 끝난 뒤에야
+    생기고 새 업로드가 통째로 지우는 필드라, 세션 생성 시점의 값을 그대로
+    ``build_toolset`` 에 넘기면 ``None`` 이 ``prepare_songcue`` 클로저에 얼어붙는다.
+    이 뷰는 접근할 때마다 현재 필드를 다시 읽는다(REQ-SONGCONFIRM-009).
+    """
+
+    def __init__(self, session: ChatSession) -> None:
+        self._session = session
+
+    @property
+    def current(self) -> ConfirmedSongAnalysis | None:
+        return self._session._song_analysis
+
+
 class _UploadedSheetView:
     """``ChatSession._uploaded_sheet``를 ``UploadedSheetPort``에 맞춘다.
 
@@ -3779,6 +3801,11 @@ class ChatSession:
         #: 가장 최근 확정된 BPM 해소 결과(``analyse_song_audio``). 오디오와 달리
         #: 이것은 **사람이 확인한 뒤**에만 채워진다.
         self._song_bpm: BpmResolution | None = None
+        #: SPEC-COPILOT-SONGCONFIRM-001 M1 — 사람이 확인한 곡 분석의 **불변 기록**
+        #: (구간 채택 여부 + BPM 해소). 답이 미응답·자유입력 표식이면 비어 있고,
+        #: 새 오디오 업로드가 무효화한다. ``_song_bpm`` 과 두 정본이 되지 않도록
+        #: 기록의 ``bpm`` 은 ``_song_bpm`` 과 **같은 객체**다(REQ-SONGCONFIRM-006).
+        self._song_analysis: ConfirmedSongAnalysis | None = None
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -3824,6 +3851,9 @@ class ChatSession:
             # freeze the pre-upload None into the wrapper's tool closure
             # (REQ-SHEETPIPE-002 · AC-SHEETPIPE-003).
             uploaded_sheet=_UploadedSheetView(self),
+            # SPEC-COPILOT-SONGCONFIRM-001 M2: prepare_songcue 가 세션의 확정 곡
+            # 분석 기록을 읽는 통로 — 위 두 뷰와 같은 읽기 투과 형태다(REQ-009).
+            song_analysis=_SongAnalysisView(self),
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port
@@ -10198,6 +10228,11 @@ class ChatSession:
         """
         data = base64.b64decode(content_base64, validate=True)
         replaced = self._song_audio is not None
+        # SPEC-COPILOT-SONGCONFIRM-001 (REQ-SONGCONFIRM-005) — 확정 기록은 그 곡의
+        # 것이다. 다른 곡이 올라오면 기록은 무효고, 기록이 **있었을 때만** 그 사실을
+        # 한 문장으로 말한다. ``_song_bpm`` 은 손대지 않는다(plan.md §C D2-b).
+        invalidated = self._song_analysis is not None
+        self._song_analysis = None
         self._song_audio = SongAudioUpload(
             file_name=file_name,
             mime_type=mime_type,
@@ -10210,6 +10245,8 @@ class ChatSession:
         if replaced:
             text = text + " (이전에 첨부한 오디오를 교체했습니다)"
         text = text + ". 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요."
+        if invalidated:
+            text = text + " 이전 분석 확정은 무효가 됐습니다 — 이 곡은 다시 분석해 주세요."
         return self._notify(text)
 
     def analyse_song_audio(
@@ -10276,6 +10313,39 @@ class ChatSession:
         )
         self._song_bpm = resolution
 
+        # SPEC-COPILOT-SONGCONFIRM-001 M1 (REQ-SONGCONFIRM-002/003) — 답이 미응답도
+        # 자유입력 표식도 아니면 구간 판독을 붙여 확정 기록을 남긴다. 위의
+        # ``_song_bpm`` 대입은 오늘 그대로이고, 기록은 그 **같은 객체**를 든다
+        # (REQ-SONGCONFIRM-006). 같은 라벨을 가진 제안은 판정을 함께 받으며 그
+        # 사실을 ``label_shared`` 로 남긴다(plan.md §F W1).
+        verdict = parse_confirmed_sections(answer, proposals=proposals)
+        record: ConfirmedSongAnalysis | None = None
+        if verdict is not None:
+            labels = [section_label(proposal) for proposal in proposals]
+            record = ConfirmedSongAnalysis(
+                source_sha256=audio.sha256,
+                source_file_name=audio.file_name,
+                confirmed_at=datetime.now(UTC).isoformat(),
+                bpm=resolution,
+                sections=tuple(
+                    ConfirmedSongSection(
+                        index=index,
+                        label=label,
+                        start_ms=proposal.start_ms,
+                        end_ms=proposal.end_ms,
+                        d_level=proposal.d_level,
+                        selected=selected,
+                        label_shared=labels.count(label) > 1,
+                    )
+                    for index, (proposal, label, selected) in enumerate(
+                        zip(proposals, labels, verdict, strict=True)
+                    )
+                ),
+            )
+        # 미응답 재분석이면 이전 기록도 내려놓는다 — 남겨 두면 그 기록의 ``bpm`` 이
+        # 방금 갈아 끼운 ``_song_bpm`` 과 다른 객체가 되어 REQ-006 이 깨진다.
+        self._song_analysis = record
+
         if resolution.bpm is None:
             lines = [f"BPM 은 확정되지 않았습니다 — 기본값 {DEFAULT_BPM:g} 로 남습니다."]
         else:
@@ -10285,12 +10355,31 @@ class ChatSession:
         lines.extend(resolution.mismatches)
         if fallback_reason:
             lines.append(fallback_reason)
+        # SPEC-COPILOT-SONGCONFIRM-001 M2 (REQ-SONGCONFIRM-013) — 기록이 생겼을 때만
+        # 구간 결과와 다음 단계를 덧붙인다. 기록이 없는 갈래의 고지는 오늘 그대로다.
+        if record is not None:
+            lines.append(f"구간 {len(record.accepted)}건 채택 · {record.dropped_count}건 제외.")
+            shared = sum(1 for section in record.sections if section.label_shared)
+            if shared:
+                lines.append(f"같은 라벨을 가진 구간 {shared}건은 함께 판정했습니다.")
+            lines.append(
+                "이 곡의 큐 리스트를 만들려면 타임코드 번호와 함께 말씀해 주세요 — "
+                "확정한 구간을 그대로 씁니다."
+            )
         return self._notify(" ".join(lines))
 
     @property
     def song_bpm(self) -> BpmResolution | None:
         """가장 최근 확정된 BPM 해소 결과 — 아직 없으면 ``None``."""
         return self._song_bpm
+
+    @property
+    def song_analysis(self) -> ConfirmedSongAnalysis | None:
+        """사람이 확인한 곡 분석의 불변 기록 — 없으면 ``None`` (REQ-SONGCONFIRM-006).
+
+        있을 때 ``song_analysis.bpm is song_bpm`` 이다 — 정본은 하나다.
+        """
+        return self._song_analysis
 
     # -- internals ------------------------------------------------------------------
 
@@ -10433,6 +10522,31 @@ class ChatSession:
                 "conversation. Its bytes and any completed report are available only "
                 "through vectorworks_autopatch; never request them in chat or infer "
                 "details that tool did not report."
+            )
+        record = self._song_analysis
+        if record is not None:
+            # SPEC-COPILOT-SONGCONFIRM-001 M2 (REQ-SONGCONFIRM-007/008) — 확정 기록은
+            # **이 통로**로만 모델에 닿는다(둘째 통로 없음). BPM 은 ``song_bpm``
+            # 프로퍼티에서 읽는다: 기록의 ``bpm`` 과 같은 객체이고(REQ-006) 정본은
+            # 그 프로퍼티 하나다 — 여기가 그 프로퍼티의 생산 판독자다. 채택 구간은
+            # 상한 없이 전부 싣는다 — 잘라 내면 모델이 모르는 구간이 생기고 그것이
+            # 이 SPEC 이 막는 결함이다(plan.md §F W3).
+            bpm = self.song_bpm
+            tempo = (
+                "BPM not confirmed"
+                if bpm is None or bpm.bpm is None
+                else f"BPM {bpm.bpm:g} ({bpm.source})"
+            )
+            accepted = ", ".join(f"#{s.index} {s.label}" for s in record.accepted) or "none"
+            notes.append(
+                "Session context — the operator confirmed the song analysis of "
+                f"'{record.source_file_name}' (sha256 {record.source_sha256[:8]}): {tempo}; "
+                f"accepted sections ({len(record.accepted)}): {accepted}; "
+                f"dropped {record.dropped_count}. When the operator asks for this song's "
+                "cue list, call prepare_songcue WITHOUT the 'sections' argument so the "
+                "confirmed sections are used as-is (the result reports sections_source = "
+                "confirmed_analysis). Still obtain timecode_number from the operator — "
+                "never choose it yourself."
             )
         guidance = layout_terms_guidance(text)
         if guidance:
