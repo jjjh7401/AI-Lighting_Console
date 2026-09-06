@@ -5134,6 +5134,108 @@ class TestSongDesignInterviewSession:
         "1:32 마지막 후렴은 따뜻하고 환하게, 가장 큰 에너지로 끝내줘."
     )
 
+    #: 카드 t305 — 같은 브리프에 BPM 을 선언하고 구간을 길게(각 32초 = 120BPM
+    #: 기준 16마디) 잡은 판. 8마디 단위이므로 구간마다 큐가 둘씩 나와야 한다.
+    _BPM_BRIEF = (
+        "곡은 약 2분 40초의 밝은 팝 무대야. BPM 120.\n"
+        "0:00 도입은 무대를 어둡게 두고 보컬에게만 시선을 모아줘.\n"
+        "0:32 벌스는 리듬이 시작되면서 무대 폭을 조금씩 넓혀줘.\n"
+        "1:04 첫 후렴은 관객까지 에너지가 퍼지는 가장 큰 장면으로 만들어줘.\n"
+        "1:36 브리지는 차갑고 비워진 느낌으로 대비를 줘.\n"
+        "2:08 마지막 후렴은 따뜻하고 환하게, 가장 큰 에너지로 끝내줘."
+    )
+
+    def test_declared_bpm_splits_long_sections_into_multiple_cues(self, tmp_path):
+        """카드 t305 — 16마디 구간이 8마디 경계에서 큐 둘로 갈린다.
+
+        오프셋은 선언된 BPM 연산이다: 120BPM · 4/4 → 1마디 2.000s → 8마디
+        16.000s. 그래서 0:00 구간의 둘째 큐는 16초, 0:32 구간의 둘째 큐는
+        48초에 앉는다. 마지막 구간은 곡의 끝을 아무도 안 주므로 안 갈린다.
+        """
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                *(["Center → Fan Out"] * 8),
+                "수정",
+                "수정",
+            ]
+        )
+
+        session.run_instruction(self._BPM_BRIEF)
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        sections = timelines[-1]["sections"]
+        starts = [section["start_ms"] for section in sections]
+        # 구간 5개 중 앞 4개가 16마디라 둘씩 → 9큐. 오늘(분할 전)이면 5큐다.
+        assert len(sections) == 9
+        assert starts == [
+            0,
+            16_000,
+            32_000,
+            48_000,
+            64_000,
+            80_000,
+            96_000,
+            112_000,
+            128_000,
+        ]
+        # 큐 번호는 빈틈 없이 이어진다 — 콘솔이 그 순서로 재생한다.
+        assert [section["cue_number"] for section in sections] == list(range(1, 10))
+        # BPM 미선언 사유는 이번엔 안 붙는다.
+        assert not any("BPM 미선언" in warning for warning in timelines[-1]["warnings"])
+
+    def test_split_cues_are_not_identical_to_the_cue_they_continue(self, tmp_path):
+        """카드 t305 — 16초 간격의 똑같은 큐 둘은 큐 하나보다 나쁘다.
+
+        정본이 쪼갠 큐에서 바꾸는 축과 같다: 강도는 유지하고 색을 돌린다
+        (Q060 "강도 유지, 색만 교체" · Q140 "색상만 순환").
+        """
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                *(["Center → Fan Out"] * 8),
+                "수정",
+                "수정",
+            ]
+        )
+
+        session.run_instruction(self._BPM_BRIEF)
+
+        sections = [item["timeline"] for item in sent if item["type"] == "song_timeline"][-1][
+            "sections"
+        ]
+        pairs = [(sections[i], sections[i + 1]) for i in range(0, 8, 2)]
+        for opening, continuation in pairs:
+            assert opening["palette"] != continuation["palette"], (
+                f"{opening['label']} 의 이어지는 큐가 여는 큐와 같습니다"
+            )
+            # 돌린 것이지 새로 지어낸 것이 아니다 — 같은 색 집합.
+            assert sorted(opening["palette"]) == sorted(continuation["palette"])
+            # 강도는 유지된다(정본과 같은 축).
+            assert opening["d_level"] == continuation["d_level"]
+
     def test_all_requery_answers_merge_and_recompose_to_pending_approval(self, tmp_path):
         provider = ScriptedProvider([])
         session, _console, _audit, sent, _ = _session(tmp_path, provider)
@@ -5220,11 +5322,18 @@ class TestSongDesignInterviewSession:
         assert intro["position"] == "Vocal DSC"
         assert verse["position"] == "Fan Out"
         assert chorus["position"] == "Audience"
-        # No same-look warning; only the disclosed single-layer note (this
-        # fake rig exposes no role-named groups).
+        # No same-look warning; the disclosed single-layer note (this fake rig
+        # exposes no role-named groups), plus — 카드 t305 — the disclosed
+        # reason no section was split into multiple cues. 이 브리프는 BPM 을
+        # 선언하지 않으므로 마디를 계산할 수 없고, 그래서 큐 밀도는 오늘과
+        # 같은 "구간 하나에 큐 하나"로 남는다. 이전에는 이 목록에 단일 레이어
+        # 경고 하나뿐이었다.
         assert timelines[-1]["warnings"] == [
-            "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다."
+            "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다.",
+            "BPM 미선언 — 마디를 계산할 수 없어 구간을 쪼개지 않았습니다",
         ]
+        # 그리고 큐 수는 구간 수 그대로다 — 분할 없음의 관측 가능한 형태.
+        assert len(sections) == 5
 
     def test_palette_conflict_card_offers_direction_before_composing(self, tmp_path):
         provider = ScriptedProvider([])
