@@ -129,6 +129,7 @@ from server.orchestrator.tools import (
     TIMECODE_POOL_PATH,
     CommandOutcome,
     DeployPipelinePort,
+    ExecutionContext,
     build_toolset,
 )
 from server.prechk.query import read_properties
@@ -2108,6 +2109,29 @@ def _song_trig_time_token(start_ms: int) -> str:
     if millis == 0:
         return str(seconds)
     return f"{seconds}.{millis:03d}".rstrip("0")
+
+
+#: `Store Sequence <n> Cue <m> …` — 큐 저장 한 줄.
+_SONG_STORE_CUE = re.compile(r"^Store Sequence \d+ Cue (\d+(?:\.\d+)?)\b")
+#: `Store Timecode <n>` — 타임코드 슬롯 쓰기 한 줄.
+_SONG_STORE_TIMECODE = re.compile(r"^Store Timecode (\d+)\b")
+
+
+# @MX:ANCHOR: [AUTO] `_song_finalize` 의 번들 위험 선언 문면을 만드는 유일한 자리
+# @MX:REASON: 감독이 읽고 수락/거절을 정하는 문장이다(REQ-BULKGATE-007). 숫자는
+#   **나갈 명령 자체**에서 읽는다 — 계획(state.timing)에서 읽으면 계획과 번들이
+#   갈릴 때 카드가 사실과 다른 것을 말한다. 문면은 `prepare_songcue` 가 이미
+#   출하한 어휘를 그대로 잇는다(tools.py `songcue_risk`).
+def _song_write_risk_reason(sequence_no: int, commands: Sequence[str]) -> str:
+    """이 번들이 쇼파일에 무엇을 하는지 — 시퀀스·큐 수·타임코드 슬롯·복원 부재."""
+    cues = {matched.group(1) for line in commands if (matched := _SONG_STORE_CUE.match(line))}
+    slots = [matched.group(1) for line in commands if (matched := _SONG_STORE_TIMECODE.match(line))]
+    timecode = f"Timecode {slots[0]} 슬롯을 씁니다" if slots else "타임코드 슬롯은 쓰지 않습니다"
+    return (
+        f"쇼파일 쓰기 — Sequence {sequence_no} 에 큐 {len(cues)}건을 저장하고 "
+        f"{timecode} "
+        "(이 앱에는 시퀀스·타임코드 복원 경로가 없습니다)."
+    )
 
 
 def _song_timed_cue_expectations(
@@ -10080,12 +10104,31 @@ class ChatSession:
                 return self._pointing_refusal(
                     f"리뷰 번들을 실행 명령으로 만들 수 없습니다: {error}"
                 )
+            # SPEC-COPILOT-WRITEGATE-001 — 감독이 실제로 쓰는 곡 흐름이 여기서
+            # 나간다(업로드 → 분석 → 확인 → 인터뷰 → 이 번들). 2026-09-07
+            # 브라우저 실측에서 `Store Sequence 210 Cue 1..4` 와
+            # `Store Timecode 9` 가 나갔는데 게이트 승인은 0건이었다 —
+            # 명령 텍스트만으로는 이 묶음이 안 잡히기 때문이다(`Store Sequence`
+            # 는 `blacklist.yaml` 에 없다). 위의 `_ask_one` 리뷰 카드는 **계획**을
+            # 승인받는 자리이고, 콘솔에 무엇이 나가는지를 게이트가 묻는 자리는
+            # 여기다. 그래서 `prepare_songcue` 가 이미 쓰는 그 선언을 그대로 단다
+            # (BULKGATE 의 `risk` — 새 심사 통로가 아니라 같은 `gate.screen`).
+            #
+            # 선언은 `ExecutionContext.risk` 로 흐른다. `tools.py` 밖에서는
+            # `run_commands` 클로저를 직접 못 부르고 `dispatch` 만 지나기
+            # 때문이고, 컨텍스트는 이미 그 두 번째 인자다 — `call.arguments`
+            # 가 아니라 **코드가 만드는 자리**라 모델이 못 만진다.
+            songcue_risk = BatchRisk(
+                reason=_song_write_risk_reason(sequence_no, commands),
+                kind="song_design",
+            )
             executed = self._registry.dispatch(
                 ToolCall(
                     id="song-design-reviewed-bundle",
                     name="run_commands",
                     arguments={"commands": list(commands)},
-                )
+                ),
+                ExecutionContext(risk=songcue_risk),
             )
             store_failures = [
                 outcome

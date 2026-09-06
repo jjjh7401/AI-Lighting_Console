@@ -74,6 +74,12 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
     ("server/web/session.py", "_cue_sheet_draft_apply", 0): (
         "Store Sequence Cue /Merge — 초안 반영. 카드 t292 의 _accept_draft_apply_batch"
     ),
+    ("server/web/session.py", "_song_finalize", 0): (
+        "감독의 곡 흐름(업로드→분석→확인→인터뷰)이 실제로 나가는 자리 — "
+        "_reviewed_song_commands 의 Store Sequence Cue + Store Timecode 다발. "
+        "SPEC-COPILOT-WRITEGATE-001 의 번들 위험 선언(risk=)이 붙었다 "
+        "(카드 t317: 2026-09-07 실측이 잰 것은 prepare_songcue 가 아니라 이 자리였다)"
+    ),
 }
 
 #: ② 쇼파일을 고치는데 봉합이 없는 자리 — 각자 후속 카드다.
@@ -130,9 +136,6 @@ WRITE_WITHOUT_SEAM_DISPATCHES: dict[tuple[str, str, int], str] = {
         "Copy Sequence / Assign Sequence … At Executor — 셋리스트 배분. "
         "plan 단계가 '미확인 후보'로 남겼던 자리이며, run 단계에서 "
         "쓰기로 확인했다"
-    ),
-    ("server/web/session.py", "_song_finalize", 0): (
-        "_reviewed_song_commands → position_cue_bundle 의 Store Sequence Cue 다발"
     ),
 }
 

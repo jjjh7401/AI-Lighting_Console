@@ -501,9 +501,25 @@ _FAILURE_MESSAGES = {
 
 @dataclass(frozen=True)
 class ExecutionContext:
-    """Instruction-scoped dispatch context (self-correction dedupe state)."""
+    """Instruction-scoped dispatch context (self-correction dedupe state).
+
+    SPEC-COPILOT-WRITEGATE-001 — `risk` 는 **이 디스패치 한 번**에 붙는 호출자의
+    번들 위험 선언이다(구체 타입 `server.safety.gate.BatchRisk`; 임포트 방향
+    때문에 `object` 로 받는다). `run_commands` 는 이미 같은 이름의 키워드 인자를
+    받지만(BULKGATE) 그 클로저는 `tools.py` 안에서만 부를 수 있어서,
+    `session.py::_song_finalize` 처럼 밖에서 `ToolRegistry.dispatch` 만 지나는
+    호출자는 닿지 못했다. 그 자리를 이 필드가 잇는다.
+
+    두 통로가 아니라 **한 통로의 두 입구**다 — 어느 쪽으로 들어와도 선언은 같은
+    `gate.screen(...)` 한 곳으로 간다(게이트의 `@MX:ANCHOR`). 그리고 두 입구 다
+    `call.arguments` 가 아니라 **코드가 만드는 자리**라, 모델이 자기 선언을
+    끄거나 붙일 수 없다는 성질이 그대로다(REQ-BULKGATE-004).
+
+    기본값 `None` 에서 동작은 오늘과 바이트 동일하다.
+    """
 
     executed_ok: frozenset[str] = frozenset()
+    risk: object | None = None
 
 
 class VectorworksUploadPort(Protocol):
@@ -2290,6 +2306,14 @@ def build_toolset(
         # `risk` 는 **키워드 인자로만** 흐른다 — `call.arguments` 는 모델이
         # 쓰는 자리라 거기 실린 `risk` 키는 읽지 않는다(REQ-BULKGATE-004).
         # 모델이 끌 수 있는 안전장치는 안전장치가 아니다.
+        #
+        # SPEC-COPILOT-WRITEGATE-001 — 두 번째 입구: `tools.py` 밖의 호출자는
+        # 이 클로저를 직접 못 부르고 `ToolRegistry.dispatch` 만 지나므로
+        # (`session.py::_song_finalize`), 선언을 `ExecutionContext.risk` 에
+        # 실어 보낸다. 위 키워드가 우선이고, 없을 때만 컨텍스트를 읽는다 —
+        # 둘 다 코드가 만드는 자리라 모델 접근 불가라는 성질은 같다.
+        if risk is None:
+            risk = getattr(context, "risk", None)
         commands = call.arguments.get("commands")
         if (
             not isinstance(commands, list)
