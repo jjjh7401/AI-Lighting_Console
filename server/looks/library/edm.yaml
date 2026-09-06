@@ -154,3 +154,22 @@ looks:
       ColorRGB_B: 100
       Iris: 100
       Zoom: 5
+
+  # --- dynamics 1 (추가): cyc 없는 리그를 위한 조용한 칸 --------------------
+  # SPEC-COPILOT-D1GRANT-001. 실기 리그에는 배경막 계열 그룹이 없어서
+  # `edm-ambient-hold`(역할 `배경` 하나)가 어디에도 안 묶이고, 곡의 가장 조용한
+  # 구간이 큐를 하나도 못 받았다. 헤더 규칙이 `프론트` 를 배제하고 `탑` 은 실기
+  # 리그에서 안 묶이므로, 배경막 없이 깊이를 만드는 것은 뒤에서 오는 빛뿐이다.
+  # 파일 끝에 붙어 있지만 선택 순서는 파일 위치가 아니라 look_id 사전순이 정한다.
+  - look_id: "edm-haze-shafts"
+    display_name: "헤이즈 샤프트"
+    genre: "edm"
+    dynamics: 1
+    roles: ["백라이트"]
+    aliases: ["헤이즈 샤프트", "haze shafts", "뒤빛 대기"]
+    mood_keywords: ["어두운", "깊은", "푸른", "대기", "haze", "shafts"]
+    attributes:
+      Dimmer: 18
+      ColorRGB_R: 0
+      ColorRGB_G: 40
+      ColorRGB_B: 78

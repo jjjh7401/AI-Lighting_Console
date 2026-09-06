@@ -139,3 +139,23 @@ looks:
       ColorRGB_B: 100
       Iris: 100
       Zoom: 10
+
+  # --- dynamics 1 (추가): cyc 없는 리그를 위한 조용한 칸 --------------------
+  # SPEC-COPILOT-D1GRANT-001. `rock-empty-stage`(역할 `배경` 하나)는 배경막 계열이
+  # 없는 실기 리그에서 안 묶인다. 헤더 규칙이 `프론트`·`스페셜` 을 배제하고,
+  # `백라이트` 는 바로 다음 칸 `rock-verse-side`(D2)가 이미 쓰므로 여기서 선점하면
+  # 벌스 진입의 대비가 사라진다. 남는 것이 `사이드` 이며, 색온도는 D2 의 차가운
+  # 청과 반전된 탁한 붉은색이다.
+  # 파일 끝에 붙어 있지만 선택 순서는 파일 위치가 아니라 look_id 사전순이 정한다.
+  - look_id: "rock-wing-embers"
+    display_name: "윙 엠버"
+    genre: "rock"
+    dynamics: 1
+    roles: ["사이드"]
+    aliases: ["윙 엠버", "wing embers", "잔불"]
+    mood_keywords: ["어두운", "붉은", "탁한", "잔불", "embers", "smoulder"]
+    attributes:
+      Dimmer: 22
+      ColorRGB_R: 65
+      ColorRGB_G: 10
+      ColorRGB_B: 22
