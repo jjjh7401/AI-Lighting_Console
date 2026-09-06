@@ -298,6 +298,19 @@ export interface SongTimelineDecision {
   source: string;
 }
 
+/** 구간 안에서 그룹 하나가 받는 값. 정본 CUE-EX 의 `Dim` 열에 해당한다. */
+export interface SongTimelineGroupIntensity {
+  group: string;
+  level: number;
+}
+
+/** 이름 붙은 팔레트 한 칸 (정본 산출물의 P1..P8 범례). */
+export interface SongTimelinePaletteEntry {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface SongTimelineSection {
   index: number;
   label: string;
@@ -312,6 +325,41 @@ export interface SongTimelineSection {
   mib: boolean;
   trig_time_seconds: number | null;
   plan_status?: SongTimelinePlanStatus;
+
+  // --- LX-SEQ 큐시트 확장 (t279). 전부 선택 필드다 --
+  // 없는 필드는 키 자체가 나오지 않으므로 기존 페이로드는 그대로 파싱된다.
+  // 정본 어휘(server/lxseq/cue_parser.py CANONICAL_CUE_COLUMNS)와의 대응은
+  // server/design/song_plan.py 의 확장 블록 주석이 정본이다.
+  /** TC Out */
+  end_ms?: number;
+  /** Dur */
+  duration_ms?: number;
+  /** 마디 시작 번호 */
+  bar_start?: number;
+  /** 마디 수 */
+  bar_count?: number;
+  /** Mood (예: "개방, 축제") */
+  mood?: string;
+  /** Color 주 (예: "P4 핫핑크") — 정본 `COL` 의 이름 표현 */
+  palette_primary?: string;
+  /** Color 보조 */
+  palette_secondary?: string;
+  /** 그룹별 값 — 전체 값은 기존 `d_level` 이 그대로 담는다 */
+  intensity?: SongTimelineGroupIntensity[];
+  /** Fixture Group (예: ["MOVER-U","MOVER-D"]) — 정본 `Group` */
+  fixture_groups?: string[];
+  /** Movement (예: "FAN-OUT @mid") — 정본 `POS` */
+  movement?: string;
+  /** Effect (예: "CHASE @1/8") — 정본 `FX` */
+  effect?: string;
+  /** Trans — 정본 `Snap` */
+  trans?: "SNAP" | "XFADE" | "FADE" | string;
+  /** Fade — 정본 `I-Fade` */
+  fade_seconds?: number;
+  /** Note */
+  note?: string;
+  /** Note 의 `[MANUAL]` 표기 */
+  manual?: boolean;
 }
 
 export interface SongTimelineView {
@@ -337,6 +385,25 @@ export interface SongTimelineView {
   layer_mapping?: { role: string; group_no: number; group_name: string }[];
   /** Basic-position preset base the plan was built on (edit support). */
   preset_start?: number | null;
+
+  // --- LX-SEQ 큐시트 헤더 메타 (t279). 전부 선택 필드다 --
+  bpm?: number;
+  /** 예: "4/4" */
+  time_signature?: string;
+  /** 예: "D♭ major" */
+  musical_key?: string;
+  total_duration_ms?: number;
+  bar_count?: number;
+  seconds_per_bar?: number;
+  /** 예: "LTC" */
+  tc_source?: string;
+  /** 예: "00:00.0 = 곡 첫 음 (카운트인 없음)" */
+  tc_origin?: string;
+  /** 타임코드의 출처. DERIVED = 마디 연산으로 도출, 음원 미검증 */
+  tc_method?: "DERIVED" | "MEASURED" | null;
+  /** tc_method 가 DERIVED 일 때 화면에 띄우는 고지 문구 */
+  tc_method_warning?: string;
+  palette_legend?: SongTimelinePaletteEntry[];
 }
 
 export type DirectorTimelineView = SongTimelineView;
