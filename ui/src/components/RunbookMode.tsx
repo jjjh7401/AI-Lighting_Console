@@ -54,6 +54,8 @@ export interface RunbookModeProps {
   onUndoDraft?: () => void;
   onRedoDraft?: () => void;
   onSaveDraft?: () => void;
+  /** t291 — 「콘솔에 반영」. 승인 카드를 거쳐야 콘솔에 닿는다. */
+  onApplyDraft?: () => void;
 }
 
 /**
@@ -184,6 +186,7 @@ export function RunbookMode({
   onUndoDraft,
   onRedoDraft,
   onSaveDraft,
+  onApplyDraft,
 }: RunbookModeProps) {
   const staleSuffix = cueMonitor.stale ? " (오래됨 — 콘솔 연결을 확인하세요)" : "";
 
@@ -222,6 +225,7 @@ export function RunbookMode({
             onUndoDraft={onUndoDraft}
             onRedoDraft={onRedoDraft}
             onSaveDraft={onSaveDraft}
+            onApplyDraft={onApplyDraft}
           />
           <SongTimeline
             timeline={timeline}

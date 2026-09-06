@@ -582,6 +582,12 @@ export default function App() {
     );
   }, [state.songTimeline.timeline]);
 
+  // t291 — 「콘솔에 반영」. 새 채널을 만들지 않고 코파일럿 문장을 그대로 보낸다:
+  // 그래야 반영이 다른 콘솔 쓰기와 **같은** 미리보기·승인·LiveLock 경로를 탄다.
+  const applyDraftToConsole = useCallback(() => {
+    sendChat("초안을 콘솔에 반영해줘", selectedCue);
+  }, [selectedCue]);
+
   const submit = () => {
     if (!composer.canSubmit) return;
     const text = draft.trim();
@@ -1059,6 +1065,7 @@ export default function App() {
               onUndoDraft={sendTimelineDraftUndo}
               onRedoDraft={sendTimelineDraftRedo}
               onSaveDraft={() => void saveDraftToLibrary()}
+              onApplyDraft={applyDraftToConsole}
               librarySlot={
                 <TimelineLibrary
                   hasTimeline={state.songTimeline.timeline !== null}
