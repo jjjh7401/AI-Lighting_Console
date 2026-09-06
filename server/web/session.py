@@ -38,7 +38,9 @@ from server.audio.analyze import AnalysisResult, analyze
 from server.deploy.review import ReviewRequest
 from server.design.cue_sheet_apply import (
     ConsoleApplyError,
+    layer_mapping_from_console_groups,
     plan_console_apply,
+    timeline_group_names,
 )
 from server.design.cue_sheet_edit import (
     CueSheetEditError,
@@ -8316,6 +8318,82 @@ class ChatSession:
         if not same_song:
             self._draft_baseline = copy.deepcopy(timeline)
 
+    def _console_group_address_book(self, names: Sequence[str]) -> list[dict[str, object]]:
+        """콘솔이 답한 그룹 이름으로 주소록을 만든다 — 없으면 빈 목록.
+
+        읽기 한 번(``DataPool/Groups``)이고, 그 읽기도 다른 모든 조회와 같이
+        게이트가 감사한다. 이름이 안 맞으면 그 이름은 그냥 안 들어간다.
+        """
+        if not names:
+            return []
+        execution = self._registry.dispatch(
+            ToolCall(
+                id="draft-apply-group-address",
+                name="query_state",
+                arguments={"path": "DataPool/Groups"},
+            )
+        )
+        if execution.result.is_error:
+            return []
+        try:
+            payload = json.loads(execution.result.content)
+        except (TypeError, ValueError):
+            return []
+        return layer_mapping_from_console_groups(payload, names)
+
+    def _draft_apply_target(self, timeline: dict, text: str) -> tuple[dict, str]:
+        """반영에 쓸 타임라인 사본 + 주소록에 대해 감독에게 말할 한 줄.
+
+        시드로 실린 곡(정본 문서를 옮긴 판)은 두 칸이 비어 있어서 오늘은 한 큐도
+        나가지 못한다 — 콘솔 시퀀스 번호가 없고, 역할↔그룹 주소록이 없다. 둘 다
+        **선언된 출처**에서만 채운다:
+
+        * 시퀀스 번호 — 감독이 이번 지시문에 적은 「시퀀스 N」. 안 적었으면 안
+          채운다(엉뚱한 시퀀스를 덮는 것이 이 앱에서 되돌릴 수 없는 사고다).
+        * 주소록 — 콘솔이 스스로 보고한 그룹 이름과의 완전 일치. 짐작 없음.
+
+        타임라인 원본은 건드리지 않는다. 구간(sections)도 손대지 않으므로
+        「달라진 큐」 판정은 그대로다.
+        """
+        target = timeline
+        notes: list[str] = []
+
+        sequence_number = timeline.get("sequence_number")
+        if not isinstance(sequence_number, int) or sequence_number < 1:
+            declared = _CUE_SEQUENCE_NO.search(text)
+            if declared is not None:
+                target = dict(target)
+                target["sequence_number"] = int(declared.group("no"))
+                notes.append(
+                    f"\n· 시퀀스 번호는 이번 지시문이 적은 {target['sequence_number']}번을 "
+                    "썼습니다 (타임라인에는 번호가 없었습니다)."
+                )
+
+        mapping = target.get("layer_mapping")
+        mapping = mapping if isinstance(mapping, list) else []
+        if not mapping:
+            names = timeline_group_names(target)
+            resolved = self._console_group_address_book(names)
+            if resolved:
+                target = dict(target)
+                target["layer_mapping"] = resolved
+                found = ", ".join(
+                    f"{entry['group_name']}=Group {entry['group_no']}" for entry in resolved
+                )
+                notes.append(f"\n· 콘솔이 보고한 그룹 이름으로 주소를 잡았습니다: {found}.")
+            missing = [
+                name
+                for name in names
+                if name.casefold() not in {str(e["group_name"]).casefold() for e in resolved}
+            ]
+            if missing:
+                notes.append(
+                    "\n· 콘솔에 같은 이름의 그룹이 없어 주소를 못 잡은 대상: "
+                    + ", ".join(missing)
+                    + " (이름을 지어내지 않습니다)."
+                )
+        return target, "".join(notes)
+
     def _cue_sheet_draft_apply(self, text: str) -> InstructionResult | None:
         """초안에서 바뀐 큐를 콘솔에 반영한다 — **기존 승인 경로 그대로**.
 
@@ -8342,11 +8420,12 @@ class ChatSession:
                 "초안에서 달라진 큐가 없습니다. 먼저 큐시트를 수정한 뒤 반영해 주세요. "
                 "콘솔에는 아무것도 쓰지 않았습니다."
             )
+        target, address_note = self._draft_apply_target(timeline, text)
         try:
-            plan = plan_console_apply(baseline, timeline)
+            plan = plan_console_apply(baseline, target)
         except ConsoleApplyError as error:
             return self._pointing_refusal(f"{error} 콘솔에는 아무것도 쓰지 않았습니다.")
-        skipped_note = "".join(
+        skipped_note = address_note + "".join(
             f"\n· 큐 {skip.cue_number}({skip.label}) 미반영 [{skip.reason}] — {skip.detail}"
             for skip in plan.skipped
         )

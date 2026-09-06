@@ -57,7 +57,9 @@ __all__ = [
     "ConsoleApplyPlan",
     "CueSkip",
     "changed_cue_numbers",
+    "layer_mapping_from_console_groups",
     "plan_console_apply",
+    "timeline_group_names",
 ]
 
 _DESTINATION = "ChangeDestination Root"
@@ -131,6 +133,82 @@ def changed_cue_numbers(
     return tuple(changed)
 
 
+def _section_group_names(section: Mapping[str, object]) -> list[str]:
+    """구간이 지목한 Fixture Group 이름들 — 사다리 ①②③ 그대로.
+
+    ① ``fixture_groups`` → ② ``intensity[].group`` → ③ 리터럴 ``ALL``.
+    """
+    names = section.get("fixture_groups")
+    names = [str(name).strip() for name in names] if isinstance(names, list) else []
+    names = [name for name in names if name]
+    if not names:
+        entries = section.get("intensity")
+        if isinstance(entries, list):
+            names = [
+                str(entry["group"]).strip()
+                for entry in entries
+                if isinstance(entry, Mapping) and entry.get("group")
+            ]
+    if not names:
+        names = ["ALL"]
+    return names
+
+
+def timeline_group_names(timeline: Mapping[str, object]) -> tuple[str, ...]:
+    """타임라인이 실제로 지목하는 그룹 이름들 (등장 순서, 중복 제거).
+
+    리터럴 ``ALL`` 은 주소가 필요한 이름이 아니라 「주소록에 적힌 것 전부」를
+    뜻하는 지시어라 빠진다. 여기서 나오는 것은 **감독의 타임라인이 적어 둔
+    이름**뿐이다 — 이 함수는 콘솔을 보지 않는다.
+    """
+    seen: dict[str, str] = {}
+    for section in _sections(timeline):
+        for name in _section_group_names(section):
+            if name.casefold() == "all":
+                continue
+            seen.setdefault(name.casefold(), name)
+    return tuple(seen.values())
+
+
+def layer_mapping_from_console_groups(
+    payload: object, names: Sequence[str]
+) -> list[dict[str, object]]:
+    """콘솔이 스스로 보고한 그룹 이름과 타임라인의 이름을 **정확히** 맞춘다.
+
+    두 출처만 쓴다: 콘솔이 답한 ``DataPool/Groups`` 의 이름·번호와, 감독의
+    타임라인이 적어 둔 이름. 대조는 앞뒤 공백을 떼고 대소문자를 접은
+    **완전 일치**뿐이다 — 하이픈과 공백을 같게 보거나 부분 문자열로 맞추는
+    것은 짐작이고, 잘못된 그룹에 쏘는 사고가 이 저장소에서 가장 비싸다.
+
+    그룹 **멤버십**은 이 통로로 읽을 수 없으므로 어느 픽스처가 들어 있는지는
+    주장하지 않는다. 기록하는 것은 「이 이름이 콘솔 몇 번 그룹인가」뿐이다.
+    맞는 이름이 없으면 그 이름은 주소록에 안 들어가고, 그 큐는 나중에
+    ``ROLE_UNADDRESSED`` 로 건너뛴다 — 없는 것이 틀린 것보다 낫다.
+    """
+    if not isinstance(payload, Mapping):
+        return []
+    children = payload.get("children")
+    if not isinstance(children, list):
+        return []
+    wanted = {name.strip().casefold(): name for name in names if str(name).strip()}
+    mapping: list[dict[str, object]] = []
+    claimed: set[str] = set()
+    for child in children:
+        if not isinstance(child, Mapping):
+            continue
+        console_name = str(child.get("name") or "").strip()
+        number = child.get("i") if isinstance(child.get("i"), int) else child.get("no")
+        if not console_name or not isinstance(number, int):
+            continue
+        key = console_name.casefold()
+        if key not in wanted or key in claimed:
+            continue
+        claimed.add(key)
+        # 타임라인이 쓴 철자로 적는다 — `_group_numbers` 는 이 이름으로 찾는다.
+        mapping.append({"group_name": wanted[key], "group_no": number})
+    return mapping
+
+
 def _group_numbers(
     section: Mapping[str, object], layer_mapping: Sequence[Mapping[str, object]]
 ) -> tuple[list[int], list[str]]:
@@ -149,18 +227,7 @@ def _group_numbers(
     ``ALL`` 은 **감독이 기록한 그룹 전부**로 풀린다. 리그 전체가 아니라 그
     주소록에 적힌 것들이다 — 적히지 않은 그룹의 번호를 이 함수는 모른다.
     """
-    names = section.get("fixture_groups")
-    names = [str(name).strip() for name in names] if isinstance(names, list) else []
-    if not names:
-        entries = section.get("intensity")
-        if isinstance(entries, list):
-            names = [
-                str(entry["group"]).strip()
-                for entry in entries
-                if isinstance(entry, Mapping) and entry.get("group")
-            ]
-    if not names:
-        names = ["ALL"]
+    names = _section_group_names(section)
     index: dict[str, int] = {}
     for entry in layer_mapping:
         number = entry.get("group_no")
