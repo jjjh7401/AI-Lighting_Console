@@ -115,4 +115,58 @@ console_writes: 0
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+> **부분 sync 다 — 3단계 종결(plan→run→sync)은 M3 실기 뒤로 미룬다.**
+> 이 회차가 닫은 것은 **오프라인 M1·M2** 뿐이다. M3 은 운영자 게이트(응답기 1.6.5 재임포트 +
+> `DataPool/Timecodes` 비우기)라 실행되지 않았고, 따라서 `AC-POOLEMPTY-013` 과
+> `AC-POOLEMPTY-014` 의 실기 반쪽은 **미충족**이다. `status` 를 `completed` 로 올리지 않고
+> `in-progress` 로 유지한다 — 실기가 남았는데 닫으면 「잰 것」과 「안 잰 것」이 문서에서 구별되지
+> 않는다. M3 회차가 끝나면 그 회차가 §E.4 를 다시 쓰고 종결 전이를 수행한다.
+
+```yaml
+sync_status: partial               # M1·M2 오프라인만 닫힘; M3 실기 대기
+sync_scope: "CHANGELOG [Unreleased] 항목 1건 + §E.4 (부분 신호)"
+sync_complete_at: 2026-09-06
+sync_commit_sha: 2fce40d491098e3233c687fa19fbf92b72e41aba   # 부분 sync 커밋; M3 회차가 §E.4 를 다시 쓰면 종결 커밋 SHA 로 갱신
+frontmatter_status_transitions:
+  spec_md: "in-progress → in-progress (전이 없음 — M3 실기 미실행)"
+  plan_md: n/a                     # Tier M plan.md 는 status 프론트매터 없음
+  acceptance_md: n/a
+  progress_md: n/a
+  rationale: "AC-013·AC-014(실기 반쪽) 미충족 — implemented/completed 전이의 전제가 안 섰다"
+
+closed_this_sync:
+  - "M1 응답기 열거 마커 (node.enumeration, VERSION 1.6.5)"
+  - "M2 앱 판정 조건부 완화 + timecode_slot_verdict 들어올리기 + 프로브 어댑터"
+  - "오프라인 AC 13건: AC-POOLEMPTY-001..012, 015"
+  - "AC-POOLEMPTY-014 오프라인 반쪽 (발화 지점 순증 0)"
+
+remaining_for_close:
+  - "M3 실기 회차 (운영자 게이트: 플러그인 재임포트 + Timecodes 풀 비우기)"
+  - "AC-POOLEMPTY-013 — 빈 풀 free + raw 회신의 enumeration:ok + 음성 대조군 unknown"
+  - "AC-POOLEMPTY-014 실기 반쪽 — 프로브 「합계 0 / 상한 8」"
+  - "docs/research/ma3-effects/ 아래 실기 회차 노트 (명령줄 + 출력 인용)"
+  - "그 뒤 §E.4 재작성 + in-progress → implemented → completed 전이"
+
+b12_self_test_a: "grep -c 'POOLEMPTY-001' CHANGELOG.md → 0 (emission 전) → 1 (emission 후). 중복 0"
+b12_self_test_b: "acceptance.md 고유 AC-ID 18개 중 3개(AC-006·AC-009·AC-015)는 AC-010 본문의 축약 상호참조; 정본 AC 는 AC-POOLEMPTY-001..015 15건 — §D 표 행수와 일치"
+b12_self_test_c: "CHANGELOG 가 지목한 파일 5종 전부 ls 확인 (copilot_responder.lua · PROTOCOL.md · tools.py · musicsync_m3a_probe.py · responder_version.py)"
+
+changelog_entry_position: "[Unreleased] → ### Added → 첫 항목"
+
+spec_lint: "moai spec lint spec.md → 0 error, 1 warning (StatusGitConsistency: frontmatter 'in-progress' vs git-implied 'implemented'). 이 경고는 부분 sync 결정의 **예상된 귀결**이다 — 코드가 머지돼 git 은 implemented 로 읽지만 실기 AC 둘이 미충족이라 프론트매터를 의도적으로 붙잡았다. status 를 올려 경고를 없애는 것은 미검증을 검증으로 보고하는 것이므로 하지 않는다. M3 회차가 해소한다"
+
+mx_scan:
+  target: "server/orchestrator/tools.py timecode_slot_verdict (모듈 수준 신설 함수)"
+  fan_in_measured: 2
+  fan_in_command: "grep -rn 'timecode_slot_verdict' server/ console/ docs/ | grep -v '/tests/'"
+  call_sites: ["server/orchestrator/tools.py:2884 (prepare_songcue 핸들러)", "server/tools/musicsync_m3a_probe.py:156 (slot_verdict 어댑터)"]
+  verdict: "fan_in 2 < 3 → @MX:ANCHOR 의무 아님. run 단계가 붙인 @MX:NOTE(:1995-2000) 가 이미 두 호출자와 들어올린 근거를 적고 있어 추가 태그 0건"
+
+docs_sync:
+  readme_md: "무변경 — 응답기 절이 버전 리터럴을 안 박고 responder_version.py 를 가리킨다"
+  console_lua_readme_md: "무변경 — §2.1 재임포트 순서(파일 복사 → 슬롯 삭제 → 재임포트)가 정확하고 --expect-version 은 매개변수형"
+  protocol_md: "M1 에서 이미 갱신 (1.6.5 revision note + §4.2 node.enumeration)"
+  research_notes: "무변경 — 날짜 붙은 실측 기록이라 고쳐 쓰지 않는다"
+
+console_writes: 0
+```
