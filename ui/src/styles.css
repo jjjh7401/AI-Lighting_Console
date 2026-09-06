@@ -3275,3 +3275,282 @@ body {
   color: #e8c025;
   font-weight: 700;
 }
+
+/* ── 큐시트 타임라인 (t280) ── 위는 가로 스크롤 창, 아래는 세로 큐시트 ── */
+.cue-sheet-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  background: #1a1e28;
+  border: 1px solid #2a3040;
+  border-radius: 9px;
+  color: #e8ecf2;
+}
+
+.cue-sheet-timeline.is-empty {
+  color: #8b94a3;
+  font-size: 13px;
+}
+
+.cst-header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+  color: #fff;
+}
+
+.cst-header h2 small {
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #8b94a3;
+}
+
+.cst-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  color: #8b94a3;
+  font-size: 12.5px;
+}
+
+.cst-meta code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #1e2330;
+  color: #c8d2e0;
+  font-size: 12px;
+}
+
+.cst-derived {
+  padding: 9px 13px;
+  border-left: 3px solid #d2506a;
+  border-radius: 5px;
+  background: #3a1f24;
+  color: #f0c4cd;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.cst-derived b {
+  color: #ffd7e0;
+}
+
+.cst-panel {
+  border-top: 1px solid #2a3040;
+  padding-top: 10px;
+}
+
+.cst-panel h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: #9aa5b6;
+  text-transform: uppercase;
+}
+
+.cst-panel h3 small {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  color: #6b7588;
+}
+
+.cst-rail {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+}
+
+.cst-track {
+  position: relative;
+  min-height: 210px;
+}
+
+.cst-ticks {
+  position: relative;
+  height: 20px;
+}
+
+.cst-tick {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  padding-left: 4px;
+  border-left: 1px solid #333b4d;
+}
+
+.cst-tick span {
+  font: 10.5px/1 Consolas, monospace;
+  color: #6b7588;
+  white-space: nowrap;
+}
+
+.cst-sections {
+  position: relative;
+  height: 44px;
+  margin-bottom: 6px;
+}
+
+.cst-section {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  padding: 0 7px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+}
+
+.cst-section b {
+  font-size: 11.5px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.cst-section i {
+  font-style: normal;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+}
+
+.cst-cues {
+  position: relative;
+  height: 34px;
+  margin-bottom: 4px;
+}
+
+.cst-cue {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 9px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+  color: #20242c;
+  font: 600 10.5px/1 Consolas, monospace;
+  cursor: pointer;
+}
+
+.cst-cue.is-snap {
+  border-left: 3px solid #fff;
+}
+
+.cst-cue.is-selected {
+  outline: 2px solid #ffd400;
+  outline-offset: 1px;
+}
+
+.cst-chart {
+  display: block;
+  width: 100%;
+  height: 100px;
+}
+
+.cst-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid #2a3040;
+  color: #98a2b3;
+  font-size: 11.5px;
+}
+
+.cst-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cst-legend-item i {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.cst-legend-snap {
+  width: 3px;
+  border-radius: 0;
+  background: #fff;
+}
+
+.cst-sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.cst-sheet th {
+  padding: 7px 6px;
+  text-align: left;
+  white-space: nowrap;
+  background: #232a38;
+  color: #9aa5b6;
+  font-size: 11px;
+  font-weight: 600;
+  border-bottom: 1px solid #333b4d;
+}
+
+.cst-sheet td {
+  padding: 6px;
+  vertical-align: top;
+  border-bottom: 1px solid #242b39;
+  cursor: pointer;
+}
+
+.cst-sheet td.m {
+  font-family: Consolas, monospace;
+  white-space: nowrap;
+}
+
+.cst-sheet td.fx {
+  font-family: Consolas, monospace;
+  font-size: 10.5px;
+  color: #a8b4c6;
+}
+
+.cst-sheet td.nt {
+  color: #8b94a3;
+  font-size: 11px;
+}
+
+.cst-sheet td.snap {
+  color: #ff7d97;
+  font-weight: 700;
+}
+
+.cst-sheet tr.is-selected td {
+  background: #232a38;
+  box-shadow: inset 3px 0 0 #ffd400;
+}
+
+/* 창은 창이어야 한다 — 레일·표가 부모를 늘리지 못하게 막는다. */
+.cue-sheet-timeline,
+.cst-panel,
+.cst-rail,
+.cst-sheet-scroll {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cst-sheet-scroll {
+  overflow-x: auto;
+}
+
+.cst-sheet {
+  min-width: 1100px;
+}

@@ -25,6 +25,7 @@ import {
   type CueMonitorState,
   type SongTimelineView,
 } from "../protocol";
+import { CueSheetTimeline } from "./CueSheetTimeline";
 import { SongTimeline } from "./SongTimeline";
 import { formatSyncTime } from "./DashBoard";
 import { sequenceLabel } from "./CueMonitor";
@@ -202,12 +203,17 @@ export function RunbookMode({
           )}
         </section>
       ) : (
-        <SongTimeline
-          timeline={timeline}
-          cueMonitor={cueMonitor}
-          stale={timelineStale}
-          isExample={timelineIsExample}
-        />
+        <>
+          {/* t280 — 두 축(가로 타임라인 창 + 세로 큐시트) 읽기 전용 뷰.
+              기존 카드형 타임라인은 아래에 그대로 남는다. */}
+          <CueSheetTimeline timeline={timeline} />
+          <SongTimeline
+            timeline={timeline}
+            cueMonitor={cueMonitor}
+            stale={timelineStale}
+            isExample={timelineIsExample}
+          />
+        </>
       )}
       <p className="runbook-execution-label">실행 런북 · 현재 콘솔 큐</p>
       {cueMonitor.executors.length === 0 ? (
