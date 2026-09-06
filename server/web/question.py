@@ -394,6 +394,13 @@ class QuestionChannel:
         self._counter = itertools.count(1)
         self._notify: dict[object, Callable[[str, QuestionRequest], None]] = {}
         self._pending: dict[str, tuple[object, _Pending]] = {}
+        #: 아직 답을 못 받은 물음의 **원본 카드**. 새 연결이 붙을 때 그대로 다시
+        #: 보내기 위한 것이고, 답이 정해지는 순간 :meth:`ask` 의 ``finally`` 에서
+        #: ``_pending`` 과 함께 지워진다 — 물음 하나에 대한 진실이 두 군데로
+        #: 갈라지지 않게 같은 자리에서 나고 같은 자리에서 죽는다.
+        self._requests: dict[str, QuestionRequest] = {}
+        #: 연결은 끊겼는데 물음이 걸려 있어 보내는 자리를 세워 둔 세션들.
+        self._detached: set[object] = set()
         self._lock = threading.Lock()
 
     # -- UI 쪽 (이벤트 루프) -------------------------------------------------
@@ -404,21 +411,88 @@ class QuestionChannel:
         *,
         session_key: object = DEFAULT_SESSION_KEY,
     ) -> None:
+        """UI 하나를 붙이고, **아직 답을 못 받은 물음을 그대로 다시 보낸다.**
+
+        되살림이 여기 있는 이유: 새로고침은 UI만 갈아 끼울 뿐 기다리는 쪽을 없애지
+        않는다. 카드가 화면에서만 사라지면 감독은 「서버가 답을 기다리는 물음」을
+        화면에서는 볼 수 없는 상태로 남는다 — 세션이 통째로 막힌다.
+
+        다시 보내는 대상은 **아직 결정되지 않은** 물음뿐이다. 다른 탭에서 이미
+        답한 물음은 :attr:`_Pending.decided` 가 서 있어 여기서 걸러지므로, 끝난
+        것을 다시 묻는 일은 일어나지 않는다.
+        """
         with self._lock:
             self._notify[session_key] = notify
+            self._detached.discard(session_key)
+            self._sweep_detached()
+            # 사전 순서 = 물어본 순서. 카드가 여럿 걸려 있어도 순서가 뒤집히지 않는다.
+            replay = [
+                (request_id, self._requests[request_id])
+                for request_id, (key, pending) in self._pending.items()
+                if key != session_key and not pending.decided and request_id in self._requests
+            ]
+        for request_id, request in replay:
+            # 락 밖에서 보낸다 — 보내는 쪽이 막히거나 던져도 통로 전체가 굳지 않는다.
+            try:
+                notify(request_id, request)
+            except Exception:
+                continue
 
     def unbind(self, *, session_key: object = DEFAULT_SESSION_KEY) -> None:
-        """연결이 끊기면 **그 세션의** 물음만 미응답으로 푼다."""
+        """연결이 끊긴다 — 걸려 있는 물음은 **미응답으로 풀지 않고 세워 둔다.**
+
+        예전에는 여기서 곧바로 :data:`UNANSWERED` 를 냈다. 그러면 새로고침 한
+        번에 감독이 답하려던 물음이 「사용자가 답하지 않았다」로 확정되고, 그
+        확정은 되돌릴 수 없다. 새로고침은 거절이 아니다.
+
+        기다림이 무한해지지는 않는다 — :meth:`ask` 의 상한(기본 600초)이 그대로
+        걸려 있고, 다시 붙는 UI 가 없으면 그 상한에서 :data:`UNANSWERED` 로 끝난다.
+        바뀐 것은 「즉시 미응답」이 「상한까지는 답할 수 있음」이 된 것뿐이다.
+
+        보내는 자리(``notify``)도 지우지 않는다. 세워 둔 작업 스레드는 다음 카드를
+        같은 자리로 계속 내보내야 하고, 그 자리는 app.py 가 살아 있는 연결로
+        되돌려 준다(``_live_target``).
+        """
         with self._lock:
-            self._notify.pop(session_key, None)
-            waiting = [
-                pending
+            parked = any(
+                key == session_key and not pending.decided
                 for key, pending in self._pending.values()
-                if key == session_key and not pending.decided
-            ]
-            for pending in waiting:
-                pending.decided = True
-                pending.event.set()
+            )
+            if parked:
+                self._detached.add(session_key)
+            else:
+                self._detached.discard(session_key)
+                self._notify.pop(session_key, None)
+            self._sweep_detached()
+
+    def _sweep_detached(self) -> None:
+        """세워 뒀지만 이제 걸린 물음이 없는 세션의 보내는 자리를 거둔다.
+
+        ``ask`` 가 끝나는 자리에서 거두지 않는 이유: 인터뷰는 카드를 **한 장씩**
+        묻는다. Q1 이 끝난 순간 거두면 Q2 가 갈 곳을 잃는다(실측으로 그렇게
+        끊겼다). 그래서 거두는 시점을 **연결이 바뀌는 순간**으로 미룬다 — 그때는
+        일이 끝났는지 여부가 「걸린 물음이 하나도 없다」로 판정 가능하다.
+
+        호출자가 :attr:`_lock` 을 들고 있어야 한다.
+        """
+        for key in [
+            key
+            for key in self._detached
+            if not any(
+                other_key == key and not pending.decided
+                for other_key, pending in self._pending.values()
+            )
+        ]:
+            self._detached.discard(key)
+            self._notify.pop(key, None)
+
+    def has_pending(self, *, session_key: object = DEFAULT_SESSION_KEY) -> bool:
+        """이 세션에 아직 답을 못 받은 물음이 남아 있는가."""
+        with self._lock:
+            return any(
+                key == session_key and not pending.decided
+                for key, pending in self._pending.values()
+            )
 
     def resolve(self, request_id: str, *, answer: str) -> bool:
         """사람의 답 하나를 전한다 — 모르는 id이거나 이미 끝난 물음이면 False."""
@@ -458,6 +532,7 @@ class QuestionChannel:
                 return UNANSWERED
             request_id = f"{self._id_prefix}-{next(self._counter)}"
             self._pending[request_id] = (session_key, pending)
+            self._requests[request_id] = request
         try:
             notify(request_id, request)
         except Exception:
@@ -465,6 +540,7 @@ class QuestionChannel:
             # 대화가 통째로 멈춘 것처럼 보인다.
             with self._lock:
                 self._pending.pop(request_id, None)
+                self._requests.pop(request_id, None)
             return UNANSWERED
         try:
             pending.event.wait(self._timeout)
@@ -472,3 +548,4 @@ class QuestionChannel:
         finally:
             with self._lock:
                 self._pending.pop(request_id, None)
+                self._requests.pop(request_id, None)

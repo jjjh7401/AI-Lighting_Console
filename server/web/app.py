@@ -26,6 +26,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from starlette.websockets import WebSocketState
 
 from server.llm.types import LLMProvider
 from server.orchestrator.spatial_memory import SpatialMemory
@@ -238,6 +239,11 @@ class WebDeps:
     # the same reason `snapshots` is — coordinates are CONSOLE state, so N open
     # tabs share one 80-round-trip read instead of paying it each.
     spatial_memory: SpatialMemory = field(default_factory=SpatialMemory)
+    # t316: 지금 붙어 있는 연결들, 붙은 순서대로. 새로고침을 견디는 물음
+    # (server/web/question.py ``unbind``) 때문에 필요하다 — 답을 기다리던 작업
+    # 스레드는 연결보다 오래 살고, 그 스레드가 내는 다음 카드는 **살아 있는**
+    # 화면으로 가야 한다. 자기 소켓이 살아 있으면 언제나 자기 소켓이 먼저다.
+    live_sockets: list = field(default_factory=list)
 
 
 async def _safe_send(websocket: WebSocket, event: dict) -> None:
@@ -355,10 +361,27 @@ def create_app(deps: WebDeps) -> FastAPI:
 
         await websocket.accept(subprotocol=subprotocol)
         loop = asyncio.get_running_loop()
+        deps.live_sockets.append(websocket)
+
+        def live_target() -> WebSocket:
+            """이 연결, 아니면 **가장 최근에 붙은 살아 있는 연결**.
+
+            t316: 새로고침을 견디는 물음 때문에 필요하다. 답을 기다리던 작업
+            스레드는 자기를 낳은 연결보다 오래 살고, 그 스레드가 뒤이어 내는
+            카드·응답을 죽은 소켓으로 보내면 감독의 화면에서는 아무 일도 일어나지
+            않는다. 자기 소켓이 살아 있으면 언제나 자기 소켓이 먼저이므로, 여러
+            탭이 동시에 열려 있는 평소 동작은 한 글자도 바뀌지 않는다.
+            """
+            if websocket.client_state is WebSocketState.CONNECTED:
+                return websocket
+            for candidate in reversed(deps.live_sockets):
+                if candidate.client_state is WebSocketState.CONNECTED:
+                    return candidate
+            return websocket
 
         def send_event(event: dict) -> None:
             # Thread-safe: session events originate on the worker thread.
-            asyncio.run_coroutine_threadsafe(_safe_send(websocket, event), loop)
+            asyncio.run_coroutine_threadsafe(_safe_send(live_target(), event), loop)
 
         session = ChatSession(
             gate=deps.gate,
@@ -839,6 +862,10 @@ def create_app(deps: WebDeps) -> FastAPI:
         except WebSocketDisconnect:
             pass
         finally:
+            # 먼저 명부에서 뺀다 — 아래의 유예 대기 동안 이 죽은 소켓이
+            # ``live_target`` 의 후보로 남아 있으면 안 된다.
+            with contextlib.suppress(ValueError):
+                deps.live_sockets.remove(websocket)
             deps.status_listeners.discard(push_status)
             # Unbind FIRST: a panel bundle parked on a pending approval is
             # released denied (fail-safe, acceptance.md §D edge case 8), so the

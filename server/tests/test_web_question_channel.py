@@ -102,16 +102,26 @@ class TestNotAnsweringIsNotDenying:
 
         assert channel.ask(_ASK) == UNANSWERED
 
-    def test_a_disconnect_releases_the_waiter(self, channel: QuestionChannel):
-        # [HARD] 연결이 끊겼는데 계속 붙잡고 있으면 대화가 통째로 멈춘다.
+    def test_a_disconnect_alone_does_not_decide_the_answer(self):
+        """[HARD] 새로고침은 거절이 아니다 (t316).
+
+        예전에는 ``unbind`` 가 곧바로 :data:`UNANSWERED` 를 냈다. 그러면 감독이
+        답하려던 물음이 새로고침 한 번에 「답하지 않았다」로 **확정**되고, 그
+        확정은 되돌릴 수 없다. 이제는 세워 두고, 상한이 그 기다림을 끝낸다 —
+        아래 두 단언이 각각 그 절반이다.
+        """
+        channel = QuestionChannel(timeout_seconds=1.0)
         recorder = Recorder(channel)
         channel.bind(recorder.notify)
         thread, box = _ask_in_background(channel)
         assert recorder.arrived.wait(2)
 
         channel.unbind()
-        thread.join(2)
-
+        # ① 끊겼다고 즉시 결정되지 않는다.
+        thread.join(0.2)
+        assert box == []
+        # ② 그래도 무한히 붙잡지는 않는다 — 상한이 끝낸다.
+        thread.join(3)
         assert box == [UNANSWERED]
         assert not thread.is_alive()
 
@@ -294,3 +304,133 @@ class TestMultiSelect:
 
         assert box == ["기본 포지션 프리셋, 기본 컬러 프리셋"]
         assert recorder.seen[-1][1].multi is True
+
+
+class TestASurvivedReload:
+    """새로고침 한 번에 물음이 사라지지 않는가 (t316).
+
+    실측 결함: 디자인 인터뷰 첫 카드가 뜬 상태에서 앱을 다시 열면
+    ``button.question-option`` 이 3 → 0 이 됐다. 화면에서는 카드가 없고, 서버는
+    답을 기다리는 중 — 감독의 세션이 통째로 막힌 채 아무 신호도 남지 않는다.
+    """
+
+    def test_the_card_comes_back_on_the_next_connection(self):
+        # [HARD] 오늘 코드에서 실패한다: 예전 ``unbind`` 는 여기서 답을
+        # UNANSWERED 로 확정해 버려, 되살릴 물음 자체가 남지 않았다.
+        channel = QuestionChannel(timeout_seconds=5.0)
+        first = Recorder(channel)
+        channel.bind(first.notify, session_key="tab-1")
+
+        box: list = []
+        thread = threading.Thread(target=lambda: box.append(channel.ask(_ASK, session_key="tab-1")))
+        thread.start()
+        assert first.arrived.wait(2)
+        request_id = first.seen[-1][0]
+
+        # 새로고침: 옛 연결이 끊기고 새 연결이 붙는다(새 세션 키).
+        channel.unbind(session_key="tab-1")
+        second = Recorder(channel)
+        channel.bind(second.notify, session_key="tab-2")
+
+        assert [rid for rid, _ in second.seen] == [request_id]
+        restored = second.seen[-1][1]
+        assert restored.prompt == _ASK.prompt
+        assert [option.label for option in restored.options] == [
+            option.label for option in _ASK.options
+        ]
+
+        # 그리고 되살아난 카드는 실제로 답할 수 있다.
+        assert channel.resolve(request_id, answer="콘솔에서 직접 고르겠다") is True
+        thread.join(3)
+        assert box == ["콘솔에서 직접 고르겠다"]
+
+    def test_a_restored_card_answered_twice_is_refused(self):
+        """중복 답은 **거절**이다 — 멱등이 아니라.
+
+        두 번째 답을 조용히 받아들이면 감독은 자기 답이 반영됐다고 읽지만
+        실제로는 아무것도 바뀌지 않는다. 거절은 UI 가 ``stale_question`` 으로
+        말해 줄 수 있는 유일한 형태다(app.py ``question_answer`` 분기).
+        """
+        channel = QuestionChannel(timeout_seconds=5.0)
+        first = Recorder(channel)
+        channel.bind(first.notify, session_key="tab-1")
+
+        box: list = []
+        thread = threading.Thread(target=lambda: box.append(channel.ask(_ASK, session_key="tab-1")))
+        thread.start()
+        assert first.arrived.wait(2)
+        request_id = first.seen[-1][0]
+
+        # 새로고침 — 옛 탭은 그대로 열려 있고 새 탭이 같은 카드를 되받는다.
+        second = Recorder(channel)
+        channel.bind(second.notify, session_key="tab-2")
+        assert [rid for rid, _ in second.seen] == [request_id]
+
+        # 새 탭에서 답한다.
+        assert channel.resolve(request_id, answer="새 탭의 답") is True
+        thread.join(3)
+        assert box == ["새 탭의 답"]
+
+        # 옛 탭에 남아 있던 같은 카드를 눌러도 **덮어쓰지 않는다** — 거절이다.
+        assert channel.resolve(request_id, answer="옛 탭의 늦은 답") is False
+
+    def test_a_question_already_answered_is_not_asked_again(self):
+        """[HARD] 다른 탭에서 이미 답한 물음을 되살리면 끝난 것을 다시 묻는다."""
+        channel = QuestionChannel(timeout_seconds=5.0)
+        first = Recorder(channel)
+        channel.bind(first.notify, session_key="tab-1")
+
+        box: list = []
+        thread = threading.Thread(target=lambda: box.append(channel.ask(_ASK, session_key="tab-1")))
+        thread.start()
+        assert first.arrived.wait(2)
+        request_id = first.seen[-1][0]
+
+        assert channel.resolve(request_id, answer="이미 답했다") is True
+        thread.join(3)
+        assert box == ["이미 답했다"]
+
+        second = Recorder(channel)
+        channel.bind(second.notify, session_key="tab-2")
+        assert second.seen == []
+        # 두 번째 답은 거절된다 — 되살아난 카드를 다시 눌러도 마찬가지다.
+        assert channel.resolve(request_id, answer="두 번째 답") is False
+
+    def test_the_next_card_of_a_parked_interview_still_reaches_a_ui(self):
+        """되살린 다음이 더 중요하다 — Q2 가 죽은 자리로 가면 인터뷰가 멈춘다.
+
+        인터뷰는 카드를 **한 장씩** 묻는다(``_song_run_interview``). Q1 을
+        되살려 답을 받아도 Q2 가 갈 곳이 없으면 감독의 화면은 그대로 빈다.
+        """
+        channel = QuestionChannel(timeout_seconds=5.0)
+        first = Recorder(channel)
+        channel.bind(first.notify, session_key="tab-1")
+
+        answers: list = []
+
+        def interview() -> None:
+            answers.append(channel.ask(_ASK, session_key="tab-1"))
+            answers.append(channel.ask(_ASK, session_key="tab-1"))
+
+        thread = threading.Thread(target=interview)
+        thread.start()
+        assert first.arrived.wait(2)
+        q1 = first.seen[-1][0]
+
+        channel.unbind(session_key="tab-1")
+        second = Recorder(channel)
+        # 새 연결이 붙을 때 앱은 옛 세션의 보내는 자리도 살아 있는 소켓으로
+        # 되돌린다(app.py ``live_target``). 여기서는 그 결과를 그대로 흉내낸다.
+        channel.bind(second.notify, session_key="tab-2")
+        assert [rid for rid, _ in second.seen] == [q1]
+
+        first.arrived.clear()
+        assert channel.resolve(q1, answer="Q1 답") is True
+        # Q2 는 옛 세션이 묻지만, 보내는 자리가 살아 있어 화면에 닿는다.
+        assert first.arrived.wait(2)
+        assert len(first.seen) == 2
+        q2 = first.seen[-1][0]
+        assert q2 != q1
+        assert channel.resolve(q2, answer="Q2 답") is True
+        thread.join(3)
+        assert answers == ["Q1 답", "Q2 답"]

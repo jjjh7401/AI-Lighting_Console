@@ -1021,6 +1021,12 @@ export function reduceServerEvent(
         ),
       };
     case "question_request":
+      // t316 — 새로고침을 견디는 물음은 재접속 때 서버가 **다시 보낸다**. 같은
+      // request_id 가 두 번 도착해도 카드가 둘로 늘어나서는 안 된다 — 둘 중
+      // 하나에 답하면 나머지 하나는 답할 수 없는 유령으로 남는다.
+      if (state.pendingQuestions.some((pending) => pending.request_id === event.request_id)) {
+        return state;
+      }
       return {
         ...state,
         pendingQuestions: [
