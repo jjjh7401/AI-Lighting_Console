@@ -124,27 +124,37 @@ export function derivedBannerText(timeline: SongTimelineView): string {
   );
 }
 
-/** 큐시트에 그릴 행 범위. 선택된 큐를 가운데 두고 목록 양끝에서 잘린다. */
-export function cueWindow(
-  total: number,
-  selectedIndex: number,
-  rows: number = VISIBLE_CUE_ROWS,
-): { start: number; end: number } {
-  if (total <= 0) return { start: 0, end: 0 };
-  const span = Math.min(rows, total);
-  const centred = selectedIndex - Math.floor(span / 2);
-  const start = Math.min(Math.max(0, centred), total - span);
-  return { start, end: start + span };
+/** 스크롤을 누가 만들었나. 사람이 굴린 것과 코드가 옮긴 것을 가른다. */
+export type ScrollCause = "user" | "program";
+
+/** 이 스크롤 이벤트를 선택 변경으로 받아들일지.
+ *
+ * 시간창(예: 700ms)으로 막던 방식은 원리적으로 어긋난다: 칩을 창의 1/3 지점에
+ * 두는 스크롤이라 정착 위치가 가리키는 큐는 언제나 클릭한 큐보다 앞이고, 창이
+ * 끝난 뒤 꼬리 이벤트가 하나만 와도 선택이 한 칸 밀린다(실측 — 13번 칩을
+ * 클릭하면 12번이 선택됐다). 창을 넓혀도 애니메이션 길이를 추측할 뿐이다.
+ * 그래서 시간이 아니라 출처로 가른다 — 코드가 만든 스크롤은 선택을 못 바꾼다. */
+export function shouldAdoptScroll(cause: ScrollCause): boolean {
+  return cause === "user";
 }
 
-/** 큐를 고른 뒤 레일이 스스로 움직이는 동안 스크롤을 무시할 시간(ms).
- * 부드러운 스크롤과 브라우저의 자동 스크롤은 이벤트를 여러 번 낸다 — 한 번만
- * 막으면 나머지가 방금 고른 큐를 다시 0번으로 되돌린다(실측). */
-export const SCROLL_SETTLE_MS = 700;
-
-/** 이 스크롤 이벤트를 선택 변경으로 받아들일지. 선택 직후 창은 무시한다. */
-export function shouldAdoptScroll(now: number, suppressUntil: number): boolean {
-  return now >= suppressUntil;
+/** 스크롤 위치에 실제로 보이는 행 범위. 페이지 번호가 아니라 위치에서 나온다.
+ * `tops` 는 각 행의 컨테이너 기준 상단 좌표, `top` 은 헤더에 가리지 않는
+ * 첫 픽셀, `height` 는 그 아래로 남은 높이. */
+export function visibleRowRange(
+  tops: number[],
+  top: number,
+  height: number,
+): { start: number; end: number } {
+  if (tops.length === 0) return { start: 0, end: 0 };
+  let start = 0;
+  for (let i = 0; i < tops.length; i += 1) {
+    if (tops[i] <= top + 1) start = i;
+    else break;
+  }
+  let end = start;
+  while (end < tops.length && tops[end] < top + height) end += 1;
+  return { start, end: Math.max(end, start + 1) };
 }
 
 /** 가로 스크롤 위치(ms)에 해당하는 큐 인덱스 — 레일 스크롤이 큐시트를 움직인다. */
@@ -220,35 +230,99 @@ export interface CueSheetTimelineProps {
 
 export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [visible, setVisible] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   const railRef = useRef<HTMLDivElement | null>(null);
-  // 프로그램이 만든 스크롤이 방금 고른 큐를 되돌리지 않게 잠시 막는다.
-  const suppressUntilRef = useRef(0);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  // 스크롤을 누가 만들었나. 코드가 옮기기 직전에 "program" 으로 두고, 사람이
+  // 굴리는 몸짓(휠·드래그·키·터치)이 올 때만 "user" 로 되돌린다. 애니메이션이
+  // 언제 끝나는지 추측하지 않으므로 꼬리 프레임이 선택을 못 밀어낸다.
+  const railCauseRef = useRef<ScrollCause>("user");
+  const sheetCauseRef = useRef<ScrollCause>("user");
 
   const sections = timeline?.sections ?? [];
   const totalMs = useMemo(() => (timeline ? songTotalMs(timeline) : 1), [timeline]);
   const trackWidth = Math.max(640, Math.round((totalMs / 1000) * PX_PER_SECOND));
 
-  const selectCue = useCallback((index: number) => {
-    suppressUntilRef.current = Date.now() + SCROLL_SETTLE_MS;
-    setSelectedIndex(index);
+  /** 큐시트를 그 행이 보이도록 옮긴다 — 코드가 만든 스크롤이다. */
+  const scrollSheetTo = useCallback((index: number) => {
+    const box = sheetRef.current;
+    if (!box) return;
+    const row = box.querySelector<HTMLElement>(`[data-row-index="${index}"]`);
+    if (!row) return;
+    const headerH = box.querySelector<HTMLElement>("thead")?.offsetHeight ?? 0;
+    const band = box.clientHeight - headerH;
+    const target = Math.max(0, row.offsetTop - headerH - Math.max(0, (band - row.offsetHeight) / 2));
+    if (Math.abs(box.scrollTop - target) < 1) return; // 안 움직이면 이벤트도 없다
+    sheetCauseRef.current = "program";
+    box.scrollTop = target;
+  }, []);
+
+  /** 레일을 그 큐가 보이도록 옮긴다 — 역시 코드가 만든 스크롤이다. */
+  const scrollRailTo = useCallback((index: number) => {
     const rail = railRef.current;
     if (!rail) return;
     const chip = rail.querySelector<HTMLElement>(`[data-cue-index="${index}"]`);
     if (!chip) return;
+    railCauseRef.current = "program";
     rail.scrollTo({ left: Math.max(0, chip.offsetLeft - rail.clientWidth / 3), behavior: "smooth" });
   }, []);
 
+  /** 명시적 선택 — 칩을 누르거나 행을 누른 결과. 두 축을 함께 옮긴다. */
+  const selectCue = useCallback(
+    (index: number) => {
+      setSelectedIndex(index);
+      scrollRailTo(index);
+      scrollSheetTo(index);
+    },
+    [scrollRailTo, scrollSheetTo],
+  );
+
+  const readVisible = useCallback(() => {
+    const box = sheetRef.current;
+    if (!box) return;
+    const headerH = box.querySelector<HTMLElement>("thead")?.offsetHeight ?? 0;
+    const tops = Array.from(box.querySelectorAll<HTMLElement>("[data-row-index]")).map(
+      (row) => row.offsetTop,
+    );
+    setVisible(visibleRowRange(tops, box.scrollTop + headerH, box.clientHeight - headerH));
+  }, []);
+
   const onRailScroll = useCallback(() => {
-    if (!shouldAdoptScroll(Date.now(), suppressUntilRef.current)) return;
+    if (!shouldAdoptScroll(railCauseRef.current)) return;
     const rail = railRef.current;
     if (!rail || sections.length === 0) return;
     const ms = (rail.scrollLeft / trackWidth) * totalMs;
-    setSelectedIndex(cueIndexAtMs(sections, ms));
-  }, [sections, totalMs, trackWidth]);
+    const index = cueIndexAtMs(sections, ms);
+    setSelectedIndex(index);
+    scrollSheetTo(index);
+  }, [scrollSheetTo, sections, totalMs, trackWidth]);
+
+  const onSheetScroll = useCallback(() => {
+    readVisible();
+    if (!shouldAdoptScroll(sheetCauseRef.current)) {
+      // 코드가 만든 스크롤은 여기서 끝난다 — 되받아 레일을 움직이지 않는다.
+      sheetCauseRef.current = "user";
+      return;
+    }
+    const box = sheetRef.current;
+    if (!box || sections.length === 0) return;
+    const headerH = box.querySelector<HTMLElement>("thead")?.offsetHeight ?? 0;
+    const tops = Array.from(box.querySelectorAll<HTMLElement>("[data-row-index]")).map(
+      (row) => row.offsetTop,
+    );
+    const range = visibleRowRange(tops, box.scrollTop + headerH, box.clientHeight - headerH);
+    scrollRailTo(range.start);
+  }, [readVisible, scrollRailTo, sections.length]);
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [timeline?.song_title, timeline?.sequence_number]);
+    const box = sheetRef.current;
+    if (box) {
+      sheetCauseRef.current = "program";
+      box.scrollTop = 0;
+    }
+    readVisible();
+  }, [readVisible, timeline?.song_title, timeline?.sequence_number]);
 
   if (timeline === null) {
     return (
@@ -258,9 +332,14 @@ export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
     );
   }
 
-  const visible = cueWindow(sections.length, selectedIndex);
-  const rows = sections.slice(visible.start, visible.end);
   const legend = timeline.palette_legend ?? [];
+  // 사람이 굴린 스크롤임을 표시한다 — 이 몸짓 뒤에 오는 스크롤만 선택을 바꾼다.
+  const railByUser = () => {
+    railCauseRef.current = "user";
+  };
+  const sheetByUser = () => {
+    sheetCauseRef.current = "user";
+  };
 
   return (
     <section className="cue-sheet-timeline" aria-label={`${timeline.song_title} 큐시트 타임라인`}>
@@ -294,7 +373,15 @@ export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
 
       <div className="cst-panel">
         <h3>TIMELINE</h3>
-        <div className="cst-rail" ref={railRef} onScroll={onRailScroll}>
+        <div
+          className="cst-rail"
+          ref={railRef}
+          onScroll={onRailScroll}
+          onWheel={railByUser}
+          onPointerDown={railByUser}
+          onTouchStart={railByUser}
+          onKeyDown={railByUser}
+        >
           <div className="cst-track" style={{ width: trackWidth }}>
             <div className="cst-ticks">
               {ticksFor(totalMs).map((ms) => (
@@ -394,10 +481,18 @@ export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
           <small>
             {sections.length === 0
               ? "큐 없음"
-              : `${visible.start + 1}–${visible.end} / ${sections.length}`}
+              : `${Math.min(visible.start + 1, sections.length)}–${Math.min(visible.end, sections.length)} / ${sections.length}`}
           </small>
         </h3>
-        <div className="cst-sheet-scroll">
+        <div
+          className="cst-sheet-scroll"
+          ref={sheetRef}
+          onScroll={onSheetScroll}
+          onWheel={sheetByUser}
+          onPointerDown={sheetByUser}
+          onTouchStart={sheetByUser}
+          onKeyDown={sheetByUser}
+        >
         <table className="cst-sheet">
           <thead>
             <tr>
@@ -407,13 +502,13 @@ export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((section) => {
-              const index = sections.indexOf(section);
+            {sections.map((section, index) => {
               const next = sections[index + 1];
               const selected = index === selectedIndex;
               return (
                 <tr
                   key={`row-${section.index}-${section.cue_number}`}
+                  data-row-index={index}
                   className={selected ? "is-selected" : undefined}
                   aria-selected={selected}
                   onClick={() => selectCue(index)}
