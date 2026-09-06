@@ -431,7 +431,14 @@ class _RefusingConsole:
         raise AssertionError(f"a console send was attempted under the live lock: {command!r}")
 
 
-def _real_gate(tmp_path, *, locked: bool) -> SafetyGate:
+class _ApprovingPort:
+    """승인은 통과 — 이 파일이 재는 축은 라이브 락이다 (카드 t319)."""
+
+    def request_approval(self, request) -> bool:
+        return True
+
+
+def _real_gate(tmp_path, *, locked: bool, approve: bool = False) -> SafetyGate:
     """A REAL SafetyGate. A fake returning the string "locked" proves nothing."""
     lock = LiveLock()
     if locked:
@@ -440,6 +447,12 @@ def _real_gate(tmp_path, *, locked: bool) -> SafetyGate:
         console=_RefusingConsole() if locked else None,
         audit=AuditLog(tmp_path / "audit"),
         lock=lock,
+        # 카드 t319 — FX 계획이 쇼파일 쓰기를 선언하게 되면서 번들 전체가
+        # 승인 대기가 된다. 이 파일이 재는 축은 **라이브 락**이므로 도구를
+        # 지나는 회차에서만 승인을 통과시킨다(잠긴 회차는 lock-FIRST 라 그래도
+        # 0건). 기본값은 거절 그대로 — 아래 분류 층 검사들은 선언 없이
+        # `gate.screen` 을 직접 부르므로 이 인자에 영향받지 않는다.
+        approval_port=_ApprovingPort() if approve else None,
     )
 
 
@@ -455,7 +468,7 @@ def _fx_registry(gate, port):
 
 def _instantiate_first_fx(tmp_path, *, locked: bool):
     port = _RecordingPort()
-    registry, library = _fx_registry(_real_gate(tmp_path, locked=locked), port)
+    registry, library = _fx_registry(_real_gate(tmp_path, locked=locked, approve=True), port)
     fx_id = library.fx[0].fx_id
     call = ToolCall(id="c1", name="instantiate_fx", arguments={"fx_id": fx_id, "group": 11})
     execution = registry.dispatch(call, None)

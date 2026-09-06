@@ -107,6 +107,22 @@ class BatchRisk:
     kind: str
 
 
+class WriteGateDeclarationError(RuntimeError):
+    """선언을 실어 보낼 수 없는 배선을 만났다 (카드 t318).
+
+    `BatchRisk` 는 **디스패치 경로가 받아 줄 때만** 게이트에 닿는다. 받지
+    못하는 배선(2번째 인자를 안 받는 레지스트리)을 만나면 파이썬은
+    `TypeError` 를 내고, 그 예외는 세션의 최상위 `except Exception` 에
+    잡혀 `provider_error`/`kind="unexpected"` 로 접혔다 — 콘솔에는 0건.
+    실측(`.moai/state/verify/t318/repro_before.json`): 예외 0건,
+    승인 요청 0건, 감사 이벤트는 `provider_error`.
+
+    「0건 나갔다」는 세 가지와 바이트 동일하다: 감독이 거절했다 ·
+    쓸 것이 없었다 · **선언이 배선을 못 지났다**. 앞의 둘은 정상이고
+    셋째는 안전장치가 꺼진 상태다. 그래서 셋째만 자기 이름을 갖는다.
+    """
+
+
 @dataclass
 class _Finding:
     command: str

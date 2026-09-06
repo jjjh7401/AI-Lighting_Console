@@ -74,6 +74,29 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
     ("server/web/session.py", "_cue_sheet_draft_apply", 0): (
         "Store Sequence Cue /Merge — 초안 반영. 카드 t292 의 _accept_draft_apply_batch"
     ),
+    # 카드 t319 — 아래 여섯 자리는 `tools.py` 안쪽이라 `run_commands` 클로저를
+    # 직접 부른다. 선언 문면은 `server/orchestrator/write_reason.py` 가 **나갈 명령**을
+    # 읽어 만든다(계획이 아니라 명령 — `_song_write_risk_reason` 의 규율).
+    ("server/orchestrator/tools.py", "instantiate_look", 0): (
+        "looks/instantiate.py 의 Store Preset 다발 — showfile_write_risk(kind='look_instantiate')"
+    ),
+    ("server/orchestrator/tools.py", "prepare_busking", 0): (
+        "build_genre_bundle 이 모은 룩별 Store Preset 다발 — kind='busking_bundle'"
+    ),
+    ("server/orchestrator/tools.py", "precheck_patch", 0): (
+        "prechk/macro.py 의 Store Macro <slot> — 매크로 풀 쓰기. kind='precheck_macro'"
+    ),
+    ("server/orchestrator/tools.py", "_deliver_fx_plan", 0): (
+        "fx/instantiate.py 의 Store Sequence <n> Cue 1 / Store Preset — kind='fx_plan'"
+    ),
+    ("server/orchestrator/tools.py", "compile_scene", 0): (
+        "scene/compile.py 가 씬을 Store Sequence <n> Cue <m> 로 굳힌다 — kind='scene_compile'"
+    ),
+    ("server/orchestrator/tools.py", "arrange_fixtures", 0): (
+        "Set Fixture <fid> Posx/Posy/Posz — 패치 좌표 쓰기. 이 자리만 복원 번들을 "
+        "함께 들고 있어 문면이 「되돌리기 없음」 대신 가진 것을 말한다. "
+        "kind='arrange_fixtures'"
+    ),
     ("server/web/session.py", "_song_finalize", 0): (
         "감독의 곡 흐름(업로드→분석→확인→인터뷰)이 실제로 나가는 자리 — "
         "_reviewed_song_commands 의 Store Sequence Cue + Store Timecode 다발. "
@@ -88,27 +111,16 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
 #: 이 SPEC 이 봉합을 다는 자리는 곡→콘솔 하나뿐이고(§4 범위 제외), 나머지는
 #: 각자 자기 카드를 갖는다. 여기 있는 자리에 봉합이 붙으면 이 검사가
 #: 실패하고, 그때 ① 표로 옮기면 된다 — 표는 양방향으로 정직하다.
+#:
+#: 카드 t319 의 판정. 남은 열 자리는 전부 `session.py` 안이라 `tools.py` 의
+#: 클로저를 직접 못 부르고 `ToolRegistry.dispatch` 를 지난다 — 봉합 자체는
+#: `_dispatch_declared` 로 한 줄이다. 그런데 이 카드가 요구하는 증거는
+#: 「거절 → 콘솔 0건 / 수락 → 카드 한 장 + approved 감사 기록」이고, 그 증거는
+#: 각 자리를 **대화 흐름으로 몰아야** 나온다(자리마다 다른 지시문·다른 사전
+#: 상태). 그 구동기 없이 봉합만 달면 「달았다」는 주장은 되지만 「승인 없이는
+#: 안 나간다」는 관측이 안 된다 — 그것은 봉합이 아니라 봉합처럼 보이는 코드다.
+#: 그래서 열 자리는 각자 자기 카드로 남긴다.
 WRITE_WITHOUT_SEAM_DISPATCHES: dict[tuple[str, str, int], str] = {
-    ("server/orchestrator/tools.py", "instantiate_look", 0): (
-        "looks/instantiate.py 가 Store Preset 을 낸다 — 오늘은 blacklist 의 "
-        "'Store Preset' 항목이 분류 층에서 잡는다"
-    ),
-    ("server/orchestrator/tools.py", "prepare_busking", 0): (
-        "build_genre_bundle → looks/instantiate 의 Store Preset 다발"
-    ),
-    ("server/orchestrator/tools.py", "precheck_patch", 0): (
-        "prechk/macro.py 가 Store Macro <slot> 을 낸다 — 매크로 풀 쓰기"
-    ),
-    ("server/orchestrator/tools.py", "_deliver_fx_plan", 0): (
-        "fx/instantiate.py 가 Store Sequence <n> Cue 1 / Store Preset 을 낸다"
-    ),
-    ("server/orchestrator/tools.py", "compile_scene", 0): (
-        "씬 컴파일이 Store 계열을 낸다 — 씬을 콘솔 오브젝트로 굳힌다"
-    ),
-    ("server/orchestrator/tools.py", "arrange_fixtures", 0): (
-        "Set Fixture <fid> Posx/Posy/Posz — 패치의 3D 좌표를 고친다. "
-        "'Set Fixture' 는 blacklist 에 있어 분류 층이 잡는다"
-    ),
     ("server/web/session.py", "run_look_bundle", 0): ("LookInstantiation.commands → Store Preset"),
     ("server/web/session.py", "_look_pan_tilt", 0): (
         "position_preset_store_commands 가 붙는 갈래에서 Store Preset 2.<n>"
