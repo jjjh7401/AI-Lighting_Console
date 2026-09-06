@@ -48,6 +48,12 @@ export interface RunbookModeProps {
   /** Timeline library panel (save/load named versions) — rendered above the
    * timeline when App supplies it; RunbookMode itself stays hook-free. */
   librarySlot?: ReactNode;
+  /** t281 — 큐시트 초안 편집 배선. 전부 선택 prop 이라, 넘기지 않으면
+   * 큐시트는 t280 의 읽기 전용 모습 그대로다. */
+  onSelectCue?: (cueNumber: number) => void;
+  onUndoDraft?: () => void;
+  onRedoDraft?: () => void;
+  onSaveDraft?: () => void;
 }
 
 /**
@@ -174,6 +180,10 @@ export function RunbookMode({
   timelineIsExample = false,
   onShowTimelineExample,
   librarySlot = null,
+  onSelectCue,
+  onUndoDraft,
+  onRedoDraft,
+  onSaveDraft,
 }: RunbookModeProps) {
   const staleSuffix = cueMonitor.stale ? " (오래됨 — 콘솔 연결을 확인하세요)" : "";
 
@@ -206,7 +216,13 @@ export function RunbookMode({
         <>
           {/* t280 — 두 축(가로 타임라인 창 + 세로 큐시트) 읽기 전용 뷰.
               기존 카드형 타임라인은 아래에 그대로 남는다. */}
-          <CueSheetTimeline timeline={timeline} />
+          <CueSheetTimeline
+            timeline={timeline}
+            onSelectCue={onSelectCue}
+            onUndoDraft={onUndoDraft}
+            onRedoDraft={onRedoDraft}
+            onSaveDraft={onSaveDraft}
+          />
           <SongTimeline
             timeline={timeline}
             cueMonitor={cueMonitor}

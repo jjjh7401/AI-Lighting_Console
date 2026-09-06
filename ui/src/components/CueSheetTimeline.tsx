@@ -3,7 +3,12 @@
 //
 // 정본 산출물은 LXSEQ_SAMPLE_01_Sugar_r3.timeline.html 이고, 이 컴포넌트는
 // 그 시각 언어(틱 레일 · 구간 밴드 · 큐 칩 · 인텐시티 폴리라인 · 팔레트 범례 ·
-// 14열 큐시트)를 앱 안에서 재현한다. 읽기 전용 — 편집·콘솔 쓰기는 없다.
+// 14열 큐시트)를 앱 안에서 재현한다.
+//
+// t281 부터 **초안 편집**이 붙는다 — 선택된 큐를 코파일럿에게 말로 고치고,
+// 되돌리고, 라이브러리에 저장한다. 콘솔 쓰기는 여전히 **없다**: 이 컴포넌트가
+// 부르는 콜백 셋(`onUndoDraft`/`onRedoDraft`/`onSaveDraft`)은 초안 사전과
+// 라이브러리 REST 만 건드리고, 콘솔 반영은 승인 게이트를 거치는 별개 동작이다.
 //
 // t279 가 넓힌 큐시트 필드는 전부 선택 필드다. 서버가 아직 대부분을 채우지
 // 않으므로 모든 칸은 값이 없으면 EMPTY_CELL 로 떨어진다 (undefined 를 그리지
@@ -224,11 +229,36 @@ const SHEET_COLUMNS = [
   "Note",
 ];
 
-export interface CueSheetTimelineProps {
-  timeline: SongTimelineView | null;
+/** t281 — 초안 배지 문구. 「수정됨 · 미저장」과 「원본」을 가른다. */
+export function draftBadgeText(timeline: SongTimelineView): string | null {
+  const draft = timeline.draft;
+  if (!draft || !draft.dirty) return null;
+  return `수정됨 · 미저장 (되돌리기 ${draft.depth}단계)`;
 }
 
-export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
+/** t281 — 직전 편집의 칸별 보고. 없으면 빈 배열(눈으로 diff 하지 않게). */
+export function draftChangeReport(timeline: SongTimelineView): string[] {
+  return timeline.draft?.last_change ?? [];
+}
+
+export interface CueSheetTimelineProps {
+  timeline: SongTimelineView | null;
+  /** 선택이 바뀔 때마다 부모에게 알린다 — 코파일럿 요청에 실려 갈 큐 번호. */
+  onSelectCue?: (cueNumber: number) => void;
+  /** 초안 되돌리기/다시하기. 콘솔에는 닿지 않는다. */
+  onUndoDraft?: () => void;
+  onRedoDraft?: () => void;
+  /** 「저장」 — 라이브러리에 새 판을 남긴다. 콘솔 반영이 아니다. */
+  onSaveDraft?: () => void;
+}
+
+export function CueSheetTimeline({
+  timeline,
+  onSelectCue,
+  onUndoDraft,
+  onRedoDraft,
+  onSaveDraft,
+}: CueSheetTimelineProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [visible, setVisible] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -324,6 +354,14 @@ export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
     readVisible();
   }, [readVisible, timeline?.song_title, timeline?.sequence_number]);
 
+  // t281 — 선택된 큐를 부모(→ 코파일럿 요청)에게 알린다. 인덱스가 아니라
+  // `cue_number` 를 보낸다: 서버가 큐를 찾을 때 쓰는 키가 그것이라, 인덱스를
+  // 보내면 두 축척이 갈리는 순간(구간 삽입·삭제) 조용히 엉뚱한 큐를 고친다.
+  useEffect(() => {
+    const section = sections[selectedIndex];
+    if (section) onSelectCue?.(section.cue_number);
+  }, [onSelectCue, sections, selectedIndex]);
+
   if (timeline === null) {
     return (
       <section className="cue-sheet-timeline is-empty" aria-label="큐시트 타임라인">
@@ -333,6 +371,9 @@ export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
   }
 
   const legend = timeline.palette_legend ?? [];
+  const draftBadge = draftBadgeText(timeline);
+  const changeReport = draftChangeReport(timeline);
+  const selected = sections[selectedIndex];
   // 사람이 굴린 스크롤임을 표시한다 — 이 몸짓 뒤에 오는 스크롤만 선택을 바꾼다.
   const railByUser = () => {
     railCauseRef.current = "user";
@@ -483,7 +524,57 @@ export function CueSheetTimeline({ timeline }: CueSheetTimelineProps) {
               ? "큐 없음"
               : `${Math.min(visible.start + 1, sections.length)}–${Math.min(visible.end, sections.length)} / ${sections.length}`}
           </small>
+          {draftBadge !== null && (
+            <span className="cst-draft-badge" role="status">
+              {draftBadge}
+            </span>
+          )}
         </h3>
+
+        {/* t281 — 초안 편집 도구. 「저장」은 라이브러리에 판을 남길 뿐,
+            콘솔에 아무것도 보내지 않는다. 콘솔 반영은 승인 카드를 거치는
+            **다른 동작**이고 이 카드에서 만들지 않았다 — 두 버튼을 나란히
+            두지 않고 문구로 갈라 놓는 이유가 그것이다. */}
+        {(onUndoDraft || onRedoDraft || onSaveDraft) && (
+          <div className="cst-draft-bar">
+            <span className="cst-draft-scope">
+              선택: {selected ? `${cueLabel(selected)} ${selected.label}` : "없음"}
+            </span>
+            <span className="cst-draft-hint">
+              코파일럿에게 「이 구간 더 밝게」처럼 말하면 이 큐의 초안이 바뀝니다.
+            </span>
+            <div className="cst-draft-actions">
+              {onUndoDraft && (
+                <button
+                  type="button"
+                  className="cst-draft-undo"
+                  onClick={onUndoDraft}
+                  disabled={(timeline.draft?.depth ?? 0) === 0}
+                >
+                  ↶ 되돌리기
+                </button>
+              )}
+              {onRedoDraft && (
+                <button type="button" className="cst-draft-redo" onClick={onRedoDraft}>
+                  ↷ 다시하기
+                </button>
+              )}
+              {onSaveDraft && (
+                <button type="button" className="cst-draft-save" onClick={onSaveDraft}>
+                  💾 라이브러리에 저장
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {changeReport.length > 0 && (
+          <ul className="cst-draft-report" aria-label="직전 수정 내역">
+            {changeReport.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
         <div
           className="cst-sheet-scroll"
           ref={sheetRef}

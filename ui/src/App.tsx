@@ -13,6 +13,7 @@ import {
   type ClipboardEvent,
   type DragEvent,
   type ReactNode,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -34,6 +35,7 @@ import { QuestionCard } from "./components/QuestionCard";
 import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
 import { TimelineLibrary } from "./components/TimelineLibrary";
+import { saveTimelineToLibrary } from "./timelineLibrary";
 import { SONG_TIMELINE_EXAMPLE } from "./components/songTimelineExample";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
@@ -374,6 +376,8 @@ export default function App() {
     connected,
     responding,
     sendChat,
+    sendTimelineDraftUndo,
+    sendTimelineDraftRedo,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,
@@ -559,6 +563,25 @@ export default function App() {
     state.pendingQuestions.length,
   ]);
 
+  // t281 — 큐시트에서 고른 큐. 코파일럿 요청에 실려 가므로, 「이 구간 더 밝게」
+  // 처럼 번호 없는 문장도 어느 큐인지 결정된다. null = 선택 없음.
+  const [selectedCue, setSelectedCue] = useState<number | null>(null);
+
+  const saveDraftToLibrary = useCallback(async () => {
+    const suggested = state.songTimeline.timeline?.song_title ?? "";
+    const name = window.prompt(
+      "라이브러리에 저장할 이름 (콘솔에는 아무것도 보내지 않습니다)",
+      suggested,
+    );
+    if (name === null || name.trim() === "") return;
+    const ok = await saveTimelineToLibrary(name.trim());
+    window.alert(
+      ok
+        ? `"${name.trim()}" 저장 완료 — 라이브러리에만 남았습니다. 콘솔 반영은 별도 승인 경로입니다.`
+        : "저장하지 못했습니다.",
+    );
+  }, [state.songTimeline.timeline]);
+
   const submit = () => {
     if (!composer.canSubmit) return;
     const text = draft.trim();
@@ -569,7 +592,7 @@ export default function App() {
     if (responding || queue.length > 0) {
       setQueue((pending) => [...pending, text]);
     } else {
-      sendChat(text);
+      sendChat(text, selectedCue);
     }
     setDraft("");
   };
@@ -1032,6 +1055,10 @@ export default function App() {
               onShowTimelineExample={() => {
                 setTimelineExample(true);
               }}
+              onSelectCue={setSelectedCue}
+              onUndoDraft={sendTimelineDraftUndo}
+              onRedoDraft={sendTimelineDraftRedo}
+              onSaveDraft={() => void saveDraftToLibrary()}
               librarySlot={
                 <TimelineLibrary
                   hasTimeline={state.songTimeline.timeline !== null}
