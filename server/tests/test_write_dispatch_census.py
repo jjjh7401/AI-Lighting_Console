@@ -38,6 +38,8 @@ import ast
 import re
 from pathlib import Path
 
+import pytest
+
 #: 주사 대상. 프로덕션 디스패치가 사는 두 파일.
 SCANNED_FILES = (
     "server/orchestrator/tools.py",
@@ -155,12 +157,18 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
 #: 옮겼다. 그래서 이 표는 **지금 비어 있다**.
 #:
 #: 비어 있다는 사실을 그대로 적어 두는 이유: 아래 `test_each_write_without_
-#: seam_site_really_has_no_seam` 은 이 표가 비면 **공허하게** 통과한다.
-#: 그것은 결함이 아니라 이 표의 정의다 — 표가 비었다는 것은 「봉합 없는
-#: 쇼파일 쓰기 자리를 하나도 모른다」는 주장이고, 그 주장을 지키는 것은
-#: 이 공허한 검사가 아니라 위의 `test_no_dispatch_site_is_unregistered`
-#: (전수 등재)와 ① 표의 `test_each_showfile_write_site_has_a_seam_in_its_
-#: function` (봉합 존재)이다. 새 쓰기 자리가 생기면 그 둘이 먼저 운다.
+#: seam_site_really_has_no_seam` 은 이 표가 비면 잴 것이 없다. 그것은 결함이
+#: 아니라 이 표의 정의다 — 표가 비었다는 것은 「봉합 없는 쇼파일 쓰기 자리를
+#: 하나도 모른다」는 주장이고, 그 주장을 지키는 것은 그 검사가 아니라 위의
+#: `test_no_dispatch_site_is_unregistered` (전수 등재)와 ① 표의
+#: `test_each_showfile_write_site_has_a_seam_in_its_function` (봉합 존재)이다.
+#: 새 쓰기 자리가 생기면 그 둘이 먼저 운다.
+#:
+#: 카드 t321 — 다만 그 검사가 **초록으로** 통과하면 안 된다. 0회 순회한 초록은
+#: 「전부 확인했다」와 출력에서 구별되지 않아서, 이 표가 비었다는 사실 자체가
+#: 눈에서 사라진다. 그래서 비었을 때는 skip 으로 답한다(명시적 미측정), 그리고
+#: 「저 둘이 지킨다」는 이 주석의 주장도 `test_the_guards_that_carry_the_empty_
+#: tables_claim_are_not_vacuous` 가 따로 잰다 — 공허를 한 칸 옮기지 않기 위해서다.
 WRITE_WITHOUT_SEAM_DISPATCHES: dict[tuple[str, str, int], str] = {}
 
 #: ③ 사람이 읽고 쇼파일 쓰기가 **아니라고** 판정한 자리. 사유가 필수다.
@@ -326,6 +334,25 @@ class TestSeamPresence:
     def test_each_write_without_seam_site_really_has_no_seam(self):
         # 표가 양방향으로 정직하려면 이쪽도 재야 한다. 봉합이 붙으면 이
         # 검사가 실패하고, 그때 SHOWFILE_WRITE_DISPATCHES 로 옮긴다.
+        #
+        # 카드 t321 — 표가 비면 아래 루프가 0회 돌고 **아무것도 안 잰 채**
+        # 초록이 된다. 그 초록은 「봉합 없는 자리를 전부 확인했다」로 읽히지만
+        # 사실은 「확인할 것이 없었다」다. 둘은 출력에서 바이트 동일하고,
+        # 그 동일함이 이 회차가 세 번 잡은 실패 형태다(아무것도 안 잰 경쟁,
+        # 침묵을 「아니오」로 읽은 판독, 0건으로 실패한 배선).
+        #
+        # 그래서 공허한 초록 대신 **명시적 미측정**으로 답한다. skip 은
+        # 출력에 남고, 남는다는 것이 곧 「이 축은 이번에 안 쟀다」는 관측이다.
+        # 표의 주장을 지키는 것은 이 검사가 아니라 위의 전수 등재
+        # (`test_no_dispatch_site_is_unregistered`)와 ① 표의 봉합 존재
+        # 검사이며, 그 둘이 공허하지 않다는 것은 아래에서 따로 잰다.
+        if not WRITE_WITHOUT_SEAM_DISPATCHES:
+            pytest.skip(
+                "WRITE_WITHOUT_SEAM_DISPATCHES 가 비어 있다 — 봉합 없는 쇼파일 쓰기 자리를 "
+                "하나도 모른다는 뜻이고, 이 검사는 이번 회차에 아무것도 재지 않았다. "
+                "그 주장을 지키는 것은 test_no_dispatch_site_is_unregistered 와 "
+                "test_each_showfile_write_site_has_a_seam_in_its_function 이다."
+            )
         for path, function, _index in WRITE_WITHOUT_SEAM_DISPATCHES:
             body = _function_body(path, function)
             present = [token for token in SEAM_TOKENS if token in body]
@@ -333,6 +360,15 @@ class TestSeamPresence:
                 f"{path} 의 {function} 에 봉합 {present} 이 생겼습니다 — "
                 "SHOWFILE_WRITE_DISPATCHES 로 옮겨 주세요"
             )
+
+    def test_the_guards_that_carry_the_empty_tables_claim_are_not_vacuous(self):
+        # 카드 t321 — 위 skip 은 「저 둘이 지킨다」고 말한다. 그 둘도 표를
+        # 순회하므로, 표가 비면 그 둘도 같은 방식으로 공허해질 수 있다.
+        # 주장을 옮겨 놓기만 하고 옮긴 자리를 안 재면 공허가 한 칸 이동할 뿐이다.
+        assert SHOWFILE_WRITE_DISPATCHES, (
+            "SHOWFILE_WRITE_DISPATCHES 가 비었다 — 봉합 존재 검사가 공허하다"
+        )
+        assert _all_sites(), "주사가 디스패치 자리를 하나도 못 찾았다 — 전수 등재 검사가 공허하다"
 
 
 class TestTheCensusStatesItsLimits:
