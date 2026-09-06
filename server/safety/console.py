@@ -90,6 +90,23 @@ class StateQueryError(Exception):
     """A state query failed or timed out."""
 
 
+class ConsoleSilentError(StateQueryError):
+    """콘솔이 **아무 답도 하지 않았다** — 「아니오」라고 답한 것이 아니다.
+
+    카드 t313. 두 실패는 겉모습이 같지만 뜻이 정반대다:
+
+    * ``ok:false`` 응답 → 콘솔이 답했고, 그 답이 부정이다. 이것은 판정이다.
+    * 무응답(시간 초과) → 판독 자체가 성립하지 않았다. UDP 는 손실을 알리지
+      않으므로 **송신 손실과 수신 손실이 구분되지 않는다**(REQ-MVP-002).
+
+    후자를 전자로 읽으면 「콘솔에 아무것도 없다」는 결론이 아무것도 재지 않은
+    실행에서 나온다 — 사전 점검이 무응답을 ``fail`` 이 아니라 ``skip`` 으로
+    낮추는 이유와 같다(``server/preshow/osc_check.py``). 기존 호출자를 깨지
+    않도록 :class:`StateQueryError` 의 하위형이다 — 침묵을 따로 다뤄야 하는
+    호출자만 이 형을 잡으면 된다.
+    """
+
+
 def _unnumbered_refusal(unnumbered: int) -> str:
     """The refusal text for a pool read whose slot arithmetic cannot be trusted.
 
@@ -708,7 +725,7 @@ class ConsoleLink:
         if payload is None:
             if self._monitor is not None:
                 self._monitor.note_query_timeout()
-            raise StateQueryError(
+            raise ConsoleSilentError(
                 f"no state reply for {path!r} within {self._timeouts.state_query_seconds}s"
             )
         if not payload.get("ok"):
@@ -732,7 +749,7 @@ class ConsoleLink:
         if payload is None:
             if self._monitor is not None:
                 self._monitor.note_query_timeout()
-            raise StateQueryError(
+            raise ConsoleSilentError(
                 f"no prop reply for {path!r} {property_name!r} within "
                 f"{self._timeouts.state_query_seconds}s"
             )
@@ -767,7 +784,7 @@ class ConsoleLink:
         if payload is None:
             if self._monitor is not None:
                 self._monitor.note_query_timeout()
-            raise StateQueryError(
+            raise ConsoleSilentError(
                 f"no introspect reply for {path!r} within {self._timeouts.state_query_seconds}s"
             )
         if not payload.get("ok"):
@@ -791,7 +808,7 @@ class ConsoleLink:
         if payload is None:
             if self._monitor is not None:
                 self._monitor.note_query_timeout()
-            raise StateQueryError(
+            raise ConsoleSilentError(
                 f"no props reply for {path!r} {tuple(property_names)!r} within "
                 f"{self._timeouts.state_query_seconds}s"
             )
