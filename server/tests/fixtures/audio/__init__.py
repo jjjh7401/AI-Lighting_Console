@@ -33,8 +33,12 @@ __all__ = [
     "FIXTURE_BPM",
     "FIXTURE_D_LEVELS",
     "FIXTURE_DURATION_MS",
+    "LONG_FIXTURE_BOUNDARIES_MS",
+    "LONG_FIXTURE_DURATION_MS",
+    "LONG_SECTION_GAINS",
     "SAMPLE_RATE",
     "SECTION_GAINS",
+    "synthesize_long_section_track",
     "synthesize_track",
 ]
 
@@ -64,10 +68,26 @@ _DRONE_HZ = 220.0
 _DRONE_MIX = 0.15
 
 
-def _section_index(time_seconds: float) -> int:
+#: 긴 구간 픽스처 — 마디 분할이 **실제로 걸리는** 유일한 합성 트랙 (카드 t308).
+#:
+#: 위 40초 픽스처는 가장 긴 구간이 16초라, 8마디 단위 둘(129 BPM 에서 29.7초)에
+#: 원리적으로 못 닿는다. 그래서 t306 까지 분할 경로의 시험은 전부 손으로 만든
+#: ``ConfirmedSongAnalysis`` 위에서 돌았고, DSP 가 쪼갤 수 있는 구간을 실제로
+#: 내놓는지는 **아무도 안 쟀다**. 이 픽스처가 그 구멍을 메운다.
+#:
+#: 35초 두 구간을 고른 근거: 129.199 BPM · 4/4 에서 8마디 = 14.86초이므로 두
+#: 단위가 29.72초다. 35초는 그 문턱을 넘으면서 3단위(44.6초)에는 못 미쳐,
+#: 구간마다 큐가 정확히 둘 나온다 — 회전이 한 바퀴 돌아 앞 큐와 같아지는
+#: 갈래(``cue_density`` 의 @MX:WARN)를 건드리지 않는다.
+LONG_SECTION_GAINS = (0.30, 0.90)
+LONG_FIXTURE_BOUNDARIES_MS = (0, 35_000)
+LONG_FIXTURE_DURATION_MS = 70_000
+
+
+def _index_for(time_seconds: float, boundaries_ms: tuple[int, ...]) -> int:
     """이 시각이 몇 번째 구간인가 — 경계 목록을 그대로 읽는다."""
     index = 0
-    for boundary_index, boundary_ms in enumerate(FIXTURE_BOUNDARIES_MS):
+    for boundary_index, boundary_ms in enumerate(boundaries_ms):
         if time_seconds * 1000.0 >= boundary_ms:
             index = boundary_index
     return index
@@ -85,12 +105,51 @@ def synthesize_track(
     바이트열이기 때문이다. 임시 파일을 거치면 「분석 중 파일 시스템 접촉 0건」을
     확인하는 시험이 자기 픽스처 때문에 못 서게 된다.
     """
+    return _render(
+        bpm=bpm,
+        duration_ms=duration_ms,
+        sample_rate=sample_rate,
+        boundaries_ms=FIXTURE_BOUNDARIES_MS,
+        gains=SECTION_GAINS,
+    )
+
+
+def synthesize_long_section_track(
+    *,
+    bpm: float = FIXTURE_BPM,
+    duration_ms: int = LONG_FIXTURE_DURATION_MS,
+    sample_rate: int = SAMPLE_RATE,
+) -> bytes:
+    """구간이 **8마디 단위 둘을 넘는** 트랙 — 분할 경로의 유일한 합성 입력.
+
+    파형 규칙은 :func:`synthesize_track` 과 한 벌을 함께 쓴다. 다른 것은 구간
+    경계와 이득뿐이다(:data:`LONG_FIXTURE_BOUNDARIES_MS` ·
+    :data:`LONG_SECTION_GAINS`) — 파형 규칙을 두 벌 두면 갈라지고, 갈라지면 두
+    픽스처가 서로 다른 분석기를 재게 된다.
+    """
+    return _render(
+        bpm=bpm,
+        duration_ms=duration_ms,
+        sample_rate=sample_rate,
+        boundaries_ms=LONG_FIXTURE_BOUNDARIES_MS,
+        gains=LONG_SECTION_GAINS,
+    )
+
+
+def _render(
+    *,
+    bpm: float,
+    duration_ms: int,
+    sample_rate: int,
+    boundaries_ms: tuple[int, ...],
+    gains: tuple[float, ...],
+) -> bytes:
     beat_period = 60.0 / bpm
     total_samples = int(sample_rate * duration_ms / 1000.0)
     frames = bytearray()
     for n in range(total_samples):
         t = n / sample_rate
-        gain = SECTION_GAINS[_section_index(t)]
+        gain = gains[_index_for(t, boundaries_ms)]
         phase = math.fmod(t, beat_period)
         if phase < _CLICK_LENGTH_SECONDS:
             click = math.exp(-phase / _CLICK_DECAY_SECONDS) * math.sin(
