@@ -4,6 +4,10 @@
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
+- plan_status: audit-ready
+- plan_complete_at: 2026-09-06
+- plan-audit: 1차 FAIL 0.80 → 2차 **PASS 0.96** (`.moai/reports/plan-audit/SPEC-COPILOT-SONGCONFIRM-001-review-{1,2}.md`); 잔여 N1·N2 를 0.1.2 로 반영. 워크트리 `t273`(브랜치 `WT-song-confirm`, base main `72e4ca6` — POOLEMPTY-001 plan 포함).
+
 - SPEC 작성 완료 2026-09-06 — `spec.md` · `plan.md` · `acceptance.md` (Tier M) + 이 파일. 카드 t273.
 - SPEC ID 정규식 검사(Bash 실행): `ID="SPEC-COPILOT-SONGCONFIRM-001"; [[ "$ID" =~ ^SPEC(-[A-Z][A-Z0-9]*)+-[0-9]{3}$ ]] && echo PASS || echo FAIL` → `PASS`.
 - **기준 트리**: 워크트리 `.claude/worktrees/agent-ab693b5114839dea5`, `git rev-parse --short HEAD` → **`f727e11`**(= main, 실브라우저 보고서의 기준과 같은 커밋). 인용한 모든 행 번호는 이 HEAD 에서 되읽었다.

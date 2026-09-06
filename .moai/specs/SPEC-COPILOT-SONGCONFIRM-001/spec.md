@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-SONGCONFIRM-001
 title: "곡 분석 확정의 도달 — 사람이 확인한 구간과 BPM 이 모델과 도구에 닿는다"
-version: "0.1.1"
+version: "0.1.2"
 status: draft
 created: 2026-09-06
 updated: 2026-09-06
@@ -35,6 +35,7 @@ depends_on: [SPEC-COPILOT-MUSICSYNC-001]
 |---|---|---|---|
 | 2026-09-06 | 0.1.0 | 최초 초안. 카드 t273. 실측 기준 HEAD `f727e11`(워크트리 `agent-ab693b5114839dea5`, main 과 동일 커밋). REQ 16 · AC 16(Tier M 상한 정확 소진). | `reports/musicsync-browser-check-20260906.md` 발견 3 + 같은 날 실측 3건(위 인용문) |
 | 2026-09-06 | 0.1.1 | plan-audit 1차(FAIL 0.80) 반영 — D1 diff 기준을 `merge-base` 로·슬롯 술어를 밑줄 없는 이름으로(형제 POOLEMPTY-001 의 들어올리기와 공존) · D2 라벨 **완전 일치**(항목 단위) + AC-005 (d) 접두 충돌 대조군 · D3 AC-014 ④⑤ 주석 제외 grep · D4 REQ-001/006 ↔ AC-001/002 · D5 앵커 · D8 AC-007 리터럴 고정 · D10 `related_specs` 제거 | `.moai/reports/plan-audit/SPEC-COPILOT-SONGCONFIRM-001-review-1.md` |
+| 2026-09-06 | 0.1.2 | plan-audit 2차 PASS 0.96 잔여 반영 — N1 diff 술어를 변경 행(`-U0`, `^[+-]`)으로 · N2 §E 보존 경계에 두 이름 병기 | `.moai/reports/plan-audit/SPEC-COPILOT-SONGCONFIRM-001-review-2.md` |
 
 ---
 
@@ -168,7 +169,7 @@ depends_on: [SPEC-COPILOT-MUSICSYNC-001]
 - **개발 방식**: TDD(`.moai/config/sections/quality.yaml` `constitution.development_mode`). 구간 파서는 순수 함수라 RED 를 라이브 없이 만든다.
 - **콘솔 접촉**: 0건. 전 마일스톤(REQ-SONGCONFIRM-014). 시험은 `_AnsweringChannel`(`test_web_song_audio.py:420-440`)과 `test_songcue_tool.py` 의 가짜 포트 형태를 그대로 쓴다.
 - **하위 호환**: 기록이 없을 때 바이트 동일(REQ-SONGCONFIRM-015). 기존 다섯 시험 파일 무수정.
-- **보존 경계**: `server/safety/**` · `server/audio/**` · `server/looks/**` · `server/design/**` · `ui/src/**` · `src-tauri/**` 무변경. `tools.py` 안에서는 `_timecode_slot_verdict` 본문 무변경.
+- **보존 경계**: `server/safety/**` · `server/audio/**` · `server/looks/**` · `server/design/**` · `ui/src/**` · `src-tauri/**` 무변경. `tools.py` 안에서는 슬롯 판정 함수(`_timecode_slot_verdict` / POOLEMPTY-001 착지 뒤 `timecode_slot_verdict`) 본문 무변경.
 - **층 경계**: `server/orchestrator/tools.py` 는 `server.web` 을 import 하지 않는다 — 형제 포트들(`VectorworksUploadPort` · `LayoutImageUploadPort` · `UploadedSheetPort`, `tools.py:507-541`)처럼 구조적 `Protocol` 로 받는다.
 - **BPM 정본**: 이 SPEC 은 `resolve_bpm` 의 결과를 읽을 뿐 우선순위를 다시 정하지 않는다(MUSICSYNC-001 `plan.md §C` 결정 3 유지).
 - **생산 호출자 규율**: 새 진입점마다 grep 으로 생산 호출자 1건 이상(REQ-SONGCONFIRM-016). 시험만 부르는 경로는 배달이 아니다.

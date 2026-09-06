@@ -25,7 +25,7 @@ git diff --name-only "$BASE" -- server/safety server/audio server/looks server/d
 # → 출력 0행
 
 # 슬롯 판정 무변경 (REQ-012) — 밑줄 없는 이름은 `_timecode_slot_verdict` 와 `timecode_slot_verdict` 둘 다 잡는다
-git diff "$BASE" -- server/orchestrator/tools.py | grep -c 'timecode_slot_verdict'
+git diff -U0 "$BASE" -- server/orchestrator/tools.py | grep '^[+-]' | grep -c 'timecode_slot_verdict'
 # → 0
 
 # 생산 호출자 (REQ-016) — 아래 AC-014 참조

@@ -82,7 +82,7 @@ D4 가 스키마를 바꾸고 D3 가 모델 지시문을 정하므로 그 둘을
 uv run pytest server/tests/test_songcue_confirmed_default.py server/tests/test_song_confirm_sections.py server/tests/test_songcue_tool.py server/tests/test_web_session.py server/tests/test_runner_self_correction.py server/tests/test_web_song_audio.py -q
 BASE=$(git merge-base origin/main HEAD)
 git diff --name-only "$BASE" -- server/safety server/audio server/looks server/design ui/src src-tauri   # → 0행
-git diff "$BASE" -- server/orchestrator/tools.py | grep -c 'timecode_slot_verdict'                     # → 0 (밑줄 유무 무관)
+git diff -U0 "$BASE" -- server/orchestrator/tools.py | grep '^[+-]' | grep -c 'timecode_slot_verdict'   # → 0 (변경 행만, 밑줄 유무 무관)
 ```
 
 ### 전량 검사 (M2 끝)
