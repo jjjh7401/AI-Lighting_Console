@@ -133,6 +133,7 @@ from server.orchestrator.tools import (
     ExecutionContext,
     build_toolset,
 )
+from server.orchestrator.write_reason import showfile_write_risk
 from server.prechk.query import read_properties
 from server.presets.store import preset_store_commands as _preset_store_commands
 from server.safety.approval import ApprovalItem, ApprovalRequest
@@ -4662,12 +4663,15 @@ class ChatSession:
         report = plan.to_dict()
         if not plan.commands:
             return {"executed": False, "report": report, "commands": []}
-        execution = self._registry.dispatch(
+        # 카드 t320 — 룩 번들은 Store Preset 다발이다. 문면은 계획이 아니라
+        # **나갈 명령**에서 읽는다(`showfile_write_risk`).
+        execution = self._dispatch_declared(
             ToolCall(
                 id=f"look-{plan.look_id}",
                 name="run_commands",
                 arguments={"commands": list(plan.commands)},
-            )
+            ),
+            risk=showfile_write_risk(plan.commands, kind="look_bundle"),
         )
         return {
             "executed": not execution.result.is_error,
@@ -5201,8 +5205,12 @@ class ChatSession:
             preset_note = (
                 f" 이어서 Position 프리셋 2.{preset_no}에 '{look_label}'로 저장을 요청했습니다."
             )
-        executed = self._registry.dispatch(
-            ToolCall(id="look-write", name="run_commands", arguments={"commands": commands})
+        # 카드 t320 — 프리셋 저장을 지시한 문장에서만 `Store Preset 2.<n>` 이
+        # 붙는다. 안 붙은 회차는 프로그래머 값뿐이라 `showfile_write_risk` 가
+        # `None` 을 답하고 선언이 카드를 만들지 않는다 — 그게 옳다.
+        executed = self._dispatch_declared(
+            ToolCall(id="look-write", name="run_commands", arguments={"commands": commands}),
+            risk=showfile_write_risk(commands, kind="look_pan_tilt"),
         )
         skipped_note = (
             f" 중심과 겹치거나 틸트 한계를 넘는 {len(skipped)}대(FID "
@@ -5497,12 +5505,13 @@ class ChatSession:
             )
         except SpatialPointingError as error:
             return self._pointing_refusal(f"포지션 이펙트 명령을 만들 수 없습니다: {error}")
-        executed = self._registry.dispatch(
+        executed = self._dispatch_declared(
             ToolCall(
                 id="position-fx-write",
                 name="run_commands",
                 arguments={"commands": list(commands)},
-            )
+            ),
+            risk=showfile_write_risk(commands, kind="position_fx_sequence"),
         )
         span_end = fx_preset_start + len(FX_POSITION_SEQUENCE) - 1
         reply = (
@@ -5621,12 +5630,14 @@ class ChatSession:
         )
         if not consented:
             return ("실행기 미할당 — 시퀀스는 저장된 상태 그대로입니다.", ())
-        executed = self._registry.dispatch(
+        assign_commands = [f"Assign Sequence {sequence_no} At Executor {target}"]
+        executed = self._dispatch_declared(
             ToolCall(
                 id="position-fx-assign",
                 name="run_commands",
-                arguments={"commands": [f"Assign Sequence {sequence_no} At Executor {target}"]},
-            )
+                arguments={"commands": list(assign_commands)},
+            ),
+            risk=showfile_write_risk(assign_commands, kind="fx_executor_assign"),
         )
         outcomes = tuple(executed.command_outcomes)
         after = self._page_one_executors(probe_id="position-fx-executor-readback")
@@ -5870,12 +5881,13 @@ class ChatSession:
             commands = _phaser_sequence_commands(pool_no, fids, slot, sequence_no, label)
         except SpatialPointingError as error:
             return self._pointing_refusal(f"페이저 시퀀스 명령을 만들 수 없습니다: {error}")
-        executed = self._registry.dispatch(
+        executed = self._dispatch_declared(
             ToolCall(
                 id="phaser-recall-sequence-write",
                 name="run_commands",
                 arguments={"commands": list(commands)},
-            )
+            ),
+            risk=showfile_write_risk(commands, kind="phaser_recall_sequence"),
         )
         disclosure_note = f" {disclosure}" if disclosure else ""
         reply = (
@@ -6131,12 +6143,13 @@ class ChatSession:
                 *_preset_store_commands(pool_no, preset_no, label),
                 "ClearAll",
             ]
-            executed = self._registry.dispatch(
+            executed = self._dispatch_declared(
                 ToolCall(
                     id=f"{bundle}-{preset_no}",
                     name="run_commands",
                     arguments={"commands": commands},
-                )
+                ),
+                risk=showfile_write_risk(commands, kind="position_preset_look"),
             )
             outcomes.extend(executed.command_outcomes)
             stored.append(f"{pool_no}.{preset_no} '{label}'")
@@ -7407,12 +7420,13 @@ class ChatSession:
             ]
         except SpatialPointingError as error:
             return self._pointing_refusal(f"큐 저장 명령을 만들 수 없습니다: {error}")
-        executed = self._registry.dispatch(
+        executed = self._dispatch_declared(
             ToolCall(
                 id="cue-store-write",
                 name="run_commands",
                 arguments={"commands": commands},
-            )
+            ),
+            risk=showfile_write_risk(commands, kind="position_cue_store"),
         )
         fade_note = f" 페이드 {fade_seconds:g}초로" if fade_seconds is not None else ""
         return InstructionResult(
@@ -7513,12 +7527,13 @@ class ChatSession:
             return self._pointing_refusal(f"포지션 큐 시트를 만들 수 없습니다: {error}")
         outcomes: list[CommandOutcome] = []
         for plan, bundle in zip(sheet.plans, sheet.bundles, strict=True):
-            executed = self._registry.dispatch(
+            executed = self._dispatch_declared(
                 ToolCall(
                     id=f"song-sheet-cue-{plan.cue_no:g}",
                     name="run_commands",
                     arguments={"commands": list(bundle)},
-                )
+                ),
+                risk=showfile_write_risk(bundle, kind="position_cue_sheet"),
             )
             outcomes.extend(executed.command_outcomes)
         lines: list[str] = []
@@ -8629,12 +8644,13 @@ class ChatSession:
             f"Store Sequence {sequence_no} Cue {cue_no} /Merge",
             "ClearAll",
         )
-        executed = self._registry.dispatch(
+        executed = self._dispatch_declared(
             ToolCall(
                 id="rehearsal-cue-edit" if live else "timeline-cue-edit",
                 name="run_commands",
                 arguments={"commands": list(commands)},
-            )
+            ),
+            risk=showfile_write_risk(commands, kind="timeline_cue_merge"),
         )
         failed = [
             outcome
@@ -9274,12 +9290,13 @@ class ChatSession:
             if slot != source:
                 commands.append(f"Copy Sequence {source} At {slot}")
             commands.append(f"Assign Sequence {slot} At Executor {exec_no}")
-        executed = self._registry.dispatch(
+        executed = self._dispatch_declared(
             ToolCall(
                 id="setlist-assign-bundle",
                 name="run_commands",
                 arguments={"commands": commands},
-            )
+            ),
+            risk=showfile_write_risk(commands, kind="setlist_assign"),
         )
         failed = [
             outcome
@@ -9957,7 +9974,7 @@ class ChatSession:
     # @MX:REASON: 선언이 조용히 사라지면 「0건 나갔다」가 거절·무작업과 구별되지
     #   않는다(SPEC-COPILOT-WRITEGATE-001). 새 심사 통로가 아니라 기존
     #   디스패치의 유일한 선언 입구다 — 게이트의 `@MX:ANCHOR` 는 그대로 하나다.
-    def _dispatch_declared(self, call: ToolCall, *, risk: BatchRisk):
+    def _dispatch_declared(self, call: ToolCall, *, risk: BatchRisk | None):
         """선언을 실어 디스패치한다 — 실을 수 없으면 조용한 0건 대신 크게 깨진다.
 
         배선 확인은 **호출 전** `Signature.bind` 로 한다. 핸들러를 돌리지 않고
@@ -9967,6 +9984,11 @@ class ChatSession:
 
         쓸 것이 없는 회차는 여기까지 오지 않는다. 이 함수는 이미 만들어진
         명령 묶음에만 붙는다.
+
+        카드 t320 — `risk` 는 `None` 일 수 있다. `showfile_write_risk` 가
+        **나갈 명령**에서 쇼파일 쓰기를 못 읽으면 그렇게 답하고(프로그래머 값만
+        찍는 번들), 그 회차는 선언으로 인한 카드를 띄우지 않는다. 배선 확인은
+        그대로 한다 — 선언을 못 싣는 레지스트리는 선언이 있든 없든 사고다.
         """
         context = ExecutionContext(risk=risk)
         dispatch = self._registry.dispatch
@@ -9975,7 +9997,8 @@ class ChatSession:
         except TypeError as error:
             raise WriteGateDeclarationError(
                 f"{type(self._registry).__name__}.dispatch 가 번들 위험 선언"
-                f"(kind={risk.kind!r})을 실은 ExecutionContext 를 받지 못합니다 — "
+                f"(kind={getattr(risk, 'kind', None)!r})을 실은 ExecutionContext 를 "
+                "받지 못합니다 — "
                 "선언 없이 보내면 승인 카드 없이 쇼파일이 고쳐지므로 아무것도 "
                 f"보내지 않았습니다: {error}"
             ) from error
