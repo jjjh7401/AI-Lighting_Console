@@ -5,7 +5,7 @@ combination order + zero Store flags) · AC-SCENE-010 (no /Overwrite, no
 /Merge) · AC-SCENE-011 (value-line collision guard, both boundaries) ·
 AC-SCENE-012 (the forbidden `At Step <k>` form) · AC-SCENE-013 (number
 acquisition safety) · AC-SCENE-014 (trigger shape + executor never automatic)
-· AC-SCENE-023 (uniform attribute set ordering, full 32-look sweep).
+· AC-SCENE-023 (uniform attribute set ordering, full 34-look sweep).
 
 Console contact: zero. Every assertion is at the STRING level over the exact
 commands the gate would see. Fx/look entries are built in memory (M2's scene
@@ -790,12 +790,15 @@ def test_effect_lines_come_after_the_look_line_in_a_collided_scene():
 
 
 # =============================================================================
-# AC-SCENE-023 — uniform attribute set ordering (full 32-look sweep)
+# AC-SCENE-023 — uniform attribute set ordering (full 34-look sweep)
 # =============================================================================
 
 
-def test_the_real_library_has_thirty_two_looks():
-    assert len(REAL_LOOKS) == 32
+def test_the_real_library_has_thirty_four_looks():
+    # 2026-09-06 (SPEC-COPILOT-D1GRANT-001): 32→34. cyc 없는 리그에서 큐를 못 받던
+    # edm·rock 의 dynamics-1 구간을 위해 묶이는 D1 룩을 하나씩 더했다. 이 수의
+    # 요지는 리터럴이 아니라 아래 스윕이 **전량**을 돈다는 비공허 근거다.
+    assert len(REAL_LOOKS) == 34
 
 
 @pytest.mark.parametrize("look", REAL_LOOKS, ids=[look.look_id for look in REAL_LOOKS])

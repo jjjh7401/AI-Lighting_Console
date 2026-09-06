@@ -62,18 +62,28 @@ def _real_library():
     return load_library_from_dir(Path("server/looks/library"))
 
 
-def _live_call() -> tuple[object, dict]:
-    """실기 리그 + 실기 룩 라이브러리로 실기 지시문을 한 번 돌린다."""
+#: 어느 역할에도 안 걸리는 리그 — 고지 기제를 계속 재기 위한 자리.
+#: 실기 리그가 이제 네 구간을 전부 덮으므로(아래 첫 테스트), 「건너뛴 구간이
+#: 있을 때 고지가 나오는가」를 실기 리그로는 더 이상 못 잰다. 계측기를 지우는
+#: 대신 여전히 건너뛰는 리그로 옮긴다.
+_UNBINDABLE_RIG_GROUPS: tuple[tuple[int, str], ...] = (
+    (1, "FIXTURE-1"),
+    (2, "FIXTURE-2"),
+    (3, "FIXTURE-3"),
+)
+
+
+def _call_with_rig(groups: tuple[tuple[int, str], ...], call_id: str) -> tuple[object, dict]:
     registry = build_toolset(
         execution_port=_RecordingPort(),
-        state_port=_SongCueStatePort(_tree(groups=_REAL_RIG_GROUPS)),
+        state_port=_SongCueStatePort(_tree(groups=groups)),
         bundle_gate=None,
         look_library=_real_library(),
         rig_paths=None,
     )
     execution = registry.dispatch(
         ToolCall(
-            id="songcue-t277",
+            id=call_id,
             name="prepare_songcue",
             arguments={
                 "song_title": "Synth Test",
@@ -86,29 +96,45 @@ def _live_call() -> tuple[object, dict]:
     return execution, json.loads(execution.result.content)
 
 
-def test_live_rig_drops_the_first_section_without_a_cue():
-    """회귀 고정 — 이 리그에서 첫 구간은 큐를 못 받는다(건너뜀은 옳다)."""
-    _execution, payload = _live_call()
+def test_live_rig_now_covers_every_section():
+    """이 카드가 관측한 손해가 닫혔다 — 4건 확정에 4건 저장 (교체된 회귀 고정).
+
+    **전** (2026-09-06 실기 회차, 이 파일이 태어난 이유): 같은 호출이
+    ``section_count == 4`` · ``generated_count == 3`` 을 답했고, 저장된 것은
+    ``["Build", "Drop", "Outro"]``, 버려진 것은 ``["Intro"]`` 였으며 그 사유는
+    ``reason_kind == "role_unaddressed"`` 였다. EDM 의 유일한 D1 룩
+    ``edm-ambient-hold`` 이 요구하는 ``배경`` 역할에 묶을 그룹이 실기 리그에
+    없었기 때문이다. 그 건너뜀은 옳았고, 결함은 침묵이었다.
+
+    **후** (SPEC-COPILOT-D1GRANT-001): ``edm-haze-shafts``(역할 ``백라이트``)가
+    라이브러리에 들어오면서 ``Intro`` 가 묶을 룩을 얻었다. 이제 네 구간이 전부
+    큐를 받으므로 버려지는 구간이 없다 — 이 테스트가 재는 것은 그 사실이다.
+    고지 기제 자체는 아래 ``_UNBINDABLE_RIG_GROUPS`` 로 계속 측정된다.
+    """
+    _execution, payload = _call_with_rig(_REAL_RIG_GROUPS, "songcue-t277")
 
     report = payload["report"]
     assert report["summary"]["section_count"] == 4
-    assert report["summary"]["generated_count"] == 3
+    assert report["summary"]["generated_count"] == 4
     stored = [cue["name"] for cue in report["generated_cues"]]
-    assert stored == ["Build", "Drop", "Outro"]
-    dropped = [section["name"] for section in report["unmapped_sections"]]
-    assert dropped == ["Intro"]
-    assert report["unmapped_sections"][0]["reason_kind"] == "role_unaddressed"
+    assert stored == ["Intro", "Build", "Drop", "Outro"]
+    assert report["unmapped_sections"] == []
 
 
 def test_operator_notice_names_the_gap_the_count_and_the_missing_role():
-    """감독이 읽는 한 문장 — 몇 건 중 몇 건, 어느 구간이, 왜."""
-    execution, _payload = _live_call()
+    """감독이 읽는 한 문장 — 몇 건 중 몇 건, 어느 구간이, 왜.
 
+    실기 리그가 아니라 어느 역할에도 안 걸리는 리그로 잰다. 실기 리그는 이제
+    건너뛰는 구간이 없어 고지가 비고, 빈 고지로는 「고지가 만들어지는가」를
+    확인할 수 없다 — 계측기가 공허해진다.
+    """
+    execution, payload = _call_with_rig(_UNBINDABLE_RIG_GROUPS, "songcue-t277-unbindable")
+
+    assert payload["report"]["summary"]["unmapped_count"] > 0
     notice = execution.operator_notice
     assert notice, "건너뛴 구간이 있는데 감독용 고지가 비어 있다"
-    assert "구간 4건 중 큐 3건" in notice
+    assert "구간 4건 중 큐 0건" in notice
     assert "Intro" in notice
-    assert "배경" in notice
 
 
 def test_notice_is_empty_when_every_section_got_a_cue():
@@ -139,29 +165,13 @@ def test_notice_is_empty_when_every_section_got_a_cue():
 
 
 def test_notice_is_built_from_the_report_alone():
-    """보고 계층이 고지의 주인이다 — 도구 핸들러는 옮기기만 한다."""
-    _execution, payload = _live_call()
-    del payload  # 아래는 보고 객체만으로 같은 문장이 나오는지 본다.
+    """보고 계층이 고지의 주인이다 — 도구 핸들러는 옮기기만 한다.
 
-    registry = build_toolset(
-        execution_port=_RecordingPort(),
-        state_port=_SongCueStatePort(_tree(groups=_REAL_RIG_GROUPS)),
-        bundle_gate=None,
-        look_library=_real_library(),
-        rig_paths=None,
-    )
-    execution = registry.dispatch(
-        ToolCall(
-            id="songcue-t277-report",
-            name="prepare_songcue",
-            arguments={
-                "song_title": "Synth Test",
-                "genre": "EDM",
-                "timecode_number": 7,
-                "sections": [dict(section) for section in _LIVE_SECTIONS],
-            },
-        )
-    )
+    실기 리그가 아니라 건너뛰는 리그로 잰다. 실기 리그의 고지는 이제 빈
+    문자열이라 「보고 객체만으로 같은 문장이 나오는가」를 확인할 수 없다.
+    """
+    execution, _payload = _call_with_rig(_UNBINDABLE_RIG_GROUPS, "songcue-t277-report")
+
     assert build_songcue_report is not None
     assert execution.operator_notice.endswith(".")
 

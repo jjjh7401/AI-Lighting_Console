@@ -24,10 +24,15 @@ from server.looks.loader import load_library_from_dir
 
 _BUSKING_MODULE = Path("server/looks/busking.py")
 
-# 출하 자산 실측(plan-phase 계수, 2026-07-27). 이 수는 라이브러리 자산의
-# 사실이며, 여기 박아 두는 이유는 AC-BUSKWIZ-001 ①이 요구하는 "EDM 9룩이
-# 9건 그대로"를 기대값 있는 테스트로 만들기 위해서다.
-_EXPECTED_COUNTS = {"worship": 8, "rock": 8, "ballad": 7, "edm": 9}
+# 출하 자산 실측. 이 수는 라이브러리 자산의 사실이며, 여기 박아 두는 이유는
+# AC-BUSKWIZ-001 ①이 요구하는 "장르 전량이 그대로 돌아온다"를 기대값 있는
+# 테스트로 만들기 위해서다.
+#
+# 2026-09-06 갱신 (SPEC-COPILOT-D1GRANT-001): edm 9→10, rock 8→9. cyc/호리 계열이
+# 없는 실기 리그에서 두 장르의 유일한 D1 룩이 어디에도 안 묶여 곡의 가장 조용한
+# 구간이 큐를 못 받았고, 그 구멍을 묶이는 D1 룩 하나씩으로 닫았다. 숫자가 바뀐
+# 것이 아니라 라이브러리가 커졌다.
+_EXPECTED_COUNTS = {"worship": 8, "rock": 9, "ballad": 7, "edm": 10}
 
 
 @pytest.fixture(scope="module")
@@ -42,13 +47,14 @@ class TestGenreLookupIsComplete:
     def test_every_genre_returns_its_whole_set(self, library, genre, expected):
         assert len(looks_for_genre(library, genre)) == expected
 
-    def test_edm_nine_looks_survive(self, library):
+    def test_edm_ten_looks_survive(self, library):
         # AC-BUSKWIZ-001 ① — 이 한 케이스가 절단 경로 미접촉의 증명이다.
-        # matching.MAX_TOOL_MATCHES == 8 이므로 그 경로를 탔다면 9번째가 사라진다.
+        # 요지는 리터럴이 아니라 `len(edm) > MAX_TOOL_MATCHES` 다: 절단 경로를
+        # 탔다면 MAX_TOOL_MATCHES(=8)를 넘는 만큼이 조용히 사라진다.
         from server.looks.matching import MAX_TOOL_MATCHES
 
         edm = looks_for_genre(library, "edm")
-        assert len(edm) == 9
+        assert len(edm) == 10
         assert len(edm) > MAX_TOOL_MATCHES
 
     def test_return_shape_carries_no_truncation_signal(self, library):

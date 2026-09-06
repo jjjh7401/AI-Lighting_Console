@@ -38,7 +38,10 @@ from server.tests.busking_fixtures import (
 _REPORT_MODULE = Path("server/looks/report.py")
 
 # plan-phase 실측을 본 테스트가 **직접 재측정**해 기대값으로 쓴다.
-_PAIR_COUNTS = {"worship": 25, "rock": 26, "ballad": 20, "edm": 26}
+#
+# 2026-09-06 갱신 (SPEC-COPILOT-D1GRANT-001): rock 26→27, edm 26→27. 새 D1 룩이
+# 장르당 하나씩 들어왔고 각각 역할을 **하나**만 선언하므로 쌍 수가 1씩 는다.
+_PAIR_COUNTS = {"worship": 25, "rock": 27, "ballad": 20, "edm": 27}
 
 
 @pytest.fixture(scope="module")
@@ -102,7 +105,8 @@ class TestUnmappedRoles:
         for look in looks:
             for role in look.roles:
                 contributions[role] = contributions.get(role, 0) + 1
-        assert max(contributions.values()) == 7, "rock `사이드` 7룩 — 경계 케이스"
+        # 2026-09-06: `rock-wing-embers`(역할 `사이드` 하나)가 들어와 7→8.
+        assert max(contributions.values()) == 8, "rock `사이드` 8룩 — 경계 케이스"
 
     def test_match_verdicts_and_section_failures_are_separate_kinds(self, library):
         # 매칭 판정 3종과 섹션 실패 전파는 서로 다른 사실이다 — 합치지 않는다.

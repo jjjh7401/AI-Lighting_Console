@@ -234,34 +234,47 @@ class TestInstrumentIsNotVacuous:
         assert look_id == _naive_first_match(library, genre, (4,))
 
 
-class TestWhatThisFixCannotReach:
-    """정직한 기록: (1,) 만 요청하는 어휘는 edm·rock 에서 여전히 X 다.
+class TestTheQuietBandIsNowCoveredEverywhere:
+    """``TestWhatThisFixCannotReach`` 의 **교체본**이다 (SPEC-COPILOT-D1GRANT-001).
 
-    선택기가 못 고르는 것이 아니라 **고를 것이 없다** — 두 장르의 D1 룩은 각각
-    하나뿐이고 그 룩의 역할은 ``배경`` 뿐이다. 이것을 O 로 만들려면 라이브러리에
-    룩을 더해야 하는데, 그 대안은 cyc 리그 출력을 바꾸므로 이 카드가 기각했다.
+    **전** (카드 t278 이 남긴 기록): ``(1,)`` 만 요청하는 어휘는 edm·rock 에서 X 였다.
+    두 장르의 D1 룩은 각각 **하나뿐**이고 그 역할은 ``("배경",)`` 뿐이라, 실기 리그에서
+    아무 그룹에도 안 묶였다. 그래서 옛 클래스는 세 가지를 단언했다 — edm·rock 의 D1
+    역할 목록이 정확히 ``[("배경",)]`` 이라는 것, 그 두 장르에서
+    ``_stored_cues(..., "ambient", _REAL_RIG)`` 가 ``[]`` 라는 것, 그리고 묶이는 D1 룩을
+    이미 가진 ballad·worship 은 O 라는 것. 선택기가 못 고르는 것이 아니라 **고를 것이
+    없었고**, 그 잔여를 정직하게 못박은 자리였다.
 
-    아래 단언은 **사유까지** 잰다. 라이브러리가 나중에 묶이는 D1 룩을 얻으면 이
-    테스트가 실패하며, 그것이 이 기록을 갱신하라는 신호다.
+    **후**: SPEC-COPILOT-D1GRANT-001 이 ``edm-haze-shafts``(``백라이트``)와
+    ``rock-wing-embers``(``사이드``)를 라이브러리에 넣었다. 두 장르가 이제 **묶이는**
+    D1 룩을 가지므로 ``ambient`` 밴드가 큐를 받는다. 옛 클래스는 설계대로 실패했고 —
+    그 실패가 갱신 신호였다 — 삭제 대신 이 클래스로 교체된다.
+
+    새 단언은 **네 장르 전부**를 잰다. 「edm·rock 이 고쳐졌다」가 아니라 「어느 장르도
+    조용한 구간을 잃지 않는다」가 이제 지켜야 할 성질이기 때문이다.
     """
 
-    @pytest.mark.parametrize("genre", ("edm", "rock"))
-    def test_those_genres_have_exactly_one_d1_look_and_it_is_backdrop_only(self, library, genre):
+    @pytest.mark.parametrize("genre", _GENRES)
+    def test_every_genre_has_a_d1_look_this_rig_can_bind(self, library, genre):
+        # 사유까지 잰다: 실기 18그룹에서 `탑`·`배경` 은 `no_match` 이므로, 그 둘의
+        # 부분집합인 역할만 가진 D1 룩은 어디에도 안 묶인다.
         d1 = [look for look in looks_for_genre(library, genre) if look.dynamics == 1]
+        bindable = [look for look in d1 if set(look.roles) - {"탑", "배경"}]
 
-        assert [look.roles for look in d1] == [("배경",)]
+        assert bindable, f"{genre}: D1 에 묶이는 룩이 없다"
 
-    @pytest.mark.parametrize("genre", ("edm", "rock"))
-    def test_the_ambient_only_band_still_has_no_cue(self, library, genre):
-        assert _stored_cues(library, genre, "ambient", _REAL_RIG) == []
-
-    @pytest.mark.parametrize("genre", ("ballad", "worship"))
-    def test_the_ambient_only_band_is_covered_where_a_bindable_d1_exists(self, library, genre):
+    @pytest.mark.parametrize("genre", _GENRES)
+    def test_the_ambient_only_band_now_stores_a_cue(self, library, genre):
         assert _stored_cues(library, genre, "ambient", _REAL_RIG)
 
 
 def test_the_matrix_is_recorded_for_the_report(library):
-    """보고서에 싣는 O/X 행렬을 한 자리에서 만든다 — 요약이 아니라 실측이다."""
+    """보고서에 싣는 O/X 행렬을 한 자리에서 만든다 — 요약이 아니라 실측이다.
+
+    전량 O 인 행렬만으로는 「재서 통과했다」와 「계측기가 공허하다」가 밖에서 구별되지
+    않는다. 그래서 같은 함수 안에서 음성 대조 행렬을 함께 만든다 — 어느 역할에도 안
+    걸리는 리그에서는 같은 계측기가 전량 X 를 답해야 한다.
+    """
     matrix = {
         genre: "".join(
             "O" if _stored_cues(library, genre, name, _REAL_RIG) else "X"
@@ -269,10 +282,23 @@ def test_the_matrix_is_recorded_for_the_report(library):
         )
         for genre in _GENRES
     }
+    unbindable = {
+        genre: "".join(
+            "O" if _stored_cues(library, genre, name, _UNBINDABLE_RIG) else "X"
+            for name, _band in _SECTION_BANDS
+        )
+        for genre in _GENRES
+    }
 
     assert matrix == {
         "ballad": "OOOOO",
-        "edm": "XOOOO",
-        "rock": "XOOOO",
+        "edm": "OOOOO",
+        "rock": "OOOOO",
         "worship": "OOOOO",
+    }
+    assert unbindable == {
+        "ballad": "XXXXX",
+        "edm": "XXXXX",
+        "rock": "XXXXX",
+        "worship": "XXXXX",
     }

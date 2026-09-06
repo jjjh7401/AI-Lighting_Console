@@ -80,7 +80,10 @@ class TestEveryBlueGreenEntryHasATwin:
     def test_the_invariant_has_entries_to_check(self, library):
         # Non-vacuity: an empty '푸른' inventory satisfies the assertion above,
         # and would also be the shape if the asset files went missing.
+        # 2026-09-06 (SPEC-COPILOT-D1GRANT-001): `edm-haze-shafts` 가 들어오면서
+        # 5→6 건, 3→4 룩. 새 룩은 심청색이라 `푸른` 을 쓰고, 이 불변식이 요구하는
+        # 대로 같은 슬롯에 `파란` 쌍을 함께 싣는다.
         entries = self._entries(library)
-        assert len(entries) == 5
+        assert len(entries) == 6
         assert {slot for _id, slot, _term in entries} == {"aliases", "mood_keywords"}
-        assert len({look_id for look_id, _slot, _term in entries}) == 3
+        assert len({look_id for look_id, _slot, _term in entries}) == 4

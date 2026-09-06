@@ -337,6 +337,69 @@ _LOOKS_GRANTED_LINE_PAIRS = {
     ),
 }
 
+#: 2026-09-06 granted addition — SPEC-COPILOT-D1GRANT-001. cyc/호리 계열 그룹이
+#: 없는 실기 리그에서 edm·rock 의 유일한 dynamics-1 룩은 역할이 ``배경`` 하나뿐이라
+#: 어디에도 안 묶였고, 곡의 가장 조용한 구간이 큐를 하나도 못 받았다(카드 t277 실측).
+#: 그 구멍은 선택 로직으로 못 닫는다 — 고를 것이 없다(카드 t278). 이 승인은 **파일
+#: 둘에 룩 하나씩**을 열고 그 이상은 열지 않는다.
+#:
+#: 이것은 닫힌 SPEC(PRECHK)의 선언을 개정하는 것이 아니라 **새 SPEC 이 자기 이름으로
+#: 발급하는 예외**다 — 이 파일의 다른 세 승인(``_RULEBOOK_GRANTED_ADDITIONS`` ·
+#: ``_RULEBOOK_GRANTED_APPEND`` · ``_CONSOLE_LUA_GRANTED_REVISION_DIGESTS``)이 전부
+#: 같은 경로를 밟았다. PRECHK 가 룩 계층을 「안 건드렸다」는 역사적 사실은 이 추가
+#: 뒤에도 참이다.
+#:
+#: 다이제스트가 아니라 **정확한 줄 텍스트**로 못박는다: 룩 정의는 사람이 감사해야 할
+#: 내용이지 불투명한 개정이 아니다. 경로 이름만 적으면 승인 파일 안에서 무엇이든
+#: 추가 가능해져 「파일당 룩 하나」라는 폭이 안 잡힌다.
+#:
+#: 실기 발사 0건 — 색·밝기는 같은 파일 안 이웃 룩에서 역산한 설계값이다.
+_LOOKS_GRANTED_D1_APPENDS = {
+    "server/looks/library/edm.yaml": (
+        "",
+        "  # --- dynamics 1 (추가): cyc 없는 리그를 위한 조용한 칸 --------------------",
+        "  # SPEC-COPILOT-D1GRANT-001. 실기 리그에는 배경막 계열 그룹이 없어서",
+        "  # `edm-ambient-hold`(역할 `배경` 하나)가 어디에도 안 묶이고, 곡의 가장 조용한",
+        "  # 구간이 큐를 하나도 못 받았다. 헤더 규칙이 `프론트` 를 배제하고 `탑` 은 실기",
+        "  # 리그에서 안 묶이므로, 배경막 없이 깊이를 만드는 것은 뒤에서 오는 빛뿐이다.",
+        "  # 파일 끝에 붙어 있지만 선택 순서는 파일 위치가 아니라 look_id 사전순이 정한다.",
+        '  - look_id: "edm-haze-shafts"',
+        '    display_name: "헤이즈 샤프트"',
+        '    genre: "edm"',
+        "    dynamics: 1",
+        '    roles: ["백라이트"]',
+        '    aliases: ["헤이즈 샤프트", "haze shafts", "뒤빛 대기"]',
+        '    mood_keywords: ["어두운", "깊은", "푸른", "파란", "대기", "haze", "shafts"]',
+        "    attributes:",
+        "      Dimmer: 18",
+        "      ColorRGB_R: 0",
+        "      ColorRGB_G: 40",
+        "      ColorRGB_B: 78",
+    ),
+    "server/looks/library/rock.yaml": (
+        "",
+        "  # --- dynamics 1 (추가): cyc 없는 리그를 위한 조용한 칸 --------------------",
+        "  # SPEC-COPILOT-D1GRANT-001. `rock-empty-stage`(역할 `배경` 하나)는 배경막 계열이",
+        "  # 없는 실기 리그에서 안 묶인다. 헤더 규칙이 `프론트`·`스페셜` 을 배제하고,",
+        "  # `백라이트` 는 바로 다음 칸 `rock-verse-side`(D2)가 이미 쓰므로 여기서 선점하면",
+        "  # 벌스 진입의 대비가 사라진다. 남는 것이 `사이드` 이며, 색온도는 D2 의 차가운",
+        "  # 청과 반전된 탁한 붉은색이다.",
+        "  # 파일 끝에 붙어 있지만 선택 순서는 파일 위치가 아니라 look_id 사전순이 정한다.",
+        '  - look_id: "rock-wing-embers"',
+        '    display_name: "윙 엠버"',
+        '    genre: "rock"',
+        "    dynamics: 1",
+        '    roles: ["사이드"]',
+        '    aliases: ["윙 엠버", "wing embers", "잔불"]',
+        '    mood_keywords: ["어두운", "붉은", "탁한", "잔불", "embers", "smoulder"]',
+        "    attributes:",
+        "      Dimmer: 22",
+        "      ColorRGB_R: 65",
+        "      ColorRGB_G: 10",
+        "      ColorRGB_B: 22",
+    ),
+}
+
 _TOOLS_PATH = "server/orchestrator/tools.py"
 
 #: Protected regions of ``tools.py``, PRECHK-base relative: the programmer-state
@@ -1048,11 +1111,18 @@ class TestConsoleLuaReadmeGrantedException:
 
 
 class TestLooksLibraryGrantedExtension:
-    """The 2026-08-02 grant — exactly the sanctioned 파란 mirror, nothing else.
+    """두 승인 — 2026-08-02 파란 미러 + 2026-09-06 D1 append. 그 밖은 전부 실패.
 
     Not a weakening: the boundary stays locked, and this class IS the lock's
     new shape. Every deleted line must reappear as its paired insertion with
     파란 added; an extra file, an extra hunk, or a different wording fails.
+
+    2026-09-06 에 두 번째 승인(``_LOOKS_GRANTED_D1_APPENDS``)이 더해지면서 파일
+    집합 단언은 두 승인의 **합집합**이 됐다. 줄 텍스트 단언은 `==` 를 유지한다 —
+    부분집합(`<=`)으로 느슨하게 만들면 승인 밖의 임의 편집이 전부 통과하므로,
+    그것은 승인이 아니라 게이트의 사망이다. 추가 줄의 기대값은
+    ``[쌍의 새 줄…] + [덧붙인 블록…]`` 이며, 이 순서는 「파란」 훅(edm 옛 74행)이
+    삽입 훅(옛 EOF)보다 앞에 온다는 사실이 결정한다.
     """
 
     @staticmethod
@@ -1073,17 +1143,24 @@ class TestLooksLibraryGrantedExtension:
         # gate that is off AND green, so pin both halves: the grant has
         # entries, and the directory it exempts really did change.
         assert _LOOKS_GRANTED_LINE_PAIRS
+        assert _LOOKS_GRANTED_D1_APPENDS
         assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", _LOOKS_LIBRARY_DIR) != ""
 
-    def test_exactly_the_three_granted_files_changed(self):
+    def test_exactly_the_granted_files_changed(self):
+        # 합집합 — edm.yaml 은 두 승인 모두에, rock.yaml 은 새 승인에만,
+        # ballad.yaml·worship.yaml 은 옛 승인에만 속한다. 다섯 번째 파일은 실패한다.
         rows = _numstat(_PRECHK_BASE, _LOOKS_LIBRARY_DIR)
-        assert set(rows) == set(_LOOKS_GRANTED_LINE_PAIRS)
+        assert set(rows) == set(_LOOKS_GRANTED_LINE_PAIRS) | set(_LOOKS_GRANTED_D1_APPENDS)
 
-    def test_every_change_is_a_granted_line_pair_and_every_pair_is_present(self):
-        for path, pairs in _LOOKS_GRANTED_LINE_PAIRS.items():
+    def test_every_change_is_a_granted_line_and_every_grant_is_present(self):
+        paths = set(_LOOKS_GRANTED_LINE_PAIRS) | set(_LOOKS_GRANTED_D1_APPENDS)
+        for path in sorted(paths):
+            pairs = _LOOKS_GRANTED_LINE_PAIRS.get(path, ())
+            appended = _LOOKS_GRANTED_D1_APPENDS.get(path, ())
             deleted, added = self._diff_lines(path)
+            # 삭제는 승인된 「파란」 옛 줄뿐이다 — append 승인은 한 줄도 지우지 않는다.
             assert deleted == [old for old, _new in pairs], path
-            assert added == [new for _old, new in pairs], path
+            assert added == [new for _old, new in pairs] + list(appended), path
 
     def test_the_grant_really_is_the_blue_mirror_and_nothing_broader(self):
         # Non-vacuity + shape: each pair differs ONLY by inserting 파란 tokens.
@@ -1097,6 +1174,31 @@ class TestLooksLibraryGrantedExtension:
                 stripped = new.replace(', "파란 밤"', "").replace(', "파란 벌스"', "")
                 stripped = stripped.replace('"파란", ', "")
                 assert stripped == old
+
+    def test_each_d1_append_is_one_insertion_hunk_at_the_old_eof(self):
+        # ``TestChoreographyObservedEffectGrantedAppend`` 와 같은 모양. 순수 삽입이면
+        # 위쪽 줄이 한 줄도 안 밀리고, 그래서 「파란」 훅의 위치가 그대로 유지되며
+        # 추가 줄의 diff 순서가 결정론적이 된다 — 위 줄 텍스트 단언의 전제다.
+        for path in _LOOKS_GRANTED_D1_APPENDS:
+            hunks = [hunk for hunk in _hunks(_PRECHK_BASE, path) if hunk[1] == 0]
+            assert len(hunks) == 1, path
+            old_start, _old_count = hunks[0]
+            text = _git("show", f"{_PRECHK_BASE}:{path}")
+            assert old_start == len(text.splitlines()), path
+
+    def test_each_d1_append_carries_exactly_one_look(self):
+        # 승인의 **폭**을 기계로 고정하는 자리: 파일당 룩 하나. 같은 블록에 룩을
+        # 하나 더 끼워 넣는 것은 이 승인 밖이고, 여기서 실패한다.
+        for path, appended in _LOOKS_GRANTED_D1_APPENDS.items():
+            assert sum(line.startswith("  - look_id:") for line in appended) == 1, path
+
+    def test_the_d1_appends_delete_nothing(self):
+        # append 승인의 이름이 곧 그 경계다. rock.yaml 은 「파란」 승인에 없으므로
+        # 삭제가 0 이어야 하고, edm.yaml 의 삭제는 「파란」 옛 줄 하나뿐이다.
+        for path in _LOOKS_GRANTED_D1_APPENDS:
+            deleted, _added = self._diff_lines(path)
+            pairs = _LOOKS_GRANTED_LINE_PAIRS.get(path, ())
+            assert len(deleted) == len(pairs), path
 
 
 class TestToolsProtectedRegions:

@@ -167,7 +167,7 @@ looks:
     dynamics: 1
     roles: ["백라이트"]
     aliases: ["헤이즈 샤프트", "haze shafts", "뒤빛 대기"]
-    mood_keywords: ["어두운", "깊은", "푸른", "대기", "haze", "shafts"]
+    mood_keywords: ["어두운", "깊은", "푸른", "파란", "대기", "haze", "shafts"]
     attributes:
       Dimmer: 18
       ColorRGB_R: 0
