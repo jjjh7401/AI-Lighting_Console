@@ -42,19 +42,12 @@ _MEASURED_BPM = 129.199
 _UNIT_MS = bar_milliseconds(_MEASURED_BPM, "4/4") * BAR_UNIT_BARS
 
 #: 구간 셋: 2단위 · 1단위 · 2단위(마지막 구간은 ``end_ms`` 로 길이를 안다).
-#: 단위 수를 변주 수(다이내믹스당 룩 2개) 이하로 잡았다 — 넘기면 회전이 한 바퀴
-#: 돌아 앞 큐와 같은 큐가 나오고, 그 갈래는 아래 건너뜀 시험이 따로 잰다.
+#: 단위 수를 변주 수(다이내믹스당 룩 2개) 이하로 잡았다 — 넘겨도 t307 의 상한이
+#: 변주 수까지 잘라내므로 큐 수는 같아진다.
 _LONG_SECTIONS = (
     (0, 32_000, 1),
     (32_000, 47_000, 3),
     (47_000, 79_000, 5),
-)
-
-#: 첫 구간만 3단위 — 변주 2가지로는 셋째 큐를 다르게 만들 수 없다.
-_OVERLONG_SECTIONS = (
-    (0, 45_000, 1),
-    (45_000, 60_000, 3),
-    (60_000, 79_000, 5),
 )
 
 
@@ -208,21 +201,27 @@ class TestSkipAccountingSurvivesTheSplit:
     """카드 t277 — 사라진 큐는 어느 표에도 안 나타난다. 큐가 늘어도 그건 안 변한다."""
 
     def test_the_notice_counts_cues_not_sections_when_a_split_cue_cannot_bind(self):
-        """단위 수가 변주 수를 넘으면 셋째 큐가 첫 큐와 같아져 접힌다 — 고지가 그걸 센다.
+        """이어지는 큐가 돌려 쓸 룩을 못 묶으면 앞 큐로 되돌아가 접힌다 — 고지가 그걸 센다.
 
-        이 갈래는 t305 가 시험으로 못박은 판단(``test_a_two_colour_section_is_split``:
-        4단위 · 2색 → 큐 4건)의 뒷면이다. 상한을 씌우면 사라지지만 그것은 이
-        카드의 범위 밖이라 **고치지 않고**, 대신 조용히 사라지지 않는다는 것을
-        여기서 못박는다.
+        **재료가 바뀐 자리다.** t306 은 이 갈래를 「단위 수 > 변주 수」로 만들었다
+        (첫 구간을 3단위로 잡고 변주는 2가지 → 셋째 큐가 첫 큐와 동일).
+        t307 이 그 중복을 상한으로 없앴으므로 그 재료로는 더 이상 접힘이 생기지
+        않는다. 접힘의 **다른 원인**은 남아 있다 — 회전이 앞세운 룩이 이 리그에
+        안 묶이면 ``_select_bindable`` 이 앞 큐와 같은 룩으로 되돌아간다. 상한이
+        못 막는 갈래이므로 값 줄 충돌 방어와 고지 계산은 여전히 살아 있어야 하고,
+        이 시험이 재는 성질(고지가 구간이 아니라 **큐**를 센다)은 그대로다.
         """
-        port, payload, execution = _run(
-            record=_record(bpm=_MEASURED_BPM, sections=_OVERLONG_SECTIONS)
+        library = _library(
+            _look("d1a", dynamics=1, value=10),
+            _look("d1b", dynamics=1, value=15, roles=("존재하지않는역할",)),
+            *(_look(f"d{n}", dynamics=n, value=n * 10) for n in range(2, 6)),
         )
+        port, payload, execution = _run(record=_record(bpm=_MEASURED_BPM), library=library)
 
         density = payload["cue_density"]
-        assert density["cue_count"] == 5  # D1 3큐 + D3 1큐 + D5 1큐
+        assert density["cue_count"] == 4  # D1 2큐 + D3 1큐 + D5 1큐
         stored = len(_store_lines(port))
-        assert stored == 4, "접힌 큐가 없으면 이 시험은 아무것도 안 잰다"
+        assert stored == 3, "접힌 큐가 없으면 이 시험은 아무것도 안 잰다"
 
         notice = execution.operator_notice
         assert notice.startswith(f"구간 {density['cue_count']}건 중 큐 {stored}건만 저장했습니다")

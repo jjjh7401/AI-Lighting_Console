@@ -65,9 +65,17 @@ Timeline 밴드가 구간마다 적어 둔 값).
 다르다 — Q060 은 "강도 유지, 색만 교체", Q140 은 "색상만 순환시켜 체감
 변화 유지". 이 규칙이 표현할 수 있는 차이도 **팔레트 회전** 하나다.
 
-따라서 색이 하나뿐인 구간은 회전해도 같은 큐가 나오므로 **쪼개지 않는다**
-(`palette_sizes`). 이것이 카드의 "차이를 못 만들면 큐 하나만 내라"이고,
-그 사유는 `SplitPlan.notes` 로 밖에 나간다.
+따라서 한 구간의 큐 수는 **변주 수를 넘지 않는다**(`palette_sizes`). 색이
+하나뿐이면 큐 하나, 색이 둘이면 큐 둘까지다 — 셋째 큐는 회전이 한 바퀴 돌아
+첫 큐와 값 줄까지 같아지기 때문이다(카드 t306 실측, t307 이 상한을 씌웠다).
+
+정본은 변주가 마르면 큐를 **반복하지 않는다**. CHORUS3 의 Q130~Q160 은 색이
+겹칠 때도 강도(100·100·100·85)·무빙(FAN-OUT·CIRCLE·SWEEP-H·CIRCLE)·이펙트
+(CHASE·RAINBOW·STROBE·TWINKLE)로 갈라진다. 즉 "같은 큐를 또 내는 것"은 정본이
+한 번도 하지 않는 일이라 선택지가 아니고, 정본이 실제로 쓰는 대안은 **다른
+축**이다. 이 규칙이 가진 축은 회전 하나뿐이므로 없는 축을 지어내는 대신 큐를
+줄이고, 줄였다는 사실을 `SplitPlan.notes` 로 밖에 낸다 — 감독이 "이 구간은
+설계가 얇아졌다"를 읽을 수 있어야 한다.
 """
 
 from __future__ import annotations
@@ -194,23 +202,27 @@ def plan_cue_density(
     for index, start in enumerate(starts):
         end = starts[index + 1] if index + 1 < len(starts) else song_end_ms
         units = _unit_count(start, end, unit_ms)
-        # @MX:WARN: [AUTO] 단위 수가 변주 수보다 많으면 회전이 한 바퀴 돌아
-        #   **앞 큐와 같은 큐**가 나온다(카드 t306 실측: 3단위 · 변주 2가지 →
-        #   셋째 큐가 첫 큐와 같은 값 줄).
-        # @MX:REASON: 「같은 큐 둘은 큐 하나보다 나쁘다」는 t305 의 규칙이
-        #   ``하나뿐일 때``만 걸리고 ``모자랄 때``는 안 걸린다. 상한을 씌우면
-        #   고쳐지지만 그것은 t305 가 시험으로 못박은 판단
-        #   (``test_a_two_colour_section_is_split``: 4단위 · 2색 → 큐 4건)을
-        #   뒤집는 일이라, 업로드 경로를 나란히 놓는 이 카드의 범위 밖이다.
-        #   업로드 경로에서는 중복 큐가 값 줄 충돌로 접히고 그 사실이 감독 고지에
-        #   수로 나온다(``test_songcue_cue_density`` 참조) — 조용히 사라지지는
-        #   않는다. 인터뷰 경로에는 그 방어가 없다.
-        if units >= MIN_UNITS_TO_SPLIT and not _palette_can_differ(palette_sizes, index):
-            notes.append(
-                f"구간 {index + 1}: {variant_label}이 하나뿐이라 쪼갠 큐가 "
-                "서로 같아집니다 — 큐 하나로 둡니다"
-            )
-            units = 1
+        variants = _variant_count(palette_sizes, index)
+        # 카드 t307 — 큐 수는 **변주 수를 넘지 않는다**. 넘기면 회전이 한 바퀴
+        # 돌아 앞 큐와 값이 같은 큐가 나오고, 그것은 t305 가 세운 전제(같은 큐
+        # 둘은 큐 하나보다 나쁘다)를 정면으로 깬다. 정본은 변주가 마르면 큐를
+        # 반복하지 않고 **다른 축**(강도·무빙·이펙트)으로 갈라놓지만, 이 규칙이
+        # 가진 축은 회전 하나뿐이라 없는 축을 지어내는 대신 큐를 줄인다.
+        # 줄였다는 사실은 사유로 밖에 낸다 — 조용히 얇아지지 않게.
+        if variants is not None and units > max(1, variants):
+            capped = max(1, variants)
+            if capped == 1:
+                notes.append(
+                    f"구간 {index + 1}: {variant_label}이 하나뿐이라 쪼갠 큐가 "
+                    "서로 같아집니다 — 큐 하나로 둡니다"
+                )
+            else:
+                notes.append(
+                    f"구간 {index + 1}: {variant_label} {variants}가지로는 서로 다른 큐를 "
+                    f"{capped}건까지만 만들 수 있어 {units}건 대신 {capped}건으로 "
+                    "줄였습니다 — 그만큼 이 구간의 그림은 오래 머뭅니다"
+                )
+            units = capped
         for unit_index in range(units):
             splits.append(
                 CueSplit(
@@ -247,9 +259,14 @@ def _unit_count(start_ms: int, end_ms: int | None, unit_ms: float) -> int:
     return max(1, units)
 
 
-def _palette_can_differ(palette_sizes: Sequence[int] | None, index: int) -> bool:
+def _variant_count(palette_sizes: Sequence[int] | None, index: int) -> int | None:
+    """이 구간에서 회전이 만들어 낼 수 있는 서로 다른 큐의 수.
+
+    ``None`` 은 「안 쟀다」 — 호출자가 변주 수를 안 줬으면 중복이 난다고
+    주장할 근거가 없으므로 상한을 씌우지 않는다. 두 호출자는 둘 다 준다.
+    """
     if palette_sizes is None:
-        return True
+        return None
     if index >= len(palette_sizes):
-        return True
-    return palette_sizes[index] >= MIN_PALETTE_COLORS_TO_SPLIT
+        return None
+    return palette_sizes[index]
