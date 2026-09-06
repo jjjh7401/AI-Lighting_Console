@@ -103,6 +103,43 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
         "SPEC-COPILOT-WRITEGATE-001 의 번들 위험 선언(risk=)이 붙었다 "
         "(카드 t317: 2026-09-07 실측이 잰 것은 prepare_songcue 가 아니라 이 자리였다)"
     ),
+    # 카드 t320 — 아래 열 자리는 `session.py` 안이라 `tools.py` 의 클로저를 직접
+    # 못 부르고 `ToolRegistry.dispatch` 를 지난다. 그래서 봉합은 `_dispatch_declared`
+    # 로 걸고, 선언 문면은 `write_reason.showfile_write_risk` 가 **나갈 명령**에서
+    # 읽는다. t319 가 남긴 조건 — 「봉합만 달면 봉합처럼 보이는 코드」 — 은
+    # `test_writegate_session_sites.py` 가 자리마다 대화 흐름을 몰아 갚았다:
+    # 거절 → 쇼파일 쓰기 0건 / 수락 → 카드 한 장 + 그 자리의 kind 를 단 approved.
+    ("server/web/session.py", "run_look_bundle", 0): (
+        "LookInstantiation.commands 의 Store Preset 다발 — kind='look_bundle'"
+    ),
+    ("server/web/session.py", "_look_pan_tilt", 0): (
+        "프리셋 저장을 지시받은 회차에만 Store Preset 2.<n> — kind='look_pan_tilt'. "
+        "안 받은 회차는 프로그래머 값뿐이라 선언이 None 이고 카드가 안 뜬다"
+    ),
+    ("server/web/session.py", "_position_fx_sequence", 0): (
+        "position_fx_commands 의 Store Sequence <n> Cue — kind='position_fx_sequence'"
+    ),
+    ("server/web/session.py", "_offer_fx_executor_assignment", 0): (
+        "Assign Sequence <n> At Executor <t> — kind='fx_executor_assign'"
+    ),
+    ("server/web/session.py", "_phaser_recall_sequence", 0): (
+        "페이저 회수분을 Store 로 시퀀스에 굳힌다 — kind='phaser_recall_sequence'"
+    ),
+    ("server/web/session.py", "_store_position_preset_looks", 0): (
+        "Store Preset + Label — 포지션 프리셋 룩 저장. kind='position_preset_look'"
+    ),
+    ("server/web/session.py", "_position_cue_store", 0): (
+        "position_cue_store_commands → Store Sequence <n> Cue <m>. kind='position_cue_store'"
+    ),
+    ("server/web/session.py", "_position_cue_sheet", 0): (
+        "sheet.bundles 의 Store Sequence <n> Cue <m> 다발 — kind='position_cue_sheet'"
+    ),
+    ("server/web/session.py", "_merge_timeline_cue_position", 0): (
+        "Store Sequence <n> Cue <m> /Merge — kind='timeline_cue_merge'"
+    ),
+    ("server/web/session.py", "_setlist_mode", 0): (
+        "Copy Sequence / Assign Sequence … At Executor — kind='setlist_assign'"
+    ),
 }
 
 #: ② 쇼파일을 고치는데 봉합이 없는 자리 — 각자 후속 카드다.
@@ -112,44 +149,19 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
 #: 각자 자기 카드를 갖는다. 여기 있는 자리에 봉합이 붙으면 이 검사가
 #: 실패하고, 그때 ① 표로 옮기면 된다 — 표는 양방향으로 정직하다.
 #:
-#: 카드 t319 의 판정. 남은 열 자리는 전부 `session.py` 안이라 `tools.py` 의
-#: 클로저를 직접 못 부르고 `ToolRegistry.dispatch` 를 지난다 — 봉합 자체는
-#: `_dispatch_declared` 로 한 줄이다. 그런데 이 카드가 요구하는 증거는
-#: 「거절 → 콘솔 0건 / 수락 → 카드 한 장 + approved 감사 기록」이고, 그 증거는
-#: 각 자리를 **대화 흐름으로 몰아야** 나온다(자리마다 다른 지시문·다른 사전
-#: 상태). 그 구동기 없이 봉합만 달면 「달았다」는 주장은 되지만 「승인 없이는
-#: 안 나간다」는 관측이 안 된다 — 그것은 봉합이 아니라 봉합처럼 보이는 코드다.
-#: 그래서 열 자리는 각자 자기 카드로 남긴다.
-WRITE_WITHOUT_SEAM_DISPATCHES: dict[tuple[str, str, int], str] = {
-    ("server/web/session.py", "run_look_bundle", 0): ("LookInstantiation.commands → Store Preset"),
-    ("server/web/session.py", "_look_pan_tilt", 0): (
-        "position_preset_store_commands 가 붙는 갈래에서 Store Preset 2.<n>"
-    ),
-    ("server/web/session.py", "_position_fx_sequence", 0): ("FX 포지션 시퀀스를 Store 로 굳힌다"),
-    ("server/web/session.py", "_offer_fx_executor_assignment", 0): (
-        "Assign Sequence <n> At Executor <t> — 익스큐터 배정은 쇼파일에 남는다"
-    ),
-    ("server/web/session.py", "_phaser_recall_sequence", 0): (
-        "페이저 회수분을 Store 로 시퀀스에 굳힌다"
-    ),
-    ("server/web/session.py", "_store_position_preset_looks", 0): (
-        "Store Preset + Label — 포지션 프리셋 룩 저장"
-    ),
-    ("server/web/session.py", "_position_cue_store", 0): (
-        "position_cue_store_commands → Store Sequence <n> Cue <m>"
-    ),
-    ("server/web/session.py", "_position_cue_sheet", 0): (
-        "sheet.bundles → position_cue_bundle 의 Store Sequence <n> Cue <m> 다발"
-    ),
-    ("server/web/session.py", "_merge_timeline_cue_position", 0): (
-        "타임라인 큐에 포지션을 Store 로 병합한다"
-    ),
-    ("server/web/session.py", "_setlist_mode", 0): (
-        "Copy Sequence / Assign Sequence … At Executor — 셋리스트 배분. "
-        "plan 단계가 '미확인 후보'로 남겼던 자리이며, run 단계에서 "
-        "쓰기로 확인했다"
-    ),
-}
+#: 카드 t319 는 여기에 열 자리를 남겼다 — 봉합은 한 줄인데 증거가 자리마다
+#: 다른 대화 흐름을 타야 나온다는 이유였다. 카드 t320 이 그 구동기를 지어
+#: (`server/tests/test_writegate_session_sites.py`) 열 자리를 전부 ① 표로
+#: 옮겼다. 그래서 이 표는 **지금 비어 있다**.
+#:
+#: 비어 있다는 사실을 그대로 적어 두는 이유: 아래 `test_each_write_without_
+#: seam_site_really_has_no_seam` 은 이 표가 비면 **공허하게** 통과한다.
+#: 그것은 결함이 아니라 이 표의 정의다 — 표가 비었다는 것은 「봉합 없는
+#: 쇼파일 쓰기 자리를 하나도 모른다」는 주장이고, 그 주장을 지키는 것은
+#: 이 공허한 검사가 아니라 위의 `test_no_dispatch_site_is_unregistered`
+#: (전수 등재)와 ① 표의 `test_each_showfile_write_site_has_a_seam_in_its_
+#: function` (봉합 존재)이다. 새 쓰기 자리가 생기면 그 둘이 먼저 운다.
+WRITE_WITHOUT_SEAM_DISPATCHES: dict[tuple[str, str, int], str] = {}
 
 #: ③ 사람이 읽고 쇼파일 쓰기가 **아니라고** 판정한 자리. 사유가 필수다.
 REVIEWED_NON_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
