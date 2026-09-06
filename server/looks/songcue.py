@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 from typing import NamedTuple
 
+from server.design.cue_density import plan_cue_density, rotate_palette
 from server.looks.busking import VALUE_LINE_COLLISION, looks_for_genre
 from server.looks.instantiate import _values_line
 from server.looks.matching import DYNAMICS_TERMS, resolve_dynamics
@@ -229,6 +230,64 @@ def map_sections_to_looks(
         )
         for section in sections
     )
+
+
+#: 업로드 경로에서 쪼갠 큐를 서로 다르게 만드는 것의 이름 — 팔레트의 색이 아니라
+#: **같은 다이내믹스 안에서 쓸 수 있는 룩**이다. 사유 문면에만 쓰인다.
+SONGCUE_VARIANT_LABEL = "쓸 수 있는 룩"
+
+
+def split_selections_for_density(
+    selections: Sequence[SongCueLookSelection],
+    *,
+    bpm: float | None,
+    meter: object = "4/4",
+    song_end_ms: int | None = None,
+) -> tuple[tuple[SongCueLookSelection, ...], tuple[str, ...]]:
+    """구간 선택 목록을 마디 경계에서 쪼갠 **큐** 선택 목록으로 넓힌다 (카드 t306).
+
+    감독 인터뷰 경로(``_build_unified_song_plan``)가 이미 하는 것과 **같은 규칙**
+    이다 — 마디 산술은 :func:`server.design.cue_density.plan_cue_density` 하나가
+    갖고, 이어지는 큐의 회전은 :func:`~server.design.cue_density.rotate_palette`
+    하나가 갖는다. 규칙을 두 벌 두면 갈라지고, 갈라진 순간 감독이 보는 두 경로가
+    다시 서로 다른 설계를 낸다.
+
+    두 경로의 **차이**는 「무엇을 돌리느냐」 하나다. 인터뷰 경로는 팔레트의 색을
+    돌리고, 이 경로는 같은 다이내믹스에 맞는 룩 목록(``dynamics_matches``)을
+    돌린다. 강도를 유지하고 그림만 바꾸는 정본의 축(Q060 "강도 유지, 색만 교체")
+    은 그대로다 — 다이내믹스가 같으면 D 레벨이 같기 때문이다.
+
+    회전은 ``look`` 뿐 아니라 ``dynamics_matches`` **순서**까지 돌린다. 저장 직전
+    :func:`_select_bindable` 이 이 목록의 앞에서부터 「리그에 묶이는 첫 룩」을
+    고르므로, 순서를 돌려야 이어지는 큐가 앞 큐와 다른 자리에서 탐색을 시작한다.
+
+    쓸 수 있는 룩이 하나뿐인 구간은 돌려도 같은 룩이라 **쪼개지 않는다**
+    — 그 사유는 돌려주는 ``notes`` 로 밖에 나간다. BPM 이 없으면 한 건도 쪼개지
+    않으며 입력이 그대로 나온다(콘솔에 가는 명령은 바이트 동일).
+
+    :param song_end_ms: 곡 끝. 주면 **마지막 구간도** 쪼갠다. 인터뷰 경로는 이
+        값을 가진 적이 없어 마지막 구간을 늘 통째로 두지만, 확정 분석 기록은
+        구간마다 ``end_ms`` 를 들고 있어 이 경로에서는 알 수 있다.
+    """
+    ordered = tuple(selections)
+    if not ordered:
+        return (), ()
+    plan = plan_cue_density(
+        [selection.section.start_ms for selection in ordered],
+        bpm=bpm,
+        meter=meter,
+        palette_sizes=[len(selection.dynamics_matches) for selection in ordered],
+        song_end_ms=song_end_ms,
+        variant_label=SONGCUE_VARIANT_LABEL,
+    )
+    expanded: list[SongCueLookSelection] = []
+    for split in plan.splits:
+        source = ordered[split.source_index]
+        section = replace(source.section, start_ms=split.start_ms)
+        rotated = rotate_palette(source.dynamics_matches, split.unit_index)
+        look = rotated[0] if rotated else source.look
+        expanded.append(replace(source, section=section, look=look, dynamics_matches=rotated))
+    return tuple(expanded), plan.notes
 
 
 def build_songcue_bundle(
