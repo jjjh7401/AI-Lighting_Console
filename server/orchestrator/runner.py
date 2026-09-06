@@ -191,6 +191,11 @@ class InstructionResult:
     retries_used: int
     model_calls: int
     duration_seconds: float
+    #: 이 턴의 도구들이 **감독에게 직접** 할 말 — 없으면 비어 있다(카드 t277).
+    #: ``text`` 는 모델의 말이고 ``command_outcomes`` 는 보낸 명령의 표다. 도구가
+    #: 조용히 건너뛴 일은 둘 중 어디에도 안 나타나므로 셋째 자리가 필요하다.
+    #: 기본값이 있어 이 클래스를 짓는 기존 자리들은 그대로 둔다.
+    notices: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -359,6 +364,7 @@ class Orchestrator:
         conversation.append(UserMessage(text=instruction))
         executed_ok: set[str] = set()
         all_outcomes: list[CommandOutcome] = []
+        notices: list[str] = []
         retries_used = 0
         last_run_failed = False
         model_calls = 0
@@ -491,6 +497,10 @@ class Orchestrator:
                 )
                 emit(PROGRESS_TOOL_DONE, f"{task} 완료")
                 results.append(execution.result)
+                # 감독에게 직접 할 말은 여기서 모은다 — 모델이 옮겨 말해 주기를
+                # 기대하지 않는다. 같은 말이 두 도구에서 나와도 한 번만 싣는다.
+                if execution.operator_notice and execution.operator_notice not in notices:
+                    notices.append(execution.operator_notice)
                 if execution.awaited_human:
                     # 사람이 카드에 답한 회차는 폭주가 아니다 — 가드에서 뺀다.
                     # 실측: 질문 3회를 거치면 12회 한도가 말라 `loop_limit` ·
@@ -522,6 +532,7 @@ class Orchestrator:
             retries_used=retries_used,
             model_calls=model_calls,
             duration_seconds=duration,
+            notices=tuple(notices),
         )
         if self._metrics_sink is not None:
             self._metrics_sink.record_turn(

@@ -865,6 +865,13 @@ class ToolExecution:
     #: 질문을 몇 번 하는 것만으로 한도가 말라 본문 0자로 끝난다 — 실측에서
     #: 질문 3회에 `status=loop_limit`이 났다. 사람이 답한 회차는 가드에서 뺀다.
     awaited_human: bool = False
+    #: 이 호출이 **감독에게 직접** 할 말 한 줄 — 없으면 빈 문자열(카드 t277).
+    #: ``result`` 는 모델이 읽고, ``command_outcomes`` 는 명령별 표를 만든다.
+    #: 둘 중 어느 것도 「도구가 조용히 건너뛴 일」을 감독의 화면에 올리지 못한다:
+    #: 전자는 모델이 옮겨 말해 주기를 기대하는 것이고, 후자는 **보낸** 명령만
+    #: 셀 수 있어 애초에 보내지 않은 것에 대해 말할 수 없다. 이 필드가 그 구멍을
+    #: 메운다 — 러너가 모아 ``InstructionResult.notices`` 로 요약에 싣는다.
+    operator_notice: str = ""
 
 
 _Handler = Callable[[ToolCall, ExecutionContext], ToolExecution]
@@ -3006,7 +3013,10 @@ def build_toolset(
                         ensure_ascii=False,
                     ),
                     is_error=False,
-                )
+                ),
+                # 한 건도 저장되지 않은 갈래다. 명령이 0개라 명령 표도 비고,
+                # 여기서 말하지 않으면 화면에는 아무 일도 없었던 것으로 보인다.
+                operator_notice=report.to_operator_notice(),
             )
         command_bundle = bundle.commands + timing.commands
         execution = run_commands(
@@ -3062,6 +3072,10 @@ def build_toolset(
                 is_error=is_error,
             ),
             command_outcomes=execution.command_outcomes,
+            # 카드 t277 — 명령은 다 실행됐는데 구간 하나가 큐를 못 받은 회차가
+            # 여기다. 「요청한 명령을 모두 실행했습니다」는 참이고, 그래서 더
+            # 위험하다: 보내지 않은 명령은 어느 표에도 안 나타난다.
+            operator_notice=report.to_operator_notice(),
         )
 
     # -- precheck_patch (REQ-PRECHK-018 — the pre-show rig check) --------------
