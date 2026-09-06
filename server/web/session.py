@@ -36,6 +36,7 @@ from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
 from server.deploy.review import ReviewRequest
+from server.design.cue_density import plan_cue_density, rotate_palette
 from server.design.cue_sheet_apply import (
     ConsoleApplyError,
     ConsoleApplyPlan,
@@ -1319,6 +1320,134 @@ def _plan_insert_start_ms(sections: Sequence[PositionSheetSection], insert_slot:
     return (next_ms or 0) // 2
 
 
+def _section_arc_geometry(
+    sections: Sequence[PositionSheetSection],
+    section_origin: Sequence[int] | None,
+) -> tuple[list[int], list[int], list[int], int, int]:
+    """쪼갠 큐 목록을 **원래 구간** 기준의 아크 좌표로 되돌린다 (카드 t305).
+
+    한 구간이 여러 큐로 갈려도 연출 아크(role · D 계단 · texture · FX)는
+    구간 단위로 그대로여야 한다 — 정본의 Q020·Q030 은 둘 다 VERSE1 이고,
+    구간이 둘로 갈렸다고 절정 위치가 옮겨 가지는 않는다.
+
+    돌려주는 것은 큐마다 하나씩: 아크 위치(1-based), 그 구간을 여는 큐의
+    번호(1-based, 재질의·미해소 보고가 쓰는 키), 구간 안에서 몇 번째
+    큐인지(0 = 여는 큐), 그리고 원래 구간 수와 절정 구간 번호.
+
+    ``section_origin`` 이 없거나 길이가 안 맞으면(계획 편집이 구간을
+    넣거나 뺀 뒤) 항등으로 되돌아간다 — 쪼개기 전과 바이트 동일.
+    """
+    count = len(sections)
+    origins = (
+        list(section_origin)
+        if section_origin is not None and len(section_origin) == count
+        else list(range(count))
+    )
+    arc_positions: list[int] = []
+    head_indexes: list[int] = []
+    units: list[int] = []
+    head_by_origin: dict[int, int] = dict()
+    position_by_origin: dict[int, int] = dict()
+    for offset, origin in enumerate(origins):
+        if origin not in head_by_origin:
+            head_by_origin[origin] = offset + 1
+            position_by_origin[origin] = len(position_by_origin) + 1
+        arc_positions.append(position_by_origin[origin])
+        head_indexes.append(head_by_origin[origin])
+        units.append(offset + 1 - head_by_origin[origin])
+    originals = [sections[head_by_origin[origin] - 1] for origin in position_by_origin]
+    return (
+        arc_positions,
+        head_indexes,
+        units,
+        len(position_by_origin),
+        _climax_section_index(originals),
+    )
+
+
+def _section_palette_choice(
+    section: PositionSheetSection,
+    *,
+    role: str,
+    profile: MusicProfile,
+    color_tendency: object,
+    palette_mode: str,
+    concept_colors: tuple[str, ...],
+) -> tuple[tuple[str, ...], str]:
+    """한 구간의 팔레트와 그 출처. 구간의 색 단어 > 팔레트 충돌 결정 > Q2."""
+    direct_colors = _extract_color_words(section.mood)
+    if direct_colors:
+        return direct_colors, "section_text"
+    if palette_mode == "concept" and concept_colors:
+        base: tuple[str, ...] = concept_colors
+    elif palette_mode == "mixed" and concept_colors and role in ("chorus", "finale"):
+        base = concept_colors
+    else:
+        base = _palette_colors(profile.palette or color_tendency)
+    return _arc_palette(base, role), "section_arc"
+
+
+def _section_palette_sizes(
+    sections: Sequence[PositionSheetSection],
+    *,
+    profile: MusicProfile,
+    palette_mode: str,
+    concept_colors: tuple[str, ...],
+) -> list[int]:
+    """구간별 팔레트 색 수 — 쪼갠 큐가 서로 달라질 수 있는지의 판정 재료.
+
+    감독 재질의 답변(``requery_overrides``)은 아직 없는 시점이라 여기서는
+    보지 않는다. 오버라이드는 색을 **더하는** 쪽이므로 이 값은 실제보다
+    작거나 같다 — 즉 이 판정은 덜 쪼개는 쪽으로만 틀린다. 같은 큐 둘을
+    내는 것보다 안 쪼개는 쪽이 낫다는 카드의 방향과 같다.
+    """
+    count = len(sections)
+    sizes: list[int] = []
+    for index, section in enumerate(sections, start=1):
+        role = _section_role(section, section_index=index, section_count=count)
+        resolved = resolve_section(section.mood, profile, director_intent=None)
+        tendency = getattr(resolved, "color_tendency", "white")
+        colors, _source = _section_palette_choice(
+            section,
+            role=role,
+            profile=profile,
+            color_tendency=tendency,
+            palette_mode=palette_mode,
+            concept_colors=concept_colors,
+        )
+        sizes.append(len(colors))
+    return sizes
+
+
+def _split_sections_for_density(
+    sections: Sequence[PositionSheetSection],
+    *,
+    profile: MusicProfile,
+    palette_mode: str = "palette",
+    concept_colors: tuple[str, ...] = (),
+) -> tuple[list[PositionSheetSection], list[int], tuple[str, ...]]:
+    """구간 목록을 마디 경계에서 쪼갠 큐 목록으로 넓힌다 (카드 t305).
+
+    돌려주는 것은 (넓힌 구간 목록, 큐마다의 원래 구간 번호, 공개할 사유).
+    BPM 이 선언되지 않았으면 입력이 그대로 나온다 — 오늘과 동일.
+    """
+    plan = plan_cue_density(
+        [section.start_ms for section in sections],
+        bpm=profile.bpm,
+        meter=profile.meter,
+        palette_sizes=_section_palette_sizes(
+            sections,
+            profile=profile,
+            palette_mode=palette_mode,
+            concept_colors=concept_colors,
+        ),
+    )
+    expanded = [
+        replace(sections[split.source_index], start_ms=split.start_ms) for split in plan.splits
+    ]
+    return expanded, list(plan.source_origins), plan.notes
+
+
 def _build_unified_song_plan(
     *,
     sections: Sequence[PositionSheetSection],
@@ -1332,23 +1461,28 @@ def _build_unified_song_plan(
     concept_colors: tuple[str, ...] = (),
     fade_overrides: Mapping[int, float] | None = None,
     fx_overrides: Mapping[int, bool] | None = None,
+    section_origin: Sequence[int] | None = None,
 ) -> UnifiedSongLightingPlan:
-    climax_index = _climax_section_index(sections)
-    section_count = len(sections)
+    arc_positions, head_indexes, units, section_count, climax_index = _section_arc_geometry(
+        sections, section_origin
+    )
     decisions: list[SectionDecision] = []
     unresolved: list[UnresolvedNote] = []
     roles: list[str] = []
     for index, section in enumerate(sections, start=1):
-        role = _section_role(section, section_index=index, section_count=section_count)
+        arc_index = arc_positions[index - 1]
+        head_index = head_indexes[index - 1]
+        unit_index = units[index - 1]
+        role = _section_role(section, section_index=arc_index, section_count=section_count)
         roles.append(role)
         override = _section_director_override(
-            section_index=index,
+            section_index=arc_index,
             section_count=section_count,
             records=records,
             climax_index=climax_index,
         )
         # Priority (결함 4): 구간 재질의 답변 > 구간 직접 자연어 의도 > Q3/Q4.
-        merged = (requery_overrides or {}).get(index)
+        merged = (requery_overrides or {}).get(head_index)
         if merged is not None:
             override = merged
         else:
@@ -1361,14 +1495,17 @@ def _build_unified_song_plan(
                 )
         resolved = resolve_section(section.mood, profile, director_intent=override)
         if isinstance(resolved, UnresolvedMood):
-            unresolved.append(
-                UnresolvedNote(
-                    axis=POSITION_AXIS,
-                    section_index=index,
-                    reason=resolved.reason,
-                    prompt=_unresolved_prompt(section, resolved.reason),
+            # 한 구간을 여러 큐로 쪼갰어도 감독에게는 카드가 **한 번** 떠야
+            # 한다 — 같은 구간의 같은 무드를 큐 수만큼 되묻는 것은 잡음이다.
+            if unit_index == 0:
+                unresolved.append(
+                    UnresolvedNote(
+                        axis=POSITION_AXIS,
+                        section_index=head_index,
+                        reason=resolved.reason,
+                        prompt=_unresolved_prompt(section, resolved.reason),
+                    )
                 )
-            )
             fallback = resolve_section(None, profile, director_intent=override)
             if not isinstance(fallback, SectionMoodResolution):
                 fallback = SectionMoodResolution(
@@ -1389,17 +1526,23 @@ def _build_unified_song_plan(
             d_level, d_source = arc_d, "section_arc"
         # Palette: section's own color words > palette-conflict choice > Q2
         # palette blended with the role arc.
-        direct_colors = _extract_color_words(section.mood)
-        if direct_colors:
-            palette_colors, palette_source = direct_colors, "section_text"
-        else:
-            if palette_mode == "concept" and concept_colors:
-                base: tuple[str, ...] = concept_colors
-            elif palette_mode == "mixed" and concept_colors and role in ("chorus", "finale"):
-                base = concept_colors
-            else:
-                base = _palette_colors(profile.palette or resolved.color_tendency)
-            palette_colors, palette_source = _arc_palette(base, role), "section_arc"
+        palette_colors, palette_source = _section_palette_choice(
+            section,
+            role=role,
+            profile=profile,
+            color_tendency=resolved.color_tendency,
+            palette_mode=palette_mode,
+            concept_colors=concept_colors,
+        )
+        # 카드 t305 — 구간 안에서 이어지는 큐는 앞 큐와 **달라야** 한다.
+        # 정본이 하는 것과 같은 축: 강도는 유지하고 색만 돌린다(Q060 "강도
+        # 유지, 색만 교체" · Q140 "색상만 순환"). 색이 하나뿐인 구간은
+        # 애초에 쪼개지지 않으므로(`plan_cue_density`) 여기서 같은 큐가
+        # 나오는 일은 없다.
+        if unit_index > 0:
+            rotated = rotate_palette(palette_colors, unit_index)
+            if rotated != palette_colors:
+                palette_colors, palette_source = rotated, "cue_density_rotation"
         decisions.append(
             SectionDecision(
                 section=TimestampedSection(
@@ -1417,7 +1560,7 @@ def _build_unified_song_plan(
                 ),
                 texture=_section_texture_decision(
                     section=section,
-                    section_index=index,
+                    section_index=arc_index,
                     climax_index=climax_index,
                     section_count=section_count,
                     records=records,
@@ -1425,14 +1568,16 @@ def _build_unified_song_plan(
                 fx=_plan_edit_fx(
                     _section_fx_decision(
                         section=section,
-                        section_index=index,
+                        section_index=arc_index,
                         climax_index=climax_index,
                         section_count=section_count,
                         records=records,
                     ),
                     (fx_overrides or {}).get(index),
                 ),
-                accent=_accent_decision(records, section_index=index, climax_index=climax_index),
+                accent=_accent_decision(
+                    records, section_index=arc_index, climax_index=climax_index
+                ),
                 cue_number=index,
                 fade_override=(fade_overrides or {}).get(index),
             )
@@ -3172,6 +3317,10 @@ class _SongDesignState:
     requery_overrides: dict[int, DirectorOverride]
     fade_overrides: dict[int, float] = dataclass_field(default_factory=dict)
     fx_overrides: dict[int, bool] = dataclass_field(default_factory=dict)
+    #: 카드 t305 — ``sections`` 는 마디 경계에서 쪼갠 **큐** 목록이다. 이
+    #: 목록은 큐마다 원래 구간 번호(0-based)를 들고 있어서 연출 아크가 구간
+    #: 단위로 유지된다. 비어 있으면 항등(쪼개기 전과 동일).
+    section_origin: list[int] = dataclass_field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -7721,8 +7870,19 @@ class ChatSession:
         layer_mapping = self._confirm_song_layer_mapping()
         if not layer_mapping:
             plan_warnings.append(_SINGLE_LAYER_WARNING)
+        # 카드 t305 — 긴 구간을 마디 경계에서 쪼갠다. 구간 하나에 큐 하나면
+        # 32마디 후렴이 정적인 큐 한 장으로 끝난다. BPM 이 선언되지 않았으면
+        # 이 호출은 입력을 그대로 돌려준다(오늘과 동일).
+        sections, section_origin, density_notes = _split_sections_for_density(
+            sections,
+            profile=interview.working_profile,
+            palette_mode=palette_mode,
+            concept_colors=concept_colors,
+        )
+        plan_warnings.extend(density_notes)
         state = _SongDesignState(
             sections=list(sections),
+            section_origin=section_origin,
             interview=interview,
             records=records,
             rig=rig,
@@ -7847,6 +8007,7 @@ class ChatSession:
             fx_overrides=state.fx_overrides,
             palette_mode=state.palette_mode,
             concept_colors=state.concept_colors,
+            section_origin=state.section_origin or None,
         )
         return built, compose_song_cue_bundle(built)
 
