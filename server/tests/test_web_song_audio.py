@@ -20,6 +20,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -631,3 +632,128 @@ class TestTheAnalysisTriggerTravelsTheWholeWire:
             assert recv_frame(ws)["kind"] == "song_audio_missing"
             _send(ws, type="status_request")
             assert recv_frame(ws)["type"] == "status"
+
+
+class TestTheCardSurvivesAReload:
+    """t316 — 새로고침 한 번에 물음이 사라지지 않는가, **와이어 위에서**.
+
+    실측 결함(2026-09-07, 브라우저): 확인 카드가 뜬 상태에서 앱을 다시 열면
+    ``button.question-option`` 이 3 → 0 이 됐다. 화면에는 카드가 없고 서버는
+    답을 기다리는 중 — 그 세션은 아무 신호 없이 통째로 막힌다.
+
+    여기서 재는 것은 **재접속이 카드를 되돌리는가**다. 채널 단위 시험
+    (``test_web_question_channel.py``) 은 ``bind``/``unbind`` 를 손으로 부르므로
+    app.py 의 연결 수명 배선을 지나지 않는다 — 그 배선이 이 시험의 대상이다.
+
+    콘솔 접촉: 0건.
+    """
+
+    @staticmethod
+    def _await_disconnect(deps) -> None:
+        """서버가 끊김을 **처리할 때까지** 기다린다.
+
+        브라우저 새로고침은 벽시계로 그 사이를 벌어 주지만, 테스트에서는 닫자마자
+        다음 연결을 연다. 이 대기가 없으면 서버가 아직 옛 소켓을 살아 있다고 읽는
+        찰나에 새 연결이 붙어, 뒤이은 이벤트가 죽은 소켓으로 갈 수 있다 —
+        시험이 간헐적으로 깨지는 자리다(실측 1회).
+        """
+        deadline = time.monotonic() + 10.0
+        while deps.live_sockets and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert not deps.live_sockets, "서버가 끊김을 제때 처리하지 못했다"
+
+    def test_the_card_comes_back_and_is_answerable_on_the_new_connection(self, tmp_path):
+        channel = QuestionChannel(timeout_seconds=30.0)
+        deps = _deps(tmp_path, question_channel=channel)
+        client = TestClient(create_app(deps))
+        with client:
+            with client.websocket_connect("/ws") as ws:
+                recv_frame(ws)  # 최초 status
+                _send(
+                    ws,
+                    type="song_audio_upload",
+                    file_name="track.wav",
+                    mime_type="audio/wav",
+                    content_base64=SMALL_WAV_B64,
+                )
+                _receive_until(ws, "notice")
+                _send(ws, type="song_audio_analyse")
+                first_card = _receive_until(ws, "question_request")
+                assert first_card["options"], "카드에 선택지가 없으면 잴 것이 없다"
+            # 여기서 새로고침이 일어난다 — 위 ``with`` 를 벗어나며 연결이 끊긴다.
+            self._await_disconnect(deps)
+
+            with client.websocket_connect("/ws") as ws2:
+                restored = _receive_until(ws2, "question_request")
+                # 같은 물음이어야 한다 — 같은 id, 같은 문구, 같은 선택지.
+                assert restored["request_id"] == first_card["request_id"]
+                assert restored["prompt"] == first_card["prompt"]
+                assert restored["options"] == first_card["options"]
+
+                # 그리고 되살아난 카드는 실제로 답할 수 있다 — 답이 분석 스레드에
+                # 닿아야 확정 알림이 나온다.
+                _send(
+                    ws2,
+                    type="question_answer",
+                    request_id=restored["request_id"],
+                    answer="BPM 130",
+                )
+                notice = _receive_until(ws2, "notice")
+        assert "130" in notice["message"]
+        assert "확정" in notice["message"]
+
+    def test_the_same_card_answered_twice_is_refused(self, tmp_path):
+        """중복 답은 거절이다 — 멱등이 아니라.
+
+        옛 탭이 열린 채 새 탭에서 답하는 경우가 실물이다. 두 번째 답을 조용히
+        받아들이면 감독은 반영됐다고 읽지만 아무것도 바뀌지 않는다.
+        """
+        channel = QuestionChannel(timeout_seconds=30.0)
+        client = TestClient(create_app(_deps(tmp_path, question_channel=channel)))
+        with client, client.websocket_connect("/ws") as ws:
+            recv_frame(ws)
+            _send(
+                ws,
+                type="song_audio_upload",
+                file_name="track.wav",
+                mime_type="audio/wav",
+                content_base64=SMALL_WAV_B64,
+            )
+            _receive_until(ws, "notice")
+            _send(ws, type="song_audio_analyse")
+            card = _receive_until(ws, "question_request")
+            _send(ws, type="question_answer", request_id=card["request_id"], answer="BPM 130")
+            _receive_until(ws, "question_resolved")
+            _send(ws, type="question_answer", request_id=card["request_id"], answer="BPM 90")
+            second = _receive_until(ws, "error")
+        assert second["kind"] == "protocol"
+
+    def test_an_already_answered_question_is_not_re_asked_after_a_reload(self, tmp_path):
+        """[HARD] 끝난 물음을 되살리면 이미 정해진 것을 다시 묻는다."""
+        channel = QuestionChannel(timeout_seconds=30.0)
+        deps = _deps(tmp_path, question_channel=channel)
+        client = TestClient(create_app(deps))
+        with client:
+            with client.websocket_connect("/ws") as ws:
+                recv_frame(ws)
+                _send(
+                    ws,
+                    type="song_audio_upload",
+                    file_name="track.wav",
+                    mime_type="audio/wav",
+                    content_base64=SMALL_WAV_B64,
+                )
+                _receive_until(ws, "notice")
+                _send(ws, type="song_audio_analyse")
+                card = _receive_until(ws, "question_request")
+                _send(ws, type="question_answer", request_id=card["request_id"], answer="BPM 130")
+                _receive_until(ws, "notice")  # 확정까지 끝났다
+            self._await_disconnect(deps)
+
+            with client.websocket_connect("/ws") as ws2:
+                # 재접속 뒤 처음 오는 프레임은 status 여야 한다 — 카드가 아니라.
+                for _ in range(5):
+                    frame = recv_frame(ws2)
+                    assert frame["type"] != "question_request", frame
+                    if frame["type"] == "status":
+                        break

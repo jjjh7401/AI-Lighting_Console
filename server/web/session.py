@@ -4467,10 +4467,17 @@ class ChatSession:
         self._channel.unbind(session_key=self._session_key)
         if self._review_channel is not None:
             self._review_channel.unbind(session_key=self._session_key)
+        parked = False
         if self._question_channel is not None:
             self._question_channel.unbind(session_key=self._session_key)
-        self._vectorworks_upload.clear()
-        self._uploaded_sheet = None
+            # 질문 통로는 끊긴다고 답을 확정하지 않는다(question.py ``unbind``).
+            # 아직 답을 기다리는 물음이 있으면 그 작업 스레드는 살아 있고, 답이
+            # 오면 여기서 첨부를 읽는다 — 비워 버리면 새로고침 뒤에 답한 감독이
+            # 「첨부가 없습니다」를 받는다.
+            parked = self._question_channel.has_pending(session_key=self._session_key)
+        if not parked:
+            self._vectorworks_upload.clear()
+            self._uploaded_sheet = None
 
     # -- event plumbing ----------------------------------------------------------
 

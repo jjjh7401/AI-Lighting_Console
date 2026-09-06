@@ -1384,6 +1384,15 @@ describe("question card — multi (additive)", () => {
     expect(next.pendingQuestions[0].options).toHaveLength(2);
   });
 
+  it("re-sending the same card does not stack a second copy (t316)", () => {
+    // 새로고침을 견디는 물음은 재접속 때 서버가 다시 보낸다. 같은 request_id 로
+    // 카드가 둘 생기면 하나에 답한 뒤 나머지는 답할 수 없는 유령으로 남는다.
+    const asked = reduceServerEvent(initialState, ask({ multi: true }));
+    const again = reduceServerEvent(asked, ask({ multi: true }));
+    expect(again.pendingQuestions).toHaveLength(1);
+    expect(again).toBe(asked);
+  });
+
   it("reads a server that sends no multi as single-select", () => {
     // additive: 구버전 서버의 카드가 갑자기 「확인」을 요구하게 되면 안 된다.
     const next = reduceServerEvent(initialState, ask());
