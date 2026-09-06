@@ -30,7 +30,6 @@ looks:
     genre: "edm"
     dynamics: 1
     roles: ["배경"]
-    aliases: ["앰비언트 홀드", "ambient hold", "대기"]
     mood_keywords: ["어두운", "차가운", "대기", "정적", "ambient", "hold"]
     attributes:
       Dimmer: 20
