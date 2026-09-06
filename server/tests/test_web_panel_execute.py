@@ -210,9 +210,12 @@ def make_harness(
     screened: list[list[str]] = []
     inner = gate.screen
 
-    def spy(commands):
+    # 카드 t323 — 대역이 `risk=` 를 못 받으면 선언이 붙은 번들에서 `TypeError`
+    # 가 나고, 그건 소켓에서 「프레임이 안 온다」로만 보인다. 게이트의 실제
+    # 시그니처를 그대로 따라 받아 넘긴다.
+    def spy(commands, *, risk=None):
         screened.append(list(commands))
-        return inner(commands)
+        return inner(commands) if risk is None else inner(commands, risk=risk)
 
     gate.screen = spy  # type: ignore[method-assign]
 

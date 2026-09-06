@@ -150,8 +150,13 @@ class TestFirstGenerationErrorAccounting:
         # The corrected scenario used one retry -> excluded from judgment.
         assert round_trip["retry_turns"]["count"] == 1
         assert len(round_trip["retry_turns"]["durations_seconds"]) == 1
-        # -1 for the retried scenario, minus the ones v4 holds for approval.
-        assert round_trip["judged_turns"] == result_scenarios - 1 - len(GATE_HELD_SCENARIOS)
+        # 판정에서 빠지는 것은 「재시도한 시나리오」와 「보류된 시나리오」의
+        # **합집합**이다. 카드 t323 이전에는 둘을 그냥 빼도 맞았는데, 선언
+        # 축이 생기면서 재시도 대상(첫 commands 시나리오)이 보류 집합에도
+        # 들어가 같은 자리를 두 번 빼고 있었다.
+        assert round_trip["judged_turns"] == result_scenarios - len(
+            GATE_HELD_SCENARIOS | {target.id}
+        )
 
 
 class TestRepetitionEscalation:

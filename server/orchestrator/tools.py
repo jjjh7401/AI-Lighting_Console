@@ -517,10 +517,21 @@ class ExecutionContext:
     끄거나 붙일 수 없다는 성질이 그대로다(REQ-BULKGATE-004).
 
     기본값 `None` 에서 동작은 오늘과 바이트 동일하다.
+
+    카드 t323 — `approval_owned_by_caller` 는 「이 디스패치의 승인은 **호출자가
+    이미 책임졌다**」는 표시다. `run_commands` 의 레지스트리 등재분은 선언이
+    없는 번들의 선언을 **서버가 나갈 명령에서 읽어** 만드는데(모델 통로 봉합),
+    자기 승인 채널을 따로 가진 서버 쪽 호출자(`_cue_sheet_draft_apply` 의
+    묶음 수락)까지 그 대상이 되면 같은 번들에 카드가 두 장 뜬다. 카드가 겹치면
+    감독은 곧 카드를 안 읽게 되고, 그게 진짜 쓰기를 통과시킨다.
+
+    기본값은 `False` 다 — 새 호출자는 아무것도 안 해도 봉합 대상이 된다.
+    빠뜨렸을 때 카드가 한 장 더 뜨는 쪽으로 틀리고, 안 뜨는 쪽으로는 안 틀린다.
     """
 
     executed_ok: frozenset[str] = frozenset()
     risk: object | None = None
+    approval_owned_by_caller: bool = False
 
 
 class VectorworksUploadPort(Protocol):
@@ -12182,7 +12193,7 @@ def build_toolset(
     #   (`tools.py` 의 여섯 봉합이 따르는 규율과 같다).
     def dispatch_run_commands(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         risk = getattr(context, "risk", None)
-        if risk is None:
+        if risk is None and not getattr(context, "approval_owned_by_caller", False):
             commands = call.arguments.get("commands")
             if isinstance(commands, list) and all(isinstance(c, str) for c in commands):
                 risk = showfile_write_risk(commands, kind="model_run_commands")

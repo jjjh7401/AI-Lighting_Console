@@ -47,7 +47,9 @@ _STORE_MACRO = re.compile(r"\bStore Macro (\d+)")
 _STORE_CUE = re.compile(r"\bStore Cue (\d+(?:\.\d+)?)")
 _STORE_GROUP = re.compile(r"\bStore Group (\d+)")
 _STORE_PAGE = re.compile(r"\bStore Page (\d+)")
-_STORE_SEQUENCE_BARE = re.compile(r"\bStore Sequence (\d+)(?! Cue\b)")
+#: `\b` 가 없으면 `Store Sequence 210 Cue 10` 에서 `210` 이 부정 전방탐색에
+#: 걸린 뒤 `21` 로 되짚어 매치된다 — 없는 시퀀스가 문면에 실린다(실측).
+_STORE_SEQUENCE_BARE = re.compile(r"\bStore Sequence (\d+)\b(?! Cue\b)")
 _SET_FIXTURE_POS = re.compile(r"\bSet Fixture (\d+) Pos[xyz]\b")
 _ASSIGN_EXECUTOR = re.compile(r"\bAssign Sequence (\d+) At Executor (\S+)")
 _COPY_SEQUENCE = re.compile(r"\bCopy Sequence (\d+) At (\d+)")

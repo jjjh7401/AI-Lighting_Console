@@ -35,6 +35,7 @@ from keyring.errors import PasswordDeleteError
 
 from server.bridge import osc as _osc
 from server.deploy import keystore
+from server.web.approval_bridge import ApprovalChannel
 
 # 실기 콘솔(grandMA3 onPC)이 듣는 기본 OSC 입력 포트. serve.py `--console-port` 와
 # bootstrap.build_console_stack `send_port` 의 기본값이 둘 다 이 값이다.
@@ -43,6 +44,29 @@ LIVE_CONSOLE_PORT = 8000
 
 class LiveConsoleWriteAttempt(AssertionError):
     """테스트가 실기 콘솔 포트로 명령을 보내려 했다 — 보내지 않고 여기서 멈춘다."""
+
+
+class AutoApproveChannel(ApprovalChannel):
+    """카드가 뜨면 바로 수락하는 승인 채널 (카드 t323).
+
+    모델이 `run_commands` 로 직접 보내는 번들 중 **쇼파일을 고치는 것**은
+    이제 승인 카드를 지난다(`tools.py::dispatch_run_commands`). 그 카드를
+    아무도 안 받으면 번들은 거절되고, 카드가 아니라 **그 뒤의 동작**을 재던
+    검사들이 전부 「0건」을 보게 된다. 그 검사들의 감독 자리를 이 대역이
+    채운다 — 원래 재던 것을 계속 재기 위해서다.
+
+    이 대역이 카드의 존재를 대신 관측한다고 읽으면 안 된다. 카드가 실제로
+    뜨는지, 거절하면 쇼파일 쓰기가 0건인지는
+    `server/tests/test_writegate_model_tool.py` 가 따로 잰다.
+    """
+
+    def __init__(self, timeout_seconds: float = 2.0) -> None:
+        super().__init__(timeout_seconds=timeout_seconds)
+        self.requests: list = []
+
+    def request_approval(self, request) -> bool:
+        self.requests.append(request)
+        return True
 
 
 @pytest.fixture(autouse=True)

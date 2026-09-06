@@ -833,7 +833,11 @@ class TestOrchestratorWiring:
         provider = ScriptedProvider(
             [_run_turn(["'broken"], "c1"), _run_turn(["Store Cue 5"], "c2"), _final()]
         )
-        orchestrator, gate, console = _gated_orchestrator(tmp_path, provider)
+        # 카드 t323 — `Store Cue 5` 는 이제 모델 통로 봉합이 카드를 띄운다.
+        # 이 검사가 재는 것은 자기교정 루프라 감독 자리를 자동 수락으로 채운다.
+        orchestrator, gate, console = _gated_orchestrator(
+            tmp_path, provider, approval_port=ScriptedApproval([True] * 8)
+        )
         result = orchestrator.handle_instruction("큐 저장해줘")
         assert result.status == "ok"
         assert result.retries_used == 1  # the blocked round counted as a correction
@@ -855,7 +859,9 @@ class TestOrchestratorWiring:
         )
         console = FakeConsole()
         console.fail_on["Bad Command"] = "Illegal command"
-        orchestrator, gate, console = _gated_orchestrator(tmp_path, provider, console=console)
+        orchestrator, gate, console = _gated_orchestrator(
+            tmp_path, provider, console=console, approval_port=ScriptedApproval([True] * 8)
+        )
         result = orchestrator.handle_instruction("세 개 실행해줘")
         assert result.status == "ok"
         # Store Cue 1 executed exactly once — the correction round skipped it.
