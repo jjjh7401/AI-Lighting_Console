@@ -251,6 +251,111 @@ class TestEverySealedSiteIsDriven:
         )
 
 
+#: 자리마다 **봉합이 유일한 방어인가** — 카드 t321 의 실측.
+#:
+#: 왜 이 표가 필요한가. 위의 세 관측은 「카드가 떴다 / 거절하면 0건 / 수락하면
+#: 나갔다」를 재는데, 그 셋은 **분류 층만으로도** 초록일 수 있다. 번들에
+#: `Store Preset` 처럼 blacklist 에 든 줄이 하나라도 있으면 선언이 없어도
+#: 게이트가 카드를 띄우기 때문이다. 그런 자리에서 위 셋은 참이지만 **봉합의
+#: 증거는 아니다** — 봉합에 유일하게 귀속되는 관측은 감사 로그의 `kind` 하나다.
+#:
+#: 그래서 재는 것을 「검사가 초록인가」에서 「봉합이 없으면 무엇이 나가는가」로
+#: 옮긴다. `seal-only` 는 나가는 명령이 전부 `safe` 로 분류되는 자리다 —
+#: 봉합을 떼면 카드가 아예 안 뜨고 쇼파일 쓰기가 승인 없이 콘솔에 닿는다.
+#: `redundant` 는 분류 층이 이미 잡는 자리다.
+#:
+#: 이 표를 코드에 박아 두는 이유는 **분류 층이 움직이면 귀속도 움직이기**
+#: 때문이다. blacklist 에 `Store Sequence` 가 추가되면 오늘 seal-only 인 일곱
+#: 자리가 조용히 redundant 가 되고, `Store Preset` 이 빠지면 그 반대가 된다.
+#: 둘 다 이 카드가 잰 사실을 무효로 만드는데, 표가 없으면 아무도 모른다.
+#: 이 검사는 그 이동을 빨갛게 만든다 — 분류 층을 바꾸는 것은 자유고, 바꾼 줄
+#: 모르는 것이 결함이다.
+#:
+#: 2026-09-07 실측: 열 자리 중 일곱이 seal-only. 뮤테이션(`risk=None`)이
+#: 같은 답을 독립으로 냈다 — seal-only 일곱은 네 관측이 전부 빨개지고,
+#: redundant 셋은 `kind` 검사 하나만 빨개진다.
+SEAL_DEFENCE = {
+    "run_look_bundle": "redundant",
+    "_look_pan_tilt": "redundant",
+    "_position_fx_sequence": "seal-only",
+    "_offer_fx_executor_assignment": "seal-only",
+    "_phaser_recall_sequence": "seal-only",
+    "_store_position_preset_looks": "redundant",
+    "_position_cue_store": "seal-only",
+    "_position_cue_sheet": "seal-only",
+    "_merge_timeline_cue_position": "seal-only",
+    "_setlist_mode": "seal-only",
+}
+
+
+def _classify_carried(gate, commands: list[str]) -> list:
+    """나갈 명령을 **오늘의** 분류 층에 대고 잰다. 못 읽으면 빨갛게 세운다."""
+    from server.safety.classify import RECOGNIZED_REFERENCE_TYPES, classify_command
+    from server.safety.grammar import validate
+
+    verdicts = []
+    for command in commands:
+        grammar = validate(command)
+        # 파싱 실패를 「분류 불가」로 삼키면 이 검사가 공허해진다 — 세운다.
+        assert grammar.ok and grammar.parsed is not None, (
+            f"분류 전에 문법이 막았다: {command!r} — {grammar.reason}"
+        )
+        verdicts.append(
+            classify_command(
+                grammar.parsed, gate._ruleset, reference_types=RECOGNIZED_REFERENCE_TYPES
+            )
+        )
+    return verdicts
+
+
+class TestWhatWouldGoOutWithoutTheSeal:
+    """봉합을 떼면 무엇이 콘솔에 닿는가 — 자리마다 오늘의 분류 층에 대고 잰다."""
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_the_recorded_defence_class_still_holds(self, tmp_path, name, drive, kind):
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert carried, f"{name}: 카드에 실린 줄이 없다 — 이 검사가 공허하다"
+
+        verdicts = _classify_carried(session._gate, carried)
+        risky = [v for v in verdicts if v.risky]
+        measured = "redundant" if risky else "seal-only"
+
+        assert measured == SEAL_DEFENCE[name], (
+            f"{name}: 방어 귀속이 {SEAL_DEFENCE[name]!r} 에서 {measured!r} 로 움직였다. "
+            f"분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: "
+            f"{sorted({v.matched_entry for v in risky if v.matched_entry})}. "
+            "SEAL_DEFENCE 표를 다시 재서 갱신해 주세요."
+        )
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_site_loses_every_card_without_its_declaration(
+        self, tmp_path, name, drive, kind
+    ):
+        """seal-only 자리에서 선언이 빠지면 카드가 **아예** 안 뜬다.
+
+        위 검사는 「전부 safe 로 분류된다」를 재는데, 그것이 곧 「봉합을 떼면
+        카드가 없다」는 뜻인지는 게이트의 동작이다(`gate.screen` 의
+        `approval_findings = list(findings) if risk is not None else held`).
+        그 접합을 여기서 직접 쏜다 — 표가 아니라 게이트에 물어본다.
+        """
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 이미 잡으므로 이 관측의 대상이 아니다")
+
+        session, console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        verdicts = _classify_carried(session._gate, carried)
+
+        # 선언 없이 이 번들을 게이트에 그대로 넣으면 `held` 가 비고 카드가 없다.
+        held = [v for v in verdicts if v.risky]
+        assert not held, f"{name}: seal-only 인데 보류될 줄이 있다: {[v.command for v in held]}"
+        assert _showfile(carried), (
+            f"{name}: 카드 없이 나갔을 줄에 쇼파일 쓰기가 없다 — 위험이 없는 자리다"
+        )
+
+
 class TestTheDriversAreNotVacuous:
     """구동기가 실제로 명령을 만들었는지 — 0건이면 위 검사가 공허하다."""
 
