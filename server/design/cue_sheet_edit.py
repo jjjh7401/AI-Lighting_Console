@@ -60,6 +60,11 @@ _FADE_MAX_SECONDS = 60.0
 #: 상대 조도 한 걸음.
 _INTENSITY_STEP = 20
 
+#: 상대 페이드 한 걸음(초). 「페이드 좀 길게」가 옮기는 양이다. 조도의 20%와
+#: 같은 성격의 고정 오프셋이며, 비례 배율이 아닌 이유도 같다(되돌리기가 정확히
+#: 대칭이 된다). 0~60초 사이에서 잘리고, 잘린 사실은 리포트에 적힌다.
+_FADE_STEP = 1.0
+
 
 def section_intensity_percent(section: Mapping[str, object]) -> int:
     """구간의 현재 조도(0..100). 그룹별 값이 있으면 최댓값, 없으면 d_level×20.
@@ -92,7 +97,14 @@ _FADE = re.compile(r"페이드\s*(를|을)?\s*(?P<v>\d+(?:\.\d+)?)\s*(초|s)?")
 _TRANS = re.compile(
     r"(전환|트랜스|trans)\s*(를|을)?\s*(?P<v>SNAP|XFADE|FADE|스냅|크로스페이드)", re.I
 )
-_SNAP_WORD = re.compile(r"스냅(으로|로)")
+#: t300 — 페이드를 **상대로** 옮기는 말. 「페이드」를 요구하는 것이 이 술어의
+#: 핵심이다: 「더 빠르게」 넉 자만으로는 페이드인지 무브먼트 속도인지 이펙트
+#: 속도인지 갈리지 않는다. 갈리지 않는 문장은 지어내지 않고 흘려보낸다.
+_FADE_LONGER = re.compile(r"페이드[^\n]{0,8}?(길게|느리게|천천히|늘려|늘리)")
+_FADE_SHORTER = re.compile(r"페이드[^\n]{0,8}?(짧게|빠르게|빨리|줄여|줄이)")
+
+#: 페이드 0초 = 스냅. 같은 물리 현상을 감독은 두 가지로 말한다.
+_FADE_NONE = re.compile(r"페이드\s*(를|을)?\s*(없이|없애|빼)|스냅(으로|로)")
 _MOOD = re.compile(r"무드\s*(를|을)?\s*(?P<v>[^,.\n]+?)\s*(으로|로)\s*(바꿔|해줘|변경|수정|설정)")
 _MOVEMENT = re.compile(
     r"(무브먼트|무브|움직임)\s*(를|을)?\s*(?P<v>[^,.\n]+?)\s*(으로|로)\s*(바꿔|해줘|변경|수정|설정)"
@@ -110,6 +122,29 @@ _NOTE = re.compile(
 #: 이 모듈이 「내 요청」이라고 인정하는 최소 신호. 하나도 없으면 None 을 돌려
 #: 기존 라우트 사슬로 그대로 흘려보낸다(오라우팅 방지).
 _EDIT_VERB = re.compile(r"(바꿔|변경|수정|해줘|설정|적어|남겨|밝게|어둡게|올려|낮춰|높여|내려)")
+
+#: **자기 완결형 페이드 지시**. 실측(2026-09-06): 「큐 20 페이드 3초로」가
+#: `None` 을 돌려받았다 — `_FADE` 는 이 문장을 읽을 수 있는데 위 동사 목록에
+#: 「로」가 없어 그 앞 게이트에서 잘렸다. 페이드를 데스크로 보내는 명령
+#: (`Store … CueFade <초> /Merge`)은 이미 실측으로 콘솔에 닿는데, 감독이
+#: 그것을 부를 말이 없었다.
+#:
+#: 이 술어는 동사 목록의 **대안**이지 확장이 아니다: 문장 자체가 「페이드를
+#: 얼마로」를 이미 말하고 있으면 「바꿔줘」를 덧붙이라고 요구하지 않는다.
+#: 두 번째 게이트(지시어 또는 t290 판별기)는 그대로 남는다.
+_FADE_DIRECTIVE = re.compile(
+    r"페이드\s*(를|을)?\s*\d+(?:\.\d+)?\s*(초|s)"  # 페이드 3초 / 페이드를 3.5초로
+    r"|페이드[^\n]{0,8}?(길게|짧게|느리게|빠르게|빨리|천천히|늘려|늘리|줄여|줄이)"
+    r"|페이드\s*(를|을)?\s*(없이|없애|빼)"
+    r"|스냅(으로|로)"
+)
+
+#: 페이드-단독 게이트가 **열지 않는** 문장. 실측 회귀(2026-09-06): 「프리셋
+#: 2.28을 시퀀스 101 큐 1로 저장, 페이드 5초」가 위 술어와 `큐 1` 지시어를
+#: 함께 갖고 있어 큐시트 편집으로 삼켜졌다 — 콘솔로 나가야 할 프리셋 저장이
+#: 0건이 됐다. 편집 동사가 따로 있는 문장은 이 배제를 받지 않는다(그쪽은
+#: 감독이 「고쳐라」라고 말한 문장이다).
+_NOT_A_CUE_SHEET_EDIT = re.compile(r"프리셋|저장|스토어|Store", re.IGNORECASE)
 
 #: **큐 지시어**. 편집 동사만으로는 부족하다 — 실측(2026-09-06): 곡 전체를
 #: 서술하는 설계 브리핑("0:00 도입은 무대를 어둡게 두고 …")이 「어둡게」 하나로
@@ -167,7 +202,10 @@ def parse_cue_sheet_edit_request(
     :func:`_is_anchorless_cue_command` 가 그 판별기다. 기본값은 거짓이라
     호출자가 아무것도 바꾸지 않으면 t281 그대로 동작한다.
     """
-    if _EDIT_VERB.search(text) is None:
+    fade_only_gate = (
+        _FADE_DIRECTIVE.search(text) is not None and _NOT_A_CUE_SHEET_EDIT.search(text) is None
+    )
+    if _EDIT_VERB.search(text) is None and not fade_only_gate:
         return None
     if _CUE_ANCHOR.search(text) is None and not (cue_selected and _is_anchorless_cue_command(text)):
         return None
@@ -182,12 +220,25 @@ def parse_cue_sheet_edit_request(
 
     if (match := _FADE.search(text)) is not None:
         changes["fade_seconds"] = float(match.group("v"))
+    elif _FADE_LONGER.search(text) is not None:
+        changes["fade_delta"] = _FADE_STEP
+    elif _FADE_SHORTER.search(text) is not None:
+        changes["fade_delta"] = -_FADE_STEP
 
     if (match := _TRANS.search(text)) is not None:
         raw = match.group("v").upper()
         changes["trans"] = {"스냅": "SNAP", "크로스페이드": "XFADE"}.get(match.group("v"), raw)
-    elif _SNAP_WORD.search(text) is not None:
+    elif _FADE_NONE.search(text) is not None:
         changes["trans"] = "SNAP"
+
+    # t300 — `Trans: SNAP` 과 `fade 0` 은 **같은 물리 현상**이다(즉시 전환).
+    # t293 은 `trans` 를 「초로 환산할 근거가 없다」며 콘솔에서 건너뛰었는데,
+    # 그 환산이 없는 것은 XFADE·FADE 쪽이다 — SNAP 은 0초로 정확히 환산된다.
+    # 그래서 여기서 접는다: SNAP 을 말한 문장은 페이드 0초도 말한 것으로 읽어,
+    # 이미 실측된 `CueFade` 통로로 데스크에 닿게 한다. 환산을 `cue_sheet_apply`
+    # 에 심지 않는 이유는 XFADE·FADE 의 거절 사유가 계속 참이어야 하기 때문이다.
+    if changes.get("trans") == "SNAP" and not ({"fade_seconds", "fade_delta"} & changes.keys()):
+        changes["fade_seconds"] = 0.0
 
     for field, pattern in (
         ("mood", _MOOD),
@@ -354,7 +405,9 @@ def apply_cue_sheet_edit(
             "무엇을 고칠지 못 읽었습니다. 예: '큐 3 조도 80으로 바꿔줘', '이 구간 더 밝게'."
         )
     unknown = [
-        key for key in changes if key not in EDITABLE_FIELD_LABELS and key != "intensity_delta"
+        key
+        for key in changes
+        if key not in EDITABLE_FIELD_LABELS and key not in ("intensity_delta", "fade_delta")
     ]
     if unknown:
         editable = ", ".join(EDITABLE_FIELD_LABELS.values())
@@ -393,6 +446,7 @@ def apply_cue_sheet_edit(
                 f"전환 값은 {', '.join(TRANS_VALUES)} 중 하나여야 합니다 (받은 값: {trans!r})."
             )
 
+    fade_target: float | None = None
     if "fade_seconds" in changes:
         fade = changes["fade_seconds"]
         if not isinstance(fade, (int, float)) or isinstance(fade, bool):
@@ -400,6 +454,27 @@ def apply_cue_sheet_edit(
         if not (0 <= float(fade) <= _FADE_MAX_SECONDS):
             raise CueSheetEditError(
                 f"페이드는 0~{_FADE_MAX_SECONDS:g}초 사이여야 합니다 (요청값: {fade})."
+            )
+        fade_target = float(fade)
+    elif "fade_delta" in changes:
+        # 상대 페이드는 **기준값**을 요구한다. 값이 없는 큐에 「좀 길게」는
+        # 0초를 가정하거나 기본값을 지어내야 답할 수 있고, 둘 다 감독이 말한
+        # 적 없는 숫자다 — 그래서 사유를 붙여 거절한다(틀린 페이드보다 낫다).
+        delta = changes["fade_delta"]
+        if not isinstance(delta, (int, float)) or isinstance(delta, bool):
+            raise CueSheetEditError(f"페이드 증감은 숫자여야 합니다 (받은 값: {delta!r}).")
+        before_fade = section.get("fade_seconds")
+        if not isinstance(before_fade, (int, float)) or isinstance(before_fade, bool):
+            raise CueSheetEditError(
+                "이 큐에는 기준이 될 페이드 값이 없어 「더 길게/짧게」를 계산할 수 "
+                "없습니다 — 초를 적어 주세요 (예: '페이드 3초로')."
+            )
+        fade_target = max(0.0, min(_FADE_MAX_SECONDS, float(before_fade) + float(delta)))
+        if fade_target == float(before_fade):
+            limit = f"천장 {_FADE_MAX_SECONDS:g}초" if delta > 0 else "바닥 0초"
+            raise CueSheetEditError(
+                f"이 큐의 페이드는 이미 {limit}에 닿아 있어 더 옮길 수 없습니다 "
+                f"(현재 {float(before_fade):g}초)."
             )
 
     for field in ("mood", "palette_primary", "palette_secondary", "movement", "effect", "note"):
@@ -423,13 +498,21 @@ def apply_cue_sheet_edit(
         before = section.get("trans")
         section["trans"] = str(changes["trans"]).upper()
         report.append(f"{EDITABLE_FIELD_LABELS['trans']} {before or '—'} → {section['trans']}")
-    if "fade_seconds" in changes:
+    if fade_target is not None:
         before = section.get("fade_seconds")
-        section["fade_seconds"] = float(changes["fade_seconds"])
-        report.append(
+        section["fade_seconds"] = fade_target
+        line = (
             f"{EDITABLE_FIELD_LABELS['fade_seconds']} "
-            f"{'—' if before is None else f'{float(before):g}초'} → {section['fade_seconds']:g}초"
+            f"{'—' if before is None else f'{float(before):g}초'} → {fade_target:g}초"
         )
+        if "fade_delta" in changes:
+            requested = float(changes["fade_delta"])
+            actual = fade_target - float(before)
+            line += f" ({actual:+g}초)"
+            if actual != requested:
+                limit = f"천장 {_FADE_MAX_SECONDS:g}초" if requested > 0 else "바닥 0초"
+                line += f", 요청 {requested:+g}초 → {limit}에 맞춰 {actual:+g}초"
+        report.append(line)
     for field in ("mood", "palette_primary", "palette_secondary", "movement", "effect", "note"):
         if field in changes:
             before = section.get(field)

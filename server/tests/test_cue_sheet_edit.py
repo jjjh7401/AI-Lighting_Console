@@ -391,3 +391,124 @@ def test_the_discriminator_precision_on_the_two_corpora():
     ]
     assert len(accepted) == len(ANCHORLESS_CUE_COMMANDS)  # 재현율 7/7
     assert leaked == []  # 거짓양성 0/6
+
+
+# -- t300: 페이드에 닿는 말이 없었다 ---------------------------------------------
+#
+# `Store … Cue N CueFade <초> /Merge` 는 실측으로 콘솔에 닿는 명령이고(t293·t296),
+# 계획도 바르게 세워진다. 그런데 「큐 20 페이드 3초로」는 `None` 을 돌려받았다 —
+# `_EDIT_VERB` 목록에 「로」가 없어 그 앞 게이트에서 잘렸기 때문이다. 능력은
+# 있는데 부를 말이 없던 자리다.
+
+#: 이 라우트가 **받는** 페이드 문장. 셋 계열이다 — 절대(초), 상대(길게/빠르게),
+#: 스냅(=0초). 전부 「바꿔줘」 없이도 열려야 한다.
+FADE_COMMANDS_WITHOUT_AN_EDIT_VERB = (
+    "큐 20 페이드 3초로",
+    "큐 20 페이드를 3.5초로",
+    "이 구간 페이드 3초",
+    "이 구간 페이드 좀 길게",
+    "이 구간 페이드 더 짧게",
+    "이 구간 페이드 더 빠르게",
+    "이 구간 페이드 더 느리게",
+    "이 구간 스냅으로",
+    "이 구간 페이드 없이",
+)
+
+#: 페이드라는 말이 있어도 **거절**해야 하는 문장. 두 계열이다 —
+#: (a) 곡을 서술하는 문장(지시어 없음·범위어), (b) 큐시트가 아니라 콘솔
+#: 프리셋을 저장하라는 명령(실측 회귀: 아래 마지막 줄).
+FADE_SHAPED_BUT_NOT_A_CUE_SHEET_EDIT = (
+    "전체적으로 페이드 3초로",
+    "모든 큐를 페이드 없이",
+    "0:00 도입은 페이드 3초로 시작해줘",
+    "프리셋 2.28을 시퀀스 101 큐 1로 저장, 페이드 5초",
+)
+
+
+@pytest.mark.parametrize("text", FADE_COMMANDS_WITHOUT_AN_EDIT_VERB)
+def test_a_fade_directive_opens_the_route_without_an_edit_verb(text):
+    """t300 재현: 이 문장들은 고치기 전 전부 `None` 이었다."""
+    assert parse_cue_sheet_edit_request(text) is not None
+
+
+@pytest.mark.parametrize("text", FADE_SHAPED_BUT_NOT_A_CUE_SHEET_EDIT)
+def test_a_fade_word_alone_does_not_open_the_route(text):
+    assert parse_cue_sheet_edit_request(text) is None
+    assert parse_cue_sheet_edit_request(text, cue_selected=True) is None
+
+
+def test_a_bare_speed_word_is_refused_because_it_does_not_name_the_fade():
+    """「더 빠르게」 넉 자는 페이드인지 무브먼트인지 이펙트인지 갈리지 않는다.
+
+    갈리지 않는 문장에 숫자를 지어내는 것보다 정직한 거절이 낫다 — 잘못 잡힌
+    페이드는 안 잡힌 페이드보다 나쁘다. 이 거절은 의도된 것이고, 감독이
+    「페이드」를 한 번 말하면 바로 열린다(위 코퍼스).
+    """
+    assert parse_cue_sheet_edit_request("더 빠르게", cue_selected=True) is None
+    assert parse_cue_sheet_edit_request("페이드 더 빠르게", cue_selected=True) is not None
+
+
+def test_the_relative_fade_step_is_one_second():
+    assert parse_cue_sheet_edit_request("이 구간 페이드 좀 길게")["changes"] == {"fade_delta": 1.0}
+    assert parse_cue_sheet_edit_request("이 구간 페이드 좀 짧게")["changes"] == {"fade_delta": -1.0}
+
+
+def test_a_relative_fade_moves_by_the_step_and_reports_it():
+    updated, report = apply_cue_sheet_edit(_timeline(), 1, {"fade_delta": 1.0})
+    assert updated["sections"][0]["fade_seconds"] == 3.0
+    assert report == ["페이드 2초 → 3초 (+1초)"]
+
+
+def test_a_relative_fade_is_clipped_at_the_floor_and_says_so():
+    timeline = _timeline()
+    timeline["sections"][0]["fade_seconds"] = 0.5
+    updated, report = apply_cue_sheet_edit(timeline, 1, {"fade_delta": -1.0})
+    assert updated["sections"][0]["fade_seconds"] == 0.0
+    assert report == ["페이드 0.5초 → 0초 (-0.5초), 요청 -1초 → 바닥 0초에 맞춰 -0.5초"]
+
+
+def test_a_relative_fade_at_the_floor_is_refused_rather_than_silently_passing():
+    timeline = _timeline()
+    timeline["sections"][0]["fade_seconds"] = 0.0
+    with pytest.raises(CueSheetEditError) as excinfo:
+        apply_cue_sheet_edit(timeline, 1, {"fade_delta": -1.0})
+    assert str(excinfo.value) == (
+        "이 큐의 페이드는 이미 바닥 0초에 닿아 있어 더 옮길 수 없습니다 (현재 0초)."
+    )
+
+
+def test_a_relative_fade_without_a_baseline_is_refused_rather_than_invented():
+    """기준값이 없는 큐에 「좀 길게」는 0초나 기본값을 **지어내야** 답할 수 있다."""
+    timeline = _timeline()
+    del timeline["sections"][0]["fade_seconds"]
+    with pytest.raises(CueSheetEditError) as excinfo:
+        apply_cue_sheet_edit(timeline, 1, {"fade_delta": 1.0})
+    assert "기준이 될 페이드 값이 없어" in str(excinfo.value)
+
+
+def test_snap_folds_into_a_zero_second_fade():
+    """`Trans: SNAP` 과 `fade 0` 은 같은 물리 현상이다 — 접는다.
+
+    t293 이 `trans` 를 콘솔에서 건너뛴 사유는 「초로 환산할 근거가 없다」였는데,
+    그 환산이 없는 것은 XFADE·FADE 쪽이다. SNAP 은 0초로 정확히 환산되므로,
+    스냅을 말한 문장은 이미 실측된 `CueFade` 통로로 데스크에 닿는다.
+    """
+    for text in ("이 구간 스냅으로", "이 구간 페이드 없이"):
+        changes = parse_cue_sheet_edit_request(text)["changes"]
+        assert changes == {"trans": "SNAP", "fade_seconds": 0.0}
+
+
+def test_an_explicit_fade_number_wins_over_the_snap_fold():
+    """감독이 초를 말했으면 그 초가 나간다 — 접기가 숫자를 덮지 않는다."""
+    changes = parse_cue_sheet_edit_request("이 구간 스냅으로 페이드 2초")["changes"]
+    assert changes["fade_seconds"] == 2.0
+
+
+def test_the_fade_route_never_leaks_into_the_song_brief_corpus():
+    """t290 이 거절하기로 한 문장들은 페이드 게이트가 생겨도 그대로 거절된다."""
+    leaked = [
+        text
+        for text in STILL_REFUSED_WITH_A_SELECTION
+        if parse_cue_sheet_edit_request(text, cue_selected=True) is not None
+    ]
+    assert leaked == []
