@@ -38,7 +38,12 @@ from server.tests.busking_fixtures import (
 _REPORT_MODULE = Path("server/looks/report.py")
 
 # plan-phase 실측을 본 테스트가 **직접 재측정**해 기대값으로 쓴다.
-_PAIR_COUNTS = {"worship": 25, "rock": 26, "ballad": 20, "edm": 26}
+#
+# 2026-09-06 갱신 — SPEC-COPILOT-D1GRANT-001 이 rock·edm 에 dynamics 1 룩을 하나씩
+# 더했다. 두 룩 모두 역할이 **하나뿐**이므로(`rock-wing-embers` = 사이드,
+# `edm-haze-shafts` = 백라이트) 쌍 수는 각각 +1 이다: rock 26→27, edm 26→27.
+# worship·ballad 는 안 움직인다.
+_PAIR_COUNTS = {"worship": 25, "rock": 27, "ballad": 20, "edm": 27}
 
 
 @pytest.fixture(scope="module")
@@ -102,7 +107,10 @@ class TestUnmappedRoles:
         for look in looks:
             for role in look.roles:
                 contributions[role] = contributions.get(role, 0) + 1
-        assert max(contributions.values()) == 7, "rock `사이드` 7룩 — 경계 케이스"
+        # 2026-09-06 — SPEC-COPILOT-D1GRANT-001 의 `rock-wing-embers` 가 `사이드`
+        # 를 유일한 역할로 들고 오면서 7→8. 경계 케이스의 성질(단일 역할 하나가
+        # 1 이 아니라 여러 쌍을 낸다)은 그대로다.
+        assert max(contributions.values()) == 8, "rock `사이드` 8룩 — 경계 케이스"
 
     def test_match_verdicts_and_section_failures_are_separate_kinds(self, library):
         # 매칭 판정 3종과 섹션 실패 전파는 서로 다른 사실이다 — 합치지 않는다.

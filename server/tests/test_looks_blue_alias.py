@@ -80,7 +80,13 @@ class TestEveryBlueGreenEntryHasATwin:
     def test_the_invariant_has_entries_to_check(self, library):
         # Non-vacuity: an empty '푸른' inventory satisfies the assertion above,
         # and would also be the shape if the asset files went missing.
+        #
+        # 2026-09-06 — 5 → 6 entries, 3 → 4 looks. SPEC-COPILOT-D1GRANT-001 added
+        # `edm-haze-shafts`, a deep-blue dynamics-1 look whose mood keywords
+        # legitimately carry '푸른'. It therefore had to carry the '파란' twin as
+        # well, and the assertion above is what caught the omission — the
+        # invariant did its job on a look written after it.
         entries = self._entries(library)
-        assert len(entries) == 5
+        assert len(entries) == 6
         assert {slot for _id, slot, _term in entries} == {"aliases", "mood_keywords"}
-        assert len({look_id for look_id, _slot, _term in entries}) == 3
+        assert len({look_id for look_id, _slot, _term in entries}) == 4

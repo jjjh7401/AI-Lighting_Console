@@ -790,12 +790,19 @@ def test_effect_lines_come_after_the_look_line_in_a_collided_scene():
 
 
 # =============================================================================
-# AC-SCENE-023 — uniform attribute set ordering (full 32-look sweep)
+# AC-SCENE-023 — uniform attribute set ordering (full-library sweep)
 # =============================================================================
 
 
-def test_the_real_library_has_thirty_two_looks():
-    assert len(REAL_LOOKS) == 32
+def test_the_real_library_has_thirty_four_looks():
+    # Non-vacuity for the parametrized sweep below: a library that failed to
+    # load would parametrize over nothing and pass silently.
+    #
+    # 2026-09-06 — 32 → 34. SPEC-COPILOT-D1GRANT-001 added one dynamics-1 look
+    # to each of edm and rock so that a rig with no cyc/backdrop group stops
+    # dropping its quietest section. This literal counts the WHOLE library, so
+    # it moves with any genre; the sweep it guards is unchanged.
+    assert len(REAL_LOOKS) == 34
 
 
 @pytest.mark.parametrize("look", REAL_LOOKS, ids=[look.look_id for look in REAL_LOOKS])

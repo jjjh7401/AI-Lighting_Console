@@ -139,3 +139,24 @@ looks:
       ColorRGB_B: 100
       Iris: 100
       Zoom: 10
+
+  # --- dynamics 1, 뒤늦게 붙인 칸: 배경막 없는 리그를 위한 것 -----------------
+  # edm.yaml 의 같은 자리와 이유가 같다 — 정렬 축은 `look_id` 사전순이지 파일
+  # 위치가 아니고, 옛 EOF 뒤에 붙이는 것은 승인 게이트를 위한 선택이다.
+  #
+  # `rock-empty-stage` 는 역할이 `배경` 하나뿐이라 배경막 없는 리그에서 침묵했다.
+  # 헤더 규칙이 벌스에서 `프론트` 를 배제하므로 남는 것은 `사이드` 와 `백라이트`
+  # 인데, `백라이트` 는 바로 다음 칸 `rock-verse-side` 가 이미 쓴다 — D1 에서
+  # 미리 쓰면 벌스로 넘어갈 때의 대비가 사라진다. 그래서 `사이드` 다.
+  - look_id: "rock-wing-embers"
+    display_name: "윙 엠버"
+    genre: "rock"
+    dynamics: 1
+    roles: ["사이드"]
+    aliases: ["윙 엠버", "wing embers", "잔불"]
+    mood_keywords: ["어두운", "탁한", "붉은", "식어가는", "embers", "smoulder"]
+    attributes:
+      Dimmer: 22
+      ColorRGB_R: 65
+      ColorRGB_G: 10
+      ColorRGB_B: 22

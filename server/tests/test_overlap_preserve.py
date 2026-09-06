@@ -337,6 +337,150 @@ _LOOKS_GRANTED_LINE_PAIRS = {
     ),
 }
 
+#: 2026-09-06 granted addition — SPEC-COPILOT-D1GRANT-001 (REQ-D1GRANT-007):
+#: ONE dynamics-1 look appended to EACH of ``edm.yaml`` and ``rock.yaml``, and
+#: nothing else. Approved through that SPEC's plan-audit + Implementation
+#: Kickoff Approval (card t282 follow-up); the grant is APPEND-ONLY and pinned
+#: below by EXACT LINE TEXT, the same regime as the 2026-08-02 파란 mirror above.
+#:
+#: The grant is motivated by a MEASUREMENT, not a preference: card t277 watched
+#: a live grandMA3 session store THREE cues for FOUR director-confirmed
+#: sections. The missing one was the quietest section, and it failed silently.
+#: Card t278 established the cause and fixed what could be fixed in code —
+#: ``_select_bindable`` now picks the first look that actually BINDS on this rig
+#: instead of the first look at the requested dynamics — which recovered
+#: worship. It could not recover edm or rock, because those two genres had
+#: exactly ONE dynamics-1 look each and its only role was ``배경``: on a rig with
+#: no cyc/backdrop group there was nothing to choose. t278 recorded that residue
+#: honestly in ``test_songcue_rig_aware_look.TestWhatThisFixCannotReach``. What
+#: remained was LIBRARY CONTENT, not selection logic, and this is that content.
+#:
+#: Why the boundary is not weakened by this. ``server/looks/library/`` stays a
+#: locked boundary and every OTHER file in it still fails on one changed byte.
+#: Three properties bound the grant mechanically, each with its own assertion in
+#: :class:`TestLooksLibraryGrantedExtension`: the changed-file set is the UNION
+#: of the two grants and nothing more; the added lines must equal
+#: ``[파란 pair] + [this block]`` EXACTLY (an ``==``, never a subset — a subset
+#: predicate would let arbitrary library edits through and is the named
+#: anti-pattern in that SPEC's plan.md §B-2); and each addition must be ONE pure
+#: insertion hunk at the old EOF carrying ``- look_id:`` exactly ONCE, which is
+#: what pins the grant's WIDTH to one look per file.
+#:
+#: The old-EOF placement is a GATE property, not a functional one.
+#: ``looks_for_genre`` sorts by ``(dynamics, look_id)`` and never reads file
+#: order, so where the block sits does not affect selection. What it buys is
+#: determinism: a pure insertion shifts no line above it, so the 파란 hunk keeps
+#: its position (old line 74) and the added-line ORDER is fixed, which is what
+#: makes the exact-equality assertion above possible at all. The cyc-rig
+#: no-regression property rests on ``look_id`` collation instead
+#: (``edm-ambient-hold`` < ``edm-haze-shafts``, ``rock-empty-stage`` <
+#: ``rock-wing-embers``) and is pinned by its own test rather than left to the
+#: file layout — see ``test_songcue_d1_cycless.TestTheCycRigDoesNotMove``.
+#:
+#: NOT live-verified: no console was touched by this addition. The two looks'
+#: colour and intensity values are DESIGN values back-derived from neighbouring
+#: looks in the same files, never fired on a real rig, so their stage
+#: suitability is a director's judgement this grant does not claim to have made.
+#: ``edm`` reaches exactly ``MAX_LOOKS_PER_GENRE`` (10) with this addition —
+#: a further edm look requires raising that constant, which is a separate
+#: decision and NOT covered here.
+_LOOKS_GRANTED_D1_APPENDS = {
+    "server/looks/library/edm.yaml": (
+        "",
+        "  # --- dynamics 1, 뒤늦게 붙인 칸: 배경막 없는 리그를 위한 것 -----------------",
+        "  # 파일이 다이내믹스 오름차순으로 읽히는 흐름에서 여기만 어긋난다. 정렬은",
+        "  # `looks_for_genre` 가 `(dynamics, look_id)` 로 하므로 파일 위치는 선택에",
+        "  # 영향을 주지 않고, 이 자리에 붙이는 이유는 승인 게이트 쪽이다(옛 EOF 뒤의",
+        "  # 순수 삽입이라 위쪽 줄이 한 줄도 밀리지 않는다).",
+        "  #",
+        "  # `edm-ambient-hold` 는 역할이 `배경` 하나뿐이라, 호리·cyc 계열이 없는 리그에서는",
+        "  # 어느 무리에도 안 묶이고 그 구간이 통째로 침묵했다. 배경막이 없을 때 깊이를",
+        "  # 만드는 빛은 뒤에서 오는 것뿐이므로 역할은 `백라이트` 다 — 헤더 규칙이 `프론트` 를",
+        "  # 배제하고, `탑` 은 실기 리그에서 안 묶인다.",
+        '  - look_id: "edm-haze-shafts"',
+        '    display_name: "헤이즈 샤프트"',
+        '    genre: "edm"',
+        "    dynamics: 1",
+        '    roles: ["백라이트"]',
+        '    aliases: ["헤이즈 샤프트", "haze shafts", "빈 하늘"]',
+        '    mood_keywords: ["어두운", "깊은", "푸른", "파란", "잠긴", "haze", "shafts"]',
+        "    attributes:",
+        "      Dimmer: 18",
+        "      ColorRGB_R: 0",
+        "      ColorRGB_G: 40",
+        "      ColorRGB_B: 78",
+    ),
+    "server/looks/library/rock.yaml": (
+        "",
+        "  # --- dynamics 1, 뒤늦게 붙인 칸: 배경막 없는 리그를 위한 것 -----------------",
+        "  # edm.yaml 의 같은 자리와 이유가 같다 — 정렬 축은 `look_id` 사전순이지 파일",
+        "  # 위치가 아니고, 옛 EOF 뒤에 붙이는 것은 승인 게이트를 위한 선택이다.",
+        "  #",
+        "  # `rock-empty-stage` 는 역할이 `배경` 하나뿐이라 배경막 없는 리그에서 침묵했다.",
+        "  # 헤더 규칙이 벌스에서 `프론트` 를 배제하므로 남는 것은 `사이드` 와 `백라이트`",
+        "  # 인데, `백라이트` 는 바로 다음 칸 `rock-verse-side` 가 이미 쓴다 — D1 에서",
+        "  # 미리 쓰면 벌스로 넘어갈 때의 대비가 사라진다. 그래서 `사이드` 다.",
+        '  - look_id: "rock-wing-embers"',
+        '    display_name: "윙 엠버"',
+        '    genre: "rock"',
+        "    dynamics: 1",
+        '    roles: ["사이드"]',
+        '    aliases: ["윙 엠버", "wing embers", "잔불"]',
+        '    mood_keywords: ["어두운", "탁한", "붉은", "식어가는", "embers", "smoulder"]',
+        "    attributes:",
+        "      Dimmer: 22",
+        "      ColorRGB_R: 65",
+        "      ColorRGB_G: 10",
+        "      ColorRGB_B: 22",
+    ),
+}
+
+#: 2026-09-06 granted line pair — SPEC-COPILOT-D1GRANT-001 (REQ-D1GRANT-019),
+#: the count-prose correction that the append above FORCES.
+#:
+#: This one is worth reading slowly, because it is where two of that SPEC's own
+#: requirements pull against each other. REQ-D1GRANT-004 says the SPEC "shall
+#: not change any FIELD of an existing look", and then states a MECHANICAL
+#: PROXY for that intent: zero deleted lines beyond the 2026-08-02 파란 pairs.
+#: REQ-D1GRANT-019 separately REQUIRES that ``edm.yaml``'s header stop saying
+#: "Nine looks", because the append makes that sentence false. A comment is not
+#: a look's field, so the two requirements agree on INTENT — but a one-line
+#: comment edit is a delete plus an add, so it trips the proxy. The proxy
+#: over-reaches its own intent; that is the conflict, and it is recorded here
+#: rather than resolved silently.
+#:
+#: Resolved by PINNING rather than by relaxing: the corrected line is named
+#: below by exact text on both sides, so the gate is exactly as strong as it was
+#: (nothing unpinned passes, and the intent REQ-D1GRANT-004 actually protects —
+#: no existing LOOK is touched — is verifiable by reading this pair). The
+#: alternative was to ship a library asset whose header states a count that its
+#: own contents contradict, which is the defect class REQ-D1GRANT-019 exists to
+#: prevent.
+#:
+#: Only the count word changes. The "weighted toward the top of the scale"
+#: clause and the "three at dynamics 4-5" clause are left exactly as the
+#: original author wrote them: the second is still true (three looks remain at
+#: dynamics 4-5), and the first is a pre-existing characterisation this SPEC
+#: neither introduced nor is required to re-litigate. Widening the edit past
+#: the one word REQ-D1GRANT-019 names would widen the grant for nothing.
+_LOOKS_GRANTED_COUNT_PROSE_PAIRS = {
+    "server/looks/library/edm.yaml": (
+        (
+            "# different room than the build did. Nine looks, weighted toward the top of the",
+            "# different room than the build did. Ten looks, weighted toward the top of the",
+        ),
+    ),
+}
+
+#: The look-library files carrying a granted change of ANY kind. Derived, not
+#: written down: a hand-kept list would desynchronise from the grants the
+#: moment any one of them is revised.
+_LOOKS_GRANTED_FILES = (
+    frozenset(_LOOKS_GRANTED_LINE_PAIRS)
+    | frozenset(_LOOKS_GRANTED_D1_APPENDS)
+    | frozenset(_LOOKS_GRANTED_COUNT_PROSE_PAIRS)
+)
+
 _TOOLS_PATH = "server/orchestrator/tools.py"
 
 #: Protected regions of ``tools.py``, PRECHK-base relative: the programmer-state
@@ -1048,11 +1192,21 @@ class TestConsoleLuaReadmeGrantedException:
 
 
 class TestLooksLibraryGrantedExtension:
-    """The 2026-08-02 grant — exactly the sanctioned 파란 mirror, nothing else.
+    """Two grants — the 2026-08-02 파란 mirror and the 2026-09-06 D1 append.
 
     Not a weakening: the boundary stays locked, and this class IS the lock's
-    new shape. Every deleted line must reappear as its paired insertion with
-    파란 added; an extra file, an extra hunk, or a different wording fails.
+    shape. Every deleted line must reappear as its paired insertion with 파란
+    added; every added line must be either one of those pairs' new lines or a
+    line of a granted append block; an extra file, an extra hunk, or a
+    different wording fails.
+
+    **The two grants are checked TOGETHER, per file, by exact equality.** They
+    overlap on ``edm.yaml`` — it carries a 파란 pair AND an appended look — so
+    checking either grant alone would read the other's lines as unsanctioned.
+    Concatenating them is sound only because the append lands at the old EOF
+    and is therefore the LAST hunk, which
+    :func:`test_each_granted_addition_is_one_appended_hunk_at_the_old_eof`
+    asserts rather than assumes.
     """
 
     @staticmethod
@@ -1066,24 +1220,78 @@ class TestLooksLibraryGrantedExtension:
         return deleted, added
 
     def test_the_grant_is_not_an_empty_exemption(self):
-        # Non-vacuity, the standard this module sets for itself. All three
-        # assertions below are satisfied by an EMPTY dict — `set() == set()`
-        # and two loops that never run — while `server/looks/library/` stays
+        # Non-vacuity, the standard this module sets for itself. The
+        # assertions below are satisfied by EMPTY grants — `set() == set()`
+        # and loops that never run — while `server/looks/library/` stays
         # filtered out of `_preserve_diff_command()`. That combination is a
-        # gate that is off AND green, so pin both halves: the grant has
-        # entries, and the directory it exempts really did change.
+        # gate that is off AND green, so pin every half: BOTH grants have
+        # entries, and the directory they exempt really did change.
         assert _LOOKS_GRANTED_LINE_PAIRS
+        assert _LOOKS_GRANTED_D1_APPENDS
         assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", _LOOKS_LIBRARY_DIR) != ""
 
-    def test_exactly_the_three_granted_files_changed(self):
+    def test_exactly_the_four_granted_files_changed(self):
         rows = _numstat(_PRECHK_BASE, _LOOKS_LIBRARY_DIR)
-        assert set(rows) == set(_LOOKS_GRANTED_LINE_PAIRS)
+        # The UNION of the two grants, not either one alone. `edm.yaml` is in
+        # both, `rock.yaml` only in the append grant, `ballad`/`worship` only
+        # in the pair grant. A fifth file still fails.
+        assert set(rows) == set(_LOOKS_GRANTED_FILES)
+        assert len(_LOOKS_GRANTED_FILES) == 4
 
     def test_every_change_is_a_granted_line_pair_and_every_pair_is_present(self):
-        for path, pairs in _LOOKS_GRANTED_LINE_PAIRS.items():
+        for path in sorted(_LOOKS_GRANTED_FILES):
+            prose = _LOOKS_GRANTED_COUNT_PROSE_PAIRS.get(path, ())
+            pairs = _LOOKS_GRANTED_LINE_PAIRS.get(path, ())
+            appended = _LOOKS_GRANTED_D1_APPENDS.get(path, ())
             deleted, added = self._diff_lines(path)
-            assert deleted == [old for old, _new in pairs], path
-            assert added == [new for _old, new in pairs], path
+            # Exact equality on BOTH sides, deliberately. Relaxing either to a
+            # subset test is the cheapest way to make an unsanctioned edit pass
+            # and would void the whole gate — see the grant comments above.
+            #
+            # The concatenation ORDER is diff order, which is file-position
+            # order: the count-prose line (old 7) precedes the 파란 line
+            # (old 74), which precedes the old EOF. That claim is not assumed
+            # here — `test_the_granted_hunks_appear_in_the_order_this_class_
+            # concatenates_them` measures it.
+            assert deleted == [old for old, _new in prose] + [old for old, _new in pairs], path
+            assert added == [new for _old, new in prose] + [new for _old, new in pairs] + list(
+                appended
+            ), path
+
+    def test_the_granted_hunks_appear_in_the_order_this_class_concatenates_them(self):
+        # The assertion above concatenates three grants in a fixed order. If the
+        # diff ever produced them in a different order the equality would fail
+        # confusingly, so pin the ordering claim itself, measured from the diff.
+        for path in sorted(_LOOKS_GRANTED_FILES):
+            starts = [old_start for old_start, _old_count in _hunks(_PRECHK_BASE, path)]
+            assert starts == sorted(starts), path
+            prose_count = len(_LOOKS_GRANTED_COUNT_PROSE_PAIRS.get(path, ()))
+            if prose_count and path in _LOOKS_GRANTED_LINE_PAIRS:
+                # The prose correction sits in the file header, above every
+                # look — so above every 파란 line by construction.
+                assert starts[0] < starts[prose_count], path
+
+    def test_each_granted_addition_is_one_appended_hunk_at_the_old_eof(self):
+        # Shape, following `TestChoreographyObservedEffectGrantedAppend`: a
+        # pure insertion (`old_count == 0`) named by the line it follows. That
+        # the insertion is the LAST hunk is what makes the concatenation order
+        # in the assertion above sound rather than lucky.
+        for path in _LOOKS_GRANTED_D1_APPENDS:
+            hunks = _hunks(_PRECHK_BASE, path)
+            insertions = [hunk for hunk in hunks if hunk[1] == 0]
+            assert len(insertions) == 1, path
+            text = _git("show", f"{_PRECHK_BASE}:{path}")
+            assert hunks[-1] == (len(text.splitlines()), 0), path
+
+    def test_each_appended_block_defines_exactly_one_look(self):
+        # This is where the grant's WIDTH is pinned mechanically. "One look per
+        # file" is the whole scope of the 2026-09-06 addition; without this,
+        # the exact-line-text assertion would still pass for a re-pinned block
+        # carrying two looks.
+        for path, block in _LOOKS_GRANTED_D1_APPENDS.items():
+            assert block, path
+            starts = [line for line in block if line.lstrip().startswith("- look_id:")]
+            assert len(starts) == 1, path
 
     def test_the_grant_really_is_the_blue_mirror_and_nothing_broader(self):
         # Non-vacuity + shape: each pair differs ONLY by inserting 파란 tokens.
