@@ -570,7 +570,10 @@ _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 10,
     "server/safety/backup.py": 2,
     "server/safety/blacklist.yaml": 1,
-    "server/safety/console.py": 59,
+    # t313 (2026-09-07): 59 → 60. 판독 시간 초과가 `ConsoleSilentError`
+    # (StateQueryError 하위형)로 올라가면서 `raise StateQueryError(` 한 줄이
+    # 지워진다. 아래 핀에 그 정확한 문면이 함께 들어간다.
+    "server/safety/console.py": 60,
     "server/safety/gate.py": 8,
     "server/safety/monitor.py": 3,
     "server/safety/responder_version.py": 0,
@@ -708,6 +711,15 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         '        """Object-tree snapshot query (REQ-MVP-003); raises on failure/timeout."""',
         "        payload = self._round_trip(",
         "            build_state_query(request_id, path), request_id, self._timeouts.state_query_seconds",  # noqa: E501
+        # t313 (2026-09-07) — 판독 시간 초과가 `ConsoleSilentError` 로 올라간다.
+        # 「콘솔이 아무 답도 안 했다」와 「콘솔이 아니오라고 답했다」가 같은
+        # 예외형이면, 아무것도 재지 못한 실행에서 「콘솔에 없다」는 결론이
+        # 나온다 — 사전 점검이 무응답을 fail 이 아니라 skip 으로 낮추는
+        # 것과 같은 구분이다(`server/preshow/osc_check.py`). 새 형은
+        # `StateQueryError` 의 **하위형**이라 기존 호출자는 그대로 잡는다.
+        # 삭제는 이 한 줄뿐 — 네 군데 timeout raise 중 나머지 셋은 기준
+        # 커밋 이후 이미 다른 이유로 바뀌어 위쪽에 계산돼 있다.
+        "            raise StateQueryError(",
         "            raise BodyUnavailable(",
         '                f"identity query failed for {reference!r}: {error}"',
         "            ) from error",
