@@ -37,6 +37,17 @@ _STORE_PRESET = re.compile(r"\bStore Preset (\d+)\.(\d+)")
 _STORE_SEQUENCE_CUE = re.compile(r"\bStore Sequence (\d+) Cue (\d+(?:\.\d+)?)")
 _STORE_TIMECODE = re.compile(r"\bStore Timecode (\d+)")
 _STORE_MACRO = re.compile(r"\bStore Macro (\d+)")
+#: 카드 t323 — 모델이 `run_commands` 로 직접 쓰는 어휘. 위의 일곱 패턴은 전부
+#: 서버가 **자기 계획으로** 만드는 문장이라, 모델이 손으로 적는 짧은 형태
+#: (`Store Cue 1` · `Store Group 3` · `Store Sequence 71`)는 하나도 안 걸렸다.
+#: t322 실측이 잡은 여덟 번들이 정확히 이 모양이었다. 여기 있는 것만 넣는다 —
+#: 확신 없이 넣으면 안 고치는 번들에 카드가 뜨고, 그게 진짜 쓰기를 통과시킨다.
+#: `Store Sequence <n>` 은 `Cue` 가 뒤따르지 않을 때만 센다(뒤따르면 위의
+#: `_STORE_SEQUENCE_CUE` 가 이미 그 줄을 큐로 세므로 두 번 세는 게 된다).
+_STORE_CUE = re.compile(r"\bStore Cue (\d+(?:\.\d+)?)")
+_STORE_GROUP = re.compile(r"\bStore Group (\d+)")
+_STORE_PAGE = re.compile(r"\bStore Page (\d+)")
+_STORE_SEQUENCE_BARE = re.compile(r"\bStore Sequence (\d+)(?! Cue\b)")
 _SET_FIXTURE_POS = re.compile(r"\bSet Fixture (\d+) Pos[xyz]\b")
 _ASSIGN_EXECUTOR = re.compile(r"\bAssign Sequence (\d+) At Executor (\S+)")
 _COPY_SEQUENCE = re.compile(r"\bCopy Sequence (\d+) At (\d+)")
@@ -77,6 +88,22 @@ def describe_showfile_write(
             f"Sequence {seq} 에 큐 {len(numbers)}건" for seq, numbers in sorted(cues.items())
         )
         parts.append(f"{cue_text}을 저장")
+
+    bare_cues = sorted({m.group(1) for m in _STORE_CUE.finditer(joined)})
+    if bare_cues:
+        parts.append("현재 시퀀스의 큐 " + ", ".join(bare_cues) + " 번을 저장")
+
+    groups = sorted({m.group(1) for m in _STORE_GROUP.finditer(joined)})
+    if groups:
+        parts.append("Group " + ", ".join(groups) + " 번 풀에 그룹을 저장")
+
+    pages = sorted({m.group(1) for m in _STORE_PAGE.finditer(joined)})
+    if pages:
+        parts.append("Page " + ", ".join(pages) + " 번을 저장")
+
+    bare_sequences = sorted({m.group(1) for m in _STORE_SEQUENCE_BARE.finditer(joined)})
+    if bare_sequences:
+        parts.append("Sequence " + ", ".join(bare_sequences) + " 번을 저장")
 
     slots = sorted({m.group(1) for m in _STORE_TIMECODE.finditer(joined)})
     if slots:

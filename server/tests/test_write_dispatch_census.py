@@ -142,6 +142,20 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
     ("server/web/session.py", "_setlist_mode", 0): (
         "Copy Sequence / Assign Sequence … At Executor — kind='setlist_assign'"
     ),
+    # 카드 t323 — 이 자리는 `ToolDefinition(name="run_commands", …)`, 즉 **모델이
+    # 보는 도구 정의**다. 여태 ③ 표에 「정의일 뿐 명령을 안 보낸다」로 있었는데,
+    # 그 문장은 이 리터럴 한 줄에 대해서만 참이고 그 도구 전체에 대해서는 거짓이었다:
+    # 모델은 이 정의를 호출해 `Store Cue 1` · `Store Group 3` · `Store Sequence 71`
+    # 을 선언 없이 보냈고(t322 실측 여덟 번들, 전부 `matched_entry: None`),
+    # 서버가 세운 열 자리가 전부 카드를 받는 동안 이 통로만 안 받았다.
+    # 이제 레지스트리 등재분이 `dispatch_run_commands` 이고, 그 함수가
+    # `showfile_write_risk(..., kind='model_run_commands')` 로 선언을 **서버 쪽에서**
+    # 만든다 — 모델은 못 켜고 못 끈다(`call.arguments` 에서 `commands` 말고 아무것도
+    # 안 읽는다). 쇼파일을 안 고치는 번들에는 선언이 `None` 이라 카드가 안 뜬다.
+    ("server/orchestrator/tools.py", "build_toolset", 0): (
+        "모델의 `run_commands` 도구 정의 — 등재된 핸들러 `dispatch_run_commands` 가 "
+        "나갈 명령에서 선언을 읽어 붙인다. kind='model_run_commands'"
+    ),
 }
 
 #: ② 쇼파일을 고치는데 봉합이 없는 자리 — 각자 후속 카드다.
@@ -175,10 +189,6 @@ WRITE_WITHOUT_SEAM_DISPATCHES: dict[tuple[str, str, int], str] = {}
 REVIEWED_NON_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
     ("server/orchestrator/tools.py", "_fire", 0): (
         "Plugin '<name>' 한 줄 — 패치 조회 플러그인을 돌린다. 오브젝트를 만들지도 덮지도 않는다"
-    ),
-    ("server/orchestrator/tools.py", "build_toolset", 0): (
-        '디스패치가 아니라 ToolDefinition(name="run_commands", …) — 도구 '
-        "**정의**다. 같은 리터럴이라 주사에 걸리지만 명령을 보내지 않는다"
     ),
     ("server/web/session.py", "_point_fixtures_at_target", 0): (
         "Fixture <fid> Attribute 'Pan'/'Tilt' At <값> — 프로그래머 값이다. "
