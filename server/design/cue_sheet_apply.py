@@ -72,10 +72,13 @@ __all__ = [
     "UNSOURCED_FIELD_REASONS",
     "ConsoleApplyError",
     "ConsoleApplyPlan",
+    "CuePlan",
     "CueSkip",
     "changed_cue_numbers",
     "layer_mapping_from_console_groups",
+    "palette_index",
     "plan_console_apply",
+    "plan_cue_console_apply",
     "timeline_group_names",
 ]
 
@@ -134,6 +137,32 @@ class CueSkip:
     label: str
     reason: str
     detail: str
+
+
+@dataclass(frozen=True)
+class CuePlan:
+    """큐 **하나**에 대한 반영 판정 — 「무엇이 나가는가」와 「무엇이 안 나가는가」.
+
+    시퀀스 번호를 담지 않는 것이 이 타입의 요점이다(t304). 큐가 나가는지 안
+    나가는지는 시퀀스 번호와 무관하고, 번호는 :func:`plan_console_apply` 가
+    ``Store Sequence N Cue M`` 을 지을 때에만 쓴다. 그래서 사전 점검은 번호를
+    지어내지 않고도 **반영과 같은 판정**을 받아 볼 수 있다.
+    """
+
+    cue_number: int
+    label: str
+    #: 프로그래머 줄. 빈 문자열이면 이 큐는 콘솔로 한 줄도 나가지 않는다.
+    value_line: str = ""
+    fade_seconds: float | None = None
+    percent: int | None = None
+    #: 「조도 90% · 컬러 P2 …」 — 감독이 읽는 한 줄.
+    summary: str = ""
+    #: 이 큐에서 **못 보낸 것**과 사유. 나가는 큐에도 붙을 수 있다(부분 성공).
+    skips: tuple[CueSkip, ...] = ()
+
+    @property
+    def would_apply(self) -> bool:
+        return bool(self.value_line)
 
 
 @dataclass(frozen=True)
@@ -320,7 +349,7 @@ def _intensity_changed(
     return previous.get("intensity") != section.get("intensity")
 
 
-def _palette_index(timeline: Mapping[str, object]) -> dict[str, str]:
+def palette_index(timeline: Mapping[str, object]) -> dict[str, str]:
     """팔레트 범례 → ``{id 또는 이름(소문자): #RRGGBB}``.
 
     출처는 감독의 타임라인이 들고 다니는 ``palette_legend`` 하나뿐이다
@@ -382,6 +411,138 @@ def _fade_seconds(section: Mapping[str, object]) -> float | None:
     return float(value)
 
 
+def plan_cue_console_apply(
+    section: Mapping[str, object],
+    previous: Mapping[str, object] | None,
+    layer_mapping: Sequence[Mapping[str, object]],
+    colors: Mapping[str, str],
+) -> CuePlan:
+    """큐 하나가 **콘솔에 무엇을 내보내는가**. 시퀀스 번호는 쓰지 않는다.
+
+    :func:`plan_console_apply` 의 큐별 본문이 그대로 여기로 나왔다(t304).
+    사전 점검(`server/design/rig_preflight.py`)이 같은 함수를 부르기 때문에
+    「점검은 나간다고 했는데 반영은 건너뛴다」가 구조적으로 생기지 않는다 —
+    두 판정이 같다는 것은 주장이 아니라 **같은 코드**다.
+
+    ``previous`` 가 ``None`` 이면 「이 큐는 통째로 새로 나간다」는 뜻이고, 그것이
+    사전 점검이 묻는 질문이다(곡 전체를 지금 반영하면 무엇이 닿는가).
+    """
+    cue = int(section["cue_number"])
+    label = str(section.get("label") or f"Cue {cue}")
+
+    # 어느 축이 달라졌나. 축마다 명령 형태의 출처가 다르므로 따로 센다.
+    intensity_changed = _intensity_changed(previous, section)
+    color_changed = previous is None or previous.get("palette_primary") != section.get(
+        "palette_primary"
+    )
+    fade_changed = previous is None or _fade_seconds(previous) != _fade_seconds(section)
+    unsourced = [
+        name
+        for name in UNSOURCED_FIELD_REASONS
+        if previous is not None and previous.get(name) != section.get(name)
+    ]
+
+    if not (intensity_changed or color_changed or fade_changed):
+        reasons = "; ".join(UNSOURCED_FIELD_REASONS[name] for name in unsourced)
+        return CuePlan(
+            cue_number=cue,
+            label=label,
+            skips=(
+                CueSkip(
+                    cue_number=cue,
+                    label=label,
+                    reason=UNMAPPED_LOOK,
+                    detail=(
+                        (reasons or "콘솔 값으로 옮길 수 있는 칸이 이 큐에는 없습니다")
+                        + ". 초안과 저장본에는 남아 있습니다."
+                    ),
+                ),
+            ),
+        )
+
+    numbers, unresolved = _group_numbers(section, layer_mapping)
+    if not numbers:
+        return CuePlan(
+            cue_number=cue,
+            label=label,
+            skips=(
+                CueSkip(
+                    cue_number=cue,
+                    label=label,
+                    reason=ROLE_UNADDRESSED,
+                    detail=("콘솔 그룹 번호를 모르는 대상입니다: " + ", ".join(unresolved)),
+                ),
+            ),
+        )
+
+    # 프로그래머 줄. 조도는 **항상** 싣는다 — 컬러·페이드만 바뀐 큐에도
+    # 실을 값이 있어야 `/Merge` 가 빈 프로그래머를 저장하지 않는다. 싣는
+    # 값은 초안이 말하는 현재 조도라 지어낸 값이 아니고, 값이 그대로면
+    # 그 큐의 조도도 그대로다.
+    percent = section_intensity_percent(section)
+    selection = "Group " + " + ".join(str(number) for number in numbers)
+    value_line = f"{selection} ; Attribute 'Dimmer' At {percent:g}"
+    parts = [f"조도 {percent}%"]
+    skips: list[CueSkip] = []
+
+    rgb = _palette_rgb(colors, section.get("palette_primary")) if color_changed else None
+    if color_changed and rgb is None:
+        skips.append(
+            CueSkip(
+                cue_number=cue,
+                label=label,
+                reason=UNMAPPED_LOOK,
+                detail=(
+                    "컬러는 못 보냈습니다 — 팔레트 범례에 없는 이름입니다: "
+                    f"{section.get('palette_primary')!r} (색을 지어내지 않습니다)."
+                ),
+            )
+        )
+    elif rgb is not None:
+        value_line += " ; " + _color_line(rgb)
+        parts.append(f"컬러 {section.get('palette_primary')}")
+
+    fade = _fade_seconds(section) if fade_changed else None
+    if fade is not None:
+        parts.append(f"페이드 {fade:g}초")
+
+    if unsourced:
+        skips.append(
+            CueSkip(
+                cue_number=cue,
+                label=label,
+                reason=UNMAPPED_LOOK,
+                detail=(
+                    "같은 큐에서 콘솔로 못 보낸 칸이 있습니다 — "
+                    + "; ".join(UNSOURCED_FIELD_REASONS[name] for name in unsourced)
+                    + ". 초안과 저장본에는 남아 있습니다."
+                ),
+            )
+        )
+    if unresolved:
+        # 일부만 주소가 잡힌 큐도 **나간 것과 안 나간 것을 같이** 말한다.
+        skips.append(
+            CueSkip(
+                cue_number=cue,
+                label=label,
+                reason=ROLE_UNADDRESSED,
+                detail=(
+                    "일부 대상만 반영했습니다 — 콘솔 그룹 번호를 모르는 대상: "
+                    + ", ".join(unresolved)
+                ),
+            )
+        )
+    return CuePlan(
+        cue_number=cue,
+        label=label,
+        value_line=value_line,
+        fade_seconds=fade,
+        percent=percent,
+        summary=" · ".join(parts),
+        skips=tuple(skips),
+    )
+
+
 def plan_console_apply(
     baseline: Mapping[str, object], current: Mapping[str, object]
 ) -> ConsoleApplyPlan:
@@ -407,7 +568,7 @@ def plan_console_apply(
     layer_mapping = layer_mapping if isinstance(layer_mapping, list) else []
     layer_mapping = [entry for entry in layer_mapping if isinstance(entry, Mapping)]
 
-    palette_index = _palette_index(current)
+    colors = palette_index(current)
     before = _by_cue(baseline)
     sections = _by_cue(current)
     commands: list[str] = []
@@ -416,115 +577,23 @@ def plan_console_apply(
     targets: dict[int, int] = {}
     summaries: dict[int, str] = {}
     for cue in changed:
-        section = sections[cue]
-        previous = before.get(cue)
-        label = str(section.get("label") or f"Cue {cue}")
-
-        # 어느 축이 달라졌나. 축마다 명령 형태의 출처가 다르므로 따로 센다.
-        intensity_changed = _intensity_changed(previous, section)
-        color_changed = previous is None or previous.get("palette_primary") != section.get(
-            "palette_primary"
-        )
-        fade_changed = previous is None or _fade_seconds(previous) != _fade_seconds(section)
-        unsourced = [
-            name
-            for name in UNSOURCED_FIELD_REASONS
-            if previous is not None and previous.get(name) != section.get(name)
-        ]
-
-        if not (intensity_changed or color_changed or fade_changed):
-            reasons = "; ".join(UNSOURCED_FIELD_REASONS[name] for name in unsourced)
-            skipped.append(
-                CueSkip(
-                    cue_number=cue,
-                    label=label,
-                    reason=UNMAPPED_LOOK,
-                    detail=(
-                        (reasons or "콘솔 값으로 옮길 수 있는 칸이 이 큐에는 없습니다")
-                        + ". 초안과 저장본에는 남아 있습니다."
-                    ),
-                )
-            )
+        # 큐별 판정은 사전 점검과 **같은 함수**다(t304) — 여기서 다시 세우지 않는다.
+        decision = plan_cue_console_apply(sections[cue], before.get(cue), layer_mapping, colors)
+        skipped.extend(decision.skips)
+        if not decision.would_apply:
             continue
-
-        numbers, unresolved = _group_numbers(section, layer_mapping)
-        if not numbers:
-            skipped.append(
-                CueSkip(
-                    cue_number=cue,
-                    label=label,
-                    reason=ROLE_UNADDRESSED,
-                    detail=("콘솔 그룹 번호를 모르는 대상입니다: " + ", ".join(unresolved)),
-                )
-            )
-            continue
-
-        # 프로그래머 줄. 조도는 **항상** 싣는다 — 컬러·페이드만 바뀐 큐에도
-        # 실을 값이 있어야 `/Merge` 가 빈 프로그래머를 저장하지 않는다. 싣는
-        # 값은 초안이 말하는 현재 조도라 지어낸 값이 아니고, 값이 그대로면
-        # 그 큐의 조도도 그대로다.
-        percent = section_intensity_percent(section)
-        targets[cue] = percent
-        selection = "Group " + " + ".join(str(number) for number in numbers)
-        value_line = f"{selection} ; Attribute 'Dimmer' At {percent:g}"
-        parts = [f"조도 {percent}%"]
-
-        rgb = _palette_rgb(palette_index, section.get("palette_primary")) if color_changed else None
-        if color_changed and rgb is None:
-            skipped.append(
-                CueSkip(
-                    cue_number=cue,
-                    label=label,
-                    reason=UNMAPPED_LOOK,
-                    detail=(
-                        "컬러는 못 보냈습니다 — 팔레트 범례에 없는 이름입니다: "
-                        f"{section.get('palette_primary')!r} (색을 지어내지 않습니다)."
-                    ),
-                )
-            )
-        elif rgb is not None:
-            value_line += " ; " + _color_line(rgb)
-            parts.append(f"컬러 {section.get('palette_primary')}")
-
         store = f"Store Sequence {sequence_number} Cue {cue}"
-        fade = _fade_seconds(section) if fade_changed else None
-        if fade is not None:
+        if decision.fade_seconds is not None:
             # `CueFade` 는 이 저장소가 실측한 유일한 페이드 형태다 — `Property
             # 'Fade'` 는 금지(`handoff/2026-08-15-timeline-workflow-handoff.md:19`),
             # `/Merge` 와 함께 쓰는 순서는 실행 로그에 있다
             # (`.moai/specs/SPEC-COPILOT-INTENT-001/progress.md:66`).
-            store += f" CueFade {fade:g}"
-            parts.append(f"페이드 {fade:g}초")
-        commands.extend((_CLEAR, value_line, f"{store} /Merge", _CLEAR))
+            store += f" CueFade {decision.fade_seconds:g}"
+        commands.extend((_CLEAR, decision.value_line, f"{store} /Merge", _CLEAR))
         applied.append(cue)
-        summaries[cue] = " · ".join(parts)
-
-        if unsourced:
-            skipped.append(
-                CueSkip(
-                    cue_number=cue,
-                    label=label,
-                    reason=UNMAPPED_LOOK,
-                    detail=(
-                        "같은 큐에서 콘솔로 못 보낸 칸이 있습니다 — "
-                        + "; ".join(UNSOURCED_FIELD_REASONS[name] for name in unsourced)
-                        + ". 초안과 저장본에는 남아 있습니다."
-                    ),
-                )
-            )
-        if unresolved:
-            # 일부만 주소가 잡힌 큐도 **나간 것과 안 나간 것을 같이** 말한다.
-            skipped.append(
-                CueSkip(
-                    cue_number=cue,
-                    label=label,
-                    reason=ROLE_UNADDRESSED,
-                    detail=(
-                        "일부 대상만 반영했습니다 — 콘솔 그룹 번호를 모르는 대상: "
-                        + ", ".join(unresolved)
-                    ),
-                )
-            )
+        if decision.percent is not None:
+            targets[cue] = decision.percent
+        summaries[cue] = decision.summary
     return ConsoleApplyPlan(
         sequence_number=sequence_number,
         commands=((_DESTINATION, *commands) if commands else ()),

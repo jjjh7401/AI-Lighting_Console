@@ -1178,6 +1178,17 @@ _RIG_PREFLIGHT_LITERAL = re.compile(r"프리\s*플라이트|preflight", re.IGNOR
 _RIG_PREFLIGHT_BLOCKED_BY_SEND = re.compile(r"반영해|적용해|전송|송출|보내")
 
 
+def _declared_slot_number(value: object) -> int | None:
+    """타임라인이 **선언한** 풀 슬롯 번호. 0·None·문자열은 「번호 없음」이다.
+
+    0 을 슬롯 0 으로 읽으면 사전 점검이 엉뚱한 자리를 재게 된다 — 시드 타임라인이
+    ``sequence_number: 0`` 을 들고 온다(t303 실측).
+    """
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        return None
+    return value
+
+
 def _is_rig_preflight_request(text: str) -> bool:
     """이 문장이 「쇼 전 리그 점검」인가.
 
@@ -8511,9 +8522,14 @@ class ChatSession:
         것은 주소록이 이미 쓰던 조회(``DataPool/Groups``) 한 번뿐이고, 그
         읽기도 다른 모든 조회와 같이 게이트가 감사한다.
 
-        판정 규칙은 반영과 **같은 함수**를 쓴다(`rig_preflight` 가
-        `layer_mapping_from_console_groups` 를 그대로 부른다) — 점검은
-        통과했는데 반영이 건너뛰는 어긋남을 만들지 않기 위해서다.
+        판정 규칙은 반영과 **같은 함수**를 쓴다 — 주소록은
+        `layer_mapping_from_console_groups`, 큐별 판정은 반영의
+        `plan_cue_console_apply` 를 그대로 부른다(t304). 점검은 통과했는데
+        반영이 건너뛰는 어긋남을 만들지 않기 위해서다.
+
+        읽기는 최대 셋이다: 주소록 하나(t303), 그리고 **번호가 선언돼 있을 때만**
+        시퀀스 슬롯·타임코드 슬롯 하나씩(t304). 번호가 없으면 그 읽기는 아예
+        나가지 않고 보고에 「재지 않았다」로 남는다.
         """
         if not _is_rig_preflight_request(text):
             return None
@@ -8525,7 +8541,30 @@ class ChatSession:
                 "타임라인을 불러온 뒤 다시 요청해 주세요. 콘솔에는 아무것도 쓰지 않았습니다."
             )
         payload, error = self._read_console_groups("rig-preflight-groups")
-        report = plan_rig_preflight(timeline, console_payload=payload, console_error=error)
+        sequence_slot = timecode_slot = ""
+        if error is None:
+            # 슬롯은 **선언된 번호에만** 묻는다. 번호가 없으면 읽지 않는다 —
+            # 어느 슬롯을 볼지 짐작하는 순간 그 답은 다른 곡의 답이 된다.
+            sequence_no = _declared_slot_number(timeline.get("sequence_number"))
+            if sequence_no is not None:
+                sequence_slot = self._console_slot_state(
+                    f"{self._rig_paths['sequences']}/{sequence_no}",
+                    probe_id=f"rig-preflight-sequence-{sequence_no}",
+                )
+            timecode_no = _declared_slot_number(timeline.get("timecode_number"))
+            if timecode_no is not None:
+                pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+                timecode_slot = self._console_slot_state(
+                    f"{pool}/{timecode_no}",
+                    probe_id=f"rig-preflight-timecode-{timecode_no}",
+                )
+        report = plan_rig_preflight(
+            timeline,
+            console_payload=payload,
+            console_error=error,
+            sequence_slot=sequence_slot,
+            timecode_slot=timecode_slot,
+        )
         return self._pointing_refusal(render_rig_preflight(report))
 
     def _draft_apply_target(self, timeline: dict, text: str) -> tuple[dict, str]:
