@@ -42,7 +42,7 @@
   (`server/design/sugar_timeline.py:55-63`)에서 읽고, 이름→색 판독은 화면과
   같은 규칙이다(`ui/src/components/CueSheetTimeline.tsx` `paletteColorFor`).
 * 페이드 — ``Store … Cue N CueFade <초> /Merge``.
-  `handoff/2026-08-15-timeline-workflow-handoff.md:19` 이 이 형태만 쓰라고
+  `docs/handoff/2026-08-15-timeline-workflow-handoff.md:19` 이 이 형태만 쓰라고
   적었고(``Property 'Fade'`` 는 금지), ``/Merge`` 와 함께 쓴 실행 기록은
   `.moai/specs/SPEC-COPILOT-INTENT-001/progress.md:66` 에 있다.
 
@@ -585,7 +585,7 @@ def plan_console_apply(
         store = f"Store Sequence {sequence_number} Cue {cue}"
         if decision.fade_seconds is not None:
             # `CueFade` 는 이 저장소가 실측한 유일한 페이드 형태다 — `Property
-            # 'Fade'` 는 금지(`handoff/2026-08-15-timeline-workflow-handoff.md:19`),
+            # 'Fade'` 는 금지(`docs/handoff/2026-08-15-timeline-workflow-handoff.md:19`),
             # `/Merge` 와 함께 쓰는 순서는 실행 로그에 있다
             # (`.moai/specs/SPEC-COPILOT-INTENT-001/progress.md:66`).
             store += f" CueFade {decision.fade_seconds:g}"

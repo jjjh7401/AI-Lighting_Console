@@ -5,6 +5,44 @@ translated into grandMA3 command lines and executed over OSC, behind a 3-stage s
 
 Target console: grandMA3 onPC 2.4.2 (MA3 v2.x). Server: Python 3.11+.
 
+## 처음 오셨나요 — 여기부터 (5분)
+
+**이 저장소가 하는 일**: 한국어로 조명 지시를 하면 grandMA3 콘솔 명령으로 옮겨서
+OSC 로 실행합니다. 되돌릴 수 없는 동작은 안전 게이트가 막습니다.
+
+### 먼저 읽을 것 셋
+
+| 무엇이 궁금한가 | 어디를 보나 |
+|---|---|
+| **지금 콘솔에 뭐가 올라가 있나** | [`.moai/docs/lxseq-status.md`](.moai/docs/lxseq-status.md) §0 — 실측 지문. 날짜를 먼저 확인하세요 |
+| **지금 뭘 하고 있나 / 뭐가 열려 있나** | `moai todo` — 작업 큐. `queued` 와 `picked` 만 살아 있는 것입니다 |
+| **어떻게 일하나** | [`.moai/docs/lane-protocol.md`](.moai/docs/lane-protocol.md) — 레인 규약 |
+
+### 폴더 지도 — 살아 있는 것과 기록
+
+| 경로 | 무엇 | 성격 |
+|---|---|---|
+| `server/` | 제품 코드 (25개 패키지) | 🟢 살아 있음 |
+| `console/lua/` | 콘솔에 올리는 응답기 플러그인 | 🟢 살아 있음 |
+| `ui/` · `src-tauri/` | 채팅 UI · 데스크톱 껍데기 | 🟢 살아 있음 |
+| `src/Lighting_Designer/` | 감독이 쓰는 시트·리그 팩 (입력 데이터) | 🟢 살아 있음 |
+| `.moai/specs/` | SPEC — 요구·인수기준·진행기록 | 🟢 열린 것 / ⚪ `completed` 섞임 |
+| `.moai/docs/` | 지금 상태를 말하는 짧은 문서 넷 | 🟢 살아 있음 |
+| `.claude/` | 에이전트 하네스 (규칙·스킬·훅) | 🟢 도구 배포본 |
+| `docs/` · `reports/` · `.moai/reports/` | 회차별 판정서·인계문·연구 노트 | 📜 **기록** — 날짜 시점의 사실이지 현재가 아님 |
+
+📜 로 표시한 것은 **고치지 마세요.** 그때의 관측을 적은 것이라, 지금과 다르다고 고치면
+기록이 거짓이 됩니다. 낡았으면 만료를 새 문서에 적습니다.
+
+### 🔴 자주 걸리는 함정 하나
+
+콘솔이 아무 대답도 안 하면 **포트부터** 의심하세요. 콘솔이 답을 보내는 포트는
+**9005** 입니다(정본: `~/MALightingTechnology/gma3_library/inout/osc/copilot_osc_row2_send.xml`).
+포트가 틀리면 에러가 아니라 **침묵**으로 나타나서, 콘솔 꺼짐·플러그인 미설치와
+구분이 안 됩니다. 침묵을 부재의 증거로 쓰기 전에 **자기 수신 포트로 한 발 쏴서
+청취기가 살아 있는지** 먼저 확인하세요.
+
+
 ## Server install (cross-platform, reproducible)
 
 Requires [uv](https://docs.astral.sh/uv/). Python 3.11 is provisioned automatically
@@ -22,7 +60,7 @@ Enable OSC input in grandMA3 onPC and set its UDP input port to match `--port`.
 Then send a harmless command line and listen for `/copilot/feedback`:
 
 ```bash
-uv run python -m server.tools.osc_smoke --host 127.0.0.1 --port 8000 --listen-port 9000 "List"
+uv run python -m server.tools.osc_smoke --host 127.0.0.1 --port 8000 --listen-port 9005 "List"
 ```
 
 Note: with a bare onPC (no console-side Lua responder installed) no OSC feedback
@@ -37,7 +75,7 @@ onPC 2.4.2 OSC setup: [`console/lua/README.md`](console/lua/README.md). Verify t
 full loop with:
 
 ```bash
-uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9000
+uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005
 ```
 
 The responder reports its version on every heartbeat, and the gate now checks it
