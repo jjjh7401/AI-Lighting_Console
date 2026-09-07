@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>grandMA3 AI 코파일럿 — 전체 구조</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+--ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;
+--oat:#E3DACC;--olive:#788C5D;
+--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard",system-ui,-apple-system,sans-serif;
+--serif:"Pretendard",ui-serif,Georgia,serif;
+--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:860px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);
+line-height:1.75;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:56px 24px 96px}
+header{border-bottom:3px solid var(--clay);padding-bottom:20px;margin-bottom:12px}
+h1{font-family:var(--serif);font-size:2.1rem;line-height:1.3;margin:0 0 10px;letter-spacing:-.02em}
+.meta{font-family:var(--mono);font-size:.78rem;color:var(--g500);letter-spacing:.01em}
+h2{font-family:var(--serif);font-size:1.4rem;margin:52px 0 6px;letter-spacing:-.01em;
+padding-top:8px;border-top:var(--border)}
+h3{font-size:1.02rem;margin:26px 0 6px;color:var(--g700)}
+p{margin:12px 0}
+.lead{color:var(--g700);background:var(--g100);border-left:3px solid var(--olive);
+padding:14px 18px;border-radius:0 var(--radius-row) var(--radius-row) 0;margin:14px 0 20px}
+.lead strong{color:var(--slate)}
+code{font-family:var(--mono);font-size:.85em;background:var(--g100);
+padding:2px 6px;border-radius:4px;border:1px solid var(--g300)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:.92rem}
+th{text-align:left;background:var(--oat);padding:10px 12px;font-weight:600;
+border:1px solid var(--g300);font-size:.85rem}
+td{padding:10px 12px;border:1px solid var(--g300);background:var(--paper);vertical-align:top}
+tr:nth-child(even) td{background:var(--g100)}
+.panel{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);
+padding:20px 24px;margin:22px 0}
+.panel h3{margin-top:0}
+.warn{border-left:4px solid var(--clay);background:#FDF6F3}
+.term{border-bottom:1px dotted var(--g500);cursor:help}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0}
+.kpi{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);
+padding:16px 18px}
+.kpi .n{font-family:var(--serif);font-size:1.8rem;font-weight:700;line-height:1.1;display:block}
+.kpi .l{font-size:.78rem;color:var(--g500);margin-top:4px;display:block}
+.kpi.accent .n{color:var(--clay)}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);
+padding:20px;margin:22px 0;overflow-x:auto;font-family:var(--mono);font-size:.8rem;
+line-height:1.5;text-align:center}
+details{background:var(--paper);border:var(--border);border-radius:var(--radius-row);
+padding:12px 18px;margin:10px 0}
+details summary{cursor:pointer;font-weight:600;font-size:.95rem}
+details[open] summary{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--g300)}
+.ex{background:var(--g100);border-radius:var(--radius-row);padding:14px 18px;margin:14px 0;
+font-size:.92rem;border-left:3px solid var(--oat)}
+.ex b{display:block;margin-bottom:6px;font-size:.8rem;letter-spacing:.04em;
+text-transform:uppercase;color:var(--g500)}
+ul,ol{padding-left:22px}li{margin:6px 0}
+.r{color:var(--clay-d);font-weight:600}
+footer{margin-top:64px;padding-top:20px;border-top:var(--border);
+font-size:.82rem;color:var(--g500)}
+@media print{body{background:#fff}.wrap{padding:0}pre.mermaid{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+<h1>grandMA3 AI 코파일럿 — 전체 구조</h1>
+<div class="meta">origin/main 7ce0652 · 2026-09-08 · 읽기 전용 실측 · 콘솔 쓰기 0건</div>
+</header>
+
+<p class="lead"><strong>한 문장으로</strong>: 한국어로 조명 지시를 하면 grandMA3 조명 콘솔이
+알아듣는 명령으로 옮겨서 실행하고, 되돌릴 수 없는 동작은 관문 하나가 막습니다.</p>
+
+<div class="kpis">
+<div class="kpi"><span class="n">2,166</span><span class="l">추적 파일 전체</span></div>
+<div class="kpi accent"><span class="n">597</span><span class="l">제품 코드 (25개 패키지)</span></div>
+<div class="kpi"><span class="n">34</span><span class="l">등록된 도구</span></div>
+<div class="kpi"><span class="n">12,042</span><span class="l">통과하는 테스트</span></div>
+</div>
+
+<h2>1. 명령이 지나가는 길</h2>
+
+<p>먼저 <span class="term" title="콘솔이 알아듣는 문장. 예: Store Sequence 5 Cue 2 'Build'">명령
+(command)</span>이 무엇인지부터. 조명 콘솔은 마우스 클릭 말고도 <b>문장</b>으로 조작할 수
+있습니다. 이 코파일럿이 하는 일은 감독님의 한국어를 그 문장으로 옮기는 것입니다.</p>
+
+<p>감독님이 「무대 앞쪽을 따뜻하게」라고 쓰면, 그 말이 아래 일곱 칸을 차례로 지나 콘솔에
+닿습니다.</p>
+
+<pre class="mermaid">
+flowchart LR
+  U["사용자<br/>한국어 문장"] --> W["채팅 UI"]
+  W --> S["세션<br/>web/session.py"]
+  S --> O["오케스트레이터<br/>도구 34종"]
+  O --> G{"안전 게이트<br/>screen()"}
+  G -->|통과| B["OSC 브리지"]
+  G -->|보류| A["승인 카드<br/>사람이 결정"]
+  A -->|승인| B
+  G -->|거절| X["실행 안 함"]
+  B --> R["콘솔 응답기<br/>Lua 1.6.5"]
+  R --> C["grandMA3 콘솔"]
+  C -.되읽기.-> R
+</pre>
+
+<noscript>
+<p><b>흐름</b>: 사용자 한국어 문장 → 채팅 UI → 세션 → 오케스트레이터(도구 34종) →
+<b>안전 게이트</b>. 게이트에서 셋으로 갈립니다 — 통과하면 OSC 브리지 → 콘솔 응답기(Lua) →
+콘솔로 나가고, 보류면 승인 카드가 떠서 사람이 결정하며, 거절이면 실행되지 않습니다.
+되읽기는 콘솔에서 응답기를 거쳐 역방향으로 돌아옵니다.</p>
+</noscript>
+
+<div class="panel warn">
+<h3>🔴 관문은 하나뿐입니다 — 이것이 설계의 핵심</h3>
+<p>게이트로 들어가는 문은 <code>screen()</code> 메서드 <b>하나</b>입니다. 코드에 이렇게
+못박혀 있습니다: <i>「정확히 하나의 검사 경로만 존재할 수 있다 — 두 번째 진입점은 구조적으로
+게이트 우회다」</i>.</p>
+<p>왜 중요하냐면, 문이 둘이면 누군가 실수로 두 번째 문을 쓸 때 <b>아무 경고 없이</b> 안전
+검사를 건너뛰게 되기 때문입니다. 문이 하나면 그런 실수가 불가능합니다.</p>
+</div>
+
+<h2>2. 안전 게이트 — 3단</h2>
+
+<p class="lead">조명 콘솔에서 잘못된 명령은 되돌릴 수 없습니다. 이미 저장된 프리셋을 덮어쓰면
+원래 값은 사라집니다. 그래서 나가는 모든 명령이 검사 셋을 차례로 지납니다.</p>
+
+<table>
+<tr><th style="width:22%">단계</th><th>무엇을 보나</th><th style="width:34%">여기서 막히면</th></tr>
+<tr><td><b>① 건강</b></td><td>콘솔이 살아 있나 · 응답기 버전이 맞나 · 백업이 됐나</td>
+<td><code>blocked_console_offline</code><br><code>blocked_responder_version_mismatch</code><br><code>blocked_backup_failed</code></td></tr>
+<tr><td><b>② 문법</b></td><td>이 문장이 MA3 문법으로 읽히나</td>
+<td><code>blocked_grammar</code></td></tr>
+<tr><td><b>③ 분류</b></td><td>각 명령이 안전한가 · 사람 승인이 필요한가</td>
+<td><code>held</code> → 승인 카드</td></tr>
+</table>
+
+<p>통과한 뒤에도 끝이 아닙니다: <b>라이브 잠금 재확인 → 승인 카드 → 위험 경로 백업 → 실행 →
+감사 기록</b> 순으로 지납니다. 잠금을 승인 <i>뒤에</i> 다시 보는 이유는, 승인을 기다리는
+사이에 공연이 시작됐을 수 있기 때문입니다.</p>
+
+<div class="ex">
+<b>실제로 이런 모습입니다</b>
+오늘 콘솔에 프리셋을 저장하려 했다면 게이트는 이렇게 답합니다 —
+「이 명령은 <code>held</code>. 프리셋 슬롯 3을 덮어씁니다. 진행할까요?」
+승인하면 백업이 먼저 돌고, 그 다음 명령이 나가고, 감사 로그에 한 줄이 남습니다.
+승인하지 않으면 <b>아무것도 나가지 않습니다</b>.
+</div>
+
+<h2>3. 코드가 어떻게 나뉘어 있나</h2>
+
+<p><span class="term" title="관련된 코드 파일을 담은 폴더">패키지 (package)</span>는 관련된 코드를
+모아둔 폴더입니다. 25개가 있고, 역할별로 층이 나뉩니다.</p>
+
+<table>
+<tr><th style="width:14%">층</th><th style="width:30%">패키지</th><th>하는 일</th></tr>
+<tr><td><b>바깥</b></td><td><code>bridge</code></td><td>콘솔과 실제로 말을 주고받는 자리 (OSC)</td></tr>
+<tr><td><b>안전</b></td><td><code>safety</code></td><td>게이트 · 잠금 · 백업 · 감사 · 분류</td></tr>
+<tr><td><b>중심</b></td><td><code>orchestrator</code></td><td>도구 34종을 등록하고 실행 <span class="r">(12,242줄)</span></td></tr>
+<tr><td><b>표면</b></td><td><code>web</code></td><td>세션과 채팅 <span class="r">(11,788줄)</span></td></tr>
+<tr><td><b>도메인</b></td><td><code>lxseq</code> <code>vwx</code> <code>looks</code> <code>design</code> <code>spatial</code> <code>fx</code> 외 11</td><td>시트 판독 · 리그 · 프리셋 · 큐 — 조명 지식이 사는 곳</td></tr>
+<tr><td><b>주변</b></td><td><code>llm</code> <code>deploy</code> <code>tools</code></td><td>모델 연결 · 배포 · 검증 도구</td></tr>
+</table>
+
+<div class="panel warn">
+<h3 class="r">🔴 눈에 띄는 것 — 파일 둘이 코드의 4분의 1입니다</h3>
+<p><code>orchestrator/tools.py</code> 12,242줄과 <code>web/session.py</code> 11,788줄. 나머지
+23개 패키지를 다 합쳐도 이 둘의 세 배 남짓입니다.</p>
+<p>다행인 것은 테스트가 <b>15.8만 줄</b>(제품 코드의 1.7배) 있다는 점입니다. 나중에 이 파일들을
+쪼갤 때 안전망이 됩니다. 다만 쪼개는 일 자체는 몇 주짜리이고, 콘솔로 나가는 명령 경로가
+지나가는 자리라 가장 조심해야 하는 작업입니다.</p>
+</div>
+
+<details>
+<summary>패키지 사이 의존 관계 — 순환이 하나 있습니다</summary>
+<p>대부분은 한 방향으로 흐릅니다(도메인 → 중심 → 안전 → 바깥). 그런데
+<code>orchestrator</code> ↔ <code>web</code> ↔ <code>safety</code> 셋이 서로를 참조합니다.</p>
+<p>순환 의존 자체가 곧 결함은 아닙니다 — 다만 셋 중 하나를 고칠 때 나머지 둘을 같이 봐야
+한다는 뜻이고, 나중에 쪼갤 때 먼저 풀어야 할 매듭입니다. <b>이 순환이 실제로 문제를
+일으키는지는 재지 않았습니다</b> — 형태만 쟀습니다.</p>
+</details>
+
+<h2>4. LX-SEQ — 시트에서 콘솔까지 4단계</h2>
+
+<p class="lead">감독님이 만든 <b>시트</b>(엑셀 같은 표)를 읽어서 콘솔에 넣는 통로입니다.
+네 단계가 순서대로 쌓입니다 — 장비를 심고(패치), 묶고(그룹), 색·밝기를 저장하고(프리셋),
+곡에 맞춰 순서를 짭니다(큐).</p>
+
+<table>
+<tr><th style="width:16%">단계</th><th style="width:42%">콘솔에 실제로 올라간 것 <span style="font-weight:400">(2026-09-07 실측)</span></th><th>SPEC 상태</th></tr>
+<tr><td><b>1 패치</b></td><td>픽스처 <b>86</b>대</td><td><code>implemented</code></td></tr>
+<tr><td><b>2 그룹</b></td><td>그룹 <b>18</b>개</td><td><code>draft</code> <span class="r">— 산출물은 이미 배포됨</span></td></tr>
+<tr><td><b>3 프리셋</b></td><td>Color 9 · Dimmer 7 · Position 6 · Beam 0</td><td><code>in-progress</code></td></tr>
+<tr><td><b>4 곡 큐</b></td><td>시퀀스 8 (<code>Sugar r3</code> 아래 큐 21)</td><td><code>in-progress</code></td></tr>
+</table>
+
+<h2>5. 이 통로가 못 하는 것 — 셋</h2>
+
+<p class="lead">가장 중요한 절입니다. 여기를 모르면 <b>없는 것을 없다고 잘못 결론냅니다.</b></p>
+
+<div class="panel">
+<h3>① 값을 못 읽습니다</h3>
+<p>콘솔에 물으면 「슬롯 3번이 차 있고 이름은 <code>골드 앰버</code>」까지만 답합니다.
+<b>그 색이 실제로 무슨 색인지는 안 알려줍니다.</b> 그래서 「이름이 맞다」가 「색이 맞다」의
+증거가 되지 못합니다. 138건 전수로 확인된 한계입니다.</p>
+</div>
+
+<div class="panel">
+<h3>② <code>0</code> 은 「비었다」가 아닙니다</h3>
+<p>내용이 들어 있는 Group 에 개수를 물었는데 <code>0</code> 을 답한 사례가 실제로 있습니다.
+그래서 <code>0</code> 은 「비어 있다」가 아니라 <b>「이 통로로는 못 봤다」</b>로 읽어야 합니다.</p>
+<div class="ex">
+<b>오늘 실제로 이 함정을 지났습니다</b>
+Beam·Gobo·Focus 프리셋이 전부 <code>0</code> 으로 나왔습니다. 문서에는 「0개 (⚠️ 이 통로로는
+못 봤다)」로 적었지 「비어 있음」으로 적지 않았습니다.
+</div>
+</div>
+
+<div class="panel">
+<h3>③ 목록이 잘립니다</h3>
+<p>자식 21개짜리 시퀀스에 목록을 요청하면 13개만 옵니다. 그래서 받은 개수를 세면 안 되고,
+콘솔이 따로 알려주는 <code>childCount</code> 와 대조해야 합니다.</p>
+</div>
+
+<h2>6. 장부 — 지금 열려 있는 것</h2>
+
+<p><span class="term" title="요구사항·인수기준·진행기록을 담은 명세 묶음">SPEC</span>은 「무엇을
+만들 것인가」와 「무엇이 되면 다 된 것인가」를 적은 문서 묶음입니다. 54건이 있습니다.</p>
+
+<div class="kpis">
+<div class="kpi"><span class="n">28</span><span class="l">completed — 닫힘</span></div>
+<div class="kpi accent"><span class="n">12</span><span class="l">draft — 그중 11은 이미 배포됨</span></div>
+<div class="kpi"><span class="n">9</span><span class="l">in-progress</span></div>
+<div class="kpi"><span class="n">90</span><span class="l">살아 있는 작업 카드</span></div>
+</div>
+
+<div class="panel warn">
+<h3 class="r">🔴 장부가 뒤처져 있습니다</h3>
+<p><code>draft</code>(초안) 12건을 전수로 대조했더니 <b>11건은 약속한 산출물이 이미
+저장소에 들어와 있습니다.</b> 진짜 초안은 <code>MCP-001</code> 하나뿐이고, 그 하나만 라벨이
+정확합니다.</p>
+<p>다만 <b>상태를 일괄로 올리면 안 됩니다.</b> 「산출물이 있다」와 「인수기준을
+통과했다」는 다르고, 후자는 재지 않았습니다. 실제로 <code>LXSEQ-001</code> 은 17개 중
+16개만 통과해서 <b>의도적으로</b> 멈춰 있습니다 — 그런 정당한 정지가 섞여 있을 수 있습니다.</p>
+</div>
+
+<h2>7. 지금 열려 있는 위험 — 넷</h2>
+
+<table>
+<tr><th style="width:8%"></th><th>무엇</th><th style="width:12%">카드</th></tr>
+<tr><td>🔴</td><td><b>감사 로그가 흩어지고, 워크트리를 지우면 같이 사라진다.</b> 로그가
+<code>.gitignore</code> 대상이라 「깨끗함」 검사에 안 잡힙니다 — 오늘 정리하면서 하마터면
+59개를 날릴 뻔했습니다(먼저 회수했습니다).</td><td><code>t331</code></td></tr>
+<tr><td>🔴</td><td><b>시퀀스 <code>eset1Fade</code></b> — 아무도 만들 의도가 없었던 객체가
+콘솔에 있습니다. 이름이 <code>Preset1Fade</code>(속성 이름)에서 두 글자 잘린 모양이고,
+<b>생성을 기록한 감사 로그가 50개 파일 어디에도 없습니다.</b></td><td><code>t328</code></td></tr>
+<tr><td>🔴</td><td><b>AC-LXSEQ-016 이 62/86 에서 막힘.</b> 남은 24대가 전부
+<code>Martin MAC Aura XB</code> 인데 후보 모드가 6종이라 고를 근거가 없습니다. 패치 결함이
+아니라 <b>판정</b> 결함입니다.</td><td><code>t332</code></td></tr>
+<tr><td>🟡</td><td><b>큐 번호표가 이미 머지된 id 를 재발행한다.</b> id 는 주소인데 겹치면 두
+작업이 같은 증거 폴더를 가리킵니다.</td><td><code>t326</code></td></tr>
+</table>
+
+<h2>8. 스스로 확인해 보실 것</h2>
+
+<p>이 문서가 맞는지 감독님이 직접 재보실 수 있습니다.</p>
+
+<div class="ex">
+<b>콘솔이 살아 있나</b>
+<code>uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005</code>
+<br>→ <code>PASS</code> 셋이 나오면 정상입니다. 🔴 <b><code>--listen-port</code> 는 9005 입니다</b> —
+9000 으로 하면 살아 있는 콘솔이 죽은 것처럼 보입니다.
+</div>
+
+<div class="ex">
+<b>지금 뭐가 열려 있나</b>
+<code>moai todo</code> → <code>queued</code> 와 <code>picked</code> 만 살아 있는 카드입니다.
+</div>
+
+<div class="ex">
+<b>콘솔에 뭐가 올라가 있나</b>
+<code>.moai/docs/lxseq-status.md</code> §0 — 날짜를 먼저 확인하세요. 쇼는 자주 바뀝니다.
+</div>
+
+<h2>안 잰 것</h2>
+<ul>
+<li>각 SPEC 의 <b>인수기준 통과 여부</b> — 산출물이 있는지만 쟀습니다</li>
+<li>순환 의존이 <b>실제로 문제를 일으키는지</b> — 형태만 쟀습니다</li>
+<li><code>.claude/</code> 하네스의 스킬 256개·규칙 71개 중 <b>실제 사용률</b></li>
+<li>도구 34종 각각이 <b>올바르게 동작하는지</b> — 등록 개수만 쟀습니다</li>
+</ul>
+
+<footer>
+grandMA3 AI 코파일럿 · <code>origin/main 7ce0652</code> · 2026-09-08 실측 ·
+이 회차 콘솔 쓰기 0건 · 마크다운 원본: <code>reports/copilot-architecture-20260908.md</code>
+</footer>
+
+</div>
+
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({
+  startOnLoad:true, theme:"base",
+  themeVariables:{
+    primaryColor:"#FAF9F5", primaryTextColor:"#141413", primaryBorderColor:"#D97757",
+    lineColor:"#87867F", secondaryColor:"#E3DACC", tertiaryColor:"#F0EEE6",
+    fontFamily:"Pretendard, system-ui, sans-serif"
+  }
+});
+</script>
+</body>
+</html>
