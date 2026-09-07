@@ -1,0 +1,28 @@
+version: 5
+blacklist:
+- Delete
+- Remove
+- Off Everything
+- Store /overwrite
+- Shutdown
+- Format
+- Set Fixture
+- LoadShow
+- NewShow
+- Store Preset
+- Store Sequence
+invoking_verbs:
+  verbs:
+  - Go
+  - Go+
+  - Go-
+  - Goto
+  - 'On'
+  - 'Off'
+  - Toggle
+  - Temp
+  - Flash
+  - Call
+  bare_object_forms:
+  - Macro <n>
+  - Plugin <n>

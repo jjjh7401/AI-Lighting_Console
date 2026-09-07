@@ -1,0 +1,5 @@
+# t299 확대 비용 측정 — 요약 + FAILED 목록만 남긴다 (트레이스백은 인용하지 않았다)
+# 원본 명령: uv run pytest -q server/tests [-p widen_plugin]
+
+12002 passed, 19 skipped, 1 warning in 202.48s (0:03:22)
+

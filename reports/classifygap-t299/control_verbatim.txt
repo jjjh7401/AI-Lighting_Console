@@ -1,0 +1,6 @@
+# t299 확대 비용 측정 — 요약 + FAILED 목록만 남긴다 (트레이스백은 인용하지 않았다)
+# 원본 명령: uv run pytest -q server/tests [-p widen_plugin]
+
+1 failed, 12001 passed, 19 skipped, 1 warning in 158.68s (0:02:38)
+
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_default_path_is_the_ssot_yaml_under_server_safety

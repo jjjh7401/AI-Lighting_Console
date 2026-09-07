@@ -1,0 +1,188 @@
+# Safety-gate closed sets — SINGLE SOURCE OF TRUTH (REQ-MVP-013 / REQ-MVP-026).
+#
+# Both sets below are CLOSED sets: they change ONLY via a revision of this file
+# with a version bump (open-ended lists are prohibited by spec). Tests iterate
+# this file's content directly, so a revision here auto-extends the FN corpora.
+#
+# - blacklist: commands that are NEVER executed without human approval
+#   (REQ-MVP-013/014 — no exception via any route).
+# - invoking_verbs: reference-invoking command forms subject to the
+#   expand-or-hold rule (REQ-MVP-026): target bodies are fetched and
+#   classified; unverifiable references are held for human approval.
+#
+# REVISION HISTORY (the version field below is the ratification record):
+#   v1 -> v2  SPEC-COPILOT-WRITEGATE-001 adds "Set Fixture". FIRST revision of
+#     this literal in the repository's history; the procedure this header has
+#     always specified now has one execution, weighted the same as
+#     SPEC-COPILOT-EXECREF-001's RECOGNIZED_REFERENCE_TYPES revision
+#     (`classify.py` @MX:NOTE). A false-negative OBSERVATION backs it, not a
+#     review: SPATIAL-001 progress.md §E.2.20 recorded 54 unrequested fixture
+#     coordinate writes reaching the console with no approval card and no
+#     showfile snapshot, because `Set Fixture <fid> Pos* '<v>'` classified
+#     "safe". The same turn's `Go+ Page 1.202` DID raise a card -- the gate was
+#     healthy and only writes slipped the net.
+#   v2 -> v3  SPEC-COPILOT-RESTORE-001 (preparatory) adds "LoadShow" and
+#     "NewShow". SHOWFILE REPLACEMENT had zero coverage: the six v1 entries are
+#     object/system scoped and v2's is a patch write, so a command that
+#     discards the entire live show classified "safe" and executed with no
+#     approval card. This is the SAME false-negative shape v2 was ratified for
+#     -- writes slipping a healthy gate -- and it is strictly worse here,
+#     because there is no way back: `backup.py` retains snapshots but there is
+#     no restore SEND path (`gate.py` @MX:NOTE), and `BACKUP_COMMAND` is a bare
+#     `SaveShow` that overwrites one file, so N snapshots address 1 showfile.
+#     A wrongly-loaded show is unrecoverable by this application today.
+#
+#     MEASURED cost (the `_would_be_held` over `load_corpus()` procedure v2
+#     established): 35 command lines across 17 scenarios, and BOTH entries add
+#     **0 newly-blacklisted lines and 0 scenarios**. The repository contains no
+#     MA3 `Load`/`New` command line at all -- rulebook, corpus and tests are
+#     0 hits -- so no canonical SAFE fixture collides the way `Store Group 3`
+#     did for DEPLOY.
+#
+#     KNOWN FUTURE COLLATERAL, stated because 0 measured is not 0 forever:
+#     `_keyword_match` is abbreviation-aware in the direction
+#     command-token -> entry-keyword, so entry "LoadShow" also matches a bare
+#     `Load ...` verb and "NewShow" a bare `New ...`. MA3's `Load Cue <n>`
+#     (load a cue into the programmer) is benign and WILL raise a card once
+#     this application starts using it. That is the designed direction
+#     (over-match, see the `Set Fixture` note below) and the cost is one
+#     approval, not a refusal.
+#
+#     SCOPE, stated precisely: the exact MA3 keyword for a show reload is
+#     UNVERIFIED (`gate.py` @MX:NOTE says so). These two literals mirror
+#     `SaveShow`, which IS verified -- production backup sends it and reads a
+#     confirmed outcome. Blacklisting under that uncertainty is safe in the
+#     only direction that matters: if the real keyword differs, this entry
+#     costs nothing and the hole stays open, so a live calibration must still
+#     confirm the vocabulary. It is a floor, not a proof of closure.
+#     `Import` is deliberately NOT here -- it is pool data import, not showfile
+#     replacement, and the plugin deploy path depends on it.
+#
+#   v3 -> v4  SPEC-COPILOT-UNREQ-001 (카드 t86) adds "Store Preset".
+#     The SAME false-negative shape v2 and v3 were ratified for -- writes slipping
+#     a healthy gate -- observed once more: SPEC-COPILOT-LXSEQ-003 M4 halted after
+#     an UNREQUESTED preset reached the console with no approval card. The command
+#     shape is `session.py:2951 _preset_store_commands` -> `Store Preset <pool>.<n>`
+#     (+ `Label Preset ...` at :2968), and it classified "safe" because this file's
+#     only Store entry is option-scoped (`Store /overwrite`).
+#
+#     WHY ONLY `Store Preset`, and NOT `Store`: the descope of the `Store` verb
+#     (2026-08-05 user decision) STANDS. t86 re-measured its cost in this tree and
+#     the decision was not merely upheld -- it was made on an UNDERSTATED number.
+#     The corpus-scenario metric this header used compares `Store` 10/21 against
+#     `Label` 9/21, nearly equal; the full suite breaks 67 vs 17, about 4x apart.
+#     Entry `Store` alone takes down `test_safety_gate` (14) and `test_web_session`
+#     (7) -- including
+#     `TestHappyPath::test_korean_instruction_executes_and_reports_in_korean`,
+#     i.e. one ordinary conversational turn would raise an approval card. That is a
+#     product-behaviour change, not a test-fixture change. So this revision widens
+#     by ONE object, not by the verb.
+#
+#     MEASURED cost of THIS entry (same `_would_be_held` over `load_corpus()`
+#     procedure v2 established, plus a full-suite run): corpus 2 of 21 scenarios
+#     (preset-store-1/2); full suite 13 failures out of 10183 -- looks_instantiate 6,
+#     measurement_runner 4, writegate 2, safety_ruleset 1. `Label Preset` was
+#     measured alongside and adds 0 further failures on top of this entry, which is
+#     why it is NOT taken here: `Label` is descoped for a DIFFERENT reason
+#     ("labelling is not a patch write", a semantic judgement, not a cost one) and
+#     needs its own argument. A separate card owns it.
+#
+#     [READ THIS BEFORE QUOTING ANY FAILURE COUNT] The denominator MOVES. Tests in
+#     `test_writegate.py` iterate this file's own blacklist, so every entry added
+#     here CREATES 4 more tests: baseline total 10179, one added entry 10183, two
+#     added entries 10187. "13 failures" is therefore not a value on a fixed
+#     denominator -- always record the total alongside it. The 2026-08-05 descope
+#     was decided on the corpus-scenario metric alone, which is exactly the kind of
+#     unit error this note exists to stop repeating.
+#
+#     NOT closed by this revision: `Store Group`, `Store Cue`, `Store Page`,
+#     `Store Macro`, `Assign`, `Copy` and the whole `Label` family all still
+#     classify "safe" and REMAIN RATIFIED as such in
+#     `test_writegate.py::UNCHANGED_SAFE`. Removing one line from that tuple does
+#     not release the rest.
+version: 4
+
+blacklist:
+  - "Delete"
+  - "Remove"
+  - "Off Everything"
+  - "Store /overwrite"
+  - "Shutdown"
+  - "Format"
+  # A fixture's patch row is SHOWFILE STATE, and every write to it needs a
+  # human. Deliberately the OBJECT and not the property: enumerating
+  # `Posx`/`Posy`/`Posz`/`Rotx`/... would be the open-ended list this file's
+  # header prohibits, and it would invite "what about the next property?".
+  #
+  # SCOPE OF THAT CLAIM, stated precisely because "closed and complete" is
+  # easy to over-read: this entry closes the PROPERTY dimension. It is keyed on
+  # one VERB (`Set`) and one ADDRESS keyword (`Fixture`), and neither of those
+  # two dimensions was varied by the evidence behind it. Candidate escapes that
+  # parse cleanly and classify `safe` today: `Edit|Assign|Change|Update Fixture
+  # 11 Posx '5.0'`, `Set Stage 1.Fixtures.1 Posx '5.0'`, `Set Fixtures 11 Posx
+  # '5.0'` (plural is not a prefix of `Fixture`), `Set Posx '5.0'`. None is
+  # established as MA3-accepted -- the rulebook documents no patch-write
+  # command line at all -- so they are unproven candidates, not known holes.
+  # The working assumption is that `Set` is the only patch-write verb; if that
+  # is ever falsified, this entry is incomplete and the fix is another revision.
+  #
+  # Over-matching here is the designed direction (`classify.py` module
+  # docstring): a non-coordinate patch write such as `Set Fixture 11 Name
+  # 'Spot 11'` also raises a card, and that is correct -- it is still a
+  # showfile mutation. Under-matching would be a safety false negative.
+  #
+  # Scoped to `Set Fixture` ON PURPOSE. `Store Group` is NOT here. MEASURED
+  # cost of taking it (with this file's own `_would_be_held` predicate over
+  # `load_corpus()`): entry `Store` collides with the measurement corpus's
+  # "non-risky verbs only" invariant in 10 of 21 scenarios (5 of 10
+  # representative task types); entry `Store Group` in 3 of 21 (1 of 10). It
+  # also breaks exactly 3 DEPLOY tests that use `Store Group 3` as their
+  # canonical SAFE fixture. An earlier draft of this comment said "13 of 21
+  # (7 of 10)" -- that was a count of write-bearing COMMANDS under a broad
+  # `Store|Set|Assign|Copy` regex, restated as `Store`'s scenario count. The
+  # descope still holds on the corrected numbers (`group_create` is 1 of the
+  # AC-MVP-001 ten representatives, and the DEPLOY collision is independent of
+  # corpus size), but the cost of the alternative was overstated and is not.
+  # Descoped by user decision 2026-08-05; a follow-up SPEC owns it and inherits
+  # the procedure this revision establishes.
+  - "Set Fixture"
+  # SHOWFILE REPLACEMENT (v3). Both discard the console's entire live show, and
+  # unlike every other entry here that loss is UNRECOVERABLE by this
+  # application: snapshots are retained but no restore SEND path exists
+  # (`gate.py` @MX:NOTE), and `BACKUP_COMMAND` is a bare `SaveShow`, so N
+  # snapshots address exactly 1 file. Approval is the only barrier there is.
+  #
+  # Two literals rather than one because the shape is unverified and they do
+  # NOT cover for each other: `_keyword_match` matches command-token ->
+  # entry-keyword, so entry "LoadShow" catches `LoadShow`/`Load`, and entry
+  # "Load Show" would catch the two-token form but NOT the single token. The
+  # single-token spelling is the strong prior — `SaveShow`, the one member of
+  # this family this repository has actually executed, is one token.
+  - "LoadShow"
+  - "NewShow"
+  # UNREQUESTED CREATION (v4). `Store /overwrite` above closes the OVERWRITE half
+  # of the preset hazard, and `SPEC-COPILOT-PRESETGUARD-001` closes it again at the
+  # application layer (occupancy check + read-back). Neither closes the other half:
+  # a write into a FREE slot. PRESETGUARD passes an unoccupied slot BY DESIGN, and
+  # a bare `Store Preset` carries no option for the gate to match on. The
+  # LXSEQ-003 M4 accident took exactly that path, so this entry closes it.
+  #
+  # Scoped to the OBJECT, like `Set Fixture` above and for the same reason: keying
+  # on the verb would be the widening whose cost is recorded in the v4 header.
+  - "Store Preset"
+
+invoking_verbs:
+  verbs:
+    - "Go"
+    - "Go+"
+    - "Go-"
+    - "Goto"
+    - "On"
+    - "Off"
+    - "Toggle"
+    - "Temp"
+    - "Flash"
+    - "Call"
+  bare_object_forms:
+    - "Macro <n>"
+    - "Plugin <n>"

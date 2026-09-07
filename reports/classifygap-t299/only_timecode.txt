@@ -1,0 +1,11 @@
+# t299 확대 비용 측정 — 요약 + FAILED 목록만 남긴다 (트레이스백은 인용하지 않았다)
+# 원본 명령: uv run pytest -q server/tests [-p widen_plugin]
+
+6 failed, 12000 passed, 19 skipped, 1 warning in 158.67s (0:02:38)
+
+FAILED server/tests/test_bulkgate_declaration.py::TestDeclarationSplitsTheVerdict::test_without_the_declaration_the_bundle_clears
+FAILED server/tests/test_bulkgate_declaration.py::TestLockAndBackupStayBetweenApprovalAndClearance::test_an_undeclared_safe_bundle_still_skips_the_backup
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_blacklist_is_exactly_the_shipped_closed_set
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_every_shipped_revision_is_documented_in_the_file
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_default_path_is_the_ssot_yaml_under_server_safety
+FAILED server/tests/test_writegate_merge_gap.py::test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store
