@@ -1,0 +1,36 @@
+interpreter : 3.11.15
+server pkg  : /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-aace3e70f979b1db2/server/__init__.py
+ruleset path: /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-aace3e70f979b1db2/server/safety/blacklist.yaml
+ruleset ver : 8
+blacklist   : ['Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'Set Fixture', 'LoadShow', 'NewShow', 'Store Preset', 'Store Group', 'Store Timecode', 'Store Sequence', 'Store Cue', 'Assign Sequence', 'Copy Sequence']
+
+① 배치된 순서 — 새 항목이 목록 끝에 있다
+   'Assign Sequence'  index = 14
+   'Copy Sequence'    index = 15
+   'Store Group 3'                          -> matched_entry='Store Group'
+   'Store Timecode 9'                       -> matched_entry='Store Timecode'
+   'Store Sequence 210 Cue 10 /Merge'       -> matched_entry='Store Sequence'
+   'Store Cue 1'                            -> matched_entry='Store Cue'
+   'Assign Sequence 201 At Executor 101'    -> matched_entry='Assign Sequence'
+   'Copy Sequence 300 At 210'               -> matched_entry='Copy Sequence'
+
+② 새 항목을 목록 **앞**으로 뒤집은 합성 룰셋
+   blacklist = ['Assign Sequence', 'Copy Sequence', 'Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'Set Fixture', 'LoadShow', 'NewShow', 'Store Preset', 'Store Group', 'Store Timecode', 'Store Sequence', 'Store Cue']
+   'Store Group 3'                          -> 'Store Group'   같음
+   'Store Timecode 9'                       -> 'Store Timecode'   같음
+   'Store Sequence 210 Cue 10 /Merge'       -> 'Store Sequence'   같음
+   'Store Cue 1'                            -> 'Store Cue'   같음
+   'Assign Sequence 201 At Executor 101'    -> 'Assign Sequence'   같음
+   'Copy Sequence 300 At 210'               -> 'Copy Sequence'   같음
+   => 귀속이 움직인 줄: 0 []
+
+③ 동사 키워드 교차 검사 — 왜 순서가 무관한가 (기전)
+   'Assign'   vs 기존 동사 ['Delete', 'Format', 'LoadShow', 'NewShow', 'Off', 'Remove', 'Set', 'Shutdown', 'Store']
+   'Copy'     vs 기존 동사 ['Delete', 'Format', 'LoadShow', 'NewShow', 'Off', 'Remove', 'Set', 'Shutdown', 'Store']
+   => 동사가 겹치는 조합: 0 []
+
+[검산] 세 관측이 말하는 것
+   새 두 항목이 대상 줄을 잡는다     : True
+   순서를 뒤집어도 귀속은 안 바뀐다  : True
+   기전 — 동사 교차 0                : True
+   => Phase 3 과 **조건이 다르다**. 거기서는 순서가 귀속의 조건이었지만, 이 회차는 동사가 겹치지 않아 순서가 무관하다. 그 무관함이 조건이므로 `test_the_new_verb_entries_are_order_independent` 가 검사로 지킨다.

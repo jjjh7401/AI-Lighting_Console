@@ -127,6 +127,32 @@ Phase 2 가 낸 비용(큐시트 이중 카드)에 해당하는 것은 이 회�
 seal-only 는 이 회차 뒤에도 **2 로 그대로**다(실측:
 `reports/classifygap-t299-p3/07_seal_defence_p3.txt`) — 남은 두 자리가 실어 나르는
 것이 `Assign Sequence`·`Copy Sequence` 뿐이기 때문이다.
+
+---
+
+## 받침이 봉합을 다 덮은 기록 (Phase 4, 카드 t325)
+
+블랙리스트 v7 -> v8 이 `Assign Sequence` 와 `Copy Sequence` 를 넣었다. 위 절이
+「§F 가 범위 밖에 뒀다」고 적은 그 둘이고, 카드 t325 가 그 범위를 넓혔다.
+
+**넓힌 근거는 대칭이 아니다.** 이 저장소가 이미 두 층에서 서로 다른 답을 하고
+있었다 — `write_reason.py::_ASSIGN_EXECUTOR`·`_COPY_SEQUENCE`(카드 t323)가 두 줄을
+「쇼파일 쓰기」로 읽어 감독에게 그렇게 설명하는데, 분류 층은 같은 줄을 `safe` 로
+답했다. v5·v6·v7 이 닫은 것과 **같은 결함 모양**이다.
+
+**무엇이 뒤집혔나.** `SEAL_DEFENCE` 의 남은 두 자리다 — seal-only **2 -> 0**
+(`reports/classifygap-t325-p4/10_seal_defence_after.txt`). Phase 3 이 위 문단에
+「§F 때문에 0 이 되지 않는다」고 예고했고, 범위가 넓어지자 예고대로 0 이 됐다.
+
+**순서 조건은 Phase 3 과 반대다.** 위
+`test_the_entry_order_preserves_the_sequence_attribution` 은 `index` 를 못 박지만,
+v8 의 두 항목은 동사가 기존 항목과 겹치지 않아 순서가 무관하다. 그 무관함을
+`test_the_new_verb_entries_are_order_independent` 가 잰다 — 같은 파일의 두 검사가
+서로 다른 조건을 못 박고 있으므로, 어느 쪽을 선례로 삼을지는 **동사가 겹치는가**로
+결정한다.
+
+**이제 §F 밖에 남은 것.** `Store Page`·`Store Macro` 와 `Label` 계열. 앞의 둘은
+비용 축이고 뒤는 의미 판단 축이라 근거가 서로 호환되지 않는다(각자 후속 카드).
 """
 
 from __future__ import annotations
@@ -258,3 +284,101 @@ def test_the_entry_order_preserves_the_sequence_attribution() -> None:
     assert _classify("Store Sequence 210 Cue 10 /Merge").matched_entry == "Store Sequence"
     # 짧은 형태는 새 항목에 걸린다 — 위 순서가 그 줄을 가리지 않는다는 비공허성 짝.
     assert _classify("Store Cue 10").matched_entry == "Store Cue"
+
+
+#: v8(Phase 4)이 넣은 둘. 위의 `Store` 계열과 **조건이 다르다** — 아래 검사가 그
+#: 차이를 잰다.
+NEW_VERB_ENTRIES = ("Assign Sequence", "Copy Sequence")
+
+
+def _synthetic_ruleset(entries: list[str]):
+    """항목 순서만 바꾼 합성 룰셋. 배치본(`server/safety/blacklist.yaml`)은 안 건드린다."""
+    import tempfile
+    from pathlib import Path
+
+    from server.safety.ruleset import load_ruleset as _load
+
+    path = Path(tempfile.mkdtemp(prefix="t325p4-order-")) / "blacklist.yaml"
+    lines = [
+        "# 합성 룰셋 — 이 검사 전용. 배치본이 아니다.",
+        "# REVISION HISTORY",
+        "#   v1 -> v2  SPEC-COPILOT-CLASSIFYGAP-001 합성 픽스처",
+        "version: 2",
+        "blacklist:",
+        *[f'  - "{entry}"' for entry in entries],
+        "invoking_verbs:",
+        "  verbs:",
+        '    - "Go"',
+        "  bare_object_forms:",
+        '    - "Macro <n>"',
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return _load(path)
+
+
+def test_the_new_verb_entries_are_order_independent() -> None:
+    """갱신 근거 (t325 Phase 4): 이 회차의 순서 조건은 Phase 3 과 **반대**다.
+
+    Phase 3 은 순서가 귀속의 조건이었다 — `Store Cue` 와 `Store Sequence` 는 동사가
+    같고 키워드가 겹쳐서, 첫-일치 성질 때문에 목록 앞뒤가 카드 사유를 바꿨다. 그래서
+    위의 `test_the_entry_order_preserves_the_sequence_attribution` 이 `index` 를
+    못 박는다.
+
+    v8 이 넣은 둘은 다르다. 동사가 `Assign`·`Copy` 이고 기존 항목 어느 것의 동사와도
+    겹치지 않으므로 첫-일치가 걸릴 자리가 없다 — 순서가 **무관**하다. 그 무관함이 이
+    회차의 조건이고, 그래서 여기에 `index` 단언을 쓰면 **없는 조건을 못 박는** 것이
+    된다(다음 사람이 항목을 옮겨도 실제로는 아무것도 안 깨지는데 검사만 붉어진다).
+
+    대신 무관함 자체를 잰다. 세 갈래이고 셋 다 실측이다:
+      ① 배치된 순서에서 두 줄의 귀속
+      ② 두 항목을 목록 **앞**으로 옮긴 합성 룰셋에서 귀속이 같은가
+      ③ 기전 — 두 동사가 기존 동사와 안 겹치는가 (③ 이 깨지면 ② 가 우연이 된다)
+
+    ③ 이 이 검사의 방어력이다: 누가 뒷날 bare `Assign` 이나 `Copy` 항목을 넣으면
+    순서가 갑자기 의미를 갖게 되고, 그때 이 줄이 붉어져서 알린다.
+
+    합성 룰셋으로 잰 증거: `reports/classifygap-t325-p4/08_entry_order.txt`.
+    """
+    from server.safety.classify import _keyword_match
+
+    lines = {
+        "Assign Sequence 201 At Executor 101": "Assign Sequence",
+        "Copy Sequence 300 At 210": "Copy Sequence",
+    }
+
+    # ① 배치된 순서.
+    for line, entry in lines.items():
+        assert _classify(line).matched_entry == entry
+
+    # ② 두 항목을 앞으로 옮겨도 귀속이 같다 — Phase 3 에서는 여기서 바뀌었다.
+    order = list(RULESET.blacklist)
+    flipped = _synthetic_ruleset(
+        [*NEW_VERB_ENTRIES, *[e for e in order if e not in NEW_VERB_ENTRIES]]
+    )
+    for line, entry in lines.items():
+        grammar = validate(line)
+        assert grammar.ok
+        assert classify_command(grammar.parsed, flipped).matched_entry == entry, (
+            f"{line!r}: 항목을 앞으로 옮기니 귀속이 바뀐다 — 이 회차의 전제가 깨졌다. "
+            "Phase 3 처럼 순서를 못 박아야 하는 상황이므로 다시 재고 조건을 바꿔 주세요."
+        )
+    # 비공허성 짝: 같은 합성 룰셋에서 Phase 3 의 줄은 **여전히** 순서에 민감하다.
+    # 즉 ② 의 「안 바뀐다」가 「합성 룰셋이 아무것도 안 잡는다」는 뜻이 아니다.
+    assert (
+        classify_command(validate("Store Sequence 210 Cue 10 /Merge").parsed, flipped).matched_entry
+        == "Store Sequence"
+    )
+
+    # ③ 기전 — 두 새 동사가 기존 항목의 동사와 겹치지 않는다.
+    others = [e for e in order if e not in NEW_VERB_ENTRIES]
+    clashes = [
+        (new, other)
+        for new in NEW_VERB_ENTRIES
+        for other in others
+        if _keyword_match(new.split()[0], other.split()[0])
+        or _keyword_match(other.split()[0], new.split()[0])
+    ]
+    assert not clashes, (
+        f"새 항목의 동사가 기존 동사와 겹친다: {clashes}. 그러면 순서가 의미를 갖고 "
+        "위 ② 의 무관함이 우연이 된다 — Phase 3 처럼 순서를 못 박아 주세요."
+    )

@@ -1,0 +1,77 @@
+interpreter : 3.11.15
+server pkg  : /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-aace3e70f979b1db2/server/__init__.py
+ruleset ver : 8
+blacklist   : ['Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'Set Fixture', 'LoadShow', 'NewShow', 'Store Preset', 'Store Group', 'Store Timecode', 'Store Sequence', 'Store Cue', 'Assign Sequence', 'Copy Sequence']
+
+[A] 카드가 지정한 두 동사 — 이 회차의 대상
+  'Assign Sequence 201 At Executor 101'                -> matched_entry='Assign Sequence' category='blacklisted' risky=True
+  'Copy Sequence 300 At 210'                           -> matched_entry='Copy Sequence' category='blacklisted' risky=True
+
+[A-2] Phase 1~3 의 네 명령 — 회귀 확인
+  'Store Group 3'                                      -> matched_entry='Store Group' category='blacklisted' risky=True
+  'Store Timecode 9'                                   -> matched_entry='Store Timecode' category='blacklisted' risky=True
+  'Store Sequence 210 Cue 3 /Merge'                    -> matched_entry='Store Sequence' category='blacklisted' risky=True
+  'Store Cue 1'                                        -> matched_entry='Store Cue' category='blacklisted' risky=True
+
+[A-3] 프로그래머 값·선택 — 안 걸려야 한다
+  'Fixture 1 At 50'                                    -> matched_entry=None category='safe' risky=False
+  'Group 4'                                            -> matched_entry=None category='safe' risky=False
+
+[A-4] 같은 동사인데 오브젝트가 `Sequence` 가 아니다 — 안 걸려야 한다
+  'Copy Page 1 At Page 4'                              -> matched_entry=None category='safe' risky=False
+  'Assign Preset 4.1 At Executor 101'                  -> matched_entry=None category='safe' risky=False
+
+[A-5] 같은 동사 + `Sequence` 변형 — 걸려야 한다 (잡는 것은 오브젝트다)
+  'Assign Sequence 4 Page 1.201'                       -> matched_entry='Assign Sequence' category='blacklisted' risky=True
+  'Assign Sequence 3 At Timecode 7'                    -> matched_entry='Assign Sequence' category='blacklisted' risky=True
+  'Copy Sequence 115 At 210'                           -> matched_entry='Copy Sequence' category='blacklisted' risky=True
+
+[B] AC-CG-001 확대판 — 여섯 명령 전부 risky=True
+  'Store Group 3'                                      -> PASS (matched='Store Group')
+  'Store Timecode 9'                                   -> PASS (matched='Store Timecode')
+  'Store Sequence 210 Cue 3 /Merge'                    -> PASS (matched='Store Sequence')
+  'Store Cue 1'                                        -> PASS (matched='Store Cue')
+  'Assign Sequence 201 At Executor 101'                -> PASS (matched='Assign Sequence')
+  'Copy Sequence 300 At 210'                           -> PASS (matched='Copy Sequence')
+  => AC-CG-001 (Phase 4 확대판): 6/6
+
+[C] 양성 대조군 (원래 걸리던 것 — 그대로 걸려야 한다)
+  'Store Preset 4.101'                                 -> matched_entry='Store Preset' category='blacklisted' risky=True
+  'Delete Sequence 5'                                  -> matched_entry='Delete' category='blacklisted' risky=True
+
+[D] 음성 대조군 — 프로그래머 트래픽 (AC-CG-002: 전부 risky=False)
+  "Fixture 20 ; Attribute 'Pan' At 12"                 -> matched_entry=None category='safe' risky=False
+  'At 100'                                             -> matched_entry=None category='safe' risky=False
+  'Group 4'                                            -> matched_entry=None category='safe' risky=False
+  'Fixture 1 Thru 12'                                  -> matched_entry=None category='safe' risky=False
+  "Set Selection MAtricks 'PhaseFromX' 0"              -> matched_entry=None category='safe' risky=False
+  "Label Group 3 'Vocals'"                             -> matched_entry=None category='safe' risky=False
+  'Go+ Sequence 5'                                     -> matched_entry=None category='invoking' risky=False
+  'Off Fixture 11'                                     -> matched_entry=None category='invoking' risky=False
+  'ChangeDestination Root'                             -> matched_entry=None category='safe' risky=False
+  => risky 로 잘못 판정된 문장: 0 []
+
+[D-2] 안 걸려야 하는 넷을 한 자리에 (must-pass 음성 대조군)
+  'Fixture 1 At 50'                                    -> matched_entry=None category='safe' risky=False
+  'Group 4'                                            -> matched_entry=None category='safe' risky=False
+  'Copy Page 1 At Page 4'                              -> matched_entry=None category='safe' risky=False
+  'Assign Preset 4.1 At Executor 101'                  -> matched_entry=None category='safe' risky=False
+  => risky 로 잘못 판정된 문장: 0 []
+
+[E] 흐름 단위 음성 대조군 (AC-CG-003: 승인 요청 0건, cleared=True)
+  bundle           : ["Fixture 20 ; Attribute 'Pan' At 12", 'At 100', 'Group 4', 'Fixture 1 Thru 12', "Set Selection MAtricks 'PhaseFromX' 0", 'Fixture 1 At 50', 'Group 4', 'Copy Page 1 At Page 4', 'Assign Preset 4.1 At Executor 101']
+  approval requests: 0
+  cleared          : True  status='cleared'
+
+[E-2] 참고 — 아홉 문장 전부를 흐름으로 (호출 동사 둘 때문에 0 이 아니다)
+  approval requests: 1  (확대 전/후 같아야 한다)
+  cleared          : False  status='rejected'
+    보류된 줄: 'Go+ Sequence 5'                             | ('reference-invoking command', "unverifiable reference 'Sequence 5': no body fetcher configured — reference bodies unverifiable")
+    보류된 줄: 'Off Fixture 11'                             | ('reference-invoking command', 'unverifiable reference: no recognizable target object')
+
+[F] 봉합 + 확대 동시 투입 (AC-CG-004: 요청 정확히 1건, 사유 병기)
+  approval requests: 1
+  items in request : 3
+    'Assign Sequence 201 At Executor 101'                | ('SEAL-REASON', "blacklisted command (matches closed-set entry 'Assign Sequence')")
+    'Copy Sequence 300 At 210'                           | ('SEAL-REASON', "blacklisted command (matches closed-set entry 'Copy Sequence')")
+    "Fixture 20 ; Attribute 'Pan' At 12"                 | ('SEAL-REASON',)
