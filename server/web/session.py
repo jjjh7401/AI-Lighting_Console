@@ -40,7 +40,6 @@ from server.deploy.review import ReviewRequest
 from server.design.cue_density import plan_cue_density, rotate_palette
 from server.design.cue_sheet_apply import (
     ConsoleApplyError,
-    ConsoleApplyPlan,
     layer_mapping_from_console_groups,
     plan_console_apply,
     timeline_group_names,
@@ -136,7 +135,7 @@ from server.orchestrator.tools import (
 from server.orchestrator.write_reason import showfile_write_risk
 from server.prechk.query import read_properties
 from server.presets.store import preset_store_commands as _preset_store_commands
-from server.safety.approval import ApprovalItem, ApprovalRequest
+from server.safety.approval import ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import (
     BatchRisk,
@@ -8939,51 +8938,6 @@ class ChatSession:
                 )
         return target, "".join(notes)
 
-    def _accept_draft_apply_batch(self, plan: ConsoleApplyPlan) -> bool:
-        """반영 묶음 **하나**에 대해 감독의 수락을 받는다 (t292).
-
-        왜 여기인가. `Store Sequence <N> Cue <M> /Merge` 는 쇼파일 쓰기인데
-        `server/safety/classify.py` 는 이 명령을 `safe` 로 분류한다 —
-        `blacklist.yaml` v4 의 `Store` 항목 둘(`Store /overwrite`,
-        `Store Preset`)이 오브젝트 기준이라 `Sequence` 를 담지 않기 때문이다.
-        그래서 t291·t294·t296 실측에서 반영이 명령을 보냈고 감사 로그는
-        `executed N, blocked 0, approved 0` 이었다. 게이트가 죽은 게 아니라
-        **이 오브젝트가 목록에 없다**(`test_writegate_merge_gap.py` 가 고정).
-
-        분류를 넓히는 대신 이 경로에서 받는 이유는 비용이다. `Store Sequence`
-        를 목록에 넣으면 이 통로뿐 아니라 룩 생성·FX·씬 컴파일까지 전부
-        승인 카드를 받는다(실측: 이 저장소 스위트에서 핀 파일 밖 8건이
-        붉어진다). 이 카드가 닫으라고 받은 구멍은 **반영 경로**다.
-
-        묶음 단위다 — 명령 하나마다 묻지 않는다. `ApprovalRequest` 는 이미
-        전부-또는-전무 승인이고(`server/safety/approval.py`), 화면도 이미
-        이 카드를 그린다(`ui/src/components/ApprovalCard.tsx`). 새 UI도 새
-        채널도 만들지 않는다.
-
-        수락 여부는 **감사 로그에 남긴다** — 게이트가 남기는 것과 같은
-        `approved`/`rejected` 항목이라, 「승인 0건인데 실행 N건」이 다시는
-        조용히 지나가지 않는다.
-
-        UI 가 없거나 답이 없으면 거절이다(fail-closed). 쇼파일 쓰기는
-        되돌릴 수 없고 이 앱에는 시퀀스 복원 경로가 없다.
-        """
-        commands = list(plan.commands)
-        reason = (
-            f"쇼파일 쓰기 — Sequence {plan.sequence_number} 의 큐 내용을 바꿉니다 "
-            "(이 앱에는 시퀀스 복원 경로가 없습니다)."
-        )
-        request = ApprovalRequest(
-            items=tuple(
-                ApprovalItem(command=command, risk_reasons=(reason,)) for command in commands
-            )
-        )
-        approved = self._channel.request_approval(request)
-        if approved:
-            self._audit.log_approved(commands, held=commands, kind="draft_apply")
-        else:
-            self._audit.log_rejected(commands, held=commands, kind="draft_apply")
-        return approved
-
     def _cue_sheet_draft_apply(self, text: str) -> InstructionResult | None:
         """초안에서 바뀐 큐를 콘솔에 반영한다 — **기존 승인 경로 그대로**.
 
@@ -8992,12 +8946,14 @@ class ChatSession:
         ``run_commands`` 디스패치다. 미리보기 카드·LiveLock·감사 로그가 전부
         그 경로에 이미 붙어 있으므로 여기에는 우회 플래그가 없다.
 
-        **승인만은 그 경로가 주지 않았다**(t292). 이 묶음의 쇼파일 쓰기는
-        `Store Sequence … /Merge` 인데 게이트가 그것을 `safe` 로 분류하므로
-        승인 단계 자체가 열리지 않았다 — 실측 세 번(t291·t294·t296) 모두
-        `executed N, blocked 0, approved 0`. 그래서 디스패치 **직전**에
-        묶음 단위 수락을 한 번 받는다(:meth:`_accept_draft_apply_batch`).
-        수락 못 받으면 명령은 0건 나간다.
+        **승인은 게이트가 준다** — 묻는 주체는 하나다(t299 Phase 2).
+        t292 당시에는 게이트가 `Store Sequence … /Merge` 를 `safe` 로 분류해서
+        승인 단계가 열리지 않았고(실측 세 번 모두 `executed N, blocked 0,
+        approved 0`), 그래서 이 자리가 자기 채널로 수락을 따로 받았다.
+        `blacklist.yaml` v6 이 그 오브젝트를 폐집합에 넣은 뒤로는 그 임시
+        채널이 **두 번째 질문자**가 됐다 — 감독이 같은 명령을 두 번 승인했다.
+        지금은 선언(`BatchRisk`)만 실어 보내고 카드는 게이트가 한 장 만든다.
+        승인 못 받으면 명령은 0건 나간다.
 
         「저장」과는 다른 행위다 — 저장은 라이브러리에만 남기고 콘솔에는 한
         건도 보내지 않는다(`server/web/timeline_api.py`).
@@ -9032,11 +8988,20 @@ class ChatSession:
                 f"콘솔에 반영한 큐가 0건입니다 (건너뜀 {len(plan.skipped)}건)."
                 f"{skipped_note}\n콘솔에는 아무것도 쓰지 않았습니다."
             )
-        if not self._accept_draft_apply_batch(plan):
+        # 카드 t299 Phase 2 — 선언을 실어 보내고 **게이트가 유일한 질문자**가
+        # 되게 한다. 사유는 손으로 적지 않고 **나갈 명령에서** 서버가 읽는다
+        # (t323 규율, 열 자리 봉합과 같은 `showfile_write_risk`). 선언이 붙으면
+        # 게이트가 분류 결과를 흡수해 번들 전체를 요청 **하나**로 만들고
+        # (`gate.py` `approval_findings`), `kind` 를 감사 로그에 싣는다.
+        risk = showfile_write_risk(list(plan.commands), kind="draft_apply")
+        if risk is None:
+            # 여기 오는 번들은 `Store Sequence … ` 를 반드시 싣는다(위에서
+            # `plan.is_empty` 를 걸렀다). 그래도 선언이 안 읽히면 승인 없이
+            # 쇼파일을 고치게 되므로 실행하지 않는다 — fail-closed.
             return self._pointing_refusal(
-                f"Sequence {plan.sequence_number} 반영을 승인받지 못해 "
-                f"중단했습니다 (요청 {len(plan.applied)}건). 초안은 그대로 "
-                f"남아 있습니다.{skipped_note}\n콘솔에는 아무것도 쓰지 않았습니다."
+                f"Sequence {plan.sequence_number} 반영의 쇼파일 쓰기 선언을 "
+                "읽지 못해 중단했습니다. 초안은 그대로 남아 있습니다."
+                f"{skipped_note}\n콘솔에는 아무것도 쓰지 않았습니다."
             )
         executed = self._registry.dispatch(
             ToolCall(
@@ -9044,10 +9009,17 @@ class ChatSession:
                 name="run_commands",
                 arguments={"commands": list(plan.commands)},
             ),
-            # 카드 t323 — 바로 위 `_accept_draft_apply_batch` 가 묶음 수락을
-            # 이미 받았다. 표시하지 않으면 같은 번들에 카드가 두 장 뜬다.
-            ExecutionContext(approval_owned_by_caller=True),
+            ExecutionContext(risk=risk),
         )
+        # 승인 거절은 「완료되지 않았다」와 다른 사건이다 — 감독이 카드를 거절한
+        # 것이므로 그 문면으로 답한다. `rejected` 는 게이트에서 승인 거절
+        # 경로에만 붙는다(다른 실패는 `blocked*` · `locked`).
+        if any(outcome.status == "rejected" for outcome in executed.command_outcomes):
+            return self._pointing_refusal(
+                f"Sequence {plan.sequence_number} 반영을 승인받지 못해 "
+                f"중단했습니다 (요청 {len(plan.applied)}건). 초안은 그대로 "
+                f"남아 있습니다.{skipped_note}\n콘솔에는 아무것도 쓰지 않았습니다."
+            )
         failed = [
             outcome
             for outcome in executed.command_outcomes

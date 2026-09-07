@@ -64,6 +64,39 @@ t292 의 부수피해 8건이었는데, 이 트리에서 다시 재니 그 8은 
 
 **그래서 이 파일이 초록인 것은 「구멍이 닫혔다」가 아니다.** 네 명령 중 둘이
 닫혔고 둘이 열려 있다. 아래 `store_entries` 단언이 그 상태를 그대로 센다.
+
+---
+
+## 못을 뽑은 기록 (SPEC-COPILOT-CLASSIFYGAP-001 Phase 2, 카드 t299)
+
+**이 파일의 제목이 이제 틀렸다.** `Store Sequence <N> Cue <M> /Merge` 는 승인
+카드를 **띄운다**. 블랙리스트 v5 -> v6 이 `Store Sequence` 를 넣었다. 파일 이름과
+위 세 절은 이 파일이 처음 박은 못의 역사로 남기고, 아래 단언들은 뒤집었다 —
+조용히 뒤집으면 다음 사람이 사고로 읽는다.
+
+**무엇이 뒤집혔나.** 셋이다.
+
+1. `UNCARDED_SEQUENCE_WRITES` -> `CARDED_SEQUENCE_WRITES`. 세 줄 전부
+   `matched_entry='Store Sequence'` / `risky=True` 다.
+2. **`/Merge` 대 `/Overwrite` 비대칭이 사라졌다.** 위 11~13행이 「가장 날카로운
+   사실」이라 부른 것이 이 SPEC 이 고친 것이다. 둘 다 이제 카드가 뜨고, 잡는
+   항목만 다르다(`Store Sequence` 대 `Store /overwrite`). 그 진단 — 결함은
+   `/Merge` 전용 구멍이 아니라 `Store` 의 오브젝트 커버리지 — 이 옳았고,
+   오브젝트를 넣어서 닫혔다.
+3. `test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store` 의
+   `assert "Store Sequence" not in RULESET.blacklist` 가 뒤집혔다. 위 35~38행이
+   「이 SPEC 이 **지키는** 성질」이라 적은 그 단언이고, 지키던 이유(부수피해 8건)는
+   낡은 값이었다. 이 트리 실측은 32건 / 전체 12034 이고 전부 갱신 대상이었다 —
+   쇼파일을 안 고치는 흐름이 승인을 요구하게 된 자리는 0건이다.
+
+**비용을 낸 자리 하나.** 확대 직후 큐시트 반영 한 동작에 카드가 **두 장** 떴다 —
+그 자리(`session.py::_cue_sheet_draft_apply`)가 t292 당시 자기 채널로 수락을
+따로 받고 있었기 때문이다. 그 임시 채널을 걷어내고 `BatchRisk` 선언으로 바꿔
+게이트가 유일한 질문자가 되게 했다(카드 1장, 사유 둘 병기). 위 26행이 말한
+`_accept_draft_apply_batch` 는 그래서 이제 없다.
+
+**아직 열려 있는 것.** `Store Cue` 하나다(Phase 3). 아래 `store_entries` 단언이
+그 상태를 그대로 센다 — 네 명령 중 셋이 닫혔다.
 """
 
 from __future__ import annotations
@@ -83,40 +116,51 @@ def _classify(command: str):
     return classify_command(grammar.parsed, RULESET)
 
 
-#: 오늘 `safe` 로 분류되는 쇼파일 쓰기들 — 승인 카드가 뜨지 않는다.
-#: `Store Cue 12` 는 `test_writegate.py::UNCHANGED_SAFE` 가 비용 근거로 이미
-#: 비준한 항목이라 여기 다시 적지 않는다. 여기 적는 것은 그 표에 없던
-#: `Store Sequence` 계열이다.
+#: 이제 승인 카드가 뜨는 시퀀스 쓰기들 — v6 이 `Store Sequence` 를 넣었다.
+#: 세 줄 모두 옵션이 다르다(`/Merge` · 옵션 없음 · 큐 없음). 잡는 것은 옵션이
+#: 아니라 **오브젝트**이므로 셋 다 같은 항목에 걸려야 한다 — 그게 이 목록이
+#: 세 줄인 이유다.
 #:
-#: t299(Phase 1)에서 `Store Group 3` 은 이 목록의 짝이 아니게 됐다 — v5 가
-#: 그것을 폐집합에 넣었으므로 이제 카드가 뜬다. `UNCHANGED_SAFE` 에서도 같은
-#: 이유로 빠졌다.
-UNCARDED_SEQUENCE_WRITES = (
+#: `Store Cue 12` 는 `test_writegate.py::UNCHANGED_SAFE` 가 여전히 비준하는
+#: 열린 구멍이라 여기 적지 않는다(Phase 3).
+CARDED_SEQUENCE_WRITES = (
     "Store Sequence 210 Cue 1 /Merge",
     "Store Sequence 210 Cue 1",
     "Store Sequence 210",
 )
 
 
-@pytest.mark.parametrize("command", UNCARDED_SEQUENCE_WRITES)
-def test_a_sequence_cue_write_raises_no_approval_card_today(command: str) -> None:
+@pytest.mark.parametrize("command", CARDED_SEQUENCE_WRITES)
+def test_a_sequence_cue_write_now_raises_an_approval_card(command: str) -> None:
+    """갱신 근거 (t299 Phase 2): 이 파일이 박은 못을 이 SPEC 이 뽑았다.
+
+    옛 이름은 `test_a_sequence_cue_write_raises_no_approval_card_today` 였고
+    `category == "safe"` 를 고정했다. v6 이 오브젝트를 폐집합에 넣었으므로 그
+    고정은 이제 거짓이다 — 이름과 단언을 같이 뒤집는다.
+    """
     verdict = _classify(command)
-    assert verdict.category == "safe"
-    assert verdict.risky is False
-    assert verdict.matched_entry is None
+    assert verdict.category == "blacklisted"
+    assert verdict.risky is True
+    assert verdict.matched_entry == "Store Sequence"
 
 
-def test_the_same_write_with_overwrite_does_raise_a_card() -> None:
-    """축은 `/Merge` 가 아니라 **블랙리스트가 든 옵션**이다.
+def test_merge_and_overwrite_now_both_raise_a_card_by_different_entries() -> None:
+    """비대칭이 사라졌다 — 이 SPEC 이 고친 것이 바로 그것이다.
 
-    `Store /overwrite` 항목이 `/Overwrite` 를 잡는다. `/Merge` 를 잡을 항목은
-    이 파일에 없다 — 즉 결함은 `/Merge` 전용 구멍이 아니라 `Store` 의
-    오브젝트 커버리지(`Sequence` 가 항목에 없다)다.
+    옛 이름은 `test_the_same_write_with_overwrite_does_raise_a_card` 이고,
+    `/Overwrite` 만 카드가 뜨고 `/Merge` 는 안 뜨는 것을 고정했다. 그 검사의
+    진단은 옳았다 — 「결함은 `/Merge` 전용 구멍이 아니라 `Store` 의 오브젝트
+    커버리지다」. v6 이 그 오브젝트를 넣어서 닫혔다.
+
+    그래서 지금 재는 것은 **둘 다 카드가 뜬다**는 것과, 잡는 항목이 서로 다르다는
+    것이다. 항목까지 재는 이유: 둘이 같은 항목에 걸리기 시작하면 옵션 축과
+    오브젝트 축이 뒤섞였다는 뜻이고, 그건 과다매칭 신호다.
     """
     merged = _classify("Store Sequence 210 Cue 1 /Merge")
     overwritten = _classify("Store Sequence 210 Cue 1 /Overwrite")
-    assert merged.risky is False
+    assert merged.risky is True
     assert overwritten.risky is True
+    assert merged.matched_entry == "Store Sequence"
     assert overwritten.matched_entry == "Store /overwrite"
 
 
@@ -127,23 +171,26 @@ def test_the_gate_itself_is_healthy_on_the_same_bundle() -> None:
     assert _classify("Delete Sequence 210").matched_entry == "Delete"
 
 
-def test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store() -> None:
-    """최소 수정 자리를 기록한다: `Store Sequence` 라는 항목이 없다.
+def test_the_blacklist_now_carries_the_sequence_store_entry() -> None:
+    """이 파일이 예고한 날이 왔다 — 누군가 그 항목을 넣었다.
 
-    이 단언이 깨지는 날은 누군가 그 항목을 넣은 날이고, 그때 이 파일 전체가
-    붉어져서 「고정해 둔 구멍이 닫혔다」를 알린다.
+    옛 이름은 `test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store`
+    이고, 그 docstring 이 「이 단언이 깨지는 날은 누군가 그 항목을 넣은 날이고,
+    그때 이 파일 전체가 붉어져서 『고정해 둔 구멍이 닫혔다』를 알린다」라고
+    적었다. v6(t299 Phase 2)이 그 항목을 넣었고, 실제로 이 파일 전체가 붉어졌다 —
+    설계된 대로 작동했다.
 
-    갱신 근거 (t299 / SPEC-COPILOT-CLASSIFYGAP-001 Phase 1): v5 가 `Store Group`
-    과 `Store Timecode` 를 넣었으므로 `store_entries` 목록이 넷이 된다. 첫
-    단언(`"Store Sequence" not in ...`)은 **바꾸지 않는다** — Phase 1 은
-    `Store Sequence` 를 안 넣었고, 그 성질은 아직 참이다. 즉 이 검사는 이제
-    「Sequence 구멍은 아직 열려 있고, Store 계열 중 넷이 닫혔다」를 센다.
+    남은 구멍은 `Store Cue` 하나다. 그것까지 닫히면 이 단언이 다시 붉어지고,
+    그때 이 파일은 「네 명령 전부 닫혔다」로 갱신된다(Phase 3).
     """
-    assert "Store Sequence" not in RULESET.blacklist
+    assert "Store Sequence" in RULESET.blacklist
+    # 아직 안 닫힌 구멍 — 이 줄이 Phase 3 의 착수 신호다.
+    assert "Store Cue" not in RULESET.blacklist
     store_entries = [entry for entry in RULESET.blacklist if entry.split()[0] == "Store"]
     assert store_entries == [
         "Store /overwrite",
         "Store Preset",
         "Store Group",
         "Store Timecode",
+        "Store Sequence",
     ]

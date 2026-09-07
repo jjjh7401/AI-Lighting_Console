@@ -214,8 +214,8 @@
 #     범위 밖에 뒀다 — 그래서 seal-only 는 0 이 되지 않는다.
 #
 #     MUTATION (항목이 실제로 방어를 만드는지): 이 한 줄만 되돌리면
-#     **2 failed / 12010 passed / 19 skipped** (전체 12031). 둘 중 **분류를
-#     관측하는 것은 하나뿐**이고 그것은 이 리비전이 새로 넣은 핀이다
+#     **2 failed / 12010 passed / 19 skipped** (전체 12031, 갱신 전 시점 기준).
+#     둘 중 **분류를 관측하는 것은 하나뿐**이고 그것은 이 리비전이 새로 넣은 핀이다
 #     (`test_safety_classify::test_direct_blacklist_commands_are_blacklisted`
 #     `[Store Sequence 210 Cue 3 /Merge]`). 나머지 하나
 #     (`test_safety_ruleset::test_every_shipped_revision_is_documented_in_the_file`)
@@ -223,17 +223,29 @@
 #     빨개지고 「카드가 안 뜨게 됐다」는 아무 검사도 말하지 않았다 — v5 가
 #     같은 자리에서 배운 것과 같은 성질이다.
 #
-#     [미해결 — 이 리비전은 아직 초록이 아니다] 큐시트 반영 자리에서 감독이
-#     카드를 **두 장** 본다. 실측: 한 동작(초안 반영)에 승인 요청 1건 -> **2건**
+#     이 확대가 드러낸 결함 하나와 그 처리: 큐시트 반영 자리에서 감독이 카드를
+#     **두 장** 보게 됐다. 실측 — 한 동작(초안 반영)에 승인 요청 1건 -> **2건**
 #     (`reports/classifygap-t299-p2/06_cuesheet_cards_after.txt`). 첫 장은
 #     `session.py::_accept_draft_apply_batch` 가 자기 채널로 받는 수락이고,
 #     둘째 장은 분류 층이 만든다 — `ExecutionContext.approval_owned_by_caller`
-#     는 *봉합* 카드만 막고 분류 카드는 막지 않는다(`gate.py:399·415`). 둘째
-#     장은 감독이 첫 장에서 이미 승인한 그 명령을 다시 묻는다. 중복 카드는
-#     감독이 카드를 안 읽게 만드는 바로 그 사고이므로 절충이 아니라 결함이다.
-#     plan.md §A-3 이 `[NEEDS CLARIFICATION: 큐시트 이중 카드]` 로 열어 둔
-#     판단이 이것이고, 아직 닫히지 않았다. 고치는 자리는 `session.py` 또는
-#     `server/safety/gate.py` 이고 둘 다 이 SPEC 의 선언 범위 밖이다.
+#     는 *봉합* 카드만 막고 분류 카드는 막지 않는다. 둘째 장은 감독이 첫 장에서
+#     이미 승인한 그 명령을 다시 묻는다.
+#
+#     닫은 방향은 **억제가 아니라 제거**다. 플래그가 분류 카드까지 막게 하면
+#     호출자가 최후 방어층의 눈을 감길 권한을 갖는다(fail-closed 의 반대). 대신
+#     두 번째 질문자를 없앴다 — `_accept_draft_apply_batch` 를 지우고 `BatchRisk`
+#     선언을 실어 게이트가 유일한 질문자가 되게 했다(`session.py` 순 -28줄).
+#     사유는 손으로 적지 않고 `write_reason.showfile_write_risk` 가 나갈 명령에서
+#     읽는다 — 열 자리 봉합과 같은 함수, 같은 규율(t323).
+#
+#     그 결과 실측: 카드 **1장 · 항목 5 · 사유 둘 병기**, 감사 로그
+#     `('approved','draft_apply')` — `kind` 보존(`11`). 거절하면 콘솔 **0건**,
+#     감사 로그 `('rejected','draft_apply')`(`12`). 위험 신호 7건은 **갱신 없이**
+#     초록이 됐다. 최종 전체 스위트 `12012 passed · 31 skipped · 0 failed`,
+#     exit 0 (전체 12043, `14`).
+#
+#     `SEAL_DEFENCE` 자리가 10 -> **11** 로 늘었다(반영 자리가 봉합이 됐으므로).
+#     재측정 seal-only **2 / 11** (`13`).
 version: 6
 
 blacklist:
