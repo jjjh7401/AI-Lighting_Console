@@ -743,7 +743,19 @@ exit=0
 
 ---
 
-## §E.2.F SPEC 전체 수락 기준표 (세 단계 합산 — 이 SPEC 의 마감 측정)
+## §E.2.F SPEC 전체 수락 기준표 (네 단계 합산 — 이 SPEC 의 마감 측정)
+
+> **Phase 4 갱신 (sync-phase, 2026-09-07, manager-docs).** 아래 표의 본문
+> 행은 **Phase 1~3 시점(v7) 그대로 보존**한다(이력 왜곡 금지). Phase 4
+> (카드 t325, PR #373, `blacklist.yaml` v7 → v8, main `197eb69`)가
+> AC-CG-005 를 `seal-only 2 → 0` 으로 마저 닫았다 — 이 sync 세션이 최종
+> 트리(`197eb69`)에서 재측정해 확인했다: 전체 스위트
+> `12032 passed / 35 skipped / 0 failed`(`uv run python -m pytest server/tests -q`),
+> `SEAL_DEFENCE`(`test_writegate_session_sites.py`) 11 항목 전부
+> `redundant`(seal-only 0), 뮤테이션(두 항목 되돌림) `9 failed / 12015 passed / 35 skipped`
+> — `_offer_fx_executor_assignment`·`_setlist_mode` 두 자리가 직접 죽는다.
+> 증거: `reports/classifygap-t325-p4/`(run-phase) +
+> `reports/classifygap-close/{full_suite.txt,ac005_targeted.txt,mutation.txt}`(sync-phase 재측정).
 
 각 판정은 **최종 트리**(v7, 갱신 후)에서 다시 잰 값이거나, 해당 단계의 추적되는
 증거 파일이다. 「이월」로 적힌 것은 그 단계에서 만족 불가였음을 자체 기록이
@@ -755,12 +767,13 @@ exit=0
 | AC-CG-002 (프로그래머 9문장) **must-pass** | **PASS** | 세 단계 모두 | 같은 프로브 `[D]`·`[D-2]` | `=> risky 로 잘못 판정된 문장: 0 []` (아홉 문장 + 배차서 두 문장 모두 0) |
 | AC-CG-003 (흐름 단위 카드 0장) **must-pass** | **PASS** | 세 단계 모두 | 같은 프로브 `[E]` | `approval requests: 0` · `cleared : True  status='cleared'` |
 | AC-CG-004 (봉합과 겹쳐도 1장 + 사유 병기) | **PASS** | 세 단계 모두 | 같은 프로브 `[F]` | `approval requests: 1` · `items in request : 3` · `Store Cue 1` 과 `Store Sequence …` 각각 `('SEAL-REASON', "blacklisted command (matches closed-set entry '…')")` |
-| AC-CG-005 (seal-only 감소) **must-pass** | **PASS** | **Phase 2** (7 → 2). Phase 3 은 2 로 유지 | `uv run python reports/classifygap-t299-p3/probe_seal_defence_p3.py` | `seal-only (실측)  : 2 / 11` · `seal-only (표)    : 2` — 표와 실측 일치, 표 diff 없음 |
+| AC-CG-005 (seal-only 감소) **must-pass** | **PASS** | **Phase 2** (7 → 2) → **Phase 4** (2 → 0, 카드 t325) | Phase 1-3: `uv run python reports/classifygap-t299-p3/probe_seal_defence_p3.py`. Phase 4: `uv run python reports/classifygap-t325-p4/probe_seal_defence_p4.py` + sync 재측정 `uv run python -m pytest server/tests/test_writegate_session_sites.py -q` | Phase 3 시점: `seal-only (실측) : 2 / 11`. Phase 4 뒤(sync 재측정, main `197eb69`): `SEAL_DEFENCE` 11/11 `redundant`, `56 passed, 22 skipped` — seal-only 0 |
 | AC-CG-006 (봉합 그대로, 0건 제거) | **PASS** | 세 단계 모두 | `git diff --stat -- server/web/session.py` (Phase 3) + `SITES` 개수 | Phase 3 diff 출력 없음 · `sites: 11` / `seal_defence rows: 11` — 11 자리 전부 선언 보유, 제거 0건 |
 | AC-CG-007 (동사 확대 안 함) | **PASS** | 세 단계 모두 | `load_ruleset()` 목록 + 평범한 대화 회차 | `bare Store present: False` · `test_web_session.py::TestHappyPath::test_korean_instruction_executes_and_reports_in_korean` → `1 passed` |
 | AC-CG-008 (리비전 문서화) | **PASS** | 각 단계가 자기 리비전을 기록 | `uv run pytest -q server/tests/test_safety_ruleset.py` | `23 passed` — `version: 7`, `v4 -> v5`·`v5 -> v6`·`v6 -> v7` 세 항목이 `REVISION HISTORY` 블록 **안**에 있고 각각 `SPEC-COPILOT-CLASSIFYGAP-001` 을 명시. 3중 핀 통과 |
 | AC-CG-009 (전체 초록 + 전체 수 병기 + 개별 근거) | **PASS** | Phase 3 (각 단계도 자기 회차에서 초록) | `uv run pytest -q server/tests` | `12017 passed, 31 skipped, 1 warning`, `exit=0` (전체 12048). 갱신된 검사 각각에 근거를 주석/docstring 으로 기재 |
 | AC-CG-010 (종류 2 = 0건) **must-pass** | **PASS** | 세 단계 모두 | 각 단계 비용 파일의 전수 분류 | Phase 1 **0** / Phase 2 **0** / Phase 3 **0** — 누적 0건 |
+| (Phase 4 추가행) 전체 스위트 최종 재확인 | **PASS** | Phase 4 (카드 t325) + sync 재측정 | `uv run python -m pytest server/tests -q` (이 worktree, main `197eb69`) | `12032 passed, 35 skipped, 1 warning`, exit 0 — Phase 3 의 `12017/31` 대비 +15 passed / +4 skipped (Phase 4 신규 검사 순증) |
 
 **must-pass 넷(002·003·005·010) 전부 PASS.** §D.4 완료 정의 대조:
 
@@ -768,7 +781,7 @@ exit=0
 2. §D.2 종류 2 여덟 항목 판정 완료 ✓ — Phase 2 가 8건 전부 판정했고(갱신 대상 1 +
    중복 카드 결함 7) 0건으로 해소, Phase 3 의 새 신호 0건
 3. 각 리비전 헤더에 항목별 비용과 그 시점 전체 수 기록 ✓ (v5·v6·v7)
-4. 남는 구멍이 후속 카드로 등재 — **감독 확인 필요**(아래 `open_for_operator`)
+4. 남는 구멍이 후속 카드로 등재 — **해소됨**: 카드 t325(PR #373, `blacklist.yaml` v7→v8, main `197eb69`)가 `Assign Sequence`·`Copy Sequence` 를 받아 AC-CG-005 의 남은 seal-only 둘을 0 으로 닫았다(sync-phase 재측정으로 확인, 아래 §E.4). `Store Page`·`Store Macro` 는 여전히 이 SPEC 범위 밖 — 별도 후속 카드 필요
 5. 커밋 메시지가 t299 명시 + `🗿 MoAI` 종료 ✓
 
 ---
@@ -830,9 +843,9 @@ formatting_repair:
   what: "§E.3 Phase 1 블록에 여는 펜스가 없어 산문으로 렌더되고 끝의 ``` 가 미닫힘 펜스를 열고 있었다"
   how: "내용 바이트 그대로 두고 제목 + 여는 펜스만 추가"
 open_for_operator:
-  - "AC-CG-005 의 남은 seal-only 둘은 이 SPEC 으로 0 이 안 된다(측정으로 확정) — 카드 t325 가 `Assign Sequence`·`Copy Sequence` 를 받는지 확인 필요"
-  - "`Store Page`·`Store Macro` 후속 카드는 `test_safety_classify._OPTION_AXIS_OBJECT` 이동을 함께 계획해야 한다"
-  - "코퍼스 무인 운전 상실 누적: 7/21 시나리오, 대표 과제 유형 3종(group_create·preset_store·cue_store)"
+  - "[RESOLVED, sync-phase 2026-09-07] AC-CG-005 의 남은 seal-only 둘 — 카드 t325(PR #373)가 `Assign Sequence`·`Copy Sequence` 를 받아 닫았다. sync 재측정: `SEAL_DEFENCE` 11/11 redundant, seal-only 0"
+  - "`Store Page`·`Store Macro` 후속 카드는 `test_safety_classify._OPTION_AXIS_OBJECT` 이동을 함께 계획해야 한다 — 여전히 열려 있음"
+  - "코퍼스 무인 운전 상실 누적: 7/21 시나리오, 대표 과제 유형 3종(group_create·preset_store·cue_store) — 여전히 열려 있음"
 gaps:
   - "실기 검증 0건 — 콘솔 오프라인, 포트 8000 미접촉"
   - "`Store Page`·`Store Macro`·`Assign`·`Copy` 확대 비용 미측정(§F 범위 밖)"
@@ -844,4 +857,38 @@ gaps:
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+```yaml
+sync_complete_at: 2026-09-07
+sync_commit_sha: pending-backfill-classifygap-close
+sync_status: complete
+base: 197eb69
+worktree: WT-classifygap-close (.claude/worktrees/agent-a19db2ff3cfddc124)
+interpreter: "uv run / this worktree (never primary checkout .venv)"
+phases_covered: "1-4 (t299 P1-P3 + t325 P4), 이 SPEC 의 마지막 sync 닫힘"
+suite_full_reexecution: "12032 passed / 35 skipped / 0 failed, exit 0 (reports/classifygap-close/full_suite.txt)"
+ac005_targeted_reexecution: "server/tests/test_writegate_session_sites.py — 56 passed, 22 skipped (reports/classifygap-close/ac005_targeted.txt)"
+mutation_revert_two_entries: "9 failed / 12015 passed / 35 skipped — 두 SEAL_DEFENCE 자리(_offer_fx_executor_assignment, _setlist_mode)가 직접 죽는다 (reports/classifygap-close/mutation.txt)"
+mutation_restore_verified: "복원 후 diff 재확인 결과 server/safety/blacklist.yaml 변경분 없음(클린 복원)"
+blacklist_version: 8
+seal_only_final: 0
+b12_self_test_a: "CHANGELOG 중복 검사 결과 0건 (사전 중복 없음, 이 커밋이 최초 진입)"
+b12_self_test_b: "AC-ID 패턴 카운트 결과 10 (AC-CG-001~010, §E.2.F 표와 일치)"
+b12_self_test_c: "CHANGELOG 신규 엔트리가 인용하는 모든 경로 사전 확인 완료 — server/safety/blacklist.yaml, server/tests/test_writegate_session_sites.py, reports/classifygap-t325-p4/, reports/classifygap-close/"
+changelog_entry_position: "[Unreleased] > Added, 기존 최신 항목 위(SPEC-COPILOT-SONGCONFIRM-001 항목 앞)"
+frontmatter_status_transitions:
+  spec_md: "in-progress -> completed (updated 필드는 이미 2026-09-07이라 불변)"
+  progress_md_e4: "이 블록으로 채움 (pending -> complete)"
+canary_compliance_check:
+  applicable: false
+  reason: "이 SPEC 은 forward-looking 정책을 정의하지 않는다 — 순수 방어 확대 SPEC"
+mx_tag_validation: "이 sync 세션에서 신규 @MX 주석 부여 없음 — 대상 파일(blacklist.yaml, test_writegate_*.py)이 코드가 아닌 데이터/테스트 파일이라 @MX 태그 대상 함수 신설 없음"
+gaps:
+  - "실기 검증 0건 — 콘솔 오프라인, 포트 8000 미접촉 (SPEC §D.5 명시 범위 밖, run-phase부터 불변)"
+  - "이 sync 세션은 코드 변경을 하지 않았다 — spec.md/plan.md/acceptance.md 본문은 무편집(정책상 금지), progress.md/spec.md frontmatter/CHANGELOG.md만 편집"
+  - "abandoned 중복 t325 워크트리(뮤테이션 적용 상태)는 손대지 않음 — 운영자 처분 대상"
+  - "Store Page, Store Macro 확대 비용 — 여전히 미측정(§D.5 명시 범위 밖)"
+residual_risk:
+  - "sync_commit_sha는 이 파일을 쓰는 시점엔 아직 커밋 전이라 placeholder — 실제 커밋 후 SHA로 back-fill되지 않음(다음 세션이 이력 조회로 실측 가능)"
+  - "PR #373 CI 결과는 이 sync 세션에서 재확인하지 않았다 — main에 머지된 상태이므로 green으로 간주하나 직접 관측하지 않았다"
+```
+
