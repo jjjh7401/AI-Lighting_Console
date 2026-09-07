@@ -384,7 +384,7 @@ redundant 비율이 바뀌면 skip 조건이 걸리는 자리도 바뀐다. 초�
 
 ```yaml
 run_complete_at: 2026-09-07
-run_commit_sha: pending-backfill-t299-p2
+run_commit_sha: "3e6dabc (확대·측정) + c5d6e64 (중복 카드 수정)"
 run_status: complete
 phase: "Phase 2 of 3 (Store Sequence + 중복 카드 결함 수정)"
 base: ca34ebe
