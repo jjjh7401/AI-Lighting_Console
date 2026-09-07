@@ -205,7 +205,7 @@ From the project root, with onPC running and OSC configured as above:
 
 ```bash
 uv run python -m server.tools.responder_roundtrip \
-    --host 127.0.0.1 --port 8000 --listen-port 9000 \
+    --host 127.0.0.1 --port 8000 --listen-port 9005 \
     --path "DataPool/Sequences" --exec-command "List" --wait 5
 ```
 
@@ -227,9 +227,9 @@ Expected output: `[PASS] ping`, `[PASS] state` (with a node/children summary),
 |---|---|
 | Re-imported plugin still behaves like the old version | Import over an existing same-named plugin doesn't reliably refresh its stored source (§2.1, 2026-07-24 finding). Verify with `--expect-version` after every deploy; recover via delete+reimport or Option B paste-in. |
 | Requests stop arriving after an OSC config change (row destination, port, prefix) even though the settings screen looks correct | grandMA3's OSC subsystem does not auto-rebind on config change — a "stale socket". Toggle the row's `Enable Input` / `Enable Output` off then on again (a real rebind cycle, not just re-saving the same values), then retry. Recurring finding across multiple sessions (2026-07-18, 2026-07-23). |
-| `[FAIL] ping: timeout` and nothing in onPC | OSC input not enabled, wrong `--port`, or prefix ≠ `copilot`. Verify with the M1 tool: `uv run python -m server.tools.osc_smoke --port 8000 --listen-port 9000 "List"` and check the onPC command-line history. |
+| `[FAIL] ping: timeout` and nothing in onPC | OSC input not enabled, wrong `--port`, or prefix ≠ `copilot`. Verify with the M1 tool: `uv run python -m server.tools.osc_smoke --port 8000 --listen-port 9005 "List"` and check the onPC command-line history. |
 | Command arrives in onPC history but no reply | Replies not reaching the server: wrong OSC row destination IP/send-port, wrong `CONFIG.osc_slot`, or the send API assumption (PROTOCOL.md §6 ASSUMPTION-2) — try `CONFIG.send_variant = "args"` then `"cmd_keyword"`. |
-| Replies arrive at `/copilot/copilot/...` | Console prepends the OSC prefix to outgoing addresses (ASSUMPTION-5). Detect with `uv run python -m server.tools.responder_roundtrip --listen-port 9000 --wait 10 --diagnose`, then strip the leading `/copilot` from `CONFIG.state_address` / `CONFIG.feedback_address`. |
+| Replies arrive at `/copilot/copilot/...` | Console prepends the OSC prefix to outgoing addresses (ASSUMPTION-5). Detect with `uv run python -m server.tools.responder_roundtrip --listen-port 9005 --wait 10 --diagnose`, then strip the leading `/copilot` from `CONFIG.state_address` / `CONFIG.feedback_address`. |
 | Plugin runs but reports `no request` | Plugin arguments not delivered (ASSUMPTION-1). Use the user-variable fallback: `SetUserVariable "COPILOT_REQ" "ping 1"` then `Plugin "CopilotResponder"`. |
 | `exec` reports failure for a command that clearly worked | `Cmd()` success-token mismatch (ASSUMPTION-3): note the raw `result` string in the reply and extend `SUCCESS_RESULTS` in the Lua file. |
 | A second responder-looking plugin sits in the pool and you fear double replies | It cannot reply. Requests name the plugin (`Plugin "CopilotResponder" "..."`), so a copy under any other name — `CopilotResponder#2`, the name an in-console duplicate gets — is never invoked (§6, 2026-07-25 finding). Confirm rather than assume: one `ping` returns exactly one `pong`. |

@@ -1,7 +1,7 @@
 # SPEC-COPILOT-CUETIME-001 — 포지션 큐 시간축 (트랜지션·MIB·곡 시트)
 
 - 브랜치: `feature/position-cue-timeline` (main `614eab9`에서 분기)
-- 근거 문서: `handoff/2026-08-14-position-cue-timeline-kickoff.md`,
+- 근거 문서: `docs/handoff/2026-08-14-position-cue-timeline-kickoff.md`,
   `docs/proposals/pan-tilt-position-preset-strategy.md`,
   `.claude/skills/ma3-spatial-pointing/SKILL.md`
 - 상태: T1 진행 중
