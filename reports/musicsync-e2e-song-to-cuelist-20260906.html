@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>곡 → 큐 리스트 끝단 실측 (2026-09-06)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;--sans:"Pretendard",system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;--max-width:860px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300)}
+*{box-sizing:border-box}body{margin:0;background:var(--ivory);color:var(--slate);font:16px/1.65 var(--sans)}
+main{max-width:var(--max-width);margin:0 auto;padding:40px 20px 80px}
+h1{font-size:26px;line-height:1.3;margin:0 0 6px}h2{font-size:19px;margin:36px 0 10px;border-bottom:var(--border);padding-bottom:6px}
+.meta{color:var(--g500);font-size:14px;margin-bottom:26px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:18px 0}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:14px 16px}
+.card .k{font-size:12px;color:var(--g500)}.card .v{font-size:24px;font-weight:700;margin-top:2px}.ok{color:var(--olive)}.warn{color:var(--clay)}
+.lead{background:var(--g100);border-left:4px solid var(--clay);border-radius:var(--radius-row);padding:10px 14px;margin:10px 0 14px;font-size:15px}
+table{width:100%;border-collapse:collapse;background:var(--paper);border:var(--border);border-radius:var(--radius-panel);overflow:hidden;font-size:14.5px;margin:10px 0}
+th,td{padding:9px 11px;text-align:left;vertical-align:top;border-bottom:1px solid var(--g300)}th{background:var(--g100);font-weight:600}tr:last-child td{border-bottom:0}
+code{font:13px var(--mono);background:var(--g100);padding:1px 5px;border-radius:4px}
+.gloss{color:var(--g700);font-size:14px}.finding{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:12px 18px;margin:12px 0}
+.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:12px}
+figure{margin:14px 0}figure img{max-width:100%;border:var(--border);border-radius:var(--radius-panel)}figcaption{font-size:13px;color:var(--g500);margin-top:4px}
+ul,ol{padding-left:22px}li{margin:4px 0}
+</style>
+</head>
+<body><main>
+<h1>곡 → 큐 리스트 끝단 실측</h1>
+<div class="meta">2026-09-06 · main <code>f611eef</code> + CI 복구 브랜치 <code>178a0c4</code>(PR #322) · 실기 콘솔 쓰기 0 (가짜 콘솔만 받음)</div>
+
+<div class="cards">
+<div class="card"><div class="k">끝단 경로</div><div class="v ok">동작</div></div>
+<div class="card"><div class="k">콘솔 명령 (가짜)</div><div class="v">26</div></div>
+<div class="card"><div class="k">큐 / 타임코드</div><div class="v">3 / 1</div></div>
+<div class="card"><div class="k">발견</div><div class="v warn">3</div></div>
+</div>
+
+<h2>한 줄 결론</h2>
+<p class="lead"><b>곡 파일 하나가 콘솔 명령 26개까지 한 번에 닿는다.</b> 올리고 → 분석하고 → 카드에서 구간 하나를 빼고 확인한 뒤 → 「이 곡으로 큐 리스트 만들어줘」라고 하자, 모델이 감독이 확정한 구간을 <b>그대로</b> 써서 시퀀스 4(큐 3개)와 타임코드 5를 가짜 콘솔에 저장했다. 오늘 머지한 세 변경이 전부 이 길에서 실제로 쓰였다.</p>
+
+<p class="gloss">가짜 콘솔 (fake console) — 진짜 grandMA3 대신 같은 자리에서 명령을 받아 주는 작은 프로그램. 실제 Lua 응답기(1.6.5)를 그대로 돌려서, 앱 입장에선 「콘솔 온라인」이지만 실기엔 아무것도 닿지 않는다.</p>
+<pre class="mermaid">
+flowchart LR
+  A[WAV 업로드] --> B[분석: BPM 129.2 · 구간 4]
+  B --> C[확인 카드: 3 채택 · 1 제외]
+  C --> D["「큐 리스트 만들어줘, 타임코드 5」"]
+  D --> E[모델 → prepare_songcue<br/>확정 구간 그대로]
+  E --> F[슬롯 판정: 빈 풀 = free<br/>응답기 1.6.5 마커]
+  F --> G[가짜 콘솔: 26개 명령<br/>Sequence 4 · Timecode 5]
+</pre>
+<noscript><p>업로드 → 분석 → 카드(3 채택·1 제외) → 큐 요청 → 모델이 확정 구간으로 prepare_songcue 호출 → 빈 풀 free 판정 → 26개 명령.</p></noscript>
+
+<figure><img src="../.moai/state/verify/musicsync-e2e/song_to_cuelist.jpeg" alt="큐 리스트 생성 직후 화면"><figcaption>큐 요청 직후 — 왼쪽 그룹 6개(가짜 리그), 가운데 실행 이력 26줄, 오른쪽 확인 고지와 모델 답</figcaption></figure>
+
+<h2>확정 구간이 정말 큐가 됐나</h2>
+<table><tr><th>카드에서</th><th>시각</th><th>콘솔 명령</th></tr>
+<tr><td>0:00–0:15 · D1 ✔</td><td>0 ms</td><td><code>Store Sequence 4 Cue 1 'S1'</code> · <code>TrigTime 0</code></td></tr>
+<tr><td>0:15–0:32 · D3 ✔</td><td>15,952 ms</td><td><code>Store Sequence 4 Cue 2 'S2'</code> · <code>TrigTime 15.952</code></td></tr>
+<tr><td>0:32–0:36 · D5 ✘ (체크 해제)</td><td>—</td><td class="ok">큐 없음 — 제외가 반영됨</td></tr>
+<tr><td>0:36–0:40 · D2 ✔</td><td>36,014 ms</td><td><code>Store Sequence 4 Cue 3 'S3'</code> · <code>TrigTime 36.014</code></td></tr>
+</table>
+<p class="gloss">예: 15,952 ms 가 <code>15.952</code> 로 그대로 나왔다 — 밀리초를 초로 옮기며 잘리는 손실이 0 이라는 뜻(t273 이 지키기로 한 조건).</p>
+<p>그 밖에 <code>Store Timecode 5</code> · <code>Assign Sequence 4 At Timecode 5</code> · 각 큐 <code>TrigType 'Time'</code>. 타임코드 풀이 **비어 있었는데도** 5번이 free 로 판정돼 저장까지 갔다 — 어제까지는 여기서 unknown 으로 멈추던 자리(t270).</p>
+
+<h2>환경</h2>
+<table><tr><th>항목</th><th>값</th></tr>
+<tr><td>서버</td><td>워크트리 <code>t273fix</code>, 포트 8768, 죽은 포트 아닌 가짜 콘솔 64441/64442</td></tr>
+<tr><td>가짜 리그</td><td>그룹 Back Wash·FOH Wash·Side L·Top·Cyc·Special · 시퀀스 3 · <b>빈 Timecodes 풀</b> · 응답기 1.6.5</td></tr>
+<tr><td>모델</td><td>Gemini 3.5 Flash (사용자 설정 파일이 <code>--config</code> 보다 우선 — 발견 1)</td></tr>
+<tr><td>증거</td><td><code>.moai/state/verify/musicsync-e2e/</code> 스크린샷·가짜 콘솔 로그·서버 로그 · 워크트리 <code>server/audit_logs/</code></td></tr>
+</table>
+
+<h2>발견</h2>
+<div class="finding"><b>1. <code>--config</code> 는 사용자 설정에 진다.</b> 시드 설정을 바꿔도 <code>~/Library/Application Support/GrandMA3 Copilot/settings.toml</code> 의 <code>active_provider</code> 가 우선하고 키는 OS 키스토어에서 주입된다. 검증할 때 함정 — 문서화 후보.</div>
+<div class="finding"><b>2. 미리보기 뒤 자동 실행.</b> 라이브 잠금이 꺼져 있으면 26개 명령이 승인 카드 없이 곧장 나간다. 가짜 콘솔이라 무해했지만 실기에선 「쇼파일을 바꾸는 저장」이 한 문장으로 나간다. 기존 설계이며, 실기 첫 회차 전에 라이브 잠금을 켤지 감독이 정할 자리.</div>
+<div class="finding"><b>3. 큐 이름이 S1·S2·S3.</b> 룩 어휘 오인을 막으려는 설계인데, 감독이 읽기엔 「인트로/후렴」이 낫다. 확인 카드에서 이름을 받는 후속 카드 후보.</div>
+
+<h2>안 잰 것</h2>
+<ul><li>실기 콘솔 — 응답기 1.6.5 재임포트는 감독 몫(t270 M3).</li><li>룩 선택의 조명적 타당성(디머 20/72/42, 색) — 값이 나온 것만 확인.</li><li>다른 곡·장르·구간 4개 초과.</li></ul>
+
+<h2>다음 손</h2>
+<ol><li>PR #322 머지 → main 초록.</li><li>t270·t273 sync(CHANGELOG·README·SPEC completed).</li><li>t270 M3 실기 — 감독 두 손 뒤 제가 ping·판정 실측.</li><li>카드: 구간 이름 입력 · <code>--config</code> 우선순위 문서화.</li></ol>
+<p class="gloss">직접 해 볼 것: 곡을 올리고 카드에서 구간 하나를 빼고 확인한 뒤 「이 곡으로 큐 리스트 만들어줘, 타임코드 N번」이라고 적으면 이 화면과 같은 흐름을 볼 수 있다 — 라이브 잠금을 켜 두면 실행 대신 제안 카드로 멈춘다.</p>
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body></html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>곡 업로드 → 분석 → 확인 카드 — 실브라우저 검증 (2026-09-06)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;--sans:"Pretendard",system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;--max-width:860px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300)}
+*{box-sizing:border-box}body{margin:0;background:var(--ivory);color:var(--slate);font:16px/1.65 var(--sans)}
+main{max-width:var(--max-width);margin:0 auto;padding:40px 20px 80px}
+h1{font-size:26px;line-height:1.3;margin:0 0 6px}h2{font-size:19px;margin:36px 0 10px;border-bottom:var(--border);padding-bottom:6px}h3{font-size:16px;margin:22px 0 6px}
+.meta{color:var(--g500);font-size:14px;margin-bottom:26px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:14px 16px}
+.card .k{font-size:12px;color:var(--g500);text-transform:uppercase;letter-spacing:.04em}.card .v{font-size:24px;font-weight:700;margin-top:2px}.card .v.ok{color:var(--olive)}.card .v.warn{color:var(--clay)}
+.lead{background:var(--g100);border-left:4px solid var(--clay);border-radius:var(--radius-row);padding:10px 14px;margin:10px 0 14px;font-size:15px}
+table{width:100%;border-collapse:collapse;background:var(--paper);border:var(--border);border-radius:var(--radius-panel);overflow:hidden;font-size:14.5px;margin:10px 0}
+th,td{padding:9px 11px;text-align:left;vertical-align:top;border-bottom:1px solid var(--g300)}th{background:var(--g100);font-weight:600}tr:last-child td{border-bottom:0}
+code{font:13px var(--mono);background:var(--g100);padding:1px 5px;border-radius:4px}pre{font:13px/1.5 var(--mono);background:var(--g100);padding:12px;border-radius:var(--radius-row);overflow-x:auto}
+.ok{color:var(--olive);font-weight:600}.warn{color:var(--clay);font-weight:600}
+.finding{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:14px 18px;margin:12px 0}
+.gloss{color:var(--g700);font-size:14px}
+figure{margin:14px 0}figure img{max-width:100%;border:var(--border);border-radius:var(--radius-panel)}figcaption{font-size:13px;color:var(--g500);margin-top:4px}
+.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:12px}
+ul{padding-left:22px}li{margin:4px 0}
+</style>
+</head>
+<body><main>
+<h1>곡 업로드 → 분석 → 확인 카드 — 실브라우저 검증</h1>
+<div class="meta">2026-09-06 · 기준 트리 main <code>f727e11</code> · 실기 콘솔 쓰기 0 (가짜 콘솔만 받음) · 대상: MoAI-Easy</div>
+
+<div class="cards">
+<div class="card"><div class="k">전체 경로</div><div class="v ok">동작</div></div>
+<div class="card"><div class="k">발견</div><div class="v warn">3건</div></div>
+<div class="card"><div class="k">측정 BPM</div><div class="v">129.2</div></div>
+<div class="card"><div class="k">구간 카드</div><div class="v">4개</div></div>
+</div>
+
+<h2>한 줄 결론</h2>
+<p class="lead">곡 파일을 올리고 「분석」을 누르면 BPM 과 구간이 든 확인 카드가 뜨고, 「확인」을 누르면 BPM 이 확정된다 — 이 흐름은 브라우저에서 <b>끝까지 동작</b>한다. 다만 <b>콘솔이 꺼져 있으면 파일 첨부 버튼 자체가 잠겨</b> 분석에 닿을 수 없고, 서버가 「쓰기 없이」 뜬다고 믿는 옵션을 줘도 기동 직후 콘솔에 저장 명령이 한 번 나간다.</p>
+
+<h2>어떻게 검증했나</h2>
+<p class="gloss">가짜 콘솔 (fake console) — 진짜 grandMA3 대신 같은 포트에서 명령을 받아 주는 작은 프로그램. 이번엔 프로젝트의 실제 Lua 응답기 코드를 그대로 돌려서, 앱 입장에선 「콘솔 온라인」으로 보이지만 실기에는 아무것도 닿지 않는다.</p>
+<pre class="mermaid">
+flowchart LR
+  A[브라우저: WAV 업로드] --> B[서버: 첨부 접수]
+  B --> C[「분석」 클릭]
+  C --> D[DSP 분석: BPM·구간]
+  D --> E[확인 카드 표시]
+  E --> F[「확인」 → BPM 확정]
+  S[가짜 콘솔 64429] -. 상태 조회만 .-> B
+</pre>
+<noscript><p>흐름: 업로드 → 서버 접수 → 「분석」 → 분석 → 확인 카드 → 「확인」으로 BPM 확정. 가짜 콘솔은 상태 조회에만 답한다.</p></noscript>
+
+<table><tr><th>항목</th><th>값</th></tr>
+<tr><td>서버</td><td><code>python -m server.web --port 8765 --console-port 64429 --receive-port 64430 --no-session-backup --no-browser</code></td></tr>
+<tr><td>콘솔</td><td>가짜 콘솔 <code>.moai/state/verify/musicsync-ui/fake_console.py</code> (실제 Lua 응답기, 64429 수신 → 64430 회신)</td></tr>
+<tr><td>입력</td><td><code>synth_128bpm.wav</code> — 합성 128 BPM, 40초, 1,764,044 B</td></tr>
+<tr><td>브라우저</td><td>Aside (Playwright), <code>http://127.0.0.1:8765/</code></td></tr>
+<tr><td>증거</td><td><code>card_after_analyse.jpeg</code> · <code>fake_console.log</code> · <code>server.log</code> (같은 폴더)</td></tr>
+</table>
+
+<h2>순서대로 본 것</h2>
+<table><tr><th>단계</th><th>관측</th><th>판정</th></tr>
+<tr><td>콘솔 없이 기동</td><td>상단 「콘솔 오프라인」, 파일 첨부 버튼 <code>[disabled]</code></td><td class="warn">발견 1</td></tr>
+<tr><td>가짜 콘솔 뒤 재기동</td><td><code>@copilot:status online</code>, 첨부 버튼 활성</td><td class="ok">OK</td></tr>
+<tr><td>WAV 업로드</td><td>「'synth_128bpm.wav' 첨부됨 — 오디오 · sha256 373351cd… · 1764044바이트」 + 「분석」 버튼</td><td class="ok">OK</td></tr>
+<tr><td>「분석」 클릭</td><td>「곡 분석 요청」 말풍선 → 약 20초 뒤 카드</td><td class="ok">OK</td></tr>
+<tr><td>카드 내용</td><td>BPM 129.199 (확신 0.98) · 구간 4개 체크박스 D1 0:00–0:15 / D3 0:15–0:32 / D5 0:32–0:36 / D2 0:36–0:40 · 자유 입력란</td><td class="ok">OK</td></tr>
+<tr><td>「확인」 클릭</td><td>「BPM 129.199 로 확정했습니다 (measured). 채택 우선순위: 측정 &gt; 시트 HEAD.BPM &gt; 기본값 120.」</td><td class="ok">OK (발견 3)</td></tr>
+</table>
+<figure><img src="../.moai/state/verify/musicsync-ui/card_after_analyse.jpeg" alt="확인 카드 화면"><figcaption>「분석」 뒤 실제 화면 — 오른쪽 패널에 BPM 과 구간 4개가 든 확인 카드</figcaption></figure>
+<p class="gloss">예: 128 BPM 으로 만든 합성곡을 넣었더니 129.2 로 읽혔다. 1 BPM 차이는 40초짜리 짧은 곡에서 흔한 오차라 「확신 0.98」과 모순되지 않는다.</p>
+<p>가짜 콘솔이 받은 명령 62건 — ping 29 · state 31 (<code>DataPool/Pages</code> 24 등) · <b>exec 1 (<code>SaveShow</code>, 기동 직후)</b>.</p>
+
+<h2>발견</h2>
+<div class="finding"><h3>발견 1 — 콘솔이 꺼져 있으면 곡 분석에 닿을 수 없다</h3>
+<p><b>근거</b>: <code>ui/src/App.tsx</code> 의 <code>attachmentControlState</code> 가 콘솔 상태가 offline 이면 첨부 버튼을 잠근다.</p>
+<p><b>영향</b>: 곡 분석은 콘솔이 필요 없는 순수 계산인데, 콘솔이 없으면 입구가 닫힌다. 공연 전 사무실에서 곡만 미리 분석해 두는 일이 불가능하다.</p>
+<p><b>제안</b>: 오디오 첨부는 콘솔 상태와 무관하게 열고, 콘솔이 진짜 필요한 단계(타임코드 인계)에서만 막는다. 카드 1장 규모.</p></div>
+
+<div class="finding"><h3>발견 2 — <code>--no-session-backup</code> 이 기동 시 콘솔 쓰기를 막지 못한다</h3>
+<p><b>근거</b>: <code>server/web/serve.py:106</code> 의 <code>--backup-poll</code> 기본 30초로 <code>_backup_loop</code> (<code>server/web/app.py:264</code>) 이 기동 즉시 <code>manager.tick()</code> 을 부르고, <code>server/safety/backup.py:130</code> 은 아직 백업이 없으면 무조건 저장(<code>SaveShow</code>)을 보낸다. 플래그는 <code>bootstrap.py:185</code> 의 기동 백업 한 곳만 끈다.</p>
+<p><b>영향</b>: 「쓰기 없이 띄웠다」고 믿는 검증용 서버가 실기 콘솔에 저장 1회를 남긴다. t269 에서 잡은 SaveShow 2건과 같은 계열이다.</p>
+<p><b>제안</b>: 이 플래그를 주면 주기 백업도 끄거나, 첫 tick 을 한 주기 뒤로 미룬다. 카드 1장 규모.</p></div>
+
+<div class="finding"><h3>발견 3 (경미) — 확정 뒤 구간이 어떻게 됐는지 안 보인다</h3>
+<p>「확인」 뒤 메시지가 BPM 만 말하고, 체크한 구간 4개의 행방(채택됐는지, 다음에 뭘 할지)을 말하지 않는다. 「분석」 버튼도 남아 있어 재분석이 되는 것처럼 보인다. 문구 문제.</p></div>
+
+<h2>안 잰 것</h2>
+<ul>
+<li>실기 콘솔 앞 동작 — 가짜 콘솔만 썼다.</li>
+<li>체크박스를 풀고 자유 입력으로 고치는 경로, 「BPM 130」 같은 정정 입력.</li>
+<li>mp3 / flac / m4a 업로드 (wav 만).</li>
+<li>확정 뒤 타임코드 인계 카드는 생산 호출자가 없어 도달 불가 — MUSICSYNC-001 에 적힌 부채 그대로.</li>
+</ul>
+
+<h2>다음 손</h2>
+<ol>
+<li>발견 1·2 를 백로그 카드로 올린다 (각 1장).</li>
+<li>t270 (POOLEMPTY-001) 첫 plan-audit 은 FAIL 0.71 — 결함 D1–D7 을 고치고 재감사.</li>
+</ol>
+<p class="gloss">직접 확인해 볼 것: 콘솔 없이 <code>python -m server.web</code> 을 띄우고 「＋」 버튼이 눌리는지 보면 발견 1 이 그대로 재현된다.</p>
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body></html>

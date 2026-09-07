@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>세션 진행 보고 — 2026-09-06</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;--sans:"Pretendard",system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;--max-width:860px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300)}
+*{box-sizing:border-box}body{margin:0;background:var(--ivory);color:var(--slate);font:16px/1.65 var(--sans)}
+main{max-width:var(--max-width);margin:0 auto;padding:40px 20px 80px}
+h1{font-size:26px;line-height:1.3;margin:0 0 6px}h2{font-size:19px;margin:36px 0 10px;border-bottom:var(--border);padding-bottom:6px}
+.meta{color:var(--g500);font-size:14px;margin-bottom:26px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:18px 0}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:14px 16px}
+.card .k{font-size:12px;color:var(--g500);letter-spacing:.04em}.card .v{font-size:24px;font-weight:700;margin-top:2px}.ok{color:var(--olive)}.warn{color:var(--clay)}
+.lead{background:var(--g100);border-left:4px solid var(--clay);border-radius:var(--radius-row);padding:10px 14px;margin:10px 0 14px;font-size:15px}
+table{width:100%;border-collapse:collapse;background:var(--paper);border:var(--border);border-radius:var(--radius-panel);overflow:hidden;font-size:14.5px;margin:10px 0}
+th,td{padding:9px 11px;text-align:left;vertical-align:top;border-bottom:1px solid var(--g300)}th{background:var(--g100);font-weight:600}tr:last-child td{border-bottom:0}
+code{font:13px var(--mono);background:var(--g100);padding:1px 5px;border-radius:4px}
+.gloss{color:var(--g700);font-size:14px}
+.finding{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:12px 18px;margin:12px 0}
+.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:12px}
+ul,ol{padding-left:22px}li{margin:4px 0}
+svg text{font-family:var(--sans);font-size:12px;fill:var(--slate)}
+</style>
+</head>
+<body><main>
+<h1>세션 진행 보고 — 2026-09-06 새벽 회차</h1>
+<div class="meta">기준 main <code>72e4ca6</code> · 실기 콘솔 쓰기 0 · 목표: 「음악 파일을 넣으면 콘솔에 연출이 세팅되는」 코파일럿</div>
+
+<div class="cards">
+<div class="card"><div class="k">머지된 PR</div><div class="v ok">3</div></div>
+<div class="card"><div class="k">새 발견</div><div class="v warn">4</div></div>
+<div class="card"><div class="k">감사 점수 (t270)</div><div class="v">0.71 → 0.86</div></div>
+<div class="card"><div class="k">콘솔 쓰기</div><div class="v ok">0</div></div>
+</div>
+
+<h2>한 줄 결론</h2>
+<p class="lead">앱을 직접 브라우저로 써 보니 <b>곡 올리기 → 분석 → 확인 카드 → BPM 확정</b>까지는 돌아간다. 그 길에서 잡은 결함 2건은 고쳐서 머지했고(#316·#318), 타임코드 SPEC(t270)은 감사를 통과해 머지됐다(#317). 가장 큰 남은 구멍은 <b>감독이 확인 카드에서 체크한 구간과 BPM 이 그 뒤 아무 데도 안 쓰인다</b>는 것 — 이걸 잇는 SPEC(t273) 초안까지 썼지만, API 세션 한도(05:50 리셋)에 걸려 감사 전에 멈췄다.</p>
+
+<h2>흐름 — 어디까지 되고, 어디가 끊겨 있나</h2>
+<p class="gloss">확인 카드 (confirmation card) — 서버가 곡을 분석한 뒤 「이 BPM 과 이 구간이 맞나요?」 하고 감독에게 체크박스로 묻는 화면.</p>
+<pre class="mermaid">
+flowchart LR
+  A[곡 업로드] --> B[분석: BPM·구간]
+  B --> C[확인 카드]
+  C --> D[BPM 확정]
+  D -. 끊김: 구간·BPM 이 버려짐 .-> E[prepare_songcue 큐 생성]
+  E --> F[타임코드 슬롯 판정]
+  F -. 빈 풀이면 unknown .-> G[콘솔에 시퀀스·타임코드]
+  style D fill:#E3DACC
+  style E fill:#F0EEE6
+</pre>
+<noscript><p>업로드 → 분석 → 확인 카드 → BPM 확정까지 동작. 확정 결과가 큐 생성(prepare_songcue)에 닿지 않는 것이 t273, 빈 타임코드 풀에서 판정이 unknown 으로 닫히는 것이 t270.</p></noscript>
+
+<h2>오늘 한 일</h2>
+<table><tr><th>#</th><th>일</th><th>산출물</th><th>증거</th></tr>
+<tr><td>1</td><td>실브라우저 검증 (가짜 콘솔 앞)</td><td><code>reports/musicsync-browser-check-20260906.{md,html}</code></td><td>카드 스크린샷 · 가짜 콘솔 수신 62건 로그</td></tr>
+<tr><td>2</td><td>t272 — 「쓰기 없이」 띄운 서버가 기동 직후 <code>SaveShow</code> 1회 발사</td><td>PR #316 → <code>eff43ff</code></td><td>재현 exec 1→0 · 테스트 +3 · CI 초록</td></tr>
+<tr><td>3</td><td>t271 — 콘솔 오프라인이면 첨부 버튼 잠김</td><td>PR #318 → <code>096e935</code></td><td>vitest 509 · 브라우저 재확인(오프라인에서 카드 도달)</td></tr>
+<tr><td>4</td><td>t270 SPEC — 감사 1차 FAIL 0.71 → 결함 12건 반영 → 2차 PASS 0.86 → 차단 2건 반영</td><td>PR #317 → <code>72e4ca6</code></td><td><code>.moai/reports/plan-audit/…-review-{1,2}.md</code></td></tr>
+<tr><td>5</td><td>t273 카드 등록 + SPEC 초안 4파일(488행)</td><td>에이전트 워크트리 안, 미커밋</td><td>설계자가 429 로 중단 — <b>미감사</b></td></tr>
+</table>
+
+<h2>발견</h2>
+<div class="finding"><b>1. 첨부가 콘솔 상태에 잠겨 있었다</b> — 업로드와 곡 분석은 콘솔이 필요 없는 서버 작업인데 입구가 닫혔다. 고침(#318). <span class="gloss">예: 공연 전 사무실에서 곡만 미리 분석해 두는 일이 이제 된다.</span></div>
+<div class="finding"><b>2. 「쓰기 없이」 띄운 서버가 저장 명령을 낸다</b> — 주기 백업 루프의 첫 tick 이 백업 이력이 없으면 무조건 발사(<code>backup.py:130</code>). 고침(#316): 플래그를 주면 타이머만 시작하고 한 주기 뒤에 첫 백업.</div>
+<div class="finding"><b>3. 확인 카드 결과가 버려진다</b> — 답변에서 BPM 만 읽고 구간 체크는 파싱하지 않으며, 확정 BPM 을 읽는 생산 코드가 0 이다. 큐 생성 도구는 모델이 구간을 채팅에서 다시 지어내야 한다. → t273.</div>
+<div class="finding"><b>4. 확정 답신이 BPM 만 말한다</b> — 구간 4개가 어떻게 됐는지, 다음에 뭘 하면 되는지 문구가 없다. → t273 에 포함.</div>
+
+<h2>진행판</h2>
+<table><tr><th>상태</th><th>항목</th><th>비고</th></tr>
+<tr><td class="ok">🟢 완료</td><td>브라우저 실측 보고서</td><td></td></tr>
+<tr><td class="ok">🟢 완료</td><td>t272 기동 시 SaveShow</td><td>#316</td></tr>
+<tr><td class="ok">🟢 완료</td><td>t271 콘솔 오프라인 첨부</td><td>#318</td></tr>
+<tr><td class="ok">🟢 완료</td><td>t270 SPEC plan-phase</td><td>#317 · PASS 0.86</td></tr>
+<tr><td>⬜ 대기</td><td>t270 M1 응답기 1.6.5 마커 · M2 앱 판정 들어올리기</td><td>오프라인 — 다음 손</td></tr>
+<tr><td>⏸️ 막힘</td><td>t270 M3 실기</td><td>감독 몫: 응답기 1.6.5 재임포트 + <code>Timecode 1</code>·<code>999</code> 삭제</td></tr>
+<tr><td class="warn">🟡 진행</td><td>t273 SPEC</td><td>초안 있음 · 감사·커밋 전 · 한도 리셋 뒤 재개</td></tr>
+<tr><td>⬜ 대기</td><td>t273 구현</td><td></td></tr>
+<tr><td>⬜ 대기</td><td>곡 → 큐 리스트까지 실브라우저 실측</td><td>t273 뒤</td></tr>
+</table>
+
+<svg viewBox="0 0 520 40" width="100%" height="40" role="img" aria-label="진행 4/9">
+<rect x="0" y="12" width="520" height="16" rx="8" fill="#F0EEE6"/>
+<rect x="0" y="12" width="231" height="16" rx="8" fill="#788C5D"/>
+<text x="240" y="25">4 / 9 완료 (44%)</text>
+</svg>
+
+<h2>안 잰 것 · 위험</h2>
+<ul>
+<li>t273 초안은 설계자가 중간에 끊겨 자기 검증을 못 했다 — 감사 전엔 내용을 믿지 말 것.</li>
+<li>워크트리 5개가 살아 있다. t271·t272 는 머지됐으니 정리 가능, t270 은 run 단계 재사용 여부를 정하기 전까지 보존.</li>
+<li><code>test_tree_identity</code> 는 주 트리 인터프리터로 워크트리를 돌리면 실패한다(환경 문제, 코드 문제 아님). 워크트리 검증은 CI 를 심판으로.</li>
+<li>세션 API 한도: 05:50(Asia/Seoul) 리셋. 그 전엔 서브에이전트 스폰이 실패한다.</li>
+</ul>
+
+<h2>다음 손 (리셋 뒤, 순서대로)</h2>
+<ol>
+<li>t273 초안을 감사에 넣고, PASS 면 커밋·PR.</li>
+<li>t270 M1·M2 를 구현 (오프라인, 콘솔 쓰기 0).</li>
+<li>t273 M1·M2 구현 → 곡 → 큐 리스트까지 브라우저 실측.</li>
+<li>감독 몫은 하나만 남는다: t270 M3 (응답기 1.6.5 재임포트 + 타임코드 풀 비우기).</li>
+</ol>
+<p class="gloss">직접 확인해 볼 것: 콘솔을 끈 채 앱을 띄우고 「＋」 를 눌러 곡을 올려 보면, 발견 1 이 고쳐진 걸 그대로 볼 수 있다.</p>
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body></html>
