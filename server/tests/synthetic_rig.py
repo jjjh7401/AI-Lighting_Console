@@ -83,6 +83,90 @@ def synthetic_fixtures() -> tuple[SyntheticFixture, ...]:
     return tuple(fixtures)
 
 
+#: 카드 t315 — **배치 라벨은 같고 크기만 다른** 격자 리그 한 쌍.
+#:
+#: `server/spatial/topology.py` 의 `grid` 는 깊이·좌우 양쪽이 또렷하게 묶였다는
+#: **구조** 판정이라, 크기는 보지 않는다. 그래서 아래 두 리그는 폭과 깊이가
+#: 100배 차이나게 뒤집혀 있어도 같은 `grid` 라벨을 받는다 — 그것이 t315 가
+#: 고치려는 구멍이고, 이 한 쌍이 그 구멍을 재는 계기다.
+#:
+#: 좌표는 위 모듈 도크대로 **지어낸 값**이다. 다만 두 모양 모두 실제로 걸리는
+#: 리그를 흉내낸다: `wide` 는 좌우 붐 무리가 앞뒤 두 열로 앉은 흔한 박스 배치,
+#: `deep` 은 센터라인을 따라 업스테이지로 뻗은 스파인 배치다.
+_WIDE_GRID_POINTS: tuple[tuple[float, float, float], ...] = (
+    # 좌측 무리(x≈−5)와 우측 무리(x≈+5)가 y=0.0 / y=1.0 두 열에 앉는다.
+    (-5.0, 0.0, 5.0),
+    (-5.0, 1.0, 5.0),
+    (-4.0, 0.0, 5.0),
+    (-4.0, 1.0, 5.0),
+    (5.0, 0.0, 5.0),
+    (5.0, 1.0, 5.0),
+    (4.0, 0.0, 5.0),
+    (4.0, 1.0, 5.0),
+)
+
+_DEEP_GRID_POINTS: tuple[tuple[float, float, float], ...] = (
+    # 센터라인 양옆 두 줄(x=−0.5/+0.5)이 객석쪽(y≈−5)부터 업스테이지(y≈+5)까지
+    # 네 깊이에 앉는다. 폭 span 1.0m — 「폭이 열린다」를 실을 폭이 없다.
+    (-0.5, -5.0, 5.0),
+    (0.5, -5.0, 5.0),
+    (-0.5, -4.0, 5.0),
+    (0.5, -4.0, 5.0),
+    (-0.5, 4.0, 5.0),
+    (0.5, 4.0, 5.0),
+    (-0.5, 5.0, 5.0),
+    (0.5, 5.0, 5.0),
+)
+
+
+def _grid_fixtures(
+    points: tuple[tuple[float, float, float], ...], role: str
+) -> tuple[SyntheticFixture, ...]:
+    return tuple(
+        SyntheticFixture(fid=index + 1, name=f"{role} {index + 1}", role=role, x=x, y=y, z=z)
+        for index, (x, y, z) in enumerate(points)
+    )
+
+
+def synthetic_wide_grid_fixtures() -> tuple[SyntheticFixture, ...]:
+    """폭으로 퍼진 격자 — 폭 10.0m, 깊이 1.0m (깊이/폭 = 0.1)."""
+    return _grid_fixtures(_WIDE_GRID_POINTS, "Box Boom")
+
+
+def synthetic_deep_grid_fixtures() -> tuple[SyntheticFixture, ...]:
+    """깊이로 쌓인 격자 — 폭 1.0m, 깊이 10.0m (깊이/폭 = 10.0)."""
+    return _grid_fixtures(_DEEP_GRID_POINTS, "Centre Spine")
+
+
+#: 카드 t315 — **폭이 더 넓은 `depth_rows` 리그.** t315 의 규칙이 한 방향으로만
+#: 뒤집는다는 것을 재는 계기다: 대칭으로 구현했다면 이 리그가 `ascending` 으로
+#: 올라가고, 한 방향 규칙이면 `descending` 에 남는다.
+#:
+#: x 를 **행마다 엇물려** 21개 값이 전부 다르고 간격이 고르게 만들었다. 이유가
+#: 있다: `topology._axis_buckets` 는 중앙값 간격의 4배를 넘는 간격에서 자르는데,
+#: 여러 행이 x 를 공유하면 정렬된 x 열에 간격 0 이 섞여 중앙값이 0 이 되고,
+#: 그러면 실제 간격 전부가 경계로 잡혀 좌우 판독이 **확신**해 버린다(그러면
+#: `grid` 가 이기고 이 리그는 `depth_rows` 가 아니게 된다 — t315 실측). 간격을
+#: 고르게 두면 튀는 간격이 없어 `weak_gap_separation` 으로 낮은 확신이 되고,
+#: 깊이 열만 확신해 `depth_rows` 가 남는다.
+_WIDE_DEPTH_ROW_DEPTHS = (-3.0, 0.0, 3.0)
+
+
+def synthetic_wide_depth_row_fixtures() -> tuple[SyntheticFixture, ...]:
+    """폭이 더 넓은 깊이 열 리그 — 폭 20.0m, 깊이 6.0m (깊이/폭 = 0.3)."""
+    return tuple(
+        SyntheticFixture(
+            fid=index + 1,
+            name=f"Truss {index + 1}",
+            role="Top",
+            x=round(-10.0 + index * 1.0, 3),
+            y=_WIDE_DEPTH_ROW_DEPTHS[index % len(_WIDE_DEPTH_ROW_DEPTHS)],
+            z=6.0,
+        )
+        for index in range(21)
+    )
+
+
 def _lua_node(fixture: SyntheticFixture) -> str:
     # 프로퍼티 키는 서버가 실제로 보내는 철자 그대로다
     # (`SPATIAL_FIXTURE_PROPERTIES = ("fid", "posx", "posy", "posz")`).
