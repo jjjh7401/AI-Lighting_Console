@@ -165,7 +165,76 @@
 #     `Store Macro`, `Assign`, `Copy` 와 `Label` 계열 전체는 아직 "safe" 로
 #     분류되고 `test_writegate.py::UNCHANGED_SAFE` 가 그 판정을 계속 비준한다.
 #     그 튜플에서 줄 둘을 뺀 것이 나머지를 풀지 않는다.
-version: 5
+#
+#   v5 -> v6  SPEC-COPILOT-CLASSIFYGAP-001 (카드 t299) 의 **Phase 2** 가
+#     "Store Sequence" 를 넣는다. v5 가 같은 SPEC 의 Phase 1 이었고
+#     (`Store Group`·`Store Timecode`), 이 리비전이 그 뒤를 잇는다. 남는 것은
+#     `Store Cue` 하나이고 Phase 3 이 받는다 — 그러니 이 파일이 v6 이라는
+#     사실은 「분류 구멍이 닫혔다」가 아니라 「구멍 넷 중 셋이 닫혔다」다.
+#
+#     닫는 대상은 곡→콘솔 흐름의 중심 쓰기다: `Store Sequence <N> Cue <M>
+#     /Merge`. t291·t294·t296 실측 세 번 모두 이 명령이 콘솔에 닿았는데 감사
+#     로그는 `executed N, blocked 0, approved 0` 이었다 — 게이트가 죽은 게
+#     아니라 이 오브젝트가 목록에 없었다. 오늘 그것을 막는 것은 반영 경로가
+#     자기 채널로 받는 수락(`session.py::_accept_draft_apply_batch`)과 호출
+#     자리마다 손으로 붙인 봉합뿐이고, t321 실측(`SEAL_DEFENCE`)에 따르면
+#     열 자리 중 일곱은 그 봉합이 유일한 방어다. 이 리비전은 봉합을 대체하지
+#     않는다 — 봉합 뒤에 받침을 놓는다.
+#
+#     왜 `Store` 동사가 아닌가: 2026-08-05 사용자 결정과 카드 t86 의 재측정이
+#     동사 확대를 두 번 거절했고, v4·v5 가 지킨 그 거절을 이 리비전도 지킨다.
+#     오브젝트 기준으로 하나만 넓힌다.
+#
+#     이 리비전이 걸지 **않는** 것, 실측으로 확인함: `Store Cue 1`(Phase 3
+#     대상)은 그대로 `matched_entry=None`. `Assign Sequence 201 At Executor
+#     101` 과 `Copy Sequence 300 At 210` 은 동사가 `Assign`·`Copy` 라 이 항목에
+#     애초에 안 닿는다(§F 범위 밖). 프로그래머 값 `Fixture 1 At 50` 도 안 걸린다.
+#
+#     MEASURED cost (이 트리에서 실측, `blacklist.yaml` 을 실제로 고쳐서 전체
+#     스위트를 돌린 값. 산출물: `reports/classifygap-t299-p2/`):
+#
+#       기준선 (base ca34ebe, 확대 전): 12011 passed · 19 skipped · 0 failed
+#       이 항목 투입:                   11983 passed · 19 skipped · 32 failed
+#
+#     전체 수가 12030 에서 12034 로 늘었다 — 항목 하나가 테스트를 4개 만든다.
+#     32건의 파일별 분포: writegate_session_sites 15 · writegate_merge_gap 5 ·
+#     web_cue_sheet_apply 4 · seeded_song_apply 3 · safety_ruleset 2 ·
+#     bulkgate_declaration 2 · fx_boundary 1.
+#
+#     plan 단계는 이 항목 단독을 **33** 건으로 쟀다(트리 e0a2263, 계측 플러그인,
+#     전체 12021). 이 트리의 실측은 32 다 — 분모가 v5 로 이미 움직였고 계측
+#     플러그인 인공물도 섞이지 않는다. 33 을 옮겨 쓰지 말 것.
+#
+#     받침이 실제로 받친다 (AC-CG-005): `SEAL_DEFENCE` 귀속 재측정에서
+#     seal-only **7 -> 2**, 다섯 자리가 움직였다(`_position_fx_sequence` ·
+#     `_phaser_recall_sequence` · `_position_cue_store` · `_position_cue_sheet` ·
+#     `_merge_timeline_cue_position`). 파생 추정이 아니라 자리별 실측이다.
+#     남는 둘(`_offer_fx_executor_assignment` · `_setlist_mode`)은
+#     `Assign Sequence` · `Copy Sequence` 만 실어 나르고 그 둘은 SPEC §F 가
+#     범위 밖에 뒀다 — 그래서 seal-only 는 0 이 되지 않는다.
+#
+#     MUTATION (항목이 실제로 방어를 만드는지): 이 한 줄만 되돌리면
+#     **2 failed / 12010 passed / 19 skipped** (전체 12031). 둘 중 **분류를
+#     관측하는 것은 하나뿐**이고 그것은 이 리비전이 새로 넣은 핀이다
+#     (`test_safety_classify::test_direct_blacklist_commands_are_blacklisted`
+#     `[Store Sequence 210 Cue 3 /Merge]`). 나머지 하나
+#     (`test_safety_ruleset::test_every_shipped_revision_is_documented_in_the_file`)
+#     는 버전 장부 핀이다. 그 핀을 안 넣었다면 항목을 지워도 장부 한 줄만
+#     빨개지고 「카드가 안 뜨게 됐다」는 아무 검사도 말하지 않았다 — v5 가
+#     같은 자리에서 배운 것과 같은 성질이다.
+#
+#     [미해결 — 이 리비전은 아직 초록이 아니다] 큐시트 반영 자리에서 감독이
+#     카드를 **두 장** 본다. 실측: 한 동작(초안 반영)에 승인 요청 1건 -> **2건**
+#     (`reports/classifygap-t299-p2/06_cuesheet_cards_after.txt`). 첫 장은
+#     `session.py::_accept_draft_apply_batch` 가 자기 채널로 받는 수락이고,
+#     둘째 장은 분류 층이 만든다 — `ExecutionContext.approval_owned_by_caller`
+#     는 *봉합* 카드만 막고 분류 카드는 막지 않는다(`gate.py:399·415`). 둘째
+#     장은 감독이 첫 장에서 이미 승인한 그 명령을 다시 묻는다. 중복 카드는
+#     감독이 카드를 안 읽게 만드는 바로 그 사고이므로 절충이 아니라 결함이다.
+#     plan.md §A-3 이 `[NEEDS CLARIFICATION: 큐시트 이중 카드]` 로 열어 둔
+#     판단이 이것이고, 아직 닫히지 않았다. 고치는 자리는 `session.py` 또는
+#     `server/safety/gate.py` 이고 둘 다 이 SPEC 의 선언 범위 밖이다.
+version: 6
 
 blacklist:
   - "Delete"
@@ -251,6 +320,19 @@ blacklist:
   # `Group 4` 는 동사가 `Group` 이라 `Store` 항목에 애초에 안 닿는다.
   - "Store Group"
   - "Store Timecode"
+  # 곡→콘솔 쓰기의 중심 (v6). 위의 두 항목이 그룹 풀과 타임코드 슬롯을 닫았지만,
+  # 반영 경로가 실제로 시퀀스를 고치는 줄은 `Store Sequence <N> Cue <M> /Merge`
+  # 다. 그 줄이 목록에 없어서 실측 세 번(t291·t294·t296) 모두 감사 로그가
+  # `approved 0` 이었다.
+  #
+  # 오브젝트 기준이다 — `Store` 동사 확대는 2026-08-05 결정과 t86 이 두 번
+  # 거절했고 이 리비전이 그 거절을 지킨다(v6 헤더 참조).
+  #
+  # 안 담기는 것: `Store Cue` 는 같은 SPEC 의 Phase 3 이 받는다(비용이 이 항목의
+  # 두 배에 가깝다). `Assign Sequence` 와 `Copy Sequence` 는 동사가 달라 이
+  # 항목에 애초에 안 닿고, SPEC §F 가 명시적으로 범위 밖에 뒀다 — 그래서 이
+  # 리비전 뒤에도 `SEAL_DEFENCE` 의 seal-only 는 0 이 되지 않는다.
+  - "Store Sequence"
 
 invoking_verbs:
   verbs:

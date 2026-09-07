@@ -45,8 +45,11 @@ from server.llm.types import ToolCall
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.tools import build_toolset
 from server.safety.audit import AuditLog
+from server.safety.classify import classify_command
 from server.safety.gate import SafetyGate
+from server.safety.grammar import validate
 from server.safety.lock import LiveLock
+from server.safety.ruleset import load_ruleset
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SERVER_DIR = PROJECT_ROOT / "server"
@@ -581,16 +584,62 @@ class TestSafetyInvariantsAreInherited:
         identifiers = set(_executable_identifiers(SAFETY_DIR / "gate.py"))
         assert "server.safety.lock" in identifiers
 
-    def test_a_real_fx_bundle_clears_the_real_gate_with_no_hold(self, tmp_path):
-        # "무보류 통과 집합" — the fx bundle lines land in the no-hold set of the
-        # EXISTING classifier. No approval port is wired, so a held line would
-        # fail here rather than quietly wait.
+    def test_only_the_sequence_store_line_of_an_fx_bundle_is_held(self):
+        """FX 번들에서 보류되는 줄은 **시퀀스 저장 한 줄**뿐이다.
+
+        갱신 근거 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 2). 이 검사의
+        원래 이름은 `test_a_real_fx_bundle_clears_the_real_gate_with_no_hold`
+        이고, 번들 **전체**가 무보류로 통과하는 것을 고정했다. 그것은 분류 층이
+        `Store Sequence` 를 못 보던 시절의 판정이고, v6 이 그 눈감음을 뒤집는다.
+
+        왜 이것이 「확대가 틀렸다」가 아니라 갱신 대상인가 — 실측 둘:
+
+        1. 이 저장소의 **봉합 술어가 이미 같은 답을 한다**.
+           `write_reason.showfile_write_risk` 를 이 번들에 그대로 물으면
+           `쇼파일 쓰기 — Sequence 90 에 큐 1건을 저장합니다` 를 답한다
+           (`reports/classifygap-t299-p2/08_fx_bundle_probe.txt`). 즉 FX 시퀀스
+           저장을 쇼파일 쓰기로 보는 판단은 이 리비전이 새로 만든 것이 아니라
+           이미 비준돼 있었다. 두 층이 이제 같은 답을 말한다.
+        2. **감독이 보는 카드 수는 늘지 않는다.** FX 디스패치 자리
+           (`_position_fx_sequence`)는 이미 봉합돼 있어 카드가 이미 뜬다.
+           v6 은 그 자리를 seal-only 에서 redundant 로 바꾼다
+           (`07_seal_defence_after.txt`) — 받침이 생긴 것이지 카드가 생긴 것이
+           아니다. 레지스트리를 지나는 FX 회차 검사들은 이 파일에서 전부
+           그대로 통과한다(38 passed).
+
+        그래서 지키는 성질을 **좁혀서** 다시 못 박는다: 프로그래머 값 줄들은
+        여전히 하나도 안 걸려야 한다. FX 번들이 통째로 걸리기 시작하면 그것이
+        곧 과다매칭이고, 이 단언이 그때 빨개진다.
+        """
         library = load_library_from_dir(DEFAULT_LIBRARY_DIR)
-        gate = _real_gate(tmp_path, locked=False)
+        ruleset = load_ruleset()
         for index, fx in enumerate(library.fx):
             plan = build_fx_bundle(fx, group=11, sequence=90 + index, label="M6")
-            decision = gate.screen(list(plan.commands))
-            assert decision.cleared is True, f"{fx.fx_id}: {decision.status}"
+            held = [
+                command
+                for command in plan.commands
+                if classify_command(validate(command).parsed, ruleset).risky
+            ]
+            assert held == [f"Store Sequence {90 + index} Cue 1 'M6'"], (
+                f"{fx.fx_id}: 보류된 줄이 시퀀스 저장 한 줄이 아니다 — {held}"
+            )
+
+    def test_the_programmer_value_lines_of_an_fx_bundle_are_never_held(self):
+        """위 검사의 비공허성 짝 — 세는 대상이 실제로 여러 줄이다.
+
+        보류가 한 줄이라는 단언은, 번들이 두 줄짜리였다면 거의 공짜로 참이 된다.
+        번들이 실제로 십수 줄이고 그중 **한 줄만** 걸린다는 것이 성질의 핵심이다.
+        """
+        library = load_library_from_dir(DEFAULT_LIBRARY_DIR)
+        ruleset = load_ruleset()
+        plan = build_fx_bundle(library.fx[0], group=11, sequence=90, label="M6")
+        assert len(plan.commands) >= 10, "번들이 짧으면 위 검사가 거의 공허하다"
+        cleared = [
+            command
+            for command in plan.commands
+            if not classify_command(validate(command).parsed, ruleset).risky
+        ]
+        assert len(cleared) == len(plan.commands) - 1
 
     def test_the_same_gate_still_holds_a_blacklisted_line(self, tmp_path):
         # Non-vacuity: a gate that clears everything would pass the test above

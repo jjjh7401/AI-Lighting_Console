@@ -1,9 +1,15 @@
 # SPEC-COPILOT-CLASSIFYGAP-001 — 진행 기록
 
-카드 t299. **Phase 1 만 수행했다** — 네 명령 중 `Store Group` · `Store Timecode`
-둘만 폐집합에 넣었다. `Store Sequence`(Phase 2)와 `Store Cue`(Phase 3)는 열린
-채로 남아 있고 각자 후속 카드를 갖는다. 감독의 단계 분할 결정이며, 그 전제
-(위험 신호 파일이 Phase 1 집합에 없다)를 이 회차에서 재확인했다.
+카드 t299. **Phase 1 완료(PR #369 머지) · Phase 2 는 감독 판단 대기로 미완**.
+
+- **Phase 1** — `Store Group` · `Store Timecode` 를 폐집합에 넣었다(v4 → v5).
+  base `59ac394`, 전체 초록. 증거는 `reports/classifygap-t299-p1/`.
+- **Phase 2** — `Store Sequence` 를 넣었다(v5 → v6). base `ca34ebe`. 분류 층
+  확대 자체는 실측으로 옳다고 확인했지만, **큐시트 반영 자리에서 승인 카드가
+  두 장** 뜨는 것이 실측돼 초록에 도달하지 못했다. plan.md §A-3 의
+  `[NEEDS CLARIFICATION: 큐시트 이중 카드]` 가 아직 닫히지 않았고, 고치는 자리는
+  이 SPEC 의 선언 범위 밖이다. 증거는 `reports/classifygap-t299-p2/`.
+- **Phase 3** — `Store Cue`. 미착수.
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
@@ -125,11 +131,206 @@ Phase 1 회차. base `origin/main` `59ac394`, 브랜치 `WT-classify-widen-p1`,
 `server/safety/*.py` 코드는 **한 줄도 안 고쳤다**(제약). `console/lua/` ·
 `server/looks/library/` 미접촉, 포트 8000 미접촉.
 
-## §E.3 Run-phase Audit-Ready Signal
+---
+
+## §E.2 Run-phase Evidence — Phase 2 (`Store Sequence`)
+
+base `origin/main` `ca34ebe`(Phase 1 = PR #369 머지분), 브랜치
+`WT-classify-widen-p2`, 인터프리터는 이 트리의 것(`uv run`, 3.11.15,
+`server` 패키지도 이 워크트리). 산출물 전체는 추적되는
+`reports/classifygap-t299-p2/`(README 에 파일별 설명).
+
+### 확대 전/후 분류 (`01_probe_before.txt` · `04_probe_after.txt`)
+
+배차서가 지정한 다섯 명령, 같은 프로브·같은 순서. 두 회차의 차이는
+`blacklist.yaml` 한 파일뿐이다.
+
+| 명령 | 확대 전 | 확대 후 |
+|---|---|---|
+| `Store Group 3` | `Store Group` / risky | `Store Group` / risky (Phase 1 회귀 없음) |
+| `Store Timecode 9` | `Store Timecode` / risky | `Store Timecode` / risky (같음) |
+| `Store Sequence 210 Cue 3 /Merge` | `None` / safe | **`Store Sequence` / risky** |
+| `Store Cue 1` | `None` / safe | `None` / safe (**Phase 3, 미접촉**) |
+| `Fixture 1 At 50` | `None` / safe | `None` / safe (**안 걸려야 하고 안 걸린다**) |
+
+음성 대조군 9문장 전부 `risky=False`(잘못 판정 0건), 흐름 단위로도 승인 요청
+0건 · `cleared=True`. 봉합과 겹치면 요청은 **정확히 1건**이고 사유가 병기된다.
+
+### Phase 2 자체 비용 (`00_baseline_ca34ebe.txt` · `03_cost_p2.txt`)
+
+| 회차 | 결과 | 전체 |
+|---|---|---|
+| 기준선 (확대 전) | `12011 passed · 19 skipped · 0 failed`, exit 0 | 12030 |
+| `Store Sequence` 투입 | `32 failed · 11983 passed · 19 skipped` | 12034 |
+
+plan 단계는 이 항목 단독을 **33** 으로 쟀다(트리 `e0a2263`, 계측 플러그인, 전체
+12021). 이 트리의 실측은 **32** 다 — 33 을 옮겨 쓰지 않았다. 분모는 v5 가 이미
+움직였고(항목 하나 = 테스트 4개), 계측 플러그인 인공물도 안 섞인다.
+
+파일별 분포: `writegate_session_sites` 15 · `writegate_merge_gap` 5 ·
+`web_cue_sheet_apply` 4 · `seeded_song_apply` 3 · `safety_ruleset` 2 ·
+`bulkgate_declaration` 2 · `fx_boundary` 1.
+
+### 위험 신호 8건의 판정
+
+plan 단계 §D.2 가 종류 2 후보로 든 8건이 **전부** 이 회차에 왔다(배차서는 7 로
+적었는데 `test_fx_boundary.py` 1건이 더 있다).
+
+| 테스트 | 건수 | 판정 |
+|---|---|---|
+| `test_fx_boundary::…_fx_bundle…` | 1 | **갱신 대상** — 근거 아래 |
+| `test_web_cue_sheet_apply` | 4 | **중복 카드 결함** — 갱신 금지, 감독 판단 대기 |
+| `test_seeded_song_apply` | 3 | 같은 자리·같은 결함 |
+
+**「확대가 틀렸다」로 판정한 것은 0건이다.** 8건 중 1건은 갱신 대상이고 7건은
+갱신도 신호도 아닌 제3의 것 — 중복 카드다.
+
+#### FX 1건을 갱신 대상으로 판정한 근거 (추론이 아니라 실측 둘)
+
+1. **이 저장소의 봉합 술어가 이미 같은 답을 한다.** FX 번들 17줄 중 걸리는 줄은
+   `Store Sequence 90 Cue 1 'M6'` 하나이고, 같은 번들에
+   `write_reason.showfile_write_risk` 를 물으면
+   `쇼파일 쓰기 — Sequence 90 에 큐 1건을 저장합니다` 를 답한다
+   (`08_fx_bundle_probe.txt`). FX 시퀀스 저장을 쇼파일 쓰기로 보는 판단은 이
+   리비전이 만든 것이 아니라 이미 비준돼 있었다.
+2. **감독이 보는 카드 수는 늘지 않는다.** FX 디스패치 자리
+   (`_position_fx_sequence`)는 이미 봉합돼 있고, v6 은 그 자리를 seal-only 에서
+   redundant 로 바꾼다(`07`). 레지스트리를 지나는 FX 회차 검사들은 그대로
+   통과한다(`test_fx_boundary.py` 40 passed).
+
+갱신은 성질을 **좁혀서** 다시 못 박았다: 보류되는 줄은 시퀀스 저장 한 줄뿐이고
+프로그래머 값 줄은 하나도 안 걸린다. 비공허성 짝도 같이 넣었다(번들이 10줄
+이상이고 걸리는 것이 정확히 1줄).
+
+### 큐시트 이중 카드 — 이 회차가 멈춘 이유 (`02` · `06`)
+
+한 동작(초안 반영)에 승인 요청이 **1장 → 2장**이 된다. 실측이다.
+
+| | 확대 전 | 확대 후 |
+|---|---|---|
+| 승인 요청 | **1장** (항목 5개) | **2장** |
+| 카드 1 | `쇼파일 쓰기 — Sequence 210 의 큐 내용을 바꿉니다 …` (항목 5) | 같음 |
+| 카드 2 | — | `blacklisted command (matches closed-set entry 'Store Sequence')` (항목 1) |
+| 감사 로그 | `[('approved','draft_apply')]` | `[('approved','draft_apply'), ('approved', None)]` |
+
+`request_id` 가 `approval-1`·`approval-2` 로 서로 다르다 — 같은 카드의 재전송이
+아니라 서로 다른 요청이고, **둘째 장은 감독이 첫 장에서 이미 승인한 그 명령을
+다시 묻는다**.
+
+기전: 첫 장은 `session.py::_accept_draft_apply_batch`(:8980)가 자기 채널로 받는
+수락, 둘째 장은 분류 층이 만든다. `ExecutionContext.approval_owned_by_caller` 는
+*봉합* 카드만 막고 분류 카드는 막지 않는다(`gate.py:399·415`). 스위트의 폴러는
+첫 장만 승인하고 돌아가므로(두 파일 모두 `_run_with_auto_approval`) 둘째 장이
+타임아웃 거절되고 `console.executed == []` 가 된다 — 일곱 검사가 빨개지는
+기전이 전부 이것 하나다.
+
+중복 카드는 감독이 카드를 안 읽게 만드는 바로 그 사고이므로 절충이 아니라
+결함이다. 그래서 이 7건을 갱신하지 않았다.
+
+### 받침이 실제로 받친다 — AC-CG-005 (`07_seal_defence_after.txt`)
+
+`SEAL_DEFENCE` 귀속 재측정: **seal-only 7 → 2**, 다섯 자리가 움직였다.
+
+| 자리 | 표 | 실측 | 나가는 쇼파일 쓰기 |
+|---|---|---|---|
+| `_position_fx_sequence` | seal-only | **redundant** | `Store Sequence 201 Cue 1 'Circle'` |
+| `_phaser_recall_sequence` | seal-only | **redundant** | `Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2` |
+| `_position_cue_store` | seal-only | **redundant** | `Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5` |
+| `_position_cue_sheet` | seal-only | **redundant** | `Store Sequence 110 Cue 1 …` · `… Cue 2 …` |
+| `_merge_timeline_cue_position` | seal-only | **redundant** | `Store Sequence 210 Cue 1 /Merge` |
+| `_offer_fx_executor_assignment` | seal-only | seal-only | `Assign Sequence 201 At Executor 101` |
+| `_setlist_mode` | seal-only | seal-only | `Copy Sequence 300 At 210` · `Assign Sequence …` |
+
+Phase 1 은 이 다섯을 「7 → 2 로 줄일 **후보**」로 적으면서 그것이 파생 추정이고
+실측이 아니라고 명시했다. 이 회차가 자리별로 실측해 확정했다 — 예측이 맞았다.
+남는 둘은 `Assign`·`Copy` 만 실어 나르고 SPEC §F 가 범위 밖에 뒀으므로,
+Phase 2·3 을 다 해도 seal-only 는 0 이 안 된다(Phase 1 기록과 같은 결론).
+
+### 뮤테이션 (`09_mutation_revert_sequence.txt`)
+
+`Store Sequence` 한 줄만 되돌리면 `2 failed · 12010 passed · 19 skipped`
+(전체 12031). 둘 중 **분류를 관측하는 것은 하나뿐**이다:
+
+1. `test_safety_classify::test_direct_blacklist_commands_are_blacklisted`
+   `[Store Sequence 210 Cue 3 /Merge]` — **이 회차가 새로 넣은 핀**
+2. `test_safety_ruleset::test_every_shipped_revision_is_documented_in_the_file`
+   — 버전 장부 핀(분류를 안 본다)
+
+이 핀을 안 넣었다면 항목을 지워도 장부 한 줄만 빨개지고 「카드가 안 뜨게 됐다」는
+아무 검사도 말하지 않았다. Phase 1 이 같은 자리에서 배운 성질이라 같은
+파라미터 목록에 이어 넣었다(그 목록이 이 SPEC 의 분류 관측 지점이다).
+
+### 손댄 파일 (4)
+
+측정 명령·출력: `git diff --stat` → 아래 4개 + 미추적 `reports/classifygap-t299-p2/`.
+
+- `server/safety/blacklist.yaml` — v5 → v6, 항목 하나 추가, 헤더에 실측 비용·
+  귀속 이동·뮤테이션·**미해결 결함**까지 기록
+- `server/tests/test_safety_classify.py` — v6 분류 관측 핀 1행 추가
+- `server/tests/test_fx_boundary.py` — FX 핀을 좁혀 갱신 + 비공허성 짝 추가
+  (근거는 그 docstring)
+- `.moai/specs/SPEC-COPILOT-CLASSIFYGAP-001/progress.md` — 이 문서
+
+`server/safety/*.py` 코드는 **한 줄도 안 고쳤다**(제약). `console/lua/` ·
+`server/looks/library/` 미접촉, 포트 8000 미접촉.
+
+### 남은 빨강 (`10_suite_remaining_red.txt`)
+
+`31 failed · 11986 passed · 19 skipped` (전체 12036). 파일별:
+`writegate_session_sites` 15 · `writegate_merge_gap` 5 ·
+`web_cue_sheet_apply` 4 · `seeded_song_apply` 3 · `safety_ruleset` 2 ·
+`bulkgate_declaration` 2.
+
+24건은 갱신 대상인데 **의도적으로 손대지 않았다** — plan.md §M1 이 「§A 판단이
+닫히기 전에 코드를 고치지 않는다. 술어가 바뀌면 아래 전부가 다시 돌아야 한다」고
+못 박았고, §A-3 이 지금 열려 있는 그 판단이다. 예외로 `fx_boundary` 1건만
+갱신했다: 그 파일이 `Makefile` 의 `FAST_TESTS` 에 들어 있어 pre-push 게이트를
+막았고, 갱신 근거가 위 실측 둘로 §A-3 의 결과와 무관하게 성립한다.
+
+7건은 위 결함이므로 갱신 대상이 아니다.
+
+---
+
+## §E.3 Run-phase Audit-Ready Signal — Phase 2
 
 ```yaml
 run_complete_at: 2026-09-07
-run_commit_sha: pending-backfill-t299-p1
+run_commit_sha: pending-backfill-t299-p2
+run_status: blocked-pending-operator-decision
+phase: "Phase 2 of 3 (Store Sequence)"
+base: ca34ebe
+branch: WT-classify-widen-p2
+interpreter: "uv run / 3.11.15 (this worktree)"
+suite_baseline: "12011 passed / 19 skipped / 0 failed (12030 total)"
+suite_widening_cost: "32 failed / 11983 passed / 19 skipped (12034 total)"
+suite_remaining_red: "31 failed / 11986 passed / 19 skipped (12036 total)"
+suite_final_green: null    # 도달 못 함 — 아래 blocker
+mutation_revert_one_entry: "2 failed / 12010 passed / 19 skipped (12031 total)"
+mutation_classification_observers: 1
+seal_only_before: 7
+seal_only_after: 2
+seal_sites_actually_moved: 5
+cuesheet_cards_before: 1
+cuesheet_cards_after: 2
+negative_control_false_positives: 0
+phase3_target_still_open: true      # 'Store Cue 1' -> matched_entry=None
+type2_signals_found: 0
+ruff_check: "All checks passed! (server/ 및 reports/classifygap-t299-p2/)"
+fx_boundary_file: "40 passed"
+live_desk_contact: 0
+server_safety_py_modified: false
+evidence_dir: reports/classifygap-t299-p2/
+blocker:
+  what: "큐시트 초안 반영 한 동작에 승인 카드가 2장 뜬다(실측 1 -> 2)"
+  where: "server/web/session.py:9041·8980 + server/safety/gate.py:399·415"
+  why_not_fixed_here: "고치는 자리가 이 SPEC 의 module 선언과 plan.md §D 범위 밖"
+  plan_marker: "plan.md §A-3 [NEEDS CLARIFICATION: 큐시트 이중 카드] — 미해결"
+  evidence: reports/classifygap-t299-p2/06_cuesheet_cards_after.txt
+open_for_operator:
+  - "중복 카드 해소 방법 결정 (세 갈래는 배차 보고에 정리)"
+  - "그 결정 뒤 남은 24건 갱신 — 특히 SEAL_DEFENCE 표(15건)"
+  - "Phase 3(`Store Cue`)는 이 결정 뒤에 착수"
+```
 run_status: partial-by-design
 phase: "Phase 1 of 3 (Store Group + Store Timecode)"
 base: 59ac394
