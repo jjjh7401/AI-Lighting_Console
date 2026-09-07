@@ -49,7 +49,9 @@ def main() -> None:
             moved.append(name)
         print(f"{name:38} 표={recorded:10} 실측={measured:10}{flag}")
         print(f"    나가는 쇼파일 쓰기: {_showfile(carried)}")
-        print(f"    잡힌 항목        : {sorted({v.matched_entry for v in risky if v.matched_entry})}")
+        print(
+            f"    잡힌 항목        : {sorted({v.matched_entry for v in risky if v.matched_entry})}"
+        )
 
     print(f"\nseal-only (실측)  : {seal_only_now}")
     print(f"seal-only (표)    : {sum(1 for v in SEAL_DEFENCE.values() if v == 'seal-only')}")

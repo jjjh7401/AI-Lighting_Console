@@ -80,9 +80,7 @@ def _line(text: str) -> str:
 
 def _gate(approval):
     tmp = Path(tempfile.mkdtemp(prefix="t299p1-"))
-    return SafetyGate(
-        console=_FakeConsole(), audit=AuditLog(tmp / "audit"), approval_port=approval
-    )
+    return SafetyGate(console=_FakeConsole(), audit=AuditLog(tmp / "audit"), approval_port=approval)
 
 
 def main() -> None:

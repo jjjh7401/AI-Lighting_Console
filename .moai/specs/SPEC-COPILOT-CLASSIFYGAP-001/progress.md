@@ -144,7 +144,17 @@ suite_final: "12011 passed / 19 skipped / 0 failed (12030 total), exit 0"
 mutation_revert_one_entry: "3 failed / 12004 passed / 19 skipped (12026 total)"
 seal_only_before: 7
 seal_only_after: 7
-ruff: "All checks passed!"
+ruff_check: "All checks passed! (server/ 및 reports/classifygap-t299-p1/)"
+ruff_format: "초기 회차에서 프로브 스크립트 2건 미포맷 — 아래 lint_scope_correction 참조"
+make_test_fast: "exit 0 (재실행)"
+lint_scope_correction: |
+  첫 push 가 pre-push 게이트에서 막혔다. 내가 돌린 것은 `uv run ruff check server/`
+  였고 게이트가 재는 것은 `test_overlap_preserve.py::TestTouchedFilesPassLint` —
+  **git diff 로 대상을 고르는** 검사다. 그래서 `reports/` 아래 프로브 스크립트 2건이
+  내 회차에는 안 보였다. `uv run ruff format` 으로 두 파일을 포맷했고(공백만 변경),
+  포맷 뒤 두 프로브를 다시 돌려 출력이 바이트 동일함을 확인했다
+  (`diff /tmp/*_recheck.txt <해당 증거파일>` → 차이 없음). 그 뒤 `make -s test-fast`
+  exit 0. 내 트리에서 초록인 것이 게이트에서 초록인 것과 같지 않았던 사례다.
 type2_signals_found: 0
 live_desk_contact: 0
 new_warnings_or_lints_introduced: 0
