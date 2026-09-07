@@ -1,0 +1,250 @@
+FF.FF....F.........................F.F......................F........... [ 74%]
+.FF...F......F.F.........                                                [100%]
+=================================== FAILURES ===================================
+___________ TestConsoleStack.test_gate_round_trip_over_udp_loopback ____________
+
+self = <server.tests.test_safety_bootstrap.TestConsoleStack object at 0x10a64eed0>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-633/test_gate_round_trip_over_udp_0')
+fake_console = <server.tests.test_safety_e2e_audit.FakeConsoleServer object at 0x10a9eda90>
+
+    def test_gate_round_trip_over_udp_loopback(self, tmp_path, fake_console):
+        stack = _stack(tmp_path, fake_console)
+        try:
+            decision = stack.gate.screen(["Store Cue 1"])
+>           assert decision.cleared
+E           assert False
+E            +  where False = ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='Store Cue 1', status='rejected', r...hes closed-set entry 'Store Cue')",), warnings=()),)), notice='bundle rejected by the approver — nothing was executed').cleared
+
+server/tests/test_safety_bootstrap.py:49: AssertionError
+_ TestAuditCompletenessE2E.test_every_send_reconciles_with_a_gate_passage_record _
+
+self = <server.tests.test_safety_e2e_audit.TestAuditCompletenessE2E object at 0x10abc0d50>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-633/test_every_send_reconciles_wit0')
+loopback = (<server.tests.test_safety_e2e_audit.FakeConsoleServer object at 0x10a9ed8d0>, <server.safety.console.ConsoleLink object at 0x10970edd0>)
+
+    def test_every_send_reconciles_with_a_gate_passage_record(self, tmp_path, loopback):
+        console_server, link = loopback
+        audit = AuditLog(tmp_path / "audit")
+        approval = ScriptedApproval(decisions=[True, False])
+        gate = SafetyGate(console=link, audit=audit, approval_port=approval)
+        gate.use_showfile_backup()
+    
+        # 1. session start -> one backup send (rule 1)
+        gate.start_session()
+        # 2. safe bundle -> two command sends
+        assert gate.screen(["Store Cue 1", "Store Cue 2"]).cleared
+        assert gate.execution_port.execute("Store Cue 1").ok
+        assert gate.execution_port.execute("Store Cue 2").ok
+        # 3. risky bundle approved -> pre-risky backup send + one command send
+>       assert gate.screen(["Delete Sequence 5"]).cleared
+E       assert False
+E        +  where False = ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='Delete Sequence 5', status='reject...atches closed-set entry 'Delete')",), warnings=()),)), notice='bundle rejected by the approver — nothing was executed').cleared
+E        +    where ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='Delete Sequence 5', status='reject...atches closed-set entry 'Delete')",), warnings=()),)), notice='bundle rejected by the approver — nothing was executed') = screen(['Delete Sequence 5'])
+E        +      where screen = <server.safety.gate.SafetyGate object at 0x10ac35850>.screen
+
+server/tests/test_safety_e2e_audit.py:133: AssertionError
+_______ TestInvokingVerbFnCorpus.test_clean_expandable_body_is_not_held ________
+
+self = <server.tests.test_safety_corpus.TestInvokingVerbFnCorpus object at 0x10aa73b50>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-633/test_clean_expandable_body_is_0')
+
+    def test_clean_expandable_body_is_not_held(self, tmp_path):
+        # Counter-case: expansion CLEARS a verified-clean body (expand, not
+        # blanket-hold) — proving the corpus holds are classification results.
+        gate, console = _gate(
+            tmp_path, {"Macro 9": ("Store Cue 1",)}, ScriptedApproval(decisions=[])
+        )
+        decision = gate.screen(["Go Macro 9"])
+>       assert decision.cleared is True
+E       assert False is True
+E        +  where False = ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='Go Macro 9', status='rejected', re... blacklisted command 'Store Cue 1'"), warnings=()),)), notice='bundle rejected by the approver — nothing was executed').cleared
+
+server/tests/test_safety_corpus.py:196: AssertionError
+_____________________ TestExpansion.test_clean_body_passes _____________________
+
+self = <server.tests.test_safety_expand.TestExpansion object at 0x10abc1cd0>
+
+    def test_clean_body_passes(self):
+        fetcher = DictBodyFetcher({"Macro 9": ("Store Cue 1", "List")})
+        outcome = _evaluate("Macro 9", fetcher)
+>       assert outcome.hold is False
+E       assert True is False
+E        +  where True = ExpansionResult(hold=True, risky=True, reasons=("body of 'Macro 9' contains blacklisted command 'Store Cue 1'",)).hold
+
+server/tests/test_safety_expand.py:42: AssertionError
+_______ TestExpansion.test_nested_clean_chain_within_depth_limit_passes ________
+
+self = <server.tests.test_safety_expand.TestExpansion object at 0x10abc3950>
+
+    def test_nested_clean_chain_within_depth_limit_passes(self):
+        fetcher = DictBodyFetcher(
+            {
+                "Macro 1": ("Go Macro 2",),
+                "Macro 2": ("Go Macro 3",),
+                "Macro 3": ("Store Cue 1",),
+            }
+        )
+        outcome = _evaluate("Macro 1", fetcher)
+>       assert outcome.hold is False
+E       assert True is False
+E        +  where True = ExpansionResult(hold=True, risky=True, reasons=("body of 'Macro 3' contains blacklisted command 'Store Cue 1'",)).hold
+
+server/tests/test_safety_expand.py:77: AssertionError
+________________ TestBlacklistMatching.test_plain_store_is_safe ________________
+
+self = <server.tests.test_safety_classify.TestBlacklistMatching object at 0x10abe6750>
+
+    def test_plain_store_is_safe(self):
+        finding = _classify("Store Cue 5")
+>       assert finding.category == "safe"
+E       AssertionError: assert 'blacklisted' == 'safe'
+E         
+E         - safe
+E         + blacklisted
+
+server/tests/test_safety_classify.py:76: AssertionError
+_____ TestBlacklistMatching.test_store_with_quoted_overwrite_text_is_safe ______
+
+self = <server.tests.test_safety_classify.TestBlacklistMatching object at 0x10abe6dd0>
+
+    def test_store_with_quoted_overwrite_text_is_safe(self):
+        finding = _classify("Store Cue 5 '/overwrite'")
+>       assert finding.category == "safe"
+E       AssertionError: assert 'blacklisted' == 'safe'
+E         
+E         - safe
+E         + blacklisted
+
+server/tests/test_safety_classify.py:86: AssertionError
+__________ TestInvokingDetection.test_plain_commands_are_not_invoking __________
+
+self = <server.tests.test_safety_classify.TestInvokingDetection object at 0x10abe7010>
+
+    def test_plain_commands_are_not_invoking(self):
+>       assert _classify("Store Cue 5").category == "safe"
+E       AssertionError: assert 'blacklisted' == 'safe'
+E         
+E         - safe
+E         + blacklisted
+
+server/tests/test_safety_classify.py:161: AssertionError
+_ TestExecutorRenameInvariance.test_screening_result_is_identical_across_rename[before-rename] _
+
+self = <server.tests.test_safety_classify.TestExecutorRenameInvariance object at 0x10ac07350>
+body_content = ('Store Cue 1',)
+
+    @pytest.mark.parametrize(
+        "body_content",
+        [
+            ("Store Cue 1",),  # 'Sequence 71'-era body content
+            ("Store Cue 1",),  # 'Cyan Look'-era body content (post-rename)
+        ],
+        ids=["before-rename", "after-rename"],
+    )
+    def test_screening_result_is_identical_across_rename(self, body_content):
+        # Both fixtures key on the SAME reference string ("Executor 202") --
+        # proving the rename never changes which body the gate consults,
+        # because the reference is number-derived, not name-derived.
+        finding = _classify("Go+ Executor 202")
+        fetcher = DictBodyFetcher({"Executor 202": body_content})
+        outcome = evaluate_reference(finding.reference, ruleset=RULESET, fetcher=fetcher)
+>       assert outcome.hold is False
+E       assert True is False
+E        +  where True = ExpansionResult(hold=True, risky=True, reasons=("body of 'Executor 202' contains blacklisted command 'Store Cue 1'",)).hold
+
+server/tests/test_safety_classify.py:276: AssertionError
+_ TestExecutorRenameInvariance.test_screening_result_is_identical_across_rename[after-rename] _
+
+self = <server.tests.test_safety_classify.TestExecutorRenameInvariance object at 0x10ac07590>
+body_content = ('Store Cue 1',)
+
+    @pytest.mark.parametrize(
+        "body_content",
+        [
+            ("Store Cue 1",),  # 'Sequence 71'-era body content
+            ("Store Cue 1",),  # 'Cyan Look'-era body content (post-rename)
+        ],
+        ids=["before-rename", "after-rename"],
+    )
+    def test_screening_result_is_identical_across_rename(self, body_content):
+        # Both fixtures key on the SAME reference string ("Executor 202") --
+        # proving the rename never changes which body the gate consults,
+        # because the reference is number-derived, not name-derived.
+        finding = _classify("Go+ Executor 202")
+        fetcher = DictBodyFetcher({"Executor 202": body_content})
+        outcome = evaluate_reference(finding.reference, ruleset=RULESET, fetcher=fetcher)
+>       assert outcome.hold is False
+E       assert True is False
+E        +  where True = ExpansionResult(hold=True, risky=True, reasons=("body of 'Executor 202' contains blacklisted command 'Store Cue 1'",)).hold
+
+server/tests/test_safety_classify.py:276: AssertionError
+_ TestExecutorSinglePressClearance.test_benign_executor_body_clears_with_no_approval_and_no_saveshow _
+
+self = <server.tests.test_safety_classify.TestExecutorSinglePressClearance object at 0x10abf6850>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-633/test_benign_executor_body_clea0')
+
+    def test_benign_executor_body_clears_with_no_approval_and_no_saveshow(self, tmp_path):
+        console = FakeConsole()
+        approval = ScriptedApproval(decisions=[])
+        gate = SafetyGate(
+            console=console,
+            audit=AuditLog(tmp_path / "audit"),
+            approval_port=approval,
+            body_fetcher=DictBodyFetcher({"Executor 201": ("Store Cue 1",)}),
+        )
+        command = "Go+ Executor 201"
+        decision = gate.screen([command])
+>       assert decision.cleared is True
+E       assert False is True
+E        +  where False = ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='Go+ Executor 201', status='rejecte... blacklisted command 'Store Cue 1'"), warnings=()),)), notice='bundle rejected by the approver — nothing was executed').cleared
+
+server/tests/test_safety_classify.py:349: AssertionError
+_______ TestBlacklistedFindings.test_multiple_findings_report_each_line ________
+
+self = <server.tests.test_deploy_scan.TestBlacklistedFindings object at 0x10ac18990>
+ruleset = SafetyRuleset(version=7, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>'))
+
+    def test_multiple_findings_report_each_line(self, ruleset):
+        source = 'Cmd("Store Cue 1")\nCmd("Delete 1")\nCmd("Remove 2")\n'
+        report = _scan(source, ruleset)
+        assert report.destructive is True
+>       assert [(f.line, f.matched_entry) for f in report.findings] == [
+            (2, "Delete"),
+            (3, "Remove"),
+        ]
+E       AssertionError: assert [(1, 'Store C...(3, 'Remove')] == [(2, 'Delete'), (3, 'Remove')]
+E         
+E         At index 0 diff: (1, 'Store Cue') != (2, 'Delete')
+E         Left contains one more item: (3, 'Remove')
+E         Use -v to get more diff
+
+server/tests/test_deploy_scan.py:77: AssertionError
+_______ TestSafeAndNonDestructive.test_quoted_object_name_never_matches ________
+
+self = <server.tests.test_deploy_scan.TestSafeAndNonDestructive object at 0x10ac06ed0>
+ruleset = SafetyRuleset(version=7, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>'))
+
+    def test_quoted_object_name_never_matches(self, ruleset):
+        # Same acceptance edge case as the gate: a blacklist keyword inside a
+        # quoted object name is NOT a destructive command.
+        report = _scan("Cmd(\"Store Cue 5 'Delete'\")", ruleset)
+>       assert report.destructive is False
+E       assert True is False
+E        +  where True = ScanReport(destructive=True, findings=(ScanFinding(line=1, command="Store Cue 5 'Delete'", kind='blacklisted', matched...dynamically assembled Lua strings can evade it; the human review gate remains the authoritative control (REQ-MVP-027)').destructive
+
+server/tests/test_deploy_scan.py:100: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_safety_bootstrap.py::TestConsoleStack::test_gate_round_trip_over_udp_loopback
+FAILED server/tests/test_safety_e2e_audit.py::TestAuditCompletenessE2E::test_every_send_reconciles_with_a_gate_passage_record
+FAILED server/tests/test_safety_corpus.py::TestInvokingVerbFnCorpus::test_clean_expandable_body_is_not_held
+FAILED server/tests/test_safety_expand.py::TestExpansion::test_clean_body_passes
+FAILED server/tests/test_safety_expand.py::TestExpansion::test_nested_clean_chain_within_depth_limit_passes
+FAILED server/tests/test_safety_classify.py::TestBlacklistMatching::test_plain_store_is_safe
+FAILED server/tests/test_safety_classify.py::TestBlacklistMatching::test_store_with_quoted_overwrite_text_is_safe
+FAILED server/tests/test_safety_classify.py::TestInvokingDetection::test_plain_commands_are_not_invoking
+FAILED server/tests/test_safety_classify.py::TestExecutorRenameInvariance::test_screening_result_is_identical_across_rename[before-rename]
+FAILED server/tests/test_safety_classify.py::TestExecutorRenameInvariance::test_screening_result_is_identical_across_rename[after-rename]
+FAILED server/tests/test_safety_classify.py::TestExecutorSinglePressClearance::test_benign_executor_body_clears_with_no_approval_and_no_saveshow
+FAILED server/tests/test_deploy_scan.py::TestBlacklistedFindings::test_multiple_findings_report_each_line
+FAILED server/tests/test_deploy_scan.py::TestSafeAndNonDestructive::test_quoted_object_name_never_matches
+13 failed, 84 passed in 3.42s

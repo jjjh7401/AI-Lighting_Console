@@ -68,7 +68,15 @@ UNCHANGED = (
     # a `Store` object that IS still descoped, so the tuple keeps a Store-family
     # member and the check keeps its original shape.
     ("Store Page 3", "still descoped: measurement corpus representative"),
-    ("Store Cue 12", "measurement corpus representative"),
+    # `Store Cue 12` was here as "measurement corpus representative". t299
+    # (SPEC-COPILOT-CLASSIFYGAP-001 Phase 3) removed it when ruleset v7 blacklisted
+    # `Store Cue` — the SAME argument the Phase 1 note above records for
+    # `Store Group 3`, applied to the same tuple a second time: this tuple asks
+    # "did the v3 widening reach anything else?", and a command a LATER revision
+    # deliberately took can no longer answer that question. Not replaced: the row
+    # above (`Store Page 3`) already keeps a still-descoped Store-family member, so
+    # the tuple keeps its original shape without adding a second line that the next
+    # revision would have to remove again.
     ("Go Sequence 4 Cue 2", "playback, not replacement — invoking, never blacklisted"),
     ("Label Group 3 'Vocals'", "labelling"),
     ("SaveShow", "the BACKUP command itself must stay executable"),

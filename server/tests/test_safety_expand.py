@@ -35,9 +35,20 @@ def _evaluate(reference, fetcher, **kwargs):
     return evaluate_reference(reference, ruleset=RULESET, fetcher=fetcher, **kwargs)
 
 
+#: 「깨끗한 본문」 리터럴 — 확장이 blanket-hold 가 아니라 실제 분류 결과라는 것을
+#: 보이는 대조군에 쓴다.
+#:
+#: 갱신 근거 (t299 Phase 3): 옛 리터럴은 `Store Cue 1` 이었고 v7
+#: (SPEC-COPILOT-CLASSIFYGAP-001)이 `Store Cue` 를 폐집합에 넣어 더는 깨끗하지
+#: 않다. Phase 1·2 가 세운 규율대로 **프로그래머 값**으로 옮긴다 — 폐집합은 쇼파일
+#: 쓰기 오브젝트만 담으므로 어떤 리비전도 이 리터럴을 다시 잡지 않는다. 다른 `Store`
+#: 오브젝트로 옮기면 Phase 1 이 겪은 대로 한 리비전 만에 다시 잃는다.
+_CLEAN_BODY_LINE = "Fixture 1 At 50"
+
+
 class TestExpansion:
     def test_clean_body_passes(self):
-        fetcher = DictBodyFetcher({"Macro 9": ("Store Cue 1", "List")})
+        fetcher = DictBodyFetcher({"Macro 9": (_CLEAN_BODY_LINE, "List")})
         outcome = _evaluate("Macro 9", fetcher)
         assert outcome.hold is False
 
@@ -70,7 +81,10 @@ class TestExpansion:
             {
                 "Macro 1": ("Go Macro 2",),
                 "Macro 2": ("Go Macro 3",),
-                "Macro 3": ("Store Cue 1",),
+                # 갱신 근거 (t299 Phase 3): 재는 축은 **깊이**(3단 이내면 통과)이고
+                # 사슬 끝의 본문 내용은 축과 무관하다. 옛 `Store Cue 1` 은 v7 이
+                # 폐집합에 넣었으므로 `_CLEAN_BODY_LINE` 으로 옮긴다.
+                "Macro 3": (_CLEAN_BODY_LINE,),
             }
         )
         outcome = _evaluate("Macro 1", fetcher)

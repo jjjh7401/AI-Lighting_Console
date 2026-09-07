@@ -189,8 +189,14 @@ class TestInvokingVerbFnCorpus:
     def test_clean_expandable_body_is_not_held(self, tmp_path):
         # Counter-case: expansion CLEARS a verified-clean body (expand, not
         # blanket-hold) — proving the corpus holds are classification results.
+        #
+        # 갱신 근거 (t299 Phase 3): 옛 본문은 `Store Cue 1` 이고 v7
+        # (SPEC-COPILOT-CLASSIFYGAP-001)이 `Store Cue` 를 폐집합에 넣어 더는
+        # verified-clean 이 아니다. 이 검사가 재는 축은 「확장이 blanket-hold 가
+        # 아니다」이므로 본문 내용은 축과 무관하다 — Phase 1·2 의 규율대로
+        # 프로그래머 값으로 옮긴다.
         gate, console = _gate(
-            tmp_path, {"Macro 9": ("Store Cue 1",)}, ScriptedApproval(decisions=[])
+            tmp_path, {"Macro 9": ("Fixture 1 At 50",)}, ScriptedApproval(decisions=[])
         )
         decision = gate.screen(["Go Macro 9"])
         assert decision.cleared is True

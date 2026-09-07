@@ -1,0 +1,66 @@
+interpreter : 3.11.15
+server pkg  : /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-ab993975d41e79110/server/__init__.py
+ruleset ver : 6
+blacklist   : ['Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'Set Fixture', 'LoadShow', 'NewShow', 'Store Preset', 'Store Group', 'Store Timecode', 'Store Sequence']
+
+[A] 배차서가 지정한 여섯 명령 — 이 순서 그대로
+  'Store Group 3'                                      -> matched_entry='Store Group' category='blacklisted' risky=True
+  'Store Timecode 9'                                   -> matched_entry='Store Timecode' category='blacklisted' risky=True
+  'Store Sequence 210 Cue 3 /Merge'                    -> matched_entry='Store Sequence' category='blacklisted' risky=True
+  'Store Cue 1'                                        -> matched_entry=None category='safe' risky=False
+  'Fixture 1 At 50'                                    -> matched_entry=None category='safe' risky=False
+  'Group 4'                                            -> matched_entry=None category='safe' risky=False
+
+[A-검산] 이 회차가 지켜야 하는 성질
+  Phase 3 대상이 걸린다        : False (matched=None)
+  Phase 1·2 회귀 없음          : 'Store Group 3' risky=True matched='Store Group'
+  Phase 1·2 회귀 없음          : 'Store Timecode 9' risky=True matched='Store Timecode'
+  Phase 1·2 회귀 없음          : 'Store Sequence 210 Cue 3 /Merge' risky=True matched='Store Sequence'
+  프로그래머/선택은 안 걸린다  : 'Fixture 1 At 50' risky=False matched=None
+  프로그래머/선택은 안 걸린다  : 'Group 4' risky=False matched=None
+
+[B] AC-CG-001 — 네 명령 전부 risky=True 이고 matched_entry is not None
+  'Store Group 3'                                      -> PASS (matched='Store Group')
+  'Store Timecode 9'                                   -> PASS (matched='Store Timecode')
+  'Store Sequence 210 Cue 3 /Merge'                    -> PASS (matched='Store Sequence')
+  'Store Cue 1'                                        -> FAIL (matched=None)
+  => AC-CG-001: 3/4
+
+[C] 양성 대조군 (원래 걸리던 것 — 그대로 걸려야 한다)
+  'Store Preset 4.101'                                 -> matched_entry='Store Preset' category='blacklisted' risky=True
+  'Delete Sequence 5'                                  -> matched_entry='Delete' category='blacklisted' risky=True
+
+[D] 음성 대조군 — 프로그래머 트래픽 (AC-CG-002: 전부 risky=False)
+  "Fixture 20 ; Attribute 'Pan' At 12"                 -> matched_entry=None category='safe' risky=False
+  'At 100'                                             -> matched_entry=None category='safe' risky=False
+  'Group 4'                                            -> matched_entry=None category='safe' risky=False
+  'Fixture 1 Thru 12'                                  -> matched_entry=None category='safe' risky=False
+  "Set Selection MAtricks 'PhaseFromX' 0"              -> matched_entry=None category='safe' risky=False
+  "Label Group 3 'Vocals'"                             -> matched_entry=None category='safe' risky=False
+  'Go+ Sequence 5'                                     -> matched_entry=None category='invoking' risky=False
+  'Off Fixture 11'                                     -> matched_entry=None category='invoking' risky=False
+  'ChangeDestination Root'                             -> matched_entry=None category='safe' risky=False
+  => risky 로 잘못 판정된 문장: 0 []
+
+[D-2] 배차서가 못 박은 두 문장도 같이 (must-pass 음성 대조군)
+  'Fixture 1 At 50'                                    -> matched_entry=None category='safe' risky=False
+  'Group 4'                                            -> matched_entry=None category='safe' risky=False
+  => risky 로 잘못 판정된 문장: 0 []
+
+[E] 흐름 단위 음성 대조군 (AC-CG-003: 승인 요청 0건, cleared=True)
+  bundle           : ["Fixture 20 ; Attribute 'Pan' At 12", 'At 100', 'Group 4', 'Fixture 1 Thru 12', "Set Selection MAtricks 'PhaseFromX' 0", 'Fixture 1 At 50', 'Group 4']
+  approval requests: 0
+  cleared          : True  status='cleared'
+
+[E-2] 참고 — 아홉 문장 전부를 흐름으로 (호출 동사 둘 때문에 0 이 아니다)
+  approval requests: 1  (확대 전/후 같아야 한다)
+  cleared          : False  status='rejected'
+    보류된 줄: 'Go+ Sequence 5'                             | ('reference-invoking command', "unverifiable reference 'Sequence 5': no body fetcher configured — reference bodies unverifiable")
+    보류된 줄: 'Off Fixture 11'                             | ('reference-invoking command', 'unverifiable reference: no recognizable target object')
+
+[F] 봉합 + 확대 동시 투입 (AC-CG-004: 요청 정확히 1건, 사유 병기)
+  approval requests: 1
+  items in request : 3
+    'Store Cue 1'                                        | ('SEAL-REASON',)
+    'Store Sequence 210 Cue 3 /Merge'                    | ('SEAL-REASON', "blacklisted command (matches closed-set entry 'Store Sequence')")
+    "Fixture 20 ; Attribute 'Pan' At 12"                 | ('SEAL-REASON',)
