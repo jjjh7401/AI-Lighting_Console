@@ -244,7 +244,12 @@ dist-ssr/
 server/audit_logs/
 server/paperwork_output/
 .moai/logs/
-.moai/reports/
+# 카드 증거(`t<번호>/`)는 추적한다 — 제품 코드와 테스트의 주석이 그 경로를
+# 증거로 인용하고 있어서(server/ 안 9자리, 전부 실재·추적 확인), 막으면 새로
+# 쌓이는 증거가 커밋되지 않아 인용이 새 클론에서 깨진다. 나머지 산출물
+# (plan-audit 판정서·일회성 리포트)은 그대로 로컬에 둔다.
+.moai/reports/*
+!.moai/reports/t[0-9]*/
 .moai/specs/*/.moai/
 .playwright-cli/
 server/**/.moai/
