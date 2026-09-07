@@ -17,6 +17,18 @@
 # M6a run over them is no longer unattended. The exception is pinned in
 # `server/tests/test_writegate.py::RATIFIED_CORPUS_COLLISIONS`; any OTHER
 # collision still fails that test.
+#
+# NARROWED AGAIN AT RULESET v5 (SPEC-COPILOT-CLASSIFYGAP-001, card t299, Phase 1):
+# group-create-1/2/3 join the exception list. Their `Store Group <n>` lines are
+# blacklisted from v5 on, because the 2026-09-07 browser observation recorded 28
+# commands reaching the desk with 25 executed and ZERO `approved` audit entries,
+# `Store Group <n>` among them. Those three scenarios now raise a card too, so
+# `group_create` — 1 of the AC-MVP-001 ten representative task types — is no longer
+# unattended-runnable either. Five of 21 scenarios now hold; the header's "non-risky
+# verbs only" claim is TRUE for the remaining sixteen.
+#
+# `Store Timecode`, the other v5 entry, changes nothing here: this corpus carries no
+# timecode line at all.
 version: 1
 
 scenarios:

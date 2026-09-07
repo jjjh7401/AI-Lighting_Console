@@ -23,7 +23,16 @@ from server.safety.registry import PluginFlagRegistry
 from server.safety.ruleset import load_ruleset
 
 DESTRUCTIVE_SOURCE = 'local function main()\n    Cmd("Delete Sequence 5")\nend\nreturn main\n'
-SAFE_SOURCE = 'local function main()\n    Cmd("Store Group 3")\nend\nreturn main\n'
+#: t299 (ruleset v5, SPEC-COPILOT-CLASSIFYGAP-001 Phase 1): the body was
+#: `Cmd("Store Group 3")` until v5 blacklisted `Store Group`. What this fixture is
+#: FOR is "a plugin the scan finds nothing in" — the specific command was never the
+#: point, so the literal moves rather than the assertion. Deliberately a NON-`Store`
+#: command now (`Group 4` is selection, not a write, and is ratified as such in
+#: `test_writegate.py::UNCHANGED_SAFE`): the v4 header already recorded that using a
+#: `Store` object as DEPLOY's canonical safe literal makes this fixture collide with
+#: every future Store revision, and re-pointing at another `Store` object would just
+#: reschedule the same break. `test_deploy_gate_e2e.py` imports this constant.
+SAFE_SOURCE = 'local function main()\n    Cmd("Group 4")\nend\nreturn main\n'
 BROKEN_SOURCE = "function broken( end"
 
 

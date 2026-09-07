@@ -100,7 +100,19 @@ HELD_FORMS = (
 #: is 1 of the AC-MVP-001 10 representatives, so even 3/21 costs a whole task
 #: type, and the DEPLOY fixture collision is independent of corpus size.
 UNCHANGED_SAFE = (
-    ("Store Group 3", "descoped: DEPLOY's canonical SAFE_SOURCE literal"),
+    # `Store Group 3` WAS here, ratified "descoped: DEPLOY's canonical SAFE_SOURCE
+    # literal". SPEC-COPILOT-CLASSIFYGAP-001 (card t299, Phase 1) removed that one
+    # line when ruleset v5 took `Store Group`. The argument for THAT line
+    # specifically, not for the tuple: its ratification reason was never a safety
+    # claim — it recorded that three DEPLOY tests happened to use the command as
+    # their "safe example" fixture. A fixture-convenience reason cannot outweigh a
+    # measured false negative, and the 2026-09-07 browser observation is exactly
+    # that: 28 commands out to the desk, 25 executed, `approved` entries in the
+    # audit log = 0, with `Store Group <n>` among them. The three DEPLOY tests were
+    # moved to a non-`Store` literal (`Group 4`, selection) rather than re-pointed
+    # at another `Store` object, so the same collision cannot recur on the next
+    # revision.
+    #
     # `Store Preset 4.1` WAS here, ratified "descoped: measurement corpus
     # representative". SPEC-COPILOT-UNREQ-001 (card t86) removed that one line
     # when ruleset v4 took `Store Preset`, on a measured false-negative
@@ -115,6 +127,8 @@ UNCHANGED_SAFE = (
     # SEMANTIC judgement ("labelling is not a patch write"). A cost measurement
     # can update the first group; it cannot update the second. Removing a line
     # here without its own argument reopens a hole that someone closed on purpose.
+    #
+    # `Store Timecode` never appeared in this tuple, so v5 removed nothing for it.
     ("Store Cue 12", "descoped: measurement corpus representative"),
     ("Store Page 3", "descoped: measurement corpus representative"),
     ("Store Macro 21", "descoped: measurement corpus representative"),
@@ -145,7 +159,24 @@ UNCHANGED_SAFE = (
 #: now raises an approval card on these two scenarios. They are no longer
 #: unattended-runnable. Order matches `_corpus_offenders` iteration (scenario
 #: order in corpus.yaml, command order within a scenario).
+#: NARROWED AGAIN at ruleset v5 (SPEC-COPILOT-CLASSIFYGAP-001, card t299, Phase 1):
+#: the three `group_create` scenarios join, because v5 blacklists `Store Group` on
+#: the 2026-09-07 browser observation (28 commands out, 25 executed, 0 `approved`
+#: audit entries, `Store Group <n>` among them). Same shape as the v4 narrowing,
+#: same consequence: those three scenarios now raise a card, so a live M6a run over
+#: them is no longer unattended-runnable. That cost is accepted rather than avoided —
+#: `group_create` is 1 of the AC-MVP-001 ten representative task types, and losing
+#: unattended operation on it is the price of closing a measured false negative.
+#:
+#: `Store Timecode` adds nothing here: the corpus carries no timecode line at all
+#: (`grep -c 'Store Timecode' server/measurement/corpus.yaml` = 0).
+#:
+#: Order matches `_corpus_offenders` iteration (scenario order in corpus.yaml,
+#: command order within a scenario) — group_create precedes preset_store there.
 RATIFIED_CORPUS_COLLISIONS = (
+    ("group-create-1", "Store Group 3"),
+    ("group-create-2", "Store Group 8"),
+    ("group-create-3", "Store Group 11"),
     ("preset-store-1", "Store Preset 4.1"),
     ("preset-store-2", "Store Preset 4.7"),
 )
@@ -221,7 +252,12 @@ class TestScopeIsHeldExactly:
         # Non-vacuity: the predicate must be able to say True, or the test above
         # would pass over an empty check.
         assert _would_be_held("Set Fixture 11 Posx '-3.5'") is True
-        assert _would_be_held("Store Group 3") is False
+        # t299 (v5): the False arm was `Store Group 3` until v5 blacklisted it.
+        # Re-pointed at `Store Page 3`, which `UNCHANGED_SAFE` above still ratifies
+        # as descoped — the arm needs a command the ruleset genuinely lets through,
+        # and asserting False on a now-blacklisted literal would have inverted the
+        # non-vacuity check into a false claim.
+        assert _would_be_held("Store Page 3") is False
         # The invoking branch counts too: `Go Macro 9` is not risky on its own
         # line, but the gate holds it because the body is unverifiable.
         assert _would_be_held("Go Macro 9") is True
@@ -369,7 +405,14 @@ class TestIndirectRoutes:
     def test_the_deploy_scan_still_passes_a_genuinely_safe_source(self):
         # Non-vacuity: DEPLOY's canonical SAFE_SOURCE literal. If this went
         # destructive, the entry would have been scoped too widely.
-        source = 'local function main()\n    Cmd("Store Group 3")\nend\nreturn main\n'
+        #
+        # t299 (v5): the literal was `Store Group 3` until v5 blacklisted it —
+        # it must be a command the ruleset genuinely passes, or this non-vacuity
+        # arm asserts something false. Re-pointed at `Group 4` (selection, not a
+        # write) rather than another `Store` object, so a later Store revision
+        # cannot collide with this fixture again. Same change in
+        # `test_deploy_pipeline.SAFE_SOURCE`, which the two DEPLOY suites import.
+        source = 'local function main()\n    Cmd("Group 4")\nend\nreturn main\n'
         report = scan_lua_source(source, RULESET)
         assert report.destructive is False
         assert list(report.findings) == []

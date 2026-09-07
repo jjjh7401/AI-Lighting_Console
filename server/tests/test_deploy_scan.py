@@ -82,7 +82,13 @@ class TestBlacklistedFindings:
 
 class TestSafeAndNonDestructive:
     def test_safe_commands_yield_no_findings(self, ruleset):
-        report = _scan('Cmd("Store Group 3")\nCmd("List")', ruleset)
+        # t299 (ruleset v5): the first literal was `Store Group 3` until v5
+        # blacklisted `Store Group`. The axis here is "a source with nothing
+        # destructive in it yields no findings", so the literal moves and the
+        # assertion stays. `Group 4` is a selection command, not a write — chosen
+        # over another `Store` object so this fixture stops colliding with Store
+        # revisions (the v4 blacklist header predicted this exact collision).
+        report = _scan('Cmd("Group 4")\nCmd("List")', ruleset)
         assert report.destructive is False
         assert report.findings == ()
         assert report.dynamic_calls == ()

@@ -42,6 +42,12 @@ class TestBlacklistMatching:
             ("Store Cue 5 /overwrite", "Store /overwrite"),
             ("Shutdown", "Shutdown"),
             ("Format Disk", "Format"),
+            # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 1). 폐집합 핀은
+            # 항목이 목록에 **있는지**만 세므로, 그 항목이 실제로 명령을 잡는지는
+            # 아무 검사도 보지 않고 있었다 — 이전 리비전들은 각자 자기 SPEC
+            # 파일에서 그 짝을 들었지만 t299 는 자기 파일이 없다. 여기 둔다.
+            ("Store Group 3", "Store Group"),
+            ("Store Timecode 9", "Store Timecode"),
         ],
     )
     def test_direct_blacklist_commands_are_blacklisted(self, line, entry):
