@@ -59,7 +59,15 @@ HELD = (
 #: category than safe, and nothing to do with v3). Asserting ``== "safe"`` here
 #: would pin an unrelated contract and fail for the wrong reason.
 UNCHANGED = (
-    ("Store Group 3", "DEPLOY's canonical SAFE literal"),
+    # `Store Group 3` was here as "DEPLOY's canonical SAFE literal". t299
+    # (SPEC-COPILOT-CLASSIFYGAP-001 Phase 1) removed it when ruleset v5 blacklisted
+    # `Store Group`. This tuple asks "did the v3 widening reach anything else?", and
+    # a command a LATER revision deliberately took can no longer answer that
+    # question — keeping it would turn this file's claim from "v3 stayed scoped"
+    # into "no revision ever widened", which is false. Replaced by `Store Page 3`,
+    # a `Store` object that IS still descoped, so the tuple keeps a Store-family
+    # member and the check keeps its original shape.
+    ("Store Page 3", "still descoped: measurement corpus representative"),
     ("Store Cue 12", "measurement corpus representative"),
     ("Go Sequence 4 Cue 2", "playback, not replacement — invoking, never blacklisted"),
     ("Label Group 3 'Vocals'", "labelling"),
@@ -106,8 +114,16 @@ class TestNoCollateralWidening:
 class TestNonVacuity:
     def test_the_probe_can_report_safe(self):
         """Without this, a broken ``_verdict`` returning 'blacklisted' for
-        everything would make every assertion above pass."""
-        assert _verdict("Store Group 3").category == "safe"
+        everything would make every assertion above pass.
+
+        t299 (ruleset v5): the literal was ``Store Group 3`` until v5 blacklisted
+        it. A non-vacuity arm has to name a command the ruleset genuinely lets
+        through — asserting ``safe`` on a blacklisted command would make this test
+        fail for the RIGHT reason while claiming the probe is broken, which is the
+        opposite of what it is for. Re-pointed at ``Store Page 3`` to match the
+        ``UNCHANGED`` tuple above.
+        """
+        assert _verdict("Store Page 3").category == "safe"
 
     def test_the_probe_can_report_blacklisted_from_a_pre_existing_entry(self):
         """And a v1 entry, so the check is not measuring only what v3 added."""

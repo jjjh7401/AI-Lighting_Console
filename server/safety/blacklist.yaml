@@ -100,7 +100,72 @@
 #     classify "safe" and REMAIN RATIFIED as such in
 #     `test_writegate.py::UNCHANGED_SAFE`. Removing one line from that tuple does
 #     not release the rest.
-version: 4
+#
+#   v4 -> v5  SPEC-COPILOT-CLASSIFYGAP-001 (카드 t299) 가 "Store Group" 과
+#     "Store Timecode" 를 넣는다. v2·v3·v4 가 비준받은 것과 같은 거짓음성 모양이다
+#     — 건강한 게이트를 쓰기가 그냥 지나간다. 2026-09-07 브라우저 실측에서 곡→콘솔
+#     흐름이 명령 28개를 보내고 25개가 실행됐는데 감사 로그에 `approved` 항목이
+#     없었다. 그 번들 안에 `Store Timecode 9` 와 `Store Group <n>` 이 있었고,
+#     분류 층은 둘 다 "safe" 로 답했다.
+#
+#     오늘 그것들을 막는 것은 호출 자리마다 손으로 붙인 봉합(`BatchRisk` 선언)
+#     하나뿐이고, t321 실측(`test_writegate_session_sites.py::SEAL_DEFENCE`)에
+#     따르면 열 자리 중 일곱은 그 봉합이 유일한 방어다. 이 리비전은 봉합을
+#     대체하지 않는다 — 봉합 뒤에 받침을 놓는다. 새 디스패치 자리에서 작성자가
+#     선언을 잊어도 분류 층이 받아낸다.
+#
+#     왜 `Store` 동사가 아닌가: 2026-08-05 사용자 결정과 카드 t86 의 재측정이
+#     동사 확대를 두 번 거절했고(전체 67건, 평범한 대화 한 회차에도 승인 카드),
+#     그 거절은 이 리비전도 지킨다. v4 가 오브젝트 하나만 넓힌 것과 같은 규율로
+#     오브젝트 둘만 넓힌다.
+#
+#     이 리비전의 범위 — Phase 1 뿐이다. `Store Sequence … Cue …` 와 `Store Cue`
+#     는 같은 SPEC 이 닫으려는 네 명령에 들지만 비용이 훨씬 크고(플러그인 실측
+#     33·62) 위험 신호 후보(FX 번들·큐시트 반영·곡 반영)가 그쪽에만 있어서
+#     후속 카드로 나눠 받는다. 그러니 이 파일이 v5 라는 사실은 「분류 구멍이
+#     닫혔다」가 아니라 「구멍 넷 중 둘이 닫혔다」다.
+#
+#     MEASURED cost (이 트리에서 실측, `blacklist.yaml` 을 실제로 고쳐서 전체
+#     스위트를 돌린 값 — 계측 플러그인 인공물이 섞이지 않는다):
+#
+#       기준선 (base 59ac394, 확대 전): 12002 passed · 19 skipped · 0 failed
+#       두 항목 동시 투입:              11996 passed · 19 skipped · 14 failed
+#
+#     전체 수가 12021 에서 12029 로 늘었다 — 항목 하나가 테스트를 4개 만들므로
+#     둘이면 +8 이다. 14건의 파일별 분포: test_writegate 4 · safety_ruleset 2 ·
+#     showfile_replacement_gate 2 · bulkgate_declaration 2 · deploy_scan 1 ·
+#     deploy_pipeline 1 · deploy_gate_e2e 1 · writegate_merge_gap 1.
+#     전부 폐집합 핀·눈감음 핀·「안전한 예」 리터럴이다. 쇼파일을 안 고치는
+#     흐름이 승인을 요구하게 된 자리는 0건이었다(= 확대가 틀렸다는 신호 없음).
+#
+#     항목별 개별 비용은 이 트리에서 재지 않았다 — 두 항목이 폐집합 핀·버전
+#     핀·`UNCHANGED_SAFE` 핀에서 겹치므로 개별 합은 동시 투입값보다 크고,
+#     동시 투입값이 이 리비전이 실제로 내는 비용이다. 참고로 plan 단계가 계측
+#     플러그인으로 잰 개별값은 `Store Timecode` 6 · `Store Group` 13(다른
+#     트리 e0a2263, 전체 12021)이고 그 둘에는 플러그인 인공물 2건이 각각
+#     포함돼 있다 — 옮겨 온 값이므로 이 트리의 실측으로 읽지 말 것.
+#
+#     MUTATION (항목이 실제로 방어를 만드는지): `Store Timecode` 한 줄만
+#     되돌리면 단언 3개가 빨개진다 — 3 failed / 12026 total.
+#     `test_safety_classify::test_direct_blacklist_commands_are_blacklisted`
+#     `[Store Timecode 9]`(분류 관측) · `test_safety_ruleset::
+#     test_blacklist_is_exactly_the_shipped_closed_set`(폐집합 멤버십) ·
+#     `test_writegate_merge_gap::test_the_blacklist_carries_no_entry_that_
+#     could_match_a_sequence_store`(Store 계열 목록). 셋 중 **분류를 관측하는
+#     것은 첫째 하나뿐**이고, 그것은 이 리비전이 새로 넣은 핀이다 — 없었다면
+#     항목을 지워도 장부 두 줄만 빨개지고 「카드가 안 뜨게 됐다」는 아무
+#     검사도 말하지 않았다.
+#
+#     [READ THIS BEFORE QUOTING ANY FAILURE COUNT] 분모는 여전히 움직인다.
+#     `test_writegate.py` 가 이 파일의 blacklist 를 순회하므로 항목 하나를
+#     넣으면 테스트가 4개 늘어난다. 위 숫자를 인용할 때는 그 시점의 전체 수를
+#     반드시 같이 적는다.
+#
+#     NOT closed by this revision: `Store Sequence`, `Store Cue`, `Store Page`,
+#     `Store Macro`, `Assign`, `Copy` 와 `Label` 계열 전체는 아직 "safe" 로
+#     분류되고 `test_writegate.py::UNCHANGED_SAFE` 가 그 판정을 계속 비준한다.
+#     그 튜플에서 줄 둘을 뺀 것이 나머지를 풀지 않는다.
+version: 5
 
 blacklist:
   - "Delete"
@@ -170,6 +235,22 @@ blacklist:
   # Scoped to the OBJECT, like `Set Fixture` above and for the same reason: keying
   # on the verb would be the widening whose cost is recorded in the v4 header.
   - "Store Preset"
+  # 곡→콘솔 쓰기 (v5). 위의 `Store Preset` 이 프리셋 풀을 닫았지만, 2026-09-07
+  # 브라우저 실측에서 실제로 콘솔에 닿은 쓰기는 그룹 풀과 타임코드 슬롯이었다.
+  # 둘 다 쇼파일 상태이고, 이 앱에는 되돌리는 SEND 경로가 없다.
+  #
+  # 오브젝트 기준이다 — `Store` 동사를 넣는 확대는 2026-08-05 결정과 t86 이
+  # 비용 근거로 두 번 거절했고 이 리비전이 그 거절을 지킨다(v5 헤더 참조).
+  #
+  # 과다매칭은 설계된 방향이다(`classify.py` 모듈 docstring): `_keyword_match` 는
+  # 명령토큰 -> 항목키워드 방향으로 축약을 받으므로 `Store Gro 3` 이나
+  # `Store Tim 9` 같은 축약형도 걸린다. 그게 옳다 — 여전히 쇼파일 쓰기다.
+  #
+  # 안 담기는 것: `Label Group` 은 「라벨링은 패치 쓰기가 아니다」라는 의미
+  # 판단으로 제외돼 있고(비용 측정으로 뒤집을 종류가 아니다), 선택 명령인
+  # `Group 4` 는 동사가 `Group` 이라 `Store` 항목에 애초에 안 닿는다.
+  - "Store Group"
+  - "Store Timecode"
 
 invoking_verbs:
   verbs:

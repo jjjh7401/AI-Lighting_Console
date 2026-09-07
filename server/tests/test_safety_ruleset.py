@@ -50,6 +50,13 @@ EXPECTED_BLACKLIST = {
     # was re-measured at 67 suite failures and would put an approval card on one
     # ordinary conversational turn (see the v4 header in blacklist.yaml).
     "Store Preset",
+    # v5 — 곡→콘솔 쓰기. SPEC-COPILOT-CLASSIFYGAP-001(카드 t299)이 넣었다.
+    # 2026-09-07 브라우저 실측에서 명령 28개가 나가고 25개가 실행됐는데 감사
+    # 로그의 `approved` 는 0건이었고, 그 번들에 이 둘이 들어 있었다. v4 와 같은
+    # 규율으로 오브젝트만 넓힌다 — `Store` 동사 확대는 여전히 거절돼 있다.
+    # 실측 비용: 이 항목 둘 동시 투입으로 14 failed / 12029 total (v5 헤더).
+    "Store Group",
+    "Store Timecode",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -147,7 +154,10 @@ class TestShippedRuleset:
         # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
         ruleset = load_ruleset()
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
-        assert len(ruleset.blacklist) == 10
+        # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299)에서 10 -> 12. 이 핀은
+        # 비준 리비전마다 갱신되도록 설계됐다 — 갱신 자체가 마찰이고, 그 마찰이
+        # 헤더에 근거를 적게 만드는 장치다.
+        assert len(ruleset.blacklist) == 12
 
     def test_every_shipped_revision_is_documented_in_the_file(self):
         """A version bump with no recorded reason is a silent widening.
@@ -173,7 +183,9 @@ class TestShippedRuleset:
         "every shipped revision" generality is made REAL by driving the same
         checker over a synthetic v4 file in `TestRevisionJustification`.
         """
-        assert load_ruleset().version == 4
+        # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299). 이 핀은 버전을 올리는
+        # 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이다.
+        assert load_ruleset().version == 5
         _assert_every_revision_is_justified(DEFAULT_RULESET_PATH)
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):

@@ -1,0 +1,441 @@
+........................................................................ [  0%]
+........................................................................ [  1%]
+........................................................................ [  1%]
+........................................................................ [  2%]
+........................................................................ [  2%]
+........................................................................ [  3%]
+........................................................................ [  4%]
+........................................................................ [  4%]
+........................................................................ [  5%]
+........................................................................ [  5%]
+........................................................................ [  6%]
+........................................................................ [  7%]
+........................................................................ [  7%]
+........................................................................ [  8%]
+........................................................................ [  8%]
+........................................................................ [  9%]
+........................................................................ [ 10%]
+........................................................................ [ 10%]
+........................................................................ [ 11%]
+........................................................................ [ 11%]
+........................................................................ [ 12%]
+........................................................................ [ 13%]
+........................................................................ [ 13%]
+........................................................................ [ 14%]
+........................................................................ [ 14%]
+........................................................................ [ 15%]
+........................................................................ [ 16%]
+........................................................................ [ 16%]
+........................................................................ [ 17%]
+........................................................................ [ 17%]
+........................................................................ [ 18%]
+........................................................................ [ 19%]
+.........F.............F................................................ [ 19%]
+............sss......................................................... [ 20%]
+...................................ss................................... [ 20%]
+........................................................................ [ 21%]
+........................................................................ [ 22%]
+............F..........................................................F [ 22%]
+........................................................................ [ 23%]
+...F.................................................................... [ 23%]
+...............................................................ss....... [ 24%]
+........................................................................ [ 25%]
+........................................................................ [ 25%]
+........................................................................ [ 26%]
+........................................................................ [ 26%]
+........................................................................ [ 27%]
+........................................................................ [ 28%]
+........................................................................ [ 28%]
+........................................................................ [ 29%]
+........................................................................ [ 29%]
+........................................................................ [ 30%]
+........................................................................ [ 31%]
+........................................................................ [ 31%]
+........................................................................ [ 32%]
+........................................................................ [ 32%]
+...........ss........................................................... [ 33%]
+........................................................................ [ 34%]
+........................................................................ [ 34%]
+........................................................................ [ 35%]
+........................................................................ [ 35%]
+........................................................................ [ 36%]
+........................................................................ [ 37%]
+........................................................................ [ 37%]
+........................................................................ [ 38%]
+........................................................................ [ 38%]
+........................................................................ [ 39%]
+........................................................................ [ 40%]
+........................................................................ [ 40%]
+........................................................................ [ 41%]
+........................................................................ [ 41%]
+........................................................................ [ 42%]
+........................................................................ [ 43%]
+........................................................................ [ 43%]
+........................................................................ [ 44%]
+........................................................................ [ 44%]
+........................................................................ [ 45%]
+........................................................................ [ 46%]
+........................................................................ [ 46%]
+........................................................................ [ 47%]
+........................................................................ [ 47%]
+........................................................................ [ 48%]
+........................................................................ [ 49%]
+........................................................................ [ 49%]
+........................................................................ [ 50%]
+........................................................................ [ 50%]
+........................................................................ [ 51%]
+........................................................................ [ 52%]
+........................................................................ [ 52%]
+........................................................................ [ 53%]
+........................................................................ [ 53%]
+........................................................................ [ 54%]
+........................................................................ [ 55%]
+........................................................................ [ 55%]
+........................................................................ [ 56%]
+........................................................................ [ 56%]
+........................................................................ [ 57%]
+........................................................................ [ 58%]
+........................................................................ [ 58%]
+........................................................................ [ 59%]
+........................................................................ [ 59%]
+........................................................................ [ 60%]
+........................................................................ [ 61%]
+........................................................................ [ 61%]
+........................................................................ [ 62%]
+..................................................FF.................... [ 62%]
+........................................................................ [ 63%]
+........................................................................ [ 64%]
+........................................................................ [ 64%]
+........................................................................ [ 65%]
+........................................................................ [ 65%]
+........................................................................ [ 66%]
+........................................................................ [ 67%]
+........................................................................ [ 67%]
+........................................................................ [ 68%]
+..............................................................F....F.... [ 68%]
+........................................................................ [ 69%]
+........................................................................ [ 70%]
+........................................................................ [ 70%]
+........................................................................ [ 71%]
+.......................................................................s [ 71%]
+s....................................................................... [ 72%]
+........................................................................ [ 73%]
+........................................................................ [ 73%]
+........................................................................ [ 74%]
+........................................................................ [ 74%]
+........................................................................ [ 75%]
+........................................................................ [ 76%]
+........................................................................ [ 76%]
+........................................................................ [ 77%]
+........................................................................ [ 77%]
+........................................................................ [ 78%]
+........................................................................ [ 79%]
+........................................................................ [ 79%]
+........................................................................ [ 80%]
+........................................................................ [ 80%]
+........................................................................ [ 81%]
+........................................................................ [ 82%]
+........................................................................ [ 82%]
+........................................................................ [ 83%]
+........................................................................ [ 83%]
+........................................................................ [ 84%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 86%]
+..............................................................s......... [ 86%]
+........................................................................ [ 87%]
+........................................................................ [ 87%]
+........................................................................ [ 88%]
+........................................................................ [ 89%]
+........................................................................ [ 89%]
+........................................................................ [ 90%]
+........................................................................ [ 90%]
+........................................................................ [ 91%]
+........................................................................ [ 92%]
+........................................................................ [ 92%]
+........................................................................ [ 93%]
+........................................................................ [ 93%]
+........................................................................ [ 94%]
+........................................................................ [ 95%]
+........................................................................ [ 95%]
+........................................................................ [ 96%]
+........................................................................ [ 96%]
+........................................................................ [ 97%]
+........................................................................ [ 98%]
+.....................................................s.............F.... [ 98%]
+.......FF...F...............F........................................... [ 99%]
+...ss...s....ss...s..................................................... [ 99%]
+.....                                                                    [100%]
+=================================== FAILURES ===================================
+_ TestDeclarationSplitsTheVerdict.test_without_the_declaration_the_bundle_clears _
+
+self = <server.tests.test_bulkgate_declaration.TestDeclarationSplitsTheVerdict object at 0x10cccdf10>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-602/test_without_the_declaration_t0')
+
+    def test_without_the_declaration_the_bundle_clears(self, tmp_path):
+        gate, _, _ = _gate(tmp_path, approval_port=ScriptedApproval(decisions=[False]))
+        decision = gate.screen(list(SONGCUE_BUNDLE))
+        # 승인을 항상 거절하는 포트를 붙였는데도 청산된다 — 아무도 안 물었다는
+        # 뜻이고, 이것이 2026-09-07 에 관측된 상태다.
+>       assert decision.cleared is True
+E       assert False is True
+E        +  where False = ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='Store Sequence 210 Cue 1 /Merge', ...losed-set entry 'Store Timecode')",), warnings=()),)), notice='bundle rejected by the approver — nothing was executed').cleared
+
+server/tests/test_bulkgate_declaration.py:63: AssertionError
+_ TestLockAndBackupStayBetweenApprovalAndClearance.test_an_undeclared_safe_bundle_still_skips_the_backup _
+
+self = <server.tests.test_bulkgate_declaration.TestLockAndBackupStayBetweenApprovalAndClearance object at 0x10cccdfd0>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-602/test_an_undeclared_safe_bundle0')
+
+    def test_an_undeclared_safe_bundle_still_skips_the_backup(self, tmp_path):
+        backup_calls: list[str] = []
+        backup = BackupManager(backup_action=lambda: backup_calls.append("b"))
+        gate, _, _ = _gate(
+            tmp_path, approval_port=ScriptedApproval(decisions=[True]), backup=backup
+        )
+        gate.screen(list(SONGCUE_BUNDLE))
+>       assert backup_calls == []
+E       AssertionError: assert ['b'] == []
+E         
+E         Left contains one more item: 'b'
+E         Use -v to get more diff
+
+server/tests/test_bulkgate_declaration.py:230: AssertionError
+_ TestSafeDeployThenInvoke.test_registered_non_destructive_plugin_passes_audited _
+
+self = <server.tests.test_deploy_gate_e2e.TestSafeDeployThenInvoke object at 0x10cf57650>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-602/test_registered_non_destructiv0')
+
+    def test_registered_non_destructive_plugin_passes_audited(self, tmp_path):
+        pipeline, gate, console, audit, approval, _ = _stack(tmp_path)
+        outcome = pipeline.deploy("Helper", SAFE_SOURCE)
+        assert outcome.status == "deployed"
+>       assert outcome.destructive is False
+E       AssertionError: assert True is False
+E        +  where True = DeployOutcome(status='deployed', detail='deployed', destructive=True, compile_error='', scan=ScanReport(destructive=Tr...ynamically assembled Lua strings can evade it; the human review gate remains the authoritative control (REQ-MVP-027)')).destructive
+
+server/tests/test_deploy_gate_e2e.py:93: AssertionError
+______ TestApprovedDeploy.test_non_destructive_plugin_registers_unflagged ______
+
+self = <server.tests.test_deploy_pipeline.TestApprovedDeploy object at 0x10d299b10>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-602/test_non_destructive_plugin_re0')
+
+    def test_non_destructive_plugin_registers_unflagged(self, tmp_path):
+        review = ScriptedReview([True])
+        pipeline, _, registry, _ = _pipeline(tmp_path, review_port=review)
+        outcome = pipeline.deploy("Helper", SAFE_SOURCE)
+        assert outcome.status == "deployed"
+>       assert outcome.destructive is False
+E       AssertionError: assert True is False
+E        +  where True = DeployOutcome(status='deployed', detail='deployed', destructive=True, compile_error='', scan=ScanReport(destructive=Tr...ynamically assembled Lua strings can evade it; the human review gate remains the authoritative control (REQ-MVP-027)')).destructive
+
+server/tests/test_deploy_pipeline.py:164: AssertionError
+________ TestSafeAndNonDestructive.test_safe_commands_yield_no_findings ________
+
+self = <server.tests.test_deploy_scan.TestSafeAndNonDestructive object at 0x10d312390>
+ruleset = SafetyRuleset(version=5, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>'))
+
+    def test_safe_commands_yield_no_findings(self, ruleset):
+        report = _scan('Cmd("Store Group 3")\nCmd("List")', ruleset)
+>       assert report.destructive is False
+E       AssertionError: assert True is False
+E        +  where True = ScanReport(destructive=True, findings=(ScanFinding(line=1, command='Store Group 3', kind='blacklisted', matched_entry=...dynamically assembled Lua strings can evade it; the human review gate remains the authoritative control (REQ-MVP-027)').destructive
+
+server/tests/test_deploy_scan.py:86: AssertionError
+_____ TestShippedRuleset.test_blacklist_is_exactly_the_shipped_closed_set ______
+
+self = <server.tests.test_safety_ruleset.TestShippedRuleset object at 0x10e9959d0>
+
+    def test_blacklist_is_exactly_the_shipped_closed_set(self):
+        # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
+        ruleset = load_ruleset()
+>       assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
+E       AssertionError: assert {'Delete', 'F...'Remove', ...} == {'Delete', 'F...'Remove', ...}
+E         
+E         Extra items in the left set:
+E         'Store Group'
+E         'Store Timecode'
+E         Use -v to get more diff
+
+server/tests/test_safety_ruleset.py:149: AssertionError
+___ TestShippedRuleset.test_every_shipped_revision_is_documented_in_the_file ___
+
+self = <server.tests.test_safety_ruleset.TestShippedRuleset object at 0x10e995d50>
+
+    def test_every_shipped_revision_is_documented_in_the_file(self):
+        """A version bump with no recorded reason is a silent widening.
+    
+        Pinning entry text alone is not enough: it forces an edit here, but it
+        cannot force the edit to be JUSTIFIED. So `version: N` must not ship
+        without a `v<N-1> -> v<N>` line saying what changed and which SPEC
+        ratified it. Deliberately NOT an entry-count rule — a future revision
+        may add two entries at once, and a count formula would manufacture
+        false friction.
+    
+        The check is TWO layers because the single whole-file
+        `"v1 -> v2" in text` form it replaces was defeatable: swapping the
+        entire 12-line justification for a contentless `# REVISION HISTORY` +
+        `#   v1 -> v2` left this module green. The enforced property now
+        matches the documented one — the marker must sit INSIDE the REVISION
+        HISTORY block, and that marker's own entry must name the ratifying
+        SPEC. Both probes live in `TestRevisionJustification`.
+    
+        On the version pin: it STAYS (deliberate friction — a bump has to come
+        here and be argued). It does make the checker's loop single-iteration
+        at the shipped pin, so rather than soften the docstring to match, the
+        "every shipped revision" generality is made REAL by driving the same
+        checker over a synthetic v4 file in `TestRevisionJustification`.
+        """
+>       assert load_ruleset().version == 4
+E       AssertionError: assert 5 == 4
+E        +  where 5 = SafetyRuleset(version=5, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>')).version
+E        +    where SafetyRuleset(version=5, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>')) = load_ruleset()
+
+server/tests/test_safety_ruleset.py:176: AssertionError
+___ TestNoCollateralWidening.test_classification_did_not_move[Store Group 3] ___
+
+self = <server.tests.test_showfile_replacement_gate.TestNoCollateralWidening object at 0x10ed3aa50>
+command = 'Store Group 3', why = "DEPLOY's canonical SAFE literal"
+
+    @pytest.mark.parametrize(("command", "why"), UNCHANGED, ids=[c for c, _ in UNCHANGED])
+    def test_classification_did_not_move(self, command: str, why: str):
+>       assert _verdict(command).category != "blacklisted", why
+E       AssertionError: DEPLOY's canonical SAFE literal
+E       assert 'blacklisted' != 'blacklisted'
+E        +  where 'blacklisted' = RiskFinding(command='Store Group 3', category='blacklisted', risky=True, reasons=("blacklisted command (matches closed-set entry 'Store Group')",), unspecified_target=False, reference=None, matched_entry='Store Group').category
+E        +    where RiskFinding(command='Store Group 3', category='blacklisted', risky=True, reasons=("blacklisted command (matches closed-set entry 'Store Group')",), unspecified_target=False, reference=None, matched_entry='Store Group') = _verdict('Store Group 3')
+
+server/tests/test_showfile_replacement_gate.py:103: AssertionError
+________________ TestNonVacuity.test_the_probe_can_report_safe _________________
+
+self = <server.tests.test_showfile_replacement_gate.TestNonVacuity object at 0x10ed3b3d0>
+
+    def test_the_probe_can_report_safe(self):
+        """Without this, a broken ``_verdict`` returning 'blacklisted' for
+        everything would make every assertion above pass."""
+>       assert _verdict("Store Group 3").category == "safe"
+E       AssertionError: assert 'blacklisted' == 'safe'
+E         
+E         - safe
+E         + blacklisted
+
+server/tests/test_showfile_replacement_gate.py:110: AssertionError
+_ TestScopeIsHeldExactly.test_the_form_stays_non_risky[Store Group 3-descoped: DEPLOY's canonical SAFE_SOURCE literal] _
+
+self = <server.tests.test_writegate.TestScopeIsHeldExactly object at 0x10fc1f550>
+command = 'Store Group 3'
+why = "descoped: DEPLOY's canonical SAFE_SOURCE literal"
+
+    @pytest.mark.parametrize(("command", "why"), UNCHANGED_SAFE)
+    def test_the_form_stays_non_risky(self, command, why):
+        finding = _classify(command)
+>       assert finding.risky is False, why
+E       AssertionError: descoped: DEPLOY's canonical SAFE_SOURCE literal
+E       assert True is False
+E        +  where True = RiskFinding(command='Store Group 3', category='blacklisted', risky=True, reasons=("blacklisted command (matches closed-set entry 'Store Group')",), unspecified_target=False, reference=None, matched_entry='Store Group').risky
+
+server/tests/test_writegate.py:192: AssertionError
+_ TestScopeIsHeldExactly.test_the_measurement_corpus_cannot_collide_with_this_entry _
+
+self = <server.tests.test_writegate.TestScopeIsHeldExactly object at 0x10fc28890>
+
+    def test_the_measurement_corpus_cannot_collide_with_this_entry(self):
+        """AC-WRITEGATE-006, checked at the SOURCE rather than by running M6a.
+    
+        `corpus.yaml`'s header declares its 21 baseline scenarios "clear the
+        safety gate without approval (non-risky verbs only)". This preserves that
+        invariant by SCOPE, not by luck — and asserts it over the PARSED corpus
+        rather than the YAML text, so it keeps holding as scenarios are added. If
+        a future revision adds a `Store` entry, THIS is the test that stops it,
+        naming the exact scenarios it would break.
+    
+        The v4 revision (SPEC-COPILOT-UNREQ-001) DID add a Store entry, and this
+        test caught it — working exactly as the paragraph above promised. The two
+        scenarios it names are recorded below as a RATIFIED exception rather than
+        asserted away, so the tripwire still bites on any collision that was not
+        argued for. The corpus header's own invariant is now narrower than it
+        reads: see the note this revision added to corpus.yaml.
+        """
+        offenders = _corpus_offenders(load_corpus())
+>       assert offenders == list(RATIFIED_CORPUS_COLLISIONS), (
+            "the set of corpus commands held by the gate is not the ratified one "
+            f"— expected {list(RATIFIED_CORPUS_COLLISIONS)}, got {offenders}. A "
+            "NEW collision means a ruleset revision broke a baseline scenario "
+            "without arguing for it; a MISSING one means a ratified collision "
+            "silently disappeared."
+        )
+E       AssertionError: the set of corpus commands held by the gate is not the ratified one — expected [('preset-store-1', 'Store Preset 4.1'), ('preset-store-2', 'Store Preset 4.7')], got [('group-create-1', 'Store Group 3'), ('group-create-2', 'Store Group 8'), ('group-create-3', 'Store Group 11'), ('preset-store-1', 'Store Preset 4.1'), ('preset-store-2', 'Store Preset 4.7')]. A NEW collision means a ruleset revision broke a baseline scenario without arguing for it; a MISSING one means a ratified collision silently disappeared.
+E       assert [('group-crea... Preset 4.7')] == [('preset-sto... Preset 4.7')]
+E         
+E         At index 0 diff: ('group-create-1', 'Store Group 3') != ('preset-store-1', 'Store Preset 4.1')
+E         Left contains 3 more items, first extra item: ('group-create-3', 'Store Group 11')
+E         Use -v to get more diff
+
+server/tests/test_writegate.py:212: AssertionError
+___ TestScopeIsHeldExactly.test_the_corpus_collision_check_can_actually_fail ___
+
+self = <server.tests.test_writegate.TestScopeIsHeldExactly object at 0x10fc28bd0>
+
+    def test_the_corpus_collision_check_can_actually_fail(self):
+        # Non-vacuity: the predicate must be able to say True, or the test above
+        # would pass over an empty check.
+        assert _would_be_held("Set Fixture 11 Posx '-3.5'") is True
+>       assert _would_be_held("Store Group 3") is False
+E       AssertionError: assert True is False
+E        +  where True = _would_be_held('Store Group 3')
+
+server/tests/test_writegate.py:224: AssertionError
+_ TestIndirectRoutes.test_the_deploy_scan_still_passes_a_genuinely_safe_source _
+
+self = <server.tests.test_writegate.TestIndirectRoutes object at 0x10fc2a650>
+
+    def test_the_deploy_scan_still_passes_a_genuinely_safe_source(self):
+        # Non-vacuity: DEPLOY's canonical SAFE_SOURCE literal. If this went
+        # destructive, the entry would have been scoped too widely.
+        source = 'local function main()\n    Cmd("Store Group 3")\nend\nreturn main\n'
+        report = scan_lua_source(source, RULESET)
+>       assert report.destructive is False
+E       AssertionError: assert True is False
+E        +  where True = ScanReport(destructive=True, findings=(ScanFinding(line=2, command='Store Group 3', kind='blacklisted', matched_entry=...dynamically assembled Lua strings can evade it; the human review gate remains the authoritative control (REQ-MVP-027)').destructive
+
+server/tests/test_writegate.py:374: AssertionError
+____ test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store _____
+
+    def test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store() -> None:
+        """최소 수정 자리를 기록한다: `Store Sequence` 라는 항목이 없다.
+    
+        이 단언이 깨지는 날은 누군가 그 항목을 넣은 날이고, 그때 이 파일 전체가
+        붉어져서 「고정해 둔 구멍이 닫혔다」를 알린다.
+        """
+        assert "Store Sequence" not in RULESET.blacklist
+        store_entries = [entry for entry in RULESET.blacklist if entry.split()[0] == "Store"]
+>       assert store_entries == ["Store /overwrite", "Store Preset"]
+E       AssertionError: assert ['Store /over...ore Timecode'] == ['Store /over...Store Preset']
+E         
+E         Left contains 2 more items, first extra item: 'Store Group'
+E         Use -v to get more diff
+
+server/tests/test_writegate_merge_gap.py:111: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a5fd170331823b378/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED server/tests/test_bulkgate_declaration.py::TestDeclarationSplitsTheVerdict::test_without_the_declaration_the_bundle_clears
+FAILED server/tests/test_bulkgate_declaration.py::TestLockAndBackupStayBetweenApprovalAndClearance::test_an_undeclared_safe_bundle_still_skips_the_backup
+FAILED server/tests/test_deploy_gate_e2e.py::TestSafeDeployThenInvoke::test_registered_non_destructive_plugin_passes_audited
+FAILED server/tests/test_deploy_pipeline.py::TestApprovedDeploy::test_non_destructive_plugin_registers_unflagged
+FAILED server/tests/test_deploy_scan.py::TestSafeAndNonDestructive::test_safe_commands_yield_no_findings
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_blacklist_is_exactly_the_shipped_closed_set
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_every_shipped_revision_is_documented_in_the_file
+FAILED server/tests/test_showfile_replacement_gate.py::TestNoCollateralWidening::test_classification_did_not_move[Store Group 3]
+FAILED server/tests/test_showfile_replacement_gate.py::TestNonVacuity::test_the_probe_can_report_safe
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_form_stays_non_risky[Store Group 3-descoped: DEPLOY's canonical SAFE_SOURCE literal]
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_measurement_corpus_cannot_collide_with_this_entry
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_corpus_collision_check_can_actually_fail
+FAILED server/tests/test_writegate.py::TestIndirectRoutes::test_the_deploy_scan_still_passes_a_genuinely_safe_source
+FAILED server/tests/test_writegate_merge_gap.py::test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store
+14 failed, 11996 passed, 19 skipped, 1 warning in 159.64s (0:02:39)
+exit=1

@@ -41,6 +41,29 @@ t291 실측에서 초안 반영이 명령 5건을 보냈고 감사 로그는 전
 디스패치 자리들은 `server/tests/test_write_dispatch_census.py` 의
 `WRITE_WITHOUT_SEAM_DISPATCHES` 에 이름과 사유로 등재돼 있고, 각자 후속 카드를
 갖는다. 그 표가 「분류했다」고 말할 뿐 「안전하다」고는 말하지 않는다.
+
+---
+
+## 못을 반쯤 뽑은 기록 (SPEC-COPILOT-CLASSIFYGAP-001 Phase 1, 카드 t299)
+
+위 종결 기록이 「아래 단언들은 바이트 그대로다」라고 적었다. **그 문장은 이제
+절반만 참이다** — 조용히 뒤집으면 다음 사람이 사고로 읽으므로 여기 적는다.
+
+**무엇이 움직였나.** 블랙리스트 v4 -> v5 가 `Store Group` 과 `Store Timecode`
+둘을 넣었다. 위 종결 기록이 「분류는 의도적으로 안 움직였다」고 적은 근거는
+t292 의 부수피해 8건이었는데, 이 트리에서 다시 재니 그 8은 `Store Sequence`
+단독 확대의 낡은 값이었고 같은 항목이 33건이 됐다(분모가 움직였다). t299 는
+비용이 작고 위험 신호가 없는 두 항목만 먼저 넣었다 — 실측 14건 / 전체 12029,
+전부 폐집합 핀과 「안전한 예」 리터럴이다.
+
+**무엇이 안 움직였나.** `Store Sequence` 와 `Store Cue` 는 **여전히 폐집합에
+없다.** 그래서 아래 `UNCARDED_SEQUENCE_WRITES` 세 줄과
+`test_the_same_write_with_overwrite_does_raise_a_card` 의 비대칭은 **바이트
+그대로 유효한 관측**이다 — 고쳐서 통과시킨 것이 아니라 아직 안 닫힌 구멍을
+계속 고정하고 있는 것이다. 그 둘은 각자 후속 카드(Phase 2·3)를 갖는다.
+
+**그래서 이 파일이 초록인 것은 「구멍이 닫혔다」가 아니다.** 네 명령 중 둘이
+닫혔고 둘이 열려 있다. 아래 `store_entries` 단언이 그 상태를 그대로 센다.
 """
 
 from __future__ import annotations
@@ -61,9 +84,13 @@ def _classify(command: str):
 
 
 #: 오늘 `safe` 로 분류되는 쇼파일 쓰기들 — 승인 카드가 뜨지 않는다.
-#: `Store Cue 12` / `Store Group 3` 은 `test_writegate.py::UNCHANGED_SAFE` 가
-#: 비용 근거로 이미 비준한 항목이라 여기 다시 적지 않는다. 여기 적는 것은
-#: 그 표에 없던 `Store Sequence` 계열이다.
+#: `Store Cue 12` 는 `test_writegate.py::UNCHANGED_SAFE` 가 비용 근거로 이미
+#: 비준한 항목이라 여기 다시 적지 않는다. 여기 적는 것은 그 표에 없던
+#: `Store Sequence` 계열이다.
+#:
+#: t299(Phase 1)에서 `Store Group 3` 은 이 목록의 짝이 아니게 됐다 — v5 가
+#: 그것을 폐집합에 넣었으므로 이제 카드가 뜬다. `UNCHANGED_SAFE` 에서도 같은
+#: 이유로 빠졌다.
 UNCARDED_SEQUENCE_WRITES = (
     "Store Sequence 210 Cue 1 /Merge",
     "Store Sequence 210 Cue 1",
@@ -105,7 +132,18 @@ def test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store() -> N
 
     이 단언이 깨지는 날은 누군가 그 항목을 넣은 날이고, 그때 이 파일 전체가
     붉어져서 「고정해 둔 구멍이 닫혔다」를 알린다.
+
+    갱신 근거 (t299 / SPEC-COPILOT-CLASSIFYGAP-001 Phase 1): v5 가 `Store Group`
+    과 `Store Timecode` 를 넣었으므로 `store_entries` 목록이 넷이 된다. 첫
+    단언(`"Store Sequence" not in ...`)은 **바꾸지 않는다** — Phase 1 은
+    `Store Sequence` 를 안 넣었고, 그 성질은 아직 참이다. 즉 이 검사는 이제
+    「Sequence 구멍은 아직 열려 있고, Store 계열 중 넷이 닫혔다」를 센다.
     """
     assert "Store Sequence" not in RULESET.blacklist
     store_entries = [entry for entry in RULESET.blacklist if entry.split()[0] == "Store"]
-    assert store_entries == ["Store /overwrite", "Store Preset"]
+    assert store_entries == [
+        "Store /overwrite",
+        "Store Preset",
+        "Store Group",
+        "Store Timecode",
+    ]
