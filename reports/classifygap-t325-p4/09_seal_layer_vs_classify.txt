@@ -1,0 +1,4 @@
+Assign Sequence 4 Page 1.201 -> None
+Assign Sequence 7 Page 2.203 -> None
+Assign Sequence 201 At Executor 101 -> BatchRisk(reason='쇼파일 쓰기 — Executor 101 에 시퀀스를 배정합니다. 이 번들에는 되돌리기 명령이 없습니다.', kind='model_run_commands')
+Copy Sequence 300 At 210 -> BatchRisk(reason='쇼파일 쓰기 — 시퀀스를 300→210 로 복제합니다. 이 번들에는 되돌리기 명령이 없습니다.', kind='model_run_commands')

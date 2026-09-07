@@ -71,6 +71,20 @@ EXPECTED_BLACKLIST = {
     # 오브젝트 기준은 그대로다.
     # 실측 비용: 이 항목 하나로 33 failed / 12047 total (v7 헤더).
     "Store Cue",
+    # v8 — 같은 SPEC 의 Phase 4 (카드 t325). 위의 여섯 `Store` 항목이 다 닫힌 뒤에도
+    # `test_writegate_session_sites.py::SEAL_DEFENCE` 의 seal-only 두 자리
+    # (`_offer_fx_executor_assignment` · `_setlist_mode`)가 남아 있었고, 그 둘이
+    # 실어 나르는 것이 정확히 이 두 줄이다. `write_reason.py` 는 t323 부터 두 형태를
+    # 「쇼파일 쓰기」로 읽고 있었는데 분류 층에만 항목이 없었다 — 한 층이 쓰기라고
+    # 부르는 명령을 다른 층이 safe 라고 답하던 셈이고, 그것이 v5~v7 이 닫은 것과
+    # 같은 결함 모양이다.
+    #
+    # **이 둘은 `Store` 형태가 아니다.** 그래서 규율의 이름을 정확히 적는다: 넣는
+    # 것은 여전히 오브젝트이고(`Assign`·`Copy` 동사가 아니라 `Assign Sequence`·
+    # `Copy Sequence`), 동사 확대 거절은 그대로다.
+    # 실측 비용: 이 항목 둘 동시 투입으로 15 failed / 12066 total (v8 헤더).
+    "Assign Sequence",
+    "Copy Sequence",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -169,10 +183,11 @@ class TestShippedRuleset:
         ruleset = load_ruleset()
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
         # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 1)에서 10 -> 12,
-        # v6 (같은 SPEC Phase 2)에서 12 -> 13, v7 (같은 SPEC Phase 3)에서 13 -> 14.
+        # v6 (같은 SPEC Phase 2)에서 12 -> 13, v7 (같은 SPEC Phase 3)에서 13 -> 14,
+        # v8 (같은 SPEC Phase 4, 카드 t325)에서 14 -> 16.
         # 이 핀은 비준 리비전마다 갱신되도록 설계됐다 — 갱신 자체가 마찰이고, 그
         # 마찰이 헤더에 근거를 적게 만드는 장치다.
-        assert len(ruleset.blacklist) == 14
+        assert len(ruleset.blacklist) == 16
 
     def test_every_shipped_revision_is_documented_in_the_file(self):
         """A version bump with no recorded reason is a silent widening.
@@ -198,10 +213,10 @@ class TestShippedRuleset:
         "every shipped revision" generality is made REAL by driving the same
         checker over a synthetic v4 file in `TestRevisionJustification`.
         """
-        # v7 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 3). 이 핀은 버전을
+        # v8 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t325 Phase 4). 이 핀은 버전을
         # 올리는 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이고,
-        # 이 회차에서도 정확히 그렇게 걸렸다 — v7 을 배치하자 이 줄이 빨개졌다.
-        assert load_ruleset().version == 7
+        # 이 회차에서도 정확히 그렇게 걸렸다 — v8 을 배치하자 이 줄이 빨개졌다.
+        assert load_ruleset().version == 8
         _assert_every_revision_is_justified(DEFAULT_RULESET_PATH)
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):

@@ -146,10 +146,31 @@ UNCHANGED_SAFE = (
     #      `reports/classifygap-t299-p3/08_entry_order.txt`.
     # The corpus scenarios it collides with are ratified below rather than
     # re-pointed at another `Store` object, so this collision cannot recur.
+    #
+    # `Assign Sequence 4 Page 1.201` WAS here, ratified bare "descoped".
+    # SPEC-COPILOT-CLASSIFYGAP-001 (card t325, Phase 4) removed that one line when
+    # ruleset v8 took `Assign Sequence`. The argument for THAT line specifically:
+    # its ratification reason was the thinnest in this tuple — a bare "descoped"
+    # with no property named, inherited from the 2026-08-05 cost decision that was
+    # about the `Store` VERB, not about this object. Two measured observations
+    # replace it:
+    #   ① `write_reason.py::_ASSIGN_EXECUTOR` (card t323) already reads
+    #      `Assign Sequence <n> At Executor <m>` as a showfile write when a caller
+    #      declares a bundle, so the seal layer and the classification layer
+    #      disagreed about the same command;
+    #   ② `test_writegate_session_sites.py::SEAL_DEFENCE` measured this object as
+    #      the ONLY thing standing between `_offer_fx_executor_assignment` /
+    #      `_setlist_mode` and an unapproved console write — seal-only 2 of 11
+    #      (`reports/classifygap-t299-p3/07_seal_defence_p3.txt`).
+    #
+    # `Copy Page 1 At Page 4` STAYS. v8 takes `Copy Sequence`, an OBJECT, so the
+    # `Page` form is untouched — measured, not assumed:
+    # `reports/classifygap-t325-p4/05_probe_after.txt` [A-4] shows it still
+    # `matched_entry=None`. That is the whole point of scoping to the object.
     ("Store Page 3", "descoped: measurement corpus representative"),
     ("Store Macro 21", "descoped: measurement corpus representative"),
-    ("Assign Sequence 4 Page 1.201", "descoped"),
-    ("Copy Page 1 At Page 4", "descoped"),
+    ("Copy Page 1 At Page 4", "descoped: v8 took `Copy Sequence`, not the `Copy` verb"),
+    ("Assign Preset 4.1 At Executor 101", "descoped: v8 took `Assign Sequence`, not `Assign`"),
     ("Label Group 3 'Vocals'", "labelling is not a patch write"),
     ("Fixture 1 Thru 12", "selection, not a write"),
     ("Group 4", "selection, not a write"),
@@ -198,9 +219,30 @@ UNCHANGED_SAFE = (
 #: the accumulating price of closing the four measured false negatives, and it is
 #: recorded here rather than left for someone to rediscover mid-run.
 #:
+#: NARROWED A FOURTH TIME at ruleset v8 (same SPEC, card t325, Phase 4): the two
+#: `sequence_assign` scenarios join, because v8 blacklists `Assign Sequence`. Same
+#: shape, same consequence, and the running total is now **4 of the 10**
+#: representative task types (`group_create`, `preset_store`, `cue_store`,
+#: `sequence_assign`).
+#:
+#: 이 회차의 차이 하나는 기록해 둘 값이 있다. v5·v7 이 합류시킨 시나리오들은 봉합
+#: 층(`write_reason.py`)이 이미 「쇼파일 쓰기」로 읽던 줄이라 `_DECLARED_WRITE_SCENARIOS`
+#: 에도 들어 있었다. 이 둘은 다르다 — `Assign Sequence <n> Page <p>` 는
+#: `_ASSIGN_EXECUTOR`(`At Executor` 형태만 읽는다)에 안 닿아서 봉합 층이 못 봤고,
+#: 그래서 v8 이전에는 **어느 층도** 이 두 줄을 잡지 않았다. 실측:
+#: `reports/classifygap-t325-p4/09_seal_layer_vs_classify.txt`.
+#:
+#: `Copy Sequence` 는 여기에 아무것도 더하지 않는다. 그 이유가 「`Copy` 줄이 없어서」가
+#: **아니라는** 점이 이 리비전의 논거를 그대로 보여 준다 — 코퍼스에는 `Copy` 줄이 하나
+#: 있고(`page-setup-2` 의 `Copy Page 1 At Page 4`, corpus.yaml:140), 그것이 v8 뒤에도
+#: 안 걸린다. 실측: `matched_entry=None`
+#: (`reports/classifygap-t325-p4/05_probe_after.txt` [A-4]).
+#: 동사(`Copy`)를 넣었다면 이 시나리오도 무인 운전 밖으로 나갔을 것이다. 오브젝트로
+#: 좁힌 대가가 여기서 정확히 한 시나리오만큼 회수된다.
+#:
 #: Order matches `_corpus_offenders` iteration (scenario order in corpus.yaml,
 #: command order within a scenario) — group_create precedes preset_store, which
-#: precedes cue_store there.
+#: precedes cue_store, which precedes sequence_assign there.
 RATIFIED_CORPUS_COLLISIONS = (
     ("group-create-1", "Store Group 3"),
     ("group-create-2", "Store Group 8"),
@@ -209,6 +251,20 @@ RATIFIED_CORPUS_COLLISIONS = (
     ("preset-store-2", "Store Preset 4.7"),
     ("cue-store-1", "Store Cue 12"),
     ("cue-store-2", "Store Cue 5 Fade 3"),
+    # 갱신 근거 (t325 Phase 4, ruleset v8): `Assign Sequence` 가 폐집합에 들어오면서
+    # `sequence_assign` 시나리오 둘이 합류한다. v5·v7 의 narrowing 과 같은 모양이고
+    # 같은 대가다 — 이 둘도 무인 운전 밖으로 나간다. 누적 4 / 10 대표 과제 유형
+    # (`group_create` · `preset_store` · `cue_store` · `sequence_assign`).
+    #
+    # **이 두 줄에는 봉합이 없다 — 분류 층이 유일한 방어다.** 실측:
+    # `showfile_write_risk(["Assign Sequence 4 Page 1.201"], kind="model_run_commands")`
+    # -> `None` (`reports/classifygap-t325-p4/09_seal_layer_vs_classify.txt`).
+    # `write_reason.py::_ASSIGN_EXECUTOR` 는 `At Executor` 형태만 읽고 `Page` 형태는
+    # 못 읽기 때문이다. 그래서 이 두 시나리오는 `_DECLARED_WRITE_SCENARIOS` 에
+    # 없었고, v8 이 넣기 전에는 아무 층도 잡지 않았다 — 카드가 새로 뜨는 것이 아니라
+    # **처음 뜨는** 자리다.
+    ("sequence-assign-1", "Assign Sequence 4 Page 1.201"),
+    ("sequence-assign-2", "Assign Sequence 7 Page 2.203"),
 )
 
 

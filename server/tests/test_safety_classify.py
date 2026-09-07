@@ -212,11 +212,24 @@ class TestInvokingDetection:
         # 갱신 근거 (t299 Phase 3): 재는 축은 「호출 동사가 아니면 invoking 이 아니다」
         # 이고, 옛 리터럴 `Store Cue 5` 는 v7 이 폐집합에 넣어 `blacklisted` 가 됐다.
         # 이 축에는 `Store` 가 필요 없으므로 Phase 1·2 의 규율대로 **프로그래머 값**
-        # 으로 옮긴다 — 폐집합은 쇼파일 쓰기 오브젝트만 담으므로 어떤 리비전도 이
-        # 리터럴을 다시 잡지 않는다.
+        # 으로 옮긴다.
+        #
+        # 갱신 근거 (t325 Phase 4): 셋째 줄도 같은 이유로 옮긴다. 옛 리터럴
+        # `Assign Sequence 1 At Executor 201` 을 v8 이 폐집합에 넣었다.
+        #
+        # **여기서 규율의 근거가 바뀐다.** Phase 3 은 「폐집합은 쇼파일 쓰기 **오브젝트**
+        # 만 담으므로 어떤 리비전도 이 리터럴을 다시 잡지 않는다」라고 적었다. v8 뒤로
+        # 그 문장은 거짓이다 — 폐집합이 `Store` 밖의 동사(`Assign`·`Copy`)로 넓어졌으니
+        # 「비-`Store` 명령이면 안전하다」는 성립하지 않는다.
+        #
+        # 새 규율: 옮길 곳은 **선택·프로그래머 상태** 명령이다. 그쪽이 안전한 이유는
+        # 목록의 현재 내용이 아니라 의미다 — 선택(`Fixture 1 Thru 12`)과 프로그래머 값
+        # (`Fixture 1 At 50`)은 쇼파일을 만들거나 덮지 않으므로, 어떤 리비전도 그것을
+        # 「쇼파일 쓰기」로 넣을 수 없다. 오브젝트 목록에 기대는 근거는 리비전마다
+        # 만료되지만 이 근거는 안 만료된다.
         assert _classify("Fixture 1 At 50").category == "safe"
         assert _classify("List").category == "safe"
-        assert _classify("Assign Sequence 1 At Executor 201").category == "safe"
+        assert _classify("Fixture 1 Thru 12").category == "safe"
 
 
 class TestQuotedPropertyCommandContent:

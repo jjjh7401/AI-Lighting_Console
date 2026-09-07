@@ -318,18 +318,38 @@ class TestEverySealedSiteIsDriven:
 #:
 #: 남는 seal-only 둘은 `Assign Sequence` · `Copy Sequence` 만 실어 나르고, SPEC §F
 #: 가 그 둘을 범위 밖에 뒀다 — 그래서 Phase 3 까지 다 해도 0 이 되지 않는다.
+#:
+#: 갱신 근거 (t325 Phase 4 / 같은 SPEC): **seal-only 2 -> 0.** Phase 3 의 위 문단이
+#: 「§F 가 범위 밖에 둔 두 동사 때문에 0 이 되지 않는다」고 적었고, 카드 t325 가 그
+#: 범위를 넓혀 v8 로 두 오브젝트(`Assign Sequence`·`Copy Sequence`)를 넣었다. 예고된
+#: 대로 남은 두 자리가 움직였다:
+#:
+#:   `_offer_fx_executor_assignment`  seal-only -> redundant  (`Assign Sequence`)
+#:   `_setlist_mode`                  seal-only -> redundant  (`Assign Sequence` + `Copy Sequence`)
+#:
+#: 아래 값은 손으로 적지 않고 `reports/classifygap-t325-p4/probe_seal_defence_p4.py`
+#: 의 출력을 그대로 옮긴 것이다(`10_seal_defence_after.txt`).
+#:
+#: **결과로 이 파일의 두 검사 계열이 전부 skip 이 된다** — 자리 열하나가 다
+#: redundant 이므로 `test_a_seal_only_site_loses_every_card_without_its_declaration`
+#: 과 `test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card` 는 11/11 로
+#: 건너뛴다(skip 31 -> 35). 그것을 죽은 코드로 읽지 말 것: 두 검사는 **잠든 가드**다.
+#: 누가 blacklist 에서 항목을 빼면 그 자리가 다시 seal-only 가 되고 두 검사가 즉시
+#: 깨어나 「봉합이 유일한 방어가 됐다」를 관측한다. 지금 살아 있는 것은
+#: `test_the_recorded_defence_class_still_holds` 이고, 그것이 열한 자리 전부에서
+#: 표와 실측을 대조한다 — 이 표의 방어력은 그 검사 하나가 지탱한다.
 SEAL_DEFENCE = {
     "run_look_bundle": "redundant",
     "_look_pan_tilt": "redundant",
     "_position_fx_sequence": "redundant",
-    "_offer_fx_executor_assignment": "seal-only",
+    "_offer_fx_executor_assignment": "redundant",
     "_phaser_recall_sequence": "redundant",
     "_store_position_preset_looks": "redundant",
     "_position_cue_store": "redundant",
     "_position_cue_sheet": "redundant",
     "_merge_timeline_cue_position": "redundant",
     "_cue_sheet_draft_apply": "redundant",
-    "_setlist_mode": "seal-only",
+    "_setlist_mode": "redundant",
 }
 
 

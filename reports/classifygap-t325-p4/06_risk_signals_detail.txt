@@ -1,0 +1,231 @@
+.F..F..FF.................F.............F.......F..........FF........... [ 90%]
+........                                                                 [100%]
+=================================== FAILURES ===================================
+_______ TestHappyPathCounting.test_happy_path_produces_no_gate_anomalies _______
+
+self = <server.tests.test_measurement_runner.TestHappyPathCounting object at 0x10ce51b50>
+corpus = (Scenario(id='group-create-1', task_type='group_create', instruction='1번부터 12번 조명 묶어서 보컬 그룹으로 만들어줘', mock=MockScript(k...nds=('Store Cue 12', 'Label Cue 12 "Opening"'), query_path='', plugin_name='', plugin_source=''), field_terms=()), ...)
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-658/test_happy_path_produces_no_ga0')
+
+    def test_happy_path_produces_no_gate_anomalies(self, corpus, tmp_path):
+        # The baseline corpus must CLEAR the gate: no rejection, no hold, no
+        # grammar block, no lock proposal — anomalies would poison the rates.
+        session = build_offline_session(corpus, audit_dir=tmp_path)
+        report = run_measurement(corpus, session, _quick_config())
+        # v4 holds the preset-store scenarios; an offline run has no approver,
+        # so they come back rejected. Derived from the ratified set, not pinned.
+>       assert report["gate_anomalies"] == dict(rejected=len(GATE_HELD_SCENARIOS))
+E       AssertionError: assert {'rejected': 12} == {'rejected': 10}
+E         
+E         Differing items:
+E         {'rejected': 12} != {'rejected': 10}
+E         Use -v to get more diff
+
+server/tests/test_measurement_runner.py:102: AssertionError
+_ TestFirstGenerationErrorAccounting.test_retry_turn_is_segregated_from_the_judged_corpus _
+
+self = <server.tests.test_measurement_runner.TestFirstGenerationErrorAccounting object at 0x10ce53390>
+corpus = (Scenario(id='group-create-1', task_type='group_create', instruction='1번부터 12번 조명 묶어서 보컬 그룹으로 만들어줘', mock=MockScript(k...nds=('Store Cue 12', 'Label Cue 12 "Opening"'), query_path='', plugin_name='', plugin_source=''), field_terms=()), ...)
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-658/test_retry_turn_is_segregated_0')
+
+    def test_retry_turn_is_segregated_from_the_judged_corpus(self, corpus, tmp_path):
+        target = next(s for s in corpus if s.mock.kind == "commands")
+        bad_bundle = ("123 잘못된 명령",) + target.mock.commands
+        session = build_offline_session(
+            corpus,
+            audit_dir=tmp_path,
+            first_attempt_overrides={target.instruction: bad_bundle},
+        )
+        report = run_measurement(corpus, session, _quick_config())
+        round_trip = report["round_trip"]
+        result_scenarios = sum(1 for s in corpus if s.mock.kind in ("commands", "plugin"))
+        # The corrected scenario used one retry -> excluded from judgment.
+        assert round_trip["retry_turns"]["count"] == 1
+        assert len(round_trip["retry_turns"]["durations_seconds"]) == 1
+        # 판정에서 빠지는 것은 「재시도한 시나리오」와 「보류된 시나리오」의
+        # **합집합**이다. 카드 t323 이전에는 둘을 그냥 빼도 맞았는데, 선언
+        # 축이 생기면서 재시도 대상(첫 commands 시나리오)이 보류 집합에도
+        # 들어가 같은 자리를 두 번 빼고 있었다.
+>       assert round_trip["judged_turns"] == result_scenarios - len(
+            GATE_HELD_SCENARIOS | {target.id}
+        )
+E       AssertionError: assert 7 == (19 - 10)
+E        +  where 10 = len((frozenset({'cue-store-1', 'cue-store-2', 'group-create-1', 'group-create-2', 'group-create-3', 'macro-create-1', ...}) | {'group-create-1'}))
+
+server/tests/test_measurement_runner.py:157: AssertionError
+______ TestRoundTripStats.test_judged_median_p95_and_warm_cache_exclusion ______
+
+self = <server.tests.test_measurement_runner.TestRoundTripStats object at 0x10ce58810>
+corpus = (Scenario(id='group-create-1', task_type='group_create', instruction='1번부터 12번 조명 묶어서 보컬 그룹으로 만들어줘', mock=MockScript(k...nds=('Store Cue 12', 'Label Cue 12 "Opening"'), query_path='', plugin_name='', plugin_source=''), field_terms=()), ...)
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-658/test_judged_median_p95_and_war0')
+
+    def test_judged_median_p95_and_warm_cache_exclusion(self, corpus, tmp_path):
+        session = build_offline_session(corpus, audit_dir=tmp_path)
+        report = run_measurement(corpus, session, _quick_config(warmup=True))
+        round_trip = report["round_trip"]
+        result_scenarios = sum(
+            1
+            for s in corpus
+            if s.mock.kind in ("commands", "plugin") and s.id not in GATE_HELD_SCENARIOS
+        )
+        # Judged = zero-retry turns with >=1 console result: command scenarios
+        # minus the ones v4 now holds for approval (they are rejected offline),
+        # AND deploy scenarios (the confirmed deploy IS the console feedback —
+        # closes the M7 gap "deploy turn measurement marking unwired").
+>       assert round_trip["judged_turns"] == result_scenarios
+E       assert 7 == 9
+
+server/tests/test_measurement_runner.py:204: AssertionError
+_ TestRoundTripStats.test_query_turns_are_unjudged_but_plugin_turns_are_judged _
+
+self = <server.tests.test_measurement_runner.TestRoundTripStats object at 0x10ce58210>
+corpus = (Scenario(id='group-create-1', task_type='group_create', instruction='1번부터 12번 조명 묶어서 보컬 그룹으로 만들어줘', mock=MockScript(k...nds=('Store Cue 12', 'Label Cue 12 "Opening"'), query_path='', plugin_name='', plugin_source=''), field_terms=()), ...)
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-658/test_query_turns_are_unjudged_0')
+
+    def test_query_turns_are_unjudged_but_plugin_turns_are_judged(self, corpus, tmp_path):
+        # AC-MVP-001's 10 task types include "Lua 플러그인 배포": a deployed
+        # plugin turn received its console confirmation, so it belongs to the
+        # judged round-trip corpus; a pure state query receives no execution
+        # result and stays unjudged.
+        session = build_offline_session(corpus, audit_dir=tmp_path)
+        report = run_measurement(corpus, session, _quick_config())
+        query_only = sum(1 for s in corpus if s.mock.kind == "query")
+        # v4 adds the held preset scenarios to the unjudged side (rejected offline).
+>       assert report["round_trip"]["unjudged_turns"] == query_only + len(GATE_HELD_SCENARIOS)
+E       AssertionError: assert 14 == (2 + 10)
+E        +  where 10 = len(frozenset({'cue-store-1', 'cue-store-2', 'group-create-1', 'group-create-2', 'group-create-3', 'macro-create-1', ...}))
+
+server/tests/test_measurement_runner.py:222: AssertionError
+__________ TestInvokingDetection.test_plain_commands_are_not_invoking __________
+
+self = <server.tests.test_safety_classify.TestInvokingDetection object at 0x10c9de110>
+
+    def test_plain_commands_are_not_invoking(self):
+        # 갱신 근거 (t299 Phase 3): 재는 축은 「호출 동사가 아니면 invoking 이 아니다」
+        # 이고, 옛 리터럴 `Store Cue 5` 는 v7 이 폐집합에 넣어 `blacklisted` 가 됐다.
+        # 이 축에는 `Store` 가 필요 없으므로 Phase 1·2 의 규율대로 **프로그래머 값**
+        # 으로 옮긴다 — 폐집합은 쇼파일 쓰기 오브젝트만 담으므로 어떤 리비전도 이
+        # 리터럴을 다시 잡지 않는다.
+        assert _classify("Fixture 1 At 50").category == "safe"
+        assert _classify("List").category == "safe"
+>       assert _classify("Assign Sequence 1 At Executor 201").category == "safe"
+E       AssertionError: assert 'blacklisted' == 'safe'
+E         
+E         - safe
+E         + blacklisted
+
+server/tests/test_safety_classify.py:219: AssertionError
+_ TestScopeIsHeldExactly.test_the_form_stays_non_risky[Assign Sequence 4 Page 1.201-descoped] _
+
+self = <server.tests.test_writegate.TestScopeIsHeldExactly object at 0x10ce6ebd0>
+command = 'Assign Sequence 4 Page 1.201', why = 'descoped'
+
+    @pytest.mark.parametrize(("command", "why"), UNCHANGED_SAFE)
+    def test_the_form_stays_non_risky(self, command, why):
+        finding = _classify(command)
+>       assert finding.risky is False, why
+E       AssertionError: descoped
+E       assert True is False
+E        +  where True = RiskFinding(command='Assign Sequence 4 Page 1.201', category='blacklisted', risky=True, reasons=("blacklisted command ...ches closed-set entry 'Assign Sequence')",), unspecified_target=False, reference=None, matched_entry='Assign Sequence').risky
+
+server/tests/test_writegate.py:253: AssertionError
+_ TestScopeIsHeldExactly.test_the_measurement_corpus_cannot_collide_with_this_entry _
+
+self = <server.tests.test_writegate.TestScopeIsHeldExactly object at 0x10ce71e10>
+
+    def test_the_measurement_corpus_cannot_collide_with_this_entry(self):
+        """AC-WRITEGATE-006, checked at the SOURCE rather than by running M6a.
+    
+        `corpus.yaml`'s header declares its 21 baseline scenarios "clear the
+        safety gate without approval (non-risky verbs only)". This preserves that
+        invariant by SCOPE, not by luck — and asserts it over the PARSED corpus
+        rather than the YAML text, so it keeps holding as scenarios are added. If
+        a future revision adds a `Store` entry, THIS is the test that stops it,
+        naming the exact scenarios it would break.
+    
+        The v4 revision (SPEC-COPILOT-UNREQ-001) DID add a Store entry, and this
+        test caught it — working exactly as the paragraph above promised. The two
+        scenarios it names are recorded below as a RATIFIED exception rather than
+        asserted away, so the tripwire still bites on any collision that was not
+        argued for. The corpus header's own invariant is now narrower than it
+        reads: see the note this revision added to corpus.yaml.
+        """
+        offenders = _corpus_offenders(load_corpus())
+>       assert offenders == list(RATIFIED_CORPUS_COLLISIONS), (
+            "the set of corpus commands held by the gate is not the ratified one "
+            f"— expected {list(RATIFIED_CORPUS_COLLISIONS)}, got {offenders}. A "
+            "NEW collision means a ruleset revision broke a baseline scenario "
+            "without arguing for it; a MISSING one means a ratified collision "
+            "silently disappeared."
+        )
+E       AssertionError: the set of corpus commands held by the gate is not the ratified one — expected [('group-create-1', 'Store Group 3'), ('group-create-2', 'Store Group 8'), ('group-create-3', 'Store Group 11'), ('preset-store-1', 'Store Preset 4.1'), ('preset-store-2', 'Store Preset 4.7'), ('cue-store-1', 'Store Cue 12'), ('cue-store-2', 'Store Cue 5 Fade 3')], got [('group-create-1', 'Store Group 3'), ('group-create-2', 'Store Group 8'), ('group-create-3', 'Store Group 11'), ('preset-store-1', 'Store Preset 4.1'), ('preset-store-2', 'Store Preset 4.7'), ('cue-store-1', 'Store Cue 12'), ('cue-store-2', 'Store Cue 5 Fade 3'), ('sequence-assign-1', 'Assign Sequence 4 Page 1.201'), ('sequence-assign-2', 'Assign Sequence 7 Page 2.203')]. A NEW collision means a ruleset revision broke a baseline scenario without arguing for it; a MISSING one means a ratified collision silently disappeared.
+E       assert [('group-crea...Cue 12'), ...] == [('group-crea...Cue 12'), ...]
+E         
+E         Left contains 2 more items, first extra item: ('sequence-assign-1', 'Assign Sequence 4 Page 1.201')
+E         Use -v to get more diff
+
+server/tests/test_writegate.py:273: AssertionError
+_____ TestShippedRuleset.test_blacklist_is_exactly_the_shipped_closed_set ______
+
+self = <server.tests.test_safety_ruleset.TestShippedRuleset object at 0x10ce791d0>
+
+    def test_blacklist_is_exactly_the_shipped_closed_set(self):
+        # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
+        ruleset = load_ruleset()
+>       assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
+E       AssertionError: assert {'Assign Sequ...NewShow', ...} == {'Delete', 'F...'Remove', ...}
+E         
+E         Extra items in the left set:
+E         'Assign Sequence'
+E         'Copy Sequence'
+E         Use -v to get more diff
+
+server/tests/test_safety_ruleset.py:170: AssertionError
+___ TestShippedRuleset.test_every_shipped_revision_is_documented_in_the_file ___
+
+self = <server.tests.test_safety_ruleset.TestShippedRuleset object at 0x10ce79b90>
+
+    def test_every_shipped_revision_is_documented_in_the_file(self):
+        """A version bump with no recorded reason is a silent widening.
+    
+        Pinning entry text alone is not enough: it forces an edit here, but it
+        cannot force the edit to be JUSTIFIED. So `version: N` must not ship
+        without a `v<N-1> -> v<N>` line saying what changed and which SPEC
+        ratified it. Deliberately NOT an entry-count rule — a future revision
+        may add two entries at once, and a count formula would manufacture
+        false friction.
+    
+        The check is TWO layers because the single whole-file
+        `"v1 -> v2" in text` form it replaces was defeatable: swapping the
+        entire 12-line justification for a contentless `# REVISION HISTORY` +
+        `#   v1 -> v2` left this module green. The enforced property now
+        matches the documented one — the marker must sit INSIDE the REVISION
+        HISTORY block, and that marker's own entry must name the ratifying
+        SPEC. Both probes live in `TestRevisionJustification`.
+    
+        On the version pin: it STAYS (deliberate friction — a bump has to come
+        here and be argued). It does make the checker's loop single-iteration
+        at the shipped pin, so rather than soften the docstring to match, the
+        "every shipped revision" generality is made REAL by driving the same
+        checker over a synthetic v4 file in `TestRevisionJustification`.
+        """
+        # v7 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 3). 이 핀은 버전을
+        # 올리는 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이고,
+        # 이 회차에서도 정확히 그렇게 걸렸다 — v7 을 배치하자 이 줄이 빨개졌다.
+>       assert load_ruleset().version == 7
+E       AssertionError: assert 8 == 7
+E        +  where 8 = SafetyRuleset(version=8, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>')).version
+E        +    where SafetyRuleset(version=8, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>')) = load_ruleset()
+
+server/tests/test_safety_ruleset.py:204: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_measurement_runner.py::TestHappyPathCounting::test_happy_path_produces_no_gate_anomalies
+FAILED server/tests/test_measurement_runner.py::TestFirstGenerationErrorAccounting::test_retry_turn_is_segregated_from_the_judged_corpus
+FAILED server/tests/test_measurement_runner.py::TestRoundTripStats::test_judged_median_p95_and_warm_cache_exclusion
+FAILED server/tests/test_measurement_runner.py::TestRoundTripStats::test_query_turns_are_unjudged_but_plugin_turns_are_judged
+FAILED server/tests/test_safety_classify.py::TestInvokingDetection::test_plain_commands_are_not_invoking
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_form_stays_non_risky[Assign Sequence 4 Page 1.201-descoped]
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_measurement_corpus_cannot_collide_with_this_entry
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_blacklist_is_exactly_the_shipped_closed_set
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_every_shipped_revision_is_documented_in_the_file
+9 failed, 71 passed in 0.86s

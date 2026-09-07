@@ -43,6 +43,29 @@
 #
 # `Store Sequence`, the v6 entry, changed nothing here: this corpus carries no
 # `Store Sequence` line at all.
+#
+# NARROWED A FOURTH TIME AT RULESET v8 (same SPEC, card t325, Phase 4):
+# sequence-assign-1 and sequence-assign-2 join the exception list. Their
+# `Assign Sequence <n> Page <p>` lines are blacklisted from v8 on. NINE of 21
+# scenarios now hold; the header's "non-risky verbs only" claim is TRUE for the
+# remaining twelve. FOUR of the AC-MVP-001 ten representative task types
+# (`group_create`, `preset_store`, `cue_store`, `sequence_assign`) are now outside
+# unattended M6a operation.
+#
+# This narrowing differs from the three above in a way worth recording. Those three
+# took lines the SEAL layer (`write_reason.py`) already read as showfile writes, so
+# an offline M6a run was already holding them by declaration. These two were held by
+# NOTHING before v8: `write_reason.py::_ASSIGN_EXECUTOR` matches only the
+# `At Executor` form, so the `Page` form here reached the console with no card from
+# either layer. Measured:
+# `reports/classifygap-t325-p4/09_seal_layer_vs_classify.txt` (both lines ->
+# `showfile_write_risk(...) is None`).
+#
+# `Copy Sequence`, the other v8 entry, changes nothing here — and the reason is NOT
+# that this corpus has no `Copy` line. It has one (page-setup-2's
+# `Copy Page 1 At Page 4`, below), and that line still classifies safe because v8
+# scoped to the OBJECT (`Copy Sequence`) rather than the `Copy` verb. Measured:
+# `reports/classifygap-t325-p4/05_probe_after.txt` [A-4].
 version: 1
 
 scenarios:

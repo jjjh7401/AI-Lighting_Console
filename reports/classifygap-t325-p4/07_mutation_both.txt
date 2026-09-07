@@ -1,0 +1,12 @@
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED server/tests/test_measurement_runner.py::TestHappyPathCounting::test_happy_path_produces_no_gate_anomalies
+FAILED server/tests/test_measurement_runner.py::TestFirstGenerationErrorAccounting::test_retry_turn_is_segregated_from_the_judged_corpus
+FAILED server/tests/test_measurement_runner.py::TestRoundTripStats::test_judged_median_p95_and_warm_cache_exclusion
+FAILED server/tests/test_measurement_runner.py::TestRoundTripStats::test_query_turns_are_unjudged_but_plugin_turns_are_judged
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_blacklist_is_exactly_the_shipped_closed_set
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_measurement_corpus_cannot_collide_with_this_entry
+FAILED server/tests/test_writegate_merge_gap.py::test_the_new_verb_entries_are_order_independent
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_the_recorded_defence_class_still_holds[_offer_fx_executor_assignment]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_the_recorded_defence_class_still_holds[_setlist_mode]
+9 failed, 12015 passed, 35 skipped, 1 warning in 163.72s (0:02:43)
