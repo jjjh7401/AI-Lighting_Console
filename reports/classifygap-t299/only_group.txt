@@ -1,0 +1,18 @@
+# t299 확대 비용 측정 — 요약 + FAILED 목록만 남긴다 (트레이스백은 인용하지 않았다)
+# 원본 명령: uv run pytest -q server/tests [-p widen_plugin]
+
+13 failed, 11993 passed, 19 skipped, 1 warning in 159.42s (0:02:39)
+
+FAILED server/tests/test_deploy_gate_e2e.py::TestSafeDeployThenInvoke::test_registered_non_destructive_plugin_passes_audited
+FAILED server/tests/test_deploy_pipeline.py::TestApprovedDeploy::test_non_destructive_plugin_registers_unflagged
+FAILED server/tests/test_deploy_scan.py::TestSafeAndNonDestructive::test_safe_commands_yield_no_findings
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_blacklist_is_exactly_the_shipped_closed_set
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_every_shipped_revision_is_documented_in_the_file
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_default_path_is_the_ssot_yaml_under_server_safety
+FAILED server/tests/test_showfile_replacement_gate.py::TestNoCollateralWidening::test_classification_did_not_move[Store Group 3]
+FAILED server/tests/test_showfile_replacement_gate.py::TestNonVacuity::test_the_probe_can_report_safe
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_form_stays_non_risky[Store Group 3-descoped: DEPLOY's canonical SAFE_SOURCE literal]
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_measurement_corpus_cannot_collide_with_this_entry
+FAILED server/tests/test_writegate.py::TestScopeIsHeldExactly::test_the_corpus_collision_check_can_actually_fail
+FAILED server/tests/test_writegate.py::TestIndirectRoutes::test_the_deploy_scan_still_passes_a_genuinely_safe_source
+FAILED server/tests/test_writegate_merge_gap.py::test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store
