@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-CLASSIFYGAP-001
 title: "곡→콘솔 경로가 쓰는 명령 네 개가 분류 층에 안 걸린다 — 봉합 뒤에 받침을 놓는다"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-09-07
 updated: 2026-09-07
 author: manager-spec (plan session, 카드 t299 — t292·t317~t323 후속)

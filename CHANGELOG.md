@@ -12,6 +12,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **SPEC-COPILOT-CLASSIFYGAP-001** — 곡→콘솔 흐름이 실제로 쓰는 명령 네 개(`Store Sequence … /Merge`·`Store Cue`·`Store Group`·`Store Timecode`)가 분류 층에 하나도 안 걸리던 구멍을 4단계에 걸쳐 닫았다(칸반 카드 t299 P1~P3 + t325 P4, `blacklist.yaml` v4 → v8). 이전에는 이 명령들을 막는 방어가 호출 자리마다 손으로 붙인 `BatchRisk` 봉합뿐이었고, 실측(t321)으로는 열 자리 중 일곱이 그 봉합에만 의존했다.
+  - **Phase 1** (PR #369, v4→v5) — `Store Group`·`Store Timecode` 를 폐집합에 추가.
+  - **Phase 2** (PR #370, v5→v6) — `Store Sequence` 추가 + 그 확대가 드러낸 중복 카드 결함을 함께 닫음. `SEAL_DEFENCE` seal-only 자리 7 → 2.
+  - **Phase 3** (PR #371, v6→v7) — `Store Cue` 추가로 이 SPEC 이 원래 목표한 네 명령을 전부 폐집합에 넣음.
+  - **Phase 4** (PR #373, v7→v8, 카드 t325) — 남아 있던 `SEAL_DEFENCE` seal-only 두 자리(`_offer_fx_executor_assignment`·`_setlist_mode`)가 `Assign Sequence`·`Copy Sequence` 만 실어 나르던 것을 확인하고 두 오브젝트를 폐집합에 추가 — seal-only 2 → **0**.
+  - **검증** — 전체 스위트 `12032 passed / 35 skipped / 0 failed`(sync-phase 재측정, main `197eb69`). 뮤테이션(신규 두 항목 되돌림) `9 failed / 12015 passed / 35 skipped` — 두 `SEAL_DEFENCE` 자리가 직접 죽는 것을 확인. AC-CG-001~010 전부 PASS, must-pass 넷(002·003·005·010) 포함.
+  - **범위 밖으로 남긴 것** — `Store Page`·`Store Macro` 확대 비용 미측정(별도 후속 카드 필요), 실기(콘솔) 검증 0건(오프라인).
+
 - **SPEC-COPILOT-SONGCONFIRM-001** — 곡 분석 확정이 이제 **닿는다**(Tier M, 칸반 카드 t273). MUSICSYNC-001 은 곡을 재고 확인 카드를 띄우고 BPM 을 확정하는 데까지 배달했지만, 사람이 체크한 구간은 버려졌고 확정 BPM 은 아무도 읽지 않았으며 `prepare_songcue` 는 세션을 볼 수 없었다(실브라우저 보고서 발견 3 + 같은 날 grep 실측). 이 회차는 기계가 아니라 **배관**을 고쳤다 — 새 통로·새 UI·새 카드 없이, 이미 있던 두 통로(세션 문맥 주입 · 도구 포트)로 확정을 모델과 도구에 잇는다.
   - **운영자가 할 수 있게 된 것** — 카드에서 체크를 풀고 「확인」을 누르면 고지가 BPM 문장 뒤에 「구간 N건 채택 · M건 제외. 이 곡의 큐 리스트를 만들려면 타임코드 번호와 함께 말씀해 주세요 — 확정한 구간을 그대로 씁니다.」라고 덧붙인다. 그다음 「이 곡으로 큐 리스트 만들어줘, 타임코드 5번」이라고 말하면 모델이 `prepare_songcue` 를 `sections` 없이 부르고 확정 구간이 그대로 큐가 된다 — 제외한 구간은 큐에 실리지 않는다. 다른 곡을 올리면 이전 확정은 무효가 되고, 기록이 있었을 때만 업로드 고지가 그 사실을 한 문장으로 말한다.
   - **① 답 판독과 불변 기록 (M1)** — `server/web/question.py` `parse_confirmed_sections`: UI 가 체크된 라벨을 `", "` 로 이어 되돌려 주므로 새 문법이 아니라 **라벨 왕복 대조**다(항목별 완전 일치 — 부분문자열 아님; 라벨이 하나도 없으면 전부 채택, 미응답·자유입력 표식이면 판정 없음). `section_label` 이 라벨의 단일 생산자(생산 호출자 3곳 → `@MX:ANCHOR` 1건 추가). `ConfirmedSongSection` · `ConfirmedSongAnalysis`(frozen dataclass — sha256 · 파일명 · 확정 시각 · `BpmResolution` · 구간 목록; 제외 구간도 `selected=False` 로 남는다). `server/web/session.py` `analyse_song_audio` 가 기록을 만들어 `_song_analysis` 에 들고 `song_analysis` 프로퍼티로 내준다 — 기록의 `bpm` 은 `song_bpm` 과 **같은 객체**(정본 하나). `upload_song_audio` 가 무효화한다.
