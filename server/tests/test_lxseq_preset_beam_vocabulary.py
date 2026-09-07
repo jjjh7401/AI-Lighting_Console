@@ -25,7 +25,11 @@ from pathlib import Path
 import pytest
 
 from server.lxseq import preset_parser as parser_module
-from server.lxseq.preset_parser import HOLD_PROBE_REJECTED, parse_preset_csv
+from server.lxseq.preset_parser import (
+    HOLD_ATTRIBUTE_UNKNOWN,
+    HOLD_PROBE_REJECTED,
+    parse_preset_csv,
+)
 
 RIG = Path("src/Lighting_Designer/02_RIG팩")
 BM = RIG / "LXSEQ_RIG_01_ShowBase_r3.preset-bm.csv"
@@ -251,3 +255,52 @@ class TestTheStaleHoldTripwire:
             without_frost,
         )
         assert stale == ()
+
+
+class TestAnUnknownAttributeIsHeldNotPassed:
+    """t137 — 어휘 축이 fail-open 이었다. 모르는 속성이 사유 0건으로 통과했다.
+
+    막는 목록(`_PROBE_REJECTED` · `_OUT_OF_SCOPE`)만 있고 **아는 이름 전체**를 묻는
+    자리가 없어서, 목록 어디에도 없는 토큰은 토큰이 0개로 잡혀 아무 검사도 안 받았다.
+    이 저장소의 다른 판정기들(`preset_mapper` 의 POOL_UNREADABLE, `rig/section.py` 의
+    SECTION_TRUNCATED)은 전부 fail-closed 다 — 이 자리만 방향이 반대였다.
+    """
+
+    def test_an_attribute_in_no_list_at_all_is_held(self):
+        """재현 — 시트 오타나 새 속성이 조용히 콘솔로 향하면 안 된다."""
+        storable, reasons = parser_module.classify_storability("preset-bm", "Blorptron 99°")
+        assert storable is False
+        assert HOLD_ATTRIBUTE_UNKNOWN in [r.hold_class for r in reasons]
+
+    def test_the_hold_names_the_attribute_it_did_not_recognize(self):
+        """사유 문면이 어느 이름인지 말해야 다음 사람이 시트를 고칠 수 있다."""
+        _storable, reasons = parser_module.classify_storability("preset-bm", "Blorptron 99°")
+        detail = " ".join(r.detail for r in reasons if r.hold_class == HOLD_ATTRIBUTE_UNKNOWN)
+        assert "Blorptron" in detail
+
+    def test_the_control_is_that_a_known_attribute_raises_no_such_hold(self):
+        """대조군 — 아는 이름에도 울리면 위 검사는 어휘를 재는 게 아니다."""
+        _storable, reasons = parser_module.classify_storability("preset-bm", "Zoom 45°")
+        assert HOLD_ATTRIBUTE_UNKNOWN not in [r.hold_class for r in reasons]
+
+    def test_the_canonical_sheet_gains_no_unknown_hold(self):
+        """정본 다섯 행의 속성은 전부 아는 이름이다 — 이 변경이 고정값을 안 흔든다."""
+        classes = [c for r in _records() for c in r.hold_classes]
+        assert HOLD_ATTRIBUTE_UNKNOWN not in classes
+
+    def test_a_prefix_of_a_known_name_is_not_treated_as_known(self):
+        """`Zo` 는 `Zoom` 의 접두지만 아는 이름이 아니다 — 역방향은 숫자 접미만 허용한다."""
+        _storable, reasons = parser_module.classify_storability("preset-bm", "Zo 5")
+        assert HOLD_ATTRIBUTE_UNKNOWN in [r.hold_class for r in reasons]
+
+    def test_the_tripwire_still_opens_bm03_under_the_prism1_substitution(self, monkeypatch):
+        """🔴 이 검사가 하중을 진다 — 새 fail-closed 축이 t135 의 증명을 죽이면 안 된다.
+
+        치환하면 시트 토큰 `Prism` 이 막는 목록에서 빠진다. 어휘 검사가 **한 방향**
+        접두 매칭이면 `Prism` 이 그 순간 「모르는 이름」이 되어 BM.03 이 새 사유로
+        막히고, 「치환은 회귀다」라는 증명이 조용히 사라진다. 두 어휘의 길이가 서로
+        반대 방향이라(`시트 Prism` ↔ `콘솔 Prism1`) 어휘 검사는 대칭이어야 한다.
+        """
+        monkeypatch.setattr(parser_module, "_PROBE_REJECTED", PROBED_STRINGS)
+        opened = [r for r in _records() if r.storable]
+        assert [r.preset_id for r in opened] == ["BM.03"]

@@ -132,6 +132,7 @@ HOLD_NO_RGB_VALUE = "no_rgb_value"  # col — RGB 도, 정의역 안의 색온�
 HOLD_PROBE_REJECTED = "attribute_probe_rejected"  # bm — 라이브 프로브가 거절했다
 HOLD_FAMILY_OUT_OF_SCOPE = "family_out_of_scope"  # bm — 풀 계열이 범위 밖이다
 HOLD_VALUE_NOT_MACHINE_READABLE = "value_not_machine_readable"  # 형태가 아니다
+HOLD_ATTRIBUTE_UNKNOWN = "attribute_unknown"  # bm — 어느 목록에도 없는 속성 이름이다
 
 #: 값 문장에서 속성 이름 후보로 읽을 토큰. 숫자·단위·한글은 보지 않는다.
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9]*")
@@ -305,9 +306,20 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
         )
 
     tokens = _attribute_tokens(value_raw)
+    unknown = _bm_unknown_attributes(value_raw)
     rejected = [a for a in tokens if a in _PROBE_REJECTED]
     out_of_scope = [a for a in tokens if a in _OUT_OF_SCOPE]
     reasons: list[PresetHoldReason] = []
+    if unknown:
+        reasons.append(
+            PresetHoldReason(
+                HOLD_ATTRIBUTE_UNKNOWN,
+                "아는 어휘 어디에도 없는 속성: "
+                + ", ".join(unknown)
+                + " — 시트 오타이거나 이 저장소가 아직 재지 않은 속성이다."
+                " 추측해서 콘솔로 보내지 않는다",
+            )
+        )
     if rejected:
         reasons.append(
             PresetHoldReason(
@@ -611,6 +623,48 @@ def _bm_components(value_raw: str) -> tuple[tuple[str, str], ...] | None:
     if not components:
         return None
     return tuple(components)
+
+
+#: 시트 어휘와 콘솔 어휘가 **길이 방향이 반대**라 어휘 검사는 대칭이어야 한다
+#: (`_SHEET_TO_CONSOLE_ATTRIBUTE` 주석의 접두 방향 표 참조). 다만 역방향을 그냥
+#: 열면 `Zo` 가 `Zoom` 의 접두라는 이유로 통과한다 — 그것은 좁아진 fail-open 이지
+#: 사라진 fail-open 이 아니다. 그래서 역방향은 **숫자 접미만** 허용한다: 두 어휘가
+#: 실제로 갈리는 모양이 그것뿐이기 때문이다(넷 전부 `Focus`->`Focus1` 꼴, 실측).
+_DIGIT_SUFFIX = re.compile(r"^\d+$")
+
+
+def _is_known_attribute(name: str) -> bool:
+    """이 속성 이름이 이 저장소가 **아는** 어휘 어딘가에 있는가.
+
+    🔴 **fail-closed 축이다.** 아래 `rejected`/`out_of_scope` 는 「막는 목록에
+    걸렸는가」를 묻는다 — 걸리는 게 없으면 사유가 0건이라 그 행이 열린다. 어느
+    목록에도 없는 이름(시트 오타, 새 속성)이 정확히 그 구멍으로 나갔다(t137).
+    이 술어는 반대로 「아는 목록에 **있는가**」를 물어서 모르는 것을 막는다.
+    저장소의 다른 판정기들(`preset_mapper` POOL_UNREADABLE, `rig/section.py`
+    SECTION_TRUNCATED)과 방향을 맞춘다.
+    """
+    lowered = name.lower()
+    for known in list(_ACCEPTED_ATTRIBUTES) + list(_PROBE_REJECTED) + list(_OUT_OF_SCOPE):
+        known_lower = known.lower()
+        if lowered.startswith(known_lower):
+            return True
+        if known_lower.startswith(lowered) and _DIGIT_SUFFIX.match(known_lower[len(lowered) :]):
+            return True
+    return False
+
+
+def _bm_unknown_attributes(value_raw: str) -> tuple[str, ...]:
+    """읽히기는 하는데 아는 이름이 아닌 속성들. 못 읽은 조각은 여기 안 온다 —
+    그쪽은 `HOLD_VALUE_NOT_MACHINE_READABLE` 이 이미 든다(축이 다르다)."""
+    found: list[str] = []
+    for segment in value_raw.split(_BM_SEGMENT_SEPARATOR):
+        component = _bm_segment_component(segment)
+        if component is None:
+            continue
+        name = component[0]
+        if not _is_known_attribute(name) and name not in found:
+            found.append(name)
+    return tuple(found)
 
 
 def _bm_unreadable_segments(value_raw: str) -> tuple[str, ...]:
