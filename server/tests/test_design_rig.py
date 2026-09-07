@@ -234,6 +234,49 @@ def test_geometry_dominant_axis_ties_break_toward_x() -> None:
     assert profile.geometry.dominant_axis == "x"
 
 
+def test_geometry_carries_the_per_axis_spans_it_computed() -> None:
+    """카드 t315 — 계산해 두고 버리던 span 이 호출자에게 도달한다."""
+    points = [(1, 0.0, 0.0, 0.0), (2, 4.0, 2.0, 1.0)]
+    profile = build_rig_profile(patch=[], groups={}, coords=_coords(points))
+    assert profile.geometry.spans == {"x": 4.0, "y": 2.0, "z": 1.0}
+
+
+def test_geometry_spans_are_absent_rather_than_zero_without_coordinates() -> None:
+    """「재지 못했다」와 「크기가 0」은 다른 상태다 — 0 으로 채우지 않는다."""
+    profile = build_rig_profile(patch=[], groups={}, coords=[])
+    assert profile.geometry.spans is None
+    assert profile.geometry.depth_width_ratio is None
+
+
+def test_depth_width_ratio_divides_depth_by_width() -> None:
+    """x 가 폭, y 가 깊이 (`server/spatial/pointing.py` 와 같은 좌표계)."""
+    points = [(1, 0.0, 0.0, 0.0), (2, 4.0, 2.0, 0.0)]
+    profile = build_rig_profile(patch=[], groups={}, coords=_coords(points))
+    assert profile.geometry.depth_width_ratio == pytest.approx(0.5)
+
+
+def test_depth_width_ratio_is_absent_when_the_rig_has_no_width() -> None:
+    """폭이 잡음 수준이면 답할 비가 없다 — 전 장비 원점이 이 경로다."""
+    flat = build_rig_profile(
+        patch=[], groups={}, coords=_coords([(1, 0.0, 0.0, 0.0), (2, 0.0, 5.0, 0.0)])
+    )
+    assert flat.geometry.spans == {"x": 0.0, "y": 5.0, "z": 0.0}
+    assert flat.geometry.depth_width_ratio is None
+
+    origin = build_rig_profile(
+        patch=[], groups={}, coords=_coords([(fid, 0.0, 0.0, 0.0) for fid in range(1, 20)])
+    )
+    assert origin.geometry.depth_width_ratio is None
+
+
+def test_carrying_spans_did_not_change_how_dominant_axis_is_chosen() -> None:
+    """t315 는 지배축 선택을 건드리지 않았다 — 동률은 여전히 x 로 깨진다."""
+    points = [(1, 0.0, 0.0, 0.0), (2, 2.0, 2.0, 0.0)]
+    profile = build_rig_profile(patch=[], groups={}, coords=_coords(points))
+    assert profile.geometry.spans == {"x": 2.0, "y": 2.0, "z": 0.0}
+    assert profile.geometry.dominant_axis == "x"
+
+
 def test_geometry_arrangement_matches_topology_classify_directly() -> None:
     """Boundary check: rig.py must not reimplement or diverge from the
     existing arrangement classifier — it proxies the same verdict."""

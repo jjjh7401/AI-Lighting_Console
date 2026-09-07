@@ -244,6 +244,98 @@ class TestQ4ReadsTheStageShape:
             assert "장비 목록 없이 곡 구조만 보고 만든 제안이에요" in option.description
 
 
+# ---------------------------------------------------------------------------
+# 카드 t315 — 라벨이 같아도 크기가 다르면 다른 답을 낸다
+# ---------------------------------------------------------------------------
+
+
+def _grid_rig_pair() -> tuple[RigProfile, RigProfile]:
+    """폭으로 퍼진 격자와 깊이로 쌓인 격자. 좌표는 하네스가 만든다."""
+    from server.tests.synthetic_rig import (
+        synthetic_deep_grid_fixtures,
+        synthetic_wide_grid_fixtures,
+    )
+
+    return (
+        _rig_with_coords([(f.x, f.y, f.z) for f in synthetic_wide_grid_fixtures()]),
+        _rig_with_coords([(f.x, f.y, f.z) for f in synthetic_deep_grid_fixtures()]),
+    )
+
+
+class TestQ4ReadsTheStageSize:
+    def test_the_same_arrangement_label_with_a_different_ratio_differs(self):
+        """t315 가 참으로 만들려던 단언 — **라벨이 같은데** 답이 갈린다.
+
+        이 한 쌍은 배치 판독이 구별해 주지 못한다: 둘 다 `grid` 다. 갈라 주는
+        것은 t315 가 실은 `spans` 뿐이라, 이 단언이 빨간불이면 배선이 안 된
+        것이고 초록불이면 배선이 **실제로 답을 바꿨다**는 뜻이다.
+        """
+        wide, deep = _grid_rig_pair()
+
+        # 전제: 라벨은 정말로 같다. 이게 깨지면 이 시험은 크기가 아니라
+        # 배치를 재고 있는 것이므로, 단언 자체가 무의미해진다.
+        assert wide.geometry.arrangement == "grid"
+        assert deep.geometry.arrangement == "grid"
+        assert wide.geometry.arrangement_low_confidence is False
+        assert deep.geometry.arrangement_low_confidence is False
+
+        # 갈라 주는 값
+        assert wide.geometry.depth_width_ratio == pytest.approx(0.1)
+        assert deep.geometry.depth_width_ratio == pytest.approx(10.0)
+
+        wide_labels = _q4_labels(wide)
+        deep_labels = _q4_labels(deep)
+        assert wide_labels != deep_labels
+        # 폭이 있는 리그만 「폭이 열리는」 서사를 받는다.
+        assert wide_labels[0] == "좁음→넓음 (E3 기본)"
+        # 폭 1.0m 짜리 리그에는 열 폭이 없다 → 모아 들어가는 쪽.
+        assert deep_labels[0] == "넓음→좁음 (역순)"
+
+    def test_a_ratio_that_does_not_discriminate_keeps_todays_answer(self):
+        """음성 대조군 — 비가 경계 아래면 라벨의 기본값이 그대로 남는다.
+
+        t314 가 세운 `_LATERAL_POINTS` 리그다. 깊이/폭 = 0.1 로 경계
+        (`_DEPTH_DOMINANCE_RATIO` = 1.5) 한참 아래라, t315 의 배선은 이
+        리그에 손대지 않아야 한다. 라벨 세 줄이 **바이트 동일**해야 한다.
+        """
+        lateral = _rig_with_coords(_LATERAL_POINTS)
+        assert lateral.geometry.arrangement == "grid"
+        assert lateral.geometry.depth_width_ratio == pytest.approx(0.1)
+        assert _q4_labels(lateral) == [
+            "좁음→넓음 (E3 기본)",
+            "넓음→좁음 (역순)",
+            "사전 등재 순서",
+        ]
+
+    def test_a_degenerate_rig_gets_no_confident_ratio(self):
+        """전 장비 원점 — 「없다」를 0 이 아니라 `None` 으로 답한다."""
+        degenerate = _rig_with_coords(_ALL_ZERO_POINTS)
+        assert degenerate.geometry.spans == {"x": 0.0, "y": 0.0, "z": 0.0}
+        assert degenerate.geometry.depth_width_ratio is None
+
+    def test_a_rig_with_no_coordinates_carries_no_spans(self):
+        """좌표가 없으면 span 도 없다 — 0 으로 채우지 않는다."""
+        no_coords = _rig()
+        assert no_coords.geometry.spans is None
+        assert no_coords.geometry.depth_width_ratio is None
+
+    def test_a_depth_row_rig_is_not_flipped_by_a_wide_ratio(self):
+        """한 방향으로만 뒤집는다 — 폭이 넓어도 깊이 열은 그대로 모인다.
+
+        `depth_rows` 가 모아 들어가는 서사를 받은 근거는 span 크기가 아니라
+        **구조**였다. 그 근거는 폭이 넓어져도 그대로이므로, 있지도 않은 대칭을
+        만들어 이 리그를 `ascending` 으로 올리지 않는다. 비를 대칭으로
+        구현했다면 이 리그(깊이/폭 = 0.3, 폭이 3배 이상 넓다)가 바로
+        `ascending` 으로 올라가므로, 이 단언이 그 구현을 걸러 낸다.
+        """
+        from server.tests.synthetic_rig import synthetic_wide_depth_row_fixtures
+
+        depth = _rig_with_coords([(f.x, f.y, f.z) for f in synthetic_wide_depth_row_fixtures()])
+        assert depth.geometry.arrangement == "depth_rows"
+        assert depth.geometry.depth_width_ratio == pytest.approx(0.3)
+        assert _q4_labels(depth)[0] == "넓음→좁음 (역순)"
+
+
 class TestQ5TextureOptions:
     def test_genre_texture_is_recommended_when_genre_known(self):
         card = build_question(Q5_TEXTURE, MusicProfile(genre="메탈"), _rig())

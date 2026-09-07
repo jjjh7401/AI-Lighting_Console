@@ -633,13 +633,12 @@ def _ascending_positions() -> tuple[str, ...]:
 #: 포지션 진행. 무대 모양이 후보 자체를 만들지는 않는다(후보는 여전히 곡
 #: 프로파일이 만든다). 정하는 것은 **순서**뿐이다.
 #:
-#: `RigGeometry` 가 실제로 들고 있는 것은 넷이다 — `arrangement`,
-#: `arrangement_low_confidence`, `centroid`, `dominant_axis`. **크기는 하나도
-#: 없다**: `_build_geometry` 가 축별 span 을 계산하고서 버린다. 그래서 「지배축
-#: 방향 퍼짐」도 「깊이/폭 비」도 이 자료로는 못 낸다 — 지어내지 않고, 실제로
-#: 들고 있는 축 하나(`arrangement`)만 쓴다. `dominant_axis` 도 안 쓴다:
+#: 카드 t315 가 `RigGeometry.spans` 를 실어 **크기 축이 열렸다.** 그전까지
+#: 이 표는 배치 라벨 하나로만 답했고, 그 한계를 여기 적어 두었다: 「깊이/폭
+#: 비」를 못 낸다고. 이제 낸다 — :func:`_q4_preferred_progression` 이 라벨의
+#: 기본값을 실제로 잰 비와 대조한다. `dominant_axis` 는 여전히 안 쓴다:
 #: 전 장비가 한 점에 모인 리그에서도 동률 타이브레이크로 `"x"` 를 답하므로,
-#: 판독 불가와 좌우 배치를 못 가른다.
+#: 판독 불가와 좌우 배치를 못 가른다. 크기가 필요한 자리는 `spans` 가 답한다.
 #:
 #: 매핑 근거(연출 판단):
 #: * `lateral_split` · `bilateral_pairs` · `grid` — 장비가 무대 폭에 걸쳐
@@ -686,6 +685,53 @@ def _readable_arrangement(rig: RigProfile) -> str | None:
     if geometry.arrangement not in _GEOMETRY_PREFERRED_PROGRESSION:
         return None
     return geometry.arrangement
+
+
+# @MX:NOTE: [AUTO] 깊이가 폭의 이 배를 넘으면 「폭이 열리는」 서사를 못 싣는다.
+#   1.5 는 잰 값이 아니라 정한 값이다 — 「깊이가 더 크다」(>1.0)로 잡으면
+#   비 1.01 짜리 정사각 리그까지 뒤집혀, 무대에서 아무도 다르게 보지 못할
+#   차이로 제안 순서가 흔들린다. 「반쯤 더 깊다」를 경계로 두어 애매한
+#   구간은 라벨의 기본값에 남긴다.
+_DEPTH_DOMINANCE_RATIO = 1.5
+
+
+def _q4_preferred_progression(rig: RigProfile) -> str | None:
+    """Q4 에서 **먼저 놓을** 진행. 배치가 안 읽히면 ``None``.
+
+    카드 t315 — 라벨만으로 답하던 자리에 **실제로 잰 크기**를 끼운다. 위
+    `_GEOMETRY_PREFERRED_PROGRESSION` 의 매핑 근거가 `ascending` 을 고르는
+    이유는 하나뿐이다: 「좁음→넓음」은 **무대 폭이 열리는** 서사이고, 폭으로
+    퍼진 리그만 그것을 실제로 열 수 있다. 그런데 배치 라벨은 **구조**를
+    답할 뿐 크기를 답하지 않는다 — `grid` 는 깊이·좌우 양쪽이 또렷하게
+    묶였다는 뜻이어서, 폭 10m·깊이 1m 인 리그와 폭 1m·깊이 10m 인 리그가
+    **같은 라벨**을 받는다(t315 실측: 둘 다 `grid`, low_confidence 아님).
+    뒤쪽 리그에 「폭이 열린다」를 제안하면 무대에서 일어나지 않는 일을 적는
+    셈이다. 그래서 깊이가 폭을 :data:`_DEPTH_DOMINANCE_RATIO` 배 넘게
+    앞서면 모아 들어가는 쪽(`descending`)으로 내린다.
+
+    **한 방향으로만 뒤집는다.** 반대쪽(`descending` 라벨인데 폭이 넓은 리그)
+    은 건드리지 않는다. `depth_rows` · `concentric` 이 모아 들어가는 서사를
+    받은 근거는 span 크기가 아니라 **구조**였다 — 앞뒤 열로 묶인 리그는 폭이
+    아무리 넓어도 폭을 넓히는 단계가 같은 좌우 그림을 반복해 「밝기 변화」로
+    읽힌다. 그 근거는 비가 커져도 그대로라서, 뒤집을 이유가 없다. 있지도
+    않은 대칭을 만들지 않는다.
+
+    비를 못 내는 리그(좌표 없음, 전 장비 원점, 폭이 잡음 수준)는
+    `depth_width_ratio` 가 `None` 을 답하고, 그때는 라벨의 기본값이 그대로
+    남는다. `_readable_arrangement` 가 앞에서 한 번 더 막으므로 — 낮은 확신
+    판독은 애초에 여기까지 오지 않는다 — 같은 좌표에서 뽑은 비로 흐릿한
+    판독을 덮어쓰는 일은 없다.
+    """
+    arrangement = _readable_arrangement(rig)
+    if arrangement is None:
+        return None
+    preferred = _GEOMETRY_PREFERRED_PROGRESSION[arrangement]
+    if preferred != "ascending":
+        return preferred
+    ratio = rig.geometry.depth_width_ratio
+    if ratio is not None and ratio > _DEPTH_DOMINANCE_RATIO:
+        return "descending"
+    return preferred
 
 
 def _q4_rig_note(rig: RigProfile) -> str:
@@ -745,11 +791,10 @@ def _q4_candidates(
             ("사전 등재 순서", "장면마다 다른 방향을 골고루 보여 줘요.", table_order),
         ),
     ]
-    arrangement = _readable_arrangement(rig)
-    if arrangement is not None:
+    preferred = _q4_preferred_progression(rig)
+    if preferred is not None:
         # 감독이 확정한 컨셉이 기하보다 앞선다 — 사람이 말한 의도가 방을
         # 이긴다. 그래서 컨셉 후보는 건드리지 않고, 그 **뒤**만 재정렬한다.
-        preferred = _GEOMETRY_PREFERRED_PROGRESSION[arrangement]
         generic.sort(key=lambda pair: pair[0] != preferred)
     candidates.extend(entry for _, entry in generic)
     return candidates

@@ -34,6 +34,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
+from server.spatial.rows import SPATIAL_ROW_NOISE_SPAN
 from server.spatial.schema import spatial_fixtures_from_records
 from server.spatial.topology import TopologyKind, classify
 
@@ -167,14 +168,23 @@ class RigGeometry:
     * `arrangement` + `arrangement_low_confidence` — **쓴다.** 판독된 배치가
       Q4 포지션 진행 후보의 **순서**를 정한다(후보 자체는 여전히 곡
       프로파일이 만든다). 확정된 컨셉은 기하보다 앞선다.
+    * `spans` + `depth_width_ratio` — **쓴다.** 카드 t315 가 실었다.
+      `_build_geometry` 가 이미 계산해 두고 버리던 축별 span 그대로다(다시
+      재지 않는다). `interview._q4_preferred_progression` 이 깊이/폭 비를
+      읽어, `arrangement` 라벨이 같아도 **실제로 폭으로 퍼진 리그**와 **깊이로
+      쌓인 리그**를 가른다. 소비자 쪽에서 지어낼 수 없는 값이라 생산 지점이
+      실어야 했다.
     * `centroid` · `dominant_axis` — **안 쓴다.** `dominant_axis` 는 전
       장비가 한 점에 모인 리그에서도 동률 타이브레이크로 `"x"` 를 답해
-      판독 불가와 좌우 배치를 못 가른다(t314 실측).
+      판독 불가와 좌우 배치를 못 가른다(t314 실측). 크기가 필요한 자리는
+      `spans` 가 답하므로, 이 축을 새로 읽기 시작할 이유도 없다.
 
-    이 자료구조가 **들고 있지 않은 것**도 기록해 둔다: `_build_geometry` 는
-    축별 span 을 계산해 지배축만 남기고 크기를 버린다. 그래서 「지배축 방향
-    퍼짐의 크기」와 「깊이/폭 비」는 이 값들로 낼 수 없다 — 그 축이 필요해지면
-    span 을 여기 실어야 하고, 소비자 쪽에서 지어낼 수 없다.
+    두 값 모두 **없으면 없다고 답한다.** `spans` 는 좌표가 없으면 `None`
+    이고 0 으로 채우지 않는다 — 「크기가 0 인 리그」와 「재지 못한 리그」는
+    다른 상태이고, 같은 값으로 답하면 소비자가 그 둘을 가를 수 없다. 같은
+    이유로 `depth_width_ratio` 는 폭 span 이 잡음 수준
+    (:data:`SPATIAL_ROW_NOISE_SPAN`) 이하일 때 `None` 을 답한다: 나눗셈이
+    정의되지 않는 리그(전 장비 원점 포함)에 확신 있는 비를 쥐여 주지 않는다.
     """
 
     # @MX:ANCHOR: [AUTO] Q4 공간 스토리 제안이 이 값을 읽는다 —
@@ -188,6 +198,24 @@ class RigGeometry:
     arrangement_low_confidence: bool
     centroid: tuple[float, float, float] | None
     dominant_axis: Axis | None
+    spans: Mapping[Axis, float] | None = None
+
+    @property
+    def depth_width_ratio(self) -> float | None:
+        """깊이(y) span ÷ 폭(x) span, 못 낼 때는 ``None``.
+
+        좌표계는 `server/spatial/pointing.py` 와 같다 — x 가 좌우(폭), y 가
+        객석→업스테이지(깊이). 폭 span 이 :data:`SPATIAL_ROW_NOISE_SPAN`
+        이하면 `None`: 나눗셈이 폭발하는 것을 막으려는 것이 아니라, 폭이
+        잡음 수준인 리그에는 **답할 비가 없기** 때문이다. 전 장비가 한 점에
+        모인 리그(t314 가 실기에서 읽은 모양)가 이 경로로 들어온다.
+        """
+        if self.spans is None:
+            return None
+        width = self.spans["x"]
+        if width <= SPATIAL_ROW_NOISE_SPAN:
+            return None
+        return self.spans["y"] / width
 
 
 @dataclass(frozen=True)
@@ -263,6 +291,7 @@ def _build_geometry(coords: Sequence[Mapping[str, object]]) -> RigGeometry:
             arrangement_low_confidence=True,
             centroid=None,
             dominant_axis=None,
+            spans=None,
         )
     fixtures = spatial_fixtures_from_records(coords)
     xs = [fixture.x for fixture in fixtures]
@@ -281,6 +310,9 @@ def _build_geometry(coords: Sequence[Mapping[str, object]]) -> RigGeometry:
         arrangement_low_confidence=classification.selected.low_confidence,
         centroid=centroid,
         dominant_axis=dominant_axis,
+        # 카드 t315 — 이미 계산해 둔 값을 그대로 싣는다. 지배축을 고르는
+        # 방식은 건드리지 않았다(위 `max` 그대로).
+        spans=spans,
     )
 
 
