@@ -1,0 +1,53 @@
+F....F.FF..F.....FFF                                                     [100%]
+=================================== FAILURES ===================================
+_ TestSafetyInvariantsAreInherited.test_a_real_fx_bundle_clears_the_real_gate_with_no_hold _
+server/tests/test_fx_boundary.py:593: in test_a_real_fx_bundle_clears_the_real_gate_with_no_hold
+    assert decision.cleared is True, f"{fx.fx_id}: {decision.status}"
+E   AssertionError: chase-warm-cool: rejected
+E   assert False is True
+E    +  where False = ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='ChangeDestination Root', status='r...losed-set entry 'Store Sequence')",), warnings=()),)), notice='bundle rejected by the approver — nothing was executed').cleared
+_ test_the_seeded_song_applies_end_to_end_when_the_director_names_the_sequence _
+server/tests/test_seeded_song_apply.py:139: in test_the_seeded_song_applies_end_to_end_when_the_director_names_the_sequence
+    assert f"Store Sequence 210 Cue {cue} /Merge" in console.executed
+E   AssertionError: assert 'Store Sequence 210 Cue 20 /Merge' in []
+E    +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x10b381250>.executed
+__________ test_a_colour_change_reaches_the_desk_as_a_colour_command ___________
+server/tests/test_seeded_song_apply.py:218: in test_a_colour_change_reaches_the_desk_as_a_colour_command
+    assert (
+E   assert "Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 24 ; Attribute 'ColorRGB_B' At 62" in []
+E    +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x10b380450>.executed
+____________ test_a_fade_change_reaches_the_desk_as_a_fade_command _____________
+server/tests/test_seeded_song_apply.py:236: in test_a_fade_change_reaches_the_desk_as_a_fade_command
+    assert "Store Sequence 3 Cue 20 CueFade 3 /Merge" in console.executed
+E   AssertionError: assert 'Store Sequence 3 Cue 20 CueFade 3 /Merge' in []
+E    +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x10b463950>.executed
+________ test_apply_sends_only_the_changed_cue_through_the_preview_gate ________
+server/tests/test_web_cue_sheet_apply.py:156: in test_apply_sends_only_the_changed_cue_through_the_preview_gate
+    assert "Store Sequence 210 Cue 10 /Merge" in console.executed
+E   AssertionError: assert 'Store Sequence 210 Cue 10 /Merge' in []
+E    +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x10b484d10>.executed
+__________ test_an_accepted_batch_is_asked_once_not_once_per_command ___________
+server/tests/test_web_cue_sheet_apply.py:257: in test_an_accepted_batch_is_asked_once_not_once_per_command
+    assert len(cards) == 1, f"카드 {len(cards)}장 — 묶음당 1장이어야 한다"
+E   AssertionError: 카드 2장 — 묶음당 1장이어야 한다
+E   assert 2 == 1
+E    +  where 2 = len([{'v': 1, 'type': 'approval_request', 'request_id': 'approval-1', 'items': [{'command': 'ChangeDestination Root', 'ris...0 /Merge', 'risk_reasons': ["blacklisted command (matches closed-set entry 'Store Sequence')"], 'warnings': []}], ...}])
+_______________ test_the_acceptance_is_written_to_the_audit_log ________________
+server/tests/test_web_cue_sheet_apply.py:276: in test_the_acceptance_is_written_to_the_audit_log
+    assert console.executed
+E   assert []
+E    +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x109e1de10>.executed
+_______________ test_applying_twice_does_not_resend_the_same_cue _______________
+server/tests/test_web_cue_sheet_apply.py:286: in test_applying_twice_does_not_resend_the_same_cue
+    assert "달라진 큐가 없습니다" in event["text"]
+E   AssertionError: assert '달라진 큐가 없습니다' in 'Sequence 210 반영을 승인받지 못해 중단했습니다 (요청 1건). 초안은 그대로 남아 있습니다.\n콘솔에는 아무것도 쓰지 않았습니다.'
+=========================== short test summary info ============================
+FAILED server/tests/test_fx_boundary.py::TestSafetyInvariantsAreInherited::test_a_real_fx_bundle_clears_the_real_gate_with_no_hold
+FAILED server/tests/test_seeded_song_apply.py::test_the_seeded_song_applies_end_to_end_when_the_director_names_the_sequence
+FAILED server/tests/test_seeded_song_apply.py::test_a_colour_change_reaches_the_desk_as_a_colour_command
+FAILED server/tests/test_seeded_song_apply.py::test_a_fade_change_reaches_the_desk_as_a_fade_command
+FAILED server/tests/test_web_cue_sheet_apply.py::test_apply_sends_only_the_changed_cue_through_the_preview_gate
+FAILED server/tests/test_web_cue_sheet_apply.py::test_an_accepted_batch_is_asked_once_not_once_per_command
+FAILED server/tests/test_web_cue_sheet_apply.py::test_the_acceptance_is_written_to_the_audit_log
+FAILED server/tests/test_web_cue_sheet_apply.py::test_applying_twice_does_not_resend_the_same_cue
+8 failed, 12 passed in 18.61s

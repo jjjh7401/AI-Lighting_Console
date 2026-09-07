@@ -43,8 +43,10 @@ from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
 from server.spatial.pointing import BASIC_POSITION_SEQUENCE
 from server.web.approval_bridge import ApprovalChannel
+from server.web.session import SongTimelineStore
 
 from .test_runner_self_correction import ScriptedProvider
+from .test_web_cue_sheet_apply import _timeline as _draft_timeline
 from .test_web_session import FakeConsole, _session
 
 # ---------------------------------------------------------------------------
@@ -186,6 +188,27 @@ def _drive_timeline_cue_merge(session):
     session._merge_timeline_cue_position(timeline, sections, 0, 1, _MERGE_TARGET)
 
 
+def _drive_cue_sheet_draft_apply(session):
+    """큐시트 초안 반영 (t299 Phase 2 에서 이 표에 들어왔다).
+
+    왜 이제 들어오는가. t292 당시 이 자리는 게이트가 `Store Sequence … /Merge` 를
+    `safe` 로 분류해서 승인 단계가 열리지 않았고, 그래서 **자기 승인 채널**로
+    수락을 따로 받았다(`_accept_draft_apply_batch`). 봉합 자리가 아니었으므로
+    이 표의 대상도 아니었다.
+
+    v6 이 그 오브젝트를 폐집합에 넣자 그 임시 채널이 **두 번째 질문자**가 됐다 —
+    한 동작에 카드가 두 장 떴다(실측). 채널을 걷어내고 `BatchRisk` 선언으로
+    바꿨으므로 이제 다른 아홉 자리와 같은 봉합 자리이고, 같은 규율로 재야 한다.
+    """
+    _stub_reads(session)
+    _answers(session, [])
+    session._timeline_store = SongTimelineStore()
+    session._timeline_store.latest = _draft_timeline()
+    # 한 큐를 고쳐 반영 대상을 만든다 — 편집만으로는 콘솔에 0건 나간다.
+    session.run_instruction("이 구간 더 밝게 해줘", 10)
+    session.run_instruction("초안을 콘솔에 반영해줘")
+
+
 def _drive_setlist(session):
     _stub_reads(session)
     _answers(session, ["승인"])
@@ -217,6 +240,8 @@ SITES = (
     ("_position_cue_store", _drive_position_cue_store, "position_cue_store"),
     ("_position_cue_sheet", _drive_position_cue_sheet, "position_cue_sheet"),
     ("_merge_timeline_cue_position", _drive_timeline_cue_merge, "timeline_cue_merge"),
+    # t299 Phase 2 — 열한 번째 자리. 근거는 구동기 docstring.
+    ("_cue_sheet_draft_apply", _drive_cue_sheet_draft_apply, "draft_apply"),
     ("_setlist_mode", _drive_setlist, "setlist_assign"),
 )
 
@@ -272,19 +297,38 @@ class TestEverySealedSiteIsDriven:
 #: 이 검사는 그 이동을 빨갛게 만든다 — 분류 층을 바꾸는 것은 자유고, 바꾼 줄
 #: 모르는 것이 결함이다.
 #:
-#: 2026-09-07 실측: 열 자리 중 일곱이 seal-only. 뮤테이션(`risk=None`)이
+#: 2026-09-07 실측(t321): 열 자리 중 일곱이 seal-only. 뮤테이션(`risk=None`)이
 #: 같은 답을 독립으로 냈다 — seal-only 일곱은 네 관측이 전부 빨개지고,
 #: redundant 셋은 `kind` 검사 하나만 빨개진다.
+#:
+#: 갱신 근거 (t299 Phase 2 / SPEC-COPILOT-CLASSIFYGAP-001): **seal-only 7 -> 2**.
+#: 위 문단이 예고한 이동이 실제로 일어났다 — 「blacklist 에 `Store Sequence` 가
+#: 추가되면 오늘 seal-only 인 일곱 자리가 조용히 redundant 가 된다」. v6 이 그
+#: 항목을 넣었고, 다섯 자리가 움직였다(`_position_fx_sequence` ·
+#: `_phaser_recall_sequence` · `_position_cue_store` · `_position_cue_sheet` ·
+#: `_merge_timeline_cue_position`). 표가 없었으면 아무도 몰랐을 이동이고, 이
+#: 검사가 그것을 빨갛게 만들어서 알렸다 — 설계된 대로 작동했다.
+#:
+#: 자리도 하나 늘었다(열 -> 열하나): `_cue_sheet_draft_apply` 가 자기 승인 채널을
+#: 버리고 `BatchRisk` 선언으로 바뀌면서 봉합 자리가 됐다(구동기 docstring).
+#: 실측 `redundant` — 분류 층이 이미 그 줄을 잡는다.
+#:
+#: 아래 값은 손으로 적지 않고 `reports/classifygap-t299-p2/probe_seal_defence_p2.py`
+#: 의 출력을 그대로 옮긴 것이다(`13_seal_defence_after_fix.txt`).
+#:
+#: 남는 seal-only 둘은 `Assign Sequence` · `Copy Sequence` 만 실어 나르고, SPEC §F
+#: 가 그 둘을 범위 밖에 뒀다 — 그래서 Phase 3 까지 다 해도 0 이 되지 않는다.
 SEAL_DEFENCE = {
     "run_look_bundle": "redundant",
     "_look_pan_tilt": "redundant",
-    "_position_fx_sequence": "seal-only",
+    "_position_fx_sequence": "redundant",
     "_offer_fx_executor_assignment": "seal-only",
-    "_phaser_recall_sequence": "seal-only",
+    "_phaser_recall_sequence": "redundant",
     "_store_position_preset_looks": "redundant",
-    "_position_cue_store": "seal-only",
-    "_position_cue_sheet": "seal-only",
-    "_merge_timeline_cue_position": "seal-only",
+    "_position_cue_store": "redundant",
+    "_position_cue_sheet": "redundant",
+    "_merge_timeline_cue_position": "redundant",
+    "_cue_sheet_draft_apply": "redundant",
     "_setlist_mode": "seal-only",
 }
 

@@ -1,0 +1,44 @@
+ruleset ver: 6   fx count: 19
+
+=== chase-warm-cool
+   'ChangeDestination Root'                                   matched=None risky=False
+   'ClearAll'                                                 matched=None risky=False
+   'Group 11'                                                 matched=None risky=False
+   "Attribute 'ColorRGB_R' At 100"                            matched=None risky=False
+   "Attribute 'ColorRGB_G' At 55"                             matched=None risky=False
+   "Attribute 'ColorRGB_B' At 5"                              matched=None risky=False
+   'Step 2'                                                   matched=None risky=False
+   "Attribute 'ColorRGB_R' At 5"                              matched=None risky=False
+   "Attribute 'ColorRGB_G' At 20"                             matched=None risky=False
+   "Attribute 'ColorRGB_B' At 100"                            matched=None risky=False
+   "Attribute 'ColorRGB_R' At Phase 0"                        matched=None risky=False
+   "Attribute 'ColorRGB_G' At Phase 120"                      matched=None risky=False
+   "Attribute 'ColorRGB_B' At Phase 240"                      matched=None risky=False
+   "Attribute 'ColorRGB_R' At Speed 16 ; Attribute 'ColorRGB_G' At Speed 16 ; Attribute 'ColorRGB_B' At Speed 16" matched=None risky=False
+   "Store Sequence 90 Cue 1 'M6'"                             matched='Store Sequence' risky=True
+   "Label Sequence 90 'M6'"                                   matched=None risky=False
+   'ClearAll'                                                 matched=None risky=False
+   showfile_write_risk -> BatchRisk(reason='쇼파일 쓰기 — Sequence 90 에 큐 1건을 저장합니다. 이 번들에는 되돌리기 명령이 없습니다.', kind='probe')
+
+=== chase-club-rgb
+   'ChangeDestination Root'                                   matched=None risky=False
+   'ClearAll'                                                 matched=None risky=False
+   'Group 11'                                                 matched=None risky=False
+   "Attribute 'ColorRGB_R' At 100"                            matched=None risky=False
+   "Attribute 'ColorRGB_G' At 10"                             matched=None risky=False
+   "Attribute 'ColorRGB_B' At 0"                              matched=None risky=False
+   'Step 2'                                                   matched=None risky=False
+   "Attribute 'ColorRGB_R' At 10"                             matched=None risky=False
+   "Attribute 'ColorRGB_G' At 100"                            matched=None risky=False
+   "Attribute 'ColorRGB_B' At 20"                             matched=None risky=False
+   'Step 3'                                                   matched=None risky=False
+   "Attribute 'ColorRGB_R' At 0"                              matched=None risky=False
+   "Attribute 'ColorRGB_G' At 30"                             matched=None risky=False
+   "Attribute 'ColorRGB_B' At 100"                            matched=None risky=False
+   "Attribute 'ColorRGB_R' At Speed 128 ; Attribute 'ColorRGB_G' At Speed 128 ; Attribute 'ColorRGB_B' At Speed 128" matched=None risky=False
+   "Set Selection MAtricks 'XShuffle' 1234"                   matched=None risky=False
+   "Store Sequence 91 Cue 1 'M6'"                             matched='Store Sequence' risky=True
+   "Label Sequence 91 'M6'"                                   matched=None risky=False
+   'Reset Selection MAtricks'                                 matched=None risky=False
+   'ClearAll'                                                 matched=None risky=False
+   showfile_write_risk -> BatchRisk(reason='쇼파일 쓰기 — Sequence 91 에 큐 1건을 저장합니다. 이 번들에는 되돌리기 명령이 없습니다.', kind='probe')

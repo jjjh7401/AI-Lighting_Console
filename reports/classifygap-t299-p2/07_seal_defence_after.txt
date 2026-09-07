@@ -1,0 +1,39 @@
+interpreter : 3.11.15
+server pkg  : /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-aaeb30c84d11d6eea/server/__init__.py
+ruleset ver : 6
+blacklist   : ['Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'Set Fixture', 'LoadShow', 'NewShow', 'Store Preset', 'Store Group', 'Store Timecode', 'Store Sequence']
+
+run_look_bundle                        표=redundant  실측=redundant 
+    나가는 쇼파일 쓰기: ['Store Preset 1.1']
+    잡힌 항목        : ['Store Preset']
+_look_pan_tilt                         표=redundant  실측=redundant 
+    나가는 쇼파일 쓰기: ['Store Preset 2.7']
+    잡힌 항목        : ['Store Preset']
+_position_fx_sequence                  표=seal-only  실측=redundant   <<< MOVED
+    나가는 쇼파일 쓰기: ["Store Sequence 201 Cue 1 'Circle'"]
+    잡힌 항목        : ['Store Sequence']
+_offer_fx_executor_assignment          표=seal-only  실측=seal-only 
+    나가는 쇼파일 쓰기: ['Assign Sequence 201 At Executor 101']
+    잡힌 항목        : []
+_phaser_recall_sequence                표=seal-only  실측=redundant   <<< MOVED
+    나가는 쇼파일 쓰기: ["Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2"]
+    잡힌 항목        : ['Store Sequence']
+_store_position_preset_looks           표=redundant  실측=redundant 
+    나가는 쇼파일 쓰기: ['Store Preset 2.31']
+    잡힌 항목        : ['Store Preset']
+_position_cue_store                    표=seal-only  실측=redundant   <<< MOVED
+    나가는 쇼파일 쓰기: ["Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5"]
+    잡힌 항목        : ['Store Sequence']
+_position_cue_sheet                    표=seal-only  실측=redundant   <<< MOVED
+    나가는 쇼파일 쓰기: ["Store Sequence 110 Cue 1 'Section 1' CueFade 3", "Store Sequence 110 Cue 2 'Section 2' CueFade 3"]
+    잡힌 항목        : ['Store Sequence']
+_merge_timeline_cue_position           표=seal-only  실측=redundant   <<< MOVED
+    나가는 쇼파일 쓰기: ['Store Sequence 210 Cue 1 /Merge']
+    잡힌 항목        : ['Store Sequence']
+_setlist_mode                          표=seal-only  실측=seal-only 
+    나가는 쇼파일 쓰기: ['Copy Sequence 300 At 210', 'Assign Sequence 210 At Executor 101']
+    잡힌 항목        : []
+
+seal-only (실측)  : 2
+seal-only (표)    : 7
+귀속이 움직인 자리: ['_position_fx_sequence', '_phaser_recall_sequence', '_position_cue_store', '_position_cue_sheet', '_merge_timeline_cue_position']

@@ -1,0 +1,1097 @@
+........................................................................ [  0%]
+........................................................................ [  1%]
+........................................................................ [  1%]
+........................................................................ [  2%]
+........................................................................ [  2%]
+........................................................................ [  3%]
+........................................................................ [  4%]
+........................................................................ [  4%]
+........................................................................ [  5%]
+........................................................................ [  5%]
+........................................................................ [  6%]
+........................................................................ [  7%]
+........................................................................ [  7%]
+........................................................................ [  8%]
+........................................................................ [  8%]
+........................................................................ [  9%]
+........................................................................ [ 10%]
+........................................................................ [ 10%]
+........................................................................ [ 11%]
+........................................................................ [ 11%]
+........................................................................ [ 12%]
+........................................................................ [ 13%]
+........................................................................ [ 13%]
+........................................................................ [ 14%]
+........................................................................ [ 14%]
+........................................................................ [ 15%]
+........................................................................ [ 16%]
+........................................................................ [ 16%]
+........................................................................ [ 17%]
+........................................................................ [ 17%]
+........................................................................ [ 18%]
+........................................................................ [ 19%]
+.........F.............F................................................ [ 19%]
+............sss......................................................... [ 20%]
+...................................ss................................... [ 20%]
+........................................................................ [ 21%]
+........................................................................ [ 22%]
+........................................................................ [ 22%]
+........................................................................ [ 23%]
+........................................................................ [ 23%]
+...............................................................ss....... [ 24%]
+........................................................................ [ 25%]
+........................................................................ [ 25%]
+........................................................................ [ 26%]
+........................................................................ [ 26%]
+........................................................................ [ 27%]
+.................................F...................................... [ 28%]
+........................................................................ [ 28%]
+........................................................................ [ 29%]
+........................................................................ [ 29%]
+........................................................................ [ 30%]
+........................................................................ [ 31%]
+........................................................................ [ 31%]
+........................................................................ [ 32%]
+........................................................................ [ 32%]
+...........ss........................................................... [ 33%]
+........................................................................ [ 34%]
+........................................................................ [ 34%]
+........................................................................ [ 35%]
+........................................................................ [ 35%]
+........................................................................ [ 36%]
+........................................................................ [ 37%]
+........................................................................ [ 37%]
+........................................................................ [ 38%]
+........................................................................ [ 38%]
+........................................................................ [ 39%]
+........................................................................ [ 40%]
+........................................................................ [ 40%]
+........................................................................ [ 41%]
+........................................................................ [ 41%]
+........................................................................ [ 42%]
+........................................................................ [ 43%]
+........................................................................ [ 43%]
+........................................................................ [ 44%]
+........................................................................ [ 44%]
+........................................................................ [ 45%]
+........................................................................ [ 46%]
+........................................................................ [ 46%]
+........................................................................ [ 47%]
+........................................................................ [ 47%]
+........................................................................ [ 48%]
+........................................................................ [ 49%]
+........................................................................ [ 49%]
+........................................................................ [ 50%]
+........................................................................ [ 50%]
+........................................................................ [ 51%]
+........................................................................ [ 52%]
+........................................................................ [ 52%]
+........................................................................ [ 53%]
+........................................................................ [ 53%]
+........................................................................ [ 54%]
+........................................................................ [ 55%]
+........................................................................ [ 55%]
+........................................................................ [ 56%]
+........................................................................ [ 56%]
+........................................................................ [ 57%]
+........................................................................ [ 58%]
+........................................................................ [ 58%]
+........................................................................ [ 59%]
+........................................................................ [ 59%]
+........................................................................ [ 60%]
+........................................................................ [ 61%]
+........................................................................ [ 61%]
+........................................................................ [ 62%]
+........................................................FF.............. [ 62%]
+........................................................................ [ 63%]
+........................................................................ [ 64%]
+........................................................................ [ 64%]
+........................................................................ [ 65%]
+........................................................................ [ 65%]
+........................................................................ [ 66%]
+........................................................................ [ 67%]
+..............................F.FF...................................... [ 67%]
+........................................................................ [ 68%]
+........................................................................ [ 68%]
+........................................................................ [ 69%]
+........................................................................ [ 70%]
+........................................................................ [ 70%]
+........................................................................ [ 71%]
+........................................................................ [ 71%]
+.....ss................................................................. [ 72%]
+........................................................................ [ 72%]
+........................................................................ [ 73%]
+........................................................................ [ 74%]
+........................................................................ [ 74%]
+........................................................................ [ 75%]
+........................................................................ [ 75%]
+........................................................................ [ 76%]
+........................................................................ [ 77%]
+........................................................................ [ 77%]
+........................................................................ [ 78%]
+........................................................................ [ 78%]
+........................................................................ [ 79%]
+........................................................................ [ 80%]
+........................................................................ [ 80%]
+........................................................................ [ 81%]
+........................................................................ [ 81%]
+........................................................................ [ 82%]
+........................................................................ [ 83%]
+........................................................................ [ 83%]
+........................................................................ [ 84%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 86%]
+....................................................................s... [ 86%]
+........................................................................ [ 87%]
+......................................................F.....FFF......... [ 87%]
+........................................................................ [ 88%]
+........................................................................ [ 89%]
+........................................................................ [ 89%]
+........................................................................ [ 90%]
+........................................................................ [ 90%]
+........................................................................ [ 91%]
+........................................................................ [ 92%]
+........................................................................ [ 92%]
+........................................................................ [ 93%]
+........................................................................ [ 93%]
+........................................................................ [ 94%]
+........................................................................ [ 95%]
+........................................................................ [ 95%]
+........................................................................ [ 96%]
+........................................................................ [ 96%]
+........................................................................ [ 97%]
+........................................................................ [ 98%]
+...........................................................s............ [ 98%]
+............................FFFF.F...................................... [ 99%]
+F.F.FFF.ssF.FsFFF.ssF.FsFFF............................................. [ 99%]
+..........                                                               [100%]
+=================================== FAILURES ===================================
+_ TestDeclarationSplitsTheVerdict.test_without_the_declaration_the_bundle_clears _
+
+self = <server.tests.test_bulkgate_declaration.TestDeclarationSplitsTheVerdict object at 0x10cb29dd0>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_without_the_declaration_t0')
+
+    def test_without_the_declaration_the_bundle_clears(self, tmp_path):
+        """갱신 근거 (t299 Phase 1): 대상 번들이 `SONGCUE_BUNDLE` 에서
+        `SONGCUE_BUNDLE_STILL_UNCLASSIFIED` 로 바뀐다.
+    
+        재는 축은 그대로 「선언 유무만 다른 두 호출이 갈리는가」다. 바뀐 것은
+        분류 층이고, v5 가 `Store Timecode` 를 잡으므로 원래 번들로는 이 축을
+        더는 못 잰다 — 청산되지 않는 이유가 선언 부재가 아니라 분류가 되기
+        때문이다. 그러면 이 검사는 초록/빨강과 무관하게 **무엇을 재는지 모르는
+        검사**가 된다.
+    
+        원래 단언이 고정하던 사실(2026-09-07 실측: 거절 포트를 붙였는데도 청산)
+        은 잃지 않는다 — 남은 구멍인 `Store Sequence` 계열에서 여전히 참이고,
+        그것이 Phase 2 가 아직 열려 있다는 관측이기도 하다.
+        """
+        gate, _, _ = _gate(tmp_path, approval_port=ScriptedApproval(decisions=[False]))
+        decision = gate.screen(list(SONGCUE_BUNDLE_STILL_UNCLASSIFIED))
+        # 승인을 항상 거절하는 포트를 붙였는데도 청산된다 — 아무도 안 물었다는
+        # 뜻이고, 이것이 2026-09-07 에 관측된 상태다.
+>       assert decision.cleared is True
+E       assert False is True
+E        +  where False = ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='Store Sequence 210 Cue 1 /Merge', ...closed-set entry 'Store Sequence')",), warnings=()))), notice='bundle rejected by the approver — nothing was executed').cleared
+
+server/tests/test_bulkgate_declaration.py:93: AssertionError
+_ TestLockAndBackupStayBetweenApprovalAndClearance.test_an_undeclared_safe_bundle_still_skips_the_backup _
+
+self = <server.tests.test_bulkgate_declaration.TestLockAndBackupStayBetweenApprovalAndClearance object at 0x10cb2a010>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_an_undeclared_safe_bundle0')
+
+    def test_an_undeclared_safe_bundle_still_skips_the_backup(self, tmp_path):
+        """갱신 근거 (t299 Phase 1): 검사 이름이 요구하는 것은 **safe 번들**이고,
+        v5 이후 `SONGCUE_BUNDLE` 은 safe 번들이 아니다(`Store Timecode` 가 잡힌다).
+    
+        그래서 대상만 `SONGCUE_BUNDLE_STILL_UNCLASSIFIED` 로 바꾼다. 단언은
+        바이트 그대로다 — 재는 것은 「위험하지 않은 번들에는 백업이 안 돈다」이고
+        그 성질은 안 바뀌었다. 원래 번들로 계속 재면 백업이 도는 것이 **정상**인
+        상태에서 「안 돈다」를 단언하게 되고, 그것은 이 검사가 지키려는 성질과
+        반대다.
+        """
+        backup_calls: list[str] = []
+        backup = BackupManager(backup_action=lambda: backup_calls.append("b"))
+        gate, _, _ = _gate(
+            tmp_path, approval_port=ScriptedApproval(decisions=[True]), backup=backup
+        )
+        gate.screen(list(SONGCUE_BUNDLE_STILL_UNCLASSIFIED))
+>       assert backup_calls == []
+E       AssertionError: assert ['b'] == []
+E         
+E         Left contains one more item: 'b'
+E         Use -v to get more diff
+
+server/tests/test_bulkgate_declaration.py:269: AssertionError
+_ TestSafetyInvariantsAreInherited.test_a_real_fx_bundle_clears_the_real_gate_with_no_hold _
+
+self = <server.tests.test_fx_boundary.TestSafetyInvariantsAreInherited object at 0x10d49b690>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_real_fx_bundle_clears_t0')
+
+    def test_a_real_fx_bundle_clears_the_real_gate_with_no_hold(self, tmp_path):
+        # "무보류 통과 집합" — the fx bundle lines land in the no-hold set of the
+        # EXISTING classifier. No approval port is wired, so a held line would
+        # fail here rather than quietly wait.
+        library = load_library_from_dir(DEFAULT_LIBRARY_DIR)
+        gate = _real_gate(tmp_path, locked=False)
+        for index, fx in enumerate(library.fx):
+            plan = build_fx_bundle(fx, group=11, sequence=90 + index, label="M6")
+            decision = gate.screen(list(plan.commands))
+>           assert decision.cleared is True, f"{fx.fx_id}: {decision.status}"
+E           AssertionError: chase-warm-cool: rejected
+E           assert False is True
+E            +  where False = ScreenDecision(cleared=False, status='rejected', commands=(CommandDecision(command='ChangeDestination Root', status='r...losed-set entry 'Store Sequence')",), warnings=()),)), notice='bundle rejected by the approver — nothing was executed').cleared
+
+server/tests/test_fx_boundary.py:593: AssertionError
+_____ TestShippedRuleset.test_blacklist_is_exactly_the_shipped_closed_set ______
+
+self = <server.tests.test_safety_ruleset.TestShippedRuleset object at 0x10e7f3950>
+
+    def test_blacklist_is_exactly_the_shipped_closed_set(self):
+        # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
+        ruleset = load_ruleset()
+>       assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
+E       AssertionError: assert {'Delete', 'F...'Remove', ...} == {'Delete', 'F...'Remove', ...}
+E         
+E         Extra items in the left set:
+E         'Store Sequence'
+E         Use -v to get more diff
+
+server/tests/test_safety_ruleset.py:156: AssertionError
+___ TestShippedRuleset.test_every_shipped_revision_is_documented_in_the_file ___
+
+self = <server.tests.test_safety_ruleset.TestShippedRuleset object at 0x10e7f3d10>
+
+    def test_every_shipped_revision_is_documented_in_the_file(self):
+        """A version bump with no recorded reason is a silent widening.
+    
+        Pinning entry text alone is not enough: it forces an edit here, but it
+        cannot force the edit to be JUSTIFIED. So `version: N` must not ship
+        without a `v<N-1> -> v<N>` line saying what changed and which SPEC
+        ratified it. Deliberately NOT an entry-count rule — a future revision
+        may add two entries at once, and a count formula would manufacture
+        false friction.
+    
+        The check is TWO layers because the single whole-file
+        `"v1 -> v2" in text` form it replaces was defeatable: swapping the
+        entire 12-line justification for a contentless `# REVISION HISTORY` +
+        `#   v1 -> v2` left this module green. The enforced property now
+        matches the documented one — the marker must sit INSIDE the REVISION
+        HISTORY block, and that marker's own entry must name the ratifying
+        SPEC. Both probes live in `TestRevisionJustification`.
+    
+        On the version pin: it STAYS (deliberate friction — a bump has to come
+        here and be argued). It does make the checker's loop single-iteration
+        at the shipped pin, so rather than soften the docstring to match, the
+        "every shipped revision" generality is made REAL by driving the same
+        checker over a synthetic v4 file in `TestRevisionJustification`.
+        """
+        # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299). 이 핀은 버전을 올리는
+        # 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이다.
+>       assert load_ruleset().version == 5
+E       AssertionError: assert 6 == 5
+E        +  where 6 = SafetyRuleset(version=6, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>')).version
+E        +    where SafetyRuleset(version=6, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>')) = load_ruleset()
+
+server/tests/test_safety_ruleset.py:188: AssertionError
+_ test_the_seeded_song_applies_end_to_end_when_the_director_names_the_sequence _
+
+harness = (<server.web.session.ChatSession object at 0x116356310>, <server.tests.test_safety_gate.FakeConsole object at 0x1176f4...ok', 'summary': '승인 거부로 번들 전체가 실행되지 않았습니다.', ...}], <server.web.approval_bridge.ApprovalChannel object at 0x1176f4210>)
+
+    def test_the_seeded_song_applies_end_to_end_when_the_director_names_the_sequence(harness):
+        session, console, store, sent, channel = harness
+        cue = _first_key_cue(store)
+        session.run_instruction(f"큐 {cue} 더 밝게 해줘", cue)
+        assert console.executed == []  # 편집만으로는 콘솔 0건
+    
+        event = _run_with_auto_approval(session, sent, channel, "시퀀스 210에 초안을 콘솔에 반영해줘")
+    
+        assert [e for e in sent if e.get("type") == "execution_preview"]
+>       assert f"Store Sequence 210 Cue {cue} /Merge" in console.executed
+E       AssertionError: assert 'Store Sequence 210 Cue 20 /Merge' in []
+E        +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x1176f41d0>.executed
+
+server/tests/test_seeded_song_apply.py:139: AssertionError
+__________ test_a_colour_change_reaches_the_desk_as_a_colour_command ___________
+
+full_rig = (<server.web.session.ChatSession object at 0x11752ca50>, <server.tests.test_safety_gate.FakeConsole object at 0x11758a...ok', 'summary': '승인 거부로 번들 전체가 실행되지 않았습니다.', ...}], <server.web.approval_bridge.ApprovalChannel object at 0x11758a4d0>)
+
+    def test_a_colour_change_reaches_the_desk_as_a_colour_command(full_rig):
+        """컬러 변경이 컬러 명령으로 나간다 — 실측 줄 그대로.
+    
+        큐 10 은 BACK·WASH-U·HAZE 를 쓰고 팔레트가 P1 골드앰버다. P4 핫핑크
+        (#FF3C9E)로 바꾸면 백분율 축으로 (100, 24, 62) 가 된다.
+        """
+        session, console, _store, sent, channel = full_rig
+        session.run_instruction("큐 10 컬러를 P4 핫핑크로 바꿔줘", 10)
+        assert console.executed == []  # 편집만으로는 콘솔 0건
+    
+        event = _run_with_auto_approval(session, sent, channel, "시퀀스 3에 초안을 콘솔에 반영해줘")
+    
+>       assert (
+            "Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; "
+            "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 24 ; "
+            "Attribute 'ColorRGB_B' At 62"
+        ) in console.executed
+E       assert "Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 24 ; Attribute 'ColorRGB_B' At 62" in []
+E        +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x11758aed0>.executed
+
+server/tests/test_seeded_song_apply.py:218: AssertionError
+____________ test_a_fade_change_reaches_the_desk_as_a_fade_command _____________
+
+full_rig = (<server.web.session.ChatSession object at 0x11634b690>, <server.tests.test_safety_gate.FakeConsole object at 0x1175c2...ok', 'summary': '승인 거부로 번들 전체가 실행되지 않았습니다.', ...}], <server.web.approval_bridge.ApprovalChannel object at 0x1175c02d0>)
+
+    def test_a_fade_change_reaches_the_desk_as_a_fade_command(full_rig):
+        """페이드 변경이 CueFade 로 나간다 — `Property 'Fade'` 는 여전히 안 쓴다."""
+        session, console, _store, sent, channel = full_rig
+        session.run_instruction("큐 20 페이드 3초로 바꿔줘", 20)
+        assert console.executed == []
+    
+        event = _run_with_auto_approval(session, sent, channel, "시퀀스 3에 초안을 콘솔에 반영해줘")
+    
+>       assert "Store Sequence 3 Cue 20 CueFade 3 /Merge" in console.executed
+E       AssertionError: assert 'Store Sequence 3 Cue 20 CueFade 3 /Merge' in []
+E        +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x1175c2250>.executed
+
+server/tests/test_seeded_song_apply.py:236: AssertionError
+________ test_apply_sends_only_the_changed_cue_through_the_preview_gate ________
+
+harness = (<server.web.session.ChatSession object at 0x117e89810>, <server.tests.test_safety_gate.FakeConsole object at 0x117e89...ok', 'summary': '승인 거부로 번들 전체가 실행되지 않았습니다.', ...}], <server.web.approval_bridge.ApprovalChannel object at 0x117e88b90>)
+
+    def test_apply_sends_only_the_changed_cue_through_the_preview_gate(harness):
+        session, console, store, sent, channel = harness
+        session.run_instruction("이 구간 더 밝게 해줘", 10)
+        assert console.executed == []  # 편집만으로는 아직 0건
+        event = _run_with_auto_approval(session, sent, channel, "초안을 콘솔에 반영해줘")
+        assert [e for e in sent if e.get("type") == "execution_preview"]
+>       assert "Store Sequence 210 Cue 10 /Merge" in console.executed
+E       AssertionError: assert 'Store Sequence 210 Cue 10 /Merge' in []
+E        +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x117e89a90>.executed
+
+server/tests/test_web_cue_sheet_apply.py:156: AssertionError
+__________ test_an_accepted_batch_is_asked_once_not_once_per_command ___________
+
+harness = (<server.web.session.ChatSession object at 0x117e91a50>, <server.tests.test_safety_gate.FakeConsole object at 0x117e23...ok', 'summary': '승인 거부로 번들 전체가 실행되지 않았습니다.', ...}], <server.web.approval_bridge.ApprovalChannel object at 0x117e23ad0>)
+
+    def test_an_accepted_batch_is_asked_once_not_once_per_command(harness):
+        """묶음 하나 = 카드 하나. 명령 수만큼 묻지 않는다.
+    
+        이 큐는 명령 여러 줄로 나간다(대상 선택·조도·`Store … /Merge`). 카드가
+        명령마다 뜨면 감독은 한 곡 반영에 프롬프트 벽을 만난다 — 이 카드가
+        분류를 넓히는 대신 반영 경로에서 받은 이유가 그 비용이다.
+        """
+        session, console, _store, sent, channel = harness
+        session.run_instruction("이 구간 더 밝게 해줘", 10)
+        event = _run_with_auto_approval(session, sent, channel, "초안을 콘솔에 반영해줘")
+        cards = _approval_events(sent)
+>       assert len(cards) == 1, f"카드 {len(cards)}장 — 묶음당 1장이어야 한다"
+E       AssertionError: 카드 2장 — 묶음당 1장이어야 한다
+E       assert 2 == 1
+E        +  where 2 = len([{'v': 1, 'type': 'approval_request', 'request_id': 'approval-1', 'items': [{'command': 'ChangeDestination Root', 'ris...0 /Merge', 'risk_reasons': ["blacklisted command (matches closed-set entry 'Store Sequence')"], 'warnings': []}], ...}])
+
+server/tests/test_web_cue_sheet_apply.py:257: AssertionError
+_______________ test_the_acceptance_is_written_to_the_audit_log ________________
+
+harness = (<server.web.session.ChatSession object at 0x117c9c2d0>, <server.tests.test_safety_gate.FakeConsole object at 0x117e00...ok', 'summary': '승인 거부로 번들 전체가 실행되지 않았습니다.', ...}], <server.web.approval_bridge.ApprovalChannel object at 0x117e02890>)
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_the_acceptance_is_written0')
+
+    def test_the_acceptance_is_written_to_the_audit_log(harness, tmp_path):
+        """감사 로그가 수락을 기록한다 — 「승인 0건인데 실행 N건」이 다시 안 생기게."""
+        session, console, _store, sent, channel = harness
+        session.run_instruction("이 구간 더 밝게 해줘", 10)
+        _run_with_auto_approval(session, sent, channel, "초안을 콘솔에 반영해줘")
+        audit = AuditLog(tmp_path / "audit")
+        events = list(audit.iter_events())
+        approved = [
+            e for e in events if e.get("event") == "approved" and e.get("kind") == "draft_apply"
+        ]
+        assert approved, f"수락 항목이 없다: {[e.get('event') for e in events]}"
+        assert "Store Sequence 210 Cue 10 /Merge" in approved[0]["commands"]
+>       assert console.executed
+E       assert []
+E        +  where [] = <server.tests.test_safety_gate.FakeConsole object at 0x117e00ed0>.executed
+
+server/tests/test_web_cue_sheet_apply.py:276: AssertionError
+_______________ test_applying_twice_does_not_resend_the_same_cue _______________
+
+harness = (<server.web.session.ChatSession object at 0x1171e6350>, <server.tests.test_safety_gate.FakeConsole object at 0x117fbf...'summary': '승인 거부로 번들 전체가 실행되지 않았습니다.', ...}, ...], <server.web.approval_bridge.ApprovalChannel object at 0x115cb3110>)
+
+    def test_applying_twice_does_not_resend_the_same_cue(harness):
+        session, console, store, sent, channel = harness
+        session.run_instruction("이 구간 더 밝게 해줘", 10)
+        _run_with_auto_approval(session, sent, channel, "초안을 콘솔에 반영해줘")
+        first = list(console.executed)
+        event = _run_with_auto_approval(session, sent, channel, "초안을 콘솔에 반영해줘")
+        assert console.executed == first
+>       assert "달라진 큐가 없습니다" in event["text"]
+E       AssertionError: assert '달라진 큐가 없습니다' in 'Sequence 210 반영을 승인받지 못해 중단했습니다 (요청 1건). 초안은 그대로 남아 있습니다.\n콘솔에는 아무것도 쓰지 않았습니다.'
+
+server/tests/test_web_cue_sheet_apply.py:286: AssertionError
+_ test_a_sequence_cue_write_raises_no_approval_card_today[Store Sequence 210 Cue 1 /Merge] _
+
+command = 'Store Sequence 210 Cue 1 /Merge'
+
+    @pytest.mark.parametrize("command", UNCARDED_SEQUENCE_WRITES)
+    def test_a_sequence_cue_write_raises_no_approval_card_today(command: str) -> None:
+        verdict = _classify(command)
+>       assert verdict.category == "safe"
+E       AssertionError: assert 'blacklisted' == 'safe'
+E         
+E         - safe
+E         + blacklisted
+
+server/tests/test_writegate_merge_gap.py:104: AssertionError
+_ test_a_sequence_cue_write_raises_no_approval_card_today[Store Sequence 210 Cue 1] _
+
+command = 'Store Sequence 210 Cue 1'
+
+    @pytest.mark.parametrize("command", UNCARDED_SEQUENCE_WRITES)
+    def test_a_sequence_cue_write_raises_no_approval_card_today(command: str) -> None:
+        verdict = _classify(command)
+>       assert verdict.category == "safe"
+E       AssertionError: assert 'blacklisted' == 'safe'
+E         
+E         - safe
+E         + blacklisted
+
+server/tests/test_writegate_merge_gap.py:104: AssertionError
+_ test_a_sequence_cue_write_raises_no_approval_card_today[Store Sequence 210] __
+
+command = 'Store Sequence 210'
+
+    @pytest.mark.parametrize("command", UNCARDED_SEQUENCE_WRITES)
+    def test_a_sequence_cue_write_raises_no_approval_card_today(command: str) -> None:
+        verdict = _classify(command)
+>       assert verdict.category == "safe"
+E       AssertionError: assert 'blacklisted' == 'safe'
+E         
+E         - safe
+E         + blacklisted
+
+server/tests/test_writegate_merge_gap.py:104: AssertionError
+_____________ test_the_same_write_with_overwrite_does_raise_a_card _____________
+
+    def test_the_same_write_with_overwrite_does_raise_a_card() -> None:
+        """축은 `/Merge` 가 아니라 **블랙리스트가 든 옵션**이다.
+    
+        `Store /overwrite` 항목이 `/Overwrite` 를 잡는다. `/Merge` 를 잡을 항목은
+        이 파일에 없다 — 즉 결함은 `/Merge` 전용 구멍이 아니라 `Store` 의
+        오브젝트 커버리지(`Sequence` 가 항목에 없다)다.
+        """
+        merged = _classify("Store Sequence 210 Cue 1 /Merge")
+        overwritten = _classify("Store Sequence 210 Cue 1 /Overwrite")
+>       assert merged.risky is False
+E       assert True is False
+E        +  where True = RiskFinding(command='Store Sequence 210 Cue 1 /Merge', category='blacklisted', risky=True, reasons=("blacklisted comma...atches closed-set entry 'Store Sequence')",), unspecified_target=False, reference=None, matched_entry='Store Sequence').risky
+
+server/tests/test_writegate_merge_gap.py:118: AssertionError
+____ test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store _____
+
+    def test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store() -> None:
+        """최소 수정 자리를 기록한다: `Store Sequence` 라는 항목이 없다.
+    
+        이 단언이 깨지는 날은 누군가 그 항목을 넣은 날이고, 그때 이 파일 전체가
+        붉어져서 「고정해 둔 구멍이 닫혔다」를 알린다.
+    
+        갱신 근거 (t299 / SPEC-COPILOT-CLASSIFYGAP-001 Phase 1): v5 가 `Store Group`
+        과 `Store Timecode` 를 넣었으므로 `store_entries` 목록이 넷이 된다. 첫
+        단언(`"Store Sequence" not in ...`)은 **바꾸지 않는다** — Phase 1 은
+        `Store Sequence` 를 안 넣었고, 그 성질은 아직 참이다. 즉 이 검사는 이제
+        「Sequence 구멍은 아직 열려 있고, Store 계열 중 넷이 닫혔다」를 센다.
+        """
+>       assert "Store Sequence" not in RULESET.blacklist
+E       AssertionError: assert 'Store Sequence' not in ('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', ...)
+E        +  where ('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', ...) = SafetyRuleset(version=6, blacklist=('Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'S..., 'Go+', 'Go-', 'Goto', 'On', 'Off', 'Toggle', 'Temp', 'Flash', 'Call'), bare_object_forms=('Macro <n>', 'Plugin <n>')).blacklist
+
+server/tests/test_writegate_merge_gap.py:142: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_the_recorded_defence_class_still_holds[_position_fx_sequence] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10fadc4d0>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_the_recorded_defence_clas2')
+name = '_position_fx_sequence'
+drive = <function _drive_position_fx_sequence at 0x10faab060>
+kind = 'position_fx_sequence'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_the_recorded_defence_class_still_holds(self, tmp_path, name, drive, kind):
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert carried, f"{name}: 카드에 실린 줄이 없다 — 이 검사가 공허하다"
+    
+        verdicts = _classify_carried(session._gate, carried)
+        risky = [v for v in verdicts if v.risky]
+        measured = "redundant" if risky else "seal-only"
+    
+>       assert measured == SEAL_DEFENCE[name], (
+            f"{name}: 방어 귀속이 {SEAL_DEFENCE[name]!r} 에서 {measured!r} 로 움직였다. "
+            f"분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: "
+            f"{sorted({v.matched_entry for v in risky if v.matched_entry})}. "
+            "SEAL_DEFENCE 표를 다시 재서 갱신해 주세요."
+        )
+E       AssertionError: _position_fx_sequence: 방어 귀속이 'seal-only' 에서 'redundant' 로 움직였다. 분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: ['Store Sequence']. SEAL_DEFENCE 표를 다시 재서 갱신해 주세요.
+E       assert 'redundant' == 'seal-only'
+E         
+E         - seal-only
+E         + redundant
+
+server/tests/test_writegate_session_sites.py:326: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_the_recorded_defence_class_still_holds[_phaser_recall_sequence] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10fadc950>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_the_recorded_defence_clas4')
+name = '_phaser_recall_sequence'
+drive = <function _drive_phaser_recall_sequence at 0x10faab1a0>
+kind = 'phaser_recall_sequence'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_the_recorded_defence_class_still_holds(self, tmp_path, name, drive, kind):
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert carried, f"{name}: 카드에 실린 줄이 없다 — 이 검사가 공허하다"
+    
+        verdicts = _classify_carried(session._gate, carried)
+        risky = [v for v in verdicts if v.risky]
+        measured = "redundant" if risky else "seal-only"
+    
+>       assert measured == SEAL_DEFENCE[name], (
+            f"{name}: 방어 귀속이 {SEAL_DEFENCE[name]!r} 에서 {measured!r} 로 움직였다. "
+            f"분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: "
+            f"{sorted({v.matched_entry for v in risky if v.matched_entry})}. "
+            "SEAL_DEFENCE 표를 다시 재서 갱신해 주세요."
+        )
+E       AssertionError: _phaser_recall_sequence: 방어 귀속이 'seal-only' 에서 'redundant' 로 움직였다. 분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: ['Store Sequence']. SEAL_DEFENCE 표를 다시 재서 갱신해 주세요.
+E       assert 'redundant' == 'seal-only'
+E         
+E         - seal-only
+E         + redundant
+
+server/tests/test_writegate_session_sites.py:326: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_the_recorded_defence_class_still_holds[_position_cue_store] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10fadcdd0>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_the_recorded_defence_clas6')
+name = '_position_cue_store'
+drive = <function _drive_position_cue_store at 0x10faab2e0>
+kind = 'position_cue_store'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_the_recorded_defence_class_still_holds(self, tmp_path, name, drive, kind):
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert carried, f"{name}: 카드에 실린 줄이 없다 — 이 검사가 공허하다"
+    
+        verdicts = _classify_carried(session._gate, carried)
+        risky = [v for v in verdicts if v.risky]
+        measured = "redundant" if risky else "seal-only"
+    
+>       assert measured == SEAL_DEFENCE[name], (
+            f"{name}: 방어 귀속이 {SEAL_DEFENCE[name]!r} 에서 {measured!r} 로 움직였다. "
+            f"분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: "
+            f"{sorted({v.matched_entry for v in risky if v.matched_entry})}. "
+            "SEAL_DEFENCE 표를 다시 재서 갱신해 주세요."
+        )
+E       AssertionError: _position_cue_store: 방어 귀속이 'seal-only' 에서 'redundant' 로 움직였다. 분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: ['Store Sequence']. SEAL_DEFENCE 표를 다시 재서 갱신해 주세요.
+E       assert 'redundant' == 'seal-only'
+E         
+E         - seal-only
+E         + redundant
+
+server/tests/test_writegate_session_sites.py:326: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_the_recorded_defence_class_still_holds[_position_cue_sheet] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10fadd010>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_the_recorded_defence_clas7')
+name = '_position_cue_sheet'
+drive = <function _drive_position_cue_sheet at 0x10faab380>
+kind = 'position_cue_sheet'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_the_recorded_defence_class_still_holds(self, tmp_path, name, drive, kind):
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert carried, f"{name}: 카드에 실린 줄이 없다 — 이 검사가 공허하다"
+    
+        verdicts = _classify_carried(session._gate, carried)
+        risky = [v for v in verdicts if v.risky]
+        measured = "redundant" if risky else "seal-only"
+    
+>       assert measured == SEAL_DEFENCE[name], (
+            f"{name}: 방어 귀속이 {SEAL_DEFENCE[name]!r} 에서 {measured!r} 로 움직였다. "
+            f"분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: "
+            f"{sorted({v.matched_entry for v in risky if v.matched_entry})}. "
+            "SEAL_DEFENCE 표를 다시 재서 갱신해 주세요."
+        )
+E       AssertionError: _position_cue_sheet: 방어 귀속이 'seal-only' 에서 'redundant' 로 움직였다. 분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: ['Store Sequence']. SEAL_DEFENCE 표를 다시 재서 갱신해 주세요.
+E       assert 'redundant' == 'seal-only'
+E         
+E         - seal-only
+E         + redundant
+
+server/tests/test_writegate_session_sites.py:326: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_the_recorded_defence_class_still_holds[_merge_timeline_cue_position] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10fadd290>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_the_recorded_defence_clas8')
+name = '_merge_timeline_cue_position'
+drive = <function _drive_timeline_cue_merge at 0x10faab420>
+kind = 'timeline_cue_merge'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_the_recorded_defence_class_still_holds(self, tmp_path, name, drive, kind):
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert carried, f"{name}: 카드에 실린 줄이 없다 — 이 검사가 공허하다"
+    
+        verdicts = _classify_carried(session._gate, carried)
+        risky = [v for v in verdicts if v.risky]
+        measured = "redundant" if risky else "seal-only"
+    
+>       assert measured == SEAL_DEFENCE[name], (
+            f"{name}: 방어 귀속이 {SEAL_DEFENCE[name]!r} 에서 {measured!r} 로 움직였다. "
+            f"분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: "
+            f"{sorted({v.matched_entry for v in risky if v.matched_entry})}. "
+            "SEAL_DEFENCE 표를 다시 재서 갱신해 주세요."
+        )
+E       AssertionError: _merge_timeline_cue_position: 방어 귀속이 'seal-only' 에서 'redundant' 로 움직였다. 분류 층(blacklist.yaml)이 바뀐 것이다 — 잡힌 항목: ['Store Sequence']. SEAL_DEFENCE 표를 다시 재서 갱신해 주세요.
+E       assert 'redundant' == 'seal-only'
+E         
+E         - seal-only
+E         + redundant
+
+server/tests/test_writegate_session_sites.py:326: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_a_seal_only_site_loses_every_card_without_its_declaration[_position_fx_sequence] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10fadf910>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_site_loses_ev2')
+name = '_position_fx_sequence'
+drive = <function _drive_position_fx_sequence at 0x10faab060>
+kind = 'position_fx_sequence'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_site_loses_every_card_without_its_declaration(
+        self, tmp_path, name, drive, kind
+    ):
+        """seal-only 자리에서 선언이 빠지면 카드가 **아예** 안 뜬다.
+    
+        위 검사는 「전부 safe 로 분류된다」를 재는데, 그것이 곧 「봉합을 떼면
+        카드가 없다」는 뜻인지는 게이트의 동작이다(`gate.screen` 의
+        `approval_findings = list(findings) if risk is not None else held`).
+        그 접합을 여기서 직접 쏜다 — 표가 아니라 게이트에 물어본다.
+        """
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 이미 잡으므로 이 관측의 대상이 아니다")
+    
+        session, console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        verdicts = _classify_carried(session._gate, carried)
+    
+        # 선언 없이 이 번들을 게이트에 그대로 넣으면 `held` 가 비고 카드가 없다.
+        held = [v for v in verdicts if v.risky]
+>       assert not held, f"{name}: seal-only 인데 보류될 줄이 있다: {[v.command for v in held]}"
+E       AssertionError: _position_fx_sequence: seal-only 인데 보류될 줄이 있다: ["Store Sequence 201 Cue 1 'Circle'"]
+E       assert not [RiskFinding(command="Store Sequence 201 Cue 1 'Circle'", category='blacklisted', risky=True, reasons=("blacklisted co...tches closed-set entry 'Store Sequence')",), unspecified_target=False, reference=None, matched_entry='Store Sequence')]
+
+server/tests/test_writegate_session_sites.py:354: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_a_seal_only_site_loses_every_card_without_its_declaration[_phaser_recall_sequence] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10fadfd90>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_site_loses_ev4')
+name = '_phaser_recall_sequence'
+drive = <function _drive_phaser_recall_sequence at 0x10faab1a0>
+kind = 'phaser_recall_sequence'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_site_loses_every_card_without_its_declaration(
+        self, tmp_path, name, drive, kind
+    ):
+        """seal-only 자리에서 선언이 빠지면 카드가 **아예** 안 뜬다.
+    
+        위 검사는 「전부 safe 로 분류된다」를 재는데, 그것이 곧 「봉합을 떼면
+        카드가 없다」는 뜻인지는 게이트의 동작이다(`gate.screen` 의
+        `approval_findings = list(findings) if risk is not None else held`).
+        그 접합을 여기서 직접 쏜다 — 표가 아니라 게이트에 물어본다.
+        """
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 이미 잡으므로 이 관측의 대상이 아니다")
+    
+        session, console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        verdicts = _classify_carried(session._gate, carried)
+    
+        # 선언 없이 이 번들을 게이트에 그대로 넣으면 `held` 가 비고 카드가 없다.
+        held = [v for v in verdicts if v.risky]
+>       assert not held, f"{name}: seal-only 인데 보류될 줄이 있다: {[v.command for v in held]}"
+E       AssertionError: _phaser_recall_sequence: seal-only 인데 보류될 줄이 있다: ["Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2"]
+E       assert not [RiskFinding(command="Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2", category='blacklisted', risky=True, reasons=...tches closed-set entry 'Store Sequence')",), unspecified_target=False, reference=None, matched_entry='Store Sequence')]
+
+server/tests/test_writegate_session_sites.py:354: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_a_seal_only_site_loses_every_card_without_its_declaration[_position_cue_store] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10faec250>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_site_loses_ev6')
+name = '_position_cue_store'
+drive = <function _drive_position_cue_store at 0x10faab2e0>
+kind = 'position_cue_store'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_site_loses_every_card_without_its_declaration(
+        self, tmp_path, name, drive, kind
+    ):
+        """seal-only 자리에서 선언이 빠지면 카드가 **아예** 안 뜬다.
+    
+        위 검사는 「전부 safe 로 분류된다」를 재는데, 그것이 곧 「봉합을 떼면
+        카드가 없다」는 뜻인지는 게이트의 동작이다(`gate.screen` 의
+        `approval_findings = list(findings) if risk is not None else held`).
+        그 접합을 여기서 직접 쏜다 — 표가 아니라 게이트에 물어본다.
+        """
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 이미 잡으므로 이 관측의 대상이 아니다")
+    
+        session, console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        verdicts = _classify_carried(session._gate, carried)
+    
+        # 선언 없이 이 번들을 게이트에 그대로 넣으면 `held` 가 비고 카드가 없다.
+        held = [v for v in verdicts if v.risky]
+>       assert not held, f"{name}: seal-only 인데 보류될 줄이 있다: {[v.command for v in held]}"
+E       AssertionError: _position_cue_store: seal-only 인데 보류될 줄이 있다: ["Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5"]
+E       assert not [RiskFinding(command="Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5", category='blacklisted', risky=True, reasons=("bl...tches closed-set entry 'Store Sequence')",), unspecified_target=False, reference=None, matched_entry='Store Sequence')]
+
+server/tests/test_writegate_session_sites.py:354: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_a_seal_only_site_loses_every_card_without_its_declaration[_position_cue_sheet] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10faec490>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_site_loses_ev7')
+name = '_position_cue_sheet'
+drive = <function _drive_position_cue_sheet at 0x10faab380>
+kind = 'position_cue_sheet'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_site_loses_every_card_without_its_declaration(
+        self, tmp_path, name, drive, kind
+    ):
+        """seal-only 자리에서 선언이 빠지면 카드가 **아예** 안 뜬다.
+    
+        위 검사는 「전부 safe 로 분류된다」를 재는데, 그것이 곧 「봉합을 떼면
+        카드가 없다」는 뜻인지는 게이트의 동작이다(`gate.screen` 의
+        `approval_findings = list(findings) if risk is not None else held`).
+        그 접합을 여기서 직접 쏜다 — 표가 아니라 게이트에 물어본다.
+        """
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 이미 잡으므로 이 관측의 대상이 아니다")
+    
+        session, console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        verdicts = _classify_carried(session._gate, carried)
+    
+        # 선언 없이 이 번들을 게이트에 그대로 넣으면 `held` 가 비고 카드가 없다.
+        held = [v for v in verdicts if v.risky]
+>       assert not held, f"{name}: seal-only 인데 보류될 줄이 있다: {[v.command for v in held]}"
+E       AssertionError: _position_cue_sheet: seal-only 인데 보류될 줄이 있다: ["Store Sequence 110 Cue 1 'Section 1' CueFade 3", "Store Sequence 110 Cue 2 'Section 2' CueFade 3"]
+E       assert not [RiskFinding(command="Store Sequence 110 Cue 1 'Section 1' CueFade 3", category='blacklisted', risky=True, reasons=("b...tches closed-set entry 'Store Sequence')",), unspecified_target=False, reference=None, matched_entry='Store Sequence')]
+
+server/tests/test_writegate_session_sites.py:354: AssertionError
+_ TestWhatWouldGoOutWithoutTheSeal.test_a_seal_only_site_loses_every_card_without_its_declaration[_merge_timeline_cue_position] _
+
+self = <server.tests.test_writegate_session_sites.TestWhatWouldGoOutWithoutTheSeal object at 0x10faec710>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_site_loses_ev8')
+name = '_merge_timeline_cue_position'
+drive = <function _drive_timeline_cue_merge at 0x10faab420>
+kind = 'timeline_cue_merge'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_site_loses_every_card_without_its_declaration(
+        self, tmp_path, name, drive, kind
+    ):
+        """seal-only 자리에서 선언이 빠지면 카드가 **아예** 안 뜬다.
+    
+        위 검사는 「전부 safe 로 분류된다」를 재는데, 그것이 곧 「봉합을 떼면
+        카드가 없다」는 뜻인지는 게이트의 동작이다(`gate.screen` 의
+        `approval_findings = list(findings) if risk is not None else held`).
+        그 접합을 여기서 직접 쏜다 — 표가 아니라 게이트에 물어본다.
+        """
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 이미 잡으므로 이 관측의 대상이 아니다")
+    
+        session, console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        verdicts = _classify_carried(session._gate, carried)
+    
+        # 선언 없이 이 번들을 게이트에 그대로 넣으면 `held` 가 비고 카드가 없다.
+        held = [v for v in verdicts if v.risky]
+>       assert not held, f"{name}: seal-only 인데 보류될 줄이 있다: {[v.command for v in held]}"
+E       AssertionError: _merge_timeline_cue_position: seal-only 인데 보류될 줄이 있다: ['Store Sequence 210 Cue 1 /Merge']
+E       assert not [RiskFinding(command='Store Sequence 210 Cue 1 /Merge', category='blacklisted', risky=True, reasons=("blacklisted comm...tches closed-set entry 'Store Sequence')",), unspecified_target=False, reference=None, matched_entry='Store Sequence')]
+
+server/tests/test_writegate_session_sites.py:354: AssertionError
+_ TestNoOtherGateStageCatchesASealOnlyBundle.test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_position_fx_sequence] _
+
+self = <server.tests.test_writegate_session_sites.TestNoOtherGateStageCatchesASealOnlyBundle object at 0x10faeee10>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_bundle_clears2')
+name = '_position_fx_sequence'
+drive = <function _drive_position_fx_sequence at 0x10faab060>
+kind = 'position_fx_sequence'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card(
+        self, tmp_path, name, drive, kind
+    ):
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 잡으므로 이 관측의 대상이 아니다")
+    
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert _showfile(carried), f"{name}: 카드에 쇼파일 쓰기가 없다 — 이 검사가 공허하다"
+    
+        # 선언을 뗀 같은 번들을 **새 게이트**에 넣는다. 콘솔·감사·승인기는 진짜다.
+        fresh = _Channel(True)
+        gate = SafetyGate(
+            console=FakeConsole(),
+            audit=AuditLog(tmp_path / "audit-noseal"),
+            approval_port=fresh,
+        )
+        decision = gate.screen(carried, risk=None)
+    
+        assert decision.cleared, (
+            f"{name}: 봉합 없이도 게이트가 세웠다 — status={decision.status!r}. "
+            "다른 단계가 이 번들을 잡는다는 뜻이고, SEAL_DEFENCE 의 'seal-only' 는 "
+            "그만큼 좁혀 다시 적어야 한다."
+        )
+>       assert decision.approval_request is None, (
+            f"{name}: 봉합 없이도 승인 카드가 떴다 — "
+            f"{[i.command for i in decision.approval_request.items]}. "
+            "봉합이 유일한 방어라는 기록이 틀렸다."
+        )
+E       AssertionError: _position_fx_sequence: 봉합 없이도 승인 카드가 떴다 — ["Store Sequence 201 Cue 1 'Circle'"]. 봉합이 유일한 방어라는 기록이 틀렸다.
+E       assert ApprovalRequest(items=(ApprovalItem(command="Store Sequence 201 Cue 1 'Circle'", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)) is None
+E        +  where ApprovalRequest(items=(ApprovalItem(command="Store Sequence 201 Cue 1 'Circle'", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)) = ScreenDecision(cleared=True, status='cleared', commands=(CommandDecision(command='ChangeDestination Root', status='cle...ircle'", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)), notice='').approval_request
+
+server/tests/test_writegate_session_sites.py:410: AssertionError
+_ TestNoOtherGateStageCatchesASealOnlyBundle.test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_phaser_recall_sequence] _
+
+self = <server.tests.test_writegate_session_sites.TestNoOtherGateStageCatchesASealOnlyBundle object at 0x10faef290>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_bundle_clears4')
+name = '_phaser_recall_sequence'
+drive = <function _drive_phaser_recall_sequence at 0x10faab1a0>
+kind = 'phaser_recall_sequence'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card(
+        self, tmp_path, name, drive, kind
+    ):
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 잡으므로 이 관측의 대상이 아니다")
+    
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert _showfile(carried), f"{name}: 카드에 쇼파일 쓰기가 없다 — 이 검사가 공허하다"
+    
+        # 선언을 뗀 같은 번들을 **새 게이트**에 넣는다. 콘솔·감사·승인기는 진짜다.
+        fresh = _Channel(True)
+        gate = SafetyGate(
+            console=FakeConsole(),
+            audit=AuditLog(tmp_path / "audit-noseal"),
+            approval_port=fresh,
+        )
+        decision = gate.screen(carried, risk=None)
+    
+        assert decision.cleared, (
+            f"{name}: 봉합 없이도 게이트가 세웠다 — status={decision.status!r}. "
+            "다른 단계가 이 번들을 잡는다는 뜻이고, SEAL_DEFENCE 의 'seal-only' 는 "
+            "그만큼 좁혀 다시 적어야 한다."
+        )
+>       assert decision.approval_request is None, (
+            f"{name}: 봉합 없이도 승인 카드가 떴다 — "
+            f"{[i.command for i in decision.approval_request.items]}. "
+            "봉합이 유일한 방어라는 기록이 틀렸다."
+        )
+E       AssertionError: _phaser_recall_sequence: 봉합 없이도 승인 카드가 떴다 — ["Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2"]. 봉합이 유일한 방어라는 기록이 틀렸다.
+E       assert ApprovalRequest(items=(ApprovalItem(command="Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)) is None
+E        +  where ApprovalRequest(items=(ApprovalItem(command="Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)) = ScreenDecision(cleared=True, status='cleared', commands=(CommandDecision(command='ChangeDestination Root', status='cle...Fade 2", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)), notice='').approval_request
+
+server/tests/test_writegate_session_sites.py:410: AssertionError
+_ TestNoOtherGateStageCatchesASealOnlyBundle.test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_position_cue_store] _
+
+self = <server.tests.test_writegate_session_sites.TestNoOtherGateStageCatchesASealOnlyBundle object at 0x10faef710>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_bundle_clears6')
+name = '_position_cue_store'
+drive = <function _drive_position_cue_store at 0x10faab2e0>
+kind = 'position_cue_store'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card(
+        self, tmp_path, name, drive, kind
+    ):
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 잡으므로 이 관측의 대상이 아니다")
+    
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert _showfile(carried), f"{name}: 카드에 쇼파일 쓰기가 없다 — 이 검사가 공허하다"
+    
+        # 선언을 뗀 같은 번들을 **새 게이트**에 넣는다. 콘솔·감사·승인기는 진짜다.
+        fresh = _Channel(True)
+        gate = SafetyGate(
+            console=FakeConsole(),
+            audit=AuditLog(tmp_path / "audit-noseal"),
+            approval_port=fresh,
+        )
+        decision = gate.screen(carried, risk=None)
+    
+        assert decision.cleared, (
+            f"{name}: 봉합 없이도 게이트가 세웠다 — status={decision.status!r}. "
+            "다른 단계가 이 번들을 잡는다는 뜻이고, SEAL_DEFENCE 의 'seal-only' 는 "
+            "그만큼 좁혀 다시 적어야 한다."
+        )
+>       assert decision.approval_request is None, (
+            f"{name}: 봉합 없이도 승인 카드가 떴다 — "
+            f"{[i.command for i in decision.approval_request.items]}. "
+            "봉합이 유일한 방어라는 기록이 틀렸다."
+        )
+E       AssertionError: _position_cue_store: 봉합 없이도 승인 카드가 떴다 — ["Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5"]. 봉합이 유일한 방어라는 기록이 틀렸다.
+E       assert ApprovalRequest(items=(ApprovalItem(command="Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)) is None
+E        +  where ApprovalRequest(items=(ApprovalItem(command="Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)) = ScreenDecision(cleared=True, status='cleared', commands=(CommandDecision(command='Fixture 20 + 21 ; At Preset 2.28', s...Fade 5", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)), notice='').approval_request
+
+server/tests/test_writegate_session_sites.py:410: AssertionError
+_ TestNoOtherGateStageCatchesASealOnlyBundle.test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_position_cue_sheet] _
+
+self = <server.tests.test_writegate_session_sites.TestNoOtherGateStageCatchesASealOnlyBundle object at 0x10faef950>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_bundle_clears7')
+name = '_position_cue_sheet'
+drive = <function _drive_position_cue_sheet at 0x10faab380>
+kind = 'position_cue_sheet'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card(
+        self, tmp_path, name, drive, kind
+    ):
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 잡으므로 이 관측의 대상이 아니다")
+    
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert _showfile(carried), f"{name}: 카드에 쇼파일 쓰기가 없다 — 이 검사가 공허하다"
+    
+        # 선언을 뗀 같은 번들을 **새 게이트**에 넣는다. 콘솔·감사·승인기는 진짜다.
+        fresh = _Channel(True)
+        gate = SafetyGate(
+            console=FakeConsole(),
+            audit=AuditLog(tmp_path / "audit-noseal"),
+            approval_port=fresh,
+        )
+        decision = gate.screen(carried, risk=None)
+    
+        assert decision.cleared, (
+            f"{name}: 봉합 없이도 게이트가 세웠다 — status={decision.status!r}. "
+            "다른 단계가 이 번들을 잡는다는 뜻이고, SEAL_DEFENCE 의 'seal-only' 는 "
+            "그만큼 좁혀 다시 적어야 한다."
+        )
+>       assert decision.approval_request is None, (
+            f"{name}: 봉합 없이도 승인 카드가 떴다 — "
+            f"{[i.command for i in decision.approval_request.items]}. "
+            "봉합이 유일한 방어라는 기록이 틀렸다."
+        )
+E       AssertionError: _position_cue_sheet: 봉합 없이도 승인 카드가 떴다 — ["Store Sequence 110 Cue 1 'Section 1' CueFade 3", "Store Sequence 110 Cue 2 'Section 2' CueFade 3"]. 봉합이 유일한 방어라는 기록이 틀렸다.
+E       assert ApprovalRequest(items=(ApprovalItem(command="Store Sequence 110 Cue 1 'Section 1' CueFade 3", risk_reasons=("blacklist...ection 2' CueFade 3", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()))) is None
+E        +  where ApprovalRequest(items=(ApprovalItem(command="Store Sequence 110 Cue 1 'Section 1' CueFade 3", risk_reasons=("blacklist...ection 2' CueFade 3", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()))) = ScreenDecision(cleared=True, status='cleared', commands=(CommandDecision(command='Fixture 20 + 21 ; At Preset 2.25', s...eFade 3", risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()))), notice='').approval_request
+
+server/tests/test_writegate_session_sites.py:410: AssertionError
+_ TestNoOtherGateStageCatchesASealOnlyBundle.test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_merge_timeline_cue_position] _
+
+self = <server.tests.test_writegate_session_sites.TestNoOtherGateStageCatchesASealOnlyBundle object at 0x10faefbd0>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-611/test_a_seal_only_bundle_clears8')
+name = '_merge_timeline_cue_position'
+drive = <function _drive_timeline_cue_merge at 0x10faab420>
+kind = 'timeline_cue_merge'
+
+    @pytest.mark.parametrize(("name", "drive", "kind"), SITES, ids=[s[0] for s in SITES])
+    def test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card(
+        self, tmp_path, name, drive, kind
+    ):
+        if SEAL_DEFENCE[name] != "seal-only":
+            pytest.skip(f"{name}: redundant — 분류 층이 잡으므로 이 관측의 대상이 아니다")
+    
+        session, _console, _audit, channel = _build(tmp_path, verdict=True)
+        drive(session)
+        carried = [item.command for request in channel.requests for item in request.items]
+        assert _showfile(carried), f"{name}: 카드에 쇼파일 쓰기가 없다 — 이 검사가 공허하다"
+    
+        # 선언을 뗀 같은 번들을 **새 게이트**에 넣는다. 콘솔·감사·승인기는 진짜다.
+        fresh = _Channel(True)
+        gate = SafetyGate(
+            console=FakeConsole(),
+            audit=AuditLog(tmp_path / "audit-noseal"),
+            approval_port=fresh,
+        )
+        decision = gate.screen(carried, risk=None)
+    
+        assert decision.cleared, (
+            f"{name}: 봉합 없이도 게이트가 세웠다 — status={decision.status!r}. "
+            "다른 단계가 이 번들을 잡는다는 뜻이고, SEAL_DEFENCE 의 'seal-only' 는 "
+            "그만큼 좁혀 다시 적어야 한다."
+        )
+>       assert decision.approval_request is None, (
+            f"{name}: 봉합 없이도 승인 카드가 떴다 — "
+            f"{[i.command for i in decision.approval_request.items]}. "
+            "봉합이 유일한 방어라는 기록이 틀렸다."
+        )
+E       AssertionError: _merge_timeline_cue_position: 봉합 없이도 승인 카드가 떴다 — ['Store Sequence 210 Cue 1 /Merge']. 봉합이 유일한 방어라는 기록이 틀렸다.
+E       assert ApprovalRequest(items=(ApprovalItem(command='Store Sequence 210 Cue 1 /Merge', risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)) is None
+E        +  where ApprovalRequest(items=(ApprovalItem(command='Store Sequence 210 Cue 1 /Merge', risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)) = ScreenDecision(cleared=True, status='cleared', commands=(CommandDecision(command='ChangeDestination Root', status='cle.../Merge', risk_reasons=("blacklisted command (matches closed-set entry 'Store Sequence')",), warnings=()),)), notice='').approval_request
+
+server/tests/test_writegate_session_sites.py:410: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-aaeb30c84d11d6eea/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED server/tests/test_bulkgate_declaration.py::TestDeclarationSplitsTheVerdict::test_without_the_declaration_the_bundle_clears
+FAILED server/tests/test_bulkgate_declaration.py::TestLockAndBackupStayBetweenApprovalAndClearance::test_an_undeclared_safe_bundle_still_skips_the_backup
+FAILED server/tests/test_fx_boundary.py::TestSafetyInvariantsAreInherited::test_a_real_fx_bundle_clears_the_real_gate_with_no_hold
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_blacklist_is_exactly_the_shipped_closed_set
+FAILED server/tests/test_safety_ruleset.py::TestShippedRuleset::test_every_shipped_revision_is_documented_in_the_file
+FAILED server/tests/test_seeded_song_apply.py::test_the_seeded_song_applies_end_to_end_when_the_director_names_the_sequence
+FAILED server/tests/test_seeded_song_apply.py::test_a_colour_change_reaches_the_desk_as_a_colour_command
+FAILED server/tests/test_seeded_song_apply.py::test_a_fade_change_reaches_the_desk_as_a_fade_command
+FAILED server/tests/test_web_cue_sheet_apply.py::test_apply_sends_only_the_changed_cue_through_the_preview_gate
+FAILED server/tests/test_web_cue_sheet_apply.py::test_an_accepted_batch_is_asked_once_not_once_per_command
+FAILED server/tests/test_web_cue_sheet_apply.py::test_the_acceptance_is_written_to_the_audit_log
+FAILED server/tests/test_web_cue_sheet_apply.py::test_applying_twice_does_not_resend_the_same_cue
+FAILED server/tests/test_writegate_merge_gap.py::test_a_sequence_cue_write_raises_no_approval_card_today[Store Sequence 210 Cue 1 /Merge]
+FAILED server/tests/test_writegate_merge_gap.py::test_a_sequence_cue_write_raises_no_approval_card_today[Store Sequence 210 Cue 1]
+FAILED server/tests/test_writegate_merge_gap.py::test_a_sequence_cue_write_raises_no_approval_card_today[Store Sequence 210]
+FAILED server/tests/test_writegate_merge_gap.py::test_the_same_write_with_overwrite_does_raise_a_card
+FAILED server/tests/test_writegate_merge_gap.py::test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_the_recorded_defence_class_still_holds[_position_fx_sequence]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_the_recorded_defence_class_still_holds[_phaser_recall_sequence]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_the_recorded_defence_class_still_holds[_position_cue_store]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_the_recorded_defence_class_still_holds[_position_cue_sheet]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_the_recorded_defence_class_still_holds[_merge_timeline_cue_position]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_a_seal_only_site_loses_every_card_without_its_declaration[_position_fx_sequence]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_a_seal_only_site_loses_every_card_without_its_declaration[_phaser_recall_sequence]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_a_seal_only_site_loses_every_card_without_its_declaration[_position_cue_store]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_a_seal_only_site_loses_every_card_without_its_declaration[_position_cue_sheet]
+FAILED server/tests/test_writegate_session_sites.py::TestWhatWouldGoOutWithoutTheSeal::test_a_seal_only_site_loses_every_card_without_its_declaration[_merge_timeline_cue_position]
+FAILED server/tests/test_writegate_session_sites.py::TestNoOtherGateStageCatchesASealOnlyBundle::test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_position_fx_sequence]
+FAILED server/tests/test_writegate_session_sites.py::TestNoOtherGateStageCatchesASealOnlyBundle::test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_phaser_recall_sequence]
+FAILED server/tests/test_writegate_session_sites.py::TestNoOtherGateStageCatchesASealOnlyBundle::test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_position_cue_store]
+FAILED server/tests/test_writegate_session_sites.py::TestNoOtherGateStageCatchesASealOnlyBundle::test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_position_cue_sheet]
+FAILED server/tests/test_writegate_session_sites.py::TestNoOtherGateStageCatchesASealOnlyBundle::test_a_seal_only_bundle_clears_the_whole_pipeline_with_no_card[_merge_timeline_cue_position]
+32 failed, 11983 passed, 19 skipped, 1 warning in 177.06s (0:02:57)
+exit=1

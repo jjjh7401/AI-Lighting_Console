@@ -48,6 +48,11 @@ class TestBlacklistMatching:
             # 파일에서 그 짝을 들었지만 t299 는 자기 파일이 없다. 여기 둔다.
             ("Store Group 3", "Store Group"),
             ("Store Timecode 9", "Store Timecode"),
+            # v6 (같은 SPEC, 카드 t299 Phase 2). 같은 이유로 여기 둔다 — 이 줄이
+            # 없으면 `Store Sequence` 항목을 지워도 장부 핀(폐집합 멤버십·버전·
+            # Store 계열 목록)만 빨개지고 「카드가 안 뜨게 됐다」는 아무 검사도
+            # 말하지 않는다. 뮤테이션으로 확인한 성질이다.
+            ("Store Sequence 210 Cue 3 /Merge", "Store Sequence"),
         ],
     )
     def test_direct_blacklist_commands_are_blacklisted(self, line, entry):

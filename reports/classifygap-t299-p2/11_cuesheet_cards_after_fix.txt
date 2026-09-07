@@ -1,0 +1,20 @@
+interpreter : 3.11.15
+server pkg  : /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-aaeb30c84d11d6eea/server/__init__.py
+ruleset ver : 6
+blacklist   : ['Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'Set Fixture', 'LoadShow', 'NewShow', 'Store Preset', 'Store Group', 'Store Timecode', 'Store Sequence']
+
+편집 뒤 콘솔 실행    : []
+
+한 동작(초안 반영) -> 승인 요청 : 1 장
+
+  카드 1/1  request_id='approval-1'
+    항목 수: 5
+      'ChangeDestination Root'                             | ['쇼파일 쓰기 — Sequence 210 에 큐 1건을 저장합니다. 이미 든 내용 위에 덮어씁니다. 이 번들에는 되돌리기 명령이 없습니다.']
+      'ClearAll'                                           | ['쇼파일 쓰기 — Sequence 210 에 큐 1건을 저장합니다. 이미 든 내용 위에 덮어씁니다. 이 번들에는 되돌리기 명령이 없습니다.']
+      "Group 11 ; Attribute 'Dimmer' At 80"                | ['쇼파일 쓰기 — Sequence 210 에 큐 1건을 저장합니다. 이미 든 내용 위에 덮어씁니다. 이 번들에는 되돌리기 명령이 없습니다.']
+      'Store Sequence 210 Cue 10 /Merge'                   | ['쇼파일 쓰기 — Sequence 210 에 큐 1건을 저장합니다. 이미 든 내용 위에 덮어씁니다. 이 번들에는 되돌리기 명령이 없습니다.', "blacklisted command (matches closed-set entry 'Store Sequence')"]
+      'ClearAll'                                           | ['쇼파일 쓰기 — Sequence 210 에 큐 1건을 저장합니다. 이미 든 내용 위에 덮어씁니다. 이 번들에는 되돌리기 명령이 없습니다.']
+
+콘솔에 나간 명령 : ['ChangeDestination Root', 'ClearAll', "Group 11 ; Attribute 'Dimmer' At 80", 'Store Sequence 210 Cue 10 /Merge', 'ClearAll']
+답장 발췌        : 'Sequence 210에 초안 1건을 병합했습니다 (큐 10(조도 80%)).'
+감사 로그 승인/거절 항목: [('approved', 'draft_apply')]

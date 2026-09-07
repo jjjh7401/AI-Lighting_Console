@@ -57,6 +57,11 @@ EXPECTED_BLACKLIST = {
     # 실측 비용: 이 항목 둘 동시 투입으로 14 failed / 12029 total (v5 헤더).
     "Store Group",
     "Store Timecode",
+    # v6 — 같은 SPEC 의 Phase 2. 반영 경로가 실제로 시퀀스를 고치는 줄이
+    # `Store Sequence <N> Cue <M> /Merge` 인데 그것이 목록에 없어서 실측 세 번
+    # (t291·t294·t296) 모두 감사 로그가 `approved 0` 이었다. 오브젝트 기준은
+    # 그대로다. 실측 비용: 이 항목 하나로 32 failed / 12034 total (v6 헤더).
+    "Store Sequence",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -154,10 +159,11 @@ class TestShippedRuleset:
         # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
         ruleset = load_ruleset()
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
-        # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299)에서 10 -> 12. 이 핀은
-        # 비준 리비전마다 갱신되도록 설계됐다 — 갱신 자체가 마찰이고, 그 마찰이
-        # 헤더에 근거를 적게 만드는 장치다.
-        assert len(ruleset.blacklist) == 12
+        # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 1)에서 10 -> 12,
+        # v6 (같은 SPEC Phase 2)에서 12 -> 13. 이 핀은 비준 리비전마다 갱신되도록
+        # 설계됐다 — 갱신 자체가 마찰이고, 그 마찰이 헤더에 근거를 적게 만드는
+        # 장치다.
+        assert len(ruleset.blacklist) == 13
 
     def test_every_shipped_revision_is_documented_in_the_file(self):
         """A version bump with no recorded reason is a silent widening.
@@ -183,9 +189,9 @@ class TestShippedRuleset:
         "every shipped revision" generality is made REAL by driving the same
         checker over a synthetic v4 file in `TestRevisionJustification`.
         """
-        # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299). 이 핀은 버전을 올리는
-        # 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이다.
-        assert load_ruleset().version == 5
+        # v6 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 2). 이 핀은 버전을
+        # 올리는 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이다.
+        assert load_ruleset().version == 6
         _assert_every_revision_is_justified(DEFAULT_RULESET_PATH)
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):
