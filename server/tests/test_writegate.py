@@ -129,7 +129,23 @@ UNCHANGED_SAFE = (
     # here without its own argument reopens a hole that someone closed on purpose.
     #
     # `Store Timecode` never appeared in this tuple, so v5 removed nothing for it.
-    ("Store Cue 12", "descoped: measurement corpus representative"),
+    # `Store Sequence` never appeared here either, so v6 removed nothing for it.
+    #
+    # `Store Cue 12` WAS here, ratified "descoped: measurement corpus
+    # representative". SPEC-COPILOT-CLASSIFYGAP-001 (card t299, Phase 3) removed
+    # that one line when ruleset v7 took `Store Cue`. The argument for THAT line
+    # specifically, not for the tuple: its ratification reason was never a safety
+    # claim either — it recorded that the measurement corpus happens to use the
+    # command as a `cue_store` representative. Two independent observations
+    # outweigh that convenience, and BOTH were measured rather than argued:
+    #   ① `write_reason.py::_STORE_CUE` (card t323) already reads this exact line
+    #      as a showfile write when a caller declares a bundle, so the seal layer
+    #      and the classification layer disagreed about the same command;
+    #   ② the model's `run_commands` path emits this short form directly, and
+    #      `Store Sequence` (v6) does not reach it — measured in
+    #      `reports/classifygap-t299-p3/08_entry_order.txt`.
+    # The corpus scenarios it collides with are ratified below rather than
+    # re-pointed at another `Store` object, so this collision cannot recur.
     ("Store Page 3", "descoped: measurement corpus representative"),
     ("Store Macro 21", "descoped: measurement corpus representative"),
     ("Assign Sequence 4 Page 1.201", "descoped"),
@@ -170,15 +186,29 @@ UNCHANGED_SAFE = (
 #:
 #: `Store Timecode` adds nothing here: the corpus carries no timecode line at all
 #: (`grep -c 'Store Timecode' server/measurement/corpus.yaml` = 0).
+#: `Store Sequence` (v6) added nothing either — the corpus carries no
+#: `Store Sequence` line (`grep -c 'Store Sequence' server/measurement/corpus.yaml` = 0).
+#:
+#: NARROWED A THIRD TIME at ruleset v7 (same SPEC, card t299, Phase 3): the two
+#: `cue_store` scenarios join, because v7 blacklists `Store Cue`. Same shape, same
+#: consequence — `cue_store` is another of the AC-MVP-001 ten representative task
+#: types, so a live M6a run over those two scenarios is no longer
+#: unattended-runnable either. Running total: 3 of the 10 representative task
+#: types (`group_create`, `preset_store`, `cue_store`) now raise a card. That is
+#: the accumulating price of closing the four measured false negatives, and it is
+#: recorded here rather than left for someone to rediscover mid-run.
 #:
 #: Order matches `_corpus_offenders` iteration (scenario order in corpus.yaml,
-#: command order within a scenario) — group_create precedes preset_store there.
+#: command order within a scenario) — group_create precedes preset_store, which
+#: precedes cue_store there.
 RATIFIED_CORPUS_COLLISIONS = (
     ("group-create-1", "Store Group 3"),
     ("group-create-2", "Store Group 8"),
     ("group-create-3", "Store Group 11"),
     ("preset-store-1", "Store Preset 4.1"),
     ("preset-store-2", "Store Preset 4.7"),
+    ("cue-store-1", "Store Cue 12"),
+    ("cue-store-2", "Store Cue 5 Fade 3"),
 )
 
 

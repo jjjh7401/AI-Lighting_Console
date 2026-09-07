@@ -29,6 +29,20 @@
 #
 # `Store Timecode`, the other v5 entry, changes nothing here: this corpus carries no
 # timecode line at all.
+#
+# NARROWED A THIRD TIME AT RULESET v7 (same SPEC, card t299, Phase 3):
+# cue-store-1 and cue-store-2 join the exception list. Their `Store Cue <n>` lines
+# are blacklisted from v7 on, because the model's `run_commands` path emits exactly
+# that short form and the v6 entry `Store Sequence` does not reach it (measured:
+# `reports/classifygap-t299-p3/08_entry_order.txt`), while the seal layer's
+# `write_reason.py::_STORE_CUE` had already been reading the same line as a showfile
+# write since card t323. SEVEN of 21 scenarios now hold; the header's "non-risky
+# verbs only" claim is TRUE for the remaining fourteen. THREE of the AC-MVP-001 ten
+# representative task types (`group_create`, `preset_store`, `cue_store`) are now
+# outside unattended M6a operation.
+#
+# `Store Sequence`, the v6 entry, changed nothing here: this corpus carries no
+# `Store Sequence` line at all.
 version: 1
 
 scenarios:

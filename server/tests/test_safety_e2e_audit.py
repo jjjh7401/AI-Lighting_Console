@@ -123,12 +123,24 @@ class TestAuditCompletenessE2E:
         gate = SafetyGate(console=link, audit=audit, approval_port=approval)
         gate.use_showfile_backup()
 
+        # 갱신 근거 (t299 Phase 3): 아래 「안전한 번들」과 잠금 단계의 운반용
+        # 리터럴이 `Store Cue <n>` 이었고, v7(SPEC-COPILOT-CLASSIFYGAP-001)이
+        # `Store Cue` 를 폐집합에 넣어 안전하지 않게 됐다. 이 검사가 재는 축은
+        # 감사 로그의 **완전성**(보낸 것 ↔ 기록된 것 1:1)이고, 안전/위험 경로를
+        # 각각 한 번씩 지나가는 것이 그 축의 전제다.
+        #
+        # 이 자리는 특히 조용히 망가진다: 안전 번들이 위험해지면 `ScriptedApproval`
+        # 의 첫 `True` 를 그 번들이 먹어버리고, 3단계의 「승인된 위험 번들」이
+        # `False` 를 받는다. 실제로 이 회차에서 빨개진 줄은 3단계였다 — 원인은
+        # 2단계다. 그래서 Phase 1·2 의 규율대로 프로그래머 값으로 옮긴다.
+        safe_a, safe_b, safe_c = "Fixture 1 At 50", "Fixture 2 At 60", "Fixture 3 At 70"
+
         # 1. session start -> one backup send (rule 1)
         gate.start_session()
         # 2. safe bundle -> two command sends
-        assert gate.screen(["Store Cue 1", "Store Cue 2"]).cleared
-        assert gate.execution_port.execute("Store Cue 1").ok
-        assert gate.execution_port.execute("Store Cue 2").ok
+        assert gate.screen([safe_a, safe_b]).cleared
+        assert gate.execution_port.execute(safe_a).ok
+        assert gate.execution_port.execute(safe_b).ok
         # 3. risky bundle approved -> pre-risky backup send + one command send
         assert gate.screen(["Delete Sequence 5"]).cleared
         assert gate.execution_port.execute("Delete Sequence 5").ok
@@ -138,7 +150,11 @@ class TestAuditCompletenessE2E:
         assert gate.screen(["'broken"]).status == "blocked_grammar"
         # 6. live lock -> proposal only, zero sends
         gate.lock.activate()
-        assert gate.screen(["Store Cue 3"]).status == "locked"
+        # 여기도 **안전한** 줄이어야 축이 산다: 잠금이 분류보다 먼저 이긴다는 것을
+        # 재는 자리인데, 위험한 줄을 쓰면 `locked` 가 어느 경로에서 왔는지 구분되지
+        # 않는다(위험 경로도 `locked` 를 답한다). v7 이후 `Store Cue 3` 이 위험해졌으니
+        # 안전한 줄로 되돌려 그 구분을 지킨다.
+        assert gate.screen([safe_c]).status == "locked"
         gate.lock.deactivate()
         # 7. heartbeat + 8. state query
         assert gate.heartbeat() == "online"
@@ -157,8 +173,8 @@ class TestAuditCompletenessE2E:
         assert sent_commands == Counter(
             {
                 BACKUP_COMMAND: 2,  # session start + pre-risky
-                "Store Cue 1": 1,
-                "Store Cue 2": 1,
+                safe_a: 1,
+                safe_b: 1,
                 "Delete Sequence 5": 1,
             }
         )

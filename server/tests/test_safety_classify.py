@@ -24,6 +24,19 @@ from .test_safety_gate import FakeConsole, ScriptedApproval
 
 RULESET = load_ruleset()
 
+#: 옵션 축을 재는 검사 셋이 공유하는 리터럴 — `TestBlacklistMatching` 의
+#: `test_plain_store_is_safe` · `test_option_abbreviation_still_matches` ·
+#: `test_store_with_quoted_overwrite_text_is_safe` 가 읽는다. 그 셋이 재는 축은
+#: `Store` 를 위험하게 만드는 것이 동사가 아니라 `/overwrite` **옵션**이라는 것이고,
+#: 따라서 리터럴의 오브젝트는 폐집합 **밖**이어야 한다.
+#:
+#: 갱신 근거 (t299 Phase 3): 옛 리터럴은 `Store Cue 5` 였고 v7 이 그 오브젝트를
+#: 폐집합에 넣었다. Phase 1·2 가 세운 「안전한 예 리터럴은 프로그래머 값 계열로
+#: 옮긴다」 규율을 이 자리에는 쓸 수 없다 — 동사가 축의 일부라서 비-`Store` 명령으로는
+#: 축이 사라진다. 그래서 폐집합 밖의 `Store` 오브젝트를 쓰고, 그 전제를
+#: `test_the_option_axis_literal_is_still_outside_the_closed_set` 이 따로 지킨다.
+_OPTION_AXIS_OBJECT = "Store Page 3"
+
 
 def _classify(line: str):
     result = validate(line)
@@ -53,6 +66,11 @@ class TestBlacklistMatching:
             # Store 계열 목록)만 빨개지고 「카드가 안 뜨게 됐다」는 아무 검사도
             # 말하지 않는다. 뮤테이션으로 확인한 성질이다.
             ("Store Sequence 210 Cue 3 /Merge", "Store Sequence"),
+            # v7 (같은 SPEC, 카드 t299 Phase 3). 같은 이유로 여기 둔다 — 이 줄이
+            # 없으면 `Store Cue` 항목을 지워도 장부 핀(폐집합 멤버십·버전)만
+            # 빨개지고 「카드가 안 뜨게 됐다」는 아무 검사도 말하지 않는다.
+            # Phase 1·2 가 같은 자리에서 뮤테이션으로 확인한 성질이다.
+            ("Store Cue 1", "Store Cue"),
         ],
     )
     def test_direct_blacklist_commands_are_blacklisted(self, line, entry):
@@ -68,11 +86,43 @@ class TestBlacklistMatching:
         assert _classify("Rem Sequence 5").category == "blacklisted"
 
     def test_option_abbreviation_still_matches(self):
-        assert _classify("Store Cue 5 /o").category == "blacklisted"
-        assert _classify("Store Cue 5 /over").category == "blacklisted"
+        """갱신 근거 (t299 Phase 3): 이 검사가 **가려질 수 있게** 됐다.
+
+        옛 형태는 `Store Cue 5 /o` 의 `category == "blacklisted"` 만 봤다. v7 이
+        `Store Cue` 를 폐집합에 넣은 뒤로는 옵션을 아예 못 읽어도 오브젝트가
+        걸려서 초록이 된다 — 재려던 축(옵션 축약)이 다른 축에 가려지는 모양이다.
+        빨개지지 않았으므로 비용 33건에는 안 들어갔지만, 갱신하지 않으면 조용히
+        공허해진다.
+
+        그래서 둘을 바꿨다: 리터럴을 폐집합 밖 오브젝트로 옮기고, `category` 대신
+        **어느 항목에 걸렸는지**를 단언한다. 이제 옵션 축약이 실제로 읽히지 않으면
+        이 검사가 붉어진다.
+        """
+        for option in ("/o", "/over"):
+            finding = _classify(f"{_OPTION_AXIS_OBJECT} {option}")
+            assert finding.category == "blacklisted", option
+            assert finding.matched_entry == "Store /overwrite", option
+
+    def test_the_option_axis_literal_is_still_outside_the_closed_set(self):
+        """옵션 축 리터럴의 **전제**를 따로 잰다 — 축과 전제를 갈라 놓는다.
+
+        이 검사가 없으면, 후속 카드가 `Store Page` 를 넣는 날 아래 세 검사가
+        「옵션 축이 깨졌다」처럼 빨개진다. 실제로 깨진 것은 축이 아니라 리터럴의
+        전제이므로, 그 구분을 검사 하나로 못 박아 둔다.
+        """
+        object_entry = " ".join(_OPTION_AXIS_OBJECT.split()[:2])
+        assert object_entry not in RULESET.blacklist, (
+            f"옵션 축 리터럴 {_OPTION_AXIS_OBJECT!r} 의 오브젝트({object_entry!r})가 "
+            "폐집합에 들어왔다. 아래 세 검사가 재는 것은 `/overwrite` **옵션** 축이지 "
+            "이 오브젝트가 아니다 — `_OPTION_AXIS_OBJECT` 를 아직 폐집합 밖인 다른 "
+            "`Store` 오브젝트로 옮기고, 그 리비전의 헤더에 이 이동을 함께 적어라. "
+            "비-`Store` 명령으로는 이 축을 잴 수 없다(동사가 축의 일부다)."
+        )
 
     def test_plain_store_is_safe(self):
-        finding = _classify("Store Cue 5")
+        # 옵션이 없으면 안전하다 — 위 `("Store Cue 5 /overwrite", "Store /overwrite")`
+        # 행과 짝을 이루는 대조군이다.
+        finding = _classify(_OPTION_AXIS_OBJECT)
         assert finding.category == "safe"
         assert finding.risky is False
 
@@ -82,7 +132,8 @@ class TestBlacklistMatching:
         assert finding.category == "safe"
 
     def test_store_with_quoted_overwrite_text_is_safe(self):
-        finding = _classify("Store Cue 5 '/overwrite'")
+        # 인용된 `/overwrite` 는 옵션이 아니라 이름이다 — 걸리면 안 된다.
+        finding = _classify(f"{_OPTION_AXIS_OBJECT} '/overwrite'")
         assert finding.category == "safe"
 
 
@@ -158,7 +209,12 @@ class TestInvokingDetection:
         assert finding.category == "invoking"
 
     def test_plain_commands_are_not_invoking(self):
-        assert _classify("Store Cue 5").category == "safe"
+        # 갱신 근거 (t299 Phase 3): 재는 축은 「호출 동사가 아니면 invoking 이 아니다」
+        # 이고, 옛 리터럴 `Store Cue 5` 는 v7 이 폐집합에 넣어 `blacklisted` 가 됐다.
+        # 이 축에는 `Store` 가 필요 없으므로 Phase 1·2 의 규율대로 **프로그래머 값**
+        # 으로 옮긴다 — 폐집합은 쇼파일 쓰기 오브젝트만 담으므로 어떤 리비전도 이
+        # 리터럴을 다시 잡지 않는다.
+        assert _classify("Fixture 1 At 50").category == "safe"
         assert _classify("List").category == "safe"
         assert _classify("Assign Sequence 1 At Executor 201").category == "safe"
 
@@ -261,8 +317,19 @@ class TestExecutorRenameInvariance:
     @pytest.mark.parametrize(
         "body_content",
         [
-            ("Store Cue 1",),  # 'Sequence 71'-era body content
-            ("Store Cue 1",),  # 'Cyan Look'-era body content (post-rename)
+            # 갱신 근거 (t299 Phase 3): 옛 본문은 두 파라미터 모두 `("Store Cue 1",)`
+            # 였고, v7 이 `Store Cue` 를 폐집합에 넣어 「깨끗한 본문」이 아니게 됐다.
+            # 재는 축은 이름 변경이 **어느 본문을 읽는지**를 바꾸지 않는다는 것이므로
+            # 본문의 내용은 축과 무관하다 — Phase 1·2 의 규율대로 프로그래머 값으로
+            # 옮긴다(폐집합은 쇼파일 쓰기 오브젝트만 담으므로 다시 안 잡힌다).
+            #
+            # 옮기면서 관측한 것도 적어 둔다: 두 파라미터의 본문이 **바이트 동일**해서
+            # 이 parametrize 는 before/after 를 구분하지 못한다(id 만 다르다). 실제
+            # 이름-무관성은 아래 `test_before_and_after_rename_outcomes_are_byte_identical`
+            # 이 재고, 이 검사가 재는 것은 「깨끗한 본문이면 hold 가 안 걸린다」다.
+            # 그 성질을 문면으로 남긴다 — 고치지는 않았다(이 SPEC 의 범위가 아니다).
+            ("Fixture 1 At 50",),  # 'Sequence 71'-era body content
+            ("Fixture 1 At 50",),  # 'Cyan Look'-era body content (post-rename)
         ],
         ids=["before-rename", "after-rename"],
     )
@@ -342,7 +409,12 @@ class TestExecutorSinglePressClearance:
             console=console,
             audit=AuditLog(tmp_path / "audit"),
             approval_port=approval,
-            body_fetcher=DictBodyFetcher({"Executor 201": ("Store Cue 1",)}),
+            # 갱신 근거 (t299 Phase 3): 옛 본문은 `("Store Cue 1",)` 이고 v7 이
+            # `Store Cue` 를 폐집합에 넣었다. 이 검사가 재는 축은 「**양성(benign)**
+            # 본문이면 승인 없이 통과한다」이므로, 본문이 쇼파일 쓰기가 된 뒤에는
+            # 축 자체가 성립하지 않는다 — 확대가 틀린 것이 아니라 리터럴이 더는
+            # benign 이 아니다. Phase 1·2 의 규율대로 프로그래머 값으로 옮긴다.
+            body_fetcher=DictBodyFetcher({"Executor 201": ("Fixture 1 At 50",)}),
         )
         command = "Go+ Executor 201"
         decision = gate.screen([command])

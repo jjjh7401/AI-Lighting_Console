@@ -43,13 +43,19 @@ def _stack(tmp_path, fake_console, **kwargs) -> ConsoleStack:
 
 class TestConsoleStack:
     def test_gate_round_trip_over_udp_loopback(self, tmp_path, fake_console):
+        # 갱신 근거 (t299 Phase 3): 재는 축은 **UDP 왕복 배관**이고, 운반용 명령은
+        # 승인 없이 통과하는 아무 안전한 줄이면 된다. 옛 리터럴 `Store Cue 1` 은 v7
+        # (SPEC-COPILOT-CLASSIFYGAP-001)이 폐집합에 넣어 승인을 요구하게 됐다 —
+        # 배관을 재는 검사가 승인 하네스를 함께 들 이유가 없으므로 Phase 1·2 의
+        # 규율대로 프로그래머 값으로 옮긴다.
         stack = _stack(tmp_path, fake_console)
+        safe_line = "Fixture 1 At 50"
         try:
-            decision = stack.gate.screen(["Store Cue 1"])
+            decision = stack.gate.screen([safe_line])
             assert decision.cleared
-            result = stack.gate.execution_port.execute("Store Cue 1")
+            result = stack.gate.execution_port.execute(safe_line)
             assert result.ok
-            assert fake_console.exec_commands == ["Store Cue 1"]
+            assert fake_console.exec_commands == [safe_line]
         finally:
             stack.stop()
 

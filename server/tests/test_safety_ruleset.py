@@ -62,6 +62,15 @@ EXPECTED_BLACKLIST = {
     # (t291·t294·t296) 모두 감사 로그가 `approved 0` 이었다. 오브젝트 기준은
     # 그대로다. 실측 비용: 이 항목 하나로 32 failed / 12034 total (v6 헤더).
     "Store Sequence",
+    # v7 — 같은 SPEC 의 Phase 3, 이 SPEC 이 닫으려던 네 명령의 마지막이다. 위의
+    # `Store Sequence` 는 서버가 자기 계획으로 만드는 `Store Sequence <N> Cue <M>`
+    # 을 잡지만, 모델이 `run_commands` 로 직접 내는 짧은 형태 `Store Cue <n>` 은
+    # 그 항목에 안 닿았다 — 그 통로는 t323 의 자동 선언 하나만이 막고 있었고,
+    # 그 선언은 `write_reason.py::_STORE_CUE` 로 같은 줄을 이미 「쇼파일 쓰기」로
+    # 읽는다. 두 층이 같은 답을 하는데 분류 층에만 항목이 없던 셈이다.
+    # 오브젝트 기준은 그대로다.
+    # 실측 비용: 이 항목 하나로 33 failed / 12047 total (v7 헤더).
+    "Store Cue",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -160,10 +169,10 @@ class TestShippedRuleset:
         ruleset = load_ruleset()
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
         # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 1)에서 10 -> 12,
-        # v6 (같은 SPEC Phase 2)에서 12 -> 13. 이 핀은 비준 리비전마다 갱신되도록
-        # 설계됐다 — 갱신 자체가 마찰이고, 그 마찰이 헤더에 근거를 적게 만드는
-        # 장치다.
-        assert len(ruleset.blacklist) == 13
+        # v6 (같은 SPEC Phase 2)에서 12 -> 13, v7 (같은 SPEC Phase 3)에서 13 -> 14.
+        # 이 핀은 비준 리비전마다 갱신되도록 설계됐다 — 갱신 자체가 마찰이고, 그
+        # 마찰이 헤더에 근거를 적게 만드는 장치다.
+        assert len(ruleset.blacklist) == 14
 
     def test_every_shipped_revision_is_documented_in_the_file(self):
         """A version bump with no recorded reason is a silent widening.
@@ -189,9 +198,10 @@ class TestShippedRuleset:
         "every shipped revision" generality is made REAL by driving the same
         checker over a synthetic v4 file in `TestRevisionJustification`.
         """
-        # v6 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 2). 이 핀은 버전을
-        # 올리는 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이다.
-        assert load_ruleset().version == 6
+        # v7 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 3). 이 핀은 버전을
+        # 올리는 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이고,
+        # 이 회차에서도 정확히 그렇게 걸렸다 — v7 을 배치하자 이 줄이 빨개졌다.
+        assert load_ruleset().version == 7
         _assert_every_revision_is_justified(DEFAULT_RULESET_PATH)
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):

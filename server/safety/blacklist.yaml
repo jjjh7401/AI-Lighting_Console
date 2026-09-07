@@ -246,7 +246,93 @@
 #
 #     `SEAL_DEFENCE` 자리가 10 -> **11** 로 늘었다(반영 자리가 봉합이 됐으므로).
 #     재측정 seal-only **2 / 11** (`13`).
-version: 6
+#
+#   v6 -> v7  SPEC-COPILOT-CLASSIFYGAP-001 (카드 t299) 의 **Phase 3** 가
+#     "Store Cue" 를 넣는다. 이 SPEC 이 닫으려던 네 명령의 **마지막**이다 —
+#     v5 가 `Store Group`·`Store Timecode`, v6 이 `Store Sequence`, 이 리비전이
+#     `Store Cue`. 그러니 이 파일이 v7 이라는 사실은 「구멍 넷이 다 닫혔다」다.
+#     다만 그것은 **이 SPEC 의 네 명령**에 대한 진술이고, 폐집합 전체가 완결됐다는
+#     뜻이 아니다: `Store Page`·`Store Macro`·`Assign`·`Copy` 와 `Label` 계열은
+#     여전히 "safe" 이고 §F 가 범위 밖에 뒀다.
+#
+#     닫는 대상은 모델이 손으로 적는 짧은 형태다. 서버가 자기 계획으로 만드는
+#     줄은 `Store Sequence <N> Cue <M>` 이고 v6 이 그것을 잡지만, 모델이
+#     `run_commands` 로 직접 내는 `Store Cue <n>` 은 동사·오브젝트가 달라 v6 에
+#     안 닿는다. 그 통로는 오늘 t323 이 붙인 봉합(`tools.py::
+#     dispatch_run_commands` 의 자동 선언)만이 막고 있고, 그 선언은
+#     `write_reason.py::_STORE_CUE` 로 같은 줄을 이미 「쇼파일 쓰기」로 읽는다 —
+#     즉 두 층이 같은 답을 하는데 분류 층에만 항목이 없었다.
+#
+#     왜 `Store` 동사가 아닌가: 2026-08-05 사용자 결정과 카드 t86 의 재측정이
+#     동사 확대를 두 번 거절했고(전체 67건, 평범한 대화 한 회차에도 승인 카드),
+#     v4·v5·v6 이 지킨 그 거절을 이 리비전도 지킨다. 오브젝트 하나만 넓힌다.
+#
+#     항목 **순서가 의미를 갖는다**. `_match_blacklist` 는 목록을 순회하며
+#     **첫** 일치를 돌려주므로(`classify.py`), `Store Cue` 를 `Store Sequence`
+#     **뒤에** 두는 이 배치에서 `Store Sequence 210 Cue 10 /Merge` 의
+#     `matched_entry` 는 v6 그대로 `'Store Sequence'` 로 남는다. 앞에 두면 그 줄의
+#     귀속 문면이 `'Store Cue'` 로 바뀐다 — 안전 판정은 같지만 카드에 적히는
+#     사유가 달라지므로, 기존 귀속을 보존하는 뒤쪽에 넣는다.
+#
+#     이 리비전이 걸지 **않는** 것, 실측으로 확인함: 프로그래머 값
+#     `Fixture 1 At 50` 과 선택 명령 `Group 4` 는 그대로 `matched_entry=None`.
+#     `Group 4` 는 동사가 `Group` 이라 `Store` 항목에 애초에 안 닿는다.
+#
+#     MEASURED cost (이 트리에서 실측, `blacklist.yaml` 을 실제로 고쳐서 전체
+#     스위트를 돌린 값. 산출물: `reports/classifygap-t299-p3/`):
+#
+#       기준선 (base e158e44, 확대 전): 12012 passed · 31 skipped · 0 failed (12043)
+#       이 항목 투입:                   11983 passed · 31 skipped · 33 failed (12047)
+#
+#     전체 수가 12043 에서 12047 로 늘었다 — 항목 하나가 테스트를 4개 만든다.
+#     33건의 파일별 분포: safety_gate 14 · safety_classify 6 · writegate 2 ·
+#     safety_ruleset 2 · safety_expand 2 · deploy_scan 2 · writegate_merge_gap 1 ·
+#     showfile_replacement_gate 1 · safety_e2e_audit 1 · safety_corpus 1 ·
+#     safety_bootstrap 1.
+#
+#     plan 단계는 이 항목 단독을 **62** 건으로 쟀다(트리 e0a2263, 계측 플러그인,
+#     전체 12021). 실측은 **33** 이다 — 62 를 옮겨 쓰지 않았다. 차이가 큰 이유는
+#     세 가지이고 전부 전제가 달라진 것이다: 분모가 v5·v6 으로 두 번 움직였고,
+#     Phase 1·2 가 「안전한 예」 리터럴 여럿을 이미 비-`Store` 명령으로 옮겼고,
+#     계측 플러그인 인공물이 이 회차에는 안 섞인다.
+#
+#     쇼파일을 안 고치는 흐름이 승인을 요구하게 된 자리는 **0건**이다(= 확대가
+#     틀렸다는 신호 없음). 33건 전부 폐집합·버전 핀이거나 배관 검사의 「안전한 예」
+#     리터럴이다. Phase 2 가 낸 비용(큐시트 이중 카드)에 해당하는 것도 없다 —
+#     큐시트 반영 한 동작의 카드 수는 확대 전후 모두 **1장**이다(`02`·`06`).
+#
+#     받침은 이 회차에 **안 움직인다** (`07`): `SEAL_DEFENCE` 자리 11개, seal-only
+#     **2 / 11** 로 확대 전과 같다. 남은 두 자리
+#     (`_offer_fx_executor_assignment` · `_setlist_mode`)가 실어 나르는 것이
+#     `Assign Sequence` · `Copy Sequence` 뿐이고 SPEC §F 가 그 둘을 범위 밖에 뒀기
+#     때문이다. 파생 추정이 아니라 자리별 실측이다.
+#
+#     MUTATION (항목이 실제로 방어를 만드는지): 이 한 줄만 되돌리면
+#     **6 failed / 12007 passed / 31 skipped** (전체 12044).
+#
+#     **이 회차의 뮤테이션 모양은 Phase 1·2 와 다르다 — 같은 문장으로 보고하면
+#     틀린다.** v5·v6 은 「분류를 관측하는 단언이 하나뿐」이었지만, 이 회차는
+#     **셋**이다:
+#       ① `test_safety_classify::test_direct_blacklist_commands_are_blacklisted`
+#          `[Store Cue 1]` — 이 리비전이 새로 넣은 표준 핀
+#       ② `test_deploy_scan::test_quoted_object_name_never_matches` — 이 회차가
+#          넣은 비공허성 짝(`Store Page 3 Cue` 가 `'Store Cue'` 에 걸린다)
+#       ③ `test_writegate_merge_gap::test_the_entry_order_preserves_the_sequence_
+#          attribution` — 이 회차가 넣은 비공허성 짝(`Store Cue 10`)
+#     나머지 셋은 장부 핀이다(폐집합 멤버십 · 코퍼스 충돌 목록 · Store 계열 목록).
+#     분류 관측이 셋이 된 것은 이 회차가 비공허성 짝을 둘 더 넣었기 때문이고,
+#     의도한 결과다 — 핀 하나에만 의존하면 그 핀이 지워질 때 방어가 통째로
+#     조용해진다.
+#
+#     버전 핀(`assert load_ruleset().version == 7`)은 이 뮤테이션에서 **안**
+#     빨개진다 — 항목만 되돌리고 버전은 그대로 뒀으므로. 그래서 위 6건은 전부
+#     항목 자체에 귀속된다.
+#
+#     [READ THIS BEFORE QUOTING ANY FAILURE COUNT] 분모는 여전히 움직인다.
+#     `test_writegate.py` 가 이 파일의 blacklist 를 순회하므로 항목 하나를
+#     넣으면 테스트가 4개 늘어난다. 위 숫자를 인용할 때는 그 시점의 전체 수를
+#     반드시 같이 적는다.
+version: 7
 
 blacklist:
   - "Delete"
@@ -345,6 +431,25 @@ blacklist:
   # 항목에 애초에 안 닿고, SPEC §F 가 명시적으로 범위 밖에 뒀다 — 그래서 이
   # 리비전 뒤에도 `SEAL_DEFENCE` 의 seal-only 는 0 이 되지 않는다.
   - "Store Sequence"
+  # 모델 통로의 짧은 형태 (v7). 위의 `Store Sequence` 는 서버가 자기 계획으로
+  # 만드는 `Store Sequence <N> Cue <M>` 을 잡지만, 모델이 `run_commands` 로 직접
+  # 내는 `Store Cue <n>` 은 그 항목에 안 닿는다. 오늘 그 통로를 막는 것은
+  # t323 이 붙인 자동 선언 하나뿐이고, 그 선언은
+  # `write_reason.py::_STORE_CUE` 로 같은 줄을 이미 「쇼파일 쓰기」로 읽는다 —
+  # 분류 층에만 항목이 없었다.
+  #
+  # 오브젝트 기준이다 — `Store` 동사 확대는 2026-08-05 결정과 t86 이 두 번
+  # 거절했고 이 리비전이 그 거절을 지킨다(v7 헤더 참조).
+  #
+  # **순서가 의미를 갖는다.** `_match_blacklist` 는 첫 일치를 돌려주므로 이
+  # 항목이 `Store Sequence` 뒤에 있는 한 `Store Sequence 210 Cue 10 /Merge` 의
+  # 귀속은 v6 그대로 `'Store Sequence'` 다. 앞으로 옮기면 그 줄의 카드 사유가
+  # 바뀐다 — 위로 올리지 말 것.
+  #
+  # 안 담기는 것: `Store Page`·`Store Macro` 와 `Assign`·`Copy` 계열은 SPEC §F 가
+  # 범위 밖에 뒀고 각자 후속 카드를 갖는다. `Label Cue` 는 「라벨링은 패치 쓰기가
+  # 아니다」라는 의미 판단으로 제외돼 있다(비용으로 뒤집을 종류가 아니다).
+  - "Store Cue"
 
 invoking_verbs:
   verbs:

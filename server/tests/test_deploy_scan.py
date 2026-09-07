@@ -71,7 +71,12 @@ class TestBlacklistedFindings:
         assert finding.matched_entry == "Delete"
 
     def test_multiple_findings_report_each_line(self, ruleset):
-        source = 'Cmd("Store Cue 1")\nCmd("Delete 1")\nCmd("Remove 2")\n'
+        # 갱신 근거 (t299 Phase 3): 재는 축은 「findings 가 **줄 번호**를 각각 보고한다」
+        # 이고, 1행은 그 번호가 밀리지 않는지 보이기 위한 **안전한** 줄이다. 옛 리터럴
+        # `Store Cue 1` 은 v7(SPEC-COPILOT-CLASSIFYGAP-001)이 폐집합에 넣어 1행도
+        # finding 이 됐고, 그러면 「2행·3행만 걸린다」는 기대가 성립하지 않는다.
+        # Phase 1·2 의 규율대로 프로그래머 값으로 옮긴다.
+        source = 'Cmd("Fixture 1 At 50")\nCmd("Delete 1")\nCmd("Remove 2")\n'
         report = _scan(source, ruleset)
         assert report.destructive is True
         assert [(f.line, f.matched_entry) for f in report.findings] == [
@@ -96,8 +101,26 @@ class TestSafeAndNonDestructive:
     def test_quoted_object_name_never_matches(self, ruleset):
         # Same acceptance edge case as the gate: a blacklist keyword inside a
         # quoted object name is NOT a destructive command.
-        report = _scan("Cmd(\"Store Cue 5 'Delete'\")", ruleset)
+        #
+        # 갱신 근거 (t299 Phase 3) — 이 자리는 plan 단계(§D.2 각주)가 함정으로
+        # 예고한 곳이다. 옛 리터럴은 `Store Cue 5 'Delete'` 이고, 인용된 `'Delete'` 가
+        # **안 걸리는** 성질을 재려는 것이었다. v7 이 `Store Cue` 를 폐집합에 넣자
+        # 비인용부가 걸려서 재려던 성질이 **가려졌다** — 확대가 틀린 것이 아니라
+        # 리터럴이 축을 못 나른다.
+        #
+        # 그래서 리터럴을 바꾸면서 축을 **더 날카롭게** 했다. 옛 형태는 인용어가
+        # `Delete` 라 동사(`Store`)가 `Delete` 항목의 첫 키워드와 애초에 안 맞았고,
+        # 인용을 무시해도 안 걸렸다 — 즉 인용 규칙을 껐어도 초록이었다. 새 형태는
+        # 동사가 `Store` 로 항목 `Store Cue` 의 첫 키워드와 **맞고**, `Cue` 는 오직
+        # 인용된 토큰으로만 나타난다. 인용 규칙이 꺼지면 이 줄은 곧바로 걸린다.
+        report = _scan("Cmd(\"Store Page 3 'Cue'\")", ruleset)
         assert report.destructive is False
+        assert report.findings == ()
+        # 비공허성 짝: 같은 줄에서 인용만 벗기면 걸려야 한다. 이것이 없으면 위
+        # 단언은 「이 스캐너가 아무것도 안 걸린다」로도 통과한다.
+        unquoted = _scan('Cmd("Store Page 3 Cue")', ruleset)
+        assert unquoted.destructive is True
+        assert [f.matched_entry for f in unquoted.findings] == ["Store Cue"]
 
     def test_source_without_cmd_calls(self, ruleset):
         report = _scan("local x = 1\nreturn x", ruleset)

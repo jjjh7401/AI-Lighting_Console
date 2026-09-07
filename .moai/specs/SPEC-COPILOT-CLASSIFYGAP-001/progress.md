@@ -1,15 +1,25 @@
 # SPEC-COPILOT-CLASSIFYGAP-001 — 진행 기록
 
-카드 t299. **Phase 1 완료(PR #369 머지) · Phase 2 는 감독 판단 대기로 미완**.
+카드 t299. **세 단계 전부 완료** — 이 SPEC 이 닫으려던 네 명령이 다 닫혔다
+(`blacklist.yaml` v4 → v7).
 
 - **Phase 1** — `Store Group` · `Store Timecode` 를 폐집합에 넣었다(v4 → v5).
-  base `59ac394`, 전체 초록. 증거는 `reports/classifygap-t299-p1/`.
+  base `59ac394`, 전체 초록. PR #369 머지. 증거는 `reports/classifygap-t299-p1/`.
 - **Phase 2** — `Store Sequence` 를 넣었고(v5 → v6), 그 확대가 드러낸 **중복 카드
   결함**까지 닫았다. base `ca34ebe`. 전체 스위트 `12012 passed · 31 skipped ·
-  0 failed`, exit 0. plan.md §A-3 의
+  0 failed`, exit 0. PR #370 머지. plan.md §A-3 의
   `[NEEDS CLARIFICATION: 큐시트 이중 카드]` 는 감독 결정(갈래 2 — 반영 자리를
   봉합으로)으로 닫혔다. 증거는 `reports/classifygap-t299-p2/`.
-- **Phase 3** — `Store Cue`. 미착수.
+- **Phase 3** — `Store Cue` 를 넣었다(v6 → v7). base `e158e44`. 실측 비용 **33**
+  (plan 예측 62 를 옮겨 쓰지 않았다). 전체 스위트 `12017 passed · 31 skipped ·
+  0 failed`, exit 0. 종류 2 신호 0건, `[NEEDS CLARIFICATION]` 0건. 증거는
+  `reports/classifygap-t299-p3/`.
+
+**남는 것은 이 SPEC 의 범위 밖이다.** `SEAL_DEFENCE` 의 seal-only 둘
+(`_offer_fx_executor_assignment` · `_setlist_mode`)은 `Assign Sequence` ·
+`Copy Sequence` 만 실어 나르고 §F 가 그 둘을 범위 밖에 뒀으므로 **이 SPEC 으로는
+0 이 될 수 없다**(Phase 3 에서 자리별로 재서 확정). 카드 **t325** 가 받는다.
+전체 수락 기준표는 아래 §E.2.F.
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
@@ -435,6 +445,15 @@ gaps:
   - "FX 흐름 단위 카드 수는 간접 증거뿐(레지스트리 검사 통과)"
   - "UI 렌더는 안 쟀다 — 서버 `approval_request` 이벤트 수로만 셌다"
 ```
+
+### Phase 1 신호 (앞선 회차 기록)
+
+> **형식 수리 (Phase 3 회차).** 아래 Phase 1 블록은 여는 펜스가 없어서 산문으로
+> 렌더되고 있었고, 끝의 ``` 가 닫히지 않은 펜스를 열고 있었다. 내용은 바이트
+> 그대로 두고 제목과 여는 펜스만 넣었다 — §E.3 는 이 에이전트가 소유하는
+> 구획이라 형식 수리를 여기서 한다.
+
+```yaml
 run_status: partial-by-design
 phase: "Phase 1 of 3 (Store Group + Store Timecode)"
 base: 59ac394
@@ -468,6 +487,359 @@ evidence_dir: reports/classifygap-t299-p1/
 open_for_operator:
   - "AC-CG-005 는 Phase 1 로는 만족 불가 — Phase 2 로 이월(근거: §E.2 자리별 명령 표)"
   - "Phase 2·3 을 다 해도 seal-only 는 0 이 안 된다(Assign/Copy 는 §F 범위 밖)"
+```
+
+---
+
+## §E.2 Run-phase Evidence — Phase 3 (`Store Cue`, 마지막 구멍)
+
+base `origin/main` `e158e44`(Phase 2 = PR #370 머지분), 브랜치
+`WT-classify-widen-p3`, 인터프리터는 이 트리의 것(`uv run`, 3.11.15, `server`
+패키지도 이 워크트리). 산출물 전체는 추적되는
+`reports/classifygap-t299-p3/`(README 에 파일별 설명).
+
+### 확대 전/후 분류 (`01_probe_before.txt` · `04_probe_after.txt`)
+
+배차서가 지정한 여섯 명령, 같은 프로브·같은 순서. 두 회차의 차이는
+`blacklist.yaml` 한 파일뿐이다.
+
+| 명령 | 확대 전 | 확대 후 |
+|---|---|---|
+| `Store Group 3` | `Store Group` / risky | 같음 (Phase 1 회귀 없음) |
+| `Store Timecode 9` | `Store Timecode` / risky | 같음 (회귀 없음) |
+| `Store Sequence 210 Cue 3 /Merge` | `Store Sequence` / risky | 같음 (Phase 2 회귀 없음) |
+| `Store Cue 1` | `None` / safe | **`Store Cue` / risky** |
+| `Fixture 1 At 50` | `None` / safe | `None` / safe (**안 걸려야 하고 안 걸린다**) |
+| `Group 4` | `None` / safe | `None` / safe (**안 걸려야 하고 안 걸린다**) |
+
+AC-CG-001 이 **3/4 → 4/4** 가 됐다. 음성 대조군 9문장 전부 `risky=False`(잘못 판정
+0건), 흐름 단위로도 승인 요청 0건 · `cleared=True`. 봉합과 겹치면 요청은 정확히
+1건이고 사유가 병기된다.
+
+**프로브 라벨 하나를 고쳤다.** `[E-2]`(아홉 문장 전부를 흐름으로)는 카드가 0 이
+아니라 1이다 — `Go+ Sequence 5` · `Off Fixture 11` 이 호출 동사(`category='invoking'`)
+라서 expand-or-hold 규칙(REQ-MVP-026)으로 보류되기 때문이고, 확대와 무관하다.
+처음 돌린 판이 그것을 「AC-CG-003 위반」처럼 읽히게 적어서, 라벨을 참고 측정으로
+바꾸고 확대 전을 다시 돌렸다. AC-CG-003 의 번들은 `[E]` 다.
+
+### Phase 3 자체 비용 (`00_baseline_e158e44.txt` · `03_cost_p3.txt`)
+
+| 회차 | 결과 | 전체 |
+|---|---|---|
+| 기준선 (확대 전) | `12012 passed · 31 skipped · 0 failed`, exit 0 | 12043 |
+| `Store Cue` 투입 | `33 failed · 11983 passed · 31 skipped` | 12047 |
+
+**plan 단계는 이 항목 단독을 62 로 쟀다**(트리 `e0a2263`, 계측 플러그인, 전체
+12021). 이 트리의 실측은 **33** 이다 — 62 를 옮겨 쓰지 않았다. 차이가 큰 이유는
+전제가 셋 달라진 것이다: 분모가 v5·v6 으로 두 번 움직였고, Phase 1·2 가 「안전한
+예」 리터럴 여럿을 이미 비-`Store` 명령으로 옮겼고, 계측 플러그인 인공물이 이
+회차에는 안 섞인다.
+
+파일별 분포: `safety_gate` 14 · `safety_classify` 6 · `writegate` 2 ·
+`safety_ruleset` 2 · `safety_expand` 2 · `deploy_scan` 2 · `writegate_merge_gap` 1 ·
+`showfile_replacement_gate` 1 · `safety_e2e_audit` 1 · `safety_corpus` 1 ·
+`safety_bootstrap` 1.
+
+### 33건의 판정 — 종류 2 는 0건
+
+| 종류 | 건수 | 처리 |
+|---|---|---|
+| 1 — 갱신 대상 | **33** | 개별 근거를 주석/docstring 에 적고 갱신 |
+| 2 — 확대가 틀렸다는 신호 | **0** | — |
+| 3 — 계측 인공물 | **0** | 계측 플러그인 미사용 |
+| `[NEEDS CLARIFICATION]` | **0** | 감독 판단이 필요한 자리가 없었다 |
+
+**33건 전부가 같은 모양이었다**: `Store Cue <n>` 을 「안전한 예 / 깨끗한 본문 /
+benign 본문」 리터럴로 쓰던 배관 검사, 또는 폐집합·버전·코퍼스 장부 핀. 쇼파일을
+안 고치는 흐름이 승인을 요구하게 된 자리는 하나도 없다.
+
+**plan 단계가 종류 2 후보로 든 파일들이 이 회차에 한 건도 없다.** 측정 명령·출력:
+`grep -cE 'web_cue_sheet_apply|seeded_song_apply|fx_boundary|writegate_session_sites' reports/classifygap-t299-p3/03_cost_p3.txt` → `0`.
+그 자리들이 실어 나르는 쇼파일 쓰기는 `Store Sequence <N> Cue <M>` 이고 v6 이 이미
+잡았으므로 이 확대가 새로 건드릴 것이 없고, Phase 2 가 큐시트 반영의 중복 질문자를
+제거해 그 자리가 이미 봉합이 됐다.
+
+**배차서 전제 하나가 이 회차에는 안 통했다.** 배차서는 「plan 단계의 8 신호가 전부
+Phase 2 에 왔다 — 새 신호는 새 정보다」라고 적었고, 이 회차의 새 신호 수는 0 이다.
+
+### 확대가 옳다는 근거 (귀속) — 두 층이 이미 같은 답을 하고 있었다
+
+확대 **전** 같은 프로브에서 `Store Cue 1` 이 `matched_entry=None / risky=False`
+였고, 확대 **후** `risky=True` 로 바뀌었다. 두 회차의 차이는 `blacklist.yaml`
+한 파일뿐이다.
+
+그리고 이 판단은 이 리비전이 새로 만든 것이 아니다. `write_reason.py` 의
+`_STORE_CUE`(카드 t323)가 같은 줄을 이미 「쇼파일 쓰기」로 읽고 있었다 — 즉 봉합
+층과 분류 층이 같은 명령에 대해 서로 다른 답을 하고 있었고, 이 리비전이 그
+불일치를 없앤다. 측정 명령·출력:
+`grep -n '_STORE_CUE' server/orchestrator/write_reason.py` → `47:_STORE_CUE = re.compile(r"\bStore Cue (\d+(?:\.\d+)?)")`.
+
+### 배차서 전제 정정 — 「두 번째 사유가 실린다」는 이 배치에서 안 성립한다 (`08`)
+
+배차서는 「your widening adds a second matching entry to the same bundle. It must
+stay 1」이라고 적었다. **카드 1장 유지는 맞지만 기전이 다르고**, 그 차이가 배치
+결정을 좌우한다. 합성 룰셋 셋으로 잰 값:
+
+| 룰셋 | `Store Sequence 210 Cue 10 /Merge` 의 `matched_entry` |
+|---|---|
+| ① 배치된 순서 (`Store Sequence` 앞) | `'Store Sequence'` |
+| ② `Store Cue` **만** 든 룰셋 | `'Store Cue'` — 항목이 그 줄에 **닿는다** |
+| ③ `Store Cue` 를 앞으로 뒤집은 순서 | `'Store Cue'` — 귀속이 **바뀐다** |
+
+항목 수준에서는 두 번째 일치가 성립하지만 `classify.py::_match_blacklist` 가 **첫**
+일치에서 즉시 돌아오므로 두 번째 사유는 카드에 실리지 않는다. 그래서 이 배치의
+성질은 「사유 병기」가 아니라 「v6 귀속 보존」이고, 항목을 목록 **끝**에 둔 것이 그
+조건이다. 주석으로만 두면 누가 위로 옮겨도 아무것도 붉어지지 않으므로
+`test_the_entry_order_preserves_the_sequence_attribution` 을 새로 넣어 검사로 지킨다.
+
+### 큐시트 카드 수 — 확대 전후 모두 1장 (`02` · `06` · `12` · `13`)
+
+| | 확대 전 | 확대 후 | 갱신 후 |
+|---|---|---|---|
+| 승인 요청 | **1장** (항목 5) | **1장** (항목 5) | **1장** (항목 5) |
+| `Store Sequence` 줄의 귀속 | `'Store Sequence'` | 같음 | 같음 |
+| 감사 로그(수락) | `[('approved','draft_apply')]` | 같음 | 같음 |
+
+거절하면 콘솔 **0건**, 감사 로그 `[('rejected','draft_apply')]`, 답장은
+「승인받지 못해 … 콘솔에는 아무것도 쓰지 않았습니다」(`13`). Phase 2 가 낸 비용
+(이중 카드)에 해당하는 것이 이 회차에는 **없다**.
+
+### 받침 재측정 — 이 회차는 `SEAL_DEFENCE` 를 움직이지 않는다 (`07`)
+
+**손으로 고치지 않았다.** `probe_seal_defence_p3.py` 가 자리별로 재고, 그 출력이
+배치된 `test_writegate_session_sites.py::SEAL_DEFENCE` 와 **줄 단위로 일치**한다.
+그래서 그 파일의 diff 는 없다 —
+측정 명령·출력: `git diff --stat -- server/tests/test_writegate_session_sites.py` → 출력 없음.
+
+| | Phase 2 뒤 | Phase 3 뒤 (실측) |
+|---|---|---|
+| 자리 수 | 11 | 11 |
+| seal-only | 2 | **2 / 11** |
+
+**감독이 물은 것에 대한 답 — 이 회차는 남은 두 자리 중 어느 것도 움직이지 않는다.**
+파생이 아니라 자리별 실측이다:
+
+| 자리 | 실측 | 나가는 쇼파일 쓰기 |
+|---|---|---|
+| `_offer_fx_executor_assignment` | seal-only (변화 없음) | `Assign Sequence 201 At Executor 101` |
+| `_setlist_mode` | seal-only (변화 없음) | `Copy Sequence 300 At 210` · `Assign Sequence 210 At Executor 101` |
+
+둘이 실어 나르는 것이 `Assign Sequence` · `Copy Sequence` 뿐이고 SPEC §F 가 그
+둘을 범위 밖에 뒀으므로, `Store Cue` 를 넣어도 이 표는 움직일 수 없다. 카드
+**t325** 가 그 둘을 받는다.
+
+### 뮤테이션 — 모양이 Phase 1·2 와 다르다 (`09`)
+
+`Store Cue` 한 줄만 되돌리면 **6 failed / 12007 passed / 31 skipped**(전체 12044).
+Phase 1·2 는 「분류를 관측하는 단언이 하나뿐」이었지만 이 회차는 **셋**이다 —
+배차서가 「어느 선례와도 같다고 가정하지 말라」고 한 그 지점이다.
+
+| # | 빨개지는 검사 | 무엇을 관측하나 |
+|---|---|---|
+| 1 | `test_safety_classify::test_direct_blacklist_commands_are_blacklisted[Store Cue 1]` | **분류** (표준 핀) |
+| 2 | `test_deploy_scan::test_quoted_object_name_never_matches` | **분류** (이 회차가 넣은 비공허성 짝) |
+| 3 | `test_writegate_merge_gap::test_the_entry_order_preserves_the_sequence_attribution` | **분류** (이 회차가 넣은 비공허성 짝) |
+| 4 | `test_safety_ruleset::test_blacklist_is_exactly_the_shipped_closed_set` | 장부 (멤버십·개수) |
+| 5 | `test_writegate::test_the_measurement_corpus_cannot_collide_with_this_entry` | 장부 (코퍼스 충돌) |
+| 6 | `test_writegate_merge_gap::test_the_blacklist_now_carries_every_store_object_this_spec_scoped` | 장부 (Store 계열 목록) |
+
+분류 관측이 셋이 된 것은 이 회차가 비공허성 짝을 둘 더 넣었기 때문이고 의도한
+결과다. 버전 핀(`version == 7`)은 이 뮤테이션에서 **안** 빨개진다(항목만 되돌렸으므로)
+— 그래서 6건 전부가 항목 자체에 귀속된다.
+
+### 빨개지지 않았는데 갱신한 것 하나 — 조용히 공허해지는 자리
+
+`test_safety_classify::test_option_abbreviation_still_matches` 는 33건에 **없다**
+(초록이었다). 그러나 옛 형태(`Store Cue 5 /o` 의 `category == "blacklisted"` 단언)는
+v7 이후 **옵션을 아예 못 읽어도** 오브젝트가 걸려 초록이 된다 — 재려던 축이 다른
+축에 가려지는 모양이다. 리터럴을 폐집합 밖 오브젝트로 옮기고
+`matched_entry == "Store /overwrite"` 를 단언하게 바꿨다. 비용에는 안 들어가지만
+갱신하지 않으면 방어가 조용히 사라지는 자리라 함께 적는다.
+
+### 리터럴 교체 규율 — 예외 하나와 그 근거
+
+「안전한 예」 리터럴은 **프로그래머 값**(`Fixture <n> At 50` 등)으로 옮겼다. 폐집합은
+쇼파일 **쓰기** 오브젝트만 담으므로 어떤 리비전도 그쪽을 다시 잡지 않는다. Phase 1 이
+하나를 당시 남은 구멍(`Store Sequence`)으로 옮겼다가 한 리비전 만에 다시 잃은 사고를
+되풀이하지 않기 위한 규율이다.
+
+**예외 하나.** `test_safety_classify.py` 의 옵션 축 검사 셋은 재는 축이 「`Store` 를
+위험하게 만드는 것은 동사가 아니라 `/overwrite` **옵션**」이라서 `Store` 가 아닌
+명령으로는 축 자체가 사라진다. 그래서 폐집합 밖의 `Store` 오브젝트(`Store Page 3`)를
+쓰고, 그 전제를 `_OPTION_AXIS_OBJECT` 한 곳에서 읽게 한 뒤
+`test_the_option_axis_literal_is_still_outside_the_closed_set` 으로 따로 지킨다.
+후속 카드가 `Store Page` 를 넣는 날 실패 메시지가 「축이 깨졌다」가 아니라
+「리터럴의 전제가 깨졌으니 이렇게 옮겨라」를 직접 말한다. **그 대가를 숨기지 않는다**
+— `Store Page` 를 넣는 카드는 이 리터럴 이동을 함께 계획해야 한다.
+
+### 손댄 파일 (13 + SPEC 산출물 1 + 추적되는 증거 디렉터리)
+
+측정 명령·출력: `git diff --stat` → `14 files changed, 829 insertions(+), 80 deletions(-)`
+— 아래 13개 + `progress.md` 이 문서(355행). 여기에 추적되는 미커밋 디렉터리
+`reports/classifygap-t299-p3/` 가 더해진다(`git diff` 는 미추적 파일을 안 센다).
+
+파일별: `blacklist.yaml` 107 · `test_safety_gate.py` 94 · `test_writegate_merge_gap.py` 90 ·
+`test_safety_classify.py` 88 · `test_writegate.py` 34 · `test_safety_e2e_audit.py` 28 ·
+`test_deploy_scan.py` 27 · `test_safety_ruleset.py` 24 · `test_safety_expand.py` 18 ·
+`corpus.yaml` 14 · `test_safety_bootstrap.py` 12 ·
+`test_showfile_replacement_gate.py` 10 · `test_safety_corpus.py` 8.
+
+데이터 (2)
+
+- `server/safety/blacklist.yaml` — v6 → v7, 항목 하나 추가(목록 **끝**). 헤더에
+  실측 비용·순서 결정·뮤테이션 모양·받침 무변화를 기록
+- `server/measurement/corpus.yaml` — 헤더의 narrowing 고지 갱신(cue-store 2건 합류,
+  누적 7/21 시나리오 · 대표 과제 유형 3종이 무인 운전 밖)
+
+핀 갱신 (11, 각각 개별 근거를 주석/docstring 에 적었다)
+
+- `server/tests/test_safety_ruleset.py` — 폐집합 13→14, 버전 6→7
+- `server/tests/test_safety_classify.py` — v7 분류 관측 핀 1행 추가 · 옵션 축
+  리터럴을 `_OPTION_AXIS_OBJECT` 로 추출 + 전제 검사 신설 · 옵션 축약 검사를
+  `matched_entry` 단언으로 강화 · 나머지 리터럴 프로그래머 값으로 이동
+- `server/tests/test_writegate.py` — `UNCHANGED_SAFE` 에서 `Store Cue 12` 제거
+  (개별 근거 기재), `RATIFIED_CORPUS_COLLISIONS` +2
+- `server/tests/test_writegate_merge_gap.py` — **못을 뽑았다**: `Store Cue not in
+  blacklist` 단언을 뒤집고 이름까지 바꿨다(검사가 자기 갱신을 예고해 뒀다).
+  순서 보존 검사를 신설
+- `server/tests/test_showfile_replacement_gate.py` — `UNCHANGED` 에서 `Store Cue 12`
+  제거(Phase 1 이 같은 튜플에 적은 논거를 두 번째로 적용)
+- `server/tests/test_safety_gate.py` — `safe_line()`/`SAFE_LINE` 도입, 빨개진 검사
+  14개 본문 안에서만 운반용 리터럴 34줄 치환
+- `server/tests/test_safety_expand.py` — `_CLEAN_BODY_LINE` 도입(2곳)
+- `server/tests/test_safety_corpus.py` — 깨끗한 본문 리터럴 이동
+- `server/tests/test_safety_bootstrap.py` — UDP 왕복 운반용 리터럴 이동
+- `server/tests/test_safety_e2e_audit.py` — 안전 번들·잠금 단계 리터럴 이동
+  (**연쇄 기전 기록**: 안전 번들이 위험해지면 `ScriptedApproval` 의 첫 `True` 를
+  먹어서 3단계가 `False` 를 받는다 — 빨개진 줄은 3단계였지만 원인은 2단계다)
+- `server/tests/test_deploy_scan.py` — 줄번호 보고 검사 리터럴 이동 · 인용 검사를
+  **더 날카롭게** 갱신(옛 형태는 인용 규칙을 꺼도 초록이었다) + 비공허성 짝 추가
+
+`server/safety/*.py` 코드는 **한 줄도 안 고쳤다**(제약). 측정 명령·출력:
+`git diff --stat -- 'server/safety/*.py'` → 출력 없음.
+`console/lua/` · `server/looks/library/` · `ui/` 미접촉(`git diff --stat --` 출력 없음),
+포트 8000 미접촉(`git diff -- server/ | grep -c 8000` → 0).
+
+### 최종 스위트 (`10_suite_final.txt`)
+
+```
+12017 passed, 31 skipped, 1 warning in 164.00s (0:02:44)
+exit=0
+```
+
+전체 12048. **12047 → 12048 의 산수**(초록만 보고 넘기면 안 되는 숫자라 함께 적는다):
+항목 하나가 `test_writegate.py` 에서 테스트를 4개 만들고(12043 + 4 = 12047), 이
+회차가 검사를 셋 더하고 둘 뺐다 → 순 +1.
+
+- 더한 셋: `test_the_option_axis_literal_is_still_outside_the_closed_set` ·
+  `test_the_entry_order_preserves_the_sequence_attribution` ·
+  `test_direct_blacklist_commands_are_blacklisted[Store Cue 1]`
+- 뺀 둘: `test_the_form_stays_non_risky[Store Cue 12-…]` ·
+  `test_classification_did_not_move[Store Cue 12]` (두 튜플에서 그 줄을 뺐으므로
+  파라미터가 사라진다)
+
+`skipped` 는 31 로 **안 움직였다** — `SEAL_DEFENCE` 의 자리 수와 redundant 비율이
+그대로이므로 skip 조건이 걸리는 자리도 그대로다.
+
+---
+
+## §E.2.F SPEC 전체 수락 기준표 (세 단계 합산 — 이 SPEC 의 마감 측정)
+
+각 판정은 **최종 트리**(v7, 갱신 후)에서 다시 잰 값이거나, 해당 단계의 추적되는
+증거 파일이다. 「이월」로 적힌 것은 그 단계에서 만족 불가였음을 자체 기록이
+명시한 항목이다.
+
+| AC | 최종 판정 | 어느 단계에서 충족됐나 | 검증 명령 | 실제 출력 / 증거 |
+|---|---|---|---|---|
+| AC-CG-001 (네 명령 보류) | **PASS** | Phase 3 (P1 2/4 → P2 3/4 → P3 4/4) | `uv run python reports/classifygap-t299-p3/probe_p3.py` `[B]` | `Store Group 3`·`Store Timecode 9`·`Store Sequence 210 Cue 3 /Merge`·`Store Cue 1` 전부 `PASS` · `=> AC-CG-001: 4/4` (`11_probe_final.txt`) |
+| AC-CG-002 (프로그래머 9문장) **must-pass** | **PASS** | 세 단계 모두 | 같은 프로브 `[D]`·`[D-2]` | `=> risky 로 잘못 판정된 문장: 0 []` (아홉 문장 + 배차서 두 문장 모두 0) |
+| AC-CG-003 (흐름 단위 카드 0장) **must-pass** | **PASS** | 세 단계 모두 | 같은 프로브 `[E]` | `approval requests: 0` · `cleared : True  status='cleared'` |
+| AC-CG-004 (봉합과 겹쳐도 1장 + 사유 병기) | **PASS** | 세 단계 모두 | 같은 프로브 `[F]` | `approval requests: 1` · `items in request : 3` · `Store Cue 1` 과 `Store Sequence …` 각각 `('SEAL-REASON', "blacklisted command (matches closed-set entry '…')")` |
+| AC-CG-005 (seal-only 감소) **must-pass** | **PASS** | **Phase 2** (7 → 2). Phase 3 은 2 로 유지 | `uv run python reports/classifygap-t299-p3/probe_seal_defence_p3.py` | `seal-only (실측)  : 2 / 11` · `seal-only (표)    : 2` — 표와 실측 일치, 표 diff 없음 |
+| AC-CG-006 (봉합 그대로, 0건 제거) | **PASS** | 세 단계 모두 | `git diff --stat -- server/web/session.py` (Phase 3) + `SITES` 개수 | Phase 3 diff 출력 없음 · `sites: 11` / `seal_defence rows: 11` — 11 자리 전부 선언 보유, 제거 0건 |
+| AC-CG-007 (동사 확대 안 함) | **PASS** | 세 단계 모두 | `load_ruleset()` 목록 + 평범한 대화 회차 | `bare Store present: False` · `test_web_session.py::TestHappyPath::test_korean_instruction_executes_and_reports_in_korean` → `1 passed` |
+| AC-CG-008 (리비전 문서화) | **PASS** | 각 단계가 자기 리비전을 기록 | `uv run pytest -q server/tests/test_safety_ruleset.py` | `23 passed` — `version: 7`, `v4 -> v5`·`v5 -> v6`·`v6 -> v7` 세 항목이 `REVISION HISTORY` 블록 **안**에 있고 각각 `SPEC-COPILOT-CLASSIFYGAP-001` 을 명시. 3중 핀 통과 |
+| AC-CG-009 (전체 초록 + 전체 수 병기 + 개별 근거) | **PASS** | Phase 3 (각 단계도 자기 회차에서 초록) | `uv run pytest -q server/tests` | `12017 passed, 31 skipped, 1 warning`, `exit=0` (전체 12048). 갱신된 검사 각각에 근거를 주석/docstring 으로 기재 |
+| AC-CG-010 (종류 2 = 0건) **must-pass** | **PASS** | 세 단계 모두 | 각 단계 비용 파일의 전수 분류 | Phase 1 **0** / Phase 2 **0** / Phase 3 **0** — 누적 0건 |
+
+**must-pass 넷(002·003·005·010) 전부 PASS.** §D.4 완료 정의 대조:
+
+1. AC-CG-001~010 전부 PASS ✓
+2. §D.2 종류 2 여덟 항목 판정 완료 ✓ — Phase 2 가 8건 전부 판정했고(갱신 대상 1 +
+   중복 카드 결함 7) 0건으로 해소, Phase 3 의 새 신호 0건
+3. 각 리비전 헤더에 항목별 비용과 그 시점 전체 수 기록 ✓ (v5·v6·v7)
+4. 남는 구멍이 후속 카드로 등재 — **감독 확인 필요**(아래 `open_for_operator`)
+5. 커밋 메시지가 t299 명시 + `🗿 MoAI` 종료 ✓
+
+---
+
+## §E.3 Run-phase Audit-Ready Signal — Phase 3
+
+```yaml
+run_complete_at: 2026-09-07
+run_commit_sha: pending-backfill-t299-p3
+run_status: complete
+phase: "Phase 3 of 3 (Store Cue — 이 SPEC 의 마지막 구멍)"
+base: e158e44
+branch: WT-classify-widen-p3
+interpreter: "uv run / 3.11.15 (this worktree)"
+suite_baseline: "12012 passed / 31 skipped / 0 failed (12043 total)"
+suite_widening_cost: "33 failed / 11983 passed / 31 skipped (12047 total)"
+suite_final_green: "12017 passed / 31 skipped / 0 failed (12048 total), exit 0"
+plan_predicted_cost: 62          # 트리 e0a2263, 계측 플러그인 — 옮겨 쓰지 않았다
+measured_cost: 33
+cost_gap_explained: "분모 2회 이동(v5·v6) + Phase 1·2 의 리터럴 선이동 + 플러그인 인공물 부재"
+total_delta_explained: "12047 -> 12048: 검사 3 추가 - 2 제거 = 순 +1"
+skipped_delta: "31 -> 31 (무변화) — SEAL_DEFENCE 자리 수/redundant 비율이 그대로"
+mutation_revert_one_entry: "6 failed / 12007 passed / 31 skipped (12044 total)"
+mutation_classification_observers: 3   # Phase 1·2 는 1 — 모양이 다르다
+mutation_ledger_observers: 3
+mutation_version_pin_fired: false      # 항목만 되돌렸으므로
+seal_sites: 11
+seal_only_before: 2
+seal_only_after: 2
+seal_sites_moved_by_this_phase: 0
+seal_defence_table_hand_edited: false  # 재서 옮겼고, 옮길 것이 없었다
+seal_defence_table_diff: "출력 없음 (git diff --stat -- server/tests/test_writegate_session_sites.py)"
+cuesheet_cards_before_widening: 1
+cuesheet_cards_after_widening: 1
+cuesheet_cards_after_pin_updates: 1
+cuesheet_reject_console_writes: 0
+audit_kind_preserved: "draft_apply (수락·거절 양쪽)"
+type2_signals_found: 0
+needs_clarification_left_failing: 0
+risk_signal_files_from_plan_phase_present: 0
+entry_position: "목록 끝 — 첫 일치 규칙 때문에 v6 귀속(`Store Sequence`)이 보존된다"
+entry_order_guarded_by_test: true      # test_the_entry_order_preserves_the_sequence_attribution
+green_but_updated_anyway: 1            # test_option_abbreviation_still_matches (가려질 수 있게 됐다)
+negative_control_false_positives: 0
+flow_level_cards_on_programmer_traffic: 0
+ruff_check: "All checks passed! (server/ 및 reports/classifygap-t299-p3/)"
+ruff_format: "1 file reformatted (probe_entry_order.py, 공백만) — 포맷 뒤 출력 바이트 동일 확인"
+touched_files_lint_gate: "test_overlap_preserve.py 57 passed"
+live_desk_contact: 0
+server_safety_py_modified: false
+new_warnings_or_lints_introduced: 0
+evidence_dir: reports/classifygap-t299-p3/
+dispatch_premise_corrected:
+  what: "「확대가 같은 번들에 두 번째 일치 항목을 더한다 → 사유 병기」"
+  measured: "항목은 그 줄에 닿지만 `_match_blacklist` 가 첫 일치에서 돌아와 두 번째 사유는 안 실린다"
+  consequence: "성질은 「사유 병기」가 아니라 「v6 귀속 보존」이고, 그것이 항목을 목록 끝에 둔 이유다"
+  evidence: "reports/classifygap-t299-p3/08_entry_order.txt"
+formatting_repair:
+  what: "§E.3 Phase 1 블록에 여는 펜스가 없어 산문으로 렌더되고 끝의 ``` 가 미닫힘 펜스를 열고 있었다"
+  how: "내용 바이트 그대로 두고 제목 + 여는 펜스만 추가"
+open_for_operator:
+  - "AC-CG-005 의 남은 seal-only 둘은 이 SPEC 으로 0 이 안 된다(측정으로 확정) — 카드 t325 가 `Assign Sequence`·`Copy Sequence` 를 받는지 확인 필요"
+  - "`Store Page`·`Store Macro` 후속 카드는 `test_safety_classify._OPTION_AXIS_OBJECT` 이동을 함께 계획해야 한다"
+  - "코퍼스 무인 운전 상실 누적: 7/21 시나리오, 대표 과제 유형 3종(group_create·preset_store·cue_store)"
+gaps:
+  - "실기 검증 0건 — 콘솔 오프라인, 포트 8000 미접촉"
+  - "`Store Page`·`Store Macro`·`Assign`·`Copy` 확대 비용 미측정(§F 범위 밖)"
+  - "UI 렌더 미측정 — 서버 `approval_request` 이벤트 수로만 셌다"
+  - "명시 선언과 레지스트리 자동 선언을 동시에 없앤 뮤테이션 미측정(Phase 2 와 동일하게 범위 밖)"
+  - "`TestExecutorRenameInvariance` 의 두 파라미터가 바이트 동일해 before/after 를 구분 못 한다 — 관측·기록했으나 고치지 않았다(범위 밖)"
+  - "`_retarget_gate_literals.py` 가 치환한 34줄을 손으로 한 줄씩 재검토하지는 않았다 — 대상 함수 본문 한정 + 최종 스위트 초록 + 뮤테이션으로 간접 확인"
 ```
 
 ## §E.4 Sync-phase Audit-Ready Signal

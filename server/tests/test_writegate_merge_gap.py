@@ -97,6 +97,36 @@ t292 의 부수피해 8건이었는데, 이 트리에서 다시 재니 그 8은 
 
 **아직 열려 있는 것.** `Store Cue` 하나다(Phase 3). 아래 `store_entries` 단언이
 그 상태를 그대로 센다 — 네 명령 중 셋이 닫혔다.
+
+---
+
+## 마지막 못을 뽑은 기록 (SPEC-COPILOT-CLASSIFYGAP-001 Phase 3, 카드 t299)
+
+블랙리스트 v6 -> v7 이 `Store Cue` 를 넣었다. 위 절이 「아직 열려 있는 것」이라
+적은 그 하나이고, 이제 **이 SPEC 이 범위로 든 네 오브젝트가 다 닫혔다**.
+
+**무엇이 뒤집혔나.** 하나다 — `store_entries` 목록과 그 짝인
+`assert "Store Cue" not in RULESET.blacklist`. 위 절이 「그것까지 닫히면 이 단언이
+다시 붉어진다」고 예고해 뒀고, 예고대로 붉어졌다.
+
+**무엇이 안 뒤집혔나.** `CARDED_SEQUENCE_WRITES` 세 줄의 귀속은 v6 그대로
+`'Store Sequence'` 다. `Store Cue` 의 키워드 둘이 그 세 줄에도 다 있으므로 항목
+수준에서는 닿지만, `_match_blacklist` 가 **첫** 일치에서 돌아오고 v7 은 항목을
+목록 끝에 넣었기 때문이다. 그 성질을 아래
+`test_the_entry_order_preserves_the_sequence_attribution` 이 검사로 지킨다 —
+주석으로만 두면 누가 항목을 위로 옮겨도 아무것도 붉어지지 않는다.
+합성 룰셋으로 두 방향을 잰 증거는 `reports/classifygap-t299-p3/08_entry_order.txt`.
+
+**이 회차의 비용.** 33건 / 전체 12047. 전부 폐집합·버전 핀과 「안전한 예」
+리터럴이고, 쇼파일을 안 고치는 흐름이 승인을 요구하게 된 자리는 0건이다.
+Phase 2 가 낸 비용(큐시트 이중 카드)에 해당하는 것은 이 회차에 없었다 — 카드 수는
+확대 전후 모두 1장이다.
+
+**그래도 「구멍이 다 닫혔다」는 아니다.** `Store Page`·`Store Macro`·`Assign`·
+`Copy` 는 §F 가 범위 밖에 뒀고 여전히 "safe" 다. 그래서 `SEAL_DEFENCE` 의
+seal-only 는 이 회차 뒤에도 **2 로 그대로**다(실측:
+`reports/classifygap-t299-p3/07_seal_defence_p3.txt`) — 남은 두 자리가 실어 나르는
+것이 `Assign Sequence`·`Copy Sequence` 뿐이기 때문이다.
 """
 
 from __future__ import annotations
@@ -121,8 +151,11 @@ def _classify(command: str):
 #: 아니라 **오브젝트**이므로 셋 다 같은 항목에 걸려야 한다 — 그게 이 목록이
 #: 세 줄인 이유다.
 #:
-#: `Store Cue 12` 는 `test_writegate.py::UNCHANGED_SAFE` 가 여전히 비준하는
-#: 열린 구멍이라 여기 적지 않는다(Phase 3).
+#: `Store Cue 12` 는 여기 없다. Phase 2 판은 「`UNCHANGED_SAFE` 가 여전히 비준하는
+#: 열린 구멍이라」라고 적었지만, v7(Phase 3)이 그것도 닫았다. 지금 빠져 있는 이유는
+#: 다르다 — 이 목록은 **시퀀스** 쓰기의 오브젝트 축을 재고, `Store Cue <n>` 은
+#: 시퀀스를 지목하지 않는 짧은 형태라 다른 항목(`Store Cue`)에 걸린다. 그 줄의
+#: 귀속은 `test_the_entry_order_preserves_the_sequence_attribution` 이 잰다.
 CARDED_SEQUENCE_WRITES = (
     "Store Sequence 210 Cue 1 /Merge",
     "Store Sequence 210 Cue 1",
@@ -171,21 +204,26 @@ def test_the_gate_itself_is_healthy_on_the_same_bundle() -> None:
     assert _classify("Delete Sequence 210").matched_entry == "Delete"
 
 
-def test_the_blacklist_now_carries_the_sequence_store_entry() -> None:
-    """이 파일이 예고한 날이 왔다 — 누군가 그 항목을 넣었다.
+def test_the_blacklist_now_carries_every_store_object_this_spec_scoped() -> None:
+    """갱신 근거 (t299 Phase 3): **이 검사가 자기 갱신을 예고해 뒀다.**
 
-    옛 이름은 `test_the_blacklist_carries_no_entry_that_could_match_a_sequence_store`
-    이고, 그 docstring 이 「이 단언이 깨지는 날은 누군가 그 항목을 넣은 날이고,
-    그때 이 파일 전체가 붉어져서 『고정해 둔 구멍이 닫혔다』를 알린다」라고
-    적었다. v6(t299 Phase 2)이 그 항목을 넣었고, 실제로 이 파일 전체가 붉어졌다 —
-    설계된 대로 작동했다.
+    Phase 2 판의 docstring 이 「남은 구멍은 `Store Cue` 하나다. 그것까지 닫히면
+    이 단언이 다시 붉어지고, 그때 이 파일은 『네 명령 전부 닫혔다』로 갱신된다
+    (Phase 3)」라고 적었다. v7 이 그 항목을 넣었고 예고대로 붉어졌다 — 갱신
+    근거를 새로 만들 필요가 없었다. 검사가 자기 수명을 적어 두면 다음 사람이
+    「고쳐서 통과시킨 것인지」를 되짚지 않아도 된다.
 
-    남은 구멍은 `Store Cue` 하나다. 그것까지 닫히면 이 단언이 다시 붉어지고,
-    그때 이 파일은 「네 명령 전부 닫혔다」로 갱신된다(Phase 3).
+    이름도 같이 바꾼다. `..._the_sequence_store_entry` 는 이제 셋 중 하나만
+    가리키므로 좁다.
+
+    **주의 — 이 목록은 「폐집합이 완결됐다」가 아니다.** 이 SPEC(§F)이 범위로 든
+    네 오브젝트가 다 들어왔다는 뜻이고, `Store Page`·`Store Macro` 는 여전히
+    밖이다. 그 둘은 `test_writegate.py::UNCHANGED_SAFE` 가 계속 비준하며 각자
+    후속 카드를 갖는다. 아래 마지막 단언이 그 경계를 문면으로 센다.
     """
     assert "Store Sequence" in RULESET.blacklist
-    # 아직 안 닫힌 구멍 — 이 줄이 Phase 3 의 착수 신호다.
-    assert "Store Cue" not in RULESET.blacklist
+    # Phase 2 판이 「Phase 3 의 착수 신호」라 적은 줄을 뒤집는다.
+    assert "Store Cue" in RULESET.blacklist
     store_entries = [entry for entry in RULESET.blacklist if entry.split()[0] == "Store"]
     assert store_entries == [
         "Store /overwrite",
@@ -193,4 +231,30 @@ def test_the_blacklist_now_carries_the_sequence_store_entry() -> None:
         "Store Group",
         "Store Timecode",
         "Store Sequence",
+        "Store Cue",
     ]
+    # 아직 열려 있는 오브젝트 — 이 SPEC §F 가 범위 밖에 뒀고 후속 카드가 받는다.
+    # 이 두 줄이 없으면 위 목록이 「전부 닫혔다」로 잘못 읽힌다.
+    assert "Store Page" not in RULESET.blacklist
+    assert "Store Macro" not in RULESET.blacklist
+
+
+def test_the_entry_order_preserves_the_sequence_attribution() -> None:
+    """갱신 근거 (t299 Phase 3): 순서가 카드 문면을 정한다 — 실측으로 확인함.
+
+    `classify.py::_match_blacklist` 는 목록을 순회하며 **첫** 일치에서 돌아온다.
+    그래서 `Store Cue` 를 `Store Sequence` 앞에 두면
+    `Store Sequence 210 Cue 10 /Merge` 의 귀속이 `'Store Cue'` 로 바뀐다 — 안전
+    판정은 같지만 감독이 카드에서 읽는 사유가 달라진다.
+
+    v7 은 항목을 목록 **끝**에 넣어 v6 의 귀속을 보존했다. 그 성질은 주석이 아니라
+    검사로 지켜야 한다: 누가 항목을 위로 옮기면 이 줄이 붉어진다.
+
+    합성 룰셋으로 두 방향을 함께 잰 증거:
+    `reports/classifygap-t299-p3/08_entry_order.txt`.
+    """
+    order = list(RULESET.blacklist)
+    assert order.index("Store Sequence") < order.index("Store Cue")
+    assert _classify("Store Sequence 210 Cue 10 /Merge").matched_entry == "Store Sequence"
+    # 짧은 형태는 새 항목에 걸린다 — 위 순서가 그 줄을 가리지 않는다는 비공허성 짝.
+    assert _classify("Store Cue 10").matched_entry == "Store Cue"

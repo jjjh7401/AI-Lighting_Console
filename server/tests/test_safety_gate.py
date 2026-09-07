@@ -86,18 +86,44 @@ def _events(audit, event_type):
     return [e for e in audit.iter_events() if e["event"] == event_type]
 
 
+def safe_line(n: int = 5) -> str:
+    """승인 없이 통과해야 하는 **운반용** 명령 한 줄.
+
+    이 파일의 검사 대부분은 게이트 **배관**(허가 소비·잠금 재확인·health 재확인·
+    미확인 집합 상한·세션 격리)을 재고, 그때 쓰는 명령은 「안전한 예」일 뿐이다.
+    그런데 그 리터럴을 폐집합에 든 오브젝트로 두면, 폐집합이 넓어질 때마다 배관
+    검사가 승인 하네스를 함께 들어야 해서 무관한 이유로 붉어진다.
+
+    갱신 근거 (t299 Phase 3): 옛 리터럴은 `Store Cue <n>` 이었고 v7
+    (SPEC-COPILOT-CLASSIFYGAP-001)이 `Store Cue` 를 폐집합에 넣어 이 파일에서
+    14건이 빨개졌다. 전부 배관 검사이고 확대가 틀렸다는 신호는 하나도 없었다.
+
+    Phase 1·2 가 세운 규율대로 **프로그래머 값**으로 옮긴다 — 폐집합은 쇼파일 쓰기
+    오브젝트만 담으므로 어떤 리비전도 이 줄을 다시 잡지 않는다. 다른 `Store`
+    오브젝트로 옮기면 Phase 1 이 겪은 대로 한 리비전 만에 다시 잃는다.
+
+    `n` 은 서로 다른 명령이 필요한 자리(미확인 집합 상한 검사처럼 N개를 보내는
+    자리)에서 신원을 갈라 주기 위한 것이고, 안전성과는 무관하다.
+    """
+    return f"Fixture {n} At 50"
+
+
+#: 신원을 가릴 필요가 없는 자리의 기본 운반용 줄.
+SAFE_LINE = safe_line()
+
+
 class TestSafePath:
     def test_safe_bundle_clears_and_executes(self, tmp_path):
         gate, console, audit = make_gate(tmp_path)
-        decision = gate.screen(["Store Cue 5", "List"])
+        decision = gate.screen([SAFE_LINE, "List"])
         assert decision.cleared is True
         assert decision.status == "cleared"
         port = gate.execution_port
-        assert port.execute("Store Cue 5").ok is True
+        assert port.execute(SAFE_LINE).ok is True
         assert port.execute("List").ok is True
-        assert console.executed == ["Store Cue 5", "List"]
+        assert console.executed == [SAFE_LINE, "List"]
         executed = _events(audit, "executed")
-        assert [e["command"] for e in executed] == ["Store Cue 5", "List"]
+        assert [e["command"] for e in executed] == [SAFE_LINE, "List"]
 
     def test_safe_bundle_needs_no_approval_and_no_backup(self, tmp_path):
         # AC-MVP-008 rule 4: the non-risky path never touches the backup.
@@ -105,8 +131,8 @@ class TestSafePath:
         backup_calls: list[str] = []
         backup = BackupManager(backup_action=lambda: backup_calls.append("b"))
         gate, console, _ = make_gate(tmp_path, approval_port=approval, backup=backup)
-        decision = gate.screen(["Store Cue 5"])
-        gate.execution_port.execute("Store Cue 5")
+        decision = gate.screen([SAFE_LINE])
+        gate.execution_port.execute(SAFE_LINE)
         assert decision.cleared
         assert approval.requests == []
         assert backup_calls == []
@@ -131,7 +157,7 @@ class TestPipelineOrder:
     def test_safe_bundle_stops_after_classification(self, tmp_path):
         stages: list[str] = []
         gate, _, _ = make_gate(tmp_path, stage_observer=stages.append)
-        gate.screen(["Store Cue 5"])
+        gate.screen([SAFE_LINE])
         assert stages == ["grammar", "classify"]
 
 
@@ -369,12 +395,12 @@ class TestLiveLock:
         lock = LiveLock()
         lock.activate()
         gate, console, _ = make_gate(tmp_path, lock=lock)
-        assert gate.screen(["Store Cue 5"]).cleared is False
+        assert gate.screen([SAFE_LINE]).cleared is False
         lock.deactivate()
-        decision = gate.screen(["Store Cue 5"])
+        decision = gate.screen([SAFE_LINE])
         assert decision.cleared is True
-        gate.execution_port.execute("Store Cue 5")
-        assert console.executed == ["Store Cue 5"]
+        gate.execution_port.execute(SAFE_LINE)
+        assert console.executed == [SAFE_LINE]
 
     def test_lock_first_wins_over_a_pending_approval(self, tmp_path):
         # AC-MVP-023 / REQ-MVP-035: lock arriving DURING the approval wait
@@ -393,9 +419,9 @@ class TestLiveLock:
     def test_executor_rechecks_the_lock_before_every_send(self, tmp_path):
         lock = LiveLock()
         gate, console, _ = make_gate(tmp_path, lock=lock)
-        assert gate.screen(["Store Cue 5"]).cleared
+        assert gate.screen([SAFE_LINE]).cleared
         lock.activate()  # lock lands between clearance and execution
-        result = gate.execution_port.execute("Store Cue 5")
+        result = gate.execution_port.execute(SAFE_LINE)
         assert result.ok is False
         assert console.executed == []
 
@@ -442,9 +468,9 @@ class TestHealthBlocking:
     def test_executor_rechecks_health_before_every_send(self, tmp_path):
         monitor = HealthMonitor()
         gate, console, _ = make_gate(tmp_path, monitor=monitor)
-        assert gate.screen(["Store Cue 5"]).cleared
+        assert gate.screen([SAFE_LINE]).cleared
         monitor.note_ping_timeout()
-        assert gate.execution_port.execute("Store Cue 5").ok is False
+        assert gate.execution_port.execute(SAFE_LINE).ok is False
         assert console.executed == []
 
     def test_heartbeat_probes_and_audits(self, tmp_path):
@@ -542,7 +568,7 @@ class TestResponderVersionGate:
         monitor.note_ping_success(version=EXPECTED_RESPONDER_VERSION)
         gate, console, audit = make_gate(tmp_path, monitor=monitor)
 
-        decision = gate.screen(["Store Cue 5"])
+        decision = gate.screen([SAFE_LINE])
 
         assert decision.cleared is True
         assert decision.status == "cleared"
@@ -557,7 +583,7 @@ class TestResponderVersionGate:
         monitor.note_ping_success()
         gate, console, _ = make_gate(tmp_path, monitor=monitor)
 
-        assert gate.screen(["Store Cue 5"]).cleared is True
+        assert gate.screen([SAFE_LINE]).cleared is True
         assert console.executed == []
 
     def test_heartbeat_carries_the_links_reported_version_into_the_state(self, tmp_path):
@@ -583,18 +609,18 @@ class TestUnconfirmedExecution:
         # AC-MVP-020 part 3 / REQ-MVP-032.
         approval = ScriptedApproval([False])
         gate, console, _ = make_gate(tmp_path, approval_port=approval)
-        console.unconfirmed_on.add("Store Cue 9")
-        assert gate.screen(["Store Cue 9"]).cleared
-        result = gate.execution_port.execute("Store Cue 9")
+        console.unconfirmed_on.add(safe_line(9))
+        assert gate.screen([safe_line(9)]).cleared
+        result = gate.execution_port.execute(safe_line(9))
         assert result.ok is False
         assert "unconfirmed" in result.detail
-        assert console.executed == ["Store Cue 9"]
+        assert console.executed == [safe_line(9)]
         # the SAME command screened again is held for approval, not resent
-        decision = gate.screen(["Store Cue 9"])
+        decision = gate.screen([safe_line(9)])
         assert decision.cleared is False
         (request,) = approval.requests
         assert any("unconfirmed" in r for r in request.items[0].risk_reasons)
-        assert console.executed == ["Store Cue 9"]  # still exactly one send
+        assert console.executed == [safe_line(9)]  # still exactly one send
 
 
 class TestUnconfirmedBoundedGrowth:
@@ -605,7 +631,7 @@ class TestUnconfirmedBoundedGrowth:
 
     def test_unconfirmed_set_never_exceeds_the_cap(self, tmp_path):
         gate, console, _ = make_gate(tmp_path)
-        commands = [f"Store Cue {i}" for i in range(_MAX_UNCONFIRMED + 1)]
+        commands = [safe_line(i) for i in range(_MAX_UNCONFIRMED + 1)]
         for command in commands:
             console.unconfirmed_on.add(command)
             assert gate.screen([command]).cleared
@@ -618,7 +644,7 @@ class TestUnconfirmedBoundedGrowth:
         # protection; only the entry pushed out by the cap regains
         # auto-resend eligibility — a documented, deliberate trade-off.
         gate, console, _ = make_gate(tmp_path)
-        commands = [f"Store Cue {i}" for i in range(_MAX_UNCONFIRMED + 1)]
+        commands = [safe_line(i) for i in range(_MAX_UNCONFIRMED + 1)]
         for command in commands:
             console.unconfirmed_on.add(command)
             gate.screen([command])
@@ -663,10 +689,10 @@ class TestClearanceEnforcement:
 
     def test_a_clearance_is_consumed_by_execution(self, tmp_path):
         gate, console, _ = make_gate(tmp_path)
-        gate.screen(["Store Cue 5"])
-        assert gate.execution_port.execute("Store Cue 5").ok is True
-        assert gate.execution_port.execute("Store Cue 5").ok is False
-        assert console.executed == ["Store Cue 5"]
+        gate.screen([SAFE_LINE])
+        assert gate.execution_port.execute(SAFE_LINE).ok is True
+        assert gate.execution_port.execute(SAFE_LINE).ok is False
+        assert console.executed == [SAFE_LINE]
 
     def test_a_new_screen_invalidates_outstanding_clearances(self, tmp_path):
         gate, console, _ = make_gate(tmp_path)
@@ -690,7 +716,7 @@ class TestConcurrentSessionClearanceIsolation:
 
         token = bind_session_key(key_a)
         try:
-            gate.screen(["Store Cue 5"])  # session A clears its own bundle
+            gate.screen([SAFE_LINE])  # session A clears its own bundle
         finally:
             reset_session_key(token)
 
@@ -703,10 +729,10 @@ class TestConcurrentSessionClearanceIsolation:
         token = bind_session_key(key_a)
         try:
             # A's clearance must survive B's unrelated screen() call.
-            assert gate.execution_port.execute("Store Cue 5").ok is True
+            assert gate.execution_port.execute(SAFE_LINE).ok is True
         finally:
             reset_session_key(token)
-        assert console.executed == ["Store Cue 5"]
+        assert console.executed == [SAFE_LINE]
 
     def test_concurrent_sessions_both_execute_their_own_cleared_bundle(self, tmp_path):
         gate, console, _ = make_gate(tmp_path)
@@ -726,7 +752,7 @@ class TestConcurrentSessionClearanceIsolation:
             finally:
                 reset_session_key(token)
 
-        thread_a = threading.Thread(target=run_session, args=(key_a, "Store Cue 5", "a"))
+        thread_a = threading.Thread(target=run_session, args=(key_a, SAFE_LINE, "a"))
         thread_b = threading.Thread(target=run_session, args=(key_b, "List", "b"))
         thread_a.start()
         thread_b.start()
@@ -735,7 +761,7 @@ class TestConcurrentSessionClearanceIsolation:
 
         assert results.get("a") is True
         assert results.get("b") is True
-        assert set(console.executed) == {"Store Cue 5", "List"}
+        assert set(console.executed) == {SAFE_LINE, "List"}
 
 
 class TestPluginInvocationGate:

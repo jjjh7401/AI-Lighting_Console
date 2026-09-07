@@ -1,0 +1,25 @@
+interpreter : 3.11.15
+server pkg  : /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-ab993975d41e79110/server/__init__.py
+ruleset path: /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-ab993975d41e79110/server/safety/blacklist.yaml
+ruleset ver : 7
+blacklist   : ['Delete', 'Remove', 'Off Everything', 'Store /overwrite', 'Shutdown', 'Format', 'Set Fixture', 'LoadShow', 'NewShow', 'Store Preset', 'Store Group', 'Store Timecode', 'Store Sequence', 'Store Cue']
+
+① 배치된 순서 — `Store Sequence` 가 `Store Cue` 앞에 있다
+   Store Sequence index = 12
+   Store Cue      index = 13
+   'Store Sequence 210 Cue 10 /Merge'   -> matched_entry='Store Sequence'
+   'Store Cue 1'                        -> matched_entry='Store Cue'
+
+② `Store Cue` **만** 든 합성 룰셋 — 이 항목이 그 줄에 닿는가
+   blacklist = ['Store Cue']
+   'Store Sequence 210 Cue 10 /Merge'   -> matched_entry='Store Cue'
+
+③ 순서를 뒤집은 합성 룰셋 — `Store Cue` 를 `Store Sequence` 앞으로
+   blacklist = ['Store Cue', 'Store Sequence']
+   'Store Sequence 210 Cue 10 /Merge'   -> matched_entry='Store Cue'
+
+[검산] 세 관측이 말하는 것
+   항목이 그 줄에 닿는다            : True  (② = 'Store Cue')
+   배치 순서에서 귀속은 안 바뀐다   : True  (① = 'Store Sequence')
+   앞으로 옮기면 귀속이 바뀐다      : True  (③ = 'Store Cue')
+   => 「두 번째 사유가 카드에 실린다」는 이 배치에서 **성립하지 않는다**. 첫 일치에서 돌아오기 때문이고, 그것이 순서를 못 박는 이유다.
