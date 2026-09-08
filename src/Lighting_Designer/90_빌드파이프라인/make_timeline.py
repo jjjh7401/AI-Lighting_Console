@@ -9,7 +9,7 @@ SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar"
 )
 os.makedirs(SONG_DIR, exist_ok=True)
-from seq_data import *
+from seq_data import CUES, HEAD_META, PALETTE, SECTIONS, tc
 
 TOTAL = 240.0  # 차트 x축 (곡 236.0 + 종료 암전 여유)
 SEC_TONE = {
