@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """MA3 생성 스크립트 정합 검증 (M1~M5)"""
+
 import sys, os, re, xml.etree.ElementTree as ET
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 입력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
 # 박아두면 그 기계 밖에서는 돌지 않는다.
 MA3_DIR = os.environ.get("LXSEQ_MA3_OUT") or os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "04_grandMA3")
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "04_grandMA3"
+)
 from rig_data import GROUPS, PRESET_DIM, PRESET_COL, PRESET_POS, PRESET_BM, FX_LIB
 from seq_data import CUES
 
@@ -16,42 +19,66 @@ lines = open(TXT, encoding="utf-8").read().splitlines()
 cmds = [l for l in lines if l and not l.startswith("//")]
 
 R = []
-def chk(n, name, ok, detail): R.append((n, name, ok, detail))
+
+
+def chk(n, name, ok, detail):
+    R.append((n, name, ok, detail))
+
 
 # M1: Group "X" 참조가 전부 RIG GROUP 정의
 gnames = {g[1] for g in GROUPS}
 refs = {m for l in cmds for m in re.findall(r'Group "([^"]+)"', l)}
 badg = sorted(refs - gnames)
-chk("M1", 'Group 참조 ⊆ RIG GROUP', not badg, str(badg) if badg else "%d개 그룹 참조 전부 유효" % len(refs))
+chk(
+    "M1",
+    "Group 참조 ⊆ RIG GROUP",
+    not badg,
+    str(badg) if badg else "%d개 그룹 참조 전부 유효" % len(refs),
+)
 
 # M2: At Preset p.n 참조가 정의된 풀·번호 내
 POOL = {"DIM": 1, "POS": 2, "COL": 4, "BM": 21, "FX": 22}
-counts = {1: len(PRESET_DIM), 2: len(PRESET_POS), 4: len(PRESET_COL), 21: len(PRESET_BM), 22: len(FX_LIB)}
+counts = {
+    1: len(PRESET_DIM),
+    2: len(PRESET_POS),
+    4: len(PRESET_COL),
+    21: len(PRESET_BM),
+    22: len(FX_LIB),
+}
 badp = []
 for l in cmds:
-    for p, n in re.findall(r'At Preset (\d+)\.(\d+)', l):
+    for p, n in re.findall(r"At Preset (\d+)\.(\d+)", l):
         p, n = int(p), int(n)
         if p not in counts or n < 1 or n > counts[p]:
             badp.append("%d.%d" % (p, n))
-chk("M2", "Preset 참조 풀·번호 유효", not badp, str(sorted(set(badp))) if badp else "풀 매핑 {DIM:1, POS:2, COL:4, BM:21, FX:22} 내 전부 유효")
+chk(
+    "M2",
+    "Preset 참조 풀·번호 유효",
+    not badp,
+    str(sorted(set(badp))) if badp else "풀 매핑 {DIM:1, POS:2, COL:4, BM:21, FX:22} 내 전부 유효",
+)
 
 # M3: Store Cue 개수·번호 = CUES와 일치
 # 개별 타이밍이 그룹마다 다른 큐는 파트로 갈린다(t215). 파트 저장은 큐를 새로
 # 만들지 않으므로 큐 목록에서 빼고 세되, 그 번호가 실재 큐인지는 따로 본다.
-stored = [int(m) for l in cmds for m in re.findall(r'Store Cue (\d+) (?!Part )', l)]
-parts = [int(m) for l in cmds for m in re.findall(r'Store Cue (\d+) Part \d+ ', l)]
+stored = [int(m) for l in cmds for m in re.findall(r"Store Cue (\d+) (?!Part )", l)]
+parts = [int(m) for l in cmds for m in re.findall(r"Store Cue (\d+) Part \d+ ", l)]
 expect = [int(c[0][1:]) for c in CUES]
 orphan = sorted(set(parts) - set(expect))
-chk("M3", "Store Cue 번호 = CUE 시트", stored == expect and not orphan,
+chk(
+    "M3",
+    "Store Cue 번호 = CUE 시트",
+    stored == expect and not orphan,
     "누락/불일치 %s · 고아 파트 %s" % (set(expect) ^ set(stored), orphan)
     if (stored != expect or orphan)
-    else "%d큐 (10~180) 순서 일치 · 파트 %d개 전부 실재 큐" % (len(stored), len(parts)))
+    else "%d큐 (10~180) 순서 일치 · 파트 %d개 전부 실재 큐" % (len(stored), len(parts)),
+)
 
 # M4: SNAP 큐는 CueFade 0.0
 snapq = {int(c[0][1:]) for c in CUES if c[10] == "SNAP"}
 badf = []
 for l in cmds:
-    m = re.search(r'Store Cue (\d+) .*CueFade ([\d.]+)', l)
+    m = re.search(r"Store Cue (\d+) .*CueFade ([\d.]+)", l)
     if m and int(m.group(1)) in snapq and float(m.group(2)) != 0.0:
         badf.append(m.group(1))
 chk("M4", "SNAP 큐 CueFade 0.0", not badf, str(badf) if badf else "SNAP %d큐 전부 0.0" % len(snapq))
@@ -61,9 +88,14 @@ try:
     root = ET.parse(XMLF).getroot()
     xml_cmds = [ml.get("Command") for ml in root.iter("MacroLine")]
     ok = len(xml_cmds) == len(cmds)
-    chk("M5", "매크로 XML 유효 · 명령 수 일치", ok,
-        "XML %d vs TXT %d" % (len(xml_cmds), len(cmds)) if not ok else
-        "%d매크로 · %d명령 · XML 파싱 OK" % (len(list(root.iter('Macro'))), len(xml_cmds)))
+    chk(
+        "M5",
+        "매크로 XML 유효 · 명령 수 일치",
+        ok,
+        "XML %d vs TXT %d" % (len(xml_cmds), len(cmds))
+        if not ok
+        else "%d매크로 · %d명령 · XML 파싱 OK" % (len(list(root.iter("Macro"))), len(xml_cmds)),
+    )
 except Exception as e:
     chk("M5", "매크로 XML 유효", False, str(e))
 
@@ -74,8 +106,11 @@ print("=" * 86)
 fails = 0
 for n, name, ok, d in R:
     s = "PASS" if ok else "FAIL"
-    if not ok: fails += 1
+    if not ok:
+        fails += 1
     print("%s. %-*s  %s  %s" % (n, w, name, s, d))
 print("-" * 86)
-print("결과: %d/%d PASS" % (len(R) - fails, len(R)) + ("" if fails == 0 else "  ← FAIL %d건" % fails))
+print(
+    "결과: %d/%d PASS" % (len(R) - fails, len(R)) + ("" if fails == 0 else "  ← FAIL %d건" % fails)
+)
 sys.exit(1 if fails else 0)
