@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LXSEQ RIG 팩 — 쇼 단위 콘솔 기본설정 샘플 (LX-SEQ v2.1, 타깃 grandMA3)
 장비 리스트 · 패치 · 그룹 · 프리셋(DIM/COL/POS/BM) · FX 라이브러리 · 콘솔 설정
 ※ 기종·풋프린트·주소는 전부 표준 가정값 — 실제 플롯 확정 시 교체 (RIG-HEAD에 명시)

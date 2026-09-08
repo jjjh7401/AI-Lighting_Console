@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """실행 레이어 시트(PATCH/PRESET/CUE-EX) 추가 + CUE-EX CSV 내보내기 (r2)"""
 
-import sys, os, csv
+import csv
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -11,10 +12,9 @@ SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar"
 )
 os.makedirs(SONG_DIR, exist_ok=True)
-from exec_data import PATCH, PRESETS, CUE_EX, EX_HEADERS, EXEC_NOTES
-from seq_data import NOTES
+from exec_data import CUE_EX, EX_HEADERS, EXEC_NOTES, PATCH, PRESETS
 from openpyxl import load_workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 SRC = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.xlsx")
 THIN = Side(style="thin", color="BFBFBF")

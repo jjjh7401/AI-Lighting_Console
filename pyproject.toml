@@ -80,17 +80,17 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 # 파일 단위면 새 파일은 처음부터 전량 린트를 받는다. 목록이 늘지 않는 것은
 # `test_overlap_preserve.py` 의 증가금지 검사가 지킨다.
 [tool.ruff.lint.per-file-ignores]
-"src/Lighting_Designer/90_빌드파이프라인/exec_data.py" = ["E501", "UP009"]
-"src/Lighting_Designer/90_빌드파이프라인/make_exec.py" = ["B905", "E401", "E402", "E501", "F401", "I001", "UP009", "UP031"]
-"src/Lighting_Designer/90_빌드파이프라인/make_ma3.py" = ["B007", "E401", "E402", "E501", "I001", "UP009", "UP031"]
-"src/Lighting_Designer/90_빌드파이프라인/make_rig.py" = ["B007", "E401", "E501", "I001", "UP009", "UP031"]
-"src/Lighting_Designer/90_빌드파이프라인/make_timeline.py" = ["E401", "E402", "E501", "I001", "UP009", "UP031"]
-"src/Lighting_Designer/90_빌드파이프라인/make_xlsx.py" = ["B905", "E401", "E402", "F401", "I001", "UP009", "UP031"]
-"src/Lighting_Designer/90_빌드파이프라인/rig_data.py" = ["E501", "UP009"]
-"src/Lighting_Designer/90_빌드파이프라인/seq_data.py" = ["E501", "UP009", "UP031"]
-"src/Lighting_Designer/90_빌드파이프라인/validate.py" = ["B007", "E401", "E402", "F401", "I001", "SIM300", "UP009", "UP031"]
-"src/Lighting_Designer/90_빌드파이프라인/validate_ma3.py" = ["E401", "E402", "E741", "I001", "SIM115", "UP009", "UP031"]
-"src/Lighting_Designer/90_빌드파이프라인/validate_rig.py" = ["B007", "E401", "F401", "I001", "UP009", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/exec_data.py" = ["E501"]
+"src/Lighting_Designer/90_빌드파이프라인/make_exec.py" = ["B905", "E402", "E501", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/make_ma3.py" = ["B007", "E402", "E501", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/make_rig.py" = ["B007", "E501", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/make_timeline.py" = ["E402", "E501", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/make_xlsx.py" = ["B905", "E402", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/rig_data.py" = ["E501"]
+"src/Lighting_Designer/90_빌드파이프라인/seq_data.py" = ["E501", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/validate_ma3.py" = ["E402", "E741", "SIM115", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/validate_rig.py" = ["B007", "UP031"]
+"src/Lighting_Designer/90_빌드파이프라인/validate.py" = ["B007", "E402", "UP031"]
 
 # PRESERVE 핀 파일은 **포매터에서만** 제외한다 (lint는 그대로 받는다).
 # `server/web/preview.py`는 SPEC-COPILOT-PRECHK-001/OVERLAP-001이 바이트

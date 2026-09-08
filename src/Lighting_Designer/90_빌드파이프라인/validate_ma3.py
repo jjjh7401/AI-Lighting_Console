@@ -1,7 +1,9 @@
-# -*- coding: utf-8 -*-
 """MA3 생성 스크립트 정합 검증 (M1~M5)"""
 
-import sys, os, re, xml.etree.ElementTree as ET
+import os
+import re
+import sys
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -10,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 MA3_DIR = os.environ.get("LXSEQ_MA3_OUT") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "04_grandMA3"
 )
-from rig_data import GROUPS, PRESET_DIM, PRESET_COL, PRESET_POS, PRESET_BM, FX_LIB
+from rig_data import FX_LIB, GROUPS, PRESET_BM, PRESET_COL, PRESET_DIM, PRESET_POS
 from seq_data import CUES
 
 TXT = os.path.join(MA3_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.ma3.txt")

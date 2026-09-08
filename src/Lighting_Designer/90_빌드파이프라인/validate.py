@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """LX-SEQ v2.0 포맷 준수 검증 — 15항목 체크리스트"""
 
-import sys, os, re
+import os
+import re
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -10,8 +11,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar"
 )
-from seq_data import FIXTURE_GROUPS, PALETTE, RUNTIME, SECTIONS
 from openpyxl import load_workbook
+from seq_data import FIXTURE_GROUPS, PALETTE, RUNTIME, SECTIONS
 
 XLSX = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.xlsx")
 wb = load_workbook(XLSX)
@@ -163,7 +164,7 @@ tc_unconf = sum(1 for r in rows for v in r if isinstance(v, str) and "확인필�
 chk(
     10,
     "확인필요 항목 NOTE 기록",
-    len(nrows) >= 10 and any("확인필요" == r[0] for r in nrows),
+    len(nrows) >= 10 and any(r[0] == "확인필요" for r in nrows),
     "NOTE %d건 (확인필요 %d · 장비이슈 %d · 스펙개정후보 %d)"
     % (
         len(nrows),
@@ -185,7 +186,7 @@ chk(
 )
 
 # ===== v2.0 실행 레이어 검증 (12~15) =====
-from exec_data import PATCH, PRESETS, CUE_EX, EX_HEADERS, SONG_BPM
+from exec_data import CUE_EX, PATCH, PRESETS, SONG_BPM
 
 cue_qs = [r[0] for r in rows]
 cue_by_q = {r[0]: r for r in rows}

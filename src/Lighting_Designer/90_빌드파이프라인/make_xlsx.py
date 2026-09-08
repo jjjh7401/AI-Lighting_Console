@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-import sys, os
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -9,11 +9,10 @@ SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar"
 )
 os.makedirs(SONG_DIR, exist_ok=True)
-from seq_data import CUES, FIXTURE_GROUPS, HEAD_META, NOTES, PALETTE, tc
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.page import PageMargins
+from seq_data import CUES, FIXTURE_GROUPS, HEAD_META, NOTES, PALETTE, tc
 
 THIN = Side(style="thin", color="BFBFBF")
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)

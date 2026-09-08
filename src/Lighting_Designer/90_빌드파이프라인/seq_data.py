@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LXSEQ 샘플 데이터 — Maroon 5 / Sugar (LX-SEQ v1.1)"""
 
 BAR = 2.0  # 120BPM 4/4 → 1마디 2.000초

@@ -1,11 +1,12 @@
-# -*- coding: utf-8 -*-
 """grandMA3 프로그래밍 스크립트 생성 — RIG 팩 + Sugar CUE-EX에서 자동 전개
 출력: .ma3.txt (명령 스크립트) / .macros.xml (매크로 풀 템플릿) / runbook .md
 ※ Store Cue 구문은 MA3 공식 도움말 기준. 프리셋 풀 번호·매크로 XML DataVersion은
   콘솔 소프트웨어 버전에서 확인 필요 (스크립트 내 [VERIFY] 표기).
 """
 
-import sys, os, html
+import html
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -15,17 +16,17 @@ MA3_DIR = os.environ.get("LXSEQ_MA3_OUT") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "04_grandMA3"
 )
 os.makedirs(MA3_DIR, exist_ok=True)
-from rig_data import (
-    FIXTURES,
-    FID_BASE,
-    GROUPS,
-    PRESET_DIM,
-    PRESET_COL,
-    PRESET_POS,
-    PRESET_BM,
-    FX_LIB,
-)
 from exec_data import CUE_EX, SONG_BPM
+from rig_data import (
+    FID_BASE,
+    FIXTURES,
+    FX_LIB,
+    GROUPS,
+    PRESET_BM,
+    PRESET_COL,
+    PRESET_DIM,
+    PRESET_POS,
+)
 from seq_data import CUES, tc
 
 FIX = {f[0]: f for f in FIXTURES}

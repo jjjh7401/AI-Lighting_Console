@@ -1,9 +1,12 @@
-# -*- coding: utf-8 -*-
 """RIG 팩 생성 — XLSX(8시트) + 픽스처 단위 패치 CSV. 주소는 유니버스 계획에서 자동 계산."""
 
-import sys, os, csv
+import csv
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from rig_data import (
     CONSOLE_SETUP,
     EXEC_LAYOUT,
@@ -19,8 +22,6 @@ from rig_data import (
     RIG_NOTES,
     UNIVERSE_PLAN,
 )
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 THIN = Side(style="thin", color="BFBFBF")
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
