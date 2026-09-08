@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar"
 )
-from seq_data import *
+from seq_data import FIXTURE_GROUPS, PALETTE, RUNTIME, SECTIONS
 from openpyxl import load_workbook
 
 XLSX = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.xlsx")

@@ -9,7 +9,7 @@ SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar"
 )
 os.makedirs(SONG_DIR, exist_ok=True)
-from seq_data import *
+from seq_data import CUES, FIXTURE_GROUPS, HEAD_META, NOTES, PALETTE, tc
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter

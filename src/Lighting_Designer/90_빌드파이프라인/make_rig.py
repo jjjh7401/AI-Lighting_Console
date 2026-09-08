@@ -4,7 +4,21 @@
 import sys, os, csv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rig_data import *
+from rig_data import (
+    CONSOLE_SETUP,
+    EXEC_LAYOUT,
+    FID_BASE,
+    FIXTURES,
+    FX_LIB,
+    GROUPS,
+    PRESET_BM,
+    PRESET_COL,
+    PRESET_DIM,
+    PRESET_POS,
+    RIG_HEAD,
+    RIG_NOTES,
+    UNIVERSE_PLAN,
+)
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
