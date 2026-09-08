@@ -78,11 +78,11 @@ for gnum, name, comp, use in GROUPS:
         parts = [fid_range(f[0]) for f in FIXTURES if f[3] > 0]
         cmd("Fixture " + " + ".join(parts))
     elif name in ("SIDE-ALL",):
-        cmd("Fixture %s + %s" % (fid_range("SIDE-L"), fid_range("SIDE-R")))
+        cmd("Fixture {} + {}".format(fid_range("SIDE-L"), fid_range("SIDE-R")))
     elif name == "WASH-ALL":
-        cmd("Fixture %s + %s" % (fid_range("WASH-U"), fid_range("WASH-D")))
+        cmd("Fixture {} + {}".format(fid_range("WASH-U"), fid_range("WASH-D")))
     elif name == "MOVER-ALL":
-        cmd("Fixture %s + %s" % (fid_range("MOVER-U"), fid_range("MOVER-D")))
+        cmd("Fixture {} + {}".format(fid_range("MOVER-U"), fid_range("MOVER-D")))
     elif name in ("ODD", "EVEN"):
         cmd("Fixture " + fid_parity(name))
     else:
@@ -95,7 +95,7 @@ sec("2. 딤머 프리셋 (Pool %d Dimmer)" % POOL["DIM"])
 for i, (pid, name, lvl, use) in enumerate(PRESET_DIM, start=1):
     cmd("ClearAll")
     cmd('Group "ALL"')
-    cmd("At %s" % lvl.rstrip("%"))
+    cmd("At {}".format(lvl.rstrip("%")))
     cmd('Store Preset %d.%d "%s %s" /Universal /Overwrite /NoConfirm' % (POOL["DIM"], i, pid, name))
 cmd("ClearAll")
 
@@ -135,8 +135,8 @@ rem("[MANUAL] 각 항목: 그룹 선택 → Pan/Tilt 조준(레코드 가이드 
 for pid, mean, grp, guide in PRESET_POS:
     n = int(pid.split(".")[1])
     g1 = grp.split("+")[0]
-    rem("%s %s — 가이드: %s" % (pid, mean, guide))
-    cmd('ClearAll ; Group "%s"' % g1)
+    rem(f"{pid} {mean} — 가이드: {guide}")
+    cmd(f'ClearAll ; Group "{g1}"')
     rem("  (조준 후) ↓")
     cmd('Store Preset %d.%d "%s %s" /Merge /NoConfirm' % (POOL["POS"], n, pid, mean))
 cmd("ClearAll")
@@ -149,8 +149,8 @@ sec(
 for pid, name, grp, val in PRESET_BM:
     n = int(pid.split(".")[1])
     g1 = grp.split("+")[0].replace("MOVER-ALL", "MOVER-ALL")
-    cmd('ClearAll ; Group "%s"' % g1)
-    rem("[MANUAL] %s: %s — Zoom/Gobo/Prism/Frost 어트리뷰트명은 기종 GDTF 기준" % (pid, val))
+    cmd(f'ClearAll ; Group "{g1}"')
+    rem(f"[MANUAL] {pid}: {val} — Zoom/Gobo/Prism/Frost 어트리뷰트명은 기종 GDTF 기준")
     cmd('Store Preset %d.%d "%s %s" /Merge /NoConfirm' % (POOL["BM"], n, pid, name))
 cmd("ClearAll")
 
@@ -161,11 +161,8 @@ cmd('Set SpeedMaster 1 Property "BPM" %d' % SONG_BPM)
 rem("[VERIFY] SpeedMaster 설정 구문은 버전별 상이 — Speed 창에서 120BPM 확인")
 for pid, name, attr, wave, rate, width, phase, note in FX_LIB:
     n = int(pid.split(".")[1])
-    rem(
-        "%s %s — %s %s · Rate %s · Width %s · Phase %s"
-        % (pid, name, attr, wave, rate, width, phase)
-    )
-    rem("  [MANUAL] Programmer: 대상 그룹 선택 → %s 저값 입력 → Step 2 → 고값 입력" % attr)
+    rem(f"{pid} {name} — {attr} {wave} · Rate {rate} · Width {width} · Phase {phase}")
+    rem(f"  [MANUAL] Programmer: 대상 그룹 선택 → {attr} 저값 입력 → Step 2 → 고값 입력")
     rem("  → Phaser 레이어에서 Speed=Rate·Phase·Width 설정 → Speed를 SpeedMaster 1 종속 →")
     cmd('Store Preset %d.%d "%s %s" /Merge /NoConfirm' % (POOL["FX"], n, pid, name))
 cmd("ClearAll")
@@ -223,34 +220,35 @@ for q, rows in by_q.items():
     meta = cue_meta[q]
     cueno = int(q[1:])
     fade = meta[11]
-    label = "%s %s %s" % (q, meta[1], meta[4].split(",")[0])
+    label = "{} {} {}".format(q, meta[1], meta[4].split(",")[0])
     tcin = tc(meta[2])
-    sec("  %s — TC %s · %s · Fade %s" % (q, tcin, meta[4], fade))
+    sec(f"  {q} — TC {tcin} · {meta[4]} · Fade {fade}")
     for r in rows:
         if r[1] == "LED-W":
             rem(
-                "  [영상팀 콜] LED-W %s%% — %s (조명 콘솔 큐 아님)"
-                % (r[2] or "trk", r[16] or "레벨 동기")
+                "  [영상팀 콜] LED-W {}% — {} (조명 콘솔 큐 아님)".format(
+                    r[2] or "trk", r[16] or "레벨 동기"
+                )
             )
     lit_rows = [r for r in rows if r[1] != "LED-W"]
     for pi, (prows, timing) in enumerate(split_parts(lit_rows)):
         cmd("ClearAll")
         for r in prows:
             _, grp, dim, col, pos, bm, fx, rate, phase, width = r[:10]
-            cmd('Group "%s"' % grp)
+            cmd(f'Group "{grp}"')
             if dim != "":
-                cmd("At %s" % dim)
+                cmd(f"At {dim}")
             if col not in ("",):
-                cmd("At Preset %s" % pool_ref(col))
+                cmd(f"At Preset {pool_ref(col)}")
             if pos not in ("",):
-                cmd("At Preset %s" % pool_ref(pos))
+                cmd(f"At Preset {pool_ref(pos)}")
             if bm not in ("",):
-                cmd("At Preset %s" % pool_ref(bm))
+                cmd(f"At Preset {pool_ref(bm)}")
             if fx == "OFF":
-                rem("  [MANUAL] %s: 기존 Phaser 정지 — Stomp 후 저장" % grp)
+                rem(f"  [MANUAL] {grp}: 기존 Phaser 정지 — Stomp 후 저장")
             elif fx != "":
-                cmd("At Preset %s" % pool_ref(fx))
-                rem("  %s Rate %s BPM · Phase %s · Width %s" % (fx, rate, phase, width or "—"))
+                cmd(f"At Preset {pool_ref(fx)}")
+                rem("  {} Rate {} BPM · Phase {} · Width {}".format(fx, rate, phase, width or "—"))
         if pi == 0:
             cmd('Store Cue %d "%s" CueFade %s Sequence 1 /Merge /NoConfirm' % (cueno, label, fade))
         else:
@@ -284,7 +282,7 @@ with open(txt_path, "w", encoding="utf-8") as f:
     f.write("// 실행 순서: 패치(수동) → §1 → §2 → §3 → §4(현장) → §5 → §6 → §7 → §8\n\n")
     for kind, line in L:
         if kind == "S":
-            f.write("\n// ═══ %s ═══\n" % line)
+            f.write(f"\n// ═══ {line} ═══\n")
         else:
             f.write(line + "\n")
 ncmds = sum(1 for k, _ in L if k == "C")
@@ -320,9 +318,9 @@ with open(xml_path, "w", encoding="utf-8") as f:
     f.write("     gma3_library/datapools/macros 에 복사 → Macro Pool에서 Import -->\n")
     f.write('<GMA3 DataVersion="2.2.0.0">\n')
     for name, cmds in merged:
-        f.write('  <Macro Name="%s">\n' % html.escape("LXSEQ " + name))
+        f.write('  <Macro Name="{}">\n'.format(html.escape("LXSEQ " + name)))
         for c in cmds:
-            f.write('    <MacroLine Command="%s" />\n' % html.escape(c, quote=True))
+            f.write(f'    <MacroLine Command="{html.escape(c, quote=True)}" />\n')
         f.write("  </Macro>\n")
     f.write("</GMA3>\n")
 print("macros.xml:", xml_path, "| 매크로", len(merged), "개")

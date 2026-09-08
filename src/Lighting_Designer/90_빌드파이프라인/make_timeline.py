@@ -41,19 +41,16 @@ pts.append((TOTAL, prev))
 CH_W, CH_H = 1000.0, 132.0
 TOP_PAD, BOT_PAD = 16.0, 4.0
 SPAN = CH_H - TOP_PAD - BOT_PAD
-poly = " ".join(
-    "%.2f,%.2f" % (t / TOTAL * CH_W, CH_H - (v / 100.0) * SPAN - BOT_PAD) for t, v in pts
-)
-area = "0,%.1f " % CH_H + poly + " %.1f,%.1f" % (CH_W, CH_H)
+poly = " ".join(f"{t / TOTAL * CH_W:.2f},{CH_H - (v / 100.0) * SPAN - BOT_PAD:.2f}" for t, v in pts)
+area = f"0,{CH_H:.1f} " + poly + f" {CH_W:.1f},{CH_H:.1f}"
 
 # ── 눈금 ────────────────────────────────────────────────
 ticks = "".join(
-    '<div class="tick" style="left:%.4f%%"><span>%s</span></div>' % (pct(t), tc(t))
+    f'<div class="tick" style="left:{pct(t):.4f}%"><span>{tc(t)}</span></div>'
     for t in range(0, 209, 16)
 )
-ticks += '<div class="tick end" style="left:%.4f%%"><span>%s ▌곡끝</span></div>' % (
-    pct(236.0),
-    tc(236.0),
+ticks += (
+    f'<div class="tick end" style="left:{pct(236.0):.4f}%"><span>{tc(236.0)} ▌곡끝</span></div>'
 )
 
 # ── 섹션 밴드 ───────────────────────────────────────────
@@ -71,9 +68,8 @@ for c in CUES:
     end = TOTAL if tout is None else tout
     dark = hexv in ("#5A2BC8", "#101418", "#FF3C9E", "#9E1F63")
     cueblocks.append(
-        '<div class="cue%s%s" style="left:%.4f%%;width:calc(%.4f%% - 2px);background:%s;color:%s" '
-        'title="%s %s | %s | %s">%s</div>'
-        % (
+        '<div class="cue{}{}" style="left:{:.4f}%;width:calc({:.4f}% - 2px);background:{};color:{}" '
+        'title="{} {} | {} | {}">{}</div>'.format(
             " snap" if trans == "SNAP" else "",
             " tiny" if pct(end - tin) < 2.5 else "",
             pct(tin),
@@ -92,7 +88,7 @@ cues_html = "".join(cueblocks)
 # ── 팔레트 범례 ─────────────────────────────────────────
 used = {c[14] for c in CUES}
 legend = "".join(
-    '<span class="lg"><i style="background:%s"></i>%s %s</span>' % (hx, pid, nm)
+    f'<span class="lg"><i style="background:{hx}"></i>{pid} {nm}</span>'
     for pid, nm, ref, hx, use in PALETTE
     if hx in used
 )
@@ -103,11 +99,10 @@ for c in CUES:
     q, sec, tin, tout, mood, color, inten, fix, mov, eff, trans, fade, note = c[:13]
     dur = "—" if tout is None else "%.1f" % (tout - tin)
     rows.append(
-        "<tr class='s-%s'><td class='m'>%s</td><td class='m'>%s</td><td class='m'>%s</td>"
-        "<td class='m'>%s</td><td class='m'>%s</td><td>%s</td><td>%s</td><td class='m'>%s</td>"
-        "<td class='fx'>%s</td><td>%s</td><td>%s</td><td class='m %s'>%s</td><td class='m'>%s</td>"
-        "<td class='nt'>%s</td></tr>"
-        % (
+        "<tr class='s-{}'><td class='m'>{}</td><td class='m'>{}</td><td class='m'>{}</td>"
+        "<td class='m'>{}</td><td class='m'>{}</td><td>{}</td><td>{}</td><td class='m'>{}</td>"
+        "<td class='fx'>{}</td><td>{}</td><td>{}</td><td class='m {}'>{}</td><td class='m'>{}</td>"
+        "<td class='nt'>{}</td></tr>".format(
             sec,
             q,
             sec,
@@ -249,8 +244,8 @@ SUBS = {
     "{cues}": cues_html,
     "{legend}": legend,
     "{table}": table,
-    "{cw}": "%.0f" % CH_W,
-    "{ch}": "%.0f" % CH_H,
+    "{cw}": f"{CH_W:.0f}",
+    "{ch}": f"{CH_H:.0f}",
     "{poly}": poly,
     "{area}": area,
     "{y100}": "%.1f" % (CH_H - SPAN - BOT_PAD),

@@ -97,7 +97,7 @@ chk(
     4,
     "Transition enum + Fade 정합",
     not tb and not fb,
-    ("enum이탈 %s / Fade모순 %s" % (tb, fb)) if (tb or fb) else "SNAP·BUMP=0.0, FADE·XFADE>0 일치",
+    (f"enum이탈 {tb} / Fade모순 {fb}") if (tb or fb) else "SNAP·BUMP=0.0, FADE·XFADE>0 일치",
 )
 # 5
 tins = [secs(r[2]) for r in rows]
@@ -109,7 +109,7 @@ chk(
     5,
     "TC In 단조증가 · 구간 무중첩",
     mono and not ovl,
-    "18큐 단조증가, 중첩 0건" if (mono and not ovl) else "중첩 %s" % ovl,
+    "18큐 단조증가, 중첩 0건" if (mono and not ovl) else f"중첩 {ovl}",
 )
 # 6
 used = set()
@@ -120,7 +120,7 @@ chk(
     6,
     "Fixture Group 약칭 HEAD 정의",
     not undef,
-    ("미정의: %s" % undef) if undef else "%d개 약칭 전부 정의됨" % len(used),
+    (f"미정의: {undef}") if undef else "%d개 약칭 전부 정의됨" % len(used),
 )
 # 7
 bad7 = []
@@ -135,7 +135,7 @@ chk(
     7,
     "Color = 팔레트ID + 한글색상명 병기",
     not bad7,
-    ("위반 %s" % bad7[:3]) if bad7 else "18큐 전부 병기",
+    (f"위반 {bad7[:3]}") if bad7 else "18큐 전부 병기",
 )
 # 8
 gaps = [(rows[i][0], rows[i + 1][0], tins[i + 1] - tins[i]) for i in range(len(rows) - 1)]
@@ -154,7 +154,7 @@ chk(
     9,
     "마지막 큐 = 암전/인계 명시",
     "블랙아웃" in last[6] and last[7] == "0" and "인계" in last[13],
-    "%s P8 블랙아웃 0%% · 인계 지시 포함" % last[0],
+    f"{last[0]} P8 블랙아웃 0% · 인계 지시 포함",
 )
 # 10
 ns = wb["NOTE"]
@@ -181,7 +181,7 @@ chk(
     11,
     "TC_METHOD 기입 · DERIVED 경고",
     grade in ("VERIFIED", "DERIVED") and (grade == "VERIFIED" or warned),
-    "%s · 경고 표기 %s" % (grade or "미기입", "있음" if warned else "없음"),
+    "{} · 경고 표기 {}".format(grade or "미기입", "있음" if warned else "없음"),
 )
 
 # ===== v2.0 실행 레이어 검증 (12~15) =====
@@ -237,7 +237,7 @@ chk(
     12,
     "CUE-EX 커버리지 · CUE 정합",
     not miss_q and not extra_q and not mismatch,
-    ("누락 %s / 잉여 %s / 모순 %s" % (miss_q, extra_q, mismatch[:3]))
+    (f"누락 {miss_q} / 잉여 {extra_q} / 모순 {mismatch[:3]}")
     if (miss_q or extra_q or mismatch)
     else "18/18 큐 커버 · %d행 · 트래킹 시뮬 Intensity/SNAP 정합" % len(CUE_EX),
 )
@@ -256,7 +256,7 @@ chk(
     13,
     "PRESET 참조 무결성",
     not badref,
-    ("미정의 참조 %s" % badref[:4]) if badref else "%d개 프리셋 · 참조 위반 0건" % len(pids),
+    (f"미정의 참조 {badref[:4]}") if badref else "%d개 프리셋 · 참조 위반 0건" % len(pids),
 )
 
 # 14: PATCH 그룹 무결성
@@ -266,7 +266,7 @@ chk(
     14,
     "CUE-EX Group PATCH 정의",
     not badgrp,
-    ("미정의 그룹 %s" % badgrp)
+    (f"미정의 그룹 {badgrp}")
     if badgrp
     else "%d그룹 전부 PATCH 정의" % len({r_[1] for r_ in CUE_EX}),
 )
@@ -293,7 +293,7 @@ chk(
     15,
     "FX-Rate BPM 공식 (§11.3)",
     not badrate,
-    ("위반 %s" % badrate[:4]) if badrate else "허용값 {7.5,15,30,120,240} 내 · 위반 0건",
+    (f"위반 {badrate[:4]}") if badrate else "허용값 {7.5,15,30,120,240} 내 · 위반 0건",
 )
 
 w = max(len(x[1]) for x in R)
