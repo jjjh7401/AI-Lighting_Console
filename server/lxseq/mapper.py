@@ -13,7 +13,7 @@ REQ-LXSEQ-008: 남은 행을 최대 연속 구간으로 묶어 순서 있는 계
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from server.lxseq.parser import LxseqPatchRecord
@@ -72,6 +72,12 @@ class SkippedRow:
     detail: str
     occupant: dict[str, Any] | None = None
     occupied_fid: int | None = None
+    #: 이 행의 모드를 무엇이 확정했는가 — `ModeResolution.resolved_by` 와 같은 어휘.
+    #: 모드가 확정되기 **전에** 걸러진 행(`type_unresolved` · `mode_unresolved`)에는
+    #: 보고할 해석이 없어 `None` 이다. 빈 문자열이나 `"unknown"` 으로 채우면
+    #: 「풀렸는데 이름을 잃었다」와 구별되지 않고, 두 상태는 감독이 취할 다음
+    #: 행동이 다르다 — 하나는 `mode_overrides` 를 주는 것이고 다른 하나는 버그다.
+    resolved_by: str | None = None
 
 
 @dataclass(frozen=True)
@@ -86,6 +92,10 @@ class PatchRun:
     name_prefix: str
     footprint_source: str
     console_mode: str | None = None
+    #: 이 런의 모드를 무엇이 확정했는가. `console_mode` 가 **무엇으로** 정해졌는지를
+    #: 말하므로 둘은 중복이 아니다 — 같은 모드 이름이 폭 유일성으로도, 감독의
+    #: override 로도, 그 자리 임자의 판독으로도 나올 수 있다.
+    resolved_by: str | None = None
 
     @property
     def width_confirmed(self) -> bool:
@@ -154,6 +164,25 @@ class ImportPlan:
     def write_count_width_unconfirmed(self) -> int:
         """폭 미확정이라 거절될 대수. 0이 아니면 미리보기가 그대로 말해야 한다."""
         return sum(run.count for run in self.runs if not run.width_confirmed)
+
+    @property
+    def resolved_by_counts(self) -> dict[str | None, int]:
+        """무엇이 모드를 확정했는지의 행 단위 집계. `None` 은 「못 풀었다」.
+
+        **런과 건너뛴 행을 함께 센다.** 한 행은 런으로도 건너뛴 행으로도 끝나므로
+        한쪽만 세면 합이 행 수에 못 미치고, 그 결손은 「0건이었다」로 읽힌다. 런은
+        여러 대를 묶은 단위라 `count` 로 센다 — 런 개수로 세면 묶인 대수가 사라진다.
+
+        `mode_resolutions` 표로 이 집계를 대신할 수 없다. 그 표는 (타입, 폭, 라벨)
+        키마다 하나이고 해석은 **행 단위**라, 같은 키의 행들이 갈리면 표에는 먼저
+        도달한 해석만 남는다 — 일부만 풀린 키가 전부 풀린 것으로 보인다.
+        """
+        counts: dict[str | None, int] = {}
+        for run in self.runs:
+            counts[run.resolved_by] = counts.get(run.resolved_by, 0) + run.count
+        for row in self.skipped:
+            counts[row.resolved_by] = counts.get(row.resolved_by, 0) + 1
+        return counts
 
 
 def _address_text(record: LxseqPatchRecord) -> str:
@@ -290,6 +319,9 @@ def _reject_plan_overlaps(placeable):
                 f"{spans[index][0]}.{spans[index][1]}–{spans[index][2]} 구간이 겹친다. "
                 "CSV 폭으로는 겹치지 않았다 — 관여한 행을 전부 거부한다."
             ),
+            # 이 행은 모드가 **확정된 뒤에** 거부된다 — 겹침을 만든 것이 확정된 폭
+            # 이므로, 무엇이 그 폭을 정했는지가 이 거부의 원인 사슬에 들어 있다.
+            resolved_by=placeable[index][2].resolved_by,
         )
         for index in sorted(involved)
     ]
@@ -654,11 +686,19 @@ def build_import_plan(
             )
             if from_seat is not None:
                 mode = from_seat
-                # 해석표에도 남긴다 — 보고가 「무엇이 이 행을 풀었나」를 말해야
-                # 감독이 override 를 더 줄 필요가 없음을 안다. 키를 덮되 이미
-                # 확정된 해석은 덮지 않는다(위 캐시 주석의 이유).
-                if mode_resolutions[resolution_key].resolution != "resolved":
-                    mode_resolutions[resolution_key] = from_seat
+                # 🔴 해석표에 **쓰지 않는다.** t333 은 여기서 `from_seat` 를 키에
+                # 써 넣었고, 그것이 바로 위 캐시 주석이 금지한 일이었다: 같은 키의
+                # 다음 행이 그 값을 물려받아, **자기 자리에 임자가 없는데도** 그
+                # 모드로 확정되고 그대로 쓰기 계획이 된다. 이 앱에 실행 취소는
+                # 없으므로 그 확정은 되돌릴 수 없는 쓰기로 이어진다.
+                #
+                # 그 결함이 t333 회차에 안 드러난 이유: 그 쇼의 24행이 전부 자리에
+                # 임자가 있어 물려받은 값과 실측값이 우연히 같았다. 임자가 일부에만
+                # 있는 쇼에서 갈린다.
+                #
+                # 표는 **라이브러리 판독의 결과**로 남긴다. 행마다 다른 해석은
+                # 행에 실린다(`SkippedRow.resolved_by` · `PatchRun.resolved_by`) —
+                # 키 하나에 값 하나인 표는 애초에 그 갈림을 담을 수 없다.
 
         if mode.resolution == "unresolved":
             measured = ", ".join(f"{m['name']}({m['channels']})" for m in mode.measured_modes)
@@ -690,7 +730,9 @@ def build_import_plan(
             existing_fid_set,
         )
         if occupied is not None:
-            skipped.append(occupied)
+            # 해석은 여기서 얹는다 — `_occupancy_skip` 은 자리만 보는 함수이고,
+            # 거기에 모드를 넘기면 자리 판정이 모드에 의존하는 것처럼 읽힌다.
+            skipped.append(replace(occupied, resolved_by=mode.resolved_by))
             continue
 
         placeable.append((record, console_type, mode))
@@ -741,10 +783,17 @@ def _group_into_runs(
     def boundary_key(item) -> tuple:
         record, console_type, mode = item
         # 폭이 빠지면 폭이 다른 행이 한 런으로 뭉치고, 런 폭은 머리 행 값이 된다.
+        #
+        # `resolved_by` 가 같은 이유로 들어간다. 이것이 빠지면 해석이 다른 행이 한
+        # 런으로 뭉치고 런의 `resolved_by` 는 머리 행 값이 된다 — 보고가 거짓이 된다.
+        # 도달 가능한 조합이다: 같은 타입에서 CSV `Mode` 라벨이 달라 한 키는 라벨
+        # 토큰으로 풀리고 다른 키는 모호해 그 자리 임자로 풀렸는데, 두 키가 같은
+        # 콘솔 모드·같은 폭에 닿으면 나머지 키 성분이 전부 같아진다.
         key = (
             console_type,
             mode.resolution,
             mode.console_mode,
+            mode.resolved_by,
             _effective_width(record, mode),
             record.universe,
         )
@@ -771,6 +820,7 @@ def _group_into_runs(
                 footprint_source=(
                     "caller_unverified" if mode.resolution == "tree_unread" else "console_measured"
                 ),
+                resolved_by=mode.resolved_by,
             )
         )
         current.clear()
