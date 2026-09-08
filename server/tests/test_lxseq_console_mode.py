@@ -337,9 +337,7 @@ def test_a_different_type_at_that_address_is_not_evidence():
     plan = _plan(
         records,
         mode_reads=_two_same_width_modes(channels),
-        inventory=_inventory(
-            _console_fixtures(records, "2 B", fixture_type="Something Else")
-        ),
+        inventory=_inventory(_console_fixtures(records, "2 B", fixture_type="Something Else")),
         occupants=_occupants(records, fixture_type="Something Else"),
     )
     assert _resolution(plan).resolution == "unresolved"
