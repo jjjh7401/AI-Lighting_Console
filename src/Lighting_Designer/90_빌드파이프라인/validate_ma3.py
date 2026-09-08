@@ -69,7 +69,7 @@ chk(
     "M3",
     "Store Cue 번호 = CUE 시트",
     stored == expect and not orphan,
-    "누락/불일치 %s · 고아 파트 %s" % (set(expect) ^ set(stored), orphan)
+    f"누락/불일치 {set(expect) ^ set(stored)} · 고아 파트 {orphan}"
     if (stored != expect or orphan)
     else "%d큐 (10~180) 순서 일치 · 파트 %d개 전부 실재 큐" % (len(stored), len(parts)),
 )

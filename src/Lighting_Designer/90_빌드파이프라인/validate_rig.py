@@ -39,7 +39,7 @@ for uni, groups, desc in UNIVERSE_PLAN:
 # R1: FID 고유성
 fids = [p[0] for p in patch]
 dup = sorted({f for f in fids if fids.count(f) > 1})
-chk("R1", "FID 고유성", not dup, ("중복 %s" % dup) if dup else "%d대 전부 고유" % len(fids))
+chk("R1", "FID 고유성", not dup, (f"중복 {dup}") if dup else "%d대 전부 고유" % len(fids))
 
 # R2: 주소 충돌·512 초과
 bad = []

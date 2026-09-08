@@ -45,7 +45,7 @@ for uni, groups, desc in UNIVERSE_PLAN:
             )
             addr += ch
 if overflow:
-    raise SystemExit("UNIVERSE OVERFLOW: %s" % overflow)
+    raise SystemExit(f"UNIVERSE OVERFLOW: {overflow}")
 
 # DMX 미사용 장비 (FOLLOW)
 manual_rows = [
@@ -254,7 +254,7 @@ print("saved:", out, "| sheets:", wb.sheetnames)
 # 규약: 확장자 앞 접미사로 시트를 구분 · 헤더는 ASCII · utf-8-sig
 # (기존 patch.csv · cue-ex.csv 와 동일)
 def write_csv(suffix, header, rows):
-    path = os.path.join(OUT_DIR, "%s.%s.csv" % (STEM, suffix))
+    path = os.path.join(OUT_DIR, f"{STEM}.{suffix}.csv")
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
         w.writerow(header)
