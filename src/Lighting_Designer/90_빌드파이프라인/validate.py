@@ -247,7 +247,7 @@ chk(
 pids = {p_[0] for p_ in PRESETS}
 badref = []
 for r_ in CUE_EX:
-    for idx, typ in ((3, "COL"), (4, "POS"), (5, "BM"), (6, "FX")):
+    for idx, _typ in ((3, "COL"), (4, "POS"), (5, "BM"), (6, "FX")):
         v = r_[idx]
         if v in ("", "OFF", None):
             continue

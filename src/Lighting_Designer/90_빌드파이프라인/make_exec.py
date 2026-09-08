@@ -51,7 +51,7 @@ for row in PATCH:
         if str(v) == "확인필요":
             c.font = Font(name="맑은 고딕", size=9, bold=True, color="B03030")
     r += 1
-for col, w in zip("ABCDEFG", [10, 24, 8, 7, 15, 16, 30]):
+for col, w in zip("ABCDEFG", [10, 24, 8, 7, 15, 16, 30], strict=True):
     ps.column_dimensions[col].width = w
 
 # ---------- PRESET ----------
@@ -74,7 +74,7 @@ for row in PRESETS:
         if str(v) == "현장 레코드":
             c.font = Font(name="맑은 고딕", size=9, bold=True, color="B03030")
     r += 1
-for col, w in zip("ABCDEF", [10, 28, 18, 32, 10, 24]):
+for col, w in zip("ABCDEF", [10, 28, 18, 32, 10, 24], strict=True):
     qs.column_dimensions[col].width = w
 
 # ---------- CUE-EX ----------

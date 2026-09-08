@@ -17,8 +17,9 @@ from seq_data import CUES
 
 TXT = os.path.join(MA3_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.ma3.txt")
 XMLF = os.path.join(MA3_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.macros.xml")
-lines = open(TXT, encoding="utf-8").read().splitlines()
-cmds = [l for l in lines if l and not l.startswith("//")]
+with open(TXT, encoding="utf-8") as _fh:
+    lines = _fh.read().splitlines()
+cmds = [line for line in lines if line and not line.startswith("//")]
 
 R = []
 
@@ -29,7 +30,7 @@ def chk(n, name, ok, detail):
 
 # M1: Group "X" 참조가 전부 RIG GROUP 정의
 gnames = {g[1] for g in GROUPS}
-refs = {m for l in cmds for m in re.findall(r'Group "([^"]+)"', l)}
+refs = {m for line in cmds for m in re.findall(r'Group "([^"]+)"', line)}
 badg = sorted(refs - gnames)
 chk(
     "M1",
@@ -48,8 +49,8 @@ counts = {
     22: len(FX_LIB),
 }
 badp = []
-for l in cmds:
-    for p, n in re.findall(r"At Preset (\d+)\.(\d+)", l):
+for line in cmds:
+    for p, n in re.findall(r"At Preset (\d+)\.(\d+)", line):
         p, n = int(p), int(n)
         if p not in counts or n < 1 or n > counts[p]:
             badp.append("%d.%d" % (p, n))
@@ -63,8 +64,8 @@ chk(
 # M3: Store Cue 개수·번호 = CUES와 일치
 # 개별 타이밍이 그룹마다 다른 큐는 파트로 갈린다(t215). 파트 저장은 큐를 새로
 # 만들지 않으므로 큐 목록에서 빼고 세되, 그 번호가 실재 큐인지는 따로 본다.
-stored = [int(m) for l in cmds for m in re.findall(r"Store Cue (\d+) (?!Part )", l)]
-parts = [int(m) for l in cmds for m in re.findall(r"Store Cue (\d+) Part \d+ ", l)]
+stored = [int(m) for line in cmds for m in re.findall(r"Store Cue (\d+) (?!Part )", line)]
+parts = [int(m) for line in cmds for m in re.findall(r"Store Cue (\d+) Part \d+ ", line)]
 expect = [int(c[0][1:]) for c in CUES]
 orphan = sorted(set(parts) - set(expect))
 chk(
@@ -79,8 +80,8 @@ chk(
 # M4: SNAP 큐는 CueFade 0.0
 snapq = {int(c[0][1:]) for c in CUES if c[10] == "SNAP"}
 badf = []
-for l in cmds:
-    m = re.search(r"Store Cue (\d+) .*CueFade ([\d.]+)", l)
+for line in cmds:
+    m = re.search(r"Store Cue (\d+) .*CueFade ([\d.]+)", line)
     if m and int(m.group(1)) in snapq and float(m.group(2)) != 0.0:
         badf.append(m.group(1))
 chk("M4", "SNAP 큐 CueFade 0.0", not badf, str(badf) if badf else "SNAP %d큐 전부 0.0" % len(snapq))

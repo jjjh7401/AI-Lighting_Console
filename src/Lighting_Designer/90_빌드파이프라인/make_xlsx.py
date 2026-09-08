@@ -101,7 +101,7 @@ for pid, name, ref, hexv, use in PALETTE:
         ws.cell(r, i).border = BORDER
     r += 1
 
-for col, w in zip("ABCDE", [16, 30, 26, 22, 34]):
+for col, w in zip("ABCDE", [16, 30, 26, 22, 34], strict=True):
     ws.column_dimensions[col].width = w
 
 # ---------------- CUE ----------------
@@ -166,6 +166,7 @@ for cue in CUES:
 for col, w in zip(
     ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"],
     [8, 10, 9, 9, 7, 16, 24, 17, 30, 15, 14, 11, 7, 40],
+    strict=True,
 ):
     cs.column_dimensions[col].width = w
 cs.freeze_panes = "C5"
@@ -210,7 +211,7 @@ for g, q, txt, d, st in NOTES:
             c.fill = PatternFill("solid", fgColor=GUBUN_COLOR.get(g, "FFFFFF"))
             c.font = Font(name="맑은 고딕", size=9, bold=True)
     r += 1
-for col, w in zip("ABCDE", [14, 14, 88, 12, 10]):
+for col, w in zip("ABCDE", [14, 14, 88, 12, 10], strict=True):
     ns.column_dimensions[col].width = w
 ns.freeze_panes = "A4"
 
