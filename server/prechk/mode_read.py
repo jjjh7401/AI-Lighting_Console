@@ -34,6 +34,47 @@ from server.prechk.footprint import (
 FOOTPRINT_PROPERTY = "TotalFootprint"
 
 
+def parse_console_mode_slot(mode_text: str | None) -> int | None:
+    """A patched fixture's ``Mode`` reading as the ``DMXModes`` slot it names.
+
+    The console answers a fixture's ``Mode`` property as
+    ``"<DMXModes slot> <mode name>"``. Live-verified 2026-09-08 (onPC, responder
+    1.6.5) across 8 fixture types / 86 fixtures: the leading token equals the
+    library ``DMXModes`` slot index 8/8, and the remainder equals the library
+    mode name 8/8 — ``.moai/reports/t333/preconditions.md`` §2.3.
+
+    The slot is what this returns, NOT the name. A slot lookup needs no string
+    comparison, so it is immune to two library types sharing a name (t334, where
+    the name-based type lookup silently takes the first of two ``Robin Spiider``
+    entries).
+
+    Exactly the FIRST whitespace-delimited token is taken. That boundary is
+    load-bearing rather than incidental: two measured modes are ``"4 4 channel"``
+    and ``"2 9 channel"``, whose names THEMSELVES begin with a digit. A
+    "strip the leading digits" predicate yields ``channel`` on both, and that
+    failure is silent — it produces a wrong answer, not an error.
+
+    ``None`` means "this text does not name a slot", and the caller must treat it
+    as no evidence rather than as a default. Every unreadable shape lands here:
+    an absent read, a name with no index, a non-integer index, and an index below
+    1 (slots are 1-based, so ``0`` is not a slot). An index with no name is also
+    refused — a slot alone leaves nothing to reconcile against, and adopting it
+    would let a bare number decide a mode.
+    """
+    if not isinstance(mode_text, str):
+        return None
+    head, separator, name = mode_text.partition(" ")
+    if not separator or not name.strip():
+        return None
+    # ``str.isdigit`` is the whole gate on purpose: it rejects a sign, a decimal
+    # point, and the unicode digit forms ``int()`` would otherwise accept, so no
+    # shape reaches the conversion that the console never emits.
+    if not head.isdigit():
+        return None
+    slot = int(head)
+    return slot if slot >= 1 else None
+
+
 @dataclass(frozen=True)
 class ModeChoice:
     """One DMX mode of one fixture type: its console name and measured width."""

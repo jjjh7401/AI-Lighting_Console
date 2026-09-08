@@ -18,7 +18,8 @@ from typing import Any
 
 from server.lxseq.parser import LxseqPatchRecord
 from server.prechk.inventory import Inventory
-from server.prechk.mode_read import TypeModeRead
+from server.prechk.mode_read import TypeModeRead, parse_console_mode_slot
+from server.prechk.patch import normalize_address
 from server.vwx.addressfit import Occupant, evaluate
 from server.vwx.apply import console_read_caveat
 from server.vwx.patchplan import ExistingFidRead
@@ -42,7 +43,8 @@ class ModeResolution:
     channels: int
     resolution: str  # resolved | unresolved | tree_unread
     console_mode: str | None = None
-    resolved_by: str | None = None  # width_unique | label_token | override
+    #: width_unique | label_token | override | console_mode
+    resolved_by: str | None = None
     measured_modes: tuple[dict[str, Any], ...] = ()
 
     def __post_init__(self) -> None:
@@ -156,6 +158,91 @@ class ImportPlan:
 
 def _address_text(record: LxseqPatchRecord) -> str:
     return f"{record.universe}.{record.address}"
+
+
+def _console_mode_slots_by_seat(
+    inventory: Inventory | None,
+) -> dict[tuple[int, int, str], frozenset[int]]:
+    """자리+타입마다, 그 자리에 앉아 있는 픽스처들이 답한 DMXModes 슬롯 집합.
+
+    키에 타입이 들어가는 이유: 어떤 모드인지는 **어떤 타입인지가 정해진 뒤에만**
+    의미가 있다. 자리만으로 이으면 다른 타입이 그 자리를 쓰던 경우에 그 타입의
+    슬롯 번호를 이 행의 모드로 읽는다 — 번호는 어느 타입에서나 유효해 보이므로
+    그 오답은 조용하다.
+
+    값이 집합인 이유: 한 자리에 여러 대가 보고될 수 있고, 그때 **앞것을 집으면 안
+    된다.** 그것이 t334(이름이 겹치는 타입 조회가 경고 없이 앞것을 채택한다)와
+    같은 형태의 조용한 오답을 이 갈래에 새로 만드는 길이다. 부르는 쪽은 집합의
+    크기가 1일 때만 채택한다.
+
+    주소를 못 읽은 픽스처는 **버린다** — 0이나 1로 채우면 그 가짜 자리가 대조에
+    들어간다(`occupants_from_patch_values` 의 같은 이유).
+    """
+    seats: dict[tuple[int, int, str], set[int]] = {}
+    for fixture in inventory.fixtures if inventory is not None else ():
+        fixture_type = fixture.fixture_type
+        if not fixture_type:
+            continue
+        slot = parse_console_mode_slot(fixture.mode)
+        if slot is None:
+            continue
+        parsed = normalize_address(fixture.patch_raw)
+        if not parsed.ok or parsed.universe is None or parsed.address is None:
+            continue
+        seats.setdefault((parsed.universe, parsed.address, fixture_type), set()).add(slot)
+    return {key: frozenset(slots) for key, slots in seats.items()}
+
+
+def _resolve_mode_from_console_seat(
+    record: LxseqPatchRecord,
+    console_type: str,
+    mode_read: TypeModeRead | None,
+    seats: dict[tuple[int, int, str], frozenset[int]],
+) -> ModeResolution | None:
+    """그 자리에 이미 앉아 있는 픽스처의 모드로 해석을 확정한다. 못 하면 `None`.
+
+    라이브러리 판독은 폭이 같은 모드가 여럿일 때 원리적으로 못 좁힌다(t128:
+    「폭은 판별기가 아니다」 — 폭 25 가 Aura XB 의 Extended 3종을 남긴다). 그런데
+    **이미 그 자리에 꽂혀 있는 픽스처는 자기 모드를 답한다.** 벽은 원리적 한계가
+    아니라 판독 지점의 문제였다 — 실측 2026-09-08, 타입 8종·86대에서 픽스처
+    `Mode` 의 앞 숫자가 라이브러리 슬롯과 8/8 일치
+    (`.moai/reports/t333/preconditions.md` §2.3).
+
+    **이름을 비교하지 않는다.** 슬롯으로 집으므로 t334(같은 이름 타입 둘 중 앞것이
+    조용히 이긴다)를 원리적으로 우회한다.
+
+    **켜지는 범위는 「이미 패치됨」 국면 하나다.** 조건이 자리+타입 일치이고 그것은
+    `_occupancy_skip` 의 `already_patched` 술어와 같으므로, 아직 없는 픽스처를 새로
+    패치하는 국면에서는 읽을 모드가 없어 이 갈래가 아예 안 켜진다 — 그쪽은
+    라이브러리 판독이 여전히 유일한 경로다.
+
+    `None` 을 돌려주면 부르는 쪽은 수정 전 동작(`mode_unresolved` +
+    `mode_overrides` 안내)을 그대로 낸다. 이 함수는 능력만 더하고 무엇도 대체하지
+    않는다.
+    """
+    if mode_read is None:
+        return None
+    slots = seats.get((record.universe, record.address, console_type))
+    # 한 자리에서 두 모드가 보고되면 어느 쪽도 증거가 아니다.
+    if not slots or len(slots) != 1:
+        return None
+    (slot,) = slots
+    matched = next((choice for choice in mode_read.modes if choice.slot == slot), None)
+    # 슬롯을 라이브러리 목록에서 못 찾았거나 폭을 못 쟀으면 확정이 아니다 —
+    # override 갈래와 같은 규율이다(t15 HIGH-2). 폭을 잃은 채 확정하면 점유
+    # 검사가 검사한 발자국과 실제로 쓰는 발자국이 갈린다.
+    if matched is None or matched.width is None:
+        return None
+    return ModeResolution(
+        console_type=console_type,
+        channels=matched.width,
+        resolution="resolved",
+        console_mode=matched.name,
+        resolved_by="console_mode",
+        measured_modes=tuple(
+            {"name": choice.name, "channels": choice.width} for choice in mode_read.modes
+        ),
+    )
 
 
 def _effective_width(record: LxseqPatchRecord, mode) -> int:
@@ -497,6 +584,10 @@ def build_import_plan(
     skipped: list[SkippedRow] = []
     mode_resolutions: dict[tuple[str, int, str], ModeResolution] = {}
     existing_fid_set = frozenset(existing_fids.fids)
+    # 한 번 만들어 행마다 조회한다. 이 함수에 도달했다는 것은 위의
+    # `_judge_console_read` 를 통과했다는 뜻이므로, 여기 실린 목록은 부분 목록이
+    # 아니다 — 미완전 판독은 이 지점 앞에서 계획 없이 끊긴다.
+    console_mode_seats = _console_mode_slots_by_seat(inventory)
 
     # 타입 해석은 **서로 다른 타입마다 한 번씩** — 행 수만큼 부르지 않는다.
     console_types: dict[str, str | None] = {}
@@ -545,6 +636,29 @@ def build_import_plan(
                 override=mode_overrides.get(csv_type) or mode_overrides.get(console_type),
             )
         mode = mode_resolutions[resolution_key]
+
+        # 라이브러리 판독으로 못 좁힌 행만 그 자리의 임자에게 물어본다. 이 갈래는
+        # **행 단위**로 판정하되 해석표에는 캐시하지 않는다 — 같은 (타입, 폭, 라벨)
+        # 키의 행들이 서로 다른 자리에 앉아 있고, 자리마다 임자가 있을 수도 없을
+        # 수도 있다. 한 행의 성공을 키 전체에 퍼뜨리면 임자가 없는 행까지 그 모드로
+        # 확정된다.
+        #
+        # `tree_unread` 는 건드리지 않는다. 그때는 라이브러리 목록 자체가 없어
+        # 슬롯을 조회할 대상이 없다.
+        if mode.resolution == "unresolved":
+            from_seat = _resolve_mode_from_console_seat(
+                record=record,
+                console_type=console_type,
+                mode_read=mode_reads.get(csv_type) or mode_reads.get(console_type),
+                seats=console_mode_seats,
+            )
+            if from_seat is not None:
+                mode = from_seat
+                # 해석표에도 남긴다 — 보고가 「무엇이 이 행을 풀었나」를 말해야
+                # 감독이 override 를 더 줄 필요가 없음을 안다. 키를 덮되 이미
+                # 확정된 해석은 덮지 않는다(위 캐시 주석의 이유).
+                if mode_resolutions[resolution_key].resolution != "resolved":
+                    mode_resolutions[resolution_key] = from_seat
 
         if mode.resolution == "unresolved":
             measured = ", ".join(f"{m['name']}({m['channels']})" for m in mode.measured_modes)
