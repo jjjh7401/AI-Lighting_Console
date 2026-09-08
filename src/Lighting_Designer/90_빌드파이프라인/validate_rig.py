@@ -28,7 +28,7 @@ FIX = {f[0]: f for f in FIXTURES}
 
 # 패치 재계산 (make_rig와 동일 로직)
 patch = []
-for uni, groups, desc in UNIVERSE_PLAN:
+for uni, groups, _desc in UNIVERSE_PLAN:
     addr = 1
     for g in groups:
         ch, cnt = FIX[g][3], FIX[g][4]

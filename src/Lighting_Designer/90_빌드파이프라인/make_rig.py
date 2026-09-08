@@ -37,7 +37,7 @@ FIX = {f[0]: f for f in FIXTURES}
 # ── 패치 자동 계산 ─────────────────────────────────────────
 patch_rows = []  # (FID, Group, 기종, Mode, ch, Universe, Addr, Addr범위, 리깅)
 overflow = []
-for uni, groups, desc in UNIVERSE_PLAN:
+for uni, groups, _desc in UNIVERSE_PLAN:
     addr = 1
     for g in groups:
         grp, model, mode, ch, cnt, rig, circuit, use, sugar = FIX[g]

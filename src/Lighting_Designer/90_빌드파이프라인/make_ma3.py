@@ -73,7 +73,7 @@ def sec(s):
 # ═══ 1. 그룹 ═══
 sec("1. 그룹 생성 (Group Pool — RIG GROUP 시트와 1:1)")
 rem("패치 선행 필수: FIXTURE·PATCH 시트대로 Patch 메뉴에서 완료 후 실행")
-for gnum, name, comp, use in GROUPS:
+for gnum, name, _comp, _use in GROUPS:
     cmd("ClearAll")
     if name == "ALL":
         parts = [fid_range(f[0]) for f in FIXTURES if f[3] > 0]
@@ -93,7 +93,7 @@ cmd("ClearAll")
 
 # ═══ 2. 딤머 프리셋 ═══
 sec("2. 딤머 프리셋 (Pool %d Dimmer)" % POOL["DIM"])
-for i, (pid, name, lvl, use) in enumerate(PRESET_DIM, start=1):
+for i, (pid, name, lvl, _use) in enumerate(PRESET_DIM, start=1):
     cmd("ClearAll")
     cmd('Group "ALL"')
     cmd("At {}".format(lvl.rstrip("%")))
@@ -113,7 +113,7 @@ RGB = {
     "COL.08": (30, 60, 255),
 }
 CCT = {"COL.02": 3200, "COL.03": 5600}
-for pid, name, absval, use in PRESET_COL:
+for pid, name, _absval, _use in PRESET_COL:
     n = int(pid.split(".")[1])
     cmd("ClearAll")
     cmd('Group "ALL"')
@@ -160,7 +160,7 @@ sec("6. FX Phaser 프리셋 (Pool %d — SpeedMaster 1 종속)" % POOL["FX"])
 cmd("Store SpeedMaster 1 /NoConfirm")
 cmd('Set SpeedMaster 1 Property "BPM" %d' % SONG_BPM)
 rem("[VERIFY] SpeedMaster 설정 구문은 버전별 상이 — Speed 창에서 120BPM 확인")
-for pid, name, attr, wave, rate, width, phase, note in FX_LIB:
+for pid, name, attr, wave, rate, width, phase, _note in FX_LIB:
     n = int(pid.split(".")[1])
     rem(f"{pid} {name} — {attr} {wave} · Rate {rate} · Width {width} · Phase {phase}")
     rem(f"  [MANUAL] Programmer: 대상 그룹 선택 → {attr} 저값 입력 → Step 2 → 고값 입력")
