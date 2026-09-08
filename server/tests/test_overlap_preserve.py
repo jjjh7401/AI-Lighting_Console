@@ -66,6 +66,7 @@ from __future__ import annotations
 import hashlib
 import re
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -1690,8 +1691,11 @@ class TestLintDeferralsDidNotGrow:
         )
     )
 
-    #: t115 착수 시점의 (파일, 규칙) 쌍 수. 상한이지 목표가 아니다.
-    _PAIR_CEILING = 85
+    #: 현재 (파일, 규칙) 쌍 수의 상한. 상한이지 목표가 아니다.
+    #: t115 착수 시점 85 → t337 국면 1(ruff format)이 E701 27건·E702 55건을 녹이고
+    #: E501 을 234→35 로 줄여 70. 유예를 줄일 때마다 이 값을 같이 낮춘다 —
+    #: 안 낮추면 증가금지 검사의 상한이 헐거워져 조이지 못한다.
+    _PAIR_CEILING = 70
 
     @staticmethod
     def _config() -> dict:
@@ -1731,12 +1735,36 @@ class TestLintDeferralsDidNotGrow:
         globbed = [key for key in self._per_file_ignores() if "*" in key or "?" in key]
         assert globbed == [], f"디렉터리 글롭이 섞였다: {globbed}"
 
-    def test_the_format_exclusion_matches_the_same_files(self):
-        """린트 유예와 포맷 유예가 갈리면 한쪽만 줄어도 아무도 모른다.
+    def test_no_pipeline_file_is_format_excluded(self):
+        """t337 국면 1 이후의 전제 — 11개는 이제 포매터를 **받는다**.
 
-        포맷 쪽은 저장소가 이미 쓰던 기제(`[tool.ruff.format].exclude` +
-        `force-exclude`)를 그대로 늘렸다 — 두 번째 기제를 만들지 않는다.
+        t115 는 린트 유예와 포맷 유예를 같은 집합으로 못박았다(한쪽만 줄면 아무도
+        모르기 때문). t337 이 실제로 포맷을 적용해 그 대칭이 깨졌다: 포맷은 끝났고
+        린트 유예는 70쌍 남았다. 그래서 검사의 방향이 뒤집힌다 — 파이프라인 파일이
+        포맷 제외에 **다시 들어오면** 빨개진다. 아래 `test_the_pipeline_is_formatted`
+        가 「그래서 실제로 포맷돼 있다」를 따로 못박으므로 이 검사는 공허하지 않다.
         """
         excluded = set(self._config()["tool"]["ruff"]["format"]["exclude"])
-        pinned = {"server/web/preview.py"}  # PRESERVE 핀 — t115 와 무관, 그대로 둔다
-        assert excluded - pinned == set(self._DEFERRED_FILES)
+        pinned = {"server/web/preview.py"}  # PRESERVE 핀 — 바이트 동일성이 핀의 값이다
+        assert pinned <= excluded, "PRESERVE 핀이 포맷 제외에서 빠졌다"
+        assert excluded - pinned == set(), (
+            f"파이프라인 파일이 포맷 제외로 되돌아왔다: {sorted(excluded - pinned)}"
+        )
+
+    def test_the_pipeline_is_formatted(self):
+        """[HARD] 위 검사가 공허해지지 않게 하는 짝 — 11개가 실제로 포맷 상태다.
+
+        제외를 지우기만 하고 포맷을 안 하면 위 검사는 통과하는데 파일은 안 포맷된
+        채다. `ruff format --check` 로 실물을 재서 그 구멍을 막는다.
+        """
+        paths = [_REPO_ROOT / rel for rel in sorted(self._DEFERRED_FILES)]
+        assert paths, "대상이 비었다 — 이 검사가 공허하다"
+        result = subprocess.run(
+            [sys.executable, "-m", "ruff", "format", "--check", "--no-cache", *map(str, paths)],
+            capture_output=True,
+            text=True,
+            cwd=_REPO_ROOT,
+        )
+        assert result.returncode == 0, (
+            "파이프라인 파일이 포맷 상태가 아니다:\n" + result.stdout + result.stderr
+        )

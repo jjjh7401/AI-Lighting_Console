@@ -1,22 +1,34 @@
 # -*- coding: utf-8 -*-
 import sys, os, html
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 출력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
 # 박아두면 그 기계 밖에서는 돌지 않는다.
 SONG_DIR = os.environ.get("LXSEQ_SONG_OUT") or os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar")
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "03_곡파일_Sugar"
+)
 os.makedirs(SONG_DIR, exist_ok=True)
 from seq_data import *
 
 TOTAL = 240.0  # 차트 x축 (곡 236.0 + 종료 암전 여유)
 SEC_TONE = {
-    "INTRO": "#8A7A5C", "VERSE1": "#A9925F", "VERSE2": "#A9925F",
-    "PRE1": "#2E8C8C", "PRE2": "#2E8C8C",
-    "CHORUS1": "#C7307D", "CHORUS2": "#C7307D", "CHORUS3": "#9E1F63",
-    "BRIDGE": "#5A2BC8", "OUTRO": "#4A5568",
+    "INTRO": "#8A7A5C",
+    "VERSE1": "#A9925F",
+    "VERSE2": "#A9925F",
+    "PRE1": "#2E8C8C",
+    "PRE2": "#2E8C8C",
+    "CHORUS1": "#C7307D",
+    "CHORUS2": "#C7307D",
+    "CHORUS3": "#9E1F63",
+    "BRIDGE": "#5A2BC8",
+    "OUTRO": "#4A5568",
 }
-def pct(x): return x / TOTAL * 100.0
+
+
+def pct(x):
+    return x / TOTAL * 100.0
+
 
 # ── 강도 곡선 ────────────────────────────────────────────
 pts, prev = [], 0
@@ -29,21 +41,27 @@ pts.append((TOTAL, prev))
 CH_W, CH_H = 1000.0, 132.0
 TOP_PAD, BOT_PAD = 16.0, 4.0
 SPAN = CH_H - TOP_PAD - BOT_PAD
-poly = " ".join("%.2f,%.2f" % (t / TOTAL * CH_W, CH_H - (v / 100.0) * SPAN - BOT_PAD) for t, v in pts)
+poly = " ".join(
+    "%.2f,%.2f" % (t / TOTAL * CH_W, CH_H - (v / 100.0) * SPAN - BOT_PAD) for t, v in pts
+)
 area = "0,%.1f " % CH_H + poly + " %.1f,%.1f" % (CH_W, CH_H)
 
 # ── 눈금 ────────────────────────────────────────────────
 ticks = "".join(
     '<div class="tick" style="left:%.4f%%"><span>%s</span></div>' % (pct(t), tc(t))
-    for t in range(0, 209, 16))
-ticks += '<div class="tick end" style="left:%.4f%%"><span>%s ▌곡끝</span></div>' % (pct(236.0), tc(236.0))
+    for t in range(0, 209, 16)
+)
+ticks += '<div class="tick end" style="left:%.4f%%"><span>%s ▌곡끝</span></div>' % (
+    pct(236.0),
+    tc(236.0),
+)
 
 # ── 섹션 밴드 ───────────────────────────────────────────
 secs = "".join(
     '<div class="sec" style="left:%.4f%%;width:%.4f%%;background:%s">'
-    '<b>%s</b><i>%d마디 · %.0fs</i></div>' % (
-        pct(a), pct(b - a), SEC_TONE[n], n, bars, b - a)
-    for n, bars, a, b in SECTIONS)
+    "<b>%s</b><i>%d마디 · %.0fs</i></div>" % (pct(a), pct(b - a), SEC_TONE[n], n, bars, b - a)
+    for n, bars, a, b in SECTIONS
+)
 
 # ── 큐 밴드 ─────────────────────────────────────────────
 cueblocks = []
@@ -54,19 +72,30 @@ for c in CUES:
     dark = hexv in ("#5A2BC8", "#101418", "#FF3C9E", "#9E1F63")
     cueblocks.append(
         '<div class="cue%s%s" style="left:%.4f%%;width:calc(%.4f%% - 2px);background:%s;color:%s" '
-        'title="%s %s | %s | %s">%s</div>' % (
+        'title="%s %s | %s | %s">%s</div>'
+        % (
             " snap" if trans == "SNAP" else "",
             " tiny" if pct(end - tin) < 2.5 else "",
-            pct(tin), pct(end - tin), hexv,
+            pct(tin),
+            pct(end - tin),
+            hexv,
             "#fff" if dark else "#20242c",
-            q, sec, html.escape(inten), trans, q))
+            q,
+            sec,
+            html.escape(inten),
+            trans,
+            q,
+        )
+    )
 cues_html = "".join(cueblocks)
 
 # ── 팔레트 범례 ─────────────────────────────────────────
 used = {c[14] for c in CUES}
 legend = "".join(
     '<span class="lg"><i style="background:%s"></i>%s %s</span>' % (hx, pid, nm)
-    for pid, nm, ref, hx, use in PALETTE if hx in used)
+    for pid, nm, ref, hx, use in PALETTE
+    if hx in used
+)
 
 # ── 상세 표 ─────────────────────────────────────────────
 rows = []
@@ -77,11 +106,26 @@ for c in CUES:
         "<tr class='s-%s'><td class='m'>%s</td><td class='m'>%s</td><td class='m'>%s</td>"
         "<td class='m'>%s</td><td class='m'>%s</td><td>%s</td><td>%s</td><td class='m'>%s</td>"
         "<td class='fx'>%s</td><td>%s</td><td>%s</td><td class='m %s'>%s</td><td class='m'>%s</td>"
-        "<td class='nt'>%s</td></tr>" % (
-            sec, q, sec, tc(tin), tc(tout) or "—", dur,
-            html.escape(mood), html.escape(color), html.escape(inten),
-            html.escape(fix), mov, eff, "snapc" if trans == "SNAP" else "", trans, fade,
-            html.escape(note)))
+        "<td class='nt'>%s</td></tr>"
+        % (
+            sec,
+            q,
+            sec,
+            tc(tin),
+            tc(tout) or "—",
+            dur,
+            html.escape(mood),
+            html.escape(color),
+            html.escape(inten),
+            html.escape(fix),
+            mov,
+            eff,
+            "snapc" if trans == "SNAP" else "",
+            trans,
+            fade,
+            html.escape(note),
+        )
+    )
 table = "".join(rows)
 
 meta = dict(HEAD_META)
@@ -200,14 +244,19 @@ tr.s-OUTRO td:first-child{border-left:3px solid #4A5568}
 out = os.path.join(SONG_DIR, "LXSEQ_SAMPLE_01_Sugar_r3.timeline.html")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 SUBS = {
-    "{ticks}": ticks, "{secs}": secs, "{cues}": cues_html,
-    "{legend}": legend, "{table}": table,
-    "{cw}": "%.0f" % CH_W, "{ch}": "%.0f" % CH_H,
-    "{poly}": poly, "{area}": area,
+    "{ticks}": ticks,
+    "{secs}": secs,
+    "{cues}": cues_html,
+    "{legend}": legend,
+    "{table}": table,
+    "{cw}": "%.0f" % CH_W,
+    "{ch}": "%.0f" % CH_H,
+    "{poly}": poly,
+    "{area}": area,
     "{y100}": "%.1f" % (CH_H - SPAN - BOT_PAD),
-    "{y50}":  "%.1f" % (CH_H - .5 * SPAN - BOT_PAD),
+    "{y50}": "%.1f" % (CH_H - 0.5 * SPAN - BOT_PAD),
     "{y100t}": "%.1f" % (CH_H - SPAN - BOT_PAD - 4),
-    "{y50t}":  "%.1f" % (CH_H - .5 * SPAN - BOT_PAD - 4),
+    "{y50t}": "%.1f" % (CH_H - 0.5 * SPAN - BOT_PAD - 4),
 }
 doc = HTML
 for k, v in SUBS.items():
