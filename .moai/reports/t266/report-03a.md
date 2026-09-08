@@ -1,0 +1,12 @@
+### t175 — ALIVE
+claim: server/looks/schema.py:16-18's rejection-reason text for Focus/Frost/Prism1/Shutter was corrected by t142/t162.
+ran: git log --all --oneline --follow -- server/looks/schema.py ; git diff 71ca590^ 71ca590 -- server/looks/schema.py | wc -l ; git diff 08edf8b^ 08edf8b -- server/looks/schema.py | wc -l ; git diff af7125d^ af7125d -- server/looks/schema.py | wc -l ; sed -n '14,20p' server/looks/schema.py
+saw: `git log --follow` shows exactly ONE commit ever touched schema.py: c1c1382 (initial M1 feat). Diffs of t162 (71ca590), t142 (08edf8b), and t146 (af7125d) against schema.py are all 0 lines. Current text (lines 15-17): "``Focus`` / ``Frost`` / ``Prism1`` / ``Shutter`` were rejected by / the console and never entered." — all four names still bundled under one undifferentiated reason.
+so: None of the cited "fix" commits (t142/t146/t162) ever touched server/looks/schema.py — the file has been byte-identical since its initial creation, so the old bundled rejection reason the card wants corrected is still there; premise is measurably still true (ALIVE), though the fix work itself likely landed in a different file (the PRESERVE gate docstring per t162's commit message) that this card's target line range does not cover.
+
+### t185 — ALIVE
+claim: moai todo CLI has nine verbs (add/list/done/next/unpick/edit/move/drop/undrop), with drop/undrop as the reversible alternative to destructive done.
+ran: moai todo --help 2>&1 | head -60
+saw: COMMANDS block lists exactly nine: add, list, done, next, unpick, edit, move, drop <n> <reason> ("Discard a queued card by id, recording the reason"), undrop <n> ("Return a dropped card to queued by id"). done <n> is described as "Remove a card from the backlog queue by id" (destructive, no reason recorded).
+so: The nine-verb surface, including drop/undrop as the reversible convention distinct from destructive done, is confirmed live in the current CLI. The card's decision points (whether to retire the done-exception convention now that drop/undrop exists; how to mark closure given status stays queued; disposition of the 55 already-done-destroyed cards) are unresolved operator/process choices, not measurable code facts.
+DECISION: whether to retire the done-exception convention in favor of drop/undrop, and how future closure should be marked (edit-prefix vs. another mechanism), given status alone does not track closure.
