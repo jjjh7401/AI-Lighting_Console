@@ -20,3 +20,23 @@ claim: five copies of a quote-validation routine exist (position_preset_store_co
 ran: grep -n 'def <fn>' across server; sed -n windows on each definition; grep -rn '<fn>(' server | grep -v 'def <fn>' for each of the 5 names.
 saw: all 5 functions exist at pointing.py:357/401, position_fx.py:116, session.py:3656, store.py:80. Each carries the same duplicated shape `if not text or "'" in text or '"' in text: raise ...`. Non-test callers: position_preset_store_commands <- session.py:5201; position_cue_store_commands <- session.py:7412; _validated_label <- position_fx.py:209; _phaser_sequence_commands <- session.py:5880; preset_apply_command <- orchestrator/tools.py:1967.
 so: all five copies are reachable from a live non-test call site, so the duplication is not dead code — premise (5 copies, all reachable) holds.
+
+### t125 — ALIVE
+claim: `Import Plugin` is not classified as a dangerous command in the safety gate, and skips the approval channel accordingly.
+ran: grep -n "dangerous\|DANGEROUS" server/orchestrator/tools.py server/safety/console.py; grep -n -i "import\|plugin" server/safety/blacklist.yaml; sed -n '173,230p' server/safety/classify.py
+saw: `server/safety/blacklist.yaml:58-59`: "# `Import` is deliberately NOT here -- it is pool data import, not showfile / replacement, and the plugin deploy path depends on it." `classify_command()` (server/safety/classify.py:173) returns `category="safe"` for any command that does not match the blacklist and is not an invoking-verb form — `Import Plugin` matches neither, so it classifies safe. No "dangerous"/"DANGEROUS" identifier exists anywhere in tools.py or console.py — classification is closed-set blacklist membership only.
+so: the card's premise (classification correctness unmeasured, rationale existence unknown) is settled: a deliberate, explicit rationale for excluding `Import` from the blacklist exists in `blacklist.yaml:58-59`, parallel in shape to the `Store Preset` precedent comment at `server/orchestrator/tools.py:5680` — this is a documented design decision, not an oversight, so the card's claim (Import Plugin skips approval) is confirmed true with a known rationale.
+
+### t124 — UNMEASURED
+claim: the plugin-deployment bottleneck's identity depends on "which tree did the deploy tool read" — primary checkout at responder 1.6.0 (ae8d494/research/ma3-effects-phaser) vs. a lane worktree pushing 1.6.2.
+ran: git branch --show-current; git rev-parse --short HEAD; git -C /Users/studiox/Documents/Claude/Code/AI-Lighting_Console rev-parse --short HEAD
+saw: first two commands (this worktree) -> branch WT-queue-triage, commit 4760a4d. Third command (targeting the primary checkout via -C) was refused by the environment's worktree-session guard: "This session is isolated in the worktree .../triage, but this command redirects git to the shared checkout via -C. Refusing to run it — a worktree-isolated session's git operations must target its own worktree."
+so: this session cannot read the primary checkout's branch/commit state at all — every path to it (cd, compound command, or -C redirect) is blocked by session isolation — so the card's own premise ("which tree did the deploy tool read") cannot be settled from here; the exact command needed is `git -C /Users/studiox/Documents/Claude/Code/AI-Lighting_Console rev-parse --short HEAD` (and `git branch --show-current` there) run from a session NOT isolated to this worktree.
+
+### TALLY
+DEAD: t121
+ALIVE: t120, t122, t123, t125
+CONSOLE-BLOCKED:
+DECISION:
+SUPERSEDED-CANDIDATE:
+UNMEASURED: t124
