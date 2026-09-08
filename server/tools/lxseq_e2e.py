@@ -394,6 +394,10 @@ def main(argv: list[str] | None = None) -> int:
                 "write_count_planned": plan.get("write_count_planned"),
                 "skipped_total": len(skipped),
                 "skipped_by_kind": kinds,
+                # 결과(`skipped_by_kind`) 옆에 원인을 나란히 둔다. 이 둘을 같이 읽어야
+                # 「86행이 이미 일치」가 무엇 때문인지 알 수 있다 — t333 회차에는
+                # 결과만 있었고, 무엇이 24행을 풀었는지는 페이로드 어디에도 없었다.
+                "resolved_by": plan.get("resolved_by_counts"),
                 "types_unresolved": [
                     row.get("csv_type")
                     for row in (payload.get("types") or {}).get("unresolved", [])

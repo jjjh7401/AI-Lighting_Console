@@ -7105,6 +7105,7 @@ def build_toolset(
                     "fids": list(run.fids),
                     "name_prefix": run.name_prefix,
                     "footprint_source": run.footprint_source,
+                    "resolved_by": run.resolved_by,
                 }
                 for run in plan.runs
             ],
@@ -7117,9 +7118,17 @@ def build_toolset(
                     "detail": row.detail,
                     "occupant": row.occupant,
                     "occupied_fid": row.occupied_fid,
+                    "resolved_by": row.resolved_by,
                 }
                 for row in plan.skipped
             ],
+            # 무엇이 모드를 확정했는지의 행 단위 집계. 이것이 없으면 감독은
+            # `already_patched 86` 같은 결과만 보고 무엇이 그것을 만들었는지 모른다 —
+            # t333 이 24행을 풀었을 때 실제로 그랬다. `null` 키는 「못 풀었다」다.
+            "resolved_by_counts": {
+                ("null" if key is None else key): value
+                for key, value in plan.resolved_by_counts.items()
+            },
             "write_count_planned": plan.write_count_planned,
             # 총계 하나로 뭉치면 미리보기가 N대를 약속하고 0대를 만든다 —
             # 폭 미확정 런은 patch_fixtures 가 거절하고 거기서 파일이 멈춘다(t28).

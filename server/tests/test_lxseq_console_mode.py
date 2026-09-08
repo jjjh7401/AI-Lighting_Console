@@ -243,16 +243,23 @@ def test_console_mode_resolves_what_the_library_read_cannot():
         inventory=_inventory(_console_fixtures(records, "2 B")),
         occupants=_occupants(records),
     )
-    resolution = _resolution(plan)
-    assert resolution.resolution == "resolved"
-    assert resolution.console_mode == "B"
-    assert resolution.resolved_by == "console_mode"
-    assert resolution.channels == channels
+    # 확정은 **행에** 실린다. 키 표(`mode_resolutions`)는 라이브러리 판독의 결과로
+    # 남으므로 여전히 `unresolved` 다 — 그것이 사실이다: 라이브러리는 못 좁혔다.
+    #
+    # 처음 이 시험은 키 표가 `resolved` 로 바뀌는 것을 단언했는데, 그 표에 쓰는
+    # 행위 자체가 결함이었다(t335 가 잡았다): 같은 키의 다음 행이 그 값을 물려받아
+    # 자기 자리에 임자가 없어도 확정되고 쓰기 계획이 된다. 그래서 단언을 행으로
+    # 옮겼다 — 시험이 검사하던 통로가 곧 누출 통로였다.
+    assert _resolution(plan).resolution == "unresolved"
+
+    assert all(row.resolved_by == "console_mode" for row in plan.skipped)
     # 자리가 이미 같은 타입으로 차 있으므로 판정은 「이미 패치됨」이다 — 쓰기 0건.
     assert plan.runs == ()
     assert plan.write_count_planned == 0
     assert len(plan.skipped) == len(records)
     assert all(s.kind == "already_patched" for s in plan.skipped)
+    # 폭은 실측 모드의 것이어야 한다 — 확정이 폭까지 옮겨 왔는지 본다.
+    assert channels == _two_same_width_modes(channels)[CSV_TYPE].modes[1].width
 
 
 def test_without_the_branch_these_rows_are_unresolved():
