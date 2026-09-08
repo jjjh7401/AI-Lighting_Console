@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LXSEQ 실행 레이어 데이터 — Maroon 5 / Sugar (LX-SEQ v2.0, 타깃 grandMA3)"""
 
 SONG_BPM = 120

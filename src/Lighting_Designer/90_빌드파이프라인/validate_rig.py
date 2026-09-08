@@ -1,21 +1,21 @@
-# -*- coding: utf-8 -*-
 """RIG 팩 검증 (R1~R6) + 곡 파일 상호참조 (R7~R8)"""
 
-import sys, os
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import exec_data
 from rig_data import (
-    FIXTURES,
     FID_BASE,
-    UNIVERSE_PLAN,
-    GROUPS,
-    PRESET_DIM,
-    PRESET_COL,
-    PRESET_POS,
-    PRESET_BM,
+    FIXTURES,
     FX_LIB,
+    GROUPS,
+    PRESET_BM,
+    PRESET_COL,
+    PRESET_DIM,
+    PRESET_POS,
+    UNIVERSE_PLAN,
 )
-import exec_data, seq_data
 
 R = []
 
