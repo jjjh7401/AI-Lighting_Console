@@ -114,7 +114,9 @@ uv run python -m server.tools.lxseq_e2e --csv <정본 절대경로> --action pre
 2. **AC-016 ④ (`address_occupied` 실기)** — 측정하지 않았다.
 3. **`apply` 경로** — 한 번도 타지 않았다. override 가 실제 쓰기에서도 같은 폭(25)으로 자리를 잡는지는 코드 독해(`matched.width`)까지만이고 실측이 아니다.
 4. **다른 6종 모드에 대한 override 매칭** — `Extended - Extended` 하나만 실측했다. `Standard - RAW` 등 나머지 5종이 같은 형식으로 매칭되는지는 재지 않았다(대조군 하나면 결론도 그만큼만 넓다).
-5. **CSV↔콘솔 FID 대응** — 이름 접두(BACK/SIDE-L/SIDE-R)와 번호로 맞췄고, 24개 각각의 `FID` 프로퍼티는 읽지 못했다(`property not readable: FIXTUREID`). 대응은 **이름 기반 추론**이며 FID 판독으로 확증한 것이 아니다.
+   > **2026-09-08 후속 — 넓혔다.** 이 쇼의 타입 8종 전수에서 픽스처 `Mode` 문자열이 `"<라이브러리 DMXModes 슬롯> <모드 이름>"` 형식임을 확인했다 — 앞 숫자는 슬롯과 8/8 일치, 뗀 이름은 라이브러리 이름과 8/8 일치(86대). 다만 이는 **슬롯→이름 대응**의 확인이고 `Standard - RAW` 등 미사용 모드로 실제 override 를 걸어 본 것은 아니다(이 쇼에 그 모드의 픽스처가 없다). 측정: `.moai/reports/t333/preconditions.md` §2.3.
+5. **CSV↔콘솔 FID 대응** — 이름 접두(BACK/SIDE-L/SIDE-R)와 번호로 맞췄고, 24개 각각의 FID 는 읽지 못했다. 대응은 **이름 기반 추론**이며 FID 판독으로 확증한 것이 아니다.
+   > **2026-09-08 정정 — 이 gap 은 닫혔고, 사유 진술이 틀렸다.** 원문은 `property not readable: FIXTUREID` 를 근거로 「FID 판독 불가」라고 적었다. 실제 프로퍼티 이름은 **`FID`** 다(`server/tools/lxseq_e2e.py:200` — 하네스가 `("FID", "Patch", "FixtureType", "Mode")` 를 읽는다). `FIXTUREID` 는 존재하지 않는 이름이라 옳게 실패한 것이고, 채널의 한계가 아니었다. `FID` 로 다시 재니 86/86 판독되고 전부 CSV 에 있으며 시작 주소가 86/86 일치(불일치 0) — 대응은 **값으로 확증**됐다. 측정: `.moai/reports/t333/preconditions.md` §2.4.
 6. **응답기 버전 대조** — 실기 1.6.5 가 이 트리의 `console/lua/copilot_responder.lua` 와 같은 빌드인지 확인하지 않았다. 과거에 실기 1.6.1 / main 1.6.2 로 갈린 전례가 있다.
 
 ## 5. Residual-risk (잔여 위험)

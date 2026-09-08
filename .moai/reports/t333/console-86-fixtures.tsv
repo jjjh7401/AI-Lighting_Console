@@ -1,0 +1,86 @@
+1	KEY 101	101	FixtureType 10	3 Direct	1.001
+2	KEY 102	102	FixtureType 10	3 Direct	1.013
+3	KEY 103	103	FixtureType 10	3 Direct	1.025
+4	KEY 104	104	FixtureType 10	3 Direct	1.037
+5	KEY 105	105	FixtureType 10	3 Direct	1.049
+6	KEY 106	106	FixtureType 10	3 Direct	1.061
+7	FOH 111	111	FixtureType 10	3 Direct	1.073
+8	FOH 112	112	FixtureType 10	3 Direct	1.085
+9	FOH 113	113	FixtureType 10	3 Direct	1.097
+10	FOH 114	114	FixtureType 10	3 Direct	1.109
+11	FOH 115	115	FixtureType 10	3 Direct	1.121
+12	FOH 116	116	FixtureType 10	3 Direct	1.133
+13	FOH 117	117	FixtureType 10	3 Direct	1.145
+14	FOH 118	118	FixtureType 10	3 Direct	1.157
+15	BLIND 601	601	FixtureType 13	4 4 channel	1.169
+16	BLIND 602	602	FixtureType 13	4 4 channel	1.173
+17	BLIND 603	603	FixtureType 13	4 4 channel	1.177
+18	BLIND 604	604	FixtureType 13	4 4 channel	1.181
+19	BLIND 605	605	FixtureType 13	4 4 channel	1.185
+20	BLIND 606	606	FixtureType 13	4 4 channel	1.189
+21	STROBE 611	611	FixtureType 14	3 Extended	1.193
+22	STROBE 612	612	FixtureType 14	3 Extended	1.207
+23	STROBE 613	613	FixtureType 14	3 Extended	1.221
+24	STROBE 614	614	FixtureType 14	3 Extended	1.235
+25	HAZE 621	621	FixtureType 15	1 Mode 0	1.249
+26	HAZE 622	622	FixtureType 15	1 Mode 0	1.251
+27	MOVER-U 501	501	FixtureType 11	1 Mode 1	2.001
+28	MOVER-U 502	502	FixtureType 11	1 Mode 1	2.040
+29	MOVER-U 503	503	FixtureType 11	1 Mode 1	2.079
+30	MOVER-U 504	504	FixtureType 11	1 Mode 1	2.118
+31	MOVER-U 505	505	FixtureType 11	1 Mode 1	2.157
+32	MOVER-U 506	506	FixtureType 11	1 Mode 1	2.196
+33	MOVER-U 507	507	FixtureType 11	1 Mode 1	2.235
+34	MOVER-U 508	508	FixtureType 11	1 Mode 1	2.274
+35	MOVER-D 521	521	FixtureType 4	1 Mode 1	3.001
+36	MOVER-D 522	522	FixtureType 4	1 Mode 1	3.050
+37	MOVER-D 523	523	FixtureType 4	1 Mode 1	3.099
+38	MOVER-D 524	524	FixtureType 4	1 Mode 1	3.148
+39	MOVER-D 525	525	FixtureType 4	1 Mode 1	3.197
+40	MOVER-D 526	526	FixtureType 4	1 Mode 1	3.246
+41	MOVER-D 527	527	FixtureType 4	1 Mode 1	3.295
+42	MOVER-D 528	528	FixtureType 4	1 Mode 1	3.344
+43	BACK 201	201	FixtureType 8	1 Extended - Extended	4.001
+44	BACK 202	202	FixtureType 8	1 Extended - Extended	4.026
+45	BACK 203	203	FixtureType 8	1 Extended - Extended	4.051
+46	BACK 204	204	FixtureType 8	1 Extended - Extended	4.076
+47	BACK 205	205	FixtureType 8	1 Extended - Extended	4.101
+48	BACK 206	206	FixtureType 8	1 Extended - Extended	4.126
+49	BACK 207	207	FixtureType 8	1 Extended - Extended	4.151
+50	BACK 208	208	FixtureType 8	1 Extended - Extended	4.176
+51	BACK 209	209	FixtureType 8	1 Extended - Extended	4.201
+52	BACK 210	210	FixtureType 8	1 Extended - Extended	4.226
+53	BACK 211	211	FixtureType 8	1 Extended - Extended	4.251
+54	BACK 212	212	FixtureType 8	1 Extended - Extended	4.276
+55	SIDE-L 301	301	FixtureType 8	1 Extended - Extended	4.301
+56	SIDE-L 302	302	FixtureType 8	1 Extended - Extended	4.326
+57	SIDE-L 303	303	FixtureType 8	1 Extended - Extended	4.351
+58	SIDE-L 304	304	FixtureType 8	1 Extended - Extended	4.376
+59	SIDE-L 305	305	FixtureType 8	1 Extended - Extended	4.401
+60	SIDE-L 306	306	FixtureType 8	1 Extended - Extended	4.426
+61	SIDE-R 311	311	FixtureType 8	1 Extended - Extended	5.001
+62	SIDE-R 312	312	FixtureType 8	1 Extended - Extended	5.026
+63	SIDE-R 313	313	FixtureType 8	1 Extended - Extended	5.051
+64	SIDE-R 314	314	FixtureType 8	1 Extended - Extended	5.076
+65	SIDE-R 315	315	FixtureType 8	1 Extended - Extended	5.101
+66	SIDE-R 316	316	FixtureType 8	1 Extended - Extended	5.126
+67	WASH-U 401	401	FixtureType 9	2 9 channel	5.151
+68	WASH-U 402	402	FixtureType 9	2 9 channel	5.160
+69	WASH-U 403	403	FixtureType 9	2 9 channel	5.169
+70	WASH-U 404	404	FixtureType 9	2 9 channel	5.178
+71	WASH-U 405	405	FixtureType 9	2 9 channel	5.187
+72	WASH-U 406	406	FixtureType 9	2 9 channel	5.196
+73	WASH-U 407	407	FixtureType 9	2 9 channel	5.205
+74	WASH-U 408	408	FixtureType 9	2 9 channel	5.214
+75	WASH-U 409	409	FixtureType 9	2 9 channel	5.223
+76	WASH-U 410	410	FixtureType 9	2 9 channel	5.232
+77	WASH-D 421	421	FixtureType 9	2 9 channel	5.241
+78	WASH-D 422	422	FixtureType 9	2 9 channel	5.250
+79	WASH-D 423	423	FixtureType 9	2 9 channel	5.259
+80	WASH-D 424	424	FixtureType 9	2 9 channel	5.268
+81	WASH-D 425	425	FixtureType 9	2 9 channel	5.277
+82	WASH-D 426	426	FixtureType 9	2 9 channel	5.286
+83	WASH-D 427	427	FixtureType 9	2 9 channel	5.295
+84	WASH-D 428	428	FixtureType 9	2 9 channel	5.304
+85	WASH-D 429	429	FixtureType 9	2 9 channel	5.313
+86	WASH-D 430	430	FixtureType 9	2 9 channel	5.322
