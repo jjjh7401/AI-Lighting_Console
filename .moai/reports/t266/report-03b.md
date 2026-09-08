@@ -1,0 +1,16 @@
+### t221 — CONSOLE-BLOCKED
+claim: POS.02/03/04 조준 불가는 물리 한계가 아니라 규칙(조준점 산출 로직)의 문제일 가능성이 있다.
+ran: (console-side claim; not independently re-measurable without firing coordinate probes at the live console, which is prohibited for this batch)
+saw: N/A — the card's own evidence (POS.03 fails but POS.06 which reuses POS.01's point succeeds) is a live-console read, not something in source alone.
+so: This card's decidable content is entirely a console-state observation (which presets compute vs fail against live fixture data); no static code inspection settles A/B/C. CONSOLE-BLOCKED — verdict needs firing coordinate probes at the console (explicitly prohibited here).
+### t223 — ALIVE (code side) / CONSOLE-BLOCKED (data side)
+claim: write path for fixture position coordinates (arrange_fixtures/ARRANGE_AXES) plus the vectorworks-diff/autopatch/apply tool chain all already exist in source; console's 86 fixtures reportedly hold PosX=PosY=PosZ=0.0 blocking six position-dependent cues.
+ran: grep -n "def arrange_fixtures\|ARRANGE_AXES" server/orchestrator/tools.py | head -10
+     grep -n "def precheck_vectorworks_diff\|def vectorworks_autopatch\|def apply_vectorworks_patch" server/orchestrator/tools.py
+saw: ARRANGE_AXES @1643, arrange_fixtures @8617 / precheck_vectorworks_diff @3599, vectorworks_autopatch @3721, apply_vectorworks_patch @3801 (card cites tools.py:1455/8557/8597/8666 — stale line numbers vs. current tree, but all four symbols exist)
+so: code side is ALIVE — every write/patch symbol the card names exists on main@5a8c24e (line numbers have drifted, symbols have not). Data side (whether the console's 86 fixtures still read Pos=0.0) is CONSOLE-BLOCKED — cannot be measured from source, and no probe was fired.
+### t229 — DECISION (COL/BM parser logic ALIVE-and-correct; apply-attribute gap ALIVE)
+claim: COL(kelvin) and BM(vocabulary) preset families fail the parser; LXSEQ_PRESET_APPLY_ATTRIBUTE lacks a bm key causing whole-import failure.
+ran: sed -n '261,360p' server/lxseq/preset_parser.py ; grep -n "LXSEQ_PRESET_APPLY_ATTRIBUTE" server/orchestrator/tools.py server/lxseq/preset_parser.py
+saw: classify_storability() has full COL-kelvin handling (_col_components/_HAS_RGB/Kim et al. 1667K-25000K domain check) and full BM-vocabulary handling (_bm_unknown_attributes/_PROBE_REJECTED/_OUT_OF_SCOPE/_bm_components) with per-reason HOLD_* codes — this is deliberate storability classification, not an unhandled failure. / tools.py:1920: `LXSEQ_PRESET_APPLY_ATTRIBUTE = dict([("preset-dim", "Dimmer")])` — only preset-dim has an apply-attribute mapping; preset_parser.py:107 comment confirms this is known/intentional ("bm 에는 적용 줄이 없으므로").
+so: The parser DOES classify COL/BM values (correctly rejecting unmapped attributes/out-of-range values by design, per the docstring) — so "fails the parser" as stated is not a code defect, it is the parser doing its documented job; whether specific real CSV rows should classify as storable but don't is UNMEASURED (needs sample CSV rows run through classify_storability, not done here). The apply-attribute gap IS confirmed ALIVE — bm/col records genuinely have no console-apply path (only preset-dim does), matching the card's second claim exactly.
