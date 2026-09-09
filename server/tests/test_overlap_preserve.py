@@ -1702,6 +1702,36 @@ class TestLintDeferralsDidNotGrow:
     #: 안 낮추면 증가금지 검사의 상한이 헐거워져 조이지 못한다.
     _PAIR_CEILING = 22
 
+    #: 🔴 구조적 유예 — 「고치면 안 돌아가는」 쌍. t337 이 남긴 결정(안 B).
+    #:
+    #: 이 폴더의 스크립트는 옆 파일을 읽으려고 `sys.path.insert(0, 자기 위치)` 를 먼저
+    #: 실행한 뒤 로컬 모듈을 임포트한다. 그래서 E402(임포트가 파일 맨 위에 없다)는
+    #: 부채가 아니라 그 기제가 요구하는 결과다 — 임포트를 위로 올리면
+    #: ModuleNotFoundError 다. 폴더를 패키지로 만드는 길은 막혀 있다: 디렉터리 이름
+    #: `90_빌드파이프라인` 은 숫자로 시작해 파이썬 식별자가 아니므로 `import` 도
+    #: `python -m` 도 불가능하고, 이름을 바꾸면 형제 7개(01_스펙 … 99_플러그인)의
+    #: 번호 정렬 체계가 깨진다. 판단 근거 전문: `.moai/reports/t337/phase5.md`.
+    #:
+    #: [HARD] 이 명단은 **선언이 아니라 주장**이다. 아래
+    #: `test_every_structural_pair_is_actually_structural` 이 파일을 읽어 그 주장을
+    #: 검산한다 — `sys.path.insert` 가 사라지면 그 쌍은 더 이상 구조적이 아니고
+    #: 검사가 빨개진다. 그러니 여기에 이름을 적는 것만으로는 면제되지 않는다.
+    _STRUCTURAL_PAIRS = frozenset(
+        (f"{_T115_PIPELINE_DIR}/{name}", "E402")
+        for name in (
+            "make_exec.py",
+            "make_ma3.py",
+            "make_timeline.py",
+            "make_xlsx.py",
+            "validate.py",
+            "validate_ma3.py",
+        )
+    )
+
+    #: 구조적 유예를 뺀 나머지 = 실제로 남은 일. 이것이 t337 의 새 출구 조건이고,
+    #: 0 이 되면 구조적 쌍만 남는다. 22 − 6 = 16 (UP031 9 · E501 7, 실측).
+    _NON_STRUCTURAL_CEILING = 16
+
     @staticmethod
     def _config() -> dict:
         with (_REPO_ROOT / "pyproject.toml").open("rb") as handle:
@@ -1729,6 +1759,88 @@ class TestLintDeferralsDidNotGrow:
         assert pairs <= self._PAIR_CEILING, (
             f"유예 쌍이 {pairs}개로 늘었다(상한 {self._PAIR_CEILING}). "
             "유예는 줄어들기만 해야 한다 — 늘려야 한다면 그건 별도 판단이다"
+        )
+
+    def _current_pairs(self) -> set:
+        return {(path, code) for path, codes in self._per_file_ignores().items() for code in codes}
+
+    def test_the_structural_list_is_not_vacuous(self):
+        """공허 방지 먼저 — 명단이 비면 아래 검산이 거저 참이 된다."""
+        assert self._STRUCTURAL_PAIRS, "구조적 명단이 비었다 — 아래 검사들이 공허하다"
+        assert self._STRUCTURAL_PAIRS.issubset(self._current_pairs()), (
+            "구조적이라 적힌 쌍이 실제 유예 목록에 없다: "
+            f"{sorted(self._STRUCTURAL_PAIRS - self._current_pairs())}"
+        )
+
+    def test_every_structural_pair_is_actually_structural(self):
+        """[HARD] 「구조적」은 선언이 아니라 파일이 답하는 사실이다.
+
+        각 쌍에 대해 실물을 검산한다: 유예를 끄고 ruff 를 돌려 그 파일의 E402 자리를
+        받고, 그중 **로컬 모듈을 임포트하는 줄**이 `sys.path.insert` 보다 아래에
+        있는지 본다. 그렇다면 그 임포트는 위로 올릴 수 없고(올리면
+        ModuleNotFoundError) 그 쌍은 못 지우는 것이 맞다.
+
+        `sys.path.insert` 가 사라지면 — 폴더를 패키지로 바꾸는 등 — 이 검사가
+        빨개져서 「이제 구조적이 아니다」를 알린다. 명단에 이름을 적는 것만으로는
+        면제되지 않는다는 뜻이고, 그것이 이 검사의 전부다.
+        """
+        local_modules = {p.stem for p in (_REPO_ROOT / _T115_PIPELINE_DIR).glob("*.py")}
+
+        for rel, code in sorted(self._STRUCTURAL_PAIRS):
+            assert code == "E402", f"E402 외의 구조적 주장은 이 검사가 검산하지 못한다: {code}"
+            path = _REPO_ROOT / rel
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "ruff",
+                    "check",
+                    str(path),
+                    "--no-cache",
+                    "--config",
+                    "lint.per-file-ignores={}",
+                    "--select",
+                    "E402",
+                    "--output-format",
+                    "concise",
+                ],
+                capture_output=True,
+                text=True,
+                cwd=_REPO_ROOT,
+            )
+            offending = [
+                int(line.split(":")[1]) for line in result.stdout.splitlines() if ": E402 " in line
+            ]
+            assert offending, f"{rel}: E402 가 없는데 구조적 유예로 적혀 있다 — 명단에서 지워라"
+
+            src = path.read_text(encoding="utf-8").splitlines()
+            insert_at = next(
+                (n for n, line in enumerate(src, start=1) if "sys.path.insert" in line), None
+            )
+            assert insert_at, f"{rel}: sys.path.insert 가 없다 — 이 쌍은 더 이상 구조적이 아니다"
+
+            pinned = [
+                n
+                for n in offending
+                if n > insert_at
+                and src[n - 1].startswith("from ")
+                and src[n - 1].split()[1].split(".")[0] in local_modules
+            ]
+            assert pinned, (
+                f"{rel}: sys.path.insert({insert_at}행) 뒤의 로컬 모듈 임포트가 없다 — "
+                f"E402 {offending} 는 구조가 아니라 고칠 수 있는 것이다"
+            )
+
+    def test_the_non_structural_pairs_did_not_grow(self):
+        """[HARD] t337 의 새 출구 조건 — 구조적 쌍을 뺀 나머지가 0 이면 끝이다.
+
+        전체 쌍 상한(`_PAIR_CEILING`)만 두면 구조적 쌍이 그 안에 섞여 「더 줄일 게
+        없는지」를 못 읽는다. 이 검사가 실제 남은 일을 센다.
+        """
+        remaining = self._current_pairs() - self._STRUCTURAL_PAIRS
+        assert len(remaining) <= self._NON_STRUCTURAL_CEILING, (
+            f"구조적이 아닌 유예가 {len(remaining)}개로 늘었다"
+            f"(상한 {self._NON_STRUCTURAL_CEILING}): {sorted(remaining)}"
         )
 
     def test_no_directory_glob_is_used(self):
