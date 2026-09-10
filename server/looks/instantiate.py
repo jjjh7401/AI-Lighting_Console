@@ -34,17 +34,23 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Protocol
 
 from server.looks.resolver import GroupCandidate, RoleResolution, UnmappedRole, resolve_roles
 from server.looks.schema import IN_SCOPE_POOL_FAMILIES, AttributeValue, Look, payload_for_family
 
 __all__ = [
+    "AXIS_ABSENT",
     "CAPTURE_PER_FAMILY",
     "CAPTURE_SHARED",
     "CONFLICT",
     "NO_FREE_SLOT",
     "POOL_UNADDRESSABLE",
     "POOL_UNRESOLVED",
+    "PRESENCE_ABSENT",
+    "PRESENCE_PRESENT",
+    "PRESENCE_UNREAD",
+    "AxisPresence",
     "CreatedPreset",
     "LookInstantiation",
     "LookInstantiationError",
@@ -66,9 +72,30 @@ CONFLICT = "conflict"  # this pool already holds a preset with this look's name
 NO_FREE_SLOT = "no_free_slot"  # no free slot was OBSERVED (incl. never opened)
 POOL_UNRESOLVED = "pool_unresolved"  # no pool name resolves to this family
 POOL_UNADDRESSABLE = "pool_unaddressable"  # a pool does, and carries no number
+# 리그의 어느 장비도 그 축을 조정할 수 없다 — 슬롯 문제가 아니라 장비 문제다.
+AXIS_ABSENT = "axis_absent"
+
+# 축 하나에 대한 리그 판정 세 갈래. **부재와 미판독을 가른다**: 못 읽은 축을
+# 부재로 접으면 콘솔이 안 닿는 순간 되던 저장이 조용히 멈춘다
+# (server/design/capability_join.py 의 같은 경계).
+PRESENCE_PRESENT = "present"
+PRESENCE_ABSENT = "absent"
+PRESENCE_UNREAD = "unread"
 
 _DESTINATION = "ChangeDestination Root"
 _CLEAR = "ClearAll"
+
+
+class AxisPresence(Protocol):
+    """리그가 그 속성을 조정할 수 있는지 답하는 판독기 — 이 모듈이 쓰는 유일한 계약.
+
+    구조적 프로토콜로 둔 이유는 ``Look`` 이 리그를 모른다는 규율과 같다: 이 모듈이
+    ``server.design`` 의 판독 사슬을 임포트하면 룩 계층이 콘솔 판독의 실패 모양까지
+    상속한다. 실제 리그 어댑터는 :mod:`server.looks.rig_axes` 가 갖는다.
+    """
+
+    def presence(self, attribute: str) -> str:
+        """:data:`PRESENCE_PRESENT` · :data:`PRESENCE_ABSENT` · :data:`PRESENCE_UNREAD`."""
 
 
 class LookInstantiationError(ValueError):
@@ -322,10 +349,37 @@ def _label_of(look: Look) -> str:
     return label
 
 
+def _absent_axis(values: Sequence[AttributeValue], axes: AxisPresence | None) -> str | None:
+    """이 family 의 payload 중 리그가 **조정할 수 없다고 확인된** 첫 속성 이름.
+
+    판독기가 없으면(``axes is None``) 언제나 ``None`` — 오늘의 동작 그대로다.
+    :data:`PRESENCE_UNREAD` 도 ``None`` 이다: 미판독은 부재가 아니다.
+    """
+    if axes is None:
+        return None
+    for value in values:
+        if axes.presence(value.name) == PRESENCE_ABSENT:
+            return value.name
+    return None
+
+
 def _plan_stores(
-    look: Look, label: str, pools: PoolIndex
+    look: Look, label: str, pools: PoolIndex, axes: AxisPresence | None = None
 ) -> tuple[list[tuple[str, CreatedPreset, tuple[AttributeValue, ...]]], list[SkippedStore]]:
-    """Decide, per family the look has values in, whether a store can happen."""
+    """Decide, per family the look has values in, whether a store can happen.
+
+    판정 단위는 **속성**이고 보류 단위는 **저장 하나**(= family 하나)다. 둘을 가르는
+    이유: ``Focus`` family 는 ``Zoom`` 을, ``Color`` family 는 ``ColorRGB_R/G/B`` 셋을
+    나른다. family 단위로만 물으면 「이 리그에 Zoom 이 있는가」와 「Focus 계열 무언가가
+    있는가」가 한 질문으로 뭉쳐, 다른 축이 있다는 이유로 없는 Zoom 이 통과한다. 그래서
+    payload 의 속성을 하나씩 묻고, 그 중 하나라도 부재면 그 family 의 저장을 보류하며
+    ``detail`` 에 **보류를 부른 속성 이름**을 싣는다.
+
+    이 rung 이 pool 검사보다 **앞**에 있는 이유: 장비가 그 축을 아예 못 움직인다는 것은
+    슬롯이 비었는지와 무관한 더 강한 사실이다. 뒤에 두면 같은 보류가
+    :data:`NO_FREE_SLOT` 으로 보고되어 고칠 곳(장비 vs 슬롯)을 잘못 가리킨다.
+    ``axes`` 가 없을 때는 이 rung 자체가 통과하므로 기존 순서 의미는 그대로다.
+    """
     planned: list[tuple[str, CreatedPreset, tuple[AttributeValue, ...]]] = []
     skipped: list[SkippedStore] = []
     for family in IN_SCOPE_POOL_FAMILIES:
@@ -333,6 +387,20 @@ def _plan_stores(
         if not values:
             continue  # this look simply has nothing for this family
         binding = pools.bindings[family]
+        absent = _absent_axis(values, axes)
+        if absent is not None:
+            skipped.append(
+                SkippedStore(
+                    family=family,
+                    reason=AXIS_ABSENT,
+                    pool=binding.number,
+                    detail=(
+                        f"리그의 어느 장비도 {absent!r} 을 조정할 수 없어 "
+                        f"{family} 프리셋을 저장하지 않았다"
+                    ),
+                )
+            )
+            continue
         if binding.reason is not None:
             skipped.append(
                 SkippedStore(
@@ -419,8 +487,13 @@ def build_instantiation(
     resolution: RoleResolution,
     pools: PoolIndex,
     shape: str = CAPTURE_SHARED,
+    axes: AxisPresence | None = None,
 ) -> LookInstantiation:
-    """Build the bundle and report for one look against one resolved rig."""
+    """Build the bundle and report for one look against one resolved rig.
+
+    ``axes`` 는 선택이며 기본은 **없음**이다. 없으면 축 부재 보류가 일어나지 않고
+    동작이 오늘과 같다 — 콘솔이 안 닿는 순간 되던 저장이 멈추는 일이 없도록.
+    """
     if shape not in CAPTURE_SHAPES:
         raise LookInstantiationError(
             f"unknown capture shape {shape!r}; expected one of {list(CAPTURE_SHAPES)}"
@@ -459,7 +532,7 @@ def build_instantiation(
         # is not.
         return empty
 
-    planned, skipped = _plan_stores(look, label, pools)
+    planned, skipped = _plan_stores(look, label, pools, axes)
     return LookInstantiation(
         look_id=look.look_id,
         display_name=label,
@@ -479,6 +552,7 @@ def instantiate_look(
     groups_section: Mapping[str, object],
     preset_pools_section: Mapping[str, object],
     shape: str = CAPTURE_SHARED,
+    axes: AxisPresence | None = None,
 ) -> LookInstantiation:
     """Resolve roles and pools from raw rig-context sections, then build."""
     return build_instantiation(
@@ -486,4 +560,5 @@ def instantiate_look(
         resolution=resolve_roles(groups_section),
         pools=resolve_pools(preset_pools_section),
         shape=shape,
+        axes=axes,
     )
