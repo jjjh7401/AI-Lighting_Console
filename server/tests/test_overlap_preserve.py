@@ -32,9 +32,11 @@ the failure mode a one-off manual gate leaves open.
 다시 확인하는 것뿐이다. 좌표(둘 다 되읽어 확인했고
 :class:`TestPreserveScopeCitations` 가 트립와이어로 잡는다):
 
-* ``.moai/specs/SPEC-COPILOT-PRECHK-001/plan.md:89`` — §A.5 PRESERVE 재확인 표의
-  첫 행. ``server/looks/*.py`` 여섯과 ``server/looks/library/`` 를 「PRECHK 는 룩
-  계층 소비자가 아니다. 변경 0건」으로 선언한다. 이어지는 행들이 나머지 항목이다.
+* ``.moai/specs/SPEC-COPILOT-PRECHK-001/plan.md`` §A.5 PRESERVE 재확인 표의 첫 행.
+  ``server/looks/*.py`` **다섯**과 ``server/looks/library/`` 를 「PRECHK 는 룩 계층
+  소비자가 아니다. 변경 0건」으로 선언한다. 이어지는 행들이 나머지 항목이다.
+  (줄번호를 인용하지 않는 이유는 :class:`TestPreserveScopeCitations` 독스트링 —
+  t177 이 좌표를 줄번호에서 **구역 + 내용 동거**로 바꿨다.)
 * ``.moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md:182`` — REQ-SONGCUE-021,
   「The **본 SPEC** shall not …」. 선례 게이트
   (``server/tests/test_songcue_bundle.py``)의 여섯 파일이 여기서 온다.
@@ -59,6 +61,37 @@ SONGCUE v0.2.0 은 ``console/lua/**`` 에 예외를 단 것이 아니라 §C PRE
 
 ⚠️ 그때는 그 SPEC 이 **살아 있었다.** 닫힌 SPEC 의 선언을 사후에 고치는 경우는 이
 선례가 덮지 않는다 — 그 판단은 이 게이트 밖이다.
+
+**아홉인 이유 — 2026-09-11 에 열에서 하나가 빠졌다 (t348, 감독 승인)**
+
+``server/looks/instantiate.py`` 가 :data:`_PRESERVE_PATHS` 에서 빠졌다. 카드 t348 이 그
+파일의 ``_plan_stores`` 보류 사다리에 rung 하나(``axis_absent`` — 리그의 어느 장비도
+조정할 수 없는 축을 쓰려는 룩을 저장 전에 보류)를 더해야 했고, 그 사다리는 그 파일에만
+있다. **감독(jaihyun)이 2026-09-11 명시적으로 승인했다.**
+
+경로는 바로 위 단락이 처방한 그대로다 — 게이트에 예외를 달지 않고 **선언 층**으로 갔다:
+``SPEC-COPILOT-PRECHK-001/plan.md`` §A.5 표 첫 행의 중괄호 묶음에서 ``instantiate`` 를
+빼고, 승인 기록을 같은 SPEC 의 ``progress.md`` §F.2 개정 절에 남겼다. 그 절이 이 저장소
+**최초의 「닫힌 SPEC 선언 사후 좁힘」 기록**이며, 위 ⚠️ 가 판단을 게이트 밖에 둔 자리를
+누가 어떻게 메웠는지를 적는다.
+
+이 게이트는 **남은 아홉에 대해 그대로 살아 있다.** 빠진 것은 한 항목이고, 첫 행 자체는
+지워지지 않았다 — 나머지 다섯 룩 파일과 ``server/looks/library/`` 의 선언은 그대로다.
+
+🔴 **같은 파일을 잠그는 선언이 하나 더 있고, 그것은 좁혀지지 않았다.** 선례 게이트
+(``server/tests/test_songcue_bundle.py``)의 ``_PRESERVE_LOOK_FILES`` 여섯 파일에도
+``server/looks/instantiate.py`` 가 있다(출처 ``SPEC-COPILOT-SONGCUE-001/spec.md:182``,
+``REQ-SONGCUE-021`` — 이 역시 **종료된** SPEC). t348 의 승인은 그 선언을 덮지 않으므로
+그 게이트는 여전히 빨갛다. 한 파일이 여러 선언에 잠길 수 있다는 것 — 하나를 좁혀도
+푸시가 통과하지 않는다는 것 — 이 t348 이 실측으로 배운 것이다.
+
+⚠️ **이 개정을 :class:`TestPreserveScopeCitations` 는 잡지 못했다(실측).** 그 검사는 경로
+조각 ``server/looks/`` 와 방침 문구가 **같은 줄에** 있는지를 보고, 중괄호 묶음의
+**멤버 하나가 빠지는 것**은 둘 다 그대로 남기므로 초록이었다. 즉 이 트립와이어는 행의
+소실·문구 변경은 잡지만 **묶음 내부의 축소는 못 본다**. 그 한계를 메우는 것은 검사가
+아니라 위 :data:`_PRESERVE_PATHS` 와 :data:`TestPreserveScopeCitations._DECLARATIONS` 의
+집합 동일성 단언이다 — 목록에서 항목을 빼면 선언 표에서도 빼야 하고, 그 짝이 어긋나면
+``test_every_preserved_path_has_a_declaration`` 이 빨개진다.
 """
 
 from __future__ import annotations
@@ -99,7 +132,6 @@ _PRESERVE_PATHS = (
     "server/looks/loader.py",
     "server/looks/roles.py",
     "server/looks/resolver.py",
-    "server/looks/instantiate.py",
     "server/looks/matching.py",
     "server/looks/library/",
     "server/web/preview.py",
@@ -902,9 +934,11 @@ def _overlaps(old_start: int, old_count: int, protected_start: int, protected_en
 class TestPreserveList:
     """AC-OVERLAP-019 ③ — the list is real before it is used."""
 
-    def test_the_list_has_ten_entries(self):
-        assert len(_PRESERVE_PATHS) == 10
-        assert len(set(_PRESERVE_PATHS)) == 10
+    def test_the_list_has_nine_entries(self):
+        # 아홉이고 열이 아닌 이유는 모듈 독스트링 § 「아홉인 이유」 — t348 이
+        # `server/looks/instantiate.py` 를 선언 층에서 빼고 감독이 승인했다.
+        assert len(_PRESERVE_PATHS) == 9
+        assert len(set(_PRESERVE_PATHS)) == 9
 
     def test_every_entry_exists_on_disk(self):
         missing = [path for path in _PRESERVE_PATHS if not (_REPO_ROOT / path).exists()]
@@ -919,7 +953,7 @@ class TestPreserveList:
         # (the plan-phase audit found "4 directories and 6 files" for a 3/7 split).
         assert len(directories) + len(files) == len(_PRESERVE_PATHS)
         assert len(directories) == 3
-        assert len(files) == 7
+        assert len(files) == 6
         # And every directory entry ends with a separator, so `--` treats it as a
         # prefix rather than as a missing file.
         assert all(path.endswith("/") for path in directories)
@@ -946,7 +980,7 @@ class TestPreserveScopeCitations:
     구역 안에서 경로 조각과 방침 문구가 **같은 줄에** 있는지를 본다. 줄이 밀리거나
     행이 재배열돼도 안 깨지고, **선언이 사라지거나 문구가 바뀌는 것**은 잡는다.
 
-    그리고 검사가 :data:`_PRESERVE_PATHS` 를 **돌면서** 확인하므로, 목록에 열한 번째
+    그리고 검사가 :data:`_PRESERVE_PATHS` 를 **돌면서** 확인하므로, 목록에 열 번째
     경로가 추가되면 그 경로의 선언도 함께 요구된다. 이것은 처방이 아니라 **새 능력**이다.
     """
 
@@ -966,7 +1000,6 @@ class TestPreserveScopeCitations:
         ("server/looks/loader.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/looks/roles.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/looks/resolver.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
-        ("server/looks/instantiate.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/looks/matching.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/looks/library/", "server/looks/library/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/web/preview.py", "server/web/preview.py", "웹 미리보기 산출물 없음"),
