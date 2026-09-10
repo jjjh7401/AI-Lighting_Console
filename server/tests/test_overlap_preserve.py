@@ -867,6 +867,33 @@ _PRECHK_GRANTED_DELETED_ROW_KEYS = (
 #: sha256 of the ten deleted lines joined by "\n", in diff order.
 _PRECHK_GRANTED_DELETION_DIGEST = "3c0748d55a049581e2b9592762299177a02e227963072ddb44c013489a56b88a"
 
+#: 2026-09-11 granted exception — t348's PRESERVE declaration amendment
+#: (operator jaihyun, asked and answered explicitly). The predecessor's §A.5
+#: table row that locked ``server/looks/instantiate.py`` was NARROWED so card
+#: t348 could add one rung to that file's existing skip ladder. Rationale,
+#: approval and the scope-declaration-vs-boundary distinction live in
+#: ``plan.md`` §A.5's amendment section and ``progress.md`` §F.2 — the latter is
+#: this repository's FIRST post-closure narrowing of a closed SPEC's PRESERVE
+#: declaration, which the module docstring above placed outside this gate.
+#:
+#: Pinned the same two ways as the grant above, and for the same reason: the row
+#: key shows WHAT was granted, the digest fixes its exact bytes so the grant
+#: cannot grow. Exactly ONE line was deleted — the old brace list — and the rest
+#: of the amendment is pure append. A later edit to this document needs its own
+#: grant; that re-review is the point.
+#:
+#: 🔴 NOTHING measured was erased. PRECHK's run-phase really did leave the file
+#: untouched and that historical record stands; what narrowed is only whom the
+#: declaration binds GOING FORWARD.
+_PRECHK_PLAN = f"{_PRECHK_SPEC_DIR}plan.md"
+_PRECHK_GRANTED_DOCS = (_PRECHK_PROGRESS, _PRECHK_PLAN)
+_PRECHK_PLAN_GRANTED_DELETED_ROW_KEYS = (
+    "`server/looks/{schema,loader,roles,resolver,instantiate,matching}.py`"
+    " · `server/looks/library/`",
+)
+#: sha256 of the single deleted line above.
+_PRECHK_PLAN_DELETION_DIGEST = "aeb44ae01915fb9e78afe834c811ad2903da53235693d643237fe39c8c99911d"
+
 
 def _git(*arguments: str) -> str:
     result = subprocess.run(  # noqa: S603
@@ -1555,20 +1582,62 @@ class TestPrecedentGateFileIsNotExtended:
 class TestPredecessorSpecDocuments:
     """AC-OVERLAP-019 ⑧ — the one assertion that uses THIS SPEC's base."""
 
-    def test_every_predecessor_document_but_the_granted_one_is_untouched(self):
+    def test_every_predecessor_document_but_the_granted_ones_is_untouched(self):
         others = _git(
             "diff",
             "--stat",
             f"{_OVERLAP_BASE}..HEAD",
             "--",
             _PRECHK_SPEC_DIR,
-            f":(exclude){_PRECHK_GRANTED_DOC}",
+            *(f":(exclude){doc}" for doc in _PRECHK_GRANTED_DOCS),
         )
         assert others == ""
 
     def test_the_exclusion_above_is_not_swallowing_the_whole_directory(self):
         """Non-vacuity: `:(exclude)` on a mistyped path would empty the diff."""
         assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", _PRECHK_SPEC_DIR) != ""
+
+    def test_each_granted_document_actually_changed(self):
+        """Non-vacuity for the grant itself — an exclusion over an untouched file
+        is a silent widening of the exemption, not a grant."""
+        for doc in _PRECHK_GRANTED_DOCS:
+            assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", doc) != "", doc
+
+    def test_the_granted_plan_deleted_exactly_the_one_granted_row(self):
+        """t348 — the §A.5 amendment removed ONE row and appended the rest."""
+        deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_PLAN)
+        assert len(deleted) == len(_PRECHK_PLAN_GRANTED_DELETED_ROW_KEYS)
+        keys = tuple(line.split("|")[1].strip() for line in deleted)
+        assert keys == _PRECHK_PLAN_GRANTED_DELETED_ROW_KEYS
+        digest = hashlib.sha256("\n".join(deleted).encode("utf-8")).hexdigest()
+        assert digest == _PRECHK_PLAN_DELETION_DIGEST
+
+    def test_the_plan_digest_would_reject_a_second_deletion(self):
+        """Non-vacuity: content-sensitive, not merely count-sensitive."""
+        deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_PLAN)
+        smuggled = [*deleted, "| 몰래 지운 두 번째 행 | |"]
+        digest = hashlib.sha256("\n".join(smuggled).encode("utf-8")).hexdigest()
+        assert digest != _PRECHK_PLAN_DELETION_DIGEST
+
+    def test_the_amendment_records_its_approval_in_both_documents(self):
+        """A narrowed declaration with no approval record is an unrecorded grant."""
+        plan = (
+            self._read(_PRECHK_PLAN)
+            if hasattr(self, "_read")
+            else (_REPO_ROOT / _PRECHK_PLAN).read_text(encoding="utf-8")
+        )
+        progress = (_REPO_ROOT / _PRECHK_PROGRESS).read_text(encoding="utf-8")
+        # The row really is narrowed, and the old six-member list is gone.
+        assert "{schema,loader,roles,resolver,matching}.py" in plan
+        assert (
+            "{schema,loader,roles,resolver,instantiate,matching}.py"
+            not in plan.split("#### 개정")[0]
+        )
+        for text in (plan, progress):
+            assert "2026-09-11" in text
+            assert "t348" in text
+        assert "§F.2" in progress
+        assert "REQ-SONGCUE-021" in progress  # the second lock is disclosed
 
     def test_the_granted_document_deleted_exactly_the_ten_granted_rows(self):
         deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_GRANTED_DOC)
