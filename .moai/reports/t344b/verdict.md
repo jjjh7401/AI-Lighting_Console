@@ -120,3 +120,14 @@ $ uv run pytest -q -x -p no:cacheprovider
   택한다(`allowed` 가 `refused` 를 이긴다). 그 기종의 어떤 모드는 실제로 못 움직일
   수 있고, 그때 거절이 한 단계 늦게(프리셋 발사 시점) 걸린다.
 - 전량 195.89s 는 이 기계 한 대·한 회차다. flake 여부는 1회 실행으로 판정 못 한다.
+
+## PR CI (사후 관측)
+
+```
+$ gh pr checks 397 --watch --fail-fast
+test	pass	7m8s	.../runs/34535342674/job/103065532805
+CHECKS_EXIT=0
+```
+
+PR #397. 이 저장소에는 CodeRabbit 행이 없다 — 롤업 컨텍스트는 `test` 하나뿐
+(색인 2 의 실측 기록과 일치). 부재는 FAIL 이 아니다.
