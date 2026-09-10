@@ -37,6 +37,7 @@ from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
 from server.deploy.review import ReviewRequest
+from server.design.capability_verdict import position_verdict
 from server.design.cue_density import plan_cue_density, rotate_palette
 from server.design.cue_sheet_apply import (
     ConsoleApplyError,
@@ -72,6 +73,13 @@ from server.design.profile import (
     resolve_section,
 )
 from server.design.rig import _LAYER_GROUP_ALIASES, build_rig_profile
+from server.design.rig_capability_read import (
+    DesignRigRead,
+    read_design_rig,
+)
+from server.design.rig_capability_read import (
+    notice_for as rig_capability_notice,
+)
 from server.design.rig_preflight import plan_rig_preflight, render_rig_preflight
 from server.design.song_cue_composer import (
     SongCueCompositionResult,
@@ -1004,6 +1012,19 @@ _COORD_GAP_NOTICES: dict[str, str] = {
         "조도·컬러 큐만 설계했습니다."
     ),
 }
+
+#: 카드 t344 — 픽스처 타입 라이브러리 경로. ``orchestrator.tools`` 의
+#: ``rig_paths["fixture_types"]`` 와 같은 값이며, 여기서 리터럴을 두 번 쓰는 대신
+#: 상수로 둔다(경로 리터럴이 흩어지면 한 곳만 고쳐진다).
+_FIXTURE_TYPES_ROOT = "Patch/FixtureTypes"
+
+#: 리그 전체가 팬/틸트 하나도 없을 때 감독이 읽는 줄. 좌표 결손과 **다른 사실**이라
+#: 문면을 따로 둔다: 좌표는 「어디에 있는지 모른다」, 이쪽은 「돌릴 수 있는 장비가
+#: 없다」다.
+_NO_POSITIONABLE_NOTICE = (
+    "팬/틸트를 가진 장비가 리그에 없어 포지션(무브) 축은 만들지 못했습니다 — "
+    "조도·컬러 큐만 설계했습니다."
+)
 
 
 def _requery_card_options(
@@ -4411,6 +4432,10 @@ class ChatSession:
         # port (it also implements query_property — the same adoption
         # build_toolset performs). Tests stub this attribute directly.
         self._current_cue_port = gate.state_port
+        # 카드 t344 — 장비 능력 판독도 같은 상태 포트를 탄다(`query_state` ·
+        # `query_property` · `query_properties` 세 읽기를 다 갖춘 유일한 물건).
+        # 테스트는 이 속성을 직접 스텁한다.
+        self._rig_capability_port = gate.state_port
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -4876,6 +4901,21 @@ class ChatSession:
             model_calls=0,
             duration_seconds=0.0,
         )
+
+    def _try_rig_capabilities(self) -> DesignRigRead:
+        """리그 능력 판독 — 실패해도 **빈 리그를 만들지 않는다**.
+
+        카드 t344. 예전에는 이 자리에 ``patch=[]`` 리터럴이 있었고, 그것은 「패치를
+        못 읽었다」와 「장비가 없다」를 바이트 동일하게 만들었다. 이제 콘솔에서 읽고,
+        못 읽었으면 :attr:`DesignRigRead.gap` 에 코드가 실려 호출자가 고지한다.
+
+        포트가 없으면(테스트·베어 deps) ``attempted=False`` 인 기본 판독이다 —
+        「조회하지 않았다」이고 「읽었고 비었다」가 아니다.
+        """
+        port = getattr(self, "_rig_capability_port", None)
+        if port is None:
+            return DesignRigRead()
+        return read_design_rig(port, fixture_types_root=_FIXTURE_TYPES_ROOT)
 
     def _try_pointing_coordinates(
         self, call_id: str
@@ -7950,15 +7990,36 @@ class ChatSession:
             bpm=float(bpm_match.group("bpm")) if bpm_match is not None else None,
             genre=genre_match.group("genre") if genre_match is not None else None,
         )
-        # RG5: no console patch/group query established for this path — the
-        # rig degrades to single-layer (an explicit, disclosed note per RG1),
-        # geometry is the only axis built from the already-read fixture
-        # coordinates above (established path, never a new console query).
+        # RG5: 그룹 판독은 여전히 이 경로에 없어 리그는 단일 레이어로 내려간다
+        # (RG1 의 명시 고지). 좌표는 위에서 이미 읽은 값이고, **패치(장비 능력)는
+        # 카드 t344 가 배선했다** — 예전 `patch=[]` 리터럴은 「못 읽었다」와
+        # 「장비가 없다」를 구별 불가능하게 만들었다.
         coords = [
             {"fid": fid, "x": position[0], "y": position[1], "z": position[2]}
             for fid, position in fixtures
         ]
-        rig = build_rig_profile(patch=[], groups={}, coords=coords)
+        rig_read = self._try_rig_capabilities()
+        rig = build_rig_profile(patch=list(rig_read.patch), groups={}, coords=coords)
+        # 기종 단위 판정. 팬/틸트가 없는 기종은 계획 단계에서 **이름 대어** 거절되고,
+        # 리그에 움직이는 장비가 하나도 없으면 Q4(공간 스토리)를 아예 묻지 않는다 —
+        # 카드 t311 이 좌표 결손에 쓴 것과 **같은** 기제(`skipped_steps`)다.
+        position_gate = position_verdict(rig_read.capabilities) if rig_read.capabilities else None
+        capability_notices: list[str] = []
+        rig_notice = rig_capability_notice(rig_read)
+        if rig_notice:
+            capability_notices.append(rig_notice)
+        if position_gate is not None:
+            refusal = position_gate.reason()
+            if refusal:
+                capability_notices.append(refusal)
+            if not position_gate.any_positionable and not position_gap:
+                position_gap = _NO_POSITIONABLE_NOTICE
+        if capability_notices:
+            self._design_coord_notice = " / ".join(
+                part for part in (position_gap, *capability_notices) if part
+            )
+        else:
+            self._design_coord_notice = position_gap
         pre_specified: dict[str, str] = {}
         concept_match = _SONG_CONCEPT_HINT.search(text)
         if concept_match is not None:
@@ -7974,6 +8035,9 @@ class ChatSession:
             pre_specified=pre_specified,
             # 카드 t311 — Q4 는 포지션 진행 서사를 묻는다. 좌표가 없으면 그
             # 답이 닿을 축이 없어 묻지 않는다(기본값으로 대신 답하지도 않는다).
+            # 카드 t344 — 팬/틸트를 가진 장비가 아예 없을 때도 같은 이유로 묻지
+            # 않는다. 두 사실은 다르지만 「답이 닿을 축이 없다」는 결론이 같아
+            # **같은 기제**를 쓴다(두 번째 기제를 만들지 않는다).
             skipped_steps=(Q4_SPATIAL_STORY,) if position_gap else (),
         )
         failure = self._song_run_interview(interview)
