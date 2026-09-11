@@ -33,8 +33,17 @@ import csv
 import io
 import re
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from server.looks.schema import CONFIRMED_ATTRIBUTES, PROBE_GATED_ATTRIBUTES
+
+if TYPE_CHECKING:
+    # 형 주석에만 쓴다 — 런타임에 `server.prechk` 를 끌어오지 않는다. 능력 판독은
+    # 콘솔을 읽는 일이고 이 모듈은 순수 파서다. 판독값은 **주입**으로 들어오므로
+    # (`classify_storability` 의 `capabilities`) 이 모듈이 판독기를 호출할 일이
+    # 없고, import 를 런타임에 두면 「파서가 콘솔 계층을 안 부른다」가 문면으로만
+    # 남는다.
+    from server.prechk.capability_read import ModeCapabilities
 
 #: 세 종류의 **정확** 열 집합. 정본 실측이며 여기가 유일한 선언 자리다.
 #:
@@ -133,6 +142,12 @@ HOLD_PROBE_REJECTED = "attribute_probe_rejected"  # bm — 라이브 프로브�
 HOLD_FAMILY_OUT_OF_SCOPE = "family_out_of_scope"  # bm — 풀 계열이 범위 밖이다
 HOLD_VALUE_NOT_MACHINE_READABLE = "value_not_machine_readable"  # 형태가 아니다
 HOLD_ATTRIBUTE_UNKNOWN = "attribute_unknown"  # bm — 어느 목록에도 없는 속성 이름이다
+#: bm — 도(degree)로 적힌 값이 **그 기종·모드가 답한 물리 범위** 밖이다.
+#: 어휘 축(위 셋)과 다르다: 속성은 쏠 수 있는데 **그 값**을 못 쏜다.
+#: 이 보류를 푸는 것은 시트 값을 범위 안으로 고치는 것, 또는 그 값을 받는 기종으로
+#: 배정을 바꾸는 것 둘뿐이다 — 값을 잘라 맞추는 것은 여기서 하지 않는다.
+#: 능력 판독을 주지 않으면(`capabilities=None`) 애초에 걸리지 않는다.
+HOLD_VALUE_OUT_OF_RANGE = "value_out_of_range"
 
 #: 값 문장에서 속성 이름 후보로 읽을 토큰. 숫자·단위·한글은 보지 않는다.
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9]*")
@@ -258,7 +273,12 @@ def _attribute_tokens(value: str) -> list[str]:
     return found
 
 
-def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetHoldReason, ...]]:
+def classify_storability(
+    kind: str,
+    value_raw: str,
+    *,
+    capabilities: ModeCapabilities | None = None,
+) -> tuple[bool, tuple[PresetHoldReason, ...]]:
     """이 값을 지금 콘솔에 넣을 수 있는가, 없으면 **무엇들이** 막는가.
 
     **부재가 아니라 판정이다.** 아래 사유는 전부 이 저장소가 이미 실기로 재서
@@ -267,6 +287,27 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
 
     사유를 **전부** 돌려준다. 하나만 돌려주면 한 원인을 풀었을 때 그 행이 열릴
     것처럼 보이는데 실제로는 다른 사유가 남아 안 열린다.
+
+    ## `capabilities` — 능력 판독은 **주입**이지 조회가 아니다
+
+    `capabilities` 는 `server.prechk.capability_read.read_mode_capabilities` 가
+    읽어 둔 「그 기종·그 모드가 조정할 수 있는 축과 물리 범위」다. 이 함수는 그것을
+    **받기만** 한다 — 여기서 콘솔을 읽으면 순수 함수가 아니게 되고, 파싱이 콘솔
+    가동 여부에 묶인다.
+
+    ``None`` (기본값)이면 범위 축은 **전혀 평가하지 않는다.** 인자 없이 부른
+    결과는 이 축이 생기기 전과 같아야 하고, 그것을 검사가 다섯 행 전수로 잰다
+    (`test_lxseq_preset_beam_range.py`).
+
+    🔴 **도(degree)로 적힌 값만 대조한다.** `Frost 30%` 같은 퍼센트와 단위 없는
+    맨숫자는 안 본다 — 역방향 축(Zoom 42.0->1.8)에서 콘솔의 `At` 매핑이 어느 끝을
+    DMX 0 으로 두는지 **이 저장소는 아직 안 쟀다**(t235: 프로그래머 판독 별칭 부재).
+    안 잰 방향으로 퍼센트를 도로 옮기는 것은 추측이고, 뒤집힌 값이 범위 안으로
+    들어오면 안 잡는 것보다 나쁘다. 그 측정이 열리면 이 제약이 먼저 풀린다.
+
+    🔴 **정규화(0~1) 축과 도 값은 대조하지 않는다.** `Frost1` 이
+    `PHYSICALFROM=0.0 PHYSICALTO=1.0` 인 실측 예이고, 도 값이 그 축과 「범위 밖」인
+    것은 단위가 다른 탓이지 값이 틀린 탓이 아니다 — 틀린 사유로 막지 않는다.
     """
     if kind == "preset-dim":
         if _PERCENT.match(value_raw):
@@ -348,6 +389,20 @@ def classify_storability(kind: str, value_raw: str) -> tuple[bool, tuple[PresetH
                 "성분으로 못 가르는 조각: "
                 + ", ".join(_bm_unreadable_segments(value_raw))
                 + " — 속성 이름으로 시작하는 조각만 옮긴다(버리지 않고 보고한다)",
+            )
+        )
+    out_of_range = _bm_out_of_range_segments(value_raw, capabilities)
+    if out_of_range:
+        # 어휘 축·구조 축과 **또 다른 축**이다: 속성은 쏠 수 있고 조각도 읽히는데
+        # 그 기종이 그 값을 못 낸다. 값·범위·채널을 사유 문면에 실어 감독이
+        # **무엇을 고쳐야 하는지** 읽게 한다 — 값을 잘라 맞추지 않는다.
+        reasons.append(
+            PresetHoldReason(
+                HOLD_VALUE_OUT_OF_RANGE,
+                "콘솔이 답한 물리 범위 밖인 값: "
+                + ", ".join(out_of_range)
+                + " — 시트 값을 범위 안으로 고치거나 그 값을 내는 기종으로 배정을 바꾼다"
+                " (잘라 맞추지 않는다)",
             )
         )
     if reasons:
@@ -664,6 +719,97 @@ def _bm_unknown_attributes(value_raw: str) -> tuple[str, ...]:
         name = component[0]
         if not _is_known_attribute(name) and name not in found:
             found.append(name)
+    return tuple(found)
+
+
+#: 조각 값에서 **명시된 도(degree)** 만 읽는 술어. `45°` · `45 deg` · `20 DEGREES` 를
+#: 받고 `30%` · 맨숫자 `45` 는 받지 않는다.
+#:
+#: 🔴 **표기가 없으면 읽지 않는다.** 퍼센트를 물리값으로 옮기려면 콘솔의 `At` 매핑이
+#: 어느 끝을 DMX 0 으로 두는지 알아야 하는데, 역방향 축(Zoom 42.0->1.8)에서 그 방향은
+#: **안 쟀다**. 재지 않은 방향으로 퍼센트를 도로 옮기면 「넓게」가 「좁게」가 되어
+#: 조용히 뒤집힌 값이 범위 안으로 들어간다 — 안 잡는 것보다 나쁘다.
+#: `deg(?:rees?)?` 로 좁힌 것은 `45 degauss` 같은 다른 낱말을 도로 읽지 않기 위한
+#: 것이고, 「degrees 는 도가 아닐 수도」라는 추측이 아니다.
+_DEGREE_VALUE = re.compile(
+    r"^\s*(-?\d+(?:\.\d+)?)\s*(?:°|deg(?:rees?)?(?![A-Za-z0-9]))", re.IGNORECASE
+)
+
+#: 정규화 축(0~1)의 상한. `Frost1` 이 `PHYSICALFROM=0.0 PHYSICALTO=1.0` 인 실측 예다.
+#: 도 값과 정규화 축은 **단위가 다르므로** 대조 자체가 성립하지 않는다 — 그런 짝은
+#: 「범위 밖」이라고 부르지 않고 **안 잰 것으로 남긴다**(틀린 사유로 막는 것이
+#: 안 막는 것보다 나쁘다).
+_NORMALIZED_AXIS_MAX = 1.0
+
+
+def _degree_value(value: str) -> float | None:
+    """조각의 값 부분에서 도 값을 꺼낸다. 도 표기가 없으면 ``None``."""
+    match = _DEGREE_VALUE.match(value)
+    if match is None:
+        return None
+    return float(match.group(1))
+
+
+def _bm_out_of_range_segments(
+    value_raw: str, capabilities: ModeCapabilities | None
+) -> tuple[str, ...]:
+    """능력 판독과 시트 값을 대조해 **범위 밖** 조각의 설명을 고른다.
+
+    `capabilities` 가 ``None`` 이면 **항상 빈 튜플**이다 — 주입이 없으면 이 축은
+    존재하지 않는 것과 같고, 그것이 「인자 없이 부르면 예전과 바이트 동일」의 근거다.
+
+    조각마다 **넷을 다 통과해야** 걸린다. 넷 전부가 하중을 진다:
+
+    1. 조각이 (속성, 값) 으로 읽힌다 — 못 읽은 조각은 다른 사유가 이미 든다.
+    2. 값에 **도 표기**가 있다 (`_DEGREE_VALUE` 주석의 방향 미측정 참조).
+    3. 그 속성의 축이 판독되어 있고 두 끝이 다 읽혔다 (`AxisRange.measurable`).
+       못 읽은 축을 「범위 밖」이라고 부르면 미판독이 결함으로 바뀐다.
+    4. 그 축이 정규화(0~1) 모양이 아니다 (`_NORMALIZED_AXIS_MAX` 주석 참조).
+
+    시트 토큰 -> 콘솔 이름은 `_SHEET_TO_CONSOLE_ATTRIBUTE` **하나만** 쓴다. 둘째 표를
+    만들면 두 어휘의 연결 지점이 둘이 되고, 그 순간 한쪽만 고치는 날이 온다.
+    표에 없는 토큰(`Zoom`)은 두 어휘가 같은 자리이므로 시트 토큰을 그대로 쓴다 —
+    실측이 그것을 확인한다(FixtureType 11 채널 28 `ATTRIBUTE=Zoom`).
+
+    ⚠️ **기종·모드 이름을 적지 못한다.** `ModeCapabilities` 는 타입/모드 슬롯을
+    싣지 않으므로(`server/prechk/capability_read.py`) provenance 로 쓸 수 있는 것은
+    축의 **채널 이름**뿐이다. 어느 기종의 판독을 주입했는지는 부르는 쪽이 안다.
+    """
+    if capabilities is None:
+        return ()
+    found: list[str] = []
+    for segment in value_raw.split(_BM_SEGMENT_SEPARATOR):
+        component = _bm_segment_component(segment)
+        if component is None:
+            continue
+        attribute, value = component
+        degrees = _degree_value(value)
+        if degrees is None:
+            continue
+        axis = capabilities.axis(_SHEET_TO_CONSOLE_ATTRIBUTE.get(attribute, attribute))
+        if axis is None or not axis.measurable:
+            continue
+        low = min(axis.physical_from, axis.physical_to)
+        high = max(axis.physical_from, axis.physical_to)
+        if low >= 0.0 and high <= _NORMALIZED_AXIS_MAX:
+            continue
+        # 정렬해서 담는다 — 판독기는 방향을 보존하지만(Zoom 42.0->1.8) 포함 검사는
+        # 방향과 무관하다. 정렬 없이 `from <= v <= to` 로 쓰면 역방향 축의 모든 값이
+        # 범위 밖이 된다.
+        if low <= degrees <= high:
+            continue
+        found.append(
+            segment.strip()
+            + " -> "
+            + axis.attribute
+            + " 축 "
+            + str(low)
+            + "~"
+            + str(high)
+            + " (채널 '"
+            + axis.channel_name
+            + "')"
+        )
     return tuple(found)
 
 
