@@ -341,3 +341,108 @@ build_instantiation`): `server/orchestrator/tools.py:2650` 의 `instantiate_look
 - **아홉으로 줄어든 게이트.** 커버리지가 한 파일만큼 줄었고, 그 파일은 이제
   SONGCUE 게이트 하나에만 잠긴다. 그 선언이 나중에 좁혀지면 `instantiate.py` 는 잠금이
   0 이 된다 — 그때는 이 파일의 변경을 잡아줄 게이트가 없다.
+
+---
+
+# 3회차 — 형제 게이트 계상, PR #398
+
+## 2회차의 과대평가를 먼저 정정한다
+
+2회차에서 나는 SONGCUE 잠금을 「`REQ-SONGCUE-021` 을 좁혀야 하는 별도 거버넌스 사안」으로
+보고했다. **과대평가였다.** 그 REQ 의 주어는 「본 SPEC」이다 — 「**본 SPEC이** 그 계층을
+재사용하되 고치지 않는다는 형상의 기계적 증거」(`SPEC-COPILOT-SONGCUE-001/spec.md:182-185`,
+내가 되읽어 확인). 역사적 사실이고 t348 이후에도 글자 그대로 참이다. 미래를 구속하는
+경계를 만든 것은 REQ 가 아니라 검사의 diff **범위**(`_RUN_PHASE_BASE..HEAD`)였다. 형제
+게이트 독스트링이 소유한 「역사적 사실 / 집행되는 경계」 혼동의 교과서적 사례이고, 그
+독스트링이 이 파일을 형제로 지목한다. **REQ 는 개정하지 않았고 개정할 필요도 없었다.**
+
+## 계상 방식 — 정확히 어떻게 못박았는가
+
+파일을 목록에서 **빼지 않았다.** 빼면 이 파일에 대한 게이트가 통째로 은퇴하고 REQ 의
+기계적 증거가 아예 검사되지 않는다.
+
+| 자리 | 내용 |
+|---|---|
+| `_PRESERVE_LOOK_FILES` | **여섯 그대로.** 한 줄도 지우지 않았다 |
+| `_unaccounted_look_files()` | 스윕 대상 = 여섯 − 계상된 하나 = **다섯**. 이 다섯은 여전히 빈 출력이어야 한다 |
+| `_T348_ACCOUNTED_DELETED_LINES` | 계상된 변경이 지운 **네 줄**(`_plan_stores` 시그니처 · 독스트링 둘 · 호출부). 사람이 「무엇이 계상됐나」를 읽는 자리 — 형제 게이트의 `_PRECHK_GRANTED_DELETED_ROW_KEYS` 와 같은 역할 |
+| `_T348_ACCOUNTED_DIGEST` | `git diff --unified=0` **본문 줄**(`+`/`-`, 헤더 제외)을 `\n` 으로 이어 sha256 = `c69d8f32…`. 줄번호를 담지 않아 밀림에 안 깨지고, **한 바이트라도** 다르면 깨진다 |
+| `_T348_ACCOUNTED_SHAPE` | `(14, 79, 4)` — hunk 14 · 추가 79 · 삭제 4. 규모를 사람이 읽는 자리이고, hunk 수는 본문 줄 수와 **다른 계기**로 센다 |
+
+즉 게이트는 두 갈래로 살아 있다: 다섯 파일에 「빈 출력」, 계상된 한 파일에 「정확히 이
+바이트열」. **계상은 이 파일을 열어주지 않는다.**
+
+## 비공허성 증명 — 별도 워크트리 프로브 4건, 4/4 사망
+
+배차서의 [HARD] 대로 이 트리에서는 `git reset --hard` · `git stash` 를 쓰지 않았다.
+`git worktree add --detach /tmp/t348-probe WT-absent-axis-hold` 로 사본을 만들어 거기서만
+변조하고, 끝나고 `git worktree remove --force` 했다. 프로브 동안 t348 트리는 손대지 않았고
+이후 `git log`/`git status` 로 5커밋 무손실을 확인했다.
+
+| # | 프로브 | 결과 |
+|---|---|---|
+| M9 | 나머지 다섯 중 하나(`server/looks/matching.py`)를 변경 | **FAIL** `test_preserve_look_files_are_unchanged_from_run_phase_base` — 스윕은 살아 있다 |
+| M10 | 계상된 파일에 **두 번째** 계상 안 된 hunk 추가 | **FAIL** `test_the_accounted_change_is_exactly_the_one_t348_introduced` |
+| M11 | 줄 수 그대로 두고 본문 **한 글자**만 변조 | **FAIL** (다이제스트 단언 — 개수 민감이 아니라 내용 민감) |
+| M12 | REQ 의 「본 SPEC이 … 재사용하되 고치지 않는다」 문면을 「아무도 … 고치지 못한다」로 바꿈 | **FAIL** `test_the_accounted_file_is_still_named_by_the_requirement` — 계상의 근거가 사라지면 계상도 무너진다 |
+
+누적 뮤테이션 **12/12 사망, 생존 0**(코드 5 + PRECHK 게이트 3 + SONGCUE 게이트 4).
+
+## Evidence (3회차)
+
+```
+$ uv run pytest server/tests/test_songcue_bundle.py server/tests/test_overlap_preserve.py -q
+89 passed in 1.32s
+$ uv run ruff check server/tests/test_songcue_bundle.py
+All checks passed!
+$ uv run pytest -q
+12178 passed, 35 skipped, 1 warning in 161.25s (0:02:41)
+$ git push -u origin WT-absent-axis-hold
+ * [new branch]      WT-absent-axis-hold -> WT-absent-axis-hold
+$ gh pr create …
+https://github.com/jjjh7401/AI-Lighting_Console/pull/398
+```
+
+전체 스위트를 pre-push 훅 **대신** 증거로 썼다 — `Makefile:63 FAST_TESTS` 가
+`test_songcue_bundle.py` 를 빠뜨리므로 훅의 침묵은 증거가 아니다(2회차 실측).
+
+## Baseline-attribution (3회차)
+
+- 트리 `.claude/worktrees/t348` · 브랜치 `WT-absent-axis-hold` · 베이스 `origin/main` = `bfaa560`
+- 전체 스위트를 돌린 head: `d3e455d` (푸시된 코드 head). 판정문 커밋이 head 를 밀므로 CI 는
+  **최종 head** 에서 다시 읽고 아래 §CI 에 어느 run 을 읽었는지 적는다.
+
+## 배차서 전제 중 내 측정이 어긋난 것
+
+1. **「그 파일의 독스트링에 기록하라」 — `test_songcue_bundle.py` 에는 모듈 독스트링이
+   없었다.** 파일이 `from __future__ import annotations` 로 시작한다(실측). 그래서 하나를
+   **신설**했다. 기록할 자리가 있다는 전제가 어긋났을 뿐, 지시의 뜻은 그대로 이행했다.
+2. **「행 키 + 콘텐츠 해시」의 「행 키」는 이 파일에서 표 행이 아니다.** 코드 파일이라
+   대응물이 없어 **삭제된 네 줄**을 그 자리에 놓았다(무엇이 치환됐는지 사람이 읽는 자리).
+   형제 게이트의 역할 대응은 유지했다.
+3. 나머지 전제는 전부 내 측정과 일치했다 — REQ 의 「본 SPEC」 주어, 역사적 사실 대 집행되는
+   경계의 혼동, 그 혼동을 형제 독스트링이 소유하고 이 파일을 형제로 지목한다는 것,
+   `FAST_TESTS` 누락, 목록에서 파일을 빼면 REQ 의 기계적 증거가 사라진다는 것.
+
+## Gaps (3회차)
+
+- **`axes=` 배선은 여전히 안 됐다.** 감독이 별도 카드로 접수했다. 막는 것은 인자 전달이
+  아니라 프리셋 저장 핸들러(`server/orchestrator/tools.py:2650`) 안에 새 콘솔 능력 판독
+  경로를 들이는 것이며, `tools.py` 의 SONGCUE hunk 트립와이어 갱신이 함께 필요하다.
+  **시작하지 않았다.**
+- 1·2회차 Gaps 는 그대로 유효하다 — 콘솔 실측 0, `Iris`·`ColorRGB_*` 철자 미측정,
+  `Dimmer`·`Zoom` 철자를 이 카드에서 직접 재지 않음.
+- **SONGCUE 게이트의 다른 짝들을 전수 세지 않았다.** 내가 고친 검사와 그 비공허성만 봤고,
+  이 파일의 다른 트립와이어(`_TOOLS_PATH` hunk 스냅샷 등)가 계상 방식과 상호작용하는지는
+  재지 않았다 — 다만 전체 스위트가 초록이므로 오늘의 head 에서 충돌은 없다.
+
+## Residual-risk (3회차)
+
+- **계상 다이제스트는 이 파일을 고치는 다음 카드에 마찰이 된다.** 의도한 설계(재검토 강제)
+  이지만, 그 카드는 `_T348_ACCOUNTED_DIGEST` 를 갱신해야 하고 그때 t348 의 계상과 자기
+  변경이 한 다이제스트에 섞인다. 계상을 카드별로 쌓을 구조는 만들지 않았다.
+- **선례가 넓게 읽힐 위험**(2회차와 동일). 다만 3회차가 그 위험을 한 단계 줄였다 — 이제
+  선례는 「닫힌 SPEC 이면 REQ 를 좁혀라」가 아니라 「REQ 의 주어를 먼저 읽어라. 대개
+  좁힐 필요가 없다」다.
+- **아홉으로 줄어든 PRECHK 게이트**(2회차와 동일). 단 `instantiate.py` 의 잠금이 0 이 된
+  것은 **아니다** — SONGCUE 게이트가 계상 다이제스트로 이 파일을 계속 잰다.
