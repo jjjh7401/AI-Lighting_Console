@@ -66,7 +66,7 @@ CAPTURE_SHARED = "shared_capture"
 CAPTURE_PER_FAMILY = "per_family_capture"
 CAPTURE_SHAPES = (CAPTURE_SHARED, CAPTURE_PER_FAMILY)
 
-# Why one intended preset store did not happen. Kept apart rather than summed: (t349 대조군)
+# Why one intended preset store did not happen. Kept apart rather than summed:
 # each names a different rig state and a different repair.
 CONFLICT = "conflict"  # this pool already holds a preset with this look's name
 NO_FREE_SLOT = "no_free_slot"  # no free slot was OBSERVED (incl. never opened)
