@@ -1,6 +1,33 @@
+"""SONGCUE 번들 게이트 — 그리고 그 PRESERVE 검사가 실제로 재는 것.
+
+이 파일에는 원래 모듈 독스트링이 없었다. t348(2026-09-11)이 하나 만든 이유는
+여기서 한 번 잘못 읽힌 것을 다음 카드가 처음부터 다시 발견하지 않게 하려는 것뿐이다.
+
+**과대평가 1건 — 「REQ 를 좁혀야 한다」는 오독.** t348 은 이 파일의
+``test_preserve_look_files_are_unchanged_from_run_phase_base`` 가 빨개진 것을 보고
+「``REQ-SONGCUE-021`` 을 좁혀야 하는 별도 거버넌스 사안」으로 보고했다. 그것은 과대평가였다.
+그 REQ 의 주어는 **「본 SPEC」**이다 — 「**본 SPEC이** 그 계층을 재사용하되 고치지 않는다는
+형상의 기계적 증거」(``SPEC-COPILOT-SONGCUE-001/spec.md:182-185``). 그것은 **역사적 사실**
+이고 t348 이후에도 글자 그대로 참이다: SONGCUE 는 ``server/looks/instantiate.py`` 를
+건드리지 않았다.
+
+미래의 누구도 못 건드린다는 **집행되는 경계**를 만든 것은 REQ 가 아니라 이 검사의 diff
+**범위**(``_RUN_PHASE_BASE..HEAD``)다 — 그 범위는 이후의 모든 변경을 함께 잰다. 형제 게이트
+(``server/tests/test_overlap_preserve.py``) 독스트링이 정확히 이 혼동을 소유하며 이 파일을
+형제로 지목한다: 「그 SPEC 은 이 파일들을 안 건드렸다」와 「아무도 이 파일들을 못 건드린다」는
+다른 문장이고, 게이트 자신은 ``git diff`` 가 비었는지만 보므로 그 둘을 **구별할 수 없다**.
+
+🔴 **``REQ-SONGCUE-021`` 은 개정되지 않았고 개정할 필요도 없었다 — 지금 문면 그대로 옳다.**
+고친 것은 이 검사가 자기 REQ 가 말하는 것을 재도록 만든 것뿐이다: t348 의 변경을
+:data:`_T348_ACCOUNTED_DIGEST` 로 **계상**하고, 나머지 다섯 파일과 이 파일의 **추가**
+변경에 대해서는 게이트를 그대로 살려 두었다. 목록에서 파일을 빼지 않았다 — 빼면 REQ 의
+기계적 증거가 아예 검사되지 않는다.
+"""
+
 from __future__ import annotations
 
 import ast
+import hashlib
 import re
 import subprocess
 from dataclasses import fields
@@ -113,6 +140,48 @@ _PRESERVE_LOOK_FILES = (
     "server/looks/loader.py",
     "server/looks/roles.py",
 )
+
+#: 2026-09-11 — 카드 t348 이 `server/looks/instantiate.py` 를 고쳤고, 그 변경은
+#: **계상되었다**(accounted for). 목록에서 파일을 빼지 않았다: 빼면 이 파일에 대한
+#: 게이트가 통째로 은퇴하고 `REQ-SONGCUE-021` 의 기계적 증거가 아예 검사되지 않는다.
+#: 대신 이 파일만 스윕에서 빼고 **아래 다이제스트로 정확히 고정**한다 — 다른 다섯
+#: 파일은 여전히 빈 출력이어야 하고, 이 파일의 **추가 변경**도 여전히 거부된다.
+#:
+#: 왜 REQ 를 고치지 않았는가 (읽고 지나갈 자리가 아니다):
+#: `REQ-SONGCUE-021` 의 주어는 **「본 SPEC」**이다 —
+#: 「**본 SPEC이** 그 계층을 재사용하되 고치지 않는다는 형상의 기계적 증거」
+#: (`SPEC-COPILOT-SONGCUE-001/spec.md:182-185`). 그것은 **역사적 사실**이고 t348
+#: 이후에도 글자 그대로 참이다: SONGCUE 는 이 파일을 건드리지 않았다. 미래의 누구도
+#: 못 건드린다는 **집행되는 경계**를 만든 것은 REQ 가 아니라 이 검사의 diff **범위**
+#: (`_RUN_PHASE_BASE..HEAD`)다 — 그 범위는 이후의 모든 변경을 함께 잰다. 형제 게이트
+#: (`server/tests/test_overlap_preserve.py`) 독스트링이 바로 이 혼동을 소유하고 이
+#: 파일을 형제로 지목한다: 「그 SPEC 은 이 파일들을 안 건드렸다」(역사적 사실)와
+#: 「아무도 이 파일들을 못 건드린다」(집행되는 경계)는 다른 문장이며, 게이트 자신은
+#: `git diff` 가 비었는지만 보므로 그 둘을 **구별할 수 없다**.
+#: 🔴 그래서 `REQ-SONGCUE-021` 은 **개정되지 않았고 개정할 필요도 없었다.** 고친 것은
+#: 이 검사가 자기 REQ 가 말하는 것을 재도록 만든 것뿐이다. (t348 이 1회차에 이 잠금을
+#: 「REQ 를 좁혀야 하는 사안」으로 과대평가했고, 그 과대평가를 여기 적어 다음 카드가
+#: 처음부터 다시 발견하지 않게 한다.)
+#:
+#: 감독 승인(2026-09-11)이 덮는 것은 t348 이 이 파일을 고치는 것이다. 승인·사유·
+#: 「범위 선언 ≠ 경계」 구별의 전문은 `SPEC-COPILOT-PRECHK-001/plan.md` §A.5 개정 절과
+#: 같은 SPEC `progress.md` §F.2 에 있다.
+_T348_ACCOUNTED_FILE = "server/looks/instantiate.py"
+#: 계상된 변경이 지운 네 줄 — 무엇이 계상됐는지 사람이 읽는 자리(형제 게이트의
+#: `_PRECHK_GRANTED_DELETED_ROW_KEYS` 와 같은 역할). 넷 다 치환이고, 나머지는 순수 추가다.
+_T348_ACCOUNTED_DELETED_LINES = (
+    "    look: Look, label: str, pools: PoolIndex",
+    '    """Decide, per family the look has values in, whether a store can happen."""',
+    '    """Build the bundle and report for one look against one resolved rig."""',
+    "    planned, skipped = _plan_stores(look, label, pools)",
+)
+#: sha256 of the diff BODY lines (`+`/`-`, headers dropped) joined by "\n", in diff
+#: order, from ``git diff --unified=0``. 본문만 담으므로 줄번호가 밀려도 안 깨지고,
+#: **한 바이트라도 다르면** 깨진다. 계상되지 않은 두 번째 변경은 여기서 거부된다.
+_T348_ACCOUNTED_DIGEST = "c69d8f321d7fdf7bee32bb78b91a2f022d2954f46cccfe055b8df6cd62a7d039"
+#: 계상된 변경의 형상 — 14 hunk, 추가 79, 삭제 4. 다이제스트가 이미 내용을 고정하므로
+#: 이 숫자는 사람이 규모를 읽는 자리다.
+_T348_ACCOUNTED_SHAPE = (14, 79, 4)
 _TOOLS_PATH = "server/orchestrator/tools.py"
 # Snapshot of every tools.py hunk since SONGCUE's run-phase base. It is a
 # TRIPWIRE, not a constant: a later SPEC that legitimately edits tools.py must
@@ -657,13 +726,18 @@ def test_preserve_gate_uses_run_phase_base_to_head_range():
 
     assert command[:4] == ["git", "diff", "--stat", f"{_RUN_PHASE_BASE}..HEAD"]
     assert command[4] == "--"
-    assert tuple(command[5:]) == _PRESERVE_LOOK_FILES
+    # 계상된 파일 하나만 빠지고 나머지 다섯은 그대로 스윕된다. 목록 자체는 여섯이며,
+    # 빠진 하나는 아래 다이제스트 검사가 더 좁게 잰다.
+    assert tuple(command[5:]) == _unaccounted_look_files()
+    assert len(command[5:]) == len(_PRESERVE_LOOK_FILES) - 1
+    assert _T348_ACCOUNTED_FILE not in command
+    assert _T348_ACCOUNTED_FILE in _PRESERVE_LOOK_FILES
 
 
 def test_preserve_look_files_are_unchanged_from_run_phase_base():
     _require_run_phase_base()
 
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         _preserve_diff_command(),
         cwd=_REPO_ROOT,
         check=True,
@@ -672,7 +746,67 @@ def test_preserve_look_files_are_unchanged_from_run_phase_base():
     )
 
     assert _PRESERVE_LOOK_FILES
+    assert _unaccounted_look_files()  # 비공허성: 스윕 대상이 비면 영구 통과가 된다
     assert result.stdout == ""
+
+
+def test_every_unaccounted_look_file_exists_on_disk():
+    """비공허성 — 존재하지 않는 경로는 `--stat` 에 한 줄도 안 낸다."""
+    missing = [path for path in _unaccounted_look_files() if not (_REPO_ROOT / path).exists()]
+    assert missing == []
+
+
+def test_the_accounted_change_is_exactly_the_one_t348_introduced():
+    """계상된 변경을 내용으로 고정한다 — 두 번째 변경은 여기서 거부된다."""
+    _require_run_phase_base()
+
+    body = _accounted_diff_body()
+    additions = [line for line in body if line[0] == "+"]
+    deletions = [line for line in body if line[0] == "-"]
+    hunks, expected_adds, expected_dels = _T348_ACCOUNTED_SHAPE
+
+    assert len(additions) == expected_adds
+    assert len(deletions) == expected_dels
+    assert tuple(line[1:] for line in deletions) == _T348_ACCOUNTED_DELETED_LINES
+    digest = hashlib.sha256("\n".join(body).encode("utf-8")).hexdigest()
+    assert digest == _T348_ACCOUNTED_DIGEST
+    # hunk 수는 별도 계기로 센다 — 본문 줄 수와 다른 것을 잰다.
+    result = subprocess.run(  # noqa: S603
+        ["git", "diff", "--unified=0", f"{_RUN_PHASE_BASE}..HEAD", "--", _T348_ACCOUNTED_FILE],
+        cwd=_REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert len([1 for line in result.stdout.splitlines() if line.startswith("@@")]) == hunks
+
+
+def test_the_accounted_digest_would_reject_a_second_unaccounted_hunk():
+    """비공허성 — 계상은 이 파일을 열어주지 않는다. 내용 민감이고 개수 민감이 아니다."""
+    _require_run_phase_base()
+
+    body = _accounted_diff_body()
+    smuggled = [*body, "+    # 계상되지 않은 두 번째 변경"]
+    digest = hashlib.sha256("\n".join(smuggled).encode("utf-8")).hexdigest()
+    assert digest != _T348_ACCOUNTED_DIGEST
+    # 한 바이트만 달라도 깨진다 — 줄을 더하지 않고 한 글자만 바꿔도.
+    tampered = [body[0] + "x", *body[1:]]
+    assert tampered != body  # 비공허성: 변조가 실제로 일어났다
+    assert len(tampered) == len(body)  # 개수는 그대로 — 내용 민감임을 증명한다
+    assert hashlib.sha256("\n".join(tampered).encode("utf-8")).hexdigest() != _T348_ACCOUNTED_DIGEST
+
+
+def test_the_accounted_file_is_still_named_by_the_requirement():
+    """`REQ-SONGCUE-021` 은 개정되지 않았다 — 계상은 REQ 를 건드리지 않는다.
+
+    REQ 의 주어가 「본 SPEC」이라는 것이 이 계상의 근거이므로, 그 문면이 사라지면
+    근거가 사라진다. 그래서 문면을 여기서 잰다.
+    """
+    text = (_REPO_ROOT / ".moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md").read_text(encoding="utf-8")
+    assert "REQ-SONGCUE-021" in text
+    assert "server/looks/instantiate.py" in text
+    # 주어가 「본 SPEC」이라는 것 — 이 계상 전체가 여기에 걸려 있다.
+    assert "본 SPEC이 그 계층을 **재사용하되 고치지 않는다**" in text
 
 
 def test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state():
@@ -889,8 +1023,43 @@ def _has_hangul(value: str) -> bool:
     return any("가" <= char <= "힣" for char in value)
 
 
+def _unaccounted_look_files() -> tuple[str, ...]:
+    """스윕이 「빈 출력」을 요구하는 파일 — 계상된 하나를 뺀 나머지 다섯."""
+    return tuple(path for path in _PRESERVE_LOOK_FILES if path != _T348_ACCOUNTED_FILE)
+
+
 def _preserve_diff_command() -> list[str]:
-    return ["git", "diff", "--stat", f"{_RUN_PHASE_BASE}..HEAD", "--", *_PRESERVE_LOOK_FILES]
+    return [
+        "git",
+        "diff",
+        "--stat",
+        f"{_RUN_PHASE_BASE}..HEAD",
+        "--",
+        *_unaccounted_look_files(),
+    ]
+
+
+def _accounted_diff_body() -> list[str]:
+    """계상된 파일의 diff 본문 줄(`+`/`-`, 헤더 제외). 줄번호를 담지 않는다."""
+    result = subprocess.run(  # noqa: S603
+        [
+            "git",
+            "diff",
+            "--unified=0",
+            f"{_RUN_PHASE_BASE}..HEAD",
+            "--",
+            _T348_ACCOUNTED_FILE,
+        ],
+        cwd=_REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return [
+        line
+        for line in result.stdout.splitlines()
+        if line[:1] in {"+", "-"} and not line.startswith(("+++", "---"))
+    ]
 
 
 def _tools_hunks_from_run_phase_base() -> list[tuple[int, int]]:

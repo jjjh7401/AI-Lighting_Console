@@ -86,13 +86,43 @@ status: draft (v0.1.0, 2026-07-29) · Tier L
 
 | 항목 | 계획 방침 |
 |---|---|
-| `server/looks/{schema,loader,roles,resolver,instantiate,matching}.py` · `server/looks/library/` | PRECHK는 룩 계층 소비자가 아니다. 변경 0건 |
+| `server/looks/{schema,loader,roles,resolver,matching}.py` · `server/looks/library/` | PRECHK는 룩 계층 소비자가 아니다. 변경 0건 |
 | `server/web/preview.py` | 웹 미리보기 산출물 없음 |
 | `console/lua/**` | 현재 `state`와 `prop` 표면을 소비한다. 응답기 변경 0건. 프로퍼티 조회 구현은 이미 디스패치에 있다(`console/lua/copilot_responder.lua:900-915`) |
 | `server/rulebook/assets/v2.4.2/**` | M0가 실측한 리터럴만 사용하고 룰북을 편집하지 않는다 |
 | `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS` | 현재 면제 집합은 `Clear`, `ClearAll`, bare `Fixture|Group` 선택으로 닫혀 있다(`server/orchestrator/tools.py:247-250`). 변경 0건 |
 | `server/orchestrator/tools.py`의 실행/dedupe 루프 | `run_commands`의 게이트, stop-on-first-failure, dedupe, 실행 결과 축은 유지한다(`server/orchestrator/tools.py:496-597`) |
 | `server/safety/**` | 승인된 조건부 예외 4지점 외 hunk 0건. 승인 전 hunk 0건 |
+
+#### 개정 — `server/looks/instantiate.py` 를 목록에서 뺀다 (2026-09-11, 감독 승인)
+
+**뺀 것: `server/looks/instantiate.py` 한 항목.** 위 표 첫 행의 중괄호 묶음이
+`{schema,loader,roles,resolver,instantiate,matching}` 에서 `{schema,loader,roles,resolver,matching}`
+로 좁아졌다. 행을 지우지 않았고 나머지 여섯 행은 손대지 않았다 — 남은 다섯 파일과
+`server/looks/library/` 의 선언은 그대로 살아 있다.
+
+**필요로 하는 쪽: 카드 t348.** 리그의 어느 장비도 조정할 수 없는 축을 쓰려는 룩을
+프리셋 저장 전에 보류한다. 보류는 `_plan_stores` 가 이미 가진 사유 사다리
+(`conflict`·`no_free_slot`·`pool_unresolved`·`pool_unaddressable`)에 rung 하나를 더하는
+모양이고, 그 사다리는 이 파일에만 있다. 두 번째 메커니즘을 만드는 것이 대안이었지만,
+같은 질문에 두 개의 보류 경로가 생기면 어느 쪽이 발사됐는지 보고가 답할 수 없다.
+
+**승인: 감독(jaihyun), 2026-09-11.** 명시적으로 묻고 명시적으로 답을 받았다.
+
+**이 개정이 좁히는 것은 범위 선언이지 경계가 아니다.** 게이트 모듈
+(`server/tests/test_overlap_preserve.py`)의 독스트링이 그 구별을 소유한다: 「그 SPEC 은
+이 파일들을 안 건드렸다」는 **역사적 사실**이고, 「아무도 이 파일들을 못 건드린다」는
+**집행되는 경계**다. 게이트가 재확인하는 것은 앞의 것이며, 게이트 자신은 `git diff` 가
+비었는지만 보므로 그 둘을 **구별할 수 없다**. 뒤의 것으로 읽으면 이미 끝난 SPEC 의 범위
+선언이 저장소 전체의 동결 규칙으로 조용히 승격되고, 그 승격은 아무도 승인한 적이 없다.
+본 개정은 PRECHK 가 이 파일을 안 건드렸다는 **역사적 사실을 부정하지 않는다** — PRECHK 의
+run-phase 는 실제로 변경 0건이었고 그 기록은 그대로다. 바뀐 것은 이 선언이 **앞으로**
+누구를 구속하는지뿐이다.
+
+**같은 파일을 잠그는 두 번째 선언이 따로 있다.** `SPEC-COPILOT-SONGCUE-001/spec.md:182`
+(`REQ-SONGCUE-021`)에서 온 선례 게이트(`server/tests/test_songcue_bundle.py` 의
+`_PRESERVE_LOOK_FILES` 여섯 파일)도 `server/looks/instantiate.py` 를 든다. 본 개정은
+**그 선언을 건드리지 않는다** — 이 승인이 덮는 범위가 아니다.
 
 ---
 

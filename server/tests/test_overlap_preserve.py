@@ -32,9 +32,11 @@ the failure mode a one-off manual gate leaves open.
 다시 확인하는 것뿐이다. 좌표(둘 다 되읽어 확인했고
 :class:`TestPreserveScopeCitations` 가 트립와이어로 잡는다):
 
-* ``.moai/specs/SPEC-COPILOT-PRECHK-001/plan.md:89`` — §A.5 PRESERVE 재확인 표의
-  첫 행. ``server/looks/*.py`` 여섯과 ``server/looks/library/`` 를 「PRECHK 는 룩
-  계층 소비자가 아니다. 변경 0건」으로 선언한다. 이어지는 행들이 나머지 항목이다.
+* ``.moai/specs/SPEC-COPILOT-PRECHK-001/plan.md`` §A.5 PRESERVE 재확인 표의 첫 행.
+  ``server/looks/*.py`` **다섯**과 ``server/looks/library/`` 를 「PRECHK 는 룩 계층
+  소비자가 아니다. 변경 0건」으로 선언한다. 이어지는 행들이 나머지 항목이다.
+  (줄번호를 인용하지 않는 이유는 :class:`TestPreserveScopeCitations` 독스트링 —
+  t177 이 좌표를 줄번호에서 **구역 + 내용 동거**로 바꿨다.)
 * ``.moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md:182`` — REQ-SONGCUE-021,
   「The **본 SPEC** shall not …」. 선례 게이트
   (``server/tests/test_songcue_bundle.py``)의 여섯 파일이 여기서 온다.
@@ -59,6 +61,37 @@ SONGCUE v0.2.0 은 ``console/lua/**`` 에 예외를 단 것이 아니라 §C PRE
 
 ⚠️ 그때는 그 SPEC 이 **살아 있었다.** 닫힌 SPEC 의 선언을 사후에 고치는 경우는 이
 선례가 덮지 않는다 — 그 판단은 이 게이트 밖이다.
+
+**아홉인 이유 — 2026-09-11 에 열에서 하나가 빠졌다 (t348, 감독 승인)**
+
+``server/looks/instantiate.py`` 가 :data:`_PRESERVE_PATHS` 에서 빠졌다. 카드 t348 이 그
+파일의 ``_plan_stores`` 보류 사다리에 rung 하나(``axis_absent`` — 리그의 어느 장비도
+조정할 수 없는 축을 쓰려는 룩을 저장 전에 보류)를 더해야 했고, 그 사다리는 그 파일에만
+있다. **감독(jaihyun)이 2026-09-11 명시적으로 승인했다.**
+
+경로는 바로 위 단락이 처방한 그대로다 — 게이트에 예외를 달지 않고 **선언 층**으로 갔다:
+``SPEC-COPILOT-PRECHK-001/plan.md`` §A.5 표 첫 행의 중괄호 묶음에서 ``instantiate`` 를
+빼고, 승인 기록을 같은 SPEC 의 ``progress.md`` §F.2 개정 절에 남겼다. 그 절이 이 저장소
+**최초의 「닫힌 SPEC 선언 사후 좁힘」 기록**이며, 위 ⚠️ 가 판단을 게이트 밖에 둔 자리를
+누가 어떻게 메웠는지를 적는다.
+
+이 게이트는 **남은 아홉에 대해 그대로 살아 있다.** 빠진 것은 한 항목이고, 첫 행 자체는
+지워지지 않았다 — 나머지 다섯 룩 파일과 ``server/looks/library/`` 의 선언은 그대로다.
+
+🔴 **같은 파일을 잠그는 선언이 하나 더 있고, 그것은 좁혀지지 않았다.** 선례 게이트
+(``server/tests/test_songcue_bundle.py``)의 ``_PRESERVE_LOOK_FILES`` 여섯 파일에도
+``server/looks/instantiate.py`` 가 있다(출처 ``SPEC-COPILOT-SONGCUE-001/spec.md:182``,
+``REQ-SONGCUE-021`` — 이 역시 **종료된** SPEC). t348 의 승인은 그 선언을 덮지 않으므로
+그 게이트는 여전히 빨갛다. 한 파일이 여러 선언에 잠길 수 있다는 것 — 하나를 좁혀도
+푸시가 통과하지 않는다는 것 — 이 t348 이 실측으로 배운 것이다.
+
+⚠️ **이 개정을 :class:`TestPreserveScopeCitations` 는 잡지 못했다(실측).** 그 검사는 경로
+조각 ``server/looks/`` 와 방침 문구가 **같은 줄에** 있는지를 보고, 중괄호 묶음의
+**멤버 하나가 빠지는 것**은 둘 다 그대로 남기므로 초록이었다. 즉 이 트립와이어는 행의
+소실·문구 변경은 잡지만 **묶음 내부의 축소는 못 본다**. 그 한계를 메우는 것은 검사가
+아니라 위 :data:`_PRESERVE_PATHS` 와 :data:`TestPreserveScopeCitations._DECLARATIONS` 의
+집합 동일성 단언이다 — 목록에서 항목을 빼면 선언 표에서도 빼야 하고, 그 짝이 어긋나면
+``test_every_preserved_path_has_a_declaration`` 이 빨개진다.
 """
 
 from __future__ import annotations
@@ -99,7 +132,6 @@ _PRESERVE_PATHS = (
     "server/looks/loader.py",
     "server/looks/roles.py",
     "server/looks/resolver.py",
-    "server/looks/instantiate.py",
     "server/looks/matching.py",
     "server/looks/library/",
     "server/web/preview.py",
@@ -835,6 +867,33 @@ _PRECHK_GRANTED_DELETED_ROW_KEYS = (
 #: sha256 of the ten deleted lines joined by "\n", in diff order.
 _PRECHK_GRANTED_DELETION_DIGEST = "3c0748d55a049581e2b9592762299177a02e227963072ddb44c013489a56b88a"
 
+#: 2026-09-11 granted exception — t348's PRESERVE declaration amendment
+#: (operator jaihyun, asked and answered explicitly). The predecessor's §A.5
+#: table row that locked ``server/looks/instantiate.py`` was NARROWED so card
+#: t348 could add one rung to that file's existing skip ladder. Rationale,
+#: approval and the scope-declaration-vs-boundary distinction live in
+#: ``plan.md`` §A.5's amendment section and ``progress.md`` §F.2 — the latter is
+#: this repository's FIRST post-closure narrowing of a closed SPEC's PRESERVE
+#: declaration, which the module docstring above placed outside this gate.
+#:
+#: Pinned the same two ways as the grant above, and for the same reason: the row
+#: key shows WHAT was granted, the digest fixes its exact bytes so the grant
+#: cannot grow. Exactly ONE line was deleted — the old brace list — and the rest
+#: of the amendment is pure append. A later edit to this document needs its own
+#: grant; that re-review is the point.
+#:
+#: 🔴 NOTHING measured was erased. PRECHK's run-phase really did leave the file
+#: untouched and that historical record stands; what narrowed is only whom the
+#: declaration binds GOING FORWARD.
+_PRECHK_PLAN = f"{_PRECHK_SPEC_DIR}plan.md"
+_PRECHK_GRANTED_DOCS = (_PRECHK_PROGRESS, _PRECHK_PLAN)
+_PRECHK_PLAN_GRANTED_DELETED_ROW_KEYS = (
+    "`server/looks/{schema,loader,roles,resolver,instantiate,matching}.py`"
+    " · `server/looks/library/`",
+)
+#: sha256 of the single deleted line above.
+_PRECHK_PLAN_DELETION_DIGEST = "aeb44ae01915fb9e78afe834c811ad2903da53235693d643237fe39c8c99911d"
+
 
 def _git(*arguments: str) -> str:
     result = subprocess.run(  # noqa: S603
@@ -902,9 +961,11 @@ def _overlaps(old_start: int, old_count: int, protected_start: int, protected_en
 class TestPreserveList:
     """AC-OVERLAP-019 ③ — the list is real before it is used."""
 
-    def test_the_list_has_ten_entries(self):
-        assert len(_PRESERVE_PATHS) == 10
-        assert len(set(_PRESERVE_PATHS)) == 10
+    def test_the_list_has_nine_entries(self):
+        # 아홉이고 열이 아닌 이유는 모듈 독스트링 § 「아홉인 이유」 — t348 이
+        # `server/looks/instantiate.py` 를 선언 층에서 빼고 감독이 승인했다.
+        assert len(_PRESERVE_PATHS) == 9
+        assert len(set(_PRESERVE_PATHS)) == 9
 
     def test_every_entry_exists_on_disk(self):
         missing = [path for path in _PRESERVE_PATHS if not (_REPO_ROOT / path).exists()]
@@ -919,7 +980,7 @@ class TestPreserveList:
         # (the plan-phase audit found "4 directories and 6 files" for a 3/7 split).
         assert len(directories) + len(files) == len(_PRESERVE_PATHS)
         assert len(directories) == 3
-        assert len(files) == 7
+        assert len(files) == 6
         # And every directory entry ends with a separator, so `--` treats it as a
         # prefix rather than as a missing file.
         assert all(path.endswith("/") for path in directories)
@@ -946,7 +1007,7 @@ class TestPreserveScopeCitations:
     구역 안에서 경로 조각과 방침 문구가 **같은 줄에** 있는지를 본다. 줄이 밀리거나
     행이 재배열돼도 안 깨지고, **선언이 사라지거나 문구가 바뀌는 것**은 잡는다.
 
-    그리고 검사가 :data:`_PRESERVE_PATHS` 를 **돌면서** 확인하므로, 목록에 열한 번째
+    그리고 검사가 :data:`_PRESERVE_PATHS` 를 **돌면서** 확인하므로, 목록에 열 번째
     경로가 추가되면 그 경로의 선언도 함께 요구된다. 이것은 처방이 아니라 **새 능력**이다.
     """
 
@@ -966,7 +1027,6 @@ class TestPreserveScopeCitations:
         ("server/looks/loader.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/looks/roles.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/looks/resolver.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
-        ("server/looks/instantiate.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/looks/matching.py", "server/looks/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/looks/library/", "server/looks/library/", "PRECHK는 룩 계층 소비자가 아니다"),
         ("server/web/preview.py", "server/web/preview.py", "웹 미리보기 산출물 없음"),
@@ -1522,20 +1582,62 @@ class TestPrecedentGateFileIsNotExtended:
 class TestPredecessorSpecDocuments:
     """AC-OVERLAP-019 ⑧ — the one assertion that uses THIS SPEC's base."""
 
-    def test_every_predecessor_document_but_the_granted_one_is_untouched(self):
+    def test_every_predecessor_document_but_the_granted_ones_is_untouched(self):
         others = _git(
             "diff",
             "--stat",
             f"{_OVERLAP_BASE}..HEAD",
             "--",
             _PRECHK_SPEC_DIR,
-            f":(exclude){_PRECHK_GRANTED_DOC}",
+            *(f":(exclude){doc}" for doc in _PRECHK_GRANTED_DOCS),
         )
         assert others == ""
 
     def test_the_exclusion_above_is_not_swallowing_the_whole_directory(self):
         """Non-vacuity: `:(exclude)` on a mistyped path would empty the diff."""
         assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", _PRECHK_SPEC_DIR) != ""
+
+    def test_each_granted_document_actually_changed(self):
+        """Non-vacuity for the grant itself — an exclusion over an untouched file
+        is a silent widening of the exemption, not a grant."""
+        for doc in _PRECHK_GRANTED_DOCS:
+            assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", doc) != "", doc
+
+    def test_the_granted_plan_deleted_exactly_the_one_granted_row(self):
+        """t348 — the §A.5 amendment removed ONE row and appended the rest."""
+        deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_PLAN)
+        assert len(deleted) == len(_PRECHK_PLAN_GRANTED_DELETED_ROW_KEYS)
+        keys = tuple(line.split("|")[1].strip() for line in deleted)
+        assert keys == _PRECHK_PLAN_GRANTED_DELETED_ROW_KEYS
+        digest = hashlib.sha256("\n".join(deleted).encode("utf-8")).hexdigest()
+        assert digest == _PRECHK_PLAN_DELETION_DIGEST
+
+    def test_the_plan_digest_would_reject_a_second_deletion(self):
+        """Non-vacuity: content-sensitive, not merely count-sensitive."""
+        deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_PLAN)
+        smuggled = [*deleted, "| 몰래 지운 두 번째 행 | |"]
+        digest = hashlib.sha256("\n".join(smuggled).encode("utf-8")).hexdigest()
+        assert digest != _PRECHK_PLAN_DELETION_DIGEST
+
+    def test_the_amendment_records_its_approval_in_both_documents(self):
+        """A narrowed declaration with no approval record is an unrecorded grant."""
+        plan = (
+            self._read(_PRECHK_PLAN)
+            if hasattr(self, "_read")
+            else (_REPO_ROOT / _PRECHK_PLAN).read_text(encoding="utf-8")
+        )
+        progress = (_REPO_ROOT / _PRECHK_PROGRESS).read_text(encoding="utf-8")
+        # The row really is narrowed, and the old six-member list is gone.
+        assert "{schema,loader,roles,resolver,matching}.py" in plan
+        assert (
+            "{schema,loader,roles,resolver,instantiate,matching}.py"
+            not in plan.split("#### 개정")[0]
+        )
+        for text in (plan, progress):
+            assert "2026-09-11" in text
+            assert "t348" in text
+        assert "§F.2" in progress
+        assert "REQ-SONGCUE-021" in progress  # the second lock is disclosed
 
     def test_the_granted_document_deleted_exactly_the_ten_granted_rows(self):
         deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_GRANTED_DOC)
