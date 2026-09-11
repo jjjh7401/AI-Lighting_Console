@@ -1,4 +1,17 @@
+---
+description: "moai MCP server tool catalogue (21 tools) + the MCP-over-CLI preference rule. Path-scoped reference: the preference rule itself is restated in the always-loaded agent-common-protocol.md § Tool Selection by Task, which points here for the full catalogue."
+paths: "**/.mcp.json,**/moai-mcp-tools.md,**/.claude/agents/**,**/internal/cli/mcp_server.go"
+---
+
 # moai-mcp Tool Catalogue
+
+> **Loading scope**: path-scoped, NOT always-loaded. This file is a capability
+> **map** — a reference catalogue read on demand. The binding behaviour it supports
+> (prefer an `mcp__moai__*` tool over its Bash CLI equivalent when it is in the
+> calling agent's `tools:` list) is restated in the always-loaded
+> `agent-common-protocol.md` § Tool Selection by Task, which names this file as the
+> full catalogue. Reach for it when wiring an agent's `tools:` list, editing
+> `.mcp.json`, or changing the MCP server surface.
 
 > Single source of truth for the 21 tools exposed by the self-hosted `moai` MCP
 > server (`.mcp.json` → `{command: "moai", args: ["mcp-server"]}`). Each tool is
