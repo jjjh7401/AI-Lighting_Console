@@ -24,7 +24,7 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
 from server.design.capability_verdict import group_capability_source
-from server.design.rig_capability_read import read_design_rig
+from server.design.rig_capability_read import RIG_GAP_UNREADABLE, read_design_rig
 from server.fx.instantiate import FxInstantiationError, build_fx_preset_bundle, select_preset_number
 from server.fx.instantiate import instantiate_fx as bind_fx
 from server.fx.loader import DEFAULT_LIBRARY_DIR as FX_LIBRARY_DIR
@@ -67,6 +67,7 @@ from server.looks.loader import LookSchemaError, load_library_from_dir
 from server.looks.matching import match_looks
 from server.looks.report import build_report, to_korean
 from server.looks.resolver import resolve_roles
+from server.looks.rig_axes import MEASURED_ATTRIBUTE_SPELLINGS, RigAxisPresence
 from server.looks.schema import LookLibrary
 from server.looks.songcue import (
     EXPLICIT_DYNAMICS_REQUIRED,
@@ -2580,6 +2581,81 @@ def build_toolset(
     #   milestone; that is what this tool repairs, so do not un-register it
     #   without giving the chain another model-reachable door.
 
+    def _look_axis_source():
+        """리그 능력 판독 -> t348 축 판정기. 못 세우면 `(None, 사유절)`.
+
+        이 자리가 t350 이 이은 **생산 경로**다. t348 이 `_plan_stores` 에 축 부재
+        rung 을 만들고 `build_instantiation(axes=...)` 를 열었지만 **그것을 넘기는
+        생산 호출자가 0** 이었다 — 부품은 초록인데 경로가 안 이어진 상태
+        (t343->t229 · t344->t351 이 이미 두 번 겪은 형태).
+
+        ## t351 과 같은 판독을 쓰고, 얹는 층만 다르다
+
+            t351 (프리셋 시트)  read_design_rig -> group_capability_source -> 값 대조
+            t350 (룩 저장)      read_design_rig -> RigAxisPresence        -> 축 유무
+
+        공유하는 것은 `read_design_rig` 이고 인자도 같다. 위층이 갈리는 이유는
+        **판정 단위**다: 시트 행은 `TargetGroup` 을 갖고 있어 그룹으로 좁힐 수 있고
+        (그래서 t351 이 패치·그룹 시트로 FID 명단을 만든다), 룩은 역할->그룹 해석이
+        콘솔 판독 안에서 일어나 시트가 없다. 그리고 t348 의 계약은 **리그 전체**에
+        그 축이 있는지 묻는 것이라(`RigAxisPresence` 독스트링) 그 명단을 필요로 하지
+        않는다. 그래서 t351 의 그룹 함수를 일반화하지 않고 그 **아래층**을 공유했다 —
+        일반화하면 룩 경로가 쓰지도 않는 시트 두 장을 요구하게 된다.
+
+        🔴 **`whole` 이 거짓이면 판정하지 않는다 — 이 게이트가 이 자리에 있는
+        이유가 있다.** `RigAxisPresence` 는 `RigCapabilities` 만 받으므로
+        `caps.unread` 와 장비별 부분 판독은 보지만 **인벤토리 절단은 못 본다**.
+        절단된 목록에 Zoom 장비가 없다는 것은 부재의 증거가 아니고, 거짓 부재는
+        되던 저장을 막는다(t348 독스트링). 그 신호를 갖고 있는 것은
+        `DesignRigRead.whole` 뿐이라 게이트가 판독기 쪽이 아니라 **배선 쪽**에
+        선다.
+
+        🔴 **부재를 성공으로 읽히게 하지 않는다.** 판정을 못 해도 예전 동작대로
+        진행하되 그 사실을 `capability` 절에 남긴다 — 「보류 0건」이 「대조해서
+        0건」과 「대조를 안 해서 0건」 두 뜻을 갖지 않게.
+
+        ## 왕복 예산 (구성된 대조군 실측 — `server/tests/test_looks_axis_wired.py`)
+
+        판독 한 번 =
+        ``2 x 장비 + 4 x (기종,모드) 쌍 + 3 x (그 쌍들의 채널 합) + 3`` 왕복.
+        정본 시트 기준(장비 86 · 8쌍 · 채널 합 154)이면 **669 왕복**이고 **저장 한
+        번마다** 다시 낸다. 지배하는 항은 채널이다 — 시트의 Spiider Mode 1 이
+        49ch 라, 기종 수만 보고 어림하면 255 가 나와 2.6배 과소가 된다.
+
+        캐시를 **일부러 안 뒀다**: 재사용하면 리패치 뒤 낡은 값이 남고 그 방향은
+        거짓 부재 — 위 게이트가 막으려는 바로 그쪽이다. 캐시는 무효화 신호를 잰
+        다음 일이며, 그때도 모듈 전역이 아니라 주입되는 물건이어야 한다. 669 는
+        감독이 그 판단을 하는 자리에 놓는 숫자다.
+
+        읽기 전용. `read_design_rig` 은 `query_state`/`query_property`/
+        `query_properties` 세 읽기만 쓴다 — 콘솔 쓰기 0.
+        """
+        types_root = str(rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"]))
+        rig_read = read_design_rig(state_port, fixture_types_root=types_root)
+        if rig_read.capabilities is None or not rig_read.whole:
+            return None, dict(
+                ok=False,
+                gap=rig_read.gap or RIG_GAP_UNREADABLE,
+                detail=(
+                    rig_read.detail
+                    or "콘솔에서 장비 능력을 읽지 못해 축 부재 판정 없이 저장 계획을 세웠다"
+                ),
+                fixtures_read=(len(rig_read.capabilities.fixtures) if rig_read.capabilities else 0),
+            )
+        return RigAxisPresence(rig_read.capabilities), dict(
+            ok=True,
+            gap=None,
+            detail=None,
+            fixtures_read=len(rig_read.capabilities.fixtures),
+            # 판정 대상 철자는 **실측된 것뿐**이다. 목록 밖 속성(`Iris` ·
+            # `ColorRGB_*`)은 부재로 답하지 않으므로, 이 절이 없으면 감독은
+            # 「Iris 는 통과했다」를 「Iris 를 대조해서 통과했다」로 읽는다.
+            judged=list(MEASURED_ATTRIBUTE_SPELLINGS),
+            types_read=sorted(
+                {c.type_name for c in rig_read.capabilities.fixtures.values() if c.type_name}
+            ),
+        )
+
     def instantiate_look(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         nonlocal looks
         look_id = call.arguments.get("look_id")
@@ -2651,12 +2727,17 @@ def build_toolset(
                     tool_call_id=call.id, name=call.name, content=content, is_error=True
                 )
             )
+        # 능력 판독은 위 두 섹션 **뒤에** 온다. 앞에 두면 이 도구가 처음 묻는
+        # 경로가 룩 섹션이 아니게 되고, 그 순서를 재는 검사가 있다
+        # (`test_looks_tool.py::test_the_configured_section_paths_are_used_not_hardcoded_ones`).
+        axes, capability_section = _look_axis_source()
         try:
             plan = build_instantiation(
                 look,
                 resolution=resolve_roles(sections["groups"]),  # type: ignore[arg-type]
                 pools=resolve_pools(sections["preset_pools"]),  # type: ignore[arg-type]
                 shape=shape,
+                axes=axes,
             )
         except LookInstantiationError as error:
             return _error_result(call, f"look {look.look_id!r} cannot be instantiated: {error}")
@@ -2665,11 +2746,18 @@ def build_toolset(
             # The rig addressed none of this look's roles. An empty bundle is
             # the honest output, and it is an ANSWER rather than a failure: a
             # retry cannot bind a role this rig does not have.
+            #
+            # 축 부재로 **모든** family 가 보류되면 여기로 온다 — 그래서 이쪽 갈래에도
+            # `capability` 가 있어야 한다. 가장 중요한 경우(전부 보류)가 왜 그랬는지
+            # 못 말하면 안 된다.
             return ToolExecution(
                 result=ToolResult(
                     tool_call_id=call.id,
                     name=call.name,
-                    content=json.dumps({"executed": False, "report": report}, ensure_ascii=False),
+                    content=json.dumps(
+                        {"executed": False, "report": report, "capability": capability_section},
+                        ensure_ascii=False,
+                    ),
                     is_error=False,
                 )
             )
@@ -2684,6 +2772,9 @@ def build_toolset(
         payload = json.loads(execution.result.content)
         payload["executed"] = not execution.result.is_error
         payload["report"] = report
+        # 축 부재 대조를 했는지/못 했는지. 이 절이 없으면 「보류 0건」이 「대조해서
+        # 0건」과 「대조를 안 해서 0건」 두 뜻을 갖고, 둘은 바이트 동일하다.
+        payload["capability"] = capability_section
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -10061,7 +10152,9 @@ def build_toolset(
                 "unmapped role emits NO command and gets NO substitute: report "
                 "it to the operator, never aim it at another group.\n"
                 '- "skipped": each preset store that did NOT happen, with its '
-                'reason — "conflict" (that pool already holds a preset with '
+                'reason — "axis_absent" (no fixture in this rig can adjust an '
+                "attribute the look needs, so the fix is the RIG, not a slot), "
+                '"conflict" (that pool already holds a preset with '
                 'this name), "no_free_slot" (occupancy was not observed, so no '
                 'slot can be claimed free), "pool_unresolved" (this rig has no '
                 'pool of that type) or "pool_unaddressable" (it has one with '
@@ -10071,10 +10164,19 @@ def build_toolset(
                 '- "complete": false whenever anything was unmapped or '
                 "skipped. Say so — never report a partial run as a whole one.\n"
                 "\n"
+                'It also reads what each fixture CAN adjust, and "capability" '
+                "says whether that comparison actually ran. "
+                '"capability.ok" false means it did NOT — the console did not '
+                "answer, or the read was partial — and then zero "
+                '"axis_absent" holds means "not compared", NOT "nothing '
+                'wrong". Never report it as the latter. "capability.judged" '
+                "lists the only attribute spellings this rig read can judge; "
+                "anything outside it is left uncompared rather than passed.\n"
+                "\n"
                 "An empty bundle (nothing executed, no created presets) means "
-                "the rig addressed none of this look's roles. That is an "
-                "answer, not a transient failure: do not retry it, report the "
-                "unmapped roles instead."
+                "the rig addressed none of this look's roles, OR every family "
+                "was held. That is an answer, not a transient failure: do not "
+                'retry it, report the unmapped roles and "skipped" instead.'
             ),
             parameters={
                 "type": "object",
