@@ -23,6 +23,8 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
+from server.design.capability_verdict import group_capability_source
+from server.design.rig_capability_read import read_design_rig
 from server.fx.instantiate import FxInstantiationError, build_fx_preset_bundle, select_preset_number
 from server.fx.instantiate import instantiate_fx as bind_fx
 from server.fx.loader import DEFAULT_LIBRARY_DIR as FX_LIBRARY_DIR
@@ -93,7 +95,10 @@ from server.lxseq.group_mapper import map_groups
 from server.lxseq.group_parser import MissingGroupColumnsError, parse_group_csv
 from server.lxseq.mapper import build_import_plan
 from server.lxseq.parser import MissingColumnsError, parse_patch_csv
-from server.lxseq.position_derive import preset_id_from_console_head
+from server.lxseq.position_derive import (
+    group_members_from_sheets,
+    preset_id_from_console_head,
+)
 from server.lxseq.preset_mapper import map_presets
 from server.lxseq.preset_parser import (
     UnknownPresetSheetError,
@@ -5494,6 +5499,82 @@ def build_toolset(
             return None, refusal[1]
         return number, ""
 
+    def _preset_capability_source(call: ToolCall):
+        """`TargetGroup` -> 그 그룹의 능력 판독. 못 세우면 `(None, 사유절)`.
+
+        이 자리가 t351 이 이은 **생산 경로**다. 사슬 넷을 다 이어야 판정이 붙는다:
+
+            1. 그룹 시트 + 패치 시트   -> 그룹 이름 -> FID 들 (순수, 시트에서)
+            2. 콘솔 픽스처 트리        -> FID -> 기종 (`read_design_rig`)
+            3. 콘솔 타입 라이브러리    -> 기종·모드 -> 축 + 물리 범위
+            4. 그룹별 교집합           -> `classify_storability` 주입
+
+        1 은 오프라인이고 2·3 은 **콘솔 판독**이다. 그래서 이 함수가 없으면 시트만으로는
+        범위를 알 수 없다 — 물리 범위는 이 저장소 어디에도 오프라인으로 없고, 콘솔의
+        FixtureType 라이브러리(GDTF)에만 있다.
+
+        조인 키는 **FID** 다. 시트의 `FixtureType` 이름으로 조인하지 않는다: 정본 패치
+        시트는 `Robe MegaPointe`, 콘솔 라이브러리 실측은 `Robin MegaPointe` 였고
+        (2026-09-10, FixtureType 11) 둘이 같은 이름이라는 것은 **안 쟀다**.
+
+        🔴 **부재를 성공으로 읽히게 하지 않는다.** 사슬이 어디서 끊겨도 판정 없이
+        진행하되 끊긴 자리를 코드로 남긴다 — 사유 절이 payload 에 실려 감독이
+        「대조했다」와 「대조 못 했다」를 가른다.
+
+        읽기 전용. `read_design_rig` 은 `query_state`/`query_property`/`query_properties`
+        세 읽기만 쓴다 — 콘솔 쓰기 0.
+        """
+        patch_raw = call.arguments.get("patch_content_base64")
+        group_raw = call.arguments.get("group_content_base64")
+        if not isinstance(patch_raw, str) or not isinstance(group_raw, str):
+            return None, dict(
+                ok=False,
+                gap="sheets_absent",
+                detail=(
+                    "패치·그룹 시트를 함께 받지 않아 기종별 물리 범위 대조를 하지 "
+                    "않았다 — 시트 값이 그 기종이 낼 수 있는 값인지 이 판정에는 "
+                    "안 들어 있다"
+                ),
+            )
+        try:
+            patch_text = base64.b64decode(patch_raw, validate=True).decode("utf-8")
+            group_text = base64.b64decode(group_raw, validate=True).decode("utf-8")
+        except (binascii.Error, ValueError, UnicodeDecodeError):
+            return None, dict(
+                ok=False,
+                gap="sheets_unreadable",
+                detail="패치 또는 그룹 시트가 base64/UTF-8 이 아니라 능력 대조를 못 했다",
+            )
+        try:
+            members = group_members_from_sheets(patch_text, group_text)
+        except (MissingColumnsError, MissingGroupColumnsError) as error:
+            return None, dict(
+                ok=False,
+                gap="sheets_unreadable",
+                detail="패치/그룹 시트 열이 맞지 않아 능력 대조를 못 했다: " + str(error),
+            )
+        types_root = str(rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"]))
+        rig_read = read_design_rig(state_port, fixture_types_root=types_root)
+        if rig_read.capabilities is None:
+            return None, dict(
+                ok=False,
+                gap=rig_read.gap or "rig_unreadable",
+                detail=rig_read.detail or "콘솔에서 장비 능력을 읽지 못해 능력 대조를 못 했다",
+            )
+        return group_capability_source(rig_read.capabilities, members), dict(
+            ok=True,
+            # 판독이 부분이면 대조도 부분이다 — `whole` 이 거짓인 채로 「대조했다」만
+            # 남기면 안 본 자리의 통과가 통과로 읽힌다.
+            whole=rig_read.whole,
+            gap=rig_read.gap or None,
+            detail=rig_read.detail or None,
+            groups_resolved=len(members),
+            fixtures_read=len(rig_read.capabilities.fixtures),
+            types_read=sorted(
+                {c.type_name for c in rig_read.capabilities.fixtures.values() if c.type_name}
+            ),
+        )
+
     def import_lxseq_presets(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         """LX-SEQ PRESET 시트를 콘솔 프리셋으로 만든다.
 
@@ -5522,8 +5603,12 @@ def build_toolset(
             text = sheet_bytes.decode("utf-8")
         except UnicodeDecodeError:
             return _error_result(call, "시트 바이트가 UTF-8이 아니다")
+        # 능력 대조는 **선택**이다: 패치·그룹 시트가 함께 오고 콘솔이 답할 때만 붙는다.
+        # 없으면 예전과 같은 판정이 나가고 그 사실이 `capability` 절에 남는다 —
+        # 조용히 「대조했다」로 읽히면 안 된다(부재를 성공으로 읽는 실패).
+        capabilities_for, capability_section = _preset_capability_source(call)
         try:
-            parsed = parse_preset_csv(text)
+            parsed = parse_preset_csv(text, capabilities_for=capabilities_for)
         except UnknownPresetSheetError as error:
             return _error_result(call, "PRESET 시트 헤더가 맞지 않다: " + str(error))
 
@@ -5579,6 +5664,9 @@ def build_toolset(
             },
             "pool_no": pool_no,
             "pool_error": pool_error or None,
+            # 능력 대조를 했는지/못 했는지. 이 절이 없으면 「범위 밖 0건」이 「대조해서
+            # 0건」과 「대조를 안 해서 0건」 두 뜻을 갖고, 둘은 바이트 동일하다.
+            "capability": capability_section,
             "rejected_rows": [
                 {"row": r.row, "kind": r.kind, "detail": r.detail} for r in parsed.rejected
             ],
@@ -11869,7 +11957,15 @@ def build_toolset(
                 "된다. 「검증된 N건」이라고 보고하지 마라.\n"
                 "\n"
                 "풀·슬롯이 어긋나면 **아무것도 만들지 않고** 대조표를 낸다. 부분 계획은 "
-                "내지 않는다 — 반쯤 맞는 프리셋이 남고 다음 단계가 그것을 참조한다."
+                "내지 않는다 — 반쯤 맞는 프리셋이 남고 다음 단계가 그것을 참조한다.\n"
+                "\n"
+                "**bm 시트는 패치·그룹 시트를 함께 넘겨라.** 그러면 `Zoom 45°` 같은 "
+                "도(degree) 값을 그 `TargetGroup` 의 **기종들이 실제로 낼 수 있는 "
+                "범위**와 대조해, 못 내는 값을 `value_out_of_range` 로 보류한다. "
+                "그룹에 기종이 여럿이면 **교집합**이고, 하나라도 못 내면 보류하며 "
+                "사유에 그 기종 이름이 실린다. 두 시트를 안 넘기면 그 대조를 **하지 "
+                "않고** `capability.gap = 'sheets_absent'` 로 그 사실을 남긴다 — "
+                "「범위 밖 0건」을 「대조해서 0건」으로 읽지 마라."
             ),
             parameters={
                 "type": "object",
@@ -11882,6 +11978,23 @@ def build_toolset(
                         "type": "string",
                         "enum": ["preview", "apply"],
                         "description": "기본 'preview'. 'apply'만 콘솔에 쓴다",
+                    },
+                    "patch_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "선택 — 같은 RIG 패치 시트 **파일** 바이트(base64). "
+                            "`group_content_base64` 와 **함께** 있어야 쓰인다. 둘이 "
+                            "`TargetGroup` -> FID 명단을 주고, 콘솔이 그 FID 들의 기종과 "
+                            "물리 범위를 답한다"
+                        ),
+                    },
+                    "group_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "선택 — 같은 RIG GROUP 시트 **파일** 바이트(base64). "
+                            "`MOVER-ALL` 같은 합집합 그룹이 여기서 펴진다. "
+                            "`patch_content_base64` 와 함께 넘겨라"
+                        ),
                     },
                 },
                 "required": ["file_content_base64"],

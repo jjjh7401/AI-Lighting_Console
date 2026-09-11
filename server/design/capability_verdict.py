@@ -31,8 +31,12 @@ t344 B. A 편(:mod:`server.design.capability_join`)은 「이 fid 가 무엇을 
 ## 방향과 미판독
 
 🔴 **:class:`AxisRange` 를 정렬하지 않는다.** 방향이 어느 끝이 DMX 0 인지를 나른다
-(A 편·``capability_read`` 독스트링). 범위 대조는 두 끝에서 지역 최소/최대를
-**계산**할 뿐 축 자체를 건드리지 않는다.
+(A 편·``capability_read`` 독스트링). 범위 대조는 축 자신의 술어
+(:meth:`AxisRange.window`)가 파생한 :class:`~server.prechk.capability_read.AxisWindow`
+로 하고, 그 창은 정렬된 두 끝과 **방향을 따로** 나른다 — 축 자체는 건드리지 않는다.
+
+t351 이 그 술어를 축으로 옮겼다. 이전에는 이 모듈과 ``lxseq.preset_parser`` 가 각자
+``min``/``max`` 를 계산했고, 같은 판정이 두 자리에 있으면 갈리는 날 한쪽만 고쳐진다.
 
 🔴 **부재와 미판독을 가른다.** 판독이 부분(``FixtureCapability.whole`` 이 거짓)인
 기종은 「팬틸트가 없다」고 단정하지 않고 :attr:`PositionVerdict.unknown` 에 앉는다.
@@ -43,11 +47,17 @@ t344 B. A 편(:mod:`server.design.capability_join`)은 「이 fid 가 무엇을 
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 
 from server.design.capability_join import FixtureCapability, RigCapabilities
-from server.prechk.capability_read import AxisRange
+from server.prechk.capability_read import (
+    AXIS_PART_FIXTURE_TYPE,
+    AxisRange,
+    AxisSource,
+    AxisWindow,
+    AxisWindowPart,
+)
 
 __all__ = [
     "CAPABILITY_VOCABULARY",
@@ -56,6 +66,7 @@ __all__ = [
     "TILT_ATTRIBUTE",
     "ZOOM_ATTRIBUTE",
     "ZOOM_CAPABILITY",
+    "GroupCapabilities",
     "PositionVerdict",
     "RangeVerdict",
     "VERDICT_ABSENT",
@@ -63,6 +74,8 @@ __all__ = [
     "VERDICT_OK",
     "VERDICT_UNMEASURED",
     "axis_for_type",
+    "group_capabilities",
+    "group_capability_source",
     "patch_records",
     "position_verdict",
     "range_verdict",
@@ -235,7 +248,12 @@ def range_verdict(
             requested=requested,
             detail=f"{name} 축이 판독 목록에 없습니다",
         )
-    if not axis.measurable:
+    # 🔴 포함 검사는 **축 자신의 술어**(`AxisRange.window`)를 쓴다. 정렬이 아니라
+    # 계산이고, `axis` 는 읽은 방향 그대로 남는다 — Zoom(42.0 -> 1.8)이 이 갈래의
+    # 실측 예다. 여기서 `min`/`max` 를 다시 적으면 이 저장소에 포함-검사 술어가 둘이
+    # 되고(t351 이 합친 상태), 그 둘이 갈리는 날 한쪽만 고쳐진다.
+    window = axis.window()
+    if window is None:
         return RangeVerdict(
             status=VERDICT_UNMEASURED,
             attribute=axis.attribute,
@@ -245,41 +263,199 @@ def range_verdict(
             descending=axis.descending,
             detail=f"{axis.attribute} 물리 범위를 읽지 못해 대조하지 못했습니다",
         )
-    # 정렬이 아니라 **계산**이다. `axis` 는 읽은 방향 그대로 남고, 여기서 만든
-    # 두 수는 대조에만 쓰인다. Zoom(42.0 -> 1.8)이 이 갈래의 실측 예다.
-    first = axis.physical_from
-    second = axis.physical_to
-    if first is None or second is None:  # measurable 가 이미 막지만 타입을 좁힌다
-        return RangeVerdict(
-            status=VERDICT_UNMEASURED,
-            attribute=axis.attribute,
-            requested=requested,
-            descending=axis.descending,
-            detail=f"{axis.attribute} 물리 범위를 읽지 못해 대조하지 못했습니다",
-        )
-    low = min(first, second)
-    high = max(first, second)
-    if low <= requested <= high:
+    if window.contains(requested):
         return RangeVerdict(
             status=VERDICT_OK,
             attribute=axis.attribute,
             requested=requested,
-            low=low,
-            high=high,
-            descending=axis.descending,
+            low=window.low,
+            high=window.high,
+            descending=window.descending,
         )
     return RangeVerdict(
         status=VERDICT_HELD,
         attribute=axis.attribute,
         requested=requested,
-        low=low,
-        high=high,
-        descending=axis.descending,
+        low=window.low,
+        high=window.high,
+        descending=window.descending,
         detail=(
             f"{axis.attribute} 요구값 {requested:g} 이 측정 범위 "
-            f"{first:g}~{second:g} 밖이라 보류했습니다 (값을 깎지 않았습니다)"
+            f"{axis.physical_from:g}~{axis.physical_to:g} 밖이라 보류했습니다"
+            " (값을 깎지 않았습니다)"
         ),
     )
+
+
+@dataclass(frozen=True)
+class GroupCapabilities:
+    """한 TargetGroup 이 낼 수 있는 값 — **기종마다 따로** 읽은 채로.
+
+    시트의 `TargetGroup` 은 fid 여럿을 가리키고, 그 fid 들이 **같은 기종이 아닐 수
+    있다.** 정본 리그 실측(`LXSEQ_RIG_01_ShowBase_r3.patch.csv`, 2026-09-11):
+
+        MOVER-ALL = MOVER-U + MOVER-D
+        MOVER-U   Robe MegaPointe   Mode 1 39ch    8대
+        MOVER-D   Robe Spiider      Mode 1 49ch    8대
+
+    두 기종이다. 그래서 「그 그룹이 이 값을 낼 수 있는가」는 한 축으로 답할 수 없다.
+
+    ## 채택한 규칙 — 교집합. 하나라도 못 내면 보류한다
+
+    :meth:`window` 는 그룹의 기종들이 **공통으로** 낼 수 있는 창(교집합)을 낸다.
+    값이 그 밖이면 적어도 한 기종이 그 값을 못 내고, 그때 그 행은 보류된다.
+
+    왜 교집합인가 — 프리셋은 **그룹 전체에 한 값**으로 간다. 절반만 낼 수 있는 값을
+    통과시키면 콘솔은 못 내는 장비 쪽에서 값을 잘라 받고, 되읽기는 슬롯 점유만
+    확인하므로(t108·t110) 그 절단이 **아무 신호도 내지 않는다.** 감독이 요구한 룩과
+    무대에 서는 룩이 조용히 달라지는 것이 이 규칙이 막는 실패다. 합집합(하나라도 낼
+    수 있으면 통과)은 바로 그 조용한 절단을 허용한다.
+
+    보류 문면은 **어느 기종이 거절했는지 이름을 댄다**(:meth:`AxisWindow.excluding`).
+    「거절됨」만 있는 사유는 참 거절과 거짓 거절을 구별할 수 없다(t112).
+
+    ## 이 판정이 **하지 않는** 것 — 세 경계
+
+    1. **축이 없는 기종은 이 판정에 안 든다.** Frost 는 리그 15기종 중 4기종에만
+       있다. 축이 아예 없는 것은 「범위 밖」이 아니라 **부재**이고, 그 사유는 t348 의
+       `axis_absent` 문턱이 이미 소유한다. 여기서 같이 들면 한 사실에 사유가 둘이 되고
+       감독은 무엇을 고쳐야 하는지 못 읽는다.
+    2. **미판독은 결함이 아니다.** 두 끝이 안 읽힌 축은 창을 못 만들므로 교집합에
+       기여하지 않는다(`AxisRange.window` 가 ``None``). 못 읽은 범위로 막으면
+       미판독이 결함으로 바뀐다.
+    3. **단위가 다른 축은 빼고 좁힌다.** ``exclude_normalized`` 가 참이면 0~1 모양
+       축은 교집합에서 제외된다 — 도 값과 대조 자체가 성립하지 않는다. 🔴 그 제외는
+       **사유 문면에 안 실린다**(t351 이 남긴 미검증 자리): 감독은 그 기종이 판정에서
+       빠진 것을 문면에서 못 읽는다.
+
+    ``missing_fids`` 는 그룹 명단에 있는데 능력 판독에 없는 fid 들이다. 비어 있지
+    않으면 이 판정은 **부분집합**에 대한 것이고, 호출자가 그 사실을 고지한다 —
+    조용히 줄어든 그룹은 「장비가 적은 그룹」과 바이트 동일하다.
+    """
+
+    group_name: str
+    per_type: Mapping[str, AxisSource] = field(default_factory=dict)
+    fids: tuple[int, ...] = ()
+    missing_fids: tuple[int, ...] = ()
+
+    @property
+    def type_names(self) -> tuple[str, ...]:
+        """이 그룹에서 능력이 읽힌 기종 이름들 — 정렬해서."""
+        return tuple(sorted(self.per_type))
+
+    @property
+    def whole(self) -> bool:
+        """그룹 명단 전부의 능력을 읽었는가. 거짓이면 판정은 부분집합에 대한 것이다."""
+        return not self.missing_fids
+
+    def window(self, attribute: str, *, exclude_normalized: bool = False) -> AxisWindow | None:
+        """그룹이 **공통으로** 낼 수 있는 창. 기여하는 축이 없으면 ``None``.
+
+        ``None`` 은 「범위 밖이 아니다」가 아니라 **「대조할 수 없다」**다 — 축이 아무
+        기종에도 없거나, 있는 축의 범위를 아무도 못 읽었거나, 단위가 다 어긋났다는
+        뜻이다. 소비자는 이것을 통과로 처리하면 안 된다.
+
+        방향(:attr:`AxisWindow.descending`)은 기여한 축들이 **한 방향으로 일치할
+        때만** 실린다. 갈리면 ``None`` — 한쪽을 골라 적는 것은 안 잰 방향을 단정하는
+        것이다. 포함 검사 자체는 방향과 무관하므로 이 불확정이 판정을 막지 않는다.
+        """
+        parts: list[AxisWindowPart] = []
+        directions: set[bool | None] = set()
+        for type_name in sorted(self.per_type):
+            axis = self.per_type[type_name].axis(attribute)
+            if axis is None:
+                # 경계 1 — 축 부재는 t348 의 몫이다. 여기서 들지 않는다.
+                continue
+            found = axis.window()
+            if found is None:
+                continue  # 경계 2 — 미판독
+            if exclude_normalized and found.normalized:
+                continue  # 경계 3 — 단위 불일치
+            parts.append(
+                AxisWindowPart(
+                    name=type_name,
+                    low=found.low,
+                    high=found.high,
+                    # 기종 이름이라고 **선언**한다. 개수로 추론하게 두면 기종이 하나
+                    # 뿐인 그룹의 창이 「채널 이름」으로 읽힌다(t351 이 밟은 자리).
+                    role=AXIS_PART_FIXTURE_TYPE,
+                )
+            )
+            directions.add(found.descending)
+        if not parts:
+            return None
+        # 교집합: 가장 높은 하한과 가장 낮은 상한. `low > high` 면 공통 창이 없다 —
+        # `AxisWindow.empty` 가 그 상태를 말하고, 그때 어떤 도 값도 걸린다(옳다:
+        # 그 그룹은 어떤 각도도 전부가 함께 낼 수 없다).
+        return AxisWindow(
+            attribute=attribute,
+            low=max(part.low for part in parts),
+            high=min(part.high for part in parts),
+            descending=directions.pop() if len(directions) == 1 else None,
+            parts=tuple(parts),
+        )
+
+
+def group_capabilities(
+    caps: RigCapabilities, group_name: str, fids: Sequence[int]
+) -> GroupCapabilities:
+    """그룹 명단(fid 들)을 그 그룹의 **기종별** 능력 판독으로 접는다.
+
+    fid 가 조인 키다. 시트의 `FixtureType` **이름**으로 조인하지 않는다 — 정본 패치
+    시트는 `Robe MegaPointe` 라 쓰고 콘솔 라이브러리 실측은 `Robin MegaPointe` 였다
+    (2026-09-10, FixtureType 11). 두 어휘가 같다는 것은 **안 쟀고**, 안 잰 조인으로
+    능력을 붙이면 조용히 엉뚱한 장비를 가리킨다. fid 는 양쪽이 다 실제 FID 로 나르는
+    값이다(`design.rig_capability_read` 의 조인 키 실측).
+
+    능력은 기종의 성질이지 개별 장비의 성질이 아니므로(``position_verdict`` 와 같은
+    규율) 같은 기종의 fid 여럿은 **한 항목**으로 접힌다. 첫 일치 fid 의 판독을 쓴다.
+
+    판독에 없는 fid 는 ``missing_fids`` 에 남는다 — 조용히 빠지면 그룹이 줄어든 것과
+    구별할 수 없다.
+    """
+    per_type: dict[str, AxisSource] = {}
+    missing: list[int] = []
+    for fid in fids:
+        capability = caps.fixtures.get(fid)
+        if capability is None:
+            missing.append(fid)
+            continue
+        per_type.setdefault(capability.type_name, capability)
+    return GroupCapabilities(
+        group_name=group_name,
+        per_type=per_type,
+        fids=tuple(fids),
+        missing_fids=tuple(missing),
+    )
+
+
+def group_capability_source(
+    caps: RigCapabilities, members: Mapping[str, Sequence[int]]
+) -> Callable[[str], GroupCapabilities | None]:
+    """그룹 이름 -> 그 그룹의 능력 판독. `parse_preset_csv(capabilities_for=...)` 재료.
+
+    ``members`` 는 그룹 이름 -> fid 들이다(시트에서 온다:
+    ``lxseq.position_derive.group_members_from_sheets``). 이 모듈은 시트를 읽지 않는다 —
+    ``server/design`` 은 ``server/lxseq`` 를 임포트하지 않고(측정: 0건), 그 방향을
+    여기서 열면 순수 판정 계층이 시트 파싱의 실패 모양까지 상속한다.
+
+    이름이 명단에 없으면 ``None`` 이다. **빈 그룹을 만들지 않는다**: 축이 하나도 없는
+    ``GroupCapabilities`` 는 `window` 가 늘 ``None`` 이라 판정에서는 같아 보이지만,
+    「그 그룹을 모른다」와 「그 그룹의 축을 못 읽었다」는 다른 사실이고 호출자가 감독에게
+    할 말도 다르다.
+
+    합집합 표기(`KEY+BACK`)는 여기서 풀지 않는다 — ``group_members_from_sheets`` 가
+    이미 아는 합집합만 펴서 명단에 담고, 그 밖은 산문이라 풀지 않는다는 규율을 그
+    함수가 소유한다. 여기서 두 번째로 펴면 규율이 두 자리에 생긴다.
+    """
+
+    def resolve(group_name: str) -> GroupCapabilities | None:
+        fids = members.get(group_name)
+        if fids is None:
+            return None
+        return group_capabilities(caps, group_name, fids)
+
+    return resolve
 
 
 def axis_for_type(

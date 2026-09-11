@@ -43,7 +43,14 @@ if TYPE_CHECKING:
     # (`classify_storability` 의 `capabilities`) 이 모듈이 판독기를 호출할 일이
     # 없고, import 를 런타임에 두면 「파서가 콘솔 계층을 안 부른다」가 문면으로만
     # 남는다.
-    from server.prechk.capability_read import ModeCapabilities
+    #
+    # t351 이 주입 형을 `ModeCapabilities`(한 기종·한 모드) 에서 `AxisWindowSource`
+    # (창을 내주는 것 아무거나) 로 넓혔다. 그룹 판독(`GroupCapabilities`)도 같은
+    # 계약을 만족하므로 이 파서는 「한 기종이냐 한 그룹이냐」를 모른 채 돈다.
+    # 포함-검사 술어도 주입된 물건이 갖고 있어 여기서 구현하지 않는다.
+    from collections.abc import Callable
+
+    from server.prechk.capability_read import AxisWindow, AxisWindowSource
 
 #: 세 종류의 **정확** 열 집합. 정본 실측이며 여기가 유일한 선언 자리다.
 #:
@@ -277,7 +284,7 @@ def classify_storability(
     kind: str,
     value_raw: str,
     *,
-    capabilities: ModeCapabilities | None = None,
+    capabilities: AxisWindowSource | None = None,
 ) -> tuple[bool, tuple[PresetHoldReason, ...]]:
     """이 값을 지금 콘솔에 넣을 수 있는가, 없으면 **무엇들이** 막는가.
 
@@ -735,11 +742,10 @@ _DEGREE_VALUE = re.compile(
     r"^\s*(-?\d+(?:\.\d+)?)\s*(?:°|deg(?:rees?)?(?![A-Za-z0-9]))", re.IGNORECASE
 )
 
-#: 정규화 축(0~1)의 상한. `Frost1` 이 `PHYSICALFROM=0.0 PHYSICALTO=1.0` 인 실측 예다.
-#: 도 값과 정규화 축은 **단위가 다르므로** 대조 자체가 성립하지 않는다 — 그런 짝은
-#: 「범위 밖」이라고 부르지 않고 **안 잰 것으로 남긴다**(틀린 사유로 막는 것이
-#: 안 막는 것보다 나쁘다).
-_NORMALIZED_AXIS_MAX = 1.0
+#: 정규화 축(0~1) 문턱은 여기에 **없다.** `server.prechk.capability_read`
+#: (`NORMALIZED_AXIS_MAX` + `AxisWindow.normalized`)가 정본이고, 이 모듈은
+#: `window(..., exclude_normalized=True)` 로 그 문턱을 **부른다** — 상수를 여기 다시
+#: 적으면 두 술어가 갈리는 날이 오고 그날 한쪽만 고쳐진다(t351 이 합친 상태).
 
 
 def _degree_value(value: str) -> float | None:
@@ -750,8 +756,35 @@ def _degree_value(value: str) -> float | None:
     return float(match.group(1))
 
 
+def _range_provenance(window: AxisWindow, degrees: float) -> str:
+    """범위 밖 사유의 **출처** 조각 — 무엇이 그 값을 거절했는지.
+
+    부품이 자기 이름의 **역할**을 선언하고(`AxisWindowPart.role`) 창이 그것을 술어로
+    내준다(`AxisWindow.names_fixture_types`) — 이 모듈은 그것을 부를 뿐 상수를 비교
+    하지 않는다(순수 파서는 런타임에 `server.prechk` 를 안 부른다).
+
+    개수로 추론하지 않는다 — 기종이 하나뿐인 그룹의 창도 부품이 1개이고, 그 이름은
+    채널이 아니라 기종이다(그 술어로 처음 썼다가 검사에 잡혔다).
+
+    * 기종 역할 — **그 값을 못 내는 기종**을 이름 대어 댄다. 감독이 고칠 것은 「그
+      그룹의 어느 장비가 못 내는가」이고, 교집합 채널 이름 같은 것은 존재하지 않는다.
+    * 채널 역할 — 콘솔 채널 이름을 댄다(단일 모드 판독의 유일한 provenance).
+
+    거절한 자리를 하나도 못 고르면(교집합이 비어 그 값이 어디에도 안 담기는 등)
+    이름을 지어내지 않고 빈 문자열을 돌려준다.
+    """
+    if window.names_fixture_types:
+        rejecting = window.excluding(degrees)
+        if rejecting:
+            return " (이 값을 못 내는 기종: " + ", ".join(rejecting) + ")"
+        return ""
+    if window.parts:
+        return " (채널 '" + window.parts[0].name + "')"
+    return ""
+
+
 def _bm_out_of_range_segments(
-    value_raw: str, capabilities: ModeCapabilities | None
+    value_raw: str, capabilities: AxisWindowSource | None
 ) -> tuple[str, ...]:
     """능력 판독과 시트 값을 대조해 **범위 밖** 조각의 설명을 고른다.
 
@@ -762,18 +795,24 @@ def _bm_out_of_range_segments(
 
     1. 조각이 (속성, 값) 으로 읽힌다 — 못 읽은 조각은 다른 사유가 이미 든다.
     2. 값에 **도 표기**가 있다 (`_DEGREE_VALUE` 주석의 방향 미측정 참조).
-    3. 그 속성의 축이 판독되어 있고 두 끝이 다 읽혔다 (`AxisRange.measurable`).
+    3. 그 속성의 창이 만들어진다 — 축이 목록에 있고 두 끝이 다 읽혔다.
        못 읽은 축을 「범위 밖」이라고 부르면 미판독이 결함으로 바뀐다.
-    4. 그 축이 정규화(0~1) 모양이 아니다 (`_NORMALIZED_AXIS_MAX` 주석 참조).
+    4. 그 창이 정규화(0~1) 모양이 아니다 (`exclude_normalized=True` 가 그 문턱이다).
+
+    문턱 3·4 는 여기서 판정하지 않고 **`window(...)` 의 ``None``** 으로 받는다 —
+    포함 검사와 두 문턱 전부가 `server.prechk.capability_read` 한 자리에 있고, 이
+    모듈은 그것을 부를 뿐이다(t351). 이 모듈이 `min`/`max` 를 다시 계산하면 같은
+    판정이 두 자리에 생긴다.
 
     시트 토큰 -> 콘솔 이름은 `_SHEET_TO_CONSOLE_ATTRIBUTE` **하나만** 쓴다. 둘째 표를
     만들면 두 어휘의 연결 지점이 둘이 되고, 그 순간 한쪽만 고치는 날이 온다.
     표에 없는 토큰(`Zoom`)은 두 어휘가 같은 자리이므로 시트 토큰을 그대로 쓴다 —
     실측이 그것을 확인한다(FixtureType 11 채널 28 `ATTRIBUTE=Zoom`).
 
-    ⚠️ **기종·모드 이름을 적지 못한다.** `ModeCapabilities` 는 타입/모드 슬롯을
-    싣지 않으므로(`server/prechk/capability_read.py`) provenance 로 쓸 수 있는 것은
-    축의 **채널 이름**뿐이다. 어느 기종의 판독을 주입했는지는 부르는 쪽이 안다.
+    🔴 **사유 문면이 DMX 0 쪽을 잃지 않는다.** 대조 구간은 정렬되어 있지만(포함 검사가
+    방향과 무관하므로) 문면은 **읽은 방향**을 함께 댄다 — Zoom 실측 42.0 -> 1.8 에서
+    정렬된 `1.8~42.0` 만 적으면 어느 끝이 DMX 0 인지가 문면에서 사라지고, 감독은
+    「좁은 쪽으로 고쳐야 하나 넓은 쪽인가」를 문면에서 읽을 수 없다.
     """
     if capabilities is None:
         return ()
@@ -786,31 +825,40 @@ def _bm_out_of_range_segments(
         degrees = _degree_value(value)
         if degrees is None:
             continue
-        axis = capabilities.axis(_SHEET_TO_CONSOLE_ATTRIBUTE.get(attribute, attribute))
-        if axis is None or not axis.measurable:
+        window = capabilities.window(
+            _SHEET_TO_CONSOLE_ATTRIBUTE.get(attribute, attribute),
+            exclude_normalized=True,
+        )
+        if window is None:
             continue
-        low = min(axis.physical_from, axis.physical_to)
-        high = max(axis.physical_from, axis.physical_to)
-        if low >= 0.0 and high <= _NORMALIZED_AXIS_MAX:
-            continue
-        # 정렬해서 담는다 — 판독기는 방향을 보존하지만(Zoom 42.0->1.8) 포함 검사는
-        # 방향과 무관하다. 정렬 없이 `from <= v <= to` 로 쓰면 역방향 축의 모든 값이
-        # 범위 밖이 된다.
-        if low <= degrees <= high:
+        if window.contains(degrees):
             continue
         found.append(
             segment.strip()
             + " -> "
-            + axis.attribute
+            + window.attribute
             + " 축 "
-            + str(low)
+            + str(window.low)
             + "~"
-            + str(high)
-            + " (채널 '"
-            + axis.channel_name
-            + "')"
+            + str(window.high)
+            + _dmx_direction_note(window)
+            + _range_provenance(window, degrees)
         )
     return tuple(found)
+
+
+def _dmx_direction_note(window: AxisWindow) -> str:
+    """읽은 방향을 문면에 싣는 조각. 방향이 하나로 정해지지 않으면 빈 문자열.
+
+    ``descending`` 이 ``None`` 인 것은 「방향이 없다」가 아니라 **「기여한 축들의
+    방향이 갈렸다」**다(교집합 창). 그때 한쪽을 골라 적으면 안 잰 방향을 단정하는
+    것이므로 아무 말도 하지 않는다.
+    """
+    if window.descending is True:
+        return " (DMX 0 이 " + str(window.high) + " 쪽)"
+    if window.descending is False:
+        return " (DMX 0 이 " + str(window.low) + " 쪽)"
+    return ""
 
 
 def _bm_unreadable_segments(value_raw: str) -> tuple[str, ...]:
@@ -828,12 +876,31 @@ def _bm_unreadable_segments(value_raw: str) -> tuple[str, ...]:
     )
 
 
-def parse_preset_csv(text: str) -> PresetParseResult:
+def parse_preset_csv(
+    text: str,
+    *,
+    capabilities_for: Callable[[str], AxisWindowSource | None] | None = None,
+) -> PresetParseResult:
     """PRESET 시트 본문을 레코드와 거부로 가른다.
 
     행 검증 실패는 예외로 새어나가지 않는다. 파일 단위 실패인
     unknown_preset_sheet 만 UnknownPresetSheetError 로 올린다.
     한 행에 결함이 여럿이면 먼저 걸린 하나만 보고한다 — 행당 거부 하나다.
+
+    ## `capabilities_for` — 능력 판독을 **행마다** 주입한다
+
+    `bm` 시트의 행은 각자 `TargetGroup` 을 갖고, 그룹마다 기종 구성이 다르다
+    (BM.01 은 `MOVER-ALL`, BM.03 은 `MOVER-U` — 실측). 그래서 판독은 시트 하나에
+    하나가 아니라 **행마다 하나**다. 이 인자는 그룹 이름을 받아 그 그룹의 판독을
+    돌려주는 호출가능이며, 값을 못 구하면 ``None`` 을 돌려준다.
+
+    ``None`` (기본값)이면 어떤 행에도 판독이 안 들어가고 결과는 이 인자가 생기기 전과
+    같다 — 파서는 여전히 콘볼을 부르지 않는다. 판독을 **만드는** 것은 콘솔을 읽는
+    일이고 그것은 호출자(툴 계층)의 몫이다.
+
+    `TargetGroup` 이 없는 행(dim·col 시트의 모든 행, 그리고 bm 시트에서 그 칸이 빈
+    행)에는 판독을 주입하지 않는다 — 그룹을 모르면 어느 기종을 대조할지 모르고,
+    아무 판독이나 붙이면 엉뚱한 기종의 범위로 막는다.
     """
     if text.startswith("\ufeff"):
         text = text[1:]
@@ -879,7 +946,13 @@ def parse_preset_csv(text: str) -> PresetParseResult:
 
         seen.add(preset_id)
         value_raw = cell[value_column]
-        storable, hold_reasons = classify_storability(kind, value_raw)
+        target_group = cell.get("TargetGroup") or None
+        capabilities = (
+            capabilities_for(target_group)
+            if capabilities_for is not None and target_group is not None
+            else None
+        )
+        storable, hold_reasons = classify_storability(kind, value_raw, capabilities=capabilities)
         records.append(
             LxseqPresetRecord(
                 kind=kind,
@@ -889,7 +962,7 @@ def parse_preset_csv(text: str) -> PresetParseResult:
                 row=line_no,
                 storable=storable,
                 hold_reasons=hold_reasons,
-                target_group=cell.get("TargetGroup") or None,
+                target_group=target_group,
                 purpose=cell.get("Purpose") or None,
             )
         )
