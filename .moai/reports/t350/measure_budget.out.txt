@@ -1,0 +1,4 @@
+attempted = True | whole = True | gap = (none)
+fixtures = 16
+calls    = {'query_state': 17, 'query_property': 18, 'query_properties': 20}
+TOTAL round trips = 55
