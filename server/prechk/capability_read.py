@@ -61,8 +61,15 @@ from typing import Protocol
 from server.prechk.footprint import _payload_ok
 
 __all__ = [
+    "AXIS_PART_CHANNEL",
+    "AXIS_PART_FIXTURE_TYPE",
     "CHANNEL_FUNCTION_PROPERTIES",
+    "NORMALIZED_AXIS_MAX",
     "AxisRange",
+    "AxisSource",
+    "AxisWindow",
+    "AxisWindowPart",
+    "AxisWindowSource",
     "BulkPropertyReader",
     "ModeCapabilities",
     "PagedStateReader",
@@ -111,6 +118,123 @@ CHANNEL_FUNCTION_PROPERTIES = (
 )
 
 
+#: 정규화 축(0~1)의 상한. `Frost1` 이 `PHYSICALFROM=0.0 PHYSICALTO=1.0` 인 실측 예다.
+#: 도(degree) 값과 정규화 축은 **단위가 다르므로** 대조 자체가 성립하지 않는다 —
+#: 그런 짝은 「범위 밖」이라고 부르지 않고 **안 잰 것으로 남긴다**(틀린 사유로 막는
+#: 것이 안 막는 것보다 나쁘다).
+#:
+#: 여기가 유일한 선언 자리다. 소비자 쪽에 상수를 다시 적으면 두 술어가 갈리는 날이
+#: 오고, 그날 한쪽만 고쳐진다 — 이 저장소가 포트 기본값에서 이미 치른 값이다(t61).
+NORMALIZED_AXIS_MAX = 1.0
+
+
+#: :attr:`AxisWindowPart.role` 의 두 값. 이름이 **무엇의** 이름인지 말한다.
+#:
+#: 🔴 개수로 가르지 마라. 「부품 1개면 채널, 2개 이상이면 기종」은 t351 이 처음 쓴
+#: 술어이고 **틀렸다**: 기종이 하나뿐인 그룹(`MOVER-U`)의 창도 부품이 1개이고, 그
+#: 이름은 기종 이름이다. 검사가 그 자리를 잡았다(`test_lxseq_preset_group_range.py`
+#: 의 `test_45_degrees_is_held_and_the_detail_names_the_type`). 역할은 만든 쪽이
+#: **선언**해야 하는 것이고 개수에서 추론할 수 있는 것이 아니다.
+AXIS_PART_CHANNEL = "channel"
+AXIS_PART_FIXTURE_TYPE = "fixture_type"
+
+
+@dataclass(frozen=True)
+class AxisWindowPart:
+    """창 하나를 좁힌 자리 — 이름, 그 이름의 **역할**, 그 자리의 정렬된 두 끝.
+
+    ``role`` 이 ``name`` 을 해석하는 열쇠다(:data:`AXIS_PART_CHANNEL` ·
+    :data:`AXIS_PART_FIXTURE_TYPE`). 만든 쪽이 선언하고 이 자료형은 나르기만 한다 —
+    여기서 「채널인가 기종인가」를 판정하려 들면 이름의 뜻을 아는 자리가 둘이 되고,
+    둘이 갈리는 순간 사유 문면이 엉뚱한 것을 가리킨다.
+    """
+
+    name: str
+    low: float
+    high: float
+    role: str = AXIS_PART_CHANNEL
+
+    def contains(self, value: float) -> bool:
+        """이 자리가 그 값을 낼 수 있는가. 두 끝을 **포함**한다."""
+        return self.low <= value <= self.high
+
+
+@dataclass(frozen=True)
+class AxisWindow:
+    """대조에 쓰는 **계산된 창** — 축이 아니다.
+
+    ## 왜 축과 창을 가르는가 (이 저장소가 두 번 다시 쓴 술어)
+
+    포함 검사는 방향과 무관하므로 정렬된 두 수가 필요하다. 그런데 축을 정렬해서
+    저장하면 「어느 끝이 DMX 0 인가」가 사라진다 — Zoom 실측이 42.0 -> 1.8 역방향
+    이고(`capability_read` 모듈 독스트링), 그 방향 없이는 퍼센트를 물리값으로 옮길
+    수 없다. 그래서 이 자료형은 **정렬된 두 수와 방향을 따로** 나른다:
+
+        low / high    대조용. 정렬되어 있고, 방향 정보가 없다.
+        descending    읽은 방향. ``None`` 은 방향이 **하나로 정해지지 않았다**는 뜻
+                      이다(기여한 축들의 방향이 갈렸다) — 거짓이 아니다.
+
+    ``AxisRange`` 자체는 이 창을 만들면서도 **전혀 바뀌지 않는다**. 정렬은 여기서
+    파생값으로 일어나고, 축은 읽은 방향 그대로 남는다.
+
+    ## ``parts`` 의 계약 — **역할**이 이름의 뜻을 정한다 (개수가 아니다)
+
+    각 부품은 :attr:`AxisWindowPart.role` 로 자기 이름이 무엇의 이름인지 선언한다:
+    단일 모드 판독은 :data:`AXIS_PART_CHANNEL`, 그룹 판독은
+    :data:`AXIS_PART_FIXTURE_TYPE`. 소비자는 그 역할로 사유 문면을 고른다.
+
+    🔴 개수로 추론하지 마라 — 기종이 하나뿐인 그룹의 창도 부품이 1개다
+    (:data:`AXIS_PART_CHANNEL` 주석의 실패 기록).
+    """
+
+    attribute: str
+    low: float
+    high: float
+    descending: bool | None = None
+    parts: tuple[AxisWindowPart, ...] = ()
+
+    def contains(self, value: float) -> bool:
+        """이 창이 그 값을 담는가. 두 끝을 **포함**한다."""
+        return self.low <= value <= self.high
+
+    @property
+    def normalized(self) -> bool:
+        """두 끝이 **다** 0~1 안인가 — 도 값과 대조하면 안 되는 모양인가.
+
+        두 끝 다를 요구하는 것이 하중을 진다: -180~180(팬 모양)을 정규화로 읽으면
+        그 축이 검사에서 통째로 빠진다.
+        """
+        return self.low >= 0.0 and self.high <= NORMALIZED_AXIS_MAX
+
+    @property
+    def empty(self) -> bool:
+        """교집합이 비었는가 — 어떤 값도 모두가 낼 수 없는 상태.
+
+        단일 축에서는 절대 참이 아니다(두 끝을 정렬했으므로 ``low <= high``).
+        여러 기종의 교집합에서만 참이 될 수 있고, 그때는 「그 그룹이 공통으로 낼 수
+        있는 값이 없다」는 뜻이다.
+        """
+        return self.low > self.high
+
+    def excluding(self, value: float) -> tuple[str, ...]:
+        """그 값을 못 내는 자리들의 이름. 창을 만든 순서 그대로.
+
+        ``parts`` 가 비어 있으면 빈 튜플이다 — 자리를 모르면 이름을 지어내지 않는다.
+        """
+        return tuple(part.name for part in self.parts if not part.contains(value))
+
+    @property
+    def names_fixture_types(self) -> bool:
+        """부품 이름이 **기종** 이름인가 — 사유 문면을 고르는 술어.
+
+        소비자가 :data:`AXIS_PART_FIXTURE_TYPE` 을 직접 비교하지 않게 하려고 여기에
+        둔다. ``server.lxseq.preset_parser`` 는 순수 파서라 런타임에 이 모듈을
+        임포트하지 않으므로(형 주석에만), 상수 비교를 그쪽에 두면 그 규율이 깨진다 —
+        술어를 주입되는 물건 자신이 갖고 있는 것이 이 카드의 규율 전체와 같은 결이다.
+        """
+        return any(part.role == AXIS_PART_FIXTURE_TYPE for part in self.parts)
+
+
 @dataclass(frozen=True)
 class AxisRange:
     """조정 가능한 축 하나 — 속성 이름과 그 물리 범위.
@@ -142,6 +266,69 @@ class AxisRange:
     def measurable(self) -> bool:
         """물리 범위 두 끝이 다 읽혔는가 — 시트 값을 대조할 수 있는 축인가."""
         return self.physical_from is not None and self.physical_to is not None
+
+    def window(self) -> AxisWindow | None:
+        """이 축의 **대조용 창**. 범위를 못 읽었으면 ``None``.
+
+        🔴 **이 저장소의 유일한 포함-검사 술어다.** 예전에는 두 소비자
+        (`design.capability_verdict.range_verdict` · `lxseq.preset_parser` 의 bm
+        범위 사유)가 각자 `min`/`max` 를 계산했다 — 같은 판정을 두 자리에서 구현한
+        상태였고, 그 둘이 갈리는 날 한쪽만 고쳐진다. 술어를 축 자신에게 두면 판독값을
+        **주입만 받는** 소비자(순수 파서)도 import 없이 같은 술어를 쓴다.
+
+        ``None`` 은 「범위 밖이 아니다」가 아니라 **「대조할 수 없다」**다. 소비자는
+        이것을 통과로 처리하면 안 된다 — 안 잰 범위는 안전장치가 아니다.
+
+        방향은 버리지 않는다: 창에 :attr:`AxisWindow.descending` 으로 실려 나가고,
+        축 자신은 읽은 방향 그대로 남는다.
+        """
+        first = self.physical_from
+        second = self.physical_to
+        if first is None or second is None:
+            return None
+        low = min(first, second)
+        high = max(first, second)
+        return AxisWindow(
+            attribute=self.attribute,
+            low=low,
+            high=high,
+            descending=self.descending,
+            parts=(
+                AxisWindowPart(name=self.channel_name, low=low, high=high, role=AXIS_PART_CHANNEL),
+            ),
+        )
+
+
+class AxisSource(Protocol):
+    """축 하나를 이름으로 내주는 것들의 계약.
+
+    ``ModeCapabilities``(이 모듈)와 ``design.capability_join.FixtureCapability`` 가
+    둘 다 만족한다 — 같은 술어(대소문자 무관 정확 일치)를 각자 갖고 있고, 그것이
+    이 Protocol 이 서술하는 전부다. 그룹 판독이 fid 단위 판독을 기종별로 모을 때
+    이 계약으로 받으므로 ``capability_verdict`` 가 ``capability_join`` 의 구체 형에
+    묶이지 않는다.
+    """
+
+    def axis(self, attribute: str) -> AxisRange | None: ...
+
+
+class AxisWindowSource(Protocol):
+    """대조용 창을 내주는 것들의 계약 — 능력 판독을 **주입**으로 받는 소비자용.
+
+    두 구현이 있다:
+
+        ModeCapabilities                       한 기종·한 모드의 판독
+        design.capability_verdict.GroupCapabilities   한 그룹(여러 기종)의 판독
+
+    소비자가 이 Protocol 로 받으면 「한 기종이냐 한 그룹이냐」를 몰라도 같은 코드가
+    돈다 — 창이 몇 자리에서 왔는지는 :attr:`AxisWindow.parts` 가 답한다.
+
+    ``server.lxseq.preset_parser`` 가 이것으로 받는다. 그 모듈은 순수 파서이므로
+    런타임에 이 모듈을 임포트하지 않고(형 주석에만 쓴다), 판독기를 **부르지 않는다** —
+    창은 주입으로 들어오고 술어는 주입된 물건 자신이 갖고 있다.
+    """
+
+    def window(self, attribute: str, *, exclude_normalized: bool = False) -> AxisWindow | None: ...
 
 
 @dataclass(frozen=True)
@@ -179,6 +366,28 @@ class ModeCapabilities:
             if candidate.attribute.casefold() == wanted:
                 return candidate
         return None
+
+    def window(self, attribute: str, *, exclude_normalized: bool = False) -> AxisWindow | None:
+        """그 속성의 **대조용 창**. 축이 없거나 범위를 못 읽었으면 ``None``.
+
+        ``exclude_normalized`` 가 참이면 0~1 모양 축도 ``None`` 이다 — 도(degree)
+        값만 대조하는 소비자가 단위 불일치를 「범위 밖」이라 부르지 않게 하는 문턱
+        이다(:data:`NORMALIZED_AXIS_MAX` 주석 참조).
+
+        ⚠️ **기종·모드 이름을 싣지 못한다.** 이 자료형은 타입/모드 슬롯을 싣지 않으
+        므로 창의 ``parts`` 에 들어갈 이름은 축의 **채널 이름**뿐이다. 어느 기종의
+        판독을 주입했는지는 부르는 쪽이 안다. 기종 이름이 필요하면 그룹 단위 판독
+        (``server.design.capability_verdict.GroupCapabilities``)을 주입한다.
+        """
+        axis = self.axis(attribute)
+        if axis is None:
+            return None
+        found = axis.window()
+        if found is None:
+            return None
+        if exclude_normalized and found.normalized:
+            return None
+        return found
 
     @property
     def attributes(self) -> tuple[str, ...]:

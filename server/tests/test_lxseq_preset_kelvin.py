@@ -192,8 +192,12 @@ class TestTheLandmineIsReproduced:
     def test_opening_the_judge_alone_kills_every_row(self, monkeypatch):
         real = preset_parser.classify_storability
 
-        def judge_only(kind, value_raw):
-            storable, holds = real(kind, value_raw)
+        # `capabilities` 는 #399 부터 `classify_storability` 의 키워드 인자다. 이
+        # 대역이 그것을 안 받고도 돌던 것은 **생산 호출지가 안 넘겼기** 때문이고,
+        # t351 이 그 자리를 배선하면서 넘기기 시작했다. 대역을 정본 서명에 맞춘다 —
+        # 이 검사가 재는 것(판정기/판독기 갈라짐)은 그대로다.
+        def judge_only(kind, value_raw, *, capabilities=None):
+            storable, holds = real(kind, value_raw, capabilities=capabilities)
             if not storable and "K" in value_raw:
                 return True, ()
             return storable, holds
