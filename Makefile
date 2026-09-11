@@ -39,8 +39,8 @@
 # fast tests : 느린 테스트를 깎는 방식은 성립하지 않는다 — `--durations=40`
 #              최댓값 5.04s, 40위 0.51s 로 153s 가 10023건에 고르게 퍼져 있다.
 #              상위 40개를 전부 빼도 ~97s 다. 그래서 좁은 지명 선택으로 간다:
-#              저장소가 스스로 지키는 구조 불변식 가드 12파일.
-#              실측 296 passed in 14.34s.
+#              저장소가 스스로 지키는 구조 불변식 가드 13파일.
+#              실측 352 passed in 18.15s.
 # typecheck  : ci-local 에 넣지 않는다. TS 타입검사는 `npm --prefix ui run
 #              build`(tsc)인데 갓 만든 워크트리에는 ui/node_modules 가 없다.
 #              「있으면 돌고 없으면 건너뛴다」로 넣으면 그것이 바로 이 카드가
@@ -55,11 +55,26 @@
 RUFF_LINT_PATHS := server tools packaging console
 RUFF_FMT_PATHS  := server tools console
 
-# 구조 불변식 가드 — 12파일을 명시 나열한다. glob 으로 고르지 않는다:
+# 구조 불변식 가드 — 13파일을 명시 나열한다. glob 으로 고르지 않는다:
 # 이름 패턴은 찾는 도구가 판정까지 하는 형태라, 패턴에 안 걸리는 가드는
 # 조용히 빠지고 다르게 이름 붙은 새 가드는 영영 안 들어온다.
-# 실측 2026-08-24: 12파일 / 296 passed / 14.34s.
+# 실측 2026-09-11: 13파일 / 352 passed / 18.15s.
 # 목록을 늘리거나 줄이면 이 세 숫자를 다시 재서 같이 고칠 것.
+#
+# t349 — `test_songcue_bundle.py` 를 넣었다. 그 파일이 유일하게 잠그는 경로가
+# 있다: `server/looks/instantiate.py` 는 형제 게이트(`test_overlap_preserve.py`)
+# 의 `_PRESERVE_PATHS` 아홉 항목에 없고(t348 이 감독 승인으로 뺐다), 이 파일의
+# `_PRESERVE_LOOK_FILES` 여섯 항목에만 남아 다이제스트로 고정돼 있다. 그래서
+# 목록에 없는 동안 훅은 초록인데 전량 스위트는 빨간 상태가 성립했다 — t348 이
+# 실제로 그 문턱까지 갔고, 그 레인이 전량을 따로 돌려서야 걸렸다.
+#
+# 실측한 대조군(t349): `instantiate.py` 의 주석 한 줄을 포맷·린트가 통과하는
+# 형태로 고쳐 **커밋**하면, 12파일 목록은 exit 0 인데 이 파일은 빨개진다
+# (`assert 80 == 79`). 두 게이트 모두 `<base>..HEAD` 범위를 보므로 작업 트리의
+# 미커밋 변경은 안 잡힌다 — 대조군은 반드시 커밋해서 재야 한다.
+#
+# 위 296 / 14.34s 는 내 추가 이전에 이미 낡아 있었다(실측 328 / 22.39s, 12파일).
+# 같은 12파일 안에서 검사가 늘어난 것이다. 352 중 24건이 새로 들어온 파일 몫이다.
 FAST_TESTS := \
 	server/tests/test_address_verdict_parity.py \
 	server/tests/test_architecture.py \
@@ -72,6 +87,7 @@ FAST_TESTS := \
 	server/tests/test_paperwork_boundary.py \
 	server/tests/test_scene_boundary.py \
 	server/tests/test_sheets_registry.py \
+	server/tests/test_songcue_bundle.py \
 	server/tests/test_ws_wait_guard.py
 
 .PHONY: ci-local require-uv fmt lint test-fast test typecheck
