@@ -60,6 +60,7 @@ __all__ = [
     "FxInstantiationError",
     "build_fx_bundle",
     "collided_lines",
+    "phaser_lines",
     "build_fx_preset_bundle",
     "select_preset_number",
     "instantiate_fx",
@@ -603,6 +604,29 @@ def _guard_collision(fx: Fx, commands: Sequence[str]) -> None:
         seen.add(command)
 
 
+# @MX:ANCHOR: [AUTO] 페이저 문법의 **유일한** 생산 지점. 캡처 사이클(선택·Store·
+#   ClearAll)은 호출자가 갖고, 그 안쪽 줄은 전부 여기서 나온다.
+# @MX:REASON: 이 줄들은 발사 후 되읽을 수 없다 — 저장된 페이저 큐는 빈 큐와 구별되지
+#   않는다(모듈 머리의 @MX:WARN). 문법이 두 곳에 있으면 한쪽만 고쳐지고, 그 갈라짐은
+#   콘솔이 ok 를 답하는 동안 무대에서만 보인다. `server/looks/movement.py` 가 룩의
+#   `MovementSpec` 을 여기로 들고 오는 이유가 그것이다: 룩 계층은 축과 세기만 정하고
+#   명령 문면은 만들지 않는다.
+def phaser_lines(fx: Fx) -> tuple[str, ...]:
+    """캡처 사이클 **안쪽**의 페이저 줄들 — 스텝 런 · 커브 · 위상 · 타이밍.
+
+    선택 줄도, ``Store`` 도, ``ClearAll`` 도 넣지 않는다: 그 셋은 사이클의 소유자
+    (:func:`build_fx_bundle` · :func:`build_fx_preset_bundle` · 곡 큐 번들)의 몫이다.
+    MAtricks 도 뺀다 — 그 축은 ``Store`` **뒤**의 ``Reset Selection MAtricks`` 와
+    한 쌍이므로, 반쪽만 여기서 내면 선택 분할이 풀리지 않은 채 남는다.
+
+    ``_refuse_unemitted_axes`` 를 먼저 부른다. 스텝이 둘 미만인 엔트리는 여기서
+    거절되며, 그 거절이 이 계층의 존재 이유다: 스텝 없는 수정자 줄만 내면 모든 줄이
+    ``ok:true`` 를 받고 무대는 가만히 있는다.
+    """
+    _refuse_unemitted_axes(fx)
+    return tuple([*_step_lines(fx), *_curve_lines(fx), *_phase_lines(fx), *_timing_lines(fx)])
+
+
 def build_fx_bundle(
     fx: Fx,
     *,
@@ -621,10 +645,7 @@ def build_fx_bundle(
     matricks = _matricks(fx)
 
     commands: list[str] = [_DESTINATION, _CLEAR, f"Group {group}"]
-    commands.extend(_step_lines(fx))
-    commands.extend(_curve_lines(fx))
-    commands.extend(_phase_lines(fx))
-    commands.extend(_timing_lines(fx))
+    commands.extend(phaser_lines(fx))
     commands.extend(f"Set Selection MAtricks '{axis}' {_format_value(v)}" for axis, v in matricks)
     commands.append(f"Store Sequence {sequence} Cue {_CUE_NUMBER} '{text}'")
     # The quoted store name labels the CUE only; the SEQUENCE object stays
@@ -686,10 +707,7 @@ def build_fx_preset_bundle(
     matricks = _matricks(fx)
 
     commands: list[str] = [_DESTINATION, _CLEAR, f"Group {group}"]
-    commands.extend(_step_lines(fx))
-    commands.extend(_curve_lines(fx))
-    commands.extend(_phase_lines(fx))
-    commands.extend(_timing_lines(fx))
+    commands.extend(phaser_lines(fx))
     commands.extend(f"Set Selection MAtricks '{axis}' {_format_value(v)}" for axis, v in matricks)
     commands.append(f"Store Preset {preset_pool}.{preset} '{text}' /Universal")
     # 실기 2026-08-16 (사용자 발견): the inline '<label>' on Store Preset is

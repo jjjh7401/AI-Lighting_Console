@@ -8,9 +8,18 @@ from decimal import Decimal, InvalidOperation
 from typing import NamedTuple
 
 from server.design.cue_density import plan_cue_density, rotate_palette
+from server.fx.instantiate import is_programmer_state
 from server.looks.busking import VALUE_LINE_COLLISION, looks_for_genre
 from server.looks.instantiate import _values_line
 from server.looks.matching import DYNAMICS_TERMS, resolve_dynamics
+from server.looks.movement import (
+    BAND_ORDER,
+    MOVEMENT_STILL,
+    MovementError,
+    MovementPlan,
+    band_for_dynamics,
+    plan_movement,
+)
 from server.looks.resolver import GroupCandidate, RoleResolution, UnmappedRole, resolve_roles
 from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, AttributeValue, Look, LookLibrary
 
@@ -28,6 +37,11 @@ SEQUENCE_TRUNCATED = "sequence_truncated"
 SEQUENCE_NUMBER_UNAVAILABLE = "sequence_number_unavailable"
 EMPTY_SECTIONS = "empty_sections"
 ROLE_UNMAPPED = "role_unmapped"
+#: 이 큐가 선언된 움직임을 못 낸 이유. 셋 다 「조용히 버렸다」의 반대말이다 — 버리는
+#: 것이 카드 t357 이 없애려는 결함이므로, 못 낸 것은 이름과 함께 밖으로 나간다.
+MOVEMENT_BAND_STILL = "movement_band_still"
+MOVEMENT_TURN_BOUNDARY = "movement_turn_boundary"
+MOVEMENT_LINE_COLLISION = "movement_line_collision"
 _DESTINATION = "ChangeDestination Root"
 _CLEAR = "ClearAll"
 _IMPLICIT_SYSTEM_CUE_COUNT = 2
@@ -139,6 +153,28 @@ class SongCueSectionBundle:
     달라졌는지가 안 보이면 감독은 「같은 룩이 두 번 나갔다」와 구별할 수 없다.
     """
 
+    movement: MovementPlan | None = None
+    """이 큐가 실제로 낸 움직임 — 안 냈으면 ``None`` (정본 §6.4, 카드 t357).
+
+    한 번들에서 이 필드가 채워지는 큐는 **하나**다. 왜 하나뿐인지는
+    :func:`_movement_carrier` 에 적어 둔다.
+    """
+
+
+@dataclass(frozen=True)
+class SongCueWithheldMovement:
+    """움직임을 선언했는데 못 낸 큐 하나와 그 이유.
+
+    버리지 않고 내보내는 이유가 이 카드의 요점이다 — 고치기 전에는 룩의 movement 가
+    **조용히** 사라졌고, 조용한 것이 결함이었다. 여기에 실리면 보고에서 읽힌다.
+    """
+
+    section: SongCueSection
+    cue_number: int
+    band: str
+    reason: str
+    detail: str = ""
+
 
 @dataclass(frozen=True)
 class SongCueBundle:
@@ -149,6 +185,11 @@ class SongCueBundle:
     sections: tuple[SongCueSectionBundle, ...]
     is_error: bool = False
     reason: str | None = None
+    withheld_movement: tuple[SongCueWithheldMovement, ...] = ()
+
+    @property
+    def movement_sections(self) -> tuple[SongCueSectionBundle, ...]:
+        return tuple(section for section in self.sections if section.movement is not None)
 
     @property
     def skipped(self) -> tuple[SongCueSkippedSection, ...]:
@@ -349,6 +390,14 @@ def split_selections_for_density(
     return tuple(expanded), plan.notes
 
 
+# @MX:ANCHOR: [AUTO] 곡→큐 번들의 유일한 조립 지점. 두 번 도는 것이 설계다 —
+#   1회차로 「어느 큐가 실제로 저장되는가」를 알아내고, 그 답으로 움직임을 실을 큐 하나를
+#   고른 뒤 2회차에서 최종 번들을 만든다.
+# @MX:REASON: 움직임을 실을 큐는 **저장되는** 큐여야 한다(룩 미해석·역할 미매칭·값 충돌로
+#   건너뛴 구간에 페이저를 실으면 아무 데도 안 간다). 그런데 그 세 갈래는 조립 도중에야
+#   갈린다. 1회차는 순수하고(`emitted` 를 새로 만든다) 움직임 줄은 값 라인 판정에 참여하지
+#   않으므로, 2회차의 저장/건너뜀 결정은 1회차와 같다 — 그 동일성은
+#   `test_songcue_movement` 가 실측한다.
 def build_songcue_bundle(
     song_title: str,
     selections: Iterable[SongCueLookSelection],
@@ -364,6 +413,45 @@ def build_songcue_bundle(
     sequence_name = _ascii_label(song_title, fallback=f"Song {sequence_number}")
     resolution = resolve_roles(groups_section)
     cue_names = _cue_names(tuple(selection.section for selection in ordered))
+
+    dry = _assembled(
+        song_title,
+        ordered,
+        cue_names,
+        sequence_number=sequence_number,
+        sequence_name=sequence_name,
+        resolution=resolution,
+        movements=dict(),
+    )
+    movements, withheld = _movement_carrier(dry)
+    bundle = (
+        dry
+        if not movements
+        else _assembled(
+            song_title,
+            ordered,
+            cue_names,
+            sequence_number=sequence_number,
+            sequence_name=sequence_name,
+            resolution=resolution,
+            movements=movements,
+        )
+    )
+    bundle = replace(bundle, withheld_movement=withheld)
+    _guard_bundle_collision(bundle)
+    return bundle
+
+
+def _assembled(
+    song_title: str,
+    ordered: Sequence[SongCueLookSelection],
+    cue_names: Sequence[str],
+    *,
+    sequence_number: int,
+    sequence_name: str,
+    resolution: RoleResolution,
+    movements: Mapping[int, MovementPlan],
+) -> SongCueBundle:
     commands: list[str] = [_DESTINATION]
     section_bundles: list[SongCueSectionBundle] = []
     emitted: dict[str, tuple[int, int, str]] = dict()
@@ -378,6 +466,7 @@ def build_songcue_bundle(
             sequence_number=sequence_number,
             resolution=resolution,
             emitted=emitted,
+            movement=movements.get(cue_number),
         )
         if section_bundle.commands:
             commands.extend(section_bundle.commands)
@@ -400,6 +489,107 @@ def build_songcue_bundle(
         commands=stored_commands,
         sections=tuple(section_bundles),
     )
+
+
+# @MX:ANCHOR: [AUTO] 한 번들이 페이저를 **하나만** 낸다는 규칙이 여기서 집행된다.
+# @MX:REASON: `run_commands` 의 중복 제거는 명령 지시 하나 전체를 범위로 하고, 면제 집합은
+#   `Clear`·`ClearAll`·`Fixture <n>`·`Group <n>` 뿐이다(`server/fx/instantiate.py` 의
+#   `_PROGRAMMER_STATE_COMMANDS`). 페이저를 만드는 데 반드시 필요한 `Step 2` 는 내용이 없는
+#   줄이라 큐마다 다르게 만들 방법이 **없다** — 두 번째 큐의 `Step 2` 는 접히고, 그 큐는
+#   스텝 하나만 가진 「페이저 아닌 것」을 저장한다. 저장된 페이저 큐는 빈 큐와 구별되지
+#   않으므로 그 실패는 무대에서만 보인다. 그래서 대역이 가장 센 큐 하나가 페이저를 갖고,
+#   나머지는 :data:`MOVEMENT_TURN_BOUNDARY` 로 보고된다. 이 경계를 넓히려면 명령 지시를
+#   큐마다 쪼개거나(`server/orchestrator/tools.py` 의 `create_arrangement_groups` 가 쓰는
+#   신선한 `ExecutionContext` 패턴) 면제 집합에 `Step <k>` 를 넣어야 하고, 둘 다 fx SPEC
+#   쪽 결정이므로 이 카드에서 하지 않는다.
+def _movement_carrier(
+    bundle: SongCueBundle,
+) -> tuple[dict[int, MovementPlan], tuple[SongCueWithheldMovement, ...]]:
+    """움직임을 실을 큐 **하나**와, 못 실은 큐들의 사유.
+
+    고르는 기준은 대역이다 — 가장 센 대역, 같으면 이른 큐. 정본 §6.4 가 「빠름 = 드롭
+    전용」이라 했고 §12 항목 1의 목적이 「드롭을 드롭으로 만드는 것」이므로, 하나만 실을 수
+    있다면 그 하나는 드롭이다.
+    """
+    candidates: list[tuple[int, int, MovementPlan]] = []
+    withheld: list[SongCueWithheldMovement] = []
+    for section in bundle.stored_sections:
+        look = section.selection.look
+        if look is None or not look.movement:
+            continue
+        band = band_for_dynamics(look.dynamics)
+        if band == MOVEMENT_STILL:
+            withheld.append(
+                SongCueWithheldMovement(
+                    section=section.section,
+                    cue_number=section.cue_number,
+                    band=band,
+                    reason=MOVEMENT_BAND_STILL,
+                    detail=f"look {look.look_id} sits at dynamics {look.dynamics}",
+                )
+            )
+            continue
+        try:
+            plan = plan_movement(look, band=band)
+        except MovementError as error:
+            withheld.append(
+                SongCueWithheldMovement(
+                    section=section.section,
+                    cue_number=section.cue_number,
+                    band=band,
+                    reason=error.reason,
+                    detail=str(error),
+                )
+            )
+            continue
+        if plan is not None:
+            candidates.append((BAND_ORDER.index(band), section.cue_number, plan))
+
+    if not candidates:
+        return dict(), tuple(withheld)
+    carrier = max(candidates, key=lambda entry: (entry[0], -entry[1]))
+    movements: dict[int, MovementPlan] = dict()
+    movements[carrier[1]] = carrier[2]
+    for _rank, cue_number, plan in candidates:
+        if cue_number == carrier[1]:
+            continue
+        section = next(s for s in bundle.sections if s.cue_number == cue_number)
+        withheld.append(
+            SongCueWithheldMovement(
+                section=section.section,
+                cue_number=cue_number,
+                band=plan.band,
+                reason=MOVEMENT_TURN_BOUNDARY,
+                detail=(
+                    f"cue {carrier[1]} carries this bundle's one phaser (band "
+                    f"{carrier[2].band}); a second `Step 2` line in the same instruction "
+                    "turn is folded by the run_commands dedupe and the cue would store a "
+                    "one-step non-phaser"
+                ),
+            )
+        )
+    return movements, tuple(withheld)
+
+
+def _guard_bundle_collision(bundle: SongCueBundle) -> None:
+    """면제 대상이 아닌 줄이 번들 안에서 두 번 나오면 거절한다.
+
+    이 그물이 잡는 것은 위 :func:`_movement_carrier` 의 규칙이 깨진 경우다. 움직임이 없는
+    번들에서는 값 라인이 `emitted` 로, Store 라인이 큐 번호로 이미 유일하므로 이 함수는
+    아무것도 바꾸지 않는다 — 무회귀 성질.
+    """
+    seen: set[str] = set()
+    for command in bundle.commands:
+        if is_programmer_state(command):
+            continue
+        if command in seen:
+            raise SongCueBundleError(
+                f"{MOVEMENT_LINE_COLLISION}: {command!r} appears twice in one bundle; the "
+                "run_commands dedupe drops the second occurrence and the affected Store "
+                "runs against an incomplete programmer — silently, because a stored "
+                "phaser cue is indistinguishable from an empty one"
+            )
+        seen.add(command)
 
 
 def render_songcue_report(bundle: SongCueBundle) -> str:
@@ -597,6 +787,7 @@ def _section_bundle(
     sequence_number: int,
     resolution: RoleResolution,
     emitted: dict[str, tuple[int, int, str]],
+    movement: MovementPlan | None = None,
 ) -> SongCueSectionBundle:
     if selection.look is None:
         skipped = SongCueSkippedSection(
@@ -667,10 +858,16 @@ def _section_bundle(
             bound=bound,
         )
     emitted[values] = (selection.section.index, cue_number, look.look_id)
+    # 움직임 줄은 **값 라인 뒤**에 온다: 기준 룩이 먼저 프로그래머에 실리고, 페이저는 그
+    # 위에 더하는 액센트다(정본 §6.1 「한 큐에 하나만」과 같은 방향). 이 순서가 이 카드의
+    # 유일한 미실측 가정이다 — 정적 Dimmer·색과 2스텝 Pan 을 한 캡처에 섞었을 때 정적
+    # 값이 살아 있는지는 콘솔에서 확인해야 알 수 있고, 저장된 페이저 큐는 빈 큐와 구별되지
+    # 않으므로 사후 판독으로는 못 가른다(`server/fx/instantiate.py` 머리의 @MX:WARN).
     commands = (
         _CLEAR,
         _selection_line(groups),
         values,
+        *(movement.commands if movement is not None else ()),
         f"Store Sequence {sequence_number} Cue {cue_number} '{cue_name}'",
         _CLEAR,
     )
@@ -682,6 +879,7 @@ def _section_bundle(
         commands=commands,
         bound=bound,
         ladder=rungs,
+        movement=movement,
     )
 
 
