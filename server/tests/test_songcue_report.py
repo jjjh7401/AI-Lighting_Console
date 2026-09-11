@@ -171,15 +171,19 @@ def _mixed_bundle():
         )
     )
     selections = (
+        # 값이 겹치는 이 한 쌍은 **천장에 있는** 룩이다(카드 t355). 밝기 100 이고 빔 축을
+        # 안 실었으므로 아껴두기 사다리가 올릴 칸이 없다 — 그래서 값 라인이 여전히 겹치고
+        # `VALUE_LINE_COLLISION` 이 마지막 수단으로 남는다. 80 으로 두면 사다리가 85 로
+        # 올려서 큐가 저장되고, 이 픽스처가 만들려던 「건너뛴 저장 1건」이 사라진다.
         SongCueLookSelection(
             section=complete,
             requested_dynamics=(4,),
-            look=_look("chorus", dynamics=4, value=80),
+            look=_look("chorus", dynamics=4, value=100),
         ),
         SongCueLookSelection(
             section=collision,
             requested_dynamics=(4,),
-            look=_look("chorus-copy", dynamics=4, value=80),
+            look=_look("chorus-copy", dynamics=4, value=100),
         ),
         SongCueLookSelection(
             section=unknown,
