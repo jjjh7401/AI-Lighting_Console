@@ -12,7 +12,7 @@ from server.looks.busking import VALUE_LINE_COLLISION, looks_for_genre
 from server.looks.instantiate import _values_line
 from server.looks.matching import DYNAMICS_TERMS, resolve_dynamics
 from server.looks.resolver import GroupCandidate, RoleResolution, UnmappedRole, resolve_roles
-from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, Look, LookLibrary
+from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, AttributeValue, Look, LookLibrary
 
 _MILLISECONDS_PER_SECOND = Decimal("1000")
 _SECONDS_PER_MINUTE = Decimal("60")
@@ -35,6 +35,40 @@ TIMECODE_DESCOPE = "timecode_descope"
 AUTO_ADVANCE_DESCOPE = "auto_advance_descope"
 TRIGGER_TYPE_TIME = "Time"
 
+#: 변형 표시로 고정한 표기 하나 — SALAMI 프라임(U+2032). 정본 §3 이 표기 셋(프라임 ·
+#: RWC 의 A·B · Harmonix 숫자 접미사) 중 하나를 골라 고정하라고 지시한다. ASCII
+#: 어포스트로피는 일부러 제외한다: MA3 명령줄의 인용 문자라서 라벨 어휘로 쓰면 큐 이름
+#: 조립과 충돌한다.
+VARIANT_PRIME = "′"
+
+#: 아껴두기 사다리의 칸 이름, 회차마다 하나씩만 더하는 순서 그대로(정본 §7.1).
+#: 여기 있는 셋은 **오늘의 어휘로 실제 발화되는** 것뿐이다 — 정본 표의 마지막 두 칸
+#: (무빙 포지션 전환 · 블라인더/백색 플래시)과 앙코르의 스트로브는 이 카드에서 못 만든다:
+#: `Pan`/`Tilt` 는 `MovementSpec` 안에서만 합법이고 v1 번들은 movement 를 발화하지 않으며
+#: (카드 t357), 블라인더·스트로브는 역할 어휘에 이름이 없다(카드 t356, 감독 결정 선행).
+#: 색 스냅도 뺀다 — 정본 §7 이 「코러스 1의 색은 되돌아와야 한다」고 못박으므로 지배색을
+#: 갈아치우는 것은 상승이 아니라 위반이다.
+LADDER_DIMMER_HIT = "dimmer_hit"
+LADDER_ZOOM_PINCH = "zoom_pinch"
+LADDER_IRIS_PINCH = "iris_pinch"
+LADDER_RUNGS: tuple[str, ...] = (LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH)
+
+_DIMMER = "Dimmer"
+_ZOOM = "Zoom"
+_IRIS = "Iris"
+#: 한 칸이 움직이는 폭과 그 방향의 한계. 밝기는 천장을 향해 오르고(정본 §6: 코러스·드롭은
+#: 80~100%), 줌·아이리스는 좁아지는 쪽으로 내려간다(§6 「점점 좁힘」).
+_HIT_STEP = 5
+_PINCH_STEP = -5
+_DIMMER_CEILING = 100
+_BEAM_FLOOR = 1
+#: 이름난 칸을 다 쓴 뒤의 오름길 — 남은 것은 밝기의 머리 공간뿐이다. 정본 §6 의 「마지막
+#: 드롭은 전 리그 최대」와 같은 방향이고, 천장에서 값이 더 안 움직이므로 유한하다: 그
+#: 지점에서 비로소 큐를 못 세운다(마지막 수단의 건너뜀).
+_LADDER_CLIMB: tuple[str, ...] = LADDER_RUNGS + (LADDER_DIMMER_HIT,) * (
+    _DIMMER_CEILING // _HIT_STEP
+)
+
 
 @dataclass(frozen=True)
 class SongCueSection:
@@ -43,6 +77,23 @@ class SongCueSection:
     index: int
     dynamics: tuple[int, ...] | None
     requires_explicit_dynamics: bool
+    label: str = ""
+    instance: int = 1
+    variant: str = ""
+    """구간 하나를 적는 세 필드(정본 §3) — 라벨 + 회차 + 변형 표시.
+
+    ``label`` 은 이름에서 변형 표시를 뗀 것, ``instance`` 는 **그 라벨의** 등장 순번(1부터),
+    ``variant`` 는 변형이면 :data:`VARIANT_PRIME` 이고 아니면 빈 문자열이다. 조명 판정은
+    ``label`` 로 의도를 정하고 ``instance`` 로 강도를 정한다.
+
+    회차는 표준 데이터셋이 주지 않는다 — Harmonix 912곡 주석에서 1·2·3번째 후렴이 전부
+    문자열 ``chorus`` 다. 그래서 후처리 카운터로 만들며, 그 카운터는
+    :func:`_numbered_by_label` **하나**다.
+
+    기본값이 「이름 없는 라벨 · 1회차 · 변형 없음」인 이유는 파서를 거치지 않고 손으로
+    만드는 호출자(``server/web/session.py`` 의 타이밍 경로) 때문이다 — 그쪽은 회차를 쓰지
+    않으므로 선언으로 1회차다.
+    """
 
 
 @dataclass(frozen=True)
@@ -81,6 +132,12 @@ class SongCueSectionBundle:
     skipped: tuple[SongCueSkippedSection, ...] = ()
     unmapped: tuple[UnmappedRole, ...] = ()
     bound: Mapping[str, tuple[GroupCandidate, ...]] | None = None
+    ladder: tuple[str, ...] = ()
+    """이 큐가 기준 룩에 더한 사다리 칸들 — 안 올랐으면 빈 튜플(정본 §7.1).
+
+    밖으로 내는 이유는 보고 하나다: 값이 같아 사라졌던 큐가 이제 저장되므로, 무엇을 더해서
+    달라졌는지가 안 보이면 감독은 「같은 룩이 두 번 나갔다」와 구별할 수 없다.
+    """
 
 
 @dataclass(frozen=True)
@@ -191,7 +248,9 @@ def normalise_start_ms(raw: object) -> int:
 def parse_sections(
     raw_sections: Iterable[Mapping[str, object] | Sequence[object]],
 ) -> tuple[SongCueSection, ...]:
-    sections = tuple(_parse_section(raw, index) for index, raw in enumerate(raw_sections))
+    sections = _numbered_by_label(
+        tuple(_parse_section(raw, index) for index, raw in enumerate(raw_sections))
+    )
     previous: SongCueSection | None = None
     for section in sections:
         if previous is not None:
@@ -426,13 +485,44 @@ def _parse_section(raw: Mapping[str, object] | Sequence[object], index: int) -> 
     if not name:
         raise ValueError(f"section index {index} has an empty name")
     dynamics = _section_dynamics(name)
+    label, variant = _label_and_variant(name)
     return SongCueSection(
         name=name,
         start_ms=normalise_start_ms(section.start),
         index=index,
         dynamics=dynamics,
         requires_explicit_dynamics=dynamics is None,
+        label=label,
+        variant=variant,
     )
+
+
+def _label_and_variant(name: str) -> tuple[str, str]:
+    """이름을 라벨과 변형 표시로 가른다(정본 §3).
+
+    변형은 라벨을 **바꾸지 않는다** — 마지막 후렴이 편곡이 달라도 후렴이므로, 프라임이
+    붙은 이름은 같은 라벨의 다음 회차로 센다. 프라임만 남는 이름은 라벨이 없으므로
+    변형으로 읽지 않는다.
+    """
+    stripped = name.rstrip(VARIANT_PRIME).strip()
+    if stripped and stripped != name:
+        return stripped, VARIANT_PRIME
+    return name, ""
+
+
+def _numbered_by_label(sections: Sequence[SongCueSection]) -> tuple[SongCueSection, ...]:
+    """라벨마다 등장 순번을 붙인다 — 표준 데이터셋이 주지 않는 필드(정본 §3).
+
+    저장소의 회차 카운터는 이 함수 **하나**다. 큐 이름의 중복 해소(:func:`_cue_names`)도
+    같은 값을 읽는다 — 두 벌을 두면 이름이 가리키는 회차와 사다리가 오르는 회차가 갈리고,
+    갈린 순간 감독이 화면에서 읽는 「후렴 2」와 콘솔에 실제로 나간 세기가 다른 것이 된다.
+    """
+    seen: dict[str, int] = dict()
+    numbered: list[SongCueSection] = []
+    for section in sections:
+        seen[section.label] = seen.get(section.label, 0) + 1
+        numbered.append(replace(section, instance=seen[section.label]))
+    return tuple(numbered)
 
 
 def _map_section_to_look(
@@ -553,17 +643,17 @@ def _section_bundle(
             bound=bound,
         )
 
-    values = _values_line(look.attributes)
-    previous = emitted.get(values)
-    if previous is not None:
-        previous_section, previous_cue, previous_look = previous
+    values, rungs = _distinct_values_line(look, selection.section, emitted)
+    if values is None:
+        previous_section, previous_cue, previous_look = emitted[_values_line(look.attributes)]
         skipped = SongCueSkippedSection(
             section=selection.section,
             cue_number=cue_number,
             reason=VALUE_LINE_COLLISION,
             detail=(
                 f"value line matches section {previous_section} "
-                f"cue {previous_cue} look {previous_look}"
+                f"cue {previous_cue} look {previous_look}; "
+                f"ladder exhausted ({', '.join(LADDER_RUNGS)})"
             ),
             collides_with_section_index=previous_section,
             collides_with_cue_number=previous_cue,
@@ -591,7 +681,101 @@ def _section_bundle(
         selection=selection,
         commands=commands,
         bound=bound,
+        ladder=rungs,
     )
+
+
+# @MX:ANCHOR: [AUTO] 값이 같은 구간을 **버리지 않는다** — 곡 안의 반복은 규범이고,
+#   되돌아와야 하는 룩을 지우는 것이 결함이었다(정본 §7 · §12 항목 3).
+# @MX:REASON: 고치기 전에는 값 라인이 앞 큐와 같으면 그 구간을 통째로 건너뛰었고, 실측
+#   5구간 EDM 입력이 큐 3장이 됐다(후렴이 드롭과 값이 같아 둘이 사라졌다). 되돌리기 쉬운
+#   유혹이 둘 있다 — (가) 충돌하면 다시 버리기, (나) 회차와 무관하게 늘 한 칸 올리기.
+#   (가)는 이 카드가 없애려는 결함 그대로이고, (나)는 충돌이 없는 입력의 콘솔 명령까지
+#   바꿔서 무회귀 성질을 깨뜨린다. 사다리는 **충돌이 방아쇠**이고 **칸은 회차가 정한다**.
+def _distinct_values_line(
+    look: Look,
+    section: SongCueSection,
+    emitted: Mapping[str, tuple[int, int, str]],
+) -> tuple[str | None, tuple[str, ...]]:
+    """앞선 큐와 겹치지 않는 값 라인과 그때 더한 사다리 칸들. 못 만들면 ``(None, ())``.
+
+    기준 룩이 이미 유일하면 그대로 돌려준다 — 충돌이 없는 입력이 내는 명령은 고치기 전과
+    **바이트 동일**하다. 겹치면 사다리를 오르는데, 시작 칸은 회차가 정하고(정본 §3: 세기는
+    회차가 정한다) 거기서도 겹치면 한 칸씩 더 올린다. 마지막 칸까지 값이 안 달라지면 —
+    이미 천장에 있거나 리그가 그 축을 안 갖고 있으면 — 그때만 큐를 못 세운다.
+
+    **한 구간 안에서 쪼갠 큐끼리 겹치는 것은 사다리의 일이 아니다.** 정본 §7 의 상승은
+    구간의 **반복 회차** 사이에서 일어난다. 마디 경계로 쪼갠 큐들은 같은 구간의 같은 회차
+    이므로, 여기서 밝기를 올리면 구간 하나가 도중에 세어진다 — 밀도 경로의 축(강도는
+    유지하고 그림만 교체)을 정면으로 어기는 것이다. 그래서 같은 구간끼리의 충돌은 예전처럼
+    건너뛴다.
+    """
+    base = _values_line(look.attributes)
+    previous = emitted.get(base)
+    if previous is None:
+        return base, ()
+    if previous[0] == section.index:
+        return None, ()
+    for rung_count in range(_ladder_start(section), len(_LADDER_CLIMB) + 1):
+        rungs = _LADDER_CLIMB[:rung_count]
+        candidate = _values_line(escalate_attributes(look.attributes, rungs))
+        if candidate not in emitted:
+            return candidate, rungs
+    return None, ()
+
+
+def _ladder_start(section: SongCueSection) -> int:
+    """회차가 정하는 첫 칸 — 2회차는 한 칸, 3회차는 두 칸(정본 §7.1 표).
+
+    1회차가 겹치는 것은 같은 라벨의 반복이 아니라 **다른 라벨과 값이 같은** 경우다(실측:
+    후렴 1이 드롭과 같았다). 그때도 한 칸은 올린다 — 안 올리면 그 큐가 사라지고, 사라지는
+    것을 없애는 것이 이 카드다. 낮은 칸으로는 내려가지 않는다: 뒤 회차가 앞 회차보다
+    약해지면 상승이 아니다.
+    """
+    return max(1, section.instance - 1)
+
+
+def escalate_attributes(
+    attributes: Sequence[AttributeValue], rungs: Sequence[str]
+) -> tuple[AttributeValue, ...]:
+    """기준 룩에 사다리 칸을 순서대로 더한 값들(정본 §7.1 아껴두기 사다리).
+
+    누적이다 — 「여기까지 그대로 + 하나 더」가 정본의 문면이고, 회차마다 새로 더하는 것이
+    하나이므로 한 큐에 새 액센트가 둘 들어가지 않는다(§6.1).
+
+    리그가 그 축을 안 갖거나 이미 한계에 닿은 칸은 **아무것도 바꾸지 않는다** — 없는 축에
+    값을 만들어 보내지 않는 것이 이 계층의 규율이다(``Zoom``·``Iris`` 는 M0 프로브가 받은
+    어휘이고, 룩이 안 실었으면 이 리그에서 그 칸은 없는 칸이다).
+    """
+    escalated = tuple(attributes)
+    for rung in rungs:
+        escalated = _rung_applied(escalated, rung)
+    return escalated
+
+
+def _rung_applied(values: Sequence[AttributeValue], rung: str) -> tuple[AttributeValue, ...]:
+    if rung == LADDER_DIMMER_HIT:
+        return _stepped(values, _DIMMER, _HIT_STEP, _DIMMER_CEILING)
+    if rung == LADDER_ZOOM_PINCH:
+        return _stepped(values, _ZOOM, _PINCH_STEP, _BEAM_FLOOR)
+    if rung == LADDER_IRIS_PINCH:
+        return _stepped(values, _IRIS, _PINCH_STEP, _BEAM_FLOOR)
+    raise SongCueBundleError(f"unknown ladder rung: {rung!r}")
+
+
+def _stepped(
+    values: Sequence[AttributeValue], attribute: str, step: int, limit: int
+) -> tuple[AttributeValue, ...]:
+    """한 속성만 한 칸 움직인 값들 — 그 속성이 없거나 한계에 닿아 있으면 그대로."""
+    stepped: list[AttributeValue] = []
+    for value in values:
+        if value.name != attribute:
+            stepped.append(value)
+            continue
+        target = value.value + step
+        bounded = min(target, limit) if step > 0 else max(target, limit)
+        stepped.append(AttributeValue(attribute, bounded))
+    return tuple(stepped)
 
 
 def _timecode_commands(bundle: SongCueBundle, timecode_number: int) -> tuple[str, ...]:
@@ -663,17 +847,22 @@ def _sequence_numbers(sequences_section: Mapping[str, object]) -> set[int]:
 
 
 def _cue_names(sections: Sequence[SongCueSection]) -> tuple[str, ...]:
+    """중복 라벨을 회차로 가른 큐 이름.
+
+    순번은 여기서 다시 세지 않고 :attr:`SongCueSection.instance` 를 읽는다 —
+    카운터는 :func:`_numbered_by_label` 하나다. 파서를 거치지 않은 구간은 라벨이 비어 있어
+    이름으로 센다(그쪽은 선언으로 1회차다).
+    """
     totals: dict[str, int] = dict()
     for section in sections:
-        totals[section.name] = totals.get(section.name, 0) + 1
-    seen: dict[str, int] = dict()
+        key = section.label or section.name
+        totals[key] = totals.get(key, 0) + 1
     names: list[str] = []
     for section in sections:
-        seen[section.name] = seen.get(section.name, 0) + 1
         fallback = f"Section {section.index + 1}"
         base = _ascii_label(section.name, fallback=fallback)
-        if totals[section.name] > 1:
-            base = f"{base} {seen[section.name]}"
+        if totals[section.label or section.name] > 1:
+            base = f"{base} {section.instance}"
         names.append(base)
     return tuple(names)
 

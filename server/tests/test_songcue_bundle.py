@@ -864,10 +864,17 @@ def test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state():
 
 
 def test_value_line_collision_skips_later_section_without_pulling_next_cue():
+    """마지막 수단으로 남은 건너뜀 — 사다리가 오를 칸이 없을 때만(카드 t355).
+
+    룩이 밝기 **천장**(100)에 있고 빔 축을 안 실었으므로 아껴두기 사다리(정본 §7.1)가
+    바꿀 값이 없다. 80 이던 시절 이 검사가 재던 것은 「값이 같으면 버린다」였고, 그것이
+    정본 §12 항목 3 이 결함으로 지목한 동작이다. 여기서 재는 것은 그것이 아니라 건너뜀이
+    일어날 때 **다음 큐를 끌어당기지 않는다**는 성질 하나다.
+    """
     chorus_a, chorus_b, verse = parse_sections(
         (("Chorus", "0:00"), ("Chorus", "0:30"), ("Verse", "1:00"))
     )
-    chorus_look = _look("chorus", dynamics=4, value=80)
+    chorus_look = _look("chorus", dynamics=4, value=100)
     verse_look = _look("verse", dynamics=2, value=45)
     bundle = build_songcue_bundle(
         "Song",
