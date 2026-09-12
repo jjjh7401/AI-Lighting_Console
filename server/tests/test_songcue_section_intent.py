@@ -20,8 +20,9 @@
 세 번째 줄이 없으면 두 번째 줄이 t355 를 방향만 바꿔 되돌린다 — 후렴 2회차가 1회차를
 피해 다른 룩으로 갈아타고, 「돌아와야 하는 것이 사라진다」.
 
-**이 파일이 고치지 않고 재기만 한 것**: §6.1 [HARD]「한 큐에 하나만」 위반.
-:class:`TestTheOneAccentRuleIsMeasuredNotFixed` 를 보라.
+**이 파일이 재기만 하고 안 고쳤던 것은 카드 t361 이 닫았다.** §6.1 [HARD]「한 큐에 하나만」
+은 이제 지켜진다 — 감독이 갈래를 정했고(2026-09-12: 밝기만 누적), 사다리가 액센트를 쌓지
+않고 갈아탄다. 아래 :class:`TestTheOneAccentRuleNowHolds` 가 그 자리를 계속 지킨다.
 """
 
 from __future__ import annotations
@@ -341,25 +342,26 @@ class TestTheFabricatedControls:
         assert sorted_candidates(pair, previous=rival, intent=None)[0].look_id == "only-one"
 
 
-class TestTheOneAccentRuleIsMeasuredNotFixed:
-    """정본 §6.1 [HARD] 위반을 **재기만** 한다 — 여기서 사다리를 고치지 않는다.
+class TestTheOneAccentRuleNowHolds:
+    """정본 §6.1 [HARD] — 이 파일이 재기만 했던 그 자리를 카드 t361 이 닫았다.
 
     §6.1 은 코러스의 순간을 찍는 수단 일곱(밝기 히트 · 무빙 버스트 · 색 스냅 · 백색
     플래시 · 드롭 직전 블랙아웃 · 짧은 스트로브 · 빔·포지션 히트) 중 **한 큐에 하나만**
-    쓰라고 못박는다. 실측 결과 3회차부터 한 큐가 둘을 싣는다 — 밝기 히트(``Dimmer``
-    90→95)와 빔 히트(``Zoom`` 18→13)가 같은 값 라인에 함께 나간다.
+    쓰라고 못박는데, §7.1 의 사다리 표는 누적을 문면으로 지시한다(「여기까지 그대로 +
+    하나 더」). 두 절이 부딪혔고 **감독이 갈래를 정했다**(2026-09-12): 누적하는 축은
+    **밝기 하나**이고, 찍는 액센트는 큐당 하나이며 뒤 회차는 갈아탄다.
 
-    **이것은 구현의 실수가 아니라 정본 안의 충돌이다.** §7.1 의 아껴두기 사다리는
-    누적을 문면으로 지시한다 — 「chorus 3 (마지막): **여기까지 그대로** + 블라인더 또는
-    백색 플래시」. 표 그대로 쌓으면 3회차 큐는 2회차의 요소와 새 요소를 함께 들므로
-    §6.1 의 「하나만」과 정면으로 부딪힌다. 어느 쪽을 접을지는 감독·정본 결정이고,
-    사다리를 여기서 비누적으로 바꾸면 §7.1 과 t355 의 실측 단정을 동시에 깨뜨린다.
-
-    그래서 이 검사는 **사실을 못박는다**. 나중에 정본이 갈래를 정하면 이 검사가 먼저
-    빨개져서 그 자리를 가리킨다.
+    그래서 아래가 재는 숫자는 **그대로인데 뜻이 바뀌었다**. 3회차의 ``Dimmer`` 90→95 와
+    ``Zoom`` 18→13 은 고치기 전과 같은 값이지만, 밝기가 예외로 확정됐으므로 이제
+    **찍는 액센트는 하나**이고 §6.1 을 지킨다. 쌓임이 실제로 일어나던 자리는 4회차이고
+    (``Zoom`` 과 ``Iris`` 가 함께 나갔다), 그쪽 실측과 수정은
+    ``test_songcue_ladder.py`` 의 ``TestOneMarkingAccentPerCue`` 가 든다.
     """
 
-    def test_the_third_occurrence_emits_two_of_the_seven_accent_classes(self):
+    #: 찍는 액센트 — 밝기는 여기 없다(감독 결정: 누적 축은 예외).
+    _MARKING = (LADDER_ZOOM_PINCH,)
+
+    def test_the_third_occurrence_carries_brightness_and_one_marking_accent(self):
         library = load_library_from_dir()
         sections = parse_sections((("Chorus", "0:00"), ("Chorus", "0:40"), ("Chorus", "1:20")))
         bundle = build_songcue_bundle(
@@ -374,7 +376,8 @@ class TestTheOneAccentRuleIsMeasuredNotFixed:
         # 두 칸 모두 **실제로 값을 바꾼다** — 없는 축에 대한 공허한 칸이 아니다.
         changed = tuple(rung for rung in third.ladder if escalate_attributes(base, (rung,)) != base)
         assert changed == (LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH)
-        # 밝기 히트와 빔 히트는 §6.1 의 일곱 중 **서로 다른** 두 계열이다.
+        # 그중 **찍는** 액센트는 하나다 — 밝기는 누적 축이라 세지 않는다.
+        assert sum(1 for rung in changed if rung in self._MARKING) == 1
         assert "Attribute 'Dimmer' At 95" in third.commands[2]
         assert "Attribute 'Zoom' At 13" in third.commands[2]
 
