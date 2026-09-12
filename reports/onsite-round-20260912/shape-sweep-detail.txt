@@ -1,0 +1,36 @@
+
+=== edm / Intro Verse Chorus Verse Chorus Bridge Chorus Chorus Outro ===
+  cue   1 Intro     #1 edm-haze-shafts
+  cue   2 Verse     #1 edm-intro-bed
+  cue   3 Chorus    #1 edm-drop-crimson
+  cue   4 Verse     #2 edm-intro-bed
+  cue   5 Chorus    #2 edm-drop-crimson
+  cue   6 Bridge    #1 edm-haze-shafts
+  cue   7 Chorus    #3 edm-drop-crimson
+  cue   8 Chorus    #4 edm-drop-crimson
+  cue   9 Outro     #1 edm-haze-shafts
+  🔴 사라짐: cue 7 Chorus#3 — value line matches section 2 cue 3 look edm-drop-crimson; ladder exhausted (dimmer_hit, zoom_pinch, iris_pinch)
+  🔴 사라짐: cue 8 Chorus#4 — value line matches section 2 cue 3 look edm-drop-crimson; ladder exhausted (dimmer_hit, zoom_pinch, iris_pinch)
+
+=== edm / Intro Verse Chorus Verse Chorus Verse Chorus Outro ===
+  cue   1 Intro     #1 edm-haze-shafts
+  cue   2 Verse     #1 edm-intro-bed
+  cue   3 Chorus    #1 edm-drop-crimson
+  cue   4 Verse     #2 edm-intro-bed
+  cue   5 Chorus    #2 edm-drop-crimson
+  cue   6 Verse     #3 edm-intro-bed
+  cue   7 Chorus    #3 edm-drop-crimson
+  cue   8 Outro     #1 edm-haze-shafts
+  🔴 사라짐: cue 7 Chorus#3 — value line matches section 2 cue 3 look edm-drop-crimson; ladder exhausted (dimmer_hit, zoom_pinch, iris_pinch)
+
+=== worship / Intro Verse Chorus Verse Chorus Bridge Chorus Chorus Outro ===
+  cue   1 Intro     #1 worship-scripture-key
+  cue   2 Verse     #1 worship-blue-verse
+  cue   3 Chorus    #1 worship-glory-climax
+  cue   4 Verse     #2 worship-blue-verse
+  cue   5 Chorus    #2 worship-glory-climax
+  cue   6 Bridge    #1 worship-scripture-key
+  cue   7 Chorus    #3 worship-glory-climax
+  cue   8 Chorus    #4 worship-glory-climax
+  cue   9 Outro     #1 worship-blue-verse
+  🔴 사라짐: cue 8 Chorus#4 — value line matches section 2 cue 3 look worship-glory-climax; ladder exhausted (dimmer_hit, zoom_pinch, iris_pinch)

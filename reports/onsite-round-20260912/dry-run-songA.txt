@@ -1,0 +1,41 @@
+== 라이브 rig ==
+  sequences: {"objects": [{"no": 1, "name": "Default"}, {"no": 2, "name": "Sugar"}, {"no": 3, "name": "Sugar r3"}, {"no": 4, "name": "eset1Fade"}, {"no": 5, "name": "Synth Test"}, {"no": 6, "name": "Notice Test"},
+  groups   : {"objects": [{"no": 1, "name": "ALL"}, {"no": 2, "name": "KEY"}, {"no": 3, "name": "FOH"}, {"no": 4, "name": "BACK"}, {"no": 5, "name": "SIDE-L"}, {"no": 6, "name": "SIDE-R"}, {"no": 7, "name": "SIDE-
+
+== 리포트 ==
+DryA
+DryA
+Intro
+Verse
+Chorus
+Verse
+Chorus
+Breakdown
+Drop
+Outro
+value line matches section 2 cue 3 look edm-drop-crimson; ladder exhausted (dimmer_hit, zoom_pinch, iris_pinch)
+
+== A 반복 후렴 ==
+  cue    1 'Intro'#1 look=edm-haze-shafts
+  cue    2 'Verse'#1 look=edm-intro-bed
+  cue    3 'Chorus'#1 look=edm-drop-crimson
+  cue    4 'Verse'#2 look=edm-intro-bed
+  cue    5 'Chorus'#2 look=edm-drop-crimson
+  cue    6 'Breakdown'#1 look=edm-haze-shafts
+  cue    7 'Drop'#1 look=edm-drop-crimson
+  cue    8 'Outro'#1 look=edm-haze-shafts
+
+== 저장/건너뜀 ==
+  stored: [1, 2, 3, 4, 5, 6, 8]
+  skipped: SongCueSkippedSection(section=SongCueSection(name='Drop', start_ms=160000, index=6, dynamics=(4, 5), requires_explicit_dynamics=False, label='Drop', instance=1, variant=''), cue_number=7, reason='value_line_collision', detail='value line matches section 2 cue 3 look edm-drop-crimson; ladder exhausted (dimmer_hit, zoom_pinch, iris_pinch)', collides_with_section_index=2, collides_with_cue_number=3)
+
+== C 드롭 앞 어둠 ==
+  darkened: 2 Verse SongCuePreDropDarkness(section=SongCueSection(name='Verse', start_ms=16000, index=1, dynamics=(2, 3), requires_explicit_dynamics=False, label='Verse', instance=1, variant=''), cue_number=2, drop_cue_number=3, row='verse', before=45, after=25)
+  darkened: 4 Verse SongCuePreDropDarkness(section=SongCueSection(name='Verse', start_ms=80000, index=3, dynamics=(2, 3), requires_explicit_dynamics=False, label='Verse', instance=2, variant=''), cue_number=4, drop_cue_number=5, row='verse', before=45, after=25)
+  withheld: 6 pre_drop_darkness_already_dark
+
+== D 무빙 ==
+  MOVES: 3 Chorus MovementPlan(band='fast', speed=96.0, attributes=('Pan', 'Tilt'), pattern='diagonal', commands=("Attribute 'Pan' At Relative -28", "Attribute 'Tilt' At Relative -14", 'Step 2', "Attribute 'Pan' At Relative 28", "Attribute 'Tilt' At Relative 14", "Attribute 'Pan' At Phase 0", "Attribute 'Tilt' At Phase 0", "Attribute 'Pan' At Speed 96 ; Attribute 'Tilt' At Speed 96"))
+  withheld: 2 Verse movement_turn_boundary
+  withheld: 4 Verse movement_turn_boundary
+  withheld: 5 Chorus movement_turn_boundary

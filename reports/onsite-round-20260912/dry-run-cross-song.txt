@@ -1,0 +1,4 @@
+곡 A 룩: ['edm-ambient-hold', 'edm-intro-bed', 'edm-drop-crimson', 'edm-intro-bed', 'edm-drop-crimson', 'edm-ambient-hold', 'edm-drop-crimson', 'edm-ambient-hold']
+A 가 쓴 룩 집합: ['edm-ambient-hold', 'edm-drop-crimson', 'edm-intro-bed']
+곡 B 룩: ['edm-haze-shafts', 'edm-breakdown-deep', 'edm-drop-acid', 'edm-breakdown-deep', 'edm-drop-acid', 'edm-haze-shafts', 'edm-drop-acid', 'edm-haze-shafts']
+🔴 B 가 A 와 겹친 룩: []
