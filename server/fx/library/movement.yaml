@@ -220,3 +220,90 @@ fx:
     phase_from: 0
     phase_to: 360
     speed: 12
+
+  # --- entries below entered from card t370 (docs/research/ma3-effects/17-fei-hu-ma2-video-patterns.md §6/§9) ------
+  #
+  # Three of the twelve candidates that document lists, chosen because they are
+  # the ones its own §9 names "relatively safe" — Pan/Tilt/Dimmer only, no beam
+  # attribute (Prism/Gobo/Iris/Zoom), so nothing here waits on the profile
+  # verification layer §5.5 says a beam entry would need. The rig's own beam
+  # coverage is thin (measured 2026-09-13: Iris on 3 of 15 fixture types, Zoom
+  # on 9, Frost on 5 — reports/onsite-round-20260912/rig-beam-axes.txt), which
+  # is a second, independent reason to stay off that family here.
+  #
+  # None of the three below has been fired on the real console — that firing is
+  # the operator's own next step, not this commit's. Each still follows the
+  # authoring rules above the header: two steps, one attribute set, no repeated
+  # value, and every modifier axis actually reads back in the bundle this file
+  # builds (a declared-but-silent axis is exactly the M0 failure mode the
+  # module header warns about).
+  #
+  # PATTERN CHOICE, NOT JUST NAMING. `pattern` here is `chase` rather than
+  # `sweep` for the first two: `resolve_pattern` (matching.py) treats the bare
+  # word 체이스 as a hard pattern-axis word, so any query naming it narrows the
+  # candidate set to `pattern: chase` entries ONLY — an entry that answers to
+  # 체이스 in its alias but is filed under a different pattern is invisible to
+  # that query no matter what else its alias says. `chase` is one attribute
+  # kind the schema already allows any attribute set under (color.yaml already
+  # runs it on ColorRGB); running it on Pan is the same mechanism, not a new
+  # one. `server/tests/test_scene_matching.py` also expects every fx_id to
+  # carry its OWN pattern as a hyphen-separated token, which is why the
+  # doc's own candidate ids gain a leading pattern-name token below.
+
+  # chase-horizontal — a Pan spread across the SELECTION, the same mechanism
+  # `sweep-club-xwave` above already proves: one attribute plus a phase pair
+  # walks the selection order end to end rather than swinging every fixture in
+  # place. The X-axis MAtricks form is the doc's own note ("기존 phase_from_x/
+  # to_x 활용 가능").
+  - fx_id: "chase-horizontal"
+    display_name: "수평 체이스"
+    pattern: "chase"
+    aliases: ["수평 체이스", "좌우로 달리게", "가로 체이스", "옆으로 흘러가게", "가로로 훑어줘", "horizontal chase"]
+    mood_keywords: ["빠른", "달리는", "이동하는", "역동적인", "club"]
+    steps:
+      - Pan: -25
+      - Pan: 25
+    phase_from_x: 0
+    phase_to_x: 360
+    speed: 108
+
+  # chase-bounce-run — the reverse axis rides on the MAIN phase pair (not an
+  # X-axis one, unlike the entry above), because `reverse` only flips the main
+  # `phase_to` sign; declaring it next to `phase_from_x`/`phase_to_x` alone
+  # would leave it unread and silent. `x_wings` supplies the doc's "wings"
+  # half of the combination: two mirrored groups, each running the same
+  # reversed spread.
+  - fx_id: "chase-bounce-run"
+    display_name: "바운스 런 체이스"
+    pattern: "chase"
+    aliases: ["바운스 체이스", "런 이펙트", "통통 튀게", "바운스 런", "bounce chase", "run effect"]
+    mood_keywords: ["통통 튀는", "탄력있는", "리드미컬한", "역동적인", "club", "bounce"]
+    steps:
+      - Pan: -32
+      - Pan: 32
+    phase_from: 0
+    phase_to: 360
+    reverse: true
+    x_wings: 2
+    speed: 132
+
+  # sweep-vshape-swing — small `relative` steps ride on top of whatever base
+  # aim is already live (the doc's "center aim 필요"), and `x_wings: 2` splits
+  # the selection into a mirrored left/right pair so the two halves open
+  # outward and close again in step — the V shape. Same two mechanisms
+  # `sweep-relative-center` and `circle-club-wings` above already prove on
+  # their own; this entry is their combination. Left on `sweep` (not `chase`):
+  # its own alias "좌우 대칭 스윙" already names the `sweep` pattern-axis word
+  # 좌우, so filing it under `chase` would make its own alias contradict its
+  # own pattern.
+  - fx_id: "sweep-vshape-swing"
+    display_name: "V자 팬 스윙"
+    pattern: "sweep"
+    aliases: ["V자로 흔들어", "대칭 팬 스윙", "브이자 스윙", "좌우 대칭 스윙", "양쪽으로 벌어지게", "v-shape swing"]
+    mood_keywords: ["대칭", "우아한", "느린", "스윙", "symmetric", "elegant"]
+    steps:
+      - Pan: -18
+      - Pan: 18
+    relative: true
+    x_wings: 2
+    speed: 16

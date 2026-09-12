@@ -1,0 +1,43 @@
+=== chase-horizontal (pattern=chase) ===
+ChangeDestination Root
+ClearAll
+Group 11
+Attribute 'Pan' At -25
+Step 2
+Attribute 'Pan' At 25
+Attribute 'Pan' At Speed 108
+Set Selection MAtricks 'PhaseFromX' 0
+Set Selection MAtricks 'PhaseToX' 360
+Store Sequence 12 Cue 1 'Horizontal Chase'
+Label Sequence 12 'Horizontal Chase'
+Reset Selection MAtricks
+ClearAll
+
+=== chase-bounce-run (pattern=chase) ===
+ChangeDestination Root
+ClearAll
+Group 11
+Attribute 'Pan' At -32
+Step 2
+Attribute 'Pan' At 32
+Attribute 'Pan' At Phase 0 Thru -360
+Attribute 'Pan' At Speed 132
+Set Selection MAtricks 'XWings' 2
+Store Sequence 12 Cue 1 'Bounce Run Chase'
+Label Sequence 12 'Bounce Run Chase'
+Reset Selection MAtricks
+ClearAll
+
+=== sweep-vshape-swing (pattern=sweep) ===
+ChangeDestination Root
+ClearAll
+Group 11
+Attribute 'Pan' At Relative -18
+Step 2
+Attribute 'Pan' At Relative 18
+Attribute 'Pan' At Speed 16
+Set Selection MAtricks 'XWings' 2
+Store Sequence 12 Cue 1 'Vshape Swing Sweep'
+Label Sequence 12 'Vshape Swing Sweep'
+Reset Selection MAtricks
+ClearAll
