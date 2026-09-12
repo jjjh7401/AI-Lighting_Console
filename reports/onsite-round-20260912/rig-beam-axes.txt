@@ -1,0 +1,16 @@
+기종                               모드                          채널  Iris  Zoom  Frost
+Robin Esprite                    Mode 1                   40/40  🟢     🟢     🟢   
+Robin Forte HP                   Mode 1                   44/44  🟢     🟢     🟢   
+Robin LEDBeam 350                Mode 1                   14/14  —     🟢     —   
+Robin Spiider                    Mode 1                   26/26  —     🟢     —   
+Xtylos                           Mode 0                   22/22  —     —     —   
+Sharpy Plus                      Mode 0                   26/26  —     🟢     🟢   
+Robin MMX Spot                   Mode 1                   29/29  🟢     🟢     🟢   
+Mac Aura XB                      Extended - Extended      23/23  —     🟢     —   
+Rush Par 2 RGBW Zoom             5 channel                  6/6  —     🟢     —   
+Source 4 LED Series 3 Lustr X8   1 Channel                  1/1  —     —     —   
+Robin MegaPointe                 Mode 1                   32/32  —     🟢     🟢   
+Robin Spiider                    Mode 1                   26/26  —     🟢     —   
+CuePix Blinder WW2               1 channel                  1/1  —     —     —   
+Atomic 3000 LED                  3 channel                  3/3  —     —     —   
+Unique 2 1                       Mode 0                     2/2  —     —     —   
