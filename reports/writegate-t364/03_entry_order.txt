@@ -1,0 +1,21 @@
+Set Layout 1.1 'PositionX' 5.0           tail=('blacklisted', 'Set Layout')    head=('blacklisted', 'Set Layout')    SAME
+Set Layout 1.1 'PositionY' 5.0           tail=('blacklisted', 'Set Layout')    head=('blacklisted', 'Set Layout')    SAME
+Set Fixture 11 Posx '5.0'                tail=('blacklisted', 'Set Fixture')   head=('blacklisted', 'Set Fixture')   SAME
+Set Fixture 11 Rotx '90.0'               tail=('blacklisted', 'Set Fixture')   head=('blacklisted', 'Set Fixture')   SAME
+Set Fix 11 Posx '1.0'                    tail=('blacklisted', 'Set Fixture')   head=('blacklisted', 'Set Fixture')   SAME
+Set Fixture 1 Thru 18 Posz '5.0'         tail=('blacklisted', 'Set Fixture')   head=('blacklisted', 'Set Fixture')   SAME
+Set Fixture 11 Name 'Spot 11'            tail=('blacklisted', 'Set Fixture')   head=('blacklisted', 'Set Fixture')   SAME
+Set Fixture 11 Layout 3                  tail=('blacklisted', 'Set Fixture')   head=('blacklisted', 'Set Layout')    *** MOVED ***
+Set Layout 1.1 Fixture 11                tail=('blacklisted', 'Set Fixture')   head=('blacklisted', 'Set Layout')    *** MOVED ***
+Set Selection MAtricks 'PhaseFromX' 0    tail=('safe', None)                   head=('safe', None)                   SAME
+Store Page 3                             tail=('safe', None)                   head=('safe', None)                   SAME
+Copy Page 1 At Page 4                    tail=('safe', None)                   head=('safe', None)                   SAME
+Assign Preset 4.1 At Executor 101        tail=('safe', None)                   head=('safe', None)                   SAME
+Label Group 3 'Vocals'                   tail=('safe', None)                   head=('safe', None)                   SAME
+Group 4                                  tail=('safe', None)                   head=('safe', None)                   SAME
+At 100                                   tail=('safe', None)                   head=('safe', None)                   SAME
+
+귀속이 움직인 줄: 2건
+기존 항목 동사 집합: ['Assign', 'Copy', 'Delete', 'Format', 'LoadShow', 'NewShow', 'Off', 'Remove', 'Set', 'Shutdown', 'Store']
+새 항목 동사 `Set` 교차: YES
+동사를 공유하는 기존 항목: ['Set Fixture', 'Set Layout']

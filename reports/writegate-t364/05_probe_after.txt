@@ -1,0 +1,15 @@
+ruleset version = 9, entries = 17
+Set Layout 1.1 'PositionX' 5.0             category=blacklisted  risky=True  entry='Set Layout'
+Set Layout 1.1 'PositionY' 5.0             category=blacklisted  risky=True  entry='Set Layout'
+Set Layout 1.1 PositionX 5.0               category=blacklisted  risky=True  entry='Set Layout'
+Set Lay 1.1 'PositionX' 5.0                category=blacklisted  risky=True  entry='Set Layout'
+Set Layout 1.1 Name 'Cue list'             category=blacklisted  risky=True  entry='Set Layout'
+Set Fixture 11 Posx '5.0'                  category=blacklisted  risky=True  entry='Set Fixture'
+Set Fixture 11 Rotx '90.0'                 category=blacklisted  risky=True  entry='Set Fixture'
+Set Layouts 1.1 'PositionX' 5.0            category=safe         risky=False entry=None
+Edit Layout 1.1 'PositionX' 5.0            category=safe         risky=False entry=None
+Store Layout 3                             category=safe         risky=False entry=None
+Layout 1                                   category=safe         risky=False entry=None
+Set Selection MAtricks 'PhaseFromX' 0      category=safe         risky=False entry=None
+Store Page 3                               category=safe         risky=False entry=None
+Group 4                                    category=safe         risky=False entry=None

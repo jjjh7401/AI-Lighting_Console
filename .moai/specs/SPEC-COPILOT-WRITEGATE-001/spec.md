@@ -145,9 +145,13 @@ SPATIAL run-phase가 `blacklist.yaml` v1→v2에 `"Set Fixture"`를 넣어 **기
 - 남은 방어선: 배포는 deny-by-default이고 사람이 소스를 **한 번** 리뷰한다(`pipeline.py:150-160`). 그리고 이 잔여 위험은 `deploy/scan.py:10-16`이 **이미 규범적으로 선언**해 둔 것이다(REQ-MVP-027 — *"best-effort … the HUMAN REVIEW GATE remains the authoritative control"*). 본 SPEC이 만든 구멍이 아니다.
 - 닫으려면 Lua AST 수준 스캔이나 패치 쓰기 능력 플래그가 필요하다 — 별도 SPEC의 몫이다.
 
-### Out of Scope — Layout 요소 좌표 기록
-- `Set Layout <l>.<e> 'PositionX' <v>`는 **오늘도 `safe`다.** 이는 저장소가 문서화한 두 번째 좌표 쓰기이며(SPATIAL `research.md:19`·`:103` — 포럼 moderator 확인, ASSUMPTION-56), SPATIAL `spec.md`가 Layout pool의 `PositionX`/`PositionY`를 **보조 공간 출처**로 명시한다.
-- 본 SPEC의 엔트리는 `Set Fixture`이므로 이 형태를 잡지 않는다. 어떤 툴도 이 형태를 발화하지 않으니 제품이 깨지는 것은 아니지만, `run_commands`는 모델이 손으로 쓴 줄을 받으므로(REQ-WRITEGATE-004가 존재하는 이유) **경로가 열려 있다.** Layout 축 자체가 SPATIAL에서 `[DEFERRED]`이므로 함께 후속으로 넘긴다.
+### ~~Out of Scope~~ → **닫힘** — Layout 요소 좌표 기록 (카드 t364, 룰셋 v9)
+- **이 절이 기록하던 구멍은 닫혔다.** 아래 두 항목은 이 SPEC의 최초 창(룰셋 v2) 당시의 판단으로, 그 시점에는 참이었다 — 만료 고지를 남기고 현재 상태를 아래에 적는다.
+  - (당시) `Set Layout <l>.<e> 'PositionX' <v>`는 **`safe`였다.** 이는 저장소가 문서화한 두 번째 좌표 쓰기이며(SPATIAL `research.md:19`·`:103` — 포럼 moderator 확인, ASSUMPTION-56), SPATIAL `spec.md`가 Layout pool의 `PositionX`/`PositionY`를 **보조 공간 출처**로 명시한다.
+  - (당시) 본 SPEC의 엔트리는 `Set Fixture`뿐이라 이 형태를 잡지 않았다. 어떤 툴도 이 형태를 발화하지 않으니 제품이 깨지는 것은 아니었지만, `run_commands`는 모델이 손으로 쓴 줄을 받으므로(REQ-WRITEGATE-004가 존재하는 이유) **경로가 열려 있었다.**
+- **현재 (카드 t364).** `blacklist.yaml` v8 → v9 리비전이 오브젝트 항목 `"Set Layout"`을 넣어 이 경로를 닫았다. 재현(main `c0aa6ec`, 오프라인, 순수 함수 호출)에서 `safe`였던 줄이 이제 `blacklisted`/`risky=True`로 분류된다 — 실측 전/후는 `reports/writegate-t364/01_probe_before.txt`·`05_probe_after.txt`, 회귀 고정은 `server/tests/test_writegate_layout.py`.
+- **덮는 범위는 `Set Fixture`와 같은 일반성이다** — 오브젝트 기준이라 프로퍼티 차원 전체(`'PositionY'`·따옴표 없는 형태·축약 `Set Lay …`·`Set Layout 1.1 Name …`)가 닫힌다. **안 덮는 것**: 다른 동사(`Edit|Assign|Copy|Store Layout`), 복수형 `Layouts`. 투입 비용은 코퍼스 신규 충돌 **0건 / 0 시나리오**(`reports/writegate-t364/02_corpus_delta.txt`).
+- Layout 축의 **기록 기능** 자체는 여전히 SPATIAL의 `[DEFERRED]`다. 닫힌 것은 분류 축이지 기능 축이 아니다.
 
 ### Out of Scope — 정렬 어휘 개명 · 절단 고지 강제 · 축 점수 비교
 - 계획서의 SPEC B/C/D. 본 SPEC과 파일 무교차이며 승인 흐름이 열린 뒤 병렬 가능하다.
@@ -164,5 +168,5 @@ SPATIAL run-phase가 `blacklist.yaml` v1→v2에 `"Set Fixture"`를 넣어 **기
 | `Store`·MAtricks·`Set Macro`·DEPLOY 픽스처 분류 불변 | 회귀 단정 | 회귀 |
 | 매크로 본문·Lua 소스의 **`Cmd()` 리터럴** 간접 경로 차단 | `expand.py`·`deploy/scan.py` 단위 + 신규 category 뮤테이션 | 구조 |
 | 트립와이어 개정이 날짜·소유자·승인 표기를 갖춘 그랜트 | 코드 리뷰 | 절차 |
-| 닫지 않은 두 경로가 §D에 명시 (Lua 직접 대입 · Layout 요소) | 문서 | **정직성** |
+| 닫지 않은 경로가 §D에 명시 — 최초 창에서는 **둘**(Lua 직접 대입 · Layout 요소), 카드 t364(룰셋 v9)가 Layout 요소를 닫은 뒤로는 **하나**(Lua 직접 대입). 닫힌 쪽은 §D에 만료 고지와 함께 남긴다 | 문서 | **정직성** |
 | 라이브 1턴에서 카드 관측 | ASSUMPTION-68 | **보조 증거** |

@@ -85,6 +85,15 @@ EXPECTED_BLACKLIST = {
     # 실측 비용: 이 항목 둘 동시 투입으로 15 failed / 12066 total (v8 헤더).
     "Assign Sequence",
     "Copy Sequence",
+    # v9 — SPEC-COPILOT-WRITEGATE-001 (카드 t364). **자기 SPEC 이 §D 에 적어 둔
+    # 구멍을 자기가 닫는다**: `Set Layout <l>.<e> 'PositionX' <v>` 는 `Set Fixture`
+    # 와 같은 좌표 쓰기인데 v8 까지 `safe` 였다(실측:
+    # `reports/writegate-t364/01_probe_before.txt`). 넣는 방식도 v2 를 미러링한다 —
+    # 오브젝트 기준이라 프로퍼티 차원 전체가 닫히고, 프로퍼티 이름 열거는
+    # blacklist.yaml 헤더가 금지한다. 실측 비용: 코퍼스 신규 충돌 0건 / 0 시나리오
+    # (v9 헤더). 항목은 목록 **끝**에 둔다 — 동사 `Set` 이 `Set Fixture` 와 겹쳐
+    # 앞으로 옮기면 교차 형태 2건의 귀속이 바뀐다.
+    "Set Layout",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -184,10 +193,11 @@ class TestShippedRuleset:
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
         # v5 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t299 Phase 1)에서 10 -> 12,
         # v6 (같은 SPEC Phase 2)에서 12 -> 13, v7 (같은 SPEC Phase 3)에서 13 -> 14,
-        # v8 (같은 SPEC Phase 4, 카드 t325)에서 14 -> 16.
+        # v8 (같은 SPEC Phase 4, 카드 t325)에서 14 -> 16,
+        # v9 (SPEC-COPILOT-WRITEGATE-001, 카드 t364)에서 16 -> 17.
         # 이 핀은 비준 리비전마다 갱신되도록 설계됐다 — 갱신 자체가 마찰이고, 그
         # 마찰이 헤더에 근거를 적게 만드는 장치다.
-        assert len(ruleset.blacklist) == 16
+        assert len(ruleset.blacklist) == 17
 
     def test_every_shipped_revision_is_documented_in_the_file(self):
         """A version bump with no recorded reason is a silent widening.
@@ -213,10 +223,10 @@ class TestShippedRuleset:
         "every shipped revision" generality is made REAL by driving the same
         checker over a synthetic v4 file in `TestRevisionJustification`.
         """
-        # v8 (SPEC-COPILOT-CLASSIFYGAP-001, 카드 t325 Phase 4). 이 핀은 버전을
-        # 올리는 사람이 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이고,
-        # 이 회차에서도 정확히 그렇게 걸렸다 — v8 을 배치하자 이 줄이 빨개졌다.
-        assert load_ruleset().version == 8
+        # v9 (SPEC-COPILOT-WRITEGATE-001, 카드 t364). 이 핀은 버전을 올리는 사람이
+        # 반드시 여기 와서 논거를 대게 만드는 의도된 마찰이고, 이 회차에서도 정확히
+        # 그렇게 걸렸다 — v9 를 배치하자 이 줄이 빨개졌다(직전 회차는 v8/t325).
+        assert load_ruleset().version == 9
         _assert_every_revision_is_justified(DEFAULT_RULESET_PATH)
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):
