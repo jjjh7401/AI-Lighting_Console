@@ -95,9 +95,23 @@ def test_missing_requested_dynamics_is_unmapped_without_nearest_promotion():
     assert selection.reason == UNMAPPED_LOOK
 
 
-def test_unknown_section_without_explicit_dynamics_requires_specification():
+@pytest.mark.parametrize("name", ["Zzyzx", "Solo"])
+def test_unknown_section_without_explicit_dynamics_requires_specification(name):
+    """세기를 못 정한 구간은 **추측하지 않는다** — 가장 가까운 대역으로 승격시키지 않는다.
+
+    이 검사는 한때 ``Breakdown`` 을 예로 들었다. 카드 t362 가 정본 §2 어휘를 실어 그
+    이름이 **읽히게** 되면서 예가 결함을 가리키지 않게 됐고, 그러니 예를 바꾼다 —
+    불변식은 그대로다. 두 갈래를 함께 쏘는 것이 요점이다:
+
+    * ``Zzyzx`` — 어휘에 **없는** 이름.
+    * ``Solo`` — 어휘에는 있는데 정본이 세기를 **주지 않은** 이름
+      (``section_vocab.POP_AXIS['solo']``: §6 solo 행이 밝기 대신 역할을 말한다).
+
+    둘 다 같은 사유로 끝나야 한다. 뒤엣것이 조용히 대역을 얻으면 정본에 없는 숫자가
+    무대에 나간다.
+    """
     library = _library(_look("rock-low", "rock", 1))
-    section = parse_sections((("Breakdown", "0:00"),))[0]
+    section = parse_sections(((name, "0:00"),))[0]
 
     selection = map_sections_to_looks((section,), library, "rock")[0]
 

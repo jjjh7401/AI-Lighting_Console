@@ -195,17 +195,22 @@ class TestIsErrorContract:
         assert payload["index"] == 1
 
     def test_unknown_section_names_require_correction(self):
+        """읽히지 않는 구간 이름은 **오류로 돌려보낸다** — 가장 가까운 대역으로 승격 금지.
+
+        예가 ``Breakdown`` 이었다. 카드 t362 가 정본 §2.2 어휘를 실으면서 그 이름은 이제
+        읽히므로(세기 ``(1,)``), 예를 어휘 밖 이름으로 바꾼다. 불변식은 그대로다.
+        """
         execution, payload = _call(
             _registry(),
             sections=(
                 {"name": "Chorus", "start": "0:10"},
-                {"name": "Breakdown", "start": "0:14"},
+                {"name": "Zzyzx", "start": "0:14"},
             ),
         )
 
         assert execution.result.is_error is True
         assert payload["reason"] == "explicit_dynamics_required"
-        assert payload["unknown_sections"] == [{"index": 1, "name": "Breakdown"}]
+        assert payload["unknown_sections"] == [{"index": 1, "name": "Zzyzx"}]
 
     def test_storing_nothing_is_an_answer_not_a_failure(self):
         port = _RecordingPort()
