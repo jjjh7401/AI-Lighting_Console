@@ -1,0 +1,11 @@
+Sequence 7 {'childCount': 10, 'class': 'Sequence', 'enumeration': 'ok', 'name': 'VerifyA'}
+  1 OffCue
+  2 CueZero
+  3 Intro
+  4 Verse 1
+  5 Chorus 1
+  6 Verse 2
+  7 Chorus 2
+  8 Breakdown
+  9 Drop
+  10 Outro

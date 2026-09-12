@@ -1,0 +1,14 @@
+시퀀스: [(1, 'Default'), (2, 'Sugar'), (3, 'Sugar r3'), (4, 'eset1Fade'), (5, 'Synth Test'), (6, 'Notice Test'), (7, 'VerifyA'), (8, 'VerifyB4x'), (9, 'T215 SCRATCH DELETABLE'), (2000, 'Sequence 2000')]
+
+Sequence 8 {'childCount': 11, 'class': 'Sequence', 'enumeration': 'ok', 'name': 'VerifyB4x'}
+  1 OffCue
+  2 CueZero
+  3 Intro
+  4 Verse 1
+  5 Chorus 1
+  6 Verse 2
+  7 Chorus 2
+  8 Bridge
+  9 Chorus 3
+  10 Chorus 4
+  11 Outro

@@ -5,9 +5,9 @@ ballad   build-drop x2             7    7     0   -
 ballad   후렴 4회                     9    9     0   -                            
 ballad   드롭 없음                     6    6     0   -                            
 edm      verse-chorus x2 + drop    8    8     0   -                            
-edm      verse-chorus x3           8    7     1   value_line_collision         ⚠️
+edm      verse-chorus x3           8    8     0   -                            
 edm      build-drop x2             7    7     0   -                            
-edm      후렴 4회                     9    7     2   value_line_collision         ⚠️
+edm      후렴 4회                     9    9     0   -                            
 edm      드롭 없음                     6    6     0   -                            
 rock     verse-chorus x2 + drop    8    8     0   -                            
 rock     verse-chorus x3           8    8     0   -                            
@@ -17,5 +17,5 @@ rock     드롭 없음                     6    6     0   -
 worship  verse-chorus x2 + drop    8    8     0   -                            
 worship  verse-chorus x3           8    8     0   -                            
 worship  build-drop x2             7    7     0   -                            
-worship  후렴 4회                     9    8     1   value_line_collision         ⚠️
+worship  후렴 4회                     9    9     0   -                            
 worship  드롭 없음                     6    6     0   -                            
