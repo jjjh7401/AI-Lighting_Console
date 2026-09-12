@@ -1,0 +1,17 @@
+=== Worked example 1: standard solo spot (MIB on, Stop IFX/PFX on) ===
+Fixture 1103 ; Attribute 'Dimmer' At 100.0 ; Attribute 'ColorRGB_R' At 100.0 ; Attribute 'ColorRGB_G' At 100.0 ; Attribute 'ColorRGB_B' At 100.0 ; Attribute 'Pan' At 33.7 ; Attribute 'Tilt' At 55.3 ; Attribute 'Zoom' At 5.0
+<MEASURE ME: Stop IFX preset call>
+<MEASURE ME: Stop PFX preset call>
+Store Preset 1.1
+Label Preset 1.1 'Piano Solo'
+
+slot chosen: 1 pool: 1
+safety: {'stop_ifx': True, 'stop_pfx': True, 'move_in_black': True}
+
+=== Worked example 2: show-the-movement request (MIB off, Stop IFX/PFX off) ===
+Fixture 1103 ; Attribute 'Dimmer' At 100.0 ; Attribute 'ColorRGB_R' At 100.0 ; Attribute 'ColorRGB_G' At 100.0 ; Attribute 'ColorRGB_B' At 100.0 ; Attribute 'Pan' At 33.7 ; Attribute 'Tilt' At 55.3 ; Attribute 'Zoom' At 5.0
+Store Preset 1.2
+Label Preset 1.2 'Piano Solo Move'
+
+slot chosen: 2 pool: 1
+safety: {'stop_ifx': False, 'stop_pfx': False, 'move_in_black': False}
