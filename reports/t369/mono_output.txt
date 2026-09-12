@@ -1,0 +1,35 @@
+
+=== edm / Intro Verse Chorus Verse Chorus Bridge Chorus Chorus Outro ===
+  cue  1 Intro    #1  Dimmer=18
+  cue  2 Verse    #1  Dimmer=25
+  cue  3 Chorus   #1  Dimmer=90
+  cue  4 Verse    #2  Dimmer=30
+  cue  5 Chorus   #2  Dimmer=95
+  cue  6 Bridge   #1  Dimmer=23
+  cue  7 Chorus   #3  Dimmer=100
+  cue  8 Chorus   #4  Dimmer=100
+  cue  9 Outro    #1  Dimmer=28
+  후렴 밝기 순서: [(1, 90), (2, 95), (3, 100), (4, 100)] 🟢단조증가
+
+=== worship / Intro Verse Chorus Verse Chorus Bridge Chorus Chorus Outro ===
+  cue  1 Intro    #1  Dimmer=45
+  cue  2 Verse    #1  Dimmer=25
+  cue  3 Chorus   #1  Dimmer=95
+  cue  4 Verse    #2  Dimmer=30
+  cue  5 Chorus   #2  Dimmer=100
+  cue  6 Bridge   #1  Dimmer=20
+  cue  7 Chorus   #3  Dimmer=100
+  cue  8 Chorus   #4  Dimmer=100
+  cue  9 Outro    #1  Dimmer=50
+  후렴 밝기 순서: [(1, 95), (2, 100), (3, 100), (4, 100)] 🟢단조증가
+
+=== edm / Intro Verse Chorus Verse Chorus Verse Chorus Outro ===
+  cue  1 Intro    #1  Dimmer=18
+  cue  2 Verse    #1  Dimmer=25
+  cue  3 Chorus   #1  Dimmer=95
+  cue  4 Verse    #2  Dimmer=30
+  cue  5 Chorus   #2  Dimmer=100
+  cue  6 Verse    #3  Dimmer=35
+  cue  7 Chorus   #3  Dimmer=100
+  cue  8 Outro    #1  Dimmer=23
+  후렴 밝기 순서: [(1, 95), (2, 100), (3, 100)] 🟢단조증가

@@ -33,6 +33,7 @@ from server.looks.schema import AttributeValue, Look
 from server.looks.songcue import (
     LADDER_DIMMER_YIELD,
     SongCueLookSelection,
+    _dimmer_from_values_line,
     build_songcue_bundle,
     map_sections_to_looks,
     parse_sections,
@@ -185,6 +186,81 @@ class TestTheChorusRescueGeneralizesBeyondDrop:
         assert chorus[1].ladder == ("dimmer_hit", "zoom_pinch")
         assert chorus[2].ladder == ("dimmer_hit", "dimmer_hit", "iris_pinch")
         assert chorus[3].ladder == (), "4회차는 회수로 비워진 기준값을 그대로 받는다"
+
+
+def _chorus_dimmers(bundle) -> list[float | None]:
+    return [_dimmer_from_values_line(section.commands[2]) for section in _chorus_sections(bundle)]
+
+
+class TestRepetitionOrderSurvivesADoubleRescueCascade:
+    """t369 — 회수가 두 겹으로 겹치면(카드 t368 이후 실측) 뒤 회차가 앞 회차보다
+
+    어두워질 수 있었다. 정본 §7.1 ``_ladder_start`` 독스트링의 「낮은 칸으로는
+    내려가지 않는다: 뒤 회차가 앞 회차보다 약해지면 상승이 아니다」를 후렴 반복에도
+    실측으로 못박는다.
+
+    **고치기 전에 실측한 것**(2026-09-13, main `a48aaf0` — t366·t367·t368 이후).
+    ``reports/onsite-round-20260912/mono.py`` 로 edm 9구간(후렴 4회)을 태우면
+    코러스 밝기 순서가 ``[(1, 95), (2, 100), (3, 90), (4, 100)]`` 로 나와 2회차→3회차
+    구간에서 역전했다. 1회차가 물러서서 3회차에게 기준값을 내준 뒤, 4회차가 다시
+    그 기준값을 원해 3회차를 물렸는데, 그 두 번째 회수가 1회차가 이미 95를 쥔 줄
+    모르고 기준값에서 처음부터 다시 내려가 90에 닿았기 때문이다.
+    """
+
+    def test_edm_four_chorus_dimmer_never_decreases_across_repetitions(self):
+        """카드의 재현 자리 그대로 — edm 9구간, 후렴 4회."""
+        library = load_library_from_dir()
+        sections = parse_sections(_EDM_NINE_SECTIONS_FOUR_CHORUS)
+        selections = map_sections_to_looks(sections, library, "edm")
+        bundle = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*FULL_RIG),
+        )
+
+        assert bundle.skipped == ()
+        assert len({s.commands[2] for s in bundle.stored_sections}) == 9, (
+            "아홉 큐의 값 라인은 여전히 서로 달라야 한다 — 회차를 재배정할 뿐 값 집합은 안 바뀐다"
+        )
+
+        dimmers = _chorus_dimmers(bundle)
+        assert all(value is not None for value in dimmers)
+        assert dimmers == sorted(dimmers), f"뒤 회차가 앞 회차보다 어두우면 안 된다: {dimmers}"
+
+    def test_worship_four_chorus_dimmer_never_decreases_across_repetitions(self):
+        """대조군 — worship 은 빔 축이 둘이라 이 카드 이전에도 단조증가였다."""
+        library = load_library_from_dir()
+        sections = parse_sections(_WORSHIP_NINE_SECTIONS_FOUR_CHORUS)
+        selections = map_sections_to_looks(sections, library, "worship")
+        bundle = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*FULL_RIG),
+        )
+
+        assert bundle.skipped == ()
+        dimmers = _chorus_dimmers(bundle)
+        assert all(value is not None for value in dimmers)
+        assert dimmers == sorted(dimmers), f"뒤 회차가 앞 회차보다 어두우면 안 된다: {dimmers}"
+
+    def test_edm_three_chorus_dimmer_never_decreases_across_repetitions(self):
+        """대조군 — edm 후렴 3회는 회수가 한 겹뿐이라 이 카드 이전에도 단조증가였다."""
+        library = load_library_from_dir()
+        sections = parse_sections(_EDM_EIGHT_SECTIONS_THREE_CHORUS)
+        selections = map_sections_to_looks(sections, library, "edm")
+        bundle = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*FULL_RIG),
+        )
+
+        assert bundle.skipped == ()
+        dimmers = _chorus_dimmers(bundle)
+        assert all(value is not None for value in dimmers)
+        assert dimmers == sorted(dimmers), f"뒤 회차가 앞 회차보다 어두우면 안 된다: {dimmers}"
 
 
 class TestControlMeasurementForTheCeilingDiagnosis:
