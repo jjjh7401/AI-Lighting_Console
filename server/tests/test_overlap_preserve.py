@@ -529,14 +529,56 @@ _LOOKS_GRANTED_COUNT_PROSE_PAIRS = {
     ),
 }
 
+#: 2026-09-12 granted change — 카드 t359 (감독 승인). 출하 룩 넷 전부에 움직임이
+#: 실렸다: 34개 중 15개가 `movement:` 를 선언하고 그 15개가 `무버` 역할을 함께 들며,
+#: 네 파일의 머리말이 그 근거(정본 §6 표 · §6.2 · §6.4)를 적는다.
+#:
+#: **왜 앞선 셋과 다른 방식으로 계상하는가.** 앞의 세 grant(파란 미러 · D1 append ·
+#: 개수 산문)는 **정확한 줄 문면**으로 고정됐고, 그 방식이 성립한 이유는 각 grant 가
+#: 몇 줄짜리였고 diff 순서(= 파일 위치 순서)로 앞뒤가 깔끔히 갈렸기 때문이다. t359 의
+#: 변경은 그렇지 않다 — 225줄이 네 파일의 **여러 자리에 흩어져** 들어가고, edm 에서는
+#: 파란 줄(옛 74)의 앞뒤 양쪽에 붙는다. 그 모양을 줄 문면 이어붙이기로 고정하려면
+#: 이 파일에 225줄짜리 리터럴을 심어야 하고, 그것은 고정이 아니라 자산의 사본이다.
+#:
+#: 그래서 형제 게이트의 **t348 / t356 계상 방식**을 쓴다: 목록에서 경로를 빼지 않고
+#: (빼면 이 디렉터리에 대한 게이트가 통째로 은퇴한다) diff 본문 전체를 아래
+#: 다이제스트로 정확히 고정한다. 한 바이트라도 달라지면 빨개진다.
+#:
+#: **앞선 세 grant 는 약해지지 않는다.** 아래
+#: :meth:`TestLooksLibraryGrantedExtension.test_every_change_is_a_granted_line_pair_
+#: and_every_pair_is_present` 가 그 줄들을 여전히 **순서를 지킨 부분수열**로 요구하고,
+#: 그 위에 이 다이제스트가 전체를 맞춘다. 부분수열 + 전체 다이제스트 = 정확 일치이며,
+#: 부분수열 하나만으로 느슨해지는 것(그 메서드가 경고하는 「subset predicate」)이
+#: 아니다.
+#:
+#: NOT live-verified: 콘솔은 만지지 않았다. 여기 실린 진폭·속도는
+#: `server/fx/library/movement.yaml` 이 이미 싣고 있는 크기대 안의 설계값이고,
+#: 무대에서 어떻게 보이는지는 실기 회차의 몫이다.
+_T359_LIBRARY_ACCOUNTED_DIGEST = "3ac12015804a6589d5e45230232a6b8f914c9b1255a1d416903fac1c45160c65"
+#: 39 hunk · 추가 225 · 삭제 30 — 사람이 규모를 읽는 자리. 다이제스트가 고정하는 것과
+#: 같은 diff 를 서술하며, 둘이 갈리면 하나는 낡은 것이다.
+_T359_LIBRARY_SHAPE = (39, 225, 30)
+
 #: The look-library files carrying a granted change of ANY kind. Derived, not
 #: written down: a hand-kept list would desynchronise from the grants the
-#: moment any one of them is revised.
+#: moment any one of them is revised. t359 이 넷 전부를 건드리므로 이 합집합의
+#: 크기는 변하지 않는다 — 넷 그대로다.
 _LOOKS_GRANTED_FILES = (
     frozenset(_LOOKS_GRANTED_LINE_PAIRS)
     | frozenset(_LOOKS_GRANTED_D1_APPENDS)
     | frozenset(_LOOKS_GRANTED_COUNT_PROSE_PAIRS)
 )
+
+
+def _is_ordered_subsequence(needles: list[str], haystack: list[str]) -> bool:
+    """``needles`` 가 ``haystack`` 안에 **순서를 지켜** 전부 나타나는가.
+
+    부분집합이 아니라 부분수열인 것이 요점이다 — 앞선 grant 들의 줄은 diff 순서가
+    곧 파일 위치 순서라서, 순서가 뒤집혔다면 그 줄이 다른 자리로 옮겨 간 것이다.
+    """
+    iterator = iter(haystack)
+    return all(needle in iterator for needle in needles)
+
 
 _TOOLS_PATH = "server/orchestrator/tools.py"
 
@@ -1458,19 +1500,50 @@ class TestLooksLibraryGrantedExtension:
             pairs = _LOOKS_GRANTED_LINE_PAIRS.get(path, ())
             appended = _LOOKS_GRANTED_D1_APPENDS.get(path, ())
             deleted, added = self._diff_lines(path)
-            # Exact equality on BOTH sides, deliberately. Relaxing either to a
-            # subset test is the cheapest way to make an unsanctioned edit pass
-            # and would void the whole gate — see the grant comments above.
+            # 2026-09-12 이전에는 여기가 양쪽 **정확 일치**였다. 카드 t359 가 같은 네
+            # 파일에 225줄을 흩어 넣으면서 그 형태를 유지할 수 없게 됐고(근거는
+            # `_T359_LIBRARY_ACCOUNTED_DIGEST` 주석), 단언은 두 조각으로 갈렸다:
             #
-            # The concatenation ORDER is diff order, which is file-position
-            # order: the count-prose line (old 7) precedes the 파란 line
-            # (old 74), which precedes the old EOF. That claim is not assumed
-            # here — `test_the_granted_hunks_appear_in_the_order_this_class_
-            # concatenates_them` measures it.
-            assert deleted == [old for old, _new in prose] + [old for old, _new in pairs], path
-            assert added == [new for _old, new in prose] + [new for _old, new in pairs] + list(
-                appended
+            #   (1) 여기 — 앞선 세 grant 의 줄이 **순서를 지켜 전부 남아 있는가**.
+            #   (2) `test_the_t359_movement_grant_pins_the_whole_library_diff` —
+            #       diff 본문 전체가 고정된 다이제스트와 바이트 일치하는가.
+            #
+            # (1)만 두면 그 메서드가 원래 경고하던 subset predicate 가 되어 임의의
+            # 라이브러리 편집이 통과한다. (2)가 그 구멍을 막고, (1)은 다이제스트를
+            # 다시 핀으로 박을 때 앞선 grant 가 조용히 사라지는 것을 막는다. 둘은
+            # 서로를 대체하지 않는다.
+            #
+            # 순서 주장(diff 순서 = 파일 위치 순서)은 여기서 가정하지 않는다 —
+            # `test_the_granted_hunks_appear_in_the_order_this_class_concatenates_them`
+            # 이 잰다.
+            assert _is_ordered_subsequence(
+                [old for old, _new in prose] + [old for old, _new in pairs], deleted
             ), path
+            assert _is_ordered_subsequence(
+                [new for _old, new in prose] + [new for _old, new in pairs] + list(appended),
+                added,
+            ), path
+
+    def test_the_t359_movement_grant_pins_the_whole_library_diff(self):
+        # 정확성의 근거. 위 부분수열 단언이 놓치는 모든 줄 — t359 가 넣은 225줄과
+        # 지운 30줄 전부 — 이 여기서 바이트 단위로 고정된다.
+        body: list[str] = []
+        hunks = 0
+        for line in _git(
+            "diff", "--unified=0", f"{_PRECHK_BASE}..HEAD", "--", _LOOKS_LIBRARY_DIR
+        ).splitlines():
+            if line.startswith("@@"):
+                hunks += 1
+            elif line.startswith(("+", "-")) and not line.startswith(("+++", "---")):
+                body.append(line)
+        added = sum(1 for line in body if line.startswith("+"))
+        deleted = len(body) - added
+        assert (hunks, added, deleted) == _T359_LIBRARY_SHAPE
+        digest = hashlib.sha256("\n".join(body).encode()).hexdigest()
+        assert digest == _T359_LIBRARY_ACCOUNTED_DIGEST, (
+            "server/looks/library/ 의 diff 가 계상된 것과 다르다. 자산을 고쳤다면 "
+            "다이제스트를 다시 재서 박고, 그 변경의 승인 근거를 위 주석에 적어라"
+        )
 
     def test_the_granted_hunks_appear_in_the_order_this_class_concatenates_them(self):
         # The assertion above concatenates three grants in a fixed order. If the
@@ -1490,10 +1563,16 @@ class TestLooksLibraryGrantedExtension:
         # pure insertion (`old_count == 0`) named by the line it follows. That
         # the insertion is the LAST hunk is what makes the concatenation order
         # in the assertion above sound rather than lucky.
+        #
+        # 예전에는 여기에 `len(insertions) == 1` 이 있었다 — 순수 삽입이 D1 append
+        # 하나뿐이라는 것. 카드 t359 의 movement 블록도 순수 삽입이라(edm 기준 7개)
+        # 그 세기는 더 이상 성립하지 않는다. **버리는 것이 아니라 좁힌다**: 이 검사가
+        # 실제로 지탱하는 성질은 「D1 append 가 여전히 옛 EOF 의 순수 삽입이고,
+        # 마지막 hunk 다」이고 그것이 아래 한 줄이다. 「다른 블록이 끼어들지 않았다」는
+        # 쪽은 `_T359_LIBRARY_ACCOUNTED_DIGEST` 가 전체를 고정하면서 받는다.
         for path in _LOOKS_GRANTED_D1_APPENDS:
             hunks = _hunks(_PRECHK_BASE, path)
-            insertions = [hunk for hunk in hunks if hunk[1] == 0]
-            assert len(insertions) == 1, path
+            assert [hunk for hunk in hunks if hunk[1] == 0], path
             text = _git("show", f"{_PRECHK_BASE}:{path}")
             assert hunks[-1] == (len(text.splitlines()), 0), path
 
