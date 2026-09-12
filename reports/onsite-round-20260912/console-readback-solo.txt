@@ -1,0 +1,2 @@
+풀 22 (All 2): {'childCount': 1, 'class': 'Presets', 'enumeration': 'ok', 'name': 'All 2'}
+  슬롯 1 'Piano Solo' Preset
