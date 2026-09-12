@@ -1,0 +1,1 @@
+test	fail	2s	https://github.com/jjjh7401/AI-Lighting_Console/actions/runs/34693381788/job/103552550163	
