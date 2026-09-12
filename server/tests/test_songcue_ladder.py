@@ -21,6 +21,8 @@ from server.looks.loader import load_library_from_dir
 from server.looks.schema import AttributeValue, Look
 from server.looks.songcue import (
     LADDER_DIMMER_HIT,
+    LADDER_IRIS_PINCH,
+    LADDER_RUNGS,
     LADDER_ZOOM_PINCH,
     VARIANT_PRIME,
     SongCueLookSelection,
@@ -300,6 +302,124 @@ class TestNoCollisionIsByteIdentical:
             "ClearAll",
         )
         assert all(section.ladder == () for section in bundle.stored_sections)
+
+
+class TestOneMarkingAccentPerCue:
+    """t361 — 한 큐에 **찍는 액센트는 하나**, 밝기만 누적한다(정본 §6.1, 감독 결정 2026-09-12).
+
+    **고치기 전에 실측한 것**(2026-09-12, main ``051e98b``): 후렴 4회차 한 큐가
+    ``Zoom At 13`` 과 ``Iris At 55`` 를 함께 실었다 — 둘 다 실제로 값을 바꿨고, §6.1
+    [HARD]「한 큐에 하나만」 위반이다. 원인은 칸 목록의 앞자락을 그대로 잘라 쓴 것
+    (``_LADDER_CLIMB[:n]``)이고, 그래서 깊이가 3에 닿으면 빔 계열 둘이 같이 나갔다.
+
+    갈래는 감독이 정했다 — **누적하는 축은 밝기 하나**, 나머지는 큐당 하나이고 뒤 회차는
+    앞 회차의 액센트 위에 얹는 것이 아니라 **갈아탄다**.
+    """
+
+    #: 찍는 액센트를 **검사 쪽에서 따로 적는다**. 구현의 ``_MARKING_ACCENTS`` 를 읽어
+    #: 세면 그 목록이 비는 순간 단정이 공허해진다(0개도 「하나 이하」다). 아래
+    #: :meth:`test_every_ladder_rung_is_classified` 가 새 칸이 조용히 새는 것을 막는다.
+    _MARKING = (LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH)
+
+    def test_every_ladder_rung_is_classified(self):
+        """새 칸이 생기면 여기가 먼저 빨개진다 — 분류 안 된 칸은 세어지지 않는다."""
+        assert set(LADDER_RUNGS) == {LADDER_DIMMER_HIT, *self._MARKING}
+
+    def test_the_third_chorus_carries_brightness_plus_exactly_one_marking_accent(self):
+        """양성 대조군 — 실측 라이브러리의 후렴 3회차. 명령 줄과 **개수**를 함께 잰다."""
+        library = load_library_from_dir()
+        sections = parse_sections((("Chorus", "0:00"), ("Chorus", "0:40"), ("Chorus", "1:20")))
+        bundle = build_songcue_bundle(
+            "Song",
+            map_sections_to_looks(sections, library, "edm"),
+            sequences_section=_sequences(),
+            groups_section=_groups(*FULL_RIG),
+        )
+
+        third = bundle.stored_sections[2]
+        assert self._marking_count(third.ladder) == 1, "찍는 액센트는 큐당 하나"
+        assert LADDER_DIMMER_HIT in third.ladder, "밝기는 누적 축이므로 함께 실린다"
+        # 실제로 나가는 명령 줄 — 밝기 히트(90→95)와 빔 히트(18→13) 하나.
+        assert (
+            third.commands[2] == "Attribute 'Dimmer' At 95 ; Attribute 'ColorRGB_R' At 72 ; "
+            "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; "
+            "Attribute 'Zoom' At 13"
+        )
+        # t355 의 보증 — 세 회차의 값 라인은 여전히 서로 다르다.
+        assert len(set(_value_lines(bundle))) == 3
+        assert bundle.skipped == ()
+
+    def test_the_fourth_occurrence_swaps_its_accent_instead_of_stacking(self):
+        """고친 그 자리 — 줌 위에 아이리스를 **얹지 않고** 갈아탄다.
+
+        룩이 줌과 아이리스를 **둘 다** 실어야 이 단정이 공허하지 않다(없는 축의 칸은
+        아무것도 안 바꾸므로, 축이 하나뿐인 룩에서는 쌓아도 한 줄만 나간다).
+        """
+        sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(5)))
+        look = _look("chorus", dimmer=80, zoom=18, iris=60)
+        bundle = _bundle_of(*((section, look) for section in sections))
+
+        assert [section.ladder for section in bundle.stored_sections] == [
+            (),
+            (LADDER_DIMMER_HIT,),
+            (LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH),
+            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_IRIS_PINCH),
+            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH),
+        ]
+        lines = _value_lines(bundle)
+        # 4회차: 줌은 기준값으로 **돌아가고** 아이리스가 좁혀진다. 밝기는 계속 오른다.
+        assert "Attribute 'Zoom' At 18" in lines[3]
+        assert "Attribute 'Iris' At 55" in lines[3]
+        assert "Attribute 'Dimmer' At 90" in lines[3]
+        # 5회차: 다시 줌으로 갈아타고 아이리스가 기준값으로 돌아온다.
+        assert "Attribute 'Zoom' At 13" in lines[4]
+        assert "Attribute 'Iris' At 60" in lines[4]
+        assert "Attribute 'Dimmer' At 95" in lines[4]
+        # 고치기 전 실측 그 자리 — 한 줄에 빔 계열 둘이 함께 나가던 것이 사라졌다.
+        for line in lines:
+            assert not ("Attribute 'Zoom' At 13" in line and "Attribute 'Iris' At 55" in line)
+        for section in bundle.stored_sections:
+            assert self._marking_count(section.ladder) <= 1
+        assert len(set(lines)) == 5
+        assert bundle.skipped == ()
+
+    def test_brightness_carries_the_cue_when_accent_swapping_cannot(self):
+        """액센트 갈아타기만으로는 값을 못 가르는 입력 — 큐가 사라지지 않고 밝기가 든다.
+
+        빔 축이 아예 없는 룩이라 줌·아이리스 칸은 **아무것도 안 바꾼다**. 액센트에만
+        기대면 2회차 이후가 전부 앞 큐와 같아져 버려졌을 것이다.
+        """
+        sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(4)))
+        look = _look("washonly", dimmer=70)
+        bundle = _bundle_of(*((section, look) for section in sections))
+
+        assert len(bundle.stored_sections) == 4
+        assert bundle.skipped == ()
+        lines = _value_lines(bundle)
+        assert len(set(lines)) == 4
+        for expected in ("At 70", "At 75", "At 80", "At 85"):
+            assert any(f"Attribute 'Dimmer' {expected}" in line for line in lines)
+        # 빔 축이 없으므로 어떤 줄에도 줌·아이리스가 나가지 않는다 — 공허하지 않다는 증거.
+        for line in lines:
+            assert "Zoom" not in line and "Iris" not in line
+
+    def test_the_accent_carries_it_when_brightness_is_at_the_ceiling(self):
+        """거울상 대조군 — 밝기가 천장이면 액센트가 값을 가른다. 그래도 큐당 하나다."""
+        first, second = parse_sections((("Chorus", "0:00"), ("Chorus", "0:40")))
+        look = _look("ceiling", dimmer=100, zoom=18, iris=60)
+        bundle = _bundle_of((first, look), (second, look))
+
+        assert len(bundle.stored_sections) == 2
+        assert bundle.skipped == ()
+        second_line = _value_lines(bundle)[1]
+        assert "Attribute 'Dimmer' At 100" in second_line, "밝기는 더 못 오른다"
+        assert "Attribute 'Zoom' At 13" in second_line
+        assert "Attribute 'Iris' At 60" in second_line, "아이리스는 아직 안 쓴다 (머리 공간)"
+        assert self._marking_count(bundle.stored_sections[1].ladder) == 1
+
+    @classmethod
+    def _marking_count(cls, rungs) -> int:
+        return sum(1 for rung in rungs if rung in cls._MARKING)
 
 
 def _look(
