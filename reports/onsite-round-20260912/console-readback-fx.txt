@@ -1,0 +1,12 @@
+Seq 11: 'chase-horizontal' childCount=3
+   1 OffCue
+   2 CueZero
+   3 chase-horizontal
+Seq 12: 'chase-bounce-run' childCount=3
+   1 OffCue
+   2 CueZero
+   3 chase-bounce-run
+Seq 13: 'sweep-vshape-swing' childCount=3
+   1 OffCue
+   2 CueZero
+   3 sweep-vshape-swing
