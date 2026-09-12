@@ -1,0 +1,2 @@
+uv run pytest server/tests --collect-only -q | grep -c ::
+=> 12595

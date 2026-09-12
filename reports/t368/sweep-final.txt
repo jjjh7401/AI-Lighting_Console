@@ -1,0 +1,21 @@
+장르       구성                       큐  저장  건너뜀  사유
+ballad   verse-chorus x2 + drop    8    8     0   -                            
+ballad   verse-chorus x3           8    8     0   -                            
+ballad   build-drop x2             7    7     0   -                            
+ballad   후렴 4회                     9    9     0   -                            
+ballad   드롭 없음                     6    6     0   -                            
+edm      verse-chorus x2 + drop    8    8     0   -                            
+edm      verse-chorus x3           8    8     0   -                            
+edm      build-drop x2             7    7     0   -                            
+edm      후렴 4회                     9    9     0   -                            
+edm      드롭 없음                     6    6     0   -                            
+rock     verse-chorus x2 + drop    8    8     0   -                            
+rock     verse-chorus x3           8    8     0   -                            
+rock     build-drop x2             7    7     0   -                            
+rock     후렴 4회                     9    9     0   -                            
+rock     드롭 없음                     6    6     0   -                            
+worship  verse-chorus x2 + drop    8    8     0   -                            
+worship  verse-chorus x3           8    8     0   -                            
+worship  build-drop x2             7    7     0   -                            
+worship  후렴 4회                     9    9     0   -                            
+worship  드롭 없음                     6    6     0   -                            

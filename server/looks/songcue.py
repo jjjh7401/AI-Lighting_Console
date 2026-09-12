@@ -638,7 +638,7 @@ def _assembled(
         )
         section_bundles.append(section_bundle)
 
-    section_bundles = _rescue_drop_collisions(
+    section_bundles = _rescue_value_line_collisions(
         section_bundles,
         emitted,
         sequence_number=sequence_number,
@@ -666,8 +666,8 @@ def _flatten_commands(
 ) -> tuple[tuple[str, ...], tuple[SongCueSectionBundle, ...]]:
     """번들을 순서대로 이어붙인 플랫 명령 목록과, 라벨이 실린 번들들.
 
-    조립 루프에서 뗀 이유는 하나다 — 드롭 구조 회수(:func:`_rescue_drop_collisions`,
-    카드 t366)가 완결된 번들 목록 하나를 사후에 고칠 수 있어야 하고, 그러려면 「번들을
+    조립 루프에서 뗀 이유는 하나다 — 값 라인 충돌 회수(:func:`_rescue_value_line_collisions`,
+    카드 t366·t368)가 완결된 번들 목록 하나를 사후에 고칠 수 있어야 하고, 그러려면 「번들을
     쌓는 일」과 「번들을 플랫 명령으로 편다」가 같은 루프에 묶여 있으면 안 된다. 편성
     규칙 자체는 고치기 전과 같다 — 저장하는 첫 큐 뒤에 ``Label Sequence`` 를 한 번만
     끼운다.
@@ -692,7 +692,8 @@ def _flatten_commands(
 
 
 # @MX:ANCHOR: [AUTO] 드롭은 값 충돌로 버려지지 않는다 — 물러서는 쪽은 드롭이 아닌
-#   상대다(정본 §6 「마지막 드롭은 전 리그 최대」, 카드 t366).
+#   상대다(정본 §6 「마지막 드롭은 전 리그 최대」, 카드 t366). 카드 t368 에서 3회차
+#   이상의 반복 라벨(후렴 등)에도 같은 회수를 열었다 — 아래 REASON 후반부.
 # @MX:REASON: 사다리(§7.1)는 **나중 큐가 오른다**. 드롭이 이미 천장(``_DIMMER_CEILING``)
 #   에 있고 빔 축(줌·아이리스)도 없거나 이미 다 쓰였으면 오를 데가 없어 마지막 수단으로
 #   버려졌다 — 실측(2026-09-12, main `13595be`) 8구간 EDM 입력에서 드롭 한 장이
@@ -703,7 +704,34 @@ def _flatten_commands(
 #   유혹은 이 결함 그대로다. 상대가 드롭 자신이면(같은 §6 행의 다른 드롭) 물리지
 #   않는다 — 정본이 「전 리그 최대」를 요구하는 것은 드롭이지, 드롭과 충돌한 또 다른
 #   드롭이 아니다.
-def _rescue_drop_collisions(
+#
+#   **카드 t368 — 같은 결함이 드롭 아닌 반복 라벨의 3회차 이상에서도 실측됐다.**
+#   빔 축이 하나뿐인 룩(``edm-drop-crimson``, 줌만)은 오를 수 있는 값이 「기준값·
+#   줌 좁힌 값」 둘뿐이고, 축이 둘인 룩(``worship-glory-climax``, 줌+아이리스)도
+#   「기준값·줌·아이리스」 셋뿐이다 — 1회차가 기준값을, 2회차(또는 2·3회차)가 그
+#   나머지를 다 쓰면 그 다음 회차부터는 사다리를 아무리 더 올라도 이미 쓴 값으로만
+#   되돌아온다(``_climb_rungs`` 의 액센트는 갈아탈 뿐 누적하지 않으므로). 그 결과
+#   3회차 이상의 후렴이 통째로 버려졌다 — 정본 §7 「곡 안 반복은 미덕」의 정반대다.
+#
+#   회수 조건을 **드롭이거나 3회차 이상**(``section.instance >= 3``)으로 잡은 것은
+#   임의가 아니다: 1회차는 언제나 기준값으로 성공하고, 2회차는 사다리의 첫 액센트로
+#   성공하는 것이 **정상 경로**다 — 이 두 회차가 그래도 충돌해 버려지는 것은 이
+#   룩에 액센트 축이 하나도 없다는 뜻이고(``test_songcue_ladder.py`` 의
+#   ``TestTheLastResortSkipStillFires`` · ``test_songcue_bundle.py`` 의
+#   ``test_value_line_collision_skips_later_section_without_pulling_next_cue`` ·
+#   ``test_songcue_report.py`` 의 ``_mixed_bundle`` 이 바로 그 도합 아홉 개 대조군),
+#   그 경계선까지 회수 대상으로 넓히면 이 셋이 전부 깨진다. 3회차부터 회수하는 것은
+#   「액센트를 다 썼는데도 반복이 남았다」는 경우만 잡고, 「애초에 액센트가 없다」는
+#   경우는 그대로 마지막 수단의 건너뜀으로 남긴다.
+#
+#   되돌리기 쉬운 유혹 하나 더— 밝기를 물러서는 폭을 회차 깊이에 비례해 키우는 것
+#   (줌을 -5 대신 -10, -15 로). 그러면 새 값이 계속 나오지만, 감독 결정(2026-09-12,
+#   ``_MARKING_ACCENTS``)이 「밝기만 누적하고 나머지는 큐당 하나」라고 못박았다 —
+#   찍는 액센트의 폭 자체를 회차마다 키우는 것은 그 결정을 어기는 것과 같은 축이다.
+#   그래서 여기서 새로 여는 것은 폭을 넓히는 것이 아니라, **이미 있는 밝기-물러섬
+#   축**(``LADDER_DIMMER_YIELD``, 정본 §8 안전 바닥까지)을 상대에게 반복해 적용하는
+#   것뿐이다 — 그 축은 이미 살아 있었다(드롭을 위해).
+def _rescue_value_line_collisions(
     section_bundles: Sequence[SongCueSectionBundle],
     emitted: dict[str, tuple[int, int, str]],
     *,
@@ -712,29 +740,19 @@ def _rescue_drop_collisions(
     movements: Mapping[int, MovementPlan],
     darken: Mapping[int, int],
 ) -> tuple[SongCueSectionBundle, ...]:
+    """드롭, 또는 3회차 이상의 반복 라벨이 사다리 소진으로 버려지려는 것을 되살린다.
+
+    한 번의 훑기로 안 끝날 수 있다 — 회차가 셋 이상 겹치면(카드 t368 실측: 후렴
+    4회) 앞선 회수가 만든 새 점유가 **뒤 회차의 진짜 상대**를 바꾼다(기준값을
+    쥔 큐가 바뀐다). 그래서 매 시도 직전에 ``_section_bundle`` 로 다시 지어
+    ``collides_with_cue_number`` 를 그 순간의 ``emitted`` 기준으로 다시 읽고,
+    바뀐 것이 없을 때까지 훑기를 반복한다(``LADDER_DIMMER_YIELD`` 가 바닥까지
+    유한하므로 반드시 멈춘다 — 상한은 방어적으로만 둔다).
+    """
     bundles = list(section_bundles)
-    for index, bundle in enumerate(bundles):
-        if not bundle.skipped:
-            continue
-        skip = bundle.skipped[0]
-        if skip.reason != VALUE_LINE_COLLISION:
-            continue
-        if not _is_literal_drop(bundle.section):
-            continue
-        rival_cue_number = skip.collides_with_cue_number
-        if rival_cue_number is None:
-            continue
-        rival_index = rival_cue_number - 1
-        if rival_index < 0 or rival_index >= len(bundles):
-            continue
-        rival = bundles[rival_index]
-        if _is_literal_drop(rival.section):
-            continue
-        yielded = _yield_bundle(rival, emitted)
-        if yielded is None:
-            continue
-        bundles[rival_index] = yielded
-        bundles[index] = _section_bundle(
+
+    def _rebuild(bundle: SongCueSectionBundle) -> SongCueSectionBundle:
+        return _section_bundle(
             selection=bundle.selection,
             cue_number=bundle.cue_number,
             cue_name=bundle.cue_name,
@@ -744,6 +762,44 @@ def _rescue_drop_collisions(
             movement=movements.get(bundle.cue_number),
             drop_cue_number=darken.get(bundle.cue_number),
         )
+
+    for _round in range(len(bundles) + 1):
+        changed = False
+        for index, bundle in enumerate(bundles):
+            if not bundle.skipped or bundle.skipped[0].reason != VALUE_LINE_COLLISION:
+                continue
+            if not (_is_literal_drop(bundle.section) or bundle.section.instance >= 3):
+                continue
+            # emitted 가 이전 회수로 바뀌었을 수 있다 — 갱신 없이 옛 skip 을 그대로
+            # 믿으면 이미 자리를 옮긴 상대를 다시 겨눈다(카드 t368 실측).
+            bundle = _rebuild(bundle)
+            bundles[index] = bundle
+            if not bundle.skipped:
+                changed = True
+                continue
+            skip = bundle.skipped[0]
+            if skip.reason != VALUE_LINE_COLLISION:
+                continue
+            rival_cue_number = skip.collides_with_cue_number
+            if rival_cue_number is None:
+                continue
+            rival_index = rival_cue_number - 1
+            if rival_index < 0 or rival_index >= len(bundles):
+                continue
+            rival = bundles[rival_index]
+            if rival.section.index == bundle.section.index:
+                # 한 구간을 마디로 쪼갠 큐끼리의 충돌 — 사다리의 일이 아니다, 접어 둔다.
+                continue
+            if _is_literal_drop(rival.section):
+                continue
+            yielded = _yield_bundle(rival, emitted)
+            if yielded is None:
+                continue
+            bundles[rival_index] = yielded
+            bundles[index] = _rebuild(bundle)
+            changed = True
+        if not changed:
+            break
     return tuple(bundles)
 
 
