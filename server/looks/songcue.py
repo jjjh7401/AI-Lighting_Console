@@ -11,7 +11,6 @@ from server.design.cue_density import plan_cue_density, rotate_palette
 from server.fx.instantiate import is_programmer_state
 from server.looks.busking import VALUE_LINE_COLLISION, looks_for_genre
 from server.looks.instantiate import _values_line
-from server.looks.matching import DYNAMICS_TERMS, resolve_dynamics
 from server.looks.movement import (
     BAND_ORDER,
     MOVEMENT_STILL,
@@ -23,6 +22,7 @@ from server.looks.movement import (
 from server.looks.resolver import GroupCandidate, RoleResolution, UnmappedRole, resolve_roles
 from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, AttributeValue, Look, LookLibrary
 from server.looks.section_intent import SectionIntent, intent_for_label, sorted_candidates
+from server.looks.section_vocab import SECTION_TERMS, resolve_section_dynamics
 
 _MILLISECONDS_PER_SECOND = Decimal("1000")
 _SECONDS_PER_MINUTE = Decimal("60")
@@ -1253,9 +1253,16 @@ def _first_present(values: Mapping[str, object], keys: Sequence[str]) -> object:
 
 
 def _section_dynamics(name: str) -> tuple[int, ...] | None:
-    if not DYNAMICS_TERMS:
-        raise RuntimeError("matching dynamics vocabulary is empty")
-    return resolve_dynamics(name)
+    """구간 이름 → 세기 대역. 판정은 ``section_vocab`` 하나가 갖는다 (카드 t362).
+
+    한때 이 자리가 ``matching.resolve_dynamics`` 를 불렀다. 그 함수는 **운영자 질의**의
+    판정이라 걸린 말의 대역을 전부 합집합하는데, 구간 라벨에서는 그것이 틀린 답이다 —
+    ``Post-Chorus`` 가 ``post-chorus`` ∪ ``chorus`` = (3,4,5) 로 읽혀 후렴 대역의 룩이
+    후주에 붙는다(실측: 고치기 전 ``Pre-Chorus`` 와 ``Post-Chorus`` 가 둘 다 (4,5) 였다).
+    """
+    if not SECTION_TERMS:
+        raise RuntimeError("section vocabulary is empty")
+    return resolve_section_dynamics(name)
 
 
 def _decimal_from(value: str, raw: object) -> Decimal:

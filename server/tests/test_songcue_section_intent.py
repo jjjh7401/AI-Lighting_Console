@@ -33,7 +33,6 @@ import pytest
 
 from server.looks import songcue
 from server.looks.loader import load_library_from_dir
-from server.looks.matching import DYNAMICS_TERMS
 from server.looks.schema import AttributeValue, Look, LookLibrary
 from server.looks.section_intent import (
     SECTION_INTENTS,
@@ -42,6 +41,7 @@ from server.looks.section_intent import (
     intent_for_label,
     sorted_candidates,
 )
+from server.looks.section_vocab import SECTION_TERMS
 from server.looks.songcue import (
     LADDER_DIMMER_HIT,
     LADDER_ZOOM_PINCH,
@@ -99,14 +99,17 @@ class TestTheLabelSteersSelection:
     def test_a_label_with_no_six_row_leaves_the_existing_order_alone(self):
         """§6 행이 없는 라벨은 **행을 지어내지 않는다** — 기존 전순서가 그대로 답이다.
 
-        ``Bridge`` 는 오늘의 어휘(``matching.DYNAMICS_TERMS``)에 없어서 세기조차 해석되지
-        않는다(정본 §12 항목 4: 어휘 추가는 별도 처방). 세기를 손으로 줘도 §6 행은 여전히
-        없고, 그러면 이 축은 아무 말도 하지 않는다.
+        예가 ``Bridge`` 였다. 카드 t362 가 정본 §6 「breakdown · bridge」 행을 실으면서
+        그 이름은 이제 행을 **갖는다**(20~35%). 불변식은 그대로이므로 예를 §6 이 밝기
+        숫자를 주지 않은 라벨로 바꾼다 — ``Solo`` 의 §6 밝기 칸은 숫자가 아니라
+        「솔로이스트만 강조」라는 §6.2 의 역할 문장이다(``section_vocab.POP_AXIS``).
+
+        세기를 손으로 줘도 §6 행은 여전히 없고, 그러면 이 축은 아무 말도 하지 않는다.
         """
-        assert intent_for_label("Bridge") is None
+        assert intent_for_label("Solo") is None
 
         library = load_library_from_dir()
-        sections = parse_sections((("Bridge", "0:00"),))
+        sections = parse_sections((("Solo", "0:00"),))
         selections = map_sections_to_looks(sections, library, "rock", {0: 2})
 
         head = min(
@@ -122,18 +125,54 @@ class TestTheLabelSteersSelection:
         assert intent_for_label("Chorus") is not None
 
     def test_every_row_term_comes_from_the_shared_section_vocabulary(self):
-        """§6 행의 말은 한 벌뿐이다 — 여기서 새 말을 만들면 어휘가 갈라진다."""
+        """§6 행의 말은 한 벌뿐이다 — 여기서 새 말을 만들면 어휘가 갈라진다.
+
+        표가 ``matching.DYNAMICS_TERMS`` 에서 ``section_vocab.SECTION_TERMS`` 로 옮겨간
+        것은 카드 t362 다. ``SECTION_TERMS`` 는 ``DYNAMICS_TERMS`` 를 **포함**하므로
+        이 단언은 넓어진 것이 아니라 같은 자리를 지킨다 — 새 말은 반드시 축 선언
+        (``POP_AXIS``/``EDM_AXIS``/``SIX_ROW_ONLY``)을 거쳐야 한다.
+        """
         for _row, _brightness, terms in SECTION_INTENTS:
             assert terms
             for term in terms:
-                assert term in DYNAMICS_TERMS, term
+                assert term in SECTION_TERMS, term
+
+    def test_the_six_rows_are_exactly_the_standard_rows_that_carry_a_percentage(self):
+        """§6 표의 열 행 중 **밝기 숫자를 가진 여섯**만 행이 된다 (카드 t362).
+
+        고치기 전엔 넷이었다. post-chorus(60~75%)와 breakdown · bridge(20~35%)가
+        더해져 여섯이고, 나머지 넷은 숫자가 없어서 빠진다 — solo(「솔로이스트만 강조」),
+        outro(「리셋 큐 · 디밍한 베이스」), 텐션(자리이지 라벨이 아니다), 마지막 drop
+        (「마지막」을 회차로 유도하는 규칙이 정본에 없다).
+        """
+        assert [row for row, _b, _t in SECTION_INTENTS] == [
+            "intro",
+            "verse",
+            "pre-chorus · build",
+            "chorus · drop",
+            "post-chorus",
+            "breakdown · bridge",
+        ]
+        assert [b for _r, b, _t in SECTION_INTENTS] == [
+            (20, 40),
+            (25, 50),
+            (40, 55),
+            (80, 100),
+            (60, 75),
+            (20, 35),
+        ]
 
     def test_the_six_row_divergence_from_the_old_order_is_exactly_one(self):
-        """전수 실측 — §6 의도가 사전순 선두를 바꾸는 자리는 라이브러리 전체에서 **한 곳**.
+        """전수 실측 — §6 의도가 사전순 선두를 바꾸는 자리를 라이브러리 전체에서 센다.
 
         「라벨을 걸어도 거의 아무것도 안 바뀐다」와 「다 바뀐다」는 둘 다 주장이다. 네
-        장르 × §6 행 넷을 전수로 돌려 실제 개수를 센다. 룩이 늘면 이 수가 움직이고,
+        장르 × §6 행을 전수로 돌려 실제 개수를 센다. 룩이 늘면 이 수가 움직이고,
         움직이면 그때 다시 읽어야 한다.
+
+        카드 t362 로 행이 넷에서 여섯이 됐고, 이 수는 **그대로 하나**다(재측정).
+        새 두 행(post-chorus · breakdown · bridge)은 어느 장르에서도 사전순 선두를
+        바꾸지 않는다 — 그 대역의 후보들이 §6 구간 밖이라 `fits` 가 전부 1로 같고,
+        같으면 꼬리의 기존 전순서가 그대로 답이기 때문이다.
         """
         library = load_library_from_dir()
         genres = sorted({look.genre for look in library.looks})
@@ -141,7 +180,7 @@ class TestTheLabelSteersSelection:
         for genre in genres:
             for row, _brightness, terms in SECTION_INTENTS:
                 intent = intent_for_label(terms[0])
-                band = DYNAMICS_TERMS[terms[0]]
+                band = SECTION_TERMS[terms[0]]
                 matches = tuple(
                     look for look in library.looks if look.genre == genre and look.dynamics in band
                 )
@@ -212,7 +251,7 @@ class TestTheSecondCueTurnsAway:
         chosen = _chosen((("Chorus", "0:00"), ("Drop", "0:40")))
 
         # 두 구간은 같은 세기 대역(4,5)이다 — 대비가 갈랐지 세기가 가른 것이 아니다.
-        assert DYNAMICS_TERMS["chorus"] == DYNAMICS_TERMS["drop"] == (4, 5)
+        assert SECTION_TERMS["chorus"] == SECTION_TERMS["drop"] == (4, 5)
         assert chosen == ["edm-drop-acid", "edm-drop-crimson"]
         # 뒤 큐가 **더 대비되는** 쪽이라는 것을 값으로 단정한다. 두 값은 카드 t359 의
         # `무버` 역할 추가로 바뀌었고, 부등호는 그대로다 — 바뀐 것은 눈금이지 순서가

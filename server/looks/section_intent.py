@@ -42,12 +42,19 @@
   **0건**이므로(실측: 네 장르 34룩 전부 ``movement: ()``) 오늘 걸어도 재지 못한다.
 - **스트로브**: 역할 어휘에 스트로브가 없다(정본 §12 항목 6, 감독 결정 선행 — 카드 t356).
 
-그리고 **§6 행이 없는 라벨**이 오늘 다수다. 정본 §6 의 열 행 중 오늘의 어휘
-(``matching.DYNAMICS_TERMS``)가 이름을 가진 것은 넷뿐이고, post-chorus · breakdown ·
-bridge · solo · outro · 텐션 · 마지막 drop 은 **구간 이름조차 세기로 해석되지 않는다**
-(정본 §12 항목 4: 어휘 추가는 별도 처방이고 이 카드의 범위가 아니다). 그런 라벨은
-:func:`intent_for_label` 이 ``None`` 을 답하고, 선택은 대비 축과 기존 전순서로만 간다 —
-**행을 지어내지 않는다.**
+**§6 행이 없는 라벨은 여전히 남는다 — 다만 줄었다**(카드 t362). 어휘가
+``section_vocab`` 으로 넓어지면서 post-chorus · breakdown · bridge 가 행을 갖게 됐고,
+행은 **넷에서 여섯**이 됐다. 남은 셋은 §6 이 그 행의 밝기 칸에 **퍼센트를 안 적어서**
+남는 것이다:
+
+- **solo**: 밝기 칸이 「솔로이스트만 강조」다 — §6.2 의 역할 문장이지 숫자가 아니다.
+- **outro**: 「리셋 큐」 · 「디밍한 베이스」 — 세기는 읽히지만(``section_vocab`` 이 (1,2)
+  로 배정한다) 밝기 구간이 없다.
+- **텐션 · 마지막 drop**: 텐션은 「드롭 직전 마지막 마디」라는 **자리**이지 §2 어휘의
+  라벨이 아니고, 「마지막」을 회차로 유도하는 것은 정본에 없는 규칙을 만드는 일이다.
+
+그런 라벨은 :func:`intent_for_label` 이 ``None`` 을 답하고, 선택은 대비 축과 기존
+전순서로만 간다 — **행을 지어내지 않는다.**
 """
 
 from __future__ import annotations
@@ -56,12 +63,17 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 
-from server.looks.matching import (
-    DYNAMICS_TERMS,
-    _found,  # 구간 어휘를 실제로 대조하는 술어의 단일 출처
-    _normalise,
-)
 from server.looks.schema import Look
+from server.looks.section_vocab import (
+    ROW_BREAKDOWN,
+    ROW_BUILD,
+    ROW_CHORUS,
+    ROW_INTRO,
+    ROW_POST_CHORUS,
+    ROW_TERMS,
+    ROW_VERSE,
+    matched_section_terms,
+)
 
 __all__ = [
     "SECTION_INTENTS",
@@ -93,46 +105,52 @@ class SectionIntent:
     brightness: tuple[int, int]
 
 
-#: 정본 §6 표의 행 → 그 행을 부르는 말. 말은 ``matching.DYNAMICS_TERMS`` 의 키에서만
-#: 가져온다 — 여기서 새 말을 만들면 구간 어휘가 두 벌이 된다.
+#: 정본 §6 표의 행 → 그 행이 주는 밝기 구간. **이 파일이 드는 것은 밝기뿐이고**, 그 행을
+#: 부르는 말은 ``section_vocab.ROW_TERMS`` 가 든다 — 소비자가 다르기 때문이다(세기는
+#: ``songcue`` 가, 밝기는 이 파일이 읽는다). 여기서 말을 다시 적으면 어휘가 두 벌이 된다.
 #:
 #: 매핑 리터럴이 아니라 튜플인 것은 ``movement._BAND_RANGES`` 와 같은 규율이고, 여기서는
-#: 순서에도 뜻이 있다(약→강, 정본 §6 표의 읽기 순서 그대로).
+#: 순서에도 뜻이 있다 — **정본 §6 표의 읽기 순서 그대로**다. 한때 이 자리에 「약→강」도
+#: 함께 적혀 있었는데, 행이 넷일 때는 두 순서가 우연히 같았을 뿐이다. post-chorus(60~75)
+#: 와 breakdown(20~35)이 들어오면서 갈라졌고, 갈라진 쪽에서 정본을 따른다.
+#: (판정에는 순서가 안 쓰인다 — :func:`intent_for_label` 은 행이 **정확히 하나** 걸릴
+#: 때만 답하므로 앞뒤가 결과를 바꾸지 않는다. 순서는 읽는 사람을 위한 것이다.)
 #:
 #: **(4,5) 대역의 말을 전부 싣지 않았다.** ``엔딩``·``피날레``·``클라이맥스``·``절정``·
 #: ``최고조``·``고조`` 는 세기로는 코러스·드롭과 같은 대역이지만 §6 은 「chorus · drop」
 #: 행과 「마지막 drop」 행을 **따로** 두고, 어느 말이 어느 행인지 정본이 정해 주지
 #: 않는다. 「마지막」을 회차로 유도하는 것은 정본에 없는 규칙을 만드는 일이므로 하지
 #: 않는다 — 그 말들은 §6 행이 없는 라벨로 남고, 대비 축이 그 구간을 고른다.
-SECTION_INTENTS: tuple[tuple[str, tuple[int, int], tuple[str, ...]], ...] = (
-    ("intro", (20, 40), ("인트로", "intro", "도입")),
-    ("verse", (25, 50), ("벌스", "verse")),
-    (
-        "pre-chorus · build",
-        (40, 55),
-        ("빌드업", "빌드", "build", "buildup", "프리코러스", "prechorus", "라이저", "riser"),
-    ),
-    ("chorus · drop", (80, 100), ("코러스", "chorus", "후렴", "드랍", "drop")),
+_ROW_BRIGHTNESS: tuple[tuple[str, tuple[int, int]], ...] = (
+    (ROW_INTRO, (20, 40)),
+    (ROW_VERSE, (25, 50)),
+    (ROW_BUILD, (40, 55)),
+    (ROW_CHORUS, (80, 100)),
+    (ROW_POST_CHORUS, (60, 75)),
+    (ROW_BREAKDOWN, (20, 35)),
+)
+
+#: 행 → (밝기, 그 행을 부르는 말). 말은 ``section_vocab`` 에서만 온다.
+SECTION_INTENTS: tuple[tuple[str, tuple[int, int], tuple[str, ...]], ...] = tuple(
+    (row, brightness, ROW_TERMS[row]) for row, brightness in _ROW_BRIGHTNESS
 )
 
 
 def _matched_terms(label: str) -> frozenset[str]:
-    """이 라벨이 담고 있는 구간 어휘 — :data:`DYNAMICS_TERMS` 의 키 중 실제로 걸린 것.
+    """이 라벨이 담고 있는 구간 어휘 — ``section_vocab`` 의 판정 하나를 그대로 쓴다.
 
-    **어휘도 술어도 새로 만들지 않는다.** 표는 ``matching.DYNAMICS_TERMS`` 하나이고,
-    대조는 ``matching._found`` 하나다(정규화·조사 처리·경계 판정이 전부 그 안에 있다).
-    여기서 다시 쓰면 같은 말이 두 곳에 살고, 그 순간 둘은 갈라지기 시작한다 —
-    ``busking.py`` 가 dedupe 문자열을 만들지 않고 ``instantiate._values_line`` 를
-    그대로 들여오는 것과 같은 규율이다.
+    **어휘도 술어도 새로 만들지 않는다.** 표는 ``section_vocab.SECTION_TERMS`` 하나이고,
+    대조는 ``section_vocab.matched_section_terms`` 하나다(정규화·조사 처리·경계 판정에
+    더해 **최장 일치**까지 전부 그 안에 있다). 여기서 다시 쓰면 같은 말이 두 곳에 살고,
+    그 순간 둘은 갈라지기 시작한다 — ``busking.py`` 가 dedupe 문자열을 만들지 않고
+    ``instantiate._values_line`` 를 그대로 들여오는 것과 같은 규율이다.
 
-    ``matching.py`` 에 공개 함수를 더하지 않은 것은 그 파일이 **선언된 무변경 대상**이기
-    때문이다(SPEC-COPILOT-SONGCUE-001 §C PRESERVE, 게이트:
-    ``server/tests/test_overlap_preserve.py``). 그 경계를 열려면 선언 층의 예외가
-    먼저 있어야 하고, 그것은 이 카드의 범위가 아니다. 비공개 이름을 들여오는 쪽이
-    어휘를 복제하는 것보다 낫다 — 복제는 조용히 갈라지고, 들여오기는 시끄럽게 깨진다.
+    한때 이 함수가 ``matching`` 의 비공개 이름을 직접 들여왔다. 그 자리가
+    ``section_vocab`` 으로 옮겨간 것은 어휘가 넓어져서가 아니라 **판정 규칙이 갈렸기**
+    때문이다: 운영자 질의는 합집합, 구간 라벨은 최장 일치다(``section_vocab`` 독스트링
+    「왜 이 파일인가」). 들여오기 자체는 그대로 한 겹 아래로 내려갔을 뿐이다.
     """
-    text = _normalise(label)
-    return frozenset(term for term in DYNAMICS_TERMS if _found(term, text))
+    return matched_section_terms(label)
 
 
 def intent_for_label(label: str) -> SectionIntent | None:
