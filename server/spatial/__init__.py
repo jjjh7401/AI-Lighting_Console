@@ -45,6 +45,16 @@ from server.spatial.pointing import (
     aim_pan_tilt,
     pointing_commands,
 )
+from server.spatial.preflight import (
+    CHAIN_ORDER_VERDICTS,
+    SPLIT_MODES,
+    SPLIT_VERDICTS,
+    ChainDivergence,
+    ChainOrderCheck,
+    SplitCheck,
+    check_chain_order,
+    check_split,
+)
 from server.spatial.presets import (
     EXPLICIT_ENTRY_KEYS,
     EXPLICIT_PRESET_NAME,
@@ -82,6 +92,7 @@ from server.spatial.schema import (
 from server.spatial.sorting import spatial_sorted_fids, spatial_sorted_fixtures
 
 __all__ = [
+    "CHAIN_ORDER_VERDICTS",
     "EXPLICIT_ENTRY_KEYS",
     "EXPLICIT_PRESET_NAME",
     "POINTING_TILT_LIMIT_DEGREES",
@@ -99,12 +110,17 @@ __all__ = [
     "SPATIAL_ROW_NOISE_SPAN",
     "SPATIAL_ROW_ORDER",
     "SPATIAL_SORTS",
+    "SPLIT_MODES",
+    "SPLIT_VERDICTS",
     "SPATIAL_WAVE_ATTRIBUTE",
     "SPATIAL_WAVE_DEFAULT_SPEED",
     "SPATIAL_WAVE_HIGH",
     "SPATIAL_WAVE_LOW",
     "SPATIAL_WAVE_PHASE_SPAN",
+    "ChainDivergence",
+    "ChainOrderCheck",
     "PointingTarget",
+    "SplitCheck",
     "SpatialAnalysis",
     "SpatialAnalysisError",
     "SpatialFixture",
@@ -120,6 +136,8 @@ __all__ = [
     "analyze_spatial_rows",
     "build_spatial_selection_chain",
     "build_spatial_wave_commands",
+    "check_chain_order",
+    "check_split",
     "match_spatial_qualifier",
     "pointing_commands",
     "resolve_spatial_sort",
