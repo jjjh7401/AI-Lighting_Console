@@ -24,7 +24,12 @@ from server.looks.resolver import GroupCandidate, RoleResolution, UnmappedRole, 
 from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, AttributeValue, Look, LookLibrary
 from server.looks.section_fade import SectionFade, fade_for_label
 from server.looks.section_intent import SectionIntent, intent_for_label, sorted_candidates
-from server.looks.section_vocab import ROW_CHORUS, SECTION_TERMS, resolve_section_dynamics
+from server.looks.section_vocab import (
+    ROW_CHORUS,
+    SECTION_TERMS,
+    matched_section_terms,
+    resolve_section_dynamics,
+)
 
 _MILLISECONDS_PER_SECOND = Decimal("1000")
 _SECONDS_PER_MINUTE = Decimal("60")
@@ -95,6 +100,14 @@ LADDER_DIMMER_HIT = "dimmer_hit"
 LADDER_ZOOM_PINCH = "zoom_pinch"
 LADDER_IRIS_PINCH = "iris_pinch"
 LADDER_RUNGS: tuple[str, ...] = (LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH)
+
+#: 드롭 구조 회수(카드 t366)가 **물러선** 큐에 붙이는 표시 — 위 세 칸과는 별개다.
+#: :data:`LADDER_RUNGS` 에는 넣지 않는다: 이것은 오르는 사다리의 칸이 아니라, 드롭이
+#: 천장에서 충돌해 마지막 수단으로 버려지려 할 때 **드롭이 아닌** 상대 큐를 한 칸
+#: 물려 자리를 비키는 표시다. 물러서는 폭·방향은 :data:`_HIT_STEP` 그대로, 바닥은
+#: :data:`DARKNESS_FLOOR` 다(정본 §8 안전 바닥 — 감광이 못 내려가는 자리를 이 물러섬도
+#: 넘지 않는다).
+LADDER_DIMMER_YIELD = "dimmer_yield"
 
 _DIMMER = "Dimmer"
 _ZOOM = "Zoom"
@@ -608,10 +621,8 @@ def _assembled(
     darken: Mapping[int, int] | None = None,
 ) -> SongCueBundle:
     darken = darken if darken is not None else dict()
-    commands: list[str] = [_DESTINATION]
     section_bundles: list[SongCueSectionBundle] = []
     emitted: dict[str, tuple[int, int, str]] = dict()
-    sequence_labelled = False
     for cue_number, (selection, cue_name) in enumerate(
         zip(ordered, cue_names, strict=True), start=1
     ):
@@ -625,27 +636,162 @@ def _assembled(
             movement=movements.get(cue_number),
             drop_cue_number=darken.get(cue_number),
         )
-        if section_bundle.commands:
-            commands.extend(section_bundle.commands)
-            if not sequence_labelled:
-                store_index = _first_store_index(commands, sequence_number, cue_number)
-                commands.insert(
-                    store_index + 1, f"Label Sequence {sequence_number} '{sequence_name}'"
-                )
-                section_bundle = replace(
-                    section_bundle, commands=tuple(commands[-len(section_bundle.commands) - 1 :])
-                )
-                sequence_labelled = True
         section_bundles.append(section_bundle)
 
-    stored_commands = tuple(commands) if len(commands) > 1 else ()
+    section_bundles = _rescue_drop_collisions(
+        section_bundles,
+        emitted,
+        sequence_number=sequence_number,
+        resolution=resolution,
+        movements=movements,
+        darken=darken,
+    )
+
+    stored_commands, labelled_bundles = _flatten_commands(
+        section_bundles, sequence_number, sequence_name
+    )
     return SongCueBundle(
         song_title=song_title,
         sequence_number=sequence_number,
         sequence_name=sequence_name,
         commands=stored_commands,
-        sections=tuple(section_bundles),
+        sections=labelled_bundles,
     )
+
+
+def _flatten_commands(
+    section_bundles: Sequence[SongCueSectionBundle],
+    sequence_number: int,
+    sequence_name: str,
+) -> tuple[tuple[str, ...], tuple[SongCueSectionBundle, ...]]:
+    """번들을 순서대로 이어붙인 플랫 명령 목록과, 라벨이 실린 번들들.
+
+    조립 루프에서 뗀 이유는 하나다 — 드롭 구조 회수(:func:`_rescue_drop_collisions`,
+    카드 t366)가 완결된 번들 목록 하나를 사후에 고칠 수 있어야 하고, 그러려면 「번들을
+    쌓는 일」과 「번들을 플랫 명령으로 편다」가 같은 루프에 묶여 있으면 안 된다. 편성
+    규칙 자체는 고치기 전과 같다 — 저장하는 첫 큐 뒤에 ``Label Sequence`` 를 한 번만
+    끼운다.
+    """
+    commands: list[str] = [_DESTINATION]
+    labelled: list[SongCueSectionBundle] = []
+    sequence_labelled = False
+    for bundle in section_bundles:
+        if bundle.commands:
+            commands.extend(bundle.commands)
+            if not sequence_labelled:
+                store_index = _first_store_index(commands, sequence_number, bundle.cue_number)
+                commands.insert(
+                    store_index + 1, f"Label Sequence {sequence_number} '{sequence_name}'"
+                )
+                bundle = replace(bundle, commands=tuple(commands[-len(bundle.commands) - 1 :]))
+                sequence_labelled = True
+        labelled.append(bundle)
+
+    stored_commands = tuple(commands) if len(commands) > 1 else ()
+    return stored_commands, tuple(labelled)
+
+
+# @MX:ANCHOR: [AUTO] 드롭은 값 충돌로 버려지지 않는다 — 물러서는 쪽은 드롭이 아닌
+#   상대다(정본 §6 「마지막 드롭은 전 리그 최대」, 카드 t366).
+# @MX:REASON: 사다리(§7.1)는 **나중 큐가 오른다**. 드롭이 이미 천장(``_DIMMER_CEILING``)
+#   에 있고 빔 축(줌·아이리스)도 없거나 이미 다 쓰였으면 오를 데가 없어 마지막 수단으로
+#   버려졌다 — 실측(2026-09-12, main `13595be`) 8구간 EDM 입력에서 드롭 한 장이
+#   사라졌다(`edm-drop-crimson`, Dimmer 100·Zoom 10, Iris 축 없음). 드롭의 값은 정본이
+#   요구하는 리그 최대 그대로가 맞으므로, 대신 **충돌한 상대**(``collides_with_cue_number``
+#   가 가리키는, 값 라인의 원래 임자)를 한 칸 물려 자리를 비킨다. 되돌리기 쉬운 유혹은
+#   「드롭도 그냥 한 칸 더 오르게 하자」인데, 이 룩처럼 오를 축이 전혀 없는 경우 그
+#   유혹은 이 결함 그대로다. 상대가 드롭 자신이면(같은 §6 행의 다른 드롭) 물리지
+#   않는다 — 정본이 「전 리그 최대」를 요구하는 것은 드롭이지, 드롭과 충돌한 또 다른
+#   드롭이 아니다.
+def _rescue_drop_collisions(
+    section_bundles: Sequence[SongCueSectionBundle],
+    emitted: dict[str, tuple[int, int, str]],
+    *,
+    sequence_number: int,
+    resolution: RoleResolution,
+    movements: Mapping[int, MovementPlan],
+    darken: Mapping[int, int],
+) -> tuple[SongCueSectionBundle, ...]:
+    bundles = list(section_bundles)
+    for index, bundle in enumerate(bundles):
+        if not bundle.skipped:
+            continue
+        skip = bundle.skipped[0]
+        if skip.reason != VALUE_LINE_COLLISION:
+            continue
+        if not _is_literal_drop(bundle.section):
+            continue
+        rival_cue_number = skip.collides_with_cue_number
+        if rival_cue_number is None:
+            continue
+        rival_index = rival_cue_number - 1
+        if rival_index < 0 or rival_index >= len(bundles):
+            continue
+        rival = bundles[rival_index]
+        if _is_literal_drop(rival.section):
+            continue
+        yielded = _yield_bundle(rival, emitted)
+        if yielded is None:
+            continue
+        bundles[rival_index] = yielded
+        bundles[index] = _section_bundle(
+            selection=bundle.selection,
+            cue_number=bundle.cue_number,
+            cue_name=bundle.cue_name,
+            sequence_number=sequence_number,
+            resolution=resolution,
+            emitted=emitted,
+            movement=movements.get(bundle.cue_number),
+            drop_cue_number=darken.get(bundle.cue_number),
+        )
+    return tuple(bundles)
+
+
+def _is_literal_drop(section: SongCueSection) -> bool:
+    """이 구간이 §2.2 EDM 축의 ``drop`` 어휘 그 자체와 걸리는가.
+
+    코러스와 드롭은 같은 §6 행(:data:`ROW_CHORUS`)을 쓰지만, 「전 리그 최대」는 정본이
+    ``drop`` 라벨에만 적은 말이다 — 행으로 물으면(:func:`_is_drop_row`) 코러스까지
+    걸려, 코러스끼리의 충돌(반복 회차)도 회수 대상이 되어 버린다.
+    """
+    return "drop" in matched_section_terms(section.label)
+
+
+def _yield_bundle(
+    rival: SongCueSectionBundle,
+    emitted: dict[str, tuple[int, int, str]],
+) -> SongCueSectionBundle | None:
+    """드롭에 자리를 비켜주려고 ``rival`` 의 밝기를 한 칸씩 내린다.
+
+    새로 겹치지 않는 값을 찾으면 그 값을 실은 번들을 돌려주고 ``emitted`` 를 그 자리에
+    맞춰 고친다. :data:`DARKNESS_FLOOR` 에 닿도록(또는 애초에 ``Dimmer`` 축이 없어서)
+    못 찾으면 ``None`` — 그때는 원래 스킵이 그대로 선다.
+    """
+    look = rival.selection.look
+    if look is None or not rival.commands:
+        return None
+    attributes = look.attributes
+    while True:
+        stepped = _stepped(attributes, _DIMMER, -_HIT_STEP, DARKNESS_FLOOR)
+        candidate = _values_line(stepped)
+        if candidate == _values_line(attributes):
+            return None
+        attributes = stepped
+        if candidate not in emitted:
+            old_values = rival.commands[2]
+            new_commands = (
+                rival.commands[0],
+                rival.commands[1],
+                candidate,
+                *rival.commands[3:],
+            )
+            emitted.pop(old_values, None)
+            emitted[candidate] = (rival.section.index, rival.cue_number, look.look_id)
+            return replace(
+                rival,
+                commands=new_commands,
+                ladder=rival.ladder + (LADDER_DIMMER_YIELD,),
+            )
 
 
 # @MX:ANCHOR: [AUTO] 한 번들이 페이저를 **하나만** 낸다는 규칙이 여기서 집행된다.
