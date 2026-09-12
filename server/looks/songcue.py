@@ -800,7 +800,106 @@ def _rescue_value_line_collisions(
             changed = True
         if not changed:
             break
+    _reorder_yields_by_repetition(bundles)
     return tuple(bundles)
+
+
+# @MX:NOTE: [AUTO] 카드 t369 — 회수가 두 겹으로 겹치면 **회차 순서**가 뒤집힐 수 있다.
+#   (여기도 ANCHOR 상한을 이미 넘겨 있어 NOTE 로 남긴다.)
+# @MX:REASON: 위 회수 루프는 매 단계를 독립으로 푼다 — 상대를 물릴 때마다
+#   :func:`_yield_bundle` 이 **그 룩의 기준값에서 처음부터** 걸리지 않는 첫 자리를
+#   찾는다. 겹침이 한 겹이면(카드 t366·t368) 그것으로 충분하다. 실측(2026-09-13,
+#   ``edm-drop-crimson``, 빔 축 하나뿐인 후렴 4회): 1회차가 물러서서 3회차에게
+#   기준값을 내주고(``Dimmer`` 100→95), 그 직후 4회차가 **다시** 그 기준값을 원해
+#   3회차를 물린다 — 그런데 3회차를 문 :func:`_yield_bundle` 은 1회차가 이미 95를
+#   쥔 줄 모르고 기준값에서부터 다시 내려가 90에 닿는다. 그 결과 1회차(95)보다
+#   **늦은** 3회차(90)가 더 어둡다 — 정본 §7.1 ``_ladder_start`` 의 「낮은 칸으로는
+#   내려가지 않는다」를 어긴다.
+#
+#   고치는 자리를 회수 루프 안이 아니라 **끝에 한 번 더** 둔 이유: 루프 한 단계는
+#   그 순간의 ``rival`` 하나만 보고, 이 결함은 **두 단계 사이의 관계**라 한 단계
+#   안에서는 안 보인다. 그래서 모든 회수가 끝난 뒤, 같은 라벨·같은 룩(``look_id``)
+#   반복끼리만 묶어 이미 낸 값들을 회차 순서로 다시 나눠 준다 — **새 값을 짓지
+#   않는다**, 이미 계산된 값 집합을 회차에 맞춰 재배정할 뿐이다(그래서 아홉 개
+#   대조군의 값 라인 집합·개수는 그대로다). 이미 단조증가라면(대부분의 입력) 아무
+#   것도 안 바꾼다 — 그 갈래가 고치기 전과 바이트 동일하다는 것을 이 파일의 다른
+#   회귀 검사들이 지킨다.
+def _reorder_yields_by_repetition(bundles: list[SongCueSectionBundle]) -> None:
+    """저장된 큐들을 제자리에서 고쳐, 같은 룩의 반복 회차가 밝기 역순이 되지 않게 한다.
+
+    라벨과 룩 정체(``look_id``)가 같은 저장된 큐만 한 묶음으로 본다 — 라벨이 다르면
+    (드롭 대 후렴) 회차 개념 자체가 다르고, 룩이 다르면 값의 서로 다름이 반복이 아닌
+    선택의 차이다. 묶음 안에서 회차(``instance``) 순서로 늘어놓은 ``Dimmer`` 값이
+    이미 단조증가면 손대지 않는다.
+    """
+    seen_labels: list[str] = []
+    for bundle in bundles:
+        if bundle.commands and bundle.section.label not in seen_labels:
+            seen_labels.append(bundle.section.label)
+
+    for label in seen_labels:
+        seen_looks: list[str] = []
+        for bundle in bundles:
+            if not bundle.commands or bundle.section.label != label:
+                continue
+            look = bundle.selection.look
+            if look is not None and look.look_id not in seen_looks:
+                seen_looks.append(look.look_id)
+
+        for look_id in seen_looks:
+            group = [
+                index
+                for index, bundle in enumerate(bundles)
+                if bundle.commands
+                and bundle.section.label == label
+                and bundle.selection.look is not None
+                and bundle.selection.look.look_id == look_id
+            ]
+            if len(group) < 2:
+                continue
+            ordered = sorted(group, key=lambda index: bundles[index].section.instance)
+            dimmers = [_dimmer_from_values_line(bundles[index].commands[2]) for index in ordered]
+            if any(value is None for value in dimmers):
+                continue
+            if all(before <= after for before, after in zip(dimmers, dimmers[1:], strict=False)):
+                continue
+            payloads = sorted(
+                (
+                    (
+                        dimmers[position],
+                        bundles[ordered[position]].commands,
+                        bundles[ordered[position]].ladder,
+                    )
+                    for position in range(len(ordered))
+                ),
+                key=lambda payload: payload[0],
+            )
+            for position, index in enumerate(ordered):
+                _new_dimmer, new_commands, new_ladder = payloads[position]
+                current = bundles[index]
+                if current.commands[2] == new_commands[2]:
+                    continue
+                replaced_commands = (
+                    current.commands[0],
+                    current.commands[1],
+                    new_commands[2],
+                    *current.commands[3:],
+                )
+                bundles[index] = replace(current, commands=replaced_commands, ladder=new_ladder)
+
+
+def _dimmer_from_values_line(values: str) -> float | None:
+    """값 라인 문자열에서 ``Dimmer`` 수치만 뽑는다 — 없으면 ``None``.
+
+    사다리·회수는 값을 :class:`AttributeValue` 로 들고 있다가 문자열로 편다
+    (:func:`_values_line`); 회수가 끝난 뒤에는 문자열만 남으므로, 여기서는 그 문자열을
+    다시 읽는다. 정규식은 :func:`_values_line` 이 내는 고정 형식(`Attribute 'Dimmer'
+    At <값>`)에 맞춘 것 하나뿐이다.
+    """
+    match = re.search(rf"Attribute '{re.escape(_DIMMER)}' At (-?\d+(?:\.\d+)?)", values)
+    if match is None:
+        return None
+    return float(match.group(1))
 
 
 def _is_literal_drop(section: SongCueSection) -> bool:
