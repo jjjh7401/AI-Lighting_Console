@@ -275,7 +275,12 @@ class TestTheLastResortSkipStillFires:
 
 
 class TestNoCollisionIsByteIdentical:
-    """충돌이 없는 입력의 콘솔 명령은 고치기 전과 바이트 동일하다."""
+    """충돌이 없는 입력의 콘솔 명령에 **사다리가 손대지 않는다**.
+
+    카드 t363 이 이 기대값의 Store 두 줄에 ``CueFade`` 를 더했다(정본 §9). 이 검사가 재는
+    성질은 그대로다 — 값 라인과 그룹 줄이 기준 룩 그대로이고 사다리 칸이 하나도 안 붙는
+    것. 페이드는 사다리 축이 아니라 구간 라벨이 정하는 별개 축이다.
+    """
 
     def test_the_command_bundle_of_a_collision_free_song_is_unchanged(self):
         first, second = parse_sections((("Chorus", "0:00"), ("Verse", "0:40")))
@@ -291,14 +296,14 @@ class TestNoCollisionIsByteIdentical:
             "Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; "
             "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; "
             "Attribute 'Zoom' At 18",
-            "Store Sequence 1 Cue 1 'Chorus'",
+            "Store Sequence 1 Cue 1 'Chorus' CueFade 0.2",
             "Label Sequence 1 'Song'",
             "ClearAll",
             "ClearAll",
             "Group 11",
             "Attribute 'Dimmer' At 45 ; Attribute 'ColorRGB_R' At 72 ; "
             "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0",
-            "Store Sequence 1 Cue 2 'Verse'",
+            "Store Sequence 1 Cue 2 'Verse' CueFade 2",
             "ClearAll",
         )
         assert all(section.ladder == () for section in bundle.stored_sections)

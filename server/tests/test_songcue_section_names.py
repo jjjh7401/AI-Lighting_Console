@@ -40,7 +40,10 @@ def _stored_cue_names(port) -> list[str]:
 
     names = []
     for command in port.executed:
-        match = re.fullmatch(r"Store Sequence \d+ Cue \d+ '(.*)'", command)
+        # 꼬리의 ``CueFade <초>`` 는 카드 t363 이 붙인 선택적 접미사다(정본 §9). 이름만
+        # 읽는 자리이므로 값은 안 받고 꼬리만 허용한다 — 안 넓히면 이 헬퍼가 모든 줄을
+        # 놓치고 단언이 빈 목록끼리 비교하며 조용히 뜻을 잃는다.
+        match = re.fullmatch(r"Store Sequence \d+ Cue \d+ '(.*?)'(?: CueFade [\d.]+)?", command)
         if match:
             names.append(match.group(1))
     return names

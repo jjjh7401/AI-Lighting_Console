@@ -313,6 +313,10 @@ class TestNoMovementIsByteIdentical:
             (second, _still_look("verse", dynamics=2, dimmer=45)),
         )
 
+        # 카드 t363 이 Store 줄에 페이드를 붙였다(정본 §9) — 후렴은 0.2초(극적인 컷),
+        # 벌스는 2초(부드러운 전환). **이 검사의 성질은 그대로다**: 재는 것은 「움직임이
+        # 없으면 움직임 줄이 하나도 안 나간다」이고, 페이드는 움직임 축이 아니다.
+        # 감광은 여기서 안 걸린다 — 드롭 대역 큐가 **뒤에** 없다(후렴이 첫 큐다).
         assert bundle.commands == (
             "ChangeDestination Root",
             "ClearAll",
@@ -320,14 +324,14 @@ class TestNoMovementIsByteIdentical:
             "Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; "
             "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; "
             "Attribute 'Zoom' At 18",
-            "Store Sequence 1 Cue 1 'Chorus'",
+            "Store Sequence 1 Cue 1 'Chorus' CueFade 0.2",
             "Label Sequence 1 'Song'",
             "ClearAll",
             "ClearAll",
             "Group 11",
             "Attribute 'Dimmer' At 45 ; Attribute 'ColorRGB_R' At 72 ; "
             "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0",
-            "Store Sequence 1 Cue 2 'Verse'",
+            "Store Sequence 1 Cue 2 'Verse' CueFade 2",
             "ClearAll",
         )
         assert bundle.movement_sections == ()

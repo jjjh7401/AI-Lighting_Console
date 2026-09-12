@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation
 from typing import NamedTuple
 
 from server.design.cue_density import plan_cue_density, rotate_palette
+from server.design.cue_fade import store_with_fade
 from server.fx.instantiate import is_programmer_state
 from server.looks.busking import VALUE_LINE_COLLISION, looks_for_genre
 from server.looks.instantiate import _values_line
@@ -21,8 +22,9 @@ from server.looks.movement import (
 )
 from server.looks.resolver import GroupCandidate, RoleResolution, UnmappedRole, resolve_roles
 from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, AttributeValue, Look, LookLibrary
+from server.looks.section_fade import SectionFade, fade_for_label
 from server.looks.section_intent import SectionIntent, intent_for_label, sorted_candidates
-from server.looks.section_vocab import SECTION_TERMS, resolve_section_dynamics
+from server.looks.section_vocab import ROW_CHORUS, SECTION_TERMS, resolve_section_dynamics
 
 _MILLISECONDS_PER_SECOND = Decimal("1000")
 _SECONDS_PER_MINUTE = Decimal("60")
@@ -47,6 +49,28 @@ LOOK_POOL_EXHAUSTED = "look_pool_exhausted"
 MOVEMENT_BAND_STILL = "movement_band_still"
 MOVEMENT_TURN_BOUNDARY = "movement_turn_boundary"
 MOVEMENT_LINE_COLLISION = "movement_line_collision"
+#: 드롭 앞 큐에서 밝기를 못 뺀 네 갈래(정본 §8 [HARD], 카드 t363). 넷 다 「조용히
+#: 안 했다」의 반대말이다 — 안 한 것은 이름과 함께 밖으로 나간다.
+#:
+#: * :data:`DARKNESS_NO_PRECEDING_CUE` — 드롭이 곡의 **첫 구간**이다. 뺄 앞 큐가 없다.
+#: * :data:`DARKNESS_SIX_ROW_ABSENT` — 앞 구간의 라벨에 §6 행이 없어 **얼마나 어두워야
+#:   하는지**를 정본이 주지 않았다. 행을 지어내지 않는다(``section_intent`` 의 규율).
+#: * :data:`DARKNESS_SAME_SIX_ROW` — 앞 큐가 드롭과 **같은 §6 행**(chorus · drop)이다.
+#:   정본이 그 행 전체를 80~100% 에 두므로 여기서 뺄 수 있는 것은 「어둠」이 아니라
+#:   절정 안쪽의 작은 요철이고, §8 이 말하는 눈의 리셋은 그것으로 일어나지 않는다.
+#: * :data:`DARKNESS_ALREADY_DARK` — 앞 큐가 이미 그 행의 바닥 이하다. 정본이 요구한
+#:   밸리가 **이미 있다** — 더 빼는 것은 정본에 없는 일이다.
+#: * :data:`DARKNESS_NO_DIMMER` — 앞 큐의 룩에 ``Dimmer`` 가 없다. 없는 축에 값을
+#:   만들어 보내지 않는다(``escalate_attributes`` 와 같은 규율).
+DARKNESS_NO_PRECEDING_CUE = "pre_drop_darkness_no_preceding_cue"
+DARKNESS_SIX_ROW_ABSENT = "pre_drop_darkness_six_row_absent"
+DARKNESS_SAME_SIX_ROW = "pre_drop_darkness_same_six_row"
+DARKNESS_ALREADY_DARK = "pre_drop_darkness_already_dark"
+DARKNESS_NO_DIMMER = "pre_drop_darkness_no_dimmer"
+#: 감광이 실렸는데 그 큐가 **저장되지 않은** 경우. 감광은 값 라인을 바꾸므로 저장/건너뜀
+#: 판정에 참여한다 — 어두워진 큐가 앞 큐와 값이 같아 건너뛰어질 수 있고, 그러면 §8 이
+#: 요구한 밸리는 무대에 없다. 적용 기록을 조용히 남겨 두면 있는 것처럼 읽힌다.
+DARKNESS_CUE_NOT_STORED = "pre_drop_darkness_cue_not_stored"
 _DESTINATION = "ChangeDestination Root"
 _CLEAR = "ClearAll"
 _IMPLICIT_SYSTEM_CUE_COUNT = 2
@@ -89,6 +113,18 @@ _MARKING_ACCENTS: tuple[str, ...] = (LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH)
 #: 더한 것. 정본 §6 의 「마지막 드롭은 전 리그 최대」와 같은 방향이고, 천장에서는 값이 더
 #: 안 움직이므로 유한하다: 그 지점에서 비로소 큐를 못 세운다(마지막 수단의 건너뜀).
 _MAX_CLIMB = _DIMMER_CEILING // _HIT_STEP + len(_MARKING_ACCENTS)
+
+#: **안전 바닥** — 감광 규칙이 내려갈 수 있는 가장 낮은 ``Dimmer`` 값(정본 §8 안전 한계).
+#:
+#: 이 값은 **정본 §6 표가 적은 가장 낮은 밝기**다: intro 행 20~40% 와 breakdown · bridge
+#: 행 20~35% 의 아래끝이 둘 다 20 이고, 표 어디에도 그보다 낮은 숫자는 없다. 지어낸
+#: 숫자가 아니라 인용이라는 것이 요점이다 — 이 저장소에는 **객석 형상도 광도 모형도
+#: 없으므로**(실측: ``grep -rn "eye_height|눈높이|house_depth" server`` 0건,
+#: ``server/looks/movement.py`` 머리에 기록) 「비상구 표지에 몇 lux 가 닿는다」는 주장은
+#: 만들 수 없다. 만들 수 있는 것은 **우리가 얼마나 어둡게 만드는가의 상한**뿐이다.
+#:
+#: 이 바닥이 지키는 것과 안 지키는 것은 :func:`darkness_target` 독스트링에 적는다.
+DARKNESS_FLOOR = 20
 
 
 @dataclass(frozen=True)
@@ -152,6 +188,43 @@ class SongCueSkippedSection:
 
 
 @dataclass(frozen=True)
+class SongCuePreDropDarkness:
+    """드롭 앞 큐 하나에서 실제로 뺀 밝기 (정본 §8 [HARD], 카드 t363).
+
+    ``before`` 와 ``after`` 는 그 큐의 ``Dimmer`` 값이고, ``row`` 는 ``after`` 를 정한
+    §6 행의 이름이다. 셋을 함께 드는 이유는 하나다 — 「감광했다」는 주장은 두 숫자와
+    그 숫자를 정한 문면 없이는 확인할 수 없다.
+
+    ``drop_cue_number`` 는 이 감광이 **누구를 위한 것인지**다. 없으면 보고에서 어느
+    드롭이 커졌는지 되짚을 수 없다.
+    """
+
+    section: SongCueSection
+    cue_number: int
+    drop_cue_number: int
+    row: str
+    before: float
+    after: float
+
+
+@dataclass(frozen=True)
+class SongCueWithheldDarkness:
+    """드롭 앞에서 밝기를 **못 뺀** 자리 하나와 그 이유 (정본 §8).
+
+    ``cue_number`` 가 ``None`` 인 갈래가 하나 있다 — 드롭이 곡의 첫 구간이라 앞 큐가
+    아예 없는 경우(:data:`DARKNESS_NO_PRECEDING_CUE`). 그때도 기록은 남는다: 「앞 큐가
+    없어서 안 했다」와 「해야 하는데 안 했다」는 다른 사실이고, 둘 다 안 적으면 같은
+    침묵이 된다.
+    """
+
+    section: SongCueSection
+    cue_number: int | None
+    drop_cue_number: int
+    reason: str
+    detail: str = ""
+
+
+@dataclass(frozen=True)
 class SongCueSectionBundle:
     section: SongCueSection
     cue_number: int
@@ -173,6 +246,27 @@ class SongCueSectionBundle:
 
     한 번들에서 이 필드가 채워지는 큐는 **하나**다. 왜 하나뿐인지는
     :func:`_movement_carrier` 에 적어 둔다.
+    """
+
+    fade: SectionFade | None = None
+    """이 큐의 ``CueFade`` — 정본이 이 라벨에 페이드를 안 줬으면 ``None`` (카드 t363).
+
+    ``None`` 이면 ``Store`` 줄에 아무것도 안 붙고, 그 명령은 고치기 전과 바이트 동일하다.
+    """
+
+    darkness: SongCuePreDropDarkness | None = None
+    """이 큐가 드롭 앞에서 실제로 뺀 밝기 — 안 뺐으면 ``None`` (정본 §8 [HARD]).
+
+    못 뺀 경우는 여기가 아니라 :attr:`SongCueBundle.withheld_darkness` 로 나간다 —
+    ``movement`` 와 ``withheld_movement`` 가 갈라져 있는 것과 같은 형상이다.
+    """
+
+    darkness_withheld: SongCueWithheldDarkness | None = None
+    """이 큐에서 감광을 못 한 이유 — 조립 도중에만 알 수 있는 셋 중 하나.
+
+    번들 수준의 :attr:`SongCueBundle.withheld_darkness` 가 이것을 걷어 간다. 여기에
+    한 번 놓는 이유는 :func:`_section_bundle` 이 큐 하나만 보기 때문이고, 곡 전체를
+    보는 판정(감광했는데 그 큐가 안 저장됨)은 걷어 가는 쪽에서 붙는다.
     """
 
 
@@ -201,10 +295,15 @@ class SongCueBundle:
     is_error: bool = False
     reason: str | None = None
     withheld_movement: tuple[SongCueWithheldMovement, ...] = ()
+    withheld_darkness: tuple[SongCueWithheldDarkness, ...] = ()
 
     @property
     def movement_sections(self) -> tuple[SongCueSectionBundle, ...]:
         return tuple(section for section in self.sections if section.movement is not None)
+
+    @property
+    def darkened_sections(self) -> tuple[SongCueSectionBundle, ...]:
+        return tuple(section for section in self.sections if section.darkness is not None)
 
     @property
     def skipped(self) -> tuple[SongCueSkippedSection, ...]:
@@ -459,6 +558,9 @@ def build_songcue_bundle(
     # ``role_aliases``: 쇼 단위 그룹명 → 역할 표 (t356). 없으면 힌트 매칭만 돈다.
     resolution = resolve_roles(groups_section, aliases=role_aliases)
     cue_names = _cue_names(tuple(selection.section for selection in ordered))
+    # 감광은 값 라인을 바꾸므로 **1회차보다 먼저** 정해져야 한다 — 어느 큐가 저장되는지가
+    # 어두워진 값으로 갈리기 때문이다. 이 계산은 선택 목록의 **자리**만 보므로 순수하다.
+    darken, structural_withheld = _pre_drop_positions(ordered)
 
     dry = _assembled(
         song_title,
@@ -468,6 +570,7 @@ def build_songcue_bundle(
         sequence_name=sequence_name,
         resolution=resolution,
         movements=dict(),
+        darken=darken,
     )
     movements, withheld = _movement_carrier(dry)
     bundle = (
@@ -481,9 +584,14 @@ def build_songcue_bundle(
             sequence_name=sequence_name,
             resolution=resolution,
             movements=movements,
+            darken=darken,
         )
     )
-    bundle = replace(bundle, withheld_movement=withheld)
+    bundle = replace(
+        bundle,
+        withheld_movement=withheld,
+        withheld_darkness=structural_withheld + _darkness_withheld(bundle, darken),
+    )
     _guard_bundle_collision(bundle)
     return bundle
 
@@ -497,7 +605,9 @@ def _assembled(
     sequence_name: str,
     resolution: RoleResolution,
     movements: Mapping[int, MovementPlan],
+    darken: Mapping[int, int] | None = None,
 ) -> SongCueBundle:
+    darken = darken if darken is not None else dict()
     commands: list[str] = [_DESTINATION]
     section_bundles: list[SongCueSectionBundle] = []
     emitted: dict[str, tuple[int, int, str]] = dict()
@@ -513,6 +623,7 @@ def _assembled(
             resolution=resolution,
             emitted=emitted,
             movement=movements.get(cue_number),
+            drop_cue_number=darken.get(cue_number),
         )
         if section_bundle.commands:
             commands.extend(section_bundle.commands)
@@ -615,6 +726,238 @@ def _movement_carrier(
             )
         )
     return movements, tuple(withheld)
+
+
+# @MX:NOTE: [AUTO] 드롭 앞에서 밝기를 빼는 자리를 **고르는** 유일한 판정(정본 §8 [HARD]).
+#   (ANCHOR 가 아니라 NOTE 인 이유는 파일 상한이다 — `.moai/config/sections/mx.yaml` 의
+#   `anchor_per_file: 3` 을 이 파일이 이미 넷으로 넘겨 있었고, 더 얹지 않는다.)
+#   고르는 기준이 두 가지로 갈릴 수 있고, 갈래를 잘못 잡으면 규칙이 조용히
+#   무력해진다. (가) 「드롭 구간의 **첫** 큐 앞」 — 여기서 고른 것. (나) 「드롭 대역 큐
+#   앞이면 언제나」 — 밀도 경로가 한 구간을 여러 큐로 쪼개면(`split_selections_for_density`)
+#   드롭 안쪽 큐마다 앞 큐를 어둡게 만들어, 정본이 「짧게」라고 못박은 드롭 한복판에
+#   밸리가 생긴다. 그래서 앞 큐의 **구간 색인이 다를 때만** 방아쇠다.
+def _pre_drop_positions(
+    ordered: Sequence[SongCueLookSelection],
+) -> tuple[dict[int, int], tuple[SongCueWithheldDarkness, ...]]:
+    """감광할 큐 번호 → 그 감광이 키우는 드롭의 큐 번호, 그리고 구조적으로 못 하는 자리.
+
+    「드롭 대역」은 정본 §6 표의 **chorus · drop 행**이다. 그 행이 후렴과 드롭을 한 줄에
+    묶은 것은 정본의 선택이고(``section_vocab.ROW_CHORUS``), §8 의 메커니즘 —
+    「플래시 앞에 무슨 일이 있었는지가 만든다」 — 도 절정 일반에 대한 말이다. 어휘로
+    후렴과 드롭을 가를 방법이 없으므로(같은 행·같은 대역), 가르는 척하지 않는다.
+    """
+    darken: dict[int, int] = dict()
+    withheld: list[SongCueWithheldDarkness] = []
+    for position, selection in enumerate(ordered):
+        if not _is_drop_row(selection.section):
+            continue
+        drop_cue_number = position + 1
+        if position == 0:
+            withheld.append(
+                SongCueWithheldDarkness(
+                    section=selection.section,
+                    cue_number=None,
+                    drop_cue_number=drop_cue_number,
+                    reason=DARKNESS_NO_PRECEDING_CUE,
+                    detail=(
+                        "the drop is this song's first cue; there is no preceding cue to "
+                        "take brightness out of"
+                    ),
+                )
+            )
+            continue
+        previous = ordered[position - 1]
+        if previous.section.index == selection.section.index:
+            # 같은 구간을 마디로 쪼갠 뒷큐다 — 드롭의 첫 큐가 아니므로 방아쇠가 아니다.
+            continue
+        darken[position] = drop_cue_number
+    return darken, tuple(withheld)
+
+
+def _is_drop_row(section: SongCueSection) -> bool:
+    intent = intent_for_label(section.label)
+    return intent is not None and intent.row == ROW_CHORUS
+
+
+# @MX:NOTE: [AUTO] §8 안전 한계의 **유일한** 집행 지점 — 감광이 내려갈 수 있는 바닥.
+#   (여기도 ANCHOR 가 아니라 NOTE 다 — 위와 같은 파일 상한 사유.)
+#   이 함수가 지키는 것과 **못 지키는 것**을 갈라 두지 않으면 다음 사람이 이
+#   바닥을 광도 보장으로 읽는다. 지키는 것: 이 규칙이 내보내는 ``Dimmer`` 는 절대
+#   :data:`DARKNESS_FLOOR` 아래로 안 간다 — 블랙아웃(§8 이 허용한 세 형태 중 하나)을
+#   **일부러 안 만든다**는 뜻이기도 하다. 못 지키는 것: 비상구 표지에 실제로 닿는 빛의
+#   양. 객석 형상도 광도 모형도 저장소에 없고(실측 0건), 없는 모형을 지어내면 그 숫자가
+#   안전 주장으로 인용된다. 그리고 이 바닥은 **우리가 내리는 값**만 막는다 — 라이브러리가
+#   스스로 20 아래로 저작한 룩은 이 규칙이 올리지 않는다(올리는 것은 감광이 아니다).
+def darkness_target(intent: SectionIntent) -> int:
+    """이 §6 행에서 감광이 내려갈 목표값 — 행의 바닥, 단 안전 바닥 위로 잘린다.
+
+    목표를 「행의 바닥」으로 잡는 것은 숫자를 안 지어내기 위해서다. 정본은 §8 에
+    **얼마나** 빼라는 수를 안 줬고, 그 구간에 대해 정본이 실제로 적은 가장 어두운 값은
+    §6 표 그 행의 아래끝이다.
+    """
+    return max(intent.brightness[0], DARKNESS_FLOOR)
+
+
+def _pre_drop_darkened(
+    look: Look,
+    *,
+    section: SongCueSection,
+    cue_number: int,
+    drop_cue_number: int | None,
+) -> tuple[Look, SongCuePreDropDarkness | None, SongCueWithheldDarkness | None]:
+    """드롭 앞 큐의 밝기를 뺀 룩, 그 기록, 또는 못 뺀 이유 (정본 §8 [HARD]).
+
+    **형태를 고른 근거.** §8 은 세 형태를 허용한다 — 더 어두운 큐 · 짧은 블랙아웃 ·
+    줄인 워시. 고른 것은 **줄인 워시**(앞 큐의 ``Dimmer`` 를 그 구간의 §6 바닥까지
+    내린다)이고, 나머지 둘을 안 고른 이유가 각각 있다:
+
+    * **짧은 블랙아웃**: §8 자신이 같은 절에서 비상구·통로·안전 표지의 가독을 요구한다.
+      전 리그를 0 으로 보내는 큐를 자동으로 만들 근거가 이 계층에는 없다 — 객석 형상이
+      없어 「그래도 표지는 읽힌다」를 **잴 수 없기** 때문이다.
+    * **큐를 새로 끼워 넣기**: 끼운 큐에는 시작 시각이 필요하고, 자동 진행 경로가 그
+      값으로 ``TrigTime`` 을 쓴다(:func:`_auto_advance_commands`). 정본이 드롭 앞 긴장에
+      준 단위는 초가 아니라 **마디**(§6 「드롭 직전 마지막 마디」)이고, 마디 산술은
+      ``cue_density`` 에 있으며 조립 단계는 BPM 을 받지 않는다. 초를 골라 끼우는 것은
+      정본에 없는 숫자를 만드는 일이다.
+
+    **같은 §6 행이면 안 한다**(:data:`DARKNESS_SAME_SIX_ROW`). 후렴 뒤의 후렴처럼 앞 큐가
+    드롭과 같은 행이면, 정본이 그 행 전체를 80~100% 로 두므로 여기서 빼는 것은 절정 안쪽의
+    요철이지 §8 이 말하는 어둠이 아니다. 이 갈래를 안 두면 부작용이 실측된다 — 반복 후렴의
+    앞 회차들이 전부 행 바닥으로 눌려 §7.1 사다리의 상승(카드 t355)이 평평해진다.
+
+    룩의 ``look_id`` 는 안 바꾼다 — 보고와 곡 사이 기억이 부르는 이름은 라이브러리의 그
+    룩 그대로여야 한다. 바뀌는 것은 이 큐에 실리는 값 하나다.
+    """
+    if drop_cue_number is None:
+        return look, None, None
+    intent = intent_for_label(section.label)
+    if intent is None:
+        return (
+            look,
+            None,
+            SongCueWithheldDarkness(
+                section=section,
+                cue_number=cue_number,
+                drop_cue_number=drop_cue_number,
+                reason=DARKNESS_SIX_ROW_ABSENT,
+                detail=(
+                    f"section label {section.label!r} matches no single §6 row, so the "
+                    "standard gives no floor to take this cue down to"
+                ),
+            ),
+        )
+    if intent.row == ROW_CHORUS:
+        return (
+            look,
+            None,
+            SongCueWithheldDarkness(
+                section=section,
+                cue_number=cue_number,
+                drop_cue_number=drop_cue_number,
+                reason=DARKNESS_SAME_SIX_ROW,
+                detail=(
+                    f"this cue sits on the same §6 row {ROW_CHORUS!r} as the drop; the "
+                    "standard keeps that whole row at 80~100%, so nothing taken out here "
+                    "is the darkness §8 asks for"
+                ),
+            ),
+        )
+    before = _attribute_value(look, _DIMMER)
+    if before is None:
+        return (
+            look,
+            None,
+            SongCueWithheldDarkness(
+                section=section,
+                cue_number=cue_number,
+                drop_cue_number=drop_cue_number,
+                reason=DARKNESS_NO_DIMMER,
+                detail=f"look {look.look_id} carries no {_DIMMER} value",
+            ),
+        )
+    target = darkness_target(intent)
+    if before <= target:
+        return (
+            look,
+            None,
+            SongCueWithheldDarkness(
+                section=section,
+                cue_number=cue_number,
+                drop_cue_number=drop_cue_number,
+                reason=DARKNESS_ALREADY_DARK,
+                detail=(
+                    f"look {look.look_id} already sits at {before:g} which is at or below "
+                    f"the §6 {intent.row!r} floor {target}"
+                ),
+            ),
+        )
+    darkened = replace(look, attributes=_at_value(look.attributes, _DIMMER, target))
+    applied = SongCuePreDropDarkness(
+        section=section,
+        cue_number=cue_number,
+        drop_cue_number=drop_cue_number,
+        row=intent.row,
+        before=before,
+        after=target,
+    )
+    return darkened, applied, None
+
+
+def _darkness_withheld(
+    bundle: SongCueBundle, darken: Mapping[int, int]
+) -> tuple[SongCueWithheldDarkness, ...]:
+    """감광을 노린 큐 중 **무대에 안 닿은** 것들의 사유.
+
+    저장되지 않은 큐의 감광은 없는 것과 같다 — 적용 기록만 남겨 두면 밸리가 있는 것처럼
+    읽힌다. 그래서 저장 여부를 **번들이 완성된 뒤** 다시 보고, 안 저장됐으면 적용을
+    사유로 바꾼다.
+    """
+    withheld: list[SongCueWithheldDarkness] = []
+    for section in bundle.sections:
+        drop_cue_number = darken.get(section.cue_number)
+        if drop_cue_number is None:
+            continue
+        if section.commands:
+            if section.darkness_withheld is not None:
+                withheld.append(section.darkness_withheld)
+            continue
+        detail = "; ".join(
+            part
+            for part in (
+                *(skipped.reason for skipped in section.skipped),
+                section.darkness_withheld.reason if section.darkness_withheld else "",
+            )
+            if part
+        )
+        withheld.append(
+            SongCueWithheldDarkness(
+                section=section.section,
+                cue_number=section.cue_number,
+                drop_cue_number=drop_cue_number,
+                reason=DARKNESS_CUE_NOT_STORED,
+                detail=detail or "cue stored nothing",
+            )
+        )
+    return tuple(withheld)
+
+
+def _attribute_value(look: Look, attribute: str) -> float | None:
+    for value in look.attributes:
+        if value.name == attribute:
+            return value.value
+    return None
+
+
+def _at_value(
+    values: Sequence[AttributeValue], attribute: str, target: float
+) -> tuple[AttributeValue, ...]:
+    """한 속성만 목표값으로 바꾼 값들 — 그 속성이 없으면 그대로.
+
+    없는 축을 만들어 넣지 않는 것은 :func:`escalate_attributes` 와 같은 규율이다.
+    """
+    return tuple(
+        AttributeValue(attribute, target) if value.name == attribute else value for value in values
+    )
 
 
 def _guard_bundle_collision(bundle: SongCueBundle) -> None:
@@ -891,6 +1234,7 @@ def _section_bundle(
     resolution: RoleResolution,
     emitted: dict[str, tuple[int, int, str]],
     movement: MovementPlan | None = None,
+    drop_cue_number: int | None = None,
 ) -> SongCueSectionBundle:
     if selection.look is None:
         skipped = SongCueSkippedSection(
@@ -937,6 +1281,16 @@ def _section_bundle(
             bound=bound,
         )
 
+    # 감광은 **값 라인을 만들기 전에** 온다(정본 §8). 사다리(§7.1)는 충돌이 방아쇠인
+    # 해소 장치라 어두워진 값에서 다시 오르기 시작한다 — 그래서 감광한 큐가 앞 큐와
+    # 값이 겹치면 밝기가 칸당 한 걸음(`_HIT_STEP`)씩 되올라갈 수 있고, 그 사실은
+    # `darkness` 의 두 숫자와 실제 값 라인을 나란히 보면 읽힌다.
+    look, darkness, darkness_withheld = _pre_drop_darkened(
+        look,
+        section=selection.section,
+        cue_number=cue_number,
+        drop_cue_number=drop_cue_number,
+    )
     values, rungs = _distinct_values_line(look, selection.section, emitted)
     if values is None:
         previous_section, previous_cue, previous_look = emitted[_values_line(look.attributes)]
@@ -959,6 +1313,7 @@ def _section_bundle(
             selection=selection,
             skipped=(skipped,),
             bound=bound,
+            darkness_withheld=darkness_withheld,
         )
     emitted[values] = (selection.section.index, cue_number, look.look_id)
     # 움직임 줄은 **값 라인 뒤**에 온다: 기준 룩이 먼저 프로그래머에 실리고, 페이저는 그
@@ -966,12 +1321,20 @@ def _section_bundle(
     # 유일한 미실측 가정이다 — 정적 Dimmer·색과 2스텝 Pan 을 한 캡처에 섞었을 때 정적
     # 값이 살아 있는지는 콘솔에서 확인해야 알 수 있고, 저장된 페이저 큐는 빈 큐와 구별되지
     # 않으므로 사후 판독으로는 못 가른다(`server/fx/instantiate.py` 머리의 @MX:WARN).
+    # 페이드는 ``Store`` 줄에 붙는다 — 문면을 만드는 것은 이 파일이 아니라
+    # ``server.design.cue_fade.store_with_fade`` 하나다(카드 t363). ``Property 'Fade'``
+    # 는 금지이고(`docs/handoff/2026-08-15-timeline-workflow-handoff.md:19`), 그 규율이
+    # 두 소비자에 흩어지지 않게 하려고 조립을 한 자리로 모았다.
+    fade = fade_for_label(selection.section.label)
     commands = (
         _CLEAR,
         _selection_line(groups),
         values,
         *(movement.commands if movement is not None else ()),
-        f"Store Sequence {sequence_number} Cue {cue_number} '{cue_name}'",
+        store_with_fade(
+            f"Store Sequence {sequence_number} Cue {cue_number} '{cue_name}'",
+            fade.seconds if fade is not None else None,
+        ),
         _CLEAR,
     )
     return SongCueSectionBundle(
@@ -983,6 +1346,9 @@ def _section_bundle(
         bound=bound,
         ladder=rungs,
         movement=movement,
+        fade=fade,
+        darkness=darkness,
+        darkness_withheld=darkness_withheld,
     )
 
 
