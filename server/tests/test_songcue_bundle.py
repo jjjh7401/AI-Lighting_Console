@@ -182,6 +182,35 @@ _T348_ACCOUNTED_DIGEST = "c69d8f321d7fdf7bee32bb78b91a2f022d2954f46cccfe055b8df6
 #: 계상된 변경의 형상 — 14 hunk, 추가 79, 삭제 4. 다이제스트가 이미 내용을 고정하므로
 #: 이 숫자는 사람이 규모를 읽는 자리다.
 _T348_ACCOUNTED_SHAPE = (14, 79, 4)
+
+#: 2026-09-12 계상 — 카드 t356 이 역할 어휘의 **닫힌 6개**를 열었다(감독 승인).
+#: 같은 이유로, 같은 방식으로 계상한다: 목록에서 파일을 빼지 않고(빼면 REQ 의
+#: 기계적 증거가 통째로 은퇴한다) 이 두 파일만 스윕에서 빼서 아래 다이제스트로
+#: 고정한다. 나머지 넷은 여전히 빈 출력이어야 하고, 이 둘의 **추가** 변경도
+#: 여전히 거부된다.
+#:
+#: 🔴 `REQ-SONGCUE-021` 은 여기서도 개정되지 않았다 — 그 REQ 의 주어는 「본 SPEC」
+#: 이고, SONGCUE 가 이 두 파일을 안 건드렸다는 역사적 사실은 t356 이후에도 참이다.
+#: 위 t348 절의 「범위 선언 ≠ 집행되는 경계」 구별이 그대로 적용된다.
+#:
+#: 무엇이 계상됐는가: 위치 역할 6개는 **한 글자도 안 바뀌었고**(룩 자산이 그 이름을
+#: 문자열로 든다), 기구 종류 역할 5개가 덧붙었으며, 이름 매칭에 「위치가 종류를
+#: 이긴다」 규칙과 쇼 단위 별칭 통로가 생겼다.
+_T356_ACCOUNTED_FILES = ("server/looks/roles.py", "server/looks/resolver.py")
+#: 지워진 줄 40개를 개행으로 이은 sha256. t348 은 네 줄이라 튜플로 들었지만 40줄은
+#: 사람이 읽을 목록이 아니다 — 형제 게이트(`test_overlap_preserve.py`)의
+#: `_PRECHK_GRANTED_DELETION_DIGEST` 가 같은 이유로 쓰는 형태를 따른다.
+_T356_ACCOUNTED_DELETION_DIGEST = "1cd64d981d67de40305b678465a0312bdf8d5a1ce50b836ccce3874ab0bb2fe7"
+#: diff 본문(`+`/`-`, 헤더 제외)을 개행으로 이은 sha256. 한 바이트라도 다르면 깨진다.
+_T356_ACCOUNTED_DIGEST = "bef1ef8a2b68ef3c21f74e6f8193426331c3733aab3ce07aa4aa5884d97c51ae"
+#: 40 hunk · 추가 277 · 삭제 40. 다이제스트가 내용을 고정하므로 이 숫자는 규모를
+#: 사람이 읽는 자리다.
+_T356_ACCOUNTED_SHAPE = (40, 277, 40)
+
+#: 스윕에서 빠지는 전체 — 계상된 것들의 합집합. 스윕 명령과 비공허성 검사가
+#: 둘 다 이 하나를 읽으므로, 계상을 추가할 때 두 곳이 어긋날 수 없다.
+_ACCOUNTED_LOOK_FILES = (_T348_ACCOUNTED_FILE, *_T356_ACCOUNTED_FILES)
+
 _TOOLS_PATH = "server/orchestrator/tools.py"
 # Snapshot of every tools.py hunk since SONGCUE's run-phase base. It is a
 # TRIPWIRE, not a constant: a later SPEC that legitimately edits tools.py must
@@ -765,12 +794,14 @@ def test_preserve_gate_uses_run_phase_base_to_head_range():
 
     assert command[:4] == ["git", "diff", "--stat", f"{_RUN_PHASE_BASE}..HEAD"]
     assert command[4] == "--"
-    # 계상된 파일 하나만 빠지고 나머지 다섯은 그대로 스윕된다. 목록 자체는 여섯이며,
-    # 빠진 하나는 아래 다이제스트 검사가 더 좁게 잰다.
+    # 계상된 파일들만 빠지고 나머지는 그대로 스윕된다. 목록 자체는 여섯이며,
+    # 빠진 것들은 아래 다이제스트 검사가 더 좁게 잰다.
     assert tuple(command[5:]) == _unaccounted_look_files()
-    assert len(command[5:]) == len(_PRESERVE_LOOK_FILES) - 1
-    assert _T348_ACCOUNTED_FILE not in command
-    assert _T348_ACCOUNTED_FILE in _PRESERVE_LOOK_FILES
+    assert len(command[5:]) == len(_PRESERVE_LOOK_FILES) - len(_ACCOUNTED_LOOK_FILES)
+    for path in _ACCOUNTED_LOOK_FILES:
+        assert path not in command
+        # 계상은 목록에서 빼는 것이 아니다 — 빼면 게이트가 통째로 은퇴한다.
+        assert path in _PRESERVE_LOOK_FILES
 
 
 def test_preserve_look_files_are_unchanged_from_run_phase_base():
@@ -818,6 +849,58 @@ def test_the_accounted_change_is_exactly_the_one_t348_introduced():
         text=True,
     )
     assert len([1 for line in result.stdout.splitlines() if line.startswith("@@")]) == hunks
+
+
+def test_the_t356_accounted_change_is_exactly_the_role_vocabulary_opening():
+    """t356 의 계상을 내용으로 고정한다 — 이 두 파일의 두 번째 변경은 여기서 거부된다."""
+    _require_run_phase_base()
+
+    body = _accounted_diff_body(*_T356_ACCOUNTED_FILES)
+    additions = [line for line in body if line[0] == "+"]
+    deletions = [line for line in body if line[0] == "-"]
+    hunks, expected_adds, expected_dels = _T356_ACCOUNTED_SHAPE
+
+    assert len(additions) == expected_adds
+    assert len(deletions) == expected_dels
+    deletion_digest = hashlib.sha256(
+        "\n".join(line[1:] for line in deletions).encode("utf-8")
+    ).hexdigest()
+    assert deletion_digest == _T356_ACCOUNTED_DELETION_DIGEST
+    digest = hashlib.sha256("\n".join(body).encode("utf-8")).hexdigest()
+    assert digest == _T356_ACCOUNTED_DIGEST
+    # hunk 수는 별도 계기로 센다 — 본문 줄 수와 다른 것을 잰다.
+    result = subprocess.run(  # noqa: S603
+        [
+            "git",
+            "diff",
+            "--unified=0",
+            f"{_RUN_PHASE_BASE}..HEAD",
+            "--",
+            *_T356_ACCOUNTED_FILES,
+        ],
+        cwd=_REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert len([1 for line in result.stdout.splitlines() if line.startswith("@@")]) == hunks
+
+
+def test_the_t356_position_role_names_did_not_change():
+    """계상의 근거 — 「덧붙이기였다」를 문면이 아니라 diff 로 잰다.
+
+    지워진 40줄 안에 위치 역할 여섯의 이름이 **한 번도** 나오지 않아야 한다.
+    나오면 그것은 덧붙이기가 아니라 개명이고, `server/looks/library/*.yaml` 의
+    룩들이 그 이름을 문자열로 들고 있으므로 자산이 깨진다.
+    """
+    _require_run_phase_base()
+
+    deletions = "\n".join(
+        line[1:] for line in _accounted_diff_body(*_T356_ACCOUNTED_FILES) if line[0] == "-"
+    )
+    assert deletions  # 비공허성: 지워진 줄이 없으면 이 검사는 아무것도 안 잰다
+    for name in ("백라이트", "프론트", "사이드", "탑", "배경", "스페셜"):
+        assert f'name="{name}"' not in deletions, name
 
 
 def test_the_accounted_digest_would_reject_a_second_unaccounted_hunk():
@@ -1070,8 +1153,8 @@ def _has_hangul(value: str) -> bool:
 
 
 def _unaccounted_look_files() -> tuple[str, ...]:
-    """스윕이 「빈 출력」을 요구하는 파일 — 계상된 하나를 뺀 나머지 다섯."""
-    return tuple(path for path in _PRESERVE_LOOK_FILES if path != _T348_ACCOUNTED_FILE)
+    """스윕이 「빈 출력」을 요구하는 파일 — 계상된 것들을 뺀 나머지."""
+    return tuple(path for path in _PRESERVE_LOOK_FILES if path not in _ACCOUNTED_LOOK_FILES)
 
 
 def _preserve_diff_command() -> list[str]:
@@ -1085,7 +1168,7 @@ def _preserve_diff_command() -> list[str]:
     ]
 
 
-def _accounted_diff_body() -> list[str]:
+def _accounted_diff_body(*paths: str) -> list[str]:
     """계상된 파일의 diff 본문 줄(`+`/`-`, 헤더 제외). 줄번호를 담지 않는다."""
     result = subprocess.run(  # noqa: S603
         [
@@ -1094,7 +1177,7 @@ def _accounted_diff_body() -> list[str]:
             "--unified=0",
             f"{_RUN_PHASE_BASE}..HEAD",
             "--",
-            _T348_ACCOUNTED_FILE,
+            *(paths or (_T348_ACCOUNTED_FILE,)),
         ],
         cwd=_REPO_ROOT,
         check=True,
