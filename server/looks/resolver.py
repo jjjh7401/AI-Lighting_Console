@@ -1,4 +1,4 @@
-"""Bind the six position roles to the rig's real groups (REQ-LOOKLIB-007/008/009).
+"""역할 어휘를 리그의 실제 그룹에 묶는다 (REQ-LOOKLIB-007/008/009).
 
 Input is one ``get_rig_context`` groups section — the shape
 ``server/orchestrator/tools.py`` builds with ``rig_object`` / ``rig_section``
@@ -30,18 +30,32 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from server.looks.roles import AMBIGUOUS, NO_MATCH, ROLES, match_role_by_name
+from server.looks.roles import (
+    AMBIGUOUS,
+    NO_MATCH,
+    ROLES,
+    match_role_by_name,
+    resolve_role_token,
+)
 
 __all__ = [
+    "ALIAS_UNKNOWN_ROLE",
     "AMBIGUOUS",
     "NO_MATCH",
     "UNADDRESSABLE",
+    "AliasRejection",
     "AmbiguousGroup",
     "GroupCandidate",
     "RoleResolution",
     "UnmappedRole",
+    "normalize_aliases",
     "resolve_roles",
 ]
+
+# 쇼 단위 별칭 표가 모르는 역할 이름을 들었다. 그룹은 매핑되지 않고 이 코드로
+# 보고된다 — 힌트 매칭으로 되돌리지 **않는다**: 운영자는 그 그룹을 특정 역할에
+# 주기로 정했고, 오타를 자동 해석하면 운영자가 지정하지 않은 조명이 켜진다.
+ALIAS_UNKNOWN_ROLE = "alias_unknown_role"
 
 # A role whose only match is a group the responder could not number. Distinct
 # from NO_MATCH on purpose: "there is no backlight in this rig" and "there is
@@ -56,6 +70,14 @@ class GroupCandidate:
 
     number: int
     name: str
+
+
+@dataclass(frozen=True)
+class AliasRejection:
+    """쇼 별칭 표의 한 줄이 거절됐다 — 그룹명과 그 줄이 요구한 역할 토큰."""
+
+    group: str
+    requested: str
 
 
 @dataclass(frozen=True)
@@ -83,13 +105,20 @@ class UnmappedRole:
 
 @dataclass(frozen=True)
 class RoleResolution:
-    """What the rig could and could not answer about the six roles."""
+    """리그가 역할들에 대해 답한 것과 답하지 못한 것."""
 
     mapped: Mapping[str, tuple[GroupCandidate, ...]]
     unmapped: tuple[UnmappedRole, ...]
     ambiguous_groups: tuple[AmbiguousGroup, ...] = ()
     unaddressable_groups: tuple[str, ...] = ()
     unmatched_groups: tuple[str, ...] = ()
+    alias_rejections: tuple[AliasRejection, ...] = ()
+    """모르는 역할 이름을 든 별칭 줄. 해당 그룹은 ``unmatched_groups`` 에도 들어간다 —
+    「모든 그룹이 어느 한 칸에는 계상된다」는 불변식을 이 갈래도 지킨다."""
+
+    unused_aliases: tuple[str, ...] = ()
+    """리그가 올린 어느 그룹명과도 안 맞은 별칭 키. 표의 오타는 이쪽으로 나온다."""
+
     truncated: bool = False
     unavailable_reason: str | None = None
 
@@ -118,18 +147,41 @@ class RoleResolution:
 #   unmapped role, taking the first hit of an ambiguous name, or numbering an
 #   unnumbered group from its listing position (tools.py:180-184). Each turns a
 #   report the operator can act on into a command aimed at the wrong lights.
-def resolve_roles(groups_section: Mapping[str, object]) -> RoleResolution:
-    """Resolve the six roles against one rig groups section.
+def normalize_aliases(aliases: Mapping[str, str] | None) -> dict[str, str]:
+    """쇼 별칭 표를 대조용 키로 정규화한다 — 앞뒤 공백 제거 + casefold.
 
-    ``groups_section`` is either a resolved section
-    (``{"objects": [...], "truncated": bool, ...}``) or the failure shape the
-    tool emits when the console did not deliver it (``{"reason": ..., ...}``).
+    리그 그룹명은 대소문자·여백이 제각각이라(`WASH-U` 대 `wash-u `) 키를 글자
+    그대로 두면 표가 리그의 표기를 따라다녀야 한다. 값(역할 토큰)은 건드리지
+    않고 그대로 넘긴다 — 해석은 :func:`resolve_role_token` 의 몫이다.
     """
+    if not aliases:
+        return {}
+    return {str(key).strip().casefold(): value for key, value in aliases.items()}
+
+
+def resolve_roles(
+    groups_section: Mapping[str, object],
+    *,
+    aliases: Mapping[str, str] | None = None,
+) -> RoleResolution:
+    """역할들을 리그 groups 섹션 하나에 대고 해석한다.
+
+    ``groups_section`` 은 해석된 섹션
+    (``{"objects": [...], "truncated": bool, ...}``)이거나, 콘솔이 주지 못했을 때
+    도구가 내는 실패 형태(``{"reason": ..., ...}``)다.
+
+    ``aliases`` 는 **쇼 단위** 그룹명 → 역할 이름 표다(그룹명은 대소문자 무시).
+    힌트 목록보다 **먼저** 보고 이긴다 — 다음 리그의 그룹명이 이 저장소의 힌트와
+    맞을 이유가 없으므로, 리그마다 코드를 고치지 않고 붙이는 자리가 필요하다.
+    """
+    alias_map = normalize_aliases(aliases)
     unavailable = groups_section.get("reason")
     if isinstance(unavailable, str):
         # Nothing was observed, so no role can be judged against this rig. Every
         # role carries the section's own reason rather than a matching verdict —
         # "no group matched" would be a claim about a rig we never saw.
+        # 관측 자체가 없었으므로 별칭 표에 대해서도 아무것도 주장하지 않는다 —
+        # 안 본 리그를 두고 「이 별칭은 안 쓰였다」고 말할 수 없다.
         return RoleResolution(
             mapped={},
             unmapped=tuple(UnmappedRole(role=role.name, reason=unavailable) for role in ROLES),
@@ -145,6 +197,8 @@ def resolve_roles(groups_section: Mapping[str, object]) -> RoleResolution:
     ambiguous_groups: list[AmbiguousGroup] = []
     unaddressable_groups: list[str] = []
     unmatched_groups: list[str] = []
+    alias_rejections: list[AliasRejection] = []
+    consumed_aliases: set[str] = set()
 
     for entry in listed:
         if not isinstance(entry, Mapping):
@@ -155,6 +209,21 @@ def resolve_roles(groups_section: Mapping[str, object]) -> RoleResolution:
             # The responder positively declined to guess this slot, so the
             # rig-level fact is recorded whatever the name matched.
             unaddressable_groups.append(name)
+
+        alias_key = name.strip().casefold()
+        if alias_key in alias_map:
+            consumed_aliases.add(alias_key)
+            requested = alias_map[alias_key]
+            forced = resolve_role_token(requested)
+            if forced is None:
+                alias_rejections.append(AliasRejection(group=name, requested=str(requested)))
+                unmatched_groups.append(name)
+                continue
+            if number is None:
+                matched_but_unnumbered.setdefault(forced, []).append(name)
+                continue
+            bound.setdefault(forced, []).append(GroupCandidate(number=number, name=name))
+            continue
 
         match = match_role_by_name(name)
         if match.reason == AMBIGUOUS:
@@ -197,5 +266,7 @@ def resolve_roles(groups_section: Mapping[str, object]) -> RoleResolution:
         ambiguous_groups=tuple(ambiguous_groups),
         unaddressable_groups=tuple(unaddressable_groups),
         unmatched_groups=tuple(unmatched_groups),
+        alias_rejections=tuple(alias_rejections),
+        unused_aliases=tuple(key for key in alias_map if key not in consumed_aliases),
         truncated=bool(groups_section.get("truncated", False)),
     )

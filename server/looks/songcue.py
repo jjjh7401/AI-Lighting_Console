@@ -448,6 +448,7 @@ def build_songcue_bundle(
     *,
     sequences_section: Mapping[str, object],
     groups_section: Mapping[str, object],
+    role_aliases: Mapping[str, str] | None = None,
 ) -> SongCueBundle:
     ordered = tuple(selections)
     if not ordered:
@@ -455,7 +456,8 @@ def build_songcue_bundle(
 
     sequence_number = select_sequence_number(sequences_section)
     sequence_name = _ascii_label(song_title, fallback=f"Song {sequence_number}")
-    resolution = resolve_roles(groups_section)
+    # ``role_aliases``: 쇼 단위 그룹명 → 역할 표 (t356). 없으면 힌트 매칭만 돈다.
+    resolution = resolve_roles(groups_section, aliases=role_aliases)
     cue_names = _cue_names(tuple(selection.section for selection in ordered))
 
     dry = _assembled(

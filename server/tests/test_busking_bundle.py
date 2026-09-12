@@ -75,9 +75,11 @@ class TestRigResolvedExactlyOnce:
         calls = {"roles": 0, "pools": 0}
         real_roles, real_pools = busking.resolve_roles, busking.resolve_pools
 
-        def spy_roles(section):
+        def spy_roles(section, **kwargs):
+            # t356 이 `aliases=` 키워드를 더했다 — 스파이가 그것을 그대로
+            # 흘려보내야 이 검사가 재는 것(호출 **횟수**)만 남는다.
             calls["roles"] += 1
-            return real_roles(section)
+            return real_roles(section, **kwargs)
 
         def spy_pools(section):
             calls["pools"] += 1

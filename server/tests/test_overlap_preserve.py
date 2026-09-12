@@ -139,6 +139,30 @@ _PRESERVE_PATHS = (
     "server/rulebook/assets/v2.4.2/",
 )
 
+#: 2026-09-12 granted exception — 카드 t356 이 역할 어휘의 **닫힌 6개**를 열었다
+#: (감독 승인). 형제 게이트(``server/tests/test_songcue_bundle.py``)의 t348 계상과
+#: **같은 방식**이다: 목록에서 파일을 빼지 않고(빼면 이 두 파일에 대한 게이트가
+#: 통째로 은퇴한다) 스윕에서만 빼서 아래 다이제스트로 정확히 고정한다. 나머지
+#: 경로는 여전히 빈 출력이어야 하고, 이 둘의 **추가** 변경도 여전히 거부된다.
+#:
+#: 무엇이 계상됐는가: 위치 역할 6개는 이름·별칭·힌트가 한 글자도 안 바뀌었고
+#: (``server/looks/library/`` 의 룩들이 그 이름을 문자열로 든다), 기구 종류 역할
+#: 다섯이 덧붙었으며, 이름 매칭에 「위치가 종류를 이긴다」 규칙과 쇼 단위 별칭
+#: 통로가 생겼다. 근거는 실측이다 — 실기 12그룹 86대에서 닫힌 6개는 38대(44.2%)만
+#: 불렀고, 일곱 그룹 48대가 전부 no_match 였다
+#: (``.moai/specs/SPEC-COPILOT-LXSEQ-001/research.md:28``).
+_T356_ACCOUNTED_FILES = (
+    "server/looks/roles.py",
+    "server/looks/resolver.py",
+)
+#: diff 본문(`+`/`-`, 헤더 제외)을 개행으로 이은 sha256, 그리고 지워진 40줄만의
+#: sha256. 형제 게이트의 값과 **같다** — 두 base 가 모두 이 변경보다 앞서므로
+#: 같은 diff 를 본다. 우연이 아니라 구조이며, 갈라지면 둘 중 하나가 낡은 것이다.
+_T356_ACCOUNTED_DIGEST = "bef1ef8a2b68ef3c21f74e6f8193426331c3733aab3ce07aa4aa5884d97c51ae"
+_T356_ACCOUNTED_DELETION_DIGEST = "1cd64d981d67de40305b678465a0312bdf8d5a1ce50b836ccce3874ab0bb2fe7"
+#: 40 hunk · 추가 277 · 삭제 40 — 사람이 규모를 읽는 자리.
+_T356_ACCOUNTED_SHAPE = (40, 277, 40)
+
 #: 2026-08-03 granted exception — SPEC-COPILOT-SPATIAL-001 M3 adds ONE rulebook
 #: asset, ``32_spatial_design.md`` (user-approved). The rulebook prefix is a
 #: deliberately EXTENSIBLE asset set (00 -> 10 -> 20 -> 30 -> 31 -> 32), so a
@@ -918,10 +942,14 @@ def _preserve_diff_command() -> list[str]:
     # ones by named locked assets (added path / untouched assets
     # respectively). Every OTHER preserved path must still diff empty, and
     # each grant's named assets are listed here so they keep doing so.
+    #
+    # t356 은 네 번째 계상이다 — `roles.py`/`resolver.py` 는 스윕에서 빠지고
+    # `TestT356RoleVocabularyOpening` 이 다이제스트로 더 좁게 잰다.
     paths = tuple(
         path
         for path in _PRESERVE_PATHS
         if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR, _CONSOLE_LUA_DIR)
+        and path not in _T356_ACCOUNTED_FILES
     )
     return [
         "git",
@@ -1157,10 +1185,15 @@ class TestPreserveDiffIsEmpty:
                 path
                 for path in _PRESERVE_PATHS
                 if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR, _CONSOLE_LUA_DIR)
+                and path not in _T356_ACCOUNTED_FILES
             ),
             *_RULEBOOK_LOCKED_ASSETS,
             *_CONSOLE_LUA_LOCKED_ASSETS,
         )
+        # 계상은 목록에서 빼는 것이 아니다 — 빼면 게이트가 통째로 은퇴한다.
+        for path in _T356_ACCOUNTED_FILES:
+            assert path not in command
+            assert path in _PRESERVE_PATHS
         # The swap must not silently drop the rulebook/console-lua boundary
         # from the gate entirely.
         assert _RULEBOOK_DIR not in command
@@ -1179,6 +1212,86 @@ class TestPreserveDiffIsEmpty:
     def test_the_same_command_detects_a_change_elsewhere(self):
         # Non-vacuity for the emptiness above: the command shape CAN report.
         assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", "server/prechk/") != ""
+
+
+class TestT356RoleVocabularyOpening:
+    """2026-09-12 계상 — 역할 어휘를 연 변경을 내용으로 고정한다.
+
+    스윕에서 빠진 두 파일이 여기서 **더 좁게** 잡힌다. 열어준 것이 아니라
+    옮긴 것이다: 두 번째 변경은 다이제스트에서 거부된다.
+    """
+
+    def _body(self) -> list[str]:
+        lines = _git("diff", "--unified=0", f"{_PRECHK_BASE}..HEAD", "--", *_T356_ACCOUNTED_FILES)
+        return [
+            line
+            for line in lines.splitlines()
+            if line[:1] in {"+", "-"} and not line.startswith(("+++", "---"))
+        ]
+
+    def test_the_accounted_files_are_still_declared_as_preserved(self):
+        # 비공허성 — 계상이 「목록에서 빼기」로 퇴화하지 않았음을 잰다.
+        for path in _T356_ACCOUNTED_FILES:
+            assert path in _PRESERVE_PATHS
+            assert (_REPO_ROOT / path).exists()
+
+    def test_the_change_shape_matches_what_was_granted(self):
+        body = self._body()
+        additions = [line for line in body if line[0] == "+"]
+        deletions = [line for line in body if line[0] == "-"]
+        hunks, expected_adds, expected_dels = _T356_ACCOUNTED_SHAPE
+
+        assert len(additions) == expected_adds
+        assert len(deletions) == expected_dels
+        assert (
+            len(_hunks(_PRECHK_BASE, "server/looks/roles.py"))
+            + len(_hunks(_PRECHK_BASE, "server/looks/resolver.py"))
+            == hunks
+        )
+
+    def test_the_change_body_is_pinned_byte_for_byte(self):
+        body = self._body()
+        assert body  # 비공허성: 빈 본문의 다이제스트를 고정하면 영구 통과가 된다
+        digest = hashlib.sha256("\n".join(body).encode("utf-8")).hexdigest()
+        assert digest == _T356_ACCOUNTED_DIGEST
+
+    def test_the_deleted_lines_are_pinned_separately(self):
+        deletions = [line[1:] for line in self._body() if line[0] == "-"]
+        assert deletions
+        digest = hashlib.sha256("\n".join(deletions).encode("utf-8")).hexdigest()
+        assert digest == _T356_ACCOUNTED_DELETION_DIGEST
+
+    def test_a_smuggled_hunk_would_be_rejected(self):
+        # 비공허성 — 다이제스트가 내용 민감임을 실제로 보인다.
+        body = self._body()
+        smuggled = [*body, "+    # 계상되지 않은 두 번째 변경"]
+        assert hashlib.sha256("\n".join(smuggled).encode("utf-8")).hexdigest() != (
+            _T356_ACCOUNTED_DIGEST
+        )
+        tampered = [body[0] + "x", *body[1:]]
+        assert len(tampered) == len(body)  # 개수는 그대로 — 내용 민감임을 증명한다
+        assert hashlib.sha256("\n".join(tampered).encode("utf-8")).hexdigest() != (
+            _T356_ACCOUNTED_DIGEST
+        )
+
+    def test_the_position_role_names_were_not_renamed(self):
+        """계상의 근거 — 「덧붙이기였다」를 문면이 아니라 diff 로 잰다.
+
+        ``server/looks/library/*.yaml`` 의 룩들이 이 여섯 이름을 문자열로 든다.
+        지워진 줄에 역할 선언이 하나라도 있으면 그것은 이행이 아니라 회귀다.
+        """
+        deletions = "\n".join(line[1:] for line in self._body() if line[0] == "-")
+        assert deletions
+        for name in ("백라이트", "프론트", "사이드", "탑", "배경", "스페셜"):
+            assert f'name="{name}"' not in deletions, name
+
+    # 「이 계상이 자산 변경을 끌고 들어오지 않았다」는 나머지 절반을 여기서 재려다
+    # 한 번 틀렸다: `_PRECHK_BASE..HEAD` 범위의 `server/looks/library/` diff 는
+    # 비어 있지 않다 — 2026-08-02 파란 별칭 grant 와 D1GRANT 의 룩 추가가 이미
+    # 그 범위 안에 있다. 그것들은 **남의 변경**이고, 여기서 재면 이 클래스가
+    # 남의 작업을 자기 판정에 싣는다(흐르는 기준). 그 경계는 이미
+    # `TestLooksLibraryGrantedLines` 가 정확한 줄 텍스트로 소유하고 있으므로
+    # 여기서 다시 재지 않는다.
 
 
 class TestRulebookGrantedAddition:

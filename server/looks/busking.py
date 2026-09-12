@@ -143,6 +143,14 @@ class GenreBundle:
     실행 결과의 per-command status를 룩에 귀속시키는 유일한 다리 —
     보고 계층이 결합 규칙을 다시 구현하지 않게 한다."""
 
+    unmatched_groups: tuple[str, ...] = ()
+    """어느 역할도 이름을 못 붙인 리그 그룹 (t356).
+
+    ``resolution`` 자체는 번들에 싣지 않는다 — 보고 계층이 필요로 하는 것은 이
+    한 목록뿐이고, 해석 전체를 들려주면 보고가 해석을 다시 할 수 있게 된다.
+    미매핑 **역할**은 이미 `plan.unmapped` 로 올라오므로, 이 필드는 그 반대
+    방향(리그 쪽)을 같은 보고에 실어 주는 자리다."""
+
     @property
     def created_count(self) -> int:
         return sum(len(plan.created) for plan in self.looks)
@@ -306,7 +314,13 @@ def build_genre_bundle(
         plans.append(plan)
         ledger = _advance(ledger, plan.created)
     commands, spans = _merge([plan.commands for plan in plans])
-    return GenreBundle(genre=genre, commands=commands, looks=tuple(plans), spans=spans)
+    return GenreBundle(
+        genre=genre,
+        commands=commands,
+        looks=tuple(plans),
+        spans=spans,
+        unmatched_groups=resolution.unmatched_groups,
+    )
 
 
 def instantiate_genre(
@@ -315,11 +329,17 @@ def instantiate_genre(
     *,
     groups_section: Mapping[str, object],
     preset_pools_section: Mapping[str, object],
+    role_aliases: Mapping[str, str] | None = None,
 ) -> GenreBundle:
-    """리그 섹션 원본에서 시작하는 편의 래퍼 — 해석은 **각각 정확히 1회**."""
+    """리그 섹션 원본에서 시작하는 편의 래퍼 — 해석은 **각각 정확히 1회**.
+
+    ``role_aliases`` 는 쇼 단위 그룹명 → 역할 표다(t356). 힌트 목록이 유일한
+    수단이면 리그가 바뀔 때마다 저장소 코드를 고쳐야 하므로, 쇼가 자기 이름을
+    들고 들어오는 통로를 여기서 연다.
+    """
     return build_genre_bundle(
         genre,
         looks_for_genre(library, genre),
-        resolution=resolve_roles(groups_section),
+        resolution=resolve_roles(groups_section, aliases=role_aliases),
         pools=resolve_pools(preset_pools_section),
     )

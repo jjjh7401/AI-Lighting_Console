@@ -131,6 +131,13 @@ class BuskingReport:
     not_executed: int = 0
     failed: int = 0
     drilldown_capped: bool = False
+    unmatched_groups: tuple[str, ...] = ()
+    """어느 역할도 이름을 못 붙인 리그 그룹 (t356).
+
+    ``unmapped``/``unmapped_roles``의 **반대 방향**이다: 저쪽은 「룩이 부른
+    역할에 그룹이 없다」, 이쪽은 「리그에 있는데 아무도 안 부른다」. 둘은 서로
+    다른 조치를 부른다 — 전자는 그룹을 만들거나 룩을 바꾸는 일이고, 후자는
+    역할 어휘를 넓히거나 쇼 별칭을 다는 일이다. 그래서 접지 않고 따로 낸다."""
 
     @property
     def created_count(self) -> int:
@@ -172,6 +179,7 @@ class BuskingReport:
                 for u in self.unmapped
             ],
             "unmapped_roles": list(self.unmapped_roles),
+            "unmatched_groups": list(self.unmatched_groups),
             "looks": [
                 {
                     "look_id": v.look_id,
@@ -269,6 +277,7 @@ def build_report(bundle: GenreBundle, outcomes: Sequence[object] | None = None) 
         not_executed=total_not_executed,
         failed=total_failed,
         drilldown_capped=any(plan.drilldown_capped for plan in bundle.looks),
+        unmatched_groups=bundle.unmatched_groups,
     )
 
 
@@ -300,6 +309,11 @@ def to_korean(report: BuskingReport) -> str:
         lines.append(f"  - 건너뜀 {store.family} {where} — {reason_label(store.reason)}")
     for pair in report.unmapped:
         lines.append(f"  ? 미매핑 [{pair.look_id}] {pair.role} — {reason_label(pair.reason)}")
+    if report.unmatched_groups:
+        # 조용히 버리지 않는다 — 리그에 있는데 어떤 역할도 안 부른 그룹은
+        # 어휘를 넓히거나 쇼 별칭을 달아야 한다는 신호다.
+        names = ", ".join(report.unmatched_groups)
+        lines.append(f"  ! 역할 미부여 그룹 {len(report.unmatched_groups)}개 — {names}")
 
     lines.append("룩별:")
     for verdict in report.looks:

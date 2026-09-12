@@ -25,10 +25,17 @@ from server.looks.resolver import (
     AMBIGUOUS,
     NO_MATCH,
     UNADDRESSABLE,
+    AliasRejection,
     GroupCandidate,
     resolve_roles,
 )
-from server.looks.roles import ROLE_NAMES, ROLES
+from server.looks.roles import (
+    POSITION_ROLE_NAMES,
+    ROLE_NAMES,
+    ROLES,
+    TYPE_ROLE_NAMES,
+    match_role_by_name,
+)
 from server.orchestrator.tools import (
     REASON_UNREACHABLE,
     REASON_UNRESOLVED,
@@ -101,10 +108,21 @@ class TestM0LiveShowfile:
         resolution = resolve_roles(_groups(*M0_SHOWFILE))
         assert resolution.groups_for(FRONT) == (GroupCandidate(number=12, name="Front"),)
 
-    def test_the_other_four_roles_are_reported_unmapped(self):
+    def test_the_other_four_position_roles_are_reported_unmapped(self):
+        # t356: 종류 역할 다섯이 어휘에 들어왔고 이 쇼파일에는 그런 그룹이 없다 —
+        # 그래서 미매핑 집합이 넓어졌다. **여기서 재는 것은 위치 축**이므로 위치
+        # 역할로 좁힌다. 집합 전체를 재던 원래 단언은 아래 검사가 이어받는다.
         resolution = resolve_roles(_groups(*M0_SHOWFILE))
-        assert {u.role for u in resolution.unmapped} == {SIDE, TOP, BACKDROP, SPECIAL}
+        unmapped = {u.role for u in resolution.unmapped}
+        assert unmapped & POSITION_ROLE_NAMES == {SIDE, TOP, BACKDROP, SPECIAL}
         assert {u.reason for u in resolution.unmapped} == {NO_MATCH}
+
+    def test_every_type_role_is_unmapped_because_this_rig_has_no_such_group(self):
+        # t356 의 비공허성: 종류 역할은 **조용히 빠지지 않는다**. 이 쇼파일에
+        # 워시·무버·블라인더·스트로브·헤이즈 그룹이 없다는 사실은 no_match 로
+        # 보고되어야 하고, 보고되지 않으면 미매핑 보고가 축 하나만 덮는 것이다.
+        resolution = resolve_roles(_groups(*M0_SHOWFILE))
+        assert {u.role for u in resolution.unmapped} & TYPE_ROLE_NAMES == TYPE_ROLE_NAMES
 
     def test_zero_ambiguous_names(self):
         resolution = resolve_roles(_groups(*M0_SHOWFILE))
@@ -141,7 +159,7 @@ class TestNamingConventions:
                 _child(6, "키라이트"),
             )
         )
-        assert resolution.unmapped == ()
+        assert {u.role for u in resolution.unmapped} == TYPE_ROLE_NAMES
         assert [c.number for c in resolution.groups_for(BACKLIGHT)] == [1]
         assert [c.number for c in resolution.groups_for(FRONT)] == [2]
         assert [c.number for c in resolution.groups_for(SIDE)] == [3]
@@ -160,7 +178,9 @@ class TestNamingConventions:
                 _child(16, "Special 1"),
             )
         )
-        assert resolution.unmapped == ()
+        # `Top Wash` 는 위치(탑)와 종류(워시) 둘 다에 걸리는 이름이다 — 위치가
+        # 이기므로 탑에 묶이고, 워시는 이 리그에서 미매핑으로 남는다.
+        assert {u.role for u in resolution.unmapped} == TYPE_ROLE_NAMES
         assert [c.name for c in resolution.groups_for(TOP)] == ["Top Wash"]
 
     def test_one_role_may_hold_several_groups_in_rig_order(self):
@@ -553,3 +573,185 @@ class TestNoConsoleCommandSynthesis:
             if token in value.lower()
         ]
         assert offenders == []
+
+
+# ---------------------------------------------------------------------------
+# t356 — 열린 역할 어휘를 실기 리그에 대고 잰다.
+# ---------------------------------------------------------------------------
+
+#: `.moai/specs/SPEC-COPILOT-LXSEQ-001/research.md:28` 이 기록한 실기 리그.
+#: 12그룹 86대. 이름은 그 문서의 `Group` 열 그대로이고, 수량도 그대로다.
+#: **이 숫자가 표준 §12 항목 6 이 다투는 분모다** — 그래서 그룹 수가 아니라
+#: 기구 수로 센다. 그룹 수로 세면 HAZE 2대와 BACK 12대가 같은 무게가 된다.
+LXSEQ_RIG: tuple[tuple[str, int], ...] = (
+    ("KEY", 6),
+    ("FOH", 8),
+    ("BLIND", 6),
+    ("STROBE", 4),
+    ("HAZE", 2),
+    ("MOVER-U", 8),
+    ("MOVER-D", 8),
+    ("BACK", 12),
+    ("SIDE-L", 6),
+    ("SIDE-R", 6),
+    ("WASH-U", 10),
+    ("WASH-D", 10),
+)
+LXSEQ_TOTAL_FIXTURES = 86
+
+#: t356 이전에는 이 일곱 그룹이 전부 no_match 였다 — 48대, 리그의 56%.
+#: 표준 §7.1 사다리의 마지막 두 칸이 불가능했던 이유가 이 중 BLIND·STROBE 다.
+LXSEQ_PREVIOUSLY_UNREACHABLE = (
+    "BLIND",
+    "STROBE",
+    "HAZE",
+    "MOVER-U",
+    "MOVER-D",
+    "WASH-U",
+    "WASH-D",
+)
+
+
+def _lxseq_section() -> dict:
+    return _groups(*(_child(index + 1, name) for index, (name, _) in enumerate(LXSEQ_RIG)))
+
+
+def _covered_fixtures(resolution) -> int:
+    bound = {candidate.name for group in resolution.mapped.values() for candidate in group}
+    return sum(count for name, count in LXSEQ_RIG if name in bound)
+
+
+class TestLxseqRigCoverage:
+    """양성 대조군 — 실기 12그룹이 실제로 해석되는가, 그리고 몇 대인가."""
+
+    def test_the_fixture_inventory_matches_the_recorded_rig(self):
+        # 비공허성: 분모가 틀리면 아래 커버리지 숫자는 아무것도 안 잰다.
+        assert sum(count for _, count in LXSEQ_RIG) == LXSEQ_TOTAL_FIXTURES
+        assert len(LXSEQ_RIG) == 12
+
+    def test_every_real_group_resolves_to_a_role(self):
+        resolution = resolve_roles(_lxseq_section())
+        assert resolution.unmatched_groups == ()
+        assert resolution.ambiguous_groups == ()
+
+    def test_coverage_is_the_whole_rig_by_fixture_count(self):
+        resolution = resolve_roles(_lxseq_section())
+        assert _covered_fixtures(resolution) == LXSEQ_TOTAL_FIXTURES
+
+    def test_the_seven_groups_that_were_unreachable_now_resolve(self):
+        resolution = resolve_roles(_lxseq_section())
+        bound = {candidate.name for group in resolution.mapped.values() for candidate in group}
+        assert set(LXSEQ_PREVIOUSLY_UNREACHABLE) <= bound
+
+    def test_the_ladder_rungs_the_standard_needs_are_callable(self):
+        # 표준 §7.1: chorus 3 = 블라인더, 앙코르 = 스트로브. 이 둘이 역할로
+        # 안 잡히면 사다리의 마지막 두 칸은 문서로만 존재한다.
+        resolution = resolve_roles(_lxseq_section())
+        assert [c.name for c in resolution.groups_for("블라인더")] == ["BLIND"]
+        assert [c.name for c in resolution.groups_for("스트로브")] == ["STROBE"]
+
+    def test_the_only_unmapped_roles_are_positions_this_rig_lacks(self):
+        # 이 리그에는 탑도 배경(호리)도 없다. 그것은 보고되어야 하는 사실이고
+        # 결함이 아니다 — 어휘를 넓혔다고 없는 그룹이 생기지는 않는다.
+        resolution = resolve_roles(_lxseq_section())
+        assert {u.role for u in resolution.unmapped} == {TOP, BACKDROP}
+        assert {u.reason for u in resolution.unmapped} == {NO_MATCH}
+
+
+class TestPositionBeatsTypeOnCollision:
+    """음성 대조군 그 1 — 두 축이 같은 이름을 주장할 때. 쏴서 확인한다."""
+
+    def test_a_name_claimed_by_a_position_and_a_type_goes_to_the_position(self):
+        resolution = resolve_roles(_groups(_child(1, "Back Wash")))
+        assert [c.name for c in resolution.groups_for(BACKLIGHT)] == ["Back Wash"]
+        assert resolution.groups_for("워시") == ()
+        assert resolution.ambiguous_groups == ()
+
+    def test_the_losing_type_role_is_reported_not_discarded(self):
+        match = match_role_by_name("Back Wash")
+        assert match.role == BACKLIGHT
+        assert match.deferred == ("워시",)
+
+    def test_two_positions_claiming_one_name_stay_ambiguous(self):
+        # 위치 우선은 **축 사이**의 규칙이다. 위치 축이 스스로 못 정하는 것을
+        # 종류 답으로 메우면 그것은 추측이다.
+        resolution = resolve_roles(_groups(_child(5, "FrontBack Wash")))
+        assert resolution.ambiguous_groups[0].roles == (BACKLIGHT, FRONT)
+        assert resolution.groups_for("워시") == ()
+
+    def test_two_types_claiming_one_name_stay_ambiguous(self):
+        match = match_role_by_name("Wash Mover")
+        assert match.reason == AMBIGUOUS
+        assert match.candidates == ("워시", "무버")
+
+
+class TestUnmatchedGroupIsReportedNotSwallowed:
+    """음성 대조군 그 2 — 아무 역할도 안 부른 이름. 조용히 사라지면 안 된다."""
+
+    def test_a_fabricated_group_name_lands_in_unmatched_groups(self):
+        resolution = resolve_roles(_groups(_child(1, "Zorblax Array"), _child(2, "Back")))
+        assert resolution.unmatched_groups == ("Zorblax Array",)
+        assert [c.name for c in resolution.groups_for(BACKLIGHT)] == ["Back"]
+
+    def test_every_listed_group_is_accounted_for_somewhere(self):
+        section = _groups(
+            _child(1, "Zorblax Array"),
+            _child(2, "Back"),
+            _child(3, "FrontBack Truss"),
+            _unnumbered("Side L"),
+        )
+        resolution = resolve_roles(section)
+        reported = set(resolution.unmatched_groups) | set(resolution.unaddressable_groups)
+        reported |= {entry.name for entry in resolution.ambiguous_groups}
+        reported |= {c.name for group in resolution.mapped.values() for c in group}
+        assert reported == {"Zorblax Array", "Back", "FrontBack Truss", "Side L"}
+
+
+class TestPerShowAliases:
+    """리그마다 다른 그룹명 — 힌트 목록이 유일한 수단이 아니어야 한다."""
+
+    def test_an_alias_binds_a_name_no_hint_would_match(self):
+        resolution = resolve_roles(
+            _groups(_child(1, "Zorblax Array")), aliases={"Zorblax Array": "블라인더"}
+        )
+        assert [c.name for c in resolution.groups_for("블라인더")] == ["Zorblax Array"]
+        assert resolution.unmatched_groups == ()
+
+    def test_the_alias_key_ignores_case_and_padding(self):
+        resolution = resolve_roles(_groups(_child(1, "WASH-U")), aliases={"  wash-u  ": "스페셜"})
+        assert [c.name for c in resolution.groups_for(SPECIAL)] == ["WASH-U"]
+
+    def test_an_alias_overrides_the_hint_match(self):
+        # 운영자가 쇼에 대해 아는 것이 저장소의 힌트보다 낫다 — 그렇지 않으면
+        # 별칭 표는 힌트가 침묵할 때만 쓰이는 반쪽 수단이 된다.
+        resolution = resolve_roles(_groups(_child(1, "Back")), aliases={"back": "배경"})
+        assert [c.name for c in resolution.groups_for(BACKDROP)] == ["Back"]
+        assert resolution.groups_for(BACKLIGHT) == ()
+
+    def test_an_english_role_alias_is_accepted_as_the_value(self):
+        resolution = resolve_roles(_groups(_child(1, "Zorblax")), aliases={"zorblax": "hazer"})
+        assert [c.name for c in resolution.groups_for("헤이즈")] == ["Zorblax"]
+
+    def test_an_unknown_role_name_is_rejected_and_reported(self):
+        resolution = resolve_roles(_groups(_child(1, "Back")), aliases={"back": "무대감독"})
+        assert resolution.alias_rejections == (AliasRejection(group="Back", requested="무대감독"),)
+
+    def test_a_rejected_alias_does_not_fall_back_to_the_hint_match(self):
+        # 오타를 힌트로 되돌리면 운영자가 지정하지 않은 조명이 켜진다.
+        resolution = resolve_roles(_groups(_child(1, "Back")), aliases={"back": "무대감독"})
+        assert resolution.groups_for(BACKLIGHT) == ()
+        assert resolution.unmatched_groups == ("Back",)
+
+    def test_an_alias_for_a_group_the_rig_never_listed_is_reported(self):
+        resolution = resolve_roles(_groups(_child(1, "Back")), aliases={"nosuchgroup": "워시"})
+        assert resolution.unused_aliases == ("nosuchgroup",)
+
+    def test_an_aliased_group_without_a_number_stays_unaddressable(self):
+        # 별칭은 이름을 푸는 수단이지 주소를 만드는 수단이 아니다.
+        resolution = resolve_roles(_groups(_unnumbered("Zorblax")), aliases={"zorblax": "워시"})
+        assert resolution.reason_for("워시") == UNADDRESSABLE
+
+    def test_no_aliases_leaves_both_alias_reports_empty(self):
+        resolution = resolve_roles(_lxseq_section())
+        assert resolution.alias_rejections == ()
+        assert resolution.unused_aliases == ()

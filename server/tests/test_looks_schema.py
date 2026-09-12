@@ -18,10 +18,15 @@ import yaml
 from server.looks.loader import LookSchemaError, load_library, load_library_from_dir
 from server.looks.roles import (
     AMBIGUOUS,
+    FIXTURE_TYPE,
     NO_MATCH,
+    POSITION,
+    POSITION_ROLES,
     ROLE_NAMES,
     ROLES,
+    TYPE_ROLES,
     match_role_by_name,
+    resolve_role_token,
     role_by_name,
 )
 from server.looks.schema import (
@@ -39,11 +44,22 @@ from server.looks.schema import (
     pool_family,
 )
 
-# The closed 6-term set, verbatim from spec.md §A (사용자 확정 ⑨ / 결정 J).
-EXPECTED_ROLES = ("백라이트", "프론트", "사이드", "탑", "배경", "스페셜")
+# 위치 축 6개, spec.md §A 원문 그대로 (사용자 확정 ⑨ / 결정 J).
+# t356 이 어휘를 **열었지만** 이 여섯은 한 글자도 안 바뀌었다 — 룩 자산들이 이
+# 이름들을 문자열로 들고 있으므로, 이 튜플은 여전히 회귀 방지선이다.
+EXPECTED_POSITION_ROLES = ("백라이트", "프론트", "사이드", "탑", "배경", "스페셜")
 
-# AC-LOOKLIB-015 ④ — fixture TYPE-class vocabulary, deliberately excluded from
-# every hint set (20_korean_terms.md:12,14,15 — these are not position roles).
+# 기구 종류 축 5개 — t356 이 더했다(감독 승인). 실기 리그의 미매칭 7그룹
+# (BLIND·STROBE·HAZE·MOVER-U/D·WASH-U/D)을 덮고, 표준 §7.1 사다리의 마지막 두 칸을
+# 부를 수 있게 한다.
+EXPECTED_TYPE_ROLES = ("워시", "무버", "블라인더", "스트로브", "헤이즈")
+
+EXPECTED_ROLES = EXPECTED_POSITION_ROLES + EXPECTED_TYPE_ROLES
+
+# AC-LOOKLIB-015 ④ — 기구 TYPE 클래스 어휘(20_korean_terms.md:12,14,15).
+# **위치 역할의** 힌트에서는 여전히 전면 금지다: 워시 한 대는 이 리그에서
+# 백라이트이고 저 리그에서 프론트라, 위치 힌트에 넣으면 체계적으로 빗나간다.
+# 종류 역할의 힌트에는 당연히 들어간다 — 그것이 그 역할의 정의다.
 EXCLUDED_TYPE_CLASS_TERMS = ("워시", "Wash", "스팟", "Spot", "빔", "Beam")
 
 
@@ -68,9 +84,19 @@ def _library(*looks: dict) -> dict:
 
 
 class TestRoleVocabularyIsClosed:
-    """AC-LOOKLIB-015 ① ② ④ — the set, the per-role payload, the exclusion."""
+    """AC-LOOKLIB-015 ① ② ④ — 집합, 역할별 적재물, 그리고 (좁혀진) 배제 규칙."""
 
-    def test_the_set_is_exactly_the_six_confirmed_roles(self):
+    def test_the_position_axis_is_still_exactly_the_six_confirmed_roles(self):
+        # t356 의 회귀 방지선. 어휘를 연 것은 **덧붙이기**여야 하고, 위 여섯의
+        # 이름이나 순서가 바뀌면 `server/looks/library/*.yaml` 의 룩들이 깨진다.
+        assert tuple(role.name for role in POSITION_ROLES) == EXPECTED_POSITION_ROLES
+        assert all(role.kind == POSITION for role in POSITION_ROLES)
+
+    def test_the_type_axis_is_exactly_the_five_roles_t356_added(self):
+        assert tuple(role.name for role in TYPE_ROLES) == EXPECTED_TYPE_ROLES
+        assert all(role.kind == FIXTURE_TYPE for role in TYPE_ROLES)
+
+    def test_the_whole_set_is_the_two_axes_position_first(self):
         assert tuple(role.name for role in ROLES) == EXPECTED_ROLES
         assert frozenset(EXPECTED_ROLES) == ROLE_NAMES
 
@@ -81,17 +107,30 @@ class TestRoleVocabularyIsClosed:
             assert role.aliases, f"{role.name} has no English alias"
             assert role.hints, f"{role.name} has no mapping hint"
 
-    def test_no_hint_uses_fixture_type_class_vocabulary(self):
-        # AC ④ — D3's lesson in mechanical form. One Wash fixture may be a
-        # backlight OR a front, so a type-class hint mis-aims systematically.
+    def test_no_position_hint_uses_fixture_type_class_vocabulary(self):
+        # AC ④ — D3 의 교훈을 기계로 옮긴 것. 워시 한 대는 백라이트일 수도 프론트일
+        # 수도 있으므로, 종류 어휘를 **위치** 힌트에 넣으면 체계적으로 빗나간다.
+        # t356 은 이 금지를 없애지 않고 위치 축으로 좁혔다.
         offenders = [
             (role.name, hint, term)
-            for role in ROLES
+            for role in POSITION_ROLES
             for hint in role.hints
             for term in EXCLUDED_TYPE_CLASS_TERMS
             if term.lower() in hint.lower()
         ]
         assert offenders == []
+
+    def test_a_type_role_may_and_does_use_that_vocabulary(self):
+        # 비공허성 — 위 검사가 「아무 데도 없다」를 재는 것으로 되돌아가지 않게
+        # 한다. 워시 역할이 `Wash` 힌트를 안 들면 어휘를 연 의미가 없다.
+        hits = [
+            hint
+            for role in TYPE_ROLES
+            for hint in role.hints
+            for term in EXCLUDED_TYPE_CLASS_TERMS
+            if term.lower() in hint.lower()
+        ]
+        assert hits
 
     def test_abbreviation_hints_are_declared_as_hints(self):
         for role in ROLES:
@@ -455,3 +494,40 @@ class TestNoPerShowBindingFieldsExist:
         look = load_library(_library()).looks[0]
         for forbidden in ("group", "group_number", "slot", "preset", "fid", "executor"):
             assert not any(forbidden in field for field in vars(look)), forbidden
+
+
+class TestRoleTokenResolution:
+    """쇼 별칭 표가 값으로 받아들이는 토큰 (t356)."""
+
+    def test_a_primary_name_resolves_to_itself(self):
+        assert resolve_role_token("블라인더") == "블라인더"
+
+    def test_a_declared_english_alias_resolves(self):
+        assert resolve_role_token("hazer") == "헤이즈"
+        assert resolve_role_token("FOH") == "프론트"
+
+    def test_case_and_padding_do_not_matter(self):
+        assert resolve_role_token("  BackLight  ") == "백라이트"
+
+    def test_an_unknown_token_is_none_not_a_guess(self):
+        assert resolve_role_token("무대감독") is None
+        assert resolve_role_token("") is None
+
+    def test_a_hint_is_not_an_identifier(self):
+        # 힌트는 부분 일치용 패턴이지 식별자가 아니다. `BL` 을 별칭 값으로
+        # 받으면 별칭 표가 힌트 매칭을 둘째 경로로 복제하게 된다.
+        # `BL`·`Rear` 는 백라이트의 힌트이지 선언된 별칭이 아니다.
+        # (`Cyc` 는 반대로 **별칭으로 선언돼 있어** 통과한다 — 힌트 여부가 아니라
+        #  선언 여부가 기준이라는 것을 이 대비가 보인다.)
+        assert resolve_role_token("BL") is None
+        assert resolve_role_token("Rear") is None
+        assert resolve_role_token("Cyc") == "배경"
+
+    def test_every_declared_token_is_claimed_by_exactly_one_role(self):
+        # 별칭이 두 역할에 걸치면 표가 먼저 선언된 쪽을 조용히 고른다.
+        seen: dict[str, str] = {}
+        for role in ROLES:
+            for token in (role.name, *role.aliases):
+                key = token.casefold()
+                assert key not in seen, (token, seen.get(key), role.name)
+                seen[key] = role.name
