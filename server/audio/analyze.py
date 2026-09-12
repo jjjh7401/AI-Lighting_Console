@@ -47,10 +47,18 @@ _MIN_SEGMENT_SECONDS = 3.0
 #: 이보다 작은 흔들림을 경계로 읽으면 한 곡이 수십 구간으로 잘린다.
 _MIN_LOG_STEP = 0.25
 
-#: 최대 novelty 대비 이 비율을 넘는 봉우리만 경계가 된다. 절대 문턱
-#: (``_MIN_LOG_STEP``)과 **둘 다** 넘어야 한다 — 절대값만 쓰면 조용한 곡에서
+#: **국소 봉우리들의 중앙값** 대비 이 비율을 넘는 봉우리만 경계가 된다. 절대
+#: 문턱(``_MIN_LOG_STEP``)과 **둘 다** 넘어야 한다 — 절대값만 쓰면 조용한 곡에서
 #: 경계가 사라지고, 상대값만 쓰면 계단이 없는 곡에서도 최대 봉우리 하나가
 #: 무조건 경계가 된다.
+#:
+#: 중앙값을 쓰는 이유(t371): 최댓값 하나를 기준으로 삼으면, 곡 안에 유독 큰
+#: 계단이 하나(예: 무음에 가까운 브레이크다운 → 드롭) 있을 때 그 계단이
+#: 기준을 밀어올려 그보다 작은 **진짜** 경계들을 통째로 지운다 — 실측(t371):
+#: 5구간 합성곡에서 4번째 계단(진폭 0.06→1.00)이 2번째 계단(0.35→0.85, 로그
+#: 진폭차 0.85)을 눌러 지웠다(최댓값 기준 문턱 1.13 > 0.85). 중앙값은 국소
+#: 봉우리 **하나**의 크기에 흔들리지 않는다 — 실측으로 확인(합성 대조군 6종 +
+#: 순수 배열 스트레스 테스트 2종, `reports/t371/`).
 _RELATIVE_PEAK_RATIO = 0.4
 
 #: D 등급 띠 — 구간 RMS 를 **가장 큰 구간의 RMS** 로 나눈 비의 상한이다.
@@ -227,7 +235,17 @@ def _boundaries_from_rms(numpy, rms, frame_ms: float, duration_ms: int) -> tuple
         after = window_mean(index, index + window)
         novelty[index] = abs(after - before)
 
-    peak_floor = max(_MIN_LOG_STEP, _RELATIVE_PEAK_RATIO * float(novelty.max()))
+    # 문턱을 적용하기 **전에** 먼저 국소 봉우리들만 모은다 — 이 목록의 중앙값이
+    # "이 곡에서 흔한 계단 크기"이고, 그것이 상대 문턱의 기준이다. 단 하나의
+    # 최댓값이 아니라 이 집합의 중앙값을 쓰면, 유독 큰 계단 하나가 나머지
+    # 진짜 경계들의 문턱을 밀어올리는 일이 없다(위 상수 설명 참조).
+    local_maxima = [
+        novelty[index]
+        for index in range(window, log_rms.size - window)
+        if novelty[index] == novelty[max(0, index - window) : index + window + 1].max()
+    ]
+    typical_peak = float(numpy.median(local_maxima)) if local_maxima else 0.0
+    peak_floor = max(_MIN_LOG_STEP, _RELATIVE_PEAK_RATIO * typical_peak)
     candidates = [
         index
         for index in range(window, log_rms.size - window)
