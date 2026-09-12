@@ -145,18 +145,24 @@ class TestNoHistoryIsByteIdentical:
             sequences_section=_sequences(),
             groups_section=_groups(*FULL_RIG),
         )
+        # 카드 t363 이 이 기대값 두 자리를 바꿨다. **무기억 성질은 그대로다** — 이 검사가
+        # 재는 것은 「기억을 안 넘긴 호출과 빈 기억을 넘긴 호출이 같은 명령을 낸다」이고,
+        # 아래 두 변화는 둘 모두에 똑같이 적용된다:
+        #   · 벌스가 55 → 25 로 내려간다. 다음 큐가 §6 chorus · drop 행이므로 드롭 앞
+        #     감광이 걸리고, 목표는 §6 verse 행의 바닥 25 다(정본 §8 [HARD]).
+        #   · Store 줄에 페이드가 붙는다 — 벌스 2초(§9 부드러운 전환), 후렴 0.2초(§9 극적인 컷).
         assert bundle.commands == (
             "ChangeDestination Root",
             "ClearAll",
             "Group 11",
-            "Attribute 'Dimmer' At 55",
-            "Store Sequence 1 Cue 1 'Verse'",
+            "Attribute 'Dimmer' At 25",
+            "Store Sequence 1 Cue 1 'Verse' CueFade 2",
             "Label Sequence 1 'Song'",
             "ClearAll",
             "ClearAll",
             "Group 11",
             "Attribute 'Dimmer' At 70",
-            "Store Sequence 1 Cue 2 'Chorus'",
+            "Store Sequence 1 Cue 2 'Chorus' CueFade 0.2",
             "ClearAll",
         )
 

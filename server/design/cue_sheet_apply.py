@@ -61,6 +61,7 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from server.design.cue_fade import store_with_fade
 from server.design.cue_sheet_edit import section_intensity_percent
 from server.looks.songcue import UNMAPPED_LOOK
 from server.looks.songcue_report import ROLE_UNADDRESSED
@@ -582,13 +583,13 @@ def plan_console_apply(
         skipped.extend(decision.skips)
         if not decision.would_apply:
             continue
-        store = f"Store Sequence {sequence_number} Cue {cue}"
-        if decision.fade_seconds is not None:
-            # `CueFade` 는 이 저장소가 실측한 유일한 페이드 형태다 — `Property
-            # 'Fade'` 는 금지(`docs/handoff/2026-08-15-timeline-workflow-handoff.md:19`),
-            # `/Merge` 와 함께 쓰는 순서는 실행 로그에 있다
-            # (`.moai/specs/SPEC-COPILOT-INTENT-001/progress.md:66`).
-            store += f" CueFade {decision.fade_seconds:g}"
+        # `CueFade` 는 이 저장소가 실측한 유일한 페이드 형태다. 조립 문면은 카드 t363
+        # 에서 `server/design/cue_fade.py` 로 **들어 올렸다** — 곡→큐 경로가 같은 문법을
+        # 쓰게 되면서 소비자가 둘이 됐고, 베끼면 두 벌이 조용히 갈라지기 때문이다.
+        # 근거 문면(`Property 'Fade'` 금지 · `/Merge` 순서 실행 로그)은 그 파일에 있다.
+        store = store_with_fade(
+            f"Store Sequence {sequence_number} Cue {cue}", decision.fade_seconds
+        )
         commands.extend((_CLEAR, decision.value_line, f"{store} /Merge", _CLEAR))
         applied.append(cue)
         if decision.percent is not None:

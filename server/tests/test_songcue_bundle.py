@@ -58,7 +58,13 @@ from server.tests.test_looks_instantiate import _groups
 from server.tests.test_looks_resolver import _code_string_constants
 
 _SONGCUE_MODULE = Path("server/looks/songcue.py")
-_STORE_RE = re.compile(r"^Store Sequence (?P<sequence>\d+) Cue (?P<cue>\d+) '(?P<name>[^']+)'$")
+#: 카드 t363 이 꼬리에 ``CueFade <초>`` 를 **선택적으로** 붙였다(정본 §9). 패턴을 넓히지
+#: 않으면 이 헬퍼가 모든 Store 줄을 놓치고, 그러면 「이름이 회차로 갈린다」 같은 단언이
+#: 빈 목록을 비교하며 조용히 뜻을 잃는다 — 꼬리는 선택이므로 페이드 없는 큐는 그대로 걸린다.
+_STORE_RE = re.compile(
+    r"^Store Sequence (?P<sequence>\d+) Cue (?P<cue>\d+) '(?P<name>[^']+)'"
+    r"(?: CueFade (?P<fade>[\d.]+))?$"
+)
 _DESTINATION = "ChangeDestination Root"
 _CLEAR = "ClearAll"
 _FORBIDDEN_COMMANDS = {
