@@ -77,8 +77,8 @@ footer{margin-top:60px;padding-top:20px;border-top:var(--border);color:var(--g50
 
 <div class="cards">
 <div class="card"><div class="k">3</div><div class="l">감독님 제안 연구 출처<br>Fei Hu · AddOnDesk · MBLightArts</div></div>
-<div class="card"><div class="k">4</div><div class="l">이번 회차에 고친 결함<br>t366 · t367 · t368 · t369</div></div>
-<div class="card"><div class="k">2</div><div class="l">실기 콘솔에 세운 곡<br>Sequence 7 · 10</div></div>
+<div class="card"><div class="k">6</div><div class="l">이번 회차에 고친 결함<br>t366~t369 · t371 · FX t370</div></div>
+<div class="card"><div class="k">6</div><div class="l">실기 콘솔에 세운 시퀀스<br>곡 3 + 효과 3</div></div>
 <div class="card"><div class="k">20/20</div><div class="l">곡 구성 전수 검사<br>큐 소실 0건</div></div>
 </div>
 
@@ -245,7 +245,22 @@ flowchart TD
 <pre><code>Sequence 7  'VerifyA'    Intro · Verse1 · Chorus1 · Verse2 · Chorus2 · Breakdown · Drop · Outro
 Sequence 10 'VerifyC4x'  Intro · Verse1 · Chorus1 · Verse2 · Chorus2 · Bridge · Chorus3 · Chorus4 · Outro</code></pre>
 
-<p>기존 쇼(Sugar 등)는 건드리지 않았습니다 — 비어 있던 자리에만 썼습니다.</p>
+<pre><code>Sequence 11 'chase-horizontal'     수평 체이스
+Sequence 12 'chase-bounce-run'    바운스 런 체이스
+Sequence 13 'sweep-vshape-swing'  V자 팬 스윙</code></pre>
+
+<p>기존 쇼(Sugar 등)는 건드리지 않았습니다 — 비어 있던 자리에만 썼습니다.
+효과 셋은 문서 17 §9 가 "이것부터"라고 지목한 안전한 세 가지입니다(빔 축을 안 쓰고 Pan 만 씁니다).
+한국어 문구 7개를 매처에 쏴서 <b>6개가 라우팅</b>되는 것을 확인했고, 나머지 하나는
+틀린 답을 주는 게 아니라 <b>"답 안 함"</b>이라 안전한 실패입니다.</p>
+
+<div class="box">
+<div class="t">🔴 감독님만 판정하실 수 있는 것</div>
+효과 셋이 콘솔에 <b>저장된 것</b>은 확인했지만, <b>실제로 도는지</b>는 기계로 확인할 수 없습니다
+(저장된 페이저는 되읽기가 불가능합니다). 특히 <code>sweep-vshape-swing</code> 이 쓰는
+<code>At Relative</code> 는 이 저장소가 <b>미검증</b>으로 분류해 둔 축입니다 —
+<b>Sequence 13 을 한 번 눌러 보시면 그 미검증 항목이 판정됩니다.</b>
+</div>
 
 <h3>감독님이 콘솔에서 눈으로 보실 것</h3>
 
