@@ -29,6 +29,7 @@ from server.looks.report import (
 )
 from server.looks.resolver import resolve_roles
 from server.tests.busking_fixtures import (
+    FULL_RIG,
     capped_pools,
     make_bundle,
     make_look,
@@ -359,3 +360,37 @@ class TestDrilldownCappedPropagates:
         bundle = make_bundle([make_look("a", "룩 A")])
         report = build_report(bundle, _all_ok(bundle))
         assert report.drilldown_capped is False
+
+
+# -- (e) 역할 미부여 그룹 — 미매핑의 반대 방향 (t356) ----------------------------
+
+
+class TestUnmatchedGroupsReachTheReport:
+    """리그에 있는데 아무 역할도 안 부른 그룹은 보고까지 올라와야 한다.
+
+    `unmapped`/`unmapped_roles` 는 「룩이 부른 역할에 그룹이 없다」이고, 이쪽은
+    「그룹이 있는데 아무도 안 부른다」다. 조치가 다르므로 접지 않는다 — 전자는
+    그룹을 만드는 일, 후자는 어휘를 넓히거나 쇼 별칭을 다는 일이다.
+    """
+
+    def test_a_group_no_role_claims_is_carried_into_the_report(self, library):
+        looks = looks_for_genre(library, "ballad")[:1]
+        bundle = make_bundle(looks, groups=((11, "Back Wash"), (99, "Zorblax Array")))
+        report = build_report(bundle, _all_ok(bundle))
+        assert report.unmatched_groups == ("Zorblax Array",)
+        assert "Zorblax Array" in report.to_dict()["unmatched_groups"]
+
+    def test_the_korean_summary_names_it(self, library):
+        looks = looks_for_genre(library, "ballad")[:1]
+        bundle = make_bundle(looks, groups=((11, "Back Wash"), (99, "Zorblax Array")))
+        text = to_korean(build_report(bundle, _all_ok(bundle)))
+        assert "역할 미부여 그룹 1개" in text
+        assert "Zorblax Array" in text
+
+    def test_a_fully_named_rig_reports_none_and_prints_no_line(self, library):
+        # 비공허성 — 위 두 검사가 항상 참인 문자열을 재는 것이 아님을 보인다.
+        looks = looks_for_genre(library, "ballad")[:1]
+        bundle = make_bundle(looks, groups=FULL_RIG)
+        report = build_report(bundle, _all_ok(bundle))
+        assert report.unmatched_groups == ()
+        assert "역할 미부여 그룹" not in to_korean(report)

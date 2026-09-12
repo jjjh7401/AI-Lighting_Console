@@ -163,11 +163,17 @@ def _naive_first_match(library, genre: str, band: tuple[int, ...]) -> str | None
 class TestRealRigCoverage:
     """실측 리그에서 구간이 큐를 받는가 — 이 카드가 고치는 결함 그 자체."""
 
-    def test_the_real_rig_binds_four_of_six_roles(self, library):
-        """전제 확인: 탑·배경이 안 묶이는 리그라는 것이 이 결함의 조건이다."""
+    def test_the_real_rig_leaves_top_and_backdrop_unbound(self, library):
+        """전제 확인: 탑·배경이 안 묶이는 리그라는 것이 이 결함의 조건이다.
+
+        t356 이 종류 축 다섯을 더하면서 이 리그의 `WASH-*`·`MOVER-*`·`BLIND`·
+        `STROBE`·`HAZE` 가 묶이기 시작했다 — 그래서 매핑 집합은 넓어졌다.
+        **이 검사가 붙들고 있는 전제는 그쪽이 아니다**: 이 리그에 탑도 호리도
+        없다는 것이고, 그것은 어휘를 열어도 그대로다(없는 그룹은 안 생긴다).
+        """
         resolution = resolve_roles(_groups_section(_REAL_RIG))
 
-        assert set(resolution.mapped) == {"백라이트", "프론트", "사이드", "스페셜"}
+        assert {"백라이트", "프론트", "사이드", "스페셜"} <= set(resolution.mapped)
         assert {entry.role: entry.reason for entry in resolution.unmapped} == {
             "탑": "no_match",
             "배경": "no_match",
