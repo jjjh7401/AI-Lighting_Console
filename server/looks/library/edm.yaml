@@ -1,7 +1,14 @@
 # Built-in look library — EDM (REQ-LOOKLIB-002).
 #
 # See worship.yaml for the shared authoring rules (full RGB always, roles never
-# numbers, no movement, percent values).
+# numbers, 움직임은 §6.4 가 정한 자리에만, percent values).
+#
+# 움직임이 가장 많은 장르다 — 열 중 일곱. 이 장르만 세 대역을 전부 쓴다: 인트로·그루브·
+# 빌드·라이저가 느림, 텐션(`edm-drop-acid`, D4)이 중속, 드롭 둘(D5)이 빠름.
+# §6.4 의 「빠름 = 드롭 전용」이 여기서만 참이 되는 이유는 이 장르에만 드롭이 있기
+# 때문이다. 정지로 남긴 셋에도 사유가 있다 — D1 둘은 대역이 정지이고,
+# `edm-breakdown-deep` 은 §6 표가 브레이크다운을 「무빙·이펙트 정지」로 적기 때문이다.
+# 숨을 고르는 구간에서 빔이 계속 돌면 다음 드롭이 올라갈 자리가 없다.
 #
 # WHAT AN EDM SET NEEDS: a build and a drop, and the drop has to feel like a
 # different room than the build did. Ten looks, weighted toward the top of the
@@ -42,7 +49,7 @@ looks:
     display_name: "인트로 베드"
     genre: "edm"
     dynamics: 2
-    roles: ["배경", "탑"]
+    roles: ["배경", "탑", "무버"]
     aliases: ["인트로 베드", "intro bed", "보라 인트로"]
     mood_keywords: ["보랏빛", "낮은", "인트로", "잠잠한", "violet", "intro"]
     attributes:
@@ -50,12 +57,18 @@ looks:
       ColorRGB_R: 55
       ColorRGB_G: 12
       ColorRGB_B: 100
+    movement:
+      - attribute: "Pan"
+        phase_from: 0
+        phase_to: 360
+        relative: 12
+        speed: 12
 
   - look_id: "edm-groove-cyan"
     display_name: "그루브 시안"
     genre: "edm"
     dynamics: 2
-    roles: ["사이드", "백라이트"]
+    roles: ["사이드", "백라이트", "무버"]
     aliases: ["그루브 시안", "groove cyan", "청록 그루브"]
     mood_keywords: ["시원한", "청록", "그루브", "일렁이는", "cyan", "groove"]
     attributes:
@@ -63,6 +76,12 @@ looks:
       ColorRGB_R: 0
       ColorRGB_G: 92
       ColorRGB_B: 100
+    movement:
+      - attribute: "Pan"
+        phase_from: 0
+        phase_to: 360
+        relative: 18
+        speed: 16
 
   - look_id: "edm-breakdown-deep"
     display_name: "브레이크다운"
@@ -83,7 +102,7 @@ looks:
     display_name: "빌드 마젠타"
     genre: "edm"
     dynamics: 3
-    roles: ["백라이트", "사이드", "탑"]
+    roles: ["백라이트", "사이드", "탑", "무버"]
     aliases: ["빌드 마젠타", "build magenta", "고조"]
     mood_keywords: ["고조되는", "마젠타", "긴장되는", "빌드업", "building", "tense"]
     attributes:
@@ -92,13 +111,22 @@ looks:
       ColorRGB_G: 0
       ColorRGB_B: 85
       Zoom: 35
+    movement:
+      - attribute: "Pan"
+        phase_from: 0
+        relative: 16
+        speed: 18
+      - attribute: "Tilt"
+        phase_from: 0
+        relative: 8
+        speed: 18
 
   - look_id: "edm-riser-white"
     display_name: "라이저 화이트"
     genre: "edm"
     dynamics: 3
     # Iris closing toward a pin while intensity climbs — the tension mechanism.
-    roles: ["백라이트", "탑", "배경"]
+    roles: ["백라이트", "탑", "배경", "무버"]
     aliases: ["라이저", "riser white", "직전"]
     mood_keywords: ["조여드는", "새하얀", "직전", "라이저", "riser", "tightening"]
     attributes:
@@ -108,13 +136,19 @@ looks:
       ColorRGB_B: 100
       Iris: 38
       Zoom: 20
+    movement:
+      - attribute: "Tilt"
+        phase_from: 0
+        phase_to: 360
+        relative: 10
+        speed: 20
 
   # --- dynamics 4-5: the drops ---------------------------------------------
   - look_id: "edm-drop-acid"
     display_name: "드랍 애시드"
     genre: "edm"
     dynamics: 4
-    roles: ["백라이트", "사이드", "탑", "배경"]
+    roles: ["백라이트", "사이드", "탑", "배경", "무버"]
     aliases: ["드랍 애시드", "drop acid", "형광 드랍"]
     mood_keywords: ["형광", "쏘는", "노랑초록", "드랍", "acid", "drop"]
     attributes:
@@ -123,12 +157,18 @@ looks:
       ColorRGB_G: 100
       ColorRGB_B: 0
       Zoom: 18
+    movement:
+      - attribute: "Pan"
+        phase_from: 0
+        phase_to: 360
+        relative: 24
+        speed: 40
 
   - look_id: "edm-drop-crimson"
     display_name: "드랍 크림슨"
     genre: "edm"
     dynamics: 5
-    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜"]
+    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜", "무버"]
     aliases: ["드랍 크림슨", "drop crimson", "붉은 드랍"]
     mood_keywords: ["새빨간", "압도적인", "드랍", "절정", "crimson", "drop"]
     attributes:
@@ -137,6 +177,15 @@ looks:
       ColorRGB_G: 0
       ColorRGB_B: 15
       Zoom: 10
+    movement:
+      - attribute: "Pan"
+        phase_from: 0
+        relative: 28
+        speed: 96
+      - attribute: "Tilt"
+        phase_from: 0
+        relative: 14
+        speed: 96
 
   - look_id: "edm-drop-beams"
     display_name: "드랍 빔"
@@ -144,7 +193,7 @@ looks:
     dynamics: 5
     # The tightest look in the library. Iris fully open, beams at their
     # narrowest: hard shafts rather than a wash.
-    roles: ["백라이트", "사이드", "탑"]
+    roles: ["백라이트", "사이드", "탑", "무버"]
     aliases: ["드랍 빔", "drop beams", "빔 드랍"]
     mood_keywords: ["날카로운", "차가운", "쏟아지는", "드랍", "빔", "beams", "hard"]
     attributes:
@@ -154,6 +203,12 @@ looks:
       ColorRGB_B: 100
       Iris: 100
       Zoom: 5
+    movement:
+      - attribute: "Pan"
+        phase_from: 0
+        phase_to: 360
+        relative: 30
+        speed: 120
 
   # --- dynamics 1, 뒤늦게 붙인 칸: 배경막 없는 리그를 위한 것 -----------------
   # 파일이 다이내믹스 오름차순으로 읽히는 흐름에서 여기만 어긋난다. 정렬은

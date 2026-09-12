@@ -13,13 +13,40 @@
 # family, so a look naming only red arrives on the console as WHITE. Naming one
 # channel is not "less colour" — it is a different colour than intended.
 #
-# NO STAGE POSITION IS EVER A NUMBER. Positions are the six closed roles
-# (백라이트 / 프론트 / 사이드 / 탑 / 배경 / 스페셜); the rig binding happens at
-# instantiation time (REQ-LOOKLIB-004).
+# NO STAGE POSITION IS EVER A NUMBER. Positions are the six closed position
+# roles (백라이트 / 프론트 / 사이드 / 탑 / 배경 / 스페셜); the rig binding happens at
+# instantiation time (REQ-LOOKLIB-004). 카드 t356 이 기구 종류 축 다섯을 더했고
+# (워시 / 무버 / 블라인더 / 스트로브 / 헤이즈), 아래에서 쓰는 것은 `무버` 하나다.
 #
-# NO MOVEMENT. The v1 bundle does not emit the movement field, so a look
-# declaring it would have its declared axis dropped while the run still reports
-# success (design.md AP-18). The schema field stays defined for successor SPECs.
+# 움직임 — 카드 t359, 감독 승인 2026-09-12. 이 문단은 예전에 「NO MOVEMENT」였다.
+# 그때의 사유는 v1 번들이 movement 필드를 발화하지 않아 선언한 축이 조용히 버려진다는
+# 것이었고(design.md AP-18), 그 사유는 **소멸했다**: 카드 t357 이 룩의 움직임 선언을
+# `server/looks/movement.py` → `server/fx/instantiate.py` 경로로 실제 페이저 명령까지
+# 옮긴다. 그래서 여기 적는 움직임은 무대에 나간다.
+#
+# 어디에 적는가 — 정본 `docs/proposals/song-structure-lighting-standard.md` §6 표와
+# §6.4 가 정한다. 규칙 넷:
+#
+#   (가) 대역은 룩이 아니라 **다이내믹스**가 정한다(§6.4, `movement.py`
+#        `_DYNAMICS_BANDS`): D1 정지 · D2·D3 느림 · D4 중속 · D5 빠름. 그래서 D1 룩은
+#        움직임을 선언하지 않는다 — 선언해도 보류되고, §6 표가 인트로·브레이크다운·
+#        솔로를 「무빙·이펙트 정지」로 적는다.
+#   (나) **빠름은 드롭 전용**(§6.4). worship 과 ballad 에는 드롭이 없으므로 이 두
+#        장르는 **느림 대역(D2·D3)에만** 움직임을 적는다. D4·D5 에 적으면 대역이
+#        자동으로 중속·빠름이 되고, 그것은 예배 절정과 발라드 마지막 코러스를
+#        클럽 속도로 돌리는 일이다.
+#   (다) 움직이는 룩은 `무버` 역할을 **함께** 든다. 워시·호리·프론트 필은 팬하지
+#        않으므로, 종류 역할 없이 움직임만 적으면 돌 수 없는 기구에 스윕을 보낸다.
+#        프론트 필은 §6.2 가 「부드러운 보정광으로 항상 유지」라 했으므로 프론트가
+#        주역인 룩에는 움직임을 적지 않는다.
+#   (라) 진폭은 `relative` 이고 스텝 둘은 그 크기의 양끝(-n · +n)이다. 여기 숫자는
+#        새로 만든 것이 아니라 `server/fx/library/movement.yaml` 이 이미 싣고 있는
+#        크기대(팬 20~30 · 틸트 10~15)의 **아래쪽**을 쓴다. 그 파일 머리말이 적어
+#        둔 이유가 그대로 유효하다 — 저장소에 위치 값의 **측정된 단위가 없다**.
+#        정본 §6.4 의 「5~20%」는 퍼센트이고 여기 값은 콘솔 단위이므로, 둘을 환산해
+#        적지 않았다. 틸트를 팬의 절반 안쪽으로 묶는 것은 §6.4 의 「관객 눈높이 위
+#        20~30°」 쪽 하드룰인데, 객석 형상이 저장소에 없어 **기계로는 못 막는다**
+#        (`server/looks/movement.py` 머리말). 작게 두는 것이 그 자리의 전부다.
 #
 # Values are percent. Zoom low = tight beam, high = wide wash; Iris low = closed,
 # high = open. The M0 probe confirmed the console ACCEPTS 'Zoom' and 'Iris'; it
@@ -100,7 +127,7 @@ looks:
     genre: "worship"
     dynamics: 3
     # Sides enter here — the first time the stage gains width.
-    roles: ["프론트", "백라이트", "사이드"]
+    roles: ["프론트", "백라이트", "사이드", "무버"]
     aliases: ["차오르는 온기", "rising warmth", "빌드업"]
     mood_keywords: ["차오르는", "따뜻한", "고조되는", "빌드업", "building", "warm"]
     attributes:
@@ -108,12 +135,18 @@ looks:
       ColorRGB_R: 100
       ColorRGB_G: 72
       ColorRGB_B: 38
+    movement:
+      - attribute: "Pan"
+        phase_from: 0
+        phase_to: 360
+        relative: 14
+        speed: 14
 
   - look_id: "worship-open-sky"
     display_name: "열린 하늘"
     genre: "worship"
     dynamics: 3
-    roles: ["배경", "탑", "백라이트"]
+    roles: ["배경", "탑", "백라이트", "무버"]
     aliases: ["열린 하늘", "open sky", "하늘"]
     mood_keywords: ["시원한", "탁 트인", "밝은", "하늘", "소망", "open", "bright"]
     attributes:
@@ -122,6 +155,12 @@ looks:
       ColorRGB_G: 85
       ColorRGB_B: 100
       Zoom: 80
+    movement:
+      - attribute: "Tilt"
+        phase_from: 0
+        phase_to: 360
+        relative: 8
+        speed: 12
 
   # --- dynamics 4-5: chorus and the moment everything opens ----------------
   - look_id: "worship-golden-chorus"
