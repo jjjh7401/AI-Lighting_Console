@@ -179,6 +179,39 @@ class TestOneInstantiationPerInstructionTurn:
         assert [section.cue_number for section in bundle.movement_sections] == [1]
         assert [w.cue_number for w in bundle.withheld_movement] == [2]
 
+    def test_a_literal_drop_wins_a_band_tie_over_an_earlier_cue(self):
+        """카드 t367 — 대역이 묶이고 그 중 하나가 **리터럴 드롭**이면 이른 큐가 아니라
+        드롭이 캐리어다. 위 시험(``test_the_earliest_cue_wins_a_tie_on_band``)은 리터럴
+        드롭끼리 묶인 경우라 이 tie-break 을 가르지 못한다 — 여기는 드롭이 아닌 큐가
+        먼저 오는 경우다.
+        """
+        chorus, drop = parse_sections((("Chorus", "0:00"), ("Drop", "0:40")))
+        bundle = _bundle_of(
+            (chorus, _moving_look("chorus", dynamics=5, dimmer=90)),
+            (drop, _moving_look("drop", dynamics=5, dimmer=80)),
+        )
+
+        assert [section.cue_number for section in bundle.movement_sections] == [2]
+        assert [w.cue_number for w in bundle.withheld_movement] == [1]
+
+    def test_a_band_tie_with_no_literal_drop_still_favours_the_earliest_cue(self):
+        """대조군 — 드롭이 아예 없으면 tie-break 은 고치기 전과 바이트 동일하다.
+
+        ``test_the_earliest_cue_wins_a_tie_on_band`` 는 리터럴 드롭끼리의 묶임이라
+        리터럴-드롭 우선이 개입할 자리가 없다. 여기는 라벨 자체가 드롭 어휘를 안 걸어
+        (``Build`` 둘), 새 tie-break 의 두 번째 열(``_is_literal_drop``)이 둘 다
+        ``False`` 로 같아 세 번째 열(이른 큐)로 그대로 내려간다 — 고치기 전 로직과
+        같은 결과다.
+        """
+        first, second = parse_sections((("Build", "0:00"), ("Build", "0:40")))
+        bundle = _bundle_of(
+            (first, _moving_look("build-a", dynamics=5, dimmer=90)),
+            (second, _moving_look("build-b", dynamics=5, dimmer=80)),
+        )
+
+        assert [section.cue_number for section in bundle.movement_sections] == [1]
+        assert [w.cue_number for w in bundle.withheld_movement] == [2]
+
     def test_firing_two_phasers_into_one_bundle_is_refused_not_silently_emitted(self):
         """대조군 ②(음성) — 경계를 넘는 모양을 실제로 쏴서 거절되는 것을 본다.
 

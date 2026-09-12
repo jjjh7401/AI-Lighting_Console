@@ -810,11 +810,17 @@ def _movement_carrier(
 ) -> tuple[dict[int, MovementPlan], tuple[SongCueWithheldMovement, ...]]:
     """움직임을 실을 큐 **하나**와, 못 실은 큐들의 사유.
 
-    고르는 기준은 대역이다 — 가장 센 대역, 같으면 이른 큐. 정본 §6.4 가 「빠름 = 드롭
-    전용」이라 했고 §12 항목 1의 목적이 「드롭을 드롭으로 만드는 것」이므로, 하나만 실을 수
-    있다면 그 하나는 드롭이다.
+    고르는 기준은 대역이다 — 가장 센 대역, 같으면 **리터럴 드롭**(:func:`_is_literal_drop`)
+    이 우선, 그래도 같으면 이른 큐. 정본 §6.4 가 「빠름 = 드롭 전용」이라 했고 §12 항목
+    1의 목적이 「드롭을 드롭으로 만드는 것」이므로, 하나만 실을 수 있다면 그 하나는
+    드롭이다 — 코러스는 §2.2 어휘가 드롭과 다이내믹스 행을 공유해(``chorus`` ·
+    ``drop`` 모두 4~5, `section_vocab.py` `ROW_CHORUS`) 같은 룩을 받을 수 있고, 그러면
+    대역이 묶인다(카드 t367 실측: 코러스 두 회차와 드롭이 전부 ``edm-drop-crimson`` 을
+    받아 셋 다 ``fast``). 대역이 묶였을 때 **이른 큐**만 보면 코러스가 드롭보다 먼저
+    와 이겨 버린다 — 리터럴 드롭 우선을 대역 다음, 이른 큐보다 앞서는 tie-break으로
+    끼워 넣는다.
     """
-    candidates: list[tuple[int, int, MovementPlan]] = []
+    candidates: list[tuple[int, int, bool, MovementPlan]] = []
     withheld: list[SongCueWithheldMovement] = []
     for section in bundle.stored_sections:
         look = section.selection.look
@@ -846,14 +852,21 @@ def _movement_carrier(
             )
             continue
         if plan is not None:
-            candidates.append((BAND_ORDER.index(band), section.cue_number, plan))
+            candidates.append(
+                (
+                    BAND_ORDER.index(band),
+                    section.cue_number,
+                    _is_literal_drop(section.section),
+                    plan,
+                )
+            )
 
     if not candidates:
         return dict(), tuple(withheld)
-    carrier = max(candidates, key=lambda entry: (entry[0], -entry[1]))
+    carrier = max(candidates, key=lambda entry: (entry[0], entry[2], -entry[1]))
     movements: dict[int, MovementPlan] = dict()
-    movements[carrier[1]] = carrier[2]
-    for _rank, cue_number, plan in candidates:
+    movements[carrier[1]] = carrier[3]
+    for _rank, cue_number, _is_drop, plan in candidates:
         if cue_number == carrier[1]:
             continue
         section = next(s for s in bundle.sections if s.cue_number == cue_number)
@@ -865,7 +878,7 @@ def _movement_carrier(
                 reason=MOVEMENT_TURN_BOUNDARY,
                 detail=(
                     f"cue {carrier[1]} carries this bundle's one phaser (band "
-                    f"{carrier[2].band}); a second `Step 2` line in the same instruction "
+                    f"{carrier[3].band}); a second `Step 2` line in the same instruction "
                     "turn is folded by the run_commands dedupe and the cue would store a "
                     "one-step non-phaser"
                 ),
