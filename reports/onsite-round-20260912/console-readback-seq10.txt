@@ -1,0 +1,12 @@
+Sequence 10 {'childCount': 11, 'class': 'Sequence', 'enumeration': 'ok', 'name': 'VerifyC4x'}
+  1 OffCue
+  2 CueZero
+  3 Intro
+  4 Verse 1
+  5 Chorus 1
+  6 Verse 2
+  7 Chorus 2
+  8 Bridge
+  9 Chorus 3
+  10 Chorus 4
+  11 Outro

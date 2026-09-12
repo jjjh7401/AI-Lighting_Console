@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fei Hu MA2 영상 사례를 AI Lighting Copilot 지식으로 바꾸기</title>
+<style>
+:root {
+  --bg: #f7f8f5;
+  --paper: #ffffff;
+  --panel: #eef2ee;
+  --ink: #171a17;
+  --muted: #5f675f;
+  --soft: #899189;
+  --line: #d9ddd6;
+  --line-strong: #b8c0b5;
+  --blue: #1f5f8b;
+  --blue-bg: #e4eef5;
+  --green: #267247;
+  --green-bg: #e5f1e8;
+  --amber: #8a5b12;
+  --amber-bg: #f4ead6;
+  --red: #9b3030;
+  --red-bg: #f4e1df;
+  --purple: #5f4b8b;
+  --purple-bg: #ece8f4;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.72;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--blue); text-underline-offset: 3px; }
+code {
+  font-family: var(--mono);
+  font-size: .88em;
+  background: #edf0ec;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: .08rem .32rem .12rem;
+}
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+.hero {
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.hero-main {
+  padding: 32px 32px 26px;
+  border-bottom: 1px solid var(--line);
+}
+.eyebrow {
+  margin: 0 0 10px;
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 {
+  margin: 0;
+  font-size: clamp(28px, 4.5vw, 48px);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+.lead {
+  max-width: 780px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+}
+.hero-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+.meta-item {
+  padding: 14px 18px 16px;
+  border-right: 1px solid var(--line);
+}
+.meta-item:last-child { border-right: 0; }
+.meta-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.meta-value {
+  display: block;
+  margin-top: 4px;
+  font-weight: 700;
+}
+.toc {
+  margin: 26px 0 0;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.toc-title {
+  margin: 0 0 8px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.toc ol {
+  margin: 0;
+  padding-left: 22px;
+  columns: 2;
+  column-gap: 42px;
+}
+.toc li { margin: 3px 0; font-size: 14px; break-inside: avoid; }
+.toc a { color: var(--ink); text-decoration: none; }
+.toc a:hover { color: var(--blue); text-decoration: underline; }
+section { margin-top: 48px; scroll-margin-top: 18px; }
+.section-head {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+.section-num {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding-top: 8px;
+}
+h2 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.22;
+  letter-spacing: -0.018em;
+}
+.section-lead {
+  margin: 8px 0 0;
+  max-width: 760px;
+  color: var(--muted);
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap: 16px;
+}
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+}
+.panel h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  line-height: 1.36;
+}
+.panel p { margin: 0; color: var(--muted); }
+.key-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+.key-list li { margin: 6px 0; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.stat {
+  background: var(--paper);
+  padding: 18px;
+}
+.stat strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 28px;
+  line-height: 1.16;
+}
+.stat span {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.flow.five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.flow-step {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--blue);
+  border-radius: 8px;
+  padding: 16px;
+}
+.flow-step:nth-child(2) { border-top-color: var(--green); }
+.flow-step:nth-child(3) { border-top-color: var(--amber); }
+.flow-step:nth-child(4) { border-top-color: var(--purple); }
+.flow-step b {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.flow-step span {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.effect-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  min-height: 210px;
+}
+.effect-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 12px;
+}
+.tag {
+  display: inline-block;
+  border: 1px solid var(--line);
+  background: #f4f6f3;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 2px 8px 3px;
+  font-size: 14px;
+}
+.tag.blue { background: var(--blue-bg); color: var(--blue); border-color: #bdd3e4; }
+.tag.green { background: var(--green-bg); color: var(--green); border-color: #bddac5; }
+.tag.amber { background: var(--amber-bg); color: var(--amber); border-color: #e2cfaa; }
+.tag.red { background: var(--red-bg); color: var(--red); border-color: #e0bdb8; }
+.tag.purple { background: var(--purple-bg); color: var(--purple); border-color: #d6cfe5; }
+.effect-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.schema-box {
+  background: #171a17;
+  color: #eef2ee;
+  border-radius: 8px;
+  padding: 18px;
+  overflow-x: auto;
+  border: 1px solid #2d332d;
+}
+.schema-box pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.72;
+  white-space: pre;
+}
+.command-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.command-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+.command-card h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.command-card ol {
+  margin: 0;
+  padding-left: 20px;
+}
+.command-card li {
+  margin: 5px 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 820px;
+}
+th, td {
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+tr:last-child td { border-bottom: 0; }
+th:last-child, td:last-child { border-right: 0; }
+th {
+  background: #edf0ec;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+td { font-size: 14px; }
+.decision-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.rule {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--blue);
+  border-radius: 8px;
+  padding: 18px;
+}
+.rule:nth-child(2) { border-left-color: var(--green); }
+.rule:nth-child(3) { border-left-color: var(--amber); }
+.rule:nth-child(4) { border-left-color: var(--purple); }
+.rule h3 { margin: 0 0 8px; font-size: 18px; }
+.rule p { margin: 0; color: var(--muted); }
+.candidate-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.candidate {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 15px;
+}
+.candidate h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.candidate p { margin: 0; color: var(--muted); font-size: 14px; }
+.callout {
+  border: 1px solid #e2cfaa;
+  border-left: 5px solid var(--amber);
+  background: var(--amber-bg);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.callout strong {
+  display: block;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+.callout p { margin: 0; color: #61420f; }
+.safe {
+  border-color: #e0bdb8;
+  border-left-color: var(--red);
+  background: var(--red-bg);
+}
+.safe strong { color: var(--red); }
+.safe p { color: #6e2525; }
+.match-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.match {
+  background: var(--paper);
+  padding: 14px 16px;
+}
+.match b { display: block; font-size: 14px; }
+.match span { display: block; margin-top: 3px; color: var(--muted); font-size: 14px; }
+.footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+@media (max-width: 900px) {
+  .hero-meta, .summary-grid, .flow, .cards, .decision-grid, .candidate-list, .match-grid {
+    grid-template-columns: 1fr;
+  }
+  .meta-item { border-right: 0; border-bottom: 1px solid var(--line); }
+  .meta-item:last-child { border-bottom: 0; }
+  .toc ol { columns: 1; }
+}
+@media (max-width: 640px) {
+  .wrap { padding: 20px 14px 56px; }
+  .hero-main { padding: 24px 20px 20px; }
+  .section-head { grid-template-columns: 1fr; gap: 4px; }
+  .stats { grid-template-columns: 1fr; }
+  th, td { padding: 9px 10px; }
+}
+@media print {
+  body { background: #fff; }
+  .wrap { max-width: none; padding: 20px; }
+  .hero, .panel, .effect-card, .rule, .candidate, .table-wrap, .callout { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="hero-main">
+      <p class="eyebrow">AI Lighting Copilot Research</p>
+      <h1>Fei Hu MA2 영상 사례를 Copilot 지식으로 바꾸기</h1>
+      <p class="lead">Facebook 피드의 MA2/onPC 조명 효과 1차 샘플을 하나씩 베끼는 대신, 효과를 카테고리로 나누고 grandMA3 Copilot이 실제 콘솔 객체와 명령 흐름으로 옮길 수 있게 정리한 HTML 설명서입니다.</p>
+    </div>
+    <div class="hero-meta">
+      <div class="meta-item"><span class="meta-label">수집일</span><span class="meta-value">2026-09-11</span></div>
+      <div class="meta-item"><span class="meta-label">원천</span><span class="meta-value">Fei Hu Facebook 피드</span></div>
+      <div class="meta-item"><span class="meta-label">콘솔 맥락</span><span class="meta-value">MA2/onPC → grandMA3 Phaser</span></div>
+      <div class="meta-item"><span class="meta-label">사용처</span><span class="meta-value">AI Lighting Copilot 지식 베이스</span></div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="문서 목차">
+    <p class="toc-title">빠른 이동</p>
+    <ol>
+      <li><a href="#summary">한눈에 보기</a></li>
+      <li><a href="#source">관측한 영상 사례</a></li>
+      <li><a href="#map">효과 카테고리 지도</a></li>
+      <li><a href="#ma">MA 기능과 연결</a></li>
+      <li><a href="#console">콘솔 연동 모델</a></li>
+      <li><a href="#rules">Copilot 판단 규칙</a></li>
+      <li><a href="#candidates">구현 후보</a></li>
+      <li><a href="#phrases">자연어 매칭</a></li>
+      <li><a href="#limits">주의할 점</a></li>
+    </ol>
+  </nav>
+
+  <section id="summary">
+    <div class="section-head">
+      <div class="section-num">01</div>
+      <div>
+        <h2>한눈에 보기</h2>
+        <p class="section-lead">이 문서의 결론은 간단합니다. Fei Hu 영상은 "멋진 효과 모음"이 아니라 Copilot이 사용자 요청을 분류하는 데 쓸 수 있는 어휘 사전입니다.</p>
+      </div>
+    </div>
+    <div class="summary-grid">
+      <article class="panel">
+        <h3>핵심 요약</h3>
+        <p>MA2 영상의 캡션은 효과 의도를 직접 말해 줍니다. Copilot은 이 이름을 그대로 명령으로 실행하지 않고, Phaser, Cue timing, SpeedMaster, MAtricks, Macro 작업 중 어디에 속하는지 먼저 판단해야 합니다.</p>
+        <ul class="key-list">
+          <li><strong>Beat/BPM</strong> 계열은 SpeedMaster 연결이 우선입니다.</li>
+          <li><strong>Preset Pack</strong> 계열은 단일 효과가 아니라 라이브러리 생성 요청입니다.</li>
+          <li><strong>Prism/Zoom/Gobo</strong> 계열은 픽스처 프로파일 확인 없이는 확정 실행하면 안 됩니다.</li>
+        </ul>
+      </article>
+      <div class="stats" aria-label="수집 요약 수치">
+        <div class="stat"><strong>23</strong><span>1차 샘플 사례</span></div>
+        <div class="stat"><strong>10</strong><span>효과 카테고리</span></div>
+        <div class="stat"><strong>12</strong><span>구현 후보</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="source">
+    <div class="section-head">
+      <div class="section-num">02</div>
+      <div>
+        <h2>관측한 영상 사례</h2>
+        <p class="section-lead">Facebook 피드에서 보이는 캡션과 영상 길이를 기준으로 분류했습니다. 세션 파라미터가 붙은 Facebook URL은 저장하지 않고, 필요한 경우 `/reel/...` 식별자만 참고합니다.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>날짜 표시</th>
+            <th>캡션/사례명</th>
+            <th>길이</th>
+            <th>Copilot 분류</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>14시간</td><td><code>MA2 Beam Prism Chase Lighting Effect</code></td><td>1:11</td><td>빔/프리즘 체이스</td></tr>
+          <tr><td>1일</td><td><code>MA2 Lighting Effect Preset Pack for stage lighting programming</code></td><td>0:35</td><td>이펙트 프리셋 팩</td></tr>
+          <tr><td>1일</td><td><code>MA2 Bounce Chase Effect</code></td><td>1:59</td><td>바운스 체이스</td></tr>
+          <tr><td>2일</td><td><code>MA2 Audience Blinder Beat Effect Tutorial</code></td><td>0:52</td><td>블라인더 비트</td></tr>
+          <tr><td>3일</td><td><code>MA2 BPM Thru Method</code></td><td>1:17</td><td>BPM/SpeedMaster</td></tr>
+          <tr><td>6일</td><td><code>How to Make MA2 Dim + Tilt Phase Offset</code></td><td>1:49</td><td>디머+틸트 위상차</td></tr>
+          <tr><td>9월 2일</td><td><code>MA2 Symmetric V-Shape Pan Swing Effect</code></td><td>2:52</td><td>대칭 V 팬 스윙</td></tr>
+          <tr><td>9월 1일</td><td><code>MA2 Beam Bounce Beat-Sync Effect Tutorial</code></td><td>2:17</td><td>빔 바운스 + 비트 싱크</td></tr>
+          <tr><td>8월 29일</td><td><code>Creating Horizontal Chase Effect on MA2</code></td><td>2:06</td><td>수평 체이스</td></tr>
+          <tr><td>8월 27일</td><td><code>MA2 Prism Beat Effect Creation</code></td><td>2:41</td><td>프리즘 비트</td></tr>
+          <tr><td>8월 23일</td><td><code>MA2: Fade-out &amp; Delay-out</code></td><td>2:54</td><td>큐 타이밍/딜레이</td></tr>
+          <tr><td>8월 12일</td><td><code>Set Trigger Timing Macro | MA2</code></td><td>2:25</td><td>매크로/트리거 타이밍</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="map">
+    <div class="section-head">
+      <div class="section-num">03</div>
+      <div>
+        <h2>효과 카테고리 지도</h2>
+        <p class="section-lead">사용자가 "Fei Hu 스타일로 해줘"라고 말했을 때 Copilot이 먼저 떠올려야 하는 큰 묶음입니다.</p>
+      </div>
+    </div>
+    <div class="cards">
+      <article class="effect-card">
+        <h3>빔/프리즘 체이스</h3>
+        <div class="tag-row"><span class="tag blue">Prism</span><span class="tag blue">Beam</span><span class="tag green">SpeedMaster</span></div>
+        <p>프리즘이 박자에 맞춰 들어오거나, 빔이 순서대로 튀는 효과입니다. 픽스처별 Prism 어트리뷰트 확인이 필요합니다.</p>
+      </article>
+      <article class="effect-card">
+        <h3>바운스/런 체이스</h3>
+        <div class="tag-row"><span class="tag blue">Phase</span><span class="tag purple">MAtricks</span><span class="tag">Reverse</span></div>
+        <p>선택 순서나 X/Y 좌표를 따라 빛이 달리는 효과입니다. `phase_from_x`, `phase_to_x`, `reverse`, `wings`가 핵심입니다.</p>
+      </article>
+      <article class="effect-card">
+        <h3>팬/틸트 모션</h3>
+        <div class="tag-row"><span class="tag blue">Pan</span><span class="tag blue">Tilt</span><span class="tag purple">Circle</span></div>
+        <p>스윕, 서클, V-shape, 원형 배치 대칭 효과입니다. 위치값보다 위상 분산과 좌우 대칭 규칙이 룩을 결정합니다.</p>
+      </article>
+      <article class="effect-card">
+        <h3>디머/줌 브리딩</h3>
+        <div class="tag-row"><span class="tag green">Dimmer</span><span class="tag blue">Zoom</span><span class="tag amber">Curve</span></div>
+        <p>밝기와 빔 폭이 같이 숨쉬는 효과입니다. 느린 속도와 부드러운 Accel/Decel 곡선이 어울립니다.</p>
+      </article>
+      <article class="effect-card">
+        <h3>페이드/딜레이</h3>
+        <div class="tag-row"><span class="tag amber">Cue</span><span class="tag amber">Fade</span><span class="tag amber">Delay</span></div>
+        <p>반복 이펙트가 아니라 큐 전환의 질감입니다. "순서대로 켜지고 꺼짐"은 Phaser보다 Cue timing으로 가야 합니다.</p>
+      </article>
+      <article class="effect-card">
+        <h3>템플릿/프리셋 팩</h3>
+        <div class="tag-row"><span class="tag purple">Preset</span><span class="tag purple">Sequence</span><span class="tag purple">Macro</span></div>
+        <p>단일 룩이 아니라 공연에서 재사용할 프리셋·시퀀스·익스큐터·매크로 묶음입니다.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="ma">
+    <div class="section-head">
+      <div class="section-num">04</div>
+      <div>
+        <h2>MA 기능과 연결</h2>
+        <p class="section-lead">MA2 영상 용어를 grandMA3 Copilot 내부의 작업 단위로 옮기면 다음과 같습니다.</p>
+      </div>
+    </div>
+    <div class="flow" aria-label="MA2 영상에서 Copilot 작업으로 바꾸는 흐름">
+      <div class="flow-step"><b>1. 캡션 읽기</b><span>예: Bounce Chase, Prism Beat, Fade-out Delay</span></div>
+      <div class="flow-step"><b>2. 작업면 분류</b><span>Phaser인지 Cue timing인지 Macro인지 결정</span></div>
+      <div class="flow-step"><b>3. 안전/리그 확인</b><span>Prism, Zoom, Blinder, Delete 계열은 가드 적용</span></div>
+      <div class="flow-step"><b>4. Copilot 객체화</b><span>Preset, Sequence, Cue, Executor, Macro로 저장</span></div>
+    </div>
+    <div class="table-wrap" style="margin-top:16px">
+      <table>
+        <thead>
+          <tr>
+            <th>영상에서 보이는 말</th>
+            <th>MA 기능</th>
+            <th>Copilot 내부 해석</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Effect, Chase, Bounce</td><td>Effect/Phaser, Phase spread</td><td>2개 이상 Step을 가진 Phaser 후보</td></tr>
+          <tr><td>BPM, Beat-sync</td><td>Speed, Speed Master, Executor speed</td><td>고정 BPM보다 SpeedMaster 연결 우선</td></tr>
+          <tr><td>Fade-in, Delay-out</td><td>Cue Fade/Delay</td><td>Phaser가 아닌 시퀀스/큐 타이밍 레시피</td></tr>
+          <tr><td>Preset Pack, Template Pack</td><td>Preset pool, Sequence, Macro import</td><td>여러 효과를 묶은 라이브러리 생성 요청</td></tr>
+          <tr><td>Trigger Timing Macro</td><td>Macro, Trigger</td><td>매크로 작성 또는 시퀀스 트리거 설정</td></tr>
+          <tr><td>RGB Mixing Mode</td><td>ColorRGB/HSB mode</td><td>컬러 이펙트 전 픽스처 색상 모델 확인</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="console">
+    <div class="section-head">
+      <div class="section-num">05</div>
+      <div>
+        <h2>콘솔 연동 모델</h2>
+        <p class="section-lead">조명감독의 말이 실제 grandMA3 onPC 명령으로 이어지려면, 중간에 구조화된 의도 객체와 안전 게이트가 있어야 합니다.</p>
+      </div>
+    </div>
+    <div class="flow five" aria-label="Copilot 콘솔 연동 파이프라인">
+      <div class="flow-step"><b>1. 자연어</b><span>"바운스 체이스를 비트에 맞춰"</span></div>
+      <div class="flow-step"><b>2. 의도 객체</b><span><code>EffectRequest</code>로 효과 종류·대상·속도 분리</span></div>
+      <div class="flow-step"><b>3. 리그 확인</b><span>Group, Fixture, GDTF attribute, free Sequence 확인</span></div>
+      <div class="flow-step"><b>4. 명령 번들</b><span>Phaser/Cue/Macro에 맞는 command bundle 생성</span></div>
+      <div class="flow-step"><b>5. 실행/보고</b><span>OSC 전송, 안전 차단, 저장 위치와 한계 보고</span></div>
+    </div>
+
+    <div class="schema-box" style="margin-top:16px" aria-label="EffectRequest 예시">
+<pre>{
+  "intent": "create_lighting_effect",
+  "effect_kind": "bounce_chase",
+  "target": { "group_label": "MOVER-U", "fixture_class": "moving_head" },
+  "attributes": ["Pan", "Tilt", "Dimmer"],
+  "timing": { "sync": "speed_master", "speed_master": 1, "phase": "x_spread" },
+  "store": { "destination": "sequence", "sequence_label": "FX Bounce Chase", "cue": 1 },
+  "safety": {
+    "audience_blinder": false,
+    "destructive_pool_operation": false,
+    "profile_dependent_attributes": []
+  }
+}</pre>
+    </div>
+
+    <div class="table-wrap" style="margin-top:16px">
+      <table>
+        <thead>
+          <tr>
+            <th>표현</th>
+            <th>Copilot 의도</th>
+            <th>필수 확인</th>
+            <th>MA 객체</th>
+            <th>명령 생성 골격</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>바운스 체이스</td><td><code>bounce_chase</code> Phaser</td><td>대상 그룹, 선택 순서 또는 X/Y 좌표</td><td>Sequence Cue 1</td><td>Group → Step 1/2 → Phase 0 Thru 360 → SpeedMaster → Store Sequence</td></tr>
+          <tr><td>비트에 맞춰</td><td><code>speed_master</code> binding</td><td>SpeedMaster 번호, 기존 할당</td><td>SpeedMaster / Executor speed</td><td>여러 효과를 같은 SpeedMaster에 묶음</td></tr>
+          <tr><td>페이드 인 딜레이</td><td>cue timing recipe</td><td>적용 그룹, 순서, Fade/Delay 값</td><td>Sequence Cue</td><td>Look 저장 → Cue Fade/Delay fan 입력</td></tr>
+          <tr><td>프리즘 비트</td><td>beam Phaser</td><td>Prism attribute 이름과 지원 범위</td><td>Sequence 또는 Preset</td><td>profile 확인 후 Prism Step 1/2 생성</td></tr>
+          <tr><td>트리거 타이밍 매크로</td><td>macro helper</td><td>대상 Sequence/Cue, overwrite 여부</td><td>Macro</td><td>검증된 명령 묶음을 Macro에 저장</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="command-grid" style="margin-top:16px">
+      <article class="command-card">
+        <h3>Phaser 계열</h3>
+        <ol>
+          <li>대상 Group 선택</li>
+          <li>Step 1/2 값 생성</li>
+          <li>Phase, Speed, Width 적용</li>
+          <li>Sequence 또는 Preset으로 저장</li>
+        </ol>
+      </article>
+      <article class="command-card">
+        <h3>Cue timing 계열</h3>
+        <ol>
+          <li>정적 Look 저장</li>
+          <li>Fade/Delay fan 지정</li>
+          <li>Follow/trigger 필요 여부 결정</li>
+          <li>Phaser와 분리 보고</li>
+        </ol>
+      </article>
+      <article class="command-card">
+        <h3>Profile-dependent 계열</h3>
+        <ol>
+          <li>Prism/Zoom/Gobo attribute 확인</li>
+          <li>지원 값 범위 확인</li>
+          <li>확인 전에는 실행 금지</li>
+          <li>계획만 사용자에게 제시</li>
+        </ol>
+      </article>
+    </div>
+  </section>
+
+  <section id="rules">
+    <div class="section-head">
+      <div class="section-num">06</div>
+      <div>
+        <h2>Copilot 판단 규칙</h2>
+        <p class="section-lead">사용자의 한국어 요청을 안정적으로 해석하기 위한 우선순위입니다.</p>
+      </div>
+    </div>
+    <div class="decision-grid">
+      <article class="rule">
+        <h3>Effect와 Cue timing을 분리</h3>
+        <p>"이펙트"라고 말해도 반복 룩이면 Phaser, 순차 점등/소등이면 Cue Fade/Delay로 보냅니다.</p>
+      </article>
+      <article class="rule">
+        <h3>Beat는 SpeedMaster 우선</h3>
+        <p>비트, BPM, 템포, sync 요청은 여러 효과를 하나의 SpeedMaster에 묶는 방향으로 해석합니다.</p>
+      </article>
+      <article class="rule">
+        <h3>대칭은 MAtricks 문제</h3>
+        <p>V-shape, mirror, circular layout은 Pan/Tilt 값보다 X/Y phase, wings, selection order를 먼저 봅니다.</p>
+      </article>
+      <article class="rule">
+        <h3>Preset Pack은 라이브러리</h3>
+        <p>팩 요청은 단일 큐가 아니라 Dimmer, Movement, Color, Beam, Timing, Macro 묶음으로 계획합니다.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="candidates">
+    <div class="section-head">
+      <div class="section-num">07</div>
+      <div>
+        <h2>구현 후보</h2>
+        <p class="section-lead">아래는 바로 실행 가능한 검증 완료 레시피가 아니라, Fei Hu 영상 사례에서 수요가 확인된 Copilot 라이브러리 확장 후보입니다.</p>
+      </div>
+    </div>
+    <div class="candidate-list">
+      <article class="candidate"><h3><code>beam-prism-chase</code></h3><p>프리즘 체이스. Prism 어트리뷰트가 기종 의존이므로 GDTF/fixture profile 가드 필요.</p></article>
+      <article class="candidate"><h3><code>prism-beat</code></h3><p>프리즘 비트. Beat 요청이면 SpeedMaster 연결을 기본값으로 둔다.</p></article>
+      <article class="candidate"><h3><code>bounce-run-x</code></h3><p>바운스 런 체이스. X축 phase spread, reverse, wings 조합이 핵심.</p></article>
+      <article class="candidate"><h3><code>vshape-pan-swing</code></h3><p>대칭 V 팬 스윙. 좌우 wings 또는 그룹 split 후 반대 방향 phase를 적용.</p></article>
+      <article class="candidate"><h3><code>zoom-dimmer-breath</code></h3><p>줌과 디머가 같이 숨쉬는 룩. 느린 속도와 부드러운 곡선으로 제한.</p></article>
+      <article class="candidate"><h3><code>fade-delay-fan-in/out</code></h3><p>순차 페이드 인/아웃. FX 라이브러리가 아니라 시퀀스 큐 타이밍 레시피로 설계.</p></article>
+    </div>
+  </section>
+
+  <section id="phrases">
+    <div class="section-head">
+      <div class="section-num">08</div>
+      <div>
+        <h2>자연어 매칭</h2>
+        <p class="section-lead">Copilot이 사용자의 말에서 바로 잡아낼 수 있는 표현 후보입니다.</p>
+      </div>
+    </div>
+    <div class="match-grid">
+      <div class="match"><b>"Fei Hu 스타일", "MA2 템플릿팩 느낌"</b><span>effect-pack plan</span></div>
+      <div class="match"><b>"프리즘 체이스", "빔 프리즘 돌려"</b><span>beam-prism-chase</span></div>
+      <div class="match"><b>"바운스 체이스", "통통 튀게"</b><span>bounce-run-x</span></div>
+      <div class="match"><b>"비트에 맞춰", "BPM으로"</b><span>speed_master binding</span></div>
+      <div class="match"><b>"V자로 흔들어", "대칭 팬 스윙"</b><span>vshape-pan-swing</span></div>
+      <div class="match"><b>"수평 체이스", "좌우로 달리게"</b><span>horizontal-chase</span></div>
+      <div class="match"><b>"줌이랑 디머 같이 숨쉬게"</b><span>zoom-dimmer-breath</span></div>
+      <div class="match"><b>"페이드 인 딜레이", "순서대로 켜져"</b><span>fade-delay-fan-in</span></div>
+    </div>
+  </section>
+
+  <section id="limits">
+    <div class="section-head">
+      <div class="section-num">09</div>
+      <div>
+        <h2>주의할 점</h2>
+        <p class="section-lead">이 문서는 연구·분류 문서입니다. 영상 사례를 실행 가능한 콘솔 명령으로 단정하지 않습니다.</p>
+      </div>
+    </div>
+    <div class="summary-grid">
+      <div class="callout">
+        <strong>MA2 캡션을 MA3 명령으로 바로 변환하지 않기</strong>
+        <p>MA2 Effect와 grandMA3 Phaser는 개념적으로 이어지지만, 저장 구조와 명령 세부는 다릅니다. Copilot은 먼저 의도와 작업면을 분류해야 합니다.</p>
+      </div>
+      <div class="callout safe">
+        <strong>블라인더·플래시·삭제는 안전 가드 우선</strong>
+        <p>Audience Blinder Beat, Flash, Delete Presets 계열은 자동 실행하면 위험하거나 되돌리기 어렵습니다. 낮은 강도, 수동 승인, 명확한 확인 절차가 필요합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    원문 Markdown: <a href="./17-fei-hu-ma2-video-patterns.md">17-fei-hu-ma2-video-patterns.md</a>.
+    이 HTML은 외부 라이브러리 없이 단일 파일로 열람·인쇄할 수 있도록 작성했습니다.
+  </footer>
+</main>
+</body>
+</html>

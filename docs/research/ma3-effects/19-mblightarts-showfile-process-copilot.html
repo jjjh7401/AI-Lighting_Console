@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MBLightArts YouTube 6편 기반 showfile 프로세스와 Copilot 역할</title>
+<style>
+:root {
+  --bg:#f6f7f4; --paper:#ffffff; --panel:#eef2f0; --ink:#171b1d; --muted:#58636a;
+  --line:#d8dedc; --line-strong:#aebbb8; --blue:#1d5f86; --blue-bg:#e4eff5;
+  --green:#267247; --green-bg:#e4f1e8; --amber:#8b5c12; --amber-bg:#f4ead6;
+  --red:#9b3030; --red-bg:#f4e1df; --purple:#5f4b8b; --purple-bg:#ece8f4;
+  --teal:#146b68; --teal-bg:#dff0ef;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.72;word-break:keep-all;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-underline-offset:3px}
+code{font-family:var(--mono);font-size:14px;background:#eef1ef;border:1px solid var(--line);border-radius:4px;padding:.08rem .32rem .12rem;word-break:break-word}
+.wrap{max-width:1220px;margin:0 auto;padding:40px 24px 80px}
+.hero{border:1px solid var(--line-strong);background:var(--paper);border-radius:8px;overflow:hidden}
+.hero-main{padding:32px 32px 26px;border-bottom:1px solid var(--line)}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font-size:clamp(28px,4.4vw,48px);line-height:1.14;letter-spacing:0}
+.lead{max-width:880px;margin:18px 0 0;color:var(--muted);font-size:18px}
+.hero-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);background:var(--panel)}
+.meta-item{padding:14px 18px 16px;border-right:1px solid var(--line)}
+.meta-item:last-child{border-right:0}
+.meta-label{display:block;font-family:var(--mono);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.meta-value{display:block;margin-top:4px;font-weight:700}
+.toc{margin:26px 0 0;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:16px 18px}
+.toc-title{margin:0 0 8px;font-family:var(--mono);font-size:14px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.toc ol{margin:0;padding-left:22px;columns:2;column-gap:42px}
+.toc li{margin:3px 0;font-size:14px;break-inside:avoid}
+.toc a{color:var(--ink);text-decoration:none}
+.toc a:hover{color:var(--blue);text-decoration:underline}
+section{margin-top:48px;scroll-margin-top:18px}
+.section-head{display:grid;grid-template-columns:86px minmax(0,1fr);gap:20px;align-items:start;margin-bottom:18px}
+.section-num{font-family:var(--mono);font-size:14px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;padding-top:8px}
+h2{margin:0;font-size:clamp(24px,3vw,34px);line-height:1.22;letter-spacing:0}
+.section-lead{margin:8px 0 0;max-width:820px;color:var(--muted)}
+h3{margin:0 0 10px;font-size:19px;line-height:1.35}
+p{margin:0 0 12px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.panel,.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px}
+.panel p,.card p,.card li{color:var(--muted)}
+.key-list{margin:10px 0 0;padding-left:18px}
+.key-list li{margin:5px 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{background:var(--paper);padding:18px}
+.stat strong{display:block;font-family:var(--mono);font-size:28px;line-height:1.16}
+.stat span{display:block;margin-top:8px;color:var(--muted);font-size:14px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.tag{display:inline-block;border:1px solid var(--line);background:#f4f6f3;color:var(--muted);border-radius:999px;padding:2px 8px 3px;font-size:14px}
+.tag.blue{background:var(--blue-bg);color:var(--blue);border-color:#bdd3e4}
+.tag.green{background:var(--green-bg);color:var(--green);border-color:#bddac5}
+.tag.amber{background:var(--amber-bg);color:var(--amber);border-color:#e2cfaa}
+.tag.red{background:var(--red-bg);color:var(--red);border-color:#e0bdb8}
+.tag.purple{background:var(--purple-bg);color:var(--purple);border-color:#d6cfe5}
+.tag.teal{background:var(--teal-bg);color:var(--teal);border-color:#acd8d5}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{width:100%;border-collapse:collapse;min-width:860px}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+tr:last-child td{border-bottom:0}
+th:last-child,td:last-child{border-right:0}
+th{background:#edf1ef;color:var(--muted);font-size:14px;font-weight:800}
+td{font-size:14px}
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.flow-step{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--blue);border-radius:8px;padding:15px}
+.flow-step:nth-child(2){border-top-color:var(--green)}
+.flow-step:nth-child(3){border-top-color:var(--amber)}
+.flow-step:nth-child(4){border-top-color:var(--purple)}
+.flow-step:nth-child(5){border-top-color:var(--teal)}
+.flow-step b{display:block;font-size:15px;margin-bottom:6px}
+.flow-step span{display:block;color:var(--muted);font-size:14px}
+.callout{border:1px solid #e2cfaa;border-left:5px solid var(--amber);background:var(--amber-bg);border-radius:8px;padding:16px 18px}
+.callout strong{display:block;color:var(--amber);margin-bottom:4px}
+.callout p{margin:0;color:#60420f}
+.safe{border-color:#e0bdb8;border-left-color:var(--red);background:var(--red-bg)}
+.safe strong{color:var(--red)}
+.safe p{color:#6e2525}
+.schema-box{background:#171b1d;color:#eef2ee;border-radius:8px;padding:18px;overflow-x:auto;border:1px solid #2d3335}
+.schema-box pre{margin:0;font-family:var(--mono);font-size:14px;line-height:1.72;white-space:pre}
+.source-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.source{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:15px}
+.source b{display:block}
+.source span{display:block;color:var(--muted);font-size:14px;margin-top:4px}
+.footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media(max-width:980px){.hero-meta,.grid-2,.grid-3,.flow,.source-list{grid-template-columns:1fr}.meta-item{border-right:0;border-bottom:1px solid var(--line)}.meta-item:last-child{border-bottom:0}.toc ol{columns:1}}
+@media(max-width:640px){.wrap{padding:20px 14px 56px}.hero-main{padding:24px 20px 20px}.section-head{grid-template-columns:1fr;gap:4px}.stats{grid-template-columns:1fr}th,td{padding:9px 10px}}
+@media print{body{background:#fff}.wrap{max-width:none;padding:20px}.hero,.panel,.card,.table-wrap,.callout{break-inside:avoid}a{color:inherit;text-decoration:none}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="hero-main">
+      <p class="eyebrow">AI Lighting Copilot Research</p>
+      <h1>MBLightArts YouTube 6편 기반 showfile 프로세스와 Copilot 역할</h1>
+      <p class="lead">grandMA3 busking/template showfile을 새 무대에 적응시키는 과정을 patch, group grid, presets, macros, cue recipes, layouts 단위로 나누고 Copilot이 자동화할 수 있는 범위와 사람이 확인해야 하는 범위를 명확히 정리한 자료입니다.</p>
+    </div>
+    <div class="hero-meta">
+      <div class="meta-item"><span class="meta-label">수집일</span><span class="meta-value">2026-09-11</span></div>
+      <div class="meta-item"><span class="meta-label">출처</span><span class="meta-value">YouTube 6 videos · manual captions</span></div>
+      <div class="meta-item"><span class="meta-label">대상</span><span class="meta-value">grandMA3 Busking Showfile</span></div>
+      <div class="meta-item"><span class="meta-label">용도</span><span class="meta-value">Copilot 구현 지식</span></div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="문서 목차">
+    <p class="toc-title">빠른 이동</p>
+    <ol>
+      <li><a href="#scope">6개 영상 범위</a></li>
+      <li><a href="#process">전체 프로세스</a></li>
+      <li><a href="#stage">Stage와 patch</a></li>
+      <li><a href="#groups">2D selection grid</a></li>
+      <li><a href="#presets">Basic presets</a></li>
+      <li><a href="#macro">Master macro와 layout</a></li>
+      <li><a href="#override">Solo override</a></li>
+      <li><a href="#autopos">Auto position</a></li>
+      <li><a href="#tap">Tap chaser와 delay sweep</a></li>
+      <li><a href="#color">Color FX</a></li>
+      <li><a href="#runbook">상세 콘솔 Runbook</a></li>
+      <li><a href="#action-catalog">Action catalog</a></li>
+      <li><a href="#copilot">Copilot 역할</a></li>
+      <li><a href="#schemas">구현 스키마</a></li>
+      <li><a href="#pantilt">Pan/Tilt 핵심</a></li>
+    </ol>
+  </nav>
+
+  <section id="scope">
+    <div class="section-head"><div class="section-num">01</div><div><h2>6개 영상 범위</h2><p class="section-lead">playlist의 6개 영상은 하나의 템플릿 showfile을 새 무대에 맞추고 busking 운용까지 연결하는 흐름입니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>영상 ID</th><th>주제</th><th>Copilot 관점</th></tr></thead><tbody>
+      <tr><td>1</td><td><code>_f0TaTWQ-d4</code></td><td>30분 내 busking showfile 생성</td><td>patch → groups → presets → master macro → layout의 표준 runbook</td></tr>
+      <tr><td>2</td><td><code>vnQLTFxY75Y</code></td><td>새 stage layout 적응</td><td>기존 fixture 유지/교체, 2D selection grid, preset 보정, color merge</td></tr>
+      <tr><td>3</td><td><code>kt99UOEzyrI</code></td><td>solo spot override sequence</td><td>Global Override Base, override preset, playback override master</td></tr>
+      <tr><td>4</td><td><code>Qy1QK3YxTww</code></td><td>MA3 v1.9 flexible showfile</td><td>Auto pos macro, straight down/up 기준 preset, master fade/FX control</td></tr>
+      <tr><td>5</td><td><code>6NAFFvqTz0o</code></td><td>chaser와 delay sweep</td><td>Sequence + Cue Recipe + MAtricks pool + Delay Speed rate master</td></tr>
+      <tr><td>6</td><td><code>usGX42BMQAw</code></td><td>color FX</td><td>Color Picker, effect color, CFX speedmaster, recipe 기반 color sequence</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="process">
+    <div class="section-head"><div class="section-num">02</div><div><h2>전체 프로세스</h2><p class="section-lead">핵심은 새 쇼를 빈 파일에서 만드는 것이 아니라, 검증된 템플릿 객체 구조를 실제 리그에 맞게 재연결하는 것입니다.</p></div></div>
+    <div class="flow" aria-label="showfile 적응 흐름">
+      <div class="flow-step"><b>1. Inventory</b><span>fixture category, truss/floor 위치, DMX, mode 파악</span></div>
+      <div class="flow-step"><b>2. Patch</b><span>템플릿 fixture 유지/교체/삭제, ID range 정리</span></div>
+      <div class="flow-step"><b>3. Group Grid</b><span>simrik group을 실제 무대처럼 2D grid에 배치</span></div>
+      <div class="flow-step"><b>4. Presets</b><span>position, gobo, prism, strobe, zoom, color 보정</span></div>
+      <div class="flow-step"><b>5. Generate</b><span>Master macro, layout, executor, recipe cook 검증</span></div>
+    </div>
+    <div class="grid-2" style="margin-top:16px">
+      <article class="panel">
+        <h3>조명감독의 판단 영역</h3>
+        <p>fixture orientation, 실제 조준, 색상 출력 균형, audience blind/strobe 안전성, busking 중 손이 가는 executor 배치는 사람이 봐야 합니다.</p>
+      </article>
+      <article class="panel">
+        <h3>Copilot의 강점</h3>
+        <p>객체 누락 점검, grid/preset/recipe 계획, pool 충돌 확인, matrix block 계산, cook 필요 여부 판단, 실행 후 검증 checklist 생성에 적합합니다.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="stage">
+    <div class="section-head"><div class="section-num">03</div><div><h2>Stage와 Patch</h2><p class="section-lead">템플릿에는 5개 main fixture group과 다수의 기존 fixture가 준비되어 있고, 새 리그는 이 구조에 맞춰 들어갑니다.</p></div></div>
+    <div class="grid-3">
+      <article class="card"><h3>Inventory</h3><div class="tag-row"><span class="tag blue">Fixture</span><span class="tag">Rider</span></div><p>spots, washes, beams, pixel/floods, strobes/front dimmers를 템플릿 role에 매핑합니다.</p></article>
+      <article class="card"><h3>Patch Strategy</h3><div class="tag-row"><span class="tag green">Replace</span><span class="tag amber">Delete</span></div><p>기존 patch를 유지하면 preset 연결이 살아 있을 수 있고, 삭제하면 group/preset을 다시 만들어야 합니다.</p></article>
+      <article class="card"><h3>Orientation Check</h3><div class="tag-row"><span class="tag red">Pan/Tilt</span><span class="tag">Invert</span></div><p>position이 반대로 보이면 preset을 덮기 전에 patch의 Pan/Tilt invert를 먼저 의심합니다.</p></article>
+    </div>
+    <div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>Copilot이 할 수 있는 일</th><th>사용자 확인</th><th>grandMA3 객체</th></tr></thead><tbody>
+      <tr><td>patch diff, fixture ID range, address 충돌 후보, template role mapping 생성</td><td>fixture mode, physical orientation, pan/tilt invert, front group A/B 분리</td><td><code>Patch</code>, <code>Fixture</code>, <code>FixtureType</code>, <code>Universe</code></td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="groups">
+    <div class="section-head"><div class="section-num">04</div><div><h2>2D Selection Grid</h2><p class="section-lead">simrik group은 이 showfile의 중심 객체입니다. 대칭 effect, color recipe, delay sweep, rig FX가 모두 이 grid를 신뢰합니다.</p></div></div>
+    <div class="grid-2">
+      <div class="callout"><strong>Grid가 맞아야 효과가 맞습니다</strong><p>좌우 순서, row 구성, 중앙축, gap 유지 여부가 horizontal chase, odd/even, center-out, circular wave의 모양을 결정합니다.</p></div>
+      <div class="callout safe"><strong>저장 성공과 룩 성공은 다릅니다</strong><p>잘못된 grid에서도 sequence와 recipe는 저장됩니다. 하지만 무대에서는 방향이 뒤집히거나 중심이 어긋난 룩이 나옵니다.</p></div>
+    </div>
+    <div class="schema-box" style="margin-top:16px"><pre>{
+  "group_label": "SPOT_ALL_SIMRIK",
+  "fixture_category": "spot",
+  "grid": [
+    { "row": 0, "source": "front_truss", "fixtures": "1101 thru 1108" },
+    { "row": 1, "source": "mid_truss", "fixtures": "1201 thru 1208" }
+  ],
+  "gap_policy": "remove_for_template_fx",
+  "symmetry_axis": "center_x",
+  "requires_human_visual_check": true
+}</pre></div>
+  </section>
+
+  <section id="presets">
+    <div class="section-head"><div class="section-num">05</div><div><h2>Basic Presets</h2><p class="section-lead">템플릿 layout과 sequence는 category별 기본 preset이 채워져 있다는 전제에서 동작합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Preset 영역</th><th>실제 작업</th><th>Copilot 연결</th></tr></thead><tbody>
+      <tr><td>Position</td><td>stage, audience, fan, blind position을 사람이 조준해 저장</td><td>slot checklist, auto position 전제 조건 확인</td></tr>
+      <tr><td>Global/Gobo</td><td>gobo wheel open/selection과 focus 값을 함께 저장</td><td>profile-dependent attribute gate</td></tr>
+      <tr><td>Prism</td><td>open, prism variant를 fixture profile에 맞춰 저장</td><td>beam attribute 확인 후 plan 생성</td></tr>
+      <tr><td>Strobe</td><td>normal/random strobe를 안전 범위에서 저장</td><td>strobe safety gate, full-speed 자동 금지</td></tr>
+      <tr><td>Zoom/Focus</td><td>wide, mid, narrow range를 실제 fixture에 맞춤</td><td>range 확인, label과 실제 방향 불일치 탐지</td></tr>
+      <tr><td>Color</td><td>fixture type 교체 후 Color Picker용 preset merge</td><td>color preset merge plan, generator 재실행 안내</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="macro">
+    <div class="section-head"><div class="section-num">06</div><div><h2>Master Macro와 Layout</h2><p class="section-lead">Patch, group, preset 작업 이후 Master macro가 layout, appearances, sequences, Color Picker generator를 다시 연결합니다.</p></div></div>
+    <div class="grid-3">
+      <article class="card"><h3>Preflight</h3><p>simrik group, basic preset, color merge, pool 충돌, 사용자 custom object 덮어쓰기 여부를 확인합니다.</p></article>
+      <article class="card"><h3>Run Macro</h3><p>Master macro와 Color Picker generator의 reinstall/generate/confirm 단계를 수행합니다.</p></article>
+      <article class="card"><h3>Verify</h3><p>group master, flash/color bump, position layout, intensity FX, movement FX, pixel FX, executor mapping을 실제로 확인합니다.</p></article>
+    </div>
+  </section>
+
+  <section id="override">
+    <div class="section-head"><div class="section-num">07</div><div><h2>Solo Override</h2><p class="section-lead">Override는 특정 fixture를 기존 rig effect에서 잠시 빼서 singer나 solo musician을 부드럽게 강조하는 구조입니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>단계</th><th>콘솔 객체</th><th>Copilot 처리</th></tr></thead><tbody>
+      <tr><td>fixture 선택</td><td><code>Fixture</code>, <code>Group</code></td><td>후보 fixture와 override slot 제안</td></tr>
+      <tr><td>Global Override Base 호출</td><td><code>Global Preset</code></td><td>movement FX 정지와 open 상태 적용 여부 확인</td></tr>
+      <tr><td>look 조준 후 저장</td><td><code>Global Preset</code>, <code>Position Preset</code></td><td>store/overwrite 대상 표시, 조준은 operator 수행</td></tr>
+      <tr><td>override sequence 갱신</td><td><code>Macro</code>, <code>Sequence</code>, <code>Cue</code></td><td><code>Setup Overwrites</code> 실행 전후 checklist</td></tr>
+      <tr><td>busking 제어</td><td><code>Playback Override Master</code></td><td>fade-in, deselect 복귀, intensity 독립 제어 검증</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="autopos">
+    <div class="section-head"><div class="section-num">08</div><div><h2>Auto Position</h2><p class="section-lead">Auto positioning은 첫 두 기준 preset을 사람이 만든 뒤 macro가 나머지 fan/cross/variant position을 생성하는 방식입니다.</p></div></div>
+    <div class="grid-2">
+      <article class="panel">
+        <h3>필수 기준 preset</h3>
+        <p><code>straight down</code>과 <code>straight up</code>은 Pan 없이 직선 방향으로 조준한 Tilt 기준입니다. 이 두 값이 틀리면 생성 position 전체가 틀어집니다.</p>
+      </article>
+      <article class="panel">
+        <h3>Macro 생성 방식</h3>
+        <p><code>Auto pos</code> main macro가 개별 position macro를 호출하고, macro 내부는 group 선택, align, MAtricks, Pan manipulation으로 구성됩니다.</p>
+      </article>
+    </div>
+    <div class="callout safe" style="margin-top:16px"><strong>Copilot 안전 원칙</strong><p>기준 position 조준은 자동화하지 않습니다. Copilot은 기준 preset 누락, macro 실행 계획, 생성 후 visual checklist까지만 책임집니다.</p></div>
+  </section>
+
+  <section id="tap">
+    <div class="section-head"><div class="section-num">09</div><div><h2>Tap Chaser와 Delay Sweep</h2><p class="section-lead">이 영역은 Phaser가 아니라 Sequence, Cue Recipe, MAtricks/Matrix, Rate Master로 만든 busking용 chaser입니다.</p></div></div>
+    <div class="grid-3">
+      <article class="card"><h3>Simple Chaser</h3><div class="tag-row"><span class="tag blue">Odd/Even</span><span class="tag">2-step</span></div><p>두 cue가 odd/even intensity 또는 color preset을 서로 바꿔 적용합니다.</p></article>
+      <article class="card"><h3>Block Chaser</h3><div class="tag-row"><span class="tag green">Left-Right</span><span class="tag">X Block</span></div><p>12대 기준 X block 6 같은 matrix pool object를 실제 fixture count에 맞춰 바꿉니다.</p></article>
+      <article class="card"><h3>Delay Sweep</h3><div class="tag-row"><span class="tag purple">Delay Speed</span><span class="tag amber">Cook</span></div><p><code>0.5 thru 0</code>과 <code>0 thru 0.5</code>로 방향을 바꾸고 Delay Speed rate master로 live timing을 제어합니다.</p></article>
+    </div>
+    <div class="schema-box" style="margin-top:16px"><pre>{
+  "intent": "adapt_tap_chaser",
+  "fixture_category": "spot",
+  "sequence": "Spot Tap 3",
+  "form": "left_to_right",
+  "recipe_basis": {
+    "group": "SPOT_ALL_SIMRIK",
+    "matrix_pool_object": "X_BLOCK_6"
+  },
+  "adaptation": {
+    "fixture_count_per_row": 8,
+    "new_x_block": 4
+  },
+  "requires_cook": true
+}</pre></div>
+  </section>
+
+  <section id="color">
+    <div class="section-head"><div class="section-num">10</div><div><h2>Color FX</h2><p class="section-lead">Color FX는 main color와 effect color를 조합하고, Cue Recipe 기반 sequence로 fixture category별 효과 형태를 선택합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>요소</th><th>의미</th><th>Copilot 처리</th></tr></thead><tbody>
+      <tr><td>Two bars</td><td>two-step color behavior</td><td>odd/even 또는 step 1/2 recipe로 분류</td></tr>
+      <tr><td>Four bars</td><td>four-step behavior</td><td>4 cue 또는 4 value recipe 확인</td></tr>
+      <tr><td>Cloud/number</td><td>soft running sine wave 계열</td><td>soft form, lower impact, speedmaster 연결 확인</td></tr>
+      <tr><td>Star</td><td>impact가 큰 effect</td><td>출력 차이와 flash성 동작 확인</td></tr>
+      <tr><td>Color bump</td><td>white flash 대신 selected effect color 사용</td><td>color bump 밝기와 색상 범위 safety check</td></tr>
+      <tr><td><code>separate cfx Speedmaster</code></td><td>IFX SpeedMaster에서 CFX speed 분리</td><td>macro 실행 전후 speed control 검증</td></tr>
+    </tbody></table></div>
+    <div class="schema-box" style="margin-top:16px"><pre>{
+  "intent": "adapt_color_fx",
+  "fixture_category": "spot",
+  "sequence_range_hint": "1701-1715",
+  "form": "odd_even_two_step",
+  "recipe": {
+    "group": "SPOT_ALL_SIMRIK",
+    "value_preset": "SPOT_COLOR_STEP_1",
+    "matrix": "odd_even"
+  },
+  "speed_control": {
+    "current": "IFX SpeedMaster",
+    "optional_macro": "separate cfx Speedmaster",
+    "target": "cfx speed"
+  }
+}</pre></div>
+  </section>
+
+  <section id="runbook">
+    <div class="section-head"><div class="section-num">11</div><div><h2>상세 콘솔 Runbook</h2><p class="section-lead">Copilot이 실제 조작 안내로 바꿀 수 있도록 영상별 버튼, 화면, macro, executor, recipe editor 경로를 더 구체화했습니다.</p></div></div>
+
+    <article class="panel">
+      <h3>초기 템플릿 적응: Patch → Groups → Presets → Master</h3>
+      <div class="table-wrap"><table><thead><tr><th>순서</th><th>콘솔 조작</th><th>Copilot이 기록할 객체</th></tr></thead><tbody>
+        <tr><td>1</td><td><code>Patch</code> menu를 열고 기존 템플릿 fixture를 실제 fixture type으로 교체하거나 새로 insert한다. 필요 없는 fixture는 unpatch/delete한다.</td><td><code>Fixture</code>, <code>FixtureType</code>, <code>Universe</code>, fixture ID range</td></tr>
+        <tr><td>2</td><td>patch 후 <code>Save and Exit</code>한다. position이 반대로 보이면 preset 수정 전 Pan/Tilt invert를 확인한다.</td><td><code>PatchOrientationCheck</code></td></tr>
+        <tr><td>3</td><td><code>Groups</code> view에서 fixture type마다 main <code>simrik</code> group을 만든다. 실제 stage row에 맞춰 2D selection grid에 fixture를 배치한다.</td><td><code>Group</code>, <code>Selection Grid</code>, row/column mapping</td></tr>
+        <tr><td>4</td><td>spot 예시는 front truss <code>1101 thru 1108</code> 선택 후 다음 grid row에서 mid truss <code>1201 thru 1208</code> 선택, group에 <code>Store/Overwrite</code>.</td><td><code>GroupLayoutPlan</code></td></tr>
+        <tr><td>5</td><td>pixel tube는 master fixture group과 sub-fixture simrik group을 분리한다. 16×8이면 <code>Grid 0/0 thru 15/7</code>처럼 영역을 만들고 필요 시 90도 transform한다.</td><td>pixel master group, sub-fixture group, transform flag</td></tr>
+        <tr><td>6</td><td><code>Presets</code> section에서 fixture category별 macro button으로 view를 전환하며 position, gobo/global, prism, strobe, zoom, color preset을 보정한다.</td><td><code>PresetBootstrapPlan</code>, pool slot, store policy</td></tr>
+        <tr><td>7</td><td><code>Macro</code> view → <code>Global</code> → <code>Master</code> macro 실행. Color Picker popup은 기본값 유지 후 <code>reinstall</code> → <code>generate</code> → <code>confirm</code>.</td><td><code>ShowfileRegenerationPlan</code>, plugin step</td></tr>
+      </tbody></table></div>
+    </article>
+
+    <div class="grid-2" style="margin-top:16px">
+      <article class="panel">
+        <h3>Layout A/B 세부 기능</h3>
+        <ul class="key-list">
+          <li><strong>Layout A top-left</strong>: moving group별 position button.</li>
+          <li><strong>Layout A position 아래</strong>: movement/position FX button.</li>
+          <li><strong>Layout A upper-right</strong>: fixture category별 Color Picker.</li>
+          <li><strong>Color Picker 아래</strong>: intensity FX 또는 color FX form.</li>
+          <li><strong>Layout B</strong>: gobo, prism, zoom, tap chaser, override, rig FX.</li>
+          <li><strong>Hardware layout</strong>: Group Master, flash/color bump, strobe, random strobe, tap executor, temp/size fader.</li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h3>Global macro와 X-key</h3>
+        <ul class="key-list">
+          <li><strong>Switch to Console / Command Wing</strong>: screen/hardware layout 전환.</li>
+          <li><strong>Reset Show File</strong>: running sequence kill. 공연 중 사용 주의.</li>
+          <li><strong>Initial File</strong>: 필요한 sequence restart.</li>
+          <li><strong>Master time 0-5s</strong>: color/position transition fade time 설정.</li>
+          <li><strong>Master FX Off</strong>: running FX 비활성화.</li>
+          <li><strong>Break / Release</strong>: FX를 pause했다가 다른 look으로 release 가능.</li>
+        </ul>
+      </article>
+    </div>
+
+    <article class="panel" style="margin-top:16px">
+      <h3>Solo Override 실제 조작</h3>
+      <div class="table-wrap"><table><thead><tr><th>순서</th><th>버튼/화면</th><th>세부 조작</th></tr></thead><tbody>
+        <tr><td>1</td><td><code>Preset Global</code></td><td>대상 fixture 선택. 예: front truss spotlight <code>Fixture 1105</code>.</td></tr>
+        <tr><td>2</td><td><code>Global Override Base</code></td><td>global wheel open, movement/effect stop, highlight look의 clean starting point 생성.</td></tr>
+        <tr><td>3</td><td>Encoder / attribute controls</td><td>position을 singer/piano 쪽으로 조준하고 zoom을 narrow하게 조정. 이 단계는 사람이 봐야 한다.</td></tr>
+        <tr><td>4</td><td><code>Store</code></td><td>Global override preset slot에 <code>Overwrite</code>. 영상 예시는 slot 6.</td></tr>
+        <tr><td>5</td><td><code>Clear Programmer</code></td><td>programmer를 비운다.</td></tr>
+        <tr><td>6</td><td><code>Macros Global</code> pool item 15</td><td><code>Setup Overwrites</code> macro 실행 후 override sequence 재생성 대기.</td></tr>
+        <tr><td>7</td><td><code>Show Layout B</code></td><td>override button을 눌러 fixture가 dimmer 0에서 위치 잡고 fade-in 되는지 확인. 해제 시 rig FX로 복귀 확인.</td></tr>
+        <tr><td>8</td><td><code>Playback Override Master</code></td><td>override fixture intensity만 일반 rig와 독립적으로 제어되는지 fader로 확인.</td></tr>
+      </tbody></table></div>
+    </article>
+
+    <article class="panel" style="margin-top:16px">
+      <h3>Auto Position 실제 조작</h3>
+      <div class="table-wrap"><table><thead><tr><th>순서</th><th>콘솔 위치</th><th>세부 조작</th></tr></thead><tbody>
+        <tr><td>1</td><td>fixture category <code>Macro Pool</code></td><td><code>Auto pos</code> main macro와 우측의 individual position macro를 확인한다.</td></tr>
+        <tr><td>2</td><td><code>Position Preset Pool</code></td><td>자동 생성 대상 preset은 clear 가능하지만, special ambient/audience blind position은 자동 생성 대상으로 보지 않는다.</td></tr>
+        <tr><td>3</td><td>stage/Capture + encoders</td><td><code>straight down</code>: Pan 없이 fixture가 stage를 균등하게 치도록 Tilt를 조정 후 store.</td></tr>
+        <tr><td>4</td><td>stage/Capture + encoders</td><td><code>straight up</code>: Pan 없이 audience 쪽으로 더 큰 Tilt look을 만들고 <code>Overwrite</code>.</td></tr>
+        <tr><td>5</td><td><code>Macro Pool</code></td><td><code>Auto pos</code> main macro 실행. 내부 macro가 align, MAtricks, Pan manipulation으로 fan/cross preset 생성.</td></tr>
+        <tr><td>6</td><td><code>Position Preset Pool</code></td><td>새로 생성된 7개 내외 preset을 눌러 fan/cross/variant가 stage에 맞는지 확인.</td></tr>
+      </tbody></table></div>
+    </article>
+
+    <article class="panel" style="margin-top:16px">
+      <h3>Tap Chaser / Delay Sweep 실제 조작</h3>
+      <div class="table-wrap"><table><thead><tr><th>작업</th><th>세부 조작</th><th>주의</th></tr></thead><tbody>
+        <tr><td>layout 선택</td><td><code>Show Layout B</code>의 tap chaser section에서 <code>Spot Tap 1</code>, <code>Spot Tap 3</code>, <code>Spot Tap 6</code> 등을 선택한다. 선택한 sequence가 hardware executor에 로드된다.</td><td>Command Wing은 공통 executor 1개 또는 category별 5개 executor 구성이 가능하다.</td></tr>
+        <tr><td>실행</td><td>executor의 <code>Go</code> button으로 beat에 맞춰 tap한다. effect amount master는 0%=효과 없음, 50%=감소, 100%=full effect.</td><td>delay sweep timing은 <code>Delay Speed</code> rate/group master로 live 조절.</td></tr>
+        <tr><td>recipe edit</td><td><code>Sequence</code> section에서 tap sequence를 swipe해 edit menu를 열고 cue recipe editor로 들어간다.</td><td>2-step chaser는 보통 2 cues, 각 cue는 odd/even용 2 recipes.</td></tr>
+        <tr><td>value 교체</td><td>recipe의 <code>Value</code>를 dimmer preset에서 red/blue color preset으로 바꾸면 odd/even color chase가 된다.</td><td>cue 1과 cue 2의 red/blue 관계를 반대로 넣는다.</td></tr>
+        <tr><td>matrix 수정</td><td>left-right chase는 matrix pool object의 X block을 수정한다. 12대 기준 <code>X_BLOCK_6</code>은 8대 rig에서 <code>X_BLOCK_4</code>가 된다.</td><td>object label도 같이 바꿔야 Copilot이 추적 가능하다.</td></tr>
+        <tr><td>delay 방향</td><td>delay sweep recipe에서 <code>0.5 to 0</code>와 <code>0 to 0.5</code>를 바꿔 bottom-to-top/top-to-bottom 방향을 전환한다.</td><td>settings에서 <code>Rate Master to Delay</code>를 <code>Delay Speed</code>에 연결.</td></tr>
+        <tr><td>cook</td><td>group/preset/matrix content를 바꾼 뒤 <code>Setup Tap</code> macro로 tap sequence를 cook한다.</td><td>cook 없이는 recipe가 최신 group/preset 값을 반영하지 않을 수 있다.</td></tr>
+        <tr><td>manual record</td><td><code>Clear Spot Tap Selected</code> → programmer에서 step look 작성 → <code>Store Spot Tap Selected</code> 반복 → layout에서 tap 실행.</td><td>MAtricks <code>Wings 2</code>, <code>Next</code>, <code>At 100</code> 같은 live programmer 동작이 포함된다.</td></tr>
+      </tbody></table></div>
+    </article>
+
+    <article class="panel" style="margin-top:16px">
+      <h3>Color FX 실제 조작</h3>
+      <div class="table-wrap"><table><thead><tr><th>작업</th><th>세부 조작</th><th>Copilot 해석</th></tr></thead><tbody>
+        <tr><td>effect form 선택</td><td>Color Picker 아래 color FX layout에서 form button을 누른다. two bars는 two-step, four bars는 four-step, cloud/number는 soft sine wave, star는 high impact.</td><td><code>ColorFxRecipePlan.form</code></td></tr>
+        <tr><td>main/effect color</td><td>fixture category별 main color와 Color Picker 하단 effect color를 조합한다. swap하면 step behavior가 뒤집힌다.</td><td>white/blue처럼 출력 차이 큰 색은 visual check 필요.</td></tr>
+        <tr><td>color bump</td><td>hardware white flash key는 color bump로 바뀌며 selected effect color를 사용한다.</td><td>flash가 아니라 color scheme hit로 모델링.</td></tr>
+        <tr><td>speed 분리</td><td><code>Macros Global</code>의 <code>separate cfx Speedmaster</code> macro 실행 시 color FX가 <code>IFX Speed</code>에서 분리되어 <code>cfx speed</code>로 제어된다.</td><td>사용자가 "컬러만 속도 따로"라고 하면 이 macro 후보.</td></tr>
+        <tr><td>recipe edit</td><td>spot 기준 sequence <code>1701-1715</code> 부근에서 color FX sequence를 열고 cue recipe의 group/value/matrix를 수정한다.</td><td>group은 <code>SPOT_ALL_SIMRIK</code>, value는 FX adapted color preset.</td></tr>
+        <tr><td>dynamic preset</td><td>Color pool <code>9001-9006</code> 부근은 active selected color/effect color를 반영하는 dynamic preset으로 쓸 수 있다.</td><td>custom sequence나 tap chaser에도 연결 가능.</td></tr>
+      </tbody></table></div>
+    </article>
+  </section>
+
+  <section id="action-catalog">
+    <div class="section-head"><div class="section-num">12</div><div><h2>Action Catalog</h2><p class="section-lead">자연어를 곧장 command로 바꾸지 않고, 아래 action 단위로 정규화하면 안전 게이트와 검증이 명확해집니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Action</th><th>필요 객체/화면</th><th>자동화</th><th>완료 검증</th></tr></thead><tbody>
+      <tr><td><code>open_patch_and_replace_fixture_type</code></td><td>Patch, FixtureType</td><td>patch diff, fixture ID/address 충돌 검사</td><td>fixture sheet와 output 확인</td></tr>
+      <tr><td><code>store_simrik_group_grid</code></td><td>Group, Selection Grid</td><td>row/column grid plan, store 후보</td><td>좌우/중앙/row visual 확인</td></tr>
+      <tr><td><code>transform_pixel_grid_90</code></td><td>Grid command, sub-fixture</td><td>16×8 등 grid 계산과 transform flag</td><td>pixel wave 방향 확인</td></tr>
+      <tr><td><code>store_position_preset_overwrite</code></td><td>Position Preset Pool</td><td>slot/label/store policy 관리</td><td>실제 beam position 확인</td></tr>
+      <tr><td><code>merge_color_preset</code></td><td>Color Preset Pool, Color Picker</td><td>merge 대상 plan</td><td>fixture category별 색 일치</td></tr>
+      <tr><td><code>run_master_macro</code></td><td>Macro Global, Plugin popup</td><td>preflight 후 실행 계획</td><td>layout/executor 동작</td></tr>
+      <tr><td><code>run_setup_overwrites</code></td><td>Macro Global <code>Setup Overwrites</code></td><td>override sequence 재생성 계획</td><td>fade-in/return 확인</td></tr>
+      <tr><td><code>run_auto_pos_macro</code></td><td>fixture category Macro Pool</td><td>straight down/up 확인 후 macro 후보</td><td>fan/cross preset visual 확인</td></tr>
+      <tr><td><code>edit_cue_recipe_value</code></td><td>Sequence, Cue, Recipe editor</td><td>value preset 교체 diff</td><td>layout effect 확인</td></tr>
+      <tr><td><code>edit_matrix_pool_object</code></td><td>MAtricks/Matrix Pool</td><td>fixture count 기반 X block/wings 계산</td><td>chase 방향/간격 확인</td></tr>
+      <tr><td><code>assign_delay_rate_master</code></td><td>Cue Recipe settings</td><td><code>Delay Speed</code> 연결 plan</td><td>fader로 delay timing 변화</td></tr>
+      <tr><td><code>cook_tap_sequences</code></td><td><code>Setup Tap</code> macro</td><td>변경된 recipe cook 후보</td><td>최신 group/preset 값 반영</td></tr>
+      <tr><td><code>record_manual_tap_step</code></td><td>Programmer, Next, Store Tap Selected</td><td>step capture 순서 안내</td><td>executor Go로 step 재생</td></tr>
+      <tr><td><code>separate_cfx_speedmaster</code></td><td>Macro Global</td><td>CFX speed 분리 후보</td><td>color FX만 speed 변화</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="copilot">
+    <div class="section-head"><div class="section-num">13</div><div><h2>Copilot 역할</h2><p class="section-lead">조명감독 용어를 실제 콘솔 연동으로 바꾸려면 자동화, 확인, 금지를 분리해야 합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>단계</th><th>Copilot 자동화</th><th>사용자 확인</th><th>자동화 금지</th></tr></thead><tbody>
+      <tr><td>Rider/Patch</td><td>inventory, role mapping, patch diff</td><td>fixture mode, orientation, address</td><td>불명확한 mode 추정 patch</td></tr>
+      <tr><td>Group/Grid</td><td>GroupLayoutPlan, gap 정책, grid 좌표</td><td>좌우 방향, 중앙축, pixel order</td><td>visual 확인 없는 group overwrite</td></tr>
+      <tr><td>Presets</td><td>slot checklist, merge/overwrite plan</td><td>position 조준, color match, gobo focus</td><td>audience blind/full strobe 저장</td></tr>
+      <tr><td>Macro/Layout</td><td>preflight, execution checklist, layout 검증표</td><td>plugin popup, custom object 보호</td><td>사용자 layout 임의 덮어쓰기</td></tr>
+      <tr><td>Recipes</td><td>matrix block math, cook 필요 판단</td><td>direction, timing, executor 동작</td><td>fixture count 불일치 무시</td></tr>
+      <tr><td>Show validation</td><td>문제 원인 후보와 체크리스트</td><td>실제 무대 visual 판단</td><td>readback만 보고 성공 판정</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="schemas">
+    <div class="section-head"><div class="section-num">14</div><div><h2>구현 스키마</h2><p class="section-lead">Copilot 내부에서는 자연어를 곧바로 명령으로 바꾸지 말고, 아래 plan 객체로 정규화해야 합니다.</p></div></div>
+    <div class="source-list">
+      <div class="source"><b><code>ShowfileAdaptationRequest</code></b><span>새 리그에 템플릿 쇼파일을 맞추는 최상위 요청</span></div>
+      <div class="source"><b><code>GroupLayoutPlan</code></b><span>2D selection grid, gap policy, symmetry axis 정의</span></div>
+      <div class="source"><b><code>PresetBootstrapPlan</code></b><span>position/global/prism/strobe/zoom/color preset 보정 계획</span></div>
+      <div class="source"><b><code>OverrideSequencePlan</code></b><span>solo spot override preset, macro, playback master 연결</span></div>
+      <div class="source"><b><code>TapChaserRecipePlan</code></b><span>sequence, cue recipe, MAtricks block, executor, cook</span></div>
+      <div class="source"><b><code>ColorFxRecipePlan</code></b><span>main/effect color, recipe value preset, CFX speedmaster</span></div>
+    </div>
+    <div class="schema-box" style="margin-top:16px"><pre>{
+  "showfile_state": {
+    "ma_version": "required",
+    "template_version": "required",
+    "groups": {
+      "simrik_groups_verified": false,
+      "all_simrik_verified": false
+    },
+    "presets": {
+      "position_basic_complete": false,
+      "color_merge_complete": false,
+      "beam_profile_checked": false
+    },
+    "macros": {
+      "master_macro_available": true,
+      "setup_tap_available": true,
+      "separate_cfx_speedmaster_available": true
+    }
+  }
+}</pre></div>
+  </section>
+
+  <section id="pantilt">
+    <div class="section-head"><div class="section-num">15</div><div><h2>Pan/Tilt 핵심</h2><p class="section-lead">이 playlist의 Pan/Tilt 지식은 effect 값보다 전제 조건에 가깝습니다. grid와 기준 position이 틀리면 모든 움직임이 틀어집니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>순서</th><th>확인할 것</th><th>실패 증상</th></tr></thead><tbody>
+      <tr><td>1</td><td>Patch orientation과 pan/tilt invert</td><td>position이 반대편 또는 뒤집혀 보임</td></tr>
+      <tr><td>2</td><td>2D selection grid의 좌우/상하/중앙축</td><td>left-to-right, center-out, circular wave가 어색함</td></tr>
+      <tr><td>3</td><td>straight down/up 기준 preset</td><td>auto position으로 생성된 모든 fan/cross variant가 어긋남</td></tr>
+      <tr><td>4</td><td>movement FX의 size/speed/fade master</td><td>모양은 맞지만 범위가 너무 크거나 전환이 거침</td></tr>
+      <tr><td>5</td><td>override position과 movement effect 분리</td><td>solo fixture가 기존 rig effect에 끌려가거나 복귀가 부자연스러움</td></tr>
+    </tbody></table></div>
+    <p class="footer">작성 기준: YouTube 수동 자막 분석. 실제 grandMA3/onPC 적용 시 콘솔 상태 조회, operator visual check, 안전 게이트를 함께 사용해야 합니다.</p>
+  </section>
+</main>
+</body>
+</html>

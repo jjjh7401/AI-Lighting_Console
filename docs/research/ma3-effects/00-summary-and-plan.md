@@ -76,3 +76,8 @@
 - `02-pantilt-effects.md` — 포지션 이펙트 7종 레시피 + 커맨드라인 문법
 - `03-color-dimmer-beam-effects.md` — 디머/컬러/빔 레시피 + Accel·Decel/Measure/MAtricks
 - `04-programmatic-phasers.md` — 명령줄 쿠크북 + Lua API + 저장소 통합 분석
+- `17-fei-hu-ma2-video-patterns.md` — Fei Hu Facebook MA2/onPC 영상 사례를 Copilot용 효과 카테고리·기능 매핑으로 분류
+- `17-fei-hu-ma2-video-patterns.html` — 위 분류 문서를 이해하기 쉬운 단일 파일 HTML 리포트로 렌더링
+- `18-addondesk-position-preset-research.md` / `18-addondesk-position-preset-research.html` — AddOnDesk Positions 공개 자료 기반 포지션 프리셋 생성·콘솔 연동 모델
+- `19-mblightarts-showfile-process-copilot.md` / `19-mblightarts-showfile-process-copilot.html` — MBLightArts YouTube 6편 기반 grandMA3 showfile 적응 프로세스와 Copilot 단계별 역할
+- `20-mblightarts-end-to-end-showfile-process.md` / `20-mblightarts-end-to-end-showfile-process.html` — MBLightArts 단일 심층 영상(`5wm88LvScSk`) 기반 새 stage layout end-to-end 조명연출·Copilot 작업 분담 runbook

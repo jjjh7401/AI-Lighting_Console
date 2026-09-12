@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MBLightArts 단일 영상 기반 end-to-end 조명연출 프로세스</title>
+<style>
+:root{--bg:#f6f7f4;--paper:#fff;--panel:#eef2f0;--ink:#171b1d;--muted:#58636a;--line:#d8dedc;--line-strong:#aebbb8;--blue:#1d5f86;--blue-bg:#e4eff5;--green:#267247;--green-bg:#e4f1e8;--amber:#8b5c12;--amber-bg:#f4ead6;--red:#9b3030;--red-bg:#f4e1df;--purple:#5f4b8b;--purple-bg:#ece8f4;--teal:#146b68;--teal-bg:#dff0ef;--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;--sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic","Segoe UI",sans-serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.72;word-break:keep-all;-webkit-font-smoothing:antialiased}a{color:var(--blue);text-underline-offset:3px}code{font-family:var(--mono);font-size:14px;background:#eef1ef;border:1px solid var(--line);border-radius:4px;padding:.08rem .32rem .12rem;word-break:break-word}.wrap{max-width:1220px;margin:0 auto;padding:40px 24px 80px}.hero{border:1px solid var(--line-strong);background:var(--paper);border-radius:8px;overflow:hidden}.hero-main{padding:32px 32px 26px;border-bottom:1px solid var(--line)}.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}h1{margin:0;font-size:clamp(28px,4.4vw,48px);line-height:1.14;letter-spacing:0}.lead{max-width:900px;margin:18px 0 0;color:var(--muted);font-size:18px}.hero-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);background:var(--panel)}.meta-item{padding:14px 18px 16px;border-right:1px solid var(--line)}.meta-item:last-child{border-right:0}.meta-label{display:block;font-family:var(--mono);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.meta-value{display:block;margin-top:4px;font-weight:700}.toc{margin:26px 0 0;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:16px 18px}.toc-title{margin:0 0 8px;font-family:var(--mono);font-size:14px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}.toc ol{margin:0;padding-left:22px;columns:2;column-gap:42px}.toc li{margin:3px 0;font-size:14px;break-inside:avoid}.toc a{color:var(--ink);text-decoration:none}.toc a:hover{color:var(--blue);text-decoration:underline}section{margin-top:48px;scroll-margin-top:18px}.section-head{display:grid;grid-template-columns:86px minmax(0,1fr);gap:20px;align-items:start;margin-bottom:18px}.section-num{font-family:var(--mono);font-size:14px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;padding-top:8px}h2{margin:0;font-size:clamp(24px,3vw,34px);line-height:1.22;letter-spacing:0}.section-lead{margin:8px 0 0;max-width:850px;color:var(--muted)}h3{margin:0 0 10px;font-size:19px;line-height:1.35}p{margin:0 0 12px}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.panel,.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px}.panel p,.card p,.card li{color:var(--muted)}.key-list{margin:10px 0 0;padding-left:18px}.key-list li{margin:5px 0}.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}.tag{display:inline-block;border:1px solid var(--line);background:#f4f6f3;color:var(--muted);border-radius:999px;padding:2px 8px 3px;font-size:14px}.tag.blue{background:var(--blue-bg);color:var(--blue);border-color:#bdd3e4}.tag.green{background:var(--green-bg);color:var(--green);border-color:#bddac5}.tag.amber{background:var(--amber-bg);color:var(--amber);border-color:#e2cfaa}.tag.red{background:var(--red-bg);color:var(--red);border-color:#e0bdb8}.tag.purple{background:var(--purple-bg);color:var(--purple);border-color:#d6cfe5}.tag.teal{background:var(--teal-bg);color:var(--teal);border-color:#acd8d5}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}table{width:100%;border-collapse:collapse;min-width:920px}th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}tr:last-child td{border-bottom:0}th:last-child,td:last-child{border-right:0}th{background:#edf1ef;color:var(--muted);font-size:14px;font-weight:800}td{font-size:14px}.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.flow-step{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--blue);border-radius:8px;padding:15px}.flow-step:nth-child(2){border-top-color:var(--green)}.flow-step:nth-child(3){border-top-color:var(--amber)}.flow-step:nth-child(4){border-top-color:var(--purple)}.flow-step:nth-child(5){border-top-color:var(--teal)}.flow-step b{display:block;font-size:15px;margin-bottom:6px}.flow-step span{display:block;color:var(--muted);font-size:14px}.callout{border:1px solid #e2cfaa;border-left:5px solid var(--amber);background:var(--amber-bg);border-radius:8px;padding:16px 18px}.callout strong{display:block;color:var(--amber);margin-bottom:4px}.callout p{margin:0;color:#60420f}.safe{border-color:#e0bdb8;border-left-color:var(--red);background:var(--red-bg)}.safe strong{color:var(--red)}.safe p{color:#6e2525}.schema-box{background:#171b1d;color:#eef2ee;border-radius:8px;padding:18px;overflow-x:auto;border:1px solid #2d3335}.schema-box pre{margin:0;font-family:var(--mono);font-size:14px;line-height:1.72;white-space:pre}.footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}@media(max-width:980px){.hero-meta,.grid-2,.grid-3,.flow{grid-template-columns:1fr}.meta-item{border-right:0;border-bottom:1px solid var(--line)}.meta-item:last-child{border-bottom:0}.toc ol{columns:1}}@media(max-width:640px){.wrap{padding:20px 14px 56px}.hero-main{padding:24px 20px 20px}.section-head{grid-template-columns:1fr;gap:4px}th,td{padding:9px 10px}}@media print{body{background:#fff}.wrap{max-width:none;padding:20px}.hero,.panel,.card,.table-wrap,.callout{break-inside:avoid}a{color:inherit;text-decoration:none}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="hero-main">
+      <p class="eyebrow">AI Lighting Copilot Research</p>
+      <h1>MBLightArts 단일 영상 기반 end-to-end 조명연출 프로세스</h1>
+      <p class="lead">YouTube 영상 <code>5wm88LvScSk</code>에 담긴 새 stage layout 적용 전 과정을 patch, group/grid, 픽셀 마스터 그룹, preset, regen, layout, override 단계로 분해했습니다. 조명감독은 기획·자료 제공·판단·요청을 맡고, Copilot은 콘솔 조작과 반복 작업 실행을 맡는 기준으로 정리했습니다.</p>
+    </div>
+    <div class="hero-meta">
+      <div class="meta-item"><span class="meta-label">수집일</span><span class="meta-value">2026-09-11</span></div>
+      <div class="meta-item"><span class="meta-label">출처</span><span class="meta-value">YouTube 5wm88LvScSk</span></div>
+      <div class="meta-item"><span class="meta-label">자막</span><span class="meta-value">1,136 segments</span></div>
+      <div class="meta-item"><span class="meta-label">용도</span><span class="meta-value">Copilot Runbook</span></div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="문서 목차">
+    <p class="toc-title">빠른 이동</p>
+    <ol>
+      <li><a href="#overview">핵심 프로세스</a></li>
+      <li><a href="#roles">감독/Copilot 분담</a></li>
+      <li><a href="#patch">Patch</a></li>
+      <li><a href="#groups">Group과 Grid</a></li>
+      <li><a href="#pixel-master-group">픽셀 마스터 그룹과 Dim Default</a></li>
+      <li><a href="#presets">Preset 작업</a></li>
+      <li><a href="#focus">Focus 3×3</a></li>
+      <li><a href="#color">Color와 Regen</a></li>
+      <li><a href="#layout">Layout/FX 검증</a></li>
+      <li><a href="#override">Override</a></li>
+      <li><a href="#routing">요청별 라우팅</a></li>
+      <li><a href="#schemas">스키마</a></li>
+    </ol>
+  </nav>
+
+  <section id="overview">
+    <div class="section-head"><div class="section-num">01</div><div><h2>핵심 프로세스</h2><p class="section-lead">이 영상은 fixture가 다른 새 무대에 템플릿 showfile을 처음부터 끝까지 다시 연결하는 실제 절차입니다.</p></div></div>
+    <div class="flow">
+      <div class="flow-step"><b>1. Patch</b><span>fixture type, mode, count, DMX, ID/naming</span></div>
+      <div class="flow-step"><b>2. Groups</b><span>simrik group, 2D selection grid, pixel rows</span></div>
+      <div class="flow-step"><b>3. 픽셀 마스터 그룹</b><span>tilt pixel bar의 master/sub-fixture 분리</span></div>
+      <div class="flow-step"><b>4. Presets</b><span>position, gobo, strobe, prism, iris, zoom, focus, color</span></div>
+      <div class="flow-step"><b>5. Regen</b><span>regen all, feature grid, layout, override</span></div>
+    </div>
+    <div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>Stage 요소</th><th>영상 fixture</th><th>showfile 관점</th></tr></thead><tbody>
+      <tr><td>Front lighting</td><td>profile moving lights in front truss</td><td>front/spot 또는 key light role</td></tr>
+      <tr><td>Main rig</td><td>hybrid LED moving lights</td><td>position, gobo, prism, strobe, iris, zoom, focus, FX 전체 사용</td></tr>
+      <tr><td>Pixel background</td><td>Astera LED tubes</td><td>sub-fixture pixel grid 중심</td></tr>
+      <tr><td>Tilt pixel bar</td><td>GP X4 bars</td><td>픽셀 마스터 그룹 + sub-fixture simrik group 분리</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="roles">
+    <div class="section-head"><div class="section-num">02</div><div><h2>감독/Copilot 분담</h2><p class="section-lead">감독은 기획, 자료 제공, 승인, 최종 판단을 담당하고 Copilot은 실제 grandMA3 콘솔 조작과 반복 실행을 담당합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>단계</th><th>조명감독이 제공·판단할 일</th><th>Copilot이 콘솔에서 수행할 일</th><th>객체/기능</th></tr></thead><tbody>
+      <tr><td>Stage 분석</td><td>장비 리스트, stage plot, 회로표, fixture mode, 연출 의도 제공</td><td><code>FixtureInventory</code> 생성, category A/B/C 매핑, 누락 자료 질문</td><td>Fixture, Patch</td></tr>
+      <tr><td>Patch</td><td>장비 mode/address 승인, ID/naming 규칙 승인</td><td><code>Patch</code> menu에서 fixture insert, type/mode/count/address 입력, fixture ID와 label 정리</td><td>Insert New Fixture</td></tr>
+      <tr><td>Group/Grid</td><td>stage left/right, gap 반영 여부, row 구조 판단</td><td>2D selection grid 구성·저장·검증, sub-fixture command 실행</td><td>Group, Selection Grid</td></tr>
+      <tr><td>픽셀 마스터 그룹</td><td>master/sub-fixture 출력과 feature 위치 판단</td><td>픽셀 마스터 그룹 저장, 사용 체크박스 설정, <code>dim default</code> 실행 전후 확인</td><td>픽셀 마스터 그룹</td></tr>
+      <tr><td>Presets</td><td>position, focus, color의 최종 룩 판단</td><td>preset checklist에 따라 store/merge/overwrite 실행</td><td>Preset Pool</td></tr>
+      <tr><td>Regen/Layout</td><td>실제 운용에 필요한 기능 승인</td><td><code>regen all</code>, feature grid, <code>Generate Layouts</code> 실행</td><td>Showfile Menu</td></tr>
+      <tr><td>Override</td><td>solo 대상, MIB 여부, Stop IFX/PFX 여부 판단</td><td>override look 저장, <code>regen override</code>, MIB 동작 검증</td><td>Global Preset, MIB</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="patch">
+    <div class="section-head"><div class="section-num">03</div><div><h2>Patch</h2><p class="section-lead">템플릿이 clone-show 구조가 아니므로 기존 patch를 모두 지우고 새 stage fixture를 넣어도 됩니다.</p></div></div>
+    <div class="grid-2">
+      <article class="panel">
+        <h3>콘솔 조작</h3>
+        <ul class="key-list">
+          <li><code>Patch</code> menu 진입.</li>
+          <li>기존 demo fixture clear/delete 가능.</li>
+          <li><code>Insert New Fixture</code> button.</li>
+          <li><code>Library</code>에서 전체 fixture type 검색.</li>
+          <li>type, mode, name, count, fixture ID, universe/address 입력.</li>
+          <li>confirm 후 다른 fixture type 반복.</li>
+          <li>fixture ID와 naming을 truss/row 단위로 재정리.</li>
+          <li><code>Save and Exit</code>.</li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h3>Copilot 처리</h3>
+        <ul class="key-list">
+          <li>fixture list를 patch 작업 단위로 변환.</li>
+          <li>ID block 제안: <code>1101-1108</code>, <code>1201-1208</code>.</li>
+          <li>mode/address 누락과 충돌 검사.</li>
+          <li>category role과 physical location을 분리 저장.</li>
+          <li>불명확한 fixture mode는 자동 확정하지 않음.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section id="groups">
+    <div class="section-head"><div class="section-num">04</div><div><h2>Group과 2D Selection Grid</h2><p class="section-lead">showfile의 대칭 FX와 pixel FX는 simrik group의 selection grid를 기준으로 동작합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>대상</th><th>Copilot 콘솔 작업</th><th>감독 확인/판단</th></tr></thead><tbody>
+      <tr><td>Hybrid A</td><td><code>Groups Small</code> view 할당. <code>111 thru 118</code> 선택 후 grid 다음 row에서 <code>1201 thru 1208</code>. Setup Mode에서 gap을 drag/drop으로 재구성 후 store/override.</td><td><code>Highlight</code> + <code>Next</code>로 실제 stage 순서 확인.</td></tr>
+      <tr><td>Titan B</td><td><code>Grid 0/0 thru 7/7</code> 생성. <code>2101 thru 2108.</code>처럼 dot-through로 sub-fixture만 선택. upper/down row 저장 후 transform/flip.</td><td>pixel movement가 top-to-bottom 또는 left-to-right로 자연스러운지 확인.</td></tr>
+      <tr><td>X4 C simrik</td><td><code>3101 thru 3108.</code>, 다음 row <code>3201 thru 3208.</code>로 sub pixels 선택 후 simrik group 저장.</td><td>8×20×2 pixel이 모두 포함됐는지 확인.</td></tr>
+      <tr><td>X4 C 픽셀 마스터 그룹</td><td><code>3101 thru 3108</code>, <code>3201 thru 3208</code>처럼 dot 없이 main fixture만 선택해 픽셀 마스터 그룹 저장.</td><td>fixture sheet에서 sub-fixture 번호가 선택되지 않았는지 확인.</td></tr>
+    </tbody></table></div>
+    <div class="callout" style="margin-top:16px"><strong>핵심</strong><p>simrik group은 pixel/intensity/color FX의 기준이고, 픽셀 마스터 그룹은 tilt, position, strobe, optics 같은 master-level feature의 기준입니다.</p></div>
+  </section>
+
+  <section id="pixel-master-group">
+    <div class="section-head"><div class="section-num">05</div><div><h2>픽셀 마스터 그룹과 Dim Default</h2><p class="section-lead">Tilt pixel bar처럼 master/sub-fixture가 나뉜 장비는 feature별 target group을 명확히 지정해야 합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>설정</th><th>내용</th><th>X4 bar 판단</th></tr></thead><tbody>
+      <tr><td>Position uses 픽셀 마스터 그룹</td><td>position preset/position FX가 simrik 대신 픽셀 마스터 그룹 사용</td><td>켬</td></tr>
+      <tr><td>Strobe uses 픽셀 마스터 그룹</td><td>strobe가 master fixture 기준으로 저장/실행</td><td>켬</td></tr>
+      <tr><td>Optics/Zoom uses 픽셀 마스터 그룹</td><td>zoom/iris/optics가 master fixture 기준</td><td>켬</td></tr>
+      <tr><td><code>dim default</code></td><td>main dimmer default 100%, sub pixel dimmers default 0%</td><td>pixel intensity FX 제어를 위해 실행</td></tr>
+    </tbody></table></div>
+    <div class="callout safe" style="margin-top:16px"><strong>실패 증상</strong><p>main dimmer가 닫혀 있거나 sub dimmer가 기본으로 열려 있으면 pixel bump와 intensity FX가 직관적으로 동작하지 않습니다.</p></div>
+  </section>
+
+  <section id="presets">
+    <div class="section-head"><div class="section-num">06</div><div><h2>Preset 작업</h2><p class="section-lead">Preset은 category별 view macro로 이동하면서 position, gobo, strobe, prism, iris, zoom, focus, color를 순서대로 채웁니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Preset</th><th>상세 작업</th><th>Copilot guard</th></tr></thead><tbody>
+      <tr><td>Position</td><td><code>straight down</code>, <code>straight up</code>을 먼저 수동 조준. 그 뒤 showfile menu의 <code>Auto pos</code> gear 실행. fan out/in, 2/3/4/5 fan 생성.</td><td>Auto pos는 position preset을 덮을 수 있으므로 실행 전 경고. grid width와 fan count divisibility 계산.</td></tr>
+      <tr><td>Ambient/Blind</td><td>ambient wall/gobo look과 audience blind는 auto 생성하지 않고 수동 저장.</td><td>audience blind safety gate.</td></tr>
+      <tr><td>Gobo</td><td>Gobo Open 저장. wheel 1 gobo 저장 시 wheel 2 open, wheel 2 gobo 저장 시 wheel 1 open.</td><td>gobo와 focus 값을 섞지 않게 체크.</td></tr>
+      <tr><td>Gobo rotation</td><td>rotation off, slow, fast 저장. wheel별 rotation 지원 여부 확인.</td><td>fixture profile dependent.</td></tr>
+      <tr><td>Strobe</td><td>normal fast/slow, random fast/slow. 현재 bump section 중심.</td><td>full-speed strobe 자동 저장 금지.</td></tr>
+      <tr><td>Prism</td><td>open, prism variant 저장. fixture에 prism 2가 없으면 prism 1과 같은 값을 저장해 빈 버튼 방지.</td><td>없는 feature fallback 표시.</td></tr>
+      <tr><td>Iris/Zoom</td><td>wide/mid/narrow. 실제 보기 좋은 값 기준.</td><td>label이 아니라 output 기준.</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="focus">
+    <div class="section-head"><div class="section-num">07</div><div><h2>Focus 3×3</h2><p class="section-lead">Focus preset은 zoom stage 3개와 optic scenario 3개를 곱한 9개를 만들며, focus value만 저장해야 합니다.</p></div></div>
+    <div class="grid-2">
+      <article class="panel">
+        <h3>콘솔 절차</h3>
+        <ul class="key-list">
+          <li>group 선택, dimmer 100%.</li>
+          <li>optic scenario 선택: gobo open, wheel 1, wheel 2.</li>
+          <li>zoom stage 선택: wide, mid, narrow.</li>
+          <li><code>Clear</code> 두 번으로 zoom 등 active record value 제거.</li>
+          <li>group을 다시 선택.</li>
+          <li>focus 값만 조정.</li>
+          <li>해당 focus preset에 store.</li>
+          <li>3×3 총 9개 반복.</li>
+        </ul>
+      </article>
+      <div class="schema-box"><pre>{
+  "focus_matrix": {
+    "zoom_stages": ["wide", "mid", "narrow"],
+    "optic_scenarios": ["gobo_open", "gobo_wheel_1", "gobo_wheel_2"],
+    "store_rule": "focus_value_only",
+    "guard": "clear_twice_then_reselect_group"
+  }
+}</pre></div>
+    </div>
+  </section>
+
+  <section id="color">
+    <div class="section-head"><div class="section-num">08</div><div><h2>Color Presets와 Regen Groups</h2><p class="section-lead">Color preset은 simrik과 픽셀 마스터 그룹을 모두 고려해야 하므로 main groups를 재생성하고 Merge 중심으로 저장합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>순서</th><th>작업</th></tr></thead><tbody>
+      <tr><td>1</td><td>showfile menu에서 <code>regen groups</code> icon을 실행해 category A/B/C main groups를 활성화한다.</td></tr>
+      <tr><td>2</td><td>color preset 저장 시 all three groups를 선택하고 dimmer 100%.</td></tr>
+      <tr><td>3</td><td>visualization 준비 단계에서는 빠르게 기본색을 저장한다. 실제 stage에서는 category별 fine tune이 필요하다.</td></tr>
+      <tr><td>4</td><td>특정 fixture category만 선택해 색을 맞춘 뒤 <code>Store + Merge</code>로 기존 color preset에 추가한다.</td></tr>
+      <tr><td>5</td><td>Merge를 쓰는 이유는 다른 category의 color information을 지우지 않기 위해서다.</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="layout">
+    <div class="section-head"><div class="section-num">09</div><div><h2>Regen All과 Layout 검증</h2><p class="section-lead">Preset과 color가 끝나면 <code>regen all</code>로 color effects, bumps, rig-size 기반 객체를 다시 생성합니다.</p></div></div>
+    <div class="grid-3">
+      <article class="card"><h3>Regen All</h3><p>showfile menu의 <code>regen all</code> 실행. plugin이 color effect preset과 bump를 rig size에 맞게 생성합니다.</p></article>
+      <article class="card"><h3>FX Calculator</h3><p>calculator icon → 수정할 running FX 선택 → wing, block, SYM group 변경. 닫으면 별도 save 없이 유지됩니다.</p></article>
+      <article class="card"><h3>Feature Grid</h3><p>category별 필요한 기능만 선택하고 <code>Generate Layouts</code>. Titan tubes는 position/optics를 숨기고, hybrid는 전체 기능을 유지합니다.</p></article>
+    </div>
+    <div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>검증</th><th>확인 내용</th></tr></thead><tbody>
+      <tr><td>Hybrid spots</td><td>group master, color, position, gobo/zoom, CFX가 동작하는지 확인.</td></tr>
+      <tr><td>Tilt bars</td><td>intensity FX가 pixel elements에서 대칭적으로 보이는지 확인.</td></tr>
+      <tr><td>Alternative SYM group</td><td>2-line simrik 대신 single-line simrik을 선택하면 FX 모양이 바뀌는지 확인.</td></tr>
+      <tr><td>Creative position</td><td>up icon으로 5 fan/2 fan 등 fan style이 바뀌는지 확인.</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="override">
+    <div class="section-head"><div class="section-num">10</div><div><h2>Override</h2><p class="section-lead">Override section은 기본적으로 functional하지 않으며, solo spot/highlight 목적에 맞게 별도 setup해야 합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>순서</th><th>Copilot 콘솔 작업</th><th>감독 확인/판단</th></tr></thead><tbody>
+      <tr><td>1</td><td><code>Preset</code> area의 아래쪽 <code>Global presets</code>에서 10개 override slot 확인.</td><td>빈 slot/기존 label 확인.</td></tr>
+      <tr><td>2</td><td>solo fixture 선택. 예: front truss spot <code>1103</code>. dimmer 100%, white, position/zoom 조정.</td><td>조준 결과와 연출 의도는 감독이 판단.</td></tr>
+      <tr><td>3</td><td>저장 전 <code>Stop IFX</code>, <code>Stop PFX</code> preset을 눌러 running FX suppression을 포함.</td><td>표준 solo spot은 켬 추천. 특수 연출은 사용자 선택.</td></tr>
+      <tr><td>4</td><td><code>Store</code> → override all preset slot에 <code>Override</code>.</td><td>덮어쓰기 확인.</td></tr>
+      <tr><td>5</td><td>showfile menu → <code>regen override</code> icon 실행.</td><td>sequence 생성 확인.</td></tr>
+      <tr><td>6</td><td>show view에서 override look 확인. 기본값은 move in black active.</td><td>MIB on은 clean transition, off는 움직임을 보여주는 연출.</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="routing">
+    <div class="section-head"><div class="section-num">11</div><div><h2>감독 요청별 Copilot 라우팅</h2><p class="section-lead">감독의 자연어 요청을 어떤 콘솔 action으로 바꿀지 정리한 표입니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>감독 요청</th><th>Copilot intent</th><th>Copilot이 콘솔에서 수행할 일</th><th>감독이 제공·판단할 일</th></tr></thead><tbody>
+      <tr><td>새 리그에 쇼파일 맞춰줘</td><td><code>adapt_showfile_to_new_stage</code></td><td>patch/group/preset/regen 전체 checklist</td><td>mode/address/orientation 확정</td></tr>
+      <tr><td>픽셀튜브가 8개씩 두 줄이야</td><td><code>build_pixel_simrik_group</code></td><td><code>Grid 0/0 thru 7/7</code>, dot-through, transform 후보</td><td>pixel 방향 확인</td></tr>
+      <tr><td>X4 바는 틸트가 있어</td><td><code>setup_pixel_master_group</code></td><td>픽셀 마스터 그룹, checkbox, dim default plan</td><td>master/sub output 확인</td></tr>
+      <tr><td>포지션 자동으로 만들어줘</td><td><code>run_auto_position_with_guard</code></td><td>straight down/up 확인, fan divisibility 검사</td><td>기준 position 최종 조준 판단</td></tr>
+      <tr><td>고보랑 포커스 잡아줘</td><td><code>build_gobo_focus_presets</code></td><td>gobo/focus 분리, 3×3 focus matrix</td><td>sharp focus 조정</td></tr>
+      <tr><td>레이아웃에 안 쓰는 버튼 지워줘</td><td><code>generate_feature_grid_layout</code></td><td>feature availability matrix, Generate Layouts</td><td>필요 기능 선택</td></tr>
+      <tr><td>피아노 솔로 스팟 만들어줘</td><td><code>create_override_solo_spot</code></td><td>override slot, Stop IFX/PFX, regen override, MIB plan</td><td>fixture 조준과 연출 의도</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="schemas">
+    <div class="section-head"><div class="section-num">12</div><div><h2>스키마</h2><p class="section-lead">Copilot 내부에서 전체 작업을 상태와 plan으로 관리하기 위한 최소 구조입니다.</p></div></div>
+    <div class="schema-box"><pre>{
+  "intent": "adapt_showfile_to_new_stage",
+  "source_video": "5wm88LvScSk",
+  "workflow": [
+    "patch",
+    "build_groups",
+    "configure_pixel_master_group",
+    "store_presets",
+    "regen_groups",
+    "store_color_presets",
+    "regen_all",
+    "generate_layouts",
+    "setup_overrides"
+  ],
+  "guards": [
+    "fixture_mode_confirmed",
+    "selection_grid_verified",
+    "pixel_master_group_verified",
+    "focus_value_only",
+    "color_merge_not_overwrite",
+    "override_mib_policy_confirmed"
+  ]
+}</pre></div>
+    <p class="footer">작성 기준: YouTube 자동 영어 자막 전체 분석. 실제 콘솔 적용 전에는 grandMA3/onPC 상태 조회와 조명감독의 visual check가 필요합니다.</p>
+  </section>
+</main>
+</body>
+</html>

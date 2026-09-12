@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>음악에서 무대까지 — 연구 3건이 코파일럿을 어떻게 바꿨나</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --ivory:#FAF9F5; --paper:#FFF; --slate:#141413; --clay:#D97757; --clay-d:#B85C3E;
+  --oat:#E3DACC; --olive:#788C5D;
+  --g100:#F0EEE6; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+  --sans:"Pretendard",system-ui,-apple-system,sans-serif;
+  --serif:"Pretendard",ui-serif,Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+  --max-width:860px; --radius-panel:12px; --radius-row:8px; --border:1.5px solid var(--g300);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);
+  font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:56px 24px 96px}
+header.top{border-bottom:3px solid var(--clay);padding-bottom:22px;margin-bottom:14px}
+h1{font-family:var(--serif);font-size:30px;line-height:1.35;margin:0 0 10px;letter-spacing:-.02em}
+.sub{color:var(--g500);font-size:14px;margin:0}
+.sub code{font-family:var(--mono);font-size:13px;background:var(--g100);padding:1px 5px;border-radius:4px}
+h2{font-family:var(--serif);font-size:22px;margin:52px 0 6px;padding-top:8px;letter-spacing:-.01em}
+h2 .n{color:var(--clay);font-variant-numeric:tabular-nums;margin-right:8px}
+h3{font-size:17px;margin:30px 0 8px;color:var(--g700)}
+p{margin:12px 0}
+.lead{background:var(--g100);border-left:4px solid var(--olive);padding:14px 18px;
+  border-radius:0 var(--radius-row) var(--radius-row) 0;margin:14px 0 22px;font-size:15.5px}
+.lead strong{color:var(--olive)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--paper);
+  border-radius:var(--radius-row);overflow:hidden;border:var(--border)}
+th{background:var(--oat);text-align:left;padding:10px 12px;font-weight:700;font-size:13.5px}
+td{padding:10px 12px;border-top:1px solid var(--g300);vertical-align:top}
+tr:nth-child(even) td{background:#FCFBF8}
+code{font-family:var(--mono);font-size:.88em;background:var(--g100);padding:1.5px 5px;border-radius:4px}
+pre{background:var(--g700);color:#F5F3EE;padding:16px 18px;border-radius:var(--radius-panel);
+  overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.7;margin:16px 0}
+pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.term{border-bottom:1.5px dotted var(--clay);cursor:help}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin:20px 0}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px 16px 14px}
+.card .k{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--clay);line-height:1.1}
+.card .l{font-size:12.5px;color:var(--g500);margin-top:6px;line-height:1.5}
+.ok{color:var(--olive);font-weight:700}
+.no{color:var(--clay-d);font-weight:700}
+.box{background:var(--paper);border:var(--border);border-left:4px solid var(--clay);
+  border-radius:0 var(--radius-panel) var(--radius-panel) 0;padding:16px 18px;margin:20px 0}
+.box .t{font-weight:700;margin-bottom:6px;font-size:15px}
+.box.good{border-left-color:var(--olive)}
+.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);
+  padding:18px;margin:20px 0;text-align:center}
+noscript .fb{background:var(--g100);border:var(--border);border-radius:var(--radius-panel);padding:14px 18px;font-size:14px}
+details{background:var(--paper);border:var(--border);border-radius:var(--radius-row);
+  padding:12px 16px;margin:12px 0}
+summary{cursor:pointer;font-weight:600;font-size:15px}
+details[open] summary{margin-bottom:10px;border-bottom:1px solid var(--g300);padding-bottom:8px}
+footer{margin-top:60px;padding-top:20px;border-top:var(--border);color:var(--g500);font-size:13px}
+@media print{body{background:#fff}.wrap{padding:0}pre{background:#f4f4f2;color:#111}}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top">
+<h1>음악에서 무대까지<br>— 연구 3건이 코파일럿을 어떻게 바꿨나</h1>
+<p class="sub">2026-09-13 · 기준 <code>main@afa7cb1</code> · 실기 grandMA3 onPC(응답기 1.6.5, 회신 9005)에서 쓰고 되읽은 기록</p>
+</header>
+
+<div class="lead">
+<strong>한 줄로.</strong> 감독님이 주신 연구 3건은 코파일럿에 「무엇을 자동으로 하면 안 되는가」의 선을 그어 줬고,
+그 선 위에서 <b>음악 파일 하나가 콘솔의 큐 시퀀스가 되는 경로</b>가 이번 회차에 실기로 뚫렸습니다.
+어제까지는 그 경로에서 가장 중요한 큐(드롭)가 조용히 사라지고 있었는데, 오늘 네 건을 고쳐 막았습니다.
+</div>
+
+<div class="cards">
+<div class="card"><div class="k">3</div><div class="l">감독님 제안 연구 출처<br>Fei Hu · AddOnDesk · MBLightArts</div></div>
+<div class="card"><div class="k">4</div><div class="l">이번 회차에 고친 결함<br>t366 · t367 · t368 · t369</div></div>
+<div class="card"><div class="k">2</div><div class="l">실기 콘솔에 세운 곡<br>Sequence 7 · 10</div></div>
+<div class="card"><div class="k">20/20</div><div class="l">곡 구성 전수 검사<br>큐 소실 0건</div></div>
+</div>
+
+<h2><span class="n">1</span>연구 3건이 무엇이었나</h2>
+
+<p class="lead">이 절은 「그 문서들이 무슨 자료였나」를 먼저 정리합니다. 셋 다 <b>남이 만든 것을 관찰한 기록</b>이고,
+셋 다 스스로 「여기까지만 봤다」는 한계를 적어 뒀습니다. 그 정직함이 중요합니다 —
+한계를 적은 문서라야 코파일럿이 그 한계를 그대로 물려받아 과하게 행동하지 않거든요.</p>
+
+<table>
+<tr><th>출처</th><th>문서</th><th>무엇을 담았나</th><th>문서가 스스로 밝힌 한계</th></tr>
+<tr><td><b>Fei Hu</b><br><span style="color:var(--g500);font-size:13px">Facebook 조명 교육 채널</span></td><td>17</td>
+<td>MA2 시절 효과 이름을 grandMA3 의 <span class="term" title="2개 이상의 Step 을 순환·보간하는 MA3 의 효과 엔진">페이저 (Phaser)</span>·큐 타이밍으로 옮기는 <b>번역 사전</b></td>
+<td>"영상 내부 구현을 실측했다가 아니라 게시자가 명명한 사례를 분류한 것"</td></tr>
+<tr><td><b>AddOnDesk Positions</b><br><span style="color:var(--g500);font-size:13px">유료 플러그인 공개 매뉴얼</span></td><td>18</td>
+<td>기준 포지션 몇 개를 보정해 <b>최대 180개 포지션 프리셋</b>을 만드는 워크플로우</td>
+<td>유료 플러그인 내부 계산식 미확인. 공개 문구·매뉴얼 기반</td></tr>
+<tr><td><b>MBLightArts</b><br><span style="color:var(--g500);font-size:13px">YouTube 튜토리얼</span></td><td>19(6편)<br>20(심층 1편)</td>
+<td>빈 파일이 아니라 <b>템플릿 쇼파일을 새 무대에 맞추는</b> 작업 순서와 역할 분담</td>
+<td>프레임 단위 실측 아님. 적용 전 콘솔 조회와 운영자 확인 필요</td></tr>
+</table>
+
+<h2><span class="n">2</span>세 문서가 그은 같은 선</h2>
+
+<p class="lead">출처가 다 다른데 결론이 겹칩니다. <strong>판단은 감독이, 연결과 안전장치는 코파일럿이.</strong>
+이게 이번 개선의 설계 원칙이 됐습니다.</p>
+
+<table>
+<tr><th>문서</th><th>원문</th></tr>
+<tr><td>19 §4</td><td>"조명감독의 감각적 판단이 필요한 부분은 Copilot이 대신하지 않고, console object와 검증 항목으로 명확히 안내한다"</td></tr>
+<tr><td>18 §9</td><td>"사용자에게는 '몇 개 Pan/Tilt를 만들까요?'보다 먼저 <b>'같은 방향으로 설치된 장비끼리 묶었나요?'</b>를 물어야 한다"</td></tr>
+<tr><td>17 §7</td><td>"빔 속성은 픽스처 프로파일 확인 전 자동 확정하지 않는다"</td></tr>
+</table>
+
+<div class="box">
+<div class="t">왜 이 선이 중요한가 — 실제로 벌어질 뻔한 일</div>
+문서 18 이 경고한 것: 잘못 보정된 기준값 하나가 <b>생성되는 180개 프리셋 전부</b>를 망칩니다.
+그리고 <code>Merge</code> 는 <b>이미 공연에 쓰이는 프리셋을 수정</b>하므로 쇼 전체 룩이 바뀔 수 있습니다.
+"몇 개 만들까요"를 먼저 물으면 이 두 사고를 못 막습니다.
+</div>
+<h2><span class="n">3</span>연구가 실제로 코드가 된 곳</h2>
+
+<p class="lead">문서는 많은 걸 제안하지만, 제안과 구현은 다릅니다. 이 절은 <b>제가 코드에서 확인한 것만</b> 적습니다.</p>
+
+<table>
+<tr><th>문서가 요구한 것</th><th>구현된 것</th><th>어디에</th></tr>
+<tr><td>18 §9-2 · 20 §11<br>"포지션 자동 생성 전에 방향과 나눗셈을 먼저 물어라"</td>
+<td>체인 순서 대조 + 팬 나눗셈 검사. 어긋난 자리를 짚어서 보고</td>
+<td><code>server/spatial/preflight.py</code><br><code>check_chain_order</code> · <code>check_split</code><br><span style="color:var(--g500);font-size:13px">카드 t365 · <code>13595be</code></span></td></tr>
+<tr><td>18 §4<br>"Overwrite 는 명시 확인 필요"</td>
+<td>Layout 좌표 쓰기를 <span class="term" title="자동 실행을 막고 사람 승인을 요구하는 명령 목록">폐집합 (blacklist)</span>에 추가 → 승인 없이는 못 나감</td>
+<td><code>server/safety/blacklist.yaml</code> v9<br><span style="color:var(--g500);font-size:13px">카드 t364 · <code>9f54763</code></span></td></tr>
+</table>
+
+<div class="box">
+<div class="t">🔴 여기서 제 계기가 저를 속일 뻔했습니다</div>
+문서 20 §11 에 적힌 기능 이름 11개를 코드에서 <code>grep</code> 하면 <b>0건</b>입니다.
+그대로 보고했으면 "하나도 구현 안 됨"이 됐을 텐데, 사실이 아닙니다 —
+t365 가 그중 두 줄(<code>run_auto_position_with_guard</code> · <code>diagnose_fan_divisibility</code>)을
+<b>다른 이름으로</b> 이미 구현해 뒀습니다.
+<br><br>
+이름이 아니라 <b>능력</b>으로 세야 합니다. 나머지 9줄은 이번에 항목별로 재지 않았습니다 —
+<b>미측정이지 부재가 아닙니다.</b>
+</div>
+
+<h2><span class="n">4</span>음악을 넣으면 실제로 무슨 일이 일어나나</h2>
+
+<p class="lead">감독님이 물으신 핵심입니다. 오디오 파일 하나가 콘솔의 큐가 되기까지 <b>일곱 단계</b>를 지납니다.
+중간에 <b>사람이 반드시 서는 자리가 두 곳</b> 있는데, 그게 이 설계의 핵심입니다.</p>
+
+<pre class="mermaid">
+flowchart TD
+  A["🎵 오디오 파일"] --> B["analyze()<br/>BPM · 구간 경계 · 세기"]
+  B --> C["D등급 1~5<br/>구간 세기를 상대값으로"]
+  C --> D{"확인 카드<br/>👤 감독이 고친다"}
+  D --> E["prepare_songcue<br/>구간 라벨 + 세기"]
+  E --> F["룩 배정<br/>장르 · 회차 기억 · 곡간 회피"]
+  F --> G["번들 조립<br/>사다리 · 드롭 앞 감광 · 무빙 · 페이드"]
+  G --> H{"안전 게이트<br/>👤 쓰기 승인"}
+  H --> I["🎛️ 콘솔<br/>Store Sequence"]
+</pre>
+<noscript><div class="fb">
+<b>경로:</b> 오디오 파일 → 분석(BPM·구간 경계·세기) → D등급 1~5 →
+<b>확인 카드(감독이 고침)</b> → prepare_songcue → 룩 배정 → 번들 조립 →
+<b>안전 게이트(쓰기 승인)</b> → 콘솔 Store Sequence.
+</div></noscript>
+
+<h3>단계별로 무슨 일이 일어나는가</h3>
+
+<table>
+<tr><th>단계</th><th>하는 일</th><th>근거</th></tr>
+<tr><td><b>1. 분석</b></td><td>오디오에서 BPM, 구간 경계, <span class="term" title="음이 시작되는 순간">온셋 (onset)</span>, 음량(RMS)을 뽑습니다. <b>콘솔은 안 건드립니다</b> — 순수 계산이에요</td><td><code>server/audio/analyze.py:121</code></td></tr>
+<tr><td><b>2. 세기 등급</b></td><td>구간 음량을 <b>그 곡에서 가장 센 구간</b>으로 나눠 1~5 등급을 매깁니다. 절대 음압이 아니라 상대값인 이유: 마스터링 레벨이 다른 두 곡이 같은 연출을 요구할 수 있으니까요</td><td>같은 파일, <code>_D_LEVEL_BANDS</code></td></tr>
+<tr><td><b>3. 👤 확인 카드</b></td><td><b>사람이 서는 첫 자리.</b> 분석 결과를 카드로 띄워 감독이 끄거나 고칩니다. 분석이 실패해도 <b>같은 카드</b>가 수동 BPM 입력으로 서고, 카드를 못 띄우면 확정은 일어나지 않습니다 — <b>건너뛰는 분기가 없습니다</b></td><td><code>server/web/session.py:11518</code></td></tr>
+<tr><td><b>4. 라벨 판정</b></td><td>"Chorus", "Drop" 같은 구간 이름을 읽습니다. <b>팝 축과 EDM 축을 갈라서</b> 씁니다 — 하나로 합치면 구간 이름 정확도가 0.883에서 0.148로 무너지기 때문입니다</td><td><code>server/looks/section_vocab.py</code></td></tr>
+<tr><td><b>5. 룩 배정</b></td><td>장르별 룩 목록에서 고릅니다. 세 가지를 기억합니다 — <b>앞 큐와 대비</b>되게, <b>같은 후렴은 1회차 룩으로 되돌아</b>오게, <b>앞 곡이 쓴 룩은 피하게</b></td><td><code>server/looks/songcue.py:432</code></td></tr>
+<tr><td><b>6. 번들 조립</b></td><td>회차마다 밝기를 한 칸씩 올리고(사다리), 드롭 직전 큐의 밝기를 빼고, 무빙을 드롭 큐 하나에 싣고, 구간별 페이드 시간을 붙입니다</td><td><code>server/looks/songcue.py:544</code></td></tr>
+<tr><td><b>7. 👤 안전 게이트</b></td><td><b>사람이 서는 두 번째 자리.</b> <code>Store Sequence</code> 는 폐집합이라 <b>승인 없이는 한 줄도 안 나갑니다</b>. 번들은 전부 통과하거나 전부 거절입니다 — 반만 나가서 쇼가 반쯤 망가지는 일이 없습니다</td><td><code>server/safety/gate.py:358</code></td></tr>
+</table>
+<h2><span class="n">5</span>무대 전체를 세우는 12단계</h2>
+
+<p class="lead">4절이 <b>한 곡</b>이 큐가 되는 길이라면, 이 절은 <b>무대 하나</b>를 세우는 전체 길입니다.
+문서 20 이 자막 1,136조각을 따라가며 정리한 것으로, 새 무대에 쇼파일을 처음부터 끝까지 맞추는 순서입니다.
+각 단계에 <b>감독이 판단할 것</b>과 <b>코파일럿이 콘솔에서 할 것</b>이 갈려 있습니다.</p>
+
+<table>
+<tr><th>#</th><th>단계</th><th>감독이 판단</th><th>코파일럿이 수행</th></tr>
+<tr><td>1</td><td>무대 분석</td><td>장비 리스트·회로표·연출 의도 제공</td><td>인벤토리 구조화, 누락 자료 질문</td></tr>
+<tr><td>2</td><td>Patch</td><td>장비 mode/address 승인</td><td>fixture 입력, ID·라벨 정리</td></tr>
+<tr><td>3</td><td>하이브리드 그룹</td><td>트러스 위치, 좌우 방향 판단</td><td>2D 선택 그리드 구성·검증</td></tr>
+<tr><td>4</td><td>픽셀 튜브 그룹</td><td>픽셀 방향과 줄 구조 확인</td><td>sub-fixture 선택, transform/flip</td></tr>
+<tr><td>5</td><td>틸트 픽셀 바</td><td>master/sub 구조 확인</td><td>픽셀 마스터 그룹 분리 저장</td></tr>
+<tr><td><b>6</b></td><td><b>포지션 프리셋</b></td><td>기준 조준의 최종 판단</td><td><b>전제 검사 후</b> Auto pos 실행과 검증 <span class="ok">← 구현됨</span></td></tr>
+<tr><td>7</td><td>고보/포커스</td><td>어떤 고보, 어디가 sharp 인지</td><td>focus-only 3×3 프리셋 저장</td></tr>
+<tr><td>8</td><td>빔 프리셋</td><td>스트로브 안전성 판단</td><td>prism/iris/zoom 저장, 없는 기능 대체</td></tr>
+<tr><td>9</td><td>컬러 프리셋</td><td>실제 무대 색상 매칭</td><td>regen groups, Merge 저장</td></tr>
+<tr><td>10</td><td>전체 재생성</td><td>승인, 결과 시각 확인</td><td><code>regen all</code>, 사후 체크리스트</td></tr>
+<tr><td>11</td><td>레이아웃 정리</td><td>운용에 필요한 기능 선택</td><td>feature grid, Generate Layouts</td></tr>
+<tr><td>12</td><td>오버라이드</td><td>솔로 대상, MIB 여부 판단</td><td>override 저장, MIB 동작 검증</td></tr>
+</table>
+
+<div class="box">
+<div class="t">지금 어디까지 왔나 — 정직하게</div>
+이 12단계 중 <b>6번의 전제 검사</b>가 이번에 코드가 됐습니다(카드 t365).
+나머지 11단계가 어디까지 되는지는 <b>이번에 항목별로 재지 않았습니다.</b>
+제 기억에 "8/12 구현됨"이라는 메모가 있었지만, 확인하지 않은 숫자라 보고서에 옮기지 않았습니다 —
+다음 회차에 전수로 재서 숫자로 말씀드리겠습니다.
+</div>
+
+<h2><span class="n">6</span>문서가 요구한 안전장치 7개</h2>
+
+<p class="lead">문서 19 가 정리한 <b>"이럴 땐 명령을 내지 말고 멈춰라"</b> 목록입니다.
+코파일럿이 무엇을 <b>안 하는가</b>가 이 프로젝트 설계의 절반입니다.</p>
+
+<table>
+<tr><th>멈추는 조건</th><th>대신 하는 일</th><th>지금 상태</th></tr>
+<tr><td>fixture mode·주소·<b>방향</b>이 미확인</td><td>명령 대신 체크리스트 출력</td><td class="ok">구현 — t365 체인 순서 검사</td></tr>
+<tr><td>고보·프리즘·스트로브·줌 <b>속성 이름이 불명</b></td><td>프로파일 읽기 또는 수동 선택 요청</td><td class="ok">가능 — 능력 판독 경로 있음</td></tr>
+<tr><td>프리셋·시퀀스 <b>덮어쓰기</b></td><td>대상 슬롯·기존 라벨·백업 여부 표시</td><td class="ok">구현 — 폐집합 + 승인 게이트</td></tr>
+<tr><td><b>관객 방향 / 풀 플래시 / 스트로브</b></td><td>낮은 값·수동 확인·안전 문구</td><td>미측정</td></tr>
+<tr><td>그리드 미확인 상태의 효과 생성</td><td>효과 전에 그리드 검증 요구</td><td>미측정</td></tr>
+<tr><td>그룹·프리셋 변경 후 레시피 사용</td><td>cook 매크로 실행 계획 포함</td><td>미측정</td></tr>
+<tr><td><b>페이저는 되읽을 수 없다</b></td><td>콘솔 결과와 <b>별개로</b> 눈 확인 요청</td><td class="ok">이 회차가 그대로 따랐습니다</td></tr>
+</table>
+
+<div class="box">
+<div class="t">문서 20 의 한 문장</div>
+"관객 안전을 위해 Copilot은 full-speed strobe를 자동 저장하지 않는다."
+<br><br>
+이런 문장이 세 문서에 반복해서 나옵니다. 빠르게 만드는 기능보다 <b>멈추는 조건</b>을 먼저 적어 둔 자료라,
+코파일럿이 그 선을 그대로 물려받을 수 있었습니다.
+</div>
+
+<h2><span class="n">7</span>실기에서 실제로 세운 것</h2>
+
+<p class="lead">위 경로가 그림이 아니라 실제로 돈다는 증거입니다. 살아 있는 콘솔에 <b>명령 105줄</b>을 보내
+큐 시퀀스 두 벌을 세웠고, <b>성공 코드가 아니라 콘솔에서 되읽어</b> 확인했습니다.</p>
+
+<pre><code>Sequence 7  'VerifyA'    Intro · Verse1 · Chorus1 · Verse2 · Chorus2 · Breakdown · Drop · Outro
+Sequence 10 'VerifyC4x'  Intro · Verse1 · Chorus1 · Verse2 · Chorus2 · Bridge · Chorus3 · Chorus4 · Outro</code></pre>
+
+<p>기존 쇼(Sugar 등)는 건드리지 않았습니다 — 비어 있던 자리에만 썼습니다.</p>
+
+<h3>감독님이 콘솔에서 눈으로 보실 것</h3>
+
+<table>
+<tr><th>확인 대상</th><th>어디를 보나</th><th>보여야 하는 것</th><th>판정</th></tr>
+<tr><td>반복 후렴이 안 사라지는가</td><td>Seq 10 큐 5·7·9·10</td><td>후렴 1~4회차가 <b>같은 색</b>인데 뒤로 갈수록 밝거나 빔이 좁다</td><td class="ok">통과</td></tr>
+<tr><td>곡이 바뀌면 룩이 바뀌는가</td><td>Seq 7 ↔ 다음 곡</td><td>곡 A 와 곡 B 의 룩이 <b>하나도 안 겹친다</b></td><td class="ok">통과</td></tr>
+<tr><td>드롭 앞이 어두워지는가</td><td>Seq 7 큐 6 → 9</td><td>드롭 직전에 한 번 내려앉았다가(45→25) 드롭에서 올라온다</td><td class="ok">통과</td></tr>
+<tr><td>무빙이 도는가</td><td>Seq 7 큐 9</td><td>드롭 큐 <b>하나에서만</b> Pan/Tilt 대각 페이저가 돈다</td><td class="ok">통과</td></tr>
+</table>
+
+<div class="box good">
+<div class="t">곡 구성 20가지 전수 검사</div>
+제 곡 하나로만 재면 운이 좋았을 수 있어서, 4개 장르 × 5가지 곡 구성 = <b>20조합</b>을 전부 돌렸습니다.
+결과: <b>큐 소실 0건</b>, 후렴 밝기 순서 전부 단조증가(뒤 회차가 앞보다 어두워지지 않음).
+</div>
+
+<h2><span class="n">8</span>이번 회차에 막은 결함 넷</h2>
+
+<p class="lead">위 네 가지를 재는 과정에서 결함이 하나씩 튀어나왔습니다. 재미있는 건 <b>넷 다 뿌리가 하나</b>였다는 겁니다 —
+<b>이미 최대 밝기(100)인 룩은 더 올릴 데가 없다.</b> 그런데 정본은 "마지막 드롭은 전 리그 최대"라고 하니,
+드롭 룩이 천장에 있는 게 <b>정상</b>입니다. 즉 설계가 가장 중요한 자리에서 깨지고 있었습니다.</p>
+
+<table>
+<tr><th>카드</th><th>무엇이 잘못돼 있었나</th><th>어떻게 고쳤나</th><th>머지</th></tr>
+<tr><td><b>t366</b></td><td>🔴 <b>드롭 큐가 통째로 사라졌다.</b> 후렴이 같은 룩을 먼저 먹으면 드롭이 앉을 자리가 없어 버려짐</td><td>양보 방향을 뒤집었다 — 약한 큐(후렴)가 내려가고 드롭이 최대를 지킨다</td><td><code>7197b2e</code></td></tr>
+<tr><td><b>t367</b></td><td>🔴 <b>무빙이 드롭이 아니라 첫 코러스에서 돌았다.</b> 코드 주석은 "하나만 실으면 그건 드롭"이라 적혀 있었는데 반대로 동작</td><td>동점일 때 드롭이 이기게. 대역 계산은 손대지 않고 동점 규칙만 고침</td><td><code>befac6b</code></td></tr>
+<tr><td><b>t368</b></td><td>🔴 <b>후렴 3회차부터 사라졌다.</b> t366 의 구제가 "드롭"에만 걸려 있어 후렴은 못 구함. 후렴이 3번 이상 나오는 <b>보통 곡</b>에서 터짐</td><td>구제를 반복 구간 전체로 넓힘</td><td><code>c9cba52</code></td></tr>
+<tr><td><b>t369</b></td><td>🟡 <b>후렴 3회차가 2회차보다 어두워졌다</b>(95→100→90→100). 관객 눈에 세 번째 후렴이 주저앉는 걸로 보임</td><td>새 값을 만들지 않고, 이미 계산된 밝기들을 <b>회차 순서대로 재배치</b></td><td><code>afa7cb1</code></td></tr>
+</table>
+
+<details>
+<summary>t369 에서 갈림길이 하나 있었습니다 — 실측으로 닫았습니다</summary>
+<p>레인이 "룩에 <span class="term" title="빔의 굵기를 조이는 축">Iris</span> 축을 하나 추가하면 산술이 풀린다"고 제안했습니다.
+맞는 말이지만, <b>이 리그가 실제로 Iris 를 갖는지</b>는 재야 아는 사실입니다. 그래서 콘솔에서 기종 15종의 채널을 전부 읽었습니다.</p>
+<p><b>결과: Iris 는 15종 중 3종만</b>(Robin Esprite · Forte HP · MMX Spot). Zoom 은 9종.
+넓게 쓸 수 있는 빔 축은 <b>Zoom 하나뿐</b>입니다. Iris 를 넣었으면 12종이 실행 못 하는 명령이 나갔을 겁니다.</p>
+<p>그래서 그 길을 막고 <b>순서 규칙</b>으로 풀게 했습니다.</p>
+<p style="color:var(--g500);font-size:13.5px">덧: 이 측정도 첫 시도에서 <b>"Iris 0종"</b>이라고 답했습니다.
+콘솔이 한 응답에 15개만 주는데(Esprite 는 채널이 40개) 그걸 전부로 읽었거든요.
+Robin Esprite 가 15채널일 리 없다는 게 걸려서 대조했고 거기서 잡혔습니다.
+<b>잘린 목록의 0은 없다는 증거가 아닙니다.</b></p>
+</details>
+<h2><span class="n">9</span>조명감독 프로세스에서 코파일럿의 자리</h2>
+
+<p class="lead">문서 19·20 이 정리한 역할 분담을, 지금 코드가 실제로 할 수 있는 것과 겹쳐 봤습니다.
+<b>감독이 결정하는 자리는 줄지 않습니다</b> — 줄어드는 건 반복 입력과 실수입니다.</p>
+
+<pre class="mermaid">
+flowchart LR
+  subgraph H["👤 감독이 결정"]
+    H1["무대 물리 구조<br/>장비 방향 · 위치"]
+    H2["미적 판단<br/>어떤 색 · 어떤 포지션"]
+    H3["연출 의도<br/>어디를 강조할까"]
+  end
+  subgraph C["🤖 코파일럿이 연결"]
+    C1["구조화<br/>inventory · 라벨 · 세기"]
+    C2["계산 · 조립<br/>큐 · 사다리 · 페이드"]
+    C3["가드<br/>승인 · 전제 검사"]
+    C4["검증<br/>되읽기 · 증거"]
+  end
+  H1 --> C1
+  H2 --> C2
+  H3 --> C2
+  C1 --> C2 --> C3 --> C4
+  C4 -.->|"판정은 눈으로"| H2
+</pre>
+<noscript><div class="fb">
+<b>역할 분담:</b> 감독이 무대 물리 구조·미적 판단·연출 의도를 결정하고,
+코파일럿이 구조화 → 계산·조립 → 가드 → 검증을 맡습니다.
+최종 판정(실제로 예쁜가)은 다시 감독의 눈으로 돌아옵니다.
+</div></noscript>
+
+<table>
+<tr><th>작업</th><th>감독이 하는 일</th><th>코파일럿이 하는 일</th><th>코파일럿이 <b>절대 안 하는</b> 일</th></tr>
+<tr><td>곡 구조 잡기</td><td>구간 이름과 세기를 확인·수정</td><td>BPM·구간 경계·세기 후보 제시</td><td>확인 카드 건너뛰고 확정</td></tr>
+<tr><td>룩 고르기</td><td>장르 지정, 결과를 눈으로 판정</td><td>회차 기억·곡간 회피로 배정</td><td>"예쁜가"를 스스로 판정</td></tr>
+<tr><td>포지션 만들기</td><td>기준 포지션 조준, 그룹 방향 확인</td><td>체인 순서·나눗셈 검사 후 계획 제시</td><td>방향 확인 없는 대량 생성</td></tr>
+<tr><td>콘솔에 쓰기</td><td>승인</td><td>명령 조립, 전부 아니면 전무로 발사</td><td>승인 없는 <code>Store</code></td></tr>
+<tr><td>빔 효과</td><td>어떤 효과를 쓸지 결정</td><td>리그가 그 축을 갖는지 먼저 확인</td><td>기종이 없는 축으로 명령 생성</td></tr>
+</table>
+
+<h2><span class="n">10</span>아직 못 하는 것</h2>
+
+<p class="lead">여기가 이 보고서에서 가장 중요한 절일 수도 있습니다. <b>할 수 있다고 과장하지 않는 것</b>이
+문서 3건이 공통으로 요구한 태도이기도 하고요.</p>
+
+<table>
+<tr><th>항목</th><th>상태</th><th>왜</th></tr>
+<tr><td><b>음악에 맞춘 자동 재생</b></td><td class="no">앱이 못 한다</td>
+<td>타임코드 <b>녹화 무장 명령을 앱이 발화하지 않습니다</b>. 문자열을 만들어 운영자에게 건네고, 실행은 사람 손입니다. 되읽기 판정 어휘에 <code>verified</code> 자체가 없습니다 — 좁혀진 범위를 성공처럼 적지 않으려고요</td></tr>
+<tr><td>저장된 페이저 되읽기</td><td class="no">콘솔 제약</td><td>기계적 확인이 불가능합니다. 성공 판정은 명령 결과 + <b>사람의 눈</b>에 의존합니다</td></tr>
+<tr><td>큐 값 되읽기</td><td class="no">부분만</td><td>큐 존재와 구조(Part)는 읽히는데 Dimmer 값은 이 통로로 안 나옵니다. 밝기·색은 감독님 눈이 최종 판정입니다</td></tr>
+<tr><td>빔 축 확장</td><td class="no">리그 제약</td><td>Iris 3/15종, Zoom 9/15종. 넓게 쓸 축은 Zoom 하나입니다</td></tr>
+<tr><td>문서 20 의 나머지 기능</td><td>미측정</td><td>11개 중 2개만 구현 확인. 나머지 9개는 <b>항목별로 재지 않았습니다</b>(부재 아님)</td></tr>
+<tr><td>CI 자동 검증</td><td class="no">과금 차단</td><td>2~10초 만에 실패하는데 실행 단계가 <b>0개</b>입니다 — 잡이 시작조차 안 합니다. 그래서 모든 검증을 제 손으로 로컬에서 돌렸습니다</td></tr>
+<tr><td>실제 곡으로 검증</td><td>미완</td><td>지금 검증은 합성 곡 구성입니다. 실기 곡으로 한 번 더 재야 확정입니다</td></tr>
+</table>
+
+<h2><span class="n">11</span>다음에 할 것</h2>
+
+<table>
+<tr><th>순서</th><th>할 일</th><th>왜 지금인가</th></tr>
+<tr><td>1</td><td>실기 곡(Sugar 등)으로 A~D 재확인</td><td>지금 증거는 합성 곡 구성입니다 — 실제 곡 구조에서 같은 결과가 나오는지가 남았습니다</td></tr>
+<tr><td>2</td><td>문서 20 §11 나머지 9줄을 능력 기준으로 전수 측정</td><td>"몇 개 구현됐나"를 기억이 아니라 숫자로 말하기 위해</td></tr>
+<tr><td>3</td><td>문서 17 의 FX 후보 중 안전한 것부터<br><code>horizontal-chase</code> · <code>bounce-run-x</code> · <code>vshape-pan-swing</code></td><td>Pan/Tilt 계열이라 리그 확인이 덜 필요합니다. 프리즘·블라인더 계열은 뒤로</td></tr>
+<tr><td>4</td><td>타임코드 무장 인계 흐름을 감독님과 한 번 같이</td><td>자동 재생은 여기가 마지막 한 걸음입니다</td></tr>
+</table>
+
+<div class="box good">
+<div class="t">감독님이 직접 확인해 보실 수 있는 것</div>
+콘솔에서 <b>Sequence 10 (VerifyC4x)</b> 을 열어 큐 5 → 7 → 9 → 10 을 차례로 눌러 보세요.
+네 번의 후렴이 <b>같은 색으로 돌아오면서 점점 세지면</b> 이번 회차의 핵심이 맞게 동작하는 겁니다.
+큐 9(드롭)에서 무빙이 도는지도 같이 보시면 됩니다.
+</div>
+
+<footer>
+기준 <code>main@afa7cb1</code> · 실기 grandMA3 onPC, 응답기 1.6.5 · 증거 <code>reports/onsite-round-20260912/</code><br>
+이 보고서의 모든 숫자는 이 회차에 직접 측정했습니다. 옮겨 적은 값은 없습니다.
+</footer>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{
+ primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",
+ lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body></html>

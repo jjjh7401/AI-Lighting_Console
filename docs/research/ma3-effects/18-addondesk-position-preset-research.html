@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AddOnDesk Positions 기반 포지션 프리셋 생성 리서치</title>
+<style>
+:root {
+  --bg:#f7f8f5; --paper:#fff; --panel:#eef2ee; --ink:#171a17; --muted:#5f675f;
+  --line:#d9ddd6; --line-strong:#b8c0b5; --blue:#1f5f8b; --blue-bg:#e4eef5;
+  --green:#267247; --green-bg:#e5f1e8; --amber:#8a5b12; --amber-bg:#f4ead6;
+  --red:#9b3030; --red-bg:#f4e1df; --purple:#5f4b8b; --purple-bg:#ece8f4;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.72;word-break:keep-all;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-underline-offset:3px}
+code{font-family:var(--mono);font-size:.88em;background:#edf0ec;border:1px solid var(--line);border-radius:4px;padding:.08rem .32rem .12rem}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+.hero{border:1px solid var(--line-strong);background:var(--paper);border-radius:8px;overflow:hidden}
+.hero-main{padding:32px 32px 26px;border-bottom:1px solid var(--line)}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font-size:clamp(28px,4.5vw,48px);line-height:1.14;letter-spacing:-.025em}
+.lead{max-width:820px;margin:18px 0 0;color:var(--muted);font-size:18px}
+.hero-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);background:var(--panel)}
+.meta-item{padding:14px 18px 16px;border-right:1px solid var(--line)}
+.meta-item:last-child{border-right:0}
+.meta-label{display:block;font-family:var(--mono);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.meta-value{display:block;margin-top:4px;font-weight:700}
+.toc{margin:26px 0 0;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:16px 18px}
+.toc-title{margin:0 0 8px;font-family:var(--mono);font-size:14px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.toc ol{margin:0;padding-left:22px;columns:2;column-gap:42px}
+.toc li{margin:3px 0;font-size:14px;break-inside:avoid}
+.toc a{color:var(--ink);text-decoration:none}
+.toc a:hover{color:var(--blue);text-decoration:underline}
+section{margin-top:48px;scroll-margin-top:18px}
+.section-head{display:grid;grid-template-columns:86px minmax(0,1fr);gap:20px;align-items:start;margin-bottom:18px}
+.section-num{font-family:var(--mono);font-size:14px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;padding-top:8px}
+h2{margin:0;font-size:clamp(24px,3vw,34px);line-height:1.22;letter-spacing:-.018em}
+.section-lead{margin:8px 0 0;max-width:780px;color:var(--muted)}
+.summary-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:20px}
+.panel h3{margin:0 0 10px;font-size:18px;line-height:1.36}
+.panel p{margin:0;color:var(--muted)}
+.key-list{margin:12px 0 0;padding-left:18px}
+.key-list li{margin:6px 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{background:var(--paper);padding:18px}
+.stat strong{display:block;font-family:var(--mono);font-size:28px;line-height:1.16}
+.stat span{display:block;margin-top:8px;color:var(--muted);font-size:14px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px}
+.card h3{margin:0 0 8px;font-size:18px}
+.card p,.card li{color:var(--muted);font-size:14px}
+.card ul,.card ol{margin:8px 0 0;padding-left:20px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
+.tag{display:inline-block;border:1px solid var(--line);background:#f4f6f3;color:var(--muted);border-radius:999px;padding:2px 8px 3px;font-size:14px}
+.tag.blue{background:var(--blue-bg);color:var(--blue);border-color:#bdd3e4}
+.tag.green{background:var(--green-bg);color:var(--green);border-color:#bddac5}
+.tag.amber{background:var(--amber-bg);color:var(--amber);border-color:#e2cfaa}
+.tag.red{background:var(--red-bg);color:var(--red);border-color:#e0bdb8}
+.tag.purple{background:var(--purple-bg);color:var(--purple);border-color:#d6cfe5}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{width:100%;border-collapse:collapse;min-width:860px}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+tr:last-child td{border-bottom:0}
+th:last-child,td:last-child{border-right:0}
+th{background:#edf0ec;color:var(--muted);font-size:14px;font-weight:800}
+td{font-size:14px}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.flow-step{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--blue);border-radius:8px;padding:16px}
+.flow-step:nth-child(2){border-top-color:var(--green)}
+.flow-step:nth-child(3){border-top-color:var(--amber)}
+.flow-step:nth-child(4){border-top-color:var(--purple)}
+.flow-step b{display:block;font-size:15px;margin-bottom:6px}
+.flow-step span{display:block;color:var(--muted);font-size:14px}
+.schema-box{background:#171a17;color:#eef2ee;border-radius:8px;padding:18px;overflow-x:auto;border:1px solid #2d332d}
+.schema-box pre{margin:0;font-family:var(--mono);font-size:14px;line-height:1.72;white-space:pre}
+.callout{border:1px solid #e2cfaa;border-left:5px solid var(--amber);background:var(--amber-bg);border-radius:8px;padding:16px 18px}
+.callout strong{display:block;color:var(--amber);margin-bottom:4px}
+.callout p{margin:0;color:#61420f}
+.safe{border-color:#e0bdb8;border-left-color:var(--red);background:var(--red-bg)}
+.safe strong{color:var(--red)}
+.safe p{color:#6e2525}
+.match-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.match{background:var(--paper);padding:14px 16px}
+.match b{display:block;font-size:14px}
+.match span{display:block;margin-top:3px;color:var(--muted);font-size:14px}
+.footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media(max-width:900px){.hero-meta,.summary-grid,.cards,.flow,.match-grid{grid-template-columns:1fr}.meta-item{border-right:0;border-bottom:1px solid var(--line)}.meta-item:last-child{border-bottom:0}.toc ol{columns:1}}
+@media(max-width:640px){.wrap{padding:20px 14px 56px}.hero-main{padding:24px 20px 20px}.section-head{grid-template-columns:1fr;gap:4px}.stats{grid-template-columns:1fr}th,td{padding:9px 10px}}
+@media print{body{background:#fff}.wrap{max-width:none;padding:20px}.hero,.panel,.card,.table-wrap,.callout{break-inside:avoid}a{color:inherit;text-decoration:none}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="hero-main">
+      <p class="eyebrow">AI Lighting Copilot Research</p>
+      <h1>AddOnDesk Positions 기반 포지션 프리셋 생성 리서치</h1>
+      <p class="lead">Facebook 영상과 공개 매뉴얼에서 확인 가능한 포지션 프리셋 자동 생성 방식을 Copilot의 실제 콘솔 연동 모델로 재구성한 별도 문서입니다.</p>
+    </div>
+    <div class="hero-meta">
+      <div class="meta-item"><span class="meta-label">수집일</span><span class="meta-value">2026-09-11</span></div>
+      <div class="meta-item"><span class="meta-label">출처</span><span class="meta-value">Facebook · AddOnDesk · Manual PDF</span></div>
+      <div class="meta-item"><span class="meta-label">대상</span><span class="meta-value">grandMA3 Position Presets</span></div>
+      <div class="meta-item"><span class="meta-label">상태</span><span class="meta-value">공개 정보 기반 설계</span></div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="문서 목차">
+    <p class="toc-title">빠른 이동</p>
+    <ol>
+      <li><a href="#summary">한눈에 보기</a></li>
+      <li><a href="#sources">확인한 공개 정보</a></li>
+      <li><a href="#workflow">워크플로우</a></li>
+      <li><a href="#limits">제한사항</a></li>
+      <li><a href="#copilot">Copilot 연동 모델</a></li>
+      <li><a href="#console">콘솔 연결 방식</a></li>
+      <li><a href="#phrases">자연어 매칭</a></li>
+      <li><a href="#implementation">구현 후보</a></li>
+      <li><a href="#conclusion">결론</a></li>
+    </ol>
+  </nav>
+
+  <section id="summary">
+    <div class="section-head"><div class="section-num">01</div><div><h2>한눈에 보기</h2><p class="section-lead">Positions의 핵심은 기준 포지션 보정값을 이용해 Pan/Tilt 조합을 대량 생성하는 것입니다.</p></div></div>
+    <div class="summary-grid">
+      <article class="panel">
+        <h3>핵심 요약</h3>
+        <p>공개 설명상 Positions는 몇 개의 calibrated reference positions를 기준으로 6 Tilt × 30 Pan, 최대 180개의 매칭 Position Preset을 생성합니다. Copilot은 이를 그대로 복제하기보다 calibration runbook, position grid plan, pool collision guard, Store Offset 안내로 나눠 구현해야 합니다.</p>
+        <ul class="key-list">
+          <li><strong>Calibration</strong>이 정확해야 모든 생성 결과가 맞습니다.</li>
+          <li><strong>Programmer Mode</strong>는 미리보기/부분 선택에 적합합니다.</li>
+          <li><strong>Preset Mode</strong>는 pool write가 있는 대량 생성이므로 충돌 가드가 필요합니다.</li>
+        </ul>
+      </article>
+      <div class="stats" aria-label="수집 요약">
+        <div class="stat"><strong>180</strong><span>최대 Position 조합</span></div>
+        <div class="stat"><strong>6×30</strong><span>Tilt × Pan 구조</span></div>
+        <div class="stat"><strong>2</strong><span>생성 workflow</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sources">
+    <div class="section-head"><div class="section-num">02</div><div><h2>확인한 공개 정보</h2><p class="section-lead">유료 플러그인 내부 구현이 아니라 공개 페이지와 매뉴얼에서 확인한 내용입니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>출처</th><th>확인 내용</th></tr></thead><tbody>
+      <tr><td>Facebook video</td><td>기준 포지션 보정 후 complete position grid 자동 생성. Pan/Tilt 값 매칭과 반복 가능한 결과를 강조.</td></tr>
+      <tr><td>Facebook reel</td><td>보정된 참조 포지션에서 최대 180개의 매칭 포지션 프리셋 생성.</td></tr>
+      <tr><td>AddOnDesk 제품 페이지</td><td>가격 79,00 € excl. Tax, Version 25.12.65, 태그 Workflow/Productivity/Presets/Setup/Position.</td></tr>
+      <tr><td>Manual PDF</td><td>Calibration, Programmer Mode, Preset Mode, Merge/Duplicate, Troubleshooting, Known Limitations 확인.</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="workflow">
+    <div class="section-head"><div class="section-num">03</div><div><h2>워크플로우</h2><p class="section-lead">공개 매뉴얼의 기능을 Copilot 관점으로 다시 나누면 다음 네 덩어리입니다.</p></div></div>
+    <div class="cards">
+      <article class="card"><h3>Calibration</h3><div class="tag-row"><span class="tag blue">Reference</span><span class="tag amber">Apply Position</span></div><p>픽토그램이 지시하는 위치로 조명을 실제 무대에서 맞추고 기준값을 저장합니다. 새 fixture type마다 필요합니다.</p></article>
+      <article class="card"><h3>Programmer Mode</h3><div class="tag-row"><span class="tag green">Preview</span><span class="tag">Partial Selection</span></div><p>현재 선택된 fixture만 대상으로 Pan/Tilt 조합을 Programmer에 올립니다. 자동 저장하지 않아 비교적 안전합니다.</p></article>
+      <article class="card"><h3>Preset Mode</h3><div class="tag-row"><span class="tag purple">Batch Store</span><span class="tag amber">Preset Pool</span></div><p>Group Pool의 전체 그룹에 대해 선택한 Tilt/Pan 조합을 Position Preset Pool에 직접 생성합니다.</p></article>
+      <article class="card"><h3>Merge / Duplicate</h3><div class="tag-row"><span class="tag amber">Merge</span><span class="tag green">Duplicate</span></div><p>기존 preset에 새 fixture 값을 합칠지, 같은 조합을 새 preset set으로 따로 만들지 결정합니다.</p></article>
+      <article class="card"><h3>Middle Mode</h3><div class="tag-row"><span class="tag blue">Odd Count</span><span class="tag purple">Symmetry</span></div><p>fixture 수가 홀수일 때 중앙 기준 대칭 계산을 더 좋게 만드는 설정으로 공개 설명에 등장합니다.</p></article>
+      <article class="card"><h3>Store Offset</h3><div class="tag-row"><span class="tag red">Tolerance</span><span class="tag">Correction</span></div><p>설치 공차로 일부 장비가 어긋나면 generated preset을 덮기보다 Store Offset workflow로 보정합니다.</p></article>
+    </div>
+  </section>
+
+  <section id="limits">
+    <div class="section-head"><div class="section-num">04</div><div><h2>제한사항</h2><p class="section-lead">Copilot에 넣을 때 가장 중요한 안전 조건입니다.</p></div></div>
+    <div class="summary-grid">
+      <div class="callout safe"><strong>같은 물리 방향만 함께 처리</strong><p>X/Y/Z 축으로 서로 회전된 fixture, upside down, 90도 회전 설치, pan/tilt orientation이 다른 fixture는 한 번에 자동 생성하지 않습니다. truss별 또는 orientation group별로 나눠야 합니다.</p></div>
+      <div class="callout"><strong>잘못된 Calibration은 전체 결과를 망칩니다</strong><p>매뉴얼의 troubleshooting도 먼저 calibration positions를 검증하라고 안내합니다. Copilot도 대량 생성 전 대표 기준 포지션 검증을 요구해야 합니다.</p></div>
+    </div>
+  </section>
+
+  <section id="copilot">
+    <div class="section-head"><div class="section-num">05</div><div><h2>Copilot 연동 모델</h2><p class="section-lead">포지션 프리셋 요청은 아래 구조화 객체로 들어와야 콘솔 연결이 명확해집니다.</p></div></div>
+    <div class="flow" aria-label="Copilot 처리 흐름">
+      <div class="flow-step"><b>1. 요청 해석</b><span>포지션팩, 팬/틸트 조합, 대상 그룹</span></div>
+      <div class="flow-step"><b>2. 대상 분리</b><span>fixture type, truss, orientation group</span></div>
+      <div class="flow-step"><b>3. 보정 확인</b><span>CalibrationProfile 존재/검증</span></div>
+      <div class="flow-step"><b>4. 저장 가드</b><span>Preset Pool, Merge/Duplicate, 충돌 확인</span></div>
+    </div>
+    <div class="schema-box" style="margin-top:16px">
+<pre>{
+  "intent": "create_position_presets",
+  "target": {
+    "group_label": "MOVER-U",
+    "fixture_type": "moving_profile",
+    "orientation_group": "upstage_truss_same_orientation"
+  },
+  "calibration": { "profile_id": "MOVER-U-default", "required": true, "status": "verified" },
+  "grid": {
+    "tilt_positions": ["near", "mid", "far"],
+    "pan_positions": ["SL", "CSL", "C", "CSR", "SR"],
+    "middle_mode": false
+  },
+  "mode": "preset",
+  "store": { "destination": "position_preset_pool", "start_slot": "next_free", "policy": "duplicate" },
+  "safety": { "same_orientation_only": true, "allow_overwrite": false }
+}</pre>
+    </div>
+  </section>
+
+  <section id="console">
+    <div class="section-head"><div class="section-num">06</div><div><h2>콘솔 연결 방식</h2><p class="section-lead">Copilot은 Programmer Mode와 Preset Mode를 분리해서 구현해야 합니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>모드</th><th>콘솔 대상</th><th>Copilot 행동</th><th>주의</th></tr></thead><tbody>
+      <tr><td>Programmer Mode</td><td>현재 선택 fixture / Programmer</td><td>계산 또는 호출한 position 값을 Programmer에 올리고 저장 여부를 사용자에게 맡김</td><td>자동 pool write 없음</td></tr>
+      <tr><td>Preset Mode</td><td>Group Pool / Position Preset Pool</td><td>Tilt × Pan 조합 수, 시작 slot, merge/duplicate policy를 확인 후 대량 저장</td><td>pool 충돌과 기존 cue 참조 확인</td></tr>
+      <tr><td>Calibration</td><td>Position attribute / reference profile</td><td>기준 위치를 순서대로 안내하고 사용자가 조준한 값을 저장</td><td>operator-in-the-loop 필수</td></tr>
+      <tr><td>Store Offset</td><td>개별 fixture pan/tilt offset</td><td>생성 후 어긋난 fixture를 offset workflow로 보정 안내</td><td>generated preset 직접 덮어쓰기 금지</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="phrases">
+    <div class="section-head"><div class="section-num">07</div><div><h2>자연어 매칭</h2><p class="section-lead">조명감독이 말할 법한 표현과 Copilot 라우팅입니다.</p></div></div>
+    <div class="match-grid">
+      <div class="match"><b>"포지션 프리셋 자동으로 만들어줘"</b><span>create_position_presets</span></div>
+      <div class="match"><b>"기준 포지션 보정해줘"</b><span>calibrate_position_profile</span></div>
+      <div class="match"><b>"팬 5점, 틸트 3단으로"</b><span>grid.pan_count=5 · grid.tilt_count=3</span></div>
+      <div class="match"><b>"선택한 장비만 프로그래머에 올려"</b><span>mode=programmer</span></div>
+      <div class="match"><b>"기존 거 건드리지 말고 따로 만들어"</b><span>store.policy=duplicate</span></div>
+      <div class="match"><b>"홀수 대라 가운데 기준으로 대칭"</b><span>middle_mode=true</span></div>
+    </div>
+  </section>
+
+  <section id="implementation">
+    <div class="section-head"><div class="section-num">08</div><div><h2>구현 후보</h2><p class="section-lead">AI Lighting Copilot에 넣을 수 있는 기능 단위입니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>후보 ID</th><th>기능</th><th>입력</th><th>출력</th><th>안전 조건</th></tr></thead><tbody>
+      <tr><td><code>position-calibration-runbook</code></td><td>기준 포지션 보정 안내</td><td>group, fixture type</td><td>CalibrationProfile draft</td><td>사용자 조준 확인</td></tr>
+      <tr><td><code>position-grid-plan</code></td><td>Tilt × Pan 조합 계획</td><td>tilt set, pan set</td><td>preset count, naming plan</td><td>같은 orientation group만</td></tr>
+      <tr><td><code>position-programmer-apply</code></td><td>선택 fixture에 포지션 후보 적용</td><td>selection, pan/tilt pair</td><td>Programmer values</td><td>자동 저장 금지</td></tr>
+      <tr><td><code>position-preset-batch</code></td><td>Position preset 대량 생성</td><td>group, grid, start slot</td><td>position preset set</td><td>pool 충돌 확인</td></tr>
+      <tr><td><code>position-store-offset-guide</code></td><td>설치 오차 보정 안내</td><td>misaligned fixture report</td><td>Store Offset runbook</td><td>preset 덮어쓰기 금지</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="conclusion">
+    <div class="section-head"><div class="section-num">09</div><div><h2>결론</h2><p class="section-lead">Copilot v1의 현실적인 목표입니다.</p></div></div>
+    <div class="summary-grid">
+      <div class="callout"><strong>자동 계산보다 먼저 보정과 검증</strong><p>포지션 프리셋 자동화의 본질은 기준 보정값을 신뢰할 수 있게 만드는 것입니다. Calibration review 없이는 대량 생성하지 않습니다.</p></div>
+      <div class="callout safe"><strong>MAgics 계산식은 미확인</strong><p>공개 자료만으로 내부 계산식은 알 수 없습니다. Copilot은 operator-guided calibration과 안전한 저장 계획부터 구현하고, Pan/Tilt 자동 계산은 별도 실측 후 확장해야 합니다.</p></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    원문 Markdown: <a href="./18-addondesk-position-preset-research.md">18-addondesk-position-preset-research.md</a>.
+    공개 자료 기반 리서치이며 유료 플러그인 내부 구현을 포함하지 않습니다.
+  </footer>
+</main>
+</body>
+</html>
