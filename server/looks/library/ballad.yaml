@@ -1,7 +1,15 @@
 # Built-in look library — ballad (REQ-LOOKLIB-002).
 #
 # See worship.yaml for the shared authoring rules (full RGB always, roles never
-# numbers, no movement, percent values).
+# numbers, 움직임은 §6.4 가 정한 자리에만, percent values).
+#
+# 움직임이 가장 적은 장르다 — 일곱 룩 중 **하나**(`ballad-second-verse-rise`)만 움직인다.
+# 근거 둘. 정본 §6 표가 벌스를 「정지 또는 아주 느림, **보컬 구간은 고정**」이라 했고
+# 발라드의 벌스는 정의상 보컬 구간이므로 `ballad-verse-lavender` 는 정지로 둔다.
+# 그리고 §6.4 의 「빠름 = 드롭 전용」 — 발라드에 드롭은 없다. D4·D5 룩
+# (`ballad-chorus-swell`·`ballad-last-chorus-open`)에 움직임을 적으면 대역이 자동으로
+# 중속·빠름이 되고, 그것이 바로 위 「A BALLAD'S 5 IS NOT A ROCK 5」 문단이 경고하는
+# 실패다. 움직이는 하나는 회차가 올라가는 자리, 즉 상승 구간이다.
 #
 # WHAT A BALLAD NEEDS: restraint. This genre is the one most easily ruined by
 # giving it everything, so it is deliberately the smallest set here (seven
@@ -83,7 +91,7 @@ looks:
     genre: "ballad"
     dynamics: 3
     # Warm drifting toward pink — the colour moves before the intensity does.
-    roles: ["프론트", "백라이트", "배경"]
+    roles: ["프론트", "백라이트", "배경", "무버"]
     aliases: ["세컨 벌스", "second verse rise", "상승"]
     mood_keywords: ["차오르는", "분홍빛", "감정적인", "세컨벌스", "rising", "tender"]
     attributes:
@@ -91,6 +99,12 @@ looks:
       ColorRGB_R: 100
       ColorRGB_G: 58
       ColorRGB_B: 62
+    movement:
+      - attribute: "Pan"
+        phase_from: 0
+        phase_to: 360
+        relative: 12
+        speed: 12
 
   # --- dynamics 4-5: chorus and the last chorus ----------------------------
   - look_id: "ballad-chorus-swell"

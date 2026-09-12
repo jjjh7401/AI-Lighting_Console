@@ -334,15 +334,19 @@ class TestControlProbes:
     def test_complete_is_false_for_a_reason_that_is_not_the_axis_rung(self):
         """비공허성 — 위 시험이 `complete` 를 안 재는 이유를 값으로 남긴다.
 
-        이 룩은 역할이 셋(`백라이트` · `사이드` · `탑`)이고 대조군 리그에는 그룹이
-        하나뿐이라 둘은 `unmapped` 다. 그것이 `complete=False` 를 만들며 축 보류와
-        **다른 사실**이다 — 둘을 섞으면 축 배선을 지워도 `complete` 는 그대로 거짓이라
-        회귀가 안 보인다.
+        이 룩은 역할이 넷(`백라이트` · `사이드` · `탑` · `무버`)이고 대조군 리그에는
+        그룹이 하나뿐이라 셋은 `unmapped` 다. 그것이 `complete=False` 를 만들며 축
+        보류와 **다른 사실**이다 — 둘을 섞으면 축 배선을 지워도 `complete` 는 그대로
+        거짓이라 회귀가 안 보인다.
+
+        `무버` 는 2026-09-12 카드 t359 가 이 룩에 더한 것이다. 미매핑 집합이 셋으로
+        늘어난 것은 이 대조군이 재는 사실(「complete 을 거짓으로 만든 것은 축이 아니라
+        미매핑이다」)을 바꾸지 않는다 — 오히려 강화한다.
         """
         payload, _port = _dispatch(_rig(zoom=True))
         assert payload["report"]["complete"] is False
         assert payload["report"]["skipped"] == []
-        assert {u["role"] for u in payload["report"]["unmapped"]} == {"사이드", "탑"}
+        assert {u["role"] for u in payload["report"]["unmapped"]} == {"사이드", "탑", "무버"}
 
     def test_an_unreadable_console_does_not_hold_anything(self):
         """부재를 성공으로 읽히게 하지 않는 쪽의 거울상: **판독 실패를 부재로 읽지

@@ -44,7 +44,15 @@ _REPORT_MODULE = Path("server/looks/report.py")
 # 더했다. 두 룩 모두 역할이 **하나뿐**이므로(`rock-wing-embers` = 사이드,
 # `edm-haze-shafts` = 백라이트) 쌍 수는 각각 +1 이다: rock 26→27, edm 26→27.
 # worship·ballad 는 안 움직인다.
-_PAIR_COUNTS = {"worship": 25, "rock": 27, "ballad": 20, "edm": 27}
+# 자산에서 잰 `(룩, 역할)` 쌍 수. 2026-09-12 카드 t359 가 움직이는 룩 열다섯에
+# `무버` 역할을 더하면서 넷 다 늘었다 (worship 25→27 · rock 27→32 · ballad 20→21 ·
+# edm 27→34). 이 표는 인용이 아니라 **재측정값**이고, 그래서 아래 검사가 자산에 대고
+# 다시 세어 맞춰 본다 — 표만 고치고 자산이 안 바뀌면 그 자리에서 빨개진다.
+_PAIR_COUNTS = {"worship": 27, "rock": 32, "ballad": 21, "edm": 34}
+
+# distinct 역할 종수. 여섯이던 것이 t359 로 일곱이 됐다 — 네 장르 모두 움직이는 룩을
+# 하나 이상 갖고, 그것이 위치 여섯 위에 `무버` 를 얹는다.
+_DISTINCT_ROLES = 7
 
 
 @pytest.fixture(scope="module")
@@ -99,7 +107,9 @@ class TestUnmappedRoles:
             bundle = make_bundle(looks, groups=((99, "관계 없는 그룹"),))
             report = build_report(bundle, _all_ok(bundle))
             assert report.unmapped_count == expected
-            assert len(report.unmapped_roles) == 6, "distinct는 언제나 6종이다"
+            assert len(report.unmapped_roles) == _DISTINCT_ROLES, (
+                f"distinct는 언제나 {_DISTINCT_ROLES}종이다"
+            )
 
     def test_a_single_unmapped_role_can_contribute_many_pairs(self, library):
         # 역할 하나만 미매핑이어도 쌍 카운트는 1이 아니다.
@@ -294,8 +304,8 @@ class TestAggregateArithmetic:
         # 이 규칙이 왜 필요한지 고정한다 — distinct로 세면 합계가 어긋난다.
         bundle = make_bundle(looks_for_genre(library, "worship"), groups=((99, "무관"),))
         report = build_report(bundle, _all_ok(bundle))
-        assert report.unmapped_count == 25
-        assert len(report.unmapped_roles) == 6
+        assert report.unmapped_count == _PAIR_COUNTS["worship"]
+        assert len(report.unmapped_roles) == _DISTINCT_ROLES
         assert report.unmapped_count != len(report.unmapped_roles)
 
 
