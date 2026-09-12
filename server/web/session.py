@@ -115,6 +115,7 @@ from server.design.song_plan import (
 )
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
+from server.looks.song_history import SongLookMemory
 from server.looks.songcue import (
     SongCueBundle as TimingSongCueBundle,
 )
@@ -4398,6 +4399,12 @@ class ChatSession:
         # bare follow-up modification can anchor to the real target.
         self._last_created: LastCreated | None = None
         self._vectorworks_upload = _UploadedVectorworksExport()
+        # 카드 t358 — 이 세션이 이미 무대에 올린 룩. 정본 §7 후반(곡 사이 재사용은
+        # 결함)의 유일한 기억이고, 수명이 **세션 하나**라는 것이 그 규범의 범위와
+        # 같다: 한 공연 안에서는 안 되풀이하고, 다음 공연은 빈손에서 시작한다.
+        # 프로세스 전역이면 어제 쓴 룩이 오늘의 팔레트를 좁히고, 툴 호출 범위
+        # (``ExecutionContext``)면 곡 하나를 못 넘긴다.
+        self._song_look_memory = SongLookMemory()
         # SPEC-COPILOT-IMGLAYOUT-001 M1 — the layout-sketch attachment (most
         # recent only; a new upload replaces it). M3's ``analyse_layout_image``
         # tool reads this field; M1 only stores it.
@@ -4471,6 +4478,10 @@ class ChatSession:
             # SPEC-COPILOT-SONGCONFIRM-001 M2: prepare_songcue 가 세션의 확정 곡
             # 분석 기록을 읽는 통로 — 위 두 뷰와 같은 읽기 투과 형태다(REQ-009).
             song_analysis=_SongAnalysisView(self),
+            # 카드 t358: prepare_songcue 가 다음 곡의 룩을 고를 때 피할 대상.
+            # 읽기 투과 뷰가 아니라 객체 자체를 넘기는 이유는 통째로 교체되지
+            # 않기 때문이다 — 세션 내내 같은 객체가 자란다.
+            song_look_memory=self._song_look_memory,
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port

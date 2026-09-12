@@ -69,8 +69,10 @@ from server.looks.report import build_report, to_korean
 from server.looks.resolver import resolve_roles
 from server.looks.rig_axes import MEASURED_ATTRIBUTE_SPELLINGS, RigAxisPresence
 from server.looks.schema import LookLibrary
+from server.looks.song_history import SongLookMemory
 from server.looks.songcue import (
     EXPLICIT_DYNAMICS_REQUIRED,
+    LOOK_POOL_EXHAUSTED,
     TRIGGER_TYPE_TIME,
     SectionTimeError,
     SequenceNumberError,
@@ -2237,6 +2239,7 @@ def build_toolset(
     uploaded_sheet: UploadedSheetPort | None = None,
     spatial_memory: SpatialMemory | None = None,
     song_analysis: SongAnalysisPort | None = None,
+    song_look_memory: SongLookMemory | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -2306,6 +2309,13 @@ def build_toolset(
     as before and spends the full per-fixture walk every call — deliberate, so
     the existing suites that count round trips keep measuring the unchanged
     path and only production wiring opts in.
+
+    ``song_look_memory`` (카드 t358) 는 이 **세션**이 이미 무대에 올린 룩의 기억이고,
+    ``prepare_songcue`` 가 다음 곡의 룩을 고를 때 피할 대상이다(정본 §7: 곡 사이
+    재사용은 결함). 생략하면(기본값) 피할 것이 없어 룩 선택이 고치기 전과 바이트
+    동일하다 — 기억을 여기서 만들지 않는 이유는 수명이다. ``build_toolset`` 은 세션마다
+    한 번 불리지만 이 객체의 주인은 세션이어야 하고(``server/web/session.py``),
+    툴 레지스트리가 만들면 「누가 이 기억을 비우는가」의 답이 사라진다.
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
     group_approval = group_approval_port or DenyAllApprovalPort()
@@ -3115,12 +3125,17 @@ def build_toolset(
                     tool_call_id=call.id, name=call.name, content=content, is_error=True
                 )
             )
+        # 카드 t358 — 앞 곡들이 이미 쓴 룩. **스냅샷**이라는 것이 요점이다: 이 곡을
+        # 만드는 동안 기억은 안 자라므로, 같은 곡의 후렴 2회차가 1회차를 피하는 일이
+        # 없다(정본 §7 의 비대칭 — 곡 안의 반복은 미덕이다).
+        history_before = song_look_memory.used() if song_look_memory is not None else ()
         try:
             selections = map_sections_to_looks(
                 sections,
                 looks,
                 genre_selection.genre,
                 explicit_dynamics=explicit_dynamics,
+                used_look_ids=history_before,
             )
         except ValueError as error:
             return _error_result(call, f"song sections cannot be mapped: {error}")
@@ -3227,6 +3242,41 @@ def build_toolset(
             timing = build_songcue_timing(bundle, timecode_number=timecode_number, axes=axes)
         except (SequenceNumberError, SongCueBundleError, ValueError) as error:
             return _error_result(call, f"song cue list cannot be built: {error}")
+        # 카드 t358 — 곡 사이 재사용을 **의도가 아니라 결과로** 잰다. 선택 단계의
+        # `reuse_reason` 은 「그 세기에 남은 새 룩이 없었다」를 말하고, `reused_look_ids`
+        # 는 저장될 큐의 룩을 앞 곡 기억과 실제로 대조한 것이다. 둘을 나란히 두는 이유는
+        # 재사용으로 내려앉는 길이 둘이기 때문이다: 풀 고갈(선택 단계), 그리고 새 룩이
+        # 리그에 안 묶이거나 밀도 회전이 쓴 룩을 앞으로 데려온 경우(조립 단계). 앞쪽만
+        # 보고하면 뒤쪽은 조용히 지나간다.
+        remembered_before = set(history_before)
+        stored_look_ids = tuple(
+            dict.fromkeys(
+                section.selection.look.look_id
+                for section in bundle.stored_sections
+                if section.selection.look is not None
+            )
+        )
+        cross_song_looks: dict[str, object] = {
+            "memory_wired": song_look_memory is not None,
+            "history_before": list(history_before),
+            "stored_look_ids": list(stored_look_ids),
+            "reused_look_ids": [
+                look_id for look_id in stored_look_ids if look_id in remembered_before
+            ],
+            "pool_exhausted_sections": [
+                {
+                    "index": selection.section.index,
+                    "name": selection.section.name,
+                    "look_id": None if selection.look is None else selection.look.look_id,
+                    "reason": LOOK_POOL_EXHAUSTED,
+                }
+                for selection in selections
+                if selection.reuse_reason == LOOK_POOL_EXHAUSTED
+            ],
+            # 콘솔에 나간 뒤에만 채워진다 — 아래 실행 갈래에서 덮어쓴다.
+            "remembered": [],
+        }
+        songconfirm_fields["cross_song_looks"] = cross_song_looks
         if not bundle.commands:
             report = build_songcue_report(bundle)
             return ToolExecution(
@@ -3280,6 +3330,11 @@ def build_toolset(
         is_error = execution.result.is_error
         if payload.get("gate_status") == _LOCKED:
             is_error = False
+        # 무대에 **실제로 나간** 룩만 기억한다. 게이트가 막았거나 감독이 거절한 회차는
+        # 콘솔에 0건이 나갔으므로(아래 `songcue_refusal`), 다음 곡이 피할 이유가 없다 —
+        # 안 나간 룩을 기억하면 팔레트만 조용히 좁아진다.
+        if song_look_memory is not None and not execution.result.is_error:
+            cross_song_looks["remembered"] = list(song_look_memory.remember(stored_look_ids))
         requery_payload = None
         if not execution.result.is_error:
             try:
@@ -3329,6 +3384,16 @@ def build_toolset(
                     "끝나면 앱이 되읽어 확인합니다."
                 ),
             }
+        # 카드 t358 — 재사용으로 내려앉은 것을 **감독이 읽는 자리**에도 적는다. 페이로드
+        # 에만 적으면 모델이 옮겨 말해 주기를 기대하는 것이고, 그 기대는 화면에서
+        # 「조용한 재사용」과 구별되지 않는다. 재사용이 0건이면 한 글자도 안 붙는다
+        # (오늘의 문면과 바이트 동일) — 침묵이 결함인 것은 되풀이가 있을 때뿐이다.
+        reuse_notice = ""
+        reused_ids = cross_song_looks["reused_look_ids"]
+        if isinstance(reused_ids, list) and reused_ids:
+            reuse_notice = "앞 곡이 쓴 룩을 이 곡이 다시 썼습니다 — " + " · ".join(reused_ids) + "."
+            if cross_song_looks["pool_exhausted_sections"]:
+                reuse_notice += " 그 세기에 아직 안 쓴 룩이 남아 있지 않습니다."
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -3340,7 +3405,8 @@ def build_toolset(
             # 카드 t277 — 명령은 다 실행됐는데 구간 하나가 큐를 못 받은 회차가
             # 여기다. 「요청한 명령을 모두 실행했습니다」는 참이고, 그래서 더
             # 위험하다: 보내지 않은 명령은 어느 표에도 안 나타난다.
-            operator_notice=songcue_refusal or report.to_operator_notice(),
+            operator_notice=songcue_refusal
+            or " ".join(part for part in (report.to_operator_notice(), reuse_notice) if part),
         )
 
     # -- precheck_patch (REQ-PRECHK-018 — the pre-show rig check) --------------

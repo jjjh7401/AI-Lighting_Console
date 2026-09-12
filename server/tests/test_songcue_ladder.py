@@ -153,16 +153,26 @@ class TestTheChorusReturns:
         assert bundle.stored_sections[0].ladder == ()
 
 
-class TestCrossSongReuseIsNotWhatThisFixes:
-    """대조군 ②(정본 §7 후반) — 곡 **사이**의 재사용은 이 카드가 고치는 것이 아니다.
+class TestTheBundleBuilderHoldsNoCrossSongState:
+    """대조군 ②(정본 §7 후반) — 곡 **사이**의 재사용은 이 계층에서 안 고친다.
 
-    §7 의 비대칭이 그것이다: 곡 안의 반복은 미덕이고 곡 사이의 반복은 결함이다. 사다리는
-    한 번들(= 한 곡) 안에서만 오른다 — 그러므로 다음 곡의 첫 후렴은 앞 곡의 첫 후렴과
-    **값이 같다**. 그 재사용을 없애는 것은 룩 **선택**의 문제이고 정본 §12 항목 2(카드
-    t357 계열)의 몫이다. 여기서는 그 경계를 실측으로 못박아 둔다.
+    **카드 t358 이 이 클래스를 고쳐 썼다.** 원래 이름은
+    ``TestCrossSongReuseIsNotWhatThisFixes`` 였고, 「다음 곡의 첫 후렴은 앞 곡과 값이
+    같다」를 **현재 동작**으로 적어 두었다 — 즉 t358 이 없애려던 결함을 이 파일이 기준선
+    으로 들고 있었다. 지우지 않고 뜻을 바꾼 이유는, 같은 단정이 t358 이후에는 **경계**를
+    재기 때문이다.
+
+    경계는 이렇다: ``build_songcue_bundle`` 은 여전히 곡 사이의 기억을 **하나도** 갖지
+    않는다. 같은 룩을 손으로 들려 주면 두 곡의 값 라인은 바이트 동일하다. 곡 B 가 다른
+    룩으로 열리는 것은 한 계층 앞(``map_sections_to_looks`` 의 ``used_look_ids``)에서
+    일어나고, 그 기억의 주인은 세션이다(``server/looks/song_history.py``). 이 분리가
+    깨지면 곡 사이 회피가 곡 안으로 새어 후렴 2회차가 1회차를 피하게 되므로, 여기서
+    「번들은 기억이 없다」를 계속 재는 것이 §7 의 비대칭을 지키는 일이다.
+
+    곡 사이 축 자체의 실측은 ``server/tests/test_songcue_cross_song.py`` 에 있다.
     """
 
-    def test_a_second_song_starts_from_the_base_look_again(self):
+    def test_one_look_handed_to_two_bundles_still_yields_the_same_lines(self):
         sections = parse_sections((("Chorus", "0:00"), ("Chorus", "0:40")))
         look = _look("chorus", dimmer=90, zoom=18)
         first_song = _bundle_of(*((section, look) for section in sections), title="Song A")
@@ -170,6 +180,24 @@ class TestCrossSongReuseIsNotWhatThisFixes:
 
         assert _value_lines(first_song) == _value_lines(second_song)
         assert _value_lines(second_song)[0] == _values_line_of(look)
+
+    def test_the_selection_layer_is_where_the_second_song_turns_away(self):
+        """같은 구간 모양에 기억만 더하면 룩이 바뀐다 — 번들이 아니라 **선택**이 바꾼다.
+
+        위 단정이 「곡 사이 재사용이 아직 안 고쳐졌다」로 다시 읽히지 않게 하는 대조군이다.
+        """
+        library = load_library_from_dir()
+        sections = parse_sections((("Chorus", "0:00"), ("Chorus", "0:40")))
+
+        song_a = map_sections_to_looks(sections, library, "edm")
+        song_b = map_sections_to_looks(
+            sections,
+            library,
+            "edm",
+            used_look_ids=[selection.look.look_id for selection in song_a],
+        )
+
+        assert song_a[0].look.look_id != song_b[0].look.look_id
 
 
 class TestTheMeasuredRegression:
