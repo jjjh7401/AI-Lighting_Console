@@ -302,7 +302,8 @@ class TestFxPatternIdInference:
     def test_shipped_fx_ids_carry_the_pattern_slug_scene_matching_infers(self):
         library = load_fx_library_from_dir()
 
-        assert len(library.fx) == 19
+        # 19 + 3 (card t370: chase-horizontal, chase-bounce-run, sweep-vshape-swing).
+        assert len(library.fx) == 22
         for entry in library.fx:
             tokens = frozenset(re.split(r"[-_\s]+", entry.fx_id.casefold()))
             assert entry.pattern in tokens, entry.fx_id
