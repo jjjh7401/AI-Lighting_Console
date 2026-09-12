@@ -40,6 +40,7 @@ __all__ = [
     "SECTION_GAINS",
     "synthesize_long_section_track",
     "synthesize_track",
+    "synthesize_track_with_steps",
 ]
 
 #: 분석기가 쓰는 것과 같은 눈금. 22.05kHz 면 클릭의 상승 모서리가 충분히 살고,
@@ -133,6 +134,31 @@ def synthesize_long_section_track(
         sample_rate=sample_rate,
         boundaries_ms=LONG_FIXTURE_BOUNDARIES_MS,
         gains=LONG_SECTION_GAINS,
+    )
+
+
+def synthesize_track_with_steps(
+    *,
+    bpm: float = FIXTURE_BPM,
+    duration_ms: int,
+    sample_rate: int = SAMPLE_RATE,
+    boundaries_ms: tuple[int, ...],
+    gains: tuple[float, ...],
+) -> bytes:
+    """임의의 경계·이득 조합 — 대조군 실험 전용(t371).
+
+    :func:`synthesize_track` · :func:`synthesize_long_section_track` 은 고정된
+    정답 하나를 쓰지만, 이 함수는 "이 특정 계단 배치에서 무슨 일이 나는가"를
+    직접 재는 대조군 실험(예: 원거리의 큰 계단이 작은 진짜 경계를 누르는지)에
+    쓴다. 파형 규칙은 여전히 :func:`_render` 하나를 공유한다 — 두 벌을 두면
+    갈라지고, 갈라지면 대조군이 재는 분석기와 정답 픽스처가 서로 달라진다.
+    """
+    return _render(
+        bpm=bpm,
+        duration_ms=duration_ms,
+        sample_rate=sample_rate,
+        boundaries_ms=boundaries_ms,
+        gains=gains,
     )
 
 

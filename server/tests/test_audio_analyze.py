@@ -23,6 +23,7 @@ from .fixtures.audio import (
     FIXTURE_BPM,
     FIXTURE_D_LEVELS,
     synthesize_track,
+    synthesize_track_with_steps,
 )
 
 BPM_TOLERANCE_RATIO = 0.03
@@ -219,3 +220,93 @@ class TestTheSameBytesGiveTheSameAnswer:
         assert again.bpm == result.bpm
         assert again.boundaries_ms == result.boundaries_ms
         assert [c.d_level for c in again.d_candidates] == [c.d_level for c in result.d_candidates]
+
+
+class TestARelativeNoveltyFloorSurvivesOneOutlierStep:
+    """t371 — 곡 안의 유독 큰 계단 하나가, 그보다 작은 진짜 경계를 눌러
+    지우면 안 된다(AC-MUSICSYNC-011 의 구간 경계 판정 폭을 그대로 쓴다).
+
+    ``server/audio/analyze.py`` 의 ``_boundaries_from_rms`` 는 절대 문턱과
+    상대 문턱을 **둘 다** 넘는 봉우리만 경계로 받는다. 수정 전에는 상대
+    문턱이 ``novelty.max()`` 하나에 매여 있어서, 곡 안에 유독 큰 계단이
+    하나만 있어도 그 계단이 나머지 모든 경계의 기준을 밀어올렸다 —
+    ``reports/t371/audio_probe.py`` 실측(수정 전): 5구간 합성곡에서 4번째
+    계단(진폭 0.06→1.00)이 2번째 계단(0.35→0.85)을 지웠다.
+
+    이 클래스의 첫 시험(outlier survives)이 그 결함의 재현이고, 나머지는
+    카드가 요구한 회귀·adversarial 대조군이다.
+    """
+
+    BOUNDARY_TOLERANCE_MS = BOUNDARY_TOLERANCE_MS
+
+    def _boundaries(self, **kwargs) -> tuple[int, ...]:
+        track = synthesize_track_with_steps(bpm=FIXTURE_BPM, **kwargs)
+        outcome = analyze(track)
+        assert isinstance(outcome, AnalysisResult), getattr(outcome, "reason", outcome)
+        return outcome.boundaries_ms
+
+    def _assert_all_planted_boundaries_survive(
+        self, planted: tuple[int, ...], detected: tuple[int, ...]
+    ) -> None:
+        misses = [
+            expected
+            for expected in planted
+            if not any(abs(found - expected) <= self.BOUNDARY_TOLERANCE_MS for found in detected)
+        ]
+        assert misses == [], f"미검출 경계 {misses} · 검출 {detected}"
+
+    def test_a_moderate_step_survives_a_much_larger_outlier_step_elsewhere(self):
+        # A — 원본 재현. 진폭 [0.10, 0.35, 0.85, 0.06, 1.00], 8초씩 5구간.
+        # 16000ms 의 계단(0.35→0.85)이 32000ms 의 훨씬 큰 계단(0.06→1.00)
+        # 때문에 지워지면 안 된다.
+        planted = (0, 8000, 16000, 24000, 32000)
+        detected = self._boundaries(
+            duration_ms=40_000,
+            boundaries_ms=planted,
+            gains=(0.10, 0.35, 0.85, 0.06, 1.00),
+        )
+        self._assert_all_planted_boundaries_survive(planted, detected)
+
+    def test_the_control_without_an_outlier_still_detects_every_boundary(self):
+        # B — 대조군: 마지막 계단을 완만하게 바꿔 "유독 큰 계단"을 제거해도
+        # 나머지 경계 검출은 그대로여야 한다 — 회귀 확인.
+        planted = (0, 8000, 16000, 24000, 32000)
+        detected = self._boundaries(
+            duration_ms=40_000,
+            boundaries_ms=planted,
+            gains=(0.10, 0.35, 0.85, 0.40, 0.90),
+        )
+        self._assert_all_planted_boundaries_survive(planted, detected)
+
+    def test_the_step_alone_is_still_detected(self):
+        # C — 대조군: 문제의 계단 하나만 단독으로 두면 원래도 잡혔다.
+        planted = (0, 20_000)
+        detected = self._boundaries(duration_ms=40_000, boundaries_ms=planted, gains=(0.35, 0.85))
+        self._assert_all_planted_boundaries_survive(planted, detected)
+
+    def test_a_track_with_no_steps_invents_no_boundary(self):
+        # 카드가 명시적으로 요구한 대조군: 계단이 없는 곡에서 경계를
+        # 지어내면 상대 문턱을 없앤 것과 같은 결함으로 되돌아간 것이다 —
+        # analyze.py 의 자기 docstring 이 경고하는 바로 그 실패 형태.
+        detected = self._boundaries(duration_ms=20_000, boundaries_ms=(0,), gains=(0.5,))
+        assert detected == (0,), f"계단 없는 곡에서 경계를 지어냈다: {detected}"
+
+    def test_a_quiet_track_with_real_steps_still_detects_them(self):
+        # 절대 진폭이 작아도 로그 비율 판정은 스케일 불변이어야 한다 —
+        # 조용한 곡이라고 진짜 계단이 사라지면 안 된다.
+        planted = (0, 15_000, 30_000)
+        detected = self._boundaries(
+            duration_ms=45_000, boundaries_ms=planted, gains=(0.02, 0.08, 0.03)
+        )
+        self._assert_all_planted_boundaries_survive(planted, detected)
+
+    def test_several_equal_sized_steps_are_all_detected(self):
+        # 동일 크기 계단 여럿 — 중앙값 기준 문턱이 이들 중 하나를 특별
+        # 취급해 나머지를 누르지 않아야 한다.
+        planted = (0, 10_000, 20_000, 30_000)
+        detected = self._boundaries(
+            duration_ms=40_000,
+            boundaries_ms=planted,
+            gains=(0.10, 0.20, 0.40, 0.80),
+        )
+        self._assert_all_planted_boundaries_survive(planted, detected)
