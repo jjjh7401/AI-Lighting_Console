@@ -81,12 +81,14 @@ _HIT_STEP = 5
 _PINCH_STEP = -5
 _DIMMER_CEILING = 100
 _BEAM_FLOOR = 1
-#: 이름난 칸을 다 쓴 뒤의 오름길 — 남은 것은 밝기의 머리 공간뿐이다. 정본 §6 의 「마지막
-#: 드롭은 전 리그 최대」와 같은 방향이고, 천장에서 값이 더 안 움직이므로 유한하다: 그
-#: 지점에서 비로소 큐를 못 세운다(마지막 수단의 건너뜀).
-_LADDER_CLIMB: tuple[str, ...] = LADDER_RUNGS + (LADDER_DIMMER_HIT,) * (
-    _DIMMER_CEILING // _HIT_STEP
-)
+#: **찍는 액센트** — 정본 §6.1 의 일곱 중 오늘의 어휘가 실제로 발화하는 둘. 한 큐에
+#: **하나**만 실린다(감독 결정 2026-09-12: 밝기만 누적하고 나머지는 큐당 하나). 회차가
+#: 깊어지면 쌓지 않고 **갈아탄다** — 그래서 여기는 순서 있는 목록이고, 깊이가 그 안을 돈다.
+_MARKING_ACCENTS: tuple[str, ...] = (LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH)
+#: 오를 수 있는 깊이의 상한 — 밝기의 머리 공간(천장까지의 걸음 수)에 액센트 갈아타기를
+#: 더한 것. 정본 §6 의 「마지막 드롭은 전 리그 최대」와 같은 방향이고, 천장에서는 값이 더
+#: 안 움직이므로 유한하다: 그 지점에서 비로소 큐를 못 세운다(마지막 수단의 건너뜀).
+_MAX_CLIMB = _DIMMER_CEILING // _HIT_STEP + len(_MARKING_ACCENTS)
 
 
 @dataclass(frozen=True)
@@ -1015,8 +1017,8 @@ def _distinct_values_line(
         return base, ()
     if previous[0] == section.index:
         return None, ()
-    for rung_count in range(_ladder_start(section), len(_LADDER_CLIMB) + 1):
-        rungs = _LADDER_CLIMB[:rung_count]
+    for depth in range(_ladder_start(section), _MAX_CLIMB + 1):
+        rungs = _climb_rungs(depth)
         candidate = _values_line(escalate_attributes(look.attributes, rungs))
         if candidate not in emitted:
             return candidate, rungs
@@ -1034,13 +1036,41 @@ def _ladder_start(section: SongCueSection) -> int:
     return max(1, section.instance - 1)
 
 
+# @MX:ANCHOR: [AUTO] 한 큐에 **찍는 액센트는 하나** — 밝기만 누적한다(정본 §6.1 [HARD],
+#   감독 결정 2026-09-12).
+# @MX:REASON: 고치기 전에는 칸 목록의 앞자락을 그대로 잘라 썼기 때문에(`_LADDER_CLIMB[:n]`)
+#   깊이가 3에 닿으면 줌 좁힘과 아이리스 좁힘이 **함께** 나갔다 — 실측(2026-09-12,
+#   `051e98b`)에서 후렴 4회차 한 큐가 `Zoom At 13` 과 `Iris At 55` 를 같이 실었고 둘 다
+#   실제로 값을 바꿨다. §6.1 은 「셋을 한꺼번에 쓰면 아무것도 안 찍힌다」고 못박는다.
+#   되돌리기 쉬운 유혹은 「누적이 §7.1 의 문면이니 앞자락을 자르자」이다. 정본의 두 절이
+#   부딪혔고 감독이 갈래를 정했다 — **누적하는 축은 밝기 하나**이고, 찍는 액센트는
+#   갈아탄다. 밝기를 액센트와 같은 규율로 묶으면 t355 의 성질(반복 회차가 사라지지 않는다)
+#   이 깨진다: 축이 하나도 남지 않는 회차가 생겨 큐가 다시 버려진다.
+def _climb_rungs(depth: int) -> tuple[str, ...]:
+    """깊이 하나가 내는 칸들 — 밝기 히트 여러 개 + 찍는 액센트 **최대 하나**.
+
+    깊이 1은 밝기뿐이고(2회차), 깊이 2부터 액센트가 하나 붙는다. 더 깊어지면 밝기 히트가
+    한 개씩 쌓이는 동안 액센트는 :data:`_MARKING_ACCENTS` 안에서 **갈아탄다** — 누적이
+    아니라 교체다. 그래서 어느 깊이에서든 돌려주는 칸 중 찍는 액센트는 최대 하나다.
+
+    밝기가 천장에 닿으면 그 뒤의 밝기 히트는 값을 안 바꾼다(:func:`_stepped` 가 자른다).
+    그때는 액센트 교체만 값 라인을 가르고, 그것도 다 떨어지면 큐를 못 세운다.
+    """
+    if depth <= 1:
+        return (LADDER_DIMMER_HIT,)
+    hits = (LADDER_DIMMER_HIT,) * (depth - 1)
+    return hits + (_MARKING_ACCENTS[(depth - 2) % len(_MARKING_ACCENTS)],)
+
+
 def escalate_attributes(
     attributes: Sequence[AttributeValue], rungs: Sequence[str]
 ) -> tuple[AttributeValue, ...]:
     """기준 룩에 사다리 칸을 순서대로 더한 값들(정본 §7.1 아껴두기 사다리).
 
-    누적이다 — 「여기까지 그대로 + 하나 더」가 정본의 문면이고, 회차마다 새로 더하는 것이
-    하나이므로 한 큐에 새 액센트가 둘 들어가지 않는다(§6.1).
+    받은 칸을 순서대로 다 더한다 — 무엇을 더할지 고르는 것은 여기가 아니라
+    :func:`_climb_rungs` 의 일이다. 「한 큐에 찍는 액센트 하나」(§6.1)는 그쪽에서 지켜지고,
+    이 함수는 **주어진 대로** 더하므로 손으로 액센트 둘을 넘기면 둘 다 나간다 — 그 성질이
+    검사에서 대조군(누적 복원)을 만들 수 있게 한다.
 
     리그가 그 축을 안 갖거나 이미 한계에 닿은 칸은 **아무것도 바꾸지 않는다** — 없는 축에
     값을 만들어 보내지 않는 것이 이 계층의 규율이다(``Zoom``·``Iris`` 는 M0 프로브가 받은
