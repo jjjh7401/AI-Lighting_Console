@@ -37,6 +37,10 @@ SEQUENCE_TRUNCATED = "sequence_truncated"
 SEQUENCE_NUMBER_UNAVAILABLE = "sequence_number_unavailable"
 EMPTY_SECTIONS = "empty_sections"
 ROLE_UNMAPPED = "role_unmapped"
+#: 이 구간이 앞 곡들이 이미 쓴 룩을 **다시** 골랐다는 표시 — 그 세기에 남은 룩이
+#: 하나도 없었다는 뜻이다(정본 §7: 곡 사이 재사용은 결함). 큐는 그래도 나간다:
+#: 재사용으로 내려앉는 것은 받아들이되, **조용히** 내려앉지는 않는다.
+LOOK_POOL_EXHAUSTED = "look_pool_exhausted"
 #: 이 큐가 선언된 움직임을 못 낸 이유. 셋 다 「조용히 버렸다」의 반대말이다 — 버리는
 #: 것이 카드 t357 이 없애려는 결함이므로, 못 낸 것은 이름과 함께 밖으로 나간다.
 MOVEMENT_BAND_STILL = "movement_band_still"
@@ -123,6 +127,14 @@ class SongCueLookSelection:
     리그에 실제로 묶이는 룩을 이 중에서 고르는 것은 역할 해석을 가진
     ``_section_bundle`` 의 일이다. 기본값이 빈 튜플이므로, 이 필드 없이 만들어진
     선택(기존 호출자·테스트)은 예전과 똑같이 ``look`` 하나로 동작한다.
+    """
+
+    reuse_reason: str | None = None
+    """앞 곡의 룩으로 내려앉았으면 :data:`LOOK_POOL_EXHAUSTED`, 아니면 ``None`` (카드 t358).
+
+    ``reason`` 과 갈라 두는 이유는 둘이 반대말이기 때문이다 — ``reason`` 은 **룩이 없다**,
+    이 필드는 **룩은 있는데 새것이 아니다**. 합치면 큐가 나가는 갈래와 안 나가는 갈래가
+    한 문자열에 섞이고, 보고에서 둘을 다시 가를 방법이 없어진다.
     """
 
 
@@ -320,13 +332,28 @@ def map_sections_to_looks(
     library: LookLibrary,
     genre: str,
     explicit_dynamics: Mapping[int, int] | None = None,
+    *,
+    used_look_ids: Iterable[str] = (),
 ) -> tuple[SongCueLookSelection, ...]:
+    """구간마다 룩 하나. ``used_look_ids`` 는 **앞 곡들이 이미 쓴** 룩 id (카드 t358).
+
+    정본 §7 후반 — 곡 사이에서 룩·고보·이펙트를 재사용하지 않는다. 그 기억은 이 함수가
+    들지 않고(세션이 든다: :class:`server.looks.song_history.SongLookMemory`) **인자로
+    들어온다**. 여기서 들면 한 곡을 만드는 동안 기억이 자라 후렴 2회차가 1회차를 피하게
+    되고, 그것은 정본이 미덕이라 부른 축을 깨는 것이다.
+
+    기본값이 빈 것이므로 기억 없이 부른 호출은 고치기 전과 **바이트 동일**하다 —
+    피할 것이 없으면 아래 재배열이 항등이다.
+    """
     ordered_looks = looks_for_genre(library, genre)
+    # frozenset — 구간마다 다시 훑지 않고, 곡 하나를 만드는 동안 **안 움직인다**.
+    already_used = frozenset(used_look_ids)
     return tuple(
         _map_section_to_look(
             section=section,
             ordered_looks=ordered_looks,
             explicit_dynamics=_explicit_dynamics_for(section, explicit_dynamics),
+            already_used=already_used,
         )
         for section in sections
     )
@@ -720,6 +747,7 @@ def _map_section_to_look(
     section: SongCueSection,
     ordered_looks: Sequence[Look],
     explicit_dynamics: int | None,
+    already_used: frozenset[str] = frozenset(),
 ) -> SongCueLookSelection:
     if explicit_dynamics is not None:
         requested_dynamics = (_validated_dynamics(explicit_dynamics, section.index),)
@@ -735,12 +763,43 @@ def _map_section_to_look(
         return SongCueLookSelection(
             section=section, requested_dynamics=requested_dynamics, reason=UNMAPPED_LOOK
         )
+    ranked, reuse_reason = _ranked_against_history(matches, already_used)
     return SongCueLookSelection(
         section=section,
         requested_dynamics=requested_dynamics,
-        look=matches[0],
-        dynamics_matches=matches,
+        look=ranked[0],
+        dynamics_matches=ranked,
+        reuse_reason=reuse_reason,
     )
+
+
+def _ranked_against_history(
+    matches: Sequence[Look], already_used: frozenset[str]
+) -> tuple[tuple[Look, ...], str | None]:
+    """앞 곡이 안 쓴 룩을 앞으로, 쓴 룩을 뒤로 — 각 묶음 **안의 순서는 그대로**.
+
+    쓴 룩을 목록에서 **빼지 않는** 것이 이 함수의 요점이다. 뒤에 남겨 두면 두 성질이
+    함께 산다: 새 룩이 있으면 그것이 선두라 곡 B 가 곡 A 의 룩으로 열리지 않고
+    (정본 §7), 새 룩이 리그에 하나도 안 묶이면 :func:`_select_bindable` 이 뒤쪽의
+    쓴 룩을 찾아내 큐가 사라지지 않는다. 빼 버리면 두 번째 성질이 「큐 없음」으로
+    바뀌는데, 재사용보다 나쁘다.
+
+    묶음 안의 순서를 그대로 두므로 다이내믹스 오름차순 → ``look_id`` 사전순
+    (``busking.looks_for_genre``)이라는 전순서는 묶음 안에서 살아 있다.
+
+    한계 하나를 적어 둔다: 밀도 경로(:func:`split_selections_for_density`)는 이 목록을
+    **회전**시키므로, 한 구간이 여러 큐로 쪼개지고 새 룩이 모자라면 뒤쪽의 쓴 룩이
+    앞으로 올 수 있다. 그 갈래는 여기서 막지 않고 **저장된 결과를 재서** 보고한다
+    (``prepare_songcue`` 의 ``cross_song_looks.reused_look_ids``) — 의도가 아니라
+    실제로 나간 것을 재는 쪽이 참이다.
+    """
+    fresh = tuple(look for look in matches if look.look_id not in already_used)
+    if not fresh:
+        return tuple(matches), LOOK_POOL_EXHAUSTED
+    if len(fresh) == len(matches):
+        return tuple(matches), None
+    stale = tuple(look for look in matches if look.look_id in already_used)
+    return fresh + stale, None
 
 
 # @MX:NOTE: [AUTO] 이 리그에서 룩이 「묶인다」는 것의 **유일한 정의**. 선택
