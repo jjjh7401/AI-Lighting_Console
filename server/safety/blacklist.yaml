@@ -357,7 +357,59 @@
 #     넣는 것은 `Assign`·`Copy` 동사가 아니라 `Assign Sequence`·`Copy Sequence`
 #     두 오브젝트다. `Copy Page 1 At Page 4` 와 `Assign Preset 4.1 At Executor
 #     101` 은 안 걸리고 `test_writegate.py::UNCHANGED_SAFE` 가 계속 비준한다.
-version: 8
+#
+#   v8 -> v9  SPEC-COPILOT-WRITEGATE-001 (카드 t364) 이 "Set Layout" 을 넣는다.
+#     **자기 SPEC 이 스스로 적어 둔 구멍을 자기가 닫는 리비전**이다 — 그 SPEC 의
+#     `spec.md` §D 「범위 밖 — Layout 요소 좌표 기록」이 *"`Set Layout <l>.<e>
+#     'PositionX' <v>`는 오늘도 `safe`다 … 어떤 툴도 이 형태를 발화하지 않으니
+#     제품이 깨지는 것은 아니지만, `run_commands`는 모델이 손으로 쓴 줄을 받으므로
+#     경로가 열려 있다"* 라고 적어 두고 후속으로 넘겼고, 이것이 그 후속이다.
+#
+#     닫는 것은 **좌표 쓰기의 두 번째 축**이다. v2 가 픽스처 패치 행을 닫은 뒤에도
+#     Layout 요소 좌표는 같은 「쇼파일 상태를 바꾸는 좌표 쓰기」인데 분류가 갈렸다.
+#     실측(main `c0aa6ec`, 오프라인, `validate` -> `classify_command` 순수 호출,
+#     룰셋 v8 — `reports/writegate-t364/01_probe_before.txt`):
+#
+#       Set Layout 1.1 'PositionX' 5.0   category=safe         risky=False
+#       Set Fixture 11 Posx '5.0'        category=blacklisted  risky=True
+#       Set Fixture 11 Rotx '90.0'       category=blacklisted  risky=True
+#
+#     **오브젝트 기준이다** — v4~v8 이 지킨 「동사를 넣지 않는다」 규율을 지키고,
+#     v2 의 `Set Fixture` 가 프로퍼티를 열거하지 않은 일반성도 그대로 미러링한다.
+#     넣는 것은 `Set` 동사가 아니라 `Set Layout` 오브젝트이므로 프로퍼티 차원
+#     전체가 닫힌다 — `'PositionX'` 하나가 아니라 `'PositionY'`·따옴표 없는 형태·
+#     축약 `Set Lay …`·`Set Layout 1.1 Name …` 까지. 리터럴 하나만 잡는 규칙이면
+#     `'PositionY'` 가 열린 채 남았을 것이고, 프로퍼티 이름 열거는 이 헤더 3~4행이
+#     금지하는 open-ended list 다.
+#
+#     MEASURED 비용 (v2 가 세운 `_would_be_held` over `load_corpus()` 절차):
+#     코퍼스 21 시나리오 / 35 줄에서 **새로 보류되는 줄 0건, 시나리오 0건**
+#     (`reports/writegate-t364/02_corpus_delta.txt`). v3(`LoadShow`/`NewShow`)와
+#     같은 모양이다 — 이 저장소에는 MA3 `Layout` 명령줄이 애초에 하나도 없다
+#     (코퍼스 0건, 룰북 0건; `LayoutImageUpload` 계열은 업로드 채널이지 명령이
+#     아니다). 그래서 대표 과제 유형 누적은 v8 그대로 **4 / 10** 이다.
+#
+#     **순서가 의미를 갖는다 — v7 과 같은 조건, v8 과 다른 조건.** 새 항목의 동사
+#     `Set` 은 기존 항목 `Set Fixture` 와 겹친다. 앞으로 뒤집어 재면 귀속이 움직이는
+#     줄이 **2건** 있다 — `Set Fixture 11 Layout 3` 과 `Set Layout 1.1 Fixture 11`,
+#     즉 두 오브젝트 키워드를 한 줄에 담은 교차 형태뿐이고 판정(`blacklisted`)은
+#     어느 순서에서도 같다(`reports/writegate-t364/03_entry_order.txt`). 그래서 이
+#     항목은 목록 **끝**에 둔다 — 그러면 기존 `Set Fixture` 귀속이 바이트 그대로
+#     남는다. 위로 올리지 말 것. 그 배치 자체가 조건이므로
+#     `test_writegate_layout.py` 의
+#     `test_the_entry_order_only_moves_attribution_never_the_verdict` 가 지킨다.
+#
+#     안 담기는 것, 정확히: 다른 **동사**(`Edit|Assign|Copy|Store Layout`), 복수형
+#     `Layouts`(`Layout` 의 접두가 아니다), 오브젝트 키워드가 없는
+#     `Set 'PositionX' 5.0`. `Set Fixture` 주석이 자기 미확인 후보들을 적어 둔 것과
+#     같은 종류의 열린 자리이고 같은 이유로 열려 있다 — `Set` 이 유일한 패치 쓰기
+#     동사라는 것이 작업 가설이며, 뒤집히면 또 한 번의 리비전이 고칠 일이다.
+#
+#     **닫지 않은 나머지 하나.** WRITEGATE §D 가 명시한 두 경로 중 다른 하나
+#     (배포 플러그인의 MA3 Lua API 직접 대입 — `deploy/scan.py` 는 `Cmd()` 문자열
+#     리터럴만 추출한다)는 이 리비전 범위 밖이고 여전히 열려 있다. 그쪽은 폐집합
+#     항목으로 닫을 수 있는 종류가 아니다(Lua AST 스캔이나 능력 플래그가 필요하다).
+version: 9
 
 blacklist:
   - "Delete"
@@ -503,6 +555,29 @@ blacklist:
   # (`Store`·`Assign`·`Copy`) 안전지대가 아니다.
   - "Assign Sequence"
   - "Copy Sequence"
+  # 좌표 쓰기의 두 번째 축 (v9). 위의 `Set Fixture`(v2)가 픽스처 패치 행을 닫았지만
+  # Layout 요소 좌표는 같은 「쇼파일 상태를 바꾸는 좌표 쓰기」인데도 `safe` 였다.
+  # WRITEGATE SPEC 의 §D 가 이 구멍을 스스로 적어 두고 후속으로 넘긴 자리다.
+  #
+  # **오브젝트 기준이고, `Set Fixture` 의 일반성을 그대로 미러링한다.** 프로퍼티를
+  # 열거하지 않으므로 `'PositionX'` 하나가 아니라 `'PositionY'`·따옴표 없는 형태·
+  # 축약 `Set Lay …`·`Set Layout 1.1 Name …` 까지 프로퍼티 차원 전체가 닫힌다.
+  # 프로퍼티 이름 열거는 이 파일 헤더 3~4행의 open-ended list 금지에 걸린다.
+  #
+  # 과다매칭은 설계된 방향이다(`classify.py` 모듈 docstring): 좌표가 아닌
+  # `Set Layout 1.1 Name 'Cue list'` 도 카드를 띄운다 — 여전히 쇼파일 쓰기다.
+  #
+  # **순서: 끝에 둘 것.** 동사 `Set` 이 `Set Fixture` 와 겹치므로 `_match_blacklist`
+  # 의 첫-일치 성질이 걸린다. 앞으로 옮기면 두 오브젝트 키워드를 한 줄에 담은 교차
+  # 형태(`Set Fixture 11 Layout 3` · `Set Layout 1.1 Fixture 11`)의 귀속이 이쪽으로
+  # 바뀐다(판정은 어느 순서에서도 `blacklisted`). 실측:
+  # `reports/writegate-t364/03_entry_order.txt`.
+  #
+  # 안 담기는 것: 다른 동사(`Edit|Assign|Copy|Store Layout`)와 복수형 `Layouts`.
+  # `Set` 이 유일한 패치 쓰기 동사라는 것이 작업 가설이며 — `Set Fixture` 주석이
+  # 자기 후보들에 대해 적어 둔 것과 같은 종류의 미확인 자리다 — 뒤집히면 또 한 번의
+  # 리비전이 고칠 일이다.
+  - "Set Layout"
 
 invoking_verbs:
   verbs:
