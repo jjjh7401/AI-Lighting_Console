@@ -1,0 +1,18 @@
+등록된 도구 38개
+
+단계                                  닿는 도구  도구 이름
+1 무대 분석                                 🟢  get_rig_context, import_lxseq_patch, import_uploaded_sheet, analyse_layout_image, precheck_vectorworks_diff
+2 Patch                                 🟢  patch_fixtures, precheck_patch, resolve_patch_address, resolve_fixture_type, vectorworks_autopatch, apply_vectorworks_patch
+3 하이브리드 그룹                              🟢  arrange_fixtures, classify_arrangement_topology, create_arrangement_groups, import_lxseq_groups
+4 픽셀 튜브 그룹                              —  (없음)
+5 틸트 픽셀 바(픽셀 마스터 그룹)                    —  (없음)
+6 포지션 프리셋                               🟢  get_spatial_context, build_preset_list, import_lxseq_presets
+7 고보/포커스                                —  (없음)
+8 빔 프리셋                                 🟢  find_fx, instantiate_fx, compose_fx
+9 컬러 프리셋                                🟢  find_looks, instantiate_look, find_scene, compile_scene
+10 regen all                            —  (없음)
+11 레이아웃 정리                              🟢  plan_executor_layout, build_magic_sheet
+12 오버라이드                                —  (없음)
+
+도구가 닿는 단계: 7/12
+표에 적었으나 툴셋에 없는 이름: 없음
