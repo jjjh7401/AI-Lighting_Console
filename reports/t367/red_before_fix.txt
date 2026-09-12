@@ -1,0 +1,44 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a65a950d1a43d0675
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a65a950d1a43d0675
+Installed 73 packages in 130ms
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ TestTheDropDoesNotYield.test_the_movement_carrier_is_the_drop_not_the_tied_earliest_chorus _
+
+self = <server.tests.test_songcue_ladder.TestTheDropDoesNotYield object at 0x10acd1290>
+
+    def test_the_movement_carrier_is_the_drop_not_the_tied_earliest_chorus(self):
+        """카드 t367 — 실측(main `7197b2e`): 코러스 두 회차와 드롭이 전부
+        ``edm-drop-crimson`` (다이내믹스 5)을 받으므로 셋 다 대역이 ``fast`` 로
+        묶인다. 고치기 전 ``_movement_carrier`` 는 묶이면 **가장 이른 큐**를 골라
+        코러스 1회차(3번 큐)가 캐리어가 됐다 — 함수 자신의 독스트링이 적은 의도
+        ("하나만 실을 수 있다면 그 하나는 드롭이다")와 반대다.
+        """
+        library = load_library_from_dir()
+        sections = parse_sections(_MEASURED_EIGHT_SECTIONS)
+        selections = map_sections_to_looks(sections, library, "edm")
+    
+        # 비공허성 — 묶임의 원인이 실재한다: 세 큐가 전부 같은 룩을 받는다.
+        chosen = [selection.look.look_id for selection in selections]
+        assert chosen[2] == chosen[4] == chosen[6] == "edm-drop-crimson"
+    
+        bundle = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*FULL_RIG),
+        )
+    
+        carriers = bundle.movement_sections
+        assert len(carriers) == 1, "한 번들은 페이저를 하나만 낸다"
+>       assert carriers[0].cue_number == 7, "캐리어는 드롭(7번 큐)이어야 한다"
+E       AssertionError: 캐리어는 드롭(7번 큐)이어야 한다
+E       assert 3 == 7
+E        +  where 3 = SongCueSectionBundle(section=SongCueSection(name='Chorus', start_ms=50000, index=2, dynamics=(4, 5), requires_explicit...rop', seconds=0.2, source='§9 「극적인 컷 0.2초」 + §6 chorus · drop 행 「짧게」·「짧은 버스트」'), darkness=None, darkness_withheld=None).cue_number
+
+server/tests/test_songcue_ladder.py:342: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_songcue_ladder.py::TestTheDropDoesNotYield::test_the_movement_carrier_is_the_drop_not_the_tied_earliest_chorus
+1 failed, 20 deselected in 1.22s

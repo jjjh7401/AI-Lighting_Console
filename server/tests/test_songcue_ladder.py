@@ -26,6 +26,7 @@ from server.looks.songcue import (
     LADDER_IRIS_PINCH,
     LADDER_RUNGS,
     LADDER_ZOOM_PINCH,
+    MOVEMENT_TURN_BOUNDARY,
     VARIANT_PRIME,
     SongCueLookSelection,
     build_songcue_bundle,
@@ -313,6 +314,37 @@ class TestTheDropDoesNotYield:
         assert second_chorus.section.label == "Chorus"
         assert second_chorus.section.instance == 2
         assert LADDER_DIMMER_YIELD not in second_chorus.ladder
+
+    def test_the_movement_carrier_is_the_drop_not_the_tied_earliest_chorus(self):
+        """카드 t367 — 실측(main `7197b2e`): 코러스 두 회차와 드롭이 전부
+        ``edm-drop-crimson`` (다이내믹스 5)을 받으므로 셋 다 대역이 ``fast`` 로
+        묶인다. 고치기 전 ``_movement_carrier`` 는 묶이면 **가장 이른 큐**를 골라
+        코러스 1회차(3번 큐)가 캐리어가 됐다 — 함수 자신의 독스트링이 적은 의도
+        ("하나만 실을 수 있다면 그 하나는 드롭이다")와 반대다.
+        """
+        library = load_library_from_dir()
+        sections = parse_sections(_MEASURED_EIGHT_SECTIONS)
+        selections = map_sections_to_looks(sections, library, "edm")
+
+        # 비공허성 — 묶임의 원인이 실재한다: 세 큐가 전부 같은 룩을 받는다.
+        chosen = [selection.look.look_id for selection in selections]
+        assert chosen[2] == chosen[4] == chosen[6] == "edm-drop-crimson"
+
+        bundle = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*FULL_RIG),
+        )
+
+        carriers = bundle.movement_sections
+        assert len(carriers) == 1, "한 번들은 페이저를 하나만 낸다"
+        assert carriers[0].cue_number == 7, "캐리어는 드롭(7번 큐)이어야 한다"
+        assert carriers[0].section.label == "Drop"
+
+        withheld_cues = {w.cue_number: w.reason for w in bundle.withheld_movement}
+        assert withheld_cues[3] == MOVEMENT_TURN_BOUNDARY, "코러스 1회차는 물러난다"
+        assert withheld_cues[5] == MOVEMENT_TURN_BOUNDARY, "코러스 2회차도 물러난다"
 
     def test_a_yield_still_respects_the_darkness_floor(self, monkeypatch):
         """물러설 자리가 이미 다 찼고 바닥까지 닿으면 회수가 실패하고 드롭이 원래대로

@@ -1,0 +1,5 @@
+MOVES:    cue 7 Drop MovementPlan(band='fast', speed=96.0, attributes=('Pan', 'Tilt'), pattern='diagonal', commands=("Attribute 'Pan' At Relative -28", "Attribute 'Tilt' At Relative -14", 'Step 2', "Attribute 'Pan' At Relative 28", "Attribute 'Tilt' At Relative 14", "Attribute 'Pan' At Phase 0", "Attribute 'Tilt' At Phase 0", "Attribute 'Pan' At Speed 96 ; Attribute 'Tilt' At Speed 96"))
+withheld: cue 2 Verse movement_turn_boundary
+withheld: cue 3 Chorus movement_turn_boundary
+withheld: cue 4 Verse movement_turn_boundary
+withheld: cue 5 Chorus movement_turn_boundary
