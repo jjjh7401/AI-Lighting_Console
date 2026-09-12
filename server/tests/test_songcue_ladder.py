@@ -208,10 +208,17 @@ class TestTheMeasuredRegression:
         sections = parse_sections(_MEASURED_FIVE_SECTIONS)
         selections = map_sections_to_looks(sections, library, "edm")
 
-        # 충돌의 원인이 여전히 실재한다는 비공허성: 후렴과 드롭이 **같은 룩**을 고른다
-        # (룩 선택은 이 카드의 범위가 아니다 — 정본 §12 항목 2).
+        # 비공허성 — 충돌의 원인이 여전히 실재한다: 후렴 두 회차가 **같은 룩**이다.
+        #
+        # **2026-09-12 (카드 t360) 에 이 줄을 뒤집었다.** t355 가 적을 때는 셋이 전부
+        # 같은 룩이었고(`chosen[2] == chosen[3] == chosen[4]`), 그 줄 자신이 사유를
+        # 「룩 선택은 이 카드의 범위가 아니다 — 정본 §12 항목 2」라고 적어 두었다.
+        # t360 이 그 항목을 닫았으므로 드롭은 이제 후렴과 **다른** 룩이다. 사라진 것은
+        # 결함이지 이 검사의 대상이 아니다 — 사다리가 재는 것은 「같은 라벨의 반복이
+        # 되돌아와도 큐가 사라지지 않는다」이고, 그 축은 후렴 1·2회차가 그대로 든다.
         chosen = [selection.look.look_id for selection in selections]
-        assert chosen[2] == chosen[3] == chosen[4]
+        assert chosen[2] == chosen[4], "같은 라벨의 회차는 되돌아온다 (정본 §7)"
+        assert chosen[3] != chosen[2], "다른 라벨은 앞 큐와 대비된다 (정본 §12 항목 2)"
 
         bundle = build_songcue_bundle(
             "Song",

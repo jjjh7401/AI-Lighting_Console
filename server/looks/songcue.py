@@ -22,6 +22,7 @@ from server.looks.movement import (
 )
 from server.looks.resolver import GroupCandidate, RoleResolution, UnmappedRole, resolve_roles
 from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, AttributeValue, Look, LookLibrary
+from server.looks.section_intent import SectionIntent, intent_for_label, sorted_candidates
 
 _MILLISECONDS_PER_SECOND = Decimal("1000")
 _SECONDS_PER_MINUTE = Decimal("60")
@@ -348,15 +349,29 @@ def map_sections_to_looks(
     ordered_looks = looks_for_genre(library, genre)
     # frozenset — 구간마다 다시 훑지 않고, 곡 하나를 만드는 동안 **안 움직인다**.
     already_used = frozenset(used_look_ids)
-    return tuple(
-        _map_section_to_look(
+    # 순차로 도는 것이 카드 t360 이다. 「앞 큐와 가장 대비되는 룩」은 앞 구간이 무엇을
+    # 골랐는지 알아야 정해지므로, 구간을 서로 **독립으로** 볼 수 없다. 앞 큐는 **룩을
+    # 고른** 마지막 구간이다 — 룩이 안 붙은 구간(세기 미해석·미매핑)은 무대에 그림을
+    # 안 냈으므로 다음 구간이 대비할 대상이 아니다.
+    selections: list[SongCueLookSelection] = []
+    previous: Look | None = None
+    # 라벨마다 **1회차가 고른 룩**. 정본 §7 [HARD]: 코러스 1의 색은 이후 코러스에서
+    # 되돌아와야 한다. 회차 사이의 변화는 룩 교체가 아니라 사다리가 만든다(§7.1).
+    first_of_label: dict[str, Look] = dict()
+    for section in sections:
+        selection = _map_section_to_look(
             section=section,
             ordered_looks=ordered_looks,
             explicit_dynamics=_explicit_dynamics_for(section, explicit_dynamics),
             already_used=already_used,
+            previous=previous,
+            returning=first_of_label.get(section.label),
         )
-        for section in sections
-    )
+        selections.append(selection)
+        if selection.look is not None:
+            previous = selection.look
+            first_of_label.setdefault(section.label, selection.look)
+    return tuple(selections)
 
 
 #: 업로드 경로에서 쪼갠 큐를 서로 다르게 만드는 것의 이름 — 팔레트의 색이 아니라
@@ -748,6 +763,8 @@ def _map_section_to_look(
     ordered_looks: Sequence[Look],
     explicit_dynamics: int | None,
     already_used: frozenset[str] = frozenset(),
+    previous: Look | None = None,
+    returning: Look | None = None,
 ) -> SongCueLookSelection:
     if explicit_dynamics is not None:
         requested_dynamics = (_validated_dynamics(explicit_dynamics, section.index),)
@@ -763,7 +780,13 @@ def _map_section_to_look(
         return SongCueLookSelection(
             section=section, requested_dynamics=requested_dynamics, reason=UNMAPPED_LOOK
         )
-    ranked, reuse_reason = _ranked_against_history(matches, already_used)
+    ranked, reuse_reason = _ranked_against_history(
+        matches,
+        already_used,
+        previous=previous,
+        intent=intent_for_label(section.label),
+        returning=returning,
+    )
     return SongCueLookSelection(
         section=section,
         requested_dynamics=requested_dynamics,
@@ -774,32 +797,49 @@ def _map_section_to_look(
 
 
 def _ranked_against_history(
-    matches: Sequence[Look], already_used: frozenset[str]
+    matches: Sequence[Look],
+    already_used: frozenset[str],
+    *,
+    previous: Look | None = None,
+    intent: SectionIntent | None = None,
+    returning: Look | None = None,
 ) -> tuple[tuple[Look, ...], str | None]:
-    """앞 곡이 안 쓴 룩을 앞으로, 쓴 룩을 뒤로 — 각 묶음 **안의 순서는 그대로**.
+    """후보를 줄 세운다 — 곡 사이 신선도(t358) 바깥, 구간 의도와 대비(t360) 안.
 
-    쓴 룩을 목록에서 **빼지 않는** 것이 이 함수의 요점이다. 뒤에 남겨 두면 두 성질이
-    함께 산다: 새 룩이 있으면 그것이 선두라 곡 B 가 곡 A 의 룩으로 열리지 않고
-    (정본 §7), 새 룩이 리그에 하나도 안 묶이면 :func:`_select_bindable` 이 뒤쪽의
-    쓴 룩을 찾아내 큐가 사라지지 않는다. 빼 버리면 두 번째 성질이 「큐 없음」으로
-    바뀌는데, 재사용보다 나쁘다.
+    **두 카드가 겹쳐 사는 자리이므로 순서에 계약이 있다.**
 
-    묶음 안의 순서를 그대로 두므로 다이내믹스 오름차순 → ``look_id`` 사전순
-    (``busking.looks_for_genre``)이라는 전순서는 묶음 안에서 살아 있다.
+    1. 앞 곡이 안 쓴 룩이 앞, 쓴 룩이 뒤(카드 t358, 정본 §7 후반: 곡 사이 재사용은 결함).
+       이것이 **가장 바깥**이다 — 곡 안에서 아무리 대비가 커도 앞 곡을 되쓰는 것보다
+       먼저 오지 않는다.
+    2. 각 묶음 **안에서** 정본 §6 의 구간 의도 → 앞 큐와의 대비 → 기존 전순서
+       (``section_intent.ordering_key``). 카드 t360 이 여기를 채웠다.
+
+    쓴 룩을 목록에서 **빼지 않는** 것은 t358 이 정한 형상 그대로다. 뒤에 남겨 두면 두
+    성질이 함께 산다: 새 룩이 있으면 그것이 선두라 곡 B 가 곡 A 의 룩으로 열리지 않고,
+    새 룩이 리그에 하나도 안 묶이면 :func:`_select_bindable` 이 뒤쪽의 쓴 룩을 찾아내
+    큐가 사라지지 않는다. 빼 버리면 두 번째 성질이 「큐 없음」으로 바뀌는데, 재사용보다
+    나쁘다.
+
+    **고치기 전과 바이트 동일한 갈래**가 남아 있다: §6 행이 없는 라벨 + 앞 큐 없음이면
+    ``ordering_key`` 가 ``(dynamics, look_id)`` 로 퇴화하고, 그 순서는
+    ``busking.looks_for_genre`` 가 준 것과 같다.
 
     한계 하나를 적어 둔다: 밀도 경로(:func:`split_selections_for_density`)는 이 목록을
-    **회전**시키므로, 한 구간이 여러 큐로 쪼개지고 새 룩이 모자라면 뒤쪽의 쓴 룩이
-    앞으로 올 수 있다. 그 갈래는 여기서 막지 않고 **저장된 결과를 재서** 보고한다
-    (``prepare_songcue`` 의 ``cross_song_looks.reused_look_ids``) — 의도가 아니라
+    **회전**시키므로, 한 구간이 여러 큐로 쪼개지면 여기서 정한 선두가 그대로 나가지
+    않는다. 저장 직전 :func:`_select_bindable` 이 목록 앞에서부터 리그에 묶이는 첫 룩을
+    다시 고르는 것도 같은 성질이다. 그 갈래는 여기서 막지 않고 **저장된 결과를 재서**
+    보고한다(``prepare_songcue`` 의 ``cross_song_looks.reused_look_ids``) — 의도가 아니라
     실제로 나간 것을 재는 쪽이 참이다.
     """
     fresh = tuple(look for look in matches if look.look_id not in already_used)
     if not fresh:
-        return tuple(matches), LOOK_POOL_EXHAUSTED
-    if len(fresh) == len(matches):
-        return tuple(matches), None
+        ranked = sorted_candidates(matches, previous=previous, intent=intent, returning=returning)
+        return ranked, LOOK_POOL_EXHAUSTED
     stale = tuple(look for look in matches if look.look_id in already_used)
-    return fresh + stale, None
+    ranked = sorted_candidates(
+        fresh, previous=previous, intent=intent, returning=returning
+    ) + sorted_candidates(stale, previous=previous, intent=intent, returning=returning)
+    return ranked, None
 
 
 # @MX:NOTE: [AUTO] 이 리그에서 룩이 「묶인다」는 것의 **유일한 정의**. 선택

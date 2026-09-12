@@ -148,9 +148,19 @@ class TestMeasuredBpmSplitsTheUploadPath:
             if command.startswith("Attribute 'Dimmer' At ")
         ]
         # 첫 구간은 D1 → 10 / 15. 같은 다이내믹스라 D 레벨은 유지되고 룩만 돈다.
+        # 앞 큐가 없는 첫 구간이라 순서는 기존 전순서 그대로다(``(dynamics, look_id)``).
         assert dimmers[:2] == [10, 15]
-        # 세 번째 구간은 D5 → 50 / 55.
-        assert dimmers[-2:] == [50, 55]
+        # 세 번째 구간은 D5 → 55 / 50.
+        #
+        # **2026-09-12 (카드 t360) 에 이 줄의 순서가 뒤집혔다.** 전에는 50 / 55 였고 그
+        # 순서를 정한 것은 룩 id 사전순(`d5a` < `d5b`)뿐이었다 — 정본 §12 항목 2 가
+        # 결함이라 부른 그 정렬이다. 이제는 앞 큐(2번째 구간 D3, Dimmer 30)와 **더
+        # 대비되는** 쪽이 앞이다: |55-30| = 25 > |50-30| = 20. 이 픽스처의 룩은
+        # ``Dimmer`` 하나만 들고 역할이 같으므로 대비의 세 축 중 밝기만 값을 낸다.
+        #
+        # 이 검사가 재는 성질은 그대로다 — 이어지는 큐가 **같은 D 레벨**을 유지하고
+        # (둘 다 D5 룩) 그림만 돈다. 순서는 그 성질이 아니라 그때의 정렬이었다.
+        assert dimmers[-2:] == [55, 50]
 
     def test_the_last_section_splits_because_the_record_knows_where_it_ends(self):
         """확정 기록은 구간마다 ``end_ms`` 를 들고 있다 — 인터뷰 경로엔 없는 재료."""
