@@ -883,10 +883,21 @@ def _section_fx_decision(
     return FxDecision(allowed=allowed, source="section_arc", density=density)
 
 
-def _arc_palette(base: tuple[str, ...], role: str) -> tuple[str, ...]:
+def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple[str, ...]:
+    """역할 아크 팔레트 — 회차마다 보조색을 돌린다 (카드 t402).
+
+    같은 역할이 반복되면(코러스 25회 등) 예전에는 매번 바이트 동일한
+    팔레트가 나왔다 — 회차를 구분하지 않았기 때문이다. `occurrence` 가
+    1보다 크면 `rotate_palette`(카드 t305, 마디분할 회전에서 이미 검증된
+    함수)로 아크 색을 회전한다. 메인 컬러(``primary``, 감독이 지정한
+    색)는 이 회전과 무관하게 아래 결합에 **항상** 남는다 — 감독 지시
+    "메인 컬러 중심" 을 구조적으로 지킨다.
+    """
     arc = _ARC_PALETTE.get(role)
     if arc is None:
         return base or ("white",)
+    if len(arc) > 1 and occurrence > 1:
+        arc = rotate_palette(arc, occurrence - 1)
     if not base:
         return arc
     primary = base[0]
@@ -1532,8 +1543,14 @@ def _section_palette_choice(
     color_tendency: object,
     palette_mode: str,
     concept_colors: tuple[str, ...],
+    occurrence: int = 1,
 ) -> tuple[tuple[str, ...], str]:
-    """한 구간의 팔레트와 그 출처. 구간의 색 단어 > 팔레트 충돌 결정 > Q2."""
+    """한 구간의 팔레트와 그 출처. 구간의 색 단어 > 팔레트 충돌 결정 > Q2.
+
+    ``occurrence`` — 카드 t402. 같은 역할의 몇 번째 회차인지(1부터).
+    아크 색 회전(`_arc_palette`)에만 쓰이므로 구간이 직접 색을 적었거나
+    (``section_text``) 컨셉 팔레트를 그대로 쓰는 경로는 영향받지 않는다.
+    """
     direct_colors = _extract_color_words(section.mood)
     if direct_colors:
         return direct_colors, "section_text"
@@ -1543,7 +1560,7 @@ def _section_palette_choice(
         base = concept_colors
     else:
         base = _palette_colors(profile.palette or color_tendency)
-    return _arc_palette(base, role), "section_arc"
+    return _arc_palette(base, role, occurrence), "section_arc"
 
 
 def _section_palette_sizes(
@@ -1637,6 +1654,24 @@ def _build_unified_song_plan(
     arc_positions, head_indexes, units, section_count, climax_index = _section_arc_geometry(
         sections, section_origin
     )
+    # 카드 t402 — 역할이 같은 구간이 반복될 때(코러스 25회 등) 몇 번째
+    # 회차인지 미리 센다. 원본(origin) 단위로 세야 한다 — 마디 분할로 갈린
+    # 큐는 부모와 같은 회차를 공유해야, 부모가 이미 정한 팔레트 회전이
+    # 자식 큐에서 흔들리지 않는다. `head_indexes[i] == i+1` 인 자리
+    # (``units[i] == 0``)만 새 원본의 시작이다.
+    origin_roles: dict[int, str] = {}
+    for offset, section in enumerate(sections, start=1):
+        if units[offset - 1] == 0:
+            arc_index = arc_positions[offset - 1]
+            origin_roles[head_indexes[offset - 1]] = _section_role(
+                section, section_index=arc_index, section_count=section_count
+            )
+    role_running: dict[str, int] = {}
+    occurrence_by_head: dict[int, int] = {}
+    for head in sorted(origin_roles):
+        role_name = origin_roles[head]
+        role_running[role_name] = role_running.get(role_name, 0) + 1
+        occurrence_by_head[head] = role_running[role_name]
     decisions: list[SectionDecision] = []
     unresolved: list[UnresolvedNote] = []
     roles: list[str] = []
@@ -1646,6 +1681,9 @@ def _build_unified_song_plan(
         unit_index = units[index - 1]
         role = _section_role(section, section_index=arc_index, section_count=section_count)
         roles.append(role)
+        # 카드 t402 — 이 원본(head_index)이 자기 역할 안에서 몇 번째 회차인지
+        # (사전 계산한 표에서 조회).
+        occurrence = occurrence_by_head.get(head_index, 1)
         override = _section_director_override(
             section_index=arc_index,
             section_count=section_count,
@@ -1711,6 +1749,7 @@ def _build_unified_song_plan(
             color_tendency=resolved.color_tendency,
             palette_mode=palette_mode,
             concept_colors=concept_colors,
+            occurrence=occurrence,
         )
         # 카드 t305 — 구간 안에서 이어지는 큐는 앞 큐와 **달라야** 한다.
         # 정본이 하는 것과 같은 축: 강도는 유지하고 색만 돌린다(Q060 "강도
