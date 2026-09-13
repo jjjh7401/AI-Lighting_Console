@@ -7997,8 +7997,21 @@ class ChatSession:
             )
         bpm_match = _SONG_BPM.search(text)
         genre_match = _SONG_GENRE.search(text)
+        # 카드 t381 — t302 는 구간을 확정 기록으로 잇지만 BPM 은 잇지 않았다.
+        # `_split_sections_for_density`(t305, 마디 경계 분할)는 `profile.bpm`
+        # 이 `None` 이면 분할을 한 건도 하지 않는다(`cue_density.py` 의 명시된
+        # 규약) — 그래서 곡을 분석·확정해 놓고도 지시문에 BPM 을 다시 안 적으면
+        # 마디 분할이 조용히 꺼졌다. 지시문이 명시하면 그 값이 최우선이고(오늘과
+        # 동일), 없을 때만 확정 BPM 이 기본값이 된다 — 구간 기본값과 같은 규칙
+        # (prepare_songcue 의 REQ-SONGCONFIRM-009).
+        if bpm_match is not None:
+            bpm = float(bpm_match.group("bpm"))
+        elif self._song_bpm is not None and self._song_bpm.bpm is not None:
+            bpm = self._song_bpm.bpm
+        else:
+            bpm = None
         profile = MusicProfile(
-            bpm=float(bpm_match.group("bpm")) if bpm_match is not None else None,
+            bpm=bpm,
             genre=genre_match.group("genre") if genre_match is not None else None,
         )
         # RG5: 그룹 판독은 여전히 이 경로에 없어 리그는 단일 레이어로 내려간다
