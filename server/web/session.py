@@ -992,25 +992,35 @@ def _distinct_from_primary(candidate: str, primary: str, fallback: str) -> str:
     return fallback
 
 
-#: 카드 t406 — 채도/무게 사다리. 회차마다 아크 색조를 두 상태(회전 주기 2)
-#: 로만 돌리면 25회차짜리 코러스도 A-B-A-B 둘로만 보인다(실측: 같은 룩을
-#: 공유하는 구간이 13개). 색 목록 자체를 늘리는 대신(순수 리스트 순환은
-#: 감독이 지시한 축이 아니다 — 카드 지시문) 아크 색의 채도/무게를 회차마다
-#: 다르게 표기해 상태 수를 늘린다. 색상 정체성(hue)은 그대로 두므로 §7의
-#: "곡 안 반복은 미덕"과 충돌하지 않는다 — 코러스 1의 색이 이후에도 여전히
-#: 같은 색이고, 다만 진하기가 회차를 구분한다.
-_ACCENT_WEIGHT_LADDER: tuple[str, ...] = ("", "짙은 ", "연한 ", "쿨톤 ", "웜톤 ")
+#: 카드 t406 핫픽스 — 무게는 색 문자열과 분리된 필드로만 나른다. 예전에는
+#: 이 사다리를 색 이름 앞에 접두어로 붙였는데, `cue_sheet_apply.py` 의
+#: `_palette_rgb` 는 `value.strip().split()[0]` 을 범례 id 로 읽는다
+#: (``"P4 핫핑크"`` → ``P4`` 관례) — 접두어가 그 첫 토큰이 되어 범례 조회가
+#: 항상 실패하고 색이 아예 안 나간다(코디네이터 실측: `짙은 magenta` →
+#: `None` → `CueSkip`). 색 문자열은 항상 범례에 그대로 걸리는 순정 토큰으로
+#: 두고, 무게는 `PaletteDecision.weight` 로만 옮긴다.
+#:
+#: 회차마다 아크 색조를 두 상태(회전 주기 2)로만 돌리면 25회차짜리 코러스도
+#: A-B-A-B 둘로만 보인다(실측: 같은 룩을 공유하는 구간이 13개). 색 목록
+#: 자체를 늘리는 대신(순수 리스트 순환은 감독이 지시한 축이 아니다 — 카드
+#: 지시문) 이 무게 축으로 상태 수를 늘린다. 색상 정체성(hue)은 그대로
+#: 두므로 §7의 "곡 안 반복은 미덕"과 충돌하지 않는다 — 코러스 1의 색이
+#: 이후에도 여전히 같은 색이고, 다만 진하기가 회차를 구분한다.
+_ACCENT_WEIGHT_LADDER: tuple[str, ...] = ("", "짙은", "연한", "쿨톤", "웜톤")
 
 
-def _weighted_accent(color: str, occurrence: int) -> str:
-    if occurrence <= 1:
-        return color
-    prefix = _ACCENT_WEIGHT_LADDER[(occurrence - 1) % len(_ACCENT_WEIGHT_LADDER)]
-    return f"{prefix}{color}" if prefix else color
+def _arc_accent_weight(role: str, occurrence: int) -> str | None:
+    """이 회차의 채도/무게 라벨. 아크가 없는 역할이거나 첫 회차(수식어
+    없음)면 ``None`` — 색 문자열이 아니라 이 값만 봐서 "무게가 있는가"를
+    판정할 수 있다."""
+    if role not in _ARC_PALETTE or occurrence <= 1:
+        return None
+    label = _ACCENT_WEIGHT_LADDER[(occurrence - 1) % len(_ACCENT_WEIGHT_LADDER)]
+    return label or None
 
 
 def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple[str, ...]:
-    """역할 아크 팔레트 — 회차마다 보조색을 돌리고 무게를 바꾼다 (카드 t402·t406).
+    """역할 아크 팔레트 — 회차마다 보조색을 돌린다 (카드 t402·t406).
 
     같은 역할이 반복되면(코러스 25회 등) 예전에는 매번 바이트 동일한
     팔레트가 나왔다 — 회차를 구분하지 않았기 때문이다. `occurrence` 가
@@ -1019,10 +1029,10 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
     색)는 이 회전과 무관하게 아래 결합에 **항상** 남는다 — 감독 지시
     "메인 컬러 중심" 을 구조적으로 지킨다.
 
-    카드 t406 — 아크가 2색뿐이라 회전만으로는 상태가 둘뿐이다(A-B-A-B).
-    `_weighted_accent` 로 채도/무게 축을 얹어 상태 수를 늘리고,
-    `_distinct_from_primary` 로 회전이 아크 색을 primary 와 같은 색상에
-    (언어만 다른 표기 포함) 겹치게 돌리는 경우를 걸러낸다.
+    카드 t406 — `_distinct_from_primary` 로 회전이 아크 색을 primary 와
+    같은 색상에(언어만 다른 표기 포함) 겹치게 돌리는 경우를 걸러낸다.
+    반환값은 항상 범례 조회가 가능한 순정 색 문자열뿐이다 — 채도/무게
+    수식어는 여기 없다(`_arc_accent_weight` 가 별도로 나른다).
     """
     arc = _ARC_PALETTE.get(role)
     if arc is None:
@@ -1035,18 +1045,14 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
     primary = base[0]
     if role in ("intro", "bridge"):
         accent = _distinct_from_primary(rotated[0], primary, fallback=rotated[-1])
-        combined: tuple[str, ...] = (_weighted_accent(accent, occurrence), primary)
+        combined: tuple[str, ...] = (accent, primary)
     elif role == "verse":
         accent = _distinct_from_primary(rotated[-1], primary, fallback=rotated[0])
-        combined = (primary, _weighted_accent(accent, occurrence))
+        combined = (primary, accent)
     else:
         head = _distinct_from_primary(rotated[0], primary, fallback=rotated[-1])
         tail = _distinct_from_primary(rotated[-1], primary, fallback=rotated[0])
-        combined = (
-            _weighted_accent(head, occurrence),
-            _weighted_accent(tail, occurrence),
-            primary,
-        )
+        combined = (head, tail, primary)
     return tuple(dict.fromkeys(combined))
 
 
@@ -1684,23 +1690,31 @@ def _section_palette_choice(
     palette_mode: str,
     concept_colors: tuple[str, ...],
     occurrence: int = 1,
-) -> tuple[tuple[str, ...], str]:
-    """한 구간의 팔레트와 그 출처. 구간의 색 단어 > 팔레트 충돌 결정 > Q2.
+) -> tuple[tuple[str, ...], str, str | None]:
+    """한 구간의 팔레트와 그 출처, 그리고 채도/무게 라벨. 구간의 색 단어 >
+    팔레트 충돌 결정 > Q2.
 
     ``occurrence`` — 카드 t402. 같은 역할의 몇 번째 회차인지(1부터).
     아크 색 회전(`_arc_palette`)에만 쓰이므로 구간이 직접 색을 적었거나
     (``section_text``) 컨셉 팔레트를 그대로 쓰는 경로는 영향받지 않는다.
+
+    카드 t406 핫픽스 — 세 번째 반환값(무게)은 색 문자열과 분리된 채널이다
+    (`_arc_accent_weight` 참조). 아크 경로가 아니면 항상 ``None``.
     """
     direct_colors = _extract_color_words(section.mood)
     if direct_colors:
-        return direct_colors, "section_text"
+        return direct_colors, "section_text", None
     if palette_mode == "concept" and concept_colors:
         base: tuple[str, ...] = concept_colors
     elif palette_mode == "mixed" and concept_colors and role in ("chorus", "finale"):
         base = concept_colors
     else:
         base = _palette_colors(profile.palette or color_tendency)
-    return _arc_palette(base, role, occurrence), "section_arc"
+    return (
+        _arc_palette(base, role, occurrence),
+        "section_arc",
+        _arc_accent_weight(role, occurrence),
+    )
 
 
 def _section_palette_sizes(
@@ -1723,7 +1737,7 @@ def _section_palette_sizes(
         role = _section_role(section, section_index=index, section_count=count)
         resolved = resolve_section(section.mood, profile, director_intent=None)
         tendency = getattr(resolved, "color_tendency", "white")
-        colors, _source = _section_palette_choice(
+        colors, _source, _weight = _section_palette_choice(
             section,
             role=role,
             profile=profile,
@@ -1888,7 +1902,7 @@ def _build_unified_song_plan(
             d_level, d_source = arc_d, "section_arc"
         # Palette: section's own color words > palette-conflict choice > Q2
         # palette blended with the role arc.
-        palette_colors, palette_source = _section_palette_choice(
+        palette_colors, palette_source, palette_weight = _section_palette_choice(
             section,
             role=role,
             profile=profile,
@@ -1920,7 +1934,9 @@ def _build_unified_song_plan(
                     source="song_design_interview",
                 ),
                 d=DLevelDecision(level=d_level, source=d_source),
-                palette=PaletteDecision(colors=palette_colors, source=palette_source),
+                palette=PaletteDecision(
+                    colors=palette_colors, source=palette_source, weight=palette_weight
+                ),
                 position=PositionDecision(
                     preset=position,
                     source=resolved.position_source,
@@ -2405,6 +2421,14 @@ def _song_timeline_payload(
                         # 않던 통로를 여는 것뿐, 새로 지어내는 값이 아니다.
                         "d_source": decision.d.source,
                         "palette_source": decision.palette.source,
+                        # 카드 t406 핫픽스 — 채도/무게는 색 문자열이 아니라 여기로만
+                        # 나른다(코디네이터 지시). UI 는 아직 이 키를 읽지 않는다 —
+                        # 화면 표시가 필요해지면 그건 별도 카드다.
+                        **(
+                            {"palette_accent_weight": decision.palette.weight}
+                            if decision.palette.weight
+                            else {}
+                        ),
                         "position_source": decision.position.source,
                         **(
                             {"position_candidates": list(decision.position.candidates)}

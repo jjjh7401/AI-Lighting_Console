@@ -16,6 +16,7 @@ from server.design.rig import build_rig_profile
 from server.design.song_plan import TimingPlan
 from server.spatial.position_cuesheet import PositionSheetSection
 from server.web.session import (
+    _arc_accent_weight,
     _arc_palette,
     _build_unified_song_plan,
     _confirmed_section_names,
@@ -70,20 +71,19 @@ class TestArcPaletteVariesByOccurrence:
         base = ("블루",)
         assert _arc_palette(base, "chorus") == _arc_palette(base, "chorus", occurrence=1)
 
-    def test_rotation_cycles_back_in_hue_but_no_longer_byte_identical(self):
-        """카드 t406으로 갱신 — 색상 회전(hue)은 여전히 주기 2로 돌아오지만
-        (아크가 2색뿐이므로), 회차마다 채도/무게 수식어가 달라져 더는
-        바이트 동일하지 않다. 원래 이 테스트는 "회차 3이 회차 1과
-        바이트 동일하다"를 정상으로 검증했는데, 그것이 바로 A-B-A-B
-        결함(t406)이었다 — 코러스가 몇 회를 반복해도 상태가 둘뿐이라는
-        뜻이었기 때문이다."""
+    def test_rotation_cycles_back_in_hue_and_weight_separates_the_states(self):
+        """카드 t406 핫픽스로 갱신 — 색상 회전(hue)은 회전 주기 2 그대로다
+        (아크가 2색뿐이고, 색 문자열은 콘솔 범례 조회가 걸려야 해서 무게
+        수식어를 섞지 않는다 — 코디네이터 지시). 원래 이 테스트는 "회차
+        3이 회차 1과 바이트 동일하다"를 A-B-A-B 결함(t402/t406 이전)의
+        재현으로 검증했는데, 색만 보면 그 동일함은 지금도 유지된다 —
+        상태를 가르는 것은 이제 `_arc_accent_weight`(별도 채널)다."""
         base = ("블루",)
         first = _arc_palette(base, "chorus", occurrence=1)
         third = _arc_palette(base, "chorus", occurrence=3)
-        assert first != third, "회차 3이 회차 1과 바이트 동일하다 — t406 결함 재발"
-        # 그래도 색상 정체성(hue)은 같은 두 색으로 돌아온다 — 무게 수식어만 다르다.
-        assert first == ("warm white", "magenta", "블루")
-        assert third == ("연한 warm white", "연한 magenta", "블루")
+        assert first == third == ("warm white", "magenta", "블루")
+        # 색은 같아도 무게 라벨이 갈라 회차를 구분한다.
+        assert _arc_accent_weight("chorus", 1) != _arc_accent_weight("chorus", 3)
 
 
 class TestBuildUnifiedSongPlanVariesRepeatedRoles:
