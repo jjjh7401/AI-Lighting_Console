@@ -1717,10 +1717,15 @@ def _build_unified_song_plan(
         # 유지, 색만 교체" · Q140 "색상만 순환"). 색이 하나뿐인 구간은
         # 애초에 쪼개지지 않으므로(`plan_cue_density`) 여기서 같은 큐가
         # 나오는 일은 없다.
+        # 카드 t398 — 회전은 이미 고른 색을 순서만 바꾼다(원소 추가 없음), 그래서
+        # `palette_source` 는 **덮어쓰지 않는다**. 예전에는 여기서
+        # "cue_density_rotation" 으로 갈아끼웠는데, 그러면 L5 가 아크 악센트인지
+        # 감독 문구인지 구분할 근거(원래 출처)를 잃는다 — 이 리터럴은 코드베이스
+        # 전체에서 이 한 줄이 유일한 생산자였다(다른 소비자 없음, grep 확인).
         if unit_index > 0:
             rotated = rotate_palette(palette_colors, unit_index)
             if rotated != palette_colors:
-                palette_colors, palette_source = rotated, "cue_density_rotation"
+                palette_colors = rotated
         decisions.append(
             SectionDecision(
                 section=TimestampedSection(
@@ -8178,10 +8183,15 @@ class ChatSession:
             bpm=bpm,
             genre=genre_match.group("genre") if genre_match is not None else None,
         )
-        # RG5: 그룹 판독은 여전히 이 경로에 없어 리그는 단일 레이어로 내려간다
-        # (RG1 의 명시 고지). 좌표는 위에서 이미 읽은 값이고, **패치(장비 능력)는
-        # 카드 t344 가 배선했다** — 예전 `patch=[]` 리터럴은 「못 읽었다」와
-        # 「장비가 없다」를 구별 불가능하게 만들었다.
+        # 카드 t399 — 이 시점의 `rig` 는 아직 그룹을 모른다(레이어 매핑은
+        # `_confirm_song_layer_mapping()` 이 감독 확인을 받은 뒤에야 나온다,
+        # 아래). 좌표는 위에서 이미 읽은 값이고, **패치(장비 능력)는 카드
+        # t344 가 배선했다** — 예전 `patch=[]` 리터럴은 「못 읽었다」와
+        # 「장비가 없다」를 구별 불가능하게 만들었다. `DirectorInterview` 는
+        # `rig.inventory`/`rig.geometry` 만 읽고 `rig.layers` 는 안 읽으므로
+        # (Q4 공간 서사는 좌표·기종만 본다) 레이어 미확정 상태로 여기서
+        # 지어도 인터뷰 질의에는 영향이 없다 — 계획에 실릴 최종 리그는
+        # 매핑 확정 뒤 다시 짓는다.
         coords = [
             {"fid": fid, "x": position[0], "y": position[1], "z": position[2]}
             for fid, position in fixtures
@@ -8276,6 +8286,30 @@ class ChatSession:
         layer_mapping = self._confirm_song_layer_mapping()
         if not layer_mapping:
             plan_warnings.append(_SINGLE_LAYER_WARNING)
+        else:
+            # 카드 t399 — 매핑이 확정됐는데도 계획에 실리는 `rig` 는 위에서
+            # `groups={}` 로 지어져 RG1 이 여전히 단일 레이어로 읽는다(순서
+            # 문제: `rig` 를 짓는 시점이 `_confirm_song_layer_mapping()` 보다
+            # 앞선다). 그룹 **멤버십**(어느 fid 가 그 그룹인지)은 이 통로로
+            # 읽을 수 없어(`_confirm_song_layer_mapping` 독스트링) `groups`
+            # 인자(역할 -> fid 목록)를 못 채운다 — 대신 `declared_layers` 에
+            # 역할 -> **그룹 번호**를 싣는다. `RigLayers.mapping` 은 원래
+            # fid 튜플을 기대하지만, RG1 게이트(`has_layer`/
+            # `layer_rules_active`)는 그 튜플이 비었는지만 보고(`fids_for`
+            # 는 프로덕션 어디서도 안 읽는다, grep 확인) 실제 fid 값을 쓰지
+            # 않으므로 그룹 번호를 자리표시자로 넣어도 안전하다.
+            declared_layers = {
+                str(entry["role"]): (int(entry["group_no"]),)
+                for entry in layer_mapping
+                if entry.get("role") and isinstance(entry.get("group_no"), int)
+            }
+            if declared_layers:
+                rig = build_rig_profile(
+                    patch=list(rig_read.patch),
+                    groups={},
+                    coords=coords,
+                    declared_layers=declared_layers,
+                )
         # 카드 t305 — 긴 구간을 마디 경계에서 쪼갠다. 구간 하나에 큐 하나면
         # 32마디 후렴이 정적인 큐 한 장으로 끝난다. BPM 이 선언되지 않았으면
         # 이 호출은 입력을 그대로 돌려준다(오늘과 동일).

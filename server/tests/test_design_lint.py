@@ -346,6 +346,64 @@ class TestL5Palette:
         report = lint_sheet(sheet, MusicProfile(), _DUAL_LAYER_RIG)
         assert "L5" not in _rule_ids(report.findings)
 
+    def test_pass_an_arc_sourced_accent_color_is_not_flagged(self):
+        """카드 t398 — 감독 재정(0913): 후렴·피날레는 역할 아크(_ARC_PALETTE)의
+        질러도 되는 색으로 팔레트를 벗어날 수 있다(「후렴에는 질러도 된다」).
+        ``palette_source="section_arc"`` 로 표시된 색은 C1 이탈이 아니다."""
+        profile = MusicProfile(palette=("블루", "퍼플"))
+        sheet = _sheet(
+            [
+                LintCue(
+                    cue_no=0,
+                    section_index=0,
+                    d_level=5,
+                    fade_seconds=1.0,
+                    palette_colors=("deep blue", "warm special"),
+                    palette_source="section_arc",
+                )
+            ]
+        )
+        report = lint_sheet(sheet, profile, _DUAL_LAYER_RIG)
+        assert "L5" not in _rule_ids(report.findings)
+
+    def test_fail_control_probe_a_non_arc_off_palette_color_still_flags(self):
+        """대조군(카드 t398 필수) — 아크가 아닌 출처(``section_text``, 감독
+        무드 문구의 색 단어)에서 온 이탈 색은 여전히 잡혀야 한다. 이게 안
+        잡히면 L5 가 그냥 꺼진 것이지 아크만 봐준 게 아니다."""
+        profile = MusicProfile(palette=("블루", "퍼플"))
+        sheet = _sheet(
+            [
+                LintCue(
+                    cue_no=0,
+                    section_index=0,
+                    d_level=3,
+                    fade_seconds=1.0,
+                    palette_colors=("neon green",),
+                    palette_source="section_text",
+                )
+            ]
+        )
+        report = lint_sheet(sheet, profile, _DUAL_LAYER_RIG)
+        assert "L5" in _rule_ids(report.findings)
+
+    def test_fail_default_palette_source_still_flags_off_palette(self):
+        """``palette_source`` 를 아예 안 실은 큐(레거시 호출자)는 기존과 동일하게
+        검사된다 — 기본값이 조용히 면제로 갈아끼워지지 않는다."""
+        profile = MusicProfile(palette=("red", "blue"))
+        sheet = _sheet(
+            [
+                LintCue(
+                    cue_no=0,
+                    section_index=0,
+                    d_level=3,
+                    fade_seconds=1.0,
+                    palette_colors=("green",),
+                )
+            ]
+        )
+        report = lint_sheet(sheet, profile, _DUAL_LAYER_RIG)
+        assert "L5" in _rule_ids(report.findings)
+
 
 # ---------------------------------------------------------------------------
 # L6 — 키층 소등 + 보컬 구간 (I3), RG1-gated
