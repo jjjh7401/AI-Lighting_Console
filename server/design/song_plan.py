@@ -195,6 +195,12 @@ class PaletteDecision:
     colors: tuple[str, ...]
     source: str
     palette_id: str | None = None
+    #: 카드 t406 핫픽스 — 채도/무게 라벨(예: "짙은"). 색 문자열과 분리된
+    #: 필드다: `cue_sheet_apply.py` 의 `_palette_rgb` 는 색 문자열의 첫
+    #: 토큰을 범례 id 로 읽으므로("P4 핫핑크" → "P4"), 무게를 색 문자열
+    #: 앞에 붙이면 그 조회가 항상 실패한다(코디네이터 실측). 콘솔로 나가는
+    #: 것은 여전히 순정 색 문자열뿐 — 이 필드는 화면·리포트용 부가 정보다.
+    weight: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "colors", _tuple_of_str("colors", self.colors))
@@ -204,7 +210,12 @@ class PaletteDecision:
             raise SongPlanError(f"source must be a non-empty string, got {self.source!r}")
 
     def to_dict(self) -> dict[str, object]:
-        return {"colors": list(self.colors), "source": self.source, "palette_id": self.palette_id}
+        return {
+            "colors": list(self.colors),
+            "source": self.source,
+            "palette_id": self.palette_id,
+            "weight": self.weight,
+        }
 
 
 @dataclass(frozen=True)
