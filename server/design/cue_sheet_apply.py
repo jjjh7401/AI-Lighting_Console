@@ -64,6 +64,7 @@ from dataclasses import dataclass, field
 from server.design.color_names import resolve_color_name
 from server.design.cue_fade import store_with_fade
 from server.design.cue_sheet_edit import section_intensity_percent
+from server.design.rig import _LAYER_GROUP_ALIASES
 from server.looks.songcue import UNMAPPED_LOOK
 from server.looks.songcue_report import ROLE_UNADDRESSED
 
@@ -95,9 +96,10 @@ _HEX_COLOR = re.compile(r"#[0-9A-Fa-f]{6}")
 #: 그 목록과 사유다.
 #: 카드 t409 — ``palette_secondary`` 가 여기 합류했다. 감독 판정("메인 색
 #: 깔고 포인트는 보조로")에 따라 ``layer_mapping`` 의 ``back`` 역할 그룹이
-#: 있으면 그 그룹에 얹는다(:func:`_back_layer_color_line`). 대상이 없으면
-#: 여전히 :data:`ROLE_UNADDRESSED` 로 정직하게 건너뛴다 — 조용히 메인 색만
-#: 내고 보조를 실은 척하지 않는다.
+#: 있으면 그 그룹에 얹는다(:func:`plan_cue_console_apply` 안의 보조 컬러
+#: 절 — 별도 함수로 뽑혀 있지 않다). 대상이 없으면 여전히
+#: :data:`ROLE_UNADDRESSED` 로 정직하게 건너뛴다 — 조용히 메인 색만 내고
+#: 보조를 실은 척하지 않는다.
 CONSOLE_APPLIABLE_FIELDS: tuple[str, ...] = (
     "intensity",
     "d_level",
@@ -272,6 +274,17 @@ def layer_mapping_from_console_groups(
     주장하지 않는다. 기록하는 것은 「이 이름이 콘솔 몇 번 그룹인가」뿐이다.
     맞는 이름이 없으면 그 이름은 주소록에 안 들어가고, 그 큐는 나중에
     ``ROLE_UNADDRESSED`` 로 건너뛴다 — 없는 것이 틀린 것보다 낫다.
+
+    카드 t409 후속 — 그룹 이름이 `server/design/rig.py` 의
+    ``_LAYER_GROUP_ALIASES``(RG5 — 정확 일치만, 부분 문자열 추측 없음)에
+    걸리면 ``role`` 도 같이 적는다. `server/web/session.py` 의
+    `_layer_mapping_from_group_children` 가 이미 같은 표로 역할을 매기고
+    있었는데, 이 함수(사전 점검·시드 곡 반영이 쓰는 주소록 생성기)만 표를
+    쓰지 않아 콘솔이 실제로 보고한 "BACK" 그룹이 있어도 ``role: "back"``
+    이 안 붙었다 — 보조 컬러의 back 역할 조회(``plan_cue_console_apply``)가
+    이 경로에서는 항상 실패하는 원인이었다(감독 재정 — 리그가 진짜로
+    back 레이어가 없는 게 아니라, 이 주소록 생성기가 role 을 안 적었을
+    뿐이다).
     """
     if not isinstance(payload, Mapping):
         return []
@@ -293,7 +306,12 @@ def layer_mapping_from_console_groups(
             continue
         claimed.add(key)
         # 타임라인이 쓴 철자로 적는다 — `_group_numbers` 는 이 이름으로 찾는다.
-        mapping.append({"group_name": wanted[key], "group_no": number})
+        entry: dict[str, object] = {"group_name": wanted[key], "group_no": number}
+        for role, aliases in _LAYER_GROUP_ALIASES.items():
+            if key in aliases:
+                entry["role"] = role
+                break
+        mapping.append(entry)
     return mapping
 
 
@@ -521,13 +539,17 @@ def plan_cue_console_apply(
     # 이미 나갔고, 이 칸은 `layer_mapping` 의 `back` 역할 그룹에 보조
     # 컬러를 얹는다. 대상 그룹이 없거나 색을 못 찾으면 조용히 메인만
     # 내지 않는다 — 큰 소리로 건너뛴다(정본 [HARD]).
-    # 이 큐 자체가 새로 편집된 경우(``previous`` 있음)에만 보조 컬러를 시도한다
-    # — 곡 전체를 처음부터 다시 반영하는 사전 점검(``previous`` 없음)은 감독이
-    # 아직 편집하지 않은 큐까지 새 칸으로 건드리지 않는다(§ 범위: 바뀐 큐만
-    # 원칙, 이 파일 머리말). 편집으로 바뀐 큐만 겨냥한다.
+    #
+    # 감독 재정(카드 t409 후속) — `color_changed` 와 같은 축으로 판정한다
+    # (previous 없음 = 처음부터 다시 반영하는 경우도 포함). 예전에는
+    # `previous is not None` 으로 좁혀 첫 전체 반영(감독이 새 곡을 처음
+    # 콘솔에 올리는 그 순간)에서 보조 컬러가 아예 안 나갔다 — "후렴
+    # 블루 + 백라이트에 warm white" 의 백라이트 절반이 사라지는 결함이었다.
+    # `_group_numbers` 가 못 찾은 이름을 조용히 버리지 않고 `ROLE_UNADDRESSED`
+    # 로 건너뛰는 것과 같은 원칙 — 대상이 없으면 큰 소리로 알리되, 첫
+    # 반영이라는 이유로 시도조차 안 하지는 않는다.
     secondary = section.get("palette_secondary")
-    secondary_changed = previous is not None and previous.get("palette_secondary") != secondary
-    if secondary_changed and isinstance(secondary, str) and secondary.strip():
+    if color_changed and isinstance(secondary, str) and secondary.strip():
         back_no = next(
             (
                 entry.get("group_no")
