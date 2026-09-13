@@ -104,10 +104,18 @@ class TestMovementReachesTheBundle:
         assert len(stored) == 1
         assert stored[0].movement is not None
         assert stored[0].movement.band == MOVEMENT_FAST
-        # 값 라인(index 2) 뒤, Store 앞.
+        # 값 라인(index 2) 뒤, Store 앞. 카드 t377·t378 이 프론트 필·찍는 액센트
+        # 그룹을 값 라인과 움직임 사이에 끼워 넣으므로(둘 다 켜지면 각 두 줄), 그
+        # 층들이 실제로 몇 줄을 냈는지(``front_fill``/``accent_fixture`` 필드)를
+        # 읽어 움직임 줄의 시작 자리를 구한다 — 위치를 하드코드하지 않는다.
         commands = stored[0].commands
         store_index = next(i for i, c in enumerate(commands) if c.startswith("Store Sequence"))
-        emitted = commands[3:store_index]
+        offset = 3
+        if stored[0].front_fill is not None:
+            offset += 2
+        if stored[0].accent_fixture is not None:
+            offset += 2
+        emitted = commands[offset:store_index]
         assert emitted == (
             "Attribute 'Pan' At Relative -20",
             "Step 2",
@@ -350,6 +358,9 @@ class TestNoMovementIsByteIdentical:
         # 벌스는 2초(부드러운 전환). **이 검사의 성질은 그대로다**: 재는 것은 「움직임이
         # 없으면 움직임 줄이 하나도 안 나간다」이고, 페이드는 움직임 축이 아니다.
         # 감광은 여기서 안 걸린다 — 드롭 대역 큐가 **뒤에** 없다(후렴이 첫 큐다).
+        # 카드 t377 이 프론트 필 두 줄을 큐마다 더했다 — 이 픽스처의 룩이 프론트를
+        # 안 실어서다(정본 §6.2 [HARD]). 두 번째 큐가 21 인 것은 첫 큐의 20 과
+        # 겹치지 않는 유일한 값으로 오른 것이다.
         assert bundle.commands == (
             "ChangeDestination Root",
             "ClearAll",
@@ -357,6 +368,9 @@ class TestNoMovementIsByteIdentical:
             "Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; "
             "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; "
             "Attribute 'Zoom' At 18",
+            "Group 12",
+            "Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52",
             "Store Sequence 1 Cue 1 'Chorus' CueFade 0.2",
             "Label Sequence 1 'Song'",
             "ClearAll",
@@ -364,6 +378,9 @@ class TestNoMovementIsByteIdentical:
             "Group 11",
             "Attribute 'Dimmer' At 45 ; Attribute 'ColorRGB_R' At 72 ; "
             "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0",
+            "Group 12",
+            "Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52",
             "Store Sequence 1 Cue 2 'Verse' CueFade 2",
             "ClearAll",
         )

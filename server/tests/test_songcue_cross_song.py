@@ -151,17 +151,27 @@ class TestNoHistoryIsByteIdentical:
         #   · 벌스가 55 → 25 로 내려간다. 다음 큐가 §6 chorus · drop 행이므로 드롭 앞
         #     감광이 걸리고, 목표는 §6 verse 행의 바닥 25 다(정본 §8 [HARD]).
         #   · Store 줄에 페이드가 붙는다 — 벌스 2초(§9 부드러운 전환), 후렴 0.2초(§9 극적인 컷).
+        # 카드 t377 이 세 번째 변화를 더했다 — 이 픽스처의 룩이 프론트를 안 실어서
+        # "Group 12" 프론트 필 두 줄이 큐마다 붙는다(정본 §6.2 [HARD]). 두 번째 큐가
+        # 20 이 아니라 21 인 것은 `run_commands` 전곡 단위 중복 제거를 피하려는
+        # 유일성 오르기다.
         assert bundle.commands == (
             "ChangeDestination Root",
             "ClearAll",
             "Group 11",
             "Attribute 'Dimmer' At 25",
+            "Group 12",
+            "Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52",
             "Store Sequence 1 Cue 1 'Verse' CueFade 2",
             "Label Sequence 1 'Song'",
             "ClearAll",
             "ClearAll",
             "Group 11",
             "Attribute 'Dimmer' At 70",
+            "Group 12",
+            "Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52",
             "Store Sequence 1 Cue 2 'Chorus' CueFade 0.2",
             "ClearAll",
         )

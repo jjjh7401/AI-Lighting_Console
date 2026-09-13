@@ -1,0 +1,32 @@
+== 큐마다: 어느 그룹에 무슨 값이 갔나 (프론트 필·찍는 액센트 포함) ==
+  cue  1 Intro      edm-haze-shafts        BACK:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B  [front=front_fill accent=-]
+  cue  2 Verse      edm-intro-bed          MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B  [front=front_fill accent=-]
+  cue  3 Verse      edm-intro-bed          MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B  [front=front_fill accent=-]
+  cue  4 Chorus     edm-drop-crimson       KEY+FOH+BACK+SIDE-L+SIDE-R+SIDE-ALL+MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom  [front=- accent=-]
+  cue  5 Chorus     edm-drop-crimson       KEY+FOH+BACK+SIDE-L+SIDE-R+SIDE-ALL+MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom  [front=- accent=-]
+  cue  6 Bridge     edm-haze-shafts        BACK:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B  [front=front_fill accent=-]
+  cue  7 Bridge     edm-haze-shafts        BACK:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / BLIND:Dimmer  [front=front_fill accent=blinder_or_flash]
+  cue  8 Chorus     edm-drop-crimson       KEY+FOH+BACK+SIDE-L+SIDE-R+SIDE-ALL+MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom  [front=- accent=-]
+  cue  9 Verse      edm-intro-bed          MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B  [front=front_fill accent=-]
+  cue 10 Chorus     edm-drop-crimson       KEY+FOH+BACK+SIDE-L+SIDE-R+SIDE-ALL+MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom  [front=- accent=-]
+  cue 11 Verse      edm-intro-bed          MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / BLIND:Dimmer  [front=front_fill accent=blinder_or_flash]
+  cue 12 Chorus     edm-drop-crimson       KEY+FOH+BACK+SIDE-L+SIDE-R+SIDE-ALL+MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom  [front=- accent=-]
+  cue 13 Breakdown  edm-haze-shafts        BACK:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B  [front=front_fill accent=-]
+  cue 14 Chorus     edm-drop-crimson       KEY+FOH+BACK+SIDE-L+SIDE-R+SIDE-ALL+MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom  [front=- accent=-]
+  cue 15 Bridge     edm-haze-shafts        BACK:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B / FOH:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B  [front=front_fill accent=-]
+  cue 16 Chorus     edm-drop-crimson       KEY+FOH+BACK+SIDE-L+SIDE-R+SIDE-ALL+MOVER-U+MOVER-D+MOVER-ALL:Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom  [front=- accent=-]
+
+== 리그 그룹 18개 중 큐가 건드린 그룹 ==
+  건드림: ['KEY', 'FOH', 'BACK', 'SIDE-L', 'SIDE-R', 'SIDE-ALL', 'MOVER-U', 'MOVER-D', 'MOVER-ALL', 'BLIND']
+  한 번도 안 건드림: ['WASH-U', 'WASH-D', 'WASH-ALL', 'STROBE', 'HAZE', 'ALL', 'ODD', 'EVEN']
+
+== 프론트 필 ==
+  채운 큐 수: 9 / 16
+
+== 찍는 액센트(블라인더·스트로브) ==
+  켠 큐 수: 2
+  cue 7 Bridge instance=2 → SongCueAccentFixture(section=SongCueSection(name='Bridge', start_ms=48000, index=6, dynamics=(1,), requires_explicit_dynamics=False, label='Bridge', instance=2, variant=''), cue_number=7, rung='blinder_or_flash', groups=(13,), dimmer=20)
+  cue 11 Verse instance=4 → SongCueAccentFixture(section=SongCueSection(name='Verse', start_ms=80000, index=10, dynamics=(2, 3), requires_explicit_dynamics=False, label='Verse', instance=4, variant=''), cue_number=11, rung='blinder_or_flash', groups=(13,), dimmer=25)
+
+== 건너뜀 ==
+  0건
