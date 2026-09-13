@@ -21,7 +21,7 @@ RGB 인지 답할 출처가 있어야 한다. `_palette_rgb`
    가리키는 영어 이름. 카드 t406 이 아크 팔레트 코드용으로 이미 관리하던
    표를 그대로 옮겼다(같은 이유로 순환 임포트를 피한다).
 
-이 두 표 밖의 이름(예: "gold"·"purple"·"pink"·"orange"·"warm special")은
+이 두 표 밖의 이름(예: "gold"·"pink"·"orange"·"warm special")은
 **일부러** 비워 둔다 — 표준 팔레트 10색에 없는 색은 실제 값이 없으므로
 지어내지 않고 `resolve_color_name` 이 `None` 을 돌려준다. 그러면 호출부는
 `CueSkip` 으로 실패를 알려야 한다(색을 지어내지 않는다는 이 저장소의
@@ -79,8 +79,12 @@ _KO_EN_COLOR_EQUIV: dict[str, str] = {
     "흰색": "white",
     "하양": "white",
     "앰버": "amber",
-    "퍼플": "purple",
-    "보라": "purple",
+    # 카드 t408 잔여 → 카드 t409 감독 판정: "퍼플" 은 표준 팔레트에 정확히
+    # 일치하는 이름이 없지만, 감독이 "퍼플/보라 → Lavender(55,35,100)" 로
+    # 직접 판정했다(#A.2 10색 중 유일한 보라 계열). 값을 새로 짓지 않고
+    # 이미 있는 Lavender 슬롯을 가리키기만 한다.
+    "퍼플": "lavender",
+    "보라": "lavender",
     "핑크": "pink",
     "오렌지": "orange",
     "주황": "orange",

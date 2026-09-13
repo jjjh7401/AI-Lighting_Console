@@ -247,6 +247,9 @@ def test_a_bare_color_name_with_no_legend_at_all_still_emits_colorrgb():
         ("deep blue", (5, 20, 100)),
         ("블루", (5, 20, 100)),  # 한국어 원색 표기 → blue.
         ("warm white", (100, 75, 40)),
+        # 카드 t409 감독 판정 — 퍼플/보라 → Lavender(55,35,100).
+        ("퍼플", (55, 35, 100)),
+        ("보라", (55, 35, 100)),
     ],
 )
 def test_the_real_songs_measured_palette_values_all_resolve(value, expected):
@@ -261,6 +264,22 @@ def test_the_real_songs_measured_palette_values_all_resolve(value, expected):
         f"Attribute 'ColorRGB_R' At {r:g} ; Attribute 'ColorRGB_G' At {g:g} ; "
         f"Attribute 'ColorRGB_B' At {b:g}" in " ".join(plan.commands)
     )
+
+
+@pytest.mark.parametrize(
+    "value", ["골드", "금색", "화이트", "흰색", "하양", "핑크", "오렌지", "주황"]
+)
+def test_words_the_director_did_not_rule_on_still_fail_loudly(value):
+    """카드 t409 — 퍼플/보라 는 감독이 판정해 배선했지만, 나머지 한국어
+    원색 어휘는 표준 10색에 정확히 일치하는 이름이 없어 여전히 지어내지
+    않고 skip 한다(감독 판정 대상 목록에는 있었지만 배선 대상은 아니다)."""
+    baseline = _timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["palette_primary"] = value
+    plan = plan_console_apply(baseline, current)
+    assert not any("ColorRGB" in command for command in plan.commands)
+    (skip,) = plan.skipped
+    assert skip.reason == UNMAPPED_LOOK
 
 
 def test_a_color_outside_the_standard_ten_still_fails_loudly_not_guessed():
