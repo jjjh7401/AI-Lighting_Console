@@ -112,7 +112,11 @@ looks:
     genre: "ballad"
     dynamics: 4
     # Wide optics, pale gold. Broad and soft, not punchy.
-    roles: ["프론트", "백라이트", "사이드", "배경"]
+    #
+    # 워시 — 카드 t379. 정본 §7.1 「chorus 1 기준 룩 — 백라이트 + 워시」.
+    # 이 룩은 이미 성격이 워시다("Broad and soft") — 백라이트를 든 이 장르의
+    # 코러스 룩에 붙인다.
+    roles: ["프론트", "백라이트", "사이드", "배경", "워시"]
     aliases: ["코러스 스웰", "chorus swell", "벅찬 코러스"]
     mood_keywords: ["벅찬", "넓은", "황금빛", "코러스", "swelling", "warm"]
     attributes:

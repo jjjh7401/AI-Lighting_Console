@@ -554,10 +554,20 @@ _LOOKS_GRANTED_COUNT_PROSE_PAIRS = {
 #: NOT live-verified: 콘솔은 만지지 않았다. 여기 실린 진폭·속도는
 #: `server/fx/library/movement.yaml` 이 이미 싣고 있는 크기대 안의 설계값이고,
 #: 무대에서 어떻게 보이는지는 실기 회차의 몫이다.
-_T359_LIBRARY_ACCOUNTED_DIGEST = "3ac12015804a6589d5e45230232a6b8f914c9b1255a1d416903fac1c45160c65"
-#: 39 hunk · 추가 225 · 삭제 30 — 사람이 규모를 읽는 자리. 다이제스트가 고정하는 것과
-#: 같은 diff 를 서술하며, 둘이 갈리면 하나는 낡은 것이다.
-_T359_LIBRARY_SHAPE = (39, 225, 30)
+#:
+#: 2026-09-13 갱신 — 카드 t379 가 같은 러닝 다이제스트 위에 더 얹었다. 리그
+#: 커버리지 결손(실기 리그 18그룹 중 WASH-U/D/ALL·HAZE 가 실측상 한 번도 안
+#: 건드려짐 — `reports/onsite-round-20260912/diag.py`)을 메우려고 네 파일에
+#: `워시`(전부) · `헤이즈`(edm·rock — 정본 §6.2 「빔을 보이게 하는 필수 요소」에
+#: 해당하는 룩에만) 역할을 얹었다. 이유는 t359 와 같다 — 변경이 여러 자리에
+#: 흩어져 줄 문면 이어붙이기로 못 고정한다. 그래서 다이제스트를 **다시 쟀다**:
+#: 이 상수는 이제 t356 이전 셋(파란 미러 · D1 append · 개수 산문) + t359 +
+#: t379 를 모두 합친 전체 diff 를 고정한다.
+_T359_LIBRARY_ACCOUNTED_DIGEST = "933caebc21d6983de7f3fc43cd4883a10c1556cf6a942e0ba8ce44ae8eeb9290"
+#: 42 hunk · 추가 262 · 삭제 32 — 사람이 규모를 읽는 자리. 다이제스트가 고정하는 것과
+#: 같은 diff 를 서술하며, 둘이 갈리면 하나는 낡은 것이다. (t359 까지는 39·225·30,
+#: t379 가 +3 hunk · +37 추가 · +2 삭제를 더했다.)
+_T359_LIBRARY_SHAPE = (42, 262, 32)
 
 #: The look-library files carrying a granted change of ANY kind. Derived, not
 #: written down: a hand-kept list would desynchronise from the grants the

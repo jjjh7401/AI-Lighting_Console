@@ -25,6 +25,19 @@
 # and beam width instead. That is a real constraint on this genre and it is
 # worth knowing it was a decision rather than an omission.
 #
+# 블라인더·스트로브는 카드 t379 에서도 안 붙였다 — 역할 어휘엔 이미 있다(roles.py,
+# 카드 t356). 안 붙인 이유는 두 갈래다. (1) 정본 §7.1 아껴두기 사다리가 그 둘을
+# **회차 트리거형**으로 못박는다 — 블라인더는 코러스 3(마지막)에만, 스트로브는
+# 앙코르·피날레까지 보류. Look 이 담는 것은 (장르, 다이내믹스) 정적 값 하나뿐이라
+# "몇 번째 코러스인가"를 모르고, 그 축이 없는 채로 정적 룩에 붙이면 그 룩이 뽑힐
+# 때마다 매번 발화해 사다리의 전제(회차마다 하나씩만 더한다)를 정면으로 깬다.
+# (2) `server/web/preview.py:130-139` 가 strobe 계열(Hz 표기 포함)과 blinder/
+# audience 패턴을 **danger** 로 분류한다 — 실측(grep) 확인. 정적 룩에 박으면 그 룩이 뽑힐
+# 때마다 danger 경고가 뜨는데, 회차형 액센트는 오퍼레이터가 그 순간에만 확인하고
+# 켜는 것이 맞다. 회차 사다리(§7.1)를 룩에 값으로 새기는 일 자체가 카드 t378 의
+# 몫이고, 여기서는 하지 않는다 — "룩 하나 = 정적 값 하나" 스키마를 벗어나는 기능은
+# 이 자산 파일이 아니라 그 로직이 담을 자리다.
+#
 # 프론트 appears in only one look. The audience faces a booth, not a portrait;
 # lighting the operator flat is neither wanted nor flattering. The exception is
 # the breakdown, where the crowd should be able to see who is up there.
@@ -168,7 +181,12 @@ looks:
     display_name: "드랍 크림슨"
     genre: "edm"
     dynamics: 5
-    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜", "무버"]
+    # 워시 — 카드 t379. 정본 §7.1 「chorus 1 기준 룩 — 백라이트 + 워시」가 이름 붙인
+    # 조합 그대로다. 실측(reports/onsite-round-20260912/diag.py)에서 실제 곡의
+    # Chorus 구간이 가장 많이 고른 룩이 이 룩이라, 여기 붙여야 WASH-U/WASH-D/
+    # WASH-ALL 이 실제로 값을 받는다 — 다른 룩에 붙이면 문면은 맞아도 리그가 안
+    # 켜진다.
+    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜", "무버", "워시"]
     aliases: ["드랍 크림슨", "drop crimson", "붉은 드랍"]
     mood_keywords: ["새빨간", "압도적인", "드랍", "절정", "crimson", "drop"]
     attributes:
@@ -193,7 +211,11 @@ looks:
     dynamics: 5
     # The tightest look in the library. Iris fully open, beams at their
     # narrowest: hard shafts rather than a wash.
-    roles: ["백라이트", "사이드", "탑", "무버"]
+    #
+    # 헤이즈 — 카드 t379. 정본 §6.2 「헤이즈는 빔을 보이게 하는 필수 요소」가
+    # 정확히 이 룩을 가리킨다 — 이름 자체가 "샤프트"이고 위 주석이 이미 "워시가
+    # 아니라 샤프트"라고 못박아 뒀다. 헤이즈 없이는 그 샤프트가 안 보인다.
+    roles: ["백라이트", "사이드", "탑", "무버", "헤이즈"]
     aliases: ["드랍 빔", "drop beams", "빔 드랍"]
     mood_keywords: ["날카로운", "차가운", "쏟아지는", "드랍", "빔", "beams", "hard"]
     attributes:
