@@ -692,6 +692,32 @@ _ARC_PALETTE: dict[str, tuple[str, ...]] = {
     "finale": ("warm white", "gold"),
 }
 
+
+def _infer_confirmed_role(index: int, d_levels: Sequence[int]) -> str:
+    """오디오 확정 구간 하나의 아크 역할을 D 레벨만으로 추정한다 (카드 t393).
+
+    이름·무드가 비어 있어 ``_section_role`` 의 자연어 판독이 닿지 않는 구간을
+    위한 대체 판정기다. ``_ARC_D_LEVEL``(intro 2 · verse 3 · chorus 5 ·
+    bridge 2 · finale 5)의 역표를 그대로 따른다: 첫 구간은 intro, 마지막
+    구간은 finale, 최고 D 레벨 구간은(동률 허용) chorus, 양옆보다 낮은 D
+    레벨 구간은 bridge, 나머지는 verse. 순전히 서수·측정값 기반이라 무드
+    단어를 지어내지 않는다.
+    """
+    count = len(d_levels)
+    if count == 0:
+        return "other"
+    if index == 0:
+        return "intro"
+    if index == count - 1:
+        return "finale"
+    level = d_levels[index]
+    if level >= max(d_levels):
+        return "chorus"
+    if level < d_levels[index - 1] and level < d_levels[index + 1]:
+        return "bridge"
+    return "verse"
+
+
 # Direct positional intent inside one section's own wording. Ordered: an
 # audience mention wins over a generic "퍼지/넓혀" in the same sentence.
 _DIRECT_POSITION_INTENTS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
@@ -714,6 +740,12 @@ def _extract_color_words(text: object) -> tuple[str, ...]:
 
 
 def _section_role(section: PositionSheetSection, *, section_index: int, section_count: int) -> str:
+    # 카드 t393 — 오디오 확정 구간은 이름/무드가 비어(중립 ASCII·빈 문자열) 아래
+    # 자연어 판독이 항상 "other" 로 떨어진다. 명시 role 이 실려 있으면(구간
+    # 확정 경로가 t393 처방으로 채운 값) 그 값을 최우선으로 쓴다 — d_level 이
+    # 명시 필드로 전역 기본값 우회를 푼 것과 같은 처방(position_cuesheet.py 참조).
+    if section.role is not None:
+        return section.role
     text = f"{section.name} {section.mood}"
     is_chorus = _SONG_CLIMAX_SECTION.search(text) is not None
     if section_index == section_count and (
@@ -7943,17 +7975,25 @@ class ChatSession:
         # `d_level` 에 그대로 싣는다 — 무드를 비운 채로 두면 `resolve_section`
         # 이 전역 기본값(D3)으로 떨어져 확정 실측값이 조용히 버려졌었다
         # (`_build_unified_song_plan` 이 이 필드를 우선순위대로 소비한다).
+        #
+        # 카드 t393 — 이름·무드가 비어 있어 `_section_role` 이 이 구간들을 전부
+        # "other" 로 판독했고, 그 결과 `_ARC_PALETTE`/`_ARC_FX`/`_ARC_TEXTURE`
+        # 세 표가 동시에 우회되어 17개 구간이 팔레트 1종·이펙트 1종·텍스처
+        # 1종으로 뭉개졌다(실측). `_infer_confirmed_role` 로 D 레벨에서 역할을
+        # 추정해 `role` 필드에 싣는다 — 지시문이 직접 적은 구간(`section_names`)
+        # 은 이 블록을 타지 않으므로 그 경로의 정본은 그대로다.
         if not sections:
             confirmed = self._song_analysis
-            for position, section in enumerate(
-                confirmed.accepted if confirmed is not None else (), start=1
-            ):
+            accepted = confirmed.accepted if confirmed is not None else ()
+            confirmed_d_levels = [section.d_level for section in accepted]
+            for position, section in enumerate(accepted, start=1):
                 sections.append(
                     PositionSheetSection(
                         name=f"S{position}",
                         start_ms=section.start_ms,
                         mood="",
                         d_level=section.d_level,
+                        role=_infer_confirmed_role(position - 1, confirmed_d_levels),
                     )
                 )
         if not sections:

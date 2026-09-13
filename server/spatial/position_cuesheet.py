@@ -65,12 +65,24 @@ class PositionSheetSection:
     실어, 무드가 빈 문자열이라 ``resolve_section`` 이 전역 기본값(D3)으로
     떨어지는 대신 실측값이 쓰이게 한다. 지시문에서 직접 구간을 적은 경로는
     이 필드를 채우지 않는다 — 그 경로는 무드 단어로 이미 D 레벨이 정해진다.
+
+    ``role`` — 카드 t393. 오디오 확정 구간은 이름이 중립 ASCII(``S<n>``,
+    plan.md §C D5)이고 무드가 비어 있어(DSP 는 밝기만 재고 느낌은 재지 않음),
+    ``session.py`` 의 ``_section_role`` 이 이름·무드만 읽으면 항상 ``other`` 로
+    떨어진다 — 그 결과 ``_ARC_PALETTE``/``_ARC_FX``/``_ARC_TEXTURE`` 세 표가
+    동시에 우회되어 17개 구간이 팔레트 1종·이펙트 1종·텍스처 1종으로
+    뭉개졌다(실측). ``d_level`` 과 같은 처방: 명시 필드를 두고, 있으면 그
+    값을 최우선으로 쓴다(``_section_role`` 참조). 지시문이 직접 적은 구간은
+    이 필드를 채우지 않는다 — 그 경로는 이름/무드 단어로 이미 역할이 갈린다
+    (운영자 ``section_names`` 가 여전히 유일한 정본이라는 원칙,
+    tools.py:630 의 dynamics 분리와 같은 이유).
     """
 
     name: str
     start_ms: int
     mood: str
     d_level: int | None = None
+    role: str | None = None
 
 
 @dataclass(frozen=True)
