@@ -938,8 +938,79 @@ def _section_fx_decision(
     return FxDecision(allowed=allowed, source="section_arc", density=density)
 
 
+#: 카드 t406 — 한국어 원색 이름과 `_ARC_PALETTE`의 영어 표기가 같은 색상을
+#: 가리킬 수 있다("블루" == "blue"). 감독이 화면에 보는 원색 표기는 절대
+#: 안 바꾼다(입력 그대로 유지) — 이 표는 "같은 색인지" 판정에만 쓴다.
+_KO_EN_COLOR_EQUIV: dict[str, str] = {
+    "블루": "blue",
+    "파랑": "blue",
+    "파란": "blue",
+    "레드": "red",
+    "빨강": "red",
+    "빨간": "red",
+    "그린": "green",
+    "초록": "green",
+    "녹색": "green",
+    "옐로우": "yellow",
+    "엘로우": "yellow",
+    "노랑": "yellow",
+    "노란": "yellow",
+    "골드": "gold",
+    "금색": "gold",
+    "마젠타": "magenta",
+    "시안": "cyan",
+    "청록": "cyan",
+    "화이트": "white",
+    "흰색": "white",
+    "하양": "white",
+    "앰버": "amber",
+    "퍼플": "purple",
+    "보라": "purple",
+    "핑크": "pink",
+    "오렌지": "orange",
+    "주황": "orange",
+}
+
+#: `_ARC_PALETTE`/무게 수식어가 이미 쓰는 색조 수식어 — 색상 동일성 판정
+#: 전에 벗겨낸다("deep blue" 와 "블루" 는 수식어를 떼면 둘 다 blue).
+_HUE_MODIFIER_STRIP = re.compile(
+    r"^(deep|cold|warm|pale|light|dark|짙은|연한|쿨톤|웜톤)\s+", re.IGNORECASE
+)
+
+
+def _hue_key(color: str) -> str:
+    stripped = _HUE_MODIFIER_STRIP.sub("", str(color or "").strip())
+    return _KO_EN_COLOR_EQUIV.get(stripped, stripped.casefold())
+
+
+def _distinct_from_primary(candidate: str, primary: str, fallback: str) -> str:
+    """`candidate` 가 언어만 다를 뿐 `primary` 와 같은 색상이면(카드 t406 —
+    "블루"/"blue") 팔레트에 이미 있는 다른 후보로 되돌아간다. 후보도
+    같은 색상이면(단색 아크 등) 그대로 돌려준다 — 더 나은 대안이 없다."""
+    if _hue_key(candidate) != _hue_key(primary):
+        return candidate
+    return fallback
+
+
+#: 카드 t406 — 채도/무게 사다리. 회차마다 아크 색조를 두 상태(회전 주기 2)
+#: 로만 돌리면 25회차짜리 코러스도 A-B-A-B 둘로만 보인다(실측: 같은 룩을
+#: 공유하는 구간이 13개). 색 목록 자체를 늘리는 대신(순수 리스트 순환은
+#: 감독이 지시한 축이 아니다 — 카드 지시문) 아크 색의 채도/무게를 회차마다
+#: 다르게 표기해 상태 수를 늘린다. 색상 정체성(hue)은 그대로 두므로 §7의
+#: "곡 안 반복은 미덕"과 충돌하지 않는다 — 코러스 1의 색이 이후에도 여전히
+#: 같은 색이고, 다만 진하기가 회차를 구분한다.
+_ACCENT_WEIGHT_LADDER: tuple[str, ...] = ("", "짙은 ", "연한 ", "쿨톤 ", "웜톤 ")
+
+
+def _weighted_accent(color: str, occurrence: int) -> str:
+    if occurrence <= 1:
+        return color
+    prefix = _ACCENT_WEIGHT_LADDER[(occurrence - 1) % len(_ACCENT_WEIGHT_LADDER)]
+    return f"{prefix}{color}" if prefix else color
+
+
 def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple[str, ...]:
-    """역할 아크 팔레트 — 회차마다 보조색을 돌린다 (카드 t402).
+    """역할 아크 팔레트 — 회차마다 보조색을 돌리고 무게를 바꾼다 (카드 t402·t406).
 
     같은 역할이 반복되면(코러스 25회 등) 예전에는 매번 바이트 동일한
     팔레트가 나왔다 — 회차를 구분하지 않았기 때문이다. `occurrence` 가
@@ -947,21 +1018,35 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
     함수)로 아크 색을 회전한다. 메인 컬러(``primary``, 감독이 지정한
     색)는 이 회전과 무관하게 아래 결합에 **항상** 남는다 — 감독 지시
     "메인 컬러 중심" 을 구조적으로 지킨다.
+
+    카드 t406 — 아크가 2색뿐이라 회전만으로는 상태가 둘뿐이다(A-B-A-B).
+    `_weighted_accent` 로 채도/무게 축을 얹어 상태 수를 늘리고,
+    `_distinct_from_primary` 로 회전이 아크 색을 primary 와 같은 색상에
+    (언어만 다른 표기 포함) 겹치게 돌리는 경우를 걸러낸다.
     """
     arc = _ARC_PALETTE.get(role)
     if arc is None:
         return base or ("white",)
+    rotated = arc
     if len(arc) > 1 and occurrence > 1:
-        arc = rotate_palette(arc, occurrence - 1)
+        rotated = rotate_palette(arc, occurrence - 1)
     if not base:
-        return arc
+        return rotated
     primary = base[0]
     if role in ("intro", "bridge"):
-        combined: tuple[str, ...] = (arc[0], primary)
+        accent = _distinct_from_primary(rotated[0], primary, fallback=rotated[-1])
+        combined: tuple[str, ...] = (_weighted_accent(accent, occurrence), primary)
     elif role == "verse":
-        combined = (primary, arc[-1])
+        accent = _distinct_from_primary(rotated[-1], primary, fallback=rotated[0])
+        combined = (primary, _weighted_accent(accent, occurrence))
     else:
-        combined = (*arc, primary)
+        head = _distinct_from_primary(rotated[0], primary, fallback=rotated[-1])
+        tail = _distinct_from_primary(rotated[-1], primary, fallback=rotated[0])
+        combined = (
+            _weighted_accent(head, occurrence),
+            _weighted_accent(tail, occurrence),
+            primary,
+        )
     return tuple(dict.fromkeys(combined))
 
 
