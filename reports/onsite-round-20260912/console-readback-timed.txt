@@ -1,0 +1,23 @@
+Sequence 13: {'childCount': 18, 'class': 'Sequence', 'enumeration': 'ok', 'name': 'DinoSync'}
+  큐 1 OffCue
+  큐 2 CueZero
+  큐 3 Intro
+  큐 4 Verse 1
+  큐 5 Verse 2
+  큐 6 Chorus 1
+  큐 7 Chorus 2
+  큐 8 Bridge 1
+  큐 9 Bridge 2
+  큐 10 Chorus 3
+  큐 11 Verse 3
+  큐 12 Chorus 4
+  큐 13 Verse 4
+  큐 14 Chorus 5
+  큐 15 Breakdown
+  큐 16 Chorus 6
+
+Timecode 1: {'childCount': 1, 'class': 'Timecode', 'enumeration': 'ok', 'name': 'DinoSync Timecode'}
+
+Executor 205: 'DinoDino' -> Sequence 14
+Executor 206: 'DinoDino' -> Sequence 14
+Executor 207: 'DinoSync' -> Sequence 13
