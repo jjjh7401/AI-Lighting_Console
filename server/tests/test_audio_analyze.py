@@ -16,7 +16,15 @@ import socket
 
 import pytest
 
-from server.audio.analyze import AnalysisFailure, AnalysisResult, analysis_available, analyze
+from server.audio.analyze import (
+    _D_LEVEL_BANDS,
+    _D_LEVEL_TOP,
+    AnalysisFailure,
+    AnalysisResult,
+    _grade_sections,
+    analysis_available,
+    analyze,
+)
 
 from .fixtures.audio import (
     FIXTURE_BOUNDARIES_MS,
@@ -310,3 +318,87 @@ class TestARelativeNoveltyFloorSurvivesOneOutlierStep:
             gains=(0.10, 0.20, 0.40, 0.80),
         )
         self._assert_all_planted_boundaries_survive(planted, detected)
+
+
+class TestDLevelRescalesToTheSongsOwnRangeWhenCompressed:
+    """t375 — 마스터링 압축이 심한 실제 곡은 절대 폭(가장 큰 구간의 RMS)만
+    으로 등급을 매기면 하위 띠가 구조적으로 닿지 못한다 — 실측
+    (``reports/t375/real-song-analyze.txt``): 최대대비 비율이 0.653~1.000
+    안에 몰린 17구간 실제 곡에서 12개가 D5 로 뭉쳤다.
+
+    ``_grade_sections`` 는 가장 조용한 구간조차 이미 압축 문턱
+    (``_D_LEVEL_RESCALE_QUIET_RATIO_FLOOR``, D4 문턱과 같은 0.60)을 넘고
+    그 몰림이 잡음이 아닐 때만(``_MIN_LOG_STEP`` 이상의 로그 차) 기준점을
+    "가장 큰 구간 하나"에서 "이 곡에서 관측된 최소~최대 폭"으로 옮긴다.
+
+    구간마다 RMS 프레임 하나만 두어(``frame_ms=1000``, 경계마다 정확히
+    한 프레임) ``_grade_sections`` 를 오디오 합성 없이 직접 잰다 — 이
+    가드는 등급 계산만의 문제라, 별도의 경계 검출 결과에 얽매이지 않는
+    것이 더 정확하다.
+    """
+
+    def _levels_for(self, means: list[float]) -> list[int]:
+        import numpy
+
+        rms = numpy.array(means, dtype=float)
+        frame_ms = 1000.0
+        boundaries_ms = tuple(int(index * frame_ms) for index in range(len(means)))
+        duration_ms = int(len(means) * frame_ms)
+        candidates = _grade_sections(numpy, rms, frame_ms, boundaries_ms, duration_ms)
+        return [candidate.d_level for candidate in candidates]
+
+    def test_a_compressed_songs_grades_spread_across_the_full_range(self):
+        # 실측(reports/t375/real-song-rms.txt)에서 뽑은 여섯 구간의 평균RMS.
+        means = [0.0249, 0.0294, 0.0315, 0.0313, 0.0213, 0.0325]
+        levels = self._levels_for(means)
+        assert levels == [2, 4, 5, 5, 1, 5]
+        assert len(set(levels)) >= 3, f"등급이 상위 두 칸에만 몰렸다: {levels}"
+
+    def test_the_grades_never_invert_the_measured_rms_ordering(self):
+        # 재조정이 등급을 넓히더라도 순서를 뒤집으면 안 된다 — 더 조용한
+        # 구간이 더 높은 등급을 받으면 그 스프레드는 지어낸 것이다.
+        means = [0.0249, 0.0294, 0.0315, 0.0313, 0.0213, 0.0325]
+        levels = self._levels_for(means)
+        for i, mean_i in enumerate(means):
+            for j, mean_j in enumerate(means):
+                if mean_i < mean_j:
+                    assert levels[i] <= levels[j], (
+                        f"{i}번({mean_i})이 {j}번({mean_j})보다 조용한데 등급은 더 높다: {levels}"
+                    )
+
+    def test_a_song_with_no_real_dynamics_is_not_forced_into_a_fake_spread(self):
+        # 카드가 명시적으로 요구한 대조군 — 전 구간이 잡음 수준 차이만 나는
+        # 곡(다이내믹이 진짜 없음)을 재조정하면 없는 다이내믹을 지어내는
+        # 것이 된다.
+        means = [0.06384, 0.06340, 0.06355, 0.06393]
+        levels = self._levels_for(means)
+        assert len(set(levels)) == 1, f"다이내믹이 없는데 등급이 갈렸다: {levels}"
+
+    def test_the_no_dynamics_control_would_show_a_fake_spread_without_the_guard(self):
+        # 대조군 — 로그 폭 조건 없이 최소~최대로 무조건 재조정하면 위
+        # 균일한 곡도 등급이 갈린다는 것을 직접 재서 확인한다. 이 대조군
+        # 자체가 갈리지 않으면 위 시험은 가드가 막은 것을 증명하지 못한다.
+        means = [0.06384, 0.06340, 0.06355, 0.06393]
+        loudest, quietest = max(means), min(means)
+        span = loudest - quietest
+        fake_levels = set()
+        for mean in means:
+            ratio = (mean - quietest) / span
+            level = _D_LEVEL_TOP
+            for upper, band_level in _D_LEVEL_BANDS:
+                if ratio < upper:
+                    level = band_level
+                    break
+            fake_levels.add(level)
+        assert len(fake_levels) > 1, (
+            f"대조군 자체가 공허하다 — 가드 없이도 안 갈리면 위 가드가 "
+            f"실제로 뭔가를 막는지 이 대조군은 증명하지 못한다: {fake_levels}"
+        )
+
+    def test_a_song_with_already_wide_dynamics_is_unaffected(self):
+        # 회귀 대조군 — 가장 조용한 구간이 이미 압축 문턱 아래인(폭이 이미
+        # 넓은) 곡은 손대지 않는다. 합성 픽스처 실측 RMS 그대로 넣어
+        # FIXTURE_D_LEVELS 와 같은 결과가 나오는지 본다.
+        means = [0.01909, 0.05716, 0.11899, 0.03902]
+        levels = self._levels_for(means)
+        assert levels == [1, 3, 5, 2]
