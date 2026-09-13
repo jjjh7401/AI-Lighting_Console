@@ -2,6 +2,8 @@
 // 그래서 렌더가 아니라 렌더를 결정하는 순수 함수를 재고, 두 축의 연동은
 // 「선택 인덱스 → 보이는 행 범위」와 「스크롤 위치 → 선택 인덱스」 두 방향을
 // 각각 함수로 확인한다.
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import type { SongTimelineSection, SongTimelineView } from "../protocol";
@@ -16,6 +18,7 @@ import {
   cueIndexAtMs,
   cueLabel,
   derivedBannerText,
+  formatBpm,
   formatDuration,
   formatTc,
   isSnapCue,
@@ -189,6 +192,18 @@ describe("정본 산출물의 표기를 따른다", () => {
     expect(formatTc(undefined)).toBe(EMPTY_CELL);
   });
 
+  // t392 — 감독 화면 신고: "126.04801829268435 BPM". 표시 전용 반올림이고,
+  // 원본 값(마디 분할·큐 타이밍이 쓰는 값)은 이 함수를 거치지 않는다 —
+  // formatBpm 은 화면에 찍을 문자열만 만들고 어떤 상태도 바꾸지 않는다.
+  it("BPM 은 화면에서만 최대 소수점 2자리로 줄인다 — 원본 계산값은 건드리지 않는다", () => {
+    const raw = 126.04801829268435;
+    expect(formatBpm(raw)).toBe("126.05");
+    expect(raw).toBe(126.04801829268435); // 원본은 그대로 살아 있다
+    expect(formatBpm(120)).toBe("120"); // 정수 BPM 은 "120.00" 으로 안 부풀린다
+    expect(formatBpm(undefined)).toBe(EMPTY_CELL);
+    expect(formatBpm(null)).toBe(EMPTY_CELL);
+  });
+
   it("Q# 는 세 자리", () => {
     expect(cueLabel(SECTIONS[0])).toBe("Q010");
     expect(cueLabel(SECTIONS[SECTIONS.length - 1])).toBe("Q180");
@@ -211,5 +226,139 @@ describe("정본 산출물의 표기를 따른다", () => {
 
   it("곡 길이는 헤더 메타를 그대로 쓴다", () => {
     expect(TOTAL).toBe(236_000);
+  });
+});
+
+// t388 — 큐시트 표(14열)가 화면 오른쪽으로 잘려 마지막 열에 닿을 방법이 없다는
+// 감독 신고. 이 컴포넌트는 useState/useRef/useCallback 을 쓰는 훅 컴포넌트라
+// RunbookMode.test.tsx 처럼 함수를 직접 호출해 렌더 트리를 얻을 수 없다(훅은
+// React 렌더 컨텍스트 밖에서 부르면 던진다) — 그래서 이 파일의 다른 모든
+// 테스트처럼 컴포넌트를 렌더하지 않고 소스/스타일시트 텍스트를 구조적으로
+// 검사한다. 스크린샷으로 시각 확인은 할 수 없다는 점을 그대로 남긴다(§ 검증
+// 섹션 참고).
+//
+// 1차 수정(overflow: auto → overflow-x: auto; overflow-y: auto)은 조율자가
+// 지적한 대로 **아무 동작도 안 바꾼 무효 수정**이었다 — 둘은 CSS 상 완전히
+// 같다. 조상 사슬을 다시 훑어도(아래 CSS 주석 참고) 스크롤을 막는 요소는
+// 없었다: 표는 이전에도 실제로 가로 스크롤이 됐다. 진짜 원인은 macOS 오버레이
+// 스크롤바라 "더 있다"는 신호가 화면에 없었던 것 — 그래서 이번엔 "스크롤이
+// 되는가"가 아니라 "스크롤할 수 있다는 게 보이는가"를 검사한다: (a) 실제로
+// 자리를 차지하는 스크롤바 스타일이 새로 생겼는가, (b) 오른쪽 가장자리
+// 그라디언트 신호가 새로 생겼는가, (c) 그 신호가 실제 스크롤 가능 여부(JS
+// 로 잰 scrollWidth)에 따라 켜지고 꺼지는가.
+describe("t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다", () => {
+  const componentSource = readFileSync(
+    new URL("./CueSheetTimeline.tsx", import.meta.url),
+    "utf-8",
+  );
+  const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf-8");
+
+  it("표가 전용 가로 스크롤 컨테이너(cst-sheet-scroll) 안에 있다", () => {
+    // cst-sheet-scroll 여는 태그와 <table className="cst-sheet"> 사이에
+    // 다른 스크롤 컨테이너가 끼어들지 않는지 순서로 확인한다.
+    const scrollWrapperIndex = componentSource.indexOf('className="cst-sheet-scroll"');
+    const tableIndex = componentSource.indexOf('<table className="cst-sheet">');
+    expect(scrollWrapperIndex).toBeGreaterThan(-1);
+    expect(tableIndex).toBeGreaterThan(scrollWrapperIndex);
+  });
+
+  it("감독이 잘려 보인다고 신고한 Fade 열은 오른쪽 끝 근처에 실재한다 — 스크롤로 닿을 위치", () => {
+    const columnsMatch = componentSource.match(/const SHEET_COLUMNS = \[([\s\S]*?)\];/);
+    expect(columnsMatch).not.toBeNull();
+    const columns = (columnsMatch as RegExpMatchArray)[1]
+      .split(",")
+      .map((s) => s.trim().replace(/^"|"$/g, ""))
+      .filter(Boolean);
+    expect(columns).toContain("Fade");
+    // 첫 칸이 아니라 뒤쪽에 있어야 "잘려서 안 보인다"는 신고와 일치한다.
+    expect(columns.indexOf("Fade")).toBeGreaterThan(columns.length / 2);
+  });
+
+  // 무효였던 이전 단언(overflow-x: auto 문자열 존재)은 여기서 지운다 — 그
+  // 단언은 「overflow: auto」였던 예전 CSS에서도 우연히는 안 통과했지만,
+  // overflow-x/-y 로 쪼개기만 해도(동작 변화 없이) 통과해버려서 조율자가
+  // 지적한 "동작을 바꾸지 않아도 통과하는 가드" 그 자체였다. 대신 실제로
+  // 새로 생긴 스크롤바 스타일을 검사한다 — macOS 오버레이 스크롤바를 굵고
+  // 항상 보이는 스크롤바로 바꾸는 것이 이번 수정의 실체다.
+  it("스크롤바를 오버레이가 아니라 항상 자리를 차지하는 굵은 형태로 강제한다", () => {
+    // .cst-sheet-scroll 은 두 곳에 나온다 — min-width:0 가드 목록의 한
+    // 셀렉터로 한 번, 그리고 실제 스크롤 동작을 정의하는 자기 자신의 규칙
+    // 으로 한 번. --cst-row-h 변수를 정의하는 쪽이 후자다.
+    const scrollRule = [...stylesSource.matchAll(/\.cst-sheet-scroll\s*{([^}]*)}/g)].find((m) =>
+      m[1].includes("--cst-row-h"),
+    );
+    expect(scrollRule).not.toBeUndefined();
+    const body = (scrollRule as RegExpMatchArray)[1];
+    // Firefox/최신 Chromium 공통 표준 축 — scrollbar-width: auto 는
+    // "얇게도 아니고 숨기지도 않는다"는 뜻이라 오버레이보다 굵게 남는다.
+    expect(body).toMatch(/scrollbar-width:\s*auto/);
+    expect(body).toMatch(/scrollbar-color:\s*#[0-9a-f]{6}\s+#[0-9a-f]{6}/);
+    // Chromium 계열(이 앱이 도는 웹뷰 포함) 전용 축 — 트랙과 손잡이가
+    // 실제 색을 가진 사각 영역으로 항상 그려진다.
+    expect(stylesSource).toMatch(/\.cst-sheet-scroll::-webkit-scrollbar\s*{[^}]*height:\s*\d+px/);
+    expect(stylesSource).toMatch(/\.cst-sheet-scroll::-webkit-scrollbar-thumb\s*{[^}]*background:/);
+  });
+
+  it("오른쪽 가장자리에 '더 있다' 그라디언트(cst-sheet-edge-fade)가 창틀에 고정된 채 존재한다", () => {
+    // 창틀(cst-sheet-scrollarea, position:relative)은 스크롤하지 않고,
+    // 그 안에서 cst-sheet-scroll 만 옆으로 굴러간다 — 그래서 그라디언트가
+    // absolute 로 창틀에 붙으면 표가 스크롤돼도 화면 위 같은 자리에 남는다.
+    expect(componentSource).toMatch(/className="cst-sheet-scrollarea"/);
+    expect(componentSource).toMatch(
+      /sheetCanScrollRight\s*&&\s*<div className="cst-sheet-edge-fade"/,
+    );
+    const areaRule = stylesSource.match(/\.cst-sheet-scrollarea\s*{([^}]*)}/);
+    expect(areaRule).not.toBeNull();
+    expect((areaRule as RegExpMatchArray)[1]).toMatch(/position:\s*relative/);
+    const fadeRule = stylesSource.match(/\.cst-sheet-edge-fade\s*{([^}]*)}/);
+    expect(fadeRule).not.toBeNull();
+    const fadeBody = (fadeRule as RegExpMatchArray)[1];
+    expect(fadeBody).toMatch(/position:\s*absolute/);
+    expect(fadeBody).toMatch(/pointer-events:\s*none/);
+    expect(fadeBody).toMatch(/background:\s*linear-gradient/);
+  });
+
+  it("그라디언트는 '아직 스크롤할 게 남았을 때만' 켜진다 — 항상 켜진 장식이 아니다", () => {
+    // sheetCanScrollRight 는 scrollWidth - clientWidth - scrollLeft 로
+    // 실측한 잔여 스크롤 폭에서만 true 가 된다. 끝까지 스크롤한 사람에게
+    // 거짓 "더 있다" 신호를 남기지 않는다는 게 이 계산의 요점이라, 그
+    // 산식 자체를 소스에서 확인한다(렌더 없이 이 이상은 확인할 수 없다 —
+    // 실제 scrollWidth 값은 브라우저에서만 나온다).
+    expect(componentSource).toMatch(
+      /box\.scrollWidth\s*-\s*box\.clientWidth\s*-\s*box\.scrollLeft/,
+    );
+    expect(componentSource).toMatch(/setSheetCanScrollRight\(remaining > 1\)/);
+    // 스크롤할 때마다, 그리고 처음 그려질 때·창 크기가 바뀔 때도 다시 잰다 —
+    // 한 번 계산하고 방치하면 리사이즈 후 신호가 낡는다.
+    expect(componentSource).toMatch(/onSheetScroll[\s\S]*updateSheetScrollAffordance\(\)/);
+    expect(componentSource).toMatch(/window\.addEventListener\("resize", updateSheetScrollAffordance\)/);
+  });
+
+  it("BPM 표시는 formatBpm 을 거친다 — 원본 부동소수점을 그대로 찍지 않는다", () => {
+    expect(componentSource).toMatch(/\{formatBpm\(timeline\.bpm\)\}\s*BPM/);
+  });
+
+  it("Fade 표시는 소수점 2자리로 반올림한다", () => {
+    expect(componentSource).toMatch(/section\.fade_seconds\.toFixed\(2\)/);
+  });
+
+  it("표 자체가 스크롤 컨테이너보다 넓게 강제된다(min-width) — 그래야 잘림이 아니라 스크롤이 생긴다", () => {
+    const sheetWidthRules = [...stylesSource.matchAll(/\.cst-sheet\s*{([^}]*)}/g)].map((m) => m[1]);
+    const minWidthLine = sheetWidthRules.find((rule) => /min-width/.test(rule));
+    expect(minWidthLine).toBeDefined();
+    const px = Number((minWidthLine as string).match(/min-width:\s*(\d+)px/)?.[1]);
+    expect(px).toBeGreaterThanOrEqual(1100);
+  });
+
+  it("조상 사슬 감사 — min-width:0 가드가 새 창틀(cst-sheet-scrollarea)까지 덮는다", () => {
+    // 이 규칙 하나가 이번 재작업에서 실제로 바뀐 유일한 '가드' 성격 CSS다:
+    // cst-sheet-scrollarea 가 cst-panel 의 새 직계 자식(flex 열의 자식)이
+    // 됐으므로, 기존 min-width:0 리스트에 끼워 넣지 않으면 이 지점이 새
+    // clipper 가 될 수 있었다.
+    const guardRule = stylesSource.match(
+      /\.cue-sheet-timeline,\s*\n\.cst-panel,\s*\n\.cst-rail,\s*\n\.cst-sheet-scrollarea,\s*\n\.cst-sheet-scroll\s*{([^}]*)}/,
+    );
+    expect(guardRule).not.toBeNull();
+    expect((guardRule as RegExpMatchArray)[1]).toMatch(/min-width:\s*0/);
   });
 });

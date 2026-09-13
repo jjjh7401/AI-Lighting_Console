@@ -3616,23 +3616,83 @@ body {
   box-shadow: inset 3px 0 0 #ffd400;
 }
 
-/* 창은 창이어야 한다 — 레일·표가 부모를 늘리지 못하게 막는다. */
+/* 창은 창이어야 한다 — 레일·표가 부모를 늘리지 못하게 막는다.
+   (t388 재작업으로 확인: 조상 사슬 전체 — .runbook-mode → .runbook-mode-frame
+   → .cue-sheet-timeline → .cst-panel → .cst-sheet-scrollarea → .cst-sheet-scroll
+   — 을 다시 훑었다. 새로 찾은 것은 없다: min-width:0 은 이미 이 사슬의
+   모든 굽힘점(flex 열의 자식이 되는 지점)에 걸려 있었고, 상위 요소 중
+   overflow-x 를 hidden 으로 막는 곳은 없었다. 즉 표는 이전에도 실제로는
+   가로로 스크롤되고 있었다 — 잘려 보인 진짜 이유는 스크롤이 안 되는 게
+   아니라, macOS 오버레이 스크롤바가 굴릴 때만 잠깐 나타나서 "더 있다"는
+   신호가 화면에 전혀 없었기 때문이다(감독 스크린샷에도 스크롤바 자체가
+   안 보였다). 그래서 이번 수정은 overflow 값을 또 바꾸는 게 아니라 —
+   그건 지난번에 이미 해봤고 아무 효과가 없었다 — 항상 보이는 스크롤바와
+   가장자리 그라디언트, 두 개의 눈에 보이는 신호를 새로 추가한다.) */
 .cue-sheet-timeline,
 .cst-panel,
 .cst-rail,
+.cst-sheet-scrollarea,
 .cst-sheet-scroll {
   min-width: 0;
   max-width: 100%;
 }
 
+/* cst-sheet-scrollarea 는 스크롤하지 않는 창틀 — 안의 cst-sheet-scroll 만
+   옆으로 굴러가고, 이 틀에 오른쪽 가장자리 그라디언트(.cst-sheet-edge-fade)
+   를 화면 고정 위치로 붙여 둔다. */
+.cst-sheet-scrollarea {
+  position: relative;
+}
+
 /* 큐시트는 위아래로 움직인다 — 행을 걸러서가 아니라 창 높이로 보이는 만큼을
-   정한다. 모든 행이 DOM 에 있고, 다섯 줄 남짓이 보이는 높이로 묶어 둔다. */
+   정한다. 모든 행이 DOM 에 있고, 다섯 줄 남짓이 보이는 높이로 묶어 둔다.
+   t388 — 가로 스크롤은 처음부터 되고 있었다(위 주석 참고); 이번엔 그
+   스크롤이 "보이게" 만드는 쪽을 고친다. scrollbar-width/-color 는 Firefox
+   와 최신 Chromium(이 앱이 도는 웹뷰 포함) 둘 다에서 먹는다 — 오버레이가
+   아니라 항상 자리를 차지하는 굵은 스크롤바를 강제한다. */
 .cst-sheet-scroll {
   --cst-row-h: 28px;
   --cst-head-h: 30px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   max-height: calc(var(--cst-row-h) * 5 + var(--cst-head-h));
   overscroll-behavior: contain;
+  scrollbar-width: auto;
+  scrollbar-color: #5a6a86 #1b2029;
+}
+
+.cst-sheet-scroll::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+
+.cst-sheet-scroll::-webkit-scrollbar-track {
+  background: #1b2029;
+}
+
+.cst-sheet-scroll::-webkit-scrollbar-thumb {
+  background: #5a6a86;
+  border-radius: 6px;
+  border: 2px solid #1b2029;
+}
+
+.cst-sheet-scroll::-webkit-scrollbar-thumb:hover {
+  background: #7488a8;
+}
+
+/* t388 — 스크롤바만으로는 부족하다(오버레이 스크롤바를 쓰는 사람은 여전히
+   스크롤바 자체를 못 볼 수 있다). 오른쪽 가장자리에 항상 같은 자리(창틀
+   기준)에 머무는 그라디언트를 얹어 "이 너머에 더 있다"를 알린다. 더 스크롤할
+   내용이 남아 있을 때만(JS 가 scrollWidth 로 판정) 그려진다 — 끝까지 스크롤한
+   사람에게는 사라진다. */
+.cst-sheet-edge-fade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 12px; /* 가로 스크롤바 높이만큼 비켜서, 스크롤바를 덮지 않는다. */
+  width: 32px;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(26, 30, 40, 0), #1a1e28 92%);
 }
 
 .cst-sheet thead th {
