@@ -162,6 +162,15 @@ class LintCue:
     names the rule IDs (a subset of :data:`LINT_RULE_IDS`) this cue's
     designer has declared an intentional violation of (spec.md R3's R
     clause) — every other rule and every other cue is unaffected.
+
+    ``palette_source`` names where ``palette_colors`` came from (카드
+    t398) — ``"section_arc"`` (the role arc table, ``_ARC_PALETTE``, a
+    deliberate accent the director ruled the chorus/finale may punch out
+    with) is exempt from L5's off-palette half; every other source
+    (``"section_text"``, the default ``"plan_palette"``, etc.) is still
+    checked. A rotation of an already-chosen palette does not change its
+    provenance, so this field is never overwritten by
+    ``server.web.session.rotate_palette``.
     """
 
     cue_no: float
@@ -173,6 +182,7 @@ class LintCue:
     position_label: str | None = None
     position_width: str | None = None
     palette_colors: tuple[str, ...] = ()
+    palette_source: str = "plan_palette"
     effect_axis_count: int = 0
     effect_speed_beats: float | None = None
     is_accent: bool = False
@@ -390,7 +400,12 @@ def _lint_l5(sheet: LintSheet, profile: MusicProfile) -> list[LintFinding]:
     """L5: 팔레트 크기 > 5 또는 곡 중 팔레트 이탈 (C1). Both halves read
     ``profile.palette`` — an undeclared (empty) palette means nothing to
     check against, so neither half can fire (not a rule disablement: there
-    is simply no declared palette for a cue to deviate from)."""
+    is simply no declared palette for a cue to deviate from).
+
+    카드 t398 — 감독 재정(0913): 「후렴에는 질러도 된다」. 역할 아크
+    (``_ARC_PALETTE``)에서 온 색(``palette_source == "section_arc"``)은
+    질러도 되는 의도된 악센트라 C1 이탈로 잡지 않는다 — 그 외 출처
+    (``"section_text"`` 등 감독 문구·기본값)는 그대로 잡는다."""
     findings = []
     if not profile.palette:
         return findings
@@ -406,7 +421,7 @@ def _lint_l5(sheet: LintSheet, profile: MusicProfile) -> list[LintFinding]:
         )
     allowed = set(profile.palette)
     for cue in sheet.cues:
-        if _suppressed("L5", cue):
+        if _suppressed("L5", cue) or cue.palette_source == "section_arc":
             continue
         off_palette = [color for color in cue.palette_colors if color not in allowed]
         if off_palette:

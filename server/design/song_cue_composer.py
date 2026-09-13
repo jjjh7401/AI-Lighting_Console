@@ -845,6 +845,7 @@ def _lint_cue(cue: ComposedCue, section_ordinal: int) -> LintCue:
         position_label=cue.position.stored,
         position_width=cue.position.width_tier,
         palette_colors=cue.color.palette,
+        palette_source=cue.color.source,
         effect_axis_count=len(cue.fx.permitted),
         effect_speed_beats=cue.fx.speed_beats,
         is_accent=bool(cue.accents),
