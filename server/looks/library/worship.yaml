@@ -68,7 +68,10 @@ looks:
     genre: "worship"
     dynamics: 1
     # Backdrop and top only. Nothing on faces: people are praying, not watching.
-    roles: ["배경", "탑"]
+    #
+    # 워시 — 카드 t379. 이름 자체가 "웨시"(wash)인데 여태 워시 역할이 없었다 —
+    # 정본 §6.2 「앰비언트 워시」 층의 가장 확실한 자리다.
+    roles: ["배경", "탑", "워시"]
     aliases: ["기도", "prayer wash", "prayer"]
     mood_keywords: ["고요한", "경건한", "어두운", "기도", "묵상", "quiet", "reverent"]
     attributes:
