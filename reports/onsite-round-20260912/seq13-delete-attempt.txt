@@ -1,0 +1,11 @@
+지우기 전 13번: sweep-vshape-swing
+  승인: ['Delete Sequence 13']
+게이트: cleared cleared= True
+실행 결과 전체: ExecutionResult(ok=False, detail='User Canceled Command')
+   ok: False
+   detail: 'User Canceled Command'
+
+=== 되읽기 ===
+남은 시퀀스: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 2000]
+13번 존재: True
+Executor 105: {'childCount': 0, 'class': 'Executor', 'enumeration': 'ok', 'name': 'sweep-vshape-swing', 'sequenceNo': 13}

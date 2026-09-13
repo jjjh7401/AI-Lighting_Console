@@ -1,0 +1,7 @@
+=== 지우기 전 상태 ===
+시퀀스: [(1, 'Default'), (2, 'Sugar'), (3, 'Sugar r3'), (4, 'eset1Fade'), (5, 'Synth Test'), (6, 'Notice Test'), (7, 'VerifyA'), (8, 'VerifyB4x'), (9, 'T215 SCRATCH DELETABLE'), (10, 'VerifyC4x'), (11, 'chase-horizontal'), (12, 'chase-bounce-run'), (13, 'sweep-vshape-swing'), (2000, 'Sequence 2000')]
+Seq 13: {'childCount': 3, 'class': 'Sequence', 'enumeration': 'ok', 'name': 'sweep-vshape-swing'}
+   큐 1 OffCue
+   큐 2 CueZero
+   큐 3 sweep-vshape-swing
+Executor 105: {'childCount': 0, 'class': 'Executor', 'enumeration': 'ok', 'name': 'sweep-vshape-swing', 'sequenceNo': 13}
