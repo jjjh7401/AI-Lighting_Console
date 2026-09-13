@@ -1,0 +1,7 @@
+Page 1 childCount=2 truncated=False
+
+점유된 실행기 (i+100 적용):
+  Executor 205  name='DinoDino'  -> Sequence 14
+  Executor 206  name='DinoDino'  -> Sequence 14
+
+🔴 내가 앞서 '105' 라고 적은 것은 슬롯 인덱스였고 실행기 번호는 205
