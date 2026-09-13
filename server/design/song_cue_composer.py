@@ -592,7 +592,7 @@ def _section_cue(
     fade_seconds = (
         float(decision.fade_override)
         if decision.fade_override is not None
-        else _fade_seconds(budget)
+        else _fade_seconds_for_role(budget, decision, plan)
     )
     position_label = None if blackout or position_axis_disabled(plan) else decision.position.preset
     return ComposedCue(
@@ -674,6 +674,26 @@ def _effect_speed_beats(budget: AxisBudget, permitted: tuple[str, ...]) -> float
 def _fade_seconds(budget: AxisBudget) -> float:
     low, high = budget.fade_seconds
     return (low + high) / 2.0
+
+
+#: 카드 t386 — 연출 기준 §6 "outro → 느린 페이드 1회". `_ARC_D_LEVEL` 은
+#: finale 도 chorus 와 같은 D5 를 준다(`session.py`) — 두 역할이 밝기는
+#: 같아야 맞지만, D5 의 페이드 표(§3)는 chorus 히트용 하프비트짜리라
+#: finale 이 그대로 받으면 곡이 뚝 끊기듯 끝난다. D 레벨(밝기)은 그대로
+#: 두고 페이드(전환 속도)만 D1 행(§3 의 가장 느린 페이드)으로 바꾼다 —
+#: 두 축을 분리해 놓은 §3 표의 구조를 그대로 이용한 것이라 새 숫자를
+#: 지어내지 않는다.
+_OUTRO_ROLE = "finale"
+_OUTRO_FADE_D_LEVEL = 1
+
+
+def _fade_seconds_for_role(
+    budget: AxisBudget, decision: SectionDecision, plan: UnifiedSongLightingPlan
+) -> float:
+    if decision.role != _OUTRO_ROLE:
+        return _fade_seconds(budget)
+    outro_budget = axis_budget(_OUTRO_FADE_D_LEVEL, plan.music_profile, plan.rig_profile)
+    return _fade_seconds(outro_budget)
 
 
 def _position_width_tier(width: float) -> str:

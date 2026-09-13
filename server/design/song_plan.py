@@ -301,6 +301,13 @@ class SectionDecision:
     #: A director's explicit PLAN-stage fade for this cue (seconds). None =
     #: derive from the D-level axis budget as before.
     fade_override: float | None = None
+    #: 카드 t386 — 아크 역할(``session.py`` 의 ``_section_role`` 이 이미 판독한
+    #: 값). 페이드는 지금까지 D 레벨만 보고 정해졌는데, D5 는 chorus 와
+    #: finale 이 공유하는 값이라(``_ARC_D_LEVEL``) finale/outro 도 chorus 의
+    #: 짧고 강한 하프비트 페이드를 그대로 받았다 — 연출 기준 §6 의
+    #: "outro → 느린 페이드 1회"와 어긋난다. ``None`` 이면 오늘과 동일(D 레벨
+    #: 축만으로 페이드를 정한다).
+    role: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.section, TimestampedSection):
