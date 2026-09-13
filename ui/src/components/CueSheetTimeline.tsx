@@ -281,6 +281,22 @@ export function CueSheetTimeline({
   // 언제 끝나는지 추측하지 않으므로 꼬리 프레임이 선택을 못 밀어낸다.
   const railCauseRef = useRef<ScrollCause>("user");
   const sheetCauseRef = useRef<ScrollCause>("user");
+  // t388 재작업 — 감독은 macOS 오버레이 스크롤바를 쓴다: 실제로는 이미
+  // 가로로 스크롤이 되는데, 스크롤바가 굴릴 때만 잠깐 보여서 "더 있다"는
+  // 신호가 화면에 없었다(이전 커밋의 `overflow-x: auto` 로는 이 신호 부재를
+  // 못 고쳤다 — overflow: auto 와 완전히 같은 동작이라 아무것도 안 바뀜).
+  // 그래서 스크롤 여부와 무관하게 판정하는 오른쪽 가장자리 그라디언트를
+  // 따로 두고, 실제로 더 스크롤할 내용이 남아 있을 때만 보이게 한다.
+  const [sheetCanScrollRight, setSheetCanScrollRight] = useState(false);
+  const updateSheetScrollAffordance = useCallback(() => {
+    const box = sheetRef.current;
+    if (!box) {
+      setSheetCanScrollRight(false);
+      return;
+    }
+    const remaining = box.scrollWidth - box.clientWidth - box.scrollLeft;
+    setSheetCanScrollRight(remaining > 1);
+  }, []);
 
   const sections = timeline?.sections ?? [];
   const totalMs = useMemo(() => (timeline ? songTotalMs(timeline) : 1), [timeline]);
@@ -342,6 +358,7 @@ export function CueSheetTimeline({
 
   const onSheetScroll = useCallback(() => {
     readVisible();
+    updateSheetScrollAffordance();
     if (!shouldAdoptScroll(sheetCauseRef.current)) {
       // 코드가 만든 스크롤은 여기서 끝난다 — 되받아 레일을 움직이지 않는다.
       sheetCauseRef.current = "user";
@@ -355,7 +372,7 @@ export function CueSheetTimeline({
     );
     const range = visibleRowRange(tops, box.scrollTop + headerH, box.clientHeight - headerH);
     scrollRailTo(range.start);
-  }, [readVisible, scrollRailTo, sections.length]);
+  }, [readVisible, scrollRailTo, updateSheetScrollAffordance, sections.length]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -365,7 +382,17 @@ export function CueSheetTimeline({
       box.scrollTop = 0;
     }
     readVisible();
-  }, [readVisible, timeline?.song_title, timeline?.sequence_number]);
+    updateSheetScrollAffordance();
+  }, [readVisible, updateSheetScrollAffordance, timeline?.song_title, timeline?.sequence_number]);
+
+  // t388 — 창 너비가 바뀌면(브라우저 리사이즈) 스크롤 가능 여부도 바뀐다.
+  // 표 자체는 폭이 고정(min-width)이라 리사이즈로 열이 늘거나 줄지 않지만,
+  // 창이 넓어지면 더는 스크롤할 게 없어질 수 있으므로 다시 잰다.
+  useEffect(() => {
+    updateSheetScrollAffordance();
+    window.addEventListener("resize", updateSheetScrollAffordance);
+    return () => window.removeEventListener("resize", updateSheetScrollAffordance);
+  }, [updateSheetScrollAffordance]);
 
   // t281 — 선택된 큐를 부모(→ 코파일럿 요청)에게 알린다. 인덱스가 아니라
   // `cue_number` 를 보낸다: 서버가 큐를 찾을 때 쓰는 키가 그것이라, 인덱스를
@@ -599,15 +626,22 @@ export function CueSheetTimeline({
             ))}
           </ul>
         )}
-        <div
-          className="cst-sheet-scroll"
-          ref={sheetRef}
-          onScroll={onSheetScroll}
-          onWheel={sheetByUser}
-          onPointerDown={sheetByUser}
-          onTouchStart={sheetByUser}
-          onKeyDown={sheetByUser}
-        >
+        {/* t388 재작업 — cst-sheet-scrollarea 는 스크롤하지 않는 「창틀」이다.
+            그 안의 cst-sheet-scroll 이 실제로 옆으로 굴러가고, cst-sheet-edge-fade
+            는 창틀에 붙박여 오른쪽 가장자리를 덮는다 — 그래서 표가 스크롤돼도
+            그라디언트는 화면에서 늘 같은 자리에 남아 "더 있다"를 알린다.
+            더 스크롤할 내용이 없으면(sheetCanScrollRight === false) 아예 안 그린다 —
+            끝까지 본 사람에게 거짓 신호를 남기지 않는다. */}
+        <div className="cst-sheet-scrollarea">
+          <div
+            className="cst-sheet-scroll"
+            ref={sheetRef}
+            onScroll={onSheetScroll}
+            onWheel={sheetByUser}
+            onPointerDown={sheetByUser}
+            onTouchStart={sheetByUser}
+            onKeyDown={sheetByUser}
+          >
         <table className="cst-sheet">
           <thead>
             <tr>
@@ -653,6 +687,8 @@ export function CueSheetTimeline({
             })}
           </tbody>
         </table>
+          </div>
+          {sheetCanScrollRight && <div className="cst-sheet-edge-fade" aria-hidden="true" />}
         </div>
       </div>
     </section>
