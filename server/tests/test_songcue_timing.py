@@ -30,6 +30,38 @@ _TRIG_TIME_RE = re.compile(
 )
 
 
+class TestBundleAloneCarriesNoTiming:
+    """카드 t380 — 현장 스크립트가 반복한 그 착시를 회귀로 고정한다.
+
+    `reports/onsite-round-20260912/{diag,real_song_cues}.py` 는 둘 다
+    `build_songcue_bundle(...)` 만 부르고 `build_songcue_timing` 은 부르지
+    않았다. 그 결과 발사된 90줄에 `Timecode`/`TrigTime`/`Follow` 가 0건이었고,
+    이것이 "곡이 리듬에 안 맞는다" 관측의 진짜 원인이었다 — 자동 진행 기능이
+    없어서가 아니라, 그 기능을 켜는 별도 호출을 진단 스크립트가 하지 않아서다.
+
+    `build_songcue_bundle` 혼자서는 타이밍 축을 절대 안 낸다는 것을,
+    그리고 `build_songcue_timing` 과 합치면 저장된 큐마다 정확히 한 쌍씩
+    나온다는 것을 여기서 기계로 고정한다 — 다음에 같은 착시가 재발하지
+    않도록.
+    """
+
+    def test_bundle_commands_alone_have_zero_sync_lines(self):
+        bundle = _bundle()
+
+        assert not _commands_matching(bundle.commands, r"Timecode|TrigTime|TrigType|Follow")
+
+    def test_combining_with_build_songcue_timing_yields_one_pair_per_stored_cue(self):
+        bundle = _bundle()
+        timing = build_songcue_timing(bundle, timecode_number=7)
+        combined = bundle.commands + timing.commands
+
+        trig_type_lines = _commands_matching(combined, r"Property 'TrigType' 'Time'$")
+        trig_time_lines = _commands_matching(combined, r"Property 'TrigTime' ")
+
+        assert len(trig_type_lines) == len(bundle.stored_sections)
+        assert len(trig_time_lines) == len(bundle.stored_sections)
+
+
 def test_axis1_timecode_go_emits_only_measured_command_forms():
     bundle = _bundle()
     plan = build_songcue_timing(bundle, timecode_number=7)
