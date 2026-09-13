@@ -6290,6 +6290,43 @@ class TestSongDesignInterviewSession:
         # disclosure disappears once a mapping is recorded.
         assert all("단일 레이어" not in warning for warning in timelines[-1]["warnings"])
 
+    def test_confirmed_layer_mapping_re_enables_rg1_layer_rules(self, tmp_path):
+        """카드 t399 — 레이어 매핑을 확정해도 계획에 실리는 리그(``state.rig``)는
+        여전히 그룹 없이(``groups={}``) 지어져 RG1 이 단일 레이어로 내려간다.
+        매핑을 확정하면 I1-I3·L6/L7 이 실제로 켜져야 하고, 그 증거가 이 RG1
+        비활성 고지의 부재다."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(
+            calls,
+            groups_readback={
+                "ok": True,
+                "path": "DataPool/Groups",
+                "children": [
+                    {"i": 11, "name": "Back", "class": "Group"},
+                    {"i": 12, "name": "Key", "class": "Group"},
+                ],
+            },
+        )
+        session._question_channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "이 매핑 사용",
+                "수정",
+            ]
+        )
+
+        session.run_instruction(self._FULL)
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        disabled = timelines[-1]["disabled"]
+        assert not any(entry["reason"].startswith("RG1") for entry in disabled)
+
     def test_readback_validation_failure_is_reported_distinctly(self, tmp_path):
         provider = ScriptedProvider([])
         session, _console, _audit, sent, _ = _session(tmp_path, provider)
