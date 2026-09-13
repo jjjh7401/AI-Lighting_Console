@@ -79,17 +79,26 @@ b = build_songcue_bundle(
 print("== 큐마다: 어느 그룹에 무슨 값이 갔나 ==")
 used_groups = set()
 for s in b.stored_sections:
-    gline = next((c for c in s.commands if c.startswith("Group ")), "")
-    vline = next((c for c in s.commands if "At " in c and "Attribute" in c), "")
-    gs = [int(x) for x in gline.replace("Group ", "").split(" + ") if x.strip().isdigit()]
-    used_groups |= set(gs)
-    attrs = [a.split("'")[1] for a in vline.split(";") if "'" in a]
-    names = [gnames.get(g, f"?{g}") for g in gs]
-    lid = getattr(s.selection.look, "look_id", "")[:22]
-    print(
-        f"  cue {s.cue_number:>2} {s.section.label:10} {lid:22} "
-        f"그룹 {','.join(names) or '—'}  속성 {','.join(attrs)}"
-    )
+    # 🔴 큐 하나에 Group/Attribute 쌍이 **여럿** 올 수 있다 (프론트 필 층, 액센트
+    # 기구). 첫 쌍만 읽으면 나중에 더해진 층이 통째로 안 보인다 — 2026-09-13 실측으로
+    # 이 스크립트가 프론트 필을 "없다"고 잘못 답했다.
+    pairs: list[tuple[list[int], list[str]]] = []
+    cur: list[int] | None = None
+    for c in s.commands:
+        if c.startswith("Group "):
+            cur = [int(x) for x in c.replace("Group ", "").split(" + ") if x.strip().isdigit()]
+        elif cur is not None and "Attribute" in c and "At " in c:
+            pairs.append((cur, [a.split("'")[1] for a in c.split(";") if "'" in a]))
+            cur = None
+    for g in pairs:
+        used_groups |= set(g[0])
+    lid = getattr(s.selection.look, "look_id", "")[:20]
+    head = f"  cue {s.cue_number:>2} {s.section.label:10} {lid:20}"
+    for idx, (gs, attrs) in enumerate(pairs):
+        names = [gnames.get(g, f"?{g}") for g in gs]
+        tag = "" if idx == 0 else "   └ 층 "
+        lead = head if idx == 0 else " " * len(head)
+        print(f"{lead}{tag}그룹 {','.join(names)}  속성 {','.join(attrs)}")
 
 print(f"\n== 리그 그룹 {len(gnames)}개 중 큐가 건드린 그룹 ==")
 touched = sorted(used_groups)
