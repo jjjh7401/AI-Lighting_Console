@@ -741,11 +741,17 @@ _ARC_FX: dict[str, tuple[tuple[str, ...], int]] = {
     "bridge": (("slow tilt",), 1),
     "finale": (("dimmer chase", "accent sweep"), 2),
 }
+# 카드 t409 감독 판정 — 표준 팔레트는 파랑이 한 종류(#8 Blue)뿐이라 인트로
+# "deep blue"·벌스 "blue"·브리지 "cold blue" 세 아크가 전부 같은 RGB로
+# 겹쳤다(t408 실측: 14구간이 동일 색). 감독은 "인접 색조로 갈라 다르게
+# 보이게 하라"를 골랐다 — 인트로는 Cyan 계열로, 브리지는 Lavender 계열로
+# 민다. 값은 전부 표준 팔레트 10색(spec.md §A.2)에서만 가져온다 — 새 RGB는
+# 짓지 않는다.
 _ARC_PALETTE: dict[str, tuple[str, ...]] = {
-    "intro": ("deep blue", "warm special"),
+    "intro": ("cyan", "warm special"),
     "verse": ("blue", "cyan"),
     "chorus": ("warm white", "magenta"),
-    "bridge": ("cold blue",),
+    "bridge": ("lavender",),
     "finale": ("warm white", "gold"),
 }
 
