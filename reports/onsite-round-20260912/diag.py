@@ -4,8 +4,18 @@ from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
 from server.looks.loader import load_library_from_dir
-from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
-from server.orchestrator.tools import rig_object, rig_section
+from server.looks.songcue import (
+    build_songcue_bundle,
+    build_songcue_timing,
+    map_sections_to_looks,
+    parse_sections,
+)
+from server.orchestrator.tools import (
+    TIMECODE_POOL_PATH,
+    rig_object,
+    rig_section,
+    timecode_slot_verdict,
+)
 from server.safety.bootstrap import build_console_stack
 
 SONG = Path("src/걸그룹DinoDino_C_max최고품질.wav")
@@ -42,6 +52,19 @@ try:
     gnames = {c.get("i"): c.get("name") for c in rg.get("children", [])}
     seqs = rig_section([rig_object(c) for c in rs.get("children", [])], rs)
     groups = rig_section([rig_object(c) for c in rg.get("children", [])], rg)
+    # 카드 t380 — 앱이 실제로 쏘는 경로(prepare_songcue)는 build_songcue_bundle()
+    # 뒤에 build_songcue_timing() 을 한 번 더 불러 자동 진행 축을 얹는다. 이 스크립트가
+    # 그동안 앞 절만 흉내 내 「음악 동기 0건」을 관측했다 — 그 0건은 기능 부재가 아니라
+    # 이 진단 스크립트가 뒤 절을 안 불러서 생긴 착시였다. 여기서 뒤 절까지 재현한다.
+    timecode_number = 1
+    occupied, timing_axes = timecode_slot_verdict(
+        stack.gate.state_port, TIMECODE_POOL_PATH, timecode_number
+    )
+    while occupied is not None:
+        timecode_number += 1
+        occupied, timing_axes = timecode_slot_verdict(
+            stack.gate.state_port, TIMECODE_POOL_PATH, timecode_number
+        )
 finally:
     stack.stop()
 
@@ -81,5 +104,13 @@ for s in b.stored_sections:
 print(f"  {len(looks)}종 / 큐 {len(b.stored_sections)}개:", looks)
 
 print("\n== 음악 동기 ==")
-tc = [c for c in b.commands if "Timecode" in c or "TrigTime" in c or "Follow" in c]
+print(
+    "  주의: build_songcue_bundle() 만의 b.commands 는 설계상 항상 0건이다 —"
+    " 자동 진행은 build_songcue_timing() 이 별도로 낸다 (카드 t380)."
+)
+timing = build_songcue_timing(b, timecode_number=timecode_number, axes=timing_axes)
+sync_commands = b.commands + timing.commands
+tc = [c for c in sync_commands if "Timecode" in c or "TrigTime" in c or "Follow" in c]
 print("  타임코드/자동진행 명령:", tc or "🔴 0건 — 큐가 음악에 안 붙어 있다")
+for skip in timing.skipped_axes:
+    print(f"  🔴 축 절단: {skip.axis} — {skip.reason}")
