@@ -180,3 +180,53 @@ def test_explicit_bpm_in_the_instruction_still_wins_over_the_confirmed_record(tm
     assert events
     starts = [section["start_ms"] for section in events[0]["timeline"]["sections"]]
     assert starts == [0, 40_000], f"지시문의 명시 BPM 40 이 확정 BPM 128 에 덮였다: {starts}"
+
+
+def test_confirmed_d_level_reaches_the_timeline_instead_of_defaulting_to_d3(tmp_path):
+    """t383 — 확정 분석이 잰 D 레벨이 타임라인까지 이어진다.
+
+    t302 는 확정 분석의 **구간(시각)** 만 연출 인터뷰로 이었다. 무드는
+    설계상 비워 두지만(구간이 어떤 느낌인지는 DSP 가 재지 않으므로), 그
+    빈 무드 때문에 `resolve_section` 이 전역 기본값(D3)으로 떨어져 확정
+    DSP 가 실측한 D 레벨이 조용히 버려졌다 — 운영자의 실제 곡에서 17구간
+    중 16개가 D3 하나로 뭉개졌다.
+
+    절정(맨 마지막) 구간은 Q3 인터뷰 답변이 자기 값을 이미 갖고 있어 이
+    결함의 영향을 받지 않는다 — 그 결정은 이 카드의 범위가 아니다. 여기서는
+    절정이 아닌 세 구간만 확인한다.
+    """
+    analysis = _confirmed(
+        (0, 20_000, 1),
+        (20_000, 40_000, 2),
+        (40_000, 60_000, 4),
+        (60_000, 80_000, 5),
+    )
+
+    events = _timeline_events(_drive(tmp_path, _NO_SECTIONS, analysis))
+
+    assert events, "확정 구간이 있는데 타임라인 이벤트가 하나도 안 나갔다"
+    d_levels = [section["d_level"] for section in events[0]["timeline"]["sections"]]
+    assert d_levels[:3] == [1, 2, 4], (
+        f"확정 D 레벨이 타임라인까지 이어지지 않았다 — 전역 기본값(D3)으로 떨어졌다: {d_levels}"
+    )
+
+
+def test_explicit_section_mood_still_wins_over_the_confirmed_d_level(tmp_path):
+    """명시한 구간의 무드가 확정 D 레벨에 조용히 덮이지 않는다 — 구간/BPM 기본값과 같은 규칙.
+
+    확정 기록은 낮은 D 레벨(1)로 잡아 놓았지만, 지시문이 첫 구간에 직접 적은
+    무드는 "잔잔한 발라드"(Vocal DSC, D2)다 — 지시문의 무드가 이겨야 한다.
+    (마지막 구간은 Q3 절정 인터뷰 답변이 항상 자기 값을 주므로 여기서는
+    첫 구간만 확인한다 — 그 우선순위는 이 카드가 바꾸는 것이 아니다.)
+    """
+    analysis = _confirmed((0, 24_000, 1), (24_000, 48_000, 1), (48_000, 72_000, 1))
+    instruction = (
+        "디자인 큐 시트, 시퀀스 110, 프리셋 21번부터, 타임코드 7: "
+        "인트로 0:00 잔잔한 발라드, 벌스 0:24 신나는 파티, 아웃트로 0:48 웅장한 피날레"
+    )
+
+    events = _timeline_events(_drive(tmp_path, instruction, analysis))
+
+    assert events
+    d_levels = [section["d_level"] for section in events[0]["timeline"]["sections"]]
+    assert d_levels[0] == 2, f"명시한 첫 구간의 무드가 확정 D 레벨(1)에 덮였다: {d_levels}"

@@ -58,11 +58,19 @@ _SAFE_NAME = re.compile(r"[A-Za-z0-9 _-]+")
 
 @dataclass(frozen=True)
 class PositionSheetSection:
-    """One song section of the request: name, start time, mood words."""
+    """One song section of the request: name, start time, mood words.
+
+    ``d_level`` — 카드 t383. 확정 분석(``ConfirmedSongSection``)에서 구간을
+    기본값으로 채울 때만 채워진다(``None`` 이 기본): DSP 가 실측한 밝기 단계를
+    실어, 무드가 빈 문자열이라 ``resolve_section`` 이 전역 기본값(D3)으로
+    떨어지는 대신 실측값이 쓰이게 한다. 지시문에서 직접 구간을 적은 경로는
+    이 필드를 채우지 않는다 — 그 경로는 무드 단어로 이미 D 레벨이 정해진다.
+    """
 
     name: str
     start_ms: int
     mood: str
+    d_level: int | None = None
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,39 @@
+sha256: 0edb6c667267b6459a5097b4bb187806fd2bd00dc6e6af5d591908ab1b81dee3
+byte_length: 31459042
+analyse_song_audio wall time: 27.79s
+analyse_song_audio notify: BPM 126.048 로 확정했습니다 (measured). 채택 우선순위: 측정 > 시트 HEAD.BPM > 기본값 120. 구간 16건 채택 · 0건 제외. 이 곡의 큐 리스트를 만들려면 타임코드 번호와 함께 말씀해 주세요 — 확정한 구간을 그대로 씁니다.
+
+--- confirmed analysis (measured by DSP) ---
+bpm: BpmResolution(bpm=126.04801829268435, source='measured', reason='채택 우선순위: 측정 > 시트 HEAD.BPM > 기본값 120.', mismatches=(), fx_rate_back_calculated=None)
+num sections: 16
+  [0] 0:00–0:06 · D2 0-6931ms D2 selected=True
+  [1] 0:06–0:20 · D4 6931-20294ms D4 selected=True
+  [2] 0:20–0:26 · D4 20294-26622ms D4 selected=True
+  [3] 0:26–0:46 · D5 26622-46626ms D5 selected=True
+  [4] 0:46–1:09 · D5 46626-69045ms D5 selected=True
+  [5] 1:09–1:12 · D2 69045-72829ms D2 selected=True
+  [6] 1:12–1:16 · D2 72829-76858ms D2 selected=True
+  [7] 1:16–1:55 · D5 76858-115183ms D5 selected=True
+  [8] 1:55–2:00 · D4 115183-120094ms D4 selected=True
+  [9] 2:00–2:05 · D5 120094-125399ms D5 selected=True
+  [10] 2:05–2:10 · D4 125399-130067ms D4 selected=True
+  [11] 2:10–2:29 · D5 130067-149188ms D5 selected=True
+  [12] 2:29–2:34 · D1 149188-154691ms D1 selected=True
+  [13] 2:34–2:39 · D4 154691-159347ms D4 selected=True
+  [14] 2:39–2:42 · D2 159347-162377ms D2 selected=True
+  [15] 2:42–2:58 · D5 162377-178339ms D5 selected=True
+
+measured d_level histogram: {1: 1, 2: 4, 4: 5, 5: 6}
+
+--- run_instruction result text ---
+{'v': 1, 'type': 'chat_response', 'status': 'ok', 'summary': '장비 능력을 콘솔에서 읽지 못해 기종별 판정(팬틸트·줌 범위) 없이 설계했습니다 — RuntimeError: no such path: Patch/Stages/1/Fixtures', 'text': "연출 인터뷰 결과 — Q1 컨셉: 우주 (확정) / Q2 팔레트: 블루/퍼플 (확정) / Q3 클라이맥스: D5, 쿨 볼드, Ring In → Center → Wall (확정) / Q4 공간 스토리: Ring In → Home → Vocal DSC → Center → Wall → Cross → Fan Out → Audience (확정) / Q5 전환 방식: 중간 (확정). 전체 리뷰 번들을 보여드렸고, 감독 승인 전이므로 콘솔에 쓰지 않았습니다. 승인 전 계획은 콘솔 무접촉으로 계속 수정할 수 있습니다 — 예: '큐 3을 Center로', '큐 3 컬러를 골드로', '큐 2 D4', '큐 3 페이드 2초', '큐 2 FX 꺼', '큐 2를 0:30으로 이동', '큐 2와 3 사이에 브레이크 추가', '큐 4 삭제' (중단: '취소'). 전곡 리뷰 번들 — 시퀀스 110 · 진행 타임코드 7번 슬롯 자동 진행.\n큐 1 S1 — D2 · Ring In · 블루/퍼플 · 타임코드\n큐 2 S2 — D4 · Ring In · 블루/퍼플 · 타임코드\n큐 3 S3 — D4 · Home · 블루/퍼플 · 타임코드\n큐 4 S4 — D5 · Home · 블루/퍼플 · 타임코드\n큐 5 S5 — D5 · Vocal DSC · 블루/퍼플 · 타임코드\n큐 6 S6 — D2 · Vocal DSC · 블루/퍼플 · 타임코드\n큐 7 S7 — D2 · Center · 블루/퍼플 · 타임코드\n큐 8 S8 — D5 · Center · 블루/퍼플 · 타임코드\n큐 9 S8 — D5 · Center · 퍼플/블루 · 타임코드\n큐 10 S9 — D4 · Wall · 블루/퍼플 · 타임코드\n큐 11 S10 — D5 · Wall · 블루/퍼플 · 타임코드\n큐 12 S11 — D4 · Cross · 블루/퍼플 · 타임코드\n큐 13 S12 — D5 · Cross · 블루/퍼플 · 타임코드\n큐 14 S13 — D1 · Fan Out · 블루/퍼플 · 타임코드\n큐 15 S14 — D4 · Fan Out · 블루/퍼플 · 타임코드\n큐 16 S15 — D2 · Audience · 블루/퍼플 · 타임코드\n큐 17 S16 — D5 · Ring In · 블루/퍼플 · 타임코드\n확인 포인트 1건: L13 큐 9: identical (position, palette, effect) combo for 3 consecutive cues (V2). 참고: 레이어 매핑 없음 — 단일 레이어로 진행 (키/백 분리 체크 L6·L7 미적용).", 'commands': []}
+
+timeline events emitted: 1
+saved to reports/t383/timeline-payload.json
+
+timeline d_level list: [2, 4, 4, 5, 5, 2, 2, 5, 5, 4, 5, 4, 5, 1, 4, 2, 5]
+timeline d_level histogram: {1: 1, 2: 4, 4: 5, 5: 7}
+
+comparison — measured (confirmed, in section order) vs timeline (may carry extra bar-split cues per section, and the last section's d_level is Q3's climax answer, not the measured value):
+measured: [2, 4, 4, 5, 5, 2, 2, 5, 4, 5, 4, 5, 1, 4, 2, 5]
+timeline: [2, 4, 4, 5, 5, 2, 2, 5, 5, 4, 5, 4, 5, 1, 4, 2, 5]
