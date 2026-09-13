@@ -2,6 +2,8 @@
 // 그래서 렌더가 아니라 렌더를 결정하는 순수 함수를 재고, 두 축의 연동은
 // 「선택 인덱스 → 보이는 행 범위」와 「스크롤 위치 → 선택 인덱스」 두 방향을
 // 각각 함수로 확인한다.
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import type { SongTimelineSection, SongTimelineView } from "../protocol";
@@ -16,6 +18,7 @@ import {
   cueIndexAtMs,
   cueLabel,
   derivedBannerText,
+  formatBpm,
   formatDuration,
   formatTc,
   isSnapCue,
@@ -189,6 +192,18 @@ describe("정본 산출물의 표기를 따른다", () => {
     expect(formatTc(undefined)).toBe(EMPTY_CELL);
   });
 
+  // t392 — 감독 화면 신고: "126.04801829268435 BPM". 표시 전용 반올림이고,
+  // 원본 값(마디 분할·큐 타이밍이 쓰는 값)은 이 함수를 거치지 않는다 —
+  // formatBpm 은 화면에 찍을 문자열만 만들고 어떤 상태도 바꾸지 않는다.
+  it("BPM 은 화면에서만 최대 소수점 2자리로 줄인다 — 원본 계산값은 건드리지 않는다", () => {
+    const raw = 126.04801829268435;
+    expect(formatBpm(raw)).toBe("126.05");
+    expect(raw).toBe(126.04801829268435); // 원본은 그대로 살아 있다
+    expect(formatBpm(120)).toBe("120"); // 정수 BPM 은 "120.00" 으로 안 부풀린다
+    expect(formatBpm(undefined)).toBe(EMPTY_CELL);
+    expect(formatBpm(null)).toBe(EMPTY_CELL);
+  });
+
   it("Q# 는 세 자리", () => {
     expect(cueLabel(SECTIONS[0])).toBe("Q010");
     expect(cueLabel(SECTIONS[SECTIONS.length - 1])).toBe("Q180");
@@ -211,5 +226,70 @@ describe("정본 산출물의 표기를 따른다", () => {
 
   it("곡 길이는 헤더 메타를 그대로 쓴다", () => {
     expect(TOTAL).toBe(236_000);
+  });
+});
+
+// t388 — 큐시트 표(13열)가 화면 오른쪽으로 잘려 마지막 열(Fade)에 닿을 방법이
+// 없다는 감독 신고. 이 컴포넌트는 useState/useRef/useCallback 을 쓰는 훅
+// 컴포넌트라 RunbookMode.test.tsx 처럼 함수를 직접 호출해 렌더 트리를 얻을
+// 수 없다(훅은 React 렌더 컨텍스트 밖에서 부르면 던진다) — 그래서 이 파일의
+// 다른 모든 테스트처럼 컴포넌트를 렌더하지 않고 소스/스타일시트 텍스트를
+// 구조적으로 검사한다. 스크린샷으로 시각 확인은 할 수 없다는 점을 그대로
+// 남긴다(§ 검증 섹션 참고).
+describe("t388 — 큐시트 표가 TIMELINE 레일과 같은 방식으로 좌우 스크롤한다", () => {
+  const componentSource = readFileSync(
+    new URL("./CueSheetTimeline.tsx", import.meta.url),
+    "utf-8",
+  );
+  const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf-8");
+
+  it("표가 전용 가로 스크롤 컨테이너(cst-sheet-scroll) 안에 있다", () => {
+    // cst-sheet-scroll 여는 태그와 <table className="cst-sheet"> 사이에
+    // 다른 스크롤 컨테이너가 끼어들지 않는지 순서로 확인한다.
+    const scrollWrapperIndex = componentSource.indexOf('className="cst-sheet-scroll"');
+    const tableIndex = componentSource.indexOf('<table className="cst-sheet">');
+    expect(scrollWrapperIndex).toBeGreaterThan(-1);
+    expect(tableIndex).toBeGreaterThan(scrollWrapperIndex);
+  });
+
+  it("감독이 잘려 보인다고 신고한 Fade 열은 오른쪽 끝 근처에 실재한다 — 스크롤로 닿을 위치", () => {
+    const columnsMatch = componentSource.match(/const SHEET_COLUMNS = \[([\s\S]*?)\];/);
+    expect(columnsMatch).not.toBeNull();
+    const columns = (columnsMatch as RegExpMatchArray)[1]
+      .split(",")
+      .map((s) => s.trim().replace(/^"|"$/g, ""))
+      .filter(Boolean);
+    expect(columns).toContain("Fade");
+    // 첫 칸이 아니라 뒤쪽에 있어야 "잘려서 안 보인다"는 신고와 일치한다.
+    expect(columns.indexOf("Fade")).toBeGreaterThan(columns.length / 2);
+  });
+
+  it("cst-sheet-scroll 은 가로 스크롤을 명시적으로 켜 두었다 — TIMELINE 레일(cst-rail)과 같은 원리", () => {
+    const railRule = stylesSource.match(/\.cst-rail\s*{([^}]*)}/);
+    const sheetScrollRules = [...stylesSource.matchAll(/\.cst-sheet-scroll\s*{([^}]*)}/g)];
+    expect(railRule).not.toBeNull();
+    expect((railRule as RegExpMatchArray)[1]).toMatch(/overflow-x:\s*auto/);
+    expect(sheetScrollRules.length).toBeGreaterThan(0);
+    const combined = sheetScrollRules.map((m) => m[1]).join("\n");
+    // overflow: auto (양축) 또는 overflow-x: auto 둘 중 하나로 가로 스크롤이
+    // 켜져 있어야 한다 — cst-rail 처럼 overflow-x 를 명시하는 쪽이 의도를
+    // 더 분명히 하므로 이 값으로 고정한다.
+    expect(combined).toMatch(/overflow-x:\s*auto/);
+  });
+
+  it("BPM 표시는 formatBpm 을 거친다 — 원본 부동소수점을 그대로 찍지 않는다", () => {
+    expect(componentSource).toMatch(/\{formatBpm\(timeline\.bpm\)\}\s*BPM/);
+  });
+
+  it("Fade 표시는 소수점 2자리로 반올림한다", () => {
+    expect(componentSource).toMatch(/section\.fade_seconds\.toFixed\(2\)/);
+  });
+
+  it("표 자체가 스크롤 컨테이너보다 넓게 강제된다(min-width) — 그래야 잘림이 아니라 스크롤이 생긴다", () => {
+    const sheetWidthRules = [...stylesSource.matchAll(/\.cst-sheet\s*{([^}]*)}/g)].map((m) => m[1]);
+    const minWidthLine = sheetWidthRules.find((rule) => /min-width/.test(rule));
+    expect(minWidthLine).toBeDefined();
+    const px = Number((minWidthLine as string).match(/min-width:\s*(\d+)px/)?.[1]);
+    expect(px).toBeGreaterThanOrEqual(1100);
   });
 });

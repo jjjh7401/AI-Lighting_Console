@@ -28,7 +28,7 @@ import {
 import { CueSheetTimeline } from "./CueSheetTimeline";
 import { SongTimeline } from "./SongTimeline";
 import { formatSyncTime } from "./DashBoard";
-import { sequenceLabel } from "./CueMonitor";
+import { currentCueMatch, isCueRowCurrent, sequenceLabel } from "./CueMonitor";
 
 export interface RunbookModeProps {
   cueMonitor: CueMonitorState;
@@ -122,7 +122,12 @@ function RunbookRow({
 }) {
   const runnable = runbookIsRunnable(entry);
   const caution = runbookCaution(entry);
-  const activeCue = entry.current_cue?.status === "ok" ? entry.current_cue.value : null;
+  // t390 — the console composes current_cue.value as "<index> — <name>"
+  // (measured live: "1 — Intro"), never a bare number. currentCueMatch
+  // re-derives the leading index and resolves it against the SAME
+  // cue_no-then-no preference order CueMonitor.tsx already uses, so the
+  // highlighted row here is the same row CueMonitor would highlight.
+  const currentMatch = currentCueMatch(entry);
 
   return (
     <li className={`runbook-item${running ? " runbook-item-live" : ""}`} data-executor-no={entry.executor_no}>
@@ -153,7 +158,7 @@ function RunbookRow({
           {entry.cues.map((cue, cueIndex) => {
             const cueNo = String(cue.cue_no ?? cue.no);
             const section = runbookSection(cue.name);
-            const isCurrent = activeCue === cueNo;
+            const isCurrent = isCueRowCurrent(currentMatch, cue);
             const sectionChanged = cueIndex === 0 || runbookSection(entry.cues[cueIndex - 1].name) !== section;
             return (
               <div className={`runbook-sheet-row${isCurrent ? " is-current" : ""}`} key={cue.no}>

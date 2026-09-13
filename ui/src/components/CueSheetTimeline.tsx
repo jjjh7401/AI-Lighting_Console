@@ -58,6 +58,15 @@ export function formatDuration(ms: number | null | undefined): string {
   return (Math.max(0, ms) / 1000).toFixed(1);
 }
 
+/** t392 — 감독 화면에 "126.04801829268435 BPM" 처럼 부동소수점 그대로
+ * 찍혔다는 신고. 표시 전용 반올림이다 — 마디 분할·큐 타이밍은 원본 bpm 값을
+ * 그대로 계속 쓰므로(server 값은 손대지 않는다), 화면에 보이는 자릿수만
+ * 줄인다. 최대 2자리, 끝자리 0은 버린다(정수 BPM 이 "120.00" 으로 안 보이게). */
+export function formatBpm(bpm: number | null | undefined): string {
+  if (bpm === null || bpm === undefined || !Number.isFinite(bpm)) return EMPTY_CELL;
+  return String(Math.round(bpm * 100) / 100);
+}
+
 /** Q# 라벨. 정본은 Q010 처럼 세 자리로 적는다. */
 export function cueLabel(section: SongTimelineSection): string {
   return `Q${String(section.cue_number).padStart(3, "0")}`;
@@ -395,7 +404,7 @@ export function CueSheetTimeline({
         </h2>
         <div className="cst-meta">
           <code>{formatTc(timeline.total_duration_ms ?? totalMs)}</code>
-          <code>{cell(timeline.bpm)} BPM</code>
+          <code>{formatBpm(timeline.bpm)} BPM</code>
           <code>{cell(timeline.time_signature)}</code>
           <code>{cell(timeline.musical_key)}</code>
           <code>
@@ -636,7 +645,7 @@ export function CueSheetTimeline({
                   <td className="m">
                     {section.fade_seconds === undefined
                       ? EMPTY_CELL
-                      : section.fade_seconds.toFixed(1)}
+                      : section.fade_seconds.toFixed(2)}
                   </td>
                   <td className="nt">{cell(section.note)}</td>
                 </tr>

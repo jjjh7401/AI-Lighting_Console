@@ -178,6 +178,51 @@ describe("RunbookMode", () => {
     expect(onExecute).toHaveBeenCalledWith(101);
   });
 
+  // t390 — RED-first regression: the real console composes current_cue.value
+  // as "<index> — <name>" (measured live on main@2752706: "1 — Intro",
+  // "15 — Breakdown"), never the bare-number "1.5" shape the prior fixtures
+  // used. A naive `activeCue === cueNo` string compare (cueNo being just the
+  // number) can never match that composed value, so the CURRENT badge and
+  // row highlight silently never render against the real console.
+  it("highlights the row the real console's composed current_cue value points at (real-console shape, not the bare-number fixture)", () => {
+    // Measured real-console cue numbering (card t390): `no` runs 1..N
+    // unique, `cue_no` runs absent, 0, 1, 2, ... — so the first row
+    // (OffCue) carries no cue_no and falls back to no=1, while a LATER row
+    // owns cue_no=1. The current-cue value "1 — Intro" must resolve to the
+    // cue_no=1 row (no=3), never the no=1 OffCue row — matching
+    // CueMonitor.tsx's currentCueMatch preference order (cue_no before no).
+    const REAL_SHAPE_ENTRY: CueExecutorEntry = {
+      executor_no: 101,
+      status: "ok",
+      sequence_no: 5,
+      sequence_name: "Song A",
+      cues: [
+        { no: 1, name: "OffCue" },
+        { no: 2, name: "CueZero", cue_no: 0 },
+        { no: 3, name: "Intro", cue_no: 1 },
+        { no: 4, name: "Chorus", cue_no: 2 },
+      ],
+      current_cue: { status: "ok", value: "1 — Intro" },
+    };
+    const state: CueMonitorState = { ...POPULATED_STATE, executors: [REAL_SHAPE_ENTRY] };
+    const element = RunbookMode({ cueMonitor: state });
+    const body = childArray(element) as ReactElement[];
+    const list = body.find((child) => (child as ReactElement).type === "ol") as ReactElement;
+    const rowElement = childArray(list)[0] as ReactElement;
+    const row = (rowElement.type as (props: unknown) => ReactElement)(rowElement.props);
+    const rowChildren = childArray(row) as ReactElement[];
+    const cueSheet = rowChildren.find(
+      (child) => child?.props?.className === "runbook-cue-sheet",
+    ) as ReactElement;
+    const sheetRows = childArray(cueSheet).filter(
+      (child) => (child as ReactElement)?.props?.className?.startsWith?.("runbook-sheet-row"),
+    ) as ReactElement[];
+    // Exactly the cue_no=1 row (3rd cue, index 2) is marked current — not
+    // the no=1 OffCue row, even though both display "1" as their number.
+    const currentFlags = sheetRows.map((r) => (r.props.className as string).includes("is-current"));
+    expect(currentFlags).toEqual([false, false, true, false]);
+  });
+
   it("dispatches manual refresh via onRefresh", () => {
     const onRefresh = vi.fn();
     const element = RunbookMode({ cueMonitor: EMPTY_STATE, onRefresh });
