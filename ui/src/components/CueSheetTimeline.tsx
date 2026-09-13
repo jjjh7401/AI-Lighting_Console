@@ -15,6 +15,7 @@
 // 않는다).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { buildAnalysisSummary } from "./analysisSummary";
 import type {
   SongTimelinePaletteEntry,
   SongTimelineSection,
@@ -451,6 +452,23 @@ export function CueSheetTimeline({
           <b>TC_METHOD: DERIVED</b> — {derivedBannerText(timeline)}
         </div>
       )}
+
+      {(() => {
+        const summaryLines = buildAnalysisSummary(timeline);
+        if (summaryLines.length === 0) return null;
+        return (
+          <details className="cst-analysis-summary">
+            <summary>분석 요약 — 왜 이렇게 만들었나</summary>
+            <ul>
+              {summaryLines.map((line) => (
+                <li key={line.label}>
+                  <strong>{line.label}</strong> {line.text}
+                </li>
+              ))}
+            </ul>
+          </details>
+        );
+      })()}
 
       <div className="cst-panel">
         <h3>TIMELINE</h3>

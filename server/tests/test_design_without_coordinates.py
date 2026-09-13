@@ -161,15 +161,23 @@ class TestACoordinateRigIsUnchanged:
 
 
 def test_the_two_rigs_differ_only_in_the_position_axis(tmp_path):
-    """대조군 — 두 리그의 큐를 나란히 놓고 **무엇만** 달라졌는지 잰다."""
+    """대조군 — 두 리그의 큐를 나란히 놓고 **무엇만** 달라졌는지 잰다.
+
+    카드 t387 — `position_source`/`position_candidates` 는 position 축의
+    일부다(값 자체는 아니지만 그 출처·후보). 좌표 유무에 따라 포지션
+    결정 경로 자체가 바뀌면(`section_mood` vs `director_intent`) 이 두
+    필드도 함께 달라지는 게 맞다 — position/movement 만 벗기던 기존
+    화이트리스트에 이 둘을 추가한다.
+    """
     _e1, _c1, without, _k1 = _drive(tmp_path, spatial_fails=True)
     _e2, _c2, with_coords, _k2 = _drive(tmp_path, spatial_fails=False)
+    position_axis_keys = ("position", "movement", "position_source", "position_candidates")
     stripped = [
-        {key: value for key, value in section.items() if key not in ("position", "movement")}
+        {key: value for key, value in section.items() if key not in position_axis_keys}
         for section in without[-1]["sections"]
     ]
     reference = [
-        {key: value for key, value in section.items() if key not in ("position", "movement")}
+        {key: value for key, value in section.items() if key not in position_axis_keys}
         for section in with_coords[-1]["sections"]
     ]
     assert json.dumps(stripped, sort_keys=True) == json.dumps(reference, sort_keys=True)

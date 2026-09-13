@@ -2203,6 +2203,20 @@ def _song_timeline_payload(
                         "trig_time_seconds": (
                             decision.section.start_seconds if plan.timing.uses_trig_time else None
                         ),
+                        # 카드 t387 — 「왜 이렇게 만들었는지」 설명 리포트의 재료. 값은
+                        # 이미 내보내고 있었지만 출처(source)는 버려지고 있었다 --
+                        # `SectionDecision` 이 이미 갖고 있는 필드를 흘려보내지
+                        # 않던 통로를 여는 것뿐, 새로 지어내는 값이 아니다.
+                        "d_source": decision.d.source,
+                        "palette_source": decision.palette.source,
+                        "position_source": decision.position.source,
+                        **(
+                            {"position_candidates": list(decision.position.candidates)}
+                            if decision.position.candidates
+                            else {}
+                        ),
+                        "texture_source": decision.texture.source,
+                        **({"role": decision.role} if decision.role else {}),
                     },
                     _song_cue_sheet_section_fields(
                         decision,

@@ -360,6 +360,20 @@ export interface SongTimelineSection {
   note?: string;
   /** Note 의 `[MANUAL]` 표기 */
   manual?: boolean;
+
+  // --- t387 확장. 값이 어디서 왔는지 — 감독 설명 리포트의 재료다.
+  /** D 레벨의 출처 (예: "section_mood", "director_intent") */
+  d_source?: string;
+  /** 팔레트의 출처 */
+  palette_source?: string;
+  /** 포지션의 출처 */
+  position_source?: string;
+  /** 포지션 결정 전 후보로 검토됐던 값들 */
+  position_candidates?: string[];
+  /** 텍스처의 출처 */
+  texture_source?: string;
+  /** 아크 역할 (예: "intro", "chorus", "finale") — 서버가 판독했을 때만 존재 */
+  role?: string;
 }
 
 export interface SongTimelineView {
