@@ -3338,6 +3338,34 @@ body {
   color: #ffd7e0;
 }
 
+/* 카드 t387 — 접이식 분석 요약. 기본은 접힘: 요약 한 줄만 보이고, 펼치면
+ * 음악 판독·색·이펙트·꺼진 축·콘솔 상태가 목록으로 나온다. */
+.cst-analysis-summary {
+  padding: 6px 13px;
+  border: 1px solid #2a3040;
+  border-radius: 5px;
+  background: #1a1f2b;
+  color: #c8d2e0;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.cst-analysis-summary summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #9fb0c9;
+}
+
+.cst-analysis-summary ul {
+  margin: 8px 0 2px;
+  padding-left: 18px;
+}
+
+.cst-analysis-summary strong {
+  color: #d8e0ec;
+  margin-right: 4px;
+}
+
 .cst-panel {
   border-top: 1px solid #2a3040;
   padding-top: 10px;
