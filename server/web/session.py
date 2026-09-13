@@ -1007,6 +1007,15 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
     같은 색상에(언어만 다른 표기 포함) 겹치게 돌리는 경우를 걸러낸다.
     반환값은 항상 범례 조회가 가능한 순정 색 문자열뿐이다 — 채도/무게
     수식어는 여기 없다(`_arc_accent_weight` 가 별도로 나른다).
+
+    카드 t409 감독 판정 — "메인 색 깔고 포인트는 보조로": 어느 역할이든
+    반환 튜플의 **첫 칸은 항상 primary**(감독이 지정한 색)다. 예전에는
+    intro/bridge/chorus/finale 역할에서 아크 색이 첫 칸을 차지해
+    (`_song_cue_sheet_section_fields` 의 `palette_primary=palette[0]`)
+    콘솔 메인 픽스처에 감독 색 대신 아크 색이 나갔다(실측: 39구간 중
+    7구간만 verse 역할이라 감독 색을 받았다). 둘째 칸(``accent``)은 변경
+    없이 그대로 회전·역할별 계산을 유지한다 — `palette_secondary` 로
+    나가 보조 픽스처(back 그룹)에 얹힌다.
     """
     arc = _ARC_PALETTE.get(role)
     if arc is None:
@@ -1017,16 +1026,11 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
     if not base:
         return rotated
     primary = base[0]
-    if role in ("intro", "bridge"):
-        accent = _distinct_from_primary(rotated[0], primary, fallback=rotated[-1])
-        combined: tuple[str, ...] = (accent, primary)
-    elif role == "verse":
+    if role == "verse":
         accent = _distinct_from_primary(rotated[-1], primary, fallback=rotated[0])
-        combined = (primary, accent)
     else:
-        head = _distinct_from_primary(rotated[0], primary, fallback=rotated[-1])
-        tail = _distinct_from_primary(rotated[-1], primary, fallback=rotated[0])
-        combined = (head, tail, primary)
+        accent = _distinct_from_primary(rotated[0], primary, fallback=rotated[-1])
+    combined: tuple[str, ...] = (primary, accent)
     return tuple(dict.fromkeys(combined))
 
 

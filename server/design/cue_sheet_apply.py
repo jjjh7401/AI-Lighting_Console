@@ -93,10 +93,16 @@ _HEX_COLOR = re.compile(r"#[0-9A-Fa-f]{6}")
 #: 각 칸의 명령 형태는 **이 저장소에 이미 있는 생산자**에서 가져왔다(t293).
 #: 출처를 못 대는 칸은 넓히지 않았다 — 아래 :data:`UNSOURCED_FIELD_REASONS` 가
 #: 그 목록과 사유다.
+#: 카드 t409 — ``palette_secondary`` 가 여기 합류했다. 감독 판정("메인 색
+#: 깔고 포인트는 보조로")에 따라 ``layer_mapping`` 의 ``back`` 역할 그룹이
+#: 있으면 그 그룹에 얹는다(:func:`_back_layer_color_line`). 대상이 없으면
+#: 여전히 :data:`ROLE_UNADDRESSED` 로 정직하게 건너뛴다 — 조용히 메인 색만
+#: 내고 보조를 실은 척하지 않는다.
 CONSOLE_APPLIABLE_FIELDS: tuple[str, ...] = (
     "intensity",
     "d_level",
     "palette_primary",
+    "palette_secondary",
     "fade_seconds",
 )
 
@@ -106,10 +112,6 @@ UNSOURCED_FIELD_REASONS: dict[str, str] = {
     "mood": (
         "무드는 콘솔 값이 아니라 룩을 고르는 말입니다 — 값으로 옮기려면 룩 "
         "라이브러리를 다시 태워야 하고, 그것은 `prepare_songcue` 의 일입니다"
-    ),
-    "palette_secondary": (
-        "보조 컬러를 실을 두 번째 대상이 이 통로에 없습니다 — 한 큐의 한 그룹 "
-        "선택에는 컬러 한 벌만 올라갑니다"
     ),
     "movement": (
         "무브먼트(Pan/Tilt) 명령 형태가 이 저장소에 없습니다 — 룩 라이브러리는 "
@@ -444,8 +446,9 @@ def plan_cue_console_apply(
 
     # 어느 축이 달라졌나. 축마다 명령 형태의 출처가 다르므로 따로 센다.
     intensity_changed = _intensity_changed(previous, section)
-    color_changed = previous is None or previous.get("palette_primary") != section.get(
-        "palette_primary"
+    color_changed = previous is None or (
+        previous.get("palette_primary") != section.get("palette_primary")
+        or previous.get("palette_secondary") != section.get("palette_secondary")
     )
     fade_changed = previous is None or _fade_seconds(previous) != _fade_seconds(section)
     unsourced = [
@@ -513,6 +516,55 @@ def plan_cue_console_apply(
     elif rgb is not None:
         value_line += " ; " + _color_line(rgb)
         parts.append(f"컬러 {section.get('palette_primary')}")
+
+    # 카드 t409 — 감독 판정 "메인 색 깔고 포인트는 보조로". 메인은 위에서
+    # 이미 나갔고, 이 칸은 `layer_mapping` 의 `back` 역할 그룹에 보조
+    # 컬러를 얹는다. 대상 그룹이 없거나 색을 못 찾으면 조용히 메인만
+    # 내지 않는다 — 큰 소리로 건너뛴다(정본 [HARD]).
+    # 이 큐 자체가 새로 편집된 경우(``previous`` 있음)에만 보조 컬러를 시도한다
+    # — 곡 전체를 처음부터 다시 반영하는 사전 점검(``previous`` 없음)은 감독이
+    # 아직 편집하지 않은 큐까지 새 칸으로 건드리지 않는다(§ 범위: 바뀐 큐만
+    # 원칙, 이 파일 머리말). 편집으로 바뀐 큐만 겨냥한다.
+    secondary = section.get("palette_secondary")
+    secondary_changed = previous is not None and previous.get("palette_secondary") != secondary
+    if secondary_changed and isinstance(secondary, str) and secondary.strip():
+        back_no = next(
+            (
+                entry.get("group_no")
+                for entry in layer_mapping
+                if entry.get("role") == "back" and isinstance(entry.get("group_no"), int)
+            ),
+            None,
+        )
+        if back_no is None:
+            skips.append(
+                CueSkip(
+                    cue_number=cue,
+                    label=label,
+                    reason=ROLE_UNADDRESSED,
+                    detail=(
+                        "보조 컬러를 못 보냈습니다 — back 역할 그룹 번호를 모릅니다: "
+                        f"{secondary!r}."
+                    ),
+                )
+            )
+        else:
+            secondary_rgb = _palette_rgb(colors, secondary)
+            if secondary_rgb is None:
+                skips.append(
+                    CueSkip(
+                        cue_number=cue,
+                        label=label,
+                        reason=UNMAPPED_LOOK,
+                        detail=(
+                            "보조 컬러는 못 보냈습니다 — 팔레트 범례에 없는 이름입니다: "
+                            f"{secondary!r} (색을 지어내지 않습니다)."
+                        ),
+                    )
+                )
+            else:
+                value_line += f" ; Group {back_no} ; " + _color_line(secondary_rgb)
+                parts.append(f"보조컬러 {secondary}")
 
     fade = _fade_seconds(section) if fade_changed else None
     if fade is not None:

@@ -69,18 +69,23 @@ class TestArcPaletteBreaksTheTwoStateCycle:
                 assert "블루" in colors, f"{role} 회차 {occurrence} 에서 메인 컬러가 사라졌다"
 
     def test_occurrence_one_stays_byte_identical_to_pre_t406_where_no_collision_existed(self):
-        """회귀 없음 — 언어 충돌이 없던 조합은 t402 시절과 바이트 동일해야 한다."""
+        """카드 t409 감독 판정 — "메인 색 깔고 포인트는 보조로": 반환 튜플의
+        첫 칸은 항상 감독의 메인 컬러다. 옛 3튜플(head, tail, primary)은
+        chorus/finale 콘솔 메인에 아크 색을 실었던 결함이라(t408 실측 —
+        verse 만 감독 색을 받고 나머지는 아크 색), 이제 2튜플
+        (primary, accent) 로 바뀌었다."""
         base = ("블루",)
-        assert _arc_palette(base, "chorus", occurrence=1) == ("warm white", "magenta", "블루")
+        assert _arc_palette(base, "chorus", occurrence=1) == ("블루", "warm white")
         assert _arc_palette(base, "verse", occurrence=1) == ("블루", "cyan")
 
     def test_intro_occurrence_one_also_had_the_language_collision_and_is_now_fixed(self):
-        """intro 아크의 첫 색("deep blue")이 "블루" 와 이미 같은 색이었다 —
-        intro 는 회차가 항상 1(싱글턴)이라 이 결함은 회전을 기다릴 필요도
-        없이 감독이 파랑 계열을 메인으로 고를 때마다 매번 났다."""
+        """intro 아크의 첫 색이 "블루" 와 같은 색이면 안 된다(언어 중복
+        방지). 카드 t409 로 intro 아크 자체가 ("cyan", "warm special") 로
+        바뀌었고(감독 판정 — 파랑 계열 아크를 Cyan 쪽으로 민다), 반환
+        튜플의 첫 칸은 여전히 감독의 메인 컬러다."""
         base = ("블루",)
         colors = _arc_palette(base, "intro", occurrence=1)
-        assert colors == ("warm special", "블루")
+        assert colors == ("블루", "cyan")
         assert "blue" not in colors
 
 

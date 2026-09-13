@@ -294,6 +294,63 @@ def test_a_color_outside_the_standard_ten_still_fails_loudly_not_guessed():
     assert "팔레트 범례에 없는 이름입니다" in skip.detail
 
 
+# -- t409: 보조 컬러는 back 그룹으로 나간다(메인은 그대로 감독 색) ---------------
+
+
+def test_a_secondary_colour_rides_the_back_role_group():
+    """카드 t409 — "메인 색 깔고 포인트는 보조로". `_timeline()` 의
+    layer_mapping 은 `back` 역할이 그룹 12다 — 보조 컬러는 그 그룹으로만
+    나가고, 메인(그룹 11+12 선택)의 조도/컬러는 그대로 남는다."""
+    baseline = _timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["palette_primary"] = "warm white"
+    current["sections"][1]["palette_secondary"] = "cyan"
+    plan = plan_console_apply(baseline, current)
+    assert plan.applied == (20,)
+    (command,) = (cmd for cmd in plan.commands if "Dimmer" in cmd)
+    assert command == (
+        "Group 11 + 12 ; Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 100 ; "
+        "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40 ; "
+        "Group 12 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; "
+        "Attribute 'ColorRGB_B' At 100"
+    )
+    assert plan.summaries[20] == "조도 70% · 컬러 warm white · 보조컬러 cyan"
+
+
+def test_a_secondary_colour_with_no_back_group_fails_loudly_not_silently():
+    """back 역할 그룹이 주소록에 없으면 보조 컬러는 조용히 사라지지 않고
+    ROLE_UNADDRESSED 로 건너뛴다 — 메인 컬러는 그래도 나간다(부분 성공)."""
+    baseline = _timeline()
+    current = copy.deepcopy(baseline)
+    current["layer_mapping"] = [
+        entry for entry in current["layer_mapping"] if entry["role"] != "back"
+    ]
+    baseline["layer_mapping"] = current["layer_mapping"]
+    current["sections"][1]["palette_primary"] = "warm white"
+    current["sections"][1]["palette_secondary"] = "cyan"
+    plan = plan_console_apply(baseline, current)
+    assert plan.applied == (20,)
+    assert not any("Group 12" in command for command in plan.commands)
+    assert any(
+        skip.reason == ROLE_UNADDRESSED and "back 역할 그룹 번호를 모릅니다" in skip.detail
+        for skip in plan.skipped
+    )
+
+
+def test_a_secondary_colour_outside_the_standard_ten_fails_loudly_not_silently():
+    """보조 컬러가 표준 10색에 없으면 지어내지 않고 건너뛴다 — 메인은 나간다."""
+    baseline = _timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["palette_primary"] = "warm white"
+    current["sections"][1]["palette_secondary"] = "gold"
+    plan = plan_console_apply(baseline, current)
+    assert plan.applied == (20,)
+    assert not any("Group 12 ; Attribute 'ColorRGB" in command for command in plan.commands)
+    (skip,) = plan.skipped
+    assert skip.reason == UNMAPPED_LOOK
+    assert "보조 컬러는 못 보냈습니다" in skip.detail
+
+
 def test_a_fade_edit_rides_the_store_line_as_cuefade():
     baseline = _legend_timeline()
     current = copy.deepcopy(baseline)
@@ -310,7 +367,7 @@ def test_an_unchanged_fade_does_not_reappear_on_the_store_line():
     assert "Store Sequence 210 Cue 20 /Merge" in plan.commands
 
 
-@pytest.mark.parametrize("field", ["movement", "effect", "trans", "note", "palette_secondary"])
+@pytest.mark.parametrize("field", ["movement", "effect", "trans", "note"])
 def test_an_unsourced_column_is_reported_with_its_own_reason(field):
     """출처 없는 칸은 칸마다 다른 사유로 건너뛴다 — 한 문장으로 뭉뚱그리지 않는다."""
     baseline = _legend_timeline()

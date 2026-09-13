@@ -81,7 +81,8 @@ class TestArcPaletteVariesByOccurrence:
         base = ("블루",)
         first = _arc_palette(base, "chorus", occurrence=1)
         third = _arc_palette(base, "chorus", occurrence=3)
-        assert first == third == ("warm white", "magenta", "블루")
+        # 카드 t409 — 첫 칸은 항상 감독의 메인 컬러(반환값 순서가 바뀌었다).
+        assert first == third == ("블루", "warm white")
         # 색은 같아도 무게 라벨이 갈라 회차를 구분한다.
         assert _arc_accent_weight("chorus", 1) != _arc_accent_weight("chorus", 3)
 
