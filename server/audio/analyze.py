@@ -85,6 +85,26 @@ _D_LEVEL_TOP = 5
 #:     매기지 않는다).
 _D_LEVEL_RESCALE_QUIET_RATIO_FLOOR = 0.60
 
+#: 재조정 판단(과 재조정 범위)에 쓸 quietest/loudest 를 고를 때, 나머지
+#: 구간들과 log 로 이만큼 단절된 극단값은 "이 곡의 진짜 최저/최고"가 아니라
+#: 별도로 떨어진 이상값으로 보고 건너뛴다(t400). t371 이 최댓값 하나 대신
+#: 국소 봉우리의 중앙값을 쓴 것과 같은 발상 — 값 하나의 극단성에 전체 판단이
+#: 끌려가지 않게 한다. `_MIN_LOG_STEP`(0.25, "이 정도는 넘어야 진짜 계단")의
+#: 두 배를 쓴다: 인접한 두 구간의 로그 차가 진짜 계단 하나로도 설명이 안 될
+#: 만큼 커야("계단 두 개 몫") 그 값을 통째로 건너뛴다는 뜻이다.
+_OUTLIER_GAP_LOG_STEP = 2 * _MIN_LOG_STEP
+
+#: 위 이상값-건너뛰기를 적용할 최소 표본 수. 표본이 이보다 적으면 어떤 값이
+#: "이상값"이고 어떤 값이 "진짜 넓은 다이내믹"인지 구별할 근거가 없다 —
+#: 합성 픽스처(4~6구간)의 회귀 시험들이 전부 이 대역에 있어, 이 문턱 아래는
+#: 원래의 min/max 를 그대로 쓴다(no-op).
+_OUTLIER_TRIM_MIN_SECTIONS = 10
+
+#: 표본 하나당 최대 몇 개까지 이상값으로 건너뛸지 — 표본의 10%를 넘는
+#: 개수를 한쪽에서 건너뛰면 "몇 개의 극단값 제외"가 아니라 "분포 자체를
+#: 재정의"하는 셈이 된다.
+_OUTLIER_TRIM_MAX_FRACTION = 0.10
+
 #: 폴백(librosa 없는 배포본)에서 돌려주는 사유. 확인 카드는 이 사유를 읽고
 #: **수동 BPM 입력 카드**로 갈아탄다 — 카드 경로 자체는 살아 있다
 #: (plan.md §C 결정 1 · AC-MUSICSYNC-017).
@@ -307,6 +327,12 @@ def _grade_sections(
     두고, 상대 비교의 **기준점**만 곡 자체의 관측 폭으로 좁힌다. 진짜
     다이내믹이 없는 곡(전 구간이 잡음 수준 차이만 남)은 그 조건을 만족하지
     않아 그대로 남는다 — 없는 다이내믹을 지어내지 않는다.
+
+    재조정 여부 판단과 재조정 범위는 전체 min/max 가 아니라
+    `_robust_song_extremes` 가 고른, 나머지와 단절된 극단값을 건너뛴
+    min/max 를 쓴다(t400) — 재조정을 **하지 않을** 때의 분모(`loudest`)는
+    여전히 전체 max 그대로다: "가장 큰 구간을 100%로" 라는 기본 설계는
+    구간 하나 때문에 흔들리지 않는다.
     """
     edges = [*boundaries_ms, duration_ms]
     means: list[float] = []
@@ -319,13 +345,13 @@ def _grade_sections(
         spans.append((start_ms, end_ms))
 
     loudest = max(means) if means else 0.0
-    quietest = min(means) if means else 0.0
-    rescale = _should_rescale_to_song_range(loudest, quietest)
+    robust_loudest, robust_quietest = _robust_song_extremes(means)
+    rescale = _should_rescale_to_song_range(robust_loudest, robust_quietest)
 
     candidates: list[DCandidate] = []
     for (start_ms, end_ms), mean in zip(spans, means, strict=True):
         if rescale:
-            ratio = (mean - quietest) / (loudest - quietest)
+            ratio = (mean - robust_quietest) / (robust_loudest - robust_quietest)
         else:
             ratio = (mean / loudest) if loudest > 0 else 0.0
         level = _D_LEVEL_TOP
@@ -335,6 +361,42 @@ def _grade_sections(
                 break
         candidates.append(DCandidate(start_ms=start_ms, end_ms=end_ms, d_level=level))
     return tuple(candidates)
+
+
+def _robust_song_extremes(means: list[float]) -> tuple[float, float]:
+    """재조정 판단·범위에 쓸 (loudest, quietest) — 단절된 극단값은 건너뛴다.
+
+    표본이 `_OUTLIER_TRIM_MIN_SECTIONS` 개 미만이면 원래의 min/max 를 그대로
+    돌려준다(no-op) — 적은 표본에서는 무엇이 "이상값"이고 무엇이 "진짜 넓은
+    다이내믹"인지 구별할 근거가 없다(t375 합성 회귀 픽스처가 전부 이
+    대역이다). 그 이상이면, 정렬된 값에서 양 끝부터 훑어 인접한 두 값의
+    로그 차가 `_OUTLIER_GAP_LOG_STEP` 을 넘는 동안만 건너뛰되, 한쪽에서
+    `_OUTLIER_TRIM_MAX_FRACTION` 를 넘는 개수는 건너뛰지 않는다.
+    """
+    if not means:
+        return 0.0, 0.0
+    ordered = sorted(means)
+    n = len(ordered)
+    if n < _OUTLIER_TRIM_MIN_SECTIONS:
+        return ordered[-1], ordered[0]
+
+    max_trim = max(1, int(n * _OUTLIER_TRIM_MAX_FRACTION))
+
+    low_index = 0
+    while low_index + 1 < n and low_index < max_trim:
+        lower, upper = ordered[low_index], ordered[low_index + 1]
+        if lower <= 0 or math.log(upper / lower) < _OUTLIER_GAP_LOG_STEP:
+            break
+        low_index += 1
+
+    high_index = n - 1
+    while high_index - 1 >= 0 and (n - 1 - high_index) < max_trim:
+        lower, upper = ordered[high_index - 1], ordered[high_index]
+        if lower <= 0 or math.log(upper / lower) < _OUTLIER_GAP_LOG_STEP:
+            break
+        high_index -= 1
+
+    return ordered[high_index], ordered[low_index]
 
 
 def _should_rescale_to_song_range(loudest: float, quietest: float) -> bool:

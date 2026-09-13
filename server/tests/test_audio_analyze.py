@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import collections
 import socket
 
 import pytest
@@ -402,3 +403,136 @@ class TestDLevelRescalesToTheSongsOwnRangeWhenCompressed:
         means = [0.01909, 0.05716, 0.11899, 0.03902]
         levels = self._levels_for(means)
         assert levels == [1, 3, 5, 2]
+
+
+class TestDLevelGuardIgnoresASingleDisconnectedOutlierSection:
+    """t400 — 한 구간이 나머지 전부와 log 로 크게 단절돼 있으면(예: 무음에
+    가까운 꼬리 구간 하나) 그 구간이 ``_should_rescale_to_song_range`` 의
+    최솟값 자리를 차지해 나머지 다수 구간의 재조정 자체를 막는다.
+
+    실측(``src/Club Diver.mp3``, t400): 39구간 중 38구간이 절대 폭
+    0.181~0.233 에 몰려 있는데(로그 폭 0.256 ≥ ``_MIN_LOG_STEP``, 재조정
+    조건을 충족), 단 하나의 꼬리 구간(RMS 0.001675 — 나머지의 1/100 이하)이
+    전체 최솟값이 되어 quietest/loudest 비율을 0.0072 로 끌어내린다 —
+    ``_D_LEVEL_RESCALE_QUIET_RATIO_FLOOR``(0.60) 미달로 재조정이 꺼지고,
+    35/39 구간이 D5 하나로 뭉친다.
+
+    t371 이 "최댓값 하나 대신 국소 봉우리의 중앙값"을 쓴 것과 같은 이유로,
+    quietest/loudest 는 전체 min/max 가 아니라 **나머지 구간들과 log 로
+    단절된 극단값을 제외한** 값이어야 한다. 표본이 10개 미만이면(합성
+    픽스처가 여기 해당) 무엇이 "단절"이고 무엇이 "진짜 다이내믹"인지 구별할
+    근거가 없어 원래의 min/max 를 그대로 쓴다 — 위 네 시험(압축·무다이내믹·
+    이미 넓음)이 전부 그 크기 대역이라 이 변경으로 흔들리지 않는다.
+    """
+
+    def _levels_for(self, means: list[float]) -> list[int]:
+        import numpy
+
+        rms = numpy.array(means, dtype=float)
+        frame_ms = 1000.0
+        boundaries_ms = tuple(int(index * frame_ms) for index in range(len(means)))
+        duration_ms = int(len(means) * frame_ms)
+        candidates = _grade_sections(numpy, rms, frame_ms, boundaries_ms, duration_ms)
+        return [candidate.d_level for candidate in candidates]
+
+    def test_a_single_near_silent_tail_no_longer_blocks_the_rescale(self):
+        # 실측(reports/t400/club-diver-means.txt)에서 뽑은 39구간 평균RMS.
+        means = [
+            0.094454,
+            0.220953,
+            0.220004,
+            0.22837,
+            0.224071,
+            0.217412,
+            0.224086,
+            0.181055,
+            0.226089,
+            0.225366,
+            0.226696,
+            0.22892,
+            0.222907,
+            0.222487,
+            0.216156,
+            0.21881,
+            0.229508,
+            0.229738,
+            0.230734,
+            0.225524,
+            0.222344,
+            0.224996,
+            0.180726,
+            0.22826,
+            0.227014,
+            0.229856,
+            0.219992,
+            0.228307,
+            0.222005,
+            0.212237,
+            0.22538,
+            0.233083,
+            0.227931,
+            0.232477,
+            0.232495,
+            0.229507,
+            0.228948,
+            0.23207,
+            0.001675,
+        ]
+        levels = self._levels_for(means)
+        distribution = collections.Counter(levels)
+        assert distribution[5] < 35, (
+            f"단절된 꼬리 구간 하나가 여전히 재조정을 막고 있다: {dict(distribution)}"
+        )
+        # 꼬리 구간(마지막 값, 나머지의 1/100 이하)은 여전히 가장 낮은 등급이어야
+        # 한다 — 재조정이 그 자체를 잘못 승격시키면 안 된다.
+        assert levels[-1] == 1
+
+    def test_the_grades_never_invert_the_measured_rms_ordering(self):
+        means = [
+            0.094454,
+            0.220953,
+            0.220004,
+            0.22837,
+            0.224071,
+            0.217412,
+            0.224086,
+            0.181055,
+            0.226089,
+            0.225366,
+            0.226696,
+            0.22892,
+            0.222907,
+            0.222487,
+            0.216156,
+            0.21881,
+            0.229508,
+            0.229738,
+            0.230734,
+            0.225524,
+            0.222344,
+            0.224996,
+            0.180726,
+            0.22826,
+            0.227014,
+            0.229856,
+            0.219992,
+            0.228307,
+            0.222005,
+            0.212237,
+            0.22538,
+            0.233083,
+            0.227931,
+            0.232477,
+            0.232495,
+            0.229507,
+            0.228948,
+            0.23207,
+            0.001675,
+        ]
+        levels = self._levels_for(means)
+        for i, mean_i in enumerate(means):
+            for j, mean_j in enumerate(means):
+                if mean_i < mean_j:
+                    assert levels[i] <= levels[j], (
+                        f"{i}번({mean_i})이 {j}번({mean_j})보다 조용한데 등급은 더 높다: {levels}"
+                    )
