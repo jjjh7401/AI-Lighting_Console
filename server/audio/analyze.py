@@ -67,6 +67,24 @@ _RELATIVE_PEAK_RATIO = 0.4
 _D_LEVEL_BANDS = ((0.20, 1), (0.40, 2), (0.60, 3), (0.80, 4))
 _D_LEVEL_TOP = 5
 
+#: 곡 자체의 최소~최대 폭으로 다시 늘릴지 판단하는 문턱(t375). 위 띠는 "가장
+#: 큰 구간"을 100%로 놓고 재는데, 마스터링 압축이 심한 실제 곡은 구간 RMS 가
+#: 전부 그 근처(예: 0.65~1.00)에 몰려 하위 띠가 구조적으로 닿지 못한다 —
+#: 실측(reports/t375/): 17구간 실제 곡에서 12개가 D5 로 뭉쳤다. 그럴 때만
+#: 기준점을 "가장 큰 구간 하나"에서 "이 곡에서 관측된 폭(최소~최대)"으로
+#: 옮긴다. 두 조건을 **함께** 요구한다 — 조용한 구간이 상대적으로는 커도
+#: (비율 조건 통과) 그 차이가 잡음 수준이면(로그 폭이 작으면) 늘리는 순간
+#: 잡음을 등급 차이로 둔갑시킨다:
+#:
+#: (1) 가장 조용한 구간조차 가장 큰 구간의 이 비율 이상이다 — 절대 폭 상위
+#:     두 칸(D4/D5 문턱 0.60)에 이미 몰려 있다는 신호. `_D_LEVEL_BANDS` 의
+#:     D4 문턱과 같은 값을 쓴다.
+#: (2) 가장 크고 작은 구간의 로그 차가 `_MIN_LOG_STEP` 이상이다 — 그 몰림이
+#:     진짜 세기 차라는 확인(경계 판정에 이미 쓰는 것과 같은 기준을 그대로
+#:     재사용해, "이 정도는 넘어야 진짜 계단"이라는 상수를 두 곳에서 따로
+#:     매기지 않는다).
+_D_LEVEL_RESCALE_QUIET_RATIO_FLOOR = 0.60
+
 #: 폴백(librosa 없는 배포본)에서 돌려주는 사유. 확인 카드는 이 사유를 읽고
 #: **수동 BPM 입력 카드**로 갈아탄다 — 카드 경로 자체는 살아 있다
 #: (plan.md §C 결정 1 · AC-MUSICSYNC-017).
@@ -259,10 +277,20 @@ def _boundaries_from_rms(numpy, rms, frame_ms: float, duration_ms: int) -> tuple
         if all(abs(index - taken) >= min_distance for taken in accepted):
             accepted.append(index)
 
+    # 시작 쪽은 이미 대칭으로 막혀 있었다(``millis >= _MIN_SEGMENT_SECONDS``)
+    # — 끝 쪽에는 같은 문턱이 없어서, 곡 맨 끝에 가까운 봉우리가 3초 미만의
+    # 꼬리 구간을 만들 수 있었다(t375 실측: 178.3초 실제 곡에서 마지막
+    # 경계가 177.3초에 잡혀 1.0초짜리 구간이 나왔다). 시작과 끝을 대칭으로
+    # 맞춘다 — 남는 꼬리는 구간이 아니라 악센트다(위 상수 설명과 같은 이유).
+    min_segment_ms = _MIN_SEGMENT_SECONDS * 1000.0
     boundaries = [0]
     for index in sorted(accepted):
         millis = int(round(index * frame_ms))
-        if millis >= _MIN_SEGMENT_SECONDS * 1000.0 and millis < duration_ms:
+        if (
+            millis >= min_segment_ms
+            and millis < duration_ms
+            and duration_ms - millis >= min_segment_ms
+        ):
             boundaries.append(millis)
     return tuple(boundaries)
 
@@ -270,7 +298,16 @@ def _boundaries_from_rms(numpy, rms, frame_ms: float, duration_ms: int) -> tuple
 def _grade_sections(
     numpy, rms, frame_ms: float, boundaries_ms: tuple[int, ...], duration_ms: int
 ) -> tuple[DCandidate, ...]:
-    """구간마다 D 등급 후보 하나 — 곡 안에서의 **상대** 세기로 매긴다."""
+    """구간마다 D 등급 후보 하나 — 곡 안에서의 **상대** 세기로 매긴다.
+
+    기본 기준점은 "가장 큰 구간의 RMS" 다. 다만 그 구간조차 곡 전체가
+    압축돼 상위 띠에 몰려 있을 때는(`_should_rescale_to_song_range`)
+    기준점을 "이 곡에서 관측된 최소~최대 폭"으로 옮긴다 — 절대 음압이
+    아니라 상대 세기를 쓰는 설계 의도(위 `_D_LEVEL_BANDS` 주석)는 그대로
+    두고, 상대 비교의 **기준점**만 곡 자체의 관측 폭으로 좁힌다. 진짜
+    다이내믹이 없는 곡(전 구간이 잡음 수준 차이만 남)은 그 조건을 만족하지
+    않아 그대로 남는다 — 없는 다이내믹을 지어내지 않는다.
+    """
     edges = [*boundaries_ms, duration_ms]
     means: list[float] = []
     spans: list[tuple[int, int]] = []
@@ -282,9 +319,15 @@ def _grade_sections(
         spans.append((start_ms, end_ms))
 
     loudest = max(means) if means else 0.0
+    quietest = min(means) if means else 0.0
+    rescale = _should_rescale_to_song_range(loudest, quietest)
+
     candidates: list[DCandidate] = []
     for (start_ms, end_ms), mean in zip(spans, means, strict=True):
-        ratio = (mean / loudest) if loudest > 0 else 0.0
+        if rescale:
+            ratio = (mean - quietest) / (loudest - quietest)
+        else:
+            ratio = (mean / loudest) if loudest > 0 else 0.0
         level = _D_LEVEL_TOP
         for upper, band_level in _D_LEVEL_BANDS:
             if ratio < upper:
@@ -292,3 +335,18 @@ def _grade_sections(
                 break
         candidates.append(DCandidate(start_ms=start_ms, end_ms=end_ms, d_level=level))
     return tuple(candidates)
+
+
+def _should_rescale_to_song_range(loudest: float, quietest: float) -> bool:
+    """등급 기준점을 곡 자체의 관측 폭으로 옮길지 — 두 조건을 함께 요구한다.
+
+    (1) 가장 조용한 구간조차 이미 `_D_LEVEL_RESCALE_QUIET_RATIO_FLOOR` 를
+        넘는다 — 절대 폭 상위 두 칸에 몰려 있다는 신호.
+    (2) 가장 크고 작은 구간의 로그 차가 `_MIN_LOG_STEP` 이상이다 — 그 몰림이
+        잡음이 아니라 진짜 세기 차라는 확인.
+    """
+    if loudest <= 0 or quietest <= 0 or quietest >= loudest:
+        return False
+    if (quietest / loudest) < _D_LEVEL_RESCALE_QUIET_RATIO_FLOOR:
+        return False
+    return math.log(loudest / quietest) >= _MIN_LOG_STEP
