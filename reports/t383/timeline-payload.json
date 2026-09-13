@@ -1,0 +1,697 @@
+{
+  "v": 1,
+  "type": "song_timeline",
+  "timeline": {
+    "song_title": "Design Interview",
+    "sequence_name": "Sequence 110",
+    "sequence_number": 110,
+    "timing_mode": "timecode",
+    "timecode_number": 7,
+    "lifecycle": "pending_approval",
+    "approval": "pending_review",
+    "director_decisions": [
+      {
+        "step": "Q1_CONCEPT",
+        "axis": "palette",
+        "value": "우주",
+        "confirmed": true,
+        "source": "option"
+      },
+      {
+        "step": "Q2_PALETTE",
+        "axis": "palette",
+        "value": "블루/퍼플",
+        "confirmed": true,
+        "source": "option"
+      },
+      {
+        "step": "Q3_CLIMAX",
+        "axis": "d",
+        "value": {
+          "d_level": 5,
+          "color_tendency": "쿨 볼드",
+          "position_candidates": [
+            "Ring In",
+            "Center",
+            "Wall"
+          ]
+        },
+        "confirmed": true,
+        "source": "option"
+      },
+      {
+        "step": "Q4_SPATIAL_STORY",
+        "axis": "position",
+        "value": {
+          "d_level": null,
+          "color_tendency": null,
+          "position_candidates": [
+            "Ring In",
+            "Home",
+            "Vocal DSC",
+            "Center",
+            "Wall",
+            "Cross",
+            "Fan Out",
+            "Audience"
+          ]
+        },
+        "confirmed": true,
+        "source": "option"
+      },
+      {
+        "step": "Q5_TEXTURE",
+        "axis": "texture",
+        "value": "중간",
+        "confirmed": true,
+        "source": "option"
+      }
+    ],
+    "sections": [
+      {
+        "index": 1,
+        "label": "S1",
+        "start_ms": 0,
+        "cue_number": 1,
+        "plan_status": "draft",
+        "d_level": 2,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Ring In",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 1.904036281179117,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 0.0,
+        "end_ms": 6931,
+        "duration_ms": 6931,
+        "bar_start": 1,
+        "bar_count": 4,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 50
+          }
+        ],
+        "movement": "Ring In",
+        "trans": "FADE"
+      },
+      {
+        "index": 2,
+        "label": "S2",
+        "start_ms": 6931,
+        "cue_number": 2,
+        "plan_status": "draft",
+        "d_level": 4,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Ring In",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.7140136054421689,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 6.931,
+        "end_ms": 20294,
+        "duration_ms": 13363,
+        "bar_start": 5,
+        "bar_count": 7,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 90
+          }
+        ],
+        "movement": "Ring In",
+        "trans": "FADE"
+      },
+      {
+        "index": 3,
+        "label": "S3",
+        "start_ms": 20294,
+        "cue_number": 3,
+        "plan_status": "draft",
+        "d_level": 4,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Home",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.7140136054421689,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 20.294,
+        "end_ms": 26622,
+        "duration_ms": 6328,
+        "bar_start": 12,
+        "bar_count": 3,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 90
+          }
+        ],
+        "movement": "Home",
+        "trans": "FADE"
+      },
+      {
+        "index": 4,
+        "label": "S4",
+        "start_ms": 26622,
+        "cue_number": 4,
+        "plan_status": "draft",
+        "d_level": 5,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Home",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.23800453514738962,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 26.622,
+        "end_ms": 46626,
+        "duration_ms": 20004,
+        "bar_start": 15,
+        "bar_count": 11,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 100
+          }
+        ],
+        "movement": "Home",
+        "trans": "FADE"
+      },
+      {
+        "index": 5,
+        "label": "S5",
+        "start_ms": 46626,
+        "cue_number": 5,
+        "plan_status": "draft",
+        "d_level": 5,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Vocal DSC",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.23800453514738962,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 46.626,
+        "end_ms": 69045,
+        "duration_ms": 22419,
+        "bar_start": 25,
+        "bar_count": 12,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 100
+          }
+        ],
+        "movement": "Vocal DSC",
+        "trans": "FADE"
+      },
+      {
+        "index": 6,
+        "label": "S6",
+        "start_ms": 69045,
+        "cue_number": 6,
+        "plan_status": "draft",
+        "d_level": 2,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Vocal DSC",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 1.904036281179117,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 69.045,
+        "end_ms": 72829,
+        "duration_ms": 3784,
+        "bar_start": 37,
+        "bar_count": 2,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 50
+          }
+        ],
+        "movement": "Vocal DSC",
+        "trans": "FADE"
+      },
+      {
+        "index": 7,
+        "label": "S7",
+        "start_ms": 72829,
+        "cue_number": 7,
+        "plan_status": "draft",
+        "d_level": 2,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Center",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 1.904036281179117,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 72.829,
+        "end_ms": 76858,
+        "duration_ms": 4029,
+        "bar_start": 39,
+        "bar_count": 2,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 50
+          }
+        ],
+        "movement": "Center",
+        "trans": "FADE"
+      },
+      {
+        "index": 8,
+        "label": "S8",
+        "start_ms": 76858,
+        "cue_number": 8,
+        "plan_status": "draft",
+        "d_level": 5,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Center",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.23800453514738962,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 76.858,
+        "end_ms": 92090,
+        "duration_ms": 15232,
+        "bar_start": 41,
+        "bar_count": 8,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 100
+          }
+        ],
+        "movement": "Center",
+        "trans": "FADE"
+      },
+      {
+        "index": 9,
+        "label": "S8",
+        "start_ms": 92090,
+        "cue_number": 9,
+        "plan_status": "draft",
+        "d_level": 5,
+        "palette": [
+          "퍼플",
+          "블루"
+        ],
+        "position": "Center",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.23800453514738962,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 92.09,
+        "end_ms": 115183,
+        "duration_ms": 23093,
+        "bar_start": 49,
+        "bar_count": 12,
+        "palette_primary": "퍼플",
+        "palette_secondary": "블루",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 100
+          }
+        ],
+        "movement": "Center",
+        "trans": "FADE"
+      },
+      {
+        "index": 10,
+        "label": "S9",
+        "start_ms": 115183,
+        "cue_number": 10,
+        "plan_status": "draft",
+        "d_level": 4,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Wall",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.7140136054421689,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 115.183,
+        "end_ms": 120094,
+        "duration_ms": 4911,
+        "bar_start": 61,
+        "bar_count": 3,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 90
+          }
+        ],
+        "movement": "Wall",
+        "trans": "FADE"
+      },
+      {
+        "index": 11,
+        "label": "S10",
+        "start_ms": 120094,
+        "cue_number": 11,
+        "plan_status": "draft",
+        "d_level": 5,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Wall",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.23800453514738962,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 120.094,
+        "end_ms": 125399,
+        "duration_ms": 5305,
+        "bar_start": 64,
+        "bar_count": 3,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 100
+          }
+        ],
+        "movement": "Wall",
+        "trans": "FADE"
+      },
+      {
+        "index": 12,
+        "label": "S11",
+        "start_ms": 125399,
+        "cue_number": 12,
+        "plan_status": "draft",
+        "d_level": 4,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Cross",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.7140136054421689,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 125.399,
+        "end_ms": 130067,
+        "duration_ms": 4668,
+        "bar_start": 67,
+        "bar_count": 2,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 90
+          }
+        ],
+        "movement": "Cross",
+        "trans": "FADE"
+      },
+      {
+        "index": 13,
+        "label": "S12",
+        "start_ms": 130067,
+        "cue_number": 13,
+        "plan_status": "draft",
+        "d_level": 5,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Cross",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.23800453514738962,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 130.067,
+        "end_ms": 149188,
+        "duration_ms": 19121,
+        "bar_start": 69,
+        "bar_count": 10,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 100
+          }
+        ],
+        "movement": "Cross",
+        "trans": "FADE"
+      },
+      {
+        "index": 14,
+        "label": "S13",
+        "start_ms": 149188,
+        "cue_number": 14,
+        "plan_status": "draft",
+        "d_level": 1,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Fan Out",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 3.808072562358234,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 149.188,
+        "end_ms": 154691,
+        "duration_ms": 5503,
+        "bar_start": 79,
+        "bar_count": 3,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 30
+          }
+        ],
+        "movement": "Fan Out",
+        "trans": "FADE"
+      },
+      {
+        "index": 15,
+        "label": "S14",
+        "start_ms": 154691,
+        "cue_number": 15,
+        "plan_status": "draft",
+        "d_level": 4,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Fan Out",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.7140136054421689,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 154.691,
+        "end_ms": 159347,
+        "duration_ms": 4656,
+        "bar_start": 82,
+        "bar_count": 2,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 90
+          }
+        ],
+        "movement": "Fan Out",
+        "trans": "FADE"
+      },
+      {
+        "index": 16,
+        "label": "S15",
+        "start_ms": 159347,
+        "cue_number": 16,
+        "plan_status": "draft",
+        "d_level": 2,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Audience",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 1.904036281179117,
+        "accents": [],
+        "mib": false,
+        "trig_time_seconds": 159.347,
+        "end_ms": 162377,
+        "duration_ms": 3030,
+        "bar_start": 85,
+        "bar_count": 2,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 50
+          }
+        ],
+        "movement": "Audience",
+        "trans": "FADE"
+      },
+      {
+        "index": 17,
+        "label": "S16",
+        "start_ms": 162377,
+        "cue_number": 17,
+        "plan_status": "draft",
+        "d_level": 5,
+        "palette": [
+          "블루",
+          "퍼플"
+        ],
+        "position": "Ring In",
+        "texture": "중간",
+        "fx": [
+          "dimmer chase"
+        ],
+        "fade_seconds": 0.23800453514738962,
+        "accents": [
+          "climax accent 쿨 볼드"
+        ],
+        "mib": false,
+        "trig_time_seconds": 162.377,
+        "bar_start": 86,
+        "palette_primary": "블루",
+        "palette_secondary": "퍼플",
+        "intensity": [
+          {
+            "group": "KEY",
+            "level": 100
+          }
+        ],
+        "movement": "Ring In",
+        "trans": "FADE"
+      }
+    ],
+    "lint": [
+      {
+        "rule_id": "L13",
+        "cue_number": 9.0,
+        "description": "identical (position, palette, effect) combo for 3 consecutive cues (V2)"
+      }
+    ],
+    "unresolved": [],
+    "disabled": [
+      {
+        "axis": "fx",
+        "section_index": null,
+        "reason": "RG1: no layer mapping declared or inferred from group names — this rig degrades to single-layer. Layer-conditioned rules (I1-I3) and lint L6/L7 are inactive; report this explicitly rather than a false violation."
+      }
+    ],
+    "readback": {
+      "verified": null,
+      "message": null
+    },
+    "console_stored": false,
+    "warnings": [
+      "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다."
+    ],
+    "layer_mapping": [],
+    "preset_start": 21,
+    "bpm": 126.04801829268435,
+    "time_signature": "4/4",
+    "seconds_per_bar": 1.904036281179117,
+    "tc_method": "DERIVED",
+    "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+  }
+}

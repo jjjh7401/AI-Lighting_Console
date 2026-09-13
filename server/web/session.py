@@ -1576,6 +1576,13 @@ def _build_unified_song_plan(
         # D-level: arc replaces only undecided defaults — a mood-word or
         # director tier keeps its value.
         d_level, d_source = resolved.d_level, resolved.d_source
+        # 카드 t383 — 확정 분석이 잰 D 레벨(``section.d_level``)은 아직 아무도
+        # 결정하지 않은 구간에서만 기본값을 채운다. 무드 단어나 감독 답변
+        # (Q3 절정 포함, ``resolve_section`` 이 이미 SOURCE_DIRECTOR_INTENT 로
+        # 최우선 처리했다)이 이미 정했으면 그 값을 덮지 않는다 — 여기서
+        # 고치는 것은 「비어서 전역 기본값(D3)으로 떨어진」 구간뿐이다.
+        if section.d_level is not None and d_source in (SOURCE_GLOBAL_DEFAULT, "fallback"):
+            d_level, d_source = section.d_level, "confirmed_song_analysis"
         arc_d = _ARC_D_LEVEL.get(role)
         if arc_d is not None and d_source in (SOURCE_GLOBAL_DEFAULT, "fallback"):
             d_level, d_source = arc_d, "section_arc"
@@ -7931,6 +7938,11 @@ class ChatSession:
         # 무드는 **비운다**: DSP 는 시각과 D 레벨을 재지, 그 구간이 어떤 느낌인지는
         # 재지 않는다. 없는 것을 지어내는 대신 비워 두면 기존 미해소(requery) 경로가
         # 구간마다 감독에게 카드를 띄운다 — 이 경로가 원래 그러라고 있는 자리다.
+        #
+        # 카드 t383 — D 레벨은 무드와 달리 비우지 않는다. DSP 가 실측한 값을
+        # `d_level` 에 그대로 싣는다 — 무드를 비운 채로 두면 `resolve_section`
+        # 이 전역 기본값(D3)으로 떨어져 확정 실측값이 조용히 버려졌었다
+        # (`_build_unified_song_plan` 이 이 필드를 우선순위대로 소비한다).
         if not sections:
             confirmed = self._song_analysis
             for position, section in enumerate(
@@ -7941,6 +7953,7 @@ class ChatSession:
                         name=f"S{position}",
                         start_ms=section.start_ms,
                         mood="",
+                        d_level=section.d_level,
                     )
                 )
         if not sections:
