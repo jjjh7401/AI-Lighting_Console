@@ -1,27 +1,39 @@
 == 큐마다: 어느 그룹에 무슨 값이 갔나 ==
-  cue  1 Intro      edm-haze-shafts        그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue  2 Verse      edm-intro-bed          그룹 MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue  3 Verse      edm-intro-bed          그룹 MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue  4 Chorus     edm-drop-crimson       그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
-  cue  5 Chorus     edm-drop-crimson       그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
-  cue  6 Bridge     edm-haze-shafts        그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue  7 Bridge     edm-haze-shafts        그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue  8 Chorus     edm-drop-crimson       그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
-  cue  9 Verse      edm-intro-bed          그룹 MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue 10 Chorus     edm-drop-crimson       그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
-  cue 11 Verse      edm-intro-bed          그룹 MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue 12 Chorus     edm-drop-crimson       그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
-  cue 13 Breakdown  edm-haze-shafts        그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue 14 Chorus     edm-drop-crimson       그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
-  cue 15 Bridge     edm-haze-shafts        그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
-  cue 16 Chorus     edm-drop-crimson       그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
+  cue  1 Intro      edm-haze-shafts     그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+  cue  2 Verse      edm-intro-bed       그룹 MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+  cue  3 Verse      edm-intro-bed       그룹 MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+  cue  4 Chorus     edm-drop-crimson    그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,WASH-U,WASH-D,WASH-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
+  cue  5 Chorus     edm-drop-crimson    그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,WASH-U,WASH-D,WASH-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
+  cue  6 Bridge     edm-haze-shafts     그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+  cue  7 Bridge     edm-haze-shafts     그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 BLIND  속성 Dimmer
+  cue  8 Chorus     edm-drop-crimson    그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,WASH-U,WASH-D,WASH-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
+  cue  9 Verse      edm-intro-bed       그룹 MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+  cue 10 Chorus     edm-drop-crimson    그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,WASH-U,WASH-D,WASH-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
+  cue 11 Verse      edm-intro-bed       그룹 MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 BLIND  속성 Dimmer
+  cue 12 Chorus     edm-drop-crimson    그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,WASH-U,WASH-D,WASH-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
+  cue 13 Breakdown  edm-haze-shafts     그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+  cue 14 Chorus     edm-drop-crimson    그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,WASH-U,WASH-D,WASH-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
+  cue 15 Bridge     edm-haze-shafts     그룹 BACK  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+                                           └ 층 그룹 FOH  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B
+  cue 16 Chorus     edm-drop-crimson    그룹 KEY,FOH,BACK,SIDE-L,SIDE-R,SIDE-ALL,WASH-U,WASH-D,WASH-ALL,MOVER-U,MOVER-D,MOVER-ALL  속성 Dimmer,ColorRGB_R,ColorRGB_G,ColorRGB_B,Zoom
 
 == 리그 그룹 18개 중 큐가 건드린 그룹 ==
-  건드림: ['KEY', 'FOH', 'BACK', 'SIDE-L', 'SIDE-R', 'SIDE-ALL', 'MOVER-U', 'MOVER-D', 'MOVER-ALL']
-  🔴 한 번도 안 건드림: ['ALL', 'WASH-U', 'WASH-D', 'WASH-ALL', 'BLIND', 'STROBE', 'HAZE', 'ODD', 'EVEN']
+  건드림: ['KEY', 'FOH', 'BACK', 'SIDE-L', 'SIDE-R', 'SIDE-ALL', 'WASH-U', 'WASH-D', 'WASH-ALL', 'MOVER-U', 'MOVER-D', 'MOVER-ALL', 'BLIND']
+  🔴 한 번도 안 건드림: ['ALL', 'STROBE', 'HAZE', 'ODD', 'EVEN']
 
 == 룩 종류 ==
   3종 / 큐 16개: {'edm-haze-shafts': 5, 'edm-intro-bed': 4, 'edm-drop-crimson': 7}
 
 == 음악 동기 ==
-  타임코드/자동진행 명령: 🔴 0건 — 큐가 음악에 안 붙어 있다
+  주의: build_songcue_bundle() 만의 b.commands 는 설계상 항상 0건이다 — 자동 진행은 build_songcue_timing() 이 별도로 낸다 (카드 t380).
+  타임코드/자동진행 명령: ['Store Timecode 3', "Set Timecode 3 Property 'Name' 'Diag Timecode'", 'Assign Sequence 16 At Timecode 3', "Set Cue 1 Sequence 16 Property 'TrigTime' 0", "Set Cue 2 Sequence 16 Property 'TrigTime' 6.931", "Set Cue 3 Sequence 16 Property 'TrigTime' 20.294", "Set Cue 4 Sequence 16 Property 'TrigTime' 26.622", "Set Cue 5 Sequence 16 Property 'TrigTime' 46.626", "Set Cue 6 Sequence 16 Property 'TrigTime' 69.045", "Set Cue 7 Sequence 16 Property 'TrigTime' 72.829", "Set Cue 8 Sequence 16 Property 'TrigTime' 76.858", "Set Cue 9 Sequence 16 Property 'TrigTime' 115.183", "Set Cue 10 Sequence 16 Property 'TrigTime' 120.094", "Set Cue 11 Sequence 16 Property 'TrigTime' 125.399", "Set Cue 12 Sequence 16 Property 'TrigTime' 130.067", "Set Cue 13 Sequence 16 Property 'TrigTime' 149.188", "Set Cue 14 Sequence 16 Property 'TrigTime' 154.691", "Set Cue 15 Sequence 16 Property 'TrigTime' 159.347", "Set Cue 16 Sequence 16 Property 'TrigTime' 162.377"]
