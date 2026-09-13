@@ -568,6 +568,26 @@ def _record_source(records: Sequence[object], step: str, fallback: str = "standa
 
 
 def _climax_section_index(sections: Sequence[PositionSheetSection]) -> int:
+    # 카드 t403 — 확정 구간(role 이 명시된 경로, t393)의 표시 이름은
+    # "Chorus 1" 처럼 역할 어휘를 그대로 담는다(`_confirmed_section_names`).
+    # 아래 텍스트 검색을 그대로 두면 그 이름 안의 "Chorus" 글자를 절정
+    # 신호로 오독해 곡의 **첫** 코러스에서 멈춘다(실측: 141초 곡에서 3초
+    # 지점). role 이 있으면 텍스트 검색을 건너뛰고 role + D 레벨로
+    # 판정한다 — 코러스 후보 중 D 레벨이 가장 높은(동률이면 나중) 구간을
+    # 고른다("마지막 drop" 이 정본 §6 의 최댓값이기 때문이다).
+    if any(section.role is not None for section in sections):
+        d_levels = [section.d_level if section.d_level is not None else 0 for section in sections]
+        chorus_candidates = [
+            index for index, section in enumerate(sections, start=1) if section.role == "chorus"
+        ]
+        if chorus_candidates:
+            return max(chorus_candidates, key=lambda index: (d_levels[index - 1], index))
+        finale_candidates = [
+            index for index, section in enumerate(sections, start=1) if section.role == "finale"
+        ]
+        if finale_candidates:
+            return finale_candidates[-1]
+        return len(sections)
     for index, section in enumerate(sections, start=1):
         if _SONG_CLIMAX_SECTION.search(f"{section.name} {section.mood}"):
             return index
@@ -645,17 +665,52 @@ def _fx_decision(records: Sequence[object]) -> FxDecision:
     return FxDecision(allowed=(), source="director_texture", density=0)
 
 
+def _occurrence_accent_label(
+    role: str, occurrence: int, total: int, *, is_final_occurrence: bool
+) -> str | None:
+    """정본 §7.1 사다리를 회차 수가 얼마든 일반화한다 (카드 t403).
+
+    코러스가 25회 반복돼도 매 회차를 찍으면 "짧고 드물어야" 하는 액센트가
+    흔해져 정본 §6.1 을 어긴다 — 감독이 원한 것은 "부분마다 변조"(팔레트,
+    t402)이지 "부분마다 폭발"이 아니다. 그래서 몇 회든 딱 **가운데**
+    회차(무빙 포지션 전환)와 **마지막** 회차(블라인더/백색 플래시)만
+    찍는다. 피날레는 항상 곡에 한 번뿐이라(싱글턴, t391) 항상 마지막이다.
+    """
+    if role == "finale":
+        return "white flash" if is_final_occurrence else None
+    if role != "chorus" or total <= 1:
+        return None
+    if is_final_occurrence:
+        return "white flash"
+    midpoint = max(2, round(total / 2))
+    return "moving position hit" if occurrence == midpoint else None
+
+
 def _accent_decision(
-    records: Sequence[object], *, section_index: int, climax_index: int
+    records: Sequence[object],
+    *,
+    section_index: int,
+    climax_index: int,
+    role: str = "other",
+    occurrence: int = 1,
+    total_for_role: int = 0,
+    is_final_occurrence: bool = False,
 ) -> AccentDecision:
-    if section_index != climax_index:
-        return AccentDecision()
-    q3 = _projection(records, Q3_CLIMAX)
-    climax = getattr(q3, "climax", None)
-    color = getattr(climax, "accent_color", None)
-    if isinstance(color, str) and color.strip():
-        return AccentDecision(accents=(f"climax accent {color}",), source="director_climax")
-    return AccentDecision(accents=("climax accent",), source="director_climax")
+    if section_index == climax_index:
+        q3 = _projection(records, Q3_CLIMAX)
+        climax = getattr(q3, "climax", None)
+        color = getattr(climax, "accent_color", None)
+        if isinstance(color, str) and color.strip():
+            return AccentDecision(accents=(f"climax accent {color}",), source="director_climax")
+        return AccentDecision(accents=("climax accent",), source="director_climax")
+    # 카드 t403 — 절정 하나뿐이던 액센트를 회차 사다리로 넓힌다. 절정이
+    # 아닌 구간은 §7.1 사다리의 가운데·마지막 회차에서만 액센트가 난다.
+    label = _occurrence_accent_label(
+        role, occurrence, total_for_role, is_final_occurrence=is_final_occurrence
+    )
+    if label is not None:
+        return AccentDecision(accents=(label,), source="section_arc")
+    return AccentDecision()
 
 
 # ── Section look-arc (연출 아크, handoff 결함 3/4) ─────────────────────────
@@ -883,10 +938,21 @@ def _section_fx_decision(
     return FxDecision(allowed=allowed, source="section_arc", density=density)
 
 
-def _arc_palette(base: tuple[str, ...], role: str) -> tuple[str, ...]:
+def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple[str, ...]:
+    """역할 아크 팔레트 — 회차마다 보조색을 돌린다 (카드 t402).
+
+    같은 역할이 반복되면(코러스 25회 등) 예전에는 매번 바이트 동일한
+    팔레트가 나왔다 — 회차를 구분하지 않았기 때문이다. `occurrence` 가
+    1보다 크면 `rotate_palette`(카드 t305, 마디분할 회전에서 이미 검증된
+    함수)로 아크 색을 회전한다. 메인 컬러(``primary``, 감독이 지정한
+    색)는 이 회전과 무관하게 아래 결합에 **항상** 남는다 — 감독 지시
+    "메인 컬러 중심" 을 구조적으로 지킨다.
+    """
     arc = _ARC_PALETTE.get(role)
     if arc is None:
         return base or ("white",)
+    if len(arc) > 1 and occurrence > 1:
+        arc = rotate_palette(arc, occurrence - 1)
     if not base:
         return arc
     primary = base[0]
@@ -1532,8 +1598,14 @@ def _section_palette_choice(
     color_tendency: object,
     palette_mode: str,
     concept_colors: tuple[str, ...],
+    occurrence: int = 1,
 ) -> tuple[tuple[str, ...], str]:
-    """한 구간의 팔레트와 그 출처. 구간의 색 단어 > 팔레트 충돌 결정 > Q2."""
+    """한 구간의 팔레트와 그 출처. 구간의 색 단어 > 팔레트 충돌 결정 > Q2.
+
+    ``occurrence`` — 카드 t402. 같은 역할의 몇 번째 회차인지(1부터).
+    아크 색 회전(`_arc_palette`)에만 쓰이므로 구간이 직접 색을 적었거나
+    (``section_text``) 컨셉 팔레트를 그대로 쓰는 경로는 영향받지 않는다.
+    """
     direct_colors = _extract_color_words(section.mood)
     if direct_colors:
         return direct_colors, "section_text"
@@ -1543,7 +1615,7 @@ def _section_palette_choice(
         base = concept_colors
     else:
         base = _palette_colors(profile.palette or color_tendency)
-    return _arc_palette(base, role), "section_arc"
+    return _arc_palette(base, role, occurrence), "section_arc"
 
 
 def _section_palette_sizes(
@@ -1637,6 +1709,27 @@ def _build_unified_song_plan(
     arc_positions, head_indexes, units, section_count, climax_index = _section_arc_geometry(
         sections, section_origin
     )
+    # 카드 t402·t403 — 역할이 같은 구간이 반복될 때(코러스 25회 등) 몇 번째
+    # 회차인지 미리 센다. 원본(origin) 단위로 세야 한다 — 마디 분할로 갈린
+    # 큐는 부모와 같은 회차를 공유해야, 부모가 이미 정한 팔레트 회전·액센트
+    # 사다리가 자식 큐에서 흔들리지 않는다. `head_indexes[i] == i+1` 인
+    # 자리(``units[i] == 0``)만 새 원본의 시작이다.
+    origin_roles: dict[int, str] = {}
+    for offset, section in enumerate(sections, start=1):
+        if units[offset - 1] == 0:
+            arc_index = arc_positions[offset - 1]
+            origin_roles[head_indexes[offset - 1]] = _section_role(
+                section, section_index=arc_index, section_count=section_count
+            )
+    role_totals: dict[str, int] = {}
+    for role_name in origin_roles.values():
+        role_totals[role_name] = role_totals.get(role_name, 0) + 1
+    role_running: dict[str, int] = {}
+    occurrence_by_head: dict[int, int] = {}
+    for head in sorted(origin_roles):
+        role_name = origin_roles[head]
+        role_running[role_name] = role_running.get(role_name, 0) + 1
+        occurrence_by_head[head] = role_running[role_name]
     decisions: list[SectionDecision] = []
     unresolved: list[UnresolvedNote] = []
     roles: list[str] = []
@@ -1646,6 +1739,12 @@ def _build_unified_song_plan(
         unit_index = units[index - 1]
         role = _section_role(section, section_index=arc_index, section_count=section_count)
         roles.append(role)
+        # 카드 t402·t403 — 이 원본(head_index)이 자기 역할 안에서 몇 번째
+        # 회차인지(사전 계산한 표에서 조회), 그 역할의 총 회차 수, 그리고
+        # 그것이 **마지막** 회차인지.
+        occurrence = occurrence_by_head.get(head_index, 1)
+        total_for_role = role_totals.get(role, 0)
+        is_final_occurrence = occurrence == total_for_role
         override = _section_director_override(
             section_index=arc_index,
             section_count=section_count,
@@ -1711,6 +1810,7 @@ def _build_unified_song_plan(
             color_tendency=resolved.color_tendency,
             palette_mode=palette_mode,
             concept_colors=concept_colors,
+            occurrence=occurrence,
         )
         # 카드 t305 — 구간 안에서 이어지는 큐는 앞 큐와 **달라야** 한다.
         # 정본이 하는 것과 같은 축: 강도는 유지하고 색만 돌린다(Q060 "강도
@@ -1759,7 +1859,13 @@ def _build_unified_song_plan(
                     (fx_overrides or {}).get(index),
                 ),
                 accent=_accent_decision(
-                    records, section_index=arc_index, climax_index=climax_index
+                    records,
+                    section_index=arc_index,
+                    climax_index=climax_index,
+                    role=role,
+                    occurrence=occurrence,
+                    total_for_role=total_for_role,
+                    is_final_occurrence=is_final_occurrence,
                 ),
                 cue_number=index,
                 fade_override=(fade_overrides or {}).get(index),
