@@ -142,10 +142,14 @@ class TestMeasuredBpmSplitsTheUploadPath:
     def test_the_continuation_cue_holds_the_d_level_and_rotates_the_look(self):
         """정본의 축 — 강도는 유지하고 그림만 바꾼다(Q060 "강도 유지, 색만 교체")."""
         port, _payload, _execution = _run(record=_record(bpm=_MEASURED_BPM))
+        # 카드 t377 — 프론트 필(정본 §6.2 [HARD])이 이 픽스처의 룩마다 "Group 12"
+        # 뒤에 별도 ``Dimmer`` 줄을 하나 더 낸다(룩이 프론트 역할을 안 실었으므로).
+        # 이 검사가 재는 것은 큐의 **기준 룩** 밝기이므로, 룩이 실제로 묶이는
+        # "Group 11"(백라이트) 뒤에 오는 ``Dimmer`` 줄만 센다.
         dimmers = [
             float(command.rsplit(" ", 1)[1])
-            for command in port.executed
-            if command.startswith("Attribute 'Dimmer' At ")
+            for previous, command in zip(port.executed, port.executed[1:], strict=False)
+            if previous == "Group 11" and command.startswith("Attribute 'Dimmer' At ")
         ]
         # 첫 구간은 D1 → 10 / 15. 같은 다이내믹스라 D 레벨은 유지되고 룩만 돈다.
         # 앞 큐가 없는 첫 구간이라 순서는 기존 전순서 그대로다(``(dynamics, look_id)``).

@@ -90,16 +90,54 @@ TRIGGER_TYPE_TIME = "Time"
 VARIANT_PRIME = "′"
 
 #: 아껴두기 사다리의 칸 이름, 회차마다 하나씩만 더하는 순서 그대로(정본 §7.1).
-#: 여기 있는 셋은 **오늘의 어휘로 실제 발화되는** 것뿐이다 — 정본 표의 마지막 두 칸
-#: (무빙 포지션 전환 · 블라인더/백색 플래시)과 앙코르의 스트로브는 이 카드에서 못 만든다:
-#: `Pan`/`Tilt` 는 `MovementSpec` 안에서만 합법이고 v1 번들은 movement 를 발화하지 않으며
-#: (카드 t357), 블라인더·스트로브는 역할 어휘에 이름이 없다(카드 t356, 감독 결정 선행).
+#:
+#: **고쳐 적음(카드 t378)** — 이 자리는 원래 "블라인더·스트로브는 역할 어휘에 이름이
+#: 없다(카드 t356, 감독 결정 선행)" 를 이유로 마지막 두 칸을 뺐다. 그 이유는 만료됐다 —
+#: 카드 t356 이 2026-09-12 에 감독 승인으로 :mod:`server.looks.roles` 를 열어
+#: `블라인더`·`스트로브` 가 이름을 얻었고, 실기 리그도 `BLIND`·`STROBE` 그룹을 낸다
+#: (`test_looks_resolver.py::TestLxseqRigCoverage` 의
+#: `test_the_ladder_rungs_the_standard_needs_are_callable` 가 이미 실측한다). 그래서
+#: :data:`LADDER_BLINDER_OR_FLASH` 를 더한다 — chorus 3 이 더하는 칸(§7.1 표).
+#:
+#: `Pan`/`Tilt` 무빙 포지션 전환은 **아직도** 이 사다리의 칸이 아니다 — 다만 이유가
+#: 바뀌었다. v1 은 이제 movement 를 낸다(카드 t357, :class:`MovementPlan`), 그런데 그
+#: 통로는 **구간마다 하나**를 고르는 별도 층(:func:`_movement_carrier`)이지 반복
+#: 회차마다 쌓는 사다리가 아니다. 두 층을 하나로 합치면 "밝기만 누적한다"(§6.1 [HARD])
+#: 는 이 사다리의 규율과 "그 구간에서 저장되는 큐 하나만 움직인다"는 :func:`_movement_carrier`
+#: 의 규율이 서로 다른 축인데도 한 필드를 다투게 된다.
+#:
 #: 색 스냅도 뺀다 — 정본 §7 이 「코러스 1의 색은 되돌아와야 한다」고 못박으므로 지배색을
 #: 갈아치우는 것은 상승이 아니라 위반이다.
+#:
+#: 스트로브(앙코르·피날레 칸)는 이 목록에 **없다** — :data:`LADDER_STROBE_HIT` 로 따로
+#: 두는 이유는 :func:`_climb_rungs` 독스트링에 적는다.
 LADDER_DIMMER_HIT = "dimmer_hit"
 LADDER_ZOOM_PINCH = "zoom_pinch"
 LADDER_IRIS_PINCH = "iris_pinch"
-LADDER_RUNGS: tuple[str, ...] = (LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH)
+#: chorus 3 이 더하는 칸(정본 §7.1 표 「블라인더 또는 백색 플래시」). 이 룩 자신의 값을
+#: 안 바꾸는 유일한 칸이다 — 블라인더는 다른 그룹(:data:`server.looks.roles`의
+#: `블라인더`)이라 :func:`_rung_applied` 가 이 칸에서 ``values`` 를 그대로 돌려주고,
+#: 실제 명령은 :func:`_accent_fixture_commands` 가 사다리와 별도로 만든다. 그래도
+#: :data:`LADDER_RUNGS`·``ladder`` 보고에는 실린다 — 「이 큐가 블라인더를 켰다」는 사실은
+#: 보고할 것이지 값 라인 계산 안에 숨길 것이 아니다.
+LADDER_BLINDER_OR_FLASH = "blinder_or_flash"
+LADDER_RUNGS: tuple[str, ...] = (
+    LADDER_DIMMER_HIT,
+    LADDER_ZOOM_PINCH,
+    LADDER_IRIS_PINCH,
+    LADDER_BLINDER_OR_FLASH,
+)
+
+#: 앙코르·피날레 칸(정본 §7.1 표 마지막 줄) — 처음으로 스트로브를 푼다.
+#: :data:`LADDER_RUNGS` 에 안 넣는 이유는 §7.1 자신이 적은 조건 때문이다: "클라이맥스
+#: 브레이크다운이나 세트 피날레까지 보류" 하고 "처음 두 곡에 최고의 트릭을 다 노출하지
+#: 않는" 것. 이 파일은 **한 곡**만 본다 — 몇 번째 곡인지, 이 공연의 세트가 어디까지
+#: 왔는지는 이 함수의 입력에 없다(``build_songcue_bundle`` 은 ``selections`` 와 리그
+#: 정보만 받는다). 그 신호를 지어내는 대신 :func:`_distinct_values_line` 이 받는
+#: ``allow_strobe`` 인자로 **호출자가 밝힌 자리**에서만 사다리 후보에 넣는다 — 곡이
+#: 몇 번째인지 세는 일은 여전히 안 하고, 세션이 알려주지 않으면 이 칸은 그냥 없는
+#: 칸처럼 동작한다(스트로브 없이도 사다리는 밝기·블라인더로 계속 오른다).
+LADDER_STROBE_HIT = "strobe_hit"
 
 #: 드롭 구조 회수(카드 t366)가 **물러선** 큐에 붙이는 표시 — 위 세 칸과는 별개다.
 #: :data:`LADDER_RUNGS` 에는 넣지 않는다: 이것은 오르는 사다리의 칸이 아니라, 드롭이
@@ -118,14 +156,67 @@ _HIT_STEP = 5
 _PINCH_STEP = -5
 _DIMMER_CEILING = 100
 _BEAM_FLOOR = 1
-#: **찍는 액센트** — 정본 §6.1 의 일곱 중 오늘의 어휘가 실제로 발화하는 둘. 한 큐에
-#: **하나**만 실린다(감독 결정 2026-09-12: 밝기만 누적하고 나머지는 큐당 하나). 회차가
-#: 깊어지면 쌓지 않고 **갈아탄다** — 그래서 여기는 순서 있는 목록이고, 깊이가 그 안을 돈다.
-_MARKING_ACCENTS: tuple[str, ...] = (LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH)
-#: 오를 수 있는 깊이의 상한 — 밝기의 머리 공간(천장까지의 걸음 수)에 액센트 갈아타기를
-#: 더한 것. 정본 §6 의 「마지막 드롭은 전 리그 최대」와 같은 방향이고, 천장에서는 값이 더
-#: 안 움직이므로 유한하다: 그 지점에서 비로소 큐를 못 세운다(마지막 수단의 건너뜀).
-_MAX_CLIMB = _DIMMER_CEILING // _HIT_STEP + len(_MARKING_ACCENTS)
+#: **찍는 액센트** — 정본 §6.1 의 일곱 중 오늘의 어휘가 실제로 발화하는 셋(카드 t378 이전엔
+#: 둘). 한 큐에 **하나**만 실린다(감독 결정 2026-09-12: 밝기만 누적하고 나머지는 큐당
+#: 하나). 회차가 깊어지면 쌓지 않고 **갈아탄다** — 그래서 여기는 순서 있는 목록이고,
+#: 깊이가 그 안을 돈다. 스트로브는 이 튜플에 **없다** — ``allow_strobe`` 가 참인 자리에서만
+#: :func:`_marking_accents` 가 네 번째 자리로 더한다(:data:`LADDER_STROBE_HIT` 독스트링).
+#:
+#: **순서는 취향이 아니라 사다리의 충돌 구조가 강제한다.** 깊이 2(3회차)는 깊이 1
+#: (2회차)과 밝기 히트 개수가 **똑같다**(``_climb_rungs`` 의 ``hits = depth - 1``이
+#: 1과 2에서 둘 다 1) — 그래서 깊이 2가 값 라인에서 유일해지려면 **액센트 자신이
+#: 값을 바꿔야** 한다. 블라인더는 이 룩 자신의 값을 안 바꾸는 칸이라(``_rung_applied``)
+#: 첫 자리에 두면 깊이 2가 깊이 1과 완전히 같은 값이 되어 매번 충돌하고, 사다리는
+#: 조용히 깊이 3으로 건너뛴다 — chorus 3 은 블라인더를 한 번도 못 켜 본다(실측:
+#: 이 조정 전에는 3회차 셋짜리 곡에서 블라인더가 전혀 안 나갔다). 깊이 3부터는 밝기
+#: 히트 개수가 2·3·4… 로 **그 자체가 유일**하므로, 값을 안 바꾸는 칸을 놓아도
+#: 충돌하지 않는다. 그래서 값을 바꾸는 줌이 첫 자리(깊이 2, 정본 §7.1 표의 chorus 3
+#: 자리를 그대로 지킨다 — 고치기 전 회귀 없음), 블라인더는 둘째 자리(깊이 3, 4회차)
+#: 다. **정본 §7.1 표가 "chorus 3 = 블라인더"라고 적은 자리를 이 사다리는 그대로
+#: 못 지킨다** — 충돌-회피 구조가 먼저이기 때문이다. 대신 지키는 것은 §7.1 이 요구
+#: 하는 **성질**(회차가 깊어질수록 다른 요소를 더한다, 액센트는 큐당 하나, 밝기만
+#: 누적)이다. 곡마다 반복 횟수가 다르므로 "정확히 3회차"라는 표의 문구를 이 계층이
+#: 보장할 수 없다는 것은 미검증 잔여 위험으로 남긴다(카드 t378 보고 참조).
+_MARKING_ACCENTS: tuple[str, ...] = (
+    LADDER_ZOOM_PINCH,
+    LADDER_BLINDER_OR_FLASH,
+    LADDER_IRIS_PINCH,
+)
+
+
+def _marking_accents(*, allow_strobe: bool) -> tuple[str, ...]:
+    """이 사다리가 회전할 찍는 액센트 목록 — 스트로브 허용 여부로 길이가 갈린다.
+
+    ``allow_strobe`` 가 거짓이면 :data:`_MARKING_ACCENTS` 그대로다(고치기 전과
+    바이트 동일). 참이면 :data:`LADDER_STROBE_HIT` 를 네 번째로 더해 회전에 넣는다 —
+    그래야 깊은 회차가 밝기·블라인더를 다 갈아탄 뒤에야 스트로브에 닿는다(앙코르·
+    피날레가 "처음부터" 스트로브를 쓰지 않는다는 §7.1 의 순서를 지킨다).
+    """
+    if not allow_strobe:
+        return _MARKING_ACCENTS
+    return (*_MARKING_ACCENTS, LADDER_STROBE_HIT)
+
+
+def _exhausted_rungs(*, allow_strobe: bool) -> tuple[str, ...]:
+    """건너뜀 사유 문면에 실을 칸 이름 전량 — 이 자리에서 실제로 후보였던 것만.
+
+    ``allow_strobe`` 가 거짓이면 스트로브는 후보에도 없었으므로 사유에도 안 적는다 —
+    「스트로브까지 다 써 봤다」는 거짓 주장을 사유 문면에 남기지 않기 위해서다.
+    """
+    if not allow_strobe:
+        return LADDER_RUNGS
+    return (*LADDER_RUNGS, LADDER_STROBE_HIT)
+
+
+def _max_climb(*, allow_strobe: bool) -> int:
+    """오를 수 있는 깊이의 상한 — 밝기의 머리 공간(천장까지의 걸음 수)에 액센트
+    갈아타기를 더한 것. 정본 §6 의 「마지막 드롭은 전 리그 최대」와 같은 방향이고,
+    천장에서는 값이 더 안 움직이므로 유한하다: 그 지점에서 비로소 큐를 못 세운다
+    (마지막 수단의 건너뜀). 액센트 개수가 ``allow_strobe`` 로 갈리므로 상한도 그만큼
+    갈린다.
+    """
+    return _DIMMER_CEILING // _HIT_STEP + len(_marking_accents(allow_strobe=allow_strobe))
+
 
 #: **안전 바닥** — 감광 규칙이 내려갈 수 있는 가장 낮은 ``Dimmer`` 값(정본 §8 안전 한계).
 #:
@@ -138,6 +229,52 @@ _MAX_CLIMB = _DIMMER_CEILING // _HIT_STEP + len(_MARKING_ACCENTS)
 #:
 #: 이 바닥이 지키는 것과 안 지키는 것은 :func:`darkness_target` 독스트링에 적는다.
 DARKNESS_FLOOR = 20
+
+#: **프론트 필** — 위치 역할 하나(정본 §6.2 [HARD], 카드 t377). 감독 실기 관측
+#: (2026-09-12): "무빙만하고 조명이 켜지지않은 장비도 있어" — verse 큐가 역할
+#: ``배경``·``탑``·``무버``만 실어 프론트·백라이트·스페셜이 전부 침묵하고, 무빙헤드는
+#: 돌아가는데 연주자는 어둡다. 정본 원문: "프론트 필은 밝은 워시가 아니라 **부드러운
+#: 보정광으로 항상 유지**한다 — 없으면 연주자가 안 보이고 영상이 어둡게 나온다."
+#:
+#: "항상"은 **선택된 룩과 무관하다**는 뜻으로 읽는다 — 그래서 이 상수들은 룩 선택
+#: 위에 얹는 층 하나로 쓰인다(:func:`_front_fill`). 개별 룩을 고쳐서 프론트를
+#: 끼워 넣지 않는 이유는 그 룩이 열 개면 규칙도 열 곳에 흩어지기 때문이다.
+FRONT_FILL_ROLE = "프론트"
+
+#: 채우는 밝기 — :data:`DARKNESS_FLOOR` 를 그대로 쓴다. 새 숫자를 짓지 않는다.
+#:
+#: (가) §6.2 자신이 이 광원을 "밝은 워시의 반대"로 규정한다 — §6 표가 적은 가장
+#: 어두운 값이 정확히 그 뜻에 맞는 인용이다. (나) §8 의 감광 바닥과 **같은 상수**를
+#: 쓰면, 드롭 앞 감광 큐(:func:`_pre_drop_darkened`)에서 이 층이 §8 이 요구한 어둠을
+#: 절대 넘어서지 않는다 — 두 숫자가 달랐다면 프론트 필이 감광보다 밝게 나가 카드
+#: t363 의 불변식("어둠은 어둠으로 읽혀야 한다")을 깰 수 있었다.
+FRONT_FILL_DIMMER = DARKNESS_FLOOR
+
+#: 색 — "인트로 온기"(`server/looks/library/ballad.yaml` ``ballad-intro-warm``)가
+#: 이미 같은 역할(프론트+스페셜)에 쓰는 부드러운 웜톤 그대로다. 새 색을 짓지 않고
+#: 이 저장소에 이미 있는 "부드러운·따뜻한" 색을 재사용한다 — §6.2 가 요구하는
+#: "부드러운 보정광"의 근거가 라이브러리 자산 하나로 이미 있다.
+FRONT_FILL_COLOR: tuple[AttributeValue, ...] = (
+    AttributeValue("ColorRGB_R", 100),
+    AttributeValue("ColorRGB_G", 75),
+    AttributeValue("ColorRGB_B", 52),
+)
+
+#: 사다리의 찍는 액센트가 켜는 기구 종류 역할 — chorus 3 은 블라인더, 앙코르는
+#: 스트로브(정본 §7.1 표, 카드 t378). 값은 §6 행의 **아래끝**을 쓴다 — "마지막
+#: 드롭 | 전 리그 + 백색 플래시 | 최대 | 여기서 풀어라"가 정본에서 유일하게
+#: 최대치를 허가한 자리이고, 그 자리는 곡 전체가 다 쓴 뒤의 "마지막 드롭" 하나다.
+#: 이 사다리는 그 자리가 아니라 반복되는 코러스/드롭 안이므로, 같은 §6 행의
+#: **최소 보장값**(chorus·drop 행 80~100% 의 아래끝 80)을 쓴다 — 최대가 아니라
+#: 최소를 고르는 것이 "자동으로 관객 전체를 최대 밝기로 쏘지 않는다"는 안전
+#: 방향(연구 문서 19의 `audience_blind_or_strobe` 안전 노트: 낮은 값·수동 확인·
+#: 안전 문구 필요)과 맞는다. 행이 없으면(:func:`intent_for_label` 이 ``None``)
+#: 켜지 않는다 — 숫자를 지어내지 않는 것은 :data:`DARKNESS_FLOOR` 와 같은 규율이다.
+#: ``dict()`` 는 취향이 아니다 — 이 모듈은 매핑 리터럴을 **한 개도** 두지 않는 규율이
+#: 있다(``test_songcue_sections`` 가 AST 로 잰다).
+_ACCENT_FIXTURE_ROLE: dict[str, str] = dict(
+    ((LADDER_BLINDER_OR_FLASH, "블라인더"), (LADDER_STROBE_HIT, "스트로브"))
+)
 
 
 @dataclass(frozen=True)
@@ -238,6 +375,35 @@ class SongCueWithheldDarkness:
 
 
 @dataclass(frozen=True)
+class SongCueFrontFill:
+    """프론트 필로 이 큐가 **더한** 그룹과 값 (정본 §6.2 [HARD], 카드 t377).
+
+    셋을 함께 드는 이유는 :class:`SongCuePreDropDarkness` 와 같다 — 「채웠다」는 주장은
+    무엇을·얼마로 채웠는지 없이는 확인할 수 없다.
+    """
+
+    section: SongCueSection
+    cue_number: int
+    groups: tuple[int, ...]
+    dimmer: float
+
+
+@dataclass(frozen=True)
+class SongCueAccentFixture:
+    """사다리의 찍는 액센트가 켠 블라인더·스트로브 그룹 (정본 §7.1 표, 카드 t378).
+
+    ``rung`` 은 :data:`LADDER_BLINDER_OR_FLASH` 또는 :data:`LADDER_STROBE_HIT` 둘 중
+    하나다 — §6.1 [HARD]가 큐당 액센트 하나로 못박으므로 이 필드도 하나만 든다.
+    """
+
+    section: SongCueSection
+    cue_number: int
+    rung: str
+    groups: tuple[int, ...]
+    dimmer: float
+
+
+@dataclass(frozen=True)
 class SongCueSectionBundle:
     section: SongCueSection
     cue_number: int
@@ -282,6 +448,25 @@ class SongCueSectionBundle:
     보는 판정(감광했는데 그 큐가 안 저장됨)은 걷어 가는 쪽에서 붙는다.
     """
 
+    front_fill: SongCueFrontFill | None = None
+    """이 큐가 프론트 필로 **더한** 그룹·값 — 채울 것이 없었으면 ``None`` (정본 §6.2
+    [HARD], 카드 t377).
+
+    룩이 이미 프론트를 실었으면(:func:`_front_fill` 이 채울 것이 없다고 판단) ``None``
+    이다 — 그때는 값 라인 자체에 프론트가 이미 있으므로 이 필드가 비어 있는 것 자체가
+    "채울 필요가 없었다"는 보고다.
+    """
+
+    accent_fixture: SongCueAccentFixture | None = None
+    """이 큐가 사다리의 찍는 액센트로 켠 블라인더·스트로브 그룹 — 안 켰으면 ``None``
+    (정본 §7.1 표, 카드 t378).
+
+    ``ladder`` 가 :data:`LADDER_BLINDER_OR_FLASH`/:data:`LADDER_STROBE_HIT` 를 실어도
+    이 필드가 ``None`` 일 수 있다 — 리그에 그 그룹이 없으면(:func:`_accent_fixture_commands`)
+    칸은 회전했지만 무대에는 아무것도 안 나갔다는 뜻이고, 그 구분이 이 필드의 존재
+    이유다.
+    """
+
 
 @dataclass(frozen=True)
 class SongCueWithheldMovement:
@@ -317,6 +502,16 @@ class SongCueBundle:
     @property
     def darkened_sections(self) -> tuple[SongCueSectionBundle, ...]:
         return tuple(section for section in self.sections if section.darkness is not None)
+
+    @property
+    def front_filled_sections(self) -> tuple[SongCueSectionBundle, ...]:
+        """프론트 필이 실제로 그룹을 더한 큐들 (카드 t377)."""
+        return tuple(section for section in self.sections if section.front_fill is not None)
+
+    @property
+    def accent_fixture_sections(self) -> tuple[SongCueSectionBundle, ...]:
+        """블라인더·스트로브가 실제로 켜진 큐들 (카드 t378)."""
+        return tuple(section for section in self.sections if section.accent_fixture is not None)
 
     @property
     def skipped(self) -> tuple[SongCueSkippedSection, ...]:
@@ -561,7 +756,15 @@ def build_songcue_bundle(
     sequences_section: Mapping[str, object],
     groups_section: Mapping[str, object],
     role_aliases: Mapping[str, str] | None = None,
+    allow_strobe: bool = False,
 ) -> SongCueBundle:
+    """``allow_strobe``: 이 곡이 세트에서 스트로브를 풀어도 되는 자리인지 — 기본값 거짓
+    (카드 t378, :data:`LADDER_STROBE_HIT` 독스트링). 이 함수는 몇 번째 곡인지, 클라이맥스
+    브레이크다운인지 **모른다** — ``selections`` 와 리그 정보만 받는다. 그 판단은
+    호출자(세션/오케스트레이터 층, 곡 사이 재사용 기억을 이미 든 :mod:`server.looks.song_history`
+    와 같은 자리)의 몫이고, 이 인자는 그 판단이 내려온 **결과**를 받는 자리다. 거짓이면
+    스트로브 칸은 사다리 후보에도 안 들어가 이전 동작과 바이트 동일하다.
+    """
     ordered = tuple(selections)
     if not ordered:
         raise SongCueBundleError(EMPTY_SECTIONS)
@@ -584,6 +787,7 @@ def build_songcue_bundle(
         resolution=resolution,
         movements=dict(),
         darken=darken,
+        allow_strobe=allow_strobe,
     )
     movements, withheld = _movement_carrier(dry)
     bundle = (
@@ -598,6 +802,7 @@ def build_songcue_bundle(
             resolution=resolution,
             movements=movements,
             darken=darken,
+            allow_strobe=allow_strobe,
         )
     )
     bundle = replace(
@@ -619,6 +824,7 @@ def _assembled(
     resolution: RoleResolution,
     movements: Mapping[int, MovementPlan],
     darken: Mapping[int, int] | None = None,
+    allow_strobe: bool = False,
 ) -> SongCueBundle:
     darken = darken if darken is not None else dict()
     section_bundles: list[SongCueSectionBundle] = []
@@ -635,6 +841,7 @@ def _assembled(
             emitted=emitted,
             movement=movements.get(cue_number),
             drop_cue_number=darken.get(cue_number),
+            allow_strobe=allow_strobe,
         )
         section_bundles.append(section_bundle)
 
@@ -645,6 +852,7 @@ def _assembled(
         resolution=resolution,
         movements=movements,
         darken=darken,
+        allow_strobe=allow_strobe,
     )
 
     stored_commands, labelled_bundles = _flatten_commands(
@@ -739,6 +947,7 @@ def _rescue_value_line_collisions(
     resolution: RoleResolution,
     movements: Mapping[int, MovementPlan],
     darken: Mapping[int, int],
+    allow_strobe: bool = False,
 ) -> tuple[SongCueSectionBundle, ...]:
     """드롭, 또는 3회차 이상의 반복 라벨이 사다리 소진으로 버려지려는 것을 되살린다.
 
@@ -761,6 +970,7 @@ def _rescue_value_line_collisions(
             emitted=emitted,
             movement=movements.get(bundle.cue_number),
             drop_cue_number=darken.get(bundle.cue_number),
+            allow_strobe=allow_strobe,
         )
 
     for _round in range(len(bundles) + 1):
@@ -1539,6 +1749,121 @@ def _select_bindable(look: Look, matches: Sequence[Look], resolution: RoleResolu
     return look
 
 
+# @MX:ANCHOR: [AUTO] 프론트 필·찍는 액센트 그룹은 다른 그룹이라 이 룩 자신의 값
+#   라인에 안 실린다 — `run_commands` 의 전곡 단위 중복 제거를 피하려면 이 층도
+#   자기만의 값으로 유일해야 한다 (카드 t377·t378).
+# @MX:REASON: `_guard_bundle_collision` 이 지키는 사실 그대로다 — 한 곡의 명령 전체가
+#   **하나의** `run_commands` 호출로 나가고, 그 콘솔 쪽 중복 제거는 `Clear`·
+#   `ClearAll`·`Group <n>`/`Fixture <n>` 만 면제한다(`server/fx/instantiate.py`
+#   `_PROGRAMMER_STATE_COMMANDS`). 프론트 필 값을 매 큐 **같은 문자열**로 내면
+#   2번째부터는 콘솔이 조용히 버린다 — 이 카드가 고치려는 결함(연주자가 안 보임)이
+#   그대로 남는 것과 같다. 그래서 이 두 층도 기준 룩과 같은 ``emitted`` 사전을
+#   읽고 써서, 겹치면 밝기를 한 걸음씩 올려 유일한 문자열을 찾는다.
+def _unique_floor_climb(
+    floor: int,
+    ceiling: int,
+    other_attributes: tuple[AttributeValue, ...],
+    emitted: Mapping[str, tuple[int, int, str]],
+) -> tuple[int, str] | None:
+    """``Dimmer`` 를 ``floor`` 부터 ``ceiling`` 까지 올려 ``emitted`` 와 안 겹치는
+    값 라인을 찾는다. 못 찾으면 ``None`` — 그 구간에서는 채우지 않는다(마지막
+    수단의 건너뜀, 사다리와 같은 규율).
+    """
+    for dimmer in range(floor, ceiling + 1):
+        candidate = _values_line((AttributeValue(_DIMMER, dimmer), *other_attributes))
+        if candidate not in emitted:
+            return dimmer, candidate
+    return None
+
+
+#: 프론트 필이 올라갈 수 있는 위쪽 끝 — 정본 §6 표 intro 행(20~40%)의 위쪽 끝이다.
+#: 그 위로는 §6 표에서 "밝은 워시"가 시작되는 구간(빌드 40~55% 부터)과 겹쳐, §6.2
+#: 가 금지한 "밝은 워시"가 된다. 프론트 필은 이 상한을 넘지 않는다 — 넘어야만
+#: 유일해지는 자리라면 채우지 않는다(:data:`_unique_floor_climb` 의 마지막 수단).
+_FRONT_FILL_CEILING = 40
+
+
+def _front_fill(
+    bound: Mapping[str, tuple[GroupCandidate, ...]],
+    resolution: RoleResolution,
+    emitted: dict[str, tuple[int, int, str]],
+    *,
+    section: SongCueSection,
+    cue_number: int,
+) -> tuple[tuple[str, ...], tuple[GroupCandidate, ...], float | None]:
+    """프론트 필 명령 두 줄(그룹 선택 + 값)과 그 그룹들 — 채울 것이 없으면 ``((), ())``.
+
+    세 갈래에서 빈 것을 돌려준다. 이미 프론트가 묶여 있으면(``bound`` 에 이미
+    :data:`FRONT_FILL_ROLE`) 룩이 스스로 프론트를 실은 것이므로 그 값을 존중하고
+    아무것도 더하지 않는다 — 라이브러리가 스스로 지은 값을 이 층이 덮어 쓰지 않는
+    것은 :func:`darkness_target` 이 라이브러리가 스스로 20 아래로 저작한 룩을 안
+    올리는 것과 같은 규율이다. 리그에 프론트로 묶일 그룹이 아예 없으면
+    (``resolution.groups_for`` 가 빈 튜플) 채울 대상이 없다. :data:`FRONT_FILL_DIMMER`
+    부터 :data:`_FRONT_FILL_CEILING` 까지 다 겹치면(``emitted`` 가 이미 그 구간을
+    전부 쥐고 있으면) 채우지 않는다 — 값을 지어내는 대신 못 채웠다고 인정한다.
+    """
+    if FRONT_FILL_ROLE in bound:
+        return (), (), None
+    groups = resolution.groups_for(FRONT_FILL_ROLE)
+    if not groups:
+        return (), (), None
+    found = _unique_floor_climb(FRONT_FILL_DIMMER, _FRONT_FILL_CEILING, FRONT_FILL_COLOR, emitted)
+    if found is None:
+        return (), (), None
+    dimmer, candidate = found
+    emitted[candidate] = (section.index, cue_number, "front-fill")
+    return (_selection_line(groups), candidate), groups, dimmer
+
+
+# @MX:ANCHOR: [AUTO] 사다리의 찍는 액센트가 블라인더·스트로브 그룹을 켠다 (정본 §7.1
+#   표, 카드 t378).
+# @MX:REASON: 이 룩 자신의 값(:func:`escalate_attributes`)은 블라인더·스트로브
+#   칸에서 안 바뀐다 — 다른 그룹이기 때문이다. 그래서 사다리가 고른 칸
+#   (``rungs``)을 여기서 다시 읽어 실제 명령을 만든다. 리그에 그 그룹이 없거나
+#   (:func:`_accent_fixture_commands` 가 빈 튜플을 돌려줌) §6 행을 못 찾으면
+#   (:func:`intent_for_label` 이 ``None``) 칸은 회전했지만 무대에는 아무것도 안
+#   나간다 — 없는 축에 값을 만들어 보내지 않는 것이 이 계층의 규율이다.
+def _accent_fixture_commands(
+    rungs: Sequence[str],
+    *,
+    section: SongCueSection,
+    cue_number: int,
+    resolution: RoleResolution,
+    emitted: dict[str, tuple[int, int, str]],
+) -> tuple[tuple[str, ...], str | None, tuple[GroupCandidate, ...], float | None]:
+    """찍는 액센트가 블라인더·스트로브를 골랐으면 그 명령 두 줄과 칸·그룹·값, 아니면 빈 값들.
+
+    :class:`SongCueAccentFixture` 는 호출자(:func:`_section_bundle`)가 이 네 값으로
+    조립한다.
+
+    ``rungs`` 에 :data:`LADDER_BLINDER_OR_FLASH`/:data:`LADDER_STROBE_HIT` 가 최대
+    하나만 있다고 전제한다(§6.1 [HARD] "한 큐에 찍는 액센트 하나" —
+    :func:`_climb_rungs` 가 이미 지킨다).
+
+    밝기는 §6 행의 **아래끝**에서 시작해 **위끝까지만** 오른다(:data:`_ACCENT_FIXTURE_ROLE`
+    독스트링 — 최대치는 "마지막 드롭" 하나의 자리다). 그 구간이 이미 다 겹치면 이번
+    큐는 채우지 않는다.
+    """
+    rung = next((r for r in rungs if r in _ACCENT_FIXTURE_ROLE), None)
+    if rung is None:
+        return (), None, (), None
+    role = _ACCENT_FIXTURE_ROLE[rung]
+    groups = resolution.groups_for(role)
+    if not groups:
+        return (), None, (), None
+    intent = intent_for_label(section.label)
+    if intent is None:
+        return (), None, (), None
+    floor, ceiling = intent.brightness
+    found = _unique_floor_climb(floor, ceiling, (), emitted)
+    if found is None:
+        return (), None, (), None
+    dimmer, candidate = found
+    emitted[candidate] = (section.index, cue_number, f"accent-{rung}")
+    commands = (_selection_line(groups), candidate)
+    return commands, rung, groups, dimmer
+
+
 def _section_bundle(
     *,
     selection: SongCueLookSelection,
@@ -1549,6 +1874,7 @@ def _section_bundle(
     emitted: dict[str, tuple[int, int, str]],
     movement: MovementPlan | None = None,
     drop_cue_number: int | None = None,
+    allow_strobe: bool = False,
 ) -> SongCueSectionBundle:
     if selection.look is None:
         skipped = SongCueSkippedSection(
@@ -1605,7 +1931,9 @@ def _section_bundle(
         cue_number=cue_number,
         drop_cue_number=drop_cue_number,
     )
-    values, rungs = _distinct_values_line(look, selection.section, emitted)
+    values, rungs = _distinct_values_line(
+        look, selection.section, emitted, allow_strobe=allow_strobe
+    )
     if values is None:
         previous_section, previous_cue, previous_look = emitted[_values_line(look.attributes)]
         skipped = SongCueSkippedSection(
@@ -1615,7 +1943,7 @@ def _section_bundle(
             detail=(
                 f"value line matches section {previous_section} "
                 f"cue {previous_cue} look {previous_look}; "
-                f"ladder exhausted ({', '.join(LADDER_RUNGS)})"
+                f"ladder exhausted ({', '.join(_exhausted_rungs(allow_strobe=allow_strobe))})"
             ),
             collides_with_section_index=previous_section,
             collides_with_cue_number=previous_cue,
@@ -1630,6 +1958,46 @@ def _section_bundle(
             darkness_withheld=darkness_withheld,
         )
     emitted[values] = (selection.section.index, cue_number, look.look_id)
+    # 프론트 필 — 정본 §6.2 [HARD], 카드 t377. 이 룩이 프론트를 안 실었어도 이 층이
+    # 채운다("항상 유지"는 선택된 룩과 무관하다는 뜻). 값 라인 **뒤**, 움직임/액센트
+    # 그룹 **앞**에 둔다 — 기준 룩이 먼저, 그 다음이 "항상 있는" 보정광, 마지막이 이
+    # 큐에서만 튀는 액센트라는 층 순서다.
+    front_fill_commands, front_fill_groups, front_fill_dimmer = _front_fill(
+        bound, resolution, emitted, section=selection.section, cue_number=cue_number
+    )
+    front_fill = (
+        SongCueFrontFill(
+            section=selection.section,
+            cue_number=cue_number,
+            groups=tuple(group.number for group in front_fill_groups),
+            dimmer=front_fill_dimmer,
+        )
+        if front_fill_groups
+        else None
+    )
+    # 찍는 액센트 그룹 — 블라인더·스트로브(카드 t378). 사다리 칸 계산
+    # (:func:`_distinct_values_line`)은 이 룩 자신의 값만 보므로 다른 그룹의 명령은
+    # 여기서 따로 만든다. 회차가 그 칸을 안 골랐거나(``rungs`` 에 없음) 리그에 그 그룹이
+    # 없으면 아무것도 안 낸다 — 없는 축에 값을 만들어 보내지 않는 것은
+    # :func:`escalate_attributes` 와 같은 규율이다.
+    accent_commands, accent_rung, accent_groups, accent_dimmer = _accent_fixture_commands(
+        rungs,
+        section=selection.section,
+        cue_number=cue_number,
+        resolution=resolution,
+        emitted=emitted,
+    )
+    accent_fixture = (
+        SongCueAccentFixture(
+            section=selection.section,
+            cue_number=cue_number,
+            rung=accent_rung,
+            groups=tuple(group.number for group in accent_groups),
+            dimmer=accent_dimmer,
+        )
+        if accent_rung is not None
+        else None
+    )
     # 움직임 줄은 **값 라인 뒤**에 온다: 기준 룩이 먼저 프로그래머에 실리고, 페이저는 그
     # 위에 더하는 액센트다(정본 §6.1 「한 큐에 하나만」과 같은 방향). 이 순서가 이 카드의
     # 유일한 미실측 가정이다 — 정적 Dimmer·색과 2스텝 Pan 을 한 캡처에 섞었을 때 정적
@@ -1644,6 +2012,8 @@ def _section_bundle(
         _CLEAR,
         _selection_line(groups),
         values,
+        *front_fill_commands,
+        *accent_commands,
         *(movement.commands if movement is not None else ()),
         store_with_fade(
             f"Store Sequence {sequence_number} Cue {cue_number} '{cue_name}'",
@@ -1663,6 +2033,8 @@ def _section_bundle(
         fade=fade,
         darkness=darkness,
         darkness_withheld=darkness_withheld,
+        front_fill=front_fill,
+        accent_fixture=accent_fixture,
     )
 
 
@@ -1677,6 +2049,8 @@ def _distinct_values_line(
     look: Look,
     section: SongCueSection,
     emitted: Mapping[str, tuple[int, int, str]],
+    *,
+    allow_strobe: bool = False,
 ) -> tuple[str | None, tuple[str, ...]]:
     """앞선 큐와 겹치지 않는 값 라인과 그때 더한 사다리 칸들. 못 만들면 ``(None, ())``.
 
@@ -1690,6 +2064,9 @@ def _distinct_values_line(
     이므로, 여기서 밝기를 올리면 구간 하나가 도중에 세어진다 — 밀도 경로의 축(강도는
     유지하고 그림만 교체)을 정면으로 어기는 것이다. 그래서 같은 구간끼리의 충돌은 예전처럼
     건너뛴다.
+
+    ``allow_strobe`` 는 호출자가 밝힌 세트 위치 신호다(:data:`LADDER_STROBE_HIT` 독스트링)
+    — 이 함수 자신은 몇 번째 곡인지 모른다.
     """
     base = _values_line(look.attributes)
     previous = emitted.get(base)
@@ -1697,8 +2074,8 @@ def _distinct_values_line(
         return base, ()
     if previous[0] == section.index:
         return None, ()
-    for depth in range(_ladder_start(section), _MAX_CLIMB + 1):
-        rungs = _climb_rungs(depth)
+    for depth in range(_ladder_start(section), _max_climb(allow_strobe=allow_strobe) + 1):
+        rungs = _climb_rungs(depth, allow_strobe=allow_strobe)
         candidate = _values_line(escalate_attributes(look.attributes, rungs))
         if candidate not in emitted:
             return candidate, rungs
@@ -1726,20 +2103,21 @@ def _ladder_start(section: SongCueSection) -> int:
 #   부딪혔고 감독이 갈래를 정했다 — **누적하는 축은 밝기 하나**이고, 찍는 액센트는
 #   갈아탄다. 밝기를 액센트와 같은 규율로 묶으면 t355 의 성질(반복 회차가 사라지지 않는다)
 #   이 깨진다: 축이 하나도 남지 않는 회차가 생겨 큐가 다시 버려진다.
-def _climb_rungs(depth: int) -> tuple[str, ...]:
+def _climb_rungs(depth: int, *, allow_strobe: bool = False) -> tuple[str, ...]:
     """깊이 하나가 내는 칸들 — 밝기 히트 여러 개 + 찍는 액센트 **최대 하나**.
 
     깊이 1은 밝기뿐이고(2회차), 깊이 2부터 액센트가 하나 붙는다. 더 깊어지면 밝기 히트가
-    한 개씩 쌓이는 동안 액센트는 :data:`_MARKING_ACCENTS` 안에서 **갈아탄다** — 누적이
+    한 개씩 쌓이는 동안 액센트는 :func:`_marking_accents` 안에서 **갈아탄다** — 누적이
     아니라 교체다. 그래서 어느 깊이에서든 돌려주는 칸 중 찍는 액센트는 최대 하나다.
 
     밝기가 천장에 닿으면 그 뒤의 밝기 히트는 값을 안 바꾼다(:func:`_stepped` 가 자른다).
     그때는 액센트 교체만 값 라인을 가르고, 그것도 다 떨어지면 큐를 못 세운다.
     """
+    accents = _marking_accents(allow_strobe=allow_strobe)
     if depth <= 1:
         return (LADDER_DIMMER_HIT,)
     hits = (LADDER_DIMMER_HIT,) * (depth - 1)
-    return hits + (_MARKING_ACCENTS[(depth - 2) % len(_MARKING_ACCENTS)],)
+    return hits + (accents[(depth - 2) % len(accents)],)
 
 
 def escalate_attributes(
@@ -1769,6 +2147,11 @@ def _rung_applied(values: Sequence[AttributeValue], rung: str) -> tuple[Attribut
         return _stepped(values, _ZOOM, _PINCH_STEP, _BEAM_FLOOR)
     if rung == LADDER_IRIS_PINCH:
         return _stepped(values, _IRIS, _PINCH_STEP, _BEAM_FLOOR)
+    if rung in (LADDER_BLINDER_OR_FLASH, LADDER_STROBE_HIT):
+        # 이 룩 자신의 값은 안 바뀐다 — 블라인더·스트로브는 다른 그룹이다
+        # (:data:`LADDER_BLINDER_OR_FLASH` 독스트링). 실제 명령은
+        # :func:`_accent_fixture_commands` 가 ``rungs`` 를 따로 읽어 만든다.
+        return tuple(values)
     raise SongCueBundleError(f"unknown ladder rung: {rung!r}")
 
 

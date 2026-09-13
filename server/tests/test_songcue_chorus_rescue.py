@@ -182,9 +182,18 @@ class TestTheChorusRescueGeneralizesBeyondDrop:
         # 회수가 실제로 켜지는 것은 값이 넷째로 필요해지는 4회차뿐이다. 물러서는
         # 쪽은 **상대**(1회차)다 — 정본 §6 「전 리그 최대」와 같은 방향으로, 되살아난
         # 4회차 자신은 기준값을 그대로 받는다(사다리 흔적이 없다).
+        #
+        # 카드 t378 이 회전에 블라인더를 더하면서 3회차가 깊이 3(둘째 자리, 블라인더)
+        # 대신 깊이 4(셋째 자리, 아이리스)까지 오른다 — 블라인더는 이 룩의 값을 안
+        # 바꾸므로 깊이 3 은 2회차와 값이 겹쳐(``_MARKING_ACCENTS`` 독스트링) 건너뛴다.
         assert LADDER_DIMMER_YIELD in chorus[0].ladder, "1회차가 물러서서 4회차에 자리를 냈다"
         assert chorus[1].ladder == ("dimmer_hit", "zoom_pinch")
-        assert chorus[2].ladder == ("dimmer_hit", "dimmer_hit", "iris_pinch")
+        assert chorus[2].ladder == (
+            "dimmer_hit",
+            "dimmer_hit",
+            "dimmer_hit",
+            "iris_pinch",
+        )
         assert chorus[3].ladder == (), "4회차는 회수로 비워진 기준값을 그대로 받는다"
 
 

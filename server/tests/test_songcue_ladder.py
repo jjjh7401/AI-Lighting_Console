@@ -7,11 +7,13 @@
 후렴이 드롭과 값 라인이 같아 `VALUE_LINE_COLLISION` 으로 **버려졌기** 때문이다. 정본 §7 은
 곡 안의 반복을 규범으로 못박는다 — 되돌아와야 하는 룩을 지우는 것이 결함이었다.
 
-**이 파일이 재지 않는 것**도 적는다. 정본 §7.1 표의 마지막 두 칸(무빙 포지션 전환 ·
-블라인더/백색 플래시)과 앙코르의 스트로브는 오늘의 어휘로 발화되지 않는다 — `Pan`/`Tilt`
-는 `MovementSpec` 안에서만 합법이고 v1 번들은 movement 를 안 내며(카드 t357), 블라인더·
-스트로브는 역할 어휘에 이름이 없다(카드 t356). 그래서 사다리의 실제 칸은 밝기 히트와
-빔(줌·아이리스) 좁힘 셋이고, 그 뒤는 밝기의 남은 머리 공간이다.
+**이 파일이 재지 않는 것**도 적는다(고쳐 적음, 카드 t378). 정본 §7.1 표의
+「무빙 포지션 전환」은 여전히 이 사다리의 칸이 아니다 — v1 은 이제 movement 를
+내지만(카드 t357), 그 통로는 구간마다 하나를 고르는 별도 층(``_movement_carrier``)
+이지 반복 회차가 쌓는 사다리가 아니다. 「블라인더/백색 플래시」와 「스트로브」는
+**이제 이 사다리의 칸이다** — 카드 t356 이 역할 어휘를 연 뒤 카드 t378 이 실었다.
+그 칸들의 실측은 `test_songcue_accent_fixture.py` 가 든다(이 파일은 밝기 히트와
+빔(줌·아이리스) 좁힘, 그리고 블라인더가 값 라인에 미치는 무영향만 잰다).
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from server.looks.busking import VALUE_LINE_COLLISION
 from server.looks.loader import load_library_from_dir
 from server.looks.schema import AttributeValue, Look
 from server.looks.songcue import (
+    LADDER_BLINDER_OR_FLASH,
     LADDER_DIMMER_HIT,
     LADDER_DIMMER_YIELD,
     LADDER_IRIS_PINCH,
@@ -421,6 +424,14 @@ class TestNoCollisionIsByteIdentical:
     카드 t363 이 이 기대값의 Store 두 줄에 ``CueFade`` 를 더했다(정본 §9). 이 검사가 재는
     성질은 그대로다 — 값 라인과 그룹 줄이 기준 룩 그대로이고 사다리 칸이 하나도 안 붙는
     것. 페이드는 사다리 축이 아니라 구간 라벨이 정하는 별개 축이다.
+
+    카드 t377 이 이 기대값에 프론트 필 두 줄(``Group 12`` + 값)을 큐마다 더했다 —
+    ``FULL_RIG`` 의 "FOH Wash"(그룹 12)가 프론트 역할로 잡히고, 두 룩 모두 프론트를
+    안 실었기 때문이다(정본 §6.2 [HARD]). 재는 성질은 여전히 그대로다: 사다리는
+    손대지 않는다(``ladder == ()``) — 프론트 필은 사다리와 별개 층이다. 두 번째 큐의
+    프론트 필이 20 이 아니라 21 인 것은 `run_commands` 전곡 단위 중복 제거를 피하려고
+    (:func:`server.looks.songcue._unique_floor_climb`) 앞 큐의 20 과 겹치지 않게
+    한 걸음 오른 것이다.
     """
 
     def test_the_command_bundle_of_a_collision_free_song_is_unchanged(self):
@@ -437,6 +448,9 @@ class TestNoCollisionIsByteIdentical:
             "Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; "
             "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; "
             "Attribute 'Zoom' At 18",
+            "Group 12",
+            "Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52",
             "Store Sequence 1 Cue 1 'Chorus' CueFade 0.2",
             "Label Sequence 1 'Song'",
             "ClearAll",
@@ -444,6 +458,9 @@ class TestNoCollisionIsByteIdentical:
             "Group 11",
             "Attribute 'Dimmer' At 45 ; Attribute 'ColorRGB_R' At 72 ; "
             "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0",
+            "Group 12",
+            "Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52",
             "Store Sequence 1 Cue 2 'Verse' CueFade 2",
             "ClearAll",
         )
@@ -465,7 +482,9 @@ class TestOneMarkingAccentPerCue:
     #: 찍는 액센트를 **검사 쪽에서 따로 적는다**. 구현의 ``_MARKING_ACCENTS`` 를 읽어
     #: 세면 그 목록이 비는 순간 단정이 공허해진다(0개도 「하나 이하」다). 아래
     #: :meth:`test_every_ladder_rung_is_classified` 가 새 칸이 조용히 새는 것을 막는다.
-    _MARKING = (LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH)
+    #: 카드 t378 이 블라인더를 더했다 — 이 룩 자신의 값은 안 바꾸지만, §6.1 이 규정한
+    #: "찍는 액센트" 라는 점은 줌·아이리스와 같다.
+    _MARKING = (LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH, LADDER_BLINDER_OR_FLASH)
 
     def test_every_ladder_rung_is_classified(self):
         """새 칸이 생기면 여기가 먼저 빨개진다 — 분류 안 된 칸은 세어지지 않는다."""
@@ -500,6 +519,12 @@ class TestOneMarkingAccentPerCue:
 
         룩이 줌과 아이리스를 **둘 다** 실어야 이 단정이 공허하지 않다(없는 축의 칸은
         아무것도 안 바꾸므로, 축이 하나뿐인 룩에서는 쌓아도 한 줄만 나간다).
+
+        카드 t378 이 회전에 블라인더를 더하면서 셋째 자리(깊이 3, 4회차)가 아이리스에서
+        블라인더로 바뀌었다 — 순서가 바뀐 이유는 ``_MARKING_ACCENTS`` 독스트링(깊이 2 는
+        밝기 히트 개수가 깊이 1 과 같아서 액센트 자신이 값을 바꿔야 하고, 블라인더는 이
+        룩의 값을 안 바꾸므로 그 자리에 못 들어간다). 블라인더는 이 룩 자신의 값을 안
+        바꾸므로 4회차는 줌·아이리스가 **기준값 그대로**이고 밝기만 오른다.
         """
         sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(5)))
         look = _look("chorus", dimmer=80, zoom=18, iris=60)
@@ -509,17 +534,18 @@ class TestOneMarkingAccentPerCue:
             (),
             (LADDER_DIMMER_HIT,),
             (LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH),
-            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_IRIS_PINCH),
-            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH),
+            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_BLINDER_OR_FLASH),
+            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_IRIS_PINCH),
         ]
         lines = _value_lines(bundle)
-        # 4회차: 줌은 기준값으로 **돌아가고** 아이리스가 좁혀진다. 밝기는 계속 오른다.
+        # 4회차: 블라인더는 이 룩의 값을 안 바꾸므로 줌·아이리스 모두 기준값 그대로다.
+        # 밝기만 두 걸음 올라 유일해진다(85 는 2회차가 이미 썼다).
         assert "Attribute 'Zoom' At 18" in lines[3]
-        assert "Attribute 'Iris' At 55" in lines[3]
+        assert "Attribute 'Iris' At 60" in lines[3]
         assert "Attribute 'Dimmer' At 90" in lines[3]
-        # 5회차: 다시 줌으로 갈아타고 아이리스가 기준값으로 돌아온다.
-        assert "Attribute 'Zoom' At 13" in lines[4]
-        assert "Attribute 'Iris' At 60" in lines[4]
+        # 5회차: 아이리스가 좁혀지고 밝기는 계속 오른다. 줌은 기준값 그대로다.
+        assert "Attribute 'Zoom' At 18" in lines[4]
+        assert "Attribute 'Iris' At 55" in lines[4]
         assert "Attribute 'Dimmer' At 95" in lines[4]
         # 고치기 전 실측 그 자리 — 한 줄에 빔 계열 둘이 함께 나가던 것이 사라졌다.
         for line in lines:
