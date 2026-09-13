@@ -221,6 +221,60 @@ def test_a_colour_name_absent_from_the_legend_is_skipped_not_guessed():
     assert not any("ColorRGB" in command for command in plan.commands)
 
 
+# -- t408: 범례가 없어도 표준 팔레트 이름은 값을 낸다 -----------------------------
+
+
+def test_a_bare_color_name_with_no_legend_at_all_still_emits_colorrgb():
+    """실제 곡 분석 경로는 palette_legend 를 아예 안 싣는다(t408 실측) — 그래도
+    표준 무대 팔레트 10색(spec.md §A.2)에 있는 순정 이름이면 값이 나가야 한다."""
+    baseline = _timeline()
+    assert "palette_legend" not in baseline
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["palette_primary"] = "warm white"
+    plan = plan_console_apply(baseline, current)
+    assert plan.applied == (20,)
+    # Warm White (100,75,40) — spec.md §A.2 표준 팔레트, 지어낸 값이 아니다.
+    assert (
+        "Group 11 + 12 ; Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 100 ; "
+        "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40" in plan.commands
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("cold blue", (5, 20, 100)),  # 수식어를 벗기면 blue — hue 는 그대로.
+        ("deep blue", (5, 20, 100)),
+        ("블루", (5, 20, 100)),  # 한국어 원색 표기 → blue.
+        ("warm white", (100, 75, 40)),
+    ],
+)
+def test_the_real_songs_measured_palette_values_all_resolve(value, expected):
+    """카드 t408 이 실측한 실제 곡의 네 값 — 고치기 전엔 전부 None 이었다."""
+    baseline = _timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["palette_primary"] = value
+    plan = plan_console_apply(baseline, current)
+    assert not plan.skipped or all(skip.reason != UNMAPPED_LOOK for skip in plan.skipped)
+    r, g, b = expected
+    assert (
+        f"Attribute 'ColorRGB_R' At {r:g} ; Attribute 'ColorRGB_G' At {g:g} ; "
+        f"Attribute 'ColorRGB_B' At {b:g}" in " ".join(plan.commands)
+    )
+
+
+def test_a_color_outside_the_standard_ten_still_fails_loudly_not_guessed():
+    """ "gold"·"warm special" 은 표준 팔레트 10색에 없다 — 지어내지 않고 skip."""
+    baseline = _timeline()
+    current = copy.deepcopy(baseline)
+    current["sections"][1]["palette_primary"] = "warm special"
+    plan = plan_console_apply(baseline, current)
+    assert not any("ColorRGB" in command for command in plan.commands)
+    (skip,) = plan.skipped
+    assert skip.reason == UNMAPPED_LOOK
+    assert "팔레트 범례에 없는 이름입니다" in skip.detail
+
+
 def test_a_fade_edit_rides_the_store_line_as_cuefade():
     baseline = _legend_timeline()
     current = copy.deepcopy(baseline)

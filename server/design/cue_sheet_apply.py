@@ -61,6 +61,7 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from server.design.color_names import resolve_color_name
 from server.design.cue_fade import store_with_fade
 from server.design.cue_sheet_edit import section_intensity_percent
 from server.looks.songcue import UNMAPPED_LOOK
@@ -375,21 +376,31 @@ def palette_index(timeline: Mapping[str, object]) -> dict[str, str]:
 
 
 def _palette_rgb(index: Mapping[str, str], value: object) -> tuple[int, int, int] | None:
-    """``"P4 핫핑크"`` → ``(r, g, b)`` 백분율. 범례에 없으면 ``None``.
+    """``"P4 핫핑크"`` → ``(r, g, b)`` 백분율. 어디에도 없으면 ``None``.
 
     앞 토큰(``P4``)이 범례 id 다 — 화면과 같은 판독이다. 백분율 축인 이유는
     룩 라이브러리가 그 축으로 적혀 있기 때문이다(`server/looks/library/*.yaml`
     의 ``ColorRGB_R`` 등은 전부 0..100).
+
+    카드 t408 — 범례(``index``)는 실제 곡 분석 경로에는 아예 안 실린다
+    (룩 라이브러리가 팔레트에 이름을 안 달아서 지어낼 수 없다는 이유,
+    `server/web/session.py` 의 `_song_cue_sheet_view_fields` 주석). 그래서
+    범례 조회가 실패하면 곧바로 포기하지 않고
+    :func:`server.design.color_names.resolve_color_name` 로 한 번 더
+    시도한다 — 아크가 내는 "warm white"·"cold blue" 같은 순정 색 이름과
+    감독의 한국어 원색 표기를 표준 무대 팔레트 10색(spec.md §A.2)에서
+    찾는다. 그 표에도 없는 이름("gold"·"warm special" 등)은 여전히
+    ``None`` — 두 출처 모두 실패해야 진짜로 못 찾은 것이다.
     """
     if not isinstance(value, str) or not value.strip():
         return None
     token = value.strip().split()[0].casefold()
     color = index.get(token) or index.get(value.strip().casefold())
-    if color is None:
-        return None
-    raw = color.lstrip("#")
-    channels = tuple(int(raw[offset : offset + 2], 16) for offset in (0, 2, 4))
-    return tuple(round(channel * 100 / 255) for channel in channels)  # type: ignore[return-value]
+    if color is not None:
+        raw = color.lstrip("#")
+        channels = tuple(int(raw[offset : offset + 2], 16) for offset in (0, 2, 4))
+        return tuple(round(channel * 100 / 255) for channel in channels)  # type: ignore[return-value]
+    return resolve_color_name(value.strip())
 
 
 def _color_line(rgb: tuple[int, int, int]) -> str:

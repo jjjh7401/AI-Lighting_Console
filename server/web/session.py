@@ -37,7 +37,9 @@ from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
 from server.deploy.review import ReviewRequest
+from server.design import color_names as _COLOR_NAMES
 from server.design.capability_verdict import position_verdict
+from server.design.color_names import _HUE_MODIFIER_STRIP, _KO_EN_COLOR_EQUIV
 from server.design.cue_density import plan_cue_density, rotate_palette
 from server.design.cue_sheet_apply import (
     ConsoleApplyError,
@@ -938,44 +940,10 @@ def _section_fx_decision(
     return FxDecision(allowed=allowed, source="section_arc", density=density)
 
 
-#: 카드 t406 — 한국어 원색 이름과 `_ARC_PALETTE`의 영어 표기가 같은 색상을
-#: 가리킬 수 있다("블루" == "blue"). 감독이 화면에 보는 원색 표기는 절대
-#: 안 바꾼다(입력 그대로 유지) — 이 표는 "같은 색인지" 판정에만 쓴다.
-_KO_EN_COLOR_EQUIV: dict[str, str] = {
-    "블루": "blue",
-    "파랑": "blue",
-    "파란": "blue",
-    "레드": "red",
-    "빨강": "red",
-    "빨간": "red",
-    "그린": "green",
-    "초록": "green",
-    "녹색": "green",
-    "옐로우": "yellow",
-    "엘로우": "yellow",
-    "노랑": "yellow",
-    "노란": "yellow",
-    "골드": "gold",
-    "금색": "gold",
-    "마젠타": "magenta",
-    "시안": "cyan",
-    "청록": "cyan",
-    "화이트": "white",
-    "흰색": "white",
-    "하양": "white",
-    "앰버": "amber",
-    "퍼플": "purple",
-    "보라": "purple",
-    "핑크": "pink",
-    "오렌지": "orange",
-    "주황": "orange",
-}
-
-#: `_ARC_PALETTE`/무게 수식어가 이미 쓰는 색조 수식어 — 색상 동일성 판정
-#: 전에 벗겨낸다("deep blue" 와 "블루" 는 수식어를 떼면 둘 다 blue).
-_HUE_MODIFIER_STRIP = re.compile(
-    r"^(deep|cold|warm|pale|light|dark|짙은|연한|쿨톤|웜톤)\s+", re.IGNORECASE
-)
+#: 카드 t408 — `_KO_EN_COLOR_EQUIV`/`_HUE_MODIFIER_STRIP` 은
+#: `server/design/color_names.py` 로 옮겼다(`_palette_rgb` 가 순환
+#: 임포트 없이 같은 표를 쓰기 위해서다). 이 모듈은 이름만 다시 가져간다 —
+#: 값은 바이트 그대로, 아래 아크 코드(`_hue_key` 등)는 안 바뀐다.
 
 
 def _hue_key(color: str) -> str:
@@ -2904,18 +2872,11 @@ _REGENERATE_COLORS_REQUEST = re.compile(
 #: 100/55/5)·8번(Blue 5/20/100)은 기존 `fx/library/color.yaml`의 실측 대역에서
 #: 왔다. 전 장비 동일 값이지만 저장은 Selective(프로그래머 경유)뿐이다 —
 #: Global/Universal 플래그는 미검증 문법(REQ-COLORPRESET-008).
-COLOR_PALETTE_SEQUENCE: tuple[tuple[str, tuple[int, int, int]], ...] = (
-    ("Warm White", (100, 75, 40)),
-    ("Cool White", (85, 95, 100)),
-    ("Red", (100, 0, 0)),
-    ("Amber", (100, 55, 5)),
-    ("Yellow", (100, 85, 0)),
-    ("Green", (0, 100, 10)),
-    ("Cyan", (0, 90, 100)),
-    ("Blue", (5, 20, 100)),
-    ("Magenta", (100, 0, 70)),
-    ("Lavender", (55, 35, 100)),
-)
+#:
+#: 카드 t408 — 표 본체는 `server/design/color_names.py` 로 옮겼다(팔레트
+#: 범례가 없는 실제 곡에서도 `_palette_rgb` 가 같은 표를 순환 임포트 없이
+#: 쓰기 위해서다). 여기서는 이름만 다시 가져간다 — 값은 바이트 그대로.
+COLOR_PALETTE_SEQUENCE = _COLOR_NAMES.COLOR_PALETTE_SEQUENCE
 
 #: 팔레트 라벨 → RGB(0-100) 역인덱스 — 멀티컬러 페이저 스텝은 팔레트 프리셋
 #: 번호(`At Preset 4.x`)가 아니라 **이 RGB 값 자체**를 스텝에 직접 싣는다
