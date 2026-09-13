@@ -1,0 +1,192 @@
+sha256: 0edb6c667267b6459a5097b4bb187806fd2bd00dc6e6af5d591908ab1b81dee3
+byte_length: 31459042
+analyse_song_audio wall time: 1.70s
+analyse_song_audio notify: BPM 126.048 로 확정했습니다 (measured). 채택 우선순위: 측정 > 시트 HEAD.BPM > 기본값 120. 구간 16건 채택 · 0건 제외. 이 곡의 큐 리스트를 만들려면 타임코드 번호와 함께 말씀해 주세요 — 확정한 구간을 그대로 씁니다.
+
+--- confirmed analysis ---
+bpm: BpmResolution(bpm=126.04801829268435, source='measured', reason='채택 우선순위: 측정 > 시트 HEAD.BPM > 기본값 120.', mismatches=(), fx_rate_back_calculated=None)
+num sections: 16
+  [0] 0:00–0:06 · D2 0-6931ms D2 selected=True
+  [1] 0:06–0:20 · D4 6931-20294ms D4 selected=True
+  [2] 0:20–0:26 · D4 20294-26622ms D4 selected=True
+  [3] 0:26–0:46 · D5 26622-46626ms D5 selected=True
+  [4] 0:46–1:09 · D5 46626-69045ms D5 selected=True
+  [5] 1:09–1:12 · D2 69045-72829ms D2 selected=True
+  [6] 1:12–1:16 · D2 72829-76858ms D2 selected=True
+  [7] 1:16–1:55 · D5 76858-115183ms D5 selected=True
+  [8] 1:55–2:00 · D4 115183-120094ms D4 selected=True
+  [9] 2:00–2:05 · D5 120094-125399ms D5 selected=True
+  [10] 2:05–2:10 · D4 125399-130067ms D4 selected=True
+  [11] 2:10–2:29 · D5 130067-149188ms D5 selected=True
+  [12] 2:29–2:34 · D1 149188-154691ms D1 selected=True
+  [13] 2:34–2:39 · D4 154691-159347ms D4 selected=True
+  [14] 2:39–2:42 · D2 159347-162377ms D2 selected=True
+  [15] 2:42–2:58 · D5 162377-178339ms D5 selected=True
+
+--- run_instruction result text ---
+{'v': 1, 'type': 'chat_response', 'status': 'ok', 'summary': '장비 능력을 콘솔에서 읽지 못해 기종별 판정(팬틸트·줌 범위) 없이 설계했습니다 — RuntimeError: no such path: Patch/Stages/1/Fixtures', 'text': "연출 인터뷰 결과 — Q1 컨셉: 우주 (확정) / Q2 팔레트: 블루/퍼플 (확정) / Q3 클라이맥스: D5, 쿨 볼드, Ring In → Center → Wall (확정) / Q4 공간 스토리: Ring In → Home → Vocal DSC → Center → Wall → Cross → Fan Out → Audience (확정) / Q5 전환 방식: 중간 (확정). 전체 리뷰 번들을 보여드렸고, 감독 승인 전이므로 콘솔에 쓰지 않았습니다. 승인 전 계획은 콘솔 무접촉으로 계속 수정할 수 있습니다 — 예: '큐 3을 Center로', '큐 3 컬러를 골드로', '큐 2 D4', '큐 3 페이드 2초', '큐 2 FX 꺼', '큐 2를 0:30으로 이동', '큐 2와 3 사이에 브레이크 추가', '큐 4 삭제' (중단: '취소'). 전곡 리뷰 번들 — 시퀀스 110 · 진행 타임코드 7번 슬롯 자동 진행.\n큐 1 S1 — D3 · Ring In · 블루/퍼플 · 타임코드\n큐 2 S2 — D3 · Ring In · 블루/퍼플 · 타임코드\n큐 3 S3 — D3 · Home · 블루/퍼플 · 타임코드\n큐 4 S4 — D3 · Home · 블루/퍼플 · 타임코드\n큐 5 S5 — D3 · Vocal DSC · 블루/퍼플 · 타임코드\n큐 6 S6 — D3 · Vocal DSC · 블루/퍼플 · 타임코드\n큐 7 S7 — D3 · Center · 블루/퍼플 · 타임코드\n큐 8 S8 — D3 · Center · 블루/퍼플 · 타임코드\n큐 9 S8 — D3 · Center · 퍼플/블루 · 타임코드\n큐 10 S9 — D3 · Wall · 블루/퍼플 · 타임코드\n큐 11 S10 — D3 · Wall · 블루/퍼플 · 타임코드\n큐 12 S11 — D3 · Cross · 블루/퍼플 · 타임코드\n큐 13 S12 — D3 · Cross · 블루/퍼플 · 타임코드\n큐 14 S13 — D3 · Fan Out · 블루/퍼플 · 타임코드\n큐 15 S14 — D3 · Fan Out · 블루/퍼플 · 타임코드\n큐 16 S15 — D3 · Audience · 블루/퍼플 · 타임코드\n큐 17 S16 — D5 · Ring In · 블루/퍼플 · 타임코드\n확인 포인트 1건: L13 큐 9: identical (position, palette, effect) combo for 3 consecutive cues (V2). 참고: 레이어 매핑 없음 — 단일 레이어로 진행 (키/백 분리 체크 L6·L7 미적용).", 'commands': []}
+
+timeline events emitted: 1
+saved to reports/t381/timeline-payload.json
+[
+  {
+    "index": 1,
+    "label": "S1",
+    "start_ms": 0,
+    "cue_number": 1,
+    "plan_status": "draft",
+    "d_level": 3,
+    "palette": [
+      "블루",
+      "퍼플"
+    ],
+    "position": "Ring In",
+    "texture": "중간",
+    "fx": [
+      "dimmer chase"
+    ],
+    "fade_seconds": 1.4280272108843377,
+    "accents": [],
+    "mib": false,
+    "trig_time_seconds": 0.0,
+    "end_ms": 6931,
+    "duration_ms": 6931,
+    "bar_start": 1,
+    "bar_count": 4,
+    "palette_primary": "블루",
+    "palette_secondary": "퍼플",
+    "intensity": [
+      {
+        "group": "KEY",
+        "level": 70
+      }
+    ],
+    "movement": "Ring In",
+    "trans": "FADE"
+  },
+  {
+    "index": 2,
+    "label": "S2",
+    "start_ms": 6931,
+    "cue_number": 2,
+    "plan_status": "draft",
+    "d_level": 3,
+    "palette": [
+      "블루",
+      "퍼플"
+    ],
+    "position": "Ring In",
+    "texture": "중간",
+    "fx": [
+      "dimmer chase"
+    ],
+    "fade_seconds": 1.4280272108843377,
+    "accents": [],
+    "mib": false,
+    "trig_time_seconds": 6.931,
+    "end_ms": 20294,
+    "duration_ms": 13363,
+    "bar_start": 5,
+    "bar_count": 7,
+    "palette_primary": "블루",
+    "palette_secondary": "퍼플",
+    "intensity": [
+      {
+        "group": "KEY",
+        "level": 70
+      }
+    ],
+    "movement": "Ring In",
+    "trans": "FADE"
+  },
+  {
+    "index": 3,
+    "label": "S3",
+    "start_ms": 20294,
+    "cue_number": 3,
+    "plan_status": "draft",
+    "d_level": 3,
+    "palette": [
+      "블루",
+      "퍼플"
+    ],
+    "position": "Home",
+    "texture": "중간",
+    "fx": [
+      "dimmer chase"
+    ],
+    "fade_seconds": 1.4280272108843377,
+    "accents": [],
+    "mib": false,
+    "trig_time_seconds": 20.294,
+    "end_ms": 26622,
+    "duration_ms": 6328,
+    "bar_start": 12,
+    "bar_count": 3,
+    "palette_primary": "블루",
+    "palette_secondary": "퍼플",
+    "intensity": [
+      {
+        "group": "KEY",
+        "level": 70
+      }
+    ],
+    "movement": "Home",
+    "trans": "FADE"
+  },
+  {
+    "index": 4,
+    "label": "S4",
+    "start_ms": 26622,
+    "cue_number": 4,
+    "plan_status": "draft",
+    "d_level": 3,
+    "palette": [
+      "블루",
+      "퍼플"
+    ],
+    "position": "Home",
+    "texture": "중간",
+    "fx": [
+      "dimmer chase"
+    ],
+    "fade_seconds": 1.4280272108843377,
+    "accents": [],
+    "mib": false,
+    "trig_time_seconds": 26.622,
+    "end_ms": 46626,
+    "duration_ms": 20004,
+    "bar_start": 15,
+    "bar_count": 11,
+    "palette_primary": "블루",
+    "palette_secondary": "퍼플",
+    "intensity": [
+      {
+        "group": "KEY",
+        "level": 70
+      }
+    ],
+    "movement": "Home",
+    "trans": "FADE"
+  },
+  {
+    "index": 5,
+    "label": "S5",
+    "start_ms": 46626,
+    "cue_number": 5,
+    "plan_status": "draft",
+    "d_level": 3,
+    "palette": [
+      "블루",
+      "퍼플"
+    ],
+    "position": "Vocal DSC",
+    "texture": "중간",
+    "fx": [
+      "dimmer chase"
+    ],
+    "fade_seconds": 1.4280272108843377,
+    "accents": [],
+    "mib": false,
+    "trig_time_seconds": 46.626,
+    "en
