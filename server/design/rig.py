@@ -59,7 +59,19 @@ RIG_LAYER_SOURCE_SINGLE_LAYER = "single_layer_degraded"
 _LAYER_GROUP_ALIASES: Mapping[str, frozenset[str]] = {
     "key": frozenset({"key", "front", "keylight", "face"}),
     "back": frozenset({"back", "backlight", "rear"}),
-    "effect": frozenset({"effect", "fx", "aerial", "beam"}),
+    # 카드 t385 — 실측(t379): 이 리그 그룹은 KEY FOH BACK SIDE-L SIDE-R
+    # SIDE-ALL MOVER-U MOVER-D MOVER-ALL WASH-U WASH-D WASH-ALL BLIND
+    # STROBE HAZE ALL ODD EVEN. "strobe"/"haze" 는 정확히 일치하는 그룹
+    # 이름이 있고 역할 판정에 모호함이 없어(스트로브·헤이즈는 어느 표준으로
+    # 읽어도 이펙트) 추가한다 — RG5(추측 금지)가 막는 것은 부분 문자열
+    # 매칭이지, 새 정확 일치 어휘가 아니다. "BLIND"(블라인더)는 일부러
+    # 뺐다 — 블라인더는 관객을 향해 쏘는 장비라 "effect" 대신 "audience"
+    # 역할일 수 있고, 이 표준·이 리그만으로는 어느 쪽인지 판정할 근거가
+    # 없다(감독 확인 필요, 별도 카드). MOVER-U/D/ALL·WASH-U/D/ALL 은
+    # 접미사가 붙어 있어 여전히 정확 일치하지 않는다 — 그 확장은
+    # 접두사/부분 일치 정책 결정이 먼저 필요해 이 카드 밖(별도 카드)으로
+    # 남긴다.
+    "effect": frozenset({"effect", "fx", "aerial", "beam", "strobe", "haze"}),
     "audience": frozenset({"audience", "house", "foh"}),
 }
 
