@@ -46,13 +46,20 @@ _REPORT_MODULE = Path("server/looks/report.py")
 # worship·ballad 는 안 움직인다.
 # 자산에서 잰 `(룩, 역할)` 쌍 수. 2026-09-12 카드 t359 가 움직이는 룩 열다섯에
 # `무버` 역할을 더하면서 넷 다 늘었다 (worship 25→27 · rock 27→32 · ballad 20→21 ·
-# edm 27→34). 이 표는 인용이 아니라 **재측정값**이고, 그래서 아래 검사가 자산에 대고
+# edm 27→34).
+# 2026-09-13 갱신 — 카드 t379 가 리그 커버리지 결손(워시·헤이즈 그룹 미매핑)을
+# 메우면서 룩마다 역할을 하나씩 더 얹었다: worship +1(워시) 27→28 ·
+# rock +2(워시·헤이즈) 32→34 · ballad +1(워시) 21→22 · edm +2(워시·헤이즈) 34→36.
+# 이 표는 인용이 아니라 **재측정값**이고, 그래서 아래 검사가 자산에 대고
 # 다시 세어 맞춰 본다 — 표만 고치고 자산이 안 바뀌면 그 자리에서 빨개진다.
-_PAIR_COUNTS = {"worship": 27, "rock": 32, "ballad": 21, "edm": 34}
+_PAIR_COUNTS = {"worship": 28, "rock": 34, "ballad": 22, "edm": 36}
 
-# distinct 역할 종수. 여섯이던 것이 t359 로 일곱이 됐다 — 네 장르 모두 움직이는 룩을
-# 하나 이상 갖고, 그것이 위치 여섯 위에 `무버` 를 얹는다.
-_DISTINCT_ROLES = 7
+# 장르별 distinct 역할 종수. t379 전에는 넷 다 7종(위치 6 + 무버)으로 같았다 —
+# t379 가 워시를 네 장르 모두에 붙이고 헤이즈는 "빔을 보이게 하는" 캐논 근거가
+# 있는 edm·rock 에만 붙여서, 이제 장르마다 다르다(worship·ballad 는 워시만 +1 →
+# 8종, edm·rock 은 워시+헤이즈 +2 → 9종). 그래서 이 표도 `_PAIR_COUNTS` 처럼
+# 장르별 dict 로 바꾼다 — 하나의 정수로는 이 비대칭을 표현할 수 없다.
+_DISTINCT_ROLES = {"worship": 8, "rock": 9, "ballad": 8, "edm": 9}
 
 
 @pytest.fixture(scope="module")
@@ -107,8 +114,8 @@ class TestUnmappedRoles:
             bundle = make_bundle(looks, groups=((99, "관계 없는 그룹"),))
             report = build_report(bundle, _all_ok(bundle))
             assert report.unmapped_count == expected
-            assert len(report.unmapped_roles) == _DISTINCT_ROLES, (
-                f"distinct는 언제나 {_DISTINCT_ROLES}종이다"
+            assert len(report.unmapped_roles) == _DISTINCT_ROLES[genre], (
+                f"{genre} 의 distinct 는 {_DISTINCT_ROLES[genre]}종이어야 한다"
             )
 
     def test_a_single_unmapped_role_can_contribute_many_pairs(self, library):
@@ -305,7 +312,7 @@ class TestAggregateArithmetic:
         bundle = make_bundle(looks_for_genre(library, "worship"), groups=((99, "무관"),))
         report = build_report(bundle, _all_ok(bundle))
         assert report.unmapped_count == _PAIR_COUNTS["worship"]
-        assert len(report.unmapped_roles) == _DISTINCT_ROLES
+        assert len(report.unmapped_roles) == _DISTINCT_ROLES["worship"]
         assert report.unmapped_count != len(report.unmapped_roles)
 
 

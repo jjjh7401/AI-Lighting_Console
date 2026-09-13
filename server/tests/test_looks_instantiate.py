@@ -770,6 +770,9 @@ class TestReportShape:
 # 아래 `plan.unmapped == ()` 가 「리그가 전부 덮는다」 대신 「하나를 못 덮는다」를
 # 재게 된다. 같은 이름의 튜플이 `busking_fixtures.FULL_RIG` 에도 있고 그쪽도 같은
 # 이유로 한 줄 늘었다 — 두 곳인 것은 t359 가 만든 상태가 아니라 원래 그랬다.
+#
+# 2026-09-13 갱신 — 카드 t379 가 출하 룩에 워시·헤이즈를 실었다. `Wash`·`Haze` 를
+# 더한다(같은 갱신을 `busking_fixtures.FULL_RIG` 에도 했다 — 근거는 그쪽 주석).
 FULL_RIG = (
     (11, "Back"),
     (12, "Front"),
@@ -778,6 +781,8 @@ FULL_RIG = (
     (15, "Cyc"),
     (16, "Special"),
     (17, "Mover"),
+    (18, "Wash"),
+    (19, "Haze"),
 )
 
 

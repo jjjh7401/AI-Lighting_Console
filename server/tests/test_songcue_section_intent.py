@@ -202,17 +202,20 @@ class TestTheContrastDefinition:
         library = load_library_from_dir()
         # 역할 수는 2026-09-12 카드 t359 로 셋 다 하나씩 늘었다 — 움직이는 룩이
         # `무버` 를 함께 들기 때문이다. 색·밝기 축은 그대로이고 역할 축만 움직였다.
+        # 2026-09-13 카드 t379 가 리그 커버리지(워시·헤이즈 미매핑)를 메우면서
+        # crimson·beams 의 역할 수가 다시 늘었다 — crimson 은 워시 +1(7→8),
+        # beams 는 헤이즈 +1(4→5). acid 는 안 바뀐다.
         acid = library.by_id("edm-drop-acid")  # D90 rgb(72,100,0) 역할 5
-        crimson = library.by_id("edm-drop-crimson")  # D100 rgb(100,0,15) 역할 7
-        beams = library.by_id("edm-drop-beams")  # D100 rgb(70,88,100) 역할 4
+        crimson = library.by_id("edm-drop-crimson")  # D100 rgb(100,0,15) 역할 8
+        beams = library.by_id("edm-drop-beams")  # D100 rgb(70,88,100) 역할 5
 
         # 색 (|72-100| + |100-0| + |0-15|) / 300 = 143/300
         # 밝기 |90-100| / 100 = 30/300
-        # 역할 1 - 5/7 = 2/7   (교집합 5 — acid 의 역할이 전부 crimson 에 있다)
-        assert contrast(acid, crimson) == Fraction(143 + 30, 300) + Fraction(2, 7)
-        assert contrast(acid, crimson) == Fraction(1811, 2100)
-        # 색 (2 + 12 + 100)/300 · 밝기 30/300 · 역할 1 - 4/5 = 60/300
-        assert contrast(acid, beams) == Fraction(114 + 30 + 60, 300) == Fraction(17, 25)
+        # 역할 1 - 5/8 = 3/8   (교집합 5 — acid 의 역할이 전부 crimson 에 있다)
+        assert contrast(acid, crimson) == Fraction(143 + 30, 300) + Fraction(3, 8)
+        assert contrast(acid, crimson) == Fraction(571, 600)
+        # 색 (2 + 12 + 100)/300 · 밝기 30/300 · 역할 1 - 4/6 = 1/3 = 100/300
+        assert contrast(acid, beams) == Fraction(114 + 30 + 100, 300) == Fraction(61, 75)
         # 대칭이고, 자기 자신과는 0 이다.
         assert contrast(crimson, acid) == contrast(acid, crimson)
         assert contrast(acid, acid) == Fraction(0)
@@ -254,10 +257,10 @@ class TestTheSecondCueTurnsAway:
         assert SECTION_TERMS["chorus"] == SECTION_TERMS["drop"] == (4, 5)
         assert chosen == ["edm-drop-acid", "edm-drop-crimson"]
         # 뒤 큐가 **더 대비되는** 쪽이라는 것을 값으로 단정한다. 두 값은 카드 t359 의
-        # `무버` 역할 추가로 바뀌었고, 부등호는 그대로다 — 바뀐 것은 눈금이지 순서가
-        # 아니다.
-        assert contrast(acid, crimson) == Fraction(1811, 2100)
-        assert contrast(acid, beams) == Fraction(17, 25)
+        # `무버` 역할 추가, 그리고 카드 t379 의 워시·헤이즈 추가로 바뀌었고, 부등호는
+        # 그대로다 — 바뀐 것은 눈금이지 순서가 아니다.
+        assert contrast(acid, crimson) == Fraction(571, 600)
+        assert contrast(acid, beams) == Fraction(61, 75)
         assert contrast(acid, crimson) > contrast(acid, beams)
 
     def test_the_measured_five_sections_are_five_different_stage_pictures(self):

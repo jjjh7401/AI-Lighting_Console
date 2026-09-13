@@ -192,20 +192,36 @@ class TestRealRigCoverage:
 
 
 class TestRootFixSignature:
-    """라이브러리를 한 줄도 안 고치고 worship D1 이 묶이는 룩을 고르는가.
+    """``_select_bindable`` 코드를 한 줄도 안 고치고 worship D1 이 묶이는 룩을 고르는가.
 
     「라이브러리 변경 0건」자체는 여기서 재지 않는다 — 그 불변식의 주인은
     ``test_overlap_preserve.py`` 이고, ``server/looks/library/`` 는 그 게이트의
     ``_PRESERVE_PATHS`` 에 이미 들어 있어 매 스위트 실행마다 다시 확인된다.
     여기서 같은 것을 브랜치 기준으로 한 번 더 재면 기준이 흐르는 검사가 하나
     늘 뿐이다(머지 뒤에는 그 범위가 남의 변경까지 삼킨다).
+
+    **2026-09-13 갱신 — 카드 t379.** 이 클래스 이름의 「고침」은 선택 **로직**
+    (``_select_bindable`` 이 「묶이는 첫 룩」을 고르는 규칙)을 가리키고, 그 로직은
+    안 바뀌었다. 바뀐 것은 **입력**이다 — t379 가 `worship-prayer-wash` 에 `워시`
+    역할을 더했고(그 역할은 `_REAL_RIG` 의 `WASH-U`/`WASH-D`/`WASH-ALL` 에 실제로
+    묶인다), 그래서 이 룩이 이제 그 리그에서 **처음부터 묶인다**. `(dynamics,
+    look_id)` 순서에서 `worship-prayer-wash` 가 `worship-scripture-key` 보다
+    앞이므로, 로직은 (변경 없이) 더 앞의 묶이는 룩을 그대로 고른다 — 옛 기대값은
+    「그 시점 라이브러리에서는 이 룩이 아직 안 묶였다」는 사실을 쟀을 뿐이고, 그
+    사실이 이제 거짓이 됐다.
     """
 
     def test_worship_d1_now_selects_the_bindable_look_that_already_existed(self, library):
-        """``worship-scripture-key`` 는 처음부터 있었다 — 아무도 그 너머를 안 봤을 뿐이다."""
+        """``worship-prayer-wash`` 는 처음부터 있었다 — 이제는 워시 역할로 묶인다.
+
+        (t379 이전에는 ``worship-scripture-key`` 가 기대값이었다 — 그때는
+        ``worship-prayer-wash`` 가 배경·탑 뿐이라 이 리그(호리·탑 없음)에서
+        하나도 안 묶였다. t379 가 그 룩에 워시를 더하면서 WASH-* 그룹에 묶이기
+        시작했고, 사전순으로 더 앞이라 이제 이쪽이 뽑힌다.)
+        """
         stored, look_id, reason = _chosen(library, "worship", _REAL_RIG, dynamics=1)
 
-        assert (stored, look_id, reason) == (True, "worship-scripture-key", None)
+        assert (stored, look_id, reason) == (True, "worship-prayer-wash", None)
 
 
 class TestCycRigIsUnchanged:

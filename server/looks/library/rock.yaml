@@ -103,7 +103,10 @@ looks:
     dynamics: 3
     # Tight beams for an instrumental break — the narrowest of the rock set
     # short of the final look.
-    roles: ["백라이트", "사이드", "무버"]
+    #
+    # 헤이즈 — 카드 t379. 정본 §6.2 「헤이즈는 빔을 보이게 하는 필수 요소」 —
+    # 이 룩이 이 장르에서 가장 가까운 후보다(가장 좁은 빔 + 움직임).
+    roles: ["백라이트", "사이드", "무버", "헤이즈"]
     aliases: ["리프 그린", "riff green", "기타 솔로"]
     mood_keywords: ["날선", "형광", "초록", "리프", "솔로", "acid", "sharp"]
     attributes:
@@ -125,7 +128,10 @@ looks:
     genre: "rock"
     dynamics: 4
     # 프론트 arrives. Saturated red, four roles, punch.
-    roles: ["백라이트", "프론트", "사이드", "탑", "무버"]
+    #
+    # 워시 — 카드 t379. 정본 §7.1 「chorus 1 기준 룩 — 백라이트 + 워시」 —
+    # 이 장르에서 백라이트를 든 첫 코러스 룩이 이 룩이다.
+    roles: ["백라이트", "프론트", "사이드", "탑", "무버", "워시"]
     aliases: ["코러스 히트", "chorus hit", "빨강 코러스"]
     mood_keywords: ["강렬한", "빨간", "터지는", "코러스", "intense", "red"]
     attributes:
