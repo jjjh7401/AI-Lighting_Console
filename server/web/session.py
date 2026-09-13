@@ -718,6 +718,79 @@ def _infer_confirmed_role(index: int, d_levels: Sequence[int]) -> str:
     return "verse"
 
 
+#: 카드 t391 — 역할 → 표시 이름 앞머리. 콘솔 큐 목록이 이미 쓰는 어휘
+#: (Intro / Verse N / Chorus N / Bridge N / Finale, 감독 실측)와 맞춘다.
+#: `_infer_confirmed_role` 이 내는 역할 5종만 다루면 되므로 "other" 는
+#: 방어적으로만 존재한다 — 확정 구간 경로에서는 나오지 않는다.
+_CONFIRMED_ROLE_DISPLAY_NAME: dict[str, str] = {
+    "intro": "Intro",
+    "verse": "Verse",
+    "chorus": "Chorus",
+    "bridge": "Bridge",
+    "finale": "Finale",
+    "other": "Section",
+}
+
+#: 이 역할은 곡에 한 번뿐이라 뒤에 회차 번호를 붙이지 않는다 — "Intro 1" 은
+#: 감독 화면의 콘솔 큐 이름(Intro / Verse 1 / Verse 2 / ...)과 다른 어휘가
+#: 된다.
+_CONFIRMED_ROLE_SINGLETON = frozenset({"intro", "finale"})
+
+
+def _confirmed_section_names(roles: Sequence[str]) -> list[str]:
+    """오디오 확정 구간의 표시 이름 — 역할 + 회차 번호 (카드 t391).
+
+    고침 전: 이름이 전부 중립 ASCII ``S<n>`` 이라 곡 하나에 같은 라벨이
+    중복됐다(실측: 17개 라벨 중 8번째·9번째가 둘 다 ``S8`` — 마디 분할이
+    한 구간을 두 큐로 쪼개면서 부모 이름을 그대로 물려받았기 때문). 콘솔의
+    큐 목록은 같은 화면에서 ``Intro / Verse 1 / Verse 2 / Chorus 1 ...``
+    처럼 역할+회차로 감독이 하나를 짚을 수 있게 이름 붙인다 — 이 함수는
+    확정 구간에도 같은 어휘를 쓴다.
+
+    ``dynamics``(D 레벨)는 이 이름과 **무관한 경로**로 전달된다
+    (``_confirmed_section_input`` 의 ``dynamics`` 키, ``_map_section_to_look``
+    이 명시 dynamics 를 이름보다 먼저 본다) — 그래서 이름을 "Chorus 1" 로
+    바꿔도 D 레벨 판정을 우회하지 않는다(plan.md §C D5 가 지키려던 것과
+    같은 불변식).
+
+    지시문이 직접 구간을 적은 경로(``section_names``)는 이 함수를 타지
+    않는다 — 그 경로는 이미 감독이 준 이름이 정본이다.
+    """
+    occurrence: dict[str, int] = {}
+    names: list[str] = []
+    for role in roles:
+        prefix = _CONFIRMED_ROLE_DISPLAY_NAME.get(role, role.title() or "Section")
+        if role in _CONFIRMED_ROLE_SINGLETON:
+            names.append(prefix)
+            continue
+        occurrence[role] = occurrence.get(role, 0) + 1
+        names.append(f"{prefix} {occurrence[role]}")
+    return names
+
+
+def _disambiguate_split_names(names: Sequence[str], source_origins: Sequence[int]) -> list[str]:
+    """마디 분할로 한 구간이 여러 큐로 갈리면 라벨을 서로 다르게 만든다
+    (카드 t391). ``plan_cue_density`` 는 시작 시각만 갈라 주고 이름은 부모
+    구간 것을 그대로 물려주므로(``replace(sections[split.source_index], ...)``
+    이 ``name`` 은 안 바꾼다), 같은 이름이 연달아 여러 번 나올 수 있다 —
+    이 함수가 그 자리에만 회차 접미사(" (2/2)" 형태)를 붙인다. 쪼개지지
+    않은 구간(부모당 큐 하나)의 이름은 바이트 그대로 둔다.
+    """
+    counts: dict[int, int] = {}
+    for origin in source_origins:
+        counts[origin] = counts.get(origin, 0) + 1
+    seen: dict[int, int] = {}
+    disambiguated: list[str] = []
+    for name, origin in zip(names, source_origins, strict=True):
+        total = counts[origin]
+        if total <= 1:
+            disambiguated.append(name)
+            continue
+        seen[origin] = seen.get(origin, 0) + 1
+        disambiguated.append(f"{name} ({seen[origin]}/{total})")
+    return disambiguated
+
+
 # Direct positional intent inside one section's own wording. Ordered: an
 # audience mention wins over a generic "퍼지/넓혀" in the same sentence.
 _DIRECT_POSITION_INTENTS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
@@ -1516,6 +1589,12 @@ def _split_sections_for_density(
 
     돌려주는 것은 (넓힌 구간 목록, 큐마다의 원래 구간 번호, 공개할 사유).
     BPM 이 선언되지 않았으면 입력이 그대로 나온다 — 오늘과 동일.
+
+    카드 t391 — 한 구간이 여러 큐로 갈리면(``plan.splits`` 에서 같은
+    ``source_index`` 가 둘 이상) 부모 이름을 그대로 물려받아 라벨이
+    중복됐다(실측: 17개 라벨 중 8번째·9번째가 둘 다 ``S8``). 이름이
+    바뀌는 구간은 쪼개진 자리에 한해서만이고, 쪼개지지 않은 구간의
+    이름은 바이트 그대로 둔다(``_disambiguate_split_names``).
     """
     plan = plan_cue_density(
         [section.start_ms for section in sections],
@@ -1528,10 +1607,15 @@ def _split_sections_for_density(
             concept_colors=concept_colors,
         ),
     )
+    source_origins = list(plan.source_origins)
+    names = _disambiguate_split_names(
+        [sections[split.source_index].name for split in plan.splits], source_origins
+    )
     expanded = [
-        replace(sections[split.source_index], start_ms=split.start_ms) for split in plan.splits
+        replace(sections[split.source_index], start_ms=split.start_ms, name=name)
+        for split, name in zip(plan.splits, names, strict=True)
     ]
-    return expanded, list(plan.source_origins), plan.notes
+    return expanded, source_origins, plan.notes
 
 
 def _build_unified_song_plan(
@@ -1674,6 +1758,7 @@ def _build_unified_song_plan(
                 ),
                 cue_number=index,
                 fade_override=(fade_overrides or {}).get(index),
+                role=role,
             )
         )
     # Invariant (결함 3): the finale never lands below the first chorus.
@@ -7986,14 +8071,26 @@ class ChatSession:
             confirmed = self._song_analysis
             accepted = confirmed.accepted if confirmed is not None else ()
             confirmed_d_levels = [section.d_level for section in accepted]
-            for position, section in enumerate(accepted, start=1):
+            confirmed_roles = [
+                _infer_confirmed_role(position, confirmed_d_levels)
+                for position in range(len(accepted))
+            ]
+            # 카드 t391 — 중립 ASCII S<n> 은 곡 하나에 라벨이 중복될 수 있고
+            # (마디 분할이 부모 이름을 물려받는다) 콘솔의 큐 목록과 다른
+            # 어휘였다. 역할+회차로 바꿔도 dynamics 는 아래 `d_level=` 로 여전히
+            # 명시 전달되므로 룩 선택(`_map_section_to_look`)은 이름을 보지
+            # 않는다 — 이름은 오직 표시용이다.
+            confirmed_names = _confirmed_section_names(confirmed_roles)
+            for _position, (section, role, name) in enumerate(
+                zip(accepted, confirmed_roles, confirmed_names, strict=True), start=1
+            ):
                 sections.append(
                     PositionSheetSection(
-                        name=f"S{position}",
+                        name=name,
                         start_ms=section.start_ms,
                         mood="",
                         d_level=section.d_level,
-                        role=_infer_confirmed_role(position - 1, confirmed_d_levels),
+                        role=role,
                     )
                 )
         if not sections:
