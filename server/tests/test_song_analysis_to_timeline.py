@@ -79,7 +79,14 @@ def test_a_confirmed_song_reaches_the_timeline_without_retyping_its_sections(tmp
     assert events, "확정 구간이 있는데 타임라인 이벤트가 하나도 안 나갔다"
     timeline = events[0]["timeline"]
     assert [section["start_ms"] for section in timeline["sections"]] == [0, 24_000, 48_000]
-    assert [section["label"] for section in timeline["sections"]] == ["S1", "S2", "S3"]
+    # 카드 t391 — 중립 ASCII S<n> 대신 역할+회차로 이름 붙인다(콘솔 큐 목록과
+    # 같은 어휘). D 레벨 (2, 3, 5): 첫/끝 구간은 intro/finale, 중간은 최고
+    # D 레벨이 아니고 양옆보다 낮지도 않아 verse.
+    assert [section["label"] for section in timeline["sections"]] == [
+        "Intro",
+        "Verse 1",
+        "Finale",
+    ]
 
 
 def test_a_song_with_no_cue_sheet_fields_still_renders(tmp_path):
@@ -90,7 +97,9 @@ def test_a_song_with_no_cue_sheet_fields_still_renders(tmp_path):
 
     assert events
     section = events[0]["timeline"]["sections"][0]
-    assert section["label"] == "S1"
+    # 카드 t391 — 구간이 하나뿐이면 첫 구간(intro)이자 마지막 구간(finale)
+    # 둘 다인데, `_infer_confirmed_role` 은 index==0 을 먼저 본다.
+    assert section["label"] == "Intro"
     assert "palette" in section and "position" in section
 
 
