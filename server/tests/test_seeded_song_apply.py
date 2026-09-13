@@ -53,9 +53,12 @@ def test_the_seed_timeline_names_the_groups_it_needs() -> None:
 def test_only_names_the_console_reported_get_an_address() -> None:
     payload = _groups_payload(("KEY", 11), ("BACK", 12), ("Unrelated", 99))
     mapping = layer_mapping_from_console_groups(payload, ["KEY", "BACK", "MOVER-U"])
+    # 카드 t409 후속 — `role` 이 `_LAYER_GROUP_ALIASES` 로 같이 붙는다("KEY"·
+    # "BACK" 은 정확 일치하는 별칭이 있다). 콘솔이 실제로 이 이름을 보고했는데
+    # role 이 안 붙어 보조 컬러의 back 조회가 늘 실패하던 것이 이 자리의 결함이었다.
     assert mapping == [
-        {"group_name": "KEY", "group_no": 11},
-        {"group_name": "BACK", "group_no": 12},
+        {"group_name": "KEY", "group_no": 11, "role": "key"},
+        {"group_name": "BACK", "group_no": 12, "role": "back"},
     ]
 
 
@@ -64,7 +67,7 @@ def test_a_near_miss_name_is_left_unaddressed_rather_than_guessed() -> None:
     payload = _groups_payload(("Side L", 13), ("key", 11))
     mapping = layer_mapping_from_console_groups(payload, ["SIDE-L", "KEY"])
     # 대소문자만 접는다: `key` 는 `KEY` 와 같은 이름, `Side L` 은 `SIDE-L` 과 다르다.
-    assert mapping == [{"group_name": "KEY", "group_no": 11}]
+    assert mapping == [{"group_name": "KEY", "group_no": 11, "role": "key"}]
 
 
 def test_an_unreadable_payload_yields_no_address_book() -> None:
@@ -208,6 +211,11 @@ def test_a_colour_change_reaches_the_desk_as_a_colour_command(full_rig):
 
     큐 10 은 BACK·WASH-U·HAZE 를 쓰고 팔레트가 P1 골드앰버다. P4 핫핑크
     (#FF3C9E)로 바꾸면 백분율 축으로 (100, 24, 62) 가 된다.
+
+    카드 t409 후속 — 콘솔이 실제로 보고한 "BACK" 그룹이 이제
+    `layer_mapping_from_console_groups` 로 role 이 잡히므로, 큐 10 의
+    보조 컬러("P2 웜화이트")가 그 back 그룹(Group 2)에도 실려 나간다 —
+    메인 값 줄 뒤에 이어붙는 두 번째 `Group … ; Attribute 'ColorRGB…'` 절.
     """
     session, console, _store, sent, channel = full_rig
     session.run_instruction("큐 10 컬러를 P4 핫핑크로 바꿔줘", 10)
@@ -218,10 +226,13 @@ def test_a_colour_change_reaches_the_desk_as_a_colour_command(full_rig):
     assert (
         "Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; "
         "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 24 ; "
-        "Attribute 'ColorRGB_B' At 62"
+        "Attribute 'ColorRGB_B' At 62 ; "
+        "Group 2 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 88 ; "
+        "Attribute 'ColorRGB_B' At 69"
     ) in console.executed
     assert "Store Sequence 3 Cue 10 /Merge" in console.executed
     assert "컬러 P4 핫핑크" in event["text"]
+    assert "보조컬러 P2 웜화이트" in event["text"]
     assert "미반영" not in event["text"]  # 건너뛴 큐 없음
 
 

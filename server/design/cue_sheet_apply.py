@@ -64,6 +64,7 @@ from dataclasses import dataclass, field
 from server.design.color_names import resolve_color_name
 from server.design.cue_fade import store_with_fade
 from server.design.cue_sheet_edit import section_intensity_percent
+from server.design.rig import _LAYER_GROUP_ALIASES
 from server.looks.songcue import UNMAPPED_LOOK
 from server.looks.songcue_report import ROLE_UNADDRESSED
 
@@ -93,10 +94,17 @@ _HEX_COLOR = re.compile(r"#[0-9A-Fa-f]{6}")
 #: 각 칸의 명령 형태는 **이 저장소에 이미 있는 생산자**에서 가져왔다(t293).
 #: 출처를 못 대는 칸은 넓히지 않았다 — 아래 :data:`UNSOURCED_FIELD_REASONS` 가
 #: 그 목록과 사유다.
+#: 카드 t409 — ``palette_secondary`` 가 여기 합류했다. 감독 판정("메인 색
+#: 깔고 포인트는 보조로")에 따라 ``layer_mapping`` 의 ``back`` 역할 그룹이
+#: 있으면 그 그룹에 얹는다(:func:`plan_cue_console_apply` 안의 보조 컬러
+#: 절 — 별도 함수로 뽑혀 있지 않다). 대상이 없으면 여전히
+#: :data:`ROLE_UNADDRESSED` 로 정직하게 건너뛴다 — 조용히 메인 색만 내고
+#: 보조를 실은 척하지 않는다.
 CONSOLE_APPLIABLE_FIELDS: tuple[str, ...] = (
     "intensity",
     "d_level",
     "palette_primary",
+    "palette_secondary",
     "fade_seconds",
 )
 
@@ -106,10 +114,6 @@ UNSOURCED_FIELD_REASONS: dict[str, str] = {
     "mood": (
         "무드는 콘솔 값이 아니라 룩을 고르는 말입니다 — 값으로 옮기려면 룩 "
         "라이브러리를 다시 태워야 하고, 그것은 `prepare_songcue` 의 일입니다"
-    ),
-    "palette_secondary": (
-        "보조 컬러를 실을 두 번째 대상이 이 통로에 없습니다 — 한 큐의 한 그룹 "
-        "선택에는 컬러 한 벌만 올라갑니다"
     ),
     "movement": (
         "무브먼트(Pan/Tilt) 명령 형태가 이 저장소에 없습니다 — 룩 라이브러리는 "
@@ -270,6 +274,17 @@ def layer_mapping_from_console_groups(
     주장하지 않는다. 기록하는 것은 「이 이름이 콘솔 몇 번 그룹인가」뿐이다.
     맞는 이름이 없으면 그 이름은 주소록에 안 들어가고, 그 큐는 나중에
     ``ROLE_UNADDRESSED`` 로 건너뛴다 — 없는 것이 틀린 것보다 낫다.
+
+    카드 t409 후속 — 그룹 이름이 `server/design/rig.py` 의
+    ``_LAYER_GROUP_ALIASES``(RG5 — 정확 일치만, 부분 문자열 추측 없음)에
+    걸리면 ``role`` 도 같이 적는다. `server/web/session.py` 의
+    `_layer_mapping_from_group_children` 가 이미 같은 표로 역할을 매기고
+    있었는데, 이 함수(사전 점검·시드 곡 반영이 쓰는 주소록 생성기)만 표를
+    쓰지 않아 콘솔이 실제로 보고한 "BACK" 그룹이 있어도 ``role: "back"``
+    이 안 붙었다 — 보조 컬러의 back 역할 조회(``plan_cue_console_apply``)가
+    이 경로에서는 항상 실패하는 원인이었다(감독 재정 — 리그가 진짜로
+    back 레이어가 없는 게 아니라, 이 주소록 생성기가 role 을 안 적었을
+    뿐이다).
     """
     if not isinstance(payload, Mapping):
         return []
@@ -291,7 +306,12 @@ def layer_mapping_from_console_groups(
             continue
         claimed.add(key)
         # 타임라인이 쓴 철자로 적는다 — `_group_numbers` 는 이 이름으로 찾는다.
-        mapping.append({"group_name": wanted[key], "group_no": number})
+        entry: dict[str, object] = {"group_name": wanted[key], "group_no": number}
+        for role, aliases in _LAYER_GROUP_ALIASES.items():
+            if key in aliases:
+                entry["role"] = role
+                break
+        mapping.append(entry)
     return mapping
 
 
@@ -444,8 +464,9 @@ def plan_cue_console_apply(
 
     # 어느 축이 달라졌나. 축마다 명령 형태의 출처가 다르므로 따로 센다.
     intensity_changed = _intensity_changed(previous, section)
-    color_changed = previous is None or previous.get("palette_primary") != section.get(
-        "palette_primary"
+    color_changed = previous is None or (
+        previous.get("palette_primary") != section.get("palette_primary")
+        or previous.get("palette_secondary") != section.get("palette_secondary")
     )
     fade_changed = previous is None or _fade_seconds(previous) != _fade_seconds(section)
     unsourced = [
@@ -513,6 +534,59 @@ def plan_cue_console_apply(
     elif rgb is not None:
         value_line += " ; " + _color_line(rgb)
         parts.append(f"컬러 {section.get('palette_primary')}")
+
+    # 카드 t409 — 감독 판정 "메인 색 깔고 포인트는 보조로". 메인은 위에서
+    # 이미 나갔고, 이 칸은 `layer_mapping` 의 `back` 역할 그룹에 보조
+    # 컬러를 얹는다. 대상 그룹이 없거나 색을 못 찾으면 조용히 메인만
+    # 내지 않는다 — 큰 소리로 건너뛴다(정본 [HARD]).
+    #
+    # 감독 재정(카드 t409 후속) — `color_changed` 와 같은 축으로 판정한다
+    # (previous 없음 = 처음부터 다시 반영하는 경우도 포함). 예전에는
+    # `previous is not None` 으로 좁혀 첫 전체 반영(감독이 새 곡을 처음
+    # 콘솔에 올리는 그 순간)에서 보조 컬러가 아예 안 나갔다 — "후렴
+    # 블루 + 백라이트에 warm white" 의 백라이트 절반이 사라지는 결함이었다.
+    # `_group_numbers` 가 못 찾은 이름을 조용히 버리지 않고 `ROLE_UNADDRESSED`
+    # 로 건너뛰는 것과 같은 원칙 — 대상이 없으면 큰 소리로 알리되, 첫
+    # 반영이라는 이유로 시도조차 안 하지는 않는다.
+    secondary = section.get("palette_secondary")
+    if color_changed and isinstance(secondary, str) and secondary.strip():
+        back_no = next(
+            (
+                entry.get("group_no")
+                for entry in layer_mapping
+                if entry.get("role") == "back" and isinstance(entry.get("group_no"), int)
+            ),
+            None,
+        )
+        if back_no is None:
+            skips.append(
+                CueSkip(
+                    cue_number=cue,
+                    label=label,
+                    reason=ROLE_UNADDRESSED,
+                    detail=(
+                        "보조 컬러를 못 보냈습니다 — back 역할 그룹 번호를 모릅니다: "
+                        f"{secondary!r}."
+                    ),
+                )
+            )
+        else:
+            secondary_rgb = _palette_rgb(colors, secondary)
+            if secondary_rgb is None:
+                skips.append(
+                    CueSkip(
+                        cue_number=cue,
+                        label=label,
+                        reason=UNMAPPED_LOOK,
+                        detail=(
+                            "보조 컬러는 못 보냈습니다 — 팔레트 범례에 없는 이름입니다: "
+                            f"{secondary!r} (색을 지어내지 않습니다)."
+                        ),
+                    )
+                )
+            else:
+                value_line += f" ; Group {back_no} ; " + _color_line(secondary_rgb)
+                parts.append(f"보조컬러 {secondary}")
 
     fade = _fade_seconds(section) if fade_changed else None
     if fade is not None:
