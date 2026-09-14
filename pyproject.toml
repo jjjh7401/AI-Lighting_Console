@@ -8,6 +8,18 @@ dependencies = [
     "anthropic>=0.116.0",
     "fastapi>=0.115",
     "google-genai>=2.12.0",
+    # SPEC-LDSTORE-001 M1: Director 교환 객체를 계약이 규범으로 지정한 JSON Schema
+    # (SPEC-LDPLUGIN-001/schemas/exchange.schema.json, draft 2020-12)로 검증한다.
+    # 손으로 재구현하면 계약이 금지한 두 번째 wire 원본이 생긴다. format-nongpl 변종은
+    # date-time 검사(rfc3339-validator)를 GPL 없이 제공한다 — 계약 §11 이 format checker
+    # 없는 validator 로는 date-time 이 보장되지 않는다고 경고한다.
+    "jsonschema[format-nongpl]>=4.23",
+    # SPEC-LDSTORE-001 M1: 계약 §9 가 모든 JSON digest 를
+    # sha256(UTF-8(RFC8785/JCS(value))) 로 규정한다. digest 는 외부 플러그인이 같은
+    # 값을 계산해야 하는 wire 계약이므로 근사하면 안 된다 — stdlib json 은 JCS 가
+    # 아니다(정수값 float 을 `1.0` 으로 쓰고 JCS 는 `1` 로 쓴다, 실측 확인).
+    # 계약의 합성 예제 digest 를 시험 벡터로 쓴다.
+    "rfc8785>=0.1.4",
     # M7: embedded Lua 5.4 for the deploy_plugin pcall compile harness
     # (REQ-MVP-019) — promoted from the dev group (ratification item).
     "keyring>=25,<26",
