@@ -161,6 +161,11 @@ _OUTLIER_TRIM_MIN_SECTIONS = 10
 #: 재정의"하는 셈이 된다.
 _OUTLIER_TRIM_MAX_FRACTION = 0.10
 
+#: 디코드된 샘플 수가 헤더가 선언한 프레임 수의 이 비율보다 적으면 조용한 잘림으로
+#: 본다(t416). mp3 는 인코더 패딩 때문에 선언과 디코드가 몇 프레임 어긋날 수 있어
+#: 1.0 이 아니다. 실측한 잘림은 0.647(실제 곡)과 0.15~0.19(합성 변형)였다.
+_MIN_DECODED_FRACTION = 0.98
+
 #: 폴백(librosa 없는 배포본)에서 돌려주는 사유. 확인 카드는 이 사유를 읽고
 #: **수동 BPM 입력 카드**로 갈아탄다 — 카드 경로 자체는 살아 있다
 #: (plan.md §C 결정 1 · AC-MUSICSYNC-017).
@@ -240,12 +245,26 @@ def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
         return AnalysisFailure(MANUAL_BPM_FALLBACK_REASON)
 
     try:
+        declared_frames = soundfile.info(io.BytesIO(payload)).frames
         samples, sample_rate = soundfile.read(io.BytesIO(payload), dtype="float32", always_2d=True)
     except Exception as error:  # soundfile 은 형식마다 다른 예외를 낸다
         return AnalysisFailure(f"오디오 형식을 읽지 못했습니다: {error}")
 
     if samples.size == 0 or sample_rate <= 0:
         return AnalysisFailure("오디오에 샘플이 없습니다.")
+
+    # t416 — 디코더가 **예외 없이** 중간에서 멈출 수 있다. 실측(2026-09-14):
+    # Let's Dance.mp3 는 헤더가 140.55초를 선언하는데 libmpg123 가 91초에서
+    # 「dequantization failed」로 멈추고 soundfile 은 90.98초만 돌려줬다. 부분
+    # 오디오로 잰 BPM·구간을 곡의 값으로 제안하느니 정직하게 거절한다.
+    if declared_frames > 0 and len(samples) < declared_frames * _MIN_DECODED_FRACTION:
+        decoded_s = len(samples) / sample_rate
+        declared_s = declared_frames / sample_rate
+        return AnalysisFailure(
+            f"오디오를 끝까지 읽지 못했습니다 — 파일은 {declared_s:.1f}초인데 "
+            f"{decoded_s:.1f}초에서 디코더가 멈췄습니다. 곡의 일부만 분석하면 BPM 과 "
+            "구간이 틀리므로 분석하지 않습니다. 파일을 WAV 등으로 다시 내보내 올려 주세요."
+        )
 
     mono = numpy.ascontiguousarray(samples.mean(axis=1), dtype=numpy.float32)
     duration_ms = int(round(len(mono) * 1000.0 / sample_rate))
