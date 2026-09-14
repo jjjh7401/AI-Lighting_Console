@@ -22,7 +22,9 @@ import {
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
   buildSongAudioAnalyse,
-  buildSongAudioUpload,
+  buildSongAudioUploadBegin,
+  buildSongAudioUploadChunk,
+  buildSongAudioUploadEnd,
   buildHistoryRestore,
   CHAT_STORAGE_KEY,
   clearPendingRequests,
@@ -196,7 +198,13 @@ export interface CopilotSocket {
   sendVectorworksExportUpload: (fileName: string, contentBase64: string) => boolean;
   /** SPEC-COPILOT-IMGLAYOUT-001 M1 — attach a design/reference image. */
   sendLayoutImageUpload: (fileName: string, mimeType: string, contentBase64: string) => boolean;
-  sendSongAudioUpload: (fileName: string, mimeType: string, contentBase64: string) => boolean;
+  /** REQ-MUSICSYNC-027 — 곡은 조각(base64 문자열 배열)으로 보낸다. */
+  sendSongAudioUpload: (
+    fileName: string,
+    mimeType: string,
+    totalBytes: number,
+    chunks: string[],
+  ) => boolean;
   /** M2 후속 — 담아 둔 곡을 재라고 부른다. 답은 확인 카드로 돌아온다. */
   sendSongAudioAnalyse: () => void;
   sendLock: (active: boolean) => void;
@@ -363,11 +371,13 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     [],
   );
   const sendSongAudioUpload = useCallback(
-    (fileName: string, mimeType: string, contentBase64: string) => {
+    (fileName: string, mimeType: string, totalBytes: number, chunks: string[]) => {
       const socket = socketRef.current;
       if (socket === null || socket.readyState !== WebSocket.OPEN) return false;
       dispatch({ kind: "user", text: `곡 첨부: ${fileName}` });
-      socket.send(buildSongAudioUpload(fileName, mimeType, contentBase64));
+      socket.send(buildSongAudioUploadBegin(fileName, mimeType, totalBytes, chunks.length));
+      chunks.forEach((chunk, index) => socket.send(buildSongAudioUploadChunk(index, chunk)));
+      socket.send(buildSongAudioUploadEnd());
       return true;
     },
     [],

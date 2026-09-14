@@ -52,12 +52,21 @@ SONG_AUDIO_MIME_TYPES = (
     "audio/mp4",
     "audio/x-m4a",
 )
-# 실효 상한은 **디코드된 원본 8 MiB 하나**다(REQ-MUSICSYNC-014). 아래 base64
-# 문자열 길이 상한은 그 8 MiB 에서 파생된 값이지 별도 상한이 아니다 — 두 개의
-# 상한이 있는 것처럼 읽히면 나중에 한쪽만 고쳐진다.
-MAX_SONG_AUDIO_BYTES = 8 * 1024 * 1024
+# 실효 상한은 **디코드된 원본 64 MiB 하나**다(REQ-MUSICSYNC-026). 아래 base64
+# 문자열 길이 상한은 그 64 MiB 에서 파생된 값이지 별도 상한이 아니다 — 두 개의
+# 상한이 있는 것처럼 읽히면 나중에 한쪽만 고쳐진다. 2026-09-14 전에는 8 MiB 였고
+# 감독 곡 31.5MB 가 어느 경로로도 안 올라갔다.
+MAX_SONG_AUDIO_BYTES = 64 * 1024 * 1024
 MAX_SONG_AUDIO_BASE64_LENGTH = ((MAX_SONG_AUDIO_BYTES + 2) // 3) * 4
-_SONG_AUDIO_CAP_PHRASE = f"상한 8 MiB({MAX_SONG_AUDIO_BYTES}바이트)"
+_SONG_AUDIO_CAP_PHRASE = (
+    f"상한 {MAX_SONG_AUDIO_BYTES // (1024 * 1024)} MiB({MAX_SONG_AUDIO_BYTES}바이트)"
+)
+
+# 분할 전송의 조각 하나 상한(REQ-MUSICSYNC-027). 상한을 64 MiB 로 올려도 **한
+# 프레임**으로는 못 보낸다 — ``server/web/serve.py`` 의 ``uvicorn.run`` 이
+# ``ws_max_size`` 를 주지 않아 기본 16777216(16 MiB)이 프레임 천장이고, 31.5MB 곡의
+# base64 는 약 42MB 다. 조각 base64 4 MiB 는 JSON 으로 감싸도 그 천장 안에 넉넉히 든다.
+MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH = 4 * 1024 * 1024
 
 # The show-control panel's client messages (SPEC-COPILOT-SHOWUI-001 M1). Like
 # the M7 "review_decision" extension before it this is ADDITIVE: the protocol
@@ -113,6 +122,12 @@ CLIENT_MESSAGE_TYPES = (
     # 등록한다. 한쪽에만 있는 타입은 클라이언트에서 조용히 사라지고 서버에서
     # 시끄럽게 틀린다.
     "song_audio_upload",
+    # REQ-MUSICSYNC-027 — 한 프레임에 안 담기는 곡의 분할 전송. 조립은 연결 하나에
+    # 하나인 :class:`SongAudioAssembly` 가 하고, ``end`` 가 검증을 통과해야만 위
+    # ``song_audio_upload`` 와 같은 보관 경로로 넘어간다.
+    "song_audio_upload_begin",
+    "song_audio_upload_chunk",
+    "song_audio_upload_end",
     # SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 「지금 재라」 요청. 업로드 프레임은
     # 바이트를 담고 멈추므로(REQ-MUSICSYNC-013 은 보관까지다), 분석·확인 카드·
     # BPM 확정(REQ-MUSICSYNC-015)을 **부르는 것**이 따로 필요하다. 이 타입이
@@ -226,6 +241,95 @@ def _is_object_number(value: object) -> bool:
     plausible-looking target.
     """
     return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _check_song_audio_name_and_mime(file_name: object, mime_type: object) -> None:
+    """단일 프레임과 분할 ``begin`` 이 **같은** 파일 이름·MIME 규칙을 쓴다."""
+    if not isinstance(file_name, str) or not file_name.strip():
+        raise SongAudioRejectedError("오디오 파일 이름이 비어 있습니다.")
+    if not file_name.lower().endswith(SONG_AUDIO_UPLOAD_EXTENSIONS):
+        allowed = ", ".join(SONG_AUDIO_UPLOAD_EXTENSIONS)
+        raise SongAudioRejectedError(
+            f"오디오 파일의 확장자가 허용 목록에 없습니다 — 허용: {allowed}"
+        )
+    if mime_type not in SONG_AUDIO_MIME_TYPES:
+        allowed = ", ".join(SONG_AUDIO_MIME_TYPES)
+        raise SongAudioRejectedError(
+            f"오디오 파일의 MIME 종류가 허용 목록에 없습니다 — 허용: {allowed}"
+        )
+
+
+class SongAudioAssembly:
+    """분할 전송(begin · chunk · end)을 조립한다 — 연결 하나에 하나 (REQ-MUSICSYNC-027).
+
+    조립 중인 부분 바이트는 **세션 첨부가 아니다.** :meth:`finish` 가 조각 수와
+    총 길이를 대조해 통과해야만 ``song_audio_upload`` 와 같은 모양의 dict 를
+    돌려주고, 호출자는 그것을 기존 보관 경로에 넘긴다. 어느 단계에서든 거절되면
+    버퍼를 버린다 — 깨진 분할이 다음 전송에 섞이지 않게 한다.
+    """
+
+    def __init__(self) -> None:
+        self._header: dict | None = None
+        self._parts: list[bytes] = []
+        self._received = 0
+
+    @property
+    def active(self) -> bool:
+        return self._header is not None
+
+    def _reset(self) -> None:
+        self._header = None
+        self._parts = []
+        self._received = 0
+
+    def _refuse(self, reason: str) -> SongAudioRejectedError:
+        self._reset()
+        return SongAudioRejectedError(reason)
+
+    def begin(self, message: dict) -> None:
+        # 새 begin 은 이전 미완성 전송을 버린다 — 운영자가 다른 곡을 고른 경우다.
+        self._reset()
+        self._header = message
+
+    def add(self, message: dict) -> None:
+        if self._header is None:
+            raise self._refuse("오디오 조각이 시작 신호 없이 왔습니다 — 파일을 다시 올려 주세요.")
+        if message["index"] != len(self._parts):
+            expected = len(self._parts)
+            raise self._refuse(
+                f"오디오 조각 순서가 어긋났습니다 — {expected}번을 기다렸는데 "
+                f"{message['index']}번이 왔습니다. 파일을 다시 올려 주세요."
+            )
+        payload = message["payload"]
+        total = self._header["total_bytes"]
+        if self._received + len(payload) > total:
+            raise self._refuse(
+                f"오디오 조각이 선언한 총 크기 {total}바이트를 넘었습니다 "
+                "— 파일을 다시 올려 주세요."
+            )
+        self._parts.append(payload)
+        self._received += len(payload)
+
+    def finish(self) -> dict:
+        header = self._header
+        if header is None:
+            raise self._refuse("오디오 전송 종료 신호가 시작 신호 없이 왔습니다.")
+        if len(self._parts) != header["chunk_count"] or self._received != header["total_bytes"]:
+            reason = (
+                f"오디오 분할 전송이 완전하지 않습니다 — 조각 {len(self._parts)}/"
+                f"{header['chunk_count']}개, {self._received}/{header['total_bytes']}바이트. "
+                "파일을 다시 올려 주세요."
+            )
+            raise self._refuse(reason)
+        data = b"".join(self._parts)
+        self._reset()
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "song_audio_upload",
+            "file_name": header["file_name"],
+            "mime_type": header["mime_type"],
+            "content_base64": base64.b64encode(data).decode("ascii"),
+        }
 
 
 def parse_client_message(raw: str) -> dict:
@@ -347,18 +451,7 @@ def parse_client_message(raw: str) -> dict:
         # 않는다. 상한 검사가 **두 번** 나오는 것은 중복이 아니다 — 앞의 것은
         # 디코드 비용 자체를 막는 문자열 길이 검사이고, 판정하는 것은 뒤의
         # 디코드된 바이트 검사다(``:218`` 의 기존 검사와 같은 형태).
-        if not isinstance(file_name, str) or not file_name.strip():
-            raise SongAudioRejectedError("오디오 파일 이름이 비어 있습니다.")
-        if not file_name.lower().endswith(SONG_AUDIO_UPLOAD_EXTENSIONS):
-            allowed = ", ".join(SONG_AUDIO_UPLOAD_EXTENSIONS)
-            raise SongAudioRejectedError(
-                f"오디오 파일의 확장자가 허용 목록에 없습니다 — 허용: {allowed}"
-            )
-        if mime_type not in SONG_AUDIO_MIME_TYPES:
-            allowed = ", ".join(SONG_AUDIO_MIME_TYPES)
-            raise SongAudioRejectedError(
-                f"오디오 파일의 MIME 종류가 허용 목록에 없습니다 — 허용: {allowed}"
-            )
+        _check_song_audio_name_and_mime(file_name, mime_type)
         if not isinstance(content_base64, str) or not content_base64:
             raise SongAudioRejectedError("오디오 파일의 내용이 비어 있습니다.")
         if len(content_base64) > MAX_SONG_AUDIO_BASE64_LENGTH:
@@ -385,6 +478,58 @@ def parse_client_message(raw: str) -> dict:
             "mime_type": mime_type,
             "content_base64": content_base64,
         }
+
+    if message_type == "song_audio_upload_begin":
+        file_name = message.get("file_name")
+        mime_type = message.get("mime_type")
+        _check_song_audio_name_and_mime(file_name, mime_type)
+        total_bytes = message.get("total_bytes")
+        chunk_count = message.get("chunk_count")
+        if not _is_object_number(total_bytes) or not _is_object_number(chunk_count):
+            raise SongAudioRejectedError(
+                "오디오 분할 전송의 총 크기와 조각 수는 1 이상의 정수여야 합니다."
+            )
+        if total_bytes > MAX_SONG_AUDIO_BYTES:
+            raise SongAudioRejectedError(
+                f"오디오 파일이 {_SONG_AUDIO_CAP_PHRASE}를 넘습니다 "
+                f"— 받은 크기 {total_bytes}바이트. 더 짧은 구간을 올려 주세요."
+            )
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "song_audio_upload_begin",
+            "file_name": file_name.strip(),
+            "mime_type": mime_type,
+            "total_bytes": total_bytes,
+            "chunk_count": chunk_count,
+        }
+
+    if message_type == "song_audio_upload_chunk":
+        index = message.get("index")
+        content_base64 = message.get("content_base64")
+        # bool 을 먼저 막는다 — 파이썬에서 bool 은 int 의 하위형이라 True 가 조각 1로 샌다.
+        if not isinstance(index, int) or isinstance(index, bool) or index < 0:
+            raise SongAudioRejectedError("오디오 조각 번호는 0 이상의 정수여야 합니다.")
+        if not isinstance(content_base64, str) or not content_base64:
+            raise SongAudioRejectedError("오디오 조각의 내용이 비어 있습니다.")
+        if len(content_base64) > MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH:
+            raise SongAudioRejectedError(
+                f"오디오 조각 하나가 상한 {MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH}자를 넘습니다."
+            )
+        try:
+            payload = base64.b64decode(content_base64, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise SongAudioRejectedError(
+                f"오디오 조각의 내용을 읽지 못했습니다 — base64 가 아닙니다: {error}"
+            ) from error
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "song_audio_upload_chunk",
+            "index": index,
+            "payload": payload,
+        }
+
+    if message_type == "song_audio_upload_end":
+        return {"v": PROTOCOL_VERSION, "type": "song_audio_upload_end"}
 
     if message_type == "song_audio_analyse":
         # 페이로드가 없다 — 잴 곡은 이미 세션에 있다. 이 프레임이 나르는 것은

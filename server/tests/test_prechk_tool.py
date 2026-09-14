@@ -1278,6 +1278,12 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # 하는 업로드 채널. layout_image_upload 와 같은 형태이고 PRECHK/OVERLAP 축과
     # 무관한 정당한 확장이다. 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
     "song_audio_upload",
+    # REQ-MUSICSYNC-027 (2026-09-14) — 한 프레임에 안 담기는 곡의 분할 전송 셋.
+    # 기존 보관 경로로만 흘러가고 PRECHK/OVERLAP 축과 무관한 정당한 확장이다.
+    # 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "song_audio_upload_begin",
+    "song_audio_upload_chunk",
+    "song_audio_upload_end",
     "status_request",
     # t281 (2026-09-06) — 큐시트 초안 되돌리기/다시하기. 초안 사전만 바꿔 끼우고
     # 콘솔·라이브러리에는 닿지 않는다. PRECHK/OVERLAP 축과 무관한 정당한 확장이고,
