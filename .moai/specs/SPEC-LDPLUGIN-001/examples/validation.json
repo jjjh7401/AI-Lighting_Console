@@ -1,0 +1,1367 @@
+{
+  "message_type": "validation_report",
+  "schema_version": "1.0.0",
+  "environment": "synthetic",
+  "validation_id": "validation-synthetic-001",
+  "project_id": "project-synthetic",
+  "plan_id": "plan-synthetic-song",
+  "plan_digest": "sha256:bee1cda574b556e3959a95f061ba3f607f665ea14953152f7d72d2efb4f0680f",
+  "context_digest": "sha256:fde69740868be1444fd6430082707077e2744aaddfe1eee5e6b4ee200aa6fdee",
+  "created_at": "2026-09-13T10:05:00Z",
+  "expires_at": "2026-09-13T10:15:00Z",
+  "outcome": "ready_for_review",
+  "diagnostics": [
+    {
+      "diagnostic_id": "diagnostic-root",
+      "rule_id": "LD-SYN-001",
+      "pointer": "",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 계약 사례의 예상 결과. 실제 컴파일·검증·콘솔 실행 결과가 아니다.",
+      "evidence_refs": [
+        "ev-music"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-001",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/0/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-002",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/0/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-003",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/0/actions/2",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-004",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/0/actions/3",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-005",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/0/actions/4",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-006",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/0/actions/5",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-007",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/0/actions/6",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-008",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/0/actions/7",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-009",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/1/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-010",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/1/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-011",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/2/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-012",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/2/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-013",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/3/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-014",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/4/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-015",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/5/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-016",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/5/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-017",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/5/actions/2",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-018",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/5/actions/3",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-019",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/5/actions/4",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-020",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/5/actions/5",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-021",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/5/actions/6",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-022",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/5/actions/7",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-023",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/6/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-024",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/6/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-025",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/7/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-026",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/7/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-027",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/8/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-028",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/8/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-029",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/8/actions/2",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-030",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/8/actions/3",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-031",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/8/actions/4",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-032",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/8/actions/5",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-033",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/8/actions/6",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-034",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/8/actions/7",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-035",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/9/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-036",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/9/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-037",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/9/actions/2",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-038",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/9/actions/3",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-039",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/9/actions/4",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-040",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/9/actions/5",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-041",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/9/actions/6",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-042",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/9/actions/7",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-043",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/10/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-044",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/10/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-045",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/11/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-046",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/11/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-047",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/12/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-048",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/12/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-049",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/12/actions/2",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-050",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/12/actions/3",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-051",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/12/actions/4",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-052",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/12/actions/5",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-053",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/12/actions/6",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-054",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/12/actions/7",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-055",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/13/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-056",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/13/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-057",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/14/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-058",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/14/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-059",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/15/actions/0",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "diagnostic_id": "diagnostic-action-060",
+      "rule_id": "LD-CAP-001",
+      "pointer": "/cues/15/actions/1",
+      "status": "accepted",
+      "blocking": false,
+      "before": {
+        "present": false
+      },
+      "after": {
+        "present": false
+      },
+      "reason": "합성 emitter가 해당 action의 모든 명시적 필드를 보존한다고 가정한 예상 수용 결과. 이 fixture는 실제 emitter 지원을 증명하지 않는다.",
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    }
+  ],
+  "compiled": {
+    "available": true,
+    "compiled_digest": "sha256:52a66d7c882f1e6b6afc49241f411dfd65fc4893d28f9dc76abd613a1a4163ea",
+    "manifest": {
+      "compiler_id": "compiler-synthetic",
+      "compiler_version": "fixture-1",
+      "compiler_build_digest": "sha256:ac1594ed2d779e4191778a65198eb6e7707195940515d9d85b17818c084552e3",
+      "plan_digest": "sha256:bee1cda574b556e3959a95f061ba3f607f665ea14953152f7d72d2efb4f0680f",
+      "context_digest": "sha256:fde69740868be1444fd6430082707077e2744aaddfe1eee5e6b4ee200aa6fdee",
+      "target": {
+        "console_id": "console-synthetic",
+        "session_id": "session-synthetic",
+        "destination": {
+          "datapool_id": "datapool-synthetic",
+          "sequence_number": 901,
+          "occupancy": "empty",
+          "occupancy_revision": 1,
+          "evidence_refs": [
+            "ev-rig"
+          ]
+        }
+      },
+      "bundles": [
+        {
+          "bundle_id": "bundle-cue-baseline",
+          "cue_id": "cue-baseline",
+          "action_ids": [
+            "action-001",
+            "action-002",
+            "action-003",
+            "action-004",
+            "action-005",
+            "action-006",
+            "action-007",
+            "action-008"
+          ],
+          "at_ms": 0,
+          "artifact_resource_id": "artifact-cue-baseline",
+          "artifact_sha256": "sha256:ef8aeb11f3ebe4e0f22267fc88cbbf4192beaf1860d05788dc9a07a41717b60d",
+          "cue_number": 1,
+          "trigger": {
+            "type": "manual_go",
+            "relative_ms": 0
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-intro-rise",
+          "cue_id": "cue-intro-rise",
+          "action_ids": [
+            "action-009",
+            "action-010"
+          ],
+          "at_ms": 1000,
+          "artifact_resource_id": "artifact-cue-intro-rise",
+          "artifact_sha256": "sha256:be5589104ed954206a6d9ff22c4960bfcf43a31dee2aafe8d3f07b387dd6417e",
+          "cue_number": 2,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 1000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-verse-a",
+          "cue_id": "cue-verse-a",
+          "action_ids": [
+            "action-011",
+            "action-012"
+          ],
+          "at_ms": 20000,
+          "artifact_resource_id": "artifact-cue-verse-a",
+          "artifact_sha256": "sha256:f6188143bb4077a067885c3533169285d22d137c1b38b5deb45fb0d42187a2ee",
+          "cue_number": 3,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 19000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-accent",
+          "cue_id": "cue-accent",
+          "action_ids": [
+            "action-013"
+          ],
+          "at_ms": 35000,
+          "artifact_resource_id": "artifact-cue-accent",
+          "artifact_sha256": "sha256:a6fb8799b03d3006e83ef57268bde64fdaa13d814cb8f46c1ac4a30808418684",
+          "cue_number": 4,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 15000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-accent-return",
+          "cue_id": "cue-accent-return",
+          "action_ids": [
+            "action-014"
+          ],
+          "at_ms": 35300,
+          "artifact_resource_id": "artifact-cue-accent-return",
+          "artifact_sha256": "sha256:541a326ac725e90637191e81a99f5b0305c79f4c09aa2306182f73d6b521d5a7",
+          "cue_number": 5,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 300
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-chorus-a",
+          "cue_id": "cue-chorus-a",
+          "action_ids": [
+            "action-015",
+            "action-016",
+            "action-017",
+            "action-018",
+            "action-019",
+            "action-020",
+            "action-021",
+            "action-022"
+          ],
+          "at_ms": 50000,
+          "artifact_resource_id": "artifact-cue-chorus-a",
+          "artifact_sha256": "sha256:fc7d5ad31f8db31e5afafba188e18e0250bb2cb5ef0f207ea75321cc1188edeb",
+          "cue_number": 6,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 14700
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-fx-start-a",
+          "cue_id": "cue-fx-start-a",
+          "action_ids": [
+            "action-023",
+            "action-024"
+          ],
+          "at_ms": 52000,
+          "artifact_resource_id": "artifact-cue-fx-start-a",
+          "artifact_sha256": "sha256:64d0ffad97964a17f24001963abc3aa30d1261eb1258995b67069cbb26e0c0f2",
+          "cue_number": 7,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 2000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-fx-stop-a",
+          "cue_id": "cue-fx-stop-a",
+          "action_ids": [
+            "action-025",
+            "action-026"
+          ],
+          "at_ms": 79000,
+          "artifact_resource_id": "artifact-cue-fx-stop-a",
+          "artifact_sha256": "sha256:523cc8352877fe71da1f99d9ff7a742b2f949259db4de0c97b9056205feaca56",
+          "cue_number": 8,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 27000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-verse-b",
+          "cue_id": "cue-verse-b",
+          "action_ids": [
+            "action-027",
+            "action-028",
+            "action-029",
+            "action-030",
+            "action-031",
+            "action-032",
+            "action-033",
+            "action-034"
+          ],
+          "at_ms": 80000,
+          "artifact_resource_id": "artifact-cue-verse-b",
+          "artifact_sha256": "sha256:697e8aad53a8ef574889e3410a61c800c026f2631a95775305863c80b0de4851",
+          "cue_number": 9,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 1000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-chorus-b",
+          "cue_id": "cue-chorus-b",
+          "action_ids": [
+            "action-035",
+            "action-036",
+            "action-037",
+            "action-038",
+            "action-039",
+            "action-040",
+            "action-041",
+            "action-042"
+          ],
+          "at_ms": 110000,
+          "artifact_resource_id": "artifact-cue-chorus-b",
+          "artifact_sha256": "sha256:8fdaf5b70461b4589cf1bad7c0e6a93b55fa9fffe7e6e35a9951b15542f2ed55",
+          "cue_number": 10,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 30000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-fx-start-b",
+          "cue_id": "cue-fx-start-b",
+          "action_ids": [
+            "action-043",
+            "action-044"
+          ],
+          "at_ms": 112000,
+          "artifact_resource_id": "artifact-cue-fx-start-b",
+          "artifact_sha256": "sha256:7516dc45ab4aba3b13b4a785b0196ab256aa3fd51a4f0b47d712054aca877f04",
+          "cue_number": 11,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 2000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-fx-stop-b",
+          "cue_id": "cue-fx-stop-b",
+          "action_ids": [
+            "action-045",
+            "action-046"
+          ],
+          "at_ms": 139000,
+          "artifact_resource_id": "artifact-cue-fx-stop-b",
+          "artifact_sha256": "sha256:0d1a9e355bb21e718f03973a646e4edb7b225f16b01c4109d6ef26c2d0950093",
+          "cue_number": 12,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 27000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-bridge",
+          "cue_id": "cue-bridge",
+          "action_ids": [
+            "action-047",
+            "action-048",
+            "action-049",
+            "action-050",
+            "action-051",
+            "action-052",
+            "action-053",
+            "action-054"
+          ],
+          "at_ms": 140000,
+          "artifact_resource_id": "artifact-cue-bridge",
+          "artifact_sha256": "sha256:a34ec47fd2b04d4e2fcae1447f79d8ca0a5a8d0dd10aba87a82e010e5e3f117a",
+          "cue_number": 13,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 1000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-outro",
+          "cue_id": "cue-outro",
+          "action_ids": [
+            "action-055",
+            "action-056"
+          ],
+          "at_ms": 160000,
+          "artifact_resource_id": "artifact-cue-outro",
+          "artifact_sha256": "sha256:f17d48a3d3adeb4c0cfa2e4550ebe29b8242abfe261df0c1b555ad206efa2072",
+          "cue_number": 14,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 20000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-outro-low",
+          "cue_id": "cue-outro-low",
+          "action_ids": [
+            "action-057",
+            "action-058"
+          ],
+          "at_ms": 172000,
+          "artifact_resource_id": "artifact-cue-outro-low",
+          "artifact_sha256": "sha256:9c6fef1288ec08381faf02189b8eaf5a1fb029f60203518dc31ccb157d5703fd",
+          "cue_number": 15,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 12000
+          }
+        },
+        {
+          "bundle_id": "bundle-cue-terminal",
+          "cue_id": "cue-terminal",
+          "action_ids": [
+            "action-059",
+            "action-060"
+          ],
+          "at_ms": 179000,
+          "artifact_resource_id": "artifact-cue-terminal",
+          "artifact_sha256": "sha256:173198232fd2008c51e9efa3c5426ef0495714ca5f9a264550a0323eddf8cb04",
+          "cue_number": 16,
+          "trigger": {
+            "type": "time",
+            "relative_ms": 7000
+          }
+        }
+      ],
+      "playback": {
+        "mode": "trig_time",
+        "origin": "audio_start",
+        "start_policy": "operator_go"
+      }
+    }
+  }
+}

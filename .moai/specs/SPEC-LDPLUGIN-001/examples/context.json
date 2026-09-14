@@ -1,0 +1,463 @@
+{
+  "message_type": "context_snapshot",
+  "schema_version": "1.0.0",
+  "environment": "synthetic",
+  "context_id": "ctx-synthetic-001",
+  "context_digest": "sha256:fde69740868be1444fd6430082707077e2744aaddfe1eee5e6b4ee200aa6fdee",
+  "project_id": "project-synthetic",
+  "show_id": "show-synthetic",
+  "show_revision": 1,
+  "created_at": "2026-09-13T10:00:00Z",
+  "expires_at": "2026-09-13T11:00:00Z",
+  "audio": {
+    "audio_id": "audio-fixture",
+    "sha256": "sha256:ca890598f1f0f63aba2563fc92588aa381bb6d6b9a2c3af4adfbc6c1c797fed5",
+    "duration_ms": 180000,
+    "resource_id": "res-audio-fixture",
+    "source_kind": "synthetic_fixture"
+  },
+  "music_revision": 1,
+  "rig_revision": 1,
+  "capability_revision": 1,
+  "safety_policy_revision": 1,
+  "compiler": {
+    "compiler_id": "compiler-synthetic",
+    "version": "fixture-1",
+    "build_digest": "sha256:ac1594ed2d779e4191778a65198eb6e7707195940515d9d85b17818c084552e3"
+  },
+  "target": {
+    "console_id": "console-synthetic",
+    "session_id": "session-synthetic",
+    "identity_status": "synthetic",
+    "identity_evidence_refs": [
+      "ev-rig"
+    ],
+    "mode": "synthetic",
+    "destination": {
+      "datapool_id": "datapool-synthetic",
+      "sequence_number": 901,
+      "occupancy": "empty",
+      "occupancy_revision": 1,
+      "evidence_refs": [
+        "ev-rig"
+      ]
+    }
+  },
+  "sources": [
+    {
+      "source_id": "src-fixture",
+      "kind": "synthetic_fixture",
+      "resource_id": "res-fixture-notes",
+      "label": "가상의 3분 곡과 8대 장비; 실제 매체 없음"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "ev-music",
+      "kind": "music_map",
+      "resource_id": "res-music-map",
+      "confirmation": "synthetic",
+      "start_ms": 0,
+      "end_ms": 180000,
+      "summary": "두 후렴의 에너지는 같고 엔딩은 조용한 합성 음악 지도",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "evidence_id": "ev-beat",
+      "kind": "beat_map",
+      "resource_id": "res-beat-map",
+      "confirmation": "synthetic",
+      "start_ms": 0,
+      "end_ms": 180000,
+      "summary": "0–180초에 120 BPM이 명시된 합성 고정 템포 지도",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "evidence_id": "ev-rig",
+      "kind": "rig_inventory",
+      "resource_id": "res-rig-map",
+      "confirmation": "synthetic",
+      "start_ms": 0,
+      "end_ms": 180000,
+      "summary": "그룹별 4대·그룹 간 fixture 겹침 없음, 합성 datapool의 Sequence 901은 empty occupancy revision 1",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "evidence_id": "ev-presets",
+      "kind": "preset_measurement",
+      "resource_id": "res-preset-map",
+      "confirmation": "synthetic",
+      "start_ms": 0,
+      "end_ms": 180000,
+      "summary": "합성 preset 호환성과 이동 정착시간 800ms",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    }
+  ],
+  "music_sections": [
+    {
+      "section_id": "intro",
+      "start_ms": 0,
+      "end_ms": 20000,
+      "role": "intro",
+      "confidence": 1,
+      "energy": 0.2,
+      "repeat_of": [],
+      "evidence_refs": [
+        "ev-music"
+      ]
+    },
+    {
+      "section_id": "verse-a",
+      "start_ms": 20000,
+      "end_ms": 50000,
+      "role": "verse",
+      "confidence": 1,
+      "energy": 0.4,
+      "repeat_of": [],
+      "evidence_refs": [
+        "ev-music"
+      ]
+    },
+    {
+      "section_id": "chorus-a",
+      "start_ms": 50000,
+      "end_ms": 80000,
+      "role": "chorus",
+      "confidence": 1,
+      "energy": 0.8,
+      "repeat_of": [],
+      "evidence_refs": [
+        "ev-music"
+      ]
+    },
+    {
+      "section_id": "verse-b",
+      "start_ms": 80000,
+      "end_ms": 110000,
+      "role": "verse",
+      "confidence": 1,
+      "energy": 0.45,
+      "repeat_of": [],
+      "evidence_refs": [
+        "ev-music"
+      ]
+    },
+    {
+      "section_id": "chorus-b",
+      "start_ms": 110000,
+      "end_ms": 140000,
+      "role": "chorus",
+      "confidence": 1,
+      "energy": 0.8,
+      "repeat_of": [
+        "chorus-a"
+      ],
+      "evidence_refs": [
+        "ev-music"
+      ]
+    },
+    {
+      "section_id": "bridge",
+      "start_ms": 140000,
+      "end_ms": 160000,
+      "role": "bridge",
+      "confidence": 1,
+      "energy": 0.35,
+      "repeat_of": [],
+      "evidence_refs": [
+        "ev-music"
+      ]
+    },
+    {
+      "section_id": "outro",
+      "start_ms": 160000,
+      "end_ms": 180000,
+      "role": "outro",
+      "confidence": 1,
+      "energy": 0.1,
+      "repeat_of": [],
+      "evidence_refs": [
+        "ev-music"
+      ]
+    }
+  ],
+  "beat_map": {
+    "status": "synthetic",
+    "segments": [
+      {
+        "start_ms": 0,
+        "end_ms": 180000,
+        "start_beat": 0,
+        "bpm": 120,
+        "evidence_ref": "ev-beat"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "group_id": "group-front",
+      "membership_revision": 1,
+      "fixture_ids": [
+        "fixture-1",
+        "fixture-2",
+        "fixture-3",
+        "fixture-4"
+      ],
+      "safe_state": {
+        "intensity_pct": 0,
+        "color_ref": "color-amber",
+        "position_ref": "pos-center",
+        "beam_ref": "beam-wash",
+        "active_fx": [],
+        "ownership": "held"
+      }
+    },
+    {
+      "group_id": "group-back",
+      "membership_revision": 1,
+      "fixture_ids": [
+        "fixture-5",
+        "fixture-6",
+        "fixture-7",
+        "fixture-8"
+      ],
+      "safe_state": {
+        "intensity_pct": 0,
+        "color_ref": "color-amber",
+        "position_ref": "pos-center",
+        "beam_ref": "beam-wash",
+        "active_fx": [],
+        "ownership": "held"
+      }
+    }
+  ],
+  "presets": [
+    {
+      "preset_id": "color-amber",
+      "content_revision": 1,
+      "content_digest": "sha256:7ecfae34463784097b928986c479edf0bc17ad233449d01692969718623166d6",
+      "content_status": "synthetic",
+      "kind": "color",
+      "label": "앰버",
+      "group_ids": [
+        "group-front",
+        "group-back"
+      ],
+      "affects_axes": [
+        "color"
+      ],
+      "settle_ms": 0,
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "preset_id": "color-blue",
+      "content_revision": 1,
+      "content_digest": "sha256:85bfd63edf501831fc73491a28d92be3b7db26840dddf797d4346f46ae348468",
+      "content_status": "synthetic",
+      "kind": "color",
+      "label": "블루",
+      "group_ids": [
+        "group-front",
+        "group-back"
+      ],
+      "affects_axes": [
+        "color"
+      ],
+      "settle_ms": 0,
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "preset_id": "pos-center",
+      "content_revision": 1,
+      "content_digest": "sha256:db10915d9e0867ba3fad33926a4b6abe8bbea7a1579794aef69c5a05cb5d1ea5",
+      "content_status": "synthetic",
+      "kind": "position",
+      "label": "센터",
+      "group_ids": [
+        "group-front",
+        "group-back"
+      ],
+      "affects_axes": [
+        "pan",
+        "tilt"
+      ],
+      "settle_ms": 800,
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "preset_id": "pos-wide",
+      "content_revision": 1,
+      "content_digest": "sha256:a90adf5e8859415fdd616b40566cbeef37c7ad286364d5320b7b9485c37049dd",
+      "content_status": "synthetic",
+      "kind": "position",
+      "label": "와이드",
+      "group_ids": [
+        "group-front",
+        "group-back"
+      ],
+      "affects_axes": [
+        "pan",
+        "tilt"
+      ],
+      "settle_ms": 800,
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "preset_id": "beam-wash",
+      "content_revision": 1,
+      "content_digest": "sha256:72d888e8d23073cc647ca7de50ef4551f809ab3c8696c7a15062f45649284ba1",
+      "content_status": "synthetic",
+      "kind": "beam",
+      "label": "워시",
+      "group_ids": [
+        "group-front",
+        "group-back"
+      ],
+      "affects_axes": [
+        "beam"
+      ],
+      "settle_ms": 0,
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "preset_id": "beam-narrow",
+      "content_revision": 1,
+      "content_digest": "sha256:4e28ab9b8ce6a2c0f2c27946093aa82f7fa17f8afa626b30eab45eb14ff121b0",
+      "content_status": "synthetic",
+      "kind": "beam",
+      "label": "내로",
+      "group_ids": [
+        "group-front",
+        "group-back"
+      ],
+      "affects_axes": [
+        "beam"
+      ],
+      "settle_ms": 0,
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    },
+    {
+      "preset_id": "fx-pulse",
+      "content_revision": 1,
+      "content_digest": "sha256:52815877eb49df16ceb6dded274cae4365d8c405dfe01033dd3cf8508a3b9a41",
+      "content_status": "synthetic",
+      "kind": "fx",
+      "label": "밝기 펄스",
+      "group_ids": [
+        "group-front",
+        "group-back"
+      ],
+      "affects_axes": [
+        "intensity"
+      ],
+      "settle_ms": 0,
+      "evidence_refs": [
+        "ev-presets"
+      ]
+    }
+  ],
+  "capabilities": [
+    {
+      "group_id": "group-front",
+      "operations": [
+        "intensity_set",
+        "color_set",
+        "position_set",
+        "beam_set",
+        "fx_start",
+        "fx_stop",
+        "group_release"
+      ],
+      "timing_axes": [
+        "intensity",
+        "color",
+        "pan",
+        "tilt",
+        "beam",
+        "fx"
+      ],
+      "fx_cycle_beats": true,
+      "dark_move": true,
+      "random_access": true
+    },
+    {
+      "group_id": "group-back",
+      "operations": [
+        "intensity_set",
+        "color_set",
+        "position_set",
+        "beam_set",
+        "fx_start",
+        "fx_stop",
+        "group_release"
+      ],
+      "timing_axes": [
+        "intensity",
+        "color",
+        "pan",
+        "tilt",
+        "beam",
+        "fx"
+      ],
+      "fx_cycle_beats": true,
+      "dark_move": true,
+      "random_access": true
+    }
+  ],
+  "safety": {
+    "max_intensity_pct": 100,
+    "forbidden_preset_refs": [],
+    "live_lock": false,
+    "require_dark_move": false
+  },
+  "limits": {
+    "plan_bytes": 2097152,
+    "cues": 2048,
+    "groups": 256,
+    "actions_per_cue": 128
+  }
+}
