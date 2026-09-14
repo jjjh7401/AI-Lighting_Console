@@ -36,12 +36,37 @@ _FRAME_LENGTH = 2048
 #: 구간 경계 판정의 두 상수.
 #:
 #: ``_STEP_WINDOW_SECONDS`` 는 「앞 1초 평균과 뒤 1초 평균의 차」를 재는 창이고,
-#: ``_MIN_SEGMENT_SECONDS`` 는 두 경계가 얼마나 붙을 수 있는지의 하한이다. 후자를
-#: 3초로 둔 것은 실측 픽스처의 가장 짧은 구간이 4초이기 때문이 아니라, 그보다
-#: 짧은 「구간」은 구간이 아니라 악센트이기 때문이다 — 악센트는 ``onsets_ms`` 가
-#: 나른다.
+#: ``_MIN_SEGMENT_SECONDS`` 는 두 경계가 얼마나 붙을 수 있는지의 **BPM 을 모를 때의**
+#: 하한이다. 3초보다 짧은 「구간」은 구간이 아니라 악센트이며, 악센트는 ``onsets_ms``
+#: 가 나른다.
+#:
+#: 🔴 **초는 음악의 단위가 아니다** (t411). 이 값 하나만 쓰던 동안, 139.7 BPM 곡에서
+#: 3000ms 는 **1.75마디** — 마디보다 짧은 하한이었다. 그러면 드럼 패턴의 2마디 프레이즈
+#: 경계가 거의 다 통과해 결과가 구간 목록이 아니라 박자 격자가 된다. 실측
+#: (`src/Club Diver.mp3`, 141초, BPM 139.7 확신 0.97): **구간 39개, 길이 중앙 2.0마디,
+#: 4마디 미만 38/38.** BPM 을 알면 :data:`_MIN_SEGMENT_BARS` 가 하한을 정한다.
 _STEP_WINDOW_SECONDS = 1.0
 _MIN_SEGMENT_SECONDS = 3.0
+
+#: 구간 하한의 **음악 단위**. 4/4 마디 수다.
+#:
+#: 4 는 고른 값이 아니라 실측 분포의 하한이다 —
+#: ``docs/proposals/song-structure-lighting-standard.md`` §4 (Harmonix 912곡 9,214구간을
+#: BPM 으로 마디 환산): **25% 하한이 라벨마다 4.0마디**다(intro·pre-chorus·post-chorus·
+#: instrumental·break·transition·outro 가 4.0, verse·chorus·bridge·solo 는 7.8~8.0 에서
+#: 시작). 4마디 미만 구간은 912곡에서 사실상 나타나지 않는다.
+#:
+#: 🔴 **8마디로 올리지 마라.** 같은 문서 §5 가 [HARD] 로 *"8마디를 기본값으로 쓰되 하드
+#: 제약으로 걸지 마라 — 절반 이상이 8의 배수가 아니다"* 라고 못박았다. 8마디는 분포의
+#: **최빈값**(42.6%)이고 4마디는 분포의 **하한**이다. 하한으로 걸어야 하는 것은 후자이며,
+#: 8을 하한으로 걸면 실측된 4마디 구간(12.3%)을 지운다.
+_MIN_SEGMENT_BARS = 4.0
+
+#: 하한이 곡을 통째로 삼키는 것을 막는 나눗수. 20 BPM(계약 §6.1 하한)이면 한 마디가
+#: 12초이고 4마디는 48초라, 그대로 걸면 3분 곡이 4구간이 된다. 기준 문서 §4 의 구간 수
+#: 중앙값이 **10개**이므로 최소 6구간은 가능해야 한다는 것을 상한으로 쓴다 — 10 보다
+#: 보수적인 값이다.
+_MIN_SEGMENTS_PER_TRACK = 6.0
 
 #: 계단으로 인정할 최소 로그 진폭 변화. ``0.25`` 는 약 28% 의 레벨 변화다.
 #: 이보다 작은 흔들림을 경계로 읽으면 한 곡이 수십 구간으로 잘린다.
@@ -212,7 +237,9 @@ def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
         return AnalysisFailure("박을 찾지 못해 BPM 을 재지 못했습니다.")
 
     frame_ms = _HOP_LENGTH * 1000.0 / sample_rate
-    boundaries_ms = _boundaries_from_rms(numpy, rms, frame_ms, duration_ms)
+    # BPM 을 경계 판정에 넘긴다 — 구간 하한은 초가 아니라 마디다(t411). BPM 은 위에서
+    # 이미 나왔으므로 새 계산이 아니라 이미 있는 값을 잇는 것이다.
+    boundaries_ms = _boundaries_from_rms(numpy, rms, frame_ms, duration_ms, bpm=bpm)
     d_candidates = _grade_sections(numpy, rms, frame_ms, boundaries_ms, duration_ms)
 
     return AnalysisResult(
@@ -246,7 +273,39 @@ def _tempo_from_beats(numpy, beat_times) -> tuple[float | None, float]:
     return 60.0 / median, confidence
 
 
-def _boundaries_from_rms(numpy, rms, frame_ms: float, duration_ms: int) -> tuple[int, ...]:
+def _min_segment_ms(*, bpm: float | None, duration_ms: int) -> float:
+    """두 경계가 붙을 수 있는 하한, 밀리초.
+
+    BPM 을 알면 :data:`_MIN_SEGMENT_BARS` 마디, 모르면 :data:`_MIN_SEGMENT_SECONDS` 초다.
+    **BPM 을 모를 때 120 을 가정하지 않는다** — 기준 문서와 계약(`LD-TIME-002`)이 같은
+    것을 요구하고, 이 저장소의 ``server/design/profile.py`` 도 같은 이유로 FX-Rate 역산을
+    채택 후보에서 뺐다. 추측한 tempo 로 구간을 자르면 그 오차가 곧 조명 시각의 오차다.
+
+    두 경계를 함께 지킨다:
+
+    * **아래로는** 옛 초 하한 밑으로 내려가지 않는다. 이 단조성이 실용적으로 중요하다 —
+      하한이 오르기만 하면 「경계가 거절되기를 기대하는」 기존 시험은 새로 깨질 수 없다.
+    * **위로는** 곡 길이의 ``1/_MIN_SEGMENTS_PER_TRACK`` 을 넘지 않는다. 아주 느린 곡에서
+      4마디가 곡의 절반이 되는 것을 막는다.
+
+    Args:
+        bpm: 측정된 BPM. ``None``·0·음수·비유한 값은 모두 「모른다」로 다룬다 —
+            ``float("nan")`` 은 비교가 전부 거짓이라 조용히 통과할 수 있어 명시로 막는다.
+        duration_ms: 곡 전체 길이. 상한 계산에 쓴다.
+    """
+    seconds_floor = _MIN_SEGMENT_SECONDS * 1000.0
+    if bpm is None or not math.isfinite(bpm) or bpm <= 0:
+        return seconds_floor
+
+    bar_ms = 4.0 * 60_000.0 / bpm
+    bars_floor = _MIN_SEGMENT_BARS * bar_ms
+    capped = min(bars_floor, duration_ms / _MIN_SEGMENTS_PER_TRACK)
+    return max(seconds_floor, capped)
+
+
+def _boundaries_from_rms(
+    numpy, rms, frame_ms: float, duration_ms: int, *, bpm: float | None
+) -> tuple[int, ...]:
     """에너지 계단이 있는 자리를 구간 경계로 읽는다.
 
     앞뒤 1초 평균의 차(novelty)를 재고, **절대 문턱과 상대 문턱을 둘 다** 넘는
@@ -291,27 +350,37 @@ def _boundaries_from_rms(numpy, rms, frame_ms: float, duration_ms: int) -> tuple
         and novelty[index] == novelty[max(0, index - window) : index + window + 1].max()
     ]
 
-    min_distance = _MIN_SEGMENT_SECONDS * 1000.0 / frame_ms
-    accepted: list[int] = []
-    for index in sorted(candidates, key=lambda i: (-novelty[i], i)):
-        if all(abs(index - taken) >= min_distance for taken in accepted):
-            accepted.append(index)
+    min_segment_ms = _min_segment_ms(bpm=bpm, duration_ms=duration_ms)
 
-    # 시작 쪽은 이미 대칭으로 막혀 있었다(``millis >= _MIN_SEGMENT_SECONDS``)
-    # — 끝 쪽에는 같은 문턱이 없어서, 곡 맨 끝에 가까운 봉우리가 3초 미만의
-    # 꼬리 구간을 만들 수 있었다(t375 실측: 178.3초 실제 곡에서 마지막
-    # 경계가 177.3초에 잡혀 1.0초짜리 구간이 나왔다). 시작과 끝을 대칭으로
-    # 맞춘다 — 남는 꼬리는 구간이 아니라 악센트다(위 상수 설명과 같은 이유).
-    min_segment_ms = _MIN_SEGMENT_SECONDS * 1000.0
-    boundaries = [0]
-    for index in sorted(accepted):
-        millis = int(round(index * frame_ms))
-        if (
+    # 곡의 양 끝에서 하한 미만의 조각을 만드는 후보를 **거리 필터보다 먼저** 버린다.
+    #
+    # 시작 쪽은 원래 막혀 있었고 끝 쪽은 t375 에서 막았다(178.3초 곡에서 마지막
+    # 경계가 177.3초에 잡혀 1.0초 구간이 나왔다). 남는 꼬리는 구간이 아니라
+    # 악센트이고, 악센트는 ``onsets_ms`` 가 나른다.
+    #
+    # 🔴 **순서가 load-bearing 이다** (t411). 이 판정이 거리 필터 *뒤*에 있던 동안,
+    # 나중에 버려질 후보가 먼저 뽑혀 이웃을 억눌렀다 — 정본 픽스처 실측: 계단
+    # 32000ms 와 36000ms 중 36000 쪽의 로그 계단이 더 커서 먼저 뽑히고, 32000 을
+    # 거리로 죽인 뒤, 자기도 꼬리 판정에서 버려져 **둘 다 사라졌다**. 하한이 3초일
+    # 때는 4초 간격이 거리를 통과해 드러나지 않던 결함이다.
+    def _leaves_a_full_segment(index: int) -> bool:
+        millis = index * frame_ms
+        return (
             millis >= min_segment_ms
             and millis < duration_ms
             and duration_ms - millis >= min_segment_ms
-        ):
-            boundaries.append(millis)
+        )
+
+    eligible = [index for index in candidates if _leaves_a_full_segment(index)]
+
+    min_distance = min_segment_ms / frame_ms
+    accepted: list[int] = []
+    for index in sorted(eligible, key=lambda i: (-novelty[i], i)):
+        if all(abs(index - taken) >= min_distance for taken in accepted):
+            accepted.append(index)
+
+    boundaries = [0]
+    boundaries.extend(int(round(index * frame_ms)) for index in sorted(accepted))
     return tuple(boundaries)
 
 
