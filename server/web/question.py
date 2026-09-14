@@ -256,6 +256,25 @@ def build_song_confirmation_card(
         confidence = "" if bpm_confidence is None else f" (확신 {bpm_confidence:.2f})"
         lines.append(f"측정된 BPM 은 {measured_bpm:g} 입니다{confidence}.")
         lines.append("다르면 「BPM 130」처럼 적어 주세요. 그대로면 이대로 확정합니다.")
+        # 배수 후보를 **함께** 적는다. 실측 2026-09-14 (실제 곡 9개,
+        # `.moai/reports/threshold-widen-20260914/`): 감독 판정을 정답지로 대조하니
+        # 9곡 중 2곡의 BPM 이 두 배로 헛나갔다(117.5 → 진짜 ≈58.7, 161.5 → ≈80.7).
+        # BPM 이 두 배면 마디가 절반이므로 `analyze._MIN_SEGMENT_BARS` 의 4마디 하한이
+        # 실제로는 2마디로 작동한다 — 두 곡의 진짜 최소 구간이 각각 2.01마디였다.
+        #
+        # 자동 판별은 네 번 시도해 네 번 실패했다(온셋 다운비트 대조 · 킥 대역
+        # 자기상관 · start_bpm=60 사전확률 · 박 교대). 체감 템포의 배수 모호성은
+        # 사람 판정이 기준인 지각적 성질이라, 새 검출기를 짓는 대신 이미 있는
+        # 자유 입력 통로(`parse_confirmed_bpm`)로 사람이 고르게 한다.
+        #
+        # 🔴 확신으로 게이트하지 않는다. 실측 9곡의 확신은 0.949~0.978 이고 두 배로
+        # 틀린 두 곡(0.963 · 0.977)이 맞은 곡과 같은 대역에 있다 — 확신은 박 간격의
+        # 일관성만 재므로 배수 오류에 대해 무증거다. 낮은 확신에서만 보이면 실측된
+        # 두 사례를 둘 다 놓친다.
+        lines.append(
+            f"자동 검출은 배수를 틀릴 수 있습니다 — 절반({measured_bpm / 2:g})이나 "
+            f"두 배({measured_bpm * 2:g})로 세신다면 그렇게 적어 주세요."
+        )
     else:
         lines.append("BPM 을 직접 적어 주세요 — 예: 「BPM 128」.")
 

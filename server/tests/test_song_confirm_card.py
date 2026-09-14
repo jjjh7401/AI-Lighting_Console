@@ -219,6 +219,58 @@ class TestTheFallbackCardIsTheSameCard:
         assert parse_confirmed_bpm("BPM 128", measured_bpm=None) == 128.0
 
 
+class TestTheCardOffersTheOctaveReadings:
+    """측정된 BPM 옆에 **절반·두 배** 후보를 함께 적는다.
+
+    근거는 실측이다 (2026-09-14, 실제 곡 9개, `.moai/reports/threshold-widen-20260914/`).
+    감독 판정을 정답지로 대조했을 때 `Morning.mp3`(앱 117.5 → 진짜 ≈58.7)와
+    `Too Cool.mp3`(앱 161.5 → 진짜 ≈80.7) 두 곡의 BPM 이 **두 배로 헛나갔다**.
+    9곡 중 2곡이다.
+
+    BPM 이 두 배면 마디 길이가 절반이고, :data:`~server.audio.analyze._MIN_SEGMENT_BARS`
+    의 4마디 하한이 **실제로는 2마디 하한**으로 작동한다 — 두 곡의 진짜 최소 구간이
+    각각 2.01마디였다. t411 이 「초는 음악의 단위가 아니다」를 고쳤는데, 입력 BPM 이
+    두 배면 같은 결함이 다른 원인으로 돌아온다.
+
+    자동 판별은 **네 번 시도해 네 번 실패했다** (온셋 다운비트 대조 · 킥 대역
+    자기상관 · `start_bpm=60` 사전확률 · 박 교대). 체감 템포의 배수 모호성은
+    사람 판정이 기준인 지각적 성질이므로, 이미 있는 자유 입력 통로
+    (:func:`parse_confirmed_bpm`)를 쓰도록 **후보를 보여 주는 것**이 처방이다 —
+    새 검출기를 짓지 않는다.
+
+    🔴 **확신으로 게이트하지 않는다.** 실측 9곡의 `bpm_confidence` 는 0.949~0.978
+    이고 두 배로 틀린 곡(0.963 · 0.977)이 맞은 곡과 같은 대역에 있다. 확신은 박
+    간격의 **일관성**만 재므로 배수 오류에 대해 무증거다 — 낮은 확신에서만
+    후보를 보이면 실측된 두 사례를 둘 다 놓친다.
+    """
+
+    def test_the_half_reading_is_named(self):
+        blob = json.dumps(_card(measured_bpm=117.5).to_dict(), ensure_ascii=False)
+        assert f"{117.5 / 2:g}" in blob
+
+    def test_the_double_reading_is_named(self):
+        blob = json.dumps(_card(measured_bpm=117.5).to_dict(), ensure_ascii=False)
+        assert f"{117.5 * 2:g}" in blob
+
+    def test_the_card_says_automatic_detection_can_be_off_by_a_factor(self):
+        # 숫자만 적으면 왜 적혀 있는지 알 수 없다 — 사람이 고를 이유를 함께 준다.
+        assert "배수" in _card().why
+
+    def test_the_readings_are_offered_even_when_confidence_is_high(self):
+        # 실측 대조군: 두 배로 틀린 두 곡의 확신은 0.963 과 0.977 이었다.
+        blob = json.dumps(
+            _card(measured_bpm=161.5, bpm_confidence=0.977).to_dict(), ensure_ascii=False
+        )
+        assert f"{161.5 / 2:g}" in blob
+
+    def test_the_fallback_card_does_not_invent_readings(self):
+        # 대조군: 측정값이 없으면 절반도 두 배도 없다 — 없는 숫자를 지어내지 않는다.
+        card = build_song_confirmation_card(
+            proposals=(), measured_bpm=None, fallback_reason="분석기 없음"
+        )
+        assert "배수" not in card.why
+
+
 class TestASheetTempoIsShownForComparison:
     def test_a_disagreeing_sheet_value_is_named_on_the_card(self):
         blob = json.dumps(_card(sheet_bpm=120.0).to_dict(), ensure_ascii=False)
