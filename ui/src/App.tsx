@@ -36,6 +36,11 @@ import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
 import { TimelineLibrary } from "./components/TimelineLibrary";
 import { saveTimelineToLibrary } from "./timelineLibrary";
+import {
+  MAX_SONG_AUDIO_BYTES,
+  MAX_TRANSCODABLE_SECONDS,
+  transcodeSongAudio,
+} from "./songAudioTranscode";
 import { SONG_TIMELINE_EXAMPLE } from "./components/songTimelineExample";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
@@ -109,7 +114,9 @@ const SONG_AUDIO_EXTENSION_MIME_TYPES: ReadonlyArray<readonly [string, string]> 
   [".mp3", "audio/mpeg"],
   [".m4a", "audio/mp4"],
 ];
-const MAX_SONG_AUDIO_BYTES = 8 * 1024 * 1024;
+// 상한 상수와 「상한을 넘으면 어떻게 하나」는 songAudioTranscode.ts 가 갖는다 —
+// 여기서 8 * 1024 * 1024 를 다시 적으면 두 곳이 따로 노후한다.
+
 
 
 export function readRunbookModeFromStorage(): boolean {
@@ -418,6 +425,9 @@ export default function App() {
   // (client-side display only; the server holds the authoritative copy).
   const [layoutImageUploadError, setLayoutImageUploadError] = useState<string | null>(null);
   const [songAudioUploadError, setSongAudioUploadError] = useState<string | null>(null);
+  // 변환 진행 문구. 오류 슬롯과 따로 두는 이유는 이것이 오류가 아니기 때문이다 —
+  // 같은 슬롯에 넣으면 붉은 오류로 렌더돼 정상 동작이 실패로 읽힌다.
+  const [songAudioBusy, setSongAudioBusy] = useState<string | null>(null);
   // SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 이번 연결에서 마지막으로 올린 곡 이름.
   // 「분석」 버튼을 띄우는 조건 그 이상이 아니다: 서버가 정본을 들고 있고,
   // 여기 값은 화면 표시용이다. 첨부 전에는 버튼이 아예 없어야 한다 — 누를 수
@@ -716,14 +726,62 @@ export default function App() {
     return null;
   };
 
+  // 상한 초과 곡을 모노 다운샘플 WAV 로 바꿔 올린다.
+  //
+  // 진행 표시가 load-bearing 이다 — 감독 곡 31.5MB 는 디코드에 시간이 걸리고,
+  // 그동안 아무 반응이 없으면 카드 t397 이 고치려던 실패 형태(「앱이 죽었다」로
+  // 읽히는 무반응)를 그대로 재현한다.
+  const uploadTranscodedSongAudio = async (file: File) => {
+    setSongAudioUploadError(null);
+    setSongAudioBusy("곡이 커서 모노로 변환하고 있습니다 — 잠시만 기다려 주세요.");
+    try {
+      const transcoded = await transcodeSongAudio(file);
+      if (transcoded === null) {
+        const minutes = Math.floor(MAX_TRANSCODABLE_SECONDS / 60);
+        const seconds = MAX_TRANSCODABLE_SECONDS % 60;
+        setSongAudioUploadError(
+          `곡이 너무 깁니다 — 변환해도 상한 8 MiB 에 넣을 수 있는 길이는 ${minutes}분 ${seconds}초까지입니다.`,
+        );
+        return;
+      }
+      if (
+        !sendSongAudioUpload(transcoded.fileName, transcoded.mimeType, transcoded.contentBase64)
+      ) {
+        setSongAudioUploadError("서버 연결이 끊겨 곡을 올릴 수 없습니다.");
+        return;
+      }
+      // 무엇이 바뀌었는지 밝힌다 — 품질을 조용히 내리지 않는다.
+      const kilohertz = (transcoded.sampleRate / 1000).toFixed(2).replace(/\.?0+$/, "");
+      setSongAudioName(`${transcoded.fileName} (${kilohertz}kHz 모노로 변환)`);
+    } catch {
+      setSongAudioUploadError(
+        "곡을 변환하지 못했습니다 — 8 MiB 이하 파일로 올리거나 다른 형식으로 저장해 주세요.",
+      );
+    } finally {
+      setSongAudioBusy(null);
+    }
+  };
+
   const uploadSongAudio = (file: File) => {
     const mimeType = songAudioMimeFor(file);
     if (mimeType === null) {
       setSongAudioUploadError("곡 파일은 WAV, FLAC, MP3 또는 M4A 만 첨부할 수 있습니다.");
       return;
     }
-    if (file.size === 0 || file.size > MAX_SONG_AUDIO_BYTES) {
+    if (file.size === 0) {
       setSongAudioUploadError("곡 파일은 비어 있지 않은 8 MiB 이하 파일이어야 합니다.");
+      return;
+    }
+    // 상한을 넘으면 **거절 대신 변환**한다 (감독 결정 2026-09-14).
+    //
+    // 실측: 감독이 준 실제 곡 9개 중 셋이 상한을 넘어 여기서 막혔다 —
+    // Cut and Run 8.6MB · scott-buckley-neon 10.4MB · 감독 곡 31.5MB.
+    // 서버의 `analyze()` 는 스테레오를 즉시 버리고 원본 sr 을 그대로 쓰므로
+    // (librosa 기본 sr 이 22050), 44.1kHz 스테레오는 분석에 쓰이지 않는 바이트다.
+    // 상한·전송 수단·Tauri capability 는 하나도 바뀌지 않는다 — 바뀌는 것은
+    // 클라이언트가 무엇을 인코딩해 보내는가뿐이다(REQ-MUSICSYNC-014 무개정).
+    if (file.size > MAX_SONG_AUDIO_BYTES) {
+      void uploadTranscodedSongAudio(file);
       return;
     }
     const reader = new FileReader();
@@ -931,6 +989,7 @@ export default function App() {
                 {songAudioUploadError && (
                   <div className="composer-status composer-upload-error">{songAudioUploadError}</div>
                 )}
+                {songAudioBusy && <div className="composer-status">{songAudioBusy}</div>}
                 {songAudioName !== null && (
                   <div className="composer-status">
                     <span>곡 «{songAudioName}» 첨부됨</span>{" "}
