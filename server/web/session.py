@@ -11935,7 +11935,8 @@ class ChatSession:
         않는다. 업로드 순간에 분석을 돌리면, 운영자가 무엇을 할지 말하기도 전에
         수 초를 태운다. 분석은 :meth:`analyse_song_audio` 가 맡는다.
 
-        와이어 검증(확장자·MIME·base64·8 MiB 상한)은 ``parse_client_message`` 에서
+        와이어 검증(확장자·MIME·base64·64 MiB 상한 — 분할 전송이면 조립 검증까지)은
+        ``parse_client_message`` 에서
         이미 끝났다 — 여기 닿은 메시지는 이미 받아들여진 것이다.
 
         교체를 소리 내어 말하는 이유는 ``upload_layout_image`` 와 같다: 침묵하면

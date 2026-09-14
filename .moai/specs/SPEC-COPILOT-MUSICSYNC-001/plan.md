@@ -36,6 +36,7 @@
 |---|---|---|---|---|---|---|
 | 1 | 번들 크기 상한 | **`packaging/build.sh` 산출물 대비 델타 300MB.** 초과 시 폴백 R8(c) — 개발 모드에서만 분석을 열고, 패키징된 앱은 **같은 확인 카드**로 수동 BPM 입력을 받는다. `bpm_is_default` 고지 경로는 그대로 정직하게 산다 | (a) 상한 없이 「실측만 기록」 (b) 절대 크기 상한(예: 총 800MB) | (a) 는 임계가 없는 것과 같다 — 어떤 숫자가 나와도 「그럭저럭 괜찮다」로 읽힌다. (b) 는 오늘 번들 크기에 의존해 이 SPEC 밖의 변동을 판정선에 끌어들인다. **델타**여야 이 SPEC 이 더한 비용만 잰다. 300MB 인 이유는 이 앱이 조명감독의 공연장 노트북에 설치되는 데스크톱 배포물이고, 그만한 증가는 설치·서명·배포 시간 전부에 걸리기 때문이다 | `pyproject.toml` · `packaging/GrandMA3-Copilot.spec` · `packaging/build.sh`(측정만) · `server/audio/analyze.py`(폴백 분기) · `server/web/question.py` 소비 측(수동 입력 카드) | 2026-09-03 |
 | 2 | `Record Timecode` 처리 | **(ii) 앱이 발화하지 않는다.** 명령은 `QuestionRequest.commands[]`(`question.py:85`)로 운영자에게 넘기고, 앱 발화 전수 grep 으로 0건을 기계 고정한다 | (i) `blacklist.yaml` 에 객체까지 2토큰으로 등재 (iii) (i)+(ii) 둘 다 | (i) 은 `_would_be_held` × `load_corpus()` **코퍼스 재측정 절차**(`server/safety/blacklist.yaml:81-84`, `server/tests/test_measurement_corpus.py`)를 요구해 이 SPEC 의 범위를 넘는다 — `Store Preset` 등재(`blacklist.yaml:172`)가 코퍼스 2/21 시나리오와 전체 스위트 13건을 움직인 선례가 그 비용을 보여 준다. 그리고 이 SPEC 이 실제로 필요로 하는 것은 「앱이 안 쏜다」 하나이며, (i) 없이도 REQ-MUSICSYNC-020 은 AC-MUSICSYNC-022 로 완전히 검증된다. **(i) 은 후속 카드로 분리한다** — 후속 카드명 `blacklist-record-timecode`(등재 + 코퍼스 재측정 + 전체 스위트 영향 계상). 이 SPEC 의 범위가 아니며, 큐 편입은 감독의 몫이다 | `server/orchestrator/tools.py`(인계 목록 조립) · `server/web/question.py` 소비 측 · `server/safety/**` **무변경** | 2026-09-03 |
+| 4 | 곡 업로드 상한과 전송 단위 (2026-09-14 개정 — REQ-MUSICSYNC-026 · 027) | **원본 64 MiB + 분할 프레임 셋**(`song_audio_upload_begin` · `song_audio_upload_chunk` · `song_audio_upload_end`). UI 는 크기와 무관하게 **항상** 분할로 보낸다(원본 3 MiB 조각 = base64 4 MiB). 조립 버퍼는 **연결(WebSocket) 하나에 하나**이고 세션 첨부와 분리된다 — `end` 에서 검증을 마친 뒤에만 기존 `upload_song_audio` 로 넘긴다. 기존 단일 프레임 `song_audio_upload` 는 **남긴다**(시험·호환). 상한은 같은 64 MiB 를 따르되 실제로는 16 MiB 프레임 천장이 먼저 막는다 | (a) 상한만 8→64 MiB (b) `uvicorn` `ws_max_size` 를 올려 한 프레임으로 (c) 다운샘플·모노 변환 (d) HTTP 업로드 | (a) 는 **원리적으로 안 된다** — 31.5MB 의 base64 ≈ 42MB 가 `serve.py:572` 의 기본 천장 16 MiB 를 넘는다. (b) 는 수십 MB JSON 문자열을 한 번에 파싱해 수신 루프를 막고, 천장을 올릴 때마다 같은 결정을 반복하게 된다. (c) 는 `bf16adc` 가 반증했다(BPM 34% 오차). (d) 는 Tauri capability 「no http, no upload」 방어선을 연다(REQ-MUSICSYNC-014) | `server/web/messages.py` · `server/web/app.py` · `server/web/session.py` · `ui/src/App.tsx` · `ui/src/protocol.ts` · `ui/src/useCopilotSocket.ts` · `server/web/PROTOCOL.md` · `src-tauri/**` **무변경** | 2026-09-14 |
 | 3 | BPM 정본 우선순위 | **측정(사람이 확인 카드에서 확정한 값) > 시트 `HEAD.BPM` > 기본값 120.** 어긋남은 채택 여부와 무관하게 **항상** 사용자에게 보고한다. `FX-Rate` 는 **대조 전용** | (a) 시트 우선 (b) `FX-Rate` 역산을 3번째 판정원으로 채택 | (a) 는 시트가 스스로 「청취 미검증」을 자백하는 경우(`TC_METHOD: DERIVED`)에도 음원에서 온 값을 밀어낸다. (b) 는 `FX-Rate = SongBPM ÷ 사이클당 박수` 인데 **사이클당 박수가 사람의 의도**라 역산이 일의적이지 않다 — 하나의 `FX-Rate` 가 여러 BPM 과 양립한다. 그래서 대조는 하되 판정에는 안 쓴다 | `server/design/profile.py` 소비 측(`:74-75`, `:301-310`) · `server/orchestrator/tools.py`(시트 `HEAD.BPM` 문자열 파싱) · `server/web/question.py` 소비 측(불일치 고지) | 2026-09-03 |
 
 ## D. 제약
@@ -115,6 +116,23 @@
 | `src-tauri/capabilities/default.json` | [EXISTING] | **무변경** |
 
 산출: 오프라인 전부 초록 + **콘솔 접촉 0** + 번들 크기 전후 숫자.
+
+### M2-c — 곡 업로드 상한 64 MiB + 분할 전송 (2026-09-14 개정 · §C 결정 4)
+
+감독 곡 31.5MB 가 어느 경로로도 안 올라가던 것을 연다. 콘솔 접촉 **0건**, 새 의존성 **0건**. 순서는 서버 검증 → 조립 → UI 다.
+
+| 파일 | 델타 | 내용 |
+|---|---|---|
+| `server/web/messages.py` | [MODIFY] | `MAX_SONG_AUDIO_BYTES` 8→64 MiB, `_SONG_AUDIO_CAP_PHRASE` 가 따라 바뀜(상수 하나에서 파생). 새 타입 셋 검증: `begin`(파일명·MIME·`total_bytes` ≤ 64 MiB·`chunk_count` ≥ 1), `chunk`(`index` 0부터·base64 길이 ≤ 4 MiB), `end`. `bool` 을 `int` 로 받지 않는다(`_is_object_number` 와 같은 이유) |
+| `server/web/app.py` | [MODIFY] | 세 분기 추가. 조립 버퍼는 **이 연결의 지역 상태**. `begin` 이 오면 이전 버퍼를 버린다. `end` 에서 조각 수·순서·총 길이를 대조한 뒤에만 `session.upload_song_audio` 호출 — 실패는 `song_audio_rejected` 로 한국어 사유, 버퍼 비움 |
+| `server/web/session.py` | [EXISTING] | **무변경**이 목표. 고지 1회 · 교체 · 분석 무효화는 기존 경로가 그대로 한다 |
+| `ui/src/protocol.ts` · `useCopilotSocket.ts` | [MODIFY] | 빌더 셋 + 송신 함수. `CLIENT_MESSAGE_TYPES` 는 **양쪽 허용 목록에 동시에** 등록(REQ-SHOWUI-014 선례) |
+| `ui/src/App.tsx` | [MODIFY] | `:726` 의 8 MiB 사전 거절 → 64 MiB. `readAsDataURL` 통째 읽기 대신 `file.slice` 로 3 MiB 씩 읽어 조각 전송 |
+| `server/web/PROTOCOL.md` | [MODIFY] | 새 프레임 셋 문서화 |
+| `server/tests/test_web_song_audio.py` | [MODIFY] | AC-026 경계(`67108864` 통과·`+1` 거절·`33030144` 통과), AC-027 조립 일치·누락/역순/길이 불일치 거절·조각 천장. **WS 층을 실제로 지나는** 왕복으로(AC-013 과 같은 이유) |
+| `src-tauri/**` | [EXISTING] | **무변경** — AC-014 가 diff 0줄로 잰다 |
+
+산출: `uv run pytest -q` · `npm --prefix ui test` 초록 + AC-014 diff 0줄. **브라우저 실제 업로드 실측(카드 t415)은 이 마일스톤의 완료 조건이 아니다** — 따로 잰다.
 
 ### M3-b — 콘솔 타임코드 리허설 본체 (M3-a 결과로 두 갈래)
 

@@ -113,11 +113,24 @@ Given `song_audio_upload` 프레임을 **WebSocket 층을 실제로 지나서** 
 When `server/web/app.py` 의 해당 디스패치 분기를 제거한 상태로 실행하면
 Then 그 테스트는 **실패한다.** (session 메서드를 직접 부르는 테스트만으로는 이 층을 지나지 않으므로 통과해 버린다 — 그 사실을 테스트 주석이 명시한다.)
 
-**AC-MUSICSYNC-014** [부정 대조군] — 상한 초과가 한국어 사유로 거절된다 (↔ REQ-MUSICSYNC-013 · REQ-MUSICSYNC-014)
-Given 8 MiB 를 넘는 WAV 를 base64 로 실은 프레임을 보내고
+**AC-MUSICSYNC-014** — 전송 수단이 그대로다 (↔ REQ-MUSICSYNC-014)
+Given 이 SPEC 의 업로드 변경을 모두 적용하고
+When `git diff --name-only <base>..HEAD -- src-tauri` 를 실행하면
+Then 출력이 **0줄**이며, `src-tauri/capabilities/default.json` 에 `http` · `websocket` · `upload` 권한이 추가되지 않았고, 업로드를 나르는 프레임이 오늘의 로컬 WebSocket 위 base64 **뿐**임이 전송 코드 grep 으로 확인된다(HTTP 멀티파트·파일 시스템 경로·별도 소켓 0건).
+
+**AC-MUSICSYNC-026** [경계 + 부정 대조군] — 상한은 64 MiB 하나이고, 초과는 한국어 사유로 거절된다 (↔ REQ-MUSICSYNC-026)
+Given 디코드된 원본이 **정확히** `67108864` 바이트인 파일을 보내고
 When 서버가 처리하면
-Then 거절되고, 사유 문자열이 한국어이며 **상한 수치를 명시**하고, 세션에는 아무것도 보관되지 않으며, `src-tauri/capabilities/default.json` 의 diff 가 **비어 있다.**
-그리고 Given 상한 이하의 정상 파일이면 When 같은 경로로 보내면 Then 보관되고 sha256 과 바이트 수가 고지되며, 기존 첨부를 교체한 경우 그 사실이 별도로 말해진다.
+Then **통과**하고 보관된다(경계 대조군 — 상한 자체는 거절되지 않는다).
+그리고 Given 원본이 `67108865` 바이트이면 When 같은 경로로 보내면 Then 거절되고, 사유 문자열이 한국어이며 `64 MiB` 와 `67108864` 를 **동시에** 포함하고, 받은 크기가 함께 적히며, `session.song_audio is None` 이고 사유 문구에 사용자 페이로드 바이트가 **0건** 포함된다.
+그리고 Given 구 상한 8 MiB 를 넘고 새 상한 이하인 크기(감독 곡 31.5MB = `33030144` 바이트 급)이면 When 같은 경로로 보내면 Then **통과**한다 — 이 줄이 이번 개정이 실제로 뭘 열었는지 재는 자리다.
+
+**AC-MUSICSYNC-027** [부정 대조군] — 분할 전송이 조립되고, 깨진 분할은 아무것도 남기지 않는다 (↔ REQ-MUSICSYNC-013 · REQ-MUSICSYNC-027)
+Given 원본 30 MiB 짜리 파일을 조각당 base64 4 MiB 이하로 나눠 시작 · 조각 · 종료 프레임으로 보내고
+When 서버가 조립하면
+Then 보관된 `byte_length` 가 원본 크기와 **일치**하고 `sha256` 이 원본을 통째로 해싱한 값과 **같으며**, 고지(sha256 · 바이트 수 · 교체 · 이전 분석 무효화)가 **정확히 1회** 나가고, 조각 하나하나의 base64 길이가 `16777216` **미만**임이 측정된다.
+그리고 Given 중간 조각 하나를 빼거나 순서를 뒤집거나 선언한 총 길이와 다르게 보내면 When 같은 경로로 보내면 Then 한국어 사유로 거절되고 `session.song_audio` 가 **개정 전 상태 그대로**이며(부분 바이트가 첨부로 승격되지 않는다), 조립 버퍼가 비워진다.
+그리고 [부정 대조군] Given 조각 하나의 base64 길이를 `16777216` 초과로 만들면 When 보내면 Then 거절된다 — 상한을 넓혔어도 프레임 천장은 살아 있음을 이 줄이 고정한다.
 
 **AC-MUSICSYNC-015** — 확인 카드가 오늘 스키마로 서고, 숫자는 사람이 정한다 (↔ REQ-MUSICSYNC-009 · REQ-MUSICSYNC-015)
 Given 분석 결과가 구간 N 개를 담고 있고
@@ -232,7 +245,7 @@ REQ 는 `001`~`025` 연속 25개, AC 는 25개(번호는 절 단위 블록이라
 | REQ-MUSICSYNC-011 | R2 | AC-011 · AC-012 | 합성 트랙 정답 폭 + 실제 곡 0건 |
 | REQ-MUSICSYNC-012 | R2 | AC-011 | 실패 결과 반환 · 예외 미전파 (AC-011 둘째 Given) |
 | REQ-MUSICSYNC-013 | R3 | AC-013 · AC-014 | 세 층 통과 + `app.py` 분기 부정 대조군 |
-| REQ-MUSICSYNC-014 | R3 | AC-014 | 8 MiB 상한 · 한국어 사유 · Tauri capability diff 0 |
+| REQ-MUSICSYNC-014 | R3 | AC-014 | Tauri capability diff 0 · 전송 수단 불변 (상한은 026, 분할은 027 로 갈라짐 — 2026-09-14 개정) |
 | REQ-MUSICSYNC-015 | R3 | AC-015 | 확인 카드를 서버 코드가 세움 |
 | REQ-MUSICSYNC-016 | R3 | AC-016 | `bpm_is_default` 를 끔 + 회귀 없음 |
 | REQ-MUSICSYNC-017 | R3 | AC-018 | 3원 불일치 보고 + 우선순위 · `FX-Rate` 대조 전용 |
@@ -244,5 +257,7 @@ REQ 는 `001`~`025` 연속 25개, AC 는 25개(번호는 절 단위 블록이라
 | REQ-MUSICSYNC-023 | R4 | AC-023 | 효과 증명된 명령만 인계 |
 | REQ-MUSICSYNC-024 | R5 | AC-031 | 5절 보고 |
 | REQ-MUSICSYNC-025 | R5 | AC-002 · AC-021 · AC-030 | 콘솔 예산 — M1 승인 번들 · M3-a 프로브 5건 · M3-b 검증 4회 |
+| REQ-MUSICSYNC-026 | R3 | AC-026 | 원본 64 MiB 상한 하나 · 경계 통과 · 초과는 한국어 사유 |
+| REQ-MUSICSYNC-027 | R3 | AC-027 | 분할 조립 sha256/바이트 수 일치 · 깨진 분할은 보관 0 · 프레임 천장 유지 |
 
-**미대응 0건**: 25개 REQ 가 모두 최소 1개 AC 를 갖는다. 역으로 25개 AC 가 모두 최소 1개 REQ 를 지목한다.
+**미대응 0건**: 27개 REQ 가 모두 최소 1개 AC 를 갖는다. 역으로 27개 AC 가 모두 최소 1개 REQ 를 지목한다.

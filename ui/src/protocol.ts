@@ -654,7 +654,8 @@ export function buildLayoutImageUpload(
  * `SONG_AUDIO_MIME_TYPES`) — this builder does not validate, and the server
  * rejects an unlisted type or an oversized payload with
  * `error(kind: "song_audio_rejected")` carrying a Korean reason that names the
- * 8 MiB cap.
+ * 64 MiB cap. The app sends songs through the chunked builders below; this
+ * single-frame builder stays for small payloads and tests.
  *
  * The transport is deliberately unchanged: today's local WebSocket carrying
  * base64. The Tauri capability file stays byte-identical (`no http, no
@@ -672,6 +673,62 @@ export function buildSongAudioUpload(
     mime_type: mimeType,
     content_base64: contentBase64,
   });
+}
+
+/**
+ * REQ-MUSICSYNC-027 — 곡 분할 전송. 한 WebSocket 프레임에는 못 담는다: 서버의
+ * `uvicorn.run` 은 `ws_max_size` 를 주지 않아 기본 16 MiB 가 프레임 천장이고,
+ * 31.5MB 곡의 base64 는 약 42MB 다. 그래서 원본을 3 MiB 씩 잘라(= base64 4 MiB,
+ * 서버 `MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH` 와 같다) begin · chunk · end 로 보낸다.
+ * 전송 수단은 그대로 로컬 WebSocket 위 base64 다(Tauri capability 무변경).
+ */
+export const SONG_AUDIO_RAW_CHUNK_BYTES = 3 * 1024 * 1024;
+
+/** 원본 바이트를 조각별 base64 문자열로 자른다. 순서가 곧 조각 번호다. */
+export function encodeSongAudioChunks(
+  bytes: Uint8Array,
+  rawChunkBytes: number = SONG_AUDIO_RAW_CHUNK_BYTES,
+): string[] {
+  const chunks: string[] = [];
+  for (let offset = 0; offset < bytes.length; offset += rawChunkBytes) {
+    const piece = bytes.subarray(offset, offset + rawChunkBytes);
+    // String.fromCharCode 에 수백만 인자를 한 번에 펼치면 호출 스택이 넘친다.
+    let binary = "";
+    for (let i = 0; i < piece.length; i += 0x8000) {
+      binary += String.fromCharCode(...piece.subarray(i, i + 0x8000));
+    }
+    chunks.push(btoa(binary));
+  }
+  return chunks;
+}
+
+export function buildSongAudioUploadBegin(
+  fileName: string,
+  mimeType: string,
+  totalBytes: number,
+  chunkCount: number,
+): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "song_audio_upload_begin",
+    file_name: fileName,
+    mime_type: mimeType,
+    total_bytes: totalBytes,
+    chunk_count: chunkCount,
+  });
+}
+
+export function buildSongAudioUploadChunk(index: number, contentBase64: string): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "song_audio_upload_chunk",
+    index,
+    content_base64: contentBase64,
+  });
+}
+
+export function buildSongAudioUploadEnd(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "song_audio_upload_end" });
 }
 
 /**

@@ -51,6 +51,7 @@ from server.web.measure import RoundTripRecorder
 from server.web.messages import (
     LayoutImageRejectedError,
     ProtocolError,
+    SongAudioAssembly,
     SongAudioRejectedError,
     approval_request_event,
     approval_resolved_event,
@@ -471,6 +472,9 @@ def create_app(deps: WebDeps) -> FastAPI:
             return task
 
         current_task: asyncio.Task | None = None
+        # REQ-MUSICSYNC-027 — 분할 곡 전송의 조립 버퍼. **이 연결의 지역 상태**이고
+        # 세션 첨부가 아니다: end 가 검증을 통과해야만 session 으로 넘어간다.
+        song_audio_assembly = SongAudioAssembly()
         await websocket.send_json(session.status_snapshot())
         if deps.song_timeline_store.latest is not None:
             await _safe_send(
@@ -592,6 +596,37 @@ def create_app(deps: WebDeps) -> FastAPI:
                         message["file_name"],
                         message["mime_type"],
                         message["content_base64"],
+                    )
+                elif message_type in (
+                    "song_audio_upload_begin",
+                    "song_audio_upload_chunk",
+                    "song_audio_upload_end",
+                ):
+                    # REQ-MUSICSYNC-027 — 한 프레임에 안 담기는 곡을 조각으로 받는다.
+                    # 조립 거절은 파싱 거절과 같은 이름 붙은 종류로 나간다. 고지·
+                    # 교체·분석 무효화는 end 에서 기존 보관 경로가 **한 번** 한다.
+                    try:
+                        if message_type == "song_audio_upload_begin":
+                            song_audio_assembly.begin(message)
+                            continue
+                        if message_type == "song_audio_upload_chunk":
+                            song_audio_assembly.add(message)
+                            continue
+                        upload = song_audio_assembly.finish()
+                    except SongAudioRejectedError as rejection:
+                        await _safe_send(
+                            websocket,
+                            error_event(message=str(rejection), kind="song_audio_rejected"),
+                        )
+                        continue
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.upload_song_audio,
+                        upload["file_name"],
+                        upload["mime_type"],
+                        upload["content_base64"],
                     )
                 elif message_type == "song_audio_analyse":
                     # SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 바로 위 분기가 담은

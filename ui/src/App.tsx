@@ -45,6 +45,7 @@ import {
   type PoolArea,
 } from "./components/PoolSection";
 import {
+  encodeSongAudioChunks,
   panelItemId,
   type CueMonitorState,
   type DashItem,
@@ -109,7 +110,7 @@ const SONG_AUDIO_EXTENSION_MIME_TYPES: ReadonlyArray<readonly [string, string]> 
   [".mp3", "audio/mpeg"],
   [".m4a", "audio/mp4"],
 ];
-const MAX_SONG_AUDIO_BYTES = 8 * 1024 * 1024;
+const MAX_SONG_AUDIO_BYTES = 64 * 1024 * 1024;
 
 
 export function readRunbookModeFromStorage(): boolean {
@@ -723,30 +724,27 @@ export default function App() {
       return;
     }
     if (file.size === 0 || file.size > MAX_SONG_AUDIO_BYTES) {
-      setSongAudioUploadError("곡 파일은 비어 있지 않은 8 MiB 이하 파일이어야 합니다.");
+      setSongAudioUploadError("곡 파일은 비어 있지 않은 64 MiB 이하 파일이어야 합니다.");
       return;
     }
+    // REQ-MUSICSYNC-027 — 한 프레임에 못 담으므로 바이트로 읽어 조각으로 보낸다.
     const reader = new FileReader();
     reader.onerror = () => setSongAudioUploadError("곡 파일을 읽지 못했습니다.");
     reader.onload = () => {
       const result = reader.result;
-      if (typeof result !== "string") {
+      if (!(result instanceof ArrayBuffer)) {
         setSongAudioUploadError("파일을 오디오 프레임으로 변환하지 못했습니다.");
         return;
       }
-      const separator = result.indexOf(",");
-      if (separator < 0) {
-        setSongAudioUploadError("파일을 오디오 프레임으로 변환하지 못했습니다.");
-        return;
-      }
-      if (!sendSongAudioUpload(file.name, mimeType, result.slice(separator + 1))) {
+      const chunks = encodeSongAudioChunks(new Uint8Array(result));
+      if (!sendSongAudioUpload(file.name, mimeType, result.byteLength, chunks)) {
         setSongAudioUploadError("서버 연결이 끊겨 곡을 올릴 수 없습니다.");
         return;
       }
       setSongAudioUploadError(null);
       setSongAudioName(file.name);
     };
-    reader.readAsDataURL(file);
+    reader.readAsArrayBuffer(file);
   };
 
   // 사용자 결정 (2026-08-15): 첨부 버튼은 하나 — 파일 종류가 목적지를 고른다.

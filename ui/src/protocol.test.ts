@@ -8,6 +8,11 @@ import {
   buildLayoutImageUpload,
   buildSongAudioAnalyse,
   buildSongAudioUpload,
+  buildSongAudioUploadBegin,
+  buildSongAudioUploadChunk,
+  buildSongAudioUploadEnd,
+  encodeSongAudioChunks,
+  SONG_AUDIO_RAW_CHUNK_BYTES,
   buildCueMonitorRequest,
   buildDashCatalogRequest,
   buildLock,
@@ -88,6 +93,25 @@ describe("builders", () => {
       mime_type: "audio/wav",
       content_base64: "c2FmZQ==",
     });
+    // REQ-MUSICSYNC-027 — 분할 전송 프레임 셋. 서버 허용 목록과 같은 이름이어야 한다.
+    expect(JSON.parse(buildSongAudioUploadBegin("song.wav", "audio/wav", 10, 2))).toEqual({
+      v: 1,
+      type: "song_audio_upload_begin",
+      file_name: "song.wav",
+      mime_type: "audio/wav",
+      total_bytes: 10,
+      chunk_count: 2,
+    });
+    expect(JSON.parse(buildSongAudioUploadChunk(1, "c2FmZQ=="))).toEqual({
+      v: 1,
+      type: "song_audio_upload_chunk",
+      index: 1,
+      content_base64: "c2FmZQ==",
+    });
+    expect(JSON.parse(buildSongAudioUploadEnd())).toEqual({
+      v: 1,
+      type: "song_audio_upload_end",
+    });
     // M2 후속 — 담아 둔 곡을 **재라**고 부르는 요청. 페이로드가 없다: 잴 곡은
     // 이미 서버 세션에 있고, 시트 BPM 같은 대조값은 UI 가 가진 적이 없다.
     expect(JSON.parse(buildSongAudioAnalyse())).toEqual({
@@ -101,6 +125,20 @@ describe("builders", () => {
       approved: true,
     });
     expect(JSON.parse(buildLock(true))).toEqual({ v: 1, type: "lock", active: true });
+  });
+});
+
+describe("encodeSongAudioChunks (REQ-MUSICSYNC-027)", () => {
+  it("round-trips bytes and keeps every chunk under the server's 4 MiB base64 ceiling", () => {
+    expect(SONG_AUDIO_RAW_CHUNK_BYTES).toBe(3 * 1024 * 1024);
+    const bytes = new Uint8Array(7 * 1024 * 1024 + 5);
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = (i * 31) & 0xff;
+    const chunks = encodeSongAudioChunks(bytes);
+    expect(chunks).toHaveLength(3);
+    for (const chunk of chunks) expect(chunk.length).toBeLessThanOrEqual(4 * 1024 * 1024);
+    const decoded = chunks.flatMap((chunk) => Array.from(atob(chunk), (c) => c.charCodeAt(0)));
+    expect(decoded.length).toBe(bytes.length);
+    expect(decoded.every((value, i) => value === bytes[i])).toBe(true);
   });
 });
 

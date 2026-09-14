@@ -31,9 +31,11 @@ from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
 from server.web.messages import (
     MAX_SONG_AUDIO_BYTES,
+    MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH,
     PROTOCOL_VERSION,
     SONG_AUDIO_UPLOAD_EXTENSIONS,
     ProtocolError,
+    SongAudioAssembly,
     SongAudioRejectedError,
     parse_client_message,
 )
@@ -121,15 +123,16 @@ class TestTheFrameIsValidatedBeforeAnythingIsStored:
         assert issubclass(SongAudioRejectedError, ProtocolError)
 
 
-class TestTheEightMebibyteCapIsMeasuredOnDecodedBytes:
-    """AC-MUSICSYNC-014 — 상한은 **디코드된 원본** 8 MiB 하나다.
+class TestTheCapIsMeasuredOnDecodedBytes:
+    """AC-MUSICSYNC-026 — 상한은 **디코드된 원본** 64 MiB 하나다.
 
-    ``messages.py:218`` 의 기존 검사와 같은 형태다. base64 문자열 길이 상한은
-    그 8 MiB 에서 **파생된 값**이지 별도 상한이 아니다(REQ-MUSICSYNC-014).
+    base64 문자열 길이 상한은 그 64 MiB 에서 **파생된 값**이지 별도 상한이
+    아니다(REQ-MUSICSYNC-026). 2026-09-14 전에는 8 MiB 였고, 감독 곡 31.5MB 가
+    어느 경로로도 안 올라갔다.
     """
 
-    def test_the_cap_is_eight_mebibytes(self):
-        assert MAX_SONG_AUDIO_BYTES == 8 * 1024 * 1024
+    def test_the_cap_is_sixty_four_mebibytes(self):
+        assert MAX_SONG_AUDIO_BYTES == 64 * 1024 * 1024 == 67108864
 
     def test_a_payload_over_the_cap_is_refused_with_the_number_in_the_reason(self):
         oversized = base64.b64encode(b"\x00" * (MAX_SONG_AUDIO_BYTES + 1)).decode("ascii")
@@ -138,7 +141,7 @@ class TestTheEightMebibyteCapIsMeasuredOnDecodedBytes:
         reason = str(caught.value)
         assert any("가" <= ch <= "힣" for ch in reason), reason
         # 「상한 수치를 명시」 — 사람이 얼마나 줄여야 하는지 알 수 있어야 한다.
-        assert "8 MiB" in reason
+        assert "64 MiB" in reason
         assert str(MAX_SONG_AUDIO_BYTES) in reason
 
     def test_a_payload_exactly_at_the_cap_is_accepted(self):
@@ -341,7 +344,7 @@ class TestTheUploadTravelsTheWholeWireNotJustTheSessionMethod:
         # 이름 붙은 종류여야 UI 가 「프레임이 깨졌다」와 「파일이 거절됐다」를
         # 가른다 — layout_image_rejected 가 세운 관례.
         assert event["kind"] == "song_audio_rejected"
-        assert "8 MiB" in event["message"]
+        assert "64 MiB" in event["message"]
 
     def test_the_connection_survives_a_rejection(self, tmp_path):
         # 거절이 연결을 끊으면 운영자는 더 작은 파일을 다시 올릴 수 없다.
@@ -757,3 +760,239 @@ class TestTheCardSurvivesAReload:
                     assert frame["type"] != "question_request", frame
                     if frame["type"] == "status":
                         break
+
+
+# =============================================================================
+# 분할 전송 — AC-MUSICSYNC-026 · AC-MUSICSYNC-027
+# =============================================================================
+#
+# 한 프레임으로는 원리적으로 못 올린다: 31.5MB 의 base64 는 약 42MB 이고
+# ``server/web/serve.py`` 의 ``uvicorn.run`` 은 ``ws_max_size`` 를 주지 않아
+# 기본 16777216 이 프레임 천장이다. 그래서 곡은 begin · chunk · end 셋으로 온다.
+
+UVICORN_DEFAULT_WS_MAX_SIZE = 16777216
+DIRECTOR_SONG_BYTES = 33030144  # 감독 곡 31.5MB 급 — 구 상한 8 MiB 를 넘는다
+
+
+def _chunks(data: bytes, raw_size: int) -> list[str]:
+    return [
+        base64.b64encode(data[i : i + raw_size]).decode("ascii")
+        for i in range(0, len(data), raw_size)
+    ]
+
+
+def _begin(total, count, **overrides) -> dict:
+    return parse_client_message(
+        json.dumps(
+            {
+                "v": PROTOCOL_VERSION,
+                "type": "song_audio_upload_begin",
+                "file_name": "song.wav",
+                "mime_type": "audio/wav",
+                "total_bytes": total,
+                "chunk_count": count,
+                **overrides,
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
+def _chunk(index, content: str) -> dict:
+    return parse_client_message(
+        json.dumps(
+            {
+                "v": PROTOCOL_VERSION,
+                "type": "song_audio_upload_chunk",
+                "index": index,
+                "content_base64": content,
+            }
+        )
+    )
+
+
+def _assemble(data: bytes, raw_size: int) -> dict:
+    parts = _chunks(data, raw_size)
+    assembly = SongAudioAssembly()
+    assembly.begin(_begin(len(data), len(parts)))
+    for index, part in enumerate(parts):
+        assembly.add(_chunk(index, part))
+    return assembly.finish()
+
+
+class TestTheCapBoundaryIsOpenAtExactlyTheCap:
+    """AC-MUSICSYNC-026 — 경계 대조군과 이번 개정이 연 크기."""
+
+    def test_a_declared_total_exactly_at_the_cap_is_accepted(self):
+        assert _begin(67108864, 23)["total_bytes"] == 67108864
+
+    def test_a_declared_total_one_byte_over_is_refused_with_both_numbers(self):
+        with pytest.raises(SongAudioRejectedError) as caught:
+            _begin(67108865, 23)
+        reason = str(caught.value)
+        assert "64 MiB" in reason and "67108864" in reason
+        assert "67108865" in reason  # 받은 크기가 함께 적힌다
+
+    def test_the_director_song_size_now_assembles(self):
+        data = b"\x01" * DIRECTOR_SONG_BYTES
+        upload = _assemble(data, 3 * 1024 * 1024)
+        assert base64.b64decode(upload["content_base64"]) == data
+        assert upload["file_name"] == "song.wav"
+
+    def test_the_rejection_reason_carries_no_user_text(self):
+        with pytest.raises(SongAudioRejectedError) as caught:
+            _begin(67108865, 23, file_name="비밀곡이름.wav")
+        assert "비밀곡이름" not in str(caught.value)
+
+
+class TestChunkedUploadAssembles:
+    """AC-MUSICSYNC-027 — 조립 결과가 원본과 바이트 단위로 같다."""
+
+    def test_thirty_mebibytes_assembles_to_the_same_sha256(self):
+        data = bytes(range(256)) * (30 * 1024 * 1024 // 256)
+        upload = _assemble(data, 3 * 1024 * 1024)
+        assembled = base64.b64decode(upload["content_base64"])
+        assert len(assembled) == len(data)
+        assert hashlib.sha256(assembled).hexdigest() == hashlib.sha256(data).hexdigest()
+
+    def test_the_chunk_ceiling_is_four_mebibytes_of_base64(self):
+        assert MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH == 4 * 1024 * 1024
+
+    def test_a_full_size_chunk_frame_fits_under_the_uvicorn_ceiling(self):
+        # 조각을 JSON 프레임으로 감싼 **실제 전송 바이트**를 잰다.
+        frame = json.dumps(
+            {
+                "v": PROTOCOL_VERSION,
+                "type": "song_audio_upload_chunk",
+                "index": 999,
+                "content_base64": "A" * MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH,
+            }
+        )
+        assert len(frame.encode("utf-8")) < UVICORN_DEFAULT_WS_MAX_SIZE
+
+    def test_a_chunk_over_the_chunk_ceiling_is_refused(self):
+        # [부정 대조군] 상한을 넓혀도 조각 천장은 살아 있다.
+        oversized = "A" * (MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH + 4)
+        with pytest.raises(SongAudioRejectedError):
+            _chunk(0, oversized)
+
+
+class TestABrokenChunkedUploadStoresNothing:
+    """AC-MUSICSYNC-027 부정 대조군 — 깨진 분할은 첨부로 승격되지 않는다."""
+
+    DATA = bytes(range(256)) * 40  # 10240 바이트 → 4096 씩 3 조각
+
+    def _parts(self):
+        return _chunks(self.DATA, 4096)
+
+    def test_a_missing_middle_chunk_is_refused_and_the_buffer_is_dropped(self):
+        parts = self._parts()
+        assembly = SongAudioAssembly()
+        assembly.begin(_begin(len(self.DATA), len(parts)))
+        assembly.add(_chunk(0, parts[0]))
+        with pytest.raises(SongAudioRejectedError):
+            assembly.add(_chunk(2, parts[2]))
+        assert not assembly.active
+
+    def test_reversed_order_is_refused(self):
+        parts = self._parts()
+        assembly = SongAudioAssembly()
+        assembly.begin(_begin(len(self.DATA), len(parts)))
+        with pytest.raises(SongAudioRejectedError):
+            assembly.add(_chunk(1, parts[1]))
+        assert not assembly.active
+
+    def test_a_total_length_mismatch_is_refused_at_end(self):
+        parts = self._parts()
+        assembly = SongAudioAssembly()
+        assembly.begin(_begin(len(self.DATA) + 1, len(parts)))
+        for index, part in enumerate(parts):
+            assembly.add(_chunk(index, part))
+        with pytest.raises(SongAudioRejectedError):
+            assembly.finish()
+        assert not assembly.active
+
+    def test_too_few_chunks_is_refused_at_end(self):
+        parts = self._parts()
+        assembly = SongAudioAssembly()
+        assembly.begin(_begin(len(self.DATA), len(parts) + 1))
+        for index, part in enumerate(parts):
+            assembly.add(_chunk(index, part))
+        with pytest.raises(SongAudioRejectedError):
+            assembly.finish()
+
+    def test_bytes_past_the_declared_total_are_refused_early(self):
+        parts = self._parts()
+        assembly = SongAudioAssembly()
+        assembly.begin(_begin(5000, len(parts)))
+        assembly.add(_chunk(0, parts[0]))
+        with pytest.raises(SongAudioRejectedError):
+            assembly.add(_chunk(1, parts[1]))
+
+    def test_a_chunk_without_begin_is_refused(self):
+        with pytest.raises(SongAudioRejectedError):
+            SongAudioAssembly().add(_chunk(0, self._parts()[0]))
+
+    def test_end_without_begin_is_refused(self):
+        with pytest.raises(SongAudioRejectedError):
+            SongAudioAssembly().finish()
+
+    @pytest.mark.parametrize("bad", [True, -1, "1", 1.0])
+    def test_index_must_be_a_real_non_negative_int(self, bad):
+        with pytest.raises(SongAudioRejectedError):
+            _chunk(bad, "AAAA")
+
+    @pytest.mark.parametrize("total,count", [(True, 1), (0, 1), (10, 0), (10, False), ("10", 1)])
+    def test_begin_counts_must_be_positive_ints(self, total, count):
+        with pytest.raises(SongAudioRejectedError):
+            _begin(total, count)
+
+    def test_begin_checks_extension_like_the_single_frame(self):
+        with pytest.raises(SongAudioRejectedError):
+            _begin(10, 1, file_name="song.pdf")
+
+
+class TestTheChunkedUploadTravelsTheWholeWire:
+    """AC-MUSICSYNC-013 · 027 — ``app.py`` 의 세 분기를 지우면 이 시험이 실패한다."""
+
+    def _send_chunked(self, ws, parts: list[str], *, total: int):
+        _send(
+            ws,
+            type="song_audio_upload_begin",
+            file_name="song.wav",
+            mime_type="audio/wav",
+            total_bytes=total,
+            chunk_count=len(parts),
+        )
+        for index, part in enumerate(parts):
+            _send(ws, type="song_audio_upload_chunk", index=index, content_base64=part)
+        _send(ws, type="song_audio_upload_end")
+
+    def test_a_chunked_upload_is_acked_with_the_whole_file_sha256(self, tmp_path):
+        parts = _chunks(SMALL_WAV, len(SMALL_WAV) // 3 + 1)
+        assert len(parts) == 3
+        with (
+            TestClient(create_app(_deps(tmp_path))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            recv_frame(ws)
+            self._send_chunked(ws, parts, total=len(SMALL_WAV))
+            event = _receive_until(ws, "notice")
+        assert "song.wav" in event["message"]
+        assert SMALL_WAV_SHA256 in event["message"]
+        assert str(len(SMALL_WAV)) in event["message"]
+
+    def test_a_broken_chunked_upload_is_refused_and_stores_nothing(self, tmp_path):
+        parts = _chunks(SMALL_WAV, len(SMALL_WAV) // 3 + 1)
+        with (
+            TestClient(create_app(_deps(tmp_path))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            recv_frame(ws)
+            self._send_chunked(ws, parts, total=len(SMALL_WAV) + 7)
+            error = _receive_until(ws, "error")
+            _send(ws, type="song_audio_analyse")
+            missing = _receive_until(ws, "error")
+        assert error["kind"] == "song_audio_rejected"
+        assert any("가" <= ch <= "힣" for ch in error["message"])
+        assert missing["kind"] == "song_audio_missing"
