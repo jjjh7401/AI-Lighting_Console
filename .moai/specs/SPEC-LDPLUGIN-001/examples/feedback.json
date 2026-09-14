@@ -1,0 +1,45 @@
+{
+  "message_type": "feedback_record",
+  "schema_version": "1.0.0",
+  "environment": "synthetic",
+  "feedback_id": "feedback-synthetic-001",
+  "revision": 1,
+  "project_id": "project-synthetic",
+  "show_id": "show-synthetic",
+  "plan_id": "plan-synthetic-song",
+  "plan_revision": 1,
+  "plan_digest": "sha256:bee1cda574b556e3959a95f061ba3f607f665ea14953152f7d72d2efb4f0680f",
+  "scope": "this_song",
+  "summary": "조용한 엔딩은 유지하되 다음 수정에서는 outro 진입을 15% 대신 12%로 제안한다.",
+  "changes": [
+    {
+      "pointer": "/cues/13/actions/0/value_pct",
+      "before": {
+        "present": true,
+        "value": 15
+      },
+      "after": {
+        "present": true,
+        "value": 12
+      },
+      "rationale": "보컬 잔향을 더 비워 주려는 합성 디렉터 수정 제안. 아직 계획에 적용되지 않았다."
+    }
+  ],
+  "evidence_refs": [
+    "ev-music"
+  ],
+  "provenance": {
+    "origin": "synthetic",
+    "actor_ref": "author-fixture",
+    "source_refs": [
+      "src-fixture"
+    ],
+    "evidence_refs": [
+      "ev-music"
+    ],
+    "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+  },
+  "review": {
+    "status": "pending"
+  }
+}

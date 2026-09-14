@@ -1,0 +1,2035 @@
+{
+  "message_type": "lighting_plan",
+  "schema_version": "1.0.0",
+  "environment": "synthetic",
+  "plan_id": "plan-synthetic-song",
+  "base_revision": 0,
+  "project_id": "project-synthetic",
+  "bindings": {
+    "context_id": "ctx-synthetic-001",
+    "context_digest": "sha256:fde69740868be1444fd6430082707077e2744aaddfe1eee5e6b4ee200aa6fdee",
+    "audio_sha256": "sha256:ca890598f1f0f63aba2563fc92588aa381bb6d6b9a2c3af4adfbc6c1c797fed5",
+    "music_revision": 1,
+    "rig_revision": 1,
+    "capability_revision": 1,
+    "safety_policy_revision": 1
+  },
+  "title": "같은 후렴, 조용한 끝 — 합성 전곡",
+  "concept": "전곡 180초. 반복 후렴은 같은 강도로 유지하고 마지막에는 낮은 앰버를 거쳐 완전 소등한다.",
+  "global_motif": "앰버의 정적인 친밀감과 블루의 넓은 후렴을 대비한다.",
+  "ending_intent": "마지막 20초는 커지지 않는다. 15%→3%→0%로 가라앉고 모든 FX가 정지한다.",
+  "provenance": {
+    "origin": "synthetic",
+    "actor_ref": "author-fixture",
+    "source_refs": [
+      "src-fixture"
+    ],
+    "evidence_refs": [
+      "ev-music"
+    ],
+    "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+  },
+  "evidence_refs": [
+    "ev-music",
+    "ev-beat",
+    "ev-rig",
+    "ev-presets"
+  ],
+  "controlled_group_ids": [
+    "group-front",
+    "group-back"
+  ],
+  "motifs": [
+    {
+      "motif_id": "motif-warm",
+      "description": "낮은 앰버와 센터 정지",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "motif_id": "motif-chorus",
+      "description": "두 후렴에서 동일한 블루·와이드·4박 펄스",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "intro",
+      "lighting_intent": "낮은 정적 상태와 호흡을 유지한다.",
+      "motif_ref": "motif-warm",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "section_id": "verse-a",
+      "lighting_intent": "낮은 정적 상태와 호흡을 유지한다.",
+      "motif_ref": "motif-warm",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "section_id": "chorus-a",
+      "lighting_intent": "동일한 후렴 모티프를 반복하며 자동 증폭하지 않는다.",
+      "motif_ref": "motif-chorus",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "section_id": "verse-b",
+      "lighting_intent": "낮은 정적 상태와 호흡을 유지한다.",
+      "motif_ref": "motif-warm",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "section_id": "chorus-b",
+      "lighting_intent": "동일한 후렴 모티프를 반복하며 자동 증폭하지 않는다.",
+      "motif_ref": "motif-chorus",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "section_id": "bridge",
+      "lighting_intent": "낮은 정적 상태와 호흡을 유지한다.",
+      "motif_ref": "motif-warm",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "section_id": "outro",
+      "lighting_intent": "낮은 정적 상태와 호흡을 유지한다.",
+      "motif_ref": "motif-warm",
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    }
+  ],
+  "cues": [
+    {
+      "cue_id": "cue-baseline",
+      "section_id": "intro",
+      "at_ms": 0,
+      "label": "완전한 기준 상태; FX 비활성 사전조건",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-001",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 0,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-002",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-amber",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-003",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-center",
+          "move_mode": "dark_move",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-004",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-wash",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-005",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 0,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-006",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-amber",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-007",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-center",
+          "move_mode": "dark_move",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-008",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-wash",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 0,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-intro-rise",
+      "section_id": "intro",
+      "at_ms": 1000,
+      "label": "정착 이후 앰버 20%",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-009",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 20,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 3000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-010",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 20,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 3000,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-verse-a",
+      "section_id": "verse-a",
+      "at_ms": 20000,
+      "label": "첫 절 35%",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-011",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 35,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 2000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-012",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 35,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 2000,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-accent",
+      "section_id": "verse-a",
+      "at_ms": 35000,
+      "label": "명시적인 300ms 악센트",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-013",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 55,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 100,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-accent-return",
+      "section_id": "verse-a",
+      "at_ms": 35300,
+      "label": "악센트의 명시적인 복귀",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-014",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 35,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 200,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-chorus-a",
+      "section_id": "chorus-a",
+      "at_ms": 50000,
+      "label": "동일한 후렴 색·위치·빔·밝기",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-015",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 70,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-016",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-blue",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-017",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-wide",
+          "move_mode": "live",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 1200,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 200,
+              "fade_ms": 1400,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-018",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-narrow",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-019",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 70,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-020",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-blue",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-021",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-wide",
+          "move_mode": "live",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 1200,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 200,
+              "fade_ms": 1400,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-022",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-narrow",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-fx-start-a",
+      "section_id": "chorus-a",
+      "at_ms": 52000,
+      "label": "4박 밝기 펄스 시작",
+      "actions": [
+        {
+          "op": "fx_start",
+          "action_id": "action-023",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "instance_id": "pulse-a-group-front",
+          "preset_ref": "fx-pulse",
+          "cycle_beats": 4,
+          "phase_beats": 0,
+          "timing": {
+            "fx": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "fx_start",
+          "action_id": "action-024",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "instance_id": "pulse-a-group-back",
+          "preset_ref": "fx-pulse",
+          "cycle_beats": 4,
+          "phase_beats": 0,
+          "timing": {
+            "fx": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-fx-stop-a",
+      "section_id": "chorus-a",
+      "at_ms": 79000,
+      "label": "후렴 종료 전에 FX 명시적 정지",
+      "actions": [
+        {
+          "op": "fx_stop",
+          "action_id": "action-025",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "instance_id": "pulse-a-group-front",
+          "timing": {
+            "fx": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "fx_stop",
+          "action_id": "action-026",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "instance_id": "pulse-a-group-back",
+          "timing": {
+            "fx": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-verse-b",
+      "section_id": "verse-b",
+      "at_ms": 80000,
+      "label": "기준 앰버와 센터로 복귀",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-027",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 35,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-028",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-amber",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 800,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-029",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-center",
+          "move_mode": "live",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 200,
+              "fade_ms": 1200,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-030",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-wash",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 800,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-031",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 35,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-032",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-amber",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 800,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-033",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-center",
+          "move_mode": "live",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 200,
+              "fade_ms": 1200,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-034",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-wash",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 800,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-chorus-b",
+      "section_id": "chorus-b",
+      "at_ms": 110000,
+      "label": "동일한 후렴 색·위치·빔·밝기",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-035",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 70,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-036",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-blue",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-037",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-wide",
+          "move_mode": "live",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 1200,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 200,
+              "fade_ms": 1400,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-038",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-narrow",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-039",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 70,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-040",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-blue",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-041",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-wide",
+          "move_mode": "live",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 1200,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 200,
+              "fade_ms": 1400,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-042",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-narrow",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-fx-start-b",
+      "section_id": "chorus-b",
+      "at_ms": 112000,
+      "label": "4박 밝기 펄스 시작",
+      "actions": [
+        {
+          "op": "fx_start",
+          "action_id": "action-043",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "instance_id": "pulse-b-group-front",
+          "preset_ref": "fx-pulse",
+          "cycle_beats": 4,
+          "phase_beats": 0,
+          "timing": {
+            "fx": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "fx_start",
+          "action_id": "action-044",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "instance_id": "pulse-b-group-back",
+          "preset_ref": "fx-pulse",
+          "cycle_beats": 4,
+          "phase_beats": 0,
+          "timing": {
+            "fx": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-fx-stop-b",
+      "section_id": "chorus-b",
+      "at_ms": 139000,
+      "label": "후렴 종료 전에 FX 명시적 정지",
+      "actions": [
+        {
+          "op": "fx_stop",
+          "action_id": "action-045",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "instance_id": "pulse-b-group-front",
+          "timing": {
+            "fx": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "fx_stop",
+          "action_id": "action-046",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "instance_id": "pulse-b-group-back",
+          "timing": {
+            "fx": {
+              "delay_ms": 0,
+              "fade_ms": 500,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-bridge",
+      "section_id": "bridge",
+      "at_ms": 140000,
+      "label": "기준 앰버와 센터로 복귀",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-047",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 25,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-048",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-amber",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 800,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-049",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-center",
+          "move_mode": "live",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 200,
+              "fade_ms": 1200,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-050",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-wash",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 800,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-051",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 25,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "color_set",
+          "action_id": "action-052",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "color-amber",
+          "timing": {
+            "color": {
+              "delay_ms": 0,
+              "fade_ms": 800,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "position_set",
+          "action_id": "action-053",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "pos-center",
+          "move_mode": "live",
+          "timing": {
+            "pan": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            },
+            "tilt": {
+              "delay_ms": 200,
+              "fade_ms": 1200,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "beam_set",
+          "action_id": "action-054",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "preset_ref": "beam-wash",
+          "timing": {
+            "beam": {
+              "delay_ms": 0,
+              "fade_ms": 800,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-outro",
+      "section_id": "outro",
+      "at_ms": 160000,
+      "label": "조용한 엔딩 15%",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-055",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 15,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 2000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-056",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 15,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 2000,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-outro-low",
+      "section_id": "outro",
+      "at_ms": 172000,
+      "label": "3%까지 가라앉음",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-057",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 3,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 4000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-058",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 3,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 4000,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    },
+    {
+      "cue_id": "cue-terminal",
+      "section_id": "outro",
+      "at_ms": 179000,
+      "label": "180초에 소등 완료; 모든 FX 정지",
+      "actions": [
+        {
+          "op": "intensity_set",
+          "action_id": "action-059",
+          "group_id": "group-front",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 0,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            }
+          }
+        },
+        {
+          "op": "intensity_set",
+          "action_id": "action-060",
+          "group_id": "group-back",
+          "provenance": {
+            "origin": "synthetic",
+            "actor_ref": "author-fixture",
+            "source_refs": [
+              "src-fixture"
+            ],
+            "evidence_refs": [
+              "ev-music"
+            ],
+            "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+          },
+          "value_pct": 0,
+          "timing": {
+            "intensity": {
+              "delay_ms": 0,
+              "fade_ms": 1000,
+              "curve": "linear"
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "origin": "synthetic",
+        "actor_ref": "author-fixture",
+        "source_refs": [
+          "src-fixture"
+        ],
+        "evidence_refs": [
+          "ev-music"
+        ],
+        "rationale": "합성 전곡 사례의 의도이며 실제 청취·콘솔 검증을 주장하지 않는다."
+      }
+    }
+  ],
+  "terminal_state": [
+    {
+      "group_id": "group-front",
+      "state": {
+        "intensity_pct": 0,
+        "color_ref": "color-amber",
+        "position_ref": "pos-center",
+        "beam_ref": "beam-wash",
+        "active_fx": [],
+        "ownership": "held"
+      }
+    },
+    {
+      "group_id": "group-back",
+      "state": {
+        "intensity_pct": 0,
+        "color_ref": "color-amber",
+        "position_ref": "pos-center",
+        "beam_ref": "beam-wash",
+        "active_fx": [],
+        "ownership": "held"
+      }
+    }
+  ],
+  "playback": {
+    "mode": "trig_time",
+    "origin": "audio_start",
+    "start_policy": "operator_go"
+  }
+}

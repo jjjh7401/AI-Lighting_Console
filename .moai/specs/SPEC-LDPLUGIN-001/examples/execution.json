@@ -1,0 +1,395 @@
+{
+  "message_type": "execution_receipt",
+  "schema_version": "1.0.0",
+  "environment": "synthetic",
+  "execution_id": "execution-synthetic-001",
+  "project_id": "project-synthetic",
+  "plan_id": "plan-synthetic-song",
+  "plan_revision": 1,
+  "plan_digest": "sha256:bee1cda574b556e3959a95f061ba3f607f665ea14953152f7d72d2efb4f0680f",
+  "context_digest": "sha256:fde69740868be1444fd6430082707077e2744aaddfe1eee5e6b4ee200aa6fdee",
+  "compiled_digest": "sha256:52a66d7c882f1e6b6afc49241f411dfd65fc4893d28f9dc76abd613a1a4163ea",
+  "approval": {
+    "approval_id": "approval-synthetic-001",
+    "plan_id": "plan-synthetic-song",
+    "plan_revision": 1,
+    "plan_digest": "sha256:bee1cda574b556e3959a95f061ba3f607f665ea14953152f7d72d2efb4f0680f",
+    "context_digest": "sha256:fde69740868be1444fd6430082707077e2744aaddfe1eee5e6b4ee200aa6fdee",
+    "compiled_digest": "sha256:52a66d7c882f1e6b6afc49241f411dfd65fc4893d28f9dc76abd613a1a4163ea",
+    "principal_id": "human-synthetic",
+    "console_id": "console-synthetic",
+    "session_id": "session-synthetic",
+    "safety_policy_revision": 1,
+    "approved_at": "2026-09-13T10:06:00Z",
+    "expires_at": "2026-09-13T10:15:00Z"
+  },
+  "created_at": "2026-09-13T10:07:00Z",
+  "updated_at": "2026-09-13T10:07:01Z",
+  "state": "unknown",
+  "recovery_required": true,
+  "bundles": [
+    {
+      "bundle_id": "bundle-cue-baseline",
+      "cue_id": "cue-baseline",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-intro-rise",
+      "cue_id": "cue-intro-rise",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-verse-a",
+      "cue_id": "cue-verse-a",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-accent",
+      "cue_id": "cue-accent",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-accent-return",
+      "cue_id": "cue-accent-return",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-chorus-a",
+      "cue_id": "cue-chorus-a",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-fx-start-a",
+      "cue_id": "cue-fx-start-a",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-fx-stop-a",
+      "cue_id": "cue-fx-stop-a",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-verse-b",
+      "cue_id": "cue-verse-b",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-chorus-b",
+      "cue_id": "cue-chorus-b",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-fx-start-b",
+      "cue_id": "cue-fx-start-b",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-fx-stop-b",
+      "cue_id": "cue-fx-stop-b",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-bridge",
+      "cue_id": "cue-bridge",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-outro",
+      "cue_id": "cue-outro",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-outro-low",
+      "cue_id": "cue-outro-low",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    },
+    {
+      "bundle_id": "bundle-cue-terminal",
+      "cue_id": "cue-terminal",
+      "state": "sent",
+      "transport": "sent",
+      "object_existence": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "attribute_readback": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "visual_observation": {
+        "status": "not_observed",
+        "evidence_refs": [],
+        "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+      },
+      "error_codes": []
+    }
+  ],
+  "artistic_approval": {
+    "status": "not_observed",
+    "evidence_refs": [],
+    "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+  },
+  "terminal_state_observation": {
+    "status": "not_observed",
+    "evidence_refs": [],
+    "note": "합성 데이터이며 실제 장비·화면 관측 없음."
+  },
+  "recovery_of": []
+}
