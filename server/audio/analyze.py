@@ -17,6 +17,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 __all__ = [
@@ -109,6 +110,36 @@ _D_LEVEL_TOP = 5
 #:     재사용해, "이 정도는 넘어야 진짜 계단"이라는 상수를 두 곳에서 따로
 #:     매기지 않는다).
 _D_LEVEL_RESCALE_QUIET_RATIO_FLOOR = 0.60
+
+#: 기본 기준점으로 매긴 등급이 **한 띠에** 이 비율 이상 몰리면 등급이 판별을 못 하고
+#: 있는 것으로 본다 (t412).
+#:
+#: 실측 (`src/Club Diver.mp3` 13구간): 12/13 = 0.92 가 D5 였다. 그 결과
+#: `_infer_confirmed_role` 의 「최고 레벨이면 chorus」 규칙이 가운데 구간 전부를
+#: chorus 로 만들고 팔레트·효과·질감 세 표가 같은 항목을 골랐다 — 구간을 정리해도
+#: 무대는 「전부 똑같다」.
+#:
+#: 만장일치(1.0)를 요구하지 않는 이유: 실제 사례가 12/13 이었다. 곡 하나가 outro
+#: 하나만 다른 등급을 받아도 나머지 열둘이 뭉개진 것은 그대로다. 기준 문서 §4 의
+#: 실측(트랙 중앙 구간 10개에 고유 라벨 6~7개)에 비추면 0.7 은 관대한 쪽이다.
+_D_LEVEL_DEGENERATE_SHARE = 0.70
+
+#: 곡 전체 다이내믹 폭의 잡음 바닥, 로그 비. 이보다 좁으면 「없는 다이내믹」이다.
+#:
+#: 🔴 **`_MIN_LOG_STEP` 을 재사용하지 않는다** (t412). 그 상수는 「**프레임 사이**
+#: 계단으로 인정할 최소 변화」이고 이것은 「**곡 전체**에 걸친 폭」이다 — 단위가 다른
+#: 두 양에 같은 문턱을 쓰면 한쪽이 조용히 틀린다. 한 순간의 23% 도약은 잡음일 수
+#: 있지만 곡 전체에 걸친 23% 폭은 구조다. 실측: `src/Club Diver.mp3` 의 robust 폭
+#: 0.208 이 `_MIN_LOG_STEP`(0.25)에 막혀 재조정이 안 됐다.
+#:
+#: 값의 근거는 **실측한 잡음 바닥**이다. 이득을 전부 같게 준 합성 트랙(진짜 다이내믹 0)
+#: 에서 구간 평균의 로그 폭은 구간 4·6·10개에서 각각 0.0015 / 0.0016 / 0.0017 이었다
+#: (대조: 이득 0.2/0.5/0.9/0.35 → 1.5009). 0.02 는 그 하한의 약 12배다.
+#:
+#: 🔴 합성 클릭 트랙에서 잰 값이므로 0.0017 은 **하한**이고, 실제 음악의 잡음 바닥은
+#: 더 높다. 그래서 여유를 크게 두었다 — 이 숫자를 「실제 음악의 잡음 바닥」이라고
+#: 주장하지 않는다.
+_D_LEVEL_RANGE_NOISE_FLOOR = 0.02
 
 #: 재조정 판단(과 재조정 범위)에 쓸 quietest/loudest 를 고를 때, 나머지
 #: 구간들과 log 로 이만큼 단절된 극단값은 "이 곡의 진짜 최저/최고"가 아니라
@@ -415,7 +446,11 @@ def _grade_sections(
 
     loudest = max(means) if means else 0.0
     robust_loudest, robust_quietest = _robust_song_extremes(means)
-    rescale = _should_rescale_to_song_range(robust_loudest, robust_quietest)
+
+    # 기본 기준점으로 매긴 비를 먼저 계산해 재조정 판정에 넘긴다 (t412) — 「등급이
+    # 판별을 못 하고 있는가」는 그 비를 봐야 답할 수 있고, 폭만으로는 알 수 없다.
+    default_ratios = [(mean / loudest) if loudest > 0 else 0.0 for mean in means]
+    rescale = _should_rescale_to_song_range(robust_loudest, robust_quietest, ratios=default_ratios)
 
     candidates: list[DCandidate] = []
     for (start_ms, end_ms), mean in zip(spans, means, strict=True):
@@ -468,16 +503,71 @@ def _robust_song_extremes(means: list[float]) -> tuple[float, float]:
     return ordered[high_index], ordered[low_index]
 
 
-def _should_rescale_to_song_range(loudest: float, quietest: float) -> bool:
-    """등급 기준점을 곡 자체의 관측 폭으로 옮길지 — 두 조건을 함께 요구한다.
+def _grading_is_degenerate(ratios: Sequence[float]) -> bool:
+    """기본 기준점으로 매긴 등급이 한 띠에 몰려 **판별을 못 하고** 있는가 (t412).
+
+    이 판정이 묻는 것은 「폭이 얼마나 넓은가」가 아니라 「등급이 일을 하고 있는가」다.
+    등급의 용도는 구간을 서로 다르게 다루는 것이고, 전부 같은 등급이면 그 용도가
+    사라진다 — 실측: 13구간 중 12개가 D5 라 팔레트·효과·질감이 모두 같은 항목을 골랐다.
+
+    구간이 둘 미만이면 ``False`` 다. 하나뿐인 등급이 하나인 것은 당연하며 결함이
+    아니다 — 여기서 ``True`` 를 답하면 구간 하나짜리 입력마다 기준점을 옮긴다.
+    """
+    if len(ratios) < 2:
+        return False
+
+    counts: dict[int, int] = {}
+    for ratio in ratios:
+        level = _D_LEVEL_TOP
+        for upper, band_level in _D_LEVEL_BANDS:
+            if ratio < upper:
+                level = band_level
+                break
+        counts[level] = counts.get(level, 0) + 1
+
+    return max(counts.values()) / len(ratios) >= _D_LEVEL_DEGENERATE_SHARE
+
+
+def _should_rescale_to_song_range(
+    loudest: float, quietest: float, *, ratios: Sequence[float] | None
+) -> bool:
+    """등급 기준점을 곡 자체의 관측 폭으로 옮길지.
+
+    두 갈래 중 하나면 옮긴다 — 새 갈래는 **덧붙인** 것이므로, 전에 재조정되던 곡은
+    전부 그대로 재조정된다(t412).
+
+    **갈래 A (기존)** — 두 조건을 함께 요구한다:
 
     (1) 가장 조용한 구간조차 이미 `_D_LEVEL_RESCALE_QUIET_RATIO_FLOOR` 를
         넘는다 — 절대 폭 상위 두 칸에 몰려 있다는 신호.
     (2) 가장 크고 작은 구간의 로그 차가 `_MIN_LOG_STEP` 이상이다 — 그 몰림이
         잡음이 아니라 진짜 세기 차라는 확인.
+
+    **갈래 B (t412)** — 등급이 실제로 판별에 실패하고 있고, 그 좁은 폭이 잡음은
+    아닐 때:
+
+    (1) `_grading_is_degenerate` — 한 띠에 몰려 있다.
+    (2) 로그 폭이 `_D_LEVEL_RANGE_NOISE_FLOOR` 이상 — 없는 다이내믹을 지어내지
+        않는다.
+
+    갈래 B 가 필요한 이유는 갈래 A 의 조건 (2)가 `_MIN_LOG_STEP` 을 빌려 쓰기
+    때문이다. 그 상수는 프레임 사이 계단의 문턱이고 곡 전체 폭의 문턱이 아니다 —
+    실측 곡의 폭 0.208 이 0.25 에 막혀 12/13 이 D5 로 남았다.
+
+    Args:
+        ratios: 기본 기준점(최대 구간 = 1.0)으로 계산한 구간별 비. ``None`` 이면
+            갈래 B 를 평가하지 않는다 — 호출자가 아직 계산하지 않았다는 뜻이고,
+            없는 값을 0 으로 가정해 판정하지 않는다.
     """
     if loudest <= 0 or quietest <= 0 or quietest >= loudest:
         return False
-    if (quietest / loudest) < _D_LEVEL_RESCALE_QUIET_RATIO_FLOOR:
-        return False
-    return math.log(loudest / quietest) >= _MIN_LOG_STEP
+
+    spread = math.log(loudest / quietest)
+
+    if (quietest / loudest) >= _D_LEVEL_RESCALE_QUIET_RATIO_FLOOR and spread >= _MIN_LOG_STEP:
+        return True
+
+    if ratios is not None and _grading_is_degenerate(ratios):
+        return spread >= _D_LEVEL_RANGE_NOISE_FLOOR
+
+    return False
