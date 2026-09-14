@@ -741,6 +741,51 @@ _ARC_FX: dict[str, tuple[tuple[str, ...], int]] = {
     "bridge": (("slow tilt",), 1),
     "finale": (("dimmer chase", "accent sweep"), 2),
 }
+#: 카드 t405 — 회차마다 효과를 바꾼다. 고치기 전 실측(main@611ce34, Club
+#: Diver.mp3 를 앱 경로로 끝까지 태운 타임라인 39구간): 서로 다른 효과가 넷뿐이고
+#: 그중 26구간이 바이트 동일한 ``dimmer chase`` 였다. 원인은 둘이다 — ``_ARC_FX``
+#: 가 역할당 효과를 한 벌만 갖고, 감독 질감이 medium 이면 아래 ``[:1]`` 이 **항상
+#: 0번**을 집는다. 이 곡은 39구간 중 25개가 chorus 라 그 한 줄이 곡을 덮는다.
+#:
+#: 처방은 색이 카드 t402 에서 한 것과 같은 축이다: 회차(occurrence)로 사다리를
+#: 돈다. **회차 1은 위 ``_ARC_FX`` 의 값과 바이트 동일**이라 기존 룩은 안 바뀐다.
+#: 효과 이름은 지어내지 않는다 — 전부 이 저장소가 이미 싣고 있는 FX 라이브러리
+#: 항목의 말이다(``server/fx/library/{movement,dimmer,color}.yaml``):
+#: horizontal chase→``chase-horizontal``, bounce chase→``chase-bounce-run``,
+#: v-shape swing→``sweep-vshape-swing``(셋 다 카드 t372 가 넣고 이 곡에서 한
+#: 번도 안 뽑히던 것), soft wave→``wave-soft-rise``, cross diagonal→
+#: ``diagonal-club-cross``, orbit→``circle-relative-orbit``, breathing→
+#: ``pulse-breath``.
+#:
+#: 🔴 여기 쓰는 말은 ``song_cue_composer._contains_any`` 가 ``_BLACKOUT_TOKENS``
+#: (blackout/암전/…)와 ``_AUDIENCE_TOKENS``(audience/blinder/객석/…)로 되읽는다 —
+#: 새 이름을 더할 때 그 토큰이 문자열 안에 들어가면 구간이 통째로 블랙아웃이나
+#: 객석 조명으로 오판된다. 아래 이름은 어느 토큰도 포함하지 않는다.
+_ARC_FX_LADDER: dict[str, tuple[tuple[str, ...], ...]] = {
+    "intro": ((),),
+    "verse": (("slow pan",), ("slow tilt",), ("soft wave",)),
+    "chorus": (
+        ("dimmer chase", "pan sweep"),
+        ("horizontal chase", "pan sweep"),
+        ("bounce chase", "v-shape swing"),
+        ("cross diagonal", "dimmer chase"),
+    ),
+    "bridge": (("slow tilt",), ("orbit",), ("breathing",)),
+    "finale": (("dimmer chase", "accent sweep"),),
+}
+
+
+def _arc_fx_allowed(role: str, occurrence: int) -> tuple[str, ...] | None:
+    """이 회차가 쓸 효과 묶음. 사다리가 없는 역할이면 ``None`` (카드 t405).
+
+    회차는 1부터 센다 — 1회차는 항상 사다리 0번, 즉 ``_ARC_FX`` 와 같은 값이다.
+    """
+    rungs = _ARC_FX_LADDER.get(role)
+    if not rungs:
+        return None
+    return rungs[(max(occurrence, 1) - 1) % len(rungs)]
+
+
 # 카드 t409 감독 판정 — 표준 팔레트는 파랑이 한 종류(#8 Blue)뿐이라 인트로
 # "deep blue"·벌스 "blue"·브리지 "cold blue" 세 아크가 전부 같은 RGB로
 # 겹쳤다(t408 실측: 14구간이 동일 색). 감독은 "인접 색조로 갈라 다르게
@@ -931,17 +976,24 @@ def _section_fx_decision(
     climax_index: int,
     section_count: int,
     records: Sequence[object],
+    occurrence: int = 1,
 ) -> FxDecision:
     base = _fx_decision(records)
     role = _section_role(section, section_index=section_index, section_count=section_count)
     arc = _ARC_FX.get(role)
     if arc is None:
         return base
-    allowed, density = arc
+    _, density = arc
+    # 카드 t405 — 묶음은 회차 사다리에서, 축 개수(density)는 ``_ARC_FX`` 에서.
+    # 사다리 칸은 전부 같은 길이라 density 는 회차와 무관하게 그대로다.
+    allowed = _arc_fx_allowed(role, occurrence) or arc[0]
     if base.density <= 0:
         # Director asked for a calm texture — the arc never re-enables FX.
         return FxDecision(allowed=(), source="section_arc", disabled=allowed, density=0)
     if base.density == 1 and density > 1:
+        # 감독 질감이 medium 이면 축이 하나로 깎인다. 예전에는 여기서 **항상**
+        # 0번을 집어 회차 사다리가 통째로 지워졌다(실측: 26구간이 같은 효과).
+        # 회차가 고른 묶음의 첫 축을 그대로 남겨 사다리를 살린다.
         allowed, density = allowed[:1], 1
     return FxDecision(allowed=allowed, source="section_arc", density=density)
 
@@ -1934,6 +1986,7 @@ def _build_unified_song_plan(
                         climax_index=climax_index,
                         section_count=section_count,
                         records=records,
+                        occurrence=occurrence,
                     ),
                     (fx_overrides or {}).get(index),
                 ),
