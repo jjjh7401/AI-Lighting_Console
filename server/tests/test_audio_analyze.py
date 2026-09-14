@@ -173,6 +173,68 @@ class TestNonAudioBytesComeBackAsAFailureNotAnException:
         assert isinstance(result, AnalysisResult)
 
 
+def _silently_truncated_mp3() -> tuple[bytes, float]:
+    """디코더가 **예외 없이** 중간에서 멈추는 mp3 를 만든다 — (바이트, 읽힌 비율).
+
+    t416 실측(2026-09-14): 실제 곡 Let's Dance.mp3 는 헤더가 140.55초를 선언하는데
+    ``soundfile.read`` 는 91초 지점의 libmpg123 「dequantization failed」에서 멈추고
+    90.98초만 돌려준다. 예외가 없다. 실제 곡은 커밋할 수 없으므로(REQ-MUSICSYNC-011)
+    합성 트랙을 mp3 로 쓰고 오디오 데이터 바이트를 덮어 **같은 모양**을 만든다.
+    위치는 실행 시 찾는다 — 인코더 출력이 바뀌어도 모양을 잃지 않게 한다.
+    """
+    import io
+
+    import soundfile
+
+    samples, rate = soundfile.read(io.BytesIO(synthesize_track(duration_ms=20000)), always_2d=True)
+    buffer = io.BytesIO()
+    soundfile.write(buffer, samples, rate, format="MP3")
+    clean = buffer.getvalue()
+    for position in range(len(clean) // 2, len(clean) - 4000, 97):
+        broken = bytearray(clean)
+        broken[position : position + 24] = b"\x55" * 24
+        try:
+            declared = soundfile.info(io.BytesIO(bytes(broken))).frames
+            decoded = len(soundfile.read(io.BytesIO(bytes(broken)), always_2d=True)[0])
+        except Exception:
+            continue  # 크게 실패하는 변형은 이미 형식 오류로 잡힌다 — 찾는 것은 조용한 쪽
+        if declared and 0.3 < decoded / declared < 0.9:
+            return bytes(broken), decoded / declared
+    raise AssertionError("조용히 잘리는 mp3 변형을 만들지 못했다 — 재현 픽스처가 공허하다")
+
+
+class TestASilentlyTruncatedDecodeIsRefusedNotAnalysed:
+    """t416 — 디코더가 조용히 잘라 읽은 곡을 완전한 결과처럼 답하지 않는다.
+
+    조용한 부분 분석보다 정직한 거절이 낫다. 부분 오디오로 잰 BPM·구간은 곡 전체의
+    것이 아닌데, 확인 카드는 그것을 곡의 값으로 제안하게 된다.
+    """
+
+    def test_the_fixture_really_truncates_without_raising(self):
+        _, ratio = _silently_truncated_mp3()
+        assert 0.3 < ratio < 0.9
+
+    def test_a_truncated_decode_comes_back_as_a_failure_naming_both_lengths(self):
+        payload, _ = _silently_truncated_mp3()
+        outcome = analyze(payload)
+        assert isinstance(outcome, AnalysisFailure), outcome
+        assert "초" in outcome.reason
+        assert any("가" <= ch <= "힣" for ch in outcome.reason)
+
+    def test_the_same_track_as_a_clean_mp3_still_analyses(self):
+        # 대조군: mp3 라서 거절하는 검사라면 위 시험은 공허하다.
+        import io
+
+        import soundfile
+
+        samples, rate = soundfile.read(
+            io.BytesIO(synthesize_track(duration_ms=20000)), always_2d=True
+        )
+        buffer = io.BytesIO()
+        soundfile.write(buffer, samples, rate, format="MP3")
+        assert isinstance(analyze(buffer.getvalue()), AnalysisResult)
+
+
 class TestTheAnalysisTouchesNoFilesystemOrNetwork:
     """AC-MUSICSYNC-011 — 호출 동안 파일 시스템·네트워크 접촉 0건.
 
