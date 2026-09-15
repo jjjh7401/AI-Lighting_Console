@@ -133,6 +133,123 @@ seam 이 계획만 넘기므로 context 는 검증기를 만들 때 주입한다
 **blocking** 이다(판정 불능을 수용으로 바꾸면 시간 검사가 조용히 사라진 채 `ready_for_review`
 가 나올 수 있다).
 
+### C3 tracking·FX·충돌 완료 (REQ-LDPLUGIN-010·011)
+
+워크트리 `.claude/worktrees/ldcompile-c3` · 브랜치 `WT-tracking-fx` · 기준 HEAD `3405f2e7`
+(= `origin/main`) · 구현 커밋 `04f3feef`.
+
+**Claim**: 계약 `LD-STATE-001`·`LD-STATE-002`·`LD-FX-001`·`LD-CONFLICT-001` 을 TDD 로 구현하고,
+C1 파이프라인 3단(`tracking_fx`)의 자리표시자를 실제 검사기로 교체했다. C2 가 남긴
+`rounding_conflicts` 의 호출자 부재도 같은 배치에서 닫았다.
+
+#### Evidence — 기준선 (실제 출력)
+
+```
+$ uv run pytest -q          # 3405f2e7, 신규 파일 전
+13185 passed, 35 skipped, 1 warning in 213.70s (0:03:33)
+```
+파일: `.moai/state/verify/c3/baseline.txt`
+
+**Baseline-attribution**: 이 워크트리·이 HEAD 에서 직접 실측했다. 인계문이 예상한
+`13185/35` 와 일치하지만 그 예상을 근거로 쓰지 않았다 — 위 출력이 근거다.
+
+#### Evidence — RED (실제 출력)
+
+```
+$ uv run pytest server/tests/test_director_validate_ready.py \
+      server/tests/test_director_validate_conflict.py -q
+67 failed, 1 passed in 1.44s
+```
+파일: `.moai/state/verify/c3/red.txt`
+
+통과한 1건이 **내 가드가 공허했다는 증거**다 — 아래 「자기 검토에서 찾은 내 결함」 1번.
+
+#### Evidence — GREEN · 회귀 (실제 출력)
+
+```
+$ uv run pytest -q
+13255 passed, 35 skipped, 1 warning in 173.80s (0:02:53)
+```
+파일: `.moai/state/verify/c3/green-full.txt`
+
+**Baseline-attribution**: 13185 + 신규 **70** = 13255 — 정확히 일치하며 skipped 불변, 실패 0.
+신규 개수는 파일을 명시해 셌다(두 신규 파일 → `70 passed`). C1·C2 시험은 깨지지 않았다:
+
+```
+$ uv run pytest server/tests/test_director_validate_pipeline.py \
+      server/tests/test_director_validate_timing.py -q
+103 passed in 0.49s
+```
+
+#### Evidence — 경계 (실제 출력)
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/     → OK - no OSC import
+$ grep -rnE "^\s*(from|import)\s+server\.(looks|web)" server/director/ → OK - no artistic producer
+$ git diff --name-only origin/main -- server/lxseq server/design       → (없음) OK - untouched
+$ git diff --name-only origin/main -- server/director/service.py        → (없음) OK - untouched
+$ uv run ruff check server/director/ server/tests/test_director_validate_{ready,conflict}.py
+All checks passed!
+```
+
+#### C2 의 빚을 닫았다 — 호출자 0건 → 1건
+
+```
+$ grep -rn "rounding_conflicts(" server --include="*.py" \
+    | grep -v "/tests/" | grep -v "def rounding_conflicts("
+server/director/validate/pipeline.py:153: ... rounding_conflicts(beat_map, fx_beat_requests(plan, context))
+```
+
+`(group, axis, beat)` 목록은 `conflict.fx_beat_requests` 가 만든다 — FX cycle 경계를 박으로
+낮춘 것이다. 계약 §7 의 반올림 충돌이 실제로 걸리는 자리는 **박으로 반복되는 것**뿐이며
+(일반 cue 의 `at_ms` 는 절대 시각이라 박 계산을 거치지 않는다), 그래서 목록의 출처가 FX 다.
+
+#### Evidence — 계기가 공허하지 않다는 확인 (전부 실측)
+
+| 확인 | 방법 | 결과 |
+|---|---|---|
+| 규범 예제가 통과하는가 | `check_ready(plan.json)` · `check_conflicts(plan, context)` | 둘 다 blocking 0 |
+| 음성 대조 셋이 통과하는가 | 조용한 엔딩(outro 3%) · 동일 후렴 강도(75/75) · 반복 motif(color-blue ×3) | 셋 다 blocking 0 |
+| 구간 이름으로 판정하지 않는가 | 같은 계획의 `section_id` 를 intro/chorus/outro/bridge 로 돌림 | 판정 불변 |
+| 검사 밖 필드를 건드리면 통과하는가 | `label`·`title` 변조 | blocking 0 (넓게 잡지 않았다) |
+| 반올림 배선이 실물인가 | `bpm=60000` + `cycle_beats=0.0625` → `run_stages` | `LD-TIME-002` blocking 등장 |
+| 그 배선의 **구멍**도 재는가 | `bpm=120` + `cycle_beats=4` | 반올림 진단 0건 (무조건 막는 것이 아니다) |
+| 반열림이 맞는가 | 끝==시작(3000) 통과 / 1ms 겹침(2999) 거부 | 양쪽 다 의도대로 |
+| delay 가 예약인가 | `delay=3000,fade=1000` 구간에 1000ms 순간 쓰기 | conflict. 4000ms 는 통과 |
+| fixture 전개가 판정 단위인가 | 같은 계획을 겹친 group / 분리된 group context 로 각각 | 겹치면 conflict, 분리하면 통과 |
+| 겹치지 않는 fixture 까지 고발하는가 | 진단 문면 검사 | `fixture-2` 만 등장, `fixture-1` 부재 |
+| 배열 순서로 덮어쓰는가 | 세 겹침의 순서를 뒤집어 개수·대상 대조 | 동일 |
+
+#### 자기 검토에서 찾은 내 결함 (수정 완료)
+
+1. 🔴 **빚을 닫았다는 내 가드가 구현 전에 통과했다.** `rounding_conflicts` 를 grep 하면서
+   여는 괄호를 요구하지 않아 `timing.py:14` 의 **독스트링 언급**을 호출자로 셌다. 도달
+   가능성은 정당화가 아니다 — 호출을 세야 한다. `rounding_conflicts(` 로 좁히고 그 사유를
+   시험 본문에 남겼다. 이것이 RED 에서 「1 passed」였던 것이다.
+2. 🔴 **첫 grep 이 계기가 죽은 채 0 을 답했다.** zsh 가 `--include=*.py` 를 글롭으로 먹어
+   `no matches found` 를 내고 `wc -l` 이 0 을 셌다 — 「호출자 0건」이라는 참인 결론이
+   거짓 경로로 나왔다. 인용하고 양성 대조(`grep "def "` → 15722건)를 함께 쏴서 다시 셌다.
+3. release 뒤 완전한 baseline 을 다시 선언해도 `ownership` 이 `released` 로 남아 양성 대조가
+   깨졌다. 쓰면 다시 소유한다 — `simulate` 에서 static 쓰기가 `held` 로 되돌린다. 부분
+   재진입은 `_check_release_reentry` 가 따로 막으므로 여기서 완전성을 재판정하지 않는다.
+4. 순서 독립 시험이 진단 **문면**까지 같기를 요구해 실패했다. pointer 가 `/cues/0/actions/{j}`
+   라 배열 첨자를 담으므로 문면은 당연히 달라진다 — 순서와 무관해야 하는 것은 판정이고,
+   관측 가능한 형태는 개수와 대상이다. 단언을 그리로 옮겼다.
+
+#### 만든 파일 · 고친 파일
+
+```
+신규  server/director/validate/simulate.py               축별 상태 · baseline · FX 생애 · terminal
+신규  server/director/validate/conflict.py               fixture×axis 예약 구간 · FX 축 · 박 요청
+신규  server/tests/test_director_validate_ready.py       41 시험 (음성 대조 3 포함)
+신규  server/tests/test_director_validate_conflict.py    29 시험 (날조 대조군 + 구멍 포함)
+수정  server/director/validate/pipeline.py               3단 배선 + rounding_conflicts 호출
+```
+
+`simulate.check_ready` 는 `context` 를 받지 않는다 — 이 판정에 필요한 것은 전부 계획 안에
+있고(controlled group·cue·terminal), group membership 은 충돌 검출의 관심사다. 안 쓰는 입력을
+받으면 그것을 본다고 오해된다.
+
 ## §E.3 Gaps — C2 에서 하지 않은 것
 
 - **「불가능 해상도 차단」(`AC-LDPLUGIN-009` 마지막 항목) 미구현.** emitter 최소 timing
@@ -149,6 +266,34 @@ seam 이 계획만 넘기므로 context 는 검증기를 만들 때 주입한다
   (LDSTORE `progress.md` §F 실측 ≈114K 토큰). 오케스트레이터가 구현자이면서 검토자다.
 - **CI 는 과금 차단으로 죽어 있어 판정 근거가 아니다.** 위 로컬 출력만 증거로 썼다.
 
+### C3 에서 하지 않은 것
+
+- **`terminal_state` 의 `ownership` 재획득 규칙은 계약 문면이 아니라 내 해석이다.** 계약은
+  `held`/`released` 두 값만 적고 재획득을 말하지 않는다. 「쓰면 다시 소유한다」를 택했고
+  근거는 부분 재진입을 별도로 막는다는 것뿐이다 — 우산 수준 확인을 받은 것은 아니다.
+- **첫 cue 의 `fx_start` 를 blocking 으로 만든 것도 해석이다.** 계약은 *"active FX 없음이
+  **target 에서** 확인되어야"* 라고 적었고 그것은 콘솔 관측이다. 계획 문면에서 판정할 수
+  있는 근사로 「baseline cue 안에서 FX 를 켜지 않는다」를 택했다. 실기 관측(C6)이 진짜 판정이다.
+- **`_MAX_BEAT_REQUESTS_PER_INSTANCE = 10000` 은 상한이며 그 너머를 안 본다.** 상한에 닿는
+  입력에서 그 뒤의 반올림 충돌은 검사되지 않는다. 어떤 입력이 상한에 닿는지 실측하지 않았다.
+- **`settle_ms` 를 예약 구간에 넣지 않았다.** 계약은 정착시간을 *"마지막 movement fade 완료 후
+  reveal 전"* 으로 적어 reveal 타이밍의 개념으로 두었다. 충돌 구간에 더할 근거를 찾지 못해
+  넣지 않았고, 이 판단은 검증되지 않았다.
+- **`LD-STATE-002` 의 *"마지막 cue 뒤에도 fade 가 남으면 duration 내 완료"* 미구현.** 곡
+  duration 은 context 쪽이며 `check_ready` 는 context 를 받지 않는다. 어느 층이 볼 것인지
+  정하지 않았다.
+- **독립 감사 없음.** `plan-auditor` 는 이 저장소에서 착수 전 컨텍스트 초과로 죽는다
+  (LDSTORE `progress.md` §F 실측 ≈114K 토큰). 오케스트레이터가 구현자이면서 검토자다.
+- **증거 파일이 이 워크트리에만 있다.** `.moai/state/` 가 gitignore 되므로
+  `.moai/state/verify/c3/*.txt` 는 커밋되지 않았고 `git status` 에도 안 나온다. 워크트리를
+  지우면 위 인용의 근거가 사라진다.
+
+> **C2 기록 정정 (2026-09-16 실측)**: C2 의 §E.2·§E.3 이 *"CI 는 과금 차단으로 죽어 있어
+> 판정 근거가 아니다"* 라고 적었으나, `gh run list --limit 5` 로 재니 최근 5건 중 4건이
+> `success`(하나는 `cancelled`)로 **CI 는 살아 있고 초록이다.** C2 의 기록은 그때 참이었을
+> 수 있으므로 고치지 않고, 이 정정을 C3 의 사실로 남긴다. 다만 C3 의 위 증거는 전부 로컬
+> 출력이며 이 브랜치는 아직 push 되지 않아 CI 판정을 받지 않았다.
+
 ## §E.4 Residual-risk
 
 - `TestContractExamplePasses` 는 「계약 fixture 가 timing 단계를 통과한다」를 전제한다. 계약
@@ -160,3 +305,20 @@ seam 이 계획만 넘기므로 context 는 검증기를 만들 때 주입한다
 - `_uncovered_ms` 는 덮인 구간을 시작점부터 이어붙여 본다. segment 가 겹쳐 있는 병리적
   입력에서는 커서가 앞으로만 가므로 보수적으로(막는 쪽으로) 답한다 — 스키마가 겹침을
   막지 않으므로 가능한 입력이다.
+
+### C3 잔여 위험
+
+- **충돌 검출이 전수 쌍 비교다.** 한 `(fixture, axis)` 키의 예약 수 n 에 대해 O(n²) 이다.
+  규범 예제(fixture 8 · 축 5 · 예약 수백)에서 0.5초 안에 끝나지만, 큐가 수천인 계획의
+  실측은 없다. 인접 쌍만 보는 최적화는 「배열 순서로 덮어쓰지 않는다」를 깨뜨릴 수 있어
+  택하지 않았다 — 성능 문제가 실제로 관측되면 그때 정렬 기반 sweep 으로 바꿔야 한다.
+- **`overlaps` 의 「같은 시작 시각이면 충돌」 절이 반열림 판정과 별개 규칙이다.** 길이 0
+  구간(순간 변경)을 잡기 위한 것인데, 이 절 때문에 *같은 시각에 시작해 곧바로 끝나는*
+  두 예약이 항상 충돌한다. 계약 *"한 instant 의 중복 쓰기는 conflict"* 와 일치하지만,
+  두 규칙이 한 술어에 얹혀 있어 한쪽을 고치면 다른 쪽이 조용히 바뀔 수 있다.
+- **`fx_beat_requests` 가 부동소수 누적으로 박을 전진시킨다** (`beat += cycle`). 반복이
+  수천 회면 누적 오차가 ms 반올림 경계를 넘길 수 있다. 곱셈(`start + k*cycle`)이 더
+  안전하지만, 그 차이가 실제 판정을 바꾸는 입력을 찾지 못해 바꾸지 않았다.
+- **이 브랜치는 push 되지 않아 CI 판정을 받지 않았다.** 위 증거는 전부 이 워크트리의 로컬
+  출력이며, 「내 트리에서 초록」은 「머지 후 초록」이 아니다. 기준 HEAD 가 `origin/main` 과
+  같으므로 차이가 생길 여지는 작지만, 그것은 재지 않은 추론이다.
