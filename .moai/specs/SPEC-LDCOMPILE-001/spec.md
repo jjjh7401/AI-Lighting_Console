@@ -2,9 +2,9 @@
 id: SPEC-LDCOMPILE-001
 title: "Director 시맨틱 검증·축별 timing lowering·capability 판정"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-09-14
-updated: 2026-09-14
+updated: 2026-09-15
 author: jaihyun
 priority: P1
 phase: "Lighting Director v1.0 target"
