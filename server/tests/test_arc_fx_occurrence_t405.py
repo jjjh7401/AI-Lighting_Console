@@ -39,9 +39,23 @@ NEW_LABEL_TO_FX_ID = {
     "breathing": "pulse-breath",
 }
 
-#: 고치기 전부터 있던 이름 — 라이브러리에 안 걸린다(실측). 이 카드의 책임이
-#: 아니지만, 목록이 조용히 늘어나면 알아채려고 여기 못박는다.
-PRE_EXISTING_UNROUTED = ("dimmer chase", "pan sweep", "slow pan", "slow tilt", "accent sweep")
+#: 카드 t411 이 뒤늦게 이어 붙인 다섯 — t405 시점에는 라이브러리에 안 걸렸다.
+#: 이름은 손대지 않고 라이브러리 쪽에 영어 별칭을 더해 이었다. 이름을 갈면
+#: ``song_cue_composer._contains_any`` 가 되읽는 문자열이 바뀌어 구간이 통째로
+#: 오판될 수 있고(PR 436·437 에서 두 번 당했다), 별칭 추가는 그 축을 아예 건드리지
+#: 않는다. 매핑 근거는 속성과 속도다 — Dimmer 계열은 pulse, Pan 은 sweep,
+#: Tilt 는 wave 이고 accent 는 빠른 쪽(speed 120)이다.
+LATE_LABEL_TO_FX_ID = {
+    "dimmer chase": "pulse-beat",
+    "pan sweep": "sweep-soft-wide",
+    "slow pan": "sweep-sine-ease",
+    "slow tilt": "wave-soft-rise",
+    "accent sweep": "sweep-club-xwave",
+}
+
+#: 이제 안 걸리는 이름은 없다. 목록이 조용히 늘어나면
+#: ``test_every_ladder_label_routes`` 가 잡는다.
+PRE_EXISTING_UNROUTED: tuple[str, ...] = ()
 
 #: ``song_cue_composer._contains_any`` 가 효과 문자열을 이 토큰들로 되읽는다 —
 #: 새 이름에 섞이면 구간이 통째로 블랙아웃/객석 조명으로 오판된다.
@@ -109,13 +123,26 @@ class TestTheNamesAreRealLibraryWords:
         assert result["selected"] == fx_id
         assert result["fallback"] is False
 
-    @pytest.mark.parametrize("label", PRE_EXISTING_UNROUTED)
-    def test_the_pre_existing_names_are_still_the_only_unrouted_ones(self, library, label):
-        assert match_fx(label, library).to_dict()["fallback"] is True
+    @pytest.mark.parametrize(("label", "fx_id"), sorted(LATE_LABEL_TO_FX_ID.items()))
+    def test_the_late_label_routes_to_its_entry(self, library, label, fx_id):
+        # 카드 t411 — 앞서 fallback 이던 다섯이 이제 항목 하나로 걸린다.
+        result = match_fx(label, library).to_dict()
+        assert result["selected"] == fx_id
+        assert result["fallback"] is False
 
-    def test_no_ladder_label_outside_the_two_sets_above(self):
+    def test_no_ladder_label_outside_the_sets_above(self):
         used = {label for rungs in _ARC_FX_LADDER.values() for rung in rungs for label in rung}
-        assert used == set(NEW_LABEL_TO_FX_ID) | set(PRE_EXISTING_UNROUTED)
+        expected = set(NEW_LABEL_TO_FX_ID) | set(LATE_LABEL_TO_FX_ID) | set(PRE_EXISTING_UNROUTED)
+        assert used == expected
+
+    def test_every_ladder_label_routes(self, library):
+        # 계기가 공허하지 않다 — 사다리에 쓰이는 모든 이름이 실제로 걸린다.
+        used = {label for rungs in _ARC_FX_LADDER.values() for rung in rungs for label in rung}
+        assert used, "사다리에 이름이 하나도 없다 — 시험이 공허하다"
+        unrouted = sorted(
+            label for label in used if match_fx(label, library).to_dict()["fallback"] is True
+        )
+        assert unrouted == [], f"라이브러리에 안 걸리는 이름이 남았다: {unrouted}"
 
     def test_no_label_carries_a_blackout_or_audience_token(self):
         used = {label for rungs in _ARC_FX_LADDER.values() for rung in rungs for label in rung}

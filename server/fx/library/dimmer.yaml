@@ -25,7 +25,7 @@ fx:
   - fx_id: "pulse-beat"
     display_name: "박자 펄스"
     pattern: "pulse"
-    aliases: ["펄스", "박자 펄스", "깜빡이는 딤머", "비트 타는 펄스", "박자 맞춰 깜빡", "pulse"]
+    aliases: ["펄스", "박자 펄스", "깜빡이는 딤머", "비트 타는 펄스", "박자 맞춰 깜빡", "pulse", "dimmer chase"]
     mood_keywords: ["박자", "깜빡이는", "리듬", "펄스", "또렷한", "비트", "pulse", "beat"]
     steps:
       - Dimmer: 100
