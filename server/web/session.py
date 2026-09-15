@@ -220,6 +220,7 @@ from server.web.question import (
     QuestionRequest,
     SongSectionProposal,
     build_song_confirmation_card,
+    is_bpm_octave_apart,
     parse_confirmed_bpm,
     parse_confirmed_sections,
     section_label,
@@ -12036,6 +12037,16 @@ class ChatSession:
         # (REQ-SONGCONFIRM-006). 같은 라벨을 가진 제안은 판정을 함께 받으며 그
         # 사실을 ``label_shared`` 로 남긴다(plan.md §F W1).
         verdict = parse_confirmed_sections(answer, proposals=proposals)
+        # t414 — 사람이 적어 넣은 BPM 이 측정값의 배수(2배·절반)면 마디 길이가 두 배로
+        # 달라진다. 카드의 구간 경계는 측정 BPM 의 4마디 하한이 만든 것이므로
+        # (``analyze._min_segment_ms``) 그 구간표는 정정된 BPM 의 것이 아니다. 여기서
+        # 다시 계산하지는 않는다 — REQ-SONGCONFIRM-004 가 카드에 없던 구간을 만드는 것을
+        # 금지한다. 그래서 REQ-SONGCONFIRM-005 와 같은 문법으로 **확정을 무효로 하고
+        # 소리 내어 말한다**: 침묵하면 절반 BPM 에 2마디짜리 구간표가 붙은 계획을
+        # 사람이 승인한 줄 모른 채 쓴다.
+        bpm_octave_corrected = is_bpm_octave_apart(confirmed_bpm, measured_bpm)
+        if bpm_octave_corrected:
+            verdict = None
         record: ConfirmedSongAnalysis | None = None
         if verdict is not None:
             labels = [section_label(proposal) for proposal in proposals]
@@ -12072,6 +12083,11 @@ class ChatSession:
         lines.extend(resolution.mismatches)
         if fallback_reason:
             lines.append(fallback_reason)
+        if bpm_octave_corrected:
+            lines.append(
+                f"측정 BPM {measured_bpm:g} 의 배수로 고쳐 주셨으므로 마디 길이가 달라집니다 — "
+                "카드에 있던 구간 확정은 무효입니다. 이 곡은 다시 분석해 주세요."
+            )
         # SPEC-COPILOT-SONGCONFIRM-001 M2 (REQ-SONGCONFIRM-013) — 기록이 생겼을 때만
         # 구간 결과와 다음 단계를 덧붙인다. 기록이 없는 갈래의 고지는 오늘 그대로다.
         if record is not None:
