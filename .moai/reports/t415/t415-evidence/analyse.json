@@ -1,0 +1,26 @@
+{
+  "file": "scott-buckley-neon.mp3",
+  "seconds_to_card": 3.1,
+  "card_arrived": true,
+  "errors": [],
+  "question": null,
+  "multi": true,
+  "option_count": 17,
+  "options_head": [
+    {
+      "label": "0:00–0:11 · D2",
+      "description": "이 구간을 D2 로 잡습니다. 아니면 체크를 풀고 자유 입력으로 고쳐 주세요.",
+      "selected": true
+    },
+    {
+      "label": "0:11–0:20 · D2",
+      "description": "이 구간을 D2 로 잡습니다. 아니면 체크를 풀고 자유 입력으로 고쳐 주세요.",
+      "selected": true
+    },
+    {
+      "label": "0:20–0:32 · D2",
+      "description": "이 구간을 D2 로 잡습니다. 아니면 체크를 풀고 자유 입력으로 고쳐 주세요.",
+      "selected": true
+    }
+  ]
+}

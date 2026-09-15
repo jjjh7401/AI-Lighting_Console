@@ -1,0 +1,29 @@
+[
+  {
+    "file": "t415-synthetic-31mb.wav",
+    "bytes": 31487444,
+    "sha256": "c005fefeda0b5c7918df4c8df6ae4d95564eed93d13f4f77c1aee03e0ff53505",
+    "ui_attached_label": true,
+    "frames_sent": [
+      "song_audio_upload_begin",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_end"
+    ],
+    "max_frame_bytes": 4194374,
+    "server_notice_has_sha256": true,
+    "server_notices": [
+      "{\"v\":1,\"type\":\"notice\",\"message\":\"'t415-synthetic-31mb.wav' 첨부됨 — 오디오 · sha256 c005fefeda0b5c7918df4c8df6ae4d95564eed93d13f4f77c1aee03e0ff53505 · 31487444바이트. 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요.\"}"
+    ],
+    "screenshot": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/musicsync-chunk/.moai/state/t415-evidence/143a6d7e.png"
+  }
+]

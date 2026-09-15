@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쇼파일 프로세스를 코파일럿에 — 기존 기능 대조와 개선 제안</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#fff;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;
+--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard",system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:900px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.75;font-size:16px}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:48px 24px 96px}
+h1{font-size:30px;line-height:1.35;margin:0 0 8px;letter-spacing:-.02em}
+h2{font-size:22px;margin:56px 0 4px;padding-top:20px;border-top:var(--border);letter-spacing:-.01em}
+h3{font-size:17px;margin:28px 0 4px;color:var(--g700)}
+.sub{color:var(--g500);font-size:14px;margin:0 0 28px}
+.lead{background:var(--g100);border-left:3px solid var(--clay);padding:14px 18px;border-radius:var(--radius-row);margin:14px 0 20px;font-size:15px}
+.verdict{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:22px 24px;margin:24px 0}
+.verdict strong{color:var(--clay-d)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--paper);border-radius:var(--radius-panel);overflow:hidden;border:var(--border)}
+th{background:var(--g100);text-align:left;padding:10px 12px;font-weight:700;border-bottom:var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--g300);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code{font-family:var(--mono);font-size:13px;background:var(--g100);padding:1.5px 5px;border-radius:4px;word-break:break-all}
+.ok{color:var(--olive);font-weight:700}
+.no{color:var(--clay-d);font-weight:700}
+.part{color:var(--g700);font-weight:700}
+.cards{display:flex;flex-wrap:wrap;gap:12px;margin:22px 0}
+.card{flex:1 1 190px;background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px 18px}
+.card .n{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.card .l{font-size:13px;color:var(--g500);margin-top:2px}
+.gloss{color:var(--g500);font-size:13.5px}
+.prop{background:var(--paper);border:var(--border);border-left:4px solid var(--olive);border-radius:var(--radius-row);padding:16px 18px;margin:14px 0}
+.prop.hold{border-left-color:var(--g500)}
+.prop h3{margin-top:0}
+.warn{background:#FCF4F1;border:1.5px solid var(--clay);border-radius:var(--radius-row);padding:14px 18px;margin:16px 0}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px;font-family:var(--mono);font-size:12.5px;overflow-x:auto}
+ul{padding-left:20px}li{margin:5px 0}
+footer{margin-top:56px;padding-top:18px;border-top:var(--border);color:var(--g500);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>쇼파일 end-to-end 프로세스를 코파일럿에 적용하기</h1>
+<p class="sub">기존 기능 대조와 개선 제안 · 대조 기준 main <code>0c0237b</code> · 2026-09-12</p>
+
+<div class="verdict">
+<p style="margin:0 0 10px"><strong>한 줄 결론.</strong> 영상 12단계 중 <strong>8단계는 이미 구현돼 있습니다.</strong> 진짜 공백은 3곳이고, 그중 가장 큰 공백(픽셀 장비)은 <strong>우리 리그에 그 장비가 없어</strong> 지금 만들 이유가 없습니다. 당장 값이 나오는 것은 새 기능이 아니라 <strong>이미 있는 도구를 영상의 순서로 꿰는 런북 하나</strong>입니다.</p>
+<p class="gloss" style="margin:0">이 리포트는 읽기 전용 재고조사 5갈래와 제 직접 검증(grep·파일 판독)으로만 썼습니다. 카드 문면이나 기억에서 옮긴 숫자는 없습니다.</p>
+</div>
+
+<h2>1. 무엇을 상대로 대조했나</h2>
+<p class="lead">먼저 규모를 말씀드립니다. 이 저장소는 제가 최근 작업한 곡→큐 경로보다 훨씬 넓고, 영상이 다루는 「쇼 셋업」 영역은 이미 여러 패키지에 들어와 있습니다.</p>
+
+<div class="cards">
+<div class="card"><div class="n">~10만</div><div class="l">생산 코드 줄 수 (25개 패키지)</div></div>
+<div class="card"><div class="n">38</div><div class="l">코파일럿 도구 (전수 열거)</div></div>
+<div class="card"><div class="n">55</div><div class="l">SPEC 문서 (완료 25 · 진행 9)</div></div>
+<div class="card"><div class="n">5%</div><div class="l">곡→큐 경로가 차지하는 비중</div></div>
+</div>
+
+<p>영상의 작업 단계와 이름부터 겹치는 패키지가 이미 있습니다 — <code>vwx</code>(도면 인테이크, 1만 줄) · <code>lxseq</code>(시트→콘솔 매핑, 5.4천) · <code>spatial</code>(좌표·조준, 4.5천) · <code>prechk</code>(사전점검, 4천) · <code>safety</code>(안전 게이트, 3.3천).</p>
+
+<h2>2. 영상 12단계 × 현 구현</h2>
+<p class="lead">한 줄씩 대조했습니다. <span class="ok">있음</span>은 도구나 함수가 실제로 존재하고 생산 경로에서 불린다는 뜻이고, <span class="no">없음</span>은 저장소 전역 검색에서 0건이라는 뜻입니다.</p>
+
+<table>
+<tr><th>#</th><th>영상 단계</th><th>현 구현</th><th>상태</th></tr>
+<tr><td>1</td><td>Stage 분석</td><td><code>vwx/rig.py:450 build_designed_rig</code>, 도구 <code>precheck_vectorworks_diff</code></td><td class="ok">있음</td></tr>
+<tr><td>2</td><td>Patch</td><td><code>patch_fixtures</code> (주소 재확인 → FID 배정 → 되읽기 검증), <code>vwx/patchplan.py:670</code> + <code>luagen.py:77</code></td><td class="ok">있음</td></tr>
+<tr><td>3</td><td>Hybrid group</td><td><code>classify_arrangement_topology</code> · <code>create_arrangement_groups</code> · <code>groupgen/write.py</code></td><td class="ok">있음</td></tr>
+<tr><td>4</td><td>Pixel tube group</td><td>—</td><td class="no">없음</td></tr>
+<tr><td>5</td><td>픽셀 마스터 그룹</td><td>—</td><td class="no">없음</td></tr>
+<tr><td>6</td><td>Position preset</td><td><code>spatial/pointing.py</code> — <code>aim_pan_tilt</code> · <code>fan_pan_tilt</code> · <code>fan_chain</code> · <code>position_preset_store_commands</code></td><td class="ok">있음</td></tr>
+<tr><td>7</td><td>Gobo / Focus</td><td>Focus 는 Zoom 한정. Gobo 는 룩 스키마 제외(<code>looks/schema.py:56</code>)</td><td class="part">부분</td></tr>
+<tr><td>8</td><td>Beam preset</td><td>Iris·Zoom 만 범위 내. Prism·Shutter 는 <strong>콘솔이 거절한 실측 결과</strong></td><td class="part">부분</td></tr>
+<tr><td>9</td><td>Color preset</td><td><code>presets/store.py</code> · <code>lxseq/preset_mapper.py</code></td><td class="ok">있음</td></tr>
+<tr><td>10</td><td>Regen all</td><td>매크로 저작·실행 기능 없음</td><td class="no">없음</td></tr>
+<tr><td>11</td><td>Feature Grid / Layout</td><td>콘솔 Layout 객체 경로 0건</td><td class="no">없음</td></tr>
+<tr><td>12</td><td>Override / MIB</td><td>MIB 는 <code>spatial/mib.py</code> 에 완성(실기 측정 완료). Override 슬롯은 0건</td><td class="part">부분</td></tr>
+</table>
+
+<div class="warn">
+<strong>이름이 겹쳐 헷갈리기 쉬운 곳.</strong> <code>server/looks/layout.py</code> 가 있지만 이건 <strong>익스큐터 배치</strong>(시퀀스를 몇 페이지 몇 번 칸에 앉힐지) 플래너입니다. 영상이 말하는 콘솔의 Layout View / Feature Grid 와는 다른 물건이라, 「레이아웃 있음」으로 세면 안 됩니다.
+</div>
+
+<h2>3. 진짜 공백 — 0건으로 확인한 것</h2>
+<p class="lead">「없다」는 말은 비싸기 때문에, 넷 다 실제 검색 명령과 결과를 남깁니다.</p>
+
+<table>
+<tr><th>공백</th><th>검증 명령</th><th>결과</th></tr>
+<tr><td>픽셀 마스터 그룹 · 서브픽스처</td><td><code>grep -ril "subfixture\|pixel.master\|simrik" server</code></td><td class="no">0건</td></tr>
+<tr><td>Feature Grid · Generate Layouts</td><td><code>grep -ril "feature grid\|feature_grid" server ui docs/proposals</code></td><td class="no">0건</td></tr>
+<tr><td>매크로 저작</td><td><code>prechk/macro.py</code> 판독</td><td class="part">응답확인 매크로만</td></tr>
+<tr><td>Override 룩 · Stop IFX/PFX</td><td><code>grep -ril "stop ifx\|override look\|solo spot" server</code></td><td class="no">0건</td></tr>
+</table>
+
+<h3>3.1 「없음」의 종류가 셋이라는 것</h3>
+<p class="lead">grep 이 0건이라고 답해도 그 0건의 <strong>성격은 셋으로 갈립니다.</strong> SPEC 을 읽고 나서야 구별됐고, 이게 제안 순서를 바꿨습니다.</p>
+<table>
+<tr><th>공백</th><th>실제 성격</th></tr>
+<tr><td>픽셀 · 서브픽스처</td><td><strong>의도적 배제.</strong> <code>SPATIAL-001/spec.md:195-197</code> 이 멀티셀 픽스처의 셀 단위 좌표 일체를 제외하고 <strong>「v1 의 공간 단위는 픽스처 1대」</strong> 라고 선언. 선례 플러그인까지 적어둠</td></tr>
+<tr><td>콘솔 Layout pool</td><td><strong>이미 부분 범위 안.</strong> 판독(<code>ASSUMPTION-55</code>)·기록(<code>ASSUMPTION-56</code>)이 들어와 있고 보류 상태. 「조사 선행」이 아니라 조사가 절반 돼 있음</td></tr>
+<tr><td>Feature Grid</td><td><strong>논의된 적 자체가 없음.</strong> 배제도 공백도 아닌 미논의</td></tr>
+</table>
+
+<h3>3.2 곁가지로 나온 열린 구멍 하나</h3>
+<div class="warn">
+<p style="margin:0 0 8px"><strong>승인 없이 통과하는 명령 형태가 하나 남아 있습니다.</strong> <code>WRITEGATE-001</code> §D 가 「Layout 요소 좌표 기록」을 범위 밖으로 두면서, 그 문형이 <strong>오늘도 안전 게이트에서 <code>safe</code> 로 분류되는 닫히지 않은 경로</strong>라고 명시해뒀습니다.</p>
+<p style="margin:0">Layout 축이 보류라 함께 미뤄졌을 뿐, 구멍은 열려 있습니다. 영상 11단계를 건드리기 전에 <strong>이것부터 닫는 게 순서</strong>입니다. 기능 추가가 아니라 이미 열린 승인 우회를 막는 일이라, 영상과 무관하게 값이 있습니다.</p>
+</div>
+
+<h2>4. 가장 중요한 발견 — 픽셀 공백은 지금 메울 이유가 없다</h2>
+<p class="lead">영상 작업량의 큰 몫이 픽셀 장비(Astera 튜브, GP X4 바)입니다. 그런데 우리 리그에 그 장비가 없습니다. 없는 장비를 위해 코드를 쓰면 검증할 대상이 없어 실기 0회로 남습니다.</p>
+
+<p>기록된 리그는 12그룹 86대이고, 장비 타입 8종은 전부 비픽셀입니다.</p>
+<ul>
+<li>ETC S4 LED S3 Lustr X8 · Elation CUEPIX Blinder WW2 · Martin Atomic 3000 LED · Look Unique 2.1(헤이저)</li>
+<li>Robe MegaPointe · Robe Spiider · Martin MAC Aura XB · Martin RUSH PAR 2 RGBW Z</li>
+</ul>
+<p><code>astera</code>·<code>GP X4</code>·<code>titan tube</code> 를 저장소 전역에서 찾으면 <strong>도면 파서의 테스트 픽스처 파일에만</strong> 나옵니다(<code>server/tests/fixtures/vwx/</code>). 도면을 읽을 수는 있지만 우리 쇼의 장비는 아니라는 뜻입니다.</p>
+<p><strong>따라서 영상 4·5·7절(픽셀 그룹·픽셀 마스터·dim default)은 장비를 실제로 들이기 전까지 착수 대상이 아닙니다.</strong> 게다가 이건 「아직 안 만든 것」이 아니라 <strong>SPEC 이 안 만들기로 정한 것</strong>입니다(§3.1). 뒤집으려면 장비 도입과 SPEC 재론이 둘 다 필요합니다.</p>
+
+<h2>5. 영상과 기존 SPEC 이 충돌하는 지점</h2>
+<p class="lead">영상 절차를 그대로 옮기면 우리가 <strong>의도적으로 안 하기로 정한</strong> 동작과 부딪히는 자리가 넷 있습니다. 넷 다 SPEC 쪽이 옳다고 봅니다.</p>
+
+<table>
+<tr><th>영상이 요구</th><th>우리 SPEC 의 결정</th><th>처분</th></tr>
+<tr><td>3.1 기존 패치 전부 삭제 후 재패치</td><td>AUTOPATCH-001: <strong>생성만</strong>, 수정·삭제·재주소 명시 제외</td><td>SPEC 유지. 삭제는 되돌릴 수 없고 백업 복원 경로도 아직 없음</td></tr>
+<tr><td>4.x 그룹 저장 후 멤버십 검증</td><td>GROUPGEN-001: 멤버십 재조회 <strong>원리적 불가</strong>(MA3 가 안 알려줌)</td><td>영상 절차를 그대로 못 옮김. 검증을 계획·승인 시점으로 옮겨야 함</td></tr>
+<tr><td>6.2 Auto pos 의 「모든 포지션 덮어쓰기」</td><td>PRESETGUARD-001: Position 프리셋 덮어쓰기 가드</td><td>가드 유지. 덮어쓰기는 감독 승인 1건으로 올림</td></tr>
+<tr><td>6.3·6.4 Gobo·Prism 프리셋</td><td>Gobo 는 SPEC 제외, Prism·Shutter 는 <strong>콘솔 거절 실측</strong></td><td>프리즘류는 재시도해도 같은 결과. 고보만 별도 판단</td></tr>
+</table>
+
+<h2>6. 제안 — 어디에 무엇을 덧대나</h2>
+<p class="lead">아래 순서는 「눈에 보이는 값 ÷ 비용」으로 매겼습니다. 새 기능을 만드는 제안은 두 번째부터입니다.</p>
+
+<pre class="mermaid">
+flowchart TD
+  A[영상 12단계] --> B{이미 있나}
+  B -->|8단계| C[P1 런북으로 꿰기<br/>신규 코드 0]
+  B -->|없음 3곳| D{우리 리그에<br/>해당 장비 있나}
+  D -->|있다| E[P2 매크로 · P3 오버라이드]
+  D -->|없다| F[P5 픽셀 — 보류]
+  B -->|조사 필요| G[P4 Feature Grid<br/>실기 조사 먼저]
+</pre>
+<noscript><p class="gloss">흐름 요약: 영상 12단계를 「이미 있나」로 가른다 → 있는 8단계는 P1 런북으로 꿴다 → 없는 3곳은 「우리 리그에 장비가 있나」로 다시 가른다 → 있으면 P2·P3, 없으면 P5 보류 → 콘솔 능력이 불확실한 것은 P4 조사 먼저.</p></noscript>
+
+<div class="prop">
+<h3>P1 · 쇼 셋업 런북 — 신규 코드 0</h3>
+<p>영상 12단계를 기존 38개 도구의 호출 순서로 적습니다. 1·2·3·6·9·12단계는 도구가 이미 있고, 없는 단계는 「감독이 콘솔에서 직접」으로 표시합니다. 가장 싸고 즉시 값이 납니다.</p>
+<p class="gloss">대는 곳: <code>docs/proposals/</code> + 오케스트레이터 라우팅 · 선행: 없음</p>
+</div>
+
+<div class="prop">
+<h3>P2 · 매크로 저작·실행 — 작고 효과 큼</h3>
+<p><code>regen all</code>·<code>auto pos</code>·<code>dim default</code> 가 전부 콘솔 매크로 실행입니다. 지금은 실행 수단이 없어 이 세 단계가 통째로 수동입니다.</p>
+<p><strong>주의할 점이 하나 있습니다.</strong> 매크로는 내용이 콘솔 안에 있어서 우리가 못 읽습니다. 안전 게이트의 「내용을 확인 못 하면 보류」 원칙에 그대로 걸리므로, 승인 문구에 <strong>「내용 미확인」</strong>을 반드시 표시해야 합니다.</p>
+<p class="gloss">대는 곳: <code>presets/store.py</code> 옆 명령 빌더 + <code>safety/classify.py</code> 위험 분류</p>
+</div>
+
+<div class="prop">
+<h3>P3 · Override 섹션 — 중간</h3>
+<p>솔로 스팟·하이라이트는 실기에서 자주 쓰는데 0건입니다. 다만 Move In Black 은 이미 완성돼 있어 절반은 깔려 있습니다.</p>
+<p class="gloss">선행: Stop IFX/PFX 명령 문법을 실기에서 1회 확인</p>
+</div>
+
+<div class="prop">
+<h3>P4 · Layout 축 — 구멍 먼저, 기능은 그다음</h3>
+<p>순서가 바뀌었습니다. §3.2 의 열린 게이트 경로를 닫는 것이 먼저입니다. 그다음에 판독·기록 가정을 실기로 판정하면 Layout 축이 열립니다. Feature Grid 는 그 위에 얹히는 층이고, 지금은 논의된 적도 없는 미개척지입니다.</p>
+<p class="gloss">대는 곳: <code>safety/classify.py</code> 의 분류 규칙</p>
+</div>
+
+<div class="prop hold">
+<h3>P5 · 픽셀 지원 — 보류 (근거 둘)</h3>
+<p>① 우리 리그에 그 장비가 없습니다. ② SPEC 이 v1 공간 단위를 「픽스처 1대」로 명시 배제했고 재론 조건도 안 걸어놨습니다.</p>
+</div>
+
+<h2>7. 안 잰 것</h2>
+<ul>
+<li><code>interview.py</code>(1,165줄) · <code>song_plan.py</code>(1,087줄) · <code>song_cue_composer.py</code>(872줄) 내부 로직은 헤더만 확인했습니다.</li>
+<li><strong>리그 기록이 하나가 아닙니다.</strong> 4절의 86대는 <code>LXSEQ-001</code> 패치 CSV 기준이고, <code>GROUPGEN-001</code> 은 별도의 이종 리그 39대(Robe MMX Spot 19 + LEDBeam 350 20)를 씁니다. 픽셀 부재 판정은 전자 기준이며, 후자에도 픽셀 장비는 없습니다.</li>
+<li>이 영상 문서를 포함해 <code>docs/research/ma3-effects/17~20</code> 은 코드·SPEC 인용 <strong>0건</strong>입니다 — 아직 아무 데서도 소비되지 않은 신규 리서치이고, 이 리포트가 20번의 첫 소비입니다.</li>
+<li>영상은 자막 기반이라 pool 번호와 클릭 위치가 프레임 단위 실측이 아닙니다(문서 자체가 명시).</li>
+<li>3절의 「없음」은 우리 저장소에 없다는 뜻이지, 콘솔이 그 기능을 안 준다는 뜻이 아닙니다.</li>
+</ul>
+
+<footer>대조 기준 main <code>0c0237b</code> · 재고조사 5갈래 + 오케스트레이터 직접 검증 · 2026-09-12</footer>
+
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body>
+</html>

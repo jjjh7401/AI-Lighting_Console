@@ -1,0 +1,41 @@
+[
+  {
+    "file": "scott-buckley-neon.mp3",
+    "bytes": 10366612,
+    "sha256": "3d0cb0662c74a33df9683a5650a862b4d84599affc71ccd060028f816586ff59",
+    "ui_attached_label": true,
+    "frames_sent": [
+      "song_audio_upload_begin",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_end"
+    ],
+    "max_frame_bytes": 4194374,
+    "server_notice_has_sha256": true,
+    "server_notices": [
+      "{\"v\":1,\"type\":\"notice\",\"message\":\"'Cut and Run.mp3' 첨부됨 — 오디오 · sha256 ddfa5637036e97a313a2e7a01d37d00f85226469cf4df896c83da07f7f2c353e · 8595361바이트 (이전에 첨부한 오디오를 교체했습니다). 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요.\"}"
+    ],
+    "screenshot": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/musicsync-chunk/.moai/state/t415-evidence/2cb97534.png"
+  },
+  {
+    "file": "Cut and Run.mp3",
+    "bytes": 8595361,
+    "sha256": "ddfa5637036e97a313a2e7a01d37d00f85226469cf4df896c83da07f7f2c353e",
+    "ui_attached_label": true,
+    "frames_sent": [
+      "song_audio_upload_begin",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_end"
+    ],
+    "max_frame_bytes": 4194374,
+    "server_notice_has_sha256": true,
+    "server_notices": [
+      "{\"v\":1,\"type\":\"notice\",\"message\":\"'Cut and Run.mp3' 첨부됨 — 오디오 · sha256 ddfa5637036e97a313a2e7a01d37d00f85226469cf4df896c83da07f7f2c353e · 8595361바이트 (이전에 첨부한 오디오를 교체했습니다). 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요.\"}"
+    ],
+    "screenshot": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/musicsync-chunk/.moai/state/t415-evidence/d15a64c6.png"
+  }
+]
