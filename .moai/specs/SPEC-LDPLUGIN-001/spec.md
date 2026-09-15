@@ -2,9 +2,9 @@
 id: SPEC-LDPLUGIN-001
 title: "Lighting Director 외부 플러그인과 copilot 수신·검토·실행 왕복"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-09-13
-updated: 2026-09-14
+updated: 2026-09-15
 author: jaihyun
 priority: P1
 phase: "Lighting Director v1.0 end-to-end target"
