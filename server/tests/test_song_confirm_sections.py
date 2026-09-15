@@ -296,3 +296,59 @@ class TestANewUploadInvalidatesTheRecord:
             "아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요."
         )
         assert "무효" not in event["message"]
+
+
+# =============================================================================
+# t414 — 배수 정정은 구간 확정을 무효로 한다
+# =============================================================================
+
+
+def _analysed_event(tmp_path, monkeypatch, answer: str):
+    """``_analysed`` 와 같지만 분석 고지 이벤트도 함께 돌려준다."""
+    _fixed_analysis(monkeypatch)
+    channel = _AnsweringChannel(answer)
+    session = _session(tmp_path, question_channel=channel)
+    session.upload_song_audio("track.wav", "audio/wav", SMALL_WAV_B64)
+    event = session.analyse_song_audio()
+    return session, event
+
+
+class TestAnOctaveBpmCorrectionVoidsTheSections:
+    """t414 — 배수 정정은 마디 길이를 두 배로 바꾼다.
+
+    카드의 구간 경계는 **측정 BPM 의 4마디 하한**이 만든 것이다(`analyze._min_segment_ms`).
+    BPM 이 절반으로 정정되면 같은 경계가 실제로는 2마디이므로, 그 구간표는 정정된
+    BPM 의 것이 아니다. 실측 근거(2026-09-14, 감독 판정 정답지): Morning.mp3 앱
+    117.45 → 진짜 ≈58.7 에서 최소 구간이 4.02마디 → 2.01마디로 읽힌다.
+
+    재계산은 하지 않는다 — REQ-SONGCONFIRM-004 가 카드에 없던 구간을 만드는 것을
+    금지한다. 대신 확정을 무효로 하고 다시 분석해 달라고 **말한다**.
+    """
+
+    def test_half_bpm_voids_the_record_and_says_so(self, tmp_path, monkeypatch):
+        # 129.199 의 절반. BPM 정정 자체는 살아남는다.
+        session, event = _analysed_event(tmp_path, monkeypatch, "BPM 64.6")
+        assert session.song_bpm.bpm == 64.6
+        assert session.song_analysis is None
+        assert "무효" in event["message"]
+        assert "다시 분석" in event["message"]
+
+    def test_double_bpm_voids_the_record_too(self, tmp_path, monkeypatch):
+        session, event = _analysed_event(tmp_path, monkeypatch, "BPM 258.4")
+        assert session.song_bpm.bpm == 258.4
+        assert session.song_analysis is None
+        assert "무효" in event["message"]
+
+    def test_a_nearby_bpm_is_not_an_octave_and_keeps_the_record(self, tmp_path, monkeypatch):
+        # 음성 대조군 — 배수가 아닌 정정은 오늘 그대로다(AC-SONGCONFIRM-003 유지).
+        session, event = _analysed_event(tmp_path, monkeypatch, "BPM 130")
+        assert session.song_bpm.bpm == 130.0
+        assert session.song_analysis is not None
+        assert len(session.song_analysis.accepted) == 4
+        assert "무효" not in event["message"]
+
+    def test_accepting_the_card_keeps_the_record(self, tmp_path, monkeypatch):
+        # 양성 대조군 — 계기가 공허하지 않다(정정이 없으면 기록이 남는다).
+        session, event = _analysed_event(tmp_path, monkeypatch, "확인")
+        assert session.song_analysis is not None
+        assert "무효" not in event["message"]

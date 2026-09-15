@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import itertools
+import math
 import re
 import threading
 from collections.abc import Callable, Sequence
@@ -336,6 +337,32 @@ def build_timecode_handoff_card(
         ),
         commands=commands,
     )
+
+
+#: t414 — 두 BPM 이 「같은 곡의 배수」로 볼 만한 옥타브 거리인지 재는 여유. log2 거리가
+#: 1.0 에서 이만큼 안이면 2배(또는 절반)로 본다. 0.06 은 비율 약 1.92~2.09 폭이다 —
+#: 사람이 소수 첫째 자리까지만 적어도 걸리도록 넉넉하고(58.7/117.45 는 거리 0.0002),
+#: 측정값 근처의 손보기는 걸리지 않도록 좁다(130/129.199 는 거리 0.991).
+_BPM_OCTAVE_LOG2_TOLERANCE = 0.06
+
+
+def is_bpm_octave_apart(confirmed_bpm: float | None, measured_bpm: float | None) -> bool:
+    """사람이 확정한 BPM 이 측정값의 **2배 또는 절반**인가.
+
+    체감 템포의 배수 모호성은 지각적 성질이라 자동 판별이 네 번 실패했다(t414). 그래서
+    이 함수는 **판별기가 아니다** — 사람이 이미 고른 값과 측정값의 관계만 읽는다.
+
+    왜 필요한가: 곡의 구간 경계는 측정 BPM 의 4마디 하한이 만든 것이므로
+    (:func:`server.audio.analyze._min_segment_ms`), BPM 이 배수로 정정되면 마디 길이가
+    두 배로 달라지고 그 구간표는 정정된 BPM 의 것이 아니게 된다. 판정은 호출자가 한다.
+
+    ``None``·0·음수·비유한 값은 「모른다」이므로 배수 관계도 아니다.
+    """
+    for value in (confirmed_bpm, measured_bpm):
+        if value is None or not math.isfinite(value) or value <= 0:
+            return False
+    distance = abs(math.log2(confirmed_bpm / measured_bpm))
+    return abs(distance - 1.0) <= _BPM_OCTAVE_LOG2_TOLERANCE
 
 
 def parse_confirmed_bpm(answer: str, *, measured_bpm: float | None = None) -> float | None:
