@@ -29,6 +29,7 @@ from server.director.validate.diagnostics import (
     STATUS_UNSUPPORTED,
     Diagnostic,
 )
+from server.director.validate.timing import check_timing
 
 #: 계약 §8 `LD-VAL-001` 의 검사 순서. 바꾸지 않는다 — 순서가 곧 의미다.
 STAGES: tuple[str, ...] = (
@@ -79,7 +80,9 @@ def _action_pointers(plan: dict[str, Any]) -> list[str]:
     return pointers
 
 
-def _stage_source_identity(plan: dict[str, Any]) -> list[Diagnostic]:
+def _stage_source_identity(
+    plan: dict[str, Any], context: dict[str, Any] | None
+) -> list[Diagnostic]:
     """1단 — source identity. 근거·출처가 해소되는가 (`LD-REF-001`·`LD-CTX-001`).
 
     C1 은 골격이다. snapshot 대조는 `ContextSnapshot` 을 받는 상위 층의 일이므로, 여기서는
@@ -100,28 +103,35 @@ def _stage_source_identity(plan: dict[str, Any]) -> list[Diagnostic]:
     ]
 
 
-def _stage_time_reference(plan: dict[str, Any]) -> list[Diagnostic]:
-    """2단 — time/reference (`LD-TIME-001`~`003`).
+def _stage_time_reference(plan: dict[str, Any], context: dict[str, Any] | None) -> list[Diagnostic]:
+    """2단 — time/reference (`LD-TIME-001`~`003`). C2 의 `timing.py` 가 실제 판정을 낸다.
 
-    시간 해석의 실제 계산은 C2 가 `timing.py` 에 넣는다. C1 은 자리를 만들고, 아직 재지
-    않았음을 진단으로 남긴다 — 침묵으로 남기지 않는다.
+    `context` 없이는 판정할 수 없다 — 전곡 분할·cue 경계·tempo 근거가 전부 `ContextSnapshot`
+    쪽에 있다. 그런데 `PlanValidator` seam 은 계획만 넘기므로(`service.py` 는 형제 SPEC 소유
+    이며 고치지 않는다) 이 경로에서는 context 가 없을 수 있다.
+
+    [HARD] 그 경우 **blocking** 이다. 판정 불능을 수용으로 바꾸면 시간 검사가 조용히
+    사라진 채로 `ready_for_review` 가 나올 수 있고, 그것이 이 층이 막아야 하는 false ready 다.
     """
-    return [
-        Diagnostic(
-            rule_id="LD-TIME-001",
-            pointer=ROOT_POINTER,
-            status=STATUS_ACCEPTED,
-            blocking=False,
-            reason=(
-                "시간 해석 단계에 도달했습니다. 반올림·delta·tempo 분할 판정은 C2 의 "
-                "timing 검사기가 이 자리에서 수행합니다."
-            ),
-            stage="time_reference",
-        )
-    ]
+    if context is None:
+        return [
+            Diagnostic(
+                rule_id="LD-TIME-001",
+                pointer=ROOT_POINTER,
+                status=STATUS_UNSUPPORTED,
+                blocking=True,
+                reason=(
+                    "ContextSnapshot 없이 시간 해석을 판정할 수 없습니다 — 전곡 분할·cue "
+                    "경계·tempo 근거가 모두 context 에 있습니다. 판정 불능을 통과로 "
+                    "바꾸지 않습니다. context 를 주입해 검증기를 구성하십시오."
+                ),
+                stage="time_reference",
+            )
+        ]
+    return check_timing(plan, context)
 
 
-def _stage_tracking_fx(plan: dict[str, Any]) -> list[Diagnostic]:
+def _stage_tracking_fx(plan: dict[str, Any], context: dict[str, Any] | None) -> list[Diagnostic]:
     """3단 — tracking/FX (`LD-STATE-001`·`002`, `LD-FX-001`, `LD-CONFLICT-001`).
 
     축별·fixture별 simulation 은 C3 가 `simulate.py`/`conflict.py` 에 넣는다.
@@ -141,7 +151,9 @@ def _stage_tracking_fx(plan: dict[str, Any]) -> list[Diagnostic]:
     ]
 
 
-def _stage_capability_fidelity(plan: dict[str, Any]) -> list[Diagnostic]:
+def _stage_capability_fidelity(
+    plan: dict[str, Any], context: dict[str, Any] | None
+) -> list[Diagnostic]:
     """4단 — capability/fidelity (`LD-CAP-001`). **요청 action 별로 진단을 낸다.**
 
     이 단계가 계약 §6.3 의 'action 당 진단 최소 하나' 를 채우는 자리다. 표현 보존을 판정하는
@@ -180,7 +192,7 @@ def _stage_capability_fidelity(plan: dict[str, Any]) -> list[Diagnostic]:
     return diagnostics
 
 
-def _stage_safety(plan: dict[str, Any]) -> list[Diagnostic]:
+def _stage_safety(plan: dict[str, Any], context: dict[str, Any] | None) -> list[Diagnostic]:
     """5단 — safety (`LD-SAFE-001`).
 
     기존 SafetyGate 의 hard check 는 실행 층(`SPEC-LDRECV-001`)이 소유한다. 이 층은
@@ -201,7 +213,9 @@ def _stage_safety(plan: dict[str, Any]) -> list[Diagnostic]:
     ]
 
 
-def _stage_approval_freshness(plan: dict[str, Any]) -> list[Diagnostic]:
+def _stage_approval_freshness(
+    plan: dict[str, Any], context: dict[str, Any] | None
+) -> list[Diagnostic]:
     """6단 — approval freshness (`LD-APPROVAL-001`).
 
     승인 발급·소비는 `SPEC-LDRECV-001` 이다. 이 층은 `ApprovalBinding` 을 발급하지 않는다.
@@ -234,7 +248,7 @@ _STAGE_FUNCS = {
 assert tuple(_STAGE_FUNCS) == STAGES, "단계 표와 STAGES 순서가 어긋났습니다."
 
 
-def run_stages(plan: dict[str, Any]) -> CoreReport:
+def run_stages(plan: dict[str, Any], context: dict[str, Any] | None = None) -> CoreReport:
     """6단을 `STAGES` 순서대로 돌리고 **전 단계** 진단을 수집한다.
 
     앞 단계가 blocking 이어도 끊지 않는다 — 계약 §6.3 의 action 당 진단 coverage 를 지키려면
@@ -243,7 +257,7 @@ def run_stages(plan: dict[str, Any]) -> CoreReport:
     """
     collected: list[dict[str, Any]] = []
     for stage in STAGES:
-        for diagnostic in _STAGE_FUNCS[stage](plan):
+        for diagnostic in _STAGE_FUNCS[stage](plan, context):
             collected.append(diagnostic.to_internal())
 
     blocked = any(d["blocking"] for d in collected)
@@ -326,13 +340,21 @@ class PipelineValidator:
     여전히 유효해야 한다.
     """
 
+    def __init__(self, context: dict[str, Any] | None = None) -> None:
+        """`context` 는 선택이다 — 없으면 시간 해석 단계가 blocking 으로 답한다.
+
+        seam 은 계획만 넘기므로 context 는 검증기를 만들 때 주입한다. 기본값을 지어내지
+        않는다: 모르는 값을 채우는 것이 이 층이 막아야 하는 실패다.
+        """
+        self._context = context
+
     def validate(self, plan: dict[str, Any]) -> dict[str, Any]:
         """seam 계약대로 `outcome`/`diagnostics`/`compiled` 를 돌려준다.
 
         신원 필드는 넣지 않는다 — seam 이 계획만 넘기므로 이 자리에서 알 수 없고,
         모르는 값을 지어내는 것이 이 층이 막아야 하는 실패다.
         """
-        core = run_stages(plan)
+        core = run_stages(plan, self._context)
         return {
             "outcome": core.outcome,
             "diagnostics": to_wire_diagnostics(core),
