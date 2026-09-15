@@ -1,0 +1,29 @@
+[
+  {
+    "file": "걸그룹DinoDino_C_max최고품질.wav",
+    "bytes": 31459042,
+    "sha256": "0edb6c667267b6459a5097b4bb187806fd2bd00dc6e6af5d591908ab1b81dee3",
+    "ui_attached_label": true,
+    "frames_sent": [
+      "song_audio_upload_begin",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_chunk",
+      "song_audio_upload_end"
+    ],
+    "max_frame_bytes": 4194374,
+    "server_notice_has_sha256": true,
+    "server_notices": [
+      "{\"v\":1,\"type\":\"notice\",\"message\":\"'걸그룹DinoDino_C_max최고품질.wav' 첨부됨 — 오디오 · sha256 0edb6c667267b6459a5097b4bb187806fd2bd00dc6e6af5d591908ab1b81dee3 · 31459042바이트. 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요.\"}"
+    ],
+    "screenshot": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t415-verify/.moai/reports/t415v/t415-evidence/b6bfb4e0.png"
+  }
+]

@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>grandMA3 onPC 코파일럿 — 소개 자료</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Noto+Serif+KR:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --ivory:  #FAF9F5;
+      --paper:  #FFFFFF;
+      --slate:  #141413;
+      --clay:   #D97757;
+      --clay-d: #B85C3E;
+      --oat:    #E3DACC;
+      --olive:  #788C5D;
+
+      --g100: #F0EEE6;
+      --g300: #D1CFC5;
+      --g500: #87867F;
+      --g700: #3D3D3A;
+
+      --sans:  "Noto Sans KR", system-ui, -apple-system, sans-serif;
+      --serif: "Noto Serif KR", ui-serif, Georgia, serif;
+      --mono:  "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+      --max-width:    1140px;
+      --content-max:  720px;
+      --radius-panel: 12px;
+      --radius-row:   8px;
+      --border:       1.5px solid var(--g300);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--ivory);
+      color: var(--g700);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.68;
+      -webkit-font-smoothing: antialiased;
+      padding: 56px 24px 120px;
+    }
+
+    .page {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 210px minmax(0, 1fr);
+      gap: 48px;
+    }
+
+    @media (max-width: 920px) {
+      .page { grid-template-columns: 1fr; }
+      nav { display: none; }
+    }
+
+    nav { position: sticky; top: 32px; align-self: start; font-size: 13px; }
+    nav .nav-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--g500); margin-bottom: 12px;
+    }
+    nav a {
+      display: block; padding: 5px 0 5px 12px; border-left: 2px solid var(--g300);
+      color: var(--g700); text-decoration: none;
+    }
+    nav a:hover { color: var(--slate); border-color: var(--clay); }
+    nav a.l2 { padding-left: 24px; font-size: 12.5px; color: var(--g500); }
+
+    header { margin-bottom: 12px; }
+    .eyebrow {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--g500); margin-bottom: 10px;
+    }
+    h1 {
+      font-family: var(--serif); font-weight: 700; font-size: 30px;
+      color: var(--slate); letter-spacing: -0.01em; margin-bottom: 14px; line-height: 1.28;
+    }
+    .subtitle { color: var(--g500); font-size: 14.5px; margin-bottom: 20px; }
+
+    .tldr {
+      border: var(--border); border-left: 3px solid var(--clay); border-radius: 10px;
+      background: var(--paper); padding: 16px 18px; margin-bottom: 8px; font-size: 14.5px;
+    }
+    .tldr b { color: var(--slate); }
+
+    h2 {
+      font-family: var(--serif); font-weight: 700; font-size: 22px; color: var(--slate);
+      margin: 48px 0 14px; scroll-margin-top: 24px;
+    }
+    h3 {
+      font-family: var(--serif); font-weight: 700; font-size: 16.5px; color: var(--slate);
+      margin: 26px 0 8px; scroll-margin-top: 24px;
+    }
+    h4 { font-family: var(--serif); font-size: 14.5px; color: var(--slate); margin: 14px 0 6px; }
+
+    p { margin-bottom: 12px; max-width: var(--content-max); }
+    ul, ol { padding-left: 20px; margin-bottom: 12px; max-width: var(--content-max); }
+    li { margin: 4px 0; font-size: 14px; }
+    strong { color: var(--slate); }
+    code { font-family: var(--mono); font-size: 12.5px; background: var(--g100); padding: 1px 5px; border-radius: 4px; }
+
+    .lead {
+      font-size: 14.5px; color: var(--g500); max-width: var(--content-max);
+      margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px dashed var(--g300);
+    }
+
+    /* 기능 블록 */
+    .feature {
+      border: var(--border); border-radius: 12px; background: var(--paper);
+      padding: 20px 22px; margin: 16px 0;
+    }
+    .feature > .fhead {
+      display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px;
+    }
+    .feature .fnum {
+      font-family: var(--mono); font-size: 12px; background: var(--oat); color: var(--slate);
+      padding: 2px 9px; border-radius: 6px; flex-shrink: 0;
+    }
+    .feature .ftitle { font-family: var(--serif); font-weight: 700; font-size: 18px; color: var(--slate); }
+    .feature .fstage {
+      margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--g500); flex-shrink: 0;
+    }
+    .feature .fsub { font-size: 13.5px; color: var(--g500); margin-bottom: 12px; }
+    .feature ul { margin-bottom: 10px; }
+    .feature li { font-size: 13.8px; }
+    .feature li b { color: var(--slate); }
+
+    .example {
+      background: rgba(120,140,93,0.08); border: 1.5px solid rgba(120,140,93,0.3);
+      border-left: 3px solid var(--olive);
+      border-radius: 8px; padding: 11px 15px; margin: 12px 0; font-size: 13.5px;
+      max-width: var(--content-max);
+    }
+    .example .tag {
+      display: block; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: 4px; color: var(--olive); font-weight: 500;
+    }
+
+    .caution {
+      background: rgba(217,119,87,0.07); border: 1.5px solid rgba(217,119,87,0.28);
+      border-left: 3px solid var(--clay);
+      border-radius: 8px; padding: 11px 15px; margin: 12px 0; font-size: 13.5px;
+      max-width: var(--content-max);
+    }
+    .caution .tag {
+      display: block; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: 4px; color: var(--clay-d); font-weight: 500;
+    }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 4px; }
+    @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+    .card { border: var(--border); border-radius: 10px; background: var(--paper); padding: 14px 16px; }
+    .card h4 { margin-top: 0; }
+    .card ul { padding-left: 18px; font-size: 13.5px; margin-bottom: 0; }
+    .card li { margin: 3px 0; font-size: 13.5px; }
+    .card.gap { border-left: 3px solid var(--g500); }
+    .card.do { border-left: 3px solid var(--olive); }
+
+    .callout {
+      display: flex; gap: 12px; border: var(--border); border-color: var(--oat);
+      background: rgba(227, 218, 204, 0.35); border-radius: 10px; padding: 14px 16px;
+      margin: 18px 0; font-size: 14px; max-width: var(--content-max);
+    }
+    .callout .ico { color: var(--clay); font-weight: 600; flex-shrink: 0; }
+
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; font-size: 13.5px; background: var(--paper); }
+    th, td { border: 1px solid var(--g300); padding: 8px 11px; text-align: left; vertical-align: top; }
+    th { background: var(--g100); font-size: 12px; font-weight: 700; color: var(--slate); }
+    td.c, th.c { text-align: center; white-space: nowrap; }
+    td.num { font-family: var(--mono); text-align: center; }
+
+    /* 라이브러리 수량 바 */
+    .libgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+    .libcard {
+      border: var(--border); border-radius: 10px; background: var(--paper); padding: 12px 14px;
+    }
+    .libcard .n { font-family: var(--mono); font-size: 26px; color: var(--clay); line-height: 1.1; }
+    .libcard .l { font-size: 12.5px; color: var(--g500); margin-top: 2px; }
+    .libcard .d { font-size: 12px; color: var(--g700); margin-top: 6px; }
+
+    details.faq-item { border-bottom: 1px solid var(--g300); padding: 4px 0; }
+    details.faq-item > summary {
+      list-style: none; cursor: pointer; font-family: var(--serif); font-size: 16px;
+      color: var(--slate); padding: 12px 4px; display: flex; align-items: center; gap: 10px;
+    }
+    details.faq-item > summary::-webkit-details-marker { display: none; }
+    details.faq-item > summary::before {
+      content: "+"; color: var(--clay); font-size: 18px; width: 20px; text-align: center; flex-shrink: 0;
+    }
+    details.faq-item[open] > summary::before { content: "−"; }
+    details.faq-item .faq-body { padding: 0 4px 16px 30px; font-size: 14px; color: var(--g700); max-width: var(--content-max); }
+    details.faq-item .faq-body p { margin-bottom: 8px; }
+
+    .mermaid-wrap { border: var(--border); border-radius: 10px; background: var(--paper); padding: 18px; margin: 16px 0; }
+    pre.mermaid { font-family: var(--mono); font-size: 13px; background: transparent; }
+
+    .glossary {
+      border: var(--border); border-radius: 10px; background: var(--paper);
+      padding: 14px 16px; margin: 16px 0; font-size: 13.5px; max-width: var(--content-max);
+    }
+    .glossary dt { font-family: var(--mono); color: var(--clay); margin-top: 10px; font-size: 12.5px; }
+    .glossary dt:first-child { margin-top: 0; }
+    .glossary dd { margin: 2px 0 0 0; color: var(--g700); }
+
+    footer {
+      margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--g300);
+      font-family: var(--mono); font-size: 12px; color: var(--g500); line-height: 1.8;
+    }
+
+    @media print {
+      .page { grid-template-columns: 1fr; }
+      nav { display: none; }
+      body { background: white; color: black; padding: 0; font-size: 11pt; }
+      .feature, details.faq-item, table, .example, .caution { page-break-inside: avoid; }
+      details[open] { display: block; }
+      h1, h2, h3 { page-break-after: avoid; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <nav>
+    <div class="nav-label">On this page</div>
+    <a href="#what">이 앱은 무엇인가</a>
+    <a href="#role">시스템 속 역할</a>
+    <a href="#screen">화면 구성</a>
+    <a href="#features">핵심 기능 상세</a>
+    <a href="#f1" class="l2">1. 패치 준비</a>
+    <a href="#f2" class="l2">2. 리그 셋업·조준</a>
+    <a href="#f3" class="l2">3. 그룹·프리셋</a>
+    <a href="#f4" class="l2">4. 룩·이펙트</a>
+    <a href="#f5" class="l2">5. 큐리스트</a>
+    <a href="#f6" class="l2">6. 리허설·본공연</a>
+    <a href="#f7" class="l2">7. 서류·인수인계</a>
+    <a href="#safety">안전 설계</a>
+    <a href="#boundary">역할의 경계</a>
+    <a href="#faq">자주 묻는 질문</a>
+  </nav>
+
+  <main>
+
+    <header>
+      <div class="eyebrow">외부 공유용 소개 자료 · grandMA3 onPC 코파일럿</div>
+      <h1>grandMA3 onPC 코파일럿이란</h1>
+      <div class="subtitle">조명감독의 언어를 콘솔의 언어로 옮겨주는 보조 프로그램 — 개요 · 기능 · 역할</div>
+      <div class="tldr" id="tldr">
+        <b>한 줄로 말하면</b> &mdash; 이 앱은 <b>grandMA3 onPC</b>(무대 조명을 실제로 제어하는 콘솔 프로그램) 위에 얹어 쓰는 한국어 보조 도구입니다.
+        조명감독이 "보컬 그룹에 따뜻한 앰버 70%"처럼 평소 쓰는 말로 요청하면, 콘솔이 이해하는 명령으로 바꿔 실행합니다.
+        공연 준비의 <b>패치 → 리그 셋업 → 그룹·프리셋 → 룩·이펙트 → 큐리스트 → 리허설 → 본공연 → 인수인계</b> 전 과정을 따라가며 일을 덜어주되,
+        <b>결정과 실행의 주체는 끝까지 사람</b>입니다.
+      </div>
+    </header>
+
+    <!-- ================= 이 앱은 무엇인가 ================= -->
+    <h2 id="what">이 앱은 무엇인가</h2>
+    <p class="lead">
+      가장 먼저 알아둘 것은 <strong>이 앱이 조명 콘솔이 아니라는 점</strong>입니다.
+      콘솔(grandMA3 onPC)은 그대로 있고, 이 앱은 그 옆에서 "무엇을 어떻게 만들지"를 사람 대신 정리해 주는 조수에 가깝습니다.
+      쉽게 말해 <strong>조명감독 옆에 붙은 프로그래머 한 명</strong>이 늘어난 것과 같습니다.
+    </p>
+
+    <div class="grid2">
+      <div class="card do">
+        <h4>앱이 하는 일 — 프로그래머 역할</h4>
+        <ul>
+          <li>한국어 문장을 콘솔 커맨드로 변환</li>
+          <li>그룹·프리셋·시퀀스·큐를 실제로 생성</li>
+          <li>장르별 룩·이펙트 초안 제안</li>
+          <li>패치 점검, 서류 출력, 공연 전 자동 점검</li>
+        </ul>
+      </div>
+      <div class="card gap">
+        <h4>앱이 하지 않는 일 — 경계선</h4>
+        <ul>
+          <li>공연 중 스스로 조명을 바꾸는 일 (제안까지)</li>
+          <li>미적 최종 판단 (앱은 초안, 확정은 감독)</li>
+          <li>콘솔 하드웨어 대체 (onPC가 있어야 함)</li>
+          <li>승인 없는 위험 명령 실행</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="example">
+      <span class="tag">예시로 보면</span>
+      조명감독이 채팅창에 <em>"보컬 그룹에 따뜻한 앰버 70%"</em>라고 입력하면,
+      앱은 이를 콘솔이 실행할 수 있는 명령(그룹 번호 지정 + 색상 값 + 밝기 값)으로 바꿔 콘솔로 전달합니다.
+      사람이 콘솔 문법을 외워 한 줄씩 입력하는 대신, 하고 싶은 말을 그대로 전달하는 셈입니다.
+    </div>
+
+    <!-- ================= 시스템 속 역할 ================= -->
+    <h2 id="role">시스템 속 역할</h2>
+    <p class="lead">
+      "역할"이라는 말은 곧 <strong>누가 결정하고, 누가 실행하고, 누가 확인하는가</strong>를 뜻합니다.
+      이 앱은 가운데서 통역과 정리를 맡고, 최종 실행은 항상 콘솔에서, 최종 판단은 항상 사람이 합니다.
+    </p>
+
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+flowchart LR
+  A["조명감독 / 오퍼레이터<br/>한국어로 요청"] --> B["AI 코파일럿<br/>명령 변환 · 안전 확인 · 승인 요청"]
+  B -->|승인된 명령만 전달| C["grandMA3 onPC<br/>실제 조명 제어"]
+  C -->|현재 상태 회신| B
+  B -->|결과 · 검증 보고| A
+      </pre>
+    </div>
+    <noscript>
+      <p>흐름 요약: 조명감독이 한국어로 요청 → 코파일럿이 명령으로 변환하고 위험 여부를 확인 → 승인된 명령만 콘솔로 전달 →
+      콘솔이 실행 결과를 코파일럿에 회신 → 코파일럿이 사람이 알아볼 수 있게 보고.</p>
+    </noscript>
+
+    <table>
+      <thead><tr><th style="width:180px">주체</th><th>맡는 일</th></tr></thead>
+      <tbody>
+        <tr><td><b>조명감독</b></td><td>연출 의도 결정, 초안 채택 여부 판단, 위험 명령 승인</td></tr>
+        <tr><td><b>AI 코파일럿</b></td><td>말 → 명령 변환, 데이터 정리, 초안 제안, 서류 작성, 결과 검증 보고</td></tr>
+        <tr><td><b>grandMA3 onPC</b></td><td>실제 조명 제어, 쇼파일 보관</td></tr>
+        <tr><td><b>오퍼레이터 · 크루</b></td><td>현장 조작, 결과 육안 확인</td></tr>
+      </tbody>
+    </table>
+
+    <div class="glossary">
+      <dt>코파일럿 (copilot)</dt>
+      <dd>운전은 사람이 하고, 옆에서 계기판을 읽어주고 조작을 거들어주는 보조 조종사 — 최종 결정권은 사람에게 있다는 뜻으로 쓰는 말입니다.</dd>
+      <dt>onPC</dt>
+      <dd>grandMA3 콘솔 소프트웨어를 일반 PC에서 실행하는 버전입니다. 이 앱은 이 onPC와 짝을 이뤄 동작합니다.</dd>
+      <dt>패치 (patch)</dt>
+      <dd>어떤 조명 장비가 몇 번 주소를 쓰는지 콘솔에 등록하는 일. 주소가 겹치면 두 장비가 같은 신호를 받아 한쪽이 통제를 벗어납니다.</dd>
+      <dt>룩 (look) / 이펙트 (effect)</dt>
+      <dd>룩은 정지된 한 장의 조명 그림, 이펙트는 시간에 따라 움직이는 변화입니다. 둘을 합쳐 하나의 장면이 됩니다.</dd>
+      <dt>큐 (cue) / 시퀀스 (sequence)</dt>
+      <dd>큐는 "이 순간의 조명 상태" 한 칸, 시퀀스는 그 큐들을 순서대로 묶은 목록입니다. 보통 곡 하나가 시퀀스 하나가 됩니다.</dd>
+      <dt>익스큐터 (executor)</dt>
+      <dd>콘솔에서 시퀀스를 실제로 재생하는 버튼·페이더 자리입니다. 어느 시퀀스를 어느 자리에 걸지 미리 계획합니다.</dd>
+    </div>
+
+    <!-- ================= 화면 구성 ================= -->
+    <h2 id="screen">화면 구성</h2>
+    <p class="lead">
+      화면은 크게 <strong>콘솔 정보를 보여주는 메인 영역</strong>과 <strong>요청을 입력하는 채팅 영역</strong> 둘로 나뉩니다.
+      채팅을 접으면 콘솔 뷰가 전체 폭을 차지합니다.
+    </p>
+    <table>
+      <thead><tr><th style="width:170px">영역</th><th>하는 일</th></tr></thead>
+      <tbody>
+        <tr><td><b>상단 헤더</b></td><td>연결 상태 표시, 라이브 잠금 토글, 런북 모드, 페이퍼워크(서류), 설정</td></tr>
+        <tr><td><b>콘솔 대시보드</b></td><td>그룹·시퀀스·프리셋·매크로 풀을 타일로 표시. 타일 클릭이 곧 Go/Off</td></tr>
+        <tr><td><b>큐 모니터</b></td><td>익스큐터별 현재 큐, 시퀀스 이름, 최근 실행 이력</td></tr>
+        <tr><td><b>채팅 컬럼</b></td><td>한국어 입력 → 명령 생성 → 승인·거부 → 실행 결과 표시</td></tr>
+        <tr><td><b>런북 모드</b></td><td>보조 진행자 전용 — 곡명과 큰 실행 버튼만 남기고 나머지는 숨김</td></tr>
+        <tr><td><b>페이퍼워크</b></td><td>서류 생성·열람·인쇄</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ================= 핵심 기능 상세 ================= -->
+    <h2 id="features">핵심 기능 상세</h2>
+    <p class="lead">
+      아래는 공연 준비의 실제 순서를 따라, 각 단계에서 앱이 구체적으로 무엇을 처리하는지 정리한 것입니다.
+      단계마다 <strong>앱이 대신하는 부분</strong>과 <strong>사람이 반드시 해야 하는 부분</strong>을 함께 적었습니다.
+    </p>
+
+    <!-- ---- 1 ---- -->
+    <div class="feature" id="f1">
+      <div class="fhead">
+        <span class="fnum">01</span>
+        <span class="ftitle">패치 준비 — 도면 대조와 주소 배정</span>
+        <span class="fstage">도면 수령 · 패치</span>
+      </div>
+      <div class="fsub">설계 도면과 현장이 어긋나는 지점을 목록으로 잡아내고, 장비를 콘솔에 등록하는 단계입니다.</div>
+
+      <h4>앱이 처리하는 것</h4>
+      <ul>
+        <li><b>도면 대조</b> — 설계 도면에서 뽑은 장비 데이터를 콘솔의 실제 패치와 대조해, 어긋난 항목만 보고서로 정리합니다. "설계대로 걸렸는가"를 눈으로 훑는 대신 목록으로 받습니다.</li>
+        <li><b>배치 도면 이미지 판독</b> — 도면을 이미지로 넘기면 판독해 배치 정보를 추출합니다.</li>
+        <li><b>CSV 일괄 패치</b> — 패치 목록이 담긴 표 파일 한 장을 넘기면 콘솔 등록 계획을 만들고, 사람이 미리보기로 확인한 뒤에만 실제로 등록합니다.</li>
+        <li><b>픽스처 타입 매칭</b> — 장비 이름만 알려 주면 콘솔이 아는 장비 종류 중 맞는 것을 찾아 줍니다.</li>
+        <li><b>빈 주소 탐색</b> — 비어 있는 DMX 주소 구간을 찾아 배정안을 만들어 줍니다.</li>
+        <li><b>주소 충돌 판정</b> — 패치된 장비를 전부 열거하고 주소 중복·공백을 판정합니다.</li>
+        <li><b>패치시트 출력</b> — 결과를 문서로 뽑습니다.</li>
+        <li><b>실행 후 재확인</b> — 등록한 뒤 콘솔을 다시 읽어 실제로 무엇이 만들어졌는지 대조합니다. 아무것도 만들어지지 않았으면 그렇게 보고합니다.</li>
+      </ul>
+
+      <div class="example">
+        <span class="tag">이렇게 씁니다</span>
+        패치 목록 CSV 파일을 넘기면 → 앱이 "몇 번 주소에 어떤 장비 몇 대" 계획을 미리보기로 보여주고 → 감독이 확인 → 그때 비로소 콘솔에 등록됩니다.
+        미리보기 단계에서는 콘솔에 아무것도 쓰지 않으므로 안심하고 먼저 볼 수 있습니다.
+      </div>
+
+      <div class="caution">
+        <span class="tag">한계와 주의</span>
+        <b>되돌리기 기능이 없습니다.</b> 목록을 먼저 검토한 뒤 실행하세요.
+        또 장비의 채널폭을 직접 읽는 경로가 없어 주소 충돌을 <b>"확정"으로는 판정하지 못합니다</b> — "겹침 없음"만 증명 가능하고, 반대 방향은 보수적 추정에 머뭅니다.
+        도면 경로의 패치는 앱이 계획만 만들고 <b>실행 버튼은 사람이 누릅니다.</b>
+      </div>
+    </div>
+
+    <!-- ---- 2 ---- -->
+    <div class="feature" id="f2">
+      <div class="fhead">
+        <span class="fnum">02</span>
+        <span class="ftitle">리그 셋업 — 좌표 판독 · 배치 · 조준</span>
+        <span class="fstage">리그 셋업 · 포커싱</span>
+      </div>
+      <div class="fsub">각 장비가 무대의 어디를 비출지 정하는 단계입니다. 여기서 앱이 팬·틸트 값을 직접 계산해 줍니다.</div>
+
+      <h4>앱이 처리하는 것</h4>
+      <ul>
+        <li><b>3차원 좌표 판독</b> — 장비가 무대 공간의 어디에 있는지 좌표를 읽어 옵니다. 아래 조준 계산의 바탕이 됩니다.</li>
+        <li><b>문장 기반 조준</b> — "모든 무빙을 무대 중앙을 바라보게"처럼 말하면 팬·틸트 값을 계산해 명령으로 만들어 줍니다. 좌표를 숫자로 줘서 특정 지점을 향하게 할 수도 있고, "부채살로 펼쳐" · "안쪽으로 모아"처럼 형태를 지시할 수도 있습니다.</li>
+        <li><b>일괄 배치</b> — 전체 장비를 격자 · 일렬 · 원형 · 반원 · 다각형으로 배치하거나, 높이를 한 번에 조정합니다.</li>
+        <li><b>백업과 검증</b> — 좌표를 쓰기 전에 원본을 백업하고, 완료 후 다시 읽어 검증합니다.</li>
+      </ul>
+
+      <div class="example">
+        <span class="tag">조준을 부르는 조건</span>
+        조준 지시에는 <b>조준 동사</b>(바라보다 · 비추다 · 향하다 · 조준 · 겨냥)와 <b>조준점</b>(좌표 세 값, 또는 중앙 · 센터 · 가운데 같은 말)이 <b>둘 다</b> 필요합니다.
+        <br>&nbsp;&nbsp;· 됩니다 → <b>"모든 무빙을 무대 중앙을 바라보게"</b>
+        <br>&nbsp;&nbsp;· 됩니다 → <b>"모든 무빙을 2, 0, 1.5 지점을 바라보게"</b>
+        <br>&nbsp;&nbsp;· 안 됩니다 → "조준해" (조준점이 빠져 앱이 되묻습니다)
+        <br>여기서 <b>대상</b>은 "어느 장비를 돌릴 것인가", <b>조준점</b>은 "어디를 볼 것인가"로 서로 다른 축입니다. 배치 지시는 간격과 기준 높이를 함께 말합니다 — "1.5m 간격", "바닥 위 5m"처럼.
+      </div>
+
+      <div class="caution">
+        <span class="tag">한계와 주의</span>
+        실제로 빔이 원하는 곳에 떨어졌는지는 앱이 판정하지 못합니다. 계산한 값을 보낼 뿐이고, 최종 확인은 눈으로 합니다.
+        포커싱 결과를 차트로 뽑아 주는 기능도 아직 없습니다.
+      </div>
+    </div>
+
+    <!-- ---- 3 ---- -->
+    <div class="feature" id="f3">
+      <div class="fhead">
+        <span class="fnum">03</span>
+        <span class="ftitle">그룹·프리셋 정리 — 좌표로 구조를 읽어 묶는다</span>
+        <span class="fstage">그룹 · 프리셋</span>
+      </div>
+      <div class="fsub">이후 모든 작업이 부를 이름을 짓는 단계입니다. 여기서 이름을 잘 지어 두면 뒤가 편해집니다.</div>
+
+      <h4>앱이 처리하는 것</h4>
+      <ul>
+        <li><b>리그 전체 요약</b> — 패치 · 그룹 · 프리셋 · 시퀀스 · 매크로가 지금 어떻게 되어 있는지 한 번에 정리해 보여 줍니다.</li>
+        <li><b>배치 구조 판정</b> — 장비 좌표를 보고 리그가 어떤 구조인지 판정합니다. <b>앞뒤 열 · 좌우 분할 · 동심원 · 층 · 격자 · 좌우 짝</b> 여섯 가지 중에서 고릅니다.</li>
+        <li><b>구조 기반 그룹 생성</b> — 판정한 구조를 그대로 그룹으로 만들어 줍니다. 좌표 기반이라 손으로 고르는 것보다 빠짐이 적습니다.</li>
+        <li><b>프리셋 목록 문서화</b> — 자주 쓰는 색 · 위치 · 강도 프리셋 목록을 문서로 뽑습니다.</li>
+        <li><b>매직시트</b> — 그룹 이름 · 프리셋 이름 · 배치 좌표를 한 장으로 묶어 줍니다.</li>
+      </ul>
+
+      <div class="example">
+        <span class="tag">이렇게 씁니다</span>
+        무빙헤드 12대가 무대 앞뒤 두 줄로 걸려 있다면, 좌표를 읽어 "앞뒤 열" 구조로 판정하고 앞줄 그룹 · 뒷줄 그룹 두 개를 자동으로 만들어 줍니다.
+        사람이 장비를 하나하나 눈으로 세어 고르는 과정이 사라집니다.
+      </div>
+
+      <div class="caution">
+        <span class="tag">한계와 주의</span>
+        콘솔은 <b>그룹 안에 어떤 장비가 들어 있는지를 앱에게 알려 주지 않습니다.</b>
+        그래서 앱은 "이 슬롯이 비어 있는가"를 확신할 수 없고, 기존 그룹 내용을 확인하거나 비교할 수도 없습니다.
+        매직시트도 멤버 목록 없는 축약형까지가 한계이며, <b>덮어쓴 그룹을 되돌리는 경로가 없습니다.</b>
+        그룹을 만들 때는 대시보드에서 비어 있는 번호를 직접 확인해 지정하는 것이 안전합니다.
+      </div>
+    </div>
+
+    <!-- ---- 4 ---- -->
+    <div class="feature" id="f4">
+      <div class="fhead">
+        <span class="fnum">04</span>
+        <span class="ftitle">룩과 이펙트 — 장르별 라이브러리</span>
+        <span class="fstage">룩 · 이펙트 제작</span>
+      </div>
+      <div class="fsub">연출의 본체가 되는 단계입니다. 앱은 검증된 초안까지 제공하고, 그 뒤를 감독이 다듬습니다.</div>
+
+      <h4>내장 라이브러리 규모</h4>
+      <div class="libgrid">
+        <div class="libcard">
+          <div class="n">32</div>
+          <div class="l">룩 (정지 화면)</div>
+          <div class="d">발라드 7 · 록 8 · EDM 9 · 워십 8</div>
+        </div>
+        <div class="libcard">
+          <div class="n">19</div>
+          <div class="l">이펙트 (움직임)</div>
+          <div class="d">무브먼트 11 · 디머 5 · 컬러 3</div>
+        </div>
+        <div class="libcard">
+          <div class="n">5</div>
+          <div class="l">완성 장면</div>
+          <div class="d">룩 + 이펙트가 묶인 형태</div>
+        </div>
+        <div class="libcard">
+          <div class="n">4</div>
+          <div class="l">장르 팔레트</div>
+          <div class="d">장르 선택 시 일괄 생성</div>
+        </div>
+      </div>
+
+      <h4>앱이 처리하는 것</h4>
+      <ul>
+        <li><b>문장 검색</b> — 룩과 이펙트를 원하는 느낌을 말로 설명해 찾습니다.</li>
+        <li><b>리그에 맞춰 저장</b> — 찾은 룩을 지금 걸려 있는 실제 리그의 역할에 맞춰 매핑해 프리셋으로 저장합니다. 라이브러리의 추상적 룩이 이 현장의 장비 번호로 옮겨집니다.</li>
+        <li><b>이펙트 적용·조합</b> — 찾은 이펙트를 실제 리그 위에 적용하고, 여러 이펙트를 조합해 새 형태를 만들 수 있습니다.</li>
+        <li><b>완성 장면 얹기</b> — 룩과 이펙트가 묶인 완성 장면을 이 리그 위에 하나의 시퀀스와 큐로 한 번에 얹습니다.</li>
+        <li><b>장르 팔레트 일괄 생성</b> — 장르를 고르면 그 장르에서 자주 쓰는 색·위치·강도 팔레트를 한 번에 만들어 줍니다. 즉흥 진행(버스킹) 준비에 씁니다.</li>
+      </ul>
+
+      <div class="example">
+        <span class="tag">이렇게 씁니다</span>
+        "록 콘서트용 강렬한 색조 룩 찾아줘" → 후보 목록 제시 → 고른 것을 지금 리그 장비에 맞춰 저장.
+        이펙트를 얹을 때는 <b>대상 그룹</b>과 <b>저장 위치</b>를 함께 말해야 합니다 — "그룹 3에 느린 발리후를 시퀀스 10에 저장해"처럼. 둘 중 하나가 빠지면 앱이 되묻습니다.
+      </div>
+
+      <div class="caution">
+        <span class="tag">한계와 주의</span>
+        <b>룩과 이펙트를 나눠서 두 번 요청하면 값이 빠진 큐가 저장됩니다.</b> 오류가 뜨지 않으므로 실행해 보기 전에는 알 수 없습니다 — 함께 필요한 장면은 <b>한 번의 요청</b>으로 만드세요.
+        또 미적 판단은 하지 않습니다. 장르 특성에 맞춰 초안을 고를 뿐이고, "이 곡의 이 순간에 맞는가"는 감독이 봅니다.
+        사용자가 직접 룩이나 장르를 정의해 라이브러리에 추가하는 경로, 참고 이미지에서 색감을 뽑아 오는 경로는 아직 없습니다.
+      </div>
+    </div>
+
+    <!-- ---- 5 ---- -->
+    <div class="feature" id="f5">
+      <div class="fhead">
+        <span class="fnum">05</span>
+        <span class="ftitle">큐리스트 — 곡 구조를 시퀀스로</span>
+        <span class="fstage">큐리스트 작성</span>
+      </div>
+      <div class="fsub">곡의 흐름을 따라 큐를 배열하고, 그 큐를 콘솔의 어느 자리에 걸지 계획하는 단계입니다.</div>
+
+      <h4>앱이 처리하는 것</h4>
+      <ul>
+        <li><b>구간 → 큐리스트 초안</b> — 곡의 구간 정보를 주면 각 구간에 맞는 룩을 배정해 시퀀스 하나를 만들어 줍니다. <b>곡 하나가 시퀀스 하나</b>가 됩니다.</li>
+        <li><b>큐시트 출력</b> — 시퀀스별 큐 번호와 이름, 트리거 종류가 들어간 문서를 뽑습니다.</li>
+        <li><b>익스큐터 배선 계획서</b> — 만든 시퀀스와 룩이 어느 익스큐터에 배선될지 한 장 표로 정리해 줍니다. 물리 콘솔 레이아웃을 확정하기 전에 미리 검토할 수 있습니다.</li>
+      </ul>
+
+      <div class="example">
+        <span class="tag">이렇게 씁니다</span>
+        "인트로 0:00, 벌스 0:30, 코러스 1:15" 형태로 <b>구간 이름과 시작 시각</b>을 주면 충분합니다. 장르도 함께 말하면 배정이 더 정확해집니다.
+      </div>
+
+      <div class="caution">
+        <span class="tag">한계와 주의</span>
+        큐시트에 <b>페이드 시간이 들어가지 않습니다</b> — 콘솔에서 그 값을 읽는 경로가 확인되지 않아, 값을 지어내는 대신 비워 둡니다.
+        음원 파일을 넣으면 구간을 자동으로 나눠 주는 기능은 없어 <b>구간은 사람이 적어 줘야 합니다.</b>
+        콘솔의 타임코드 오브젝트 자체를 만들지는 못하며, 구간 이름과 시간 기반 큐리스트까지가 한계입니다.
+      </div>
+    </div>
+
+    <!-- ---- 6 ---- -->
+    <div class="feature" id="f6">
+      <div class="fhead">
+        <span class="fnum">06</span>
+        <span class="ftitle">리허설과 본공연 — 모니터링 · 점검 · 잠금</span>
+        <span class="fstage">리허설 · 본공연</span>
+      </div>
+      <div class="fsub">만드는 단계가 끝나고 "맞추고 운용하는" 단계입니다. 여기서는 안전이 최우선이 됩니다.</div>
+
+      <h4>리허설에서</h4>
+      <ul>
+        <li><b>상태 조회</b> — 그룹 · 프리셋 · 시퀀스가 지금 어떤 상태인지 콘솔에 물어 확인합니다.</li>
+        <li><b>문장으로 수정</b> — 고칠 내용을 말하면 커맨드로 옮겨 실행합니다. 값 하나 바꾸는 정도는 콘솔을 직접 만지지 않고 처리됩니다.</li>
+        <li><b>큐 모니터</b> — 익스큐터별 현재 큐와 최근 실행 이력을 실시간으로 보여 줍니다. 앱이 보낸 명령에는 확인 표시가 붙고, 콘솔을 직접 만진 조작은 회색으로 남습니다(오류가 아니라 정상 표시입니다).</li>
+      </ul>
+
+      <h4>본공연에서</h4>
+      <ul>
+        <li><b>공연 전 자동 점검</b> — 콘솔과의 통신 상태, 필요한 시퀀스와 익스큐터의 존재 여부, 프리셋 라이브러리 상태, 그리고 알려진 함정들을 한 번에 확인합니다.</li>
+        <li><b>쇼 컨트롤 패널</b> — 익스큐터와 시퀀스를 타일로 보여 주고, 타일을 누르면 Go, 다시 누르면 Off입니다. <b>타일 순서와 번호는 절대 바뀌지 않아</b> 큐시트에 적힌 번호와 그대로 맞춰 쓸 수 있습니다.</li>
+        <li><b>런북 모드</b> — 곡 이름과 큰 실행 버튼만 남기고 나머지를 전부 숨깁니다. 보조 진행자가 잘못 누를 곳 자체를 없애는 모드입니다.</li>
+        <li><b>라이브 잠금</b> — 켜면 모든 실행이 차단되고 제안 카드만 뜹니다. 승인 대기 중이던 명령도 함께 차단되며, 상태 조회는 계속 됩니다.</li>
+      </ul>
+
+      <div class="example">
+        <span class="tag">권장 운용</span>
+        공연 시작 전에 <b>라이브 잠금을 켜 두세요.</b> 잠금이 켜져 있으면 실수로 무엇을 눌러도 콘솔로 나가지 않습니다.
+        런북 모드는 잠금과 별개이므로 <b>둘 다 켜는 것</b>이 가장 안전합니다.
+      </div>
+
+      <div class="caution">
+        <span class="tag">한계와 주의</span>
+        앱은 <b>큐의 내용을 읽지 못합니다.</b> 그래서 "다음 Go를 누르면 무대가 어떻게 바뀌는지"를 미리 보여줄 수 없습니다 — 리허설에서 가장 아쉬운 지점입니다.
+        되돌리기가 없어 바꾼 것을 취소하려면 손으로 다시 바꿔야 하고,
+        장비가 실제로 반응하는지 자동으로 감지하지도 못합니다(대신 눈으로 확인하는 응답 매크로를 만들어 주는 방식으로 대체합니다).
+        여러 콘솔이 물린 네트워크 환경은 대상이 아니며, 단일 onPC 기준입니다.
+      </div>
+    </div>
+
+    <!-- ---- 7 ---- -->
+    <div class="feature" id="f7">
+      <div class="fhead">
+        <span class="fnum">07</span>
+        <span class="ftitle">서류와 인수인계 — 다섯 가지 문서</span>
+        <span class="fstage">철수 · 인수인계</span>
+      </div>
+      <div class="fsub">다음 사람이 이어받을 수 있도록 정리하는 단계입니다. 여기서 가장 위험한 것은 "일부만 본 목록을 전부라고 오해하는 것"입니다.</div>
+
+      <h4>뽑을 수 있는 문서</h4>
+      <table>
+        <thead><tr><th style="width:150px">문서</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td><b>패치시트</b></td><td>장비별 주소 배정 현황</td></tr>
+          <tr><td><b>큐시트</b></td><td>시퀀스별 큐 번호 · 이름 · 트리거 종류</td></tr>
+          <tr><td><b>프리셋 목록</b></td><td>저장된 색 · 위치 · 강도 프리셋</td></tr>
+          <tr><td><b>매직시트(축약형)</b></td><td>그룹 이름 · 프리셋 이름 · 배치 좌표 한 장 요약</td></tr>
+          <tr><td><b>인수인계 패키지</b></td><td>위 문서를 한 폴더로 묶고, 불완전성 요약을 첫 화면에 얹은 묶음</td></tr>
+        </tbody>
+      </table>
+
+      <div class="example">
+        <span class="tag">불완전성 배지 — 이 앱의 특징</span>
+        모든 서류에는 <b>읽지 못한 부분을 표시하는 배지</b>가 붙습니다 — 목록이 잘렸는지, 더 파고들 여력이 소진됐는지, 내용을 열지 못했는지.
+        <b>읽지 못한 것은 읽지 못했다고 적는다</b>는 것이 이 앱의 원칙입니다. 빈칸을 그럴듯한 값으로 채우지 않습니다.
+      </div>
+
+      <div class="caution">
+        <span class="tag">한계와 주의</span>
+        매직시트에 그룹 멤버 목록이 들어가지 않고(3번 항목의 한계와 같은 뿌리), 큐시트에 페이드 시간이 없습니다(5번 항목과 같음).
+        쇼파일 백업은 자동으로 되지만 <b>복원은 콘솔에서 직접</b> 해야 합니다.
+      </div>
+    </div>
+
+    <!-- ================= 안전 설계 ================= -->
+    <h2 id="safety">안전 설계 — 실수를 무대까지 보내지 않는 구조</h2>
+    <p class="lead">
+      조명은 잘못 나가면 그 순간 관객이 봅니다. 그래서 이 앱은 "빠르게"보다 <strong>"나가지 않게"</strong>를 우선해 설계됐습니다.
+      콘솔로 가는 모든 명령은 <strong>문법 검증 → 위험 분류 → 사람 승인</strong> 세 단계를 통과하며, 우회 경로는 없습니다.
+    </p>
+    <table>
+      <thead><tr><th style="width:170px">장치</th><th>동작</th></tr></thead>
+      <tbody>
+        <tr><td><b>라이브 잠금</b></td><td>실행 전면 차단, 제안만 표시</td></tr>
+        <tr><td><b>쇼파일 자동 백업</b></td><td>세션 시작 시 + 10분 간격 + 위험 명령 직전</td></tr>
+        <tr><td><b>감사 로그</b></td><td>실행 · 승인 · 거부를 시각과 함께 기록 (90일 보관)</td></tr>
+        <tr><td><b>자가 수정 제한</b></td><td>앱이 스스로 고쳐 다시 시도하는 횟수를 최대 3회로 제한</td></tr>
+        <tr><td><b>스트로브 경고</b></td><td>광과민성 발작 위험 패턴을 감지해 경고</td></tr>
+        <tr><td><b>콘솔 오프라인 차단</b></td><td>콘솔과 연결이 끊기면 모든 실행을 차단</td></tr>
+        <tr><td><b>묶음 전체 취소</b></td><td>여러 명령 묶음 중 하나라도 거부되면 전체를 취소</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ================= 역할의 경계 ================= -->
+    <h2 id="boundary">역할의 경계 — 못 하는 일도 분명히</h2>
+    <p class="lead">
+      "무엇을 할 수 있는가" 못지않게 중요한 것은 <strong>"어디까지가 이 앱의 몫인가"</strong>입니다.
+      경계를 분명히 알아야 나머지를 사람이 미리 준비할 수 있기 때문입니다.
+    </p>
+    <table>
+      <thead><tr><th style="width:190px">구분</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>미적 최종 판단</td><td>장르에 맞는 초안을 제안할 뿐, "이 곡 이 순간에 맞는가"는 감독이 눈으로 확인해 결정합니다.</td></tr>
+        <tr><td>공연 중 자동 조작</td><td>공연 도중 스스로 판단해 조명을 바꾸는 기능은 <b>설계상 의도적으로 제외</b>했습니다. 한계가 아니라 선택입니다.</td></tr>
+        <tr><td>콘솔 대체</td><td>onPC(또는 콘솔 하드웨어)가 반드시 있어야 동작합니다. 이 앱만으로는 조명을 켤 수 없습니다.</td></tr>
+        <tr><td>그룹·큐 내용 판독</td><td>그룹 안의 장비 목록, 큐의 내용은 읽지 못합니다. 다음 Go의 결과를 미리 보여줄 수 없는 이유입니다.</td></tr>
+        <tr><td>되돌리기</td><td>백업은 자동으로 되지만 앱에서의 복원 경로가 없습니다. 덮어쓰기 계열은 실행 전 확인이 특히 중요합니다.</td></tr>
+        <tr><td>도면 작성</td><td>도면을 읽을 뿐, 그려 주지는 않습니다. 설계는 감독과 디자이너의 일입니다.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <span class="ico">★</span>
+      <div>정리하면, 이 앱은 <b>"제안하고 정리하는 조수"</b>이고 <b>"결정하고 실행하는 주체"</b>는 여전히 조명감독과 콘솔입니다.
+      이 역할 구분이 이 앱을 설계할 때 가장 우선한 원칙이며, 위 경계들은 대부분 그 원칙에서 나온 결과입니다.</div>
+    </div>
+
+    <!-- ================= FAQ ================= -->
+    <h2 id="faq">자주 묻는 질문</h2>
+
+    <details class="faq-item">
+      <summary>인터넷이 안 되는 공연장에서도 쓸 수 있나요?</summary>
+      <div class="faq-body">
+        <p>한국어 요청을 명령으로 바꾸는 기능 자체는 인터넷이 필요합니다.
+        다만 <b>미리 만들어 둔 큐와 매크로는 콘솔 안에 저장되어 있으므로</b>, 공연 진행 자체는 인터넷 없이 onPC에서 그대로 됩니다.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>앱의 실수로 쇼파일이 망가질 수 있나요?</summary>
+      <div class="faq-body">
+        <p>위험한 명령은 반드시 사람이 승인해야 실행되고, 세션 시작 시 · 10분 간격 · 위험 명령 직전에 자동 백업이 걸립니다.
+        다만 <b>앱에서의 복원 기능이 없으므로</b> 덮어쓰기 계열은 승인 전에 대상을 꼭 확인하세요. 라이브 잠금을 켜면 어떤 명령도 나가지 않습니다.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>콘솔 문법을 몰라도 쓸 수 있나요?</summary>
+      <div class="faq-body">
+        <p>네. 하고 싶은 것을 평소 쓰는 말로 설명하면 됩니다. 다만 결과가 의도대로 나왔는지는 콘솔 화면에서 눈으로 확인하는 것이 좋습니다.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>타임코드 쇼를 만들 수 있나요?</summary>
+      <div class="faq-body">
+        <p>구간 마커와 시간 기반 큐리스트는 만들 수 있습니다. 다만 콘솔의 타임코드 오브젝트 자체를 만드는 것은 아직 안 되며,
+        레코딩은 콘솔에서 직접 해야 합니다.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>경험이 적은 보조 진행자에게 공연 진행을 맡겨도 되나요?</summary>
+      <div class="faq-body">
+        <p>런북 모드와 라이브 잠금을 함께 켜면 곡 이름과 큰 실행 버튼만 남고 나머지는 모두 숨겨집니다.
+        잘못 누를 수 있는 곳 자체를 없애는 것이 이 모드의 목적입니다. 타일 번호는 콘솔의 실제 번호이므로 큐시트와 그대로 맞춰 보면 됩니다.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>"읽지 못했다"는 표시가 자주 보이는데 오류인가요?</summary>
+      <div class="faq-body">
+        <p>오류가 아니라 <b>설계된 표시</b>입니다. 콘솔이 알려 주지 않는 정보(그룹 내용, 큐 내용, 페이드 시간 등)가 있고,
+        이 앱은 그런 빈칸을 그럴듯한 값으로 채우지 않고 "읽지 못했다"고 그대로 적습니다.
+        서류를 받은 다음 사람이 <b>일부만 본 목록을 전부로 오해하지 않게</b> 하려는 원칙입니다.</p>
+      </div>
+    </details>
+
+    <footer>
+      원본: <code>docs/user-guide.html</code> (조명감독 사용 가이드, 감독 워크플로우 9단계)<br>
+      이 자료는 외부 공유용 개요이며, 통신 방식·내부 플러그인 등 개발 항목은 다루지 않습니다.<br>
+      작성: 2026-09-12 &nbsp;·&nbsp; 브라우저에서 인쇄(Ctrl+P / Cmd+P)하면 PDF로 저장됩니다.
+    </footer>
+
+  </main>
+
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "base",
+    themeVariables: {
+      primaryColor:      "#FAF9F5",
+      primaryTextColor:  "#141413",
+      primaryBorderColor:"#D97757",
+      lineColor:         "#87867F",
+      secondaryColor:    "#E3DACC",
+      tertiaryColor:     "#F0EEE6"
+    }
+  });
+</script>
+</body>
+</html>

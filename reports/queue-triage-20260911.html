@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>열린 카드 51장 — 분류와 코파일럿 효과 순위</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono/css/jetbrains-mono.css">
+<style>
+:root{
+--ivory:#FAF9F5;--paper:#FFFFFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;
+--oat:#E3DACC;--olive:#788C5D;
+--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard",system-ui,-apple-system,sans-serif;
+--serif:"Pretendard",ui-serif,Georgia,serif;
+--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:920px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);
+line-height:1.72;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:48px 24px 96px}
+h1{font-family:var(--serif);font-weight:800;font-size:2rem;line-height:1.3;margin:0 0 8px;letter-spacing:-.02em}
+h2{font-family:var(--serif);font-weight:700;font-size:1.35rem;margin:56px 0 6px;letter-spacing:-.01em;
+padding-bottom:8px;border-bottom:2px solid var(--oat)}
+h3{font-family:var(--serif);font-weight:700;font-size:1.05rem;margin:32px 0 6px}
+.sub{color:var(--g500);font-size:.9rem;margin:0 0 4px}
+.lead{background:var(--g100);border-left:3px solid var(--clay);padding:14px 18px;
+border-radius:var(--radius-row);margin:14px 0 22px;font-size:.95rem}
+.lead b{color:var(--clay-d)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:28px 0 8px}
+.kpi{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:18px 16px}
+.kpi .n{font-family:var(--serif);font-weight:800;font-size:2rem;line-height:1;letter-spacing:-.03em}
+.kpi .l{color:var(--g500);font-size:.8rem;margin-top:8px;letter-spacing:.02em}
+.kpi.hot .n{color:var(--clay)}.kpi.cut .n{color:var(--g500)}.kpi.ok .n{color:var(--olive)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:.88rem;background:var(--paper);
+border:var(--border);border-radius:var(--radius-panel);overflow:hidden}
+th{background:var(--g100);text-align:left;padding:11px 12px;font-weight:700;font-size:.82rem;
+color:var(--g700);border-bottom:var(--border)}
+td{padding:11px 12px;border-bottom:1px solid var(--g100);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.rank{font-family:var(--serif);font-weight:800;color:var(--clay);width:34px;text-align:center}
+code,.card{font-family:var(--mono);font-size:.85em;background:var(--g100);padding:1px 5px;
+border-radius:4px;white-space:nowrap}
+.card{color:var(--clay-d);font-weight:600}
+.grp{background:var(--paper);border:var(--border);border-left:4px solid var(--clay);
+border-radius:var(--radius-panel);padding:16px 18px;margin:16px 0}
+.grp.b{border-left-color:#B84A4A}.grp.c{border-left-color:var(--olive)}
+.grp.d{border-left-color:var(--g500)}.grp.e{border-left-color:var(--g300)}
+.grp.f{border-left-color:var(--oat)}
+.grp h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.grp .cnt{font-family:var(--mono);font-size:.78rem;color:var(--g500);font-weight:400;white-space:nowrap}
+.grp .cards{margin:8px 0 10px;line-height:2.1}
+.grp p{margin:6px 0 0;font-size:.9rem;color:var(--g700)}
+.bar{display:flex;height:26px;border-radius:var(--radius-row);overflow:hidden;margin:18px 0 6px;border:var(--border)}
+.bar span{display:flex;align-items:center;justify-content:center;font-size:.7rem;
+font-family:var(--mono);color:var(--paper);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.78rem;color:var(--g500);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+.rec{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:6px 20px 18px;margin:18px 0}
+.rec ol{padding-left:22px;margin:12px 0 0}
+.rec li{margin:10px 0;font-size:.93rem}
+.rec li b{color:var(--clay-d)}
+.warn{background:#FDF6F3;border:1.5px solid var(--clay);border-radius:var(--radius-panel);
+padding:16px 18px;margin:20px 0;font-size:.9rem}
+.warn strong{color:var(--clay-d)}
+.ex{background:var(--g100);border-radius:var(--radius-row);padding:14px 18px;margin:14px 0;font-size:.89rem}
+.ex .t{font-weight:700;font-size:.78rem;color:var(--olive);letter-spacing:.06em;margin-bottom:6px}
+.gap{background:var(--paper);border:1.5px dashed var(--g300);border-radius:var(--radius-panel);
+padding:14px 18px;margin:20px 0;font-size:.87rem;color:var(--g700)}
+.gap .t{font-weight:700;color:var(--slate);margin-bottom:6px;font-size:.9rem}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);
+padding:18px;margin:18px 0;font-family:var(--mono);font-size:.8rem;overflow-x:auto;text-align:center}
+noscript p{background:var(--g100);border-radius:var(--radius-row);padding:14px 18px;font-size:.88rem}
+.g{color:var(--g500)}
+footer{margin-top:64px;padding-top:18px;border-top:2px solid var(--oat);color:var(--g500);font-size:.8rem}
+@media print{body{background:#fff}.wrap{padding:0}h2{page-break-after:avoid}table{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>열린 카드 51장 — 분류와 코파일럿 효과 순위</h1>
+<p class="sub">기준 <code>origin/main bfaa560</code> · 2026-09-11 · 큐 전수 덤프 650,541B / 295행</p>
+<p class="sub g">집계 근거: <code>.moai/state/verify/t-review/queue-full.txt</code> — queued 42 + picked 9 = 열린 카드 51 (닫힌 것 244)</p>
+
+<div class="kpis">
+<div class="kpi hot"><div class="n">51</div><div class="l">열린 카드</div></div>
+<div class="kpi ok"><div class="n">7</div><div class="l">연출을 여는 것</div></div>
+<div class="kpi cut"><div class="n">14</div><div class="l">정리 권고</div></div>
+<div class="kpi"><div class="n">3</div><div class="l">착수 불가</div></div>
+</div>
+
+<h2>순위를 어떻게 매겼나</h2>
+<div class="lead">
+카드는 전부 "실재하는 결함"입니다 — 그게 문제입니다. 실재한다는 것만으로는 순서가 안 정해집니다.
+그래서 기준을 하나로 잡았습니다: <b>코파일럿이 곡을 받아 쇼를 만들고 콘솔에 올리는 일에서, 지금 막혀 있는 것을 여는가.</b>
+직접 효과(산출물이 달라진다) → 안전(잘못 쓰는 것을 막는다) → 도구(작업 속도가 곱으로 달라진다) → 위생 → 서류 순입니다.
+</div>
+
+<p><b>지금 코파일럿이 실제로 할 수 있는 것</b>은 좁습니다. 조도(dim) 6행은 콘솔에 올라가지만,
+컬러(col) 8행과 빔(bm) 5행은 <span class="g">보류(hold)</span> 상태입니다 — 보류란 "값을 만들 수는 있는데 콘솔에 넣지 않고 사유와 함께 들고 있는" 상태입니다.
+순위 상단이 전부 이 보류를 푸는 카드인 이유입니다.</p>
+
+<h2>상위 10장 — 이유와 효과</h2>
+<div class="lead">
+표의 "왜"는 <b>이미 실측된 사실</b>이고, "효과"는 그것을 했을 때의 예상입니다. 두 칸을 갈라 둔 이유가 있습니다 —
+섞어 쓰면 예상이 실측처럼 읽힙니다.
+</div>
+
+<table>
+<thead><tr><th>#</th><th>카드</th><th>왜 해야 하나 (실측)</th><th>하면 무엇이 달라지나 (예상)</th></tr></thead>
+<tbody>
+<tr><td class="rank">1</td><td><span class="card">t229</span></td>
+<td>빔·고보의 <b>물리 단위를 콘솔에서 직접 읽는 경로</b>가 발견됐다(실기, 응답기 1.6.5, 읽기 전용). 카드가 막혀 있던 이유 자체가 소멸했다</td>
+<td>bm 5행과 Gobo 가 따라 열린다. <b>오늘 t346 을 단위 불일치로 폐기했는데</b> 그 원인이 사라진다 — 도미노의 첫 장</td></tr>
+<tr><td class="rank">2</td><td><span class="card">t244</span></td>
+<td>대상 열을 겨누는 발사 경로가 없다. main 의 코드·검사·문서 <b>5자리</b>가 이 카드 번호를 가리키고 있다</td>
+<td>bm 을 여는 날 실제로 쏠 수 있다. 없으면 t229 성과가 발사로 안 이어진다</td></tr>
+<tr><td class="rank">3</td><td><span class="card">t101</span></td>
+<td>col·bm 이 감독 결정으로 보류 중. col 은 RGB 6행 + 켈빈 2행이 값을 갖고 대기</td>
+<td>컬러 프리셋 8행이 콘솔에 올라간다. dim 6행만 되는 현 상태를 처음 벗어난다</td></tr>
+<tr><td class="rank">4</td><td><span class="card">t91</span></td>
+<td>2자 동사가 Store/overwrite 방어를 <b>지나간다</b>. Import Plugin 은 아예 미분류</td>
+<td>쇼파일을 덮어쓰는 사고 경로가 닫힌다. 되돌릴 수 없는 손해 쪽이라 순위를 올렸다</td></tr>
+<tr><td class="rank">5</td><td><span class="card">t350</span></td>
+<td>능력 판독이 룩 저장 경로에 안 닿는다 — <code>tools.py:2650</code> 이 groups/preset_pools 만 들고 있다</td>
+<td>없는 축을 요구하는 룩이 <b>실제 발사 경로</b>에서 걸린다. t344·t348 성과가 처음 실사용된다</td></tr>
+<tr><td class="rank">6</td><td><span class="card">t138</span></td>
+<td>Gobo 가 닫힌 스키마에 들어 있어 BM.05(고보 브레이크업)가 안 열린다</td>
+<td>고보 룩이 가능해진다. t229 뒤에 하면 값까지 정확해진다 — 순서가 중요하다</td></tr>
+<tr><td class="rank">7</td><td><span class="card">t345</span></td>
+<td>항상 로드되는 규칙 <b>209KB</b> 가 서브에이전트를 출발선에서 죽인다. 이 세션에서 <b>2회 사망</b>(파일 읽기 전)</td>
+<td>배차가 다시 sonnet 으로 돌아온다. 카드 한 장당 드는 비용이 내려간다 — 곱셈 효과</td></tr>
+<tr><td class="rank">8</td><td><span class="card">t122</span></td>
+<td>제어문자 방어가 <code>ord(ch)&lt;32</code> 한 계열만 덮는다. DEL·C1·U+2028 통과(실측)</td>
+<td>이상한 이름이 콘솔에 들어가 전량 거절되는 경로가 닫힌다</td></tr>
+<tr><td class="rank">9</td><td><span class="card">t349</span></td>
+<td>푸시 훅이 도는 <code>FAST_TESTS</code> 12개에 잠금 가드 하나가 빠졌다 — 훅은 초록인데 전체 시험은 빨갈 수 있다</td>
+<td>원격에 빨간 브랜치가 올라가는 것을 막는다. t348 이 <b>하마터면</b> 겪었다</td></tr>
+<tr><td class="rank">10</td><td><span class="card">t347</span></td>
+<td>콘솔 철자(<code>Frost1</code>·<code>ColorRGB_R</code>)를 연출 어휘로 옮기는 표. 지금 소비되는 이름은 <code>effect</code> <b>하나</b></td>
+<td>능력 판독이 더 많은 판정에 쓰인다. 단 소비자를 먼저 만들어야 죽은 표가 안 된다</td></tr>
+</tbody>
+</table>
+
+<div class="ex">
+<div class="t">실제로 있었던 일 — 1위가 왜 1위인가</div>
+오늘 저는 t346("범위 밖 줌 값을 보류한다")을 만들려다 <b>폐기했습니다.</b>
+룩 라이브러리의 <code>Zoom: 35</code> 는 0~100 퍼센트 눈금이고, 능력 판독이 주는 범위는 <code>42.0 → 1.8</code> 도(degree)였습니다.
+단위가 달라서 비교할 수가 없었습니다. <b>t229 가 여는 것이 정확히 그 단위 판독</b>입니다 —
+1위는 다른 카드를 살려내는 카드라서 1위입니다.
+</div>
+
+<h2>이 순서를 지켜야 하는 이유</h2>
+<div class="lead">
+상위 카드들은 <b>독립적이지 않습니다.</b> 뒤 카드가 앞 카드의 결과를 재료로 씁니다.
+순서를 바꾸면 뒤 카드가 "값은 흘러가는데 판정이 안 바뀌는" 상태로 끝납니다 — 오늘 두 번 본 모양입니다.
+</div>
+
+<pre class="mermaid">
+flowchart TD
+  A["t229<br/>물리 단위 판독"] --> B["t138<br/>Gobo 범위"]
+  A --> C["t347<br/>능력 어휘표"]
+  A --> D["폐기된 t346<br/>범위 밖 보류 부활"]
+  E["t101<br/>col·bm 보류 해제"] --> F["t244<br/>대상 열 발사 경로"]
+  A --> E
+  C --> G["t350<br/>저장 핸들러에 능력 판독"]
+  F --> H["콘솔에 실제로 올라간다"]
+  G --> H
+</pre>
+<noscript>
+<p><b>흐름:</b> t229(물리 단위 판독)가 뿌리입니다. 거기서 t138(Gobo 범위)·t347(능력 어휘표)·폐기된 t346(범위 밖 보류)이 갈라지고,
+t101(col·bm 보류 해제) → t244(대상 열 발사 경로)로 이어집니다. t347 은 t350(저장 핸들러에 능력 판독)으로 가고,
+t244 와 t350 이 만나는 자리가 "콘솔에 실제로 올라간다"입니다.</p>
+</noscript>
+
+<h2>51장 전수 분류</h2>
+<div class="lead">
+여섯 갈래입니다. <b>A·B 는 하고, C 는 상위 3장만, D 는 묶고, E 는 자르고, F 는 감독 결정이 필요합니다.</b>
+</div>
+
+<div class="legend">
+<span><i style="background:var(--clay)"></i>A 연출 7</span>
+<span><i style="background:#B84A4A"></i>B 안전 6</span>
+<span><i style="background:var(--olive)"></i>C 도구 9</span>
+<span><i style="background:var(--g500)"></i>D 위생 12</span>
+<span><i style="background:var(--g300)"></i>E 정리 14</span>
+<span><i style="background:var(--oat)"></i>F 대기 3</span>
+</div>
+<div class="bar">
+<span style="background:var(--clay);flex:7">7</span>
+<span style="background:#B84A4A;flex:6">6</span>
+<span style="background:var(--olive);flex:9">9</span>
+<span style="background:var(--g500);flex:12">12</span>
+<span style="background:var(--g300);flex:14;color:var(--slate)">14</span>
+<span style="background:var(--oat);flex:3;color:var(--slate)">3</span>
+</div>
+
+<div class="grp">
+<h3><span>A. 연출 산출물을 여는 것</span><span class="cnt">7장 · 하자</span></h3>
+<div class="cards"><span class="card">t229</span> <span class="card">t244</span> <span class="card">t101</span>
+<span class="card">t138</span> <span class="card">t350</span> <span class="card">t347</span> <span class="card">t348</span><span class="g"> (진행 중)</span></div>
+<p>직접 효과. 지금 조도 6행만 콘솔에 올라가고 컬러·빔·고보가 전부 막혀 있는 상태를 푼다.
+이 7장이 코파일럿이 "쇼를 만든다"고 말할 수 있는지를 정한다.</p>
+</div>
+
+<div class="grp b">
+<h3><span>B. 잘못 쓰는 것을 막는 것</span><span class="cnt">6장 · 하자</span></h3>
+<div class="cards"><span class="card">t91</span> <span class="card">t122</span> <span class="card">t232</span>
+<span class="card">t139</span> <span class="card">t92</span> <span class="card">t341</span></div>
+<p>콘솔 쓰기는 되돌리기 어렵다. 사고 한 번의 비용이 카드 열 장보다 크다.
+<span class="g">t232 는 같은 시트가 쇼파일 상태에 따라 다른 슬롯에 앉는 문제 — 프리셋 참조가 조용히 깨진다.</span></p>
+</div>
+
+<div class="grp c">
+<h3><span>C. 도구가 나를 막는 것</span><span class="cnt">9장 · 상위 3장만</span></h3>
+<div class="cards"><b><span class="card">t345</span> <span class="card">t349</span> <span class="card">t191</span></b>
+<span class="g">|</span> <span class="card">t195</span> <span class="card">t340</span> <span class="card">t161</span>
+<span class="card">t339</span> <span class="card">t36</span> <span class="card">t78</span></div>
+<p>효과가 곱셈이다 — 도구가 빠르면 모든 카드가 싸진다. <b>다만 이 갈래만 계속하면 쇼는 안 나온다.</b>
+앞의 셋만 권합니다: t345(배차 사망) · t349(빨간 브랜치 유출) · t191(색인 예산이 <b>지금 211바이트</b> 남아 임박).</p>
+</div>
+
+<div class="grp d">
+<h3><span>D. 시험·CI 위생</span><span class="cnt">12장 · 묶어 둔다</span></h3>
+<div class="cards"><span class="card">t59</span> <span class="card">t65</span> <span class="card">t56</span>
+<span class="card">t94</span> <span class="card">t60</span> <span class="card">t99</span> <span class="card">t337</span>
+<span class="card">t88</span> <span class="card">t81</span> <span class="card">t67</span> <span class="card">t72</span> <span class="card">t47</span></div>
+<p>전부 실측된 실재 결함이다. 그런데 <b>지금 아무것도 막고 있지 않다.</b>
+자르지는 말고 묶어 두고, 무언가 실제로 깨질 때 그 카드를 연다 — 그때는 재현이 공짜로 딸려 온다.</p>
+</div>
+
+<div class="grp e">
+<h3><span>E. 정리 권고</span><span class="cnt">14장 · 자르자</span></h3>
+<div class="cards"><span class="card">t266</span> <span class="card">t116</span> <span class="card">t338</span>
+<span class="card">t265</span> <span class="card">t263</span> <span class="card">t53</span> <span class="card">t148</span>
+<span class="card">t164</span> <span class="card">t268</span> <span class="card">t245</span> <span class="card">t100</span>
+<span class="card">t132</span> <span class="card">t293</span> <span class="card">t298</span></div>
+<p>사유별로 갈라 놓았습니다 — 자를 때 근거가 서로 다릅니다.</p>
+<table style="margin-top:12px">
+<thead><tr><th>사유</th><th>카드</th><th>자르는 근거</th></tr></thead>
+<tbody>
+<tr><td>메타·집계</td><td><span class="card">t266</span> <span class="card">t116</span></td>
+<td>큐를 세는 일이 큐에 카드로 들어와 있다. 세는 것 자체가 산출물이 아니다</td></tr>
+<tr><td>서류 정합</td><td><span class="card">t338</span> <span class="card">t265</span> <span class="card">t263</span> <span class="card">t53</span> <span class="card">t148</span></td>
+<td>SPEC 54개 훑기·AC 판정·문서 표 이동. 코파일럿 동작이 전혀 안 바뀐다</td></tr>
+<tr><td>목적 소멸</td><td><span class="card">t164</span> <span class="card">t100</span> <span class="card">t245</span></td>
+<td>카드 자신이 "이미 고쳐졌다 / 전제가 뒤집혔다 / 버전이 낡았다"고 적고 있다</td></tr>
+<tr><td>빈도 미측정</td><td><span class="card">t293</span></td>
+<td>"40자 넘는 지시가 실제로 얼마나 나오나"를 안 쟀다. 가치가 미지다</td></tr>
+<tr><td>선행조사만</td><td><span class="card">t132</span> <span class="card">t268</span></td>
+<td>조사 결과가 이미 다른 카드에 흡수됐거나, 결정 비용이 효과보다 크다</td></tr>
+<tr><td>결함 아님</td><td><span class="card">t298</span></td>
+<td>"결함" 주장이 반증됐고 연출 취향 물음으로 바뀌었다. 물어서 답하면 끝나는 일</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="grp f">
+<h3><span>F. 착수 불가 — 감독 결정 필요</span><span class="cnt">3장</span></h3>
+<div class="cards"><span class="card">t18</span> <span class="card">t22</span> <span class="card">t342</span></div>
+<p><b>t18·t22</b> — Part 와 사용자 큐가 들어 있는 쇼파일이 없으면 시작할 수 없습니다. 재료가 필요합니다.<br>
+<b>t342</b> — 파킹된 메타 카드이고, 카드 본문이 "재개는 감독 판정 후, 리드가 스스로 열지 말 것"이라고 적고 있습니다.</p>
+</div>
+
+<h2>권고</h2>
+<div class="rec">
+<ol>
+<li><b>지금 착수:</b> <span class="card">t229</span> → <span class="card">t244</span> → <span class="card">t101</span>.
+연출이 실제로 열립니다. t229 는 다른 카드를 살려내는 카드라 반드시 먼저입니다.</li>
+<li><b>같이 처리:</b> <span class="card">t345</span> · <span class="card">t349</span>.
+배차 비용과 원격 오염을 먼저 막습니다 — 뒤 카드 전부가 싸집니다.</li>
+<li><b>자른다:</b> E 14장을 큐에서 내립니다. 근거는 위 표에 사유별로 있습니다.</li>
+<li><b>묶어 둔다:</b> D 12장. 깨질 때 엽니다.</li>
+<li><b>감독께 필요한 것:</b> t18·t22 는 쇼파일, t342 는 재개 판정입니다.</li>
+</ol>
+</div>
+
+<div class="warn">
+<strong>자르면 잃는 것 — 정직하게.</strong> E 를 자르는 것이 공짜는 아닙니다.
+<span class="card">t338</span>(SPEC 장부 정합)은 <b>나중에 더 비싸집니다</b> — 문서가 코드와 어긋난 채 쌓이면 다음 사람이 낡은 문서를 근거로 판단합니다.
+지금 자르되, 언젠가 한 번은 치러야 하는 비용으로 기록해 두는 것이 정직합니다.
+<span class="card">t191</span>(색인 예산)은 자르지 않고 C 에 남겼습니다 — 지금 여유가 211바이트뿐이라 다음 세션에 실제로 막힙니다.
+</div>
+
+<h2>직접 확인해 보실 것</h2>
+<div class="lead">이 보고서를 저 혼자 믿지 마시고, 두 줄로 검산하실 수 있습니다.</div>
+<table>
+<thead><tr><th>확인할 것</th><th>명령</th></tr></thead>
+<tbody>
+<tr><td>열린 카드가 정말 51장인가</td><td><code>moai todo | grep -c "	queued	\|	picked	"</code></td></tr>
+<tr><td>1위 카드가 정말 "막힌 이유가 소멸"이라 적혀 있나</td><td><code>moai todo | grep t229</code></td></tr>
+</tbody>
+</table>
+
+<div class="gap">
+<div class="t">안 잰 것 (이 보고서의 한계)</div>
+• <b>카드 본문을 전수로 읽지 않았습니다.</b> 제목과 실측 머리말로 분류했습니다 — 이 저장소의 카드는 제목에 실측이 실려 있는 경우가 많아 그것으로 갈랐습니다. 그래도 본문에만 있는 사실을 놓쳤을 수 있습니다.<br>
+• <b>각 카드의 비용(토큰·시간)을 재지 않았습니다.</b> 순위는 <b>효과</b> 기준이고 비용 기준이 아닙니다. "효과 대비 비용"으로 다시 정렬하면 순서가 바뀔 수 있습니다.<br>
+• <b>E 14장의 본문을 열어 확인하지 않았습니다.</b> 자르기 전에 감독 확인이 필요한 이유입니다 — 제 분류가 근거이고, 결정은 아닙니다.
+</div>
+
+<footer>
+AI-Lighting_Console · 큐 분류 보고 · 2026-09-11 · 기준 <code>origin/main bfaa560</code><br>
+집계 원본 <code>.moai/state/verify/t-review/queue-full.txt</code> (650,541B / 295행) · 마크다운 정본 <code>reports/queue-triage-20260911.md</code>
+</footer>
+
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{
+primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",
+lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body>
+</html>

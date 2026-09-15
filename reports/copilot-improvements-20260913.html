@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코파일럿 앱 개선 보고 — 2026-09-13</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+<style>
+:root{
+--ivory:#FAF9F5;--paper:#FFFFFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;
+--oat:#E3DACC;--olive:#788C5D;
+--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard",system-ui,-apple-system,sans-serif;
+--serif:"Pretendard",ui-serif,Georgia,serif;
+--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:860px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);
+  line-height:1.7;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:48px 20px 80px}
+h1{font-family:var(--serif);font-size:2rem;line-height:1.3;margin:0 0 8px;letter-spacing:-.02em}
+h2{font-family:var(--serif);font-size:1.35rem;margin:56px 0 8px;padding-top:20px;
+  border-top:var(--border);letter-spacing:-.01em}
+h3{font-size:1.05rem;margin:32px 0 8px;color:var(--g700)}
+.sub{color:var(--g500);font-size:.92rem;margin:0 0 4px}
+.lead{background:var(--g100);border-left:3px solid var(--clay);padding:14px 18px;
+  border-radius:0 var(--radius-row) var(--radius-row) 0;margin:14px 0 22px;font-size:.95rem}
+.lead strong{color:var(--clay-d)}
+p{margin:12px 0}
+code{font-family:var(--mono);background:var(--g100);padding:1px 5px;border-radius:4px;font-size:.87em}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:24px 0}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px 18px}
+.card .k{font-size:.78rem;color:var(--g500);text-transform:uppercase;letter-spacing:.06em}
+.card .v{font-size:1.75rem;font-weight:700;line-height:1.2;margin-top:6px}
+.card .n{font-size:.82rem;color:var(--g500);margin-top:2px}
+.up{color:var(--olive)}
+.warn{color:var(--clay-d)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:.9rem;
+  background:var(--paper);border-radius:var(--radius-row);overflow:hidden}
+th{background:var(--g100);text-align:left;padding:9px 12px;font-weight:600;
+  font-size:.82rem;color:var(--g700);border-bottom:var(--border)}
+td{padding:9px 12px;border-bottom:1px solid var(--g300)}
+tr:last-child td{border-bottom:none}
+td.num{font-family:var(--mono);font-size:.85rem;text-align:right;white-space:nowrap}
+td.mono{font-family:var(--mono);font-size:.84rem}
+.panel{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);
+  padding:18px 22px;margin:20px 0}
+.panel.accent{border-left:4px solid var(--clay)}
+.panel.ok{border-left:4px solid var(--olive)}
+.panel h3{margin-top:0}
+ul{padding-left:22px;margin:12px 0}
+li{margin:7px 0}
+.tag{display:inline-block;font-size:.72rem;font-family:var(--mono);padding:2px 7px;
+  border-radius:99px;background:var(--oat);color:var(--g700);vertical-align:2px}
+.tag.done{background:#DDE8D2;color:#3E5228}
+.tag.open{background:#F5DED4;color:var(--clay-d)}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);
+  padding:18px;text-align:center;font-family:var(--mono);font-size:.82rem;overflow-x:auto}
+.before-after{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+@media(max-width:620px){.before-after{grid-template-columns:1fr}}
+.ba{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px 18px}
+.ba h4{margin:0 0 10px;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--g500)}
+.ba.after{border-color:var(--olive)}
+.ba code{display:block;background:transparent;padding:2px 0;font-size:.82rem;line-height:1.65}
+footer{margin-top:56px;padding-top:20px;border-top:var(--border);
+  font-size:.82rem;color:var(--g500)}
+@media print{body{background:#fff}.wrap{padding:0}pre.mermaid{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="sub">MA3 코파일럿 · 2026-09-13</p>
+<h1>코파일럿 앱 개선 보고</h1>
+<p class="sub">감독님 리뷰 4건 + 리뷰 중 발견 5건 · 카드 9장 종료 · PR 4건 머지 (<code>2752706</code> → <code>7bd5d25</code>)</p>
+
+<div class="cards">
+  <div class="card"><div class="k">색</div><div class="v up">1 → 5</div><div class="n">종류</div></div>
+  <div class="card"><div class="k">이펙트</div><div class="v up">1 → 5</div><div class="n">종류</div></div>
+  <div class="card"><div class="k">질감</div><div class="v up">1 → 5</div><div class="n">종류</div></div>
+  <div class="card"><div class="k">테스트</div><div class="v">12,713</div><div class="n">통과 · 회귀 0</div></div>
+</div>
+
+<h2>1. 감독님이 지적하신 것, 그리고 그 결과</h2>
+
+<div class="lead">
+감독님 말씀 중 <strong>「색상과 이펙트와 전환이 하나도 변함없이 똑같다」</strong>가 가장 컸고, 파고들어 보니
+<strong>원인이 하나</strong>였습니다. 세 가지가 따로 고장 난 게 아니라, 한 곳이 막혀서 세 갈래가 동시에 멈춰 있었어요.
+</div>
+
+<table>
+<tr><th>감독님 지적</th><th>결과</th></tr>
+<tr><td>컬러·이펙트·전환이 큐리스트 전체 동일</td><td><span class="tag done">해결</span> 색·이펙트·질감 각 1종 → 5종</td></tr>
+<tr><td>음악을 어떻게 분석했는지 리포트가 없다</td><td><span class="tag done">해결</span> 큐시트 위에 접히는 요약 6줄</td></tr>
+<tr><td>큐시트가 전체가 보이지 않는다</td><td><span class="tag done">해결</span> 스크롤바 상시 표시 + 가장자리 신호</td></tr>
+<tr><td>런북 우측이 많이 비어 있다</td><td><span class="tag open">미해결</span> 안전한 연결 근거가 없어 표시하지 않음 (§6)</td></tr>
+</table>
+
+<p>리뷰하면서 제가 추가로 찾은 것 다섯 가지도 같이 고쳤습니다 — 현재 큐 강조가 한 번도 안 뜨던 것,
+구간 이름이 <code>S1~S16</code> 이고 그중 하나가 중복이던 것, 화면에 소수점 15자리가 그대로 찍히던 것,
+효과 규칙이 통째로 꺼져 있던 것, 피날레 페이드가 후렴과 같던 것입니다.</p>
+
+<h2>2. 왜 전부 똑같았나 — 막힌 곳은 한 군데였습니다</h2>
+
+<div class="lead">
+앱에는 구간마다 <strong>「이 구간은 인트로다 / 벌스다 / 후렴이다」</strong>를 판정하는 부분이 있습니다.
+이 판정 결과가 <strong>색·효과·질감·밝기 네 가지를 모두 결정</strong>합니다. 그런데 그 판정이
+<strong>16개 구간 전부 실패</strong>하고 있었습니다.
+</div>
+
+<p>판정기는 구간의 <strong>이름</strong>과 <strong>설명글</strong> 두 가지만 읽습니다. 그런데 음원 분석이 만들어 넘기는 구간은
+이름이 <code>S1</code>, <code>S2</code>… 이고 설명글은 <strong>빈 칸</strong>이었습니다. 둘 다 일부러 그렇게 만든 것이었어요 —
+이름은 룩 라이브러리 용어와 겹치면 안 되고, 설명글은 음원 분석이 「느낌」을 잴 수 없으니 지어내지 않기로 한 겁니다.</p>
+
+<p>결과적으로 판정기는 <code>S1</code> 에서 아무 단서도 못 찾고 <strong>「기타」</strong>로 답했습니다. 그리고 「기타」는
+색 표에도, 효과 표에도, 질감 표에도 <strong>없는 항목</strong>이라 — 세 표가 전부 그냥 넘어가고 기본값이 나왔습니다.</p>
+
+<pre class="mermaid">
+flowchart TD
+  A["음원 분석<br/>구간 16개 + 밝기"] --> B["구간 만들기<br/>이름 S1 · 설명글 빈칸"]
+  B --> C{"역할 판정<br/>이름·설명글만 읽음"}
+  C -->|"단서 없음"| D["전부 '기타'"]
+  D --> E["색 표 통과 못함<br/>→ 감독님이 고른 2색 그대로"]
+  D --> F["효과 표 통과 못함<br/>→ dimmer chase 하나"]
+  D --> G["질감 표 통과 못함<br/>→ '중간' 하나"]
+</pre>
+<noscript>
+<p><strong>흐름 요약:</strong> 음원 분석 → 구간 생성(이름 <code>S1</code>, 설명글 빈칸) → 역할 판정이 단서를 못 찾아 전부 「기타」 →
+색·효과·질감 세 표를 모두 통과하지 못하고 각각 기본값 하나만 나옴.</p>
+</noscript>
+
+<h3>판정기 자체는 멀쩡했습니다</h3>
+<p>확인차 <strong>제대로 된 이름을 넣어 봤습니다</strong>. <code>Intro / Verse 1 / Chorus 1 / Bridge 1 / Chorus 2</code> 를 주니
+<code>인트로 / 벌스 / 후렴 / 브리지 / 피날레</code> 를 정확히 답했습니다. 고장 난 건 판정기가 아니라
+<strong>판정기에 들어가는 입력</strong>이었습니다.</p>
+
+<h3>고친 방법</h3>
+<p>어제 같은 모양의 문제를 한 번 푼 적이 있습니다(밝기 값이 같은 이유로 버려지던 것). 그때 쓴 방법을 그대로 썼습니다 —
+<strong>역할을 담는 칸을 따로 만들고</strong>, 음원이 잰 밝기 배열에서 역할을 추정해 그 칸에 실어 보냅니다.
+첫 구간은 인트로, 마지막은 피날레, 가장 밝은 구간은 후렴, 양옆보다 어두운 구간은 브리지, 나머지는 벌스입니다.</p>
+
+<div class="before-after">
+  <div class="ba"><h4>고치기 전</h4>
+    <code>역할  : 기타 × 16</code>
+    <code>색    : 블루+퍼플 (17구간 전부)</code>
+    <code>효과  : dimmer chase (전부)</code>
+    <code>질감  : 중간 (전부)</code>
+  </div>
+  <div class="ba after"><h4>고친 뒤</h4>
+    <code>역할  : 인트로·벌스·후렴·브리지·피날레</code>
+    <code>색    : 5종 (후렴에 warm white+magenta)</code>
+    <code>효과  : 5종 (인트로는 효과 없음)</code>
+    <code>질감  : 5종 (긴 페이드 ↔ 샤프 히트)</code>
+  </div>
+</div>
+
+<h2>3. 음악 한 곡을 넣으면 실제로 어떻게 되는가</h2>
+
+<div class="lead">
+감독님이 요청하신 부분입니다. 말로 설명하는 대신 <strong>감독님 곡을 실제로 넣어서 끝까지 돌렸습니다</strong>.
+이 저장소에서 실제 음원 파일로 전 과정을 돌린 것은 <strong>이번이 처음</strong>입니다 — 그동안은 전부 합성 음원이나
+이미 측정해 둔 숫자로만 확인했습니다.
+</div>
+
+<h3>① 음원을 읽는다</h3>
+<p>입력은 <code>걸그룹DinoDino_C_max최고품질.wav</code> (31MB). 앱이 음원에서 직접 재는 것은 네 가지입니다.</p>
+
+<div class="cards">
+  <div class="card"><div class="k">템포</div><div class="v">126.05</div><div class="n">BPM · 신뢰도 0.974</div></div>
+  <div class="card"><div class="k">구간</div><div class="v">16</div><div class="n">개 경계 검출</div></div>
+  <div class="card"><div class="k">1마디</div><div class="v">1.904</div><div class="n">초 (4/4 기준)</div></div>
+  <div class="card"><div class="k">온셋</div><div class="v">806</div><div class="n">개 타점</div></div>
+</div>
+
+<p>구간별 밝기 등급(D1 가장 어두움 ~ D5 가장 밝음)은 이렇게 나왔습니다:</p>
+<p><code>2 · 4 · 4 · 5 · 5 · 2 · 2 · 5 · 4 · 5 · 4 · 5 · 1 · 4 · 2 · 5</code></p>
+
+<p><strong>앱이 재지 <em>않는</em> 것</strong>도 분명히 말씀드립니다 — 음원 분석은 <strong>소리의 크기와 변화</strong>를 잽니다.
+「이 구간이 후렴인지 벌스인지」, 「어떤 느낌인지」는 <strong>재지 못합니다</strong>. 그래서 역할은 밝기 패턴에서 <em>추정</em>하고,
+색과 컨셉은 <strong>감독님이 인터뷰에서 답하신 것</strong>을 씁니다.</p>
+
+<h3>② 역할을 추정하고 이름을 붙인다</h3>
+<p>구간 이름이 <code>S1~S16</code> 에서 사람이 읽는 이름으로 바뀝니다. 그리고 마디 경계로 한 구간이 둘로 쪼개지면
+<code>(1/2)</code>·<code>(2/2)</code> 가 붙어서 <strong>17개 전부 서로 다른 이름</strong>이 됩니다.</p>
+
+<div class="before-after">
+  <div class="ba"><h4>고치기 전 — 중복 있음</h4>
+    <code>S1 S2 S3 S4 S5 S6 S7</code>
+    <code>S8 S8 ← 서로 다른 구간인데 같은 이름</code>
+    <code>S9 S10 … S16</code>
+  </div>
+  <div class="ba after"><h4>고친 뒤 — 17/17 고유</h4>
+    <code>Intro · Verse 1 · Verse 2</code>
+    <code>Chorus 3 (1/2) · Chorus 3 (2/2)</code>
+    <code>Bridge 1 · … · Finale</code>
+  </div>
+</div>
+
+<p>이게 실무에서 왜 중요하냐면 — 감독님이 <strong>「Chorus 3 (2/2) 더 밝게」</strong>처럼 구간 하나를 정확히 짚어
+수정 요청을 하실 수 있게 됩니다. <code>S8</code> 이 두 개였을 때는 어느 쪽인지 지목할 방법이 없었습니다.</p>
+
+<h3>③ 역할이 색·효과·질감을 결정한다</h3>
+<p>감독님 곡을 실제로 돌린 결과입니다. <strong>이 표 전체가 실측이고, 예시가 아닙니다.</strong></p>
+
+<table>
+<tr><th>#</th><th>시각</th><th>이름</th><th>밝기</th><th>색</th><th>효과</th></tr>
+<tr><td class="num">1</td><td class="num">0.0s</td><td class="mono">Intro</td><td class="num">D2</td><td class="mono">deep blue+블루</td><td class="mono">(없음)</td></tr>
+<tr><td class="num">2</td><td class="num">6.9s</td><td class="mono">Verse 1</td><td class="num">D4</td><td class="mono">블루+cyan</td><td class="mono">slow pan</td></tr>
+<tr><td class="num">3</td><td class="num">20.3s</td><td class="mono">Verse 2</td><td class="num">D4</td><td class="mono">블루+cyan</td><td class="mono">slow pan</td></tr>
+<tr><td class="num">4</td><td class="num">26.6s</td><td class="mono">Chorus 1</td><td class="num">D5</td><td class="mono">warm white+magenta+블루</td><td class="mono">dimmer chase+pan sweep</td></tr>
+<tr><td class="num">5</td><td class="num">46.6s</td><td class="mono">Chorus 2</td><td class="num">D5</td><td class="mono">warm white+magenta+블루</td><td class="mono">dimmer chase+pan sweep</td></tr>
+<tr><td class="num">6</td><td class="num">69.0s</td><td class="mono">Verse 3</td><td class="num">D2</td><td class="mono">블루+cyan</td><td class="mono">slow pan</td></tr>
+<tr><td class="num">7</td><td class="num">72.8s</td><td class="mono">Verse 4</td><td class="num">D2</td><td class="mono">블루+cyan</td><td class="mono">slow pan</td></tr>
+<tr><td class="num">8</td><td class="num">76.9s</td><td class="mono">Chorus 3</td><td class="num">D5</td><td class="mono">warm white+magenta+블루</td><td class="mono">dimmer chase+pan sweep</td></tr>
+<tr><td class="num">9</td><td class="num">115.2s</td><td class="mono">Bridge 1</td><td class="num">D4</td><td class="mono">cold blue+블루</td><td class="mono">slow tilt</td></tr>
+<tr><td class="num">10</td><td class="num">120.1s</td><td class="mono">Chorus 4</td><td class="num">D5</td><td class="mono">warm white+magenta+블루</td><td class="mono">dimmer chase+pan sweep</td></tr>
+<tr><td class="num">11</td><td class="num">125.4s</td><td class="mono">Bridge 2</td><td class="num">D4</td><td class="mono">cold blue+블루</td><td class="mono">slow tilt</td></tr>
+<tr><td class="num">12</td><td class="num">130.1s</td><td class="mono">Chorus 5</td><td class="num">D5</td><td class="mono">warm white+magenta+블루</td><td class="mono">dimmer chase+pan sweep</td></tr>
+<tr><td class="num">13</td><td class="num">149.2s</td><td class="mono">Bridge 3</td><td class="num">D1</td><td class="mono">cold blue+블루</td><td class="mono">slow tilt</td></tr>
+<tr><td class="num">14</td><td class="num">154.7s</td><td class="mono">Verse 5</td><td class="num">D4</td><td class="mono">블루+cyan</td><td class="mono">slow pan</td></tr>
+<tr><td class="num">15</td><td class="num">159.3s</td><td class="mono">Bridge 4</td><td class="num">D2</td><td class="mono">cold blue+블루</td><td class="mono">slow tilt</td></tr>
+<tr><td class="num">16</td><td class="num">162.4s</td><td class="mono">Finale</td><td class="num">D5</td><td class="mono">warm white+gold+블루</td><td class="mono">dimmer chase+accent sweep</td></tr>
+</table>
+
+<p>감독님이 인터뷰에서 고르신 <strong>블루/퍼플</strong>이 곡 전체의 기조로 남되, 후렴에는 <code>warm white + magenta</code> 가,
+피날레에는 <code>gold</code> 가 얹힙니다. 인트로는 효과가 아예 없고(정적), 피날레만 <code>accent sweep</code> 을 씁니다.</p>
+
+<h3>④ 페이드 — 사실 이미 갈려 있었습니다</h3>
+
+<div class="lead">
+여기는 <strong>제가 처음에 잘못 짚었던 부분</strong>이라 정정해서 말씀드립니다. 페이드는 원래부터
+<strong>16배로 갈려 있었습니다</strong>. 감독님 화면에 <code>FADE</code> 한 단어만 보인 건 다른 이유였습니다.
+</div>
+
+<table>
+<tr><th>밝기</th><th>페이드</th><th>박자 환산</th><th>쓰이는 곳</th></tr>
+<tr><td class="num">D1</td><td class="num">3.808초</td><td class="num">8박 (2마디)</td><td>가장 조용한 구간</td></tr>
+<tr><td class="num">D2</td><td class="num">1.904초</td><td class="num">4박 (1마디)</td><td>인트로·브리지</td></tr>
+<tr><td class="num">D4</td><td class="num">0.714초</td><td class="num">1.5박</td><td>벌스</td></tr>
+<tr><td class="num">D5</td><td class="num">0.238초</td><td class="num">반 박</td><td>후렴·드롭</td></tr>
+</table>
+
+<p>정본 문서 §5.1 이 <strong>「코러스 큐는 보컬이 들어오는 정확한 순간에 떨어져야 하며 두 박 늦으면 안 된다」</strong>고
+못박았는데, D5 의 <strong>반 박</strong>은 이미 그 기준을 지키고 있었습니다.</p>
+
+<p>감독님 눈에 안 보인 이유는 둘이었습니다. 하나는 <code>Trans</code> 칸이 <strong>페이드가 0초일 때만 SNAP</strong> 이고
+나머지는 전부 <code>FADE</code> 라고만 적어서 16배 차이를 한 단어로 뭉갠 것. 다른 하나는 <strong>실제 초가 적힌
+<code>Fade</code> 열이 화면 오른쪽에서 잘려 있던 것</strong>입니다 — 감독님이 지적하신 그 잘림이요.
+이번에 스크롤을 고쳤으니 이제 그 숫자가 보입니다.</p>
+
+<p>남은 진짜 문제 하나는 고쳤습니다 — <strong>페이드가 밝기만 따라가고 구간 역할을 몰랐던 것</strong>입니다.
+정본 §6 표는 피날레에 「느린 페이드 1회」를 지정하는데, 피날레도 D5 라는 이유로 후렴과 같은 반 박을 쓰고 있었어요.
+이제 <strong>피날레 4.0초 vs 후렴 0.25초</strong>로 갈립니다.</p>
+
+<h2>4. 화면에 새로 생긴 것 — 분석 요약</h2>
+
+<div class="lead">
+감독님이 <strong>「수정을 요청하는 데 도움이 되도록」</strong> 이라고 하신 요구를 그대로 받았습니다.
+기능 소개가 아니라, <strong>앱이 내린 판단이 틀렸을 때 감독님이 반박할 수 있게</strong> 근거를 보여주는 것이 목적입니다.
+</div>
+
+<p>큐시트 위에 접힌 블록이 하나 생겼습니다. 감독님 곡에서는 이렇게 나옵니다:</p>
+
+<div class="panel accent">
+<p style="margin:4px 0"><strong>음악 판독</strong> — 126.05 BPM · 4/4 · 시각 추정(마디 연산)</p>
+<p style="margin:4px 0"><strong>주의</strong> — 이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다.
+음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오.</p>
+<p style="margin:4px 0"><strong>색</strong> — 감독 지정(Q2_PALETTE): 블루/퍼플 · 구간 역할 5종이 팔레트를 갈랐다</p>
+<p style="margin:4px 0"><strong>이펙트</strong> — 5종 사용: slow pan, dimmer chase, pan sweep, slow tilt, accent sweep</p>
+<p style="margin:4px 0"><strong>콘솔 상태</strong> — 이 타임라인은 아직 콘솔에 저장되지 않았다</p>
+</div>
+
+<p><strong>없는 근거는 지어내지 않습니다.</strong> 어떤 값에 출처 기록이 없으면 그 줄 자체를 안 냅니다.
+이 앱이 룩 라이브러리에 팔레트 이름이 없을 때 이름을 지어내지 않는 것과 같은 원칙입니다.</p>
+
+<h2>5. 지금 감독님이 하셔야 할 것</h2>
+
+<div class="panel ok">
+<h3>① 브라우저 새로고침 — 화면 3건은 바로 보입니다</h3>
+<p>빌드와 앱 재시작을 이미 마쳤습니다(앱 정상 동작 확인). 새로고침하시면 <strong>큐시트 스크롤바</strong>,
+<strong>현재 큐 강조</strong>, <strong>소수점 정리</strong>가 바로 보입니다.</p>
+</div>
+
+<div class="panel accent">
+<h3>② 색·이름·효과 개선을 보시려면 — 곡을 다시 설계하셔야 합니다</h3>
+<p>지금 앱에 떠 있는 타임라인은 <strong>고치기 전에 만들어진 것</strong>이라 여전히 <code>S1~S16</code> 입니다.
+개선된 로직은 <strong>새로 설계할 때</strong> 작동합니다. 같은 곡을 다시 넣으시면 위 §3 의 표대로 나옵니다.</p>
+</div>
+
+<div class="panel">
+<h3>③ 두 가지는 감독님 눈 확인이 필요합니다</h3>
+<p>저는 브라우저를 띄울 수 없어서 <strong>화면에 실제로 어떻게 그려지는지 확인하지 못했습니다</strong>.
+스크롤바가 눈에 잘 띄는지, 분석 요약 블록이 읽기 좋은지 봐주시면 조정하겠습니다.</p>
+</div>
+
+<h2>6. 못 한 것과 남은 것</h2>
+
+<div class="lead">
+감독님 요청 중 <strong>하나는 해결하지 못했습니다</strong>. 덮지 않고 그대로 말씀드립니다.
+</div>
+
+<h3>런북 우측 빈 칸 — 일부러 비워 뒀습니다</h3>
+<p>감독님이 「런북 표의 우측이 많이 비어 있는데 큐의 다른 정보를 표시해 줄 수 있지 않을까」라고 하셨는데,
+<strong>연결할 안전한 근거가 없어서 아무것도 넣지 않았습니다</strong>.</p>
+
+<table>
+<tr><th>확인한 것</th><th>결과</th></tr>
+<tr><td>연결 키가 있나</td><td>있음 — 시퀀스 번호끼리 맞추는 방식을 앱이 이미 씀</td></tr>
+<tr><td>이 곡에 적용되나</td><td><strong>안 됨</strong> — 감독 타임라인은 Sequence 110, 콘솔에 없음. 런북 실행기는 다른 시퀀스</td></tr>
+<tr><td>큐 단위로 맞출 수 있나</td><td><strong>안 됨</strong> — 타임라인 1~17 vs 콘솔 번호 체계 2종(1~16 / 0~14)</td></tr>
+</table>
+
+<p>순서대로 억지로 맞출 수는 있습니다. 하지만 그러면 <strong>감독님이 실기에서 엉뚱한 큐의 색을 믿게 됩니다</strong>.
+빈 칸보다 나쁜 결과라 판단했습니다. 대신 <strong>왜 비어 있는지</strong>는 화면에 나오게 했습니다 —
+분석 요약의 「콘솔 상태」 줄이 그 답입니다.</p>
+
+<h3>후속 카드로 남긴 것</h3>
+<table>
+<tr><th>내용</th><th>왜 중요한가</th></tr>
+<tr><td><strong>FOH 그룹이 「객석」으로 분류됨</strong></td><td>정본 §6.2 와 어제 작업은 같은 그룹을 <strong>프론트 필</strong>(연주자 얼굴 보정광)로 씁니다. 둘 중 하나가 틀렸고, 틀린 쪽이 연출에 그대로 나타납니다</td></tr>
+<tr><td><strong>무빙·워시가 역할 없이 돕니다</strong></td><td>리그 18개 그룹 중 역할이 붙는 건 5개뿐입니다. MOVER·WASH 가 통째로 빠져 있는데, 조명의 주력입니다</td></tr>
+<tr><td><strong>어두운 구간이 연속이면 브리지로 안 잡힘</strong></td><td>이번 곡에서 69.0초·72.8초가 D2(어두움)인데 <code>Verse</code> 로 판정됐습니다. 브레이크다운일 가능성이 높습니다</td></tr>
+<tr><td><strong>전환 SNAP 이 아직 없음</strong></td><td>정본 §6.1 이 후렴을 찍는 일곱 수단 중 하나로 「색 스냅」을 명시하는데, 아직 진짜 스냅을 쓰는 자리가 없습니다</td></tr>
+</table>
+
+<h2>7. 검증</h2>
+
+<table>
+<tr><th>항목</th><th>기준</th><th>결과</th></tr>
+<tr><td>서버 테스트</td><td class="num">12,682</td><td class="num">12,713 통과 · 회귀 0</td></tr>
+<tr><td>화면 테스트</td><td class="num">558</td><td class="num">570 통과 · 회귀 0</td></tr>
+<tr><td>타입 검사</td><td>—</td><td>0 에러</td></tr>
+<tr><td>코드 검사</td><td>—</td><td>통과</td></tr>
+<tr><td>CI (자동 검증)</td><td>—</td><td class="warn">판정 불가 — 아래 참조</td></tr>
+</table>
+
+<div class="panel">
+<p><strong>CI 가 빨간데, 코드 문제가 아닙니다.</strong> GitHub 의 자동 검증이
+<code>recent account payments have failed or your spending limit needs to be increased</code> 로
+<strong>시작도 못 하고 2초 만에 죽습니다</strong>. 대조군으로 이전 커밋 5개를 확인했더니 전부 같은 이유였습니다.
+즉 이 저장소는 지금 자동 검증이 아예 안 도는 상태이고, 판정 근거는 제 로컬 테스트뿐입니다.
+결제 설정을 손보시면 자동 검증이 돌아옵니다.</p>
+</div>
+
+<h2>8. 제가 틀렸던 것</h2>
+
+<div class="lead">
+작업 중 <strong>제 판단이 두 번 틀렸습니다</strong>. 나중에 같은 실수를 반복하지 않으려고 기록합니다.
+</div>
+
+<ul>
+<li><strong>색 문제의 원인을 잘못 짚었습니다.</strong> 코드에서 「설명글에 색 단어가 있으면 색 표를 건너뛴다」는
+분기를 발견하고 그걸 원인이라 단정했는데, 재보니 그 설명글은 <strong>빈 칸</strong>이라 그 분기를 아예 타지 않았습니다.
+위험은 실재했지만 자리가 달랐습니다. <em>코드에서 수상한 걸 찾았을 때, 그게 실제로 작동하는지 재지 않고 넘어간 것이 실수였습니다.</em></li>
+<li><strong>스크롤 수정 1차본이 무효였습니다.</strong> CSS 두 줄을 바꿨는데 문법상 완전히 동등해서 동작 변화가 0이었습니다.
+다시 시켜서 제대로 원인(스크롤바가 안 보임)에 닿았습니다.</li>
+</ul>
+
+<footer>
+<p>기준 커밋 <code>2752706</code> → <code>7bd5d25</code> · PR #430 · #431 · #432 · #433 ·
+카드 t384 t385 t386 t387 t388 t389 t390 t391 t392 t393 종료 ·
+후속 카드 t382 t394 t395 t396 열림</p>
+<p>본 보고서의 모든 수치는 실측입니다. §3 의 구간표는 감독님 실제 음원(31MB WAV)을
+전 과정에 태워 얻은 결과이며, 이 저장소에서 실제 음원으로 끝까지 돌린 것은 이번이 처음입니다.</p>
+</footer>
+
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "base",
+    themeVariables: {
+      primaryColor:"#FAF9F5", primaryTextColor:"#141413", primaryBorderColor:"#D97757",
+      lineColor:"#87867F", secondaryColor:"#E3DACC", tertiaryColor:"#F0EEE6",
+      fontFamily:"Pretendard, system-ui, sans-serif"
+    }
+  });
+</script>
+</body>
+</html>
