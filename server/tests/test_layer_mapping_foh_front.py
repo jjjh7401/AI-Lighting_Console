@@ -128,11 +128,18 @@ class TestTheOtherRolesAreUnchanged:
         assert _role_of("STROBE") == "effect"
         assert _role_of("HAZE") == "effect"
 
-    def test_blind_stays_unclassified_pending_the_directors_answer(self):
-        """BLIND 는 여전히 감독 확인 대기다 — 이 카드가 추측해 채우지 않는다.
-        FOH 를 옮기면서 '관객 지향 장비'를 audience 로 몰아넣고 싶어지는데,
-        그 판정 근거는 이 저장소에 없다."""
-        assert _role_of("BLIND") is None
+    def test_blind_reads_as_effect_by_the_directors_answer(self):
+        """감독 답 2026-09-15: BLIND 는 `effect` 다.
+
+        t385·t395 는 이 판정을 비워 뒀다 — 블라인더는 객석을 향해 쏘니 `audience`
+        로도, 순간에 터뜨리는 장비이니 `effect` 로도 읽혀서 저장소만으로는 어느
+        쪽인지 정할 근거가 없었다. 내가 감독에게 직접 물었고 `effect` 를 골랐다:
+        운용 방식이 스트로브와 같은 계열이라는 판단이다.
+
+        이 단언의 근거는 코드도 문서도 아니라 **감독의 연출 판단**이다. 뒤집으려면
+        추론이 아니라 감독에게 다시 물어야 한다.
+        """
+        assert _role_of("BLIND") == "effect"
 
     def test_the_audience_role_keeps_its_own_vocabulary(self):
         """audience 역할 자체를 없애는 것이 아니다 — FOH 만 나간다."""
@@ -140,10 +147,13 @@ class TestTheOtherRolesAreUnchanged:
         assert "house" in _LAYER_GROUP_ALIASES["audience"]
 
     def test_no_group_in_this_rig_reads_as_audience_anymore(self):
-        """이 리그에서의 귀결 — FOH 가 나가면 audience 를 받는 그룹이 없다.
-        이것이 회귀가 아니라 **이 카드가 의도한 결과**임을 고정한다: audience 를
-        받을 자격이 있는 그룹(BLIND)은 감독 확인 대기 중이고, 없는 역할을
-        있는 것처럼 세우지 않는다."""
+        """이 리그에서의 귀결 — audience 를 받는 그룹이 없다.
+
+        t395 시점에는 "후보 BLIND 가 감독 확인 대기"라 비어 있었고, 2026-09-15
+        감독 답으로 그 후보도 `effect` 로 갔다. 그래서 이 리그에 audience 그룹이
+        **없는 것이 확정된 상태**다 — 회귀가 아니라 판정 결과다. 객석 전용 그룹을
+        둔 다른 리그에서는 `audience`/`house` 어휘가 여전히 발화한다(아래 항목).
+        """
         mapping = _layer_mapping_from_group_children(_payload(_MEASURED_GROUP_NAMES))
         audience_groups = {e["group_name"] for e in mapping if e["role"] == "audience"}
         assert audience_groups == set(), f"audience 판독: {audience_groups}"
