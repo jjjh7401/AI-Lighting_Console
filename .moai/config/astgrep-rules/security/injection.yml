@@ -9,7 +9,7 @@
 # Every language below carries the identical pattern-family with equal
 # opportunity. Languages not yet listed are equal-priority future additions.
 ---
-id: sec-command-injection-shell-go
+id: sec-command-injection-shell
 language: go
 severity: error
 message: "A shell command is built with exec.Command(\"sh\", \"-c\", ...). If any argument derives from external input, this is a command-injection risk."
@@ -20,7 +20,7 @@ metadata:
 rule:
   pattern: exec.Command("sh", "-c", $CMD)
 ---
-id: sec-command-injection-shell-python
+id: sec-command-injection-shell
 language: python
 severity: error
 message: "A shell command is executed with shell=True or os.system. If any argument derives from external input, this is a command-injection risk."
@@ -35,7 +35,7 @@ rule:
     - pattern: subprocess.Popen($CMD, shell=True)
     - pattern: os.system($CMD)
 ---
-id: sec-command-injection-exec-javascript
+id: sec-command-injection-exec
 language: javascript
 severity: error
 message: "A shell command is executed with child_process.exec. If any argument derives from external input, this is a command-injection risk."
@@ -48,7 +48,7 @@ rule:
     - pattern: child_process.exec($CMD)
     - pattern: cp.exec($CMD)
 ---
-id: sec-command-injection-exec-typescript
+id: sec-command-injection-exec
 language: typescript
 severity: error
 message: "A shell command is executed with child_process.exec. If any argument derives from external input, this is a command-injection risk."
