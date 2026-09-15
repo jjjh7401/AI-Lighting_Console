@@ -21,7 +21,13 @@ WASH-D WASH-ALL BLIND STROBE HAZE ALL ODD EVEN.
 고침: STROBE·HAZE 는 어느 표준으로 읽어도 모호함 없이 "effect" 이므로
 정확 일치 어휘에 추가한다. BLIND(블라인더)는 관객 지향 장비일 수 있어
 역할이 모호하므로 뺀다(감독 확인이 필요한 별도 결정 — 이 카드에서
-추측하지 않는다). MOVER-*/WASH-* 는 접미사가 붙어 있어 여전히
+추측하지 않는다).
+
+🔴 **위 BLIND 유보는 2026-09-15 감독 답으로 해소됐다** — `effect` 다. 이 문단은
+t385 시점의 기록으로 남기고, 현재 동작은 아래
+`test_blind_reads_as_effect_by_the_directors_answer` 가 정본이다.
+
+MOVER-*/WASH-* 는 접미사가 붙어 있어 여전히
 미판독이며, 이는 RG5(부분 문자열 매칭 금지)의 정책 결정이 선행돼야
 하는 별도 카드로 남긴다 — 이 테스트가 그 잔여를 명시적으로 고정한다.
 """
@@ -76,16 +82,39 @@ class TestEffectRoleNowInfersFromThisRigsGroupNames:
         assert {"key", "back"} <= roles
 
     def test_effect_role_now_infers_from_strobe_and_haze(self):
-        """재현 대상: 고침 전에는 이 리그에서 effect 역할이 0건이었다."""
+        """재현 대상: 고침 전에는 이 리그에서 effect 역할이 0건이었다.
+
+        🔴 2026-09-15 개정 — BLIND 가 합류했다(감독 답, 아래 항목). 이 단언은
+        「effect 를 받는 그룹 전수」라서 셋이 됐다.
+        """
         mapping = _layer_mapping_from_group_children(_payload(_MEASURED_GROUP_NAMES))
         effect_groups = {entry["group_name"] for entry in mapping if entry["role"] == "effect"}
-        assert effect_groups == {"STROBE", "HAZE"}, f"effect 판독: {effect_groups}"
+        assert effect_groups == {"STROBE", "HAZE", "BLIND"}, f"effect 판독: {effect_groups}"
 
-    def test_blind_is_deliberately_left_unclassified(self):
-        """블라인더는 관객 지향일 수 있어 이 카드에서 역할을 추측하지 않는다."""
+    def test_blind_reads_as_effect_by_the_directors_answer(self):
+        """감독 답 2026-09-15 — BLIND 는 `effect` 다.
+
+        t385(이 파일)와 t395 는 이 판정을 **비워 뒀다**: 블라인더는 객석을 향해
+        쏘니 `audience` 로도, 순간에 터뜨리는 장비이니 `effect` 로도 읽혀서
+        저장소만으로는 정할 근거가 없었다. 감독에게 직접 물어 `effect` 를 받았다 —
+        운용 방식이 스트로브와 같은 계열이라는 판단이다.
+
+        근거가 코드도 문서도 아니라 **감독의 연출 판단**이라, 뒤집으려면 추론이
+        아니라 감독에게 다시 물어야 한다.
+        """
         mapping = _layer_mapping_from_group_children(_payload(_MEASURED_GROUP_NAMES))
-        blind_entries = [entry for entry in mapping if entry["group_name"] == "BLIND"]
-        assert blind_entries == [], "BLIND 를 이 카드가 추측해 분류했다"
+        blind_roles = [entry["role"] for entry in mapping if entry["group_name"] == "BLIND"]
+        assert blind_roles == ["effect"], f"BLIND 판독: {blind_roles}"
+
+    def test_the_full_word_blinder_reads_as_effect_too(self):
+        """이 리그는 `BLIND` 로 줄여 쓰지만 `BLINDER` 로 쓰는 쇼파일도 있다.
+
+        같은 장비의 온전한 이름이라 같은 판정을 받아야 한다 — 이 표의 기존 관례와
+        같다(`back` 이 `backlight`·`rear` 를, `effect` 가 `fx`·`aerial` 을 함께 든다).
+        어휘를 넣고 검사를 안 붙이면 나중에 정리 과정에서 조용히 사라진다.
+        """
+        mapping = _layer_mapping_from_group_children(_payload(("BLINDER",)))
+        assert [entry["role"] for entry in mapping] == ["effect"]
 
     def test_mover_and_wash_groups_remain_unmatched_documented_residual(self):
         """MOVER-*/WASH-* 는 접미사 때문에 여전히 미판독 — 잔여로 명시 고정."""
