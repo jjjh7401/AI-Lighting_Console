@@ -169,7 +169,9 @@ class TestRegistry:
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 38
+        # t374 은 39 로 올린다 — `plan_override_look`, override look 플래너의
+        # 모델 진입점. 플래너는 t373 부터 있었고 툴셋에 이름만 없었다.
+        assert len(names) == len(TOOL_NAMES) == 39
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.
