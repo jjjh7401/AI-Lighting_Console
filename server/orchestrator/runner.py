@@ -173,6 +173,7 @@ _TOOL_TASKS: dict[str, str] = {
     "classify_arrangement_topology": "배치 구조 판별",
     "create_arrangement_groups": "그룹 저장",
     "analyse_layout_image": "첨부 도면 판독",
+    "plan_override_look": "솔로 스팟 override 저장",
 }
 
 

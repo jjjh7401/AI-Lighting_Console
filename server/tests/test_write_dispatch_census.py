@@ -94,6 +94,10 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
     ("server/orchestrator/tools.py", "compile_scene", 0): (
         "scene/compile.py 가 씬을 Store Sequence <n> Cue <m> 로 굳힌다 — kind='scene_compile'"
     ),
+    ("server/orchestrator/tools.py", "plan_override_look", 0): (
+        "design/override_look.py 가 조준·색·줌을 채우고 Store Preset <풀>.<슬롯> 로 "
+        "override 슬롯에 굳힌다 — kind='override_look'. 카드 t374"
+    ),
     ("server/orchestrator/tools.py", "arrange_fixtures", 0): (
         "Set Fixture <fid> Posx/Posy/Posz — 패치 좌표 쓰기. 이 자리만 복원 번들을 "
         "함께 들고 있어 문면이 「되돌리기 없음」 대신 가진 것을 말한다. "

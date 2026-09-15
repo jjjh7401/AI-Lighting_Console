@@ -24,6 +24,12 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
 from server.design.capability_verdict import group_capability_source
+from server.design.override_look import (
+    DEFAULT_OVERRIDE_SLOTS,
+    OverrideLookError,
+    OverrideSafetyAnswers,
+    plan_override_solo_spot,
+)
 from server.design.rig_capability_read import RIG_GAP_UNREADABLE, read_design_rig
 from server.fx.instantiate import FxInstantiationError, build_fx_preset_bundle, select_preset_number
 from server.fx.instantiate import instantiate_fx as bind_fx
@@ -183,6 +189,7 @@ from server.spatial.naming import (
     name_lateral_bucket,
     name_vertical_bucket,
 )
+from server.spatial.pointing import PointingTarget, SpatialPointingError
 from server.spatial.presets import (
     SPATIAL_PRESETS,
     SpatialPlacement,
@@ -316,6 +323,7 @@ TOOL_NAMES = (
     "create_arrangement_groups",
     "build_magic_sheet",
     "analyse_layout_image",
+    "plan_override_look",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -8845,6 +8853,313 @@ def build_toolset(
             )
         )
 
+    # -- plan_override_look (t374 — override look 플래너의 유일한 모델 진입점) ---
+    #
+    # @MX:ANCHOR: [AUTO] `server/design/override_look.py` 의 하나뿐인 모델 도달
+    #   경로. 12단계 커버리지가 7/12 에 머문 이유가 이 자리의 부재였다 —
+    #   플래너는 t373 에 들어왔고 시험도 통과했지만 툴셋에 이름이 없어 모델이
+    #   못 불렀다(존재는 도달의 증거가 아니다).
+    # @MX:REASON: 이 도구가 지켜야 하는 것 셋이고, 셋 다 조용히 깨질 수 있다.
+    #   (1) 안전 답 셋(`stop_ifx`/`stop_pfx`/`move_in_black`)은 문서20 §10.1
+    #       항목 13 이 **자동화를 금지**한 결정이다. 그래서 스키마가 셋 다
+    #       `required` 로 요구하고, 이 핸들러는 `recommended_safety_answers()` 를
+    #       **부르지 않는다** — 이름이 「추천」인 함수를 도구 안에서 부르면 그게
+    #       곧 기본값이 되고, 금지된 자동화가 우회 없이 성립한다. 답이 없으면
+    #       감독에게 묻는 통로는 `ask_user` 다.
+    #   (2) IFX/PFX 를 멈추는 콘솔 문형은 이 저장소가 측정한 바 없다. 플래너가
+    #       답이 True 인데 원문 커맨드가 없으면 거절하는데, 여기서 그 거절을
+    #       감싸거나 기본 문형을 지어 넣으면 게이트를 통과해 **틀린 명령이
+    #       콘솔에 간다**.
+    #   (3) 슬롯 점유는 콘솔을 읽어야 아는 사실이고, 목록이 잘리면 점유 집합이
+    #       부분집합이 된다 — 그때 「가장 낮은 빈 슬롯」은 점유된 슬롯을 답할 수
+    #       있고 이어지는 `Store Preset` 이 감독이 손으로 만든 프리셋을 덮는다.
+    #       잘린 읽기는 `occupied_slots=None`(못 쟀음)으로 넘겨 플래너가 거절하게
+    #       한다. 못 쟀음은 비었음이 아니다.
+    #
+    # `instantiate_look` 과 같은 모양으로 이 핸들러는 `run_commands` 의
+    # **호출자**이고 두 번째 실행 표면이 아니다 — 게이트 심사·라이브 락·승인
+    # 카드·감사 로그가 그 한 경로에서 그대로 적용된다.
+    def plan_override_look(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        arguments = call.arguments if isinstance(call.arguments, dict) else {}
+
+        fixture_ids = arguments.get("fixture_ids")
+        if not isinstance(fixture_ids, list) or not fixture_ids:
+            return _error_result(
+                call, "'fixture_ids' must be a non-empty list of fixture ids (FIDs)"
+            )
+        requested: list[int] = []
+        for entry in fixture_ids:
+            if not isinstance(entry, int) or isinstance(entry, bool):
+                return _error_result(call, f"'fixture_ids' entry {entry!r} is not an integer FID")
+            if entry in requested:
+                return _error_result(call, f"fixture {entry} named twice in 'fixture_ids'")
+            requested.append(entry)
+
+        target_arg = arguments.get("target")
+        if not isinstance(target_arg, dict):
+            return _error_result(
+                call, "'target' must be an object with 'x', 'y' and 'z' stage coordinates in metres"
+            )
+        coordinates: list[float] = []
+        for axis in ("x", "y", "z"):
+            value = target_arg.get(axis)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return _error_result(call, f"'target.{axis}' must be a number, got {value!r}")
+            if not math.isfinite(float(value)):
+                return _error_result(call, f"'target.{axis}' must be finite, got {value!r}")
+            coordinates.append(float(value))
+        target = PointingTarget(*coordinates)
+
+        pool_no = arguments.get("pool_no")
+        if not isinstance(pool_no, int) or isinstance(pool_no, bool) or pool_no < 1:
+            return _error_result(
+                call, f"'pool_no' must be the override preset pool number, got {pool_no!r}"
+            )
+
+        # 안전 답 셋. 스키마가 이미 required 로 요구하지만 스키마는 조언이고
+        # 이 검사가 방어다 — 모델이 세 키 중 하나를 빼고 부르면 여기서 멈춘다.
+        safety_arg = arguments.get("safety")
+        if not isinstance(safety_arg, dict):
+            return _error_result(
+                call,
+                "'safety' must be an object carrying explicit true/false answers for "
+                "'stop_ifx', 'stop_pfx' and 'move_in_black' — this tool never defaults them "
+                "(rulebook §10.1 item 13 bans automating these decisions). Ask the operator "
+                "with ask_user first.",
+            )
+        answers: dict[str, bool] = {}
+        for name in ("stop_ifx", "stop_pfx", "move_in_black"):
+            value = safety_arg.get(name)
+            if not isinstance(value, bool):
+                return _error_result(
+                    call,
+                    f"'safety.{name}' must be an explicit true or false, got {value!r} — "
+                    "a missing answer is not a 'no'. Ask the operator with ask_user.",
+                )
+            answers[name] = value
+        try:
+            safety = OverrideSafetyAnswers(**answers)
+        except OverrideLookError as error:
+            return _error_result(call, f"override safety answers refused: {error}")
+
+        stop_commands: dict[str, str | None] = {}
+        for name in ("stop_ifx_command", "stop_pfx_command"):
+            value = arguments.get(name)
+            if value is None:
+                stop_commands[name] = None
+                continue
+            if not isinstance(value, str) or not value.strip():
+                return _error_result(call, f"'{name}' must be a non-empty command string")
+            stop_commands[name] = value
+
+        zoom_degrees = arguments.get("zoom_degrees")
+        if isinstance(zoom_degrees, bool) or not isinstance(zoom_degrees, (int, float)):
+            return _error_result(call, f"'zoom_degrees' must be a number, got {zoom_degrees!r}")
+
+        optional: dict[str, object] = {}
+        dimmer_pct = arguments.get("dimmer_pct")
+        if dimmer_pct is not None:
+            if isinstance(dimmer_pct, bool) or not isinstance(dimmer_pct, (int, float)):
+                return _error_result(call, f"'dimmer_pct' must be a number, got {dimmer_pct!r}")
+            optional["dimmer_pct"] = float(dimmer_pct)
+        color_percents = arguments.get("color_percents")
+        if color_percents is not None:
+            if not isinstance(color_percents, list) or len(color_percents) != 3:
+                return _error_result(
+                    call, "'color_percents' must be three numbers [red, green, blue]"
+                )
+            channels: list[float] = []
+            for index, value in enumerate(color_percents):
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    return _error_result(
+                        call, f"'color_percents[{index}]' must be a number, got {value!r}"
+                    )
+                channels.append(float(value))
+            optional["color_percents"] = tuple(channels)
+        preferred_slot = arguments.get("preferred_slot")
+        if preferred_slot is not None:
+            if not isinstance(preferred_slot, int) or isinstance(preferred_slot, bool):
+                return _error_result(
+                    call, f"'preferred_slot' must be an integer slot, got {preferred_slot!r}"
+                )
+            optional["preferred_slot"] = preferred_slot
+        available_slots = arguments.get("available_slots")
+        if available_slots is not None:
+            if not isinstance(available_slots, list) or not available_slots:
+                return _error_result(
+                    call, "'available_slots' must be a non-empty list of slot numbers"
+                )
+            slots: list[int] = []
+            for value in available_slots:
+                if not isinstance(value, int) or isinstance(value, bool):
+                    return _error_result(
+                        call, f"'available_slots' entry {value!r} is not an integer slot"
+                    )
+                slots.append(value)
+            optional["available_slots"] = tuple(slots)
+        label = arguments.get("label")
+        if label is not None:
+            if not isinstance(label, str) or not label.strip():
+                return _error_result(call, "'label' must be a non-empty string when given")
+            optional["label"] = label
+
+        # -- 리그 판독. 좌표·회전·풀 점유는 인수로 받지 않는다(AP-16): 모델이
+        #    옮겨 적은 숫자는 절단 신호를 잃거나 콘솔이 준 적 없는 값일 수 있다.
+        fixtures_path = rig_paths.get("fixtures")
+        if not fixtures_path:
+            return _error_result(
+                call,
+                "rig context has no 'fixtures' path configured — fixture coordinates "
+                "cannot be read without it",
+            )
+        pools_path = rig_paths.get("preset_pools")
+        if not pools_path:
+            return _error_result(
+                call,
+                "rig context has no 'preset_pools' path configured — override slot occupancy "
+                "cannot be read without it",
+            )
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+
+        try:
+            spatial = read_spatial_fixtures(
+                state_port,
+                property_port,
+                fixtures_path,
+                _spatial_read_budget(True, bulk=bulk_capable(property_port)),
+                include_rotation=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return _error_result(
+                call, f"stage patch enumeration failed for {fixtures_path!r}: {exc}"
+            )
+        # 두 모양 다 처리한다(SPEC-COPILOT-TRUNCATE-001): 완전한 읽기는
+        # `fixtures`, 부분 읽기는 `partial_fixtures`. 부분 읽기라도 **요청한
+        # FID 가 전부 그 안에 있으면** 진행한다 — 이 도구는 리그 전체가 아니라
+        # 이름 지어진 픽스처만 겨눈다. 없으면 거절하고, 조용히 빼지 않는다.
+        records = spatial.get("fixtures")
+        if not isinstance(records, list):
+            records = spatial.get("partial_fixtures")
+        if not isinstance(records, list):
+            return _error_result(call, "the stage patch read returned no fixture records to aim")
+        by_fid = {
+            record["fid"]: record
+            for record in records
+            if isinstance(record, dict) and isinstance(record.get("fid"), int)
+        }
+        missing = [fid for fid in requested if fid not in by_fid]
+        if missing:
+            return _error_result(
+                call,
+                f"no readable coordinates for fixture(s) {missing} — the console did not "
+                "answer for their position, so they cannot be aimed. See "
+                "get_spatial_context for which fixtures read and why the rest did not.",
+            )
+        planner_fixtures: list[tuple[int, tuple[float, float, float]]] = []
+        rotz_by_fid: dict[int, float] = {}
+        rotation_unread: list[int] = []
+        for fid in requested:
+            record = by_fid[fid]
+            planner_fixtures.append(
+                (fid, (float(record["x"]), float(record["y"]), float(record["z"])))
+            )
+            rotz = record.get("rotz")
+            if isinstance(rotz, (int, float)) and not isinstance(rotz, bool):
+                rotz_by_fid[fid] = float(rotz)
+            else:
+                # 회전을 못 읽었으면 0 을 지어 넣지 않고 그 사실을 보고에 싣는다.
+                # 플래너는 없는 fid 에 대해 0.0 을 쓰지만, 그것이 **측정값으로
+                # 읽히면** 안 되므로 답에 명시한다.
+                rotation_unread.append(fid)
+
+        pool_path = f"{pools_path}/{pool_no}"
+        try:
+            pool_payload = state_port.query_state(pool_path)
+        except Exception as exc:  # noqa: BLE001
+            return _error_result(
+                call, f"override preset pool {pool_no} could not be read at {pool_path!r}: {exc}"
+            )
+        children, truncated = paged_children(state_port, pool_path, pool_payload)
+        if truncated:
+            # 못 쟀음을 비었음으로 바꾸지 않는다. 여기서 진행하면 점유된 슬롯이
+            # 「빈 자리」로 답해질 수 있고, 그 위에 Store 가 간다.
+            return _error_result(
+                call,
+                f"override preset pool {pool_no} enumeration is truncated — occupancy could "
+                "not be established, and an unestablished slot is not a free slot. Nothing "
+                "was planned.",
+            )
+        occupied = frozenset(
+            child["i"]
+            for child in children
+            if isinstance(child, dict)
+            and isinstance(child.get("i"), int)
+            and not isinstance(child.get("i"), bool)
+        )
+
+        try:
+            plan = plan_override_solo_spot(
+                planner_fixtures,
+                target,
+                safety=safety,
+                pool_no=pool_no,
+                occupied_slots=occupied,
+                zoom_degrees=float(zoom_degrees),
+                rotz_by_fid=rotz_by_fid,
+                stop_ifx_command=stop_commands["stop_ifx_command"],
+                stop_pfx_command=stop_commands["stop_pfx_command"],
+                **optional,  # type: ignore[arg-type]
+            )
+        except OverrideLookError as error:
+            # 플래너의 거절을 감싸지 않고 그대로 올린다 — 점유 미확정·안전답
+            # 누락·모순 입력은 재시도로 고쳐지는 종류이고, 문면이 그 사유다.
+            return _error_result(call, f"override look refused: {error}")
+        except SpatialPointingError as error:
+            # 기하가 성립하지 않는다(대상이 픽스처 자리에 있거나 틸트 한계 초과).
+            # 플래너의 거절과 **다른 층의 사실**이라 사유를 구분해 올린다.
+            return _error_result(call, f"the head cannot be aimed at that target: {error}")
+
+        report = plan.to_dict()
+        report["occupancy"] = {
+            "pool": pool_no,
+            "occupied": sorted(occupied),
+            "chosen_slot": plan.slot,
+        }
+        if rotation_unread:
+            report["rotation_unread"] = rotation_unread
+        # MIB 는 플래머가 정보로만 싣는 결정이다(§10.2 의 override *sequence*
+        # 속성이고 이 저장소에 그 토글 문형이 없다). 커맨드가 없다는 사실을
+        # 보고에 적어야, 감독의 "켜라"가 실행된 것으로 오독되지 않는다.
+        report["move_in_black_note"] = (
+            "recorded as a decision only — no command for it exists in this repository, so "
+            "the override sequence's Move In Black must still be set on the console by hand"
+            if safety.move_in_black
+            else "the operator answered no; nothing was emitted for it either way"
+        )
+
+        execution = run_commands(
+            ToolCall(id=call.id, name="run_commands", arguments={"commands": list(plan.commands)}),
+            context,
+            risk=showfile_write_risk(plan.commands, kind="override_look"),
+        )
+        payload = json.loads(execution.result.content)
+        payload["executed"] = not execution.result.is_error
+        payload["report"] = report
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=execution.result.is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
+        )
+
     # -- arrange_fixtures (REQ-SPATIAL-019~024 — the coordinate WRITE axis) ----
     #
     # The ONE order this tool may run in, and none of it is negotiable:
@@ -12107,6 +12422,207 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="plan_override_look",
+            description=(
+                "Build ONE override look — a solo spot aimed at a stage "
+                "coordinate — and store it in a Global Preset override slot. "
+                "Use it when the operator asks to catch someone or something "
+                "at a place on stage ('put a spot on the piano', 'catch the "
+                "singer downstage centre') rather than to realise a named "
+                "look from the library; instantiate_look is the library "
+                "route, this one is the coordinate route.\n"
+                "\n"
+                "The rig is READ here — fixture coordinates, body rotation "
+                "and the override pool's slot occupancy all come from the "
+                "console on this call. Never retype a coordinate, a rotation "
+                "or a slot number from get_spatial_context: pass fixture ids "
+                "and a target, and this tool reads the rest.\n"
+                "\n"
+                "It aims each fixture's Pan/Tilt at the target, sets dimmer, "
+                "colour and zoom, and stores the result into ONE free "
+                "override slot, then runs the whole bundle through the SAME "
+                "execution path as run_commands — so the live lock, the "
+                "safety screening and the approval gate all apply "
+                "unchanged. Nothing is ever overwritten: an occupied slot is "
+                "refused, never stored over.\n"
+                "\n"
+                "SAFETY ANSWERS ARE THE OPERATOR'S, NOT YOURS. 'safety' "
+                "carries three explicit true/false answers — 'stop_ifx', "
+                "'stop_pfx' and 'move_in_black' — and this tool has NO "
+                "defaults for them: the rulebook forbids automating these "
+                "decisions, so a missing answer is a refusal, not a 'no'. "
+                "ASK THE OPERATOR WITH ask_user BEFORE CALLING THIS, and pass "
+                "back what they said.\n"
+                "\n"
+                "Answering true to 'stop_ifx' or 'stop_pfx' ALSO requires the "
+                "matching command string ('stop_ifx_command' / "
+                "'stop_pfx_command'), because the console syntax for stopping "
+                "IFX/PFX has never been measured in this project. Do NOT "
+                "invent one — a guessed command passes the safety screening "
+                "and reaches the console wrong. If the operator wants them "
+                "stopped and nobody knows the command, say so and stop.\n"
+                "\n"
+                "'move_in_black' is recorded as a DECISION only. It is a "
+                "property of the override sequence, set on the console after "
+                "'regen override', and this tool emits no command for it — "
+                "report that to the operator rather than implying it was "
+                "applied.\n"
+                "\n"
+                'The result carries "executed", a per-command "commands" list '
+                'exactly like run_commands, and a "report" holding the '
+                "per-fixture aim angles, the chosen slot, the pool occupancy "
+                'that was observed, and "rotation_unread" listing any fixture '
+                "whose body rotation the console did not answer for (its aim "
+                "was computed with no rotation correction — say so).\n"
+                "\n"
+                "Refusals are ANSWERS, not transient failures: a truncated "
+                "pool read (occupancy unestablished), an occupied slot, a "
+                "fixture with no readable coordinates, a target that sits on "
+                "the fixture, or a tilt the head cannot reach all come back "
+                "with the reason. Do not retry them unchanged — report the "
+                "reason and ask the operator."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "fixture_ids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "minItems": 1,
+                        "description": (
+                            "The fixture ids (FIDs) to aim, as the console "
+                            "numbers them. Coordinates are read here — do not "
+                            "pass any."
+                        ),
+                    },
+                    "target": {
+                        "type": "object",
+                        "properties": {
+                            "x": {"type": "number"},
+                            "y": {"type": "number"},
+                            "z": {"type": "number"},
+                        },
+                        "required": ["x", "y", "z"],
+                        "description": (
+                            "The stage point to catch, in metres, in the same "
+                            "coordinate frame get_spatial_context reports. "
+                            "Head height for a person is roughly z 1.2-1.7."
+                        ),
+                    },
+                    "zoom_degrees": {
+                        "type": "number",
+                        "description": (
+                            "Beam angle for the spot. Narrow (a few degrees) "
+                            "for a tight solo, wider to cover a group."
+                        ),
+                    },
+                    "pool_no": {
+                        "type": "integer",
+                        "description": (
+                            "The Global Preset pool number prepared for "
+                            "override looks. Its occupancy is read here."
+                        ),
+                    },
+                    "safety": {
+                        "type": "object",
+                        "properties": {
+                            "stop_ifx": {
+                                "type": "boolean",
+                                "description": (
+                                    "The operator's answer on stopping IFX. "
+                                    "True also requires stop_ifx_command."
+                                ),
+                            },
+                            "stop_pfx": {
+                                "type": "boolean",
+                                "description": (
+                                    "The operator's answer on stopping PFX. "
+                                    "True also requires stop_pfx_command."
+                                ),
+                            },
+                            "move_in_black": {
+                                "type": "boolean",
+                                "description": (
+                                    "The operator's answer on Move In Black. "
+                                    "Recorded as a decision; no command is "
+                                    "emitted for it."
+                                ),
+                            },
+                        },
+                        "required": ["stop_ifx", "stop_pfx", "move_in_black"],
+                        "description": (
+                            "All three answers, as the operator gave them. "
+                            "There is no default — ask with ask_user first."
+                        ),
+                    },
+                    "stop_ifx_command": {
+                        "type": "string",
+                        "description": (
+                            "Required when safety.stop_ifx is true: the exact "
+                            "console command that stops IFX on THIS show. "
+                            "Never invented — if it is unknown, do not call "
+                            "this tool with stop_ifx true."
+                        ),
+                    },
+                    "stop_pfx_command": {
+                        "type": "string",
+                        "description": (
+                            "Required when safety.stop_pfx is true: the exact "
+                            "console command that stops PFX on THIS show. "
+                            "Never invented."
+                        ),
+                    },
+                    "dimmer_pct": {
+                        "type": "number",
+                        "description": "Optional, 0..100. Defaults to full.",
+                    },
+                    "color_percents": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": (
+                            "Optional [red, green, blue], each 0..100. Defaults to open white."
+                        ),
+                    },
+                    "preferred_slot": {
+                        "type": "integer",
+                        "description": (
+                            "Optional. Ask for one specific override slot; it "
+                            "is refused if occupied rather than moved. Leave "
+                            "unset to take the lowest free one."
+                        ),
+                    },
+                    "available_slots": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "minItems": 1,
+                        "description": (
+                            "Optional. The slots prepared for override looks "
+                            f"on THIS show; defaults to {list(DEFAULT_OVERRIDE_SLOTS)}, "
+                            "which is an assumption rather than a measured "
+                            "fact — pass the real ones when the operator "
+                            "names them."
+                        ),
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": (
+                            "Optional label for the stored preset, e.g. the "
+                            "moment it is for ('Piano Solo')."
+                        ),
+                    },
+                },
+                "required": [
+                    "fixture_ids",
+                    "target",
+                    "zoom_degrees",
+                    "pool_no",
+                    "safety",
+                ],
+            },
+        ),
+        ToolDefinition(
             name="import_lxseq_presets",
             description=(
                 "LX-SEQ PRESET 시트 한 장(dim/col/bm)을 읽어 콘솔 프리셋 계획을 "
@@ -12528,5 +13044,6 @@ def build_toolset(
         "classify_arrangement_topology": classify_arrangement_topology,
         "create_arrangement_groups": create_arrangement_groups,
         "analyse_layout_image": analyse_layout_image,
+        "plan_override_look": plan_override_look,
     }
     return ToolRegistry(definitions, handlers)
