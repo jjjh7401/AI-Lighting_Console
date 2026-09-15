@@ -25,15 +25,16 @@ module adds the things those do not:
 The last point matters because `resolve_pattern` (matching.py) treats a bare
 pattern word (스윕/웨이브/체이스/...) as a hard axis: a query containing one
 narrows candidates to that SAME `pattern` band before any alias is scored, so
-an alias containing a *different* pattern's word can be present on an entry
-and still be unreachable through it — a pre-existing characteristic of the
-shipped library (e.g. `sweep-club-xwave`'s own alias "엑스축 웨이브" resolves
-to `wave-soft-rise` instead, because 웨이브 is itself a `wave`-pattern word).
-`chase-horizontal` and `chase-bounce-run` are filed under `pattern: chase`
-specifically so their own doc phrasing containing 체이스 reaches them; the one
-phrasing this leaves imperfectly served (좌우로 달리게, which itself contains
-the `sweep`-axis word 좌우) is tested below as a documented, non-regressive
-gap rather than left as an unstated assumption.
+an alias containing a *different* pattern's word used to be present on an entry
+and still unreachable through it (e.g. `sweep-club-xwave`'s own alias
+"엑스축 웨이브" resolved to `wave-soft-rise` instead, because 웨이브 is itself a
+`wave`-pattern word).
+
+카드 t411 이 그 계열을 닫았다: `match_fx` 는 이름을 통째로 맞힌 항목이 딱 하나면
+패턴 좁히기보다 **먼저** 그 항목을 고른다. 그래서 아래 `좌우로 달리게` 시험은
+「못 찾는 게 낫다」에서 「자기 항목을 찾는다」로 바뀌었다. 패턴 판독 자체는
+그대로이고(그 시험이 여전히 `pattern == "sweep"` 을 단언한다), 좁히기가 지는 것은
+정확 일치라는 더 강한 증거가 있을 때뿐이다.
 
 Nothing here touches a console: static repo data, the real loader, the real
 matcher, and the real bundle builder — the same production path
@@ -46,7 +47,7 @@ import pytest
 
 from server.fx.instantiate import build_fx_bundle
 from server.fx.loader import FxSchemaError, load_library, load_library_from_dir
-from server.fx.matching import LOW_CONFIDENCE, match_fx
+from server.fx.matching import match_fx
 from server.fx.schema import MIN_STEPS
 
 NEW_FX_IDS = ("chase-horizontal", "chase-bounce-run", "sweep-vshape-swing")
@@ -190,18 +191,21 @@ class TestTheDocPhrasingsActuallyRoute:
         )
         assert result.selected.fx_id == expected_id
 
-    def test_the_one_undocumented_gap_is_an_honest_miss_not_a_wrong_answer(self, library):
+    def test_the_former_gap_now_routes_to_its_own_entry(self, library):
         # 좌우로 달리게 is `chase-horizontal`'s own doc alias, but it also
         # contains 좌우 — a `sweep`-pattern axis word — so `resolve_pattern`
-        # narrows the candidate set to `sweep` entries before the alias is
-        # ever scored, and `chase-horizontal` (pattern: chase) never enters
-        # that set. The pre-existing shipped library has the same class of
-        # gap already (`sweep-club-xwave`'s alias "엑스축 웨이브"). The bar
-        # this test holds is not "it resolves" but "it never resolves to the
-        # WRONG entry" — an honest miss over a confident wrong answer.
+        # narrowed the candidate set to `sweep` entries before the alias was
+        # ever scored, and `chase-horizontal` (pattern: chase) never entered
+        # that set. This test used to hold the weaker bar "an honest miss over
+        # a confident wrong answer", asserting the query must NOT resolve to
+        # `chase-horizontal`.
+        #
+        # 카드 t411 이 그 전제를 뒤집었다: 정확 일치는 패턴 좁히기보다 먼저 이긴다
+        # (`match_fx` 의 exact 경로). 사람이 그 항목의 이름을 통째로 적었으므로
+        # `chase-horizontal` 은 「틀린 답」이 아니라 **바로 그 항목**이다. 그래서
+        # 이 시험의 바는 「못 찾는 게 낫다」에서 「자기 항목을 찾는다」로 올라갔다.
+        # 패턴 판독 자체는 그대로다 — 아래에서 여전히 sweep 으로 읽는다.
         result = match_fx("좌우로 달리게", library)
         assert result.pattern == "sweep"
-        if result.selected is not None:
-            assert result.selected.fx_id != "chase-horizontal"
-        else:
-            assert result.fallback_reason == LOW_CONFIDENCE
+        assert result.selected is not None
+        assert result.selected.fx_id == "chase-horizontal"

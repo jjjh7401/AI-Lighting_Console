@@ -300,6 +300,27 @@ def match_fx(query: str, library: FxLibrary) -> FxMatch:
         return FxMatch(query="", fallback_reason=EMPTY_QUERY)
 
     pattern = resolve_pattern(text)
+
+    # 카드 t411 — 이름을 통째로 맞힌 항목은 애매하지 않다. 아래 점수는 「맞은 단어
+    # 수」이므로 별칭을 통째로 맞혀도 1점이고, 다른 항목의 일반 단어(`slow`,
+    # `chase`) 하나도 1점이다. 그래서 `slow pan`·`slow tilt`·`dimmer chase` 는
+    # 동점으로 low_confidence 에 걸려 아무것도 고르지 못했다(실측 2026-09-15).
+    #
+    # 정확 일치는 패턴 좁히기보다도 먼저 이긴다 — `dimmer chase` 는 `chase` 라는
+    # 패턴 단어를 품고 있지만 Dimmer 를 흔드는 chase 항목은 라이브러리에 없고,
+    # 사람이 부른 이름은 `pulse-beat` 의 별칭이다. 패턴 필터를 먼저 걸면 그 항목이
+    # 후보에서 사라져 이름이 통째로 맞았는데도 못 고른다.
+    #
+    # 두 항목이 같은 이름을 들고 있으면 그것은 진짜 애매함이므로 아래 점수 경로로
+    # 넘긴다.
+    folded = text.casefold()
+    exact = [fx for fx in library.fx if any(term.casefold() == folded for term in _terms_of(fx))]
+    if len(exact) == 1:
+        fx = exact[0]
+        matched = tuple(term for term in _terms_of(fx) if _found(term, text))
+        score = FxScore(fx=fx, score=len(matched), matched=matched)
+        return FxMatch(query=text, pattern=pattern, matches=(score,), selected=fx)
+
     survivors = [fx for fx in library.fx if pattern is None or fx.pattern == pattern]
 
     scored = []

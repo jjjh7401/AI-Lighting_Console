@@ -47,7 +47,7 @@ fx:
   - fx_id: "sweep-soft-wide"
     display_name: "부드러운 좌우 스윕"
     pattern: "sweep"
-    aliases: ["좌우 스윕", "부드러운 스윕", "좌우로 쓸어줘", "무빙 살랑살랑", "빔 천천히 흔들어", "soft sweep"]
+    aliases: ["좌우 스윕", "부드러운 스윕", "좌우로 쓸어줘", "무빙 살랑살랑", "빔 천천히 흔들어", "soft sweep", "pan sweep"]
     mood_keywords: ["부드러운", "느린", "잔잔한", "넓은", "발라드", "살랑살랑", "soft", "slow", "sweep"]
     steps:
       - Pan: -30
@@ -63,7 +63,7 @@ fx:
   - fx_id: "sweep-club-xwave"
     display_name: "클럽 좌우 웨이브"
     pattern: "sweep"
-    aliases: ["클럽 스윕", "빠른 스윕", "엑스축 웨이브", "빔 흔들어줘", "무빙 신나게 흔들어", "club sweep"]
+    aliases: ["클럽 스윕", "빠른 스윕", "엑스축 웨이브", "빔 흔들어줘", "무빙 신나게 흔들어", "club sweep", "accent sweep"]
     mood_keywords: ["빠른", "신나는", "클럽", "에너지", "파도", "흔드는", "fast", "club", "energetic"]
     steps:
       - Pan: -20
@@ -76,7 +76,7 @@ fx:
   - fx_id: "wave-soft-rise"
     display_name: "부드러운 상하 웨이브"
     pattern: "wave"
-    aliases: ["상하 웨이브", "웨이브", "부드러운 웨이브", "웨이브 태워줘", "파도 타게", "soft wave"]
+    aliases: ["상하 웨이브", "웨이브", "부드러운 웨이브", "웨이브 태워줘", "파도 타게", "soft wave", "slow tilt"]
     mood_keywords: ["부드러운", "느린", "물결", "잔잔한", "예배", "파도", "soft", "wave", "gentle"]
     steps:
       - Tilt: -12
@@ -210,7 +210,7 @@ fx:
   - fx_id: "sweep-sine-ease"
     display_name: "이지 스윕"
     pattern: "sweep"
-    aliases: ["이지 스윕", "부드럽게 도는 스윕", "사인 스윕", "스르륵 갔다 오는", "eased sweep"]
+    aliases: ["이지 스윕", "부드럽게 도는 스윕", "사인 스윕", "스르륵 갔다 오는", "eased sweep", "slow pan"]
     mood_keywords: ["부드러운", "우아한", "느린", "유려한", "고급스러운", "매끄러운", "ease", "sine", "elegant"]
     steps:
       - Pan: -26
