@@ -57,7 +57,28 @@ RIG_LAYER_SOURCE_SINGLE_LAYER = "single_layer_degraded"
 #: (via "front") and "audience" (via "house") from a single label that never
 #: declared either — exact match keeps the heuristic conservative.
 _LAYER_GROUP_ALIASES: Mapping[str, frozenset[str]] = {
-    "key": frozenset({"key", "front", "keylight", "face"}),
+    # 카드 t395 — "foh" 는 `audience` 에서 여기로 옮겼다. FOH(Front of House)는
+    # 객석 **뒤편에 매단 위치**를 뜻하고 비추는 대상은 무대와 연주자다 — 객석을
+    # 향해 쏘는 것은 블라인더 쪽이다. 정본 §6.2 는 그 층을 **프론트 필**이라
+    # 부르며(카드 t377 이 `server/looks/songcue.py` 에 구현) `key` 의 감독용
+    # 라벨이 이미 "Key/Front" 이므로, 여기 두면 감독이 읽는 문장이 정본의
+    # 어휘와 맞는다.
+    #
+    # 실측(2026-09-15, origin/main 794a161)으로 좁혀진 피해 범위: `audience`
+    # 역할을 읽는 연출 규칙은 **없다** — `RigLayers` 를 읽는 프로덕션 술어 중
+    # `has_layer(role)` 의 인수는 전부 `"back"` 이고(`song_cue_composer.py:635`
+    # ·`:640`), `layer_rules_active()` 는 역할 무관 `mapped` 불리언이며
+    # `fids_for()` 는 프로덕션 호출 0건이다. 프론트 필도 이 표를 안 쓴다(위치
+    # 역할 `"프론트"` → `server/looks/roles.py` 의 별칭 `("front", "FOH")`).
+    # 그래서 이 이동이 바꾸는 것은 `_confirm_song_layer_mapping` 이 감독에게
+    # 보여주고 승인받는 **라벨 한 줄**이고, 그것이 이 카드의 목적이다 —
+    # 발화하는 규칙이 없어도 감독이 「객석」으로 이해한 채 승인하면 그 이해가
+    # 이후 판단의 전제가 된다.
+    #
+    # 위 주석이 경고한 "Front of House" 이중 매칭은 여전히 정확 일치가 막는다:
+    # `foh` 는 `key` 의 정확 일치 토큰일 뿐이고, "Front of House" 라는 이름은
+    # 어느 역할에도 걸리지 않는다.
+    "key": frozenset({"key", "front", "keylight", "face", "foh"}),
     "back": frozenset({"back", "backlight", "rear"}),
     # 카드 t385 — 실측(t379): 이 리그 그룹은 KEY FOH BACK SIDE-L SIDE-R
     # SIDE-ALL MOVER-U MOVER-D MOVER-ALL WASH-U WASH-D WASH-ALL BLIND
@@ -72,7 +93,10 @@ _LAYER_GROUP_ALIASES: Mapping[str, frozenset[str]] = {
     # 접두사/부분 일치 정책 결정이 먼저 필요해 이 카드 밖(별도 카드)으로
     # 남긴다.
     "effect": frozenset({"effect", "fx", "aerial", "beam", "strobe", "haze"}),
-    "audience": frozenset({"audience", "house", "foh"}),
+    # 카드 t395 — "foh" 가 `key` 로 나갔다(위 주석). 이 리그에서는 `audience` 를
+    # 받는 그룹이 남지 않는데, 그것이 의도한 결과다: 자격이 있는 후보(BLIND,
+    # 블라인더)는 감독 확인 대기이고, 없는 역할을 있는 것처럼 세우지 않는다.
+    "audience": frozenset({"audience", "house"}),
 }
 
 #: RG6 default budget-scale threshold — the capable-fixture count at which

@@ -7,7 +7,12 @@ WASH-D WASH-ALL BLIND STROBE HAZE ALL ODD EVEN.
 
 측정(이 카드): `_layer_mapping_from_group_children`(session.py) 은
 이 그룹 이름들에 대해 이미 발화하고 있었다 — key/audience/back 셋은
-정확 일치로 판독됐다(KEY→key, FOH→audience, BACK→back). 발화하지
+정확 일치로 판독됐다(KEY→key, FOH→audience, BACK→back).
+
+🔴 **위 문장의 `FOH→audience` 는 2026-09-15 t395 로 만료됐다** — 그 판독은
+오분류였고, `foh` 는 `key`(라벨 "Key/Front")로 옮겼다. 이 문단은 t385 시점의
+기록으로 남기고 고치지 않는다(당시 사실이므로); 현재 동작은
+`test_layer_mapping_foh_front.py` 가 정본이다. 발화하지
 "않은" 것은 "effect" 역할뿐이었다: `_LAYER_GROUP_ALIASES["effect"]`
 가 {effect, fx, aerial, beam} 뿐이라 STROBE·HAZE·MOVER-*·WASH-* 어느
 것도 정확히 일치하지 않았다 — "구현 자체가 없다"가 아니라 "이 리그의
@@ -54,11 +59,21 @@ def _payload(names: tuple[str, ...]) -> dict[str, object]:
 
 
 class TestEffectRoleNowInfersFromThisRigsGroupNames:
-    def test_key_audience_back_were_already_inferred_before_this_card(self):
-        """회귀 없음 — 이 세 역할은 고침 전에도 이미 발화했다."""
+    def test_key_and_back_were_already_inferred_before_this_card(self):
+        """회귀 없음 — 이 두 역할은 고침 전에도 이미 발화했다.
+
+        🔴 t395 개정: 원래 이 단언은 `{"key", "audience", "back"}` 이었다. 그
+        `audience` 는 **FOH 그룹의 오분류를 못박고 있었다** — 이 파일이 t385
+        시점의 사실을 「회귀 없음」으로 고정하면서, 그것이 옳은지는 재지 않았기
+        때문이다. t395 가 `foh` 를 `key`(라벨 "Key/Front")로 옮겼고, FOH 의 역할
+        이동은 이 파일 밖의 `test_layer_mapping_foh_front.py` 가 잰다.
+
+        `audience` 를 여기서 뺀 것은 그 역할을 없앤 것이 아니다 — 이 리그에
+        audience 를 받을 그룹이 없을 뿐이다(후보 BLIND 는 감독 확인 대기).
+        """
         mapping = _layer_mapping_from_group_children(_payload(_MEASURED_GROUP_NAMES))
         roles = {entry["role"] for entry in mapping}
-        assert {"key", "audience", "back"} <= roles
+        assert {"key", "back"} <= roles
 
     def test_effect_role_now_infers_from_strobe_and_haze(self):
         """재현 대상: 고침 전에는 이 리그에서 effect 역할이 0건이었다."""
