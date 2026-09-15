@@ -2,9 +2,9 @@
 # MoAI-ADK system-level settings
 moai:
   # MoAI-ADK version
-  version: "3.1.0"
+  version: "3.1.2"
   # Template version (updated by moai update)
-  template_version: "3.1.0"
+  template_version: "3.1.2"
   # Version update check frequency (daily, weekly, never)
   update_check_frequency: daily
   # Version check configuration

@@ -37,8 +37,8 @@ workflow:
   # not state the opposite of the recorded policy.
   worktree:
     auto_create: false
-    auto_merge: true
-    auto_cleanup: true
+    auto_merge: false
+    auto_cleanup: false
     tmux_preferred: true
     # session_name_pattern: declared but not read — no code builds a session
     # name from this value (reserved). Retained as a placeholder only.
@@ -77,12 +77,12 @@ workflow:
   # {inherit, sonnet, opus}, effort in {low, medium, high, xhigh, max}.
   workflow_agents:
     read-only-extract: {model: sonnet, effort: low}
-    mechanical-transform: {model: sonnet, effort: medium}
-    synthesize: {model: sonnet, effort: high}
-    research: {model: sonnet, effort: high}
-    verify-judge: {model: sonnet, effort: xhigh}
-    implement: {model: sonnet, effort: xhigh}
-    design-architecture: {model: opus, effort: xhigh}
+    mechanical-transform: {model: opus, effort: low}
+    synthesize: {model: opus, effort: low}
+    research: {model: opus, effort: medium}
+    verify-judge: {model: opus, effort: medium}
+    implement: {model: opus, effort: medium}
+    design-architecture: {model: opus, effort: high}
   # model_routing: LEGACY flat block (Tier x Phase -> {model, effort}).
   # DEPRECATED — retained as a `medium` profile alias for one backward-compat
   # cycle. Values mirror the
@@ -93,18 +93,18 @@ workflow:
   # {plan, run, sync, mx}. Closed sets: model in
   # {inherit, sonnet, opus, glm, fable}, effort in {low, medium, high, xhigh, max}.
   model_routing:
-    S-plan: {model: sonnet, effort: medium}
-    S-run: {model: sonnet, effort: high}
-    S-sync: {model: sonnet, effort: low}
+    S-plan: {model: opus, effort: low}
+    S-run: {model: opus, effort: medium}
+    S-sync: {model: opus, effort: low}
     S-mx: {model: sonnet, effort: low}
-    M-plan: {model: sonnet, effort: medium}
-    M-run: {model: sonnet, effort: xhigh}
-    M-sync: {model: sonnet, effort: medium}
+    M-plan: {model: opus, effort: medium}
+    M-run: {model: opus, effort: medium}
+    M-sync: {model: opus, effort: low}
     M-mx: {model: sonnet, effort: low}
     L-plan: {model: opus, effort: high}
-    L-run: {model: sonnet, effort: xhigh}
-    L-sync: {model: sonnet, effort: high}
-    L-mx: {model: sonnet, effort: medium}
+    L-run: {model: opus, effort: medium}
+    L-sync: {model: opus, effort: medium}
+    L-mx: {model: sonnet, effort: low}
   # model_routing_profiles: No-Haiku 3-tier policy — perfTier -> (Tier x Phase) -> {model, effort}.
   # 3 perfTiers (high/medium/low) × 12 cells (S/M/L × plan/run/sync/mx) = 36
   # entries. The orchestrator consults RouteModelFor(specTier, phase,
@@ -126,30 +126,30 @@ workflow:
       L-sync: {model: opus, effort: medium}
       L-mx: {model: sonnet, effort: low}
     medium:
-      S-plan: {model: sonnet, effort: medium}
-      S-run: {model: sonnet, effort: high}
-      S-sync: {model: sonnet, effort: low}
+      S-plan: {model: opus, effort: low}
+      S-run: {model: opus, effort: medium}
+      S-sync: {model: opus, effort: low}
       S-mx: {model: sonnet, effort: low}
-      M-plan: {model: sonnet, effort: medium}
-      M-run: {model: sonnet, effort: xhigh}
-      M-sync: {model: sonnet, effort: medium}
+      M-plan: {model: opus, effort: medium}
+      M-run: {model: opus, effort: medium}
+      M-sync: {model: opus, effort: low}
       M-mx: {model: sonnet, effort: low}
       L-plan: {model: opus, effort: high}
-      L-run: {model: sonnet, effort: xhigh}
-      L-sync: {model: sonnet, effort: high}
-      L-mx: {model: sonnet, effort: medium}
+      L-run: {model: opus, effort: medium}
+      L-sync: {model: opus, effort: medium}
+      L-mx: {model: sonnet, effort: low}
     low:
-      S-plan: {model: sonnet, effort: medium}
-      S-run: {model: sonnet, effort: high}
+      S-plan: {model: opus, effort: low}
+      S-run: {model: opus, effort: low}
       S-sync: {model: sonnet, effort: low}
       S-mx: {model: sonnet, effort: low}
-      M-plan: {model: sonnet, effort: medium}
-      M-run: {model: sonnet, effort: high}
+      M-plan: {model: opus, effort: low}
+      M-run: {model: opus, effort: low}
       M-sync: {model: sonnet, effort: low}
       M-mx: {model: sonnet, effort: low}
-      L-plan: {model: sonnet, effort: xhigh}
-      L-run: {model: sonnet, effort: xhigh}
-      L-sync: {model: sonnet, effort: medium}
+      L-plan: {model: opus, effort: low}
+      L-run: {model: opus, effort: medium}
+      L-sync: {model: sonnet, effort: low}
       L-mx: {model: sonnet, effort: low}
     max:
       S-plan: {model: opus, effort: high}
