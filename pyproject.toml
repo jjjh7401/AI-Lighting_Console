@@ -37,6 +37,14 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx>=0.28",
+    # packaging/build.sh:36 이 `"$PY" -m PyInstaller` 로 데스크톱 번들을 만드는데,
+    # :12 는 .venv 에 PyInstaller 가 이미 있음을 **전제로 적고 스스로 설치하지 않는다**.
+    # 선언이 없으면 `uv sync` 가 걷어내 데스크톱 빌드가 깨진다 (2026-09-14 실측:
+    # SPEC-LDSTORE-001 M1 작업 중 실제로 깨졌고 `uv pip install --python
+    # .venv/bin/python pyinstaller` 로 수동 복구했다 — 그 SPEC 의 progress.md 가
+    # 「이 SPEC 이 만든 문제가 아니라 드러낸 문제」로 기록해 두었다).
+    # uv 는 dev 그룹을 기본으로 설치하므로 여기 두면 sync 가 유지한다.
+    "pyinstaller>=6.22",
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "ruff>=0.9",
