@@ -143,3 +143,66 @@ class TestConfirmedSongDesignArcDiversity:
         assert (
             tuple(first["palette"]) != tuple(last["palette"]) or first["texture"] != last["texture"]
         )
+
+
+class TestBridgeRequiresALowAbsoluteBand:
+    """카드 t396 — bridge 는 이웃보다 낮기만 해서는 안 되고 **절대 대역**도 낮아야 한다.
+
+    정본 6절 표가 breakdown·bridge 를 20~35% 대역에 두므로, 낮은 대역(D1·D2)이 아닌
+    구간이 bridge 룩(``_ARC_PALETTE`` 의 lavender 단색)을 받으면 무대에서 어긋난다.
+
+    실측 2026-09-15 origin/main@47da882, 감독 실제 음원 8곡을 end-to-end 로 태워 확인:
+    이웃 대비만 보는 오늘 규칙은 **밝은 bridge 5건**(Cut and Run 2 · Morning 1 ·
+    Rain 1 · scott-buckley-neon 1, 전부 D4 이상)과 **연속 저강도 verse 4건**
+    (Too Cool 2 · scott-buckley-neon 2, 전부 D2 이하)을 낸다. 뒤쪽은 낮은 구간이
+    둘 연속이라 서로가 서로의 이웃이 되어 이웃 조건이 깨지는 자리다.
+
+    같은 계열의 실수를 이 저장소는 t371·t375 에서 두 번 겪었고, 둘 다 상대 문턱에
+    절대 대역을 섞어 고쳤다 — 그 처방을 따른다.
+    """
+
+    def test_a_bright_dip_is_not_a_bridge(self):
+        # D4 가 D5 둘 사이에 낀 자리 — 이웃보다는 낮지만 밝은 대역이다.
+        levels = [1, 5, 4, 5, 5]
+        assert _infer_confirmed_role(2, levels) == "verse"
+
+    def test_a_low_band_dip_is_still_a_bridge(self):
+        # 양성 대조군 — 낮은 대역이면 오늘처럼 bridge 다.
+        levels = [1, 5, 2, 5, 5]
+        assert _infer_confirmed_role(2, levels) == "bridge"
+
+    def test_two_consecutive_low_sections_are_both_bridges(self):
+        # 연속 저강도 — 이웃 조건은 깨지지만 절대 대역이 낮으므로 bridge 다.
+        levels = [5, 5, 2, 2, 5, 5]
+        assert _infer_confirmed_role(2, levels) == "bridge"
+        assert _infer_confirmed_role(3, levels) == "bridge"
+
+    def test_the_measured_songs_have_no_bright_bridge(self):
+        # 실측 음원에서 나온 D 레벨 배열 넷 — 어느 자리도 D4 이상 bridge 가 아니다.
+        measured = {
+            "Cut and Run": [4, 5, 5, 5, 3, 5, 3, 5, 4, 5, 5, 4, 5, 3, 5, 5, 2],
+            "Morning": [5, 4, 5, 5, 5, 5, 5, 5, 5, 4, 4, 5, 3],
+            "Rain": [2, 3, 3, 5, 5, 3, 5, 5, 5, 4, 5, 1],
+            "scott-buckley-neon": [2, 2, 2, 4, 4, 4, 4, 5, 5, 4, 3, 5, 4, 5, 5, 5, 4],
+        }
+        for name, levels in measured.items():
+            bright = [
+                index
+                for index, level in enumerate(levels)
+                if _infer_confirmed_role(index, levels) == "bridge" and level >= 4
+            ]
+            assert bright == [], f"{name} 에 밝은 bridge 가 남았다: {bright}"
+
+    def test_the_measured_songs_have_no_low_verse(self):
+        # 뒷면 — 낮은 대역이 verse 로 남지 않는다(연속 저강도 누락 축).
+        measured = {
+            "Too Cool": [5, 5, 5, 5, 5, 5, 5, 3, 3, 4, 5, 5, 5, 5, 3, 5, 5, 5, 2, 2, 4, 4, 4],
+            "scott-buckley-neon": [2, 2, 2, 4, 4, 4, 4, 5, 5, 4, 3, 5, 4, 5, 5, 5, 4],
+        }
+        for name, levels in measured.items():
+            low = [
+                index
+                for index, level in enumerate(levels)
+                if _infer_confirmed_role(index, levels) == "verse" and level <= 2
+            ]
+            assert low == [], f"{name} 에 저강도 verse 가 남았다: {low}"

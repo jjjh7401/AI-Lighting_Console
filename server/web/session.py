@@ -802,15 +802,28 @@ _ARC_PALETTE: dict[str, tuple[str, ...]] = {
 }
 
 
+#: 카드 t396 — bridge 로 볼 수 있는 **절대** 상한. 정본 6절 표가 breakdown·bridge 를
+#: 20~35% 대역에 두므로 D1·D2 만 해당한다. 이웃 대비(상대) 조건만 쓰면 두 방향으로
+#: 틀렸다(실측 2026-09-15, 감독 음원 8곡): 밝은 D4 가 이웃보다 낮다는 이유로 bridge 가
+#: 되고(5건), 낮은 구간이 둘 연속이면 서로가 서로의 이웃이 되어 조건이 깨져 verse 로
+#: 남았다(4건). 절대 대역으로 바꾸면 두 방향이 함께 닫힌다 — t371·t375 가 같은 계열의
+#: 실수를 상대 문턱에 절대 대역을 섞어 고친 그 처방이다.
+_BRIDGE_MAX_D_LEVEL = 2
+
+
 def _infer_confirmed_role(index: int, d_levels: Sequence[int]) -> str:
     """오디오 확정 구간 하나의 아크 역할을 D 레벨만으로 추정한다 (카드 t393).
 
     이름·무드가 비어 있어 ``_section_role`` 의 자연어 판독이 닿지 않는 구간을
     위한 대체 판정기다. ``_ARC_D_LEVEL``(intro 2 · verse 3 · chorus 5 ·
     bridge 2 · finale 5)의 역표를 그대로 따른다: 첫 구간은 intro, 마지막
-    구간은 finale, 최고 D 레벨 구간은(동률 허용) chorus, 양옆보다 낮은 D
-    레벨 구간은 bridge, 나머지는 verse. 순전히 서수·측정값 기반이라 무드
+    구간은 finale, 최고 D 레벨 구간은(동률 허용) chorus, :data:`_BRIDGE_MAX_D_LEVEL`
+    이하의 낮은 대역은 bridge, 나머지는 verse. 순전히 서수·측정값 기반이라 무드
     단어를 지어내지 않는다.
+
+    bridge 판정은 **절대 대역**이다(카드 t396). 이웃 대비만 보던 앞선 규칙은 밝은
+    구간을 bridge 로 오인하고 연속 저강도 구간을 놓쳤다 — 근거는
+    :data:`_BRIDGE_MAX_D_LEVEL` 주석의 실측이다.
     """
     count = len(d_levels)
     if count == 0:
@@ -822,7 +835,7 @@ def _infer_confirmed_role(index: int, d_levels: Sequence[int]) -> str:
     level = d_levels[index]
     if level >= max(d_levels):
         return "chorus"
-    if level < d_levels[index - 1] and level < d_levels[index + 1]:
+    if level <= _BRIDGE_MAX_D_LEVEL:
         return "bridge"
     return "verse"
 
