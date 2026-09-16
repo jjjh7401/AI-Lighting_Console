@@ -31,6 +31,7 @@ from server.director.validate.diagnostics import (
     STATUS_UNSUPPORTED,
     Diagnostic,
 )
+from server.director.validate.mib import check_dark_move, check_random_access
 from server.director.validate.simulate import check_ready
 from server.director.validate.timing import check_timing, rounding_conflicts
 
@@ -156,12 +157,19 @@ def _stage_capability_fidelity(
 
 
 def _stage_safety(plan: dict[str, Any], context: dict[str, Any] | None) -> list[Diagnostic]:
-    """5단 — safety (`LD-SAFE-001`).
+    """5단 — safety (`LD-SAFE-001`) + dark move·재진입 (`LD-MIB-001`·`LD-REENTRY-001`).
 
     기존 SafetyGate 의 hard check 는 실행 층(`SPEC-LDRECV-001`)이 소유한다. 이 층은
-    그것을 우회하지 않으며, artistic advisory 로 hard limit 을 완화하지도 않는다.
+    그것을 우회하지 않으며, artistic advisory 로 hard limit 을 완화하지도 않는다. 아래
+    수용 진단이 그 소유 관계를 남기며, C5 가 이 자리에 dark move 어둠 증명과 random_access
+    광고 검증을 더한다 (`mib.py`).
+
+    dark move 를 5단에 둔 이유: 어둠이 깨지면 무대에서 빔이 지나가므로 판정의 성격이 표현
+    보존(4단)이 아니라 안전이다. `require_dark_move` 도 `safety` snapshot 에 있다.
     """
     return [
+        *check_dark_move(plan, context),
+        *check_random_access(plan, context),
         Diagnostic(
             rule_id="LD-SAFE-001",
             pointer=ROOT_POINTER,
@@ -172,7 +180,7 @@ def _stage_safety(plan: dict[str, Any], context: dict[str, Any] | None) -> list[
                 "hard check 는 실행 층의 SafetyGate 가 소유하며 이 층은 우회하지 않습니다."
             ),
             stage="safety",
-        )
+        ),
     ]
 
 

@@ -92,7 +92,13 @@ def _timing_window(action: dict[str, Any], axis: str, at_ms: int) -> tuple[int, 
     return at_ms, at_ms + delay + fade
 
 
-def _group_fixtures(context: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+def group_fixtures(context: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+    """`group_id` → `fixture_ids`. 계약 `LD-CONFLICT-001` 의 「실제 group membership 으로 확장」.
+
+    공개인 이유: `mib.py` 의 dark move 어둠 검사도 같은 전개를 필요로 한다 — 어둠은 fixture 의
+    성질이므로 group 단위로 보면 겹친 group 이 같은 조명을 밝히는 것을 놓친다. 전개 규칙이
+    두 곳에 복사되면 한쪽만 고쳐지는 날이 온다.
+    """
     return {
         str(g.get("group_id")): tuple(str(f) for f in g.get("fixture_ids") or [])
         for g in context.get("groups") or []
@@ -153,7 +159,7 @@ def _static_reservations(
 
 def _fx_reservations(
     plan: dict[str, Any],
-    group_fixtures: dict[str, tuple[str, ...]],
+    fixtures_by_group: dict[str, tuple[str, ...]],
     preset_axes: dict[str, tuple[str, ...]],
 ) -> tuple[list[Reservation], list[Diagnostic]]:
     """FX 는 start 시각부터 **stop fade 완료까지** 자기 축을 잡는다.
@@ -185,7 +191,7 @@ def _fx_reservations(
 
         window = _timing_window(stop.action, "fx", stop.at_ms)
         end_ms = window[1] if window else stop.at_ms
-        fixtures = group_fixtures.get(start.group_id, ())
+        fixtures = fixtures_by_group.get(start.group_id, ())
 
         for axis in axes:
             for fixture in fixtures:
@@ -207,7 +213,7 @@ def reservations(
     plan: dict[str, Any], context: dict[str, Any]
 ) -> tuple[list[Reservation], list[Diagnostic]]:
     """계획 전체를 `(fixture, axis)` 예약 목록으로 전개한다."""
-    group_fixtures = _group_fixtures(context)
+    fixtures_by_group = group_fixtures(context)
     preset_axes = _preset_axes(context)
 
     collected: list[Reservation] = []
@@ -217,7 +223,7 @@ def reservations(
     for ref in action_refs(plan):
         if ref.op in ("fx_start", "fx_stop"):
             continue
-        fixtures = group_fixtures.get(ref.group_id)
+        fixtures = fixtures_by_group.get(ref.group_id)
         if fixtures is None:
             if ref.group_id not in missing_groups:
                 missing_groups.add(ref.group_id)
@@ -234,7 +240,7 @@ def reservations(
         collected.extend(found)
         diagnostics.extend(problems)
 
-    fx_found, fx_problems = _fx_reservations(plan, group_fixtures, preset_axes)
+    fx_found, fx_problems = _fx_reservations(plan, fixtures_by_group, preset_axes)
     collected.extend(fx_found)
     diagnostics.extend(fx_problems)
 
