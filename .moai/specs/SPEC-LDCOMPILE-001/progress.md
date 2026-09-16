@@ -327,6 +327,142 @@ $ uv run ruff check server/director/ server/tests/                     → All c
 수정  server/director/validate/pipeline.py                  4단 교체 + 죽은 코드 제거
 ```
 
+### C5 dark move·재진입 거부 완료 (REQ-LDPLUGIN-012)
+
+워크트리 `.claude/worktrees/ldcompile-c5` · 브랜치 `WT-dark-move-refuse` · 기준 HEAD
+`50623f39` (= C4 머지 직후의 `origin/main`) · 구현 커밋 `26514169` + 수정 `72b4e723`.
+
+**Claim**: 계약 `LD-MIB-001`(dark move 어둠 증명)과 `LD-REENTRY-001`(`random_access` 광고
+검증)을 구현하고 5단에 배선했다. C4 가 판정 없이 남긴 `random_access` 축을 닫았다.
+
+#### Evidence — 기준선 (실제 출력)
+
+```
+$ uv run pytest -q          # 50623f39, 신규 파일 전
+13283 passed, 35 skipped, 1 warning in 215.11s (0:03:35)
+```
+파일: `.moai/state/verify/c5/baseline.txt`
+
+**Baseline-attribution**: **이 워크트리에서 직접 실측했다.** C4 는 기준선을 C3 절에서
+인용했고 그것을 §E.3 에 미검증으로 적었는데, C5 는 그 구멍을 닫았다.
+
+#### Evidence — RED (실제 출력) — C4 의 구멍을 닫았다
+
+```
+$ uv run pytest server/tests/test_director_validate_mib.py -q
+29 failed, 1 passed in 0.48s
+```
+파일: `.moai/state/verify/c5/red.txt`
+
+통과한 1건은 `test_safety_gate_ownership_is_still_stated` 이며 **보존 단언**이다 — 「5단이
+SafetyGate 소유를 진술하는 문장은 내 변경 뒤에도 살아 있어야 한다」. 보존 시험이 RED 에서
+통과하는 것은 정상이다(C3 의 공허한 가드와 다르다: 그것은 아직 없는 것을 있다고 답했고,
+이것은 이미 있는 것이 계속 있음을 확인한다).
+
+첫 RED 판에서는 2건이 통과했고, 나머지 1건은 **제가 만든 빈 시험**이었다 — 안 쓰는 import
+(`beam`·`color`)를 정당화하려고 `assert callable(...)` 을 넣은 것. import 와 함께 지웠다.
+
+#### Evidence — GREEN · 회귀 (실제 출력)
+
+```
+$ uv run pytest -q
+13316 passed, 35 skipped, 1 warning in 175.06s (0:02:55)
+```
+파일: `.moai/state/verify/c5/green-full.txt`
+
+**Baseline-attribution**: 13283 + 신규 **33** = 13316 — 정확히 일치, skipped 불변, 실패 0.
+신규 개수는 파일을 명시해 셌다(`test_director_validate_mib.py` → 33). 이 SPEC 범위 전체:
+
+```
+$ uv run pytest server/tests/ -k "director_validate" -q
+234 passed, 13117 deselected
+```
+
+#### 어둠의 창 — 두 조건을 다 요구한다
+
+```
+        at_ms   +delay        pan/tilt 중 늦은 완료     +settle_ms
+          |-------|=============================|----------|
+                  [           어두워야 하는 창             )
+```
+
+1. **창에 들어가는 순간의 정착값이 0** 이어야 하고, 그런 쓰기가 실제로 있어야 한다.
+   선언이 없으면 미증명이다 — `LD-STATE-001` 이 `safe_state` 상속을 금지한 것과 같은 이유.
+2. **창 안에서 진행 중이거나 새로 시작하는 intensity 쓰기가 없어야** 한다. 목표값이 0 인
+   fade 도 진행 중이면 미증명이다: **0 으로 가는 중인 것은 0 인 것이 아니다.**
+
+`settle_ms` 가 드디어 제 일을 한다. C4 는 이것을 예약 구간에 넣지 않았고 그 판단을 미검증으로
+적었는데, reveal 전 정착시간은 **충돌이 아니라 어둠의 길이**였다 — 창의 끝을 늘린다.
+
+#### Evidence — 계기가 공허하지 않다는 확인 (전부 실측)
+
+| 확인 | 방법 | 결과 |
+|---|---|---|
+| 증명이 서는 계획은 통과하는가 | baseline 0 + 창 안 무변경 | blocking 0 |
+| `move_mode=live` 를 잡지 않는가 | 같은 계획을 live 로 (창 안 intensity 80) | blocking 0 — 넓게 잡지 않았다 |
+| 창 끝이 늦은 축인가 | pan fade 500 · tilt fade 4000, 13000ms 에 올림 | blocking. 빠른 축으로 재면 통과해 버린다 |
+| 경계가 반열림인가 | 12800(끝) 통과 / 12799 거부 | 양쪽 다 의도대로 |
+| `settle_ms` 가 창을 늘리는가 | 같은 계획을 settle 800 / 0 | 800 거부, 0 통과 |
+| delay 가 창 시작을 미루는가 | delay 3000, 11000ms 에 0 선언 | 통과 |
+| 진행 중 fade 가 미증명인가 | 목표 0 인 fade `[8000,12000)` | 거부 |
+| 부재를 0 으로 가정하는가 | intensity 선언 없는 계획 | 거부 |
+| intensity FX 만 잡는가 | `fx-pulse`(intensity) 거부 / 같은 FX 를 pan·tilt 로 바꿈 | 후자 통과 |
+| 광고가 `false` 면 결함인가 | `random_access=false` | blocking 0 |
+| 규범 예제가 `true` 로 광고하는가 | context 실측 | 전 group `true` → 거부 |
+| reveal 이동을 제안하는가 | 모든 진단의 `after` | 전부 부재 |
+| 음수 ms 를 내는가 | `dark_windows` 의 start·end | 전부 ≥ 0 |
+
+**뮤테이션 셋** — 셋 다 의도한 그 시험이 잡았다:
+
+| 뮤테이션 | 결과 |
+|---|---|
+| 창 끝을 `min(end)` 으로 (빠른 축) | `test_later_axis_completion_defines_the_window_end` |
+| 정착값 부재를 통과로 (`if False`) | `test_never_declared_intensity_is_blocking` |
+| 목표 0 인 진행 fade 를 통과로 | `test_a_fade_crossing_into_the_window_is_blocking` |
+
+#### 🔴 자기 검토에서 찾은 내 결함 (수정 완료)
+
+1. 🔴 **제 시험 둘이 서로 모순이었다.** `test_stage_five_is_not_a_placeholder` 는 *"'safety
+   단계에 도달했습니다' 가 없어야 한다"* 로 썼는데, 그 문장은 **일부러 남긴** SafetyGate 소유
+   진술이고 바로 아래 `test_safety_gate_ownership_is_still_stated` 가 그 존재를 요구한다.
+   자리표시자 판별을 **문구의 부재**가 아니라 **판정의 존재**(5단이 `LD-SAFE-001` 수용 외의
+   rule_id 를 낸다)로 바꿨다.
+2. **안 쓰는 import 를 정당화하는 빈 시험을 만들었다.** `assert callable(beam)` 류는 깨질 수
+   없어 계기가 아니다 — import 와 함께 지웠다. 첫 RED 의 「2 passed」 중 하나였다.
+3. 🔴 **어둠 검사가 요청 group 만 봐서, 공유 fixture 를 다른 group 이 밝히면 통과했다.**
+   처음에는 이것을 §E.3 미검증에 적고 넘기려 했다 — 근거는 「겹침은 `conflict.py` 가 이미
+   막는다」였는데 그것을 **재지 않았다.** 계약이 fixture 전개를 요구하는 바로 그 실패
+   형태이므로 기록이 아니라 수정으로 닫았다(`72b4e723`): `mib.shadow_groups` 가 겹치는
+   group 전부를 내고, 전개 규칙은 복사하지 않고 `conflict.group_fixtures` 를 public 으로
+   올려 한 자리를 공유한다. 시험 3개를 더했고 그중 하나는 **구멍 대조군**이다(분리된 group 이
+   밝아지는 것은 통과 — 없으면 「다른 group 이 밝으면 무조건 막는다」와 구별되지 않는다).
+4. **`ruff check ... | tail -3 && echo "LINT OK"` 가 거짓 초록을 냈다.** 파이프의 종료 코드는
+   `tail` 의 것이라 ruff 가 실패해도 `&&` 가 통과한다 — import 정렬 오류 1건이 「LINT OK」로
+   보고됐다. 저장소의 `test_overlap_preserve.py::TestTouchedFilesPassLint` 가 잡았다.
+   종료 코드를 보려면 파이프 없이 돌려야 한다. zsh 글롭에 먹혀 grep 이 0 을 답한 C3 의 결함과
+   같은 계열이다 — **계기의 출력만 보고 계기의 상태를 믿었다.**
+
+#### Evidence — 경계 (실제 출력)
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/     → OK - no OSC import
+$ grep -rnE "^\s*(from|import)\s+server\.(looks|web)" server/director/ → OK - no artistic producer
+$ git diff --name-only origin/main -- server/lxseq server/design server/director/service.py
+                                                                       → (없음) OK - untouched
+$ uv run ruff check server/director/ server/tests/                     → All checks passed!
+```
+
+#### 만든 파일 · 고친 파일
+
+```
+신규  server/director/validate/mib.py                  어둠의 창 · random_access 광고 검증
+신규  server/tests/test_director_validate_mib.py       30 시험
+수정  server/director/validate/pipeline.py             5단에 배선
+```
+
+C1~C5 로 **6단 전부가 실물 판정기**가 되었다 — 1단만 계획 단독 판독 범위의 수용이고,
+2~5단은 실제 검사를 부르며 6단은 승인 소유를 진술한다. 콘솔 없이 할 수 있는 것은 여기까지다.
+
 ## §E.3 Gaps — C2 에서 하지 않은 것
 
 - **「불가능 해상도 차단」(`AC-LDPLUGIN-009` 마지막 항목) 미구현.** emitter 최소 timing
@@ -401,6 +537,39 @@ $ uv run ruff check server/director/ server/tests/                     → All c
 - **기준선을 C4 워크트리에서 다시 재지 않았다.** C3 절의 13255 를 기준선으로 인용했다.
   같은 커밋이므로 같아야 하지만, 그것은 재지 않은 추론이다.
 - **독립 감사 없음** (C2·C3 와 동일). `plan-auditor` 가 컨텍스트 초과로 죽는다.
+
+### C5 에서 하지 않은 것
+
+- **어둠은 계획 문면에서만 증명된다.** 계약은 *"intensity=0 및 intensity FX 없음이
+  증명되어야"* 라고 적었고 진짜 증명은 **target 관측**이다(`AC-LDPLUGIN-012` 콘솔 PASS 조건:
+  movement 시작부터 늦은 완료 + `settle_ms` 까지 실제로 어두운지 본다). 이 층이 하는 것은
+  계획이 스스로 모순되지 않는지까지이며, 콘솔이 그 계획대로 동작하는지는 C6 이다.
+- **`require_dark_move` 를 보지 않는다.** `safety` snapshot 에 이 플래그가 있고 규범 예제는
+  `false` 다. `true` 일 때 「모든 position_set 이 dark_move 여야 한다」로 읽는 것이 자연스럽지만
+  계약이 그렇게 적지 않아 넣지 않았다 — 읽는 방식을 자식이 정하면 그것이 조용한 규범이 된다.
+- ~~다른 group 의 fixture 를 공유하는 경우를 보지 않는다.~~ → **미검증으로 적다가 고쳤다**
+  (커밋 `72b4e723`). 아래 「자기 검토」 3번 참조. 처음에는 「겹침은 `conflict.py` 가 이미
+  막는다」에 기대어 범위 밖으로 두려 했는데, 그것은 **재지 않은 추론**이었고 계약이 fixture
+  전개를 요구하는 바로 그 실패 형태였다.
+- **`random_access` 판정이 계획을 보지 않는다.** `check_random_access` 는 context 의 신고만
+  본다. 계약 `LD-REENTRY-001` 의 나머지 절(*"compiler 는 이전 cue 를 수동 실행해야만 맞는
+  숨은 tracking 상태를 남기지 않는다"*)은 emitter 가 있어야 판정할 수 있어 C6 이다.
+- **`dark_windows` 는 pan·tilt timing 이 둘 다 없으면 조용히 건너뛴다.** 스키마가 둘 다
+  요구하므로 정상 입력에서는 생기지 않지만, 스키마를 우회한 입력에서는 창이 만들어지지 않아
+  어둠 검사가 사라진다. 4단이 축 timing 부재를 blocking 으로 잡지만 그것은 다른 단계의
+  검사에 기댄 것이다.
+- **독립 감사 없음** (C2~C4 와 동일).
+
+### C5 잔여 위험
+
+- **정착값 판정이 「마지막으로 완료된 쓰기」 하나에 의존한다.** 같은 시각에 끝나는 쓰기가
+  둘이면 `(end_ms, start_ms)` 최대값으로 하나를 고르는데, 그 상황 자체가 C3 의 충돌 검사가
+  막는 형태다. 즉 이 tie-break 는 **다른 단계가 막아 주는 것에 기댄** 코드이며, 그 검사가
+  느슨해지면 여기서 조용히 임의의 값을 고른다.
+- **창을 시간 구간으로만 다룬다.** intensity 의 곡선(`curve`)을 보지 않으므로 fade 중간값이
+  0 에 매우 가까운 경우도 미증명으로 막는다. 보수적인 방향이라 안전하지만, 실기에서 정당한
+  계획이 막히는 사례가 나오면 곡선을 봐야 할 수 있다.
+- **이 브랜치는 push 전 CI 판정을 받지 않았다** (C3·C4 와 동일 구조).
 
 ### C3 잔여 위험
 
