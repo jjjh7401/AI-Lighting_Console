@@ -38,6 +38,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from server.director.validate.conflict import group_fixtures
 from server.director.validate.diagnostics import (
     STATUS_UNRESOLVED,
     STATUS_UNSUPPORTED,
@@ -156,6 +157,26 @@ def dark_windows(plan: dict[str, Any], context: dict[str, Any]) -> list[DarkWind
     return windows
 
 
+def shadow_groups(context: dict[str, Any], group_id: str) -> dict[str, tuple[str, ...]]:
+    """`group_id` 와 fixture 를 **공유하는** 모든 group → 겹치는 fixture 목록.
+
+    자기 자신도 들어간다(자기와의 교집합은 비지 않는다). 어둠은 **fixture 의 성질**이므로
+    dark move 를 요청한 group 만 보면 같은 조명을 공유하는 다른 group 이 그것을 밝혀도
+    통과한다 — 계약 `LD-CONFLICT-001` 이 fixture 전개를 요구하는 것과 같은 이유가 여기에도
+    걸린다. 전개 규칙은 `conflict.group_fixtures` 하나를 쓴다.
+    """
+    fixtures = group_fixtures(context)
+    own = set(fixtures.get(group_id, ()))
+    if not own:
+        return {}
+    shared: dict[str, tuple[str, ...]] = {}
+    for other, members in fixtures.items():
+        overlap = own & set(members)
+        if overlap:
+            shared[other] = tuple(sorted(overlap))
+    return shared
+
+
 def _intensity_writes(plan: dict[str, Any], group_id: str) -> list[_Write]:
     writes: list[_Write] = []
     for ref in action_refs(plan):
@@ -256,54 +277,74 @@ def check_dark_move(plan: dict[str, Any], context: dict[str, Any] | None) -> lis
             )
 
     for window in dark_windows(plan, context):
-        writes = _intensity_writes(plan, window.group_id)
-
-        settled = _settled_value_at(writes, window.start_ms)
-        if settled is None:
+        shared = shadow_groups(context, window.group_id)
+        if not shared:
             diagnostics.append(
                 _refuse(
                     window.pointer,
-                    f"group {window.group_id} 의 intensity 가 dark move 창 시작 "
-                    f"{window.start_ms}ms 까지 한 번도 선언되지 않았습니다. 0 으로 가정하지 "
-                    f"않습니다 — 부재는 증명이 아닙니다. {_CONTRACT_ROUTES}",
+                    f"group {window.group_id} 이 context 의 groups 에 없거나 fixture 가 비어 "
+                    "있어 어느 조명이 어두워야 하는지 알 수 없습니다. 판정 불능으로 답합니다.",
+                    status=STATUS_UNRESOLVED,
                 )
             )
-        elif settled.value != 0:
-            diagnostics.append(
-                _refuse(
-                    window.pointer,
-                    f"group {window.group_id} 의 intensity 가 dark move 창 시작 "
-                    f"{window.start_ms}ms 에 {settled.value} 입니다 (0 이어야 합니다). 창은 "
-                    f"[{window.start_ms}, {window.end_ms}) 이며 pan/tilt 중 늦은 완료에 "
-                    f"settle_ms {window.settle_ms} 를 더한 구간입니다. {_CONTRACT_ROUTES}",
-                )
-            )
+            continue
 
-        for write in _in_flight(writes, window):
-            diagnostics.append(
-                _refuse(
-                    window.pointer,
-                    f"dark move 창 [{window.start_ms}, {window.end_ms}) 안에서 intensity 쓰기가 "
-                    f"진행되거나 시작됩니다 ({write.pointer}, "
-                    f"[{write.start_ms}, {write.end_ms}) → {write.value}). 목표값이 0 이어도 "
-                    "진행 중인 fade 는 0 임이 증명되지 않습니다 — 0 으로 가는 중인 것은 0 인 "
-                    f"것이 아닙니다. {_CONTRACT_ROUTES}",
-                )
+        # 어둠은 fixture 의 성질이다 — 공유하는 모든 group 을 본다. 요청한 group 만 보면
+        # 같은 조명을 공유하는 다른 group 이 그것을 밝혀도 통과한다.
+        for lit_group, overlap in sorted(shared.items()):
+            where = (
+                ""
+                if lit_group == window.group_id
+                else f" (group {lit_group} 이 fixture {', '.join(overlap)} 를 공유합니다)"
             )
+            writes = _intensity_writes(plan, lit_group)
 
-        spans, problems = _intensity_fx_spans(plan, context, window.group_id)
-        diagnostics.extend(problems)
-        for instance, fx_start_ms, fx_end_ms, pointer in spans:
-            if fx_start_ms < window.end_ms and fx_end_ms > window.start_ms:
+            settled = _settled_value_at(writes, window.start_ms)
+            if settled is None:
                 diagnostics.append(
                     _refuse(
                         window.pointer,
-                        f"intensity 축을 쓰는 FX {instance} 가 dark move 창 "
-                        f"[{window.start_ms}, {window.end_ms}) 안에 살아 있습니다 "
-                        f"([{fx_start_ms}, {fx_end_ms}), {pointer}). 계약은 창 동안 intensity "
-                        f"FX 가 없음을 요구합니다. {_CONTRACT_ROUTES}",
+                        f"group {lit_group} 의 intensity 가 dark move 창 시작 "
+                        f"{window.start_ms}ms 까지 한 번도 선언되지 않았습니다{where}. 0 으로 "
+                        f"가정하지 않습니다 — 부재는 증명이 아닙니다. {_CONTRACT_ROUTES}",
                     )
                 )
+            elif settled.value != 0:
+                diagnostics.append(
+                    _refuse(
+                        window.pointer,
+                        f"group {lit_group} 의 intensity 가 dark move 창 시작 "
+                        f"{window.start_ms}ms 에 {settled.value} 입니다 (0 이어야 합니다){where}. "
+                        f"창은 [{window.start_ms}, {window.end_ms}) 이며 pan/tilt 중 늦은 완료에 "
+                        f"settle_ms {window.settle_ms} 를 더한 구간입니다. {_CONTRACT_ROUTES}",
+                    )
+                )
+
+            for write in _in_flight(writes, window):
+                diagnostics.append(
+                    _refuse(
+                        window.pointer,
+                        f"dark move 창 [{window.start_ms}, {window.end_ms}) 안에서 group "
+                        f"{lit_group} 의 intensity 쓰기가 진행되거나 시작됩니다{where} "
+                        f"({write.pointer}, [{write.start_ms}, {write.end_ms}) → {write.value}). "
+                        "목표값이 0 이어도 진행 중인 fade 는 0 임이 증명되지 않습니다 — 0 으로 "
+                        f"가는 중인 것은 0 인 것이 아닙니다. {_CONTRACT_ROUTES}",
+                    )
+                )
+
+            spans, problems = _intensity_fx_spans(plan, context, lit_group)
+            diagnostics.extend(problems)
+            for instance, fx_start_ms, fx_end_ms, pointer in spans:
+                if fx_start_ms < window.end_ms and fx_end_ms > window.start_ms:
+                    diagnostics.append(
+                        _refuse(
+                            window.pointer,
+                            f"intensity 축을 쓰는 FX {instance}(group {lit_group}) 가 dark move "
+                            f"창 [{window.start_ms}, {window.end_ms}) 안에 살아 있습니다{where} "
+                            f"([{fx_start_ms}, {fx_end_ms}), {pointer}). 계약은 창 동안 "
+                            f"intensity FX 가 없음을 요구합니다. {_CONTRACT_ROUTES}",
+                        )
+                    )
 
     return diagnostics
 

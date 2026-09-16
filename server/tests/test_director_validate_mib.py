@@ -233,6 +233,105 @@ class TestDarkWindowBoundary:
         assert "LD-MIB-001" in _rules(_blocking(check_dark_move(plan, dark_context())))
 
 
+class TestSharedFixturesBreakTheDarkness:
+    """어둠은 **fixture** 의 성질이다 — group 의 성질이 아니다.
+
+    dark move 를 요청한 group 만 보면, 같은 fixture 를 공유하는 다른 group 이 그 조명을
+    밝혀도 통과한다. 계약 `LD-CONFLICT-001` 이 *"fixture별 attribute를 실제 group
+    membership으로 확장한다"* 고 적은 것과 같은 이유가 여기에도 걸린다.
+    """
+
+    OTHER = "group-warm"
+
+    def _shared_context(self, *, shared: bool) -> dict[str, Any]:
+        ctx = dark_context()
+        front = next(g for g in ctx["groups"] if g["group_id"] == GROUP)
+        ctx["groups"].append(
+            {
+                "group_id": self.OTHER,
+                "membership_revision": 1,
+                "fixture_ids": (
+                    [front["fixture_ids"][0], "fixture-99"] if shared else ["fixture-99"]
+                ),
+                "safe_state": front["safe_state"],
+            }
+        )
+        ctx["capabilities"].append(
+            {**ctx["capabilities"][0], "group_id": self.OTHER, "random_access": False}
+        )
+        return ctx
+
+    def _plan_with_other_group_lit(self) -> dict[str, Any]:
+        move = position(GROUP, "pos-wide", fade=2000)
+        move["move_mode"] = "dark_move"
+        return make_plan(
+            [
+                cue("cue-baseline", 0, baseline(GROUP, pct=0) + baseline(self.OTHER, pct=0)),
+                cue("cue-move", 10000, [move]),
+                # 창 [10000, 12800) 안에서 **다른 group** 이 밝아진다.
+                cue("cue-other-up", 11000, [intensity(self.OTHER, 90)]),
+            ],
+            [
+                terminal(GROUP, position_ref="pos-wide"),
+                terminal(self.OTHER, intensity_pct=90),
+            ],
+            controlled=(GROUP, self.OTHER),
+        )
+
+    def test_shared_fixture_lit_by_another_group_is_blocking(self):
+        """`fixture-1` 을 공유하는 다른 group 이 창 안에서 밝아지면 어둠이 깨진다."""
+        from server.director.validate.mib import check_dark_move
+
+        found = _blocking(
+            check_dark_move(self._plan_with_other_group_lit(), self._shared_context(shared=True))
+        )
+        assert "LD-MIB-001" in _rules(found)
+        text = _reasons(found)
+        assert self.OTHER in text, "어느 group 이 어둠을 깼는지 말해야 사람이 고칠 수 있다"
+        assert "fixture-1" in text, "어느 fixture 가 겹치는지 말해야 한다"
+
+    def test_disjoint_group_lit_is_not_blocking(self):
+        """구멍도 잰다 — fixture 를 공유하지 않는 group 이 밝아지는 것은 무관하다.
+
+        이것이 없으면 위 시험의 초록이 「다른 group 이 밝으면 무조건 막는다」와 구별되지
+        않는다.
+        """
+        from server.director.validate.mib import check_dark_move
+
+        assert (
+            _blocking(
+                check_dark_move(
+                    self._plan_with_other_group_lit(), self._shared_context(shared=False)
+                )
+            )
+            == []
+        )
+
+    def test_shared_fixture_intensity_fx_is_blocking(self):
+        """다른 group 의 intensity FX 도 공유 fixture 를 밝힌다."""
+        from server.director.validate.mib import check_dark_move
+
+        move = position(GROUP, "pos-wide", fade=2000)
+        move["move_mode"] = "dark_move"
+        plan = make_plan(
+            [
+                cue("cue-baseline", 0, baseline(GROUP, pct=0) + baseline(self.OTHER, pct=0)),
+                cue("cue-move", 10000, [move]),
+                cue("cue-fx", 10500, [fx_start(self.OTHER, "pulse-x")]),
+                cue("cue-off", 13000, [fx_stop(self.OTHER, "pulse-x")]),
+            ],
+            [terminal(GROUP, position_ref="pos-wide"), terminal(self.OTHER)],
+            controlled=(GROUP, self.OTHER),
+        )
+        ctx = self._shared_context(shared=True)
+        for preset in ctx["presets"]:
+            if preset["preset_id"] == "fx-pulse":
+                preset["group_ids"] = [GROUP, self.OTHER]
+        found = _blocking(check_dark_move(plan, ctx))
+        assert "LD-MIB-001" in _rules(found)
+        assert "pulse-x" in _reasons(found)
+
+
 class TestIntensityFxInTheWindow:
     def test_intensity_fx_active_in_the_window_is_blocking(self):
         """`fx-pulse` 는 intensity 축을 쓴다 — 창 안에서 살아 있으면 blocking."""
