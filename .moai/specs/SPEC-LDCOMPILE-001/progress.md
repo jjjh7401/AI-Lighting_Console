@@ -662,6 +662,57 @@ CuePart 레벨에서 발견: `PRESET1FADE`·`PRESET1DELAY` … `PRESET16FADE`·`
 전체 원자료: `.moai/state/verify/c6/p0-introspect-record.md`,
 `introspect-{seq13,cue,cuepart}.json`.
 
+#### Evidence — P1 ① 쓰기 시도 (실측, 감독 승인 후)
+
+감독 승인(빈 시퀀스 1999 새로 생성 → 후보 3종 시도)을 받고 `server/tools/ldcompile_c6_p1_axis_timing_probe.py`
+를 새로 만들어 돌렸다(`--approve` 없으면 아무것도 안 쏘는 t60 계열 형태 승계). 매 실행 전후로
+`server.web`(주 체크아웃, PID 는 실행마다 다름)을 정확히 같은 방식으로 잠깐 멈추고 재기동했다
+— `introspect_probe` 가 자기 OSC 리슨 포트(9005)를 독점으로 열어야 해서 이미 뜬 서버와
+공존 못 한다.
+
+**대조군 — `Store Sequence 1999 Cue 1 'LDCOMPILE-C6 SCRATCH DELETABLE' CueFade 1`**: 1차 실행
+`ok:true`(시퀀스·큐 생성 성공). 2차 실행(같은 명령 재실행) `"User Canceled Command"` —
+이미 존재하는 큐를 다시 Store 하면 콘솔이 확인 팝업을 띄우고, 사람이 없어 자동 취소된 것으로
+보인다(재현 검증 안 함, 가설).
+
+**후보 3종 전부 관측 실패** — `AXIS_TIMING_OBSERVED` 는 채우지 않는다:
+- `Fixture 'MOVER-ALL'` → `"Illegal object"`. `Fixture` 동사가 그룹 이름을 안 받는다(그룹은
+  `Group` 동사일 가능성 — 미검증). 이중인용(`"..."`) 은 이 브릿지 자체가 거부한다
+  (`server/bridge/protocol.py:126-130` — 플러그인 인자로 감쌀 때 조기 종료되기 때문. 단일인용
+  으로 고쳐 재실행함).
+- `Attribute 'Position'` → `"Illegal object"`.
+- `PRESET2FADE 3 Enter` / `PRESET2DELAY 1 Enter` (bare 명령 동사로) → `"Illegal object"` 둘 다.
+  P0 에서 읽힌 이 이름들은 **속성(property) 이름**이지 **명령줄 동사**가 아니다 — 이 형태로는
+  못 쓴다.
+- `Fade 3 Enter` / `Delay 1 Enter` / `Store … /Merge` 자체는 매번 `ok:true` 였지만, 앞선
+  `Fixture`/`Attribute` 선택이 전부 거절돼 프로그래머가 비어 있었다 — 무엇에도 적용 안 된
+  빈 실행이라 의미 있는 결과가 아니다.
+- **되읽기로 확정**: `PRESET2FADE`/`PRESET2DELAY` = `"CueTiming"`(상속, 불변) ·
+  `INDIVIDUALTIMING` = `"Default"` · `INDIVFADE`/`INDIVDELAY` = `0.0` · `CUEINFADE` = `0.0` —
+  세 후보 다 아무 값도 못 썼다. 깨끗한 음성 결과다.
+- **부수 발견**: `NAME` 이 의도한 `'LDCOMPILE-C6 SCRATCH DELETABLE'` 이 아니라 콘솔이 붙인
+  기본값 `"Sequence 1999"` 로 읽힌다 — Store 의 이름 인용부가 실제로는 안 먹었을 수 있다
+  (미조사, cue 이름과 시퀀스 이름 혼동 가능).
+- **물리 안전**: `Fixture`/`Group` 선택이 매번 거절돼 프로그래머에 아무 것도 안 올라갔다 —
+  실제 무빙헤드가 움직인 흔적 없음(감독 확인 + 명령 응답 둘 다 일치).
+
+**round 2 — `Group 'MOVER-ALL'` (Fixture 대신)**: 이번엔 `ok:true, "OK"` — 그룹 선택 동사는
+`Fixture` 가 아니라 `Group` 이었다(가설 확정). 하지만 후속은 그대로 막힘:
+- `Attribute 'Position'` → 여전히 `"Illegal object"`. Position 속성에 초점을 맞추는 올바른
+  동사/문법은 아직도 못 찾았다.
+- `PRESET2FADE 3 Enter` / `PRESET2DELAY 1 Enter` → 여전히 `"Illegal object"`.
+- 되읽기 재확인: `PRESET2FADE`/`PRESET2DELAY` = `"CueTiming"` · `INDIVIDUALTIMING` = `"Default"` ·
+  `INDIVFADE`/`INDIVDELAY`/`CUEINFADE` = `0.0` — round 1 과 완전히 동일, **여전히 관측 0건**.
+  `Group` 만 맞고 Position 값 자체를 프로그래머에 넣는 통로가 없어서, 있지도 않은 Position 데이터에
+  개별 timing 을 얹을 수가 없는 것으로 보인다(가설).
+- **물리 안전 갱신**: 이번엔 `Group 'MOVER-ALL'` 이 실제로 성공해 그룹이 프로그래머에 올라갔다
+  (감독 사전 확인: 지금은 안전한 상태). Position 값은 끝까지 못 넣었으므로 실제 조명 이동은
+  없었을 것으로 보이나, **명령 응답만으로 확정한 것이지 무대를 직접 보고 확인한 것은 아니다**.
+
+다음 후보(미시도, 사람 판단 필요): Position 값을 프로그래머에 실제로 넣는 통로(프리셋 풀
+번호로 직접 `Recall`/`At Position <pool>.<no>` 형태 등) · Attribute 초점 동사의 정확한 문법 ·
+그랜드MA3 정식 문서 또는 감독 실기 조작으로 확인.
+
 #### Gaps — C6 에서 아직 하지 않은 것
 
 - **보존 여부 미관측.** 속성이 읽힌다는 것은 존재의 증거이고 보존의 증거가 아니다.
@@ -670,7 +721,9 @@ CuePart 레벨에서 발견: `PRESET1FADE`·`PRESET1DELAY` … `PRESET16FADE`·`
   가를 수 없다. `AC-LDPLUGIN-012` 의 "pan/tilt 다른 종료"가 이 통로로 되는지 미측정.
 - **`MIB*` 필드가 이 객체에서 `property not readable`.** dark move 통로가 CuePart 가
   아닌 다른 자리일 수 있다 — 미조사.
-- **P1(쓰기·되읽기)·P2(무대 관측) 미실행.** 스크래치 시퀀스 번호 미조회, 감독 승인 필요.
+- **P1(쓰기·되읽기) 시도함, 관측 0건 — P2(무대 관측) 미실행.** 스크래치 `Sequence 1999` 조회·생성·감독
+  승인 완료, 후보 3종(`Fixture`/`Attribute`/bare 속성명) 전부 `"Illegal object"` 또는 무효과.
+  다음 후보(`Group` 동사 등)는 사람 판단 필요 — 위 "Evidence — P1 ①" 참조.
 - **한 시퀀스의 한 큐의 한 Part 만 봤다.** 전수 아님.
 - **독립 감사 없음** (C2~C5 와 동일).
 - **이 브랜치는 push 되지 않아 CI 판정을 받지 않았다.**
