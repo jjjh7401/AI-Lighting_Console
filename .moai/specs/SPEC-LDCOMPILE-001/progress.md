@@ -250,6 +250,83 @@ server/director/validate/pipeline.py:153: ... rounding_conflicts(beat_map, fx_be
 있고(controlled group·cue·terminal), group membership 은 충돌 검출의 관심사다. 안 쓰는 입력을
 받으면 그것을 본다고 오해된다.
 
+### C4 capability 거부 완료 (REQ-LDPLUGIN-008·013 거부부)
+
+워크트리 `.claude/worktrees/ldcompile-c4` · 브랜치 `WT-capability-refuse` · 기준 HEAD
+`4c3ed064` (= C3 머지 직후의 `origin/main`) · 구현 커밋 `7ad9cb65`.
+
+**Claim**: 계약 `LD-CAP-001` 을 구현하고 4단의 자리표시자(전 action 동일 문구)를 원인별
+사유로 교체했다. **아무것도 열지 않았다** — 4단은 여전히 전부 blocking 이다.
+
+#### 🔴 Gap — RED 을 잡지 못했다 (이 마일스톤의 가장 큰 미검증)
+
+시험 파일을 구현보다 먼저 **작성했지만 구현 전에 실행하지 않았다.** 따라서 test-first 를
+반증할 수 있는 pre-GREEN 실패 출력이 **없다.** C2·C3 는 `red.txt` 를 남겼는데 C4 는 없다.
+
+사후에 구현을 치워 두고 돌려서 「RED」라고 적을 수는 있었지만, 그것은 pre-GREEN 증거가
+아니라 **사후 재구성**이므로 하지 않았다. 대신 시험이 공허하지 않다는 것을 **뮤테이션으로**
+재고 그 출력을 아래에 남긴다 — 이것은 test-first 의 증거가 아니라 「이 시험이 회귀를
+잡는다」의 증거이며, 두 주장은 다르다.
+
+#### Evidence — 뮤테이션 (실제 출력)
+
+| 뮤테이션 | 무엇을 깨는가 | 결과 |
+|---|---|---|
+| `AXIS_TIMING_OBSERVED` 를 6축으로 채움 | 관측 없는 승격 | **12 failed**, 55 passed — 내 시험 + C1 coverage 가드가 함께 잡았다 |
+| `_refuse` 의 `after` 에 `present(100)` | clamp 제안 | **1 failed** — `test_no_diagnostic_carries_a_replacement_value` |
+| 부재 preset 사유에 `color-amber` 대체안 명시 | fallback preset | **1 failed** — `test_absent_preset_is_not_replaced_with_a_similar_one` |
+| (원복) | — | **27 passed** |
+
+두 번째가 설계 의도를 확인해 준다: 5대 금지를 한 문장(*"어떤 진단도 `after` 에 값을 싣지
+않는다"*)으로 모았으므로 clamp 를 넣으면 **정확히 그 한 시험**이 깨진다.
+
+#### Evidence — GREEN · 회귀 (실제 출력)
+
+```
+$ uv run pytest -q
+13283 passed, 35 skipped, 1 warning in 176.01s (0:02:56)
+```
+파일: `.moai/state/verify/c4/green-full.txt`
+
+**Baseline-attribution**: 기준선은 C3 머지 직후의 `origin/main`(`4c3ed064`) = **13255/35**
+이며, 그 숫자는 C3 절에서 이 저장소에 대해 실측한 값이다(C4 워크트리에서 다시 재지 않았다 —
+이것이 이 항목의 귀속 한계다). 13255 + 신규 **28** = 13283 으로 정확히 맞물리고 skipped
+불변, 실패 0. 신규 개수는 파일을 명시해 셌다(`test_director_validate_capability.py` → 28).
+
+#### 🔴 자기 검토에서 찾은 내 결함 (수정 완료)
+
+1. 🔴 **`context=None` 에서 root 진단 하나로 갈음해 C1 의 coverage 가드 5건을 깨뜨렸다.**
+   4단은 계약 §6.3 *"각 요청 action에는 적어도 하나의 diagnostic"* 을 채우는 자리인데
+   (`pipeline.py` 독스트링에 그렇게 적혀 있다) 판정 불능을 coverage 면제로 다뤘다. action
+   별로 내도록 고치고 `test_missing_context_still_yields_one_diagnostic_per_action` 으로
+   박았다. **C1 이 남긴 가드가 이것을 잡았다** — 그 가드가 없었으면 조용히 통과했다.
+2. 🔴 **스키마 거부 시험이 거짓 사유로 통과할 뻔했다.** 손으로 짠 최소 계획을
+   `parse_exchange` 에 넣으니 rogue op 이 아니라 상위 필드 부재 때문에
+   `UNSUPPORTED_SCHEMA_VERSION` 이 먼저 났다 — 두 거절이 모두 「거절」이라 성공/실패
+   이분법으로는 구별되지 않는다. 규범 예제에 rogue op 하나만 주입하도록 바꾸고
+   **코드(`SCHEMA_INVALID`)를 단언**하며, 손대지 않은 예제가 통과하는 양성 대조를 같은
+   시험에 넣었다.
+3. `pipeline.py` 에 자리표시자가 쓰던 `_NO_AXIS_EMITTER_REASON`·`_action_pointers` 를 죽은
+   채로 남겼다. 지웠고 회귀는 13283 그대로다.
+
+#### Evidence — 경계 (실제 출력)
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/     → OK - no OSC import
+$ grep -rnE "^\s*(from|import)\s+server\.(looks|web)" server/director/ → OK - no artistic producer
+$ git diff --name-only origin/main -- server/lxseq server/design server/director/service.py
+                                                                       → (없음) OK - untouched
+$ uv run ruff check server/director/ server/tests/                     → All checks passed!
+```
+
+#### 만든 파일 · 고친 파일
+
+```
+신규  server/director/validate/capability.py                op·축·preset·정책별 거부 사유
+신규  server/tests/test_director_validate_capability.py     28 시험
+수정  server/director/validate/pipeline.py                  4단 교체 + 죽은 코드 제거
+```
+
 ## §E.3 Gaps — C2 에서 하지 않은 것
 
 - **「불가능 해상도 차단」(`AC-LDPLUGIN-009` 마지막 항목) 미구현.** emitter 최소 timing
@@ -305,6 +382,25 @@ server/director/validate/pipeline.py:153: ... rounding_conflicts(beat_map, fx_be
 - `_uncovered_ms` 는 덮인 구간을 시작점부터 이어붙여 본다. segment 가 겹쳐 있는 병리적
   입력에서는 커서가 앞으로만 가므로 보수적으로(막는 쪽으로) 답한다 — 스키마가 겹침을
   막지 않으므로 가능한 입력이다.
+
+### C4 에서 하지 않은 것
+
+- **RED 부재.** 위 §E.2 C4 절에 적은 대로 pre-GREEN 실패 출력이 없다. 이 마일스톤에 대해
+  test-first 는 **주장이지 증거가 아니다.** 뮤테이션 셋은 「시험이 회귀를 잡는다」만 보인다.
+- **`random_access` 를 판정하지 않았다.** `LD-CAP-001` 이 여섯 축(op·preset·timing 축·cycle·
+  dark_move·random_access) 중 하나로 열거했는데 계획 payload 에 이것을 요구하는 필드가
+  없다 — `playback` 쪽 개념으로 보이며 어느 층이 볼 것인지 정하지 않았다. C5(`mib.py`)가
+  `AC-LDPLUGIN-012` 로 다룰 후보다.
+- **`AXIS_TIMING_OBSERVED` 가 채워질 때 무엇이 갈라지는지 시험하지 않았다.** 지금은 빈
+  tuple 이라 상시 사유가 모든 축에 붙는다. 일부만 관측된 상태(예: intensity 만)에서 축별로
+  갈라지는지는 C6 전까지 재지 않는다 — 그 상태를 합성해 시험할 수는 있었지만, 관측 없이
+  「승격 후 동작」을 고정하면 그 시험이 승격의 근거처럼 읽힐 위험이 있어 두지 않았다.
+- **`safety_blocked` 를 4단에서 낸다** (정책 상한 초과·금지 preset). 5단이 safety 단계인데
+  원인 분류상 4단에 두었다 — `AC-LDPLUGIN-008` 2번이 clamp 금지를 capability AC 에 적었기
+  때문이다. 단계 경계가 흐려지는 비용을 감수한 선택이며 우산 확인을 받지 않았다.
+- **기준선을 C4 워크트리에서 다시 재지 않았다.** C3 절의 13255 를 기준선으로 인용했다.
+  같은 커밋이므로 같아야 하지만, 그것은 재지 않은 추론이다.
+- **독립 감사 없음** (C2·C3 와 동일). `plan-auditor` 가 컨텍스트 초과로 죽는다.
 
 ### C3 잔여 위험
 
