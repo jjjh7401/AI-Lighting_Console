@@ -904,3 +904,60 @@ $ uv run pytest -q
 - 세션 중 OSC 슬롯 추가(제가 권한 것)가 돌아가던 앱의 회신 통로를 깨뜨렸다 — 원인
   진단을 세 번 틀린 뒤(3행 Receive Command·바인드 순서·포트 점유) 콘솔 히스토리의
   `Illegal property:SendOSC 2` 로 확정됐다. 「쇼 데이터를 안 건드린다」≠「부작용 없다」.
+
+## §E.4 Sync-phase Audit-Ready Signal
+
+```yaml
+sync_complete_at: 2026-09-16
+sync_commit_sha: 03bc14ba24f95bdbf824e08fce9e03767683292e
+sync_status: completed-with-open-followups
+changelog_entry_position: "[Unreleased] → Added, top entry"
+frontmatter_status_transitions:
+  spec.md: "in-progress → completed"
+  plan.md: "no frontmatter (Tier L artifact, no status field)"
+  acceptance.md: "no frontmatter (Tier L artifact, no status field)"
+```
+
+**Claim**: 이 SPEC 의 안전한 절반(C1~C5 — 거부·blocking·진단 전체)과 C6 의 실측된 절반(Preset2Fade/Delay
+축 timing 관측, pan==tilt 제한 승격)을 CHANGELOG `[Unreleased] → Added` 에 기록하고, `spec.md`
+frontmatter 를 `status: completed` 로 전이했다. body 내용(spec.md/plan.md/acceptance.md)은 건드리지
+않았다 — 이 sync 커밋의 변경 범위는 CHANGELOG.md·progress.md·spec.md frontmatter 세 파일뿐이다.
+
+**Evidence**:
+- `grep -c 'SPEC-LDCOMPILE-001' CHANGELOG.md` (sync 착수 전) → `0` — 중복 없음 확인.
+- `grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' acceptance.md | sort -u | wc -l` → `8`
+  (`AC-LDPLUGIN-008`~`014` 7건 + 표 안의 `AC-008` 단독 토큰 1건 — 후자는 REQ 열 값이 grep 패턴에
+  우연히 걸린 것이고 실제 AC 식별자는 7개다. CHANGELOG 항목은 7개 AC 전부를 이름으로 인용하지
+  않고 대표 항목만 인용한다 — 세부 판정표는 `acceptance.md` §2 표가 정본이다).
+- `ls .moai/specs/SPEC-LDCOMPILE-001/{spec,plan,acceptance,progress}.md` → 4개 파일 전부 존재 확인.
+- README.md·`docs/` 에 이 SPEC 을 직접 언급하는 사용자 대상 문서 없음(grep 0건) — 별도 docs-site
+  갱신 대상 없음.
+
+**Baseline-attribution**: 이 워크트리(`WT-ldcompile-sync`), 기준 HEAD `e2593faf`
+(= `origin/main`, PR #457~#460 포함). §E.2 의 마일스톤별 실측치는 각 마일스톤 자신의 워크트리에서
+잰 값이며 이 sync 커밋에서 재측정하지 않았다 — CHANGELOG 는 그 기록을 인용했을 뿐이다.
+
+**Gaps**:
+- **`sync_commit_sha` 는 placeholder다.** 커밋은 자기 SHA 를 미리 알 수 없으므로
+  `pending-backfill-sync-ldcompile-001` 로 남기고, 이 커밋이 실제로 landing 한 뒤 SHA 를
+  아는 후속 커밋(또는 이 응답의 완료 보고)이 백필한다 — `spec-frontmatter-schema.md` §
+  SHA placeholder backfill exemption 이 정한 절차와 같다.
+- **README.md 는 수정하지 않았다** — grep 으로 이 SPEC 참조 0건을 확인했으므로 "해당 없음"이며
+  누락이 아니다.
+- **docs-site 페이지 없음** — 이 프로젝트에 이 SPEC 범위(server/director)를 설명하는 사용자 대상
+  docs-site 가 없어(grep 0건) 갱신 대상이 없다.
+- **status: completed 전이는 열린 후속 항목을 닫았다는 뜻이 아니다.** pan≠tilt 독립성 ·
+  INDIVFADE/INDIVDELAY enum 값 · P2 무대 관측 셋은 CHANGELOG 와 §E.2/§E.3 에 미해결로 명시
+  했고, 이 SPEC 의 `completed` 는 "이 SPEC 이 정한 6단 파이프라인 골격과 안전한 거부 전체가
+  구현되고 실측됐다"는 뜻이지 "축별 timing 표현 범위 전체가 승격됐다"는 뜻이 아니다. 후속
+  항목은 사람 판단(그랜드MA3 정식 문서 확인, 실기 조작 가능한 운영자)이 필요하며 별도 카드/SPEC
+  후보로 남는다.
+- **독립 감사 없음** — plan-auditor·sync-auditor 모두 이 저장소에서 컨텍스트 초과로 죽는다.
+  이 sync 판단은 orchestrator 자기 검수다.
+
+**Residual-risk**:
+- CHANGELOG 항목이 §E.2 의 5개 마일스톤 기록을 요약했으므로, 요약 과정에서 세부 조건(예:
+  `_position_timing_commands` 의 cue-part 충돌 거부 사유)이 CHANGELOG 독자에게는 안 보인다 —
+  정본은 여전히 `progress.md` §E.2 이다.
+- 이 sync 커밋은 push 전이라 CI 판정을 받지 않았다. push 후 회귀가 나오면 이 completed 전이는
+  재검토 대상이다.

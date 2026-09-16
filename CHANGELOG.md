@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **SPEC-LDCOMPILE-001** — Director 층 검증 파이프라인 6단(source identity → time/reference → tracking/FX → capability/fidelity → safety → approval freshness)이 전부 **실물 판정기**가 됐다(마일스톤 C1~C6, `server/director/validate/{pipeline,timing,simulate,conflict,capability,mib}.py` + `server/director/emit.py`). 이 층의 핵심 주장은 하나다 — 보존할 수 없으면 지원한다고 말하지 않는다. 착수 시점(2026-09-14 실측)엔 계약이 요구하는 축별 timing emitter 통로가 **0건**이었고, 이 SPEC 은 그 정직한 `blocking` 상태에서 출발해 실측된 것만 하나씩 열었다.
+  - **C1~C5(검증 골격·시간 해석·simulation·충돌 검출·capability 거부·dark move/재진입 거부)** — 콘솔 없이 전부 로컬 pytest 로 닫힌다. AC-LDPLUGIN-014·011·010(계산부)·009(계산부)·008(거부부)·012(거부부)·013(거부부)이 여기서 초록이다. 전량 스위트 `13316 passed, 35 skipped, 0 failed`(C5 시점, `origin/main` HEAD `b3819fbf`).
+  - **C6 — emitter 프로브 + 콘솔 관측(REQ-LDPLUGIN-013, `AC-LDPLUGIN-008/012/013` 콘솔 조건)** — `server/director/emit.py` 가 실측된 `CueFade` 만 낸다. 실기 콘솔 프로브로 `Set Cue <n> Sequence <seq> Property 'Preset2Fade'/'Preset2Delay' <값>` 문법(카드 t215 유래)을 재현해 **Preset2Fade/Preset2Delay 축 timing 쓰기를 관측했다** — 저장소 코드 판독으로는 0건이던 통로가 콘솔에서는 다른 이름으로 존재했다. **제한적 승격만 했다**: `AXIS_TIMING_OBSERVED = ("pan", "tilt")`는 pan==tilt(같은 값 요구)일 때만 재현 가능으로 인정하고, 값이 다르면 여전히 `unsupported`다 — 한 preset 값이 pan·tilt 를 가르지 못하는 콘솔 쪽 구조적 제약 때문이다. Position **값** 쓰기(fid·Attribute Pan/Tilt·Preset recall) 자체는 완전히 검증됐다(fid 501 실제 이동 확인, round 3/4). 전량 스위트 `13349 passed, 35 skipped, 0 failed`.
+  - 🔴 **미해결 — 사람 판단이 필요한 후속 항목 (이 SPEC 이 해소했다고 주장하지 않는다)**: (1) **pan≠tilt 독립 timing** — `Preset2Fade`/`Preset2Delay` 는 CuePart 전체에 걸리는 값 하나뿐이라 두 축에 다른 값을 요구하는 요청은 여전히 재현 불가. (2) **`INDIVFADE`/`INDIVDELAY`/`IndividualTiming` enum 값** — 속성명은 유효하나(`Set…Property` 로 `ok:true`) 값 자체는 무효과(형제 속성 `PRESET2FADE`가 같은 경로에서 바뀌므로 경로 오류가 아니라 진짜 무효과)이며 `'On'` 은 `Illegal value` 로 거절됨 — 그랜드MA3 정식 문서 확인이 필요하다. (3) **`AC-LDPLUGIN-012`/`013` 의 P2 무대 관측(intensity=0 실측·terminal state 일치)** — 실기 콘솔에 물리로 접근 가능한 운영자 확인이 필요하며 이 SPEC 은 시도하지 않았다.
+  - **경계 검사 전 마일스톤 통과**: OSC import 0 · 예술 producer import 0 · `server/lxseq`·`server/design`·`server/director/service.py` 무변경(형제 SPEC-LDSTORE-001 소유 seam 을 읽기만 함).
+  - **독립 감사 없음** — `plan-auditor` 는 이 저장소에서 착수 전 컨텍스트 초과(≈114K 토큰)로 죽는다. 이 SPEC 의 품질 판단은 전부 orchestrator 자기 검수다.
+  - **이 close 시점의 push 여부** — C1~C6 워크트리 커밋(`4c3ed064`·`50623f39`·`b3819fbf`·`e2593faf`)은 이미 PR #457~#460 로 머지됐다(`origin/main` 포함). 이 sync 커밋은 문서·frontmatter 전이만 다룬다.
+
 ### Changed
 
 - **판정 하향 1건** — 「그룹 멤버십 판독은 플랫폼 성질상 원리적으로 불가」가 **미측정**으로 좁혀졌다. 그 판정이 내려진 표면에는 `introspect` 가 없었고 전제가 만료됐다(`SPEC-COPILOT-RESTORE-001/readability-survey.md` §A.2 → §A.5). 과거 릴리스 항목은 **고치지 않고 하향 표식만 덧붙였다**(감사 흔적 보존). 같은 단정이 저장소에 28곳 있으며 전수 분류표는 `overclaim-survey.md` 에 있다. **재측정은 그룹이 있는 쇼파일을 기다린다** — 결론(점유 슬롯 쓰기 금지)은 불변.
