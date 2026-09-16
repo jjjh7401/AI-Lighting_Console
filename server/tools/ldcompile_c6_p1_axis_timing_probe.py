@@ -43,45 +43,51 @@ SEQ_NAME = "LDCOMPILE-C6 SCRATCH DELETABLE"
 GROUP = "MOVER-ALL"
 CLEAR = "ClearAll"
 
-#: 대조군 — 실측된 유일한 페이드 키워드로 시퀀스·큐를 만든다.
+#: Round 3 — fid 501(MOVER-U 1번, `src/Lighting_Designer/02_RIG팩/
+#: LXSEQ_RIG_01_ShowBase_r3.patch.csv` 실측) 하나만 움직인다(감독 승인 완료).
+#: `Fixture 'MOVER-ALL'`/`Group 'MOVER-ALL'`(이름) 대신 fid 번호를 직접 쓴다 —
+#: `server/spatial/pointing.py::aimed_commands` 의 검증된 형태
+#: (`Fixture <fid> ; Attribute 'Pan' At <p> ; Attribute 'Tilt' At <t>`).
+#: 임의 각도를 새로 만들지 않고, 이미 존재하는 Preset 2.1('POS01 보컬 센터
+#: 페이스 · 합성좌표')을 그대로 recall 한다(`preset_recall_command` 형태) —
+#: 이미 실측·사용된 좌표라 새 값을 지어내는 것보다 안전하다.
+FID = 501
+PRESET_NO = 1
+
+#: 대조군 — 실측된 유일한 페이드 키워드로 시퀀스·큐를 만든다. Cue 1 은 이미
+#: round 1/2 에서 만들어져 있으므로(재실행 시 콘솔이 확인 팝업을 내고 취소됨),
+#: 이번엔 새 Cue 번호를 쓴다 — `position_cue_store_commands` 의 규율대로
+#: `/Merge`/`/Overwrite` 는 쓰지 않는다(머지가 phaser 를 깨뜨린다는 이 저장소의
+#: 실측, `server/spatial/pointing.py:412-414`).
+CUE_NO = 2
 BASELINE = [
-    f"Store Sequence {SEQ_NO} Cue 1 '{SEQ_NAME}' CueFade 1",
+    f"Store Sequence {SEQ_NO} Cue {CUE_NO} '{SEQ_NAME} R3' CueFade 1",
 ]
 
-#: 후보 recipe 들. 각 recipe 는 한 세트로 이어서 쏜다(중간에 ClearAll 없음) —
-#: Fixture 선택 -> 속성 초점 -> timing 지정 -> Store 가 프로그래머 상태를
-#: 공유해야 사슬이 이어진다는 가정이다. 이 가정 자체가 검증 대상이다.
+#: 후보 recipe 들. 각 recipe 는 한 세트로 이어서 쏜다(중간에 ClearAll 없음).
 #: MA3 는 이중인용도 받지만 이 브릿지는 명령을 플러그인 인자 문자열 안에 감싸
 #: 보내서, 명령에 `"` 가 들어가면 그 감싼 문자열이 조기 종료된다
 #: (`server/bridge/protocol.py:126-130`). MA3 는 단일인용도 받으므로 이름은
 #: 전부 단일인용으로 쓴다.
-#: Round 2 — `Fixture '<group>'` 는 R1 에서 "Illegal object" 로 거절됐다. `MOVER-ALL`
-#: 은 이 저장소의 다른 프로브들이 그룹으로 다뤄왔으므로, `Group` 동사로 바꿔 다시 시도한다.
+#: Round 4 — round 3 이 값 설정까지는 전부 `ok:true` 였지만 Store 를 안 넣어서
+#: 무엇도 Cue 에 안 남았다(ClearAll 이 프로그래머를 비웠다). 이번엔 값 설정 뒤
+#: 곧바로 새 Cue(3)에 Store 해서 되읽을 수 있게 한다.
+CUE_NO_R4 = 3
 CANDIDATE_RECIPES: list[tuple[str, list[str]]] = [
     (
-        "group_verb_attribute_focus_fade_delay",
+        "recall_preset_inline_fade_then_store",
         [
-            f"Group '{GROUP}'",
-            "Attribute 'Position'",
-            "Fade 3 Enter",
-            "Delay 1 Enter",
-            f"Store Sequence {SEQ_NO} Cue 1 /Merge",
+            f"Fixture {FID} ; At Preset 2.{PRESET_NO} Fade 3 Delay 1",
+            f"Store Sequence {SEQ_NO} Cue {CUE_NO_R4} 'R4 recall-inline'",
         ],
     ),
     (
-        "group_verb_slash_qualifier_fade",
+        "attribute_pan_tilt_inline_fade_then_store",
         [
-            f"Group '{GROUP}'",
-            f"Store Sequence {SEQ_NO} Cue 1 Fade 3 /Position /Merge",
-        ],
-    ),
-    (
-        "group_verb_named_property_bare",
-        [
-            f"Group '{GROUP}'",
-            "PRESET2FADE 3 Enter",
-            "PRESET2DELAY 1 Enter",
-            f"Store Sequence {SEQ_NO} Cue 1 /Merge",
+            f"Fixture {FID} ; At Preset 2.{PRESET_NO}",
+            "Attribute 'Pan' At 200 Fade 3",
+            "Attribute 'Tilt' At 45 Fade 1",
+            f"Store Sequence {SEQ_NO} Cue {CUE_NO_R4 + 1} 'R4 attribute-inline'",
         ],
     ),
 ]

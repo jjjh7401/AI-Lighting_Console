@@ -713,6 +713,44 @@ CuePart 레벨에서 발견: `PRESET1FADE`·`PRESET1DELAY` … `PRESET16FADE`·`
 번호로 직접 `Recall`/`At Position <pool>.<no>` 형태 등) · Attribute 초점 동사의 정확한 문법 ·
 그랜드MA3 정식 문서 또는 감독 실기 조작으로 확인.
 
+#### Evidence — P1 ③ round 3/4 — Position 값 쓰기는 검증됨(선행 자산 재사용), timing 은 여전히 관측 0건
+
+감독이 「이미 있는 코파일럿 기능·과거 작업을 다시 보라」고 정정을 줘서 재조사했다.
+`server/spatial/pointing.py`(`aimed_commands`/`preset_recall_command`) + `server/presets/store.py`
+가 이미 **검증되고 실전에 쓰인** Position 값 쓰기 통로를 갖고 있었다 — round 1/2 의 실패는
+문법을 잘못 짜서였다(기능 부재가 아니었다):
+- `Fixture <fid>`(그룹 이름 아님, fid **번호**) ; `Attribute 'Pan' At <deg>` ; `Attribute 'Tilt' At <deg>`
+  — Pan·Tilt 는 이미 **독립된 속성**이다(값 레벨). 전제 5의 절반은 이걸로 풀렸다.
+- fid 목록은 `src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.patch.csv` 실측:
+  MOVER-U 501~508(Robe MegaPointe) · MOVER-D 521~528(Robe Spiider) = MOVER-ALL 16대.
+  감독 승인 받아 fid **501 하나만** 사용(물리 이동 최소화).
+- 임의 각도 대신 이미 존재하는 `Preset 2.1`("POS01 보컬 센터 페이스 · 합성좌표", 콘솔 조회로
+  확인)을 그대로 recall — 새 좌표를 지어내지 않았다.
+
+**round 3(Store 없이 값만 설정)**: `Fixture 501 ; At Preset 2.1 Fade 3 Delay 1` → `ok:true`.
+`Fixture 501 ; At Preset 2.1` → OK, `Attribute 'Pan' At 200 Fade 3` → OK, `Attribute 'Tilt' At 45
+Fade 1` → OK. `IndividualTiming On`(bare) → 여전히 `"Illegal object"`. 매 recipe 끝의 `ClearAll`
+이 프로그래머를 비워 아무것도 Cue 에 안 남았다(이 라운드의 결함 — Store 를 안 넣었다).
+
+**round 4(같은 값 설정 뒤 새 Cue 에 Store)**: `Fixture 501 ; At Preset 2.1 Fade 3 Delay 1` →
+`Store Sequence 1999 Cue 3 'R4 recall-inline'` — 둘 다 `ok:true`. `Fixture 501 ; At Preset 2.1` →
+`Attribute 'Pan' At 200 Fade 3` → `Attribute 'Tilt' At 45 Fade 1` → `Store Sequence 1999 Cue 4
+'R4 attribute-inline'` — 넷 다 `ok:true`. **되읽기(Cue 3·Cue 4 둘 다 CuePart 1)**:
+`PRESET2FADE`/`PRESET2DELAY` = `"CueTiming"` · `INDIVIDUALTIMING` = `"Default"` ·
+`INDIVFADE`/`INDIVDELAY` = `0.0` — **양쪽 다 여전히 기본값**.
+
+**결론(round 1~4 종합)**: Position **값** 쓰기는 완전히 검증되고 동작한다(fid·Attribute
+Pan/Tilt·Preset recall 전부 `ok:true`, 실제 fid 501 물리 이동 확인). 하지만 `At`/`Attribute`
+클로즈 뒤에 `Fade`/`Delay` 토큰을 이어붙이는 건 콘솔이 **문법 오류 없이 받아주지만**(`Illegal
+object` 아님) `PRESET2FADE`/`INDIVIDUALTIMING`/`INDIVFADE`/`INDIVDELAY` 어느 필드에도 **관측
+가능한 효과가 없다** — 이건 round 1/2 의 "선택 자체가 막혀서 값이 없었다"는 혼입 변수가 전혀
+없는 상태에서 나온 결과라 이전보다 훨씬 강한 음성 증거다. `IndividualTiming` 을 bare 동사로 못
+쓰는 것도 재확인됐다. `AXIS_TIMING_OBSERVED` 는 여전히 빈 tuple.
+
+다음 후보(미시도, 사람 판단 필요 — 그랜드MA3 정식 문서 또는 감독 실기 조작 필요): Cue View의
+타이밍 그리드에서 UI 로만 되는 편집(명령줄 등가물이 없을 수 있음) · `Assign`/`Copy To` 계열
+동사 · 이 필드들이 command-line 이 아니라 오직 매크로/플러그인 API 로만 쓰일 수 있는 가능성.
+
 #### Gaps — C6 에서 아직 하지 않은 것
 
 - **보존 여부 미관측.** 속성이 읽힌다는 것은 존재의 증거이고 보존의 증거가 아니다.
@@ -721,9 +759,10 @@ CuePart 레벨에서 발견: `PRESET1FADE`·`PRESET1DELAY` … `PRESET16FADE`·`
   가를 수 없다. `AC-LDPLUGIN-012` 의 "pan/tilt 다른 종료"가 이 통로로 되는지 미측정.
 - **`MIB*` 필드가 이 객체에서 `property not readable`.** dark move 통로가 CuePart 가
   아닌 다른 자리일 수 있다 — 미조사.
-- **P1(쓰기·되읽기) 시도함, 관측 0건 — P2(무대 관측) 미실행.** 스크래치 `Sequence 1999` 조회·생성·감독
-  승인 완료, 후보 3종(`Fixture`/`Attribute`/bare 속성명) 전부 `"Illegal object"` 또는 무효과.
-  다음 후보(`Group` 동사 등)는 사람 판단 필요 — 위 "Evidence — P1 ①" 참조.
+- **P1(쓰기·되읽기) 4라운드 시도함, timing 관측 0건 — P2(무대 관측) 미실행.** Position **값**
+  쓰기(fid·Attribute Pan/Tilt·Preset recall)는 완전히 검증됨(round 3/4, fid 501 실제 이동).
+  `PRESET2FADE`/`INDIVIDUALTIMING`/`INDIVFADE`/`INDIVDELAY` 는 혼입 변수 없는 상태에서도 4라운드
+  전부 관측 0건 — 위 "Evidence — P1 ③" 참조. 다음 후보(UI 전용 편집 가능성 등)는 사람 판단 필요.
 - **한 시퀀스의 한 큐의 한 Part 만 봤다.** 전수 아님.
 - **독립 감사 없음** (C2~C5 와 동일).
 - **이 브랜치는 push 되지 않아 CI 판정을 받지 않았다.**
