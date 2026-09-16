@@ -129,7 +129,189 @@ run-phase 착수가 승인되었다. 위 "사람 확인 대기 항목" 4건 중 
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### M1 완료 (REQ-LDPLUGIN-018 · REQ-LDPLUGIN-019)
+
+작업 트리 기준 HEAD `d6122990` · 커밋 전.
+
+**환경 메모(투명성)**: M1 착수 직전, 이 세션이 격리된 워크트리가 배차서가 전제한
+`.claude/worktrees/ldrecv-m1` 이 아니라 다른(오래된, SPEC 문서 병합 이전) 워크트리임을
+발견해 Missing Inputs 로 1차 보고했다. 오케스트레이터가 "하네스가 정상적으로 재격리한
+것"이라 확인해 주었고, 실제로 환경이 `ldrecv-m1`(브랜치 `worktree-ldrecv-m1`, HEAD
+`d6122990`)으로 재조정된 것을 실측 확인한 뒤 구현을 진행했다. 아래 전 과정은 이
+재조정 이후, 실제 `ldrecv-m1` 워크트리 안에서 수행했다.
+
+**Claim**: M1 의 두 요구사항을 TDD 로 구현했다 — 인증·ACL·Host/Origin 검증(018)과
+evidence 신뢰 경계·audio 외부 전송 동의 게이트(019). `server/director/auth.py`(신규)가
+두 REQ 를 모두 담당하고, `server/director/director_api.py`(신규)가 계약 §3 공통
+route 의 HTTP 골격을 그 인증 뒤에 배선하며, `server/web/app.py`(EXTEND, router 등록
+1곳)가 조건부(`deps.director is not None`) 마운트를 추가했다.
+
+**Evidence — RED (구현 삭제 후 실제로 실패시킨 verbatim 출력)**
+
+TDD 규율에 따라 `auth.py` 를 먼저 작성한 것을 인지한 뒤, 두 시험 파일이 실제로 RED
+상태에서 시작했음을 증명하기 위해 `auth.py` 를 삭제하고 재확인했다:
+
+```
+$ rm server/director/auth.py
+$ uv run pytest server/tests/test_director_auth.py server/tests/test_director_evidence_trust.py -q
+ERROR collecting server/tests/test_director_auth.py
+ModuleNotFoundError: No module named 'server.director.auth'
+ERROR collecting server/tests/test_director_evidence_trust.py
+ModuleNotFoundError: No module named 'server.director.auth'
+2 errors in 0.08s
+```
+
+이후 `auth.py` 를 복원해 GREEN 으로 이행했다(아래).
+
+**Evidence — GREEN (신규 시험 31개, 첫 시도에 전부 통과)**
+
+```
+$ uv run pytest server/tests/test_director_auth.py server/tests/test_director_evidence_trust.py -q
+...............................                                          [100%]
+31 passed in 0.43s
+```
+
+| AC | 시험 파일 | PASS 조건 커버 | Status |
+|---|---|---|---|
+| AC-LDPLUGIN-018 | `test_director_auth.py` (23개) | human-only scope 7종 각각 SCOPE_DENIED(파라미터화) · 만료/철회/부재/위조 credential UNAUTHENTICATED · Origin 불일치·Host allowlist 밖 ORIGIN_DENIED · **양성 대조**(MCP 공통 scope 통과, human 전용 scope 통과, Origin 부재 stdio proxy 허용) · secret 비노출(로그·응답·예외 str/repr/ErrorEnvelope 전부 grep) | PASS |
+| AC-LDPLUGIN-019 | `test_director_evidence_trust.py` (8개) | claim 만으로 미승격(negative) · 서버 record 역참조 시 승격(**양성 대조**) · project/principal/scope 불일치 시 미승격(3-way 파라미터화) · audio 전송 동의 없이 차단 · 목적/수신자/범위 결여 시 차단(3-way 파라미터화) · 완전한 기록 시 통과(**양성 대조**) | PASS |
+
+**Baseline-attribution**: 기준선(착수 시 재측정, 같은 HEAD `d6122990`) `13376 passed, 35
+skipped` (배차서 지시값과 일치). 신규 테스트 **31개**(2파일). 13376 + 31 = **13407** —
+아래 최종 회귀와 정확히 일치, skipped 불변(35), 실패 0.
+
+**Evidence — 최종 회귀 (전체, async-def 수정 반영 후 재실행)**
+
+```
+$ uv run pytest -q
+13407 passed, 35 skipped, 1 warning in 182.18s (0:03:02)
+```
+verbatim 저장: `.moai/state/verify/ldrecv-m1/m1-full-regress.txt`
+
+**Evidence — ruff**
+
+```
+$ uv run ruff check server/director/ server/tests/test_director_auth.py server/tests/test_director_evidence_trust.py server/web/app.py
+All checks passed!
+$ uv run ruff format --check server/director/auth.py server/director/director_api.py server/tests/test_director_auth.py server/tests/test_director_evidence_trust.py server/web/app.py
+5 files already formatted
+```
+(2개 findings — `SIM105`try/except/pass → `contextlib.suppress`, `SIM300` Yoda 조건 — 를
+GREEN 뒤 수정해 반영했다. `ruff format` 이 최초 3개 파일을 자동 재포맷했다 — 순수 공백
+정리, 재실행으로 초록 확인.)
+
+**Evidence — 경계 grep (전부 실측, 날조 대조군 없음)**
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/   → 0 매치 (exit 1)
+$ grep -rnE "^\s*(from|import)\s+server\.(looks|web\.session)" server/director/  → 0 매치 (exit 1)
+$ grep -rn "approval_bridge\|DenyAllApprovalPort\|request_approval(" server/director/
+  → 1 매치: auth.py:15, docstring 산문(`server/web/approval_bridge.py` 를 "이것과
+    다른 채널"이라 설명하는 문장) — import/호출 아님. `^import\|^from` grep 으로
+    재확인: `server.web` import 없음(auth.py/director_api.py 모두).
+$ grep -rn "def " server/director/ | wc -l  → 194 (양성 대조 — grep 자체가 헛돌지 않음을 확인)
+```
+
+**Evidence — secret 비노출 (in-test + 외부 재확인 둘 다)**
+
+1. `test_director_auth.py::test_secret_never_exposed_in_errors_body_or_logs` — 위조
+   secret 시도·scope 거부·성공 경로 세 시나리오 각각의 예외 `str()`/`repr()`/
+   `ErrorEnvelope` dict, 성공 `Credential` 의 `str()`/`repr()`, `caplog.text` 전부를
+   캡처해 실제 secret 문자열이 없는지 단언 — PASS(위 31개 중 하나).
+2. **외부 재확인**(모듈 경계 밖에서 별도 스크립트로) — canary secret 을 생성해 위조
+   시도/scope 거부/성공 세 시나리오를 실행하고 `DEBUG` 레벨 로깅까지 캡처한 뒤,
+   canary 를 **의도적으로 출력한 한 줄만 제외**하고 나머지 출력에서 canary 를 grep:
+   ```
+   canary length: 43
+   matches outside marker line: 0
+   ```
+   **부수 발견 및 정리**: 이 재확인 스크립트는 pytest 의 autouse in-memory keyring
+   fixture 밖에서 실행되어 실제 macOS Keychain 에 `com.grandma3copilot.director`
+   서비스로 항목을 하나 남겼다 — `security delete-generic-password` 로 즉시 삭제하고
+   `security find-generic-password` 재조회로 부재를 확인했다(exit 44). 스크래치
+   스크립트 자체는 `.moai/specs` 밖의 워크트리 루트에 임시로 썼다가 사용 후 삭제해
+   `git status --short` 를 clean 상태로 유지했다.
+
+**부수 발견 — SQLite 스레드 친화성 위험 (RED 시험 범위 밖, 스스로 찾아 고침)**
+
+M1 시험 파일 두 개는 `director_api.py` 의 HTTP 배선 자체를 시험하지 않는다(배차서
+절차가 명시한 RED 대상은 `test_director_auth.py`·`test_director_evidence_trust.py`
+두 개뿐이었다). 그럼에도 "LDSTORE service 를 실제로 호출하는가"를 비공식으로
+검증하려고 FastAPI `TestClient` 로 router 를 직접 왕복시키자 실제 결함이 나왔다:
+
+```
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used
+in that same thread. The object was created in thread id 8496078208 and this
+is thread id 6163034112.
+```
+
+`server/director/store.py`(PRESERVE, 수정 금지)의 `DirectorStore` 는
+`sqlite3.connect()` 를 생성 스레드에 고정한다. 내가 처음 `def`(동기) handler 로
+짠 route 는 FastAPI 가 매 요청을 threadpool 의 임의 스레드로 보내(`run_in_threadpool`)
+이 제약을 깼다. **고침**: 7개 handler 전부를 `async def` 로 바꿨다 — event loop
+스레드에서 직접 실행되므로, `deps`(따라서 `DirectorStore`)를 그 스레드에서 구성하면
+(앱 startup/lifespan) 문제가 사라진다. `httpx.ASGITransport` + `AsyncClient`(스레드
+포털 없이 단일 이벤트 루프에서 실행)로 재확인 — 인증 실패(401)·PUT plan 저장(200,
+`DirectorStore.submit` 실제 호출)·GET plan 조회(200, 저장한 값 그대로 왕복)·
+IDENTITY_MISMATCH(422)·미배선 context provider(503 DEPENDENCY_UNAVAILABLE)·
+POST validations(200, `NotInstalledValidator` stub) 전부 통과, cross-thread 오류
+재발 없음. 이 수정은 이번 M1 delegation 범위 안에서(같은 파일, `def`→`async def`
+전환만) 처리했고, `store.py` 는 손대지 않았다(PRESERVE 준수).
+
+**만든 파일**
+
+```
+server/director/auth.py           인증·ACL·CSRF/Origin 검증 + evidence 신뢰 경계 (413줄)
+server/director/director_api.py   계약 §3 공통 route HTTP 골격, async def (289줄)
+server/tests/test_director_auth.py            REQ-018 시험 23개
+server/tests/test_director_evidence_trust.py  REQ-019 시험 8개
+```
+
+EXTEND: `server/web/app.py` — `WebDeps.director: DirectorApiDeps | None = None` 필드
+추가 + `if deps.director is not None: app.include_router(...)` 조건부 등록 1곳(기존
+`settings`/`provision`/`presets` 관례와 동일 패턴). 다른 곳은 건드리지 않았다.
+
+**Gaps — M1 에서 하지 않은 것**
+
+- **`test_director_api_routes.py` 를 시험 스위트에 커밋하지 않았다.** `director_api.py`
+  의 HTTP 배선은 위 "부수 발견" 절의 **비공식** 스크래치 스크립트(사용 후 삭제)로만
+  왕복 확인했다 — TDD "test-first" 규율상 커밋된 `.py` 구현은 커밋된 실패 시험이
+  선행해야 하므로, 이 router 골격은 배차서가 지정한 RED 두 파일의 보호를 받지
+  않는다는 것을 정직하게 남긴다. plan.md §4 M1 TDD 순서의 예시(대표 마일스톤 예시)는
+  이 파일도 언급하지만, 이번 배차서의 §"절차" 는 명시적으로 두 파일만 지정했다 —
+  둘 사이 불일치를 여기 기록한다. 후속(다음 배차 또는 이번 세션 연장)에서
+  `test_director_api_routes.py` 를 커밋 시험으로 만드는 것을 권고한다.
+- **GET context/knowledge, GET execution, POST feedback-proposals 는 실제 배선이
+  없다.** `context_provider`/`execution_provider`/`feedback_service` seam(Protocol)만
+  있고 구현은 이 SPEC 의 뒤 마일스톤(M2 feedback 저장소, M4 execution journal) 또는
+  범위 밖(콘솔 관측 배선)이다 — 미주입이면 계약 §5 `503 DEPENDENCY_UNAVAILABLE` 을
+  정직하게 답한다.
+- **CSRF token 검사 미구현.** 계약 §5 는 "cookie 사용 APP route 도 CSRF token 도
+  요구한다"고 규정하나, 이 코드베이스 전체에 쿠키 기반 세션 패턴이 없음을
+  실측했다(`grep -rn "set_cookie\|request.cookies" server/` 무매치, 이 파일의 docstring
+  인용 제외). Bearer 인증만 쓰는 현재 경로에는 조건부로 적용되지 않는다 — 쿠키 세션이
+  추가되면 `authenticate()` 에 CSRF 검사를 보강해야 한다.
+- **CredentialRegistry/PairingSecretStore 는 인메모리·keyring 뿐, MCP pairing
+  발급/철회 흐름(사람이 앱에서 최초 pairing 을 승인하는 UI 경로)은 이 SPEC 의
+  범위 밖이다(계약 §5: "최초 pairing은 앱에서 사용자가 승인한다") — M1 은 인증
+  판정 로직만 제공하고, 실제 pairing UX 배선은 다루지 않는다.
+
+**Residual-risk**
+
+- acceptance.md §3 AC-018 본문이 human-only scope 를 "6종"이라 세지만 실제 나열된
+  토큰은 7개(spec.md·contract.md 도 동일 7개) — 문서 불일치를 실측했고, 더 넓은
+  실측 집합(7개)을 시험이 전부 돈다. 이 문서 불일치 자체는 spec.md 소유이므로 이
+  run-phase 에이전트가 고치지 않았다(SPEC 본문 수정 금지 경계) — sync-phase 나
+  독립 plan-audit 재검토 시 참고할 사항으로 남긴다.
+- `authenticate()` 의 Host/Origin 판정 순서(Host → Origin → credential → scope)는
+  내가 설계한 순서다 — AC-018 원문이 세 결과(SCOPE_DENIED/UNAUTHENTICATED/
+  ORIGIN_DENIED)를 매핑하는 것은 확인했지만, 세 검사의 **상대 순서**까지 계약이
+  강제하지는 않는다. 다른 순서를 선호하는 감사 의견이 있으면 조정 여지가 있다.
+- M3(공유 programmer 중재자)가 아직 없으므로, 이 M1 router 골격 자체는 동시 요청
+  직렬화를 하지 않는다 — SQLite 스레드 친화성 수정(async def)은 "같은 스레드"
+  문제만 풀었을 뿐 "동시 쓰기 경쟁"(CAS 가 있으므로 안전하긴 하다, `store.py` 의
+  `REVISION_CONFLICT` 재시도 없는 실패로 처리됨)까지 다루지 않는다 — 이는 원래
+  M3 의 몫이다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
