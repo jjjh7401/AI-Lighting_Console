@@ -24,12 +24,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from server.director.models import SCHEMA_VERSION
+from server.director.validate.conflict import check_conflicts, fx_beat_requests
 from server.director.validate.diagnostics import (
     STATUS_ACCEPTED,
     STATUS_UNSUPPORTED,
     Diagnostic,
 )
-from server.director.validate.timing import check_timing
+from server.director.validate.simulate import check_ready
+from server.director.validate.timing import check_timing, rounding_conflicts
 
 #: 계약 §8 `LD-VAL-001` 의 검사 순서. 바꾸지 않는다 — 순서가 곧 의미다.
 STAGES: tuple[str, ...] = (
@@ -134,21 +136,22 @@ def _stage_time_reference(plan: dict[str, Any], context: dict[str, Any] | None) 
 def _stage_tracking_fx(plan: dict[str, Any], context: dict[str, Any] | None) -> list[Diagnostic]:
     """3단 — tracking/FX (`LD-STATE-001`·`002`, `LD-FX-001`, `LD-CONFLICT-001`).
 
-    축별·fixture별 simulation 은 C3 가 `simulate.py`/`conflict.py` 에 넣는다.
+    두 판정이 여기서 만난다. `check_ready` 는 계획만 보고(누락=hold·baseline·FX 생애·
+    terminal 일치), `check_conflicts` 는 context 의 group membership 으로 fixture 까지
+    전개해서 겹침을 본다. 앞이 막혀도 뒤를 돌린다 — 계약 §6.3 의 action 당 진단 coverage 를
+    지키려면 끊을 수 없고, 사람이 두 종류의 결함을 한 번에 보아야 고칠 수 있다.
+
+    `rounding_conflicts` 를 여기서 부른다. C2 가 그 검사를 만들었지만 `(group, axis, beat)`
+    목록을 넘기는 곳이 없어 경로에 안 이어져 있었다 — 그 목록을 만드는 것이 FX cycle 을
+    박으로 낮추는 이 단계의 일이다.
     """
-    return [
-        Diagnostic(
-            rule_id="LD-STATE-001",
-            pointer=ROOT_POINTER,
-            status=STATUS_ACCEPTED,
-            blocking=False,
-            reason=(
-                "tracking/FX 단계에 도달했습니다. 누락=hold·baseline·terminal 판정과 "
-                "fixture×axis 충돌 검출은 C3 의 simulation 이 이 자리에서 수행합니다."
-            ),
-            stage="tracking_fx",
-        )
-    ]
+    diagnostics = list(check_ready(plan))
+    diagnostics.extend(check_conflicts(plan, context))
+    if context is not None:
+        beat_map = context.get("beat_map")
+        if isinstance(beat_map, dict):
+            diagnostics.extend(rounding_conflicts(beat_map, fx_beat_requests(plan, context)))
+    return diagnostics
 
 
 def _stage_capability_fidelity(
