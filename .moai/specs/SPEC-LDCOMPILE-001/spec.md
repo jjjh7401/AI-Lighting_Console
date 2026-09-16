@@ -2,7 +2,7 @@
 id: SPEC-LDCOMPILE-001
 title: "Director 시맨틱 검증·축별 timing lowering·capability 판정"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-09-14
 updated: 2026-09-16
 author: jaihyun
