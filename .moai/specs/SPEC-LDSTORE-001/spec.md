@@ -2,9 +2,9 @@
 id: SPEC-LDSTORE-001
 title: "Director 교환 스키마·불변 저장·context snapshot·지식 seed"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-09-14
-updated: 2026-09-15
+updated: 2026-09-16
 author: jaihyun
 priority: P1
 phase: "Lighting Director v1.0 target"
