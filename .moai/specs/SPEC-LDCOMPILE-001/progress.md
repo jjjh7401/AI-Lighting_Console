@@ -909,7 +909,7 @@ $ uv run pytest -q
 
 ```yaml
 sync_complete_at: 2026-09-16
-sync_commit_sha: pending-backfill-sync-ldcompile-001
+sync_commit_sha: 03bc14ba24f95bdbf824e08fce9e03767683292e
 sync_status: completed-with-open-followups
 changelog_entry_position: "[Unreleased] → Added, top entry"
 frontmatter_status_transitions:
