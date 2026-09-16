@@ -92,6 +92,40 @@ CANDIDATE_RECIPES: list[tuple[str, list[str]]] = [
     ),
 ]
 
+#: Round 5 — `Set Cue <n> Sequence <seq> Property '<name>' <value>` 형태다.
+#: round 1~4 는 전부 프로그래머 경로(Fixture/Attribute/At + Store)였고 이 형태는
+#: 시도한 적이 없다. `.moai/reports/t215/verdict.md` §3(F1)이 **다른 카드**에서
+#: 이 정확한 문법으로 `PRESET2FADE`(값 4)를 실측·되읽기까지 확인했다
+#: (`Set Cue 1 Sequence 9 Property 'Preset2Fade' 4` → ok → 되읽기 4.0) — 이 카드는
+#: 그 결과를 이 문법을 다시 추측하지 않고 그대로 재사용해 C6 의 SEQ_NO(1999)
+#: 위에서 재현한다. Store 가 필요 없다 — 이미 저장된 Cue 의 CuePart 속성을 직접
+#: 덮어쓰는 통로라 프로그래머를 거치지 않는다(t215 실측). `INDIVFADE`/`INDIVDELAY`
+#: 를 이 Set…Property 형태로 직접 쓰는 것과 `INDIVIDUALTIMING`(문자열 enum,
+#: 기본값 `Default`)에 `'On'` 을 써 보는 것은 **미시도 후보**다 — t215 는
+#: INDIVFADE 를 다른 통로(bare `At <레벨> Fade` + Store)로만 관측했다.
+CANDIDATE_RECIPES_R5: list[tuple[str, list[str]]] = [
+    (
+        "set_property_preset2fade_on_existing_cue",
+        [f"Set Cue {CUE_NO} Sequence {SEQ_NO} Property 'Preset2Fade' 4"],
+    ),
+    (
+        "set_property_preset2delay_on_existing_cue",
+        [f"Set Cue {CUE_NO} Sequence {SEQ_NO} Property 'Preset2Delay' 1.5"],
+    ),
+    (
+        "set_property_indivfade_on_existing_cue",
+        [f"Set Cue {CUE_NO} Sequence {SEQ_NO} Property 'IndivFade' 2"],
+    ),
+    (
+        "set_property_indivdelay_on_existing_cue",
+        [f"Set Cue {CUE_NO} Sequence {SEQ_NO} Property 'IndivDelay' 0.8"],
+    ),
+    (
+        "set_property_individualtiming_on_existing_cue",
+        [f"Set Cue {CUE_NO} Sequence {SEQ_NO} Property 'IndividualTiming' 'On'"],
+    ),
+]
+
 
 def _fire_sequence(gate, label: str, lines: list[str]) -> dict:
     """한 recipe 를 순서대로 쏜다. 각 줄의 clearance+실행 결과를 남긴다."""
@@ -99,14 +133,10 @@ def _fire_sequence(gate, label: str, lines: list[str]) -> dict:
     for line in lines:
         decision = gate.screen([line])
         if not decision.cleared:
-            steps.append(
-                dict(command=line, cleared=False, ok=None, detail=decision.status)
-            )
+            steps.append(dict(command=line, cleared=False, ok=None, detail=decision.status))
             continue
         result = gate._execute_cleared(line)
-        steps.append(
-            dict(command=line, cleared=True, ok=result.ok, detail=result.detail)
-        )
+        steps.append(dict(command=line, cleared=True, ok=result.ok, detail=result.detail))
     return dict(label=label, steps=steps)
 
 
@@ -144,6 +174,10 @@ def main() -> int:
         report["baseline"] = _fire_sequence(gate, "baseline_store_cuefade", BASELINE)
         report["baseline"]["clear"] = _clear(gate)
         for label, lines in CANDIDATE_RECIPES:
+            entry = _fire_sequence(gate, label, lines)
+            entry["clear"] = _clear(gate)
+            report["candidates"].append(entry)
+        for label, lines in CANDIDATE_RECIPES_R5:
             entry = _fire_sequence(gate, label, lines)
             entry["clear"] = _clear(gate)
             report["candidates"].append(entry)

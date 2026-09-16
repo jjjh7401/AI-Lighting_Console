@@ -712,8 +712,13 @@ class TestWiredIntoThePipeline:
         without = PipelineValidator().validate(plan)
         with_context = PipelineValidator(context).validate(plan)
         # 둘 다 blocked 다(capability 때문). 다른 것은 2단 진단의 내용이다.
+        #
+        # 개수 비교가 아니라 내용 비교다 — C6 round 5(pan==tilt Position timing 관측,
+        # `server/director/validate/capability.py::AXIS_TIMING_OBSERVED`) 이후 규범
+        # 예제의 두 position_set(pan==tilt==0) 이 with_context 쪽에서 진단을 하나씩
+        # 덜 받아 우연히 개수가 같아질 수 있다 — 개수가 아니라 내용이 달라야 한다.
         assert without["outcome"] == with_context["outcome"] == "blocked"
-        assert len(with_context["diagnostics"]) != len(without["diagnostics"])
+        assert with_context["diagnostics"] != without["diagnostics"]
 
 
 class TestNoConsoleAndNoArtisticImport:

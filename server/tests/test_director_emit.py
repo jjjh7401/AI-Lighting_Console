@@ -36,19 +36,42 @@ DIGESTS: dict[str, Any] = {
 }
 
 
-def _cue(cue_id: str, at_ms: int, *, fade_s: float | None = None, timing: dict | None = None):
+def _cue(
+    cue_id: str,
+    at_ms: int,
+    *,
+    op: str = "intensity_set",
+    fade_s: float | None = None,
+    timing: dict | None = None,
+    extra_actions: list[dict[str, Any]] | None = None,
+):
     action: dict[str, Any] = {
         "action_id": f"{cue_id}-a0",
-        "op": "intensity_set",
+        "op": op,
         "group_id": "group-front",
         "value_pct": 50,
     }
     if timing is not None:
         action["timing"] = timing
-    cue: dict[str, Any] = {"cue_id": cue_id, "at_ms": at_ms, "actions": [action]}
+    cue: dict[str, Any] = {
+        "cue_id": cue_id,
+        "at_ms": at_ms,
+        "actions": [action, *(extra_actions or [])],
+    }
     if fade_s is not None:
         cue["fade_s"] = fade_s
     return cue
+
+
+def _position_action(
+    action_id: str, *, group_id: str = "group-front", timing: dict
+) -> dict[str, Any]:
+    return {
+        "action_id": action_id,
+        "op": "position_set",
+        "group_id": group_id,
+        "timing": timing,
+    }
 
 
 def _plan(*cues: dict[str, Any], playback: str = "manual_go") -> dict[str, Any]:
@@ -259,6 +282,91 @@ class TestMeasuredFadeSyntaxOnly:
         assert "tilt" in reason
 
 
+class TestPositionAxisTimingIsEmittedWhenUniform:
+    """C6 round 5(2026-09-16) 실기 관측 — `Set Cue <n> Sequence <seq> Property
+    'Preset2Fade'/'Preset2Delay' <값>` (다른 카드 t215 §3 F1 이 확정한 문법, `progress.md`
+    §E.2 Evidence — P1 ④). pan==tilt 일 때만 이 통로로 재현된다 — Position 한 preset
+    type 전체에 걸리는 값 하나뿐이라 pan·tilt 를 다른 값으로 나눠 담을 수 없다.
+    """
+
+    def test_uniform_pan_and_tilt_emits_the_measured_set_commands(self) -> None:
+        timing = {
+            "pan": {"delay_ms": 500, "fade_ms": 2000},
+            "tilt": {"delay_ms": 500, "fade_ms": 2000},
+        }
+        _, artifacts = emit_compiled(
+            _plan(_cue("c0", 0, op="position_set", timing=timing)), target=TARGET, **DIGESTS
+        )
+        payload = next(iter(artifacts.values())).decode("utf-8")
+        assert "Set Cue 1 Sequence seq-9001 Property 'Preset2Fade' 2" in payload
+        assert "Set Cue 1 Sequence seq-9001 Property 'Preset2Delay' 0.5" in payload
+
+    def test_zero_timing_still_emits_the_snap_representable_zero(self) -> None:
+        """`0` 도 왕복된다(t215 F1 `Preset5Fade 0` — 스냅 표현 가능). 생략하지 않는다."""
+        timing = {"pan": {"delay_ms": 0, "fade_ms": 0}, "tilt": {"delay_ms": 0, "fade_ms": 0}}
+        _, artifacts = emit_compiled(
+            _plan(_cue("c0", 0, op="position_set", timing=timing)), target=TARGET, **DIGESTS
+        )
+        payload = next(iter(artifacts.values())).decode("utf-8")
+        assert "Property 'Preset2Fade' 0" in payload
+        assert "Property 'Preset2Delay' 0" in payload
+
+    def test_mismatched_pan_and_tilt_still_raises_with_the_specific_reason(self) -> None:
+        timing = {
+            "pan": {"delay_ms": 0, "fade_ms": 1200},
+            "tilt": {"delay_ms": 200, "fade_ms": 1400},
+        }
+        with pytest.raises(AxisTimingUnsupportedError) as caught:
+            emit_compiled(
+                _plan(_cue("c0", 0, op="position_set", timing=timing)), target=TARGET, **DIGESTS
+            )
+        reason = str(caught.value)
+        assert "관측 0건" not in reason, "pan·tilt 는 이제 관측됐다 — 옛 사유가 남았다"
+        assert "Preset2Fade" in reason or "Preset2Delay" in reason
+
+    def test_a_single_axis_alone_still_raises(self) -> None:
+        """pan 하나만 선언한 요청은 여전히 미관측이다 — tilt 없이 재현할 통로가 없다."""
+        with pytest.raises(AxisTimingUnsupportedError):
+            emit_compiled(
+                _plan(_cue("c0", 0, op="position_set", timing={"pan": {"fade_ms": 2000}})),
+                target=TARGET,
+                **DIGESTS,
+            )
+
+    def test_two_actions_in_one_cue_agreeing_emit_the_commands_once(self) -> None:
+        """같은 cue 안에 group 이 다른 position_set 이 둘이어도, timing 이 같으면 재현된다
+        — `Preset2Fade`/`Preset2Delay` 는 CuePart 전체에 걸리는 값 하나뿐이라 같은 값을
+        요구할 때만 여러 group 이 공존할 수 있다."""
+        timing = {"pan": {"fade_ms": 2000, "delay_ms": 0}, "tilt": {"fade_ms": 2000, "delay_ms": 0}}
+        cue = _cue(
+            "c0",
+            0,
+            op="position_set",
+            timing=timing,
+            extra_actions=[_position_action("c0-a1", group_id="group-back", timing=timing)],
+        )
+        _, artifacts = emit_compiled(_plan(cue), target=TARGET, **DIGESTS)
+        payload = next(iter(artifacts.values())).decode("utf-8")
+        assert payload.count("Preset2Fade") == 1, "같은 값인데 명령이 중복됐다"
+
+    def test_two_actions_in_one_cue_disagreeing_raises_the_collision_reason(self) -> None:
+        """같은 cue 안의 group 둘이 **다른** position timing 을 요구하면 재현할 수 없다 —
+        CuePart 의 `Preset2Fade`/`Preset2Delay` 는 값 하나뿐이라 group 별로 나눠 담지
+        못한다(하나를 골라 나머지를 버리는 것은 금지된 대체다)."""
+        first = {"pan": {"fade_ms": 2000, "delay_ms": 0}, "tilt": {"fade_ms": 2000, "delay_ms": 0}}
+        second = {"pan": {"fade_ms": 500, "delay_ms": 0}, "tilt": {"fade_ms": 500, "delay_ms": 0}}
+        cue = _cue(
+            "c0",
+            0,
+            op="position_set",
+            timing=first,
+            extra_actions=[_position_action("c0-a1", group_id="group-back", timing=second)],
+        )
+        with pytest.raises(AxisTimingUnsupportedError) as caught:
+            emit_compiled(_plan(cue), target=TARGET, **DIGESTS)
+        assert "다른" in str(caught.value)
+
+
 class TestNoDivergentCopyOfTheSyntax:
     def test_emit_module_does_not_import_the_design_helper(self) -> None:
         """생산 모듈은 `server.design.cue_fade` 를 들여오지 않는다 (`plan.md §3`)."""
@@ -280,3 +388,11 @@ class TestNoDivergentCopyOfTheSyntax:
         store = "Store Sequence 9001 Cue 1 'c0'"
         for fade in (None, 0, 0.2, 2.0, 12.0):
             assert store_with_measured_fade(store, fade) == store_with_fade(store, fade)
+
+    def test_the_axis_timing_observed_constant_mirrors_capability(self) -> None:
+        """이 파일의 `AXIS_TIMING_OBSERVED` 거울이 `validate/capability.py` 원본과
+        갈라지지 않는지 대조한다 — import 하지 않는 대신 이 시험이 갈라짐을 잡는다."""
+        from server.director.emit import AXIS_TIMING_OBSERVED as emit_observed
+        from server.director.validate.capability import AXIS_TIMING_OBSERVED as capability_observed
+
+        assert emit_observed == capability_observed

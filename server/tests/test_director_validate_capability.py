@@ -92,13 +92,22 @@ class TestOpTableCoversTheSchema:
         assert len(OPS) == 7
 
     def test_every_op_receives_a_blocking_diagnostic(self):
-        """7개 op 각각이 판정을 받는다 — 침묵으로 통과하는 op 이 없다."""
+        """7개 op 각각이 판정을 받는다 — 침묵으로 통과하는 op 이 없다.
+
+        `position_set` 은 **pan≠tilt** 로 만든다(`position()` 기본값은 pan==tilt 라 C6
+        round 5 이후 관측된 통로로 재현되어 조용히 통과한다 — 이 시험의 취지와 맞지 않다).
+        pan≠tilt 는 `Preset2Fade`/`Preset2Delay` 하나로 나눠 담을 수 없어 여전히 막힌다.
+        """
         from server.director.validate.capability import OPS, check_capability
 
+        mismatched_position = position(GROUPS[0])
+        mismatched_position["timing"]["tilt"] = dict(
+            mismatched_position["timing"]["tilt"], fade_ms=500
+        )
         actions = {
             "intensity_set": intensity(GROUPS[0], 50),
             "color_set": color(GROUPS[0]),
-            "position_set": position(GROUPS[0]),
+            "position_set": mismatched_position,
             "beam_set": beam(GROUPS[0]),
             "fx_start": fx_start(GROUPS[0], "pulse-a"),
             "fx_stop": fx_stop(GROUPS[0], "pulse-a"),
@@ -330,31 +339,45 @@ class TestReasonsDistinguishCauses:
 
 
 class TestUnmeasuredEmitterIsTheStandingReason:
-    def test_nothing_is_observed_yet(self):
-        """`AXIS_TIMING_OBSERVED` 가 비어 있다 — C6 전에는 관측이 0건이다.
-
-        이 상수가 채워지는 순간이 승격이며, 그때 근거는 실기 관측이어야 한다.
+    def test_pan_and_tilt_are_the_only_observed_axes(self):
+        """`AXIS_TIMING_OBSERVED` 가 `pan`·`tilt` 만 담는다 — C6 round 5(2026-09-16)의
+        실기 관측(`Set Cue <n> Sequence <seq> Property 'Preset2Fade'/'Preset2Delay'
+        <값>`, 다른 카드 t215 의 문법 재사용, `progress.md` §E.2 Evidence — P1 ④)이
+        승격의 근거다. `intensity`·`color`·`beam`·`fx` 는 여전히 관측 0건이다.
         """
         from server.director.validate.capability import AXIS_TIMING_OBSERVED
 
-        assert AXIS_TIMING_OBSERVED == ()
+        assert AXIS_TIMING_OBSERVED == ("pan", "tilt")
 
-    def test_every_action_in_the_contract_example_is_blocked(self, plan, context):
-        """규범 예제는 capability 를 전부 지원한다고 광고하지만 그래도 막힌다.
+    def test_every_action_in_the_contract_example_is_blocked_except_the_reproducible_pair(
+        self, plan, context
+    ):
+        """규범 예제는 capability 를 전부 지원한다고 광고하지만 그래도 막힌다 —
+
+        **단, action-003·action-007 은 예외다.** 둘 다 `position_set` 이며 pan==tilt
+        (둘 다 delay=0/fade=0)이라 `Preset2Fade`/`Preset2Delay` 로 충실히 재현된다(C6
+        round 5, 위 참조). 그 뒤의 모든 `position_set`(action-017 이하)은 pan≠tilt 라
+        (예: pan.delay_ms=0 vs tilt.delay_ms=200) 여전히 막힌다 — Position 이 preset
+        type 하나뿐이라 다른 값을 나눠 담을 수 없기 때문이다.
 
         `LD-CAP-001` 이 광고의 근거를 *"실제 compiler+rig+target 출력"* 으로 못박았으므로,
-        context 의 자기 신고를 근거로 쓰지 않는다. 이것이 이 마일스톤의 요점이다.
+        context 의 자기 신고를 근거로 쓰지 않는다 — 이 예외 둘도 신고가 아니라 실기
+        관측이 근거다.
         """
         from server.director.validate.capability import check_capability
 
         found = check_capability(plan, context)
         pointers = {d.pointer for d in found if d.blocking}
+        reproducible = {"/cues/0/actions/2", "/cues/0/actions/6"}
         expected = {
             f"/cues/{i}/actions/{j}"
             for i, c in enumerate(plan["cues"])
             for j in range(len(c["actions"]))
-        }
+        } - reproducible
         assert expected <= pointers, "action 중 판정을 못 받은 것이 있다"
+        assert reproducible.isdisjoint(pointers), (
+            "관측되고 재현 가능한 action(pan==tilt==0)까지 여전히 막혔다 — 승격이 반영되지 않았다"
+        )
 
     def test_reason_separates_missing_implementation_from_a_bad_plan(self, context):
         """사람이 「내 계획이 틀렸나」와 「아직 안 만들어졌나」를 구분할 수 있어야 한다."""
@@ -374,6 +397,48 @@ class TestUnmeasuredEmitterIsTheStandingReason:
             check_capability(one_action_plan(intensity(GROUPS[0], 50, fade=2000)), context)
         )
         assert "해상도" in _reasons(found)
+
+
+# --------------------------------------------------------------------------- #
+# 제한적 승격 — pan==tilt 일 때만 Position timing 이 관측된 것으로 본다
+# --------------------------------------------------------------------------- #
+
+
+class TestPositionTimingPromotionIsRestrictedToUniformValues:
+    def test_uniform_pan_and_tilt_timing_is_no_longer_flagged_unobserved(self, context):
+        """pan·tilt 가 같은 값이면 축별 timing 진단이 사라진다 — `Preset2Fade`/
+        `Preset2Delay` 하나로 충실히 재현되기 때문이다(C6 round 5 실기 관측)."""
+        from server.director.validate.capability import check_capability
+
+        uniform = position(GROUPS[0], "pos-center", delay=500, fade=2000)
+        found = _blocking(check_capability(one_action_plan(uniform), context))
+        assert not found, f"pan==tilt 인데도 여전히 막혔다: {_reasons(found)}"
+
+    def test_mismatched_pan_and_tilt_is_still_refused_with_a_distinct_reason(self, context):
+        """pan≠tilt 는 여전히 막히지만, 「관측 0건」이 아니라 「값이 갈리면 못 나눈다」가
+        사유여야 한다 — pan·tilt 자체는 이제 관측됐으므로 옛 사유는 더 이상 정확하지
+        않다(사유가 원인별로 갈려야 한다는 이 파일의 원칙, `TestReasonsDistinguishCauses`
+        와 같은 취지)."""
+        from server.director.validate.capability import check_capability
+
+        mismatched = position(GROUPS[0], "pos-center", delay=0, fade=2000)
+        mismatched["timing"]["tilt"] = dict(mismatched["timing"]["tilt"], fade_ms=1200)
+        found = _blocking(check_capability(one_action_plan(mismatched), context))
+        text = _reasons(found)
+        assert found, "pan≠tilt 인데 통과했다"
+        assert "관측 0건" not in text, "pan·tilt 는 이제 관측됐다 — 옛 사유가 그대로 남았다"
+        assert "Preset2Fade" in text or "Preset2Delay" in text
+
+    def test_a_single_axis_alone_is_still_unobserved(self, context):
+        """pan 만 선언하고 tilt 를 아예 안 든 요청은 여전히 미관측이다 — Position 은
+        preset type 하나뿐이라 pan 하나만 따로 재현할 통로가 없다."""
+        from server.director.validate.capability import check_capability
+
+        partial = position(GROUPS[0], "pos-center", delay=0, fade=2000)
+        del partial["timing"]["tilt"]
+        found = _blocking(check_capability(one_action_plan(partial), context))
+        assert found, "pan 하나만 선언했는데도 통과했다"
+        assert "pan" in _reasons(found)
 
 
 # --------------------------------------------------------------------------- #
