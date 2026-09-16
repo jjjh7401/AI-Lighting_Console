@@ -587,3 +587,99 @@ C1~C5 로 **6단 전부가 실물 판정기**가 되었다 — 1단만 계획 �
 - **이 브랜치는 push 되지 않아 CI 판정을 받지 않았다.** 위 증거는 전부 이 워크트리의 로컬
   출력이며, 「내 트리에서 초록」은 「머지 후 초록」이 아니다. 기준 HEAD 가 `origin/main` 과
   같으므로 차이가 생길 여지는 작지만, 그것은 재지 않은 추론이다.
+
+### C6 emitter + 프로브 진행 중 (REQ-LDPLUGIN-013) — 미완료, 승격 없음
+
+워크트리 `.claude/worktrees/ldcompile-c6` · 브랜치 `WT-emitter-probe` · 기준 HEAD
+`b3819fbf` (= C5 머지 직후의 `origin/main`) · 구현 커밋 `3c74f3cf`.
+
+**Claim**: `server/director/emit.py` — 계약 §145 형태의 manifest + frozen artifact
+bytes 를 낸다. 실측된 `CueFade` 만 emit 하고 축별 timing 요청은 거부한다. 콘솔 프로브로
+축별 timing 문법 **후보**를 찾았으나, **승격은 하지 않았다** — `AXIS_TIMING_OBSERVED` ·
+`RANDOM_ACCESS_OBSERVED` 는 여전히 빈 tuple 이다. **C6 은 미완료**: P1(쓰기·되읽기)과
+P2(무대 관측)가 남아 있다.
+
+#### Evidence — 기준선 (이 트리에서 직접 실측)
+
+```
+$ uv run pytest -q
+13316 passed, 35 skipped, 1 warning in 219.64s (0:03:39)
+```
+
+경계 검사 4건 (plan.md §5): OSC import 0 · 예술 producer import 0 · `server.design` 리터럴
+import 0 · PRESERVE 무변경.
+
+#### Evidence — emit.py GREEN + 회귀
+
+```
+$ uv run pytest server/tests/test_director_emit.py -q
+23 passed in 0.05s
+
+$ uv run pytest -q
+13339 passed, 35 skipped, 1 warning in 181.21s (0:03:01)   # 13316 + 23, 정확히 일치
+```
+
+뮤테이션 2건으로 시험 비공허성 확인: `cue_number = index + 1` → `+ 2` 로 밀면 3 failed;
+축별 거부(`if axes:`)를 `if False:` 로 죽이면 5 failed. 원본 복구 후 재확인.
+
+**설계 결정 3건**: (1) digest 는 인자로 받고 `artifact_sha256` 만 자기가 만든 bytes 를
+해시 — `compiled_digest` 는 만들지 않는다(JCS 정규화를 stdlib 로 근사하면 깨진다는 이
+저장소의 실측 때문). (2) 축별 timing 요청은 조용히 clamp·drop·대체하지 않고 거부
+(`AC-LDPLUGIN-008`). (3) `server.design.cue_fade` 를 import 하지 않는다(`plan.md §3`
+읽기 전용) — 대신 문면 대조 시험이 두 벌 갈라짐을 잡는다.
+
+**서브에이전트 배차 실패 (두 번째 실측)**: `manager-develop` 에 이 구현을 배차했으나
+`Prompt is too long` 으로 첫 파일도 읽기 전에 종료됐다(자동 압축도 빈 응답으로 실패).
+`plan.md §7` 이 이미 적어 둔 컨텍스트 초과(≈114K 토큰)가 이번엔 구현 배차에서도
+재현됐다 — 직접 구현으로 전환했다.
+
+#### Evidence — P0 ① 콘솔 도달 (읽기 전용, 여러 차례 재측정)
+
+세션 중 콘솔 통로가 여러 번 끊기고 복구됐다. 최종 정상 상태: onPC OSC 1행 수신(8000,
+prefix `copilot`) · 2행 송신(`127.0.0.1:9005`, `Send=Yes`) — 응답기 `osc_slot = 2` 와
+일치. `curl http://127.0.0.1:8765/healthz` → `{"health":"online"}`, `GET /api/presets`
+→ 14개 실기 프리셋 풀.
+
+**부수 소득 — `SendOSC N` 의 의미(실측)**: `SendOSC 3` → `OK`(행 3 존재+Send=Yes),
+`SendOSC 4` → `Illegal object`(행 없음), `SendOSC 2` → `Illegal property`(행은 있으나
+Send=No). `N` 은 **행 번호 그대로**이며 Send 행만 세는 번호가 아니다. MA3 는 「행 없음」과
+「보낼 수 없음」을 다른 오류 문구로 구분한다.
+
+#### Evidence — P0 ② 축별 timing 문법 조회 (읽기 전용, `introspect_probe`)
+
+```
+$ uv run python -m server.tools.introspect_probe --path "DataPool/Sequences/13/1/1" \
+    --all-pages --listen-port 9005
+```
+
+CuePart 레벨에서 발견: `PRESET1FADE`·`PRESET1DELAY` … `PRESET16FADE`·`PRESET16DELAY` ·
+`INDIVIDUALTIMING`·`INDIVFADE`·`INDIVDELAY` · `CUEINFADE`·`CUEOUTFADE` 등. 값 읽기 —
+`PRESET1FADE`/`PRESET2FADE`/`PRESET4FADE`/`PRESET5FADE` 전부 `ok:true, v:"CueTiming"`
+(상속=재정의 통로). Sequence·Cue 레벨(63·23개 필드)에는 없었다 — **저장소 코드 판독**
+(`PanFade`·`IndividualFade` 등 0건, `cde2744`)과 **콘솔 판독**은 범위가 달랐을 뿐 모순이
+아니다: 콘솔은 같은 능력을 다른 이름(`PRESET<n>FADE`)으로 갖고 있었다.
+
+전체 원자료: `.moai/state/verify/c6/p0-introspect-record.md`,
+`introspect-{seq13,cue,cuepart}.json`.
+
+#### Gaps — C6 에서 아직 하지 않은 것
+
+- **보존 여부 미관측.** 속성이 읽힌다는 것은 존재의 증거이고 보존의 증거가 아니다.
+  `AXIS_TIMING_OBSERVED`/`RANDOM_ACCESS_OBSERVED` 는 **의도적으로 빈 tuple 그대로** 둔다.
+- **pan ≠ tilt 독립성 미확립.** Position 이 preset type 하나(`PRESET2*`)라 pan·tilt 를
+  가를 수 없다. `AC-LDPLUGIN-012` 의 "pan/tilt 다른 종료"가 이 통로로 되는지 미측정.
+- **`MIB*` 필드가 이 객체에서 `property not readable`.** dark move 통로가 CuePart 가
+  아닌 다른 자리일 수 있다 — 미조사.
+- **P1(쓰기·되읽기)·P2(무대 관측) 미실행.** 스크래치 시퀀스 번호 미조회, 감독 승인 필요.
+- **한 시퀀스의 한 큐의 한 Part 만 봤다.** 전수 아님.
+- **독립 감사 없음** (C2~C5 와 동일).
+- **이 브랜치는 push 되지 않아 CI 판정을 받지 않았다.**
+
+#### Residual-risk
+
+- `CueTiming` 문자열의 의미(상속)는 이름에서 온 해석이다 — 값을 써서 되읽어야 확정.
+- 승격은 `compiler version/build` + `rig fingerprint` 에 고정해야 한다(`plan.md §3`).
+  이번 조회는 이 rig·이 show 전용이며 다른 rig 로 옮길 수 없다.
+- 세션 중 OSC 슬롯 추가(제가 권한 것)가 돌아가던 앱의 회신 통로를 깨뜨렸다 — 원인
+  진단을 세 번 틀린 뒤(3행 Receive Command·바인드 순서·포트 점유) 콘솔 히스토리의
+  `Illegal property:SendOSC 2` 로 확정됐다. 「쇼 데이터를 안 건드린다」≠「부작용 없다」.
