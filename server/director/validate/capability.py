@@ -65,7 +65,7 @@ _OP_TIMING_AXES: dict[str, tuple[str, ...]] = {
 #: `preset_ref` 를 드는 op.
 _PRESET_OPS = frozenset({"color_set", "position_set", "beam_set", "fx_start"})
 
-#: **관측된** 축별 timing 통로. 지금은 비어 있다.
+#: **관측된** 축별 timing 통로.
 #:
 #: `spec.md` §6.1 실측(2026-09-14, `cde2744`): `PanFade`·`TiltFade`·`ColorFade`·`BeamFade`
 #: 각 0건, `IndividualFade`·`AttributeFade`·`IndividualTime` 각 0건, `.py` 의 `delay_ms` 0건.
@@ -74,7 +74,21 @@ _PRESET_OPS = frozenset({"color_set", "position_set", "beam_set", "fx_start"})
 #: [HARD] 이 상수를 채우는 것이 곧 승격이며, 근거는 **실기 관측**이어야 한다
 #: (`acceptance.md` AC-LDPLUGIN-013 *"콘솔 PASS 조건(승격의 유일한 근거)"*). 코드 판독이나
 #: context 의 자기 신고로 채우지 않는다.
-AXIS_TIMING_OBSERVED: tuple[str, ...] = ()
+#:
+#: C6 round 5(2026-09-16) 실기 관측: `Set Cue <n> Sequence <seq> Property 'Preset2Fade'/
+#: 'Preset2Delay' <값>` — 다른 카드 t215(`.moai/reports/t215/verdict.md` §3 F1)가 확정한
+#: 문법을 다시 추측하지 않고 재사용해, 되읽기로 값이 실제로 바뀌는 것까지 확인했다
+#: (`progress.md` §E.2 Evidence — P1 ④). `intensity`·`color`·`beam`·`fx` 는 여전히
+#: 관측 0건이라 이 튜플에 없다.
+#:
+#: [HARD] **`pan`·`tilt` 는 조건부 관측이다 — 무조건이 아니다.** `Preset2Fade`/
+#: `Preset2Delay` 는 Position **한 preset type 전체**에 걸리는 값 하나뿐이라 pan·tilt 를
+#: 다른 시간으로 나눠 담을 통로가 없다(pan ≠ tilt 독립성은 여전히 미확립,
+#: `progress.md` §E.3 Gap). 그래서 이 튜플에 있다는 사실만으로 축별 timing 이 통과하지
+#: 않는다 — `_axis_timing_is_reproducible` 이 **pan·tilt 값이 같을 때만** 관측된 것으로
+#: 본다. 이 제약을 지우고 이 튜플 멤버십만으로 판단하면, pan·tilt 에 다른 값을 요구한
+#: 요청까지 통과시키는 관측 없는 승격이 된다.
+AXIS_TIMING_OBSERVED: tuple[str, ...] = ("pan", "tilt")
 
 _UNMEASURED_REASON = (
     "축별 delay/fade 를 보존하는 emitter 가 실측되지 않았습니다(관측 0건). LD-CAP-001 은 "
@@ -83,6 +97,43 @@ _UNMEASURED_REASON = (
     "실측되지 않아 요청 값을 정확히 재현할 수 있는지 증명할 수 없습니다 — 자동으로 "
     "quantize·clamp·대체하지 않습니다. 계획의 결함이 아닙니다."
 )
+
+_POSITION_MISMATCH_REASON = (
+    "pan·tilt 에 다른 timing 값을 요청했습니다. 실기로 관측된 유일한 Position timing "
+    "통로(Preset2Fade/Preset2Delay, 2026-09-16 관측)는 Position preset type 전체에 걸리는 "
+    "값 하나뿐이라 pan·tilt 를 다른 시간으로 나눌 수 없습니다. 하나의 값으로 합치거나 "
+    "clamp 하지 않습니다 — 다른 값을 그대로 재현할 수 있는 통로가 실측되기 전까지는 "
+    "unsupported 로 답합니다."
+)
+
+
+def _position_pan_tilt_mismatch(op: str, axes: list[str], timing: dict[str, Any]) -> bool:
+    """`position_set` 이 pan·tilt 를 정확히 둘 다 선언했고 값이 다른가.
+
+    둘 다 선언했을 때만 판단한다 — 하나만 선언한 경우(예: pan 만)는 이 함수가 아니라
+    `AXIS_TIMING_OBSERVED` 멤버십만으로 이미 걸린다(둘 다 있어야 재현 가능하므로).
+    """
+    return (
+        op == "position_set" and axes == ["pan", "tilt"] and timing.get("pan") != timing.get("tilt")
+    )
+
+
+def _axis_timing_is_reproducible(op: str, axes: list[str], timing: dict[str, Any]) -> bool:
+    """요청한 축별 timing 을 관측된 통로로 충실히 재현할 수 있는가.
+
+    `pan`·`tilt` 를 조금이라도 든 요청은 **전부** 이 조건을 거친다 — `position_set` 이고
+    pan·tilt 둘 다 선언했고 값이 같을 때만 참이다. `pan` 하나만 선언한 요청을 일반
+    멤버십 검사로 흘리면(`{"pan"} <= {"pan","tilt"}` 는 참이다) tilt 없이도 통과해
+    버린다 — Position 은 한 preset type 뿐이라 pan 하나만 따로 재현할 통로가 없다.
+    """
+    if "pan" in axes or "tilt" in axes:
+        return (
+            op == "position_set"
+            and axes == ["pan", "tilt"]
+            and set(axes) <= set(AXIS_TIMING_OBSERVED)
+            and timing.get("pan") == timing.get("tilt")
+        )
+    return set(axes) <= set(AXIS_TIMING_OBSERVED)
 
 
 def _refuse(pointer: str, reason: str, *, status: str = STATUS_UNSUPPORTED) -> Diagnostic:
@@ -321,15 +372,22 @@ def check_capability(plan: dict[str, Any], context: dict[str, Any] | None) -> li
         diagnostics.extend(_check_intensity_policy(ref, safety))
         diagnostics.extend(_check_declared_flags(ref, capability))
 
-        # 상시 사유 — 위의 어떤 것도 걸리지 않아도 관측이 0건이므로 여전히 unsupported 다.
-        # 이 줄이 곧 「관측 없는 승격이 일어나지 않는다」는 집행이며, `AXIS_TIMING_OBSERVED`
-        # 가 채워질 때(C6) 여기서 축별로 갈라진다.
-        unobserved = [axis for axis in _requested_axes(ref) if axis not in AXIS_TIMING_OBSERVED]
-        if unobserved:
+        # 상시 사유 — 재현 가능하지 않으면 여전히 unsupported 다. 이 줄이 곧 「관측 없는
+        # 승격이 일어나지 않는다」는 집행이며, `_axis_timing_is_reproducible` 이
+        # `AXIS_TIMING_OBSERVED`(C6) 와 pan==tilt 제약을 함께 집행한다.
+        requested = _requested_axes(ref)
+        timing = ref.action.get("timing")
+        timing = timing if isinstance(timing, dict) else {}
+        if requested and not _axis_timing_is_reproducible(ref.op, requested, timing):
+            reason = (
+                _POSITION_MISMATCH_REASON
+                if _position_pan_tilt_mismatch(ref.op, requested, timing)
+                else _UNMEASURED_REASON
+            )
             diagnostics.append(
                 _refuse(
                     ref.pointer,
-                    f"{ref.op} 의 축 {', '.join(unobserved)} — {_UNMEASURED_REASON}",
+                    f"{ref.op} 의 축 {', '.join(requested)} — {reason}",
                 )
             )
 

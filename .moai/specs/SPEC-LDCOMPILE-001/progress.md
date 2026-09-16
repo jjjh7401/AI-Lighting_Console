@@ -587,3 +587,320 @@ C1~C5 로 **6단 전부가 실물 판정기**가 되었다 — 1단만 계획 �
 - **이 브랜치는 push 되지 않아 CI 판정을 받지 않았다.** 위 증거는 전부 이 워크트리의 로컬
   출력이며, 「내 트리에서 초록」은 「머지 후 초록」이 아니다. 기준 HEAD 가 `origin/main` 과
   같으므로 차이가 생길 여지는 작지만, 그것은 재지 않은 추론이다.
+
+### C6 emitter + 프로브 진행 중 (REQ-LDPLUGIN-013) — 미완료, 승격 없음
+
+워크트리 `.claude/worktrees/ldcompile-c6` · 브랜치 `WT-emitter-probe` · 기준 HEAD
+`b3819fbf` (= C5 머지 직후의 `origin/main`) · 구현 커밋 `3c74f3cf`.
+
+**Claim**: `server/director/emit.py` — 계약 §145 형태의 manifest + frozen artifact
+bytes 를 낸다. 실측된 `CueFade` 만 emit 하고 축별 timing 요청은 거부한다. 콘솔 프로브로
+축별 timing 문법 **후보**를 찾았으나, **승격은 하지 않았다** — `AXIS_TIMING_OBSERVED` ·
+`RANDOM_ACCESS_OBSERVED` 는 여전히 빈 tuple 이다. **C6 은 미완료**: P1(쓰기·되읽기)과
+P2(무대 관측)가 남아 있다.
+
+#### Evidence — 기준선 (이 트리에서 직접 실측)
+
+```
+$ uv run pytest -q
+13316 passed, 35 skipped, 1 warning in 219.64s (0:03:39)
+```
+
+경계 검사 4건 (plan.md §5): OSC import 0 · 예술 producer import 0 · `server.design` 리터럴
+import 0 · PRESERVE 무변경.
+
+#### Evidence — emit.py GREEN + 회귀
+
+```
+$ uv run pytest server/tests/test_director_emit.py -q
+23 passed in 0.05s
+
+$ uv run pytest -q
+13339 passed, 35 skipped, 1 warning in 181.21s (0:03:01)   # 13316 + 23, 정확히 일치
+```
+
+뮤테이션 2건으로 시험 비공허성 확인: `cue_number = index + 1` → `+ 2` 로 밀면 3 failed;
+축별 거부(`if axes:`)를 `if False:` 로 죽이면 5 failed. 원본 복구 후 재확인.
+
+**설계 결정 3건**: (1) digest 는 인자로 받고 `artifact_sha256` 만 자기가 만든 bytes 를
+해시 — `compiled_digest` 는 만들지 않는다(JCS 정규화를 stdlib 로 근사하면 깨진다는 이
+저장소의 실측 때문). (2) 축별 timing 요청은 조용히 clamp·drop·대체하지 않고 거부
+(`AC-LDPLUGIN-008`). (3) `server.design.cue_fade` 를 import 하지 않는다(`plan.md §3`
+읽기 전용) — 대신 문면 대조 시험이 두 벌 갈라짐을 잡는다.
+
+**서브에이전트 배차 실패 (두 번째 실측)**: `manager-develop` 에 이 구현을 배차했으나
+`Prompt is too long` 으로 첫 파일도 읽기 전에 종료됐다(자동 압축도 빈 응답으로 실패).
+`plan.md §7` 이 이미 적어 둔 컨텍스트 초과(≈114K 토큰)가 이번엔 구현 배차에서도
+재현됐다 — 직접 구현으로 전환했다.
+
+#### Evidence — P0 ① 콘솔 도달 (읽기 전용, 여러 차례 재측정)
+
+세션 중 콘솔 통로가 여러 번 끊기고 복구됐다. 최종 정상 상태: onPC OSC 1행 수신(8000,
+prefix `copilot`) · 2행 송신(`127.0.0.1:9005`, `Send=Yes`) — 응답기 `osc_slot = 2` 와
+일치. `curl http://127.0.0.1:8765/healthz` → `{"health":"online"}`, `GET /api/presets`
+→ 14개 실기 프리셋 풀.
+
+**부수 소득 — `SendOSC N` 의 의미(실측)**: `SendOSC 3` → `OK`(행 3 존재+Send=Yes),
+`SendOSC 4` → `Illegal object`(행 없음), `SendOSC 2` → `Illegal property`(행은 있으나
+Send=No). `N` 은 **행 번호 그대로**이며 Send 행만 세는 번호가 아니다. MA3 는 「행 없음」과
+「보낼 수 없음」을 다른 오류 문구로 구분한다.
+
+#### Evidence — P0 ② 축별 timing 문법 조회 (읽기 전용, `introspect_probe`)
+
+```
+$ uv run python -m server.tools.introspect_probe --path "DataPool/Sequences/13/1/1" \
+    --all-pages --listen-port 9005
+```
+
+CuePart 레벨에서 발견: `PRESET1FADE`·`PRESET1DELAY` … `PRESET16FADE`·`PRESET16DELAY` ·
+`INDIVIDUALTIMING`·`INDIVFADE`·`INDIVDELAY` · `CUEINFADE`·`CUEOUTFADE` 등. 값 읽기 —
+`PRESET1FADE`/`PRESET2FADE`/`PRESET4FADE`/`PRESET5FADE` 전부 `ok:true, v:"CueTiming"`
+(상속=재정의 통로). Sequence·Cue 레벨(63·23개 필드)에는 없었다 — **저장소 코드 판독**
+(`PanFade`·`IndividualFade` 등 0건, `cde2744`)과 **콘솔 판독**은 범위가 달랐을 뿐 모순이
+아니다: 콘솔은 같은 능력을 다른 이름(`PRESET<n>FADE`)으로 갖고 있었다.
+
+전체 원자료: `.moai/state/verify/c6/p0-introspect-record.md`,
+`introspect-{seq13,cue,cuepart}.json`.
+
+#### Evidence — P1 ① 쓰기 시도 (실측, 감독 승인 후)
+
+감독 승인(빈 시퀀스 1999 새로 생성 → 후보 3종 시도)을 받고 `server/tools/ldcompile_c6_p1_axis_timing_probe.py`
+를 새로 만들어 돌렸다(`--approve` 없으면 아무것도 안 쏘는 t60 계열 형태 승계). 매 실행 전후로
+`server.web`(주 체크아웃, PID 는 실행마다 다름)을 정확히 같은 방식으로 잠깐 멈추고 재기동했다
+— `introspect_probe` 가 자기 OSC 리슨 포트(9005)를 독점으로 열어야 해서 이미 뜬 서버와
+공존 못 한다.
+
+**대조군 — `Store Sequence 1999 Cue 1 'LDCOMPILE-C6 SCRATCH DELETABLE' CueFade 1`**: 1차 실행
+`ok:true`(시퀀스·큐 생성 성공). 2차 실행(같은 명령 재실행) `"User Canceled Command"` —
+이미 존재하는 큐를 다시 Store 하면 콘솔이 확인 팝업을 띄우고, 사람이 없어 자동 취소된 것으로
+보인다(재현 검증 안 함, 가설).
+
+**후보 3종 전부 관측 실패** — `AXIS_TIMING_OBSERVED` 는 채우지 않는다:
+- `Fixture 'MOVER-ALL'` → `"Illegal object"`. `Fixture` 동사가 그룹 이름을 안 받는다(그룹은
+  `Group` 동사일 가능성 — 미검증). 이중인용(`"..."`) 은 이 브릿지 자체가 거부한다
+  (`server/bridge/protocol.py:126-130` — 플러그인 인자로 감쌀 때 조기 종료되기 때문. 단일인용
+  으로 고쳐 재실행함).
+- `Attribute 'Position'` → `"Illegal object"`.
+- `PRESET2FADE 3 Enter` / `PRESET2DELAY 1 Enter` (bare 명령 동사로) → `"Illegal object"` 둘 다.
+  P0 에서 읽힌 이 이름들은 **속성(property) 이름**이지 **명령줄 동사**가 아니다 — 이 형태로는
+  못 쓴다.
+- `Fade 3 Enter` / `Delay 1 Enter` / `Store … /Merge` 자체는 매번 `ok:true` 였지만, 앞선
+  `Fixture`/`Attribute` 선택이 전부 거절돼 프로그래머가 비어 있었다 — 무엇에도 적용 안 된
+  빈 실행이라 의미 있는 결과가 아니다.
+- **되읽기로 확정**: `PRESET2FADE`/`PRESET2DELAY` = `"CueTiming"`(상속, 불변) ·
+  `INDIVIDUALTIMING` = `"Default"` · `INDIVFADE`/`INDIVDELAY` = `0.0` · `CUEINFADE` = `0.0` —
+  세 후보 다 아무 값도 못 썼다. 깨끗한 음성 결과다.
+- **부수 발견**: `NAME` 이 의도한 `'LDCOMPILE-C6 SCRATCH DELETABLE'` 이 아니라 콘솔이 붙인
+  기본값 `"Sequence 1999"` 로 읽힌다 — Store 의 이름 인용부가 실제로는 안 먹었을 수 있다
+  (미조사, cue 이름과 시퀀스 이름 혼동 가능).
+- **물리 안전**: `Fixture`/`Group` 선택이 매번 거절돼 프로그래머에 아무 것도 안 올라갔다 —
+  실제 무빙헤드가 움직인 흔적 없음(감독 확인 + 명령 응답 둘 다 일치).
+
+**round 2 — `Group 'MOVER-ALL'` (Fixture 대신)**: 이번엔 `ok:true, "OK"` — 그룹 선택 동사는
+`Fixture` 가 아니라 `Group` 이었다(가설 확정). 하지만 후속은 그대로 막힘:
+- `Attribute 'Position'` → 여전히 `"Illegal object"`. Position 속성에 초점을 맞추는 올바른
+  동사/문법은 아직도 못 찾았다.
+- `PRESET2FADE 3 Enter` / `PRESET2DELAY 1 Enter` → 여전히 `"Illegal object"`.
+- 되읽기 재확인: `PRESET2FADE`/`PRESET2DELAY` = `"CueTiming"` · `INDIVIDUALTIMING` = `"Default"` ·
+  `INDIVFADE`/`INDIVDELAY`/`CUEINFADE` = `0.0` — round 1 과 완전히 동일, **여전히 관측 0건**.
+  `Group` 만 맞고 Position 값 자체를 프로그래머에 넣는 통로가 없어서, 있지도 않은 Position 데이터에
+  개별 timing 을 얹을 수가 없는 것으로 보인다(가설).
+- **물리 안전 갱신**: 이번엔 `Group 'MOVER-ALL'` 이 실제로 성공해 그룹이 프로그래머에 올라갔다
+  (감독 사전 확인: 지금은 안전한 상태). Position 값은 끝까지 못 넣었으므로 실제 조명 이동은
+  없었을 것으로 보이나, **명령 응답만으로 확정한 것이지 무대를 직접 보고 확인한 것은 아니다**.
+
+다음 후보(미시도, 사람 판단 필요): Position 값을 프로그래머에 실제로 넣는 통로(프리셋 풀
+번호로 직접 `Recall`/`At Position <pool>.<no>` 형태 등) · Attribute 초점 동사의 정확한 문법 ·
+그랜드MA3 정식 문서 또는 감독 실기 조작으로 확인.
+
+#### Evidence — P1 ③ round 3/4 — Position 값 쓰기는 검증됨(선행 자산 재사용), timing 은 여전히 관측 0건
+
+감독이 「이미 있는 코파일럿 기능·과거 작업을 다시 보라」고 정정을 줘서 재조사했다.
+`server/spatial/pointing.py`(`aimed_commands`/`preset_recall_command`) + `server/presets/store.py`
+가 이미 **검증되고 실전에 쓰인** Position 값 쓰기 통로를 갖고 있었다 — round 1/2 의 실패는
+문법을 잘못 짜서였다(기능 부재가 아니었다):
+- `Fixture <fid>`(그룹 이름 아님, fid **번호**) ; `Attribute 'Pan' At <deg>` ; `Attribute 'Tilt' At <deg>`
+  — Pan·Tilt 는 이미 **독립된 속성**이다(값 레벨). 전제 5의 절반은 이걸로 풀렸다.
+- fid 목록은 `src/Lighting_Designer/02_RIG팩/LXSEQ_RIG_01_ShowBase_r3.patch.csv` 실측:
+  MOVER-U 501~508(Robe MegaPointe) · MOVER-D 521~528(Robe Spiider) = MOVER-ALL 16대.
+  감독 승인 받아 fid **501 하나만** 사용(물리 이동 최소화).
+- 임의 각도 대신 이미 존재하는 `Preset 2.1`("POS01 보컬 센터 페이스 · 합성좌표", 콘솔 조회로
+  확인)을 그대로 recall — 새 좌표를 지어내지 않았다.
+
+**round 3(Store 없이 값만 설정)**: `Fixture 501 ; At Preset 2.1 Fade 3 Delay 1` → `ok:true`.
+`Fixture 501 ; At Preset 2.1` → OK, `Attribute 'Pan' At 200 Fade 3` → OK, `Attribute 'Tilt' At 45
+Fade 1` → OK. `IndividualTiming On`(bare) → 여전히 `"Illegal object"`. 매 recipe 끝의 `ClearAll`
+이 프로그래머를 비워 아무것도 Cue 에 안 남았다(이 라운드의 결함 — Store 를 안 넣었다).
+
+**round 4(같은 값 설정 뒤 새 Cue 에 Store)**: `Fixture 501 ; At Preset 2.1 Fade 3 Delay 1` →
+`Store Sequence 1999 Cue 3 'R4 recall-inline'` — 둘 다 `ok:true`. `Fixture 501 ; At Preset 2.1` →
+`Attribute 'Pan' At 200 Fade 3` → `Attribute 'Tilt' At 45 Fade 1` → `Store Sequence 1999 Cue 4
+'R4 attribute-inline'` — 넷 다 `ok:true`. **되읽기(Cue 3·Cue 4 둘 다 CuePart 1)**:
+`PRESET2FADE`/`PRESET2DELAY` = `"CueTiming"` · `INDIVIDUALTIMING` = `"Default"` ·
+`INDIVFADE`/`INDIVDELAY` = `0.0` — **양쪽 다 여전히 기본값**.
+
+**결론(round 1~4 종합)**: Position **값** 쓰기는 완전히 검증되고 동작한다(fid·Attribute
+Pan/Tilt·Preset recall 전부 `ok:true`, 실제 fid 501 물리 이동 확인). 하지만 `At`/`Attribute`
+클로즈 뒤에 `Fade`/`Delay` 토큰을 이어붙이는 건 콘솔이 **문법 오류 없이 받아주지만**(`Illegal
+object` 아님) `PRESET2FADE`/`INDIVIDUALTIMING`/`INDIVFADE`/`INDIVDELAY` 어느 필드에도 **관측
+가능한 효과가 없다** — 이건 round 1/2 의 "선택 자체가 막혀서 값이 없었다"는 혼입 변수가 전혀
+없는 상태에서 나온 결과라 이전보다 훨씬 강한 음성 증거다. `IndividualTiming` 을 bare 동사로 못
+쓰는 것도 재확인됐다. `AXIS_TIMING_OBSERVED` 는 여전히 빈 tuple.
+
+다음 후보(미시도, 사람 판단 필요 — 그랜드MA3 정식 문서 또는 감독 실기 조작 필요): Cue View의
+타이밍 그리드에서 UI 로만 되는 편집(명령줄 등가물이 없을 수 있음) · `Assign`/`Copy To` 계열
+동사 · 이 필드들이 command-line 이 아니라 오직 매크로/플러그인 API 로만 쓰일 수 있는 가능성.
+
+#### Evidence — P1 ④ round 5 — 인접 카드(t215) 문법 재사용으로 PRESET2FADE/DELAY 관측 성공
+
+라운드 1~4 는 전부 **프로그래머 경로**(`Fixture`/`Attribute`/`At` + `Store`)만 시도했다.
+「안 된다」로 다시 결론 내리기 전에 이 저장소 안에서 이 능력의 기존/인접 구현을 넓게
+재탐색하라는 지시에 따라 `grep -rliE 'PRESET2FADE|INDIVFADE|...'`을 서버 전체에 다시
+돌렸고, **다른 카드 `t215`**(`.moai/reports/t215/verdict.md`, 2026-09-01 실측, 콘솔 접촉)가
+전혀 다른 경로 — **`Set Cue <n> Sequence <seq> Property '<name>' <value>`** — 를 이미
+발견·되읽기까지 확정해 두고 있었다. t215 의 F1 행이 정확히 `Set Cue 1 Sequence 9 Property
+'Preset2Fade' 4` → `ok` → 되읽기 `PRESET2FADE` **4.0** 을 실측했다 — C6 이 4라운드 동안 못
+찾은 바로 그 속성명이다.
+
+이 형태를 **다시 추측하지 않고 그대로** `ldcompile_c6_p1_axis_timing_probe.py` 에 Round 5 로
+추가해(`server/tools/ldcompile_c6_p1_axis_timing_probe.py:95-128`), C6 의 SEQ_NO(1999) ·
+기존 baseline Cue(2) 위에서 재현했다. 물리 접촉 없음(Fixture/Group 선택도, 프로그래머 진입도
+전혀 없다 — Set…Property 는 이미 저장된 Cue 의 CuePart 속성을 직접 덮어쓴다).
+
+**실행 (실제 응답, `--listen-port 9005`, server.web 정지 후 재기동)**:
+
+```
+$ uv run python -m server.tools.ldcompile_c6_p1_axis_timing_probe --approve --listen-port 9005
+"set_property_preset2fade_on_existing_cue"  → Set Cue 2 Sequence 1999 Property 'Preset2Fade' 4     → ok:true "OK"
+"set_property_preset2delay_on_existing_cue" → Set Cue 2 Sequence 1999 Property 'Preset2Delay' 1.5  → ok:true "OK"
+"set_property_indivfade_on_existing_cue"    → Set Cue 2 Sequence 1999 Property 'IndivFade' 2       → ok:true "OK"
+"set_property_indivdelay_on_existing_cue"   → Set Cue 2 Sequence 1999 Property 'IndivDelay' 0.8    → ok:true "OK"
+"set_property_individualtiming_on_existing_cue" → Set Cue 2 Sequence 1999 Property 'IndividualTiming' 'On' → ok:false "Illegal value"
+```
+
+**되읽기 함정 회피 — 경로를 먼저 검산했다.** `ok:true` 는 값 보존의 증거가 아니다
+(t215 자신의 C2 `Zorble` 함정과 같은 계열). 처음 되읽은 경로 `DataPool/Sequences/1999/2/1`
+은 전부 기본값을 답해 의심스러웠다 — child-index 를 Cue 번호와 동일시한 **내 가정이
+틀렸다**는 신호였다. `NAME` 을 index 1~6 에서 전수로 읽어 오프셋을 확정했다:
+
+| index | NAME | 정체 |
+|---|---|---|
+| 1 | `OffCue` | 무관 잔존 큐 |
+| 2 | `CueZero` | 무관 잔존 큐 |
+| 3 | `LDCOMPILE-C6 SCRATCH DELETABLE` | Cue 1 (round 1/2) |
+| **4** | `LDCOMPILE-C6 SCRATCH DELETABLE R3` | **Cue 2 (이번 baseline)** |
+| 5 | `R4 recall-inline` | Cue 3 |
+| 6 | `R4 attribute-inline` | Cue 4 |
+
+즉 이 Sequence 는 child-index = Cue 번호 + 2 다(앞에 무관한 잔존 큐 둘이 있다). 정정된 경로
+`DataPool/Sequences/1999/4/1` 되읽기:
+
+```
+PRESET2FADE   : string "CueTiming" → number 4.0    ✅ 관측 성공 — 타입까지 바뀌었다
+PRESET2DELAY  : string "CueTiming" → number 1.5    ✅ 관측 성공
+INDIVFADE     : number 0.0 (불변)                   ❌ ok:true 였지만 값은 그대로 — 진짜 무효과
+INDIVDELAY    : number 0.0 (불변)                   ❌ 진짜 무효과
+INDIVIDUALTIMING : string "Default" (불변)          — 거절됐으므로 예상대로 불변
+```
+
+INDIVFADE/INDIVDELAY 의 무효과는 **경로 오류가 아니다** — 같은 정확한 경로에서 형제
+속성(PRESET2FADE/DELAY)이 실제로 바뀌었으므로, 이 무효과는 진짜 음성 결과다. `Set…Property`
+동사가 `PRESET<n>FADE/DELAY` 계열에는 통하고 `INDIVFADE`/`INDIVDELAY` 에는 안 통한다 —
+후자는 t215 F5 가 관측한 **다른 경로**(bare `Group <n> At <레벨> Fade <시간>` + `Store`,
+intensity 대상)로만 확인됐고, 그 경로가 Position 에도 적용되는지는 여전히 미측정이다.
+
+**승격 방식 — 감독 판정을 받았다(2026-09-16).** `PRESET2FADE`/`PRESET2DELAY` 는 Position
+**한 preset type 전체**의 값이며 pan·tilt 를 가르지 못한다(§E.3 Gap "pan ≠ tilt 독립성
+미확립" 그대로 남는다). `AXIS_TIMING_OBSERVED` 를 그대로 채우면 pan·tilt 에 **다른** 값을
+요구하는 요청까지 통과시켜 버린다 — 그런 요청은 이 통로로 충실히 재현할 수 없다(값이
+하나로 합쳐진다). 그건 이 SPEC 이 처음부터 막아 온 바로 그 "관측 없는 승격"이 된다. 또한
+기존 `emit.py::emit_compiled` 는 `AXIS_TIMING_OBSERVED` 를 전혀 참조하지 않고 축별
+timing 이 있으면 무조건 거부했다 — capability 단(4단)만 열어도 emit 단이 그대로 막는
+구조적 간극이었다.
+
+**판정: 제한적 승격.** pan==tilt(같은 값 요구)일 때만 관측된 것으로 본다. 두 파일을
+같이 고쳤다(TDD, RED→GREEN):
+
+- `server/director/validate/capability.py` — `AXIS_TIMING_OBSERVED = ("pan", "tilt")`.
+  `_axis_timing_is_reproducible`(신규)이 pan·tilt 둘 다 선언 + 같은 값일 때만 참을
+  반환한다. 하나만 선언했거나(예: pan 만) 값이 다르면 여전히 unsupported — 사유는 값이
+  다를 때만 `_POSITION_MISMATCH_REASON`(신규, "관측 0건"이 아니라 "다른 값은 못 나눈다"로
+  정확하게)으로 갈린다.
+- `server/director/emit.py` — 같은 판정을 거울로 둔다(`AXIS_TIMING_OBSERVED` 를 import 하지
+  않고 복제 — `store_with_measured_fade`/design 층의 짝과 같은 이유, 대조 시험이 갈라짐을
+  잡는다). pan==tilt 인 `position_set` 은 `_position_timing_commands`(신규)가 `Set Cue <n>
+  Sequence <seq> Property 'Preset2Fade'/'Preset2Delay' <값>`(t215 문법, ms→초 변환)을 Store
+  뒤에 이어 붙인다. **한 cue 안에서 group 이 다른 position_set 둘이 다른 timing 을 요구하면
+  거부한다** — `Preset2Fade`/`Preset2Delay` 는 CuePart 전체에 걸리는 값 하나뿐이라 group 별로
+  나눠 담을 수 없기 때문이다(새로 발견한 구조적 제약, `_POSITION_CUE_PART_COLLISION_REASON`).
+
+**RED→GREEN 증거 (실제 출력)**:
+
+```
+$ uv run pytest server/tests/test_director_validate_capability.py server/tests/test_director_emit.py -q  # RED (구현 전)
+4 failed, 27 passed / 5 failed, 24 passed  # 각각 의도한 신규 시험만 실패
+
+$ uv run pytest server/tests/test_director_validate_capability.py server/tests/test_director_emit.py -q  # GREEN (구현 후)
+31 passed / 30 passed
+
+$ uv run pytest server/tests/ -k "director_validate" -q
+237 passed, 13140 deselected
+
+$ uv run pytest -q
+13349 passed, 35 skipped, 1 warning in 176.09s (0:02:56)
+```
+
+**뮤테이션 2건으로 신규 시험 비공허성 확인** — 원복 후 재확인:
+
+| 뮤테이션 | 결과 |
+|---|---|
+| `_axis_timing_is_reproducible` → 항상 `True` | **7 failed**(옛 시험 5 + 신규 시험 2 — 옛 시험도 여전히 산다) |
+| cue-part 충돌 검사 제거(`_position_timing_commands`) | **1 failed** — 의도한 그 시험 정확히 |
+
+**cross-file 회귀 둘을 고쳤다(둘 다 승격의 정당한 결과, 결함이 아니다)**:
+1. `test_director_validate_capability.py::TestOpTableCoversTheSchema.test_every_op_receives_a_blocking_diagnostic`
+   — `position(GROUPS[0])` 기본값(pan==tilt==0)이 이제 조용히 통과해 이 시험 취지와
+   충돌 — pan≠tilt 로 만든 action 으로 교체.
+2. `test_director_validate_capability.py::TestUnmeasuredEmitterIsTheStandingReason.test_every_action_in_the_contract_example_is_blocked`
+   — 규범 예제의 `action-003`·`action-007`(둘 다 `position_set`, pan==tilt==0)이 이제
+   진단 0건으로 통과한다 — 그 둘을 예외로 밝히고, **여전히 재현 가능한 채로 남아
+   있는지**(`isdisjoint`)까지 양성으로 단언하도록 강화했다.
+3. `test_director_validate_timing.py::TestWiredIntoThePipeline.test_validator_carries_the_injected_context`
+   — 같은 두 action 때문에 with/without context 진단 **개수**가 우연히 같아졌다(68==68).
+   원래 취지("2단 진단의 내용이 다르다")를 개수 비교에서 **내용 비교**(`!=` 리스트 자체)로
+   바꿔 정확하게 만들었다.
+
+**Position **값** 쓰기는 round 3/4 에서 이미 완결됐다** — 이 절은 그 위에 timing 을
+얹은 것이며, fid 를 다시 움직이지 않았다(cue 데이터 직접 쓰기뿐, 프로그래머 무접촉).
+
+#### Gaps — C6 에서 아직 하지 않은 것
+
+- **보존 여부 미관측.** 속성이 읽힌다는 것은 존재의 증거이고 보존의 증거가 아니다.
+  `AXIS_TIMING_OBSERVED`/`RANDOM_ACCESS_OBSERVED` 는 **의도적으로 빈 tuple 그대로** 둔다.
+- **pan ≠ tilt 독립성 미확립 — round 5 이후에도 남는다.** `PRESET2FADE`/`PRESET2DELAY` 가
+  관측됐지만(round 5) Position 한 preset type 전체에 걸리는 값이라 pan·tilt 를 여전히
+  가르지 못한다. `AC-LDPLUGIN-012` 의 "pan/tilt 다른 종료"가 어느 통로로 되는지 미측정.
+- **`MIB*` 필드가 이 객체에서 `property not readable`.** dark move 통로가 CuePart 가
+  아닌 다른 자리일 수 있다 — 미조사.
+- **P1(쓰기·되읽기) 5라운드 시도함 — PRESET2FADE/PRESET2DELAY 관측 성공, INDIVFADE/INDIVDELAY
+  는 Set…Property 로는 여전히 무효과 · P2(무대 관측) 미실행.** Position **값** 쓰기
+  (fid·Attribute Pan/Tilt·Preset recall)는 완전히 검증됨(round 3/4, fid 501 실제 이동).
+  round 1~4 는 전부 프로그래머 경로였고 timing 관측 0건이었다 — round 5(다른 카드 t215의
+  `Set Cue N Sequence M Property '<name>' <value>` 문법 재사용)에서 `PRESET2FADE`/
+  `PRESET2DELAY` 가 처음으로 관측됐다(위 "Evidence — P1 ④" 참조). `INDIVFADE`/`INDIVDELAY`
+  는 같은 형태로 `ok:true` 를 받았지만 값은 그대로였다(같은 경로에서 형제 속성은 바뀌었으므로
+  경로 오류가 아니라 진짜 무효과). `INDIVIDUALTIMING` 에 `'On'` 은 `Illegal value`로 거절—
+  속성명은 유효했으나 올바른 enum 문자열은 여전히 미확인. 승격(AXIS_TIMING_OBSERVED 채움)은
+  pan≠tilt 독립성 문제 때문에 보류했다 — 사람 판단 필요(§E.2 Evidence — P1 ④ 마지막 문단).
+- **한 시퀀스의 한 큐의 한 Part 만 봤다.** 전수 아님.
+- **독립 감사 없음** (C2~C5 와 동일).
+- **이 브랜치는 push 되지 않아 CI 판정을 받지 않았다.**
+
+#### Residual-risk
+
+- `CueTiming` 문자열의 의미(상속)는 이름에서 온 해석이다 — 값을 써서 되읽어야 확정.
+- 승격은 `compiler version/build` + `rig fingerprint` 에 고정해야 한다(`plan.md §3`).
+  이번 조회는 이 rig·이 show 전용이며 다른 rig 로 옮길 수 없다.
+- 세션 중 OSC 슬롯 추가(제가 권한 것)가 돌아가던 앱의 회신 통로를 깨뜨렸다 — 원인
+  진단을 세 번 틀린 뒤(3행 Receive Command·바인드 순서·포트 점유) 콘솔 히스토리의
+  `Illegal property:SendOSC 2` 로 확정됐다. 「쇼 데이터를 안 건드린다」≠「부작용 없다」.
