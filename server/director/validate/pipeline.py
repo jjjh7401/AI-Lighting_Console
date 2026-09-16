@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from server.director.models import SCHEMA_VERSION
+from server.director.validate.capability import check_capability
 from server.director.validate.conflict import check_conflicts, fx_beat_requests
 from server.director.validate.diagnostics import (
     STATUS_ACCEPTED,
@@ -50,14 +51,6 @@ OUTCOME_READY = "ready_for_review"
 #: 전체 plan 을 가리키는 pointer (계약 §6.3).
 ROOT_POINTER = ""
 
-#: 축별 timing emitter 부재의 사유. 사람이 "왜 막혔나" 를 물었을 때 「구현이 안 됐다」와
-#: 「계획이 잘못됐다」가 구분되어야 한다.
-_NO_AXIS_EMITTER_REASON = (
-    "축별 delay/fade 를 보존하는 emitter 가 실측되지 않았습니다. "
-    "LD-CAP-001 은 capability 광고의 근거를 실제 compiler+rig+target 출력으로 규정하므로, "
-    "관측 전에는 unsupported 로 답합니다. 계획의 결함이 아닙니다."
-)
-
 
 @dataclass(frozen=True, slots=True)
 class CoreReport:
@@ -70,16 +63,6 @@ class CoreReport:
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
     outcome: str = OUTCOME_BLOCKED
     compiled: dict[str, Any] = field(default_factory=lambda: {"available": False})
-
-
-def _action_pointers(plan: dict[str, Any]) -> list[str]:
-    """요청된 모든 action 의 leaf JSON Pointer. submitted plan root 기준이다."""
-    pointers: list[str] = []
-    for cue_index, cue in enumerate(plan.get("cues", []) or []):
-        actions = cue.get("actions", []) if isinstance(cue, dict) else []
-        for action_index in range(len(actions or [])):
-            pointers.append(f"/cues/{cue_index}/actions/{action_index}")
-    return pointers
 
 
 def _stage_source_identity(
@@ -162,37 +145,14 @@ def _stage_capability_fidelity(
     이 단계가 계약 §6.3 의 'action 당 진단 최소 하나' 를 채우는 자리다. 표현 보존을 판정하는
     단계이므로 판정의 단위가 action 이고, 그래서 leaf pointer 가 여기서 붙는다.
 
-    [HARD] 지금은 무조건 blocking 이다. 유보 상태의 기본값이 안전한 쪽이어야 한다 —
-    C4 가 하는 일은 이 blocking 의 *사유를 축·op별로 정확하게 만드는 것*이지 blocking 을
-    켜는 것이 아니다.
+    [HARD] 여전히 무조건 blocking 이다. C4 가 한 일은 이 blocking 의 *사유를 축·op별로
+    정확하게 만든 것*이지 무엇을 연 것이 아니다 — 여는 것(승격)은 C6 의 emitter 프로브가
+    관측한 뒤에만 일어나며, 그 자리는 `capability.AXIS_TIMING_OBSERVED` 다.
+
+    `context` 가 없어도 action 별로 낸다. 판정 불능이라는 사실이 계약 §6.3 coverage 면제가
+    되지 않는다 — root 하나로 갈음하면 action 들이 진단 0개가 된다.
     """
-    diagnostics = [
-        Diagnostic(
-            rule_id="LD-CAP-001",
-            pointer=pointer,
-            status=STATUS_UNSUPPORTED,
-            blocking=True,
-            reason=_NO_AXIS_EMITTER_REASON,
-            stage="capability_fidelity",
-        )
-        for pointer in _action_pointers(plan)
-    ]
-    if not diagnostics:
-        # action 이 하나도 없는 계획도 판정을 받는다. 침묵으로 통과시키지 않는다.
-        diagnostics.append(
-            Diagnostic(
-                rule_id="LD-CAP-001",
-                pointer=ROOT_POINTER,
-                status=STATUS_UNSUPPORTED,
-                blocking=True,
-                reason=(
-                    "요청된 action 이 없습니다. 계약 LD-STATE-001 은 빈 cue/terminal 배열을 "
-                    "draft 에서만 허용하므로 ready 판정 대상이 아닙니다."
-                ),
-                stage="capability_fidelity",
-            )
-        )
-    return diagnostics
+    return check_capability(plan, context)
 
 
 def _stage_safety(plan: dict[str, Any], context: dict[str, Any] | None) -> list[Diagnostic]:
