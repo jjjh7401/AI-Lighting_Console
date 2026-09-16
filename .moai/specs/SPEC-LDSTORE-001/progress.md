@@ -462,6 +462,54 @@ $ uv run pytest -q          # HEAD 98a822e, 2026-09-14
 
 **CI 는 저장소 전체가 과금 차단으로 죽어 있다.** 로컬 pytest 가 유일한 판정 근거다.
 
+## §E.4 Sync-phase Audit-Ready Signal
+
+```
+sync_status: completed
+sync_complete_at: 2026-09-16
+sync_commit_sha: pending-backfill-ldstore-001-sync
+```
+
+**Claim**: SPEC-LDSTORE-001 전체(M1 교환 스키마·불변 저장 + M2 ContextSnapshot + M3 지식
+seed)가 완료됐다. M1+M2는 `origin/main` `cde27445`로 앞서 머지됐고, M3는 이 워크트리
+HEAD(`dd3c1121` 이후 `9f44a1ba` → merge `913bb02b`)에서 TDD로 완료됐다. 세 마일스톤
+모두가 이 SPEC의 계획된 범위 전부다 — `plan.md` §2는 M1/M2/M3 세 행만 명시한다.
+
+**Evidence**
+
+```
+$ uv run pytest -q          # 이 워크트리 HEAD 기준
+13376 passed, 35 skipped, 1 warning
+```
+```
+$ uv run pytest server/tests/test_director_knowledge_seed.py -q   # M3 단독
+27 passed
+```
+```
+$ uv run ruff check server/director/ server/tests/test_director_knowledge_seed.py
+All checks passed!
+$ uv run ruff format --check server/director/ server/tests/test_director_knowledge_seed.py
+(clean)
+```
+```
+$ grep -rn "server.bridge.osc\|from server.bridge" server/director/
+(no matches)
+$ grep -rn "songcue\|_ARC_" server/director/
+(no matches — 문서 언급만 있음)
+```
+
+**Baseline-attribution**: 이 워크트리 HEAD 기준 실행, §E.2 "M3 완료" 절에 기록된 동일
+숫자(13376/35)와 일치. 커밋 SHA는 이 세션에서 직접 확인함(`git log --oneline -5` 재측정,
+아래 §H).
+
+**Gaps**: 독립 plan-audit 없음(§E.1 — 이 저장소에서 `plan-auditor`가 컨텍스트 초과로
+죽는다, §F). HTTP 표면(`LDRECV` 몫) 없음 — M1·M3 둘 다 계약이 정의하는 API 노출은 이
+SPEC의 범위 밖이다. feedback seed(scope binding)는 M3에서 명시적으로 범위 밖.
+
+**Residual-risk**: §E.2 M1/M3 각 절의 Residual-risk 참조 — 경쟁 시험은 이 기계·이 빌드
+실측(12/12), `MAX_EXCHANGE_BYTES` 해석은 보수적 읽기, 검색은 단순 substring, cursor는
+서명 없는 base64(계약이 요구하지 않음).
+
 ### 계약 독해 기록 (M1 착수 조건 — `plan.md` §6)
 
 `contract.md` 읽은 절: §2(공통 wire 규칙) · §3(MCP signature·Envelope·ErrorEnvelope) ·
