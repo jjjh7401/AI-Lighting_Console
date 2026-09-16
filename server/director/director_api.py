@@ -21,6 +21,7 @@ from typing import Any, Protocol
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from server.director.approvals import ApprovalRegistry, ContextRef, ValidationRef
 from server.director.auth import (
     DEFAULT_HOST_ALLOWLIST,
     CredentialRegistry,
@@ -55,6 +56,17 @@ class FeedbackProposalService(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class ValidationProvider(Protocol):
+    """`POST .../approvals` 가 참조하는 `ValidationReport` 조회 seam.
+
+    `SPEC-LDCOMPILE-001` 이 만들 저장소가 아직 HTTP 로 노출되지 않았다 —
+    `ContextProvider`/`ExecutionProvider` 와 같은 이유로 미주입 시 503 을
+    정직하게 답한다(모듈 상단 docstring).
+    """
+
+    def get(self, project_id: str, validation_id: str) -> ValidationRef: ...
+
+
 @dataclass
 class DirectorApiDeps:
     """M1 이 배선하는 것 전부 — 실제 LDSTORE/LDCOMPILE 서비스 + 인증 자료.
@@ -79,6 +91,11 @@ class DirectorApiDeps:
     context_provider: ContextProvider | None = None
     execution_provider: ExecutionProvider | None = None
     feedback_service: FeedbackProposalService | None = None
+    #: M2 (SPEC-LDRECV-001) 사람 승인/거절 오버레이. 기본값은 새 in-memory
+    #: registry — durable 저장은 M4 가 한다(approvals.py 모듈 docstring).
+    approvals: ApprovalRegistry = field(default_factory=ApprovalRegistry)
+    #: `POST .../approvals` 가 참조하는 ValidationReport 조회 seam. 미주입 시 503.
+    validation_provider: ValidationProvider | None = None
 
 
 def _request_id(request: Request) -> str:
@@ -191,6 +208,117 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 "state": record.state,
                 "plan_digest": record.plan_digest,
             }
+        except ExchangeError as error:
+            return _error_response(error, request)
+
+    @router.post("/plans/{plan_id}/revisions/{revision}/approvals")
+    async def post_approval(
+        project_id: str, plan_id: str, revision: int, body: dict[str, Any], request: Request
+    ):
+        """계약 §4 — human APP route 만 승인을 발급한다 (REQ-LDPLUGIN-020 M2).
+
+        MCP credential 은 ``plan:approve`` 가 human-only scope 이므로
+        `auth.authenticate` 단계에서 SCOPE_DENIED 로 이미 거부되어 이 handler
+        본문에 도달하지 않는다. 일반 chat/WS 승인 boolean(예: ``{"approved":
+        true}``)은 아래 필수 필드 검사에서 SCHEMA_INVALID 로 구조적으로 거부된다.
+        """
+        try:
+            credential = _require_credential(request, scope="plan:approve")
+
+            # 일반 chat/WS 승인 boolean(예: {"approved": true})은 director 승인
+            # route 의 필수 필드를 갖추지 못하므로 여기서 SCHEMA_INVALID 로 구조적
+            # 거부된다 — dependency 미배선(503)보다 형태 검사가 먼저다: 형태부터
+            # 틀린 요청은 애초에 director 승인 시도가 아니었다는 판정을 우선한다.
+            validation_id = body.get("validation_id")
+            plan_digest = body.get("plan_digest")
+            context_digest = body.get("context_digest")
+            compiled_digest = body.get("compiled_digest")
+            idempotency_key = body.get("idempotency_key")
+            if not all(
+                isinstance(value, str) and value
+                for value in (
+                    validation_id,
+                    plan_digest,
+                    context_digest,
+                    compiled_digest,
+                    idempotency_key,
+                )
+            ):
+                raise ExchangeError(
+                    "SCHEMA_INVALID",
+                    422,
+                    "validation_id·plan_digest·context_digest·compiled_digest·"
+                    "idempotency_key 가 모두 필요합니다.",
+                    (Detail("", "missing approval fields — not a director approval"),),
+                )
+
+            if deps.validation_provider is None or deps.context_provider is None:
+                raise _dependency_unavailable("validation/context provider")
+
+            validation = deps.validation_provider.get(project_id, str(validation_id))
+            context_snapshot = deps.context_provider.current(project_id)
+            context = ContextRef.from_snapshot(context_snapshot)
+
+            binding = deps.approvals.approve(
+                store=deps.store,
+                project_id=project_id,
+                plan_id=plan_id,
+                revision=revision,
+                principal_id=credential.principal_id,
+                validation=validation,
+                context=context,
+                body=body,
+                operation=(
+                    f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
+                    f"revisions/{revision}/approvals"
+                ),
+            )
+            record = deps.store.get(project_id=project_id, plan_id=plan_id, revision=revision)
+            return JSONResponse(
+                status_code=201,
+                content={
+                    "approval": binding.as_dict(),
+                    "record": {
+                        "plan": record.plan,
+                        "revision": record.revision,
+                        "state": "approved",
+                        "plan_digest": record.plan_digest,
+                    },
+                },
+            )
+        except ExchangeError as error:
+            return _error_response(error, request)
+
+    @router.post("/plans/{plan_id}/revisions/{revision}/rejections")
+    async def post_rejection(
+        project_id: str, plan_id: str, revision: int, body: dict[str, Any], request: Request
+    ):
+        """계약 §4 — human APP route 만 거절을 기록한다 (REQ-LDPLUGIN-020 M2)."""
+        try:
+            credential = _require_credential(request, scope="plan:reject")
+            reason = body.get("reason")
+            idempotency_key = body.get("idempotency_key")
+            if not isinstance(reason, str) or not isinstance(idempotency_key, str):
+                raise ExchangeError(
+                    "SCHEMA_INVALID",
+                    422,
+                    "reason·idempotency_key 가 필요합니다.",
+                    (Detail("", "missing reason/idempotency_key"),),
+                )
+            result = deps.approvals.reject(
+                store=deps.store,
+                project_id=project_id,
+                plan_id=plan_id,
+                revision=revision,
+                reason=reason,
+                idempotency_key=idempotency_key,
+                principal_id=credential.principal_id,
+                operation=(
+                    f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
+                    f"revisions/{revision}/rejections"
+                ),
+            )
+            return result
         except ExchangeError as error:
             return _error_response(error, request)
 

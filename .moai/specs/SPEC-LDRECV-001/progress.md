@@ -313,6 +313,147 @@ EXTEND: `server/web/app.py` — `WebDeps.director: DirectorApiDeps | None = None
   `REVISION_CONFLICT` 재시도 없는 실패로 처리됨)까지 다루지 않는다 — 이는 원래
   M3 의 몫이다.
 
+### M2 완료 (REQ-LDPLUGIN-020)
+
+작업 트리 기준 M1 완료 커밋 `e297b03a` 위에서 진행 — 커밋 전 HEAD `abc3e92d`
+(이 에이전트 워크트리가 `e297b03a` 를 `--no-ff` merge 한 결과. 배차서가 전제한
+HEAD 상태와 다른 워크트리에서 시작했음을 착수 직전 실측 확인했고, `e297b03a` 를
+찾아 병합한 뒤 진행했다 — 추측 없이 재조정했다).
+
+**Claim**: M2 의 REQ-LDPLUGIN-020(사람 승인/거절)을 TDD 로 구현했다 —
+`server/director/approvals.py`(신규)가 `ApprovalBinding`(계약 §4 나열 12필드)
+발급·만료 계산(approved_at+10분과 validation/context 만료 중 빠른 값)·무효화
+판정(`check_validity`)·거절 오버레이를 담당하고, `server/director/director_api.py`
+(EXTEND)가 `POST .../approvals`·`POST .../rejections` route 2개를 M1 의 인증
+뒤에 배선한다.
+
+**Evidence — RED (구현 삭제 전 실제로 실패시킨 verbatim 출력)**
+
+```
+$ uv run pytest server/tests/test_director_approvals.py -q
+ImportError while importing test module '.../server/tests/test_director_approvals.py'.
+server/tests/test_director_approvals.py:26: in <module>
+    from server.director.approvals import (
+E   ModuleNotFoundError: No module named 'server.director.approvals'
+1 error during collection
+```
+(`approvals.py` 는 이 RED 확인 **후에** 작성했다 — test-first 준수.)
+
+**Evidence — GREEN (신규 시험 21개, 서비스 층 17 + route 층 4)**
+
+```
+$ uv run pytest server/tests/test_director_approvals.py -q
+.....................                                                    [100%]
+21 passed, 1 warning in 0.66s
+```
+
+| AC | 시험 커버 | Status |
+|---|---|---|
+| AC-LDPLUGIN-020 | `ApprovalBinding` 12필드 전부 채워짐(계약 §4 원문 나열 승계 — plan.md/acceptance.md 의 "9필드" 표기는 auth.py `HUMAN_ONLY_SCOPES` "6종" vs 실제 7개 나열과 같은 문서 불일치, 이 시험은 나열된 쪽을 고정) · 만료 = approved_at+10분과 validation/context 만료 중 빠른 값(3-way 파라미터화) · plan head 변경·context stale(compiler/target/policy 를 context_digest 하나가 덮음, context.py NINE_AXES 근거)·만료 각각 무효화(`check_validity`, 개별+복합 케이스) · validation.outcome≠ready_for_review 시 VALIDATION_BLOCKED(422) · body/record/context/validation digest 어긋남 시 CONTEXT_STALE(409) · revision 이 head 아니면 REVISION_CONFLICT(409, superseded) · idempotent replay + 다른 요청 시 IDEMPOTENCY_CONFLICT(409) · `plan_revisions` 행 불변 확인(before==after) · reject() 빈 reason 거부·store 미변경·거절 오버레이 반환 · **route 층**: MCP credential(`plan:approve` 없음) → SCOPE_DENIED(403, `auth.authenticate` 가 approvals.py 도달 전에 차단) · 일반 WS boolean(`{"approved": true}`) → SCHEMA_INVALID(422, 구조적 거부) · human credential 정상 승인(201, `ApprovalBinding` 12필드+`record.state=="approved"`) · human credential 정상 거절(200, `state=="rejected"`) | PASS |
+
+**Baseline-attribution**: 기준선(이번 착수 시 재측정, 같은 HEAD `abc3e92d`)
+`13407 passed, 35 skipped` — M1 §E.2 가 기록한 값과 정확히 일치(이 SPEC 은 M1
+이후 다른 커밋이 없었으므로 재측정값이 같다). 신규 테스트 **21개**(1파일). 13407
++ 21 = **13428** — 아래 최종 회귀와 정확히 일치, skipped 불변(35), 실패 0.
+
+**Evidence — 최종 회귀 (전체)**
+
+```
+$ uv run pytest -q
+13428 passed, 35 skipped, 1 warning in 185.18s (0:03:05)
+```
+verbatim 저장: `.moai/state/verify/ldrecv-m2/m2-full-regress.txt`
+
+**Evidence — ruff**
+
+```
+$ uv run ruff check server/director/ server/tests/test_director_approvals.py
+All checks passed!
+$ uv run ruff format --check server/director/ server/tests/test_director_approvals.py
+26 files already formatted
+```
+(GREEN 뒤 정리: import 정렬 자동수정 1건 + 함수 시그니처 줄바꿈 6건(E501) +
+`approvals.py` 자체 포맷 1건 — 전부 수정 후 재확인 초록.)
+
+**Evidence — 경계 grep**
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/       → 0 매치
+$ grep -rnE "^\s*(from|import)\s+server\.(looks|web\.session)" server/director/  → 0 매치
+$ grep -rn "approval_bridge\|DenyAllApprovalPort\|request_approval(" server/director/
+  → 2 매치: auth.py:15(M1 기존, docstring 산문) · approvals.py:9(이번 신규,
+    같은 성격의 docstring 산문 — "이 채널과는 다르다"는 설명이지 import/호출이
+    아니다). `git status --short` 로 실제 변경 파일 확인: approvals.py(신규)·
+    director_api.py(EXTEND)·test_director_approvals.py(신규) 세 개뿐, gate.py·
+    tools.py·session.py·approval.py·approval_bridge.py 미접촉.
+$ git diff --name-only origin/main -- server/director/models.py server/director/store.py \
+    server/director/service.py server/director/context.py server/director/knowledge.py \
+    server/director/digest.py server/director/emit.py server/director/validate
+  → 0 매치 — PRESERVE(형제 SPEC 소유) 위반 없음.
+```
+
+**설계 판단 — console_id/session_id 출처** (배차서가 명시적으로 요구한 판단)
+
+`Credential`(auth.py)에는 `console_id` 필드가 없다 — credential 의 `session_id`
+는 사람/plugin 세션이지 콘솔 세션이 아니다. 계약 §6.1 이 ContextSnapshot 의
+identity 축으로 `target={console_id,session_id,identity_status,
+identity_evidence_refs,mode,destination}` 를 명시적으로 규정하므로, LDSTORE 의
+`ContextObservations.target`(context.py, PRESERVE·읽기 전용)에서 값을 가져오는
+쪽을 채택했다 — `ContextRef.from_snapshot()` 이 `snapshot["target"]["console_id"]`
+/`["session_id"]` 를 꺼낸다(`context.py` 자체는 `target` 을 구조화 없는
+`Mapping[str, Any]` 로 취급하므로 이 층이 처음 구조를 부여한다). credential 로부터
+passthrough 하는 대안은 기각했다 — 계약이 `console_id`/`session_id` 를 target(콘솔
+identity) 축의 값으로 규정했지, credential(사람 인증) 축의 값으로 규정하지 않았다.
+
+**만든 파일**
+
+```
+server/director/approvals.py           ApprovalBinding·만료·무효화·승인/거절 오버레이 (신규)
+server/tests/test_director_approvals.py REQ-020 시험 21개 (신규)
+```
+
+EXTEND: `server/director/director_api.py` — `POST .../approvals`·
+`POST .../rejections` route 2개 + `DirectorApiDeps.approvals`/`validation_provider`
+필드 추가. 계약 §4 의 route 형태를 그대로 따랐다(plan.md 가 이 EXTEND 를 M2 의
+정당한 범위로 명시).
+
+**Gaps — M2 에서 하지 않은 것**
+
+- **`ValidationProvider` 의 실제 구현이 없다.** `SPEC-LDCOMPILE-001` 이 만든
+  validation 산출물을 durable 하게 저장·HTTP 로 노출하는 저장소가 이 코드베이스에
+  아직 없다(M1 의 `ContextProvider`/`ExecutionProvider` 와 같은 이유 — 미주입이면
+  503). route 층 시험은 stub(`_StubValidationProvider`/`_StubContextProvider`)으로
+  왕복만 확인했다.
+- **ApprovalRegistry 는 in-memory 다.** durable 저장(SQLite, 승인 소비 추적)은
+  계획 §2 M4 행이 만든다 — REQ-020 자체가 console 게이트가 아니므로(spec.md §5)
+  이 범위는 의도된 것이다(approvals.py 모듈 docstring에 명시).
+- **재승인(같은 revision 에 대한 두 번째 approve 호출, 다른 idempotency_key)의
+  상태-기계 제약을 추가로 걸지 않았다.** 계약 §10 은 만료된 승인이 있는 revision
+  은 재승인이 아니라 새 revision 제출을 요구한다고 규정하지만, 이 세부는 M5(apply
+  직전 재검사)의 몫으로 남겼다 — M2 는 발급·무효화 판정만 책임진다.
+- **`test_director_api_routes.py` 를 별도로 만들지 않았다** — M1 이 남긴 동일한
+  gap(§E.2 M1 Gaps 참고)이며, 이번 M2 의 route 층 시험(4개)은 그 파일 대신 이번
+  시험 파일(`test_director_approvals.py`) 안에 함께 두었다. `director_api.py` 의
+  기존 M1 route(GET context/knowledge/plan 등)는 이번에도 여전히 HTTP 표면
+  시험을 갖지 않는다 — 이 SPEC 의 후속 마일스톤(또는 별도 delegation)에서
+  `test_director_api_routes.py` 로 채우는 것을 권고한다.
+
+**Residual-risk**
+
+- CONTEXT_STALE 의 세부 사유 셋(body 어긋남 / validation 만료 / context 만료)을
+  하나의 코드(409 CONTEXT_STALE)로 묶었다 — 계약이 이 세 경우를 서로 다른 코드로
+  구분하라고 명시하지 않았으므로 설계 판단이지만, 감사 의견에 따라 세분화될
+  여지가 있다.
+- `check_validity()` 의 "context_changed" 판정이 compiler/target/policy 변경을
+  context_digest 하나로 뭉뚱그린다는 설계 판단(context.py NINE_AXES 근거)은
+  design.md 의 destination occupancy 결정(§3, "context_digest 하나가 아홉 축을
+  덮는다")과 같은 원리를 재사용한 것이지만, 이 SPEC 자신의 design.md 는 이
+  재사용을 명시적으로 다루지 않는다 — sync-phase 나 감사 시 이 설계 판단을
+  design.md 에 소급 기록할지 검토 권장.
+- M3(공유 programmer 중재자)가 아직 없으므로, 두 요청이 동시에 같은 plan 을
+  승인/거절하는 race 는 이 M2 코드 자체로는 막히지 않는다(idempotency 는 같은
+  key 재제출만 방어) — 이는 원래 M3(§2.0-나·design.md §2)의 몫이다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
