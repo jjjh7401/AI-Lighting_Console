@@ -34,6 +34,7 @@ from collections import Counter, OrderedDict
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from server.director.programmer_arbiter import ProgrammerArbiter, TargetBusyError
 from server.orchestrator.ports import ExecutionResult
 from server.safety.approval import (
     ApprovalItem,
@@ -191,6 +192,7 @@ class SafetyGate:
         plugin_registry: PluginFlagRegistry | None = None,
         reference_types: tuple[str, ...] = RECOGNIZED_REFERENCE_TYPES,
         stage_observer: Callable[[str], None] | None = None,
+        arbiter: ProgrammerArbiter | None = None,
     ) -> None:
         self._console = console
         self._audit = audit
@@ -198,6 +200,13 @@ class SafetyGate:
         self._approval_port = approval_port or DenyAllApprovalPort()
         self.lock = lock or LiveLock()
         self.monitor = monitor or HealthMonitor()
+        # SPEC-LDRECV-001 M3 (REQ-LDPLUGIN-022) — the shared programmer
+        # mutation mutex. One instance per SafetyGate (injectable for
+        # tests), NOT a module-level singleton: exactly one live SafetyGate
+        # is already shared by every concurrent ChatSession + the director
+        # apply path (see the M6c-1 note atop this module), so an
+        # instance-scoped lock already covers every live mutation caller.
+        self._arbiter = arbiter or ProgrammerArbiter()
         self._backup = backup
         self._body_fetcher = body_fetcher or _UnavailableBodyFetcher()
         self._plugin_registry = plugin_registry
@@ -350,12 +359,30 @@ class SafetyGate:
 
     # -- screening pipeline (BundleGate) ---------------------------------------
 
-    # @MX:ANCHOR: [AUTO] the 3-stage gate pipeline entry — run_commands (via the
+    # @MX:ANCHOR: [AUTO] the shared screening pipeline — run_commands (via the
     #   BundleGate wiring), the M5 approval UI flow, and every FN-corpus/E2E test
-    #   pass bundles through this single method
-    # @MX:REASON: REQ-MVP-011/029 — exactly ONE screening path may exist; a second
-    #   entry would be a gate bypass by construction (fan_in >= 3)
-    def screen(self, commands: Sequence[str], *, risk: BatchRisk | None = None) -> ScreenDecision:
+    #   pass bundles through this method; execute_preapproved() below (SPEC-LDRECV-001
+    #   M3) is a SECOND public entry point that calls the identical private stage
+    #   sequence (_check_health -> _stage_grammar -> _stage_classify -> _check_lock ->
+    #   _acquire_arbiter -> backup) — fan_in >= 3 now spans both entry points together
+    # @MX:REASON: REQ-MVP-011/029 — exactly ONE screening PIPELINE may exist; a
+    #   second entry that skipped a stage would be a gate bypass by construction.
+    #   execute_preapproved() is a second PUBLIC METHOD, not a second pipeline: it
+    #   reuses these same private stages and differs only in never invoking
+    #   self._approval_port (REQ-LDPLUGIN-021 §2.0-가; design.md §1.2/§1.3 — the
+    #   ANCHOR protects pipeline singularity, not public-method count). The
+    #   arbitrate= keyword (SPEC-LDRECV-001 M3 scope narrowing, design.md §2.5)
+    #   lets one specific caller (server/web/panel.py PanelRuntime.fire(),
+    #   REQ-SHOWUI-013) opt OUT of the REQ-LDPLUGIN-022 arbiter while every
+    #   other stage still runs unchanged — grammar/classify/backup/health/audit
+    #   are NEVER conditional on arbitrate=, only the arbiter stage is
+    def screen(
+        self,
+        commands: Sequence[str],
+        *,
+        risk: BatchRisk | None = None,
+        arbitrate: bool = True,
+    ) -> ScreenDecision:
         """Screen one command bundle; issues clearances only on full clearance.
 
         ``risk`` 는 호출자의 **번들 위험 선언**이다(SPEC-COPILOT-BULKGATE-001).
@@ -368,6 +395,17 @@ class SafetyGate:
         선언은 새 분기가 아니라 **보류 판정을 만드는 입력**이다: 승인 뒤의
         락 재확인(lock-FIRST)과 위험 경로 백업은 선언 경로에서도 같은
         순서로 지난다(REQ-BULKGATE-005).
+
+        ``arbitrate`` (SPEC-LDRECV-001 M3, design.md §2.5) 는 REQ-LDPLUGIN-022
+        의 공유 programmer 중재자에 이 호출이 참여하는지를 정한다. 기본값
+        `True` 에서 기존 모든 호출부(``tools.py`` 의 `run_commands`,
+        ``session.py`` 의 chat 래퍼, ``measurement/runner.py``)는 **코드
+        변경 없이** 그대로 중재자를 탄다 — 이 키워드를 아예 넘기지 않기
+        때문이다. `False` 는 REQ-SHOWUI-013("chat 진행 중에도 panel 은
+        busy 로 막히지 않는다")을 지키기 위해 ``server/web/panel.py`` 의
+        `PanelRuntime.fire()` 만 명시적으로 넘긴다 — director apply 나
+        chat 이 lock 을 쥐고 있어도 panel 요청은 평소처럼 통과한다(M3
+        도입 이전과 바이트 동일한 동작).
         """
         commands = list(commands)
         session_key = current_session_key()
@@ -390,89 +428,233 @@ class SafetyGate:
         if locked is not None:
             return locked
 
-        approval_request: ApprovalRequest | None = None
-        held = [f for f in findings if f.hold]
-        # 선언이 붙은 번들은 분류 결과를 흡수해 **전체**가 하나의 요청이 된다.
-        # `held` 만 담으면 safe 로 분류된 명령이 카드에서 빠지고 감독은
-        # 무엇을 수락하는지 못 본다(REQ-BULKGATE-002). 요청은 여전히 하나다 —
-        # 선언 경로와 분류 경로를 따로 요청하면 카드가 둘로 갈린다.
-        approval_findings = list(findings) if risk is not None else held
-        audit_extra: dict[str, object] = {"kind": risk.kind} if risk is not None else {}
-        if approval_findings:
-            self._observe("approval")
-            approval_request = ApprovalRequest(
-                items=tuple(
-                    ApprovalItem(
-                        command=f.command,
-                        # 분류가 준 사유는 잃지 않는다 — 선언의 사유가 앞에 붙을 뿐.
-                        risk_reasons=((risk.reason, *f.reasons) if risk is not None else f.reasons),
-                        warnings=f.warnings,
-                    )
-                    for f in approval_findings
-                )
-            )
-            held = approval_findings
-            approved = self._approval_port.request_approval(approval_request)
-            if not approved:
-                self._audit.log_rejected(commands, held=[f.command for f in held], **audit_extra)
-                return ScreenDecision(
-                    cleared=False,
-                    status="rejected",
-                    commands=tuple(
-                        CommandDecision(
+        # SPEC-LDRECV-001 M3 (REQ-LDPLUGIN-022) — shared programmer mutation
+        # mutex, right after the existing live-lock check (design.md §2.3).
+        # On success, EVERYTHING below (including the approval wait) runs
+        # while the arbiter is held; the finally below guarantees release on
+        # every exit path (rejected, backup-failed, or cleared). Skipped
+        # entirely when arbitrate=False (design.md §2.5) — the panel's own
+        # calls never touch this lock at all, matching pre-M3 behavior.
+        busy = self._acquire_arbiter(commands, findings) if arbitrate else None
+        if busy is not None:
+            return busy
+        try:
+            approval_request: ApprovalRequest | None = None
+            held = [f for f in findings if f.hold]
+            # 선언이 붙은 번들은 분류 결과를 흡수해 **전체**가 하나의 요청이 된다.
+            # `held` 만 담으면 safe 로 분류된 명령이 카드에서 빠지고 감독은
+            # 무엇을 수락하는지 못 본다(REQ-BULKGATE-002). 요청은 여전히 하나다 —
+            # 선언 경로와 분류 경로를 따로 요청하면 카드가 둘로 갈린다.
+            approval_findings = list(findings) if risk is not None else held
+            audit_extra: dict[str, object] = {"kind": risk.kind} if risk is not None else {}
+            if approval_findings:
+                self._observe("approval")
+                approval_request = ApprovalRequest(
+                    items=tuple(
+                        ApprovalItem(
                             command=f.command,
-                            status="rejected",
-                            reasons=f.reasons or ("bundle rejected (all-or-nothing, REQ-MVP-015)",),
+                            # 분류가 준 사유는 잃지 않는다 — 선언의 사유가 앞에 붙을 뿐.
+                            risk_reasons=(
+                                (risk.reason, *f.reasons) if risk is not None else f.reasons
+                            ),
                             warnings=f.warnings,
                         )
-                        for f in findings
-                    ),
-                    approval_request=approval_request,
-                    notice="bundle rejected by the approver — nothing was executed",
+                        for f in approval_findings
+                    )
                 )
-            self._audit.log_approved(commands, held=[f.command for f in held], **audit_extra)
-
-            # Lock-FIRST (REQ-MVP-035): a lock activated while the approval was
-            # pending converts the held commands to non-executable.
-            locked = self._check_lock(
-                commands, findings, phase="live lock activated during approval (lock-first)"
-            )
-            if locked is not None:
-                return locked
-
-            # Backup rule ③ (REQ-MVP-017): only the RISKY path backs up.
-            if self._backup is not None:
-                try:
-                    self._backup.before_risky_execution()
-                except BackupError as error:
-                    for command in commands:
-                        self._audit.log_blocked(command, reason=f"backup failed: {error}")
+                held = approval_findings
+                approved = self._approval_port.request_approval(approval_request)
+                if not approved:
+                    self._audit.log_rejected(
+                        commands, held=[f.command for f in held], **audit_extra
+                    )
                     return ScreenDecision(
                         cleared=False,
-                        status="blocked_backup_failed",
+                        status="rejected",
                         commands=tuple(
                             CommandDecision(
-                                command=f.command, status="blocked", reasons=(str(error),)
+                                command=f.command,
+                                status="rejected",
+                                reasons=f.reasons
+                                or ("bundle rejected (all-or-nothing, REQ-MVP-015)",),
+                                warnings=f.warnings,
                             )
                             for f in findings
                         ),
                         approval_request=approval_request,
-                        notice=f"showfile backup failed — execution blocked (fail-safe): {error}",
+                        notice="bundle rejected by the approver — nothing was executed",
                     )
+                self._audit.log_approved(commands, held=[f.command for f in held], **audit_extra)
 
-        with self._clearances_lock:
-            self._clearances[session_key] = Counter(commands)
-        return ScreenDecision(
-            cleared=True,
-            status="cleared",
-            commands=tuple(
-                CommandDecision(
-                    command=f.command, status="cleared", reasons=f.reasons, warnings=f.warnings
+                # Lock-FIRST (REQ-MVP-035): a lock activated while the approval was
+                # pending converts the held commands to non-executable.
+                locked = self._check_lock(
+                    commands, findings, phase="live lock activated during approval (lock-first)"
                 )
-                for f in findings
-            ),
-            approval_request=approval_request,
-        )
+                if locked is not None:
+                    return locked
+
+                # Backup rule ③ (REQ-MVP-017): only the RISKY path backs up.
+                if self._backup is not None:
+                    try:
+                        self._backup.before_risky_execution()
+                    except BackupError as error:
+                        for command in commands:
+                            self._audit.log_blocked(command, reason=f"backup failed: {error}")
+                        return ScreenDecision(
+                            cleared=False,
+                            status="blocked_backup_failed",
+                            commands=tuple(
+                                CommandDecision(
+                                    command=f.command, status="blocked", reasons=(str(error),)
+                                )
+                                for f in findings
+                            ),
+                            approval_request=approval_request,
+                            notice=(
+                                f"showfile backup failed — execution blocked (fail-safe): {error}"
+                            ),
+                        )
+
+            with self._clearances_lock:
+                self._clearances[session_key] = Counter(commands)
+            return ScreenDecision(
+                cleared=True,
+                status="cleared",
+                commands=tuple(
+                    CommandDecision(
+                        command=f.command, status="cleared", reasons=f.reasons, warnings=f.warnings
+                    )
+                    for f in findings
+                ),
+                approval_request=approval_request,
+            )
+        finally:
+            # arbitrate=False never acquired the arbiter above (busy=None,
+            # no try_acquire call) — releasing it here regardless would
+            # erroneously unlock whatever OTHER caller currently holds it
+            # (threading.Lock.release() is not ownership-checked). Release
+            # only on the path that actually acquired it.
+            if arbitrate:
+                self._arbiter.release()
+
+    # @MX:NOTE: [AUTO] the director apply entry point (SPEC-LDRECV-001 M3,
+    #   REQ-LDPLUGIN-021/022) — see the @MX:ANCHOR atop screen() for why this
+    #   second public method does not itself carry a second ANCHOR: it calls
+    #   the identical private stage sequence, so the pipeline-singularity
+    #   invariant that ANCHOR protects already covers both entry points from
+    #   that one tag (gate.py is already at the anchor_per_file cap of 3).
+    #   Director already holds its own ApprovalBinding (M2) by the time it
+    #   calls this; re-questioning through the general ApprovalPort would be
+    #   a SECOND, redundant approval that fails closed (DenyAllApprovalPort,
+    #   no UI session). grammar/classify/backup/health/audit are NEVER
+    #   skipped — only the general-channel approval re-ask is (design.md
+    #   §1.3; acceptance.md AC-LDPLUGIN-021 항목 3)
+    def execute_preapproved(
+        self, commands: Sequence[str], *, risk: BatchRisk | None = None
+    ) -> ScreenDecision:
+        """Screen a command bundle already covered by a director ``ApprovalBinding``.
+
+        Calls the SAME private stage sequence as :meth:`screen` —
+        ``_check_health`` -> ``_stage_grammar`` -> ``_stage_classify`` ->
+        ``_check_lock`` -> ``_acquire_arbiter`` -> backup — but NEVER calls
+        ``self._approval_port`` regardless of whether any command classifies
+        as ``held`` (design.md §1.3): a director caller has already obtained
+        human approval through its own ``ApprovalBinding`` channel (M2), and
+        this method treats that as the authorization evidence for this
+        bundle instead of re-asking the general chat/WS approval channel.
+
+        This method does NOT itself inspect any approval object — the
+        director layer (M5) is responsible for verifying its
+        ``ApprovalBinding`` actually covers this exact command bundle
+        BEFORE calling here. Calling this with an unverified bundle is a
+        caller bug, not something this method can detect.
+
+        ``risk`` mirrors :meth:`screen`'s parameter (SPEC-COPILOT-BULKGATE-001)
+        purely for audit-log parity — it never triggers an approval request
+        here, since none is ever made.
+        """
+        commands = list(commands)
+        session_key = current_session_key()
+        with self._clearances_lock:
+            self._clearances[session_key] = Counter()
+
+        health = self._check_health(commands)
+        if health is not None:
+            return health
+
+        grammar = self._stage_grammar(commands)
+        if isinstance(grammar, ScreenDecision):
+            return grammar
+
+        findings = self._stage_classify(grammar)
+
+        locked = self._check_lock(commands, findings, phase="live lock active")
+        if locked is not None:
+            return locked
+
+        busy = self._acquire_arbiter(commands, findings)
+        if busy is not None:
+            return busy
+        try:
+            held = [f for f in findings if f.hold]
+            if held:
+                # REQ-LDPLUGIN-021 §2.0-가: the director's own ApprovalBinding
+                # already authorized this bundle — the general ApprovalPort
+                # is never consulted from this entry point (AC-021 항목 3:
+                # mock 호출 횟수 0).
+                self._audit.log_approved(
+                    commands,
+                    held=[f.command for f in held],
+                    kind=(risk.kind if risk is not None else "director_preapproved"),
+                )
+
+                # Lock-FIRST (REQ-MVP-035) parity with screen(): a lock
+                # activated between classify and here converts held commands
+                # to non-executable, exactly as screen() does after approval.
+                locked = self._check_lock(
+                    commands,
+                    findings,
+                    phase="live lock activated during preapproved execution (lock-first)",
+                )
+                if locked is not None:
+                    return locked
+
+                # Backup rule ③ (REQ-MVP-017): only the RISKY path backs up.
+                if self._backup is not None:
+                    try:
+                        self._backup.before_risky_execution()
+                    except BackupError as error:
+                        for command in commands:
+                            self._audit.log_blocked(command, reason=f"backup failed: {error}")
+                        return ScreenDecision(
+                            cleared=False,
+                            status="blocked_backup_failed",
+                            commands=tuple(
+                                CommandDecision(
+                                    command=f.command, status="blocked", reasons=(str(error),)
+                                )
+                                for f in findings
+                            ),
+                            notice=(
+                                f"showfile backup failed — execution blocked (fail-safe): {error}"
+                            ),
+                        )
+
+            with self._clearances_lock:
+                self._clearances[session_key] = Counter(commands)
+            return ScreenDecision(
+                cleared=True,
+                status="cleared",
+                commands=tuple(
+                    CommandDecision(
+                        command=f.command, status="cleared", reasons=f.reasons, warnings=f.warnings
+                    )
+                    for f in findings
+                ),
+            )
+        finally:
+            self._arbiter.release()
 
     # -- pipeline stages ---------------------------------------------------------
 
@@ -621,6 +803,42 @@ class SafetyGate:
             proposal=proposal,
             notice=f"{phase} — no console sends; proposal card only",
         )
+
+    def _acquire_arbiter(
+        self, commands: list[str], findings: list[_Finding]
+    ) -> ScreenDecision | None:
+        """Shared programmer mutation mutex (SPEC-LDRECV-001 M3, REQ-LDPLUGIN-022).
+
+        Shared by :meth:`screen` and :meth:`execute_preapproved` so EVERY
+        shared-programmer mutation path — director apply, general chat,
+        import — serializes behind ONE lock regardless of which public
+        entry point issued the request (design.md §2.3).
+
+        Acquisition is immediate-reject: a caller that finds the lock held
+        gets ``TARGET_BUSY`` right away — never polls, never waits — so a
+        request cannot sit queued long enough for its approval to go stale
+        before running (REQ-LDPLUGIN-022 — "오래 대기시켜 낡은 승인을
+        실행하지 않는다").
+
+        Returns ``None`` on success; the CALLER owns releasing
+        ``self._arbiter`` (via ``finally``) once its own pipeline call
+        completes — this method never releases on the caller's behalf.
+        """
+        try:
+            self._arbiter.try_acquire(str(current_session_key()))
+        except TargetBusyError as error:
+            for command in commands:
+                self._audit.log_blocked(command, reason=str(error))
+            return ScreenDecision(
+                cleared=False,
+                status="blocked_target_busy",
+                commands=tuple(
+                    CommandDecision(command=f.command, status="blocked", reasons=(str(error),))
+                    for f in findings
+                ),
+                notice=str(error),
+            )
+        return None
 
     # -- plugin deployment (M7 — REQ-MVP-019/029) ---------------------------------
 

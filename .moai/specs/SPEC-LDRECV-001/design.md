@@ -188,6 +188,85 @@ execution journal(LDRECV 소유)에 속하는 것이 자연스럽다.
 - 이 구현 방향은 M4/M5 착수 시 재확인 대상이다(§4). 컬럼 이름·정확한 상태 enum 은
   이 문서가 확정하지 않는다.
 
+## 2.5. M3 착수 후 발견 — REQ-LDPLUGIN-022 범위를 director/chat/import 로
+좁힌다 (panel 제외)
+
+### 2.5.1 충돌
+
+M3 구현(§1·§2)을 `server/safety/gate.py` 에 배선한 뒤 전체 회귀
+(`uv run pytest -q`)를 돌리자, 이 SPEC 문서 어디에도 등장하지 않는 기존
+요구사항과 충돌했다: `server/web/panel.py`(SHOWUI M2/M3 소유,
+REQ-SHOWUI-001..013/022..026)의 `PanelRuntime.fire()` — 대시보드 실행기
+버튼 하나가 콘솔에 닿는 유일한 경로 — 도 `self._gate.screen([command])`
+를 직접 부른다. 이것은 §2.1(실측)이 찾은 `tools.py`/`session.py`/
+`measurement/runner.py` 세 호출부에 포함되지 않은 **네 번째** 호출부이며,
+이 SPEC 의 spec.md·plan.md·acceptance.md 어디에도 "panel"이라는 단어가
+없다 — 순수하게 이번 회귀에서 처음 드러났다.
+
+`REQ-SHOWUI-013`(기존, 배포됨): "a chat turn in flight must not busy-out
+the panel" — chat 이 진행 중이어도 panel 조작은 busy 로 막히지 않고 실제로
+콘솔에 닿아야 한다. 이것을 지키는 기존 테스트
+(`server/tests/test_web_panel_execute.py::TestSerialization`)는 chat 과
+panel 의 `screen()` 호출이 **의도적으로 동시에, 직렬화 없이** 통과하는
+것을 전제로 짜여 있다.
+
+`REQ-LDPLUGIN-022`(이 SPEC): "director/chat/import 등 **모든** shared
+programmer mutation을 하나의 중재자로 직렬화". `gate.py` 의 공유 private
+스테이지에 lock 을 둔 것(§2.3 의 핵심 이점 — 세 호출부 무수정)은 그
+대가로 `.screen(` 을 부르는 모든 경로를 자동으로 포함시킨다 — panel 도
+예외가 아니다. 결과: `TestSerialization` 의 2개 시험이 실패했다(director
+apply 가 lock 을 쥔 동안 panel 요청이 콘솔에 닿지 못함).
+
+### 2.5.2 결정 (사람 확인, 2026-09-17)
+
+**REQ-LDPLUGIN-022 의 "모든 shared programmer mutation"을
+"director/chat/import"로 좁힌다 — panel(REQ-SHOWUI-013)은 중재자 범위에서
+제외한다.** 근거: panel 은 사람이 지금 이 순간 누른 실행기 버튼이라
+REQ-022 의 동기("오래 대기시켜 낡은 승인을 실행하지 않는다")가 원천적으로
+적용되지 않는다 — panel 에는 "낡아질 승인"이 없다, 매 press 가 그 자체로
+새 요청이다. 반면 director apply 는 M2 의 `ApprovalBinding`(최대
+10분짜리 승인)을 들고 대기했다가 실행하므로 "낡은 승인" 위험이 실재한다.
+
+### 2.5.3 채택한 가드 메커니즘
+
+`SafetyGate.screen()`에 키워드 전용 매개변수 `arbitrate: bool = True`를
+추가한다. 기본값이 `True`이므로 **기존 호출부(`tools.py`의
+`run_commands`, `session.py`의 chat 래퍼, `measurement/runner.py`)는
+코드를 전혀 바꾸지 않고도** REQ-022 의 직렬화를 그대로 받는다(이
+키워드를 아예 넘기지 않으므로). `panel.py`의 `PanelRuntime.fire()` 만
+`self._gate.screen([command], arbitrate=False)`로 명시적으로 넘겨
+중재자를 건너뛴다 — grammar/classify/backup/health/audit 는 조건 없이
+그대로 지난다, `arbitrate`가 건드리는 것은 새 arbiter 스테이지 하나뿐이다.
+
+**이 대안을 고른 이유**: (1) `tools.py`/`session.py`/`measurement/
+runner.py` 를 안 건드린다는 §2.3 의 원래 이점을 그대로 지킨다 — 새
+매개변수의 기본값이 곧 "과거와 동일"이라서 세 파일이 여전히 무수정이다.
+(2) panel.py 는 이 SPEC 소유가 아니므로(SHOWUI 소유) 최소 1줄만
+건드린다 — `arbitrate=False`를 넘기는 호출부 변경 자체가 REQ-SHOWUI-013
+을 지키기 위한 필수 최소 수정이다(gate.py 내부만으로는 "이 호출이
+panel 발신"이라는 사실을 판별할 신호가 전혀 없다 — session_key 는
+세션 단위 식별자이지 chat-vs-panel 구분자가 아니다). (3) 대안(호출부마다
+직접 lock 을 관리하게 하거나, gate.py 가 명령 내용으로 panel 을
+추측하는 것)은 각각 §2.3-근거2 가 이미 기각한 "호출부마다 감싸기"의
+재현이거나, 안전장치가 내용 기반 추측에 의존하는 더 위험한 설계다.
+
+**부작용 — test harness 1줄 추가 수정**: `server/tests/
+test_web_panel_execute.py::make_harness` 의 `spy()` 함수가 `gate.screen`
+을 모니터링용으로 감싸는데, 실제 시그니처와 다른 파라미터 목록
+(`commands, *, risk=None`)만 받고 있어 `arbitrate=`를 못 받아
+`TypeError`를 냈다(카드 t323 이 남긴 같은 모양의 결함 — `risk=`때도
+같은 문제였다). 시그니처를 게이트의 실제 것과 맞춰
+`spy(commands, *, risk=None, arbitrate=True)`로 확장하고 그대로
+전달한다 — 이 파일은 SHOWUI 소유 **테스트** 코드이며, 프로덕션 코드는
+아니다.
+
+### 2.5.4 이 결정이 재확인이 필요 없는 이유
+
+`execute_preapproved()`(director 전용, M5 apply 가 부를 유일한 경로)는
+`arbitrate` 매개변수를 갖지 않는다 — director 는 REQ-022 의 세 갈래 중
+하나이므로 항상 중재자를 타야 하고, 이 SPEC 의 어떤 결정도 그것을
+바꾸지 않는다.
+
 ## 4. 이 문서가 판정하지 않는 것
 
 - SafetyGate `execute_preapproved` 의 최종 시그니처·private 스테이지 재사용 방식의

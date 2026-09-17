@@ -32,7 +32,7 @@ id 는 우산에서 승계한다 (`../SPEC-LDPLUGIN-001/spec.md:45` — id 는 �
 | AC-LDPLUGIN-019 | 019 | D+H | **Given** 서버 immutable record 로 역참조되지 않는 `actor_ref`/`origin`/`confirmation` 주장, **When** 권한 판단에 소비, **Then** 그 주장만으로 승격하지 않는다. **Given** audio 의 외부 provider 전송 요청, **When** 앱 명시 동의가 없음, **Then** 차단하고 목적/수신자/범위 기록 없이 전송하지 않는다. |
 | AC-LDPLUGIN-020 | 020 | S+D+H | **Given** `ready_for_review` plan, **When** human 이 APP route 로 승인, **Then** `ApprovalBinding`(approval_id·plan_id·plan_revision·plan_digest·context_digest·compiled_digest·principal_id·console_id·session_id·safety_policy_revision·approved_at·expires_at) 을 발급하고 만료는 생성+10분과 validation/context 만료 중 빠른 값이다. **Given** 일반 chat/WS boolean 또는 MCP 호출, **When** 승인 시도, **Then** director 승인으로 인정하지 않는다. |
 | AC-LDPLUGIN-021 | 021 | D+H | **Given** apply 요청이 lock 을 얻은 직후, **When** current bindings·target/destination occupancy·LiveLock·승인 신선도를 재검사, **Then** 하나라도 stale/점유/lock-active/만료면 차단하고 destination 은 server-selected 새 Sequence create-only 만 허용한다. **Given** 그 명령 bundle 이 SafetyGate 의 grammar/classify/backup/health/audit 를 통과해야 하는 경로, **When** apply, **Then** 그 다섯을 우회하지 않는다(§2.0-가는 여섯째인 일반 `ApprovalPort` 재질문만 건너뛴다). **콘솔 필요**: 통과한 apply 가 실제로 콘솔에 객체를 만들었는지(applied 판정)는 실기 관측이 있어야 한다. |
-| AC-LDPLUGIN-022 | 022 | D | **Given** director apply 가 중재자 lock 을 쥔 동안 동시 chat/import mutation 요청, **When** 그 요청 도착, **Then** `TARGET_BUSY` 로 거부하고 오래 대기시켜 낡은 승인을 실행하지 않는다. 역방향(chat 이 먼저 쥔 lock 에 director 가 요청)도 동일하다. |
+| AC-LDPLUGIN-022 | 022 | D | **범위(design.md §2.5, M3 착수 후 확정): director·chat·import — panel(대시보드 실행기 조작, REQ-SHOWUI-013)은 제외.** **Given** director apply 가 중재자 lock 을 쥔 동안 동시 chat/import mutation 요청, **When** 그 요청 도착, **Then** `TARGET_BUSY` 로 거부하고 오래 대기시켜 낡은 승인을 실행하지 않는다. 역방향(chat 이 먼저 쥔 lock 에 director 가 요청)도 동일하다. **Given** panel 조작(`PanelRuntime.fire()`)이 도착, **When** director apply 나 chat 이 중재자 lock 을 쥔 상태, **Then** panel 은 `arbitrate=False` 로 그 lock 을 건너뛰어 REQ-SHOWUI-013("chat 진행 중에도 panel 은 busy 로 막히지 않는다")대로 정상 통과한다 — busy 로 거부되지 않는다. |
 | AC-LDPLUGIN-023 | 023 | D+H | **Given** 같은 `(project_id, principal_id, operation, idempotency_key)` + 같은 request fingerprint 로 재제출, **When** 처리, **Then** 최초 status·body 그대로 replay 한다. **Given** 같은 key + 다른 request, **When** 제출, **Then** `IDEMPOTENCY_CONFLICT`(409). **Given** socket send 후 DB commit 전 crash(합성), **When** 재시작 후 조회, **Then** 그 execution 은 `unknown` 이며 blind 하게 success/failed 로 확정하지 않는다. |
 | AC-LDPLUGIN-024 | 024 | D | **Given** bundle 시퀀스 중 하나가 실패/간섭/불확실 전송, **When** 이후 bundle 평가, **Then** 후속 bundle 은 전송하지 않고(`not_sent` 로 receipt 에 보존) `failed`/`partial`/`unknown` 을 정확히 구분한다(하나라도 확인 불가면 `unknown` 이 `partial` 보다 우선). blind retry 나 atomic OSC rollback 을 주장하지 않는다. |
 | AC-LDPLUGIN-032 | 032 | D+H | **Given** release/운영 중단 결정, **When** 실행, **Then** 해당 principal 의 MCP/human credential 을 즉시 철회하고 신규 apply 를 차단하며 journal 을 삭제·수정하지 않고 보존한다. **Given** 과거 execution 이 partial/unknown, **When** recovery 흐름(새 revision→검증→승인→apply `recovery_of`), **Then** 원본 execution 기록은 불변으로 남고 새 execution 이 별도로 생긴다. **콘솔 필요**: recovery apply 가 실제로 적용됐는지는 실기 관측이 있어야 한다. |
@@ -105,16 +105,24 @@ uv run pytest server/tests/test_director_apply_rejection.py server/tests/test_di
 객체를 만들었는지(`applied` 판정, object-existence confirmed)는 실기 관측 기록이
 별도 증거다. 이 기준은 이 문서가 go 로 판정할 수 없다.
 
-### AC-LDPLUGIN-022 — 공유 programmer 중재자
+### AC-LDPLUGIN-022 — 공유 programmer 중재자 (범위: director·chat·import — panel 제외)
 
 ```bash
 uv run pytest server/tests/test_director_arbiter.py -q
+uv run pytest "server/tests/test_web_panel_execute.py::TestSerialization" -q
 ```
 
 **PASS 조건**: 두 동시 요청(둘 다 합성 — director 시뮬레이션 + chat 시뮬레이션) 중
 정확히 하나만 lock 을 얻고 나머지는 `TARGET_BUSY`. lock 보유 중 재시도가 아니라
 즉시 거부인지(폴링/대기 없음) 확인한다. lock 해제 후 대기 중이던 승인이 그대로
 실행되지 않고 신선도를 다시 검사하는지(§AC-021 항목 1 과 결합) 확인한다.
+
+**범위 제외 확인(design.md §2.5, M3 착수 후 확정)**: panel(대시보드 실행기 조작)은
+이 중재자 대상이 아니다 — director apply 나 chat 이 lock 을 쥔 동안에도 panel
+조작(`PanelRuntime.fire()`, `arbitrate=False`)은 `TARGET_BUSY` 없이 정상 통과해야
+한다(REQ-SHOWUI-013). `test_web_panel_execute.py::TestSerialization`의
+`test_the_chat_turn_lock_is_not_shared_with_the_panel`·
+`test_a_stop_is_exempt_from_the_busy_guard` 가 이 조건을 고정한다.
 
 ### AC-LDPLUGIN-023 — durable journal·idempotency
 

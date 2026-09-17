@@ -454,9 +454,346 @@ EXTEND: `server/director/director_api.py` — `POST .../approvals`·
   승인/거절하는 race 는 이 M2 코드 자체로는 막히지 않는다(idempotency 는 같은
   key 재제출만 방어) — 이는 원래 M3(§2.0-나·design.md §2)의 몫이다.
 
+### M3 완료 (REQ-LDPLUGIN-021 §2.0-가 항목 3·4 · REQ-LDPLUGIN-022, 범위 확정: director/chat/import — panel 제외)
+
+작업 트리 기준 M2 완료 커밋 `8af5d570` 위에서 진행. **1차 구현 뒤 전체 회귀에서
+이 SPEC 문서 어디에도 없던 기존 요구사항(REQ-SHOWUI-013)과의 충돌을 발견해
+Missing Inputs로 중단·보고했고(아래 "발견된 충돌" 절), 사람 확인
+(2026-09-17, 옵션 1 채택) 후 스코프 가드를 구현해 재해소했다** — design.md
+§2.5, plan.md M3 행 + §3.1, acceptance.md AC-022 를 모두 그 결정에 맞춰
+갱신했다. 최종 회귀 실패 0 확인 후 커밋했다(아래 SHA).
+
+**Claim**: `server/safety/gate.py`에 `execute_preapproved()`(신규 public
+메서드) + `server/director/programmer_arbiter.py`(신규, `ProgrammerArbiter`)를
+design.md §1.3 대안 C·§2.3 그대로 TDD 로 구현했다. `screen()`은 회귀 0으로
+유지했고, `tools.py`/`session.py`/`measurement/runner.py` 세 파일은 전혀
+건드리지 않았다(§2.3 전제대로 lock 이 `gate.py` 내부 공유 private 스테이지에
+있어 자동으로 세 호출부를 직렬화한다). 그러나 **전체 회귀에서 이 SPEC 문서
+어디에도 언급되지 않은 기존 요구사항(`REQ-SHOWUI-013`)과의 충돌을
+발견했다** — 아래 "발견된 충돌" 참고.
+
+**Evidence — RED (구현 삭제 후 실제로 재확인한 verbatim 출력)**
+
+최초 작성 순서 오류를 스스로 발견했다 — `programmer_arbiter.py`를 그 단위
+시험보다 먼저 써서 test-after 가 됐다. 파일을 삭제하고 RED 를 다시 확인한
+뒤 재작성했다(test-first 준수 재확립).
+
+```
+$ uv run pytest server/tests/test_director_arbiter.py server/tests/test_director_gate_bridge.py -q
+ERROR collecting server/tests/test_director_arbiter.py
+ModuleNotFoundError: No module named 'server.director.programmer_arbiter'
+1 error in 0.09s
+```
+
+**Evidence — GREEN (신규 시험 17개: arbiter 파일 9 + gate_bridge 파일 8)**
+
+```
+$ uv run pytest server/tests/test_director_arbiter.py server/tests/test_director_gate_bridge.py -q
+.................                                                        [100%]
+17 passed in 0.17s
+```
+
+| AC | 시험 커버 | Status |
+|---|---|---|
+| AC-LDPLUGIN-022 | `ProgrammerArbiter` 단위(즉시 거부·holder 이름·해제 후 재획득·역방향) · `SafetyGate` 배선(director `execute_preapproved()`가 잡은 lock에 chat `screen()` 요청이 `blocked_target_busy`로 거부 · 역방향(chat이 잡은 lock에 director 요청)도 동일) · lock 해제 후 재시도가 캐시가 아니라 파이프라인을 처음부터 재실행함(콘솔 미도달 확인 후 재시도 시 도달) — 신선도 판정 자체는 M5 몫, 이번엔 seam까지 | PASS |
+| AC-LDPLUGIN-021 항목 3 | `execute_preapproved`가 안전한 명령은 승인 요청 0회로 클리어, 위험 명령도 승인 요청 0회로 클리어(감사엔 approved로 기록) · grammar 위반·console offline·live lock 활성 셋 다 `screen()`과 동일한 status 로 거부(대조 시험) · backup rule ③(위험 경로만 백업)이 `execute_preapproved`에서도 유지됨 | PASS |
+| AC-LDPLUGIN-021 항목 4 | 기존 `screen()` characterization — 아래 "characterization" 참고 | PASS |
+
+**Evidence — characterization (기존 gate 테스트 스위트 전체, 회귀 0)**
+
+```
+$ uv run pytest server/tests/test_bulkgate_declaration.py server/tests/test_bulkgate_songcue_seam.py \
+    server/tests/test_deploy_gate_e2e.py server/tests/test_responder_import_gate.py \
+    server/tests/test_safety_gate.py server/tests/test_showfile_replacement_gate.py \
+    server/tests/test_worktree_gate_deps.py server/tests/test_writegate_declaration_wiring.py \
+    server/tests/test_writegate_layout.py server/tests/test_writegate_merge_gap.py \
+    server/tests/test_writegate_model_tool.py server/tests/test_writegate_session_sites.py \
+    server/tests/test_writegate_song_finalize.py server/tests/test_writegate_tool_seams.py \
+    server/tests/test_writegate.py -q
+283 passed, 22 skipped in 4.10s
+```
+`screen()`의 관측 가능한 입출력 계약(결정·사유·감사 로그)은 바이트 동일 —
+design.md §1.4 의 characterization 요구를 이 15개 파일 305개 시험 전체
+실행으로 충족했다.
+
+**Evidence — ruff**
+
+```
+$ uv run ruff check server/director/ server/safety/gate.py \
+    server/tests/test_director_arbiter.py server/tests/test_director_gate_bridge.py
+All checks passed!
+$ uv run ruff format --check (동일 범위)
+29 files already formatted
+```
+(중간에 재인덴트로 인한 E501 2건 + 미사용 import 1건을 발견해 고쳤다 —
+`_check_lock` 직후부터 `try/finally`로 감싸며 4칸 들여쓰기가 늘어 100자를
+넘긴 줄 2개.)
+
+**Evidence — 경계 3개 금지 파일 미접촉**
+
+```
+$ git diff --name-only 8af5d570..HEAD -- server/orchestrator/tools.py \
+    server/web/session.py server/measurement/runner.py
+(빈 출력 — 세 파일 전혀 수정 안 됨, 확인됨)
+```
+
+**Evidence — @MX:ANCHOR 갱신 (fan_in >= 3 cap 준수)**
+
+`gate.py`는 이미 `anchor_per_file: 3` 상한에 있었다(기존 `screen()` +
+introspect 2개). `execute_preapproved()`에 두 번째 ANCHOR 를 추가하면 4개가
+되어 한도 초과 — design.md §1.3 자체가 "두 진입점이 같은 파이프라인을
+공유한다"는 사실 하나로 갱신하라고 했으므로, `screen()`의 기존 ANCHOR/REASON
+만 갱신(두 entry point 언급)하고 `execute_preapproved()`에는 `@MX:NOTE`로
+격하해 그 ANCHOR 를 참조하게 했다(design.md 의도를 정확히 지키면서 hard
+limit 도 지키는 선택).
+
+```
+$ grep -nE "^\s*#\s*@MX:ANCHOR:" server/safety/gate.py
+362:    # @MX:ANCHOR: [AUTO] the shared screening pipeline — run_commands (via the
+964:        # @MX:ANCHOR: [AUTO] introspect audit subject is path-only.
+981:        # @MX:ANCHOR: [AUTO] props audit subject is path plus requested names only.
+```
+(3개, 한도 내 — 갱신된 REASON 은 두 entry point 를 모두 언급한다)
+
+**만든 파일**
+
+```
+server/director/programmer_arbiter.py       ProgrammerArbiter · TargetBusyError (신규)
+server/tests/test_director_arbiter.py       REQ-022 시험 (신규)
+server/tests/test_director_gate_bridge.py   REQ-021 §2.0-가 대조 시험 (신규)
+```
+
+EXTEND: `server/safety/gate.py` — `execute_preapproved()`(신규 public
+메서드) + `_acquire_arbiter()`(신규 private 스테이지, `_check_lock` 직후) +
+`__init__`에 `arbiter` 파라미터 추가 + `screen()`에 arbiter 획득/해제
+`try/finally` 삽입(관측 가능한 입출력은 불변, 내부 구현만 확장 —
+design.md §2.0-나 정정 그대로).
+
+**Baseline-attribution**: 기준선(M2 §E.2 가 기록한 최종값, 같은 HEAD `8af5d570`)
+`13428 passed, 35 skipped`. 신규 테스트 **17개**(2파일). 13428 + 17 = **13445**
+— 전체 회귀 시도 수(passed+failed 합)와 정확히 일치. skipped 불변(35). **실패
+2건** — 아래 "발견된 충돌" 참고, 회귀 0 이 아니므로 no-go.
+
+**Evidence — 최종 회귀 (전체, 실패 2건 포함)**
+
+```
+$ uv run pytest -q
+2 failed, 13443 passed, 35 skipped, 1 warning in 181.34s (0:03:01)
+```
+verbatim 저장: `.moai/state/verify/ldrecv-m3/m3-full-regress.txt`
+
+---
+
+**발견된 충돌 — REQ-LDPLUGIN-022 vs REQ-SHOWUI-013 (BLOCKER, 사람 판단 필요)**
+
+전체 회귀(`uv run pytest -q`)에서 이 SPEC 문서(spec.md·plan.md·design.md·
+acceptance.md) 어디에도 언급되지 않은 기존 시험 2개가 실패했다:
+
+```
+$ uv run pytest server/tests/test_web_panel_execute.py::TestSerialization -q
+FAILED test_a_stop_is_exempt_from_the_busy_guard
+  assert 'Off Executor 5' in ['Go+ Executor 191']  (Off Executor 5 가 콘솔에 안 닿음)
+FAILED test_the_chat_turn_lock_is_not_shared_with_the_panel
+  assert 'Go+ Executor 191' in ['Store Group 3']  (Go+ Executor 191 이 콘솔에 안 닿음)
+2 failed, 3 passed in 2.10s
+```
+
+`test_the_chat_turn_lock_is_not_shared_with_the_panel`의 원문 주석:
+*"REQ-SHOWUI-013: a chat turn in flight must not busy-out the panel."*
+— 이 기존 요구사항은 **chat 이 진행 중이어도 panel(대시보드 실행기 버튼)은
+busy 로 막히지 않고 진짜로 콘솔에 도달해야 한다**는 것이다. 즉 chat 과
+panel 의 `screen()` 호출은 **의도적으로 동시에(직렬화 없이) 통과**하도록
+이미 설계·시험돼 있다(같은 파일의 `test_a_panel_screen_does_not_invalidate_
+a_chat_bundles_clearance` 등 다른 테스트도 이 동시성 전제를 공유).
+
+REQ-LDPLUGIN-022 원문: *"director/chat/import 등 모든 shared programmer
+mutation을 하나의 중재자로 직렬화"*. 이 SPEC 의 design.md/plan.md/
+acceptance.md 는 director·chat·import 세 갈래만 언급하고, **panel(대시보드
+실행기 조작)을 한 번도 명시적으로 다루지 않았다** — grep 결과 이 SPEC
+문서 5개(spec/plan/design/acceptance/progress) 어디에도 "panel"·
+"REQ-SHOWUI" 문자열이 없다.
+
+이 SPEC 이 채택한 대로 arbiter 를 `gate.py`의 공유 private 스테이지에
+두면(design.md §2.3 의 핵심 이점 — tools.py/session.py/runner.py 무수정),
+`.screen(`을 부르는 **모든** 경로가 자동으로 같은 lock 을 거친다 — panel
+경로(`server/web/session.py`의 panel 전용 코드, 위 세 "금지 파일" 목록엔
+없는 부분)도 예외가 아니다. 그 결과 REQ-022 가 요구하는 "모든" 직렬화가
+문자 그대로 실현되지만, 그로 인해 기존 REQ-SHOWUI-013 이 명시적으로
+보장하던 "chat 과 panel 은 서로 busy 시키지 않는다"가 깨진다.
+
+**멈춘 이유**: 이 둘 중 하나를 조용히 고치는 것(예: panel 경로만 arbiter
+에서 제외)은 design.md/plan.md가 승인하지 않은 새로운 대안을 이 에이전트가
+임의로 만드는 것과 같다 — 배차서 원문: "design.md의 사양과 다르게
+판단해야 할 상황이 생기면 추측하지 말고 Missing Inputs로 멈추고 보고하라
+— 이건 안전 게이트라 임의 판단이 특히 위험하다." 두 요구사항 다 안전
+관련(하나는 승인 우회 방지, 하나는 조작 반응성 방지)이라 어느 쪽을
+좁히는 결정도 사람이 내려야 한다.
+
+**옵션 (사람 판단 필요, 추측하지 않음)**:
+1. **panel 경로를 arbiter 범위에서 명시적으로 제외** — REQ-022 의 "모든
+   shared mutation"을 "director/chat/import(패널 제외)"로 재해석. 근거:
+   panel 은 사람이 지금 이 순간 누른 실행기 버튼이라 "낡은 승인" 개념이
+   원천적으로 없다(REQ-022 의 동기, "오래 대기시켜 낡은 승인을
+   실행하지 않는다"). 위험: REQ-022 원문의 "모든"을 좁히는 재해석이며,
+   panel 을 통한 shared programmer mutation 도 여전히 director apply 와
+   경합할 수 있다(이 경우는 그냥 통과시킨다는 뜻).
+2. **REQ-SHOWUI-013 을 이 SPEC 의 M3 로 인해 재조정** — "chat 과 panel 은
+   서로 busy 시키지 않는다"를 "chat/panel 과 director apply 는 경합할 수
+   있다"로 완화. 근거: REQ-022 가 이 SPEC 의 새 요구사항이므로 우선한다.
+   위험: 기존 UI 반응성 계약을 깨는 결정이며 SPEC-LDRECV-001 범위 밖의
+   SPEC(SHOWUI)을 건드리는 것 — plan.md PRESERVE 표가 "예술 producer 둘"
+   외의 UI 계약을 명시하지 않아 이 SPEC 의 권한 범위가 불명확하다.
+3. **panel 도 arbiter 를 타되, "충돌 시에만" busy** — 현재 구현은 이미
+   "충돌 시에만 busy"다(진짜 동시 요청일 때만 TARGET_BUSY). 실패한 두
+   테스트가 실패하는 이유는 테스트가 기대하는 것이 "충돌해도 busy 없이
+   둘 다 통과"이기 때문이다 — 이 옵션은 사실상 옵션 1 과 같은 결론(패널
+   제외)으로 수렴한다.
+
+**이번에 하지 않은 것**: 위 세 옵션 중 어느 것도 코드로 반영하지 않았다.
+`execute_preapproved`/`_acquire_arbiter`/`ProgrammerArbiter` 구현은
+design.md §1.3·§2.3 이 승인한 그대로이며, 범위를 좁히거나 넓히는 어떤
+추가 판단도 넣지 않았다.
+
+**중단 시점의 상태**(2026-09-17, 사람 확인 이전): 위 회귀 2건이 해소되지
+않은 채 커밋하면 acceptance.md §4 "회귀 실패가 하나라도 있는 경우 →
+no-go"를 어기게 되므로 코드는 작업 트리에만 두고 커밋하지 않았다.
+
+---
+
+### 해소 (2026-09-17, 사람 확인 — 옵션 1 채택: design.md §2.5)
+
+**결정**: REQ-LDPLUGIN-022 의 범위를 "director/chat/import"로 좁히고
+panel(REQ-SHOWUI-013)은 중재자 대상에서 제외한다. 근거는 design.md §2.5.2
+에 기록(요약: panel 은 "낡아질 승인"이 없는 즉시성 조작이라 REQ-022 의
+동기가 애초에 적용되지 않는다).
+
+**구현한 가드**: `SafetyGate.screen()`에 키워드 전용 `arbitrate: bool =
+True` 추가(기본값 유지로 기존 3개 호출부 무수정) + `server/web/panel.py`
+`PanelRuntime.fire()` 단 1줄만 `arbitrate=False` 로 명시 호출.
+
+**Evidence — RED (재확장 전 실제로 재확인한 verbatim 출력)**
+
+```
+$ uv run pytest server/tests/test_director_arbiter.py::TestScreenArbitrateScopeGuard -q
+TypeError: SafetyGate.screen() got an unexpected keyword argument 'arbitrate'
+3 failed, 1 passed in 0.49s
+```
+(4번째 테스트 `test_arbitrate_defaults_to_true` 는 새 키워드를 안 써서
+이미 통과 — 정상, 기존 동작이 안 바뀌었다는 신호.)
+
+**Evidence — GREEN (신규 시험 4개 추가, arbiter 파일 합계 9→13)**
+
+```
+$ uv run pytest server/tests/test_director_arbiter.py -q
+.............                                                            [100%]
+13 passed in 0.11s
+```
+
+**구현 중 발견·수정한 버그**: 최초 구현에서 `finally: self._arbiter.release()`
+를 `arbitrate` 값과 무관하게 무조건 실행했다 — `arbitrate=False` 경로는
+애초에 lock 을 획득하지 않으므로, 이 상태로는 **다른 호출자가 쥐고 있는
+lock 을 엉뚱하게 풀어버릴 수 있었다**(Python `threading.Lock.release()`
+는 소유권을 확인하지 않는다). `test_arbitrate_false_does_not_busy_a_
+concurrent_arbitrated_caller` 를 쓰다가 이 위험을 발견해 `finally`
+블록을 `if arbitrate: self._arbiter.release()`로 고쳤다(회귀 테스트로
+고정됨) — 커밋 전에 잡힌 결함이라 프로덕션에 나간 적은 없다.
+
+**Evidence — 부작용 수정: test harness `spy()` 시그니처 확장**
+
+`server/tests/test_web_panel_execute.py::make_harness` 의 `spy()` 가
+`arbitrate=`를 못 받아 panel 을 부르는 시험 27개가 `TypeError`로
+실패했다(카드 t323 이 남긴 것과 같은 모양의 결함 — `risk=` 때도 같은
+문제였다). `spy(commands, *, risk=None, arbitrate=True)`로 확장 —
+실제 게이트 시그니처를 그대로 따라 받아 넘기는 방식(기존 `risk=` 처리와
+동일 패턴).
+
+```
+$ uv run pytest server/tests/test_web_panel_execute.py -q   # 수정 전
+27 failed, 49 passed in 237.44s
+
+$ uv run pytest server/tests/test_web_panel_execute.py -q   # 수정 후
+76 passed, 1 warning in 1.58s
+```
+(**주의**: 최초 "27 failed"는 오염된 대조군이었다 — 배경에서 같은 파일을
+중복 실행 중이었고, 그 두 프로세스가 자원을 놓고 경합해 무관한 시험군
+(`TestGotoGateRouting`·`TestApprovalRoundTrip`·`TestLiveLock` 등)까지
+같이 무너졌다. 배경 프로세스를 끝낸 뒤 **단독**으로 다시 돌려 진짜
+"27 failed"(전부 `arbitrate=` `TypeError`, panel 을 부르는 경로 전부)를
+확인했다 — 오염된 1차 결과와 진짜 2차 결과를 둘 다 여기 남긴다.)
+
+**Evidence — REQ-SHOWUI-013 회귀 두 건 재확인**
+
+```
+$ uv run pytest "server/tests/test_web_panel_execute.py::TestSerialization" -q
+......                                                                   [100%]
+6 passed in 0.03s
+```
+(`test_the_chat_turn_lock_is_not_shared_with_the_panel`·
+`test_a_stop_is_exempt_from_the_busy_guard` 포함 6개 전부 PASS.)
+
+**Evidence — 최종 전체 회귀 (실패 0)**
+
+```
+$ uv run pytest -q
+13449 passed, 35 skipped, 1 warning in 182.86s (0:03:02)
+```
+**Baseline-attribution**: M2 §E.2 기록값 13428 + M3 신규 21(arbiter 파일
+13 + gate_bridge 파일 8) = **13449** — 정확히 일치. skipped 불변(35),
+실패 0. verbatim 저장:
+`.moai/state/verify/ldrecv-m3/m3-final-full-regress.txt`.
+
+**Evidence — ruff (전체 대상 파일)**
+
+```
+$ uv run ruff check server/director/ server/safety/gate.py server/web/panel.py \
+    server/tests/test_director_arbiter.py server/tests/test_director_gate_bridge.py \
+    server/tests/test_web_panel_execute.py
+All checks passed!
+$ uv run ruff format --check (동일 범위)
+31 files already formatted
+```
+
+**Evidence — 경계 확인 (panel.py/session.py 실제 수정 여부 — 정직 보고)**
+
+```
+$ git diff --name-only 8af5d570..HEAD -- server/orchestrator/tools.py \
+    server/web/session.py server/measurement/runner.py
+(빈 출력 — 원래 3개 금지 파일은 여전히 완전 미접촉, 확인됨)
+```
+
+**`server/web/panel.py`는 수정했다** — 위 3개 금지 파일에 포함되지 않은
+파일이며, M3 착수 후 새로 발견한 SHOWUI 소유 파일이다. diff:
+
+```diff
+-            decision = self._gate.screen([command])
++            # SPEC-LDRECV-001 M3 scope narrowing (design.md §2.5): ... (주석 6줄)
++            decision = self._gate.screen([command], arbitrate=False)
+```
+1줄(호출 인자)만 실질 변경, 나머지는 이유를 남기는 주석. `git diff --stat`:
+`server/web/panel.py | 9 +-`.
+
+**`server/tests/test_web_panel_execute.py`도 수정했다** — SHOWUI 소유
+**테스트** 코드(프로덕션 아님). `spy()` 시그니처 확장(위 참고).
+`git diff --stat`: `13 +-`.
+
+**PASS/FAIL 최종 표**
+
+| AC | 항목 | 검증 명령 | Status |
+|---|---|---|---|
+| AC-LDPLUGIN-022 | director↔chat 양방향 TARGET_BUSY, 즉시 거부, panel 제외 | `test_director_arbiter.py` (13) | PASS |
+| AC-LDPLUGIN-022 | panel 이 REQ-SHOWUI-013 대로 busy 없이 통과 | `test_web_panel_execute.py::TestSerialization` (6) | PASS |
+| AC-LDPLUGIN-021 항목 3 | `execute_preapproved` 승인 재질문 0회, screen()과 동일 거부 | `test_director_gate_bridge.py` (8) | PASS |
+| AC-LDPLUGIN-021 항목 4 | 기존 `screen()` characterization | `test_safety_gate.py` 등 gate 스위트 15파일 305개 | PASS |
+| 전체 회귀 | 실패 0 | `uv run pytest -q` | PASS (13449 passed, 35 skipped) |
+| 경계 | 3개 금지 파일 미접촉 | `git diff --name-only` | PASS |
+| MX 한도 | ANCHOR ≤3 | `grep -cE "^\s*#\s*@MX:ANCHOR:"` | PASS (3) |
+
+**커밋**: 아래 M3 완료 커밋 SHA 참고(§E.2 이 절 상단 — commit 직후 이
+placeholder 를 실제 SHA 로 백필한다). push 는 하지 않았다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+_<pending run-phase — M3 blocked, see §E.2 M3 for the REQ-022/REQ-SHOWUI-013 conflict>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
