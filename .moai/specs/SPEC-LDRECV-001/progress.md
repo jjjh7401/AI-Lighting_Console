@@ -791,6 +791,50 @@ $ git diff --name-only 8af5d570..HEAD -- server/orchestrator/tools.py \
 **커밋**: `f1375da7` (`feat(SPEC-LDRECV-001): M3 공유 programmer 중재자 —
 REQ-LDPLUGIN-021/022 TDD 구현`). push 는 하지 않았다.
 
+### M3 이후 발견된 회귀 — 프로젝트 전역 거버넌스 시험 pinned 값 갱신
+
+M3 커밋(`f1375da7`)이 `server/safety/gate.py` 를 정당하게 확장(REQ-LDPLUGIN-021/022:
+`execute_preapproved()` 신규 public 메서드 + `_acquire_arbiter` 공유 programmer 중재자
+lock 스테이지)했지만, 그 파일의 변경을 감시하는 프로젝트 전역 거버넌스 시험
+`server/tests/test_overlap_preserve.py::TestSafetyChokepointFileSet` 의 pinned
+값(`_SAFETY_EXPECTED_DELETIONS["server/safety/gate.py"]` 와
+`_SAFETY_ALLOWED_DELETED_LINES["server/safety/gate.py"]`)을 이 SPEC 이 함께 갱신하지
+않아 회귀 RED 상태로 남아 있었다.
+
+**왜 실패했는지**: `_PRECHK_BASE`(`95687a0e0eba90b325daf76efbd0ac197e69e2fc`) 기준
+`gate.py` 의 실제 삭제 줄 수가 15(BULKGATE-001 시점 값)에서 69로 늘었는데, pinned
+값은 갱신되지 않아 `test_the_deletion_counts_match`(`assert 69 == 15`)와
+`test_the_deletions_are_exactly_the_pinned_lines`(리스트 불일치)가 FAIL 했다.
+69개 중 48개는 `screen()` 본문이 새 `try/finally`(중재자 획득/해제)로 한 단 더
+들여쓰기되며 생기는 순수 재들여쓰기, 2개는 그 안의 빈 줄 삭제, 나머지 19개만
+실질적으로 바뀐/새 문면이다(측정: `git diff --unified=0 95687a0e..HEAD --
+server/safety/gate.py` 의 삭제분을 같은 diff 의 추가분과 문면 대조).
+
+**어떻게 고쳤는지**: (1) `_SAFETY_EXPECTED_DELETIONS["server/safety/gate.py"]` 를
+15 → 69 로 갱신하고 근거 주석을 추가했다. (2) `_SAFETY_ALLOWED_DELETED_LINES
+["server/safety/gate.py"]` 를 실측한 69줄 전부(diff 순서 그대로, 요약·생략
+없이)로 교체하고, 실질 변경 19줄 지점마다 왜 바뀌었는지 인라인 주석을 남겼다.
+(3) `_SAFETY_EXPECTED_DELETIONS` 위쪽 서술(`#:`) 문단에 이 SPEC 의 grant 를
+WRITEGATE-001/READBACK-002/BULKGATE-001 선례와 같은 형식으로 추가했다 —
+왜 이 확장이 불가피했는지(`SafetyGate.screen()` 이 이미 `tools.py`/`session.py`/
+`measurement/runner.py` 세 호출부의 공유 진입점이라 중재자 lock 을 여기 두는
+것이 그 세 파일을 안 건드리는 유일한 방법이었다는 것 — design.md §2.3),
+`@MX:ANCHOR` 갱신 근거(파이프라인 단수성은 유지, gate.py 는 이미
+`anchor_per_file` 상한 3), 그리고 재들여쓰기 대 실질변경 48/2/19 분해를 명시했다.
+`gate.py` 자체는 건드리지 않았고, 다른 안전 파일(`audit.py`, `backup.py`,
+`blacklist.yaml`, `console.py`, `monitor.py`, `responder_version.py`,
+`bootstrap.py`)의 pinned 값도 건드리지 않았다 — `git diff --numstat
+95687a0e..HEAD -- server/safety/` 로 gate.py 외 전부 무변경 확인.
+
+**검증**: RED 재현(`git checkout -- server/tests/test_overlap_preserve.py`
+후 실행) → `2 failed, 3 passed`(`assert 69 == 15` 그대로 재현) → 패치 재적용
+→ `TestSafetyChokepointFileSet` 5/5 PASS, 파일 전체(`test_overlap_preserve.py`)
+72/72 PASS, 전체 회귀 `13449 passed, 35 skipped`(직전 기준선과 정확히 일치,
+신규 실패 0) → `ruff check`/`ruff format --check` 둘 다 clean.
+
+**커밋**: (M3 이후 회귀 수정 커밋 — 이 커밋 자체의 SHA는 `git log -1`로 확인).
+push 는 하지 않았다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase — M3 blocked, see §E.2 M3 for the REQ-022/REQ-SHOWUI-013 conflict>_
