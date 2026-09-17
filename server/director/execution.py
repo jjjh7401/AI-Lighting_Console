@@ -1,0 +1,896 @@
+"""durable execution journal · idempotency · destination 예약 (SPEC-LDRECV-001 M4 ·
+REQ-LDPLUGIN-023).
+
+계약 §9.7·§10 이 단일 원본이다. 이 모듈이 담당하는 것:
+
+- 첫 write(실제 socket 전송) 전에 **승인 소비·execution·bundle journal·idempotency
+  fingerprint·destination 예약을 하나의 transaction** 으로 SQLite 에 커밋한다
+  (:meth:`ExecutionJournal.begin_execution`).
+- 같은 idempotency key + 같은 request fingerprint 재제출은 최초 status·body 를
+  **그대로** replay 한다 — 재실행하지 않는다. 같은 key + 다른 request 는
+  ``IDEMPOTENCY_CONFLICT``(409).
+- socket send 뒤 결과 커밋 전 crash 는 ``unknown`` 이다 — blind 하게
+  success/failed 로 확정하지 않는다 (:meth:`ExecutionJournal.status`).
+
+## fingerprint 는 형제 LDSTORE 와 같은 알고리즘
+
+``server.director.store.DirectorStore._fingerprint`` 가 이미 계약 §9.7 을 구현했다
+(``sha256(JCS({operation,project_id,principal_id,request}))``). 이 모듈은 그
+알고리즘을 새로 발명하지 않고 ``server.director.digest.canonical_digest`` 를 직접
+재사용한다 — 계산 규칙이 문자 그대로 같아야 두 층의 fingerprint 가 어긋나지 않는다.
+
+## journal state 와 crash → unknown 의 관계
+
+계약 §10: *"journal에는 bundle planned→sending(디스크 commit)→sent/acknowledged/
+failed/unknown과 시간·오류·evidence를 남긴다. OSC 전송과 DB commit을 원자
+transaction이라고 주장하지 않는다. socket send 뒤 저장 전 crash는 unknown이다."*
+
+이 모듈은 그 문장을 문자 그대로 접근 패턴으로 구현한다: :meth:`mark_sending` 이
+"socket send 직전" 상태를 디스크에 커밋하고, 그 다음 실제 전송이 일어난 뒤
+:meth:`finalize_execution` 이 결과를 커밋한다. 두 커밋 사이에 프로세스가 죽으면
+(합성 테스트에서는 두 번째 호출을 하지 않는 것으로 재현한다) execution 은
+``sending`` 에 멈춘 채로 남고, :meth:`status` 는 그 상태를 ``unknown`` 으로
+읽는다 — "sending 에서 멈췄다" 는 "확정할 수 없다" 와 같은 뜻이기 때문이다.
+
+## destination occupancy — design.md §3 채택안 B
+
+`context.py`(형제 SPEC 소유, 불변 ``ContextSnapshot``)를 건드리지 않는다. destination
+점유는 apply 실행의 부산물(가변 상태)이므로 이 execution journal 층에 독립 테이블로
+둔다. create-only 다 — 이미 점유된 slot 위에 다른 execution 이 조용히 재선택하지
+못한다(LD-TARGET-001).
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from collections.abc import Callable, Generator, Mapping, Sequence
+from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, Protocol
+
+from server.director.approvals import ApprovalRegistry, check_validity
+from server.director.digest import canonical_digest
+from server.director.models import Detail, ExchangeError
+from server.director.store import DirectorStore
+
+_MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
+
+#: 계약 §10 의 execution journal state. `UNKNOWN` 은 이 모듈이 직접 쓰는 값이라기보다
+#: `status()` 가 `SENDING` 에서 멈춘 행을 읽을 때 반환하는 값이다 — 다만 M5(간섭 감지)
+#: 가 명시적으로 이 상태를 커밋하는 경로도 있을 수 있어 상수로 노출해 둔다.
+STATE_PLANNED = "planned"
+STATE_SENDING = "sending"
+STATE_SENT = "sent"
+STATE_ACKNOWLEDGED = "acknowledged"
+STATE_FAILED = "failed"
+STATE_UNKNOWN = "unknown"
+
+#: destination_reservations.status (design.md §3).
+RESERVATION_RESERVED = "reserved"
+RESERVATION_RELEASED = "released"
+
+#: bundle 레벨 상태 — 후속 bundle 이 아예 시도되지 않았음을 뜻한다
+#: (AC-LDPLUGIN-024, "not_sent 로 receipt 에 보존").
+STATE_NOT_SENT = "not_sent"
+
+#: execution 전체(aggregate) 상태 — 일부 bundle 은 confirmed, 일부는
+#: not_sent/failed. `unknown`/`failed`/`sent`(전부 confirmed) 와 나란히
+#: :func:`execute_bundles` 만 계산해 쓰는 값이다.
+STATE_PARTIAL = "partial"
+
+#: 계약 §3 — 신규 생성 201.
+_STATUS_CREATED = 201
+
+
+def _now() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _idempotency_conflict() -> ExchangeError:
+    return ExchangeError(
+        "IDEMPOTENCY_CONFLICT",
+        409,
+        "같은 idempotency_key 에 다른 요청이 들어왔습니다.",
+        (Detail("", "idempotency key reused with a different request"),),
+    )
+
+
+def _target_busy(message: str) -> ExchangeError:
+    return ExchangeError("TARGET_BUSY", 409, message, (Detail("/destination", "already reserved"),))
+
+
+def _not_found(message: str) -> ExchangeError:
+    return ExchangeError("NOT_FOUND", 404, message)
+
+
+def _approval_not_found(approval_id: str) -> ExchangeError:
+    return ExchangeError(
+        "APPROVAL_NOT_FOUND",
+        404,
+        f"승인 {approval_id} 을 찾을 수 없습니다.",
+        (Detail("/approval_id", ""),),
+    )
+
+
+def _approval_stale(reasons: tuple[str, ...]) -> ExchangeError:
+    """REQ-LDPLUGIN-021 재검사 — head 변경/context stale/만료된 승인 거부.
+
+    ``reasons`` 는 :func:`server.director.approvals.check_validity` 가 돌려주는
+    사유 어휘(``head_changed``/``context_changed``/``expired``)를 그대로 싣는다 —
+    같은 무효화 판정을 M2(승인 재조회) 와 M5(apply 직전 재검사)가 공유한다.
+    """
+    return ExchangeError(
+        "APPROVAL_STALE",
+        409,
+        f"승인이 더 이상 유효하지 않습니다: {', '.join(reasons)}",
+        (Detail("/approval_id", ", ".join(reasons)),),
+    )
+
+
+def _live_lock_active() -> ExchangeError:
+    return ExchangeError(
+        "LIVE_LOCK_ACTIVE",
+        423,
+        "LiveLock 이 활성화되어 있어 apply 를 차단합니다.",
+        (Detail("", "live lock active"),),
+    )
+
+
+def _gate_rejected(decision: Any) -> ExchangeError:
+    return ExchangeError(
+        "GATE_REJECTED",
+        422,
+        f"SafetyGate 가 이 bundle 을 거부했습니다: {decision.status}",
+        (Detail("", decision.notice or decision.status),),
+    )
+
+
+def _schema_invalid(message: str, pointer: str = "") -> ExchangeError:
+    return ExchangeError("SCHEMA_INVALID", 422, message, (Detail(pointer, ""),))
+
+
+def _recovery_source_invalid(execution_id: str, status: str) -> ExchangeError:
+    """M6 · REQ-LDPLUGIN-032 — recovery 는 partial/unknown execution 만 대상으로
+    한다. 이미 confirmed(``sent``/``acknowledged``) 된 execution 을 recovery
+    대상으로 삼으면 "이미 성공한 것을 왜 다시 보내는가"라는 의미가 불분명해지고,
+    ``planned``/``sending``/``failed`` 는 recovery 가 아니라 각각 정상 진행 중이거나
+    (M5 의 재검사 대상) 그냥 실패 재시도(이 SPEC 이 금지하는 blind retry, LD-EXEC-002)
+    이지 recovery 가 아니다."""
+    return ExchangeError(
+        "RECOVERY_SOURCE_INVALID",
+        409,
+        f"execution {execution_id} 는 partial/unknown 상태가 아니어서({status}) "
+        "recovery 대상이 될 수 없습니다.",
+        (Detail("/recovery_of", status),),
+    )
+
+
+class GatePort(Protocol):
+    """M5 가 ``SafetyGate`` 로부터 필요로 하는 표면만 — 전체 ``SafetyGate`` 타입에
+    결합하지 않고 테스트에서 fake 로 대체할 수 있게 한다. 실제 운영 배선에서는
+    ``server.safety.gate.SafetyGate`` 인스턴스가 이 Protocol 을 그대로 만족한다
+    (구조적 타이핑 — 상속 불필요)."""
+
+    @property
+    def lock(self) -> Any: ...  # LiveLock — .is_active 만 읽는다
+
+    def execute_preapproved(self, commands: Sequence[str]) -> Any: ...  # ScreenDecision
+
+
+class BundleSender(Protocol):
+    """실제 콘솔 송신 seam (spec.md §5 — apply 의 승격부는 콘솔 게이트다).
+
+    이 SPEC 은 이 프로토콜의 실제 구현체(``server/bridge/osc.py`` 연결)를
+    만들지 않는다 — PRESERVE 경계(§3 spec.md, §5 spec.md)가 그 층을 콘솔
+    게이트로 명시하기 때문이다. 호출자(추후 SPEC 또는 운영 배선)가 진짜
+    전송기를, 테스트는 fake 를 주입한다.
+    """
+
+    def send(self, bundle: Mapping[str, Any]) -> str:
+        """``STATE_SENT``/``STATE_ACKNOWLEDGED``/``STATE_FAILED``/``STATE_UNKNOWN``
+        중 하나를 반환한다."""
+        ...
+
+
+class InterferenceDetector(Protocol):
+    """operator 개입(programmer 변경) 감지 seam. bundle 하나를 보내기 전마다
+    호출되며, ``True`` 를 반환하면 진행 중이던 execution 을 ``unknown``+
+    ``recovery_required`` 로 전환하고 후속 bundle 을 전송하지 않는다."""
+
+    def check(self) -> bool: ...
+
+
+def _fingerprint(
+    *, operation: str, project_id: str, principal_id: str, request: Mapping[str, Any]
+) -> str:
+    """계약 §9.7 의 request fingerprint 를 `store.py`/`approvals.py` 와 동일하게 계산한다.
+
+    ``sha256(JCS({operation, project_id, principal_id, request}))`` — ``request`` 는
+    호출자가 이미 idempotency_key 를 제거한 객체를 넘긴다는 전제다(계약 §9.7: "request는
+    HTTP body에서 idempotency_key만 제거한 객체다").
+    """
+    return canonical_digest(
+        {
+            "operation": operation,
+            "project_id": project_id,
+            "principal_id": principal_id,
+            "request": dict(request),
+        }
+    )
+
+
+def _default_execution_id() -> str:
+    import secrets
+
+    return f"execution-{secrets.token_urlsafe(16)}"
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionResult:
+    """:meth:`ExecutionJournal.begin_execution` 의 반환값."""
+
+    execution_id: str
+    status: str
+    response_status: int
+    response_body: dict[str, Any]
+    replayed: bool
+
+
+class ExecutionJournal:
+    """durable execution journal · idempotency · destination occupancy 저장소.
+
+    `server.director.store.DirectorStore` 와 같은 파일을 가리켜도 안전하다 — 두
+    클래스 모두 자신의 마이그레이션을 ``IF NOT EXISTS`` 로 적용하므로 순서와 무관하게
+    수렴한다. 이 클래스를 단독으로(``DirectorStore`` 없이) 열어도 001+002 가 모두
+    적용되어 스키마가 완결된다.
+    """
+
+    def __init__(self, path: Path) -> None:
+        self._path = Path(path)
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._connection = sqlite3.connect(self._path, isolation_level=None)
+        self._connection.row_factory = sqlite3.Row
+        self._migrate()
+
+    @property
+    def path(self) -> Path:
+        """이 저장소의 DB 파일. 같은 파일을 여는 다른 연결을 만들 때 쓴다."""
+        return self._path
+
+    def _migrate(self) -> None:
+        """마이그레이션 파일을 **파일명 순서대로** 전부 적용한다 — 001 다음 002.
+
+        `001_initial.sql` 을 다시 적용해도 전부 ``IF NOT EXISTS`` 라 안전하다. 이
+        순차 적용이 이 SPEC 이 추가하는 유일한 신규 메커니즘이다 —
+        `DirectorStore._migrate` 는 고정된 단일 파일만 적용하므로 재사용하지 않고,
+        여기서 최소하게 새로 만든다.
+        """
+        for migration in sorted(_MIGRATIONS_DIR.glob("*.sql")):
+            self._connection.executescript(migration.read_text(encoding="utf-8"))
+
+    def close(self) -> None:
+        self._connection.close()
+
+    @contextmanager
+    def _transaction(self) -> Generator[None, None, None]:
+        """명시적 transaction 경계.
+
+        이 연결은 ``isolation_level=None``(autocommit) 으로 연다 — `DirectorStore` 와
+        같은 패턴이다. 그러나 실측(스크립트로 직접 확인)하면 ``isolation_level=None``
+        에서는 Python `sqlite3` 모듈이 DML 문 앞에 묵시적 ``BEGIN`` 을 **전혀 발행하지
+        않는다** — 즉 각 ``execute()`` 가 곧바로 커밋되고, 뒤이은 예외에서
+        ``with self._connection:`` 이 부르는 ``rollback()`` 은 되돌릴 열린 transaction
+        이 없어 아무 일도 하지 않는다. 이 SPEC 이 요구하는 "하나의 transaction"
+        불변식(§ M4 docstring)은 그 위에서는 성립하지 않으므로, 여기서 ``BEGIN
+        IMMEDIATE``/``COMMIT``/``ROLLBACK`` 을 직접 발행해 진짜 원자성을 만든다.
+        """
+        self._connection.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+        except BaseException:
+            self._connection.execute("ROLLBACK")
+            raise
+        else:
+            self._connection.execute("COMMIT")
+
+    # ------------------------------------------------------------ idempotent execution
+
+    def begin_execution(
+        self,
+        *,
+        project_id: str,
+        principal_id: str,
+        operation: str,
+        idempotency_key: str,
+        request: Mapping[str, Any],
+        approval_id: str,
+        bundles: list[Mapping[str, Any]],
+        destination: Mapping[str, str] | None = None,
+        allocate_execution_id: Callable[[], str] | None = None,
+    ) -> ExecutionResult:
+        """첫 write 전 승인 소비·execution·bundle journal·fingerprint·destination
+        예약을 하나의 transaction 으로 커밋한다 (계약 §10).
+
+        Raises:
+            ExchangeError: ``IDEMPOTENCY_CONFLICT`` (같은 key 에 다른 request),
+                ``TARGET_BUSY`` (``destination`` 이 이미 예약된 slot).
+        """
+        fingerprint = _fingerprint(
+            operation=operation,
+            project_id=project_id,
+            principal_id=principal_id,
+            request=request,
+        )
+
+        replayed = self._replay_or_none(
+            project_id=project_id,
+            principal_id=principal_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            fingerprint=fingerprint,
+        )
+        if replayed is not None:
+            return replayed
+
+        execution_id = (allocate_execution_id or _default_execution_id)()
+        created_at = _now()
+        response_body: dict[str, Any] = {
+            "execution_id": execution_id,
+            "state": STATE_PLANNED,
+            "bundles": [
+                {"bundle_id": str(bundle["bundle_id"]), "state": STATE_PLANNED}
+                for bundle in bundles
+            ],
+        }
+        response_status = _STATUS_CREATED
+
+        # 하나의 transaction — 승인 소비(approval_id 기록)·execution·bundle journal·
+        # destination 예약·idempotency fingerprint 전부가 이 안에서 커밋되거나 전부
+        # 롤백된다. destination 이 이미 점유돼 있으면(TARGET_BUSY) execution 행도
+        # 남지 않는다.
+        with self._transaction():
+            self._connection.execute(
+                "INSERT INTO executions "
+                "(execution_id, project_id, principal_id, approval_id, operation, state, "
+                " created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    execution_id,
+                    project_id,
+                    principal_id,
+                    approval_id,
+                    operation,
+                    STATE_PLANNED,
+                    created_at,
+                    created_at,
+                ),
+            )
+
+            for index, bundle in enumerate(bundles):
+                self._connection.execute(
+                    "INSERT INTO execution_bundles "
+                    "(execution_id, bundle_index, bundle_id, state, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (execution_id, index, str(bundle["bundle_id"]), STATE_PLANNED, created_at),
+                )
+
+            if destination is not None:
+                self._reserve_destination_locked(
+                    project_id=project_id,
+                    show_id=str(destination["show_id"]),
+                    sequence_id=str(destination["sequence_id"]),
+                    execution_id=execution_id,
+                    now=created_at,
+                )
+
+            self._connection.execute(
+                "INSERT INTO idempotency_records "
+                "(project_id, principal_id, operation, idempotency_key, request_fingerprint, "
+                " result_execution_id, result_status, result_body, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    project_id,
+                    principal_id,
+                    operation,
+                    idempotency_key,
+                    fingerprint,
+                    execution_id,
+                    response_status,
+                    json.dumps(response_body, ensure_ascii=False),
+                    created_at,
+                ),
+            )
+
+        return ExecutionResult(
+            execution_id=execution_id,
+            status=STATE_PLANNED,
+            response_status=response_status,
+            response_body=response_body,
+            replayed=False,
+        )
+
+    def _replay_or_none(
+        self,
+        *,
+        project_id: str,
+        principal_id: str,
+        operation: str,
+        idempotency_key: str,
+        fingerprint: str,
+    ) -> ExecutionResult | None:
+        """같은 key 가 이미 있으면 **최초 저장한 status·body 그대로** replay 한다.
+
+        계약 §10: "동일 key+동일 request fingerprint는 최초 저장한 status와 body를
+        그대로 replay한다." 현재 execution 의 최신 상태가 아니라 저장 시점의 응답
+        body 를 그대로 돌려준다 — 최신 상태는 :meth:`status`(별도 GET)가 맡는다.
+        """
+        row = self._connection.execute(
+            "SELECT * FROM idempotency_records WHERE project_id = ? AND principal_id = ? "
+            "AND operation = ? AND idempotency_key = ?",
+            (project_id, principal_id, operation, idempotency_key),
+        ).fetchone()
+        if row is None:
+            return None
+
+        if str(row["request_fingerprint"]) != fingerprint:
+            raise _idempotency_conflict()
+
+        stored_body = json.loads(str(row["result_body"]))
+        return ExecutionResult(
+            execution_id=str(row["result_execution_id"]),
+            status=str(stored_body.get("state", STATE_PLANNED)),
+            response_status=int(row["result_status"]),
+            response_body=stored_body,
+            replayed=True,
+        )
+
+    def replay_if_exists(
+        self,
+        *,
+        project_id: str,
+        principal_id: str,
+        operation: str,
+        idempotency_key: str,
+        request: Mapping[str, Any],
+    ) -> ExecutionResult | None:
+        """``begin_execution`` 을 실제로 커밋하기 전에 replay 여부만 먼저 본다.
+
+        M5 의 apply 재검사(REQ-021 — 승인 신선도·LiveLock·destination occupancy)는
+        idempotent replay 요청에는 적용되면 안 된다(계약 §9.7 — 동일 key+동일
+        request 는 그 사이 상태가 무엇이든 최초 응답을 그대로 replay 한다).
+        :class:`ApplyCoordinator` 가 재검사보다 먼저 이 메서드를 호출해
+        replay 경로를 가른다.
+        """
+        fingerprint = _fingerprint(
+            operation=operation,
+            project_id=project_id,
+            principal_id=principal_id,
+            request=request,
+        )
+        return self._replay_or_none(
+            project_id=project_id,
+            principal_id=principal_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            fingerprint=fingerprint,
+        )
+
+    # ------------------------------------------------------------ 전송 상태 전이
+
+    def mark_sending(self, execution_id: str) -> None:
+        """socket send 직전 — ``sending`` 으로 디스크에 커밋한다 (계약 §10:
+        "planned→sending(디스크 commit)"). 이 커밋 이후 crash 하면 :meth:`status` 가
+        ``unknown`` 을 반환한다."""
+        with self._transaction():
+            self._connection.execute(
+                "UPDATE executions SET state = ?, updated_at = ? WHERE execution_id = ?",
+                (STATE_SENDING, _now(), execution_id),
+            )
+
+    def finalize_execution(self, execution_id: str, state: str) -> None:
+        """실제 전송 결과를 커밋한다 (``sent``/``acknowledged``/``failed``/``unknown``).
+
+        socket send 와 이 호출 사이에 crash 가 나면(합성 시험에서는 이 호출을 하지
+        않는 것으로 재현한다) execution 은 ``sending`` 에 멈춘 채 남고 :meth:`status`
+        가 그것을 ``unknown`` 으로 읽는다.
+        """
+        with self._transaction():
+            self._connection.execute(
+                "UPDATE executions SET state = ?, updated_at = ? WHERE execution_id = ?",
+                (state, _now(), execution_id),
+            )
+
+    def record_bundle_result(
+        self, *, execution_id: str, bundle_index: int, state: str, error: str | None = None
+    ) -> None:
+        """bundle 하나의 결과를 커밋한다 (계약 §10 의 bundle journal)."""
+        with self._transaction():
+            self._connection.execute(
+                "UPDATE execution_bundles SET state = ?, updated_at = ?, error = ? "
+                "WHERE execution_id = ? AND bundle_index = ?",
+                (state, _now(), error, execution_id, bundle_index),
+            )
+
+    def status(self, execution_id: str) -> str:
+        """현재 관측 가능한 execution 상태.
+
+        ``sending`` 에서 다음 상태로 전이하지 못한 채 남아 있으면 ``unknown`` 으로
+        읽는다 — socket send 뒤 결과 커밋 전 crash 와 바이트 동일한 관측이다(계약
+        §10: "socket send 뒤 저장 전 crash는 unknown이다"). ``planned``(아직 전송
+        시도 전)는 unknown 이 아니다 — 전송을 시작조차 안 한 상태와 "전송했는데
+        결과를 모르는" 상태는 다르다.
+
+        Raises:
+            ExchangeError: ``NOT_FOUND`` (해당 execution 이 없음).
+        """
+        row = self._connection.execute(
+            "SELECT state FROM executions WHERE execution_id = ?", (execution_id,)
+        ).fetchone()
+        if row is None:
+            raise _not_found(f"execution {execution_id} 이 없습니다.")
+
+        state = str(row["state"])
+        if state == STATE_SENDING:
+            return STATE_UNKNOWN
+        return state
+
+    # ------------------------------------------------------------ destination 예약
+
+    def reserve_destination(
+        self, *, project_id: str, show_id: str, sequence_id: str, execution_id: str
+    ) -> None:
+        """create-only 예약 (design.md §3, LD-TARGET-001).
+
+        이미 ``reserved`` 인 slot 이면 조용히 다른 slot 으로 재선택하지 않고
+        ``TARGET_BUSY`` 로 거부한다. ``released`` 였던 slot 은 재예약할 수 있다.
+
+        Raises:
+            ExchangeError: ``TARGET_BUSY``.
+        """
+        with self._transaction():
+            self._reserve_destination_locked(
+                project_id=project_id,
+                show_id=show_id,
+                sequence_id=sequence_id,
+                execution_id=execution_id,
+                now=_now(),
+            )
+
+    def _reserve_destination_locked(
+        self, *, project_id: str, show_id: str, sequence_id: str, execution_id: str, now: str
+    ) -> None:
+        """``reserve_destination`` 의 본체 — 이미 열린 transaction 안에서 호출되도록
+        커밋을 직접 하지 않는다(``begin_execution`` 이 같은 transaction 에서
+        재사용한다)."""
+        existing = self._connection.execute(
+            "SELECT status, reserved_by_execution_id FROM destination_reservations "
+            "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
+            (project_id, show_id, sequence_id),
+        ).fetchone()
+
+        if existing is not None and str(existing["status"]) == RESERVATION_RESERVED:
+            raise _target_busy(
+                f"destination (show={show_id}, sequence={sequence_id}) 이 이미 "
+                f"execution {existing['reserved_by_execution_id']} 에 의해 점유되어 "
+                "있습니다 — create-only."
+            )
+
+        if existing is None:
+            self._connection.execute(
+                "INSERT INTO destination_reservations "
+                "(project_id, show_id, sequence_id, reserved_by_execution_id, reserved_at, status) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (project_id, show_id, sequence_id, execution_id, now, RESERVATION_RESERVED),
+            )
+        else:
+            self._connection.execute(
+                "UPDATE destination_reservations "
+                "SET reserved_by_execution_id = ?, reserved_at = ?, status = ? "
+                "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
+                (execution_id, now, RESERVATION_RESERVED, project_id, show_id, sequence_id),
+            )
+
+    def release_destination(self, *, project_id: str, show_id: str, sequence_id: str) -> None:
+        """예약을 해제한다 — slot 은 이후 다시 ``reserve_destination`` 할 수 있다."""
+        with self._transaction():
+            self._connection.execute(
+                "UPDATE destination_reservations SET status = ? "
+                "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
+                (RESERVATION_RELEASED, project_id, show_id, sequence_id),
+            )
+
+    def destination_status(
+        self, *, project_id: str, show_id: str, sequence_id: str
+    ) -> dict[str, Any] | None:
+        """slot 하나의 현재 예약 상태. 아예 예약된 적 없으면 ``None``."""
+        row = self._connection.execute(
+            "SELECT reserved_by_execution_id, reserved_at, status FROM destination_reservations "
+            "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
+            (project_id, show_id, sequence_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "reserved_by_execution_id": str(row["reserved_by_execution_id"]),
+            "reserved_at": str(row["reserved_at"]),
+            "status": str(row["status"]),
+        }
+
+    # ------------------------------------------------------------ M6 — recovery 링크
+
+    def record_recovery_link(
+        self, *, recovery_execution_id: str, original_execution_id: str
+    ) -> None:
+        """recovery execution 이 어떤 원본의 recovery 인지 기록한다 (M6 · REQ-032).
+
+        원본 execution 행(``executions`` 테이블)은 이 메서드가 전혀 건드리지
+        않는다 — 별도 테이블(``execution_recovery_links``, migrations/003)에
+        관계만 추가한다. 원본 기록이 "덮어써지지 않고 recovery_of 로만
+        연결된다"는 AC-LDPLUGIN-032 항목4 의 요구를 스키마 수준에서 만족한다.
+        """
+        with self._transaction():
+            self._connection.execute(
+                "INSERT INTO execution_recovery_links "
+                "(recovery_execution_id, original_execution_id, created_at) VALUES (?, ?, ?)",
+                (recovery_execution_id, original_execution_id, _now()),
+            )
+
+    def recovery_of(self, execution_id: str) -> str | None:
+        """``execution_id`` 가 recovery execution 이면 원본 execution_id, 아니면
+        ``None``(recovery 가 아닌 일반 execution)."""
+        row = self._connection.execute(
+            "SELECT original_execution_id FROM execution_recovery_links "
+            "WHERE recovery_execution_id = ?",
+            (execution_id,),
+        ).fetchone()
+        return None if row is None else str(row["original_execution_id"])
+
+
+# ---------------------------------------------------------------------------
+# M5 — apply 직전 재검사 · SafetyGate 연결 (REQ-LDPLUGIN-021)
+# ---------------------------------------------------------------------------
+
+
+class ApplyCoordinator:
+    """apply 직전 재검사(REQ-LDPLUGIN-021) + durable journal 커밋 + SafetyGate
+    연결. 실제 bundle 전송·실패 분류(REQ-LDPLUGIN-024)는 :func:`execute_bundles`
+    가 별도로 맡는다 — 이 클래스는 "lock 안에서 첫 write 직전" 재검사와 journal
+    커밋, gate 로의 연결까지만 책임진다.
+
+    이 클래스가 실제로 검사하는 순서(REQ-021 원문이 나열한 네 항목 — current
+    bindings·target/destination occupancy·LiveLock·승인 — 은 검사 **대상**의
+    열거이지 순서 규정이 아니다; acceptance.md AC-021 항목 1 은 각 조건이
+    "하나라도" 위반되면 차단됨을 요구할 뿐, 순서 자체를 시험하지 않는다):
+
+    0. idempotent replay(같은 key+같은 request) 여부 — 그 사이 상태가 무엇이든
+       최초 응답을 그대로 돌려준다(계약 §9.7). 아래 재검사보다 먼저 확인한다.
+    1. 승인 조회 + 신선도(head 변경/context stale/만료) —
+       :func:`server.director.approvals.check_validity` ("current bindings" +
+       "승인").
+    2. LiveLock 활성 여부 — ``gate.lock.is_active``.
+    3. destination occupancy — :meth:`ExecutionJournal.begin_execution` 이
+       같은 transaction 안에서 create-only 로 예약한다(design.md §3). 이미
+       점유돼 있으면 ``TARGET_BUSY`` 로 거부하고 **다른 slot 으로 조용히
+       재선택하지 않는다**.
+    4. SafetyGate 연결 — ``gate.execute_preapproved(commands)``. grammar/
+       classify/backup/health/audit 는 우회하지 않는다(§2.0-가, design.md §1).
+
+    M6(REQ-LDPLUGIN-032) 의 recovery 흐름도 이 클래스를 그대로 재사용한다 —
+    별도 "recovery apply" 메서드를 만들지 않는다. 호출자가 body 에
+    ``recovery_of``(원본 execution_id)를 실으면, 위 재검사를 전부 통과한
+    **새** execution 이 만들어지고 :meth:`ExecutionJournal.record_recovery_link`
+    로 원본과 연결된다 — 원본 execution 행 자체는 건드리지 않는다(plan.md
+    M6 이 명시한 "새 revision→검증→승인→apply(recovery_of)").
+    """
+
+    def __init__(
+        self,
+        *,
+        journal: ExecutionJournal,
+        approvals: ApprovalRegistry,
+        store: DirectorStore,
+        gate: GatePort,
+    ) -> None:
+        self._journal = journal
+        self._approvals = approvals
+        self._store = store
+        self._gate = gate
+
+    def apply(
+        self,
+        *,
+        project_id: str,
+        plan_id: str,
+        revision: int,
+        principal_id: str,
+        operation: str,
+        current_context_digest: str,
+        body: Mapping[str, Any],
+    ) -> ExecutionResult:
+        """``POST .../apply`` 판정.
+
+        Raises:
+            ExchangeError: ``SCHEMA_INVALID`` (필수 필드 누락),
+                ``APPROVAL_NOT_FOUND`` (approval_id 가 없음),
+                ``APPROVAL_STALE`` (head 변경/context stale/만료),
+                ``LIVE_LOCK_ACTIVE``, ``TARGET_BUSY`` (destination 이미 점유,
+                create-only), ``IDEMPOTENCY_CONFLICT``, ``GATE_REJECTED``
+                (SafetyGate 가 grammar/classify/backup/health 중 하나에서
+                거부), ``RECOVERY_SOURCE_INVALID`` (``recovery_of`` 가 가리키는
+                원본 execution 이 partial/unknown 상태가 아님 — M6).
+        """
+        approval_id = body.get("approval_id")
+        idempotency_key = body.get("idempotency_key")
+        destination = body.get("destination")
+        bundles = body.get("bundles")
+        recovery_of = body.get("recovery_of")
+        if not isinstance(approval_id, str) or not approval_id:
+            raise _schema_invalid("approval_id 가 필요합니다.", "/approval_id")
+        if not isinstance(idempotency_key, str) or not idempotency_key:
+            raise _schema_invalid("idempotency_key 가 필요합니다.", "/idempotency_key")
+        if not isinstance(destination, Mapping):
+            raise _schema_invalid("destination 이 필요합니다.", "/destination")
+        if not isinstance(bundles, list) or not bundles:
+            raise _schema_invalid("bundles 가 필요합니다.", "/bundles")
+        if recovery_of is not None and (not isinstance(recovery_of, str) or not recovery_of):
+            raise _schema_invalid(
+                "recovery_of 는 비어있지 않은 문자열이어야 합니다.", "/recovery_of"
+            )
+
+        request_for_fingerprint = {k: v for k, v in body.items() if k != "idempotency_key"}
+
+        # 0. replay 는 재검사보다 먼저 — 그 사이 상태와 무관하게 최초 응답을
+        # 그대로 돌려준다(계약 §9.7). recovery_of 검증도 재검사이므로 replay
+        # 경로에는 적용하지 않는다 — 이미 커밋된 최초 응답을 그대로 돌려준다.
+        replayed = self._journal.replay_if_exists(
+            project_id=project_id,
+            principal_id=principal_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request=request_for_fingerprint,
+        )
+        if replayed is not None:
+            return replayed
+
+        # M6 — recovery 대상은 partial/unknown 이어야 한다(REQ-LDPLUGIN-032).
+        # ``status()`` 가 없는 execution_id 에는 NOT_FOUND 를 던진다 — 그대로
+        # 전파한다.
+        if recovery_of is not None:
+            original_status = self._journal.status(recovery_of)
+            if original_status not in (STATE_PARTIAL, STATE_UNKNOWN):
+                raise _recovery_source_invalid(recovery_of, original_status)
+
+        # 1. current bindings + 승인 신선도.
+        binding = self._approvals.get(approval_id)
+        if binding is None:
+            raise _approval_not_found(approval_id)
+
+        current_head = self._store.head_revision(project_id=project_id, plan_id=plan_id)
+        reasons = check_validity(
+            binding,
+            current_head=current_head,
+            current_context_digest=current_context_digest,
+            now=_now(),
+        )
+        if reasons:
+            raise _approval_stale(reasons)
+
+        # 2. LiveLock.
+        if self._gate.lock.is_active:
+            raise _live_lock_active()
+
+        # 3. destination occupancy — begin_execution 의 단일 transaction 안에서
+        # create-only 로 예약된다(design.md §3). 이미 점유돼 있으면 여기서
+        # TARGET_BUSY 로 거부되고 execution 행 자체가 남지 않는다 — 다른 빈
+        # slot 으로 조용히 재선택하지 않는다.
+        result = self._journal.begin_execution(
+            project_id=project_id,
+            principal_id=principal_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request=request_for_fingerprint,
+            approval_id=approval_id,
+            bundles=bundles,
+            destination=destination,
+        )
+        if result.replayed:
+            return result
+
+        # M6 — recovery_of 가 있었으면 새로 만들어진 execution 을 원본과 연결한다.
+        # 원본 execution 행(``executions``)은 여기서도 건드리지 않는다 — 별도
+        # 테이블에 관계만 추가한다(record_recovery_link docstring).
+        if recovery_of is not None:
+            self._journal.record_recovery_link(
+                recovery_execution_id=result.execution_id, original_execution_id=recovery_of
+            )
+
+        # 4. SafetyGate 연결 — director 는 execute_preapproved 만 부른다
+        # (screen() 이 아니다). 이미 가진 ApprovalBinding 이 그 자리의 승인
+        # 증거이므로 일반 ApprovalPort 재질문은 여기서도 일어나지 않는다.
+        commands = [str(command) for bundle in bundles for command in bundle.get("commands", ())]
+        decision = self._gate.execute_preapproved(commands)
+        if not decision.cleared:
+            # journal 은 이미 durable 하게 남았다(§ M4 doctrine — journal 이
+            # 첫 write 보다 먼저다) — gate 거부는 그 execution 을 failed 로
+            # 닫는다. 실제 송신은 시도된 적이 없다.
+            self._journal.finalize_execution(result.execution_id, STATE_FAILED)
+            raise _gate_rejected(decision)
+
+        return result
+
+
+def execute_bundles(
+    journal: ExecutionJournal,
+    *,
+    execution_id: str,
+    bundles: Sequence[Mapping[str, Any]],
+    sender: BundleSender,
+    interference: InterferenceDetector | None = None,
+) -> dict[str, Any]:
+    """AC-LDPLUGIN-024 — 실패/간섭/불확실 전송 시 후속 bundle 을 전송하지 않는다.
+
+    N 개 bundle 을 순서대로 :class:`BundleSender` 로 보낸다. k 번째가
+    ``STATE_FAILED``/``STATE_UNKNOWN`` 이거나, 그 직전에 :class:`InterferenceDetector`
+    가 개입(programmer 변경)을 감지하면, k+1 번째부터는 ``sender.send()`` 를
+    **호출하지 않고** ``STATE_NOT_SENT`` 로 journal 에 남긴다 — blind retry 를
+    하지 않는다.
+
+    전체(aggregate) 상태 우선순위:
+
+    1. interference 감지, 또는 하나라도 ``STATE_UNKNOWN`` 이면 → ``unknown``
+       (``unknown`` 이 ``partial`` 보다 우선한다 — 계약 요구).
+    2. confirmed(``sent``/``acknowledged``)와 그 외(``failed``/``not_sent``)가
+       섞여 있으면 → ``partial``.
+    3. 전부 confirmed 면 → ``sent``.
+    4. 그 밖(confirmed 도 unknown 도 없음) → ``failed``.
+
+    ``recovery_required`` 는 interference 감지 또는 ``unknown`` 전체 상태일 때
+    ``True`` 다 — M6(운영 중단·recovery)의 recovery 흐름이 참조하는 신호다.
+    """
+    outcomes: list[str] = []
+    stop = False
+    interference_detected = False
+
+    for index, bundle in enumerate(bundles):
+        if not stop and interference is not None and interference.check():
+            interference_detected = True
+            stop = True
+
+        if stop:
+            journal.record_bundle_result(
+                execution_id=execution_id, bundle_index=index, state=STATE_NOT_SENT
+            )
+            outcomes.append(STATE_NOT_SENT)
+            continue
+
+        # "socket send 직전" 을 디스크에 남긴다 — M4 doctrine (execution.py
+        # 모듈 docstring): 이 커밋 이후 crash 하면 status() 가 unknown 을
+        # 반환한다.
+        journal.mark_sending(execution_id)
+        outcome = sender.send(bundle)
+        if outcome not in (STATE_SENT, STATE_ACKNOWLEDGED, STATE_FAILED, STATE_UNKNOWN):
+            raise ValueError(f"sender.send() 가 알 수 없는 상태를 반환했습니다: {outcome!r}")
+        journal.record_bundle_result(execution_id=execution_id, bundle_index=index, state=outcome)
+        outcomes.append(outcome)
+        if outcome not in (STATE_SENT, STATE_ACKNOWLEDGED):
+            stop = True
+
+    confirmed = {STATE_SENT, STATE_ACKNOWLEDGED}
+    if interference_detected or STATE_UNKNOWN in outcomes:
+        overall, recovery_required = STATE_UNKNOWN, True
+    elif any(o in confirmed for o in outcomes) and any(o not in confirmed for o in outcomes):
+        overall, recovery_required = STATE_PARTIAL, False
+    elif outcomes and all(o in confirmed for o in outcomes):
+        overall, recovery_required = STATE_SENT, False
+    else:
+        overall, recovery_required = STATE_FAILED, False
+
+    journal.finalize_execution(execution_id, overall)
+    return {
+        "execution_id": execution_id,
+        "state": overall,
+        "recovery_required": recovery_required,
+        "bundles": outcomes,
+    }
