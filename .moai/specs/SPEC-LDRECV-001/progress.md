@@ -1735,7 +1735,7 @@ README.md` 무매치) — 이 저장소의 README 는 기능 단위가 아니라
 ```yaml
 sync_status: audit-ready
 sync_complete_at: 2026-09-17
-sync_commit_sha: pending-backfill-ldrecv001  # 이 섹션을 기록한 커밋 자신 — 커밋 직후 백필 예정 (M3/M6 과 동일 관례)
+sync_commit_sha: ed2cae5a  # 백필 완료 — 이 섹션을 기록한 커밋 자신(committed 후 재확인: `git log -1 --format=%h` → ed2cae5a)
 b12_self_test_a: "PASS — grep -c 'SPEC-LDRECV-001' CHANGELOG.md 편집 전 0"
 b12_self_test_b: "PASS — acceptance.md AC 8개(018,019,020,021,022,023,024,032) == progress.md ac_pass_count(8)"
 b12_self_test_c: "PASS — 10개 파일 경로 전부 ls 로 존재 확인"
