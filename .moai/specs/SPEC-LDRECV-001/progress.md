@@ -1605,4 +1605,146 @@ run-phase 에서는 건드리지 않았다.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+**환경 메모**: 이 워크트리(`.claude/worktrees/ldrecv-m1`, 브랜치 `worktree-ldrecv-m1`)는
+사용자 지시대로 origin 에 push 하지 않는다 — 커밋은 로컬에만 남긴다. PR·`gh pr create`
+는 이번 sync 에서 수행하지 않았다.
+
+**sync 착수 직전 회귀 재확인**: 이 sync 에이전트를 배차하기 직전 오케스트레이터가 이
+워크트리에서 전체 pytest 를 다시 돌려 실패 1건(`test_director_approvals.py::
+test_human_credential_approves_via_app_route`, 벽시계 의존 시험 픽스처의 시간 폭탄 —
+프로덕션 결함 아님)을 발견해 `monkeypatch.setattr` 로 `_now_utc` 를 고정하는 커밋
+(`21bec8a3`)으로 고쳤다. 이 sync-phase 는 그 수정 이후의 HEAD(`21bec8a3`) 위에서
+수행했다.
+
+**Evidence — 최종 전체 회귀 (sync 착수, 이 워크트리에서 재실행)**
+
+```
+$ uv run pytest -q
+13515 passed, 35 skipped, 1 warning in 183.71s
+```
+(`21bec8a3` 커밋의 벽시계 고정 수정이 반영된 상태 — M6 이후 다각도 검토 종료 시점의
+13515 와 동일, 신규 실패 0.)
+
+**Evidence — ruff (sync 범위 재확인)**
+
+```
+$ uv run ruff check server/director/ server/safety/gate.py server/web/panel.py server/web/app.py
+All checks passed!
+$ uv run ruff format --check server/director/ server/safety/gate.py server/web/panel.py server/web/app.py
+31 files already formatted
+```
+
+**Evidence — MX tag 확인 (sync-phase 품질 게이트)**
+
+```
+$ grep -rn "@MX:ANCHOR\|@MX:NOTE\|@MX:WARN\|@MX:TODO\|@MX:DEBT\|@MX:LEGACY" server/director/ | wc -l
+2
+$ grep -rn "@MX:ANCHOR\|@MX:NOTE\|@MX:WARN\|@MX:TODO\|@MX:DEBT\|@MX:LEGACY" server/director/
+server/director/auth.py:253:# @MX:ANCHOR: [AUTO] director 인증 경계 — 모든 director HTTP route 가 이 함수
+server/director/ops.py:11:가장 먼저 거친다(`auth.py` `@MX:ANCHOR` — "모든 director HTTP route 가 이
+$ grep -nE "^\s*#\s*@MX:ANCHOR:" server/safety/gate.py
+362:    # @MX:ANCHOR: [AUTO] the shared screening pipeline — run_commands (via the
+964:        # @MX:ANCHOR: [AUTO] introspect audit subject is path-only.
+981:        # @MX:ANCHOR: [AUTO] props audit subject is path plus requested names only.
+```
+(`gate.py` ANCHOR 3개, `anchor_per_file` 상한 3 — M3 §E.2 가 기록한 상태 그대로 불변.
+`server/director/` 하위는 `auth.py`의 ANCHOR 주석 1건 + `ops.py`의 그 ANCHOR를 인용하는
+docstring 산문 1건, 합계 2매치 — 이 SPEC의 run-phase가 이미 남긴 것이며, 이번 sync에서
+신규로 추가·삭제한 MX 태그는 없다. `server/director/`의 나머지 신규 함수들(`ApprovalBinding`
+발급, `ExecutionJournal` API, `ApplyCoordinator.apply`, `decommission_principal` 등)은
+fan_in < 3(각 route/서비스 1곳에서만 호출)이라 `@MX:ANCHOR` 의무 대상이 아니다 — 코드는
+run-phase 산출물을 그대로 두고 문서·frontmatter만 전이했다.)
+
+**Evidence — CHANGELOG 중복 방지 사전 grep (B12 self-test 1)**
+
+```
+$ grep -c 'SPEC-LDRECV-001' CHANGELOG.md   # 편집 전
+0
+```
+(0건 확인 후 신규 항목 1개 삽입 — 중복 없음.)
+
+**Evidence — AC 개수 대조 (B12 self-test 2)**
+
+```
+$ grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' .moai/specs/SPEC-LDRECV-001/acceptance.md | sort -u
+AC-021
+AC-LDPLUGIN-015
+AC-LDPLUGIN-018
+AC-LDPLUGIN-019
+AC-LDPLUGIN-020
+AC-LDPLUGIN-021
+AC-LDPLUGIN-022
+AC-LDPLUGIN-023
+AC-LDPLUGIN-024
+AC-LDPLUGIN-032
+```
+naive 토큰 매치는 10개지만, `AC-021`(줄임 표기, `AC-LDPLUGIN-021`과 동일 대상)과
+`AC-LDPLUGIN-015`(형제 SPEC-LDCOMPILE-001 소유 AC 를 §2 계산 규칙 설명에서 인용한
+것 — `plan.md`/`acceptance.md` §2 원문 확인)는 이 SPEC 이 소유한 AC 가 아니다. 실제
+소유 AC 는 progress.md §E.3 `ac_pass_count: 8`과 일치하는 **8개**(018·019·020·021·
+022·023·024·032) — CHANGELOG 항목의 "8개 REQ/AC id" 서술이 이 값과 정확히 일치한다.
+
+**Evidence — 파일 경로 검증 (B12 self-test 3)**
+
+```
+$ ls server/director/auth.py server/director/director_api.py server/director/approvals.py \
+     server/director/programmer_arbiter.py server/director/execution.py server/director/ops.py \
+     server/director/migrations/002_execution_journal.sql server/director/migrations/003_ops_recovery.sql \
+     server/safety/gate.py server/web/panel.py
+(전부 존재 확인 — exit 0, 10개 경로 모두 CHANGELOG 항목이 인용한 그대로)
+```
+
+**변경한 파일**
+
+```
+CHANGELOG.md                                  [Unreleased] Added 에 SPEC-LDRECV-001 항목 신설
+.moai/specs/SPEC-LDRECV-001/spec.md           frontmatter status: in-progress → completed
+.moai/specs/SPEC-LDRECV-001/progress.md       이 §E.4 섹션 작성
+```
+`plan.md`·`acceptance.md`는 이 SPEC 문서군 안에 별도 frontmatter 블록을 갖지 않는다
+(canonical frontmatter 는 `spec.md` 하나뿐 — `head -3 plan.md`/`acceptance.md` 로
+확인) — 따라서 "body 미수정" 경계는 그대로 지켜졌고, 전이 대상은 `spec.md` 하나다.
+README.md 는 수정하지 않았다 — 선행 두 형제(`SPEC-LDSTORE-001`·`SPEC-LDCOMPILE-001`)
+sync 도 README 를 건드리지 않은 선례를 확인했다(`grep -n "LDSTORE\|LDCOMPILE\|LDPLUGIN"
+README.md` 무매치) — 이 저장소의 README 는 기능 단위가 아니라 배포 스테이지(M1~M7)
+단위로 구성되어 있어 SPEC 단위 절이 없다.
+
+**Gaps — 이 sync 에서 하지 않은 것**
+
+- **PR 생성/push 를 하지 않았다** — 사용자 지시(이 워크트리는 push 대상이 아님)에
+  따라 커밋만 로컬에 남긴다. `gh pr create` 미실행.
+- **콘솔 승격부 3건(AC-021·024·032 각 일부)의 실기 관측**은 여전히 미검증 —
+  spec.md §5 가 명시한 범위 밖이며, 이 sync 는 그 상태를 바꾸지 않는다.
+- **`ValidationProvider` 의 실제 HTTP 노출 저장소**는 여전히 부재 — progress.md
+  M2 Gaps·M1~M6 다각도 검토 절이 이미 문서화한 잔여 위험이며, 이 SPEC 범위 밖
+  후속 SPEC 소관이다. (LDCOMPILE-001 의 검증 산출물을 durable 하게 저장·노출하는
+  seam 은 이 코드베이스에 아직 구현되지 않았다 — 이 sync 가 새로 만든 gap 이
+  아니라 run-phase 가 이미 문서화한 기존 gap을 재확인한 것.)
+
+**Residual-risk**
+
+- `compiled_digest` 재검증(M1~M6 다각도 검토 결함1+2 수정)은 "제출값이 승인 당시와
+  같은가"만 확인하고 "제출된 bundles 가 실제로 그 digest 가 가리키는 artifact 와
+  일치하는가"까지는 확인하지 못한다 — `ValidationProvider` 가 배선되어야 완전히
+  닫힌다(progress.md 해당 절 원문 인용).
+- REQ-LDPLUGIN-018 human-only scope 문서 불일치("6종" vs 실제 7개 나열, M1 §E.2
+  Residual-risk 가 이미 기록)는 이 sync 가 고치지 않았다 — spec.md 소유 body 수정
+  경계 때문에 manager-docs 권한 밖이다. 사람 재확인이 필요하면 이 항목부터 검토
+  대상이다.
+
+```yaml
+sync_status: audit-ready
+sync_complete_at: 2026-09-17
+sync_commit_sha: pending-backfill-ldrecv001  # 이 섹션을 기록한 커밋 자신 — 커밋 직후 백필 예정 (M3/M6 과 동일 관례)
+b12_self_test_a: "PASS — grep -c 'SPEC-LDRECV-001' CHANGELOG.md 편집 전 0"
+b12_self_test_b: "PASS — acceptance.md AC 8개(018,019,020,021,022,023,024,032) == progress.md ac_pass_count(8)"
+b12_self_test_c: "PASS — 10개 파일 경로 전부 ls 로 존재 확인"
+changelog_entry_position: "[Unreleased] > Added > 최상단 (SPEC-LDSTORE-001 항목 바로 위)"
+frontmatter_status_transitions:
+  spec_md: "in-progress → completed"
+  plan_md: "해당 없음 — 이 SPEC 문서군은 spec.md 하나만 frontmatter 를 가짐"
+  acceptance_md: "해당 없음 — 위와 동일"
+canary_compliance_check:
+  applicable: false
+  reason: "이 SPEC 은 자신의 sync 절에서 검증하는 forward-looking policy 를 정의하지 않는다"
+```

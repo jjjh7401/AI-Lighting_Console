@@ -2,7 +2,7 @@
 id: SPEC-LDRECV-001
 title: "Director 인증 receiver·사람 승인·실행·중재자"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-09-16
 updated: 2026-09-17
 author: jaihyun

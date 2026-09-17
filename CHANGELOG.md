@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **SPEC-LDRECV-001** — Director 인증 receiver·사람 승인·실행·중재자 6개 마일스톤(M1~M6)이 전부 TDD로 완료됐다. `SPEC-LDPLUGIN-001`을 쪼갠 여섯 자식 중 이 SPEC이 소유한 8개 REQ/AC id(018-024, 032)가 전부 로컬로 닫혔다 — 승격부 3건(021·024·032 각각의 콘솔 관측 부분)만 실기 게이트로 남는다.
+  - **M1(REQ-LDPLUGIN-018·019)** — 인증·ACL·Host/Origin 검증 + evidence 신뢰 경계·audio 외부 전송 동의 게이트. `server/director/auth.py`(신규) + `server/director/director_api.py`(신규, 계약 §3 공통 route HTTP 골격) + `server/web/app.py`(EXTEND, 조건부 router 등록). SQLite 스레드 친화성 위험을 발견해 7개 handler 전부 `async def`로 전환했다.
+  - **M2(REQ-LDPLUGIN-020)** — 사람 승인/거절. `server/director/approvals.py`(신규, `ApprovalBinding` 12필드·만료 계산·무효화 판정·거절 오버레이) + `director_api.py`(EXTEND, `POST .../approvals`·`POST .../rejections`).
+  - **M3(REQ-LDPLUGIN-021 §2.0-가·022)** — 공유 programmer 중재자. `server/safety/gate.py`(EXTEND, `execute_preapproved()` 신규 public 메서드) + `server/director/programmer_arbiter.py`(신규, `ProgrammerArbiter`). 기존 요구사항(REQ-SHOWUI-013, chat/panel 비busy 계약)과의 충돌을 발견해 Missing Inputs로 중단·사람 판단(옵션 1: panel을 중재자 범위에서 제외)을 거쳐 `server/web/panel.py`(EXTEND, `arbitrate=False`)로 해소했다.
+  - **M4(REQ-LDPLUGIN-023)** — durable execution journal·idempotency. `server/director/execution.py`(신규, `ExecutionJournal`) + `server/director/migrations/002_execution_journal.sql`(신규). 같은 idempotency key+같은 request는 replay, 다른 request는 `IDEMPOTENCY_CONFLICT`(409). `isolation_level=None`에서 `with self._connection:`이 원자성을 보장하지 않는 결함을 발견해 `BEGIN IMMEDIATE` 기반 명시적 transaction으로 고쳤다.
+  - **M5(REQ-LDPLUGIN-021·024)** — apply·실패 분류. `execution.py`(EXTEND, `ApplyCoordinator`+`execute_bundles()`) + `director_api.py`(EXTEND, `POST .../apply`). lock 안 재검사(승인 신선도→LiveLock→destination occupancy) 통과 후에만 `execute_preapproved()` 호출, k번째 실패/불확실 시 후속 bundle 미전송·`unknown`이 `partial`보다 우선.
+  - **M6(REQ-LDPLUGIN-032)** — 운영 중단·recovery. `server/director/ops.py`(신규, `decommission_principal()`) + `execution.py`(EXTEND, `record_recovery_link`/`recovery_of`) + `server/director/migrations/003_ops_recovery.sql`(신규, `execution_recovery_links` 테이블). 인증 철회 후 신규 apply는 인증 단계에서 즉시 거부, journal은 삭제 API 없이 불변 보존, recovery는 별도 링크 테이블로만 원본과 연결.
+  - **M1~M6 완료 후 다각도 검토(2026-09-17)** — apply 경로 핵심 안전 결함 7건(치명적 2건 포함)을 발견·수정했다: `compiled_digest` 미대조, 승인 재사용 가능, URL revision/plan_id 미검사, `TARGET_BUSY`가 `GATE_REJECTED`로 뭉개짐, 거부된 apply가 destination을 영구 점유. 기존 TDD 인프라를 확장해 신규 시험 10개로 고정했다.
+  - **검증** — 전량 스위트 `13515 passed, 35 skipped, 0 failed`(이 워크트리 HEAD). ruff check/format clean.
+  - **범위 밖으로 남긴 것** — `ValidationProvider`의 실제 저장소 구현(HTTP 노출)은 이 코드베이스에 아직 없다 — 후속 SPEC 소관. 콘솔 승격부 3건(AC-021·024·032 각 일부)은 실기 게이트가 남는다.
+
 - **SPEC-LDSTORE-001** — 외부 `lighting-director` 플러그인이 만든 계획을 copilot이 받아 보관하고 근거를 되짚게 하는 저장층이 완결됐다(M1+M2+M3, `server/director/`). 이 층은 판단하지 않는다 — 스키마 검사·불변 저장·context 제공·검토된 지식 제공까지다. `SPEC-LDPLUGIN-001`을 쪼갠 여섯 자식 중 **의존 뿌리**로, 나머지 다섯이 소비하는 canonical plan/revision 자료구조와 `ContextSnapshot`을 제공한다.
   - **M1(REQ-LDPLUGIN-007·015)** — 교환 객체 strict parsing + 불변 저장·revision CAS·멱등. 계약 §9가 규정한 digest 값(`audio.sha256`·`context_digest`·`plan_digest`)을 정확히 재현했고, JCS(RFC 8785)를 stdlib 근사로 대체하지 않았다는 것을 회귀 시험으로 고정했다. `origin/main` `cde27445`로 머지.
   - **M2 — ContextSnapshot** — `server/director/context.py`(434줄), 9축 전부를 `context_digest`에 반영하도록 [HARD] 불변식으로 고정(자기 검토에서 발견한 안전 구멍 수정 — 4축만 반영했다면 preset 내용 변경 시 이전 승인이 유효하게 남는 상태였다). `cde27445`로 머지.
