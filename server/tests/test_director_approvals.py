@@ -640,9 +640,17 @@ def test_general_ws_style_boolean_body_is_structurally_rejected(
 
 
 def test_human_credential_approves_via_app_route(
-    client, credential_registry, secret_store, ready_record
+    client, credential_registry, secret_store, ready_record, monkeypatch
 ):
     from server.director.auth import APP_HUMAN_SCOPES
+
+    # 이 시험은 route 층을 거치므로 `ApprovalRegistry.approve()` 가 내부에서
+    # 부르는 `_now_utc()`(실제 벽시계)를 이 파일의 고정 `_now()` 로 고정한다 —
+    # 그러지 않으면 `validation`/`context` 의 만료 시각(`_now()+30분`)이 실제
+    # 현재 시각과 무관하게 계산되어, 실행 시각이 그 창을 지나면(같은 날 나중
+    # 시각에 재실행 등) `moment > expires_at` 로 거짓 CONTEXT_STALE(409) 이
+    # 난다 — 실제 재현: 2026-09-17 14:03 UTC 실행 시 12:30 UTC 만료로 실패.
+    monkeypatch.setattr("server.director.approvals._now_utc", _now)
 
     credential_id, secret = _issue(
         credential_registry, secret_store, audience=AUDIENCE_APP_HUMAN, scopes=APP_HUMAN_SCOPES
