@@ -213,9 +213,18 @@ def make_harness(
     # 카드 t323 — 대역이 `risk=` 를 못 받으면 선언이 붙은 번들에서 `TypeError`
     # 가 나고, 그건 소켓에서 「프레임이 안 온다」로만 보인다. 게이트의 실제
     # 시그니처를 그대로 따라 받아 넘긴다.
-    def spy(commands, *, risk=None):
+    #
+    # SPEC-LDRECV-001 M3 (design.md §2.5) — `arbitrate` 도 같은 이유로 받아
+    # 넘긴다: `panel.py` 의 `PanelRuntime.fire()` 가 이제
+    # `gate.screen([command], arbitrate=False)` 로 부르는데, 이 spy 가 그
+    # 키워드를 못 받으면 여기서도 똑같이 `TypeError` 가 소켓 타임아웃으로
+    # 위장한다. 기본값(`True`)이 실제 `SafetyGate.screen()` 의 기본값과
+    # 같으므로 그대로 전달해도 관측 가능한 동작은 바뀌지 않는다.
+    def spy(commands, *, risk=None, arbitrate=True):
         screened.append(list(commands))
-        return inner(commands) if risk is None else inner(commands, risk=risk)
+        if risk is None:
+            return inner(commands, arbitrate=arbitrate)
+        return inner(commands, risk=risk, arbitrate=arbitrate)
 
     gate.screen = spy  # type: ignore[method-assign]
 
