@@ -675,6 +675,50 @@ _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 #: This grant widens nothing beyond the seven pinned lines and the two rows.
 #: A third new file under the chokepoint, an eighth deleted line, or any text
 #: other than the seven pinned below still fails the gate.
+#:
+#: 2026-09-17 granted extension -- SPEC-LDRECV-001 M3 (REQ-LDPLUGIN-021/022) adds
+#: ONE new public method, `SafetyGate.execute_preapproved()`, plus a shared
+#: programmer-mutation mutex stage (`_acquire_arbiter`, backed by the new
+#: `ProgrammerArbiter`) inserted into `screen()` right after the existing
+#: live-lock check (design.md §2.3). The director's own apply path (M2) already
+#: holds a human-approved `ApprovalBinding` by the time it reaches the gate, so
+#: `execute_preapproved()` runs the IDENTICAL private stage sequence `screen()`
+#: uses -- `_check_health` -> `_stage_grammar` -> `_stage_classify` ->
+#: `_check_lock` -> `_acquire_arbiter` -> backup -- and differs only in never
+#: calling `self._approval_port` (a second, redundant approval would fail
+#: closed against `DenyAllApprovalPort` with no UI session attached).
+#:
+#: Why it could not be avoided at all: REQ-LDPLUGIN-022 requires every
+#: shared-programmer mutation caller -- director apply, general chat, panel --
+#: to serialize behind ONE lock, and `SafetyGate.screen()` is already the single
+#: shared entry point all three existing callers (`tools.py`, `session.py`,
+#: `measurement/runner.py`) go through -- the same "every possible design edits
+#: at least one file under `server/safety/`" reasoning the WRITEGATE-001 grant
+#: above records. The `@MX:ANCHOR` atop `screen()` is UPDATED, not duplicated --
+#: `execute_preapproved()` calls the same private pipeline, so ANCHOR's
+#: pipeline-singularity invariant already covers both entry points from that one
+#: tag -- because gate.py is already at the file's `anchor_per_file` cap of 3.
+#:
+#: Why the pinned deletion count grew from 15 to 69 rather than by a handful of
+#: lines: `screen()`'s body is now wrapped in a `try/finally` that acquires and
+#: releases the arbiter around the whole approval-and-backup sequence, so most
+#: of the method's existing body shifted one indent level deeper. Measured
+#: against the additions in the same diff (`git diff --unified=0
+#: 95687a0e..HEAD -- server/safety/gate.py`): 48 of the 69 deletions are PURE
+#: reindent -- identical stripped content reappears among the additions at a
+#: deeper indent -- 2 are blank-line removals inside the reshaped body, and the
+#: remaining 19 are genuinely new or changed content (the `risk`/`arbitrate`
+#: signature, the arbiter-stage wiring, the `execute_preapproved()` body
+#: itself). `screen()`'s OBSERVABLE input/output contract is unchanged: the
+#: full pre-M3 `server/safety/` characterization suite
+#: (`test_safety_gate.py` + `test_safety_ruleset.py`, 78 tests) passes with
+#: zero new failures against the same fixtures, which is the evidence the
+#: reindent moved no behavior.
+#:
+#: This grant widens nothing beyond the sixty-nine pinned lines below and this
+#: one row. A second file newly reopened under the chokepoint by this SPEC, a
+#: seventieth deleted line in gate.py, or any text in the pinned tuple other
+#: than what M3 actually deleted still fails the gate.
 _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 10,
     "server/safety/backup.py": 2,
@@ -686,7 +730,14 @@ _SAFETY_EXPECTED_DELETIONS = {
     # SPEC-COPILOT-BULKGATE-001 (2026-09-07): 8 → 15. `screen` 이 번들 위험
     # 선언(`risk: BatchRisk | None`)을 얻으면서 시그니처·독스트링·승인 블록
     # 일곱 줄이 제자리에서 교체된다. 아래 핀에 그 정확한 문면이 함께 들어간다.
-    "server/safety/gate.py": 15,
+    # SPEC-LDRECV-001 M3 (2026-09-17): 15 → 69. `execute_preapproved()` 신규
+    # public 메서드와 공유 programmer 중재자 lock 스테이지(`_acquire_arbiter`)가
+    # `screen()` 안에 들어가면서 그 본문 전체가 `try/finally` 한 단 더 들여쓰기된다
+    # — 69개 중 48개는 순수 재들여쓰기(같은 문면이 더 깊은 들여쓰기로 재등장),
+    # 2개는 그 안의 빈 줄 삭제, 나머지 19개만 실제로 바뀐/새 문면이다(위 상단
+    # `#:` 서술 문단 참고). 아래 핀에 그 정확한 69줄 전부가 diff 순서 그대로
+    # 들어간다.
+    "server/safety/gate.py": 69,
     "server/safety/monitor.py": 3,
     "server/safety/responder_version.py": 0,
     # t272 (2026-09-06): `bootstrap.py` reopened with an ADD-ONLY 4-line
@@ -839,11 +890,22 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         "        self, reference: str, path: str, *, allow_empty: bool",
         "    ) -> Sequence[str]:",
     ),
-    # gate.py's three NEW deletions (2026-08-16 paging) are the two
-    # `query_state` signatures gaining the same keyword-only offset and the
-    # fixed `self._console.query_state(path)` call replaced by the
+    # gate.py's paging-era deletions (2026-08-16) are the two `query_state`
+    # signatures gaining the same keyword-only offset and the fixed
+    # `self._console.query_state(path)` call replaced by the
     # offset-conditional pair — the audited chokepoint rides through
-    # unchanged (`_query_state` still audits every send, 1:1).
+    # unchanged (`_query_state` still audits every send, 1:1). Items 3 and 68
+    # below (0-indexed in diff order) are that pair.
+    #
+    # 2026-09-17 — SPEC-LDRECV-001 M3 grew this row from 15 to 69 pinned
+    # lines (full rationale in the `#:` narrative above
+    # `_SAFETY_EXPECTED_DELETIONS`). Measured against the diff's own additions
+    # (`git diff --unified=0 95687a0e..HEAD -- server/safety/gate.py`): 48 of
+    # the 69 lines below are PURE REINDENT (`screen()`'s existing body wrapped
+    # one level deeper by the new `try/finally` around the arbiter
+    # acquire/release), 2 are blank-line removals inside that reshaped body,
+    # and 19 are genuinely new or changed content — those 19 are annotated
+    # inline below where they are not self-evident from the M3 SPEC context.
     "server/safety/gate.py": (
         "from server.safety.backup import BackupError, BackupManager",
         '    """StateQueryPort implementation riding the gate-audited console link."""',
@@ -857,31 +919,102 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         '        """Probe the responder once; audited; returns the resulting health state."""',
         "            self.monitor.note_ping_success()",
         '        """Attach a BackupManager whose action saves the showfile via this gate."""',
+        # 2026-09-17 M3 — 실질 변경. `@MX:ANCHOR`/`@MX:REASON` 문면 자체가
+        # 바뀐다: `execute_preapproved()` 라는 두 번째 public 진입점이 생겼지만
+        # 같은 private 파이프라인을 타므로, ANCHOR 는 "파이프라인 단수성"을
+        # 지킨다는 취지로 갱신되고 새 ANCHOR 를 더 달지 않는다(gate.py 는 이미
+        # `anchor_per_file` 상한 3). 아래 네 줄이 옛 문면이 지워지는 자리다.
+        "    # @MX:ANCHOR: [AUTO] the 3-stage gate pipeline entry — run_commands (via the",
+        "    #   pass bundles through this single method",
+        "    # @MX:REASON: REQ-MVP-011/029 — exactly ONE screening path may exist; a second",
+        "    #   entry would be a gate bypass by construction (fan_in >= 3)",
         # 2026-09-07 승인된 확장 — SPEC-COPILOT-BULKGATE-001. `screen` 이
-        # 키워드 전용 `risk: BatchRisk | None = None` 을 얻는다. 그래서
-        # 지워지는 다섯 줄은 전부 **제자리 교체**다: 시그니처 한 줄과 한 줄
-        # 독스트링(여러 줄로 늘어난다), `if held:`(선언이 있으면 `held` 가
-        # 아니라 번들 전체가 요청이 되므로 `if approval_findings:` 로 바뀐다),
-        # `ApprovalItem(...)` 한 줄과 `for f in held`(항목 생성이 선언 사유를
-        # 앞에 붙이는 여러 줄로 늘어난다), 그리고 감사 두 줄(`**audit_extra`
-        # 로 `kind` 를 싣는다).
+        # 키워드 전용 `risk: BatchRisk | None = None` 을 얻는다.
         #
         # **없어진 능력은 없다.** 이 SPEC 은 분류를 안 움직이고
         # `blacklist.yaml`·`classify.py`·`ruleset.py`·`grammar.py` 의 diff 가
         # 0이다. 락 재확인(lock-FIRST)과 위험 경로 백업의 순서도 그대로다 —
         # 선언은 별도 분기가 아니라 보류 판정의 **입력**이기 때문이다.
+        #
+        # 2026-09-17 — SPEC-LDRECV-001 M3 가 다시 이 시그니처를 넓힌다.
+        # `screen()` 이 키워드 전용 `arbitrate: bool = True` 를 추가로 얻는다
+        # (design.md §2.5) — 기존 세 호출부는 넘기지 않으므로 그대로 중재자를
+        # 탄다; `server/web/panel.py` 의 `PanelRuntime.fire()` 만 `False` 를
+        # 명시해 REQ-SHOWUI-013 을 지킨다. 아래 한 줄은 BULKGATE-001 이 이미
+        # 넓혀둔 옛 시그니처(`risk` 만 있던 형태)가 지워지는 자리다.
         "    def screen(self, commands: Sequence[str]) -> ScreenDecision:",
         '        """Screen one command bundle; issues clearances only on full clearance."""',
+        "        approval_request: ApprovalRequest | None = None",
+        "        held = [f for f in findings if f.hold]",
         "        if held:",
-        # 원문이 100자를 넘어 이어붙인다 — 핀은 **문면 그대로**여야 한다.
-        (
-            "                    ApprovalItem(command=f.command, "
-            "risk_reasons=f.reasons, warnings=f.warnings)"
-        ),
+        '            self._observe("approval")',
+        "            approval_request = ApprovalRequest(",
+        "                items=tuple(",
+        # 2026-09-17 M3 — 실질 변경. `ApprovalItem(...)` 한 줄짜리 호출이
+        # 아래에서 `risk.reason` 을 사유 앞에 붙이는 다줄 형태로 늘어난다
+        # (BULKGATE-001 의 선언 병합 규칙 REQ-BULKGATE-002 를 그대로 유지).
+        "                    ApprovalItem(command=f.command, risk_reasons=f.reasons, warnings=f.warnings)",  # noqa: E501
         "                    for f in held",
+        "                )",
+        "            )",
+        "            approved = self._approval_port.request_approval(approval_request)",
+        "            if not approved:",
+        # 2026-09-17 M3 — 실질 변경. `**audit_extra` 로 `risk.kind` 를 감사에
+        # 싣는 형태로 바뀐다(BULKGATE-001 REQ-BULKGATE-002 계승, 새 줄 아님).
         "                self._audit.log_rejected(commands, held=[f.command for f in held])",
+        "                return ScreenDecision(",
+        "                    cleared=False,",
+        '                    status="rejected",',
+        "                    commands=tuple(",
+        "                        CommandDecision(",
+        '                            status="rejected",',
+        # 2026-09-17 M3 — 실질 변경. `risk` 선언이 있으면 분류 사유 앞에
+        # `risk.reason` 이 붙는 형태로 늘어난다(사유는 안 사라진다).
+        '                            reasons=f.reasons or ("bundle rejected (all-or-nothing, REQ-MVP-015)",),',  # noqa: E501
+        "                        for f in findings",
+        "                    ),",
+        "                    approval_request=approval_request,",
+        '                    notice="bundle rejected by the approver — nothing was executed",',
+        # 2026-09-17 M3 — 실질 변경. 위와 같은 `**audit_extra` 확장.
         "            self._audit.log_approved(commands, held=[f.command for f in held])",
-        # 핀은 diff 순서, 곧 **파일 안 순서**다. 아래 둘은 `screen` 뒤에 온다.
+        "",
+        "            # Lock-FIRST (REQ-MVP-035): a lock activated while the approval was",
+        "            # pending converts the held commands to non-executable.",
+        "            locked = self._check_lock(",
+        '                commands, findings, phase="live lock activated during approval (lock-first)"',  # noqa: E501
+        "            )",
+        "            if locked is not None:",
+        "                return locked",
+        "",
+        "            # Backup rule ③ (REQ-MVP-017): only the RISKY path backs up.",
+        "            if self._backup is not None:",
+        "                try:",
+        "                    self._backup.before_risky_execution()",
+        "                except BackupError as error:",
+        "                    for command in commands:",
+        '                        self._audit.log_blocked(command, reason=f"backup failed: {error}")',  # noqa: E501
+        '                        status="blocked_backup_failed",',
+        '                                command=f.command, status="blocked", reasons=(str(error),)',  # noqa: E501
+        # 2026-09-17 M3 — 실질 변경. 이 알림 문면은 승인-거절 분기(위쪽)의
+        # `notice="bundle rejected..."` 로 교체된다 — try/finally 재구성 중
+        # 백업-실패 분기와 승인-거절 분기가 자리를 맞바꿔, 이 옛 backup-failed
+        # 알림 문면 한 줄이 그 자리에서 지워진다(백업-실패 분기 자체는 살아서
+        # 아래(54~55번째 핀)에 재등장한다 — 알림 문면만 바뀐 것).
+        '                        notice=f"showfile backup failed — execution blocked (fail-safe): {error}",',  # noqa: E501
+        "            self._clearances[session_key] = Counter(commands)",
+        "        return ScreenDecision(",
+        "            cleared=True,",
+        '            status="cleared",',
+        "            commands=tuple(",
+        "                CommandDecision(",
+        '                    command=f.command, status="cleared", reasons=f.reasons, warnings=f.warnings',  # noqa: E501
+        "                for f in findings",
+        "            ),",
+        "            approval_request=approval_request,",
+        "        )",
+        # 핀은 diff 순서, 곧 **파일 안 순서**다. 아래 둘은 `screen` 뒤에 온다 —
+        # 이 시그니처 변경은 M3 가 아니라 최상단 주석의 2026-08-16 paging 쌍
+        # (item 3 과 이 줄) 그 자체다; `offset` 키워드가 여기서 추가된다.
         "    def _query_state(self, path: str) -> dict:",
         "            payload = self._console.query_state(path)",
     ),

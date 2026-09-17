@@ -820,7 +820,14 @@ class PanelRuntime:
             command = playback_command(verb, target_kind, target)
         token = bind_session_key(self._session_key)
         try:
-            decision = self._gate.screen([command])
+            # SPEC-LDRECV-001 M3 scope narrowing (design.md §2.5):
+            # REQ-LDPLUGIN-022's shared programmer arbiter is scoped to
+            # director/chat/import — a panel press must keep clearing even
+            # while a director apply or a chat turn holds that lock
+            # (REQ-SHOWUI-013, "a chat turn in flight must not busy-out the
+            # panel"). `arbitrate=False` opts this ONE call out of that
+            # lock; grammar/classify/backup/health/audit are unaffected.
+            decision = self._gate.screen([command], arbitrate=False)
             if not decision.cleared:
                 return self._report_not_cleared(decision, command, target_kind, target)
             # Adjacent to the screen call ON PURPOSE. The clearance Counter is
