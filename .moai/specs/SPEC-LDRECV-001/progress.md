@@ -1037,10 +1037,191 @@ verbatim 저장: `.moai/state/verify/ldrecv-m4/m4-final-full-regress.txt`.
 execution journal·idempotency — REQ-LDPLUGIN-023 TDD 구현` 커밋 예정.
 push 는 하지 않는다.
 
+### M5 완료 (REQ-LDPLUGIN-021 · REQ-LDPLUGIN-024)
+
+작업 트리(`worktree-agent-a8b81a6a2135fa399`) 착수 시 HEAD 가 M4 를 포함하지
+않은 상태(`f12d590e`, SPEC-LDSTORE-001 계열)였으므로, 먼저
+`git merge --no-ff worktree-ldrecv-m1 -m "merge: SPEC-LDRECV-001 M1-M4 into
+agent worktree"`(커밋 `d556c278`)로 M1-M4 를 병합한 뒤 착수했다.
+
+**Claim**: `server/director/execution.py`(M4 EXTEND — `ApplyCoordinator` +
+`execute_bundles()` + 관련 seam·오류 헬퍼 신규 추가) + `server/director/
+director_api.py`(M1 EXTEND — `POST .../apply` route 추가)를 TDD 로
+구현했다. lock 을 얻은 직후 재검사(승인 신선도 → LiveLock → destination
+occupancy)를 통과해야만 `SafetyGate.execute_preapproved()`(M3)를 호출하고,
+bundle 순차 전송은 k 번째 실패/불확실 시 후속 bundle 을 전송하지 않고
+`not_sent` 로 journal 에 남기며 `unknown`(확인 불가) 이 `partial` 보다
+우선하는 상태 우선순위를 구현했다.
+
+**설계 판단 — "lock 안에서 재검사"의 실제 구현 지점**: REQ-021 원문은 "lock
+안에서 첫 write 직전 재검사"를 요구하지만, `SafetyGate.execute_preapproved`
+는 중재자(arbiter) lock 을 자신의 메서드 본문 안에서만 획득·해제하고
+반환 즉시 놓는다(`gate.py:656-657` 실측 — `finally: self._arbiter.release()`)
+— 즉 director 층이 그 lock 을 별도로 선점할 수 없고(같은 스레드가 non-
+reentrant lock 을 두 번 잡으면 자기 자신에게 BUSY 를 반환한다), M5 가
+gate.py 를 고칠 수도 없다(경계, plan.md §3). 그래서 이 재검사는 gate 의
+arbiter lock 이 아니라 **`ExecutionJournal.begin_execution()` 이 이미
+쓰는 SQLite `BEGIN IMMEDIATE` 원자 transaction**을 재검사·journal
+커밋·destination 예약의 실제 원자성 경계로 삼았다 — destination
+occupancy 재검사는 그 transaction 안에서 create-only 예약으로 수행되고
+(design.md §3 이 이미 이 방향을 지시했다), 승인 신선도·LiveLock 재검사는
+그 transaction 진입 직전(같은 호출 흐름 안, 재진입 불가능한 순간)에
+수행해 어느 경로로도 두 재검사 사이에 다른 요청이 끼어들 수 없다.
+`execute_preapproved()` 자신도 `_check_lock`(LiveLock)·`_acquire_arbiter`
+를 내부적으로 다시 검사하므로 이중 방어가 된다. REQ-021 원문이 나열한
+"bindings·destination occupancy·LiveLock·승인" 넷은 검사 **대상**의
+열거이지 순서 규정이 아니다 — acceptance.md AC-021 항목1 은 "하나라도"
+위반되면 차단됨을 요구할 뿐 순서를 시험하지 않는다(설계 판단이므로
+`ApplyCoordinator.apply()` docstring 에 근거를 남겼다. 사람 재확인이
+필요하면 이 판단부터 검토 대상이다).
+
+**설계 판단 — 콘솔 송신 seam**: `server/bridge/osc.py` 를 import 하지
+않는다(spec.md §5 — 이 SPEC 은 apply 의 "승격부"만 콘솔 게이트다).
+`execute_bundles()` 는 `BundleSender` Protocol(`send(bundle) -> str`,
+`STATE_SENT`/`STATE_ACKNOWLEDGED`/`STATE_FAILED`/`STATE_UNKNOWN` 중 하나)
+을 주입받아 실제 전송 여부와 무관하게 실패 분류 로직만 시험 가능하게
+했다 — M4 의 `EvidenceRegistry` 류 seam 패턴을 그대로 따른다. `director_api.py`
+의 `DirectorApiDeps.bundle_sender` 가 `None` 이면 apply 는 journal 커밋·gate
+연결까지만 하고 실제 bundle 전송은 건너뛴다(부분 배선 — 실제 전송기는
+이 SPEC 범위 밖의 후속 배선).
+
+**LiveLock 재검사 처리(조사 결과+판단 근거)**: `ApplyCoordinator` 는
+`GatePort` Protocol(`lock`/`execute_preapproved` 만 노출)을 통해
+`gate.lock.is_active` 를 직접 읽어 승인 재검사 직후·destination 예약
+직전에 재검사한다. `execute_preapproved()` 자신도 `_check_lock` 을 두 번
+(classify 직후, 그리고 held 명령이 있으면 approval-등가 지점에서 한 번 더,
+`gate.py:592`·`615`) 수행하므로, M5 의 사전 재검사는 **추가 방어층**이지
+유일한 방어가 아니다 — 두 재검사가 서로 다른 창(gate 호출 전/gate 내부)을
+덮어 "lock 활성화 후 짧은 창에서 재검사를 피해가는" 경로를 없앤다.
+
+**Evidence — RED (구현 전 실제로 확인한 verbatim 출력)**
+
+```
+$ uv run pytest server/tests/test_director_apply_rejection.py server/tests/test_director_execution_failure.py -q
+ImportError while importing test module '.../test_director_apply_rejection.py'
+E   ImportError: cannot import name 'ApplyCoordinator' from 'server.director.execution'
+ImportError while importing test module '.../test_director_execution_failure.py'
+E   ImportError: cannot import name 'STATE_NOT_SENT' from 'server.director.execution'
+2 errors in 0.82s
+```
+
+**Evidence — GREEN (신규 시험 21개)**
+
+```
+$ uv run pytest server/tests/test_director_apply_rejection.py server/tests/test_director_execution_failure.py -q
+.....................                                                    [100%]
+21 passed in 0.87s
+```
+verbatim 저장: `.moai/state/verify/ldrecv-m5/m5-new-tests.txt`.
+
+| AC | 시험 커버 | Status |
+|---|---|---|
+| AC-LDPLUGIN-021 항목1 (승인 신선도) | approval 없음/head 변경/만료/context 변경 각각 차단, gate 미호출(`TestApprovalFreshnessRejection`, 4) | PASS |
+| AC-LDPLUGIN-021 항목1 (LiveLock) | 활성 LiveLock 차단·gate 미호출, 비활성 시 정상 진행(`TestLiveLockRejection`, 2) | PASS |
+| AC-LDPLUGIN-021 항목2 (destination create-only) | 점유된 slot 재선택 없음(`TARGET_BUSY`, 두 번째 gate 미호출, 점유자 execution_id 불변), 해제 후 재예약 가능(`TestDestinationCreateOnly`, 2) | PASS |
+| REQ-021 후단 (gate 우회 없음) | gate 거부가 `GATE_REJECTED` 로 전파되고 journal 이 `failed` 로 남음(`TestGateRejectionPropagates`, 1) | PASS |
+| 계약 §9.7 (replay 우선) | 같은 key+같은 request 재제출은 재검사·gate 재호출 없이 최초 응답 replay(`TestIdempotentReplayBypassesRecheck`, 1) | PASS |
+| AC-LDPLUGIN-024 (후속 중단) | k 번째 실패/unknown 이후 sender 미호출, `not_sent` 로 journal 보존(`TestSubsequentBundlesNotSentAfterFailure`, 2) | PASS |
+| AC-LDPLUGIN-024 (상태 우선순위) | unknown이 partial 보다 우선, confirmed+not_sent 혼재는 partial, 전부 실패는 failed, 전부 confirmed 는 failed/partial/unknown 이 아님(`TestStatePriority`, 4) | PASS |
+| AC-LDPLUGIN-024 (operator 개입) | 개입 감지 시 진행 중 execution 이 `unknown`+`recovery_required` 로 전환, 후속 sender 미호출(`TestOperatorInterference`, 2) | PASS |
+| AC-LDPLUGIN-024 (journal 영속) | not_sent/최종 상태가 반환값이 아니라 되읽은 DB 행으로 확인됨(`TestJournalPersistence`, 2) | PASS |
+| 방어적 계약 | sender 가 알 수 없는 상태를 반환하면 예외(`TestUnknownSenderOutcomeRejected`, 1) | PASS |
+
+**Evidence — ruff**
+
+```
+$ uv run ruff check server/director/execution.py server/director/director_api.py server/tests/test_director_apply_rejection.py server/tests/test_director_execution_failure.py
+All checks passed!
+$ uv run ruff format --check server/director/execution.py server/director/director_api.py server/tests/test_director_apply_rejection.py server/tests/test_director_execution_failure.py
+4 files already formatted
+```
+(1회 REFACTOR — 줄 길이 2건(E501)·`if/elif` 통합 1건(SIM114)을 잡아
+`test_overlap_preserve.py::TestTouchedFilesPassLint` 전체 회귀에서 발견,
+고친 뒤 재확인.)
+
+**Evidence — 경계 5개 금지 파일 미접촉**
+
+```
+$ git diff --name-only 34086cd7 -- server/safety/gate.py \
+    server/orchestrator/tools.py server/web/session.py \
+    server/measurement/runner.py server/web/panel.py
+(빈 출력 — 전부 미접촉, 확인됨)
+```
+
+**Evidence — 경계(spec.md/acceptance.md 공통 grep)**
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/
+(매치 없음 — OSC 직접 import 안 함)
+$ grep -rnE "^\s*(from|import)\s+server\.(looks|web\.session)" server/director/
+(매치 없음 — 예술 producer 호출 안 함)
+$ grep -rn "approval_bridge\|DenyAllApprovalPort\|request_approval(" server/director/execution.py server/director/director_api.py
+(매치 없음 — 이 SPEC 이 M5 에서 만든 두 파일은 0건. auth.py/approvals.py
+의 docstring 인용 2건은 M1/M2 기존 파일이며 이번 변경이 아니다.)
+```
+
+**Evidence — M3 gate_bridge·panel 회귀 재확인 (건드리지 않았다는 증거)**
+
+```
+$ uv run pytest server/tests/test_director_gate_bridge.py "server/tests/test_web_panel_execute.py::TestSerialization" -q
+.............                                                            [100%]
+13 passed, 1 warning in 2.43s
+```
+
+**만든 파일**
+
+```
+server/tests/test_director_apply_rejection.py    REQ-021(거부 방향) 시험 10개 (신규)
+server/tests/test_director_execution_failure.py  REQ-024 시험 11개 (신규)
+```
+
+**EXTEND 한 파일**
+
+```
+server/director/execution.py     ApplyCoordinator·execute_bundles()·seam Protocol 3종·오류 헬퍼 5종 추가
+server/director/director_api.py  POST .../apply route 추가, DirectorApiDeps 에 apply_coordinator·
+                                  execution_journal·bundle_sender·interference_detector 필드 추가
+```
+
+`server/director/{models,store,service,context,knowledge,digest,emit,
+validate}.py`(형제 SPEC 소유, PRESERVE)는 읽기만 했다 — `git diff --name-only
+34086cd7 -- <파일 목록>` 빈 출력으로 확인.
+
+**Baseline-attribution**: 기준선(M4 완료 커밋 `bcd38b4e` 직후, M1-M4 병합
+직후 실측) `13473 passed, 35 skipped`. 신규 테스트 **21개**(2파일).
+13473 + 21 = **13494** — 전체 회귀 결과와 정확히 일치. skipped 불변(35),
+실패 0.
+
+**Evidence — 최종 전체 회귀**
+
+```
+$ uv run pytest -q
+13494 passed, 35 skipped, 1 warning in 182.10s (0:03:02)
+```
+verbatim 저장: `.moai/state/verify/ldrecv-m5/m5-final-full-regress.txt`.
+
+**PASS/FAIL 최종 표**
+
+| AC | 항목 | 검증 명령 | Status |
+|---|---|---|---|
+| AC-LDPLUGIN-021 | lock 안 재검사(bindings·occupancy·LiveLock·승인) — 거부 방향 | `test_director_apply_rejection.py` (10) | PASS |
+| AC-LDPLUGIN-021 | destination create-only(재선택 없음) | `TestDestinationCreateOnly` (2) | PASS |
+| AC-LDPLUGIN-021 | SafetyGate 문법/위험/백업/health/audit 우회 없음(승인 재질문만 건너뜀) | `test_director_gate_bridge.py`(기존, 회귀 재확인) + `TestGateRejectionPropagates` | PASS |
+| AC-LDPLUGIN-021 승격부(콘솔) | 실제 콘솔 적용 확인 | 실기 관측 — **이 SPEC 범위 밖**(spec.md §5) | N/A — 콘솔 게이트 |
+| AC-LDPLUGIN-024 | 후속 bundle not_sent, 상태 우선순위, operator 개입→unknown+recovery_required | `test_director_execution_failure.py` (11) | PASS |
+| AC-LDPLUGIN-022 (회귀) | panel/chat 직렬화 범위 불변 | `test_web_panel_execute.py::TestSerialization` (5) | PASS |
+| 전체 회귀 | 실패 0 | `uv run pytest -q` | PASS (13494 passed, 35 skipped) |
+| 경계 | 5개 금지 파일 미접촉 | `git diff --name-only` | PASS |
+| 경계 | OSC 직접 import 없음 · 예술 producer 미호출 · 일반 승인 채널 재사용 없음 | grep 3종 | PASS |
+| 스타일 | ruff check/format | 위 Evidence | PASS |
+
+**커밋**: 이 섹션을 기록한 뒤 `feat(SPEC-LDRECV-001): M5 apply·실패 분류
+— REQ-LDPLUGIN-021·024 TDD 구현` 커밋 예정. push 는 하지 않는다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending — M4 완료, M5(apply·실패 분류)·M6(운영 중단·recovery) 남음. 최종
-run-phase 종료 시 이 섹션을 채운다>_
+_<pending — M5 완료, M6(운영 중단·recovery) 남음. 최종 run-phase 종료 시
+이 섹션을 채운다>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

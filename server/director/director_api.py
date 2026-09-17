@@ -28,6 +28,13 @@ from server.director.auth import (
     PairingSecretStore,
     authenticate,
 )
+from server.director.execution import (
+    ApplyCoordinator,
+    BundleSender,
+    ExecutionJournal,
+    InterferenceDetector,
+    execute_bundles,
+)
 from server.director.knowledge import KnowledgeService
 from server.director.models import Detail, ExchangeError
 from server.director.service import DirectorService, NotInstalledValidator, PlanValidator
@@ -96,6 +103,17 @@ class DirectorApiDeps:
     approvals: ApprovalRegistry = field(default_factory=ApprovalRegistry)
     #: `POST .../approvals` 가 참조하는 ValidationReport 조회 seam. 미주입 시 503.
     validation_provider: ValidationProvider | None = None
+    #: M5 (SPEC-LDRECV-001) apply 직전 재검사 + durable journal 커밋 + SafetyGate
+    #: 연결 조율자. 미주입 시 `POST .../apply` 는 503 을 답한다.
+    apply_coordinator: ApplyCoordinator | None = None
+    #: M4/M5 durable execution journal — apply 이후 bundle 전송 결과를 기록한다.
+    execution_journal: ExecutionJournal | None = None
+    #: 실제 콘솔 송신 seam (execution.py 모듈 docstring — 이 SPEC 은 구현체를
+    #: 만들지 않는다). 미주입 시 apply 는 journal 커밋·gate 연결까지만 하고
+    #: bundle 전송은 건너뛴다(부분 배선 — 이 층의 콘솔 게이트 경계, spec.md §5).
+    bundle_sender: BundleSender | None = None
+    #: operator 개입(programmer 변경) 감지 seam. 미주입 시 개입 감지 없이 진행한다.
+    interference_detector: InterferenceDetector | None = None
 
 
 def _request_id(request: Request) -> str:
@@ -380,6 +398,60 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 },
                 "validation": result.validation,
             }
+        except ExchangeError as error:
+            return _error_response(error, request)
+
+    @router.post("/plans/{plan_id}/revisions/{revision}/apply")
+    async def post_apply(
+        project_id: str, plan_id: str, revision: int, body: dict[str, Any], request: Request
+    ):
+        """계약 §4 — apply 는 lock 안 재검사(REQ-LDPLUGIN-021)를 통과한 뒤에만
+        SafetyGate 로 연결한다(REQ-LDPLUGIN-024 의 실패 분류는
+        :func:`server.director.execution.execute_bundles` 가 맡는다).
+
+        MCP credential 은 ``plan:apply`` 가 human-only scope 이므로
+        `auth.authenticate` 단계에서 SCOPE_DENIED 로 이미 거부되어 이 handler
+        본문에 도달하지 않는다.
+        """
+        try:
+            credential = _require_credential(request, scope="plan:apply")
+
+            if deps.apply_coordinator is None or deps.context_provider is None:
+                raise _dependency_unavailable("apply coordinator/context provider")
+
+            context_snapshot = deps.context_provider.current(project_id)
+            result = deps.apply_coordinator.apply(
+                project_id=project_id,
+                plan_id=plan_id,
+                revision=revision,
+                principal_id=credential.principal_id,
+                operation=(
+                    f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
+                    f"revisions/{revision}/apply"
+                ),
+                current_context_digest=str(context_snapshot["context_digest"]),
+                body=body,
+            )
+
+            # 실제 bundle 전송은 이 SPEC 의 콘솔 게이트 경계다(spec.md §5) — sender
+            # 가 배선되지 않았거나 이미 replay 된 응답이면 journal 커밋·gate 연결
+            # 결과만 그대로 돌려준다.
+            journal_ready = deps.execution_journal is not None
+            if deps.bundle_sender is not None and not result.replayed and journal_ready:
+                bundles = body.get("bundles") or []
+                outcome = execute_bundles(
+                    deps.execution_journal,
+                    execution_id=result.execution_id,
+                    bundles=bundles,
+                    sender=deps.bundle_sender,
+                    interference=deps.interference_detector,
+                )
+                return JSONResponse(
+                    status_code=result.response_status,
+                    content={**result.response_body, **outcome},
+                )
+
+            return JSONResponse(status_code=result.response_status, content=result.response_body)
         except ExchangeError as error:
             return _error_response(error, request)
 

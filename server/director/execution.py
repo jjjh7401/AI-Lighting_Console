@@ -44,15 +44,17 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
+from server.director.approvals import ApprovalRegistry, check_validity
 from server.director.digest import canonical_digest
 from server.director.models import Detail, ExchangeError
+from server.director.store import DirectorStore
 
 _MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
@@ -69,6 +71,15 @@ STATE_UNKNOWN = "unknown"
 #: destination_reservations.status (design.md §3).
 RESERVATION_RESERVED = "reserved"
 RESERVATION_RELEASED = "released"
+
+#: bundle 레벨 상태 — 후속 bundle 이 아예 시도되지 않았음을 뜻한다
+#: (AC-LDPLUGIN-024, "not_sent 로 receipt 에 보존").
+STATE_NOT_SENT = "not_sent"
+
+#: execution 전체(aggregate) 상태 — 일부 bundle 은 confirmed, 일부는
+#: not_sent/failed. `unknown`/`failed`/`sent`(전부 confirmed) 와 나란히
+#: :func:`execute_bundles` 만 계산해 쓰는 값이다.
+STATE_PARTIAL = "partial"
 
 #: 계약 §3 — 신규 생성 201.
 _STATUS_CREATED = 201
@@ -93,6 +104,87 @@ def _target_busy(message: str) -> ExchangeError:
 
 def _not_found(message: str) -> ExchangeError:
     return ExchangeError("NOT_FOUND", 404, message)
+
+
+def _approval_not_found(approval_id: str) -> ExchangeError:
+    return ExchangeError(
+        "APPROVAL_NOT_FOUND",
+        404,
+        f"승인 {approval_id} 을 찾을 수 없습니다.",
+        (Detail("/approval_id", ""),),
+    )
+
+
+def _approval_stale(reasons: tuple[str, ...]) -> ExchangeError:
+    """REQ-LDPLUGIN-021 재검사 — head 변경/context stale/만료된 승인 거부.
+
+    ``reasons`` 는 :func:`server.director.approvals.check_validity` 가 돌려주는
+    사유 어휘(``head_changed``/``context_changed``/``expired``)를 그대로 싣는다 —
+    같은 무효화 판정을 M2(승인 재조회) 와 M5(apply 직전 재검사)가 공유한다.
+    """
+    return ExchangeError(
+        "APPROVAL_STALE",
+        409,
+        f"승인이 더 이상 유효하지 않습니다: {', '.join(reasons)}",
+        (Detail("/approval_id", ", ".join(reasons)),),
+    )
+
+
+def _live_lock_active() -> ExchangeError:
+    return ExchangeError(
+        "LIVE_LOCK_ACTIVE",
+        423,
+        "LiveLock 이 활성화되어 있어 apply 를 차단합니다.",
+        (Detail("", "live lock active"),),
+    )
+
+
+def _gate_rejected(decision: Any) -> ExchangeError:
+    return ExchangeError(
+        "GATE_REJECTED",
+        422,
+        f"SafetyGate 가 이 bundle 을 거부했습니다: {decision.status}",
+        (Detail("", decision.notice or decision.status),),
+    )
+
+
+def _schema_invalid(message: str, pointer: str = "") -> ExchangeError:
+    return ExchangeError("SCHEMA_INVALID", 422, message, (Detail(pointer, ""),))
+
+
+class GatePort(Protocol):
+    """M5 가 ``SafetyGate`` 로부터 필요로 하는 표면만 — 전체 ``SafetyGate`` 타입에
+    결합하지 않고 테스트에서 fake 로 대체할 수 있게 한다. 실제 운영 배선에서는
+    ``server.safety.gate.SafetyGate`` 인스턴스가 이 Protocol 을 그대로 만족한다
+    (구조적 타이핑 — 상속 불필요)."""
+
+    @property
+    def lock(self) -> Any: ...  # LiveLock — .is_active 만 읽는다
+
+    def execute_preapproved(self, commands: Sequence[str]) -> Any: ...  # ScreenDecision
+
+
+class BundleSender(Protocol):
+    """실제 콘솔 송신 seam (spec.md §5 — apply 의 승격부는 콘솔 게이트다).
+
+    이 SPEC 은 이 프로토콜의 실제 구현체(``server/bridge/osc.py`` 연결)를
+    만들지 않는다 — PRESERVE 경계(§3 spec.md, §5 spec.md)가 그 층을 콘솔
+    게이트로 명시하기 때문이다. 호출자(추후 SPEC 또는 운영 배선)가 진짜
+    전송기를, 테스트는 fake 를 주입한다.
+    """
+
+    def send(self, bundle: Mapping[str, Any]) -> str:
+        """``STATE_SENT``/``STATE_ACKNOWLEDGED``/``STATE_FAILED``/``STATE_UNKNOWN``
+        중 하나를 반환한다."""
+        ...
+
+
+class InterferenceDetector(Protocol):
+    """operator 개입(programmer 변경) 감지 seam. bundle 하나를 보내기 전마다
+    호출되며, ``True`` 를 반환하면 진행 중이던 execution 을 ``unknown``+
+    ``recovery_required`` 로 전환하고 후속 bundle 을 전송하지 않는다."""
+
+    def check(self) -> bool: ...
 
 
 def _fingerprint(
@@ -338,6 +430,37 @@ class ExecutionJournal:
             replayed=True,
         )
 
+    def replay_if_exists(
+        self,
+        *,
+        project_id: str,
+        principal_id: str,
+        operation: str,
+        idempotency_key: str,
+        request: Mapping[str, Any],
+    ) -> ExecutionResult | None:
+        """``begin_execution`` 을 실제로 커밋하기 전에 replay 여부만 먼저 본다.
+
+        M5 의 apply 재검사(REQ-021 — 승인 신선도·LiveLock·destination occupancy)는
+        idempotent replay 요청에는 적용되면 안 된다(계약 §9.7 — 동일 key+동일
+        request 는 그 사이 상태가 무엇이든 최초 응답을 그대로 replay 한다).
+        :class:`ApplyCoordinator` 가 재검사보다 먼저 이 메서드를 호출해
+        replay 경로를 가른다.
+        """
+        fingerprint = _fingerprint(
+            operation=operation,
+            project_id=project_id,
+            principal_id=principal_id,
+            request=request,
+        )
+        return self._replay_or_none(
+            project_id=project_id,
+            principal_id=principal_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            fingerprint=fingerprint,
+        )
+
     # ------------------------------------------------------------ 전송 상태 전이
 
     def mark_sending(self, execution_id: str) -> None:
@@ -478,3 +601,221 @@ class ExecutionJournal:
             "reserved_at": str(row["reserved_at"]),
             "status": str(row["status"]),
         }
+
+
+# ---------------------------------------------------------------------------
+# M5 — apply 직전 재검사 · SafetyGate 연결 (REQ-LDPLUGIN-021)
+# ---------------------------------------------------------------------------
+
+
+class ApplyCoordinator:
+    """apply 직전 재검사(REQ-LDPLUGIN-021) + durable journal 커밋 + SafetyGate
+    연결. 실제 bundle 전송·실패 분류(REQ-LDPLUGIN-024)는 :func:`execute_bundles`
+    가 별도로 맡는다 — 이 클래스는 "lock 안에서 첫 write 직전" 재검사와 journal
+    커밋, gate 로의 연결까지만 책임진다.
+
+    이 클래스가 실제로 검사하는 순서(REQ-021 원문이 나열한 네 항목 — current
+    bindings·target/destination occupancy·LiveLock·승인 — 은 검사 **대상**의
+    열거이지 순서 규정이 아니다; acceptance.md AC-021 항목 1 은 각 조건이
+    "하나라도" 위반되면 차단됨을 요구할 뿐, 순서 자체를 시험하지 않는다):
+
+    0. idempotent replay(같은 key+같은 request) 여부 — 그 사이 상태가 무엇이든
+       최초 응답을 그대로 돌려준다(계약 §9.7). 아래 재검사보다 먼저 확인한다.
+    1. 승인 조회 + 신선도(head 변경/context stale/만료) —
+       :func:`server.director.approvals.check_validity` ("current bindings" +
+       "승인").
+    2. LiveLock 활성 여부 — ``gate.lock.is_active``.
+    3. destination occupancy — :meth:`ExecutionJournal.begin_execution` 이
+       같은 transaction 안에서 create-only 로 예약한다(design.md §3). 이미
+       점유돼 있으면 ``TARGET_BUSY`` 로 거부하고 **다른 slot 으로 조용히
+       재선택하지 않는다**.
+    4. SafetyGate 연결 — ``gate.execute_preapproved(commands)``. grammar/
+       classify/backup/health/audit 는 우회하지 않는다(§2.0-가, design.md §1).
+    """
+
+    def __init__(
+        self,
+        *,
+        journal: ExecutionJournal,
+        approvals: ApprovalRegistry,
+        store: DirectorStore,
+        gate: GatePort,
+    ) -> None:
+        self._journal = journal
+        self._approvals = approvals
+        self._store = store
+        self._gate = gate
+
+    def apply(
+        self,
+        *,
+        project_id: str,
+        plan_id: str,
+        revision: int,
+        principal_id: str,
+        operation: str,
+        current_context_digest: str,
+        body: Mapping[str, Any],
+    ) -> ExecutionResult:
+        """``POST .../apply`` 판정.
+
+        Raises:
+            ExchangeError: ``SCHEMA_INVALID`` (필수 필드 누락),
+                ``APPROVAL_NOT_FOUND`` (approval_id 가 없음),
+                ``APPROVAL_STALE`` (head 변경/context stale/만료),
+                ``LIVE_LOCK_ACTIVE``, ``TARGET_BUSY`` (destination 이미 점유,
+                create-only), ``IDEMPOTENCY_CONFLICT``, ``GATE_REJECTED``
+                (SafetyGate 가 grammar/classify/backup/health 중 하나에서
+                거부).
+        """
+        approval_id = body.get("approval_id")
+        idempotency_key = body.get("idempotency_key")
+        destination = body.get("destination")
+        bundles = body.get("bundles")
+        if not isinstance(approval_id, str) or not approval_id:
+            raise _schema_invalid("approval_id 가 필요합니다.", "/approval_id")
+        if not isinstance(idempotency_key, str) or not idempotency_key:
+            raise _schema_invalid("idempotency_key 가 필요합니다.", "/idempotency_key")
+        if not isinstance(destination, Mapping):
+            raise _schema_invalid("destination 이 필요합니다.", "/destination")
+        if not isinstance(bundles, list) or not bundles:
+            raise _schema_invalid("bundles 가 필요합니다.", "/bundles")
+
+        request_for_fingerprint = {k: v for k, v in body.items() if k != "idempotency_key"}
+
+        # 0. replay 는 재검사보다 먼저 — 그 사이 상태와 무관하게 최초 응답을
+        # 그대로 돌려준다(계약 §9.7).
+        replayed = self._journal.replay_if_exists(
+            project_id=project_id,
+            principal_id=principal_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request=request_for_fingerprint,
+        )
+        if replayed is not None:
+            return replayed
+
+        # 1. current bindings + 승인 신선도.
+        binding = self._approvals.get(approval_id)
+        if binding is None:
+            raise _approval_not_found(approval_id)
+
+        current_head = self._store.head_revision(project_id=project_id, plan_id=plan_id)
+        reasons = check_validity(
+            binding,
+            current_head=current_head,
+            current_context_digest=current_context_digest,
+            now=_now(),
+        )
+        if reasons:
+            raise _approval_stale(reasons)
+
+        # 2. LiveLock.
+        if self._gate.lock.is_active:
+            raise _live_lock_active()
+
+        # 3. destination occupancy — begin_execution 의 단일 transaction 안에서
+        # create-only 로 예약된다(design.md §3). 이미 점유돼 있으면 여기서
+        # TARGET_BUSY 로 거부되고 execution 행 자체가 남지 않는다 — 다른 빈
+        # slot 으로 조용히 재선택하지 않는다.
+        result = self._journal.begin_execution(
+            project_id=project_id,
+            principal_id=principal_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request=request_for_fingerprint,
+            approval_id=approval_id,
+            bundles=bundles,
+            destination=destination,
+        )
+        if result.replayed:
+            return result
+
+        # 4. SafetyGate 연결 — director 는 execute_preapproved 만 부른다
+        # (screen() 이 아니다). 이미 가진 ApprovalBinding 이 그 자리의 승인
+        # 증거이므로 일반 ApprovalPort 재질문은 여기서도 일어나지 않는다.
+        commands = [str(command) for bundle in bundles for command in bundle.get("commands", ())]
+        decision = self._gate.execute_preapproved(commands)
+        if not decision.cleared:
+            # journal 은 이미 durable 하게 남았다(§ M4 doctrine — journal 이
+            # 첫 write 보다 먼저다) — gate 거부는 그 execution 을 failed 로
+            # 닫는다. 실제 송신은 시도된 적이 없다.
+            self._journal.finalize_execution(result.execution_id, STATE_FAILED)
+            raise _gate_rejected(decision)
+
+        return result
+
+
+def execute_bundles(
+    journal: ExecutionJournal,
+    *,
+    execution_id: str,
+    bundles: Sequence[Mapping[str, Any]],
+    sender: BundleSender,
+    interference: InterferenceDetector | None = None,
+) -> dict[str, Any]:
+    """AC-LDPLUGIN-024 — 실패/간섭/불확실 전송 시 후속 bundle 을 전송하지 않는다.
+
+    N 개 bundle 을 순서대로 :class:`BundleSender` 로 보낸다. k 번째가
+    ``STATE_FAILED``/``STATE_UNKNOWN`` 이거나, 그 직전에 :class:`InterferenceDetector`
+    가 개입(programmer 변경)을 감지하면, k+1 번째부터는 ``sender.send()`` 를
+    **호출하지 않고** ``STATE_NOT_SENT`` 로 journal 에 남긴다 — blind retry 를
+    하지 않는다.
+
+    전체(aggregate) 상태 우선순위:
+
+    1. interference 감지, 또는 하나라도 ``STATE_UNKNOWN`` 이면 → ``unknown``
+       (``unknown`` 이 ``partial`` 보다 우선한다 — 계약 요구).
+    2. confirmed(``sent``/``acknowledged``)와 그 외(``failed``/``not_sent``)가
+       섞여 있으면 → ``partial``.
+    3. 전부 confirmed 면 → ``sent``.
+    4. 그 밖(confirmed 도 unknown 도 없음) → ``failed``.
+
+    ``recovery_required`` 는 interference 감지 또는 ``unknown`` 전체 상태일 때
+    ``True`` 다 — M6(운영 중단·recovery)의 recovery 흐름이 참조하는 신호다.
+    """
+    outcomes: list[str] = []
+    stop = False
+    interference_detected = False
+
+    for index, bundle in enumerate(bundles):
+        if not stop and interference is not None and interference.check():
+            interference_detected = True
+            stop = True
+
+        if stop:
+            journal.record_bundle_result(
+                execution_id=execution_id, bundle_index=index, state=STATE_NOT_SENT
+            )
+            outcomes.append(STATE_NOT_SENT)
+            continue
+
+        # "socket send 직전" 을 디스크에 남긴다 — M4 doctrine (execution.py
+        # 모듈 docstring): 이 커밋 이후 crash 하면 status() 가 unknown 을
+        # 반환한다.
+        journal.mark_sending(execution_id)
+        outcome = sender.send(bundle)
+        if outcome not in (STATE_SENT, STATE_ACKNOWLEDGED, STATE_FAILED, STATE_UNKNOWN):
+            raise ValueError(f"sender.send() 가 알 수 없는 상태를 반환했습니다: {outcome!r}")
+        journal.record_bundle_result(execution_id=execution_id, bundle_index=index, state=outcome)
+        outcomes.append(outcome)
+        if outcome not in (STATE_SENT, STATE_ACKNOWLEDGED):
+            stop = True
+
+    confirmed = {STATE_SENT, STATE_ACKNOWLEDGED}
+    if interference_detected or STATE_UNKNOWN in outcomes:
+        overall, recovery_required = STATE_UNKNOWN, True
+    elif any(o in confirmed for o in outcomes) and any(o not in confirmed for o in outcomes):
+        overall, recovery_required = STATE_PARTIAL, False
+    elif outcomes and all(o in confirmed for o in outcomes):
+        overall, recovery_required = STATE_SENT, False
+    else:
+        overall, recovery_required = STATE_FAILED, False
+
+    journal.finalize_execution(execution_id, overall)
+    return {
+        "execution_id": execution_id,
+        "state": overall,
+        "recovery_required": recovery_required,
+        "bundles": outcomes,
+    }
