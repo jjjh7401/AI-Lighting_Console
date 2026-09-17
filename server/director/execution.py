@@ -152,6 +152,22 @@ def _schema_invalid(message: str, pointer: str = "") -> ExchangeError:
     return ExchangeError("SCHEMA_INVALID", 422, message, (Detail(pointer, ""),))
 
 
+def _recovery_source_invalid(execution_id: str, status: str) -> ExchangeError:
+    """M6 · REQ-LDPLUGIN-032 — recovery 는 partial/unknown execution 만 대상으로
+    한다. 이미 confirmed(``sent``/``acknowledged``) 된 execution 을 recovery
+    대상으로 삼으면 "이미 성공한 것을 왜 다시 보내는가"라는 의미가 불분명해지고,
+    ``planned``/``sending``/``failed`` 는 recovery 가 아니라 각각 정상 진행 중이거나
+    (M5 의 재검사 대상) 그냥 실패 재시도(이 SPEC 이 금지하는 blind retry, LD-EXEC-002)
+    이지 recovery 가 아니다."""
+    return ExchangeError(
+        "RECOVERY_SOURCE_INVALID",
+        409,
+        f"execution {execution_id} 는 partial/unknown 상태가 아니어서({status}) "
+        "recovery 대상이 될 수 없습니다.",
+        (Detail("/recovery_of", status),),
+    )
+
+
 class GatePort(Protocol):
     """M5 가 ``SafetyGate`` 로부터 필요로 하는 표면만 — 전체 ``SafetyGate`` 타입에
     결합하지 않고 테스트에서 fake 로 대체할 수 있게 한다. 실제 운영 배선에서는
@@ -602,6 +618,35 @@ class ExecutionJournal:
             "status": str(row["status"]),
         }
 
+    # ------------------------------------------------------------ M6 — recovery 링크
+
+    def record_recovery_link(
+        self, *, recovery_execution_id: str, original_execution_id: str
+    ) -> None:
+        """recovery execution 이 어떤 원본의 recovery 인지 기록한다 (M6 · REQ-032).
+
+        원본 execution 행(``executions`` 테이블)은 이 메서드가 전혀 건드리지
+        않는다 — 별도 테이블(``execution_recovery_links``, migrations/003)에
+        관계만 추가한다. 원본 기록이 "덮어써지지 않고 recovery_of 로만
+        연결된다"는 AC-LDPLUGIN-032 항목4 의 요구를 스키마 수준에서 만족한다.
+        """
+        with self._transaction():
+            self._connection.execute(
+                "INSERT INTO execution_recovery_links "
+                "(recovery_execution_id, original_execution_id, created_at) VALUES (?, ?, ?)",
+                (recovery_execution_id, original_execution_id, _now()),
+            )
+
+    def recovery_of(self, execution_id: str) -> str | None:
+        """``execution_id`` 가 recovery execution 이면 원본 execution_id, 아니면
+        ``None``(recovery 가 아닌 일반 execution)."""
+        row = self._connection.execute(
+            "SELECT original_execution_id FROM execution_recovery_links "
+            "WHERE recovery_execution_id = ?",
+            (execution_id,),
+        ).fetchone()
+        return None if row is None else str(row["original_execution_id"])
+
 
 # ---------------------------------------------------------------------------
 # M5 — apply 직전 재검사 · SafetyGate 연결 (REQ-LDPLUGIN-021)
@@ -631,6 +676,13 @@ class ApplyCoordinator:
        재선택하지 않는다**.
     4. SafetyGate 연결 — ``gate.execute_preapproved(commands)``. grammar/
        classify/backup/health/audit 는 우회하지 않는다(§2.0-가, design.md §1).
+
+    M6(REQ-LDPLUGIN-032) 의 recovery 흐름도 이 클래스를 그대로 재사용한다 —
+    별도 "recovery apply" 메서드를 만들지 않는다. 호출자가 body 에
+    ``recovery_of``(원본 execution_id)를 실으면, 위 재검사를 전부 통과한
+    **새** execution 이 만들어지고 :meth:`ExecutionJournal.record_recovery_link`
+    로 원본과 연결된다 — 원본 execution 행 자체는 건드리지 않는다(plan.md
+    M6 이 명시한 "새 revision→검증→승인→apply(recovery_of)").
     """
 
     def __init__(
@@ -666,12 +718,14 @@ class ApplyCoordinator:
                 ``LIVE_LOCK_ACTIVE``, ``TARGET_BUSY`` (destination 이미 점유,
                 create-only), ``IDEMPOTENCY_CONFLICT``, ``GATE_REJECTED``
                 (SafetyGate 가 grammar/classify/backup/health 중 하나에서
-                거부).
+                거부), ``RECOVERY_SOURCE_INVALID`` (``recovery_of`` 가 가리키는
+                원본 execution 이 partial/unknown 상태가 아님 — M6).
         """
         approval_id = body.get("approval_id")
         idempotency_key = body.get("idempotency_key")
         destination = body.get("destination")
         bundles = body.get("bundles")
+        recovery_of = body.get("recovery_of")
         if not isinstance(approval_id, str) or not approval_id:
             raise _schema_invalid("approval_id 가 필요합니다.", "/approval_id")
         if not isinstance(idempotency_key, str) or not idempotency_key:
@@ -680,11 +734,16 @@ class ApplyCoordinator:
             raise _schema_invalid("destination 이 필요합니다.", "/destination")
         if not isinstance(bundles, list) or not bundles:
             raise _schema_invalid("bundles 가 필요합니다.", "/bundles")
+        if recovery_of is not None and (not isinstance(recovery_of, str) or not recovery_of):
+            raise _schema_invalid(
+                "recovery_of 는 비어있지 않은 문자열이어야 합니다.", "/recovery_of"
+            )
 
         request_for_fingerprint = {k: v for k, v in body.items() if k != "idempotency_key"}
 
         # 0. replay 는 재검사보다 먼저 — 그 사이 상태와 무관하게 최초 응답을
-        # 그대로 돌려준다(계약 §9.7).
+        # 그대로 돌려준다(계약 §9.7). recovery_of 검증도 재검사이므로 replay
+        # 경로에는 적용하지 않는다 — 이미 커밋된 최초 응답을 그대로 돌려준다.
         replayed = self._journal.replay_if_exists(
             project_id=project_id,
             principal_id=principal_id,
@@ -694,6 +753,14 @@ class ApplyCoordinator:
         )
         if replayed is not None:
             return replayed
+
+        # M6 — recovery 대상은 partial/unknown 이어야 한다(REQ-LDPLUGIN-032).
+        # ``status()`` 가 없는 execution_id 에는 NOT_FOUND 를 던진다 — 그대로
+        # 전파한다.
+        if recovery_of is not None:
+            original_status = self._journal.status(recovery_of)
+            if original_status not in (STATE_PARTIAL, STATE_UNKNOWN):
+                raise _recovery_source_invalid(recovery_of, original_status)
 
         # 1. current bindings + 승인 신선도.
         binding = self._approvals.get(approval_id)
@@ -730,6 +797,14 @@ class ApplyCoordinator:
         )
         if result.replayed:
             return result
+
+        # M6 — recovery_of 가 있었으면 새로 만들어진 execution 을 원본과 연결한다.
+        # 원본 execution 행(``executions``)은 여기서도 건드리지 않는다 — 별도
+        # 테이블에 관계만 추가한다(record_recovery_link docstring).
+        if recovery_of is not None:
+            self._journal.record_recovery_link(
+                recovery_execution_id=result.execution_id, original_execution_id=recovery_of
+            )
 
         # 4. SafetyGate 연결 — director 는 execute_preapproved 만 부른다
         # (screen() 이 아니다). 이미 가진 ApprovalBinding 이 그 자리의 승인

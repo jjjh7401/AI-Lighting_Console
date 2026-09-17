@@ -146,6 +146,22 @@ class CredentialRegistry:
         if existing is not None:
             self._by_id[credential_id] = dataclasses.replace(existing, revoked=True)
 
+    def for_principal(self, *, project_id: str, principal_id: str) -> tuple[Credential, ...]:
+        """해당 project·principal 이 보유한 모든 credential(어느 audience 든).
+
+        M6(REQ-LDPLUGIN-032) 운영 중단 흐름이 "해당 principal 의 MCP/human
+        credential 을 즉시 철회"할 때 철회 대상을 모으는 조회다 — 철회 자체는
+        :meth:`revoke` 가 이미 하고, 이 메서드는 그 대상을 찾기만 한다. 한
+        principal 이 MCP credential 과 human credential 을 동시에 가질 수
+        있으므로(LD-AUTH-001 — 두 축은 서로 다른 자격이지 배타적 소유가 아니다)
+        audience 로 필터링하지 않는다.
+        """
+        return tuple(
+            credential
+            for credential in self._by_id.values()
+            if credential.project_id == project_id and credential.principal_id == principal_id
+        )
+
 
 class PairingSecretStore:
     """LD-AUTH-001 pairing secret 의 OS credential store 어댑터.
