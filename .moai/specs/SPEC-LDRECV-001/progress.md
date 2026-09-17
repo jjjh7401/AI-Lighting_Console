@@ -2,6 +2,34 @@
 
 [요구사항](spec.md) · [구현 계획](plan.md) · [인수](acceptance.md)
 
+## SPEC 전체 완료 (M1~M6, 2026-09-17)
+
+**이 SPEC 의 여섯 마일스톤(M1~M6) 전부가 TDD 로 완료됐다.** M6(운영 중단·
+recovery)이 마지막 마일스톤이었다 — plan.md §2 가 정한 순서 M1→M2→M3→M4→
+M5→M6 그대로 진행했다. `../SPEC-LDPLUGIN-001` 을 쪼갠 여섯 자식 중 이 SPEC 이
+소유한 8개 REQ/AC id(018-024, 032)가 전부 로컬로 닫혔다 — 승격부 3건
+(021·024·032 각각의 콘솔 관측 부분)만 실기 게이트로 남는다(spec.md §5).
+
+| 마일스톤 | REQ | 완료 커밋 | 신규 시험 | 완료 시점 전체 회귀 |
+|---|---|---|---|---|
+| M1 인증·공통 route 골격 | 018, 019 | `e297b03a` | — | — |
+| M2 사람 승인/거절 | 020 | `a4fdeea8` | — | — |
+| M3 공유 programmer 중재자 | 021 §2.0-가·022 | `f1375da7`(+ 회귀수정 `8d07ffea`) | — | — |
+| M4 durable journal·idempotency | 023 | `bcd38b4e` | — | 13473 passed, 35 skipped |
+| M5 apply·실패 분류 | 021, 024 | `168a57f8` | 21개(2파일) | 13494 passed, 35 skipped |
+| M6 운영 중단·recovery | 032 | `pending-backfill-ldrecv-001-m6` | 11개(1파일, `test_director_ops_lifecycle.py`) | **13505 passed, 35 skipped** |
+
+M1-M3 은 이 워크트리 착수 이전(선행 세션)에 완료됐으므로 그 시점의 전체
+회귀 숫자는 이 기록에 없다 — M4 절부터 이 워크트리가 직접 실측한 값이다
+(§E.2 M4/M5/M6 각 절 참고). M6 완료 시점 최종 회귀는 **13505 passed, 35
+skipped, 실패 0** — M5 종료 시점(13494) 대비 신규 11개가 정확히 더해진
+숫자다(13494 + 11 = 13505).
+
+`run_commit_sha` 는 이 섹션을 기록한 커밋 자신을 가리키므로 커밋 전에는
+값을 알 수 없다 — LDSTORE-001 의 sync 절이 쓴 것과 같은 백필 관례
+(`pending-backfill-*`)를 그대로 따른다. sync 단계(`manager-docs`)가 이
+플레이스홀더를 실제 SHA 로 채운다.
+
 ## §E.1 Plan-phase Audit-Ready Signal
 
 - `plan_status: audit-ready`
@@ -1218,10 +1246,223 @@ verbatim 저장: `.moai/state/verify/ldrecv-m5/m5-final-full-regress.txt`.
 **커밋**: 이 섹션을 기록한 뒤 `feat(SPEC-LDRECV-001): M5 apply·실패 분류
 — REQ-LDPLUGIN-021·024 TDD 구현` 커밋 예정. push 는 하지 않는다.
 
+### M6 완료 (REQ-LDPLUGIN-032) — **이 SPEC 의 마지막 마일스톤**
+
+작업 트리(`.claude/worktrees/agent-aba158551e1c50b0c`) 착수 시 HEAD 가
+M5 를 포함하지 않은 상태(`f12d590e`, SPEC-LDSTORE-001 M3 계열)였으므로,
+먼저 `git merge --no-ff 7fc6419c -m "merge: SPEC-LDRECV-001 M1-M5 into agent
+worktree"`(커밋 `b91748ef`)로 M1-M5 를 병합한 뒤 착수했다.
+
+**Claim**: `server/director/ops.py`(신규 — 파일 소유 결정: M 시작 시 판단한
+대로 별도 파일로 분리했다, 아래 "설계 판단 — ops.py 신규 vs 흡수" 참고) +
+`server/director/auth.py`(EXTEND — `CredentialRegistry.for_principal`
+추가) + `server/director/execution.py`(EXTEND — `ExecutionJournal
+.record_recovery_link`/`.recovery_of` + `ApplyCoordinator.apply()` 의
+`recovery_of` 확장) + `server/director/migrations/003_ops_recovery.sql`
+(신규 — `execution_recovery_links` 테이블)을 TDD 로 구현했다. AC-LDPLUGIN-032
+의 로컬로 닫히는 4개 PASS 조건을 전부 구현·시험했다.
+
+**설계 판단 — ops.py 신규 vs 흡수**: plan.md M6 행은 "신규
+`server/director/ops.py`(또는 `auth.py`/`execution.py` 에 흡수 — M 시작
+시 판단)"이라고 세 옵션을 열어 뒀다. 실제로 살펴보니 director_api.py 의
+모든 route(POST apply 포함)가 `auth.authenticate()` 를 가장 먼저 거치므로
+(auth.py `@MX:ANCHOR`), "신규 apply 차단"은 별도 메커니즘이 필요 없고
+"해당 principal 의 모든 credential 을 철회한다"는 오케스트레이션 함수
+하나로 충분했다 — 이 함수(`decommission_principal`)는 `auth.py` 의
+`CredentialRegistry` 를 소비할 뿐 그 자신은 인증 판정도 journal 판정도
+아닌 "운영 결정을 시스템 동작으로 옮기는" 별도 관심사이므로, 기존 두
+파일에 흡수하지 않고 `ops.py` 로 분리했다(plan.md M6 행이 명시한 파일
+소유). recovery 흐름은 반대로 새 파일을 만들지 않고 **기존
+`ApplyCoordinator.apply()` 를 그대로 재사용**했다(execution.py 모듈
+docstring — 별도 "recovery apply" 메서드를 만들지 않는다) — body 에
+`recovery_of` 필드가 있으면 그 값을 원본 execution_id 로 해석해 재검사
+하나(partial/unknown 상태 확인)를 추가하고, 성공하면 새 execution 을
+원본과 연결하는 것으로 충분했기 때문이다. 두 판단 모두 사람 재확인이
+필요하면 이 문단부터 검토 대상이다.
+
+**설계 판단 — "신규 apply 차단"은 별도 플래그가 아니라 철회의 구조적
+귀결이다**: REQ-032 원문은 "인증 철회·신규 apply 차단·journal 보존·명시
+recovery"를 나열하지만, 이 SPEC 의 기존 인증 경계(모든 route 가
+`authenticate()` 를 먼저 거침)를 재사용하면 "철회"와 "차단"이 사실상 같은
+사건이 된다 — 별도 차단 플래그를 만들면 "철회는 됐는데 차단 플래그
+세우는 걸 잊는" 경로가 새로 생긴다. `test_director_ops_lifecycle.py` 의
+스파이(`_SpyApplyCoordinator`, HTTP 라우트 층)가 이 판단을 직접 검증한다
+— 철회된 credential 로 apply 를 호출하면 스파이 자체가 아예 호출되지
+않고(인증 단계에서 이미 401), 대조군(철회하지 않은 credential)은 스파이가
+호출되어(그리고 스파이가 고의로 `AssertionError` 를 던져) 500 으로
+전파되는 것으로 "본문 도달"의 반증 가능한 증거를 세웠다.
+
+**설계 판단 — recovery 대상 검증(partial/unknown 만 허용)**: AC-032 문면은
+"과거 execution 이 partial/unknown" 을 recovery 흐름의 전제로만 적었고
+강제 검사를 명시하지 않았지만, 검증 없이 아무 execution_id 나
+`recovery_of` 로 받아들이면 이미 confirmed 된 execution 을 "recovery"라고
+주장하는 요청이 통과해 의미가 흐려진다. 그래서 `RECOVERY_SOURCE_INVALID`
+(409)를 새로 만들어 `journal.status(recovery_of)` 가 `STATE_PARTIAL`/
+`STATE_UNKNOWN` 이 아니면 거부한다 — 이 판단은 AC 문면을 넘어선 것이므로
+사람 재확인 대상으로 남긴다.
+
+**설계 판단 — `execution_recovery_links` 별도 테이블(ALTER TABLE 아님)**:
+원본 execution 행에 `recovery_of` 컬럼을 `ALTER TABLE` 로 추가하는 대신
+별도 링크 테이블(`CREATE TABLE IF NOT EXISTS`, 001/002 와 같은 관례)을
+새로 만들었다. 이유는 둘: (1) `_migrate()` 는 매 `ExecutionJournal` 연결마다
+모든 마이그레이션 파일을 재적용한다(002 자신의 관례) — `ALTER TABLE ADD
+COLUMN` 은 idempotent 하지 않아(두 번째 오픈에서 "duplicate column name"
+에러) 기존 crash-재시작 시험 패턴(`ExecutionJournal(path)` 를 같은 파일에
+두 번 여는 M4 시험들)을 깬다. (2) 원본 행을 물리적으로 전혀 건드리지
+않는 설계가 "원본 execution 기록은 불변으로 남는다"(AC-032 항목4)를
+스키마 수준에서 구조적으로 보장한다 — 덮어쓸 컬럼 자체가 없다.
+
+**Evidence — RED (구현 전 실제로 확인한 verbatim 출력)**
+
+```
+$ uv run pytest server/tests/test_director_ops_lifecycle.py -q
+ImportError while importing test module '.../test_director_ops_lifecycle.py'
+E   ModuleNotFoundError: No module named 'server.director.ops'
+1 error in 0.62s
+```
+
+**Evidence — GREEN (신규 시험 11개, 1파일)**
+
+```
+$ uv run pytest server/tests/test_director_ops_lifecycle.py -q
+...........                                                              [100%]
+11 passed, 1 warning in 0.59s
+```
+
+| AC | 시험 커버 | Status |
+|---|---|---|
+| AC-LDPLUGIN-032 항목1 (철회 — MCP/human 모두) | `for_principal`이 두 audience 모두 찾음, 다른 principal 은 대상 아님, 철회 후 임의 scope 로 `authenticate()` 호출 시 UNAUTHENTICATED, 재철회 멱등(`TestDecommissionRevokesEveryCredential`, 3) | PASS |
+| AC-LDPLUGIN-032 항목2 (신규 apply 즉시 거부) | 철회된 human credential 로 POST apply → 401 UNAUTHENTICATED, `ApplyCoordinator.apply()` 스파이 미호출; 대조군(철회 안 함)은 스파이 호출됨(`test_revoked_human_credential_is_rejected_before_apply_coordinator_runs`, `test_non_revoked_human_credential_still_reaches_apply_coordinator`, 2) | PASS |
+| AC-LDPLUGIN-032 항목3 (journal 보존, 삭제 API 없음) | `ExecutionJournal` public API 이름에 delete/purge/erase/overwrite/truncate 없음(구조 고정), 운영 중단 실행 전후 journal 3개 테이블 스냅샷(raw sqlite dump) 바이트 동일(`TestJournalPreservedAcrossDecommission`, 2) | PASS |
+| AC-LDPLUGIN-032 항목4 (recovery — 원본 불변, recovery_of 로만 연결) | 새 revision→검증→승인→apply(recovery_of) 로 별도 execution 생성, `recovery_of()` 로 원본 연결 확인, 원본 execution 행 상태·바이트 불변; recovery 대상이 partial/unknown 아니면 RECOVERY_SOURCE_INVALID(409); 존재하지 않는 execution_id 는 NOT_FOUND(`TestRecoveryFlow`, 4) | PASS |
+
+**Evidence — ruff**
+
+```
+$ uv run ruff check server/director/ops.py server/director/execution.py server/director/auth.py server/tests/test_director_ops_lifecycle.py
+All checks passed!
+$ uv run ruff format --check server/director/ops.py server/director/execution.py server/director/auth.py server/tests/test_director_ops_lifecycle.py
+4 files already formatted
+```
+(1회 REFACTOR — import 정렬(I001) 자동수정 1건, `TestClient(app,
+raise_server_exceptions=False)` 로 대조군 시험의 500 응답을 관측 가능하게
+수정 1건.)
+
+**Evidence — 경계 5개 금지 파일 미접촉**
+
+```
+$ git diff --name-only -- server/safety/gate.py \
+    server/orchestrator/tools.py server/web/session.py \
+    server/measurement/runner.py server/web/panel.py
+(빈 출력 — 전부 미접촉, 확인됨)
+```
+
+**Evidence — PRESERVE 전체 10개 영역 미접촉 (plan.md §3 전체, M6 이 추가로
+확인)**
+
+```
+$ git diff --name-only -- server/bridge/osc.py server/safety/ \
+    server/spatial/ server/fx/ server/looks/ server/web/session.py \
+    server/director/models.py server/director/store.py \
+    server/director/service.py server/director/context.py \
+    server/director/knowledge.py server/director/digest.py \
+    server/director/emit.py server/director/validate/ \
+    server/director/knowledge_seed/ ui/src/ src-tauri/ \
+    server/lxseq/ server/design/
+(빈 출력 — PRESERVE 10개 영역 전부 미접촉, 확인됨)
+```
+
+**`recovery_of` 스키마 확장 — 있었다**: M4 스키마(`002_execution_journal
+.sql`)를 먼저 Read 로 확인한 결과 `executions` 테이블에 `recovery_of` 류
+컬럼이 없었다. `ALTER TABLE` 로 기존 테이블에 컬럼을 더하지 않고(위 설계
+판단 참고), 새 마이그레이션 `003_ops_recovery.sql` 을 추가해 별도 링크
+테이블(`execution_recovery_links`)로 관계만 저장했다.
+
+**만든 파일**
+
+```
+server/director/ops.py                              decommission_principal() (신규)
+server/director/migrations/003_ops_recovery.sql      execution_recovery_links 테이블 (신규)
+server/tests/test_director_ops_lifecycle.py          REQ-032 시험 11개 (신규)
+```
+
+**EXTEND 한 파일**
+
+```
+server/director/auth.py        CredentialRegistry.for_principal() 추가
+server/director/execution.py   ExecutionJournal.record_recovery_link()/.recovery_of() 추가,
+                                ApplyCoordinator.apply() 에 recovery_of 선택적 처리 추가
+                                (기존 시그니처·기존 동작 불변 — body 의 새 선택적 키만 읽음)
+```
+
+`server/director_api.py` 는 이번에 **수정하지 않았다** — apply route 가
+이미 `body` 전체를 `ApplyCoordinator.apply(..., body=body)` 로 그대로
+전달하므로, `recovery_of` 확장이 라우트 층 변경 없이 그대로 이어졌다
+(`git diff --name-only` 로 확인 — `director_api.py` 미포함).
+
+**Baseline-attribution**: 기준선(M5 완료 커밋 `168a57f8` 직후 실측)
+`13494 passed, 35 skipped`. 신규 테스트 **11개**(1파일). 13494 + 11 =
+**13505** — 전체 회귀 결과와 정확히 일치. skipped 불변(35), 실패 0.
+
+**Evidence — 최종 전체 회귀**
+
+```
+$ uv run pytest -q
+13505 passed, 35 skipped, 1 warning in 184.71s (0:03:04)
+```
+
+**Evidence — M3 gate_bridge·M5 apply_rejection/execution_failure·전체
+PRESERVE 회귀 재확인 (건드리지 않았다는 증거, `test_overlap_preserve.py`
+포함 전체 스위트 안에 이미 포함되어 있음)**
+
+```
+$ uv run pytest server/tests/test_overlap_preserve.py -q
+........................................................................ [100%]
+72 passed in 1.29s
+```
+
+**PASS/FAIL 최종 표**
+
+| AC | 항목 | 검증 명령 | Status |
+|---|---|---|---|
+| AC-LDPLUGIN-032 | 철회 직후 UNAUTHENTICATED(MCP·human 모두) | `TestDecommissionRevokesEveryCredential` (3) | PASS |
+| AC-LDPLUGIN-032 | 철회 이후 신규 apply 는 인증 단계에서 즉시 거부(본문 미도달) | 스파이 시험 2건 | PASS |
+| AC-LDPLUGIN-032 | journal 삭제 API 없음 + 철회 전후 바이트 동일 | `TestJournalPreservedAcrossDecommission` (2) | PASS |
+| AC-LDPLUGIN-032 | recovery — 원본 불변 + recovery_of 로만 연결 | `TestRecoveryFlow` (4) | PASS |
+| AC-LDPLUGIN-032 승격부(콘솔) | recovery apply 가 실제로 콘솔에 적용됐는가 | 실기 관측 — **이 SPEC 범위 밖**(spec.md §5) | N/A — 콘솔 게이트 |
+| 전체 회귀 | 실패 0 | `uv run pytest -q` | PASS (13505 passed, 35 skipped) |
+| 경계 | 5개 금지 파일 미접촉 | `git diff --name-only` | PASS |
+| 경계 | PRESERVE 10개 영역 전부 미접촉 | `git diff --name-only`(전체) | PASS |
+| 스타일 | ruff check/format | 위 Evidence | PASS |
+
+**커밋**: 이 섹션을 기록한 뒤 `feat(SPEC-LDRECV-001): M6 운영 중단·recovery
+— REQ-LDPLUGIN-032 TDD 구현, SPEC 전체(M1~M6) 완료` 커밋 예정. push 는
+하지 않는다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending — M5 완료, M6(운영 중단·recovery) 남음. 최종 run-phase 종료 시
-이 섹션을 채운다>_
+```yaml
+run_status: completed
+run_complete_at: 2026-09-17
+run_commit_sha: pending-backfill-ldrecv-001-m6  # 이 섹션을 기록한 커밋 자신 — 커밋 전에는 알 수 없다(LDSTORE-001 sync 절과 같은 백필 관례)
+ac_pass_count: 8   # 이 SPEC 소유 REQ/AC 8건(018,019,020,021,022,023,024,032) 전부 로컬 PASS
+ac_fail_count: 0
+preserve_list_post_run_count: 10   # plan.md §3 PRESERVE 표 10개 영역, M6 완료 시점까지 전부 미접촉 확인
+l44_pre_commit_fetch: "해당 없음 — 이 워크트리는 origin 에 push 하지 않는다(사용자 지시: 커밋은 하되 push 는 하지 않는다)"
+l44_post_push_fetch: "해당 없음 — push 안 함"
+new_warnings_or_lints_introduced: 0   # ruff check/format 전부 clean (위 Evidence)
+cross_platform_build:
+  checked: false
+  reason: "Python 서버 코드 — 플랫폼별 빌드 산출물 없음(src-tauri 는 이 SPEC PRESERVE, 미접촉)"
+total_run_phase_files: 52   # 실측: `git diff --name-only 10858ffe..HEAD`(49, 커밋됨) + 이 M6 커밋 예정 미커밋 신규 3개(ops.py·003_ops_recovery.sql·test_director_ops_lifecycle.py, progress.md 는 이미 49건에 포함) 합집합 = 52
+m1_to_mN_commit_strategy: "마일스톤마다 별도 커밋(M1 e297b03a, M2 a4fdeea8, M3 f1375da7+8d07ffea, M4 bcd38b4e, M5 168a57f8, M6 이 커밋) — 스쿼시 없음, 각 마일스톤이 독립적으로 되짚을 수 있다"
+```
+
+**M6 이 이 SPEC 의 마지막 마일스톤이므로 SPEC 전체(M1~M6)가 이 시점에
+완료됐다.** 위 "SPEC 전체 완료 (M1~M6)" 절(문서 최상단)이 이 사실을
+요약한다. `spec.md` frontmatter 의 `status` 전이(`in-progress →
+implemented → completed`)는 sync 단계(`manager-docs`) 소유이므로 이
+run-phase 에서는 건드리지 않았다.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
