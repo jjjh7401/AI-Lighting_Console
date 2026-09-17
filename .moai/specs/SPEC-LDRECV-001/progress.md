@@ -835,9 +835,212 @@ WRITEGATE-001/READBACK-002/BULKGATE-001 선례와 같은 형식으로 추가했�
 **커밋**: `8d07ffea` (`fix(SPEC-LDRECV-001): M3 이후 안전 게이트 거버넌스 시험
 pinned 값 회귀 수정`). push 는 하지 않았다.
 
+### M4 완료 (REQ-LDPLUGIN-023)
+
+작업 트리 기준 M3 완료 커밋(`e2099b96`, "회귀 수정 커밋 SHA 백필") 위에서
+진행. 착수 시 작업 트리(`worktree-agent-ad5c07bc5442a93ac`)가 M1-M3 를
+아직 병합하지 않은 상태였으므로, 먼저 `git merge --no-ff e2099b96 -m
+"merge: SPEC-LDRECV-001 M1-M3 into agent worktree"`(커밋 `eb933440`)로
+병합한 뒤 착수했다.
+
+**Claim**: `server/director/execution.py`(신규, `ExecutionJournal`) +
+`server/director/migrations/002_execution_journal.sql`(신규, `001_initial.sql`
+EXTEND)를 TDD 로 구현했다. 같은 idempotency key+같은 request fingerprint
+재제출은 최초 status·body 를 그대로 replay, 다른 request 는
+`IDEMPOTENCY_CONFLICT`(409). socket send 후 DB commit 전 crash 를 합성해
+재시작 후 조회하면 `unknown`. destination_reservations 테이블(design.md
+§3 채택안 B)로 create-only 예약/해제 API 를 구현했다. fingerprint 계산은
+`server.director.digest.canonical_digest` 를 그대로 재사용해 형제 LDSTORE
+(`store.py`)와 동일 알고리즘임을 보장했다(대조 시험으로 고정).
+
+**설계 판단 — 순차 마이그레이션 메커니즘 (배차서가 "기존 코드 조사 후
+불확실하면 확정"이라 지시한 부분)**: `server/director/store.py` 의
+`_MIGRATION` 은 고정된 단일 파일(`001_initial.sql`)만 적용하는 상수이며,
+여러 마이그레이션을 순서대로 적용하는 기존 메커니즘이 프로젝트 어디에도
+없었다(`grep -rln "_MIGRATION\|migrations" server/ --include="*.py"` →
+`store.py` 하나뿐, 실측). `store.py` 는 PRESERVE 대상이라 고칠 수 없으므로,
+`ExecutionJournal._migrate()` 에 **파일명 정렬로 `migrations/*.sql` 전부를
+순서대로 적용**하는 최소 메커니즘을 새로 만들었다 — `001_initial.sql` 을
+다시 적용해도 전부 `IF NOT EXISTS` 라 안전하며, 이 클래스를
+`DirectorStore` 없이 단독으로 열어도 001+002 가 모두 적용되어 스키마가
+완결된다(`TestSchemaIsMigratedSequentially` 로 고정).
+
+**구현 중 발견·수정한 버그 — `isolation_level=None` 에서
+`with self._connection:` 은 원자성을 보장하지 않는다**: `DirectorStore`
+의 기존 패턴(`with self._connection:  # BEGIN … COMMIT / ROLLBACK`)을
+그대로 따라 첫 구현을 했더니, destination 이 이미 점유된 상태에서 두
+번째 `begin_execution()` 이 `TARGET_BUSY` 로 실패해도 그 안에서 먼저
+실행된 `INSERT INTO executions` 가 **커밋된 채로 남았다**(`executions`
+행 수가 1이 아니라 2 — 아래 RED 재현 참고). 직접 스크립트로 실측한
+결과: `isolation_level=None`(autocommit)에서는 Python `sqlite3` 모듈이
+DML 문 앞에 묵시적 `BEGIN` 을 전혀 발행하지 않아, 각 `execute()` 가
+즉시 커밋되고 이후 예외에서 `rollback()` 은 되돌릴 열린 transaction이
+없어 아무 일도 하지 않는다.
+
+```
+$ uv run python3 -c "
+import sqlite3, tempfile, os
+path = tempfile.mktemp(suffix='.sqlite3')
+conn = sqlite3.connect(path, isolation_level=None)
+conn.execute('CREATE TABLE t (id INTEGER PRIMARY KEY)')
+try:
+    with conn:
+        conn.execute('INSERT INTO t (id) VALUES (1)')
+        raise ValueError('boom')
+except ValueError:
+    pass
+print('rows after rollback attempt:', conn.execute('SELECT * FROM t').fetchall())
+"
+rows after rollback attempt: [(1,)]
+```
+(`DirectorStore` 자신의 시험 스위트는 이 원자성을 실제로 요구하는
+다중-INSERT 부분 실패 시나리오를 시험하지 않아 이 결함이 드러나지
+않았을 뿐이다 — PRESERVE 대상이라 `store.py` 자체는 고치지 않았다.)
+
+**고친 방법**: `ExecutionJournal._transaction()` context manager 를
+추가해 `BEGIN IMMEDIATE`/`COMMIT`/`ROLLBACK` 을 직접 발행한다 — 이후
+"승인 소비·execution·bundle journal·destination 예약·idempotency
+fingerprint 가 하나의 transaction" 불변식이 실제로 성립한다
+(`TestOneTransactionForFirstWrite::test_a_second_begin_execution_with_
+an_already_reserved_destination_is_target_busy` 가 이 회귀를 고정한다
+— 실패한 두 번째 시도 후 `executions` 행 수가 정확히 1임을 단언).
+
+**Evidence — RED (구현 전 실제로 확인한 verbatim 출력)**
+
+```
+$ uv run pytest server/tests/test_director_execution_journal.py -q
+ImportError while importing test module '.../test_director_execution_journal.py'
+E   ModuleNotFoundError: No module named 'server.director.execution'
+1 error in 0.07s
+```
+
+**Evidence — GREEN (신규 시험 24개, 1회 REFACTOR 포함)**
+
+```
+$ uv run pytest server/tests/test_director_execution_journal.py -q
+........................                                                 [100%]
+24 passed in 0.51s
+```
+
+(위 원자성 결함을 잡은 뒤의 최종 실행 — 결함 발견 당시의 실패 verbatim은
+"구현 중 발견·수정한 버그" 절에 인용했다.)
+
+| AC | 시험 커버 | Status |
+|---|---|---|
+| AC-LDPLUGIN-023 (replay) | 같은 key+같은 fingerprint → execution_id·status·body 동일 replay, 새 execution 행 생성 안 함(`TestIdempotentReplay`, 5개) | PASS |
+| AC-LDPLUGIN-023 (conflict) | 같은 key+다른 request → `IDEMPOTENCY_CONFLICT`(409)(`TestIdempotentReplay::test_same_key_with_different_request_is_idempotency_conflict`) | PASS |
+| AC-LDPLUGIN-023 (fingerprint 알고리즘) | `canonical_digest({operation,project_id,principal_id,request})` 와 저장된 fingerprint 가 문자 그대로 일치(`TestFingerprintAlgorithmMatchesLdstore`) | PASS |
+| AC-LDPLUGIN-023 (crash→unknown) | `mark_sending` 커밋 후 `finalize_execution` 호출 없이 "재시작"(새 인스턴스)하면 `status()` 가 `unknown`(`TestCrashSimulationYieldsUnknown`, 4개 — 양성 대조 2개 포함) | PASS |
+| AC-LDPLUGIN-023 (durability) | 같은 파일을 재시작 후 되읽어도 상태·replay 유지, DB 재생성 방식 아님(`TestDurabilitySurvivesReopeningTheSameFile`) | PASS |
+| design.md §3 (destination 예약) | create-only(이미 점유 시 `TARGET_BUSY`, silent reselection 없음), release 후 재예약 가능, project 별 독립 slot(`TestDestinationReservation`, 5개) | PASS |
+| 순차 마이그레이션 | 001+002 테이블 전부 존재, 001 재적용 안전, 001_initial.sql 미수정(`TestSchemaIsMigratedSequentially`, 4개) | PASS |
+| 하나의 transaction | destination 이미 점유된 상태에서 execution 행이 부분 커밋되지 않음(`TestOneTransactionForFirstWrite`, 3개) | PASS |
+
+**Evidence — ruff**
+
+```
+$ uv run ruff check server/director/execution.py server/tests/test_director_execution_journal.py
+All checks passed!
+$ uv run ruff format --check server/director/execution.py server/tests/test_director_execution_journal.py
+2 files already formatted
+```
+
+**Evidence — 경계 3개 금지 파일(+ 001_initial.sql) 미접촉**
+
+```
+$ git diff --name-only e2099b96..HEAD -- server/safety/gate.py \
+    server/orchestrator/tools.py server/web/session.py \
+    server/measurement/runner.py server/web/panel.py \
+    server/director/migrations/001_initial.sql
+(빈 출력 — 전부 미접촉, 확인됨)
+```
+
+**Evidence — 경계(spec.md/acceptance.md 공통 grep)**
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/
+(매치 없음 — OSC 직접 import 안 함)
+$ grep -rnE "^\s*(from|import)\s+server\.(looks|web\.session)" server/director/
+(매치 없음 — 예술 producer 호출 안 함)
+$ grep -rn "approval_bridge\|DenyAllApprovalPort\|request_approval(" server/director/
+server/director/auth.py, server/director/approvals.py 의 docstring 인용
+2건뿐(M1/M2 기존 파일, 이번 변경 아님) — 이 SPEC 이 만든 execution.py 는
+0건.
+```
+
+**destination_reservations 실제 스키마 (확정)**
+
+```
+$ uv run python3 -c "
+import sqlite3, tempfile
+from pathlib import Path
+from server.director.execution import ExecutionJournal
+path = Path(tempfile.mktemp(suffix='.sqlite3'))
+ExecutionJournal(path)
+conn = sqlite3.connect(path)
+for row in conn.execute('PRAGMA table_info(destination_reservations)'):
+    print(row)
+"
+(0, 'project_id', 'TEXT', 1, None, 1)
+(1, 'show_id', 'TEXT', 1, None, 2)
+(2, 'sequence_id', 'TEXT', 1, None, 3)
+(3, 'reserved_by_execution_id', 'TEXT', 1, None, 0)
+(4, 'reserved_at', 'TEXT', 1, None, 0)
+(5, 'status', 'TEXT', 1, None, 0)
+```
+PRIMARY KEY `(project_id, show_id, sequence_id)`. design.md §3.3 이 제안한
+최소 컬럼 집합 그대로 채택했다 — M5 착수 시 인덱스/추가 컬럼이 필요하면
+그때 확정한다(design.md §4 미검증 항목).
+
+**만든 파일**
+
+```
+server/director/execution.py                       ExecutionJournal (신규)
+server/director/migrations/002_execution_journal.sql  001 EXTEND (신규)
+server/tests/test_director_execution_journal.py     REQ-023 시험 24개 (신규)
+```
+
+EXTEND 없음 — 이 마일스톤은 기존 파일을 전혀 수정하지 않았다(신규 파일
+3개만). `server/director/store.py`/`digest.py`/`models.py`(형제 SPEC
+소유, PRESERVE)는 읽기만 했다.
+
+**Baseline-attribution**: 기준선(M3 이후 거버넌스 수정 커밋 `8d07ffea`
+직후 실측, plan.md §1 이 지시한 "착수 시점 재측정" 그대로 M4 착수 전
+`uv run pytest -q` 로 재확인) `13449 passed, 35 skipped`. 신규 테스트
+**24개**(1파일). 13449 + 24 = **13473** — 전체 회귀 결과와 정확히 일치.
+skipped 불변(35), 실패 0.
+
+**Evidence — 최종 전체 회귀**
+
+```
+$ uv run pytest -q
+13473 passed, 35 skipped, 1 warning in 184.00s (0:03:03)
+```
+verbatim 저장: `.moai/state/verify/ldrecv-m4/m4-final-full-regress.txt`.
+
+**PASS/FAIL 최종 표**
+
+| AC | 항목 | 검증 명령 | Status |
+|---|---|---|---|
+| AC-LDPLUGIN-023 | 같은 key+같은 request replay, 다른 request 409 | `test_director_execution_journal.py::TestIdempotentReplay` (5) | PASS |
+| AC-LDPLUGIN-023 | fingerprint 알고리즘이 형제 LDSTORE 와 동일 | `TestFingerprintAlgorithmMatchesLdstore` (1) | PASS |
+| AC-LDPLUGIN-023 | crash(합성) → unknown, DB 재생성 아닌 재시작으로 확인 | `TestCrashSimulationYieldsUnknown` (4) + `TestDurabilitySurvivesReopeningTheSameFile` (1) | PASS |
+| design.md §3 | destination create-only 예약/해제 | `TestDestinationReservation` (5) | PASS |
+| plan.md M4 | 001 뒤 002 순차 적용, 001 미수정 | `TestSchemaIsMigratedSequentially` (4) | PASS |
+| plan.md M4 | 하나의 transaction(부분 커밋 없음) | `TestOneTransactionForFirstWrite` (3) | PASS |
+| 전체 회귀 | 실패 0 | `uv run pytest -q` | PASS (13473 passed, 35 skipped) |
+| 경계 | 3개 금지 파일 + 001_initial.sql 미접촉 | `git diff --name-only` | PASS |
+| 경계 | OSC 직접 import 없음 · 예술 producer 미호출 · 일반 승인 채널 재사용 없음 | grep 3종 | PASS |
+| 스타일 | ruff check/format | 위 Evidence | PASS |
+
+**커밋**: 이 섹션을 기록한 뒤 `feat(SPEC-LDRECV-001): M4 durable
+execution journal·idempotency — REQ-LDPLUGIN-023 TDD 구현` 커밋 예정.
+push 는 하지 않는다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase — M3 blocked, see §E.2 M3 for the REQ-022/REQ-SHOWUI-013 conflict>_
+_<pending — M4 완료, M5(apply·실패 분류)·M6(운영 중단·recovery) 남음. 최종
+run-phase 종료 시 이 섹션을 채운다>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
