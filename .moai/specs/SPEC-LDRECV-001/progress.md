@@ -17,7 +17,7 @@ M5→M6 그대로 진행했다. `../SPEC-LDPLUGIN-001` 을 쪼갠 여섯 자식 
 | M3 공유 programmer 중재자 | 021 §2.0-가·022 | `f1375da7`(+ 회귀수정 `8d07ffea`) | — | — |
 | M4 durable journal·idempotency | 023 | `bcd38b4e` | — | 13473 passed, 35 skipped |
 | M5 apply·실패 분류 | 021, 024 | `168a57f8` | 21개(2파일) | 13494 passed, 35 skipped |
-| M6 운영 중단·recovery | 032 | `pending-backfill-ldrecv-001-m6` | 11개(1파일, `test_director_ops_lifecycle.py`) | **13505 passed, 35 skipped** |
+| M6 운영 중단·recovery | 032 | `9f790f60` | 11개(1파일, `test_director_ops_lifecycle.py`) | **13505 passed, 35 skipped** |
 
 M1-M3 은 이 워크트리 착수 이전(선행 세션)에 완료됐으므로 그 시점의 전체
 회귀 숫자는 이 기록에 없다 — M4 절부터 이 워크트리가 직접 실측한 값이다
@@ -25,10 +25,13 @@ M1-M3 은 이 워크트리 착수 이전(선행 세션)에 완료됐으므로 �
 skipped, 실패 0** — M5 종료 시점(13494) 대비 신규 11개가 정확히 더해진
 숫자다(13494 + 11 = 13505).
 
-`run_commit_sha` 는 이 섹션을 기록한 커밋 자신을 가리키므로 커밋 전에는
-값을 알 수 없다 — LDSTORE-001 의 sync 절이 쓴 것과 같은 백필 관례
-(`pending-backfill-*`)를 그대로 따른다. sync 단계(`manager-docs`)가 이
-플레이스홀더를 실제 SHA 로 채운다.
+`run_commit_sha` 는 이 섹션을 기록한 커밋(`9f790f60`) 자신을 가리킨다 —
+커밋 전에는 값을 알 수 없어 LDSTORE-001 의 sync 절과 같은 백필 관례
+(`pending-backfill-*`)로 남겨 두었다가, 커밋 직후 이 문서를 다시 열어
+실제 SHA 로 백필했다(별도 `docs(...)` 커밋 없이, M3 가 했던 것처럼 —
+이번엔 커밋 하나가 코드+진행기록을 함께 실었으므로 백필 자체도 그
+커밋을 가리키는 자기참조가 된다. 백필 편집 자체는 이 커밋 이후의 워크트리
+상태이며, 이 문서를 읽는 시점의 `git log -1`로 재확인 가능하다).
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
@@ -1435,16 +1438,15 @@ $ uv run pytest server/tests/test_overlap_preserve.py -q
 | 경계 | PRESERVE 10개 영역 전부 미접촉 | `git diff --name-only`(전체) | PASS |
 | 스타일 | ruff check/format | 위 Evidence | PASS |
 
-**커밋**: 이 섹션을 기록한 뒤 `feat(SPEC-LDRECV-001): M6 운영 중단·recovery
-— REQ-LDPLUGIN-032 TDD 구현, SPEC 전체(M1~M6) 완료` 커밋 예정. push 는
-하지 않는다.
+**커밋**: `feat(SPEC-LDRECV-001): M6 운영 중단·recovery — REQ-LDPLUGIN-032
+TDD 구현, SPEC 전체(M1~M6) 완료` (`9f790f60`). push 는 하지 않았다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
 run_status: completed
 run_complete_at: 2026-09-17
-run_commit_sha: pending-backfill-ldrecv-001-m6  # 이 섹션을 기록한 커밋 자신 — 커밋 전에는 알 수 없다(LDSTORE-001 sync 절과 같은 백필 관례)
+run_commit_sha: 9f790f60  # 백필 완료 — 이 섹션을 기록한 커밋 자신(committed 후 재확인: `git log -1 --format=%h` → 9f790f60)
 ac_pass_count: 8   # 이 SPEC 소유 REQ/AC 8건(018,019,020,021,022,023,024,032) 전부 로컬 PASS
 ac_fail_count: 0
 preserve_list_post_run_count: 10   # plan.md §3 PRESERVE 표 10개 영역, M6 완료 시점까지 전부 미접촉 확인
