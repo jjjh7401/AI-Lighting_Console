@@ -98,8 +98,10 @@ def _idempotency_conflict() -> ExchangeError:
     )
 
 
-def _target_busy(message: str) -> ExchangeError:
-    return ExchangeError("TARGET_BUSY", 409, message, (Detail("/destination", "already reserved"),))
+def _target_busy(
+    message: str, *, pointer: str = "/destination", detail: str = "already reserved"
+) -> ExchangeError:
+    return ExchangeError("TARGET_BUSY", 409, message, (Detail(pointer, detail),))
 
 
 def _not_found(message: str) -> ExchangeError:
@@ -150,6 +152,52 @@ def _gate_rejected(decision: Any) -> ExchangeError:
 
 def _schema_invalid(message: str, pointer: str = "") -> ExchangeError:
     return ExchangeError("SCHEMA_INVALID", 422, message, (Detail(pointer, ""),))
+
+
+def _identity_mismatch(field_name: str, path_value: str, binding_value: str) -> ExchangeError:
+    """`director_api.py` 의 ``_identity_mismatch`` 와 같은 패턴(계약 §3) — path/URL 이
+    주장하는 식별자가 `ApprovalBinding` 이 실제로 가리키는 값과 다르면 422 다.
+
+    ``director_api.py`` 는 project_id/plan_id 의 path-vs-body 불일치에 이 코드를
+    쓴다; 이 모듈은 같은 코드를 plan_id/revision 의 path-vs-**binding** 불일치에
+    재사용한다 — `director_api.py` 를 import 하지 않는 이유는 그쪽이 이미 이
+    모듈(`execution.py`)을 import 하기 때문이다(순환 참조 방지, 값은 리터럴로
+    복제해 두 자리가 갈라지지 않게 `test_director_apply_rejection.py` 가 대조한다).
+    """
+    return ExchangeError(
+        "IDENTITY_MISMATCH",
+        422,
+        f"path 의 {field_name}({path_value!r})가 승인의 {field_name}({binding_value!r})와 "
+        "다릅니다.",
+        (Detail(f"/{field_name}", "path/approval identity mismatch"),),
+    )
+
+
+def _invalid_state(approval_id: str, execution_id: str) -> ExchangeError:
+    """M5 다각도 검토 결함3 — 승인은 첫 execution allocation 시 소비된다(계약 §10).
+    이미 소비된 approval_id 를 다른 idempotency_key 로 다시 apply 하면 여기로 온다.
+    """
+    return ExchangeError(
+        "INVALID_STATE",
+        409,
+        f"승인 {approval_id} 은 이미 execution {execution_id} 에 의해 소비되었습니다 — "
+        "같은 승인을 다른 idempotency_key 로 재사용할 수 없습니다.",
+        (Detail("/approval_id", "approval already consumed"),),
+    )
+
+
+def _recovery_required(approval_id: str, execution_id: str) -> ExchangeError:
+    """결함3 — 소비된 execution 이 partial/unknown(recovery_required=true) 이면
+    ``INVALID_STATE`` 대신 이 코드로 recovery 흐름(새 approval+``recovery_of``)을
+    가리킨다(계약 §10: "이후 다른 idempotency key로 같은 approval을 apply하면
+    INVALID_STATE 또는 RECOVERY_REQUIRED다")."""
+    return ExchangeError(
+        "RECOVERY_REQUIRED",
+        409,
+        f"승인 {approval_id} 이 소비한 execution {execution_id} 은 partial/unknown "
+        "상태입니다 — 새 승인과 recovery_of 로 recovery 흐름을 거쳐야 합니다.",
+        (Detail("/approval_id", "recovery required"),),
+    )
 
 
 def _recovery_source_invalid(execution_id: str, status: str) -> ExchangeError:
@@ -513,6 +561,24 @@ class ExecutionJournal:
                 (state, _now(), error, execution_id, bundle_index),
             )
 
+    def existing_execution_for_approval(self, approval_id: str) -> str | None:
+        """이 ``approval_id`` 가 이미 어떤 execution 에 소비됐으면 그 execution_id,
+        아니면 ``None`` (M5 다각도 검토 결함3 · 계약 §10 "승인은 첫 execution
+        allocation 시 소비된다").
+
+        ``executions_by_approval`` 인덱스(migrations/002)를 그대로 쓴다 — 이
+        인덱스는 M4 부터 존재했지만 이 조회가 만들어지기 전까지는 아무도 쿼리하지
+        않았다. 한 approval_id 는 정확히 하나의 execution 만 만들 수 있어야 하므로
+        (`ApplyCoordinator.apply` 가 이 메서드로 먼저 재사용을 차단한다) 가장 이른
+        행 하나만 돌려주면 충분하다.
+        """
+        row = self._connection.execute(
+            "SELECT execution_id FROM executions WHERE approval_id = ? "
+            "ORDER BY created_at ASC LIMIT 1",
+            (approval_id,),
+        ).fetchone()
+        return None if row is None else str(row["execution_id"])
+
     def status(self, execution_id: str) -> str:
         """현재 관측 가능한 execution 상태.
 
@@ -666,16 +732,47 @@ class ApplyCoordinator:
 
     0. idempotent replay(같은 key+같은 request) 여부 — 그 사이 상태가 무엇이든
        최초 응답을 그대로 돌려준다(계약 §9.7). 아래 재검사보다 먼저 확인한다.
-    1. 승인 조회 + 신선도(head 변경/context stale/만료) —
+    1. path identity — URL 의 ``plan_id``/``revision`` 이 실제로 승인이
+       가리키는 ``ApprovalBinding.plan_id``/``plan_revision`` 과 같은지
+       (``director_api.py`` 의 project_id/plan_id path-vs-body
+       ``IDENTITY_MISMATCH`` 패턴을 plan_id/revision 의 path-vs-**binding**
+       불일치에 재사용한다 — M5 다각도 검토 결함4·5. 같은 프로젝트의 다른
+       plan 이 우연히 같은 revision 숫자를 가지면 승인이 잘못된 plan 에
+       쓰일 수 있다는 결함5 의 시나리오를 이 검사가 막는다).
+    2. 승인 단일 소비 — 이 ``approval_id`` 로 이미 만들어진 execution 이
+       있으면(:meth:`ExecutionJournal.existing_execution_for_approval`)
+       ``INVALID_STATE``/``RECOVERY_REQUIRED`` 로 거부한다(계약 §10: "승인은
+       첫 execution allocation 시 소비된다" — M5 다각도 검토 결함3).
+       ``recovery_of`` 흐름은 항상 **새** approval_id 를 쓰므로(plan.md M6:
+       "새 revision→검증→승인→apply") 이 검사와 부딪히지 않는다.
+    3. 승인 조회 + 신선도(head 변경/context stale/compiled_digest 변경/만료) —
        :func:`server.director.approvals.check_validity` ("current bindings" +
-       "승인").
-    2. LiveLock 활성 여부 — ``gate.lock.is_active``.
-    3. destination occupancy — :meth:`ExecutionJournal.begin_execution` 이
+       "승인"). ``compiled_digest`` 는 apply 요청이 되풀이해 제출해야 하는
+       값이다 — 이 층은 ``bundles`` 로부터 그 값을 재계산하지 않는다(계약
+       §209 — `compiled_digest` 는 compiler_id/compiler_version/
+       compiler_build_digest/target/playback 까지 묶은 manifest 전체의
+       digest 이고, 이 필드들은 이 층에 전달되지 않는다 — M5 다각도 검토
+       결함1+2 잔여 위험: 클라이언트가 실제로는 다른 bundles 를 보내면서
+       예전 compiled_digest 를 그대로 재전송하면 이 비교만으로는 잡지
+       못한다; 결함3 수정이 같은 승인의 반복 소비는 막지만 **최초** apply
+       요청의 bundles 내용 자체를 manifest 와 대조하려면 이 모듈에 없는
+       compiled manifest 접근(LDCOMPILE `ValidationProvider`)이 필요하다).
+    4. LiveLock 활성 여부 — ``gate.lock.is_active``.
+    5. destination occupancy — :meth:`ExecutionJournal.begin_execution` 이
        같은 transaction 안에서 create-only 로 예약한다(design.md §3). 이미
        점유돼 있으면 ``TARGET_BUSY`` 로 거부하고 **다른 slot 으로 조용히
        재선택하지 않는다**.
-    4. SafetyGate 연결 — ``gate.execute_preapproved(commands)``. grammar/
+    6. SafetyGate 연결 — ``gate.execute_preapproved(commands)``. grammar/
        classify/backup/health/audit 는 우회하지 않는다(§2.0-가, design.md §1).
+       중재자 lock 충돌(``status=="blocked_target_busy"``)은 재시도 가능
+       신호를 보존하기 위해 ``GATE_REJECTED`` 가 아니라 ``TARGET_BUSY`` 로
+       분기한다(M5 다각도 검토 결함6). 이 단계에서 거부되면(``GATE_REJECTED``
+       든 이 ``TARGET_BUSY`` 든) 아직 콘솔에 아무것도 보내지 않았다는 것이
+       확정되므로, execution 을 ``failed`` 로 닫는 동시에 destination
+       예약도 즉시 해제한다(결함7) — ``STATE_PARTIAL``/``STATE_UNKNOWN`` 으로
+       끝나는 :func:`execute_bundles` 의 실패 경로는 별도이며 이 즉시 해제
+       대상이 아니다(그 상태들은 콘솔에 무엇이 도달했는지 불확실하므로
+       recovery 흐름을 거쳐야 한다).
 
     M6(REQ-LDPLUGIN-032) 의 recovery 흐름도 이 클래스를 그대로 재사용한다 —
     별도 "recovery apply" 메서드를 만들지 않는다. 호출자가 body 에
@@ -713,10 +810,15 @@ class ApplyCoordinator:
 
         Raises:
             ExchangeError: ``SCHEMA_INVALID`` (필수 필드 누락),
+                ``IDENTITY_MISMATCH`` (URL 의 plan_id/revision 이 승인이
+                가리키는 plan_id/plan_revision 과 다름 — 결함4·5),
                 ``APPROVAL_NOT_FOUND`` (approval_id 가 없음),
-                ``APPROVAL_STALE`` (head 변경/context stale/만료),
-                ``LIVE_LOCK_ACTIVE``, ``TARGET_BUSY`` (destination 이미 점유,
-                create-only), ``IDEMPOTENCY_CONFLICT``, ``GATE_REJECTED``
+                ``INVALID_STATE``/``RECOVERY_REQUIRED`` (이 approval_id 가
+                이미 다른 execution 을 만듦 — 결함3),
+                ``APPROVAL_STALE`` (head 변경/context stale/compiled_digest
+                변경/만료), ``LIVE_LOCK_ACTIVE``, ``TARGET_BUSY``
+                (destination 이미 점유·create-only, 또는 SafetyGate 중재자
+                lock 충돌 — 결함6), ``IDEMPOTENCY_CONFLICT``, ``GATE_REJECTED``
                 (SafetyGate 가 grammar/classify/backup/health 중 하나에서
                 거부), ``RECOVERY_SOURCE_INVALID`` (``recovery_of`` 가 가리키는
                 원본 execution 이 partial/unknown 상태가 아님 — M6).
@@ -725,6 +827,7 @@ class ApplyCoordinator:
         idempotency_key = body.get("idempotency_key")
         destination = body.get("destination")
         bundles = body.get("bundles")
+        compiled_digest = body.get("compiled_digest")
         recovery_of = body.get("recovery_of")
         if not isinstance(approval_id, str) or not approval_id:
             raise _schema_invalid("approval_id 가 필요합니다.", "/approval_id")
@@ -734,6 +837,11 @@ class ApplyCoordinator:
             raise _schema_invalid("destination 이 필요합니다.", "/destination")
         if not isinstance(bundles, list) or not bundles:
             raise _schema_invalid("bundles 가 필요합니다.", "/bundles")
+        if not isinstance(compiled_digest, str) or not compiled_digest:
+            # M5 다각도 검토 결함1+2 — 이 apply 가 향하는 compiled artifact 를
+            # 밝히지 않으면 애초에 승인과 대조할 것이 없다. check_validity 가
+            # 이 값을 binding.compiled_digest 와 비교한다(APPROVAL_STALE 아래).
+            raise _schema_invalid("compiled_digest 가 필요합니다.", "/compiled_digest")
         if recovery_of is not None and (not isinstance(recovery_of, str) or not recovery_of):
             raise _schema_invalid(
                 "recovery_of 는 비어있지 않은 문자열이어야 합니다.", "/recovery_of"
@@ -767,11 +875,34 @@ class ApplyCoordinator:
         if binding is None:
             raise _approval_not_found(approval_id)
 
+        # path identity — URL 의 plan_id/revision 이 실제로 이 승인이 가리키는
+        # plan_id/plan_revision 과 같아야 한다(결함4·5). 같은 프로젝트의 다른
+        # plan 이 우연히 같은 revision 숫자를 가지는 경우까지 잡는다 — 이 검사가
+        # 없으면 head_revision 조회 자체가 엉뚱한 plan_id 로 이뤄질 수 있었다.
+        if binding.plan_id != plan_id:
+            raise _identity_mismatch("plan_id", plan_id, binding.plan_id)
+        if revision != binding.plan_revision:
+            raise _identity_mismatch("revision", str(revision), str(binding.plan_revision))
+
+        # 승인 단일 소비 — 이 approval_id 로 이미 만들어진 execution 이 있으면
+        # 다른 idempotency_key 로도 재사용할 수 없다(계약 §10, 결함3). replay
+        # 경로(0 단계)는 이미 위에서 갈렸으므로 여기 도달했다는 것 자체가
+        # "이 정확한 request 는 처음"이라는 뜻이다 — 그런데도 approval_id 가
+        # 이미 소비돼 있으면 그건 재사용 시도다. recovery_of 흐름은 항상 새
+        # approval_id 를 쓰므로(plan.md M6) 이 검사와 부딪히지 않는다.
+        existing_execution_id = self._journal.existing_execution_for_approval(approval_id)
+        if existing_execution_id is not None:
+            existing_state = self._journal.status(existing_execution_id)
+            if existing_state in (STATE_PARTIAL, STATE_UNKNOWN):
+                raise _recovery_required(approval_id, existing_execution_id)
+            raise _invalid_state(approval_id, existing_execution_id)
+
         current_head = self._store.head_revision(project_id=project_id, plan_id=plan_id)
         reasons = check_validity(
             binding,
             current_head=current_head,
             current_context_digest=current_context_digest,
+            current_compiled_digest=compiled_digest,
             now=_now(),
         )
         if reasons:
@@ -814,8 +945,27 @@ class ApplyCoordinator:
         if not decision.cleared:
             # journal 은 이미 durable 하게 남았다(§ M4 doctrine — journal 이
             # 첫 write 보다 먼저다) — gate 거부는 그 execution 을 failed 로
-            # 닫는다. 실제 송신은 시도된 적이 없다.
+            # 닫는다. 실제 송신은 시도된 적이 없다는 것이 이 분기에 도달했다는
+            # 사실 자체로 확정되므로(execute_bundles 는 아직 호출되지 않았다),
+            # destination 예약도 여기서 즉시 해제한다(결함7) — STATE_PARTIAL/
+            # STATE_UNKNOWN 으로 끝나는 execute_bundles 의 실패는 콘솔에
+            # 무엇이 도달했는지 불확실하므로 이 즉시 해제 대상이 아니다.
             self._journal.finalize_execution(result.execution_id, STATE_FAILED)
+            self._journal.release_destination(
+                project_id=project_id,
+                show_id=str(destination["show_id"]),
+                sequence_id=str(destination["sequence_id"]),
+            )
+            if decision.status == "blocked_target_busy":
+                # 결함6 — 중재자(shared programmer lock) 충돌은 문법/안전
+                # 위반이 아니라 재시도 가능한 점유 상태다. GATE_REJECTED(422,
+                # 재시도 불가 신호)로 뭉개면 계약이 요구하는 TARGET_BUSY(409,
+                # 재시도 가능 신호)를 잃는다.
+                raise _target_busy(
+                    decision.notice or "SafetyGate 중재자 lock 충돌로 apply 가 거부되었습니다.",
+                    pointer="",
+                    detail=decision.status,
+                )
             raise _gate_rejected(decision)
 
         return result

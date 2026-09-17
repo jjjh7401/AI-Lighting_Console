@@ -101,6 +101,7 @@ def _binding(
     approval_id: str = "approval-0001",
     plan_revision: int = 1,
     context_digest: str = "ctx-digest-1",
+    compiled_digest: str = "compiled-digest-1",
     expires_at: str = "2099-01-01T00:00:00Z",
 ) -> ApprovalBinding:
     return ApprovalBinding(
@@ -109,7 +110,7 @@ def _binding(
         plan_revision=plan_revision,
         plan_digest="plan-digest-1",
         context_digest=context_digest,
-        compiled_digest="compiled-digest-1",
+        compiled_digest=compiled_digest,
         principal_id=_PRINCIPAL,
         console_id="console-1",
         session_id="session-1",
@@ -125,6 +126,7 @@ def _body(
     idempotency_key: str = "key-0001",
     show_id: str = "show-1",
     sequence_id: str = "sequence-1",
+    compiled_digest: str = "compiled-digest-1",
     recovery_of: str | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
@@ -132,6 +134,9 @@ def _body(
         "idempotency_key": idempotency_key,
         "destination": {"show_id": show_id, "sequence_id": sequence_id},
         "bundles": [{"bundle_id": "bundle-a", "commands": ["Fixture 901 At 50"]}],
+        # `_binding()` 의 기본 compiled_digest 와 일치해야 재검사를 통과한다
+        # (M5 다각도 검토 결함1+2 수정).
+        "compiled_digest": compiled_digest,
     }
     if recovery_of is not None:
         payload["recovery_of"] = recovery_of

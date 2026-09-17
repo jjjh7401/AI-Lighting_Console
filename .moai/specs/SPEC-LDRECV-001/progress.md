@@ -1441,6 +1441,143 @@ $ uv run pytest server/tests/test_overlap_preserve.py -q
 **커밋**: `feat(SPEC-LDRECV-001): M6 운영 중단·recovery — REQ-LDPLUGIN-032
 TDD 구현, SPEC 전체(M1~M6) 완료` (`9f790f60`). push 는 하지 않았다.
 
+### M1~M6 완료 후 다각도 검토에서 발견·수정한 결함 (2026-09-17)
+
+SPEC 전체(M1~M6) 완료 후 다각도 검토(대적적 검증 포함)에서 apply 경로의
+핵심 안전 결함 6항목(결함1+2 는 같은 근본 원인이라 통합 서술 — 실질 7건)이
+확인되어 기존 TDD 인프라(`test_director_apply_rejection.py`,
+`test_director_approvals.py`)를 그대로 확장해 고쳤다. `server/director/
+execution.py`·`server/director/approvals.py` 외 파일은 미접촉이다(§ 경계
+확인 참고). 새 마이그레이션은 추가하지 않았다 — 결함3 이 필요로 하는
+`executions_by_approval` 인덱스는 M4(`002_execution_journal.sql`)가 이미
+만들어 뒀고, 이 검토 전까지 아무도 조회하지 않았을 뿐이다.
+
+**`compiled_digest` 가 무엇의 digest 인지 — 이 수정 전체의 핵심 전제.**
+결함1+2 를 고치기 전에 `approvals.py` 의 승인 발급 코드
+(`ApprovalRegistry.approve`, L361/L394 — `compiled_digest=validation.
+compiled_digest`)와 `SPEC-LDPLUGIN-001/contract.md` §209 를 읽어 확인했다.
+계약 §209 원문: *"`compiled_digest`: ValidationReport.compiled.manifest
+객체 전체. compiled.available/compiled_digest/validation timestamps·
+diagnostics는 제외한다. ... compiler version/build, target, plan/context
+digest, ordered bundles와 action coverage가 묶인다."* — 즉 `compiled_digest`
+는 `bundles` 배열 하나가 아니라 **compiler_id·compiler_version·
+compiler_build_digest·target(전체)·playback 까지 묶은 compiled manifest
+객체 전체**의 digest다. 이 필드들은 현재 `ApplyCoordinator.apply()`(및
+`ApprovalBinding`, `ValidationRef`)그 어디에도 존재하지 않는다 — LDCOMPILE
+의 `ValidationProvider` seam 은 아직 이 코드베이스에 배선되지 않았다
+(`approvals.py` 모듈 docstring: "저장소 자체는 아직 이 코드베이스에 HTTP 로
+노출되지 않았다"). 따라서 `bundles` 로부터 `canonical_digest` 로
+`compiled_digest` 를 **재계산**해 비교하는 방법은(디폴트로 제안된 방식)
+검증했더니 원칙적으로 실패한다 — 두 digest 는 서로 다른 객체를 해시하므로
+실제 LDCOMPILE 연동이 붙으면 항상 불일치해 모든 apply 를 거부하는
+회귀가 된다. 이 발견에 따라 결함1+2 는 "추측해서 다른 것과 비교하지
+말라"는 지시대로 **재계산 대신, 이미 이 코드베이스가 `current_context_
+digest`(외부에서 관측한 신선한 값을 그대로 받아 동등성만 비교)에 쓰는
+같은 관례**로 구현했다 — apply 요청에 `compiled_digest` 를 필수 필드로
+추가하고, `check_validity()` 의 기존 `reasons` 어휘(`head_changed`/
+`context_changed`/`expired`)에 `compiled_digest_changed` 를 보태
+`binding.compiled_digest` 와 동등성만 비교한다. **잔여 위험**: 이 비교는
+"클라이언트가 제출한 digest 값이 승인 당시와 같은가"만 확인하고, "지금
+제출한 `bundles` 내용이 실제로 그 digest 가 가리키는 artifact 와 일치하는가"
+까지는 확인하지 못한다(그러려면 이 층에 없는 compiled manifest 접근이
+필요하다) — 다만 결함3 수정으로 같은 승인의 **반복** 소비(다른
+idempotency_key 로 다른 bundles 재시도)는 이제 최초 1회로 막히므로, 남는
+노출면은 "최초 apply 요청 자체가 애초에 잘못된 bundles 를 담고 있는 경우"
+로 좁혀진다. 이 잔여 위험은 LDCOMPILE `ValidationProvider` 가 실제로
+배선되어 이 층이 원본 manifest 에 접근할 수 있게 되는 후속 SPEC 에서
+`canonical_digest(manifest)` 재계산으로 완전히 닫을 수 있다.
+
+| 결함 | 파일:위치 | 고친 방법 | 고정한 시험 |
+|---|---|---|---|
+| 1+2(치명적) — apply 가 bundles/destination 을 compiled_digest 와 전혀 대조하지 않음 | `execution.py` `ApplyCoordinator.apply` | `compiled_digest` 를 apply 요청 필수 필드로 추가(SCHEMA_INVALID 미제출 시) + `check_validity()` 에 `compiled_digest_changed` reason 추가(불일치 시 기존 `APPROVAL_STALE` 409 로 표면화 — 새 코드를 만들지 않고 계약에 이미 있는 코드를 재사용) | `TestBundleCompiledDigestBinding`(2, apply_rejection) + `test_check_validity_flags_compiled_digest_change`(approvals) |
+| 3(치명적) — 승인이 idempotency key 만 바꾸면 여러 번 재사용 가능 | `execution.py` `ApplyCoordinator.apply` + `ExecutionJournal` | `ExecutionJournal.existing_execution_for_approval()` 신규(기존 `executions_by_approval` 인덱스 조회) — 이미 execution 이 있으면 그 상태가 partial/unknown 이면 `RECOVERY_REQUIRED`(409), 아니면 `INVALID_STATE`(409). `recovery_of` 흐름은 항상 새 approval_id 를 쓰므로(plan.md M6) 부딪히지 않는다(기존 M6 recovery 시험 11개 그대로 통과로 확인) | `TestApprovalIsSingleUse`(2) |
+| 4(중대) — URL 의 revision 을 검사 안 함 | `execution.py` `ApplyCoordinator.apply` | `director_api.py` 의 `_identity_mismatch` 패턴(422)을 이 모듈에 복제해(순환 참조 회피) `revision != binding.plan_revision` 검사 추가 | `TestPathIdentityMustMatchApproval::test_url_revision_...` |
+| 5(중대) — check_validity 가 plan_id 를 확인 안 함 | `execution.py` `ApplyCoordinator.apply` | 함수 시그니처(`check_validity`)는 바꾸지 않고(§ 대안 검토: plan_id 는 "신선도" 축이 아니라 "식별자" 축이라 결함4 와 같은 `IDENTITY_MISMATCH` 부류로 두는 것이 더 일관적이라 판단) `apply()` 안에서 `binding.plan_id != plan_id` 를 결함4 와 같은 자리·같은 코드(422)로 검사 | `TestPathIdentityMustMatchApproval::test_url_plan_id_...` |
+| 6(중대) — TARGET_BUSY 가 GATE_REJECTED(422)로 뭉개짐 | `execution.py` `ApplyCoordinator.apply` | gate 거부 분기에서 `decision.status == "blocked_target_busy"` 이면 기존 `_target_busy()`(선택적 `pointer`/`detail` kwarg 추가, 기존 호출부는 기본값으로 무변경)로 분기 — `_gate_rejected()` 자체나 `gate.py` 는 손대지 않았다 | `TestGateArbiterConflictMapsToTargetBusy` |
+| 7(중대) — 거부된 apply 가 예약한 destination 을 영영 안 풀어줌 | `execution.py` `ApplyCoordinator.apply` | `GATE_REJECTED`·(결함6 이 분기한) `TARGET_BUSY` 실패 경로에서 `finalize_execution(FAILED)` 직후 기존 `release_destination()` 호출 추가 — `STATE_PARTIAL`/`STATE_UNKNOWN` 으로 끝나는 `execute_bundles()` 의 실패 경로는 별도 함수이며 이 분기가 손대지 않으므로 그쪽은 그대로 recovery 흐름을 거친다 | `TestDestinationReleasedOnPreSendRejection`(2, 해제 후 재시도까지 확인) |
+
+**RED→GREEN 절차(전 항목 공통)**: `git show HEAD:server/director/
+execution.py`/`approvals.py` 로 수정 전 원본을 워크트리에 되돌려 신규
+9+1건을 실행 → 정확히 그 10건만 실패(기존 106건은 그대로 통과)를 확인한
+뒤, 수정본을 복원해 GREEN 을 재확인했다(아래 Evidence).
+
+**Evidence — RED (수정 전 코드에 신규 시험만 실행)**
+
+```
+$ uv run pytest server/tests/test_director_apply_rejection.py -q
+...
+9 failed, 10 passed in 0.59s
+FAILED ...TestBundleCompiledDigestBinding::test_missing_compiled_digest_is_schema_invalid
+FAILED ...TestBundleCompiledDigestBinding::test_compiled_digest_mismatch_is_rejected_before_gate
+FAILED ...TestPathIdentityMustMatchApproval::test_url_revision_mismatching_the_approval_is_rejected
+FAILED ...TestPathIdentityMustMatchApproval::test_url_plan_id_mismatching_the_approval_is_rejected
+FAILED ...TestApprovalIsSingleUse::test_reusing_a_confirmed_approval_with_a_new_key_is_invalid_state
+FAILED ...TestApprovalIsSingleUse::test_reusing_a_partial_approval_with_a_new_key_requires_recovery
+FAILED ...TestGateArbiterConflictMapsToTargetBusy::test_blocked_target_busy_decision_is_target_busy_not_gate_rejected
+FAILED ...TestDestinationReleasedOnPreSendRejection::test_gate_rejected_apply_releases_its_destination_reservation
+FAILED ...TestDestinationReleasedOnPreSendRejection::test_target_busy_from_gate_also_releases_its_destination_reservation
+```
+
+**Evidence — GREEN (수정본 복원 후)**
+
+```
+$ uv run pytest server/tests/test_director_apply_rejection.py server/tests/test_director_ops_lifecycle.py \
+    server/tests/test_director_execution_journal.py server/tests/test_director_approvals.py \
+    server/tests/test_director_gate_bridge.py server/tests/test_director_evidence_trust.py \
+    server/tests/test_director_execution_failure.py -q
+106 passed, 1 warning in 1.09s
+```
+
+**Evidence — 전체 회귀**
+
+```
+$ uv run pytest -q
+13515 passed, 35 skipped, 1 warning in 183.51s
+```
+
+M6 종료 시점(13505) 대비 신규 10건(결함별 시험 9개 + `test_director_
+approvals.py` 신규 1개)이 정확히 더해진 숫자다(13505 + 10 = 13515). 기존
+시험 중 깨진 것은 없다 — `_body()`/`_binding()` 두 fixture 파일에 새로
+필수가 된 `compiled_digest` 필드를 기본값(`binding` 과 동일한
+`"compiled-digest-1"`)으로 보강했을 뿐, assertion 을 느슨하게 바꾼 곳은
+없다.
+
+**Evidence — ruff**
+
+```
+$ uv run ruff check server/director/execution.py server/director/approvals.py \
+    server/tests/test_director_apply_rejection.py server/tests/test_director_ops_lifecycle.py \
+    server/tests/test_director_approvals.py
+All checks passed!
+$ uv run ruff format --check <같은 5개 파일>
+5 files already formatted
+$ uv run pytest server/tests/test_overlap_preserve.py -q -k TestTouchedFilesPassLint
+4 passed, 68 deselected in 0.23s
+```
+
+**Evidence — 경계 확인**
+
+```
+$ git status --short
+ M server/director/approvals.py
+ M server/director/execution.py
+ M server/tests/test_director_apply_rejection.py
+ M server/tests/test_director_approvals.py
+ M server/tests/test_director_ops_lifecycle.py
+$ git diff --stat 4d5b6bea..HEAD -- server/safety/gate.py server/orchestrator/tools.py \
+    server/web/session.py server/measurement/runner.py server/web/panel.py \
+    server/director/migrations/
+(빈 출력 — 5개 파일·migrations 디렉터리 전부 미접촉)
+```
+
+**마이그레이션**: 추가하지 않았다. 결함3 이 쓰는 `executions_by_approval`
+인덱스는 `002_execution_journal.sql`(M4)이 이미 만들었고, 이 검토가
+그것을 처음으로 조회했을 뿐이다 — 새 컬럼·테이블이 필요한 결함은 없었다.
+
+**커밋**: 이 절을 기록한 커밋 자신을 가리킨다(M3/M6 이 쓴 것과 같은
+자기참조 관례) — `git log -1 --format=%H` 로 재확인 가능. push 는 하지
+않았다(사용자 지시).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml

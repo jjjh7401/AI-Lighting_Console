@@ -176,6 +176,7 @@ def check_validity(
     *,
     current_head: int,
     current_context_digest: str,
+    current_compiled_digest: str,
     now: str,
 ) -> tuple[str, ...]:
     """무효 사유 목록. 빈 tuple 이면 유효 — `context.stale_bindings` 와 같은 관례.
@@ -183,12 +184,28 @@ def check_validity(
     `context_digest` 하나가 compiler·target·policy 를 포함한 아홉 축 전부를
     덮으므로(`context.py` `NINE_AXES`), REQ-020 이 나열한 "context stale·
     compiler/target/policy 변경"은 이 한 비교로 함께 잡힌다.
+
+    `current_compiled_digest` 는 apply 호출자(``ApplyCoordinator``)가 이번
+    apply 요청이 적용하려는 compiled artifact 라고 주장하는 digest 값이다 —
+    `current_context_digest` 와 같은 관례로, 이 함수는 recompute 하지 않고
+    호출자가 이미 관측한 값을 그대로 받아 `binding.compiled_digest` 와
+    동등성만 비교한다(계약 §209 — `compiled_digest` 는 `ValidationReport.
+    compiled.manifest` 객체 전체의 digest 이고, 그 manifest 는 compiler_id·
+    compiler_version·compiler_build_digest·target·playback 을 포함해 이 모듈이
+    접근할 수 없는 필드까지 묶는다 — 그래서 여기서 bundles 등 원재료로부터
+    재계산하지 않는다; `SPEC-LDRECV-001 M5 다각도 검토` 결함1+2 수정 근거).
+    불일치하면 `compiled_digest_changed` 를 보탠다 — apply 가 승인된 것과 다른
+    compiled artifact 로 향하고 있다는 신호다(LD-APPROVAL-001: "apply 직전
+    durable human approval을 exact compiled artifact digest에 묶은 SafetyGate
+    bridge에서 소비한다").
     """
     reasons: list[str] = []
     if binding.plan_revision != current_head:
         reasons.append("head_changed")
     if binding.context_digest != current_context_digest:
         reasons.append("context_changed")
+    if binding.compiled_digest != current_compiled_digest:
+        reasons.append("compiled_digest_changed")
     if _parse_utc(now) > _parse_utc(binding.expires_at):
         reasons.append("expired")
     return tuple(reasons)

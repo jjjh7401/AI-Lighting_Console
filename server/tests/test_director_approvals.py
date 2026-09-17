@@ -426,6 +426,7 @@ def test_check_validity_passes_when_nothing_changed():
         binding,
         current_head=1,
         current_context_digest=binding.context_digest,
+        current_compiled_digest=binding.compiled_digest,
         now=_fmt(_now() + timedelta(minutes=1)),
     )
     assert reasons == ()
@@ -437,6 +438,7 @@ def test_check_validity_flags_head_change():
         binding,
         current_head=2,  # 새 revision 이 제출됐다
         current_context_digest=binding.context_digest,
+        current_compiled_digest=binding.compiled_digest,
         now=_fmt(_now() + timedelta(minutes=1)),
     )
     assert "head_changed" in reasons
@@ -452,6 +454,7 @@ def test_check_validity_flags_context_change():
         binding,
         current_head=1,
         current_context_digest="sha256:" + "9" * 64,  # 리그/compiler/target 변경
+        current_compiled_digest=binding.compiled_digest,
         now=_fmt(_now() + timedelta(minutes=1)),
     )
     assert "context_changed" in reasons
@@ -463,9 +466,26 @@ def test_check_validity_flags_expiry():
         binding,
         current_head=1,
         current_context_digest=binding.context_digest,
+        current_compiled_digest=binding.compiled_digest,
         now=_fmt(_now() + timedelta(minutes=11)),  # expires_at 을 지났다
     )
     assert "expired" in reasons
+
+
+def test_check_validity_flags_compiled_digest_change():
+    """SPEC-LDRECV-001 M1~M6 완료 후 다각도 검토 결함1+2 — apply 가 승인 당시와
+    다른 compiled artifact 를 향하면(예: 재컴파일로 compiled_digest 가 바뀜)
+    `compiled_digest_changed` 를 반환해야 한다. `ApplyCoordinator.apply` 는 이
+    reason 을 `APPROVAL_STALE`(409) 로 표면화한다(execution.py `_approval_stale`)."""
+    binding = _binding()
+    reasons = check_validity(
+        binding,
+        current_head=1,
+        current_context_digest=binding.context_digest,
+        current_compiled_digest="sha256:" + "9" * 64,  # 재컴파일로 다른 artifact
+        now=_fmt(_now() + timedelta(minutes=1)),
+    )
+    assert "compiled_digest_changed" in reasons
 
 
 def test_check_validity_reports_all_reasons_together():
@@ -474,9 +494,15 @@ def test_check_validity_reports_all_reasons_together():
         binding,
         current_head=2,
         current_context_digest="sha256:" + "9" * 64,
+        current_compiled_digest="sha256:" + "9" * 64,
         now=_fmt(_now() + timedelta(minutes=11)),
     )
-    assert set(reasons) == {"head_changed", "context_changed", "expired"}
+    assert set(reasons) == {
+        "head_changed",
+        "context_changed",
+        "compiled_digest_changed",
+        "expired",
+    }
 
 
 # ---------------------------------------------------------------------------
