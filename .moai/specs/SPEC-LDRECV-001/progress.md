@@ -832,8 +832,8 @@ WRITEGATE-001/READBACK-002/BULKGATE-001 선례와 같은 형식으로 추가했�
 72/72 PASS, 전체 회귀 `13449 passed, 35 skipped`(직전 기준선과 정확히 일치,
 신규 실패 0) → `ruff check`/`ruff format --check` 둘 다 clean.
 
-**커밋**: (M3 이후 회귀 수정 커밋 — 이 커밋 자체의 SHA는 `git log -1`로 확인).
-push 는 하지 않았다.
+**커밋**: `8d07ffea` (`fix(SPEC-LDRECV-001): M3 이후 안전 게이트 거버넌스 시험
+pinned 값 회귀 수정`). push 는 하지 않았다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
