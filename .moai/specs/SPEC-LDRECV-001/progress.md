@@ -788,8 +788,8 @@ $ git diff --name-only 8af5d570..HEAD -- server/orchestrator/tools.py \
 | 경계 | 3개 금지 파일 미접촉 | `git diff --name-only` | PASS |
 | MX 한도 | ANCHOR ≤3 | `grep -cE "^\s*#\s*@MX:ANCHOR:"` | PASS (3) |
 
-**커밋**: 아래 M3 완료 커밋 SHA 참고(§E.2 이 절 상단 — commit 직후 이
-placeholder 를 실제 SHA 로 백필한다). push 는 하지 않았다.
+**커밋**: `f1375da7` (`feat(SPEC-LDRECV-001): M3 공유 programmer 중재자 —
+REQ-LDPLUGIN-021/022 TDD 구현`). push 는 하지 않았다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
