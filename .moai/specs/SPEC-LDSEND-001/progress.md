@@ -889,6 +889,7 @@ exit=1
 - 전체 회귀(마지막 코드 변경 `eee1c4e4` 기준): `uv run pytest -q -p no:cacheprovider` → exit 0, `13583 passed, 35 skipped` (기준선 13515/35, +68 신규, 회귀 0)
 - AC 로컬 판정: 각 M 절 매트릭스(구현 에이전트 작성)가 001-015 를 시험에 대응시켰고, 그 시험들은 위 전체 회귀에서 통과했다. AC↔시험 대응 자체의 독립 감사는 sync-auditor 몫(미수행). 콘솔 필요 항목(021 승격부·024 관측부·032 실행부)은 M5 실기 관측 PASS.
 - 남은 것: 위 M5 "열린 판단" 3건, 콘솔 잔여물 정리, sync.
+- 사람 결정(2026-09-19): 열린 판단 ① — 032 recovery 가 새 scratch destination 에 쓰는 방식을 AC-LDPLUGIN-032 실행부 관측으로 **인정**. 예약 해제 절차는 후속 카드 **t422**(`moai todo add`, id 충돌 없음 확인: `git log --all --grep=t422` 0건, `.moai/reports/t422` 부재). ② 는 t422 본문에 함께 기록. ③ 은 sync 에서 문서 정정.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
