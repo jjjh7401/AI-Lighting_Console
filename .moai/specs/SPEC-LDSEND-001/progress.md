@@ -191,6 +191,13 @@ $ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/execution.py se
 존재한다 — `WT-bundle-sender`/`t420` 로 병합·반영되기 전까지는 원래 배차
 대상 브랜치에 반영되지 않은 상태다.
 
+#### M1 오케스트레이터 재측정 (2026-09-18, t420)
+
+- 반영: `git merge --ff-only 7b4004a0` → `WT-bundle-sender` 에 fast-forward(부모가 `ecaaa2e5` 그대로). 위 Residual risk 는 해소됐다.
+- **위 13528 수치는 커밋 전 작업 트리에서 잰 것이라 무효였다.** `test_overlap_preserve.py` 는 `<base>..HEAD` 커밋 diff 로 판정하므로 커밋 전에는 gate.py 변경을 못 본다. 커밋 뒤 `uv run pytest -q -p no:cacheprovider` → `3 failed, 13525 passed, 35 skipped` (`.moai/state/verify/ae8e2656/m1-full.txt`): `TestSafetyChokepointFileSet` 2건(gate.py 삭제 `74 == 69`) + `TestTouchedFilesPassLint::test_ruff_format_reports_no_change`(`test_run_director_apply.py` 서식).
+- 수정 `75ed61c7`: 핀에 `_execute_cleared()` 옛 문면 5줄 추가, 69→74, ruff format.
+- 재측정 @`75ed61c7`: `uv run pytest -q -p no:cacheprovider` → exit 0, `13528 passed, 35 skipped, 1 warning` (`.moai/state/verify/ae8e2656/m1-full-2.txt`).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
