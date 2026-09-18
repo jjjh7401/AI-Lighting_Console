@@ -176,11 +176,12 @@ test_director_execution_failure.py:35`)만 그 자리를 채웠다. 이 SPEC 은
 - 새 승인 경로, 새 직렬화(중재자) 로직, apply 재검사 로직의 변경은 포함하지
   않는다 — 전부 `SPEC-LDRECV-001` `ApplyCoordinator`/`ProgrammerArbiter`
   소유다. 이 SPEC 은 그 뒤에 이미 승인된 명령을 보내기만 한다. 예외
-  하나(REQ-LDSEND-013): `director_api.py` `post_apply()` 에 세션 클리어런스
-  격리를 위한 `bind_session_key`/`reset_session_key` 감쌈과
-  `ApplyCoordinator.revoke_clearances()` 전달 메서드 하나를 추가한다 — 이는
+  하나(REQ-LDSEND-013/015): `server/director/execution.py` 의 공유 함수
+  `run_director_apply()` 안에 세션 클리어런스 격리를 위한
+  `bind_session_key`/`reset_session_key` 감쌈과 `revoke_clearances()` 호출을
+  둔다(`post_apply()` 는 이 함수를 부르는 얇은 adapter 가 된다) — 이는
   승인·재검사·직렬화 판단을 바꾸지 않는 순수 격리 배선이다(plan.md
-  §2.0-나 참고).
+  §2.0-나·§2.0-마 참고).
 - HTTP 라우팅·자격 발급·`ContextProvider`/`ValidationProvider` 배선은
   포함하지 않는다 — 큐 카드 t421 이 담당하고, 그 자리에 필요한
   `ValidationProvider` 가 아직 없어 지금은 실행 가능한 경로가 아니다
