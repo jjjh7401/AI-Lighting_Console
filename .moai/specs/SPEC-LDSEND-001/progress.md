@@ -851,6 +851,23 @@ exit=1
   - 024 후보: ① `Store Sequence 9901`(점유된 대상에 맨몸 Store — 코드 기록상 콘솔이 'Not allowed' 거부) ② `Copy Sequence <source> At 9901`(미검증)
   - 추가로 나가는 것: `--execute` 시 세션 시작 SaveShow 1회(bootstrap.py:185-189). `Store Sequence` 는 blacklist held 이므로 apply 마다 위험 명령 직전 백업(`before_risky_execution`)이 나갈 것으로 **코드 판독상** 예상 — 실측 아님.
 
+### M4a — 실기 탐색: AC-024 실패 유발 명령 (2026-09-18, 사람 승인 후 1회 실행)
+
+- 선행 확인(읽기 전용): `lsof -nP -iUDP:8000 -iUDP:9005` → `app_gma3 81528 UDP *:8000`, `*:9005`. `uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005 --skip-exec` → `[PASS] ping: ok (CopilotResponder 1.6.5)`, `[PASS] state: ok ... children=17`, `result: PASS`.
+- 같은 인자로 dry-run 먼저 → 명령 3줄이 승인 목록과 일치.
+- 실행: `uv run python -m server.tools.director_apply_observe 024 --listen-port 9005 --confirmed-failure-command 'Store Sequence {n}' --execute` → exit 0 (`.moai/state/verify/ae8e2656/m4a-024-execute.txt`):
+  - `response_status: 201`, `response_body: {'state': 'partial', 'bundles': ['acknowledged', 'failed', 'not_sent'], 'recovery_required': False}`
+  - `readback[primary]: exists=True ... node={'childCount': 3, 'class': 'Sequence', 'name': 'Sequence 9901'}`
+  - `readback[never_written]: exists=False ... StateQueryError (ok:false): path segment not found: '9902'`
+- 감사 로그 `server/audit_logs/audit-20260918.jsonl`(13:08:47Z~48Z) 1-5행: `SaveShow`(backup, OK) → `approved` 3개 전부 held(`director_preapproved`) → `SaveShow`(backup, OK) → `Store Sequence 9901 Cue 1 /Merge` ok → `Store Sequence 9901` **ok:false, detail `User Canceled Command`, outcome failed**. `Store Sequence 9902 ...` 실행 기록 **없음**.
+- 판정:
+  - 후보 ①은 **콘솔 자신의 명시적 거부**를 낸다(게이트는 승인 통과). 단 사유 문자열은 plan.md §2.0-라가 인용한 `'Not allowed'` 가 아니라 `User Canceled Command` — 콘솔 저장 확인 팝업이 취소된 것으로 **추정**(미확인). 1회 관측이라 안정성은 미검증.
+  - 후속 bundle 미송신(REQ-002/AC-024)은 실기에서 관측됨 — 감사 로그 부재 + readback 부재 두 갈래.
+  - §2.0-다 응답 모양 확정: 부재 = `ok:false` `path segment not found`(후보 1), 존재 = `ok:true` + `class: Sequence` node.
+  - **예측 반증**: pre-risky 백업은 명령마다가 아니라 승인된 배치 1회였다(SaveShow 총 2회). 위 "apply 마다 … 코드 판독상 예상"은 명령 단위로는 틀렸다.
+- 후보 ②는 시도하지 않음(①이 명시적 실패를 냈다).
+- 콘솔 잔여물: Sequence 9901(3 children). 정리 명령 `Delete Sequence 9901` 은 사람이 실행(9902 는 생성되지 않음).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
