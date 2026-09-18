@@ -737,7 +737,11 @@ _SAFETY_EXPECTED_DELETIONS = {
     # 2개는 그 안의 빈 줄 삭제, 나머지 19개만 실제로 바뀐/새 문면이다(위 상단
     # `#:` 서술 문단 참고). 아래 핀에 그 정확한 69줄 전부가 diff 순서 그대로
     # 들어간다.
-    "server/safety/gate.py": 69,
+    # SPEC-LDSEND-001 M1 (2026-09-18): 69 → 74. `_execute_cleared()` 의
+    # `ExecutionResult(...)` 생성 다섯 줄이 `outcome=` 을 명시하는 형태로 다시
+    # 쓰인다(plan.md §2.0-가). 새 public 메서드 `revoke_clearances()` 는 추가만
+    # 한다. 아래 핀에 그 정확한 다섯 줄이 diff 순서대로 들어간다.
+    "server/safety/gate.py": 74,
     "server/safety/monitor.py": 3,
     "server/safety/responder_version.py": 0,
     # t272 (2026-09-06): `bootstrap.py` reopened with an ADD-ONLY 4-line
@@ -1012,6 +1016,18 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         "            ),",
         "            approval_request=approval_request,",
         "        )",
+        # 2026-09-18 — SPEC-LDSEND-001 M1 (plan.md §2.0-가, 대안 B). 실질
+        # 변경 다섯 줄, 전부 `_execute_cleared()` 안이다. 각 `ExecutionResult(...)`
+        # 생성이 `outcome="ok"|"failed"|"unconfirmed"` 를 명시하도록 다시 쓰이며
+        # 옛 문면이 지워진다(여섯째 자리 — unconfirmed 분기 — 는 원래 여러 줄이라
+        # 지워지는 줄 없이 `outcome=` 한 줄만 더해진다). `ok`/`detail` 값과 분기
+        # 순서는 그대로다. `deploy_plugin_source()` 의 다섯 자리는 PRESERVE —
+        # 이 SPEC 은 거기서 지우는 줄이 없다.
+        '            return ExecutionResult(ok=False, detail="blocked: live lock active (read-only)")',  # noqa: E501
+        '            return ExecutionResult(ok=False, detail=f"blocked: {reason}")',
+        '                    ok=False, detail="blocked: command was not cleared by the safety gate"',  # noqa: E501
+        "            return ExecutionResult(ok=True, detail=outcome.detail)",
+        "        return ExecutionResult(ok=False, detail=outcome.detail)",
         # 핀은 diff 순서, 곧 **파일 안 순서**다. 아래 둘은 `screen` 뒤에 온다 —
         # 이 시그니처 변경은 M3 가 아니라 최상단 주석의 2026-08-16 paging 쌍
         # (item 3 과 이 줄) 그 자체다; `offset` 키워드가 여기서 추가된다.

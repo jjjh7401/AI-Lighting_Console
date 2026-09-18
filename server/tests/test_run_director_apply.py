@@ -357,9 +357,7 @@ class TestCrossSessionClearanceIsolationDuringRunDirectorApply:
     (``server/measurement/runner.py`` 흉내, ``DEFAULT_SESSION_KEY`` 공유)가
     남긴 클리어런스는 apply 의 전용 세션 회수로 지워지지 않는다."""
 
-    def test_a_default_session_callers_clearance_survives_applys_own_revoke(
-        self, tmp_path: Path
-    ):
+    def test_a_default_session_callers_clearance_survives_applys_own_revoke(self, tmp_path: Path):
         console = _AlwaysOkConsole()
         gate = SafetyGate(console=console, audit=AuditLog(tmp_path / "audit"))
         store = DirectorStore(tmp_path / "director.sqlite3")
