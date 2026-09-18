@@ -184,6 +184,7 @@ spec.md, 미작성)의 몫이다.
   재지 않았다(plan.md §7 — iter2 D9 신규 gap).** 공개 API 라 호출은
   가능하지만, `ValidationRef`/`ContextRef` 구성 + `store.submit()`
   헬퍼의 정확한 형태는 M3 착수 시 확정한다.
-- `director_api.py` `post_apply()` 에 세션 바인딩을 추가하는 정확한 위치
-  (`apply()` 호출 전 vs credential 검증 뒤)는 M1 착수 시 그 함수를 다시
-  읽어 확정한다 — 현재는 "함수 진입부"로만 정해뒀다.
+- 세션 바인딩은 `run_director_apply()` 안에 둔다(REQ-LDSEND-013/015). 그
+  함수 안에서의 정확한 위치(`ApplyCoordinator.apply()` 호출 직전부터
+  `revoke_clearances()` 이후 `finally` 까지)는 추출 착수 시 다시 읽어
+  확정한다 — credential 검증은 `post_apply()` adapter 에 남는다.
