@@ -1748,3 +1748,47 @@ canary_compliance_check:
   applicable: false
   reason: "이 SPEC 은 자신의 sync 절에서 검증하는 forward-looking policy 를 정의하지 않는다"
 ```
+
+## §J 콘솔 실기 관측 시도 (2026-09-18)
+
+**Claim** — 콘솔 승격부 3건(AC-021·024·032 각 일부)은 이번에도 관측하지 못했다.
+막은 것은 두 가지이며, 첫째는 해소했고 둘째는 남았다.
+
+**1. onPC 가 UDP 8000 을 열지 않던 문제 — 해소**
+
+- 증상: `netstat -an -p udp | grep '\.8000'` 무출력, `lsof -p <app_gma3>` 에 UDP *:30020 만.
+  onPC 재시작(PID 69352 → 81528) 뒤에도 동일.
+- 원인: onPC `In & Out → OSC` 의 `Interface=<None>` + `Preferred IP=10.0.0.0/8`.
+  Interface 가 None 이면 onPC 는 Preferred IP 범위의 인터페이스를 고른다. 맥 IP 가
+  `10.53.41.207`(옛 onPC 가 쥐고 있던 CLOSED 소켓의 출발 주소)에서 `172.30.1.224` 로
+  바뀌어 범위에 맞는 인터페이스가 사라졌고, OSC 소켓이 오류 없이 생성되지 않았다.
+- 함정: Preferred IP 가 127.x 를 배제하는 동안에는 Interface 목록에서 `lo0` 를 골라도
+  적용되지 않았다(2회 시도, 캡처로 `<None>` 유지 확인).
+- 조치(사용자가 콘솔에서): Preferred IP `127.0.0.1/8`(화면 표기 `127.0.0.0/8`) →
+  Interface 가 자동으로 `<lo0 (127.0.0.1)>` → Enable Input/Output ON.
+- Evidence:
+  ```
+  $ lsof -nP -p 81528 -a -iUDP
+  app_gma3 81528 ... UDP *:30020
+  app_gma3 81528 ... UDP *:8000
+  app_gma3 81528 ... UDP *:9005
+  $ uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005 --skip-exec
+    [PASS] ping: ok   live version=1.6.5 plugin=CopilotResponder
+    [PASS] state: ok  node={... 'name': 'Sequences'} children=17
+  result: PASS
+  ```
+
+**2. 승격부 관측 경로가 코드에 없다 — 미해소 (콘솔 문제 아님)**
+
+- `BundleSender` 는 Protocol 선언(`server/director/execution.py:231`)뿐이며, 테스트를
+  제외하면 구현체가 0개다(`grep -rn -E 'bundle_sender|BundleSender' server | grep -v tests/`).
+- `DirectorApiDeps.bundle_sender` 기본값 `None` → apply 는 journal 까지만 기록하고 전송을
+  건너뛴다(`director_api.py:440`). 이 절 위의 "설계 판단 — 콘솔 송신 seam"이 이미 적어 둔 사항.
+- 운영 서버 `server/web/serve.py` 는 `director=` 를 넘기지 않아 `/api/director/v1/...`
+  라우트 자체가 마운트되지 않는다(`app.py:962`).
+- 따라서 콘솔이 정상이어도 "apply 가 콘솔에 실제로 적용됐는가"를 볼 수 있는 경로가 없다.
+  송신기 구현 + serve.py 배선은 후속 작업(큐 카드)으로 넘긴다.
+
+**Gaps** — AC-021·024·032 승격부 3건 전부 미관측. ping/state 왕복만 관측했다.
+**Residual-risk** — onPC OSC 설정은 쇼 파일에 저장해야 유지된다. 저장하지 않은 쇼나
+Preferred IP 가 기본값인 새 쇼에서는 같은 증상이 재발한다.
