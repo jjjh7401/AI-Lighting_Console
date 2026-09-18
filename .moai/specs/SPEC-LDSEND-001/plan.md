@@ -358,7 +358,7 @@ SPEC 이 존재하는 이유(AC-LDPLUGIN-021/024/032 를 실기로 관측하는 
 | 단계 | REQ | 파일 소유 | 완료 산출물 | 콘솔 | TDD |
 |---|---|---|---|---|---|
 | M1 인터페이스 확정 | 003, 005, 006, 013, 015 | 기존 `server/orchestrator/ports.py` **EXTEND**(`outcome` 필드); 기존 `server/safety/gate.py` **EXTEND**(`revoke_clearances()` 추가 + `_execute_cleared()` 의 6곳 `ExecutionResult(...)` 생성에 `outcome=` 채움 — §2.0-가, `deploy_plugin_source()` 의 5곳은 PRESERVE); 기존 `server/director/execution.py` **EXTEND**(`GatePort` Protocol 에 `revoke_clearances` 추가, `ApplyCoordinator.revoke_clearances()` 위임 메서드 추가, 신규 `run_director_apply()` 공유 함수 — §2.0-마·REQ-015); 기존 `server/director/director_api.py` **EXTEND**(`post_apply()` 본문을 `run_director_apply()` 호출로 교체 — 행동 보존); 기존 `server/tests/test_safety_gate.py` **EXTEND**; 신규 `server/tests/test_run_director_apply.py`(공유 함수 자체의 단위 시험 — fake coordinator/journal/sender) | `revoke_clearances()` 가 자기 세션 카운터만 비운다, `ExecutionResult.outcome` 이 ok/failed/unconfirmed 를 정확히 구분, `run_director_apply()` 가 전용 세션을 바인딩하고 예외에도 되돌린다(DEFAULT_SESSION_KEY 공유 호출자와 교차하지 않음), 기존 LDRECV apply route 시험(`test_director_ops_lifecycle.py`·`test_director_apply_rejection.py`)이 추출 후에도 그대로 통과한다(REQ-015 행동 보존) | 아니오 | RED 먼저 |
-| M2 실물 송신기 | 001, 002, 004 | 신규 `server/director/sender.py`(`GateBundleSender` 클래스, `BundleSender` Protocol 구현); 신규 `server/tests/test_director_sender.py` | 순서대로 송신, 첫 미확인 뒤 중단, 넷 중 하나의 상태 반환, 콘솔 링크 예외를 unconfirmed 로 흡수 — 클리어런스 회수(M1)는 M2 의 책임이 아니라 M1 이 배선한 `run_director_apply()` 의 책임이다(§2.0-나/마) | 아니오 | RED 먼저 |
+| M2 실물 송신기 | 001, 002, 004 | 신규 `server/orchestrator/bundle_sender.py`(`GateBundleSender` 클래스, `BundleSender` Protocol 구현); 신규 `server/tests/test_bundle_sender.py` | 순서대로 송신, 첫 미확인 뒤 중단, 넷 중 하나의 상태 반환, 콘솔 링크 예외를 unconfirmed 로 흡수 — 클리어런스 회수(M1)는 M2 의 책임이 아니라 M1 이 배선한 `run_director_apply()` 의 책임이다(§2.0-나/마) | 아니오 | RED 먼저 |
 | M3 관측 도구 골격 | 007, 009, 012 | 신규 `server/tools/director_apply_observe.py`; 신규 `server/tests/test_director_apply_observe.py` | `build_console_stack()` 재사용(dry-run 시 `attempt_session_backup=False`, D11), 로컬 `DirectorStore`/`ApprovalRegistry` 구성 + 공개 `approve()` 로 `ldsend-observe-harness` 라벨 `ApprovalBinding` 발급(§2.0-마), `run_director_apply()` 만 호출(`director_api.py` import 안 함, §2.0 D9 — D6 뒤집힘), 인자 파싱, dry-run 기본값, `--execute` 없이는 콘솔에 아무것도 쓰지 않는다는 것(세션 시작 백업 포함)을 fake 콘솔로 확인 | 아니오 | RED 먼저 |
 | M4 시나리오 배선 | 008, 010, 011, 014 | `server/tools/director_apply_observe.py` 계속 확장 | AC-021/024/032 세 시나리오 함수(각각 `run_director_apply()` 호출), destination 점유 확인, cleanup **명령 출력**(REQ-011 — 도구는 실행하지 않음), 백업 선행조건 관측 기록 경로(REQ-014) | 아니오(로직) / 예(§4 실행 자체) | RED 가능한 부분만(dry-run 출력 형태, cleanup 출력 형태) |
 | M4a 실기 탐색(AC-024 명령 확정) | (§7 미검증, §2.0-라) | 코드 없음 — `progress.md` 기록만, 그 결과로 M4 의 AC-024 시나리오 함수를 확정 | 후보 1(`Store Sequence <N>` on 점유됨)·후보 2 를 onPC 에 먼저 시도한 기록, 채택 명령 확정 | **예** | n/a — 수동, HALT 조건(§2.0-라) |
@@ -385,6 +385,11 @@ M1 → M2 → M3 → M4 → M4a → M5. M2 는 M1 의 `revoke_clearances()`/`out
 | `deploy_plugin_source()` 의 `ExecutionResult(...)` 생성 지점 다섯(`gate.py:861,865,890,892,900`) | M7 플러그인 배포 전용 — 이 SPEC 의 `execution_port` 경로와 무관하다(§2.0-가). `outcome=` 을 채우지 않으며, 그로 인한 기본값(`"ok"`) 불일치는 이 SPEC 이전부터 있던 것으로 후속 카드에 남긴다 |
 | 저장·검증·인증층(단, `director_api.py` 는 §2.0-나/마 예외 하나 있음) | `server/director/{models,store,service,context,knowledge,digest,emit,auth,approvals}.py` — 형제 SPEC 소유, 읽고 호출만(`approvals.py` 의 공개 `approve()` API 는 관측 도구가 그대로 **호출**한다 — API 자체는 고치지 않는다). `server/director/director_api.py` 는 원칙적으로 동일하게 PRESERVE 이나, **`post_apply()`** 에 한해 §2.0-마 가 요구하는 대로 본문을 `run_director_apply()` 호출(+ 그 반환 튜플을 `JSONResponse` 로 감싸는 코드)로 교체한다 — 검증·라우팅·승인 판단 순서·응답 상태/본문/journal 기록은 바이트 동일해야 한다(REQ-LDSEND-015, 행동 보존) |
 | 스크래치 destination 정책 | `../SPEC-LDRECV-001/spec.md` §2 의 "server-selected 새 Sequence create-only" 원칙을 관측 도구도 그대로 따른다 — overwrite·silent reselection 없음 |
+
+**결정 기록(2026-09-18)**: `server/director` 는 `test_director_boundary.py`
+(SPEC-LDSTORE-001)가 보장하는 콘솔 비접촉 상태를 그대로 유지한다. 송신기
+구현은 `server/director` 밖, `server/orchestrator/bundle_sender.py` 에 두고
+`BundleSender` Protocol 로 주입된다.
 
 ## 4. TDD 순서 (대표 마일스톤 예시)
 
@@ -431,7 +436,7 @@ M1 → M2 → M3 → M4 → M4a → M5. M2 는 M1 의 `revoke_clearances()`/`out
 
 ### M2 (실물 송신기)
 
-1. **RED** `server/tests/test_director_sender.py`: fake 콘솔 링크(즉
+1. **RED** `server/tests/test_bundle_sender.py`: fake 콘솔 링크(즉
    `ConsolePort` 를 흉내내는 fake — `execute(command) -> ExecOutcome`)와
    fake gate(`GatePort` Protocol — `.lock`·`.execute_preapproved()`)를
    주입해 — 전부 ok → `STATE_ACKNOWLEDGED`; 첫 명령이 명시적으로 실패(그 전
@@ -502,7 +507,7 @@ M1 → M2 → M3 → M4 → M4a → M5. M2 는 M1 의 `revoke_clearances()`/`out
 uv run pytest -q
 
 # 이 SPEC 범위
-uv run pytest server/tests/test_safety_gate.py server/tests/test_director_sender.py \
+uv run pytest server/tests/test_safety_gate.py server/tests/test_bundle_sender.py \
   server/tests/test_run_director_apply.py server/tests/test_director_apply_observe.py -q
 
 # 회귀 — ExecutionResult 소비자 다섯(D3 정정: "넷"이 아니다) 전부
@@ -518,7 +523,7 @@ uv run pytest server/tests/test_director_ops_lifecycle.py server/tests/test_dire
 uv run pytest -q
 
 # 경계: 이 층은 OSC 를 직접 만지지 않는다
-grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/sender.py server/tools/director_apply_observe.py \
+grep -rnE "^\s*(from|import)\s+server\.bridge" server/orchestrator/bundle_sender.py server/tools/director_apply_observe.py \
   || echo "OK - no direct OSC import"
 
 # 경계: 관측 도구가 director_api.py(fastapi 의존)를 import 하지 않는지(D9)

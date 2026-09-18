@@ -20,7 +20,7 @@
 
 | AC | REQ | 종류 | 기준 |
 |---|---|---|---|
-| AC-LDSEND-001 | 001 | S+D | **Given** `GateBundleSender` 모듈, **When** `grep -rnE "^\s*(from\|import)\s+server\.bridge" server/director/sender.py`, **Then** 매치 0. **Given** `send()` 호출, **When** 명령을 보냄, **Then** 그 호출이 오직 주입된 `gate.execution_port.execute()` 경로로만 관측된다(fake gate 의 호출 카운트로 확인). |
+| AC-LDSEND-001 | 001 | S+D | **Given** `GateBundleSender` 모듈, **When** `grep -rnE "^\s*(from\|import)\s+server\.bridge" server/orchestrator/bundle_sender.py`, **Then** 매치 0. **Given** `send()` 호출, **When** 명령을 보냄, **Then** 그 호출이 오직 주입된 `gate.execution_port.execute()` 경로로만 관측된다(fake gate 의 호출 카운트로 확인). |
 | AC-LDSEND-002 | 002 | D | **Given** 3개 명령을 담은 bundle, **When** 2번째 명령이 미확인(failed 또는 unconfirmed) 결과를 내는 fake 콘솔, **Then** 3번째 명령은 `gate.execution_port.execute()` 가 호출되지 않는다(mock 호출 카운트 2). |
 | AC-LDSEND-003 | 003 | D | 아래 표의 각 조건을 fake gate/콘솔로 재현해 `send()` 반환값이 표와 일치하는지 확인한다(5개 시나리오 전부). |
 | AC-LDSEND-004 | 004 | D | **Given** fake 콘솔 링크가 `execute()` 호출 시 예외를 던지도록 구성, **When** `send(bundle)` 호출, **Then** 예외가 `send()` 밖으로 전파되지 않고 반환값은 `STATE_UNKNOWN` 이다. |
@@ -41,7 +41,7 @@
 ### AC-LDSEND-001~006, 013, 015 — 송신기·클리어런스·세션 격리·공유 함수
 
 ```bash
-uv run pytest server/tests/test_director_sender.py -q
+uv run pytest server/tests/test_bundle_sender.py -q
 uv run pytest server/tests/test_safety_gate.py -q
 uv run pytest server/tests/test_run_director_apply.py -q   # 013, 015의 공유 함수 자체
 uv run pytest server/tests/test_director_ops_lifecycle.py server/tests/test_director_apply_rejection.py -q   # 015 행동 보존(회귀)
@@ -102,7 +102,7 @@ grep -n "ldsend-observe" server/tools/director_apply_observe.py
 
 ```bash
 # 이 SPEC 이 만드는 코드는 OSC 를 직접 만지지 않는다
-grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/sender.py \
+grep -rnE "^\s*(from|import)\s+server\.bridge" server/orchestrator/bundle_sender.py \
   server/tools/director_apply_observe.py ; test $? -ne 0 && echo "PASS: no direct OSC import"
 
 # ExecutionResult 소비자 다섯(D3 정정 — "넷"이 아니다)의 회귀 없음(§2.0-가 전제 검증)
@@ -114,7 +114,7 @@ uv run pytest server/tests/test_measurement_runner.py server/tests/test_web_sess
 uv run pytest -q
 ```
 
-**양성 대조**: grep 자체가 동작하는지 확인한다 — `grep -rn "def " server/director/sender.py`
+**양성 대조**: grep 자체가 동작하는지 확인한다 — `grep -rn "def " server/orchestrator/bundle_sender.py`
 가 매치를 내는지 같은 회차에서 본다.
 
 ## 4. go / no-go
