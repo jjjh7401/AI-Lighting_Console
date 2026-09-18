@@ -314,6 +314,221 @@ tools/director_apply_observe.py` 신설 시)도 같은 경계 시험(있다면 �
 - 재측정 @`ca37eb05`: `uv run pytest -q -p no:cacheprovider` → exit 0, `13538 passed, 35 skipped, 1 warning` (`.moai/state/verify/ae8e2656/m2-full-2.txt`).
 - 남은 일: plan.md·acceptance.md 의 옛 경로 표기 8곳(plan 4, acceptance 4) 정정 — manager-spec.
 
+### M3 — 관측 도구 골격 (REQ-LDSEND-007/009/012)
+
+**작업 위치**: `.claude/worktrees/agent-a7a879f40154e4519` — 격리된 별도
+워크트리라, `f1bea4c2`(`WT-bundle-sender`, M2 반영 뒤 최신 커밋) 위에 로컬
+브랜치 `ldsend-001-m3` 를 새로 만들어 작업했다(`git switch -c ldsend-001-m3
+f1bea4c2`) — `f1bea4c2` 가 이 워크트리에서 직접 reachable(`git cat-file -t`
+확인)했으므로 그 커밋 위에 바로 분기했다. 병합은 오케스트레이터가 이
+브랜치를 `WT-bundle-sender`/`t420` 으로 반영해야 한다(M1/M2 와 동일한 절차).
+
+**RED (명령 + 그대로의 출력)** — `server/tools/director_apply_observe.py`
+작성 전:
+
+```
+$ uv run pytest server/tests/test_director_apply_observe.py -q -p no:cacheprovider
+==================================== ERRORS ====================================
+_________ ERROR collecting server/tests/test_director_apply_observe.py _________
+ImportError while importing test module '.../server/tests/test_director_apply_observe.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+.../importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/tests/test_director_apply_observe.py:39: in <module>
+    import server.tools.director_apply_observe as tool
+E   ModuleNotFoundError: No module named 'server.tools.director_apply_observe'
+=========================== short test summary info ============================
+ERROR server/tests/test_director_apply_observe.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.06s
+```
+
+**GREEN — 구현**:
+
+- 신규 `server/tools/director_apply_observe.py`: CLI 골격 — `argparse` 로
+  인자를 먼저 파싱하고(`scenario` positional + `--host`/`--port`/
+  `--listen-port`(공용 `add_listen_port_argument`, t61 규율 — 기본값
+  없음)/`--execute`/`--sequence-range-start`), `build_console_stack(...,
+  attempt_session_backup=args.execute)` 로 스택을 구성한다(D11 — dry-run
+  이면 `False`). dry-run 은 계획만 출력하고 그 자리에서 반환한다 —
+  `run_director_apply()` 를 호출하지 않는다. `--execute` 경로는
+  `_build_local_approval()`(로컬 `DirectorStore.submit()` + 공개
+  `ApprovalRegistry.approve()` API 로 `ldsend-observe-harness` 라벨의 진짜
+  `ApprovalBinding` 발급, `_register()` 지름길 미사용)로 승인을 만들고,
+  `ApplyCoordinator(journal=<로컬>, approvals=<로컬>, store=<로컬>,
+  gate=stack.gate)` 를 구성해 `run_director_apply(bundle_sender=
+  GateBundleSender(stack.gate.execution_port), ...)` 를 정확히 1회 호출한다
+  (run = CLI 1회 호출 = 시나리오 1개, D12). 성공이든 실패든 `finally` 에서
+  cleanup(`Delete Sequence <N>` 문자열만 표준출력에 출력, 송신 없음)을
+  출력한다. `server.director.director_api`(`fastapi` 의존)는 import 하지
+  않는다.
+- 시나리오 본문(`_plan_for_scenario`)은 `@MX:TODO` 로 명시적으로 표시된
+  M4 자리표시자다 — 021/024/032 세 시나리오 모두 안전 대조군 명령
+  (`"Fixture 901 At 50"`, 이 코드베이스가 두루 쓰는 non-blacklisted 명령)
+  하나짜리 bundle 을 만들어 `run_director_apply()` 경로 자체(REQ-007)만
+  태운다. REQ-LDSEND-008(destination 점유 확인)·010(readback 재확인)·
+  014(백업 선행조건 관측)는 이 함수에 아직 없다 — M4 의 몫이다.
+- 신규 `server/tests/test_director_apply_observe.py`: 26개 시험 —
+  정적 경계 8(직접 `server.bridge`/`director_api` import 없음,
+  `run_director_apply`/`build_console_stack`/`add_listen_port_argument
+  (parser)`/`ldsend-observe-harness` 소스 표지, `ApprovalRegistry()` 모듈
+  스코프 생성 없음, `serve.py` 미배선), 인자 파싱 4(`--execute` 기본
+  `False`, `--sequence-range-start` 기본 `9900`, 시나리오 선택지 제한,
+  `--listen-port` 필수), dry-run 배선 3(`attempt_session_backup` 인자가
+  dry-run 에서 `False`/`--execute` 에서 `True`, 세 가지 인자 조합 모두
+  콘솔(fake gate) 호출 0회 + 스택 `stop()` 1회), execute 배선 4
+  (`run_director_apply` 호출 1회·`principal_id`/`bundle_sender`/
+  `interference` 인자, cleanup+결과 출력, 예외 시에도 cleanup 출력),
+  로컬 승인 라벨링 2(`principal_id == "ldsend-observe-harness"`, 서로 다른
+  로컬 레지스트리 인스턴스 간 비공유), `run_director_apply` 종단 배선 1
+  (진짜 `SafetyGate`+fake 콘솔 링크로 `_run_scenario()` 를 실제로 태워
+  명령이 fake 콘솔까지 도달하는지), cleanup 4(명령 형태, 콘솔/레지스트리
+  터치 없음을 시그니처로 강제).
+
+**E1 AC PASS/FAIL 매트릭스 (M3 관련 3개 — 007·009·012, 로컬로 닫히는
+부분만; 012 의 `server/web/serve.py` grep 은 별도 §5 명령으로 확인)**:
+
+| AC | 시험 | 결과 |
+|---|---|---|
+| AC-LDSEND-007 | `TestStaticBoundaries::test_no_director_api_import`·`test_calls_run_director_apply`·`test_uses_build_console_stack`·`test_no_direct_bridge_import` + §5 grep 4종 | PASS |
+| AC-LDSEND-009 | `TestDryRunBuildsStackWithBackupDisabled::test_dry_run_passes_attempt_session_backup_false`·`test_execute_passes_attempt_session_backup_true`; `TestDryRunSendsNothing::test_no_console_writes_without_execute`(3 인자 조합) | PASS |
+| AC-LDSEND-012 | `TestStaticBoundaries::test_labels_the_harness_principal`·`test_not_wired_into_serve_py`; `TestBuildLocalApproval::test_binding_is_labelled_with_the_harness_principal`·`test_two_local_registries_are_independent_instances`; `TestExecuteInvokesRunDirectorApplyOncePerScenario::test_execute_calls_run_director_apply_exactly_once`(cleanup 이 `ApprovalRegistry` 를 만들지 않음은 `TestCleanup::test_cleanup_prints_without_touching_any_console_or_registry` 의 시그니처 검사로 확인) | PASS |
+
+**E2 명령 + 관측 출력**:
+
+```
+$ uv run pytest server/tests/test_director_apply_observe.py -q -p no:cacheprovider
+..........................                                               [100%]
+26 passed in 0.83s
+```
+
+**E5 lint**: `uv run ruff format server/tools/director_apply_observe.py
+server/tests/test_director_apply_observe.py` → 최초 실행에서 `2 files
+reformatted`(재측정 시 `2 files left unchanged`). `uv run ruff check`
+양쪽 → 최초 `F841`(시험 안 쓰는 지역변수 `store_b`) 1건 발견·제거 → 재측정
+`All checks passed!`.
+
+**§5 plan.md 경계 grep (커밋 뒤 재측정)**:
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/orchestrator/bundle_sender.py server/tools/director_apply_observe.py
+(매치 없음) exit=1 — OK, no direct OSC import
+
+$ grep -nE "^\s*(from|import)\s+server\.director\.director_api" server/tools/director_apply_observe.py
+(매치 없음) exit=1 — OK, director_api 미참조(D9)
+
+$ grep -n "run_director_apply" server/tools/director_apply_observe.py
+10:이 도구는 ``server.director.execution.run_director_apply()`` 만 호출한다 —
+26:헬퍼, cleanup 출력, ``run_director_apply()`` 배선까지만 M3 의 범위다. 시나리오
+56:from server.director.execution import ApplyCoordinator, ExecutionJournal, run_director_apply
+103:    ``run_director_apply()`` 를 실제로 한 번 타게 하는 최소 자리표시자
+207:    """시나리오 하나를 ``run_director_apply()`` 로 실제로 구동한다.
+217:    로직은 아직 여기 없다. 이 함수는 ``run_director_apply()`` 호출 경로
+247:            response_body, response_status = run_director_apply(
+
+$ grep -n "director_apply_observe" server/web/serve.py
+(매치 없음) exit=1 — OK, not wired into serve.py
+
+$ grep -n "ldsend-observe-harness" server/tools/director_apply_observe.py
+21:문자열 ``ldsend-observe-harness`` 로 로컬 관측 하네스 산출물임을 표시한다.
+69:HARNESS_PRINCIPAL_ID = "ldsend-observe-harness"
+
+$ grep -n "def cleanup\|Delete Sequence" server/tools/director_apply_observe.py
+276:    return [f"Delete Sequence {destination['sequence_id']}"]
+```
+
+**추가(t61 규율) — `server/tests/test_probe_port_discipline.py`·
+`server/tests/test_director_boundary.py` 재측정**:
+
+```
+$ uv run pytest server/tests/test_probe_port_discipline.py server/tests/test_director_boundary.py -q -p no:cacheprovider
+............                                                             [100%]
+12 passed in 0.14s
+```
+
+이 도구는 `build_console_stack` 을 import 하므로 `test_probe_port_
+discipline.py` 의 콘솔 접촉 도구 표지에 자동으로 걸린다 — `--listen-port`
+에 기본값을 두지 않고 공용 `add_listen_port_argument(parser)` 를 그대로
+불러 썼으므로 그대로 통과했다(별도 대응 불필요, 사전에 인지하고 설계에
+반영함).
+
+**전체 회귀 (post-commit, `331e868a`)**:
+
+```
+$ uv run pytest -q -p no:cacheprovider
+13564 passed, 35 skipped, 1 warning in 181.87s (0:03:01)
+```
+
+exit=0. baseline(M2 뒤, `ca37eb05`) `13538 passed, 35 skipped` 대비 델타
++26(`test_director_apply_observe.py` 신규 26개), skip 수 불변, 실패 0 —
+회귀 없음. 전체 출력: `.moai/state/verify/m3-full.txt`(post-commit 재측정).
+
+**CLI `--help` (verbatim)**:
+
+```
+$ uv run python -m server.tools.director_apply_observe --help
+usage: director_apply_observe [-h] [--host HOST] [--port PORT] --listen-port
+                              LISTEN_PORT [--execute]
+                              [--sequence-range-start SEQUENCE_RANGE_START]
+                              {021,024,032}
+
+SPEC-LDSEND-001 M3~M4 로컬 관측 도구 — director-apply 경로(AC-LDPLUGIN-021/024/032)를
+실기로 관측한다.
+
+positional arguments:
+  {021,024,032}         관측할 시나리오 — 021(승격부)/024(관측부)/032(실행부). 1회 실행(run) =
+                        시나리오 1개(REQ-LDSEND-008 D12).
+
+options:
+  -h, --help            show this help message and exit
+  --host HOST           콘솔 OSC 송신 목적지 host.
+  --port PORT           콘솔 OSC 송신 목적지 port.
+  --listen-port LISTEN_PORT
+                        회신 수신 포트. **기본값 없음** — 이 저장소의 하네스들이 9005 와 9000 으로 갈려
+                        있었고(t61), 기본값에 기대면 틀린 포트로 조용히 쏜 뒤 그 침묵을 「응답기가 죽었다」로
+                        오독한다. 현장 실측값은 9005.
+  --execute             명시하지 않으면 dry-run(계획만 출력, 콘솔로 아무것도 보내지 않음 — 세션 시작 백업
+                        포함, REQ-LDSEND-009). 지정하면 실제로 콘솔에 쓴다.
+  --sequence-range-start SEQUENCE_RANGE_START
+                        스크래치 destination 으로 쓸 Sequence 번호대의 시작값(기본 9900) — 쓰기
+                        전 비어 있는지 확인한다(REQ-LDSEND-008, 확인 로직 자체는 M4).
+```
+
+**CLI dry-run 실측(콘솔 접촉 없음 — 실행 근거)**: `build_console_stack()`
+이 여는 것은 로컬 UDP 수신 소켓 bind 뿐이다(`OscBridge.start()` →
+`_bind_receiver()`, `server/bridge/osc.py:203-242` 실측 — 송신은 커넥션리스
+UDP 라 목적지가 존재하지 않아도 되고, dry-run 은 애초에 `send`/`execute`
+경로를 하나도 부르지 않는다). 그래서 임의의 미사용 고포트(`--listen-port
+19099`)로 실제 CLI 를 한 번 돌렸다 — 콘솔이 없어도 안전하다고 판단한 근거를
+먼저 확인한 뒤 실행함:
+
+```
+$ uv run python -m server.tools.director_apply_observe 021 --listen-port 19099
+# scenario 021 — AC-LDPLUGIN-021 승격부 — apply 가 실제로 콘솔에 적용됐는가
+destination: {'show_id': '1', 'sequence_id': '9900'}
+commands:
+  Fixture 901 At 50
+dry-run — 콘솔로는 아무것도 보내지 않습니다(세션 시작 백업 포함, D11 — build_console_stack(attempt_session_backup=False)).
+exit=0
+```
+
+**Gaps**: M4(시나리오 배선·021/024/032 실제 명령·readback·destination 점유
+확인·백업 선행조건 관측)·M4a(실기 탐색)·M5(실기 관측)는 이 M3 커밋의
+범위가 아니다 — 배차서의 지시대로 M3 커밋 뒤 정지한다. REQ-LDSEND-010(readback
+확인)·014(백업 선행조건 관측 전체)는 M3 의 자리표시자 시나리오가 아직
+호출하지 않는다 — `_print_result()` 가 이 사실을 명시적으로 출력한다.
+
+**Residual risk**: 이 M3 산출물은 `.claude/worktrees/agent-a7a879f40154e4519`
+의 로컬 브랜치(`ldsend-001-m3`, `f1bea4c2` 위)에만 존재한다 —
+`WT-bundle-sender`/`t420` 으로 병합·반영되기 전까지는 원래 배차 대상
+브랜치에 반영되지 않은 상태다(M1/M2 와 같은 패턴). `_plan_for_scenario()`
+의 자리표시자 명령(`"Fixture 901 At 50"`)은 실제 스크래치 destination
+(`Store Sequence <N> Cue <M> /Merge`)을 전혀 건드리지 않는다 — M4 가 실제
+명령으로 교체할 때 REQ-LDSEND-014 의 백업 선행조건 관측 배선도 함께
+필요해진다(그 명령들은 blacklist held 경로를 타므로, §1 규범표 spec.md).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
