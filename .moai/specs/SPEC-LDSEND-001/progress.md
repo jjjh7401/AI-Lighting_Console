@@ -53,3 +53,16 @@ _<pending run-phase>_
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync-phase>_
+
+## §F Phase 4 Mode Selection
+
+- 입력: Tier M · 예상 파일 7~8개(ports.py·gate.py·execution.py·director_api.py EXTEND, sender.py·director_apply_observe.py 신규 + 시험 3개) · 도메인 2(safety·director) · Python 100% · 코딩 위주(병렬 이득 낮음)
+- 평가: `direct` 아님(다파일) · `fanout` 아님(코딩 위주) · `sweep` 아님(기계적 일괄 변환 아님) · `serial` 선택
+- Decision: serial
+- 근거: 코딩 위주 작업은 순차 하위 에이전트가 기본값이다. M1→M2→M3→M4 는 앞 단계 인터페이스에 의존한다.
+
+## §G Implementation Kickoff (2026-09-18)
+
+- plan-audit: iter1 FAIL 0.75 → iter2 FAIL 0.63 → iter3 **PASS 0.86** (`.moai/reports/plan-audit/SPEC-LDSEND-001-review-3.md`). iter3 D13(문장 잔재)은 `3c6aa451`·`7804dc13` 으로 정정.
+- 사람 결정(2026-09-18): ① `ExecutionResult.outcome` 필드 추가 ② apply 별 전용 세션 + `revoke_clearances()` — 바인딩은 `run_director_apply()` 안 ③ 도구는 `Delete` 를 보내지 않고 정리 명령만 출력 ④ 실패 유발 명령·readback 경로는 M4a 실기 탐색 후 HALT 해 사람 확인 ⑤ 착수 승인: **M1 부터 시작, M4a 앞에서 반드시 정지**.
+- 상태: 착수 승인됨, 구현 미착수(M1 커밋 없음). 콘솔 쓰기(M4a·M5)는 보낼 명령을 보여 주고 다시 확인받은 뒤에만.
