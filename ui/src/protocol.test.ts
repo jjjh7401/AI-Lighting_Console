@@ -352,8 +352,20 @@ describe("healthGuidance with the console-input discriminator", () => {
     expect(guidance).not.toContain("실행 중인지");
   });
 
-  it("keeps the current message when nothing is listening (it is correct there)", () => {
-    expect(healthGuidance("console_offline", "silent")).toBe(CURRENT_OFFLINE);
+  // Live-observed 2026-09-18: onPC was running with Enable Input ON, yet no OSC
+  // socket existed — OSC Interface=<None> + Preferred IP 10.0.0.0/8 lost its only
+  // matching NIC when the Mac's IP changed. The generic "check OSC input is on"
+  // message sent the operator to cycle Enable Input repeatedly, which never helps;
+  // lo0 could not even be selected until Preferred IP admitted 127.x.
+  it("names the Preferred IP / lo0 fix when nothing is listening on the console port", () => {
+    const guidance = healthGuidance("console_offline", "silent");
+    expect(guidance).not.toBeNull();
+    expect(guidance).not.toBe(CURRENT_OFFLINE);
+    expect(guidance).toContain("Preferred IP");
+    expect(guidance).toContain("127.0.0.1/8");
+    expect(guidance).toContain("lo0");
+    // onPC being down is still a possible cause of a free port — keep it named.
+    expect(guidance).toContain("실행 중");
   });
 
   it("keeps the current message when the probe is undetermined (remote console)", () => {
@@ -368,6 +380,13 @@ describe("healthGuidance with the console-input discriminator", () => {
     expect(healthGuidance("responder_degraded", "listening")).toBe(
       healthGuidance("responder_degraded"),
     );
+  });
+
+  it("never leaks a stack trace or raw-SDK marker in the silent-port guidance", () => {
+    const guidance = healthGuidance("console_offline", "silent") ?? "";
+    for (const marker of STACK_MARKERS) {
+      expect(guidance).not.toContain(marker);
+    }
   });
 
   it("never leaks a stack trace or raw-SDK marker in the new guidance", () => {

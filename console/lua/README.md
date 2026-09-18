@@ -59,6 +59,16 @@ Captured by reading a known-working show's `Menu → Settings → In & Out → O
 screen and exporting both rows via onPC's native `Export`. Reproduce this
 exactly — a plausible-looking row is not the same as this one:
 
+0. **Preferred IP**: set to **`127.0.0.1/8`** (onPC displays it as
+   `127.0.0.0/8`) BEFORE touching Interface. onPC's default `10.0.0.0/8`
+   causes two silent failures, both verified live 2026-09-18: (a) choosing
+   `lo0` in the Interface list does not stick — it stays `<None>`; (b) with
+   Interface `<None>`, onPC binds OSC on a NIC inside Preferred IP, so the
+   moment the Mac's IP leaves `10.x` (Wi-Fi/network change) NO OSC socket is
+   created at all — `lsof`/`netstat` show nothing on UDP 8000, onPC restarts
+   don't help, and cycling Enable Input doesn't either. With `127.0.0.1/8`,
+   Interface resolves to `lo0` on its own and the link no longer depends on
+   which network the Mac is on.
 1. **Interface**: set to **`lo0 (127.0.0.1)`**, not the machine's Wi-Fi/
    Ethernet adapter (`en0` or similar). This is the single most-missed step:
    a console left on `en0` silently never delivers 127.0.0.1 traffic even
@@ -77,6 +87,9 @@ exactly — a plausible-looking row is not the same as this one:
    `SendCommand=Yes`, `Receive=No`. This is the row `CONFIG.osc_slot` in the
    Lua must index — the responder's `SendOSCMessage(CONFIG.osc_slot, ...)`
    reply channel.
+5. **Save Show**. OSC config lives in the show file; an unsaved fix reverts on
+   the next load. If `CopilotOscTemplate.show` still carries Preferred IP
+   `10.0.0.0/8`, re-save the fixed show over it so new shows inherit the fix.
 5. Confirm with a round trip: run `Plugin "CopilotResponder" "ping <id>"` on
    the console command line and check the app's `/healthz` — `health` flips
    from `console_offline` to `online`.
@@ -234,6 +247,7 @@ Expected output: `[PASS] ping`, `[PASS] state` (with a node/children summary),
 | `exec` reports failure for a command that clearly worked | `Cmd()` success-token mismatch (ASSUMPTION-3): note the raw `result` string in the reply and extend `SUCCESS_RESULTS` in the Lua file. |
 | A second responder-looking plugin sits in the pool and you fear double replies | It cannot reply. Requests name the plugin (`Plugin "CopilotResponder" "..."`), so a copy under any other name — `CopilotResponder#2`, the name an in-console duplicate gets — is never invoked (§6, 2026-07-25 finding). Confirm rather than assume: one `ping` returns exactly one `pong`. |
 | A `state` listing is short and `truncated:true`, and re-querying returns the same children | Expected — there is no paging. Enumerate slot by slot against `node.childCount` (PROTOCOL.md §4.2). |
+| Nothing listens on UDP 8000 at all (`lsof -nP -iUDP:8000` empty; app shows "입력 없음") although onPC runs with Enable Input ON — typically right after a Wi-Fi/network change | Interface `<None>` + Preferred IP `10.0.0.0/8`: onPC only binds OSC on a NIC inside Preferred IP, and the Mac's new IP is outside it. Restarting onPC and cycling Enable Input do NOT help. Set Preferred IP to `127.0.0.1/8` (Interface then becomes `lo0` by itself), turn Enable Input/Output ON, Save Show (§1.1 step 0). Verified 2026-09-18: 8000 bound and `responder_roundtrip --skip-exec` → ping/state PASS immediately. |
 | App reports `console_offline` forever on a NEW show even though every OSC row's IP/port/prefix is verified correct by eye | Check **Interface** at the top of `In & Out > OSC` — if it is bound to the machine's Wi-Fi/Ethernet adapter (`en0` or similar) instead of `lo0 (127.0.0.1)`, 127.0.0.1 traffic is silently dropped with no error surfaced anywhere. Verified 2026-08-12: a show with an otherwise-identical OSC table connected the instant Interface was set to `lo0`. |
 
 Record the outcome of this live round-trip (pass or deviations found) in the

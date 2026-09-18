@@ -297,7 +297,11 @@ def osc_bootstrap_guide(console_port: int, receive_port: int) -> dict:
     and imported correctly and the console will still never reply: the
     verified failure mode is an OSCData row bound to the machine's Wi-Fi/
     Ethernet interface (``en0``) instead of loopback, which silently drops
-    127.0.0.1 traffic even after every port number is right.
+    127.0.0.1 traffic even after every port number is right. A second verified
+    failure (2026-09-18): Interface ``<None>`` with Preferred IP left at
+    ``10.0.0.0/8`` binds no OSC socket at all once the Mac's IP leaves 10.x, and
+    lo0 cannot be selected until Preferred IP admits 127.x — hence the
+    Preferred IP step comes first.
 
     ``install_osc_templates`` stages the two row files so steps 3-4 are an
     Import + file pick rather than re-typing every field; the interface and
@@ -310,7 +314,12 @@ def osc_bootstrap_guide(console_port: int, receive_port: int) -> dict:
         "steps": [
             "Menu > Settings > In & Out > OSC 화면을 연다.",
             (
-                "Interface를 lo0 (127.0.0.1)로 설정한다 — "
+                "Preferred IP를 127.0.0.1/8로 바꾼다 — 기본값 10.0.0.0/8이면 "
+                "Interface에서 lo0를 골라도 적용되지 않고, 맥 IP가 10.x를 벗어나면 "
+                "OSC 포트가 오류 없이 아예 열리지 않는다."
+            ),
+            (
+                "Interface가 lo0 (127.0.0.1)인지 확인한다(아니면 lo0로 설정) — "
                 "en0/Wi-Fi로 두면 127.0.0.1 트래픽이 조용히 사라진다."
             ),
             (
@@ -323,5 +332,9 @@ def osc_bootstrap_guide(console_port: int, receive_port: int) -> dict:
             ),
             "Enable Output과 Enable Input을 둘 다 켠다(노란색으로 표시되면 켜진 상태).",
             'Plugin "CopilotResponder" "ping <id>"를 콘솔 명령줄에서 한 번 실행해 왕복을 확인한다.',
+            (
+                "쇼를 저장한다(Save Show) — OSC 설정은 쇼 파일에 들어 있어 "
+                "저장하지 않으면 다시 열 때 되돌아간다."
+            ),
         ],
     }
