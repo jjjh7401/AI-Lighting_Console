@@ -867,6 +867,9 @@ exit=1
   - **예측 반증**: pre-risky 백업은 명령마다가 아니라 승인된 배치 1회였다(SaveShow 총 2회). 위 "apply 마다 … 코드 판독상 예상"은 명령 단위로는 틀렸다.
 - 후보 ②는 시도하지 않음(①이 명시적 실패를 냈다).
 - 콘솔 잔여물: Sequence 9901(3 children). 정리 명령 `Delete Sequence 9901` 은 사람이 실행(9902 는 생성되지 않음).
+- **재현 1회(사람 승인)**: `... 024 --listen-port 9005 --sequence-range-start 9910 --confirmed-failure-command 'Store Sequence {n}' --execute` → exit 0 (`.moai/state/verify/ae8e2656/m4a-024-execute-2.txt`): `bundles: ['acknowledged', 'failed', 'not_sent']`, readback 9911 존재·9912 `path segment not found`. 감사 로그 6-10행(13:41:08Z): SaveShow → approved(3 held) → SaveShow → `Store Sequence 9911 Cue 1 /Merge` ok → `Store Sequence 9911` ok:false `User Canceled Command`. 9912 실행 기록 없음. 두 번 모두 동일.
+- **확정(사람 결정, 2026-09-18)**: AC-024/032 실패 유발 명령 = 후보 ① `Store Sequence {n}`(점유된 scratch 에 맨몸 Store). 도구에는 `--confirmed-failure-command 'Store Sequence {n}'` 로 넘긴다. plan.md §2.0-라의 `'Not allowed'` 인용은 실기 사유와 다르다 — 실기 사유는 `User Canceled Command`(2/2).
+- 콘솔 잔여물 누적: Sequence 9901, 9911.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
