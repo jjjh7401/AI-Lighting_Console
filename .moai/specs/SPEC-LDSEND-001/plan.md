@@ -10,15 +10,16 @@
 이 계획은 **Implementation Kickoff Approval 을 아직 받지 않았다.** 승인 없이
 구현을 시작하지 않는다.
 
-[HARD] **착수 전에 §2.0 의 두 인터페이스 결정(`ExecutionResult.outcome` 확장
-여부, `SafetyGate` 클리어런스 회수 메서드 시그니처)을 먼저 사람에게 확인받는다.**
-둘 다 되돌리기 가장 비싼 결정이다 — 테스트가 한 번 그 형태에 고정되면 이후
-바꾸는 비용이 크다. 이 문서는 각 결정에 권고안을 제시하지만 최종 확정은
-Implementation Kickoff Approval 단계에서 사람이 한다.
+**§2.0 의 인터페이스 결정 네 항목은 사람 확인을 마쳤다(2026-09-18,
+plan-audit iter1 D1-D4 대응).** `ExecutionResult.outcome` 확장(가),
+`SafetyGate` 클리어런스 회수 + 세션 격리(나), readback 질의 경로(다),
+AC-024 실패 유발 명령의 실기 탐색 방침(라) — 넷 다 되돌리기 비싼 결정이라
+Implementation Kickoff Approval 이전에 확정해 뒀다. M1 착수 전 마지막으로
+남는 것은 §6 중단 조건의 재실측(행 번호·버전 드리프트 확인)뿐이다.
 
 ## 2.0 인터페이스 결정 — 가장 먼저 확인받아야 하는 것
 
-### (가) `ExecutionResult`(게이트 쪽) 에 명시적 `outcome` 필드를 추가할지
+### (가) `ExecutionResult`(게이트 쪽) 에 명시적 `outcome` 필드를 추가할지 — **확정(사람 확인 완료, 2026-09-18)**
 
 **문제**: `server/orchestrator/ports.py` 의 `ExecutionResult` 는 `ok: bool`,
 `detail: str` 두 필드뿐이다(24~28행 실측). `SafetyGate._execute_cleared`
@@ -36,22 +37,68 @@ Implementation Kickoff Approval 단계에서 사람이 한다.
 구분한다. 코드 변경이 없다는 장점이 있지만, 사람이 읽으라고 쓴 안내 문구를
 제어 흐름 신호로 쓰는 것은 취약하다 — 문구가 바뀌면 조용히 깨진다.
 
-**대안 B(권장)**: `ExecutionResult` 에 선택적 필드
+**대안 B(채택)**: `ExecutionResult` 에 선택적 필드
 `outcome: str = "ok"`(값: `"ok"`/`"failed"`/`"unconfirmed"`)를 추가하고,
-`gate.py` 안의 기존 `ExecutionResult(...)` 생성 지점 5곳(880~900행,
-917~950행 각각 lock/health 차단·성공·unconfirmed·failed 분기)에서 이 값을
-명시적으로 채운다. 새 필드는 기본값을 가지므로 기존 호출자
-(`server/measurement/runner.py`, `server/web/session.py`,
-`server/web/panel.py`, `server/deploy/pipeline.py` — 전부 `.ok`/`.detail`
-만 읽는 소비자, grep 확인)는 아무 영향을 받지 않는다.
+`gate.py` 안의 기존 생성 지점에서 이 값을 명시적으로 채운다.
 
-**채택(잠정, 사람 확인 대상)**: 대안 B. 문자열 스니핑보다 명시적 필드가
-싸고(추가 LOC ~15줄) 덜 취약하다. [NEEDS CLARIFICATION: 대안 B 로
-`server/orchestrator/ports.py` 를 확장하는 것을 승인하는지, 아니면 대안 A 의
-문자열 판별을 받아들이고 그 취약성을 문서화하는 것으로 충분한지 — Implementation
-Kickoff Approval 전에 확인.]
+**채택: 대안 B. 확정됨 — 아래는 재실측한 생성 지점·소비자 전수다.**
 
-### (나) `SafetyGate` 클리어런스 회수 메서드
+**생성 지점 재실측(11곳, 두 메서드 — "5곳"은 낡은 수였다).**
+`grep -n "ExecutionResult(" server/safety/gate.py` 로 다시 세면 **11개**
+호출부가 **두 개의 서로 다른 메서드**에 걸쳐 있다:
+
+- `deploy_plugin_source()`(845~900행, M7 플러그인 배포 전용 — 이 SPEC 의
+  `execution_port` 경로와 무관) — 5곳(861·865·890·892·900행).
+- `_execute_cleared()`(904~950행 — `_GateExecutor.execute()`(148행)가
+  호출하고, `BundleSender`/관측 도구가 실제로 타는 경로가 여기다) — 6곳
+  (917·921·927·940·943·950행).
+
+**M1 의 범위는 `_execute_cleared()` 의 6곳뿐이다** — 이 SPEC 이 만드는
+`send()`/관측 도구가 지나가는 유일한 경로이기 때문이다(REQ-LDSEND-001/003).
+`deploy_plugin_source()` 의 5곳은 이 SPEC 의 PRESERVE 대상(§3)이고 손대지
+않는다 — **다만 정직하게 밝힌다**: 그 5곳을 안 고치면 `outcome` 필드
+기본값(`"ok"`)이 `ok=False` 인 반환값에도 그대로 남는다(예: 861행
+`ExecutionResult(ok=False, detail="blocked: ...")` 는 `outcome="ok"` 로
+읽힌다). 이는 이 SPEC 이전부터 있던 계약 불일치이고, `deploy_plugin_source()`
+의 유일한 소비자(`server/deploy/pipeline.py`)는 `outcome` 필드를 읽지 않는
+`.ok`/`.detail` 전용 소비자이므로 오늘은 관측 가능한 결함이 아니다 — 이
+SPEC 은 이 불일치를 **만들지 않지만 고치지도 않는다**. 후속 카드로 남긴다.
+
+**소비자 전수 재실측(D3 정정 — grep 두 갈래로 교차검증).**
+
+1. `ExecutionResult` 이름을 직접 import 하는 소비자:
+   `grep -rln "ExecutionResult" server/ --include="*.py" | grep -v "/tests/"`
+   → `server/measurement/runner.py`, `server/director/execution.py`(별개
+   클래스, §1 D7 각주), `server/web/session.py`, `server/web/panel.py`,
+   `server/deploy/pipeline.py`, `server/safety/gate.py`(생산자),
+   `server/orchestrator/ports.py`(정의).
+2. `execution_port.execute()`/`.execution_port` 를 실제로 부르는(덕타이핑)
+   소비자: `grep -rln "execution_port\.execute(\|\.execution_port\b" server/
+   --include="*.py" | grep -v "/tests/"` → 위 넷에 더해
+   **`server/orchestrator/tools.py:2436`**(`result = execution_port.execute
+   (command); if result.ok: ...`) — `.ok`/`.detail` 만 읽고 구조 분해·위치
+   인자 소비 없음(직접 읽음, 확인). `server/tools/*_e2e.py` 아홉 파일도 같은
+   grep 에 걸리지만, 전부 `execution_port=stack.gate.execution_port` 형태로
+   **다른 함수에 전달만** 할 뿐 반환값을 자신이 읽지 않는다(각 파일의 해당
+   줄을 직접 읽어 확인) — 별도 소비자가 아니다.
+
+**결론**: 실제 읽기 전용(`.ok`/`.detail` 전용) 소비자는 **다섯**이다 —
+`server/measurement/runner.py`, `server/web/session.py`(두 자리:
+`outcome_view()` 4401행, `_MeasuredExecutionPort._is_console_result()`
+4551-4556행), `server/web/panel.py`, `server/deploy/pipeline.py`,
+`server/orchestrator/tools.py:2436`. `outcome` 필드는 선택적 기본값을 가지므로
+다섯 모두 영향받지 않는다. acceptance.md §4 no-go 기준은 이 다섯을 전부
+반영하도록 정정했다(D3) — 그리고 최종 백스톱은 여전히 `uv run pytest -q`
+전체 회귀다.
+
+**추가 발견(부수 이득, 이 SPEC 범위 밖)**: `server/web/session.py:4401,4556`
+와 `server/measurement/runner.py:193` 셋은 이미 `UNCONFIRMED_MARKER =
+"execution unconfirmed"`(정확히 대안 A 가 경고한 그 문자열 스니핑)를
+`.detail` 에 대고 쓰고 있다. 대안 B 의 `outcome` 필드는 이 기존 세 자리도
+문자열 스니핑에서 벗어나게 할 수 있지만, 그 마이그레이션은 이 SPEC 의
+PRESERVE 경계(§3) 밖이므로 여기서 하지 않는다 — 후속 카드로 남긴다.
+
+### (나) `SafetyGate` 클리어런스 회수 메서드와 세션 격리 — **확정(사람 확인 완료, 2026-09-18)**
 
 **문제**: `execute_preapproved()`(`gate.py:645`)는 성공 시
 `self._clearances[session_key] = Counter(commands)` 로 세션별 카운터를
@@ -71,41 +118,145 @@ Kickoff Approval 전에 확인.]
 `_clearances_lock` 을 그대로 재사용해 동시성 안전을 지킨다. 다른 세션 키의
 카운터는 건드리지 않는다 — `screen()`/`execute_preapproved()` 의 세션별
 스코프 불변식(M6c-1, `gate.py` 머리말 19~26행)을 그대로 지킨다.
+`GatePort` Protocol(`execution.py:228-238`)도 `def revoke_clearances(self)
+-> None: ...` 한 줄을 얻는다 — fake gate 와 실물 `SafetyGate` 양쪽이 그
+구조적 타입을 만족해야 하기 때문이다.
 
-`ApplyCoordinator`(`server/director/execution.py`) 또는 새 송신기 호출부가
-`execute_bundles()` 반환 직후(성공이든 조기 중단이든) 이 메서드를 부른다 —
-REQ-LDSEND-005.
+**D2 정정 — 세션 자체를 격리하지 않으면 회수는 무의미하다(사람 확인 완료:
+전용 세션 + 회수 채택).** plan-audit iter1 이 정확히 지적한 결함: 위
+`revoke_clearances()` 는 **호출 세션의** 카운터만 비운다. 그런데 apply
+경로 자체가 오늘 어떤 세션 키도 바인딩하지 않는다 — 실측:
+`grep -n "bind_session_key\|session_context\|current_session_key" server/
+director/*.py server/measurement/runner.py` → **0 매치**. `server/web/
+session.py:11650`(`ChatSession`)·`server/web/panel.py:821`(`PanelRuntime`)
+만 `bind_session_key()` 를 부른다. 즉 director apply 와
+`server/measurement/runner.py` 는 **둘 다** 오늘 암묵적으로 같은
+`DEFAULT_SESSION_KEY`(`session_context.py:35`) 를 공유한다 — apply 가
+`revoke_clearances()` 를 불러도 그것이 실제로 비우는 것은
+"director apply 의 세션" 이 아니라 "`DEFAULT_SESSION_KEY` 를 쓰는 모든
+호출자가 공유하는 그 하나의 카운터"다. REQ-LDSEND-006 의 "다른 세션·다른
+호출자의 관측 가능 동작을 바꾸지 않는다"는 오늘의 배선에서는 지켜지지
+않는다 — 다른 세션이 아니라 **같은(기본) 세션**이기 때문이다.
+
+**채택(전용 세션 + 회수, D2)**: `apply` 요청 하나마다 전용 `SessionKey` 를
+새로 발급해 바인딩한다 — REQ-LDSEND-013.
+
+- **바인딩 위치**: `server/director/execution.py` `ApplyCoordinator.apply()`
+  가 아니라 **`server/director/director_api.py` `post_apply()`**(404~452행)
+  다. `ApplyCoordinator.apply()` 자신은 `execute_bundles()` 를 호출하지
+  않는다(코드 실측 — `apply()` 는 `execute_preapproved()` 판정까지만 내고
+  `ExecutionResult`(journal 쪽, D7 각주)를 반환한다) — `execute_bundles()`
+  는 `post_apply()` 가 `apply()` 반환 직후 별도로 부른다(437-448행). 따라서
+  "`execute_preapproved()` 호출 시작부터 `execute_bundles()` 반환·회수
+  직후까지"를 한 세션 키로 감싸려면, 그 **둘을 다 부르는** `post_apply()`
+  가 감싸는 지점이어야 한다 — `ApplyCoordinator` 내부에 감싸면
+  `execute_bundles()` 호출 시점의 세션 키를 알 수 없다.
+- **plan.md §3 PRESERVE 의 `director_api.py` 예외**: 이 파일은 형제
+  SPEC(`SPEC-LDRECV-001`) 소유로 읽기·호출만 하는 것이 원칙이지만(§3), 이
+  변경은 검증·라우팅·승인 판단을 전혀 바꾸지 않는 순수 격리 배선이다 —
+  `post_apply()` 본문 맨 앞에서 `token = bind_session_key(new_session_key())`
+  하고, `try/finally` 로 감싸 `finally` 에서 `reset_session_key(token)` 을
+  부른다(세션.py:11650·panel.py:821 과 같은 기존 관용구). `execute_bundles()`
+  호출 직후(성공이든 예외든, `finally` 안에서) `deps.apply_coordinator.
+  revoke_clearances()` 를 부른다 — 이를 위해 `ApplyCoordinator` 에 전달
+  메서드 하나를 추가한다: `def revoke_clearances(self) -> None: self._gate.
+  revoke_clearances()`(순수 위임, `apply()` 의 재검사 순서는 그대로다).
+- **AC 갱신(D2)**: acceptance.md AC-LDSEND-005/006 은 이제 **실제
+  `DEFAULT_SESSION_KEY` 공유 구성**을 재현해 대조한다 — 세션 키를 바인딩
+  하지 않는 fake 호출자(`server/measurement/runner.py` 를 흉내)가
+  `execute_preapproved()` 로 클리어런스를 남긴 뒤, apply 가 전용 세션에서
+  `revoke_clearances()` 를 불러도 그 fake 호출자의(DEFAULT 세션) 클리어런스가
+  안 지워지는지, 그리고 그 역방향(전용 세션의 apply 클리어런스가 DEFAULT
+  세션 회수로 안 지워지는지)도 함께 잰다. 예외 발생 시에도 토큰이
+  `reset_session_key()` 되는지(즉 다음 요청이 이전 요청의 세션을 물려받지
+  않는지)도 별도로 잰다.
+
+### (다) 021 승격부 readback 질의 경로 — **해소(코드로 확정, 더 이상 미확정 아님)**
+
+plan.md §7 이 사람 확인 대기 마커로 남겼던 항목이지만, 코드를 읽으면
+이미 확립된 선례가 있다 — 미확정이 아니라 **재사용할 경로가 이미 있다**.
+`server/web/cue_monitor.py` 머리말(12-15행)이 명시적으로 적어 뒀다:
+"`DataPool/Sequences/<no>` 를 `server/orchestrator/tools.py`의 `drill_into`
+가 다른 pool 을 여는 것과 같은 방식으로 연다." 실제 사용 지점 다수 실측—
+`server/tools/lxseq_*_e2e.py`, `server/tools/t230_cue_content_survey.py`,
+`server/preshow/checks.py`, `server/web/cue_monitor.py` 전부
+`state_port.query_state("DataPool/Sequences" [+ "/<N>" [+ "/<cue-index>"]])`
+를 부르고, 응답의 `children`(리스트, 각 원소가 `i`/`name`/`childCount`)을
+읽어 존재 여부·자식을 판정한다(`t230_cue_content_survey.py:60-73`
+`read_state`/`read_children`).
+
+**021 승격부의 readback**은 이 선례를 그대로 따른다 —
+`state_port.query_state(f"DataPool/Sequences/{N}")` (또는 부모 pool 을 읽고
+`children` 에서 `i == N` 원소를 찾음)으로 object-existence 를 확인한다.
+**아직 실기로 확인 못 한 것 하나만 남는다**: 존재하지 않는 `<N>` 을 직접
+질의했을 때 콘솔이 `ok:false`(→ `StateQueryError`)로 답하는지, 아니면
+`ok:true` + 빈/부재 `node` 로 답하는지 — 이 둘 중 어느 쪽이 "없음"의 응답
+모양인지는 M5 에서 실기로 한 번 확인해 이 문서에 반영한다. **질의 경로
+자체는 더 이상 미확정이 아니다.**
+
+### (라) AC-024 실패 유발 명령 — 실기 탐색으로 이연(사람 확인 완료: M4a 신설)
+
+plan.md §7 이 사람 확인 대기 마커로 남겼던 항목. 사람 결정: 후보를 미리
+목록화하고 M4a("실기 탐색") 에서 확정한다 — §2 마일스톤 표·§4 참고.
+**후보 1(권장, 실측 근거 있음)**: 스크래치 destination 이 **이미 점유된
+상태**에서 `Store Sequence <N>`(맨몸, `/Merge`·`Cue` 없음)을 보낸다.
+`server/web/session.py:10662`(2026-08-16 실측·사용자 방향)가 이 정확한
+형태의 실패를 기록한다: "시퀀스 {N}에 이미 콘솔 데이터가 있어 그대로
+저장하면 콘솔이 'Not allowed'로 거부합니다." — 이는 게이트 승인 여부와
+무관한, **콘솔 자신의** 명시적 거부다(참고: `Store Sequence` 자체는
+`blacklist.yaml` v6 이후 held 이므로 이 도구의 labelled auto-approve
+`ApprovalPort` 로 승인을 통과한 **뒤** 콘솔이 별도로 거부한다는 뜻 — 두
+층이 다르다, §1 규범표·§2 spec.md 참고). 시나리오: (1) M3~M4 의 첫 bundle 로
+scratch `<N>` 에 `Store Sequence <N> Cue 1 /Merge` 를 보내 점유시킨다. (2)
+후속 bundle 의 첫 명령으로 같은 `<N>` 에 맨몸 `Store Sequence <N>` 을
+보낸다 — 그 bundle 은 `STATE_FAILED` 로 귀결되어야 하고, 그 뒤 bundle 은
+전혀 전송되지 않아야 한다(REQ-LDSEND-002/024).
+**후보 2(미검증, 대체 후보)**: `Copy Sequence <N> At <occupied-M>` — 이미
+점유된 대상으로의 Copy 도 유사하게 거부될 것으로 추정되나 실측 인용이
+없다.
+
+**HALT 조건(사람 결정 4)**: M4a 에서 이 두 후보를 실기로 먼저 시도하고,
+그 결과를 `progress.md` 에 기록한 뒤에만 `--execute` 경로 스크립트에
+확정 명령을 굳힌다 — 확정 전에는 dry-run 출력까지만 완성한다(§6 중단
+조건과 동일 취지, 여기서는 별도 마일스톤으로 명시).
 
 ## 2. 마일스톤
 
 착수 순서를 정하는 원리: 되돌리기 가장 비싼 인터페이스 결정을 먼저
 확정하고(M1), 그 인터페이스 위에 실물 송신기를 얹고(M2), 사람이 보는 CLI
 동작(dry-run/`--execute`)을 정하고(M3), 그 위에 실제 시나리오 배선을
-쌓고(M4), 마지막으로 코드가 아닌 실기 관측을 수행한다(M5).
+쌓고(M4), 실기 탐색으로 미확정 실패 명령을 확정하고(M4a), 마지막으로
+코드가 아닌 실기 관측을 수행한다(M5).
 
 | 단계 | REQ | 파일 소유 | 완료 산출물 | 콘솔 | TDD |
 |---|---|---|---|---|---|
-| M1 인터페이스 확정 | 003, 005, 006 | 기존 `server/orchestrator/ports.py` **EXTEND**(§2.0-가 채택 시 `outcome` 필드); 기존 `server/safety/gate.py` **EXTEND**(`revoke_clearances()` 추가 + 5곳 `ExecutionResult(...)` 생성에 `outcome=` 채움); 기존 `server/tests/test_safety_gate.py` **EXTEND** | `revoke_clearances()` 가 자기 세션 카운터만 비운다, 다른 세션 영향 없음, `ExecutionResult.outcome` 이 ok/failed/unconfirmed 를 정확히 구분 | 아니오 | RED 먼저 |
-| M2 실물 송신기 | 001, 002, 004 | 신규 `server/director/sender.py`(`GateBundleSender` 클래스, `BundleSender` Protocol 구현); 신규 `server/tests/test_director_sender.py` | 순서대로 송신, 첫 미확인 뒤 중단, 넷 중 하나의 상태 반환, 콘솔 링크 예외를 unconfirmed 로 흡수, `send()` 반환 뒤 M1 의 회수 메서드 호출 | 아니오 | RED 먼저 |
-| M3 관측 도구 골격 | 007, 009 | 신규 `server/tools/director_apply_observe.py`; 신규 `server/tests/test_director_apply_observe.py` | `build_console_stack()` 재사용, 인자 파싱, dry-run 기본값, `--execute` 없이는 콘솔에 아무것도 쓰지 않는다는 것을 fake 콘솔로 확인 | 아니오 | RED 먼저 |
-| M4 시나리오 배선 | 008, 010, 011, 012 | `server/tools/director_apply_observe.py` 계속 확장 | AC-021/024/032 세 시나리오 함수, destination 점유 확인, cleanup 단계, labelled auto-approve `ApprovalPort`(cleanup 용) | 아니오(로직) / 예(§4 실행 자체) | RED 가능한 부분만(dry-run 출력 형태) |
-| M5 실기 관측 | (spec.md §5 콘솔 필요 항목) | 코드 없음 — `progress.md` 기록만 | 021 승격부·024 관측부·032 실행부·cleanup 이 실제로 지워졌는지의 관측 기록 | **예** | n/a — 수동 |
+| M1 인터페이스 확정 | 003, 005, 006, 013 | 기존 `server/orchestrator/ports.py` **EXTEND**(`outcome` 필드); 기존 `server/safety/gate.py` **EXTEND**(`revoke_clearances()` 추가 + `_execute_cleared()` 의 6곳 `ExecutionResult(...)` 생성에 `outcome=` 채움 — §2.0-가, `deploy_plugin_source()` 의 5곳은 PRESERVE); 기존 `server/director/execution.py` **EXTEND**(`GatePort` Protocol 에 `revoke_clearances` 추가, `ApplyCoordinator.revoke_clearances()` 위임 메서드 추가); 기존 `server/director/director_api.py` **EXTEND**(§2.0-나 예외 — `post_apply()` 에 세션 바인딩/회수 감쌈만 추가); 기존 `server/tests/test_safety_gate.py` **EXTEND** | `revoke_clearances()` 가 자기 세션 카운터만 비운다, `ExecutionResult.outcome` 이 ok/failed/unconfirmed 를 정확히 구분, `post_apply()` 가 전용 세션을 바인딩하고 예외에도 되돌린다(DEFAULT_SESSION_KEY 공유 호출자와 교차하지 않음) | 아니오 | RED 먼저 |
+| M2 실물 송신기 | 001, 002, 004 | 신규 `server/director/sender.py`(`GateBundleSender` 클래스, `BundleSender` Protocol 구현); 신규 `server/tests/test_director_sender.py` | 순서대로 송신, 첫 미확인 뒤 중단, 넷 중 하나의 상태 반환, 콘솔 링크 예외를 unconfirmed 로 흡수 — 클리어런스 회수(M1)는 M2 의 책임이 아니라 M1 이 배선한 `post_apply()` 의 책임이다(§2.0-나) | 아니오 | RED 먼저 |
+| M3 관측 도구 골격 | 007, 009 | 신규 `server/tools/director_apply_observe.py`; 신규 `server/tests/test_director_apply_observe.py` | `build_console_stack()` 재사용, `gate.screen()` 만 호출(§2.0 D6, `execute_preapproved()` 아님), 인자 파싱, dry-run 기본값, `--execute` 없이는 콘솔에 아무것도 쓰지 않는다는 것을 fake 콘솔로 확인 | 아니오 | RED 먼저 |
+| M4 시나리오 배선 | 008, 010, 011, 012, 014 | `server/tools/director_apply_observe.py` 계속 확장 | AC-021/024/032 세 시나리오 함수, destination 점유 확인, cleanup **명령 출력**(REQ-011 — 도구는 실행하지 않음), 시나리오 명령 전용 labelled auto-approve `ApprovalPort`(cleanup 용 아님, §2.0), 백업 선행조건 관측 기록 경로(REQ-014) | 아니오(로직) / 예(§4 실행 자체) | RED 가능한 부분만(dry-run 출력 형태, cleanup 출력 형태) |
+| M4a 실기 탐색(AC-024 명령 확정) | (§7 미검증, §2.0-라) | 코드 없음 — `progress.md` 기록만, 그 결과로 M4 의 AC-024 시나리오 함수를 확정 | 후보 1(`Store Sequence <N>` on 점유됨)·후보 2 를 onPC 에 먼저 시도한 기록, 채택 명령 확정 | **예** | n/a — 수동, HALT 조건(§2.0-라) |
+| M5 실기 관측 | (spec.md §5 콘솔 필요 항목) | 코드 없음 — `progress.md` 기록만 | 021 승격부(readback 응답 모양 확정 포함, §2.0-다)·024 관측부·032 실행부의 관측 기록, cleanup 명령을 사람이 실행한 뒤 destination 이 비었는지, 시나리오 실행 시 백업 선행조건 통과 여부(REQ-014) | **예** | n/a — 수동 |
 
-M1 → M2 → M3 → M4 → M5. M2 는 M1 의 `revoke_clearances()`/`outcome` 필드가
-있어야 완결된다(TDD 로 M1 을 GREEN 으로 만든 뒤 M2 의 fake 게이트가 그
-인터페이스를 흉내낸다). M4 는 M3 의 CLI 골격 위에 시나리오를 얹으므로
-순서가 뒤바뀌면 다시 쓰게 된다. M5 는 M1~M4 가 전부 로컬에서 닫힌 뒤에만
-의미가 있다 — 실물 송신기 없이 실기를 관측할 수는 없다.
+M1 → M2 → M3 → M4 → M4a → M5. M2 는 M1 의 `revoke_clearances()`/`outcome`
+필드가 있어야 완결된다(TDD 로 M1 을 GREEN 으로 만든 뒤 M2 의 fake 게이트가
+그 인터페이스를 흉내낸다). M4 는 M3 의 CLI 골격 위에 시나리오를 얹으므로
+순서가 뒤바뀌면 다시 쓰게 된다. M4a 는 M4 가 만든 dry-run 출력까지만
+완성된 상태에서 실기로 후보 명령을 확정하고, 그 결과로 M4 의 AC-024
+시나리오 함수 코드를 마저 채운다 — 그래서 M4a 는 M4 와 M5 사이에 있다(M4
+가 "코드 골격+미확정 명령", M4a 가 "명령 확정", M5 가 "그 확정된 코드로
+실기 관측"). M5 는 M1~M4a 가 전부 닫힌 뒤에만 의미가 있다 — 실물 송신기
+없이, 그리고 확정 안 된 실패 명령으로는 실기를 관측할 수 없다.
 
 ## 3. PRESERVE — 건드리지 않는다
 
 | 영역 | 파일 |
 |---|---|
 | apply 재검사·직렬화·journal | `server/director/execution.py` 의 `ApplyCoordinator`/`ExecutionJournal` 본체 — `execute_bundles()` 호출부만 새 송신기를 주입할 뿐, 그 함수 자체·`ApplyCoordinator.apply()` 의 재검사 순서는 바꾸지 않는다 |
-| SafetyGate 파이프라인 본체 | `server/safety/{grammar,classify,backup,console,monitor,expand,ruleset,blacklist.yaml,programmer_arbiter}.py` — 읽기·호출만. `gate.py` 자체도 §2.0 이 명시한 최소 확장(새 메서드 1개 + 기존 5개 생성 지점에 필드 채움)만 한다 |
+| SafetyGate 파이프라인 본체 | `server/safety/{grammar,classify,backup,console,monitor,expand,ruleset,blacklist.yaml,programmer_arbiter}.py` — 읽기·호출만. `gate.py` 자체도 §2.0 이 명시한 최소 확장(새 메서드 1개 + `_execute_cleared()` 의 6개 생성 지점에 필드 채움, `deploy_plugin_source()` 의 5곳은 아래 별도 행 참고)만 한다 |
 | OSC 송신 | `server/bridge/osc.py` — 이 SPEC 도 직접 import 하지 않는다. `SafetyGate.execution_port` 를 거친다(REQ-LDSEND-001) |
-| `ExecutionResult` 소비자 넷 | `server/measurement/runner.py`, `server/web/session.py`, `server/web/panel.py`, `server/deploy/pipeline.py` — `.ok`/`.detail` 만 읽는 소비자이므로 §2.0-가의 선택적 필드 추가에 영향받지 않는다. 이 넷의 코드 자체는 건드리지 않는다 |
-| 저장·검증·인증층 | `server/director/{models,store,service,context,knowledge,digest,emit,auth,approvals,director_api}.py` — 형제 SPEC 소유. 이 층은 읽고 호출만 |
+| `ExecutionResult` 소비자 다섯(D3 정정 — "넷"이 아니다) | `server/measurement/runner.py`, `server/web/session.py`(두 자리), `server/web/panel.py`, `server/deploy/pipeline.py`, **`server/orchestrator/tools.py:2436`**(덕타이핑 — `ExecutionResult` 를 import 하지 않고 `execution_port.execute()` 반환값의 `.ok`/`.detail` 만 읽음) — 전부 `.ok`/`.detail` 전용 소비자이므로 §2.0-가의 선택적 필드 추가에 영향받지 않는다. 이 다섯의 코드 자체는 건드리지 않는다. `server/tools/*_e2e.py` 아홉 파일은 `execution_port` 를 다른 함수에 전달만 하므로 별도 소비자가 아니다(§2.0-가) |
+| `deploy_plugin_source()` 의 `ExecutionResult(...)` 생성 지점 다섯(`gate.py:861,865,890,892,900`) | M7 플러그인 배포 전용 — 이 SPEC 의 `execution_port` 경로와 무관하다(§2.0-가). `outcome=` 을 채우지 않으며, 그로 인한 기본값(`"ok"`) 불일치는 이 SPEC 이전부터 있던 것으로 후속 카드에 남긴다 |
+| 저장·검증·인증층(단, `director_api.py` 는 §2.0-나 예외 하나 있음) | `server/director/{models,store,service,context,knowledge,digest,emit,auth,approvals}.py` — 형제 SPEC 소유, 읽고 호출만. `server/director/director_api.py` 는 원칙적으로 동일하게 PRESERVE 이나, **`post_apply()`** 에 한해 §2.0-나 가 요구하는 세션 바인딩/회수 감쌈(추가 4줄 안팎: `bind_session_key`/`try`/`finally`/`reset_session_key`/`revoke_clearances()` 호출)을 예외적으로 추가한다 — 검증·라우팅·승인 판단 순서는 바꾸지 않는다 |
 | 스크래치 destination 정책 | `../SPEC-LDRECV-001/spec.md` §2 의 "server-selected 새 Sequence create-only" 원칙을 관측 도구도 그대로 따른다 — overwrite·silent reselection 없음 |
 
 ## 4. TDD 순서 (대표 마일스톤 예시)
@@ -120,9 +271,25 @@ M1 → M2 → M3 → M4 → M5. M2 는 M1 의 `revoke_clearances()`/`outcome` �
    `bind_session_key` 로 각각 만들어 대조). `_execute_cleared` 가 반환하는
    `ExecutionResult.outcome` 이 성공/실패/미확인 세 경로 각각에서
    `"ok"`/`"failed"`/`"unconfirmed"` 인지.
-2. **GREEN** `gate.py` 에 `revoke_clearances()` 추가, 5곳 생성 지점에
-   `outcome=` 채움, `server/orchestrator/ports.py` 에 필드 추가.
-3. **REFACTOR** 필요 시 다섯 생성 지점을 작은 헬퍼로 통일.
+2. **GREEN** `gate.py` 에 `revoke_clearances()` 추가, `_execute_cleared()`
+   의 6곳 생성 지점(917·921·927·940·943·950행)에 `outcome=` 채움 —
+   `deploy_plugin_source()` 의 5곳은 PRESERVE(§3). `server/orchestrator/
+   ports.py` 에 `outcome: str = "ok"` 필드 추가. `GatePort` Protocol
+   (`execution.py:228-238`)에 `revoke_clearances` 시그니처 추가.
+3. **REFACTOR** 필요 시 `_execute_cleared()` 의 6곳을 작은 헬퍼로 통일.
+4. **RED** `server/tests/test_director_api_apply.py`(또는 기존 director_api
+   시험 파일)에 추가: `post_apply()` 를 세션 키를 바인딩하지 않은 fake
+   호출자(측정기 흉내)와 교차로 호출해 — apply 가 남긴 클리어런스를 fake
+   호출자가(`DEFAULT_SESSION_KEY`) 못 쓰는지, fake 호출자가 남긴 클리어런스를
+   apply 의 `revoke_clearances()` 가 안 지우는지, `execute_bundles()` 내부에서
+   예외가 나도 `reset_session_key()` 가 호출되는지(다음 요청이 이전 세션을
+   물려받지 않는지, mock 토큰으로 확인).
+5. **GREEN** `post_apply()` 본문에 `bind_session_key(new_session_key())`
+   /`try`/`finally: reset_session_key(token)` 감쌈 추가, `execute_bundles()`
+   반환 직후(같은 `try` 안, 성공이든 예외든 `finally` 에서)
+   `deps.apply_coordinator.revoke_clearances()` 호출. `ApplyCoordinator`
+   에 `revoke_clearances(self) -> None: self._gate.revoke_clearances()`
+   위임 메서드 추가(순수 위임, `apply()` 재검사 순서 불변).
 
 ### M2 (실물 송신기)
 
@@ -136,8 +303,11 @@ M1 → M2 → M3 → M4 → M5. M2 는 M1 의 `revoke_clearances()`/`outcome` �
    `failed` 로 부를 수 없고, 전부가 확인된 것도 아니므로 `ACKNOWLEDGED` 도
    아니다 — 계약의 "atomic OSC rollback 을 주장하지 않는다"를 이 갈래가
    구체화한다); 콘솔 링크가 예외를 던짐 → 그 명령을 unconfirmed 로 잡고
-   번들 전체 `STATE_UNKNOWN`; `send()` 반환 뒤 `revoke_clearances()` 가
-   정확히 한 번 호출됐는지(mock 호출 카운트).
+   번들 전체 `STATE_UNKNOWN`. **클리어런스 회수는 이 시험의 책임이 아니다**
+   — `revoke_clearances()` 호출은 M1 이 `post_apply()` 에 배선했다(§2.0-나).
+   `GateBundleSender.send()` 자신은 `execution_port.execute()` 만 부르고
+   회수를 호출하지 않는다 — 이 점을 명시적으로 잰다(fake gate 의
+   `revoke_clearances` mock 호출 카운트가 0인지, `send()` 시험 전체에서).
 2. **GREEN** `sender.py` 의 `GateBundleSender` 최소 구현.
 3. **REFACTOR** 상태 판정 로직을 표 기반 헬퍼로 정리.
 
@@ -163,11 +333,18 @@ M1 → M2 → M3 → M4 → M5. M2 는 M1 의 `revoke_clearances()`/`outcome` �
    `build_console_stack()` 을 대체해 — 기본 인자(플래그 없음)로 실행하면
    콘솔에 아무 명령도 안 나가고 계획만 출력되는지(`monkeypatch` 로 fake
    send 카운트 0 확인); `--execute` 없이는 어떤 인자 조합으로도 실행 경로가
-   콘솔 쓰기에 도달하지 않는지.
-2. **GREEN** CLI 골격 + dry-run 출력.
+   콘솔 쓰기에 도달하지 않는지; 도구가 `gate.execute_preapproved()` 를 부르지
+   않는지(fake gate 의 그 메서드 호출 카운트 0 — REQ-LDSEND-007 D6);
+   시나리오 명령이 fake 콘솔로 갈 때 도구 자신의 labelled auto-approve
+   `ApprovalPort`(고정 문자열 `ldsend-observe-harness`, REQ-LDSEND-012)가
+   정확히 그 요청 하나만 승인하는지; cleanup 단계는 fake 콘솔로 명령을
+   보내지 않고 `Delete Sequence <N>` 문자열만 표준출력에 내는지(REQ-011).
+2. **GREEN** CLI 골격 + dry-run 출력 + cleanup 출력.
 3. 시나리오 함수(021/024/032)는 fake 콘솔로 그 판정 로직(readback 호출 순서,
    destination 점유 확인 순서)만 pytest 로 고정한다 — 실제 onPC 대상
-   `--execute` 경로는 M5 의 수동 실행이다.
+   `--execute` 경로는 M4a(024 의 실패 명령 확정)·M5(수동 실행)의 몫이다.
+   백업 선행조건 관측(REQ-014)은 fake `BackupManager`(성공/실패 두 경로)로
+   그 관측·기록 로직만 로컬에서 고정한다 — 실제 onPC 통과 여부는 M5.
 
 각 단계마다 `uv run pytest` 관련 파일을 돌려 착수 시점 기준선이 깨지지
 않는지 본다(§5).
@@ -182,20 +359,32 @@ uv run pytest -q
 uv run pytest server/tests/test_safety_gate.py server/tests/test_director_sender.py \
   server/tests/test_director_apply_observe.py -q
 
-# 회귀 — 특히 ExecutionResult 소비자 넷이 영향받지 않았는지
+# 회귀 — ExecutionResult 소비자 다섯(D3 정정: "넷"이 아니다) 전부
 uv run pytest server/tests/test_measurement_runner.py server/tests/test_web_session.py \
-  server/tests/test_web_panel_execute.py server/tests/test_deploy_pipeline.py -q 2>&1 \
+  server/tests/test_web_panel_execute.py server/tests/test_deploy_pipeline.py \
+  server/tests/test_orchestrator_tools.py -q 2>&1 \
   || echo "일부 파일명은 실제 존재 여부를 착수 시 확인한다 — 추정 이름"
 
-# 전체 회귀 (기준선 대조)
+# 세션 격리(D2/REQ-LDSEND-013) — post_apply() 회귀
+uv run pytest server/tests/test_director_api.py -k "apply" -q 2>&1 \
+  || echo "파일명은 실제 존재 여부를 착수 시 확인한다 — 추정 이름"
+
+# 전체 회귀 (기준선 대조) — §2.0-가 "다섯 소비자" 전제의 최종 백스톱이기도 하다
 uv run pytest -q
 
 # 경계: 이 층은 OSC 를 직접 만지지 않는다
 grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/sender.py server/tools/director_apply_observe.py \
   || echo "OK - no direct OSC import"
 
+# 경계: 관측 도구가 execute_preapproved() 를 부르지 않는지(D6 — director 전용)
+grep -n "execute_preapproved" server/tools/director_apply_observe.py \
+  && echo "FAIL: 관측 도구가 director 전용 진입점을 쓴다" || echo "OK - screen() 만 사용"
+
 # 경계: 관측 도구의 auto-approve ApprovalPort 가 운영 조립에 배선되지 않았는지
 grep -n "director_apply_observe" server/web/serve.py || echo "OK - not wired into serve.py"
+
+# 경계: cleanup 이 실제로 명령을 보내지 않는지 — Delete 문자열은 표준출력에만 있어야 한다
+grep -n "def cleanup\|Delete Sequence" server/tools/director_apply_observe.py
 ```
 
 **CI 는 과금 차단으로 죽어 있어 판정 근거가 아니다.** 위 로컬 명령의 출력만
@@ -204,51 +393,56 @@ grep -n "director_apply_observe" server/web/serve.py || echo "OK - not wired int
 
 ## 6. 중단 조건
 
-- **§2.0(가)·(나) 의 두 인터페이스 결정을 사람에게 확인받기 전에 M1 을
-  시작하지 않는다.**
+- **§2.0(가)·(나) 의 두 인터페이스 결정은 확정됐다(2026-09-18)** — 재론하지
+  않는다. 다만 착수 시 `gate.py`/`execution.py`/`director_api.py` 를 다시
+  읽어 이 문서가 인용한 행 번호·시그니처가 그대로인지 확인한다(아래 둘째
+  항목).
 - `server/measurement/runner.py`/`server/web/session.py`/
-  `server/web/panel.py`/`server/deploy/pipeline.py` 중 하나라도 `.ok`/
-  `.detail` 외의 필드를 구조 분해나 위치 인자로 소비하고 있는 것이
-  발견되면(§2.0-가의 "읽기 전용 소비자" 전제가 반증되면) 중단하고 대안 A
-  (문자열 판별)로 재조정한다.
+  `server/web/panel.py`/`server/deploy/pipeline.py`/`server/orchestrator/
+  tools.py:2436`(다섯, D3 정정) 중 하나라도 `.ok`/`.detail` 외의 필드를
+  구조 분해나 위치 인자로 소비하고 있는 것이 발견되면(§2.0-가의 "읽기 전용
+  소비자" 전제가 반증되면) 중단하고 대안 A(문자열 판별)로 재조정한다.
 - `SPEC-LDRECV-001` 이 확정한 `ApplyCoordinator.apply()` 의 재검사 순서나
-  `execute_bundles()` 의 시그니처가 이 문서가 인용한 것과 다르면(코드가
-  이 문서 작성 뒤 바뀌었으면) 중단하고 다시 읽는다.
-- M4 착수 시 AC-024 관측 시나리오에 쓸 "안전하게 콘솔에서 실패를 유발하는
-  명령"이 §7 미검증 항목대로 여전히 불확실하면, 그 명령을 확정하기 전에는
-  `--execute` 경로를 스크립트에 굳히지 않는다 — dry-run 출력까지만 완성하고
-  M5 에서 사람이 직접 후보를 시도해 확정한다.
+  `execute_bundles()` 의 시그니처, 또는 `director_api.py` `post_apply()`
+  가 `apply()`→`execute_bundles()` 를 부르는 순서(§2.0-나가 세션 바인딩의
+  근거로 삼는 그 순서)가 이 문서가 인용한 것과 다르면(코드가 이 문서 작성
+  뒤 바뀌었으면) 중단하고 다시 읽는다.
+- M4a 실기 탐색(§2.0-라)이 두 후보 모두 안정적인 명시적 실패를 못 낸다고
+  확인하면, `--execute` 경로를 스크립트에 굳히지 않고 다시 원인을 코드에서
+  찾는다 — 추측으로 세 번째 후보를 만들지 않는다.
+- `blacklist.yaml` 의 버전이 이 문서 작성 시점(9)과 다르면(착수 전 재확인),
+  `Store Sequence`/`Store Cue` 의 블랙리스트 소속 여부를 다시 확인하고
+  §2.0-라·REQ-LDSEND-007/012 의 전제를 재검산한다.
 
 ## 7. 미검증 (착수 전 남은 것)
 
-- **AC-024 관측 시나리오의 "안전한 실패 유발 명령"이 미확정이다.**
-  `Store Sequence <N> Cue <M> /Merge` 가 safe 로 분류된다는 것은 실측했다
-  (`test_bulkgate_declaration.py:38-41`). 그러나 그 명령이 **콘솔에서**
-  안정적으로 `failed`(거부 확인)를 내는 malformed 변형(예: 존재하지 않는
-  참조를 포함한 조작)이 무엇인지는 이 문서 작성 시점에 코드만으로 확정할 수
-  없다 — 그 판정은 grammar/classify 가 아니라 콘솔 자신의 응답이 정한다.
-  [NEEDS CLARIFICATION: 어떤 구체적 MA3 명령이 게이트를 통과하면서도
-  콘솔에서 신뢰성 있게 명시적 실패를 내는지 — M5 착수 시 실기로 먼저
-  탐색하고, 그 결과를 이 문서에 반영한다.]
-- **021 승격부의 정확한 readback 질의 경로가 미확정이다.** "responder 를
-  통한 state/property 재조회로 object-existence 를 확인한다"는 spec.md §5
-  가 요구하지만, `DataPool/Sequences/<N>` 형태의 정확한 경로 문법과
-  존재/부재를 구분하는 응답 모양은 `server/director/context.py`/
-  `models.py` 전문을 읽지 않았고 실기로 확인한 적도 없다. [NEEDS
-  CLARIFICATION: M5 착수 시 `server/tools/responder_roundtrip.py` 로 먼저
-  경로 문법을 확인한다.]
+- **AC-024 관측 시나리오의 "안전한 실패 유발 명령"은 후보 2개로 좁혀졌다
+  (해소 — §2.0-라, 인간 결정 4).** M4a 에서 실기로 확정하고 이 문서를
+  갱신한다 — 더 이상 사람 확인 대기 마커가 아니라 명시적 마일스톤이다.
+- **021 승격부의 readback 질의 경로는 코드로 확정됐다(해소 — §2.0-다).**
+  남은 것은 존재/부재를 가르는 정확한 응답 모양(`ok:false` vs 빈
+  `children`)뿐이고, 이는 M5 실기 관측 한 항목으로 축소됐다 — 더 이상
+  경로 자체가 미지수가 아니다.
 - **cleanup 의 스크래치 destination 정확한 번호 범위는 정책만 정했다.**
   "높은 미사용 Sequence 번호대, 쓰기 전 비어 있는지 확인, 점유돼 있으면
   거부"라는 정책(REQ-LDSEND-008)만 확정했고, 정확한 시작 번호는 M3~M4
   착수 시 CLI 인자(`--sequence-range-start`, 기본값 제안 9900)로 남긴다 —
   스크립트에 하드코딩하지 않는다.
-- **§2.0-가의 "읽기 전용 소비자" 전제는 grep 확인이지 전수 대조가
-  아니다.** 넷 중 하나가 실은 `ExecutionResult` 를 위치 기반으로 소비하고
-  있을 가능성은 M1 착수 시 각 파일을 직접 읽어 다시 확인한다.
-- **LOC 추정 없음.** Tier M 으로 잡았으나(§1, spec.md — 새 파일 4개 + 공유
-  파일 2개(EXTEND) + 콘솔 게이트 항목 몇 건의 규모로 판단, 예상 600~1000
-  LOC), 실제 구현 규모는 재지 않았다.
-- **계획 내용에 대한 독립 plan-audit 없음.** 형제 SPEC 들이 이 저장소에서
-  착수 전 컨텍스트 초과로 `plan-auditor` 가 죽는다고 기록했다(`SPEC-LDRECV-001
-  plan.md` §7). 이 SPEC 에 대한 plan-audit 이 같은 이유로 죽으면, 오케스트
-  레이터 자기 검수임을 숨기지 않고 기록한다.
+- **§2.0-가의 "읽기 전용 소비자" 전제는 두 갈래 grep 확인이지 전수 대조가
+  아니다.** 다섯 중 하나가 실은 `ExecutionResult` 를 위치 기반으로 소비하고
+  있을 가능성은 M1 착수 시 각 파일을 직접 읽어 다시 확인한다(§5 의 회귀
+  명령이 최종 백스톱이다).
+- **REQ-LDSEND-014 의 백업 실패 시 후속 절차가 상세하지 않다.** "readback
+  판정과 구분해 기록한다"까지만 요구했고, 백업 실패가 확인되면 그 실행을
+  중단할지 경고만 남기고 계속할지는 M4 착수 시 코드로 결정한다 — 안전
+  방향은 계속하지 않는 쪽이므로 기본값은 "중단+기록"으로 잠정한다.
+- **LOC 추정 없음.** Tier M 으로 잡았으나(§1, spec.md — 새 파일 3개
+  (`sender.py`, `director_apply_observe.py`, 그 시험들) + 공유 파일
+  4개(EXTEND — `ports.py`, `gate.py`, `execution.py`, `director_api.py`,
+  이 개정에서 D2 반영으로 2개 늘었다) + 콘솔 게이트 항목 몇 건의 규모로
+  판단, 예상 700~1100 LOC), 실제 구현 규모는 재지 않았다.
+- **독립 plan-audit 완료(갱신) — iter1 FAIL 0.75, 이 개정으로 D1-D8 반영.**
+  `.moai/reports/plan-audit/SPEC-LDSEND-001-review-1.md` 가 iter1 결과다.
+  D1(MP-7 clarification 3건)은 사람 확인으로 해소, D2-D8 은 이 문서·spec.md·
+  acceptance.md 개정으로 반영했다 — Retry Loop Contract 에 따라 iter2
+  재심사를 받는다(§ delta-scoped, D1-D8 + 회귀 확인).
