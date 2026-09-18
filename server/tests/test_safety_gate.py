@@ -702,6 +702,94 @@ class TestClearanceEnforcement:
         assert console.executed == []
 
 
+class TestClearanceRevocation:
+    """SPEC-LDSEND-001 M1 (REQ-LDSEND-005/006) — a minimal public method that
+    empties the CALLING session's own outstanding clearances only, so an
+    apply that stops mid-bundle (REQ-LDSEND-002) cannot leave unused
+    clearances alive for a later, unrelated ``execution_port.execute()`` call
+    on the same session key to accidentally reuse.
+    """
+
+    def test_revoke_clearances_empties_only_the_callers_own_session(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
+        gate.screen([SAFE_LINE])
+        gate.revoke_clearances()
+        result = gate.execution_port.execute(SAFE_LINE)
+        assert result.ok is False
+        assert "not cleared" in result.detail
+        assert console.executed == []
+
+    def test_revoke_clearances_does_not_touch_another_sessions_clearance(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
+        key_a = new_session_key()
+        key_b = new_session_key()
+
+        token = bind_session_key(key_a)
+        try:
+            gate.screen([SAFE_LINE])  # session A clears its own bundle
+        finally:
+            reset_session_key(token)
+
+        token = bind_session_key(key_b)
+        try:
+            # session B has never screened anything — its own (empty) counter
+            # is what gets revoked; A's must survive untouched (M6c-1 scope).
+            gate.revoke_clearances()
+        finally:
+            reset_session_key(token)
+
+        token = bind_session_key(key_a)
+        try:
+            assert gate.execution_port.execute(SAFE_LINE).ok is True
+        finally:
+            reset_session_key(token)
+        assert console.executed == [SAFE_LINE]
+
+
+class TestExecutionResultOutcomeField:
+    """SPEC-LDSEND-001 M1 (REQ-LDSEND-003, plan.md §2.0-가) — ``ExecutionResult.
+    outcome`` distinguishes an explicit console failure from an unconfirmed
+    (timeout) result; both collapse to ``ok=False`` today, and only the
+    ``outcome`` field lets a caller (the M2 ``GateBundleSender``) tell them
+    apart without string-sniffing ``detail``.
+    """
+
+    def test_outcome_is_ok_on_a_confirmed_send(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
+        gate.screen([SAFE_LINE])
+        result = gate.execution_port.execute(SAFE_LINE)
+        assert result.ok is True
+        assert result.outcome == "ok"
+
+    def test_outcome_is_unconfirmed_on_an_unconfirmed_send(self, tmp_path):
+        line = safe_line(21)
+        console = FakeConsole()
+        console.unconfirmed_on = {line}
+        gate, console, _ = make_gate(tmp_path, console=console)
+        gate.screen([line])
+        result = gate.execution_port.execute(line)
+        assert result.ok is False
+        assert result.outcome == "unconfirmed"
+
+    def test_outcome_is_failed_on_an_explicit_console_failure(self, tmp_path):
+        line = safe_line(22)
+        console = FakeConsole()
+        console.fail_on = {line: "console rejected"}
+        gate, console, _ = make_gate(tmp_path, console=console)
+        gate.screen([line])
+        result = gate.execution_port.execute(line)
+        assert result.ok is False
+        assert result.outcome == "failed"
+
+    def test_outcome_is_failed_when_not_cleared(self, tmp_path):
+        # Never screened — the "not cleared by the safety gate" block (927행)
+        # is a definite failure, not an ambiguous unconfirmed result.
+        gate, console, _ = make_gate(tmp_path)
+        result = gate.execution_port.execute(SAFE_LINE)
+        assert result.ok is False
+        assert result.outcome == "failed"
+
+
 class TestConcurrentSessionClearanceIsolation:
     """M6c-1 Finding 2 — one SafetyGate instance is shared by every concurrent
     ChatSession (``deps.gate`` in server/web/app.py), but ``_clearances`` was

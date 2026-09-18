@@ -33,7 +33,7 @@ from server.director.execution import (
     BundleSender,
     ExecutionJournal,
     InterferenceDetector,
-    execute_bundles,
+    run_director_apply,
 )
 from server.director.knowledge import KnowledgeService
 from server.director.models import Detail, ExchangeError
@@ -412,6 +412,13 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
         MCP credential 은 ``plan:apply`` 가 human-only scope 이므로
         `auth.authenticate` 단계에서 SCOPE_DENIED 로 이미 거부되어 이 handler
         본문에 도달하지 않는다.
+
+        SPEC-LDSEND-001 REQ-LDSEND-015 — apply 판정 흐름(``ApplyCoordinator.
+        apply()`` 호출 → ``execute_bundles()`` 호출 → 세션 바인딩/회수)은
+        :func:`server.director.execution.run_director_apply` 로 추출됐다. 이
+        handler 는 그 함수를 부르고 반환 튜플을 ``JSONResponse`` 로 감싸기만
+        하는 얇은 adapter 다 — 응답 상태·본문·journal 기록은 추출 전과
+        바이트 동일하다(행동 보존).
         """
         try:
             credential = _require_credential(request, scope="plan:apply")
@@ -420,7 +427,11 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 raise _dependency_unavailable("apply coordinator/context provider")
 
             context_snapshot = deps.context_provider.current(project_id)
-            result = deps.apply_coordinator.apply(
+            response_body, response_status = run_director_apply(
+                coordinator=deps.apply_coordinator,
+                journal=deps.execution_journal,
+                bundle_sender=deps.bundle_sender,
+                interference=deps.interference_detector,
                 project_id=project_id,
                 plan_id=plan_id,
                 revision=revision,
@@ -432,26 +443,7 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 current_context_digest=str(context_snapshot["context_digest"]),
                 body=body,
             )
-
-            # 실제 bundle 전송은 이 SPEC 의 콘솔 게이트 경계다(spec.md §5) — sender
-            # 가 배선되지 않았거나 이미 replay 된 응답이면 journal 커밋·gate 연결
-            # 결과만 그대로 돌려준다.
-            journal_ready = deps.execution_journal is not None
-            if deps.bundle_sender is not None and not result.replayed and journal_ready:
-                bundles = body.get("bundles") or []
-                outcome = execute_bundles(
-                    deps.execution_journal,
-                    execution_id=result.execution_id,
-                    bundles=bundles,
-                    sender=deps.bundle_sender,
-                    interference=deps.interference_detector,
-                )
-                return JSONResponse(
-                    status_code=result.response_status,
-                    content={**result.response_body, **outcome},
-                )
-
-            return JSONResponse(status_code=result.response_status, content=result.response_body)
+            return JSONResponse(status_code=response_status, content=response_body)
         except ExchangeError as error:
             return _error_response(error, request)
 

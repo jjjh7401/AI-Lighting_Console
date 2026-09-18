@@ -55,6 +55,7 @@ from server.director.approvals import ApprovalRegistry, check_validity
 from server.director.digest import canonical_digest
 from server.director.models import Detail, ExchangeError
 from server.director.store import DirectorStore
+from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 
 _MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
@@ -226,6 +227,12 @@ class GatePort(Protocol):
     def lock(self) -> Any: ...  # LiveLock — .is_active 만 읽는다
 
     def execute_preapproved(self, commands: Sequence[str]) -> Any: ...  # ScreenDecision
+
+    def revoke_clearances(self) -> None:
+        """SPEC-LDSEND-001 REQ-LDSEND-005/006 — 호출 세션 자신의 남은 클리어런스만
+        비운다. fake gate 와 실물 :class:`server.safety.gate.SafetyGate` 양쪽이
+        이 구조적 타입을 만족해야 한다."""
+        ...
 
 
 class BundleSender(Protocol):
@@ -969,6 +976,90 @@ class ApplyCoordinator:
             raise _gate_rejected(decision)
 
         return result
+
+    def revoke_clearances(self) -> None:
+        """SPEC-LDSEND-001 REQ-LDSEND-005/006/013 — 순수 위임. ``apply()`` 의
+        재검사 순서는 이 메서드로 바뀌지 않는다. :func:`run_director_apply` 가
+        ``execute_bundles()`` 반환 직후(성공이든 예외든) ``finally`` 에서
+        정확히 1회 호출한다."""
+        self._gate.revoke_clearances()
+
+
+# @MX:NOTE: [AUTO] the single director-apply entry point (SPEC-LDSEND-001
+#   REQ-LDSEND-007/015) — director_api.py post_apply() (HTTP adapter) and the
+#   M3~M4 observation tool both call ONLY this function to reach
+#   ApplyCoordinator.apply() -> execute_bundles(); neither ever calls those
+#   two pieces separately. Placed in this fastapi-free module deliberately so
+#   the observation tool never has to import server.director.director_api.
+def run_director_apply(
+    *,
+    coordinator: ApplyCoordinator,
+    journal: ExecutionJournal | None,
+    bundle_sender: BundleSender | None,
+    interference: InterferenceDetector | None,
+    project_id: str,
+    plan_id: str,
+    revision: int,
+    principal_id: str,
+    operation: str,
+    current_context_digest: str,
+    body: Mapping[str, Any],
+) -> tuple[dict[str, Any], int]:
+    """``POST .../apply`` 의 판정 흐름 전체 — REQ-LDSEND-015 가 요구하는 공유
+    함수. ``director_api.py`` 의 ``post_apply()``(HTTP adapter)와 관측 도구
+    (SPEC-LDSEND-001 M3~M4, ``server/tools/director_apply_observe.py``) 양쪽의
+    **유일한** apply 호출 지점이다(spec.md §2.0-마).
+
+    ``fastapi`` 를 import 하지 않는 이 모듈에 둔 이유: 관측 도구가
+    ``director_api.py`` 를 import 하지 않아도 되게 하기 위함이다(그 파일은
+    ``fastapi`` 를 끌어온다).
+
+    본문 — ``bind_session_key(new_session_key())`` 로 전용 세션을 얻고
+    (REQ-LDSEND-013), ``coordinator.apply(...)`` 를 호출한다. 그 호출이
+    :class:`server.director.models.ExchangeError` 를 던지면(APPROVAL_STALE·
+    GATE_REJECTED 등) 이 함수는 그 예외를 그대로 전파한다 — ``director_api.py``
+    의 기존 ``except ExchangeError`` 가 그대로 잡는다(REQ-LDSEND-015 행동
+    보존). ``execute_bundles()`` 는 sender 가 배선돼 있고 이번 apply 가
+    replay 가 아닐 때만 호출한다(기존 ``post_apply()`` 와 바이트 동일한
+    조건). 성공이든 예외든 ``finally`` 에서 ``coordinator.revoke_clearances()``
+    (REQ-LDSEND-005) 다음 ``reset_session_key(token)``(REQ-LDSEND-013)을
+    정확히 1회씩 부른다.
+
+    Returns:
+        ``(response_body, response_status)`` — 호출자가 ``JSONResponse`` 로
+        감싸기만 하면 되는 튜플(관측 도구는 그대로 읽기만 한다).
+    """
+    token = bind_session_key(new_session_key())
+    try:
+        result = coordinator.apply(
+            project_id=project_id,
+            plan_id=plan_id,
+            revision=revision,
+            principal_id=principal_id,
+            operation=operation,
+            current_context_digest=current_context_digest,
+            body=body,
+        )
+
+        # 실제 bundle 전송은 이 SPEC 의 콘솔 게이트 경계다(spec.md §5) — sender
+        # 가 배선되지 않았거나 이미 replay 된 응답이면 journal 커밋·gate 연결
+        # 결과만 그대로 돌려준다(post_apply() 의 원래 조건과 바이트 동일).
+        journal_ready = journal is not None
+        if bundle_sender is not None and not result.replayed and journal_ready:
+            bundles = body.get("bundles") or []
+            outcome = execute_bundles(
+                journal,
+                execution_id=result.execution_id,
+                bundles=bundles,
+                sender=bundle_sender,
+                interference=interference,
+            )
+            return ({**result.response_body, **outcome}, result.response_status)
+
+        return (result.response_body, result.response_status)
+    finally:
+        coordinator.revoke_clearances()
+        reset_session_key(token)
 
 
 def execute_bundles(

@@ -356,6 +356,12 @@ class _SpyApplyCoordinator:
         self.called = True
         raise AssertionError("ApplyCoordinator.apply() 가 호출됐다 — 인증 단계가 막지 못했다.")
 
+    def revoke_clearances(self) -> None:
+        # SPEC-LDSEND-001 M1 — run_director_apply() 는 apply() 결과와 무관하게
+        # finally 에서 이 메서드를 부른다(REQ-LDSEND-005/013). 이 스파이는
+        # apply() 호출 자체를 재는 것이 목적이므로 no-op 이면 충분하다.
+        pass
+
 
 @pytest.fixture()
 def client(

@@ -914,18 +914,22 @@ class SafetyGate:
             )
         if self.lock.is_active:
             self._audit.log_blocked(command, reason="live lock active (read-only)")
-            return ExecutionResult(ok=False, detail="blocked: live lock active (read-only)")
+            return ExecutionResult(
+                ok=False, detail="blocked: live lock active (read-only)", outcome="failed"
+            )
         if self.monitor.executions_blocked:
             reason = f"health: {self.monitor.state}"
             self._audit.log_blocked(command, reason=reason)
-            return ExecutionResult(ok=False, detail=f"blocked: {reason}")
+            return ExecutionResult(ok=False, detail=f"blocked: {reason}", outcome="failed")
         session_key = current_session_key()
         with self._clearances_lock:
             clearances = self._clearances.setdefault(session_key, Counter())
             if clearances[command] <= 0:
                 self._audit.log_blocked(command, reason="not cleared by the safety gate")
                 return ExecutionResult(
-                    ok=False, detail="blocked: command was not cleared by the safety gate"
+                    ok=False,
+                    detail="blocked: command was not cleared by the safety gate",
+                    outcome="failed",
                 )
             clearances[command] -= 1
         outcome = self._console.execute(command)
@@ -937,7 +941,7 @@ class SafetyGate:
             outcome=outcome.status,
         )
         if outcome.status == "ok":
-            return ExecutionResult(ok=True, detail=outcome.detail)
+            return ExecutionResult(ok=True, detail=outcome.detail, outcome="ok")
         if outcome.status == "unconfirmed":
             self._remember_unconfirmed(command)
             return ExecutionResult(
@@ -946,8 +950,28 @@ class SafetyGate:
                     "execution unconfirmed — the command may or may not have run on "
                     f"the console; it will NOT be auto-resent (REQ-MVP-032): {outcome.detail}"
                 ),
+                outcome="unconfirmed",
             )
-        return ExecutionResult(ok=False, detail=outcome.detail)
+        return ExecutionResult(ok=False, detail=outcome.detail, outcome="failed")
+
+    # @MX:NOTE: [AUTO] session-scoped clearance revocation (SPEC-LDSEND-001
+    #   REQ-LDSEND-005/006) — clears ONLY current_session_key()'s own Counter,
+    #   never another session's, preserving the M6c-1 per-session-scope
+    #   invariant screen()/execute_preapproved() already establish.
+    def revoke_clearances(self) -> None:
+        """Empty the CALLING session's own outstanding clearances (REQ-LDSEND-
+        005/006). Used by :func:`server.director.execution.run_director_apply`
+        immediately after ``execute_bundles()`` returns (success or exception)
+        so a bundle that stopped mid-send (REQ-LDSEND-002) cannot leave unused
+        clearances alive for a LATER, unrelated ``execution_port.execute()``
+        call on the same session key to accidentally reuse (same command
+        string coinciding). Reuses ``_clearances_lock`` for the same
+        concurrency-safety discipline as ``screen()``/``execute_preapproved()``.
+        Scoped to ``current_session_key()`` only — never touches another
+        session's counter (M6c-1 per-session-scope invariant, unchanged)."""
+        session_key = current_session_key()
+        with self._clearances_lock:
+            self._clearances[session_key] = Counter()
 
     def _remember_unconfirmed(self, command: str) -> None:
         """Record ``command`` as unconfirmed, evicting the oldest entry
