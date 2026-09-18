@@ -90,7 +90,7 @@ from server.director.service import OUTCOME_READY
 from server.director.store import DirectorStore
 from server.orchestrator.bundle_sender import GateBundleSender
 from server.safety.bootstrap import build_console_stack
-from server.safety.console import StateQueryError
+from server.safety.console import ConsoleSilentError, StateQueryError
 from server.tools.probe_preflight import add_listen_port_argument
 from server.tools.tree_identity import assert_same_tree
 
@@ -337,7 +337,8 @@ class DestinationCheck:
     두 용도를 겸한다.
     """
 
-    empty: bool
+    #: ``None`` = 판독 불가(콘솔 무응답) — 비었다고도 찼다고도 말할 수 없다.
+    empty: bool | None
     response_shape: str
     raw: Any
 
@@ -354,6 +355,15 @@ def _check_destination_empty(state_port: Any, path: str) -> DestinationCheck:
     """
     try:
         payload = state_port.query_state(path)
+    except ConsoleSilentError as error:
+        # 무응답은 「없다」는 답이 아니다(console.py t313) — 판독 자체가 성립하지
+        # 않았다. ``empty=None``(모름): 점유 확인은 쓰기를 거부하고, readback 은
+        # 「없음」으로 단정하지 않는다.
+        return DestinationCheck(
+            empty=None,
+            response_shape=f"ConsoleSilentError (무응답): {error} — 판독 불가",
+            raw=None,
+        )
     except StateQueryError as error:
         return DestinationCheck(
             empty=True,
@@ -382,6 +392,11 @@ def _require_destination_empty(state_port: Any, destination: Mapping[str, str]) 
     점유돼 있으면 거부한다."""
     path = f"DataPool/Sequences/{destination['sequence_id']}"
     check = _check_destination_empty(state_port, path)
+    if check.empty is None:
+        raise DestinationOccupiedError(
+            f"destination {dict(destination)!r} 의 점유 여부를 판독할 수 없습니다 — "
+            f"쓰기를 거부합니다({check.response_shape})."
+        )
     if not check.empty:
         raise DestinationOccupiedError(
             f"destination {dict(destination)!r} 이 이미 점유돼 있습니다 — 쓰기를 "
@@ -396,7 +411,8 @@ class ReadbackResult:
     결과로 apply 여부를 보고한다."""
 
     path: str
-    exists: bool
+    #: ``None`` = 판독 불가(콘솔 무응답).
+    exists: bool | None
     response_shape: str
     raw: Any
 
@@ -405,7 +421,10 @@ def _readback_object_existence(state_port: Any, destination: Mapping[str, str]) 
     path = f"DataPool/Sequences/{destination['sequence_id']}"
     check = _check_destination_empty(state_port, path)
     return ReadbackResult(
-        path=path, exists=not check.empty, response_shape=check.response_shape, raw=check.raw
+        path=path,
+        exists=None if check.empty is None else not check.empty,
+        response_shape=check.response_shape,
+        raw=check.raw,
     )
 
 

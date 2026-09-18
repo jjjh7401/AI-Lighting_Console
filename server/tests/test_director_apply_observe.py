@@ -47,7 +47,7 @@ from server.director.store import DirectorStore
 from server.orchestrator.ports import ExecutionResult
 from server.safety.audit import AuditLog
 from server.safety.backup import BackupManager
-from server.safety.console import ExecOutcome, StateQueryError
+from server.safety.console import ConsoleSilentError, ExecOutcome, StateQueryError
 from server.safety.gate import SafetyGate
 
 _MODULE_SOURCE = Path(tool.__file__).read_text(encoding="utf-8")
@@ -451,6 +451,23 @@ class TestDestinationOccupancyCheck:
 
         assert result["backup_precondition"] == "ok"
         assert stack.console.executed
+
+    def test_refuses_when_console_is_silent(self):
+        # 무응답(ConsoleSilentError)은 「없다」는 답이 아니다(console.py t313) —
+        # 판독이 성립하지 않았으므로 쓰기를 진행하면 안 된다.
+        state_port = MagicMock()
+        state_port.query_state.side_effect = ConsoleSilentError("timeout (fake)")
+
+        with pytest.raises(tool.DestinationOccupiedError):
+            tool._require_destination_empty(state_port, {"sequence_id": "9900"})
+
+    def test_readback_is_unknown_when_console_is_silent(self):
+        state_port = MagicMock()
+        state_port.query_state.side_effect = ConsoleSilentError("timeout (fake)")
+
+        readback = tool._readback_object_existence(state_port, {"sequence_id": "9900"})
+
+        assert readback.exists is None
 
 
 class TestScenario024BundleThreeNeverSentAfterBundleTwoFails:
