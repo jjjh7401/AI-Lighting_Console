@@ -32,6 +32,7 @@ duplicate that coverage.
 
 from __future__ import annotations
 
+import contextvars
 from pathlib import Path
 from typing import Any
 
@@ -395,3 +396,55 @@ class TestCrossSessionClearanceIsolationDuringRunDirectorApply:
         result = gate.execution_port.execute(default_caller_line)
         assert result.ok is True
         assert console.executed[-1] == default_caller_line
+
+    def test_applys_clearance_survives_a_default_session_callers_revoke(self, tmp_path: Path):
+        # AC-LDSEND-006 역방향 — apply 가 전용 세션에서 클리어런스를 받은 뒤,
+        # 송신 직전에 DEFAULT 세션 호출자가 revoke_clearances() 를 불러도
+        # apply 의 클리어런스는 지워지지 않아야 한다. revoke_clearances() 가
+        # 호출 세션만이 아니라 전체를 비우도록 퇴행하면 이 시험이 깨진다.
+        console = _AlwaysOkConsole()
+        gate = SafetyGate(console=console, audit=AuditLog(tmp_path / "audit"))
+        store = DirectorStore(tmp_path / "director.sqlite3")
+        store.submit(
+            plan={"project_id": _PROJECT, "plan_id": _PLAN, "base_revision": 0, "body": "v1"},
+            expected_revision=0,
+            principal_id=_PRINCIPAL,
+            operation="PUT /plans/plan-0001",
+            idempotency_key="submit-key-1",
+        )
+        journal = ExecutionJournal(tmp_path / "execution.sqlite3")
+        approvals = ApprovalRegistry()
+        _register(approvals, _binding())
+        coordinator = ApplyCoordinator(journal=journal, approvals=approvals, store=store, gate=gate)
+
+        interloper_keys: list[object] = []
+
+        def _default_caller_revokes() -> None:
+            # 빈 Context 에서 돌리면 ContextVar 기본값, 곧 DEFAULT_SESSION_KEY 다
+            # — 세션 키를 바인딩하지 않는 측정기 흉내.
+            interloper_keys.append(current_session_key())
+            gate.revoke_clearances()
+
+        class _InterleavingSender:
+            def __init__(self) -> None:
+                self.results: list[Any] = []
+
+            def send(self, bundle: Any) -> str:
+                contextvars.Context().run(_default_caller_revokes)
+                for command in bundle["commands"]:
+                    self.results.append(gate.execution_port.execute(command))
+                return STATE_ACKNOWLEDGED
+
+        sender = _InterleavingSender()
+        run_director_apply(
+            coordinator=coordinator,
+            journal=journal,
+            bundle_sender=sender,
+            interference=None,
+            **_kwargs(),
+        )
+
+        # 끼어든 쪽이 정말 DEFAULT 세션이었는지(대조) — 아니면 이 시험은 공허하다.
+        assert interloper_keys == [DEFAULT_SESSION_KEY]
+        assert [r.ok for r in sender.results] == [True]
+        assert console.executed == ["Fixture 901 At 50"]
