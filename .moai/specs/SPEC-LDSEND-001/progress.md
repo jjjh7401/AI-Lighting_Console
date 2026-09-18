@@ -871,9 +871,24 @@ exit=1
 - **확정(사람 결정, 2026-09-18)**: AC-024/032 실패 유발 명령 = 후보 ① `Store Sequence {n}`(점유된 scratch 에 맨몸 Store). 도구에는 `--confirmed-failure-command 'Store Sequence {n}'` 로 넘긴다. plan.md §2.0-라의 `'Not allowed'` 인용은 실기 사유와 다르다 — 실기 사유는 `User Canceled Command`(2/2).
 - 콘솔 잔여물 누적: Sequence 9901, 9911.
 
+### M5 — 실기 관측 (2026-09-18, 사람 승인: 021·032 실행, 024 는 M4a 2회 관측 사용)
+
+- 021: `uv run python -m server.tools.director_apply_observe 021 --listen-port 9005 --execute` → exit 0 (`.moai/state/verify/ae8e2656/m5-021-execute.txt`). `response_status: 201`, `{'state': 'sent', 'bundles': ['acknowledged'], 'recovery_required': False}`, `readback[primary]: exists=True ... 'class': 'Sequence', 'name': 'Sequence 9900'`. 감사 로그 11-14행: SaveShow → approved(held) → SaveShow → `Store Sequence 9900 Cue 1 /Merge` ok. **AC-LDPLUGIN-021 승격부 관측됨.**
+- 024: M4a 의 2회 실행(9901/9902, 9911/9912)이 같은 `run_director_apply()`→`execute_bundles()`→`GateBundleSender` 경로 — 두 번 모두 `['acknowledged', 'failed', 'not_sent']`, 3번째 bundle 감사 기록 0, readback 부재. **AC-LDPLUGIN-024 관측부 관측됨(2/2).**
+- 032: `... 032 --listen-port 9005 --confirmed-failure-command 'Store Sequence {n}' --execute` → exit 0 (`.moai/state/verify/ae8e2656/m5-032-execute.txt`). 원본 `{'state': 'partial', 'bundles': ['acknowledged', 'failed'], 'recovery_required': False}`, recovery `{'state': 'sent', 'bundles': ['acknowledged']}`, readback 9903·9904 모두 존재. 감사 로그 15-22행: SaveShow → approved(2 held) → SaveShow → 9903 Merge ok → `Store Sequence 9903` `User Canceled Command` → approved(recovery) → SaveShow → `Store Sequence 9904 Cue 1 /Merge` ok. `recovery_of` 는 `ApplyCoordinator.apply()` 875-878행이 원본 상태 `partial|unknown` 이 아니면 `RECOVERY_SOURCE_INVALID` 로 거부하는데 201 이 나왔다 → 연결 수용됨. **AC-LDPLUGIN-032 실행부 관측됨.**
+- §2.0-다 응답 모양 확정(5회 일관): 부재 = `ok:false` `path segment not found: '<N>'`, 존재 = `ok:true` + node `class: Sequence`.
+- 백업(REQ-014): 모든 실행에서 `backup_precondition: ok`. SaveShow 는 세션 시작 1회 + 승인 배치마다 1회(명령마다 아님).
+- **열린 판단(사람 확인 대상)**: ① 032 recovery 가 원본 destination(9903)이 아니라 새 scratch(9904)에 쓴다 — destination 예약이 partial 뒤에도 안 풀리고(create-only) SPEC 에 해제 절차가 없어서 M4 가 정한 설계. ② 원본 partial 응답의 `recovery_required: False` — 명시적 failed 가 섞인 partial 에서 LDRECV 가 recovery 를 요구하지 않는다는 뜻. 이 SPEC 의 범위 밖(LDRECV 계약)이라 기록만 한다. ③ plan.md §2.0-라 의 `'Not allowed'` 인용은 실기 사유(`User Canceled Command`)와 다르다 — sync 때 문서 정정 대상.
+- 콘솔 잔여물(정리 명령 — 사람이 실행): `Delete Sequence 9900`, `Delete Sequence 9901`, `Delete Sequence 9903`, `Delete Sequence 9904`, `Delete Sequence 9911`. (9902·9912 는 생성되지 않음.)
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+- run_status: audit-ready
+- run_complete_at: 2026-09-18
+- head: M1~M5 기록 커밋(이 절 포함 커밋)
+- 전체 회귀(마지막 코드 변경 `eee1c4e4` 기준): `uv run pytest -q -p no:cacheprovider` → exit 0, `13583 passed, 35 skipped` (기준선 13515/35, +68 신규, 회귀 0)
+- AC 로컬 판정: 각 M 절 매트릭스(구현 에이전트 작성)가 001-015 를 시험에 대응시켰고, 그 시험들은 위 전체 회귀에서 통과했다. AC↔시험 대응 자체의 독립 감사는 sync-auditor 몫(미수행). 콘솔 필요 항목(021 승격부·024 관측부·032 실행부)은 M5 실기 관측 PASS.
+- 남은 것: 위 M5 "열린 판단" 3건, 콘솔 잔여물 정리, sync.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
