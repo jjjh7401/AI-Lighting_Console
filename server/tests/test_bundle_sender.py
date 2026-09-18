@@ -18,7 +18,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from server.director.execution import STATE_ACKNOWLEDGED, STATE_FAILED, STATE_UNKNOWN
-from server.director.sender import GateBundleSender
+from server.orchestrator.bundle_sender import GateBundleSender
 from server.orchestrator.ports import ExecutionResult
 
 

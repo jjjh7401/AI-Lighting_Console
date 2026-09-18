@@ -11,28 +11,20 @@
 이 모듈은 직접 import 하지 않는다(REQ-LDSEND-001).
 
 .. note::
-   ``server/director`` 경계 시험(``test_director_boundary.py``,
-   SPEC-LDSTORE-001)이 이 패키지 전체에서 실행 포트 타입 이름을 문자열로
-   금지한다 — 그래서 이 모듈은 그 타입을 이름으로 import 하지 않고, 구조적
-   타이핑(로컬 ``Protocol``)으로만 그 모양을 표현한다. 런타임 동작은
-   동일하다 — 어차피 ``gate.execution_port`` 는 덕타이핑으로 소비된다.
+   위치가 ``server/director`` 가 아니라 ``server/orchestrator`` 인 이유:
+   ``server/director`` 는 콘솔을 만지지 않는 교환·저장 층이다(SPEC-LDSTORE-001,
+   ``test_director_boundary.py``). director 는 ``BundleSender`` 프로토콜과
+   ``execute_bundles()`` 라는 틀만 갖고, 실제로 콘솔에 보내는 이 구현체는
+   실행 포트(``CommandExecutionPort``)가 정의된 이 층에 두고 밖에서 주입한다.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Protocol
+from typing import Any
 
 from server.director.execution import STATE_ACKNOWLEDGED, STATE_FAILED, STATE_UNKNOWN
-from server.orchestrator.ports import ExecutionResult
-
-
-class _ExecutionPort(Protocol):
-    """``execution_port`` 가 만족해야 하는 구조적 타입 — 명령 하나를 보내고
-    ``ExecutionResult`` 를 반환한다. 실물 ``server.safety.gate.SafetyGate.
-    execution_port`` 가 이 타입을 구조적으로 만족한다(상속 불필요)."""
-
-    def execute(self, command: str) -> ExecutionResult: ...
+from server.orchestrator.ports import CommandExecutionPort
 
 
 class GateBundleSender:
@@ -45,7 +37,7 @@ class GateBundleSender:
     부수 효과를 일으키지 않는다.
     """
 
-    def __init__(self, execution_port: _ExecutionPort) -> None:
+    def __init__(self, execution_port: CommandExecutionPort) -> None:
         self._execution_port = execution_port
 
     def send(self, bundle: Mapping[str, Any]) -> str:
