@@ -838,6 +838,19 @@ exit=1
 있다(M5 가 닫아야 한다). 032 의 recovery-다른-destination 설계 선택은
 사람의 재확인 없이 코드로 굳어 있다.
 
+#### M4 오케스트레이터 재측정·무응답 결함 수정 (2026-09-18, t420)
+
+- 반영: `git merge --ff-only 6713f93f` → `WT-bundle-sender`. 위 Residual risk(미반영)는 해소됐다.
+- **결함**: `_check_destination_empty()` 가 `StateQueryError` 전체를 「비었음」으로 받았다. 그 하위형 `ConsoleSilentError`(무응답, `console.py` t313 — 「무응답을 `ok:false` 로 읽으면 아무것도 재지 않은 실행에서 '콘솔에 아무것도 없다'는 결론이 나온다」)까지 「비었음」이 되어, 콘솔이 조용하면 점유 확인이 쓰기를 진행시키고(이미 찬 시퀀스에 `/Merge`) readback 은 「없음」으로 단정했다. 배차서가 요구한 "모호하면 쓰지 않는다"와 어긋났다.
+- 재현: 새 시험 2건 → `2 failed` (`DID NOT RAISE DestinationOccupiedError`, `assert False is None`). 수정 `eee1c4e4`: 무응답은 `empty=None`(판독 불가), 점유 확인은 거부, readback 은 `exists=None`. 도구 시험 `45 passed`.
+- 재측정 @`eee1c4e4`: `uv run pytest -q -p no:cacheprovider` → exit 0, `13583 passed, 35 skipped, 1 warning` (`.moai/state/verify/ae8e2656/m4-full.txt`).
+- **M4a 승인 대상 명령(코드에서 직접 추출** — `_plan_for_scenario(..., sequence_range_start=9900)`, `.moai/state/verify/ae8e2656/dump_plans.py`, 콘솔 무접촉):
+  - 021: `Store Sequence 9900 Cue 1 /Merge` · 정리 `Delete Sequence 9900`
+  - 024: b1 `Store Sequence 9901 Cue 1 /Merge` → b2 `<확정 실패 명령>` → b3 `Store Sequence 9902 Cue 1 /Merge`(가면 안 됨) · 정리 `Delete Sequence 9901`, `Delete Sequence 9902`
+  - 032: b1 `Store Sequence 9903 Cue 1 /Merge` → b2 `<확정 실패 명령>` → recovery `Store Sequence 9904 Cue 1 /Merge` · 정리 `Delete Sequence 9903`, `Delete Sequence 9904`
+  - 024 후보: ① `Store Sequence 9901`(점유된 대상에 맨몸 Store — 코드 기록상 콘솔이 'Not allowed' 거부) ② `Copy Sequence <source> At 9901`(미검증)
+  - 추가로 나가는 것: `--execute` 시 세션 시작 SaveShow 1회(bootstrap.py:185-189). `Store Sequence` 는 blacklist held 이므로 apply 마다 위험 명령 직전 백업(`before_risky_execution`)이 나갈 것으로 **코드 판독상** 예상 — 실측 아님.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
