@@ -529,6 +529,315 @@ exit=0
 명령으로 교체할 때 REQ-LDSEND-014 의 백업 선행조건 관측 배선도 함께
 필요해진다(그 명령들은 blacklist held 경로를 타므로, §1 규범표 spec.md).
 
+### M4 — 시나리오 배선 (REQ-LDSEND-008/010/011/014, D12)
+
+**작업 위치**: `.claude/worktrees/agent-a6fa7fbab70a1e155` — 격리된 별도
+워크트리라, base commit `a0e919f0`(M3 반영 뒤 최신 커밋, `WT-bundle-sender`/
+`t420`) 위에 로컬 브랜치 `LDSEND-M4-t420` 을 새로 만들어 작업했다
+(`git switch -c LDSEND-M4-t420 a0e919f0` — `a0e919f0` 가 이 워크트리의
+공유 object store 에서 reachable(`git cat-file -t` 확인)했으므로 그 커밋
+위에 바로 분기했다). 병합은 오케스트레이터가 이 브랜치를
+`WT-bundle-sender`/`t420` 으로 반영해야 한다(M1~M3 와 동일한 절차).
+
+**착수 전 기준선**: 오케스트레이터가 `a0e919f0` 기준으로 확인한
+`13564 passed, 35 skipped`, exit=0.
+
+**RED (명령 + 그대로의 출력, 요약)** — 신규/변경 시험 16개를 옛 M3 구현
+대비 먼저 돌려 실패를 확인했다(전체 verbatim 은 `.moai/state/verify/`
+세션 로그에 남기지 않고 이 커밋 전 turn 의 도구 출력으로 관측했다 — 아래는
+그 pytest 요약 그대로):
+
+```
+$ uv run pytest server/tests/test_director_apply_observe.py -q -p no:cacheprovider
+...
+FAILED ...::TestArgParsing::test_confirmed_failure_command_defaults_to_none
+FAILED ...::TestDryRunShowsAc024Candidates::test_024_dry_run_output_names_both_candidates
+FAILED ...::TestRunScenarioEndToEnd::test_run_scenario_goes_through_the_real_apply_path
+FAILED ...::TestRunScenarioEndToEnd::test_run_scenario_readback_confirms_object_existence
+FAILED ...::TestDestinationOccupancyCheck::test_refuses_when_destination_already_occupied
+FAILED ...::TestDestinationOccupancyCheck::test_proceeds_when_destination_is_empty
+FAILED ...::TestScenario024BundleThreeNeverSentAfterBundleTwoFails::test_bundle_three_is_never_sent_and_readback_confirms_it
+FAILED ...::TestScenario024RequiresConfirmedFailureCommand::test_run_scenario_raises_without_confirmed_failure_command
+FAILED ...::TestM4aConfirmationGate::test_024_execute_refuses_without_confirmed_failure_command
+FAILED ...::TestM4aConfirmationGate::test_032_execute_refuses_without_confirmed_failure_command
+FAILED ...::TestM4aConfirmationGate::test_024_execute_proceeds_with_confirmed_failure_command
+FAILED ...::TestBackupPreconditionObservation::test_backup_failure_is_recorded_separately_and_blocks_readback
+FAILED ...::TestBackupPreconditionObservation::test_backup_success_lets_readback_proceed_normally
+FAILED ...::TestCleanup::test_print_cleanup_all_prints_every_destination
+FAILED ...::TestCleanup::test_execute_024_cleanup_prints_both_destinations
+FAILED ...::TestExecuteBundlesStopsAfterBundleTwoFails::test_bundle_three_never_reaches_the_execution_port
+16 failed, 27 passed in 1.64s
+```
+
+주요 실패 사유(대표): `AttributeError: module ... has no attribute
+'_print_cleanup_all'`, `TypeError: _plan_for_scenario() got an unexpected
+keyword argument 'confirmed_failure_command'`, `unrecognized arguments:
+--confirmed-failure-command` — 옛 M3 구현에 M4 가 추가하는 심볼/인자가
+전혀 없었다는 것을 그대로 보여준다. M3 의 기존 26개는 이 시점에도 이미
+통과(회귀 없음의 사전 확인).
+
+**GREEN — 구현**:
+
+- `server/tools/director_apply_observe.py` — M3 골격 위에 시나리오
+  021/024/032 를 실제로 얹었다.
+  - `ScenarioPlan` 이 `destination`(단수) 대신 `destinations`(named slot
+    dict — `primary`/`never_written`/`recovery`) 와 `recovery_bundles`,
+    `notes` 를 갖도록 확장됐다. 시나리오별 오프셋은
+    `_DESTINATION_OFFSETS` 로 미리 나눠 겹치지 않는다(021: primary+0,
+    024: primary+1/never_written+2, 032: primary+3/recovery+4).
+  - `_check_destination_empty()`/`_require_destination_empty()` —
+    REQ-LDSEND-008. `state_port.query_state("DataPool/Sequences/<N>")` 를
+    호출해 `StateQueryError`(§2.0-다 후보 1) 또는 `ok:true`+빈/부재
+    `node`·`children`(§2.0-다 후보 2) 둘 다 "비어있음"으로, 그 밖은 점유로
+    판정한다 — 모호하면 쓰지 않는다(보수적 기본값). 어느 응답 모양이
+    실제로 관측됐는지는 `DestinationCheck.response_shape` 에 남겨 M5 가
+    확정하게 한다.
+  - `_readback_object_existence()` — REQ-LDSEND-010. 같은 질의 함수를
+    반대 극성(`exists = not empty`)으로 재사용해, `BundleSender` 가
+    돌려준 상태가 아니라 별도 조회로 적용 여부를 보고한다.
+  - `_backup_failure_detail()` — REQ-LDSEND-014. `ApplyCoordinator.
+    apply()` 가 backup 실패를 `ExchangeError(code="GATE_REJECTED",
+    details=(Detail("", decision.notice), ...))` 로 감싸는 것을
+    역으로 읽어(`"backup failed"` 부분 문자열), 다른 GATE_REJECTED 사유
+    (문법/분류/health/lock)와 구분한다. `_apply_bundles()` 가 이 신호를
+    잡으면 `backup_precondition="failed"` 로 반환하고 readback 을
+    **시도하지 않는다** — 그 사실을 readback 필드로 덮어쓰지 않는다.
+  - `_plan_for_scenario()` — 021 은 채움 bundle 하나. 024 는
+    `confirmed_failure_command` 가 주어졌을 때만 bundle2(같은
+    destination 재시도, 실패 유발)·bundle3(다른 destination, 전혀 안 감)
+    을 완성한다 — 없으면 두 후보(`AC024_CANDIDATES`)만 `notes` 에 보여
+    준다. 032 는 024 와 같은 메커니즘으로 원본을 partial 로 만들고,
+    **다른** scratch destination 으로 recovery apply 를 낸다 — 원본
+    destination 은 partial 이후에도 create-only 예약이 풀리지 않는다는
+    실측(`ExecutionJournal._reserve_destination_locked`)에 근거한 설계
+    결정이며, 같은 자리 재사용은 이 SPEC 이 정하지 않은 release 절차가
+    필요하다고 코드 주석에 명시했다(M5 재확인 대상).
+  - `_run_scenario()` — (1) primary destination 점유 확인(한 번만, D12 —
+    같은 run 안의 후속 bundle 재시도는 재확인하지 않는다) (2) 원본
+    apply(`_apply_bundles`) (3) backup 실패면 즉시 반환, 성공하면
+    readback(021/024 는 primary(+024 는 never_written 도)) (4) 032 만 —
+    recovery apply(새 로컬 승인, `recovery_of=<원본 execution_id>`) →
+    성공하면 recovery destination 도 readback.
+  - `main()` — M4a HALT 게이트: `--execute` + 시나리오가
+    `_REQUIRES_CONFIRMED_FAILURE_COMMAND`(024/032)에 있고
+    `--confirmed-failure-command` 가 없으면, **콘솔 스택을 만들기 전에**
+    거부 메시지를 출력하고 exit 1 — 세션 시작 백업(`SaveShow`)조차
+    나가지 않는다. `_print_cleanup_all()` 이 이 실행이 만들 수 있는 모든
+    destination 에 대해 cleanup 명령을 출력한다(기존 `_print_cleanup`/
+    `_cleanup_commands` 는 단일 destination 시그니처 그대로 보존 — M3
+    시험이 그 시그니처를 직접 검사하므로).
+  - placeholder 명령(`"Fixture 901 At 50"`)을 전부 실제 명령(`Store
+    Sequence <N> Cue 1 /Merge`)으로 교체했다.
+- `server/tests/test_director_apply_observe.py` — 신규/변경 시험 16개 +
+  기존 M3 시험 27개(스택 fake 만 `state_port.query_state` 사전 구성으로
+  최소 갱신, 어설션은 그대로) = 43개.
+  - `_FakeConsoleLink` 가 `execute()` 로 지나간 `Store Sequence <N>` 을
+    기억해 뒀다가 `query_state()` 응답에 반영하도록 확장(점유·readback
+    양쪽에 씀), `failing_commands` 로 특정 명령을 명시적으로 거부하게
+    구성 가능해졌다.
+  - destination 점유(008: 점유 거부/빈 진행), D12(같은 destination
+    재시도는 안 막힘)+REQ-002/024(bundle3 안 감)를 한 시험에서 같이
+    잰다(`TestScenario024BundleThreeNeverSentAfterBundleTwoFails`).
+  - readback(010)은 `TestRunScenarioEndToEnd::
+    test_run_scenario_readback_confirms_object_existence` 와 위 024
+    시험의 `readback["never_written"].exists is False` 가 함께 잰다.
+  - cleanup(011 로컬 절반)은 `_print_cleanup_all` 신규 시험 +
+    `main()` 을 통한 024 다중-destination cleanup 출력 시험(콘솔
+    `execution_port.execute` 호출 0회까지 확인).
+  - backup 선행조건(014 로직 절반)은 진짜 `SafetyGate`+진짜
+    `BackupManager`(성공/실패 두 경로 — `backup_action` 콜백으로 구성)로
+    `TestBackupPreconditionObservation` 두 시험이 잰다.
+  - `execute_bundles()`+`GateBundleSender` 를 직접 호출해 bundle3 이
+    `STATE_NOT_SENT` 로 저널에 남고 실행 포트에 전혀 도달하지 않는 것을
+    최소 배선으로 재확인(`TestExecuteBundlesStopsAfterBundleTwoFails`).
+  - M4a 게이트(024/032 는 `--confirmed-failure-command` 없이 `--execute`
+    거부, 021 은 그 게이트에 안 걸림)를 `TestM4aConfirmationGate` 4개가
+    잰다 — 거부 시 `build_console_stack` 자체가 0회 호출됨을 확인(세션
+    시작 백업 포함 0회).
+  - dry-run 이 024/032 의 두 후보를 그대로 보여주는 것을
+    `TestDryRunShowsAc024Candidates` 가 잰다.
+
+**E1 AC PASS/FAIL 매트릭스 (M4 관련 4개 — 008·010·011(로컬 절반)·
+014(로직 절반))**:
+
+| AC | 시험 | 결과 |
+|---|---|---|
+| AC-LDSEND-008 | `TestDestinationOccupancyCheck::test_refuses_when_destination_already_occupied`·`test_proceeds_when_destination_is_empty`; D12 추가절: `TestScenario024BundleThreeNeverSentAfterBundleTwoFails::test_bundle_three_is_never_sent_and_readback_confirms_it`(bundle2 가 같은 destination 재시도에서 막히지 않음) | PASS |
+| AC-LDSEND-010 | `TestRunScenarioEndToEnd::test_run_scenario_readback_confirms_object_existence`; `TestScenario024BundleThreeNeverSentAfterBundleTwoFails`(`readback["primary"].exists is True` · `readback["never_written"].exists is False`) | PASS |
+| AC-LDSEND-011(로컬 절반) | `TestCleanup::test_cleanup_commands_shape`·`test_cleanup_prints_without_touching_any_console_or_registry`(M3, 시그니처 불변)·`test_print_cleanup_all_prints_every_destination`·`test_execute_024_cleanup_prints_both_destinations`(콘솔 `execution_port.execute` 호출 0회까지 확인) | PASS |
+| AC-LDSEND-014(로직 절반) | `TestBackupPreconditionObservation::test_backup_failure_is_recorded_separately_and_blocks_readback`(readback 필드 부재 확인)·`test_backup_success_lets_readback_proceed_normally` | PASS |
+
+**E2 명령 + 관측 출력**:
+
+```
+$ uv run pytest server/tests/test_director_apply_observe.py -q -p no:cacheprovider
+...........................................                              [100%]
+43 passed in 0.93s
+```
+
+**E5 lint**: `uv run ruff format server/tools/director_apply_observe.py
+server/tests/test_director_apply_observe.py` → `2 files reformatted`(공백
+정리, 로직 변경 없음). `uv run ruff check` 양쪽 → `All checks passed!`.
+
+**§5 plan.md 경계 grep (커밋 뒤 재측정)**:
+
+```
+$ grep -rnE "^\s*(from|import)\s+server\.bridge" server/orchestrator/bundle_sender.py server/tools/director_apply_observe.py
+(매치 없음) exit=1 — OK, no direct OSC import
+
+$ grep -nE "^\s*(from|import)\s+server\.director\.director_api" server/tools/director_apply_observe.py
+(매치 없음) exit=1 — OK, director_api 미참조(D9)
+
+$ grep -n "run_director_apply" server/tools/director_apply_observe.py
+10:이 도구는 ``server.director.execution.run_director_apply()`` 만 호출한다 —
+87:from server.director.execution import ApplyCoordinator, ExecutionJournal, run_director_apply
+448:    """승인 하나를 발급하고 ``run_director_apply()`` 를 한 번 호출한다.
+477:        response_body, response_status = run_director_apply(
+518:    """시나리오 하나를 ``run_director_apply()`` 로 실제로 구동한다.
+
+$ grep -n "director_apply_observe" server/web/serve.py
+(매치 없음) exit=1 — OK, not wired into serve.py
+
+$ grep -n "ldsend-observe-harness" server/tools/director_apply_observe.py
+21:문자열 ``ldsend-observe-harness`` 로 로컬 관측 하네스 산출물임을 표시한다.
+102:HARNESS_PRINCIPAL_ID = "ldsend-observe-harness"
+
+$ grep -n "def cleanup\|Delete Sequence" server/tools/director_apply_observe.py
+622:    return [f"Delete Sequence {destination['sequence_id']}"]
+691:    대해 ``Delete Sequence <N>`` 를 출력한다(단일 destination 시나리오는
+```
+
+**추가 — `server/tests/test_probe_port_discipline.py`·
+`server/tests/test_director_boundary.py` 재측정**:
+
+```
+$ uv run pytest server/tests/test_probe_port_discipline.py server/tests/test_director_boundary.py -q -p no:cacheprovider
+............                                                             [100%]
+12 passed in 0.15s
+```
+
+**추가 — `ExecutionResult` 소비자 다섯 중 존재가 확인된 넷 재측정**(§2.0-가
+D3 — 다섯 번째 `server/orchestrator/tools.py:2436` 은 이 M4 커밋이 만지지
+않은 모듈이고 전용 시험 파일명이 확정되지 않아, 아래 넷 + 전체 회귀가
+백스톱이다):
+
+```
+$ uv run pytest server/tests/test_measurement_runner.py server/tests/test_web_session.py server/tests/test_web_panel_execute.py server/tests/test_deploy_pipeline.py -q -p no:cacheprovider
+532 passed, 1 warning in 9.13s
+```
+
+**추가 — M1/M2/LDRECV 회귀 재측정**:
+
+```
+$ uv run pytest server/tests/test_director_ops_lifecycle.py server/tests/test_director_apply_rejection.py server/tests/test_run_director_apply.py server/tests/test_bundle_sender.py server/tests/test_safety_gate.py -q -p no:cacheprovider
+108 passed in 1.43s
+```
+
+**전체 회귀 (post-commit, `4009c0e8`)**:
+
+```
+$ uv run pytest -q -p no:cacheprovider
+13581 passed, 35 skipped, 1 warning in 213.96s (0:03:33)
+```
+
+exit=0. baseline(착수 전, `a0e919f0`) `13564 passed, 35 skipped` 대비 델타
++17(신규 시험 16개 + `test_confirmed_failure_command_defaults_to_none` 1개
+= 순증 17, `test_director_apply_observe.py` 26→43), skip 수 불변, 실패 0 —
+회귀 없음. 전체 출력: `.moai/state/verify/m4-full.txt`.
+
+**CLI dry-run 실측(콘솔 접촉 없음 — 그대로 수행)**:
+
+```
+$ uv run python -m server.tools.director_apply_observe 021 --listen-port 19296
+# scenario 021 — AC-LDPLUGIN-021 승격부 — apply 가 실제로 콘솔에 적용됐는가
+destination[primary]: {'show_id': '1', 'sequence_id': '9900'}
+commands:
+  Store Sequence 9900 Cue 1 /Merge
+dry-run — 콘솔로는 아무것도 보내지 않습니다(세션 시작 백업 포함, D11 — build_console_stack(attempt_session_backup=False)).
+
+$ uv run python -m server.tools.director_apply_observe 024 --listen-port 19299
+# scenario 024 — AC-LDPLUGIN-024 관측부 — 실패 뒤 후속 bundle 이 실기에서도 안 갔는가
+destination[primary]: {'show_id': '1', 'sequence_id': '9901'}
+destination[never_written]: {'show_id': '1', 'sequence_id': '9902'}
+commands:
+  Store Sequence 9901 Cue 1 /Merge
+# AC-024 실패 유발 명령은 M4a 가 실기로 확정한다(plan.md §2.0-라) — 아래 두 후보 중 하나가 채택된다:
+#   candidate_1(권장): Store Sequence 9901
+#   candidate_2(미검증): Copy Sequence <source> At {n}
+# --confirmed-failure-command 없이는 bundle 2/3 을 아직 만들지 않는다(REQ-LDSEND-009 안전) — --execute 도 거부한다.
+dry-run — 콘솔로는 아무것도 보내지 않습니다(세션 시작 백업 포함, D11 — build_console_stack(attempt_session_backup=False)).
+
+$ uv run python -m server.tools.director_apply_observe 032 --listen-port 19298
+# scenario 032 — AC-LDPLUGIN-032 실행부 — recovery apply 가 실제로 적용됐는가
+destination[primary]: {'show_id': '1', 'sequence_id': '9903'}
+destination[recovery]: {'show_id': '1', 'sequence_id': '9904'}
+commands:
+  Store Sequence 9903 Cue 1 /Merge
+# AC-024 실패 유발 명령은 M4a 가 실기로 확정한다(plan.md §2.0-라) — 아래 두 후보 중 하나가 채택된다:
+#   candidate_1(권장): Store Sequence 9903
+#   candidate_2(미검증): Copy Sequence <source> At {n}
+# 원본 apply 를 의도적으로 partial 로 만들기 위해 024 와 같은 확정 대기 실패 유발 명령을 재사용한다. recovery apply 는 원본과 다른 scratch destination 을 새로 쓴다 — 원본 destination 은 partial 이후에도 예약이 풀리지 않는다(create-only, ExecutionJournal._reserve_destination_locked) — 같은 자리를 재사용하려면 이 SPEC 이 정하지 않은 release 절차가 필요하다. 이 설계 결정은 M5 에서 재확인한다.
+# --confirmed-failure-command 없이는 원본을 partial 로 만들 수 없다 — recovery 배선도 아직 만들지 않는다(REQ-LDSEND-009 안전) — --execute 도 거부한다.
+dry-run — 콘솔로는 아무것도 보내지 않습니다(세션 시작 백업 포함, D11 — build_console_stack(attempt_session_backup=False)).
+
+$ uv run python -m server.tools.director_apply_observe 024 --listen-port 19297 --execute
+(위 024 dry-run 과 같은 plan 출력 뒤)
+거부 — 시나리오 024 는 M4a 가 실기로 확정한 실패 유발 명령이 필요합니다(plan.md §2.0-라 HALT 조건). --confirmed-failure-command 로 명시적으로 넘기지 않으면 --execute 를 거부합니다 — 콘솔로는 아무것도 보내지 않았습니다(세션 시작 백업 포함).
+exit=1
+```
+
+**M4a/M5 가 승인할 정확한 명령 목록(§E 보고 요구 — 실제로 --execute 로
+보낼 명령, dry-run·코드에서 그대로 읽음, 콘솔로 실제 실행한 적 없음)**:
+
+- **021**: 스택 구성 시 세션 시작 `SaveShow`(D11, `attempt_session_backup=
+  True`) → `Store Sequence 9900 Cue 1 /Merge`(1개 명령, 1개 bundle) →
+  readback `query_state("DataPool/Sequences/9900")` → cleanup 출력
+  `Delete Sequence 9900`(사람이 직접 실행).
+- **024**(`--confirmed-failure-command` 필요, 후보 1 채택 가정):
+  `SaveShow` → bundle1 `Store Sequence 9901 Cue 1 /Merge` → bundle2
+  `Store Sequence 9901`(candidate_1, 콘솔이 거부할 것으로 기대) → bundle3
+  은 **전송 안 함**(`STATE_NOT_SENT`) → readback
+  `query_state("DataPool/Sequences/9901")`(존재 기대) +
+  `query_state("DataPool/Sequences/9902")`(부재 기대) → cleanup 출력
+  `Delete Sequence 9901`·`Delete Sequence 9902`.
+- **032**(`--confirmed-failure-command` 필요): `SaveShow` → 원본 apply —
+  bundle1 `Store Sequence 9903 Cue 1 /Merge` → bundle2 `Store Sequence
+  9903`(원본을 partial 로 만들기 위한 실패 유발, candidate_1 가정) →
+  recovery apply(새 승인, `recovery_of=<원본 execution_id>`) — bundle
+  `Store Sequence 9904 Cue 1 /Merge` → readback
+  `query_state("DataPool/Sequences/9904")`(recovery 적용 확인) → cleanup
+  출력 `Delete Sequence 9903`·`Delete Sequence 9904`.
+
+**Gaps**:
+
+- M4a(실기 탐색 — 024/032 의 실패 유발 명령 두 후보 중 실제 확정)와
+  M5(021/024/032 실기 관측, readback 응답 모양 확정, backup 선행조건 실제
+  통과 여부, cleanup 사람 실행 뒤 상태)는 이 커밋의 범위가 아니다 — 지시
+  대로 이 커밋 뒤 정지한다. `--execute` 를 단 한 번도 돌리지 않았고,
+  콘솔에 어떤 형태로도 접촉하지 않았다.
+- REQ-LDSEND-008 의 "비어있음" 두 후보(§2.0-다) 중 어느 쪽이 실제 응답
+  모양인지는 fake 콘솔로만 재현했다 — 실기 확정은 M5.
+- 032 의 recovery 가 원본과 **다른** destination 을 쓰는 것은 이 M4
+  구현의 설계 선택이다(원본 destination 이 partial 이후에도 create-only
+  예약이 풀리지 않는다는 실측에 근거) — SPEC 은 recovery 의 정확한
+  destination 재사용 여부를 명문화하지 않았으므로, 이 선택은 M5 에서
+  사람이 재확인해야 한다(코드 주석·이 문서에 명시).
+- 024/032 의 candidate_2(`Copy Sequence <source> At {n}`)는 원본 소스가
+  무엇인지 SPEC 자체가 비워 둔 채로 남아 있다(plan.md §2.0-라 "미검증") —
+  이 코드는 데이터로만 표시할 뿐 실행 가능한 형태로 완성하지 않았다.
+- `server/orchestrator/tools.py:2436`(§2.0-가 다섯 소비자 중 하나)의
+  전용 회귀 시험 파일명은 확정하지 못했다 — 전체 회귀(exit=0)가 백스톱.
+
+**Residual risk**: 이 M4 산출물은
+`.claude/worktrees/agent-a6fa7fbab70a1e155` 의 로컬 브랜치
+(`LDSEND-M4-t420`, `a0e919f0` 위)에만 존재한다 — `WT-bundle-sender`/
+`t420` 으로 병합·반영되기 전까지는 원래 배차 대상 브랜치에 반영되지 않은
+상태다(M1~M3 와 같은 패턴). destination 점유 확인·readback 이 의존하는
+"비어있음"의 두 후보 판정(§2.0-다)은 fake 콘솔로만 검증됐으므로, 실기
+콘솔이 이 코드가 가정하지 않은 세 번째 응답 모양을 낼 가능성은 아직 열려
+있다(M5 가 닫아야 한다). 032 의 recovery-다른-destination 설계 선택은
+사람의 재확인 없이 코드로 굳어 있다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
