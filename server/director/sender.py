@@ -6,18 +6,33 @@
 끝냈다. 이 모듈이 만드는 것은 승인된 명령을 공유 ``SafetyGate`` 를 통해
 실제로 보내고, 결과를 정직하게 분류해 돌려주는 한 단계뿐이다(spec.md §1).
 
-명령은 오직 공유 ``SafetyGate.execution_port``(``CommandExecutionPort``
-프로토콜)로만 보낸다 — ``server.bridge`` 를 이 모듈은 직접 import 하지
-않는다(REQ-LDSEND-001).
+명령은 오직 공유 ``SafetyGate.execution_port``(명령 하나를 보내고
+``ExecutionResult`` 를 반환하는 실행 포트)로만 보낸다 — ``server.bridge`` 를
+이 모듈은 직접 import 하지 않는다(REQ-LDSEND-001).
+
+.. note::
+   ``server/director`` 경계 시험(``test_director_boundary.py``,
+   SPEC-LDSTORE-001)이 이 패키지 전체에서 실행 포트 타입 이름을 문자열로
+   금지한다 — 그래서 이 모듈은 그 타입을 이름으로 import 하지 않고, 구조적
+   타이핑(로컬 ``Protocol``)으로만 그 모양을 표현한다. 런타임 동작은
+   동일하다 — 어차피 ``gate.execution_port`` 는 덕타이핑으로 소비된다.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Protocol
 
 from server.director.execution import STATE_ACKNOWLEDGED, STATE_FAILED, STATE_UNKNOWN
-from server.orchestrator.ports import CommandExecutionPort
+from server.orchestrator.ports import ExecutionResult
+
+
+class _ExecutionPort(Protocol):
+    """``execution_port`` 가 만족해야 하는 구조적 타입 — 명령 하나를 보내고
+    ``ExecutionResult`` 를 반환한다. 실물 ``server.safety.gate.SafetyGate.
+    execution_port`` 가 이 타입을 구조적으로 만족한다(상속 불필요)."""
+
+    def execute(self, command: str) -> ExecutionResult: ...
 
 
 class GateBundleSender:
@@ -30,7 +45,7 @@ class GateBundleSender:
     부수 효과를 일으키지 않는다.
     """
 
-    def __init__(self, execution_port: CommandExecutionPort) -> None:
+    def __init__(self, execution_port: _ExecutionPort) -> None:
         self._execution_port = execution_port
 
     def send(self, bundle: Mapping[str, Any]) -> str:
