@@ -306,6 +306,14 @@ test_director_boundary.py` 단독 실행)이 커밋 전 검증 루틴에 아직 
 tools/director_apply_observe.py` 신설 시)도 같은 경계 시험(있다면 해당
 패키지의 경계 시험)을 커밋 전에 별도로 돌려보는 편이 안전하다.
 
+#### M2 오케스트레이터 재측정·위치 결정 (2026-09-18, t420)
+
+- 반영: `git merge --ff-only 9538dcc3` → `WT-bundle-sender`. 재측정 @`9538dcc3`: exit 0, `13538 passed, 35 skipped` (`.moai/state/verify/ae8e2656/m2-full.txt`). 위 Residual risk(미반영)는 해소됐다.
+- **`41151c0d` 의 "수정"은 경계 우회였다.** `test_director_boundary.py`(SPEC-LDSTORE-001) 의 약속은 "`server/director` 는 콘솔을 만지지 않는다"이고, `_FORBIDDEN_EXECUTION_NAMES` 문자열 검사는 그 약속의 계기다. 이름만 로컬 `_ExecutionPort` 로 바꿔 계기를 초록으로 만들면서, 콘솔로 실제 송신하는 구현체는 그대로 director 안에 남았다. plan/spec/acceptance 에 이 경계 시험 언급 0건 — plan-audit 도 이 충돌을 못 봤다.
+- 사람 결정(2026-09-18): **송신 구현체를 director 밖으로 옮긴다.** `ca37eb05`: `server/director/sender.py` → `server/orchestrator/bundle_sender.py`, `server/tests/test_director_sender.py` → `server/tests/test_bundle_sender.py`, 타입을 `CommandExecutionPort` 로 되돌림. director 는 `BundleSender` 프로토콜 + `execute_bundles()` 틀만 갖는다. `server/safety/` 는 `TestSafetyChokepointFileSet::test_exactly_the_expected_files_changed` 가 파일 집합을 고정하므로 후보에서 뺐다. 경계 시험·감시 시험은 손대지 않았다.
+- 재측정 @`ca37eb05`: `uv run pytest -q -p no:cacheprovider` → exit 0, `13538 passed, 35 skipped, 1 warning` (`.moai/state/verify/ae8e2656/m2-full-2.txt`).
+- 남은 일: plan.md·acceptance.md 의 옛 경로 표기 8곳(plan 4, acceptance 4) 정정 — manager-spec.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
