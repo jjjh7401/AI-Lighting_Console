@@ -198,6 +198,114 @@ $ grep -rnE "^\s*(from|import)\s+server\.bridge" server/director/execution.py se
 - 수정 `75ed61c7`: 핀에 `_execute_cleared()` 옛 문면 5줄 추가, 69→74, ruff format.
 - 재측정 @`75ed61c7`: `uv run pytest -q -p no:cacheprovider` → exit 0, `13528 passed, 35 skipped, 1 warning` (`.moai/state/verify/ae8e2656/m1-full-2.txt`).
 
+### M2 — 실물 송신기 (REQ-LDSEND-001/002/003/004)
+
+**작업 위치**: `.claude/worktrees/agent-a1b3c914ba0dc22fd` 가 격리된 별도
+워크트리라, `d1d91e5e`(`WT-bundle-sender`, M1 완료 커밋) 위에 로컬 브랜치
+`ldsend-001-m2` 를 새로 만들어 작업했다(`git switch -c ldsend-001-m2
+d1d91e5e`) — `d1d91e5e` 가 이 워크트리에서 직접 reachable(`git cat-file -t`
+확인)했으므로 별도 병합-베이스 확인 없이 그 커밋 위에 바로 분기했다. 병합은
+오케스트레이터가 이 브랜치를 `WT-bundle-sender`/`t420` 으로 반영해야 한다
+(M1 과 동일한 절차, §E.2 M1 Residual risk 참고).
+
+**RED (E8, 명령 + 그대로의 출력)** — `server/director/sender.py` 작성 전:
+
+```
+$ uv run pytest server/tests/test_director_sender.py -q -p no:cacheprovider
+==================================== ERRORS ====================================
+____________ ERROR collecting server/tests/test_director_sender.py _____________
+ImportError while importing test module '.../server/tests/test_director_sender.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+.../importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/tests/test_director_sender.py:21: in <module>
+    from server.director.sender import GateBundleSender
+E   ModuleNotFoundError: No module named 'server.director.sender'
+=========================== short test summary info ============================
+ERROR server/tests/test_director_sender.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.69s
+```
+
+**GREEN — 구현**:
+- 신규 `server/director/sender.py`: `GateBundleSender`(`BundleSender`
+  프로토콜 구현). 주입된 `execution_port.execute(command)`(공유
+  `SafetyGate.execution_port`)로만 `bundle["commands"]` 를 순서대로 보내고,
+  `result.outcome`(`"ok"`/`"failed"`/`"unconfirmed"`, 문자열 스니핑 아님)을
+  직접 읽어 판정한다 — 전부 ok → `STATE_ACKNOWLEDGED`; 첫 명령부터 확인 없이
+  명시적 실패 → `STATE_FAILED`; 어떤 명령이든 미확인 → `STATE_UNKNOWN`;
+  확인된 명령 뒤 명시적 실패(부분 완료) → `STATE_UNKNOWN`; `execute()` 예외 →
+  흡수해 `STATE_UNKNOWN`(예외가 `send()` 밖으로 전파되지 않음). `STATE_SENT`
+  는 반환하지 않는다. `revoke_clearances()` 는 호출하지 않는다(회수는
+  `run_director_apply()` 책임, M1 이 이미 배선).
+- 신규 `server/tests/test_director_sender.py`: fake
+  `CommandExecutionPort`(구조적 타이핑, 이름 import 없음)와 예외를 던지는
+  fake 만 주입하는 10개 시험 — 콘솔/OSC 트래픽 없음.
+
+**경계 가드 위반 발견 및 수정(post-commit 재측정에서 발견)**: 첫 GREEN 커밋
+(`eb953842`)의 `sender.py` 가 `from server.orchestrator.ports import
+CommandExecutionPort` 로 타입을 이름으로 import 했는데, 이것이
+`server/tests/test_director_boundary.py::TestDirectorNeverTouchesTheConsole
+::test_no_module_names_an_execution_port`(SPEC-LDSTORE-001 소유 경계
+시험 — `server/director/*.py` 전체에서 `"CommandExecutionPort"`/
+`"BundleGate"` 문자열을 금지)를 깨뜨렸다. 가드 시험은 손대지 않고,
+`sender.py` 를 로컬 구조적 `Protocol`(`_ExecutionPort`, 이름 없이 같은
+덕타이핑 계약)로 고쳐 해소했다(`41151c0d`) — 런타임 동작 변경 없음, 시험
+10개 그대로 PASS.
+
+**E1 AC PASS/FAIL 매트릭스 (M2 관련 4개 — 001·002·003·004)**:
+
+| AC | 시험 | 결과 |
+|---|---|---|
+| AC-LDSEND-001 | `TestAllCommandsOk::test_commands_are_sent_only_through_the_injected_execution_port`; `grep -rnE "^\s*(from\|import)\s+server\.bridge" server/director/sender.py` → 매치 0 | PASS |
+| AC-LDSEND-002 | `TestFirstCommandExplicitFailure::test_first_command_failed_with_none_confirmed_before_returns_failed`(3개 중 2·3번째 미전송, `port.calls == ["cmd-1"]`) | PASS |
+| AC-LDSEND-003 | `TestAllCommandsOk`(1), `TestFirstCommandExplicitFailure`(1), `TestAnyUnconfirmedStopsAndReturnsUnknown`(1), `TestConfirmedThenFailedIsPartialAndUnknown`(1), `TestNeverReturnsStateSent`(1) — 판정 표 5 경로 전부 | PASS |
+| AC-LDSEND-004 | `TestConsoleLinkExceptionIsAbsorbed::*`(2 — 첫 명령 예외·중간 명령 예외 둘 다) | PASS |
+
+**E2 명령 + 관측 출력**:
+
+```
+$ uv run pytest server/tests/test_director_sender.py server/tests/test_director_boundary.py -q -p no:cacheprovider
+...............                                                          [100%]
+15 passed in 0.51s
+```
+
+**E5 lint**: `uv run ruff format server/director/sender.py
+server/tests/test_director_sender.py` → `1 file left unchanged` /
+`2 files left unchanged`(재측정 시). `uv run ruff check` 양쪽 →
+`All checks passed!`.
+
+**전체 회귀 (post-commit, `41151c0d`)**:
+
+```
+$ uv run pytest -q -p no:cacheprovider
+13538 passed, 35 skipped, 1 warning in 183.30s (0:03:03)
+```
+
+exit=0. baseline(M1 뒤, `d1d91e5e`) `13528 passed, 35 skipped` 대비 델타
++10(`test_director_sender.py` 신규 10개), skip 수 불변, 실패 0 — 회귀 없음.
+전체 출력: `.moai/state/verify/m2-full.txt`(첫 커밋 뒤, 경계 가드 FAIL 1건
+관측 — `1 failed, 13537 passed`), `.moai/state/verify/m2-full-2.txt`(수정
+커밋 뒤, exit=0, `13538 passed`).
+
+**Gaps**: M3(관측 도구 골격)·M4(시나리오 배선)·M4a(실기 탐색)·M5(실기
+관측)는 이 M2 커밋의 범위가 아니다 — 배차서의 지시대로 M2 커밋 뒤 정지한다.
+AC-LDSEND-005/006/013/015(클리어런스 회수·세션 격리·공유 함수 추출)는 M1
+범위이며 M2 의 새 코드는 그 계약을 변경하지 않는다(M2 는 `revoke_clearances`
+를 호출하지 않는다는 사실만 명시적으로 시험했다).
+
+**Residual risk**: 이 M2 산출물은 `.claude/worktrees/agent-a1b3c914ba0dc22fd`
+의 로컬 브랜치(`ldsend-001-m2`, `d1d91e5e` 위)에만 존재한다 —
+`WT-bundle-sender`/`t420` 으로 병합·반영되기 전까지는 원래 배차 대상
+브랜치에 반영되지 않은 상태다. 경계 가드 위반이 post-commit 전체 회귀에서
+처음 발견됐다는 점은, M2 범위 파일에 대한 사전 경계 시험 실행(`server/tests/
+test_director_boundary.py` 단독 실행)이 커밋 전 검증 루틴에 아직 없다는
+잔여 위험을 시사한다 — 이번엔 즉시 수정했지만, 후속 마일스톤(M3 이 `server/
+tools/director_apply_observe.py` 신설 시)도 같은 경계 시험(있다면 해당
+패키지의 경계 시험)을 커밋 전에 별도로 돌려보는 편이 안전하다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
