@@ -177,11 +177,8 @@ commit history diffstat across the run-phase commits, zero hits.
 
 - sync_complete_at: 2026-09-19T00:00:00+09:00 (this sync; wall clock offset
   depends on environment timezone -- commit timestamps are the baseline)
-- sync_commit_sha: pending-backfill-sync-ldwire-001 (this commit's own SHA is
-  unknown to itself at write time; backfill deferred -- no follow-up commit
-  is planned for this worktree session, so the placeholder stays until a
-  later session backfills it or a reader resolves it via `git log
-  --grep=SPEC-LDWIRE-001`)
+- sync_commit_sha: 41886174 (backfilled in this immediate follow-up commit;
+  the sync commit could not know its own SHA at write time)
 - sync_status: complete
 - b12_self_test_a: PASS -- `grep -c 'SPEC-LDWIRE-001' CHANGELOG.md` returned 0
   before this sync's edit (no duplicate entry existed)
