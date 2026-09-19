@@ -1,12 +1,18 @@
-"""불변 plan 저장 · revision CAS · 멱등 (SPEC-LDSTORE-001 M1 · REQ-LDPLUGIN-015).
+"""Immutable plan storage + revision CAS + idempotency (SPEC-LDSTORE-001 M1, REQ-LDPLUGIN-015).
 
-계약 §10 의 revision 규칙과 §9.7 의 idempotency fingerprint 를 SQLite transaction 하나로
-집행한다. 불변성은 애플리케이션 규율이 아니라 **접근 패턴**으로 구현한다: `plan_revisions`
-에는 INSERT 만 하고 UPDATE 를 하지 않으며, CAS 는 PRIMARY KEY 충돌이 담당한다.
+Contract Section 10 revision rules and Section 9.7 idempotency fingerprint, enforced as a
+single SQLite transaction. Immutability is not an application-layer discipline but an
+*access pattern*: `plan_revisions` is INSERT-only, never UPDATE, and CAS is enforced by
+PRIMARY KEY collision.
 
-이 층이 하지 않는 것: 검증. 계약 §3 의 `SubmitResult` 가 `ValidationReport` 를 포함하지만
-그것을 만드는 것은 `SPEC-LDCOMPILE-001` 이다. 여기서는 저장까지이고 상태는 계약 §10 이
-정의한 `submitted` 에서 출발한다.
+What this layer does not do: validation. Contract Section 3 `SubmitResult` includes a
+`ValidationReport`, but producing it is `SPEC-LDCOMPILE-001` ownership. Here we only store,
+and state starts from the `submitted` value Section 10 defines.
+
+SPEC-LDWIRE-001 M2 extends this module with `ValidationReport` persistence (design.md
+section "na" alternative A) -- a `validations` table keyed by a deterministic
+`validation_id`, so `POST .../approvals` can resolve the id it is handed back to the
+exact report a `PUT plan` submission produced.
 """
 
 from __future__ import annotations
@@ -21,22 +27,33 @@ from typing import Any
 from server.director.digest import canonical_digest, plan_digest
 from server.director.models import Detail, ExchangeError
 
-_MIGRATION = Path(__file__).resolve().parent / "migrations" / "001_initial.sql"
+_MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
+#: DirectorStore owns exactly these two migration files -- NOT a directory glob. The
+#: sibling ExecutionJournal (execution.py) applies every "*.sql" file it finds because it
+#: legitimately shares the physical file with 002/003; DirectorStore stays scoped to its
+#: own two files so a bare DirectorStore instance never silently creates
+#: ExecutionJournal-owned tables (002/003 stay ExecutionJournal ownership).
+_MIGRATIONS = (
+    _MIGRATIONS_DIR / "001_initial.sql",
+    _MIGRATIONS_DIR / "004_validations.sql",
+)
 
-#: 계약 §10 — 저장 직후의 durable 내부 상태. 검증이 끝나기 전의 자리다.
+#: Contract Section 10 -- the durable internal state right after storage. The state
+#: before validation has finished.
 STATE_SUBMITTED = "submitted"
 
-#: 계약 §3 — 신규 생성 201, 후속(replay) 200.
+#: Contract Section 3 -- 201 for a new record, 200 for a replay.
 _STATUS_CREATED = 201
 _STATUS_REPLAYED = 200
 
 
 @dataclass(frozen=True, slots=True)
 class PlanRecord:
-    """계약 §3 의 `PlanRecord` 중 M1 이 채우는 부분.
+    """The part of contract Section 3 PlanRecord that M1 fills.
 
-    `validation_id` · `approval_id` · `execution_id` 는 아직 없는 관계이므로 생략된다 —
-    계약 §3: *"생략된 연결 ID 는 아직 없는 관계다."*
+    validation_id / approval_id / execution_id are omitted -- that relationship does not
+    exist yet (contract Section 3: "an omitted linking ID means the relationship does not
+    exist yet").
     """
 
     plan: dict[str, Any]
@@ -45,12 +62,49 @@ class PlanRecord:
     plan_digest: str
 
 
+@dataclass(frozen=True, slots=True)
+class ValidationRecord:
+    """SPEC-LDWIRE-001 M2 -- a persisted ValidationReport, keyed by validation_id.
+
+    diagnostics/compiled are plain JSON-serializable structures (lists/dicts), matching
+    what PipelineValidator.validate()/NotInstalledValidator.validate() already return --
+    this record does not reshape them, only stores and returns them verbatim.
+    """
+
+    validation_id: str
+    project_id: str
+    plan_id: str
+    plan_digest: str
+    context_digest: str
+    compiled_digest: str
+    outcome: str
+    diagnostics: list[dict[str, Any]]
+    compiled: dict[str, Any]
+    created_at: str
+    expires_at: str
+
+
+def compute_validation_id(*, plan_digest: str, revision: int, context_digest: str) -> str:
+    """A deterministic validation_id (design.md section "na" alternative A).
+
+    Same input (plan_digest, revision, context_digest) always yields the same id -- the
+    same discipline store.py already uses for its own idempotency fingerprint. A retried
+    PUT plan submission with the identical plan/context therefore reissues the SAME
+    validation_id, and DirectorStore.save_validation is a no-op on a repeat (ON CONFLICT
+    DO NOTHING) rather than a silent overwrite of the first report.
+    """
+    digest = canonical_digest(
+        dict(plan_digest=plan_digest, revision=revision, context_digest=context_digest)
+    )
+    return "validation-" + digest.removeprefix("sha256:")[:32]
+
+
 def _revision_conflict(message: str, pointer: str = "/base_revision") -> ExchangeError:
     return ExchangeError("REVISION_CONFLICT", 409, message, (Detail(pointer, "revision conflict"),))
 
 
 class DirectorStore:
-    """plan revision 저장소. 한 파일에 대해 한 인스턴스를 쓴다."""
+    """Plan revision storage. One instance per file."""
 
     def __init__(self, path: Path) -> None:
         self._path = Path(path)
@@ -61,20 +115,22 @@ class DirectorStore:
 
     @property
     def path(self) -> Path:
-        """이 저장소의 DB 파일. 같은 파일을 여는 다른 연결을 만들 때 쓴다."""
+        """This store DB file. Use it to open another connection to the same file."""
         return self._path
 
     def _migrate(self) -> None:
-        """마이그레이션은 여러 번 돌아도 안전하다 (`IF NOT EXISTS`)."""
-        self._connection.executescript(_MIGRATION.read_text(encoding="utf-8"))
+        """Applies both owned migration files in order. Each is IF NOT EXISTS-safe."""
+        for migration in _MIGRATIONS:
+            self._connection.executescript(migration.read_text(encoding="utf-8"))
 
     def close(self) -> None:
         self._connection.close()
 
-    # ---------------------------------------------------------------- 조회
+    # ---------------------------------------------------------------- reads
 
     def head_revision(self, *, project_id: str, plan_id: str) -> int:
-        """현재 head revision. 아직 없으면 0 이다 (계약 §10: 새 ID 는 0 에서 출발)."""
+        """Current head revision. 0 if none exists yet (contract Section 10: a new ID
+        starts at 0)."""
         row = self._connection.execute(
             "SELECT MAX(revision) AS head FROM plan_revisions WHERE project_id = ? AND plan_id = ?",
             (project_id, plan_id),
@@ -82,9 +138,9 @@ class DirectorStore:
         return int(row["head"] or 0)
 
     def get(self, *, project_id: str, plan_id: str, revision: int | None = None) -> PlanRecord:
-        """revision 하나를 되읽는다. 생략하면 head (계약 §3).
+        """Re-reads one revision. Omitted means head (contract Section 3).
 
-        저장된 **원문 bytes** 를 파싱해 돌려준다 — 서버가 재직렬화한 값이 아니다.
+        Returns the stored ORIGINAL bytes parsed -- not a value the server re-serialized.
         """
         if revision is None:
             query = (
@@ -100,7 +156,7 @@ class DirectorStore:
 
         row = self._connection.execute(query, parameters).fetchone()
         if row is None:
-            raise ExchangeError("NOT_FOUND", 404, "해당 plan revision 이 없습니다.")
+            raise ExchangeError("NOT_FOUND", 404, "No such plan revision.")
         return PlanRecord(
             plan=json.loads(bytes(row["plan_json"]).decode("utf-8")),
             revision=int(row["revision"]),
@@ -108,7 +164,7 @@ class DirectorStore:
             plan_digest=str(row["plan_digest"]),
         )
 
-    # ---------------------------------------------------------------- 제출
+    # ---------------------------------------------------------------- submission
 
     def submit(
         self,
@@ -119,22 +175,20 @@ class DirectorStore:
         operation: str,
         idempotency_key: str,
     ) -> PlanRecord:
-        """계획 하나를 새 revision 으로 저장한다.
+        """Stores one plan as a new revision.
 
         Raises:
-            ExchangeError: ``REVISION_CONFLICT`` (CAS 실패 또는 base_revision 불일치),
-                ``IDEMPOTENCY_CONFLICT`` (같은 key 에 다른 request).
+            ExchangeError: REVISION_CONFLICT (CAS failure or base_revision mismatch),
+                IDEMPOTENCY_CONFLICT (same key, different request).
         """
         project_id = str(plan["project_id"])
         plan_id = str(plan["plan_id"])
         base_revision = int(plan["base_revision"])
 
-        # 계약 §10 — 둘이 같아야 한다. 이 검사가 CAS 보다 먼저다: 제출자가 무엇을
-        # 기대했는지와 계획이 무엇을 주장하는지가 어긋나면 어느 쪽을 믿을지 알 수 없다.
         if expected_revision != base_revision:
             raise _revision_conflict(
-                f"expected_revision({expected_revision}) 과 "
-                f"plan.base_revision({base_revision}) 이 다릅니다."
+                f"expected_revision({expected_revision}) does not match "
+                f"plan.base_revision({base_revision})."
             )
 
         fingerprint = self._fingerprint(
@@ -156,16 +210,14 @@ class DirectorStore:
             return replayed
 
         digest = plan_digest(plan)
-        # 제출 원문을 그대로 보관한다. `sort_keys` 를 쓰지 않는 것이 의도다 — 계약 §3 의
-        # "제출 그대로" 를 지키려면 서버가 형태를 손대지 않아야 한다.
         plan_bytes = json.dumps(plan, ensure_ascii=False).encode("utf-8")
         created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        with self._connection:  # BEGIN … COMMIT / ROLLBACK
+        with self._connection:  # BEGIN ... COMMIT / ROLLBACK
             head = self.head_revision(project_id=project_id, plan_id=plan_id)
             if base_revision != head:
                 raise _revision_conflict(
-                    f"base_revision({base_revision}) 이 현재 head({head}) 와 다릅니다."
+                    f"base_revision({base_revision}) does not match current head({head})."
                 )
             revision = head + 1
 
@@ -187,9 +239,7 @@ class DirectorStore:
                     ),
                 )
             except sqlite3.IntegrityError as error:
-                # PRIMARY KEY 충돌 — 우리가 head 를 읽은 뒤 남이 같은 revision 을 썼다.
-                # 이것이 CAS 의 실패 경로다.
-                raise _revision_conflict(f"revision {revision} 이 이미 존재합니다.") from error
+                raise _revision_conflict(f"revision {revision} already exists.") from error
 
             self._connection.execute(
                 "INSERT INTO idempotency_keys "
@@ -216,7 +266,7 @@ class DirectorStore:
             plan_digest=digest,
         )
 
-    # ---------------------------------------------------------------- 내부
+    # ---------------------------------------------------------------- internal
 
     @staticmethod
     def _fingerprint(
@@ -227,20 +277,20 @@ class DirectorStore:
         plan: dict[str, Any],
         expected_revision: int,
     ) -> str:
-        """계약 §9.7 의 request fingerprint.
+        """Contract Section 9.7 request fingerprint.
 
-        `sha256(JCS({operation, project_id, principal_id, request}))` 이고 ``request`` 는
-        HTTP body 에서 ``idempotency_key`` 만 제거한 객체다. body 는 계약 §3 의
-        `ld_submit_plan` 형태이므로 여기서 그 형태를 다시 만든다.
+        sha256(JCS(dict(operation, project_id, principal_id, request))) where request is
+        the HTTP body with only idempotency_key removed. The body follows contract Section
+        3 ld_submit_plan shape, so this rebuilds that shape here.
         """
-        request = {"plan": plan, "expected_revision": expected_revision}
+        request = dict(plan=plan, expected_revision=expected_revision)
         return canonical_digest(
-            {
-                "operation": operation,
-                "project_id": project_id,
-                "principal_id": principal_id,
-                "request": request,
-            }
+            dict(
+                operation=operation,
+                project_id=project_id,
+                principal_id=principal_id,
+                request=request,
+            )
         )
 
     def _replay(
@@ -252,7 +302,7 @@ class DirectorStore:
         idempotency_key: str,
         fingerprint: str,
     ) -> PlanRecord | None:
-        """같은 key 가 이미 있으면 replay 하거나 충돌을 낸다 (계약 §10)."""
+        """Replays or conflicts when the same key already exists (contract Section 10)."""
         row = self._connection.execute(
             "SELECT * FROM idempotency_keys WHERE project_id = ? AND principal_id = ? "
             "AND operation = ? AND idempotency_key = ?",
@@ -265,7 +315,7 @@ class DirectorStore:
             raise ExchangeError(
                 "IDEMPOTENCY_CONFLICT",
                 409,
-                "같은 idempotency_key 에 다른 요청이 들어왔습니다.",
+                "A different request arrived with the same idempotency_key.",
                 (Detail("", "idempotency key reused with a different request"),),
             )
 
@@ -273,4 +323,62 @@ class DirectorStore:
             project_id=project_id,
             plan_id=str(row["result_plan_id"]),
             revision=int(row["result_revision"]),
+        )
+
+    # ---------------------------------------------------------------- validations (M2)
+
+    def save_validation(self, record: ValidationRecord) -> None:
+        """SPEC-LDWIRE-001 M2 -- persists a ValidationReport, keyed by validation_id.
+
+        ON CONFLICT DO NOTHING: validation_id is deterministic (compute_validation_id), so
+        a retried submission with the identical inputs recomputes the SAME id -- this is a
+        no-op replay, never a silent overwrite of the first-saved report.
+        """
+        self._connection.execute(
+            "INSERT INTO validations "
+            "(validation_id, project_id, plan_id, plan_digest, context_digest, "
+            " compiled_digest, outcome, diagnostics_json, compiled_json, created_at, "
+            " expires_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (validation_id) DO NOTHING",
+            (
+                record.validation_id,
+                record.project_id,
+                record.plan_id,
+                record.plan_digest,
+                record.context_digest,
+                record.compiled_digest,
+                record.outcome,
+                json.dumps(record.diagnostics, ensure_ascii=False),
+                json.dumps(record.compiled, ensure_ascii=False),
+                record.created_at,
+                record.expires_at,
+            ),
+        )
+
+    def get_validation(self, *, project_id: str, validation_id: str) -> ValidationRecord | None:
+        """SPEC-LDWIRE-001 M2 -- resolves validation_id back to its ValidationReport.
+
+        Scoped to project_id -- a validation_id issued for one project never resolves
+        under a different project_id, even if the row exists (REQ-LDWIRE-007: honest
+        rejection of a mismatched project, never a promoted guess).
+        """
+        row = self._connection.execute(
+            "SELECT * FROM validations WHERE project_id = ? AND validation_id = ?",
+            (project_id, validation_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return ValidationRecord(
+            validation_id=str(row["validation_id"]),
+            project_id=str(row["project_id"]),
+            plan_id=str(row["plan_id"]),
+            plan_digest=str(row["plan_digest"]),
+            context_digest=str(row["context_digest"]),
+            compiled_digest=str(row["compiled_digest"]),
+            outcome=str(row["outcome"]),
+            diagnostics=json.loads(str(row["diagnostics_json"])),
+            compiled=json.loads(str(row["compiled_json"])),
+            created_at=str(row["created_at"]),
+            expires_at=str(row["expires_at"]),
         )

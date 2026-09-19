@@ -22,10 +22,19 @@ from typing import Protocol
 
 @dataclass(frozen=True)
 class ExecutionResult:
-    """The confirmed outcome of one command execution attempt."""
+    """The confirmed outcome of one command execution attempt.
+
+    ``outcome`` (SPEC-LDSEND-001 §2.0-가) makes the ``failed``/``unconfirmed``
+    distinction explicit — both collapse to ``ok=False`` today, and without
+    this field the only way to tell them apart is to string-sniff ``detail``
+    for "unconfirmed" (the fragile pattern this field replaces). Optional
+    with a default so every existing ``.ok``/``.detail``-only reader is
+    unaffected; only the gate's own construction sites opt in.
+    """
 
     ok: bool
     detail: str = ""
+    outcome: str = "ok"
 
 
 class GateCommandDecision(Protocol):

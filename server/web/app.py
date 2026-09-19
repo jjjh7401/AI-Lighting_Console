@@ -28,6 +28,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
+from server.director.director_api import DirectorApiDeps, build_director_router
 from server.llm.types import LLMProvider
 from server.orchestrator.spatial_memory import SpatialMemory
 from server.orchestrator.tools import DeployPipelinePort
@@ -245,6 +246,11 @@ class WebDeps:
     # 스레드는 연결보다 오래 살고, 그 스레드가 내는 다음 카드는 **살아 있는**
     # 화면으로 가야 한다. 자기 소켓이 살아 있으면 언제나 자기 소켓이 먼저다.
     live_sockets: list = field(default_factory=list)
+    # SPEC-LDRECV-001 M1: the director HTTP surface (/api/director/v1/...).
+    # ``None`` = not wired (pre-LDRECV behaviour — no director routes are
+    # mounted), matching the settings/provision/presets optional-Deps
+    # convention above.
+    director: DirectorApiDeps | None = None
 
 
 async def _safe_send(websocket: WebSocket, event: dict) -> None:
@@ -948,6 +954,13 @@ def create_app(deps: WebDeps) -> FastAPI:
             TimelineLibraryDeps(store=deps.song_timeline_store, library=deps.timeline_library)
         )
     )
+
+    # SPEC-LDRECV-001 M1: external lighting-director exchange surface
+    # (/api/director/v1/projects/{project_id}/...) — auth + common routes only
+    # (contract.md §3/§5). ``None`` = not wired, same optional-Deps convention
+    # as settings/provision/presets above.
+    if deps.director is not None:
+        app.include_router(build_director_router(deps.director))
 
     if deps.ui_dist is not None and Path(deps.ui_dist).is_dir():
         app.mount("/", StaticFiles(directory=str(deps.ui_dist), html=True), name="ui")

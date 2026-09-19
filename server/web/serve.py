@@ -27,6 +27,7 @@ from server.deploy.keystore import (
 from server.deploy.pipeline import DeployPipeline
 from server.deploy.settings import resolve_effective_settings
 from server.design.sugar_timeline import sugar_library_entry
+from server.director.provision import build_director_deps
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
 from server.llm.runtime import ProviderSlot
@@ -318,6 +319,20 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         plugin_import_dir=(args.plugin_import_dir or None),
     )
 
+    # SPEC-LDWIRE-001 M6 (REQ-LDWIRE-008/009/010) -- the ONE DirectorApiDeps this
+    # process ever assembles, reusing THIS SAME stack.gate/stack.ruleset (no
+    # second SafetyGate, no second OSC send path). Constructed here, synchronously,
+    # on the SAME thread that (absent --workers>1, the default) later drives the
+    # uvicorn event loop in main() -- satisfying REQ-LDWIRE-010s event-loop-thread
+    # constraint without a separate async lifespan just for this seam.
+    director_boot = build_director_deps(
+        db_path=pin_store_path("director.sqlite3"),
+        gate=stack.gate,
+        ruleset=stack.ruleset,
+        console_host=args.console_host,
+        console_port=args.console_port,
+    )
+
     # AC-MVP-027 part 3 (REQ-MVP-039/040 ii): only when a fallback target is
     # configured do we build a SECOND adapter and wrap the active one in the
     # runtime-swappable indirection — a persistent-miss decision then actually
@@ -377,6 +392,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     deps = WebDeps(
         gate=stack.gate,
         provider=active_provider,
+        director=director_boot.deps,
         system_prefix=system_prefix,
         audit=stack.audit,
         approval_channel=channel,
@@ -444,6 +460,24 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         console_port=args.console_port,
     )
     deps.reply_port_probe = reply_diagnostic.verdict
+    # SPEC-LDWIRE-001 M5 (REQ-LDWIRE-001) -- the bearer token reveal channel.
+    # This stdout line IS the "initial issuance surface" REQ-LDWIRE-001/002
+    # names -- the secret plaintext appears here and ONLY here (never in a
+    # structured log, an error response, or an audit record). Matches the
+    # existing generate_launch_token() per-boot-reissue convention
+    # (server/web/launcher.py) -- design.md section "ga" alternative A.
+    if director_boot.bearer_token is not None:
+        print(
+            f"[director] operator credential (plan:apply) -- reissued this boot: "
+            f"{director_boot.bearer_token}",
+            file=sys.stderr,
+        )
+    # Test/diagnostic introspection seam only (matches app.state.deps below) --
+    # never read by production route handlers, which get the token from a
+    # human operator via the stderr line above (when issuance succeeded), not
+    # from this attribute. None when the OS credential store was unavailable
+    # at boot (REQ-LDWIRE-003) -- director routes stay 401 until reissue.
+    deps.director.operator_bearer_token = director_boot.bearer_token
     app = create_app(deps)
     # A finished discovery changes no health state, and the heartbeat loop only
     # pushes status on a CHANGE — without this fan-out the verdict would be
