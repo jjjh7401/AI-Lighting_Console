@@ -14,6 +14,7 @@ from server.design.song_cue_composer import (
 )
 from server.design.song_plan import (
     ACCENT_AXIS,
+    COLOR_USAGE_AXIS,
     POSITION_AXIS,
     AccentDecision,
     ApprovalState,
@@ -193,6 +194,28 @@ def test_unresolved_and_unconfirmed_director_inputs_return_card_requeries_only()
     assert result.requery_requirements[0].prompt == "Ask Q4 again."
     assert result.requery_requirements[1].step == "Q5_ACCENTS"
     assert result.lint_findings == ()
+
+
+def test_color_usage_default_accepted_decision_never_generates_a_requery() -> None:
+    """AC-COLORMODE-003 (REQ-010) — a confirmed=True Q2B_COLOR_USAGE decision
+    (default-accepted or otherwise) never appears in requery_requirements —
+    `_requery_requirements`'s ``if decision.confirmed: continue`` already
+    works axis-agnostically (research.md §4)."""
+    color_usage = DirectorDecision(
+        step="Q2B_COLOR_USAGE",
+        axis=COLOR_USAGE_AXIS,
+        value="modulate",
+        confirmed=True,
+        source="default_accepted",
+    )
+    plan = _plan(
+        sections=(_section(1, "Verse", 0, d_level=3),),
+        director_decisions=(color_usage,),
+    )
+
+    result = compose_song_cue_bundle(plan)
+
+    assert COLOR_USAGE_AXIS not in [requirement.axis for requirement in result.requery_requirements]
 
 
 def test_lint_findings_and_disabled_rule_notes_are_returned_with_bundle() -> None:

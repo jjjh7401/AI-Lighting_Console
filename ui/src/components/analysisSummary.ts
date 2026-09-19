@@ -40,7 +40,17 @@ function buildWarningLine(timeline: SongTimelineView): AnalysisSummaryLine | nul
   return { label: "주의", text: timeline.tc_method_warning };
 }
 
-/** 무엇이 색을 정했는지 — 감독의 PLAN 답변 + 구간 아크 역할. */
+// SPEC-COPILOT-COLORMODE-001 D4 — Q2B_COLOR_USAGE 값(modulate/single/
+// per_chorus)의 한국어 설명 문구. 값 자체는 서버가 이미 실어 보내는
+// 것이므로 여기서는 표현만 맡는다 — 값을 지어내지 않는다는 이 파일의
+// 원칙과 같다.
+const COLOR_USAGE_LABELS: Record<string, string> = {
+  modulate: "메인 컬러 중심으로 변조하다가 임팩트에서 터뜨림",
+  single: "이 색 계열로만 유지",
+  per_chorus: "후렴마다 다른 포인트 색",
+};
+
+/** 무엇이 색을 정했는지 — 감독의 PLAN 답변 + 구간 아크 역할 + 색 운용 방식. */
 function buildColorLine(timeline: SongTimelineView): AnalysisSummaryLine | null {
   const parts: string[] = [];
   const paletteDecision = timeline.director_decisions.find((decision) => decision.axis === "palette");
@@ -52,6 +62,14 @@ function buildColorLine(timeline: SongTimelineView): AnalysisSummaryLine | null 
           ? paletteDecision.value.join("+")
           : String(paletteDecision.value);
     parts.push(`감독 지정(${paletteDecision.step}): ${value}`);
+  }
+  const colorUsageDecision = timeline.director_decisions.find((decision) => decision.axis === "color_usage");
+  if (colorUsageDecision) {
+    const rawValue =
+      typeof colorUsageDecision.value === "string" ? colorUsageDecision.value : String(colorUsageDecision.value);
+    const label = COLOR_USAGE_LABELS[rawValue] ?? rawValue;
+    const defaultAcceptedMarker = colorUsageDecision.source === "default_accepted" ? " (기본값 수용)" : "";
+    parts.push(`색 운용: ${label}${defaultAcceptedMarker}`);
   }
   const roles = Array.from(
     new Set(timeline.sections.map((section) => section.role).filter((role): role is string => Boolean(role))),

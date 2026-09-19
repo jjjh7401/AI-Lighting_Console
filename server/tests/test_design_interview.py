@@ -16,10 +16,12 @@ from server.design.interview import (
     GLOBAL_DEFAULT_TEXTURE,
     Q1_CONCEPT,
     Q2_PALETTE,
+    Q2B_COLOR_USAGE,
     Q3_CLIMAX,
     Q4_SPATIAL_STORY,
     Q5_TEXTURE,
     SOURCE_AUTO_DRAFT,
+    SOURCE_DEFAULT_ACCEPTED,
     SOURCE_FREE_TEXT,
     SOURCE_OPTION,
     SOURCE_PRE_SPECIFIED,
@@ -364,6 +366,7 @@ class TestDirectorDecisionProjection:
         interview = DirectorInterview(MusicProfile(), _rig())
         interview.submit_answer(None)
         interview.submit_answer(None)
+        interview.submit_answer(None)  # Q2B default-accepted
         card = interview.build_current_card()
         record = interview.submit_answer(card.options[0].label)
 
@@ -380,6 +383,7 @@ class TestDirectorDecisionProjection:
         interview = DirectorInterview(MusicProfile(), _rig())
         interview.submit_answer("완전히 새로운 컨셉")
         interview.submit_answer(None)
+        interview.submit_answer(None)  # Q2B default-accepted
         interview.submit_answer(None)
         card = interview.build_current_card()
         record = interview.submit_answer(card.options[0].label)
@@ -407,7 +411,7 @@ class TestDirectorDecisionProjection:
         self, raw, bpm, snap_fade, fx_density, bpm_speed
     ):
         interview = DirectorInterview(MusicProfile(bpm=bpm), _rig())
-        for _ in range(4):
+        for _ in range(5):  # Q1/Q2/Q2B/Q3/Q4 auto-draft
             interview.submit_answer(None)
         record = interview.submit_answer(raw)
 
@@ -469,6 +473,10 @@ class TestQ1ChangesDownstreamProposals:
         assert q2_card.options[0].value == "마젠타/시안"
 
         interview.submit_answer(None)  # auto-draft Q2
+        q2b_card = interview.build_current_card()
+        assert q2b_card.step == Q2B_COLOR_USAGE
+
+        interview.submit_answer(None)  # default-accepted Q2B
         q3_card = interview.build_current_card()
         assert q3_card.step == Q3_CLIMAX
         assert q3_card.options[0].label == "Cross"
@@ -534,6 +542,7 @@ class TestFreeTextPath:
         interview = DirectorInterview(MusicProfile(), _rig())
         interview.submit_answer(None)
         interview.submit_answer(None)
+        interview.submit_answer(None)  # Q2B default-accepted
         record = interview.submit_answer("웅장한 피날레 연출")
         assert isinstance(record, AnswerRecord)
         assert isinstance(record.value, DirectorOverride)
@@ -542,7 +551,7 @@ class TestFreeTextPath:
 
     def test_q4_free_text_resolves_to_position_candidates_only(self):
         interview = DirectorInterview(MusicProfile(), _rig())
-        for _ in range(3):
+        for _ in range(4):  # Q1/Q2/Q2B/Q3 auto-draft
             interview.submit_answer(None)
         record = interview.submit_answer("잔잔한 발라드 느낌")
         assert isinstance(record, AnswerRecord)
@@ -552,7 +561,7 @@ class TestFreeTextPath:
 
     def test_q5_free_text_is_accepted_verbatim_and_never_becomes_an_override(self):
         interview = DirectorInterview(MusicProfile(), _rig())
-        for _ in range(4):
+        for _ in range(5):  # Q1/Q2/Q2B/Q3/Q4 auto-draft
             interview.submit_answer(None)
         record = interview.submit_answer("드라이 스냅 위주로")
         assert record.value == "드라이 스냅 위주로"
@@ -595,6 +604,7 @@ class TestUnresolvedFreeTextReAsks:
         interview = DirectorInterview(MusicProfile(), _rig())
         interview.submit_answer(None)
         interview.submit_answer(None)
+        interview.submit_answer(None)  # Q2B default-accepted
         result = interview.submit_answer("이해할 수 없는 외계어 문장")
         assert isinstance(result, UnresolvedAnswer)
         assert result.reason == "no_keyword_match"
@@ -604,6 +614,7 @@ class TestUnresolvedFreeTextReAsks:
         interview = DirectorInterview(MusicProfile(), _rig())
         interview.submit_answer(None)
         interview.submit_answer(None)
+        interview.submit_answer(None)  # Q2B default-accepted
         unresolved = interview.submit_answer("이해할 수 없는 외계어 문장")
         assert isinstance(unresolved, UnresolvedAnswer)
         record = interview.submit_answer("웅장한 피날레 연출")
@@ -612,7 +623,7 @@ class TestUnresolvedFreeTextReAsks:
 
     def test_q4_ambiguous_mood_text_also_re_asks(self):
         interview = DirectorInterview(MusicProfile(), _rig())
-        for _ in range(3):
+        for _ in range(4):  # Q1/Q2/Q2B/Q3 auto-draft
             interview.submit_answer(None)
         result = interview.submit_answer("발라드풍 오프닝 연출")  # ties Vocal DSC/Center
         assert isinstance(result, UnresolvedAnswer)
@@ -672,6 +683,7 @@ class TestPartialRestart:
         interview = DirectorInterview(MusicProfile(), _rig())
         interview.submit_answer("우주")
         interview.submit_answer(None)
+        interview.submit_answer(None)  # Q2B default-accepted
         interview.submit_answer(None)  # Q3
         interview.submit_answer(None)  # Q4
         interview.submit_answer(None)  # Q5
@@ -713,6 +725,7 @@ class TestAuditTrail:
         interview = DirectorInterview(MusicProfile(), _rig())
         interview.submit_answer("우주")
         interview.submit_answer(None)
+        interview.submit_answer(None)  # Q2B default-accepted
         interview.submit_answer("웅장한 피날레 연출")
         interview.submit_answer(None)
         interview.submit_answer("드라이 스냅")
@@ -722,7 +735,9 @@ class TestAuditTrail:
         assert trail[0].source == SOURCE_OPTION
         assert trail[1].source == SOURCE_AUTO_DRAFT
         assert trail[1].confirmed is False
-        assert trail[2].source == SOURCE_FREE_TEXT
+        assert trail[2].source == SOURCE_DEFAULT_ACCEPTED
+        assert trail[2].confirmed is True
+        assert trail[3].source == SOURCE_FREE_TEXT
 
     def test_audit_trail_is_partial_mid_interview(self):
         interview = DirectorInterview(MusicProfile(), _rig())
@@ -738,8 +753,192 @@ class TestAuditTrail:
 
 
 class TestRigDerivedContext:
-    @pytest.mark.parametrize("step", list(STEP_ORDER))
+    # Q2B_COLOR_USAGE is deliberately rig-independent (spec.md §2 D1 — the
+    # three color-usage options never vary with the rig or the profile), so
+    # it is excluded from this rig-derived-context parametrization.
+    @pytest.mark.parametrize("step", [s for s in STEP_ORDER if s != Q2B_COLOR_USAGE])
     def test_option_descriptions_mention_the_rigs_fixture_count(self, step):
         card = build_question(step, MusicProfile(), _rig(fixture_count=12))
         for option in card.options:
             assert "12대" in option.description
+
+
+# ---------------------------------------------------------------------------
+# SPEC-COPILOT-COLORMODE-001 — Q2B_COLOR_USAGE
+# ---------------------------------------------------------------------------
+
+
+class TestQ2bColorUsageOptions:
+    """AC-COLORMODE-001 (REQ-001, 002) — exactly 3 options, modulate first."""
+
+    def test_exactly_three_options_in_fixed_order_with_modulate_default(self):
+        card = build_question(Q2B_COLOR_USAGE, MusicProfile(), _rig())
+        assert len(card.options) == 3
+        assert card.options[0].value == "modulate"
+        assert card.options[1].value == "single"
+        assert card.options[2].value == "per_chorus"
+        assert "기본" in card.options[0].label
+
+    def test_why_cites_the_2026_09_13_director_instruction(self):
+        card = build_question(Q2B_COLOR_USAGE, MusicProfile(), _rig())
+        assert "2026-09-13" in card.why
+
+    def test_step_order_places_q2b_between_q2_and_q3(self):
+        assert STEP_ORDER == (
+            Q1_CONCEPT,
+            Q2_PALETTE,
+            Q2B_COLOR_USAGE,
+            Q3_CLIMAX,
+            Q4_SPATIAL_STORY,
+            Q5_TEXTURE,
+        )
+
+
+class TestQ2bBlankAnswerIsDefaultAccepted:
+    """AC-COLORMODE-002 (REQ-003) — blank Q2B is confirmed=True, not a draft."""
+
+    def test_blank_submission_is_confirmed_default_accepted(self):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        interview.submit_answer(None)  # Q1
+        interview.submit_answer(None)  # Q2
+        record = interview.submit_answer(None)  # Q2B
+        assert record.step == Q2B_COLOR_USAGE
+        assert record.value == "modulate"
+        assert record.confirmed is True
+        assert record.source == SOURCE_DEFAULT_ACCEPTED
+
+    def test_whitespace_only_submission_is_also_default_accepted(self):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        interview.submit_answer(None)
+        interview.submit_answer(None)
+        record = interview.submit_answer("   ")
+        assert record.source == SOURCE_DEFAULT_ACCEPTED
+        assert record.confirmed is True
+
+
+class TestQ2bOptionAndFreeTextResolveAllThreeValues:
+    """AC-COLORMODE-004 (REQ-002, 005) — option labels and free text both
+    map to all three values."""
+
+    @pytest.mark.parametrize(
+        ("free_text", "expected"),
+        [
+            ("단색으로 갈게요", "single"),
+            ("하나로 통일해줘", "single"),
+            ("메인 컬러 변조로", "modulate"),
+            ("기본값 그대로", "modulate"),
+            ("후렴마다 다른 색", "per_chorus"),
+            ("포인트 색을 바꿔줘", "per_chorus"),
+        ],
+    )
+    def test_free_text_resolves_to_expected_value(self, free_text, expected):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        interview.submit_answer(None)
+        interview.submit_answer(None)
+        record = interview.submit_answer(free_text)
+        assert isinstance(record, AnswerRecord)
+        assert record.value == expected
+        assert record.confirmed is True
+        assert record.source == SOURCE_FREE_TEXT
+
+    @pytest.mark.parametrize("expected", ["modulate", "single", "per_chorus"])
+    def test_matching_the_option_label_resolves_via_option_path(self, expected):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        interview.submit_answer(None)
+        interview.submit_answer(None)
+        card = interview.build_current_card()
+        chosen = next(option for option in card.options if option.value == expected)
+        record = interview.submit_answer(chosen.label)
+        assert record.value == expected
+        assert record.confirmed is True
+        assert record.source == SOURCE_OPTION
+
+
+class TestQ2bUnresolvedFreeTextReAsks:
+    """AC-COLORMODE-005 (REQ-006) — unrecognized text re-asks, no guess."""
+
+    def test_unrecognized_text_returns_unresolved_and_does_not_advance(self):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        interview.submit_answer(None)
+        interview.submit_answer(None)
+        result = interview.submit_answer("이해할 수 없는 외계어 문장")
+        assert isinstance(result, UnresolvedAnswer)
+        assert result.step == Q2B_COLOR_USAGE
+        assert result.reason == "no_known_color_usage_token"
+        assert interview.current_step == Q2B_COLOR_USAGE
+
+
+class TestExistingRestartsUnaffectedByQ2bInsertion:
+    """AC-COLORMODE-006 (REQ-007) — "Q3/Q1/Q4/Q5 다시" still restart the
+    same step as before Q2B existed; this is engine-level restart_from
+    behavior (the session.py lookup-table wiring is covered separately in
+    test_web_session.py)."""
+
+    def test_restart_from_q3_by_name_is_unaffected_by_the_new_step(self):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        for _ in STEP_ORDER:
+            interview.submit_answer(None)
+        interview.restart_from(Q3_CLIMAX)
+        assert interview.current_step == Q3_CLIMAX
+        assert Q1_CONCEPT in interview.answers
+        assert Q2_PALETTE in interview.answers
+        assert Q2B_COLOR_USAGE in interview.answers
+        assert Q4_SPATIAL_STORY not in interview.answers
+
+
+class TestQ2bRestart:
+    """AC-COLORMODE-007 (REQ-008) — restarting Q2B preserves Q1/Q2, drops
+    everything from Q2B onward."""
+
+    def test_restart_from_q2b_keeps_q1_and_q2_drops_the_rest(self):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        for _ in STEP_ORDER:
+            interview.submit_answer(None)
+        q1_before = interview.answers[Q1_CONCEPT]
+        q2_before = interview.answers[Q2_PALETTE]
+
+        interview.restart_from(Q2B_COLOR_USAGE)
+
+        assert interview.current_step == Q2B_COLOR_USAGE
+        assert interview.answers[Q1_CONCEPT] == q1_before
+        assert interview.answers[Q2_PALETTE] == q2_before
+        assert Q3_CLIMAX not in interview.answers
+        assert Q4_SPATIAL_STORY not in interview.answers
+        assert Q5_TEXTURE not in interview.answers
+
+
+class TestQ2RestartDiscardsQ2b:
+    """AC-COLORMODE-015 (REQ-016) — restarting Q2_PALETTE also discards the
+    downstream Q2B_COLOR_USAGE answer (restart_from's existing suffix-drop
+    semantics, extended one step downstream by Q2B's insertion point)."""
+
+    def test_restart_from_q2_drops_q2b_and_re_presents_it_after_q2_is_re_answered(self):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        interview.submit_answer("우주")  # Q1
+        interview.submit_answer(None)  # Q2
+        interview.submit_answer("single")  # Q2B, explicit — not default-accepted
+        assert Q2B_COLOR_USAGE in interview.answers
+
+        interview.restart_from(Q2_PALETTE)
+
+        assert Q2B_COLOR_USAGE not in interview.answers
+        assert interview.current_step == Q2_PALETTE
+
+        interview.submit_answer(None)  # re-answer Q2
+        next_card = interview.build_current_card()
+        assert next_card.step == Q2B_COLOR_USAGE
+
+
+class TestQ2bDoesNotChangeOtherStepsBlankBehavior:
+    """AC-COLORMODE-016 (REQ-004) — every step other than Q2B keeps the
+    byte-identical confirmed=False/SOURCE_AUTO_DRAFT blank-answer path."""
+
+    @pytest.mark.parametrize("step", [s for s in STEP_ORDER if s != Q2B_COLOR_USAGE])
+    def test_blank_answer_on_other_steps_is_still_auto_draft(self, step):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        while interview.current_step != step:
+            interview.submit_answer(None)
+        record = interview.submit_answer(None)
+        assert record.confirmed is False
+        assert record.source == SOURCE_AUTO_DRAFT
+        assert record.source != SOURCE_DEFAULT_ACCEPTED

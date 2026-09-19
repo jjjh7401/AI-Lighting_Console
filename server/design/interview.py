@@ -112,10 +112,12 @@ __all__ = [
     "GLOBAL_DEFAULT_TEXTURE",
     "Q1_CONCEPT",
     "Q2_PALETTE",
+    "Q2B_COLOR_USAGE",
     "Q3_CLIMAX",
     "Q4_SPATIAL_STORY",
     "Q5_TEXTURE",
     "SOURCE_AUTO_DRAFT",
+    "SOURCE_DEFAULT_ACCEPTED",
     "SOURCE_FREE_TEXT",
     "SOURCE_OPTION",
     "SOURCE_PRE_SPECIFIED",
@@ -140,15 +142,25 @@ class InterviewError(ValueError):
     is already complete."""
 
 
-#: The five closed questions (표준 §2d table), in the fixed order DI2 asks
-#: them ("한 번에 하나씩").
+#: The six closed questions (표준 §2d table + SPEC-COPILOT-COLORMODE-001
+#: Q2B), in the fixed order DI2 asks them ("한 번에 하나씩").
 Q1_CONCEPT = "Q1_CONCEPT"
 Q2_PALETTE = "Q2_PALETTE"
+#: SPEC-COPILOT-COLORMODE-001 D1 — "이 색을 곡 전체에 걸쳐 어떻게 쓸지"
+#: 확인하는 새 스텝. Q2(팔레트) 바로 다음, Q3(클라이맥스) 이전에 온다.
+Q2B_COLOR_USAGE = "Q2B_COLOR_USAGE"
 Q3_CLIMAX = "Q3_CLIMAX"
 Q4_SPATIAL_STORY = "Q4_SPATIAL_STORY"
 Q5_TEXTURE = "Q5_TEXTURE"
 
-STEP_ORDER: tuple[str, ...] = (Q1_CONCEPT, Q2_PALETTE, Q3_CLIMAX, Q4_SPATIAL_STORY, Q5_TEXTURE)
+STEP_ORDER: tuple[str, ...] = (
+    Q1_CONCEPT,
+    Q2_PALETTE,
+    Q2B_COLOR_USAGE,
+    Q3_CLIMAX,
+    Q4_SPATIAL_STORY,
+    Q5_TEXTURE,
+)
 
 #: Audit-trail source tags (DI6) — where an :class:`AnswerRecord`'s value
 #: actually came from.
@@ -156,6 +168,11 @@ SOURCE_OPTION = "option"
 SOURCE_FREE_TEXT = "free_text"
 SOURCE_PRE_SPECIFIED = "pre_specified"
 SOURCE_AUTO_DRAFT = "auto_draft"
+#: SPEC-COPILOT-COLORMODE-001 D3 — Q2B's blank-answer path. Unlike
+#: SOURCE_AUTO_DRAFT (confirmed=False, "모르겠다"), a blank Q2B answer means
+#: the director SAW the card and explicitly accepted its first option — so
+#: it is recorded confirmed=True and never re-queried.
+SOURCE_DEFAULT_ACCEPTED = "default_accepted"
 
 #: The neutral texture used only when neither a genre nor a BPM tempo band
 #: supplies one — mirrors ``profile.py``'s ``GLOBAL_DEFAULT_COLOR_TENDENCY``
@@ -255,6 +272,12 @@ class QuestionCard:
     prompt: str
     why: str
     options: tuple[QuestionOption, ...]
+    #: SPEC-COPILOT-COLORMODE-001 D3 — when True, a blank/unanswered
+    #: submission for this card is recorded confirmed=True with
+    #: SOURCE_DEFAULT_ACCEPTED instead of the default confirmed=False/
+    #: SOURCE_AUTO_DRAFT path. Defaults to False so every existing card
+    #: (Q1/Q2/Q3/Q4/Q5) is byte-identical.
+    default_confirms: bool = False
 
     def __post_init__(self) -> None:
         if len(self.options) != 3:
@@ -574,6 +597,49 @@ def _build_q2(profile: MusicProfile, rig: RigProfile) -> QuestionCard:
 
 
 # ---------------------------------------------------------------------------
+# Q2B — 색 운용 방식 (SPEC-COPILOT-COLORMODE-001 D1)
+# ---------------------------------------------------------------------------
+
+#: spec.md §2 D1 — 2026-09-13 감독 지시 인용, 카드마다 그대로 보여준다.
+_COLOR_USAGE_WHY = (
+    '2026-09-13 감독 지시: "물론 곡과 조명감독의 스타일에 따라서 다르겠지. '
+    '그리고 조명감독의 확인을 받는게 좋을 것 같아." 기본값은 감독이 이미 '
+    "밝힌 선호(메인 컬러 중심 변조 + 임팩트에서 터뜨림)입니다."
+)
+
+
+def _build_q2b(profile: MusicProfile, rig: RigProfile) -> QuestionCard:
+    del profile, rig  # 색 운용 후보는 곡/리그와 무관하게 항상 같은 3옵션.
+    options = (
+        QuestionOption(
+            label="메인 컬러 중심 변조 + 임팩트에서 터뜨림 (기본)",
+            description=(
+                "Q2에서 고른 색을 기본으로 곡 전체에서 조금씩 바꾸다가, "
+                "가장 중요한 순간에 크게 터뜨려요."
+            ),
+            value="modulate",
+        ),
+        QuestionOption(
+            label="이 색 계열로만 간다",
+            description="Q2에서 고른 색 계열을 곡 전체에서 그대로 유지해요.",
+            value="single",
+        ),
+        QuestionOption(
+            label="후렴마다 다른 포인트 색",
+            description="후렴(하이라이트)마다 서로 다른 포인트 색을 써요.",
+            value="per_chorus",
+        ),
+    )
+    return QuestionCard(
+        step=Q2B_COLOR_USAGE,
+        prompt="이 색을 곡 전체에서 어떻게 쓸까요?",
+        why=_COLOR_USAGE_WHY,
+        options=options,
+        default_confirms=True,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Q3 — 클라이맥스 (피크 구간·터뜨릴 방식)
 # ---------------------------------------------------------------------------
 
@@ -883,6 +949,7 @@ def _build_q5(profile: MusicProfile, rig: RigProfile) -> QuestionCard:
 _STEP_BUILDERS = {
     Q1_CONCEPT: _build_q1,
     Q2_PALETTE: _build_q2,
+    Q2B_COLOR_USAGE: _build_q2b,
     Q3_CLIMAX: _build_q3,
     Q4_SPATIAL_STORY: _build_q4,
     Q5_TEXTURE: _build_q5,
@@ -954,10 +1021,20 @@ def _palette_value_tokens(value: object) -> tuple[str, ...]:
     return tuple(tokens) or (str(value),)
 
 
+#: spec.md §2 D1 — Q2B 자유 입력 키워드 그룹 (단색/하나/only/single →
+#: "single"; 변조/기본/modulate/main → "modulate"; 후렴마다/포인트/
+#: per chorus/accent → "per_chorus"). 순서가 판정 순서다 — 어느 그룹에도
+#: 안 걸리면 재질의(DI3 무추측 원칙).
+_COLOR_USAGE_SINGLE_TOKENS = ("단색", "하나", "only", "single")
+_COLOR_USAGE_MODULATE_TOKENS = ("변조", "기본", "modulate", "main")
+_COLOR_USAGE_PER_CHORUS_TOKENS = ("후렴마다", "포인트", "per chorus", "per_chorus", "accent")
+
+
 def _parse_free_text(step: str, raw: str, profile: MusicProfile) -> object | _ParseFailure:
     """Parse one step's free text into the same value shape its options
     carry (DI3). Q1/Q5 are open vocabulary and always resolve; Q2 checks
-    against :data:`_KNOWN_COLOR_TOKENS`; Q3/Q4 delegate to
+    against :data:`_KNOWN_COLOR_TOKENS`; Q2B checks the color-usage keyword
+    groups; Q3/Q4 delegate to
     :func:`~server.design.profile.resolve_section`'s own unified-mood
     matcher and surface its :class:`~server.design.profile.UnresolvedMood`
     as a parse failure rather than guessing."""
@@ -968,6 +1045,15 @@ def _parse_free_text(step: str, raw: str, profile: MusicProfile) -> object | _Pa
         if any(token in folded for token in _KNOWN_COLOR_TOKENS):
             return raw
         return _ParseFailure(reason="no_known_color_token")
+    if step == Q2B_COLOR_USAGE:
+        folded = raw.casefold()
+        if any(token in folded for token in _COLOR_USAGE_SINGLE_TOKENS):
+            return "single"
+        if any(token in folded for token in _COLOR_USAGE_MODULATE_TOKENS):
+            return "modulate"
+        if any(token in folded for token in _COLOR_USAGE_PER_CHORUS_TOKENS):
+            return "per_chorus"
+        return _ParseFailure(reason="no_known_color_usage_token")
     if step in (Q3_CLIMAX, Q4_SPATIAL_STORY):
         result: SectionMoodResolution | UnresolvedMood = resolve_section(raw, profile)
         if isinstance(result, UnresolvedMood):
@@ -1105,14 +1191,18 @@ class DirectorInterview:
 
         if not stripped:
             value = card.options[0].value
+            if card.default_confirms:
+                confirmed, source = True, SOURCE_DEFAULT_ACCEPTED
+            else:
+                confirmed, source = False, SOURCE_AUTO_DRAFT
             record = AnswerRecord(
                 step=step,
                 proposals=card.options,
                 choice=card.options[0],
                 free_text=None,
                 value=value,
-                confirmed=False,
-                source=SOURCE_AUTO_DRAFT,
+                confirmed=confirmed,
+                source=source,
                 director_decision=_project_director_decision(step, value, profile),
             )
             self.answers[step] = record

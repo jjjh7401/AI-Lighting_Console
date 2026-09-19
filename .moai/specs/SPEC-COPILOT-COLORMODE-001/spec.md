@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-COLORMODE-001
 title: "색 운용 방식 확인 문항 — Q2B 색 운용(Color Usage) 인터뷰 스텝"
 version: "0.2.0"
-status: draft
+status: in-progress
 created: 2026-09-20
 updated: 2026-09-20
 author: jaihyun
