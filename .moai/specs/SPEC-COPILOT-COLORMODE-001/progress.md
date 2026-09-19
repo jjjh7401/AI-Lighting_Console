@@ -153,7 +153,7 @@ test_q2b_다시_.../test_색_운용_다시_...: assert '처음부터 끝까지 �
 - 16/16 AC 전부 PASS(§E.2 E1 매트릭스). 전체 회귀 `13659 passed, 33 skipped, 0 failed`. UI 577/577 passed. `npm run build` exit 0. ruff check/format 클린. subagent-boundary grep 0건.
 - run_complete_at: 2026-09-20T02:14:00+09:00
 - run_status: audit-ready
-- run_commit_sha: 58184d4e
+- run_commit_sha: df17ab41 (sync-audit F1-F5 보정 커밋; 코드 변경 없음, session.py 무변경 — 뮤테이션 프로브 원상 복구 확인)
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
