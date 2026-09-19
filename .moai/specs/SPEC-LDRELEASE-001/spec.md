@@ -2,7 +2,7 @@
 id: SPEC-LDRELEASE-001
 title: "Director apply destination 예약 해제(release) 절차"
 version: "0.2.0"
-status: draft
+status: in-progress
 created: 2026-09-19
 updated: 2026-09-19
 author: jaihyun

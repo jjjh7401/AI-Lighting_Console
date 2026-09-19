@@ -292,6 +292,11 @@ class ExecutionResult:
     response_status: int
     response_body: dict[str, Any]
     replayed: bool
+    # SPEC-LDRELEASE-001 REQ-LDRELEASE-001 — 이 execution 이 destination 예약을
+    # partial 원본으로부터 원자적으로 이전받았으면 그 원본 execution_id, 아니면
+    # ``None``. 기본값 ``None`` 이므로 기존 호출자는 이 필드를 몰라도 바이트
+    # 동일하게 동작한다(plan.md §E 위험 완화).
+    transferred_from: str | None = None
 
 
 class ExecutionJournal:
@@ -365,13 +370,21 @@ class ExecutionJournal:
         bundles: list[Mapping[str, Any]],
         destination: Mapping[str, str] | None = None,
         allocate_execution_id: Callable[[], str] | None = None,
+        recovery_of: str | None = None,
     ) -> ExecutionResult:
         """첫 write 전 승인 소비·execution·bundle journal·fingerprint·destination
         예약을 하나의 transaction 으로 커밋한다 (계약 §10).
 
+        ``recovery_of``(SPEC-LDRELEASE-001 §C 항목2) 가 주어지면, ``destination``
+        예약 단계에서 그 값을 ``transfer_from`` 으로 그대로 전달한다 — 새 API
+        왕복이나 새 lock 없이, 이미 ``begin_execution`` 이 열어둔 같은
+        transaction 안에서 이전 여부를 판단한다. 기본값 ``None`` 이므로 기존
+        호출자는 바이트 동일하게 동작한다.
+
         Raises:
             ExchangeError: ``IDEMPOTENCY_CONFLICT`` (같은 key 에 다른 request),
-                ``TARGET_BUSY`` (``destination`` 이 이미 예약된 slot).
+                ``TARGET_BUSY`` (``destination`` 이 이미 예약된 slot이고
+                이전 조건도 만족하지 않음).
         """
         fingerprint = _fingerprint(
             operation=operation,
@@ -431,13 +444,15 @@ class ExecutionJournal:
                     (execution_id, index, str(bundle["bundle_id"]), STATE_PLANNED, created_at),
                 )
 
+            transferred_from: str | None = None
             if destination is not None:
-                self._reserve_destination_locked(
+                transferred_from = self._reserve_destination_locked(
                     project_id=project_id,
                     show_id=str(destination["show_id"]),
                     sequence_id=str(destination["sequence_id"]),
                     execution_id=execution_id,
                     now=created_at,
+                    transfer_from=recovery_of,
                 )
 
             self._connection.execute(
@@ -464,6 +479,7 @@ class ExecutionJournal:
             response_status=response_status,
             response_body=response_body,
             replayed=False,
+            transferred_from=transferred_from,
         )
 
     def _replay_or_none(
@@ -632,11 +648,30 @@ class ExecutionJournal:
             )
 
     def _reserve_destination_locked(
-        self, *, project_id: str, show_id: str, sequence_id: str, execution_id: str, now: str
-    ) -> None:
+        self,
+        *,
+        project_id: str,
+        show_id: str,
+        sequence_id: str,
+        execution_id: str,
+        now: str,
+        transfer_from: str | None = None,
+    ) -> str | None:
         """``reserve_destination`` 의 본체 — 이미 열린 transaction 안에서 호출되도록
         커밋을 직접 하지 않는다(``begin_execution`` 이 같은 transaction 에서
-        재사용한다)."""
+        재사용한다).
+
+        SPEC-LDRELEASE-001 §C 항목1 — ``transfer_from`` 이 주어지고 그것이
+        현재 점유자와 정확히 같으며(REQ-LDRELEASE-006), 그 점유자의 journal
+        상태가 ``partial`` 이면(REQ-LDRELEASE-001), create-only 예외 없이
+        예약을 ``execution_id`` 로 원자적으로 이전한다. 점유자 상태가
+        ``unknown`` 이면(그 밖의 어떤 상태여도) REQ-LDRELEASE-002 에 따라
+        평소와 동일한 TARGET_BUSY 로 거부한다 — 콘솔에 실제로 무엇이 도달했는지
+        불확실한 상태에서는 자동 이전하지 않는다.
+
+        Returns:
+            이전이 실제로 일어났으면 원본 execution_id, 아니면 ``None``.
+        """
         existing = self._connection.execute(
             "SELECT status, reserved_by_execution_id FROM destination_reservations "
             "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
@@ -644,6 +679,42 @@ class ExecutionJournal:
         ).fetchone()
 
         if existing is not None and str(existing["status"]) == RESERVATION_RESERVED:
+            occupant = str(existing["reserved_by_execution_id"])
+            # @MX:NOTE: [AUTO] SPEC-LDRELEASE-001 REQ-LDRELEASE-001/002/008 —
+            #   create-only 예약의 유일한 예외 분기. recovery_of 가 현재
+            #   점유자를 정확히 가리키고(REQ-006) 그 점유자가 partial 이면만
+            #   (REQ-001) 원자적 이전을 허용한다; unknown 등 그 밖의 상태는
+            #   콘솔 상태가 불확실하므로 이전을 거부한다(REQ-002). 이 이전이
+            #   일어난 recovery 가 이어서 게이트에서 거부되면 완전 해제가
+            #   아니라 원본에게 되돌아간다(REQ-008, ApplyCoordinator.apply()
+            #   의 게이트-거부 분기 참고) — 그래야 create-only 가 지키는
+            #   "누가 이 슬롯을 다시 쓸 자격이 있는가" 감사 가능성이 이
+            #   경로에서도 유지된다.
+            if transfer_from is not None and occupant == transfer_from:
+                occupant_status = self.status(transfer_from)
+                if occupant_status == STATE_PARTIAL:
+                    self._connection.execute(
+                        "UPDATE destination_reservations "
+                        "SET reserved_by_execution_id = ?, reserved_at = ?, status = ? "
+                        "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
+                        (
+                            execution_id,
+                            now,
+                            RESERVATION_RESERVED,
+                            project_id,
+                            show_id,
+                            sequence_id,
+                        ),
+                    )
+                    return transfer_from
+                # REQ-LDRELEASE-002 — unknown(그 밖의 어떤 상태여도) 원본은 이전
+                # 대상이 아니다. 오늘의 일반 TARGET_BUSY 메시지와 구분되는 사유를
+                # 명시한다.
+                raise _target_busy(
+                    f"destination (show={show_id}, sequence={sequence_id}) 의 원본 "
+                    f"execution {transfer_from} 이 partial 이 아니라 {occupant_status} "
+                    "상태라 이전할 수 없습니다 — 콘솔 상태가 불확실합니다."
+                )
             raise _target_busy(
                 f"destination (show={show_id}, sequence={sequence_id}) 이 이미 "
                 f"execution {existing['reserved_by_execution_id']} 에 의해 점유되어 "
@@ -664,6 +735,7 @@ class ExecutionJournal:
                 "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
                 (execution_id, now, RESERVATION_RESERVED, project_id, show_id, sequence_id),
             )
+        return None
 
     def release_destination(self, *, project_id: str, show_id: str, sequence_id: str) -> None:
         """예약을 해제한다 — slot 은 이후 다시 ``reserve_destination`` 할 수 있다."""
@@ -672,6 +744,38 @@ class ExecutionJournal:
                 "UPDATE destination_reservations SET status = ? "
                 "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
                 (RESERVATION_RELEASED, project_id, show_id, sequence_id),
+            )
+
+    def restore_destination(
+        self, *, project_id: str, show_id: str, sequence_id: str, to_execution_id: str
+    ) -> None:
+        """SPEC-LDRELEASE-001 REQ-LDRELEASE-008 — ``release_destination`` 과
+        동형인 단일 UPDATE 문이지만, ``status`` 를 ``released`` 로 바꾸는 대신
+        ``reserved`` 로 **유지**한 채 ``reserved_by_execution_id``/``reserved_at``
+        만 ``to_execution_id``(REQ-LDRELEASE-001 이전 전의 원본 execution_id)로
+        되돌린다.
+
+        REQ-LDRELEASE-001 이전으로 destination 소유권을 넘겨받은 recovery
+        execution 이 그 뒤 SafetyGate 에서(destination 점유와 무관한 사유로)
+        거부되었을 때만 쓰인다 — 완전 해제(``released``)하면 ``recovery_of``
+        링크 없는 무관한 apply 도 그 슬롯을 재사용할 수 있게 되어 create-only
+        가 지키는 "누가 이 슬롯을 다시 쓸 자격이 있는가" 감사 가능성이 이
+        경로에서만 무너진다 — 원본에게 되돌리면 그 원본을 가리키는 **다른**
+        recovery 가 다시 그 슬롯을 이전받을 수 있다(REQ-LDRELEASE-001 이 이미
+        하는 검사가 그대로 재사용된다)."""
+        with self._transaction():
+            self._connection.execute(
+                "UPDATE destination_reservations "
+                "SET reserved_by_execution_id = ?, reserved_at = ?, status = ? "
+                "WHERE project_id = ? AND show_id = ? AND sequence_id = ?",
+                (
+                    to_execution_id,
+                    _now(),
+                    RESERVATION_RESERVED,
+                    project_id,
+                    show_id,
+                    sequence_id,
+                ),
             )
 
     def destination_status(
@@ -932,6 +1036,7 @@ class ApplyCoordinator:
             approval_id=approval_id,
             bundles=bundles,
             destination=destination,
+            recovery_of=recovery_of,
         )
         if result.replayed:
             return result
@@ -958,11 +1063,26 @@ class ApplyCoordinator:
             # STATE_UNKNOWN 으로 끝나는 execute_bundles 의 실패는 콘솔에
             # 무엇이 도달했는지 불확실하므로 이 즉시 해제 대상이 아니다.
             self._journal.finalize_execution(result.execution_id, STATE_FAILED)
-            self._journal.release_destination(
-                project_id=project_id,
-                show_id=str(destination["show_id"]),
-                sequence_id=str(destination["sequence_id"]),
-            )
+            # SPEC-LDRELEASE-001 REQ-LDRELEASE-008 (1차 plan-audit D1 반영) —
+            # 이 apply 가 REQ-LDRELEASE-001 원자적 이전으로 destination
+            # 소유권을 원본 execution 에서 넘겨받은 것이면(result.transferred_from
+            # 이 있으면), 무조건 완전 해제하지 않고 원본에게 되돌린다 — 그래야
+            # 그 원본을 가리키는 다른 recovery 시도가 같은 슬롯을 다시 겨냥할
+            # 수 있다. 전이가 없었던 일반 경로(recovery_of 없음 또는 다른
+            # destination)는 REQ-LDRELEASE-004 그대로 무조건 해제한다.
+            if result.transferred_from is not None:
+                self._journal.restore_destination(
+                    project_id=project_id,
+                    show_id=str(destination["show_id"]),
+                    sequence_id=str(destination["sequence_id"]),
+                    to_execution_id=result.transferred_from,
+                )
+            else:
+                self._journal.release_destination(
+                    project_id=project_id,
+                    show_id=str(destination["show_id"]),
+                    sequence_id=str(destination["sequence_id"]),
+                )
             if decision.status == "blocked_target_busy":
                 # 결함6 — 중재자(shared programmer lock) 충돌은 문법/안전
                 # 위반이 아니라 재시도 가능한 점유 상태다. GATE_REJECTED(422,
