@@ -42,27 +42,30 @@
 | AC-COLORMODE-003 | PASS | `uv run pytest -q server/tests/test_song_cue_composer.py::test_color_usage_default_accepted_decision_never_generates_a_requery` | 1/1 passed |
 | AC-COLORMODE-004 | PASS | `uv run pytest -q server/tests/test_design_interview.py::TestQ2bOptionAndFreeTextResolveAllThreeValues` | 9/9 passed |
 | AC-COLORMODE-005 | PASS | `uv run pytest -q server/tests/test_design_interview.py::TestQ2bUnresolvedFreeTextReAsks` | 1/1 passed |
-| AC-COLORMODE-006 | PASS | `uv run pytest -q server/tests/test_design_interview.py::TestExistingRestartsUnaffectedByQ2bInsertion` + `test_web_session.py` 기존 "Q3 다시" 계열 회귀 | 1/1 + 회귀 전량 통과 |
-| AC-COLORMODE-007 | PASS | `uv run pytest -q server/tests/test_design_interview.py::TestQ2bRestart` | 1/1 passed |
+| AC-COLORMODE-006 | PASS | `uv run pytest -q "server/tests/test_web_session.py::TestSongDesignInterviewSession::test_q3_다시_reaches_q3_climax_prompt_not_q2b_or_q4_and_continues_to_q4_q5" "...test_q4_다시_reaches_q4_prompt_not_q5_and_continues_to_q5" "...test_q5_다시_restarts_q5_itself_not_q4"` | 3/3 passed — 세션 레벨(`_song_run_interview` 실제 루프, `_SONG_RESTART_STEP_BY_TOKEN` 조회 테이블 실행). sync-audit F1 보정: 이전 PASS 근거였던 `test_design_interview.py::TestExistingRestartsUnaffectedByQ2bInsertion`는 엔진 API(`interview.restart_from`)를 직접 호출해 session.py의 정규식/조회 테이블을 전혀 실행하지 않는 대체 시험이었다(뮤테이션 프로브로 SURVIVED 확인됨) — 지금은 세션 레벨 회귀로 교체 |
+| AC-COLORMODE-007 | PASS | `uv run pytest -q "server/tests/test_web_session.py::TestSongDesignInterviewSession::test_q2b_다시_reaches_q2b_prompt_and_drops_q3_until_re_answered" "...test_색_운용_다시_reaches_q2b_prompt"` | 2/2 passed — "Q2B 다시"(`_SONG_RESTART`의 `2[Bb]` 대안)와 "색 운용 다시"(`_SONG_RESTART_COLOR_USAGE`) 두 트리거 문자열을 세션 레벨에서 리터럴로 제출해 검증. sync-audit F2 보정 |
 | AC-COLORMODE-008 | PASS | `uv run pytest -q "server/tests/test_web_session.py::TestSongDesignInterviewSession::test_color_usage_decision_default_accepted_is_recorded_in_the_timeline_payload" "server/tests/test_web_session.py::TestSongDesignInterviewSession::test_color_usage_decision_explicit_choice_is_recorded_in_the_timeline_payload"` | 2/2 passed |
-| AC-COLORMODE-009 | PASS | `npm --prefix ui test -- --run analysisSummary` | 3건 신규(modulate/single/per_chorus) 포함 14/14 passed |
+| AC-COLORMODE-009 | PASS | `npm --prefix ui test -- --run analysisSummary` | 3건 신규(modulate/single/per_chorus) + sync-audit F4 결합 케이스(palette+color_usage 동시 존재) 포함 15/15 passed |
 | AC-COLORMODE-010 | PASS | 위와 동일 | default_accepted 표시 + option 미표시 2건 포함 |
-| AC-COLORMODE-011 | PASS | `uv run pytest -q server/tests/test_song_color_usage_t404.py::TestModulateIsByteIdenticalToPreSpec` + 기존 t402/t403/t405/t406 무변경 회귀 | 2/2 + 63/63 회귀 통과 |
+| AC-COLORMODE-011 | PASS | `uv run pytest -q server/tests/test_song_color_usage_t404.py::TestModulateIsByteIdenticalToPreSpec` + 기존 t402/t403/t405/t406 무변경 회귀 | 2/2 + 56/56 회귀 통과(`uv run pytest -q --collect-only server/tests/test_song_palette_occurrence_t402.py server/tests/test_song_accent_ladder_t403.py server/tests/test_arc_fx_occurrence_t405.py server/tests/test_song_palette_occurrence_t406.py` → `56 tests collected`; 실행 결과 `56 passed`. sync-audit F3 — "63/63"은 실측과 불일치하는 오기재였다, 이번 실행에서 재측정.) |
 | AC-COLORMODE-012 | PASS | `uv run pytest -q server/tests/test_song_color_usage_t404.py::TestSingleReturnsBaseEverywhere` | 3/3 passed |
 | AC-COLORMODE-013 | PASS | `uv run pytest -q server/tests/test_song_color_usage_t404.py::TestPerChorusConsecutiveAccentsDiffer` | 4/4 passed |
+| (sync-audit F5) | PASS | `uv run pytest -q server/tests/test_song_color_usage_t404.py::TestColorUsageAffectsQueueDensity` | 4/4 passed — 실측: `single`은 `_section_palette_sizes`를 `[2,2,2,2]`→`[1,1,1,1]`로, `_split_sections_for_density`의 실제 큐 개수를 5→3으로 줄인다; `per_chorus`는 두 값 모두 modulate와 동일(색만 다르고 개수는 안 바뀜) — 추측이 아니라 측정으로 확정 |
 | AC-COLORMODE-014 | PASS | `uv run pytest -q "server/tests/test_web_session.py::TestSongDesignInterviewSession::test_full_choice_flow_previews_before_any_write_and_asks_for_approval"` | 6문항+리뷰=7장, `asked[2]` prompt가 Q2B |
 | AC-COLORMODE-015 | PASS | `uv run pytest -q server/tests/test_design_interview.py::TestQ2RestartDiscardsQ2b` | 1/1 passed |
 | AC-COLORMODE-016 | PASS | `uv run pytest -q server/tests/test_design_interview.py::TestQ2bDoesNotChangeOtherStepsBlankBehavior` | 5/5 passed(파라미터화) |
 
 ### E2 — 전체 회귀 + UI + 빌드
 
+sync-audit 보정 후 재측정(F1/F2 세션-레벨 시험 5건 + F5 밀도 시험 4건 = pytest +9, F4 결합 렌더링 시험 1건 = vitest +1):
+
 ```
 $ uv run pytest -q
-13659 passed, 33 skipped, 1 warning in 184.61s (0:03:04)
+13668 passed, 33 skipped, 1 warning in 183.34s (0:03:03)
 
 $ npm --prefix ui test -- --run
 Test Files  25 passed (25)
-     Tests  577 passed (577)
+     Tests  578 passed (578)
 
 $ npm --prefix ui run build
 ✓ built in 294ms  (exit 0)
@@ -117,6 +120,28 @@ $ git status --short
 - session.py M1 배선 직후: `uv run pytest -q server/tests/test_web_session.py::TestSongDesignInterviewSession` → `52 failed, 54 passed`. 대표: `test_full_choice_flow_previews_before_any_write_and_asks_for_approval` — `AssertionError: assert 5 == 6`.
 - 전체 회귀 1차: `27 failed, 13632 passed` (interview 5장 고정 리스트를 쓰는 잔여 파일 4개).
 - 전체 회귀 2차: `7 failed, 13652 passed` (좌표 유무 리그 카드 수 단언 2건).
+
+**sync-audit F1/F2 보정 — 뮤테이션 프로브 RED (2026-09-20, GREEN 이전 캡처)**: session.py의 `_SONG_RESTART`를 `[Qq]\s*(?P<no>[1-5])\s*(?:만)?\s*다시`(2[Bb] 대안 제거)로, `_SONG_RESTART_COLOR_USAGE`를 매칭 불가 패턴으로, 호출부를 `STEP_ORDER[int(no)-1]` 암묵 인덱싱으로 되돌린 뒤(`STEP_ORDER` re-import 필요) 신규 세션-레벨 시험 5건을 실행:
+
+```
+$ uv run pytest -q "server/tests/test_web_session.py::TestSongDesignInterviewSession::test_q3_다시_reaches_q3_climax_prompt_not_q2b_or_q4_and_continues_to_q4_q5" "...test_q4_다시_reaches_q4_prompt_not_q5_and_continues_to_q5" "...test_q5_다시_restarts_q5_itself_not_q4" "...test_q2b_다시_reaches_q2b_prompt_and_drops_q3_until_re_answered" "...test_색_운용_다시_reaches_q2b_prompt"
+5 failed in 1.19s
+
+대표 (test_q3_다시_...): AssertionError: assert prompts[5] == q3_prompt
+  assert '이 색을 곡 전체에서 어떻게 쓸까요?' == '가장 중요한 순간을 어떻게 보여 주면 좋겠어요?'
+  ("Q3 다시"가 STEP_ORDER[2]=Q2B_COLOR_USAGE로 잘못 라우팅됨 — sync-audit F1이 지목한 정확한 결함)
+
+test_q4_다시_...: assert '가장 중요한 순간을 어떻게 보여 주면 좋겠어요?' == '처음부터 끝까지 무대가...'
+  ("Q4 다시"가 STEP_ORDER[3]=Q3_CLIMAX로 잘못 라우팅됨)
+
+test_q5_다시_...: assert '처음부터 끝까지 무대가...' == '전환 방식은 어떻게 갈까요...'
+  ("Q5 다시"가 STEP_ORDER[4]=Q4_SPATIAL_STORY로 잘못 라우팅됨)
+
+test_q2b_다시_.../test_색_운용_다시_...: assert '처음부터 끝까지 무대가...' == '이 색을 곡 전체에서 어떻게 쓸까요?'
+  ("Q2B 다시"/"색 운용 다시"가 전혀 인식되지 않아 Q4 카드가 그대로 진행됨)
+```
+
+뮤테이션 복구 후(`git diff --stat server/web/session.py` → 빈 출력, 트리 바이트 동일 확인) 같은 5건 재실행 → `5 passed in 0.85s`(GREEN).
 
 ### 잔여 위험 (Residual-risk)
 

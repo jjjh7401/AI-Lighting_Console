@@ -20,7 +20,12 @@ from __future__ import annotations
 
 from server.design.profile import MusicProfile
 from server.spatial.position_cuesheet import PositionSheetSection
-from server.web.session import _arc_palette, _section_palette_choice
+from server.web.session import (
+    _arc_palette,
+    _section_palette_choice,
+    _section_palette_sizes,
+    _split_sections_for_density,
+)
 
 
 def _section(mood: str = "") -> PositionSheetSection:
@@ -162,3 +167,118 @@ class TestPerChorusConsecutiveAccentsDiffer:
         per_chorus = _choice(role="verse", color_usage="per_chorus", occurrence=3, profile=profile)
         modulate = _choice(role="verse", color_usage="modulate", occurrence=3, profile=profile)
         assert per_chorus == modulate
+
+
+def _chorus_sections(count: int, *, gap_ms: int = 40_000) -> list[PositionSheetSection]:
+    return [
+        PositionSheetSection(name=f"Chorus {i + 1}", start_ms=i * gap_ms, mood="", role="chorus")
+        for i in range(count)
+    ]
+
+
+class TestColorUsageAffectsQueueDensity:
+    """sync-audit.md F5 — measured, not guessed. `_section_palette_sizes`
+    reports `len(colors)` per section, and `plan_cue_density` caps a
+    section's split count to its palette size (never splitting a
+    single-color section, per `cue_density.py`'s own "2 미만인 구간은
+    쪼개지 않는다" contract). `single` returns exactly ``len(profile.palette)``
+    colors (no accent), which is fewer than modulate's 2-color
+    (primary+accent) output — so `single` measurably reduces both the
+    reported palette size AND the actual queue split count.
+    `per_chorus` reuses the same 2-color (primary+accent) shape as
+    modulate for every occurrence, so — measured below — it produces the
+    IDENTICAL palette sizes and split count as modulate for this fixture;
+    it changes WHICH accent color is used, not HOW MANY.
+    """
+
+    def test_single_reduces_palette_sizes_versus_modulate(self):
+        sections = _chorus_sections(4)
+        profile = MusicProfile(palette=("블루",))
+        modulate_sizes = _section_palette_sizes(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="modulate",
+        )
+        single_sizes = _section_palette_sizes(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="single",
+        )
+        assert modulate_sizes == [2, 2, 2, 2]
+        assert single_sizes == [1, 1, 1, 1]
+        assert single_sizes != modulate_sizes
+
+    def test_per_chorus_reports_the_same_palette_sizes_as_modulate(self):
+        """Measured equality, not an assumption: per_chorus varies the
+        accent COLOR per occurrence but not the accent COUNT, so its sizes
+        match modulate's exactly for this fixture."""
+        sections = _chorus_sections(4)
+        profile = MusicProfile(palette=("블루",))
+        modulate_sizes = _section_palette_sizes(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="modulate",
+        )
+        per_chorus_sizes = _section_palette_sizes(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="per_chorus",
+        )
+        assert per_chorus_sizes == modulate_sizes == [2, 2, 2, 2]
+
+    def test_single_reduces_the_actual_cue_split_count_versus_modulate(self):
+        """`single`'s single-color sections (size 1, below the "2 미만인
+        구간은 쪼개지 않는다" split floor) stay unsplit, while modulate's
+        2-color sections split into 2 units each (BPM 120, 4/4, 40s gap ==
+        2.5 bar-units of 8 bars each) — a real, observable queue-count
+        difference, not a pass-through."""
+        sections = _chorus_sections(3, gap_ms=40_000)
+        profile = MusicProfile(bpm=120.0, meter="4/4", palette=("블루",))
+        modulate_expanded, _origins, _notes = _split_sections_for_density(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="modulate",
+        )
+        single_expanded, _origins, _notes = _split_sections_for_density(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="single",
+        )
+        assert (
+            len(modulate_expanded) == 5
+        )  # Chorus 1/2 split into 2 units each, Chorus 3 (last, no end) stays 1
+        assert (
+            len(single_expanded) == 3
+        )  # every section capped to 1 unit — single color, no distinct variant
+        assert len(single_expanded) < len(modulate_expanded)
+
+    def test_per_chorus_produces_the_same_cue_split_count_as_modulate(self):
+        sections = _chorus_sections(3, gap_ms=40_000)
+        profile = MusicProfile(bpm=120.0, meter="4/4", palette=("블루",))
+        modulate_expanded, _origins, _notes = _split_sections_for_density(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="modulate",
+        )
+        per_chorus_expanded, _origins, _notes = _split_sections_for_density(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="per_chorus",
+        )
+        assert len(per_chorus_expanded) == len(modulate_expanded) == 5

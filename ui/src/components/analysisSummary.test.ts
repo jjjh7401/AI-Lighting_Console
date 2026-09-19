@@ -70,6 +70,24 @@ describe("buildAnalysisSummary", () => {
     expect(colorLine?.text).toContain("블루/퍼플");
   });
 
+  it("palette 축과 color_usage 축이 함께 있으면 한 색 줄에 둘 다 담긴다 (sync-audit F4)", () => {
+    const timeline: SongTimelineView = {
+      ...BASE,
+      director_decisions: [
+        { step: "Q2 PALETTE", axis: "palette", value: "블루/퍼플", confirmed: true, source: "director" },
+        { step: "Q2B_COLOR_USAGE", axis: "color_usage", value: "single", confirmed: true, source: "option" },
+      ],
+    };
+    const summary = buildAnalysisSummary(timeline);
+    const colorLines = summary.filter((line) => line.label === "색");
+    expect(colorLines).toHaveLength(1); // both axes land in the SAME 색 line, not two separate lines
+    const colorLine = colorLines[0];
+    expect(colorLine.text).toContain("Q2 PALETTE");
+    expect(colorLine.text).toContain("블루/퍼플");
+    expect(colorLine.text).toContain("색 운용");
+    expect(colorLine.text).toContain("색 계열로만 유지");
+  });
+
   it("director_decisions 의 color_usage 축(modulate)을 색 줄에 이어 붙인다 (AC-COLORMODE-009)", () => {
     const timeline: SongTimelineView = {
       ...BASE,

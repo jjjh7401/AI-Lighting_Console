@@ -6585,6 +6585,218 @@ class TestSongDesignInterviewSession:
         assert len(channel.asked) == 14
         assert "Q1 컨셉: 빈티지 (확정)" in event["text"]
 
+    # ------------------------------------------------------------------
+    # sync-audit F1/F2 — SPEC-COPILOT-COLORMODE-001 D2's session-level
+    # restart lookup table (`_SONG_RESTART_STEP_BY_TOKEN`), exercised
+    # through the REAL `_song_run_interview` loop rather than by calling
+    # `DirectorInterview.restart_from` directly. The engine-level tests in
+    # test_design_interview.py never touch session.py's regex/lookup-table
+    # replacement of the pre-SPEC `STEP_ORDER[int(no)-1]` indexing — a
+    # mutation probe reverting that replacement left every existing test
+    # green (sync-audit.md F1/F2). These cases close that gap: each drives
+    # a real restart trigger string through the channel and asserts BOTH
+    # (a) the very next card asked is the correct target step's prompt
+    # (not a wrong neighbor from stale indexing), and (b) the final
+    # director_decisions value reflects the POST-restart answer, proving
+    # the pre-restart answer for the restarted step was actually dropped.
+    # ------------------------------------------------------------------
+
+    def _color_usage_decision_value(self, timeline: dict) -> object:
+        for decision in timeline["director_decisions"]:
+            if decision["axis"] == "color_usage":
+                return decision["value"]
+        raise AssertionError("no color_usage decision in director_decisions")
+
+    def _d_axis_decision_value(self, timeline: dict) -> dict:
+        for decision in timeline["director_decisions"]:
+            if decision["axis"] == "d":
+                return decision["value"]
+        raise AssertionError("no d-axis (Q3_CLIMAX) decision in director_decisions")
+
+    def test_q3_다시_reaches_q3_climax_prompt_not_q2b_or_q4_and_continues_to_q4_q5(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "",  # Q2B default-accepted
+                "Ring In",  # Q3 (pre-restart answer)
+                "Q3 다시",  # answered on the Q4 card -> restarts from Q3_CLIMAX
+                "웅장한 피날레 연출",  # Q3 (post-restart answer, distinct)
+                "우주 컨셉 우선 배치",  # Q4
+                "템포 맞춤 (BPM 기준)",  # Q5
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q3_prompt = "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?"
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        q5_prompt = "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요."
+        assert prompts[3] == q3_prompt  # pre-restart Q3 ask
+        assert prompts[4] == q4_prompt  # reached Q4 before typing "Q3 다시"
+        # The restart target: the very next card MUST be Q3_CLIMAX again —
+        # not Q2B_COLOR_USAGE (stale STEP_ORDER[2] under pre-SPEC indexing)
+        # and not Q4 (would mean the trigger was silently ignored).
+        assert prompts[5] == q3_prompt
+        assert prompts[6] == q4_prompt  # continues Q4...
+        assert prompts[7] == q5_prompt  # ...then Q5
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        d_value = self._d_axis_decision_value(timelines[-1])
+        # "웅장한 피날레 연출" resolves to d_level=5
+        # (test_q3_free_text_resolves_via_resolve_section_into_a_director_override).
+        # "Ring In" (the discarded pre-restart answer) would not produce this.
+        assert d_value["d_level"] == 5
+
+    def test_q4_다시_reaches_q4_prompt_not_q5_and_continues_to_q5(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "",  # Q2B default-accepted
+                "Ring In",  # Q3
+                "우주 컨셉 우선 배치",  # Q4 (pre-restart answer)
+                "Q4 다시",  # answered on the Q5 card -> restarts from Q4_SPATIAL_STORY
+                "잔잔한 발라드 느낌",  # Q4 (post-restart answer, distinct free text)
+                "템포 맞춤 (BPM 기준)",  # Q5
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        q5_prompt = "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요."
+        assert prompts[4] == q4_prompt  # pre-restart Q4 ask
+        assert prompts[5] == q5_prompt  # reached Q5 before typing "Q4 다시"
+        assert prompts[6] == q4_prompt  # restart target: Q4 again, not stale
+        assert prompts[7] == q5_prompt  # continues to Q5
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        position_decisions = [
+            d for d in timelines[-1]["director_decisions"] if d["axis"] == "position"
+        ]
+        assert len(position_decisions) == 1
+        positions = position_decisions[0]["value"]["position_candidates"]
+        # "잔잔한 발라드 느낌" (post-restart) resolves to Vocal DSC-led candidates
+        # (test_q4_free_text_resolves_to_position_candidates_only); the
+        # discarded "우주 컨셉 우선 배치" pre-restart answer would not.
+        assert positions[0] == "Vocal DSC"
+
+    def test_q5_다시_restarts_q5_itself_not_q4(self, tmp_path):
+        """Under the pre-SPEC `STEP_ORDER[int(no)-1]` indexing, "5" resolved
+        to `STEP_ORDER[4]` == Q4_SPATIAL_STORY (wrong — Q5_TEXTURE is now at
+        index 5 after Q2B's insertion), which would drop Q4 too and re-ask
+        it. The correct behaviour restarts Q5 alone; the very next card
+        stays Q5, never falling back to Q4."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "",  # Q2B default-accepted
+                "Ring In",  # Q3
+                "우주 컨셉 우선 배치",  # Q4
+                "Q5 다시",  # answered on the Q5 card itself
+                "템포 맞춤 (BPM 기준)",  # Q5 (real answer)
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        q5_prompt = "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요."
+        assert prompts[5] == q5_prompt  # "Q5 다시" answered on Q5's own card
+        assert prompts[6] == q5_prompt  # restart target is Q5 again, NOT Q4
+        assert q4_prompt not in prompts[6:]
+
+    def test_q2b_다시_reaches_q2b_prompt_and_drops_q3_until_re_answered(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "single",  # Q2B (pre-restart, explicit)
+                "Ring In",  # Q3 (pre-restart answer)
+                "Q2B 다시",  # answered on the Q4 card -> restarts from Q2B
+                "per_chorus",  # Q2B (post-restart, distinct)
+                "웅장한 피날레 연출",  # Q3 (re-asked, must be answered again)
+                "우주 컨셉 우선 배치",  # Q4
+                "템포 맞춤 (BPM 기준)",  # Q5
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q2b_prompt = "이 색을 곡 전체에서 어떻게 쓸까요?"
+        q3_prompt = "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?"
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        assert prompts[3] == q3_prompt  # pre-restart Q3 ask
+        assert prompts[4] == q4_prompt  # reached Q4 before typing "Q2B 다시"
+        assert prompts[5] == q2b_prompt  # restart target: Q2B, not Q4/Q3
+        assert prompts[6] == q3_prompt  # Q3 was dropped and is re-asked
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        # Both the color_usage AND the D-axis (Q3) decisions must reflect
+        # the POST-restart answers — proving the pre-restart "single" and
+        # "Ring In" answers were actually discarded by the restart, not
+        # merely shadowed.
+        assert self._color_usage_decision_value(timelines[-1]) == "per_chorus"
+        assert self._d_axis_decision_value(timelines[-1])["d_level"] == 5
+
+    def test_색_운용_다시_reaches_q2b_prompt(self, tmp_path):
+        """The Korean-alias trigger ("색 운용 다시") is recognized by a
+        SEPARATE regex (`_SONG_RESTART_COLOR_USAGE`) from "Q2B 다시" (which
+        the `_SONG_RESTART`/`2[Bb]` alternation already matches) — this case
+        exercises that second regex specifically."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "modulate",  # Q2B (pre-restart)
+                "Ring In",  # Q3
+                "색 운용 다시",  # answered on the Q4 card -> restarts from Q2B
+                "single",  # Q2B (post-restart, distinct)
+                "웅장한 피날레 연출",  # Q3 (re-asked)
+                "우주 컨셉 우선 배치",  # Q4
+                "템포 맞춤 (BPM 기준)",  # Q5
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q2b_prompt = "이 색을 곡 전체에서 어떻게 쓸까요?"
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        assert prompts[4] == q4_prompt  # reached Q4 before typing "색 운용 다시"
+        assert prompts[5] == q2b_prompt  # restart target: Q2B
+
     def test_time_first_two_token_sections_start_the_interview(self, tmp_path):
         """Repro (post-restart browser submission): '디자인 인터뷰, BPM 128,
         메탈: 0:00 도입, 0:20 후렴' used to hit the "곡 구간을 읽지 못해"
