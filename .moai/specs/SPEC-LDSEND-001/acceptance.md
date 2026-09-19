@@ -109,6 +109,10 @@ grep -rnE "^\s*(from|import)\s+server\.bridge" server/orchestrator/bundle_sender
 uv run pytest server/tests/test_measurement_runner.py server/tests/test_web_session.py \
   server/tests/test_web_panel_execute.py server/tests/test_deploy_pipeline.py \
   server/tests/test_orchestrator_tools.py -q
+# 구현 결과(2026-09-19): server/tests/test_orchestrator_tools.py 는 이
+# 저장소에 존재하지 않는다 — 다섯 번째 소비자(server/orchestrator/
+# tools.py:2436)의 회귀는 전용 시험 없이 아래 전체 회귀가 전이적으로
+# 백스톱한다(plan.md §5, progress.md §E.2 M1/M4 E3).
 
 # 회귀 (§2.0-가 "다섯 소비자" 전제의 최종 백스톱)
 uv run pytest -q
@@ -169,17 +173,37 @@ spec.md, 미작성)의 몫이다.
 
 ## 6. 미검증 (Gaps — 작성 시점)
 
+> **구현 결과(2026-09-19):** M4a·M5 실기 관측(progress.md §E.2 M4a·M5)이
+> 끝나 아래 항목 중 콘솔 필요 항목은 관측 완료로 닫혔다 — 세부는 각
+> 항목 아래 blockquote와 plan.md §7 의 동일 annotation 참고.
+
 - **기준선 숫자 미확정.** 착수 전 `uv run pytest -q` 를 재실행해야 한다.
 - AC-024 관측 시나리오의 "안전한 실패 유발 명령"은 두 후보로 좁혀졌다
   (plan.md §2.0-라) — M4a 에서 실기로 확정한다. 더 이상 완전 미지수가
   아니다.
+
+  > **구현 결과(2026-09-19):** 후보 ①(`Store Sequence {n}`, 점유된
+  > destination 에 맨몸 Store)로 확정됨(2회 재현 일치). 실기 거부
+  > 사유는 plan.md §2.0-라가 인용한 `'Not allowed'` 가 아니라
+  > `User Canceled Command` 였다(progress.md §E.2 M4a).
 - 021 승격부의 readback 질의 경로는 코드로 확정됐다(plan.md §2.0-다) —
   남은 것은 존재/부재 응답 모양뿐이고 M5 한 항목으로 축소됐다.
+
+  > **구현 결과(2026-09-19):** 응답 모양 확정 — 부재: `ok:false`
+  > `path segment not found: '<N>'`; 존재: `ok:true` + node
+  > `class: Sequence`(5회 일관, progress.md §E.2 M5). 콘솔 무응답
+  > (`ConsoleSilentError`)은 "비어있음"이 아니라 판독 불가(`exists=None`)
+  > 로 다루도록 M4 구현이 정정됐다(수정 `eee1c4e4`).
 - `server/orchestrator/ports.py` 확장(§2.0-가)은 채택이 확정됐다
   (plan.md §2.0-가, 2026-09-18) — 대안 A 로 되돌아갈 가능성은 §5 plan.md
   중단 조건("읽기 전용 소비자" 전제가 반증되는 경우)에만 남아 있다.
 - REQ-LDSEND-014 의 백업 실패 시 후속 절차(중단 vs 경고-후-계속)가 M4
   착수 시 코드로 결정된다 — 잠정 기본값은 "중단+기록"이다(plan.md §7).
+
+  > **구현 결과(2026-09-19):** "중단+기록"으로 구현됨 — 백업 실패 시
+  > readback 을 시도하지 않고 그 사실만 별도 필드로 기록한다. M5
+  > 실기 관측 5회 전부 `backup_precondition: ok` 였다(progress.md §E.2
+  > M4/M5).
 - **`ApprovalRegistry.approve()` 를 실제로 호출하는 관측 도구 코드 규모는
   재지 않았다(plan.md §7 — iter2 D9 신규 gap).** 공개 API 라 호출은
   가능하지만, `ValidationRef`/`ContextRef` 구성 + `store.submit()`

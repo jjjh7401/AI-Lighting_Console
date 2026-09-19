@@ -196,6 +196,16 @@ plan.md §7 이 사람 확인 대기 마커로 남겼던 항목이지만, 코드
 모양인지는 M5 에서 실기로 한 번 확인해 이 문서에 반영한다. **질의 경로
 자체는 더 이상 미확정이 아니다.**
 
+> **구현 결과(2026-09-19):** M5 실기 관측(5회 일관 — progress.md §E.2
+> M5)으로 응답 모양이 확정됐다 — 부재: `ok:false`
+> `path segment not found: '<N>'`; 존재: `ok:true` + node
+> `class: Sequence`. 여기에 더해 M4 구현은 콘솔 **무응답**
+> (`ConsoleSilentError`, `StateQueryError` 의 하위형)을 "비어있음"으로
+> 잘못 읽던 결함을 발견해 정정했다 — 무응답은 이제 "비어있음"이 아니라
+> **판독 불가**(`empty=None`/`exists=None`)로 다뤄, destination 점유
+> 확인은 무응답이면 쓰기를 거부한다(최초 구현 결함 재현 2건 → 수정
+> `eee1c4e4`, progress.md §E.2 M4 "무응답 결함 수정" 참고).
+
 ### (라) AC-024 실패 유발 명령 — 실기 탐색으로 이연(사람 확인 완료: M4a 신설)
 
 plan.md §7 이 사람 확인 대기 마커로 남겼던 항목. 사람 결정: 후보를 미리
@@ -217,10 +227,26 @@ scratch `<N>` 에 `Store Sequence <N> Cue 1 /Merge` 를 보내 점유시킨다. 
 점유된 대상으로의 Copy 도 유사하게 거부될 것으로 추정되나 실측 인용이
 없다.
 
+> **구현 결과(2026-09-19):** M4a 실기 탐색(progress.md §E.2 M4a — 사람
+> 승인 후 실행)에서 후보 ①(`Store Sequence {n}`, 점유된 destination 에
+> 맨몸 Store)이 2회 재현 모두 성공해 확정됐다. 다만 콘솔이 실제로 낸
+> 거부 사유는 위에서 인용한 `'Not allowed'` 가 아니라
+> `User Canceled Command` 였다(감사 로그 실측, 2/2 일치) — 저장 확인
+> 팝업이 취소된 것으로 추정(미확인). 후보 ②는 후보 ①이 이미 안정적인
+> 명시적 실패를 냈으므로 시도되지 않았다. 후속 bundle 미송신(REQ-002/
+> AC-024)은 실기에서도 관측됨(감사 로그 부재 + readback 부재 두 갈래).
+
 **HALT 조건(사람 결정 4)**: M4a 에서 이 두 후보를 실기로 먼저 시도하고,
 그 결과를 `progress.md` 에 기록한 뒤에만 `--execute` 경로 스크립트에
 확정 명령을 굳힌다 — 확정 전에는 dry-run 출력까지만 완성한다(§6 중단
 조건과 동일 취지, 여기서는 별도 마일스톤으로 명시).
+
+> **구현 결과(2026-09-19):** 이 HALT 게이트는 M4 구현에서 CLI 옵션
+> `--confirmed-failure-command` 로 구체화됐다 — `--execute` 실행이
+> 024/032 시나리오를 고르고 이 옵션이 없으면, **콘솔 스택을 만들기
+> 전에** 거부 메시지를 출력하고 exit 1 로 종료한다(세션 시작 백업조차
+> 나가지 않는다, progress.md §E.2 M4). M4a 확정 뒤에는
+> `--confirmed-failure-command 'Store Sequence {n}'` 로 넘긴다.
 
 ### (마) 관측 도구의 apply 경로 — 공유 함수로 real `GateBundleSender`/`execute_bundles` 를 실제로 탄다 — **확정(사람 확인 완료, 2026-09-18, iter2 D9-D11 대응)**
 
@@ -335,6 +361,14 @@ SPEC 이 존재하는 이유(AC-LDPLUGIN-021/024/032 를 실기로 관측하는 
    한다 — `--execute` 플래그 자체가 이미 "콘솔에 쓰겠다"는 명시적
    동의이므로 별도 확인 프롬프트를 추가하지는 않는다.
 
+   > **구현 결과(2026-09-19):** 실기 관측(M4a·M5, progress.md §E.2)으로
+   > `SaveShow` 송신 빈도가 확정됐다 — 세션 시작 1회 + `--execute` 실행
+   > 중 승인된 배치(batch)마다 1회이며, **명령 단위가 아니다**. M4 GREEN
+   > 구현 시점에 코드 주석으로 남긴 "`Store Sequence` 는 blacklist held
+   > 이므로 apply 마다 위험 명령 직전 백업이 나갈 것으로 예상"이라는
+   > 추정은 이 실측으로 반증됐다(진짜 빈도는 명령 단위가 아니라 승인
+   > 배치 단위) — 모든 실행에서 `backup_precondition: ok` 로 확인됐다.
+
 6. **D12 — REQ-008 "run" 범위.** "run" = CLI 1회 호출 = 시나리오 1개로
    명문화한다(spec.md REQ-LDSEND-008 갱신). AC-024 시나리오가 의도적으로
    재사용하는 "이미 점유된" 대상은 **그 시나리오 자신이 같은 실행 안에서
@@ -374,6 +408,16 @@ M1 → M2 → M3 → M4 → M4a → M5. M2 는 M1 의 `revoke_clearances()`/`out
 실기 관측"). M5 는 M1~M4a 가 전부 닫힌 뒤에만 의미가 있다 — 실물 송신기
 없이, 그리고 확정 안 된 실패 명령으로는 실기를 관측할 수 없다.
 
+> **구현 결과(2026-09-19):** M4 구현은 032 recovery apply 가 원본과
+> **다른** scratch destination 에 쓰도록 설계했다 — 원본 destination
+> 이 partial 이후에도 create-only 예약이 풀리지 않는다는 실측 근거다
+> (`ExecutionJournal._reserve_destination_locked`, progress.md §E.2
+> M4). 이 문서는 이 설계 선택을 명문화하지 않았으므로 M5 재확인 대상으로
+> 남겼고, M5 실기 관측이 AC-LDPLUGIN-032 실행부 관측으로 이를 뒷받침한
+> 뒤 사람이 이 설계를 **인정**했다(2026-09-19, progress.md §E.3) —
+> destination 예약 해제 절차는 이 SPEC 이 정하지 않으며 후속 카드
+> **t422** 로 넘겼다.
+
 ## 3. PRESERVE — 건드리지 않는다
 
 | 영역 | 파일 |
@@ -390,6 +434,17 @@ M1 → M2 → M3 → M4 → M4a → M5. M2 는 M1 의 `revoke_clearances()`/`out
 (SPEC-LDSTORE-001)가 보장하는 콘솔 비접촉 상태를 그대로 유지한다. 송신기
 구현은 `server/director` 밖, `server/orchestrator/bundle_sender.py` 에 두고
 `BundleSender` Protocol 로 주입된다.
+
+> **구현 결과(2026-09-19):** 위 표는 §3 대상을 "읽기·호출만"으로
+> 명시했지만, 실제 구현은 회귀 방지를 위해 시험 파일 두 개를 추가로
+> 건드렸다 — `server/tests/test_overlap_preserve.py`(`gate.py` 의
+> 파일-집합 핀을 69→74 로 수정, `_execute_cleared()` 옛 문면 5줄 추가에
+> 따른 삭제 라인 수 변경, 커밋 `75ed61c7`)와
+> `server/tests/test_director_ops_lifecycle.py`(`_SpyApplyCoordinator`
+> 에 구조적 호환성을 위한 no-op `revoke_clearances()` 추가 —
+> `run_director_apply()` 가 `finally` 에서 무조건 그 메서드를 호출하므로
+> 없으면 `AttributeError` 로 회귀한다). 두 변경 모두 판정 로직을 바꾸지
+> 않는 최소 수정이다(progress.md §E.2 M1·M2).
 
 ## 4. TDD 순서 (대표 마일스톤 예시)
 
@@ -515,6 +570,11 @@ uv run pytest server/tests/test_measurement_runner.py server/tests/test_web_sess
   server/tests/test_web_panel_execute.py server/tests/test_deploy_pipeline.py \
   server/tests/test_orchestrator_tools.py -q 2>&1 \
   || echo "일부 파일명은 실제 존재 여부를 착수 시 확인한다 — 추정 이름"
+# 구현 결과(2026-09-19): server/tests/test_orchestrator_tools.py 는 이
+# 저장소에 존재하지 않는다(위 "추정 이름" 각주가 예견한 그대로). 그
+# 소비자(server/orchestrator/tools.py:2436)의 회귀는 전용 시험 없이
+# 아래 "전체 회귀(기준선 대조)" 의 uv run pytest -q 전체 실행이
+# 전이적으로 백스톱한다(progress.md §E.2 M1/M4 E3).
 
 # 세션 격리(D2/REQ-LDSEND-013) + 공유 함수 추출 행동 보존(REQ-LDSEND-015) — post_apply() 회귀
 uv run pytest server/tests/test_director_ops_lifecycle.py server/tests/test_director_apply_rejection.py -q
@@ -575,13 +635,25 @@ grep -n "def cleanup\|Delete Sequence" server/tools/director_apply_observe.py
 
 ## 7. 미검증 (착수 전 남은 것)
 
+> **구현 결과(2026-09-19):** M4a·M5 실기 관측(progress.md §E.2 M4a·M5)이
+> 완료돼 아래 항목 중 콘솔 필요 항목은 전부 관측 완료로 닫혔다 — 남는
+> 것은 §2.0-마 032 recovery destination 설계와 §2.0-다 응답 모양처럼
+> 사람 확인/문서 정정 대상으로 넘어간 몇 건과, LOC 추정처럼 이 SPEC이
+> 애초에 재지 않기로 한 항목뿐이다.
+
 - **AC-024 관측 시나리오의 "안전한 실패 유발 명령"은 후보 2개로 좁혀졌다
   (해소 — §2.0-라, 인간 결정 4).** M4a 에서 실기로 확정하고 이 문서를
   갱신한다 — 더 이상 사람 확인 대기 마커가 아니라 명시적 마일스톤이다.
+
+  > **구현 결과(2026-09-19):** 후보 ①(`Store Sequence {n}`)로 확정됨
+  > (§2.0-라 blockquote 참고, progress.md §E.2 M4a).
 - **021 승격부의 readback 질의 경로는 코드로 확정됐다(해소 — §2.0-다).**
   남은 것은 존재/부재를 가르는 정확한 응답 모양(`ok:false` vs 빈
   `children`)뿐이고, 이는 M5 실기 관측 한 항목으로 축소됐다 — 더 이상
   경로 자체가 미지수가 아니다.
+
+  > **구현 결과(2026-09-19):** 응답 모양 확정됨(§2.0-다 blockquote
+  > 참고, progress.md §E.2 M5).
 - **cleanup 의 스크래치 destination 정확한 번호 범위는 정책만 정했다.**
   "높은 미사용 Sequence 번호대, 쓰기 전 비어 있는지 확인, 점유돼 있으면
   거부"라는 정책(REQ-LDSEND-008)만 확정했고, 정확한 시작 번호는 M3~M4
@@ -595,6 +667,12 @@ grep -n "def cleanup\|Delete Sequence" server/tools/director_apply_observe.py
   판정과 구분해 기록한다"까지만 요구했고, 백업 실패가 확인되면 그 실행을
   중단할지 경고만 남기고 계속할지는 M4 착수 시 코드로 결정한다 — 안전
   방향은 계속하지 않는 쪽이므로 기본값은 "중단+기록"으로 잠정한다.
+
+  > **구현 결과(2026-09-19):** "중단+기록"으로 구현됨 —
+  > `_backup_failure_detail()` 이 backup 실패를 감지하면
+  > `backup_precondition="failed"` 로 반환하고 readback 을 **시도하지
+  > 않는다**(progress.md §E.2 M4). M5 실기 관측에서는 5회 전부
+  > `backup_precondition: ok` 였다.
 - **로컬 `ApprovalRegistry`/`DirectorStore` 구성이 도구 안에서 몇 줄로
   끝나는지 재지 않았다(§2.0-마).** `test_director_ops_lifecycle.py` 의
   fixture 규모(약 20줄)로 어림했지만, 공개 `approve()` API 는 그 시험이
@@ -615,3 +693,8 @@ grep -n "def cleanup\|Delete Sequence" server/tools/director_apply_observe.py
   D12 는 REQ-LDSEND-008 명문화로 반영했다 — Retry Loop Contract 에 따라
   iter3(3-iteration 상한의 마지막 회차) 재심사를 받는다(§ delta-scoped,
   D9-D12 + D1-D8 회귀 재확인).
+
+  > **구현 결과(2026-09-18):** iter3 **PASS 0.86**
+  > (`.moai/reports/plan-audit/SPEC-LDSEND-001-review-3.md`). iter3 가
+  > 지적한 D13(문장 잔재)은 `3c6aa451`·`7804dc13` 으로 정정됐다
+  > (progress.md §G).
