@@ -901,7 +901,7 @@ exit=1
 - 증거(orchestrator-verified, `f77eeba7` 기준): `uv run pytest -q -p no:cacheprovider` → exit 0, `13584 passed, 35 skipped, 1 warning` (`.moai/state/verify/ae8e2656/sync-full.txt`) — 착수 전 기준선 13515/35 대비 +69, 회귀 0.
 - 갱신 문서: `CHANGELOG.md`([Unreleased] Added, SPEC-LDRECV-001 항목 위) · `spec.md`(frontmatter status/updated) · 본 파일(§E.4).
 - 사람이 직접 실행해야 할 남은 콘솔 정리 명령(M5 잔여물, `progress.md` §M5 인용): `Delete Sequence 9900` · `Delete Sequence 9901` · `Delete Sequence 9903` · `Delete Sequence 9904` · `Delete Sequence 9911`.
-- sync_commit_sha: pending-backfill-t420-ldsend-001-sync — 이 커밋 자신의 SHA는 커밋 시점에 알 수 없어 후속 커밋으로 백필한다(spec-frontmatter-schema.md § SHA placeholder backfill exemption).
+- sync_commit_sha: 5afa47a2 — `docs(SPEC-LDSEND-001): sync-phase artifacts — 3-phase close`.
 
 ## §F Phase 4 Mode Selection
 
