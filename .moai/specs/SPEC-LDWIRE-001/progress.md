@@ -81,7 +81,7 @@ output below are measured against HEAD 246907de, this tree, this run.
 |---|---|---|---|
 | AC-LDWIRE-001 | PASS | pytest test_director_credential_issuance.py | 3 passed in 0.45s |
 | AC-LDWIRE-002 | PASS | same file, test_secret_is_never_returned_inside_the_credential_object | PASSED -- Credential carries no secret field at all (structural), secret absent from repr |
-| AC-LDWIRE-003 | PASS | pytest test_director_auth.py (existing 24 tests unchanged) | 24 passed -- new issuance path never bypasses the fail-closed 401 |
+| AC-LDWIRE-003 | PASS | pytest test_director_auth.py (existing tests unchanged) | 20 passed -- new issuance path never bypasses the fail-closed 401 (sync-auditor independent re-run corrected the count from a stale "24" to the actual 20) |
 | AC-LDWIRE-004 | PASS | pytest test_director_context_provider.py::TestNineAxesAllPresent | 3 passed -- missing_axes(snapshot) == (), identity/expiry/policy really observed, other six axes honest-unobserved |
 | AC-LDWIRE-005 | PASS | same file, TestReissueSuppression | 2 passed -- unchanged repeat keeps same context_id/context_digest, a policy version change reissues |
 | AC-LDWIRE-006 | PASS | pytest test_director_validator_injection.py::test_put_plan_response_carries_a_resolvable_validation_id | 1 passed -- PUT plan response validation_id matches compute_validation_id(plan_digest, revision, context_digest) byte-identical (verified deterministically, no direct DB read from the test thread -- REQ-LDWIRE-010 boundary respected) |
@@ -92,6 +92,19 @@ output below are measured against HEAD 246907de, this tree, this run.
 | AC-LDWIRE-011 | PASS | same file, TestNoCrossThreadSqliteError | 1 passed -- 5 consecutive requests, zero sqlite3.ProgrammingError |
 
 REQ-LDWIRE-010 to AC-LDWIRE-011 traceability confirmed (matches acceptance.md).
+
+### Design-vs-shipped deviation (sync-auditor F3)
+
+design.md §라's decision table named `stack.gate`/`session_context.py` as the
+candidate observation source for the `identity` axis ("정확한 필드명은 구현
+시 확정" — field names TBD at implementation). The shipped
+`RealContextProvider` instead fills `identity` from the CLI-configured
+`console_host`/`console_port` boot args, and never consults `stack.gate` for
+this axis (`stack.gate` is separately used for the unrelated
+`apply_coordinator._gate` identity check, see AC-LDWIRE-008). This is a
+reasonable resolution of an underspecified design cell, not a defect — noted
+here per sync-auditor's finding so a future reader does not assume
+`stack.gate` backs the `identity` axis.
 
 ### RED evidence (TDD, captured before GREEN)
 
