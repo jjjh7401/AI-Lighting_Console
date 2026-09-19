@@ -181,7 +181,7 @@ class TestTheChorusRescueGeneralizesBeyondDrop:
         # 셋을 낸다 — 그래서 EDM(빔 축 하나)과 달리 3회차까지는 회수가 필요 없고,
         # 회수가 실제로 켜지는 것은 값이 넷째로 필요해지는 4회차뿐이다. 물러서는
         # 쪽은 **상대**(1회차)다 — 정본 §6 「전 리그 최대」와 같은 방향으로, 되살아난
-        # 4회차 자신은 기준값을 그대로 받는다(사다리 흔적이 없다).
+        # 4회차 자신은 기준값을 그대로 받는다(값 라인은 사다리 흔적이 없다).
         #
         # 카드 t378 이 회전에 블라인더를 더하면서 3회차가 깊이 3(둘째 자리, 블라인더)
         # 대신 깊이 4(셋째 자리, 아이리스)까지 오른다 — 블라인더는 이 룩의 값을 안
@@ -194,7 +194,14 @@ class TestTheChorusRescueGeneralizesBeyondDrop:
             "dimmer_hit",
             "iris_pinch",
         )
-        assert chorus[3].ladder == (), "4회차는 회수로 비워진 기준값을 그대로 받는다"
+        # 카드 t382 이후 — 4회차는 값 라인은 여전히 기준값 그대로지만(사다리 흔적
+        # 없음), 반복 회차(instance >= 2)로서 찍는 액센트를 하나 받는다
+        # (``_ensure_marking_accent``). 값을 안 바꾸는 블라인더가 실린 이유는 줌·
+        # 아이리스 좁힘이 각각 2·3회차의 값 라인과 겹쳐 회전이 밀렸기 때문이다
+        # (``_ensure_marking_accent`` 의 겹치지 않는 자리 찾기).
+        assert chorus[3].ladder == ("blinder_or_flash",), (
+            "4회차는 값은 기준값 그대로지만 반복 회차이므로 찍는 액센트를 하나 받는다"
+        )
 
 
 def _chorus_dimmers(bundle) -> list[float | None]:
