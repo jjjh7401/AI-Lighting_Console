@@ -2,9 +2,9 @@
 id: SPEC-LDSEND-001
 title: "Director apply 층의 실제 콘솔 송신기와 로컬 관측 도구"
 version: "0.3.0"
-status: in-progress
+status: completed
 created: 2026-09-18
-updated: 2026-09-18
+updated: 2026-09-19
 author: jaihyun
 priority: P1
 phase: "Lighting Director v1.0 target"

@@ -893,7 +893,15 @@ exit=1
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+- sync_status: audit-ready
+- sync_complete_at: 2026-09-19
+- sync-audit 검증: `.moai/reports/sync-audit/SPEC-LDSEND-001.md` — 전체 판정 **PASS**, 가중 조화평균 ≈91/100 (Functionality 88 · Security 96 · Craft 92 · Consistency 93). Must-pass 방화벽(Functionality·Security) 전부 통과.
+- F1(AC-LDSEND-006 역방향 시나리오 미재현, Medium) 해소 커밋: `f77eeba7` — `test_run_director_apply.py`에 "apply가 전용 세션에서 클리어런스 발급 → `DEFAULT_SESSION_KEY` 호출자가 `gate.revoke_clearances()` 직접 호출 → apply 세션의 클리어런스는 살아 있음" 역방향 시험 1개 추가.
+- F2(plan.md §2.0-라 `'Not allowed'` 인용 정정) 처리: `d94c3d06` — 실기 관측 사유(`User Canceled Command`, M4a·M5 실측)로 as-implemented 주석 6건과 함께 정정.
+- 증거(orchestrator-verified, `f77eeba7` 기준): `uv run pytest -q -p no:cacheprovider` → exit 0, `13584 passed, 35 skipped, 1 warning` (`.moai/state/verify/ae8e2656/sync-full.txt`) — 착수 전 기준선 13515/35 대비 +69, 회귀 0.
+- 갱신 문서: `CHANGELOG.md`([Unreleased] Added, SPEC-LDRECV-001 항목 위) · `spec.md`(frontmatter status/updated) · 본 파일(§E.4).
+- 사람이 직접 실행해야 할 남은 콘솔 정리 명령(M5 잔여물, `progress.md` §M5 인용): `Delete Sequence 9900` · `Delete Sequence 9901` · `Delete Sequence 9903` · `Delete Sequence 9904` · `Delete Sequence 9911`.
+- sync_commit_sha: pending-backfill-t420-ldsend-001-sync — 이 커밋 자신의 SHA는 커밋 시점에 알 수 없어 후속 커밋으로 백필한다(spec-frontmatter-schema.md § SHA placeholder backfill exemption).
 
 ## §F Phase 4 Mode Selection
 
