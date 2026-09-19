@@ -1454,6 +1454,17 @@ export const CONSOLE_OFFLINE_RESPONDER_GUIDANCE =
   "콘솔 OSC 입력 포트는 열려 있습니다 — CopilotResponder 플러그인이 실행 중이 아닐 수 있습니다. " +
   "onPC의 Plugins 풀에서 CopilotResponder를 실행해 주세요.";
 
+// console_offline with the console's OSC input port FREE (nothing bound). onPC
+// may simply be down — but live-observed 2026-09-18, onPC was up with Enable
+// Input ON and still bound no OSC socket: Interface=<None> makes onPC pick a NIC
+// inside Preferred IP (default 10.0.0.0/8), and once the Mac's IP left that range
+// no NIC matched. Cycling Enable Input never helps there, and lo0 cannot even be
+// selected until Preferred IP admits 127.x — so the fix is named in that order.
+export const CONSOLE_OFFLINE_SILENT_GUIDANCE =
+  "콘솔 OSC 입력 포트가 열려 있지 않습니다 — onPC가 실행 중인지 확인해 주세요. " +
+  "실행 중이라면 Menu → In & Out → OSC에서 Preferred IP를 127.0.0.1/8로 바꾸고, " +
+  "Interface가 lo0 (127.0.0.1)인지 확인한 뒤 Enable Input을 켜고 쇼를 저장해 주세요.";
+
 // The third console_offline cause. A grandMA3 OSC entry has ONE port used for
 // BOTH directions, so the port the console replies THROUGH lives in the
 // console's OSC table while the port the app listens ON lives in the app's
@@ -1481,9 +1492,9 @@ export function consoleOfflineReplyPortGuidance(replyPort: number, receivePort: 
  * IS listening, so both refinements apply at once — but only the mismatch names
  * the real cause, and the responder message would misattribute it.
  *
- * Every argument is optional: absent / "undetermined" / "silent" / no observed
- * reply port all keep the message that is correct in that case, so a server that
- * does not diagnose behaves exactly as before.
+ * Every argument is optional: absent / "undetermined" / no observed reply port
+ * keep the generic message, so a server that does not diagnose behaves exactly
+ * as before. "silent" (port free) gets the Preferred IP / lo0 remedy.
  */
 export function healthGuidance(
   health: string,
@@ -1501,6 +1512,9 @@ export function healthGuidance(
     }
     if (consoleInput === "listening") {
       return CONSOLE_OFFLINE_RESPONDER_GUIDANCE;
+    }
+    if (consoleInput === "silent") {
+      return CONSOLE_OFFLINE_SILENT_GUIDANCE;
     }
   }
   return HEALTH_GUIDANCE[health] ?? null;

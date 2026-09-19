@@ -352,6 +352,22 @@ class TestOscBootstrapGuide:
         assert "lo0" in joined
         assert "Enable Output" in joined and "Enable Input" in joined
 
+    def test_guide_sets_preferred_ip_before_the_interface_step(self):
+        # Live 2026-09-18: with Preferred IP left at onPC's 10.0.0.0/8, picking
+        # lo0 in the Interface list did not stick (stayed <None>), and once the
+        # Mac's IP left 10.x onPC bound no OSC socket at all. Preferred IP must
+        # admit 127.x first — the step order is the fix, so it is asserted.
+        steps = osc_bootstrap_guide(8000, 9005)["steps"]
+        preferred = next(i for i, s in enumerate(steps) if s.startswith("Preferred IP"))
+        interface = next(i for i, s in enumerate(steps) if s.startswith("Interface") and "lo0" in s)
+        assert "127.0.0.1/8" in steps[preferred]
+        assert preferred < interface
+
+    def test_guide_ends_by_saving_the_show(self):
+        # OSC config lives in the show file — an unsaved fix reverts on reload.
+        steps = osc_bootstrap_guide(8000, 9005)["steps"]
+        assert any("저장" in s for s in steps)
+
     def test_guide_reflects_custom_ports(self):
         guide = osc_bootstrap_guide(8100, 9200)
         joined = " ".join(guide["steps"])
