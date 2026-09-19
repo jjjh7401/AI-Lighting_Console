@@ -115,7 +115,14 @@ class TestConfirmedSongDesignArcDiversity:
                 return self.answers.pop(0) if self.answers else "UNANSWERED"
 
         session._question_channel = _Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
+            [
+                "우주",
+                "우주 색 조합",
+                "",  # Q2B_COLOR_USAGE default-accepted
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+            ]
         )
         session.run_instruction("디자인 큐 시트, 시퀀스 110, 프리셋 21번부터, 타임코드 7")
         timeline_events = [event for event in sent if event.get("type") == "song_timeline"]

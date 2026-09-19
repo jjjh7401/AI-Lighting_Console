@@ -55,10 +55,10 @@ from server.design.cue_sheet_edit import (
 from server.design.interview import (
     Q1_CONCEPT,
     Q2_PALETTE,
+    Q2B_COLOR_USAGE,
     Q3_CLIMAX,
     Q4_SPATIAL_STORY,
     Q5_TEXTURE,
-    STEP_ORDER,
     DirectorInterview,
     UnresolvedAnswer,
 )
@@ -89,6 +89,7 @@ from server.design.song_cue_composer import (
     position_axis_disabled,
 )
 from server.design.song_plan import (
+    COLOR_USAGE_AXIS,
     D_AXIS,
     FX_AXIS,
     MANUAL_GO,
@@ -448,7 +449,25 @@ _SONG_PALETTE_HINT = re.compile(r"팔레트\s*(?:는|은)?\s*[:\-]?\s*(?P<palett
 # is never fed to the current step's parser (it would corrupt a free-text
 # step like Q1/Q5) — it restarts from Q<N> instead, keeping every earlier
 # answer intact (DirectorInterview.restart_from).
-_SONG_RESTART = re.compile(r"[Qq]\s*(?P<no>[1-5])\s*(?:만)?\s*다시")
+#
+# SPEC-COPILOT-COLORMODE-001 D2 — Q2B_COLOR_USAGE inserted `STEP_ORDER[2]`
+# meant "Q3 다시" would silently restart the wrong step if this regex's
+# numeric group were still fed straight into `STEP_ORDER[N-1]` (research.md
+# §2, session.py:8619 실측). The alternation below recognizes "Q2B" (and its
+# Korean alias "색 운용") ahead of the plain "Q<1-5>" numeric form, and the
+# call site resolves through the explicit `_SONG_RESTART_STEP_BY_TOKEN`
+# lookup table instead of an implicit index.
+_SONG_RESTART = re.compile(r"[Qq]\s*(?P<no>2[Bb]|[1-5])\s*(?:만)?\s*다시")
+_SONG_RESTART_COLOR_USAGE = re.compile(r"색\s*운용\s*다시")
+
+_SONG_RESTART_STEP_BY_TOKEN: dict[str, str] = {
+    "1": Q1_CONCEPT,
+    "2": Q2_PALETTE,
+    "2b": Q2B_COLOR_USAGE,
+    "3": Q3_CLIMAX,
+    "4": Q4_SPATIAL_STORY,
+    "5": Q5_TEXTURE,
+}
 _SONG_TIMECODE_NO = re.compile(r"(?:타임\s*코드|타임코드|timecode)\s*(?P<no>\d+)", re.IGNORECASE)
 _SONG_TIMING_TIMECODE = re.compile(r"타임\s*코드|타임코드|timecode", re.IGNORECASE)
 _SONG_TIMING_TRIG_TIME = re.compile(
@@ -468,6 +487,7 @@ _SAFE_SONG_CUE_NAME = re.compile(r"[A-Za-z0-9 _-]+")
 _DI_RECORD_AXES = {
     Q1_CONCEPT: PALETTE_AXIS,
     Q2_PALETTE: PALETTE_AXIS,
+    Q2B_COLOR_USAGE: COLOR_USAGE_AXIS,
     Q3_CLIMAX: D_AXIS,
     Q4_SPATIAL_STORY: POSITION_AXIS,
     Q5_TEXTURE: TEXTURE_AXIS,
@@ -476,6 +496,7 @@ _DI_RECORD_AXES = {
 _DI_STEP_LABELS: dict[str, str] = {
     Q1_CONCEPT: "Q1 컨셉",
     Q2_PALETTE: "Q2 팔레트",
+    Q2B_COLOR_USAGE: "Q2B 색 운용",
     Q3_CLIMAX: "Q3 클라이맥스",
     Q4_SPATIAL_STORY: "Q4 공간 스토리",
     Q5_TEXTURE: "Q5 전환 방식",
@@ -1098,6 +1119,41 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
         accent = _distinct_from_primary(rotated[0], primary, fallback=rotated[-1])
     combined: tuple[str, ...] = (primary, accent)
     return tuple(dict.fromkeys(combined))
+
+
+def _per_chorus_palette(base: tuple[str, ...], role: str, occurrence: int) -> tuple[str, ...]:
+    """SPEC-COPILOT-COLORMODE-001 D5/REQ-014 — chorus/finale accents that
+    differ between consecutive occurrences, drawn from the standard 10-color
+    palette (spec.md §A.2) rather than the 2-color `_ARC_PALETTE` arcs (which
+    repeat with period 2 — occurrence 1 and 3 land on the same accent).
+
+    Occurrence 1 delegates straight to :func:`_arc_palette` — this is what
+    makes the "song has exactly one chorus occurrence" boundary case
+    (AC-COLORMODE-013) byte-identical to modulate mode, since modulate's
+    occurrence-1 output IS `_arc_palette`'s occurrence-1 output. Occurrence
+    2+ draws from the standard palette, excluding both the primary's hue and
+    occurrence 1's own accent hue, so occurrence 1 and 2 never coincide;
+    consecutive occurrences beyond that cycle through the remaining slots
+    (index advances by exactly 1 per occurrence), so no two consecutive
+    occurrences can land on the same slot.
+    """
+    if occurrence <= 1:
+        return _arc_palette(base, role, occurrence)
+    if not base:
+        base = ("white",)
+    primary = base[0]
+    first_arc = _arc_palette(base, role, 1)
+    first_accent = first_arc[-1] if len(first_arc) > 1 else primary
+    excluded_hues = {_hue_key(primary), _hue_key(first_accent)}
+    ladder = tuple(
+        name.casefold()
+        for name, _rgb in _COLOR_NAMES.COLOR_PALETTE_SEQUENCE
+        if _hue_key(name) not in excluded_hues
+    )
+    if not ladder:
+        ladder = (first_accent,)
+    accent = ladder[(occurrence - 2) % len(ladder)]
+    return tuple(dict.fromkeys((primary, accent)))
 
 
 def _requery_position_from_answer(answer: str) -> str | None:
@@ -1734,9 +1790,10 @@ def _section_palette_choice(
     palette_mode: str,
     concept_colors: tuple[str, ...],
     occurrence: int = 1,
+    color_usage: str = "modulate",
 ) -> tuple[tuple[str, ...], str, str | None]:
     """한 구간의 팔레트와 그 출처, 그리고 채도/무게 라벨. 구간의 색 단어 >
-    팔레트 충돌 결정 > Q2.
+    팔레트 충돌 결정 > Q2 (+ Q2B 색 운용, SPEC-COPILOT-COLORMODE-001).
 
     ``occurrence`` — 카드 t402. 같은 역할의 몇 번째 회차인지(1부터).
     아크 색 회전(`_arc_palette`)에만 쓰이므로 구간이 직접 색을 적었거나
@@ -1744,6 +1801,17 @@ def _section_palette_choice(
 
     카드 t406 핫픽스 — 세 번째 반환값(무게)은 색 문자열과 분리된 채널이다
     (`_arc_accent_weight` 참조). 아크 경로가 아니면 항상 ``None``.
+
+    ``color_usage`` (spec.md §2 D5) — Q2B 답이 이 `base` 확정 **다음**,
+    `_arc_palette` 호출 **이전**에 개입한다(REQ-COLORMODE-013). `palette_mode`
+    해소는 이미 끝난 뒤이므로 `single`/`per_chorus` 모두 그 결과(`base`)를
+    우회하지 않는다:
+
+    * ``"modulate"``(기본) — 분기 없이 그대로 `_arc_palette` 로 진행한다
+      (REQ-012: 기존 fixture 와 바이트 동일).
+    * ``"single"`` — `base` 를 회전 없이 그대로 반환한다.
+    * ``"per_chorus"`` — chorus/finale 역할만 :func:`_per_chorus_palette`
+      사다리를 쓰고, 그 외 역할은 modulate 와 동일하게 유지한다.
     """
     direct_colors = _extract_color_words(section.mood)
     if direct_colors:
@@ -1754,6 +1822,14 @@ def _section_palette_choice(
         base = concept_colors
     else:
         base = _palette_colors(profile.palette or color_tendency)
+    if color_usage == "single":
+        return base, "section_single", None
+    if color_usage == "per_chorus" and role in ("chorus", "finale"):
+        return (
+            _per_chorus_palette(base, role, occurrence),
+            "section_per_chorus",
+            _arc_accent_weight(role, occurrence),
+        )
     return (
         _arc_palette(base, role, occurrence),
         "section_arc",
@@ -1767,6 +1843,7 @@ def _section_palette_sizes(
     profile: MusicProfile,
     palette_mode: str,
     concept_colors: tuple[str, ...],
+    color_usage: str = "modulate",
 ) -> list[int]:
     """구간별 팔레트 색 수 — 쪼갠 큐가 서로 달라질 수 있는지의 판정 재료.
 
@@ -1774,6 +1851,9 @@ def _section_palette_sizes(
     보지 않는다. 오버라이드는 색을 **더하는** 쪽이므로 이 값은 실제보다
     작거나 같다 — 즉 이 판정은 덜 쪼개는 쪽으로만 틀린다. 같은 큐 둘을
     내는 것보다 안 쪼개는 쪽이 낫다는 카드의 방향과 같다.
+
+    ``color_usage`` — SPEC-COPILOT-COLORMODE-001. 실제 산출(`_section_palette_choice`)
+    과 어긋나지 않도록 여기도 같은 값을 전달한다(research.md §6).
     """
     count = len(sections)
     sizes: list[int] = []
@@ -1788,6 +1868,7 @@ def _section_palette_sizes(
             color_tendency=tendency,
             palette_mode=palette_mode,
             concept_colors=concept_colors,
+            color_usage=color_usage,
         )
         sizes.append(len(colors))
     return sizes
@@ -1799,6 +1880,7 @@ def _split_sections_for_density(
     profile: MusicProfile,
     palette_mode: str = "palette",
     concept_colors: tuple[str, ...] = (),
+    color_usage: str = "modulate",
 ) -> tuple[list[PositionSheetSection], list[int], tuple[str, ...]]:
     """구간 목록을 마디 경계에서 쪼갠 큐 목록으로 넓힌다 (카드 t305).
 
@@ -1820,6 +1902,7 @@ def _split_sections_for_density(
             profile=profile,
             palette_mode=palette_mode,
             concept_colors=concept_colors,
+            color_usage=color_usage,
         ),
     )
     source_origins = list(plan.source_origins)
@@ -1873,6 +1956,10 @@ def _build_unified_song_plan(
         role_name = origin_roles[head]
         role_running[role_name] = role_running.get(role_name, 0) + 1
         occurrence_by_head[head] = role_running[role_name]
+    # SPEC-COPILOT-COLORMODE-001 — Q2B_COLOR_USAGE decision, read once for
+    # the whole plan (default "modulate" when unanswered, matching modulate
+    # being the interview's recommended/first option).
+    color_usage = _record_value(records, Q2B_COLOR_USAGE, "modulate")
     decisions: list[SectionDecision] = []
     unresolved: list[UnresolvedNote] = []
     roles: list[str] = []
@@ -1954,6 +2041,7 @@ def _build_unified_song_plan(
             palette_mode=palette_mode,
             concept_colors=concept_colors,
             occurrence=occurrence,
+            color_usage=color_usage,
         )
         # 카드 t305 — 구간 안에서 이어지는 큐는 앞 큐와 **달라야** 한다.
         # 정본이 하는 것과 같은 축: 강도는 유지하고 색만 돌린다(Q060 "강도
@@ -8571,6 +8659,7 @@ class ChatSession:
             profile=interview.working_profile,
             palette_mode=palette_mode,
             concept_colors=concept_colors,
+            color_usage=_record_value(records, Q2B_COLOR_USAGE, "modulate"),
         )
         plan_warnings.extend(density_notes)
         state = _SongDesignState(
@@ -8616,7 +8705,11 @@ class ChatSession:
                 raw_answer = self._ask_one(card.prompt, options=options, why=card.why)
                 restart_match = _SONG_RESTART.search(raw_answer) if raw_answer else None
                 if restart_match is not None:
-                    interview.restart_from(STEP_ORDER[int(restart_match.group("no")) - 1])
+                    token = restart_match.group("no").lower()
+                    interview.restart_from(_SONG_RESTART_STEP_BY_TOKEN[token])
+                    break
+                if raw_answer and _SONG_RESTART_COLOR_USAGE.search(raw_answer):
+                    interview.restart_from(Q2B_COLOR_USAGE)
                     break
                 result = interview.submit_answer(raw_answer)
                 if isinstance(result, UnresolvedAnswer):

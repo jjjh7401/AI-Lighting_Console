@@ -15,6 +15,7 @@ __all__ = [
     "APPROVAL_DRAFT",
     "APPROVAL_PENDING",
     "APPROVAL_REJECTED",
+    "COLOR_USAGE_AXIS",
     "D_AXIS",
     "FX_AXIS",
     "MANUAL_GO",
@@ -56,7 +57,7 @@ __all__ = [
     "UnresolvedNote",
 ]
 
-DecisionAxis = Literal["d", "palette", "position", "texture", "fx", "accent"]
+DecisionAxis = Literal["d", "palette", "position", "texture", "fx", "accent", "color_usage"]
 TimingMode = Literal["manual_go", "trig_time", "timecode"]
 ApprovalStatus = Literal["draft", "pending_review", "approved", "rejected"]
 
@@ -66,6 +67,9 @@ POSITION_AXIS = "position"
 TEXTURE_AXIS = "texture"
 FX_AXIS = "fx"
 ACCENT_AXIS = "accent"
+#: SPEC-COPILOT-COLORMODE-001 D4 — the Q2B_COLOR_USAGE decision axis (how the
+#: Q2 palette is used across the song: modulate/single/per_chorus).
+COLOR_USAGE_AXIS = "color_usage"
 
 MANUAL_GO = "manual_go"
 TRIG_TIME = "trig_time"
@@ -77,7 +81,7 @@ APPROVAL_APPROVED = "approved"
 APPROVAL_REJECTED = "rejected"
 
 _AXES: frozenset[str] = frozenset(
-    (D_AXIS, PALETTE_AXIS, POSITION_AXIS, TEXTURE_AXIS, FX_AXIS, ACCENT_AXIS)
+    (D_AXIS, PALETTE_AXIS, POSITION_AXIS, TEXTURE_AXIS, FX_AXIS, ACCENT_AXIS, COLOR_USAGE_AXIS)
 )
 _TIMING_MODES: frozenset[str] = frozenset((MANUAL_GO, TRIG_TIME, TIMECODE))
 _APPROVAL_STATUSES: frozenset[str] = frozenset(

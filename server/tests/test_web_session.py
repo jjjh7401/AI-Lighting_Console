@@ -4873,29 +4873,30 @@ class TestSongDesignInterviewSession:
         # rig/profile — a deterministic full-choice path (DI1 confirms every
         # axis; no auto-draft anywhere).
         channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
+            ["우주", "우주 색 조합", "", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
         )
         session._question_channel = channel
 
         event = session.run_instruction(self._FULL)
 
-        assert len(channel.asked) == 6
-        assert [q.prompt for q in channel.asked[:5]] == [
+        assert len(channel.asked) == 7
+        assert [q.prompt for q in channel.asked[:6]] == [
             "공연 전체가 어떤 느낌이면 좋겠어요?",
             "어떤 색이 가장 잘 어울릴까요?",
+            "이 색을 곡 전체에서 어떻게 쓸까요?",
             "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?",
             "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?",
             "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요.",
         ]
-        assert "전곡 리뷰 번들" in channel.asked[5].prompt
+        assert "전곡 리뷰 번들" in channel.asked[6].prompt
         # T12(d) — the '후렴' section's phaser proposal (Wave CM) is visible
         # in the pre-approval review sheet BEFORE any console write, plus
         # the [ASSUMPTION] caveat that recall/reference persistence is not
         # mechanically verifiable (T11 프로브 §1/§4).
-        assert "페이저 제안: Wave CM" in channel.asked[5].prompt
-        assert "ASSUMPTION" in channel.asked[5].prompt
-        assert "콘솔 화면에서 직접 확인" in channel.asked[5].prompt
-        for q in channel.asked[:5]:
+        assert "페이저 제안: Wave CM" in channel.asked[6].prompt
+        assert "ASSUMPTION" in channel.asked[6].prompt
+        assert "콘솔 화면에서 직접 확인" in channel.asked[6].prompt
+        for q in channel.asked[:6]:
             assert len(q.options) == 3  # R1c: 제안 3개 + 자유 입력(무조건 제공)
         writes = [call for call in calls if call.name == "run_commands"]
         assert writes == []
@@ -4908,13 +4909,72 @@ class TestSongDesignInterviewSession:
         assert timelines[-1]["sections"][0]["cue_number"] == 1
         assert timelines[-1]["sections"][0]["trig_time_seconds"] == 0
 
+    def test_color_usage_decision_default_accepted_is_recorded_in_the_timeline_payload(
+        self, tmp_path
+    ):
+        """AC-COLORMODE-008 (REQ-009, 015) — a blank Q2B answer records a
+        `color_usage` axis entry, confirmed via SOURCE_DEFAULT_ACCEPTED."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            ["우주", "우주 색 조합", "", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
+        )
+
+        session.run_instruction(self._FULL)
+
+        timelines = [event["timeline"] for event in sent if event["type"] == "song_timeline"]
+        color_usage_decisions = [
+            d for d in timelines[-1]["director_decisions"] if d["axis"] == "color_usage"
+        ]
+        assert len(color_usage_decisions) == 1
+        decision = color_usage_decisions[0]
+        assert decision["step"] == "Q2B_COLOR_USAGE"
+        assert decision["value"] == "modulate"
+        assert decision["confirmed"] is True
+        assert decision["source"] == "default_accepted"
+
+    def test_color_usage_decision_explicit_choice_is_recorded_in_the_timeline_payload(
+        self, tmp_path
+    ):
+        """AC-COLORMODE-008 (REQ-009, 015) — an explicit free-text Q2B answer
+        records the resolved value with SOURCE_FREE_TEXT."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "single",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+            ]
+        )
+
+        session.run_instruction(self._FULL)
+
+        timelines = [event["timeline"] for event in sent if event["type"] == "song_timeline"]
+        color_usage_decisions = [
+            d for d in timelines[-1]["director_decisions"] if d["axis"] == "color_usage"
+        ]
+        assert len(color_usage_decisions) == 1
+        decision = color_usage_decisions[0]
+        assert decision["step"] == "Q2B_COLOR_USAGE"
+        assert decision["value"] == "single"
+        assert decision["confirmed"] is True
+        assert decision["source"] == "free_text"
+
     def test_natural_song_lighting_brief_routes_to_timeline(self, tmp_path):
         provider = ScriptedProvider([])
         session, _console, _audit, sent, _ = _session(tmp_path, provider)
         calls: list[ToolCall] = []
         session._registry = self._registry(calls)
         session._question_channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
+            ["우주", "우주 색 조합", "", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
         )
 
         event = session.run_instruction(
@@ -4951,6 +5011,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -4970,12 +5031,14 @@ class TestSongDesignInterviewSession:
 
         assert event["status"] == "ok"
         assert [call for call in calls if call.name == "run_commands"] == []
-        # 3 setup + 5 interview + 1 requery answered ("수정") + 1 requery that
-        # went unanswered (channel exhausted) — the loop stops without writes.
-        assert len(channel.asked) == 10
-        assert [question.prompt for question in channel.asked[3:8]] == [
+        # 3 setup + 6 interview (Q1/Q2/Q2B/Q3/Q4/Q5) + 1 requery answered
+        # ("수정") + 1 requery that went unanswered (channel exhausted) — the
+        # loop stops without writes.
+        assert len(channel.asked) == 11
+        assert [question.prompt for question in channel.asked[3:9]] == [
             "공연 전체가 어떤 느낌이면 좋겠어요?",
             "어떤 색이 가장 잘 어울릴까요?",
+            "이 색을 곡 전체에서 어떻게 쓸까요?",
             "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?",
             "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?",
             "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요.",
@@ -5006,6 +5069,7 @@ class TestSongDesignInterviewSession:
             [
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5089,6 +5153,7 @@ class TestSongDesignInterviewSession:
             [
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5140,6 +5205,7 @@ class TestSongDesignInterviewSession:
             [
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5195,6 +5261,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5244,6 +5311,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5280,6 +5348,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5322,6 +5391,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5374,6 +5444,7 @@ class TestSongDesignInterviewSession:
         session._registry = self._registry(calls)
         channel = self._Channel(
             [
+                "",  # Q2B_COLOR_USAGE default-accepted
                 "Ring In",
                 "",
                 "템포 맞춤 (BPM 기준)",
@@ -5414,7 +5485,7 @@ class TestSongDesignInterviewSession:
         store = SongTimelineStore()
         session._timeline_store = store
         session._question_channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
+            ["우주", "우주 색 조합", "", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
         )
 
         session.run_instruction(self._FULL)
@@ -5480,6 +5551,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5527,6 +5599,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",  # Q2B_COLOR_USAGE default-accepted
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5629,6 +5702,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5678,6 +5752,7 @@ class TestSongDesignInterviewSession:
                 "120",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5733,6 +5808,7 @@ class TestSongDesignInterviewSession:
             [
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5878,6 +5954,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -6197,6 +6274,7 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -6222,6 +6300,7 @@ class TestSongDesignInterviewSession:
             [
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "",
                 "템포 맞춤 (BPM 기준)",
@@ -6266,6 +6345,7 @@ class TestSongDesignInterviewSession:
             [
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -6313,6 +6393,7 @@ class TestSongDesignInterviewSession:
             [
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -6339,6 +6420,7 @@ class TestSongDesignInterviewSession:
             [
                 "우주",
                 "우주 색 조합",
+                "",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -6383,7 +6465,7 @@ class TestSongDesignInterviewSession:
         calls: list[ToolCall] = []
         session._registry = self._registry(calls)
         channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
+            ["우주", "우주 색 조합", "", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
         )
         session._question_channel = channel
         text = (
@@ -6393,7 +6475,7 @@ class TestSongDesignInterviewSession:
 
         event = session.run_instruction(text)
 
-        assert len(channel.asked) == 6
+        assert len(channel.asked) == 7
         assert "도입 구간" in channel.asked[-1].prompt
         assert [call for call in calls if call.name == "run_commands"] == []
         assert "미확정/미해결 입력" in event["text"]
@@ -6410,9 +6492,10 @@ class TestSongDesignInterviewSession:
 
         event = session.run_instruction(self._FULL)
 
-        # 5 interview cards + a DI5 partial re-interview of the first
-        # unconfirmed step (Q1 → Q5 re-asked, unanswered → restored).
-        assert len(channel.asked) == 10
+        # 6 interview cards (Q1/Q2/Q2B/Q3/Q4/Q5) + a DI5 partial re-interview
+        # of the first unconfirmed step (Q1 → Q5 re-asked, unanswered →
+        # restored).
+        assert len(channel.asked) == 12
         assert "Q2 팔레트: 레드 톤 위주로 가죠 (확정)" in event["text"]
         assert [call for call in calls if call.name == "run_commands"] == []
 
@@ -6426,8 +6509,9 @@ class TestSongDesignInterviewSession:
 
         session.run_instruction(self._FULL)
 
-        # 5 interview cards + restart_from(Q2)'s 4 re-asked cards.
-        assert len(channel.asked) == 9
+        # 6 interview cards (Q1/Q2/Q2B/Q3/Q4/Q5) + restart_from(Q2)'s 5
+        # re-asked cards (Q2/Q2B/Q3/Q4/Q5).
+        assert len(channel.asked) == 11
         q2_labels = [option.label for option in channel.asked[1].options]
         assert "네온 색 조합" in q2_labels  # DI2: Q1's confirmed concept re-seeds Q2
 
@@ -6445,10 +6529,11 @@ class TestSongDesignInterviewSession:
 
         event = session.run_instruction(text)
 
-        # Q2 card never fires on the FIRST pass — only Q1/Q3/Q4/Q5 ask; the
-        # unanswered DI5 re-interview then re-opens Q1..Q5 (5 more asks) and
-        # restores the pre-specified palette untouched.
-        assert len(channel.asked) == 9
+        # Q2 card never fires on the FIRST pass — only Q1/Q2B/Q3/Q4/Q5 ask
+        # (5); the unanswered DI5 re-interview then re-opens all 6 steps
+        # (Q1/Q2/Q2B/Q3/Q4/Q5) and restores the pre-specified palette
+        # untouched.
+        assert len(channel.asked) == 11
         assert all("팔레트" not in q.prompt for q in channel.asked[:4])
         assert "Q2 팔레트: 청록+마젠타 (확정)" in event["text"]
 
@@ -6461,8 +6546,9 @@ class TestSongDesignInterviewSession:
 
         event = session.run_instruction(self._FULL)
 
-        # 5 cards + the unanswered Q1 re-interview (5 re-asks, restored).
-        assert len(session._question_channel.asked) == 10
+        # 6 cards (Q1/Q2/Q2B/Q3/Q4/Q5) + the unanswered Q1 re-interview
+        # (6 re-asks, restored).
+        assert len(session._question_channel.asked) == 12
         assert event["status"] == "ok"
         assert event["text"].count("감독 미확정") == 5
         writes = [call for call in calls if call.name == "run_commands"]
@@ -6487,17 +6573,229 @@ class TestSongDesignInterviewSession:
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
         calls: list[ToolCall] = []
         session._registry = self._registry(calls)
-        # Answer Q1/Q2, then on Q3 ask for "Q1만 다시" instead of answering —
+        # Answer Q1/Q2, then on Q2B ask for "Q1만 다시" instead of answering —
         # DI5: Q1 reruns (this time "빈티지"), Q2-Q5 follow fresh.
         channel = self._Channel(["우주", "", "Q1만 다시", "빈티지", "", "", ""])
         session._question_channel = channel
 
         event = session.run_instruction(self._FULL)
 
-        # 8 interview cards (Q1,Q2,Q3 + DI5 restart Q1..Q5) + the unanswered
-        # Q2 re-interview (4 re-asks, restored).
-        assert len(channel.asked) == 12
+        # 9 interview cards (Q1,Q2,Q2B + DI5 restart Q1,Q2,Q2B,Q3,Q4,Q5) + the
+        # unanswered Q2 re-interview (5 re-asks: Q2,Q2B,Q3,Q4,Q5, restored).
+        assert len(channel.asked) == 14
         assert "Q1 컨셉: 빈티지 (확정)" in event["text"]
+
+    # ------------------------------------------------------------------
+    # sync-audit F1/F2 — SPEC-COPILOT-COLORMODE-001 D2's session-level
+    # restart lookup table (`_SONG_RESTART_STEP_BY_TOKEN`), exercised
+    # through the REAL `_song_run_interview` loop rather than by calling
+    # `DirectorInterview.restart_from` directly. The engine-level tests in
+    # test_design_interview.py never touch session.py's regex/lookup-table
+    # replacement of the pre-SPEC `STEP_ORDER[int(no)-1]` indexing — a
+    # mutation probe reverting that replacement left every existing test
+    # green (sync-audit.md F1/F2). These cases close that gap: each drives
+    # a real restart trigger string through the channel and asserts BOTH
+    # (a) the very next card asked is the correct target step's prompt
+    # (not a wrong neighbor from stale indexing), and (b) the final
+    # director_decisions value reflects the POST-restart answer, proving
+    # the pre-restart answer for the restarted step was actually dropped.
+    # ------------------------------------------------------------------
+
+    def _color_usage_decision_value(self, timeline: dict) -> object:
+        for decision in timeline["director_decisions"]:
+            if decision["axis"] == "color_usage":
+                return decision["value"]
+        raise AssertionError("no color_usage decision in director_decisions")
+
+    def _d_axis_decision_value(self, timeline: dict) -> dict:
+        for decision in timeline["director_decisions"]:
+            if decision["axis"] == "d":
+                return decision["value"]
+        raise AssertionError("no d-axis (Q3_CLIMAX) decision in director_decisions")
+
+    def test_q3_다시_reaches_q3_climax_prompt_not_q2b_or_q4_and_continues_to_q4_q5(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "",  # Q2B default-accepted
+                "Ring In",  # Q3 (pre-restart answer)
+                "Q3 다시",  # answered on the Q4 card -> restarts from Q3_CLIMAX
+                "웅장한 피날레 연출",  # Q3 (post-restart answer, distinct)
+                "우주 컨셉 우선 배치",  # Q4
+                "템포 맞춤 (BPM 기준)",  # Q5
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q3_prompt = "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?"
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        q5_prompt = "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요."
+        assert prompts[3] == q3_prompt  # pre-restart Q3 ask
+        assert prompts[4] == q4_prompt  # reached Q4 before typing "Q3 다시"
+        # The restart target: the very next card MUST be Q3_CLIMAX again —
+        # not Q2B_COLOR_USAGE (stale STEP_ORDER[2] under pre-SPEC indexing)
+        # and not Q4 (would mean the trigger was silently ignored).
+        assert prompts[5] == q3_prompt
+        assert prompts[6] == q4_prompt  # continues Q4...
+        assert prompts[7] == q5_prompt  # ...then Q5
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        d_value = self._d_axis_decision_value(timelines[-1])
+        # "웅장한 피날레 연출" resolves to d_level=5
+        # (test_q3_free_text_resolves_via_resolve_section_into_a_director_override).
+        # "Ring In" (the discarded pre-restart answer) would not produce this.
+        assert d_value["d_level"] == 5
+
+    def test_q4_다시_reaches_q4_prompt_not_q5_and_continues_to_q5(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "",  # Q2B default-accepted
+                "Ring In",  # Q3
+                "우주 컨셉 우선 배치",  # Q4 (pre-restart answer)
+                "Q4 다시",  # answered on the Q5 card -> restarts from Q4_SPATIAL_STORY
+                "잔잔한 발라드 느낌",  # Q4 (post-restart answer, distinct free text)
+                "템포 맞춤 (BPM 기준)",  # Q5
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        q5_prompt = "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요."
+        assert prompts[4] == q4_prompt  # pre-restart Q4 ask
+        assert prompts[5] == q5_prompt  # reached Q5 before typing "Q4 다시"
+        assert prompts[6] == q4_prompt  # restart target: Q4 again, not stale
+        assert prompts[7] == q5_prompt  # continues to Q5
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        position_decisions = [
+            d for d in timelines[-1]["director_decisions"] if d["axis"] == "position"
+        ]
+        assert len(position_decisions) == 1
+        positions = position_decisions[0]["value"]["position_candidates"]
+        # "잔잔한 발라드 느낌" (post-restart) resolves to Vocal DSC-led candidates
+        # (test_q4_free_text_resolves_to_position_candidates_only); the
+        # discarded "우주 컨셉 우선 배치" pre-restart answer would not.
+        assert positions[0] == "Vocal DSC"
+
+    def test_q5_다시_restarts_q5_itself_not_q4(self, tmp_path):
+        """Under the pre-SPEC `STEP_ORDER[int(no)-1]` indexing, "5" resolved
+        to `STEP_ORDER[4]` == Q4_SPATIAL_STORY (wrong — Q5_TEXTURE is now at
+        index 5 after Q2B's insertion), which would drop Q4 too and re-ask
+        it. The correct behaviour restarts Q5 alone; the very next card
+        stays Q5, never falling back to Q4."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "",  # Q2B default-accepted
+                "Ring In",  # Q3
+                "우주 컨셉 우선 배치",  # Q4
+                "Q5 다시",  # answered on the Q5 card itself
+                "템포 맞춤 (BPM 기준)",  # Q5 (real answer)
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        q5_prompt = "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요."
+        assert prompts[5] == q5_prompt  # "Q5 다시" answered on Q5's own card
+        assert prompts[6] == q5_prompt  # restart target is Q5 again, NOT Q4
+        assert q4_prompt not in prompts[6:]
+
+    def test_q2b_다시_reaches_q2b_prompt_and_drops_q3_until_re_answered(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "single",  # Q2B (pre-restart, explicit)
+                "Ring In",  # Q3 (pre-restart answer)
+                "Q2B 다시",  # answered on the Q4 card -> restarts from Q2B
+                "per_chorus",  # Q2B (post-restart, distinct)
+                "웅장한 피날레 연출",  # Q3 (re-asked, must be answered again)
+                "우주 컨셉 우선 배치",  # Q4
+                "템포 맞춤 (BPM 기준)",  # Q5
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q2b_prompt = "이 색을 곡 전체에서 어떻게 쓸까요?"
+        q3_prompt = "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?"
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        assert prompts[3] == q3_prompt  # pre-restart Q3 ask
+        assert prompts[4] == q4_prompt  # reached Q4 before typing "Q2B 다시"
+        assert prompts[5] == q2b_prompt  # restart target: Q2B, not Q4/Q3
+        assert prompts[6] == q3_prompt  # Q3 was dropped and is re-asked
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        # Both the color_usage AND the D-axis (Q3) decisions must reflect
+        # the POST-restart answers — proving the pre-restart "single" and
+        # "Ring In" answers were actually discarded by the restart, not
+        # merely shadowed.
+        assert self._color_usage_decision_value(timelines[-1]) == "per_chorus"
+        assert self._d_axis_decision_value(timelines[-1])["d_level"] == 5
+
+    def test_색_운용_다시_reaches_q2b_prompt(self, tmp_path):
+        """The Korean-alias trigger ("색 운용 다시") is recognized by a
+        SEPARATE regex (`_SONG_RESTART_COLOR_USAGE`) from "Q2B 다시" (which
+        the `_SONG_RESTART`/`2[Bb]` alternation already matches) — this case
+        exercises that second regex specifically."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",  # Q1
+                "우주 색 조합",  # Q2
+                "modulate",  # Q2B (pre-restart)
+                "Ring In",  # Q3
+                "색 운용 다시",  # answered on the Q4 card -> restarts from Q2B
+                "single",  # Q2B (post-restart, distinct)
+                "웅장한 피날레 연출",  # Q3 (re-asked)
+                "우주 컨셉 우선 배치",  # Q4
+                "템포 맞춤 (BPM 기준)",  # Q5
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        prompts = [q.prompt for q in channel.asked]
+        q2b_prompt = "이 색을 곡 전체에서 어떻게 쓸까요?"
+        q4_prompt = "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        assert prompts[4] == q4_prompt  # reached Q4 before typing "색 운용 다시"
+        assert prompts[5] == q2b_prompt  # restart target: Q2B
 
     def test_time_first_two_token_sections_start_the_interview(self, tmp_path):
         """Repro (post-restart browser submission): '디자인 인터뷰, BPM 128,
@@ -6519,7 +6817,7 @@ class TestSongDesignInterviewSession:
         event = session.run_instruction(text)
 
         assert "곡 구간을 읽지 못해" not in event["text"]
-        assert len(channel.asked) == 6
+        assert len(channel.asked) == 7
         assert [q.prompt for q in channel.asked][0] == "공연 전체가 어떤 느낌이면 좋겠어요?"
         assert event["status"] == "ok"
         assert "미확정/미해결 입력" in event["text"]
@@ -6543,7 +6841,7 @@ class TestSongDesignInterviewSession:
         event = session.run_instruction(text)
 
         assert "곡 구간을 읽지 못해" not in event["text"]
-        assert len(channel.asked) == 6
+        assert len(channel.asked) == 7
         assert event["status"] == "ok"
         assert "미확정/미해결 입력" in event["text"]
         assert [call for call in calls if call.name == "run_commands"] == []
@@ -6562,8 +6860,9 @@ class TestSongDesignInterviewSession:
 
         event = session.run_instruction(self._FULL)
 
-        # 5 cards + the unanswered Q1 re-interview (5 re-asks, restored).
-        assert len(channel.asked) == 10
+        # 6 cards (Q1/Q2/Q2B/Q3/Q4/Q5) + the unanswered Q1 re-interview
+        # (6 re-asks, restored).
+        assert len(channel.asked) == 12
         assert event["status"] == "ok"
         assert "미확정/미해결 입력" in event["text"]
         assert [call for call in calls if call.name == "run_commands"] == []

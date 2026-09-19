@@ -23,11 +23,13 @@ from .test_runner_self_correction import ScriptedProvider
 from .test_web_session import TestSongDesignInterviewSession as _Harness
 from .test_web_session import _session
 
-#: 인터뷰 5장 + 리뷰 1장. 미해소 구간이 있으면 재질의 카드가 더 붙는데, 답을 다
-#: 소진하면 채널이 UNANSWERED 를 돌려주므로 흐름은 그대로 끝까지 간다.
+#: 인터뷰 6장(Q1/Q2/Q2B/Q3/Q4/Q5) + 리뷰 1장. 미해소 구간이 있으면 재질의
+#: 카드가 더 붙는데, 답을 다 소진하면 채널이 UNANSWERED 를 돌려주므로 흐름은
+#: 그대로 끝까지 간다.
 _INTERVIEW_ANSWERS = [
     "우주",
     "우주 색 조합",
+    "",  # Q2B_COLOR_USAGE default-accepted
     "Ring In",
     "우주 컨셉 우선 배치",
     "템포 맞춤 (BPM 기준)",
