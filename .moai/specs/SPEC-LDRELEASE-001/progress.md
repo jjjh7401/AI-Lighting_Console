@@ -173,10 +173,12 @@ $ uv run ruff format --check <위 5개 파일>
 - new_warnings_or_lints_introduced: 0 (`ruff check`/`ruff format --check` 둘 다 clean)
 - cross_platform_build.python: N/A — Python 프로젝트, `GOOS`/`GOARCH` 빌드
   태그 대상 아님(server/director 는 순수 Python)
-- total_run_phase_files: 6 (`server/director/execution.py` + 5개 테스트 파일:
-  `test_director_execution_journal.py`, `test_director_ops_lifecycle.py`,
-  `test_director_execution_failure.py`, `test_director_apply_rejection.py`,
-  `.moai/specs/SPEC-LDRELEASE-001/{spec.md,progress.md}`)
+- total_run_phase_files: 7 (`git diff --stat 3659eafb..661c85d3` 실측,
+  sync-audit F4 반영 정정 — 이전 초안의 "6개/5개 테스트 파일" 표기는 내부
+  불일치였다) — `server/director/execution.py` + 4개 테스트 파일
+  (`test_director_execution_journal.py`, `test_director_ops_lifecycle.py`,
+  `test_director_execution_failure.py`, `test_director_apply_rejection.py`)
+  + `.moai/specs/SPEC-LDRELEASE-001/{spec.md,progress.md}`
 - m1_to_mN_commit_strategy: 단일 마일스톤(M1) — 단일 커밋으로 RED-GREEN-REFACTOR
   전체를 담는다(Tier S, 최소 delegation)
 - full_regression: `uv run pytest -q -p no:cacheprovider` → **13619 passed, 35
@@ -186,4 +188,50 @@ $ uv run ruff format --check <위 5개 파일>
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+- sync_complete_at: 2026-09-19
+- sync_commit_sha: pending-backfill-in-next-immediate-commit (this sync
+  commit could not know its own SHA at write time)
+- sync_status: complete
+- b12_self_test_a: PASS — `grep -c 'SPEC-LDRELEASE-001' CHANGELOG.md`
+  returned 0 before this sync's edit (no duplicate entry existed)
+- b12_self_test_b: PASS — `grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' spec.md | sort
+  -u | wc -l` returned 8, matching the 8 AC-LDRELEASE-001 through 008
+  entries the CHANGELOG references (this SPEC has no separate
+  acceptance.md — ACs are inline in spec.md §3 per 1차 plan-audit D3)
+- b12_self_test_c: PASS — all five file paths cited in the CHANGELOG entry
+  (`server/director/execution.py`, `server/tests/test_director_execution_
+  journal.py`, `server/tests/test_director_ops_lifecycle.py`,
+  `server/tests/test_director_execution_failure.py`, `server/tests/
+  test_director_apply_rejection.py`) verified to exist via `ls` before
+  commit
+- changelog_entry_position: inserted as the first `### Added` bullet in
+  `[Unreleased]`, immediately before the pre-existing SPEC-LDWIRE-001 entry
+- frontmatter_status_transitions.spec_md: in-progress -> completed (this
+  sync commit; `updated:` already carried today's date, left unchanged)
+- frontmatter_status_transitions.other_artifacts: not applicable —
+  plan.md and progress.md in this SPEC carry no YAML frontmatter `status:`
+  field (grep-verified); only spec.md tracks the lifecycle status
+- canary_compliance_check: not applicable — this SPEC defines no
+  forward-looking policy that tests itself in sync phase
+- mx_tag_validation: no new @MX marker added in this sync pass —
+  `_reserve_destination_locked` already carries an inline `@MX:NOTE`
+  (Korean) from the run-phase REFACTOR step explaining the REQ-001/002/008
+  transfer branch; `restore_destination`/`begin_execution` each have
+  exactly 1 production caller (`ApplyCoordinator.apply()`), below the
+  `@MX:ANCHOR` fan-in>=3 threshold, so none were added
+- sync_auditor_verdict: PASS, harmonic mean 91.8/100 (Functionality 95 ·
+  Security 95 · Craft 93 · Consistency 85) — report
+  `.moai/reports/sync-audit/SPEC-LDRELEASE-001-audit-1.md` (gitignored).
+  One finding, F4 [Low] [blocking-for-doc-accuracy only]: this section's
+  prior draft (now corrected) undercounted `total_run_phase_files` as 6
+  with a mislabeled "5개 테스트 파일" list; the actual `git diff --stat
+  3659eafb..661c85d3` count is **7** distinct changed files
+  (`server/director/execution.py` + 4 test files + `spec.md` +
+  `progress.md`). §E.3's `total_run_phase_files` field is corrected to 7
+  as part of this sync commit (see below) — F1/F2/F3 are Low/optional,
+  no fix required.
+- residual_gap: real-console (onPC) re-run of the LDSEND-001 M5 032
+  scenario (recovery apply reusing sequence 9903 instead of 9904) is out
+  of scope for this SPEC's local judgment — deferred to the next time the
+  console is on, together with `Delete Sequence 9900/9901/9903/9904/9911`
+  cleanup.
