@@ -25,12 +25,14 @@ from .test_runner_self_correction import ScriptedProvider
 from .test_web_session import TestSongDesignInterviewSession as _Harness
 from .test_web_session import _session
 
-#: 인터뷰 답 — 좌표가 없으면 Q4(공간 스토리)를 **묻지 않으므로** 4장이다.
-_ANSWERS_NO_COORDS = ["우주", "우주 색 조합", "Ring In", "템포 맞춤 (BPM 기준)"]
-#: 좌표가 있으면 오늘과 같은 5장.
+#: 인터뷰 답 — 좌표가 없으면 Q4(공간 스토리)를 **묻지 않으므로** 5장
+#: (Q1/Q2/Q2B/Q3/Q5)이다.
+_ANSWERS_NO_COORDS = ["우주", "우주 색 조합", "", "Ring In", "템포 맞춤 (BPM 기준)"]
+#: 좌표가 있으면 오늘과 같은 6장(Q1/Q2/Q2B/Q3/Q4/Q5).
 _ANSWERS_WITH_COORDS = [
     "우주",
     "우주 색 조합",
+    "",  # Q2B_COLOR_USAGE default-accepted
     "Ring In",
     "우주 컨셉 우선 배치",
     "템포 맞춤 (BPM 기준)",
@@ -111,7 +113,7 @@ class TestACoordinatelessRigStillGetsCues:
         _event, channel, _timelines, _calls = _drive(tmp_path, spatial_fails=True)
         prompts = [request.prompt for request in channel.asked]
         assert not any("무대가 어떻게 달라 보이면" in prompt for prompt in prompts)
-        assert len([p for p in prompts if "전곡 리뷰 번들" not in p]) == 4
+        assert len([p for p in prompts if "전곡 리뷰 번들" not in p]) == 5
 
     def test_no_console_write_happens_before_approval(self, tmp_path):
         _event, _channel, _timelines, calls = _drive(tmp_path, spatial_fails=True)
@@ -157,7 +159,7 @@ class TestACoordinateRigIsUnchanged:
         _event, channel, _timelines, _calls = _drive(tmp_path, spatial_fails=False)
         prompts = [request.prompt for request in channel.asked]
         assert any("무대가 어떻게 달라 보이면" in prompt for prompt in prompts)
-        assert len([p for p in prompts if "전곡 리뷰 번들" not in p]) == 5
+        assert len([p for p in prompts if "전곡 리뷰 번들" not in p]) == 6
 
 
 def test_the_two_rigs_differ_only_in_the_position_axis(tmp_path):
