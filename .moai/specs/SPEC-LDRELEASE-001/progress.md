@@ -189,8 +189,8 @@ $ uv run ruff format --check <위 5개 파일>
 ## §E.4 Sync-phase Audit-Ready Signal
 
 - sync_complete_at: 2026-09-19
-- sync_commit_sha: pending-backfill-in-next-immediate-commit (this sync
-  commit could not know its own SHA at write time)
+- sync_commit_sha: 5a799f04 (backfilled in this immediate follow-up commit;
+  the sync commit could not know its own SHA at write time)
 - sync_status: complete
 - b12_self_test_a: PASS — `grep -c 'SPEC-LDRELEASE-001' CHANGELOG.md`
   returned 0 before this sync's edit (no duplicate entry existed)
