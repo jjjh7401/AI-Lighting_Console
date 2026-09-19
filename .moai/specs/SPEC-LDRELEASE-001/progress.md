@@ -162,8 +162,9 @@ $ uv run ruff format --check <위 5개 파일>
 
 - run_status: audit-ready
 - run_complete_at: 2026-09-19
-- run_commit_sha: pending-backfill-<M1-commit> (같은 커밋이 자기 SHA 를 알 수
-  없으므로 placeholder — 다음 커밋에서 backfill)
+- run_commit_sha: f72b442b (M1 커밋 — 자기 SHA 는 그 커밋 안에서 알 수 없으므로
+  placeholder 로 시작했다가 이 후속 커밋에서 backfill 했다, SHA 필드 backfill
+  예외 — spec.md/plan.md 본문은 건드리지 않는다)
 - ac_pass_count: 8/8 (AC-LDRELEASE-001~008 전부 PASS)
 - ac_fail_count: 0
 - preserve_list_post_run_count: 4/4 (§A PRESERVE 4항목 전부 회귀 확인)
