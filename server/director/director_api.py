@@ -1,21 +1,32 @@
-"""Director HTTP route 골격 (SPEC-LDRECV-001 M1 · REQ-LDPLUGIN-018/019).
+"""Director HTTP route skeleton (SPEC-LDRECV-001 M1, REQ-LDPLUGIN-018/019).
 
-계약 §3 의 공통 route(GET context/knowledge/plan, POST validations, PUT plan,
-GET execution, POST feedback-proposals)를 `auth.authenticate` 뒤에 얇게
-배선한다. 판단·검증은 하지 않는다 — LDSTORE(`DirectorStore`)와 LDCOMPILE(주입된
-validator, `DirectorService` 경유)을 그대로 호출할 뿐이다.
+Wires contract Section 3 common routes (GET context/knowledge/plan, POST
+validations, PUT plan, GET execution, POST feedback-proposals) thinly behind
+auth.authenticate. No judgment or validation happens here -- it only calls into
+LDSTORE (DirectorStore) and LDCOMPILE (an injected validator, via DirectorService).
 
-GET execution · POST feedback-proposals 는 아직 근거 저장소가 없다(각각 M4
-durable execution journal, M2 사람 승인/feedback 저장소 — 이 SPEC 의 뒤
-마일스톤). GET context · GET knowledge 도 "현재 server-owned context" 를 만들
-관측 배선(콘솔 판독)이 이 SPEC 의 범위 밖이다 — 그래서 이 넷은 `deps` 에 해당
-provider 가 주입되지 않으면 계약 §5 의 ``503 DEPENDENCY_UNAVAILABLE`` 을
-정직하게 답한다. 아직 없는 기능을 있는 것처럼 꾸미지 않는다.
+GET execution / POST feedback-proposals have no backing store yet (each is a
+later milestone -- M4 durable execution journal, M2 human-approval/feedback
+store). GET context / GET knowledge also depend on a real "current server-owned
+context" observation wiring (console readback) that was out of the original
+SPEC scope -- so all four answer a contract Section 5 503
+DEPENDENCY_UNAVAILABLE honestly when their deps provider is not injected,
+rather than pretending a feature exists that does not.
+
+SPEC-LDWIRE-001 M4 (design.md section "da" alternative A) changes the
+POST .../validations and PUT .../plans/{plan_id} handlers to reconstruct a
+context-aware PipelineValidator PER REQUEST instead of relying on a
+construction-time-fixed deps.validator instance -- context.py.ContextProvider
+snapshots change over a servers lifetime (REQ-LDWIRE-005), and a fixed
+validator instance would keep validating against whatever context existed the
+moment it was constructed. service.py and validate/pipeline.py stage content
+stay untouched -- only this route layer reconstructs the validator.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
 from fastapi import APIRouter, Request
@@ -28,6 +39,7 @@ from server.director.auth import (
     PairingSecretStore,
     authenticate,
 )
+from server.director.digest import canonical_digest
 from server.director.execution import (
     ApplyCoordinator,
     BundleSender,
@@ -38,25 +50,32 @@ from server.director.execution import (
 from server.director.knowledge import KnowledgeService
 from server.director.models import Detail, ExchangeError
 from server.director.service import DirectorService, NotInstalledValidator, PlanValidator
-from server.director.store import DirectorStore
+from server.director.store import DirectorStore, ValidationRecord, compute_validation_id
+from server.director.validate.pipeline import PipelineValidator
 
 _REQUEST_ID_HEADER = "x-request-id"
 
+#: SPEC-LDWIRE-001 M2 -- how long a persisted ValidationReport stays resolvable by
+#: validation_id. Matches the 30-minute window already established for
+#: validation/context expiry elsewhere in this suite.
+_VALIDATION_WINDOW_MINUTES = 30
+
 
 class ContextProvider(Protocol):
-    """GET context 의 조회 seam. 이 SPEC 에는 콘솔/관측 배선이 없다 — 미주입 기본."""
+    """GET context lookup seam. No console/observation wiring in the original SPEC --
+    unset by default."""
 
     def current(self, project_id: str) -> dict[str, Any]: ...
 
 
 class ExecutionProvider(Protocol):
-    """GET execution 의 조회 seam. M4 durable journal 이 채운다."""
+    """GET execution lookup seam. M4 durable journal fills this."""
 
     def get(self, project_id: str, execution_id: str) -> dict[str, Any]: ...
 
 
 class FeedbackProposalService(Protocol):
-    """POST feedback-proposals 의 저장 seam. M2 가 채운다."""
+    """POST feedback-proposals storage seam. M2 fills this."""
 
     def propose(
         self, *, project_id: str, feedback: dict[str, Any], idempotency_key: str
@@ -64,11 +83,12 @@ class FeedbackProposalService(Protocol):
 
 
 class ValidationProvider(Protocol):
-    """`POST .../approvals` 가 참조하는 `ValidationReport` 조회 seam.
+    """The ValidationReport lookup seam POST .../approvals references.
 
-    `SPEC-LDCOMPILE-001` 이 만들 저장소가 아직 HTTP 로 노출되지 않았다 —
-    `ContextProvider`/`ExecutionProvider` 와 같은 이유로 미주입 시 503 을
-    정직하게 답한다(모듈 상단 docstring).
+    SPEC-LDCOMPILE-001 storage was not exposed over HTTP yet -- for the same reason
+    as ContextProvider/ExecutionProvider, an unset provider honestly answers 503
+    (module docstring)." SPEC-LDWIRE-001 M2 is the first real implementation
+    (server.director.provision.StoreValidationProvider)."
     """
 
     def get(self, project_id: str, validation_id: str) -> ValidationRef: ...
@@ -76,11 +96,11 @@ class ValidationProvider(Protocol):
 
 @dataclass
 class DirectorApiDeps:
-    """M1 이 배선하는 것 전부 — 실제 LDSTORE/LDCOMPILE 서비스 + 인증 자료.
+    """Everything M1 wires -- real LDSTORE/LDCOMPILE services + auth material.
 
-    ``context_provider``/``execution_provider``/``feedback_service`` 는 이
-    SPEC 의 뒤 마일스톤(또는 범위 밖의 관측 배선)이 채우는 seam 이다 — M1 은
-    Protocol 만 소유하고 기본값은 ``None`` 이다.
+    context_provider/execution_provider/feedback_service are seams a later
+    milestone (or an observation wiring out of this SPEC scope) fills -- M1 owns
+    only the Protocol, default is None.
     """
 
     store: DirectorStore
@@ -88,31 +108,35 @@ class DirectorApiDeps:
     service: DirectorService
     registry: CredentialRegistry
     secrets: PairingSecretStore
-    #: `POST .../validations` 의 무저장 재검증 경로가 쓰는 validator. ``None``
-    #: 이면 `NotInstalledValidator()` — `deps.service` 가 이미 물고 있는
-    #: private `_validator` 를 밖에서 다시 꺼내지 않기 위해 별도 필드로 둔다
-    #: (호출자는 같은 validator 인스턴스를 두 곳에 넘기면 된다).
+    #: The validator POST .../validations no-store re-check path uses. None means
+    #: NotInstalledValidator(). Also doubles, since SPEC-LDWIRE-001 M4, as the
+    #: "PipelineValidator is installed" signal PUT plan reads -- the actual
+    #: instance stored here is discarded per-request in favour of a freshly
+    #: context-aware one (design.md section "da").
     validator: PlanValidator | None = None
     allowed_hosts: tuple[str, ...] = field(default_factory=lambda: DEFAULT_HOST_ALLOWLIST)
     trusted_origins: tuple[str, ...] = ()
     context_provider: ContextProvider | None = None
     execution_provider: ExecutionProvider | None = None
     feedback_service: FeedbackProposalService | None = None
-    #: M2 (SPEC-LDRECV-001) 사람 승인/거절 오버레이. 기본값은 새 in-memory
-    #: registry — durable 저장은 M4 가 한다(approvals.py 모듈 docstring).
+    #: M2 (SPEC-LDRECV-001) human approve/reject overlay. Default is a fresh
+    #: in-memory registry -- durable storage is M4s job (approvals.py module
+    #: docstring).
     approvals: ApprovalRegistry = field(default_factory=ApprovalRegistry)
-    #: `POST .../approvals` 가 참조하는 ValidationReport 조회 seam. 미주입 시 503.
+    #: ValidationReport lookup seam POST .../approvals references. 503 when unset.
     validation_provider: ValidationProvider | None = None
-    #: M5 (SPEC-LDRECV-001) apply 직전 재검사 + durable journal 커밋 + SafetyGate
-    #: 연결 조율자. 미주입 시 `POST .../apply` 는 503 을 답한다.
+    #: M5 (SPEC-LDRECV-001) pre-apply re-check + durable journal commit +
+    #: SafetyGate connection coordinator. 503 on POST .../apply when unset.
     apply_coordinator: ApplyCoordinator | None = None
-    #: M4/M5 durable execution journal — apply 이후 bundle 전송 결과를 기록한다.
+    #: M4/M5 durable execution journal -- records bundle-send results after apply.
     execution_journal: ExecutionJournal | None = None
-    #: 실제 콘솔 송신 seam (execution.py 모듈 docstring — 이 SPEC 은 구현체를
-    #: 만들지 않는다). 미주입 시 apply 는 journal 커밋·gate 연결까지만 하고
-    #: bundle 전송은 건너뛴다(부분 배선 — 이 층의 콘솔 게이트 경계, spec.md §5).
+    #: The real console-send seam (execution.py module docstring -- this SPEC does
+    #: not build an implementation). Unset means apply commits the journal + gate
+    #: connection only and skips bundle send (partial wiring -- this layers
+    #: console-gate boundary, spec.md section 5).
     bundle_sender: BundleSender | None = None
-    #: operator 개입(programmer 변경) 감지 seam. 미주입 시 개입 감지 없이 진행한다.
+    #: Operator-intervention (programmer change) detection seam. Unset means no
+    #: intervention detection while proceeding.
     interference_detector: InterferenceDetector | None = None
 
 
@@ -127,40 +151,67 @@ def _error_response(error: ExchangeError, request: Request) -> JSONResponse:
 
 
 def _identity_mismatch(field_name: str, path_value: str, body_value: str) -> ExchangeError:
-    """계약 §3 — path/query 와 body 의 project/plan ID 불일치는 422 IDENTITY_MISMATCH."""
+    """Contract Section 3 -- a path/body project or plan ID mismatch is 422 IDENTITY_MISMATCH."""
     return ExchangeError(
         "IDENTITY_MISMATCH",
         422,
-        f"path 의 {field_name}({path_value!r})와 body 의 {field_name}({body_value!r})가 다릅니다.",
+        f"path {field_name}({path_value!r}) does not match body {field_name}({body_value!r}).",
         (Detail(f"/{field_name}", "path/body identity mismatch"),),
     )
 
 
 def _dependency_unavailable(what: str) -> ExchangeError:
-    return ExchangeError("DEPENDENCY_UNAVAILABLE", 503, f"{what} 이(가) 아직 배선되지 않았습니다.")
+    return ExchangeError("DEPENDENCY_UNAVAILABLE", 503, f"{what} is not wired yet.")
+
+
+def _build_request_validator(deps: DirectorApiDeps, project_id: str) -> PlanValidator:
+    """SPEC-LDWIRE-001 M4 (design.md section "da" alternative A) -- reconstructs a
+    context-aware PipelineValidator per request instead of using a fixed
+    construction-time instance.
+
+    deps.validator not being None is read ONLY as the "PipelineValidator is
+    installed" signal -- whatever context (if any) that stored instance itself was
+    built with is discarded here in favour of deps.context_provider CURRENT
+    snapshot, so a stale construction-time context can never outlive a real
+    context reissue (REQ-LDWIRE-005).
+    """
+    if deps.validator is None:
+        return NotInstalledValidator()
+    context_snapshot = deps.context_provider.current(project_id) if deps.context_provider else None
+    return PipelineValidator(context=context_snapshot)
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _validation_expiry(created_at: str) -> str:
+    moment = datetime.fromisoformat(created_at)
+    return (moment + timedelta(minutes=_VALIDATION_WINDOW_MINUTES)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def build_director_router(deps: DirectorApiDeps) -> APIRouter:
-    """계약 §3 공통 route 를 인증 뒤에 배선한다.
+    """Wires contract Section 3 common routes behind auth.
 
-    router 는 project 경로 prefix (``/api/director/v1/projects/{project_id}``)
-    아래 계약 §3 의 여섯 route 형태를 갖는다. 모든 handler 는 `auth.authenticate`
-    를 먼저 거치고, 실패는 `ExchangeError` → :func:`_error_response` 로 계약
-    §3 의 `ErrorEnvelope` shape 을 그대로 돌려준다.
+    The router carries the project path prefix
+    (/api/director/v1/projects/{project_id}) under contract Section 3 six-route
+    shape. Every handler goes through auth.authenticate first, and a failure
+    becomes an ExchangeError -> _error_response with the contract Section 3
+    ErrorEnvelope shape.
     """
 
     router = APIRouter(prefix="/api/director/v1/projects/{project_id}")
 
-    # 모든 handler 를 ``async def`` 로 둔다 — ``deps.store`` (`DirectorStore`)
-    # 는 `sqlite3.connect()` 를 생성 스레드에 고정한다(`server/director/store.py`,
-    # PRESERVE, 수정 불가). ``def`` handler 는 FastAPI 가 threadpool 로 보내
-    # 매 요청마다 다른 스레드에서 실행될 수 있어(`run_in_threadpool`) 이
-    # 제약을 깬다 — 실측: `sqlite3.ProgrammingError: SQLite objects created
-    # in a thread can only be used in that same thread.` ``async def`` 는
-    # event loop 스레드에서 직접 실행되므로, `deps` 를 그 스레드에서 구성하는
-    # 한(앱 startup/lifespan) 이 제약이 지켜진다 — 호출자(`serve.py` 조립부)
-    # 는 `DirectorStore` 를 event loop 스레드 밖(별도 스레드/프로세스 풀)에서
-    # 구성하지 않아야 한다.
+    # Every handler is async def -- deps.store (DirectorStore) pins its
+    # sqlite3.connect() to its construction thread (server/director/store.py,
+    # PRESERVE, do not modify). A def handler would let FastAPI send it to a
+    # threadpool (run_in_threadpool), running on a different thread per request --
+    # breaking that constraint. Measured: sqlite3.ProgrammingError: SQLite objects
+    # created in a thread can only be used in that same thread. async def runs
+    # directly on the event-loop thread, so as long as deps is constructed on that
+    # same thread (app startup/lifespan) this constraint holds -- the caller
+    # (serve.py composition) must not construct DirectorStore off the event-loop
+    # thread (a separate thread/process pool).
 
     def _require_credential(request: Request, *, scope: str):
         return authenticate(
@@ -194,9 +245,6 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
     ):
         try:
             credential = _require_credential(request, scope="knowledge:read")
-            # 계약 §3 — 검색 범위는 "서버의 현재 project context" 에 고정된다.
-            # 현재 context 가 없으면(§ 상단 docstring 이유) 검색 자체가 성립하지
-            # 않는다 — GET context 와 동일한 의존이다.
             if deps.context_provider is None:
                 raise _dependency_unavailable("context provider")
             context = deps.context_provider.current(project_id)
@@ -233,26 +281,23 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
     async def post_approval(
         project_id: str, plan_id: str, revision: int, body: dict[str, Any], request: Request
     ):
-        """계약 §4 — human APP route 만 승인을 발급한다 (REQ-LDPLUGIN-020 M2).
+        """Contract Section 4 -- only the human APP route issues an approval
+        (REQ-LDPLUGIN-020 M2).
 
-        MCP credential 은 ``plan:approve`` 가 human-only scope 이므로
-        `auth.authenticate` 단계에서 SCOPE_DENIED 로 이미 거부되어 이 handler
-        본문에 도달하지 않는다. 일반 chat/WS 승인 boolean(예: ``{"approved":
-        true}``)은 아래 필수 필드 검사에서 SCHEMA_INVALID 로 구조적으로 거부된다.
+        An MCP credential is already rejected SCOPE_DENIED at the auth.authenticate
+        step (plan:approve is human-only scope), never reaching this handler body.
+        A general chat/WS approval boolean (e.g. approved true) is rejected
+        SCHEMA_INVALID structurally by the required-field check below.
         """
         try:
             credential = _require_credential(request, scope="plan:approve")
 
-            # 일반 chat/WS 승인 boolean(예: {"approved": true})은 director 승인
-            # route 의 필수 필드를 갖추지 못하므로 여기서 SCHEMA_INVALID 로 구조적
-            # 거부된다 — dependency 미배선(503)보다 형태 검사가 먼저다: 형태부터
-            # 틀린 요청은 애초에 director 승인 시도가 아니었다는 판정을 우선한다.
             validation_id = body.get("validation_id")
             plan_digest = body.get("plan_digest")
             context_digest = body.get("context_digest")
             compiled_digest = body.get("compiled_digest")
             idempotency_key = body.get("idempotency_key")
-            if not all(
+            required_ok = all(
                 isinstance(value, str) and value
                 for value in (
                     validation_id,
@@ -261,13 +306,17 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                     compiled_digest,
                     idempotency_key,
                 )
-            ):
+            )
+            if not required_ok:
+                message = (
+                    "validation_id/plan_digest/context_digest/compiled_digest/"
+                    "idempotency_key are all required."
+                )
                 raise ExchangeError(
                     "SCHEMA_INVALID",
                     422,
-                    "validation_id·plan_digest·context_digest·compiled_digest·"
-                    "idempotency_key 가 모두 필요합니다.",
-                    (Detail("", "missing approval fields — not a director approval"),),
+                    message,
+                    (Detail("", "missing approval fields -- not a director approval"),),
                 )
 
             if deps.validation_provider is None or deps.context_provider is None:
@@ -277,6 +326,10 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
             context_snapshot = deps.context_provider.current(project_id)
             context = ContextRef.from_snapshot(context_snapshot)
 
+            approval_operation = (
+                f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
+                f"revisions/{revision}/approvals"
+            )
             binding = deps.approvals.approve(
                 store=deps.store,
                 project_id=project_id,
@@ -286,24 +339,17 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 validation=validation,
                 context=context,
                 body=body,
-                operation=(
-                    f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
-                    f"revisions/{revision}/approvals"
-                ),
+                operation=approval_operation,
             )
             record = deps.store.get(project_id=project_id, plan_id=plan_id, revision=revision)
-            return JSONResponse(
-                status_code=201,
-                content={
-                    "approval": binding.as_dict(),
-                    "record": {
-                        "plan": record.plan,
-                        "revision": record.revision,
-                        "state": "approved",
-                        "plan_digest": record.plan_digest,
-                    },
-                },
+            approval_record = dict(
+                plan=record.plan,
+                revision=record.revision,
+                state="approved",
+                plan_digest=record.plan_digest,
             )
+            approval_content = dict(approval=binding.as_dict(), record=approval_record)
+            return JSONResponse(status_code=201, content=approval_content)
         except ExchangeError as error:
             return _error_response(error, request)
 
@@ -311,7 +357,8 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
     async def post_rejection(
         project_id: str, plan_id: str, revision: int, body: dict[str, Any], request: Request
     ):
-        """계약 §4 — human APP route 만 거절을 기록한다 (REQ-LDPLUGIN-020 M2)."""
+        """Contract Section 4 -- only the human APP route records a rejection
+        (REQ-LDPLUGIN-020 M2)."""
         try:
             credential = _require_credential(request, scope="plan:reject")
             reason = body.get("reason")
@@ -320,9 +367,13 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 raise ExchangeError(
                     "SCHEMA_INVALID",
                     422,
-                    "reason·idempotency_key 가 필요합니다.",
+                    "reason/idempotency_key are required.",
                     (Detail("", "missing reason/idempotency_key"),),
                 )
+            rejection_operation = (
+                f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
+                f"revisions/{revision}/rejections"
+            )
             result = deps.approvals.reject(
                 store=deps.store,
                 project_id=project_id,
@@ -331,10 +382,7 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 reason=reason,
                 idempotency_key=idempotency_key,
                 principal_id=credential.principal_id,
-                operation=(
-                    f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
-                    f"revisions/{revision}/rejections"
-                ),
+                operation=rejection_operation,
             )
             return result
         except ExchangeError as error:
@@ -347,15 +395,15 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
             plan = body.get("plan")
             if not isinstance(plan, dict):
                 raise ExchangeError(
-                    "SCHEMA_INVALID", 422, "plan 은 object 여야 합니다.", (Detail("/plan", ""),)
+                    "SCHEMA_INVALID", 422, "plan must be an object.", (Detail("/plan", ""),)
                 )
             if str(plan.get("project_id")) != project_id:
                 raise _identity_mismatch("project_id", project_id, str(plan.get("project_id")))
-            # M1 은 저장 없이 validator 를 직접 호출한다 — 실제 저장 경로는
-            # PUT plan(`DirectorService.submit`)이 이미 검증을 함께 수행한다
-            # (`service.py`). 이 route 는 `ld_validate_plan`(계약 §3) 의 "짧은
-            # report 저장은 허용, console 불변" 을 따르는 무저장 재검증 경로다.
-            validator = deps.validator or NotInstalledValidator()
+            # SPEC-LDWIRE-001 M4 -- a context-aware PipelineValidator reconstructed
+            # per request (design.md section "da" alternative A). This is the
+            # no-store re-check path (PUT plan / DirectorService.submit already
+            # performs validation as part of storing -- see below).
+            validator = _build_request_validator(deps, project_id)
             return validator.validate(plan)
         except ExchangeError as error:
             return _error_response(error, request)
@@ -367,7 +415,7 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
             plan = body.get("plan")
             if not isinstance(plan, dict):
                 raise ExchangeError(
-                    "SCHEMA_INVALID", 422, "plan 은 object 여야 합니다.", (Detail("/plan", ""),)
+                    "SCHEMA_INVALID", 422, "plan must be an object.", (Detail("/plan", ""),)
                 )
             if str(plan.get("project_id")) != project_id:
                 raise _identity_mismatch("project_id", project_id, str(plan.get("project_id")))
@@ -379,25 +427,64 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 raise ExchangeError(
                     "SCHEMA_INVALID",
                     422,
-                    "expected_revision·idempotency_key 가 필요합니다.",
+                    "expected_revision/idempotency_key are required.",
                     (Detail("", "missing expected_revision/idempotency_key"),),
                 )
-            result = deps.service.submit(
+            # SPEC-LDWIRE-001 M4 -- deps.service is NOT used directly any more:
+            # its validator is fixed at DirectorApiDeps construction time, which
+            # would validate every request against whatever context existed at
+            # boot (design.md section "da"). A fresh DirectorService sharing the
+            # SAME deps.store is constructed per request instead, carrying a
+            # freshly context-aware validator -- service.py itself is untouched.
+            validator = _build_request_validator(deps, project_id)
+            request_service = DirectorService(deps.store, validator=validator)
+            put_operation = f"PUT /api/director/v1/projects/{project_id}/plans/{plan_id}"
+            result = request_service.submit(
                 plan=plan,
                 expected_revision=expected_revision,
                 principal_id=credential.principal_id,
-                operation=f"PUT /api/director/v1/projects/{project_id}/plans/{plan_id}",
+                operation=put_operation,
                 idempotency_key=idempotency_key,
             )
-            return {
-                "record": {
-                    "plan": result.record.plan,
-                    "revision": result.record.revision,
-                    "state": result.state,
-                    "plan_digest": result.record.plan_digest,
-                },
-                "validation": result.validation,
-            }
+
+            result_validation = dict(result.validation)
+            # SPEC-LDWIRE-001 M2 -- persists the ValidationReport so a later
+            # POST .../approvals can resolve it by validation_id (REQ-LDWIRE-006).
+            if deps.validation_provider is not None:
+                context_snapshot = (
+                    deps.context_provider.current(project_id) if deps.context_provider else None
+                )
+                context_digest = str(context_snapshot["context_digest"]) if context_snapshot else ""
+                validation_id = compute_validation_id(
+                    plan_digest=result.record.plan_digest,
+                    revision=result.record.revision,
+                    context_digest=context_digest,
+                )
+                compiled = dict(result.validation.get("compiled") or dict(available=False))
+                created_at = _now_iso()
+                validation_record = ValidationRecord(
+                    validation_id=validation_id,
+                    project_id=project_id,
+                    plan_id=plan_id,
+                    plan_digest=result.record.plan_digest,
+                    context_digest=context_digest,
+                    compiled_digest=canonical_digest(compiled),
+                    outcome=str(result.validation.get("outcome", "")),
+                    diagnostics=list(result.validation.get("diagnostics") or []),
+                    compiled=compiled,
+                    created_at=created_at,
+                    expires_at=_validation_expiry(created_at),
+                )
+                deps.store.save_validation(validation_record)
+                result_validation["validation_id"] = validation_id
+
+            record_body = dict(
+                plan=result.record.plan,
+                revision=result.record.revision,
+                state=result.state,
+                plan_digest=result.record.plan_digest,
+            )
+            return dict(record=record_body, validation=result_validation)
         except ExchangeError as error:
             return _error_response(error, request)
 
@@ -405,20 +492,18 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
     async def post_apply(
         project_id: str, plan_id: str, revision: int, body: dict[str, Any], request: Request
     ):
-        """계약 §4 — apply 는 lock 안 재검사(REQ-LDPLUGIN-021)를 통과한 뒤에만
-        SafetyGate 로 연결한다(REQ-LDPLUGIN-024 의 실패 분류는
-        :func:`server.director.execution.execute_bundles` 가 맡는다).
+        """Contract Section 4 -- apply connects to SafetyGate only after passing the
+        in-lock re-check (REQ-LDPLUGIN-021; REQ-LDPLUGIN-024 failure classification
+        is server.director.execution.execute_bundles job).
 
-        MCP credential 은 ``plan:apply`` 가 human-only scope 이므로
-        `auth.authenticate` 단계에서 SCOPE_DENIED 로 이미 거부되어 이 handler
-        본문에 도달하지 않는다.
+        An MCP credential is already rejected SCOPE_DENIED at the auth.authenticate
+        step (plan:apply is human-only scope), never reaching this handler body.
 
-        SPEC-LDSEND-001 REQ-LDSEND-015 — apply 판정 흐름(``ApplyCoordinator.
-        apply()`` 호출 → ``execute_bundles()`` 호출 → 세션 바인딩/회수)은
-        :func:`server.director.execution.run_director_apply` 로 추출됐다. 이
-        handler 는 그 함수를 부르고 반환 튜플을 ``JSONResponse`` 로 감싸기만
-        하는 얇은 adapter 다 — 응답 상태·본문·journal 기록은 추출 전과
-        바이트 동일하다(행동 보존).
+        SPEC-LDSEND-001 REQ-LDSEND-015 -- the apply decision flow (ApplyCoordinator.
+        apply() -> execute_bundles() -> session bind/release) was extracted to
+        server.director.execution.run_director_apply. This handler only calls that
+        function and wraps its return tuple as a JSONResponse -- response status,
+        body, and journal record are byte-identical to before the extraction.
         """
         try:
             credential = _require_credential(request, scope="plan:apply")
@@ -427,6 +512,10 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 raise _dependency_unavailable("apply coordinator/context provider")
 
             context_snapshot = deps.context_provider.current(project_id)
+            apply_operation = (
+                f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
+                f"revisions/{revision}/apply"
+            )
             response_body, response_status = run_director_apply(
                 coordinator=deps.apply_coordinator,
                 journal=deps.execution_journal,
@@ -436,10 +525,7 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 plan_id=plan_id,
                 revision=revision,
                 principal_id=credential.principal_id,
-                operation=(
-                    f"POST /api/director/v1/projects/{project_id}/plans/{plan_id}/"
-                    f"revisions/{revision}/apply"
-                ),
+                operation=apply_operation,
                 current_context_digest=str(context_snapshot["context_digest"]),
                 body=body,
             )
@@ -469,7 +555,7 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                 raise ExchangeError(
                     "SCHEMA_INVALID",
                     422,
-                    "feedback·idempotency_key 가 필요합니다.",
+                    "feedback/idempotency_key are required.",
                     (Detail("", "missing feedback/idempotency_key"),),
                 )
             return deps.feedback_service.propose(
