@@ -69,11 +69,109 @@ plan-auditor 가 CONDITIONAL 판정과 함께 blocking 결함 3건을 반환했�
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+## §E.2 Run-phase Evidence
+
+Commit order: 5e62ce95(M1) then 4dc165f6(M2) then b77173ed(M3/M5) then
+f5502d66(M4) then 246907de(M6/M7). Verification commands and observed
+output below are measured against HEAD 246907de, this tree, this run.
+
+### AC PASS/FAIL matrix
+
+| AC | Status | Verification | Observed output |
+|---|---|---|---|
+| AC-LDWIRE-001 | PASS | pytest test_director_credential_issuance.py | 3 passed in 0.45s |
+| AC-LDWIRE-002 | PASS | same file, test_secret_is_never_returned_inside_the_credential_object | PASSED -- Credential carries no secret field at all (structural), secret absent from repr |
+| AC-LDWIRE-003 | PASS | pytest test_director_auth.py (existing 24 tests unchanged) | 24 passed -- new issuance path never bypasses the fail-closed 401 |
+| AC-LDWIRE-004 | PASS | pytest test_director_context_provider.py::TestNineAxesAllPresent | 3 passed -- missing_axes(snapshot) == (), identity/expiry/policy really observed, other six axes honest-unobserved |
+| AC-LDWIRE-005 | PASS | same file, TestReissueSuppression | 2 passed -- unchanged repeat keeps same context_id/context_digest, a policy version change reissues |
+| AC-LDWIRE-006 | PASS | pytest test_director_validator_injection.py::test_put_plan_response_carries_a_resolvable_validation_id | 1 passed -- PUT plan response validation_id matches compute_validation_id(plan_digest, revision, context_digest) byte-identical (verified deterministically, no direct DB read from the test thread -- REQ-LDWIRE-010 boundary respected) |
+| AC-LDWIRE-007 | PASS | pytest test_director_validation_store.py::TestStoreValidationProviderHonestRejection | 3 passed -- resolves/missing NOT_FOUND/cross-project NOT_FOUND, three branches |
+| AC-LDWIRE-008 | PASS | pytest test_director_production_wiring.py::TestDirectorDepsInjected | 2 passed -- deps.apply_coordinator._gate is stack.gate (identity comparison) |
+| AC-LDWIRE-009 | PASS | same file, TestRoutesActuallyMounted | 1 passed -- all 10 (method, path) pairs present as a subset (recursed into fastapi 0.139 _IncludedRouter.original_router.routes) |
+| AC-LDWIRE-010 | PASS | same file, TestIssuedCredentialAuthenticatesInProduction | 1 passed -- the real build_runtime() issued credential reaches 200 on GET context |
+| AC-LDWIRE-011 | PASS | same file, TestNoCrossThreadSqliteError | 1 passed -- 5 consecutive requests, zero sqlite3.ProgrammingError |
+
+REQ-LDWIRE-010 to AC-LDWIRE-011 traceability confirmed (matches acceptance.md).
+
+### RED evidence (TDD, captured before GREEN)
+
+M2 (before store.py extension): pytest test_director_validation_store.py
+raised ImportError: cannot import name ValidationRecord from
+server.director.store.
+
+M3 (before provision.py existed): pytest test_director_context_provider.py
+raised ModuleNotFoundError: No module named server.director.provision.
+
+M4 (before director_api.py edit): pytest test_director_validator_injection.py
+showed 1 failed, 1 passed -- test_put_plan_response_carries_a_resolvable_validation_id
+raised KeyError: validation_id (PUT plan response carried no validation_id).
+
+M5 (before issue_operator_credential existed): pytest
+test_director_credential_issuance.py raised ImportError: cannot import
+name issue_operator_credential from server.director.provision.
+
+M7 (before director= wiring): pytest test_director_production_wiring.py
+showed 5 failed -- app.state.deps.director was None, all 10 routes
+unmounted, the issued-credential auth check failed on the None attribute.
+
+### Full test suite
+
+pytest -q (whole repo): 13606 passed, 35 skipped, 1 warning in 195.36s
+(0:03:15). Pre-flight baseline (HEAD 01c81fa8): 13584 passed, 35 skipped.
+25 new tests added across 5 files (9+5+3+3+5); director-scoped subset
+(pytest -k director) separately confirmed 728 passed with zero failures.
+
+### Thread safety (REQ-LDWIRE-010)
+
+pytest server/tests -k "director or web_serve" -q: zero occurrences of
+sqlite3.ProgrammingError in the captured output (grepped, zero matches).
+
+### Boundary and lint
+
+grep -rn AskUserQuestion server/director/ server/web/serve.py: no matches.
+grep -n "director=" server/web/serve.py: one match, director=director_boot.deps.
+ruff check on all touched files: All checks passed.
+ruff format --check on all touched files: 9 files already formatted.
+
+### Coverage (TRUST 5 Tested, target 85%+)
+
+pytest server/tests -k "director or web_serve" with coverage on
+server.director.provision / server.director.store / server.director.director_api:
+provision.py 103 statements, 0 missed, 100%. store.py 108 statements,
+1 missed, 99%. director_api.py 210 statements, 55 missed, 74% (the
+uncovered lines are pre-existing unwired execution/feedback-proposals
+503 branches predating this SPEC, not new code this SPEC introduced).
+TOTAL 421 statements, 56 missed, 87% -- above the 85% threshold.
+
+### Regression check (t422 non-interference plus PRESERVE)
+
+The change-set between 5e62ce95 and 246907de touches no file under the
+six PRESERVE targets (execution.py, auth.py authenticate/Credential
+body, approvals.py, validate/pipeline.py stage content, safety/gate.py,
+safety/bootstrap.py build_console_stack signature) -- confirmed via the
+commit history diffstat across the run-phase commits, zero hits.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+- run_complete_at: 2026-09-19T00:00:00+09:00 (this run; wall clock offset
+  depends on environment timezone -- commit timestamps are the baseline)
+- run_commit_sha: 246907de516aee17b29961abe1a1c8f08f441a95
+- run_status: complete
+- ac_pass_count: 11
+- ac_fail_count: 0
+- preserve_list_post_run_count: 6 (execution.py, auth.py body,
+  approvals.py, validate/pipeline.py stage content, safety/gate.py,
+  safety/bootstrap.py signature -- all confirmed unchanged in section E.2)
+- l44_pre_commit_fetch: not applicable (this SPEC touches no hook L44 target)
+- l44_post_push_fetch: not applicable
+- new_warnings_or_lints_introduced: 0 (ruff check/format both clean)
+- cross_platform_build.applicable: false (pure Python, no OS-conditional
+  build tags -- the Go-project B1 category does not apply to this SPEC)
+- total_run_phase_files: 11 (3 modified plus 8 new: 1 migration, 1 new
+  module, 5 new test files -- the 6 SPEC docs are counted under the M1
+  commit that precedes run-phase code)
+- m1_to_mN_commit_strategy: 5 per-milestone commits (M1, M2, M3+M5, M4,
+  M6+M7), one final push at session end
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
