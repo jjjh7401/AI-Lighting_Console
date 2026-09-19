@@ -160,4 +160,4 @@ test_q2b_다시_.../test_색_운용_다시_...: assert '처음부터 끝까지 �
 - sync_complete_at: 2026-09-20T16:30:00+09:00
 - sync_status: audit-ready
 - sync_auditor: PASS (재감사 d7bb16ae)
-- sync_commit_sha: pending-backfill-t404
+- sync_commit_sha: df9bfb6e
