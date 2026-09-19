@@ -32,6 +32,7 @@ from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
 from server.llm.runtime import ProviderSlot
 from server.llm.types import LLMProvider
+from server.orchestrator.bundle_sender import GateBundleSender
 from server.orchestrator.fallback import FallbackDetector
 from server.orchestrator.runner import SwitchableProvider
 from server.resources import resource_base
@@ -325,12 +326,16 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     # on the SAME thread that (absent --workers>1, the default) later drives the
     # uvicorn event loop in main() -- satisfying REQ-LDWIRE-010s event-loop-thread
     # constraint without a separate async lifespan just for this seam.
+    # Card t420: the bundle sender rides the SAME stack.gate.execution_port --
+    # without it DirectorApiDeps.bundle_sender stays None and apply skips the
+    # console send entirely (AC-LDWIRE-008 bundle-send half).
     director_boot = build_director_deps(
         db_path=pin_store_path("director.sqlite3"),
         gate=stack.gate,
         ruleset=stack.ruleset,
         console_host=args.console_host,
         console_port=args.console_port,
+        bundle_sender=GateBundleSender(stack.gate.execution_port),
     )
 
     # AC-MVP-027 part 3 (REQ-MVP-039/040 ii): only when a fallback target is

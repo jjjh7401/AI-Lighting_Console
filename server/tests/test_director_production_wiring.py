@@ -14,6 +14,7 @@ import socket
 
 from fastapi.testclient import TestClient
 
+from server.orchestrator.bundle_sender import GateBundleSender
 from server.web.serve import build_runtime, parse_args
 
 #: The 10 contract Section 3 route (method, path) pairs director_api.py wires
@@ -86,6 +87,19 @@ class TestDirectorDepsInjected:
             deps = app.state.deps.director
             assert deps.apply_coordinator is not None
             assert deps.apply_coordinator._gate is stack.gate
+        finally:
+            stack.stop()
+
+    def test_bundle_sender_reuses_the_same_execution_port(self) -> None:
+        """AC-LDWIRE-008 bundle-send half (card t420) -- a None bundle_sender makes
+        apply commit the journal and SKIP the console send (DirectorApiDeps field
+        docstring), so production must inject a GateBundleSender bound to THIS
+        stack.gate.execution_port -- identity, not equality: no second OSC path."""
+        app, stack = _build()
+        try:
+            deps = app.state.deps.director
+            assert isinstance(deps.bundle_sender, GateBundleSender)
+            assert deps.bundle_sender._execution_port is stack.gate.execution_port
         finally:
             stack.stop()
 
