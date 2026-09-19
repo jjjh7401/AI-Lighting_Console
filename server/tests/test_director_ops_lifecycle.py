@@ -49,11 +49,13 @@ from server.director.auth import (
 )
 from server.director.director_api import DirectorApiDeps, build_director_router
 from server.director.execution import (
+    STATE_FAILED,
     STATE_PARTIAL,
     STATE_SENT,
     STATE_UNKNOWN,
     ApplyCoordinator,
     ExecutionJournal,
+    run_director_apply,
 )
 from server.director.knowledge import KnowledgeService
 from server.director.models import ExchangeError
@@ -94,6 +96,25 @@ class FakeGate:
     def execute_preapproved(self, commands):
         self.calls.append(list(commands))
         return self._decision
+
+    def revoke_clearances(self) -> None:
+        """``run_director_apply()`` 가 ``finally`` 에서 정확히 1회 호출한다
+        (SPEC-LDSEND-001 REQ-LDSEND-005/006) — 이 대역은 그 호출을 흡수만
+        한다(AC-LDRELEASE-005 가 이 경로를 통해 구동된다)."""
+
+
+class _FakeBundleSender:
+    """SPEC-LDRELEASE-001 AC-LDRELEASE-005 — 순서대로 미리 정해둔 상태를
+    반환하는 fake ``BundleSender``(``test_director_execution_failure.py`` 의
+    ``ScriptedSender`` 와 같은 패턴). 실제 콘솔은 흉내내지 않는다."""
+
+    def __init__(self, outcomes: list[str]) -> None:
+        self._outcomes = list(outcomes)
+        self.calls: list[dict] = []
+
+    def send(self, bundle):
+        self.calls.append(dict(bundle))
+        return self._outcomes.pop(0)
 
 
 def _binding(
@@ -721,3 +742,169 @@ class TestRecoveryFlow:
                 body=_body(recovery_of="execution-does-not-exist"),
             )
         assert excinfo.value.code == "NOT_FOUND"
+
+    def test_recovery_of_reuses_the_same_destination_the_original_occupied(
+        self, journal: ExecutionJournal, approvals: ApprovalRegistry, store: DirectorStore
+    ) -> None:
+        """SPEC-LDRELEASE-001 plan.md §D M1 항목3 — recovery_of 가 원본과
+        같은 destination 을 다시 써서 성공한다(LDSEND M5 032 시나리오의 로컬
+        재현, AC-LDRELEASE-001/005). 기존 회귀
+        (``test_recovery_apply_creates_a_separate_execution_linked_by_recovery_of``/
+        ``test_recovery_of_accepts_partial_source``)는 다른 sequence_id 를
+        쓰므로 그대로 통과해야 한다 — 이 시험만 **같은** destination 을 쓴다."""
+        gate = FakeGate()
+        coordinator = _coordinator(journal=journal, approvals=approvals, store=store, gate=gate)
+
+        _register(approvals, _binding(approval_id="approval-original-same-dest"))
+        original = coordinator.apply(
+            project_id=_PROJECT,
+            plan_id=_PLAN,
+            revision=1,
+            principal_id=_PRINCIPAL,
+            operation="POST /apply",
+            current_context_digest="ctx-digest-1",
+            body=_body(
+                approval_id="approval-original-same-dest",
+                idempotency_key="key-original-same-dest",
+                show_id="show-1",
+                sequence_id="sequence-9903",
+            ),
+        )
+        journal.finalize_execution(original.execution_id, STATE_PARTIAL)
+
+        _bump_revision(store, base_revision=1, idempotency_key="submit-key-same-dest")
+        _register(
+            approvals,
+            _binding(
+                approval_id="approval-recovery-same-dest",
+                plan_revision=2,
+                context_digest="ctx-digest-2",
+            ),
+        )
+        recovered = coordinator.apply(
+            project_id=_PROJECT,
+            plan_id=_PLAN,
+            revision=2,
+            principal_id=_PRINCIPAL,
+            operation="POST /apply",
+            current_context_digest="ctx-digest-2",
+            body=_body(
+                approval_id="approval-recovery-same-dest",
+                idempotency_key="key-recovery-same-dest",
+                show_id="show-1",
+                sequence_id="sequence-9903",  # 원본과 정확히 같은 destination
+                recovery_of=original.execution_id,
+            ),
+        )
+
+        assert journal.recovery_of(recovered.execution_id) == original.execution_id
+        status = journal.destination_status(
+            project_id=_PROJECT, show_id="show-1", sequence_id="sequence-9903"
+        )
+        assert status is not None
+        assert status["reserved_by_execution_id"] == recovered.execution_id
+        assert status["status"] == "reserved"
+
+    def test_recovery_via_run_director_apply_reuses_9903_and_preserves_the_original_row(
+        self, journal: ExecutionJournal, approvals: ApprovalRegistry, store: DirectorStore
+    ) -> None:
+        """AC-LDRELEASE-005 — SPEC-LDSEND-001 M5 032 시나리오의 로컬 재구성.
+        원본 apply 가 ``Store Sequence 9903 Cue 1 /Merge`` 뒤 확정 실패 명령으로
+        ``partial`` 종결한 뒤, ``run_director_apply()`` 경로로 ``recovery_of=
+        <원본>`` 과 destination(show=1, sequence=**9903**, 9904 아님)을 실은
+        recovery apply 를 fake ``BundleSender``로 구동하면 새 destination 을
+        만들지 않고 9903 을 재사용해 ``sent`` 로 끝나며, 원본 execution 행
+        (``state``/``bundles``/``created_at`` 포함 전체 컬럼)은 recovery
+        전후로 완전히 동일하다. 실기 readback 확인은 이 SPEC 의 로컬 판정
+        범위 밖이다(spec.md §3 AC-LDRELEASE-005)."""
+        gate = FakeGate()
+        coordinator = _coordinator(journal=journal, approvals=approvals, store=store, gate=gate)
+
+        _register(approvals, _binding(approval_id="approval-original-e2e"))
+        original_body_payload = _body(
+            approval_id="approval-original-e2e",
+            idempotency_key="key-original-e2e",
+            show_id="show-1",
+            sequence_id="sequence-9903",
+        )
+        original_body_payload["bundles"] = [
+            {"bundle_id": "bundle-a", "commands": ["Store Sequence 9903 Cue 1 /Merge"]},
+            {"bundle_id": "bundle-b", "commands": ["Fixture 901 At 50"]},
+        ]
+        original_sender = _FakeBundleSender([STATE_SENT, STATE_FAILED])
+        original_response, _ = run_director_apply(
+            coordinator=coordinator,
+            journal=journal,
+            bundle_sender=original_sender,
+            interference=None,
+            project_id=_PROJECT,
+            plan_id=_PLAN,
+            revision=1,
+            principal_id=_PRINCIPAL,
+            operation="POST /apply",
+            current_context_digest="ctx-digest-1",
+            body=original_body_payload,
+        )
+        assert original_response["state"] == STATE_PARTIAL
+        original_execution_id = original_response["execution_id"]
+
+        with sqlite3.connect(journal.path) as connection:
+            connection.row_factory = sqlite3.Row
+            original_row_before = dict(
+                connection.execute(
+                    "SELECT * FROM executions WHERE execution_id = ?",
+                    (original_execution_id,),
+                ).fetchone()
+            )
+
+        _bump_revision(store, base_revision=1, idempotency_key="submit-key-e2e")
+        _register(
+            approvals,
+            _binding(
+                approval_id="approval-recovery-e2e",
+                plan_revision=2,
+                context_digest="ctx-digest-2",
+            ),
+        )
+        recovery_body_payload = _body(
+            approval_id="approval-recovery-e2e",
+            idempotency_key="key-recovery-e2e",
+            show_id="show-1",
+            sequence_id="sequence-9903",  # 원본과 정확히 같은 destination — 9904 아님
+            recovery_of=original_execution_id,
+        )
+        recovery_sender = _FakeBundleSender([STATE_SENT])
+        recovery_response, _ = run_director_apply(
+            coordinator=coordinator,
+            journal=journal,
+            bundle_sender=recovery_sender,
+            interference=None,
+            project_id=_PROJECT,
+            plan_id=_PLAN,
+            revision=2,
+            principal_id=_PRINCIPAL,
+            operation="POST /apply",
+            current_context_digest="ctx-digest-2",
+            body=recovery_body_payload,
+        )
+        assert recovery_response["state"] == STATE_SENT
+
+        status = journal.destination_status(
+            project_id=_PROJECT, show_id="show-1", sequence_id="sequence-9903"
+        )
+        assert status is not None
+        assert status["reserved_by_execution_id"] == recovery_response["execution_id"], (
+            "recovery 는 새 destination 을 만들지 않고 9903 을 재사용해야 한다"
+        )
+
+        with sqlite3.connect(journal.path) as connection:
+            connection.row_factory = sqlite3.Row
+            original_row_after = dict(
+                connection.execute(
+                    "SELECT * FROM executions WHERE execution_id = ?",
+                    (original_execution_id,),
+                ).fetchone()
+            )
+        assert original_row_after == original_row_before, (
+            "원본 execution 행은 recovery 전후로 한 바이트도 바뀌지 않아야 한다"
+        )

@@ -28,6 +28,7 @@ import pytest
 from server.director.execution import (
     RESERVATION_RELEASED,
     RESERVATION_RESERVED,
+    STATE_PARTIAL,
     STATE_PLANNED,
     STATE_UNKNOWN,
     ExecutionJournal,
@@ -428,6 +429,170 @@ class TestDestinationReservation:
             sequence_id="sequence-shared",
             execution_id="execution-y",
         )
+
+
+class TestDestinationTransferOnRecovery:
+    """SPEC-LDRELEASE-001 §3 REQ-LDRELEASE-001/002/003/006 —
+    ``begin_execution(recovery_of=...)`` 가 partial 원본이 점유한 destination 을
+    원자적으로 이전한다. ``reserve_destination``(standalone API) 은 이 SPEC 이
+    건드리지 않는다 — 이전은 오직 ``begin_execution`` 의 단일 transaction
+    안에서만 일어난다(plan.md §C 항목1·2)."""
+
+    def test_transfer_from_partial_original_succeeds_and_moves_reservation(self, tmp_path: Path):
+        """AC-LDRELEASE-001 — partial 원본을 가리키는 recovery_of 는 TARGET_BUSY
+        없이 destination 예약을 원본에서 새 recovery execution 으로 이전한다."""
+        path = tmp_path / "execution.sqlite3"
+        journal = ExecutionJournal(path)
+        original = journal.begin_execution(
+            project_id=_PROJECT,
+            principal_id=_PRINCIPAL,
+            operation=_OPERATION,
+            idempotency_key="key-original-9903",
+            request={"plan_id": "plan-0001", "plan_revision": 1},
+            approval_id=_APPROVAL,
+            bundles=_bundles(),
+            destination={"show_id": "show-1", "sequence_id": "sequence-9903"},
+        )
+        journal.finalize_execution(original.execution_id, STATE_PARTIAL)
+
+        recovered = journal.begin_execution(
+            project_id=_PROJECT,
+            principal_id=_PRINCIPAL,
+            operation=_OPERATION,
+            idempotency_key="key-recovery-9903",
+            request={"plan_id": "plan-0001", "plan_revision": 2},
+            approval_id="approval-recovery-9903",
+            bundles=_bundles(),
+            destination={"show_id": "show-1", "sequence_id": "sequence-9903"},
+            recovery_of=original.execution_id,
+        )
+
+        assert recovered.transferred_from == original.execution_id
+        status = journal.destination_status(
+            project_id=_PROJECT, show_id="show-1", sequence_id="sequence-9903"
+        )
+        assert status is not None
+        assert status["reserved_by_execution_id"] == recovered.execution_id
+        assert status["status"] == RESERVATION_RESERVED
+
+    def test_transfer_from_unknown_original_is_still_target_busy(self, tmp_path: Path):
+        """AC-LDRELEASE-004 / REQ-LDRELEASE-002 — unknown 원본은 이전 대상이
+        아니다. 콘솔에 실제로 무엇이 도달했는지 불확실한 상태에서는 자동
+        이전하지 않는다."""
+        path = tmp_path / "execution.sqlite3"
+        journal = ExecutionJournal(path)
+        original = journal.begin_execution(
+            project_id=_PROJECT,
+            principal_id=_PRINCIPAL,
+            operation=_OPERATION,
+            idempotency_key="key-original-9904",
+            request={"plan_id": "plan-0001", "plan_revision": 1},
+            approval_id=_APPROVAL,
+            bundles=_bundles(),
+            destination={"show_id": "show-1", "sequence_id": "sequence-9904"},
+        )
+        journal.finalize_execution(original.execution_id, STATE_UNKNOWN)
+
+        with pytest.raises(ExchangeError) as excinfo:
+            journal.begin_execution(
+                project_id=_PROJECT,
+                principal_id=_PRINCIPAL,
+                operation=_OPERATION,
+                idempotency_key="key-recovery-9904",
+                request={"plan_id": "plan-0001", "plan_revision": 2},
+                approval_id="approval-recovery-9904",
+                bundles=_bundles(),
+                destination={"show_id": "show-1", "sequence_id": "sequence-9904"},
+                recovery_of=original.execution_id,
+            )
+        assert excinfo.value.code == "TARGET_BUSY"
+        assert excinfo.value.http_status == 409
+
+        status = journal.destination_status(
+            project_id=_PROJECT, show_id="show-1", sequence_id="sequence-9904"
+        )
+        assert status is not None
+        assert status["reserved_by_execution_id"] == original.execution_id
+
+    def test_transfer_from_a_different_execution_than_the_occupant_is_target_busy(
+        self, tmp_path: Path
+    ):
+        """AC-LDRELEASE-003 / REQ-LDRELEASE-006 — recovery_of 가 현재 점유자를
+        정확히 가리키지 않으면(다른 partial execution 이어도) 이전하지 않고
+        오늘과 동일한 TARGET_BUSY 로 거부한다 — 조용한 재선택 없음."""
+        path = tmp_path / "execution.sqlite3"
+        journal = ExecutionJournal(path)
+        occupant = journal.begin_execution(
+            project_id=_PROJECT,
+            principal_id=_PRINCIPAL,
+            operation=_OPERATION,
+            idempotency_key="key-occupant-9905",
+            request={"plan_id": "plan-0001", "plan_revision": 1},
+            approval_id=_APPROVAL,
+            bundles=_bundles(),
+            destination={"show_id": "show-1", "sequence_id": "sequence-9905"},
+        )
+        journal.finalize_execution(occupant.execution_id, STATE_PARTIAL)
+
+        other = journal.begin_execution(
+            project_id=_PROJECT,
+            principal_id=_PRINCIPAL,
+            operation=_OPERATION,
+            idempotency_key="key-other-9905",
+            request={"plan_id": "plan-0001", "plan_revision": 1},
+            approval_id="approval-other-9905",
+            bundles=_bundles(),
+        )
+        journal.finalize_execution(other.execution_id, STATE_PARTIAL)
+
+        with pytest.raises(ExchangeError) as excinfo:
+            journal.begin_execution(
+                project_id=_PROJECT,
+                principal_id=_PRINCIPAL,
+                operation=_OPERATION,
+                idempotency_key="key-recovery-9905",
+                request={"plan_id": "plan-0001", "plan_revision": 2},
+                approval_id="approval-recovery-9905",
+                bundles=_bundles(),
+                destination={"show_id": "show-1", "sequence_id": "sequence-9905"},
+                recovery_of=other.execution_id,
+            )
+        assert excinfo.value.code == "TARGET_BUSY"
+
+        status = journal.destination_status(
+            project_id=_PROJECT, show_id="show-1", sequence_id="sequence-9905"
+        )
+        assert status is not None
+        assert status["reserved_by_execution_id"] == occupant.execution_id
+
+    def test_no_recovery_of_still_create_only_on_reserved_slot(self, tmp_path: Path):
+        """AC-LDRELEASE-006 회귀 — recovery_of 없이 오는 apply 는 오늘과 동일한
+        create-only 규칙을 그대로 적용한다(다른 destination 이면 새로 예약)."""
+        path = tmp_path / "execution.sqlite3"
+        journal = ExecutionJournal(path)
+        original = journal.begin_execution(
+            project_id=_PROJECT,
+            principal_id=_PRINCIPAL,
+            operation=_OPERATION,
+            idempotency_key="key-original-9906",
+            request={"plan_id": "plan-0001", "plan_revision": 1},
+            approval_id=_APPROVAL,
+            bundles=_bundles(),
+            destination={"show_id": "show-1", "sequence_id": "sequence-9906"},
+        )
+        journal.finalize_execution(original.execution_id, STATE_PARTIAL)
+
+        other = journal.begin_execution(
+            project_id=_PROJECT,
+            principal_id=_PRINCIPAL,
+            operation=_OPERATION,
+            idempotency_key="key-other-9906b",
+            request={"plan_id": "plan-0001", "plan_revision": 1},
+            approval_id="approval-other-9906b",
+            bundles=_bundles(),
+            destination={"show_id": "show-1", "sequence_id": "sequence-9906b"},
+        )
+        assert other.transferred_from is None
 
 
 class TestSchemaIsMigratedSequentially:

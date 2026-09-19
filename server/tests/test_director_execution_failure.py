@@ -141,6 +141,22 @@ class TestStatePriority:
         assert result["state"] not in (STATE_FAILED, STATE_PARTIAL, STATE_UNKNOWN)
         assert result["bundles"] == [STATE_SENT, STATE_ACKNOWLEDGED]
 
+    def test_partial_with_explicit_failed_recovery_required_stays_false(self, journal):
+        """SPEC-LDRELEASE-001 §3 REQ-LDRELEASE-007 (1차 plan-audit D2 반영) —
+        characterization/regression pin, RED-first 아님. ``partial`` 결과에
+        명시적 ``failed`` 가 섞여도 ``recovery_required`` 는 오늘처럼 ``False``
+        로 남는다 — ``recovery_required=True`` 는 ``unknown``(간섭 감지 포함)
+        결과에만 결부된 계약이며, 이 SPEC 은 그 계약을 코드로 바꾸지 않고
+        문서로만 확정한다(D2). 이 시험은 오늘 코드에서 이미 통과한다 — 새
+        동작을 드라이브하는 것이 아니라 기존 계약을 고정하는 회귀 핀이다."""
+        execution_id = _execution_id(journal)
+        sender = ScriptedSender([STATE_ACKNOWLEDGED, STATE_FAILED])
+        result = execute_bundles(
+            journal, execution_id=execution_id, bundles=_bundles(2), sender=sender
+        )
+        assert result["state"] == STATE_PARTIAL
+        assert result["recovery_required"] is False
+
 
 class TestOperatorInterference:
     """operator 개입(programmer 변경) 감지 시 진행 중이던 execution 이

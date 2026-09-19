@@ -639,6 +639,76 @@ class TestDestinationReleasedOnPreSendRejection:
         assert status["status"] == "released"
 
 
+class TestDestinationRestoredAfterTransferThenRejection:
+    """SPEC-LDRELEASE-001 REQ-LDRELEASE-008 (1차 plan-audit D1 반영) —
+    ``recovery_of`` 이전으로 destination 소유권을 넘겨받은 recovery apply
+    자체가 이어서 게이트에서(destination 점유와 무관한 사유로) 거부되면,
+    그 destination 은 완전 해제가 아니라 원본 execution 에게 되돌아간다.
+    무조건 ``release_destination()`` 을 적용하면 ``recovery_of`` 링크 없는
+    무관한 apply 도 그 슬롯을 재사용할 수 있게 되어 create-only 의 감사
+    가능성이 이 경로에서만 무너진다."""
+
+    def test_gate_rejection_after_transfer_restores_destination_to_the_original(
+        self, journal, approvals, store
+    ):
+        _register(approvals, _binding(approval_id="approval-original"))
+        gate_original = FakeGate()
+        coordinator_original = _coordinator(
+            journal=journal, approvals=approvals, store=store, gate=gate_original
+        )
+        original = coordinator_original.apply(
+            project_id=_PROJECT,
+            plan_id=_PLAN,
+            revision=1,
+            principal_id=_PRINCIPAL,
+            operation="POST apply",
+            current_context_digest="ctx-digest-1",
+            body=_body(
+                approval_id="approval-original",
+                idempotency_key="key-original",
+                show_id="show-1",
+                sequence_id="sequence-9903",
+            ),
+        )
+        journal.finalize_execution(original.execution_id, STATE_PARTIAL)
+
+        _register(approvals, _binding(approval_id="approval-recovery"))
+        gate_recovery = FakeGate(
+            decision=FakeScreenDecision(cleared=False, status="blocked_grammar")
+        )
+        coordinator_recovery = _coordinator(
+            journal=journal, approvals=approvals, store=store, gate=gate_recovery
+        )
+        recovery_body = _body(
+            approval_id="approval-recovery",
+            idempotency_key="key-recovery",
+            show_id="show-1",
+            sequence_id="sequence-9903",
+        )
+        recovery_body["recovery_of"] = original.execution_id
+
+        with pytest.raises(ExchangeError) as excinfo:
+            coordinator_recovery.apply(
+                project_id=_PROJECT,
+                plan_id=_PLAN,
+                revision=1,
+                principal_id=_PRINCIPAL,
+                operation="POST apply",
+                current_context_digest="ctx-digest-1",
+                body=recovery_body,
+            )
+        assert excinfo.value.code == "GATE_REJECTED"
+
+        status = journal.destination_status(
+            project_id=_PROJECT, show_id="show-1", sequence_id="sequence-9903"
+        )
+        assert status is not None
+        assert status["status"] == "reserved", (
+            "전이된 destination 은 완전 해제가 아니라 원본에게 복원돼야 한다(REQ-LDRELEASE-008)"
+        )
+        assert status["reserved_by_execution_id"] == original.execution_id
+
+
 class TestIdempotentReplayBypassesRecheck:
     """계약 §9.7 — 같은 key+같은 request 는 재검사와 무관하게 최초 응답을
     그대로 replay 한다."""
