@@ -44,7 +44,7 @@ from server.director.auth import (
 )
 from server.director.context import ContextObservations, build_snapshot, should_reissue
 from server.director.director_api import DirectorApiDeps
-from server.director.execution import ApplyCoordinator, ExecutionJournal, GatePort
+from server.director.execution import ApplyCoordinator, BundleSender, ExecutionJournal, GatePort
 from server.director.knowledge import KnowledgeService
 from server.director.models import Detail, ExchangeError
 from server.director.service import DirectorService
@@ -315,11 +315,19 @@ def build_director_deps(
     ruleset: RulesetView,
     console_host: str,
     console_port: int,
+    bundle_sender: BundleSender,
     environment: str = "production",
     project_id: str = DEFAULT_PROJECT_ID,
 ) -> DirectorBoot:
     """SPEC-LDWIRE-001 M6 -- assembles the ONE DirectorApiDeps (REQ-LDWIRE-008/009)
     and mints the initial operator credential (REQ-LDWIRE-001).
+
+    ``bundle_sender`` is REQUIRED, not defaulted (card t420): a None
+    ``DirectorApiDeps.bundle_sender`` makes apply commit the journal and silently
+    skip the console send, so the caller must hand in the real sender built on
+    the SAME ``stack.gate.execution_port`` (AC-LDWIRE-008 identity). This layer
+    does not construct it -- ``server.orchestrator.bundle_sender`` is the
+    execution-port layer and is injected from outside (its module docstring).
 
     MUST be called from the FastAPI event-loop thread (REQ-LDWIRE-010) --
     DirectorStore / ExecutionJournal both sqlite3.connect() with the default
@@ -379,5 +387,6 @@ def build_director_deps(
         validation_provider=StoreValidationProvider(store),
         apply_coordinator=apply_coordinator,
         execution_journal=journal,
+        bundle_sender=bundle_sender,
     )
     return DirectorBoot(deps=deps, bearer_token=bearer_token, credential_id=credential_id)
