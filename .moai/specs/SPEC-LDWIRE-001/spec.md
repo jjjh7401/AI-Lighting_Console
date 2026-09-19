@@ -2,7 +2,7 @@
 id: SPEC-LDWIRE-001
 title: "Director HTTP 운영 배선 — 자격증명 발급·ContextProvider·ValidationProvider·DirectorApiDeps 조립"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-09-19
 updated: 2026-09-19
 author: jaihyun

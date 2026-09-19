@@ -102,6 +102,15 @@ def _round_window_end(moment: datetime, window_minutes: int) -> datetime:
     return window_start + timedelta(minutes=window_minutes)
 
 
+# @MX:DEBT: only 3 of the 9 ContextSnapshot axes (identity/expiry/policy) are
+# genuinely observed; the other 6 (show/audio/group_membership/preset_content/
+# compiler/capability) always report honest-unobserved states, never guesses.
+# @MX:CEILING: valid as-is for any plan that does not require show/audio/rig
+# observation to pass review -- the unobserved axes fail closed, they do not
+# silently pass.
+# @MX:UPGRADE: revisit when a follow-up SPEC adds real observation wiring for
+# one of the 6 unobserved axes (design.md section "la" names the deferred
+# observation surfaces).
 class RealContextProvider:
     """SPEC-LDWIRE-001 M3 -- the director_api.ContextProvider Protocol, wired for real.
 

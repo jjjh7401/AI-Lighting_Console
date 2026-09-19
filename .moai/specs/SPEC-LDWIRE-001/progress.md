@@ -175,4 +175,38 @@ commit history diffstat across the run-phase commits, zero hits.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+- sync_complete_at: 2026-09-19T00:00:00+09:00 (this sync; wall clock offset
+  depends on environment timezone -- commit timestamps are the baseline)
+- sync_commit_sha: pending-backfill-sync-ldwire-001 (this commit's own SHA is
+  unknown to itself at write time; backfill deferred -- no follow-up commit
+  is planned for this worktree session, so the placeholder stays until a
+  later session backfills it or a reader resolves it via `git log
+  --grep=SPEC-LDWIRE-001`)
+- sync_status: complete
+- b12_self_test_a: PASS -- `grep -c 'SPEC-LDWIRE-001' CHANGELOG.md` returned 0
+  before this sync's edit (no duplicate entry existed)
+- b12_self_test_b: PASS -- `grep -oE 'AC-([A-Z0-9]+-)*[0-9]+'
+  acceptance.md | sort -u | wc -l` returned 11, matching the 11 AC-LDWIRE-001
+  through 011 entries the CHANGELOG references
+- b12_self_test_c: PASS -- all four file paths cited in the CHANGELOG entry
+  (`server/director/provision.py`, `server/director/store.py`,
+  `server/director/migrations/004_validations.sql`, `server/web/serve.py`)
+  verified to exist via `ls` before commit
+- changelog_entry_position: inserted as the first `### Added` bullet in
+  `[Unreleased]`, immediately before the pre-existing SPEC-LDSEND-001 entry
+- frontmatter_status_transitions.spec_md: in-progress -> completed (this sync
+  commit; `updated:` already carried today's date from the plan-phase write,
+  left unchanged)
+- frontmatter_status_transitions.other_artifacts: not applicable -- plan.md,
+  acceptance.md, design.md, research.md, and progress.md in this SPEC carry
+  no YAML frontmatter `status:` field (grep-verified); only spec.md tracks
+  the lifecycle status for this SPEC
+- canary_compliance_check: not applicable -- this SPEC defines no
+  forward-looking policy that tests itself in sync phase
+- mx_tag_validation: one `@MX:DEBT` marker added to
+  `server/director/provision.py` `RealContextProvider` (3-of-9 axis partial
+  observation, with `@MX:CEILING`+`@MX:UPGRADE` sub-lines) -- the run-phase
+  new/modified director files were scanned for high-fan-in (>=3 caller)
+  functions warranting `@MX:ANCHOR`; `build_director_deps()` and
+  `issue_operator_credential()` each have exactly 1 production caller
+  (`server/web/serve.py`), below the ANCHOR threshold, so none were added
