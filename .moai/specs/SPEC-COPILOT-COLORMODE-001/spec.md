@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-COLORMODE-001
 title: "색 운용 방식 확인 문항 — Q2B 색 운용(Color Usage) 인터뷰 스텝"
 version: "0.2.0"
-status: in-progress
+status: completed
 created: 2026-09-20
 updated: 2026-09-20
 author: jaihyun
@@ -20,6 +20,7 @@ tags: "interview, color-usage, director-decisions, analysis-summary, kanban-t404
 |---|---|---|---|
 | 0.1.0 | 2026-09-20 | orchestrator | 최초 작성. 카드 t404. base main `91695109`. 감독 지시 2026-09-13 반영 — Q2 팔레트 다음에 "이 색을 어떻게 쓸지" 확인 문항(Q2B_COLOR_USAGE)을 인터뷰에 추가하고, 답을 `director_decisions`에 `color_usage` 축으로 남기며, 분석 요약과 구간 팔레트 산출에 실제로 반영한다. |
 | 0.2.0 | 2026-09-20 | orchestrator | plan-audit FAIL(0.75) 5건 보정: (D8) frontmatter `tier: M` 추가. (D4) `single` × `palette_mode` 우선순위를 REQ-013/§2 D5/plan.md M2/AC-012에 명시(팔레트 충돌 해소가 먼저, single은 그 결과값을 그대로 반환). (D3) "Q2 다시"가 Q2B 답변도 폐기하는 부수효과를 REQ-016으로 신설하고 §2 D2에 명문화. (D1) REQ-004(기존 스텝 공백-답변 회귀)를 검증하는 AC-016 신설. (D2) 전체 AC 헤딩에 REQ 인용 추가 + §3 말미에 REQ→AC 추적 표 신설. minor 3건(D5 GEARS 태그 통일, D6 per_chorus 저-회차 경계, D7 skipped_steps 문서화)도 함께 반영. |
+| 0.2.0 | 2026-09-20 | orchestrator | run 완료(df17ab41) · sync-auditor PASS · completed 전이 |
 
 ---
 

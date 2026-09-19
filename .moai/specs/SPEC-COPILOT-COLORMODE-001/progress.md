@@ -150,11 +150,14 @@ test_q2b_다시_.../test_색_운용_다시_...: assert '처음부터 끝까지 �
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-- 16/16 AC 전부 PASS(§E.2 E1 매트릭스). 전체 회귀 `13659 passed, 33 skipped, 0 failed`. UI 577/577 passed. `npm run build` exit 0. ruff check/format 클린. subagent-boundary grep 0건.
+- 16/16 AC 전부 PASS(§E.2 E1 매트릭스). 전체 회귀 `13668 passed, 33 skipped, 0 failed`. UI 578/578 passed. `npm run build` exit 0. ruff check/format 클린. subagent-boundary grep 0건.
 - run_complete_at: 2026-09-20T02:14:00+09:00
 - run_status: audit-ready
 - run_commit_sha: df17ab41 (sync-audit F1-F5 보정 커밋; 코드 변경 없음, session.py 무변경 — 뮤테이션 프로브 원상 복구 확인)
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+- sync_complete_at: 2026-09-20T16:30:00+09:00
+- sync_status: audit-ready
+- sync_auditor: PASS (재감사 d7bb16ae)
+- sync_commit_sha: pending-backfill-t404
