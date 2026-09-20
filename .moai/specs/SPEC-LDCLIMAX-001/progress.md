@@ -198,7 +198,7 @@ plan.md §B3 이 적은 4곳이 아니라 **6곳**이었다(`_no_effective_candi
 ## §E.4 Sync-phase Audit-Ready Signal
 
 - sync_complete_at: 2026-09-20
-- sync_commit_sha: (이 커밋 자신 — `git log -1` 로 확인)
+- sync_commit_sha: 2a0e23da (백필)
 - sync_status: audit-ready
 - b12_self_test_a: PASS — `grep -c 'SPEC-LDCLIMAX-001' CHANGELOG.md` 사전 0건(중복 없음), 삽입 후 2건(제목 줄 1 + `.moai/specs/SPEC-LDCLIMAX-001/progress.md` 경로 언급 1)
 - b12_self_test_b: PASS — `grep -oE 'AC-LDCLIMAX-[0-9]+' acceptance.md | sort -u | wc -l` → 10, CHANGELOG 항목이 "AC-LDCLIMAX-001~010 전부 PASS"로 동일 개수 인용
