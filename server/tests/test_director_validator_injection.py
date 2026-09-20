@@ -32,7 +32,6 @@ from server.director.provision import (
     StoreValidationProvider,
     issue_operator_credential,
 )
-from server.director.service import DirectorService
 from server.director.store import DirectorStore, compute_validation_id
 from server.director.validate.pipeline import PipelineValidator
 from server.safety.ruleset import SafetyRuleset
@@ -91,7 +90,6 @@ def client(
         deps = DirectorApiDeps(
             store=route_store,
             knowledge=KnowledgeService(),
-            service=DirectorService(route_store),
             registry=credential_registry,
             secrets=secret_store,
             allowed_hosts=(DEFAULT_HOST.split(":")[0],),

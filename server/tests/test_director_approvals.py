@@ -45,7 +45,7 @@ from server.director.auth import (
 from server.director.director_api import DirectorApiDeps, build_director_router
 from server.director.knowledge import KnowledgeService
 from server.director.models import ExchangeError
-from server.director.service import OUTCOME_READY, DirectorService
+from server.director.service import OUTCOME_READY
 from server.director.store import DirectorStore
 
 PROJECT = "proj-1"
@@ -566,7 +566,6 @@ def client(store: DirectorStore, credential_registry, secret_store):
         deps = DirectorApiDeps(
             store=route_store,
             knowledge=KnowledgeService(),
-            service=DirectorService(route_store),
             registry=credential_registry,
             secrets=secret_store,
             allowed_hosts=(DEFAULT_HOST.split(":")[0],),

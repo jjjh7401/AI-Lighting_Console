@@ -60,7 +60,6 @@ from server.director.execution import (
 from server.director.knowledge import KnowledgeService
 from server.director.models import ExchangeError
 from server.director.ops import DecommissionResult, decommission_principal
-from server.director.service import DirectorService
 from server.director.store import DirectorStore
 
 _PROJECT = "project-0001"
@@ -400,7 +399,6 @@ def client(
         deps = DirectorApiDeps(
             store=route_store,
             knowledge=KnowledgeService(),
-            service=DirectorService(route_store),
             registry=credential_registry,
             secrets=secret_store,
             allowed_hosts=(DEFAULT_HOST.split(":")[0],),
