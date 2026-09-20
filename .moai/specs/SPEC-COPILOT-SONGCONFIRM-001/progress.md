@@ -248,3 +248,10 @@ spec_body_findings_for_manager_spec:   # 본문 무수정 — 소유권 밖. 차
 - **증거**: `server/web/question.py:349` `is_bpm_octave_apart` · 여유 상수 `_BPM_OCTAVE_LOG2_TOLERANCE = 0.06`(`:346`) · `server/web/session.py:12153-12196` `bpm_octave_corrected` 배선 · 시험 `server/tests/test_song_confirm_sections.py:316-354` `TestAnOctaveBpmCorrectionVoidsTheSections`(4건, 개정 전에도 초록 — 이번 개정으로 실행하지 않았다) · 관용도 실측 `.moai/reports/d5-crowding-20260920/octave_fp.txt`(주 체크아웃, 실측 8곡).
 - **frontmatter**: `status: completed → in-progress`(제자리 개정) · `version: 0.1.2 → 0.2.0` · `updated: 2026-09-20` · `amendment_of: SPEC-COPILOT-SONGCONFIRM-001`(자기 참조). `prior_completed_sha: b10154cd`(spec.md HISTORY `## Amendments` 표에 기록).
 - **다음 단계**: 이 개정의 `completed` 복귀(`in-progress → implemented → completed`)는 sync 단계의 단일 sync 커밋이 맡는다(manager-docs 소유, `spec-frontmatter-schema.md` § Status Transition Ownership Matrix). 이 개정 자체는 코드를 바꾸지 않으므로 run-phase 를 거치지 않고 sync 로 직행할 후보다 — 그 판단은 오케스트레이터 소유.
+
+```yaml
+amendment_sync_complete_at: 2026-09-20T00:00:00Z
+sync_status: audit-ready
+tests: "uv run pytest -q server/tests/test_song_confirm_sections.py -k octave → 4 passed, 34 deselected"
+sync_commit_sha: pending-backfill
+```

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **SPEC-COPILOT-SONGCONFIRM-001** (제자리 개정, 카드 t417) — 배수 정정 무효 규칙을 REQ-003 규칙 3 / AC-003 (b) 로 명문화. 코드는 47da882(PR #445)에 이미 있었고 SPEC 이 한 조항 뒤져 있었다. 여유 상수 0.06 근거: 8곡 실측 오검출 0/8·검출 8/8(.moai/reports/d5-crowding-20260920/octave_fp.txt). 행동 변화 0, Tier M 상한 16/16 유지.
+
 ### Added
 
 - **SPEC-COPILOT-COLORMODE-001** — 곡 인터뷰에 색 운용 방식을 확인하는 문항(Q2B_COLOR_USAGE)이 추가되어, 팔레트를 곡 전체에서 어떻게 쓸지가 감독의 명시적 확인을 거쳐 실제 팔레트 산출에 반영된다. 계기는 2026-09-13 조명감독 지시(「물론 곡과 조명감독의 스타일에 따라서 다르겠지. 그리고 조명감독의 확인을 받는게 좋을 것 같아.」, 카드 t404) — 기존 인터뷰(`DirectorInterview`)는 Q1(컨셉)→Q2(팔레트)→Q3(클라이맥스)→Q4(공간 스토리)→Q5(전환) 5문항 고정이었고, Q2에서 팔레트(어떤 색)는 확인하지만 그 색을 곡 전체에 걸쳐 어떻게 쓸지는 묻지 않았다. 선행 카드 t402(팔레트 회차 회전)/t403(악센트 웨이트 사다리)/t406(primary 우선 배치)는 모두 main 머지 완료 상태에서 시작.

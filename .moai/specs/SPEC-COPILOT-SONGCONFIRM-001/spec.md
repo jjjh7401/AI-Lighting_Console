@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-SONGCONFIRM-001
 title: "곡 분석 확정의 도달 — 사람이 확인한 구간과 BPM 이 모델과 도구에 닿는다"
 version: "0.2.0"
-status: in-progress
+status: completed
 created: 2026-09-06
 updated: 2026-09-20
 author: manager-spec (card t273)
