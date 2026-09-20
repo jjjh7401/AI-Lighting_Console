@@ -2,7 +2,7 @@
 id: SPEC-LDCLIMAX-001
 title: "코러스 색 스냅 액센트 + 절정 지속시간 상한 — 정본 §6/§6.1 명문화"
 version: "0.2.0"
-status: in-progress
+status: completed
 created: 2026-09-20
 updated: 2026-09-20
 author: jaihyun

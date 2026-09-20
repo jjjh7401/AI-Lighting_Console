@@ -197,8 +197,15 @@ plan.md §B3 이 적은 4곳이 아니라 **6곳**이었다(`_no_effective_candi
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<sync-phase 대기>_
-
-## §E.4 Sync-phase Audit-Ready Signal
-
-_<sync-phase 대기>_
+- sync_complete_at: 2026-09-20
+- sync_commit_sha: (이 커밋 자신 — `git log -1` 로 확인)
+- sync_status: audit-ready
+- b12_self_test_a: PASS — `grep -c 'SPEC-LDCLIMAX-001' CHANGELOG.md` 사전 0건(중복 없음), 삽입 후 2건(제목 줄 1 + `.moai/specs/SPEC-LDCLIMAX-001/progress.md` 경로 언급 1)
+- b12_self_test_b: PASS — `grep -oE 'AC-LDCLIMAX-[0-9]+' acceptance.md | sort -u | wc -l` → 10, CHANGELOG 항목이 "AC-LDCLIMAX-001~010 전부 PASS"로 동일 개수 인용
+- b12_self_test_c: PASS — CHANGELOG 인용 경로(`server/looks/songcue.py`, `server/design/energy.py`, `.moai/specs/SPEC-LDCLIMAX-001/progress.md`) 전량 `ls` 로 존재 확인
+- changelog_entry_position: `[Unreleased]` → `### Added` 섹션 최상단(SPEC-LDACCENT-001 `### Fixed` 항목 바로 위)
+- frontmatter_status_transitions.spec_md: in-progress → completed (이 커밋)
+- frontmatter_status_transitions.other_artifacts: 해당 없음 — 이 저장소 관행상 `status:` 필드는 spec.md 에만 있다(plan.md/acceptance.md/design.md/research.md 는 `status:` 프론트매터 없음, grep 으로 확인)
+- docs_site_check: `docs/proposals/song-structure-lighting-standard.md` §6/§6.1/§12 를 확인했다 — §12 "현재 구현과의 차이 — 고칠 것" 표는 이 SPEC 이 구현한 색 스냅/절정 지속시간 상한과 무관한 7개 항목(움직임 미발화·룩 선택 순서·후렴 삭제 등)만 추적하고, §6.1 이 정의한 "일곱 수단" 자체의 구현 상태를 추적하는 별도 표·주석은 이 문서 어디에도 없었다(grep 확인). 상태 추적 대상이 없으므로 이 문서는 손대지 않았다.
+- canary_compliance_check: 해당 없음 — 이 SPEC 은 forward-looking 정책을 정의하지 않는다
+- README_check: `README.md` 에 songcue 관련 기술 언급은 2곳(구현 파일 경로 나열, 곡 인터뷰 진입점 설명)뿐이고 액센트 사다리·색 스냅 세부는 다루지 않는다 — 갱신 대상 없음
