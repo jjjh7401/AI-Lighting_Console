@@ -194,7 +194,7 @@ $ grep -rn "AskUserQuestion" server/looks/ | grep -v "_test.go" | grep -v "// "
 ## §E.4 Sync-phase Audit-Ready Signal
 
 - sync_complete_at: 2026-09-20
-- sync_commit_sha: pending-backfill-LDACCENT-001-sync (다음 커밋에서 실제 SHA 백필)
+- sync_commit_sha: 3f0b6945ca3d7b084077f45686dcb63d2ea7d933
 - sync_status: complete
 - b12_self_test_a: PASS — `grep -c 'SPEC-LDACCENT-001' CHANGELOG.md` → 사전 조회 0건, 본 sync 커밋에서 최초 삽입
 - b12_self_test_b: PASS — `acceptance.md` 고유 AC-LDACCENT-ID 6개(`grep -oE 'AC-LDACCENT-[0-9]+' acceptance.md | sort -u | wc -l` → 6), CHANGELOG 항목이 AC-LDACCENT-001~006 전부 인용
