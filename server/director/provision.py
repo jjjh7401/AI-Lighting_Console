@@ -47,7 +47,6 @@ from server.director.director_api import DirectorApiDeps
 from server.director.execution import ApplyCoordinator, BundleSender, ExecutionJournal, GatePort
 from server.director.knowledge import KnowledgeService
 from server.director.models import Detail, ExchangeError
-from server.director.service import DirectorService
 from server.director.store import DirectorStore
 from server.director.validate.pipeline import PipelineValidator
 
@@ -305,7 +304,6 @@ class DirectorBoot:
     #: route answers the existing 401 UNAUTHENTICATED fail-closed path until a
     #: reissue succeeds).
     bearer_token: str | None
-    credential_id: str | None
 
 
 def build_director_deps(
@@ -345,7 +343,6 @@ def build_director_deps(
     registry = CredentialRegistry()
     secrets_store = PairingSecretStore()
     bearer_token: str | None = None
-    credential_id: str | None = None
     try:
         credential, secret = issue_operator_credential(
             registry=registry, secrets_store=secrets_store, project_id=project_id
@@ -364,7 +361,6 @@ def build_director_deps(
         )
     else:
         bearer_token = encode_bearer_token(credential.credential_id, secret)
-        credential_id = credential.credential_id
     context_provider = RealContextProvider(
         ruleset=ruleset,
         console_host=console_host,
@@ -378,7 +374,6 @@ def build_director_deps(
     deps = DirectorApiDeps(
         store=store,
         knowledge=KnowledgeService(),
-        service=DirectorService(store),
         registry=registry,
         secrets=secrets_store,
         validator=PipelineValidator(),
@@ -389,4 +384,4 @@ def build_director_deps(
         execution_journal=journal,
         bundle_sender=bundle_sender,
     )
-    return DirectorBoot(deps=deps, bearer_token=bearer_token, credential_id=credential_id)
+    return DirectorBoot(deps=deps, bearer_token=bearer_token)

@@ -42,9 +42,8 @@ _MIGRATIONS = (
 #: before validation has finished.
 STATE_SUBMITTED = "submitted"
 
-#: Contract Section 3 -- 201 for a new record, 200 for a replay.
+#: Contract Section 3 -- 201 for a new record.
 _STATUS_CREATED = 201
-_STATUS_REPLAYED = 200
 
 
 @dataclass(frozen=True, slots=True)

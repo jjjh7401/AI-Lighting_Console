@@ -105,7 +105,6 @@ class DirectorApiDeps:
 
     store: DirectorStore
     knowledge: KnowledgeService
-    service: DirectorService
     registry: CredentialRegistry
     secrets: PairingSecretStore
     #: The validator POST .../validations no-store re-check path uses. None means
@@ -430,12 +429,11 @@ def build_director_router(deps: DirectorApiDeps) -> APIRouter:
                     "expected_revision/idempotency_key are required.",
                     (Detail("", "missing expected_revision/idempotency_key"),),
                 )
-            # SPEC-LDWIRE-001 M4 -- deps.service is NOT used directly any more:
-            # its validator is fixed at DirectorApiDeps construction time, which
-            # would validate every request against whatever context existed at
-            # boot (design.md section "da"). A fresh DirectorService sharing the
-            # SAME deps.store is constructed per request instead, carrying a
-            # freshly context-aware validator -- service.py itself is untouched.
+            # SPEC-LDWIRE-001 M4 -- a fixed construction-time validator would
+            # validate every request against whatever context existed at boot
+            # (design.md section "da"). A fresh DirectorService sharing the SAME
+            # deps.store is constructed per request instead, carrying a freshly
+            # context-aware validator -- service.py itself is untouched.
             validator = _build_request_validator(deps, project_id)
             request_service = DirectorService(deps.store, validator=validator)
             put_operation = f"PUT /api/director/v1/projects/{project_id}/plans/{plan_id}"
