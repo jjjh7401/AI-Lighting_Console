@@ -165,15 +165,20 @@ plan.md §B3 이 적은 4곳이 아니라 **6곳**이었다(`_no_effective_candi
 
 ### 잔여 위험 (§6 검증 수단의 한계 — 이 SPEC 이전부터 명시된 경계 안)
 
-- **복귀 큐의 값 라인 재사용 + `_guard_bundle_collision`** — 복귀 큐는
-  설계대로 절정 큐의 "오르기 전" 값을 그대로 재방출하는데, 그 값은 흔히
-  이미 다른(더 이른) 저장 큐가 쓴 값과 바이트 동일하다.
-  `_guard_bundle_collision`(정본 번들 안 값 라인 중복을 잡는 안전망)은
-  `build_songcue_bundle` 이 M3 **이전**에 한 번만 부르고, M3 이후에는
-  재호출하지 않는다(§6 이 명시한 "실기 콘솔 관측은 범위 밖" 경계 안에서
-  내린 판단) — 실제 `run_commands` 중복 제거가 이 재사용 값 라인을
-  콘솔에서 어떻게 다루는지는 로컬 pytest 로 판정할 수 없다. 이 구멍은
-  design.md §2.1 이 지시한 대로 정확히 구현한 결과이지 이탈이 아니다.
+- **[정정됨 — `f6279509`] 복귀 큐의 값 라인 재사용 + `_guard_bundle_collision`**
+  — 이 항목은 원래 "§6 실기 콘솔 관측 범위 밖"으로 분류했으나 **오분류였다**.
+  §6 이 배제하는 것은 grandMA3 실기 육안 확인이지, 이 저장소가 이미 갖춘
+  충돌 가드의 사후 재적용이 아니다 — 로컬 pytest 로 판정 가능한 결함이었고
+  sync-auditor F1(critical)로 실제 재현됐다(6회 반복 코러스 + `bpm=120`,
+  삽입된 복귀 큐 4개 전부가 1회차 값 라인과 글자 그대로 충돌).
+  **현재 코드 동작**: `build_songcue_bundle` 이 `_apply_climax_duration_cap`
+  반환 직후 `_guard_bundle_collision(capped)` 를 재호출한다(songcue.py:1132) —
+  M3 이후에도 가드가 돈다. 따라서 반복 룩 + 지속시간 상한 삽입 조합은
+  이제 조립 단계에서 `SongCueBundleError` 로 **명시적으로 거절**된다.
+  → 이 거절이 드러낸 기능 공백(공개 진입점으로 이 삽입이 성공하는 경로가
+  없음; 현재는 `server/orchestrator/tools.py` 가 `bpm` 을 배선하지 않아
+  프로덕션 도달 불가)은 sync-auditor F4 로 보고됐고 **별도 후속 카드**로
+  분리한다 — `bpm` 프로덕션 배선의 선행 조건.
 - **재번호 매기기가 건드리는 다른 소비처** — `collides_with_cue_number`
   (스킵 사유 안의 교차 참조), `withheld_movement`/`withheld_darkness`/
   `withheld_accents` 안의 `cue_number` — M3 삽입으로 뒤 큐 번호가
