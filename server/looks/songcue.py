@@ -8,7 +8,8 @@ from decimal import Decimal, InvalidOperation
 from typing import NamedTuple
 
 from server.design.cue_density import plan_cue_density, rotate_palette
-from server.design.cue_fade import store_with_fade
+from server.design.cue_fade import CUE_FADE_KEYWORD, store_with_fade
+from server.design.energy import beats_to_seconds
 from server.fx.instantiate import is_programmer_state
 from server.looks.busking import VALUE_LINE_COLLISION, looks_for_genre
 from server.looks.instantiate import _values_line
@@ -106,8 +107,16 @@ VARIANT_PRIME = "′"
 #: 는 이 사다리의 규율과 "그 구간에서 저장되는 큐 하나만 움직인다"는 :func:`_movement_carrier`
 #: 의 규율이 서로 다른 축인데도 한 필드를 다투게 된다.
 #:
-#: 색 스냅도 뺀다 — 정본 §7 이 「코러스 1의 색은 되돌아와야 한다」고 못박으므로 지배색을
-#: 갈아치우는 것은 상승이 아니라 위반이다.
+#: **색 스냅은 SPEC-LDCLIMAX-001(2026-09-20 감독 결정) 이후 이 사다리의 정규 칸이다**
+#: (:data:`LADDER_COLOR_SNAP`). 고치기 전에는 "색 스냅도 뺀다 — 정본 §7 이 「코러스
+#: 1의 색은 되돌아와야 한다」고 못박으므로 지배색을 갈아치우는 것은 상승이 아니라
+#: 위반이다"였다 — 그 판단은 "색 스냅"을 §7.1 아껴두기 사다리의 에스컬레이션 칸
+#: (회차마다 지배색을 새로 갈아치우는 것)으로 읽었을 때의 결론이다. SPEC-LDCLIMAX-001
+#: 은 다른 정의를 쓴다: §7 이 이미 돌아오라고 요구하는 색(코러스 1이 쓴 색)을 즉시
+#: 전환(페이드 0)으로 내는 것 — 새 색을 만들지 않으므로 §7 을 어기지 않는다. 이
+#: 칸도 블라인더처럼 이 룩 자신의 값 라인은 바꾸지 않는다(:func:`_rung_applied`)
+#: — 색은 이미 룩 자신이 들고 있는 값 그대로이고, 이 칸이 더하는 것은 페이드를
+#: 0 으로 강제하는 것뿐이다(REQ-LDCLIMAX-003).
 #:
 #: 스트로브(앙코르·피날레 칸)는 이 목록에 **없다** — :data:`LADDER_STROBE_HIT` 로 따로
 #: 두는 이유는 :func:`_climb_rungs` 독스트링에 적는다.
@@ -121,11 +130,18 @@ LADDER_IRIS_PINCH = "iris_pinch"
 #: :data:`LADDER_RUNGS`·``ladder`` 보고에는 실린다 — 「이 큐가 블라인더를 켰다」는 사실은
 #: 보고할 것이지 값 라인 계산 안에 숨길 것이 아니다.
 LADDER_BLINDER_OR_FLASH = "blinder_or_flash"
+#: 색 스냅(SPEC-LDCLIMAX-001 REQ-LDCLIMAX-001) — 찍는 액센트 사다리의 마지막 후보.
+#: 기존 네 칸(줌→블라인더→아이리스[→스트로브])보다 우선하지 않고, 대체도 병행도
+#: 아닌 같은 회전의 한 후보다(2026-09-20 감독 결정, `plan.md §NC`). 스트로브와
+#: 반대 극성이다 — ``disable_color_snap=True`` 로 명시적으로 끄지 않는 한 항상
+#: 회전 후보다(REQ-LDCLIMAX-012 는 첫 실기 콘솔 검증 세션까지의 임시 킬스위치).
+LADDER_COLOR_SNAP = "color_snap"
 LADDER_RUNGS: tuple[str, ...] = (
     LADDER_DIMMER_HIT,
     LADDER_ZOOM_PINCH,
     LADDER_IRIS_PINCH,
     LADDER_BLINDER_OR_FLASH,
+    LADDER_COLOR_SNAP,
 )
 
 #: 앙코르·피날레 칸(정본 §7.1 표 마지막 줄) — 처음으로 스트로브를 푼다.
@@ -201,16 +217,64 @@ def _look_has_attribute(look: Look, attribute: str) -> bool:
     return any(value.name == attribute for value in look.attributes)
 
 
+#: 색 스냅이 비교·강제하는 채널 — 리그 색 스키마의 확정 세 채널(`server/looks/
+#: schema.py` ``CONFIRMED_ATTRIBUTES``)과 같은 순서. 이 모듈 안에서 따로 적는 이유는
+#: ``Dimmer`` 를 뺀 색 채널만 필요하기 때문이다(REQ-LDCLIMAX-002/004, D3).
+_COLOR_ATTRIBUTES: tuple[str, ...] = ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
+
+
+def _look_color(look: Look) -> tuple[AttributeValue, ...]:
+    """이 룩이 싣는 ColorRGB_* 값, 정본 채널 순서 그대로 — 없는 채널은 빠진다.
+
+    색 채널이 하나도 없으면 빈 튜플이다 — 색 스냅은 그 갈래에서 무영향으로
+    판정된다(``_color_snap_is_effective``), 없는 축에 값을 만들어 보내지 않는
+    :func:`_look_has_attribute` 와 같은 규율이다.
+    """
+    return tuple(value for value in look.attributes if value.name in _COLOR_ATTRIBUTES)
+
+
+def _color_snap_is_effective(
+    look: Look,
+    *,
+    section: SongCueSection,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
+) -> bool:
+    """색 스냅의 셋째 판정 축(REQ-LDCLIMAX-002/004, SPEC-LDCLIMAX-001 D3) — 축
+    보유(줌·아이리스)도 그룹 보유(블라인더·스트로브)도 아닌 **색 비교**다.
+
+    ``previous_color`` 는 직전에 저장된 큐의 색(REQ-004 — 다르지 않으면 "스냅"이
+    관측되지 않는다), ``label_palette`` 는 이 라벨의 1회차가 이미 쓴 색 집합
+    (REQ-002 — §7 색 복귀 규율이 적용되는 반복 회차에서만, 그 집합 밖의 색은
+    대상이 될 수 없다). 두 값 모두 호출자가 이미 곡 전체를 훑어 계산해 넘긴다
+    (``_previous_stored_color``/``_label_return_palette``) — 이 함수 자신은
+    곡 상태를 전역도 가변 기본값도 없이 명시 인자로만 받는다.
+    """
+    current = _look_color(look)
+    if not current:
+        return False
+    if section.instance >= 2 and label_palette and current not in label_palette:
+        return False
+    return current != previous_color
+
+
 def _accent_is_effective(
-    rung: str, *, look: Look, resolution: RoleResolution, section: SongCueSection
+    rung: str,
+    *,
+    look: Look,
+    resolution: RoleResolution,
+    section: SongCueSection,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
 ) -> bool:
     """이 칸이 이 룩+이 리그+이 라벨에서 실제로 관측 가능한 효과를 내는지
-    (REQ-LDACCENT-001~003).
+    (REQ-LDACCENT-001~003, REQ-LDCLIMAX-002/004).
 
     줌·아이리스는 **룩 자신의 값 라인**을 바꾸는지(축 보유)로 판정한다. 블라인더·
     스트로브는 **별도 무대 명령**이 실제로 나가는지로 판정한다 — 리그가 대응 그룹을
     갖는 것과, 이 큐가 속한 섹션의 라벨이 §6 행을 갖는 것 **둘 다**를 요구한다
-    (:func:`_accent_fixture_commands` 가 실제로 명령을 내는 조건 그대로).
+    (:func:`_accent_fixture_commands` 가 실제로 명령을 내는 조건 그대로). 색 스냅은
+    셋째 갈래(:func:`_color_snap_is_effective`)다 — 축도 그룹도 아닌 색 비교다.
     """
     axis = _MARKING_ACCENT_AXIS.get(rung)
     if axis is not None:
@@ -218,11 +282,22 @@ def _accent_is_effective(
     role = _ACCENT_FIXTURE_ROLE.get(rung)
     if role is not None:
         return bool(resolution.groups_for(role)) and intent_for_label(section.label) is not None
+    if rung == LADDER_COLOR_SNAP:
+        return _color_snap_is_effective(
+            look, section=section, previous_color=previous_color, label_palette=label_palette
+        )
     raise SongCueBundleError(f"unknown ladder rung: {rung!r}")
 
 
 def _no_effective_candidate_detail(
-    *, allow_strobe: bool, look: Look, resolution: RoleResolution, section: SongCueSection
+    *,
+    allow_strobe: bool,
+    disable_color_snap: bool,
+    look: Look,
+    resolution: RoleResolution,
+    section: SongCueSection,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
 ) -> str:
     """유보 기록의 ``detail`` (REQ-LDACCENT-005) — 후보 집합이 애초에 비었으면
     후보 전량의 무영향 사유를, 후보는 있었지만 전부 이미 나간 값과 겹쳐 탐색이
@@ -230,7 +305,13 @@ def _no_effective_candidate_detail(
     (:data:`ACCENT_NO_EFFECTIVE_CANDIDATE`)를 공유하고 여기서만 구분된다.
     """
     accents = _marking_accents(
-        allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+        allow_strobe=allow_strobe,
+        disable_color_snap=disable_color_snap,
+        look=look,
+        resolution=resolution,
+        section=section,
+        previous_color=previous_color,
+        label_palette=label_palette,
     )
     if accents:
         return (
@@ -238,8 +319,19 @@ def _no_effective_candidate_detail(
             "already-emitted value line"
         )
     parts: list[str] = []
-    for rung in (LADDER_ZOOM_PINCH, LADDER_BLINDER_OR_FLASH, LADDER_IRIS_PINCH, LADDER_STROBE_HIT):
+    for rung in (
+        LADDER_ZOOM_PINCH,
+        LADDER_BLINDER_OR_FLASH,
+        LADDER_IRIS_PINCH,
+        LADDER_STROBE_HIT,
+        LADDER_COLOR_SNAP,
+    ):
         if rung == LADDER_STROBE_HIT and not allow_strobe:
+            continue
+        if rung == LADDER_COLOR_SNAP and disable_color_snap:
+            continue
+        if rung == LADDER_COLOR_SNAP:
+            parts.append(f"{rung}: no observable color change")
             continue
         axis = _MARKING_ACCENT_AXIS.get(rung)
         if axis is not None:
@@ -254,32 +346,60 @@ def _no_effective_candidate_detail(
 
 
 # @MX:NOTE: [AUTO] 회전 후보는 회전 전에 걸러진다 — 무영향 칸(줌/아이리스 축
-#   부재, 블라인더/스트로브 그룹 부재, §6 행 미매치)은 이 함수를 거치는 모든
-#   호출자(`_climb_rungs`·`_ensure_marking_accent`·`_max_climb`·`_exhausted_rungs`)
-#   에서 후보로 아예 보이지 않는다(SPEC-LDACCENT-001 §2).
+#   부재, 블라인더/스트로브 그룹 부재, §6 행 미매치, 색 무변화)은 이 함수를 거치는
+#   모든 호출자(`_climb_rungs`·`_ensure_marking_accent`·`_max_climb`·
+#   `_exhausted_rungs`·`_no_effective_candidate_detail`·`_finalize_marking_accents`)
+#   에서 후보로 아예 보이지 않는다(SPEC-LDACCENT-001 §2, SPEC-LDCLIMAX-001 REQ-004).
 def _marking_accents(
-    *, allow_strobe: bool, look: Look, resolution: RoleResolution, section: SongCueSection
+    *,
+    allow_strobe: bool,
+    disable_color_snap: bool,
+    look: Look,
+    resolution: RoleResolution,
+    section: SongCueSection,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
 ) -> tuple[str, ...]:
     """이 사다리가 회전할 찍는 액센트 **후보** — 이 룩+이 리그+이 라벨에서 실제로
-    관측 가능한 효과를 내는 칸으로만 미리 거른다(SPEC-LDACCENT-001 REQ-001~003).
+    관측 가능한 효과를 내는 칸으로만 미리 거른다(SPEC-LDACCENT-001 REQ-001~003,
+    SPEC-LDCLIMAX-001 REQ-LDCLIMAX-001).
 
     ``allow_strobe`` 가 거짓이면 :data:`_MARKING_ACCENTS` 순서 그대로 필터만 거친다
     (고치기 전과 바이트 동일 — 필터가 아무것도 안 거르는 룩+리그+라벨 조합에서는).
     참이면 :data:`LADDER_STROBE_HIT` 를 네 번째 후보로 더해 같은 필터를 통과시킨다.
-    무영향 칸(룩이 그 축을 안 실었거나, 리그에 그 그룹이 없거나, 이 큐의 섹션
-    라벨에 §6 행이 없는 칸)은 후보에서 아예 빠진다 — **회전 전, 회차별 값 결정
+    ``disable_color_snap`` 이 거짓(기본값)이면 :data:`LADDER_COLOR_SNAP` 을 **맨 끝**
+    후보로 무조건 더한다(REQ-LDCLIMAX-001) — 참이면 더하지 않는다(REQ-LDCLIMAX-012,
+    첫 실기 콘솔 검증 세션까지의 임시 안전판). 무영향 칸(룩이 그 축을 안 실었거나,
+    리그에 그 그룹이 없거나, 이 큐의 섹션 라벨에 §6 행이 없거나, 색이 §7 집합 밖
+    이거나 직전 큐와 같은 칸)은 후보에서 아예 빠진다 — **회전 전, 회차별 값 결정
     전에** 적용한다(§2), 사후에 걸러내지 않는다.
     """
     candidates = _MARKING_ACCENTS if not allow_strobe else (*_MARKING_ACCENTS, LADDER_STROBE_HIT)
+    if not disable_color_snap:
+        candidates = (*candidates, LADDER_COLOR_SNAP)
     return tuple(
         rung
         for rung in candidates
-        if _accent_is_effective(rung, look=look, resolution=resolution, section=section)
+        if _accent_is_effective(
+            rung,
+            look=look,
+            resolution=resolution,
+            section=section,
+            previous_color=previous_color,
+            label_palette=label_palette,
+        )
     )
 
 
 def _exhausted_rungs(
-    *, allow_strobe: bool, look: Look, resolution: RoleResolution, section: SongCueSection
+    *,
+    allow_strobe: bool,
+    disable_color_snap: bool,
+    look: Look,
+    resolution: RoleResolution,
+    section: SongCueSection,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
 ) -> tuple[str, ...]:
     """건너뜀 사유 문면에 실을 칸 이름 전량 — 이 자리에서 실제로 후보였던 것만.
 
@@ -290,25 +410,44 @@ def _exhausted_rungs(
     return (
         LADDER_DIMMER_HIT,
         *_marking_accents(
-            allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+            allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
+            look=look,
+            resolution=resolution,
+            section=section,
+            previous_color=previous_color,
+            label_palette=label_palette,
         ),
     )
 
 
 def _max_climb(
-    *, allow_strobe: bool, look: Look, resolution: RoleResolution, section: SongCueSection
+    *,
+    allow_strobe: bool,
+    disable_color_snap: bool,
+    look: Look,
+    resolution: RoleResolution,
+    section: SongCueSection,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
 ) -> int:
     """오를 수 있는 깊이의 상한 — 밝기의 머리 공간(천장까지의 걸음 수)에 액센트
     갈아타기를 더한 것. 정본 §6 의 「마지막 드롭은 전 리그 최대」와 같은 방향이고,
     천장에서는 값이 더 안 움직이므로 유한하다: 그 지점에서 비로소 큐를 못 세운다
-    (마지막 수단의 건너뜀). 액센트 개수가 ``allow_strobe`` **그리고** 이 룩+리그+
-    라벨에서 실제로 유효한 후보 수로 갈리므로 상한도 그만큼 갈린다 — 무영향 칸을
-    분모에 넣은 채 상한을 계산하면 실제로는 못 오를 깊이까지 "시도해볼 가치가
-    있다"고 잘못 보고한다(SPEC-LDACCENT-001).
+    (마지막 수단의 건너뜀). 액센트 개수가 ``allow_strobe``·``disable_color_snap``
+    **그리고** 이 룩+리그+라벨에서 실제로 유효한 후보 수로 갈리므로 상한도 그만큼
+    갈린다 — 무영향 칸을 분모에 넣은 채 상한을 계산하면 실제로는 못 오를 깊이까지
+    "시도해볼 가치가 있다"고 잘못 보고한다(SPEC-LDACCENT-001).
     """
     return _DIMMER_CEILING // _HIT_STEP + len(
         _marking_accents(
-            allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+            allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
+            look=look,
+            resolution=resolution,
+            section=section,
+            previous_color=previous_color,
+            label_palette=label_palette,
         )
     )
 
@@ -606,6 +745,28 @@ class SongCueWithheldAccent:
 
 
 @dataclass(frozen=True)
+class SongCueClimaxReturn:
+    """절정 지속시간 상한이 끼워 넣은 복귀 큐 — 어느 절정 큐 뒤에, 몇 박 뒤에,
+    무슨 이유로 삽입됐는지(SPEC-LDCLIMAX-001 REQ-LDCLIMAX-010).
+
+    :class:`SongCueWithheldMovement`/:class:`SongCueWithheldDarkness`/
+    :class:`SongCueWithheldAccent` 와 같은 "조립 중에만 아는 부가 사실을 명시적으로
+    보고한다" 패턴을 따르되, 이것은 유보가 아니라 **삽입** 보고라 별도 클래스로
+    둔다.
+    """
+
+    source_section: SongCueSection
+    source_cue_number: int
+    rung: str
+    """:data:`LADDER_BLINDER_OR_FLASH` 또는 :data:`LADDER_STROBE_HIT` — 이 상한이
+    적용되는 두 칸(design.md §2 대조표)."""
+    cap_beats: float
+    """2.0(백색 플래시) 또는 4.0(최강 효과) — 정본 §6 상한 값의 상한 끝."""
+    inserted_cue_number: int
+    inserted_start_ms: int
+
+
+@dataclass(frozen=True)
 class SongCueBundle:
     song_title: str
     sequence_number: int
@@ -617,6 +778,11 @@ class SongCueBundle:
     withheld_movement: tuple[SongCueWithheldMovement, ...] = ()
     withheld_darkness: tuple[SongCueWithheldDarkness, ...] = ()
     withheld_accents: tuple[SongCueWithheldAccent, ...] = ()
+    climax_returns: tuple[SongCueClimaxReturn, ...] = ()
+    """절정 지속시간 상한이 끼워 넣은 복귀 큐 전량 — 안 끼웠으면 빈 튜플
+    (SPEC-LDCLIMAX-001 REQ-LDCLIMAX-010). ``withheld_movement``/``withheld_darkness``/
+    ``withheld_accents`` 와 같은 자리, 같은 "조용히 넘어가지 않는다" 보고 규율이다.
+    """
 
     @property
     def movement_sections(self) -> tuple[SongCueSectionBundle, ...]:
@@ -880,6 +1046,8 @@ def build_songcue_bundle(
     groups_section: Mapping[str, object],
     role_aliases: Mapping[str, str] | None = None,
     allow_strobe: bool = False,
+    disable_color_snap: bool = False,
+    bpm: float | None = None,
 ) -> SongCueBundle:
     """``allow_strobe``: 이 곡이 세트에서 스트로브를 풀어도 되는 자리인지 — 기본값 거짓
     (카드 t378, :data:`LADDER_STROBE_HIT` 독스트링). 이 함수는 몇 번째 곡인지, 클라이맥스
@@ -887,6 +1055,14 @@ def build_songcue_bundle(
     호출자(세션/오케스트레이터 층, 곡 사이 재사용 기억을 이미 든 :mod:`server.looks.song_history`
     와 같은 자리)의 몫이고, 이 인자는 그 판단이 내려온 **결과**를 받는 자리다. 거짓이면
     스트로브 칸은 사다리 후보에도 안 들어가 이전 동작과 바이트 동일하다.
+
+    ``disable_color_snap``: SPEC-LDCLIMAX-001 REQ-LDCLIMAX-012 — 첫 실기 콘솔 검증
+    세션까지의 임시 킬스위치. 기본값 거짓(즉 색 스냅은 REQ-001 대로 무조건 회전
+    후보다) — 참이면 :data:`LADDER_COLOR_SNAP` 이 후보에서 완전히 빠진다.
+
+    ``bpm``: 절정 지속시간 상한(REQ-LDCLIMAX-006~009) 계산에 쓰는 곡 BPM.
+    ``None``(기본값, 미선언)이면 상한 메커니즘은 아무 것도 하지 않는다 — 이 SPEC
+    이전과 바이트 동일하다(REQ-LDCLIMAX-009, "안 재고는 안 쓴다").
     """
     ordered = tuple(selections)
     if not ordered:
@@ -911,6 +1087,7 @@ def build_songcue_bundle(
         movements=dict(),
         darken=darken,
         allow_strobe=allow_strobe,
+        disable_color_snap=disable_color_snap,
     )
     movements, withheld = _movement_carrier(dry)
     bundle = (
@@ -926,6 +1103,7 @@ def build_songcue_bundle(
             movements=movements,
             darken=darken,
             allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
         )
     )
     bundle = replace(
@@ -935,7 +1113,12 @@ def build_songcue_bundle(
         withheld_accents=_collect_withheld_accents(bundle.sections),
     )
     _guard_bundle_collision(bundle)
-    return bundle
+    # 절정 지속시간 상한(REQ-LDCLIMAX-006~011, design.md §2) — 사다리·프론트필·
+    # 움직임·감광이 전부 확정된 뒤에만 "이 큐가 실제로 blinder_or_flash/strobe_hit
+    # 를 실었는가"를 알 수 있으므로, 조립 도중이 아니라 조립이 끝난 **후처리 패스**로
+    # 한 번 더 훑는다(design.md §2 — 여러 호출자에 컨텍스트를 빠짐없이 배선해야
+    # 하는 SPEC-LDACCENT-001 §B1 취약점을 반복하지 않는다).
+    return _apply_climax_duration_cap(bundle, bpm=bpm)
 
 
 def _collect_withheld_accents(
@@ -961,6 +1144,7 @@ def _assembled(
     movements: Mapping[int, MovementPlan],
     darken: Mapping[int, int] | None = None,
     allow_strobe: bool = False,
+    disable_color_snap: bool = False,
 ) -> SongCueBundle:
     darken = darken if darken is not None else dict()
     section_bundles: list[SongCueSectionBundle] = []
@@ -975,9 +1159,11 @@ def _assembled(
             sequence_number=sequence_number,
             resolution=resolution,
             emitted=emitted,
+            section_bundles=section_bundles,
             movement=movements.get(cue_number),
             drop_cue_number=darken.get(cue_number),
             allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
         )
         section_bundles.append(section_bundle)
 
@@ -989,6 +1175,7 @@ def _assembled(
         movements=movements,
         darken=darken,
         allow_strobe=allow_strobe,
+        disable_color_snap=disable_color_snap,
     )
 
     stored_commands, labelled_bundles = _flatten_commands(
@@ -1001,6 +1188,22 @@ def _assembled(
         commands=stored_commands,
         sections=labelled_bundles,
     )
+
+
+#: ``_flatten_commands`` 가 스플라이스하는 줄의 고정 접두어 — 두 번째 훑기가 이미
+#: 붙은 라벨을 다시 붙이지 않도록 감지하는 데 쓴다(``_apply_climax_duration_cap``).
+_LABEL_SEQUENCE_PREFIX = "Label Sequence "
+
+
+def _delabelled(bundle: SongCueSectionBundle) -> SongCueSectionBundle:
+    """``_flatten_commands`` 가 붙인 ``Label Sequence`` 줄을 뗀다 — 재훑기 전
+    원래 형태로 되돌려, 재훑기가 정확히 한 번만 다시 붙이게 한다."""
+    commands = tuple(
+        command for command in bundle.commands if not command.startswith(_LABEL_SEQUENCE_PREFIX)
+    )
+    if commands == bundle.commands:
+        return bundle
+    return replace(bundle, commands=commands)
 
 
 def _flatten_commands(
@@ -1033,6 +1236,148 @@ def _flatten_commands(
 
     stored_commands = tuple(commands) if len(commands) > 1 else ()
     return stored_commands, tuple(labelled)
+
+
+def _renumbered(
+    bundle: SongCueSectionBundle, new_cue_number: int, sequence_number: int
+) -> SongCueSectionBundle:
+    """이 번들의 ``cue_number`` 를 새 번호로 옮긴다 — 저장된 큐라면 ``Store`` 줄에
+    박힌 리터럴 번호도 함께 고친다(design.md §1.2 — 복귀 큐 삽입은 뒤따르는 모든
+    큐의 번호를 1씩 민다).
+
+    ``collides_with_cue_number`` 처럼 **다른** 번들을 가리키는 교차 참조는 고치지
+    않는다 — 그 필드는 스킵 사유의 정보성 기록일 뿐 이 SPEC 의 판정 범위(REQ-006~
+    011) 밖이다(design.md §2.2 미검증 잔여 위험과 같은 결의 문제).
+    """
+    if bundle.cue_number == new_cue_number:
+        return bundle
+    commands = bundle.commands
+    if commands:
+        old_marker = f"Store Sequence {sequence_number} Cue {bundle.cue_number} "
+        new_marker = f"Store Sequence {sequence_number} Cue {new_cue_number} "
+        commands = tuple(
+            command.replace(old_marker, new_marker, 1)
+            if command.startswith(old_marker)
+            else command
+            for command in commands
+        )
+    skipped = tuple(
+        replace(skip, cue_number=new_cue_number) if skip.cue_number == bundle.cue_number else skip
+        for skip in bundle.skipped
+    )
+    return replace(bundle, cue_number=new_cue_number, commands=commands, skipped=skipped)
+
+
+def _climax_return_bundle(
+    climax: SongCueSectionBundle, *, sequence_number: int, cue_number: int, cap_ms: int
+) -> SongCueSectionBundle:
+    """절정 큐 뒤에 끼우는 복귀 큐 — "사다리를 오르지 않았을 때의 기준 값"
+    (design.md §2.1 6번)을 그대로 재방출하고 페이드는 강제하지 않는다(즉시 복귀).
+
+    ``climax.selection.look`` 은 사다리 에스컬레이션 **전** 값이다 —
+    :func:`escalate_attributes` 는 새 튜플만 만들 뿐 ``look`` 자체를 고치지
+    않으므로, 밝기 히트를 포함해 이 절정 큐가 오른 만큼은 전혀 반영돼 있지
+    않다(REQ-LDCLIMAX-007 이 요구하는 "기준 값"이 정확히 이것이다).
+
+    같은 그룹 선택 줄(``climax.commands[1]``)을 그대로 재사용한다 — 이 큐가
+    끄는 것은 절정 칸(블라인더·스트로브)뿐이고, 룩 자신이 켠 그룹은 바뀌지
+    않는다.
+    """
+    look = climax.selection.look
+    if look is None:
+        raise SongCueBundleError(
+            "climax cue has no resolved look; cannot build a duration-cap return cue"
+        )
+    values = _values_line(look.attributes)
+    cue_name = f"{climax.cue_name} Return"
+    return_section = replace(climax.section, name=cue_name, start_ms=cap_ms)
+    commands = (
+        _CLEAR,
+        climax.commands[1],
+        values,
+        store_with_fade(f"Store Sequence {sequence_number} Cue {cue_number} '{cue_name}'", None),
+        _CLEAR,
+    )
+    return SongCueSectionBundle(
+        section=return_section,
+        cue_number=cue_number,
+        cue_name=cue_name,
+        selection=climax.selection,
+        commands=commands,
+    )
+
+
+# @MX:ANCHOR: [AUTO] 절정 지속시간 상한 — blinder_or_flash/strobe_hit 를 실은 큐마다
+#   상한 박수 뒤에 통제된 룩으로 복귀하는 큐를 끼운다(정본 §6, SPEC-LDCLIMAX-001
+#   REQ-LDCLIMAX-006~011).
+# @MX:REASON: 사다리·프론트필·움직임·감광이 전부 확정된 **완성된 번들** 위에서만
+#   "이 큐가 실제로 절정 칸을 실었는가"를 알 수 있다(design.md §2) — 조립 도중에
+#   같은 판단을 하려면 SPEC-LDACCENT-001 §B1 이 이미 겪은 "여러 호출자에 컨텍스트를
+#   빠짐없이 배선해야 하는" 취약점을 반복한다. 그래서 이 함수는 완성된
+#   :class:`SongCueBundle` 을 받아 훑고, 필요할 때만 큐를 더한다 — 기존 큐의 값
+#   결정 경로는 건드리지 않는다(REQ-LDCLIMAX-011).
+def _apply_climax_duration_cap(bundle: SongCueBundle, *, bpm: float | None) -> SongCueBundle:
+    """완성된 번들을 훑어 blinder_or_flash/strobe_hit 를 실은 큐마다 상한을
+    계산하고, 다음 큐가 상한보다 늦게 오면 그 사이에 복귀 큐를 끼운다.
+
+    ``bpm`` 이 ``None`` 이면 아무것도 하지 않는다(REQ-LDCLIMAX-009,
+    ``cue_density.py`` 의 "안 재고는 안 쓴다" 규율과 같은 방향) — 입력 그대로
+    반환한다(바이트 동일).
+    """
+    if bpm is None:
+        return bundle
+
+    sections = list(bundle.sections)
+    returns: list[SongCueClimaxReturn] = []
+    shift = 0
+    for original in [section for section in bundle.sections if section.commands]:
+        rung = original.accent_fixture.rung if original.accent_fixture is not None else None
+        if rung not in (LADDER_BLINDER_OR_FLASH, LADDER_STROBE_HIT):
+            continue
+        cap_beats = 2.0 if rung == LADDER_BLINDER_OR_FLASH else 4.0
+        cap_ms = original.section.start_ms + round(beats_to_seconds(cap_beats, bpm) * 1000)
+        climax_index = original.cue_number - 1 + shift
+        climax = sections[climax_index]
+        next_stored = next((s for s in sections[climax_index + 1 :] if s.commands), None)
+        if next_stored is not None and cap_ms >= next_stored.section.start_ms:
+            # REQ-LDCLIMAX-008 — 자연 전환이 이미 상한을 지킨다. 삽입하지 않는다.
+            continue
+        new_cue_number = climax.cue_number + 1
+        return_bundle = _climax_return_bundle(
+            climax,
+            sequence_number=bundle.sequence_number,
+            cue_number=new_cue_number,
+            cap_ms=cap_ms,
+        )
+        sections.insert(climax_index + 1, return_bundle)
+        for later_index in range(climax_index + 2, len(sections)):
+            sections[later_index] = _renumbered(
+                sections[later_index], sections[later_index].cue_number + 1, bundle.sequence_number
+            )
+        shift += 1
+        returns.append(
+            SongCueClimaxReturn(
+                source_section=climax.section,
+                source_cue_number=climax.cue_number,
+                rung=rung,
+                cap_beats=cap_beats,
+                inserted_cue_number=new_cue_number,
+                inserted_start_ms=cap_ms,
+            )
+        )
+
+    if not returns:
+        return bundle
+    # ``sections`` 는 ``bundle.sections`` 에서 왔고, 그 안의 첫 저장 큐는 이미
+    # ``_flatten_commands`` 가 한 번 스플라이스한 ``Label Sequence`` 줄을 갖고
+    # 있다(`_assembled`) — 그대로 다시 훑으면 라벨 줄이 두 번 붙는다. 다시
+    # 훑기 전에 떼서, 재훑기가 정확히 한 번만 다시 붙이게 한다.
+    for index, section in enumerate(sections):
+        if section.commands and any(c.startswith(_LABEL_SEQUENCE_PREFIX) for c in section.commands):
+            sections[index] = _delabelled(section)
+            break
+    commands, labelled = _flatten_commands(sections, bundle.sequence_number, bundle.sequence_name)
+    return replace(bundle, commands=commands, sections=labelled, climax_returns=tuple(returns))
 
 
 # @MX:ANCHOR: [AUTO] 드롭은 값 충돌로 버려지지 않는다 — 물러서는 쪽은 드롭이 아닌
@@ -1084,6 +1429,7 @@ def _rescue_value_line_collisions(
     movements: Mapping[int, MovementPlan],
     darken: Mapping[int, int],
     allow_strobe: bool = False,
+    disable_color_snap: bool = False,
 ) -> tuple[SongCueSectionBundle, ...]:
     """드롭, 또는 3회차 이상의 반복 라벨이 사다리 소진으로 버려지려는 것을 되살린다.
 
@@ -1097,6 +1443,9 @@ def _rescue_value_line_collisions(
     bundles = list(section_bundles)
 
     def _rebuild(bundle: SongCueSectionBundle) -> SongCueSectionBundle:
+        # ``bundles`` 는 이 클로저가 참조하는 시점의 **현재** 상태다(재구성 순서와
+        # 무관하게 항상 "cue_number 앞의 지금 상태") — SPEC-LDCLIMAX-001 D3,
+        # ``_section_bundle`` 독스트링과 같은 근거.
         return _section_bundle(
             selection=bundle.selection,
             cue_number=bundle.cue_number,
@@ -1104,9 +1453,11 @@ def _rescue_value_line_collisions(
             sequence_number=sequence_number,
             resolution=resolution,
             emitted=emitted,
+            section_bundles=bundles,
             movement=movements.get(bundle.cue_number),
             drop_cue_number=darken.get(bundle.cue_number),
             allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
         )
 
     for _round in range(len(bundles) + 1):
@@ -1147,7 +1498,13 @@ def _rescue_value_line_collisions(
         if not changed:
             break
     _reorder_yields_by_repetition(bundles)
-    _finalize_marking_accents(bundles, emitted, resolution, allow_strobe=allow_strobe)
+    _finalize_marking_accents(
+        bundles,
+        emitted,
+        resolution,
+        allow_strobe=allow_strobe,
+        disable_color_snap=disable_color_snap,
+    )
     return tuple(bundles)
 
 
@@ -1247,6 +1604,19 @@ def _parse_values_line(values: str) -> tuple[AttributeValue, ...]:
     (`server.looks.instantiate`) 이 내는 고정 형식 하나뿐이다.
     """
     return tuple(AttributeValue(name, float(raw)) for name, raw in _VALUE_TOKEN_RE.findall(values))
+
+
+_CUE_FADE_SUFFIX_RE = re.compile(rf" {re.escape(CUE_FADE_KEYWORD)} -?\d+(?:\.\d+)?$")
+
+
+def _forced_zero_fade_store(store_line: str) -> str:
+    """이 ``Store`` 줄의 페이드를 정확히 0으로 다시 강제한다(REQ-LDCLIMAX-003).
+
+    이미 붙은 ``CueFade <값>`` 접미사가 있으면 떼고 다시 0을 붙인다 — 붙은 값이
+    무엇이었든(라벨이 정한 값이든, 아예 없었든) 결과는 늘 ``CueFade 0`` 하나다.
+    """
+    base = _CUE_FADE_SUFFIX_RE.sub("", store_line)
+    return store_with_fade(base, 0.0)
 
 
 #: 찍는 액센트 판정에서 "이 칸이 액센트인가"를 물을 때 쓰는 전체 집합 —
@@ -1394,6 +1764,7 @@ def _finalize_marking_accents(
     resolution: RoleResolution,
     *,
     allow_strobe: bool = False,
+    disable_color_snap: bool = False,
 ) -> None:
     """재배열이 끝난 뒤 액센트를 1회차에서 걷어 내고, 빠진 자리를 채우고, 무대
     명령을 사다리에 맞춘다."""
@@ -1408,8 +1779,21 @@ def _finalize_marking_accents(
         look = bundle.selection.look
         if look is None:
             continue
+        # SPEC-LDCLIMAX-001 D3 — 이 시점의 ``bundles`` (재배열까지 끝난 최종 순서)
+        # 에서 다시 읽는다. ``_section_bundle`` 이 처음 이 큐를 지을 때 계산한 값은
+        # 재배열이 순서를 바꿨을 수 있어 이제는 낡았을 수 있다.
+        previous_color = _previous_stored_color(bundles, before_cue_number=bundle.cue_number)
+        label_palette = _label_return_palette(
+            bundles, label=bundle.section.label, before_cue_number=bundle.cue_number
+        )
         accents = _marking_accents(
-            allow_strobe=allow_strobe, look=look, resolution=resolution, section=bundle.section
+            allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
+            look=look,
+            resolution=resolution,
+            section=bundle.section,
+            previous_color=previous_color,
+            label_palette=label_palette,
         )
         if any(rung in accents for rung in bundle.ladder):
             continue
@@ -1425,7 +1809,10 @@ def _finalize_marking_accents(
             look=look,
             resolution=resolution,
             allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
             force=force,
+            previous_color=previous_color,
+            label_palette=label_palette,
         )
         if withheld:
             # SPEC-LDACCENT-001 REQ-005/006 — 유효한 찍는 액센트 후보가 하나도 없으면
@@ -1439,9 +1826,12 @@ def _finalize_marking_accents(
                     reason=ACCENT_NO_EFFECTIVE_CANDIDATE,
                     detail=_no_effective_candidate_detail(
                         allow_strobe=allow_strobe,
+                        disable_color_snap=disable_color_snap,
                         look=look,
                         resolution=resolution,
                         section=bundle.section,
+                        previous_color=previous_color,
+                        label_palette=label_palette,
                     ),
                 ),
             )
@@ -1453,7 +1843,25 @@ def _finalize_marking_accents(
             emitted.pop(values, None)
             emitted[final_values] = (bundle.section.index, bundle.cue_number, look.look_id)
         new_commands = (bundle.commands[0], bundle.commands[1], final_values, *bundle.commands[3:])
-        bundles[index] = replace(bundle, commands=new_commands, ladder=bundle.ladder + added_rungs)
+        new_ladder = bundle.ladder + added_rungs
+        new_fade = bundle.fade
+        if LADDER_COLOR_SNAP in added_rungs:
+            # REQ-LDCLIMAX-003 — 이 마무리 패스에서 색 스냅이 새로 채워진 경우에도
+            # 페이드는 정확히 0 이어야 한다. ``_section_bundle`` 의 강제는 이 큐를
+            # 처음 지을 때(그때는 아직 색 스냅이 없었다) 이미 지나갔으므로, 여기서
+            # Store 줄의 페이드를 다시 강제한다.
+            store_index = len(new_commands) - 2
+            new_commands = (
+                *new_commands[:store_index],
+                _forced_zero_fade_store(new_commands[store_index]),
+                *new_commands[store_index + 1 :],
+            )
+            new_fade = SectionFade(
+                line=LADDER_COLOR_SNAP,
+                seconds=0.0,
+                source="REQ-LDCLIMAX-003 — 마무리 패스 색 스냅도 페이드를 0으로 강제한다",
+            )
+        bundles[index] = replace(bundle, commands=new_commands, ladder=new_ladder, fade=new_fade)
 
     for index, bundle in enumerate(bundles):
         if not bundle.commands:
@@ -2235,6 +2643,62 @@ def _accent_fixture_commands(
     return commands, rung, groups, dimmer
 
 
+# SPEC-LDCLIMAX-001 D3 — 색 스냅 판정 상태를 곡 전체에서 어떻게 배선하는가.
+#
+# 후보였던 셋: (1) `_section_bundle` 이 갱신하는 가변 딕셔너리(``emitted`` 와 같은
+# 자리) — 그런데 이 값은 **순서 의존**이다: `_rescue_value_line_collisions` 가 앞선
+# 큐를 나중에 다시 짓는(rebuild) 순간, "누적해 온 previous_color"는 그 rebuild
+# 시점의 곡 상태를 반영하지 못한다(그 시점 이전 cue_number 기준이 아니라 "지금까지
+# 처리한 순서" 기준이 되어 버린다). (2) 함수 기본값(`= None`) — 안 쓴다: 요청이
+# 명시적으로 금지했고, 무엇보다 "곡 전체 상태"는 태생적으로 가변인데 함수 기본값은
+# 한 번만 평가되므로 두 번째 곡을 조립할 때 첫 곡의 상태가 새어 든다(고전적인 가변
+# 기본값 결함, `_look_color` 근방 규율과 같은 방향). (3, 채택) **순수 함수로,
+# 이미 조립된 번들 목록에서 매번 다시 읽는다.** ``_assembled`` 의 진행 중 목록도
+# ``_rescue_value_line_collisions`` 가 재조립 중인 목록도 모두 "지금 이 cue_number
+# 앞에 무엇이 실제로 저장돼 있는가"를 그대로 담고 있으므로, 어느 재조립 순서에서
+# 호출해도 같은 답을 낸다(멱등) — 전역도 가변 기본값도 아닌, 호출자가 매번 넘기는
+# 명시 인자 하나(``section_bundles``)로 충분하다.
+def _previous_stored_color(
+    section_bundles: Sequence[SongCueSectionBundle], *, before_cue_number: int
+) -> tuple[AttributeValue, ...] | None:
+    """``before_cue_number`` 보다 앞이고 실제로 저장된(``commands`` 가 있는) 큐 중
+    가장 최근의 색 — REQ-LDCLIMAX-004 판정 입력. 없으면 ``None``(첫 저장 큐 또는
+    앞선 큐 전부 색 채널이 없음).
+    """
+    for bundle in reversed(section_bundles):
+        if bundle.cue_number >= before_cue_number or not bundle.commands:
+            continue
+        look = bundle.selection.look
+        if look is None:
+            continue
+        color = _look_color(look)
+        if color:
+            return color
+    return None
+
+
+def _label_return_palette(
+    section_bundles: Sequence[SongCueSectionBundle], *, label: str, before_cue_number: int
+) -> frozenset[tuple[AttributeValue, ...]]:
+    """이 라벨의 1회차가 ``before_cue_number`` 앞에서 실제로 저장한 색 집합 —
+    REQ-LDCLIMAX-002 판정 입력(§7 색 복귀 규율). 1회차가 아직 저장되지 않았으면
+    빈 집합이고, 빈 집합은 "제한 없음"으로 읽힌다(:func:`_color_snap_is_effective`).
+    """
+    colors: set[tuple[AttributeValue, ...]] = set()
+    for bundle in section_bundles:
+        if bundle.cue_number >= before_cue_number or not bundle.commands:
+            continue
+        if bundle.section.label != label or bundle.section.instance != 1:
+            continue
+        look = bundle.selection.look
+        if look is None:
+            continue
+        color = _look_color(look)
+        if color:
+            colors.add(color)
+    return frozenset(colors)
+
+
 def _section_bundle(
     *,
     selection: SongCueLookSelection,
@@ -2243,10 +2707,22 @@ def _section_bundle(
     sequence_number: int,
     resolution: RoleResolution,
     emitted: dict[str, tuple[int, int, str]],
+    section_bundles: Sequence[SongCueSectionBundle],
     movement: MovementPlan | None = None,
     drop_cue_number: int | None = None,
     allow_strobe: bool = False,
+    disable_color_snap: bool = False,
 ) -> SongCueSectionBundle:
+    # SPEC-LDCLIMAX-001 D3 — 색 스냅 판정이 필요로 하는, 곡 전체를 훑어야만 아는
+    # 상태 둘(직전 저장 큐의 색·이 라벨 1회차가 쓴 색 집합)을 여기서 한 번만
+    # 계산해 아래 호출자 전량에 명시 인자로 흘려보낸다. ``section_bundles`` 는
+    # 이 큐 앞에 이미 조립된 번들들이다 — `_assembled` 의 진행 중 목록이거나
+    # `_rescue_value_line_collisions` 가 재조립 중인 목록이거나, 어느 쪽이든
+    # "이 cue_number 이전"의 최신 상태를 읽는다(전역도 가변 기본값도 아니다).
+    previous_color = _previous_stored_color(section_bundles, before_cue_number=cue_number)
+    label_palette = _label_return_palette(
+        section_bundles, label=selection.section.label, before_cue_number=cue_number
+    )
     if selection.look is None:
         skipped = SongCueSkippedSection(
             section=selection.section,
@@ -2303,7 +2779,14 @@ def _section_bundle(
         drop_cue_number=drop_cue_number,
     )
     values, rungs = _distinct_values_line(
-        look, selection.section, emitted, resolution=resolution, allow_strobe=allow_strobe
+        look,
+        selection.section,
+        emitted,
+        resolution=resolution,
+        allow_strobe=allow_strobe,
+        disable_color_snap=disable_color_snap,
+        previous_color=previous_color,
+        label_palette=label_palette,
     )
     if values is not None:
         # 카드 t382 — 이 회차가 양보로 받은 자리든 기준값 자리든, 반복 회차(instance
@@ -2321,6 +2804,9 @@ def _section_bundle(
             look=look,
             resolution=resolution,
             allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
+            previous_color=previous_color,
+            label_palette=label_palette,
         )
     if values is None:
         previous_section, previous_cue, previous_look = emitted[_values_line(look.attributes)]
@@ -2335,9 +2821,12 @@ def _section_bundle(
                 + ", ".join(
                     _exhausted_rungs(
                         allow_strobe=allow_strobe,
+                        disable_color_snap=disable_color_snap,
                         look=look,
                         resolution=resolution,
                         section=selection.section,
+                        previous_color=previous_color,
+                        label_palette=label_palette,
                     )
                 )
                 + ")"
@@ -2404,7 +2893,19 @@ def _section_bundle(
     # ``server.design.cue_fade.store_with_fade`` 하나다(카드 t363). ``Property 'Fade'``
     # 는 금지이고(`docs/handoff/2026-08-15-timeline-workflow-handoff.md:19`), 그 규율이
     # 두 소비자에 흩어지지 않게 하려고 조립을 한 자리로 모았다.
-    fade = fade_for_label(selection.section.label)
+    #
+    # 색 스냅이 확정됐으면(REQ-LDCLIMAX-003) 라벨이 정하는 페이드 대신 정확히 0 을
+    # 강제한다 — "즉시 전환"은 크로스페이드가 아니라 하드 스냅이다. 값은 이미
+    # ``look`` 자신의 것과 같으므로(REQ-LDCLIMAX-002 가 이미 §7 집합 안임을 확인했다)
+    # 색·Dimmer·Zoom·Iris 등 다른 속성 값은 색 스냅이 없었을 때와 동일하게 남는다.
+    if LADDER_COLOR_SNAP in rungs:
+        fade = SectionFade(
+            line=LADDER_COLOR_SNAP,
+            seconds=0.0,
+            source="REQ-LDCLIMAX-003 — 색 스냅은 페이드를 0 으로 강제한다(즉시 전환)",
+        )
+    else:
+        fade = fade_for_label(selection.section.label)
     commands = (
         _CLEAR,
         _selection_line(groups),
@@ -2449,6 +2950,9 @@ def _distinct_values_line(
     *,
     resolution: RoleResolution,
     allow_strobe: bool = False,
+    disable_color_snap: bool = False,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
 ) -> tuple[str | None, tuple[str, ...]]:
     """앞선 큐와 겹치지 않는 값 라인과 그때 더한 사다리 칸들. 못 만들면 ``(None, ())``.
 
@@ -2473,11 +2977,24 @@ def _distinct_values_line(
     if previous[0] == section.index:
         return None, ()
     max_climb = _max_climb(
-        allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+        allow_strobe=allow_strobe,
+        disable_color_snap=disable_color_snap,
+        look=look,
+        resolution=resolution,
+        section=section,
+        previous_color=previous_color,
+        label_palette=label_palette,
     )
     for depth in range(_ladder_start(section), max_climb + 1):
         rungs = _climb_rungs(
-            depth, allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+            depth,
+            allow_strobe=allow_strobe,
+            disable_color_snap=disable_color_snap,
+            look=look,
+            resolution=resolution,
+            section=section,
+            previous_color=previous_color,
+            label_palette=label_palette,
         )
         candidate = _values_line(escalate_attributes(look.attributes, rungs))
         if candidate not in emitted:
@@ -2510,9 +3027,12 @@ def _climb_rungs(
     depth: int,
     *,
     allow_strobe: bool = False,
+    disable_color_snap: bool = False,
     look: Look,
     resolution: RoleResolution,
     section: SongCueSection,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
 ) -> tuple[str, ...]:
     """깊이 하나가 내는 칸들 — 밝기 히트 여러 개 + 찍는 액센트 **최대 하나**.
 
@@ -2529,7 +3049,13 @@ def _climb_rungs(
     필요로 했는지는 :func:`_ensure_marking_accent` 가 값이 정해진 뒤에 다시 본다.
     """
     accents = _marking_accents(
-        allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+        allow_strobe=allow_strobe,
+        disable_color_snap=disable_color_snap,
+        look=look,
+        resolution=resolution,
+        section=section,
+        previous_color=previous_color,
+        label_palette=label_palette,
     )
     if depth <= 1:
         return (LADDER_DIMMER_HIT,)
@@ -2593,7 +3119,10 @@ def _ensure_marking_accent(
     look: Look,
     resolution: RoleResolution,
     allow_strobe: bool = False,
+    disable_color_snap: bool = False,
     force: bool = False,
+    previous_color: tuple[AttributeValue, ...] | None,
+    label_palette: frozenset[tuple[AttributeValue, ...]],
 ) -> tuple[str, tuple[str, ...], bool]:
     """이 회차에 찍는 액센트가 아직 없으면 하나 골라 붙인다 — 값이 이미 정해진 뒤에도.
 
@@ -2633,7 +3162,13 @@ def _ensure_marking_accent(
     if section.instance < 2:
         return values, rungs, False
     accents = _marking_accents(
-        allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+        allow_strobe=allow_strobe,
+        disable_color_snap=disable_color_snap,
+        look=look,
+        resolution=resolution,
+        section=section,
+        previous_color=previous_color,
+        label_palette=label_palette,
     )
     if any(rung in accents for rung in rungs):
         return values, rungs, False
@@ -2657,6 +3192,16 @@ def _rung_applied(values: Sequence[AttributeValue], rung: str) -> tuple[Attribut
         return _stepped(values, _ZOOM, _PINCH_STEP, _BEAM_FLOOR)
     if rung == LADDER_IRIS_PINCH:
         return _stepped(values, _IRIS, _PINCH_STEP, _BEAM_FLOOR)
+    if rung == LADDER_COLOR_SNAP:
+        # 색은 이미 바뀌지 않는다 — 색 스냅이 내는 색은 이 룩 자신이 이미 들고
+        # 있는 §7 복귀 색이고(REQ-LDCLIMAX-002, 호출자가 효과 판정으로 이미
+        # 확인했다), "에스컬레이션"은 값 라인이 아니라 페이드(REQ-LDCLIMAX-003)
+        # 쪽에서 일어난다 — 그 강제는 ``_section_bundle`` 이 ``rungs`` 를 보고
+        # 별도로 한다(design.md 의 sketch 는 이 자리에서 ``(look, float)`` 쌍을
+        # 돌려주는 헬퍼를 그렸지만, 그 반환형은 이 함수의 계약(``tuple[AttributeValue,
+        # ...]`` 만)과 맞지 않는다 — 시그니처 불일치를 그대로 옮기지 않고 여기서는
+        # 항등, 페이드는 별도 지점에서 강제하는 쪽으로 갈랐다).
+        return tuple(values)
     if rung in (LADDER_BLINDER_OR_FLASH, LADDER_STROBE_HIT):
         # 이 룩 자신의 값은 안 바뀐다 — 블라인더·스트로브는 다른 그룹이다
         # (:data:`LADDER_BLINDER_OR_FLASH` 독스트링). 실제 명령은

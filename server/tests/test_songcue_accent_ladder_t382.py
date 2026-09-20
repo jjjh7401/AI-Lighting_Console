@@ -196,6 +196,15 @@ class TestForcedAccentReachesTheConsoleWhenItPicksTheBlinder:
     이 정확한 조합(3회차·블라인더·재배열 생존)을 결정론적으로 재현하기 어려워
     (재배열이 어느 회차가 어느 값을 받을지 다시 섞는다), 실제 결함 지점을 직접
     잰다.
+
+    SPEC-LDCLIMAX-001 이후 — ``section_bundles`` 를 빈 튜플로 두면 "직전 저장
+    큐가 없다"는 뜻이 돼(``previous_color=None``) 색 스냅도 무조건 효과 있음으로
+    판정된다(REQ-LDCLIMAX-004 는 "다른 색"만 요구하고, 비교 대상이 아예 없으면
+    다른 것으로 셀 수밖에 없다) — 그러면 회전 후보가 ``(blinder_or_flash,
+    color_snap)`` 둘이 되어 ``(3-2)%2=1`` 이 색 스냅을 고른다. 이 시험의 본래
+    의도(블라인더가 실제로 무대까지 닿는지)를 지키려면 **실제 곡이라면 이미
+    있었을 1·2회차**(같은 색)를 합성해 넘긴다 — 그러면 직전 저장 큐의 색이
+    이 회차와 같아 색 스냅은 REQ-004 로 걸러지고, 블라인더만 남는다.
     """
 
     def test_a_direct_success_landing_on_the_base_line_still_lights_the_blinder(self):
@@ -225,13 +234,37 @@ class TestForcedAccentReachesTheConsoleWhenItPicksTheBlinder:
         )
         selection = SongCueLookSelection(section=section, requested_dynamics=(5,), look=look)
 
+        def _prior_stub(cue_number: int, instance: int) -> songcue_module.SongCueSectionBundle:
+            prior_section = SongCueSection(
+                name="Chorus",
+                start_ms=0,
+                index=0,
+                dynamics=(4, 5),
+                requires_explicit_dynamics=False,
+                label="Chorus",
+                instance=instance,
+                variant="",
+            )
+            return songcue_module.SongCueSectionBundle(
+                section=prior_section,
+                cue_number=cue_number,
+                cue_name=f"Chorus {instance}",
+                selection=SongCueLookSelection(
+                    section=prior_section, requested_dynamics=(5,), look=look
+                ),
+                commands=("ClearAll",),
+            )
+
+        prior_bundles = (_prior_stub(1, 1), _prior_stub(2, 2))
+
         bundle = songcue_module._section_bundle(
             selection=selection,
-            cue_number=1,
+            cue_number=3,
             cue_name="Chorus",
             sequence_number=1,
             resolution=resolution,
             emitted={},
+            section_bundles=prior_bundles,
         )
 
         assert bundle.skipped == ()
