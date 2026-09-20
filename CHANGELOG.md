@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **SPEC-LDACCENT-001** — 찍는 액센트 사다리 회전이 무영향 칸(줌/아이리스 축이 없는 룩, 블라인더/스트로브 그룹이 없는 리그, §6 표에 없는 섹션 라벨)을 그대로 후보로 골라 `.ladder`에 실었던 결함을 닫았다. 카드 t424 — t382(PR #468) 자신의 판정 보고가 "effective-accent filter" 후속으로 예고했던 결함이다. 실측(FULL_RIG, 단일 축 룩, 후렴 7회): 무대 효과가 전혀 없는데도 `zoom_pinch`/`iris_pinch`/`blinder_or_flash`가 회차마다 사다리에 실렸다.
+  - **효과-판정 필터(REQ-LDACCENT-001~003)** — 새 순수 함수 `_accent_is_effective`(`server/looks/songcue.py`)가 룩의 축 보유, 리그의 그룹 보유, 그 큐가 속한 섹션 라벨의 §6 행 보유(`intent_for_label`) 세 조건을 회전 이전에 판정한다. `_marking_accents`가 이 판정을 거쳐 회전 후보를 미리 좁힌 뒤 반환한다.
+  - **건너뛰고 다음 후보로(REQ-LDACCENT-004)** — 회전이 무영향 칸을 가리켜도 같은 회전 순서 안에서 남은 유효 후보로 넘어간다 — 유효 후보가 있는 한 그 회차의 액센트 자체를 포기하지 않는다.
+  - **유보 기록(REQ-LDACCENT-005~007)** — 유효 후보가 하나도 없으면 셀 이름을 지어내지 않고, 신규 `SongCueWithheldAccent`(`accent_withheld`/`withheld_accents`)가 어느 섹션·큐·사유로 못 채웠는지 담아 `SongCueBundle`/`SongCueSectionBundle`에 노출한다 — 기존 `withheld_movement`/`withheld_darkness`와 같은 보고 패턴.
+  - **하나뿐인 액센트 불변식 유지(REQ-LDACCENT-008)** — 필터·유보 도입 뒤에도 큐당 찍는 액센트는 정확히 하나(감독 결정 2026-09-12) 그대로다.
+  - **밝기 진행값은 바이트 동일** — `Dimmer` 값 진행(20/25/30/35/40/45/50)과 다른 속성 명령 바이트는 이 SPEC 전후로 변화 없음(AC-LDACCENT-004 골든 대조군). 달라지는 것은 `.ladder`의 셀 이름 보고와 신규 유보 기록뿐이다.
+  - **검증** — AC-LDACCENT-001~006 전부 PASS. 전체 회귀 `uv run pytest -q` → `13689 passed, 35 skipped`(착수 전 기준선 `13685 passed, 35 skipped` 대비 회귀 0, 신규 통과 net +4). `ruff check`/`ruff format --check` 클린. subagent-boundary grep(`AskUserQuestion`) `server/looks/` 0건.
+  - **범위 밖으로 남긴 것** — 밝기 구간이 이미 다른 큐로 소진된 네 번째 무영향 경로(`_unique_floor_climb` 소진)는 REQ-LDACCENT-007이 명시적 예외로 이름 붙여 미룬다. 실기 콘솔 육안 확인, 정본 문서(§6/§7.1) 개정, 회전 순서 자체 재설계도 이 SPEC의 범위 밖이다.
+
 ### Changed
 
 - **SPEC-COPILOT-SONGCONFIRM-001** (제자리 개정, 카드 t417) — 배수 정정 무효 규칙을 REQ-003 규칙 3 / AC-003 (b) 로 명문화. 코드는 47da882(PR #445)에 이미 있었고 SPEC 이 한 조항 뒤져 있었다. 여유 상수 0.06 근거: 8곡 실측 오검출 0/8·검출 8/8(.moai/reports/d5-crowding-20260920/octave_fp.txt). 행동 변화 0, Tier M 상한 16/16 유지.

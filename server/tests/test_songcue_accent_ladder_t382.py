@@ -22,12 +22,14 @@ import server.looks.songcue as songcue_module
 from server.looks.resolver import resolve_roles
 from server.looks.schema import AttributeValue, Look
 from server.looks.songcue import (
+    _MARKING_ACCENTS,
     LADDER_BLINDER_OR_FLASH,
     LADDER_DIMMER_YIELD,
+    LADDER_IRIS_PINCH,
+    LADDER_ZOOM_PINCH,
     SongCueLookSelection,
     SongCueSection,
     _dimmer_from_values_line,
-    _marking_accents,
     build_songcue_bundle,
     parse_sections,
 )
@@ -54,7 +56,7 @@ _RIG_WITH_BLINDER: tuple[tuple[int, str], ...] = FULL_RIG + ((20, "BLIND"),)
 #: 독스트링). 그래서 이 룩에서는 어느 액센트가 실려도 값 라인이 갈리지 않고, 사다리가
 #: 오를 수 있는 값은 「기준값 · 밝기 히트 한 걸음」 둘뿐이다 — 실측 카드의 결함을
 #: 정확히 그대로 재현한다.
-_MARKING = _marking_accents(allow_strobe=False)
+_MARKING = _MARKING_ACCENTS
 
 
 def _single_axis_look(dimmer: float = 95.0) -> Look:
@@ -106,9 +108,18 @@ def _build(count: int, *, dimmer: float = 95.0):
 
 
 class TestEveryRepeatOccurrenceCarriesOneAccent:
-    """AC-1 — 헤드룸 한 걸음뿐인 룩의 7회차 전부: 저장 개수·밝기 단조·액센트 하나씩."""
+    """AC-1 — 헤드룸 한 걸음뿐인 룩의 7회차 전부: 저장 개수·밝기 단조는 그대로다.
 
-    def test_all_seven_survive_with_non_decreasing_brightness_and_one_accent_each(self):
+    **SPEC-LDACCENT-001 이후로 바뀐 성질**: 이 룩(단일 축 ``Dimmer``)과 이 리그
+    (``FULL_RIG``, 블라인더 없음)에서는 줌·아이리스·블라인더 셋 다 무영향이다 —
+    필터가 회전 전에 전부 걸러내므로, 반복 회차는 찍는 액센트 없이 양보·밝기
+    만으로 유일해지고, 못 채운 자리는 셀 이름을 지어내는 대신 유보 기록을
+    남긴다(AC-LDACCENT-001). 이 클래스 이름의 "하나씩"은 더는 참이 아니다 —
+    이 SPEC 이전에는 무영향 칸도 하나씩 실렸다는 뜻이었고, 그 실림 자체가
+    고친 결함이다.
+    """
+
+    def test_all_seven_survive_with_non_decreasing_brightness_and_no_ineffective_accent(self):
         bundle = _build(7, dimmer=95.0)
 
         assert bundle.skipped == (), "일곱 회차 전부 저장돼야 한다(t368)"
@@ -124,25 +135,30 @@ class TestEveryRepeatOccurrenceCarriesOneAccent:
         for instance in range(2, 8):
             ladder = by_instance[instance].ladder
             marking_in_ladder = [rung for rung in ladder if rung in _MARKING]
-            assert len(marking_in_ladder) == 1, (
-                f"{instance}회차는 찍는 액센트를 정확히 하나 실어야 한다: ladder={ladder}"
+            assert marking_in_ladder == [], (
+                f"{instance}회차는 무영향 칸을 실으면 안 된다: ladder={ladder}"
             )
+            assert by_instance[instance].accent_withheld is not None, (
+                f"{instance}회차는 유효 후보가 없으므로 유보 기록을 남겨야 한다"
+            )
+        assert len(bundle.withheld_accents) == 6, "instance>=2 인 여섯 회차 전부 유보된다"
 
-    def test_instances_two_three_four_cycle_through_different_accents(self):
-        """액센트가 갈아탄다는 성질 — 연속 회차 셋이 같은 것으로 굳지 않는다."""
+    def test_instances_two_three_four_all_withhold_naming_every_candidate(self):
+        """회전할 것이 없는 조합에서는 갈아타기 대신 유보가 일관되게 남는다 —
+        detail 문면이 세 후보 전량과 각각 무영향인 이유를 이름 붙인다."""
         bundle = _build(7, dimmer=95.0)
         by_instance = {s.section.instance: s for s in bundle.stored_sections}
 
-        accents = []
+        cue_numbers = set()
         for instance in (2, 3, 4):
-            ladder = by_instance[instance].ladder
-            marking_in_ladder = [rung for rung in ladder if rung in _MARKING]
-            assert len(marking_in_ladder) == 1
-            accents.append(marking_in_ladder[0])
+            withheld = by_instance[instance].accent_withheld
+            assert withheld is not None
+            assert withheld.reason == songcue_module.ACCENT_NO_EFFECTIVE_CANDIDATE
+            for rung in _MARKING:
+                assert rung in withheld.detail, f"{instance}회차 detail 이 {rung} 를 안 뺐다"
+            cue_numbers.add(withheld.cue_number)
 
-        assert len(set(accents)) == 3, (
-            f"2·3·4회차의 액센트가 서로 달라야 회전이 실제로 도는 것이 보인다: {accents}"
-        )
+        assert cue_numbers == {2, 3, 4}, "유보 기록은 각자 자기 큐의 cue_number 를 가리킨다"
 
     def test_the_base_occurrence_never_carries_a_marking_accent_seven_choruses(self):
         """D1 — 오케스트레이터 재측정(af494681): 7회차 곡에서 1회차가
@@ -234,8 +250,16 @@ class TestForcedAccentReachesTheConsoleWhenItPicksTheBlinder:
 
 
 class TestHeadroomCaseIsUntouched:
-    """AC-3 — 헤드룸이 넉넉해 애초에 양보가 필요 없는 곡은 이 카드 이전과 바이트
-    동일하다. 값은 카드 조사 중 실측한 것을 그대로 굳힌 것이다(회귀 대조군).
+    """AC-3/AC-4 — 헤드룸이 넉넉해 애초에 양보가 필요 없는 곡의 ``Dimmer`` 진행은
+    이 SPEC 전후로 바이트 동일하다(SPEC-LDACCENT-001 AC-LDACCENT-004). 값은 카드
+    조사 중 실측한 것을 그대로 굳힌 것이다(회귀 대조군).
+
+    **SPEC-LDACCENT-001 이후로 바뀐 성질**: 이 룩(단일 축, ``Zoom``/``Iris`` 없음)과
+    이 리그(``FULL_RIG``, 블라인더 없음)에서는 줌·아이리스·블라인더 셋 다 무영향
+    이다 — 필터가 회전 전에 전부 걸러내므로, 사다리는 더 이상 무영향 칸 이름을
+    싣지 않는다(전부 ``dimmer_hit`` 뿐). ``Dimmer`` 값 자체는 무영향 칸이 애초에
+    그 값을 바꾼 적이 없었으므로 이 SPEC 이전과 완전히 동일하다 — 달라지는 것은
+    ``.ladder`` 의 셀 이름 보고뿐이다(AC-LDACCENT-001/004).
     """
 
     def test_seven_choruses_with_ample_headroom_are_byte_identical_before_and_after(self):
@@ -248,17 +272,10 @@ class TestHeadroomCaseIsUntouched:
         expected_ladders = {
             1: (),
             2: ("dimmer_hit",),
-            3: ("dimmer_hit", "dimmer_hit", "blinder_or_flash"),
-            4: ("dimmer_hit", "dimmer_hit", "dimmer_hit", "iris_pinch"),
-            5: ("dimmer_hit", "dimmer_hit", "dimmer_hit", "dimmer_hit", "zoom_pinch"),
-            6: (
-                "dimmer_hit",
-                "dimmer_hit",
-                "dimmer_hit",
-                "dimmer_hit",
-                "dimmer_hit",
-                "blinder_or_flash",
-            ),
+            3: ("dimmer_hit", "dimmer_hit"),
+            4: ("dimmer_hit", "dimmer_hit", "dimmer_hit"),
+            5: ("dimmer_hit", "dimmer_hit", "dimmer_hit", "dimmer_hit"),
+            6: ("dimmer_hit", "dimmer_hit", "dimmer_hit", "dimmer_hit", "dimmer_hit"),
             7: (
                 "dimmer_hit",
                 "dimmer_hit",
@@ -266,15 +283,37 @@ class TestHeadroomCaseIsUntouched:
                 "dimmer_hit",
                 "dimmer_hit",
                 "dimmer_hit",
-                "iris_pinch",
             ),
         }
         for instance, expected_dimmer in expected_dimmers.items():
             section = by_instance[instance]
-            assert _dimmer_from_values_line(section.commands[2]) == expected_dimmer
-            assert section.ladder == expected_ladders[instance], (
-                f"{instance}회차 사다리가 이 카드 이전과 달라지면 안 된다: {section.ladder}"
+            assert _dimmer_from_values_line(section.commands[2]) == expected_dimmer, (
+                "Dimmer 값 진행은 이 SPEC 전후로 완전히 동일해야 한다(AC-LDACCENT-004)"
             )
+            assert section.ladder == expected_ladders[instance], (
+                f"{instance}회차 사다리에 무영향 칸 이름이 남으면 안 된다: {section.ladder}"
+            )
+            assert not any(rung in _MARKING for rung in section.ladder), (
+                f"{instance}회차 ladder 에 무영향 찍는 액센트가 남아 있다: {section.ladder}"
+            )
+
+    def test_at_least_one_repeat_occurrence_is_withheld(self):
+        """AC-LDACCENT-001 — 전량 무영향 조합에서는 채울 후보가 없으니 빈 칸이
+        아니라 눈에 보이는 유보 기록이 최소 하나는 남는다."""
+        bundle = _build(7, dimmer=20.0)
+        by_instance = {s.section.instance: s for s in bundle.stored_sections}
+
+        withheld_instances = [i for i in range(2, 8) if by_instance[i].accent_withheld is not None]
+        assert withheld_instances, "instance>=2 중 적어도 하나는 유보 기록을 남겨야 한다"
+        for instance in withheld_instances:
+            withheld = by_instance[instance].accent_withheld
+            assert withheld.section == by_instance[instance].section
+            assert withheld.cue_number == by_instance[instance].cue_number
+            assert withheld.reason
+        assert bundle.withheld_accents, "번들 수준 withheld_accents 도 비어 있으면 안 된다"
+        assert set(bundle.withheld_accents) == {
+            by_instance[i].accent_withheld for i in withheld_instances
+        }
 
 
 class TestExistingGuardsStillHold:
@@ -384,3 +423,110 @@ class TestBlinderLadderAlwaysCarriesItsConsoleCommand:
                     f"instance={section.section.instance} 사다리엔 블라인더가 없는데 "
                     "블라인더 명령이 남아 있다"
                 )
+
+
+class TestEffectiveBlinderStillRotatesAndReachesTheConsole:
+    """AC-LDACCENT-003 — 양성 대조군: 블라인더 그룹을 실제로 가진 리그와, §6 행이
+    있는 섹션 라벨(``Chorus``) 조합에서는 필터가 과도하게 거르지 않는다 —
+    blinder_or_flash 는 여전히 회전에 오르고 무대 명령까지 실제로 나간다."""
+
+    def test_blinder_rotates_and_reaches_the_console_on_a_matching_label(self):
+        bundle = _build_with_blinder_rig(7, dimmer=95.0)
+        assert bundle.skipped == ()
+        with_blinder = [s for s in bundle.stored_sections if LADDER_BLINDER_OR_FLASH in s.ladder]
+        assert with_blinder, (
+            "블라인더 그룹이 있는 리그에서는 회전이 blinder_or_flash 에 닿아야 한다"
+        )
+
+        section = with_blinder[0]
+        fixture = section.accent_fixture
+        assert fixture is not None, "AC-LDACCENT-003 — accent_fixture 는 None 이면 안 된다"
+        assert fixture.rung == LADDER_BLINDER_OR_FLASH
+        assert fixture.groups, "AC-LDACCENT-003 — groups 는 비어 있으면 안 된다"
+        assert any(f"Group {group}" in section.commands for group in fixture.groups), (
+            "실제 콘솔 명령 목록에 그 그룹을 겨냥한 선택 줄이 있어야 한다"
+        )
+        assert section.accent_withheld is None, (
+            "AC-LDACCENT-003 — 이 회차는 유보 기록을 남기면 안 된다"
+        )
+
+
+class TestLabelWithoutSixRowExcludesBlinderEvenWithAGroup:
+    """AC-LDACCENT-006 — 음성 대조군: 블라인더 그룹은 실제로 있어도, 이 큐가 속한
+    섹션의 라벨이 §6 행을 못 찾으면(``intent_for_label`` 이 ``None``)
+    blinder_or_flash 는 후보에서 제외된다 — 그룹 보유와 라벨의 §6 행 보유는
+    AND 로 묶인다(REQ-LDACCENT-003)."""
+
+    def test_a_label_outside_the_six_row_table_excludes_the_blinder(self):
+        sections = parse_sections(tuple(("Nonstandard", f"{minute}:00") for minute in range(6)))
+        look = _single_axis_look(dimmer=95.0)
+        selections = tuple(
+            SongCueLookSelection(section=section, requested_dynamics=(look.dynamics,), look=look)
+            for section in sections
+        )
+        bundle = build_songcue_bundle(
+            "Chorus Rise Ladder — Unmatched Label",
+            selections,
+            sequences_section=_sequences(1),
+            groups_section=_groups(*_RIG_WITH_BLINDER),
+        )
+
+        assert bundle.skipped == ()
+        assert all(LADDER_BLINDER_OR_FLASH not in s.ladder for s in bundle.stored_sections), (
+            "§6 행이 없는 라벨에서는 그룹이 있어도 blinder_or_flash 가 후보에 오르면 안 된다"
+        )
+        for section in bundle.stored_sections:
+            if section.accent_fixture is not None:
+                assert section.accent_fixture.rung != LADDER_BLINDER_OR_FLASH
+        assert bundle.withheld_accents, (
+            "유효 후보가 하나도 없는 반복 회차는 유보 기록을 남겨야 한다"
+        )
+
+
+def _zoom_only_look(dimmer: float = 20.0) -> Look:
+    return Look(
+        look_id="zoom-only",
+        display_name="zoom-only",
+        genre="edm",
+        dynamics=5,
+        roles=("백라이트",),
+        attributes=(
+            AttributeValue("Dimmer", dimmer),
+            AttributeValue("Zoom", 18),
+            AttributeValue("ColorRGB_R", 72),
+            AttributeValue("ColorRGB_G", 100),
+            AttributeValue("ColorRGB_B", 0),
+        ),
+    )
+
+
+class TestZoomOnlyLookExcludesIrisFromRotation:
+    """REQ-LDACCENT-002 엣지 케이스 — 줌만 있고 아이리스는 없는 룩. ``zoom_pinch``
+    만 유효 후보이고, ``iris_pinch`` 는(그리고 블라인더 그룹 없는 이 리그에서는
+    ``blinder_or_flash`` 도) 필터링 대상이다."""
+
+    def test_iris_and_blinder_never_appear_only_zoom_rotates(self):
+        sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(5)))
+        look = _zoom_only_look()
+        selections = tuple(
+            SongCueLookSelection(section=section, requested_dynamics=(look.dynamics,), look=look)
+            for section in sections
+        )
+        bundle = build_songcue_bundle(
+            "Zoom Only",
+            selections,
+            sequences_section=_sequences(1),
+            groups_section=_groups(*FULL_RIG),
+        )
+
+        assert bundle.skipped == ()
+        for section in bundle.stored_sections:
+            assert LADDER_IRIS_PINCH not in section.ladder, "아이리스 축이 없는 룩이다"
+            assert LADDER_BLINDER_OR_FLASH not in section.ladder, "블라인더 그룹이 없는 리그다"
+
+        by_instance = {s.section.instance: s for s in bundle.stored_sections}
+        for instance in range(3, 6):
+            assert LADDER_ZOOM_PINCH in by_instance[instance].ladder, (
+                f"{instance}회차는 유일한 유효 후보(zoom_pinch)로 넘어가야 한다"
+            )
+            assert by_instance[instance].accent_withheld is None

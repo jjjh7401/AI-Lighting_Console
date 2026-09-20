@@ -172,15 +172,21 @@ class TestStrobeNeedsExplicitPermission:
 
 
 class TestAccentGroupAbsentMeansNoConsoleCommand:
-    """음성 대조군 — 리그에 블라인더·스트로브 그룹이 없으면 칸은 회전해도 무대는 안 켜진다.
+    """음성 대조군 — 리그에 블라인더·스트로브 그룹이 없으면 그 칸은 애초에 회전
+    후보에도 안 오른다(SPEC-LDACCENT-001 — 카드 t382 verdict.md 가 예고한 후속).
 
-    실측(카드 t377 다이어그노시스): 이 저장소가 처음 만난 EDM 실기 리그
-    (``server.tests.busking_fixtures.FULL_RIG``)에는 블라인더·스트로브 그룹이
+    **고치기 전 실측**(카드 t377 다이어그노시스): 이 저장소가 처음 만난 EDM 실기
+    리그(``server.tests.busking_fixtures.FULL_RIG``)에는 블라인더·스트로브 그룹이
     없다 — 종류 역할 넷(워시·블라인더·스트로브·헤이즈)은 출하 룩 어디에도
-    선언되지 않는다(``busking_fixtures`` 머리말).
+    선언되지 않는다(``busking_fixtures`` 머리말). 그때는 ``.ladder`` 에
+    ``blinder_or_flash`` 가 실려도 무대에는 아무것도 안 나갔다 — 셀 이름이
+    무대 효과를 정직하게 보고하지 않는 결함이었다. 이 룩은 줌·아이리스 축도
+    없으므로(``_look`` 이 ``Dimmer`` 하나만 싣는다) 이 시나리오는 세 후보
+    전부 무영향인 AC-LDACCENT-001 과 같은 모양이다.
     """
 
-    def test_no_blind_group_in_the_rig_means_no_accent_command(self):
+    def test_no_blind_group_in_the_rig_means_the_ladder_never_names_it(self):
+        from server.looks.songcue import LADDER_IRIS_PINCH, LADDER_ZOOM_PINCH
         from server.tests.busking_fixtures import FULL_RIG
 
         sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(6)))
@@ -198,5 +204,11 @@ class TestAccentGroupAbsentMeansNoConsoleCommand:
         )
 
         assert bundle.skipped == ()
-        assert any(LADDER_BLINDER_OR_FLASH in s.ladder for s in bundle.stored_sections)
-        assert bundle.accent_fixture_sections == (), "칸은 회전했지만 리그에 그룹이 없다"
+        for rung in (LADDER_BLINDER_OR_FLASH, LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH):
+            assert all(rung not in s.ladder for s in bundle.stored_sections), (
+                f"무영향 칸 {rung!r} 이 필터를 거치고도 사다리에 남았다"
+            )
+        assert bundle.accent_fixture_sections == (), "칸이 없으니 무대 명령도 없다"
+        assert bundle.withheld_accents, (
+            "유효 후보가 하나도 없는 반복 회차는 빈 칸이 아니라 유보 기록을 남긴다"
+        )

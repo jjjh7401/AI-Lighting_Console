@@ -183,39 +183,134 @@ _MARKING_ACCENTS: tuple[str, ...] = (
     LADDER_IRIS_PINCH,
 )
 
+#: 찍는 액센트 칸 이름 -> 그 칸이 겨냥하는 **룩 자신의** 속성. 줌·아이리스만 여기
+#: 있다 — 블라인더·스트로브는 이 룩의 값을 안 바꾸는 다른 그룹이라(:data:`_ACCENT_FIXTURE_ROLE`)
+#: 효과 판정이 축이 아니라 리그의 그룹 보유로 갈린다(:func:`_accent_is_effective`).
+_MARKING_ACCENT_AXIS: dict[str, str] = dict(
+    ((LADDER_ZOOM_PINCH, _ZOOM), (LADDER_IRIS_PINCH, _IRIS))
+)
 
-def _marking_accents(*, allow_strobe: bool) -> tuple[str, ...]:
-    """이 사다리가 회전할 찍는 액센트 목록 — 스트로브 허용 여부로 길이가 갈린다.
+#: 유보 사유(SPEC-LDACCENT-001) — 그 회차·그 룩+리그+라벨 조합에서 유효한 찍는
+#: 액센트 후보가 하나도 남지 않았다. 어느 축이 없었는지·어느 그룹이 없었는지는
+#: :func:`_no_effective_candidate_detail` 이 ``detail`` 에 적는다.
+ACCENT_NO_EFFECTIVE_CANDIDATE = "accent_no_effective_candidate"
 
-    ``allow_strobe`` 가 거짓이면 :data:`_MARKING_ACCENTS` 그대로다(고치기 전과
-    바이트 동일). 참이면 :data:`LADDER_STROBE_HIT` 를 네 번째로 더해 회전에 넣는다 —
-    그래야 깊은 회차가 밝기·블라인더를 다 갈아탄 뒤에야 스트로브에 닿는다(앙코르·
-    피날레가 "처음부터" 스트로브를 쓰지 않는다는 §7.1 의 순서를 지킨다).
+
+def _look_has_attribute(look: Look, attribute: str) -> bool:
+    """룩 자신의 값 라인에 그 속성이 실려 있는지 — 없으면 이 칸은 이 룩에서 무영향이다."""
+    return any(value.name == attribute for value in look.attributes)
+
+
+def _accent_is_effective(
+    rung: str, *, look: Look, resolution: RoleResolution, section: SongCueSection
+) -> bool:
+    """이 칸이 이 룩+이 리그+이 라벨에서 실제로 관측 가능한 효과를 내는지
+    (REQ-LDACCENT-001~003).
+
+    줌·아이리스는 **룩 자신의 값 라인**을 바꾸는지(축 보유)로 판정한다. 블라인더·
+    스트로브는 **별도 무대 명령**이 실제로 나가는지로 판정한다 — 리그가 대응 그룹을
+    갖는 것과, 이 큐가 속한 섹션의 라벨이 §6 행을 갖는 것 **둘 다**를 요구한다
+    (:func:`_accent_fixture_commands` 가 실제로 명령을 내는 조건 그대로).
     """
-    if not allow_strobe:
-        return _MARKING_ACCENTS
-    return (*_MARKING_ACCENTS, LADDER_STROBE_HIT)
+    axis = _MARKING_ACCENT_AXIS.get(rung)
+    if axis is not None:
+        return _look_has_attribute(look, axis)
+    role = _ACCENT_FIXTURE_ROLE.get(rung)
+    if role is not None:
+        return bool(resolution.groups_for(role)) and intent_for_label(section.label) is not None
+    raise SongCueBundleError(f"unknown ladder rung: {rung!r}")
 
 
-def _exhausted_rungs(*, allow_strobe: bool) -> tuple[str, ...]:
+def _no_effective_candidate_detail(
+    *, allow_strobe: bool, look: Look, resolution: RoleResolution, section: SongCueSection
+) -> str:
+    """유보 기록의 ``detail`` (REQ-LDACCENT-005) — 후보 집합이 애초에 비었으면
+    후보 전량의 무영향 사유를, 후보는 있었지만 전부 이미 나간 값과 겹쳐 탐색이
+    소진됐으면 그 사실을 적는다. 두 갈래는 같은 유보 사유
+    (:data:`ACCENT_NO_EFFECTIVE_CANDIDATE`)를 공유하고 여기서만 구분된다.
+    """
+    accents = _marking_accents(
+        allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+    )
+    if accents:
+        return (
+            f"effective candidates ({', '.join(accents)}) all collided with an "
+            "already-emitted value line"
+        )
+    parts: list[str] = []
+    for rung in (LADDER_ZOOM_PINCH, LADDER_BLINDER_OR_FLASH, LADDER_IRIS_PINCH, LADDER_STROBE_HIT):
+        if rung == LADDER_STROBE_HIT and not allow_strobe:
+            continue
+        axis = _MARKING_ACCENT_AXIS.get(rung)
+        if axis is not None:
+            parts.append(f"{rung}: no {axis} axis in look")
+            continue
+        role = _ACCENT_FIXTURE_ROLE[rung]
+        if not resolution.groups_for(role):
+            parts.append(f"{rung}: no {role} fixture group in rig")
+        else:
+            parts.append(f"{rung}: no six-row intent for label {section.label!r}")
+    return "; ".join(parts)
+
+
+# @MX:NOTE: [AUTO] 회전 후보는 회전 전에 걸러진다 — 무영향 칸(줌/아이리스 축
+#   부재, 블라인더/스트로브 그룹 부재, §6 행 미매치)은 이 함수를 거치는 모든
+#   호출자(`_climb_rungs`·`_ensure_marking_accent`·`_max_climb`·`_exhausted_rungs`)
+#   에서 후보로 아예 보이지 않는다(SPEC-LDACCENT-001 §2).
+def _marking_accents(
+    *, allow_strobe: bool, look: Look, resolution: RoleResolution, section: SongCueSection
+) -> tuple[str, ...]:
+    """이 사다리가 회전할 찍는 액센트 **후보** — 이 룩+이 리그+이 라벨에서 실제로
+    관측 가능한 효과를 내는 칸으로만 미리 거른다(SPEC-LDACCENT-001 REQ-001~003).
+
+    ``allow_strobe`` 가 거짓이면 :data:`_MARKING_ACCENTS` 순서 그대로 필터만 거친다
+    (고치기 전과 바이트 동일 — 필터가 아무것도 안 거르는 룩+리그+라벨 조합에서는).
+    참이면 :data:`LADDER_STROBE_HIT` 를 네 번째 후보로 더해 같은 필터를 통과시킨다.
+    무영향 칸(룩이 그 축을 안 실었거나, 리그에 그 그룹이 없거나, 이 큐의 섹션
+    라벨에 §6 행이 없는 칸)은 후보에서 아예 빠진다 — **회전 전, 회차별 값 결정
+    전에** 적용한다(§2), 사후에 걸러내지 않는다.
+    """
+    candidates = _MARKING_ACCENTS if not allow_strobe else (*_MARKING_ACCENTS, LADDER_STROBE_HIT)
+    return tuple(
+        rung
+        for rung in candidates
+        if _accent_is_effective(rung, look=look, resolution=resolution, section=section)
+    )
+
+
+def _exhausted_rungs(
+    *, allow_strobe: bool, look: Look, resolution: RoleResolution, section: SongCueSection
+) -> tuple[str, ...]:
     """건너뜀 사유 문면에 실을 칸 이름 전량 — 이 자리에서 실제로 후보였던 것만.
 
-    ``allow_strobe`` 가 거짓이면 스트로브는 후보에도 없었으므로 사유에도 안 적는다 —
-    「스트로브까지 다 써 봤다」는 거짓 주장을 사유 문면에 남기지 않기 위해서다.
+    ``LADDER_DIMMER_HIT`` 는 늘 후보이므로 무조건 더한다. 찍는 액센트는
+    :func:`_marking_accents` 가 거른 유효 집합만 싣는다 — 무영향 칸까지 "실제로
+    시도했다"는 거짓 주장을 사유 문면에 남기지 않기 위해서다(SPEC-LDACCENT-001).
     """
-    if not allow_strobe:
-        return LADDER_RUNGS
-    return (*LADDER_RUNGS, LADDER_STROBE_HIT)
+    return (
+        LADDER_DIMMER_HIT,
+        *_marking_accents(
+            allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+        ),
+    )
 
 
-def _max_climb(*, allow_strobe: bool) -> int:
+def _max_climb(
+    *, allow_strobe: bool, look: Look, resolution: RoleResolution, section: SongCueSection
+) -> int:
     """오를 수 있는 깊이의 상한 — 밝기의 머리 공간(천장까지의 걸음 수)에 액센트
     갈아타기를 더한 것. 정본 §6 의 「마지막 드롭은 전 리그 최대」와 같은 방향이고,
     천장에서는 값이 더 안 움직이므로 유한하다: 그 지점에서 비로소 큐를 못 세운다
-    (마지막 수단의 건너뜀). 액센트 개수가 ``allow_strobe`` 로 갈리므로 상한도 그만큼
-    갈린다.
+    (마지막 수단의 건너뜀). 액센트 개수가 ``allow_strobe`` **그리고** 이 룩+리그+
+    라벨에서 실제로 유효한 후보 수로 갈리므로 상한도 그만큼 갈린다 — 무영향 칸을
+    분모에 넣은 채 상한을 계산하면 실제로는 못 오를 깊이까지 "시도해볼 가치가
+    있다"고 잘못 보고한다(SPEC-LDACCENT-001).
     """
-    return _DIMMER_CEILING // _HIT_STEP + len(_marking_accents(allow_strobe=allow_strobe))
+    return _DIMMER_CEILING // _HIT_STEP + len(
+        _marking_accents(
+            allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+        )
+    )
 
 
 #: **안전 바닥** — 감광 규칙이 내려갈 수 있는 가장 낮은 ``Dimmer`` 값(정본 §8 안전 한계).
@@ -467,6 +562,15 @@ class SongCueSectionBundle:
     이유다.
     """
 
+    accent_withheld: SongCueWithheldAccent | None = None
+    """이 큐에서 찍는 액센트를 못 채운 이유 — 조립 도중에만 알 수 있는 셋 중 하나
+    (SPEC-LDACCENT-001).
+
+    번들 수준의 :attr:`SongCueBundle.withheld_accents` 가 이것을 걷어 간다 —
+    :attr:`darkness_withheld` 와 :attr:`SongCueBundle.withheld_darkness` 가 갈라져
+    있는 것과 같은 형상이다.
+    """
+
 
 @dataclass(frozen=True)
 class SongCueWithheldMovement:
@@ -484,6 +588,24 @@ class SongCueWithheldMovement:
 
 
 @dataclass(frozen=True)
+class SongCueWithheldAccent:
+    """찍는 액센트를 낼 자리인데 유효한 후보가 하나도 없어 못 채운 큐 하나와 그 이유
+    (SPEC-LDACCENT-001).
+
+    회전이 후보를 고르기 전에 무영향 칸(룩이 그 축을 안 실었거나, 리그에 그 그룹이
+    없거나, 이 큐가 속한 섹션 라벨에 §6 행이 없는 칸)을 미리 거르고 나면, 이 회차가
+    회전할 후보가 하나도 남지 않을 수 있다. 그때 셀 이름을 지어내는 대신 여기에
+    「냈어야 했는데 못 냈다」를 남긴다 — :class:`SongCueWithheldMovement`·
+    :class:`SongCueWithheldDarkness` 와 같은 보고 패턴이다.
+    """
+
+    section: SongCueSection
+    cue_number: int
+    reason: str
+    detail: str = ""
+
+
+@dataclass(frozen=True)
 class SongCueBundle:
     song_title: str
     sequence_number: int
@@ -494,6 +616,7 @@ class SongCueBundle:
     reason: str | None = None
     withheld_movement: tuple[SongCueWithheldMovement, ...] = ()
     withheld_darkness: tuple[SongCueWithheldDarkness, ...] = ()
+    withheld_accents: tuple[SongCueWithheldAccent, ...] = ()
 
     @property
     def movement_sections(self) -> tuple[SongCueSectionBundle, ...]:
@@ -809,9 +932,22 @@ def build_songcue_bundle(
         bundle,
         withheld_movement=withheld,
         withheld_darkness=structural_withheld + _darkness_withheld(bundle, darken),
+        withheld_accents=_collect_withheld_accents(bundle.sections),
     )
     _guard_bundle_collision(bundle)
     return bundle
+
+
+def _collect_withheld_accents(
+    sections: Sequence[SongCueSectionBundle],
+) -> tuple[SongCueWithheldAccent, ...]:
+    """섹션 번들 전량에서 :attr:`SongCueSectionBundle.accent_withheld` 를 걷는다
+    (SPEC-LDACCENT-001) — 기존 ``withheld_movement``/``withheld_darkness`` 집계와
+    같은 패턴. 조립 도중에만 알 수 있는 값이므로 여기서 한 번에 걷는다.
+    """
+    return tuple(
+        section.accent_withheld for section in sections if section.accent_withheld is not None
+    )
 
 
 def _assembled(
@@ -1266,35 +1402,56 @@ def _finalize_marking_accents(
             continue
         bundles[index] = _strip_marking_accent_from_base_occurrence(bundle, emitted)
 
-    accents = _marking_accents(allow_strobe=allow_strobe)
     for index, bundle in enumerate(bundles):
         if not bundle.commands or bundle.section.instance < 2:
             continue
+        look = bundle.selection.look
+        if look is None:
+            continue
+        accents = _marking_accents(
+            allow_strobe=allow_strobe, look=look, resolution=resolution, section=bundle.section
+        )
         if any(rung in accents for rung in bundle.ladder):
             continue
         values = bundle.commands[2]
         escalated = _parse_values_line(values)
         force = LADDER_DIMMER_YIELD in bundle.ladder
-        final_values, final_rungs = _ensure_marking_accent(
+        final_values, final_rungs, withheld = _ensure_marking_accent(
             escalated,
             bundle.section,
             bundle.ladder,
             values,
             emitted,
+            look=look,
+            resolution=resolution,
             allow_strobe=allow_strobe,
             force=force,
         )
+        if withheld:
+            # SPEC-LDACCENT-001 REQ-005/006 — 유효한 찍는 액센트 후보가 하나도 없으면
+            # 셀 이름을 지어내지 않고, 어느 섹션·어느 큐에서·어떤 이유로 못 채웠는지
+            # 눈에 보이는 유보 기록을 남긴다(빈 칸으로 조용히 넘어가지 않는다).
+            bundles[index] = replace(
+                bundle,
+                accent_withheld=SongCueWithheldAccent(
+                    section=bundle.section,
+                    cue_number=bundle.cue_number,
+                    reason=ACCENT_NO_EFFECTIVE_CANDIDATE,
+                    detail=_no_effective_candidate_detail(
+                        allow_strobe=allow_strobe,
+                        look=look,
+                        resolution=resolution,
+                        section=bundle.section,
+                    ),
+                ),
+            )
+            continue
         added_rungs = final_rungs[len(bundle.ladder) :]
         if not added_rungs:
             continue
         if final_values != values:
             emitted.pop(values, None)
-            look = bundle.selection.look
-            emitted[final_values] = (
-                bundle.section.index,
-                bundle.cue_number,
-                look.look_id if look is not None else "",
-            )
+            emitted[final_values] = (bundle.section.index, bundle.cue_number, look.look_id)
         new_commands = (bundle.commands[0], bundle.commands[1], final_values, *bundle.commands[3:])
         bundles[index] = replace(bundle, commands=new_commands, ladder=bundle.ladder + added_rungs)
 
@@ -2146,19 +2303,23 @@ def _section_bundle(
         drop_cue_number=drop_cue_number,
     )
     values, rungs = _distinct_values_line(
-        look, selection.section, emitted, allow_strobe=allow_strobe
+        look, selection.section, emitted, resolution=resolution, allow_strobe=allow_strobe
     )
     if values is not None:
         # 카드 t382 — 이 회차가 양보로 받은 자리든 기준값 자리든, 반복 회차(instance
         # >= 2)는 찍는 액센트를 하나 받는다(정본 §7.1). `_distinct_values_line` 이
         # 충돌 없이 곧바로 기준값(``rungs=()``)이나 얕은 깊이로 끝났다고 해서 액센트를
         # 건너뛰지 않는다 — 자세한 이유는 :func:`_ensure_marking_accent` 독스트링.
-        values, rungs = _ensure_marking_accent(
+        # 유보 여부는 여기서 버린다(SPEC-LDACCENT-001) — 재배열 뒤 `_finalize_marking_accents`
+        # 가 최종 사다리를 기준으로 다시 판정하고 기록하는 것이 권위 있는 자리다.
+        values, rungs, _withheld = _ensure_marking_accent(
             escalate_attributes(look.attributes, rungs),
             selection.section,
             rungs,
             values,
             emitted,
+            look=look,
+            resolution=resolution,
             allow_strobe=allow_strobe,
         )
     if values is None:
@@ -2170,7 +2331,16 @@ def _section_bundle(
             detail=(
                 f"value line matches section {previous_section} "
                 f"cue {previous_cue} look {previous_look}; "
-                f"ladder exhausted ({', '.join(_exhausted_rungs(allow_strobe=allow_strobe))})"
+                "ladder exhausted ("
+                + ", ".join(
+                    _exhausted_rungs(
+                        allow_strobe=allow_strobe,
+                        look=look,
+                        resolution=resolution,
+                        section=selection.section,
+                    )
+                )
+                + ")"
             ),
             collides_with_section_index=previous_section,
             collides_with_cue_number=previous_cue,
@@ -2277,6 +2447,7 @@ def _distinct_values_line(
     section: SongCueSection,
     emitted: Mapping[str, tuple[int, int, str]],
     *,
+    resolution: RoleResolution,
     allow_strobe: bool = False,
 ) -> tuple[str | None, tuple[str, ...]]:
     """앞선 큐와 겹치지 않는 값 라인과 그때 더한 사다리 칸들. 못 만들면 ``(None, ())``.
@@ -2301,8 +2472,13 @@ def _distinct_values_line(
         return base, ()
     if previous[0] == section.index:
         return None, ()
-    for depth in range(_ladder_start(section), _max_climb(allow_strobe=allow_strobe) + 1):
-        rungs = _climb_rungs(depth, allow_strobe=allow_strobe)
+    max_climb = _max_climb(
+        allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+    )
+    for depth in range(_ladder_start(section), max_climb + 1):
+        rungs = _climb_rungs(
+            depth, allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+        )
         candidate = _values_line(escalate_attributes(look.attributes, rungs))
         if candidate not in emitted:
             return candidate, rungs
@@ -2330,7 +2506,14 @@ def _ladder_start(section: SongCueSection) -> int:
 #   부딪혔고 감독이 갈래를 정했다 — **누적하는 축은 밝기 하나**이고, 찍는 액센트는
 #   갈아탄다. 밝기를 액센트와 같은 규율로 묶으면 t355 의 성질(반복 회차가 사라지지 않는다)
 #   이 깨진다: 축이 하나도 남지 않는 회차가 생겨 큐가 다시 버려진다.
-def _climb_rungs(depth: int, *, allow_strobe: bool = False) -> tuple[str, ...]:
+def _climb_rungs(
+    depth: int,
+    *,
+    allow_strobe: bool = False,
+    look: Look,
+    resolution: RoleResolution,
+    section: SongCueSection,
+) -> tuple[str, ...]:
     """깊이 하나가 내는 칸들 — 밝기 히트 여러 개 + 찍는 액센트 **최대 하나**.
 
     깊이 1은 밝기뿐이고(2회차), 깊이 2부터 액센트가 하나 붙는다. 더 깊어지면 밝기 히트가
@@ -2339,11 +2522,20 @@ def _climb_rungs(depth: int, *, allow_strobe: bool = False) -> tuple[str, ...]:
 
     밝기가 천장에 닿으면 그 뒤의 밝기 히트는 값을 안 바꾼다(:func:`_stepped` 가 자른다).
     그때는 액센트 교체만 값 라인을 가르고, 그것도 다 떨어지면 큐를 못 세운다.
+
+    ``accents`` 는 이 룩+이 리그+이 라벨에서 이미 **효과가 있는 것만** 거른 후보다
+    (SPEC-LDACCENT-001). 그 집합이 비어 있으면(무영향 칸뿐이면) 붙일 액센트가 없다 —
+    무영향 칸 이름을 지어내지 않고 밝기 히트만 돌려준다; 그 회차가 액센트를 정말
+    필요로 했는지는 :func:`_ensure_marking_accent` 가 값이 정해진 뒤에 다시 본다.
     """
-    accents = _marking_accents(allow_strobe=allow_strobe)
+    accents = _marking_accents(
+        allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+    )
     if depth <= 1:
         return (LADDER_DIMMER_HIT,)
     hits = (LADDER_DIMMER_HIT,) * (depth - 1)
+    if not accents:
+        return hits
     return hits + (accents[(depth - 2) % len(accents)],)
 
 
@@ -2398,9 +2590,11 @@ def _ensure_marking_accent(
     values: str,
     emitted: Mapping[str, tuple[int, int, str]],
     *,
+    look: Look,
+    resolution: RoleResolution,
     allow_strobe: bool = False,
     force: bool = False,
-) -> tuple[str, tuple[str, ...]]:
+) -> tuple[str, tuple[str, ...], bool]:
     """이 회차에 찍는 액센트가 아직 없으면 하나 골라 붙인다 — 값이 이미 정해진 뒤에도.
 
     1회차(``section.instance < 2``)는 그대로 둔다 — 기준 회차는 아무것도 더하지 않는다는
@@ -2422,26 +2616,38 @@ def _ensure_marking_accent(
 
     ``escalated`` 는 ``rungs`` 까지 이미 반영된 현재 값 상태다(:func:`escalate_attributes`
     가 만든 것, 또는 양보 축처럼 그 함수가 모르는 칸으로 만들어진 값도 무방하다 —
-    여기서는 그 위에 액센트 하나만 얹는다). 회차가 고르는 첫 자리는
-    :data:`_MARKING_ACCENTS` 안에서 ``(instance - 2) % len`` 이고(:func:`_climb_rungs`
-    와 같은 회전), 그 자리가 이미 나간 값과 겹치면 회전판을 한 칸씩 밀어 겹치지 않는
-    자리를 찾는다 — 블라인더·스트로브는 이 룩 자신의 값을 안 바꾸므로(:func:`_rung_applied`)
-    항상 겹치지 않아 회전은 유한한 안에서 반드시 멈춘다.
+    여기서는 그 위에 액센트 하나만 얹는다). 회차가 고르는 첫 자리는 :func:`_marking_accents`
+    가 이 룩+이 리그+이 라벨에서 거른 유효 후보 안에서 ``(instance - 2) % len`` 이고
+    (:func:`_climb_rungs` 와 같은 회전), 그 자리가 이미 나간 값과 겹치면 회전판을 한
+    칸씩 밀어 겹치지 않는 자리를 찾는다 — 블라인더·스트로브는 이 룩 자신의 값을 안
+    바꾸므로(:func:`_rung_applied`) 항상 겹치지 않아 회전은 유한한 안에서 반드시 멈춘다.
+
+    셋째 반환값은 **유보 여부**(SPEC-LDACCENT-001, REQ-LDACCENT-005) — 이 회차가
+    액센트를 마땅히 받아야 하는데(이미 있지도 않고, 마땅한 깊이에도 안 닿았는데)
+    REQ-004 의 탐색(이 룩+이 리그+이 라벨에서 유효한 후보 전량을 회전 순서대로
+    시도)을 다 거쳐도 유효한 후보가 하나도 남지 않으면 참이다 — 후보 집합이
+    애초에 비어 있었든(무영향 칸뿐), 있었지만 전부 이미 나간 값과 겹쳤든 같은
+    사유다. 그때 ``values``·``rungs`` 는 입력 그대로 돌려준다 — 셀 이름을
+    지어내지 않는다.
     """
     if section.instance < 2:
-        return values, rungs
-    accents = _marking_accents(allow_strobe=allow_strobe)
+        return values, rungs, False
+    accents = _marking_accents(
+        allow_strobe=allow_strobe, look=look, resolution=resolution, section=section
+    )
     if any(rung in accents for rung in rungs):
-        return values, rungs
+        return values, rungs, False
     if not force and _climb_depth_reached(rungs) >= _ladder_start(section):
-        return values, rungs
+        return values, rungs, False
+    if not accents:
+        return values, rungs, True
     start = (section.instance - 2) % len(accents)
     for offset in range(len(accents)):
         accent = accents[(start + offset) % len(accents)]
         candidate = _values_line(_rung_applied(escalated, accent))
         if candidate == values or candidate not in emitted:
-            return candidate, rungs + (accent,)
-    return values, rungs
+            return candidate, rungs + (accent,), False
+    return values, rungs, True
 
 
 def _rung_applied(values: Sequence[AttributeValue], rung: str) -> tuple[AttributeValue, ...]:
