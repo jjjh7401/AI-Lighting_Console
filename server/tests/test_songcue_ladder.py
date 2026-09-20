@@ -520,11 +520,11 @@ class TestOneMarkingAccentPerCue:
         룩이 줌과 아이리스를 **둘 다** 실어야 이 단정이 공허하지 않다(없는 축의 칸은
         아무것도 안 바꾸므로, 축이 하나뿐인 룩에서는 쌓아도 한 줄만 나간다).
 
-        카드 t378 이 회전에 블라인더를 더하면서 셋째 자리(깊이 3, 4회차)가 아이리스에서
-        블라인더로 바뀌었다 — 순서가 바뀐 이유는 ``_MARKING_ACCENTS`` 독스트링(깊이 2 는
-        밝기 히트 개수가 깊이 1 과 같아서 액센트 자신이 값을 바꿔야 하고, 블라인더는 이
-        룩의 값을 안 바꾸므로 그 자리에 못 들어간다). 블라인더는 이 룩 자신의 값을 안
-        바꾸므로 4회차는 줌·아이리스가 **기준값 그대로**이고 밝기만 오른다.
+        **SPEC-LDACCENT-001 이후로 바뀐 자리**: 이 픽스처의 리그는 ``FULL_RIG``
+        (블라인더 그룹 없음)다 — 이제 ``blinder_or_flash`` 는 애초에 회전 후보에도
+        안 오른다(AC-LDACCENT-002). 그래서 4회차는 남은 유효 후보(아이리스)로,
+        5회차는 다시 줌으로 갈아탄다 — 회전이 무영향 칸을 건너뛰고 다음 유효
+        후보를 시도하되, 정확히 하나만 담는다.
         """
         sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(5)))
         look = _look("chorus", dimmer=80, zoom=18, iris=60)
@@ -534,18 +534,21 @@ class TestOneMarkingAccentPerCue:
             (),
             (LADDER_DIMMER_HIT,),
             (LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH),
-            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_BLINDER_OR_FLASH),
-            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_IRIS_PINCH),
+            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_IRIS_PINCH),
+            (LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_DIMMER_HIT, LADDER_ZOOM_PINCH),
         ]
+        assert not any(
+            LADDER_BLINDER_OR_FLASH in section.ladder for section in bundle.stored_sections
+        ), "블라인더 그룹이 없는 리그이므로 blinder_or_flash 는 후보에도 오르면 안 된다"
         lines = _value_lines(bundle)
-        # 4회차: 블라인더는 이 룩의 값을 안 바꾸므로 줌·아이리스 모두 기준값 그대로다.
-        # 밝기만 두 걸음 올라 유일해진다(85 는 2회차가 이미 썼다).
+        # 4회차: 아이리스가 좁혀지고 줌은 기준값 그대로다. 밝기도 두 걸음 오른다
+        # (85 는 2·3회차가 이미 썼다).
         assert "Attribute 'Zoom' At 18" in lines[3]
-        assert "Attribute 'Iris' At 60" in lines[3]
+        assert "Attribute 'Iris' At 55" in lines[3]
         assert "Attribute 'Dimmer' At 90" in lines[3]
-        # 5회차: 아이리스가 좁혀지고 밝기는 계속 오른다. 줌은 기준값 그대로다.
-        assert "Attribute 'Zoom' At 18" in lines[4]
-        assert "Attribute 'Iris' At 55" in lines[4]
+        # 5회차: 줌이 다시 좁혀지고 아이리스는 기준값 그대로다.
+        assert "Attribute 'Zoom' At 13" in lines[4]
+        assert "Attribute 'Iris' At 60" in lines[4]
         assert "Attribute 'Dimmer' At 95" in lines[4]
         # 고치기 전 실측 그 자리 — 한 줄에 빔 계열 둘이 함께 나가던 것이 사라졌다.
         for line in lines:

@@ -31,6 +31,7 @@ from __future__ import annotations
 from server.looks.loader import load_library_from_dir
 from server.looks.schema import AttributeValue, Look
 from server.looks.songcue import (
+    LADDER_BLINDER_OR_FLASH,
     LADDER_DIMMER_YIELD,
     SongCueLookSelection,
     _dimmer_from_values_line,
@@ -183,25 +184,26 @@ class TestTheChorusRescueGeneralizesBeyondDrop:
         # 쪽은 **상대**(1회차)다 — 정본 §6 「전 리그 최대」와 같은 방향으로, 되살아난
         # 4회차 자신은 기준값을 그대로 받는다(값 라인은 사다리 흔적이 없다).
         #
-        # 카드 t378 이 회전에 블라인더를 더하면서 3회차가 깊이 3(둘째 자리, 블라인더)
-        # 대신 깊이 4(셋째 자리, 아이리스)까지 오른다 — 블라인더는 이 룩의 값을 안
-        # 바꾸므로 깊이 3 은 2회차와 값이 겹쳐(``_MARKING_ACCENTS`` 독스트링) 건너뛴다.
+        # SPEC-LDACCENT-001 이후 — 이 리그(``FULL_RIG``)에는 블라인더 그룹이 없으므로
+        # ``blinder_or_flash`` 는 애초에 회전 후보에도 안 오른다. 3회차는 더 이상
+        # (값이 안 바뀌는) 블라인더 깊이를 거치지 않고 곧바로 아이리스로 유일해진다
+        # (2회차 값과 겹치지 않는 더 얕은 깊이에서 성공한다).
         assert LADDER_DIMMER_YIELD in chorus[0].ladder, "1회차가 물러서서 4회차에 자리를 냈다"
         assert chorus[1].ladder == ("dimmer_hit", "zoom_pinch")
-        assert chorus[2].ladder == (
-            "dimmer_hit",
-            "dimmer_hit",
-            "dimmer_hit",
-            "iris_pinch",
+        assert chorus[2].ladder == ("dimmer_hit", "dimmer_hit", "iris_pinch")
+        assert not any(LADDER_BLINDER_OR_FLASH in c.ladder for c in chorus), (
+            "블라인더 그룹이 없는 리그이므로 blinder_or_flash 는 후보에도 오르면 안 된다"
         )
-        # 카드 t382 이후 — 4회차는 값 라인은 여전히 기준값 그대로지만(사다리 흔적
-        # 없음), 반복 회차(instance >= 2)로서 찍는 액센트를 하나 받는다
-        # (``_ensure_marking_accent``). 값을 안 바꾸는 블라인더가 실린 이유는 줌·
-        # 아이리스 좁힘이 각각 2·3회차의 값 라인과 겹쳐 회전이 밀렸기 때문이다
-        # (``_ensure_marking_accent`` 의 겹치지 않는 자리 찾기).
-        assert chorus[3].ladder == ("blinder_or_flash",), (
-            "4회차는 값은 기준값 그대로지만 반복 회차이므로 찍는 액센트를 하나 받는다"
+        # 4회차 — 값 라인은 여전히 기준값 그대로다(사다리 흔적 없음). 반복 회차
+        # (instance >= 2)이므로 찍는 액센트를 마땅히 받아야 하지만, 이 룩+이 리그에서
+        # 유효한 후보(줌·아이리스)는 각각 2·3회차의 값 라인과 이미 겹쳐 있다 — 값이
+        # 안 바뀌는 블라인더라는 안전판이 이제 없으므로, 탐색이 소진되면 셀 이름을
+        # 지어내는 대신 유보 기록을 남긴다(REQ-LDACCENT-005).
+        assert chorus[3].ladder == (), "4회차는 유효 후보 전량이 소진돼 액센트를 못 받는다"
+        assert chorus[3].accent_withheld is not None, (
+            "4회차는 빈 칸으로 조용히 넘어가지 않고 유보 기록을 남겨야 한다"
         )
+        assert chorus[3].accent_withheld in bundle.withheld_accents
 
 
 def _chorus_dimmers(bundle) -> list[float | None]:
