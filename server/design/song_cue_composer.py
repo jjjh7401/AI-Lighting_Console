@@ -588,7 +588,7 @@ def _section_cue(
     budget = axis_budget(decision.d.level, plan.music_profile, plan.rig_profile)
     blackout = _is_blackout(decision)
     dimmer = _dimmer_data(budget, plan, blackout=blackout)
-    fx = _fx_data(decision, budget)
+    fx = _fx_data_for_role(decision, budget)
     fade_seconds = (
         float(decision.fade_override)
         if decision.fade_override is not None
@@ -605,7 +605,7 @@ def _section_cue(
         position=CuePositionData(
             requested=decision.position.preset,
             stored=position_label,
-            width_tier=_position_width_tier(budget.position_width),
+            width_tier=_position_width_for_role(decision, budget),
             source=decision.position.source,
         ),
         dimmer=dimmer,
@@ -658,6 +658,37 @@ def _fx_data(decision: SectionDecision, budget: AxisBudget) -> CueFxData:
         axis_budget=budget.fx_axes,
         speed_beats=speed_beats,
     )
+
+
+#: 카드 t394 — 정본 §6 "breakdown · bridge → 밝기 20~35% · 무빙·이펙트 정지".
+#: `_ARC_D_LEVEL`(session.py) 은 bridge 를 D2 고정으로 주지만, 이 예산은
+#: `axis_budget(decision.d.level, ...)` 로 D 레벨마다 다시 계산되므로 D2·D3
+#: 에서는 `('slow tilt',)` 가 permit 된다(실측: D2 fx_permitted=('slow
+#: tilt',) density=1 speed_beats=0.25 — 정지가 아니다). §6 은 밝기(D 레벨)와
+#: 별개로 role 하나만 조건으로 건다 — D1 에서 우연히 permitted 가 비었던 것과
+#: 같은 결과를 D 레벨과 무관하게 강제한다. 밝기·페이드는 이 축이 아니므로
+#: 건드리지 않는다(`_fade_seconds_for_role` 과 같은 분리 원칙).
+_BRIDGE_ROLE = "bridge"
+
+
+def _fx_data_for_role(decision: SectionDecision, budget: AxisBudget) -> CueFxData:
+    if decision.role != _BRIDGE_ROLE:
+        return _fx_data(decision, budget)
+    requested = decision.fx.allowed
+    return CueFxData(
+        requested=requested,
+        permitted=(),
+        disabled=(*decision.fx.disabled, *requested),
+        density=0,
+        axis_budget=budget.fx_axes,
+        speed_beats=None,
+    )
+
+
+def _position_width_for_role(decision: SectionDecision, budget: AxisBudget) -> str:
+    if decision.role != _BRIDGE_ROLE:
+        return _position_width_tier(budget.position_width)
+    return _position_width_tier(0.0)
 
 
 def _effect_speed_beats(budget: AxisBudget, permitted: tuple[str, ...]) -> float | None:
