@@ -1792,3 +1792,43 @@ canary_compliance_check:
 **Gaps** — AC-021·024·032 승격부 3건 전부 미관측. ping/state 왕복만 관측했다.
 **Residual-risk** — onPC OSC 설정은 쇼 파일에 저장해야 유지된다. 저장하지 않은 쇼나
 Preferred IP 가 기본값인 새 쇼에서는 같은 증상이 재발한다.
+
+## §K AC-021 승격부 실기 관측 (2026-09-20)
+
+**Claim** — AC-LDPLUGIN-021 콘솔 필요 항목("통과한 apply 가 실제로 콘솔에 객체를
+만들었는지")을 처음으로 실기 관측했다. §J 가 코드 부재로 못했던 관측이며, 그
+코드(`server/orchestrator/bundle_sender.py` `GateBundleSender`, `provision.py`
+`bundle_sender` REQUIRED화, `serve.py` 배선)는 카드 t420 에서 이미 완결되어
+있었다 — 이번 세션은 새로 만들지 않고 기존 도구(`server.tools.
+director_apply_observe`)로 관측만 수행했다.
+
+**Evidence**:
+```
+$ uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005 --skip-exec
+  [PASS] ping: ok   live version=1.6.5 plugin=CopilotResponder
+  [PASS] state: ok  node={... 'name': 'Sequences'} children=18
+result: PASS
+
+$ uv run python -m server.tools.director_apply_observe 021 --listen-port 9005 --execute
+approval_id: zSQ6OTonNY0yEvFgPdaMYQ
+backup_precondition: ok
+response_status: 201
+response_body: {'execution_id': 'execution-Wkhu1Hi4mYieqmNkP0PpGg', 'state': 'sent', 'bundles': ['acknowledged'], 'recovery_required': False}
+readback[primary]: exists=True path=DataPool/Sequences/9900 shape=ok:true,
+  node={'childCount': 3, 'class': 'Sequence', 'enumeration': 'ok', 'name': 'Sequence 9900'} children=3개 — 점유
+```
+
+**함정 — 첫 시도는 점유로 거부됨(참고 관측)**: 삭제하지 않은 이전 스크래치
+`Sequence 9900`(childCount 3) 이 남아 있어 첫 실행은 `DestinationOccupiedError`
+로 거부됐다 — 이 자체가 AC-021 항목 2(create-only, 점유 slot 을 조용히 재선택하지
+않음)의 부수 증거다. 사용자가 콘솔에서 `Delete Sequence 9900/9901/9903/9904/9911`
+실행 후 재시도하여 위 성공 결과를 얻었다.
+
+**Gaps** — AC-024(실패/간섭 시 중단)·AC-032(운영 중단·recovery) 콘솔 승격부는
+여전히 미관측 — 이번 세션은 AC-021 만 관측하고 종료. `SPEC-LDCERT-001`(미작성)
+수준의 first-release go/no-go 판정은 이 관측만으로 내려지지 않는다(acceptance.md
+§4 "콘솔 필요 항목은 이 SPEC 만으로 go/no-go 를 내지 않는다").
+**Residual-risk** — 이번 성공은 이 세션의 onPC 설정(수동 확인됨) 에서만 관측됐다.
+쇼 파일에 저장되지 않았다면 §J 의 잔여 위험(재발)이 그대로 유효하다. 이번에
+콘솔에 만든 `Sequence 9900` 은 스크래치이며 삭제하지 않았다 — 다음 관측(024/032)
+전 정리 필요.
