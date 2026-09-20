@@ -2,7 +2,7 @@
 
 > 각 항목은 **이진 판정 가능**해야 한다. 부정 대조군이 없는 항목은 통과해도 계기 고장과 구별되지 않는다.
 > **전 항목이 오프라인이다.** 콘솔 쓰기 0 · 조회 0(REQ-SONGCONFIRM-014). 실측 기준 HEAD 는 `f727e11` 이었으나, diff 술어의 기준은 리터럴이 아니라 **`BASE=$(git merge-base origin/main HEAD)`** 다 — M1 착수 시 그 값을 `progress.md §E.2` 에 적는다. 형제 SPEC-COPILOT-POOLEMPTY-001 이 `_timecode_slot_verdict` 를 모듈 수준 `timecode_slot_verdict` 로 옮기므로(두 SPEC 은 독립이며 나중에 착지하는 쪽이 rebase 한다), 슬롯 판정 술어는 밑줄 없는 `timecode_slot_verdict` 로 두 이름을 함께 잡는다.
-> AC 는 `001`~`016` 연속 16건(Tier M 상한). 하위 ID 없음. 「AC 번호는 REQ 번호를 함의하지 않는다」 — `↔` 표기가 정본이다.
+> AC 는 `001`~`016` 연속 16건(Tier M 상한). 하위 ID 없음. 「AC 번호는 REQ 번호를 함의하지 않는다」 — `↔` 표기가 정본이다. 2026-09-20 제자리 개정(카드 t417)이 배수 정정 무효 규칙을 AC-SONGCONFIRM-003 **(b)** 로 접어 넣었다 — 신규 AC id 없음, 16 건 그대로(`spec.md` HISTORY `## Amendments` 참조).
 
 ## A. 실행 명령
 
@@ -45,10 +45,17 @@ Given 같은 카드에서
 When 답이 첫째와 셋째 라벨만 이은 문자열이면
 Then `sections[0].selected`·`sections[2].selected` 는 `True`, `sections[1]`·`sections[3]` 은 `False`, `accepted` 는 `index` `(0, 2)` 순서, `dropped_count == 2`. 제외된 구간도 기록에 **남아 있다**(목록 길이 4).
 
-**AC-SONGCONFIRM-003** — 자유 입력으로 BPM 만 고쳐도 구간은 카드대로 채택된다 ↔ REQ-003 ② · 004
+**AC-SONGCONFIRM-003** [제자리 개정 — 카드 t417, 2026-09-20] — 자유 입력으로 BPM 을 고치는 두 갈래: 배수가 아니면 카드대로 채택, 배수면 구간 확정 무효 ↔ REQ-003 ② · 규칙 3 · 004
+
+(a) — 자유 입력으로 BPM 만 고쳐도 구간은 카드대로 채택된다:
 Given 같은 카드에서
-When 답이 `BPM 130` 이면(라벨 0건)
-Then `song_bpm.bpm == 130.0` 이고, `song_analysis.accepted` 길이 4, `dropped_count == 0`. **대조군**: 답이 `두 번째는 빼 줘` 여도 결과는 동일하다(산문은 구간 편집이 아니다).
+When 답이 `BPM 130` 이면(라벨 0건, 측정 `129.199`, `log2` 거리 `0.991` — 배수 판정 밖)
+Then `song_bpm.bpm == 130.0` 이고, `song_analysis.accepted` 길이 4, `dropped_count == 0`. **대조군**: 답이 `두 번째는 빼 줘` 여도 결과는 동일하다(산문은 구간 편집이 아니다). 시험: `test_song_confirm_sections.py::TestAnOctaveBpmCorrectionVoidsTheSections::test_a_nearby_bpm_is_not_an_octave_and_keeps_the_record`.
+
+(b) [제자리 개정 — 카드 t417, 2026-09-20] — 배수로 고친 BPM 은 구간 확정을 무효로 하고 재분석을 요청한다(REQ-003 규칙 3):
+Given 측정 BPM(감독 판정 정답지 예: `Morning` 측정 `117.45`)으로 카드가 서고
+When 사람이 그 절반(`58.7`, `log2` 거리 `0.0002`) 또는 두 배를 자유 입력 BPM 으로 확정하면
+Then `song_bpm.bpm` 은 사람이 적은 값으로 확정되지만 `session.song_analysis is None`(구간 확정 무효)이고 재계산은 없으며, 확정 고지에 배수로 고쳐졌다는 문장과 "다시 분석해 주세요"가 들어 있다. 시험(고정 픽스처 측정 `129.199`, 절반 `64.6` · 두 배 `258.4`): `::test_half_bpm_voids_the_record_and_says_so` · `::test_double_bpm_voids_the_record_too`. **양성 대조군**: 정정 없이 카드를 그대로 받아들이면(`확인`) 기록이 남는다 — `::test_accepting_the_card_keeps_the_record`. 이 갈래는 코드 변경 없이 이미 초록인 시험을 뒤늦게 인수 기준으로 명문화한다(spec.md HISTORY `## Amendments`).
 
 **AC-SONGCONFIRM-004** [부정 대조군] — 답이 없으면 기록도 없고 오늘 거동은 그대로다 ↔ REQ-002
 Given 같은 카드에서
@@ -145,7 +152,7 @@ Then 다섯 파일 전부 초록이고 전량 검사에 실패 0 건이며, `git
 ## E. 품질 게이트 · 완료 정의
 
 - **게이트**: §A 명령 전부 통과 · `uv run ruff check server` · `uv run ruff format --check server` · 전량 `server/tests` 실패 0.
-- **완료 정의(DoD)**: AC 16/16 PASS(PASS-WITH-DEBT 는 사유와 함께 §E.2 에 적는다) · REQ→AC 역방향표(§F) 미대응 0 · `progress.md §E.2` 가 5절 형식(주장 · 증거 · 기준 귀속 · 미검증 · 잔여 위험)으로 마일스톤별 RED 증거와 게이트 출력을 그대로 싣는다 · 콘솔 접촉 0 을 숫자로 적는다.
+- **완료 정의(DoD)**: AC 16/16 PASS(PASS-WITH-DEBT 는 사유와 함께 §E.2 에 적는다; AC-003 (b) 는 2026-09-20 제자리 개정에서 코드 변경 없이 이미 초록인 시험으로 PASS) · REQ→AC 역방향표(§F) 미대응 0 · `progress.md §E.2` 가 5절 형식(주장 · 증거 · 기준 귀속 · 미검증 · 잔여 위험)으로 마일스톤별 RED 증거와 게이트 출력을 그대로 싣는다 · 콘솔 접촉 0 을 숫자로 적는다.
 
 ## F. REQ → AC 역방향표
 

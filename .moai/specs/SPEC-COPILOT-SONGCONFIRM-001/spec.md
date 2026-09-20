@@ -1,10 +1,10 @@
 ---
 id: SPEC-COPILOT-SONGCONFIRM-001
 title: "곡 분석 확정의 도달 — 사람이 확인한 구간과 BPM 이 모델과 도구에 닿는다"
-version: "0.1.2"
-status: completed
+version: "0.2.0"
+status: in-progress
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-20
 author: manager-spec (card t273)
 priority: P1
 phase: "v1.8.1 target"
@@ -13,6 +13,7 @@ lifecycle: spec-anchored
 tags: "song-confirm, sections, bpm, session-context, prepare-songcue, production-caller-discipline, zero-console-contact, backward-compat"
 tier: M
 depends_on: [SPEC-COPILOT-MUSICSYNC-001]
+amendment_of: SPEC-COPILOT-SONGCONFIRM-001
 ---
 
 # SPEC-COPILOT-SONGCONFIRM-001 — 곡 분석 확정의 도달
@@ -36,6 +37,16 @@ depends_on: [SPEC-COPILOT-MUSICSYNC-001]
 | 2026-09-06 | 0.1.0 | 최초 초안. 카드 t273. 실측 기준 HEAD `f727e11`(워크트리 `agent-ab693b5114839dea5`, main 과 동일 커밋). REQ 16 · AC 16(Tier M 상한 정확 소진). | `reports/musicsync-browser-check-20260906.md` 발견 3 + 같은 날 실측 3건(위 인용문) |
 | 2026-09-06 | 0.1.1 | plan-audit 1차(FAIL 0.80) 반영 — D1 diff 기준을 `merge-base` 로·슬롯 술어를 밑줄 없는 이름으로(형제 POOLEMPTY-001 의 들어올리기와 공존) · D2 라벨 **완전 일치**(항목 단위) + AC-005 (d) 접두 충돌 대조군 · D3 AC-014 ④⑤ 주석 제외 grep · D4 REQ-001/006 ↔ AC-001/002 · D5 앵커 · D8 AC-007 리터럴 고정 · D10 `related_specs` 제거 | `.moai/reports/plan-audit/SPEC-COPILOT-SONGCONFIRM-001-review-1.md` |
 | 2026-09-06 | 0.1.2 | plan-audit 2차 PASS 0.96 잔여 반영 — N1 diff 술어를 변경 행(`-U0`, `^[+-]`)으로 · N2 §E 보존 경계에 두 이름 병기 | `.moai/reports/plan-audit/SPEC-COPILOT-SONGCONFIRM-001-review-2.md` |
+| 2026-09-20 | 0.2.0 | **제자리 개정**(카드 t417) — 배수(octave) 정정 무효 규칙을 REQ-SONGCONFIRM-003 **규칙 3**과 AC-SONGCONFIRM-003 **(b)** 로 접어 넣었다(신규 REQ·AC id 없음, Tier M 16/16 유지). PR #445(`47da882`, 카드 t414)가 `is_bpm_octave_apart`(`server/web/question.py:349`)와 그 배선(`server/web/session.py:12153-12196`)을 이미 구현·시험해 main 에 올렸으나, 이 SPEC 의 REQ·AC 목록은 그 절을 반영하지 않고 있었다(`grep 'octave\|배수' spec.md` → 개정 전 0). 동작 변경 0 — 문서가 이미 있는 구현을 뒤따라 맞춘다 | 카드 t417 배차문 + `server/web/question.py:342-370` · `server/web/session.py:12146-12196` · `server/tests/test_song_confirm_sections.py:316-354` `TestAnOctaveBpmCorrectionVoidsTheSections`(4건, 개정 전에도 초록) |
+
+### Amendments
+
+| 항목 | 값 |
+|---|---|
+| 이전 완료 버전 | 0.1.2 |
+| `prior_completed_sha` | `b10154cd`(origin/main — `docs(SPEC-COPILOT-SONGCONFIRM-001): sync-phase artifacts — 3-phase close (#323)`) |
+| 근거 | 코드가 명세보다 한 절 앞서 있었다 — PR #445(`47da882`)의 배수 정정 무효 규칙이 REQ·AC 에 없었다(카드 t417) |
+| 범위 | REQ-003 규칙 3 + AC-003 (b) 추가, 신규 id 없음, 행동 변화 없음 |
 
 ---
 
@@ -71,13 +82,13 @@ depends_on: [SPEC-COPILOT-MUSICSYNC-001]
 
 ## B. 요구사항 (GEARS)
 
-> 요구 번호는 `001`부터 `016`까지 연속이며 공백이 없다. Tier M 상한(16)을 정확히 소진한다.
+> 요구 번호는 `001`부터 `016`까지 연속이며 공백이 없다. Tier M 상한(16)을 정확히 소진한다. **2026-09-20 제자리 개정**(카드 t417)이 이미 구현·시험된 배수 정정 무효 규칙을 REQ-SONGCONFIRM-003 **규칙 3**으로 접어 넣었다 — 신규 id 없음, 개수 불변(HISTORY `## Amendments` 참조).
 
 ### B.1 확정 기록과 답 판독 (M1)
 
 - **REQ-SONGCONFIRM-001** [Ubiquitous] — the 세션 **shall** 확정된 곡 분석을 **불변 기록** 하나로 보관한다. 기록은 정체성(원본 오디오의 `sha256` · 파일명 · 확정 시각), 확정 BPM 해소 결과(`BpmResolution`), 구간 목록(구간마다 `index` · 카드 라벨 · `start_ms` · `end_ms` · `d_level` · `selected`)을 담으며, 채택 구간과 제외 개수를 파생값으로 내준다. 기록은 세션 안에 산다 — 프로세스를 넘어 저장하지 않는다.
 - **REQ-SONGCONFIRM-002** [Event-driven] — **When** 사람이 확인 카드에 답하고 그 답이 미응답(`UNANSWERED`)도 자유입력 표식(`ANSWER_FREEFORM`)도 아니면, the 세션 **shall** 그 답과 카드의 제안 목록으로부터 기록을 만들어 보관한다. 미응답·자유입력 표식이면 기록을 만들지 않으며, 오늘의 BPM 대입(`session.py:10277`)은 어느 갈래에서도 변하지 않는다.
-- **REQ-SONGCONFIRM-003** [Ubiquitous] — the 구간 답 파서 **shall** `parse_confirmed_bpm` 과 같은 자리(`server/web/question.py`)에 있는 순수 함수이며, 카드의 제안 목록과 답 문자열을 받아 규칙 셋으로 판정한다 — ① 답에 카드 라벨이 **하나 이상** 들어 있으면, 들어 있는 라벨의 구간은 채택하고 없는 라벨의 구간은 제외한다 ② 답에 카드 라벨이 **하나도** 없으면 모든 제안을 채택한다(카드를 있는 그대로 받아들인 것) ③ 미응답·자유입력 표식·문자열 아님이면 판정 없음. 라벨 대조는 답을 `", "` 로 나눈 **항목 각각과 라벨의 완전 일치**(양끝 공백 제거 뒤 `==`)로 하며, 부분문자열 포함은 대조가 아니다 — 라벨의 일부(시각 하나, `D` 등급 하나)도, 다른 라벨을 접두로 품은 긴 라벨(`1:00–1:15 · D1` ⊂ `11:00–11:15 · D1`)도 그 라벨을 채택하지 않는다.
+- **REQ-SONGCONFIRM-003** [Ubiquitous] — the 구간 답 파서 **shall** `parse_confirmed_bpm` 과 같은 자리(`server/web/question.py`)에 있는 순수 함수이며, 카드의 제안 목록과 답 문자열을 받아 규칙 셋으로 판정한다 — ① 답에 카드 라벨이 **하나 이상** 들어 있으면, 들어 있는 라벨의 구간은 채택하고 없는 라벨의 구간은 제외한다 ② 답에 카드 라벨이 **하나도** 없으면 모든 제안을 채택한다(카드를 있는 그대로 받아들인 것) ③ 미응답·자유입력 표식·문자열 아님이면 판정 없음. 라벨 대조는 답을 `", "` 로 나눈 **항목 각각과 라벨의 완전 일치**(양끝 공백 제거 뒤 `==`)로 하며, 부분문자열 포함은 대조가 아니다 — 라벨의 일부(시각 하나, `D` 등급 하나)도, 다른 라벨을 접두로 품은 긴 라벨(`1:00–1:15 · D1` ⊂ `11:00–11:15 · D1`)도 그 라벨을 채택하지 않는다. **규칙 3 — 배수 정정 무효**(제자리 개정, 카드 t417, 2026-09-20): 확정 BPM 이 측정 BPM 의 배수(2배 또는 절반)면 그 카드의 구간 확정은 무효이며, 재계산하지 않고 재분석을 요청한다. 배수 판정은 두 값의 `log2` 거리가 1.0 에서 **0.06** 이내(비율 약 1.92~2.09)인 경우로 한정한다 — 근거는 실측 8곡(2026-09-20, `.moai/reports/d5-crowding-20260920/octave_fp.txt`, 주 체크아웃: 같은 값·`+1`·`−2`·`+5%` → 배수 아님 0/8, `×2`·`÷2` → 배수 8/8, `×1.9`·`×2.1` → 배수 아님)과 감독 판정 정답지(`Morning` 측정 `117.45` ↔ 확정 `58.7` 거리 `0.0002`, 측정 `129.199` ↔ 확정 `130` 거리 `0.991`)다. 판정은 `is_bpm_octave_apart`(`server/web/question.py:349`, 여유 상수 `_BPM_OCTAVE_LOG2_TOLERANCE`(`:346`))가 이미 확정된 값과 측정값의 **관계만** 읽어 내린다 — 자동 배수 판별기가 아니다(체감 템포의 배수 모호성은 지각적 성질이라 자동 판별이 네 번 실패했다; 새 검출기를 짓지 않는다). 무효화된 갈래의 확정 고지(`server/web/session.py:12192-12196`)는 배수로 고쳐졌다는 사실과 "다시 분석해 주세요" 문장을 담는다.
 - **REQ-SONGCONFIRM-004** [Unwanted] — the 구간 답 파서 **shall not** 카드에 없던 구간을 만들어 내거나, 산문(이름·시각·「빼 줘」류)을 구간 편집으로 읽는다. 산문은 BPM 토큰 판독(`parse_confirmed_bpm`)에만 영향을 주며 구간에는 규칙 ②가 적용된다.
 - **REQ-SONGCONFIRM-005** [Event-driven] — **When** 새 곡 오디오가 업로드되면, the 세션 **shall** 보관 중인 확정 기록을 무효화하고(기록 없음 상태로), 기록이 **있었던 경우에만** 업로드 고지에 무효화 사실을 한 문장으로 덧붙인다. 기록이 없던 경우의 업로드 고지는 오늘 문자열과 바이트 동일하다.
 - **REQ-SONGCONFIRM-006** [Ubiquitous] — the 세션 **shall** 확정 기록을 읽기 전용 프로퍼티로 내주며, 기록이 있을 때 그 기록의 BPM 해소 결과는 `song_bpm` 프로퍼티가 돌려주는 객체와 **같은 객체**다(두 정본이 생기지 않는다).

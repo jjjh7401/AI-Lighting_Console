@@ -113,3 +113,7 @@ uv run ruff check server && uv run ruff format --check server
 ## H. 교차 참조
 
 `spec.md` · `acceptance.md` · `progress.md` · `SPEC-COPILOT-MUSICSYNC-001/{plan,progress}.md` · `reports/musicsync-browser-check-20260906.md` · `.claude/rules/moai/core/verification-claim-integrity.md`
+
+## I. 개정 — 배수(octave) 정정 무효 (카드 t417, 2026-09-20)
+
+새 마일스톤을 만들지 않는다. 배수 정정 무효 규칙(`is_bpm_octave_apart` · `bpm_octave_corrected`, `server/web/question.py:342-370` · `server/web/session.py:12146-12196`)은 PR #445(`47da882`, 카드 t414)로 이미 구현·시험되어 main 에 있다 — 이 개정은 `spec.md`(REQ-SONGCONFIRM-003 **규칙 3**)와 `acceptance.md`(AC-SONGCONFIRM-003 **(b)**)로 그 구현을 접어 넣어 뒤늦게 반영한다. 신규 REQ·AC id 는 만들지 않는다 — Tier M 상한(16/16)은 그대로 유지된다. 실행할 새 코드 변경은 0 이며, M1·M2 게이트 명령은 그대로다 — 인수 시험(`test_song_confirm_sections.py::TestAnOctaveBpmCorrectionVoidsTheSections`)이 그 파일 안에 이미 있어 두 게이트 명령 모두에 걸린다(§E M1·M2 게이트 참조).

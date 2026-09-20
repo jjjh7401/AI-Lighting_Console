@@ -240,3 +240,11 @@ spec_body_findings_for_manager_spec:   # 본문 무수정 — 소유권 밖. 차
   - "acceptance.md AC-005 (d) 괄호 전제「앞 라벨이 뒤 라벨의 부분문자열」— 실측 False(§E.2 M1 GREEN 1차). Then 절은 통과"
   - "spec.md §E「tools.py 는 server.web 을 import 하지 않는다」— BASE 에 이미 tools.py:234 import 1행. 이 SPEC 이 지킨 것은 「새 import 를 더하지 않는다」"
 ```
+
+## §Amendment 2026-09-20 (t417)
+
+- **Tier M 상한(16/16) 유지** — 배수 규칙은 REQ-003 규칙 3 / AC-003 (b) 로 접음(신규 id 없음).
+- **무엇이 바뀌었나**: `spec.md` REQ-SONGCONFIRM-003 에 **규칙 3 — 배수 정정 무효**를 추가하고, `acceptance.md` AC-SONGCONFIRM-003 을 (a)(기존 자유입력 BPM 대조군) / (b)(배수 정정 무효, 신규 서술)로 확장했다. `plan.md` §I 에 개정 참조 절을 추가했다. **코드 변경은 0** — 이미 PR #445(`47da882`, 카드 t414)로 배선되고 시험된 동작을 SPEC 이 뒤늦게 반영한 것이다(카드 t417; 개정 전 `grep 'octave\|배수' spec.md` → 0건). 신규 REQ·AC id 는 만들지 않았다 — REQ 16건 · AC 16건 그대로.
+- **증거**: `server/web/question.py:349` `is_bpm_octave_apart` · 여유 상수 `_BPM_OCTAVE_LOG2_TOLERANCE = 0.06`(`:346`) · `server/web/session.py:12153-12196` `bpm_octave_corrected` 배선 · 시험 `server/tests/test_song_confirm_sections.py:316-354` `TestAnOctaveBpmCorrectionVoidsTheSections`(4건, 개정 전에도 초록 — 이번 개정으로 실행하지 않았다) · 관용도 실측 `.moai/reports/d5-crowding-20260920/octave_fp.txt`(주 체크아웃, 실측 8곡).
+- **frontmatter**: `status: completed → in-progress`(제자리 개정) · `version: 0.1.2 → 0.2.0` · `updated: 2026-09-20` · `amendment_of: SPEC-COPILOT-SONGCONFIRM-001`(자기 참조). `prior_completed_sha: b10154cd`(spec.md HISTORY `## Amendments` 표에 기록).
+- **다음 단계**: 이 개정의 `completed` 복귀(`in-progress → implemented → completed`)는 sync 단계의 단일 sync 커밋이 맡는다(manager-docs 소유, `spec-frontmatter-schema.md` § Status Transition Ownership Matrix). 이 개정 자체는 코드를 바꾸지 않으므로 run-phase 를 거치지 않고 sync 로 직행할 후보다 — 그 판단은 오케스트레이터 소유.
