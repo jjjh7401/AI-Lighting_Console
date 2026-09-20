@@ -253,5 +253,5 @@ spec_body_findings_for_manager_spec:   # 본문 무수정 — 소유권 밖. 차
 amendment_sync_complete_at: 2026-09-20T00:00:00Z
 sync_status: audit-ready
 tests: "uv run pytest -q server/tests/test_song_confirm_sections.py -k octave → 4 passed, 34 deselected"
-sync_commit_sha: pending-backfill
+sync_commit_sha: e47a9919
 ```
