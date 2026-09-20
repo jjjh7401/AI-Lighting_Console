@@ -1011,6 +1011,7 @@ def _rescue_value_line_collisions(
         if not changed:
             break
     _reorder_yields_by_repetition(bundles)
+    _finalize_marking_accents(bundles, emitted, resolution, allow_strobe=allow_strobe)
     return tuple(bundles)
 
 
@@ -1098,6 +1099,211 @@ def _reorder_yields_by_repetition(bundles: list[SongCueSectionBundle]) -> None:
                 bundles[index] = replace(current, commands=replaced_commands, ladder=new_ladder)
 
 
+_VALUE_TOKEN_RE = re.compile(r"Attribute '([^']+)' At (-?\d+(?:\.\d+)?)")
+
+
+def _parse_values_line(values: str) -> tuple[AttributeValue, ...]:
+    """``_values_line`` 이 낸 문자열을 :class:`AttributeValue` 로 되돌린다.
+
+    회수·재배열이 다 끝난 뒤에는 문자열만 남으므로(:func:`_dimmer_from_values_line`
+    독스트링과 같은 사정), 재배열 뒤에 액센트를 마저 얹으려면(:func:`_finalize_marking_accents`)
+    다시 구조화된 값이 필요하다. 파싱하는 형식은 :func:`_values_line`
+    (`server.looks.instantiate`) 이 내는 고정 형식 하나뿐이다.
+    """
+    return tuple(AttributeValue(name, float(raw)) for name, raw in _VALUE_TOKEN_RE.findall(values))
+
+
+#: 찍는 액센트 판정에서 "이 칸이 액센트인가"를 물을 때 쓰는 전체 집합 —
+#: :func:`_marking_accents` 의 ``allow_strobe`` 로 갈리는 회전 후보 목록과 다르다.
+#: 1회차에서 걷어 낼 때는(:func:`_strip_marking_accent_from_base_occurrence`)
+#: ``allow_strobe`` 가 그때 거짓이라고 해서 스트로브를 못 걷어 내면 안 되므로
+#: 이 자리는 언제나 넷 다 본다.
+_ALL_MARKING_RUNGS: tuple[str, ...] = (*_MARKING_ACCENTS, LADDER_STROBE_HIT)
+
+
+def _accent_insertion_index(bundle: SongCueSectionBundle) -> int:
+    """액센트 명령 두 줄을 끼워 넣을(또는 걷어 낼) 자리.
+
+    :func:`_section_bundle` 의 조립 순서(값 라인 → 프론트 필 → 액센트 → 움직임 →
+    Store)와 같다 — 프론트 필이 있으면 그 두 줄(``Group`` + 값) 뒤, 없으면 값 라인
+    바로 뒤.
+    """
+    return 3 + (2 if bundle.front_fill is not None else 0)
+
+
+# @MX:ANCHOR: [AUTO] 1회차(section.instance < 2)는 절대 찍는 액센트를 받지 않는다
+#   (카드 t382 후속 결함 D1).
+# @MX:REASON: 실측(오케스트레이터 재측정, af494681): 7·4회차 곡 모두 1회차가
+#   ``blinder_or_flash`` 를 실었다. 원인은 :func:`_reorder_yields_by_repetition`
+#   가 (값 라인, 사다리) 묶음을 밝기 오름차순으로 회차 사이에서 통째로 바꿔치기
+#   하기 때문이다 — 1회차 자신은 이 코드 어디서도 액센트를 받지 않지만
+#   (:func:`_ensure_marking_accent` 의 ``instance < 2`` 단락), 재배열이 액센트를
+#   실은 **다른** 회차의 묶음을 1회차 자리로 옮겨 붙이면 그 액센트가 딸려 온다.
+#   그래서 재배열이 다 끝난 뒤 1회차 자리만 다시 훑어 액센트를 걷어 낸다 — 값
+#   라인은 ``look.attributes``(기준값) + 이미 확정된 ``Dimmer`` 값만으로 다시
+#   지어 줌·아이리스 좁힘의 흔적을 지운다. 무대 명령(``commands[3:]``)은 여기서
+#   건드리지 않는다 — 재배열이 애초에 그쪽은 안 옮기므로(``_reorder_yields_by_repetition``
+#   독스트링) 이 번들 몫으로 지울 것이 없고, 사다리를 명령에 맞추는 일은
+#   :func:`_reconcile_accent_fixture` 가 모든 번들에 대해 한 번에 한다.
+def _strip_marking_accent_from_base_occurrence(
+    bundle: SongCueSectionBundle,
+    emitted: dict[str, tuple[int, int, str]],
+) -> SongCueSectionBundle:
+    """1회차 번들에 재배열이 얹은 찍는 액센트가 있으면 값·사다리에서 걷어 낸다."""
+    look = bundle.selection.look
+    if look is None or not bundle.commands:
+        return bundle
+    inherited = next((rung for rung in bundle.ladder if rung in _ALL_MARKING_RUNGS), None)
+    if inherited is None:
+        return bundle
+    old_values = bundle.commands[2]
+    current_dimmer = _dimmer_from_values_line(old_values)
+    clean_attributes = tuple(
+        AttributeValue(
+            attribute.name,
+            current_dimmer
+            if attribute.name == _DIMMER and current_dimmer is not None
+            else attribute.value,
+        )
+        for attribute in look.attributes
+    )
+    clean_values = _values_line(clean_attributes)
+    new_ladder = tuple(rung for rung in bundle.ladder if rung != inherited)
+    if clean_values == old_values:
+        return replace(bundle, ladder=new_ladder)
+    emitted.pop(old_values, None)
+    emitted[clean_values] = (bundle.section.index, bundle.cue_number, look.look_id)
+    new_commands = (bundle.commands[0], bundle.commands[1], clean_values, *bundle.commands[3:])
+    return replace(bundle, commands=new_commands, ladder=new_ladder)
+
+
+# @MX:ANCHOR: [AUTO] 무대 액센트 명령을 방금 확정된 사다리에 맞춘다(카드 t382
+#   후속 결함 D2).
+# @MX:REASON: 실측(오케스트레이터 재측정, af494681): 리그에 블라인더 그룹이 있어도
+#   ``blinder_or_flash`` 를 실은 회차의 명령에 그 그룹 명령이 없었다. 원인은
+#   :func:`_reorder_yields_by_repetition` 가 (값 라인, 사다리)만 다른 회차 것으로
+#   바꿔치기하고 ``commands[3:]``(프론트 필·액센트·움직임·Store)는 이 번들
+#   **자신**이 원래 낸 것을 그대로 두기 때문이다(그 함수 독스트링) — 그래서 재배열
+#   뒤에는 사다리가 가리키는 액센트와 실제 무대 명령이 서로 다른 회차 것일 수
+#   있다. ``bundle.accent_fixture`` 필드는 재배열이 안 건드리므로 "commands[3:]에
+#   지금 액센트 명령이 실제로 있는가"를 정확히 말해 준다 — 있으면 걷어 내고
+#   (``emitted`` 도 같이 지운다), 방금 확정된 사다리가 블라인더·스트로브를
+#   가리키면 :func:`_accent_fixture_commands` 로 다시 만들어 붙인다. 리그에 그
+#   그룹이 없으면(:func:`_accent_fixture_commands` 가 빈 명령을 돌려줌) 사다리는
+#   그 칸을 실어도 무대에는 여전히 아무것도 안 나간다 — 그 갈래는 고치기 전부터
+#   있던 모양이고(``SongCueSectionBundle.accent_fixture`` 독스트링), 이 카드의
+#   범위 밖이다(별도 follow-up 카드 후보 — verdict.md 참고).
+def _reconcile_accent_fixture(
+    bundle: SongCueSectionBundle,
+    resolution: RoleResolution,
+    emitted: dict[str, tuple[int, int, str]],
+) -> SongCueSectionBundle:
+    """이 번들의 무대 액센트 명령을 지금 사다리가 가리키는 칸과 다시 맞춘다."""
+    commands = bundle.commands
+    accent_fixture = bundle.accent_fixture
+    if accent_fixture is not None:
+        insert_at = _accent_insertion_index(bundle)
+        stale = commands[insert_at : insert_at + 2]
+        if len(stale) == 2:
+            emitted.pop(stale[1], None)
+            commands = commands[:insert_at] + commands[insert_at + 2 :]
+        accent_fixture = None
+
+    rung = next((r for r in bundle.ladder if r in _ACCENT_FIXTURE_ROLE), None)
+    if rung is not None:
+        accent_commands, accent_rung, accent_groups, accent_dimmer = _accent_fixture_commands(
+            (rung,),
+            section=bundle.section,
+            cue_number=bundle.cue_number,
+            resolution=resolution,
+            emitted=emitted,
+        )
+        if accent_commands:
+            insert_at = _accent_insertion_index(bundle)
+            commands = commands[:insert_at] + accent_commands + commands[insert_at:]
+            accent_fixture = SongCueAccentFixture(
+                section=bundle.section,
+                cue_number=bundle.cue_number,
+                rung=accent_rung,
+                groups=tuple(group.number for group in accent_groups),
+                dimmer=accent_dimmer,
+            )
+
+    if commands == bundle.commands and accent_fixture == bundle.accent_fixture:
+        return bundle
+    return replace(bundle, commands=commands, accent_fixture=accent_fixture)
+
+
+# @MX:ANCHOR: [AUTO] 재배열(:func:`_reorder_yields_by_repetition`) 뒤에도 반복
+#   회차(instance >= 2)는 찍는 액센트를 하나 잃지 않는다(카드 t382).
+# @MX:REASON: 재배열은 값 라인·사다리 묶음을 통째로 옮긴다 — 그 묶음이 원래 어느
+#   회차를 위해 만들어졌는지는 안 본다(정본 §7.1 이 요구하는 것은 "밝기가 회차
+#   순으로 오른다"이지 "액센트가 원래 회차 그대로 남는다"가 아니다, `_reorder_yields_by_repetition`
+#   독스트링). 실측(카드 t382): 액센트 없이 성공한 낮은 회차의 묶음이 재배열로 높은
+#   회차 자리에 옮겨 가면, 그 자리는 :func:`_section_bundle` 에서 이미 액센트를
+#   받았더라도 최종 결과에서는 잃는다. 이 마지막 훑기가 최종 위치를 기준으로 다시
+#   확인한다.
+#
+#   세 단계로 나눈다 — (1) 1회차가 재배열로 물려받은 액센트를 걷어 낸다
+#   (:func:`_strip_marking_accent_from_base_occurrence`, D1), (2) 그 결과 액센트를
+#   잃었을 수 있는 instance >= 2 자리를 그 회차 **자신의** 회전으로 다시 채운다
+#   (``force`` 는 이 자리가 양보를 거쳤는지로 정한다 — 양보는 사다리 축이
+#   아니므로 "마땅한 깊이" 개념이 없다, :func:`_ensure_marking_accent` 독스트링),
+#   (3) 모든 저장된 번들의 무대 명령을 지금 사다리에 맞춘다
+#   (:func:`_reconcile_accent_fixture`, D2). 순서가 중요하다 — (3)은 (1)·(2)가
+#   확정한 사다리를 읽으므로 반드시 마지막이다.
+def _finalize_marking_accents(
+    bundles: list[SongCueSectionBundle],
+    emitted: dict[str, tuple[int, int, str]],
+    resolution: RoleResolution,
+    *,
+    allow_strobe: bool = False,
+) -> None:
+    """재배열이 끝난 뒤 액센트를 1회차에서 걷어 내고, 빠진 자리를 채우고, 무대
+    명령을 사다리에 맞춘다."""
+    for index, bundle in enumerate(bundles):
+        if not bundle.commands or bundle.section.instance >= 2:
+            continue
+        bundles[index] = _strip_marking_accent_from_base_occurrence(bundle, emitted)
+
+    accents = _marking_accents(allow_strobe=allow_strobe)
+    for index, bundle in enumerate(bundles):
+        if not bundle.commands or bundle.section.instance < 2:
+            continue
+        if any(rung in accents for rung in bundle.ladder):
+            continue
+        values = bundle.commands[2]
+        escalated = _parse_values_line(values)
+        force = LADDER_DIMMER_YIELD in bundle.ladder
+        final_values, final_rungs = _ensure_marking_accent(
+            escalated,
+            bundle.section,
+            bundle.ladder,
+            values,
+            emitted,
+            allow_strobe=allow_strobe,
+            force=force,
+        )
+        added_rungs = final_rungs[len(bundle.ladder) :]
+        if not added_rungs:
+            continue
+        if final_values != values:
+            emitted.pop(values, None)
+            look = bundle.selection.look
+            emitted[final_values] = (
+                bundle.section.index,
+                bundle.cue_number,
+                look.look_id if look is not None else "",
+            )
+        new_commands = (bundle.commands[0], bundle.commands[1], final_values, *bundle.commands[3:])
+        bundles[index] = replace(bundle, commands=new_commands, ladder=bundle.ladder + added_rungs)
+
+    for index, bundle in enumerate(bundles):
+        if not bundle.commands:
+            continue
+        bundles[index] = _reconcile_accent_fixture(bundle, resolution, emitted)
+
+
 def _dimmer_from_values_line(values: str) -> float | None:
     """값 라인 문자열에서 ``Dimmer`` 수치만 뽑는다 — 없으면 ``None``.
 
@@ -1131,6 +1337,14 @@ def _yield_bundle(
     새로 겹치지 않는 값을 찾으면 그 값을 실은 번들을 돌려주고 ``emitted`` 를 그 자리에
     맞춰 고친다. :data:`DARKNESS_FLOOR` 에 닿도록(또는 애초에 ``Dimmer`` 축이 없어서)
     못 찾으면 ``None`` — 그때는 원래 스킵이 그대로 선다.
+
+    카드 t382 — 양보로 자리를 얻은 반복 회차(instance >= 2)에 찍는 액센트를 붙이는
+    일은 여기서 하지 않는다. 이 함수가 결정한 액센트는 :func:`_reorder_yields_by_repetition`
+    가 값 라인·사다리만 다른 회차 것으로 바꿔치기할 때(그 함수 독스트링 — 무대
+    명령은 안 옮긴다) 액센트와 실제 명령이 서로 다른 회차 것으로 어긋날 수 있다
+    (카드 t382 후속 결함 D1·D2). 그래서 액센트는 회수·재배열이 전부 끝나 밝기가
+    최종 확정된 뒤 :func:`_finalize_marking_accents` 한 자리에서만 결정한다 — 이
+    함수는 밝기(``Dimmer``)만 다룬다.
     """
     look = rival.selection.look
     if look is None or not rival.commands:
@@ -1934,6 +2148,19 @@ def _section_bundle(
     values, rungs = _distinct_values_line(
         look, selection.section, emitted, allow_strobe=allow_strobe
     )
+    if values is not None:
+        # 카드 t382 — 이 회차가 양보로 받은 자리든 기준값 자리든, 반복 회차(instance
+        # >= 2)는 찍는 액센트를 하나 받는다(정본 §7.1). `_distinct_values_line` 이
+        # 충돌 없이 곧바로 기준값(``rungs=()``)이나 얕은 깊이로 끝났다고 해서 액센트를
+        # 건너뛰지 않는다 — 자세한 이유는 :func:`_ensure_marking_accent` 독스트링.
+        values, rungs = _ensure_marking_accent(
+            escalate_attributes(look.attributes, rungs),
+            selection.section,
+            rungs,
+            values,
+            emitted,
+            allow_strobe=allow_strobe,
+        )
     if values is None:
         previous_section, previous_cue, previous_look = emitted[_values_line(look.attributes)]
         skipped = SongCueSkippedSection(
@@ -2138,6 +2365,83 @@ def escalate_attributes(
     for rung in rungs:
         escalated = _rung_applied(escalated, rung)
     return escalated
+
+
+# @MX:ANCHOR: [AUTO] 반복 회차(instance >= 2)는 값 라인이 어떻게 정해졌든 찍는
+#   액센트를 하나 받는다 — 충돌-회피 사다리가 자리를 대신 정해 줬다는 이유로
+#   건너뛰지 않는다(카드 t382, 정본 §7.1).
+# @MX:REASON: 실측(카드 t382 보고): 값 라인 충돌-회피 구조가 먼저이므로(``_MARKING_ACCENTS``
+#   독스트링), 반복이 깊어져 값 겹침이 사다리를 완전히 소진시키면
+#   (:func:`_rescue_value_line_collisions`) 양보로 자리를 얻은 회차나 양보가 비워
+#   준 기준값 자리를 그대로 물려받은 회차는
+#   ``_distinct_values_line`` 이 애초에 액센트를 시도하기도 전에(``rungs=()``) 값을
+#   확정해 버린다 — 후렴 일곱 중 여섯이 액센트 없이 밝기만 오르내리는 결과가 그것이다.
+#   `_distinct_values_line` 자신이 액센트를 고집하게 만들면 그 함수의 규율("충돌이
+#   방아쇠, 칸은 회차가 정한다")이 깨진다 — 충돌 없는 입력의 명령까지 바뀐다. 그래서
+#   이 함수는 값 라인이 **이미 정해진 뒤**, 성공한 자리에서만 액센트가 빠졌는지 검사해
+#   하나를 더 얹는다.
+def _climb_depth_reached(rungs: tuple[str, ...]) -> int:
+    """``rungs`` 가 :func:`_climb_rungs` 의 어느 깊이에서 나왔는지 — 액센트 없는 두 모양만.
+
+    호출자가 이미 액센트 유무를 걸렀으므로, 여기 남는 것은 :func:`_climb_rungs` 가
+    액센트 없이 낼 수 있는 두 모양뿐이다: 기준값 그대로(``()``, 깊이 0)와 밝기 히트
+    하나(``(dimmer_hit,)``, 깊이 1). 그 밖의 모양이 들어오면 이미 액센트가 있다는
+    뜻이므로 호출자 쪽 조건이 먼저 걸러낸다.
+    """
+    return 1 if rungs == (LADDER_DIMMER_HIT,) else 0
+
+
+def _ensure_marking_accent(
+    escalated: Sequence[AttributeValue],
+    section: SongCueSection,
+    rungs: tuple[str, ...],
+    values: str,
+    emitted: Mapping[str, tuple[int, int, str]],
+    *,
+    allow_strobe: bool = False,
+    force: bool = False,
+) -> tuple[str, tuple[str, ...]]:
+    """이 회차에 찍는 액센트가 아직 없으면 하나 골라 붙인다 — 값이 이미 정해진 뒤에도.
+
+    1회차(``section.instance < 2``)는 그대로 둔다 — 기준 회차는 아무것도 더하지 않는다는
+    성질이 이 카드의 범위 밖이다. ``rungs`` 가 이미 :func:`_marking_accents` 의 칸을
+    하나 갖고 있으면(정상적으로 사다리를 오른 경우) 그대로 둔다 — §6.1 「하나만」을
+    두 번 채우지 않는다.
+
+    ``force`` 가 거짓이면(기본값, 직접 사다리를 오른 성공 경로) **이 회차가 마땅히
+    닿았어야 할 깊이**(:func:`_ladder_start`, 곧 ``instance - 1``)에 실제로 닿아
+    있으면 그대로 둔다 — 2회차가 깊이 1(밝기 히트 하나, 액센트 없음)에서 곧바로
+    성공하는 것은 이 카드가 고치는 결함이 아니라 정본 §7.1 자신의 설계다("2회차는
+    밝기만"). 실제로 닿은 깊이가 마땅한 깊이보다 **얕으면**(기준값을 그대로 물려받은
+    ``()`` 나, 3회차 이상인데 1에서 멈춘 경우) 사다리가 이 회차를 위해 오른 것이
+    아니라 충돌-회피가 자리를 대신 정해 준 것이므로 그때는 강제한다.
+
+    ``force`` 가 참이면(양보 경로, :func:`_yield_bundle`) 깊이를 안 따진다 — 양보는
+    사다리 축 자체가 아니므로 "마땅한 깊이" 개념이 없고, 자리를 얻은 이상 액센트를
+    받는다(카드 t382 결정).
+
+    ``escalated`` 는 ``rungs`` 까지 이미 반영된 현재 값 상태다(:func:`escalate_attributes`
+    가 만든 것, 또는 양보 축처럼 그 함수가 모르는 칸으로 만들어진 값도 무방하다 —
+    여기서는 그 위에 액센트 하나만 얹는다). 회차가 고르는 첫 자리는
+    :data:`_MARKING_ACCENTS` 안에서 ``(instance - 2) % len`` 이고(:func:`_climb_rungs`
+    와 같은 회전), 그 자리가 이미 나간 값과 겹치면 회전판을 한 칸씩 밀어 겹치지 않는
+    자리를 찾는다 — 블라인더·스트로브는 이 룩 자신의 값을 안 바꾸므로(:func:`_rung_applied`)
+    항상 겹치지 않아 회전은 유한한 안에서 반드시 멈춘다.
+    """
+    if section.instance < 2:
+        return values, rungs
+    accents = _marking_accents(allow_strobe=allow_strobe)
+    if any(rung in accents for rung in rungs):
+        return values, rungs
+    if not force and _climb_depth_reached(rungs) >= _ladder_start(section):
+        return values, rungs
+    start = (section.instance - 2) % len(accents)
+    for offset in range(len(accents)):
+        accent = accents[(start + offset) % len(accents)]
+        candidate = _values_line(_rung_applied(escalated, accent))
+        if candidate == values or candidate not in emitted:
+            return candidate, rungs + (accent,)
+    return values, rungs
 
 
 def _rung_applied(values: Sequence[AttributeValue], rung: str) -> tuple[AttributeValue, ...]:
