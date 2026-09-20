@@ -291,6 +291,33 @@ class TestEmittedSectionFields:
         assert "effect" not in sections[1]
         assert sections[2]["effect"] == "dimmer chase"
 
+    def test_effect_is_absent_for_a_bridge_role_cue_even_when_fx_was_requested(
+        self,
+    ) -> None:
+        """카드 t394 — 정본 §6 "bridge → 무빙·이펙트 정지"가 director 가 보는
+        큐시트 타임라인 payload 에도 반영되는지 잰다. `fx.allowed` 에 요청이
+        있어도 role 이 "bridge" 면 `effect` 키가 안 뜬다(§6 이 실제로 director
+        화면에 닿는지의 경계 시험 — `_song_cue_sheet_section_fields` 는
+        `cue.fx.permitted` 를 읽을 뿐 `decision.fx.allowed` 를 직접 읽지
+        않으므로, 이 시험은 `_section_cue`(작성자)와 `_song_cue_sheet_section_
+        fields`(소비자) 양쪽이 같은 값을 두고 일치하는지까지 함께 확인한다)."""
+        base = _section(1, "BRIDGE", 0, d_level=2, fx_allowed=("slow tilt",), fx_density=1)
+        bridge = SectionDecision(
+            section=base.section,
+            d=base.d,
+            palette=base.palette,
+            position=base.position,
+            texture=base.texture,
+            fx=base.fx,
+            accent=base.accent,
+            cue_number=base.cue_number,
+            role="bridge",
+        )
+
+        section = _payload(_plan(sections=(bridge,)))["sections"][0]
+
+        assert "effect" not in section
+
     def test_trans_reads_fade_when_the_cue_actually_fades(self) -> None:
         assert [section["trans"] for section in _payload()["sections"]] == [
             "FADE",
