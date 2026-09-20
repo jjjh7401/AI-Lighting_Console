@@ -41,6 +41,13 @@ _LXSEQ_GROUPS: tuple[tuple[int, str], ...] = tuple(
     (index + 1, name) for index, (name, _count) in enumerate(LXSEQ_RIG)
 )
 
+#: 카드 t382 재현 자리(`FULL_RIG`)에는 블라인더 그룹이 없다(`busking_fixtures.py`) —
+#: D1·D2 재현·검사에 쓰는 곡 모양은 그대로 두고 블라인더 그룹 하나만 보탠다.
+#: 이름 "BLIND"는 `server.looks.resolver`의 힌트 매칭이 역할 "블라인더"로 묶는
+#: 이름이다(`test_songcue_ladder.py`의 실기 리그·`test_songcue_accent_fixture.py`의
+#: ``_LXSEQ_GROUPS`` 와 같은 방식).
+_RIG_WITH_BLINDER: tuple[tuple[int, str], ...] = FULL_RIG + ((20, "BLIND"),)
+
 #: 카드 t382 재현 자리 그대로 — 단일 축(``Dimmer``) 룩, 후렴 7회, 시작값 95(헤드룸
 #: 한 걸음). 줌·아이리스가 없으므로 그 두 액센트는 이 룩 자신의 값을 안 바꾼다
 #: (블라인더·스트로브와 같은 무영향 — :data:`server.looks.songcue.LADDER_ZOOM_PINCH`
@@ -136,6 +143,27 @@ class TestEveryRepeatOccurrenceCarriesOneAccent:
         assert len(set(accents)) == 3, (
             f"2·3·4회차의 액센트가 서로 달라야 회전이 실제로 도는 것이 보인다: {accents}"
         )
+
+    def test_the_base_occurrence_never_carries_a_marking_accent_seven_choruses(self):
+        """D1 — 오케스트레이터 재측정(af494681): 7회차 곡에서 1회차가
+        ``blinder_or_flash``를 실었다. 원인은 재배열
+        (:func:`server.looks.songcue._reorder_yields_by_repetition`)이 (값 라인,
+        사다리) 묶음을 밝기 오름차순으로 통째로 바꿔치기해, 액센트를 실은 다른
+        회차의 묶음이 1회차 자리로 옮겨 붙기 때문이다. 1회차는 예외 없이
+        액센트가 없어야 한다(``dimmer_yield``는 예외 — 이 카드 이전부터 있던
+        축이다).
+        """
+        bundle = _build(7, dimmer=95.0)
+        base = next(s for s in bundle.stored_sections if s.section.instance == 1)
+        marking_in_base = [rung for rung in base.ladder if rung in _MARKING]
+        assert marking_in_base == [], f"1회차는 찍는 액센트를 받으면 안 된다: ladder={base.ladder}"
+
+    def test_the_base_occurrence_never_carries_a_marking_accent_four_choruses(self):
+        """D1 — 4회차 곡에서도 같은 결함이 실측됐다(오케스트레이터 재측정)."""
+        bundle = _build(4, dimmer=95.0)
+        base = next(s for s in bundle.stored_sections if s.section.instance == 1)
+        marking_in_base = [rung for rung in base.ladder if rung in _MARKING]
+        assert marking_in_base == [], f"1회차는 찍는 액센트를 받으면 안 된다: ladder={base.ladder}"
 
 
 class TestForcedAccentReachesTheConsoleWhenItPicksTheBlinder:
@@ -298,3 +326,61 @@ class TestDropStillNeverYields:
         assert drop_sections, "드롭이 저장돼야 이 대조군이 공허하지 않다"
         for section in drop_sections:
             assert LADDER_DIMMER_YIELD not in section.ladder
+
+
+def _build_with_blinder_rig(count: int, *, dimmer: float = 95.0):
+    sections = parse_sections(_chorus_times(count))
+    look = _single_axis_look(dimmer=dimmer)
+    selections = tuple(
+        SongCueLookSelection(section=section, requested_dynamics=(look.dynamics,), look=look)
+        for section in sections
+    )
+    return build_songcue_bundle(
+        "Chorus Rise Ladder — Blinder Rig",
+        selections,
+        sequences_section=_sequences(1),
+        groups_section=_groups(*_RIG_WITH_BLINDER),
+    )
+
+
+class TestBlinderLadderAlwaysCarriesItsConsoleCommand:
+    """D2 — 오케스트레이터 재측정(af494681): ``FULL_RIG``에는 블라인더 그룹이
+    없어 이전 검사(AC-2)는 명령 부재를 놓쳤다. 리그에 블라인더 그룹이 있으면,
+    사다리가 ``blinder_or_flash``를 가리키는 모든 저장 큐(양보·재배열을 거친
+    회차 포함)는 반드시 그 그룹 명령을 낸다 — 사다리 칸이 회전했는데 무대에는
+    아무것도 안 나가는 것이 감독이 말한 「단조롭다」의 정확한 모양이다.
+    """
+
+    def test_every_blinder_ladder_entry_matches_a_console_command_seven_choruses(self):
+        bundle = _build_with_blinder_rig(7, dimmer=95.0)
+        assert bundle.skipped == ()
+        self._assert_ladder_and_fixture_agree(bundle)
+
+    def test_every_blinder_ladder_entry_matches_a_console_command_four_choruses(self):
+        bundle = _build_with_blinder_rig(4, dimmer=95.0)
+        assert bundle.skipped == ()
+        self._assert_ladder_and_fixture_agree(bundle)
+
+    @staticmethod
+    def _assert_ladder_and_fixture_agree(bundle) -> None:
+        for section in bundle.stored_sections:
+            has_blinder_in_ladder = LADDER_BLINDER_OR_FLASH in section.ladder
+            if has_blinder_in_ladder:
+                fixture = section.accent_fixture
+                assert fixture is not None, (
+                    f"instance={section.section.instance} 사다리는 블라인더를 가리키는데 "
+                    f"콘솔 명령이 없다: ladder={section.ladder} commands={section.commands}"
+                )
+                assert fixture.rung == LADDER_BLINDER_OR_FLASH
+                assert any(f"Group {group}" in section.commands for group in fixture.groups), (
+                    f"instance={section.section.instance} accent_fixture는 있는데 "
+                    f"명령 줄에 그룹 선택이 없다: {section.commands}"
+                )
+            else:
+                assert (
+                    section.accent_fixture is None
+                    or section.accent_fixture.rung != LADDER_BLINDER_OR_FLASH
+                ), (
+                    f"instance={section.section.instance} 사다리엔 블라인더가 없는데 "
+                    "블라인더 명령이 남아 있다"
+                )
