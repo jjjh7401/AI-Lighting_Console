@@ -24,6 +24,7 @@ from server.looks.loader import load_library_from_dir
 from server.looks.schema import AttributeValue, Look
 from server.looks.songcue import (
     LADDER_BLINDER_OR_FLASH,
+    LADDER_COLOR_SNAP,
     LADDER_DIMMER_HIT,
     LADDER_DIMMER_YIELD,
     LADDER_IRIS_PINCH,
@@ -483,8 +484,9 @@ class TestOneMarkingAccentPerCue:
     #: 세면 그 목록이 비는 순간 단정이 공허해진다(0개도 「하나 이하」다). 아래
     #: :meth:`test_every_ladder_rung_is_classified` 가 새 칸이 조용히 새는 것을 막는다.
     #: 카드 t378 이 블라인더를 더했다 — 이 룩 자신의 값은 안 바꾸지만, §6.1 이 규정한
-    #: "찍는 액센트" 라는 점은 줌·아이리스와 같다.
-    _MARKING = (LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH, LADDER_BLINDER_OR_FLASH)
+    #: "찍는 액센트" 라는 점은 줌·아이리스와 같다. SPEC-LDCLIMAX-001 이 색 스냅을
+    #: 더했다 — 스트로브와 반대 극성(기본 활성)이라 :data:`LADDER_RUNGS` 에도 든다.
+    _MARKING = (LADDER_ZOOM_PINCH, LADDER_IRIS_PINCH, LADDER_BLINDER_OR_FLASH, LADDER_COLOR_SNAP)
 
     def test_every_ladder_rung_is_classified(self):
         """새 칸이 생기면 여기가 먼저 빨개진다 — 분류 안 된 칸은 세어지지 않는다."""
