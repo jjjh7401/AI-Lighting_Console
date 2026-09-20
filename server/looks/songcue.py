@@ -1118,7 +1118,19 @@ def build_songcue_bundle(
     # 를 실었는가"를 알 수 있으므로, 조립 도중이 아니라 조립이 끝난 **후처리 패스**로
     # 한 번 더 훑는다(design.md §2 — 여러 호출자에 컨텍스트를 빠짐없이 배선해야
     # 하는 SPEC-LDACCENT-001 §B1 취약점을 반복하지 않는다).
-    return _apply_climax_duration_cap(bundle, bpm=bpm)
+    capped = _apply_climax_duration_cap(bundle, bpm=bpm)
+    # F1(sync-auditor, SPEC-LDCLIMAX-001) — 복귀 큐(`_climax_return_bundle`)는
+    # 절정 큐가 사다리를 오르기 전의 기준 값을 그대로 재방출한다(REQ-LDCLIMAX-007).
+    # 블라인더·스트로브는 룩 자신의 값을 안 바꾸므로(`_rung_applied`) 그 기준 값은
+    # 흔히 이 곡의 다른 어느 저장 큐(같은 룩이 처음 저장됐을 때)의 값 라인과 글자
+    # 그대로 같다 — 위 첫 번째 `_guard_bundle_collision` 호출은 상한 패스가 큐를
+    # 더 끼우기 **전**에 돌아서 이 충돌을 못 본다. 완성된(삽입까지 끝난) 번들을
+    # 같은 그물로 한 번 더 걸러, `run_commands` 의 dedupe 가 이 중복 값 라인을
+    # 조용히 건너뛰고 그 자리의 Store 가 불완전한 프로그래머 상태로 실행되는
+    # 사태(재현: 6회 반복 코러스 + bpm 지정, 복귀 큐 4개 전부가 1회차 값과 충돌)를
+    # 조립 단계에서 거절한다.
+    _guard_bundle_collision(capped)
+    return capped
 
 
 def _collect_withheld_accents(
@@ -1867,6 +1879,48 @@ def _finalize_marking_accents(
         if not bundle.commands:
             continue
         bundles[index] = _reconcile_accent_fixture(bundle, resolution, emitted)
+
+    # SPEC-LDCLIMAX-001 F2 — :func:`_reorder_yields_by_repetition` 는 (값 라인,
+    # 사다리) 묶음만 바꿔치기하고 ``commands[3:]``(Store 줄)·``fade`` 는 건드리지
+    # 않는다(그 함수 독스트링) — 그래서 color_snap 이 재배열로 옮겨 붙은 자리는
+    # 그 자리가 원래 갖고 있던(0이 아닐 수 있는) 페이드를 그대로 들고 있을 수
+    # 있다. 위 두 훑기(1회차에서 걷어 내기·instance>=2 새로 채우기)는 "지금
+    # 이 자리에서 처음 판정한다"는 전제라 이 경로를 못 잡는다(이미 효과가
+    # 있다고 재판정되면 그대로 넘어간다). 이 마지막 훑기는 지금 사다리에
+    # color_snap 이 있는 **모든** 번들(``_section_bundle`` 이 처음부터 실었든,
+    # 위에서 새로 채웠든, 재배열로 물려받았든)의 페이드를 판정 경로와 무관하게
+    # 무조건 다시 0으로 강제한다 — REQ-LDCLIMAX-003 은 "색 스냅이 확정된 큐"를
+    # 규율하지 "이 패스에서 새로 확정된" 것만을 규율하지 않는다.
+    # ``_reconcile_accent_fixture`` 뒤여야 한다 — 그 함수가 액센트 명령을
+    # 삽입·제거해 ``commands`` 길이를 바꿀 수 있어, Store 줄 자리
+    # (``len(commands) - 2``)가 그 전에는 아직 확정이 아니다.
+    for index, bundle in enumerate(bundles):
+        if not bundle.commands or LADDER_COLOR_SNAP not in bundle.ladder:
+            continue
+        store_index = len(bundle.commands) - 2
+        forced_store = _forced_zero_fade_store(bundle.commands[store_index])
+        already_forced = (
+            bundle.commands[store_index] == forced_store
+            and bundle.fade is not None
+            and bundle.fade.line == LADDER_COLOR_SNAP
+            and bundle.fade.seconds == 0.0
+        )
+        if already_forced:
+            continue
+        new_commands = (
+            *bundle.commands[:store_index],
+            forced_store,
+            *bundle.commands[store_index + 1 :],
+        )
+        bundles[index] = replace(
+            bundle,
+            commands=new_commands,
+            fade=SectionFade(
+                line=LADDER_COLOR_SNAP,
+                seconds=0.0,
+                source="REQ-LDCLIMAX-003 — 경로와 무관하게 색 스냅 페이드를 0으로 강제한다",
+            ),
+        )
 
 
 def _dimmer_from_values_line(values: str) -> float | None:

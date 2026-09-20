@@ -23,15 +23,21 @@
 
 from __future__ import annotations
 
+import pytest
+
 import server.looks.songcue as songcue_module
+from server.design.cue_fade import store_with_fade
 from server.looks.resolver import resolve_roles
 from server.looks.schema import AttributeValue, Look
+from server.looks.section_fade import SectionFade
 from server.looks.songcue import (
     LADDER_BLINDER_OR_FLASH,
     LADDER_COLOR_SNAP,
     LADDER_STROBE_HIT,
+    MOVEMENT_LINE_COLLISION,
     SongCueAccentFixture,
     SongCueBundle,
+    SongCueBundleError,
     SongCueLookSelection,
     SongCueSection,
     SongCueSectionBundle,
@@ -479,7 +485,20 @@ class TestUndeclaredBpmIsANoOp:
 
 class TestClimaxDurationCapIsWiredThroughBuildSongcueBundle:
     """REQ-LDCLIMAX-006~009 — ``build_songcue_bundle(bpm=...)`` 가 실제로 이
-    후처리 패스를 부른다(단위 시험이 아니라 공개 진입점을 통한 배선 확인)."""
+    후처리 패스를 부른다(단위 시험이 아니라 공개 진입점을 통한 배선 확인).
+
+    F1(sync-auditor, SPEC-LDCLIMAX-001) 후속 — 이 클래스가 원래 배선 확인에 쓰던
+    바로 이 픽스처(6회 반복 동일 룩 코러스)가 F1 결함의 재현 사례임이 드러났다.
+    블라인더/스트로브는 룩 자신의 값을 안 바꾸므로(``_rung_applied``) 복귀 큐가
+    재방출하는 "사다리를 오르기 전 기준 값"은 반드시 그 룩이 (경쟁 없이) 처음
+    저장됐을 때의 값과 글자 그대로 같다 — 같은 룩이 반복되는 픽스처에서는 그
+    값을 이미 쥔 큐가 항상 존재한다(1회차). F1 수정으로 ``build_songcue_bundle``
+    이 절정 지속시간 상한 패스 뒤에도 ``_guard_bundle_collision`` 을 다시 돌리므로,
+    이 조합은 이제 올바르게 ``SongCueBundleError`` 로 거절된다 — 배선 자체
+    (``bpm`` 인자가 실제로 이 패스에 도달해 삽입을 시도했다는 것)는 이 예외가
+    발생한다는 사실 자체가 증명한다(``bpm=None`` 이면 상한 패스가 아예 안 돌아
+    이 충돌도 없다 — 아래 첫 단언).
+    """
 
     def test_bpm_argument_reaches_the_duration_cap_pass(self):
         sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(6)))
@@ -494,21 +513,175 @@ class TestClimaxDurationCapIsWiredThroughBuildSongcueBundle:
             sequences_section=_sequences(),
             groups_section=_groups(*_LXSEQ_GROUPS),
         )
-        bundle_with_bpm = build_songcue_bundle(
+
+        assert bundle_without_bpm.climax_returns == ()
+        with_blinder = [
+            s for s in bundle_without_bpm.stored_sections if LADDER_BLINDER_OR_FLASH in s.ladder
+        ]
+        assert with_blinder, (
+            "6회 반복이면 블라인더 칸에 닿는다(test_songcue_accent_fixture.py 와 같은 픽스처) "
+            "— bpm 과 무관하게 사다리 회전만으로 정해지므로 bpm=None 픽스처로도 확인된다"
+        )
+
+        # bpm 을 넘기면 상한 패스가 돌아 복귀 큐 삽입을 시도하고, 그 복귀 큐의
+        # 기준 값이 1회차의 저장 값과 충돌한다(F1) — 이 예외가 나온다는 사실
+        # 자체가 bpm 인자가 실제로 이 패스에 도달했다는 증거다.
+        with pytest.raises(SongCueBundleError, match=MOVEMENT_LINE_COLLISION):
+            build_songcue_bundle(
+                "Song",
+                selections,
+                sequences_section=_sequences(),
+                groups_section=_groups(*_LXSEQ_GROUPS),
+                bpm=120.0,
+            )
+
+
+class TestClimaxReturnCueCollisionIsGuarded:
+    """F1(sync-auditor, SPEC-LDCLIMAX-001) — ``build_songcue_bundle`` 은
+    ``_apply_climax_duration_cap`` 이 끼운 복귀 큐도 ``_guard_bundle_collision``
+    으로 다시 거른다(REQ-LDCLIMAX-007 이 요구하는 "기준 값 재방출"과
+    ``run_commands`` 의 dedupe 가 부딪히는 지점).
+
+    재현(auditor): 같은 룩이 반복되는 코러스 3장(bpm 지정) — 3회차가 사다리를
+    올라 ``blinder_or_flash`` 에 닿고, 그 복귀 큐가 재방출하는 기준 값은 1회차의
+    저장 값과 글자 그대로 같다. 고치기 전에는 ``_guard_bundle_collision`` 이
+    상한 패스보다 **먼저** 도는 한 번뿐이라 이 충돌을 못 보고, 그 값 라인은
+    ``run_commands`` 의 dedupe 로 두 번째부터 조용히 건너뛰어져 그 자리의
+    ``Store`` 가 불완전한 프로그래머 상태로 실행됐다(F1 원인).
+    """
+
+    def test_a_repeated_look_climax_return_collides_with_the_first_occurrence(self):
+        sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(3)))
+        look = _look("chorus", dimmer=60.0)
+        selections = tuple(
+            SongCueLookSelection(section=section, requested_dynamics=(look.dynamics,), look=look)
+            for section in sections
+        )
+
+        with pytest.raises(SongCueBundleError) as excinfo:
+            build_songcue_bundle(
+                "Song",
+                selections,
+                sequences_section=_sequences(),
+                groups_section=_groups(*_LXSEQ_GROUPS),
+                bpm=120.0,
+            )
+
+        assert MOVEMENT_LINE_COLLISION in str(excinfo.value)
+        # 충돌한 값 라인은 1회차(사다리를 안 오른) 기준 값 그대로다 — REQ-007 이
+        # 요구하는 "복귀 큐는 오르기 전 기준 값을 재방출한다"는 성질 자체가
+        # 충돌의 원인임을 확인한다.
+        assert "Attribute 'Dimmer' At 60" in str(excinfo.value)
+
+    def test_the_guard_still_passes_when_bpm_is_undeclared(self):
+        """대조군 — bpm 을 안 주면 상한 패스가 아예 안 돌아 복귀 큐도 안 생기고,
+        같은 픽스처가 예전처럼 조용히 성공한다(REQ-LDCLIMAX-009)."""
+        sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(3)))
+        look = _look("chorus", dimmer=60.0)
+        selections = tuple(
+            SongCueLookSelection(section=section, requested_dynamics=(look.dynamics,), look=look)
+            for section in sections
+        )
+
+        bundle = build_songcue_bundle(
             "Song",
             selections,
             sequences_section=_sequences(),
             groups_section=_groups(*_LXSEQ_GROUPS),
-            bpm=120.0,
         )
 
-        assert bundle_without_bpm.climax_returns == ()
-        with_blinder = [
-            s for s in bundle_with_bpm.stored_sections if LADDER_BLINDER_OR_FLASH in s.ladder
-        ]
-        assert with_blinder, (
-            "6회 반복이면 블라인더 칸에 닿는다(test_songcue_accent_fixture.py 와 같은 픽스처)"
+        assert bundle.climax_returns == ()
+        assert any(LADDER_BLINDER_OR_FLASH in s.ladder for s in bundle.stored_sections)
+
+
+class TestReorderSwapKeepsColorSnapFadeForced:
+    """F2(sync-auditor, SPEC-LDCLIMAX-001) — ``_reorder_yields_by_repetition``
+    이 (값 라인, 사다리) 묶음을 다른 회차 것으로 바꿔치기해도(그 함수 독스트링:
+    ``commands[3:]``·``fade`` 는 건드리지 않는다), color_snap 을 새로 받은 자리는
+    ``_finalize_marking_accents`` 를 거치면 페이드가 다시 0으로 강제된다
+    (REQ-LDCLIMAX-003).
+
+    재현(auditor): 회차 순서로 밝기가 역순인 두 저장 큐 — 낮은 회차가
+    color_snap(페이드 0)을, 높은 회차가 blinder_or_flash(페이드 0.4)를 실었다.
+    재배열은 밝기 오름차순으로 (값, 사다리) 묶음을 다시 나누므로 color_snap 은
+    낮은 밝기 쪽(원래 blinder_or_flash 였던 큐)으로 옮겨 붙는데, 그 큐 자신의
+    ``Store``/``fade`` 는 원래 것(0.4)이 그대로 남는다.
+    """
+
+    @staticmethod
+    def _cue(*, instance, cue_number, dimmer, ladder, fade_line, fade_seconds):
+        section = SongCueSection(
+            name="Chorus",
+            start_ms=(instance - 1) * 40_000,
+            index=instance - 1,
+            dynamics=None,
+            requires_explicit_dynamics=False,
+            label="Chorus",
+            instance=instance,
+            variant="",
         )
-        assert bundle_with_bpm.climax_returns, (
-            "1분 간격(60000ms)은 2박(1초) 상한보다 한참 뒤이므로 복귀 큐가 끼워져야 한다"
+        look = _look("chorus", dimmer=60.0)
+        values = (
+            f"Attribute 'Dimmer' At {dimmer} ; Attribute 'ColorRGB_R' At 72 ; "
+            "Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0"
         )
+        store = store_with_fade(
+            f"Store Sequence 1 Cue {cue_number} 'Chorus {cue_number}'", fade_seconds
+        )
+        commands = ("ClearAll", "Group 11", values, store, "ClearAll")
+        selection = SongCueLookSelection(section=section, requested_dynamics=(5,), look=look)
+        fade = SectionFade(line=fade_line, seconds=fade_seconds, source="test fixture")
+        return SongCueSectionBundle(
+            section=section,
+            cue_number=cue_number,
+            cue_name=f"Chorus {cue_number}",
+            selection=selection,
+            commands=commands,
+            ladder=ladder,
+            fade=fade,
+        )
+
+    def test_the_swapped_in_color_snap_rung_gets_its_fade_re_forced_to_zero(self):
+        # 낮은 회차(2회차)가 color_snap(밝기 90, 페이드 0), 높은 회차(3회차)가
+        # blinder_or_flash(밝기 70, 페이드 0.4) — 회차 순으로 밝기가 내려가므로
+        # (90 -> 70) 재배열의 방아쇠(단조증가 아님)가 걸린다.
+        higher_instance_lower_dimmer = self._cue(
+            instance=2,
+            cue_number=1,
+            dimmer=90,
+            ladder=(LADDER_COLOR_SNAP,),
+            fade_line=LADDER_COLOR_SNAP,
+            fade_seconds=0.0,
+        )
+        lower_instance_higher_dimmer = self._cue(
+            instance=3,
+            cue_number=2,
+            dimmer=70,
+            ladder=(LADDER_BLINDER_OR_FLASH,),
+            fade_line=LADDER_BLINDER_OR_FLASH,
+            fade_seconds=0.4,
+        )
+        bundles = [higher_instance_lower_dimmer, lower_instance_higher_dimmer]
+
+        songcue_module._reorder_yields_by_repetition(bundles)
+
+        # 재현 확인 — 재배열 직후에는 color_snap 이 옮겨 붙은 자리가 여전히 옛
+        # 페이드(0.4)를 들고 있다(``_reorder_yields_by_repetition`` 은
+        # ``commands[3:]``/``fade`` 를 건드리지 않는다, 그 함수 독스트링).
+        swapped = next(b for b in bundles if LADDER_COLOR_SNAP in b.ladder)
+        assert swapped.fade is not None
+        assert swapped.fade.seconds == pytest.approx(0.4)
+        assert "CueFade 0.4" in swapped.commands[-2]
+
+        resolution = _resolution()
+        emitted: dict[str, tuple[int, int, str]] = {}
+        songcue_module._finalize_marking_accents(
+            bundles, emitted, resolution, allow_strobe=False, disable_color_snap=False
+        )
+
+        fixed = next(b for b in bundles if LADDER_COLOR_SNAP in b.ladder)
+        assert fixed.fade is not None
+        assert fixed.fade.seconds == 0.0
+        store_line = next(c for c in fixed.commands if c.startswith("Store "))
+        assert "CueFade 0.4" not in store_line
+        assert store_line.endswith("CueFade 0")
