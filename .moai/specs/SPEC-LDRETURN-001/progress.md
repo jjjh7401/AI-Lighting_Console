@@ -202,4 +202,30 @@ m1_to_mN_commit_strategy: single-commit
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<sync-phase 대기>_
+```yaml
+sync_complete_at: 2026-09-21
+sync_commit_sha: pending-backfill-ldreturn-001-sync
+sync_status: complete
+b12_self_test_a: "PASS — grep -c 'LDRETURN' CHANGELOG.md → 0 before emission"
+b12_self_test_b: "PASS — grep -oE 'AC-([A-Z0-9]+-)*[0-9]+' acceptance.md | sort -u | wc -l → 9 raw matches; 8 are AC-LDRETURN-001~008 (1 stray AC-001 excluded, not a domain AC token) — matches progress.md §E.2 AC PASS-count of 8"
+b12_self_test_c: "PASS — ls server/looks/songcue.py, .moai/specs/SPEC-LDRETURN-001/progress.md, server/orchestrator/tools.py all resolve"
+changelog_entry_position: "CHANGELOG.md [Unreleased] ### Fixed, first bullet (prepended above SPEC-LDACCENT-001)"
+frontmatter_status_transitions.spec_md: "in-progress → completed (this sync commit)"
+docs_check: "no canonical doc under docs/ tracks climax-return-cue value-collision behavior — grep -rln 'climax_return|SongCueClimaxReturn' docs/ returned 0 matches (docs/reports/2026-08-14-songstd-m2-feasibility.md matched only 'climax' as a bare substring, unrelated) — nothing touched"
+canary_compliance_check.applicable: false
+canary_compliance_check.reason: "SPEC-LDRETURN-001 defines no forward-looking policy of its own that a canary test could verify"
+```
+
+### 사후 감사(post-hoc sync-audit) 기록
+
+이 SPEC 의 run-phase(`38b76c19`)는 PR 리뷰를 거치지 않고 `origin/main` 에
+직접 push 됐다(추가 백필 커밋 `7a828923`/`3a700129` 도 동일). sync-auditor
+가 SPEC-LDRETURN-001 sync-phase 를 스킵으로 F2(major, blocking SPEC
+closure)로 지적한 것이 이 절을 채우는 계기다 — 정상 경로였다면 sync-phase
+는 run-PR 병합 직후 곧바로 수행됐어야 한다. sync-audit 자체는 이 기록을
+작성하는 시점에 `main` `3a700129` 위에서 사후 수행됐다: 판정 PASS
+(Functionality 97 / Security 100 / Craft 90 / Consistency 75), 전체
+스위트 `13707 passed, 35 skipped`, CI `main` `3a700129` conclusion
+`success`(run 35547648771). 이 이탈을 조용히 정상화하지 않고 기록으로
+남긴다 — 향후 SPEC 은 run-PR 병합 직후 sync-phase 가 곧바로 뒤따르는
+정상 경로를 지켜야 한다.
