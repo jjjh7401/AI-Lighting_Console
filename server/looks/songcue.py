@@ -1630,11 +1630,12 @@ def _rescue_value_line_collisions(
             changed = True
         if not changed:
             break
-    _reorder_yields_by_repetition(bundles)
+    reordered_indices = _reorder_yields_by_repetition(bundles)
     _finalize_marking_accents(
         bundles,
         emitted,
         resolution,
+        reordered_indices=reordered_indices,
         allow_strobe=allow_strobe,
         disable_color_snap=disable_color_snap,
     )
@@ -1661,14 +1662,19 @@ def _rescue_value_line_collisions(
 #   대조군의 값 라인 집합·개수는 그대로다). 이미 단조증가라면(대부분의 입력) 아무
 #   것도 안 바꾼다 — 그 갈래가 고치기 전과 바이트 동일하다는 것을 이 파일의 다른
 #   회귀 검사들이 지킨다.
-def _reorder_yields_by_repetition(bundles: list[SongCueSectionBundle]) -> None:
+def _reorder_yields_by_repetition(bundles: list[SongCueSectionBundle]) -> frozenset[int]:
     """저장된 큐들을 제자리에서 고쳐, 같은 룩의 반복 회차가 밝기 역순이 되지 않게 한다.
 
     라벨과 룩 정체(``look_id``)가 같은 저장된 큐만 한 묶음으로 본다 — 라벨이 다르면
     (드롭 대 후렴) 회차 개념 자체가 다르고, 룩이 다르면 값의 서로 다름이 반복이 아닌
     선택의 차이다. 묶음 안에서 회차(``instance``) 순서로 늘어놓은 ``Dimmer`` 값이
     이미 단조증가면 손대지 않는다.
+
+    돌려주는 것은 **실제로 값 라인을 바꿔치기한 번들의 인덱스**(카드 t429) —
+    :func:`_finalize_marking_accents` 의 1회차 액센트 걷어내기가 이 함수가 손도
+    대지 않은 번들까지 걷어내지 않도록, 무엇을 건드렸는지 호출자에게 알려 준다.
     """
+    touched: set[int] = set()
     seen_labels: list[str] = []
     for bundle in bundles:
         if bundle.commands and bundle.section.label not in seen_labels:
@@ -1723,6 +1729,9 @@ def _reorder_yields_by_repetition(bundles: list[SongCueSectionBundle]) -> None:
                     *current.commands[3:],
                 )
                 bundles[index] = replace(current, commands=replaced_commands, ladder=new_ladder)
+                touched.add(index)
+
+    return frozenset(touched)
 
 
 _VALUE_TOKEN_RE = re.compile(r"Attribute '([^']+)' At (-?\d+(?:\.\d+)?)")
@@ -1896,13 +1905,24 @@ def _finalize_marking_accents(
     emitted: dict[str, tuple[int, int, str]],
     resolution: RoleResolution,
     *,
+    reordered_indices: frozenset[int] = frozenset(),
     allow_strobe: bool = False,
     disable_color_snap: bool = False,
 ) -> None:
     """재배열이 끝난 뒤 액센트를 1회차에서 걷어 내고, 빠진 자리를 채우고, 무대
-    명령을 사다리에 맞춘다."""
+    명령을 사다리에 맞춘다.
+
+    ``reordered_indices`` 는 :func:`_reorder_yields_by_repetition` 가 실제로 값
+    라인을 바꿔치기한 자리다(카드 t429). 1회차 액센트 걷어내기는 **그 자리에서만**
+    한다 — 재배열이 손도 대지 않은 1회차(업로드 경로가 회차마다 다른 라벨을 쓸 때는
+    모든 섹션이 자기 라벨의 1회차다)까지 걷어내면, 그 섹션이 스스로의 충돌-회피
+    사다리로 정당하게 얻은 액센트를 도로 지워 값 라인이 다시 충돌한다 — 그 회귀의
+    실측이 이 파일의 t429 회귀 테스트다.
+    """
     for index, bundle in enumerate(bundles):
         if not bundle.commands or bundle.section.instance >= 2:
+            continue
+        if index not in reordered_indices:
             continue
         bundles[index] = _strip_marking_accent_from_base_occurrence(bundle, emitted)
 
