@@ -31,13 +31,13 @@ from server.looks.resolver import resolve_roles
 from server.looks.schema import AttributeValue, Look
 from server.looks.section_fade import SectionFade
 from server.looks.songcue import (
+    CLIMAX_RETURN_DIMMER_EXHAUSTED,
+    DARKNESS_FLOOR,
     LADDER_BLINDER_OR_FLASH,
     LADDER_COLOR_SNAP,
     LADDER_STROBE_HIT,
-    MOVEMENT_LINE_COLLISION,
     SongCueAccentFixture,
     SongCueBundle,
-    SongCueBundleError,
     SongCueLookSelection,
     SongCueSection,
     SongCueSectionBundle,
@@ -379,7 +379,14 @@ class TestClimaxReturnIsInsertedForALongClimax:
 
     def test_a_return_cue_lands_at_the_two_beat_cap(self):
         climax = _climax_cue(cue_number=1, start_ms=0, rung=LADDER_BLINDER_OR_FLASH)
-        following = _plain_cue(cue_number=2, start_ms=8000)
+        # SPEC-LDRETURN-001 — ``following`` 의 밝기는 climax 의 사다리-오르기-전
+        # 기준 값(60, ``_climax_cue`` 의 ``base_dimmer`` 기본값)과 달라야 한다.
+        # 둘이 우연히 같으면(둘 다 기본값 60) 복귀 큐 자신의 값 라인이 이
+        # ``following`` 큐와 글자 그대로 충돌해 넛지가 개입한다 — 이 시험의
+        # 의도(§ AC-LDRETURN-005, "충돌 없는 다음 큐")와 어긋나는 우연한 충돌을
+        # 피하려고 명시적으로 다른 값을 준다(``_plain_cue`` 의 기본값 자체는
+        # 다른 시험이 의존하므로 바꾸지 않는다).
+        following = _plain_cue(cue_number=2, start_ms=8000, dimmer=45.0)
         bundle = _bundle((climax, following))
 
         result = songcue_module._apply_climax_duration_cap(bundle, bpm=120.0)
@@ -411,7 +418,7 @@ class TestClimaxReturnIsInsertedForALongClimax:
         assert stored[0].commands[2] == climax.commands[2]
         # 다음 큐는 번호만 밀린다 — Dimmer 값은 동일.
         assert stored[2].cue_number == 3
-        assert "Attribute 'Dimmer' At 60" in stored[2].commands[2]
+        assert "Attribute 'Dimmer' At 45" in stored[2].commands[2]
 
     def test_a_return_cue_reuses_the_pre_climb_baseline_look_not_the_climax_commands(self):
         """복귀 큐의 값은 절정 큐가 사다리를 오르기 전의 기준 값(즉, ``look``
@@ -494,10 +501,14 @@ class TestClimaxDurationCapIsWiredThroughBuildSongcueBundle:
     저장됐을 때의 값과 글자 그대로 같다 — 같은 룩이 반복되는 픽스처에서는 그
     값을 이미 쥔 큐가 항상 존재한다(1회차). F1 수정으로 ``build_songcue_bundle``
     이 절정 지속시간 상한 패스 뒤에도 ``_guard_bundle_collision`` 을 다시 돌리므로,
-    이 조합은 이제 올바르게 ``SongCueBundleError`` 로 거절된다 — 배선 자체
-    (``bpm`` 인자가 실제로 이 패스에 도달해 삽입을 시도했다는 것)는 이 예외가
-    발생한다는 사실 자체가 증명한다(``bpm=None`` 이면 상한 패스가 아예 안 돌아
-    이 충돌도 없다 — 아래 첫 단언).
+    이 조합은 F1~F4 사이에는 ``SongCueBundleError`` 로 거절됐었다.
+
+    SPEC-LDRETURN-001(F4 후속)이 이 결함을 닫는다 — 복귀 큐 자신의 ``Dimmer`` 를
+    넛지해 비충돌 값을 찾으므로, 이 조합은 이제 예외 없이 성공하고
+    ``climax_returns`` 에 실제로 삽입된다. 이것이 **공개 진입점을 통한 삽입
+    성공을 재는 이 저장소 최초의 시험**이다(AC-LDRETURN-001, F4 가 지목한
+    커버리지 공백을 직접 닫는다) — ``_apply_climax_duration_cap`` 을 직접 부르지
+    않는다.
     """
 
     def test_bpm_argument_reaches_the_duration_cap_pass(self):
@@ -523,17 +534,22 @@ class TestClimaxDurationCapIsWiredThroughBuildSongcueBundle:
             "— bpm 과 무관하게 사다리 회전만으로 정해지므로 bpm=None 픽스처로도 확인된다"
         )
 
-        # bpm 을 넘기면 상한 패스가 돌아 복귀 큐 삽입을 시도하고, 그 복귀 큐의
-        # 기준 값이 1회차의 저장 값과 충돌한다(F1) — 이 예외가 나온다는 사실
-        # 자체가 bpm 인자가 실제로 이 패스에 도달했다는 증거다.
-        with pytest.raises(SongCueBundleError, match=MOVEMENT_LINE_COLLISION):
-            build_songcue_bundle(
-                "Song",
-                selections,
-                sequences_section=_sequences(),
-                groups_section=_groups(*_LXSEQ_GROUPS),
-                bpm=120.0,
-            )
+        # AC-LDRETURN-001 — bpm 을 넘기면 상한 패스가 돌아 복귀 큐 삽입을 시도한다.
+        # 그 복귀 큐의 기준 값이 1회차의 저장 값과 충돌하지만(F1 재현 조합),
+        # SPEC-LDRETURN-001 의 넛지가 비충돌 값을 찾아 예외 없이 성공한다 —
+        # ``_apply_climax_duration_cap`` 을 직접 부르지 않는 공개 진입점 그대로다.
+        bundle_with_bpm = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*_LXSEQ_GROUPS),
+            bpm=120.0,
+        )
+
+        assert bundle_with_bpm.climax_returns != (), (
+            "AC-LDRETURN-001 — 적어도 1건의 복귀 큐가 실제로 삽입돼야 한다"
+        )
+        assert bundle_with_bpm.withheld_climax_returns == ()
 
 
 class TestClimaxReturnCueCollisionIsGuarded:
@@ -544,13 +560,20 @@ class TestClimaxReturnCueCollisionIsGuarded:
 
     재현(auditor): 같은 룩이 반복되는 코러스 3장(bpm 지정) — 3회차가 사다리를
     올라 ``blinder_or_flash`` 에 닿고, 그 복귀 큐가 재방출하는 기준 값은 1회차의
-    저장 값과 글자 그대로 같다. 고치기 전에는 ``_guard_bundle_collision`` 이
-    상한 패스보다 **먼저** 도는 한 번뿐이라 이 충돌을 못 보고, 그 값 라인은
-    ``run_commands`` 의 dedupe 로 두 번째부터 조용히 건너뛰어져 그 자리의
-    ``Store`` 가 불완전한 프로그래머 상태로 실행됐다(F1 원인).
+    저장 값과 글자 그대로 같다. F1~F4 사이에는 ``_guard_bundle_collision`` 이
+    이 충돌을 정확히 잡아 ``SongCueBundleError`` 로 거절했다 — 배선 자체는
+    맞지만 공개 진입점을 통한 성공 삽입 경로가 없었다(F4).
+
+    SPEC-LDRETURN-001 이 F4 를 닫는다 — 복귀 큐 자신의 ``Dimmer`` 를 넛지해
+    비충돌 값을 찾는다(REQ-001~002). 넛지할 축이 있으면 성공하고(AC-007,
+    아래 첫 시험), 넛지할 데가 없으면(``Dimmer`` 가 이미 :data:`DARKNESS_FLOOR`)
+    예외 대신 유보한다(AC-004, 아래 둘째 시험).
     """
 
-    def test_a_repeated_look_climax_return_collides_with_the_first_occurrence(self):
+    def test_a_repeated_look_climax_return_succeeds_via_nudge(self):
+        """AC-LDRETURN-007 — F1→F4 폐쇄 확인. 오늘(이 SPEC 이전) 쓰던 결함
+        재현 픽스처(3회 반복, ``Dimmer`` 축 존재, ``bpm=120``)가 이제 예외 없이
+        성공하고, 3회차의 복귀 큐가 넛지된 ``Dimmer`` 값으로 삽입된다."""
         sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(3)))
         look = _look("chorus", dimmer=60.0)
         selections = tuple(
@@ -558,20 +581,71 @@ class TestClimaxReturnCueCollisionIsGuarded:
             for section in sections
         )
 
-        with pytest.raises(SongCueBundleError) as excinfo:
-            build_songcue_bundle(
-                "Song",
-                selections,
-                sequences_section=_sequences(),
-                groups_section=_groups(*_LXSEQ_GROUPS),
-                bpm=120.0,
-            )
+        bundle = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*_LXSEQ_GROUPS),
+            bpm=120.0,
+        )
 
-        assert MOVEMENT_LINE_COLLISION in str(excinfo.value)
-        # 충돌한 값 라인은 1회차(사다리를 안 오른) 기준 값 그대로다 — REQ-007 이
-        # 요구하는 "복귀 큐는 오르기 전 기준 값을 재방출한다"는 성질 자체가
-        # 충돌의 원인임을 확인한다.
-        assert "Attribute 'Dimmer' At 60" in str(excinfo.value)
+        assert bundle.withheld_climax_returns == ()
+        assert len(bundle.climax_returns) == 1
+        record = bundle.climax_returns[0]
+        assert record.source_cue_number == 3
+        return_cue = next(
+            s for s in bundle.stored_sections if s.cue_number == record.inserted_cue_number
+        )
+        # 넛지가 실제로 적용됐다 — 재방출 값은 더는 1회차 기준 값(60)과 같지 않다
+        # (REQ-001). 그러나 이 번들 다른 어디에도 이미 나가 있지 않다(REQ-002,
+        # 삽입 성공 그 자체가 증거 — 성공했다는 사실이 곧 비충돌 확인이다).
+        assert "Attribute 'Dimmer' At 60" not in return_cue.commands[2]
+        # AC-LDRETURN-002 — 색은 그대로다(넛지는 Dimmer 축에만 적용된다).
+        assert "Attribute 'ColorRGB_R' At 72" in return_cue.commands[2]
+        assert "Attribute 'ColorRGB_G' At 100" in return_cue.commands[2]
+        assert "Attribute 'ColorRGB_B' At 0" in return_cue.commands[2]
+        # AC-LDRETURN-003 — 넛지된 값도 DARKNESS_FLOOR 이상이다.
+        nudged_dimmer = float(return_cue.commands[2].split("At ")[1].split(" ;")[0])
+        assert nudged_dimmer >= DARKNESS_FLOOR
+
+    def test_a_repeated_look_climax_return_is_withheld_without_dimmer_axis(self):
+        """AC-LDRETURN-004 — 넛지가 물러날 데가 없으면(REQ-003) 예외 대신
+        유보한다.
+
+        위 시험과 같은 3회 반복 구조를 재구성하되, ``Dimmer`` 를 처음부터
+        :data:`DARKNESS_FLOOR` 에 둔다. ``_stepped`` 는 속성이 아예 없을 때와
+        이미 한계에 닿았을 때를 같은 방식으로 처리한다 — 입력을 그대로
+        돌려준다 — 이므로 이 픽스처는 "``Dimmer`` 축 부재"와 넛지 관점에서
+        바이트 동일한 조건을 재현한다. ``Dimmer`` 축을 아예 제거하면
+        이 리그·이 픽스처에서는 ``dimmer_hit`` 이 값을 전혀 못 바꿔 3회차
+        자체가 사다리를 못 올라(``_climb_rungs`` 의 "hits" 접두사가 유일한
+        차별화 수단이다) ``blinder_or_flash`` 에 닿지 못한다 — 이 시험의
+        Given 절("blinder_or_flash 사다리 칸에 도달")을 만족시키는 동시에
+        REQ-003 의 유보 경로를 실제로 트는 유일한 재구성이 이것이다.
+        """
+        sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(3)))
+        look = _look("chorus", dimmer=float(DARKNESS_FLOOR))
+        selections = tuple(
+            SongCueLookSelection(section=section, requested_dynamics=(look.dynamics,), look=look)
+            for section in sections
+        )
+
+        bundle = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*_LXSEQ_GROUPS),
+            bpm=120.0,
+        )
+
+        assert bundle.climax_returns == ()
+        assert len(bundle.withheld_climax_returns) == 1
+        withheld = bundle.withheld_climax_returns[0]
+        assert withheld.source_cue_number == 3
+        assert withheld.rung == LADDER_BLINDER_OR_FLASH
+        assert withheld.cap_beats == 2.0
+        assert withheld.reason == CLIMAX_RETURN_DIMMER_EXHAUSTED
+        assert withheld.detail != ""
 
     def test_the_guard_still_passes_when_bpm_is_undeclared(self):
         """대조군 — bpm 을 안 주면 상한 패스가 아예 안 돌아 복귀 큐도 안 생기고,
@@ -592,6 +666,54 @@ class TestClimaxReturnCueCollisionIsGuarded:
 
         assert bundle.climax_returns == ()
         assert any(LADDER_BLINDER_OR_FLASH in s.ladder for s in bundle.stored_sections)
+
+
+class TestRepeatedClimaxReturnsDoNotCollideWithEachOther:
+    """AC-LDRETURN-008 — 반복 삽입이 서로 충돌하지 않는다.
+
+    절정 칸이 2개 이상이고 둘 다 같은 룩(같은 ``look_id``)을 반복해 두 복귀
+    큐가 같은 기준 값을 재방출하려 하면, 두 번째 삽입의 충돌 판정이 첫 번째
+    삽입이 만든 값도 포함해서 다시 읽는다(plan.md §B3) — 두 넛지 값은
+    서로 달라야 한다.
+
+    전용 픽스처(plan.md M5a) — M5(``TestClimaxDurationCapIsWiredThroughBuildSongcueBundle``,
+    AC-001 만 겨냥)의 6회 반복·``Dimmer`` 60 픽스처를 재사용하지 않는다. 반복
+    수(7회)와 기준 밝기(65)를 모두 바꿔 독립적으로 구성한다 — M5 는 절정 칸
+    개수를 단언·보장하지 않으므로 이 시험의 목적(반복 삽입 간 비충돌)에
+    우연히 기댈 수 없다.
+    """
+
+    def test_the_second_nudged_return_differs_from_the_first(self):
+        sections = parse_sections(tuple(("Chorus", f"{minute}:00") for minute in range(7)))
+        look = _look("chorus", dimmer=65.0)
+        selections = tuple(
+            SongCueLookSelection(section=section, requested_dynamics=(look.dynamics,), look=look)
+            for section in sections
+        )
+
+        bundle = build_songcue_bundle(
+            "Song",
+            selections,
+            sequences_section=_sequences(),
+            groups_section=_groups(*_LXSEQ_GROUPS),
+            bpm=120.0,
+        )
+
+        assert bundle.withheld_climax_returns == ()
+        assert len(bundle.climax_returns) >= 2, (
+            "이 픽스처는 절정 칸이 2개 이상이어야 AC-LDRETURN-008 을 잰다"
+        )
+        first_record, second_record = bundle.climax_returns[0], bundle.climax_returns[1]
+        first_cue = next(
+            s for s in bundle.stored_sections if s.cue_number == first_record.inserted_cue_number
+        )
+        second_cue = next(
+            s for s in bundle.stored_sections if s.cue_number == second_record.inserted_cue_number
+        )
+        assert first_cue.commands[2] != second_cue.commands[2], (
+            "AC-LDRETURN-008 — 첫 번째 넛지 값과 두 번째 넛지 값은 서로 달라야 한다 "
+            "(§B3 — 두 번째 충돌 판정이 첫 번째 삽입이 만든 값도 다시 읽는다)"
+        )
 
 
 class TestReorderSwapKeepsColorSnapFadeForced:

@@ -77,6 +77,13 @@ DARKNESS_NO_DIMMER = "pre_drop_darkness_no_dimmer"
 #: 판정에 참여한다 — 어두워진 큐가 앞 큐와 값이 같아 건너뛰어질 수 있고, 그러면 §8 이
 #: 요구한 밸리는 무대에 없다. 적용 기록을 조용히 남겨 두면 있는 것처럼 읽힌다.
 DARKNESS_CUE_NOT_STORED = "pre_drop_darkness_cue_not_stored"
+#: 절정 복귀 큐가 값 충돌 회피 넛지에도 불구하고 삽입을 못 한 이유
+#: (SPEC-LDRETURN-001 REQ-003). 두 갈래를 하나로 묶는다 — 룩에 ``Dimmer``
+#: 축이 없거나, 넛지가 :data:`DARKNESS_FLOOR` 까지 내려갔는데도 비충돌 값을
+#: 못 찾았거나. 감독 결정(2026-09-21, 옵션 A)이 넛지 단계 수 상한을 두지
+#: 않았으므로 갈라 적을 실익이 없다 — 어느 쪽이든 ``_stepped`` 가 "더
+#: 내려갈 데가 없다"고 판정한다는 같은 사실이다.
+CLIMAX_RETURN_DIMMER_EXHAUSTED = "climax_return_dimmer_exhausted"
 _DESTINATION = "ChangeDestination Root"
 _CLEAR = "ClearAll"
 _IMPLICIT_SYSTEM_CUE_COUNT = 2
@@ -767,6 +774,27 @@ class SongCueClimaxReturn:
 
 
 @dataclass(frozen=True)
+class SongCueWithheldClimaxReturn:
+    """절정 지속시간 상한이 값 충돌 회피 넛지에도 불구하고 복귀 큐를 못 끼운
+    자리 하나와 그 이유(SPEC-LDRETURN-001 REQ-003, REQ-008).
+
+    :class:`SongCueWithheldMovement`/:class:`SongCueWithheldDarkness`/
+    :class:`SongCueWithheldAccent` 와 같은 "조립 중에만 아는 부가 사실을
+    명시적으로 보고한다" 패턴을 따르되, :class:`SongCueClimaxReturn` 과 같은
+    필드 이름 규약(``source_section``/``source_cue_number``/``rung``/
+    ``cap_beats``)을 공유한다 — 이것은 삽입이 아니라 **유보** 보고라 별도
+    클래스로 둔다.
+    """
+
+    source_section: SongCueSection
+    source_cue_number: int
+    rung: str
+    cap_beats: float
+    reason: str
+    detail: str = ""
+
+
+@dataclass(frozen=True)
 class SongCueBundle:
     song_title: str
     sequence_number: int
@@ -782,6 +810,12 @@ class SongCueBundle:
     """절정 지속시간 상한이 끼워 넣은 복귀 큐 전량 — 안 끼웠으면 빈 튜플
     (SPEC-LDCLIMAX-001 REQ-LDCLIMAX-010). ``withheld_movement``/``withheld_darkness``/
     ``withheld_accents`` 와 같은 자리, 같은 "조용히 넘어가지 않는다" 보고 규율이다.
+    """
+
+    withheld_climax_returns: tuple[SongCueWithheldClimaxReturn, ...] = ()
+    """값 충돌 회피 넛지가 실패해 못 끼운 복귀 큐 전량 — 안 유보했으면 빈 튜플
+    (SPEC-LDRETURN-001 REQ-003, REQ-008). ``climax_returns`` 와 같은 자리, 같은
+    "조용히 넘어가지 않는다" 보고 규율이다.
     """
 
     @property
@@ -1319,6 +1353,60 @@ def _climax_return_bundle(
     )
 
 
+# @MX:NOTE: [AUTO] 복귀 큐 자신의 값 충돌 회피 — 상대(rival, 이미 저장된 실제
+#   큐)가 아니라 이 함수가 받은 후보 자신을 넛지한다(SPEC-LDRETURN-001 REQ-001~003).
+#   `_yield_bundle` 은 드롭에 자리를 비켜주려고 **상대**를 물러서게 한다 — 이
+#   함수의 문맥은 반대다. 물러서야 하는 것은 이 SPEC 이 새로 합성하는 복귀
+#   큐이고, 충돌 상대(1회차 등)는 director 가 이미 확정한 실제 큐다.
+#   `_yield_bundle` 을 그대로 호출해 상대를 물러서게 하면 이 SPEC 과 무관한
+#   곡의 다른 큐 값이 조용히 바뀐다 — REQ-LDCLIMAX-011("기존 큐 값 결정 경로를
+#   안 건드린다")을 정면으로 어긴다(plan.md §B1). 그래서 `_yield_bundle` 을
+#   호출하지 않고, 그 단계별 탐색(`_HIT_STEP`, `DARKNESS_FLOOR`) 알고리즘만
+#   재사용해 적용 대상을 후보 자신으로 바꾼다.
+def _climax_return_bumped(
+    candidate: SongCueSectionBundle,
+    sections: Sequence[SongCueSectionBundle],
+) -> SongCueSectionBundle | None:
+    """복귀 큐 자신의 ``Dimmer`` 를 넛지해 값 충돌을 피한다(REQ-001~003).
+
+    충돌 판정은 ``sections`` 의 현재 상태(이 패스 안에서 앞서 끼운 복귀 큐
+    포함)에서 매번 새로 읽는다(plan.md §B2/§B3) — 조립-시점 ``emitted``
+    딕셔너리를 스레딩하지 않는다(SPEC-LDCLIMAX-001 D3 과 같은 근거).
+
+    비충돌이면 ``candidate`` 를 그대로 돌려준다(REQ-005 무회귀 — 넛지는
+    실제 충돌이 있을 때만 개입한다). 충돌하면 ``Dimmer`` 를 ``_HIT_STEP``
+    단위로 ``DARKNESS_FLOOR`` 까지 단계 수 제한 없이 내리며 비충돌 값을
+    찾는다(REQ-001, 감독 결정 2026-09-21 옵션 A). ``Dimmer`` 축이 없거나
+    ``DARKNESS_FLOOR`` 에 닿아도 못 찾으면 ``None`` — 호출자가 REQ-003 유보
+    경로로 넘어간다.
+    """
+    look = candidate.selection.look
+    if look is None:
+        return None
+    occupied: set[str] = set()
+    for section in sections:
+        for command in section.commands:
+            if not is_programmer_state(command):
+                occupied.add(command)
+    if candidate.commands[2] not in occupied:
+        return candidate
+    attributes = look.attributes
+    while True:
+        stepped = _stepped(attributes, _DIMMER, -_HIT_STEP, DARKNESS_FLOOR)
+        candidate_line = _values_line(stepped)
+        if candidate_line == _values_line(attributes):
+            return None
+        attributes = stepped
+        if candidate_line not in occupied:
+            new_commands = (
+                candidate.commands[0],
+                candidate.commands[1],
+                candidate_line,
+                *candidate.commands[3:],
+            )
+            return replace(candidate, commands=new_commands)
+
+
 # @MX:ANCHOR: [AUTO] 절정 지속시간 상한 — blinder_or_flash/strobe_hit 를 실은 큐마다
 #   상한 박수 뒤에 통제된 룩으로 복귀하는 큐를 끼운다(정본 §6, SPEC-LDCLIMAX-001
 #   REQ-LDCLIMAX-006~011).
@@ -1327,7 +1415,10 @@ def _climax_return_bundle(
 #   같은 판단을 하려면 SPEC-LDACCENT-001 §B1 이 이미 겪은 "여러 호출자에 컨텍스트를
 #   빠짐없이 배선해야 하는" 취약점을 반복한다. 그래서 이 함수는 완성된
 #   :class:`SongCueBundle` 을 받아 훑고, 필요할 때만 큐를 더한다 — 기존 큐의 값
-#   결정 경로는 건드리지 않는다(REQ-LDCLIMAX-011).
+#   결정 경로는 건드리지 않는다(REQ-LDCLIMAX-011). SPEC-LDRETURN-001 이 더한
+#   분기(F4 후속) — 새로 끼우는 복귀 큐의 값이 이미 번들 안에 있으면
+#   `_climax_return_bumped` 로 자신을 넛지하고(REQ-001~002), 넛지도 실패하면
+#   삽입을 유보하고 명시적으로 보고한다(REQ-003, REQ-008) — 예외를 던지지 않는다.
 def _apply_climax_duration_cap(bundle: SongCueBundle, *, bpm: float | None) -> SongCueBundle:
     """완성된 번들을 훑어 blinder_or_flash/strobe_hit 를 실은 큐마다 상한을
     계산하고, 다음 큐가 상한보다 늦게 오면 그 사이에 복귀 큐를 끼운다.
@@ -1341,6 +1432,7 @@ def _apply_climax_duration_cap(bundle: SongCueBundle, *, bpm: float | None) -> S
 
     sections = list(bundle.sections)
     returns: list[SongCueClimaxReturn] = []
+    withheld: list[SongCueWithheldClimaxReturn] = []
     shift = 0
     for original in [section for section in bundle.sections if section.commands]:
         rung = original.accent_fixture.rung if original.accent_fixture is not None else None
@@ -1361,7 +1453,26 @@ def _apply_climax_duration_cap(bundle: SongCueBundle, *, bpm: float | None) -> S
             cue_number=new_cue_number,
             cap_ms=cap_ms,
         )
-        sections.insert(climax_index + 1, return_bundle)
+        # SPEC-LDRETURN-001 REQ-001~003 — 이 복귀 큐 자신의 값이 이미 번들
+        # 안에 있으면(반복 룩, F4) 자신을 넛지해 비충돌 값을 찾는다; 넛지도
+        # 실패하면 삽입을 유보한다(예외를 던지지 않는다).
+        bumped = _climax_return_bumped(return_bundle, sections)
+        if bumped is None:
+            withheld.append(
+                SongCueWithheldClimaxReturn(
+                    source_section=climax.section,
+                    source_cue_number=climax.cue_number,
+                    rung=rung,
+                    cap_beats=cap_beats,
+                    reason=CLIMAX_RETURN_DIMMER_EXHAUSTED,
+                    detail=(
+                        f"look {climax.selection.look.look_id} has no free Dimmer value at "
+                        "or above DARKNESS_FLOOR for its climax-duration-cap return cue"
+                    ),
+                )
+            )
+            continue
+        sections.insert(climax_index + 1, bumped)
         for later_index in range(climax_index + 2, len(sections)):
             sections[later_index] = _renumbered(
                 sections[later_index], sections[later_index].cue_number + 1, bundle.sequence_number
@@ -1378,8 +1489,12 @@ def _apply_climax_duration_cap(bundle: SongCueBundle, *, bpm: float | None) -> S
             )
         )
 
-    if not returns:
+    if not returns and not withheld:
         return bundle
+    if not returns:
+        # 유보만 있고 성공 삽입은 0건 — sections 구조는 안 바뀌었으므로 재훑기
+        # 없이 withheld_climax_returns 만 채워 돌려준다(plan.md M4).
+        return replace(bundle, withheld_climax_returns=tuple(withheld))
     # ``sections`` 는 ``bundle.sections`` 에서 왔고, 그 안의 첫 저장 큐는 이미
     # ``_flatten_commands`` 가 한 번 스플라이스한 ``Label Sequence`` 줄을 갖고
     # 있다(`_assembled`) — 그대로 다시 훑으면 라벨 줄이 두 번 붙는다. 다시
@@ -1389,7 +1504,13 @@ def _apply_climax_duration_cap(bundle: SongCueBundle, *, bpm: float | None) -> S
             sections[index] = _delabelled(section)
             break
     commands, labelled = _flatten_commands(sections, bundle.sequence_number, bundle.sequence_name)
-    return replace(bundle, commands=commands, sections=labelled, climax_returns=tuple(returns))
+    return replace(
+        bundle,
+        commands=commands,
+        sections=labelled,
+        climax_returns=tuple(returns),
+        withheld_climax_returns=tuple(withheld),
+    )
 
 
 # @MX:ANCHOR: [AUTO] 드롭은 값 충돌로 버려지지 않는다 — 물러서는 쪽은 드롭이 아닌
