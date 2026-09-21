@@ -191,7 +191,7 @@ ac_pass_count: 8
 ac_fail_count: 0
 preserve_list_post_run_count: 4  # plan.md §D — songcue.py 밖 4개 카테고리(리그 YAML/resolver.py/section_intent.py/tools.py) 전량 미수정
 l44_pre_commit_fetch: "0 0"
-l44_post_push_fetch: pending-backfill-ldreturn-001-push
+l44_post_push_fetch: "0 0"
 new_warnings_or_lints_introduced: 0
 cross_platform_build:
   applicable: false
