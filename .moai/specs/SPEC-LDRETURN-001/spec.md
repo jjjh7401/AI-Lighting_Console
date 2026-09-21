@@ -2,7 +2,7 @@
 id: SPEC-LDRETURN-001
 title: "절정 복귀 큐 값 충돌 회피 — 공개 진입점 성공 삽입 경로 확보"
 version: "0.2.0"
-status: in-progress
+status: completed
 created: 2026-09-20
 updated: 2026-09-21
 author: jaihyun
