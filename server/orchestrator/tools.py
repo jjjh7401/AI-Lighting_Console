@@ -3232,6 +3232,12 @@ def build_toolset(
                 selections,
                 sequences_section=rig_sections["sequences"],  # type: ignore[arg-type]
                 groups_section=rig_sections["groups"],  # type: ignore[arg-type]
+                # 카드 t428 — 절정 지속시간 상한(REQ-LDCLIMAX-006~009)이 실기에서
+                # 발화하려면 이 자리에서 곡 BPM 을 실어야 한다. `density_bpm` 은
+                # 위 마디 분할에 이미 쓰고 있던 같은 값이다(확정 기록이 채택한
+                # BPM, 없으면 None — 상한도 마디 분할과 같은 "안 재고는 안 쓴다"
+                # 규율을 탄다).
+                bpm=density_bpm,
             )
             occupied, axes = timecode_slot_verdict(
                 state_port,
