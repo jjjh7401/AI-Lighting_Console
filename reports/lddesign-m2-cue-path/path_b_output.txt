@@ -1,0 +1,38 @@
+=== 길 B 가 내는 콘솔 명령
+    ChangeDestination Root
+    ClearAll
+    Group 15
+    Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+    Group 12
+    Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+    Store Sequence 1 Cue 1 'Intro' CueFade 2
+    Label Sequence 1 'Probe Song'
+    ClearAll
+    ClearAll
+    Group 14 + 15 + 17
+    Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 100
+    Group 12
+    Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+    Store Sequence 1 Cue 2 'Verse' CueFade 2
+    ClearAll
+    ClearAll
+    Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+    Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 10
+    Attribute 'Pan' At Relative -28
+    Attribute 'Tilt' At Relative -14
+    Step 2
+    Attribute 'Pan' At Relative 28
+    Attribute 'Tilt' At Relative 14
+    Attribute 'Pan' At Phase 0
+    Attribute 'Tilt' At Phase 0
+    Attribute 'Pan' At Speed 96 ; Attribute 'Tilt' At Speed 96
+    Store Sequence 1 Cue 3 'Chorus' CueFade 0.2
+    ClearAll
+
+  명령 총 29줄
+  색 관련 줄: 5
+    -> Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+    -> Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+    -> Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 100
+    -> Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+    -> Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 10
