@@ -1,0 +1,23 @@
+=== 붙이기 전 (현재 main)
+  명령 22줄 · 색 줄 0
+
+=== 붙인 뒤
+    ChangeDestination Root
+    Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+    Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+    Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+    Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+    ClearAll
+    Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+    Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 90
+    Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+    Store Sequence 210 Cue 102 'Verse' CueFade 0.75
+    ClearAll
+    Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+    Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+    Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 70
+    ...
+  명령 25줄 · 색 줄 3
+
+=== 추가된 코드: 10줄 (새 함수 하나) + 호출부 1줄
+=== 명령 증가: 22 -> 25줄

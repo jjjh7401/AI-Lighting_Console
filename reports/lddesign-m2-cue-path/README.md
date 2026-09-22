@@ -81,9 +81,62 @@ plan.md 가 적은 회귀 시험(「같은 입력에 같은 결과」)은 **쓸 
 **길 B 의 명령 생성 앞에 길 A 의 설계·검사를 세우는 일**이다 — plan.md 의
 「인터뷰가 입구, 대화가 엔진」이 이 뜻이다.
 
+## 방향별 비용 실측 (2026-09-23)
+
+### 방향 1 — 길 A 에 색 붙이기: **10줄 + 호출부 1줄**
+
+필요한 부품이 **전부 이미 있다**:
+
+| 부품 | 위치 | 상태 |
+|---|---|---|
+| 색 이름 → RGB | `design/color_names.py:100 resolve_color_name` | 있음 |
+| RGB → 콘솔 값 라인 | `web/session.py:4199 _color_apply_command` | 있음 (`_reviewed_song_commands` 와 같은 파일) |
+| 값 라인 주입 통로 | `_reviewed_song_commands` 의 `extra_value_lines` | 있음 (`_back_layer_value_lines` 가 이미 쓰는 자리) |
+
+실제로 붙여서 돌렸다(`probe_cost_direction1.py`, `probe_helper_path_a.py`):
+명령 22 → 25줄, **색 줄 0 → 3**, 구간마다 다른 색이 나간다.
+
+```
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; …_G' At 20 ; …_B' At 100   (Intro  blue)
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; …_G' At 55 ; …_B' At 5   (Verse  amber)
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; …_G' At 0 ; …_B' At 70   (Chorus magenta)
+```
+
+**알려진 구멍**: `resolve_color_name("white")` 가 `None` 이다. 정본 팔레트 10개는
+`Warm White`·`Cool White` 로 갈라져 있는데 설계층 기본 팔레트는 맨 `white` 를 쓴다
+(`MusicProfile(palette=("blue","white"))`). 색 6개 중 1개가 해소 안 된다 —
+합치기 전에 따로 판정할 것.
+
+### 방향 2 — 길 B 에 설계·검사 붙이기: **지어내야 하는 필드 5 + 5**
+
+검사(`_lint_report`)와 MIB(`_apply_mib`)는 `UnifiedSongLightingPlan` /
+`ComposedCue` 위에서만 돈다. 길 B 를 태우려면 변환기가 필요하고, 그 변환기는
+없는 자료를 지어내야 한다(`probe_cost_direction2.py`):
+
+| 요구 타입 | 필수 필드 | 길 B 자료로 채울 수 있음 | **지어내야 함** |
+|---|---|---|---|
+| `SectionDecision` | 7 | 2 (`section`, `d` — 세기 목록→단일 D레벨은 손실) | **5** (`palette`·`position`·`texture`·`fx`·`accent`) |
+| `UnifiedSongLightingPlan` | 6 | 1 (`song_title`) | **5** (`sections`·`timing`·`music_profile`·`rig_profile`·`approval`) |
+
+그 5개는 길 B 자료에 대응 항목이 없다 — Look 안에 녹아 있어 역산되지 않는다.
+그리고 `SectionDecision` 의 **유일한 생산자**는 `session.py:2061` 하나이고,
+감독 인터뷰/확정 분석에서 만든다(`source="song_design_interview"`,
+palette·position·texture 가 감독 답변에서 파생). 즉 방향 2 는 설계층이 **받아
+적으려고 존재하는 감독 결정을 Look 에서 역으로 지어내는** 일이 된다.
+
+### 판정
+
+방향 1 이 싸다 — 자릿수가 다르다. 그리고 방향 1 은 plan.md 의
+「인터뷰가 입구, 대화가 엔진」과 방향이 같다: 감독 확정 경로가 온전해지고,
+길 B 는 그 위를 호출하는 엔진으로 남는다.
+
 ## 안 잰 것
 
 - 두 경로가 **실기 콘솔**에서 어떻게 보이는지 — 콘솔 0회.
 - 감독 확정 경로에 색이 빠진 것이 **언제부터인지**(git 이력 추적 안 함).
 - 길 B 의 `Group` 지정과 길 A 의 `Fixture` 지정이 같은 기구를 가리키는지.
-- 길 A 에 색을 붙이는 것과 길 B 에 검사를 붙이는 것 중 어느 쪽이 싼지.
+- 방향 1 의 10줄이 **기존 시험 13812개를 깨지 않는지** — 탐침은 monkeypatch 로
+  주입했을 뿐 본 코드를 고치지 않았다.
+- 보조색(팔레트 2번째 이후)·유보색·언더페인팅을 어떻게 낼지 — 탐침은 주색만 냈다.
+- 방향 1 을 해도 길 B 에 검사가 붙지 않는다는 점 — 코파일럿 경로의 무검사 상태는
+  그대로 남는다(별도 과제).
