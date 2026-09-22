@@ -156,9 +156,7 @@ def _load_section_row(raw: Any, *, index: int) -> SectionRow:
         _require_str(data["section"], field_name=f"sections.rows[{index}].section"),
         path=f"sections.rows[{index}].section",
     )
-    occurrence = _require_int(
-        data["occurrence"], field_name=f"sections.rows[{index}].occurrence"
-    )
+    occurrence = _require_int(data["occurrence"], field_name=f"sections.rows[{index}].occurrence")
     operation = _vocab(
         validate_operation,
         _require_str(data["operation"], field_name=f"sections.rows[{index}].operation"),
@@ -234,7 +232,9 @@ def parse_worksheet(raw: Any) -> Worksheet:
     data = _require_mapping(raw, field_name="<root>")
     missing = [key for key in _TOP_LEVEL_KEYS if key not in data]
     if missing:
-        raise WorksheetError(f"워크시트 최상위 구획 누락: {missing} (요구: {list(_TOP_LEVEL_KEYS)})")
+        raise WorksheetError(
+            f"워크시트 최상위 구획 누락: {missing} (요구: {list(_TOP_LEVEL_KEYS)})"
+        )
     palette = _load_palette(data["palette"])
     concept = _require_str(data["concept"], field_name="concept")
     rows, one_shots = _load_sections(data["sections"])

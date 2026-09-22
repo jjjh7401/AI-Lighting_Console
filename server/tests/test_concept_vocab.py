@@ -123,7 +123,7 @@ class TestDirectorOnlyTriggers:
         assert len(DIRECTOR_ONLY_TRIGGERS) == 4
 
     def test_director_only_triggers_are_subset_of_triggers(self):
-        assert DIRECTOR_ONLY_TRIGGERS <= set(TRIGGERS)
+        assert set(TRIGGERS) >= DIRECTOR_ONLY_TRIGGERS
 
     def test_named_four_are_director_only(self):
         expected = {"코드·조성 변화", "핵심 가사", "안무 대형 변화", "중심 멤버·솔로 변경"}

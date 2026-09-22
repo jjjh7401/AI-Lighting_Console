@@ -144,7 +144,9 @@ class TestSectionRowsFields:
 
     def test_memo_is_optional_free_text_outside_vocab_check(self):
         raw = _valid_raw()
-        raw["sections"]["rows"][0]["memo"] = "어휘에 없는 임의 문장이어도 통과해야 한다 — REQ-016 검사 밖"
+        raw["sections"]["rows"][0]["memo"] = (
+            "어휘에 없는 임의 문장이어도 통과해야 한다 — REQ-016 검사 밖"
+        )
         worksheet = parse_worksheet(raw)
         assert "임의 문장" in worksheet.sections[0].memo
 
