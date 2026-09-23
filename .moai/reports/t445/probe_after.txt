@@ -1,0 +1,5 @@
+cues 8 from 8
+'Chorus' ('blue', 'warm white') section_arc
+'Chorus' ('blue', 'warm white') section_arc
+'Chorus' ('blue', 'warm white') section_arc
+'G7 후렴 주색 동일': {'passed': True, 'detail': 'chorus_primary_color_identity: pass (위반 0건)'}

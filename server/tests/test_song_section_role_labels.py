@@ -81,7 +81,11 @@ class TestSplitSectionsForDensityProducesUniqueLabels:
         ]
         # 팔레트가 다양해야(변주 ≥ 유닛 수) 회전으로 안 잘린다 — 여기서는
         # `_section_palette_sizes` 가 자동으로 재므로 role 만 채워 두면 된다.
-        expanded, origins, _notes = _split_sections_for_density(sections, profile=profile)
+        # 카드 t445 — 기본(modulate)의 후렴은 주색을 고정해 2색이면 쪼개지 않는다.
+        # 이 시험은 분할 라벨을 재므로 분할 회전을 그대로 둔 split_swap 으로 잰다.
+        expanded, origins, _notes = _split_sections_for_density(
+            sections, profile=profile, color_usage="split_swap"
+        )
         chorus_labels = [
             section.name for section, origin in zip(expanded, origins, strict=True) if origin == 1
         ]
