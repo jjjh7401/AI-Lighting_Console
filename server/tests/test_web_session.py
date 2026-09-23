@@ -49,7 +49,7 @@ from server.spatial.pointing import (
     SpatialPointingError,
     preset_recall_command,
 )
-from server.spatial.position_fx import position_fx_commands
+from server.spatial.position_fx import position_fx_commands, required_position_labels
 from server.web.approval_bridge import ApprovalChannel
 from server.web.measure import RoundTripRecorder
 from server.web.question import UNANSWERED, QuestionRequest
@@ -1660,6 +1660,7 @@ class _PresetPoolRegistry:
         names=None,
         pool_index=None,
         pool_index_truncated=False,
+        position_pool_names=None,
     ):
         self.calls = calls
         self.pool = tuple(pool)
@@ -1683,6 +1684,13 @@ class _PresetPoolRegistry:
         #: 슬롯 번호 → 프리셋 이름. 가족 필터(재생성)가 이름을 볼 때만 지정한다;
         #: 미지정 슬롯은 이름 없는 자식(구형 페이로드)으로 남는다.
         self.names = dict(names or {})
+        #: t232 — Position 프리셋 풀(경로 "DataPool/PresetPools/2") 전용
+        #: 라벨 응답. None이면 이 경로도 기존 pool/readback 점유 판독으로
+        #: 응답한다(기존 테스트 무수정 동작 동일) — 세 소비 경로(곡 큐/대화
+        #: 수정/포지션 FX)를 겨눈 테스트만 실제 라벨을 채운다.
+        self.position_pool_names = (
+            None if position_pool_names is None else dict(position_pool_names)
+        )
         self.state_reads = 0
         self.wrote = False
 
@@ -1721,6 +1729,26 @@ class _PresetPoolRegistry:
                         tool_call_id=call.id,
                         name=call.name,
                         content=json.dumps(index_payload),
+                    )
+                )
+            if (
+                self.position_pool_names is not None
+                and call.arguments.get("path") == "DataPool/PresetPools/2"
+            ):
+                # t232 — Position 프리셋 풀 전용 응답(라벨 조회). 기존
+                # pool/readback 점유 판독과 분리된 경로다 — 그 둘은 시퀀스/
+                # 타임코드 점유 확인에도 같이 쓰이므로 라벨을 섞으면 안 된다.
+                position_payload = {
+                    "children": [
+                        {"i": slot, "name": name}
+                        for slot, name in sorted(self.position_pool_names.items())
+                    ]
+                }
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=json.dumps(position_payload),
                     )
                 )
             # write 경계로 가른다 — 호출 순번이 아니다(§F9).
@@ -4750,6 +4778,18 @@ class TestSongDesignInterviewSession:
             "children": [],
         }
 
+    #: t232 — every brief in this class stores "프리셋 21번부터", so a NORMAL
+    #: showfile (the ten BASIC_POSITION_SEQUENCE labels sitting contiguously
+    #: at 21..30) is the right default for the label-lookup pool read this
+    #: card adds. Byte-identical to the pre-t232 `preset_start + index`
+    #: bundle unless a test overrides ``preset_pool_readback`` itself.
+    def _default_position_pool_readback(self) -> dict:
+        return {
+            "children": [
+                {"i": 21 + i, "name": name} for i, name in enumerate(BASIC_POSITION_SEQUENCE)
+            ]
+        }
+
     def _registry(
         self,
         calls,
@@ -4773,7 +4813,9 @@ class TestSongDesignInterviewSession:
             "DataPool/Sequences/110": sequence_readback or self._sequence_readback(),
             "DataPool/Timecodes/7": timecode_readback or self._timecode_readback(),
             "DataPool/Groups": groups_readback or {},
-            "DataPool/PresetPools/2": preset_pool_readback or {},
+            "DataPool/PresetPools/2": (
+                preset_pool_readback or self._default_position_pool_readback()
+            ),
         }
 
         class Registry:
@@ -5115,6 +5157,13 @@ class TestSongDesignInterviewSession:
             # the cue proceeds WITHOUT a phaser (contract #4) — the
             # `run_commands` output below is byte-identical to pre-T12.
             "DataPool/PresetPools",
+            # t232: ONE Position preset pool read (`_resolve_position_preset_
+            # labels`, batched per label) resolves 'Ring In' by name instead
+            # of `preset_start + index` — this registry's default pool has
+            # the ten BASIC_POSITION_SEQUENCE labels contiguously at 21..30,
+            # so the resolved slot (and the emitted commands) stay
+            # byte-identical to the pre-t232 arithmetic.
+            "DataPool/PresetPools/2",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -5185,6 +5234,11 @@ class TestSongDesignInterviewSession:
             "DataPool/Timecodes/7",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
+            # t232 — position 라벨 확인은 페이저와 무관하게 항상 1회 돈다
+            # ('Ring In' 이 이 구간의 위치 답이므로). 이 리그의 기본 풀에
+            # 기본 포지션 10종이 21~30에 연속으로 있어 옛 산술과 바이트
+            # 동일한 슬롯으로 해석된다.
+            "DataPool/PresetPools/2",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -6472,6 +6526,10 @@ class TestSongDesignInterviewSession:
             # test above ('후렴' → Wave CM, resolution fails in this registry
             # so the cue proceeds without a phaser — commands unchanged).
             "DataPool/PresetPools",
+            # t232: same one-time Position label-resolution probe as the
+            # sibling test above ('Ring In', resolved against the registry's
+            # default contiguous 21..30 bank — byte-identical commands).
+            "DataPool/PresetPools/2",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -6973,6 +7031,16 @@ class TestRehearsalCueEdit:
             {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
             {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
         ]
+        # t232 — `_stored_timeline` always carries "preset_start": 21, so a
+        # NORMAL showfile (the ten BASIC_POSITION_SEQUENCE labels sitting
+        # contiguously at 21..30) is the right default for the label-lookup
+        # pool read `_merge_timeline_cue_position` now does — byte-identical
+        # to the pre-t232 `preset_start + index` resolved slot.
+        position_pool = {
+            "children": [
+                {"i": 21 + i, "name": name} for i, name in enumerate(BASIC_POSITION_SEQUENCE)
+            ]
+        }
 
         class Registry:
             def dispatch(self, call: ToolCall, context=None) -> ToolExecution:
@@ -6985,6 +7053,16 @@ class TestRehearsalCueEdit:
                             content=json.dumps(
                                 {"fixtures": fixtures, "coverage": {"complete": True}}
                             ),
+                        )
+                    )
+                if call.name == "query_state" and call.arguments.get("path") == (
+                    "DataPool/PresetPools/2"
+                ):
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(position_pool),
                         )
                     )
                 outcomes = tuple(
@@ -7492,6 +7570,17 @@ class TestStatusSnapshot:
         assert snapshot["executions_blocked"] is False
 
 
+#: t232 — a NORMAL FX preset bank: the ten `FX_POSITION_SEQUENCE` labels sit
+#: contiguously at 41..50, matching every ``TestPositionFx*`` test's fixed
+#: "FX 프리셋 41번부터" brief. `_PresetPoolRegistry`/`_ExecutorPageRegistry`
+#: answer the label-lookup pool read (path "DataPool/PresetPools/2") with
+#: this by default, so the pre-t232 `fx_preset_start + index` bundle stays
+#: byte-identical unless a test overrides `position_pool_names` itself.
+_DEFAULT_FX_POSITION_POOL_NAMES = {
+    41 + offset: name for offset, name in enumerate(FX_POSITION_SEQUENCE)
+}
+
+
 class TestPositionFxSequence:
     """포지션 이펙트 시퀀스 빌더 — 저장된 FX 포지션 프리셋(2.N~2.N+9)을 실제로
     소비하는 시퀀스를 만든다. 명령열 자체는 ``position_fx_commands``가 만들므로
@@ -7505,6 +7594,7 @@ class TestPositionFxSequence:
         provider = ScriptedProvider([])
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
         calls: list[ToolCall] = []
+        rig.setdefault("position_pool_names", _DEFAULT_FX_POSITION_POOL_NAMES)
         session._registry = _PresetPoolRegistry(calls, **rig)
         chan = _AnsweringChannel(answers)
         session._question_channel = chan
@@ -7512,10 +7602,12 @@ class TestPositionFxSequence:
         return event, calls, chan
 
     def _expected(self, effect, label, *, start=41, sequence=201):
+        needed = required_position_labels(effect)
+        preset_numbers = {name: start + FX_POSITION_SEQUENCE.index(name) for name in needed}
         return position_fx_commands(
             effect,
             fids=self._FIDS,
-            fx_preset_start=start,
+            preset_numbers=preset_numbers,
             sequence_no=sequence,
             label=label,
         )
@@ -7641,8 +7733,15 @@ class TestPositionFxSequence:
     # 라우팅 회귀 — 프리셋 **저장** 문장(효과어 없음)은 여전히 FX 프리셋 저장
     # 흐름으로 가 10번들을 쓴다. 이 빌더가 앞에서 가로챘다면 1번들이었을 것이다.
     def test_a_preset_store_sentence_is_not_captured_by_the_builder(self, tmp_path):
+        # 이 문장은 (라벨 조회를 쓰는) 이펙트 빌더가 아니라 프리셋 **저장**
+        # 흐름으로 간다 — `position_pool_names` 대역을 꺼서 옛 점유 판독
+        # (`pool=(1, 2, 3)`)이 "DataPool/PresetPools/2"에도 그대로 먹히게
+        # 한다(t232 이전 동작과 동일).
         _event, calls, chan = self._run(
-            tmp_path, "이펙트 포지션 프리셋을 41번부터 저장해줘", pool=(1, 2, 3)
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(1, 2, 3),
+            position_pool_names=None,
         )
 
         assert chan.asked == []
@@ -7738,6 +7837,7 @@ class TestPositionFxIntentFrame:
         provider = ScriptedProvider([_final("확인하겠습니다")])
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
         calls: list[ToolCall] = []
+        rig.setdefault("position_pool_names", _DEFAULT_FX_POSITION_POOL_NAMES)
         session._registry = _ExecutorPageRegistry(calls, **rig)
         chan = _AnsweringChannel(answers)
         session._question_channel = chan
@@ -7855,6 +7955,7 @@ class TestPositionFxExecutorOffer:
         provider = ScriptedProvider([])
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
         calls: list[ToolCall] = []
+        rig.setdefault("position_pool_names", _DEFAULT_FX_POSITION_POOL_NAMES)
         session._registry = _ExecutorPageRegistry(calls, **rig)
         chan = _AnsweringChannel(answers)
         session._question_channel = chan

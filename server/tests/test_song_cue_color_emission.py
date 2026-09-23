@@ -46,6 +46,7 @@ from server.design.song_plan import (
     TimingPlan,
     UnifiedSongLightingPlan,
 )
+from server.spatial.pointing import BASIC_POSITION_SEQUENCE
 from server.web.session import (
     ChatSession,
     _color_failure_note,
@@ -106,6 +107,13 @@ class _Stub:
 
     def _phaser_slots_for_bundle(self, bundle):
         return {}, {}
+
+    def _resolve_position_preset_labels(self, labels, *, start, span, pool_no=None):
+        # t232 — a normal showfile stand-in: the ten labels sit contiguously
+        # at ``start``, so this matches the pre-t232 `start + index` formula
+        # byte-for-byte. The real console-backed resolver is exercised by
+        # ``test_preset_label_lookup_t232.py``, not this colour-focused file.
+        return {label: start + BASIC_POSITION_SEQUENCE.index(label) for label in labels}
 
     _reviewed_song_timing_commands = ChatSession._reviewed_song_timing_commands
 

@@ -105,6 +105,15 @@ def _stub_reads(session, *, executors: set[int] | None = None) -> None:
     session._console_slot_occupied = lambda _path, **_kw: False
     if executors is not None:
         session._page_one_executors = lambda **_kw: set(executors)
+    # t232 — `_position_fx_sequence`/`_merge_timeline_cue_position` now
+    # resolve each Position preset label off a real console read
+    # (`_resolve_position_preset_labels`). This file's PresetPools fixture
+    # never carries names, so stub the resolver too — this file measures
+    # gate behaviour (card raised / rejected 0 lines / audit kind), never
+    # the exact preset numbers, so any deterministic per-label slot works.
+    session._resolve_position_preset_labels = lambda labels, *, start, span, pool_no=None: {
+        label: start + i for i, label in enumerate(labels)
+    }
 
 
 def _answers(session, answers: list[str]) -> list[str]:
