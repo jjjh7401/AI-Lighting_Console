@@ -33,7 +33,7 @@ path unchanged.
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from server.spatial.pointing import (
     FX_POSITION_SEQUENCE,
@@ -44,6 +44,7 @@ from server.spatial.pointing import (
 __all__ = [
     "POSITION_FX_EFFECTS",
     "position_fx_commands",
+    "required_position_labels",
 ]
 
 #: The closed effect vocabulary — like FAN_MODES/RADIAL_MODES in pointing.
@@ -177,52 +178,74 @@ def _relative_phaser_lines(effect: str, speed_bpm: float) -> tuple[str, ...]:
     )
 
 
+def required_position_labels(effect: str) -> tuple[str, ...]:
+    """The ``FX_POSITION_SEQUENCE`` labels ``effect`` recalls — STORE order.
+
+    One label for a base effect (``circle``/``ballyhoo``/``wave``), two for
+    an A/B effect (``sweep``/``flyout``). Callers resolve each label to an
+    ACTUAL console preset slot (t232 — by label, never ``start + index``)
+    before calling :func:`position_fx_commands`.
+    """
+    if effect not in POSITION_FX_EFFECTS:
+        raise SpatialPointingError(
+            f"unknown position fx effect {effect!r}; expected one of {POSITION_FX_EFFECTS}"
+        )
+    if effect in _AB_PRESET_OFFSETS:
+        offset_a, offset_b = _AB_PRESET_OFFSETS[effect]
+        return (FX_POSITION_SEQUENCE[offset_a], FX_POSITION_SEQUENCE[offset_b])
+    offset = _BASE_PRESET_OFFSETS[effect]
+    return (FX_POSITION_SEQUENCE[offset],)
+
+
 def position_fx_commands(
     effect: str,
     *,
     fids: Sequence[int],
-    fx_preset_start: int,
+    preset_numbers: Mapping[str, int],
     sequence_no: int,
     label: str,
     speed_bpm: float = 60.0,
 ) -> tuple[str, ...]:
     """The command bundle that builds one position-FX sequence.
 
-    ``fx_preset_start`` is the pool slot of the FIRST FX skeleton preset —
-    the bank ``fx_position_presets`` stored in ``FX_POSITION_SEQUENCE``
-    order — so preset numbers here are ``fx_preset_start + <index>``.
+    ``preset_numbers`` maps each label :func:`required_position_labels`
+    returns for ``effect`` to its RESOLVED Position preset slot number — the
+    caller looks these up on the console BY LABEL (t232; see
+    ``ChatSession._resolve_position_preset_labels``), never by
+    ``fx_preset_start + index``, so a pool whose FX bank is not a contiguous
+    ``FX_POSITION_SEQUENCE``-ordered run still recalls the right preset.
     ``speed_bpm`` shapes the base effects' phaser rate only; the A/B effects
     move on the cue crossfade instead.
     """
-    if effect not in POSITION_FX_EFFECTS:
-        raise SpatialPointingError(
-            f"unknown position fx effect {effect!r}; expected one of {POSITION_FX_EFFECTS}"
-        )
+    needed = required_position_labels(effect)
     if not fids:
         raise SpatialPointingError("no fixtures to build the position fx on")
-    if fx_preset_start <= 0:
-        raise SpatialPointingError(f"fx preset start {fx_preset_start!r} must be positive")
     if sequence_no <= 0:
         raise SpatialPointingError(f"sequence number {sequence_no!r} must be positive")
     if not math.isfinite(speed_bpm) or speed_bpm <= 0:
         raise SpatialPointingError(f"speed {speed_bpm!r} must be a positive finite BPM")
+    missing = [name for name in needed if name not in preset_numbers]
+    if missing:
+        raise SpatialPointingError(
+            f"no resolved preset number for {missing!r} — expected one of {needed!r}"
+        )
     text = _validated_label(label)
 
     commands: list[str] = [_DESTINATION, _CLEAR]
     if effect in _AB_PRESET_OFFSETS:
-        offset_a, offset_b = _AB_PRESET_OFFSETS[effect]
+        name_a, name_b = needed
         commands += [
-            preset_recall_command(fids, fx_preset_start + offset_a),
-            _cue_store(sequence_no, 1, FX_POSITION_SEQUENCE[offset_a], merge=False),
+            preset_recall_command(fids, preset_numbers[name_a]),
+            _cue_store(sequence_no, 1, name_a, merge=False),
             _CLEAR,
-            preset_recall_command(fids, fx_preset_start + offset_b),
-            _cue_store(sequence_no, 2, FX_POSITION_SEQUENCE[offset_b], merge=True),
+            preset_recall_command(fids, preset_numbers[name_b]),
+            _cue_store(sequence_no, 2, name_b, merge=True),
             _CLEAR,
         ]
     else:
-        offset = _BASE_PRESET_OFFSETS[effect]
+        (name,) = needed
         commands += [
-            preset_recall_command(fids, fx_preset_start + offset),
+            preset_recall_command(fids, preset_numbers[name]),
             *_relative_phaser_lines(effect, speed_bpm),
             f"Store Sequence {sequence_no} Cue 1 '{effect.capitalize()}'",
             _CLEAR,

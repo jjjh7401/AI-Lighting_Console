@@ -26,6 +26,7 @@ import pytest
 
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
+from server.spatial.pointing import BASIC_POSITION_SEQUENCE
 from server.tests.test_safety_gate import FakeConsole
 from server.web.approval_bridge import ApprovalChannel
 from server.web.question import UNANSWERED
@@ -48,12 +49,24 @@ ANSWERS = (
 
 _EMPTY = {"ok": True, "node": {"childCount": 0}, "children": []}
 
+#: t232 — REQUEST stores "프리셋 21번부터"; the label-lookup pool read
+#: `_reviewed_song_commands` now does needs a normal showfile (the ten
+#: BASIC_POSITION_SEQUENCE labels sitting contiguously at 21..30) to resolve
+#: 'Ring In' — an empty pool used to be harmless (the old `preset_start +
+#: index` arithmetic never looked at pool contents at all).
+_POSITION_POOL = {
+    "ok": True,
+    "children": [{"i": 21 + i, "name": name} for i, name in enumerate(BASIC_POSITION_SEQUENCE)],
+}
+
 
 class _Console(FakeConsole):
     """빈 풀 슬롯을 실기와 같이 'path segment not found' 로 답한다."""
 
     def query_state(self, path: str) -> dict:
-        if path in ("DataPool/Groups", "DataPool/PresetPools/2"):
+        if path == "DataPool/PresetPools/2":
+            return _POSITION_POOL
+        if path == "DataPool/Groups":
             return _EMPTY
         raise RuntimeError(f"path segment not found: {path}")
 
