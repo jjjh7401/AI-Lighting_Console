@@ -36,6 +36,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
+from server.concept.session_bridge import build_concept_report
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
 from server.design.capability_verdict import position_verdict
@@ -2698,6 +2699,13 @@ def _song_timeline_payload(
             # The basic-position preset base the plan was built on — kept so a
             # later "타임라인 큐 N 수정" edit can rebuild preset references.
             "preset_start": preset_start,
+            # 카드 t439 — SPEC-LDDESIGN-001 M6 §④b. 컨셉 v2 파이프라인(13게이트·
+            # MIB·린트/에너지)을 이 곡에 대해 돌려 부가 정보로 붙인다. ADDITIVE 다
+            # — 오늘 콘솔로 나가는 명령은 위에서 이미 다 결정됐고 이 키는 그 뒤에
+            # 붙을 뿐이다. 실패해도(`build_concept_report` 는 예외를 밖으로 안
+            # 낸다, `server/concept/session_bridge.py` 독스트링) `available:
+            # False` 로 계속 진행된다.
+            "concept_report": build_concept_report(plan),
         },
         _song_cue_sheet_view_fields(plan),
     )
