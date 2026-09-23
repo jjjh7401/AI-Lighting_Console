@@ -1,4 +1,46 @@
-# t232 판정 — 프리셋 참조 안정성, 1단계 판독
+# t232 판정 — 프리셋 참조 안정성
+
+## 0. 결과 (2단계 수정 후) — PASS
+
+- 리드가 방향 (나)를 정했고, 감독이 레인 터미널에서 직접 착수를 승인했다. 곡 큐·대화 포지션 수정·포지션 FX 세 경로가 이제 **라벨로** Position 프리셋 슬롯을 찾는다. 새 헬퍼 `_resolve_position_preset_labels`가 풀을 한 번 읽고, `#n` 중복 접미는 무시한 채 이름으로 맞춘다. 같은 이름이 여러 칸에 있으면 고른 구간 안의 칸을 쓴다. 이름이 없거나 모호하거나 풀을 읽지 못하면 사유를 적고 거절한다. 거절은 명령을 만드는 단계에서 일어나므로 콘솔 쓰기는 0이다.
+- 커밋: `75a833d8`(구현) · `7b13d43a`(기존 대역 갱신) · `f91a51ec`(전후 재현).
+- 저장 라벨 전제 확인: `basic_position_presets`와 `fx_position_presets`는 `BASIC_POSITION_SEQUENCE`·`FX_POSITION_SEQUENCE` 이름을 라벨로 그대로 쓴다. 두 목록에는 `.`도 따옴표도 없어서, 콘솔이 라벨에서 `.`을 지워도 영향이 없다.
+
+### 전후 대조 — 같은 스크립트, 고치기 전과 후
+
+`.moai/reports/t232/repro_song_cue_path.py`는 생산 빌더(`_reviewed_song_commands`, 대화 수정, 포지션 FX)를 가짜 풀 위에서 돌린다. 수정 전 출력은 `.before.txt`, 수정 후 출력은 `.after.txt`이며, 수정 후 스크립트를 다시 돌려도 `.after.txt`와 바이트 동일하다.
+
+`diff before after`로 바뀐 줄은 D·D2 구간뿐이고, **C 구간(1~23, 30~33, 42~45행)은 차이 0줄**이다.
+
+| 경로 | 상태 D 전 | 상태 D 후 | 상태 D2 후 |
+|---|---|---|---|
+| 곡 큐 'Center' | `At Preset 2.4` (= 'POS04 시트') | `At Preset 2.41` (= 'Center') | 거절: 'Center' 라벨의 Position 프리셋을 콘솔에서 찾지 못했습니다 |
+| 대화 수정 'Center' | `At Preset 2.24` (시트 프리셋) | `At Preset 2.41` | 거절: 큐를 수정할 수 없습니다: … |
+| 포지션 FX 'Circle Base' | `At Preset 2.25` (다른 이름) | `At Preset 2.61` | 거절: 포지션 이펙트 명령을 만들 수 없습니다: … |
+
+### 검증
+
+```
+.venv/bin/python -m pytest -q server/tests/test_preset_label_lookup_t232.py server/tests/test_song_cue_color_emission.py \
+  server/tests/test_web_session.py server/tests/test_write_dispatch_census.py server/tests/test_position_fx.py \
+  server/tests/test_writegate_session_sites.py server/tests/test_writegate_song_finalize.py server/tests/test_song_cue_w_channel_t430.py
+588 passed, 23 skipped in 7.26s        (레인 재실행)
+RED: ImportError — required_position_labels 없음 (구현 에이전트, 구현 전)
+```
+
+구현 에이전트의 전체 스위트 실행 결과는 14099 passed, 1 failed였다. 실패한 1건은 `test_tree_identity.py::test_own_tree_runs_normally`다. 에이전트 판단으로는, 주 체크아웃의 `.venv`로 다른 워크트리를 돌려서 생긴 환경 문제다. **레인은 이 판단을 재지 않았다.** PR CI의 전체 스위트가 판정한다.
+
+### 🔴 같은 결함, 네 번째 경로 — 범위 밖, 카드 필요
+
+`server/spatial/position_cuesheet.py::build_position_cue_sheet`(무드 인터뷰 「포지션 큐 시트」, `session.py`의 `_SHEET_PRESET_START` 처리부)도 `preset_start + BASIC_POSITION_SEQUENCE.index(label)`로 번호를 짓는다. 구현 에이전트가 발견했고, 이번 카드가 지정한 세 경로에 들지 않아 고치지 않았다. 리드에게 카드 발행을 요청한다.
+
+### 알아둘 부작용
+
+라벨 없이 손으로 저장한 기본 포지션을 쓰던 쇼파일은, 이제 곡 큐·대화 수정·포지션 FX가 거절된다. 지금까지는 순서만 맞으면 통과했다. 거절할 때는 무엇을 못 찾았는지 사유를 남긴다.
+
+---
+
+# (이하) 1단계 판독
 
 - 카드: t232 (클래스 B), 레인 lane-2 · 브랜치 `WT-preset-ref-check` · 기준 origin/main `910e198d`
 - 범위: 판독만 한다. 코드 수정 0, 콘솔 접촉 0.
