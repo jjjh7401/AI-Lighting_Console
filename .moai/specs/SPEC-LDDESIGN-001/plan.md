@@ -118,9 +118,10 @@
   제거(REQ-031) — 함수 자체는 삭제하지 않고 다른 목적(초안 생성 등)으로
   재활용 가능한지는 M3 내부 판단.
 - 파일: `server/concept/color_strip.py`(신규),
-  `server/concept/color_lint.py`(신규), `server/web/session.py`(수정 —
-  `_arc_palette` 호출부 제거), `server/tests/test_concept_color_lint.py`
-  (신규).
+  `server/concept/color_lint.py`(신규), `server/tests/test_concept_color_lint.py`
+  (신규). `server/web/session.py`의 `_arc_palette` 호출부 제거는 M3가 아니라
+  M6(REQ-004 — "M0~M6이 완료되면")에서 한다 — M3는 새 검사기가 그 함수를
+  부르지 않게만 한다(카드 t436 리드 판정, 2026-09-23).
 
 ### M4 — 3층 밀도 + §4 회차 규칙 + 헤드룸 (REQ-LDDESIGN-036~052)
 
