@@ -497,6 +497,26 @@ PASS, 공통색이 없으면 FAIL이다. `prepare_songcue` 배선 시험은 감�
 **Gaps**: 실기 콘솔과 실제 감독 곡의 G6 결과는 재지 않았다. 전체 시험은 CI에 맡겼다.
 경로 A 보조색은 back 그룹이 매핑된 경우에만 콘솔로 나간다.
 
+### M7 2차 — 런북 화면: 데이터가 생긴 부분 (REQ-082·084·081·079/080/097/098, 카드 t454)
+
+워크트리 `.claude/worktrees/t454`, 브랜치 `WT-runbook-ui-second`, 기준 `dacba149`.
+판정서는 `.moai/reports/t454/verdict.md`다(원천 매핑 표·화면 캡처 포함).
+
+**Claim**: 화면만 바꿨다(서버 0줄, 리드 A안). CUE SHEET는 14열이고, 옛 5열은
+화면에서만 뺐다(`trans` 값·수정 경로는 그대로, REQ-096). 상태줄 GATE는 런북 전용
+새 컴포넌트가 `concept_report.gates`로 그린다. 컨셉 패널은 기본 접힘에 탭 3개
+고정 라벨이고, 6칸 표 중 5칸을 구간 값으로 채운다. 원천이 없는 칸(회차·Trigger·
+Track 예외·근거 등급·MIB 3상태·WARN·점 줄·한눈에·인과 불릿·「그래서 보이는
+것」·블록 실색)은 「데이터 없음」으로 둔다.
+
+**Evidence**: `_song_timeline_payload` 실측 — `concept_report` 키는 6개, `mib`는
+20행인데 화면 구간은 8행이다(`measure_payload.out.txt`). ui 시험은 602 passed
+(신규 19건), `tsc` exit 0, 빌드 통과. 가드 변이 2건은 모두 잡혔다. 헤드리스
+캡처는 `runbook-open.png`다.
+
+**Gaps**: 실제 곡·앱 본체는 확인하지 않았다. 캡처는 펼친 상태 한 장뿐이다.
+빈 칸을 채우는 서버 쪽 일은 t455(행 단위 리포트)와 t456(구간 색 HEX)로 넘겼다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml

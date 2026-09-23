@@ -3738,3 +3738,243 @@ body {
 .cst-sheet {
   min-width: 1100px;
 }
+
+/* ── t454 SPEC-LDDESIGN-001 M7 2차 — 런북 모드 전용 선택자만 ───────────────
+   REQ-082 14열 · REQ-084 GATE · REQ-079/080 컨셉 패널. 메인 화면 선택자는
+   건드리지 않는다. 값은 src/DESIGN.md §2 토큰 그대로다. */
+
+/* 원천 없는 칸 — 「—」(빈 값)와 구분되도록 글자로 적고 기울인다. */
+.cst-sheet td.nodata,
+.concept-nodata,
+.cst-legend-nodata,
+.runbook-gate-missing {
+  color: #9aa0a6;
+  font-style: italic;
+}
+
+.cst-sheet td.nodata {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* 구간이 바뀌는 행에만 상단 구분선, 구간명은 첫 행만 강조 */
+.cst-sheet tr.is-section-start td {
+  border-top: 1px solid #3b465c;
+}
+
+.cst-sheet tr.is-section-start td.cst-sec {
+  color: #e8eaed;
+  font-weight: 700;
+}
+
+.cst-sheet tr.is-section-cont td.cst-sec {
+  color: #9aa0a6;
+  font-weight: 400;
+}
+
+/* 밝기 칸 — 값 + 구간색 막대 + 직전 큐 대비 증감 */
+.cst-level-bar {
+  display: inline-block;
+  height: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+
+.cst-level-trend {
+  display: inline-block;
+  min-width: 1em;
+  margin-left: 4px;
+  color: #cfd6e4;
+  font-weight: 700;
+}
+
+/* 선택 행: 좌측 5px 바 + 아웃라인 + 파란 면, Q# 칸은 알약으로 반전 */
+.cst-sheet tr.is-selected td {
+  background: rgba(79, 140, 255, 0.26);
+  box-shadow: none;
+}
+
+.cst-sheet tr.is-selected {
+  outline: 1px solid #4f8cff;
+  outline-offset: -1px;
+}
+
+.cst-sheet tr.is-selected td.cst-q {
+  box-shadow: inset 5px 0 0 #4f8cff;
+  color: #0d0f12;
+  font-weight: 700;
+  background: #4f8cff;
+}
+
+/* REQ-084 상태줄 GATE */
+.runbook-gate {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid #2b303a;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.runbook-gate-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.runbook-gate-title {
+  color: #a9c4ff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.runbook-gate-badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.runbook-gate-badge.is-pass,
+.runbook-gate-verdict.is-pass {
+  color: var(--ok);
+}
+
+.runbook-gate-badge.is-fail,
+.runbook-gate-verdict.is-fail {
+  color: #ff8078;
+}
+
+.runbook-gate-badge.is-na,
+.runbook-gate-verdict.is-na,
+.runbook-gate-badge.is-nodata {
+  color: #9aa0a6;
+}
+
+.runbook-gate-badge.is-nodata {
+  border-style: dashed;
+  font-style: italic;
+}
+
+.runbook-gate-detail {
+  margin-top: 8px;
+}
+
+.runbook-gate-detail summary {
+  cursor: pointer;
+  color: #aab3c0;
+  font-size: 13px;
+}
+
+.runbook-gate-detail table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.runbook-gate-detail th,
+.runbook-gate-detail td {
+  padding: 5px 8px;
+  text-align: left;
+  border-bottom: 1px solid #2e3747;
+}
+
+.runbook-gate-detail th {
+  color: #a9c4ff;
+  font-weight: 600;
+}
+
+.runbook-gate-verdict {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+/* REQ-079/080 컨셉 패널 — 기본 접힘 */
+.concept-panel {
+  margin: 14px 0;
+  background: #232834;
+  border: 1px solid #333c4d;
+  border-radius: 10px;
+}
+
+.concept-panel-head {
+  padding: 10px 14px;
+  cursor: pointer;
+  color: #a9c4ff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.concept-panel-body {
+  padding: 0 14px 14px;
+}
+
+.concept-glance h4 {
+  margin: 4px 0 6px;
+  color: #e8eaed;
+  font-size: 13px;
+}
+
+.concept-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+
+.concept-tab {
+  padding: 6px 12px;
+  background: #1b2029;
+  border: 1px solid #2e3747;
+  border-radius: 8px;
+  color: #cfd6e4;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.concept-tab small {
+  margin-left: 6px;
+  color: #9aa0a6;
+  font-size: 11px;
+}
+
+.concept-tab.is-active {
+  border-color: #a9c4ff;
+  color: #e8eaed;
+}
+
+.concept-grammar-scroll {
+  max-height: 336px;
+  overflow-y: auto;
+}
+
+.concept-grammar {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.concept-grammar th {
+  position: sticky;
+  top: 0;
+  padding: 6px 8px;
+  text-align: left;
+  background: #1b2029;
+  color: #a9c4ff;
+  font-weight: 600;
+}
+
+.concept-grammar td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #2e3747;
+}
+
+.concept-grammar td.m {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

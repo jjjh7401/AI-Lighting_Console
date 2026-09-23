@@ -1,0 +1,65 @@
+TOP KEYS: ['approval', 'bpm', 'concept_report', 'console_stored', 'director_decisions', 'disabled', 'layer_mapping', 'lifecycle', 'lint', 'preset_start', 'readback', 'seconds_per_bar', 'sections', 'sequence_name', 'sequence_number', 'song_title', 'tc_method', 'tc_method_warning', 'time_signature', 'timecode_number', 'timing_mode', 'unresolved', 'warnings']
+SECTION KEYS: ['accents', 'bar_count', 'bar_start', 'cue_number', 'd_level', 'd_source', 'duration_ms', 'end_ms', 'fade_seconds', 'fx', 'index', 'intensity', 'label', 'mib', 'movement', 'palette', 'palette_primary', 'palette_source', 'plan_status', 'position', 'position_source', 'start_ms', 'texture', 'texture_source', 'trans', 'trig_time_seconds']
+n sections: 8
+CR KEYS: ['available', 'energy_report_count', 'gates', 'lint_disabled_rule_count', 'lint_finding_count', 'mib']
+{
+ "available": true,
+ "gates": {
+  "G1 어휘 닫힘": {
+   "passed": true,
+   "detail": "구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)"
+  },
+  "G2 후렴 정체성": {
+   "passed": true,
+   "detail": "2/2 쌍 정체성 유지"
+  },
+  "G3 회차마다 새 축(5회차까지)": {
+   "passed": true,
+   "detail": "새 축 0인 쌍(5회차 이내) 0개"
+  },
+  "G4 피날레 새 축 + 여유": {
+   "passed": true,
+   "detail": "피날레 새 축 ['area', 'brightness', 'density', 'direction', 'groups', 'motion'] · 직전 남은 모션 단계 2"
+  },
+  "G5 헤드룸 경고 0": {
+   "passed": true,
+   "detail": "경고 0건"
+  },
+  "G6 컬러: 유보색 조기 0 · 브리지 위반 0": {
+   "passed": true,
+   "detail": "유보색 n/a(입력에 유보색 없음) · 브리지 pass(위반 0)"
+  },
+  "G7 후렴 주색 동일": {
+   "passed": true,
+   "detail": "chorus_primary_color_identity: pass (위반 0건)"
+  },
+  "G8 후렴 앞 빌드업": {
+   "passed": true,
+   "detail": "빌드업 3 / 필요 3"
+  },
+  "G9 트래킹: Block·Release·누출 0": {
+   "passed": true,
+   "detail": "Block 처음 True · Release 마지막 True · cue_only 10 · 누출 없음 True"
+  },
+  "G10 상대 감소 겹침 없음": {
+   "passed": null,
+   "detail": "절 밝기 [45, 38](2개 이하 — n/a)"
+  },
+  "G11 타이밍 전 큐 배정": {
+   "passed": true,
+   "detail": "snap 3 · short 16 · long 1 · 후렴 순차 3"
+  },
+  "G12 MIB: 켜진 채 이동 0": {
+   "passed": true,
+   "detail": "어둠 2 · Mark 1 · 켜진 채 0"
+  },
+  "G13 큐 밀도 10~45": {
+   "passed": true,
+   "detail": "시퀀스 큐 20 + 원샷 3"
+  }
+ },
+ "lint_finding_count": 27,
+ "lint_disabled_rule_count": 2,
+ "energy_report_count": 20
+}
+mib len: 20 values: [None, 'dark', None, None, None, None, None, None, None, 'dark', None, None, None, None, 'mark', None, None, None, None, None]

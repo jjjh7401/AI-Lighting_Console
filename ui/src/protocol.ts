@@ -422,6 +422,30 @@ export interface SongTimelineView {
   /** t281 — 초안 편집 표식. 없으면 「한 번도 안 고친 초안」으로 본다.
    * `depth` 는 되돌릴 수 있는 걸음 수, `last_change` 는 직전 편집의 칸별 보고. */
   draft?: SongTimelineDraftState;
+
+  /** t454 — 서버 `build_concept_report`(server/concept/session_bridge.py)가
+   * 내는 모양 그대로다. 예전 페이로드에는 없으므로 선택 필드다. */
+  concept_report?: SongTimelineConceptReport;
+}
+
+/** 게이트 하나의 판정. `passed` 는 세 값뿐이다 — true(통과)·false(실패)·
+ * null(해당 없음). 「경고」 상태는 서버가 내지 않는다. */
+export interface SongTimelineGateResult {
+  passed: boolean | null;
+  detail: string;
+}
+
+/** t454 — 컨셉 v2 파이프라인 리포트. `available: false` 면 `reason` 만 온다.
+ * `mib` 는 컨셉 파이프라인의 행(안전 큐·프레이즈 큐 포함) 순서라 `sections`
+ * 와 길이도 순서도 다르다 — 화면 행에 짝지으면 안 된다. */
+export interface SongTimelineConceptReport {
+  available: boolean;
+  reason?: string;
+  gates?: Record<string, SongTimelineGateResult>;
+  mib?: ({ status: string } | null)[];
+  lint_finding_count?: number;
+  lint_disabled_rule_count?: number;
+  energy_report_count?: number;
 }
 
 /** t281 — 초안이 원본에서 얼마나 벌어졌는지. 서버 `_draft_badge` 가 만든다. */
