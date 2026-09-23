@@ -1,0 +1,122 @@
+Club Diver.mp3: old_owner=29 new_owner=29 last_tracking=track
+  G1=True G2=None G3=True G4=True G5=True G6=None G7=None G8=True G9=True G10=None G11=True G12=True G13=True
+    G1 어휘 닫힘: 구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)
+    G2 후렴 정체성: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G3 회차마다 새 축(5회차까지): 새 축 0인 쌍(5회차 이내) 0개
+    G4 피날레 새 축 + 여유: 피날레 새 축 ['area', 'density', 'groups', 'motion'] · 직전 남은 모션 단계 1
+    G5 헤드룸 경고 0: 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+    G6 컬러: 유보색 조기 0 · 브리지 위반 0: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G7 후렴 주색 동일: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G8 후렴 앞 빌드업: 빌드업 2 / 필요 2
+    G9 트래킹: Block·Release·누출 0: Block 처음 True · Release 마지막 True · cue_only 16 · 누출 없음 True
+    G10 상대 감소 겹침 없음: 절 밝기 [45](2개 이하 — n/a)
+    G11 타이밍 전 큐 배정: snap 10 · short 19 · long 2 · 후렴 순차 9
+    G12 MIB: 켜진 채 이동 0: 어둠 2 · Mark 1 · 켜진 채 0
+    G13 큐 밀도 10~45: 시퀀스 큐 31 + 원샷 9
+Cut and Run.mp3: old_owner=36 new_owner=36 last_tracking=track
+  G1=True G2=None G3=True G4=True G5=True G6=None G7=None G8=True G9=True G10=True G11=True G12=True G13=True
+    G1 어휘 닫힘: 구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)
+    G2 후렴 정체성: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G3 회차마다 새 축(5회차까지): 새 축 0인 쌍(5회차 이내) 0개
+    G4 피날레 새 축 + 여유: 피날레 새 축 ['area', 'density', 'groups', 'motion'] · 직전 남은 모션 단계 1
+    G5 헤드룸 경고 0: 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+    G6 컬러: 유보색 조기 0 · 브리지 위반 0: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G7 후렴 주색 동일: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G8 후렴 앞 빌드업: 빌드업 4 / 필요 4
+    G9 트래킹: Block·Release·누출 0: Block 처음 True · Release 마지막 True · cue_only 19 · 누출 없음 True
+    G10 상대 감소 겹침 없음: 절 밝기 [45, 38, 38, 38, 38]
+    G11 타이밍 전 큐 배정: snap 11 · short 25 · long 2 · 후렴 순차 10
+    G12 MIB: 켜진 채 이동 0: 어둠 2 · Mark 1 · 켜진 채 0
+    G13 큐 밀도 10~45: 시퀀스 큐 38 + 원샷 10
+Ice cream.mp3: old_owner=11 new_owner=11 last_tracking=track
+  G1=True G2=None G3=True G4=None G5=True G6=None G7=None G8=True G9=True G10=None G11=True G12=True G13=True
+    G1 어휘 닫힘: 구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)
+    G2 후렴 정체성: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G3 회차마다 새 축(5회차까지): 새 축 0인 쌍(5회차 이내) 0개
+    G4 피날레 새 축 + 여유: Final Chorus 없음(구조상 n/a)
+    G5 헤드룸 경고 0: 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+    G6 컬러: 유보색 조기 0 · 브리지 위반 0: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G7 후렴 주색 동일: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G8 후렴 앞 빌드업: 빌드업 0 / 필요 0
+    G9 트래킹: Block·Release·누출 0: Block 처음 True · Release 마지막 True · cue_only 4 · 누출 없음 True
+    G10 상대 감소 겹침 없음: 절 밝기 [45](2개 이하 — n/a)
+    G11 타이밍 전 큐 배정: snap 2 · short 9 · long 2 · 후렴 순차 2
+    G12 MIB: 켜진 채 이동 0: 어둠 2 · Mark 0 · 켜진 채 0
+    G13 큐 밀도 10~45: 시퀀스 큐 13 + 원샷 2
+Morning.mp3: old_owner=27 new_owner=27 last_tracking=track
+  G1=True G2=None G3=True G4=True G5=True G6=None G7=None G8=True G9=True G10=True G11=True G12=True G13=True
+    G1 어휘 닫힘: 구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)
+    G2 후렴 정체성: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G3 회차마다 새 축(5회차까지): 새 축 0인 쌍(5회차 이내) 0개
+    G4 피날레 새 축 + 여유: 피날레 새 축 ['area', 'density', 'direction', 'groups', 'motion'] · 직전 남은 모션 단계 1
+    G5 헤드룸 경고 0: 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+    G6 컬러: 유보색 조기 0 · 브리지 위반 0: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G7 후렴 주색 동일: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G8 후렴 앞 빌드업: 빌드업 1 / 필요 1
+    G9 트래킹: Block·Release·누출 0: Block 처음 True · Release 마지막 True · cue_only 14 · 누출 없음 True
+    G10 상대 감소 겹침 없음: 절 밝기 [45, 38, 38]
+    G11 타이밍 전 큐 배정: snap 9 · short 18 · long 2 · 후렴 순차 8
+    G12 MIB: 켜진 채 이동 0: 어둠 2 · Mark 2 · 켜진 채 0
+    G13 큐 밀도 10~45: 시퀀스 큐 29 + 원샷 8
+Rain.mp3: old_owner=25 new_owner=25 last_tracking=track
+  G1=True G2=None G3=True G4=True G5=True G6=None G7=None G8=True G9=True G10=True G11=True G12=True G13=True
+    G1 어휘 닫힘: 구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)
+    G2 후렴 정체성: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G3 회차마다 새 축(5회차까지): 새 축 0인 쌍(5회차 이내) 0개
+    G4 피날레 새 축 + 여유: 피날레 새 축 ['area', 'density', 'direction', 'groups', 'motion'] · 직전 남은 모션 단계 1
+    G5 헤드룸 경고 0: 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+    G6 컬러: 유보색 조기 0 · 브리지 위반 0: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G7 후렴 주색 동일: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G8 후렴 앞 빌드업: 빌드업 3 / 필요 3
+    G9 트래킹: Block·Release·누출 0: Block 처음 True · Release 마지막 True · cue_only 13 · 누출 없음 True
+    G10 상대 감소 겹침 없음: 절 밝기 [45, 38, 38, 38]
+    G11 타이밍 전 큐 배정: snap 7 · short 18 · long 2 · 후렴 순차 6
+    G12 MIB: 켜진 채 이동 0: 어둠 2 · Mark 2 · 켜진 채 0
+    G13 큐 밀도 10~45: 시퀀스 큐 27 + 원샷 6
+Too Cool.mp3: old_owner=42 new_owner=42 last_tracking=track
+  G1=True G2=None G3=True G4=True G5=True G6=None G7=None G8=True G9=True G10=True G11=True G12=True G13=True
+    G1 어휘 닫힘: 구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)
+    G2 후렴 정체성: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G3 회차마다 새 축(5회차까지): 새 축 0인 쌍(5회차 이내) 0개
+    G4 피날레 새 축 + 여유: 피날레 새 축 ['area', 'groups', 'motion'] · 직전 남은 모션 단계 1
+    G5 헤드룸 경고 0: 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+    G6 컬러: 유보색 조기 0 · 브리지 위반 0: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G7 후렴 주색 동일: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G8 후렴 앞 빌드업: 빌드업 3 / 필요 3
+    G9 트래킹: Block·Release·누출 0: Block 처음 True · Release 마지막 True · cue_only 19 · 누출 없음 True
+    G10 상대 감소 겹침 없음: 절 밝기 [45, 38, 38, 38, 38, 38]
+    G11 타이밍 전 큐 배정: snap 13 · short 29 · long 2 · 후렴 순차 13
+    G12 MIB: 켜진 채 이동 0: 어둠 2 · Mark 1 · 켜진 채 0
+    G13 큐 밀도 10~45: 시퀀스 큐 44 + 원샷 13
+scott-buckley-neon.mp3: old_owner=30 new_owner=30 last_tracking=track
+  G1=True G2=None G3=True G4=True G5=True G6=None G7=None G8=True G9=True G10=True G11=True G12=True G13=True
+    G1 어휘 닫힘: 구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)
+    G2 후렴 정체성: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G3 회차마다 새 축(5회차까지): 새 축 0인 쌍(5회차 이내) 0개
+    G4 피날레 새 축 + 여유: 피날레 새 축 ['area', 'density', 'groups', 'motion'] · 직전 남은 모션 단계 1
+    G5 헤드룸 경고 0: 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+    G6 컬러: 유보색 조기 0 · 브리지 위반 0: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G7 후렴 주색 동일: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G8 후렴 앞 빌드업: 빌드업 2 / 필요 2
+    G9 트래킹: Block·Release·누출 0: Block 처음 True · Release 마지막 True · cue_only 13 · 누출 없음 True
+    G10 상대 감소 겹침 없음: 절 밝기 [45, 38, 38, 38, 38, 38, 38]
+    G11 타이밍 전 큐 배정: snap 7 · short 23 · long 2 · 후렴 순차 6
+    G12 MIB: 켜진 채 이동 0: 어둠 2 · Mark 1 · 켜진 채 0
+    G13 큐 밀도 10~45: 시퀀스 큐 32 + 원샷 6
+걸그룹DinoDino_C_max최고품질.wav: old_owner=12 new_owner=12 last_tracking=track
+  G1=True G2=None G3=None G4=None G5=True G6=None G7=None G8=True G9=True G10=True G11=True G12=True G13=True
+    G1 어휘 닫힘: 구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)
+    G2 후렴 정체성: 후렴 쌍 없음(구조상 n/a)
+    G3 회차마다 새 축(5회차까지): 후렴 쌍 없음(구조상 n/a)
+    G4 피날레 새 축 + 여유: Final Chorus 없음(구조상 n/a)
+    G5 헤드룸 경고 0: 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+    G6 컬러: 유보색 조기 0 · 브리지 위반 0: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G7 후렴 주색 동일: 입력에 색 없음 — 상수 팔레트 판정 안 함
+    G8 후렴 앞 빌드업: 빌드업 1 / 필요 1
+    G9 트래킹: Block·Release·누출 0: Block 처음 True · Release 마지막 True · cue_only 3 · 누출 없음 True
+    G10 상대 감소 겹침 없음: 절 밝기 [45, 38, 38, 38]
+    G11 타이밍 전 큐 배정: snap 1 · short 11 · long 2 · 후렴 순차 1
+    G12 MIB: 켜진 채 이동 0: 어둠 1 · Mark 0 · 켜진 채 0
+    G13 큐 밀도 10~45: 시퀀스 큐 14 + 원샷 1
+
+같은 행을 고른 곡: 8/8
