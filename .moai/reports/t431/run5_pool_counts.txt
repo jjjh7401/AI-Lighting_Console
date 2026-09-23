@@ -1,0 +1,52 @@
+
+>>> props:ShowData/GelPools/MA|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props 1fb41621 NAME,COUNT ShowData/GelPools/MA"
+<<< {"id": "1fb41621", "kind": "props", "ok": true, "path": "ShowData/GelPools/MA", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MA"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Apollo|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props 2b894633 NAME,COUNT ShowData/GelPools/Apollo"
+<<< {"id": "2b894633", "kind": "props", "ok": true, "path": "ShowData/GelPools/Apollo", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Apollo"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/CalCol|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props c8262225 NAME,COUNT ShowData/GelPools/CalCol"
+<<< {"id": "c8262225", "kind": "props", "ok": true, "path": "ShowData/GelPools/CalCol", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "CalCol"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Cinegel|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props a7a18385 NAME,COUNT ShowData/GelPools/Cinegel"
+<<< {"id": "a7a18385", "kind": "props", "ok": true, "path": "ShowData/GelPools/Cinegel", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Cinegel"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Supergel|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props aa3b6924 NAME,COUNT ShowData/GelPools/Supergel"
+<<< {"id": "aa3b6924", "kind": "props", "ok": true, "path": "ShowData/GelPools/Supergel", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Supergel"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/GamColor|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props 7830aa22 NAME,COUNT ShowData/GelPools/GamColor"
+<<< {"id": "7830aa22", "kind": "props", "ok": true, "path": "ShowData/GelPools/GamColor", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "GamColor"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Lee|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props 271c5dba NAME,COUNT ShowData/GelPools/Lee"
+<<< {"id": "271c5dba", "kind": "props", "ok": true, "path": "ShowData/GelPools/Lee", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Lee"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/PolyCol|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props 0ae78e46 NAME,COUNT ShowData/GelPools/PolyCol"
+<<< {"id": "0ae78e46", "kind": "props", "ok": true, "path": "ShowData/GelPools/PolyCol", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "PolyCol"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Storaro|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props 613ce401 NAME,COUNT ShowData/GelPools/Storaro"
+<<< {"id": "613ce401", "kind": "props", "ok": true, "path": "ShowData/GelPools/Storaro", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Storaro"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Zircon|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props 10b8de1e NAME,COUNT ShowData/GelPools/Zircon"
+<<< {"id": "10b8de1e", "kind": "props", "ok": true, "path": "ShowData/GelPools/Zircon", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Zircon"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Custom|NAME,COUNT
+    wire: Plugin "CopilotResponder" "props 97c3b318 NAME,COUNT ShowData/GelPools/Custom"
+<<< {"id": "97c3b318", "kind": "props", "ok": true, "path": "ShowData/GelPools/Custom", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Custom"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Cinegel/1|KEY,NAME
+    wire: Plugin "CopilotResponder" "props e53b4a8c KEY,NAME ShowData/GelPools/Cinegel/1"
+<<< {"id": "e53b4a8c", "kind": "props", "ok": true, "path": "ShowData/GelPools/Cinegel/1", "reads": [{"n": "KEY", "ok": true, "t": "string", "v": "R3410"}, {"n": "NAME", "ok": true, "t": "string", "v": "Roscosun 1/8 CTO"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Apollo/1|KEY,NAME
+    wire: Plugin "CopilotResponder" "props 1e974969 KEY,NAME ShowData/GelPools/Apollo/1"
+<<< {"id": "1e974969", "kind": "props", "ok": true, "path": "ShowData/GelPools/Apollo/1", "reads": [{"n": "KEY", "ok": true, "t": "string", "v": "AP1050"}, {"n": "NAME", "ok": true, "t": "string", "v": "Soft Diffusion"}], "truncated": false, "v": 1}
