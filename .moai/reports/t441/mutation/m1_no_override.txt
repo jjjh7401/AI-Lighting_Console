@@ -1,0 +1,16 @@
+........................F.                                               [100%]
+=================================== FAILURES ===================================
+_ TestToolsetEmitsDirectorColorInCommands.test_records_present_chorus_commands_carry_director_blue _
+
+self = <server.tests.test_chorus_color_two_paths_t441.TestToolsetEmitsDirectorColorInCommands object at 0x10d2bc0d0>
+
+    def test_records_present_chorus_commands_carry_director_blue(self):
+        commands = self._commands(_RecordsPort(_records("modulate")))
+>       assert any(self._BLUE in command for command in commands)
+E       assert False
+E        +  where False = any(<generator object TestToolsetEmitsDirectorColorInCommands.test_records_present_chorus_commands_carry_director_blue.<locals>.<genexpr> at 0x10bbecf20>)
+
+server/tests/test_chorus_color_two_paths_t441.py:510: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_chorus_color_two_paths_t441.py::TestToolsetEmitsDirectorColorInCommands::test_records_present_chorus_commands_carry_director_blue
+1 failed, 25 passed in 0.63s

@@ -496,8 +496,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     27,
     # t350 이 더한 시작점 — 임포트 블록 두 줄(`RIG_GAP_UNREADABLE` 추가 ·
     # `server.looks.rig_axes`)이 기존 27 헝크를 쪼갰다.
-    31,
-    33,
+    32,
     49,
     104,
     125,
@@ -527,7 +526,6 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     483,
     591,
     593,
-    620,
     # 카드 t319 (2026-09-07): 새 시작점 넷. `instantiate_look`·`prepare_busking`·
     # `precheck_patch`·`_deliver_fx_plan`·`compile_scene`·`arrange_fixtures` 여섯
     # 자리가 번들 위험 선언(`risk=showfile_write_risk(...)`)을 달면서 이 근처에
@@ -542,6 +540,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     # 781 · 789 · 794 는 `instantiate_look` 앞에 들어간 `_look_axis_source` 클로저와
     # `axes=` 인자, 그리고 payload 두 갈래의 `capability` 절이 기존 헝크를 쪼갠
     # 자리다. 804 는 그 아래 첫 경계다.
+    621,
     704,
     775,
     781,
@@ -555,14 +554,12 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     952,
     # t350 갱신 — 도구 설명(`instantiate_look` 의 `skipped` 사유 목록에 `axis_absent`
     # 를 넣고 `capability` 절을 설명하는 문단)이 기존 헝크를 둘로 쪼갰다.
-    965,
     # t374 갱신 (override look 플래너 도구 등록, 2026-09-15): 새 시작점 **967**
     # 하나뿐이고 사라진 시작점은 없다. `plan_override_look` 의 핸들러·스키마·
     # 이름 목록·디스패치 표가 전부 기존 헝크 안쪽에 들어가 경계를 하나만 새로
     # 그었다. 보호 구간 둘(234..238 / 524..569)은 여기서 400 넘게 떨어져 있고,
     # 겹침은 아래 `_overlaps` 검사로 다시 재어 **0** 이다 — 겹쳤다면 목록을
     # 고치는 것이 아니라 변경을 물렀어야 한다.
-    967,
     971,
     # SPEC-COPILOT-BULKGATE-001 (2026-09-07): 새 시작점 하나. `run_commands`
     # 클로저가 키워드 전용 `risk` 를 얻으면서 이 근처의 헝크 경계가 하나 더
@@ -587,24 +584,9 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     # 교체(본문 무변경) → 42. 즉 크기도 위치도 아니고 그 한 줄이다. t317 은
     # 그래서 `dispatch` 를 안 건드리고 선언을 `ExecutionContext` 로 흘렸다 —
     # 가드를 고쳐서 통과한 것이 아니라, 가드가 지키는 자리를 실제로 비켜 갔다.
-    975,
-    977,
-    984,
-    986,
     989,
-    993,
-    995,
-    1004,
     1007,
-    1011,
-    1013,
-    1035,
-    1048,
-    1061,
     1067,
-    1070,
-    1072,
-    1081,
     1088,
     1096,
     1103,
@@ -618,6 +600,8 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     # 삭제가 아니라 삽입이 경계를 다시 그은 것으로, 위 t306 · t317 항목이 명명한 것과
     # 같은 기제다.
     1129,
+    1140,
+    1146,
     1167,
     1175,
     1177,
@@ -628,6 +612,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1196,
     1198,
     1210,
+    1211,
     1213,
     1220,
     # 카드 t323 (모델 도구 봉합, 2026-09-07) 갱신 — `build_toolset` 의 핸들러
@@ -656,6 +641,16 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     # 부재의 증거가 아니다. (같은 이유로 형제 검사
     # `test_the_accounted_change_is_exactly_the_one_t348_introduced` 도 커밋 전에는
     # 공허하다.)
+    # 카드 t441 (구간별 주색 결정 단일화, 2026-09-23) 갱신: 94 -> **79** hunks.
+    # 새 시작점 다섯(32 · 621 · 1140 · 1146 · 1211), 사라진 시작점 스물
+    # (31 · 33 · 620 · 965 · 967 · 975 · 977 · 984 · 986 · 993 · 995 · 1004 ·
+    # 1011 · 1013 · 1035 · 1048 · 1061 · 1070 · 1072 · 1081). `section_palette`
+    # 임포트, `InterviewRecordsPort`·`_override_songcue_main_color` 삽입,
+    # `build_toolset(interview_records=)` 인자가 `--unified=0` 경계를 다시 그어
+    # 인접 헝크들이 합쳐졌다 — 위 t306 · t317 · t350 항목과 같은 기제(삽입이
+    # 경계를 재정렬). 보호 구간 둘(234..238 / 524..569) 무접촉 — `_overlaps` 로
+    # 커밋 **뒤에** 재어 **0** 이다. 형제 게이트(`test_overlap_preserve.py`,
+    # 247..251 / 537..582)도 같은 커밋 위에서 72 passed.
 )
 
 

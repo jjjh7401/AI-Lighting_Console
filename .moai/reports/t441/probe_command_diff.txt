@@ -1,0 +1,13 @@
+none commands 52
+modulate commands 52
+differing commands: 5
+ - Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+ + Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+ - Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 10
+ + Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Zoom' At 10
+ - Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 12 ; Attribute 'ColorRGB_G' At 25 ; Attribute 'ColorRGB_B' At 85
+ + Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+ - Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 18
+ + Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Zoom' At 18
+ - Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 5
+ + Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Zoom' At 5

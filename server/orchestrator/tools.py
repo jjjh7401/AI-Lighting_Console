@@ -24,14 +24,18 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
 from server.concept.session_bridge import build_concept_report_from_songcue_sections
+from server.design import color_names as _COLOR_NAMES
 from server.design.capability_verdict import group_capability_source
+from server.design.interview import Q2_PALETTE, Q2B_COLOR_USAGE, _palette_value_tokens
 from server.design.override_look import (
     DEFAULT_OVERRIDE_SLOTS,
     OverrideLookError,
     OverrideSafetyAnswers,
     plan_override_solo_spot,
 )
+from server.design.profile import MusicProfile
 from server.design.rig_capability_read import RIG_GAP_UNREADABLE, read_design_rig
+from server.design.section_palette import _section_palette_choice, role_for_songcue_label
 from server.fx.instantiate import FxInstantiationError, build_fx_preset_bundle, select_preset_number
 from server.fx.instantiate import instantiate_fx as bind_fx
 from server.fx.loader import DEFAULT_LIBRARY_DIR as FX_LIBRARY_DIR
@@ -75,7 +79,7 @@ from server.looks.matching import match_looks
 from server.looks.report import build_report, to_korean
 from server.looks.resolver import resolve_roles
 from server.looks.rig_axes import MEASURED_ATTRIBUTE_SPELLINGS, RigAxisPresence
-from server.looks.schema import LookLibrary
+from server.looks.schema import AttributeValue, Look, LookLibrary
 from server.looks.song_history import SongLookMemory
 from server.looks.songcue import (
     EXPLICIT_DYNAMICS_REQUIRED,
@@ -84,6 +88,7 @@ from server.looks.songcue import (
     SectionTimeError,
     SequenceNumberError,
     SongCueBundleError,
+    SongCueLookSelection,
     SongCueTimingAxes,
     _format_seconds,
     build_songcue_bundle,
@@ -191,6 +196,7 @@ from server.spatial.naming import (
     name_vertical_bucket,
 )
 from server.spatial.pointing import PointingTarget, SpatialPointingError
+from server.spatial.position_cuesheet import PositionSheetSection
 from server.spatial.presets import (
     SPATIAL_PRESETS,
     SpatialPlacement,
@@ -630,6 +636,22 @@ class SongAnalysisPort(Protocol):
     """
 
     current: ConfirmedSongAnalysisPort | None
+
+
+class InterviewRecordsPort(Protocol):
+    """세션이 든 연출 인터뷰 기록(경로 A, 채팅)에 닿는 읽기 투과 창 (카드 t441,
+    SPEC-LDDESIGN-001 REQ-003).
+
+    :class:`SongAnalysisPort` 와 같은 자리다 — 세션 객체가 아니라 구조적
+    ``Protocol`` 로 받으므로 이 모듈은 ``server.web`` 을 import 하지 않는다(층 경계).
+    ``current`` 는 접근할 때마다 세션의 **가장 최근에 완료된** 연출 인터뷰의
+    `server.design.interview.DirectorInterview.audit_trail()` 을 다시 읽는다 —
+    세션 생성 시점의 값이 얼어붙지 않도록(``SongAnalysisPort`` 와 같은 이유).
+    인터뷰가 아직 한 번도 끝나지 않았으면 ``None`` — 경로 B 는 그때 오늘과
+    바이트 동일하게 동작한다(기록 없이는 색을 지어내지 않는다).
+    """
+
+    current: Sequence[object] | None
 
 
 def _confirmed_section_input(
@@ -2225,6 +2247,170 @@ def timecode_slot_verdict(
     return None, SongCueTimingAxes()
 
 
+# @MX:NOTE: [AUTO] 카드 t441, SPEC-LDDESIGN-001 REQ-003 — 경로 B(이 모듈,
+#   `prepare_songcue`)가 경로 A(`server/web/session.py`)와 같은 함수로 구간별
+#   주색을 정하게 하는 세 함수. `timecode_slot_verdict` 와 같은 이유로
+#   `build_toolset` 클로저 밖에 둔다 — 순수 판정이라 `prepare_songcue` 핸들러
+#   하나가 아니라도 테스트가 직접 부를 수 있어야 한다.
+def _interview_record_value(
+    records: Sequence[object], step: str, fallback: object = None
+) -> object:
+    """``records``(``DirectorInterview.audit_trail()``)에서 이 단계의 값.
+
+    ``server/web/session.py`` 의 같은 이름 함수(``_record_value``)와 판정이
+    같다 — 짧고 순수한 4줄이라, 새 공유 모듈을 만드는 대신 여기 다시 둔다.
+    layering 은 ``session.py`` -> ``tools.py`` 방향 하나뿐이라(``session.py``
+    가 이미 ``build_toolset`` 을 이 모듈에서 들여온다) 이 모듈은
+    ``server.web`` 을 import 할 수 없다(``SongAnalysisPort`` 독스트링과 같은
+    층 경계).
+    """
+    for record in records:
+        if getattr(record, "step", None) == step:
+            return getattr(record, "value", fallback)
+    return fallback
+
+
+def _songcue_role_occurrences(
+    selections: Sequence[SongCueLookSelection],
+) -> tuple[tuple[str, int], ...]:
+    """선택 목록과 같은 길이·순서로 (경로 A 역할, 그 역할의 몇 번째 회차) 를
+    낸다 (카드 t441) — 경로 A 의 ``_build_unified_song_plan`` 이 원본 구간을
+    ``head_indexes`` 로 묶어 회차를 세는 것과 같은 규율이다.
+
+    마디 분할로 갈린 조각(``split_selections_for_density``)은 원본과 같은
+    ``section.label``·``section.instance`` 를 그대로 물려받는다(시작 시각만
+    다르다, ``dataclasses.replace(source.section, start_ms=...)``) — 그래서
+    그 쌍으로 원본을 식별하면 조각들이 같은 회차를 공유한다. 라벨 문자열이
+    달라도(예: ``Chorus`` 다음 ``Drop``) 같은 §6 행으로 접히면(
+    ``role_for_songcue_label``) 같은 역할의 연속 회차로 센다 — 텍스트가 아니라
+    **역할**을 세는 것이 경로 A 와 같은 의미다.
+    """
+    role_running: dict[str, int] = {}
+    seen: dict[tuple[str, int], tuple[str, int]] = {}
+    result: list[tuple[str, int]] = []
+    for selection in selections:
+        section = selection.section
+        key = (section.label, section.instance)
+        cached = seen.get(key)
+        if cached is not None:
+            result.append(cached)
+            continue
+        role = role_for_songcue_label(section.label)
+        role_running[role] = role_running.get(role, 0) + 1
+        entry = (role, role_running[role])
+        seen[key] = entry
+        result.append(entry)
+    return tuple(result)
+
+
+def _override_songcue_main_color(
+    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
+) -> tuple[tuple[SongCueLookSelection, ...], tuple[str, ...]]:
+    """경로 A 와 같은 함수(``_section_palette_choice``)로 구간별 주색을 정해,
+    이미 고른 룩의 ``ColorRGB_R/G/B`` 만 덮는다 (카드 t441, REQ-003).
+
+    ``records`` 가 없거나(``None``/빈 시퀀스) Q2(팔레트) 답이 없으면 오늘과
+    바이트 동일하게 아무 것도 바꾸지 않는다 — 색을 지어내지 않는다는 규율은
+    ``_song_color_value_lines``(``session.py``) 와 같다.
+
+    **적용 순서 — 룩 선택·마디 분할 뒤, ``build_songcue_bundle`` 호출 전.**
+    LDACCENT 색 스냅(``_color_snap_is_effective``)과 LDRETURN 복귀 판정
+    (``_label_return_palette``) 모두 ``selection.look.attributes`` 를 그
+    구간이 "원래" 낸 색으로 읽는다(``server/looks/songcue.py``). 이 함수가
+    그 전에 값을 덮어 두면 스냅은 감독 색끼리 비교하고 복귀는 감독 색으로
+    돌아온다(둘 다 원하는 동작) — 나중에 덮으면 사다리·복귀가 이미 룩
+    고유색으로 판정을 끝낸 뒤라 감독 색이 두 축 모두에서 무시된다.
+
+    보조색(``colors[1]``)은 내지 않는다 — 경로 A 의 콘솔 명령 생성기
+    (``_song_color_value_lines``)도 주색 한 줄만 낸다("보조색·유보색·
+    언더페인팅은 M3 의 몫" 독스트링). 다이내믹스·포지션·이펙트·클라이맥스
+    상한·아껴두기 사다리·복귀 로직 자체는 건드리지 않는다 — 바꾸는 것은
+    그 룩 자신의 색 세 채널뿐이다. ``ColorRGB_W`` 는 내지 않는다 — 이
+    라이브러리의 룩에는 W 채널 축이 없다(``_COLOR_ATTRIBUTES =
+    ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")``, ``songcue.py``).
+
+    색 이름이 표준 10색(``server/design/color_names.py``)에 없어 RGB 로
+    못 바뀌면 그 구간의 룩은 그대로 두고(색을 지어내지 않는다) 그 사실을
+    두 번째 반환값(``notes``)에 적는다 — 실패를 조용히 삼키지 않는다.
+
+    룩이 애초에 ``ColorRGB_R/G/B`` 채널을 하나도 안 실었으면(``attributes``
+    에 그 세 이름이 없음 — 예: 색 없는 헤이즈/무빙 전용 기구) 아무것도
+    바뀌지 않는다. 없는 축에 새 값을 만들어 얹지 않는다 — 이 라이브러리
+    전역의 규율이다(``_look_has_attribute``, ``server/looks/songcue.py``).
+
+    **``selection.look`` 하나만 덮으면 부족하다 — ``dynamics_matches`` 전부를
+    덮는다.** ``build_songcue_bundle`` 은 최종 저장 색을 ``selection.look``
+    에서 읽지 않는다: ``_select_bindable`` 이 ``selection.dynamics_matches``
+    (요청 다이내믹스에 맞는 룩 **전량**, 버스킹 순서 그대로)를 앞에서부터
+    훑어 **이 리그에 실제로 묶이는 첫 룩**을 고르고, 그 룩이 저장된다
+    (``SongCueLookSelection.dynamics_matches`` 독스트링 — "리그에 실제로
+    묶이는 룩을 이 중에서 고르는 것은 ... ``_section_bundle`` 의 일이다").
+    ``look`` 만 덮으면 리그가 그 룩을 못 묶었을 때(``_select_bindable`` 이
+    ``matches`` 의 다른 항목으로 넘어갈 때) 덮은 색이 조용히 사라진다 —
+    그래서 ``dynamics_matches`` 의 모든 후보에 같은 덮어쓰기를 적용해,
+    어느 후보가 최종 선택돼도 감독 색을 낸다.
+    """
+    if not records:
+        return tuple(selections), ()
+    palette_answer = _interview_record_value(records, Q2_PALETTE, None)
+    if palette_answer is None:
+        return tuple(selections), ()
+    palette_value = _palette_value_tokens(palette_answer)
+    color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
+    profile = MusicProfile(palette=palette_value)
+    role_occurrences = _songcue_role_occurrences(selections)
+    overridden: list[SongCueLookSelection] = []
+    notes: list[str] = []
+    for selection, (role, occurrence) in zip(selections, role_occurrences, strict=True):
+        if selection.look is None:
+            overridden.append(selection)
+            continue
+        colors, _source, _weight = _section_palette_choice(
+            PositionSheetSection(
+                name=selection.section.label or selection.section.name, start_ms=0, mood=""
+            ),
+            role=role,
+            profile=profile,
+            color_tendency="white",
+            palette_mode="palette",
+            concept_colors=(),
+            occurrence=occurrence,
+            color_usage=str(color_usage),
+        )
+        primary = colors[0] if colors else None
+        rgb = _COLOR_NAMES.resolve_color_name(primary) if primary else None
+        if rgb is None:
+            notes.append(
+                f"section {selection.section.label!r} instance {selection.section.instance}: "
+                f"director color {primary!r} is not in the standard 10-color palette — "
+                "this section's look color was left unchanged"
+            )
+            overridden.append(selection)
+            continue
+        red, green, blue = rgb
+        override_values = {"ColorRGB_R": red, "ColorRGB_G": green, "ColorRGB_B": blue}
+
+        def _recolor(look: Look, _override_values: dict[str, int] = override_values) -> Look:
+            new_attributes = tuple(
+                AttributeValue(value.name, _override_values[value.name])
+                if value.name in _override_values
+                else value
+                for value in look.attributes
+            )
+            return replace(look, attributes=new_attributes)
+
+        overridden.append(
+            replace(
+                selection,
+                look=_recolor(selection.look),
+                dynamics_matches=tuple(
+                    _recolor(candidate) for candidate in selection.dynamics_matches
+                ),
+            )
+        )
+    return tuple(overridden), tuple(notes)
+
+
 def build_toolset(
     *,
     execution_port: CommandExecutionPort,
@@ -2249,6 +2435,7 @@ def build_toolset(
     spatial_memory: SpatialMemory | None = None,
     song_analysis: SongAnalysisPort | None = None,
     song_look_memory: SongLookMemory | None = None,
+    interview_records: InterviewRecordsPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -2325,6 +2512,13 @@ def build_toolset(
     동일하다 — 기억을 여기서 만들지 않는 이유는 수명이다. ``build_toolset`` 은 세션마다
     한 번 불리지만 이 객체의 주인은 세션이어야 하고(``server/web/session.py``),
     툴 레지스트리가 만들면 「누가 이 기억을 비우는가」의 답이 사라진다.
+
+    ``interview_records`` (카드 t441, SPEC-LDDESIGN-001 REQ-003) 는 ``song_analysis``
+    와 같은 읽기 투과 자리다 — 경로 A(채팅 연출 인터뷰)가 이미 끝났으면
+    ``prepare_songcue`` 가 그 Q2(팔레트)·Q2B(색 운용) 답으로 이 곡의 구간별
+    주색을 경로 A 와 **같은 함수**(``server.design.section_palette``)로 정한다.
+    생략하면(기본값) ``None`` 이 되어 오늘과 바이트 동일하다 — 기록이 없으면
+    색을 지어내지 않는다(``prepare_songcue`` 본문 참고).
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
     group_approval = group_approval_port or DenyAllApprovalPort()
@@ -3192,6 +3386,23 @@ def build_toolset(
             "song_end_ms": density_end_ms,
             "notes": list(density_notes),
         }
+        # 카드 t441, SPEC-LDDESIGN-001 REQ-003 — 경로 A(채팅 연출 인터뷰)가 이
+        # 세션에서 이미 끝났으면(Q2 팔레트 답 포함) 경로 A 와 **같은 함수**
+        # (`server.design.section_palette._section_palette_choice`)로 구간별
+        # 주색을 정해 이미 고른 룩의 ColorRGB_R/G/B 만 덮는다. 기록이 없거나
+        # Q2 답이 없으면(`interview_records` 생략, 대화 전용 사용 포함) 오늘과
+        # 바이트 동일 — 색을 지어내지 않는다(`_override_songcue_main_color`
+        # 독스트링). 룩 선택·마디 분할이 이미 끝난 자리, `build_songcue_bundle`
+        # 호출 **전**인 이유도 그 독스트링에 적는다(LDACCENT 색 스냅·LDRETURN
+        # 복귀가 이 덮어쓴 색을 "그 구간의 색"으로 읽어야 한다).
+        interview_records_current = (
+            interview_records.current if interview_records is not None else None
+        )
+        selections, director_color_notes = _override_songcue_main_color(
+            selections, records=interview_records_current
+        )
+        if director_color_notes:
+            songconfirm_fields["director_color_override_notes"] = list(director_color_notes)
         # 카드 t439 — SPEC-LDDESIGN-001 M6 §④b. 컨셉 v2 파이프라인(13게이트·
         # MIB·린트/에너지)을 이 곡에 대해 돌려 부가 정보로 붙인다. ADDITIVE 다
         # — 아래 사다리 경로(`build_songcue_bundle`)가 오늘 내는 콘솔 명령은
