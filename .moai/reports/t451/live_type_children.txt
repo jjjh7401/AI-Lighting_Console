@@ -1,0 +1,12 @@
+
+>>> state:Patch/FixtureTypes/9
+    wire: Plugin "CopilotResponder" "state 0b0f2a24 Patch/FixtureTypes/9"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "0b0f2a24", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Rush Par 2 RGBW Zoom"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8
+    wire: Plugin "CopilotResponder" "state 1774e909 Patch/FixtureTypes/8"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "1774e909", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Mac Aura XB"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10
+    wire: Plugin "CopilotResponder" "state 95d6cd39 Patch/FixtureTypes/10"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "95d6cd39", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Source 4 LED Series 3 Lustr X8"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10", "truncated": false, "v": 1}
