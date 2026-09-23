@@ -651,6 +651,15 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     # 경계를 재정렬). 보호 구간 둘(234..238 / 524..569) 무접촉 — `_overlaps` 로
     # 커밋 **뒤에** 재어 **0** 이다. 형제 게이트(`test_overlap_preserve.py`,
     # 247..251 / 537..582)도 같은 커밋 위에서 72 passed.
+    # 카드 t444 (컨셉 게이트 색 입력, 2026-09-23) 갱신: 79 -> **80** hunks.
+    # 새 시작점 하나(1233 — `prepare_songcue` 의 컨셉 리포트 호출에
+    # `palettes=` 한 줄), 사라진 시작점 **0**. 새 헬퍼 둘은 파일 끝에 붙여 마지막
+    # 헝크에 합쳐졌다. 처음엔 `_override_songcue_main_color` 곁에 두었는데 그러면
+    # 내용이 안 바뀐 `run_commands` 가 diff 정렬상 삭제·재삽입으로 보여 79 -> 112,
+    # 보호 구간 겹침 1(483,99)이 됐다 — 그래서 자리를 옮겼다(tools.py 주석).
+    # 보호 구간 둘과 형제 게이트 구간 모두 커밋 **뒤에** `_overlaps` 로 재어
+    # **0** 이다(`.moai/reports/t444/measure_hunks.out.txt`).
+    1233,
 )
 
 
