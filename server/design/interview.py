@@ -604,7 +604,9 @@ def _build_q2(profile: MusicProfile, rig: RigProfile) -> QuestionCard:
 _COLOR_USAGE_WHY = (
     '2026-09-13 감독 지시: "물론 곡과 조명감독의 스타일에 따라서 다르겠지. '
     '그리고 조명감독의 확인을 받는게 좋을 것 같아." 기본값은 감독이 이미 '
-    "밝힌 선호(메인 컬러 중심 변조 + 임팩트에서 터뜨림)입니다."
+    "밝힌 선호(메인 컬러 중심 변조 + 임팩트에서 터뜨림)입니다. "
+    "긴 후렴을 나눈 큐마다 주색·보조색을 맞바꾸려면 「맞바꾸기」라고 "
+    "직접 적어 주세요."
 )
 
 
@@ -1028,6 +1030,10 @@ def _palette_value_tokens(value: object) -> tuple[str, ...]:
 _COLOR_USAGE_SINGLE_TOKENS = ("단색", "하나", "only", "single")
 _COLOR_USAGE_MODULATE_TOKENS = ("변조", "기본", "modulate", "main")
 _COLOR_USAGE_PER_CHORUS_TOKENS = ("후렴마다", "포인트", "per chorus", "per_chorus", "accent")
+#: 카드 t445 — 넷째 선택지 "split_swap"(후렴 분할 큐 안에서 주·보조색 맞바꾸기).
+#: single 다음, modulate 앞에서 판정한다 — 「메인(main) 색 맞바꾸기」처럼
+#: modulate 어휘와 함께 오는 답을 맞바꾸기로 읽기 위해서다.
+_COLOR_USAGE_SPLIT_SWAP_TOKENS = ("맞바꾸", "교대", "분할", "swap")
 
 
 def _parse_free_text(step: str, raw: str, profile: MusicProfile) -> object | _ParseFailure:
@@ -1049,6 +1055,8 @@ def _parse_free_text(step: str, raw: str, profile: MusicProfile) -> object | _Pa
         folded = raw.casefold()
         if any(token in folded for token in _COLOR_USAGE_SINGLE_TOKENS):
             return "single"
+        if any(token in folded for token in _COLOR_USAGE_SPLIT_SWAP_TOKENS):
+            return "split_swap"
         if any(token in folded for token in _COLOR_USAGE_MODULATE_TOKENS):
             return "modulate"
         if any(token in folded for token in _COLOR_USAGE_PER_CHORUS_TOKENS):

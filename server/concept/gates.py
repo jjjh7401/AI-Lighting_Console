@@ -725,6 +725,11 @@ _GATE_FUNCS = (
 )
 
 
+#: 카드 t439·t445 — 감독이 곡마다 후렴 색을 바꾸기로 고른 색 운용(Q2B).
+#: 이 곡들은 G7(후렴 주색 동일)을 판정하지 않는다.
+_G7_NA_COLOR_USAGES = frozenset({"per_chorus", "split_swap"})
+
+
 def evaluate_song(
     raw_song: Mapping[str, object], *, color_usage: str = "modulate"
 ) -> dict[str, GateResult]:
@@ -734,10 +739,12 @@ def evaluate_song(
     ``color_usage`` — 감독이 곡마다 고르는 색 운용(Q2B). ``"per_chorus"``
     곡은 후렴 회차마다 색을 바꾸는 것이 감독의 선택이므로 G7(후렴 주색
     동일)을 판정하지 않고 n/a 로 둔다(카드 t439, 감독 결정 2026-09-23 —
-    REQ-LDDESIGN-004/030 은 기본값이고 곡별 선택은 예외)."""
+    REQ-LDDESIGN-004/030 은 기본값이고 곡별 선택은 예외). 한 후렴의 분할 큐
+    안에서 주·보조색을 맞바꾸는 ``"split_swap"`` 도 같은 이유로 n/a 다
+    (카드 t445)."""
     build = build_song(raw_song)
     results = dict(zip(GATE_NAMES, (gate(build) for gate in _GATE_FUNCS), strict=True))
-    if color_usage == "per_chorus":
+    if color_usage in _G7_NA_COLOR_USAGES:
         g7 = next(name for name in GATE_NAMES if name.startswith("G7"))
-        results[g7] = GateResult(None, "곡별 per_chorus 선택 — 후렴 색 고정 판정 제외")
+        results[g7] = GateResult(None, f"곡별 {color_usage} 선택 — 후렴 색 고정 판정 제외")
     return results

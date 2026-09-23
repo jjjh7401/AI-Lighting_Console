@@ -1,0 +1,24 @@
+>       assert report["gates"][_G7]["passed"] is True, report["gates"][_G7]
+E       AssertionError: {'passed': False, 'detail': 'chorus_primary_color_identity: fail (위반 5건)'}
+>       assert report["gates"][_G7]["passed"] is True, report["gates"][_G7]
+E       AssertionError: {'passed': False, 'detail': 'chorus_primary_color_identity: fail (위반 5건)'}
+>       assert report["gates"][_G7]["passed"] is None
+>       assert results[_G7].passed is None, results[_G7].detail
+E        +  where False = GateResult(passed=False, detail='chorus_primary_color_identity: fail (위반 9건)').passed
+FAILED server/tests/test_chorus_split_color_t445.py::TestDefaultPinsChorusPrimaryAcrossSplitCues::test_every_chorus_cue_shares_one_primary[None]
+FAILED server/tests/test_chorus_split_color_t445.py::TestDefaultPinsChorusPrimaryAcrossSplitCues::test_every_chorus_cue_shares_one_primary[modulate]
+FAILED server/tests/test_chorus_split_color_t445.py::TestDefaultPinsChorusPrimaryAcrossSplitCues::test_every_chorus_cue_shares_one_primary[single]
+FAILED server/tests/test_chorus_split_color_t445.py::TestDefaultPinsChorusPrimaryAcrossSplitCues::test_g7_passes_on_the_session_path[None]
+FAILED server/tests/test_chorus_split_color_t445.py::TestDefaultPinsChorusPrimaryAcrossSplitCues::test_g7_passes_on_the_session_path[modulate]
+FAILED server/tests/test_chorus_split_color_t445.py::TestSplitSwapKeepsThePreviousBehaviour::test_g7_is_not_judged_for_split_swap
+FAILED server/tests/test_chorus_split_color_t445.py::TestGateRespectsPerSongChoice::test_evaluate_song_marks_g7_na[split_swap]
+FAILED server/tests/test_chorus_split_color_t445.py::TestInterviewOffersSplitSwap::test_q2b_card_keeps_three_options_and_names_split_swap_as_free_text
+FAILED server/tests/test_chorus_split_color_t445.py::TestInterviewOffersSplitSwap::test_free_text_resolves_to_split_swap[\ud6c4\ub834 \uc548\uc5d0\uc11c \ub9de\ubc14\uafb8\uae30]
+FAILED server/tests/test_chorus_split_color_t445.py::TestInterviewOffersSplitSwap::test_free_text_resolves_to_split_swap[\ubd84\ud560 \ud050 \uc0c9 \uad50\ub300]
+FAILED server/tests/test_chorus_split_color_t445.py::TestInterviewOffersSplitSwap::test_free_text_resolves_to_split_swap[swap]
+FAILED server/tests/test_chorus_split_color_t445.py::TestTwoEntrancesAgreeOnSplitChorusPrimary::test_split_swap_path_b_alternates_like_path_a
+FAILED server/tests/test_web_session.py::TestSongDesignInterviewSession::test_declared_bpm_splits_long_sections_into_multiple_cues
+FAILED server/tests/test_web_session.py::TestSongDesignInterviewSession::test_split_cues_are_not_identical_to_the_cue_they_continue
+FAILED server/tests/test_web_session.py::TestSongDesignInterviewSession::test_default_color_usage_keeps_the_chorus_primary_across_split_cues
+FAILED server/tests/test_song_color_usage_t404.py::TestColorUsageAffectsQueueDensity::test_modulate_chorus_no_longer_splits_since_t445
+16 failed, 8 passed, 433 deselected in 1.59s

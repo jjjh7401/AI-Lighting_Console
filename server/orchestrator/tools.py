@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Protocol
 from server.concept.session_bridge import build_concept_report_from_songcue_sections
 from server.design import color_names as _COLOR_NAMES
 from server.design.capability_verdict import group_capability_source
+from server.design.cue_density import rotate_palette
 from server.design.interview import Q2_PALETTE, Q2B_COLOR_USAGE, _palette_value_tokens
 from server.design.override_look import (
     DEFAULT_OVERRIDE_SLOTS,
@@ -2361,9 +2362,19 @@ def _override_songcue_main_color(
     color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
     profile = MusicProfile(palette=palette_value)
     role_occurrences = _songcue_role_occurrences(selections)
+    # 카드 t445 — 마디 분할 조각의 순번(0 = 여는 큐). 조각들은 부모의
+    # (label, instance) 를 그대로 물려받으므로 연속한 같은 키를 센다.
+    units: list[int] = []
+    previous_key: tuple[object, object] | None = None
+    for selection in selections:
+        key = (selection.section.label, selection.section.instance)
+        units.append(units[-1] + 1 if key == previous_key and units else 0)
+        previous_key = key
     overridden: list[SongCueLookSelection] = []
     notes: list[str] = []
-    for selection, (role, occurrence) in zip(selections, role_occurrences, strict=True):
+    for selection, (role, occurrence), unit_index in zip(
+        selections, role_occurrences, units, strict=True
+    ):
         if selection.look is None:
             overridden.append(selection)
             continue
@@ -2379,6 +2390,10 @@ def _override_songcue_main_color(
             occurrence=occurrence,
             color_usage=str(color_usage),
         )
+        # 카드 t445 — 감독이 split_swap 을 고른 곡은 경로 A 처럼 한 후렴의 분할
+        # 조각마다 주·보조색을 맞바꾼다. 기본은 조각 모두 같은 주색이다.
+        if color_usage == "split_swap" and role in ("chorus", "finale") and unit_index > 0:
+            colors = rotate_palette(colors, unit_index)
         primary = colors[0] if colors else None
         rgb = _COLOR_NAMES.resolve_color_name(primary) if primary else None
         if rgb is None:
