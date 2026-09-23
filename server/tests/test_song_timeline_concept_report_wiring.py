@@ -114,3 +114,36 @@ class TestConceptReportIsAdditiveNotBreaking:
         assert len(payload["sections"]) == 2
         assert payload["sections"][0]["label"] == "Intro"
         assert payload["song_title"] == "Timeline Wiring Test"
+
+
+class TestConceptReportFollowsColorUsage:
+    """카드 t439 — 감독 결정(2026-09-23): 곡별 ``per_chorus`` 선택이면 부가
+    리포트의 G7(후렴 주색 동일)은 n/a, 기본값이면 실제로 판정한다."""
+
+    _SECTIONS = (
+        _section(1, "Intro", 0, 13_000),
+        _section(2, "Verse", 13_000, 26_000),
+        _section(3, "Chorus 1", 26_000, 39_000),
+        _section(4, "Verse", 39_000, 52_000),
+        _section(5, "Chorus 2", 52_000, 65_000),
+        _section(6, "Finale", 65_000, None),
+    )
+
+    def _g7(self, color_usage: str) -> object:
+        plan = _plan(bpm=120.0, sections=self._SECTIONS)
+        payload = _song_timeline_payload(
+            plan,
+            compose_song_cue_bundle(plan),
+            lifecycle="pending_approval",
+            sequence_no=1,
+            color_usage=color_usage,
+        )
+        report = payload["concept_report"]
+        assert report["available"] is True
+        return report["gates"]["G7 후렴 주색 동일"]["passed"]
+
+    def test_per_chorus_song_reports_g7_not_applicable(self) -> None:
+        assert self._g7("per_chorus") is None
+
+    def test_default_song_judges_g7(self) -> None:
+        assert self._g7("modulate") is not None

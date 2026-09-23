@@ -511,3 +511,26 @@ def test_evaluate_song_is_deterministic() -> None:
     first = {gate: outcome.passed for gate, outcome in evaluate_song(song).items()}
     second = {gate: outcome.passed for gate, outcome in evaluate_song(song).items()}
     assert first == second
+
+
+class TestG7FollowsPerSongColorUsage:
+    """카드 t439 — 감독 결정(2026-09-23): 후렴 회차 색 고정은 기본값이고
+    곡별 ``per_chorus``(Q2B) 선택은 예외다. G7(후렴 주색 동일)은 기본 모드
+    곡만 판정하고 per_chorus 곡은 n/a 로 둔다."""
+
+    _G7 = next(name for name in GATE_NAMES if name.startswith("G7"))
+
+    @pytest.mark.parametrize("song_name", sorted(EXPECTED_GATES))
+    def test_per_chorus_song_marks_g7_not_applicable(self, song_name: str) -> None:
+        result = evaluate_song(_SONGS_BY_NAME[song_name], color_usage="per_chorus")
+        assert result[self._G7].passed is None
+        # 다른 12개 게이트는 기본 모드와 똑같다.
+        default = evaluate_song(_SONGS_BY_NAME[song_name])
+        for gate in GATE_NAMES:
+            if gate != self._G7:
+                assert result[gate].passed == default[gate].passed
+
+    def test_default_mode_still_judges_g7(self) -> None:
+        """대조군 — 기본(modulate)은 G7 을 실제로 판정한다(n/a 가 아니다)."""
+        for song in _SONGS:
+            assert evaluate_song(song)[self._G7].passed is not None

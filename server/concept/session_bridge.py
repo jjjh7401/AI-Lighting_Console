@@ -118,7 +118,11 @@ def _raw_sections_from_pairs(pairs: Sequence[tuple[str, int]]) -> list[dict[str,
 
 
 def _run_concept_pipeline(
-    song_title: str, bpm: float | None, raw_sections: list[dict[str, object]]
+    song_title: str,
+    bpm: float | None,
+    raw_sections: list[dict[str, object]],
+    *,
+    color_usage: str = "modulate",
 ) -> dict[str, object]:
     """두 어댑터의 공통 실행기 — REQ-073/074 §④b. 콘솔에 아무것도 쓰지
     않는다(순수 계산, 다른 ``server/concept/*`` 모듈과 같은 원칙). 실패는
@@ -137,7 +141,7 @@ def _run_concept_pipeline(
     try:
         raw_song = {"song": song_title, "bpm": bpm, "sections": raw_sections}
         build = build_song(raw_song)
-        gates = evaluate_song(raw_song)
+        gates = evaluate_song(raw_song, color_usage=color_usage)
         compiled = compile_song(build)
     except Exception as error:  # noqa: BLE001 — 컨셉 리포트는 부가 정보다,
         # 실패해도 기존 콘솔 명령 경로를 막지 않는다(ADDITIVE 원칙,
@@ -159,12 +163,20 @@ def _run_concept_pipeline(
     }
 
 
-def build_concept_report(plan: UnifiedSongLightingPlan) -> dict[str, object]:
+def build_concept_report(
+    plan: UnifiedSongLightingPlan, *, color_usage: str = "modulate"
+) -> dict[str, object]:
     """REQ-073/074 §④b — session.py 경로(``UnifiedSongLightingPlan``)
-    어댑터. 자세한 원칙은 모듈 독스트링 참고."""
+    어댑터. ``color_usage`` 는 감독의 Q2B 답(``"per_chorus"`` 면 G7 n/a).
+    자세한 원칙은 모듈 독스트링 참고."""
     if not plan.sections:
         return {"available": False, "reason": "구간이 없다"}
-    return _run_concept_pipeline(plan.song_title, plan.music_profile.bpm, _raw_sections(plan))
+    return _run_concept_pipeline(
+        plan.song_title,
+        plan.music_profile.bpm,
+        _raw_sections(plan),
+        color_usage=color_usage,
+    )
 
 
 def build_concept_report_from_songcue_sections(

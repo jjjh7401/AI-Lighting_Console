@@ -597,8 +597,19 @@ _GATE_FUNCS = (
 )
 
 
-def evaluate_song(raw_song: Mapping[str, object]) -> dict[str, GateResult]:
+def evaluate_song(
+    raw_song: Mapping[str, object], *, color_usage: str = "modulate"
+) -> dict[str, GateResult]:
     """곡 하나(``'error'`` 키 없는 것)를 조립하고 13개 게이트를 전부
-    판정한다(REQ-075/076)."""
+    판정한다(REQ-075/076).
+
+    ``color_usage`` — 감독이 곡마다 고르는 색 운용(Q2B). ``"per_chorus"``
+    곡은 후렴 회차마다 색을 바꾸는 것이 감독의 선택이므로 G7(후렴 주색
+    동일)을 판정하지 않고 n/a 로 둔다(카드 t439, 감독 결정 2026-09-23 —
+    REQ-LDDESIGN-004/030 은 기본값이고 곡별 선택은 예외)."""
     build = build_song(raw_song)
-    return dict(zip(GATE_NAMES, (gate(build) for gate in _GATE_FUNCS), strict=True))
+    results = dict(zip(GATE_NAMES, (gate(build) for gate in _GATE_FUNCS), strict=True))
+    if color_usage == "per_chorus":
+        g7 = next(name for name in GATE_NAMES if name.startswith("G7"))
+        results[g7] = GateResult(None, "곡별 per_chorus 선택 — 후렴 색 고정 판정 제외")
+    return results

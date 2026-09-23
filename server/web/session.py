@@ -1085,8 +1085,9 @@ def _arc_accent_weight(role: str, occurrence: int) -> str | None:
 #: 회차 축을 더 이상 색으로 표현하지 않는다 — §3.7(REQ-043)의 6개 에스컬레이션
 #: 축(기구군 수·면적·밝기·모션·포지션·큐 밀도)이 색 대신 회차를 구분한다.
 #: verse/intro/bridge 는 이 SPEC 의 범위 밖이라(REQ-030 이 "후렴" 한정) 회전을
-#: 그대로 둔다 — 아래 `_arc_palette`/`_per_chorus_palette` 둘 다 이 집합으로
-#: occurrence 인자를 1로 고정한다.
+#: 그대로 둔다 — 아래 `_arc_palette` 가 이 집합으로 occurrence 인자를 1로
+#: 고정한다. 곡별 선택 `per_chorus`(`_per_chorus_palette`)는 감독 결정
+#: (2026-09-23)으로 이 고정의 예외다.
 _CHORUS_IDENTITY_ROLES: frozenset[str] = frozenset({"chorus", "finale"})
 
 
@@ -1141,27 +1142,21 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
 
 
 def _per_chorus_palette(base: tuple[str, ...], role: str, occurrence: int) -> tuple[str, ...]:
-    """SPEC-COPILOT-COLORMODE-001 D5/REQ-014 — chorus/finale accent ladder,
-    now retired by REQ-LDDESIGN-004/030 (카드 t439): chorus/finale
-    occurrences no longer differ in color at all, so this function is a
-    pass-through to :func:`_arc_palette`'s occurrence-1 output for those
-    roles.
+    """SPEC-COPILOT-COLORMODE-001 D5/REQ-014 — chorus/finale accent ladder.
 
-    Previously (REQ-014) occurrence 2+ drew from the standard 10-color
-    palette (spec.md §A.2) so consecutive occurrences never coincided — the
-    exact "정체성 유지" violation REQ-LDDESIGN-004 now forbids ("후렴 회차마다
-    보조색을 회전시키지 않는다"). The 10-color ladder below is kept only as
-    a defined (if currently unreachable in production — the sole caller,
-    `_section_palette_choice`, gates `role in ("chorus", "finale")` before
-    calling this, and both are now frozen) fallback for any OTHER role a
-    direct caller might pass, so this function's contract stays total.
+    감독이 곡마다 고르는 ``color_usage="per_chorus"``(Q2B) 전용이다.
+    occurrence 2+ 는 표준 10색 팔레트(spec.md §A.2)에서 액센트를 뽑아
+    연속 회차가 겹치지 않는다. 주색(``primary``)은 늘 첫 칸이다.
 
-    Occurrence 1 still delegates straight to :func:`_arc_palette` — this is
-    what makes the "song has exactly one chorus occurrence" boundary case
-    (AC-COLORMODE-013) byte-identical to modulate mode, since modulate's
-    occurrence-1 output IS `_arc_palette`'s occurrence-1 output.
+    카드 t439 — 감독 결정(2026-09-23, 「음악 스타일마다 다르니 하나로
+    고정은 무리」): REQ-LDDESIGN-004/030 의 후렴 회차 색 고정은 **기본값**
+    (modulate)에만 적용되고, 이 함수가 대표하는 곡별 선택은 그 예외다.
+    그래서 여기서는 `_CHORUS_IDENTITY_ROLES` 로 회차를 고정하지 않는다.
+
+    Occurrence 1 은 :func:`_arc_palette` 에 그대로 위임한다 — 후렴이 한 번뿐인
+    곡(AC-COLORMODE-013)이 modulate 와 바이트 동일한 이유다.
     """
-    if occurrence <= 1 or role in _CHORUS_IDENTITY_ROLES:
+    if occurrence <= 1:
         return _arc_palette(base, role, 1)
     if not base:
         base = ("white",)
@@ -2540,6 +2535,7 @@ def _song_timeline_payload(
     warnings: Sequence[str] = (),
     layer_mapping: Sequence[Mapping[str, object]] = (),
     preset_start: int | None = None,
+    color_usage: str = "modulate",
 ) -> dict[str, object]:
     """Project the reviewed plan for the runbook UI without exposing commands."""
     bundle = composition.bundle
@@ -2705,7 +2701,7 @@ def _song_timeline_payload(
             # 붙을 뿐이다. 실패해도(`build_concept_report` 는 예외를 밖으로 안
             # 낸다, `server/concept/session_bridge.py` 독스트링) `available:
             # False` 로 계속 진행된다.
-            "concept_report": build_concept_report(plan),
+            "concept_report": build_concept_report(plan, color_usage=color_usage),
         },
         _song_cue_sheet_view_fields(plan),
     )
@@ -8939,6 +8935,7 @@ class ChatSession:
             warnings=state.plan_warnings,
             layer_mapping=state.layer_mapping,
             preset_start=state.preset_start,
+            color_usage=_record_value(state.records, Q2B_COLOR_USAGE, "modulate"),
         )
         # Keep the LAST projection process-wide so a refreshed browser (new
         # WebSocket) is replayed the current timeline instead of a blank pane.

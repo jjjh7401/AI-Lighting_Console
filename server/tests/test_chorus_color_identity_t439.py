@@ -1,8 +1,10 @@
 """카드 t439 — REQ-LDDESIGN-004/REQ-LDDESIGN-030/AC-LDDESIGN-016.
 
-`_arc_palette`/`_per_chorus_palette`(둘 다 `server/web/session.py`)는 더 이상
+기본 색 운용(modulate)에서 `_arc_palette`(`server/web/session.py`)는 더 이상
 후렴 회차마다 보조색을 회전시키지 않는다 — 후렴(Chorus) 구간 전체는 동일한
-주색을 유지한다(Final Chorus의 클라이맥스 색 전환만 예외). 회차 에스컬레이션은
+주색을 유지한다(Final Chorus의 클라이맥스 색 전환만 예외). 감독이 곡마다
+고르는 `per_chorus`(Q2B, `_per_chorus_palette`)는 감독 결정(2026-09-23)으로
+이 고정의 예외라 회차마다 색이 바뀐다. 회차 에스컬레이션은
 REQ-043의 6개 축(기구군 수·면적·밝기·모션·포지션·큐 밀도)이 표현하고, 색은
 그 축에 없다.
 
@@ -72,28 +74,27 @@ class TestArcPaletteChorusIdentityAcrossOccurrences:
                 assert first != second, f"{role} 회전이 사라졌다 — 회귀"
 
 
-class TestPerChorusChorusIdentityAcrossOccurrences:
-    """REQ-LDDESIGN-004 — `_per_chorus_palette` 도 같은 계약을 진다."""
+class TestPerChorusIsTheDirectorsPerSongException:
+    """감독 결정(2026-09-23) — 「음악 스타일마다 다르니 하나로 고정은 무리」.
+    기본(modulate)은 후렴 회차 색을 고정하고(위 시험들), 감독이 곡마다
+    고르는 ``color_usage="per_chorus"``(Q2B)는 회차마다 색을 바꾸는 원래
+    동작(SPEC-COPILOT-COLORMODE-001 REQ-014)을 유지한다 — REQ-LDDESIGN-004
+    ·030 의 예외 구절."""
 
-    def test_per_chorus_ladder_no_longer_varies_by_occurrence(self):
+    def test_per_chorus_ladder_varies_by_occurrence(self):
         base = ("blue",)
-        palettes = {_per_chorus_palette(base, "chorus", occurrence=k) for k in range(1, 7)}
-        assert len(palettes) == 1, (
-            f"per_chorus 사다리가 회차마다 여전히 갈린다 — {len(palettes)}종 (REQ-004 위반)"
-        )
+        palettes = [_per_chorus_palette(base, "chorus", occurrence=k) for k in range(1, 7)]
+        for earlier, later in zip(palettes, palettes[1:], strict=False):
+            assert earlier != later, f"per_chorus 연속 회차 색이 같다 — {palettes}"
+        assert all(p[0] == "blue" for p in palettes)  # 주색은 늘 첫 칸
 
-    def test_per_chorus_matches_arc_palette_for_every_occurrence(self):
-        """REQ-004 정정 후: `per_chorus` 는 이제 `modulate` 와 바이트 동일하다
-        (둘 다 occurrence=1 의 항등 출력으로 얼어붙는다)."""
+    def test_per_chorus_occurrence_one_matches_default(self):
         base = ("blue",)
-        for occurrence in range(1, 6):
-            assert _per_chorus_palette(base, "chorus", occurrence) == _arc_palette(
-                base, "chorus", 1
-            )
+        assert _per_chorus_palette(base, "chorus", 1) == _arc_palette(base, "chorus", 1)
 
-    def test_section_palette_choice_per_chorus_mode_is_frozen(self):
-        """`_section_palette_choice` 를 통한 실제 소비 경로에서도 동일해야
-        한다(session.py:1884 분기, Q2B_COLOR_USAGE="per_chorus")."""
+    def test_section_palette_choice_per_chorus_mode_rotates(self):
+        """실제 소비 경로(``_section_palette_choice``, Q2B="per_chorus")에서도
+        회차마다 갈린다."""
         profile = MusicProfile(palette=("블루",))
         results = [
             _section_palette_choice(
@@ -108,7 +109,9 @@ class TestPerChorusChorusIdentityAcrossOccurrences:
             )[0]
             for n in range(1, 6)
         ]
-        assert len(set(results)) == 1, f"per_chorus 소비 경로가 회차마다 갈린다 — {results}"
+        assert len(set(results)) == len(results), (
+            f"per_chorus 소비 경로가 회차마다 안 갈린다 — {results}"
+        )
 
 
 def _confirmed_chorus_plan(chorus_occurrences: int, *, with_finale: bool):
