@@ -126,6 +126,12 @@ design.md §1 스케치 그대로 "포지션 변화가 있을 때만" 값을 갖
 확인) · 브랜치 `worktree-agent-a7985662c69d50be4` · 기준
 `06e3d125`(지시서 기준과 동일, fast-forward 불필요) · TDD 사이클(RED→GREEN).
 
+> **레인 정정(lane-1, 2026-09-23)**: 에이전트 3커밋(`44cc8de6`/`b8c99f79`/`d62e7d14`)을
+> 레인이 SHA 로 되읽어 `.claude/worktrees/t437`(브랜치 `WT-concept-density`)의
+> `origin/main@a54db70e`(M3 PR #483 머지 포함) 위로 cherry-pick 했다. 그 병합 트리에서
+> `test_concept_*.py` 270 passed, 신규 91건(`--collect-only`), ruff 통과를 다시 쟀다
+> (`.moai/reports/t437/pytest_concept.txt`). 변이 3종도 레인이 쐈다 — `.moai/reports/t437/verdict.md`.
+
 **Claim**: `.moai/state/verify/f12e5c95-t429/final_integrated.py`(프로토타입)의
 `build()`(49~100행, 구간/프레이즈/원샷 생성·빌드업·눈 리셋·후렴 모션
 분배·프레이즈 상한)와 게이트 로직(145~179행, G2/G3/G4/G5/G8/G13)을
