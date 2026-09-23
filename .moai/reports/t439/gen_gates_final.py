@@ -5,11 +5,9 @@ from collections import Counter
 
 from server.concept.gates import GATE_NAMES, evaluate_song
 
-songs = [
-    s
-    for s in json.load(open("server/tests/fixtures/pilot_baseline.json", encoding="utf-8"))
-    if "error" not in s
-]
+with open("server/tests/fixtures/pilot_baseline.json", encoding="utf-8") as _f:
+    _all_songs = json.load(_f)
+songs = [s for s in _all_songs if "error" not in s]
 res = {s["song"]: evaluate_song(s) for s in songs}
 c: Counter[str] = Counter()
 lines = [
