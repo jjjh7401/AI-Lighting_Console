@@ -1,0 +1,36 @@
+/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+Club Diver.mp3 |  | 139.67483108108198 | 13 | 9 | rock | A_default | OK | 7 | 7 | None |  | 
+Club Diver.mp3 |  | 139.67483108108198 | 13 | 9 | rock | B_chorus | OK | 7 | 7 | pilot_baseline |  | 
+Club Diver.mp3 |  | 139.67483108108198 | 13 | 9 | edm | A_default | OK | 9 | 9 | None |  | 
+Club Diver.mp3 |  | 139.67483108108198 | 13 | 9 | edm | B_chorus | OK | 9 | 9 | pilot_baseline |  | 
+Cut and Run.mp3 |  | 107.6660156250002 | 17 | 10 | rock | A_default | OK | 10 | 10 | None |  | 
+Cut and Run.mp3 |  | 107.6660156250002 | 17 | 10 | rock | B_chorus | OK | 10 | 10 | pilot_baseline |  | 
+Cut and Run.mp3 |  | 107.6660156250002 | 17 | 10 | edm | A_default | OK | 12 | 12 | None |  | 
+Cut and Run.mp3 |  | 107.6660156250002 | 17 | 10 | edm | B_chorus | OK | 12 | 12 | pilot_baseline |  | 
+Ice cream.mp3 |  | 100.44642857142858 | 7 | 2 | rock | A_default | OK | 7 | 7 | None |  | 
+Ice cream.mp3 |  | 100.44642857142858 | 7 | 2 | rock | B_chorus | OK | 7 | 7 | pilot_baseline |  | 
+Ice cream.mp3 |  | 100.44642857142858 | 7 | 2 | edm | A_default | OK | 7 | 7 | None |  | 
+Ice cream.mp3 |  | 100.44642857142858 | 7 | 2 | edm | B_chorus | OK | 7 | 7 | pilot_baseline |  | 
+Let's Dance.mp3 | REJECT |  |  |  |  |  |  |  |  |  | 오디오를 끝까지 읽지 못했습니다 — 파일은 140.5초인데 91.0초에서 디코더가 멈췄습니다. 곡의 일부만 분석하면 BPM 과 구간이 틀리므로 분석하지 않습니다. 파일을 WAV 등으로 다시 내보내 올려 주세요. | 
+LoveMe.mp3 | REJECT |  |  |  |  |  |  |  |  |  | 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x116eafdd0>: Format not recognised. | 
+Morning.mp3 |  | 117.45383522727278 | 13 | 8 | rock | A_default | OK | 7 | 7 | None |  | 
+Morning.mp3 |  | 117.45383522727278 | 13 | 8 | rock | B_chorus | OK | 7 | 7 | pilot_baseline |  | 
+Morning.mp3 |  | 117.45383522727278 | 13 | 8 | edm | A_default | OK | 9 | 9 | None |  | 
+Morning.mp3 |  | 117.45383522727278 | 13 | 8 | edm | B_chorus | OK | 9 | 9 | pilot_baseline |  | 
+Rain.mp3 |  | 76.01351351351367 | 12 | 6 | rock | A_default | OK | 9 | 9 | None |  | 
+Rain.mp3 |  | 76.01351351351367 | 12 | 6 | rock | B_chorus | OK | 9 | 9 | pilot_baseline |  | 
+Rain.mp3 |  | 76.01351351351367 | 12 | 6 | edm | A_default | OK | 10 | 10 | None |  | 
+Rain.mp3 |  | 76.01351351351367 | 12 | 6 | edm | B_chorus | OK | 10 | 10 | pilot_baseline |  | 
+Too Cool.mp3 |  | 161.4990234374967 | 23 | 13 | rock | A_default | OK | 12 | 12 | None |  | 
+Too Cool.mp3 |  | 161.4990234374967 | 23 | 13 | rock | B_chorus | OK | 13 | 13 | pilot_baseline |  | 
+Too Cool.mp3 |  | 161.4990234374967 | 23 | 13 | edm | A_default | OK | 14 | 14 | None |  | 
+Too Cool.mp3 |  | 161.4990234374967 | 23 | 13 | edm | B_chorus | OK | 15 | 15 | pilot_baseline |  | 
+scott-buckley-neon.mp3 |  | 120.18531976744346 | 17 | 6 | rock | A_default | OK | 14 | 14 | None |  | 
+scott-buckley-neon.mp3 |  | 120.18531976744346 | 17 | 6 | rock | B_chorus | OK | 14 | 14 | pilot_baseline |  | 
+scott-buckley-neon.mp3 |  | 120.18531976744346 | 17 | 6 | edm | A_default | OK | 13 | 13 | None |  | 
+scott-buckley-neon.mp3 |  | 120.18531976744346 | 17 | 6 | edm | B_chorus | OK | 16 | 16 | pilot_baseline |  | 
+걸그룹DinoDino_C_max최고품질.wav |  | 126.04801829268435 | 9 | 1 | rock | A_default | OK | 10 | 10 | None |  | 
+걸그룹DinoDino_C_max최고품질.wav |  | 126.04801829268435 | 9 | 1 | rock | B_chorus | OK | 10 | 10 | pilot_baseline |  | 
+걸그룹DinoDino_C_max최고품질.wav |  | 126.04801829268435 | 9 | 1 | edm | A_default | OK | 9 | 9 | None |  | 
+걸그룹DinoDino_C_max최고품질.wav |  | 126.04801829268435 | 9 | 1 | edm | B_chorus | OK | 9 | 9 | pilot_baseline |  | 
