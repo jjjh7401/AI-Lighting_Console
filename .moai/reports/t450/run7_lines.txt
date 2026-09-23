@@ -1,0 +1,12 @@
+
+>>> props:Root/DeviceConfigurations/DMXProtocols/1/1/1|ENABLED,MODE,DESTINATIONIP,LOCALUNIVERSE,AMOUNT
+    wire: Plugin "CopilotResponder" "props e9e16bd0 ENABLED,MODE,DESTINATIONIP,LOCALUNIVERSE,AMOUNT Root/DeviceConfigurations/DMXProtocols/1/1/1"
+<<< {"id": "e9e16bd0", "kind": "props", "ok": true, "path": "Root/DeviceConfigurations/DMXProtocols/1/1/1", "reads": [{"n": "ENABLED", "ok": true, "t": "boolean", "v": "false"}, {"n": "MODE", "ok": true, "t": "string", "v": "Auto"}, {"e": "property not readable: DESTINATIONIP", "n": "DESTINATIONIP", "ok": false}, {"n": "LOCALUNIVERSE", "ok": true, "t": "number", "v": "1"}, {"n": "AMOUNT", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
+
+>>> props:Root/DeviceConfigurations/DMXProtocols/2/1/1|ENABLED,MODE,DESTINATIONIP,LOCALUNIVERSE,AMOUNT,SACNUNIVERSE
+    wire: Plugin "CopilotResponder" "props 627d4e48 ENABLED,MODE,DESTINATIONIP,LOCALUNIVERSE,AMOUNT,SACNUNIVERSE Root/DeviceConfigurations/DMXProtocols/2/1/1"
+<<< {"id": "627d4e48", "kind": "props", "ok": true, "path": "Root/DeviceConfigurations/DMXProtocols/2/1/1", "reads": [{"n": "ENABLED", "ok": true, "t": "boolean", "v": "false"}, {"n": "MODE", "ok": true, "t": "string", "v": "Output Multicast"}, {"e": "property not readable: DESTINATIONIP", "n": "DESTINATIONIP", "ok": false}, {"n": "LOCALUNIVERSE", "ok": true, "t": "number", "v": "1"}, {"n": "AMOUNT", "ok": true, "t": "number", "v": "1"}, {"n": "SACNUNIVERSE", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/67|NAME,FID,PATCH
+    wire: Plugin "CopilotResponder" "props d0f3d9d8 NAME,FID,PATCH Patch/Stages/1/Fixtures/67"
+<<< {"id": "d0f3d9d8", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/67", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "WASH-U 401"}, {"n": "FID", "ok": true, "t": "number", "v": "401"}, {"n": "PATCH", "ok": true, "t": "string", "v": "5.151"}], "truncated": false, "v": 1}

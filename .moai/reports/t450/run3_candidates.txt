@@ -1,0 +1,16 @@
+
+>>> state:ShowData@19
+    wire: Plugin "CopilotResponder" "state b7ea1539 ShowData offset=19"
+<<< {"children": [{"class": "Users", "i": 20, "name": "Users"}, {"class": "PlaybackTable", "i": 21, "name": "PlaybackTable"}, {"class": "PSNProtocol", "i": 22, "name": "PSNProtocol"}, {"class": "Materials", "i": 23, "name": "Materials"}, {"class": "MVRxchange", "i": 24, "name": "MVRxchange"}, {"class": "MidiShowControl", "i": 25, "name": "MidiShowControl"}, {"class": "WindowTypes", "i": 26, "name": "WindowTypes"}], "id": "b7ea1539", "kind": "state", "node": {"childCount": 26, "class": "ShowData", "enumeration": "ok", "name": "ShowData"}, "offset": 19, "ok": true, "path": "ShowData", "truncated": false, "v": 1}
+
+>>> state:Root/DeviceConfigurations
+    wire: Plugin "CopilotResponder" "state 0286e667 Root/DeviceConfigurations"
+<<< {"children": [{"class": "OutputStations", "i": 1, "name": "OutputStations"}, {"class": "DMXProtocols", "i": 2, "name": "DMXProtocols"}], "id": "0286e667", "kind": "state", "node": {"childCount": 2, "class": "DeviceConfigurations", "enumeration": "ok", "name": "DeviceConfigurations"}, "offset": 0, "ok": true, "path": "Root/DeviceConfigurations", "truncated": false, "v": 1}
+
+>>> state:Root/Interfaces
+    wire: Plugin "CopilotResponder" "state d261cda2 Root/Interfaces"
+<<< {"children": [{"class": "Interface", "i": 1, "name": "lo0"}, {"class": "Interface", "i": 2, "name": "en0"}], "id": "d261cda2", "kind": "state", "node": {"childCount": 2, "class": "Interfaces", "enumeration": "ok", "name": "Interfaces"}, "offset": 0, "ok": true, "path": "Root/Interfaces", "truncated": false, "v": 1}
+
+>>> state:Root/HardwareStatus
+    wire: Plugin "CopilotResponder" "state 1680eae3 Root/HardwareStatus"
+<<< {"children": [{"class": "ExecutorKeyStatus", "i": 1, "name": "ExecutorKeyStatus"}, {"class": "BatteryStatus", "i": 2, "name": "BatteryStatus"}], "id": "1680eae3", "kind": "state", "node": {"childCount": 2, "class": "HardwareStatus", "enumeration": "ok", "name": "HardwareStatus"}, "offset": 0, "ok": true, "path": "Root/HardwareStatus", "truncated": false, "v": 1}

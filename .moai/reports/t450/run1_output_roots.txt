@@ -1,0 +1,24 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 2d29cc7f"
+<<< {"id": "2d29cc7f", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/NoSuchT450
+    wire: Plugin "CopilotResponder" "state 5e23b267 ShowData/NoSuchT450"
+<<< {"error": "path segment not found: 'NoSuchT450' (in ShowData/NoSuchT450)", "id": "5e23b267", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/NoSuchT450", "v": 1}
+
+>>> props:Selection|COUNT,COUNTTOTALSELECTED,COUNTFULLYSELECTED,ACTIVE
+    wire: Plugin "CopilotResponder" "props 8b0ce7be COUNT,COUNTTOTALSELECTED,COUNTFULLYSELECTED,ACTIVE Selection"
+<<< {"id": "8b0ce7be", "kind": "props", "ok": true, "path": "Selection", "reads": [{"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "COUNTTOTALSELECTED", "ok": true, "t": "number", "v": "0"}, {"n": "COUNTFULLYSELECTED", "ok": true, "t": "number", "v": "0"}, {"n": "ACTIVE", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/Output
+    wire: Plugin "CopilotResponder" "state 56d50037 ShowData/Output"
+<<< {"children": [], "id": "56d50037", "kind": "state", "node": {"childCount": 0, "class": "Output", "enumeration": "ok", "name": "Output"}, "offset": 0, "ok": true, "path": "ShowData/Output", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/Output
+    wire: Plugin "CopilotResponder" "introspect f5a76900 ShowData/Output"
+<<< {"class": "Output", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}], "id": "f5a76900", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/Output", "source": "property_accessors", "total": 15, "truncated": false, "v": 1}
+
+>>> state:ShowData/DMXRoot
+    wire: Plugin "CopilotResponder" "state 321a2cdf ShowData/DMXRoot"
+<<< {"children": [], "id": "321a2cdf", "kind": "state", "node": {"childCount": 0, "class": "DMXRoot", "enumeration": "ok", "name": "DMXRoot"}, "offset": 0, "ok": true, "path": "ShowData/DMXRoot", "truncated": false, "v": 1}
