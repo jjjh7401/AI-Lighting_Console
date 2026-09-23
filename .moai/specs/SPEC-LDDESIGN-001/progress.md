@@ -473,6 +473,30 @@ VocabError가 난다(별도 카드).
 **Gaps**: REQ-003 방출 단일화, `build_songcue_bundle` 은퇴, 세 메커니즘 이식은
 카드 t448로 넘긴다. 실기 콘솔은 확인하지 않았다.
 
+### REQ-026·029 브리지 — 컨셉 게이트 색은 입력 색으로만 (카드 t444)
+
+워크트리 `.claude/worktrees/t444`, 브랜치 `WT-concept-two-colors`, 기준 `f5283ea4`에서
+`f898d8a2`를 합류했다. 판정서는 `.moai/reports/t444/verdict.md`다.
+
+**Claim**: 큐 모델이 보조색을 나른다(`CueState.secondary`). 두 운영 어댑터는 구간이
+실제로 내는 색을 원시 구간 `palette`로 싣는다. 경로 A는 주색과 보조색을, 경로 B는
+적용된 감독 주색을 싣는다. G2·G6·G7과 G5의 흰색 조건은 그 입력 색으로만 판정하고,
+입력 색이 없으면 n/a(「입력에 색 없음 — 상수 팔레트 판정 안 함」)다.
+
+**정정**: 위 M6 절의 「PASS 90 · n/a 6 · FAIL 8 (남은 8칸은 모두 G6 실제 위반)」과
+같은 행렬의 G2·G7 PASS는 입력 색이 아니라 `gates.py`의 프로토타입 상수 팔레트로 낸
+판정이었다. 8곡 fixture에는 색이 없다. 재측정한 값은 **PASS 75 · n/a 29 · FAIL 0**이다
+(G2 7칸·G7 8칸 PASS→n/a, G6 8칸 FAIL→n/a, 나머지 81칸 불변).
+
+**Evidence**: `gates_8songs.txt`(75/29/0). 입력 색 대조 시험에서 보조색이 공통이면
+PASS, 공통색이 없으면 FAIL이다. `prepare_songcue` 배선 시험은 감독 기록이 있으면
+판정하고 없으면 n/a다. 변이 6건은 모두 잡혔다(`mutation/`). `tools.py` 헝크 재고는
+79→80이고 보호 구간 겹침은 0이다(커밋 뒤 측정). 합류 트리 범위 시험은 2515 passed,
+2 skipped다.
+
+**Gaps**: 실기 콘솔과 실제 감독 곡의 G6 결과는 재지 않았다. 전체 시험은 CI에 맡겼다.
+경로 A 보조색은 back 그룹이 매핑된 경우에만 콘솔로 나간다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml

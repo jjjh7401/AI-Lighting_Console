@@ -1,0 +1,13 @@
+exit=1
+FAILED server/tests/test_concept_color_input_t444.py::TestNoInputColorIsNotApplicable::test_color_gates_are_na_with_reason[\uac78\uadf8\ub8f9DinoDino_C_max\ucd5c\uace0\ud488\uc9c8.wav]
+FAILED server/tests/test_concept_color_input_t444.py::TestPathBAdapterCarriesPalette::test_without_palettes_color_gates_are_na
+FAILED server/tests/test_concept_color_input_t444.py::TestPrepareSongcueWiresPalettes::test_records_absent_color_gates_are_na
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[Club Diver.mp3]
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[Cut and Run.mp3]
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[Ice cream.mp3]
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[Morning.mp3]
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[Rain.mp3]
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[Too Cool.mp3]
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[scott-buckley-neon.mp3]
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[\uac78\uadf8\ub8f9DinoDino_C_max\ucd5c\uace0\ud488\uc9c8.wav]
+18 failed, 32 passed, 1 warning in 1.71s
