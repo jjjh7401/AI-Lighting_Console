@@ -219,9 +219,7 @@ class TestPathBFabricatedControl:
         import server.looks.section_intent as section_intent_module
 
         def _ordering_key_without_return_bias(look, *, previous, intent, returning=None):
-            fits_intent = intent is not None and section_intent_module.brightness_fits(
-                intent, look
-            )
+            fits_intent = intent is not None and section_intent_module.brightness_fits(intent, look)
             fits = 0 if fits_intent else 1
             gap = (
                 section_intent_module.contrast(previous, look)
@@ -237,6 +235,5 @@ class TestPathBFabricatedControl:
 
         look_ids = {look_id for _label, _colors, look_id in rows}
         assert len(look_ids) > 1, (
-            "날조 대조군이 공허하다 — '되돌아옴' 축을 없앴는데도 룩이 하나뿐이다: "
-            f"{rows}"
+            f"날조 대조군이 공허하다 — '되돌아옴' 축을 없앴는데도 룩이 하나뿐이다: {rows}"
         )

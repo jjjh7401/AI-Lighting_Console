@@ -42,9 +42,7 @@ class TestArcPaletteChorusIdentityAcrossOccurrences:
         first = _arc_palette(base, "chorus", occurrence=1)
         for occurrence in range(2, 9):
             later = _arc_palette(base, "chorus", occurrence=occurrence)
-            assert later == first, (
-                f"회차 {occurrence}: {later} != 1회차 {first} — REQ-004 위반"
-            )
+            assert later == first, f"회차 {occurrence}: {later} != 1회차 {first} — REQ-004 위반"
 
     def test_finale_accent_is_identical_across_occurrences(self):
         """finale 은 보통 회차 1로만 나타나지만, 함수 계약 자체가 회차를

@@ -15,12 +15,9 @@ G6 판정식이 REQ-029 의 **예외** 조건을 위반 조건으로 뒤집어 �
 (98)도 아니라 **이 파이프라인이 오늘 실제로 내는 값**을 고정한다
 (REQ-075/076).
 
-REQ-076 — 발견한 편차는 종이로 덮지 않는다. 대조 결과 정정 기준선(90)
-대비로도 **1개 셀이 남는다**(G6 8곡 PASS 는 프로토타입 결함이 낸 거짓
-PASS 였다는 게 이미 밝혀졌으니 정정 기준선 자체가 8곡 FAIL 을 이미
-포함한다 — 실제로 남는 차이는 scott-buckley-neon 의 G5 하나뿐이다).
-원인은 아래 두 갈래로, 전부 ``server/concept/`` 기존 모듈의 동작이지
-이 파일(``gates.py``)이 만든 결함이 아니다:
+REQ-076 — 발견한 편차는 종이로 덮지 않는다. 최종 실측은 **PASS 90 ·
+n/a 6 · FAIL 8** 로 정정 기준선(90)과 같다. 남은 FAIL 8칸은 전부 G6 이고
+실제 위반이다:
 
 1. **G6 (컬러: 유보색 조기 0 · 브리지 위반 0) — 8곡 전부, 실 위반.**
    유보색 검사(REQ-027, ``check_reserved_color_release``)는 8곡 전부
@@ -59,29 +56,13 @@ PASS 였다는 게 이미 밝혀졌으니 정정 기준선 자체가 8곡 FAIL �
    색 배정)의 새 결정이 필요하다 — M6 은 기존 모듈을 조립만 하므로
    이 파일에서 고치지 않는다.
 
-2. **G5 (헤드룸 경고 0) — scott-buckley-neon.mp3 하나, 카드 t439 에서
-   원인이 바뀌었다(감독 결정 2 적용 후에도 잔존).** 이전 실측(카드
-   t437 축소 포팅)의 원인은 Intro 가 KEY 10% 하나(1그룹)만 켜 Bridge
-   (KEY+BACK 30%, 2그룹)보다 그룹 수까지 "늘어" 보이는 것이었다 —
-   이 카드가 ``density.py`` 의 Intro 분기를 프로토타입(라인 61~62)
-   수준으로 복원했다(KEY 10% + BACK 25% 확장 + "보컬 시작" 4마디 전
-   SIDE-L·SIDE-R 35% 예고 프레이즈, ``density.py`` Intro 분기 참고).
-   복원 후 Intro 는 KEY+BACK 2그룹·25% 로, Bridge(KEY+BACK 2그룹·30%)
-   보다 **밝기는 이제 진짜로 낮다**(25<30) — 하지만 ``headroom.
-   bridge_reduced``(REQ-047)는 밝기와 그룹 수 **둘 다** 엄격히 감소해야
-   pass 인데, 이 곡은 Intro 와 Bridge 가 똑같이 KEY+BACK 2그룹을 쓰므로
-   그룹 수 조건(``2 < 2``)이 거짓이라 여전히 fail 한다. 즉 원래 있던
-   "그룹 수가 오히려 늘어나는" 결함은 사라졌지만, "브릿지가 그 앞
-   구간보다 그룹 수까지 줄어야 한다"는 REQ-047 자체의 엄격한 요구를
-   이 곡의 실제 조명 설계(Intro·Bridge 모두 KEY+BACK 조합)가 못
-   만족하는 건 별개의 사실이다 — density.py 를 더 손대면 배차서가
-   금지한 "다른 값을 건드려 PASS 를 만드는" 방향이 되므로 이 파일에서
-   더 고치지 않는다.
-
-두 원인 모두 이 어댑터(``gates.py``)의 조립 방식이 아니라, 조립 대상인
-기존 모듈(팔레트의 색 배타성, 이 곡의 Intro·Bridge 조명 설계)이 실제로
-맞물릴 때 드러나는 사실이다 — REQ-076 은 이런 사실을 시험이 가리지
-말고 고정해 보고하라고 요구한다.
+2. **G5 (헤드룸 경고 0) — scott-buckley-neon.mp3, 카드 t439 에서 해소.**
+   두 원인이 겹쳐 있었다. (가) 카드 t437 의 ``density.py`` Intro 분기
+   축소 이식(KEY 10% 만) — 프로토타입 61~62행대로 복원했다. (나) 이
+   어댑터가 G5 의 Bridge 비교 대상을 "구간 큐"로만 골라 Intro 끝의
+   "보컬 시작" 프레이즈(4그룹 35%)를 빠뜨렸다 — 프로토타입 ``_prev_nb``
+   (162~166행)는 표의 모든 행을 본다. (나)를 고친 뒤 Bridge(2그룹 30%)는
+   직전 상태(4그룹 35%)보다 둘 다 줄어 PASS 다. 다른 7곡의 G5 는 그대로다.
 """
 
 from __future__ import annotations
@@ -108,9 +89,8 @@ _SONGS_BY_NAME = {song["song"]: song for song in _SONGS}
 
 # --- 오늘 실측(``.moai/reports/t439/baseline/matrix.json``, 프로토타입
 # 직접 실행) 대비, 이 파이프라인이 실제로 내는 13×8 판정 행렬. 프로토타입
-# 값과 다른 9칸(G6 8곡 전부 + scott-buckley-neon G5)은 위 모듈 docstring
-# 이 원인을 설명한다 — 전부 True→False(새 FAIL). 나머지 95칸은
-# 프로토타입과 동일하다(PASS 는 PASS, n/a 는 n/a).
+# 값과 다른 8칸(G6 8곡 전부)은 위 모듈 docstring 이 원인을 설명한다 —
+# 전부 True→False(거짓 PASS 교정). 나머지 96칸은 프로토타입과 동일하다.
 EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     "Club Diver.mp3": {
         "G1 어휘 닫힘": True,
@@ -207,7 +187,7 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
         "G2 후렴 정체성": True,
         "G3 회차마다 새 축(5회차까지)": True,
         "G4 피날레 새 축 + 여유": True,
-        "G5 헤드룸 경고 0": False,  # 새 FAIL — 모듈 docstring 원인 2
+        "G5 헤드룸 경고 0": True,  # 카드 t439 — 비교 대상을 프로토타입처럼 직전 전체 행으로(원인 2)
         "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 원인 1
         "G7 후렴 주색 동일": True,
         "G8 후렴 앞 빌드업": True,
@@ -380,45 +360,33 @@ def test_gate_matrix_matches_measured_pipeline_output(song_name: str) -> None:
     assert actual == EXPECTED_GATES[song_name]
 
 
-def test_gate_matrix_diverges_from_prototype_baseline_in_exactly_nine_cells() -> None:
+def test_gate_matrix_diverges_from_prototype_baseline_only_in_g6() -> None:
     """REQ-076 — 프로토타입 기준선(구 기준선 98)과의 차이를 셀 단위로
-    명시적으로 센다. 9칸(G6 8곡 + scott-buckley-neon G5)이 True(프로토타입
-    PASS)에서 False(이 파이프라인 FAIL)로 바뀐다 — 그 밖의 95칸은 동일하다.
-    9칸 중 8칸(G6)은 정정 기준선(90)에 이미 포함된 "거짓 PASS 교정"이고,
-    나머지 1칸(scott-buckley-neon 의 G5)은 카드 t439 Intro 복원 뒤에도
-    남는 실제 위반이다 — 정정 기준선(90)이 아니라 이 파이프라인의 실측
-    (89)을 고정한다(모듈 docstring 참고)."""
+    센다. 다른 칸은 G6 8곡뿐이다 — 프로토타입 G6 식이 REQ-029 면제 조건을
+    거꾸로 세서 생긴 거짓 PASS 를 바로잡은 결과이고, 나머지 96칸은
+    동일하다(모듈 docstring 참고)."""
     diffs = [
         (song, gate)
         for song in EXPECTED_GATES
         for gate in GATE_NAMES
         if EXPECTED_GATES[song][gate] != BASELINE_GATES[song][gate]
     ]
-    assert len(diffs) == 9
+    assert len(diffs) == 8
     assert all(EXPECTED_GATES[song][gate] is False for song, gate in diffs)
     g6_diffs = [d for d in diffs if d[1].startswith("G6")]
     g5_diffs = [d for d in diffs if d[1].startswith("G5")]
     assert len(g6_diffs) == 8  # 8곡 전부
-    assert g5_diffs == [("scott-buckley-neon.mp3", "G5 헤드룸 경고 0")]
+    assert g5_diffs == []
 
 
 def test_aggregate_pass_na_fail_counts() -> None:
     """REQ-075/076 집계 — 오늘 실제로 나오는 PASS/n/a/FAIL 개수를 고정한다.
 
-    배차서가 요구한 "PASS>=98, FAIL==0"은 프로토타입이 REQ-029를 정확히
-    검사하지 못한 버그 위에서 성립하는 목표였다 — 이 파이프라인이 그
-    버그를 상속하지 않고 REQ-029/REQ-047 을 실제로 검사하면서 그 목표가
-    깨진다(REQ-076 "새 FAIL 이면 멈추고 보고" — 이 시험이 그 보고다).
-
-    카드 t439(감독 결정 2)의 정정 기준선은 90(=98-8, G6 거짓 PASS 8건만
-    뺀 값)이었으나, 실측 PASS 는 **89**로 그보다 1 낮다 — density.py의
-    Intro 복원(감독 결정 2)이 scott-buckley-neon 의 G5 를 고치지
-    못했기 때문이다(모듈 docstring 2번: Intro·Bridge 가 이제 밝기는
-    맞게 감소해도 그룹 수는 똑같이 KEY+BACK 2개라 REQ-047 의 "그룹
-    수도 반드시 감소"를 못 만족). 이 시험은 정정 기준선(90)을 억지로
-    맞추지 않고 **오늘 이 파이프라인이 실제로 내는 값**을 고정한다 —
-    배차서의 "다른 값을 건드려 PASS 를 만들지 마라"를 그대로 지킨
-    결과다.
+    배차서가 요구한 "PASS>=98, FAIL==0"은 프로토타입 G6 식 반전(REQ-029
+    면제 조건을 위반으로 셈)이 만든 거짓 PASS 8칸 위의 목표였다. 정정
+    기준선은 90(=98-8)이고, 카드 t439 수정(G4 재정의 · Intro 복원 · G5
+    비교 대상 교정) 뒤 실측도 PASS 90 · n/a 6 · FAIL 8 이다. 남은 FAIL 8은
+    전부 G6 실제 위반이다(REQ-076 — 시험이 가리지 않고 고정해 보고한다).
     """
     total = pass_count = na_count = fail_count = 0
     for _song, gates in EXPECTED_GATES.items():
@@ -432,7 +400,7 @@ def test_aggregate_pass_na_fail_counts() -> None:
             else:
                 fail_count += 1
     assert total == 8 * 13 == 104
-    assert (pass_count, na_count, fail_count) == (89, 6, 9)
+    assert (pass_count, na_count, fail_count) == (90, 6, 8)
 
 
 class TestFabricatedControlProbe:
@@ -469,9 +437,12 @@ class TestFabricatedControlProbe:
         # 정상 경로 — 여유 1, PASS(오늘 측정치와 일치).
         remaining_ok = remaining_motion_before_final(build.states, build.final_index)
         assert remaining_ok == 1
-        assert g4_final_new_axis_and_headroom(
-            build.pairs, before_final_remaining_motion=remaining_ok
-        ).passed is True
+        assert (
+            g4_final_new_axis_and_headroom(
+                build.pairs, before_final_remaining_motion=remaining_ok
+            ).passed
+            is True
+        )
 
         # 날조 — 피날레 이전 어딘가에서 모션 3 을 이미 썼다고 가정한
         # 상태 목록으로 다시 재본다. remaining_motion_before_final 은

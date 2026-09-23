@@ -109,7 +109,7 @@ _RELEASE_REF_BASE_NAME = "song_release_reference"
 
 
 def _mmss(text: str) -> float:
-    """"M:SS" 형식 문자열을 초로 바꾼다(프로토타입 50행 ``t`` 람다와 동일)."""
+    """ "M:SS" 형식 문자열을 초로 바꾼다(프로토타입 50행 ``t`` 람다와 동일)."""
     minutes, seconds = str(text).split(":")
     return float(int(minutes) * 60 + int(seconds))
 
@@ -465,7 +465,13 @@ def g5_headroom_warnings(build: SongBuild) -> GateResult:
             effects_on=frozenset(row.on) & _EFFECT_GROUPS,
             color=row.color,
         )
-        for row in section_rows
+        # 카드 t439 — 프로토타입(``final_integrated.py`` 162~166행 ``_prev_nb``)
+        # 처럼 구간 큐만이 아니라 표의 **모든 행**(안전·구간·프레이즈)을
+        # 넣는다. Bridge 직전에 무대에 켜져 있던 상태는 앞 구간의 마지막
+        # 행(예: Intro 의 "보컬 시작" 프레이즈 4그룹 35%)이지 그 구간의
+        # 첫 큐가 아니다 — 구간 큐만 넣으면 이 프레이즈가 빠져 Bridge 가
+        # "감소 아님"으로 오판된다(scott-buckley-neon, REQ-047).
+        for row in build.table
     )
     final_pair = next((pair for pair in build.pairs if pair.curr.section == "Final Chorus"), None)
     final_chorus_has_new_axis = bool(final_pair.axes) if final_pair is not None else None
@@ -550,16 +556,12 @@ def g12_mib_no_live_moves(build: SongBuild) -> GateResult:
     dark = sum(1 for verdict in build.mib if verdict is not None and verdict.status == "dark")
     mark = sum(1 for verdict in build.mib if verdict is not None and verdict.status == "mark")
     live = [verdict for verdict in build.mib if verdict is not None and verdict.status == "live"]
-    return GateResult(
-        len(live) == 0, f"어둠 {dark} · Mark {mark} · 켜진 채 {len(live)}"
-    )
+    return GateResult(len(live) == 0, f"어둠 {dark} · Mark {mark} · 켜진 채 {len(live)}")
 
 
 def g13_cue_density(build: SongBuild) -> GateResult:
     count = len(build.table)
-    return GateResult(
-        10 <= count <= 45, f"시퀀스 큐 {count} + 원샷 {len(build.one_shots)}"
-    )
+    return GateResult(10 <= count <= 45, f"시퀀스 큐 {count} + 원샷 {len(build.one_shots)}")
 
 
 GATE_NAMES: tuple[str, ...] = (
