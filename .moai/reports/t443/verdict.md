@@ -86,3 +86,17 @@ FAILED ...::TestAHeaderlessVbrMp3IsNotMistakenForATruncatedOne::test_a_silently_
 - 동기 탐색은 ID3 뒤 64 KiB 까지. 그 안에서 연속 두 프레임을 못 찾으면 검사를 유지한다.
 - 앱을 띄워 업로드하지는 않았다 — `analyze()` 를 직접 불렀다.
 - 전체 스위트는 로컬에서 돌리지 않았다(pre-push 의 test-fast + CI 가 돈다).
+
+## CI 1차 실패와 수정
+
+첫 푸시(`139708fd`)의 CI 가 `server/tests/test_audio_boundary.py::TestNoConsolePortLiteralLivesInTheAudioLayer` 에서
+`assert ['analyze.py: 8000'] == []` 로 실패했다. 표본율 표의 MPEG2.5 값 8000 Hz 가 콘솔 포트 리터럴 0건 고정에 걸렸다.
+pre-push 의 test-fast 에는 이 파일이 없어 로컬에서 못 봤다.
+
+가드는 그대로 두고 표를 규격 관계대로 적었다 — MPEG2 = MPEG1 ÷ 2, MPEG2.5 = MPEG1 ÷ 4(`_MP3_MPEG1_SAMPLE_RATES`).
+값은 같다(`{3: (44100, 48000, 32000), 2: (22050, 24000, 16000), 0: (11025, 12000, 8000)}` 출력 확인).
+
+```
+.venv/bin/python -m pytest -q $(grep -rl "server.audio" server/tests/*.py)
+188 passed, 1 warning in 15.98s
+```

@@ -170,8 +170,15 @@ _MIN_DECODED_FRACTION = 0.98
 #: MPEG Layer III 비트레이트 표(kbps) — MPEG1 과 MPEG2/2.5. 인덱스 0(free)·15(금지)는 0.
 _MP3_BITRATES_V1 = (0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0)
 _MP3_BITRATES_V2 = (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0)
-#: 버전 비트(3=MPEG1, 2=MPEG2, 0=MPEG2.5)별 표본율 표.
-_MP3_SAMPLE_RATES = {3: (44100, 48000, 32000), 2: (22050, 24000, 16000), 0: (11025, 12000, 8000)}
+#: 버전 비트(3=MPEG1, 2=MPEG2, 0=MPEG2.5)별 표본율 표. 규격대로 MPEG2 는 MPEG1 의 절반,
+#: MPEG2.5 는 4분의 1 이다 — 나눗셈으로 적어 두면 콘솔 포트와 같은 정수 리터럴(8000)이
+#: 이 층에 생기지 않는다(``test_audio_boundary.py`` 의 포트 리터럴 0건 고정).
+_MP3_MPEG1_SAMPLE_RATES = (44100, 48000, 32000)
+_MP3_SAMPLE_RATES = {
+    3: _MP3_MPEG1_SAMPLE_RATES,
+    2: tuple(rate // 2 for rate in _MP3_MPEG1_SAMPLE_RATES),
+    0: tuple(rate // 4 for rate in _MP3_MPEG1_SAMPLE_RATES),
+}
 #: 첫 프레임을 찾으려고 ID3 태그 뒤를 훑는 최대 바이트 수.
 _MP3_SYNC_SEARCH_BYTES = 65536
 
