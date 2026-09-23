@@ -2,5 +2,7 @@
 #
 # 이 패키지는 OSC 송신·콘솔 접근·네트워크를 하지 않는다(plan.md M3 —
 # "server/concept/ 패키지 신설(순수 데이터, OSC/콘솔 접근 금지)"). M1 은
-# 어휘(vocab)와 워크시트(worksheet) 두 모듈만 담는다 — 큐 모델·컬러 규칙·
-# 밀도 컴파일러 등 나머지는 M2 이후 마일스톤에서 이 패키지에 더해진다.
+# 어휘(vocab)와 워크시트(worksheet) 두 모듈만 담았다. M2 가 큐 모델 v2
+# 타입(cue_model)·상태 해석기(resolver)·description 생성기(description)를
+# 더한다 — 컬러 규칙·밀도 컴파일러 등 나머지는 M3 이후 마일스톤에서 이
+# 패키지에 더해진다.
