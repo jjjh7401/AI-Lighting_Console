@@ -98,3 +98,43 @@ class TestLastSafetyCue:
         )
         description = describe(prev, state, cue["ops"], headroom)
         assert "최대 0%" in description
+
+    def test_every_downstream_dim_reader_treats_the_reduced_state_as_fully_off(self):
+        """카드 t439 §④b M5 판단 2 — ``reduce factor=0`` 뒤의 상태를
+        읽는 모든 하류가 키 존재가 아니라 **값**으로 읽는지 확인한다
+        (``.get(role, 0) > 0`` 패턴 — "존재하면 안 꺼진 것" 이라고 읽는
+        하류가 있다면, ``reduce`` 가 키를 명시적 0 으로 채워도 그 하류는
+        "그룹이 여전히 켜져 있다" 로 오판한다).
+
+        조사(grep) 결과 — ``server/concept/*.py`` 안의 ``.dim`` 소비 지점
+        전부가 값 기반이다: ``mib.py:69-70``
+        (``prev.dim.get(role, 0) > 0``), ``resolver.py:208-209``(같은
+        패턴), ``description.py:46-47``/``escalation.py:96``/
+        ``gates.py:300``(``value for role, value in state.dim.items()
+        if value > 0``), ``resolver.py:233``(같은 패턴). 존재 여부만
+        보는(``"role" in state.dim``) 소비 지점은 0건이다 — 이 시험은
+        그 grep 이 맞다는 것을 실행으로 증명한다: reduce 뒤 상태에서
+        gates.py/mib.py 가 실제로 쓰는 두 식을 그대로 재현해 both 0/빈
+        결과가 나오는지 확인한다.
+        """
+        base = CueState(
+            dim={group: 60 for group in ALL_GROUPS}, color="White", pos="front", motion=2
+        )
+        prev = CueState(
+            dim={group: 60 for group in ALL_GROUPS}, color="White", pos="front", motion=2
+        )
+        cue = last_safety_cue(ref="ALL_GROUPS_BASE")
+        state = apply(prev, cue["ops"], {"ALL_GROUPS_BASE": base})
+
+        # gates.py:300-301 이 TableRow.on/top 을 내는 것과 같은 식.
+        on = tuple(sorted(role for role, value in state.dim.items() if value > 0))
+        top = max(state.dim.values(), default=0)
+        assert on == ()
+        assert top == 0
+
+        # mib.py:69-70 이 무버 점등 여부를 읽는 것과 같은 식(부재도 0 으로
+        # 다루므로 reduce 가 키를 명시적으로 0 으로 채우든 아예 비우든
+        # 결과는 같다 — 그래서 이 하류는 애초에 안전하다).
+        movers = ("MOVER-U", "MOVER-D")
+        now_on = any(state.dim.get(role, 0) > 0 for role in movers)
+        assert now_on is False

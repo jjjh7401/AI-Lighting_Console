@@ -1,0 +1,189 @@
+....................FF.FF........F..........F...........                 [100%]
+=================================== FAILURES ===================================
+_ TestRemainingMotionBeforeFinal.test_immediate_row_is_low_but_an_earlier_cue_already_maxed_motion _
+
+self = <server.tests.test_concept_escalation.TestRemainingMotionBeforeFinal object at 0x10be37c50>
+
+    def test_immediate_row_is_low_but_an_earlier_cue_already_maxed_motion(self) -> None:
+        # 날조 대조군 — 직전 한 줄만 읽는 옛 정의라면 여기서 3 을 냈을
+        # 것이다(states[-1].motion == 0 이므로). 새 정의는 중간 후렴이
+        # 이미 모션 3 을 썼다는 사실을 놓치지 않아 여유 0 을 낸다.
+        states = [
+            CueState(dim={}, color="노랑", pos="back", motion=0),  # Verse
+            CueState(dim={}, color="노랑", pos="back", motion=3),  # 중간 후렴 — 모션 최대치 소진
+            CueState(dim={}, color="노랑", pos="back", motion=0),  # 피날레 직전 Verse — 모션 0 복귀
+        ]
+>       assert remaining_motion_before_final(states, 3) == 0
+E       AssertionError: assert 3 == 0
+E        +  where 3 = remaining_motion_before_final([CueState(dim=mappingproxy({}), color='노랑', pos='back', motion=0), CueState(dim=mappingproxy({}), color='노랑', pos='back', motion=3), CueState(dim=mappingproxy({}), color='노랑', pos='back', motion=0)], 3)
+
+server/tests/test_concept_escalation.py:206: AssertionError
+_ TestRemainingMotionBeforeFinal.test_max_prior_motion_two_leaves_exactly_one __
+
+self = <server.tests.test_concept_escalation.TestRemainingMotionBeforeFinal object at 0x10be40290>
+
+    def test_max_prior_motion_two_leaves_exactly_one(self) -> None:
+        states = [
+            CueState(dim={}, color="노랑", pos="back", motion=0),
+            CueState(dim={}, color="노랑", pos="back", motion=2),
+            CueState(dim={}, color="노랑", pos="back", motion=0),
+        ]
+>       assert remaining_motion_before_final(states, 3) == 1
+E       AssertionError: assert 3 == 1
+E        +  where 3 = remaining_motion_before_final([CueState(dim=mappingproxy({}), color='노랑', pos='back', motion=0), CueState(dim=mappingproxy({}), color='노랑', pos='back', motion=2), CueState(dim=mappingproxy({}), color='노랑', pos='back', motion=0)], 3)
+
+server/tests/test_concept_escalation.py:214: AssertionError
+_ TestRemainingMotionBeforeFinal.test_g4_fails_when_earlier_motion_already_exhausted_even_with_new_axis _
+
+self = <server.tests.test_concept_escalation.TestRemainingMotionBeforeFinal object at 0x10be366d0>
+
+    def test_g4_fails_when_earlier_motion_already_exhausted_even_with_new_axis(self) -> None:
+        # G4 통합 — 새 축은 있지만(피날레가 밝기를 더 올림) 이전 어딘가
+        # 에서 이미 모션 3 을 썼다면 새 정의로는 여유 0 이라 FAIL 이어야
+        # 한다. 옛 정의(직전 한 줄)라면 여유 3 으로 오판해 PASS 했을
+        # 자리다.
+        snapshots = [
+            _snap(round_number=1, brightness=70, motion=3),
+            _snap(section="Final Chorus", occurrence=1, round_number=2, brightness=100, motion=3),
+        ]
+        pairs = check_pairs(snapshots)
+        states = [
+            CueState(dim={}, color="노랑", pos="back", motion=0),  # Verse
+            CueState(dim={}, color="노랑", pos="back", motion=3),  # 중간 후렴 — 모션 최대치 소진
+            CueState(dim={}, color="노랑", pos="back", motion=0),  # 피날레 직전 Verse
+            CueState(dim={}, color="흰색", pos="audience", motion=3),  # Final Chorus 자신
+        ]
+        remaining = remaining_motion_before_final(states, 3)
+        result = g4_final_new_axis_and_headroom(pairs, before_final_remaining_motion=remaining)
+>       assert remaining == 0
+E       assert 3 == 0
+
+server/tests/test_concept_escalation.py:239: AssertionError
+_ TestRemainingMotionBeforeFinal.test_g4_passes_when_max_prior_motion_leaves_one _
+
+self = <server.tests.test_concept_escalation.TestRemainingMotionBeforeFinal object at 0x10be1f9d0>
+
+    def test_g4_passes_when_max_prior_motion_leaves_one(self) -> None:
+        snapshots = [
+            _snap(round_number=1, brightness=70, motion=2),
+            _snap(section="Final Chorus", occurrence=1, round_number=2, brightness=100, motion=3),
+        ]
+        pairs = check_pairs(snapshots)
+        states = [
+            CueState(dim={}, color="노랑", pos="back", motion=0),
+            CueState(dim={}, color="노랑", pos="back", motion=2),
+            CueState(dim={}, color="노랑", pos="back", motion=0),
+            CueState(dim={}, color="흰색", pos="audience", motion=3),
+        ]
+        remaining = remaining_motion_before_final(states, 3)
+        result = g4_final_new_axis_and_headroom(pairs, before_final_remaining_motion=remaining)
+>       assert remaining == 1
+E       assert 3 == 1
+
+server/tests/test_concept_escalation.py:256: AssertionError
+____ TestBuildChorusSnapshotsIntegration.test_rain_pairs_all_pass_g2_g3_g4 _____
+
+self = <server.tests.test_concept_escalation.TestBuildChorusSnapshotsIntegration object at 0x10be43250>
+
+    def test_rain_pairs_all_pass_g2_g3_g4(self) -> None:
+        raw = [
+            ("Intro", "0:00", "0:20"),
+            ("Verse", "0:20", "0:33"),
+            ("Verse", "0:33", "0:49"),
+            ("Chorus", "0:49", "1:06"),
+            ("Chorus", "1:06", "1:19"),
+            ("Verse", "1:19", "1:46"),
+            ("Chorus", "1:46", "2:03"),
+            ("Chorus", "2:03", "2:18"),
+            ("Chorus", "2:18", "2:46"),
+            ("Verse", "2:46", "2:59"),
+            ("Chorus", "2:59", "3:29"),
+            ("Outro", "3:29", "3:42"),
+        ]
+    
+        def mmss(text: str) -> float:
+            m, s = text.split(":")
+            return float(int(m) * 60 + int(s))
+    
+        chorus_positions = [i for i, (n, _, _) in enumerate(raw) if n == "Chorus"]
+        last_chorus = chorus_positions[-1]
+        occurrence_by_name: dict[str, int] = {}
+        sections = []
+        for i, (name, start, end) in enumerate(raw):
+            label = "Final Chorus" if (name == "Chorus" and i == last_chorus) else name
+            occurrence_by_name[label] = occurrence_by_name.get(label, 0) + 1
+            sections.append(
+                SectionOccurrence(
+                    section=label,
+                    occurrence=occurrence_by_name[label],
+                    start=mmss(start),
+                    end=mmss(end),
+                )
+            )
+    
+        result = compile_density(sections, 76.0)
+        states = resolve_sequence(result.sequence)
+        snapshots = build_chorus_snapshots(result.sequence, states, total_groups=len(GROUP_ROSTER))
+        pairs = check_pairs(snapshots)
+    
+        assert g2_identity(pairs).passed is True
+        assert g3_new_axis_within_five(pairs).passed is True
+    
+        final_index = next(
+            i
+            for i, row in enumerate(result.sequence)
+            if row["section"] == "Final Chorus" and row["kind"] == "section"
+        )
+        # 새 정의(REQ-044/048, 카드 t439) — 직전 한 줄이 아니라 피날레
+        # 이전 전체 최대 모션 단계를 쓴다. Rain 은 3~5 회차 후렴에서
+        # 이미 모션 2 를 쓰므로(density.distribute_motion_steps 가
+        # 마지막 회차 이전엔 max_motion-1 을 넘지 않게 분배한다) 여유는
+        # 1 — 직전 한 줄(Verse, 모션 0)만 읽던 옛 정의의 여유 3 과 다르다.
+        before_final_motion = remaining_motion_before_final(states, final_index)
+>       assert before_final_motion == 1
+E       assert 3 == 1
+
+server/tests/test_concept_escalation.py:402: AssertionError
+_ TestFabricatedControlProbe.test_forcing_motion_3_before_final_chorus_flips_g4_to_fail _
+
+self = <server.tests.test_concept_gates.TestFabricatedControlProbe object at 0x10bf2a1d0>
+
+    def test_forcing_motion_3_before_final_chorus_flips_g4_to_fail(self) -> None:
+        """Rain 은 G4 PASS(피날레 이전 최대 모션 2, 여유 1). 피날레
+        바로 앞 절의 ``sections`` 원시 구간 시작·끝 시각을 조작해 모션
+        3 이 이미 쓰인 뒤에도 피날레가 여전히 등장하는 형태를 만들 수는
+        없으므로(모션 자체가 density.py 파생값), 대신 원시 곡의 BPM을
+        극단적으로 낮춰 모든 후렴이 4마디 미만이 되게 해 회차 분배
+        (``distribute_motion_steps``)가 최종 회차를 1 회차짜리로 만들고
+        (n=1 일 때 바로 max_motion) 직전 회차가 max_motion-1 이 아니라
+        더 낮은 값에서 max_motion 으로 건너뛰는 시나리오 대신, 가장
+        직접적인 방법 — :func:`server.concept.escalation.
+        remaining_motion_before_final` 자체를 모션 3 을 미리 쓴 상태
+        목록으로 직접 호출해 G4 가 진짜로 FAIL 로 뒤집히는지 확인한다
+        (이 함수는 t439 스텝 ①에서 이미 단위 시험됐지만, 여기서는
+        "곡 파이프라인이 그 반환값을 실제로 게이트에 반영하는지"까지
+        한 번 더 확인하는 통합 대조군이다)."""
+        from server.concept.escalation import (
+            g4_final_new_axis_and_headroom,
+            remaining_motion_before_final,
+        )
+        from server.concept.gates import build_song
+    
+        rain = _SONGS_BY_NAME["Rain.mp3"]
+        build = build_song(rain)
+        assert build.final_index is not None
+    
+        # 정상 경로 — 여유 1, PASS(오늘 측정치와 일치).
+        remaining_ok = remaining_motion_before_final(build.states, build.final_index)
+>       assert remaining_ok == 1
+E       assert 3 == 1
+
+server/tests/test_concept_gates.py:439: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_concept_escalation.py::TestRemainingMotionBeforeFinal::test_immediate_row_is_low_but_an_earlier_cue_already_maxed_motion
+FAILED server/tests/test_concept_escalation.py::TestRemainingMotionBeforeFinal::test_max_prior_motion_two_leaves_exactly_one
+FAILED server/tests/test_concept_escalation.py::TestRemainingMotionBeforeFinal::test_g4_fails_when_earlier_motion_already_exhausted_even_with_new_axis
+FAILED server/tests/test_concept_escalation.py::TestRemainingMotionBeforeFinal::test_g4_passes_when_max_prior_motion_leaves_one
+FAILED server/tests/test_concept_escalation.py::TestBuildChorusSnapshotsIntegration::test_rain_pairs_all_pass_g2_g3_g4
+FAILED server/tests/test_concept_gates.py::TestFabricatedControlProbe::test_forcing_motion_3_before_final_chorus_flips_g4_to_fail
+6 failed, 50 passed in 0.11s

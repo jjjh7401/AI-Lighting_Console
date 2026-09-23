@@ -1,0 +1,57 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_ TestConceptReportKeyIsAlwaysPresentOnTimelinePayload.test_bpm_declared_payload_has_concept_report _
+
+self = <server.tests.test_song_timeline_concept_report_wiring.TestConceptReportKeyIsAlwaysPresentOnTimelinePayload object at 0x10a66d610>
+
+    def test_bpm_declared_payload_has_concept_report(self) -> None:
+        sections = (
+            _section(1, "Intro", 0, 13_000),
+            _section(2, "Verse", 13_000, 26_000),
+            _section(3, "Chorus 1", 26_000, 39_000),
+            _section(4, "Finale", 39_000, None),
+        )
+        payload = _payload(bpm=120.0, sections=sections)
+    
+>       assert "concept_report" in payload
+E       AssertionError: assert 'concept_report' in {'song_title': 'Timeline Wiring Test', 'sequence_name': 'Timeline Wiring Seq', 'sequence_number': 1, 'timing_mode': 'timecode', ...}
+
+server/tests/test_song_timeline_concept_report_wiring.py:90: AssertionError
+_ TestConceptReportKeyIsAlwaysPresentOnTimelinePayload.test_bpm_undeclared_payload_still_has_concept_report_unavailable _
+
+self = <server.tests.test_song_timeline_concept_report_wiring.TestConceptReportKeyIsAlwaysPresentOnTimelinePayload object at 0x10b15a110>
+
+    def test_bpm_undeclared_payload_still_has_concept_report_unavailable(self) -> None:
+        sections = (_section(1, "Intro", 0, 13_000), _section(2, "Verse", 13_000, None))
+        payload = _payload(bpm=None, sections=sections)
+    
+>       assert payload["concept_report"] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+            "available": False,
+            "reason": "BPM이 선언되지 않았다 — 컨셉 파이프라인의 마디 계산 전제가 없다",
+        }
+E       KeyError: 'concept_report'
+
+server/tests/test_song_timeline_concept_report_wiring.py:98: KeyError
+_ TestConceptReportIsAdditiveNotBreaking.test_concept_report_does_not_change_section_payload_shape _
+
+self = <server.tests.test_song_timeline_concept_report_wiring.TestConceptReportIsAdditiveNotBreaking object at 0x10b15a810>
+
+    def test_concept_report_does_not_change_section_payload_shape(self) -> None:
+        # 이 픽스처는 이 카드가 실측한 gates.py 사각지대(Outro 없이 곡이
+        # 끝남 — g9 이 예외)를 일부러 재현한다: concept_report 는
+        # available:False 지만, 그와 무관하게 sections 페이로드(기존
+        # `_song_timeline_payload` 필드)는 손상되지 않는다.
+        sections = (_section(1, "Intro", 0, 13_000), _section(2, "Chorus 1", 13_000, None))
+        payload = _payload(bpm=100.0, sections=sections)
+    
+>       assert payload["concept_report"]["available"] is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'concept_report'
+
+server/tests/test_song_timeline_concept_report_wiring.py:113: KeyError
+=========================== short test summary info ============================
+FAILED server/tests/test_song_timeline_concept_report_wiring.py::TestConceptReportKeyIsAlwaysPresentOnTimelinePayload::test_bpm_declared_payload_has_concept_report
+FAILED server/tests/test_song_timeline_concept_report_wiring.py::TestConceptReportKeyIsAlwaysPresentOnTimelinePayload::test_bpm_undeclared_payload_still_has_concept_report_unavailable
+FAILED server/tests/test_song_timeline_concept_report_wiring.py::TestConceptReportIsAdditiveNotBreaking::test_concept_report_does_not_change_section_payload_shape
+3 failed in 0.47s

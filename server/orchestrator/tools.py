@@ -23,6 +23,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
+from server.concept.session_bridge import build_concept_report_from_songcue_sections
 from server.design.capability_verdict import group_capability_source
 from server.design.override_look import (
     DEFAULT_OVERRIDE_SLOTS,
@@ -3191,6 +3192,22 @@ def build_toolset(
             "song_end_ms": density_end_ms,
             "notes": list(density_notes),
         }
+        # 카드 t439 — SPEC-LDDESIGN-001 M6 §④b. 컨셉 v2 파이프라인(13게이트·
+        # MIB·린트/에너지)을 이 곡에 대해 돌려 부가 정보로 붙인다. ADDITIVE 다
+        # — 아래 사다리 경로(`build_songcue_bundle`)가 오늘 내는 콘솔 명령은
+        # 이 값과 무관하게 그대로 나간다. `songconfirm_fields` 에 실어 두면
+        # 성공/무명령 두 반환 갈래 모두에 자동으로 실린다(둘 다
+        # `songconfirm_fields` 를 펼친다). 실패해도(`build_concept_report_
+        # from_songcue_sections` 는 예외를 밖으로 안 낸다, `server/concept/
+        # session_bridge.py` 독스트링) `available: False` 로 계속 진행된다.
+        songconfirm_fields["concept_report"] = build_concept_report_from_songcue_sections(
+            song_title,
+            density_bpm,
+            [
+                (f"{item.section.label} {item.section.instance}".strip(), item.section.start_ms)
+                for item in selections
+            ],
+        )
         missing = [section for section in SONGCUE_RIG_SECTIONS if section not in rig_paths]
         if missing:
             return _error_result(

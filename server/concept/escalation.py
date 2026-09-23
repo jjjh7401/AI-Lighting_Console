@@ -30,6 +30,7 @@ __all__ = [
     "g3_new_axis_within_five",
     "g4_final_new_axis_and_headroom",
     "g49_stagnation_is_normal",
+    "remaining_motion_before_final",
 ]
 
 # REQ-043 여섯 축 — 이 이름 다섯 + "density"(프레이즈 밀도)가 전부다.
@@ -196,6 +197,42 @@ def g3_new_axis_within_five(pairs: Sequence[ChorusPair]) -> GateResult:
         return GateResult(None, "후렴 쌍 없음(구조상 n/a)")
     early_flat = [pair for pair in pairs if pair.curr.round_number <= 5 and not pair.axes]
     return GateResult(len(early_flat) == 0, f"새 축 0인 쌍(5회차 이내) {len(early_flat)}개")
+
+
+def remaining_motion_before_final(
+    states: Sequence[CueState],
+    final_chorus_index: int | None,
+    *,
+    max_motion: int = 3,
+) -> int | None:
+    """REQ-044/048 재정의(카드 t439, 리드 결정) — G4 가 읽을 "피날레
+    직전까지 남은 모션 단계"를 낸다.
+
+    "직전 한 줄"의 모션이 아니라 **Final Chorus 이전에 등장한 모든 큐
+    중 최대 모션 단계**를 기준으로 삼는다 — 피날레 바로 앞 한 줄이
+    절·프리코러스처럼 모션을 0 으로 낮춰도, 그 전에 이미 모션을
+    최대치까지 썼다는 사실이 그 한 줄 뒤에 가려지지 않게 하기 위함이다.
+    옛 정의(``states[index - 1].motion`` 한 줄만 읽음)는 이 창을 놓쳐,
+    마지막 절·브릿지가 모션 0 으로 복귀한 곡(Morning·Rain 실측)에서
+    실제로는 이미 소진된 여유를 3 으로 오판했다.
+
+    Args:
+        states: :func:`server.concept.resolver.resolve_sequence` 가 낸
+            전체 큐 상태 목록(구간+프레이즈 전부, ``ts`` 오름차순).
+        final_chorus_index: ``states`` 안에서 Final Chorus 구간 큐의
+            인덱스. 그 앞(``states[:final_chorus_index]``)만 판정
+            대상이다 — 그 인덱스 자신(피날레 자신의 모션)은 포함하지
+            않는다.
+        max_motion: 모션 단계 상한(기본 3).
+
+    Returns:
+        ``final_chorus_index`` 가 ``None`` 이거나 0 이하이면(Final
+        Chorus 가 곡 첫 큐거나 찾지 못했으면) ``None`` — 판정 불가.
+    """
+    if final_chorus_index is None or final_chorus_index <= 0:
+        return None
+    used = max((state.motion for state in states[:final_chorus_index]), default=0)
+    return max_motion - used
 
 
 def g4_final_new_axis_and_headroom(
