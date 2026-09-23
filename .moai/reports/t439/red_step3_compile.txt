@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+____________ ERROR collecting server/tests/test_concept_compile.py _____________
+ImportError while importing test module '/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-acbcd3d5b7cbc951f/server/tests/test_concept_compile.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/tests/test_concept_compile.py:28: in <module>
+    from server.concept import compile as compile_module
+E   ImportError: cannot import name 'compile' from 'server.concept' (/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-acbcd3d5b7cbc951f/server/concept/__init__.py)
+=========================== short test summary info ============================
+ERROR server/tests/test_concept_compile.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.06s

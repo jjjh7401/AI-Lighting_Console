@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+_ ERROR collecting server/tests/test_concept_density_mover_reposition_condition.py _
+ImportError while importing test module '/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-acbcd3d5b7cbc951f/server/tests/test_concept_density_mover_reposition_condition.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/tests/test_concept_density_mover_reposition_condition.py:23: in <module>
+    from server.concept.density import (
+E   ImportError: cannot import name '_movers_need_repositioning' from 'server.concept.density' (/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-acbcd3d5b7cbc951f/server/concept/density.py)
+=========================== short test summary info ============================
+ERROR server/tests/test_concept_density_mover_reposition_condition.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.07s

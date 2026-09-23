@@ -1,0 +1,53 @@
+FFF.                                                                     [100%]
+=================================== FAILURES ===================================
+_ TestConceptReportKeyIsAlwaysPresent.test_bpm_declared_payload_has_concept_report _
+
+self = <server.tests.test_songcue_concept_report_wiring.TestConceptReportKeyIsAlwaysPresent object at 0x10d3c48d0>
+
+    def test_bpm_declared_payload_has_concept_report(self) -> None:
+        port, payload, execution = _run(bpm=120.0)
+        assert not execution.result.is_error, execution.result.content
+>       assert "concept_report" in payload
+E       assert 'concept_report' in {'all_ok': True, 'commands': [{'command': 'ChangeDestination Root', 'status': 'executed_ok', 'detail': 'OK'}, {'comman...' At 52", 'status': 'executed_ok', 'detail': 'OK'}, ...], 'executed': True, 'song_title': 'Concept Report Wiring', ...}
+
+server/tests/test_songcue_concept_report_wiring.py:69: AssertionError
+_ TestConceptReportKeyIsAlwaysPresent.test_bpm_undeclared_payload_still_has_concept_report_unavailable _
+
+self = <server.tests.test_songcue_concept_report_wiring.TestConceptReportKeyIsAlwaysPresent object at 0x10d3c5610>
+
+    def test_bpm_undeclared_payload_still_has_concept_report_unavailable(self) -> None:
+        port, payload, execution = _run(bpm=None)
+        assert not execution.result.is_error, execution.result.content
+>       assert payload["concept_report"] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+            "available": False,
+            "reason": "BPM이 선언되지 않았다 — 컨셉 파이프라인의 마디 계산 전제가 없다",
+        }
+E       KeyError: 'concept_report'
+
+server/tests/test_songcue_concept_report_wiring.py:75: KeyError
+_ TestConceptReportIsAdditiveNotBreaking.test_concept_report_unavailable_does_not_block_console_commands _
+
+self = <server.tests.test_songcue_concept_report_wiring.TestConceptReportIsAdditiveNotBreaking object at 0x10d3c5d90>
+
+    def test_concept_report_unavailable_does_not_block_console_commands(self) -> None:
+        port, payload, execution = _run(bpm=120.0)
+        assert not execution.result.is_error, execution.result.content
+        # 이 카드가 실측한 사각지대(모듈 독스트링 — 6연속 Chorus 는 Outro
+        # 없이 끝나 g9 이 예외를 던진다) — 그래도 콘솔 명령은 나갔다.
+>       assert payload["concept_report"]["available"] is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'concept_report'
+
+server/tests/test_songcue_concept_report_wiring.py:91: KeyError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-acbcd3d5b7cbc951f/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED server/tests/test_songcue_concept_report_wiring.py::TestConceptReportKeyIsAlwaysPresent::test_bpm_declared_payload_has_concept_report
+FAILED server/tests/test_songcue_concept_report_wiring.py::TestConceptReportKeyIsAlwaysPresent::test_bpm_undeclared_payload_still_has_concept_report_unavailable
+FAILED server/tests/test_songcue_concept_report_wiring.py::TestConceptReportIsAdditiveNotBreaking::test_concept_report_unavailable_does_not_block_console_commands
+3 failed, 1 passed, 1 warning in 2.13s
