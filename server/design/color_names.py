@@ -144,3 +144,15 @@ def resolve_color_name(value: str) -> tuple[int, int, int] | None:
             return hit
 
     return None
+
+
+def color_hex(value: str) -> str | None:
+    """색 이름 → 화면용 ``#RRGGBB``. :func:`resolve_color_name` 이 못 찾으면 ``None``.
+
+    카드 t456 — 런북 화면이 색 표를 따로 들고 있지 않도록 서버가 HEX 까지
+    내보낸다. 0-100 백분율을 0-255 로 반올림할 뿐 값을 새로 짓지 않는다.
+    """
+    rgb = resolve_color_name(value)
+    if rgb is None:
+        return None
+    return "#" + "".join(f"{round(channel * 255 / 100):02X}" for channel in rgb)

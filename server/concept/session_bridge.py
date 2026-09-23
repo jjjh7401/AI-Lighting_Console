@@ -57,13 +57,24 @@ False`` 와 사유를 담은 리포트를 낸다(가짜 값을 만들지 않는�
 - BPM 이 선언되지 않았으면 컨셉 파이프라인을 아예 돌리지 않는다 —
   ``density.bar_seconds`` 가 마디 계산의 전제로 삼는 값이 기본값(120)
   추정이면 판정 자체가 근거 없는 값 위에 선다.
-- 곡이 (프레이즈 층의) ``cue_only`` 큐 바로 뒤에서 끝나면(Outro 없이
-  Chorus 로 곡이 끝나는 등) gates.py 자신의 기존 g9 검사가
-  ``VocabError`` 를 던진다 — 이 다리의 새 실패 모드가 아니라 gates.py
-  의 기존 사각지대이고(``test_concept_session_bridge.py``
-  ``TestSongEndingOnCueOnlyPhraseIsCaughtNotRaised`` 가 문서화), 이
-  다리는 그것을 ``available: False`` 로 삼켜 콘솔 명령 경로를 막지
-  않는다.
+- (해소됨, 카드 t452 · PR #500) 곡이 (프레이즈 층의) ``cue_only`` 큐 바로
+  뒤에서 끝나면(Outro 없이 Chorus 로 곡이 끝나는 등) gates.py 의 g9 검사가
+  ``VocabError`` 를 던졌다 — 기준 이름을 마지막 track 행에 붙여 고쳤다
+  (``test_concept_session_bridge.py`` ``TestSongEndingOnCueOnlyPhraseIsJudged``).
+
+**행 단위 표(카드 t455).** 리포트의 ``rows`` 는 컨셉 큐 한 줄에 한 행이고,
+``screen_position`` 으로 화면 구간(이 다리에 넘어온 구간 목록의 0-base
+위치 — ``_song_timeline_payload`` 의 ``sections`` 와 같은 순서)과 짝을
+짓는다. 짝 규칙(리드 승인 2026-09-23): k번째 section 행 ↔ 구간 k(순서
+기준), phrase 행은 바로 앞 section 행의 구간, safety 행은 ``None``, 원샷은
+ts 가 같은 section 행에 붙는다. 시각 기준은 쓰지 않는다 —
+:func:`_mmss_from_ms` 가 ms 를 초 단위로 버리므로 15.5초에 시작하는 구간의
+행이 ts 15 가 되어 앞 구간에 붙는다. 이름+회차 기준도 쓰지 않는다 —
+``Pre-Chorus`` 는 화면 구간 이름이 아니고, 재매핑이 이름을 바꾼다(예:
+``Outro`` → ``Rap/Solo/Dance Break``). section 행 수와 구간 수가 다르면
+짝을 짓지 않는다(``row_pairing.available: False``, 모든 행 ``None``).
+근거 등급(``evidence``)은 큐마다 등급을 매기는 생산자가 없어 전 행
+``None`` 이다(생산자 배선은 카드 t457).
 """
 
 from __future__ import annotations
@@ -71,7 +82,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from server.concept.compile import compile_song
-from server.concept.gates import build_song, evaluate_song
+from server.concept.gates import SongBuild, build_song, evaluate_song
 from server.design.song_plan import UnifiedSongLightingPlan
 
 __all__ = ["build_concept_report", "build_concept_report_from_songcue_sections"]
@@ -133,6 +144,46 @@ def _raw_sections_from_pairs(
     return raw
 
 
+def _concept_rows(
+    build: SongBuild, *, screen_count: int
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    """카드 t455 — 컨셉 큐 행 표와 화면 구간 짝짓기(규칙은 모듈 독스트링)."""
+    section_count = sum(1 for row in build.table if row.kind == "section")
+    paired = section_count == screen_count
+    shots = {
+        float(shot["ts"]): {"shot": shot["shot"], "target": shot["target"]}
+        for shot in build.one_shots
+    }
+    rows: list[dict[str, object]] = []
+    position: int | None = None
+    seen_sections = 0
+    for row, verdict in zip(build.table, build.mib, strict=True):
+        if row.kind == "section":
+            position = seen_sections
+            seen_sections += 1
+        rows.append(
+            {
+                "q": row.q,
+                "ts": row.ts,
+                "kind": row.kind,
+                "section": row.section,
+                "occurrence": row.occurrence,
+                "trigger": row.trigger,
+                "tracking": row.tracking,
+                "mib": None if verdict is None else verdict.status,
+                "one_shot": shots.get(row.ts) if row.kind == "section" else None,
+                "evidence": None,
+                "screen_position": (position if paired and row.kind != "safety" else None),
+            }
+        )
+    reason = (
+        None
+        if paired
+        else f"컨셉 구간 행 {section_count}개와 화면 구간 {screen_count}개가 짝이 안 맞는다"
+    )
+    return rows, {"available": paired, "reason": reason}
+
+
 def _run_concept_pipeline(
     song_title: str,
     bpm: float | None,
@@ -159,6 +210,7 @@ def _run_concept_pipeline(
         build = build_song(raw_song)
         gates = evaluate_song(raw_song, color_usage=color_usage)
         compiled = compile_song(build)
+        rows, row_pairing = _concept_rows(build, screen_count=len(raw_sections))
     except Exception as error:  # noqa: BLE001 — 컨셉 리포트는 부가 정보다,
         # 실패해도 기존 콘솔 명령 경로를 막지 않는다(ADDITIVE 원칙,
         # 모듈 독스트링 참고).
@@ -176,6 +228,8 @@ def _run_concept_pipeline(
         "lint_finding_count": len(compiled.lint_report.findings),
         "lint_disabled_rule_count": len(compiled.lint_report.disabled_rules),
         "energy_report_count": len(compiled.energy_reports),
+        "rows": rows,
+        "row_pairing": row_pairing,
     }
 
 

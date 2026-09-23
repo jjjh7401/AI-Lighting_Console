@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+_______ ERROR collecting server/tests/test_runbook_payload_t455_t456.py ________
+ImportError while importing test module '/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t455/server/tests/test_runbook_payload_t455_t456.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/tests/test_runbook_payload_t455_t456.py:21: in <module>
+    from server.concept.session_bridge import _concept_rows, _raw_sections_from_pairs
+E   ImportError: cannot import name '_concept_rows' from 'server.concept.session_bridge' (/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t455/server/concept/session_bridge.py)
+=========================== short test summary info ============================
+ERROR server/tests/test_runbook_payload_t455_t456.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.09s
