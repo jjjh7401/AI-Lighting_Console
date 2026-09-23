@@ -9,9 +9,9 @@
   B chorus   — section_names = pilot_baseline 의 'Chorus 1'/'Chorus 2'… 회차별 라벨
                (#475 가 고친 결함 형상). 구간 수가 안 맞으면 규칙 이름으로 대체하고 표시.
 """
+
 from __future__ import annotations
 
-import base64
 import json
 import sys
 import traceback
@@ -73,8 +73,11 @@ def fire(song, record, genre, names):
     try:
         execution = registry.dispatch(ToolCall(id="t429", name="prepare_songcue", arguments=args))
     except Exception as error:  # 예외는 데이터로 남긴다
-        return {"result": "EXC", "detail": f"{type(error).__name__}: {error}"[:300],
-                "trace": traceback.format_exc()[-800:]}
+        return {
+            "result": "EXC",
+            "detail": f"{type(error).__name__}: {error}"[:300],
+            "trace": traceback.format_exc()[-800:],
+        }
     content = execution.result.content
     try:
         payload = json.loads(content)
@@ -94,7 +97,13 @@ for path in sorted(MUSIC.iterdir()):
     song = path.name
     outcome = analyze(path.read_bytes())
     if not isinstance(outcome, AnalysisResult):
-        rows.append({"song": song, "analysis": "REJECT", "reason": getattr(outcome, "reason", repr(outcome))})
+        rows.append(
+            {
+                "song": song,
+                "analysis": "REJECT",
+                "reason": getattr(outcome, "reason", repr(outcome)),
+            }
+        )
         continue
     proposals = tuple(
         SongSectionProposal(start_ms=c.start_ms, end_ms=c.end_ms, d_level=c.d_level)
@@ -108,30 +117,64 @@ for path in sorted(MUSIC.iterdir()):
         bpm=BpmResolution(bpm=outcome.bpm, source="measured", reason="t429 probe"),
         sections=tuple(
             ConfirmedSongSection(
-                index=i, label=lab, start_ms=p.start_ms, end_ms=p.end_ms,
-                d_level=p.d_level, selected=True, label_shared=labels.count(lab) > 1,
+                index=i,
+                label=lab,
+                start_ms=p.start_ms,
+                end_ms=p.end_ms,
+                d_level=p.d_level,
+                selected=True,
+                label_shared=labels.count(lab) > 1,
             )
-            for i, (p, lab) in enumerate(zip(proposals, labels))
+            for i, (p, lab) in enumerate(zip(proposals, labels, strict=True))
         ),
     )
     base = baseline.get(song)
-    base_names = [x["baseline_name"] for x in base["sections"]] if base and "sections" in base else []
+    base_names = (
+        [x["baseline_name"] for x in base["sections"]] if base and "sections" in base else []
+    )
     if len(base_names) == len(proposals):
         chorus_names, chorus_src = base_names, "pilot_baseline"
     else:
-        chorus_names, chorus_src = rule_names(proposals), f"rule(baseline {len(base_names)}≠{len(proposals)})"
+        chorus_names, chorus_src = (
+            rule_names(proposals),
+            f"rule(baseline {len(base_names)}≠{len(proposals)})",
+        )
     n_chorus = sum(1 for n in chorus_names if n.startswith("Chorus"))
     for genre in GENRES:
         for arm, names in (("A_default", None), ("B_chorus", chorus_names)):
             r = fire(song, record, genre, names)
-            rows.append({
-                "song": song, "bpm": outcome.bpm, "sections": len(proposals),
-                "chorus_labels": n_chorus, "names_src": None if names is None else chorus_src,
-                "genre": genre, "arm": arm, **r,
-            })
+            rows.append(
+                {
+                    "song": song,
+                    "bpm": outcome.bpm,
+                    "sections": len(proposals),
+                    "chorus_labels": n_chorus,
+                    "names_src": None if names is None else chorus_src,
+                    "genre": genre,
+                    "arm": arm,
+                    **r,
+                }
+            )
 
 for r in rows:
-    print(" | ".join(str(r.get(k, "")) for k in
-                     ("song", "analysis", "bpm", "sections", "chorus_labels", "genre", "arm",
-                      "result", "cues", "stores", "names_src", "reason", "detail")))
+    print(
+        " | ".join(
+            str(r.get(k, ""))
+            for k in (
+                "song",
+                "analysis",
+                "bpm",
+                "sections",
+                "chorus_labels",
+                "genre",
+                "arm",
+                "result",
+                "cues",
+                "stores",
+                "names_src",
+                "reason",
+                "detail",
+            )
+        )
+    )
 Path(OUT).write_text(json.dumps(rows, ensure_ascii=False, indent=1))
