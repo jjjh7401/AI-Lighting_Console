@@ -93,6 +93,10 @@ def check_reserved_color_release(
     ``cues`` 는 곡 진행 순서(시간순)로 이미 정렬돼 있다고 가정한다 — 실제
     파이프라인이 만드는 큐 목록의 자연스러운 순서이며, 이 함수는 그 순서를
     다시 만들지 않는다.
+
+    층을 가리지 않는다 — REQ-027 은 "그 색을 쓰는 큐"다. 구간 큐로 좁히는
+    것은 Color Strip(REQ-033)만의 경계이고, 해제 전 원샷 한 방도 유보를
+    깬다(카드 t436 리뷰에서 실측으로 잡은 구멍).
     """
     reserved_norm = {_normalize_color_name(color) for color in reserved}
     if not reserved_norm:
@@ -100,7 +104,7 @@ def check_reserved_color_release(
 
     violations: list[ColorLintViolation] = []
     released = False
-    for cue in _section_cues(cues):
+    for cue in cues:
         is_release_cue = cue.section == release_section and (
             release_occurrence is None or cue.occurrence == release_occurrence
         )

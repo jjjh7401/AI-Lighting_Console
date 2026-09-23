@@ -84,11 +84,29 @@ class TestReservedColorRelease:
         result = check_reserved_color_release(cues, reserved=(), release_section="Final Chorus")
         assert result.status == "pass"
 
-    def test_phrase_and_one_shot_cues_are_ignored(self):
+    def test_phrase_and_one_shot_cues_before_release_are_violations(self):
+        # REQ-027 은 "그 색을 쓰는 큐"라 층을 가리지 않는다 — 구간 큐로 좁히는
+        # 것은 Color Strip(REQ-033)만의 경계다. 해제 전 원샷 흰색 한 방도
+        # 유보를 깬다(REQ-093 (3) 리저브 경고와 같은 방향, 카드 t436 리뷰).
         cues = [
             _cue("Verse", 1, colors=("Red",), layer="phrase"),
             _cue("Chorus", 1, colors=("Red",), layer="one_shot"),
             _cue("Final Chorus", 1, colors=("Red",)),
+        ]
+        result = check_reserved_color_release(
+            cues, reserved=("Red",), release_section="Final Chorus"
+        )
+        assert result.status == "fail"
+        assert [(v.section, v.occurrence) for v in result.violations] == [
+            ("Verse", 1),
+            ("Chorus", 1),
+        ]
+
+    def test_one_shot_at_or_after_release_passes(self):
+        cues = [
+            _cue("Verse", 1, colors=("Blue",)),
+            _cue("Final Chorus", 1, colors=("Red",)),
+            _cue("Final Chorus", 1, colors=("Red",), layer="one_shot"),
         ]
         result = check_reserved_color_release(
             cues, reserved=("Red",), release_section="Final Chorus"
