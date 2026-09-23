@@ -4,8 +4,12 @@
 
 ### M2 큐 모델 v2 (REQ-LDDESIGN-017~025, 카드 t434)
 
-워크트리 `.claude/worktrees/agent-ab022cd89989adcf7` · 브랜치
-`WT-lddesign-cue-model` · TDD 사이클(RED→GREEN).
+워크트리 `.claude/worktrees/t434` · 브랜치 `WT-lddesign-cue-model` · TDD 사이클(RED→GREEN).
+
+> **정정(lane-1, 2026-09-23)**: 구현 에이전트는 실제로는 자기 워크트리
+> (`agent-ab022cd89989adcf7`, 브랜치 `worktree-agent-ab022cd89989adcf7`, 기준
+> `7a5432a7`)에 커밋했다. 레인이 그 3커밋을 `origin/main@20c027ff`(PR #478 머지
+> 포함) 위로 cherry-pick 했고, 아래 GREEN 수치는 그 병합 트리에서 다시 잰 값이다.
 
 **Claim**: `.moai/state/verify/f12e5c95-t429/final_integrated.py`(프로토타입)의
 `State`/`apply()`(17~41행)·시퀀스 해석(102~108행)·MIB 판정(110~117행)·
@@ -25,7 +29,7 @@ design.md §1 의 `CueV2` 타입 스케치를 그대로 옮기되, 아래 "결�
   `compute_headroom()`·`section_base_name()`.
 - `server/concept/description.py` — `describe()`(결정론적 한국어
   description, 절대 빈 문자열 아님).
-- `server/tests/test_concept_resolver.py` — 시험 46건(아래 집계).
+- `server/tests/test_concept_resolver.py` — 시험 40건(`--collect-only` 실측).
 - `server/concept/__init__.py` — 헤더 주석에 M2 3모듈 추가(주석만).
 
 #### Evidence — RED (실제 출력, 구현 파일 3개를 스크래치패드로 옮긴 뒤)
@@ -49,8 +53,9 @@ $ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_
 141 passed in 0.33s
 ```
 
-신규 시험 46건(`test_concept_resolver.py`) + 기존 M1 시험 95건(vocab
-54건 + worksheet 41건, 이 카드가 손대지 않음) = 141. M1 시험은 이 카드가
+신규 시험 40건(`test_concept_resolver.py`) + 기존 M1 시험 101건(vocab
++ worksheet, 이 카드가 손대지 않음) = 141. (정정: 에이전트 원 기록은 46+95 였으나
+`uv run pytest <파일> --collect-only -q` 실측은 40 / 101.) M1 시험은 이 카드가
 회귀시키지 않았다(그대로 전부 통과).
 
 #### Evidence — 린트 (실제 출력)
@@ -136,19 +141,10 @@ m1_to_mN_commit_strategy: "M1(REQ-005~016, 이 SPEC 밖 선행 카드) 완료 �
 
 ## §E.4 — Gaps(명시적으로 안 잰 것) · Residual-risk
 
-- 🔴 **이 워크트리의 기준선은 착수 시점에 `origin/main` 보다 7커밋
-  뒤졌다.** 착수 중 `git fetch origin main && git rev-list --count
-  --left-right origin/main...HEAD` → `7 0`(origin 이 7 앞섬, 이 트리의
-  로컬 전용 커밋은 0 — diverge 아니라 순수 지연). `git diff --name-only
-  HEAD origin/main`으로 겹치는 파일을 직접 대조: `server/concept/` 전체
-  0건 겹침, 유일한 겹침은 `.moai/specs/SPEC-LDDESIGN-001/spec.md`이고
-  그 diff(§4 "색 표현 방식 확장" 절 신설 + §5 흰색 판정 보류 기록)는
-  이 카드가 건드린 frontmatter 두 줄(`status`/`updated`)과 라인이 겹치지
-  않는다(직접 `git diff` 로 읽어 확인). **이 카드는 지시대로 push·PR·
-  다른 워크트리 접근을 하지 않았으므로 `origin/main` 을 이 브랜치에
-  병합하지 않았다** — 병합하면 이 카드가 검증하지 않은 변경(색 경로
-  M2 하위 스레드)까지 이 카드의 커밋 범위로 끌어들이게 된다. 이 지연은
-  머지 전 리드/오케스트레이터가 판단할 잔여 위험으로 남긴다.
+- **기준선 지연(해소됨).** 에이전트 트리는 `origin/main` 보다 7커밋 뒤였다(`7 0`).
+  레인이 `origin/main@20c027ff` 로 fast-forward 한 뒤 3커밋을 cherry-pick 해서
+  해소했다 — 충돌 0. 병합 트리에서 시험 161 passed(concept 3파일 +
+  `test_song_cue_color_emission.py`), ruff 통과(`.moai/reports/t434/pytest_concept.txt`).
 - **M2 "큐 경로 단일화" 는 별도 M2 하위 스레드이고, `origin/main` 에서
   이미 진행됐다** — 이 카드(큐 모델 v2, REQ-017~025)와는 다른 작업이다.
   `origin/main` 의 `reports/lddesign-m2-cue-path/README.md`를 직접
