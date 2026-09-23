@@ -1,0 +1,32 @@
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7
+    wire: Plugin "CopilotResponder" "state 98105fe4 Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7"
+<<< {"children": [{"class": "LogicalChannel", "i": 1, "name": "COLORMIXER"}], "id": "98105fe4", "kind": "state", "node": {"childCount": 1, "class": "DMXChannel", "enumeration": "ok", "name": "Main Module#2_COLORMIXER"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1
+    wire: Plugin "CopilotResponder" "state ca6bed0f Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "ColorMacro 1"}, {"class": "ChannelFunction", "i": 2, "name": "ColorMacro 2"}, {"class": "ChannelFunction", "i": 3, "name": "ColorMacro 3"}, {"class": "ChannelFunction", "i": 4, "name": "COLORMIXCYCLE 4"}, {"class": "ChannelFunction", "i": 5, "name": "COLORMIXRANDOM 5"}], "id": "ca6bed0f", "kind": "state", "node": {"childCount": 5, "class": "LogicalChannel", "enumeration": "ok", "name": "COLORMIXER"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1/1|NAME,DEFAULT,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 44aca66f NAME,DEFAULT,DMXFROM,DMXTO Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1/1"
+<<< {"id": "44aca66f", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "ColorMacro 1"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "0"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "657930"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1/1
+    wire: Plugin "CopilotResponder" "state 0f652051 Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "Normal"}], "id": "0f652051", "kind": "state", "node": {"childCount": 1, "class": "ChannelFunction", "enumeration": "ok", "name": "ColorMacro 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3
+    wire: Plugin "CopilotResponder" "state 826d1b30 Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3"
+<<< {"children": [{"class": "LogicalChannel", "i": 1, "name": "COLORMIXER"}], "id": "826d1b30", "kind": "state", "node": {"childCount": 1, "class": "DMXChannel", "enumeration": "ok", "name": "Aura_COLORMIXER"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1
+    wire: Plugin "CopilotResponder" "state 0bb08474 Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "ColorMacro 1"}, {"class": "ChannelFunction", "i": 2, "name": "ColorMacro 2"}, {"class": "ChannelFunction", "i": 3, "name": "COLORMIXPOSITION 3"}, {"class": "ChannelFunction", "i": 4, "name": "COLORMIXCYCLE 4"}, {"class": "ChannelFunction", "i": 5, "name": "ColorMacro 5"}, {"class": "ChannelFunction", "i": 6, "name": "COLORMIXRANDOM 6"}, {"class": "ChannelFunction", "i": 7, "name": "COLORMIXPOSITION 7"}], "id": "0bb08474", "kind": "state", "node": {"childCount": 7, "class": "LogicalChannel", "enumeration": "ok", "name": "COLORMIXER"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1/1|NAME,DEFAULT,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 7f03ca6d NAME,DEFAULT,DMXFROM,DMXTO Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1/1"
+<<< {"id": "7f03ca6d", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "ColorMacro 1"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "0"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "592137"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1/1
+    wire: Plugin "CopilotResponder" "state 870780cf Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "Normal"}], "id": "870780cf", "kind": "state", "node": {"childCount": 1, "class": "ChannelFunction", "enumeration": "ok", "name": "ColorMacro 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1/1", "truncated": false, "v": 1}

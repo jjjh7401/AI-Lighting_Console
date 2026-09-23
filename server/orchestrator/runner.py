@@ -148,6 +148,7 @@ _TOOL_TASKS: dict[str, str] = {
     "vectorworks_autopatch": "Vectorworks 자동 패치",
     "apply_vectorworks_patch": "패치 인계 준비",
     "preshow_check": "프리쇼 체크리스트 실행",
+    "diagnose_fixture_light": "기구 점등 진단(읽기 전용)",
     "ask_user": "사용자 답변 대기",
     "resolve_fixture_type": "픽스처 타입 확인",
     "resolve_patch_address": "DMX 주소 자리 확인",
