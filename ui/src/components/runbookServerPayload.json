@@ -1,0 +1,458 @@
+{
+ "song_title": "Timeline Wiring Test",
+ "sequence_name": "Timeline Wiring Seq",
+ "sequence_number": 1,
+ "timing_mode": "timecode",
+ "timecode_number": 9,
+ "lifecycle": "pending_approval",
+ "approval": "approved",
+ "director_decisions": [],
+ "sections": [
+  {
+   "index": 1,
+   "label": "Intro",
+   "start_ms": 0,
+   "cue_number": 101,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 0.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 15000,
+   "duration_ms": 15000,
+   "bar_start": 1,
+   "bar_count": 8,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 2,
+   "label": "Verse 1",
+   "start_ms": 15000,
+   "cue_number": 102,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 15.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 40000,
+   "duration_ms": 25000,
+   "bar_start": 9,
+   "bar_count": 12,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 3,
+   "label": "Chorus 1",
+   "start_ms": 40000,
+   "cue_number": 103,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 40.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 60000,
+   "duration_ms": 20000,
+   "bar_start": 21,
+   "bar_count": 10,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 4,
+   "label": "Verse 2",
+   "start_ms": 60000,
+   "cue_number": 104,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 60.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 85000,
+   "duration_ms": 25000,
+   "bar_start": 31,
+   "bar_count": 12,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 5,
+   "label": "Chorus 2",
+   "start_ms": 85000,
+   "cue_number": 105,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 85.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 105000,
+   "duration_ms": 20000,
+   "bar_start": 43,
+   "bar_count": 10,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 6,
+   "label": "Bridge",
+   "start_ms": 105000,
+   "cue_number": 106,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 105.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 125000,
+   "duration_ms": 20000,
+   "bar_start": 53,
+   "bar_count": 10,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 7,
+   "label": "Chorus 3",
+   "start_ms": 125000,
+   "cue_number": 107,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 125.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 150000,
+   "duration_ms": 25000,
+   "bar_start": 63,
+   "bar_count": 12,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 8,
+   "label": "Outro",
+   "start_ms": 150000,
+   "cue_number": 108,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 150.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "position_source": "director",
+   "texture_source": "genre",
+   "bar_start": 76,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  }
+ ],
+ "lint": [
+  {
+   "rule_id": "L13",
+   "cue_number": 103.0,
+   "description": "identical (position, palette, effect) combo for 3 consecutive cues (V2)"
+  },
+  {
+   "rule_id": "L13",
+   "cue_number": 104.0,
+   "description": "identical (position, palette, effect) combo for 4 consecutive cues (V2)"
+  },
+  {
+   "rule_id": "L13",
+   "cue_number": 105.0,
+   "description": "identical (position, palette, effect) combo for 5 consecutive cues (V2)"
+  },
+  {
+   "rule_id": "L13",
+   "cue_number": 106.0,
+   "description": "identical (position, palette, effect) combo for 6 consecutive cues (V2)"
+  },
+  {
+   "rule_id": "L13",
+   "cue_number": 107.0,
+   "description": "identical (position, palette, effect) combo for 7 consecutive cues (V2)"
+  },
+  {
+   "rule_id": "L13",
+   "cue_number": 108.0,
+   "description": "identical (position, palette, effect) combo for 8 consecutive cues (V2)"
+  }
+ ],
+ "unresolved": [],
+ "disabled": [],
+ "readback": {
+  "verified": null,
+  "message": null
+ },
+ "console_stored": false,
+ "warnings": [
+  "전 구간이 동일한 Palette/Texture/FX입니다 — 연출 아크를 확인하세요."
+ ],
+ "layer_mapping": [],
+ "preset_start": null,
+ "concept_report": {
+  "available": true,
+  "gates": {
+   "G1 어휘 닫힘": {
+    "passed": true,
+    "detail": "구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)"
+   },
+   "G2 후렴 정체성": {
+    "passed": true,
+    "detail": "2/2 쌍 정체성 유지"
+   },
+   "G3 회차마다 새 축(5회차까지)": {
+    "passed": true,
+    "detail": "새 축 0인 쌍(5회차 이내) 0개"
+   },
+   "G4 피날레 새 축 + 여유": {
+    "passed": true,
+    "detail": "피날레 새 축 ['area', 'brightness', 'density', 'direction', 'groups', 'motion'] · 직전 남은 모션 단계 2"
+   },
+   "G5 헤드룸 경고 0": {
+    "passed": true,
+    "detail": "경고 0건"
+   },
+   "G6 컬러: 유보색 조기 0 · 브리지 위반 0": {
+    "passed": true,
+    "detail": "유보색 n/a(입력에 유보색 없음) · 브리지 pass(위반 0)"
+   },
+   "G7 후렴 주색 동일": {
+    "passed": true,
+    "detail": "chorus_primary_color_identity: pass (위반 0건)"
+   },
+   "G8 후렴 앞 빌드업": {
+    "passed": true,
+    "detail": "빌드업 3 / 필요 3"
+   },
+   "G9 트래킹: Block·Release·누출 0": {
+    "passed": true,
+    "detail": "Block 처음 True · Release 마지막 True · cue_only 10 · 누출 없음 True"
+   },
+   "G10 상대 감소 겹침 없음": {
+    "passed": null,
+    "detail": "절 밝기 [45, 38](2개 이하 — n/a)"
+   },
+   "G11 타이밍 전 큐 배정": {
+    "passed": true,
+    "detail": "snap 3 · short 16 · long 1 · 후렴 순차 3"
+   },
+   "G12 MIB: 켜진 채 이동 0": {
+    "passed": true,
+    "detail": "어둠 2 · Mark 1 · 켜진 채 0"
+   },
+   "G13 큐 밀도 10~45": {
+    "passed": true,
+    "detail": "시퀀스 큐 20 + 원샷 3"
+   }
+  },
+  "mib": [
+   null,
+   {
+    "status": "dark"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "status": "dark"
+   },
+   null,
+   null,
+   null,
+   null,
+   {
+    "status": "mark"
+   },
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "lint_finding_count": 27,
+  "lint_disabled_rule_count": 2,
+  "energy_report_count": 20
+ },
+ "bpm": 120.0,
+ "time_signature": "4/4",
+ "seconds_per_bar": 2.0,
+ "tc_method": "DERIVED",
+ "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+}

@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { buildAnalysisSummary } from "./analysisSummary";
+import { NO_DATA, intensityTrend, mibCellText } from "./runbookM7";
 import type {
   SongTimelinePaletteEntry,
   SongTimelineSection,
@@ -222,21 +223,25 @@ function intensityPolyline(
   return points.join(" ");
 }
 
+// t454 — REQ-LDDESIGN-082 14열(src/DESIGN.md §4.4 순서). 옛 5열(TC Out·Dur·
+// Mood·Trans·Note)은 화면에서만 뺐다 — `trans` 값은 데이터 모델과 대화창 수정
+// 경로에 그대로 남는다(REQ-096, server/design/cue_sheet_edit.py). 회차·Trigger·
+// Track 예외·근거 등급은 서버가 구간 단위로 내지 않아 「데이터 없음」 칸이다.
 const SHEET_COLUMNS = [
   "Q#",
-  "Section",
-  "TC In",
-  "TC Out",
-  "Dur",
-  "Mood",
-  "Color(주/보조)",
-  "Intensity",
-  "Fixture Group",
-  "Movement",
-  "Effect",
-  "Trans",
+  "구간",
+  "회차",
+  "Trigger",
+  "시각",
+  "색",
+  "밝기",
+  "기구 그룹",
+  "움직임",
+  "효과",
   "Fade",
-  "Note",
+  "MIB",
+  "Track 예외",
+  "근거 등급",
 ];
 
 /** t281 — 초안 배지 문구. 「수정됨 · 미저장」과 「원본」을 가른다. */
@@ -571,6 +576,18 @@ export function CueSheetTimeline({
             <i className="cst-legend-snap" />
             흰 좌측선 = SNAP 전환
           </span>
+          {/* t454 — REQ-081. 범례가 없으면 색 이름을 색값으로 바꿀 원천이 화면에
+              없다(색 표는 서버 color_names.py 에만 있다 — 카드 t456). 원샷·Mark
+              점 줄도 서버가 구간 단위로 내지 않는다(카드 t455). 둘 다 그리지 않고
+              그렇다고 적는다. */}
+          {legend.length === 0 && (
+            <span className="cst-legend-item cst-legend-nodata">
+              블록 색 · 색값 원천 없음(중립색)
+            </span>
+          )}
+          <span className="cst-legend-item cst-legend-nodata">
+            원샷·Mark 점 줄 · {NO_DATA}
+          </span>
         </div>
       </div>
 
@@ -670,36 +687,54 @@ export function CueSheetTimeline({
           </thead>
           <tbody>
             {sections.map((section, index) => {
-              const next = sections[index + 1];
               const selected = index === selectedIndex;
+              const sectionStart = index === 0 || sections[index - 1].label !== section.label;
+              const railColor = paletteColorFor(section, legend);
+              const rowClass = [
+                selected ? "is-selected" : "",
+                sectionStart ? "is-section-start" : "is-section-cont",
+              ]
+                .filter(Boolean)
+                .join(" ");
               return (
                 <tr
                   key={`row-${section.index}-${section.cue_number}`}
                   data-row-index={index}
-                  className={selected ? "is-selected" : undefined}
+                  className={rowClass}
                   aria-selected={selected}
                   onClick={() => selectCue(index)}
                 >
-                  <td className="m">{cueLabel(section)}</td>
-                  <td className="m">{cell(section.label)}</td>
-                  <td className="m">{formatTc(section.start_ms)}</td>
-                  <td className="m">{formatTc(sectionEndMs(section, next, totalMs))}</td>
-                  <td className="m">{formatDuration(sectionDurationMs(section, next, totalMs))}</td>
-                  <td>{cell(section.mood)}</td>
-                  <td>
-                    {cell(section.palette_primary)} / {cell(section.palette_secondary)}
+                  <td className="m cst-q" style={{ borderLeft: `7px solid ${railColor}` }}>
+                    {cueLabel(section)}
                   </td>
-                  <td className="m">{sectionIntensityText(section)}</td>
+                  <td className="cst-sec">{cell(section.label)}</td>
+                  <td className="nodata">{NO_DATA}</td>
+                  <td className="nodata">{NO_DATA}</td>
+                  <td className="m">{formatTc(section.start_ms)}</td>
+                  <td>
+                    {section.palette_primary === undefined
+                      ? cell(section.palette)
+                      : `${cell(section.palette_primary)} / ${cell(section.palette_secondary)}`}
+                  </td>
+                  <td className="m cst-level">
+                    {sectionIntensityText(section)}
+                    <i
+                      className="cst-level-bar"
+                      style={{ width: `${sectionIntensityPercent(section) * 0.4}px`, background: railColor }}
+                    />
+                    <b className="cst-level-trend">{intensityTrend(sections, index)}</b>
+                  </td>
                   <td className="fx">{cell(section.fixture_groups)}</td>
                   <td>{cell(section.movement)}</td>
                   <td>{cell(section.effect ?? (section.fx.length ? section.fx.join(" · ") : null))}</td>
-                  <td className={`m${isSnapCue(section) ? " snap" : ""}`}>{cell(section.trans)}</td>
-                  <td className="m">
+                  <td className={`m${isSnapCue(section) ? " snap" : ""}`}>
                     {section.fade_seconds === undefined
                       ? EMPTY_CELL
                       : section.fade_seconds.toFixed(2)}
                   </td>
-                  <td className="nt">{cell(section.note)}</td>
+                  <td>{mibCellText(section)}</td>
+                  <td className="nodata">{NO_DATA}</td>
+                  <td className="nodata">{NO_DATA}</td>
                 </tr>
               );
             })}
