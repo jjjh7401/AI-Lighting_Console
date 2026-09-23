@@ -10,6 +10,7 @@
     prop:<경로>|<속성이름>       속성 하나
     props:<경로>|<이름,이름,...> 속성 여러 개를 한 번에 (1.6.1+, 최대 16개)
 """
+
 import json
 import queue
 import sys
@@ -62,7 +63,10 @@ def main(steps):
                 line, kind = build_state_query(rid, body, int(off) if off else None), "state"
             elif raw.startswith("introspect:"):
                 body, _, off = raw[11:].partition("@")
-                line, kind = build_introspect_query(rid, body, int(off) if off else None), "introspect"
+                line, kind = (
+                    build_introspect_query(rid, body, int(off) if off else None),
+                    "introspect",
+                )
             elif raw.startswith("props:"):
                 path, _, names = raw[6:].partition("|")
                 line, kind = build_props_query(rid, path, names.split(",")), "props"
