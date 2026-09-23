@@ -7,8 +7,8 @@ report_from_songcue_sections`` 를 직접 부르는 게 아니라 **공개 진�
 — 가짜 실행 포트와 가짜 상태 포트 위에서만 돈다.
 
 ADDITIVE 원칙 확인이 이 파일의 핵심이다: ``concept_report`` 가
-``available: False`` 든(6연속 Chorus 픽스처 — gates.py 기존 g9 사각지대,
-``test_concept_session_bridge.py`` 가 문서화) ``available: True`` 든,
+``available: False`` 든(파이프라인 예외 — 카드 t452 전에는 6연속 Chorus
+픽스처가 g9 사각지대로 이를 냈다) ``available: True`` 든,
 어느 쪽도 콘솔 명령 생성 자체(``is_error``·저장된 큐 수)에 영향을 주지
 않는다.
 """
@@ -16,6 +16,8 @@ ADDITIVE 원칙 확인이 이 파일의 핵심이다: ``concept_report`` 가
 from __future__ import annotations
 
 import json
+
+import pytest
 
 from server.llm.types import ToolCall
 from server.orchestrator.tools import build_toolset
@@ -77,17 +79,22 @@ class TestConceptReportKeyIsAlwaysPresent:
 
 
 class TestConceptReportIsAdditiveNotBreaking:
-    """이 카드가 발견한 gates.py 사각지대(6연속 Chorus, Outro 없음 —
-    g9 이 `VocabError`) 가 실제로 발화해도 콘솔 명령 경로는 그대로
-    간다는 것을 진입점 레벨에서 확인한다."""
+    """컨셉 파이프라인이 예외를 던져도 콘솔 명령 경로는 그대로 간다는
+    것을 진입점 레벨에서 확인한다. (이 카드가 처음 쓴 실패 유발원 —
+    6연속 Chorus 가 Outro 없이 끝나 g9 이 ``VocabError`` — 은 카드 t452 가
+    고쳤으므로, 실패는 ``build_song`` 을 바꿔치기해 일으킨다.)"""
 
-    def test_concept_report_unavailable_does_not_block_console_commands(self) -> None:
+    def test_concept_report_unavailable_does_not_block_console_commands(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _boom(raw_song):
+            raise RuntimeError("t452 주입 실패")
+
+        monkeypatch.setattr("server.concept.session_bridge.build_song", _boom)
         port, payload, execution = _run(bpm=120.0)
         assert not execution.result.is_error, execution.result.content
-        # 이 카드가 실측한 사각지대(모듈 독스트링 — 6연속 Chorus 는 Outro
-        # 없이 끝나 g9 이 예외를 던진다) — 그래도 콘솔 명령은 나갔다.
         assert payload["concept_report"]["available"] is False
-        assert "reduce: ref" in payload["concept_report"]["reason"]
+        assert "t452 주입 실패" in payload["concept_report"]["reason"]
         stored = [line for line in port.executed if line.startswith("Store Sequence ")]
         assert len(stored) > 0, "concept_report 실패가 콘솔 명령 생성을 막으면 안 된다"
 

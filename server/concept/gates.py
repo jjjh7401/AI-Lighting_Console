@@ -387,7 +387,19 @@ def build_song(raw_song: Mapping[str, object]) -> SongBuild:
         # 마지막 시퀀스 큐에 참조 이름을 하나 더 등록한다(REQ-069) — 그
         # 큐 자신의 기존 base_name(항상 None, density.py 는 이 필드를
         # 안 채운다)을 대체하는 것이지 값 자체를 바꾸지 않는다.
-        sequence_rows[-1] = dict(sequence_rows[-1], base_name=_RELEASE_REF_BASE_NAME)
+        # 카드 t452 — cue_only(프레이즈) 행은 건너뛴다: G9 누출 검사가
+        # cue_only 행을 빼고 다시 해석하면 기준 이름도 같이 사라져 안전
+        # 큐의 reduce 가 거절된다. 다음 큐로 이어지는 상태는 마지막
+        # track 행의 것이기도 하다.
+        owner = next(
+            (
+                i
+                for i in range(len(sequence_rows) - 1, -1, -1)
+                if sequence_rows[i].get("tracking") != "cue_only"
+            ),
+            len(sequence_rows) - 1,
+        )
+        sequence_rows[owner] = dict(sequence_rows[owner], base_name=_RELEASE_REF_BASE_NAME)
         last_end = sections[-1].end
     else:
         last_end = 0.0

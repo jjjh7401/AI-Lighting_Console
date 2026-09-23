@@ -283,8 +283,8 @@ class TestPrepareSongcueWiresPalettes:
             **({} if port is None else {"interview_records": port}),
         )
         # 구간 간격 16초(120 BPM 8마디) + Outro — t441 의 4초 간격 5구간은
-        # 색과 무관하게 컨셉 파이프라인이 ``reduce: ref 'song_release_reference'``
-        # 로 실패해(기록 유무 둘 다) 색 게이트까지 가지 못한다.
+        # 카드 t452 전까지 색과 무관하게 ``reduce: ref 'song_release_reference'``
+        # 로 실패했다(``test_concept_release_ref_t452.py``).
         sections = [
             {"name": name, "start": start}
             for name, start in (

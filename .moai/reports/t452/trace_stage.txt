@@ -1,0 +1,27 @@
+build_song OK rows= 9
+evaluate_song FAIL
+Traceback (most recent call last):
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t452/.moai/reports/t452/trace_stage.py", line 19, in <module>
+    fn()
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t452/.moai/reports/t452/trace_stage.py", line 17, in <lambda>
+    for name, fn in (("evaluate_song", lambda: evaluate_song(raw_song)), ("compile_song", lambda: compile_song(build))):
+                                               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t452/server/concept/gates.py", line 727, in evaluate_song
+    results = dict(zip(GATE_NAMES, (gate(build) for gate in _GATE_FUNCS), strict=True))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t452/server/concept/gates.py", line 727, in <genexpr>
+    results = dict(zip(GATE_NAMES, (gate(build) for gate in _GATE_FUNCS), strict=True))
+                                    ^^^^^^^^^^^
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t452/server/concept/gates.py", line 637, in g9_tracking_block_release_leak
+    leak_free = verify_no_cue_only_leak(build.rows)  # type: ignore[arg-type]
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t452/server/concept/tracking.py", line 70, in verify_no_cue_only_leak
+    without_cue_only = resolve_sequence(without_rows)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t452/server/concept/resolver.py", line 173, in resolve_sequence
+    next_state = apply(carry, row["ops"], bases, section_base=section_base)  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t452/server/concept/resolver.py", line 105, in apply
+    raise VocabError(f"reduce: ref {ref!r} 가 bases 에 없음(REQ-021)")
+server.concept.vocab.VocabError: reduce: ref 'song_release_reference' 가 bases 에 없음(REQ-021)
+compile_song OK

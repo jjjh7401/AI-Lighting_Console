@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from server.design.energy import EFFECT_AXIS_CAPABILITY
 from server.design.profile import MusicProfile
 from server.design.rig import build_rig_profile
@@ -102,11 +104,17 @@ class TestConceptReportKeyIsAlwaysPresentOnTimelinePayload:
 
 
 class TestConceptReportIsAdditiveNotBreaking:
-    def test_concept_report_does_not_change_section_payload_shape(self) -> None:
-        # 이 픽스처는 이 카드가 실측한 gates.py 사각지대(Outro 없이 곡이
-        # 끝남 — g9 이 예외)를 일부러 재현한다: concept_report 는
-        # available:False 지만, 그와 무관하게 sections 페이로드(기존
-        # `_song_timeline_payload` 필드)는 손상되지 않는다.
+    def test_concept_report_does_not_change_section_payload_shape(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # 컨셉 파이프라인이 예외를 던져 concept_report 가 available:False
+        # 여도 sections 페이로드(기존 `_song_timeline_payload` 필드)는
+        # 손상되지 않는다. (이 카드가 쓰던 실패 유발원 — Outro 없이 곡이
+        # 끝나 g9 이 예외 — 은 카드 t452 가 고쳐서 build_song 을 바꿔치기한다.)
+        def _boom(raw_song):
+            raise RuntimeError("t452 주입 실패")
+
+        monkeypatch.setattr("server.concept.session_bridge.build_song", _boom)
         sections = (_section(1, "Intro", 0, 13_000), _section(2, "Chorus 1", 13_000, None))
         payload = _payload(bpm=100.0, sections=sections)
 

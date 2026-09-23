@@ -1,0 +1,11 @@
+raw_sections: [{'baseline_name': 'Intro', 'start': '0:00', 'end': '0:04'}, {'baseline_name': 'Chorus', 'start': '0:04', 'end': '0:08'}, {'baseline_name': 'Verse', 'start': '0:08', 'end': '0:12'}, {'baseline_name': 'Drop', 'start': '0:12', 'end': '0:16'}, {'baseline_name': 'Chorus', 'start': '0:16', 'end': '0:31'}]
+  row0 kind=safety section=Intro occ=0 base_name=None ops=['replace', 'expand'] refs=[]
+  row1 kind=section section=Intro occ=1 base_name=None ops=['replace', 'expand', 'expand'] refs=[]
+  row2 kind=section section=Chorus occ=1 base_name=None ops=['replace', 'expand'] refs=[]
+  row3 kind=section section=Verse occ=1 base_name=None ops=['replace', 'remove', 'expand'] refs=[]
+  row4 kind=section section=Rap/Solo/Dance Break occ=1 base_name=None ops=['retain'] refs=[]
+  row5 kind=section section=Chorus occ=2 base_name=None ops=['restore', 'expand'] refs=['Chorus 1']
+  row6 kind=phrase section=Chorus occ=2 base_name=None ops=['add'] refs=[]
+  row7 kind=phrase section=Chorus occ=2 base_name=song_release_reference ops=['add'] refs=[]
+  row8 kind=safety section=Outro occ=0 base_name=None ops=['reduce'] refs=['song_release_reference']
+build_song OK
