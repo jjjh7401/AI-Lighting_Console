@@ -189,7 +189,25 @@ class TestColorUsageAffectsQueueDensity:
     modulate for every occurrence, so — measured below — it produces the
     IDENTICAL palette sizes and split count as modulate for this fixture;
     it changes WHICH accent color is used, not HOW MANY.
+
+    카드 t445 — 기본(modulate)의 후렴은 이제 주색을 고정하고 보조색만 돌리므로
+    2색 후렴을 쪼개지 않는다(같은 큐 둘을 내지 않는다). 위 "modulate 의 2색
+    분할" 성질은 그 동작을 그대로 옮긴 ``split_swap`` 이 갖는다 — 그래서 아래
+    비교 기준(변수 이름 ``modulate_*``)은 ``split_swap`` 으로 잰다. 기본의 새
+    성질은 ``test_modulate_chorus_no_longer_splits_since_t445`` 가 잰다.
     """
+
+    def test_modulate_chorus_no_longer_splits_since_t445(self):
+        sections = _chorus_sections(3, gap_ms=40_000)
+        profile = MusicProfile(bpm=120.0, meter="4/4", palette=("블루",))
+        expanded, _origins, _notes = _split_sections_for_density(
+            sections,
+            profile=profile,
+            palette_mode="palette",
+            concept_colors=(),
+            color_usage="modulate",
+        )
+        assert len(expanded) == 3
 
     def test_single_reduces_palette_sizes_versus_modulate(self):
         sections = _chorus_sections(4)
@@ -199,7 +217,7 @@ class TestColorUsageAffectsQueueDensity:
             profile=profile,
             palette_mode="palette",
             concept_colors=(),
-            color_usage="modulate",
+            color_usage="split_swap",
         )
         single_sizes = _section_palette_sizes(
             sections,
@@ -223,7 +241,7 @@ class TestColorUsageAffectsQueueDensity:
             profile=profile,
             palette_mode="palette",
             concept_colors=(),
-            color_usage="modulate",
+            color_usage="split_swap",
         )
         per_chorus_sizes = _section_palette_sizes(
             sections,
@@ -247,7 +265,7 @@ class TestColorUsageAffectsQueueDensity:
             profile=profile,
             palette_mode="palette",
             concept_colors=(),
-            color_usage="modulate",
+            color_usage="split_swap",
         )
         single_expanded, _origins, _notes = _split_sections_for_density(
             sections,
@@ -272,7 +290,7 @@ class TestColorUsageAffectsQueueDensity:
             profile=profile,
             palette_mode="palette",
             concept_colors=(),
-            color_usage="modulate",
+            color_usage="split_swap",
         )
         per_chorus_expanded, _origins, _notes = _split_sections_for_density(
             sections,

@@ -1,0 +1,10 @@
+# 수정 전 — WT-chorus-color-mode @ db601e8a (origin/main), `uv run python .moai/reports/t445/probe.py`
+# (2026-09-23 착수 직후 같은 트리에서 실행한 출력의 해당 줄 발췌)
+cues 11 from 8
+'Chorus (1/2)' ('blue', 'warm white') section_arc
+'Chorus (2/2)' ('warm white', 'blue') section_arc
+'Chorus (1/2)' ('blue', 'warm white') section_arc
+'Chorus (2/2)' ('warm white', 'blue') section_arc
+'Chorus (1/2)' ('blue', 'warm white') section_arc
+'Chorus (2/2)' ('warm white', 'blue') section_arc
+'G7 후렴 주색 동일': {'passed': False, 'detail': 'chorus_primary_color_identity: fail (위반 5건)'}

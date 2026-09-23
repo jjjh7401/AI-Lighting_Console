@@ -1,0 +1,6 @@
+== modulate
+A cues 3 primaries ['블루'] [('Chorus', '블루'), ('Chorus', '블루'), ('Chorus', '블루')]
+B cues 6 primary RGB [(5, 20, 100)] [('Chorus 1', (5, 20, 100)), ('Chorus 1', (5, 20, 100)), ('Chorus 2', (5, 20, 100)), ('Chorus 2', (5, 20, 100)), ('Chorus 3', (5, 20, 100)), ('Chorus 3', (5, 20, 100))] notes ()
+== split_swap
+A cues 6 primaries ['warm white', '블루'] [('Chorus (1/2)', '블루'), ('Chorus (2/2)', 'warm white'), ('Chorus (1/2)', '블루'), ('Chorus (2/2)', 'warm white'), ('Chorus (1/2)', '블루'), ('Chorus (2/2)', 'warm white')]
+B cues 6 primary RGB [(5, 20, 100), (100, 75, 40)] [('Chorus 1', (5, 20, 100)), ('Chorus 1', (100, 75, 40)), ('Chorus 2', (5, 20, 100)), ('Chorus 2', (100, 75, 40)), ('Chorus 3', (5, 20, 100)), ('Chorus 3', (100, 75, 40))] notes ()

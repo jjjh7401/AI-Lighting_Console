@@ -1742,8 +1742,26 @@ def _section_palette_sizes(
             concept_colors=concept_colors,
             color_usage=color_usage,
         )
-        sizes.append(len(colors))
+        # 카드 t445 — 주색을 고정하는 후렴은 보조색만 돌므로, 쪼갤 수 있는지도
+        # 보조색 개수로 센다. 2색 팔레트면 돌릴 것이 없어 쪼개지 않는다.
+        pinned = _pins_split_primary(role, color_usage) and len(colors) > 1
+        sizes.append(len(colors) - 1 if pinned else len(colors))
     return sizes
+
+
+#: 카드 t445 — 후렴 분할 큐의 주색을 고정하지 **않는** 곡별 선택(Q2B).
+#: ``per_chorus`` 는 회차마다 색을 바꾸는 선택이라 기존 회전을 그대로 두고,
+#: ``split_swap`` 은 한 후렴 안에서 주·보조색을 맞바꾸는 t305 동작 그 자체다.
+_SPLIT_PRIMARY_UNPINNED_USAGES = frozenset({"per_chorus", "split_swap"})
+
+
+def _pins_split_primary(role: str, color_usage: str) -> bool:
+    """카드 t445 — 이 역할의 마디 분할 큐가 주색을 고정하는가.
+
+    감독 결정 2026-09-23 「기본은 후렴 주색 고정, 곡마다 선택」(REQ-LDDESIGN-030).
+    후렴(chorus/finale)만 해당하고, verse 등 다른 역할의 분할 회전은 그대로다.
+    """
+    return role in ("chorus", "finale") and color_usage not in _SPLIT_PRIMARY_UNPINNED_USAGES
 
 
 def _split_sections_for_density(
@@ -1925,8 +1943,14 @@ def _build_unified_song_plan(
         # "cue_density_rotation" 으로 갈아끼웠는데, 그러면 L5 가 아크 악센트인지
         # 감독 문구인지 구분할 근거(원래 출처)를 잃는다 — 이 리터럴은 코드베이스
         # 전체에서 이 한 줄이 유일한 생산자였다(다른 소비자 없음, grep 확인).
+        # 카드 t445 — 기본(modulate)·single 의 후렴은 주색을 고정하고 보조색만
+        # 돌린다. 한 후렴 안에서 주·보조색을 맞바꾸는 것은 감독이 곡마다 고르는
+        # ``split_swap``(와 ``per_chorus``)일 때뿐이다.
         if unit_index > 0:
-            rotated = rotate_palette(palette_colors, unit_index)
+            if _pins_split_primary(role, color_usage) and palette_colors:
+                rotated = (palette_colors[0], *rotate_palette(palette_colors[1:], unit_index))
+            else:
+                rotated = rotate_palette(palette_colors, unit_index)
             if rotated != palette_colors:
                 palette_colors = rotated
         decisions.append(

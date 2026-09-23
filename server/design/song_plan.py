@@ -68,7 +68,7 @@ TEXTURE_AXIS = "texture"
 FX_AXIS = "fx"
 ACCENT_AXIS = "accent"
 #: SPEC-COPILOT-COLORMODE-001 D4 — the Q2B_COLOR_USAGE decision axis (how the
-#: Q2 palette is used across the song: modulate/single/per_chorus).
+#: Q2 palette is used across the song: modulate/single/per_chorus/split_swap).
 COLOR_USAGE_AXIS = "color_usage"
 
 MANUAL_GO = "manual_go"

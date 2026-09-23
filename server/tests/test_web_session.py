@@ -5385,7 +5385,10 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
-                "",
+                # 카드 t445 — Q2B 「맞바꾸기」(split_swap). 기본(빈 답)은 이제
+                # 후렴 주색을 고정해 2색 후렴을 쪼개지 않으므로, t305 의 분할
+                # 회전을 그대로 재려면 그 동작을 옮긴 선택지를 고른다.
+                "맞바꾸기",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5435,7 +5438,10 @@ class TestSongDesignInterviewSession:
                 "수동 Go",
                 "우주",
                 "우주 색 조합",
-                "",
+                # 카드 t445 — Q2B 「맞바꾸기」(split_swap). 기본(빈 답)은 이제
+                # 후렴 주색을 고정해 2색 후렴을 쪼개지 않으므로, t305 의 분할
+                # 회전을 그대로 재려면 그 동작을 옮긴 선택지를 고른다.
+                "맞바꾸기",
                 "Ring In",
                 "우주 컨셉 우선 배치",
                 "템포 맞춤 (BPM 기준)",
@@ -5459,6 +5465,47 @@ class TestSongDesignInterviewSession:
             assert sorted(opening["palette"]) == sorted(continuation["palette"])
             # 강도는 유지된다(정본과 같은 축).
             assert opening["d_level"] == continuation["d_level"]
+
+    def test_default_color_usage_keeps_the_chorus_primary_across_split_cues(self, tmp_path):
+        """카드 t445 — 같은 곡, Q2B 빈 답(기본 modulate). 감독 결정 2026-09-23
+        「기본은 후렴 주색 고정」: 2색 후렴은 돌릴 보조색이 없어 쪼개지 않는다
+        (같은 큐 둘을 내지 않는다, t305). 후렴이 아닌 구간의 분할은 그대로다."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                *(["Center → Fan Out"] * 8),
+                "수정",
+                "수정",
+            ]
+        )
+
+        session.run_instruction(self._BPM_BRIEF)
+
+        sections = [item["timeline"] for item in sent if item["type"] == "song_timeline"][-1][
+            "sections"
+        ]
+        chorus = [section for section in sections if section["role"] in ("chorus", "finale")]
+        assert (
+            len({tuple(section["palette"])[0] for section in chorus if section["role"] == "chorus"})
+            == 1
+        )
+        # 첫 후렴(1:04, 16마디)은 한 큐로 남는다 — split_swap 이면 둘이었다(위 시험).
+        assert [section["start_ms"] for section in sections if section["role"] == "chorus"] == [
+            64_000
+        ]
+        assert len(sections) == 8
 
     def test_all_requery_answers_merge_and_recompose_to_pending_approval(self, tmp_path):
         provider = ScriptedProvider([])
