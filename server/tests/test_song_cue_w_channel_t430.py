@@ -20,29 +20,28 @@
 from __future__ import annotations
 
 from server.design.color_names import resolve_color_name
+from server.design.song_plan import TimingPlan
 from server.tests.test_runner_self_correction import ScriptedProvider
 from server.tests.test_song_cue_color_emission import (
     _FIDS,
-    _Stub,
     _color_lines,
     _composition,
+    _Stub,
 )
 from server.tests.test_web_session import (
     _M0_COLOR_ASSIGNMENTS,
     _M0_COLOR_CHANNELS,
     _M0_COLOR_PAIRS,
+    _color_fixture_props,
     _ColorChannelRegistry,
     _ColorRigPropPort,
-    _color_fixture_props,
     _session,
 )
-from server.design.song_plan import TimingPlan
 from server.web.session import (
     ChatSession,
     _color_apply_command,
     _song_color_value_lines,
 )
-
 
 # --------------------------------------------------------------------------
 # §1~3 — _song_color_value_lines 단위 시험
@@ -57,8 +56,10 @@ class TestNoWSetIsByteIdenticalToBeforeTheChange:
         fids = (1, 2, 3, 4)
 
         # 고치기 전 형태를 그대로 하드코드 — 회귀 대조군.
-        before = ("Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; "
-                  "Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",)
+        before = (
+            "Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; "
+            "Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+        )
         assert resolve_color_name("blue") == (5, 20, 100)
 
         lines_no_w, failure_no_w = _song_color_value_lines(cue, fids)
@@ -155,7 +156,6 @@ class TestRigMixShapes:
         그 결과(멤버십 없음)가 값 라인 생성기에서 항등으로 이어짐을 잰다.
         """
         cue = _composition(("yellow", "red")).bundle.cues[0]
-        rgb = resolve_color_name("yellow")
         fids = (1, 2, 3, 4)
         # 판별 불가 기구 3은 w_fids에 없다(호출부가 undetermined를 안 싣는다).
         w_fids = frozenset({2})
@@ -280,9 +280,7 @@ class TestColorCapableFidsUnchanged:
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
         calls: list = []
         session._registry = _ColorChannelRegistry(calls, channels=_M0_COLOR_CHANNELS)
-        session._current_cue_port = _ColorRigPropPort(
-            _color_fixture_props(_M0_COLOR_ASSIGNMENTS)
-        )
+        session._current_cue_port = _ColorRigPropPort(_color_fixture_props(_M0_COLOR_ASSIGNMENTS))
         capable, excluded, undetermined = session._color_capable_fids(
             _M0_COLOR_PAIRS, probe_id_prefix="test-color"
         )

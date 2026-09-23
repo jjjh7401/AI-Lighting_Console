@@ -237,8 +237,11 @@ class TestTheFabricatedControl:
         assert len(before) == 2
 
         # 옛 동작 복원: 값 라인 생성기가 빈손으로 돌아온다.
+        # 카드 t430 — 세 번째 인자(w_fids)는 항상 위치 인자로 넘어오므로
+        # (기본값이라도) 대역도 받아야 한다.
         monkeypatch.setattr(
-            "server.web.session._song_color_value_lines", lambda cue, fids: ((), None)
+            "server.web.session._song_color_value_lines",
+            lambda cue, fids, w_fids=frozenset(): ((), None),
         )
         after = _color_lines(_commands(composition)[0])
         assert after == [], "옛 동작을 되돌렸는데도 색이 나갔다 — 다른 자리가 내고 있다"

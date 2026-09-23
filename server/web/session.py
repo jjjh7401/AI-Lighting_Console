@@ -1334,7 +1334,9 @@ def _color_failure_note(failures: Mapping[str, str]) -> str:
     return " 색 미반영: " + "; ".join(failures.values()) + "."
 
 
-def _song_color_value_lines(cue, fids: Sequence[int]) -> tuple[tuple[str, ...], str | None]:
+def _song_color_value_lines(
+    cue, fids: Sequence[int], w_fids: frozenset[int] = frozenset()
+) -> tuple[tuple[str, ...], str | None]:
     """SPEC-LDDESIGN-001 M2 — 큐의 팔레트 주색을 콘솔 값 라인으로 낸다.
 
     ``(값 라인들, 실패 사유 또는 None)``. **고치기 전 실측**: 감독 확정
@@ -1347,6 +1349,14 @@ def _song_color_value_lines(cue, fids: Sequence[int]) -> tuple[tuple[str, ...], 
     MIB 사전이동 큐(``kind == "mib_premove"``)는 건너뛴다 — 어둠 속 이동
     큐라 색 값이 공연에 보이지 않고, 사전에 색까지 얹을지는 아직 안 잰
     별도 판단이다.
+
+    카드 t430 — ``w_fids``(W 채널 확인 기구, 기본 빈 집합)에 든 fid는
+    ``fids``에서 빼고 별도 줄로 낸다: 오늘과 같은 R/G/B 줄에
+    ``Attribute 'ColorRGB_W' At 0``을 이어붙인다. 값은 0 고정이다 — 이
+    카드는 무대 색을 바꾸지 않는다(어느 흰색을 W로 낼지는 리드 결정
+    대기, `.moai/reports/t430/verdict.md` §3). W 없이 부르면(``w_fids``
+    빈 집합) 오늘과 바이트 동일하다. W 라인 없는 기구 목록이 비면 그
+    줄은 아예 안 낸다.
     """
     if cue.kind != "section":
         return (), None
@@ -1357,7 +1367,16 @@ def _song_color_value_lines(cue, fids: Sequence[int]) -> tuple[tuple[str, ...], 
     rgb = _COLOR_NAMES.resolve_color_name(name)
     if rgb is None:
         return (), f"Q{cue.cue_number:g} {cue.cue_name!r}의 색 {name!r}은 표준 팔레트 10색에 없음"
-    return (_color_apply_command(fids, rgb),), None
+    if not w_fids:
+        return (_color_apply_command(fids, rgb),), None
+    rgb_only_fids = [fid for fid in fids if fid not in w_fids]
+    w_only_fids = [fid for fid in fids if fid in w_fids]
+    lines: list[str] = []
+    if rgb_only_fids:
+        lines.append(_color_apply_command(rgb_only_fids, rgb))
+    if w_only_fids:
+        lines.append(_color_apply_command(w_only_fids, rgb) + " ; Attribute 'ColorRGB_W' At 0")
+    return tuple(lines), None
 
 
 def _back_layer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
@@ -3941,6 +3960,10 @@ class _SongDesignState:
     #: 카드 t311 — 좌표를 못 읽어 포지션(무브) 축을 비활성으로 둔 사유. 빈
     #: 문자열이면 축이 살아 있고 오늘 이전과 문면이 같다.
     position_disabled_reason: str = ""
+    #: 카드 t430 — W 채널 확인 기구(`_w_capable_fids` w_capable). 빈
+    #: 집합이면 오늘과 동일(모든 기구가 RGB 줄만 받는다). 열거 실패·판독
+    #: 불가는 빈 집합으로 남는다(무대 색 변화 0 — fail-closed).
+    w_fids: frozenset[int] = dataclass_field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)
@@ -8199,6 +8222,7 @@ class ChatSession:
         fids: Sequence[int],
         timing: TimingPlan,
         layer_mapping: Sequence[Mapping[str, object]] = (),
+        w_fids: frozenset[int] = frozenset(),
     ) -> tuple[str, ...]:
         bundle = composition.bundle
         if bundle is None:
@@ -8206,6 +8230,8 @@ class ChatSession:
         phaser_slots, self._last_phaser_failures = self._phaser_slots_for_bundle(bundle)
         # SPEC-LDDESIGN-001 M2 — 컨셉 색을 이 경로로 내보낸다. 미해소 사유는
         # 큐마다 모아 최종 회신에 노출한다(`_color_failure_note`).
+        # 카드 t430 — w_fids(기본 빈 집합)는 `_song_color_value_lines`로
+        # 그대로 전달한다. 빈 집합이면 오늘과 바이트 동일.
         color_failures: dict[str, str] = {}
         commands: list[str] = ["ChangeDestination Root"]
         for cue in bundle.cues:
@@ -8218,7 +8244,7 @@ class ChatSession:
                         f"unknown reviewed position {cue.position.stored!r}"
                     ) from error
             dimmer = cue.dimmer.key_pct
-            color_lines, color_failure = _song_color_value_lines(cue, fids)
+            color_lines, color_failure = _song_color_value_lines(cue, fids, w_fids)
             if color_failure is not None:
                 color_failures[f"{cue.cue_number:g}"] = color_failure
             if preset_no is None and dimmer is None:
@@ -8709,6 +8735,17 @@ class ChatSession:
             color_usage=_record_value(records, Q2B_COLOR_USAGE, "modulate"),
         )
         plan_warnings.extend(density_notes)
+        # 카드 t430 — W 채널 확인 기구를 한 번 계산해 상태에 싣는다. 열거
+        # 실패·빈 결과는 빈 집합으로 남는다(오늘과 동일, 무대 색 변화 0).
+        w_fids: frozenset[int] = frozenset()
+        color_pairs_enumerated = self._color_rig_fixture_pairs()
+        if color_pairs_enumerated is not None:
+            color_pairs, _fid_unread = color_pairs_enumerated
+            if color_pairs:
+                w_capable, _rgb_only, _undetermined = self._w_capable_fids(
+                    color_pairs, probe_id_prefix="song-w-channel"
+                )
+                w_fids = frozenset(w_capable)
         state = _SongDesignState(
             sections=list(sections),
             section_origin=section_origin,
@@ -8725,6 +8762,7 @@ class ChatSession:
             layer_mapping=layer_mapping,
             requery_overrides={},
             position_disabled_reason=position_gap,
+            w_fids=w_fids,
         )
         plan, composition = self._song_compose(state)
         self._song_send_timeline(state, plan, composition)
@@ -10312,6 +10350,54 @@ class ChatSession:
                 return None
         return None  # 페이지 상한 초과 — 부분 판독은 더 짧은 채널 목록이 아니다
 
+    def _fixture_color_channel_names(
+        self, fixtures: Sequence[tuple[int, int]], *, probe_id_prefix: str
+    ) -> dict[int, list[str | None] | None]:
+        """``fid -> DMX 채널 이름 목록``(완전 판독) 또는 ``None``(판독 실패·
+        미해소 절단) — ``_color_capable_fids``와 W 채널 분류
+        (``_w_capable_fids``, 카드 t430)가 공유하는 3단계 판독.
+
+        ``fixtures``는 ``(slot, fid)`` 쌍: ``slot``이 패치 자식 경로를
+        가리키고(``rig_paths["fixtures"]`` 아래, 속성 판독은 PATH가
+        필요), ``fid``가 호출자가 고르는 키다.
+
+        기구별: ① ``FixtureType`` 속성 → ``"FixtureType N"``(표시 문자열,
+        M0 실측 형태 — 끝 정수가 이 채널의 라이브러리 경로 인덱스) ②
+        ``Mode`` 속성 → ``"<m> <name>"``(첫 토큰이 모드 경로 인덱스) ③
+        ``(N, m)`` 조합의 ``DMXChannels`` 자식 이름, 페이징
+        (:meth:`_dmx_channel_names`) — 조합 단위 캐시(왕복 예산은
+        ``_color_capable_fids`` 독스트링과 동일). 판정(부분 문자열 기준)은
+        호출자 몫이다 — 이 메서드는 이름 목록만 돌려준다.
+        """
+        fixtures_root = self._rig_paths.get("fixtures", "Patch/Stages/1/Fixtures")
+        combo_names: dict[tuple[int, int], list[str | None] | None] = {}
+        result: dict[int, list[str | None] | None] = {}
+        for slot, fid in fixtures:
+            reads = read_properties(
+                self._current_cue_port,
+                f"{fixtures_root}/{slot}",
+                ("FixtureType", "Mode"),
+            )
+            type_read = reads["FixtureType"]
+            mode_read = reads["Mode"]
+            if not type_read.ok or not mode_read.ok:
+                result[fid] = None
+                continue
+            # 표시 문자열 파싱 — M0 실측 형태만 받는다. 다른 형태(타입 이름 표시,
+            # 무번호 모드)는 추측하지 않고 판별 불가로 내린다(fail-closed).
+            type_match = re.fullmatch(r"FixtureType\s+(\d+)", str(type_read.value or "").strip())
+            mode_match = re.match(r"(\d+)(?:\s|$)", str(mode_read.value or "").strip())
+            if type_match is None or mode_match is None:
+                result[fid] = None
+                continue
+            combo = (int(type_match.group(1)), int(mode_match.group(1)))
+            if combo not in combo_names:
+                combo_names[combo] = self._dmx_channel_names(
+                    combo[0], combo[1], probe_id_prefix=probe_id_prefix
+                )
+            result[fid] = combo_names[combo]
+        return result
+
     def _color_capable_fids(
         self, fixtures: Sequence[tuple[int, int]], *, probe_id_prefix: str
     ) -> tuple[list[int], list[int], list[int]]:
@@ -10323,13 +10409,9 @@ class ChatSession:
         child under ``rig_paths["fixtures"]`` (the property reads need the
         PATH), ``fid`` is what the caller selects with (the return lists).
 
-        Per fixture: ① ``FixtureType`` property → ``"FixtureType N"``
-        (display string, M0-measured form — the trailing integer IS the
-        library path index on this channel) ② ``Mode`` property →
-        ``"<m> <name>"`` (first token is the mode path index) ③ the
-        ``(N, m)`` combination's ``DMXChannels`` child names, paged
-        (:meth:`_dmx_channel_names`), judged by SUBSTRING ``"ColorRGB"`` —
-        ``ColorRGB_R/G/B`` and ``ColorRGB_W`` alike (measured: LEDBeam350
+        Judged by SUBSTRING ``"ColorRGB"`` on the channel names
+        :meth:`_fixture_color_channel_names` reads (shared 3-hop discovery)
+        — ``ColorRGB_R/G/B`` and ``ColorRGB_W`` alike (measured: LEDBeam350
         carries the W channel).
 
         Verdicts: a name match → capable; a COMPLETELY read list with no
@@ -10344,46 +10426,49 @@ class ChatSession:
         combination — cached per call, so the measured 41-fixture rig with
         ≤5 combinations costs 82 property reads + a handful of state pages.
         """
-        fixtures_root = self._rig_paths.get("fixtures", "Patch/Stages/1/Fixtures")
-        combo_verdicts: dict[tuple[int, int], str] = {}
+        channel_names = self._fixture_color_channel_names(fixtures, probe_id_prefix=probe_id_prefix)
         capable: set[int] = set()
         excluded: set[int] = set()
         undetermined: set[int] = set()
-        for slot, fid in fixtures:
-            reads = read_properties(
-                self._current_cue_port,
-                f"{fixtures_root}/{slot}",
-                ("FixtureType", "Mode"),
-            )
-            type_read = reads["FixtureType"]
-            mode_read = reads["Mode"]
-            if not type_read.ok or not mode_read.ok:
-                undetermined.add(fid)
-                continue
-            # 표시 문자열 파싱 — M0 실측 형태만 받는다. 다른 형태(타입 이름 표시,
-            # 무번호 모드)는 추측하지 않고 판별 불가로 내린다(fail-closed).
-            type_match = re.fullmatch(r"FixtureType\s+(\d+)", str(type_read.value or "").strip())
-            mode_match = re.match(r"(\d+)(?:\s|$)", str(mode_read.value or "").strip())
-            if type_match is None or mode_match is None:
-                undetermined.add(fid)
-                continue
-            combo = (int(type_match.group(1)), int(mode_match.group(1)))
-            verdict = combo_verdicts.get(combo)
-            if verdict is None:
-                names = self._dmx_channel_names(combo[0], combo[1], probe_id_prefix=probe_id_prefix)
-                if names is not None and any(
-                    name is not None and "ColorRGB" in name for name in names
-                ):
-                    verdict = "capable"
-                elif names is not None and all(name is not None for name in names):
-                    verdict = "excluded"  # 전 채널 이름 완독 + 부재 — 확정 제외
-                else:
-                    verdict = "undetermined"  # 절단 미해소·무명 자식 — 판별 불가
-                combo_verdicts[combo] = verdict
-            {"capable": capable, "excluded": excluded, "undetermined": undetermined}[verdict].add(
-                fid
-            )
+        for _slot, fid in fixtures:
+            names = channel_names.get(fid)
+            if names is not None and any(name is not None and "ColorRGB" in name for name in names):
+                capable.add(fid)
+            elif names is not None and all(name is not None for name in names):
+                excluded.add(fid)  # 전 채널 이름 완독 + 부재 — 확정 제외
+            else:
+                undetermined.add(fid)  # 절단 미해소·무명 자식 — 판별 불가
         return sorted(capable), sorted(excluded), sorted(undetermined)
+
+    def _w_capable_fids(
+        self, fixtures: Sequence[tuple[int, int]], *, probe_id_prefix: str
+    ) -> tuple[list[int], list[int], list[int]]:
+        """``(w_capable_fids, rgb_only_fids, undetermined_fids)`` — 카드
+        t430 W 채널 분류. ``_color_capable_fids``와 같은 3단계 판독을
+        공유한다(:meth:`_fixture_color_channel_names`, 조합당 1회 캐시).
+        콘솔 쓰기는 0 — 읽기만 한다.
+
+        완전 판독 + ``"ColorRGB_W"`` 부분 문자열 존재 → w_capable. 완전
+        판독 + 부재 → rgb_only. 실패·파싱 불가·미해소 절단은 모두
+        undetermined다(``_color_capable_fids``와 같은 fail-closed 규율 —
+        모르는 채널은 켜지 않는다). 호출자는 undetermined를 rgb_only와
+        같이 다뤄야 한다(t430 결정 범위 §5 — RGB만 낸다).
+        """
+        channel_names = self._fixture_color_channel_names(fixtures, probe_id_prefix=probe_id_prefix)
+        w_capable: set[int] = set()
+        rgb_only: set[int] = set()
+        undetermined: set[int] = set()
+        for _slot, fid in fixtures:
+            names = channel_names.get(fid)
+            if names is not None and any(
+                name is not None and "ColorRGB_W" in name for name in names
+            ):
+                w_capable.add(fid)
+            elif names is not None and all(name is not None for name in names):
+                rgb_only.add(fid)
+            else:
+                undetermined.add(fid)
+        return sorted(w_capable), sorted(rgb_only), sorted(undetermined)
 
     def _ask_position_preset_start(self, refusal: str) -> int | InstructionResult:
         """The shared '기본 포지션이 프리셋 몇 번부터?' card — proposes only
@@ -10820,6 +10905,7 @@ class ChatSession:
                     fids=state.fids,
                     timing=state.timing,
                     layer_mapping=state.layer_mapping,
+                    w_fids=state.w_fids,
                 )
             except SpatialPointingError as error:
                 self._pending_song_plan = state

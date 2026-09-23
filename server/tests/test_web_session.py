@@ -5100,6 +5100,11 @@ class TestSongDesignInterviewSession:
             # readbacks.
             "DataPool/Sequences/110",
             "DataPool/Groups",
+            # 카드 t430 — `_SongDesignState` 조립 시 W 채널 확인용 패치 열거
+            # 1회(`_color_rig_fixture_pairs`). 이 더블은 컨테이너 자식 목록이
+            # 아니라서 즉시 미해결로 끝나고(`w_fids` 빈 집합), 왕복은 이 한
+            # 줄뿐이다.
+            "Patch/Stages/1/Fixtures",
             "DataPool/Timecodes/7",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
@@ -5175,6 +5180,8 @@ class TestSongDesignInterviewSession:
         assert readbacks == [
             "DataPool/Sequences/110",
             "DataPool/Groups",
+            # 카드 t430 — W 채널 확인용 패치 열거 1회(위 설명과 동일).
+            "Patch/Stages/1/Fixtures",
             "DataPool/Timecodes/7",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
@@ -6456,6 +6463,8 @@ class TestSongDesignInterviewSession:
             # readbacks.
             "DataPool/Sequences/110",
             "DataPool/Groups",
+            # 카드 t430 — W 채널 확인용 패치 열거 1회(위 설명과 동일).
+            "Patch/Stages/1/Fixtures",
             "DataPool/Timecodes/7",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
