@@ -1,0 +1,17 @@
+Club Diver.mp3 table 3094a9611299
+Cut and Run.mp3 table d290f7cb51a5
+Ice cream.mp3 table 9c33e81b037e
+Morning.mp3 table 1f4e604d7b74
+Rain.mp3 table 27f473c54be2
+Too Cool.mp3 table e92b056417b3
+scott-buckley-neon.mp3 table 1e21a5da7ada
+걸그룹DinoDino_C_max최고품질.wav table 5f85140b14fd
+8곡 합계 {'PASS': 75, 'n/a': 29}
+no-last Club Diver.mp3 Chorus 9 True Block 처음 True · Release 마지막 True · cue_only 15 · 누출 없음 True
+no-last Cut and Run.mp3 Chorus 10 True Block 처음 True · Release 마지막 True · cue_only 18 · 누출 없음 True
+no-last Ice cream.mp3 Chorus 2 True Block 처음 True · Release 마지막 True · cue_only 4 · 누출 없음 True
+no-last Morning.mp3 Chorus 8 True Block 처음 True · Release 마지막 True · cue_only 13 · 누출 없음 True
+no-last Rain.mp3 Chorus 6 True Block 처음 True · Release 마지막 True · cue_only 12 · 누출 없음 True
+no-last Too Cool.mp3 Verse 6 True Block 처음 True · Release 마지막 True · cue_only 19 · 누출 없음 True
+no-last scott-buckley-neon.mp3 Chorus 6 True Block 처음 True · Release 마지막 True · cue_only 12 · 누출 없음 True
+no-last 걸그룹DinoDino_C_max최고품질.wav Bridge 2 True Block 처음 True · Release 마지막 True · cue_only 3 · 누출 없음 True
