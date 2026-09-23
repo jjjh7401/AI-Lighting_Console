@@ -192,6 +192,44 @@ def _chorus_position(k: int, prev_is_chorus_family: bool) -> str | None:
     return "front"
 
 
+def _next_chorus_position(
+    sections: Sequence[SectionOccurrence], from_index: int, k_by_index: Mapping[int, int]
+) -> str | None:
+    """카드 t439 §④b M5 판단 2 — ``from_index`` 뒤로 처음 나오는 후렴이
+    실제로 쓸 포지션을 미리 본다(REQ-064 "다음 후렴을 위해"). ``None``
+    이면 그 후렴이 새 포지션을 요구하지 않거나(``_chorus_position`` 이
+    이미 ``None`` — k>=4·직전이 후렴, REQ-043 방향 축 예외), 뒤에 후렴
+    자체가 없다는 뜻이다 — 두 경우 모두 "포지션을 옮길 이유가 없다"로
+    같은 값(``None``)으로 합쳐진다(:func:`_movers_need_repositioning`
+    가 소비한다)."""
+    for idx in range(from_index + 1, len(sections)):
+        if sections[idx].section in CHORUS_FAMILY:
+            k = k_by_index[idx]
+            prev_is_chorus = idx > 0 and sections[idx - 1].section in CHORUS_FAMILY
+            return _chorus_position(k, prev_is_chorus)
+    return None
+
+
+def _movers_need_repositioning(
+    sections: Sequence[SectionOccurrence],
+    from_index: int,
+    k_by_index: Mapping[int, int],
+    current_pos: str,
+) -> bool:
+    """REQ-064 — "무버가... **다음 후렴을 위해 포지션을 바꿔야 하면**"
+    만 무버를 소등한다(원래 배차서 5·카드 t439 §④b M5 판단 2). 뒤에
+    후렴이 없거나, 그 후렴이 새 포지션을 요구하지 않거나, 요구하는
+    포지션이 지금 위치와 같으면 전부 False — "옮길 이유가 없다"는 같은
+    결론이다. 카드 t438 이 만든 :func:`server.concept.mib.
+    movers_off_ops` (``section in MOVER_HOLD_SECTIONS`` 조건만 봄)는
+    이 조건을 아직 갖지 않아, 이 함수가 그 조건을 조립기(assembler,
+    이 모듈)에 직접 넣는다 — 두 번째 판정 함수를 만드는 것이 아니라
+    ``mib.movers_off_ops`` 가 아직 못 갖춘 조건을 그 함수를 부르지
+    않는 이 자리에서 대신 계산하는 것이다."""
+    next_pos = _next_chorus_position(sections, from_index, k_by_index)
+    return next_pos is not None and next_pos != current_pos
+
+
 def compile_density(
     sections: Sequence[SectionOccurrence],
     bpm: float,
@@ -214,12 +252,21 @@ def compile_density(
     bar = bar_seconds(bpm)
     warnings: list[str] = []
     rows: list[dict] = []
+    # 카드 t439 §④b M5 판단 2 — 지금까지 조립된 행이 마지막으로 정한
+    # 포지션. 안전 시작 큐(``safety.first_safety_cue``)의 ``pos:
+    # "home"`` 과 같은 초기값이다(이 모듈은 안전 큐를 직접 만들지 않지만,
+    # ``gates.build_song`` 이 이 시퀀스 앞에 항상 그 안전 큐를 붙인다).
+    current_pos = "home"
 
     def _append(row: dict) -> None:
+        nonlocal current_pos
         rows.append(row)
         warning = layer_limit_warning(row["kind"], row["layers"])
         if warning is not None:
             warnings.append(f"{row['section']} {row['occurrence']}: {warning}")
+        for op in row["ops"]:
+            if "pos" in op:
+                current_pos = op["pos"]
 
     chorus_indices = [i for i, s in enumerate(sections) if s.section in CHORUS_FAMILY]
     chorus_total = len(chorus_indices)
@@ -298,6 +345,26 @@ def compile_density(
                 # 않으면 carry 로 그대로 새어 들어와 절 밝기가 후렴 값을
                 # 물려받는다(어두운 창을 만드는 목적도 겸한다, MIB 판정과
                 # 같은 방향).
+                #
+                # 카드 t439 §④b M5 판단 2 — REQ-064 문면대로 "다음 후렴을
+                # 위해 포지션을 바꿔야 할 때만" 무버를 소등하도록
+                # 조건화해 봤으나(`_movers_need_repositioning`, 이 파일
+                # 아래에 남겨 둔 구현), TOO_COOL_RAW 픽스처에서 무조건
+                # 회귀했다 — AC-LDDESIGN-010 이 고정한
+                # `test_verse_first_occurrence_clears_prior_mover_and_wash_
+                # state`(밝기 45 기대)가 100 으로 깨진다. 다음 후렴이 지금과
+                # 같은 포지션이면(이 픽스처가 정확히 그 경우) 무버가 이전
+                # 후렴의 100% 밝기를 그대로 들고 절로 들어온다 — REQ-064는
+                # "포지션을 바꿀 필요가 없다"만 말하지 "밝기도 그대로
+                # 둔다"를 말하지 않는데, 이 둘을 하나의 소등/비소등
+                # 이분법으로 묶으면 후자가 딸려 온다. 밝기를 절 수준(45%)
+                # 으로는 낮추되 위치는 안 바꾸는 제3의 동작이 필요할 수
+                # 있는데, 그 값은 이 SPEC 문면에 없어 지어내지 않는다 —
+                # 감독 확인 필요(리드에게 보고, 카드 지시 "matrix 변하면
+                # 재고정하지 말고 보고"와 같은 원칙을 이 회귀에도 적용).
+                # 그래서 무조건 소등 동작은 그대로 두고, 조건 계산 자체만
+                # `_movers_need_repositioning`(아래)로 분리해 시험으로
+                # 고정해 둔다 — 배선 여부는 이 판단이 난 뒤에 결정한다.
                 ops = _color_ops(color_for, occ.section, occ.occurrence) + [
                     {"op": "remove", "roles": [*MOVER_GROUPS, "WASH-U", "WASH-D", "FOH"]},
                     {
@@ -407,6 +474,14 @@ def compile_density(
                 )
 
         elif occ.section == "Bridge":
+            # REQ-047 — KEY·BACK 을 제외한 그룹은 무조건 끈다.
+            #
+            # 카드 t439 §④b M5 판단 2 — Verse 1회차와 같은 이유로 무버만
+            # REQ-064 조건(`_movers_need_repositioning`)으로 바꿔 봤으나
+            # TOO_COOL_RAW 의 두 Bridge 발생 중 최소 하나가 같은 회귀를
+            # 낸다(`test_bridge_removes_everything_but_key_and_back`/
+            # `test_bridge_cue_ops_shape`, 위 Verse 주석과 같은 원인·같은
+            # 미결정 — 감독 확인 필요). 배선하지 않는다.
             ops = _color_ops(color_for, occ.section, occ.occurrence) + [
                 {
                     "op": "remove",
