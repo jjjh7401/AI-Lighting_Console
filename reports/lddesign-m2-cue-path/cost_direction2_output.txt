@@ -1,0 +1,31 @@
+=== 길 B 가 실제로 들고 있는 것 (SongCueLookSelection)
+  section
+  requested_dynamics
+  look
+  reason
+  dynamics_matches
+  reuse_reason
+
+=== 길 A 검사가 요구하는 것 (SectionDecision)
+  section    채울 수 있음  — SongCueSection 에서 라벨·시각을 옮길 수 있다
+  d          채울 수 있음  — requested_dynamics 로 근사 가능(세기 목록 -> 단일 D레벨은 손실)
+  palette    지어내야 함   — 길 B 자료에 대응 항목 없음 — Look 안에 녹아 있어 역산 불가
+  position   지어내야 함   — 길 B 자료에 대응 항목 없음 — Look 안에 녹아 있어 역산 불가
+  texture    지어내야 함   — 길 B 자료에 대응 항목 없음 — Look 안에 녹아 있어 역산 불가
+  fx         지어내야 함   — 길 B 자료에 대응 항목 없음 — Look 안에 녹아 있어 역산 불가
+  accent     지어내야 함   — 길 B 자료에 대응 항목 없음 — Look 안에 녹아 있어 역산 불가
+
+  필수 7개 중 지어내야 하는 것: 5개 ['palette', 'position', 'texture', 'fx', 'accent']
+
+=== 계획 수준에서 더 필요한 것 (UnifiedSongLightingPlan)
+  song_title     채울 수 있음
+  sections       지어내야 함
+  timing         지어내야 함
+  music_profile  지어내야 함
+  rig_profile    지어내야 함
+  approval       지어내야 함
+  필수 6개 중 지어내야 하는 것: 5개
+
+=== 기존 SectionDecision 생산자는 몇 개인가
+  session.py:2061 하나뿐 — 감독 인터뷰/확정 분석에서 만든다
+  (source='song_design_interview', palette/position/texture 는 감독 답변에서 파생)

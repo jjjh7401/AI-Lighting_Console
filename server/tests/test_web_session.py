@@ -5722,9 +5722,24 @@ class TestSongDesignInterviewSession:
         assert len(back_lines) == 5
         for line in back_lines:
             index = commands.index(line)
-            key_line = commands[index - 1]
-            assert key_line.startswith("Fixture ") and "'Dimmer' At " in key_line
-            assert commands[index + 1].startswith("Store Sequence 110 Cue ")
+            # SPEC-LDDESIGN-001 M2 — 이 큐 블록에는 이제 컨셉 색 값 라인도 들어간다
+            # (`_song_color_value_lines`). 그래서 "바로 앞 줄이 키 밝기"라는 인접성은
+            # 더 이상 성립하지 않는다. 재는 것은 그대로다: 같은 블록 안에서 키 밝기
+            # 줄을 찾아 80% 비율을 확인하고, 뒤에 그 큐의 Store 가 온다.
+            key_line = next(
+                commands[i]
+                for i in range(index - 1, -1, -1)
+                if commands[i].startswith("Fixture ") and "'Dimmer' At " in commands[i]
+            )
+            store_at = next(
+                i
+                for i in range(index + 1, len(commands))
+                if commands[i].startswith("Store Sequence 110 Cue ")
+            )
+            # 사이에 다른 큐의 Store 가 끼지 않았는지 — 같은 블록임을 보증한다.
+            assert not any(
+                commands[i].startswith("Store Sequence") for i in range(index + 1, store_at)
+            )
             key_pct = float(key_line.rsplit(" At ", 1)[1])
             back_pct = float(line.rsplit(" At ", 1)[1])
             assert back_pct == round(key_pct * 0.8, 6)

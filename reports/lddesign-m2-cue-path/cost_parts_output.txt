@@ -1,0 +1,19 @@
+=== 1) 설계층이 내는 팔레트 이름을 resolve_color_name 이 아는가
+  blue      -> (5, 20, 100)
+  cyan      -> (0, 90, 100)
+  amber     -> (100, 55, 5)
+  white     -> None
+  magenta   -> (100, 0, 70)
+  red       -> (100, 0, 0)
+  모르는 이름: 1/6 ['white']
+
+=== 2) 그 RGB 를 콘솔 값 라인으로 바꾸는 함수가 이미 있는가
+  blue      -> Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  cyan      -> Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  amber     -> Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+  magenta   -> Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 70
+  red       -> Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+
+=== 3) 앱이 아는 팔레트 이름 전체
+  COLOR_PALETTE_SEQUENCE 10개
+  ['Warm White', 'Cool White', 'Red', 'Amber', 'Yellow', 'Green', 'Cyan', 'Blue', 'Magenta', 'Lavender']
