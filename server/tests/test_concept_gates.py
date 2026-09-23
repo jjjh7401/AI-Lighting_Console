@@ -3,25 +3,32 @@
 
 ``server/tests/fixtures/pilot_baseline.json`` (8곡, ``'error'`` 있는 2곡
 제외)을 ``server.concept.gates`` 파이프라인(density → resolver →
-escalation/headroom/color_lint/mib/tracking)으로 돌려, 오늘 실측한
-프로토타입 기준선(``.moai/reports/t439/baseline/matrix.json`` —
-``.moai/state/verify/f12e5c95-t429/final_integrated.py`` 를 이 트리에서
-직접 실행해 얻음, PASS 98 · n/a 6 · FAIL 0)과 셀 단위로 대조한다.
+escalation/headroom/color_lint/mib/tracking)으로 돌려, 이 파이프라인이
+실제로 내는 13×8 판정 행렬을 고정(pin)한다.
 
-REQ-076 — 발견한 편차는 종이로 덮지 않는다. 대조 결과 **9개 셀이
-프로토타입과 다르다** — 전부 FAIL 로, 새 FAIL 이다(REQ-076 "새 FAIL 이면
-멈추고 보고"). 이 시험은 그 9개 셀을 프로토타입 값이 아니라 **오늘
-실제로 나온 값**으로 고정(pin)한다 — 억지로 프로토타입과 맞추지 않는다.
+**구 기준선(98) 은 과대다.** ``.moai/state/verify/f12e5c95-t429/
+final_integrated.py`` 를 이 트리에서 직접 실행해 얻은 "PASS 98 · n/a 6 ·
+FAIL 0"(``.moai/reports/t439/baseline/matrix.json``)은 프로토타입 자신의
+G6 판정식이 REQ-029 의 **예외** 조건을 위반 조건으로 뒤집어 세는 결함
+위에서 나온 값이다(아래 1번) — 이 결함이 낸 8곡 전부의 G6=PASS 를 빼면
+**정정된 기준선은 90**(98-8)이다. 이 시험은 정정값(90)도, 구 기준선
+(98)도 아니라 **이 파이프라인이 오늘 실제로 내는 값**을 고정한다
+(REQ-075/076).
+
+REQ-076 — 발견한 편차는 종이로 덮지 않는다. 대조 결과 정정 기준선(90)
+대비로도 **1개 셀이 남는다**(G6 8곡 PASS 는 프로토타입 결함이 낸 거짓
+PASS 였다는 게 이미 밝혀졌으니 정정 기준선 자체가 8곡 FAIL 을 이미
+포함한다 — 실제로 남는 차이는 scott-buckley-neon 의 G5 하나뿐이다).
 원인은 아래 두 갈래로, 전부 ``server/concept/`` 기존 모듈의 동작이지
 이 파일(``gates.py``)이 만든 결함이 아니다:
 
-1. **G6 (컬러: 유보색 조기 0 · 브리지 위반 0) — 8곡 전부.** 유보색
-   검사(REQ-027, ``check_reserved_color_release``)는 8곡 전부 pass —
-   프로토타입과 일치. 브리지 검사(REQ-029, ``check_adjacent_bridge``)만
-   fail 한다. 원인: 이 컨셉의 팔레트는 절/브릿지=파랑(COOL), 후렴=노랑
-   (WARM)을 완전히 배타적으로 쓰고, 절과 후렴은 KEY·BACK·SIDE-L·SIDE-R
-   그룹을 그대로 공유한다(``density.py`` Verse/Chorus 분기) — REQ-029
-   문면("인접 구간은 공통색 최소 1개 유지, 켜진 그룹이 전혀 안 겹치면
+1. **G6 (컬러: 유보색 조기 0 · 브리지 위반 0) — 8곡 전부, 실 위반.**
+   유보색 검사(REQ-027, ``check_reserved_color_release``)는 8곡 전부
+   pass. 브리지 검사(REQ-029, ``check_adjacent_bridge``)만 fail 한다.
+   원인: 이 컨셉의 팔레트는 절/브릿지=파랑(COOL), 후렴=노랑(WARM)을
+   완전히 배타적으로 쓰고, 절과 후렴은 KEY·BACK·SIDE-L·SIDE-R 그룹을
+   그대로 공유한다(``density.py`` Verse/Chorus 분기) — REQ-029 문면
+   ("인접 구간은 공통색 최소 1개 유지, 켜진 그룹이 전혀 안 겹치면
    예외")을 문자 그대로 구현한 ``check_adjacent_bridge`` 는 이 조합을
    위반으로 정확히 잡아낸다. 프로토타입 자신의 인라인 ``bridge_viol``
    공식(``final_integrated.py`` 170행)은 정반대 조건 — "그룹이 하나도
@@ -31,28 +38,48 @@ REQ-076 — 발견한 편차는 종이로 덮지 않는다. 대조 결과 **9개
    검사한 결과가 아니라 그 공식 자체의 결함으로 생긴 거짓 PASS다 —
    ``color_lint.check_adjacent_bridge`` 가 REQ-029를 올바르게 구현한
    쪽이다(그 자신의 docstring이 이 예외 조건을 명시적으로 설명한다).
-   CueState 가 색을 1개 필드로만 들고 다니는 M2 설계(주+보조색을
-   따로 못 담음) 위에서, 절=파랑/후렴=노랑을 완전히 배타적으로 쓰는
-   이 컨셉의 팔레트 설계 자체가 REQ-029 를 구조적으로 못 만족한다 —
-   이 관측은 M6(이 파일)이 처음으로 density→resolver→color_lint 를
-   실제로 이어 돌려서야 드러났다. 고치려면 M3(팔레트 설계) 또는
-   M4(density.py 구간별 색 배정) 스코프의 결정이 필요하다 — M6 은
-   기존 모듈을 조립만 하므로 이 파일에서 고치지 않는다.
 
-2. **G5 (헤드룸 경고 0) — scott-buckley-neon.mp3 하나.** 이 곡은
-   Bridge 가 Intro 바로 뒤에 온다. ``density.py`` 의 Intro 분기는
-   KEY 10% 하나만 켠다(프로토타입의 Intro 분기는 BACK 25% 확장 +
-   "보컬 시작" 4마디 전 프레이즈 큐로 SIDE-L·SIDE-R 까지 35%까지
-   올린다 — density.py 는 이 두 단계를 아예 포함하지 않는다, M4
-   스코프의 축소 포팅). 그 결과 이 곡에서 Bridge(KEY+BACK 30%, 2그룹)
-   가 Intro(KEY 10%, 1그룹)보다 밝기·그룹 수가 **늘어** 보여
-   ``headroom.bridge_reduced``(REQ-047, "직전 브릿지 아닌 구간보다
-   반드시 감소")가 위반으로 잡는다. density.py 의 Intro 분기 자체를
-   프로토타입 수준으로 확장하는 일은 M4 스코프이므로 이 파일에서
-   고치지 않는다.
+   **카드 t439 재확인(감독 결정 1) — "공유 보조색도 공통색으로 친다"를
+   시도했으나 실제로 적용할 대상이 없다.** REQ-026 은 구간마다 "주색·
+   보조색"을 산출하라고 하지만, 이 파이프라인 어디에도 큐 하나가
+   동시에 두 색을 띠는 자리가 없다: :class:`server.concept.cue_model.
+   CueState` 의 ``color`` 는 단일 ``str | None`` 필드이고,
+   ``density.py`` 의 ``_color_ops``/``color_for`` 콜백도 색 문자열
+   하나만 낸다. :class:`server.concept.color_strip.ConceptCue` 자체는
+   ``colors`` 를 튜플로 설계해 ``compute_color_strip`` 이 둘째 원소를
+   "보조색"으로 읽지만, 그 함수를 실제로 호출하는 production 코드가
+   이 파이프라인에 없어 채워지지 않는다. ``Palette.secondary``(이
+   파일의 ``SECONDARY_COLOR``)는 곡 전체 전역 상수이지 "그 큐가
+   동시에 띠는 두 번째 색"이 아니므로, 이 값을 ``check_adjacent_bridge``
+   에 억지로 밀어 넣는 건 "실제로 emit 되지 않는 색을 지어내 PASS를
+   만드는" 것과 같다 — 배차서가 명시적으로 금지한 방향이다(``gates.py``
+   ``_concept_cues`` 독스트링에 이 조사 전체를 기록해 뒀다). 그러므로
+   G6 FAIL 8곡은 지어낸 값 없이도 남는 **실제 위반**이다. 고치려면
+   M3(팔레트 설계 — 절/후렴이 색을 공유하게) 또는 M4(density.py 구간별
+   색 배정)의 새 결정이 필요하다 — M6 은 기존 모듈을 조립만 하므로
+   이 파일에서 고치지 않는다.
+
+2. **G5 (헤드룸 경고 0) — scott-buckley-neon.mp3 하나, 카드 t439 에서
+   원인이 바뀌었다(감독 결정 2 적용 후에도 잔존).** 이전 실측(카드
+   t437 축소 포팅)의 원인은 Intro 가 KEY 10% 하나(1그룹)만 켜 Bridge
+   (KEY+BACK 30%, 2그룹)보다 그룹 수까지 "늘어" 보이는 것이었다 —
+   이 카드가 ``density.py`` 의 Intro 분기를 프로토타입(라인 61~62)
+   수준으로 복원했다(KEY 10% + BACK 25% 확장 + "보컬 시작" 4마디 전
+   SIDE-L·SIDE-R 35% 예고 프레이즈, ``density.py`` Intro 분기 참고).
+   복원 후 Intro 는 KEY+BACK 2그룹·25% 로, Bridge(KEY+BACK 2그룹·30%)
+   보다 **밝기는 이제 진짜로 낮다**(25<30) — 하지만 ``headroom.
+   bridge_reduced``(REQ-047)는 밝기와 그룹 수 **둘 다** 엄격히 감소해야
+   pass 인데, 이 곡은 Intro 와 Bridge 가 똑같이 KEY+BACK 2그룹을 쓰므로
+   그룹 수 조건(``2 < 2``)이 거짓이라 여전히 fail 한다. 즉 원래 있던
+   "그룹 수가 오히려 늘어나는" 결함은 사라졌지만, "브릿지가 그 앞
+   구간보다 그룹 수까지 줄어야 한다"는 REQ-047 자체의 엄격한 요구를
+   이 곡의 실제 조명 설계(Intro·Bridge 모두 KEY+BACK 조합)가 못
+   만족하는 건 별개의 사실이다 — density.py 를 더 손대면 배차서가
+   금지한 "다른 값을 건드려 PASS 를 만드는" 방향이 되므로 이 파일에서
+   더 고치지 않는다.
 
 두 원인 모두 이 어댑터(``gates.py``)의 조립 방식이 아니라, 조립 대상인
-기존 모듈(density.py 의 Intro 축소 포팅, 팔레트의 색 배타성)이 실제로
+기존 모듈(팔레트의 색 배타성, 이 곡의 Intro·Bridge 조명 설계)이 실제로
 맞물릴 때 드러나는 사실이다 — REQ-076 은 이런 사실을 시험이 가리지
 말고 고정해 보고하라고 요구한다.
 """
@@ -207,12 +234,17 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     },
 }
 
-# 프로토타입 기준선 — ``.moai/state/verify/f12e5c95-t429/final_integrated.py``
-# 를 이 트리(HEAD)에서 직접 실행해 오늘 실측(PASS 98 · n/a 6 · FAIL 0,
-# 산출물 ``.moai/reports/t439/baseline/{final_integrated.txt,json,matrix.json}``)
-# 한 값을 그대로 옮겨 적은 것이다 — 대조용으로만 쓰고 파이프라인 호출에는
-# 관여하지 않는다. EXPECTED_GATES 와의 차이가 위 모듈 docstring 이 말하는
-# "새 FAIL 9칸"이다.
+# 프로토타입 기준선(구 기준선, PASS 98) — ``.moai/state/verify/
+# f12e5c95-t429/final_integrated.py`` 를 이 트리(HEAD)에서 직접 실행해
+# 실측(PASS 98 · n/a 6 · FAIL 0, 산출물 ``.moai/reports/t439/baseline/
+# {final_integrated.txt,json,matrix.json}``)한 값을 그대로 옮겨 적은
+# 것이다 — 대조용으로만 쓰고 파이프라인 호출에는 관여하지 않는다.
+# **이 98 은 과대다** — 모듈 docstring 1번이 말하듯 G6 8곡 PASS 는
+# 프로토타입 자신의 판정식 결함(REQ-029 예외 조건 반전)이 낸 거짓
+# PASS 다. 그 8칸을 빼면 **정정 기준선은 90**(98-8)이고, EXPECTED_GATES
+# 와 정정 기준선 사이의 실제 남은 차이는 scott-buckley-neon 의 G5
+# 1칸뿐이다(모듈 docstring 2번, 카드 t439 Intro 복원 후에도 이 곡의
+# Intro·Bridge 가 그룹 수를 공유해 REQ-047 의 엄격 조건을 못 만족).
 BASELINE_GATES: dict[str, dict[str, bool | None]] = {
     "Club Diver.mp3": {
         "G1 어휘 닫힘": True,
@@ -349,9 +381,13 @@ def test_gate_matrix_matches_measured_pipeline_output(song_name: str) -> None:
 
 
 def test_gate_matrix_diverges_from_prototype_baseline_in_exactly_nine_cells() -> None:
-    """REQ-076 — 프로토타입 기준선과의 차이를 셀 단위로 명시적으로 센다.
-    9칸(G6 8곡 + scott-buckley-neon G5)이 True(프로토타입 PASS)에서
-    False(이 파이프라인 FAIL)로 바뀐다 — 그 밖의 95칸은 동일하다."""
+    """REQ-076 — 프로토타입 기준선(구 기준선 98)과의 차이를 셀 단위로
+    명시적으로 센다. 9칸(G6 8곡 + scott-buckley-neon G5)이 True(프로토타입
+    PASS)에서 False(이 파이프라인 FAIL)로 바뀐다 — 그 밖의 95칸은 동일하다.
+    9칸 중 8칸(G6)은 정정 기준선(90)에 이미 포함된 "거짓 PASS 교정"이고,
+    나머지 1칸(scott-buckley-neon 의 G5)은 카드 t439 Intro 복원 뒤에도
+    남는 실제 위반이다 — 정정 기준선(90)이 아니라 이 파이프라인의 실측
+    (89)을 고정한다(모듈 docstring 참고)."""
     diffs = [
         (song, gate)
         for song in EXPECTED_GATES
@@ -373,6 +409,16 @@ def test_aggregate_pass_na_fail_counts() -> None:
     검사하지 못한 버그 위에서 성립하는 목표였다 — 이 파이프라인이 그
     버그를 상속하지 않고 REQ-029/REQ-047 을 실제로 검사하면서 그 목표가
     깨진다(REQ-076 "새 FAIL 이면 멈추고 보고" — 이 시험이 그 보고다).
+
+    카드 t439(감독 결정 2)의 정정 기준선은 90(=98-8, G6 거짓 PASS 8건만
+    뺀 값)이었으나, 실측 PASS 는 **89**로 그보다 1 낮다 — density.py의
+    Intro 복원(감독 결정 2)이 scott-buckley-neon 의 G5 를 고치지
+    못했기 때문이다(모듈 docstring 2번: Intro·Bridge 가 이제 밝기는
+    맞게 감소해도 그룹 수는 똑같이 KEY+BACK 2개라 REQ-047 의 "그룹
+    수도 반드시 감소"를 못 만족). 이 시험은 정정 기준선(90)을 억지로
+    맞추지 않고 **오늘 이 파이프라인이 실제로 내는 값**을 고정한다 —
+    배차서의 "다른 값을 건드려 PASS 를 만들지 마라"를 그대로 지킨
+    결과다.
     """
     total = pass_count = na_count = fail_count = 0
     for _song, gates in EXPECTED_GATES.items():

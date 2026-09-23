@@ -233,8 +233,30 @@ def compile_density(
         prev_is_chorus_family = prev is not None and prev.section in CHORUS_FAMILY
 
         if occ.section == "Intro":
+            # 프로토타입(``final_integrated.py`` 61~62행)을 그대로 포팅한다
+            # (카드 t439 G5 수정 — 카드 t437 의 축소 포팅이 KEY 10% 하나만
+            # 남기고 아래 BACK 25% 확장과 "보컬 시작" 예고 프레이즈를
+            # 빠뜨렸다):
+            #
+            #   if d=='Intro':
+            #       add(ts,d,occ,None,[{'op':'replace','color':COOL},
+            #           {'op':'expand','roles':['BACK'],'dimmer':25,
+            #           'pos':'back','motion':0}],'구간',R,'Track',
+            #           ('long',2.0),None,src,'보조색 고립',
+            #           base_name='Intro')
+            #       if bars>=4: add(round(en[i]-4*BAR,1),d,occ,'보컬 시작',
+            #           [{'op':'add','roles':['BACK','SIDE-L','SIDE-R'],
+            #           'dimmer':35}],'프레이즈',R,'Track',('short',1.0),
+            #           None,'rule','보컬 4마디 전 예고')
+            #
+            # ``tracking`` 은 프로토타입의 ``'Track'`` 을 그대로 옮기지
+            # 않는다 — REQ-056(``tracking.py``)이 phrase 층 기본값을
+            # ``cue_only`` 로 못박은 이유가 이 파일의 다른 phrase 큐
+            # (빌드업·눈 리셋)에 이미 적용돼 있고, 이 새 phrase 만 다른
+            # 규칙을 쓸 이유가 없다.
             ops = _color_ops(color_for, occ.section, occ.occurrence) + [
-                {"op": "expand", "roles": ["KEY"], "dimmer": 10, "pos": "home", "motion": 0}
+                {"op": "expand", "roles": ["KEY"], "dimmer": 10, "pos": "home", "motion": 0},
+                {"op": "expand", "roles": ["BACK"], "dimmer": 25, "pos": "back", "motion": 0},
             ]
             _append(
                 dict(
@@ -249,6 +271,26 @@ def compile_density(
                     base_name=None,
                 )
             )
+            if bars >= 4:
+                _append(
+                    dict(
+                        ts=round(occ.end - 4 * bar, 1),
+                        section=occ.section,
+                        occurrence=occ.occurrence,
+                        kind="phrase",
+                        trigger="보컬 시작",
+                        layers=frozenset({"visibility", "environment"}),
+                        ops=[
+                            {
+                                "op": "add",
+                                "roles": ["BACK", "SIDE-L", "SIDE-R"],
+                                "dimmer": 35,
+                            }
+                        ],
+                        tracking="cue_only",
+                        base_name=None,
+                    )
+                )
 
         elif occ.section == "Verse":
             if occ.occurrence == 1:

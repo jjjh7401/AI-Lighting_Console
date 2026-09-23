@@ -355,7 +355,41 @@ def _concept_cues(table: Sequence[TableRow]) -> list[ConceptCue]:
     으로 바꾼다. 안전 큐(``kind=="safety"``)는 "section" 층으로
     취급한다 — 곡 시작·끝을 표시하는 앵커 큐라는 점에서 구간 큐와 같은
     성격이다(REQ-027 은 층을 가리지 않으므로 이 선택이 그 판정을
-    바꾸지 않는다)."""
+    바꾸지 않는다).
+
+    ``colors`` 는 큐마다 1개 원소 튜플이다 — 카드 t439 조사 결과, 이
+    컨셉 파이프라인은 큐 하나에 "주색+보조색"을 동시에 담는 자리를
+    어디에도 만들지 않는다(G6 조사, REQ-026 "구간별 주색·보조색"
+    narrow reading):
+
+    - :class:`server.concept.cue_model.CueState` 의 ``color`` 필드
+      자체가 단일 ``str | None`` 이다(``cue_model.py`` 231행) — 여러
+      그룹이 동시에 다른 색을 켤 수 있는 자리가 모델에 없다.
+    - :func:`server.concept.density._color_ops` 는 색 동작을
+      ``{"op":"replace","color":<한 값>}`` 하나만 낸다(``density.py``)
+      — ``color_for`` 콜백(``_make_color_for``, 이 파일 187~212행)도
+      섹션당 색 문자열 하나만 돌려준다.
+    - :class:`server.concept.color_strip.ConceptCue` 자체는 ``colors``
+      를 튜플로 설계해 뒀고 :func:`server.concept.color_strip.
+      compute_color_strip` 은 ``colors[1]`` 을 "보조색"으로 읽지만
+      (``color_strip.py`` 87~88행), 이 함수(``compute_color_strip``)를
+      실제로 호출하는 production 코드가 이 파이프라인에 없다 — REQ-026
+      의 Color Strip 산출 자체가 M6 배선 밖이라 ``secondary_color`` 는
+      어디서도 채워지지 않는다.
+    - :class:`server.concept.worksheet.Palette` 의 ``secondary`` 는
+      곡 전체에서 하나뿐인 전역 상수(이 파일의 ``SECONDARY_COLOR``,
+      Verse·Bridge 색으로 이미 그 자체가 색 값으로 쓰인다)이지, 켜진
+      큐 하나가 "동시에 띠는 두 번째 색"이 아니다 — 이 값을 여기서
+      ``colors`` 둘째 원소로 밀어 넣으면 실제로 emit 되지 않는 색을
+      지어내 G6 를 통과시키는 것과 같다(배차서 금지 사항).
+
+    결론: 실제로 emit 되는 색만 담는다 — 지어내지 않는다. 따라서
+    Verse/Bridge(COOL 단독)와 Chorus(WARM 단독)가 그룹을 공유하며
+    인접하는 전환은 :func:`server.concept.color_lint.
+    check_adjacent_bridge`(REQ-029)가 실제 위반으로 정확히 잡는다 —
+    이 컨셉의 팔레트가 색을 완전히 배타적으로 쓰는 설계 자체의 결과다
+    (``test_concept_gates.py`` 모듈 docstring 원인 1과 동일 결론).
+    """
     cues: list[ConceptCue] = []
     for row in table:
         layer = "section" if row.kind in ("section", "safety") else "phrase"
