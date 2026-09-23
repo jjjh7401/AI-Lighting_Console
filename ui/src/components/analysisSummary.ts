@@ -41,13 +41,15 @@ function buildWarningLine(timeline: SongTimelineView): AnalysisSummaryLine | nul
 }
 
 // SPEC-COPILOT-COLORMODE-001 D4 — Q2B_COLOR_USAGE 값(modulate/single/
-// per_chorus)의 한국어 설명 문구. 값 자체는 서버가 이미 실어 보내는
+// per_chorus/split_swap)의 한국어 설명 문구. 값 자체는 서버가 이미 실어 보내는
 // 것이므로 여기서는 표현만 맡는다 — 값을 지어내지 않는다는 이 파일의
 // 원칙과 같다.
 const COLOR_USAGE_LABELS: Record<string, string> = {
   modulate: "메인 컬러 중심으로 변조하다가 임팩트에서 터뜨림",
   single: "이 색 계열로만 유지",
   per_chorus: "후렴마다 다른 포인트 색",
+  // 카드 t445 — 긴 후렴을 나눈 큐마다 주색·보조색을 맞바꾼다.
+  split_swap: "후렴 안에서 주색·보조색 맞바꾸기",
 };
 
 /** 무엇이 색을 정했는지 — 감독의 PLAN 답변 + 구간 아크 역할 + 색 운용 방식. */
