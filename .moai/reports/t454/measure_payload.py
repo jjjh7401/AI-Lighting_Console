@@ -8,9 +8,17 @@ from server.design.song_cue_composer import compose_song_cue_bundle
 from server.tests.test_song_timeline_concept_report_wiring import _plan, _section
 from server.web.session import _song_timeline_payload
 
-labels = [("Intro", 0), ("Verse 1", 15000), ("Chorus 1", 40000), ("Verse 2", 60000),
-          ("Chorus 2", 85000), ("Bridge", 105000), ("Chorus 3", 125000), ("Outro", 150000)]
-secs = tuple(_section(i + 1, l, s) for i, (l, s) in enumerate(labels))
+labels = [
+    ("Intro", 0),
+    ("Verse 1", 15000),
+    ("Chorus 1", 40000),
+    ("Verse 2", 60000),
+    ("Chorus 2", 85000),
+    ("Bridge", 105000),
+    ("Chorus 3", 125000),
+    ("Outro", 150000),
+]
+secs = tuple(_section(i + 1, label, s) for i, (label, s) in enumerate(labels))
 plan = _plan(bpm=120.0, sections=secs)
 p = _song_timeline_payload(
     plan, compose_song_cue_bundle(plan), lifecycle="pending_approval", sequence_no=1
