@@ -114,25 +114,21 @@ class TestUnrecognizedLabelsFallBackNotRaise:
         assert report["available"] is True
 
 
-class TestSongEndingOnCueOnlyPhraseIsCaughtNotRaised:
-    """카드 t439 발견 — 곡이 (프레이즈 층의) ``cue_only`` 큐 바로 뒤에서
-    끝나면(예: Outro 없이 Chorus 로 곡이 끝남), gates.py 자신의 기존
-    g9(``tracking.verify_no_cue_only_leak``)가 ``VocabError`` 를 던진다
-    (안전 마지막 큐가 참조하는 ``song_release_reference`` 가 cue_only 행
-    필터링 과정에서 함께 걸러지기 때문 — ``resolver.py`` ``reduce: ref
-    ... bases 에 없음``). 이 다리의 새 실패 모드가 아니다 — gates.py 의
-    기존 13게이트 회귀 행렬(test_concept_gates.py, PASS 90 는 이 카드가
-    바꾸지 않는다)에는 안 걸린 사각지대다. 이 시험은 그 사각지대가
-    ``build_concept_report`` 를 통해서는 예외로 새지 않는다는 것만
-    확인한다(콘솔 명령 경로는 계속 진행된다) — gates.py 자체는 이
-    카드의 수정 대상이 아니다(REQ-075/076 회귀 행렬 보존, 카드 지시)."""
+class TestSongEndingOnCueOnlyPhraseIsJudged:
+    """카드 t439 발견·t452 수정 — 곡이 (프레이즈 층의) ``cue_only`` 큐
+    바로 뒤에서 끝나면(예: Outro 없이 Chorus 로 곡이 끝남), 안전 마지막
+    큐가 참조하는 ``song_release_reference`` 가 그 cue_only 행에 붙어
+    g9(``tracking.verify_no_cue_only_leak``)의 cue_only 필터링과 함께
+    걸러졌고 ``VocabError`` 로 리포트 전체가 ``available: False`` 가
+    됐다. t452 이후 기준 이름은 마지막 track 행에 붙으므로 리포트가 선다."""
 
-    def test_chorus_with_no_outro_downgrades_to_unavailable(self) -> None:
+    def test_chorus_with_no_outro_is_judged(self) -> None:
         plan = _plan(bpm=100.0, labels=("Intro", "Verse", "Chorus 1"))
         report = build_concept_report(plan)
 
-        assert report["available"] is False
-        assert "reduce: ref" in report["reason"]
+        assert report["available"] is True, report
+        g9 = next(v for k, v in report["gates"].items() if k.startswith("G9"))
+        assert g9["passed"] is True, g9
 
 
 class TestBpmUndeclaredIsUnavailableNotRaised:

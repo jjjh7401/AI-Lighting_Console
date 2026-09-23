@@ -1,0 +1,195 @@
+.FFFF                                                                    [100%]
+=================================== FAILURES ===================================
+____________ test_release_reference_is_registered_on_a_tracked_row _____________
+
+    def test_release_reference_is_registered_on_a_tracked_row() -> None:
+        rows = build_song(_raw_song()).rows
+        owners = [row for row in rows if row.get("base_name") == _RELEASE_REF_BASE_NAME]
+        assert len(owners) == 1
+>       assert owners[0].get("tracking") != "cue_only"
+E       AssertionError: assert 'cue_only' != 'cue_only'
+E        +  where 'cue_only' = <built-in method get of dict object at 0x10b10c780>('tracking')
+E        +    where <built-in method get of dict object at 0x10b10c780> = {'ts': 24.0, 'section': 'Chorus', 'occurrence': 2, 'kind': 'phrase', ...}.get
+
+server/tests/test_concept_release_ref_t452.py:41: AssertionError
+________________ test_leak_check_resolves_without_cue_only_rows ________________
+
+    def test_leak_check_resolves_without_cue_only_rows() -> None:
+>       assert verify_no_cue_only_leak(build_song(_raw_song()).rows) is True
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server/tests/test_concept_release_ref_t452.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+server/concept/tracking.py:70: in verify_no_cue_only_leak
+    without_cue_only = resolve_sequence(without_rows)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/concept/resolver.py:173: in resolve_sequence
+    next_state = apply(carry, row["ops"], bases, section_base=section_base)  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+state = CueState(dim=mappingproxy({'KEY': 75, 'BACK': 75, 'FOH': 75, 'SIDE-L': 75, 'SIDE-R': 75, 'WASH-U': 76, 'WASH-D': 76}), color='노랑', pos='side', motion=3, secondary=None)
+ops = [{'op': 'reduce', 'factor': 0.0, 'ref': 'song_release_reference'}]
+bases = {'Intro 1': CueState(dim=mappingproxy({'KEY': 10, 'BACK': 25}), color='파랑', pos='back', motion=0, secondary=None), 'Ch...SIDE-R': 45, 'MOVER-U': 0, 'MOVER-D': 0, 'WASH-U': 0, 'WASH-D': 0}), color='파랑', pos='back', motion=0, secondary=None)}
+section_base = 'Outro 1'
+
+    def apply(
+        state: CueState,
+        ops: Sequence[Mapping[str, object]],
+        bases: Mapping[str, CueState],
+        *,
+        section_base: str | None = None,
+    ) -> CueState:
+        """큐 하나의 동작 목록(``ops``)을 현재 상태에 순서대로 적용한다(REQ-019).
+    
+        Args:
+            state: 이 큐 직전까지 트래킹된 상태(``resolve_sequence`` 가 넘기는
+                ``carry``, 또는 단일 큐를 단위 시험할 때의 임의 시작 상태).
+            ops: ``{"op": <9종 중 하나>, ...}`` 형태의 동작 목록.
+            bases: 이름 → 등록된 기준 상태(``restore``/``reduce`` 의 ``ref``
+                대상). ``resolve_sequence`` 가 누적해 넘긴다.
+            section_base: 현재 큐가 속한 구간의 자기 1회차 기준 이름(관례
+                ``section_base_name(section)``) — ``reduce`` 가 ``ref`` 없이
+                호출됐을 때의 폴백 조회 키다(REQ-021).
+    
+        Raises:
+            VocabError: 동작 어휘 밖의 값, 또는 ``restore``/``reduce`` 가
+                찾을 수 없는 ``ref`` 를 참조하거나(REQ-021 — ``ref`` 가 주어
+                졌는데 ``bases`` 에 없으면 ``section_base`` 로 조용히 바꿔
+                타지 않는다), ``reduce`` 가 ``ref`` 도 ``section_base`` 도
+                갖지 못한 경우.
+        """
+        dim: dict[str, int] = dict(state.dim)
+        color = state.color
+        secondary = state.secondary
+        pos = state.pos
+        motion = state.motion
+    
+        for op in ops:
+            kind = op["op"]
+            validate_operation(kind)  # type: ignore[arg-type]
+    
+            if kind == "retain":
+                pass
+            elif kind in ("add", "expand"):
+                for role in op["roles"]:  # type: ignore[union-attr]
+                    if kind == "add":
+                        dim[role] = max(dim.get(role, 0), op["dimmer"])  # type: ignore[arg-type]
+                    else:
+                        dim[role] = op["dimmer"]  # type: ignore[assignment]
+            elif kind == "remove":
+                for role in op["roles"]:  # type: ignore[union-attr]
+                    dim[role] = 0
+            elif kind == "reduce":
+                factor = op["factor"]
+                ref = op.get("ref")
+                if ref is not None:
+                    if ref not in bases:
+>                       raise VocabError(f"reduce: ref {ref!r} 가 bases 에 없음(REQ-021)")
+E                       server.concept.vocab.VocabError: reduce: ref 'song_release_reference' 가 bases 에 없음(REQ-021)
+
+server/concept/resolver.py:105: VocabError
+_________________________ test_g9_is_judged_not_raised _________________________
+
+    def test_g9_is_judged_not_raised() -> None:
+>       gates = evaluate_song(_raw_song())
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server/tests/test_concept_release_ref_t452.py:49: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+server/concept/gates.py:727: in evaluate_song
+    results = dict(zip(GATE_NAMES, (gate(build) for gate in _GATE_FUNCS), strict=True))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/concept/gates.py:727: in <genexpr>
+    results = dict(zip(GATE_NAMES, (gate(build) for gate in _GATE_FUNCS), strict=True))
+                                    ^^^^^^^^^^^
+server/concept/gates.py:637: in g9_tracking_block_release_leak
+    leak_free = verify_no_cue_only_leak(build.rows)  # type: ignore[arg-type]
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/concept/tracking.py:70: in verify_no_cue_only_leak
+    without_cue_only = resolve_sequence(without_rows)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/concept/resolver.py:173: in resolve_sequence
+    next_state = apply(carry, row["ops"], bases, section_base=section_base)  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+state = CueState(dim=mappingproxy({'KEY': 75, 'BACK': 75, 'FOH': 75, 'SIDE-L': 75, 'SIDE-R': 75, 'WASH-U': 76, 'WASH-D': 76}), color='노랑', pos='side', motion=3, secondary=None)
+ops = [{'op': 'reduce', 'factor': 0.0, 'ref': 'song_release_reference'}]
+bases = {'Intro 1': CueState(dim=mappingproxy({'KEY': 10, 'BACK': 25}), color='파랑', pos='back', motion=0, secondary=None), 'Ch...SIDE-R': 45, 'MOVER-U': 0, 'MOVER-D': 0, 'WASH-U': 0, 'WASH-D': 0}), color='파랑', pos='back', motion=0, secondary=None)}
+section_base = 'Outro 1'
+
+    def apply(
+        state: CueState,
+        ops: Sequence[Mapping[str, object]],
+        bases: Mapping[str, CueState],
+        *,
+        section_base: str | None = None,
+    ) -> CueState:
+        """큐 하나의 동작 목록(``ops``)을 현재 상태에 순서대로 적용한다(REQ-019).
+    
+        Args:
+            state: 이 큐 직전까지 트래킹된 상태(``resolve_sequence`` 가 넘기는
+                ``carry``, 또는 단일 큐를 단위 시험할 때의 임의 시작 상태).
+            ops: ``{"op": <9종 중 하나>, ...}`` 형태의 동작 목록.
+            bases: 이름 → 등록된 기준 상태(``restore``/``reduce`` 의 ``ref``
+                대상). ``resolve_sequence`` 가 누적해 넘긴다.
+            section_base: 현재 큐가 속한 구간의 자기 1회차 기준 이름(관례
+                ``section_base_name(section)``) — ``reduce`` 가 ``ref`` 없이
+                호출됐을 때의 폴백 조회 키다(REQ-021).
+    
+        Raises:
+            VocabError: 동작 어휘 밖의 값, 또는 ``restore``/``reduce`` 가
+                찾을 수 없는 ``ref`` 를 참조하거나(REQ-021 — ``ref`` 가 주어
+                졌는데 ``bases`` 에 없으면 ``section_base`` 로 조용히 바꿔
+                타지 않는다), ``reduce`` 가 ``ref`` 도 ``section_base`` 도
+                갖지 못한 경우.
+        """
+        dim: dict[str, int] = dict(state.dim)
+        color = state.color
+        secondary = state.secondary
+        pos = state.pos
+        motion = state.motion
+    
+        for op in ops:
+            kind = op["op"]
+            validate_operation(kind)  # type: ignore[arg-type]
+    
+            if kind == "retain":
+                pass
+            elif kind in ("add", "expand"):
+                for role in op["roles"]:  # type: ignore[union-attr]
+                    if kind == "add":
+                        dim[role] = max(dim.get(role, 0), op["dimmer"])  # type: ignore[arg-type]
+                    else:
+                        dim[role] = op["dimmer"]  # type: ignore[assignment]
+            elif kind == "remove":
+                for role in op["roles"]:  # type: ignore[union-attr]
+                    dim[role] = 0
+            elif kind == "reduce":
+                factor = op["factor"]
+                ref = op.get("ref")
+                if ref is not None:
+                    if ref not in bases:
+>                       raise VocabError(f"reduce: ref {ref!r} 가 bases 에 없음(REQ-021)")
+E                       server.concept.vocab.VocabError: reduce: ref 'song_release_reference' 가 bases 에 없음(REQ-021)
+
+server/concept/resolver.py:105: VocabError
+_____________________ test_production_report_is_available ______________________
+
+    def test_production_report_is_available() -> None:
+        """운영 경로 — 예외가 ``available: False`` 로 삼켜지지 않고 리포트가 선다."""
+        report = build_concept_report_from_songcue_sections(
+            "t452", 120.0, [(name, start_ms) for name, start_ms in _PAIRS]
+        )
+>       assert report["available"] is True, report
+E       AssertionError: {'available': False, 'reason': "컨셉 파이프라인 실패: reduce: ref 'song_release_reference' 가 bases 에 없음(REQ-021)"}
+E       assert False is True
+
+server/tests/test_concept_release_ref_t452.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_concept_release_ref_t452.py::test_release_reference_is_registered_on_a_tracked_row
+FAILED server/tests/test_concept_release_ref_t452.py::test_leak_check_resolves_without_cue_only_rows
+FAILED server/tests/test_concept_release_ref_t452.py::test_g9_is_judged_not_raised
+FAILED server/tests/test_concept_release_ref_t452.py::test_production_report_is_available
+4 failed, 1 passed in 0.08s
