@@ -1,0 +1,44 @@
+상태 C — 기본 10종이 1~10(정상 쇼파일), 시작 1
+  recall -> ['Fixture 1 + 2 ; At Preset 2.5', 'Fixture 1 + 2 ; At Preset 2.8']
+  콘솔 전송 줄 수: 8
+  회신:
+    시퀀스 110에 포지션 큐 시트 2큐를 저장 요청했습니다 (페이드 3초, 전 큐 프리셋 참조). 큐 1 인트로(0:00): Vocal DSC (Preset 2.5) / 큐 2 후렴(0:40): Cross (Preset 2.8). 승인 또는 라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요.
+  전체 명령열:
+    Fixture 1 + 2 ; At Preset 2.5
+    Fixture 1 + 2 ; Attribute 'Dimmer' At 100
+    Store Sequence 110 Cue 1 'Section 1' CueFade 3
+    ClearAll
+    Fixture 1 + 2 ; At Preset 2.8
+    Fixture 1 + 2 ; Attribute 'Dimmer' At 100
+    Store Sequence 110 Cue 2 'Section 2' CueFade 3
+    ClearAll
+
+상태 D — 1~10은 시트 프리셋, 진짜 기본 10종은 41~50, 시작 1
+  recall -> ['Fixture 1 + 2 ; At Preset 2.5', 'Fixture 1 + 2 ; At Preset 2.8']
+  콘솔 전송 줄 수: 8
+  회신:
+    시퀀스 110에 포지션 큐 시트 2큐를 저장 요청했습니다 (페이드 3초, 전 큐 프리셋 참조). 큐 1 인트로(0:00): Vocal DSC (Preset 2.5) / 큐 2 후렴(0:40): Cross (Preset 2.8). 승인 또는 라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요.
+  전체 명령열:
+    Fixture 1 + 2 ; At Preset 2.5
+    Fixture 1 + 2 ; Attribute 'Dimmer' At 100
+    Store Sequence 110 Cue 1 'Section 1' CueFade 3
+    ClearAll
+    Fixture 1 + 2 ; At Preset 2.8
+    Fixture 1 + 2 ; Attribute 'Dimmer' At 100
+    Store Sequence 110 Cue 2 'Section 2' CueFade 3
+    ClearAll
+
+상태 D2 — 1~10은 시트 프리셋, 기본 10종은 어디에도 없음, 시작 1
+  recall -> ['Fixture 1 + 2 ; At Preset 2.5', 'Fixture 1 + 2 ; At Preset 2.8']
+  콘솔 전송 줄 수: 8
+  회신:
+    시퀀스 110에 포지션 큐 시트 2큐를 저장 요청했습니다 (페이드 3초, 전 큐 프리셋 참조). 큐 1 인트로(0:00): Vocal DSC (Preset 2.5) / 큐 2 후렴(0:40): Cross (Preset 2.8). 승인 또는 라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요.
+  전체 명령열:
+    Fixture 1 + 2 ; At Preset 2.5
+    Fixture 1 + 2 ; Attribute 'Dimmer' At 100
+    Store Sequence 110 Cue 1 'Section 1' CueFade 3
+    ClearAll
+    Fixture 1 + 2 ; At Preset 2.8
+    Fixture 1 + 2 ; Attribute 'Dimmer' At 100
+    Store Sequence 110 Cue 2 'Section 2' CueFade 3
+    ClearAll
