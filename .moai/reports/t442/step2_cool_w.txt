@@ -1,0 +1,5 @@
+
+>>> exec "Fixture 401 Thru 404 ; At 100 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'ColorRGB_W' At 100"
+<<< {"id": "4667f2bb", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0

@@ -1,0 +1,8 @@
+
+>>> state:ShowData/Masters
+    wire: Plugin "CopilotResponder" "state 83ef9488 ShowData/Masters"
+<<< {"children": [{"class": "MasterPoolSelected", "i": 1, "name": "Selected"}, {"class": "MasterPoolGrand", "i": 2, "name": "Grand"}, {"class": "MasterPoolSpeed", "i": 3, "name": "Speed"}, {"class": "MasterPoolPlayback", "i": 4, "name": "Playback"}, {"class": "MasterPoolTiming", "i": 5, "name": "Timing"}], "id": "83ef9488", "kind": "state", "node": {"childCount": 5, "class": "Masters", "enumeration": "ok", "name": "Masters"}, "offset": 0, "ok": true, "path": "ShowData/Masters", "truncated": false, "v": 1}
+
+>>> state:ShowData/Masters/1
+    wire: Plugin "CopilotResponder" "state 1bb9bf81 ShowData/Masters/1"
+<<< {"children": [{"class": "MasterSelected", "i": 1, "name": "Master"}, {"class": "MasterSelected", "i": 2, "name": "XFade"}, {"class": "MasterSelected", "i": 3, "name": "XFadeA"}, {"class": "MasterSelected", "i": 4, "name": "XFadeB"}, {"class": "MasterSelected", "i": 5, "name": "Temp"}, {"class": "MasterSelected", "i": 6, "name": "Rate"}, {"class": "MasterSelected", "i": 7, "name": "Speed"}, {"class": "MasterSelected", "i": 8, "name": "Highlight"}, {"class": "MasterSelected", "i": 9, "name": "Lowlight"}, {"class": "MasterSelected", "i": 10, "name": "Solo"}, {"class": "MasterSelected", "i": 11, "name": "Time"}], "id": "1bb9bf81", "kind": "state", "node": {"childCount": 11, "class": "MasterPoolSelected", "enumeration": "ok", "name": "Selected"}, "offset": 0, "ok": true, "path": "ShowData/Masters/1", "truncated": false, "v": 1}

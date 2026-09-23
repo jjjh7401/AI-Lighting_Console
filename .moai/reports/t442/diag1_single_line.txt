@@ -1,0 +1,11 @@
+
+>>> exec 'Fixture 401 At 100'
+<<< {"id": "89efde25", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> state 'Selection'
+<<< {"children": [], "id": "7c5348c1", "kind": "state", "node": {"childCount": 0, "class": "Selection", "enumeration": "ok", "name": "Selection"}, "offset": 0, "ok": true, "path": "Selection", "truncated": false, "v": 1}
+
+>>> state 'Programmer/1'
+<<< {"children": [], "id": "2b7ce9c2", "kind": "state", "node": {"childCount": 0, "class": "ProgPart", "enumeration": "ok", "name": "Part Zero"}, "offset": 0, "ok": true, "path": "Programmer/1", "truncated": false, "v": 1}
+
+=== steps=3 not_ok_or_timeout=0

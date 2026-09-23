@@ -1,0 +1,128 @@
+
+>>> state:Patch/FixtureTypes/10/DMXModes/3/DMXChannels@0
+    wire: Plugin "CopilotResponder" "state 6e0eb19e Patch/FixtureTypes/10/DMXModes/3/DMXChannels"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module_Dimmer"}, {"class": "DMXChannel", "i": 2, "name": "Main Module_DEEPRED"}, {"class": "DMXChannel", "i": 3, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 4, "name": "Main Module_ColorRGB_RY"}, {"class": "DMXChannel", "i": 5, "name": "Main Module_ColorRGB_GY"}, {"class": "DMXChannel", "i": 6, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_ColorRGB_C"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_ColorRGB_B"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_ColorRGB_BM"}, {"class": "DMXChannel", "i": 10, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_DimmerCurve"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_Fans"}], "id": "6e0eb19e", "kind": "state", "node": {"childCount": 12, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/DMXModes/3/DMXChannels@18
+    wire: Plugin "CopilotResponder" "state 4dee5b16 Patch/FixtureTypes/10/DMXModes/3/DMXChannels offset=18"
+<<< {"children": [], "id": "4dee5b16", "kind": "state", "node": {"childCount": 12, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 18, "ok": true, "path": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/DMXModes/3/DMXChannels@36
+    wire: Plugin "CopilotResponder" "state 8f02b5be Patch/FixtureTypes/10/DMXModes/3/DMXChannels offset=36"
+<<< {"children": [], "id": "8f02b5be", "kind": "state", "node": {"childCount": 12, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 36, "ok": true, "path": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/DMXModes/3/DMXChannels@54
+    wire: Plugin "CopilotResponder" "state fac174c6 Patch/FixtureTypes/10/DMXModes/3/DMXChannels offset=54"
+<<< {"children": [], "id": "fac174c6", "kind": "state", "node": {"childCount": 12, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 54, "ok": true, "path": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/DMXModes/4/DMXChannels@0
+    wire: Plugin "CopilotResponder" "state 6044fa92 Patch/FixtureTypes/13/DMXModes/4/DMXChannels"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module_Dimmer"}, {"class": "DMXChannel", "i": 2, "name": "Main Module_Dimmer2"}, {"class": "DMXChannel", "i": 3, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 4, "name": "Main Module_DimmerCurve"}], "id": "6044fa92", "kind": "state", "node": {"childCount": 4, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/DMXModes/4/DMXChannels@18
+    wire: Plugin "CopilotResponder" "state 462d06f4 Patch/FixtureTypes/13/DMXModes/4/DMXChannels offset=18"
+<<< {"children": [], "id": "462d06f4", "kind": "state", "node": {"childCount": 4, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 18, "ok": true, "path": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/DMXModes/4/DMXChannels@36
+    wire: Plugin "CopilotResponder" "state 4a597a14 Patch/FixtureTypes/13/DMXModes/4/DMXChannels offset=36"
+<<< {"children": [], "id": "4a597a14", "kind": "state", "node": {"childCount": 4, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 36, "ok": true, "path": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/DMXModes/4/DMXChannels@54
+    wire: Plugin "CopilotResponder" "state b79b34a8 Patch/FixtureTypes/13/DMXModes/4/DMXChannels offset=54"
+<<< {"children": [], "id": "b79b34a8", "kind": "state", "node": {"childCount": 4, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 54, "ok": true, "path": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/DMXModes/3/DMXChannels@0
+    wire: Plugin "CopilotResponder" "state 28d31668 Patch/FixtureTypes/14/DMXModes/3/DMXChannels"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Aura_Shutter1"}, {"class": "DMXChannel", "i": 2, "name": "Aura_Dimmer"}, {"class": "DMXChannel", "i": 3, "name": "Aura_ColorRGB_R"}, {"class": "DMXChannel", "i": 4, "name": "Aura_ColorRGB_G"}, {"class": "DMXChannel", "i": 5, "name": "Aura_ColorRGB_B"}, {"class": "DMXChannel", "i": 6, "name": "Aura_COLORMIXER"}, {"class": "DMXChannel", "i": 7, "name": "Main Module#2_Dimmer"}, {"class": "DMXChannel", "i": 8, "name": "Main Module#2_StrobeDuration"}, {"class": "DMXChannel", "i": 9, "name": "Main Module#2_Shutter1"}, {"class": "DMXChannel", "i": 10, "name": "Main Module#2_StrobeMode"}, {"class": "DMXChannel", "i": 11, "name": "Main Module#2_FixtureGlobalReset"}, {"class": "DMXChannel", "i": 12, "name": "Main Module#2_EFFECTMACROS"}, {"class": "DMXChannel", "i": 13, "name": "Main Module#2_EFFECTMACRORATE"}, {"class": "DMXChannel", "i": 14, "name": "Main Module#2_EFFECTMACROS2"}], "id": "28d31668", "kind": "state", "node": {"childCount": 14, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/DMXModes/3/DMXChannels@18
+    wire: Plugin "CopilotResponder" "state 61c84e41 Patch/FixtureTypes/14/DMXModes/3/DMXChannels offset=18"
+<<< {"children": [], "id": "61c84e41", "kind": "state", "node": {"childCount": 14, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 18, "ok": true, "path": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/DMXModes/3/DMXChannels@36
+    wire: Plugin "CopilotResponder" "state 4f36d2da Patch/FixtureTypes/14/DMXModes/3/DMXChannels offset=36"
+<<< {"children": [], "id": "4f36d2da", "kind": "state", "node": {"childCount": 14, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 36, "ok": true, "path": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/DMXModes/3/DMXChannels@54
+    wire: Plugin "CopilotResponder" "state a2291c3c Patch/FixtureTypes/14/DMXModes/3/DMXChannels offset=54"
+<<< {"children": [], "id": "a2291c3c", "kind": "state", "node": {"childCount": 14, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 54, "ok": true, "path": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/DMXModes/1/DMXChannels@0
+    wire: Plugin "CopilotResponder" "state 5fdfe7be Patch/FixtureTypes/15/DMXModes/1/DMXChannels"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module_Haze1"}, {"class": "DMXChannel", "i": 2, "name": "Main Module_Blower1"}], "id": "5fdfe7be", "kind": "state", "node": {"childCount": 2, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/DMXModes/1/DMXChannels@18
+    wire: Plugin "CopilotResponder" "state 3d304b2c Patch/FixtureTypes/15/DMXModes/1/DMXChannels offset=18"
+<<< {"children": [], "id": "3d304b2c", "kind": "state", "node": {"childCount": 2, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 18, "ok": true, "path": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/DMXModes/1/DMXChannels@36
+    wire: Plugin "CopilotResponder" "state 7c1f89c9 Patch/FixtureTypes/15/DMXModes/1/DMXChannels offset=36"
+<<< {"children": [], "id": "7c1f89c9", "kind": "state", "node": {"childCount": 2, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 36, "ok": true, "path": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/DMXModes/1/DMXChannels@54
+    wire: Plugin "CopilotResponder" "state c5deef19 Patch/FixtureTypes/15/DMXModes/1/DMXChannels offset=54"
+<<< {"children": [], "id": "c5deef19", "kind": "state", "node": {"childCount": 2, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 54, "ok": true, "path": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels@0
+    wire: Plugin "CopilotResponder" "state 132a8135 Patch/FixtureTypes/11/DMXModes/1/DMXChannels"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Yoke_Main Module_Pan"}, {"class": "DMXChannel", "i": 2, "name": "Main Module_Tilt"}, {"class": "DMXChannel", "i": 3, "name": "Main Module_PositionMSpeed"}, {"class": "DMXChannel", "i": 4, "name": "Main Module_LampControl"}, {"class": "DMXChannel", "i": 5, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 6, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_ColorRGB_B"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_Color1"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_COLORMIXER"}, {"class": "DMXChannel", "i": 10, "name": "Main Module_ColorMixMSpeed"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_ColorMixMSPeed2"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_ZoomMSpeed"}, {"class": "DMXChannel", "i": 13, "name": "Main Module_AnimationWheel1"}, {"class": "DMXChannel", "i": 14, "name": "Main Module_ANIMATIONINDEXROTATE"}, {"class": "DMXChannel", "i": 15, "name": "Main Module_EFFECTMACROS"}], "id": "132a8135", "kind": "state", "node": {"childCount": 32, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels@18
+    wire: Plugin "CopilotResponder" "state 8d3c45be Patch/FixtureTypes/11/DMXModes/1/DMXChannels offset=18"
+<<< {"children": [{"class": "DMXChannel", "i": 19, "name": "Main Module_EFFECTWHEEL"}, {"class": "DMXChannel", "i": 20, "name": "Main Module_EFFECTINDEXROTATE"}, {"class": "DMXChannel", "i": 21, "name": "Main Module_EFFECTWHEEL2"}, {"class": "DMXChannel", "i": 22, "name": "Main Module_EFFECTINDEXROTATE2"}, {"class": "DMXChannel", "i": 23, "name": "Main Module_EFFECTMACROS2"}, {"class": "DMXChannel", "i": 24, "name": "Main Module_EFFECTMACRORATE"}, {"class": "DMXChannel", "i": 25, "name": "Main Module_EFFECTWHEEL3"}, {"class": "DMXChannel", "i": 26, "name": "Main Module_EFFECTINDEXROTATE3"}, {"class": "DMXChannel", "i": 27, "name": "Main Module_Frost1"}, {"class": "DMXChannel", "i": 28, "name": "Main Module_Zoom"}, {"class": "DMXChannel", "i": 29, "name": "Main Module_Focus1"}, {"class": "DMXChannel", "i": 30, "name": "Main Module_ReflectorAdjust"}, {"class": "DMXChannel", "i": 31, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 32, "name": "Main Module_Dimmer"}], "id": "8d3c45be", "kind": "state", "node": {"childCount": 32, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 18, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels@36
+    wire: Plugin "CopilotResponder" "state eca3f584 Patch/FixtureTypes/11/DMXModes/1/DMXChannels offset=36"
+<<< {"children": [], "id": "eca3f584", "kind": "state", "node": {"childCount": 32, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 36, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels@54
+    wire: Plugin "CopilotResponder" "state 1224feba Patch/FixtureTypes/11/DMXModes/1/DMXChannels offset=54"
+<<< {"children": [], "id": "1224feba", "kind": "state", "node": {"childCount": 32, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 54, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/DMXModes/1/DMXChannels@0
+    wire: Plugin "CopilotResponder" "state 1fa95733 Patch/FixtureTypes/4/DMXModes/1/DMXChannels"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "RGBW Cluster_ColorRGB_R"}, {"class": "DMXChannel", "i": 2, "name": "RGBW Cluster_ColorRGB_G"}, {"class": "DMXChannel", "i": 3, "name": "RGBW Cluster_ColorRGB_B"}, {"class": "DMXChannel", "i": 4, "name": "RGBW Cluster_ColorRGB_W"}, {"class": "DMXChannel", "i": 5, "name": "RGBW Cluster_Dimmer"}, {"class": "DMXChannel", "i": 6, "name": "Yoke_Main Module_Pan"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_Tilt"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_PositionMSpeed"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_FixtureGlobalReset"}, {"class": "DMXChannel", "i": 10, "name": "Main Module_COLORMIXER"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_COLORTEMPERATURE"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_COLOURPRIORITY"}, {"class": "DMXChannel", "i": 13, "name": "Main Module_PIXELMASK"}, {"class": "DMXChannel", "i": 14, "name": "Main Module_PIXELMASKINDEXROTATE"}, {"class": "DMXChannel", "i": 15, "name": "Main Module_PIXELMASKSTEPTIME"}], "id": "1fa95733", "kind": "state", "node": {"childCount": 26, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels", "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/DMXModes/1/DMXChannels@18
+    wire: Plugin "CopilotResponder" "state aba6fdb7 Patch/FixtureTypes/4/DMXModes/1/DMXChannels offset=18"
+<<< {"children": [{"class": "DMXChannel", "i": 19, "name": "Main Module_ColorRGB_B"}, {"class": "DMXChannel", "i": 20, "name": "Main Module_ColorRGB_W"}, {"class": "DMXChannel", "i": 21, "name": "Main Module_COLORMIXER2"}, {"class": "DMXChannel", "i": 22, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 23, "name": "Main Module_Dimmer"}, {"class": "DMXChannel", "i": 24, "name": "Main Module_Zoom"}, {"class": "DMXChannel", "i": 25, "name": "Main Module_Shutter2"}, {"class": "DMXChannel", "i": 26, "name": "Main Module_Dimmer2"}], "id": "aba6fdb7", "kind": "state", "node": {"childCount": 26, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 18, "ok": true, "path": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/DMXModes/1/DMXChannels@36
+    wire: Plugin "CopilotResponder" "state 644f9fba Patch/FixtureTypes/4/DMXModes/1/DMXChannels offset=36"
+<<< {"children": [], "id": "644f9fba", "kind": "state", "node": {"childCount": 26, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 36, "ok": true, "path": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/DMXModes/1/DMXChannels@54
+    wire: Plugin "CopilotResponder" "state 3eb20038 Patch/FixtureTypes/4/DMXModes/1/DMXChannels offset=54"
+<<< {"children": [], "id": "3eb20038", "kind": "state", "node": {"childCount": 26, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 54, "ok": true, "path": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/DMXModes/1/DMXChannels@0
+    wire: Plugin "CopilotResponder" "state 037095db Patch/FixtureTypes/8/DMXModes/1/DMXChannels"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Aura_Shutter1"}, {"class": "DMXChannel", "i": 2, "name": "Aura_Dimmer"}, {"class": "DMXChannel", "i": 3, "name": "Aura_COLORMIXER"}, {"class": "DMXChannel", "i": 4, "name": "Aura_ColorRGB_R"}, {"class": "DMXChannel", "i": 5, "name": "Aura_ColorRGB_G"}, {"class": "DMXChannel", "i": 6, "name": "Aura_ColorRGB_B"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_Dimmer"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_Zoom"}, {"class": "DMXChannel", "i": 10, "name": "Yoke_Main Module_Pan"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_Tilt"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_FixtureGlobalReset"}, {"class": "DMXChannel", "i": 13, "name": "Main Module_COLORMIXER"}, {"class": "DMXChannel", "i": 14, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 15, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 16, "name": "Main Module_ColorRGB_B"}], "id": "037095db", "kind": "state", "node": {"childCount": 23, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels", "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/DMXModes/1/DMXChannels@18
+    wire: Plugin "CopilotResponder" "state 0e55d259 Patch/FixtureTypes/8/DMXModes/1/DMXChannels offset=18"
+<<< {"children": [{"class": "DMXChannel", "i": 19, "name": "Main Module_EFFECTMACROS"}, {"class": "DMXChannel", "i": 20, "name": "Main Module_EFFECTMACRORATE"}, {"class": "DMXChannel", "i": 21, "name": "Main Module_EFFECTMACROS2"}, {"class": "DMXChannel", "i": 22, "name": "Main Module_EFFECTMACRORATE2"}, {"class": "DMXChannel", "i": 23, "name": "Main Module_EFFECTMACROS3"}], "id": "0e55d259", "kind": "state", "node": {"childCount": 23, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 18, "ok": true, "path": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/DMXModes/1/DMXChannels@36
+    wire: Plugin "CopilotResponder" "state f47293ec Patch/FixtureTypes/8/DMXModes/1/DMXChannels offset=36"
+<<< {"children": [], "id": "f47293ec", "kind": "state", "node": {"childCount": 23, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 36, "ok": true, "path": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/DMXModes/1/DMXChannels@54
+    wire: Plugin "CopilotResponder" "state 5c0793dc Patch/FixtureTypes/8/DMXModes/1/DMXChannels offset=54"
+<<< {"children": [], "id": "5c0793dc", "kind": "state", "node": {"childCount": 23, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 54, "ok": true, "path": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels@0
+    wire: Plugin "CopilotResponder" "state 08c2808b Patch/FixtureTypes/9/DMXModes/2/DMXChannels"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module#2_Dimmer"}, {"class": "DMXChannel", "i": 2, "name": "Main Module#2_Shutter1"}, {"class": "DMXChannel", "i": 3, "name": "Main Module#2_ColorRGB_R"}, {"class": "DMXChannel", "i": 4, "name": "Main Module#2_ColorRGB_G"}, {"class": "DMXChannel", "i": 5, "name": "Main Module#2_ColorRGB_B"}, {"class": "DMXChannel", "i": 6, "name": "Main Module#2_ColorRGB_W"}, {"class": "DMXChannel", "i": 7, "name": "Main Module#2_COLORMIXER"}, {"class": "DMXChannel", "i": 8, "name": "Main Module#2_Zoom"}], "id": "08c2808b", "kind": "state", "node": {"childCount": 8, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels@18
+    wire: Plugin "CopilotResponder" "state 301c89cc Patch/FixtureTypes/9/DMXModes/2/DMXChannels offset=18"
+<<< {"children": [], "id": "301c89cc", "kind": "state", "node": {"childCount": 8, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 18, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels@36
+    wire: Plugin "CopilotResponder" "state 98482214 Patch/FixtureTypes/9/DMXModes/2/DMXChannels offset=36"
+<<< {"children": [], "id": "98482214", "kind": "state", "node": {"childCount": 8, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 36, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels@54
+    wire: Plugin "CopilotResponder" "state 26b52421 Patch/FixtureTypes/9/DMXModes/2/DMXChannels offset=54"
+<<< {"children": [], "id": "26b52421", "kind": "state", "node": {"childCount": 8, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 54, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels", "truncated": false, "v": 1}

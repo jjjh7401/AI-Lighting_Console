@@ -1,0 +1,12 @@
+
+>>> props:ShowData/Masters/2/1|NAME,NORMEDVALUE,FADERENABLE
+    wire: Plugin "CopilotResponder" "props a7d6f174 NAME,NORMEDVALUE,FADERENABLE ShowData/Masters/2/1"
+<<< {"id": "a7d6f174", "kind": "props", "ok": true, "path": "ShowData/Masters/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Master"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}, {"n": "FADERENABLE", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/12|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 2bfd6e26 NAME,NORMEDVALUE ShowData/Masters/2/12"
+<<< {"id": "2bfd6e26", "kind": "props", "ok": true, "path": "ShowData/Masters/2/12", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Blind"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/2|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 126d5a12 NAME,NORMEDVALUE ShowData/Masters/2/2"
+<<< {"id": "126d5a12", "kind": "props", "ok": true, "path": "ShowData/Masters/2/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "World"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}

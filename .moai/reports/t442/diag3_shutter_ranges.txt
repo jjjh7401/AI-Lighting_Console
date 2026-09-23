@@ -1,0 +1,20 @@
+
+>>> introspect:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/2
+    wire: Plugin "CopilotResponder" "introspect f6069c4f Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/2"
+<<< {"class": "ChannelSet", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "DMXFROM", "t": "UInt32"}, {"n": "DMXTO", "t": "UInt32"}, {"n": "WHEELSLOTINDEX", "t": "UInt32"}, {"n": "PHYSICALFROM", "t": "Double"}, {"n": "PHYSICALTO", "t": "Double"}, {"n": "HASPHYSICAL", "t": "UInt8"}], "id": "f6069c4f", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/2", "source": "property_accessors", "total": 22, "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1|DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO,DEFAULT
+    wire: Plugin "CopilotResponder" "props a7cefc1a DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO,DEFAULT Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1"
+<<< {"id": "a7cefc1a", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1", "reads": [{"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "986895"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "0.0"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "1.0"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "789516"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/1|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props 822d5e78 NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/1"
+<<< {"id": "822d5e78", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "closed"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "460551"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "0.0"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/2|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props 095792d6 NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/2"
+<<< {"id": "095792d6", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "open"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "526344"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "986895"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "1.0"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "1.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/2|DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props bcfccc89 DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/2"
+<<< {"id": "bcfccc89", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/2", "reads": [{"n": "DMXFROM", "ok": true, "t": "number", "v": "1048576"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "8618883"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "0.1"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "10.0"}], "truncated": false, "v": 1}

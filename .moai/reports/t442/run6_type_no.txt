@@ -1,0 +1,64 @@
+
+>>> props:Patch/FixtureTypes/1|NO,NAME
+    wire: Plugin "CopilotResponder" "props fd4c2922 NO,NAME Patch/FixtureTypes/1"
+<<< {"id": "fd4c2922", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/1", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "NAME", "ok": true, "t": "string", "v": "Robin Esprite"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/2|NO,NAME
+    wire: Plugin "CopilotResponder" "props a09dabc9 NO,NAME Patch/FixtureTypes/2"
+<<< {"id": "a09dabc9", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/2", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "2"}, {"n": "NAME", "ok": true, "t": "string", "v": "Robin Forte HP"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/3|NO,NAME
+    wire: Plugin "CopilotResponder" "props 4a63105c NO,NAME Patch/FixtureTypes/3"
+<<< {"id": "4a63105c", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/3", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "3"}, {"n": "NAME", "ok": true, "t": "string", "v": "Robin LEDBeam 350"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4|NO,NAME
+    wire: Plugin "CopilotResponder" "props 859ba59e NO,NAME Patch/FixtureTypes/4"
+<<< {"id": "859ba59e", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "4"}, {"n": "NAME", "ok": true, "t": "string", "v": "Robin Spiider"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/5|NO,NAME
+    wire: Plugin "CopilotResponder" "props 761d0cb9 NO,NAME Patch/FixtureTypes/5"
+<<< {"id": "761d0cb9", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/5", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "5"}, {"n": "NAME", "ok": true, "t": "string", "v": "Xtylos"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/6|NO,NAME
+    wire: Plugin "CopilotResponder" "props 03a71faf NO,NAME Patch/FixtureTypes/6"
+<<< {"id": "03a71faf", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/6", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "6"}, {"n": "NAME", "ok": true, "t": "string", "v": "Sharpy Plus"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/7|NO,NAME
+    wire: Plugin "CopilotResponder" "props 1e353d19 NO,NAME Patch/FixtureTypes/7"
+<<< {"id": "1e353d19", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/7", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "7"}, {"n": "NAME", "ok": true, "t": "string", "v": "Robin MMX Spot"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8|NO,NAME
+    wire: Plugin "CopilotResponder" "props 8996e8d1 NO,NAME Patch/FixtureTypes/8"
+<<< {"id": "8996e8d1", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "8"}, {"n": "NAME", "ok": true, "t": "string", "v": "Mac Aura XB"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9|NO,NAME
+    wire: Plugin "CopilotResponder" "props d502eaca NO,NAME Patch/FixtureTypes/9"
+<<< {"id": "d502eaca", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "9"}, {"n": "NAME", "ok": true, "t": "string", "v": "Rush Par 2 RGBW Zoom"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10|NO,NAME
+    wire: Plugin "CopilotResponder" "props fa9c02e0 NO,NAME Patch/FixtureTypes/10"
+<<< {"id": "fa9c02e0", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/10", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "10"}, {"n": "NAME", "ok": true, "t": "string", "v": "Source 4 LED Series 3 Lustr X8"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11|NO,NAME
+    wire: Plugin "CopilotResponder" "props 1c700153 NO,NAME Patch/FixtureTypes/11"
+<<< {"id": "1c700153", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "11"}, {"n": "NAME", "ok": true, "t": "string", "v": "Robin MegaPointe"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/12|NO,NAME
+    wire: Plugin "CopilotResponder" "props 29daba0b NO,NAME Patch/FixtureTypes/12"
+<<< {"id": "29daba0b", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/12", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "12"}, {"n": "NAME", "ok": true, "t": "string", "v": "Robin Spiider"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13|NO,NAME
+    wire: Plugin "CopilotResponder" "props 0913933f NO,NAME Patch/FixtureTypes/13"
+<<< {"id": "0913933f", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/13", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "13"}, {"n": "NAME", "ok": true, "t": "string", "v": "CuePix Blinder WW2"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14|NO,NAME
+    wire: Plugin "CopilotResponder" "props c569b379 NO,NAME Patch/FixtureTypes/14"
+<<< {"id": "c569b379", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/14", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "14"}, {"n": "NAME", "ok": true, "t": "string", "v": "Atomic 3000 LED"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15|NO,NAME
+    wire: Plugin "CopilotResponder" "props 781594f0 NO,NAME Patch/FixtureTypes/15"
+<<< {"id": "781594f0", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/15", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "15"}, {"n": "NAME", "ok": true, "t": "string", "v": "Unique 2 1"}], "truncated": false, "v": 1}
+
+>>> prop:Patch/Stages/1/Fixtures/67|FIXTURETYPE
+    wire: Plugin "CopilotResponder" "prop 39d65fcd Patch/Stages/1/Fixtures/67 FIXTURETYPE"
+<<< {"id": "39d65fcd", "kind": "prop", "ok": true, "path": "Patch/Stages/1/Fixtures/67", "property": "FIXTURETYPE", "v": 1, "value": "FixtureType 9"}

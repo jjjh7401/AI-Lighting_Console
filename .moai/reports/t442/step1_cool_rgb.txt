@@ -1,0 +1,11 @@
+
+>>> exec "Fixture 401 Thru 404 ; At 100 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 95 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorRGB_W' At 0"
+<<< {"id": "2d8d4e94", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> state 'Selection'
+<<< {"children": [], "id": "82e4a742", "kind": "state", "node": {"childCount": 0, "class": "Selection", "enumeration": "ok", "name": "Selection"}, "offset": 0, "ok": true, "path": "Selection", "truncated": false, "v": 1}
+
+>>> state 'Programmer/1'
+<<< {"children": [], "id": "1fb57233", "kind": "state", "node": {"childCount": 0, "class": "ProgPart", "enumeration": "ok", "name": "Part Zero"}, "offset": 0, "ok": true, "path": "Programmer/1", "truncated": false, "v": 1}
+
+=== steps=3 not_ok_or_timeout=0

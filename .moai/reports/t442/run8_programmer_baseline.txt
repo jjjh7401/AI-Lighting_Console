@@ -1,0 +1,20 @@
+
+>>> state:Programmer
+    wire: Plugin "CopilotResponder" "state 12794b61 Programmer"
+<<< {"children": [{"class": "ProgPart", "i": 1, "name": "Part Zero"}], "id": "12794b61", "kind": "state", "node": {"childCount": 1, "class": "Programmer", "enumeration": "ok", "name": "Programmer"}, "offset": 0, "ok": true, "path": "Programmer", "truncated": false, "v": 1}
+
+>>> introspect:Programmer
+    wire: Plugin "CopilotResponder" "introspect ecc7a33b Programmer"
+<<< {"class": "Programmer", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "AUTOSTART", "t": "UInt32"}, {"n": "AUTOSTOP", "t": "UInt32"}, {"n": "AUTOFIX", "t": "UInt32"}, {"n": "AUTOSTOMP", "t": "UInt32"}, {"n": "RELEASEFIRSTCUE", "t": "UInt32"}, {"n": "SOFTLTP", "t": "UInt32"}, {"n": "CUECOMMAND", "t": "UInt8"}, {"n": "XFADEMODE", "t": "UInt32"}, {"n": "XFADERELOAD", "t": "UInt32"}, {"n": "SWAPPROTECT", "t": "UInt32"}, {"n": "KILLPROTECT", "t": "UInt32"}, {"n": "USEEXECUTORTIME", "t": "UInt32"}], "id": "ecc7a33b", "kind": "introspect", "offset": 0, "ok": true, "path": "Programmer", "source": "property_accessors", "total": 48, "truncated": true, "v": 1}
+
+>>> state:Selection
+    wire: Plugin "CopilotResponder" "state 6fe821fc Selection"
+<<< {"children": [], "id": "6fe821fc", "kind": "state", "node": {"childCount": 0, "class": "Selection", "enumeration": "ok", "name": "Selection"}, "offset": 0, "ok": true, "path": "Selection", "truncated": false, "v": 1}
+
+>>> state:Programmer/1
+    wire: Plugin "CopilotResponder" "state a052e415 Programmer/1"
+<<< {"children": [], "id": "a052e415", "kind": "state", "node": {"childCount": 0, "class": "ProgPart", "enumeration": "ok", "name": "Part Zero"}, "offset": 0, "ok": true, "path": "Programmer/1", "truncated": false, "v": 1}
+
+>>> state:ProgrammerPart
+    wire: Plugin "CopilotResponder" "state ceaf602a ProgrammerPart"
+<<< {"children": [], "id": "ceaf602a", "kind": "state", "node": {"childCount": 0, "class": "ProgPart", "enumeration": "ok", "name": "Part Zero"}, "offset": 0, "ok": true, "path": "ProgrammerPart", "truncated": false, "v": 1}

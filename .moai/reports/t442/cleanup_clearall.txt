@@ -1,0 +1,5 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "2c493412", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
