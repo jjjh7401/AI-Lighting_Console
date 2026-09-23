@@ -20,7 +20,7 @@ pure builder's — none of them read the dimmer/fade values this path changes.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from server.design.energy import axis_budget
@@ -84,7 +84,7 @@ def build_standard_position_cue_sheet(
     sections: Sequence[PositionSheetSection],
     *,
     sequence_no: int,
-    preset_start: int,
+    preset_numbers: Mapping[str, int],
     fids: Sequence[int],
     fade_seconds: float = 3.0,
     move_seconds: float = 1.0,
@@ -107,7 +107,7 @@ def build_standard_position_cue_sheet(
     sheet = build_position_cue_sheet(
         sections,
         sequence_no=sequence_no,
-        preset_start=preset_start,
+        preset_numbers=preset_numbers,
         fids=fids,
         fade_seconds=fade_seconds,
         move_seconds=move_seconds,

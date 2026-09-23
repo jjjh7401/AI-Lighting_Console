@@ -4622,7 +4622,11 @@ class TestPositionCueStoreSession:
 class TestPositionCueSheetSession:
     """T3: '포지션 큐 시트 …: 이름 시각 무드, …' — full-song preset-cue draft."""
 
-    def _registry(self, calls):
+    def _registry(self, calls, pool_entries=None):
+        if pool_entries is None:
+            pool_entries = [
+                {"i": 21 + i, "name": name} for i, name in enumerate(BASIC_POSITION_SEQUENCE)
+            ]
         fixtures = [
             {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
             {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
@@ -4639,6 +4643,19 @@ class TestPositionCueSheetSession:
                             content=json.dumps(
                                 {"fixtures": fixtures, "coverage": {"complete": True}}
                             ),
+                        )
+                    )
+                # 카드 t449 — 시트는 부를 라벨을 풀 판독으로 찾는다. 정상 쇼파일
+                # (기본 10종이 21~30)이라 옛 `preset_start + index` 와 번호가 같다.
+                if (
+                    call.name == "query_state"
+                    and call.arguments.get("path") == "DataPool/PresetPools/2"
+                ):
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps({"children": pool_entries}),
                         )
                     )
                 return ToolExecution(
@@ -4740,6 +4757,52 @@ class TestPositionCueSheetSession:
 
         assert calls == []
         assert "형식" in event["text"]
+
+    # 카드 t449 — 시트 프리셋이 21~30 을 차지한 쇼파일. 옛 `preset_start + index`
+    # 는 2.25 / 2.28(시트 프리셋)을 불렀다.
+    _SHEET_PRESETS_21 = [{"i": 21 + i, "name": f"POS{i + 1:02d} 시트"} for i in range(10)]
+
+    def test_a_displaced_basic_run_recalls_the_labelled_slots(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        real = [{"i": 41 + i, "name": name} for i, name in enumerate(BASIC_POSITION_SEQUENCE)]
+        session._registry = self._registry(calls, self._SHEET_PRESETS_21 + real)
+        session._question_channel = self._Channel([])
+
+        session.run_instruction(self._FULL)
+
+        recalls = [
+            line
+            for call in calls
+            if call.name == "run_commands"
+            for line in call.arguments["commands"]
+            if "At Preset" in line
+        ]
+        assert recalls == ["Fixture 20 + 26 ; At Preset 2.45", "Fixture 20 + 26 ; At Preset 2.48"]
+
+    @pytest.mark.parametrize(
+        ("extra", "reason"),
+        [
+            ([], "찾지 못했습니다"),
+            (
+                [{"i": 41, "name": "Vocal DSC"}, {"i": 61, "name": "Vocal DSC#2"}],
+                "특정할 수 없습니다",
+            ),
+        ],
+        ids=["absent", "ambiguous"],
+    )
+    def test_an_absent_or_ambiguous_label_refuses_with_zero_writes(self, tmp_path, extra, reason):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls, self._SHEET_PRESETS_21 + extra)
+        session._question_channel = self._Channel([])
+
+        event = session.run_instruction(self._FULL)
+
+        assert [call for call in calls if call.name == "run_commands"] == []
+        assert "Vocal DSC" in event["text"] and reason in event["text"]
 
 
 class TestSongDesignInterviewSession:
