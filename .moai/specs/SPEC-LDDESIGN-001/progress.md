@@ -118,6 +118,169 @@ design.md §1 의 `Headroom` 스케치는 `remaining_scale_levels: int` 정수
 design.md §1 스케치 그대로 "포지션 변화가 있을 때만" 값을 갖는다.
 `resolver.mib_verdict()` 는 포지션이 바뀌지 않으면 `None` 을 반환한다.
 
+### M4 3층 밀도·회차·헤드룸 (REQ-LDDESIGN-036~052, 카드 t437)
+
+워크트리 `.claude/worktrees/agent-a7985662c69d50be4` (지시서가 지정한
+`.claude/worktrees/t437`/`WT-concept-density` 가 아니라, 오케스트레이터가
+격리한 실제 워크트리 — 배차서 지시대로 `git rev-parse --show-toplevel` 로
+확인) · 브랜치 `worktree-agent-a7985662c69d50be4` · 기준
+`06e3d125`(지시서 기준과 동일, fast-forward 불필요) · TDD 사이클(RED→GREEN).
+
+**Claim**: `.moai/state/verify/f12e5c95-t429/final_integrated.py`(프로토타입)의
+`build()`(49~100행, 구간/프레이즈/원샷 생성·빌드업·눈 리셋·후렴 모션
+분배·프레이즈 상한)와 게이트 로직(145~179행, G2/G3/G4/G5/G8/G13)을
+저장소 3모듈(`server/concept/{density,escalation,headroom}.py`)로
+재작성했다 — 색 결정은 M3 스코프라 호출자 콜백(`color_for`)으로 뺐다.
+
+#### 신규 파일
+
+- `server/concept/density.py` — `SectionOccurrence`·`DensityResult`·
+  `compile_density()`(3층 컴파일러)·`distribute_motion_steps()`(REQ-044)·
+  `g13_density_warning()`(REQ-041)·`GROUP_ROSTER`(프로토타입 로스터,
+  실 리그 아님)·`bar_seconds()`(4/4 가정).
+- `server/concept/escalation.py` — `ChorusSnapshot`·`ChorusPair`·
+  `GateResult`·`build_chorus_snapshots()`·`new_axes()`(REQ-043 6축)·
+  `check_pairs()`(REQ-042 정체성)·`g2_identity`/`g3_new_axis_within_five`/
+  `g4_final_new_axis_and_headroom`/`g49_stagnation_is_normal`.
+- `server/concept/headroom.py` — `compute_cue_headroom()`(resolver 래퍼,
+  REQ-050)·`SectionCueSnapshot`·`bridge_reduced()`(REQ-047 구간 단위
+  비교)·`g5_warnings()`(REQ-051 4조건, REQ-052 예외 없음).
+- `server/tests/test_concept_density.py` — 42건.
+- `server/tests/test_concept_escalation.py` — 29건.
+- `server/tests/test_concept_headroom.py` — 20건.
+- (기존 파일 수정 없음 — `cue_model.py`/`resolver.py`/`vocab.py`/
+  `description.py`/`worksheet.py`/`__init__.py` 전부 불변.)
+
+#### Evidence — RED (구현 파일 3개를 `/tmp` 로 옮긴 뒤, 실제 출력)
+
+```
+$ uv run pytest server/tests/test_concept_density.py server/tests/test_concept_escalation.py server/tests/test_concept_headroom.py -q
+ERROR server/tests/test_concept_density.py
+ERROR server/tests/test_concept_escalation.py
+ERROR server/tests/test_concept_headroom.py
+server/tests/test_concept_density.py:15: in <module>
+    from server.concept.density import (
+E   ModuleNotFoundError: No module named 'server.concept.density'
+server/tests/test_concept_escalation.py:15: in <module>
+    from server.concept.density import (
+E   ModuleNotFoundError: No module named 'server.concept.density'
+server/tests/test_concept_headroom.py:19: in <module>
+    from server.concept.headroom import (
+E   ModuleNotFoundError: No module named 'server.concept.headroom'
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+3 errors in 0.13s
+```
+
+구현 파일을 되돌린 뒤 첫 GREEN 실행에서 실패 2건 발견 —
+`TestBuildupPhraseCue` 픽스처 두 개가 시험 작성 시점의 손 계산 오류였다
+(마디 문턱을 잘못 셈, 구현이 아니라 시험 기대값을 고쳤다): 구현은
+처음부터 정확했고, 손으로 다시 마디를 세어 기대값 2→3·픽스처의 Intro
+길이를 조정해 GREEN 으로 만들었다(아래 "결정" 절 참고).
+
+#### Evidence — GREEN (이 카드 범위 3개 시험 파일, 실제 출력)
+
+```
+$ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && \
+  uv run pytest server/tests/test_concept_density.py server/tests/test_concept_escalation.py server/tests/test_concept_headroom.py -q
+........................................................................ [ 79%]
+...................                                                      [100%]
+91 passed in 0.10s
+```
+
+전체 `test_concept_*.py`(M1+M2+M4, M3 은 별도 레인이 아직 안 들어와
+있음) 회귀 확인:
+
+```
+$ uv run pytest server/tests/test_concept_*.py -q
+........................................................................ [ 31%]
+........................................................................ [ 62%]
+........................................................................ [ 93%]
+................                                                         [100%]
+232 passed in 0.18s
+```
+
+`--collect-only -q` 실측 개수 — density.py 42건 · escalation.py 29건 ·
+headroom.py 20건 (합 91, 위 GREEN 수치와 일치).
+
+#### Evidence — 린트/포맷 (실제 출력)
+
+```
+$ uv run ruff check server/concept server/tests/test_concept_density.py server/tests/test_concept_escalation.py server/tests/test_concept_headroom.py
+All checks passed!
+
+$ uv run ruff format --check server/concept server/tests/test_concept_density.py server/tests/test_concept_escalation.py server/tests/test_concept_headroom.py
+12 files already formatted
+```
+
+(린트 1차 실행에서 18건 발견 — `zip()` 의 `strict=` 누락(B905) 6건,
+미사용 import 4건, 100자 초과 6건, 미사용 지역 변수 1건, 나머지 —
+전부 이 카드 신규 파일 안에서 직접 고쳤다. `ruff format` 도 1개 파일
+재포맷했다.)
+
+**Baseline-attribution**: 이 워크트리(`worktree-agent-a7985662c69d50be4`,
+HEAD `06e3d125`)에서 직접 실측했다 — 지시서가 지정한 워크트리 이름과
+다르지만 기준 커밋은 동일하다(`git fetch`/`ff-merge` 불필요, 이미
+`06e3d125`).
+
+#### 결정 — Verse 1회차에 `remove`(MOVER·WASH·FOH) 를 앞세운다
+
+프로토타입(`final_integrated.py:64`)에는 있지만 첫 초안에서 빠뜨렸던
+줄이다 — 없으면 직전 후렴의 WASH/MOVER 디머가 `expand`(KEY/BACK/
+SIDE-L/SIDE-R 만 건드림)로 안 지워지고 carry 로 새어 들어와 절 밝기가
+45 가 아니라 훨씬 큰 값(실측: Too Cool 절1 이 100)으로 나왔다 —
+AC-LDDESIGN-010 시험(`TestVerseBrightnessShape`)이 이 결함을 잡았다.
+회귀 방지 시험(`test_verse_first_occurrence_clears_prior_mover_and_wash_state`)
+을 별도로 남겼다.
+
+#### 결정 — "직전 구간의 남은 모션 단계"(G4/REQ-044/048)는 리졸브된
+시퀀스의 바로 앞 행 상태다(프로토타입과 같은 정의)
+
+REQ-044 문면은 "회차마다"라고 서술하지만, 프로토타입 G4 산식
+(`before_final=table[table.index(final)-1]`)은 Final Chorus 바로 앞
+**행**(반드시 직전 후렴 회차가 아니라, 그 사이에 절·빌드업이 끼면 그
+행)의 헤드룸을 본다. 이 구현도 같은 정의를 그대로 옮겼다 — Verse 의
+`restore(ref='Verse 1')` 가 모션을 0 으로 되돌리는 부수효과가 있어
+"직전 행"이 절이면 남은 모션이 인위적으로 커질 수 있다는 것을 실측으로
+확인했다(Rain: Verse4→빌드업3 경로, 남은 모션 3). 8곡 실측 기준으로
+검증된 프로토타입 정의를 임의로 "가장 최근 후렴 회차"로 바꾸지 않았다
+— SIV-001 급 행위(발주 없는 행위 확장) 위험을 피하기 위해서다.
+
+#### 결정 — 빌드업/눈 리셋/후렴 뒷마디 프레이즈 큐는 전부 `tracking:
+cue_only`(프로토타입 이탈, REQ-056 문면을 따름)
+
+프로토타입은 빌드업을 `'Track'` 으로 쐈다(`final_integrated.py:96`).
+REQ-LDDESIGN-056 은 "프레이즈 큐... 기본값 `Cue Only`다 — `Track` 으로
+두면... 8곡 중 6곡에서 실측" 누출을 명시적으로 지적한다. M2 가 이미
+이 REQ 를 구현해 뒀으므로(`resolver.resolve_sequence` 의 cue_only 비전파),
+M4 는 프로토타입의 알려진 결함을 그대로 옮기지 않고 REQ-056 을 따랐다.
+
+#### Gaps(명시적으로 안 잰 것) — M4
+
+- **`session.py`/`orchestrator/tools.py` 에 배선되지 않았다.** M6(§3.13)
+  스코프 — 이 카드는 순수 함수만 만들었다(카드 지시 그대로).
+- **행(row)의 `tracking` 값은 이 컴파일러의 잠정 배정이다.** REQ-053~057
+  4모드 자체는 M2 가 이미 정의했지만, "이 큐가 정확히 어느 모드여야
+  하는가"의 세부 배정(특히 구간 큐의 `Block`/`Release` 안전 큐 경계,
+  REQ-054)은 M5(§3.9 트래킹/타이밍/MIB 완결) 스코프로 남긴다 — 이
+  카드는 REQ-055(구간=Track 기본)/REQ-056(프레이즈=Cue Only 기본)만
+  구현했다.
+- **색은 이 모듈이 결정하지 않는다(M3 스코프).** `color_for` 콜백이
+  없으면 색 동작을 아예 내지 않는다 — Chorus 주색·Final Chorus 클라이맥스
+  전환·빌드업 언더페인팅 전부 콜백 호출 지점만 마련했다.
+- **4/4 박자를 가정한다(`bar_seconds()`).** 곡의 실제 박자 표기를 읽지
+  않는다 — 다른 박자 곡은 마디 계산이 어긋날 수 있다.
+- **`GROUP_ROSTER` 는 프로토타입 로스터이지 실제 리그가 아니다.** 실
+  리그 바인딩은 이 SPEC 밖(REQ-017)이다.
+- **원샷 레인은 콘솔 실행이 없다.** `compile_density()` 가 내는
+  `one_shots` 는 이름·시각·타깃만 있는 데이터일 뿐, OSC 송신 경로가
+  없다(REQ-026 원칙, M2/M4 공통).
+- **"직전 구간의 남은 모션 단계"(G4) 정의는 프로토타입을 그대로
+  옮겼다** — 위 "결정" 절 참고. REQ 문면과 미묘하게 다를 수 있는
+  자리이므로 M6 8곡 게이트 고정 때 재확인이 필요하다.
+- **`layer_limit_warning` 의 `cue_kind`("section"/"phrase") 이름은
+  M2 가 이미 고른 내부 식별자를 그대로 재사용했다** — spec.md 자신의
+  명명이 아니다(M2 progress.md 의 같은 지적 참고).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
