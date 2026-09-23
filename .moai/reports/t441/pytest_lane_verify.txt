@@ -1,0 +1,8 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t441
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t441
+Installed 97 packages in 182ms
+........................................................................ [ 58%]
+....................................................                     [100%]
+124 passed in 1.85s

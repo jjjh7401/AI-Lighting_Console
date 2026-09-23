@@ -484,3 +484,33 @@ class TestWriteTheCrossPathReport:
         _REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
         _REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
         assert _REPORT_PATH.exists()
+
+
+class TestToolsetEmitsDirectorColorInCommands:
+    """카드 t441 레인 검수 — 위 툴셋 시험은 "실패 메모 없음"만 봐서, 실제
+    호출 자리(``prepare_songcue`` 안 ``_override_songcue_main_color``)를
+    빼도 통과했다(변이 시험). 여기서는 도구가 **실제로 내보내는 명령**의
+    색 값을 본다."""
+
+    _BLUE = (
+        "Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+    )
+    _CRIMSON = (
+        "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15"
+    )
+
+    def _commands(self, port) -> list[str]:
+        wiring = TestToolsetWiring()
+        registry = wiring._registry(interview_records=port) if port else wiring._registry()
+        _execution, payload = wiring._dispatch(registry)
+        return [entry["command"] for entry in payload["commands"]]
+
+    def test_records_present_chorus_commands_carry_director_blue(self):
+        commands = self._commands(_RecordsPort(_records("modulate")))
+        assert any(self._BLUE in command for command in commands)
+        assert not any(self._CRIMSON in command for command in commands)
+
+    def test_records_absent_commands_keep_the_look_library_colour(self):
+        """대조군 — 인터뷰 기록이 없으면 오늘처럼 룩 라이브러리 색(crimson)."""
+        commands = self._commands(None)
+        assert any(self._CRIMSON in command for command in commands)
