@@ -1,5 +1,7 @@
 # t442 — W 흰색 vs RGB 흰색 실기 육안 비교
 
+> 🟢 **2026-09-23 재개 — 완료.** 켜지는 기구(Robin Spiider 521·522)로 다시 해서 감독 선택을 받았다. 결과는 맨 아래 「재개」 절에 있다. 아래 BLOCKED 판정은 Rush Par·Mac Aura 로 시도한 첫 회차 기록이다. 그 기구들이 안 켜지는 건 콘솔 쪽 문제로 범위 밖이다(t451 §4).
+
 - 카드: t442, 레인 lane-1 · 브랜치 `WT-white-eye-test` · 기준 origin/main `73966746`
 - 판정: **BLOCKED — 비교 못 함. 콘솔에서 불이 켜지지 않는다. 감독이 직접 `Fixture 401 Full` 을 쳐도 마찬가지다.** 감독의 흰색 선택은 받지 못했다. 코드 수정 0.
 - 막힌 곳은 명령 다음 단계다. 명령은 콘솔에 닿는다: 기구가 선택되고, Dim 100 이 들어가고, 명령줄 이력은 `OK` 다(감독 스크린샷). 그랜드 마스터는 100 이고, Blind·Freeze·Preview 는 꺼져 있다(감독 스크린샷). 남은 후보는 DMX 출력과 3D 창 표시다. **둘 중 무엇인지는 재지 않았다.**
@@ -49,6 +51,8 @@ Shutter1 의 첫 채널 함수 "Shutter1 1" 에 ChannelSet 두 개가 있다. DM
 
 ## 3. 🔴 계기가 눈을 가렸다 — 읽기 통로 두 개가 프로그래머 값을 보지 못한다
 
+> **정정 (t450 §3, 재개 절에서 실측)**: 「선택을 못 본다」는 틀렸다. 읽은 필드가 틀렸다 — `state` 의 `childCount` 대신 `prop Selection COUNTTOTALSELECTED` 를 읽으면 선택 수가 `2 → 0` 으로 움직이는 것이 보인다. 「프로그래머 **값**을 못 본다」는 여전히 맞다.
+
 ①·② 직후와 진단1 직후에 `state:Selection` → `childCount 0`, `state:Programmer/1`("Part Zero") → `childCount 0` 이 나왔다(`step1_cool_rgb.txt`, `diag1_single_line.txt`). 같은 시각 감독 화면에서는 401 이 선택되어 있었고 Dim 100 이었다. **응답기의 `Selection`·`Programmer` 별칭은 감독 화면의 선택·프로그래머를 보여 주지 않는다.** 되돌림 확인에 쓸 수 없는 계기다.
 
 그래서 리드가 요구한 「ClearAll 뒤 한 대라도 읽어 값이 비었는지 확인」은 **하지 못했다.** 이 계기로 0이 나와도 증거가 되지 않는다.
@@ -76,3 +80,43 @@ Shutter1 의 첫 채널 함수 "Shutter1 1" 에 ChannelSet 두 개가 있다. DM
 - ClearAll 뒤 프로그래머가 비었는지 (§3: 계기가 보지 못한다)
 - Shutter1 에서 퍼센트→DMX 환산
 - Spiider 521~522 (쏘지 않음)
+
+
+## 재개 (2026-09-23) — 켜지는 기구로 비교
+
+- 기준: 트리 `.claude/worktrees/t442` 에 origin/main `f898d8a2` 합류. 대상 **Robin Spiider 521·522** (타입 4 모드 1). 리드 지시 「작동이 되는 장비로 테스트」.
+- 착수 전 판독(읽기 전용, t451 도구): `live_run.py 521 101` → 65요청 state/prop 만 (`resume/diag_521.txt`). 색 채널이 두 모듈에 둘씩 있다(`RGBW Cluster_ColorRGB_R/G/B/W` · `Main Module_ColorRGB_R/G/B/W`). 셔터 `Shutter1`·`Shutter2`, 디머 `Dimmer`·`Dimmer2`, 셔터 open = DMX 32~63. 색 기본값 R·G·B 255, W 0.
+- 착수 전 확인(감독): 「지금 안 켜져 있어. 내가 조작하면 켜지는데」.
+- 쓰기: 프로그래머 값만. Store·Assign·Delete 0. 끝에 `ClearAll`.
+- 명령마다 `prop Selection COUNTTOTALSELECTED` 로 되읽었다 → 매번 `2` (명령이 두 대에 닿음). `ClearAll` 뒤 `0`.
+
+### 쏜 명령과 감독 선택
+
+공통 앞부분: `Fixture 521 Thru 522 ; At 100 ; ` + 아래 색 값 (`Attribute 'ColorRGB_<c>' At <v>` 네 줄). 응답은 전부 `{"kind": "result", "ok": true, "result": "OK"}`.
+
+| # | R | G | B | W | 감독 관찰·선택 | 원문 |
+|---|---|---|---|---|---|---|
+| ① 차가운 흰색 RGB 만 | 85 | 95 | 100 | 0 | 켜짐 | `resume/step1_cool_rgb.txt` |
+| ② W 칩만 | 0 | 0 | 0 | 100 | **② 가 ① 보다 좋다** | `resume/step2_cool_w.txt` |
+| + RGBW 전부 (감독 제안으로 추가) | 100 | 100 | 100 | 100 | **RGBW 전부가 ② 보다 좋다** | `resume/step2b_rgbw_all.txt` |
+| ③ RGB 조금 + W | 0 | 10 | 15 | 85 | 비교 답 없음(감독이 질문을 되물음) | `resume/step3_cool_mix.txt` |
+| 프리셋 P3 흰색 (감독이 알려 준 값) | 100 | 88 | 80 | 89 | **P3 가 RGBW 전부보다 좋다** | `resume/step_p3_preset_white.txt` |
+| ④ 따뜻한 흰색 RGB 만 | 100 | 75 | 40 | 0 | 켰음, 단독 판정 없음 | `resume/step4_warm_rgb.txt` |
+| 프리셋 P2 따뜻한 흰색 (감독이 알려 준 값) | 100 | 63 | 24 | 46 | **P2 가 ④ 보다 좋다** | `resume/step_p2_preset_warm.txt` |
+| ⑤ | — | — | — | — | 감독 선택으로 생략 | — |
+| 되돌림 `ClearAll` | | | | | 선택 수 `2 → 0` | `resume/cleanup_clearall.txt` |
+
+### 감독 선택 요약 (이 기구, Robin Spiider)
+
+- **차가운 흰색: 콘솔 프리셋 P3 (R100 G88 B80 W89) 이 가장 좋다.** 좋은 순서: P3 > RGBW 전부 100 > W 만 > RGB 만.
+- **따뜻한 흰색: 콘솔 프리셋 P2 (R100 G63 B24 W46) 가 RGB 만(R100 G75 B40) 보다 좋다.**
+- 두 경우 모두 **W 를 켠 쪽**이 이겼다. 배차서 (a)안(W 만으로 대체, ②)은 RGBW 전부와 P3 에 졌다. (b)안(`W = min(r,g,b)` 분리, ③)은 비교 답을 받지 못해 **순위를 모른다.** 가장 좋다고 뽑힌 값은 **RGB 와 W 를 함께 높게 켜는 값**(감독이 이미 프리셋으로 잡아 둔 값)이다.
+- 감독 말: 「장비마다 다르긴 할텐데」 — 이 결과는 Spiider 한 기종의 것이다.
+
+### 재개 절의 안 잰 것
+
+- 다른 W 기종(Rush Par 2 RGBW)에서의 선택 — 그 기구는 3D 에서 안 켜져 비교 불가(t451 §4)
+- ③ 과 P3 의 직접 비교, ④ 와 ⑤ 비교 (감독 선택으로 생략)
+- 두 모듈(`RGBW Cluster`·`Main Module`)이 각각 어떤 값을 받았는지 — `Attribute 'ColorRGB_W'` 한 줄이 두 모듈 모두에 걸렸는지는 3D 관찰로만 확인했고 채널 값은 못 읽는다
+- `ClearAll` 뒤 프로그래머 **값**이 비었는지 — 선택 수 `0` 만 읽힌다(값은 응답기가 비추지 못함)
+- 이 선택을 앱 규칙으로 옮기는 일 — 배차서대로 구현하지 않았다. 리드가 따로 배차

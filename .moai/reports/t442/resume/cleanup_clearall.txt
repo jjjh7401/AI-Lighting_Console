@@ -1,0 +1,8 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "d314db4b", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'Selection' 'COUNTTOTALSELECTED'
+<<< {"id": "daaf8c8a", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+=== steps=2 not_ok_or_timeout=0
