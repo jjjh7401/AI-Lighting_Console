@@ -225,12 +225,17 @@ class CueState:
     ``color`` 는 팔레트 칸 이름(설계 문서 값 문자열) 그대로다 — RGB 해석은
     이 계층 아래(하류)의 일이다(REQ-017 "3밴드 속성 값 자체... 이 SPEC이
     건드리지 않는다").
+
+    ``secondary`` — 카드 t444(REQ-026/029). 같은 큐가 주색과 함께 띠는
+    보조색이다. 입력(운영 경로의 구간 팔레트)이 두 색을 줄 때만 채워지고,
+    없으면 ``None`` 이다 — 기존 호출자는 이 칸을 몰라도 그대로 동작한다.
     """
 
     dim: Mapping[str, int]
     color: str | None
     pos: str
     motion: int
+    secondary: str | None = None
 
     def __post_init__(self) -> None:
         # frozen dataclass 라도 속성 재할당은 object.__setattr__ 로만

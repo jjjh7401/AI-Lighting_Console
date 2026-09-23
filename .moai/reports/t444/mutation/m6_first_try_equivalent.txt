@@ -1,0 +1,9 @@
+exit=0
+..................................................                       [100%]
+=============================== warnings summary ===============================
+server/tests/test_concept_color_input_t444.py::TestPrepareSongcueWiresPalettes::test_records_present_color_gates_are_judged
+  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t444/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+50 passed, 1 warning in 1.64s

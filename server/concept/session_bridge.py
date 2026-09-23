@@ -21,6 +21,17 @@
 MIB·린트/에너지 요약)를 JSON 직렬화 가능한 "컨셉 리포트" 딕셔너리로
 묶는다.
 
+**색(카드 t444).** 두 어댑터는 각 구간이 실제로 내는 색 이름을 원시
+구간의 ``palette`` 로 실어 넘긴다 — 컨셉 게이트의 색 판정(G2·G5 흰색
+조건·G6·G7)은 그 색으로만 한다(``server/concept/gates.py`` 모듈
+독스트링). session.py 경로는 구간 결정의 팔레트(``SectionDecision.
+palette.colors`` — 주색, 보조색 순. 콘솔로는 주색이 ``_song_color_value_
+lines``, 보조색이 큐시트 반영의 back 그룹 절로 나간다)를, tools.py
+경로는 감독 주색 덮어쓰기가 실제로 적용된 구간의 주색 한 개를 싣는다
+(그 경로는 보조색을 내지 않는다 — ``_override_songcue_main_color``
+독스트링). 색을 싣지 못한 구간은 빈 목록이고, 곡 전체에 색이 없으면
+색 게이트는 n/a 다.
+
 **콘솔 명령을 바꾸지 않는다** — 이 다리는 ADDITIVE 다. 기존 두 진입점이
 오늘 내는 콘솔 명령·번들 자체는 이 파일이 손대지 않는다(REQ-073 은
 컴파일 경로가 기존 하류를 재사용하는지를 검증하지, 배선 경로의 출력을
@@ -95,25 +106,30 @@ def _raw_sections(plan: UnifiedSongLightingPlan) -> list[dict[str, object]]:
                 "baseline_name": decision.section.label,
                 "start": _mmss_from_ms(start_ms),
                 "end": _mmss_from_ms(end_ms),
+                "palette": list(decision.palette.colors),
             }
         )
     return raw
 
 
-def _raw_sections_from_pairs(pairs: Sequence[tuple[str, int]]) -> list[dict[str, object]]:
+def _raw_sections_from_pairs(
+    pairs: Sequence[tuple[str, int]],
+    palettes: Sequence[Sequence[str]] | None = None,
+) -> list[dict[str, object]]:
     """``(baseline_name, start_ms)`` 시간순 목록에서 raw_song 구간을
     낸다 — 원천(``SongCueSection``)에 ``end_ms`` 필드 자체가 없으므로
     다음 구간 시작(또는 마지막 구간은 고정 꼬리)에서 끝을 역산한다."""
     raw: list[dict[str, object]] = []
     for i, (baseline_name, start_ms) in enumerate(pairs):
         end_ms = pairs[i + 1][1] if i + 1 < len(pairs) else start_ms + _FALLBACK_TAIL_MS
-        raw.append(
-            {
-                "baseline_name": baseline_name,
-                "start": _mmss_from_ms(start_ms),
-                "end": _mmss_from_ms(end_ms),
-            }
-        )
+        item: dict[str, object] = {
+            "baseline_name": baseline_name,
+            "start": _mmss_from_ms(start_ms),
+            "end": _mmss_from_ms(end_ms),
+        }
+        if palettes is not None:
+            item["palette"] = list(palettes[i])
+        raw.append(item)
     return raw
 
 
@@ -180,7 +196,11 @@ def build_concept_report(
 
 
 def build_concept_report_from_songcue_sections(
-    song_title: str, bpm: float | None, sections: Sequence[tuple[str, int]]
+    song_title: str,
+    bpm: float | None,
+    sections: Sequence[tuple[str, int]],
+    *,
+    palettes: Sequence[Sequence[str]] | None = None,
 ) -> dict[str, object]:
     """REQ-073/074 §④b — tools.py 경로(``prepare_songcue``, 사다리
     ``build_songcue_bundle``) 어댑터. ``sections`` 는 시간순
@@ -188,8 +208,18 @@ def build_concept_report_from_songcue_sections(
     ``SongCueSection.label``/``.instance`` 를 ``f"{label}
     {instance}"`` 로 합쳐 넘긴다(gates.py 의 "Chorus 2" 류 baseline_name
     형식과 맞춘다; ``label``/``instance`` 분리가 이미 이 형식의 근원이다
-    — ``songcue.py`` ``SongCueSection`` 독스트링). 자세한 원칙은 모듈
-    독스트링 참고."""
+    — ``songcue.py`` ``SongCueSection`` 독스트링). ``palettes`` 는
+    ``sections`` 와 같은 순서의 구간별 실제 색 이름 목록이다(카드 t444,
+    생략하면 입력에 색 없음). 자세한 원칙은 모듈 독스트링 참고."""
     if not sections:
         return {"available": False, "reason": "구간이 없다"}
-    return _run_concept_pipeline(song_title, bpm, _raw_sections_from_pairs(list(sections)))
+    if palettes is not None and len(palettes) != len(sections):
+        # 예외를 밖으로 내지 않는다(모듈 독스트링 ADDITIVE 원칙) — 색이
+        # 어느 구간 것인지 모르면 짝을 추측하지 않는다.
+        return {
+            "available": False,
+            "reason": f"구간 색 {len(palettes)}개가 구간 {len(sections)}개와 짝이 안 맞는다",
+        }
+    return _run_concept_pipeline(
+        song_title, bpm, _raw_sections_from_pairs(list(sections), palettes)
+    )

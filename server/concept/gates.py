@@ -27,6 +27,15 @@ color_lint·color_strip·timing·tracking·mib·safety·vocab)로 재조립한�
 - Outro 구간 동작은 density.py 가 프로토타입과 다르게 짠다(M4 스코프
   독자 결정) — 이 모듈은 그 차이를 그대로 받아들인다.
 
+**색 입력(카드 t444).** 아래 ``PRIMARY_COLOR`` 등 상수 4개는 프로토타입
+팔레트를 옮긴 자리표시자다 — 입력이 아니다. 색에 기대는 게이트(G2·G6·
+G7 전체, G5 의 "Chorus 1 흰색" 조건 하나)는 원시 구간이 ``palette``(그
+구간이 실제로 내는 색 이름 목록, 주색 먼저)를 실어 올 때만 그 색으로
+판정한다. 실어 오지 않으면 n/a(:data:`NO_INPUT_COLOR_REASON`)다 — 상수로
+판정한 값은 무대에 나갈 색에 대한 증거가 아니다. 상수 팔레트는 색 입력이
+없을 때 큐 상태를 채우는 데만 계속 쓰인다(컴파일·에너지 경로가 오늘과
+바이트 동일하게 남도록).
+
 이 편차들이 판정 결과(PASS/FAIL/n/a)를 바꾸는지는 오늘 실측한
 프로토타입 기준선(``.moai/reports/t439/baseline/matrix.json``)과 셀 단위로
 대조한다(REQ-076) — 이 파일 자체는 그 대조 결과를 담지 않는다(시험의 몫).
@@ -80,6 +89,7 @@ __all__ = [
     "CLIMAX_COLOR",
     "UNDER_COLOR",
     "RESERVED_COLORS",
+    "NO_INPUT_COLOR_REASON",
     "TableRow",
     "SongBuild",
     "remap_baseline_sections",
@@ -95,6 +105,15 @@ SECONDARY_COLOR = "파랑"
 CLIMAX_COLOR = "흰색"
 UNDER_COLOR = "주황"
 RESERVED_COLORS: tuple[str, ...] = (CLIMAX_COLOR,)
+
+#: 카드 t444 — 입력에 색이 없을 때 색 의존 게이트가 내는 n/a 사유.
+NO_INPUT_COLOR_REASON = "입력에 색 없음 — 상수 팔레트 판정 안 함"
+
+#: G5 "Chorus 1 흰색" 조건이 흰색으로 보는 이름 — 상수 팔레트(한국어)와
+#: 운영 경로 표준 10색(영어, ``server/design/color_names.py``) 둘 다.
+#: 대소문자·공백만 접어 비교한다(``color_lint._normalize_color_name`` 과
+#: 같은 규칙 — warm white 같은 수식어 붙은 이름은 흰색으로 치지 않는다).
+_WHITE_NAMES: frozenset[str] = frozenset({"흰색", "white"})
 
 _EFFECT_GROUPS: frozenset[str] = frozenset({"BLIND", "STROBE"})
 _BUILDUP_TRIGGER = "빌드업 시작"
@@ -212,6 +231,72 @@ def _make_color_for(under_flags: Mapping[int, bool]) -> ColorForCallback:
     return color_for
 
 
+def _input_palettes(
+    raw_sections: Sequence[Mapping[str, object]],
+) -> tuple[tuple[str, ...], ...] | None:
+    """카드 t444 — 원시 구간마다 실어 온 ``palette``(실제로 내는 색 이름,
+    주색 먼저)를 읽는다. 어느 구간도 색을 싣지 않았으면 ``None`` —
+    "입력에 색 없음"이다. 목록/튜플이 아닌 값·빈 문자열은 버린다(색을
+    추측해 채우지 않는다)."""
+    palettes: list[tuple[str, ...]] = []
+    for raw in raw_sections:
+        value = raw.get("palette")
+        colors: tuple[str, ...] = ()
+        if isinstance(value, (list, tuple)):
+            colors = tuple(
+                dict.fromkeys(str(color).strip() for color in value if str(color).strip())
+            )
+        palettes.append(colors)
+    return tuple(palettes) if any(palettes) else None
+
+
+def _replace_op(palette: Sequence[str]) -> dict[str, object]:
+    """입력 팔레트 하나를 resolver 의 ``replace`` 동작으로 — 둘째 색이
+    있으면 ``secondary`` 로 함께 싣는다."""
+    op: dict[str, object] = {"op": "replace", "color": palette[0]}
+    if len(palette) > 1:
+        op["secondary"] = palette[1]
+    return op
+
+
+def _inject_input_colors(
+    rows: Sequence[dict[str, object]],
+    sections: Sequence[SectionOccurrence],
+    palettes: Sequence[tuple[str, ...]],
+) -> list[dict[str, object]]:
+    """카드 t444 — 구간 큐(``kind == "section"``)마다 그 구간이 입력으로
+    실어 온 색을 ``replace`` 동작으로 얹는다.
+
+    density.py 는 색 콜백 없이(``color_for=None``) 부른 상태다 — 프로토타입
+    팔레트 결정(언더페인팅 포함)은 입력 색이 있을 때 쓰지 않는다. 동작
+    위치는 ``restore`` 뒤다: ``restore`` 가 기준 상태의 색을 되살리므로
+    그 앞에 두면 입력 색이 덮여 사라진다(후렴 2회차 이후가 "Chorus 1"
+    을 복원하는 행이 그렇다). 색을 싣지 않은 구간은 건드리지 않는다 —
+    앞 큐 색이 이어진다(콘솔에서 색 명령이 없는 큐와 같다)."""
+    by_key = {
+        (occ.section, occ.occurrence): palette
+        for occ, palette in zip(sections, palettes, strict=True)
+    }
+    result: list[dict[str, object]] = []
+    for row in rows:
+        palette = by_key.get((str(row["section"]), int(row.get("occurrence", 1))))  # type: ignore[call-overload]
+        if row.get("kind") != "section" or not palette:
+            result.append(row)
+            continue
+        ops = [op for op in row["ops"] if op.get("op") != "replace"]  # type: ignore[attr-defined, union-attr]
+        insert_at = max((i + 1 for i, op in enumerate(ops) if op.get("op") == "restore"), default=0)
+        ops.insert(insert_at, _replace_op(palette))
+        result.append(dict(row, ops=ops))
+    return result
+
+
+def _state_colors(state: CueState) -> tuple[str, ...]:
+    """큐 상태가 띠는 색 — 주색, 그리고 있으면 보조색(중복 제거)."""
+    return tuple(
+        dict.fromkeys(color for color in (state.color, state.secondary) if color is not None)
+    )
+
+
 # --- 곡 단위 큐 테이블 --------------------------------------------------------
 
 
@@ -235,6 +320,9 @@ class TableRow:
     pos: str
     motion: int
     timing: Timing
+    #: 카드 t444 — 이 큐가 띠는 색 전부(주색, 보조색 순). ``color`` 는
+    #: 주색만이다(후렴 정체성 판정 등 기존 소비자용).
+    colors: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -251,6 +339,12 @@ class SongBuild:
     mib: tuple[MibVerdict | None, ...]
     final_index: int | None
     buildup_needed: int
+    #: 카드 t444 — 큐 색의 출처. ``"input"`` 이면 원시 구간이 실어 온 색,
+    #: ``"constant"`` 면 프로토타입 상수 팔레트(증거 아님 — 색 게이트 n/a).
+    color_source: str = "constant"
+    #: 입력이 선언한 유보색(``raw_song["reserved"]``). 없으면 빈 튜플 —
+    #: 유보색 검사(REQ-027)는 그때 판정하지 않는다.
+    reserved: tuple[str, ...] = ()
 
 
 def build_song(raw_song: Mapping[str, object]) -> SongBuild:
@@ -269,13 +363,25 @@ def build_song(raw_song: Mapping[str, object]) -> SongBuild:
     starts = [s.start for s in sections]
     total_chorus = sum(1 for s in sections if s.section in CHORUS_FAMILY)
     under_flags = _buildup_under_flags(doc, starts, bar=bar, total_chorus=total_chorus)
-    color_for = _make_color_for(under_flags)
+    input_palettes = _input_palettes(raw_song["sections"])  # type: ignore[arg-type]
+    color_for = _make_color_for(under_flags) if input_palettes is None else None
 
     density_result = compile_density(sections, bpm, color_for=color_for)
     sequence_rows = [dict(row) for row in density_result.sequence]
+    if input_palettes is not None:
+        sequence_rows = _inject_input_colors(sequence_rows, sections, input_palettes)
 
     safety_start: dict[str, object] = dict(first_safety_cue(default_color=SECONDARY_COLOR))
     safety_start.update(section="Intro", occurrence=0, ts=-1.0, kind="safety", trigger=None)
+    if input_palettes is not None:
+        # 곡 앞 안전 큐는 컨셉 파이프라인이 만든 큐다(운영 경로에는 없다).
+        # 상수 색을 두면 첫 구간과의 브리지가 상수 색으로 판정되므로, 입력
+        # 중 가장 먼저 나오는 색(곡이 처음 내는 색)을 그대로 쓴다.
+        first_palette = next(palette for palette in input_palettes if palette)
+        safety_start["ops"] = [
+            _replace_op(first_palette) if op.get("op") == "replace" else op
+            for op in safety_start["ops"]  # type: ignore[union-attr]
+        ]
 
     if sequence_rows:
         # 마지막 시퀀스 큐에 참조 이름을 하나 더 등록한다(REQ-069) — 그
@@ -323,6 +429,7 @@ def build_song(raw_song: Mapping[str, object]) -> SongBuild:
                 pos=state.pos,
                 motion=state.motion,
                 timing=timing,
+                colors=_state_colors(state),
             )
         )
         if final_index is None and kind == "section" and section == "Final Chorus":
@@ -344,6 +451,12 @@ def build_song(raw_song: Mapping[str, object]) -> SongBuild:
         mib=tuple(mib_list),
         final_index=final_index,
         buildup_needed=len(under_flags),
+        color_source="input" if input_palettes is not None else "constant",
+        reserved=tuple(
+            str(color).strip()
+            for color in raw_song.get("reserved", ()) or ()  # type: ignore[union-attr]
+            if str(color).strip()
+        ),
     )
 
 
@@ -357,38 +470,18 @@ def _concept_cues(table: Sequence[TableRow]) -> list[ConceptCue]:
     성격이다(REQ-027 은 층을 가리지 않으므로 이 선택이 그 판정을
     바꾸지 않는다).
 
-    ``colors`` 는 큐마다 1개 원소 튜플이다 — 카드 t439 조사 결과, 이
-    컨셉 파이프라인은 큐 하나에 "주색+보조색"을 동시에 담는 자리를
-    어디에도 만들지 않는다(G6 조사, REQ-026 "구간별 주색·보조색"
-    narrow reading):
+    ``colors`` 는 그 큐가 띠는 색 전부다(:attr:`TableRow.colors` — 주색,
+    그리고 입력이 둘째 색을 줬으면 보조색).
 
-    - :class:`server.concept.cue_model.CueState` 의 ``color`` 필드
-      자체가 단일 ``str | None`` 이다(``cue_model.py`` 231행) — 여러
-      그룹이 동시에 다른 색을 켤 수 있는 자리가 모델에 없다.
-    - :func:`server.concept.density._color_ops` 는 색 동작을
-      ``{"op":"replace","color":<한 값>}`` 하나만 낸다(``density.py``)
-      — ``color_for`` 콜백(``_make_color_for``, 이 파일 187~212행)도
-      섹션당 색 문자열 하나만 돌려준다.
-    - :class:`server.concept.color_strip.ConceptCue` 자체는 ``colors``
-      를 튜플로 설계해 뒀고 :func:`server.concept.color_strip.
-      compute_color_strip` 은 ``colors[1]`` 을 "보조색"으로 읽지만
-      (``color_strip.py`` 87~88행), 이 함수(``compute_color_strip``)를
-      실제로 호출하는 production 코드가 이 파이프라인에 없다 — REQ-026
-      의 Color Strip 산출 자체가 M6 배선 밖이라 ``secondary_color`` 는
-      어디서도 채워지지 않는다.
-    - :class:`server.concept.worksheet.Palette` 의 ``secondary`` 는
-      곡 전체에서 하나뿐인 전역 상수(이 파일의 ``SECONDARY_COLOR``,
-      Verse·Bridge 색으로 이미 그 자체가 색 값으로 쓰인다)이지, 켜진
-      큐 하나가 "동시에 띠는 두 번째 색"이 아니다 — 이 값을 여기서
-      ``colors`` 둘째 원소로 밀어 넣으면 실제로 emit 되지 않는 색을
-      지어내 G6 를 통과시키는 것과 같다(배차서 금지 사항).
-
-    결론: 실제로 emit 되는 색만 담는다 — 지어내지 않는다. 따라서
-    Verse/Bridge(COOL 단독)와 Chorus(WARM 단독)가 그룹을 공유하며
-    인접하는 전환은 :func:`server.concept.color_lint.
-    check_adjacent_bridge`(REQ-029)가 실제 위반으로 정확히 잡는다 —
-    이 컨셉의 팔레트가 색을 완전히 배타적으로 쓰는 설계 자체의 결과다
-    (``test_concept_gates.py`` 모듈 docstring 원인 1과 동일 결론).
+    카드 t439 는 이 자리에서 "큐 하나가 두 색을 담는 자리가 모델 어디에도
+    없다"는 것을 확인하고 한 색만 실었다. 카드 t444 가 그 자리를 만들었다:
+    :class:`server.concept.cue_model.CueState` 의 ``secondary``, resolver 의
+    ``replace`` 동작이 나르는 ``secondary``, 원시 구간의 ``palette`` 입력
+    (:func:`_input_palettes`). 둘째 색은 **입력이 실어 온 것만** 들어간다 —
+    곡 전역 상수(``SECONDARY_COLOR``)를 큐마다 끼워 넣지 않는다(그건 내지
+    않는 색을 지어내 G6 을 통과시키는 것이다). 입력에 색이 없으면 이 목록의
+    색은 상수 팔레트 값이고, 색 게이트는 그때 판정하지 않는다
+    (:data:`NO_INPUT_COLOR_REASON`).
     """
     cues: list[ConceptCue] = []
     for row in table:
@@ -398,7 +491,7 @@ def _concept_cues(table: Sequence[TableRow]) -> list[ConceptCue]:
                 section=row.section,
                 occurrence=row.occurrence,
                 layer=layer,  # type: ignore[arg-type]
-                colors=(row.color,) if row.color else (),
+                colors=row.colors,
                 max_brightness=float(row.top),
                 lit_groups=row.n_on,
                 total_groups=len(GROUP_ROSTER),
@@ -437,6 +530,10 @@ def g1_vocab_closed(build: SongBuild) -> GateResult:
 
 
 def g2_chorus_identity(build: SongBuild) -> GateResult:
+    """G2 — 후렴 쌍 정체성(REQ-042: 주색 동일 또는 Final Chorus). 판정이
+    색 비교뿐이라 입력에 색이 없으면 n/a 다(카드 t444)."""
+    if build.pairs and build.color_source != "input":
+        return GateResult(None, NO_INPUT_COLOR_REASON)
     return g2_identity(build.pairs)
 
 
@@ -479,33 +576,52 @@ def g5_headroom_warnings(build: SongBuild) -> GateResult:
     chorus1_effects_on = (
         frozenset(chorus1_row.on) & _EFFECT_GROUPS if chorus1_row is not None else frozenset()
     )
+    # 카드 t444 — 네 조건 중 "Chorus 1 색이 흰색" 하나만 색에 기댄다. 입력에
+    # 색이 없으면 그 조건만 빼고(``chorus1_color=None``) 나머지 세 조건은
+    # 그대로 판정한다 — 색과 무관한 조건까지 n/a 로 만들 이유가 없다.
+    chorus1_is_white: bool | None = None
+    if build.color_source == "input" and chorus1_row is not None and chorus1_row.color:
+        chorus1_is_white = " ".join(chorus1_row.color.casefold().split()) in _WHITE_NAMES
     warnings = g5_warnings(
         intro_groups_on=intro_row.n_on if intro_row is not None else None,
         total_groups=len(GROUP_ROSTER),
         chorus1_effects_on=chorus1_effects_on,
-        chorus1_color=chorus1_row.color if chorus1_row is not None else None,
+        chorus1_color=CLIMAX_COLOR if chorus1_is_white else None,
         bridge_snapshots=bridge_snapshots,
         final_chorus_has_new_axis=final_chorus_has_new_axis,
         white_color=CLIMAX_COLOR,
     )
-    return GateResult(len(warnings) == 0, "; ".join(warnings) if warnings else "경고 0건")
+    detail = "; ".join(warnings) if warnings else "경고 0건"
+    if build.color_source != "input":
+        detail += f" (Chorus 1 흰색 조건: {NO_INPUT_COLOR_REASON})"
+    return GateResult(len(warnings) == 0, detail)
 
 
 def g6_color_release_and_bridge(build: SongBuild) -> GateResult:
+    """G6 — 유보색 조기 등장 0(REQ-027) · 인접 구간 브리지 위반 0(REQ-029).
+
+    카드 t444 — 입력에 색이 없으면 n/a. 입력 색이 있으면 브리지는 그 색
+    (주색+보조색)으로 판정한다. 유보색 검사는 입력이 유보색을 선언했을
+    때만(``raw_song["reserved"]``) 판정하고, 아니면 그 절만 n/a 로 적는다
+    — 상수 ``RESERVED_COLORS`` 를 입력 색에 대 보지 않는다."""
+    if build.color_source != "input":
+        return GateResult(None, NO_INPUT_COLOR_REASON)
     cues = _concept_cues(build.table)
-    release = check_reserved_color_release(
-        cues, reserved=RESERVED_COLORS, release_section="Final Chorus", release_occurrence=1
-    )
     bridge = check_adjacent_bridge(cues)
-    passed = release.ok and bridge.ok
-    detail = (
-        f"유보색 {release.status}(위반 {len(release.violations)}) · "
-        f"브리지 {bridge.status}(위반 {len(bridge.violations)})"
+    bridge_detail = f"브리지 {bridge.status}(위반 {len(bridge.violations)})"
+    if not build.reserved:
+        return GateResult(bridge.ok, f"유보색 n/a(입력에 유보색 없음) · {bridge_detail}")
+    release = check_reserved_color_release(
+        cues, reserved=build.reserved, release_section="Final Chorus", release_occurrence=1
     )
-    return GateResult(passed, detail)
+    detail = f"유보색 {release.status}(위반 {len(release.violations)}) · {bridge_detail}"
+    return GateResult(release.ok and bridge.ok, detail)
 
 
 def g7_chorus_primary_color(build: SongBuild) -> GateResult:
+    """G7 — 후렴 주색 동일(REQ-030). 입력에 색이 없으면 n/a(카드 t444)."""
+    if build.color_source != "input":
+        return GateResult(None, NO_INPUT_COLOR_REASON)
     return _lint_to_gate(check_chorus_identity(_concept_cues(build.table)))
 
 

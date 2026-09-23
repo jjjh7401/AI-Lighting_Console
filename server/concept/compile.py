@@ -143,7 +143,7 @@ def _lint_sheet_from_table(table: Sequence[TableRow]) -> LintSheet:
             # 뜻으로 None 을 유지한다(LintCue 독스트링 — 0으로 지어내지
             # 않는다).
             key_dimmer_pct=float(row.top) if row.top else None,
-            palette_colors=(row.color,) if row.color else (),
+            palette_colors=row.colors,
             is_accent=row.kind == "phrase",
             is_blackout=row.n_on == 0,
             is_audience_or_blinder=bool(frozenset(row.on) & _EFFECT_GROUPS),
