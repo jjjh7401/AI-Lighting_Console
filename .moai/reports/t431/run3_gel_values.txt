@@ -1,0 +1,48 @@
+
+>>> prop:ShowData/GelPools/Lee/1|NoSuchPropT431
+    wire: Plugin "CopilotResponder" "prop b6f08bf2 ShowData/GelPools/Lee/1 NoSuchPropT431"
+<<< {"error": "property not readable: NoSuchPropT431", "id": "b6f08bf2", "kind": "prop", "ok": false, "path": "ShowData/GelPools/Lee/1", "property": "NoSuchPropT431", "v": 1}
+
+>>> prop:ShowData/GelPools/Lee/1|NAME
+    wire: Plugin "CopilotResponder" "prop 81db3ffc ShowData/GelPools/Lee/1 NAME"
+<<< {"id": "81db3ffc", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Lee/1", "property": "NAME", "v": 1, "value": "Rose Pink"}
+
+>>> prop:ShowData/GelPools/Lee/1|KEY
+    wire: Plugin "CopilotResponder" "prop 1b8b59a3 ShowData/GelPools/Lee/1 KEY"
+<<< {"id": "1b8b59a3", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Lee/1", "property": "KEY", "v": 1, "value": "2"}
+
+>>> prop:ShowData/GelPools/Lee/1|R
+    wire: Plugin "CopilotResponder" "prop 04393f47 ShowData/GelPools/Lee/1 R"
+<<< {"id": "04393f47", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Lee/1", "property": "R", "v": 1, "value": "1.0"}
+
+>>> prop:ShowData/GelPools/Lee/1|G
+    wire: Plugin "CopilotResponder" "prop 0d6e1959 ShowData/GelPools/Lee/1 G"
+<<< {"id": "0d6e1959", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Lee/1", "property": "G", "v": 1, "value": "0.47058799862862"}
+
+>>> prop:ShowData/GelPools/Lee/1|B
+    wire: Plugin "CopilotResponder" "prop c417dd65 ShowData/GelPools/Lee/1 B"
+<<< {"id": "c417dd65", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Lee/1", "property": "B", "v": 1, "value": "0.86274498701096"}
+
+>>> prop:ShowData/GelPools/Lee/1|COLOR
+    wire: Plugin "CopilotResponder" "prop 6bec972f ShowData/GelPools/Lee/1 COLOR"
+<<< {"id": "6bec972f", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Lee/1", "property": "COLOR", "v": 1, "value": "1.000000,0.470588,0.862745,1.000000"}
+
+>>> prop:ShowData/GelPools/Lee/1|NO
+    wire: Plugin "CopilotResponder" "prop c6e981af ShowData/GelPools/Lee/1 NO"
+<<< {"id": "c6e981af", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Lee/1", "property": "NO", "v": 1, "value": "1"}
+
+>>> prop:ShowData/GelPools/Supergel/1|KEY
+    wire: Plugin "CopilotResponder" "prop 2e324acf ShowData/GelPools/Supergel/1 KEY"
+<<< {"id": "2e324acf", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Supergel/1", "property": "KEY", "v": 1, "value": "R01"}
+
+>>> prop:ShowData/GelPools/Supergel/1|NAME
+    wire: Plugin "CopilotResponder" "prop 20bbf53b ShowData/GelPools/Supergel/1 NAME"
+<<< {"id": "20bbf53b", "kind": "prop", "ok": true, "path": "ShowData/GelPools/Supergel/1", "property": "NAME", "v": 1, "value": "Light Bastard Amber"}
+
+>>> state:ShowData/GelPools/Supergel
+    wire: Plugin "CopilotResponder" "state 538b8ba0 ShowData/GelPools/Supergel"
+<<< {"children": [{"class": "Gel", "i": 1, "name": "Light Bastard Amber"}, {"class": "Gel", "i": 2, "name": "Dark Bastard Amber"}, {"class": "Gel", "i": 3, "name": "Warm Peach"}, {"class": "Gel", "i": 4, "name": "Bastard Amber"}, {"class": "Gel", "i": 5, "name": "Pale Apricot"}, {"class": "Gel", "i": 6, "name": "Rose Tint"}, {"class": "Gel", "i": 7, "name": "Rose Gold"}, {"class": "Gel", "i": 8, "name": "Pale Yellow"}, {"class": "Gel", "i": 9, "name": "Medium Bastard Amber"}, {"class": "Gel", "i": 10, "name": "Pale Amber Gold"}, {"class": "Gel", "i": 11, "name": "Medium Yellow"}, {"class": "Gel", "i": 12, "name": "Light Straw"}, {"class": "Gel", "i": 13, "name": "Canary"}, {"class": "Gel", "i": 14, "name": "Straw Tint"}, {"class": "Gel", "i": 15, "name": "Light Relief Yellow"}, {"class": "Gel", "i": 16, "name": "Medium Straw"}, {"class": "Gel", "i": 17, "name": "Deep Straw"}, {"class": "Gel", "i": 18, "name": "Apricot"}], "id": "538b8ba0", "kind": "state", "node": {"childCount": 134, "class": "GelPool", "enumeration": "ok", "name": "Supergel"}, "offset": 0, "ok": true, "path": "ShowData/GelPools/Supergel", "truncated": true, "v": 1}
+
+>>> state:ShowData/GelPools/MA
+    wire: Plugin "CopilotResponder" "state 6c762fd2 ShowData/GelPools/MA"
+<<< {"children": [{"class": "Gel", "i": 1, "name": "White"}, {"class": "Gel", "i": 2, "name": "Red"}, {"class": "Gel", "i": 3, "name": "Orange"}, {"class": "Gel", "i": 4, "name": "Yellow"}, {"class": "Gel", "i": 5, "name": "Fern Green"}, {"class": "Gel", "i": 6, "name": "Green"}, {"class": "Gel", "i": 7, "name": "Sea Green"}, {"class": "Gel", "i": 8, "name": "Cyan"}, {"class": "Gel", "i": 9, "name": "Lavender"}, {"class": "Gel", "i": 10, "name": "Blue"}, {"class": "Gel", "i": 11, "name": "Violet"}, {"class": "Gel", "i": 12, "name": "Magenta"}, {"class": "Gel", "i": 13, "name": "Pink"}], "id": "6c762fd2", "kind": "state", "node": {"childCount": 13, "class": "GelPool", "enumeration": "ok", "name": "MA"}, "offset": 0, "ok": true, "path": "ShowData/GelPools/MA", "truncated": false, "v": 1}

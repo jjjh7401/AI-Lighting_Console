@@ -29,7 +29,7 @@ import json
 import os
 import re
 import tempfile
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
@@ -204,7 +204,7 @@ from server.spatial.pointing import (
     radial_pan_tilt,
 )
 from server.spatial.position_cuesheet import PositionSheetSection, build_position_cue_sheet
-from server.spatial.position_fx import position_fx_commands
+from server.spatial.position_fx import position_fx_commands, required_position_labels
 from server.spatial.position_moods import match_position_mood
 from server.spatial.vocabulary import (
     layout_terms_guidance,
@@ -5922,6 +5922,8 @@ class ChatSession:
         # 점유 확인은 셋리스트/곡 설계와 같은 fail-closed 프로브를 재사용한다 —
         # 빈 시퀀스 Store는 자동 생성이라 비가역 위험이 낮지만, 점유된 슬롯은
         # 기존 쇼 데이터가 바뀌므로 승낙 없이는 저장하지 않는다.
+        if fx_preset_start <= 0:
+            return self._pointing_refusal("FX 프리셋 시작 번호는 1 이상이어야 합니다.")
         if sequence_no <= 0:
             return self._pointing_refusal("시퀀스 번호는 1 이상이어야 합니다.")
         if self._song_sequence_occupied(sequence_no):
@@ -5943,10 +5945,17 @@ class ChatSession:
                 )
         fids = [fid for fid, _position in fixtures]
         try:
+            # 카드 t232 — 이 효과가 부르는 라벨만(1~2개) 라벨로 확인한 뒤
+            # 실제 슬롯을 넘긴다. `fx_preset_start + offset`는 그 자리가
+            # 진짜 그 라벨인지 보지 않았다(판독: `.moai/reports/t232/verdict.md`).
+            needed_labels = required_position_labels(effect)
+            preset_numbers = self._resolve_position_preset_labels(
+                needed_labels, start=fx_preset_start, span=len(FX_POSITION_SEQUENCE)
+            )
             commands = position_fx_commands(
                 effect,
                 fids=fids,
-                fx_preset_start=fx_preset_start,
+                preset_numbers=preset_numbers,
                 sequence_no=sequence_no,
                 label=label,
             )
@@ -8079,6 +8088,21 @@ class ChatSession:
         if bundle is None:
             return ()
         phaser_slots, self._last_phaser_failures = self._phaser_slots_for_bundle(bundle)
+        # 카드 t232 — 번호 참조를 라벨로 확인한다. 큐가 부르는 포지션 라벨을
+        # 한 번에 모아 풀을 1회 판독으로 슬롯을 찾는다(`_phaser_slots_for_
+        # bundle`과 같은 배치 규율) — `preset_start + index`는 그 슬롯이
+        # 실제로 그 라벨인지 보지 않았다(판독: `.moai/reports/t232/verdict.md`).
+        # 못 찾거나 모호하면 여기서 거부하고, 콘솔 쓰기는 한 줄도 나가지 않는다.
+        needed_positions = {
+            cue.position.stored for cue in bundle.cues if cue.position.stored is not None
+        }
+        position_slots = (
+            self._resolve_position_preset_labels(
+                needed_positions, start=preset_start, span=len(BASIC_POSITION_SEQUENCE)
+            )
+            if needed_positions
+            else {}
+        )
         # SPEC-LDDESIGN-001 M2 — 컨셉 색을 이 경로로 내보낸다. 미해소 사유는
         # 큐마다 모아 최종 회신에 노출한다(`_color_failure_note`).
         # 카드 t430 — w_fids(기본 빈 집합)는 `_song_color_value_lines`로
@@ -8088,12 +8112,7 @@ class ChatSession:
         for cue in bundle.cues:
             preset_no = None
             if cue.position.stored is not None:
-                try:
-                    preset_no = preset_start + BASIC_POSITION_SEQUENCE.index(cue.position.stored)
-                except ValueError as error:
-                    raise SpatialPointingError(
-                        f"unknown reviewed position {cue.position.stored!r}"
-                    ) from error
+                preset_no = position_slots[cue.position.stored]
             dimmer = cue.dimmer.key_pct
             color_lines, color_failure = _song_color_value_lines(cue, fids, w_fids)
             if color_failure is not None:
@@ -9208,7 +9227,13 @@ class ChatSession:
         if not fixtures:
             return self._pointing_refusal("좌표가 확인된 장비가 없어 큐를 수정하지 않았습니다.")
         fids = [fid for fid, _position in fixtures]
-        preset_no = preset_start + BASIC_POSITION_SEQUENCE.index(target)
+        try:
+            resolved = self._resolve_position_preset_labels(
+                (target,), start=preset_start, span=len(BASIC_POSITION_SEQUENCE)
+            )
+        except SpatialPointingError as error:
+            return self._pointing_refusal(f"큐를 수정할 수 없습니다: {error}")
+        preset_no = resolved[target]
         commands = (
             "ChangeDestination Root",
             "ClearAll",
@@ -10118,6 +10143,64 @@ class ChatSession:
         """Number-only view of :meth:`_position_preset_pool_children`."""
         children = self._position_preset_pool_children(pool_no=pool_no)
         return None if children is None else set(children)
+
+    def _resolve_position_preset_labels(
+        self,
+        labels: Iterable[str],
+        *,
+        start: int,
+        span: int,
+        pool_no: int = POSITION_PRESET_POOL,
+    ) -> dict[str, int]:
+        """룩 라벨 집합 -> Position 프리셋 슬롯, 콘솔 판독 1회(t232).
+
+        `start + BASIC_POSITION_SEQUENCE.index(label)`로 번호를 짓던 옛
+        경로는 그 자리가 실제로 그 라벨인지 확인하지 않았다 — 연속 10칸이
+        다른 프리셋(예: 시트 프리셋)으로 채워져 있으면 조용히 엉뚱한 프리셋을
+        불렀다(카드 t232 판독). 이 헬퍼는 ``_phaser_slot_by_label``과 같은
+        규율로 풀을 완전 판독해(``_position_preset_pool_children``) 라벨을
+        직접 찾는다.
+
+        라벨은 베이스이름 매칭으로 찾는다(``#n`` 중복 접미 제거). 같은
+        베이스이름이 여러 슬롯에 있으면 운영자가 고른 구간
+        ``[start, start+span-1]`` 안의 슬롯을 우선한다 — 구간 안에 정확히
+        하나가 있으면 그것을 쓴다. 구간 안에 하나도 없는데 구간 밖에 둘
+        이상이면 모호 — 거부한다(추측 금지). 어디서든 후보가 딱 하나뿐이면
+        그것을 쓴다. 풀을 읽지 못하면 그 자체로 거부한다 — 라벨 부재와는
+        다른 사유를 남긴다.
+        """
+        pool = self._position_preset_pool_children(pool_no=pool_no)
+        if pool is None:
+            raise SpatialPointingError(
+                f"Position 프리셋 풀(Preset {pool_no}.x)을 읽지 못해 라벨을 확인할 수 없습니다"
+            )
+        by_base: dict[str, list[int]] = {}
+        for slot, name in pool.items():
+            if not isinstance(name, str):
+                continue
+            base = name.split("#", 1)[0]
+            by_base.setdefault(base, []).append(slot)
+        span_end = start + span - 1
+        resolved: dict[str, int] = {}
+        for label in labels:
+            if label in resolved:
+                continue
+            candidates = sorted(by_base.get(label, ()))
+            if not candidates:
+                raise SpatialPointingError(
+                    f"'{label}' 라벨의 Position 프리셋을 콘솔에서 찾지 못했습니다"
+                )
+            if len(candidates) == 1:
+                resolved[label] = candidates[0]
+                continue
+            in_span = [slot for slot in candidates if start <= slot <= span_end]
+            if len(in_span) == 1:
+                resolved[label] = in_span[0]
+                continue
+            raise SpatialPointingError(
+                f"'{label}' 라벨이 Position 프리셋 여러 슬롯 {candidates}에 있어 특정할 수 없습니다"
+            )
+        return resolved
 
     def _position_preset_free_starts(
         self, *, count: int = 3, pool_no: int = POSITION_PRESET_POOL

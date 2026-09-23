@@ -1,0 +1,20 @@
+
+>>> props:ShowData/GelPools/Lee/201|NO,KEY,NAME,R,G,B
+    wire: Plugin "CopilotResponder" "props 1f967f0b NO,KEY,NAME,R,G,B ShowData/GelPools/Lee/201"
+<<< {"id": "1f967f0b", "kind": "props", "ok": true, "path": "ShowData/GelPools/Lee/201", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "201"}, {"n": "KEY", "ok": true, "t": "string", "v": "604"}, {"n": "NAME", "ok": true, "t": "string", "v": "Full C_T Eight Five"}, {"n": "R", "ok": true, "t": "number", "v": "1.0"}, {"n": "G", "ok": true, "t": "number", "v": "0.76078397035599"}, {"n": "B", "ok": true, "t": "number", "v": "0.58431398868561"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Lee/294|NO,KEY,NAME,R,G,B
+    wire: Plugin "CopilotResponder" "props 330583bd NO,KEY,NAME,R,G,B ShowData/GelPools/Lee/294"
+<<< {"id": "330583bd", "kind": "props", "ok": true, "path": "ShowData/GelPools/Lee/294", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "294"}, {"n": "KEY", "ok": true, "t": "string", "v": "821"}, {"n": "NAME", "ok": true, "t": "string", "v": "Zircon UV Blue Blocker"}, {"n": "R", "ok": true, "t": "number", "v": "1.0"}, {"n": "G", "ok": true, "t": "number", "v": "0.70588201284409"}, {"n": "B", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Lee/295|NO,KEY,NAME
+    wire: Plugin "CopilotResponder" "props 67a8111f NO,KEY,NAME ShowData/GelPools/Lee/295"
+<<< {"error": "path segment not found: '295' (in ShowData/GelPools/Lee/295)", "id": "67a8111f", "kind": "props", "ok": false, "path": "ShowData/GelPools/Lee/295", "reads": [], "truncated": false, "v": 1}
+
+>>> props:ShowData/GelPools/Custom|NO,NAME,COUNT,LOCK
+    wire: Plugin "CopilotResponder" "props 4155efa2 NO,NAME,COUNT,LOCK ShowData/GelPools/Custom"
+<<< {"id": "4155efa2", "kind": "props", "ok": true, "path": "ShowData/GelPools/Custom", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "11"}, {"n": "NAME", "ok": true, "t": "string", "v": "Custom"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "LOCK", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> state:ShowData/GelPools/Custom
+    wire: Plugin "CopilotResponder" "state ff6a59d5 ShowData/GelPools/Custom"
+<<< {"children": [], "id": "ff6a59d5", "kind": "state", "node": {"childCount": 0, "class": "GelPool", "enumeration": "ok", "name": "Custom"}, "offset": 0, "ok": true, "path": "ShowData/GelPools/Custom", "truncated": false, "v": 1}

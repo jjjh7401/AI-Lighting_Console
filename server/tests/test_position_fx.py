@@ -8,16 +8,27 @@ number offsets into the FX_POSITION_SEQUENCE bank.
 
 import pytest
 
-from server.spatial.pointing import SpatialPointingError
+from server.spatial.pointing import FX_POSITION_SEQUENCE, SpatialPointingError
 from server.spatial.position_fx import POSITION_FX_EFFECTS, position_fx_commands
 
 FIDS = (11, 12, 13)
 START = 41  # bank stored as Preset 2.41..2.50 in FX_POSITION_SEQUENCE order
 SEQ = 201
 
+#: t232 — the module no longer computes ``start + index`` itself; the caller
+#: resolves each label to a real console slot first. This default mirrors a
+#: NORMAL showfile (the ten labels sit contiguously at ``START``), so every
+#: test below stays byte-identical to the pre-t232 ``fx_preset_start``-based
+#: bundle unless it overrides ``preset_numbers`` directly.
+_CONTIGUOUS_PRESET_NUMBERS = {
+    name: START + offset for offset, name in enumerate(FX_POSITION_SEQUENCE)
+}
+
 
 def build(effect: str, **overrides) -> tuple[str, ...]:
-    kwargs = dict(fids=FIDS, fx_preset_start=START, sequence_no=SEQ, label="My FX")
+    kwargs = dict(
+        fids=FIDS, preset_numbers=_CONTIGUOUS_PRESET_NUMBERS, sequence_no=SEQ, label="My FX"
+    )
     kwargs.update(overrides)
     return position_fx_commands(effect, **kwargs)
 
@@ -156,9 +167,18 @@ class TestRefusals:
         with pytest.raises(SpatialPointingError, match="no fixtures"):
             build("sweep", fids=())
 
-    def test_nonpositive_preset_start_is_refused(self):
+    def test_nonpositive_resolved_preset_number_is_refused(self):
+        # t232 — the module no longer validates a bare "start"; each
+        # RESOLVED preset number is validated instead (``preset_recall_
+        # command``'s own guard), the same rule as every other consumer.
+        broken = dict(_CONTIGUOUS_PRESET_NUMBERS)
+        broken["Sweep L"] = 0
         with pytest.raises(SpatialPointingError, match="must be positive"):
-            build("sweep", fx_preset_start=0)
+            build("sweep", preset_numbers=broken)
+
+    def test_a_label_missing_from_preset_numbers_is_refused(self):
+        with pytest.raises(SpatialPointingError, match="no resolved preset number"):
+            build("sweep", preset_numbers={})
 
     def test_nonpositive_sequence_number_is_refused(self):
         with pytest.raises(SpatialPointingError, match="must be positive"):

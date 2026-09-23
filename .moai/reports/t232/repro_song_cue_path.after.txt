@@ -1,0 +1,52 @@
+(1) 감독 확정 곡 큐 — 상태 C (기본 10종이 1~10, 시작 1)
+  Fixture 1 + 2 ; At Preset 2.4
+  Fixture 1 + 2 ; At Preset 2.10
+  전체 명령열:
+    ChangeDestination Root
+    Fixture 1 + 2 ; At Preset 2.4
+    Fixture 1 + 2 ; Attribute 'Dimmer' At 70
+    Fixture 1 + 2 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+    Store Sequence 210 Cue 101 'S1' CueFade 1.5
+    ClearAll
+    Fixture 1 + 2 ; At Preset 2.10
+    Fixture 1 + 2 ; Attribute 'Dimmer' At 70
+    Fixture 1 + 2 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+    Store Sequence 210 Cue 102 'S2' CueFade 1.5
+    ClearAll
+    Store Timecode 9
+    Set Timecode 9 Property 'Name' 'repro seq Timecode'
+    Assign Sequence 210 At Timecode 9
+    Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+    Set Cue 101 Sequence 210 Property 'TrigTime' 0
+    Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+    Set Cue 102 Sequence 210 Property 'TrigTime' 20
+
+(1) 감독 확정 곡 큐 — 상태 D (시트 프리셋 10개가 1~10, 진짜 Center는 41)
+  'Center' 큐 recall -> Fixture 1 + 2 ; At Preset 2.41
+
+(1) 감독 확정 곡 큐 — 상태 D2 ('Center'가 어디에도 없음)
+  거부: 'Center' 라벨의 Position 프리셋을 콘솔에서 찾지 못했습니다
+
+(2) 대화 포지션 수정 — 상태 C (기본 10종이 21~30, 시작 21)
+  recall -> ['Fixture 1 + 2 ; At Preset 2.24']
+  회신: 감독 타임라인 큐 1의 포지션을 Center(으)로 수정했습니다 — Sequence 210 Cue 1에 Preset 2.24을 병합하고 타임라인에 즉시 반영했습니다.
+
+(2) 대화 포지션 수정 — 상태 D (시트 프리셋 10개가 21~30, 진짜 Center는 41)
+  recall -> ['Fixture 1 + 2 ; At Preset 2.41']
+  회신: 감독 타임라인 큐 1의 포지션을 Center(으)로 수정했습니다 — Sequence 210 Cue 1에 Preset 2.41을 병합하고 타임라인에 즉시 반영했습니다.
+
+(2) 대화 포지션 수정 — 상태 D2 ('Center'가 어디에도 없음)
+  recall -> []
+  회신: 큐를 수정할 수 없습니다: 'Center' 라벨의 Position 프리셋을 콘솔에서 찾지 못했습니다
+
+(3) 포지션 FX — 상태 C (FX 10종이 21~30, 시작 21)
+  recall -> ['Fixture 1 + 2 ; At Preset 2.25']
+  회신: 서클 포지션 이펙트를 시퀀스 201에 저장 요청했습니다 — FX 포지션 프리셋 2.21~2.30 구간을 참조...
+
+(3) 포지션 FX — 상태 D (21~30은 다른 이름, 진짜 'Circle Base'는 61)
+  recall -> ['Fixture 1 + 2 ; At Preset 2.61']
+  회신: 서클 포지션 이펙트를 시퀀스 201에 저장 요청했습니다 — FX 포지션 프리셋 2.21~2.30 구간을 참조합니다 (프리셋 참조 유지, 저장 후...
+
+(3) 포지션 FX — 상태 D2 ('Circle Base'가 어디에도 없음)
+  recall -> []
+  회신: 포지션 이펙트 명령을 만들 수 없습니다: 'Circle Base' 라벨의 Position 프리셋을 콘솔에서 찾지 못했습니다...
