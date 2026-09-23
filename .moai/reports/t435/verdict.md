@@ -14,7 +14,7 @@
 | REQ-085 스크롤 연동 | **변경 없음 — 이미 구현** | [읽은 것] `ui/src/components/CueSheetTimeline.tsx:307-376`에 가로 레일↔세로 시트 연동이 있다(t280/t287/t288). 되먹임은 cause 플래그(`program`/`user`, `shouldAdoptScroll`)로 막는다. DESIGN §4.7의 lock+80ms와 방식은 다르지만, REQ 원문은 방식을 정하지 않는다. 브라우저에서 직접 굴려 보지는 않았다(§4 참조). 두 번째 절(한글 주 라벨)은 열 헤더 문제라 REQ-082와 함께 처리해야 한다. |
 | REQ-084 상태줄 GATE | **보류 — 데이터 의존** | [읽은 것] GATE의 입력은 §3.6~3.11 게이트 산출물이고, 이는 M3~M5가 만든다. 지금 있는 `SongTimelineView.lint`로 채우면 의미를 지어내는 셈이다. |
 | REQ-082 CUE SHEET 14열 | **보류 — 데이터 의존** | [읽은 것] 새 5열 중 회차(M4)·MIB 3상태(M5)·Track 예외(M5)·근거 등급은 데이터가 없다. 지금 페이로드에 있는 건 `mib: boolean`뿐이다(`ui/src/protocol.ts:325`). |
-| REQ-096 Trans 접근 | **blocker → 리드** | [읽은 것] 열을 지운 뒤 Trans에 닿는 길은 대화창 자연어 경로 하나다(`server/design/cue_sheet_edit.py:45,230`). 생성기에도 둘지는 결정이 필요하다. REQ-082가 보류라 당장 막히는 일은 없다. |
+| REQ-096 Trans 접근 | **해소 — 감독 결정 A안 (2026-09-23)** | 결정 내용: Trans 열은 화면에서 뺀다. 값을 바꾸는 길은 대화창 자연어 경로(`server/design/cue_sheet_edit.py:230`) 하나로 충분하고, 수정요청 생성기에 Trans 조작은 넣지 않는다. 데이터 모델과 서버 경로(`TRANS_VALUES`, `EDITABLE_FIELD_LABELS["trans"]`, SNAP 시 fade 0으로 접기)는 건드리지 않는다 — 열이 사라져도 값은 유효하다. REQ-082가 보류 중이라 지금 할 코드 작업은 없다. 근거: 주 체크아웃의 `reports/trans-column-decision-20260923.md`(리드 전달, 추적되지 않는 파일). |
 
 ## 2. 변경
 

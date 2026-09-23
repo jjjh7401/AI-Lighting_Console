@@ -2,9 +2,9 @@
 id: SPEC-LDDESIGN-001
 title: "감독 워크시트 기반 조명 연출 컴파일러 — 컨셉·컬러 스크립트·3층 큐 밀도·회차 에스컬레이션·트래킹/타이밍/MIB"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-09-21
-updated: 2026-09-22
+updated: 2026-09-23
 author: jaihyun
 priority: P1
 phase: "Lighting Copilot v1.0 target"
@@ -344,7 +344,7 @@ REQ-LDDESIGN-096~101로 잠근다. REQ-082(CUE SHEET 14열)·REQ-079/080
 
 | REQ | 요구사항 | 근거 |
 |---|---|---|
-| REQ-LDDESIGN-096 | **The** REQ-LDDESIGN-082가 CUE SHEET에서 제거하는 기존 5열 중 `Trans`(SNAP/XFADE/FADE) 값은 **SHALL** 열 제거와 무관하게 데이터 모델과 수정 경로에서 계속 존재한다 — `server/design/cue_sheet_edit.py`의 `TRANS_VALUES`(38-51행)와 `EDITABLE_FIELD_LABELS["trans"]`는 이 SPEC이 변경하지 않는다. 열이 화면에서 사라지는 것이지 값 자체가 사라지는 것이 아니다. **The** M7 구현은 화면에 보이지 않게 된 이 값을 수정 요청 경로(§3.15 생성기 또는 대화창)로 바꿀 수 있게 둘지 여부를 M7 착수 시(Implementation Kickoff Approval 또는 design D-step 브리프) 확인해야 하며, 확인 없이 조용히 접근 불가능하게 만들지 않는다. | 감독 결정(2026-09-22) — 실측 `cue_sheet_edit.py:38,51` |
+| REQ-LDDESIGN-096 | **The** REQ-LDDESIGN-082가 CUE SHEET에서 제거하는 기존 5열 중 `Trans`(SNAP/XFADE/FADE) 값은 **SHALL** 열 제거와 무관하게 데이터 모델과 수정 경로에서 계속 존재한다 — `server/design/cue_sheet_edit.py`의 `TRANS_VALUES`(38-51행)와 `EDITABLE_FIELD_LABELS["trans"]`는 이 SPEC이 변경하지 않는다. 열이 화면에서 사라지는 것이지 값 자체가 사라지는 것이 아니다. **감독 결정(2026-09-23)**: `Trans`는 화면 열에서 제거한다. 값을 바꾸는 경로는 대화창(`cue_sheet_edit.py:230`) 하나뿐이며, §3.15 생성기에 `Trans` 조작을 추가하지 않는다. 데이터 모델과 `SNAP`→fade 0 접기(`cue_sheet_edit.py:240`)는 그대로 둔다. | 감독 결정(2026-09-22, 2026-09-23 A안) — 실측 `cue_sheet_edit.py:38,51,230,240` |
 | REQ-LDDESIGN-097 | **The** 컨셉 패널의 "한눈에" 구획은 **SHALL** 최상단에 한 줄 분석 + 5단계 카드(`시작 → 쌓기 → 강조 → 예고 → 정점→마무리`)로 구성되며, 각 카드는 **SHALL** 색 바·단계명·Q 범위·구간·시간·색 HEX·밝기 범위·한 줄 설명 8개 항목을 갖는다. **The** 카드에 쓰이는 수치(Q 범위·구간·시간·색 HEX·밝기 범위)는 **SHALL** 그 곡의 큐 데이터에서 파생된다 — 하드코딩된 문장을 두지 않는다. 시트와 어긋나는 값이 있으면 감독이 어느 쪽을 믿을지 알 수 없다. | 감독 결정(2026-09-22) — `src/DESIGN.md` §4.2 채택 |
 | REQ-LDDESIGN-098 | **The** 컨셉 패널은 **SHALL** "한눈에" 구획 아래에 탭 3개를 고정 라벨로 갖는다 — `이 곡의 연출`(Master Concept) / `이 곡의 재료`(Micro Concept) / `지키는 것·하지 않는 것·아껴 두는 것`(Visual Grammar). 영어 병기(Master Concept 등)는 **SHALL** 작은 보조 표기로만 두고, 주 라벨은 한글을 유지한다. | 감독 결정(2026-09-22) — `src/DESIGN.md` §4.2 채택 |
 | REQ-LDDESIGN-099 | **The** UI는 **SHALL NOT** 웹폰트 의존성을 추가한다 — 본문은 시스템 폰트 스택, 수치·ID·프리셋명은 시스템 모노스페이스 스택을 쓴다. `src/DESIGN.md` §2가 확정한 `IBM Plex Sans KR`+`IBM Plex Mono`는 **채택하지 않는다** — 실측(`ui/package.json`) 결과 의존성은 `react`·`react-dom` 둘뿐이며 앱은 현재 웹폰트를 하나도 싣지 않는다; 공연장 오프라인 환경에서 폰트 로딩 실패 위험과 번들 증가를 피한다. **The** 밝기 %·시각(초)·페이드 초·Q 번호가 세로로 정렬되어야 하는 모든 칸(CUE SHEET 수치 열, PLAN CUE 카드 수치, 타임라인 시간 눈금)은 **SHALL** `font-variant-numeric: tabular-nums`를 적용해 숫자 정렬을 유지한다 — 웹폰트를 뺀 대가로 수치 열 정렬이 무너지지 않게 하는 완화책이다. 최소 글자 크기(11px, 데이터 12.5px 이상)와 대비 4.5:1 하한은 `src/DESIGN.md` §2 그대로 유지한다 — 폰트만 바뀐다. | 감독 결정(2026-09-22) — 실측 `ui/package.json` |
