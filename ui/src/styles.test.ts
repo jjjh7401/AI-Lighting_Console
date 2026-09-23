@@ -160,3 +160,37 @@ describe("진행 순서 보드 (2026-08-15) — the executor list is VERTICAL", 
     expect(block!.body).toMatch(/flex-direction:\s*row/);
   });
 });
+
+// t435 — SPEC-LDDESIGN-001 REQ-099 / AC-LDDESIGN-051. 웹폰트를 싣지 않는 대신
+// 런북 모드의 수치 칸이 세로로 어긋나지 않게 `tabular-nums` 를 건다. 세 자리
+// (CUE SHEET 수치 열 · PLAN CUE 카드 · 타임라인 시간 눈금) 중 하나라도 빠지면
+// 기능은 그대로라 다른 어떤 검사에도 안 걸린다 — 그래서 여기서 못박는다.
+describe("런북 모드 수치 정렬 — tabular-nums (REQ-LDDESIGN-099)", () => {
+  const RUNBOOK_NUMERIC_SELECTORS = [
+    ".cst-sheet", // CUE SHEET 수치 열
+    ".song-timeline-section", // PLAN CUE 카드
+    ".cst-tick span", // 타임라인 시간 눈금
+  ];
+
+  for (const selector of RUNBOOK_NUMERIC_SELECTORS) {
+    it(`${selector} 는 tabular-nums 를 건다`, () => {
+      const matches = blocks.filter((b) => b.selector === selector);
+      expect(matches.length).toBeGreaterThan(0);
+      expect(matches.some((b) => /font-variant-numeric:\s*tabular-nums/.test(b.body))).toBe(true);
+    });
+  }
+
+  it("웹폰트를 싣지 않는다 — @font-face·폰트 CDN·폰트 파일 참조 0건", () => {
+    expect(css).not.toMatch(/@font-face/);
+    expect(css).not.toMatch(/fonts\.googleapis|fonts\.gstatic/);
+    expect(css).not.toMatch(/\.(woff2?|ttf|otf)\b/);
+  });
+
+  it("런북 모노 칸은 시스템 모노스페이스(ui-monospace)로 시작한다 — Consolas 단독 금지", () => {
+    for (const selector of [".cst-tick span", ".cst-sheet td.m", ".cst-sheet td.fx"]) {
+      const block = blocks.find((b) => b.selector === selector);
+      expect(block).toBeDefined();
+      expect(block!.body).toMatch(/ui-monospace/);
+    }
+  });
+});
