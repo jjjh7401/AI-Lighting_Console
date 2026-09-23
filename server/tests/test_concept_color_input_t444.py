@@ -231,6 +231,29 @@ class TestPathBAdapterCarriesPalette:
         # 경로 A 의 ``palette.colors[0]`` 과 같은 문자열(t441 교차 일치).
         assert set(palettes) == {("블루",)}
 
+    @pytest.mark.parametrize("color_usage", ["modulate", "per_chorus"])
+    def test_concept_palettes_match_what_the_override_applied(self, color_usage: str) -> None:
+        """교차 대조 — 감독 주색 결정은 ``_override_songcue_main_color`` 본문과
+        ``_songcue_director_primaries`` 두 곳에 있다(tools.py 헝크 가드 때문에
+        합치지 않았다). 컨셉에 실은 색 이름을 RGB 로 풀면 덮어쓴 룩의 RGB 와
+        구간마다 같아야 하고, 색을 싣지 않은 구간은 룩이 그대로여야 한다."""
+        from server.design import color_names
+        from server.tests.test_chorus_color_two_paths_t441 import _rgb_tuple
+
+        records = _records(color_usage)
+        before, _ = _path_b_selections(records=None)
+        after, notes = _path_b_selections(records=records)
+        assert not notes
+        palettes = _songcue_concept_palettes(before, records=records)
+        assert palettes is not None
+        for original, overridden, palette in zip(before, after, palettes, strict=True):
+            assert original.look is not None and overridden.look is not None
+            if palette:
+                expected = color_names.resolve_color_name(palette[0])
+                assert _rgb_tuple(overridden.look.attributes) == expected
+            else:
+                assert overridden.look == original.look
+
     def test_songcue_concept_palettes_none_without_records(self) -> None:
         selections, _notes = _path_b_selections(records=None)
         assert _songcue_concept_palettes(selections, records=None) is None

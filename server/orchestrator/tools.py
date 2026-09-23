@@ -2303,69 +2303,6 @@ def _songcue_role_occurrences(
     return tuple(result)
 
 
-def _songcue_director_primaries(
-    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
-) -> tuple[str | None, ...] | None:
-    """구간마다 경로 A 와 같은 함수(``_section_palette_choice``)가 고른 감독
-    주색 이름. 기록이 없거나 Q2(팔레트) 답이 없으면 ``None`` — 색을 정할
-    근거가 없다(카드 t441 규율). :func:`_override_songcue_main_color` 와
-    컨셉 리포트 색 입력(:func:`_songcue_concept_palettes`, 카드 t444)이 같은
-    결정을 쓰도록 한 자리로 뺐다."""
-    if not records:
-        return None
-    palette_answer = _interview_record_value(records, Q2_PALETTE, None)
-    if palette_answer is None:
-        return None
-    palette_value = _palette_value_tokens(palette_answer)
-    color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
-    profile = MusicProfile(palette=palette_value)
-    primaries: list[str | None] = []
-    for selection, (role, occurrence) in zip(
-        selections, _songcue_role_occurrences(selections), strict=True
-    ):
-        colors, _source, _weight = _section_palette_choice(
-            PositionSheetSection(
-                name=selection.section.label or selection.section.name, start_ms=0, mood=""
-            ),
-            role=role,
-            profile=profile,
-            color_tendency="white",
-            palette_mode="palette",
-            concept_colors=(),
-            occurrence=occurrence,
-            color_usage=str(color_usage),
-        )
-        primaries.append(colors[0] if colors else None)
-    return tuple(primaries)
-
-
-def _songcue_concept_palettes(
-    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
-) -> tuple[tuple[str, ...], ...] | None:
-    """카드 t444 — 컨셉 리포트에 실을 구간별 색. 감독 주색 덮어쓰기가
-    **실제로 적용되는** 구간(룩이 있고, 색 이름이 표준 10색이고, 룩이
-    ``ColorRGB_R/G/B`` 를 싣는다)만 그 주색 한 개를 싣고, 나머지는 빈
-    튜플이다. 이 경로는 보조색을 내지 않으므로 둘째 색을 싣지 않는다 —
-    룩 고유색은 RGB 값뿐이라 색 이름으로 옮기지 않는다(지어내지 않는다).
-    감독 기록이 없으면 ``None``(입력에 색 없음)."""
-    primaries = _songcue_director_primaries(selections, records=records)
-    if primaries is None:
-        return None
-    palettes: list[tuple[str, ...]] = []
-    for selection, primary in zip(selections, primaries, strict=True):
-        applied = (
-            selection.look is not None
-            and primary is not None
-            and _COLOR_NAMES.resolve_color_name(primary) is not None
-            and any(
-                value.name in ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
-                for value in selection.look.attributes
-            )
-        )
-        palettes.append((primary,) if applied and primary is not None else ())
-    return tuple(palettes)
-
-
 def _override_songcue_main_color(
     selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
 ) -> tuple[tuple[SongCueLookSelection, ...], tuple[str, ...]]:
@@ -2413,15 +2350,34 @@ def _override_songcue_main_color(
     그래서 ``dynamics_matches`` 의 모든 후보에 같은 덮어쓰기를 적용해,
     어느 후보가 최종 선택돼도 감독 색을 낸다.
     """
-    primaries = _songcue_director_primaries(selections, records=records)
-    if primaries is None:
+    if not records:
         return tuple(selections), ()
+    palette_answer = _interview_record_value(records, Q2_PALETTE, None)
+    if palette_answer is None:
+        return tuple(selections), ()
+    palette_value = _palette_value_tokens(palette_answer)
+    color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
+    profile = MusicProfile(palette=palette_value)
+    role_occurrences = _songcue_role_occurrences(selections)
     overridden: list[SongCueLookSelection] = []
     notes: list[str] = []
-    for selection, primary in zip(selections, primaries, strict=True):
+    for selection, (role, occurrence) in zip(selections, role_occurrences, strict=True):
         if selection.look is None:
             overridden.append(selection)
             continue
+        colors, _source, _weight = _section_palette_choice(
+            PositionSheetSection(
+                name=selection.section.label or selection.section.name, start_ms=0, mood=""
+            ),
+            role=role,
+            profile=profile,
+            color_tendency="white",
+            palette_mode="palette",
+            concept_colors=(),
+            occurrence=occurrence,
+            color_usage=str(color_usage),
+        )
+        primary = colors[0] if colors else None
         rgb = _COLOR_NAMES.resolve_color_name(primary) if primary else None
         if rgb is None:
             notes.append(
@@ -13326,3 +13282,75 @@ def build_toolset(
         "plan_override_look": plan_override_look,
     }
     return ToolRegistry(definitions, handlers)
+
+
+# 카드 t444 — 아래 두 함수가 파일 끝에 있는 이유: `test_songcue_bundle.py`
+# 의 헝크 재고 가드(`_TOOLS_EXPECTED_HUNK_OLD_STARTS`)는 기준 커밋과의
+# `--unified=0` diff 시작점을 센다. 같은 두 함수를 `_override_songcue_main_color`
+# 곁(2300번대)에 끼우면, 내용은 한 줄도 안 바뀐 `run_commands` 가 diff 정렬상
+# "지웠다 다시 넣은 것"으로 보여 헝크가 79 -> 112 로 늘고 보호 구간
+# (524..569)과 겹친다(`.moai/reports/t444/verdict.md` 헝크 절). 파일 끝에 두면
+# 79 -> 80, 겹침 0 이다. 같은 이유로 `_override_songcue_main_color` 본문은
+# 손대지 않았다 — 감독 주색 결정이 두 곳에 있고, 둘이 같은 답을 내는지는
+# `test_concept_color_input_t444.py` 의 교차 대조 시험이 잡는다.
+def _songcue_director_primaries(
+    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
+) -> tuple[str | None, ...] | None:
+    """구간마다 경로 A 와 같은 함수(``_section_palette_choice``)가 고른 감독
+    주색 이름. 기록이 없거나 Q2(팔레트) 답이 없으면 ``None`` — 색을 정할
+    근거가 없다(카드 t441 규율). :func:`_override_songcue_main_color` 본문의
+    결정과 같은 호출·같은 인자다(위 주석 — 두 곳이 같은 답을 내는지는 시험이
+    대조한다)."""
+    if not records:
+        return None
+    palette_answer = _interview_record_value(records, Q2_PALETTE, None)
+    if palette_answer is None:
+        return None
+    palette_value = _palette_value_tokens(palette_answer)
+    color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
+    profile = MusicProfile(palette=palette_value)
+    primaries: list[str | None] = []
+    for selection, (role, occurrence) in zip(
+        selections, _songcue_role_occurrences(selections), strict=True
+    ):
+        colors, _source, _weight = _section_palette_choice(
+            PositionSheetSection(
+                name=selection.section.label or selection.section.name, start_ms=0, mood=""
+            ),
+            role=role,
+            profile=profile,
+            color_tendency="white",
+            palette_mode="palette",
+            concept_colors=(),
+            occurrence=occurrence,
+            color_usage=str(color_usage),
+        )
+        primaries.append(colors[0] if colors else None)
+    return tuple(primaries)
+
+
+def _songcue_concept_palettes(
+    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
+) -> tuple[tuple[str, ...], ...] | None:
+    """카드 t444 — 컨셉 리포트에 실을 구간별 색. 감독 주색 덮어쓰기가
+    **실제로 적용되는** 구간(룩이 있고, 색 이름이 표준 10색이고, 룩이
+    ``ColorRGB_R/G/B`` 를 싣는다)만 그 주색 한 개를 싣고, 나머지는 빈
+    튜플이다. 이 경로는 보조색을 내지 않으므로 둘째 색을 싣지 않는다 —
+    룩 고유색은 RGB 값뿐이라 색 이름으로 옮기지 않는다(지어내지 않는다).
+    감독 기록이 없으면 ``None``(입력에 색 없음)."""
+    primaries = _songcue_director_primaries(selections, records=records)
+    if primaries is None:
+        return None
+    palettes: list[tuple[str, ...]] = []
+    for selection, primary in zip(selections, primaries, strict=True):
+        applied = (
+            selection.look is not None
+            and primary is not None
+            and _COLOR_NAMES.resolve_color_name(primary) is not None
+            and any(
+                value.name in ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
+                for value in selection.look.attributes
+            )
+        )
+        palettes.append((primary,) if applied and primary is not None else ())
+    return tuple(palettes)
