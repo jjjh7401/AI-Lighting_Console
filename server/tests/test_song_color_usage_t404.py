@@ -10,10 +10,11 @@ section-palette computation (spec.md §2 D5, plan.md §C M2).
     both pinned.
 (ii) single returns the palette_mode-resolved base, unmodified, for every
      role/occurrence — including the palette_mode="concept" case (AC-012).
-(iii) per_chorus assigns chorus/finale occurrences accents that differ
-      between consecutive occurrences, while base[0] (primary) stays first;
-      a role with exactly one occurrence in the song matches modulate
-      (AC-013).
+(iii) per_chorus assigns chorus/finale occurrences the SAME accent across
+      every occurrence (카드 t439, REQ-LDDESIGN-004/030 supersedes the
+      original REQ-014 "differs between consecutive occurrences" behavior),
+      while base[0] (primary) stays first; a role with exactly one
+      occurrence in the song matches modulate (AC-013).
 """
 
 from __future__ import annotations
@@ -128,18 +129,27 @@ class TestSingleReturnsBaseEverywhere:
         assert "레드" in colors
 
 
-class TestPerChorusConsecutiveAccentsDiffer:
-    """AC-COLORMODE-013 (REQ-014)."""
+class TestPerChorusIdentityAcrossOccurrences:
+    """AC-COLORMODE-013 (REQ-014) — 카드 t439(REQ-LDDESIGN-004/030)로 뒤집힘.
 
-    def test_per_chorus_consecutive_accents_differ(self):
+    이전 이름 `TestPerChorusConsecutiveAccentsDiffer`/
+    `test_per_chorus_consecutive_accents_differ` 는 REQ-014 시절 "연속
+    회차는 액센트가 달라야 한다"를 검증했다. REQ-LDDESIGN-004/030 이
+    "후렴(chorus) 구간 전체는 동일한 주색을 유지한다"를 요구하면서 그
+    성질 자체가 결함으로 재분류됐다 — `per_chorus` 는 이제 `modulate`
+    와 바이트 동일하게 항등이다(자세한 근거:
+    `test_chorus_color_identity_t439.py`)."""
+
+    def test_per_chorus_occurrences_are_identical(self):
         profile = MusicProfile(palette=("블루",))
         results = [
             _choice(role="chorus", color_usage="per_chorus", occurrence=n, profile=profile)
             for n in range(1, 6)
         ]
         colors_by_occurrence = [colors for colors, _source, _weight in results]
-        for earlier, later in zip(colors_by_occurrence, colors_by_occurrence[1:], strict=False):
-            assert earlier != later
+        first = colors_by_occurrence[0]
+        for later in colors_by_occurrence[1:]:
+            assert later == first, "REQ-004/030: per_chorus 회차 간 색이 항등이어야 한다"
         for colors, _source, _weight in results:
             assert colors[0] == "블루"  # primary always first
 

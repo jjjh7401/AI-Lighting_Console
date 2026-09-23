@@ -1080,8 +1080,18 @@ def _arc_accent_weight(role: str, occurrence: int) -> str | None:
     return label or None
 
 
+#: 카드 t439 — REQ-LDDESIGN-004/030. 후렴(Chorus)·Final Chorus(finale) 역할은
+#: 회차 축을 더 이상 색으로 표현하지 않는다 — §3.7(REQ-043)의 6개 에스컬레이션
+#: 축(기구군 수·면적·밝기·모션·포지션·큐 밀도)이 색 대신 회차를 구분한다.
+#: verse/intro/bridge 는 이 SPEC 의 범위 밖이라(REQ-030 이 "후렴" 한정) 회전을
+#: 그대로 둔다 — 아래 `_arc_palette`/`_per_chorus_palette` 둘 다 이 집합으로
+#: occurrence 인자를 1로 고정한다.
+_CHORUS_IDENTITY_ROLES: frozenset[str] = frozenset({"chorus", "finale"})
+
+
 def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple[str, ...]:
-    """역할 아크 팔레트 — 회차마다 보조색을 돌린다 (카드 t402·t406).
+    """역할 아크 팔레트 — 회차마다 보조색을 돌린다 (카드 t402·t406), 단
+    chorus/finale 은 회차와 무관하게 항등이다 (카드 t439, REQ-004/030).
 
     같은 역할이 반복되면(코러스 25회 등) 예전에는 매번 바이트 동일한
     팔레트가 나왔다 — 회차를 구분하지 않았기 때문이다. `occurrence` 가
@@ -1089,6 +1099,14 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
     함수)로 아크 색을 회전한다. 메인 컬러(``primary``, 감독이 지정한
     색)는 이 회전과 무관하게 아래 결합에 **항상** 남는다 — 감독 지시
     "메인 컬러 중심" 을 구조적으로 지킨다.
+
+    카드 t439 — 위 회전 자체가 REQ-LDDESIGN-004/030 이 금지하는 성질이
+    됐다: "후렴(Chorus) 구간 전체는 동일한 주색을 유지한다"(Final
+    Chorus의 클라이맥스 색 전환만 예외). 회차 에스컬레이션은 색이 아니라
+    §3.7(REQ-043)의 6개 축으로 표현하므로, `role`이
+    :data:`_CHORUS_IDENTITY_ROLES`(chorus/finale)에 속하면 `occurrence`
+    를 무시하고 항상 1회차 팔레트를 낸다 — verse/intro/bridge 는 이
+    SPEC 의 범위 밖이라(REQ-030 은 "후렴" 한정) 기존 회전을 그대로 둔다.
 
     카드 t406 — `_distinct_from_primary` 로 회전이 아크 색을 primary 와
     같은 색상에(언어만 다른 표기 포함) 겹치게 돌리는 경우를 걸러낸다.
@@ -1108,7 +1126,7 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
     if arc is None:
         return base or ("white",)
     rotated = arc
-    if len(arc) > 1 and occurrence > 1:
+    if role not in _CHORUS_IDENTITY_ROLES and len(arc) > 1 and occurrence > 1:
         rotated = rotate_palette(arc, occurrence - 1)
     if not base:
         return rotated
@@ -1122,23 +1140,28 @@ def _arc_palette(base: tuple[str, ...], role: str, occurrence: int = 1) -> tuple
 
 
 def _per_chorus_palette(base: tuple[str, ...], role: str, occurrence: int) -> tuple[str, ...]:
-    """SPEC-COPILOT-COLORMODE-001 D5/REQ-014 — chorus/finale accents that
-    differ between consecutive occurrences, drawn from the standard 10-color
-    palette (spec.md §A.2) rather than the 2-color `_ARC_PALETTE` arcs (which
-    repeat with period 2 — occurrence 1 and 3 land on the same accent).
+    """SPEC-COPILOT-COLORMODE-001 D5/REQ-014 — chorus/finale accent ladder,
+    now retired by REQ-LDDESIGN-004/030 (카드 t439): chorus/finale
+    occurrences no longer differ in color at all, so this function is a
+    pass-through to :func:`_arc_palette`'s occurrence-1 output for those
+    roles.
 
-    Occurrence 1 delegates straight to :func:`_arc_palette` — this is what
-    makes the "song has exactly one chorus occurrence" boundary case
+    Previously (REQ-014) occurrence 2+ drew from the standard 10-color
+    palette (spec.md §A.2) so consecutive occurrences never coincided — the
+    exact "정체성 유지" violation REQ-LDDESIGN-004 now forbids ("후렴 회차마다
+    보조색을 회전시키지 않는다"). The 10-color ladder below is kept only as
+    a defined (if currently unreachable in production — the sole caller,
+    `_section_palette_choice`, gates `role in ("chorus", "finale")` before
+    calling this, and both are now frozen) fallback for any OTHER role a
+    direct caller might pass, so this function's contract stays total.
+
+    Occurrence 1 still delegates straight to :func:`_arc_palette` — this is
+    what makes the "song has exactly one chorus occurrence" boundary case
     (AC-COLORMODE-013) byte-identical to modulate mode, since modulate's
-    occurrence-1 output IS `_arc_palette`'s occurrence-1 output. Occurrence
-    2+ draws from the standard palette, excluding both the primary's hue and
-    occurrence 1's own accent hue, so occurrence 1 and 2 never coincide;
-    consecutive occurrences beyond that cycle through the remaining slots
-    (index advances by exactly 1 per occurrence), so no two consecutive
-    occurrences can land on the same slot.
+    occurrence-1 output IS `_arc_palette`'s occurrence-1 output.
     """
-    if occurrence <= 1:
-        return _arc_palette(base, role, occurrence)
+    if occurrence <= 1 or role in _CHORUS_IDENTITY_ROLES:
+        return _arc_palette(base, role, 1)
     if not base:
         base = ("white",)
     primary = base[0]

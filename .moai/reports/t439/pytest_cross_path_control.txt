@@ -1,0 +1,14 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a1342cc20f6f145d5/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a1342cc20f6f145d5
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.2
+collecting ... collected 4 items
+
+server/tests/test_chorus_color_two_paths_t439.py::TestBothPathsSatisfyChorusColorIdentityInTheirOwnRepresentation::test_path_a_all_chorus_occurrences_share_one_palette_final_excluded PASSED [ 25%]
+server/tests/test_chorus_color_two_paths_t439.py::TestBothPathsSatisfyChorusColorIdentityInTheirOwnRepresentation::test_path_b_all_chorus_occurrences_share_one_look PASSED [ 50%]
+server/tests/test_chorus_color_two_paths_t439.py::TestBothPathsSatisfyChorusColorIdentityInTheirOwnRepresentation::test_write_the_cross_path_report PASSED [ 75%]
+server/tests/test_chorus_color_two_paths_t439.py::TestPathBFabricatedControl::test_removing_the_returning_sort_axis_breaks_chorus_color_identity PASSED [100%]
+
+============================== 4 passed in 0.37s ===============================

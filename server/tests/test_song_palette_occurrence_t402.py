@@ -7,6 +7,15 @@
 
 `_build_unified_song_plan` 을 확정 구간으로 직접 몰아 재현한다 — 웹소켓
 통합 하네스 없이도 결정 층 자체의 결함이라 이 폭으로 충분하다.
+
+카드 t439 정정(REQ-LDDESIGN-004/030) — 위 "변조" 처방은 chorus/finale
+에서는 다시 뒤집혔다: 후렴 구간 전체가 동일한 주색을 유지해야 한다는
+REQ-030 이 이 카드가 심은 회차별 회전과 정면으로 충돌한다(색으로 표현한
+변조 자체가 결함으로 재분류됨). 아래 두 테스트(`chorus` 역할의 회차별
+차이를 요구하던 것)는 이제 **항등**을 요구하도록 뒤집혔다 — 자세한
+근거는 `test_chorus_color_identity_t439.py`. verse/intro/bridge(REQ-030
+범위 밖)의 회차별 변조는 이 파일의 나머지 테스트(`_arc_accent_weight`
+채널 포함) 그대로 유지된다.
 """
 
 from __future__ import annotations
@@ -52,13 +61,17 @@ def _club_diver_shape() -> list[int]:
 
 class TestArcPaletteVariesByOccurrence:
     """t402 — 같은 역할의 반복 회차가 서로 다른 팔레트를 낸다, 메인 컬러는
-    항상 남는다."""
+    항상 남는다. (t439 정정: chorus 는 더 이상 여기 해당하지 않는다 —
+    아래 참조.)"""
 
-    def test_first_and_second_chorus_occurrence_differ(self):
+    def test_first_and_second_chorus_occurrence_are_identical(self):
+        """카드 t439(REQ-LDDESIGN-004/030) — chorus 는 t402 가 심은 회차별
+        회전에서 제외됐다: 후렴 구간 전체가 동일한 주색을 유지해야 한다.
+        옛 단정(`first != second`)은 지금은 REQ-030 위반이라 뒤집는다."""
         base = ("블루",)
         first = _arc_palette(base, "chorus", occurrence=1)
         second = _arc_palette(base, "chorus", occurrence=2)
-        assert first != second, "회차가 달라져도 팔레트가 바이트 동일하다 — t402 결함 재현"
+        assert first == second, "REQ-004/030: 후렴 회차는 색이 항등이어야 한다"
 
     def test_main_colour_is_always_present_across_occurrences(self):
         base = ("블루",)
@@ -88,8 +101,12 @@ class TestArcPaletteVariesByOccurrence:
 
 
 class TestBuildUnifiedSongPlanVariesRepeatedRoles:
-    """t402 통합 — 확정 구간 39개(클럽 다이버 모양)를 실제로 계획에 태워
-    코러스 25회가 더 이상 팔레트 1종으로 뭉개지지 않는지 확인한다."""
+    """t402 통합 — 확정 구간 39개(클럽 다이버 모양)를 실제로 계획에 태운다.
+
+    카드 t439 정정(REQ-LDDESIGN-004/030) — "코러스 25회가 팔레트 1종으로
+    뭉개진다"는 t402 당시엔 결함이었지만, REQ-030("후렴 구간 전체는 동일한
+    주색을 유지한다")이 그 정확한 성질을 요구사항으로 승격했다. 그래서
+    이 클래스의 유일한 테스트는 이제 반대 방향을 단정한다."""
 
     def _plan(self, d_levels: list[int]):
         sections = _confirmed_sections(d_levels)
@@ -103,7 +120,7 @@ class TestBuildUnifiedSongPlanVariesRepeatedRoles:
             sequence_no=120,
         )
 
-    def test_before_fix_all_25_choruses_share_one_palette(self):
+    def test_after_req004_fix_all_25_choruses_share_one_palette(self):
         plan = self._plan(_club_diver_shape())
         chorus_labels = {
             f"Chorus {n}" for n in range(1, 26)
@@ -114,8 +131,8 @@ class TestBuildUnifiedSongPlanVariesRepeatedRoles:
             if decision.section.label in chorus_labels
         ]
         distinct = set(chorus_palettes)
-        assert len(distinct) > 1, (
-            f"코러스 25구간이 여전히 팔레트 {len(distinct)}종뿐이다 — t402 결함 재현"
+        assert len(distinct) == 1, (
+            f"REQ-004/030 위반 — 코러스 25구간이 팔레트 {len(distinct)}종을 냈다: {distinct}"
         )
 
     def test_finale_and_intro_are_unaffected_singleton_roles(self):
