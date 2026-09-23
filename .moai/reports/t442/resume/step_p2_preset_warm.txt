@@ -1,0 +1,8 @@
+
+>>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 63 ; Attribute 'ColorRGB_B' At 24 ; Attribute 'ColorRGB_W' At 46"
+<<< {"id": "cc74daaa", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'Selection' 'COUNTTOTALSELECTED'
+<<< {"id": "585c41ed", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "2"}
+
+=== steps=2 not_ok_or_timeout=0
