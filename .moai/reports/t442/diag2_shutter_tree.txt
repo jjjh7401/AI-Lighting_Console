@@ -1,0 +1,12 @@
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2
+    wire: Plugin "CopilotResponder" "state 28dea4da Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2"
+<<< {"children": [{"class": "LogicalChannel", "i": 1, "name": "Shutter1"}], "id": "28dea4da", "kind": "state", "node": {"childCount": 1, "class": "DMXChannel", "enumeration": "ok", "name": "Main Module#2_Shutter1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1
+    wire: Plugin "CopilotResponder" "state bca0d1ec Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "Shutter1 1"}, {"class": "ChannelFunction", "i": 2, "name": "Shutter1Strobe 2"}, {"class": "ChannelFunction", "i": 3, "name": "Shutter1 3"}, {"class": "ChannelFunction", "i": 4, "name": "Shutter1StrobePulseOpen 4"}, {"class": "ChannelFunction", "i": 5, "name": "Shutter1 5"}, {"class": "ChannelFunction", "i": 6, "name": "Shutter1StrobePulseClose 6"}, {"class": "ChannelFunction", "i": 7, "name": "Shutter1 7"}, {"class": "ChannelFunction", "i": 8, "name": "Shutter1StrobeRandom 8"}, {"class": "ChannelFunction", "i": 9, "name": "Shutter1 9"}], "id": "bca0d1ec", "kind": "state", "node": {"childCount": 9, "class": "LogicalChannel", "enumeration": "ok", "name": "Shutter1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1
+    wire: Plugin "CopilotResponder" "state 79c2eb2b Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "closed"}, {"class": "ChannelSet", "i": 2, "name": "open"}], "id": "79c2eb2b", "kind": "state", "node": {"childCount": 2, "class": "ChannelFunction", "enumeration": "ok", "name": "Shutter1 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1", "truncated": false, "v": 1}

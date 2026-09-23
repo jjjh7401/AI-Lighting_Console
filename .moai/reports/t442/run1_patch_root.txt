@@ -1,0 +1,8 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 8d9ad9e1"
+<<< {"id": "8d9ad9e1", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:Patch/Stages/1/Fixtures
+    wire: Plugin "CopilotResponder" "state cfde48e4 Patch/Stages/1/Fixtures"
+<<< {"children": [{"class": "Fixture", "i": 1, "name": "KEY 101"}, {"class": "Fixture", "i": 2, "name": "KEY 102"}, {"class": "Fixture", "i": 3, "name": "KEY 103"}, {"class": "Fixture", "i": 4, "name": "KEY 104"}, {"class": "Fixture", "i": 5, "name": "KEY 105"}, {"class": "Fixture", "i": 6, "name": "KEY 106"}, {"class": "Fixture", "i": 7, "name": "FOH 111"}, {"class": "Fixture", "i": 8, "name": "FOH 112"}, {"class": "Fixture", "i": 9, "name": "FOH 113"}, {"class": "Fixture", "i": 10, "name": "FOH 114"}, {"class": "Fixture", "i": 11, "name": "FOH 115"}, {"class": "Fixture", "i": 12, "name": "FOH 116"}, {"class": "Fixture", "i": 13, "name": "FOH 117"}, {"class": "Fixture", "i": 14, "name": "FOH 118"}, {"class": "Fixture", "i": 15, "name": "BLIND 601"}, {"class": "Fixture", "i": 16, "name": "BLIND 602"}, {"class": "Fixture", "i": 17, "name": "BLIND 603"}, {"class": "Fixture", "i": 18, "name": "BLIND 604"}], "id": "cfde48e4", "kind": "state", "node": {"childCount": 86, "class": "Fixtures", "enumeration": "ok", "name": "Fixtures"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures", "truncated": true, "v": 1}

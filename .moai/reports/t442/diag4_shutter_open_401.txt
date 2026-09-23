@@ -1,0 +1,5 @@
+
+>>> exec "Fixture 401 ; Attribute 'Shutter1' At 4.7"
+<<< {"id": "e3df86a1", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
