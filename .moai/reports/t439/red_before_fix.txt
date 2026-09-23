@@ -1,0 +1,140 @@
+FFF.FFFF..                                                               [100%]
+=================================== FAILURES ===================================
+_ TestArcPaletteChorusIdentityAcrossOccurrences.test_chorus_accent_is_identical_across_six_occurrences _
+
+self = <server.tests.test_chorus_color_identity_t439.TestArcPaletteChorusIdentityAcrossOccurrences object at 0x108dcf290>
+
+    def test_chorus_accent_is_identical_across_six_occurrences(self):
+        base = ("blue",)
+        palettes = {_arc_palette(base, "chorus", occurrence=k) for k in range(1, 7)}
+>       assert len(palettes) == 1, (
+            f"코러스 6회차가 팔레트 {len(palettes)}종을 냈다 — REQ-004 위반 (t439)"
+        )
+E       AssertionError: 코러스 6회차가 팔레트 2종을 냈다 — REQ-004 위반 (t439)
+E       assert 2 == 1
+E        +  where 2 = len({('blue', 'magenta'), ('blue', 'warm white')})
+
+server/tests/test_chorus_color_identity_t439.py:36: AssertionError
+_ TestArcPaletteChorusIdentityAcrossOccurrences.test_chorus_occurrence_n_equals_occurrence_one_byte_for_byte _
+
+self = <server.tests.test_chorus_color_identity_t439.TestArcPaletteChorusIdentityAcrossOccurrences object at 0x109162fd0>
+
+    def test_chorus_occurrence_n_equals_occurrence_one_byte_for_byte(self):
+        base = ("blue", "white")
+        first = _arc_palette(base, "chorus", occurrence=1)
+        for occurrence in range(2, 9):
+            later = _arc_palette(base, "chorus", occurrence=occurrence)
+>           assert later == first, (
+                f"회차 {occurrence}: {later} != 1회차 {first} — REQ-004 위반"
+            )
+E           AssertionError: 회차 2: ('blue', 'magenta') != 1회차 ('blue', 'warm white') — REQ-004 위반
+E           assert ('blue', 'magenta') == ('blue', 'warm white')
+E             
+E             At index 1 diff: 'magenta' != 'warm white'
+E             Use -v to get more diff
+
+server/tests/test_chorus_color_identity_t439.py:45: AssertionError
+_ TestArcPaletteChorusIdentityAcrossOccurrences.test_finale_accent_is_identical_across_occurrences _
+
+self = <server.tests.test_chorus_color_identity_t439.TestArcPaletteChorusIdentityAcrossOccurrences object at 0x109163590>
+
+    def test_finale_accent_is_identical_across_occurrences(self):
+        """finale 은 보통 회차 1로만 나타나지만, 함수 계약 자체가 회차를
+        무시해야 한다(REQ-004 는 chorus 뿐 아니라 finale 도 명시한다)."""
+        base = ("blue",)
+        palettes = {_arc_palette(base, "finale", occurrence=k) for k in range(1, 5)}
+>       assert len(palettes) == 1
+E       AssertionError: assert 2 == 1
+E        +  where 2 = len({('blue', 'gold'), ('blue', 'warm white')})
+
+server/tests/test_chorus_color_identity_t439.py:54: AssertionError
+_ TestPerChorusChorusIdentityAcrossOccurrences.test_per_chorus_ladder_no_longer_varies_by_occurrence _
+
+self = <server.tests.test_chorus_color_identity_t439.TestPerChorusChorusIdentityAcrossOccurrences object at 0x109163b90>
+
+    def test_per_chorus_ladder_no_longer_varies_by_occurrence(self):
+        base = ("blue",)
+        palettes = {_per_chorus_palette(base, "chorus", occurrence=k) for k in range(1, 7)}
+>       assert len(palettes) == 1, (
+            f"per_chorus 사다리가 회차마다 여전히 갈린다 — {len(palettes)}종 (REQ-004 위반)"
+        )
+E       AssertionError: per_chorus 사다리가 회차마다 여전히 갈린다 — 6종 (REQ-004 위반)
+E       assert 6 == 1
+E        +  where 6 = len({('blue', 'amber'), ('blue', 'cool white'), ('blue', 'green'), ('blue', 'red'), ('blue', 'warm white'), ('blue', 'yellow')})
+
+server/tests/test_chorus_color_identity_t439.py:83: AssertionError
+_ TestPerChorusChorusIdentityAcrossOccurrences.test_per_chorus_matches_arc_palette_for_every_occurrence _
+
+self = <server.tests.test_chorus_color_identity_t439.TestPerChorusChorusIdentityAcrossOccurrences object at 0x109184190>
+
+    def test_per_chorus_matches_arc_palette_for_every_occurrence(self):
+        """REQ-004 정정 후: `per_chorus` 는 이제 `modulate` 와 바이트 동일하다
+        (둘 다 occurrence=1 의 항등 출력으로 얼어붙는다)."""
+        base = ("blue",)
+        for occurrence in range(1, 6):
+>           assert _per_chorus_palette(base, "chorus", occurrence) == _arc_palette(
+                base, "chorus", 1
+            )
+E           AssertionError: assert ('blue', 'cool white') == ('blue', 'warm white')
+E             
+E             At index 1 diff: 'cool white' != 'warm white'
+E             Use -v to get more diff
+
+server/tests/test_chorus_color_identity_t439.py:92: AssertionError
+_ TestPerChorusChorusIdentityAcrossOccurrences.test_section_palette_choice_per_chorus_mode_is_frozen _
+
+self = <server.tests.test_chorus_color_identity_t439.TestPerChorusChorusIdentityAcrossOccurrences object at 0x109184750>
+
+    def test_section_palette_choice_per_chorus_mode_is_frozen(self):
+        """`_section_palette_choice` 를 통한 실제 소비 경로에서도 동일해야
+        한다(session.py:1884 분기, Q2B_COLOR_USAGE="per_chorus")."""
+        profile = MusicProfile(palette=("블루",))
+        results = [
+            _section_palette_choice(
+                PositionSheetSection(name="S", start_ms=0, mood=""),
+                role="chorus",
+                profile=profile,
+                color_tendency="블루",
+                palette_mode="palette",
+                concept_colors=(),
+                occurrence=n,
+                color_usage="per_chorus",
+            )[0]
+            for n in range(1, 6)
+        ]
+>       assert len(set(results)) == 1, f"per_chorus 소비 경로가 회차마다 갈린다 — {results}"
+E       AssertionError: per_chorus 소비 경로가 회차마다 갈린다 — [('블루', 'warm white'), ('블루', 'cool white'), ('블루', 'red'), ('블루', 'amber'), ('블루', 'yellow')]
+E       assert 5 == 1
+E        +  where 5 = len({('블루', 'amber'), ('블루', 'cool white'), ('블루', 'red'), ('블루', 'warm white'), ('블루', 'yellow')})
+E        +    where {('블루', 'amber'), ('블루', 'cool white'), ('블루', 'red'), ('블루', 'warm white'), ('블루', 'yellow')} = set([('블루', 'warm white'), ('블루', 'cool white'), ('블루', 'red'), ('블루', 'amber'), ('블루', 'yellow')])
+
+server/tests/test_chorus_color_identity_t439.py:113: AssertionError
+_ TestBuildUnifiedSongPlanChorusColorIdentity.test_all_non_final_chorus_occurrences_share_one_palette _
+
+self = <server.tests.test_chorus_color_identity_t439.TestBuildUnifiedSongPlanChorusColorIdentity object at 0x109184dd0>
+
+    def test_all_non_final_chorus_occurrences_share_one_palette(self):
+        plan = _confirmed_chorus_plan(6, with_finale=True)
+        chorus_palettes = {
+            tuple(decision.palette.colors)
+            for decision in plan.sections
+            if decision.role == "chorus"
+        }
+>       assert len(chorus_palettes) == 1, (
+            f"REQ-030 위반 — 후렴 구간 전체가 팔레트 {len(chorus_palettes)}종을 냈다: "
+            f"{chorus_palettes}"
+        )
+E       AssertionError: REQ-030 위반 — 후렴 구간 전체가 팔레트 2종을 냈다: {('중립', 'warm white'), ('중립', 'magenta')}
+E       assert 2 == 1
+E        +  where 2 = len({('중립', 'magenta'), ('중립', 'warm white')})
+
+server/tests/test_chorus_color_identity_t439.py:159: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_chorus_color_identity_t439.py::TestArcPaletteChorusIdentityAcrossOccurrences::test_chorus_accent_is_identical_across_six_occurrences
+FAILED server/tests/test_chorus_color_identity_t439.py::TestArcPaletteChorusIdentityAcrossOccurrences::test_chorus_occurrence_n_equals_occurrence_one_byte_for_byte
+FAILED server/tests/test_chorus_color_identity_t439.py::TestArcPaletteChorusIdentityAcrossOccurrences::test_finale_accent_is_identical_across_occurrences
+FAILED server/tests/test_chorus_color_identity_t439.py::TestPerChorusChorusIdentityAcrossOccurrences::test_per_chorus_ladder_no_longer_varies_by_occurrence
+FAILED server/tests/test_chorus_color_identity_t439.py::TestPerChorusChorusIdentityAcrossOccurrences::test_per_chorus_matches_arc_palette_for_every_occurrence
+FAILED server/tests/test_chorus_color_identity_t439.py::TestPerChorusChorusIdentityAcrossOccurrences::test_section_palette_choice_per_chorus_mode_is_frozen
+FAILED server/tests/test_chorus_color_identity_t439.py::TestBuildUnifiedSongPlanChorusColorIdentity::test_all_non_final_chorus_occurrences_share_one_palette
+7 failed, 3 passed in 0.27s

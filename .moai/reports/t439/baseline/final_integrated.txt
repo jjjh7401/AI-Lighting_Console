@@ -1,0 +1,30 @@
+gate                               Club Diver Cut and Ru Ice cream. Morning.mp Rain.mp3   Too Cool.m scott-buck 걸그룹DinoDin
+G1 어휘 닫힘                           PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+G2 후렴 정체성                          PASS       PASS       PASS       PASS       PASS       PASS       PASS       n/a       
+G3 회차마다 새 축(5회차까지)                 PASS       PASS       PASS       PASS       PASS       PASS       PASS       n/a       
+G4 피날레 새 축 + 여유                    PASS       PASS       n/a        PASS       PASS       PASS       PASS       n/a       
+G5 헤드룸 경고 0                        PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+G6 컬러: 유보색 조기 0 · 브리지 위반 0         PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+G7 후렴 주색 동일                        PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+G8 후렴 앞 빌드업                        PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+G9 트래킹: Block·Release·누출 0         PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+G10 상대 감소 겹침 없음                    n/a        PASS       n/a        PASS       PASS       PASS       PASS       PASS      
+G11 타이밍 전 큐 배정                     PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+G12 MIB: 켜진 채 이동 0                 PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+G13 큐 밀도 10~45                     PASS       PASS       PASS       PASS       PASS       PASS       PASS       PASS      
+--- live moves left
+--- Rain details
+  G1 어휘 닫힘 → True | 구간·트리거·원샷 전부 문서 어휘
+  G2 후렴 정체성 → True | 5/5 쌍 유지
+  G3 회차마다 새 축(5회차까지) → True | 새 축 0인 쌍 0 (5회차 이내)
+  G4 피날레 새 축 + 여유 → True | 피날레 새 축 ['groups', 'area', 'motion', 'direction', 'impact'], 직전 남은 모션 단계 3
+  G5 헤드룸 경고 0 → True | 인트로 전부켬 False · 후렴1 고임팩트 False · 브릿지 무감소 False · 피날레 새축없음 False
+  G6 컬러: 유보색 조기 0 · 브리지 위반 0 → True | 유보색 조기 0 · 언더페인팅 2 · 브리지 위반 0
+  G7 후렴 주색 동일 → True | ['노랑']
+  G8 후렴 앞 빌드업 → True | 빌드업 3 / 필요 3
+  G9 트래킹: Block·Release·누출 0 → True | Block 1 · Cue Only 7 · Release 1 · Cue Only 큐는 다음 큐에 미반영(해석기 보장)
+  G10 상대 감소 겹침 없음 → True | 절 밝기 [45, 38, 38, 38]
+  G11 타이밍 전 큐 배정 → True | snap 7 · short 12 · long 7 · 순차 6
+  G12 MIB: 켜진 채 이동 0 → True | 어둠 2 · Mark 2 · 켜진 채 0 []
+  G13 큐 밀도 10~45 → True | 시퀀스 큐 26 + 원샷 13
+ cues 26 shots 13 mib [{'ts': 0, 'cue': 'Intro 1', 'move': 'home→back', 'status': 'dark', 'window': 0.0, 'mark_at': None}, {'ts': 66, 'cue': 'Chorus 2', 'move': 'back→side', 'status': 'dark', 'window': 66.0, 'mark_at': None}, {'ts': 106, 'cue': 'Chorus 3', 'move': 'side→front', 'status': 'mark', 'window': 106.0, 'mark_at': 102.0}, {'ts': 179, 'cue': 'Final Chorus 1', 'move': 'front→audience', 'status': 'mark', 'window': 13, 'mark_at': 175.0}]

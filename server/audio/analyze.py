@@ -163,8 +163,24 @@ _OUTLIER_TRIM_MAX_FRACTION = 0.10
 
 #: 디코드된 샘플 수가 헤더가 선언한 프레임 수의 이 비율보다 적으면 조용한 잘림으로
 #: 본다(t416). mp3 는 인코더 패딩 때문에 선언과 디코드가 몇 프레임 어긋날 수 있어
-#: 1.0 이 아니다. 실측한 잘림은 0.647(실제 곡)과 0.15~0.19(합성 변형)였다.
+#: 1.0 이 아니다. 실측한 잘림은 0.15~0.19(합성 변형)였다. 실제 곡 Let's Dance.mp3 의
+#: 0.647 은 잘림이 아니라 선언 쪽이 부푼 것이었다(t440) — :func:`_mp3_length_is_a_bitrate_guess`.
 _MIN_DECODED_FRACTION = 0.98
+
+#: MPEG Layer III 비트레이트 표(kbps) — MPEG1 과 MPEG2/2.5. 인덱스 0(free)·15(금지)는 0.
+_MP3_BITRATES_V1 = (0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0)
+_MP3_BITRATES_V2 = (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0)
+#: 버전 비트(3=MPEG1, 2=MPEG2, 0=MPEG2.5)별 표본율 표. 규격대로 MPEG2 는 MPEG1 의 절반,
+#: MPEG2.5 는 4분의 1 이다 — 나눗셈으로 적어 두면 콘솔 포트와 같은 정수 리터럴(8000)이
+#: 이 층에 생기지 않는다(``test_audio_boundary.py`` 의 포트 리터럴 0건 고정).
+_MP3_MPEG1_SAMPLE_RATES = (44100, 48000, 32000)
+_MP3_SAMPLE_RATES = {
+    3: _MP3_MPEG1_SAMPLE_RATES,
+    2: tuple(rate // 2 for rate in _MP3_MPEG1_SAMPLE_RATES),
+    0: tuple(rate // 4 for rate in _MP3_MPEG1_SAMPLE_RATES),
+}
+#: 첫 프레임을 찾으려고 ID3 태그 뒤를 훑는 최대 바이트 수.
+_MP3_SYNC_SEARCH_BYTES = 65536
 
 #: 폴백(librosa 없는 배포본)에서 돌려주는 사유. 확인 카드는 이 사유를 읽고
 #: **수동 BPM 입력 카드**로 갈아탄다 — 카드 경로 자체는 살아 있다
@@ -225,6 +241,56 @@ def analysis_available() -> bool:
     return True
 
 
+def _mp3_frame(payload: bytes, at: int) -> tuple[int, int] | None:
+    """``at`` 에 MPEG Layer III 프레임 헤더가 있으면 (프레임 바이트 수, kbps), 아니면 None."""
+    if at + 4 > len(payload) or payload[at] != 0xFF or (payload[at + 1] & 0xE0) != 0xE0:
+        return None
+    version = (payload[at + 1] >> 3) & 3
+    if version == 1 or ((payload[at + 1] >> 1) & 3) != 1:  # 예약 버전, Layer III 아님
+        return None
+    bitrate_index, rate_index = payload[at + 2] >> 4, (payload[at + 2] >> 2) & 3
+    table = _MP3_BITRATES_V1 if version == 3 else _MP3_BITRATES_V2
+    if not table[bitrate_index] or rate_index == 3:
+        return None
+    kbps = table[bitrate_index]
+    per_kbps = 144000 if version == 3 else 72000
+    size = per_kbps * kbps // _MP3_SAMPLE_RATES[version][rate_index] + ((payload[at + 2] >> 1) & 1)
+    return size, kbps
+
+
+def _mp3_length_is_a_bitrate_guess(payload: bytes) -> bool:
+    """이 mp3 의 선언 길이가 **첫 프레임 비트레이트로 어림한 값**인가 (t443).
+
+    Xing/Info/VBRI 헤더가 없으면 판독기(libsndfile·ffprobe·afinfo)는 길이를
+    ``파일 크기 ÷ 첫 프레임 비트레이트`` 로 어림한다. CBR 이면 이 어림이 맞지만,
+    VBR 이면 틀린다 — Let's Dance.mp3 는 첫 프레임 128kbps·평균 약 197kbps 라
+    140.5초로 부풀었고 실제 곡은 90.98초였다(t440 실측, 프레임이 파일 끝까지 연속).
+
+    헤더가 없고 **프레임 비트레이트가 둘 이상 섞였을 때만** 참이다. 판단이 서지 않으면
+    (프레임을 못 찾음, 헤더 있음, 한 비트레이트뿐) 거짓 — 절단 검사를 그대로 둔다.
+    """
+    start = 0
+    if payload[:3] == b"ID3" and len(payload) >= 10:
+        start = 10 + ((payload[6] << 21) | (payload[7] << 14) | (payload[8] << 7) | payload[9])
+        if payload[5] & 0x10:  # ID3v2.4 꼬리표(footer)
+            start += 10
+    for at in range(start, min(len(payload), start + _MP3_SYNC_SEARCH_BYTES)):
+        frame = _mp3_frame(payload, at)
+        if frame and _mp3_frame(payload, at + frame[0]):  # 다음 프레임까지 이어져야 진짜 동기
+            break
+    else:
+        return False
+    if any(tag in payload[at : at + frame[0]] for tag in (b"Xing", b"Info", b"VBRI")):
+        return False
+    first_kbps = frame[1]
+    while frame:
+        if frame[1] != first_kbps:
+            return True
+        at += frame[0]
+        frame = _mp3_frame(payload, at)
+    return False
+
+
 def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
     """오디오 바이트열 하나를 재서 여섯 축을 돌려준다.
 
@@ -245,7 +311,8 @@ def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
         return AnalysisFailure(MANUAL_BPM_FALLBACK_REASON)
 
     try:
-        declared_frames = soundfile.info(io.BytesIO(payload)).frames
+        info = soundfile.info(io.BytesIO(payload))
+        declared_frames = info.frames
         samples, sample_rate = soundfile.read(io.BytesIO(payload), dtype="float32", always_2d=True)
     except Exception as error:  # soundfile 은 형식마다 다른 예외를 낸다
         return AnalysisFailure(f"오디오 형식을 읽지 못했습니다: {error}")
@@ -253,11 +320,20 @@ def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
     if samples.size == 0 or sample_rate <= 0:
         return AnalysisFailure("오디오에 샘플이 없습니다.")
 
-    # t416 — 디코더가 **예외 없이** 중간에서 멈출 수 있다. 실측(2026-09-14):
-    # Let's Dance.mp3 는 헤더가 140.55초를 선언하는데 libmpg123 가 91초에서
-    # 「dequantization failed」로 멈추고 soundfile 은 90.98초만 돌려줬다. 부분
-    # 오디오로 잰 BPM·구간을 곡의 값으로 제안하느니 정직하게 거절한다.
-    if declared_frames > 0 and len(samples) < declared_frames * _MIN_DECODED_FRACTION:
+    # t416 — 디코더가 **예외 없이** 중간에서 멈출 수 있다(합성 변형으로 재현, 읽힌
+    # 비율 0.15~0.19). 부분 오디오로 잰 BPM·구간을 곡의 값으로 제안하느니 정직하게
+    # 거절한다. 단 t440 실측: 이 검사를 처음 부른 실제 곡 Let's Dance.mp3 는 잘린
+    # 게 아니었다 — 헤더 없는 VBR 이라 선언 140.55초가 비트레이트 어림이었고, 프레임
+    # 3,791개가 파일 끝까지 이어져 곡은 실제로 90.98초다(soundfile·librosa·ffmpeg 일치).
+    # 옛 서술의 「libmpg123 dequantization failed」는 그 곡에선 재현되지 않았다(합성
+    # 변형에서만 찍힌다 — 91초 뒤엔 디코드할 프레임이 없다). 그래서 선언이
+    # 어림인 경우(t443)는 기준에서 뺀다 — 디코더는 그대로 두고 판정만 고친다.
+    length_is_a_guess = info.format == "MP3" and _mp3_length_is_a_bitrate_guess(payload)
+    if (
+        declared_frames > 0
+        and not length_is_a_guess
+        and len(samples) < declared_frames * _MIN_DECODED_FRACTION
+    ):
         decoded_s = len(samples) / sample_rate
         declared_s = declared_frames / sample_rate
         return AnalysisFailure(

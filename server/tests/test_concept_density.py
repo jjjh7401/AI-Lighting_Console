@@ -467,3 +467,112 @@ class TestColorForCallback:
         replace_ops = [op for op in intro_row["ops"] if op["op"] == "replace"]
         assert replace_ops == [{"op": "replace", "color": "파랑"}]
         assert ("Intro", 1) in calls
+
+
+class TestIntroPrototypePort:
+    """REQ-047/G5, 카드 t439 — density.py 의 Intro 분기를 프로토타입
+    (``.moai/state/verify/f12e5c95-t429/final_integrated.py`` 61~62행)
+    수준으로 복원한다. 카드 t437 이 낸 축소 포팅(KEY 10% 하나만)은
+    프로토타입의 BACK 25% 확장과 "보컬 시작" 4마디 전 예고 프레이즈를
+    빠뜨렸다 — scott-buckley-neon.mp3 에서 Bridge(KEY+BACK 30%, 2그룹)가
+    Intro(KEY 10%, 1그룹)보다 밝기·그룹 수가 늘어 보이는 G5 거짓 위반을
+    냈다(``test_concept_gates.py`` 모듈 docstring 원인 2).
+
+    프로토타입 인용:
+
+        if d=='Intro':
+            add(ts,d,occ,None,[{'op':'replace','color':COOL},
+                {'op':'expand','roles':['BACK'],'dimmer':25,'pos':'back',
+                'motion':0}],'구간',R,'Track',('long',2.0),None,src,
+                '보조색 고립',base_name='Intro')
+            if bars>=4: add(round(en[i]-4*BAR,1),d,occ,'보컬 시작',
+                [{'op':'add','roles':['BACK','SIDE-L','SIDE-R'],
+                'dimmer':35}],'프레이즈',R,'Track',('short',1.0),None,
+                'rule','보컬 4마디 전 예고')
+
+    ``tracking`` 은 프로토타입의 ``'Track'`` 문자열을 그대로 옮기지
+    않는다 — REQ-056(``tracking.py`` ``_DEFAULTS``)이 phrase 층 기본값을
+    ``cue_only`` 로 못박은 이유("Track 이면 구간이 끝난 뒤에도 새어
+    나간다")가 이 파일의 다른 모든 phrase 큐(빌드업·눈 리셋)에 이미
+    적용돼 있다 — 이 새 phrase 만 다른 규칙을 쓸 이유가 없다."""
+
+    def test_intro_section_cue_expands_key_and_back(self) -> None:
+        sections = [
+            SectionOccurrence(section="Intro", occurrence=1, start=0.0, end=20.0),
+            SectionOccurrence(section="Verse", occurrence=1, start=20.0, end=40.0),
+            SectionOccurrence(section="Outro", occurrence=1, start=40.0, end=50.0),
+        ]
+        result = compile_density(sections, 120.0)
+        intro_section = next(
+            row for row in result.sequence if row["section"] == "Intro" and row["kind"] == "section"
+        )
+        expand_ops = [op for op in intro_section["ops"] if op["op"] == "expand"]
+        assert {op["roles"][0]: op["dimmer"] for op in expand_ops} == {
+            "KEY": 10,
+            "BACK": 25,
+        }
+        states = resolve_sequence(list(result.sequence))
+        intro_state = states[result.sequence.index(intro_section)]
+        assert intro_state.dim.get("KEY") == 10
+        assert intro_state.dim.get("BACK") == 25
+        assert intro_state.pos == "back"
+
+    def test_intro_vocal_start_phrase_inserted_when_4_bars_or_more(self) -> None:
+        # 120bpm → 마디 2초. Intro 20초=10마디 ≥ 4마디 문턱.
+        sections = [
+            SectionOccurrence(section="Intro", occurrence=1, start=0.0, end=20.0),
+            SectionOccurrence(section="Verse", occurrence=1, start=20.0, end=40.0),
+            SectionOccurrence(section="Outro", occurrence=1, start=40.0, end=50.0),
+        ]
+        result = compile_density(sections, 120.0)
+        vocal_start = [row for row in result.sequence if row["trigger"] == "보컬 시작"]
+        assert len(vocal_start) == 1
+        row = vocal_start[0]
+        assert row["kind"] == "phrase"
+        assert row["tracking"] == "cue_only"
+        # Intro 종료 4마디(=8초) 전 — 20 - 8 = 12.0.
+        assert row["ts"] == pytest.approx(12.0)
+        assert row["ops"] == [{"op": "add", "roles": ["BACK", "SIDE-L", "SIDE-R"], "dimmer": 35}]
+
+    def test_intro_vocal_start_phrase_not_inserted_when_below_4_bars(self) -> None:
+        # 120bpm → 마디 2초. Intro 6초=3마디 < 4마디 문턱.
+        sections = [
+            SectionOccurrence(section="Intro", occurrence=1, start=0.0, end=6.0),
+            SectionOccurrence(section="Verse", occurrence=1, start=6.0, end=20.0),
+            SectionOccurrence(section="Outro", occurrence=1, start=20.0, end=30.0),
+        ]
+        result = compile_density(sections, 120.0)
+        assert not [row for row in result.sequence if row["trigger"] == "보컬 시작"]
+
+    def test_bridge_no_longer_looks_bigger_than_intro_on_neon(self) -> None:
+        """G5 원인 2 재현 — scott-buckley-neon.mp3(Intro 바로 뒤 Bridge)
+        실측 구간을 직접 써서, Intro 가 Bridge 와 같은 그룹 수(KEY+BACK
+        2개)를 켠 채로 밝기(25%)가 Bridge(30%)보다 여전히 낮은지
+        확인한다 — 그룹 수 자체가 "늘어 보이는" 결함은 이 포팅으로
+        사라진다(그룹 수는 2==2, headroom.bridge_reduced 의 엄격한
+        "그룹 수도 줄어야 한다" 조건까지 만족하는지는 G5 게이트 시험이
+        직접 잰다 — 이 시험은 density.py 층위의 절대값만 확인한다)."""
+        sections = [
+            SectionOccurrence(section="Intro", occurrence=1, start=0.0, end=20.0),
+            SectionOccurrence(section="Bridge", occurrence=1, start=20.0, end=30.0),
+            SectionOccurrence(section="Outro", occurrence=1, start=30.0, end=40.0),
+        ]
+        result = compile_density(sections, 120.0)
+        states = resolve_sequence(list(result.sequence))
+        section_rows = [
+            (row, state)
+            for row, state in zip(result.sequence, states, strict=True)
+            if row["kind"] == "section"
+        ]
+        intro_row, intro_state = section_rows[0]
+        bridge_row, bridge_state = section_rows[1]
+        assert intro_row["section"] == "Intro"
+        assert bridge_row["section"] == "Bridge"
+        intro_top = max(intro_state.dim.values(), default=0)
+        bridge_top = max(bridge_state.dim.values(), default=0)
+        intro_groups = sum(1 for v in intro_state.dim.values() if v > 0)
+        bridge_groups = sum(1 for v in bridge_state.dim.values() if v > 0)
+        assert intro_top == 25
+        assert bridge_top == 30
+        assert intro_top < bridge_top
+        assert intro_groups == bridge_groups == 2

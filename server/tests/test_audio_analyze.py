@@ -176,10 +176,11 @@ class TestNonAudioBytesComeBackAsAFailureNotAnException:
 def _silently_truncated_mp3() -> tuple[bytes, float]:
     """디코더가 **예외 없이** 중간에서 멈추는 mp3 를 만든다 — (바이트, 읽힌 비율).
 
-    t416 실측(2026-09-14): 실제 곡 Let's Dance.mp3 는 헤더가 140.55초를 선언하는데
-    ``soundfile.read`` 는 91초 지점의 libmpg123 「dequantization failed」에서 멈추고
-    90.98초만 돌려준다. 예외가 없다. 실제 곡은 커밋할 수 없으므로(REQ-MUSICSYNC-011)
-    합성 트랙을 mp3 로 쓰고 오디오 데이터 바이트를 덮어 **같은 모양**을 만든다.
+    이 변형(Xing 헤더가 전체 길이를 선언, 가운데 바이트를 덮음)에서는 libmpg123 가
+    「dequantization failed」를 찍고 예외 없이 멈춘다. t416 이 이 모양의 근거로 든
+    실제 곡 Let's Dance.mp3 는 t440 실측으로 잘린 곡이 아니었다 — 헤더 없는 VBR 의
+    선언이 부푼 것이다(아래 :class:`TestAHeaderlessVbrMp3IsNotMistakenForATruncatedOne`).
+    합성 트랙을 mp3 로 쓰고 오디오 데이터 바이트를 덮어 이 모양을 만든다.
     위치는 실행 시 찾는다 — 인코더 출력이 바뀌어도 모양을 잃지 않게 한다.
     """
     import io
@@ -233,6 +234,128 @@ class TestASilentlyTruncatedDecodeIsRefusedNotAnalysed:
         buffer = io.BytesIO()
         soundfile.write(buffer, samples, rate, format="MP3")
         assert isinstance(analyze(buffer.getvalue()), AnalysisResult)
+
+
+def _mp3(samples, rate) -> bytes:
+    import io
+
+    import soundfile
+
+    buffer = io.BytesIO()
+    soundfile.write(buffer, samples, rate, format="MP3")
+    return buffer.getvalue()
+
+
+def _without_the_xing_frame(payload: bytes) -> bytes:
+    """인코더가 맨 앞에 쓰는 Xing 정보 프레임을 떼어 **헤더 없는** 스트림을 만든다."""
+    from server.audio.analyze import _mp3_frame
+
+    assert payload[:3] != b"ID3", "ID3 태그가 붙어 나오면 이 절단 위치가 틀린다"
+    frame = _mp3_frame(payload, 0)
+    assert frame is not None
+    assert b"Xing" in payload[: frame[0]], "첫 프레임이 Xing 이 아니면 떼어 낼 것이 없다"
+    stripped = payload[frame[0] :]
+    assert b"Xing" not in stripped and b"Info" not in stripped and b"VBRI" not in stripped
+    return stripped
+
+
+def _declared_and_decoded(payload: bytes) -> tuple[int, int]:
+    import io
+
+    import soundfile
+
+    declared = soundfile.info(io.BytesIO(payload)).frames
+    decoded = len(soundfile.read(io.BytesIO(payload), always_2d=True)[0])
+    return declared, decoded
+
+
+def _headerless_vbr_mp3() -> bytes:
+    """Let's Dance.mp3 모양(t440): 헤더 없는 VBR, 첫 프레임이 평균보다 낮은 비트레이트.
+
+    무음 3초로 시작하면 첫 프레임은 최저 비트레이트, 박자가 들어오면 높아진다. 판독기는
+    ``파일 크기 ÷ 첫 프레임 비트레이트`` 로 길이를 어림해 선언이 부푼다.
+    """
+    import io
+
+    import numpy
+    import soundfile
+
+    samples, rate = soundfile.read(io.BytesIO(synthesize_track(duration_ms=20000)), always_2d=True)
+    lead = numpy.zeros((rate * 3, samples.shape[1]), dtype=samples.dtype)
+    return _without_the_xing_frame(_mp3(numpy.concatenate([lead, samples]), rate))
+
+
+class TestAHeaderlessVbrMp3IsNotMistakenForATruncatedOne:
+    """t443 — 헤더 없는 VBR 의 부푼 선언 길이를 절단 기준으로 쓰지 않는다.
+
+    t440 실측: Let's Dance.mp3 는 선언 140.5초·디코드 90.98초로 거절됐지만 프레임이 파일
+    끝까지 이어진 온전한 곡이었다. 선언이 비트레이트 어림이었다. 디코더는 그대로 두고
+    판정만 고친다 — 진짜 잘린 파일은 아래 대조군들처럼 계속 거절돼야 한다.
+    """
+
+    def test_the_fixture_reproduces_the_inflated_declaration(self):
+        # 이 모양이 아니면 아래 시험은 공허하다: 수정 전 판정이라면 거절될 비율이어야 한다.
+        declared, decoded = _declared_and_decoded(_headerless_vbr_mp3())
+        assert decoded < declared * 0.9, (declared, decoded)
+
+    def test_a_headerless_vbr_mp3_is_analysed(self):
+        outcome = analyze(_headerless_vbr_mp3())
+        assert isinstance(outcome, AnalysisResult), getattr(outcome, "reason", outcome)
+
+    def test_a_truncated_vbr_mp3_with_a_xing_header_is_still_refused(self):
+        # 대조군 1: Xing 헤더가 전체 길이를 선언한 VBR 을 반에서 자른다 — 진짜 절단.
+        import io
+
+        import soundfile
+
+        samples, rate = soundfile.read(
+            io.BytesIO(synthesize_track(duration_ms=20000)), always_2d=True
+        )
+        whole = _mp3(samples, rate)
+        cut = whole[: len(whole) // 2]
+        assert b"Xing" in cut[:2000]
+        declared, decoded = _declared_and_decoded(cut)
+        assert decoded < declared * 0.9, (declared, decoded)
+        outcome = analyze(cut)
+        assert isinstance(outcome, AnalysisFailure), outcome
+        assert "끝까지 읽지 못했습니다" in outcome.reason
+
+    def test_a_silently_truncated_headerless_cbr_mp3_is_still_refused(self):
+        # 대조군 2: 헤더 없는 CBR — 어림이 정확한 경우다. 무음은 한 비트레이트로만
+        # 인코딩되므로 CBR 이 된다. 스트림 가운데를 0xFF 로 덮으면 libmpg123 가 예외 없이
+        # 거기서 멈춘다(t443 탐침 실측, 0x00·0x55 는 예외를 내거나 멈추지 않았다).
+        # 위치는 실행 시 찾는다 — 인코더 출력이 바뀌어도 모양을 잃지 않게 한다.
+        import numpy
+
+        from server.audio.analyze import _mp3_frame
+
+        rate = 22050
+        cbr = _without_the_xing_frame(_mp3(numpy.zeros((rate * 20, 1), dtype="float32"), rate))
+        bitrates, at = set(), 0
+        while frame := _mp3_frame(cbr, at):
+            bitrates.add(frame[1])
+            at += frame[0]
+        assert len(bitrates) == 1 and at == len(cbr), (bitrates, at, len(cbr))
+
+        for position in range(len(cbr) // 3, len(cbr) - 400, 13):
+            broken = bytearray(cbr)
+            broken[position : position + 24] = b"\xff" * 24
+            try:
+                declared, decoded = _declared_and_decoded(bytes(broken))
+            except Exception:
+                continue  # 크게 실패하는 변형은 이미 형식 오류로 잡힌다 — 찾는 것은 조용한 쪽
+            if declared and 0.3 < decoded / declared < 0.9:
+                break
+        else:
+            raise AssertionError("조용히 잘리는 CBR 변형을 만들지 못했다 — 대조군이 공허하다")
+
+        outcome = analyze(bytes(broken))
+        assert isinstance(outcome, AnalysisFailure), outcome
+        assert "끝까지 읽지 못했습니다" in outcome.reason
+
+        # 덮지 않은 같은 CBR 은 절단으로 거절되지 않는다 — 덮은 바이트가 판별 변수다.
+        whole = analyze(cbr)
+        assert "끝까지 읽지 못했습니다" not in getattr(whole, "reason", "")
 
 
 class TestTheAnalysisTouchesNoFilesystemOrNetwork:

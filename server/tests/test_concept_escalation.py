@@ -10,6 +10,7 @@ escalation.py 단독으로 검증 가능함을 보장한다(모듈 경계 분리
 
 from __future__ import annotations
 
+from server.concept.cue_model import CueState
 from server.concept.density import (
     GROUP_ROSTER,
     SectionOccurrence,
@@ -25,6 +26,7 @@ from server.concept.escalation import (
     g4_final_new_axis_and_headroom,
     g49_stagnation_is_normal,
     new_axes,
+    remaining_motion_before_final,
 )
 from server.concept.resolver import resolve_sequence
 
@@ -181,6 +183,80 @@ class TestG3NewAxisWithinFive:
         assert result.passed is True
 
 
+class TestRemainingMotionBeforeFinal:
+    """REQ-044/048 재정의(카드 t439, 리드 결정) — G4 의 "남은 모션 단계"는
+    피날레 **직전 한 줄**의 모션이 아니라 피날레 이전 전체 큐 중 **최대**
+    모션 단계를 기준으로 삼는다.
+
+    옛 정의(``states[final_index - 1].motion`` 한 줄만 읽음)는 피날레
+    바로 앞 한 줄이 절/프리코러스처럼 모션을 0 으로 복귀해도 그 전에
+    이미 모션을 최대치까지 썼다는 사실을 가려, Morning·Rain 이 실제로는
+    이미 여유가 소진됐는데도 여유 3 으로 오판했다(카드 t439 배차 근거).
+    """
+
+    def test_immediate_row_is_low_but_an_earlier_cue_already_maxed_motion(self) -> None:
+        # 날조 대조군 — 직전 한 줄만 읽는 옛 정의라면 여기서 3 을 냈을
+        # 것이다(states[-1].motion == 0 이므로). 새 정의는 중간 후렴이
+        # 이미 모션 3 을 썼다는 사실을 놓치지 않아 여유 0 을 낸다.
+        states = [
+            CueState(dim={}, color="노랑", pos="back", motion=0),  # Verse
+            CueState(dim={}, color="노랑", pos="back", motion=3),  # 중간 후렴 — 모션 최대치 소진
+            CueState(dim={}, color="노랑", pos="back", motion=0),  # 피날레 직전 Verse — 모션 0 복귀
+        ]
+        assert remaining_motion_before_final(states, 3) == 0
+
+    def test_max_prior_motion_two_leaves_exactly_one(self) -> None:
+        states = [
+            CueState(dim={}, color="노랑", pos="back", motion=0),
+            CueState(dim={}, color="노랑", pos="back", motion=2),
+            CueState(dim={}, color="노랑", pos="back", motion=0),
+        ]
+        assert remaining_motion_before_final(states, 3) == 1
+
+    def test_none_when_final_index_is_zero_or_none(self) -> None:
+        states = [CueState(dim={}, color=None, pos="home", motion=0)]
+        assert remaining_motion_before_final(states, 0) is None
+        assert remaining_motion_before_final(states, None) is None
+
+    def test_g4_fails_when_earlier_motion_already_exhausted_even_with_new_axis(self) -> None:
+        # G4 통합 — 새 축은 있지만(피날레가 밝기를 더 올림) 이전 어딘가
+        # 에서 이미 모션 3 을 썼다면 새 정의로는 여유 0 이라 FAIL 이어야
+        # 한다. 옛 정의(직전 한 줄)라면 여유 3 으로 오판해 PASS 했을
+        # 자리다.
+        snapshots = [
+            _snap(round_number=1, brightness=70, motion=3),
+            _snap(section="Final Chorus", occurrence=1, round_number=2, brightness=100, motion=3),
+        ]
+        pairs = check_pairs(snapshots)
+        states = [
+            CueState(dim={}, color="노랑", pos="back", motion=0),  # Verse
+            CueState(dim={}, color="노랑", pos="back", motion=3),  # 중간 후렴 — 모션 최대치 소진
+            CueState(dim={}, color="노랑", pos="back", motion=0),  # 피날레 직전 Verse
+            CueState(dim={}, color="흰색", pos="audience", motion=3),  # Final Chorus 자신
+        ]
+        remaining = remaining_motion_before_final(states, 3)
+        result = g4_final_new_axis_and_headroom(pairs, before_final_remaining_motion=remaining)
+        assert remaining == 0
+        assert result.passed is False
+
+    def test_g4_passes_when_max_prior_motion_leaves_one(self) -> None:
+        snapshots = [
+            _snap(round_number=1, brightness=70, motion=2),
+            _snap(section="Final Chorus", occurrence=1, round_number=2, brightness=100, motion=3),
+        ]
+        pairs = check_pairs(snapshots)
+        states = [
+            CueState(dim={}, color="노랑", pos="back", motion=0),
+            CueState(dim={}, color="노랑", pos="back", motion=2),
+            CueState(dim={}, color="노랑", pos="back", motion=0),
+            CueState(dim={}, color="흰색", pos="audience", motion=3),
+        ]
+        remaining = remaining_motion_before_final(states, 3)
+        result = g4_final_new_axis_and_headroom(pairs, before_final_remaining_motion=remaining)
+        assert remaining == 1
+        assert result.passed is True
+
+
 class TestG4FinalNewAxisAndHeadroom:
     def test_n_a_when_no_final_chorus(self) -> None:
         pairs = check_pairs([_snap(round_number=1), _snap(round_number=2)])
@@ -317,7 +393,13 @@ class TestBuildChorusSnapshotsIntegration:
             for i, row in enumerate(result.sequence)
             if row["section"] == "Final Chorus" and row["kind"] == "section"
         )
-        before_final_motion = 3 - states[final_index - 1].motion
+        # 새 정의(REQ-044/048, 카드 t439) — 직전 한 줄이 아니라 피날레
+        # 이전 전체 최대 모션 단계를 쓴다. Rain 은 3~5 회차 후렴에서
+        # 이미 모션 2 를 쓰므로(density.distribute_motion_steps 가
+        # 마지막 회차 이전엔 max_motion-1 을 넘지 않게 분배한다) 여유는
+        # 1 — 직전 한 줄(Verse, 모션 0)만 읽던 옛 정의의 여유 3 과 다르다.
+        before_final_motion = remaining_motion_before_final(states, final_index)
+        assert before_final_motion == 1
         assert (
             g4_final_new_axis_and_headroom(
                 pairs, before_final_remaining_motion=before_final_motion

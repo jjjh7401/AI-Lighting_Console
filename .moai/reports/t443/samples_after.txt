@@ -1,0 +1,10 @@
+Club Diver.mp3                   declared=145.726s           guess=False -> AnalysisResult bpm=139.67
+Cut and Run.mp3                  declared=214.863s           guess=False -> AnalysisResult bpm=107.67
+Ice cream.mp3                    declared=78.072s            guess=False -> AnalysisResult bpm=100.45
+Let's Dance.mp3                  declared=140.546s           guess=True  -> AnalysisResult bpm=119.68
+LoveMe.mp3                       declared=info 실패(LibsndfileError) guess=None  -> AnalysisFailure: 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x105cdfdd0>: F
+Morning.mp3                      declared=153.556s           guess=False -> AnalysisResult bpm=117.45
+Rain.mp3                         declared=222.592s           guess=False -> AnalysisResult bpm=76.01
+Too Cool.mp3                     declared=181.629s           guess=False -> AnalysisResult bpm=161.50
+scott-buckley-neon.mp3           declared=259.081s           guess=False -> AnalysisResult bpm=120.19
+걸그룹DinoDino_C_max최고품질.wav        declared=178.339s           guess=False -> AnalysisResult bpm=126.05

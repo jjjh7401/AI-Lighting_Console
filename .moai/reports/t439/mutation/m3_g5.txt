@@ -1,0 +1,26 @@
+......F...............                                                   [100%]
+=================================== FAILURES ===================================
+__ test_gate_matrix_matches_measured_pipeline_output[scott-buckley-neon.mp3] ___
+
+song_name = 'scott-buckley-neon.mp3'
+
+    @pytest.mark.parametrize("song_name", sorted(EXPECTED_GATES))
+    def test_gate_matrix_matches_measured_pipeline_output(song_name: str) -> None:
+        """오늘 이 파이프라인이 실제로 내는 13개 게이트 판정을 곡별로 고정한다
+        (REQ-075/076). G6 전체 + scott-buckley-neon 의 G5 는 프로토타입과
+        다르다 — 모듈 docstring 의 원인 1/2 을 그대로 반영한다."""
+        song = _SONGS_BY_NAME[song_name]
+        result = evaluate_song(song)
+        actual = {gate: outcome.passed for gate, outcome in result.items()}
+>       assert actual == EXPECTED_GATES[song_name]
+E       AssertionError: assert {'G1 어휘 닫힘': ...유': True, ...} == {'G1 어휘 닫힘': ...유': True, ...}
+E         
+E         Omitting 12 identical items, use -vv to show
+E         Differing items:
+E         {'G5 헤드룸 경고 0': False} != {'G5 헤드룸 경고 0': True}
+E         Use -v to get more diff
+
+server/tests/test_concept_gates.py:360: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_concept_gates.py::test_gate_matrix_matches_measured_pipeline_output[scott-buckley-neon.mp3]
+1 failed, 21 passed in 0.08s
