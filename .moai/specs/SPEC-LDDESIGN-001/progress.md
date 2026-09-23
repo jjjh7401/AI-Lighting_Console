@@ -118,6 +118,306 @@ design.md §1 의 `Headroom` 스케치는 `remaining_scale_levels: int` 정수
 design.md §1 스케치 그대로 "포지션 변화가 있을 때만" 값을 갖는다.
 `resolver.mib_verdict()` 는 포지션이 바뀌지 않으면 `None` 을 반환한다.
 
+### M4 3층 밀도·회차·헤드룸 (REQ-LDDESIGN-036~052, 카드 t437)
+
+워크트리 `.claude/worktrees/agent-a7985662c69d50be4` (지시서가 지정한
+`.claude/worktrees/t437`/`WT-concept-density` 가 아니라, 오케스트레이터가
+격리한 실제 워크트리 — 배차서 지시대로 `git rev-parse --show-toplevel` 로
+확인) · 브랜치 `worktree-agent-a7985662c69d50be4` · 기준
+`06e3d125`(지시서 기준과 동일, fast-forward 불필요) · TDD 사이클(RED→GREEN).
+
+> **레인 정정(lane-1, 2026-09-23)**: 에이전트 3커밋(`44cc8de6`/`b8c99f79`/`d62e7d14`)을
+> 레인이 SHA 로 되읽어 `.claude/worktrees/t437`(브랜치 `WT-concept-density`)의
+> `origin/main@a54db70e`(M3 PR #483 머지 포함) 위로 cherry-pick 했다. 그 병합 트리에서
+> `test_concept_*.py` 270 passed, 신규 91건(`--collect-only`), ruff 통과를 다시 쟀다
+> (`.moai/reports/t437/pytest_concept.txt`). 변이 3종도 레인이 쐈다 — `.moai/reports/t437/verdict.md`.
+
+**Claim**: `.moai/state/verify/f12e5c95-t429/final_integrated.py`(프로토타입)의
+`build()`(49~100행, 구간/프레이즈/원샷 생성·빌드업·눈 리셋·후렴 모션
+분배·프레이즈 상한)와 게이트 로직(145~179행, G2/G3/G4/G5/G8/G13)을
+저장소 3모듈(`server/concept/{density,escalation,headroom}.py`)로
+재작성했다 — 색 결정은 M3 스코프라 호출자 콜백(`color_for`)으로 뺐다.
+
+#### 신규 파일
+
+- `server/concept/density.py` — `SectionOccurrence`·`DensityResult`·
+  `compile_density()`(3층 컴파일러)·`distribute_motion_steps()`(REQ-044)·
+  `g13_density_warning()`(REQ-041)·`GROUP_ROSTER`(프로토타입 로스터,
+  실 리그 아님)·`bar_seconds()`(4/4 가정).
+- `server/concept/escalation.py` — `ChorusSnapshot`·`ChorusPair`·
+  `GateResult`·`build_chorus_snapshots()`·`new_axes()`(REQ-043 6축)·
+  `check_pairs()`(REQ-042 정체성)·`g2_identity`/`g3_new_axis_within_five`/
+  `g4_final_new_axis_and_headroom`/`g49_stagnation_is_normal`.
+- `server/concept/headroom.py` — `compute_cue_headroom()`(resolver 래퍼,
+  REQ-050)·`SectionCueSnapshot`·`bridge_reduced()`(REQ-047 구간 단위
+  비교)·`g5_warnings()`(REQ-051 4조건, REQ-052 예외 없음).
+- `server/tests/test_concept_density.py` — 42건.
+- `server/tests/test_concept_escalation.py` — 29건.
+- `server/tests/test_concept_headroom.py` — 20건.
+- (기존 파일 수정 없음 — `cue_model.py`/`resolver.py`/`vocab.py`/
+  `description.py`/`worksheet.py`/`__init__.py` 전부 불변.)
+
+#### Evidence — RED (구현 파일 3개를 `/tmp` 로 옮긴 뒤, 실제 출력)
+
+```
+$ uv run pytest server/tests/test_concept_density.py server/tests/test_concept_escalation.py server/tests/test_concept_headroom.py -q
+ERROR server/tests/test_concept_density.py
+ERROR server/tests/test_concept_escalation.py
+ERROR server/tests/test_concept_headroom.py
+server/tests/test_concept_density.py:15: in <module>
+    from server.concept.density import (
+E   ModuleNotFoundError: No module named 'server.concept.density'
+server/tests/test_concept_escalation.py:15: in <module>
+    from server.concept.density import (
+E   ModuleNotFoundError: No module named 'server.concept.density'
+server/tests/test_concept_headroom.py:19: in <module>
+    from server.concept.headroom import (
+E   ModuleNotFoundError: No module named 'server.concept.headroom'
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+3 errors in 0.13s
+```
+
+구현 파일을 되돌린 뒤 첫 GREEN 실행에서 실패 2건 발견 —
+`TestBuildupPhraseCue` 픽스처 두 개가 시험 작성 시점의 손 계산 오류였다
+(마디 문턱을 잘못 셈, 구현이 아니라 시험 기대값을 고쳤다): 구현은
+처음부터 정확했고, 손으로 다시 마디를 세어 기대값 2→3·픽스처의 Intro
+길이를 조정해 GREEN 으로 만들었다(아래 "결정" 절 참고).
+
+#### Evidence — GREEN (이 카드 범위 3개 시험 파일, 실제 출력)
+
+```
+$ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && \
+  uv run pytest server/tests/test_concept_density.py server/tests/test_concept_escalation.py server/tests/test_concept_headroom.py -q
+........................................................................ [ 79%]
+...................                                                      [100%]
+91 passed in 0.10s
+```
+
+전체 `test_concept_*.py`(M1+M2+M4, M3 은 별도 레인이 아직 안 들어와
+있음) 회귀 확인:
+
+```
+$ uv run pytest server/tests/test_concept_*.py -q
+........................................................................ [ 31%]
+........................................................................ [ 62%]
+........................................................................ [ 93%]
+................                                                         [100%]
+232 passed in 0.18s
+```
+
+`--collect-only -q` 실측 개수 — density.py 42건 · escalation.py 29건 ·
+headroom.py 20건 (합 91, 위 GREEN 수치와 일치).
+
+#### Evidence — 린트/포맷 (실제 출력)
+
+```
+$ uv run ruff check server/concept server/tests/test_concept_density.py server/tests/test_concept_escalation.py server/tests/test_concept_headroom.py
+All checks passed!
+
+$ uv run ruff format --check server/concept server/tests/test_concept_density.py server/tests/test_concept_escalation.py server/tests/test_concept_headroom.py
+12 files already formatted
+```
+
+(린트 1차 실행에서 18건 발견 — `zip()` 의 `strict=` 누락(B905) 6건,
+미사용 import 4건, 100자 초과 6건, 미사용 지역 변수 1건, 나머지 —
+전부 이 카드 신규 파일 안에서 직접 고쳤다. `ruff format` 도 1개 파일
+재포맷했다.)
+
+**Baseline-attribution**: 이 워크트리(`worktree-agent-a7985662c69d50be4`,
+HEAD `06e3d125`)에서 직접 실측했다 — 지시서가 지정한 워크트리 이름과
+다르지만 기준 커밋은 동일하다(`git fetch`/`ff-merge` 불필요, 이미
+`06e3d125`).
+
+#### 결정 — Verse 1회차에 `remove`(MOVER·WASH·FOH) 를 앞세운다
+
+프로토타입(`final_integrated.py:64`)에는 있지만 첫 초안에서 빠뜨렸던
+줄이다 — 없으면 직전 후렴의 WASH/MOVER 디머가 `expand`(KEY/BACK/
+SIDE-L/SIDE-R 만 건드림)로 안 지워지고 carry 로 새어 들어와 절 밝기가
+45 가 아니라 훨씬 큰 값(실측: Too Cool 절1 이 100)으로 나왔다 —
+AC-LDDESIGN-010 시험(`TestVerseBrightnessShape`)이 이 결함을 잡았다.
+회귀 방지 시험(`test_verse_first_occurrence_clears_prior_mover_and_wash_state`)
+을 별도로 남겼다.
+
+#### 결정 — "직전 구간의 남은 모션 단계"(G4/REQ-044/048)는 리졸브된
+시퀀스의 바로 앞 행 상태다(프로토타입과 같은 정의)
+
+REQ-044 문면은 "회차마다"라고 서술하지만, 프로토타입 G4 산식
+(`before_final=table[table.index(final)-1]`)은 Final Chorus 바로 앞
+**행**(반드시 직전 후렴 회차가 아니라, 그 사이에 절·빌드업이 끼면 그
+행)의 헤드룸을 본다. 이 구현도 같은 정의를 그대로 옮겼다 — Verse 의
+`restore(ref='Verse 1')` 가 모션을 0 으로 되돌리는 부수효과가 있어
+"직전 행"이 절이면 남은 모션이 인위적으로 커질 수 있다는 것을 실측으로
+확인했다(Rain: Verse4→빌드업3 경로, 남은 모션 3). 8곡 실측 기준으로
+검증된 프로토타입 정의를 임의로 "가장 최근 후렴 회차"로 바꾸지 않았다
+— SIV-001 급 행위(발주 없는 행위 확장) 위험을 피하기 위해서다.
+
+#### 결정 — 빌드업/눈 리셋/후렴 뒷마디 프레이즈 큐는 전부 `tracking:
+cue_only`(프로토타입 이탈, REQ-056 문면을 따름)
+
+프로토타입은 빌드업을 `'Track'` 으로 쐈다(`final_integrated.py:96`).
+REQ-LDDESIGN-056 은 "프레이즈 큐... 기본값 `Cue Only`다 — `Track` 으로
+두면... 8곡 중 6곡에서 실측" 누출을 명시적으로 지적한다. M2 가 이미
+이 REQ 를 구현해 뒀으므로(`resolver.resolve_sequence` 의 cue_only 비전파),
+M4 는 프로토타입의 알려진 결함을 그대로 옮기지 않고 REQ-056 을 따랐다.
+
+#### Gaps(명시적으로 안 잰 것) — M4
+
+- **`session.py`/`orchestrator/tools.py` 에 배선되지 않았다.** M6(§3.13)
+  스코프 — 이 카드는 순수 함수만 만들었다(카드 지시 그대로).
+- **행(row)의 `tracking` 값은 이 컴파일러의 잠정 배정이다.** REQ-053~057
+  4모드 자체는 M2 가 이미 정의했지만, "이 큐가 정확히 어느 모드여야
+  하는가"의 세부 배정(특히 구간 큐의 `Block`/`Release` 안전 큐 경계,
+  REQ-054)은 M5(§3.9 트래킹/타이밍/MIB 완결) 스코프로 남긴다 — 이
+  카드는 REQ-055(구간=Track 기본)/REQ-056(프레이즈=Cue Only 기본)만
+  구현했다.
+- **색은 이 모듈이 결정하지 않는다(M3 스코프).** `color_for` 콜백이
+  없으면 색 동작을 아예 내지 않는다 — Chorus 주색·Final Chorus 클라이맥스
+  전환·빌드업 언더페인팅 전부 콜백 호출 지점만 마련했다.
+- **4/4 박자를 가정한다(`bar_seconds()`).** 곡의 실제 박자 표기를 읽지
+  않는다 — 다른 박자 곡은 마디 계산이 어긋날 수 있다.
+- **`GROUP_ROSTER` 는 프로토타입 로스터이지 실제 리그가 아니다.** 실
+  리그 바인딩은 이 SPEC 밖(REQ-017)이다.
+- **원샷 레인은 콘솔 실행이 없다.** `compile_density()` 가 내는
+  `one_shots` 는 이름·시각·타깃만 있는 데이터일 뿐, OSC 송신 경로가
+  없다(REQ-026 원칙, M2/M4 공통).
+- **"직전 구간의 남은 모션 단계"(G4) 정의는 프로토타입을 그대로
+  옮겼다** — 위 "결정" 절 참고. REQ 문면과 미묘하게 다를 수 있는
+  자리이므로 M6 8곡 게이트 고정 때 재확인이 필요하다.
+- **`layer_limit_warning` 의 `cue_kind`("section"/"phrase") 이름은
+  M2 가 이미 고른 내부 식별자를 그대로 재사용했다** — spec.md 자신의
+  명명이 아니다(M2 progress.md 의 같은 지적 참고).
+### M5 트래킹·타이밍·MIB·안전 큐 (REQ-LDDESIGN-053~072, 카드 t438)
+
+워크트리 `.claude/worktrees/t438` — 착수 직전 이 워크트리 사용이
+샌드박스로 거절돼(같은 절 안의 다른 워크트리 `git`/`git -C` 조작을
+격리 에이전트가 거부) 리드가 자기 워크트리에서 진행하도록 정정했고,
+그 뒤 환경이 primary working directory 를 `t438` 자체로 바꿔 이
+워크트리에서 직접 작업했다(경위는 커밋 로그와 이 절 자체가 증거).
+브랜치 `WT-concept-tracking-mib`, 기준 `06e3d125`(divergence 0 0).
+TDD 사이클(RED→GREEN, mutation 확인 2건).
+
+**Claim**: M2 의 트래킹 4모드(REQ-053~057)·타이밍(REQ-058~061)·MIB
+판정(REQ-062~067)·안전 큐(REQ-068~069)·근거 등급(REQ-071~072)을 신규
+모듈 5개로 구현했다. `resolver.mib_verdict()`/`resolve_sequence()` 를
+재사용하고(두 번째 판정기를 만들지 않는다, REQ-067), `MOVE_SECONDS`/
+`SETTLE_SECONDS` 잠정값을 `resolver.py` 한 지점에서만 가져온다.
+
+#### 신규 파일
+
+- `server/concept/tracking.py` — `default_tracking()`(4모드 기본값,
+  REQ-053~056) + `verify_no_cue_only_leak()`(REQ-057/AC-015 프로퍼티
+  검사기 — cue_only 행을 뺀 시퀀스와 비교).
+- `server/concept/timing.py` — `default_timing()`(트리거·구간별 기본
+  Timing, REQ-058) + `chorus_entry_timing()`(REQ-059/060) +
+  `outro_timing()` + `emit_fade()`(REQ-061, `cue_fade.store_with_fade`
+  재사용).
+- `server/concept/mib.py` — `compute_mib_sequence()`(REQ-062/067,
+  `off_since` 순회 재구현) + `mark_cue_spec()`(REQ-063) +
+  `movers_off_ops()`(REQ-064) + `resolve_position()`(REQ-065) +
+  `live_move_note()`(REQ-066).
+- `server/concept/safety.py` — `first_safety_cue()`(REQ-068) +
+  `last_safety_cue()`(REQ-069, `reduce factor=0`).
+- `server/concept/evidence.py` — `VERIFIED_EXPLANATION`·
+  `NO_PUBLIC_EVIDENCE_MARKER`·`mark_no_public_evidence()`(REQ-071/072).
+- `server/tests/test_concept_tracking.py`(14건)·
+  `test_concept_timing.py`(16건)·`test_concept_mib.py`(17건)·
+  `test_concept_safety.py`(9건)·`test_concept_evidence.py`(8건)·
+  `test_concept_no_director_import.py`(AST 기반, 제약 4 — 신규 모듈
+  5개가 `server.director` 를 import 하지 않는지 판정).
+
+#### 결정 — REQ-062 문언과 실제 판정 의미론의 편차(배차서 5번 항목)
+
+spec.md REQ-062 문면은 "충분하면 dark, 부족하면 mark"로 읽히지만, 그
+근거인 `tracking-timing-mib-20260921.md:70`("충분하면 Mark 큐 자동
+삽입, 아니면 live_move")·REQ-063·기존 M2 `mib_verdict()` 는 전부
+"무버가 계속 꺼져 있으면 dark, 꺼졌다가 켜지며 창이 충분하면 mark,
+그 밖은 live"다. 이 카드는 기존 코드·연구 문서의 의미론을 그대로
+따랐다(`mib.py` 는 `resolver.mib_verdict()` 를 재사용할 뿐 재구현하지
+않는다) — spec.md 편집은 리드 몫으로 남긴다(카드 지시 5번).
+
+#### 결정 — 타이밍 트리거→kind 매핑은 이 카드가 내린 판단(spec.md 미문언)
+
+`timing.py` 는 REQ-058 이 예시로 든 "드롭·히트·백색 플래시류"·
+"프레이즈 전환(악기 추가 등)"·"발라드성 공간 확장·아웃트로"를 닫힌
+10종 트리거 어휘로 1:1 매핑하지 않는다(문면이 직접 대응시키지 않는다)
+— 모듈 독스트링에 판단 근거를 남겼다: 드롭류→"드롭 직전의 정적",
+프레이즈 전환류→"악기 추가"·"악기 제거"·"보컬 시작"·"보컬 종료"·
+"빌드업 시작", 나머지 감독 전용 4종→long(발라드성 느린 전환으로 간주).
+
+#### 결정 — `resolve_position()` 은 mark 판정을 낼 수 없다(설계 경계)
+
+포지션만 바꿔 보는 프로브라 `dim` 은 그대로 들고 간다 — 무버가 꺼진
+채면 창이 아무리 길어도 항상 `dark`(`mark` 는 같은 큐에서 무버가 함께
+켜지는 경우라 이 프로브 범위 밖이다). mark 가 필요한 자리는
+`compute_mib_sequence()`(dim 변화도 함께 도는 시퀀스 판정)를 쓴다.
+착수 중 시험을 처음 `mark` 기대로 썼다가 이 경계를 발견해 시험·
+독스트링 둘 다 고쳤다(REQ-065 자체는 위반이 아니다 — "유지"는 여전히
+정확히 일어난다, 시험의 기대 상태만 틀렸었다).
+
+#### Evidence — RED (구현 파일 5개가 없는 상태의 실제 출력)
+
+```
+$ uv run pytest -q server/tests/test_concept_tracking.py server/tests/test_concept_timing.py \
+    server/tests/test_concept_mib.py server/tests/test_concept_safety.py \
+    server/tests/test_concept_evidence.py server/tests/test_concept_no_director_import.py
+==================================== ERRORS ====================================
+____________ ERROR collecting server/tests/test_concept_tracking.py ____________
+ModuleNotFoundError: No module named 'server.concept.tracking'
+_____________ ERROR collecting server/tests/test_concept_timing.py _____________
+ModuleNotFoundError: No module named 'server.concept.timing'
+______________ ERROR collecting server/tests/test_concept_mib.py _______________
+ModuleNotFoundError: No module named 'server.concept.mib'
+_____________ ERROR collecting server/tests/test_concept_safety.py _____________
+ModuleNotFoundError: No module named 'server.concept.safety'
+____________ ERROR collecting server/tests/test_concept_evidence.py ____________
+ModuleNotFoundError: No module named 'server.concept.evidence'
+=========================== short test summary info ============================
+ERROR server/tests/test_concept_tracking.py
+ERROR server/tests/test_concept_timing.py
+ERROR server/tests/test_concept_mib.py
+ERROR server/tests/test_concept_safety.py
+ERROR server/tests/test_concept_evidence.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 5 errors during collection !!!!!!!!!!!!!!!!!!!!
+5 errors in 0.14s
+```
+
+#### Evidence — GREEN
+
+```
+$ uv run pytest -q server/tests/test_concept_*.py
+........................................................................ [ 35%]
+........................................................................ [ 71%]
+..........................................................               [100%]
+202 passed in 0.22s
+```
+
+(M2 시험 40건 + M5 신규 64건 + 기존 통합 시험 = 202건 전체 통과. M5
+신규분만 세면 `-k`로 6개 파일 합계 64건.)
+
+#### Evidence — mutation 확인 2건 (전부 백업→수정→실패 관찰→git diff 없음으로 복원)
+
+1. **cue_only 누출 검사기** — `resolver.py`의
+   `if tracking != "cue_only": carry = next_state` 를 무조건
+   `carry = next_state` 로 바꾸자 `test_concept_tracking.py`의 leak 시험
+   3건이 즉시 FAIL(`AssertionError: assert False is True`)했다.
+   `cp`으로 원복 후 `git diff --stat`가 빈 출력임을 확인했다.
+2. **단일 지점 상수** — `mib.py`에 `MOVE_SECONDS = 1.5`/
+   `SETTLE_SECONDS = 0.5` 를 삽입하자
+   `TestNoLiteralConstantRedefinition::test_no_1_5_or_0_5_literal_in_source`
+   가 즉시 FAIL 했다. 같은 방식으로 원복·`git diff --stat` 빈 출력 확인.
+
+#### Evidence — ruff
+
+```
+$ uv run ruff check server/concept server/tests/test_concept_{tracking,timing,mib,safety,evidence,no_director_import}.py
+All checks passed!
+$ uv run ruff format --check (같은 파일 목록)
+17 files already formatted
+```
+
+(최초 실행에서 `zip()` 에 `strict=` 누락 2건 + Yoda 조건 1건을 잡아
+고쳤다 — 위 결과는 수정 후 재실행분이다.)
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
