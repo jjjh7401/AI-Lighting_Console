@@ -25,7 +25,7 @@ Cross, finale on the wide Ring In cone.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from server.spatial.mib import (
@@ -34,7 +34,7 @@ from server.spatial.mib import (
     position_cue_bundle,
     premove_follow_command,
 )
-from server.spatial.pointing import BASIC_POSITION_SEQUENCE, SpatialPointingError
+from server.spatial.pointing import SpatialPointingError
 from server.spatial.position_moods import match_position_mood
 
 __all__ = [
@@ -42,6 +42,7 @@ __all__ = [
     "PositionSheetResolution",
     "PositionCueSheet",
     "build_position_cue_sheet",
+    "required_sheet_labels",
 ]
 
 #: Blackout vocabulary — an explicit dark section, not a position. Checked
@@ -140,11 +141,55 @@ def _pick_varied(candidates: Sequence[str], usage: dict[str, tuple[int, int]]) -
     return min(enumerate(candidates), key=key)[1]
 
 
+@dataclass(frozen=True)
+class _SectionLook:
+    """One section's look decision, before any preset number exists."""
+
+    blackout: bool = False
+    skipped_reason: str | None = None
+    label: str | None = None
+    canonical: str | None = None
+
+
+def _section_looks(sections: Sequence[PositionSheetSection]) -> list[_SectionLook]:
+    """Blackout / skip / look label per section — the sheet's ONE selection rule.
+
+    Shared by :func:`required_sheet_labels` and
+    :func:`build_position_cue_sheet` so the labels a caller resolves on the
+    console are exactly the labels the builder then recalls (t449).
+    """
+    looks: list[_SectionLook] = []
+    usage: dict[str, tuple[int, int]] = {}  # label -> (use count, last section index)
+    for index, section in enumerate(sections):
+        if _BLACKOUT.search(section.mood) is not None:
+            looks.append(_SectionLook(blackout=True))
+            continue
+        suggestion = match_position_mood(section.mood)
+        if suggestion is None:
+            looks.append(_SectionLook(skipped_reason="무드 어휘가 포지션 표와 일치하지 않음"))
+            continue
+        candidates = (suggestion.entry.label, *suggestion.entry.alternatives)
+        label = _pick_varied(candidates, usage)
+        usage[label] = (usage.get(label, (0, -1))[0] + 1, index)
+        looks.append(_SectionLook(label=label, canonical=suggestion.entry.label))
+    return looks
+
+
+def required_sheet_labels(sections: Sequence[PositionSheetSection]) -> tuple[str, ...]:
+    """The Position preset labels the sheet for ``sections`` recalls — first-use order.
+
+    카드 t449 — 호출자는 이 라벨들을 콘솔에서 **라벨로** 찾아 실제 슬롯을
+    :func:`build_position_cue_sheet` 의 ``preset_numbers`` 로 넘긴다
+    (``ChatSession._resolve_position_preset_labels``, t232 와 같은 규율).
+    """
+    return tuple(dict.fromkeys(look.label for look in _section_looks(sections) if look.label))
+
+
 def build_position_cue_sheet(
     sections: Sequence[PositionSheetSection],
     *,
     sequence_no: int,
-    preset_start: int,
+    preset_numbers: Mapping[str, int],
     fids: Sequence[int],
     fade_seconds: float = 3.0,
     move_seconds: float = 1.0,
@@ -152,11 +197,13 @@ def build_position_cue_sheet(
 ) -> PositionCueSheet:
     """The draft sheet for ``sections`` — resolutions, MIB plans, bundles.
 
-    ``preset_start`` is the operator-stated slot of the FIRST basic position
-    ('Home'); the other nine follow in ``BASIC_POSITION_SEQUENCE`` order,
-    exactly as ``_basic_position_presets`` stored them. Recalling a guessed
-    slot would aim the show at whatever happens to live there, so the number
-    always comes from the operator (instruction or question card).
+    ``preset_numbers`` maps each label :func:`required_sheet_labels` returns
+    for ``sections`` to its RESOLVED Position preset slot — the caller looks
+    them up on the console BY LABEL (카드 t449; ``ChatSession.
+    _resolve_position_preset_labels``). The old ``preset_start + index``
+    arithmetic never checked that the slot actually held that label, so a
+    pool whose 10-slot run was taken by other presets silently recalled the
+    wrong look. A label with no resolved number is refused, never guessed.
 
     ``lit_dimmer_fade`` is R4's optional per-section (dimmer %, fade
     seconds) pair, aligned one-to-one with ``sections`` (SPEC-COPILOT-
@@ -172,8 +219,6 @@ def build_position_cue_sheet(
     """
     if not sections:
         raise SpatialPointingError("no song sections to build a sheet from")
-    if preset_start <= 0:
-        raise SpatialPointingError(f"preset start {preset_start!r} must be positive")
     if lit_dimmer_fade is not None and len(lit_dimmer_fade) != len(sections):
         raise SpatialPointingError(
             f"lit_dimmer_fade carries {len(lit_dimmer_fade)} pairs "
@@ -185,13 +230,24 @@ def build_position_cue_sheet(
                 f"section start times must strictly increase: "
                 f"{prev.name!r} {prev.start_ms}ms then {cur.name!r} {cur.start_ms}ms"
             )
+    looks = _section_looks(sections)
+    needed = tuple(dict.fromkeys(look.label for look in looks if look.label))
+    missing = [label for label in needed if label not in preset_numbers]
+    if missing:
+        raise SpatialPointingError(
+            f"no resolved preset number for {missing!r} — expected one of {needed!r}"
+        )
+    for label in needed:
+        if preset_numbers[label] <= 0:
+            raise SpatialPointingError(
+                f"preset number {preset_numbers[label]!r} for {label!r} must be positive"
+            )
 
     resolutions: list[PositionSheetResolution] = []
-    usage: dict[str, tuple[int, int]] = {}  # label -> (use count, last section index)
     plans: list[PositionCuePlan] = []
-    for index, section in enumerate(sections):
+    for index, (section, look) in enumerate(zip(sections, looks, strict=True)):
         cue_no = index + 1  # skipped sections consume numbers (songcue convention)
-        if _BLACKOUT.search(section.mood) is not None:
+        if look.blackout:
             resolutions.append(
                 PositionSheetResolution(section=section, cue_no=cue_no, blackout=True)
             )
@@ -204,27 +260,24 @@ def build_position_cue_sheet(
                 )
             )
             continue
-        suggestion = match_position_mood(section.mood)
-        if suggestion is None:
+        if look.label is None:
             resolutions.append(
                 PositionSheetResolution(
                     section=section,
                     cue_no=cue_no,
-                    skipped_reason="무드 어휘가 포지션 표와 일치하지 않음",
+                    skipped_reason=look.skipped_reason,
                 )
             )
             continue
-        candidates = (suggestion.entry.label, *suggestion.entry.alternatives)
-        label = _pick_varied(candidates, usage)
-        usage[label] = (usage.get(label, (0, -1))[0] + 1, index)
-        preset_no = preset_start + BASIC_POSITION_SEQUENCE.index(label)
+        label = look.label
+        preset_no = preset_numbers[label]
         resolutions.append(
             PositionSheetResolution(
                 section=section,
                 cue_no=cue_no,
                 look_label=label,
                 preset_no=preset_no,
-                varied_from=(suggestion.entry.label if label != suggestion.entry.label else None),
+                varied_from=(look.canonical if label != look.canonical else None),
             )
         )
         if lit_dimmer_fade is None:

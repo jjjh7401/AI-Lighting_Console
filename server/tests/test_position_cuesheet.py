@@ -13,11 +13,16 @@ import pytest
 from server.design.position_sheet import build_standard_position_cue_sheet
 from server.design.profile import MusicProfile
 from server.design.rig import build_rig_profile
-from server.spatial.pointing import SpatialPointingError
+from server.spatial.pointing import BASIC_POSITION_SEQUENCE, SpatialPointingError
 from server.spatial.position_cuesheet import (
     PositionSheetSection,
     build_position_cue_sheet,
+    required_sheet_labels,
 )
+
+#: 카드 t449 — 정상 쇼파일(기본 10종이 21~30에 순서대로)을 라벨 조회한 결과.
+#: 옛 ``preset_start=21`` 과 바이트 동일한 번호를 낸다.
+_NORMAL_POOL_21 = {label: 21 + i for i, label in enumerate(BASIC_POSITION_SEQUENCE)}
 
 
 def _single_layer_rig():
@@ -37,7 +42,7 @@ def _sections() -> tuple[PositionSheetSection, ...]:
 class TestBuildPositionCueSheet:
     def test_moods_resolve_to_operator_based_presets(self):
         sheet = build_position_cue_sheet(
-            _sections(), sequence_no=110, preset_start=21, fids=[20, 26]
+            _sections(), sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20, 26]
         )
         by_cue = {res.cue_no: res for res in sheet.resolutions}
         # 잔잔/발라드 → Vocal DSC (sequence offset 4 → 2.25);
@@ -49,7 +54,9 @@ class TestBuildPositionCueSheet:
         assert by_cue[3].preset_no == 28
 
     def test_the_blackout_reveal_gains_a_mib_premove(self):
-        sheet = build_position_cue_sheet(_sections(), sequence_no=110, preset_start=21, fids=[20])
+        sheet = build_position_cue_sheet(
+            _sections(), sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20]
+        )
         assert [plan.cue_no for plan in sheet.plans] == [1, 2, 2.5, 3]
         premove = sheet.plans[2]
         assert premove.preset_no == 28 and premove.dimmer is None
@@ -57,7 +64,9 @@ class TestBuildPositionCueSheet:
         assert sheet.plans[3].preset_no is None and sheet.plans[3].dimmer == 100.0
 
     def test_every_lit_cue_stores_a_preset_recall(self):
-        sheet = build_position_cue_sheet(_sections(), sequence_no=110, preset_start=21, fids=[20])
+        sheet = build_position_cue_sheet(
+            _sections(), sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20]
+        )
         stores = [line for bundle in sheet.bundles for line in bundle if "Store" in line]
         recalls = [line for bundle in sheet.bundles for line in bundle if "At Preset" in line]
         assert len(stores) == 4  # 3 sections + 1 pre-move
@@ -76,14 +85,18 @@ class TestBuildPositionCueSheet:
             PositionSheetSection("Bridge", 30_000, "뭔가 애매한 느낌"),
             PositionSheetSection("Outro", 60_000, "웅장한 피날레"),
         )
-        sheet = build_position_cue_sheet(sections, sequence_no=110, preset_start=21, fids=[20])
+        sheet = build_position_cue_sheet(
+            sections, sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20]
+        )
         assert sheet.resolutions[1].skipped_reason is not None
         assert [plan.cue_no for plan in sheet.plans] == [1, 3]
 
     def test_cue_names_are_console_safe(self):
         # Korean section names fall back to 'Section n'; dots never survive.
         sections = (PositionSheetSection("인트로 v2.1", 0, "잔잔하게"),)
-        sheet = build_position_cue_sheet(sections, sequence_no=110, preset_start=21, fids=[20])
+        sheet = build_position_cue_sheet(
+            sections, sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20]
+        )
         store = next(line for line in sheet.bundles[0] if line.startswith("Store"))
         assert store == "Store Sequence 110 Cue 1 'v21' CueFade 3"
 
@@ -91,7 +104,9 @@ class TestBuildPositionCueSheet:
         # "브레이크1" → ASCII remainder "1" — measured live: the cue list
         # filled with cues named '1', '2'. Digits-only = fall back.
         sections = (PositionSheetSection("브레이크1", 0, "잔잔하게"),)
-        sheet = build_position_cue_sheet(sections, sequence_no=110, preset_start=21, fids=[20])
+        sheet = build_position_cue_sheet(
+            sections, sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20]
+        )
         store = next(line for line in sheet.bundles[0] if line.startswith("Store"))
         assert store == "Store Sequence 110 Cue 1 'Section 1' CueFade 3"
 
@@ -105,7 +120,9 @@ class TestBuildPositionCueSheet:
             PositionSheetSection("Drop2", 20_000, "클럽 드롭"),
             PositionSheetSection("Solo", 30_000, "화려 펼침"),
         )
-        sheet = build_position_cue_sheet(sections, sequence_no=110, preset_start=21, fids=[20])
+        sheet = build_position_cue_sheet(
+            sections, sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20]
+        )
         labels = [res.look_label for res in sheet.resolutions]
         # First occurrences keep the canonical looks; repeats drift to fresh
         # same-vibe alternatives (Cross -> Ring Out, Fan Out -> Audience).
@@ -117,7 +134,7 @@ class TestBuildPositionCueSheet:
 
     def test_refusals(self):
         with pytest.raises(SpatialPointingError, match="no song sections"):
-            build_position_cue_sheet((), sequence_no=110, preset_start=21, fids=[20])
+            build_position_cue_sheet((), sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20])
         with pytest.raises(SpatialPointingError, match="strictly increase"):
             build_position_cue_sheet(
                 (
@@ -125,17 +142,66 @@ class TestBuildPositionCueSheet:
                     PositionSheetSection("B", 10_000, "웅장"),
                 ),
                 sequence_no=110,
-                preset_start=21,
+                preset_numbers=_NORMAL_POOL_21,
                 fids=[20],
             )
-        with pytest.raises(SpatialPointingError, match="preset start"):
-            build_position_cue_sheet(_sections(), sequence_no=110, preset_start=0, fids=[20])
+        with pytest.raises(SpatialPointingError, match="must be positive"):
+            build_position_cue_sheet(
+                _sections(),
+                sequence_no=110,
+                preset_numbers={**_NORMAL_POOL_21, "Vocal DSC": 0},
+                fids=[20],
+            )
         with pytest.raises(SpatialPointingError, match="nothing to store"):
             build_position_cue_sheet(
                 (PositionSheetSection("A", 0, "애매한 무드"),),
                 sequence_no=110,
-                preset_start=21,
+                preset_numbers=_NORMAL_POOL_21,
                 fids=[20],
+            )
+
+
+class TestLabelResolvedPresetNumbers:
+    """카드 t449 — 번호는 ``preset_start + index`` 산술이 아니라 호출자가 콘솔에서
+    라벨로 찾은 슬롯에서 온다. 결함 상태: 1~10 이 시트 프리셋이고 진짜 기본
+    10종은 다른 자리에 있을 때 옛 산술은 조용히 엉뚱한 프리셋을 불렀다."""
+
+    def test_required_labels_match_what_the_sheet_recalls(self):
+        # 반복 무드의 대안 회전까지 포함해 빌더가 실제로 부르는 라벨과 같다.
+        sections = (
+            PositionSheetSection("Drop1", 0, "클럽 드롭"),
+            PositionSheetSection("Break", 5_000, "암전"),
+            PositionSheetSection("Verse", 10_000, "화려하게 펼침"),
+            PositionSheetSection("Drop2", 20_000, "클럽 드롭"),
+            PositionSheetSection("Odd", 25_000, "뭔가 애매한 느낌"),
+        )
+        labels = required_sheet_labels(sections)
+        assert labels == ("Cross", "Fan Out", "Ring Out")
+        sheet = build_position_cue_sheet(
+            sections, sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20]
+        )
+        recalled = tuple(dict.fromkeys(r.look_label for r in sheet.resolutions if r.look_label))
+        assert recalled == labels
+
+    def test_a_blackout_only_sheet_needs_no_label(self):
+        assert required_sheet_labels((PositionSheetSection("B", 0, "암전"),)) == ()
+
+    def test_the_recall_uses_the_resolved_slot_not_arithmetic(self):
+        # 진짜 Vocal DSC=45, Cross=48 (시트 프리셋이 1~10 을 차지한 쇼파일).
+        sheet = build_position_cue_sheet(
+            _sections(),
+            sequence_no=110,
+            preset_numbers={"Vocal DSC": 45, "Cross": 48},
+            fids=[20],
+        )
+        recalls = [line for bundle in sheet.bundles for line in bundle if "At Preset" in line]
+        assert recalls == ["Fixture 20 ; At Preset 2.45", "Fixture 20 ; At Preset 2.48"]
+        assert [r.preset_no for r in sheet.resolutions] == [45, None, 48]
+
+    def test_a_label_without_a_resolved_number_is_refused(self):
+        with pytest.raises(SpatialPointingError, match="no resolved preset number"):
+            build_position_cue_sheet(
+                _sections(), sequence_no=110, preset_numbers={"Vocal DSC": 45}, fids=[20]
             )
 
 
@@ -157,7 +223,7 @@ class TestStandardEngineIntegration:
         # pure spatial draft carries no lint at all since the SONGSTD M2
         # boundary move (the audit lives on StandardPositionCueSheet).
         sheet = build_position_cue_sheet(
-            self._profile_sections(), sequence_no=110, preset_start=21, fids=[20]
+            self._profile_sections(), sequence_no=110, preset_numbers=_NORMAL_POOL_21, fids=[20]
         )
         assert [plan.dimmer for plan in sheet.plans] == [100.0, 100.0]
         assert not hasattr(sheet, "lint_report")
@@ -168,7 +234,7 @@ class TestStandardEngineIntegration:
         sheet = build_standard_position_cue_sheet(
             self._profile_sections(),
             sequence_no=110,
-            preset_start=21,
+            preset_numbers=_NORMAL_POOL_21,
             fids=[20],
             profile=profile,
             rig=rig,
@@ -191,7 +257,7 @@ class TestStandardEngineIntegration:
         sheet = build_standard_position_cue_sheet(
             self._profile_sections(),
             sequence_no=110,
-            preset_start=21,
+            preset_numbers=_NORMAL_POOL_21,
             fids=[20],
             profile=profile,
             rig=rig,
@@ -205,7 +271,7 @@ class TestStandardEngineIntegration:
         sheet = build_standard_position_cue_sheet(
             _sections(),
             sequence_no=110,
-            preset_start=21,
+            preset_numbers=_NORMAL_POOL_21,
             fids=[20],
             profile=profile,
             rig=rig,
@@ -227,7 +293,7 @@ class TestStandardEngineIntegration:
         sheet = build_standard_position_cue_sheet(
             (PositionSheetSection("Verse", 0, "잔잔한 발라드"),),
             sequence_no=110,
-            preset_start=21,
+            preset_numbers=_NORMAL_POOL_21,
             fids=[20],
             profile=profile,
             rig=rig,
@@ -243,7 +309,7 @@ class TestStandardEngineIntegration:
             build_standard_position_cue_sheet(
                 self._profile_sections(),
                 sequence_no=110,
-                preset_start=21,
+                preset_numbers=_NORMAL_POOL_21,
                 fids=[20],
                 profile=MusicProfile(bpm=120.0),
             )
@@ -251,7 +317,7 @@ class TestStandardEngineIntegration:
             build_position_cue_sheet(
                 self._profile_sections(),
                 sequence_no=110,
-                preset_start=21,
+                preset_numbers=_NORMAL_POOL_21,
                 fids=[20],
                 profile=MusicProfile(bpm=120.0),
                 rig=_single_layer_rig(),

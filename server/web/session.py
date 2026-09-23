@@ -203,7 +203,11 @@ from server.spatial.pointing import (
     preset_recall_command,
     radial_pan_tilt,
 )
-from server.spatial.position_cuesheet import PositionSheetSection, build_position_cue_sheet
+from server.spatial.position_cuesheet import (
+    PositionSheetSection,
+    build_position_cue_sheet,
+    required_sheet_labels,
+)
 from server.spatial.position_fx import position_fx_commands, required_position_labels
 from server.spatial.position_moods import match_position_mood
 from server.spatial.vocabulary import (
@@ -7964,6 +7968,8 @@ class ChatSession:
             if isinstance(asked, InstructionResult):
                 return asked
             preset_start = asked
+        if preset_start <= 0:
+            return self._pointing_refusal("프리셋 시작 번호는 1 이상이어야 합니다.")
         fade_match = _CUE_FADE.search(text)
         fade_seconds = (
             float(fade_match.group("sec") or fade_match.group("sec2"))
@@ -7972,10 +7978,23 @@ class ChatSession:
         )
         fids = [fid for fid, _position in fixtures]
         try:
+            # 카드 t449 — t232 가 고친 세 경로와 같은 규율. 시트가 부를 라벨만
+            # 모아 풀 1회 판독으로 실제 슬롯을 찾는다. `preset_start + index`
+            # 는 그 슬롯이 진짜 그 라벨인지 보지 않았다(판독:
+            # `.moai/reports/t449/verdict.md`). 못 찾거나 모호하면 여기서
+            # 거부하고, 콘솔 쓰기는 한 줄도 나가지 않는다.
+            needed_labels = required_sheet_labels(sections)
+            preset_numbers = (
+                self._resolve_position_preset_labels(
+                    needed_labels, start=preset_start, span=len(BASIC_POSITION_SEQUENCE)
+                )
+                if needed_labels
+                else {}
+            )
             sheet = build_position_cue_sheet(
                 sections,
                 sequence_no=sequence_no,
-                preset_start=preset_start,
+                preset_numbers=preset_numbers,
                 fids=fids,
                 fade_seconds=fade_seconds,
             )
