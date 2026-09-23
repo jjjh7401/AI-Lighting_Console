@@ -1864,6 +1864,8 @@ body {
   border-top: 1px solid var(--timeline-line);
   border-right: 1px solid var(--timeline-line);
   background: linear-gradient(180deg, color-mix(in srgb, var(--energy) 16%, transparent), rgba(10, 15, 22, .76) 58%);
+  /* t435 REQ-LDDESIGN-099 — PLAN CUE 카드 수치(밝기·페이드 초) 세로 정렬 */
+  font-variant-numeric: tabular-nums;
 }
 
 .song-timeline-section.d-level-4 { --energy: #d67d4d; }
@@ -3491,7 +3493,9 @@ body {
 }
 
 .cst-tick span {
-  font: 10.5px/1 Consolas, monospace;
+  /* t435 REQ-LDDESIGN-099 — 시스템 모노 스택 + 타임라인 시간 눈금 정렬 */
+  font: 10.5px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   color: #6b7588;
   white-space: nowrap;
 }
@@ -3598,6 +3602,8 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: 11.5px;
+  /* t435 REQ-LDDESIGN-099 — CUE SHEET 수치 열(밝기 %·시각·Fade 초) 세로 정렬 */
+  font-variant-numeric: tabular-nums;
 }
 
 .cst-sheet th {
@@ -3619,12 +3625,12 @@ body {
 }
 
 .cst-sheet td.m {
-  font-family: Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: nowrap;
 }
 
 .cst-sheet td.fx {
-  font-family: Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 10.5px;
   color: #a8b4c6;
 }
