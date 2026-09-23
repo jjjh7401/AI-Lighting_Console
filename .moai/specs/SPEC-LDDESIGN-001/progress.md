@@ -456,6 +456,23 @@ VocabError가 난다(별도 카드).
 **Residual-risk**: `compile.py` D-레벨은 밝기에서 역산하므로 D5에 도달하지
 못한다. 분할 큐 주·보조색 맞바꾸기는 현행을 유지했다(카드 t445).
 
+### REQ-003 부분 — 구간별 주색 결정 단일화 (카드 t441)
+
+워크트리 `.claude/worktrees/t441`, 브랜치 `WT-single-composer`, 기준 `452d8aa7`.
+판정서 `.moai/reports/t441/verdict.md`.
+
+**Claim**: 두 입구(`session.py` 경로, `tools.py` `prepare_songcue`)가 같은 함수
+(`server/design/section_palette.py`)로 구간별 주색을 정한다. 경로 B는 세션의
+인터뷰 기록을 받아 Look을 고른 뒤 주색 칩만 덮는다. 기록이 없으면 오늘 그대로다.
+
+**Evidence**: 두 입구 주색 표 10/10 일치(`chorus_color_two_paths.md`).
+`prepare_songcue` 명령 diff는 52줄 중 색 값 5줄뿐이다. 덮어쓰기 호출을 빼는
+변이에서 1 failed. LDCLIMAX/ACCENT/RETURN 시험 40개와 8곡 게이트 90/6/8은
+바뀌지 않았다.
+
+**Gaps**: REQ-003 방출 단일화, `build_songcue_bundle` 은퇴, 세 메커니즘 이식은
+카드 t448로 넘긴다. 실기 콘솔은 확인하지 않았다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
