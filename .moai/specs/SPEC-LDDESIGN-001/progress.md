@@ -118,6 +118,138 @@ design.md §1 의 `Headroom` 스케치는 `remaining_scale_levels: int` 정수
 design.md §1 스케치 그대로 "포지션 변화가 있을 때만" 값을 갖는다.
 `resolver.mib_verdict()` 는 포지션이 바뀌지 않으면 `None` 을 반환한다.
 
+### M5 트래킹·타이밍·MIB·안전 큐 (REQ-LDDESIGN-053~072, 카드 t438)
+
+워크트리 `.claude/worktrees/t438` — 착수 직전 이 워크트리 사용이
+샌드박스로 거절돼(같은 절 안의 다른 워크트리 `git`/`git -C` 조작을
+격리 에이전트가 거부) 리드가 자기 워크트리에서 진행하도록 정정했고,
+그 뒤 환경이 primary working directory 를 `t438` 자체로 바꿔 이
+워크트리에서 직접 작업했다(경위는 커밋 로그와 이 절 자체가 증거).
+브랜치 `WT-concept-tracking-mib`, 기준 `06e3d125`(divergence 0 0).
+TDD 사이클(RED→GREEN, mutation 확인 2건).
+
+**Claim**: M2 의 트래킹 4모드(REQ-053~057)·타이밍(REQ-058~061)·MIB
+판정(REQ-062~067)·안전 큐(REQ-068~069)·근거 등급(REQ-071~072)을 신규
+모듈 5개로 구현했다. `resolver.mib_verdict()`/`resolve_sequence()` 를
+재사용하고(두 번째 판정기를 만들지 않는다, REQ-067), `MOVE_SECONDS`/
+`SETTLE_SECONDS` 잠정값을 `resolver.py` 한 지점에서만 가져온다.
+
+#### 신규 파일
+
+- `server/concept/tracking.py` — `default_tracking()`(4모드 기본값,
+  REQ-053~056) + `verify_no_cue_only_leak()`(REQ-057/AC-015 프로퍼티
+  검사기 — cue_only 행을 뺀 시퀀스와 비교).
+- `server/concept/timing.py` — `default_timing()`(트리거·구간별 기본
+  Timing, REQ-058) + `chorus_entry_timing()`(REQ-059/060) +
+  `outro_timing()` + `emit_fade()`(REQ-061, `cue_fade.store_with_fade`
+  재사용).
+- `server/concept/mib.py` — `compute_mib_sequence()`(REQ-062/067,
+  `off_since` 순회 재구현) + `mark_cue_spec()`(REQ-063) +
+  `movers_off_ops()`(REQ-064) + `resolve_position()`(REQ-065) +
+  `live_move_note()`(REQ-066).
+- `server/concept/safety.py` — `first_safety_cue()`(REQ-068) +
+  `last_safety_cue()`(REQ-069, `reduce factor=0`).
+- `server/concept/evidence.py` — `VERIFIED_EXPLANATION`·
+  `NO_PUBLIC_EVIDENCE_MARKER`·`mark_no_public_evidence()`(REQ-071/072).
+- `server/tests/test_concept_tracking.py`(14건)·
+  `test_concept_timing.py`(16건)·`test_concept_mib.py`(17건)·
+  `test_concept_safety.py`(9건)·`test_concept_evidence.py`(8건)·
+  `test_concept_no_director_import.py`(AST 기반, 제약 4 — 신규 모듈
+  5개가 `server.director` 를 import 하지 않는지 판정).
+
+#### 결정 — REQ-062 문언과 실제 판정 의미론의 편차(배차서 5번 항목)
+
+spec.md REQ-062 문면은 "충분하면 dark, 부족하면 mark"로 읽히지만, 그
+근거인 `tracking-timing-mib-20260921.md:70`("충분하면 Mark 큐 자동
+삽입, 아니면 live_move")·REQ-063·기존 M2 `mib_verdict()` 는 전부
+"무버가 계속 꺼져 있으면 dark, 꺼졌다가 켜지며 창이 충분하면 mark,
+그 밖은 live"다. 이 카드는 기존 코드·연구 문서의 의미론을 그대로
+따랐다(`mib.py` 는 `resolver.mib_verdict()` 를 재사용할 뿐 재구현하지
+않는다) — spec.md 편집은 리드 몫으로 남긴다(카드 지시 5번).
+
+#### 결정 — 타이밍 트리거→kind 매핑은 이 카드가 내린 판단(spec.md 미문언)
+
+`timing.py` 는 REQ-058 이 예시로 든 "드롭·히트·백색 플래시류"·
+"프레이즈 전환(악기 추가 등)"·"발라드성 공간 확장·아웃트로"를 닫힌
+10종 트리거 어휘로 1:1 매핑하지 않는다(문면이 직접 대응시키지 않는다)
+— 모듈 독스트링에 판단 근거를 남겼다: 드롭류→"드롭 직전의 정적",
+프레이즈 전환류→"악기 추가"·"악기 제거"·"보컬 시작"·"보컬 종료"·
+"빌드업 시작", 나머지 감독 전용 4종→long(발라드성 느린 전환으로 간주).
+
+#### 결정 — `resolve_position()` 은 mark 판정을 낼 수 없다(설계 경계)
+
+포지션만 바꿔 보는 프로브라 `dim` 은 그대로 들고 간다 — 무버가 꺼진
+채면 창이 아무리 길어도 항상 `dark`(`mark` 는 같은 큐에서 무버가 함께
+켜지는 경우라 이 프로브 범위 밖이다). mark 가 필요한 자리는
+`compute_mib_sequence()`(dim 변화도 함께 도는 시퀀스 판정)를 쓴다.
+착수 중 시험을 처음 `mark` 기대로 썼다가 이 경계를 발견해 시험·
+독스트링 둘 다 고쳤다(REQ-065 자체는 위반이 아니다 — "유지"는 여전히
+정확히 일어난다, 시험의 기대 상태만 틀렸었다).
+
+#### Evidence — RED (구현 파일 5개가 없는 상태의 실제 출력)
+
+```
+$ uv run pytest -q server/tests/test_concept_tracking.py server/tests/test_concept_timing.py \
+    server/tests/test_concept_mib.py server/tests/test_concept_safety.py \
+    server/tests/test_concept_evidence.py server/tests/test_concept_no_director_import.py
+==================================== ERRORS ====================================
+____________ ERROR collecting server/tests/test_concept_tracking.py ____________
+ModuleNotFoundError: No module named 'server.concept.tracking'
+_____________ ERROR collecting server/tests/test_concept_timing.py _____________
+ModuleNotFoundError: No module named 'server.concept.timing'
+______________ ERROR collecting server/tests/test_concept_mib.py _______________
+ModuleNotFoundError: No module named 'server.concept.mib'
+_____________ ERROR collecting server/tests/test_concept_safety.py _____________
+ModuleNotFoundError: No module named 'server.concept.safety'
+____________ ERROR collecting server/tests/test_concept_evidence.py ____________
+ModuleNotFoundError: No module named 'server.concept.evidence'
+=========================== short test summary info ============================
+ERROR server/tests/test_concept_tracking.py
+ERROR server/tests/test_concept_timing.py
+ERROR server/tests/test_concept_mib.py
+ERROR server/tests/test_concept_safety.py
+ERROR server/tests/test_concept_evidence.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 5 errors during collection !!!!!!!!!!!!!!!!!!!!
+5 errors in 0.14s
+```
+
+#### Evidence — GREEN
+
+```
+$ uv run pytest -q server/tests/test_concept_*.py
+........................................................................ [ 35%]
+........................................................................ [ 71%]
+..........................................................               [100%]
+202 passed in 0.22s
+```
+
+(M2 시험 40건 + M5 신규 64건 + 기존 통합 시험 = 202건 전체 통과. M5
+신규분만 세면 `-k`로 6개 파일 합계 64건.)
+
+#### Evidence — mutation 확인 2건 (전부 백업→수정→실패 관찰→git diff 없음으로 복원)
+
+1. **cue_only 누출 검사기** — `resolver.py`의
+   `if tracking != "cue_only": carry = next_state` 를 무조건
+   `carry = next_state` 로 바꾸자 `test_concept_tracking.py`의 leak 시험
+   3건이 즉시 FAIL(`AssertionError: assert False is True`)했다.
+   `cp`으로 원복 후 `git diff --stat`가 빈 출력임을 확인했다.
+2. **단일 지점 상수** — `mib.py`에 `MOVE_SECONDS = 1.5`/
+   `SETTLE_SECONDS = 0.5` 를 삽입하자
+   `TestNoLiteralConstantRedefinition::test_no_1_5_or_0_5_literal_in_source`
+   가 즉시 FAIL 했다. 같은 방식으로 원복·`git diff --stat` 빈 출력 확인.
+
+#### Evidence — ruff
+
+```
+$ uv run ruff check server/concept server/tests/test_concept_{tracking,timing,mib,safety,evidence,no_director_import}.py
+All checks passed!
+$ uv run ruff format --check (같은 파일 목록)
+17 files already formatted
+```
+
+(최초 실행에서 `zip()` 에 `strict=` 누락 2건 + Yoda 조건 1건을 잡아
+고쳤다 — 위 결과는 수정 후 재실행분이다.)
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
