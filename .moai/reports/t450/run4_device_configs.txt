@@ -1,0 +1,20 @@
+
+>>> state:Root/DeviceConfigurations/OutputStations
+    wire: Plugin "CopilotResponder" "state e2a94e2a Root/DeviceConfigurations/OutputStations"
+<<< {"children": [{"class": "OutputStationCollect", "i": 1, "name": "Console"}, {"class": "OutputStationCollect", "i": 2, "name": "onPC"}, {"class": "OutputStationCollect", "i": 3, "name": "PU"}, {"class": "OutputStationCollect", "i": 4, "name": "NetworkNode"}], "id": "e2a94e2a", "kind": "state", "node": {"childCount": 4, "class": "OutputStations", "enumeration": "ok", "name": "OutputStations"}, "offset": 0, "ok": true, "path": "Root/DeviceConfigurations/OutputStations", "truncated": false, "v": 1}
+
+>>> state:Root/DeviceConfigurations/DMXProtocols
+    wire: Plugin "CopilotResponder" "state 78fc5066 Root/DeviceConfigurations/DMXProtocols"
+<<< {"children": [{"class": "ArtNet", "i": 1, "name": "ArtNet"}, {"class": "sACN", "i": 2, "name": "sACN"}], "id": "78fc5066", "kind": "state", "node": {"childCount": 2, "class": "DMXProtocols", "enumeration": "ok", "name": "DMXProtocols"}, "offset": 0, "ok": true, "path": "Root/DeviceConfigurations/DMXProtocols", "truncated": false, "v": 1}
+
+>>> state:Root/DeviceConfigurations/DMXProtocols/1
+    wire: Plugin "CopilotResponder" "state d253e4e7 Root/DeviceConfigurations/DMXProtocols/1"
+<<< {"children": [{"class": "ArtNetDataCollect", "i": 1, "name": "ArtNetDataCollect"}, {"class": "ArtNetNodeCollect", "i": 2, "name": "ArtNetNodeCollect"}, {"class": "ArtNetTimecodeCollect", "i": 3, "name": "ArtNetTimecodeCollect"}], "id": "d253e4e7", "kind": "state", "node": {"childCount": 3, "class": "ArtNet", "enumeration": "ok", "name": "ArtNet"}, "offset": 0, "ok": true, "path": "Root/DeviceConfigurations/DMXProtocols/1", "truncated": false, "v": 1}
+
+>>> state:Root/DeviceConfigurations/DMXProtocols/2
+    wire: Plugin "CopilotResponder" "state 6d645e3c Root/DeviceConfigurations/DMXProtocols/2"
+<<< {"children": [{"class": "sACNDataCollect", "i": 1, "name": "sACNDataCollect"}, {"class": "sACNDiscoveryCollect", "i": 2, "name": "sACNDiscoveryCollect"}], "id": "6d645e3c", "kind": "state", "node": {"childCount": 2, "class": "sACN", "enumeration": "ok", "name": "sACN"}, "offset": 0, "ok": true, "path": "Root/DeviceConfigurations/DMXProtocols/2", "truncated": false, "v": 1}
+
+>>> state:Root/DeviceConfigurations/DMXProtocols/3
+    wire: Plugin "CopilotResponder" "state 460887db Root/DeviceConfigurations/DMXProtocols/3"
+<<< {"error": "path segment not found: '3' (in Root/DeviceConfigurations/DMXProtocols/3)", "id": "460887db", "kind": "state", "offset": 0, "ok": false, "path": "Root/DeviceConfigurations/DMXProtocols/3", "v": 1}
