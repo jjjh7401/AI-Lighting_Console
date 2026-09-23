@@ -128,7 +128,11 @@ def resolve_position(
         함께 도는 시퀀스 판정)를 쓴다.
     """
     probe = CueState(
-        dim=dict(prev_state.dim), color=prev_state.color, pos=intended_pos, motion=prev_state.motion
+        dim=dict(prev_state.dim),
+        color=prev_state.color,
+        pos=intended_pos,
+        motion=prev_state.motion,
+        secondary=prev_state.secondary,
     )
     verdict = mib_verdict(prev_state, probe, ts=ts, dark_since=dark_since, movers=movers)
     if verdict is not None and verdict.status == "live":

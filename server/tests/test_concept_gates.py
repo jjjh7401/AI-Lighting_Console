@@ -15,9 +15,25 @@ G6 판정식이 REQ-029 의 **예외** 조건을 위반 조건으로 뒤집어 �
 (98)도 아니라 **이 파이프라인이 오늘 실제로 내는 값**을 고정한다
 (REQ-075/076).
 
-REQ-076 — 발견한 편차는 종이로 덮지 않는다. 최종 실측은 **PASS 90 ·
-n/a 6 · FAIL 8** 로 정정 기준선(90)과 같다. 남은 FAIL 8칸은 전부 G6 이고
-실제 위반이다:
+**카드 t444 정정 — 오늘 고정값은 PASS 75 · n/a 29 · FAIL 0 이다.**
+``pilot_baseline.json`` 의 곡에는 색이 없다(키: song·bpm·bpm_confidence·
+duration_ms·n_sections·sections, 구간 키에도 색 없음). 아래 옛 서술(t439)의
+G6 FAIL 8 과 G2 PASS 7·G7 PASS 8 은 **입력 색이 아니라 프로토타입 상수
+팔레트**(``gates.PRIMARY_COLOR`` 등 4개)로 판정한 값이었다 — 무대에 나갈
+색에 대한 증거가 아니다. 그래서 색에 기대는 게이트(G2·G6·G7 전체, G5 의
+"Chorus 1 흰색" 조건)는 입력 색이 없으면 n/a(``gates.
+NO_INPUT_COLOR_REASON``)로 바뀌었다: 90/6/8 → 75/29/0 (G2 7칸·G7 8칸
+PASS→n/a, G6 8칸 FAIL→n/a, 나머지 81칸 불변). G5 는 흰색 조건만 빼고
+판정하는데 상수 팔레트의 Chorus 1 색이 노랑이라 원래도 그 조건에 걸린
+곡이 없어 8곡 모두 그대로다. 입력 색이 있을 때의 판정은
+``test_concept_color_input_t444.py`` 가 고정한다.
+
+아래는 카드 t439 당시 서술이다(역사 기록 — 판정 근거가 상수 팔레트였다는
+점만 위 정정으로 바뀐다).
+
+REQ-076 — 발견한 편차는 종이로 덮지 않는다. t439 실측은 **PASS 90 ·
+n/a 6 · FAIL 8** 로 정정 기준선(90)과 같았다. 남은 FAIL 8칸은 전부 G6
+이었다:
 
 1. **G6 (컬러: 유보색 조기 0 · 브리지 위반 0) — 8곡 전부, 실 위반.**
    유보색 검사(REQ-027, ``check_reserved_color_release``)는 8곡 전부
@@ -87,19 +103,20 @@ def _load_usable_songs() -> list[dict[str, Any]]:
 _SONGS = _load_usable_songs()
 _SONGS_BY_NAME = {song["song"]: song for song in _SONGS}
 
-# --- 오늘 실측(``.moai/reports/t439/baseline/matrix.json``, 프로토타입
-# 직접 실행) 대비, 이 파이프라인이 실제로 내는 13×8 판정 행렬. 프로토타입
-# 값과 다른 8칸(G6 8곡 전부)은 위 모듈 docstring 이 원인을 설명한다 —
-# 전부 True→False(거짓 PASS 교정). 나머지 96칸은 프로토타입과 동일하다.
+# --- 이 파이프라인이 오늘 실제로 내는 13×8 판정 행렬(카드 t444 재측정,
+# ``.moai/reports/t444/gates_8songs.txt``). 프로토타입 기준선과 다른 23칸은
+# 전부 색 게이트(G2 7·G6 8·G7 8)의 → n/a 다 — 입력에 색이 없어 상수
+# 팔레트로 판정하지 않는다(모듈 docstring 카드 t444 정정). 나머지 81칸은
+# 프로토타입과 동일하다.
 EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     "Club Diver.mp3": {
         "G1 어휘 닫힘": True,
-        "G2 후렴 정체성": True,
+        "G2 후렴 정체성": None,  # 입력에 색 없음(카드 t444)
         "G3 회차마다 새 축(5회차까지)": True,
         "G4 피날레 새 축 + 여유": True,
         "G5 헤드룸 경고 0": True,
-        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 모듈 docstring 원인 1
-        "G7 후렴 주색 동일": True,
+        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": None,  # 입력에 색 없음(카드 t444)
+        "G7 후렴 주색 동일": None,  # 입력에 색 없음(카드 t444)
         "G8 후렴 앞 빌드업": True,
         "G9 트래킹: Block·Release·누출 0": True,
         "G10 상대 감소 겹침 없음": None,
@@ -109,12 +126,12 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     },
     "Cut and Run.mp3": {
         "G1 어휘 닫힘": True,
-        "G2 후렴 정체성": True,
+        "G2 후렴 정체성": None,  # 입력에 색 없음(카드 t444)
         "G3 회차마다 새 축(5회차까지)": True,
         "G4 피날레 새 축 + 여유": True,
         "G5 헤드룸 경고 0": True,
-        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 원인 1
-        "G7 후렴 주색 동일": True,
+        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": None,  # 입력에 색 없음(카드 t444)
+        "G7 후렴 주색 동일": None,  # 입력에 색 없음(카드 t444)
         "G8 후렴 앞 빌드업": True,
         "G9 트래킹: Block·Release·누출 0": True,
         "G10 상대 감소 겹침 없음": True,
@@ -124,12 +141,12 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     },
     "Ice cream.mp3": {
         "G1 어휘 닫힘": True,
-        "G2 후렴 정체성": True,
+        "G2 후렴 정체성": None,  # 입력에 색 없음(카드 t444)
         "G3 회차마다 새 축(5회차까지)": True,
         "G4 피날레 새 축 + 여유": None,
         "G5 헤드룸 경고 0": True,
-        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 원인 1
-        "G7 후렴 주색 동일": True,
+        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": None,  # 입력에 색 없음(카드 t444)
+        "G7 후렴 주색 동일": None,  # 입력에 색 없음(카드 t444)
         "G8 후렴 앞 빌드업": True,
         "G9 트래킹: Block·Release·누출 0": True,
         "G10 상대 감소 겹침 없음": None,
@@ -139,12 +156,12 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     },
     "Morning.mp3": {
         "G1 어휘 닫힘": True,
-        "G2 후렴 정체성": True,
+        "G2 후렴 정체성": None,  # 입력에 색 없음(카드 t444)
         "G3 회차마다 새 축(5회차까지)": True,
         "G4 피날레 새 축 + 여유": True,
         "G5 헤드룸 경고 0": True,
-        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 원인 1
-        "G7 후렴 주색 동일": True,
+        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": None,  # 입력에 색 없음(카드 t444)
+        "G7 후렴 주색 동일": None,  # 입력에 색 없음(카드 t444)
         "G8 후렴 앞 빌드업": True,
         "G9 트래킹: Block·Release·누출 0": True,
         "G10 상대 감소 겹침 없음": True,
@@ -154,12 +171,12 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     },
     "Rain.mp3": {
         "G1 어휘 닫힘": True,
-        "G2 후렴 정체성": True,
+        "G2 후렴 정체성": None,  # 입력에 색 없음(카드 t444)
         "G3 회차마다 새 축(5회차까지)": True,
         "G4 피날레 새 축 + 여유": True,
         "G5 헤드룸 경고 0": True,
-        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 원인 1
-        "G7 후렴 주색 동일": True,
+        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": None,  # 입력에 색 없음(카드 t444)
+        "G7 후렴 주색 동일": None,  # 입력에 색 없음(카드 t444)
         "G8 후렴 앞 빌드업": True,
         "G9 트래킹: Block·Release·누출 0": True,
         "G10 상대 감소 겹침 없음": True,
@@ -169,12 +186,12 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     },
     "Too Cool.mp3": {
         "G1 어휘 닫힘": True,
-        "G2 후렴 정체성": True,
+        "G2 후렴 정체성": None,  # 입력에 색 없음(카드 t444)
         "G3 회차마다 새 축(5회차까지)": True,
         "G4 피날레 새 축 + 여유": True,
         "G5 헤드룸 경고 0": True,
-        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 원인 1
-        "G7 후렴 주색 동일": True,
+        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": None,  # 입력에 색 없음(카드 t444)
+        "G7 후렴 주색 동일": None,  # 입력에 색 없음(카드 t444)
         "G8 후렴 앞 빌드업": True,
         "G9 트래킹: Block·Release·누출 0": True,
         "G10 상대 감소 겹침 없음": True,
@@ -184,12 +201,12 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     },
     "scott-buckley-neon.mp3": {
         "G1 어휘 닫힘": True,
-        "G2 후렴 정체성": True,
+        "G2 후렴 정체성": None,  # 입력에 색 없음(카드 t444)
         "G3 회차마다 새 축(5회차까지)": True,
         "G4 피날레 새 축 + 여유": True,
         "G5 헤드룸 경고 0": True,  # 카드 t439 — 비교 대상을 프로토타입처럼 직전 전체 행으로(원인 2)
-        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 원인 1
-        "G7 후렴 주색 동일": True,
+        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": None,  # 입력에 색 없음(카드 t444)
+        "G7 후렴 주색 동일": None,  # 입력에 색 없음(카드 t444)
         "G8 후렴 앞 빌드업": True,
         "G9 트래킹: Block·Release·누출 0": True,
         "G10 상대 감소 겹침 없음": True,
@@ -199,12 +216,12 @@ EXPECTED_GATES: dict[str, dict[str, bool | None]] = {
     },
     "걸그룹DinoDino_C_max최고품질.wav": {
         "G1 어휘 닫힘": True,
-        "G2 후렴 정체성": None,
+        "G2 후렴 정체성": None,  # 후렴 쌍 없음(구조상 n/a)
         "G3 회차마다 새 축(5회차까지)": None,
         "G4 피날레 새 축 + 여유": None,
         "G5 헤드룸 경고 0": True,
-        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": False,  # 새 FAIL — 원인 1
-        "G7 후렴 주색 동일": True,
+        "G6 컬러: 유보색 조기 0 · 브리지 위반 0": None,  # 입력에 색 없음(카드 t444)
+        "G7 후렴 주색 동일": None,  # 입력에 색 없음(카드 t444)
         "G8 후렴 앞 빌드업": True,
         "G9 트래킹: Block·Release·누출 0": True,
         "G10 상대 감소 겹침 없음": True,
@@ -360,23 +377,23 @@ def test_gate_matrix_matches_measured_pipeline_output(song_name: str) -> None:
     assert actual == EXPECTED_GATES[song_name]
 
 
-def test_gate_matrix_diverges_from_prototype_baseline_only_in_g6() -> None:
+def test_gate_matrix_diverges_from_prototype_baseline_only_in_color_gates() -> None:
     """REQ-076 — 프로토타입 기준선(구 기준선 98)과의 차이를 셀 단위로
-    센다. 다른 칸은 G6 8곡뿐이다 — 프로토타입 G6 식이 REQ-029 면제 조건을
-    거꾸로 세서 생긴 거짓 PASS 를 바로잡은 결과이고, 나머지 96칸은
-    동일하다(모듈 docstring 참고)."""
+    센다. 다른 칸은 색 게이트뿐이고 전부 n/a 로 바뀐 것이다(카드 t444 —
+    입력에 색이 없으면 상수 팔레트로 판정하지 않는다). G2 는 후렴 쌍이
+    있는 7곡, G6·G7 은 8곡 전부다. 나머지 81칸은 동일하다."""
     diffs = [
         (song, gate)
         for song in EXPECTED_GATES
         for gate in GATE_NAMES
         if EXPECTED_GATES[song][gate] != BASELINE_GATES[song][gate]
     ]
-    assert len(diffs) == 8
-    assert all(EXPECTED_GATES[song][gate] is False for song, gate in diffs)
-    g6_diffs = [d for d in diffs if d[1].startswith("G6")]
-    g5_diffs = [d for d in diffs if d[1].startswith("G5")]
-    assert len(g6_diffs) == 8  # 8곡 전부
-    assert g5_diffs == []
+    assert all(EXPECTED_GATES[song][gate] is None for song, gate in diffs)
+    by_gate = {
+        prefix: sum(1 for d in diffs if d[1].startswith(prefix)) for prefix in ("G2", "G6", "G7")
+    }
+    assert by_gate == {"G2": 7, "G6": 8, "G7": 8}
+    assert len(diffs) == 23
 
 
 def test_aggregate_pass_na_fail_counts() -> None:
@@ -387,6 +404,10 @@ def test_aggregate_pass_na_fail_counts() -> None:
     기준선은 90(=98-8)이고, 카드 t439 수정(G4 재정의 · Intro 복원 · G5
     비교 대상 교정) 뒤 실측도 PASS 90 · n/a 6 · FAIL 8 이다. 남은 FAIL 8은
     전부 G6 실제 위반이다(REQ-076 — 시험이 가리지 않고 고정해 보고한다).
+
+    카드 t444 — 그 G6 FAIL 8 과 G2·G7 PASS 는 입력 색이 아닌 상수 팔레트
+    판정이었다. 입력에 색이 없는 8곡은 색 게이트가 n/a 가 되어 오늘 값은
+    PASS 75 · n/a 29 · FAIL 0 이다(모듈 docstring 정정).
     """
     total = pass_count = na_count = fail_count = 0
     for _song, gates in EXPECTED_GATES.items():
@@ -400,7 +421,7 @@ def test_aggregate_pass_na_fail_counts() -> None:
             else:
                 fail_count += 1
     assert total == 8 * 13 == 104
-    assert (pass_count, na_count, fail_count) == (90, 6, 8)
+    assert (pass_count, na_count, fail_count) == (75, 29, 0)
 
 
 class TestFabricatedControlProbe:
@@ -513,24 +534,37 @@ def test_evaluate_song_is_deterministic() -> None:
     assert first == second
 
 
+def _with_uniform_palette(song: dict[str, Any]) -> dict[str, Any]:
+    """카드 t444 — 모든 구간에 같은 두 색을 실은 사본. G7 이 "판정한다/
+    n/a 다"를 가르는 시험은 입력 색이 있어야 의미가 있다(색이 없으면 두
+    모드 모두 n/a 라 대조가 공허하다)."""
+    colored = copy.deepcopy(song)
+    for section in colored["sections"]:
+        section["palette"] = ["blue", "warm white"]
+    return colored
+
+
 class TestG7FollowsPerSongColorUsage:
     """카드 t439 — 감독 결정(2026-09-23): 후렴 회차 색 고정은 기본값이고
     곡별 ``per_chorus``(Q2B) 선택은 예외다. G7(후렴 주색 동일)은 기본 모드
-    곡만 판정하고 per_chorus 곡은 n/a 로 둔다."""
+    곡만 판정하고 per_chorus 곡은 n/a 로 둔다. 카드 t444 부터 입력 색이
+    있는 곡으로 잰다."""
 
     _G7 = next(name for name in GATE_NAMES if name.startswith("G7"))
 
     @pytest.mark.parametrize("song_name", sorted(EXPECTED_GATES))
     def test_per_chorus_song_marks_g7_not_applicable(self, song_name: str) -> None:
-        result = evaluate_song(_SONGS_BY_NAME[song_name], color_usage="per_chorus")
+        song = _with_uniform_palette(_SONGS_BY_NAME[song_name])
+        result = evaluate_song(song, color_usage="per_chorus")
         assert result[self._G7].passed is None
         # 다른 12개 게이트는 기본 모드와 똑같다.
-        default = evaluate_song(_SONGS_BY_NAME[song_name])
+        default = evaluate_song(song)
         for gate in GATE_NAMES:
             if gate != self._G7:
                 assert result[gate].passed == default[gate].passed
 
     def test_default_mode_still_judges_g7(self) -> None:
-        """대조군 — 기본(modulate)은 G7 을 실제로 판정한다(n/a 가 아니다)."""
+        """대조군 — 기본(modulate)은 입력 색이 있으면 G7 을 실제로 판정한다
+        (n/a 가 아니다)."""
         for song in _SONGS:
-            assert evaluate_song(song)[self._G7].passed is not None
+            assert evaluate_song(_with_uniform_palette(song))[self._G7].passed is True

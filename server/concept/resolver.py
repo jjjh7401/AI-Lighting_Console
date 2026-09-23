@@ -78,6 +78,7 @@ def apply(
     """
     dim: dict[str, int] = dict(state.dim)
     color = state.color
+    secondary = state.secondary
     pos = state.pos
     motion = state.motion
 
@@ -114,6 +115,11 @@ def apply(
             dim = {role: int(round(value * factor)) for role, value in base.dim.items()}  # type: ignore[operator]
         elif kind == "replace":
             color = op["color"]  # type: ignore[assignment]
+            # 카드 t444 — 보조색은 같은 replace 동작에 실려 온다. 싣지 않은
+            # 동작(한 색만 쓰는 기존 경로)은 보조색을 비운다: 주색만 바꾼
+            # 큐가 앞 큐의 보조색을 그대로 끌고 가면 내보내지 않은 색이
+            # 남는다.
+            secondary = op.get("secondary")  # type: ignore[assignment]
         elif kind == "isolate":
             keep = op["role"]
             keep_dimmer = op["dimmer"]
@@ -126,6 +132,7 @@ def apply(
             base = bases[ref]  # type: ignore[index]
             dim = dict(base.dim)
             color = base.color
+            secondary = base.secondary
             motion = base.motion
             # 포지션은 SHALL NOT 복원한다(REQ-020) — pos 는 건드리지 않는다.
         elif kind == "release":
@@ -138,7 +145,7 @@ def apply(
         if "motion" in op:
             motion = op["motion"]  # type: ignore[assignment]
 
-    return CueState(dim=dim, color=color, pos=pos, motion=motion)
+    return CueState(dim=dim, color=color, pos=pos, motion=motion, secondary=secondary)
 
 
 def resolve_sequence(rows: Sequence[Mapping[str, object]]) -> list[CueState]:
