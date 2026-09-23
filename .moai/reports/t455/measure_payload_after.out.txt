@@ -1,0 +1,31 @@
+section hex:
+  Intro     palette=['Blue']                 primary_hex=#0D33FF secondary_hex=None
+  Verse 1   palette=['블루', 'Amber']          primary_hex=#0D33FF secondary_hex=#FF8C0D
+  Chorus 1  palette=['Warm White']           primary_hex=#FFBF66 secondary_hex=None
+  Verse 2   palette=['흰색']                   primary_hex=None secondary_hex=None
+  Chorus 2  palette=['gold', 'Red']          primary_hex=None secondary_hex=#FF0000
+  Bridge    palette=['Lavender']             primary_hex=#8C59FF secondary_hex=None
+  Chorus 3  palette=['Cyan', 'Magenta']      primary_hex=#00E6FF secondary_hex=#FF00B2
+  Outro     palette=['핑크']                   primary_hex=None secondary_hex=None
+concept_report keys: ['available', 'energy_report_count', 'gates', 'lint_disabled_rule_count', 'lint_finding_count', 'mib', 'row_pairing', 'rows']
+row_pairing: {'available': True, 'reason': None}
+   {"q": 1, "ts": -1.0, "kind": "safety", "section": "Intro", "occurrence": 0, "trigger": null, "tracking": "block", "mib": null, "one_shot": null, "evidence": null, "screen_position": null}
+   {"q": 2, "ts": 0.0, "kind": "section", "section": "Intro", "occurrence": 1, "trigger": null, "tracking": "track", "mib": "dark", "one_shot": null, "evidence": null, "screen_position": 0}
+   {"q": 3, "ts": 7.0, "kind": "phrase", "section": "Intro", "occurrence": 1, "trigger": "보컬 시작", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 0}
+   {"q": 4, "ts": 15.0, "kind": "section", "section": "Verse", "occurrence": 1, "trigger": null, "tracking": "track", "mib": null, "one_shot": null, "evidence": null, "screen_position": 1}
+   {"q": 5, "ts": 32.0, "kind": "phrase", "section": "Pre-Chorus", "occurrence": 1, "trigger": "빌드업 시작", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 1}
+   {"q": 6, "ts": 40.0, "kind": "section", "section": "Chorus", "occurrence": 1, "trigger": null, "tracking": "track", "mib": null, "one_shot": {"shot": "White hit", "target": "KEY+FOH"}, "evidence": null, "screen_position": 2}
+   {"q": 7, "ts": 44.0, "kind": "phrase", "section": "Chorus", "occurrence": 1, "trigger": "악기 추가", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 2}
+   {"q": 8, "ts": 60.0, "kind": "section", "section": "Verse", "occurrence": 2, "trigger": null, "tracking": "track", "mib": null, "one_shot": null, "evidence": null, "screen_position": 3}
+   {"q": 9, "ts": 77.0, "kind": "phrase", "section": "Pre-Chorus", "occurrence": 2, "trigger": "빌드업 시작", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 3}
+   {"q": 10, "ts": 85.0, "kind": "section", "section": "Chorus", "occurrence": 2, "trigger": null, "tracking": "track", "mib": "dark", "one_shot": {"shot": "White hit", "target": "KEY+FOH"}, "evidence": null, "screen_position": 4}
+   {"q": 11, "ts": 89.0, "kind": "phrase", "section": "Chorus", "occurrence": 2, "trigger": "악기 추가", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 4}
+   {"q": 12, "ts": 93.0, "kind": "phrase", "section": "Chorus", "occurrence": 2, "trigger": "악기 추가", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 4}
+   {"q": 13, "ts": 105.0, "kind": "section", "section": "Bridge", "occurrence": 1, "trigger": null, "tracking": "track", "mib": null, "one_shot": null, "evidence": null, "screen_position": 5}
+   {"q": 14, "ts": 121.0, "kind": "phrase", "section": "Pre-Chorus", "occurrence": 3, "trigger": "빌드업 시작", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 5}
+   {"q": 15, "ts": 125.0, "kind": "section", "section": "Final Chorus", "occurrence": 1, "trigger": null, "tracking": "track", "mib": "mark", "one_shot": {"shot": "Blinder hit", "target": "BLIND"}, "evidence": null, "screen_position": 6}
+   {"q": 16, "ts": 129.0, "kind": "phrase", "section": "Final Chorus", "occurrence": 1, "trigger": "악기 추가", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 6}
+   {"q": 17, "ts": 133.0, "kind": "phrase", "section": "Final Chorus", "occurrence": 1, "trigger": "악기 추가", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 6}
+   {"q": 18, "ts": 137.0, "kind": "phrase", "section": "Final Chorus", "occurrence": 1, "trigger": "악기 추가", "tracking": "cue_only", "mib": null, "one_shot": null, "evidence": null, "screen_position": 6}
+   {"q": 19, "ts": 150.0, "kind": "section", "section": "Rap/Solo/Dance Break", "occurrence": 1, "trigger": null, "tracking": "track", "mib": null, "one_shot": null, "evidence": null, "screen_position": 7}
+   {"q": 20, "ts": 166.0, "kind": "safety", "section": "Outro", "occurrence": 0, "trigger": null, "tracking": "release", "mib": null, "one_shot": null, "evidence": null, "screen_position": null}

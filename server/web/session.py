@@ -2451,6 +2451,19 @@ def _song_timeline_payload(
                         # 않던 통로를 여는 것뿐, 새로 지어내는 값이 아니다.
                         "d_source": decision.d.source,
                         "palette_source": decision.palette.source,
+                        # 카드 t456 — 런북 블록·색 레일의 실색. 해석 못 한 색은
+                        # 키를 빼지 않고 None 으로 둔다(흰색 미배선 경계 그대로,
+                        # `server/design/color_names.py`).
+                        "palette_primary_hex": (
+                            _COLOR_NAMES.color_hex(decision.palette.colors[0])
+                            if decision.palette.colors
+                            else None
+                        ),
+                        "palette_secondary_hex": (
+                            _COLOR_NAMES.color_hex(decision.palette.colors[1])
+                            if len(decision.palette.colors) > 1
+                            else None
+                        ),
                         # 카드 t406 핫픽스 — 채도/무게는 색 문자열이 아니라 여기로만
                         # 나른다(코디네이터 지시). UI 는 아직 이 키를 읽지 않는다 —
                         # 화면 표시가 필요해지면 그건 별도 카드다.
