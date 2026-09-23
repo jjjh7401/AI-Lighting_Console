@@ -418,6 +418,44 @@ $ uv run ruff format --check (같은 파일 목록)
 (최초 실행에서 `zip()` 에 `strict=` 누락 2건 + Yoda 조건 1건을 잡아
 고쳤다 — 위 결과는 수정 후 재실행분이다.)
 
+### M6 기존 하류 브리지 + 8곡 게이트 고정 (REQ-LDDESIGN-073~077, REQ-004, 카드 t439)
+
+워크트리 `.claude/worktrees/t439`, 브랜치 `WT-concept-bridge-gates`, 기준
+`bb47bab4` → 도중 `origin/main@fbc3c838` 합류(`f23f8fd0`). TDD(RED→GREEN),
+변이 시험 3건. 판정서 `.moai/reports/t439/verdict.md`.
+
+**Claim**: 13게이트를 `server/tests/test_concept_gates.py`로 고정했다
+(REQ-075). 게이트는 프로토타입이 아니라 `server/concept/*` 모듈로 돈다
+(`server/concept/gates.py`). 컨셉 v2 → 콘솔 컴파일 경로는 기존
+`lint.lint_sheet`·`energy.axis_budget`·`cue_fade`를 직접 부른다
+(`server/concept/compile.py`, REQ-073). 두 입구(`session.py`·`tools.py`)에
+`concept_report`를 덧붙였고 콘솔 명령은 바뀌지 않는다. 기본 색 운용에서
+후렴 회차 색을 고정했다(REQ-004/030). 곡별 `per_chorus`는 감독 결정으로
+예외다.
+
+**Evidence**:
+- 프로토타입 재실행: PASS 98 · n/a 6 · FAIL 0 (`.moai/reports/t439/baseline/`).
+- 구 기준선 98은 과대하다. 프로토타입 G6 식(`final_integrated.py:169`)이
+  REQ-029의 면제 조건을 위반으로 거꾸로 셌다. 정정값은 90이다.
+- 최종 실측: `uv run python .moai/reports/t439/gen_gates_final.py` →
+  PASS 90 · n/a 6 · FAIL 8 (남은 8칸은 모두 G6 실제 위반, 카드 t444).
+- G4 재정의: 남은 모션 = 3 − 피날레 전까지 쓴 최대 모션(REQ-044/048).
+- G5(neon): Intro 분기 복원(t437 이식 누락) + 어댑터의 Bridge 비교 대상을
+  전체 행으로 교정했다.
+- `uv run pytest server/tests -k "palette or color or songcue or song_cue or arc or concept" -q`
+  → 1159 passed, 4 skipped, exit 0.
+
+**Baseline-attribution**: 8곡 fixture `server/tests/fixtures/pilot_baseline.json`
+(원본 `.claude/worktrees/pilot-labeling/pilot_baseline.json`과 `cmp` 동일).
+
+**Gaps**: 실기 콘솔에는 쏘지 않았다. REQ-074는 리드백 정규식을 통과하는지까지만
+확인했다. REQ-077과 경로 간 색 동일은 카드 t441로 넘겼다. 무버 재배치 조건은
+배선을 보류했다(소등하지 않을 때의 밝기는 감독 결정 필요). g9는 Outro 없는 곡에서
+VocabError가 난다(별도 카드).
+
+**Residual-risk**: `compile.py` D-레벨은 밝기에서 역산하므로 D5에 도달하지
+못한다. 분할 큐 주·보조색 맞바꾸기는 현행을 유지했다(카드 t445).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml

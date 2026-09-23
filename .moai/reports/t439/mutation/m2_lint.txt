@@ -1,0 +1,187 @@
+F...FFFFFFFFF...........                                                 [100%]
+=================================== FAILURES ===================================
+_____________ TestReuseIsTraced.test_lint_sheet_is_actually_called _____________
+
+self = <server.tests.test_concept_compile.TestReuseIsTraced object at 0x10b097690>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b405bd0>
+
+    def test_lint_sheet_is_actually_called(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[object] = []
+        original = lint_module.lint_sheet
+    
+        def _spy(sheet, profile, rig):
+            calls.append(sheet)
+            return original(sheet, profile, rig)
+    
+        monkeypatch.setattr(compile_module, "lint_sheet", _spy)
+        build = build_song(_SONGS_BY_NAME["Rain.mp3"])
+        result = compile_song(build)
+    
+>       assert len(calls) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+server/tests/test_concept_compile.py:62: AssertionError
+_ TestCompileAllEightSongs.test_song_compiles_and_matches_pinned_counts[Club Diver.mp3] _
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b36ecd0>
+song_name = 'Club Diver.mp3'
+
+    @pytest.mark.parametrize("song_name", list(EXPECTED))
+    def test_song_compiles_and_matches_pinned_counts(self, song_name: str) -> None:
+        build = build_song(_SONGS_BY_NAME[song_name])
+        result = compile_song(build)
+        expected = self.EXPECTED[song_name]
+    
+        assert len(result.commands) == expected["commands"]
+>       assert len(result.lint_report.findings) == expected["findings"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'findings'
+
+server/tests/test_concept_compile.py:145: AttributeError
+_ TestCompileAllEightSongs.test_song_compiles_and_matches_pinned_counts[Cut and Run.mp3] _
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b36ef10>
+song_name = 'Cut and Run.mp3'
+
+    @pytest.mark.parametrize("song_name", list(EXPECTED))
+    def test_song_compiles_and_matches_pinned_counts(self, song_name: str) -> None:
+        build = build_song(_SONGS_BY_NAME[song_name])
+        result = compile_song(build)
+        expected = self.EXPECTED[song_name]
+    
+        assert len(result.commands) == expected["commands"]
+>       assert len(result.lint_report.findings) == expected["findings"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'findings'
+
+server/tests/test_concept_compile.py:145: AttributeError
+_ TestCompileAllEightSongs.test_song_compiles_and_matches_pinned_counts[Ice cream.mp3] _
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b36f150>
+song_name = 'Ice cream.mp3'
+
+    @pytest.mark.parametrize("song_name", list(EXPECTED))
+    def test_song_compiles_and_matches_pinned_counts(self, song_name: str) -> None:
+        build = build_song(_SONGS_BY_NAME[song_name])
+        result = compile_song(build)
+        expected = self.EXPECTED[song_name]
+    
+        assert len(result.commands) == expected["commands"]
+>       assert len(result.lint_report.findings) == expected["findings"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'findings'
+
+server/tests/test_concept_compile.py:145: AttributeError
+_ TestCompileAllEightSongs.test_song_compiles_and_matches_pinned_counts[Morning.mp3] _
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b36f390>
+song_name = 'Morning.mp3'
+
+    @pytest.mark.parametrize("song_name", list(EXPECTED))
+    def test_song_compiles_and_matches_pinned_counts(self, song_name: str) -> None:
+        build = build_song(_SONGS_BY_NAME[song_name])
+        result = compile_song(build)
+        expected = self.EXPECTED[song_name]
+    
+        assert len(result.commands) == expected["commands"]
+>       assert len(result.lint_report.findings) == expected["findings"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'findings'
+
+server/tests/test_concept_compile.py:145: AttributeError
+_ TestCompileAllEightSongs.test_song_compiles_and_matches_pinned_counts[Rain.mp3] _
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b36f610>
+song_name = 'Rain.mp3'
+
+    @pytest.mark.parametrize("song_name", list(EXPECTED))
+    def test_song_compiles_and_matches_pinned_counts(self, song_name: str) -> None:
+        build = build_song(_SONGS_BY_NAME[song_name])
+        result = compile_song(build)
+        expected = self.EXPECTED[song_name]
+    
+        assert len(result.commands) == expected["commands"]
+>       assert len(result.lint_report.findings) == expected["findings"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'findings'
+
+server/tests/test_concept_compile.py:145: AttributeError
+_ TestCompileAllEightSongs.test_song_compiles_and_matches_pinned_counts[Too Cool.mp3] _
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b36f8d0>
+song_name = 'Too Cool.mp3'
+
+    @pytest.mark.parametrize("song_name", list(EXPECTED))
+    def test_song_compiles_and_matches_pinned_counts(self, song_name: str) -> None:
+        build = build_song(_SONGS_BY_NAME[song_name])
+        result = compile_song(build)
+        expected = self.EXPECTED[song_name]
+    
+        assert len(result.commands) == expected["commands"]
+>       assert len(result.lint_report.findings) == expected["findings"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'findings'
+
+server/tests/test_concept_compile.py:145: AttributeError
+_ TestCompileAllEightSongs.test_song_compiles_and_matches_pinned_counts[scott-buckley-neon.mp3] _
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b36fb90>
+song_name = 'scott-buckley-neon.mp3'
+
+    @pytest.mark.parametrize("song_name", list(EXPECTED))
+    def test_song_compiles_and_matches_pinned_counts(self, song_name: str) -> None:
+        build = build_song(_SONGS_BY_NAME[song_name])
+        result = compile_song(build)
+        expected = self.EXPECTED[song_name]
+    
+        assert len(result.commands) == expected["commands"]
+>       assert len(result.lint_report.findings) == expected["findings"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'findings'
+
+server/tests/test_concept_compile.py:145: AttributeError
+_ TestCompileAllEightSongs.test_song_compiles_and_matches_pinned_counts[\uac78\uadf8\ub8f9DinoDino_C_max\ucd5c\uace0\ud488\uc9c8.wav] _
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b36fe50>
+song_name = '걸그룹DinoDino_C_max최고품질.wav'
+
+    @pytest.mark.parametrize("song_name", list(EXPECTED))
+    def test_song_compiles_and_matches_pinned_counts(self, song_name: str) -> None:
+        build = build_song(_SONGS_BY_NAME[song_name])
+        result = compile_song(build)
+        expected = self.EXPECTED[song_name]
+    
+        assert len(result.commands) == expected["commands"]
+>       assert len(result.lint_report.findings) == expected["findings"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'findings'
+
+server/tests/test_concept_compile.py:145: AttributeError
+___ TestCompileAllEightSongs.test_disabled_lint_rules_are_l6_l7_single_layer ___
+
+self = <server.tests.test_concept_compile.TestCompileAllEightSongs object at 0x10b380590>
+
+    def test_disabled_lint_rules_are_l6_l7_single_layer(self) -> None:
+        # 이 컴파일 경로는 라이브 리그를 읽지 않는다(모듈 독스트링) —
+        # L6/L7 은 항상 단일 레이어로 꺼진다. 거짓 PASS 가 아니라 명시적
+        # DisabledRuleNote 다(RG1, lint.py 독스트링).
+        build = build_song(_SONGS_BY_NAME["Rain.mp3"])
+        result = compile_song(build)
+>       rule_ids = {note.rule_id for note in result.lint_report.disabled_rules}
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'disabled_rules'
+
+server/tests/test_concept_compile.py:159: AttributeError
+=========================== short test summary info ============================
+FAILED server/tests/test_concept_compile.py::TestReuseIsTraced::test_lint_sheet_is_actually_called
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_song_compiles_and_matches_pinned_counts[Club Diver.mp3]
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_song_compiles_and_matches_pinned_counts[Cut and Run.mp3]
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_song_compiles_and_matches_pinned_counts[Ice cream.mp3]
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_song_compiles_and_matches_pinned_counts[Morning.mp3]
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_song_compiles_and_matches_pinned_counts[Rain.mp3]
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_song_compiles_and_matches_pinned_counts[Too Cool.mp3]
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_song_compiles_and_matches_pinned_counts[scott-buckley-neon.mp3]
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_song_compiles_and_matches_pinned_counts[\uac78\uadf8\ub8f9DinoDino_C_max\ucd5c\uace0\ud488\uc9c8.wav]
+FAILED server/tests/test_concept_compile.py::TestCompileAllEightSongs::test_disabled_lint_rules_are_l6_l7_single_layer
+10 failed, 14 passed in 0.29s
