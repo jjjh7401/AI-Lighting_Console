@@ -1,0 +1,24 @@
+
+>>> state:Patch/FixtureTypes/9/Geometries
+    wire: Plugin "CopilotResponder" "state 3f19d7ee Patch/FixtureTypes/9/Geometries"
+<<< {"children": [{"class": "Geometry", "i": 1, "name": "Body"}, {"class": "Geometry", "i": 2, "name": "Body#2"}], "id": "3f19d7ee", "kind": "state", "node": {"childCount": 2, "class": "Geometries", "enumeration": "ok", "name": "Geometries"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/Geometries", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/Geometries/1
+    wire: Plugin "CopilotResponder" "state a2da2496 Patch/FixtureTypes/9/Geometries/1"
+<<< {"children": [{"class": "Beam", "i": 1, "name": "Main Module"}], "id": "a2da2496", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Body"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/Geometries/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/Geometries
+    wire: Plugin "CopilotResponder" "state 224f55b0 Patch/FixtureTypes/8/Geometries"
+<<< {"children": [{"class": "Beam", "i": 1, "name": "Aura"}, {"class": "Geometry", "i": 2, "name": "Body"}, {"class": "Beam", "i": 3, "name": "Aura#2"}, {"class": "Geometry", "i": 4, "name": "Body#2"}, {"class": "Beam", "i": 5, "name": "Aura#3"}, {"class": "Geometry", "i": 6, "name": "Body#3"}, {"class": "Geometry", "i": 7, "name": "Body#4"}], "id": "224f55b0", "kind": "state", "node": {"childCount": 7, "class": "Geometries", "enumeration": "ok", "name": "Geometries"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/Geometries", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/Geometries/1
+    wire: Plugin "CopilotResponder" "state 9814d622 Patch/FixtureTypes/8/Geometries/1"
+<<< {"children": [], "id": "9814d622", "kind": "state", "node": {"childCount": 0, "class": "Beam", "enumeration": "ok", "name": "Aura"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/Geometries/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/Geometries
+    wire: Plugin "CopilotResponder" "state b95e4231 Patch/FixtureTypes/10/Geometries"
+<<< {"children": [{"class": "Geometry", "i": 1, "name": "Body"}], "id": "b95e4231", "kind": "state", "node": {"childCount": 1, "class": "Geometries", "enumeration": "ok", "name": "Geometries"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/Geometries", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/Geometries/1
+    wire: Plugin "CopilotResponder" "state c3c2688a Patch/FixtureTypes/10/Geometries/1"
+<<< {"children": [{"class": "Beam", "i": 1, "name": "Main Module"}], "id": "c3c2688a", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Body"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/Geometries/1", "truncated": false, "v": 1}

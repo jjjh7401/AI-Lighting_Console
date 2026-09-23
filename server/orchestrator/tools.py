@@ -152,6 +152,7 @@ from server.presets.store import (
     preset_apply_command,
     preset_store_commands,
 )
+from server.preshow.fixture_light import diagnose_fixture_light as run_fixture_light_diagnosis
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
 from server.rig.paging import paged_children
@@ -305,6 +306,7 @@ TOOL_NAMES = (
     "apply_vectorworks_patch",
     "vectorworks_autopatch",
     "preshow_check",
+    "diagnose_fixture_light",
     "ask_user",
     "resolve_fixture_type",
     "resolve_patch_address",
@@ -4528,6 +4530,45 @@ def build_toolset(
                 name=call.name,
                 content=content,
                 is_error=report.signal == "red",
+            ),
+        )
+
+    # -- diagnose_fixture_light (t451 — 「401 왜 안 켜져?」) ---------------------
+    #
+    # @MX:NOTE: [AUTO] 읽기 전용 진단. state_port·property_port 만 쓰고 쓰기 포트는
+    #   만지지 않는다. 점검 순서·판정 기준은 .moai/reports/t450/verdict.md §1 이고,
+    #   답의 사람이 읽는 요약(summary)은 감독이 대화창에서 그대로 읽는다.
+    def diagnose_fixture_light(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        fid = call.arguments.get("fid")
+        compare_fid = call.arguments.get("compare_fid")
+        if not isinstance(fid, int) or isinstance(fid, bool) or fid <= 0:
+            return _error_result(call, "'fid' must be a positive integer fixture id")
+        if compare_fid is not None and (
+            not isinstance(compare_fid, int) or isinstance(compare_fid, bool) or compare_fid <= 0
+        ):
+            return _error_result(call, "'compare_fid' must be a positive integer fixture id")
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        diagnosis = run_fixture_light_diagnosis(
+            fid,
+            state_port=state_port,
+            property_port=property_port,
+            compare_fid=compare_fid,
+            fixtures_path=rig_paths.get("fixtures", DEFAULT_RIG_CONTEXT_PATHS["fixtures"]),
+            fixture_types_path=rig_paths.get(
+                "fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"]
+            ),
+        )
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(diagnosis.to_dict(), ensure_ascii=False),
+                is_error=False,
             ),
         )
 
@@ -11208,6 +11249,39 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="diagnose_fixture_light",
+            description=(
+                "READ-ONLY diagnosis for 'why won't fixture N light up?'. Reads the "
+                "console (never writes): responder liveness, the fixture's patch "
+                "address/type/mode, grand and world masters, the fixture type's "
+                "channels (dimmer, shutter open range, color channel DEFAULTS), 3D "
+                "visibility, current selection count, and the network DMX output "
+                "(reference only — external output, never a cause for the built-in "
+                "3D window). ASK THE OPERATOR FIRST whether another fixture lights "
+                "up in the 3D window; if so pass its number as compare_fid — the "
+                "side-by-side difference is the strongest cause candidate. The "
+                "result's 'summary' is Korean prose for the operator: relay it as "
+                "is. Findings the app cannot read (3D Beam fader, GPU warning, "
+                "programmer values) are marked app_cannot_check/unknown with where "
+                "to look — never guess them."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "fid": {
+                        "type": "integer",
+                        "description": "Fixture id that does not light up (e.g. 401).",
+                    },
+                    "compare_fid": {
+                        "type": "integer",
+                        "description": "A fixture id the operator says DOES light up.",
+                    },
+                },
+                "required": ["fid"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="ask_user",
             description=(
                 "Ask the operator a question and WAIT for the answer. Use this "
@@ -13254,6 +13328,7 @@ def build_toolset(
         "apply_vectorworks_patch": apply_vectorworks_patch,
         "vectorworks_autopatch": vectorworks_autopatch,
         "preshow_check": preshow_check,
+        "diagnose_fixture_light": diagnose_fixture_light,
         "ask_user": ask_user,
         "resolve_fixture_type": resolve_fixture_type,
         "resolve_patch_address": resolve_patch_address,
