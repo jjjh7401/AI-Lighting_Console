@@ -75,6 +75,15 @@ _KO_EN_COLOR_EQUIV: dict[str, str] = {
     "마젠타": "magenta",
     "시안": "cyan",
     "청록": "cyan",
+    # SPEC-LDDESIGN-001 M2(2026-09-23) 재확인 — 흰색 표기는 **여전히 배선하지
+    # 않는다**. 카드 t409 가 퍼플/보라만 판정하고 화이트/흰색/하양은 "감독 판정
+    # 대상 목록에는 있었지만 배선 대상은 아니다"로 남긴 그대로다
+    # (`server/tests/test_cue_sheet_apply.py`
+    #  `test_words_the_director_did_not_rule_on_still_fail_loudly`).
+    # 표준 팔레트에는 `Warm White`(100,75,40)와 `Cool White`(85,95,100)가
+    # 둘 다 있어 맨 "흰색"이 어느 쪽인지는 감독만 정할 수 있다 — 무대에서
+    # 눈에 띄게 다른 두 색이므로 한쪽으로 몰면 지어내는 것이다.
+    # 미해소는 조용히 넘어가지 않고 사유로 노출된다(`_color_failure_note`).
     "화이트": "white",
     "흰색": "white",
     "하양": "white",

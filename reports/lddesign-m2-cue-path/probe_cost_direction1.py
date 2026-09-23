@@ -13,6 +13,7 @@ sys.path.insert(0, ".")
 from server.design.color_names import resolve_color_name
 from server.web.session import _color_apply_command
 
+
 # ---- 여기가 추가될 코드 전부 --------------------------------------------
 def _color_value_lines(cue, fids):
     """REQ-012 팔레트 주색을 큐의 값 라인으로 낸다. 모르는 이름은 조용히 건너뛴다."""
@@ -23,6 +24,8 @@ def _color_value_lines(cue, fids):
     if rgb is None:
         return ()
     return (_color_apply_command(fids, rgb),)
+
+
 # ---- 끝 ------------------------------------------------------------------
 
 ADDED_LINES = 10  # 위 블록의 실제 줄 수(독스트링 포함, 주석 제외)

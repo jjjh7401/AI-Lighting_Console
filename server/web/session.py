@@ -1322,6 +1322,44 @@ def _phaser_failure_note(failures: Mapping[str, str]) -> str:
     return " 페이저 미배정: " + "; ".join(failures.values()) + "."
 
 
+def _color_failure_note(failures: Mapping[str, str]) -> str:
+    """색 미해소는 곡 설계를 무산시키지 않되, 사유를 최종 회신에 노출한다.
+
+    `_phaser_failure_note` 와 같은 관행 — 지어내지 않고 정직하게 강등을
+    고지한다. 값이 없는 색 이름("gold"·"warm special" 등)은
+    `server/design/color_names.py` 가 일부러 비워 둔 자리다.
+    """
+    if not failures:
+        return ""
+    return " 색 미반영: " + "; ".join(failures.values()) + "."
+
+
+def _song_color_value_lines(cue, fids: Sequence[int]) -> tuple[tuple[str, ...], str | None]:
+    """SPEC-LDDESIGN-001 M2 — 큐의 팔레트 주색을 콘솔 값 라인으로 낸다.
+
+    ``(값 라인들, 실패 사유 또는 None)``. **고치기 전 실측**: 감독 확정
+    경로는 색을 한 줄도 보내지 않았다(`reports/lddesign-m2-cue-path/`)
+    — 설계층은 팔레트를 들고 있는데 명령 생성기가 떨어뜨렸다.
+
+    주색만 낸다. 보조색·유보색·언더페인팅은 M3(컬러 규칙)의 몫이고,
+    이 자리에서 지어내면 그 규칙이 도착했을 때 두 출처가 생긴다.
+
+    MIB 사전이동 큐(``kind == "mib_premove"``)는 건너뛴다 — 어둠 속 이동
+    큐라 색 값이 공연에 보이지 않고, 사전에 색까지 얹을지는 아직 안 잰
+    별도 판단이다.
+    """
+    if cue.kind != "section":
+        return (), None
+    palette = cue.color.palette
+    if not palette:
+        return (), None
+    name = palette[0]
+    rgb = _COLOR_NAMES.resolve_color_name(name)
+    if rgb is None:
+        return (), f"Q{cue.cue_number:g} {cue.cue_name!r}의 색 {name!r}은 표준 팔레트 10색에 없음"
+    return (_color_apply_command(fids, rgb),), None
+
+
 def _back_layer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
     """결함 6 후속 (priority 6): Front/Back 분리 연출 — the director-confirmed
     'back' role group adds ONE group-addressed dimmer line to every LIT
@@ -4862,6 +4900,7 @@ class ChatSession:
         # in the final reply without threading a new return value through
         # ``_reviewed_song_commands``'s existing call sites/signature.
         self._last_phaser_failures: dict[str, str] = {}
+        self._last_color_failures: dict[str, str] = {}
         # Rolling transcript of prior turns (user instruction + assistant reply),
         # replayed to the model so context survives across turns for EVERY
         # conversation, not just the layout special-cases. Bounded to the last
@@ -8165,6 +8204,9 @@ class ChatSession:
         if bundle is None:
             return ()
         phaser_slots, self._last_phaser_failures = self._phaser_slots_for_bundle(bundle)
+        # SPEC-LDDESIGN-001 M2 — 컨셉 색을 이 경로로 내보낸다. 미해소 사유는
+        # 큐마다 모아 최종 회신에 노출한다(`_color_failure_note`).
+        color_failures: dict[str, str] = {}
         commands: list[str] = ["ChangeDestination Root"]
         for cue in bundle.cues:
             preset_no = None
@@ -8176,6 +8218,9 @@ class ChatSession:
                         f"unknown reviewed position {cue.position.stored!r}"
                     ) from error
             dimmer = cue.dimmer.key_pct
+            color_lines, color_failure = _song_color_value_lines(cue, fids)
+            if color_failure is not None:
+                color_failures[f"{cue.cue_number:g}"] = color_failure
             if preset_no is None and dimmer is None:
                 continue
             plan = PositionCuePlan(
@@ -8192,6 +8237,7 @@ class ChatSession:
                     plan,
                     fids,
                     extra_value_lines=(
+                        *color_lines,
                         *_back_layer_value_lines(cue, layer_mapping),
                         *_phaser_cue_value_lines(cue, fids, phaser_slots),
                     ),
@@ -8200,6 +8246,7 @@ class ChatSession:
             if plan.premove:
                 commands.append(premove_follow_command(sequence_no, plan))
         commands.extend(self._reviewed_song_timing_commands(bundle, sequence_no, timing))
+        self._last_color_failures = color_failures
         return tuple(commands)
 
     def _phaser_slots_for_bundle(self, bundle) -> tuple[dict[str, tuple[int, int]], dict[str, str]]:
@@ -10878,6 +10925,7 @@ class ChatSession:
                     f"readback 검증에 실패했습니다: {readback.failure}. "
                     f"{review_text} readback 요청: {', '.join(readback.paths)}.{snapshot_note}"
                     f"{_phaser_failure_note(self._last_phaser_failures)}"
+                    f"{_color_failure_note(self._last_color_failures)}"
                 ),
                 command_outcomes=tuple(executed.command_outcomes),
                 retries_used=0,
@@ -10900,6 +10948,7 @@ class ChatSession:
                 f"감독 승인 후 시퀀스 {sequence_no}에 리뷰 번들 1건을 원자 실행 요청했습니다. "
                 f"{review_text} readback 검증 완료: {', '.join(readback.paths)}.{snapshot_note}"
                 f"{_phaser_failure_note(self._last_phaser_failures)}"
+                f"{_color_failure_note(self._last_color_failures)}"
             ),
             command_outcomes=tuple(executed.command_outcomes),
             retries_used=0,
