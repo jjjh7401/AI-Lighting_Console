@@ -1,0 +1,11 @@
+
+[12:50:45.771] >>> exec 'ClearAll'
+[12:50:45.807] <<< {"id": "acbfc0f1", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:50:50.811] >>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'PositionMSpeed' At 0 ; Attribute 'Pan' At -60 ; Attribute 'Tilt' At -30"
+[12:50:50.873] <<< {"id": "cc3afb15", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:50:55.874] >>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 60 ; Attribute 'Tilt' At 30"
+[12:50:55.940] <<< {"id": "e595c0ce", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=3 not_ok_or_timeout=0

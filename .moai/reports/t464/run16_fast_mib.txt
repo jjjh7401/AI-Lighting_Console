@@ -1,0 +1,26 @@
+
+[12:42:16.060] >>> exec 'Goto Executor 201 Cue 13'
+[12:42:16.127] <<< {"id": "153e2948", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
+
+[12:42:40.104] >>> exec 'Go Executor 201'
+[12:42:40.160] <<< {"id": "7049cc68", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:42:40.661] >>> exec 'Go Executor 201'
+[12:42:40.726] <<< {"id": "8c1f052b", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=2 not_ok_or_timeout=0
+
+[12:42:58.933] >>> exec 'Goto Executor 201 Cue 13'
+[12:42:58.992] <<< {"id": "f220f8f1", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
+
+[12:43:17.512] >>> exec 'Go Executor 201'
+[12:43:17.559] <<< {"id": "c2df06b3", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:43:18.062] >>> exec 'Go Executor 201'
+[12:43:18.125] <<< {"id": "d89b3013", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=2 not_ok_or_timeout=0

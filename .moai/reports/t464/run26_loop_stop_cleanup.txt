@@ -1,0 +1,23 @@
+
+[12:56:42.877] >>> exec 'Off Executor 201'
+[12:56:42.926] <<< {"id": "4ce1bd54", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:56:43.181] >>> exec 'ClearAll'
+[12:56:43.226] <<< {"id": "8d5ef6d7", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:56:43.478] >>> exec 'Delete Sequence 900 /NoConfirm'
+[12:56:43.526] <<< {"id": "85f17c87", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:56:43.781] >>> state 'ShowData/DataPools/Default/Sequences/900'
+[12:56:43.827] <<< {"error": "path segment not found: '900' (in ShowData/DataPools/Default/Sequences/900)", "id": "5f14e659", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/900", "v": 1}
+
+[12:56:44.080] >>> state 'ShowData/DataPools/Default/Sequences'
+[12:56:44.126] <<< {"children": [{"class": "Sequence", "i": 1, "name": "Default"}, {"class": "Sequence", "i": 2, "name": "Sugar"}, {"class": "Sequence", "i": 3, "name": "Sugar r3"}, {"class": "Sequence", "i": 4, "name": "eset1Fade"}, {"class": "Sequence", "i": 5, "name": "Synth Test"}, {"class": "Sequence", "i": 6, "name": "Notice Test"}, {"class": "Sequence", "i": 7, "name": "VerifyA"}, {"class": "Sequence", "i": 8, "name": "VerifyB4x"}, {"class": "Sequence", "i": 9, "name": "T215 SCRATCH DELETABLE"}, {"class": "Sequence", "i": 10, "name": "VerifyC4x"}, {"class": "Sequence", "i": 11, "name": "chase-horizontal"}, {"class": "Sequence", "i": 12, "name": "chase-bounce-run"}, {"class": "Sequence", "i": 13, "name": "DinoSync"}, {"class": "Sequence", "i": 14, "name": "DinoDino"}, {"class": "Sequence", "i": 15, "name": "DinoFull"}, {"class": "Sequence", "i": 1999, "name": "Sequence 1999"}, {"class": "Sequence", "i": 2000, "name": "Sequence 2000"}], "id": "c30ce223", "kind": "state", "node": {"childCount": 17, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": false, "v": 1}
+
+[12:56:44.381] >>> state 'ShowData/DataPools/Default/Pages/1'
+[12:56:44.427] <<< {"children": [{"class": "Executor", "i": 105, "name": "DinoDino"}, {"class": "Executor", "i": 106, "name": "DinoDino"}, {"class": "Executor", "i": 107, "name": "DinoSync"}, {"class": "Executor", "i": 108, "name": "DinoFull"}], "id": "b74bf5d0", "kind": "state", "node": {"childCount": 4, "class": "Page", "enumeration": "ok", "name": "Page 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Pages/1", "truncated": false, "v": 1}
+
+[12:56:44.681] >>> prop 'Selection' 'COUNTTOTALSELECTED'
+[12:56:44.726] <<< {"id": "0159c317", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+=== steps=7 not_ok_or_timeout=1

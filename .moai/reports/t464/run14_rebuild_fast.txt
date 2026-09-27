@@ -1,0 +1,77 @@
+
+[12:39:46.911] >>> exec 'ClearAll'
+[12:39:46.967] <<< {"id": "060f5b59", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:47.217] >>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'Pan' At -60"
+[12:39:47.266] <<< {"id": "812da0cf", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:47.522] >>> exec "Store Sequence 900 Cue 11 'Q11 lit pan-60'"
+[12:39:47.567] <<< {"id": "b48ea7de", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:47.820] >>> exec 'ClearAll'
+[12:39:47.867] <<< {"id": "de22f8de", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:48.120] >>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 60"
+[12:39:48.166] <<< {"id": "0b434ff0", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:48.420] >>> exec "Attribute 'Pan' At Delay 0 Thru 2"
+[12:39:48.467] <<< {"id": "3b5c7f32", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:48.721] >>> exec "Store Sequence 900 Cue 12 'Q12 pan60 delay0thru2'"
+[12:39:48.766] <<< {"id": "77683b97", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:49.020] >>> exec 'ClearAll'
+[12:39:49.066] <<< {"id": "d9ada22f", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:49.321] >>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'Pan' At 30"
+[12:39:49.367] <<< {"id": "42a32ed7", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:49.621] >>> exec "Store Sequence 900 Cue 13 'Q13 lit pan30'"
+[12:39:49.666] <<< {"id": "fbf0f27a", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:49.921] >>> exec 'ClearAll'
+[12:39:49.966] <<< {"id": "1c759908", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:50.220] >>> exec 'Fixture 521 Thru 522 ; At 0'
+[12:39:50.266] <<< {"id": "56bbffff", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:50.520] >>> exec "Store Sequence 900 Cue 14 'Q14 dark'"
+[12:39:50.566] <<< {"id": "01fd53ac", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:50.818] >>> exec 'ClearAll'
+[12:39:50.866] <<< {"id": "0c41700e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:51.120] >>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'Pan' At -30"
+[12:39:51.167] <<< {"id": "08360e4e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:51.428] >>> exec "Store Sequence 900 Cue 15 'Q15 lit pan-30'"
+[12:39:51.467] <<< {"id": "6a790ed7", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:51.718] >>> exec 'ClearAll'
+[12:39:51.766] <<< {"id": "4c59832a", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:52.020] >>> exec "Label Sequence 900 'T464 SCRATCH DELETABLE'"
+[12:39:52.066] <<< {"id": "617c8ce2", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:52.321] >>> exec 'Assign Sequence 900 At Executor 201'
+[12:39:52.366] <<< {"id": "0c0b0723", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:52.621] >>> exec "Set Sequence 900 Property 'SEQUMIBMODE' 'Early'"
+[12:39:52.666] <<< {"id": "c712b029", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:39:52.921] >>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIBMODE'
+[12:39:52.966] <<< {"id": "2b99554d", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIBMODE", "v": 1, "value": "Early"}
+
+[12:39:53.221] >>> prop 'Selection' 'COUNTTOTALSELECTED'
+[12:39:53.266] <<< {"id": "fa27feae", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+[12:39:53.520] >>> state 'ShowData/DataPools/Default/Sequences/900'
+[12:39:53.566] <<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 11, "i": 3, "name": "Q11 lit pan-60"}, {"class": "Cue", "cueNo": 12, "i": 4, "name": "Q12 pan60 delay0thru2"}, {"class": "Cue", "cueNo": 13, "i": 5, "name": "Q13 lit pan30"}, {"class": "Cue", "cueNo": 14, "i": 6, "name": "Q14 dark"}, {"class": "Cue", "cueNo": 15, "i": 7, "name": "Q15 lit pan-30"}], "id": "fd8225a8", "kind": "state", "node": {"childCount": 7, "class": "Sequence", "enumeration": "ok", "name": "T464 SCRATCH DELETABLE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+[12:39:53.821] >>> state 'ShowData/DataPools/Default/Pages/1'
+[12:39:53.866] <<< {"children": [{"class": "Executor", "i": 101, "name": "T464 SCRATCH DELETABLE"}, {"class": "Executor", "i": 105, "name": "DinoDino"}, {"class": "Executor", "i": 106, "name": "DinoDino"}, {"class": "Executor", "i": 107, "name": "DinoSync"}, {"class": "Executor", "i": 108, "name": "DinoFull"}], "id": "e0d0abfe", "kind": "state", "node": {"childCount": 5, "class": "Page", "enumeration": "ok", "name": "Page 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Pages/1", "truncated": false, "v": 1}
+
+[12:39:54.118] >>> exec 'Goto Executor 201 Cue 11'
+[12:39:54.167] <<< {"id": "2feedec0", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=25 not_ok_or_timeout=0

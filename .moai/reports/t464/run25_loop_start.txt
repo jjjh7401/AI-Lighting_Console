@@ -1,0 +1,5 @@
+
+[12:52:47.762] >>> exec 'Goto Executor 201 Cue 11'
+[12:52:47.802] <<< {"id": "4f9d9ec8", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
