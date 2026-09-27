@@ -1,0 +1,2 @@
+FAILED server/tests/test_concept_density_verse_mover_wiring.py::TestVerseNeverRaisesMovers::test_movers_off_before_verse_stay_off
+1 failed, 50 passed in 0.09s

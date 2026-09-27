@@ -1,0 +1,9 @@
+Club Diver.mp3               | verse {'off': 1, 'lvl[0]': 1} | mib {'dark': 2, 'mark': 1}
+Cut and Run.mp3              | verse {'off': 5, 'lvl[0]': 5} | mib {'dark': 2, 'mark': 1}
+Ice cream.mp3                | verse {'off': 1, 'lvl[0]': 1} | mib {'dark': 2}
+Morning.mp3                  | verse {'off': 3, 'lvl[0]': 3} | mib {'dark': 2, 'mark': 2}
+Rain.mp3                     | verse {'off': 4, 'lvl[0]': 4} | mib {'dark': 2, 'mark': 2}
+Too Cool.mp3                 | verse {'off': 6, 'lvl[0]': 6} | mib {'dark': 2, 'mark': 1}
+scott-buckley-neon.mp3       | verse {'off': 7, 'lvl[0]': 7} | mib {'dark': 2, 'mark': 1}
+걸그룹DinoDino_C_max최고품질.wav    | verse {'off': 4, 'lvl[0]': 4} | mib {'dark': 1}
+합계: {'mib_dark': 15, 'mib_mark': 8, 'verse_lvl[0]': 31, 'verse_off': 31}
