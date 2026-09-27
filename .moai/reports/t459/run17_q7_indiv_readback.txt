@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/900/9/1|INDIVDELAY,INDIVFADE,INDIVDURATION,INDIVIDUALTIMING,DURATION
+    wire: Plugin "CopilotResponder" "props f62ec15f INDIVDELAY,INDIVFADE,INDIVDURATION,INDIVIDUALTIMING,DURATION ShowData/DataPools/Default/Sequences/900/9/1"
+<<< {"id": "f62ec15f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/9/1", "reads": [{"n": "INDIVDELAY", "ok": true, "t": "number", "v": "2.0"}, {"n": "INDIVFADE", "ok": true, "t": "number", "v": "0.0"}, {"n": "INDIVDURATION", "ok": true, "t": "number", "v": "2.0"}, {"n": "INDIVIDUALTIMING", "ok": true, "t": "string", "v": "Default"}, {"n": "DURATION", "ok": true, "t": "number", "v": "2.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/10/1|INDIVDELAY,INDIVFADE,INDIVDURATION,INDIVIDUALTIMING,DURATION
+    wire: Plugin "CopilotResponder" "props 26755aa0 INDIVDELAY,INDIVFADE,INDIVDURATION,INDIVIDUALTIMING,DURATION ShowData/DataPools/Default/Sequences/900/10/1"
+<<< {"id": "26755aa0", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/10/1", "reads": [{"n": "INDIVDELAY", "ok": true, "t": "number", "v": "0.0"}, {"n": "INDIVFADE", "ok": true, "t": "number", "v": "0.0"}, {"n": "INDIVDURATION", "ok": true, "t": "number", "v": "0.0"}, {"n": "INDIVIDUALTIMING", "ok": true, "t": "string", "v": "Default"}, {"n": "DURATION", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}

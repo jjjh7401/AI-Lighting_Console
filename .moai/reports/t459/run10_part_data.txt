@@ -1,0 +1,16 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/900/4/1
+    wire: Plugin "CopilotResponder" "state c3406cef ShowData/DataPools/Default/Sequences/900/4/1"
+<<< {"children": [], "id": "c3406cef", "kind": "state", "node": {"childCount": 0, "class": "Part", "enumeration": "ok", "name": "Q2 pan30 only"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4/1", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/900/3/1
+    wire: Plugin "CopilotResponder" "state 79199215 ShowData/DataPools/Default/Sequences/900/3/1"
+<<< {"children": [], "id": "79199215", "kind": "state", "node": {"childCount": 0, "class": "Part", "enumeration": "ok", "name": "Q1 on center"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/3/1", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/4/1|OWNDATAPRESENT,OWNNONCOOKEDDATAPRESENT,STOREDDATA,PRESETDATA,VALUESMODE,MODE
+    wire: Plugin "CopilotResponder" "props 5306c43c OWNDATAPRESENT,OWNNONCOOKEDDATAPRESENT,STOREDDATA,PRESETDATA,VALUESMODE,MODE ShowData/DataPools/Default/Sequences/900/4/1"
+<<< {"id": "5306c43c", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4/1", "reads": [{"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "OWNNONCOOKEDDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"e": "property not readable: STOREDDATA", "n": "STOREDDATA", "ok": false}, {"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}, {"n": "VALUESMODE", "ok": true, "t": "string", "v": "Normal"}, {"n": "MODE", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/3/1|OWNDATAPRESENT,OWNNONCOOKEDDATAPRESENT,STOREDDATA,PRESETDATA,VALUESMODE,MODE
+    wire: Plugin "CopilotResponder" "props 85408157 OWNDATAPRESENT,OWNNONCOOKEDDATAPRESENT,STOREDDATA,PRESETDATA,VALUESMODE,MODE ShowData/DataPools/Default/Sequences/900/3/1"
+<<< {"id": "85408157", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/3/1", "reads": [{"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "OWNNONCOOKEDDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"e": "property not readable: STOREDDATA", "n": "STOREDDATA", "ok": false}, {"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}, {"n": "VALUESMODE", "ok": true, "t": "string", "v": "Normal"}, {"n": "MODE", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}

@@ -1,0 +1,35 @@
+
+>>> exec "Set Cue 2 Part 1 Sequence 900 Property 'DelayToX' 2"
+<<< {"error": "Illegal object", "id": "fee5b062", "kind": "result", "ok": false, "result": "Illegal object", "v": 1}
+
+>>> exec "Set Sequence 900 Cue 2 Part 1 Property 'DelayToX' 2"
+<<< {"error": "Illegal object", "id": "b926d7f2", "kind": "result", "ok": false, "result": "Illegal object", "v": 1}
+
+>>> exec "Set Cue 2 Sequence 900 Part 1 Property 'DelayToX' 2"
+<<< {"error": "Illegal object", "id": "9c1242bf", "kind": "result", "ok": false, "result": "Illegal object", "v": 1}
+
+>>> exec "Set Cue 2 Part 1 Sequence 900 Property 'DelayToQ' 2"
+<<< {"error": "Illegal object", "id": "253de4f4", "kind": "result", "ok": false, "result": "Illegal object", "v": 1}
+
+>>> exec "Set Cue 3 Part 1 Sequence 900 Property 'MIBFade' 1.5"
+<<< {"error": "Illegal object", "id": "4ffd220a", "kind": "result", "ok": false, "result": "Illegal object", "v": 1}
+
+>>> exec "Set Cue 3 Part 1 Sequence 900 Property 'MIBDelay' 0.5"
+<<< {"error": "Illegal object", "id": "edf16cdc", "kind": "result", "ok": false, "result": "Illegal object", "v": 1}
+
+>>> exec "Set Cue 3 Sequence 900 Property 'MIBPreference' 'Late'"
+<<< {"error": "Illegal value", "id": "57ad68b2", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> exec "Set Cue 3 Sequence 900 Property 'MIBPreference' 'None'"
+<<< {"error": "Illegal value", "id": "56cc63f4", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> exec "Set Cue 3 Sequence 900 Property 'MIBPreference' 'Prefer'"
+<<< {"error": "Illegal value", "id": "ba2f5cb0", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> exec "Set Cue 3 Sequence 900 Property 'MIBPreference' 'Mark'"
+<<< {"error": "Illegal value", "id": "abdef1be", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/5' 'MIBPREFERENCE'
+<<< {"id": "6e0e04af", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/5", "property": "MIBPREFERENCE", "v": 1, "value": "Normal"}
+
+=== steps=11 not_ok_or_timeout=10

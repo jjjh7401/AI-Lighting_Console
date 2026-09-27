@@ -1,0 +1,26 @@
+
+>>> exec "Set Cue 4 Sequence 900 Property 'NoSuchPropT459' 1"
+<<< {"error": "Illegal property", "id": "3133789d", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/6' 'RELEASE'
+<<< {"id": "ed494921", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/6", "property": "RELEASE", "v": 1, "value": "false"}
+
+>>> exec "Set Cue 4 Sequence 900 Property 'Release' 1"
+<<< {"id": "0e4aa392", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/6' 'RELEASE'
+<<< {"id": "b22197e9", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/6", "property": "RELEASE", "v": 1, "value": "true"}
+
+>>> exec 'Blockzz Sequence 900 Cue 2'
+<<< {"id": "f293f9d0", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Block Sequence 900 Cue 2'
+<<< {"id": "bef752ec", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/4' 'ASSERT'
+<<< {"id": "d2e7efc0", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4", "property": "ASSERT", "v": 1, "value": ""}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900/4'
+<<< {"children": [{"class": "Part", "i": 1, "name": "Q2 pan30 only"}], "id": "f549cf29", "kind": "state", "node": {"childCount": 1, "class": "Cue", "enumeration": "ok", "name": "Q2 pan30 only"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4", "truncated": false, "v": 1}
+
+=== steps=8 not_ok_or_timeout=1

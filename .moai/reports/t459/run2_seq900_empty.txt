@@ -1,0 +1,12 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/900
+    wire: Plugin "CopilotResponder" "state 67c0372e ShowData/DataPools/Default/Sequences/900"
+<<< {"error": "path segment not found: '900' (in ShowData/DataPools/Default/Sequences/900)", "id": "67c0372e", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/900", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/2
+    wire: Plugin "CopilotResponder" "state 959b4f6d ShowData/DataPools/Default/Sequences/2"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Cue 1"}, {"class": "Cue", "cueNo": 10, "i": 4, "name": "Q010"}, {"class": "Cue", "cueNo": 20, "i": 5, "name": "Q020"}, {"class": "Cue", "cueNo": 30, "i": 6, "name": "Q030"}, {"class": "Cue", "cueNo": 40, "i": 7, "name": "Q040"}, {"class": "Cue", "cueNo": 50, "i": 8, "name": "Q050"}, {"class": "Cue", "cueNo": 60, "i": 9, "name": "Q060"}, {"class": "Cue", "cueNo": 70, "i": 10, "name": "Q070"}, {"class": "Cue", "cueNo": 80, "i": 11, "name": "Q080"}, {"class": "Cue", "cueNo": 90, "i": 12, "name": "Q090"}, {"class": "Cue", "cueNo": 100, "i": 13, "name": "Q100"}, {"class": "Cue", "cueNo": 110, "i": 14, "name": "Q110"}, {"class": "Cue", "cueNo": 120, "i": 15, "name": "Q120"}, {"class": "Cue", "cueNo": 130, "i": 16, "name": "Q130"}], "id": "959b4f6d", "kind": "state", "node": {"childCount": 21, "class": "Sequence", "enumeration": "ok", "name": "Sugar"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/2", "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/1999
+    wire: Plugin "CopilotResponder" "state 163cca2c ShowData/DataPools/Default/Sequences/1999"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "LDCOMPILE-C6 SCRATCH DELETABLE"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "LDCOMPILE-C6 SCRATCH DELETABLE R3"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "R4 recall-inline"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "R4 attribute-inline"}], "id": "163cca2c", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "Sequence 1999"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/1999", "truncated": false, "v": 1}
