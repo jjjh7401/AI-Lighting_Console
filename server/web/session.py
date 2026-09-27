@@ -2410,6 +2410,13 @@ def _song_timeline_payload(
         if bundle is not None
         else set()
     )
+    # 카드 t472 — 사전이동 큐가 잰 어둠 길이와 「켜진 채 이동」 경고(t471)를 그
+    # 구간에 싣는다. 사전이동이 없는 구간에는 키를 붙이지 않는다(추가만).
+    premove_mib = (
+        {cue.section_index: cue.mib for cue in bundle.cues if cue.kind == "mib_premove"}
+        if bundle is not None
+        else {}
+    )
     # PLAN vs console truth (결함 1): a section is only "stored"/"verified"
     # after the console write + readback; unresolved sections stay flagged.
     unresolved_indexes = {
@@ -2484,6 +2491,14 @@ def _song_timeline_payload(
                         "fade_seconds": fade_by_section.get(decision.section.index),
                         "accents": list(decision.accent.accents),
                         "mib": decision.section.index in mib_section_indexes,
+                        **(
+                            {
+                                "dark_window_seconds": mib_data.dark_window_seconds,
+                                "live_move": mib_data.live_move,
+                            }
+                            if (mib_data := premove_mib.get(decision.section.index)) is not None
+                            else {}
+                        ),
                         "trig_time_seconds": (
                             decision.section.start_seconds if plan.timing.uses_trig_time else None
                         ),

@@ -77,7 +77,16 @@ export function intensityTrend(sections: SongTimelineSection[], index: number): 
 
 /** MIB 칸. 원천은 `mib: boolean`(이 구간에 mib_premove 큐가 있는가) 하나뿐이다.
  * dark/mark/live 3상태는 서버가 구간 단위로 내지 않으므로 기호를 쓰지 않는다. */
+/** t472 — 조립기가 잰 어둠이 모자라 무빙이 켜진 채 움직이면(t471 live_move) 경고 문구,
+ * 아니면 null. 어둠 길이는 서버 값 그대로(소수 둘째 자리까지) 적는다. */
+export function liveMoveWarning(section: SongTimelineSection): string | null {
+  if (!section.live_move || section.dark_window_seconds == null) return null;
+  return `⚠ 어둠 ${Number(section.dark_window_seconds.toFixed(2))}초 — 켜진 채 이동`;
+}
+
 export function mibCellText(section: SongTimelineSection): string {
+  const warning = liveMoveWarning(section);
+  if (warning !== null) return warning;
   return section.mib ? "사전이동 있음" : "—";
 }
 
@@ -189,10 +198,15 @@ export function conceptCells(
       nodata: true,
     };
   }
+  const symbols = concept.mib.length
+    ? concept.mib.map((status) => MIB_SYMBOL[status]).join(" ")
+    : "—";
+  // t472 — 컨셉 기호와 별개로, 실제로 콘솔에 나갈 큐에서 조립기가 잰 경고를 덧붙인다.
+  const warning = liveMoveWarning(section);
   return {
     occurrence: concept.occurrence === null ? "—" : String(concept.occurrence),
     trigger: concept.triggers.length ? concept.triggers.join(" · ") : "—",
-    mib: concept.mib.length ? concept.mib.map((status) => MIB_SYMBOL[status]).join(" ") : "—",
+    mib: warning === null ? symbols : `${symbols} ${warning}`,
     evidence: concept.evidence ?? NO_PUBLIC_EVIDENCE,
     nodata: false,
   };

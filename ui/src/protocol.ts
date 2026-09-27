@@ -323,6 +323,10 @@ export interface SongTimelineSection {
   fx: string[];
   accents: string[];
   mib: boolean;
+  /** t472 — 사전이동이 있는 구간에만: 사전이동에 쓸 수 있는 어둠(초), 모르면 null (t471). */
+  dark_window_seconds?: number | null;
+  /** t472 — 어둠이 모자라 무빙이 켜진 채 움직이는가 (t471, REQ-066). 사전이동 구간에만. */
+  live_move?: boolean;
   trig_time_seconds: number | null;
   plan_status?: SongTimelinePlanStatus;
 
