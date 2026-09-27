@@ -1,0 +1,16 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/900@10
+    wire: Plugin "CopilotResponder" "state b81d0342 ShowData/DataPools/Default/Sequences/900 offset=10"
+<<< {"children": [{"class": "Cue", "cueNo": 9, "i": 11, "name": "Q9 pos 25"}, {"class": "Cue", "cueNo": 10, "i": 12, "name": "Q10 pos 26"}, {"class": "Cue", "cueNo": 11, "i": 13, "name": "[POS05 팬아웃 종점 (객석 상단) · 합성좌표]"}, {"class": "Cue", "cueNo": 12, "i": 14, "name": "Cue 12"}, {"class": "Cue", "cueNo": 13, "i": 15, "name": "[POS05 팬아웃 종점 (객석 상단) · 합성좌표]"}], "id": "b81d0342", "kind": "state", "node": {"childCount": 15, "class": "Sequence", "enumeration": "ok", "name": "T469 SCRATCH DELETABLE"}, "offset": 10, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/13|RELEASE,NAME
+    wire: Plugin "CopilotResponder" "props 00604f8e RELEASE,NAME ShowData/DataPools/Default/Sequences/900/13"
+<<< {"id": "00604f8e", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/13", "reads": [{"n": "RELEASE", "ok": true, "t": "boolean", "v": "true"}, {"n": "NAME", "ok": true, "t": "string", "v": "[POS05 팬아웃 종점 (객석 상단) · 합성좌표]"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/14|RELEASE,NAME
+    wire: Plugin "CopilotResponder" "props 27bc4597 RELEASE,NAME ShowData/DataPools/Default/Sequences/900/14"
+<<< {"id": "27bc4597", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/14", "reads": [{"n": "RELEASE", "ok": true, "t": "boolean", "v": "false"}, {"n": "NAME", "ok": true, "t": "string", "v": "Cue 12"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/15|RELEASE,NAME
+    wire: Plugin "CopilotResponder" "props 420cd79b RELEASE,NAME ShowData/DataPools/Default/Sequences/900/15"
+<<< {"id": "420cd79b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/15", "reads": [{"n": "RELEASE", "ok": true, "t": "boolean", "v": "false"}, {"n": "NAME", "ok": true, "t": "string", "v": "[POS05 팬아웃 종점 (객석 상단) · 합성좌표]"}], "truncated": false, "v": 1}
