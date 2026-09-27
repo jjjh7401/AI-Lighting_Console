@@ -83,6 +83,7 @@ from collections.abc import Sequence
 
 from server.concept.compile import compile_song
 from server.concept.gates import SongBuild, build_song, evaluate_song
+from server.concept.headroom import compute_cue_headroom
 from server.design.song_plan import UnifiedSongLightingPlan
 
 __all__ = ["build_concept_report", "build_concept_report_from_songcue_sections"]
@@ -157,7 +158,7 @@ def _concept_rows(
     rows: list[dict[str, object]] = []
     position: int | None = None
     seen_sections = 0
-    for row, verdict in zip(build.table, build.mib, strict=True):
+    for row, verdict, state in zip(build.table, build.mib, build.states, strict=True):
         if row.kind == "section":
             position = seen_sections
             seen_sections += 1
@@ -174,6 +175,9 @@ def _concept_rows(
                 "one_shot": shots.get(row.ts) if row.kind == "section" else None,
                 "evidence": None,
                 "screen_position": (position if paired and row.kind != "safety" else None),
+                # 카드 t461 — REQ-093 (4) 헤드룸 경고의 원천. 컨셉 그룹 로스터
+                # (density.GROUP_ROSTER) 기준 꺼진 그룹 수, headroom 재사용.
+                "unused_groups": compute_cue_headroom(state).unused_groups,
             }
         )
     reason = (
@@ -182,6 +186,44 @@ def _concept_rows(
         else f"컨셉 구간 행 {section_count}개와 화면 구간 {screen_count}개가 짝이 안 맞는다"
     )
     return rows, {"available": paired, "reason": reason}
+
+
+#: 카드 t461 — 해제 전까지 아껴 두는 효과 그룹(gates.py ``_EFFECT_GROUPS`` 와 같은 둘).
+_RESERVE_GROUPS: tuple[str, ...] = ("BLIND", "STROBE")
+
+
+def _concept_reserve(
+    build: SongBuild, rows: Sequence[dict[str, object]]
+) -> list[dict[str, object]]:
+    """카드 t461 — REQ-090(BLIND 잠금)·REQ-093 (3)의 서버 원천.
+
+    리저브 그룹은 해석된 큐 상태에서 **처음 켜지는 행**이 해제 큐다(한 번도 안
+    켜지면 ``released_q`` 가 None). 유보색은 입력(``raw_song["reserved"]``)이
+    선언했을 때만 나오고, 해제 큐는 입력 색으로 판정한 곡(``color_source ==
+    "input"``)에서만 찾는다 — 상수 팔레트 색은 증거가 아니다(카드 t444).
+    ``screen_position`` 은 그 행의 화면 구간(짝짓기가 안 됐으면 None).
+    """
+
+    def released(predicate) -> tuple[int | None, int | None]:
+        for row, state, table_row in zip(rows, build.states, build.table, strict=True):
+            if predicate(state, table_row):
+                return int(row["q"]), row["screen_position"]  # type: ignore[return-value]
+        return None, None
+
+    items: list[dict[str, object]] = []
+    for name in _RESERVE_GROUPS:
+        q, position = released(lambda state, _row, name=name: state.dim.get(name, 0) > 0)
+        items.append({"name": name, "kind": "group", "released_q": q, "screen_position": position})
+    for color in build.reserved:
+        if build.color_source == "input":
+            wanted = color.casefold()
+            q, position = released(
+                lambda _state, row, wanted=wanted: any(c.casefold() == wanted for c in row.colors)
+            )
+        else:
+            q, position = None, None
+        items.append({"name": color, "kind": "color", "released_q": q, "screen_position": position})
+    return items
 
 
 def _run_concept_pipeline(
@@ -211,6 +253,7 @@ def _run_concept_pipeline(
         gates = evaluate_song(raw_song, color_usage=color_usage)
         compiled = compile_song(build)
         rows, row_pairing = _concept_rows(build, screen_count=len(raw_sections))
+        reserve = _concept_reserve(build, rows)
     except Exception as error:  # noqa: BLE001 — 컨셉 리포트는 부가 정보다,
         # 실패해도 기존 콘솔 명령 경로를 막지 않는다(ADDITIVE 원칙,
         # 모듈 독스트링 참고).
@@ -230,6 +273,7 @@ def _run_concept_pipeline(
         "energy_report_count": len(compiled.energy_reports),
         "rows": rows,
         "row_pairing": row_pairing,
+        "reserve": reserve,
     }
 
 
