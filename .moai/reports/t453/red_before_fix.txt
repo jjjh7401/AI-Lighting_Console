@@ -1,0 +1,18 @@
+E       assert False
+E        +  where False = any(<generator object TestSongFlow.test_unfound_label_is_disclosed_and_nothing_is_invented.<locals>.<genexpr> at 0x108a082b0>)
+
+server/tests/test_song_cue_white_preset_t453.py:191: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhiteCueRecallsThePresetOnWFixtures::test_cool_white_adds_a_preset_line_after_the_w_line
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhiteCueRecallsThePresetOnWFixtures::test_warm_white_uses_its_own_slot
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhiteCueRecallsThePresetOnWFixtures::test_a_non_white_cue_is_unchanged
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhiteCueRecallsThePresetOnWFixtures::test_no_w_fixtures_means_no_preset_line
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhiteCueRecallsThePresetOnWFixtures::test_unfound_label_keeps_todays_lines_and_reports_why
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_measured_pool_resolves_both_whites
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_duplicate_suffix_is_ignored
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_missing_label_is_a_reason_not_a_slot
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_label_in_two_slots_is_ambiguous
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_unresolved_pool_or_unreadable_pool_is_a_reason_for_both
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestSongFlow::test_white_cue_on_w_rig_recalls_the_preset
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestSongFlow::test_unfound_label_is_disclosed_and_nothing_is_invented
+12 failed, 2 passed in 1.26s
