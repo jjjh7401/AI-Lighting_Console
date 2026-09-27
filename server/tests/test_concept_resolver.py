@@ -460,3 +460,39 @@ class TestMibVerdict:
         verdict = mib_verdict(prev, cur, ts=1.0, dark_since=0.0, movers=self.MOVERS)
         assert verdict.status == "live"
         assert verdict.mark_insert_at is None
+
+
+class TestMibTimingMeasured:
+    """카드 t468 — §F 잠정값을 M8 콘솔 실측(t464)에 맞춘다.
+
+    실측(.moai/reports/t464/verdict.md §3b, Spiider 팬 60°, onPC): 어둠 2.07초로는
+    사전이동이 다 끝나지 않았고 4.05초면 켜질 때 이미 도착해 있었다. 판정기는
+    (1) 2.07초 창을 ``mark`` 로 통과시키면 안 되고 (2) ``mark`` 로 통과시킨 창에서
+    Mark 큐가 켜지는 큐보다 최소 4.05초 먼저 나가야 한다(이동 시간 보장).
+    """
+
+    MOVERS = ("MOVER-U", "MOVER-D")
+    MEASURED_INSUFFICIENT = 2.07
+    MEASURED_SUFFICIENT = 4.05
+
+    def _reveal(self, window: float):
+        prev = _state(dim={"MOVER-U": 0}, pos="home")
+        cur = _state(dim={"MOVER-U": 50}, pos="back")
+        ts = 100.0
+        return ts, mib_verdict(prev, cur, ts=ts, dark_since=ts - window, movers=self.MOVERS)
+
+    def test_measured_insufficient_window_is_live(self):
+        _, verdict = self._reveal(self.MEASURED_INSUFFICIENT)
+        assert verdict.status == "live"
+
+    @pytest.mark.parametrize("window", [MOVE_SECONDS + SETTLE_SECONDS, 6.0, 40.0])
+    def test_mark_leaves_at_least_the_measured_move_time(self, window):
+        ts, verdict = self._reveal(window)
+        assert verdict.status == "mark"
+        assert ts - verdict.mark_insert_at >= self.MEASURED_SUFFICIENT
+
+    def test_mark_fires_after_the_dark_window_opens(self):
+        # 대조: Mark 큐가 어둠이 시작되기 전(켜진 채)에 나가면 안 된다.
+        window = MOVE_SECONDS + SETTLE_SECONDS
+        ts, verdict = self._reveal(window)
+        assert verdict.mark_insert_at >= ts - window
