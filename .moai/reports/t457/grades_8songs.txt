@@ -1,0 +1,15 @@
+등급 분포 {'verified': 16, None: 72, 'practitioner_pattern': 135, 'designed_rule': 5}
+게이트 {'PASS': 75, 'n/a': 29}
+5 ('phrase', '*', '드롭 직전의 정적', 'designed_rule')
+8 ('phrase', '*', '보컬 시작', None)
+16 ('phrase', '*', '빌드업 시작', 'practitioner_pattern')
+72 ('phrase', '*', '악기 추가', 'practitioner_pattern')
+8 ('safety', 'Intro', None, 'verified')
+8 ('safety', 'Outro', None, 'verified')
+9 ('section', 'Bridge', None, None)
+41 ('section', 'Chorus', None, 'practitioner_pattern')
+8 ('section', 'Chorus', None, None)
+6 ('section', 'Final Chorus', None, 'practitioner_pattern')
+8 ('section', 'Intro', None, None)
+8 ('section', 'Outro', None, None)
+31 ('section', 'Verse', None, None)
