@@ -33,5 +33,33 @@
     "change": { "field": "trans", "value": "XFADE", "before": "SNAP" },
     "sentence": "큐 3 전환을 XFADE로 바꿔줘",
     "expected_changes": { "trans": "XFADE" }
+  },
+  {
+    "name": "tracking",
+    "cue": 3,
+    "change": { "field": "tracking", "value": "Block", "before": "Track" },
+    "sentence": "큐 3 트래킹 Block으로 바꿔줘",
+    "expected_changes": { "tracking": "Block" }
+  },
+  {
+    "name": "mib",
+    "cue": 3,
+    "change": { "field": "mib_mode", "value": "dark", "before": "없음" },
+    "sentence": "큐 3 MIB dark로 설정",
+    "expected_changes": { "mib_mode": "dark" }
+  },
+  {
+    "name": "phaser",
+    "cue": 3,
+    "change": { "field": "phaser", "value": "Breathe Soft", "before": "—" },
+    "sentence": "큐 3 페이저 Breathe Soft로 바꿔줘",
+    "expected_changes": { "phaser": "Breathe Soft" }
+  },
+  {
+    "name": "position",
+    "cue": 3,
+    "change": { "field": "position", "value": "Sweep L", "presetNo": "2.11", "before": "—" },
+    "sentence": "큐 3 포지션 2.11 Sweep L로 바꿔줘",
+    "expected_changes": { "position": "Sweep L", "position_preset_no": "2.11" }
   }
 ]

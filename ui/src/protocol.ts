@@ -379,6 +379,19 @@ export interface SongTimelineSection {
   texture_source?: string;
   /** 아크 역할 (예: "intro", "chorus", "finale") — 서버가 판독했을 때만 존재 */
   role?: string;
+
+  // --- t470 확장(t466 파서 어휘). 전부 선택 필드다 — 없는 필드는 키 자체가
+  // 나오지 않으므로 기존 페이로드는 그대로 파싱된다. 정본은
+  // server/design/cue_sheet_edit.py TRACKING_VALUES·MIB_MODES.
+  /** 트래킹 — 없으면 "Track"으로 본다(t466). `Track`·`Block`·`Cue Only`·`Release`. */
+  tracking?: string;
+  /** MIB — 조립기가 계산한 기존 `mib`(참/거짓)와는 다른 칸이다(t466, 건드리지
+   * 않는다). `none`·`dark`·`mark`·`live`. */
+  mib_mode?: string;
+  /** 페이저 프리셋 이름(딤머 풀 1 또는 컬러 풀 4). */
+  phaser?: string;
+  /** 포지션 프리셋 번호("2.<point>" — 풀 2만). 기존 `position`(이름)과 짝. */
+  position_preset_no?: string;
 }
 
 export interface SongTimelineView {

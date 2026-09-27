@@ -35,7 +35,9 @@ def _load_fixture() -> list[dict[str, object]]:
 FIXTURE = _load_fixture()
 
 
-def test_fixture_has_the_five_representative_operations() -> None:
+def test_fixture_has_the_nine_representative_operations() -> None:
+    # t470 — t466 이 넓힌 파서 어휘(트래킹·MIB·페이저·포지션) 네 건이 기존
+    # 대표 5종에 더해졌다.
     names = {item["name"] for item in FIXTURE}
     assert names == {
         "group-multi-intensity",
@@ -43,6 +45,10 @@ def test_fixture_has_the_five_representative_operations() -> None:
         "effect-preset-name",
         "fade",
         "trans",
+        "tracking",
+        "mib",
+        "phaser",
+        "position",
     }
 
 

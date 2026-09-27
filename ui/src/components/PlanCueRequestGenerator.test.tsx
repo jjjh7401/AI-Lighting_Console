@@ -72,11 +72,16 @@ function baseViewModel(overrides: Partial<PlanCueRequestGeneratorViewModel> = {}
     onApplyFade: vi.fn(),
     transValue: "SNAP",
     onApplyTrans: vi.fn(),
+    trackingValue: "Track",
+    onApplyTracking: vi.fn(),
+    mibValue: "none",
+    onApplyMib: vi.fn(),
     positionLabel: "—",
     colorLabel: "—",
     colorButtonDisabled: true,
     dimLabel: "—",
     effectLabel: "—",
+    phaserLabel: "—",
     onOpenPopup: vi.fn(),
     stack: [],
     onRemoveEntry: vi.fn(),
@@ -325,6 +330,81 @@ describe("PlanCueRequestGeneratorView — 반영 요청 버튼", () => {
       findAllByType(root, "button").find((b) => textOf(b) === "코파일럿에게 반영 요청");
     expect(submitOf(empty)?.props.disabled).toBe(true);
     expect(submitOf(withOne)?.props.disabled).toBe(false);
+  });
+});
+
+describe("PlanCueRequestGeneratorView — t470 트래킹 4택", () => {
+  it("renders the four TRACKING_VALUES buttons and marks the current one selected", () => {
+    const vm = baseViewModel({ trackingValue: "Block" });
+    const el = PlanCueRequestGeneratorView(vm);
+    const buttons = findAllByType(el, "button").filter((b) =>
+      ["Track", "Block", "Cue Only", "Release"].includes(textOf(b)),
+    );
+    expect(buttons).toHaveLength(4);
+    const blockButton = buttons.find((b) => textOf(b) === "Block");
+    expect(blockButton?.props.className).toContain("is-selected");
+    const trackButton = buttons.find((b) => textOf(b) === "Track");
+    expect(trackButton?.props.className).not.toContain("is-selected");
+  });
+
+  it("calls onApplyTracking with the pressed value", () => {
+    const onApplyTracking = vi.fn();
+    const vm = baseViewModel({ onApplyTracking });
+    const el = PlanCueRequestGeneratorView(vm);
+    const releaseButton = findAllByType(el, "button").find((b) => textOf(b) === "Release");
+    releaseButton?.props.onClick();
+    expect(onApplyTracking).toHaveBeenCalledWith("Release");
+  });
+});
+
+describe("PlanCueRequestGeneratorView — t470 MIB 4택", () => {
+  it("renders 없음/dark/mark/live button labels", () => {
+    const vm = baseViewModel({ mibValue: "dark" });
+    const el = PlanCueRequestGeneratorView(vm);
+    const labels = findAllByType(el, "button").map(textOf);
+    expect(labels).toEqual(expect.arrayContaining(["없음", "dark", "mark", "live"]));
+    const darkButton = findAllByType(el, "button").find((b) => textOf(b) === "dark");
+    expect(darkButton?.props.className).toContain("is-selected");
+  });
+
+  it("calls onApplyMib with the canonical enum value, not the display label", () => {
+    const onApplyMib = vi.fn();
+    const vm = baseViewModel({ onApplyMib });
+    const el = PlanCueRequestGeneratorView(vm);
+    const noneButton = findAllByType(el, "button").find((b) => textOf(b) === "없음");
+    noneButton?.props.onClick();
+    expect(onApplyMib).toHaveBeenCalledWith("none");
+  });
+});
+
+describe("PlanCueRequestGeneratorView — t470 페이저 두 풀", () => {
+  it("shows the phaser label and two 바꾸기 buttons opening the phaser field", () => {
+    const onOpenPopup = vi.fn();
+    const vm = baseViewModel({ phaserLabel: "Breathe Soft", onOpenPopup });
+    const el = PlanCueRequestGeneratorView(vm);
+    const rows = findAllByClassIncludes(el, "plan-cue-generator-row");
+    const phaserRow = rows.find((row) => textOf(row).includes("Breathe Soft"));
+    expect(phaserRow).toBeDefined();
+    const phaserButtons = findAllByType(phaserRow as ReactElement, "button");
+    expect(phaserButtons).toHaveLength(2);
+    phaserButtons[0].props.onClick();
+    phaserButtons[1].props.onClick();
+    expect(onOpenPopup).toHaveBeenNthCalledWith(1, "phaser", 1);
+    expect(onOpenPopup).toHaveBeenNthCalledWith(2, "phaser", 4);
+  });
+});
+
+describe("PlanCueRequestGeneratorView — t470 포지션 행은 position 필드를 연다", () => {
+  it("opens the popup with field 'position' (not the old 'movement')", () => {
+    const onOpenPopup = vi.fn();
+    const vm = baseViewModel({ positionLabel: "Sweep L", onOpenPopup });
+    const el = PlanCueRequestGeneratorView(vm);
+    const rows = findAllByClassIncludes(el, "plan-cue-generator-row");
+    const positionRow = rows.find((row) => textOf(row).includes("Sweep L"));
+    expect(positionRow).toBeDefined();
+    const button = findAllByType(positionRow as ReactElement, "button")[0];
+    button.props.onClick();
+    expect(onOpenPopup).toHaveBeenCalledWith("position", 2);
   });
 });
 

@@ -162,6 +162,14 @@ describe("deriveWarningsForChange", () => {
     expect(warnings).toEqual(["⚠ MIB live — GATE 경고 예고"]);
   });
 
+  it("t470 — attaches MIB-live to a position change too (the position row now emits `position`)", () => {
+    const warnings = deriveWarningsForChange(
+      { section: cue, allSections: [cue, laterChorus], conceptRow: row, reserve },
+      { field: "position", value: "Sweep L", presetNo: "2.11", before: "—" },
+    );
+    expect(warnings).toEqual(["⚠ MIB live — GATE 경고 예고"]);
+  });
+
   it("carries no warnings for a fade change (none of the 4 reused signals apply)", () => {
     const warnings = deriveWarningsForChange(
       { section: cue, allSections: [cue, laterChorus], conceptRow: row, reserve },
