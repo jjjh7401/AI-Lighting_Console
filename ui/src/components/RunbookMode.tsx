@@ -58,6 +58,11 @@ export interface RunbookModeProps {
   onSaveDraft?: () => void;
   /** t291 — 「콘솔에 반영」. 승인 카드를 거쳐야 콘솔에 닿는다. */
   onApplyDraft?: () => void;
+  /** t460 — REQ-087~101 PLAN CUE 수정요청 생성기 배선. 전부 선택 prop이라
+   * 넘기지 않으면 카드는 REQ-083 문언 그대로 읽기 전용에 머문다(AC-034). */
+  onGeneratorSend?: (text: string, cueNumber: number) => void;
+  generatorResponding?: boolean;
+  generatorLastAssistantText?: string | null;
 }
 
 /**
@@ -194,6 +199,9 @@ export function RunbookMode({
   onRedoDraft,
   onSaveDraft,
   onApplyDraft,
+  onGeneratorSend,
+  generatorResponding = false,
+  generatorLastAssistantText = null,
 }: RunbookModeProps) {
   const staleSuffix = cueMonitor.stale ? " (오래됨 — 콘솔 연결을 확인하세요)" : "";
 
@@ -241,6 +249,9 @@ export function RunbookMode({
             cueMonitor={cueMonitor}
             stale={timelineStale}
             isExample={timelineIsExample}
+            onGeneratorSend={onGeneratorSend}
+            generatorResponding={generatorResponding}
+            generatorLastAssistantText={generatorLastAssistantText}
           />
           {/* t454 — REQ-084 상태줄 GATE. 앱 셸의 StatusBanner 와 별개다. */}
           <RunbookGateBar report={timeline.concept_report} />

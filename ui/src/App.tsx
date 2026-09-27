@@ -15,6 +15,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -607,6 +608,28 @@ export default function App() {
     sendChat("초안을 콘솔에 반영해줘", selectedCue);
   }, [selectedCue]);
 
+  // t460 — REQ-092: PLAN CUE 생성기가 거절 사유로 보여줄 "가장 최근
+  // assistant 응답 텍스트". state.entries 는 이미 매 chat_response 를
+  // {kind:"assistant", text} 로 쌓아 둔다(protocol.ts reduceServerEvent) —
+  // 새 채널을 만들지 않고 그 값을 그대로 찾아 쓴다.
+  const lastAssistantText = useMemo(() => {
+    for (let i = state.entries.length - 1; i >= 0; i -= 1) {
+      const entry = state.entries[i];
+      if (entry.kind === "assistant") return entry.text;
+    }
+    return null;
+  }, [state.entries]);
+
+  // t460 — REQ-087~101 생성기 전송. sendChat 과 같은 모양(text, cueNumber)
+  // 이라 생성기가 보낸 요청도 감독이 손으로 친 것과 같은 대화 경로를 탄다
+  // (REQ-094) — 새 웹소켓 메시지 종류를 만들지 않는다.
+  const sendGeneratorRequest = useCallback(
+    (text: string, cueNumber: number) => {
+      sendChat(text, cueNumber);
+    },
+    [sendChat],
+  );
+
   const submit = () => {
     if (!composer.canSubmit) return;
     const text = draft.trim();
@@ -1092,6 +1115,9 @@ export default function App() {
               onSaveDraft={() => void saveDraftToLibrary()}
               onApplyDraft={applyDraftToConsole}
               librarySlot={timelineLibrarySlot}
+              onGeneratorSend={sendGeneratorRequest}
+              generatorResponding={responding}
+              generatorLastAssistantText={lastAssistantText}
             />
           </div>
           {/* The copilot chat rides ALONGSIDE the runbook pane (user request,
