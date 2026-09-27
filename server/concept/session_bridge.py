@@ -73,8 +73,9 @@ ts 가 같은 section 행에 붙는다. 시각 기준은 쓰지 않는다 —
 ``Pre-Chorus`` 는 화면 구간 이름이 아니고, 재매핑이 이름을 바꾼다(예:
 ``Outro`` → ``Rap/Solo/Dance Break``). section 행 수와 구간 수가 다르면
 짝을 짓지 않는다(``row_pairing.available: False``, 모든 행 ``None``).
-근거 등급(``evidence``)은 큐마다 등급을 매기는 생산자가 없어 전 행
-``None`` 이다(생산자 배선은 카드 t457).
+근거 등급(``evidence``)은 :func:`server.concept.evidence.evidence_for_row` 가
+행 종류·구간·트리거·회차로 매긴다(카드 t457, REQ-022/071) — 조문이 받치지
+않는 행은 ``None`` 이다.
 """
 
 from __future__ import annotations
@@ -82,6 +83,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from server.concept.compile import compile_song
+from server.concept.evidence import evidence_for_row
 from server.concept.gates import SongBuild, build_song, evaluate_song
 from server.concept.headroom import compute_cue_headroom
 from server.design.song_plan import UnifiedSongLightingPlan
@@ -173,7 +175,7 @@ def _concept_rows(
                 "tracking": row.tracking,
                 "mib": None if verdict is None else verdict.status,
                 "one_shot": shots.get(row.ts) if row.kind == "section" else None,
-                "evidence": None,
+                "evidence": evidence_for_row(row.kind, row.section, row.trigger, row.occurrence),
                 "screen_position": (position if paired and row.kind != "safety" else None),
                 # 카드 t461 — REQ-093 (4) 헤드룸 경고의 원천. 컨셉 그룹 로스터
                 # (density.GROUP_ROSTER) 기준 꺼진 그룹 수, headroom 재사용.

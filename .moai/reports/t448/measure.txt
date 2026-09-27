@@ -1,0 +1,35 @@
+server/looks/songcue.py: 3594 lines · climax=103 accent=173 darkness=93 return=211 ladder=116 yield=27 front_fill=30 mib=0 premove=0
+server/design/song_cue_composer.py: 924 lines · climax=0 accent=15 darkness=0 return=54 ladder=0 yield=0 front_fill=0 mib=33 premove=19
+
+== build_songcue_bundle
+  시험 파일 17개 · 호출 55곳 · 그 파일들의 시험 함수 212개
+    server/tests/test_chorus_color_two_paths_t439.py: 호출 1 · 시험 4
+    server/tests/test_chorus_color_two_paths_t441.py: 호출 2 · 시험 13 · prepare_songcue 도 씀
+    server/tests/test_songcue_accent_fixture.py: 호출 2 · 시험 7
+    server/tests/test_songcue_accent_ladder_t382.py: 호출 6 · 시험 15
+    server/tests/test_songcue_bundle.py: 호출 9 · 시험 26 · prepare_songcue 도 씀
+    server/tests/test_songcue_chorus_rescue.py: 호출 7 · 시험 8
+    server/tests/test_songcue_climax_001.py: 호출 8 · 시험 18
+    server/tests/test_songcue_cross_song.py: 호출 3 · 시험 9 · prepare_songcue 도 씀
+    server/tests/test_songcue_front_fill.py: 호출 1 · 시험 6
+    server/tests/test_songcue_ladder.py: 호출 5 · 시험 21
+    server/tests/test_songcue_movement.py: 호출 1 · 시험 24
+    server/tests/test_songcue_pre_drop_darkness.py: 호출 2 · 시험 14
+    server/tests/test_songcue_report.py: 호출 1 · 시험 8
+    server/tests/test_songcue_rig_aware_look.py: 호출 1 · 시험 11 · prepare_songcue 도 씀
+    server/tests/test_songcue_section_intent.py: 호출 2 · 시험 15
+    server/tests/test_songcue_t429_repeat_chorus_collision.py: 호출 2 · 시험 2
+    server/tests/test_songcue_timing.py: 호출 2 · 시험 11 · prepare_songcue 도 씀
+  생산 호출처: ['server/orchestrator/tools.py']
+
+== compose_song_cue_bundle
+  시험 파일 8개 · 호출 25곳 · 그 파일들의 시험 함수 87개
+    server/tests/test_preset_label_lookup_t232.py: 호출 1 · 시험 18
+    server/tests/test_song_cue_color_emission.py: 호출 1 · 시험 13
+    server/tests/test_song_cue_composer.py: 호출 7 · 시험 7
+    server/tests/test_song_cue_fade_role.py: 호출 5 · 시험 5
+    server/tests/test_song_cue_role_stop_t394.py: 호출 7 · 시험 7
+    server/tests/test_song_timeline_concept_report_wiring.py: 호출 2 · 시험 5
+    server/tests/test_song_timeline_cue_sheet_producer.py: 호출 1 · 시험 25
+    server/tests/test_song_timeline_decision_sources.py: 호출 1 · 시험 7
+  생산 호출처: ['server/web/session.py']
