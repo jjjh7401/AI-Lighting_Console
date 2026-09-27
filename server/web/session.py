@@ -1205,8 +1205,33 @@ def _color_failure_note(failures: Mapping[str, str]) -> str:
     return " 색 미반영: " + "; ".join(failures.values()) + "."
 
 
+#: 카드 t453 — 흰색 큐가 부르는 콘솔 컬러 프리셋 라벨(감독 결정 2026-09-27:
+#: RGBW 숫자를 앱이 박지 않고 콘솔 프리셋을 이름으로 참조). 라벨은 판독값이다
+#: (`.moai/reports/t469/run3_phaser_pools.txt`, 컬러 풀 4 슬롯 7·8). 슬롯 번호는
+#: 적지 않는다 — 쇼파일마다 다르므로 ``_white_preset_slots``가 풀에서 찾는다.
+_WHITE_PRESET_LABELS: dict[str, str] = {
+    "Warm White": "웜 화이트 (=P2)",
+    "Cool White": "뉴트럴 화이트 (=P3)",
+}
+
+_WHITE_NAME_BY_RGB: dict[tuple[int, int, int], str] = {
+    rgb: name for name, rgb in _COLOR_NAMES.COLOR_PALETTE_SEQUENCE if name in _WHITE_PRESET_LABELS
+}
+
+
+def _white_palette_name(cue) -> str | None:
+    """구간 큐의 주색이 표준 팔레트 흰색 둘 중 하나면 그 이름, 아니면 None."""
+    if cue.kind != "section" or not cue.color.palette:
+        return None
+    rgb = _COLOR_NAMES.resolve_color_name(cue.color.palette[0])
+    return None if rgb is None else _WHITE_NAME_BY_RGB.get(rgb)
+
+
 def _song_color_value_lines(
-    cue, fids: Sequence[int], w_fids: frozenset[int] = frozenset()
+    cue,
+    fids: Sequence[int],
+    w_fids: frozenset[int] = frozenset(),
+    white_presets: Mapping[str, tuple[int, int] | str] | None = None,
 ) -> tuple[tuple[str, ...], str | None]:
     """SPEC-LDDESIGN-001 M2 — 큐의 팔레트 주색을 콘솔 값 라인으로 낸다.
 
@@ -1228,6 +1253,14 @@ def _song_color_value_lines(
     대기, `.moai/reports/t430/verdict.md` §3). W 없이 부르면(``w_fids``
     빈 집합) 오늘과 바이트 동일하다. W 라인 없는 기구 목록이 비면 그
     줄은 아예 안 낸다.
+
+    카드 t453 — ``white_presets``(흰색 이름 → ``(풀, 슬롯)`` 또는 못 찾은
+    사유)를 주면, 흰색 큐의 W 기구에 ``At Preset`` 한 줄을 W 줄 **뒤에**
+    붙인다. 콘솔은 뒤에 온 값을 쓰므로 프리셋의 RGBW 가 적용되고, 프리셋에
+    값이 없는 기구는 앞 줄의 RGB 흰색을 그대로 받는다. 다음 큐의 W 기구 줄이
+    늘 ``W At 0``을 적으므로 프리셋이 켠 W 는 다음 색으로 새지 않는다. 사유가
+    오면 프리셋 줄 없이 오늘 줄만 내고 그 사유를 돌려준다(지어내지 않는다).
+    ``None``(판독 안 함)이면 t430 동작 그대로다.
     """
     if cue.kind != "section":
         return (), None
@@ -1247,6 +1280,15 @@ def _song_color_value_lines(
         lines.append(_color_apply_command(rgb_only_fids, rgb))
     if w_only_fids:
         lines.append(_color_apply_command(w_only_fids, rgb) + " ; Attribute 'ColorRGB_W' At 0")
+    white = _white_palette_name(cue)
+    if white is None or white_presets is None or not w_only_fids:
+        return tuple(lines), None
+    resolved = white_presets.get(white)
+    if not isinstance(resolved, tuple):
+        reason = resolved or f"{white} 프리셋 판독 결과 없음"
+        return tuple(lines), f"Q{cue.cue_number:g} {cue.cue_name!r} 흰색 프리셋 미사용: {reason}"
+    pool_no, slot = resolved
+    lines.append(_preset_recall_command(pool_no, w_only_fids, slot))
     return tuple(lines), None
 
 
@@ -6209,6 +6251,45 @@ class ChatSession:
             outcomes,
         )
 
+    def _white_preset_slots(self) -> dict[str, tuple[int, int] | str]:
+        """카드 t453 — 흰색 이름 → 콘솔 컬러 프리셋 ``(풀, 슬롯)`` 또는 못 찾은 사유.
+
+        ``_resolve_position_preset_labels``(t232)와 같은 규율이다: 풀을 한 번
+        완전 판독해 라벨(``#n`` 접미 무시)로 찾는다. 슬롯이 하나면 쓰고, 없거나
+        여럿이면 사유를 남긴다(추측 금지). 컬러 풀 번호는 이름 "Color"로
+        해석한다(하드코딩 금지, ``_phaser_slot_by_label``과 같은 리졸버).
+        """
+        pool_no = self._resolve_named_pool_no("Color", probe_id="song-white-preset-pool")
+        if pool_no is None:
+            reason = "Color 프리셋 풀을 찾지 못해 흰색 프리셋 라벨을 확인할 수 없습니다"
+            return dict.fromkeys(_WHITE_PRESET_LABELS, reason)
+        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        children = self._paged_pool_children(
+            f"{pool_root}/{pool_no}", probe_id="song-white-preset-slots"
+        )
+        if children is None:
+            reason = (
+                f"Color 프리셋 풀(Preset {pool_no}.x)을 읽지 못해 "
+                "흰색 프리셋 라벨을 확인할 수 없습니다"
+            )
+            return dict.fromkeys(_WHITE_PRESET_LABELS, reason)
+        by_base: dict[str, list[int]] = {}
+        for slot, name in children.items():
+            if isinstance(name, str):
+                by_base.setdefault(name.split("#", 1)[0], []).append(slot)
+        resolved: dict[str, tuple[int, int] | str] = {}
+        for white, label in _WHITE_PRESET_LABELS.items():
+            slots = sorted(by_base.get(label, ()))
+            if len(slots) == 1:
+                resolved[white] = (pool_no, slots[0])
+            elif not slots:
+                resolved[white] = f"'{label}' 라벨의 Color 프리셋을 콘솔에서 찾지 못했습니다"
+            else:
+                resolved[white] = (
+                    f"'{label}' 라벨이 Color 프리셋 여러 슬롯 {slots}에 있어 특정할 수 없습니다"
+                )
+        return resolved
+
     def _phaser_slot_by_label(self, label: str) -> tuple[int, int] | None:
         """카탈로그 페이저 라벨 → 실기 ``(pool_no, slot)``, 못 찾으면 None(거부).
 
@@ -8220,6 +8301,13 @@ class ChatSession:
         # 큐마다 모아 최종 회신에 노출한다(`_color_failure_note`).
         # 카드 t430 — w_fids(기본 빈 집합)는 `_song_color_value_lines`로
         # 그대로 전달한다. 빈 집합이면 오늘과 바이트 동일.
+        # 카드 t453 — 흰색 큐가 있고 W 기구가 있을 때만 컬러 풀을 1회 판독한다.
+        # 그 밖의 곡은 판독 순서까지 오늘과 같다.
+        white_presets = (
+            self._white_preset_slots()
+            if w_fids and any(_white_palette_name(cue) for cue in bundle.cues)
+            else None
+        )
         color_failures: dict[str, str] = {}
         commands: list[str] = ["ChangeDestination Root"]
         # 카드 t462 — 앞 저장 큐가 켠 블라인더(다음 큐가 끈다).
@@ -8229,7 +8317,7 @@ class ChatSession:
             if cue.position.stored is not None:
                 preset_no = position_slots[cue.position.stored]
             dimmer = cue.dimmer.key_pct
-            color_lines, color_failure = _song_color_value_lines(cue, fids, w_fids)
+            color_lines, color_failure = _song_color_value_lines(cue, fids, w_fids, white_presets)
             if color_failure is not None:
                 color_failures[f"{cue.cue_number:g}"] = color_failure
             if preset_no is None and dimmer is None:
