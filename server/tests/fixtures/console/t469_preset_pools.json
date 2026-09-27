@@ -1,0 +1,300 @@
+{
+ "_provenance": "verbatim '<<<' replies from .moai/reports/t469/run2_preset_pools.txt and run3_phaser_pools.txt (real grandMA3 onPC, card t469). Keys are the console paths the probe read. Regenerate with .moai/reports/t477/extract_pools.py",
+ "replies": {
+  "ShowData/DataPools/Default/PresetPools": {
+   "children": [
+    {
+     "class": "Presets",
+     "i": 1,
+     "name": "Dimmer"
+    },
+    {
+     "class": "Presets",
+     "i": 2,
+     "name": "Position"
+    },
+    {
+     "class": "Presets",
+     "i": 3,
+     "name": "Gobo"
+    },
+    {
+     "class": "Presets",
+     "i": 4,
+     "name": "Color"
+    },
+    {
+     "class": "Presets",
+     "i": 5,
+     "name": "Beam"
+    },
+    {
+     "class": "Presets",
+     "i": 6,
+     "name": "Focus"
+    },
+    {
+     "class": "Presets",
+     "i": 7,
+     "name": "Control"
+    },
+    {
+     "class": "Presets",
+     "i": 8,
+     "name": "Shapers"
+    },
+    {
+     "class": "Presets",
+     "i": 9,
+     "name": "Video"
+    },
+    {
+     "class": "Presets",
+     "i": 21,
+     "name": "All 1"
+    },
+    {
+     "class": "Presets",
+     "i": 22,
+     "name": "All 2"
+    },
+    {
+     "class": "Presets",
+     "i": 23,
+     "name": "All 3"
+    },
+    {
+     "class": "Presets",
+     "i": 24,
+     "name": "All 4"
+    },
+    {
+     "class": "Presets",
+     "i": 25,
+     "name": "All 5"
+    }
+   ],
+   "id": "3c255c94",
+   "kind": "state",
+   "node": {
+    "childCount": 14,
+    "class": "PresetPools",
+    "enumeration": "ok",
+    "name": "PresetPools"
+   },
+   "offset": 0,
+   "ok": true,
+   "path": "ShowData/DataPools/Default/PresetPools",
+   "truncated": false,
+   "v": 1
+  },
+  "ShowData/DataPools/Default/PresetPools/2": {
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "POS01 보컬 센터 페이스 · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 2,
+     "name": "POS02 무대 전체 커버 · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 3,
+     "name": "POS03 밴드 라인 백 · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 4,
+     "name": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 5,
+     "name": "POS05 팬아웃 종점 (객석 상단) · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 6,
+     "name": "POS06 센터 집중 (브리지) · 합성좌표"
+    }
+   ],
+   "id": "a19975b1",
+   "kind": "state",
+   "node": {
+    "childCount": 6,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Position"
+   },
+   "offset": 0,
+   "ok": true,
+   "path": "ShowData/DataPools/Default/PresetPools/2",
+   "truncated": false,
+   "v": 1
+  },
+  "ShowData/DataPools/Default/PresetPools/21": {
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "DIM-PULSE"
+    },
+    {
+     "class": "Preset",
+     "i": 2,
+     "name": "PT-CIRCLE"
+    },
+    {
+     "class": "Preset",
+     "i": 3,
+     "name": "DIM-CHASE"
+    },
+    {
+     "class": "Preset",
+     "i": 4,
+     "name": "DIM-BREATHE"
+    },
+    {
+     "class": "Preset",
+     "i": 5,
+     "name": "TILT-SWEEP"
+    },
+    {
+     "class": "Preset",
+     "i": 6,
+     "name": "DIM-TWINKLE"
+    }
+   ],
+   "id": "e96b28ce",
+   "kind": "state",
+   "node": {
+    "childCount": 6,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "All 1"
+   },
+   "offset": 0,
+   "ok": true,
+   "path": "ShowData/DataPools/Default/PresetPools/21",
+   "truncated": false,
+   "v": 1
+  },
+  "ShowData/DataPools/Default/PresetPools/1": {
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "풀"
+    },
+    {
+     "class": "Preset",
+     "i": 2,
+     "name": "쇼 하이 OLD"
+    },
+    {
+     "class": "Preset",
+     "i": 3,
+     "name": "미드"
+    },
+    {
+     "class": "Preset",
+     "i": 4,
+     "name": "로우"
+    },
+    {
+     "class": "Preset",
+     "i": 5,
+     "name": "잔광"
+    },
+    {
+     "class": "Preset",
+     "i": 6,
+     "name": "아웃"
+    },
+    {
+     "class": "Preset",
+     "i": 7,
+     "name": "쇼 하이"
+    }
+   ],
+   "id": "bd7b56ad",
+   "kind": "state",
+   "node": {
+    "childCount": 7,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Dimmer"
+   },
+   "offset": 0,
+   "ok": true,
+   "path": "ShowData/DataPools/Default/PresetPools/1",
+   "truncated": false,
+   "v": 1
+  },
+  "ShowData/DataPools/Default/PresetPools/4": {
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "골드 앰버 (=P1)"
+    },
+    {
+     "class": "Preset",
+     "i": 2,
+     "name": "핫 핑크 (=P4)"
+    },
+    {
+     "class": "Preset",
+     "i": 3,
+     "name": "딥 퍼플 (=P5)"
+    },
+    {
+     "class": "Preset",
+     "i": 4,
+     "name": "터쿼이즈 (=P6)"
+    },
+    {
+     "class": "Preset",
+     "i": 5,
+     "name": "선셋 오렌지 (=P7)"
+    },
+    {
+     "class": "Preset",
+     "i": 6,
+     "name": "딥 블루"
+    },
+    {
+     "class": "Preset",
+     "i": 7,
+     "name": "웜 화이트 (=P2)"
+    },
+    {
+     "class": "Preset",
+     "i": 8,
+     "name": "뉴트럴 화이트 (=P3)"
+    },
+    {
+     "class": "Preset",
+     "i": 32,
+     "name": "Preset 32"
+    }
+   ],
+   "id": "ad10a105",
+   "kind": "state",
+   "node": {
+    "childCount": 9,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Color"
+   },
+   "offset": 0,
+   "ok": true,
+   "path": "ShowData/DataPools/Default/PresetPools/4",
+   "truncated": false,
+   "v": 1
+  }
+ }
+}

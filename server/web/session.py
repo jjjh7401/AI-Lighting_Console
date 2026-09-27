@@ -43,6 +43,7 @@ from server.design.capability_verdict import position_verdict
 from server.design.cue_density import plan_cue_density, rotate_palette
 from server.design.cue_sheet_apply import (
     ConsoleApplyError,
+    changed_cue_numbers,
     layer_mapping_from_console_groups,
     plan_console_apply,
     timeline_group_names,
@@ -61,6 +62,12 @@ from server.design.interview import (
     Q5_TEXTURE,
     DirectorInterview,
     UnresolvedAnswer,
+)
+from server.design.preset_names import (
+    NAME_ABSENT,
+    NAME_AMBIGUOUS,
+    match_preset_name,
+    match_preset_name_across_pools,
 )
 from server.design.profile import (
     DEFAULT_BPM,
@@ -1549,6 +1556,14 @@ _DRAFT_APPLY_NEGATED = re.compile(
 #:
 #: 넘치면 **거짓**을 답해 사슬로 흘려보낸다 — 콘솔 쓰기 쪽으로 닫는 방향이다.
 _DRAFT_APPLY_MAX_CHARS = 40
+
+
+def _draft_name_miss(kind: str | None, where: str, candidates: Sequence[object]) -> str:
+    """카드 t477 — 이름으로 프리셋 번호를 못 찾은 사유 한 줄(번호를 지어내지 않는다)."""
+    if kind == NAME_AMBIGUOUS:
+        shown = ", ".join(str(candidate) for candidate in candidates)
+        return f" — 콘솔 {where}에서 여러 프리셋({shown})이 맞아 특정할 수 없습니다."
+    return f" — 콘솔 {where}에서 그 이름의 프리셋을 찾지 못했습니다(번호를 지어내지 않습니다)."
 
 
 def _is_draft_apply_request(text: str) -> bool:
@@ -9749,6 +9764,134 @@ class ChatSession:
                 )
         return target, "".join(notes)
 
+    def _resolve_draft_preset_names(
+        self, baseline: Mapping[str, object], target: dict
+    ) -> tuple[dict, str]:
+        """카드 t477 — 초안에서 **이름만** 고친 포지션·페이저에 콘솔 풀 번호를 채운다.
+
+        t469 는 번호가 있는 포지션만 보냈다. 이름→번호는 콘솔을 읽어야 알 수 있고
+        계획기(:func:`plan_console_apply`)는 순수 함수라 읽지 못한다 — 그래서 세션이
+        반영 직전에 풀을 **읽기만** 한다(쓰기 0). 번호는 ``target`` 사본에만 채운다:
+        초안 자체는 감독이 적은 그대로 남는다.
+
+        * 포지션 → Position 풀(``POSITION_PRESET_POOL``, 계획기의 ``2.<n>`` 규칙과 같은 풀).
+        * 페이저 → 카탈로그 세 계열이 사는 풀(``All 1``·``Dimmer``·``Color``)을 **이름으로**
+          해석해 모두 읽는다(t469 실측: DIM-BREATHE = 21.4, 풀 21 = All 1).
+        * 매칭은 :func:`match_preset_name` 한 곳 — 정확한 이름, 없으면 이름 첫 낱말
+          (실기 이름이 ``POS05 팬아웃 종점 …`` 처럼 길다). 못 찾음·모호·판독 실패는
+          번호를 채우지 않고 사유를 메모에 적는다. 계획기는 번호 없는 칸을 원래대로
+          건너뛴다.
+
+        판독할 이름이 하나도 없으면 콘솔에 한 번도 묻지 않는다.
+        """
+        before = {
+            int(section["cue_number"]): section
+            for section in baseline.get("sections") or ()
+            if isinstance(section, Mapping) and isinstance(section.get("cue_number"), int)
+        }
+        sections = target.get("sections")
+        if not isinstance(sections, list):
+            return target, ""
+        changed = set(changed_cue_numbers(baseline, target))
+        wants: list[tuple[int, str, str]] = []  # (섹션 위치, 칸, 이름)
+        for index, section in enumerate(sections):
+            if not isinstance(section, Mapping):
+                continue
+            cue = section.get("cue_number")
+            previous = before.get(cue) if isinstance(cue, int) else None
+            if cue not in changed or previous is None:
+                continue
+            for field, number_key in (
+                ("position", "position_preset_no"),
+                ("phaser", "phaser_preset_no"),
+            ):
+                name = section.get(field)
+                if (
+                    isinstance(name, str)
+                    and name.strip()
+                    and previous.get(field) != name
+                    and section.get(number_key) in (None, "")
+                ):
+                    wants.append((index, field, name.strip()))
+        if not wants:
+            return target, ""
+
+        position_pool: dict[int, str | None] | None = None
+        phaser_pools: dict[int, dict[int, str | None] | None] | None = None
+        phaser_unresolved: list[str] = []
+        if any(field == "position" for _i, field, _n in wants):
+            position_pool = self._position_preset_pool_children()
+        if any(field == "phaser" for _i, field, _n in wants):
+            pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+            phaser_pools = {}
+            for pool_name in ("All 1", "Dimmer", "Color"):
+                slug = pool_name.lower().replace(" ", "")
+                pool_no = self._resolve_named_pool_no(
+                    pool_name, probe_id=f"draft-phaser-pool-{slug}"
+                )
+                if pool_no is None:
+                    phaser_unresolved.append(pool_name)
+                    continue
+                phaser_pools[pool_no] = self._paged_pool_children(
+                    f"{pool_root}/{pool_no}", probe_id=f"draft-phaser-slots-{slug}"
+                )
+
+        target = dict(target)
+        target["sections"] = sections = [
+            dict(section) if isinstance(section, Mapping) else section for section in sections
+        ]
+        notes: list[str] = []
+        for index, field, name in wants:
+            section = sections[index]
+            cue = section["cue_number"]
+            noun = "포지션" if field == "position" else "페이저"
+            head = f"\n· 큐 {cue} {noun} {name!r}"
+            if field == "position":
+                if position_pool is None:
+                    notes.append(
+                        f"{head} — Position 프리셋 풀(Preset {POSITION_PRESET_POOL}.x)을 읽지 "
+                        "못해 번호를 찾지 않았습니다."
+                    )
+                    continue
+                match = match_preset_name(position_pool, name, leading_token=True)
+                if match.slot is None:
+                    notes.append(
+                        head
+                        + _draft_name_miss(
+                            match.kind, f"풀 {POSITION_PRESET_POOL}", match.candidates
+                        )
+                    )
+                    continue
+                number = f"{POSITION_PRESET_POOL}.{match.slot}"
+                section["position_preset_no"] = number
+                rule, found = match.rule, match.name
+            else:
+                assert phaser_pools is not None
+                if phaser_unresolved:
+                    notes.append(
+                        f"{head} — 콘솔에서 {', '.join(phaser_unresolved)} 풀 번호를 확인하지 "
+                        "못해 번호를 찾지 않았습니다(유일한지 알 수 없음)."
+                    )
+                    continue
+                found_in = match_preset_name_across_pools(phaser_pools, name, leading_token=True)
+                if found_in.slot is None:
+                    where = "풀 " + "·".join(str(no) for no in sorted(phaser_pools))
+                    if found_in.unread:
+                        notes.append(
+                            f"{head} — 풀 {', '.join(map(str, found_in.unread))}을(를) 읽지 못해 "
+                            "번호를 찾지 않았습니다(유일한지 알 수 없음)."
+                        )
+                        continue
+                    shown = tuple(f"{p}.{s}" for p, s in found_in.candidates)
+                    notes.append(head + _draft_name_miss(found_in.kind, where, shown))
+                    continue
+                number = f"{found_in.pool_no}.{found_in.slot}"
+                section["phaser_preset_no"] = number
+                rule, found = found_in.rule, found_in.name
+            how = "이름 일치" if rule == "exact" else "이름 첫 낱말 일치"
+            notes.append(f"{head} → 콘솔 프리셋 {number} {found!r} ({how}, 풀 판독).")
+        return target, "".join(notes)
+
     def _cue_sheet_draft_apply(self, text: str) -> InstructionResult | None:
         """초안에서 바뀐 큐를 콘솔에 반영한다 — **기존 승인 경로 그대로**.
 
@@ -9785,6 +9928,9 @@ class ChatSession:
                 "콘솔에는 아무것도 쓰지 않았습니다."
             )
         target, address_note = self._draft_apply_target(timeline, text)
+        # 카드 t477 — 이름만 있는 포지션·페이저를 콘솔 풀 판독(읽기 전용)으로 번호로 채운다.
+        target, name_note = self._resolve_draft_preset_names(baseline, target)
+        address_note += name_note
         try:
             plan = plan_console_apply(baseline, target)
         except ConsoleApplyError as error:
@@ -10387,31 +10533,22 @@ class ChatSession:
             raise SpatialPointingError(
                 f"Position 프리셋 풀(Preset {pool_no}.x)을 읽지 못해 라벨을 확인할 수 없습니다"
             )
-        by_base: dict[str, list[int]] = {}
-        for slot, name in pool.items():
-            if not isinstance(name, str):
-                continue
-            base = name.split("#", 1)[0]
-            by_base.setdefault(base, []).append(slot)
-        span_end = start + span - 1
+        # 매칭 규칙은 공용 순수 함수 하나에 있다(t477 — 초안 이름 판독·t453 과 같은 몸통).
         resolved: dict[str, int] = {}
         for label in labels:
             if label in resolved:
                 continue
-            candidates = sorted(by_base.get(label, ()))
-            if not candidates:
+            match = match_preset_name(pool, label, span=(start, start + span - 1))
+            if match.slot is not None:
+                resolved[label] = match.slot
+                continue
+            if match.kind == NAME_ABSENT:
                 raise SpatialPointingError(
                     f"'{label}' 라벨의 Position 프리셋을 콘솔에서 찾지 못했습니다"
                 )
-            if len(candidates) == 1:
-                resolved[label] = candidates[0]
-                continue
-            in_span = [slot for slot in candidates if start <= slot <= span_end]
-            if len(in_span) == 1:
-                resolved[label] = in_span[0]
-                continue
             raise SpatialPointingError(
-                f"'{label}' 라벨이 Position 프리셋 여러 슬롯 {candidates}에 있어 특정할 수 없습니다"
+                f"'{label}' 라벨이 Position 프리셋 여러 슬롯 {list(match.candidates)}에 있어 "
+                "특정할 수 없습니다"
             )
         return resolved
 
