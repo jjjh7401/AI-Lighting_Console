@@ -6269,10 +6269,12 @@ class ChatSession:
     def _white_preset_slots(self) -> dict[str, tuple[int, int] | str]:
         """카드 t453 — 흰색 이름 → 콘솔 컬러 프리셋 ``(풀, 슬롯)`` 또는 못 찾은 사유.
 
-        ``_resolve_position_preset_labels``(t232)와 같은 규율이다: 풀을 한 번
-        완전 판독해 라벨(``#n`` 접미 무시)로 찾는다. 슬롯이 하나면 쓰고, 없거나
-        여럿이면 사유를 남긴다(추측 금지). 컬러 풀 번호는 이름 "Color"로
-        해석한다(하드코딩 금지, ``_phaser_slot_by_label``과 같은 리졸버).
+        풀을 한 번 완전 판독하고, 이름 매칭은 공용 규칙
+        ``server.design.preset_names.match_preset_name``(t477)의 **정확한 이름**
+        규칙만 쓴다(``#n`` 접미 무시). 라벨 전체를 알므로 첫 낱말 규칙은 켜지
+        않는다 — 「웜」만으로 찾는 것은 짐작이다. 슬롯이 하나면 쓰고, 없거나
+        여럿이면 사유를 남긴다. 컬러 풀 번호는 이름 "Color"로 해석한다
+        (하드코딩 금지, ``_phaser_slot_by_label``과 같은 리졸버).
         """
         pool_no = self._resolve_named_pool_no("Color", probe_id="song-white-preset-pool")
         if pool_no is None:
@@ -6288,21 +6290,18 @@ class ChatSession:
                 "흰색 프리셋 라벨을 확인할 수 없습니다"
             )
             return dict.fromkeys(_WHITE_PRESET_LABELS, reason)
-        by_base: dict[str, list[int]] = {}
-        for slot, name in children.items():
-            if isinstance(name, str):
-                by_base.setdefault(name.split("#", 1)[0], []).append(slot)
         resolved: dict[str, tuple[int, int] | str] = {}
         for white, label in _WHITE_PRESET_LABELS.items():
-            slots = sorted(by_base.get(label, ()))
-            if len(slots) == 1:
-                resolved[white] = (pool_no, slots[0])
-            elif not slots:
-                resolved[white] = f"'{label}' 라벨의 Color 프리셋을 콘솔에서 찾지 못했습니다"
-            else:
+            match = match_preset_name(children, label)
+            if match.slot is not None:
+                resolved[white] = (pool_no, match.slot)
+            elif match.kind == NAME_AMBIGUOUS:
                 resolved[white] = (
-                    f"'{label}' 라벨이 Color 프리셋 여러 슬롯 {slots}에 있어 특정할 수 없습니다"
+                    f"'{label}' 라벨이 Color 프리셋 여러 슬롯 {list(match.candidates)}에 있어 "
+                    "특정할 수 없습니다"
                 )
+            else:
+                resolved[white] = f"'{label}' 라벨의 Color 프리셋을 콘솔에서 찾지 못했습니다"
         return resolved
 
     def _phaser_slot_by_label(self, label: str) -> tuple[int, int] | None:
