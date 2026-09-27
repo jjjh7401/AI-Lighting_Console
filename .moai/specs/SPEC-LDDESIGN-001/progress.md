@@ -517,6 +517,24 @@ Track 예외·근거 등급·MIB 3상태·WARN·점 줄·한눈에·인과 불�
 **Gaps**: 실제 곡·앱 본체는 확인하지 않았다. 캡처는 펼친 상태 한 장뿐이다.
 빈 칸을 채우는 서버 쪽 일은 t455(행 단위 리포트)와 t456(구간 색 HEX)로 넘겼다.
 
+### REQ-064 절 무버 소등 조건 배선 (카드 t446)
+
+워크트리 `.claude/worktrees/t446`, 브랜치 `WT-movers-off`, 기준 `c4506a7c`.
+판정서는 `.moai/reports/t446/verdict.md`다. 위 M6 절의 "무버 재배치 조건은 배선을
+보류했다"를 이 카드가 닫는다.
+
+**Claim**: 절(Verse)에서 무버는 다음 후렴이 새 포지션을 요구할 때만 끈다. 끄지
+않는 절은 감독 결정(2026-09-27)대로 무버를 절 밝기(1회차 45, 2회차 이후 38)로
+낮추고 포지션은 그대로 둔다. 절 직전에 꺼져 있던 무버는 켜지 않는다. Bridge는
+REQ-046 무조건 소등 그대로다. 예측이 k=1의 `back`과 Final Chorus의 `audience`를
+`front`로 잘못 보던 것을 조립기와 같은 규칙 하나로 합쳤다.
+
+**Evidence**: 8곡 게이트는 변경 전후 75/29/0 동일(`gates_before.txt`·
+`gates_after.txt`). 8곡 절 31개 중 11개가 무버를 유지하고, MIB `live`는 전후 0건
+(`movers_before.txt`·`movers_after.txt`). 범위 시험 2074 passed. 변이 2건 모두 잡힘.
+
+**Gaps**: 실기 콘솔과 화면은 확인하지 않았다. Bridge는 배선하지 않았다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml

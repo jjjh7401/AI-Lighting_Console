@@ -28,7 +28,8 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
-from server.concept.cue_model import layer_limit_warning
+from server.concept.cue_model import CueState, layer_limit_warning
+from server.concept.resolver import resolve_sequence
 from server.concept.vocab import validate_one_shot, validate_section
 
 __all__ = [
@@ -65,6 +66,10 @@ GROUP_ROSTER: tuple[str, ...] = (
     "STROBE",
 )
 MOVER_GROUPS: tuple[str, ...] = ("MOVER-U", "MOVER-D")
+
+# 절 밝기 — 1회차 값과, 2회차 이후가 1회차 기준으로 곱하는 비율(REQ-021).
+VERSE_DIMMER = 45
+VERSE_REPEAT_FACTOR = 0.85
 
 # 후렴 계열 — Chorus 와 Final Chorus 를 하나의 "회차 축"으로 합쳐 센다
 # (REQ-042~049 는 이 둘을 구분하지 않고 "후렴이 반복되면"으로 서술한다).
@@ -192,12 +197,27 @@ def _chorus_position(k: int, prev_is_chorus_family: bool) -> str | None:
     return "front"
 
 
+def _chorus_section_position(
+    section: str, k: int, prev_is_chorus_family: bool, chorus_total: int
+) -> str | None:
+    """후렴 계열 구간 큐가 실제로 정하는 포지션 — 조립기의 후렴 분기와
+    :func:`_next_chorus_position` 의 예측이 같은 규칙을 쓰도록 한 곳에
+    둔다(카드 t446 — 예측이 k=1 의 ``"back"`` 과 Final Chorus 의
+    ``"audience"`` 를 몰라 ``"front"`` 로 잘못 봤다). 분기 순서는 조립기와
+    같다: 1회차 → Final Chorus → 그 밖. ``None`` 은 포지션 유지."""
+    if k == 1:
+        return "back"
+    if section == "Final Chorus":
+        return None if (prev_is_chorus_family and chorus_total >= 4) else "audience"
+    return _chorus_position(k, prev_is_chorus_family)
+
+
 def _next_chorus_position(
     sections: Sequence[SectionOccurrence], from_index: int, k_by_index: Mapping[int, int]
 ) -> str | None:
     """카드 t439 §④b M5 판단 2 — ``from_index`` 뒤로 처음 나오는 후렴이
     실제로 쓸 포지션을 미리 본다(REQ-064 "다음 후렴을 위해"). ``None``
-    이면 그 후렴이 새 포지션을 요구하지 않거나(``_chorus_position`` 이
+    이면 그 후렴이 새 포지션을 요구하지 않거나(:func:`_chorus_section_position` 이
     이미 ``None`` — k>=4·직전이 후렴, REQ-043 방향 축 예외), 뒤에 후렴
     자체가 없다는 뜻이다 — 두 경우 모두 "포지션을 옮길 이유가 없다"로
     같은 값(``None``)으로 합쳐진다(:func:`_movers_need_repositioning`
@@ -206,7 +226,9 @@ def _next_chorus_position(
         if sections[idx].section in CHORUS_FAMILY:
             k = k_by_index[idx]
             prev_is_chorus = idx > 0 and sections[idx - 1].section in CHORUS_FAMILY
-            return _chorus_position(k, prev_is_chorus)
+            return _chorus_section_position(
+                sections[idx].section, k, prev_is_chorus, len(k_by_index)
+            )
     return None
 
 
@@ -228,6 +250,39 @@ def _movers_need_repositioning(
     않는 이 자리에서 대신 계산하는 것이다."""
     next_pos = _next_chorus_position(sections, from_index, k_by_index)
     return next_pos is not None and next_pos != current_pos
+
+
+def _tracked_state(rows: Sequence[Mapping[str, object]]) -> CueState:
+    """지금까지 조립된 행의 트래킹 상태(다음 큐가 이어받는 carry) —
+    ``cue_only`` 행은 다음 큐로 넘어가지 않으므로(REQ-057) 마지막
+    ``track`` 행의 상태다."""
+    carry = CueState(dim={}, color=None, pos="home", motion=0)
+    for row, state in zip(rows, resolve_sequence(rows), strict=True):
+        if row.get("tracking") != "cue_only":
+            carry = state
+    return carry
+
+
+def _verse_mover_ops(prev: CueState, need_reposition: bool, verse_top: int) -> list[dict]:
+    """카드 t446 — 절 큐의 무버 동작(REQ-064 + 감독 결정 2026-09-27).
+
+    다음 후렴이 새 포지션을 요구하면 무버를 끈다(어두운 창에서 옮기도록).
+    그렇지 않으면 무버를 절 밝기(``verse_top``)로 **낮춘다** — 포지션은
+    건드리지 않는다. 낮추기만 하므로 절 직전에 더 어두웠던(꺼져 있던)
+    무버는 그 값 그대로 둔다(``min``).
+    """
+    if need_reposition:
+        return [{"op": "remove", "roles": list(MOVER_GROUPS)}]
+    ops: list[dict] = []
+    by_level: dict[int, list[str]] = {}
+    for role in MOVER_GROUPS:
+        by_level.setdefault(min(prev.dim.get(role, 0), verse_top), []).append(role)
+    for level, roles in by_level.items():
+        if level == 0:
+            ops.append({"op": "remove", "roles": roles})
+        else:
+            ops.append({"op": "expand", "roles": roles, "dimmer": level})
+    return ops
 
 
 def compile_density(
@@ -340,46 +395,34 @@ def compile_density(
                 )
 
         elif occ.section == "Verse":
+            # 카드 t446 — REQ-064 배선. 무버는 "다음 후렴을 위해 포지션을
+            # 바꿔야 할 때만" 끈다(`_movers_need_repositioning`). 끄지 않는
+            # 절에서는 감독 결정(2026-09-27)대로 무버를 그 절 밝기로
+            # 낮추고 포지션은 그대로 둔다(`_verse_mover_ops`).
+            need_reposition = _movers_need_repositioning(sections, i, k_by_index, current_pos)
             if occ.occurrence == 1:
-                # 앞 구간(대개 후렴)이 켜 둔 무버·WASH·FOH 를 끈다 — 지우지
-                # 않으면 carry 로 그대로 새어 들어와 절 밝기가 후렴 값을
-                # 물려받는다(어두운 창을 만드는 목적도 겸한다, MIB 판정과
-                # 같은 방향).
-                #
-                # 카드 t439 §④b M5 판단 2 — REQ-064 문면대로 "다음 후렴을
-                # 위해 포지션을 바꿔야 할 때만" 무버를 소등하도록
-                # 조건화해 봤으나(`_movers_need_repositioning`, 이 파일
-                # 아래에 남겨 둔 구현), TOO_COOL_RAW 픽스처에서 무조건
-                # 회귀했다 — AC-LDDESIGN-010 이 고정한
-                # `test_verse_first_occurrence_clears_prior_mover_and_wash_
-                # state`(밝기 45 기대)가 100 으로 깨진다. 다음 후렴이 지금과
-                # 같은 포지션이면(이 픽스처가 정확히 그 경우) 무버가 이전
-                # 후렴의 100% 밝기를 그대로 들고 절로 들어온다 — REQ-064는
-                # "포지션을 바꿀 필요가 없다"만 말하지 "밝기도 그대로
-                # 둔다"를 말하지 않는데, 이 둘을 하나의 소등/비소등
-                # 이분법으로 묶으면 후자가 딸려 온다. 밝기를 절 수준(45%)
-                # 으로는 낮추되 위치는 안 바꾸는 제3의 동작이 필요할 수
-                # 있는데, 그 값은 이 SPEC 문면에 없어 지어내지 않는다 —
-                # 감독 확인 필요(리드에게 보고, 카드 지시 "matrix 변하면
-                # 재고정하지 말고 보고"와 같은 원칙을 이 회귀에도 적용).
-                # 그래서 무조건 소등 동작은 그대로 두고, 조건 계산 자체만
-                # `_movers_need_repositioning`(아래)로 분리해 시험으로
-                # 고정해 둔다 — 배선 여부는 이 판단이 난 뒤에 결정한다.
+                # 앞 구간(대개 후렴)이 켜 둔 WASH·FOH 를 끈다 — 지우지 않으면
+                # carry 로 그대로 새어 들어와 절 밝기가 후렴 값을 물려받는다.
+                verse_top = VERSE_DIMMER
                 ops = _color_ops(color_for, occ.section, occ.occurrence) + [
-                    {"op": "remove", "roles": [*MOVER_GROUPS, "WASH-U", "WASH-D", "FOH"]},
+                    {"op": "remove", "roles": ["WASH-U", "WASH-D", "FOH"]},
                     {
                         "op": "expand",
                         "roles": ["BACK", "SIDE-L", "SIDE-R", "KEY"],
-                        "dimmer": 45,
+                        "dimmer": verse_top,
                         "motion": 0,
                     },
                 ]
             else:
+                # restore 가 Verse 1 의 무버 값을 다시 들여오므로, 무버 동작은
+                # 이 회차에서 따로 정한다(아래 `_verse_mover_ops`).
+                verse_top = int(round(VERSE_DIMMER * VERSE_REPEAT_FACTOR))
                 ops = [
                     {"op": "restore", "ref": "Verse 1"},
-                    {"op": "reduce", "factor": 0.85, "ref": "Verse 1"},
+                    {"op": "reduce", "factor": VERSE_REPEAT_FACTOR, "ref": "Verse 1"},
                     *_color_ops(color_for, occ.section, occ.occurrence),
                 ]
+            ops += _verse_mover_ops(_tracked_state(rows), need_reposition, verse_top)
             _append(
                 dict(
                     ts=ts,
@@ -403,13 +446,17 @@ def compile_density(
                         "op": "expand",
                         "roles": ["KEY", "FOH", "BACK", "SIDE-L", "SIDE-R"],
                         "dimmer": 75,
-                        "pos": "back",
+                        "pos": _chorus_section_position(
+                            occ.section, k, prev_is_chorus_family, chorus_total
+                        ),
                         "motion": motion,
                     }
                 ]
                 dimmer = 75
             elif occ.section == "Final Chorus":
-                fin_pos = None if (prev_is_chorus_family and chorus_total >= 4) else "audience"
+                fin_pos = _chorus_section_position(
+                    occ.section, k, prev_is_chorus_family, chorus_total
+                )
                 expand_op: dict = {
                     "op": "expand",
                     "roles": ["WASH-U", "WASH-D", "MOVER-U", "MOVER-D"],
@@ -426,7 +473,7 @@ def compile_density(
                 ]
                 dimmer = 100
             else:
-                pos = _chorus_position(k, prev_is_chorus_family)
+                pos = _chorus_section_position(occ.section, k, prev_is_chorus_family, chorus_total)
                 fam = ["WASH-U", "WASH-D"] if k == 2 else ["WASH-U", "WASH-D", "MOVER-U", "MOVER-D"]
                 dimmer = min(100, 60 + 8 * k)
                 expand_op = {"op": "expand", "roles": fam, "dimmer": dimmer, "motion": motion}
@@ -474,14 +521,10 @@ def compile_density(
                 )
 
         elif occ.section == "Bridge":
-            # REQ-047 — KEY·BACK 을 제외한 그룹은 무조건 끈다.
-            #
-            # 카드 t439 §④b M5 판단 2 — Verse 1회차와 같은 이유로 무버만
-            # REQ-064 조건(`_movers_need_repositioning`)으로 바꿔 봤으나
-            # TOO_COOL_RAW 의 두 Bridge 발생 중 최소 하나가 같은 회귀를
-            # 낸다(`test_bridge_removes_everything_but_key_and_back`/
-            # `test_bridge_cue_ops_shape`, 위 Verse 주석과 같은 원인·같은
-            # 미결정 — 감독 확인 필요). 배선하지 않는다.
+            # REQ-046 — KEY·BACK 을 제외한 그룹은 무조건 끈다. 카드 t446 은
+            # Verse 만 REQ-064 조건으로 배선했다 — Bridge 는 REQ-046 이
+            # 무버를 포함해 무조건 소등을 정하고(REQ-064 의 소등과 같은
+            # 방향), 감독 결정(2026-09-27)도 절만 다룬다.
             ops = _color_ops(color_for, occ.section, occ.occurrence) + [
                 {
                     "op": "remove",
