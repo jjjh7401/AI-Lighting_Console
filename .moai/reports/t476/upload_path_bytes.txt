@@ -1,0 +1,19 @@
+Ice cream rock bpm=100.4 lines=53
+Ice cream rock bpm=None lines=53
+Ice cream edm bpm=100.4 lines=55
+Ice cream edm bpm=None lines=55
+Ice cream pop bpm=100.4 lines=1
+Ice cream pop bpm=None lines=1
+Ice cream ballad bpm=100.4 lines=43
+Ice cream ballad bpm=None lines=43
+Rain rock bpm=76.0 lines=77
+Rain rock bpm=None lines=77
+Rain edm bpm=76.0 lines=77
+Rain edm bpm=None lines=77
+Rain pop bpm=76.0 lines=1
+Rain pop bpm=None lines=1
+Rain ballad bpm=76.0 lines=70
+Rain ballad bpm=None lines=70
+before sha256=022bf9926dd0c49be7e91ebcf6068223a787bbbbcecad03bdd08f98c83cde738
+after  sha256=022bf9926dd0c49be7e91ebcf6068223a787bbbbcecad03bdd08f98c83cde738
+BYTE-IDENTICAL

@@ -696,8 +696,9 @@ def test_the_two_declarations_are_the_same_set() -> None:
 def test_neither_declaration_is_empty() -> None:
     # Non-vacuity: two empty tuples are equal and would prove nothing.
     write_side, tool_side = _both_declarations()
-    assert len(_pattern_set(write_side)) == 3
-    assert len(_pattern_set(tool_side)) == 3
+    # 4 — card t476 added the selected value line to the exemption.
+    assert len(_pattern_set(write_side)) == 4
+    assert len(_pattern_set(tool_side)) == 4
 
 
 def test_the_comparison_notices_a_widened_tool_side() -> None:
