@@ -1,0 +1,12 @@
+
+>>> state:ShowData/DataPools/Default/Timecodes/9
+    wire: Plugin "CopilotResponder" "state 9bd4d58f ShowData/DataPools/Default/Timecodes/9"
+<<< {"children": [{"class": "TrackGroup", "i": 1, "name": "TrackGroup 1"}], "id": "9bd4d58f", "kind": "state", "node": {"childCount": 1, "class": "Timecode", "enumeration": "ok", "name": "Sequence 210 Timecode"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/9", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/9|NAME
+    wire: Plugin "CopilotResponder" "props f145cf3e NAME ShowData/DataPools/Default/Timecodes/9"
+<<< {"id": "f145cf3e", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/9", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Sequence 210 Timecode"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/9/1
+    wire: Plugin "CopilotResponder" "state edda1dd7 ShowData/DataPools/Default/Timecodes/9/1"
+<<< {"children": [{"class": "MarkerTrack", "i": 1, "name": "Marker"}, {"class": "Track", "i": 2, "name": "<Sequence 210>"}], "id": "edda1dd7", "kind": "state", "node": {"childCount": 2, "class": "TrackGroup", "enumeration": "ok", "name": "TrackGroup 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/9/1", "truncated": false, "v": 1}
