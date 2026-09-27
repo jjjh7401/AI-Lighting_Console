@@ -1,0 +1,11 @@
+
+>>> exec 'Goto Executor 201 Cue 11'
+<<< {"id": "c841617f", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
+sent 12:32:25
+
+>>> exec 'Go Executor 201'
+<<< {"id": "e9e15f20", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0

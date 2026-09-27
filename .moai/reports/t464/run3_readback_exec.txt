@@ -1,0 +1,28 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/900/12/1|INDIVDELAY,DURATION,NAME
+    wire: Plugin "CopilotResponder" "props 3c8614cf INDIVDELAY,DURATION,NAME ShowData/DataPools/Default/Sequences/900/12/1"
+<<< {"error": "path segment not found: '12' (in ShowData/DataPools/Default/Sequences/900/12/1)", "id": "3c8614cf", "kind": "props", "ok": false, "path": "ShowData/DataPools/Default/Sequences/900/12/1", "reads": [], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/13/1|INDIVDELAY,DURATION
+    wire: Plugin "CopilotResponder" "props 0791d941 INDIVDELAY,DURATION ShowData/DataPools/Default/Sequences/900/13/1"
+<<< {"error": "path segment not found: '13' (in ShowData/DataPools/Default/Sequences/900/13/1)", "id": "0791d941", "kind": "props", "ok": false, "path": "ShowData/DataPools/Default/Sequences/900/13/1", "reads": [], "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Pages/1/101
+    wire: Plugin "CopilotResponder" "introspect c7427dd1 ShowData/DataPools/Default/Pages/1/101"
+<<< {"class": "Executor", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "KEY", "t": "Token"}, {"n": "KEYUNPRESS", "t": "Token"}, {"n": "FADER", "t": "Token"}, {"n": "FADERRANGELOW", "t": "Int32"}, {"n": "FADERRANGEHIGH", "t": "Int32"}, {"n": "ENCODER", "t": "Token"}, {"n": "ENCODERRIGHT", "t": "Token"}, {"n": "ENCODERLEFT", "t": "Token"}, {"n": "KEYCOMMAND", "t": "String"}, {"n": "KEYUNPRESSCOMMAND", "t": "String"}, {"n": "KEYUNPRESSCOMBINED", "t": "String"}], "id": "c7427dd1", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Pages/1/101", "source": "property_accessors", "total": 71, "truncated": true, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/4/1|INDIVDELAY,DURATION,NAME
+    wire: Plugin "CopilotResponder" "props cd13ec85 INDIVDELAY,DURATION,NAME ShowData/DataPools/Default/Sequences/900/4/1"
+<<< {"id": "cd13ec85", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4/1", "reads": [{"n": "INDIVDELAY", "ok": true, "t": "number", "v": "2.0"}, {"n": "DURATION", "ok": true, "t": "number", "v": "2.0"}, {"n": "NAME", "ok": true, "t": "string", "v": "Q12 pan60 delay0thru2"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/5/1|INDIVDELAY,DURATION,NAME
+    wire: Plugin "CopilotResponder" "props d2f08bbe INDIVDELAY,DURATION,NAME ShowData/DataPools/Default/Sequences/900/5/1"
+<<< {"id": "d2f08bbe", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/5/1", "reads": [{"n": "INDIVDELAY", "ok": true, "t": "number", "v": "0.0"}, {"n": "DURATION", "ok": true, "t": "number", "v": "0.0"}, {"n": "NAME", "ok": true, "t": "string", "v": "Q13 lit pan30"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Pages/1/101|NO,NAME,KEY,FADER,FADERENABLED
+    wire: Plugin "CopilotResponder" "props 3ceee7b5 NO,NAME,KEY,FADER,FADERENABLED ShowData/DataPools/Default/Pages/1/101"
+<<< {"id": "3ceee7b5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Pages/1/101", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "201"}, {"n": "NAME", "ok": true, "t": "string", "v": "T464 SCRATCH DELETABLE"}, {"n": "KEY", "ok": true, "t": "string", "v": "Go+"}, {"n": "FADER", "ok": true, "t": "string", "v": "Master"}, {"n": "FADERENABLED", "ok": true, "t": "boolean", "v": "true"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900|SEQUMIB,SEQUMIBMODE,TRACKING
+    wire: Plugin "CopilotResponder" "props f6eb3912 SEQUMIB,SEQUMIBMODE,TRACKING ShowData/DataPools/Default/Sequences/900"
+<<< {"id": "f6eb3912", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "reads": [{"n": "SEQUMIB", "ok": true, "t": "string", "v": "Enabled"}, {"n": "SEQUMIBMODE", "ok": true, "t": "string", "v": "None"}, {"n": "TRACKING", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
