@@ -1,12 +1,47 @@
 // PresetPoolPopup — parser/title units (hook-free, no DOM; see protocol.ts).
-import { describe, expect, it } from "vitest";
+import type { ReactElement } from "react";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  PresetPoolPopup,
   parsePresetPoolResponse,
   phaserGradient,
   presetPoolErrorMessage,
   presetPopupTitle,
+  type PresetPopupState,
 } from "./PresetPoolPopup";
+
+// t460 — 이 프로젝트의 no-jsdom 관례(CueMonitor.test.tsx와 같은 패턴):
+// 함수 컴포넌트를 직접 호출해 반환된 React 엘리먼트 트리를 렌더 없이 훑는다.
+function childArray(element: ReactElement): unknown[] {
+  const children = element.props.children;
+  if (children === undefined) return [];
+  const list = Array.isArray(children) ? children : [children];
+  return list.flat(Infinity).filter((child) => child !== null && child !== undefined && child !== false);
+}
+
+function findAllByType(root: ReactElement, type: unknown): ReactElement[] {
+  const results: ReactElement[] = [];
+  for (const child of childArray(root)) {
+    const el = child as ReactElement;
+    if (el?.type === type) results.push(el);
+    if (el?.props) results.push(...findAllByType(el, type));
+  }
+  return results;
+}
+
+const READY_STATE: PresetPopupState = {
+  phase: "ready",
+  contents: {
+    pool: { no: 21, name: "All 1" },
+    presets: [
+      { no: 1, name: "Sweep L" },
+      { no: 2, name: "Sweep R" },
+    ],
+    truncated: false,
+    total: 2,
+  },
+};
 
 describe("parsePresetPoolResponse — GET /api/presets/{no}의 와이어 형태", () => {
   it("parses the pool, its presets and the completeness flags", () => {
@@ -131,5 +166,48 @@ describe("presetPopupTitle — 개수는 아는 만큼만", () => {
 
   it("loading/error show the pool identity only", () => {
     expect(presetPopupTitle({ phase: "loading", pool: { no: 25, name: "" } })).toBe("프리셋 풀 25");
+  });
+});
+
+describe("PresetPoolPopup — onSelect prop (t460, REQ-089 재사용 규칙)", () => {
+  it("renders plain divs (unchanged) when onSelect is omitted", () => {
+    const element = PresetPoolPopup({
+      state: READY_STATE,
+      onClose: () => {},
+      onRefresh: () => {},
+    });
+    const buttons = findAllByType(element, "button");
+    // 닫기·새로고침 버튼 2개뿐 — 타일은 button 이 아니다(오늘과 바이트 동일).
+    expect(buttons).toHaveLength(2);
+  });
+
+  it("renders each tile as a pressable button when onSelect is provided", () => {
+    const onSelect = vi.fn();
+    const element = PresetPoolPopup({
+      state: READY_STATE,
+      onClose: () => {},
+      onRefresh: () => {},
+      onSelect,
+    });
+    const buttons = findAllByType(element, "button");
+    // 닫기·새로고침 2개 + 프리셋 타일 2개.
+    expect(buttons).toHaveLength(4);
+  });
+
+  it("reports the selected entry (number + name) and nothing else", () => {
+    const onSelect = vi.fn();
+    const element = PresetPoolPopup({
+      state: READY_STATE,
+      onClose: () => {},
+      onRefresh: () => {},
+      onSelect,
+    });
+    const tileButtons = findAllByType(element, "button").filter(
+      (button) => button.props.className?.includes("preset-popup-tile-pressable"),
+    );
+    expect(tileButtons).toHaveLength(2);
+    tileButtons[1].props.onClick();
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith({ no: 2, name: "Sweep R" });
   });
 });
