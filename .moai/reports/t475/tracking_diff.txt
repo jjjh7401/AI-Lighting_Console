@@ -1,0 +1,45 @@
+승인 카드 명령 107줄 · 콘솔이 받은 명령 75줄 · 빠진 줄 32
+
+== 빠진 줄(중복 제거로 건너뜀)
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Fixture 20 + 26 ; At Preset 2.21
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Group 3 ; Attribute 'Dimmer' At 80
+  Fixture 20 + 26 ; At Preset 2.24
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Group 3 ; Attribute 'Dimmer' At 20
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Group 3 ; Attribute 'Dimmer' At 80
+  Fixture 20 + 26 ; At Preset 2.22
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Group 3 ; Attribute 'Dimmer' At 80
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Group 3 ; Attribute 'Dimmer' At 80
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Group 3 ; Attribute 'Dimmer' At 20
+  Fixture 20 + 26 ; At Preset 2.30
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Group 3 ; Attribute 'Dimmer' At 80
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+  Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+  Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  Group 3 ; Attribute 'Dimmer' At 80
+
+== 트래킹 후 무대 값이 달라지는 큐
+  큐 6 Verse 3: Fixture 20 + 26 Dimmer — 의도 25 · 실제 100
+  큐 6 Verse 3: Group 3 Dimmer — 의도 20 · 실제 80
+  큐 10 Verse 4: Fixture 20 + 26 Dimmer — 의도 25 · 실제 100
+  큐 10 Verse 4: Group 3 Dimmer — 의도 20 · 실제 80
+  큐 11 Chorus 6: Fixture 20 + 26 Position — 의도 2.30 · 실제 2.26
+  큐 11.5 Chorus 6 Return: Fixture 20 + 26 Position — 의도 2.30 · 실제 2.26
+
+무대 차이 6건
