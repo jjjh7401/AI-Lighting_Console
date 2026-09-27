@@ -131,10 +131,18 @@ _ASSIGN_IS_LAST = True
 #   mirror precedent is `server/looks/busking.py` `_guard_collision`: the
 #   builder classifies the lines it generated itself.
 _SELECTION_OPERAND = r"\d+(?:\s*[-+]\s*\d+|\s+Thru(?:\s+\d+)?)*"
+# Card t476 — selected value line; rationale at the tools.py twin.
+_SELECTION = rf"(?:Fixture|Group)\s+{_SELECTION_OPERAND}"
+_VALUE_ASSIGNMENT = r"(?:Attribute\s+'[^']+'\s+At\s+-?\d+(?:\.\d+)?|At\s+Preset\s+\d+\.\d+)"
+_SELECTED_VALUE_LINE = (
+    rf"{_SELECTION}\s*;\s*{_VALUE_ASSIGNMENT}"
+    rf"(?:\s*;\s*(?:{_SELECTION}\s*;\s*)?{_VALUE_ASSIGNMENT})*"
+)
 _PROGRAMMER_STATE_COMMANDS = (
     re.compile(r"Clear", re.IGNORECASE),
     re.compile(r"ClearAll", re.IGNORECASE),
     re.compile(rf"(?:Fixture|Group)\s+{_SELECTION_OPERAND}", re.IGNORECASE),
+    re.compile(_SELECTED_VALUE_LINE, re.IGNORECASE),
 )
 
 

@@ -1,0 +1,309 @@
+FFFFFFFFFFFF..........FF                                                 [100%]
+=================================== FAILURES ===================================
+_ test_a_selected_value_line_reaches_the_console_every_time[Fixture 20 + 26 ; Attribute 'Dimmer' At 25] _
+
+line = "Fixture 20 + 26 ; Attribute 'Dimmer' At 25"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_a_selected_value_line_reaches_the_console_every_time(line):
+        commands = [
+            line,
+            "Store Sequence 210 Cue 3 'Verse 2' CueFade 2",
+            "ClearAll",
+            line,
+            "Store Sequence 210 Cue 6 'Verse 3' CueFade 2",
+            "ClearAll",
+        ]
+        executed, statuses = _run(commands)
+>       assert executed == commands
+E       assert ["Fixture 20 ...", 'ClearAll'] == ["Fixture 20 ...", 'ClearAll']
+E         
+E         At index 3 diff: "Store Sequence 210 Cue 6 'Verse 3' CueFade 2" != "Fixture 20 + 26 ; Attribute 'Dimmer' At 25"
+E         Right contains one more item: 'ClearAll'
+E         Use -v to get more diff
+
+server/tests/test_dedupe_value_lines_t476.py:87: AssertionError
+_ test_a_selected_value_line_reaches_the_console_every_time[Group 3 ; Attribute 'Dimmer' At 20] _
+
+line = "Group 3 ; Attribute 'Dimmer' At 20"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_a_selected_value_line_reaches_the_console_every_time(line):
+        commands = [
+            line,
+            "Store Sequence 210 Cue 3 'Verse 2' CueFade 2",
+            "ClearAll",
+            line,
+            "Store Sequence 210 Cue 6 'Verse 3' CueFade 2",
+            "ClearAll",
+        ]
+        executed, statuses = _run(commands)
+>       assert executed == commands
+E       assert ["Group 3 ; A...", 'ClearAll'] == ["Group 3 ; A...", 'ClearAll']
+E         
+E         At index 3 diff: "Store Sequence 210 Cue 6 'Verse 3' CueFade 2" != "Group 3 ; Attribute 'Dimmer' At 20"
+E         Right contains one more item: 'ClearAll'
+E         Use -v to get more diff
+
+server/tests/test_dedupe_value_lines_t476.py:87: AssertionError
+_ test_a_selected_value_line_reaches_the_console_every_time[Fixture 20 + 26 ; At Preset 2.30] _
+
+line = 'Fixture 20 + 26 ; At Preset 2.30'
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_a_selected_value_line_reaches_the_console_every_time(line):
+        commands = [
+            line,
+            "Store Sequence 210 Cue 3 'Verse 2' CueFade 2",
+            "ClearAll",
+            line,
+            "Store Sequence 210 Cue 6 'Verse 3' CueFade 2",
+            "ClearAll",
+        ]
+        executed, statuses = _run(commands)
+>       assert executed == commands
+E       assert ['Fixture 20 ...", 'ClearAll'] == ['Fixture 20 ...", 'ClearAll']
+E         
+E         At index 3 diff: "Store Sequence 210 Cue 6 'Verse 3' CueFade 2" != 'Fixture 20 + 26 ; At Preset 2.30'
+E         Right contains one more item: 'ClearAll'
+E         Use -v to get more diff
+
+server/tests/test_dedupe_value_lines_t476.py:87: AssertionError
+_ test_a_selected_value_line_reaches_the_console_every_time[Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100] _
+
+line = "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_a_selected_value_line_reaches_the_console_every_time(line):
+        commands = [
+            line,
+            "Store Sequence 210 Cue 3 'Verse 2' CueFade 2",
+            "ClearAll",
+            line,
+            "Store Sequence 210 Cue 6 'Verse 3' CueFade 2",
+            "ClearAll",
+        ]
+        executed, statuses = _run(commands)
+>       assert executed == commands
+E       assert ["Fixture 20 ...", 'ClearAll'] == ["Fixture 20 ...", 'ClearAll']
+E         
+E         At index 3 diff: "Store Sequence 210 Cue 6 'Verse 3' CueFade 2" != "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+E         Right contains one more item: 'ClearAll'
+E         Use -v to get more diff
+
+server/tests/test_dedupe_value_lines_t476.py:87: AssertionError
+_ test_a_selected_value_line_reaches_the_console_every_time[Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Group 2 ; Attribute 'ColorRGB_R' At 100] _
+
+line = "Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Group 2 ; Attribute 'ColorRGB_R' At 100"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_a_selected_value_line_reaches_the_console_every_time(line):
+        commands = [
+            line,
+            "Store Sequence 210 Cue 3 'Verse 2' CueFade 2",
+            "ClearAll",
+            line,
+            "Store Sequence 210 Cue 6 'Verse 3' CueFade 2",
+            "ClearAll",
+        ]
+        executed, statuses = _run(commands)
+>       assert executed == commands
+E       assert ["Group 2 + 7...", 'ClearAll'] == ["Group 2 + 7...", 'ClearAll']
+E         
+E         At index 3 diff: "Store Sequence 210 Cue 6 'Verse 3' CueFade 2" != "Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Group 2 ; Attribute 'ColorRGB_R' At 100"
+E         Right contains one more item: 'ClearAll'
+E         Use -v to get more diff
+
+server/tests/test_dedupe_value_lines_t476.py:87: AssertionError
+_ test_a_selected_value_line_reaches_the_console_every_time[Fixture 101 Thru 110 ; Attribute 'Dimmer' At 0] _
+
+line = "Fixture 101 Thru 110 ; Attribute 'Dimmer' At 0"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_a_selected_value_line_reaches_the_console_every_time(line):
+        commands = [
+            line,
+            "Store Sequence 210 Cue 3 'Verse 2' CueFade 2",
+            "ClearAll",
+            line,
+            "Store Sequence 210 Cue 6 'Verse 3' CueFade 2",
+            "ClearAll",
+        ]
+        executed, statuses = _run(commands)
+>       assert executed == commands
+E       assert ["Fixture 101...", 'ClearAll'] == ["Fixture 101...", 'ClearAll']
+E         
+E         At index 3 diff: "Store Sequence 210 Cue 6 'Verse 3' CueFade 2" != "Fixture 101 Thru 110 ; Attribute 'Dimmer' At 0"
+E         Right contains one more item: 'ClearAll'
+E         Use -v to get more diff
+
+server/tests/test_dedupe_value_lines_t476.py:87: AssertionError
+_ test_both_exemption_definitions_agree_on_the_value_line[Fixture 20 + 26 ; Attribute 'Dimmer' At 25] _
+
+line = "Fixture 20 + 26 ; Attribute 'Dimmer' At 25"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_both_exemption_definitions_agree_on_the_value_line(line):
+>       assert _is_programmer_state(line) is True
+E       assert False is True
+E        +  where False = _is_programmer_state("Fixture 20 + 26 ; Attribute 'Dimmer' At 25")
+
+server/tests/test_dedupe_value_lines_t476.py:93: AssertionError
+_ test_both_exemption_definitions_agree_on_the_value_line[Group 3 ; Attribute 'Dimmer' At 20] _
+
+line = "Group 3 ; Attribute 'Dimmer' At 20"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_both_exemption_definitions_agree_on_the_value_line(line):
+>       assert _is_programmer_state(line) is True
+E       assert False is True
+E        +  where False = _is_programmer_state("Group 3 ; Attribute 'Dimmer' At 20")
+
+server/tests/test_dedupe_value_lines_t476.py:93: AssertionError
+_ test_both_exemption_definitions_agree_on_the_value_line[Fixture 20 + 26 ; At Preset 2.30] _
+
+line = 'Fixture 20 + 26 ; At Preset 2.30'
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_both_exemption_definitions_agree_on_the_value_line(line):
+>       assert _is_programmer_state(line) is True
+E       AssertionError: assert False is True
+E        +  where False = _is_programmer_state('Fixture 20 + 26 ; At Preset 2.30')
+
+server/tests/test_dedupe_value_lines_t476.py:93: AssertionError
+_ test_both_exemption_definitions_agree_on_the_value_line[Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100] _
+
+line = "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_both_exemption_definitions_agree_on_the_value_line(line):
+>       assert _is_programmer_state(line) is True
+E       assert False is True
+E        +  where False = _is_programmer_state("Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100")
+
+server/tests/test_dedupe_value_lines_t476.py:93: AssertionError
+_ test_both_exemption_definitions_agree_on_the_value_line[Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Group 2 ; Attribute 'ColorRGB_R' At 100] _
+
+line = "Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Group 2 ; Attribute 'ColorRGB_R' At 100"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_both_exemption_definitions_agree_on_the_value_line(line):
+>       assert _is_programmer_state(line) is True
+E       assert False is True
+E        +  where False = _is_programmer_state("Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Group 2 ; Attribute 'ColorRGB_R' At 100")
+
+server/tests/test_dedupe_value_lines_t476.py:93: AssertionError
+_ test_both_exemption_definitions_agree_on_the_value_line[Fixture 101 Thru 110 ; Attribute 'Dimmer' At 0] _
+
+line = "Fixture 101 Thru 110 ; Attribute 'Dimmer' At 0"
+
+    @pytest.mark.parametrize("line", _VALUE_LINES)
+    def test_both_exemption_definitions_agree_on_the_value_line(line):
+>       assert _is_programmer_state(line) is True
+E       assert False is True
+E        +  where False = _is_programmer_state("Fixture 101 Thru 110 ; Attribute 'Dimmer' At 0")
+
+server/tests/test_dedupe_value_lines_t476.py:93: AssertionError
+___________ test_the_whole_approved_rain_bundle_reaches_the_console ____________
+
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-1725/test_the_whole_approved_rain_b0')
+
+    def test_the_whole_approved_rain_bundle_reaches_the_console(tmp_path):
+        console = _RainConsole()
+        audit = AuditLog(tmp_path / "audit")
+        sent: list[dict] = []
+        session = ChatSession(
+            gate=SafetyGate(console=console, audit=audit, approval_port=_Approval(True)),
+            provider=_Provider(),
+            system_prefix="PREFIX",
+            audit=audit,
+            send_event=sent.append,
+            approval_channel=ApprovalChannel(timeout_seconds=1.0),
+        )
+        session._registry = _Spatial(session._registry, [])
+        session._question_channel = _Questions(
+            (
+                "우주",
+                "우주 색 조합",
+                "",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "이 매핑 사용",
+                "승인",
+            )
+        )
+        session._song_analysis = _rain_analysis()
+        session._song_bpm = _RAIN_BPM
+    
+        session.run_instruction("디자인 큐 시트, 시퀀스 210, 프리셋 21번부터, 타임코드 9")
+    
+        previews = [event for event in sent if event.get("type") == "execution_preview"]
+        assert previews, "승인 카드가 뜨지 않았다 — 반영 경로에 닿지 않았다"
+        approved = [row["command"] for row in previews[-1]["commands"]]
+        # 계기가 공허하지 않다: 승인 카드 안에 같은 값 줄이 실제로 두 번 이상 있다.
+        darkness = "Fixture 20 + 26 ; Attribute 'Dimmer' At 25"
+        assert approved.count(darkness) >= 2
+>       assert console.executed == approved
+E       assert ['ChangeDesti...3.15733', ...] == ['ChangeDesti...3.15733', ...]
+E         
+E         At index 9 diff: "Group 3 ; Attribute 'Dimmer' At 56" != "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+E         Right contains 32 more items, first extra item: "Group 3 ; Attribute 'Dimmer' At 80"
+E         Use -v to get more diff
+
+server/tests/test_dedupe_value_lines_t476.py:217: AssertionError
+________ test_two_cues_with_the_same_value_line_both_reach_the_console _________
+
+    def test_two_cues_with_the_same_value_line_both_reach_the_console():
+        baseline = build_sugar_timeline()
+        current = copy.deepcopy(baseline)
+        current["sequence_number"] = 3
+        current["layer_mapping"] = layer_mapping_from_console_groups(
+            {"children": [{"name": name, "i": number} for name, number in _SUGAR_RIG]},
+            ["KEY", "BACK", "SIDE-L", "SIDE-R"],
+        )
+        # 큐 20 과 큐 70 은 둘 다 KEY·BACK 을 쓰고 주색이 같다(P2 웜화이트). 같은 밝기로
+        # 고치면 두 큐의 값 줄이 글자까지 같아진다.
+        for section in current["sections"]:
+            if section["cue_number"] in (20, 70):
+                section["intensity"] = [
+                    {"group": "KEY", "level": 80},
+                    {"group": "BACK", "level": 40},
+                ]
+                section["palette"] = ["P2 웜화이트"]
+                section["palette_primary"] = "P2 웜화이트"
+                section.pop("palette_secondary", None)
+        plan = plan_console_apply(baseline, current)
+    
+        stores = [command for command in plan.commands if command.startswith("Store Sequence 3 Cue")]
+        assert len(stores) == 2
+        values = [command for command in plan.commands if command.startswith("Group ")]
+        # 계기가 공허하지 않다: 두 큐의 값 줄이 실제로 같다.
+        assert len(values) == 2
+        assert values[0] == values[1]
+    
+        executed, statuses = _run(list(plan.commands))
+>       assert executed == list(plan.commands)
+E       assert ['ChangeDesti...learAll', ...] == ['ChangeDesti...learAll', ...]
+E         
+E         At index 6 diff: 'Store Sequence 3 Cue 70 /Merge' != "Group 1 + 2 ; Attribute 'Dimmer' At 80 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 88 ; Attribute 'ColorRGB_B' At 69 ; Group 2 ; Attribute 'Dimmer' At 40"
+E         Right contains one more item: 'ClearAll'
+E         Use -v to get more diff
+
+server/tests/test_dedupe_value_lines_t476.py:254: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_a_selected_value_line_reaches_the_console_every_time[Fixture 20 + 26 ; Attribute 'Dimmer' At 25]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_a_selected_value_line_reaches_the_console_every_time[Group 3 ; Attribute 'Dimmer' At 20]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_a_selected_value_line_reaches_the_console_every_time[Fixture 20 + 26 ; At Preset 2.30]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_a_selected_value_line_reaches_the_console_every_time[Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_a_selected_value_line_reaches_the_console_every_time[Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Group 2 ; Attribute 'ColorRGB_R' At 100]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_a_selected_value_line_reaches_the_console_every_time[Fixture 101 Thru 110 ; Attribute 'Dimmer' At 0]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_both_exemption_definitions_agree_on_the_value_line[Fixture 20 + 26 ; Attribute 'Dimmer' At 25]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_both_exemption_definitions_agree_on_the_value_line[Group 3 ; Attribute 'Dimmer' At 20]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_both_exemption_definitions_agree_on_the_value_line[Fixture 20 + 26 ; At Preset 2.30]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_both_exemption_definitions_agree_on_the_value_line[Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_both_exemption_definitions_agree_on_the_value_line[Group 2 + 7 + 9 ; Attribute 'Dimmer' At 55 ; Group 2 ; Attribute 'ColorRGB_R' At 100]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_both_exemption_definitions_agree_on_the_value_line[Fixture 101 Thru 110 ; Attribute 'Dimmer' At 0]
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_the_whole_approved_rain_bundle_reaches_the_console
+FAILED server/tests/test_dedupe_value_lines_t476.py::test_two_cues_with_the_same_value_line_both_reach_the_console
+14 failed, 10 passed in 0.52s

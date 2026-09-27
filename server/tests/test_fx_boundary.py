@@ -288,8 +288,9 @@ class TestTheDedupeExemptionSetsAreEqual:
     def test_neither_side_is_empty(self):
         # Non-vacuity: two empty tuples are equal and would prove nothing.
         fx_side, tool_side = self._both()
-        assert len(_pattern_set(fx_side)) == 3
-        assert len(_pattern_set(tool_side)) == 3
+        # 4 — card t476 added the selected value line to the exemption.
+        assert len(_pattern_set(fx_side)) == 4
+        assert len(_pattern_set(tool_side)) == 4
 
     def test_the_comparison_notices_a_widened_tool_side(self):
         # Mutation control, in-process. This is the dangerous direction: the

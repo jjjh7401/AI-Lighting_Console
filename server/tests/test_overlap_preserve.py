@@ -1187,6 +1187,27 @@ def _overlaps(old_start: int, old_count: int, protected_start: int, protected_en
     return old_start <= protected_end and protected_start <= old_end
 
 
+#: 카드 t476 — 보호 구간(247..251, 면제 튜플) 안에 허락된 유일한 삽입.
+_T476_GRANTED_OLD_START = 250
+_T476_GRANTED_TUPLE_LINE = (
+    "    re.compile(_SELECTED_VALUE_LINE, re.IGNORECASE),  # selected value line (t476)"
+)
+
+
+def _added_lines(base: str, path: str, old_start: int) -> list[str]:
+    """``--unified=0`` diff 에서 옛 시작점이 ``old_start`` 인 헝크의 ``+`` 줄들."""
+    added: list[str] = []
+    inside = False
+    for line in _git("diff", "--unified=0", f"{base}..HEAD", "--", path).splitlines():
+        match = _HUNK_RE.match(line)
+        if match is not None:
+            inside = int(match.group("old_start")) == old_start
+            continue
+        if inside and line.startswith("+"):
+            added.append(line[1:])
+    return added
+
+
 class TestPreserveList:
     """AC-OVERLAP-019 ③ — the list is real before it is used."""
 
@@ -1771,7 +1792,18 @@ class TestToolsProtectedRegions:
             for protected in _TOOLS_PROTECTED_OLD_RANGES
             if _overlaps(start, count, *protected)
         ]
-        assert crossings == []
+        # 카드 t476 (2026-09-27, 감독 승인) — 면제 튜플을 넓히는 것이 그 카드의 목적이다.
+        # 봉쇄를 풀지 않고 허용분 하나로 좁힌다: 250 뒤 순수 삽입, 글자까지 고정.
+        assert crossings == [(_T476_GRANTED_OLD_START, 0, (247, 251))]
+        assert _added_lines(_PRECHK_BASE, _TOOLS_PATH, _T476_GRANTED_OLD_START) == [
+            _T476_GRANTED_TUPLE_LINE
+        ]
+
+    def test_the_t476_grant_would_not_admit_a_different_line(self):
+        # Non-vacuity of the grant: the pinned text is the tuple entry itself, not a
+        # prefix a longer edit could hide behind.
+        assert _T476_GRANTED_TUPLE_LINE.strip().startswith("re.compile(_SELECTED_VALUE_LINE")
+        assert _T476_GRANTED_TUPLE_LINE in _git("show", f"HEAD:{_TOOLS_PATH}").splitlines()
 
     def test_the_blockade_would_catch_a_planted_hunk(self):
         # Non-vacuity: the overlap predicate is not simply always false.

@@ -1053,10 +1053,32 @@ _EMPTY_CONTEXT = ExecutionContext()
 # open-ended `Thru` is screened upstream (server/safety/classify.py) before any
 # of this runs, so exempting one from dedupe never widens what may execute.
 _SELECTION_OPERAND = r"\d+(?:\s*[-+]\s*\d+|\s+Thru(?:\s+\d+)?)*"
+# Card t476 — the SELECTED VALUE line is programmer state too:
+# `Fixture 20 + 26 ; Attribute 'Dimmer' At 25`, `Group 3 ; Attribute ... At ...`
+# (chained with ` ; `, re-selection allowed between clauses) and
+# `Fixture 20 + 26 ; At Preset 2.30`. It loads the programmer; the durable
+# artifact is the `Store` that follows. Deduping it made a store bundle's second
+# cue with the same value store NOTHING for that attribute, so the console
+# tracked the previous cue's value instead — measured on Rain (t475): 32 of 107
+# approved lines skipped, the second and third pre-drop darkness lost, while the
+# reply said every command ran. Every clause must be one of the two value forms,
+# so a trailing `; Store ...` / `; Delete ...` keeps the whole line deduped. The
+# unselected (`Attribute ... At 50`) and selection-with-value (`Group 3 Full`,
+# `Fixture 1 Thru 10 At 80`) forms stay outside: no producer here emits them into
+# a store bundle, and builders that emit the bare form guard it themselves.
+# The tuple below gains ONE line for this; that line is the pinned t476 grant in
+# the position blockades (test_overlap_preserve.py · test_songcue_bundle.py).
+_SELECTION = rf"(?:Fixture|Group)\s+{_SELECTION_OPERAND}"
+_VALUE_ASSIGNMENT = r"(?:Attribute\s+'[^']+'\s+At\s+-?\d+(?:\.\d+)?|At\s+Preset\s+\d+\.\d+)"
+_SELECTED_VALUE_LINE = (
+    rf"{_SELECTION}\s*;\s*{_VALUE_ASSIGNMENT}"
+    rf"(?:\s*;\s*(?:{_SELECTION}\s*;\s*)?{_VALUE_ASSIGNMENT})*"
+)
 _PROGRAMMER_STATE_COMMANDS = (
     re.compile(r"Clear", re.IGNORECASE),  # step clear (selection -> values)
     re.compile(r"ClearAll", re.IGNORECASE),  # clear the whole programmer
     re.compile(rf"(?:Fixture|Group)\s+{_SELECTION_OPERAND}", re.IGNORECASE),  # bare selection
+    re.compile(_SELECTED_VALUE_LINE, re.IGNORECASE),  # selected value line (t476)
 )
 
 
