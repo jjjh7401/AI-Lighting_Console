@@ -1,0 +1,47 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t460-ui
+
+ ✓ ui/src/styles.test.ts (26 tests) 6ms
+ ✓ ui/src/components/analysisSummary.test.ts (15 tests) 4ms
+ ✓ ui/src/provision.test.ts (23 tests) 4ms
+ ✓ ui/src/components/PoolTile.test.tsx (15 tests) 4ms
+ ✓ ui/src/components/PoolSection.test.tsx (20 tests) 6ms
+ ✓ ui/src/components/PresetPoolPopup.test.tsx (14 tests) 7ms
+ ✓ ui/src/components/PaperworkPanel.test.tsx (34 tests) 11ms
+stdout | ui/src/components/DashBoard.test.tsx > DashBoard > refresh button click does not throw when onRefresh is omitted (M4 placeholder path)
+dash: manual refresh requested (M5 wires dash_catalog_request)
+
+ ✓ ui/src/components/DashBoard.test.tsx (32 tests) 10ms
+ ✓ ui/src/components/QuestionCard.test.tsx (16 tests) 12ms
+ ✓ ui/src/components/CueSheetTimeline.test.tsx (35 tests) 7ms
+stdout | ui/src/components/CueMonitor.test.tsx > CueMonitor > refresh button click does not throw when onRefresh is omitted
+cue monitor: manual refresh requested
+
+ ✓ ui/src/components/CueMonitor.test.tsx (99 tests) 17ms
+ ✓ ui/src/components/runbookM7.test.tsx (19 tests) 6ms
+ ✓ ui/src/components/PlanCueRequestGenerator.test.tsx (20 tests) 17ms
+ ✓ ui/src/components/SongTimeline.test.tsx (18 tests) 6ms
+ ✓ ui/src/components/RunbookMode.test.tsx (16 tests) 6ms
+ ✓ ui/src/settings.test.ts (21 tests) 4ms
+ ✓ ui/src/components/cueRequestWarnings.test.ts (18 tests) 3ms
+ ✓ ui/src/components/cueRequestSentence.test.ts (20 tests) 5ms
+ ✓ ui/src/useCopilotSocket.test.ts (15 tests) 3ms
+ ✓ ui/src/components/ApprovalCard.test.tsx (7 tests) 4ms
+ ✓ ui/src/components/ExecutionPreviewCard.test.tsx (4 tests) 3ms
+ ✓ ui/src/components/ChatView.test.tsx (12 tests) 6ms
+ ✓ ui/src/components/runbookM7Third.test.tsx (16 tests) 6ms
+ ✓ ui/src/components/CueSheetDraft.test.tsx (10 tests) 3ms
+ ✓ ui/src/attachmentCopy.test.ts (4 tests) 2ms
+ ✓ ui/src/timelineLibrary.test.ts (5 tests) 3ms
+ ✓ ui/src/components/TimelineLibrary.test.tsx (3 tests) 3ms
+ ✓ ui/src/components/StatusBanner.test.tsx (4 tests) 2ms
+ ✓ ui/src/App.test.tsx (30 tests) 8ms
+ ✓ ui/src/protocol.test.ts (118 tests) 583ms
+   ✓ encodeSongAudioChunks (REQ-MUSICSYNC-027) > round-trips bytes and keeps every chunk under the server's 4 MiB base64 ceiling 574ms
+
+ Test Files  30 passed (30)
+      Tests  689 passed (689)
+   Start at  13:05:59
+   Duration  989ms (transform 1.38s, setup 0ms, collect 3.77s, tests 761ms, environment 3ms, prepare 2.32s)
+
+exit=0

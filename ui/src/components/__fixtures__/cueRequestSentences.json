@@ -1,0 +1,37 @@
+[
+  {
+    "name": "group-multi-intensity",
+    "cue": 3,
+    "change": { "field": "intensity", "groups": ["KEY", "BACK"], "value": 95, "before": "혼합" },
+    "sentence": "큐 3 KEY·BACK 밝기 95%로 바꿔줘",
+    "expected_changes": { "intensity": 95, "groups": ["KEY", "BACK"] }
+  },
+  {
+    "name": "colour-single-group",
+    "cue": 3,
+    "change": { "field": "palette_primary", "groups": ["BACK"], "value": "앰버", "before": "—" },
+    "sentence": "큐 3 BACK 컬러 앰버로 바꿔줘",
+    "expected_changes": { "palette_primary": "앰버", "groups": ["BACK"] }
+  },
+  {
+    "name": "effect-preset-name",
+    "cue": 3,
+    "change": { "field": "effect", "value": "CHASE", "before": "—" },
+    "sentence": "큐 3 이펙트 CHASE로 바꿔줘",
+    "expected_changes": { "effect": "CHASE" }
+  },
+  {
+    "name": "fade",
+    "cue": 3,
+    "change": { "field": "fade_seconds", "value": 5, "before": "2초" },
+    "sentence": "큐 3 페이드 5초로 바꿔줘",
+    "expected_changes": { "fade_seconds": 5.0 }
+  },
+  {
+    "name": "trans",
+    "cue": 3,
+    "change": { "field": "trans", "value": "XFADE", "before": "SNAP" },
+    "sentence": "큐 3 전환을 XFADE로 바꿔줘",
+    "expected_changes": { "trans": "XFADE" }
+  }
+]

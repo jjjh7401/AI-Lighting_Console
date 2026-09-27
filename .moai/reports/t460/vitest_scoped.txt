@@ -1,0 +1,18 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t460-ui
+
+ ✓ ui/src/components/cueRequestSentence.test.ts (20 tests) 4ms
+ ✓ ui/src/components/PresetPoolPopup.test.tsx (14 tests) 6ms
+ ✓ ui/src/components/cueRequestWarnings.test.ts (18 tests) 4ms
+ ✓ ui/src/components/CueSheetTimeline.test.tsx (35 tests) 8ms
+ ✓ ui/src/components/PlanCueRequestGenerator.test.tsx (20 tests) 17ms
+ ✓ ui/src/components/SongTimeline.test.tsx (18 tests) 8ms
+ ✓ ui/src/components/RunbookMode.test.tsx (16 tests) 7ms
+ ✓ ui/src/App.test.tsx (30 tests) 5ms
+
+ Test Files  8 passed (8)
+      Tests  171 passed (171)
+   Start at  13:05:54
+   Duration  469ms (transform 484ms, setup 0ms, collect 1.02s, tests 59ms, environment 1ms, prepare 337ms)
+
+exit=0

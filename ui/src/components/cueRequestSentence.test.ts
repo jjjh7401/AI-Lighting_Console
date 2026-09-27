@@ -6,8 +6,10 @@ import {
   cueRequestSentence,
   mixedColorLabel,
   mixedIntensityLabel,
+  type GeneratorChange,
   type GeneratorChangeItem,
 } from "./cueRequestSentence";
+import vocabularyFixture from "./__fixtures__/cueRequestSentences.json";
 
 describe("cueRequestSentence", () => {
   it("builds a group-multi intensity sentence the parser accepts", () => {
@@ -105,6 +107,23 @@ describe("mixedIntensityLabel", () => {
 
   it("returns the empty placeholder when nothing is selected", () => {
     expect(mixedIntensityLabel([])).toBe("—");
+  });
+});
+
+describe("AC-LDDESIGN-039 — 어휘 공유 고정(fixture) — TS 빌더 쪽", () => {
+  // 이 fixture(cueRequestSentences.json)는 pytest
+  // (server/tests/test_plan_cue_generator_vocabulary_t460.py)와 공유한다 —
+  // 여기서는 TS 빌더가 만드는 문장이 fixture 문장과 바이트 동일한지만
+  // 검증한다; 그 문장이 파서 기대 changes 로 풀리는지는 pytest 쪽이 잰다.
+  it("produces exactly the fixture sentence for every representative operation", () => {
+    for (const item of vocabularyFixture as {
+      name: string;
+      cue: number;
+      change: GeneratorChange;
+      sentence: string;
+    }[]) {
+      expect(cueRequestSentence(item.cue, item.change)).toBe(item.sentence);
+    }
   });
 });
 
