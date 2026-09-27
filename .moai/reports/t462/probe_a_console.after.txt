@@ -1,0 +1,90 @@
+== cues
+    1 section       Intro            D2 key=50.0 pre_drop_from=None blinder=None start=0
+    2 section       Verse 1          D3 key=70.0 pre_drop_from=None blinder=None start=16000
+    3 section       Verse 2          D4 key=25.0 pre_drop_from=90.0 blinder=None start=32000
+    4 section       Chorus 1         D5 key=100.0 pre_drop_from=None blinder=None start=48000
+    5 section       Verse 3          D3 key=70.0 pre_drop_from=None blinder=None start=64000
+    6 section       Verse 4          D4 key=25.0 pre_drop_from=90.0 blinder=None start=80000
+    7 section       Chorus 2         D5 key=100.0 pre_drop_from=None blinder=None start=96000
+    8 section       Bridge 1         D2 key=50.0 pre_drop_from=None blinder=None start=112000
+    9 section       Verse 5          D4 key=25.0 pre_drop_from=90.0 blinder=None start=128000
+   10 section       Chorus 3         D5 key=100.0 pre_drop_from=None blinder={'rung': 'blinder_or_flash', 'group_no': 14, 'dimmer_pct': 80.0} start=144000
+ 10.5 climax_return Chorus 3 Return  D5 key=100.0 pre_drop_from=None blinder=None start=145000
+   11 section       Finale           D5 key=100.0 pre_drop_from=None blinder=None start=160000
+== arc_notes
+blinder_six_row_absent: Q11 'Finale' 절정 액센트 — 구간 이름이 §6 표의 한 행에 맞지 않아 블라인더 밝기를 정할 근거가 없음
+== console commands
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 50
+Store Sequence 120 Cue 1 'Intro' CueFade 2
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 120 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Store Sequence 120 Cue 3 'Verse 2' CueFade 0.75
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Store Sequence 120 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 120 Cue 5 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Store Sequence 120 Cue 6 'Verse 4' CueFade 0.75
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Store Sequence 120 Cue 7 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 50
+Store Sequence 120 Cue 8 'Bridge 1' CueFade 2
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Store Sequence 120 Cue 9 'Verse 5' CueFade 0.75
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Group 14 ; Attribute 'Dimmer' At 80
+Store Sequence 120 Cue 10 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Group 14 ; Attribute 'Dimmer' At 0
+Store Sequence 120 Cue 10.5 'Chorus 3 Return' CueFade 0
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.1
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Store Sequence 120 Cue 11 'Finale' CueFade 4
+ClearAll
+Set Cue 1 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 120 Property 'TrigTime' 0
+Set Cue 2 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 120 Property 'TrigTime' 16
+Set Cue 3 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 120 Property 'TrigTime' 32
+Set Cue 4 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 120 Property 'TrigTime' 48
+Set Cue 5 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 120 Property 'TrigTime' 64
+Set Cue 6 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 120 Property 'TrigTime' 80
+Set Cue 7 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 120 Property 'TrigTime' 96
+Set Cue 8 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 120 Property 'TrigTime' 112
+Set Cue 9 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 120 Property 'TrigTime' 128
+Set Cue 10 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 120 Property 'TrigTime' 144
+Set Cue 10.5 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 10.5 Sequence 120 Property 'TrigTime' 145
+Set Cue 11 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 120 Property 'TrigTime' 160

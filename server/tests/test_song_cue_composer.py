@@ -142,8 +142,12 @@ def test_complete_bundle_contains_section_axis_data_and_structured_timing() -> N
         "source": "director",
         "mib_premoved_by": None,
     }
-    assert first.dimmer.key_pct == pytest.approx(90.0)
-    assert first.dimmer.back_pct == pytest.approx(72.0)
+    # 카드 t462 — Verse 바로 뒤가 Chorus(§6 chorus · drop 행)라 드롭 앞 어둠이 걸린다:
+    # D4 예산 밝기 90 → verse 행 바닥 25(업로드 길 `darkness_target`), back 은 같은
+    # key→back 비율(0.8)로 20. 고치기 전에는 90/72 그대로 나갔다.
+    assert first.pre_drop_from == pytest.approx(90.0)
+    assert first.dimmer.key_pct == pytest.approx(25.0)
+    assert first.dimmer.back_pct == pytest.approx(20.0)
     assert first.color.palette == ("blue", "white")
     assert first.color.saturation == "높음"
     assert first.fx.permitted == ("dimmer chase", "pan sweep")
