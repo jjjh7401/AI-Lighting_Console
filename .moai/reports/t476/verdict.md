@@ -1,7 +1,8 @@
 # t476 판정서 — 승인한 값 줄이 중복 제거로 조용히 빠지던 결함
 
 - 카드: t476 · SPEC-LDDESIGN-001 · lane-2 · 발견 t475(`.moai/reports/t475/verdict.md` §3)
-- 브랜치: `WT-dedupe-value-lines`, 기준 `origin/main` c4506a7c (차이 `0 0` 확인)
+- 브랜치: `WT-dedupe-value-lines`, 기준 `origin/main` c4506a7c (차이 `0 0` 확인). PR 전에 `origin/main`
+  9587a41a(PR #519, t469 — `cue_sheet_apply.py` 변경)를 합류했고, 아래 측정은 전부 **합류 뒤 트리**에서 다시 쟀다
 - 콘솔 쓰기: 0 (가짜 콘솔만 사용)
 - 감독 결정(착수 승인 겸, 2026-09-27): 「면제 목록 넓히기」 — 생성기 쪽 우회가 아니라 중복 제거의 면제 판정을 고친다
 - 판정: **PASS**
@@ -30,11 +31,27 @@
 
 | 파일 | 변경 |
 |---|---|
-| `server/orchestrator/tools.py` | `_PROGRAMMER_STATE_COMMANDS` 에 선택 + 값 줄 패턴 1개. 근거 주석 |
-| `server/fx/instantiate.py` | 같은 패턴(이 집합은 tools.py 와 같아야 한다 — 기존 동등성 시험) |
-| `server/groupgen/write.py` | 같은 패턴(세 번째 복사본, 같은 이유) |
+| `server/orchestrator/tools.py` | 순수 삽입 둘: 튜플 앞 근거 주석 + 상수(`_SELECTION`·`_VALUE_ASSIGNMENT`·`_SELECTED_VALUE_LINE`), 튜플 안 **한 줄**. 기존 줄은 바이트 그대로 |
+| `server/fx/instantiate.py` | 같은 모양(이 집합은 tools.py 와 같아야 한다 — 기존 동등성 시험) |
+| `server/groupgen/write.py` | 같은 모양(세 번째 복사본, 같은 이유 — 착수 때는 몰랐고 grep 으로 찾았다) |
 | `server/tests/test_dedupe_value_lines_t476.py` | 새 시험 24개 |
 | `server/tests/test_fx_boundary.py` · `test_groupgen_write.py` | 집합 크기 단언 3 → 4 (의도한 변경) |
+| `server/tests/test_overlap_preserve.py` · `test_songcue_bundle.py` | 보호 구간 위치 봉쇄에 **t476 허용분 한 줄** (§2.1) |
+
+### 2.1 보호 구간 잠금 두 곳 — 풀지 않고 허용분 하나로 좁혔다
+
+`test_overlap_preserve.py`(SPEC-COPILOT-OVERLAP-001 AC-OVERLAP-019 ④)와 `test_songcue_bundle.py`(SONGCUE 헝크 재고)는
+면제 튜플과 중복 제거 루프를 **위치 봉쇄**로 지킨다. 두 SPEC 이 「우리 작업은 중복 제거 의미를 바꾸지 않았다」를
+증명하려고 박은 것이다. 이번 카드는 감독 승인으로 **바로 그 튜플을 넓히는** 카드라, 푸시 전 검사가 두 잠금에서
+멈췄다(`pre-push`, 커밋 뒤 측정).
+
+- **하지 않은 것**: pre-push 건너뛰기. 그리고 코드를 보호 구간 밖(`_is_programmer_state` 함수 본문)으로 옮기는 것 —
+  뜻은 똑같이 바뀌는데 줄 위치만 피하는 것이라 잠금을 속이는 셈이다.
+- **한 것**: 보호 구간 안의 변경을 **순수 삽입 한 줄**로 줄였다(기존 세 항목 바이트 동일). 두 잠금이 그 한 줄만,
+  **자리(기준별 250 / 237 뒤 순수 삽입)와 글자가 둘 다 맞을 때** 받아들이게 했다. 다른 편집은 여전히 실패한다.
+- **뮤테이션 확인**: 튜플 줄 주석을 `(t476)` → `(t476X)` 로 바꿔 임시 커밋하자 `3 failed, 3 passed`
+  (두 잠금 + 허용분 비공허성 시험). 되돌린 뒤 통과.
+- SONGCUE 헝크 재고: 80 → 82(새 시작점 233·237, 사라진 시작점 0). 커밋 **뒤에** 쟀다.
 
 면제 패턴이 받는 꼴(대소문자 무시, 줄 전체 일치):
 
@@ -95,8 +112,10 @@
 
 ### 회귀
 
-- 영향받는 시험 236파일(`affected_tests.txt`: tools·fx·scene·looks·web·cue_sheet_apply 를 부르는 파일):
-  `uv run pytest @.moai/reports/t476/affected_tests.txt -q` → `7594 passed, 29 skipped` (`pytest_affected.txt`)
+- 영향받는 시험 237파일(`affected_tests.txt`: tools·fx·scene·looks·web·cue_sheet_apply 를 부르는 파일 +
+  합류로 들어온 `test_cue_sheet_apply_t469.py`): `uv run pytest @.moai/reports/t476/affected_tests.txt -q`
+  → `7612 passed, 29 skipped` (`pytest_affected.txt`, 합류 뒤)
+- 첫 회차(잠금 고치기 전, 합류 전)에는 4건이 실패했다 — groupgen 복사본 미반영 3 + 집합 크기 단언 1. 그 뒤 고쳤다.
 - 8곡 게이트: `PASS 75 · n/a 29 · FAIL 0`
 - `ruff check`·`ruff format --check`: 고친 파일 + 새 시험 + 증거 스크립트 통과
 
