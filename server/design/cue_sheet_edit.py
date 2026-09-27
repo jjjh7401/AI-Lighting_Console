@@ -45,10 +45,29 @@ EDITABLE_FIELD_LABELS: dict[str, str] = {
     "trans": "전환",
     "fade_seconds": "페이드",
     "note": "노트",
+    # 카드 t466 — 트래킹·MIB·페이저·포지션 프리셋. 초안에만 남는 칸이다(콘솔
+    # 전송은 `cue_sheet_apply.UNSOURCED_FIELD_REASONS` 가 사유를 달고 건너뛴다).
+    "tracking": "트래킹",
+    "mib_mode": "MIB",
+    "phaser": "페이저",
+    "position": "포지션",
+    "position_preset_no": "포지션 번호",
 }
 
 #: 정본 `Snap` 열이 받는 값. 다른 값은 지어내지 않는다.
 TRANS_VALUES: tuple[str, ...] = ("SNAP", "XFADE", "FADE")
+
+#: 카드 t466 — 트래킹 4모드(REQ-LDDESIGN-053, `server/concept/cue_model.py`
+#: ``TRACKING_MODES`` 와 같은 넷). 화면 표기(대문자 시작)로 둔다 — CUE SHEET 의
+#: `Track 예외` 열과 생성기 4택이 이 글자를 그대로 보인다(`src/DESIGN.md` §4.5).
+TRACKING_VALUES: tuple[str, ...] = ("Track", "Block", "Cue Only", "Release")
+
+#: 카드 t466 — MIB 4택(REQ-LDDESIGN-082 표시 3종 + 없음). ``none`` 은 「감독이
+#: MIB 를 안 쓰기로 했다」이고, 조립기가 계산한 ``mib``(참/거짓)와는 다른 칸이다.
+MIB_MODES: tuple[str, ...] = ("none", "dark", "mark", "live")
+
+#: 포지션 프리셋이 사는 풀 번호(REQ-LDDESIGN-089 「포지션(풀 2)」).
+_POSITION_POOL = "2"
 
 #: 조도 상·하한. 콘솔 백분율 축 그대로다.
 _INTENSITY_MIN = 0
@@ -118,6 +137,46 @@ _COLOR = re.compile(
 _NOTE = re.compile(
     r"(노트|메모)\s*(를|을)?\s*(?P<v>[^\n]+?)\s*(으로|로)?\s*(적어|남겨|바꿔|해줘|설정)"
 )
+
+#: 카드 t466 — 네 칸의 문장. 모양은 위 무드·이펙트와 같다: 「<칸> <값>(으)로
+#: 바꿔줘/설정」. 값은 원문 그대로 뽑고, 닫힌 어휘 판정은 :func:`apply_cue_sheet_edit`
+#: 가 사유를 붙여 한다(파서는 짐작하지 않는다).
+_SET_TAIL = r"\s*(으로|로)\s*(바꿔|해줘|변경|수정|설정)"
+_TRACKING = re.compile(r"(트래킹|tracking)\s*(를|을)?\s*(?P<v>[^,.\n]+?)" + _SET_TAIL, re.I)
+_MIB = re.compile(r"(?<![A-Za-z])MIB\s*(를|을)?\s*(?P<v>[^,.\n]+?)" + _SET_TAIL, re.I)
+_PHASER = re.compile(r"(페이저|phaser)\s*(를|을)?\s*(?P<v>[^,.\n]+?)" + _SET_TAIL, re.I)
+_POSITION = re.compile(
+    r"포지션\s*(프리셋\s*)?(를|을)?\s*(?:(?P<no>\d+\.\d+)\s+)?(?P<v>[^,\n]+?)" + _SET_TAIL
+)
+
+#: 현장 말 → 닫힌 어휘. 대소문자·띄어쓰기는 접어서 찾는다. 없는 말은 원문 그대로.
+_TRACKING_ALIASES: dict[str, str] = {
+    "track": "Track",
+    "트랙": "Track",
+    "block": "Block",
+    "블록": "Block",
+    "블럭": "Block",
+    "cueonly": "Cue Only",
+    "큐온리": "Cue Only",
+    "release": "Release",
+    "릴리즈": "Release",
+    "릴리스": "Release",
+}
+_MIB_ALIASES: dict[str, str] = {
+    "none": "none",
+    "없음": "none",
+    "dark": "dark",
+    "다크": "dark",
+    "mark": "mark",
+    "마크": "mark",
+    "live": "live",
+    "라이브": "live",
+}
+
+
+def _folded(value: str) -> str:
+    return re.sub(r"\s+", "", value).casefold()
+
 
 #: 카드 t461 — **그룹 스코프**(SPEC-LDDESIGN-001 REQ-087 전제, 리드 승인 문법).
 #: 라틴 그룹 이름 목록(· , + / 와 과 랑 하고 로 잇는다) 바로 뒤에 편집 항목
@@ -255,12 +314,26 @@ def parse_cue_sheet_edit_request(
     if changes.get("trans") == "SNAP" and not ({"fade_seconds", "fade_delta"} & changes.keys()):
         changes["fade_seconds"] = 0.0
 
+    # 카드 t466 — 트래킹·MIB 는 현장 말을 닫힌 어휘로 옮기고, 모르는 말은 원문
+    # 그대로 둔다(apply 가 사유를 붙여 거절한다).
+    if (match := _TRACKING.search(text)) is not None:
+        raw = match.group("v").strip()
+        changes["tracking"] = _TRACKING_ALIASES.get(_folded(raw), raw)
+    if (match := _MIB.search(text)) is not None:
+        raw = match.group("v").strip()
+        changes["mib_mode"] = _MIB_ALIASES.get(_folded(raw), raw)
+    if (match := _POSITION.search(text)) is not None:
+        changes["position"] = match.group("v").strip()
+        if match.group("no") is not None:
+            changes["position_preset_no"] = match.group("no")
+
     for field, pattern in (
         ("mood", _MOOD),
         ("movement", _MOVEMENT),
         ("effect", _EFFECT),
         ("palette_primary", _COLOR),
         ("note", _NOTE),
+        ("phaser", _PHASER),
     ):
         if (match := pattern.search(text)) is not None:
             value = match.group("v").strip()
@@ -518,6 +591,77 @@ def _lift_group_intensity(section: dict, slots: list[int], delta: int, report: l
     )
 
 
+#: 비어 있으면 안 되는 글자 칸.
+_TEXT_FIELDS = (
+    "mood",
+    "palette_primary",
+    "palette_secondary",
+    "movement",
+    "effect",
+    "note",
+    "phaser",
+    "position",
+)
+
+
+def _validate_t466_fields(changes: Mapping[str, object]) -> None:
+    """카드 t466 — 닫힌 어휘와 포지션 번호를 **쓰기 전에** 판정한다."""
+    if "tracking" in changes and changes["tracking"] not in TRACKING_VALUES:
+        raise CueSheetEditError(
+            f"트래킹 값은 {', '.join(TRACKING_VALUES)} 중 하나여야 합니다 "
+            f"(받은 값: {changes['tracking']!r})."
+        )
+    if "mib_mode" in changes and changes["mib_mode"] not in MIB_MODES:
+        raise CueSheetEditError(
+            "MIB 값은 없음, dark, mark, live 중 하나여야 합니다 "
+            f"(받은 값: {changes['mib_mode']!r})."
+        )
+    if "position" in changes and re.fullmatch(r"\d+(\.\d+)?", str(changes["position"]).strip()):
+        raise CueSheetEditError(
+            f"번호만으로는 포지션 이름을 알 수 없습니다 (받은 값: {changes['position']!r}) — "
+            "이름을 같이 적어 주세요 (예: '포지션 2.11 Sweep L로 바꿔줘')."
+        )
+    number = changes.get("position_preset_no")
+    if number is not None:
+        if "position" not in changes:
+            raise CueSheetEditError("포지션 번호는 포지션 이름과 같이 적어 주세요.")
+        if str(number).split(".")[0] != _POSITION_POOL:
+            raise CueSheetEditError(
+                f"포지션 프리셋은 풀 {_POSITION_POOL}에 있습니다 — "
+                f"'{number}'는 다른 풀의 번호입니다."
+            )
+
+
+def _write_t466_fields(section: dict, changes: Mapping[str, object], report: list[str]) -> None:
+    """카드 t466 — 네 칸을 쓴다. 조립기가 계산한 ``mib``(참/거짓)는 건드리지 않는다."""
+    if "tracking" in changes:
+        before = section.get("tracking") or "Track"
+        section["tracking"] = changes["tracking"]
+        report.append(f"트래킹 {before} → {section['tracking']}")
+    if "mib_mode" in changes:
+        before = section.get("mib_mode") or "none"
+        section["mib_mode"] = changes["mib_mode"]
+        report.append(f"MIB {_mib_label(before)} → {_mib_label(section['mib_mode'])}")
+    if "phaser" in changes:
+        before = section.get("phaser")
+        section["phaser"] = str(changes["phaser"]).strip()
+        report.append(f"페이저 {before or '—'} → {section['phaser']}")
+    if "position" in changes:
+        before = section.get("position")
+        section["position"] = str(changes["position"]).strip()
+        number = changes.get("position_preset_no")
+        if number is not None:
+            section["position_preset_no"] = str(number)
+        else:
+            section.pop("position_preset_no", None)
+        shown = f"{number} {section['position']}" if number is not None else section["position"]
+        report.append(f"포지션 {before or '—'} → {shown}")
+
+
+def _mib_label(mode: str) -> str:
+    return "없음" if mode == "none" else mode
+
+
 def apply_cue_sheet_edit(
     timeline: Mapping[str, object],
     cue_number: int,
@@ -610,7 +754,7 @@ def apply_cue_sheet_edit(
                 f"(현재 {float(before_fade):g}초)."
             )
 
-    for field in ("mood", "palette_primary", "palette_secondary", "movement", "effect", "note"):
+    for field in _TEXT_FIELDS:
         if field in changes:
             value = changes[field]
             if not isinstance(value, str) or not value.strip():
@@ -618,6 +762,7 @@ def apply_cue_sheet_edit(
                     f"{EDITABLE_FIELD_LABELS[field]} 값이 비어 있습니다 — "
                     "무엇으로 바꿀지 적어 주세요."
                 )
+    _validate_t466_fields(changes)
 
     # --- 여기부터 쓰기. 위를 전부 통과했으므로 중간에 튀지 않는다. ---
     # 조도가 맨 앞이다. 「더 옮길 곳이 없다」 거절은 여기서 나며, 그 시점에는
@@ -655,6 +800,7 @@ def apply_cue_sheet_edit(
             before = section.get(field)
             section[field] = str(changes[field]).strip()
             report.append(f"{EDITABLE_FIELD_LABELS[field]} {before or '—'} → {section[field]}")
+    _write_t466_fields(section, changes, report)
 
     updated = copy.deepcopy(dict(timeline))
     sections = list(updated["sections"])
