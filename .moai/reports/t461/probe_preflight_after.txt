@@ -1,0 +1,8 @@
+· 큐 18개 중 반영 가능 18건(그중 일부만 나가는 큐 2건), 건너뜀 0건.
+  · 큐 20(VERSE1) 나가는 것: 조도 70% · 보조컬러 P1 골드앰버 · BACK 35% · 페이드 1.5초
+  · 큐 30(VERSE1) 나가는 것: 조도 70% · 컬러 P2 웜화이트 · 보조컬러 P6 터쿼이즈 · 페이드 2초
+partial: [20, 30]
+  skip q20 [unmapped_look] 컬러는 못 보냈습니다 — 팔레트 범례에 없는 이름입니다: 'P99 범례에 없는 색' (색을 지어내지 않습니다).
+  skip q30 [role_unaddressed] 그룹별 조도를 나눠 보내지 못했습니다 — 콘솔 그룹 번호를 모르는 그룹: SIDE. 큐 전체 70% 한 값으로 보냈습니다.
+q30 intensity: [{'group': 'KEY', 'level': 70}, {'group': 'SIDE', 'level': 40}] fixture_groups: ['KEY', 'BACK', 'SIDE-L', 'SIDE-R']
+skipped: []

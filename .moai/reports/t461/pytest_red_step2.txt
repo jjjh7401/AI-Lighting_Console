@@ -1,0 +1,53 @@
+.FFF.                                                                    [100%]
+=================================== FAILURES ===================================
+__________ test_lower_group_gets_its_own_dimmer_line_after_the_colour __________
+
+    def test_lower_group_gets_its_own_dimmer_line_after_the_colour() -> None:
+        plan = plan_cue_console_apply(_section(90, 70), None, _MAPPING, _LEGEND)
+>       assert plan.value_line == (
+            f"Group 11 + 12 ; Attribute 'Dimmer' At 90 ; {_BLUE} ; "
+            "Group 12 ; Attribute 'Dimmer' At 70"
+        )
+E       assert "Group 11 + 1...RGB_B' At 100" == "Group 11 + 1...Dimmer' At 70"
+E         
+E         Skipping 122 identical leading characters in diff, use -v to show
+E         - B_B' At 100 ; Group 12 ; Attribute 'Dimmer' At 70
+E         + B_B' At 100
+
+server/tests/test_cue_sheet_apply_group_dimmer_t461.py:50: AssertionError
+_____________________ test_key_lower_with_secondary_colour _____________________
+
+    def test_key_lower_with_secondary_colour() -> None:
+        plan = plan_cue_console_apply(
+            _section(50, 90, palette_secondary="앰버"), None, _MAPPING, _LEGEND
+        )
+>       assert plan.value_line == (
+            f"Group 11 + 12 ; Attribute 'Dimmer' At 90 ; {_BLUE} ; Group 12 ; {_AMBER} ; "
+            "Group 11 ; Attribute 'Dimmer' At 50"
+        )
+E       assert "Group 11 + 1...orRGB_B' At 5" == "Group 11 + 1...Dimmer' At 50"
+E         
+E         Skipping 226 identical leading characters in diff, use -v to show
+E         - RGB_B' At 5 ; Group 11 ; Attribute 'Dimmer' At 50
+E         + RGB_B' At 5
+
+server/tests/test_cue_sheet_apply_group_dimmer_t461.py:62: AssertionError
+________ test_unresolvable_group_falls_back_to_one_value_with_a_reason _________
+
+    def test_unresolvable_group_falls_back_to_one_value_with_a_reason() -> None:
+        """KEY 는 번호를 모른다(주소록에 없음) — 한 값만 보내고 사유를 단다."""
+        mapping = [{"group_name": "MOVER-U", "group_no": 12, "role": "back"}]
+        section = _section(50, 90, fixture_groups=["MOVER-U"])
+        plan = plan_cue_console_apply(section, None, mapping, _LEGEND)
+        assert plan.value_line == f"Group 12 ; Attribute 'Dimmer' At 90 ; {_BLUE}"
+        details = [skip.detail for skip in plan.skips]
+>       assert any("그룹별 조도를 나눠 보내지 못했습니다" in d and "KEY" in d for d in details)
+E       assert False
+E        +  where False = any(<generator object test_unresolvable_group_falls_back_to_one_value_with_a_reason.<locals>.<genexpr> at 0x109dede50>)
+
+server/tests/test_cue_sheet_apply_group_dimmer_t461.py:75: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_cue_sheet_apply_group_dimmer_t461.py::test_lower_group_gets_its_own_dimmer_line_after_the_colour
+FAILED server/tests/test_cue_sheet_apply_group_dimmer_t461.py::test_key_lower_with_secondary_colour
+FAILED server/tests/test_cue_sheet_apply_group_dimmer_t461.py::test_unresolvable_group_falls_back_to_one_value_with_a_reason
+3 failed, 2 passed in 0.14s
