@@ -1,0 +1,96 @@
+!! unknown step form: props:ShowData/DataPools/Default/Sequences/900/4|TRIGTYPE,TRIGTIME
+
+[12:52:10.816] >>> exec 'ClearAll'
+[12:52:10.870] <<< {"id": "4da6f14b", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:11.124] >>> exec 'Off Executor 201'
+[12:52:11.170] <<< {"id": "0de4d2a8", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:11.423] >>> exec 'Delete Sequence 900 /NoConfirm'
+[12:52:11.470] <<< {"id": "4404681f", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:11.725] >>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'PositionMSpeed' At 0 ; Attribute 'Pan' At -60 ; Attribute 'Tilt' At -30"
+[12:52:11.770] <<< {"id": "23e16ae5", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:12.025] >>> exec "Store Sequence 900 Cue 11 'Q11 lit pan-60 tilt-30 mspeed0'"
+[12:52:12.070] <<< {"id": "31deeb94", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:12.320] >>> exec 'ClearAll'
+[12:52:12.369] <<< {"id": "9daea385", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:12.623] >>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 60 ; Attribute 'Tilt' At 30"
+[12:52:12.670] <<< {"id": "a5cc4e4a", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:12.924] >>> exec "Attribute 'Pan' At Delay 0 Thru 2"
+[12:52:12.970] <<< {"id": "935482d7", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:13.225] >>> exec "Attribute 'Tilt' At Delay 0 Thru 2"
+[12:52:13.270] <<< {"id": "68a1bb32", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:13.524] >>> exec "Store Sequence 900 Cue 12 'Q12 pan60 tilt30 delay0thru2'"
+[12:52:13.570] <<< {"id": "1009e67c", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:13.821] >>> exec 'ClearAll'
+[12:52:13.870] <<< {"id": "1b67af08", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:14.121] >>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'Pan' At 30 ; Attribute 'Tilt' At -30"
+[12:52:14.170] <<< {"id": "1102af60", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:14.425] >>> exec "Store Sequence 900 Cue 13 'Q13 lit pan30 tilt-30'"
+[12:52:14.469] <<< {"id": "f4433ade", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:14.725] >>> exec 'ClearAll'
+[12:52:14.770] <<< {"id": "6ab40ed8", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:15.024] >>> exec 'Fixture 521 Thru 522 ; At 0'
+[12:52:15.070] <<< {"id": "28ba8f58", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:15.325] >>> exec "Store Sequence 900 Cue 14 'Q14 dark'"
+[12:52:15.370] <<< {"id": "e0926f07", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:15.625] >>> exec 'ClearAll'
+[12:52:15.670] <<< {"id": "032dfbf8", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:15.921] >>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'Pan' At -30 ; Attribute 'Tilt' At 30"
+[12:52:15.970] <<< {"id": "075f4978", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:16.225] >>> exec "Store Sequence 900 Cue 15 'Q15 lit pan-30 tilt30'"
+[12:52:16.270] <<< {"id": "58db1eb0", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:16.524] >>> exec 'ClearAll'
+[12:52:16.570] <<< {"id": "0e30c4ee", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:16.824] >>> exec "Label Sequence 900 'T464 SCRATCH DELETABLE'"
+[12:52:16.870] <<< {"id": "c75d21b3", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:17.125] >>> exec 'Assign Sequence 900 At Executor 201'
+[12:52:17.170] <<< {"id": "2faec413", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:17.425] >>> exec "Set Sequence 900 Property 'SEQUMIBMODE' 'Early'"
+[12:52:17.470] <<< {"id": "5e68a028", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:17.725] >>> exec "Set Cue 12 Sequence 900 Property 'TrigType' 'Blorp'"
+[12:52:17.770] <<< {"error": "Illegal value", "id": "86df3d4a", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+[12:52:18.024] >>> exec "Set Cue 12 Sequence 900 Property 'TrigTypeZZ' 'Time'"
+[12:52:18.070] <<< {"error": "Illegal property", "id": "58d2a6b9", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+[12:52:18.322] >>> exec "Set Cue 12 Sequence 900 Property 'TrigType' 'Time'"
+[12:52:18.370] <<< {"id": "238cfedd", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:18.624] >>> exec "Set Cue 12 Sequence 900 Property 'TrigTime' 2"
+[12:52:18.670] <<< {"id": "30ac7a2f", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:18.923] >>> exec "Set Sequence 900 Property 'WrapAround' 1"
+[12:52:18.970] <<< {"id": "239ce945", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:19.224] >>> prop 'ShowData/DataPools/Default/Sequences/900' 'WRAPAROUND'
+[12:52:19.270] <<< {"id": "fe3b7ac7", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "WRAPAROUND", "v": 1, "value": "true"}
+
+[12:52:19.525] >>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIBMODE'
+[12:52:19.570] <<< {"id": "433760b8", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIBMODE", "v": 1, "value": "Early"}
+
+[12:52:19.823] >>> prop 'Selection' 'COUNTTOTALSELECTED'
+[12:52:19.869] <<< {"id": "0749a933", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+=== steps=32 not_ok_or_timeout=3

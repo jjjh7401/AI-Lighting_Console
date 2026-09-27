@@ -1,0 +1,23 @@
+
+>>> exec "Set Sequence 900 Property 'SEQUMIBMODE' 'Early'"
+<<< {"id": "f497b6de", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIBMODE'
+<<< {"id": "16b6fd8b", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIBMODE", "v": 1, "value": "Early"}
+
+>>> exec 'Goto Executor 201 Cue 13'
+<<< {"id": "51225fff", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=3 not_ok_or_timeout=0
+sent 12:37:20
+
+>>> exec 'Go Executor 201'
+<<< {"id": "7f95a0de", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
+sent 12:37:50
+
+>>> exec 'Go Executor 201'
+<<< {"id": "3bb407ef", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0

@@ -1,0 +1,5 @@
+
+>>> exec 'Goto Executor 201 Cue 11'
+<<< {"id": "c2c01491", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
