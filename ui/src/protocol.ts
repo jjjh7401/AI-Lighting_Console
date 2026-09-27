@@ -344,6 +344,11 @@ export interface SongTimelineSection {
   palette_primary?: string;
   /** Color 보조 */
   palette_secondary?: string;
+  /** t456 — 주색 HEX(`#RRGGBB`). 서버 color_names.py 가 해석 못 한 색은 null
+   * (흰색 미배선 경계 그대로). 옛 페이로드에는 키가 없다. */
+  palette_primary_hex?: string | null;
+  /** t456 — 보조색 HEX. 보조색이 없거나 해석 못 하면 null. */
+  palette_secondary_hex?: string | null;
   /** 그룹별 값 — 전체 값은 기존 `d_level` 이 그대로 담는다 */
   intensity?: SongTimelineGroupIntensity[];
   /** Fixture Group (예: ["MOVER-U","MOVER-D"]) — 정본 `Group` */
@@ -446,6 +451,32 @@ export interface SongTimelineConceptReport {
   lint_finding_count?: number;
   lint_disabled_rule_count?: number;
   energy_report_count?: number;
+  /** t455 — 컨셉 큐 한 줄에 한 행(`mib` 와 같은 길이·순서). */
+  rows?: SongTimelineConceptRow[];
+  /** t455 — 행 ↔ 화면 구간 짝짓기가 됐는가. false 면 모든 행의
+   * `screen_position` 이 null 이다. */
+  row_pairing?: { available: boolean; reason: string | null };
+}
+
+/** t455 — 컨셉 큐 한 행. 구간 이름은 `section` 이 아니라 `screen_position`
+ * 으로 화면 구간의 `label` 을 읽는다(재매핑이 Outro 를 Rap/Solo/Dance Break
+ * 로 바꾸는 등 `section` 은 컨셉 어휘다). */
+export interface SongTimelineConceptRow {
+  q: number;
+  /** 곡 시작 기준 초(초 단위로 버림한 구간 시각에서 나온다). */
+  ts: number;
+  kind: "safety" | "section" | "phrase";
+  section: string;
+  occurrence: number;
+  trigger: string | null;
+  tracking: string;
+  /** 포지션 변화가 있을 때만 값 — dark / mark / live. */
+  mib: "dark" | "mark" | "live" | null;
+  one_shot: { shot: string; target: string } | null;
+  /** 큐별 근거 등급 생산자가 아직 없다(t457) — 지금은 항상 null. */
+  evidence: string | null;
+  /** `sections` 의 0-base 위치. safety 행과 짝짓기 실패 때는 null. */
+  screen_position: number | null;
 }
 
 /** t281 — 초안이 원본에서 얼마나 벌어졌는지. 서버 `_draft_badge` 가 만든다. */

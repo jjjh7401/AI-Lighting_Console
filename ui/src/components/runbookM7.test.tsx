@@ -162,11 +162,12 @@ describe("REQ-082 CUE SHEET 14열", () => {
     expect(protocol).toMatch(/\btrans\?:/);
   });
 
-  it("MIB 는 bool 원천뿐이라 기호 3종(◐◇◑)을 쓰지 않는다", () => {
+  // t458 — 서버 rows(t455)로 3상태 기호를 쓴다(runbookM7Third.test.tsx). 짝짓기가
+  // 안 된 리포트에서는 여전히 bool 원천뿐이라 이 표기로 돌아간다.
+  it("짝짓기가 없으면 MIB 는 bool 표기다", () => {
     const base = CUE_SHEET_EXAMPLE.sections[0];
     expect(mibCellText({ ...base, mib: true })).toBe("사전이동 있음");
     expect(mibCellText({ ...base, mib: false })).toBe("—");
-    expect(source).not.toMatch(/[◐◇◑]/);
   });
 
   it("밝기 증감 기호는 직전 큐와의 비교에서만 나온다", () => {
@@ -181,9 +182,12 @@ describe("REQ-082 CUE SHEET 14열", () => {
     expect(intensityTrend(seq, 3)).toBe("▼");
   });
 
-  it("원천 없는 4열은 행마다 데이터 없음 칸으로 그린다", () => {
-    const noDataCells = source.match(/className="nodata"/g) ?? [];
-    expect(noDataCells.length).toBe(4);
+  // t458 — 회차·Trigger·근거 등급은 짝짓기 여부에 따라 className 이 갈린다
+  // (`conceptClass`). 늘 원천이 없는 칸은 Track 예외 하나만 남았다. 행 수 단위
+  // 검사는 runbookM7Third.test.tsx 가 렌더 결과로 한다.
+  it("늘 원천 없는 칸은 Track 예외 하나, 짝짓기에 따라 갈리는 칸은 셋이다", () => {
+    expect(source.match(/className="nodata"/g) ?? []).toHaveLength(1);
+    expect(source.match(/className=\{conceptClass\}/g) ?? []).toHaveLength(3);
   });
 });
 

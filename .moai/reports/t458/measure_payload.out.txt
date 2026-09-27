@@ -1,0 +1,2 @@
+row_pairing: {'available': True, 'reason': None} rows: 20
+hex: ['#0D33FF', '#0D33FF', '#FFBF66', None, None, '#8C59FF', '#00E6FF', None]
