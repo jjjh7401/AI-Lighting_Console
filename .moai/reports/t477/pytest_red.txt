@@ -1,0 +1,101 @@
+.............FF......FFFFF...                                            [100%]
+=================================== FAILURES ===================================
+_______ test_a_phaser_with_a_pool_number_is_recalled_like_t469_measured ________
+
+    def test_a_phaser_with_a_pool_number_is_recalled_like_t469_measured():
+        plan = _plan_with({"phaser": "DIM-BREATHE", "phaser_preset_no": "21.4"})
+>       value = next(line for line in plan.commands if line.startswith("Group 11"))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       StopIteration
+
+server/tests/test_preset_name_resolve_t477.py:162: StopIteration
+______________ test_position_and_phaser_ride_the_same_value_line _______________
+
+    def test_position_and_phaser_ride_the_same_value_line():
+        plan = _plan_with(
+            {
+                "position": "POS05",
+                "position_preset_no": "2.5",
+                "phaser": "DIM-BREATHE",
+                "phaser_preset_no": "21.4",
+            }
+        )
+        value = next(line for line in plan.commands if line.startswith("Group 11"))
+>       assert value.endswith(" ; Group 11 ; At Preset 2.5 ; Group 11 ; At Preset 21.4")
+E       assert False
+E        +  where False = <built-in method endswith of str object at 0x10ce16d40>(' ; Group 11 ; At Preset 2.5 ; Group 11 ; At Preset 21.4')
+E        +    where <built-in method endswith of str object at 0x10ce16d40> = "Group 11 ; Attribute 'Dimmer' At 70 ; Group 11 ; At Preset 2.5".endswith
+
+server/tests/test_preset_name_resolve_t477.py:178: AssertionError
+____________ test_a_position_name_is_filled_from_the_captured_pool _____________
+
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-1746/test_a_position_name_is_filled0')
+
+    def test_a_position_name_is_filled_from_the_captured_pool(tmp_path):
+        event, console = _apply(tmp_path, _captured_pools(), position="POS05")
+>       assert "Group 11 ; Attribute 'Dimmer' At 60 ; Group 11 ; At Preset 2.5" in console.executed
+E       assert "Group 11 ; Attribute 'Dimmer' At 60 ; Group 11 ; At Preset 2.5" in []
+E        +  where [] = <server.tests.test_preset_name_resolve_t477._RecordingConsole object at 0x10d3e47d0>.executed
+
+server/tests/test_preset_name_resolve_t477.py:253: AssertionError
+_____________ test_a_phaser_name_is_filled_from_the_captured_pool ______________
+
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-1746/test_a_phaser_name_is_filled_f0')
+
+    def test_a_phaser_name_is_filled_from_the_captured_pool(tmp_path):
+        event, console = _apply(tmp_path, _captured_pools(), phaser="DIM-BREATHE")
+>       assert any(line.endswith("; At Preset 21.4") for line in console.executed)
+E       assert False
+E        +  where False = any(<generator object test_a_phaser_name_is_filled_from_the_captured_pool.<locals>.<genexpr> at 0x10ce80f20>)
+
+server/tests/test_preset_name_resolve_t477.py:261: AssertionError
+___________ test_a_catalog_name_absent_from_the_pool_is_not_invented ___________
+
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-1746/test_a_catalog_name_absent_fro0')
+
+    def test_a_catalog_name_absent_from_the_pool_is_not_invented(tmp_path):
+        # t469 실측: 카탈로그 이름(Breathe Soft)은 이 콘솔 풀에 없다.
+        event, console = _apply(tmp_path, _captured_pools(), phaser="Breathe Soft")
+        assert not any("At Preset" in line for line in console.executed)
+        assert not any(line.startswith("Store") for line in console.executed)
+>       assert "Breathe Soft" in event["text"]
+E       AssertionError: assert 'Breathe Soft' in '콘솔에 반영한 큐가 0건입니다 (건너뜀 1건).\n· 큐 20(VERSE1) 미반영 [unmapped_look] — 페이저 프리셋을 큐에 싣는 형태(`At Preset <풀>.<번호>` 뒤 `/Merge`)는 실측됐지만(카드 t469), 초안에는 이름만 있고 그 이름의 콘솔 풀 번호를 이 경로가 알 수 없습니다 — 번호를 지어내지 않습니다. 초안과 저장본에는 남아 있습니다.\n콘솔에는 아무것도 쓰지 않았습니다.'
+
+server/tests/test_preset_name_resolve_t477.py:270: AssertionError
+____________ test_an_unreadable_position_pool_is_a_distinct_reason _____________
+
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-1746/test_an_unreadable_position_po0')
+
+    def test_an_unreadable_position_pool_is_a_distinct_reason(tmp_path):
+        tree = {k: v for k, v in _captured_pools().items() if not k.endswith("/2")}
+        event, console = _apply(tmp_path, tree, position="POS05")
+        assert not any("At Preset" in line for line in console.executed)
+>       assert "읽지 못" in event["text"]
+E       assert '읽지 못' in "콘솔에 반영한 큐가 0건입니다 (건너뜀 1건).\n· 큐 20(VERSE1) 미반영 [unmapped_look] — 포지션 'POS05' 은(는) 프리셋 번호 없이 이름만 있습니다 — 이름으로 콘솔 풀 번호를 찾지 않습니다(번호를 지어내지 않음). 초안과 저장본에는 남아 있습니다.\n콘솔에는 아무것도 쓰지 않았습니다."
+
+server/tests/test_preset_name_resolve_t477.py:278: AssertionError
+____________ test_two_presets_sharing_the_leading_word_are_refused _____________
+
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-1746/test_two_presets_sharing_the_l0')
+
+    def test_two_presets_sharing_the_leading_word_are_refused(tmp_path):
+        tree = _captured_pools()
+        pool = copy.deepcopy(tree[f"{_SESSION_ROOT}/2"])
+        pool["children"].append({"class": "Preset", "i": 7, "name": "POS05 사본"})
+        pool["node"]["childCount"] = 7
+        tree[f"{_SESSION_ROOT}/2"] = pool
+        event, console = _apply(tmp_path, tree, position="POS05")
+        assert not any("At Preset" in line for line in console.executed)
+>       assert "특정할 수 없" in event["text"]
+E       assert '특정할 수 없' in "콘솔에 반영한 큐가 0건입니다 (건너뜀 1건).\n· 큐 20(VERSE1) 미반영 [unmapped_look] — 포지션 'POS05' 은(는) 프리셋 번호 없이 이름만 있습니다 — 이름으로 콘솔 풀 번호를 찾지 않습니다(번호를 지어내지 않음). 초안과 저장본에는 남아 있습니다.\n콘솔에는 아무것도 쓰지 않았습니다."
+
+server/tests/test_preset_name_resolve_t477.py:289: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_preset_name_resolve_t477.py::test_a_phaser_with_a_pool_number_is_recalled_like_t469_measured
+FAILED server/tests/test_preset_name_resolve_t477.py::test_position_and_phaser_ride_the_same_value_line
+FAILED server/tests/test_preset_name_resolve_t477.py::test_a_position_name_is_filled_from_the_captured_pool
+FAILED server/tests/test_preset_name_resolve_t477.py::test_a_phaser_name_is_filled_from_the_captured_pool
+FAILED server/tests/test_preset_name_resolve_t477.py::test_a_catalog_name_absent_from_the_pool_is_not_invented
+FAILED server/tests/test_preset_name_resolve_t477.py::test_an_unreadable_position_pool_is_a_distinct_reason
+FAILED server/tests/test_preset_name_resolve_t477.py::test_two_presets_sharing_the_leading_word_are_refused
+7 failed, 22 passed in 1.31s

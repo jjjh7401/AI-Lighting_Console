@@ -55,7 +55,12 @@
   값 줄에 붙인다. 그 프리셋에 선택 기구 값이 없으면 콘솔은 OK 를 돌려주고
   아무것도 싣지 않는다 — 요약의 번호를 화면에서 확인해야 한다.
 
-무드·무브먼트·이펙트·전환·노트·MIB 모드·페이저는 출처를 못 대서 **넓히지 않았다**.
+카드 t477 — 페이저는 초안에 **번호**(``phaser_preset_no``, ``<풀>.<n>``)가 있을 때만 같은
+모양(``<그룹> ; At Preset <풀>.<n>``)으로 싣는다. 이름만 있는 포지션·페이저의 번호는 세션이
+반영 직전 콘솔 풀을 읽어 채운다(``ChatSession._resolve_draft_preset_names``) — 이 모듈은
+여전히 콘솔을 읽지 않는다.
+
+무드·무브먼트·이펙트·전환·노트·MIB 모드와 번호 없는 페이저는 출처를 못 대서 **넓히지 않았다**.
 칸마다 왜 못 보내는지는 :data:`UNSOURCED_FIELD_REASONS` 에 적혀 있고, 그
 문장이 건너뜀 사유로 그대로 나간다. 사유 **코드**는 새로 만들지 않고 t277 이
 이미 쓰던 두 개를 그대로 쓴다:
@@ -118,6 +123,8 @@ CONSOLE_APPLIABLE_FIELDS: tuple[str, ...] = (
     # 카드 t469 — 실측 뒤 합류(`.moai/reports/t469/verdict.md`).
     "tracking",
     "position_preset_no",
+    # 카드 t477 — 세션이 반영 직전 콘솔 풀에서 이름으로 찾아 채운 번호.
+    "phaser_preset_no",
 )
 
 #: 콘솔로 못 보내는 칸과 **그 이유**. 「지원 안 함」이라고만 적으면 감독은 이게
@@ -149,8 +156,8 @@ UNSOURCED_FIELD_REASONS: dict[str, str] = {
     ),
     "phaser": (
         "페이저 프리셋을 큐에 싣는 형태(`At Preset <풀>.<번호>` 뒤 `/Merge`)는 실측됐지만"
-        "(카드 t469), 초안에는 이름만 있고 그 이름의 콘솔 풀 번호를 이 경로가 알 수 "
-        "없습니다 — 번호를 지어내지 않습니다"
+        "(카드 t469), 이 페이저 이름의 콘솔 풀 번호가 없습니다 — 반영 전에 콘솔 풀에서 "
+        "이름으로 찾고(카드 t477), 못 찾으면 번호를 지어내지 않습니다"
     ),
 }
 
@@ -162,6 +169,9 @@ _RELEASE = "Release"
 _TRACKING_VALUES = (_TRACK, _BLOCK, _CUE_ONLY, _RELEASE)
 #: 포지션 프리셋 번호 — 풀 2 만(`cue_sheet_edit` 이 이미 막는 규칙을 반영 쪽에서도 지킨다).
 _POSITION_PRESET_NO = re.compile(r"2\.[1-9]\d*")
+#: 카드 t477 — 페이저 프리셋 번호 ``<풀>.<슬롯>``. 풀은 이름으로 찾으므로 고정하지 않는다
+#: (t469 실측은 21.4 = All 1 풀의 DIM-BREATHE).
+_PHASER_PRESET_NO = re.compile(r"[1-9]\d*\.[1-9]\d*")
 
 
 class ConsoleApplyError(ValueError):
@@ -622,12 +632,36 @@ def _position_recall(
             return None, None
         return None, (
             f"포지션 {section.get('position')!r} 은(는) 프리셋 번호 없이 이름만 있습니다 — "
-            "이름으로 콘솔 풀 번호를 찾지 않습니다(번호를 지어내지 않음)"
+            "반영 전 콘솔 풀 판독에서 번호를 얻지 못했습니다(번호를 지어내지 않음)"
         )
     if not isinstance(number, str) or not _POSITION_PRESET_NO.fullmatch(number):
         if previous is None:
             return None, None
         return None, f"포지션 프리셋 번호 {number!r} 는 풀 2(`2.<n>`) 번호가 아닙니다"
+    return number, None
+
+
+def _phaser_recall(
+    previous: Mapping[str, object] | None, section: Mapping[str, object]
+) -> tuple[str | None, str | None]:
+    """카드 t477 — 페이저 프리셋을 ``(프리셋 번호, 건너뜀 사유)`` 로.
+
+    싣는 형태는 t469 가 실측했다: ``At Preset 21.4`` 뒤 ``/Merge`` → 큐에 ``21.4 DIM-B…`` +
+    ``Step 2``. 번호는 세션이 반영 직전 콘솔 풀에서 이름으로 찾아 ``phaser_preset_no`` 에
+    채운다(``ChatSession._resolve_draft_preset_names``). 번호가 없으면 ``phaser`` 는 기존
+    :data:`UNSOURCED_FIELD_REASONS` 사유로 건너뛴다 — 여기서는 번호 모양만 판정한다.
+    곡 전체 반영(``previous is None``)의 페이저 이름은 감독이 고친 것이 아니라 건드리지 않는다.
+    """
+    if previous is None:
+        return None, None
+    keys = ("phaser", "phaser_preset_no")
+    if all(previous.get(k) == section.get(k) for k in keys):
+        return None, None
+    number = section.get("phaser_preset_no")
+    if number in (None, ""):
+        return None, None
+    if not isinstance(number, str) or not _PHASER_PRESET_NO.fullmatch(number):
+        return None, f"페이저 프리셋 번호 {number!r} 는 `<풀>.<번호>` 모양이 아닙니다"
     return number, None
 
 
@@ -657,15 +691,21 @@ def plan_cue_console_apply(
         or previous.get("palette_secondary") != section.get("palette_secondary")
     )
     fade_changed = previous is None or _fade_seconds(previous) != _fade_seconds(section)
+    # 카드 t469 — 트래킹·포지션, t477 — 페이저 번호. 못 보내는 경우의 사유는 칸마다 따로 든다.
+    store_options, tracking_ops, tracking_part, tracking_reason = _tracking_plan(previous, section)
+    position_no, position_reason = _position_recall(previous, section)
+    phaser_no, phaser_reason = _phaser_recall(previous, section)
+    field_reasons = [
+        reason for reason in (tracking_reason, position_reason, phaser_reason) if reason
+    ]
     unsourced = [
         name
         for name in UNSOURCED_FIELD_REASONS
-        if previous is not None and previous.get(name) != section.get(name)
+        if previous is not None
+        and previous.get(name) != section.get(name)
+        # 번호가 있거나 번호 모양이 틀렸으면 페이저는 위 판정이 말한다(사유 중복 방지).
+        and not (name == "phaser" and (phaser_no or phaser_reason))
     ]
-    # 카드 t469 — 트래킹·포지션. 못 보내는 경우의 사유는 칸마다 따로 든다.
-    store_options, tracking_ops, tracking_part, tracking_reason = _tracking_plan(previous, section)
-    position_no, position_reason = _position_recall(previous, section)
-    field_reasons = [reason for reason in (tracking_reason, position_reason) if reason]
 
     if not (
         intensity_changed
@@ -674,6 +714,7 @@ def plan_cue_console_apply(
         or store_options
         or tracking_ops
         or position_no
+        or phaser_no
     ):
         reasons = "; ".join([UNSOURCED_FIELD_REASONS[name] for name in unsourced] + field_reasons)
         return CuePlan(
@@ -810,6 +851,10 @@ def plan_cue_console_apply(
     if position_no is not None:
         value_line += f" ; {selection} ; At Preset {position_no}"
         parts.append(f"포지션 {position_no}")
+    # 카드 t477 — 페이저도 같은 모양(t469 실측 `At Preset 21.4`). 포지션 뒤에 선택을 다시 적는다.
+    if phaser_no is not None:
+        value_line += f" ; {selection} ; At Preset {phaser_no}"
+        parts.append(f"페이저 {phaser_no}")
     if tracking_part is not None:
         parts.append(tracking_part)
     for detail in field_reasons:
