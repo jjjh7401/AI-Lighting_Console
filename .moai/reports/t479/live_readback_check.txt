@@ -1,0 +1,4 @@
+children=15
+고치기 전 판정: Sequence readback timed cue 1의 TrigType이 Time이 아닙니다: None
+고친 뒤 판정: 통과
+타임코드 9 판정: 통과

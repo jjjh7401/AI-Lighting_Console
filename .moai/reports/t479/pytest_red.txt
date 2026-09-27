@@ -1,0 +1,55 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t479
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t479
+Installed 97 packages in 166ms
+FF.                                                                      [100%]
+=================================== FAILURES ===================================
+___ test_a_live_shaped_console_that_stored_everything_reads_back_as_verified ___
+
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-1768/test_a_live_shaped_console_tha0')
+
+    def test_a_live_shaped_console_that_stored_everything_reads_back_as_verified(tmp_path):
+        console = _LiveShapedConsole()
+        text, timeline = _drive(tmp_path, console)
+    
+        # 계기가 공허하지 않다: 콘솔이 실제로 큐 13개와 그 TrigTime 을 받았고, 자식에는 속성이 없다.
+        assert len(console.cues) == 13
+        assert all("TRIGTIME" in cue for cue in console.cues.values())
+>       assert "readback 검증 완료" in text, text
+E       AssertionError: 연출 인터뷰 결과 — Q1 컨셉: 우주 (확정) / Q2 팔레트: 블루/퍼플 (확정) / Q2B 색 운용: modulate (확정) / Q3 클라이맥스: D5, 쿨 볼드, Ring In → Center → Wall (확정) / Q4 공간 스토리: Ring In → Home → Vocal DSC → Center → Wall → Cross → Fan Out → Audience (확정) / Q5 전환 방식: 긴 페이드 성향 (느린 템포) (확정). 감독 승인 후 시퀀스 210에 리뷰 번들 1건을 원자 실행 요청했지만 readback 검증에 실패했습니다: Sequence readback timed cue 1의 TrigType이 Time이 아닙니다: None. 전곡 리뷰 번들 — 시퀀스 210 · 진행 타임코드 9번 슬롯 자동 진행.
+E         큐 1 Intro — D2 · Ring In · 블루/cyan · 타임코드
+E         큐 2 Verse 1 — D3 · Home · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm
+E         큐 3 Verse 2 — D3 · Home · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm
+E         큐 4 Chorus 1 — D5 · Vocal DSC · 블루/warm white · 타임코드 · 페이저 제안: Wave CM
+E         큐 5 Chorus 2 — D5 · Center · 블루/warm white · 타임코드 · 페이저 제안: Wave CM
+E         큐 6 Verse 3 — D3 · Center · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm
+E         큐 7 Chorus 3 — D5 · Wall · 블루/warm white · 타임코드 · 페이저 제안: Wave CM
+E         큐 8 Chorus 4 — D5 · Wall · 블루/warm white · 타임코드 · 페이저 제안: Wave CM
+E         큐 9 Chorus 5 — D5 · Cross · 블루/warm white · 타임코드 · 페이저 제안: Wave CM
+E         큐 10 Verse 4 — D4 · Fan Out · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm
+E         큐 11 Chorus 6 — D5 · Ring In · 블루/warm white · 타임코드 · 페이저 제안: Wave CM
+E         큐 11.5 Chorus 6 Return — D5 · 포지션 유지 · 블루/warm white · 타임코드
+E         큐 12 Finale — D5 · Audience · 블루/warm white · 타임코드 · 페이저 제안: Finale Slam
+E         확인 포인트 1건: L9 큐 11.5: snap fade (0s) used outside an accent/hit/drop/button cue (G1). 페이저 제안은 승인 후 실기 슬롯을 조회해 배정합니다(못 찾으면 그 큐는 페이저 없이 진행). recall이 페이저를 싣는 것은 실기 확인됐고(2026-08-19), 저장된 큐가 그 참조를 보존하는지는 판독할 수 없어 ASSUMPTION입니다 — 곡 큐 재생은 콘솔 화면에서 직접 확인해 주세요. readback 요청: DataPool/Sequences/210, DataPool/Timecodes/9. 페이저 미배정: 'Breathe Warm' 페이저 프리셋을 콘솔에서 찾지 못했습니다; 'Finale Slam' 페이저 프리셋을 콘솔에서 찾지 못했습니다; 'Wave CM' 페이저 프리셋을 콘솔에서 찾지 못했습니다. 절정 연출 미반영: blinder_six_row_absent: Q12 'Finale' 절정 액센트 — 구간 이름이 §6 표의 한 행에 맞지 않아 블라인더 밝기를 정할 근거가 없음.
+E       assert 'readback 검증 완료' in "연출 인터뷰 결과 — Q1 컨셉: 우주 (확정) / Q2 팔레트: 블루/퍼플 (확정) / Q2B 색 운용: modulate (확정) / Q3 클라이맥스: D5, 쿨 볼드, Ring In → Center → Wa...셋을 콘솔에서 찾지 못했습니다. 절정 연출 미반영: blinder_six_row_absent: Q12 'Finale' 절정 액센트 — 구간 이름이 §6 표의 한 행에 맞지 않아 블라인더 밝기를 정할 근거가 없음."
+
+server/tests/test_song_readback_props_t479.py:160: AssertionError
+____________ test_a_wrong_trig_time_read_through_props_still_fails _____________
+
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-1768/test_a_wrong_trig_time_read_th0')
+
+    def test_a_wrong_trig_time_read_through_props_still_fails(tmp_path):
+        # 음성 대조: props 로 읽은 값이 승인 값과 다르면 여전히 실패다.
+        console = _LiveShapedConsole(trig_time_shift={"6": 1.0})
+        text, timeline = _drive(tmp_path, console)
+    
+        assert "readback 검증에 실패" in text
+>       assert "TrigTime" in timeline["readback"]["message"]
+E       AssertionError: assert 'TrigTime' in 'Sequence readback timed cue 1의 TrigType이 Time이 아닙니다: None'
+
+server/tests/test_song_readback_props_t479.py:173: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_song_readback_props_t479.py::test_a_live_shaped_console_that_stored_everything_reads_back_as_verified
+FAILED server/tests/test_song_readback_props_t479.py::test_a_wrong_trig_time_read_through_props_still_fails
+2 failed, 1 passed in 1.36s
