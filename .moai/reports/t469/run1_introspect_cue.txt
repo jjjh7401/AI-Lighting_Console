@@ -1,0 +1,16 @@
+
+>>> introspect:ShowData/DataPools/Default/Sequences/1999/3
+    wire: Plugin "CopilotResponder" "introspect 1bb1b0db ShowData/DataPools/Default/Sequences/1999/3"
+<<< {"class": "Cue", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "NO", "t": "CueNumber"}, {"n": "RELEASE", "t": "UInt32"}, {"n": "ASSERT", "t": "UInt32"}, {"n": "ALLOWDUPLICATES", "t": "UInt32"}, {"n": "TRIGTYPE", "t": "UInt8"}, {"n": "TRIGTIME", "t": "Int64Time"}, {"n": "TRIGSOUND", "t": "UInt8"}, {"n": "MIBPREFERENCE", "t": "UInt8"}, {"n": "BREAK", "t": "Handle"}], "id": "1bb1b0db", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/1999/3", "source": "property_accessors", "total": 23, "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Sequences/1999/3@26
+    wire: Plugin "CopilotResponder" "introspect 34c9ce92 ShowData/DataPools/Default/Sequences/1999/3 offset=26"
+<<< {"class": "Cue", "fields": [], "id": "34c9ce92", "kind": "introspect", "offset": 26, "ok": true, "path": "ShowData/DataPools/Default/Sequences/1999/3", "source": "property_accessors", "total": 23, "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Sequences/1999/3@52
+    wire: Plugin "CopilotResponder" "introspect 9c3a2033 ShowData/DataPools/Default/Sequences/1999/3 offset=52"
+<<< {"class": "Cue", "fields": [], "id": "9c3a2033", "kind": "introspect", "offset": 52, "ok": true, "path": "ShowData/DataPools/Default/Sequences/1999/3", "source": "property_accessors", "total": 23, "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Sequences/1999/3@78
+    wire: Plugin "CopilotResponder" "introspect 8e28798b ShowData/DataPools/Default/Sequences/1999/3 offset=78"
+<<< {"class": "Cue", "fields": [], "id": "8e28798b", "kind": "introspect", "offset": 78, "ok": true, "path": "ShowData/DataPools/Default/Sequences/1999/3", "source": "property_accessors", "total": 23, "truncated": false, "v": 1}

@@ -1,0 +1,5 @@
+
+>>> state 'ShowData/DataPools/Default/Groups'
+<<< {"children": [{"class": "Group", "i": 1, "name": "ALL"}, {"class": "Group", "i": 2, "name": "KEY"}, {"class": "Group", "i": 3, "name": "FOH"}, {"class": "Group", "i": 4, "name": "BACK"}, {"class": "Group", "i": 5, "name": "SIDE-L"}, {"class": "Group", "i": 6, "name": "SIDE-R"}, {"class": "Group", "i": 7, "name": "SIDE-ALL"}, {"class": "Group", "i": 8, "name": "WASH-U"}, {"class": "Group", "i": 9, "name": "WASH-D"}, {"class": "Group", "i": 10, "name": "WASH-ALL"}, {"class": "Group", "i": 11, "name": "MOVER-U"}, {"class": "Group", "i": 12, "name": "MOVER-D"}, {"class": "Group", "i": 13, "name": "MOVER-ALL"}, {"class": "Group", "i": 14, "name": "BLIND"}, {"class": "Group", "i": 15, "name": "STROBE"}, {"class": "Group", "i": 16, "name": "HAZE"}, {"class": "Group", "i": 17, "name": "ODD"}, {"class": "Group", "i": 18, "name": "EVEN"}], "id": "808fcb85", "kind": "state", "node": {"childCount": 18, "class": "Groups", "enumeration": "ok", "name": "Groups"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups", "truncated": false, "v": 1}
+
+=== steps=1 not_ok_or_timeout=0

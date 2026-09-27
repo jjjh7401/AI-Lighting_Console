@@ -167,7 +167,8 @@ def test_new_fields_are_cue_wide_and_refuse_a_group_scope():
 # --- 콘솔 반영: 초안에만 남고 사유가 붙는다 ----------------------------------
 
 
-@pytest.mark.parametrize("field", ["tracking", "mib_mode", "phaser", "position"])
+# 카드 t469 — 트래킹·포지션은 실측 뒤 콘솔로 나간다(`test_cue_sheet_apply_t469.py`).
+@pytest.mark.parametrize("field", ["mib_mode", "phaser"])
 def test_the_new_fields_are_skipped_on_the_console_with_their_own_reason(field):
     baseline = _legend_timeline()
     current = copy.deepcopy(baseline)
