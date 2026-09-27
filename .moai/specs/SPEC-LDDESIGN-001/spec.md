@@ -259,7 +259,7 @@ REQ 번호는 이 SPEC 전체에서 연속이다(절 단위로 다시 시작하�
 
 | REQ | 요구사항 | 근거 |
 |---|---|---|
-| REQ-LDDESIGN-062 | **When** 포지션(`pos`)이 이전 큐와 달라지면, MIB 검사는 **SHALL** 그 변화 직전 무버가 이미 꺼져 있던 시간을 확인해 셋 중 하나로 판정한다. 무버가 변화 전후 계속 꺼져 있으면 `dark`(어두운 채 이동)다. 꺼져 있다가 이 큐에서 켜지고, 꺼져 있던 창이 이동 시간(plan.md §F 잠정값 — 이동 1.5초 + 정착 0.5초, M8 콘솔 프로브로 실측치 교체 예정) 이상이면 `mark`(REQ-063에 따라 Mark 큐 삽입)다. 그 밖의 경우(창이 부족하거나 무버가 켜진 채 이동)는 `live`(경고)다. | 문서 §5.5, `tracking-timing-mib-20260921.md`:70, REQ-063, `server/concept/resolver.py` `mib_verdict` |
+| REQ-LDDESIGN-062 | **When** 포지션(`pos`)이 이전 큐와 달라지면, MIB 검사는 **SHALL** 그 변화 직전 무버가 이미 꺼져 있던 시간을 확인해 셋 중 하나로 판정한다. 무버가 변화 전후 계속 꺼져 있으면 `dark`(어두운 채 이동)다. 꺼져 있다가 이 큐에서 켜지고, 꺼져 있던 창이 이동 시간(이동 4.1초 + 정착 0.5초, M8 실측 t464 — plan.md §F) 이상이면 `mark`(REQ-063에 따라 Mark 큐 삽입)다. 그 밖의 경우(창이 부족하거나 무버가 켜진 채 이동)는 `live`(경고)다. | 문서 §5.5, `tracking-timing-mib-20260921.md`:70, REQ-063, `server/concept/resolver.py` `mib_verdict`, `.moai/reports/t464/verdict.md` |
 | REQ-LDDESIGN-063 | **When** MIB 판정이 `mark`이면, 컴파일러는 **SHALL** 창이 시작되는 시점에 Mark 큐(포지션만 변경, 밝기는 0 유지)를 자동 삽입한다. | `tracking-timing-mib-20260921.md` Rain 실측 — Mark 삽입 1건(102.0초) |
 | REQ-LDDESIGN-064 | **When** 절(Verse) 또는 Bridge 구간에서 무버 계열 그룹(MOVER-U/MOVER-D 등)이 다음 후렴을 위해 포지션을 바꿔야 하면, 컴파일러는 **SHALL** 그 무버를 그 구간 동안 소등(`remove`)한 뒤 어두운 창에서 포지션을 옮긴다 — 켜진 채 포지션을 바꾸지 않는다. | `tracking-timing-mib-20260921.md` 개선사항 5, `final-verification-20260921.md` "절이 무버를 끄면서 동시에 포지션 변경" 수정 |
 | REQ-LDDESIGN-065 | **The** 포지션 변경은 **SHALL** 어두운 창(REQ-062 `dark`/`mark` 판정) 안에서만 이뤄진다 — 연속 후렴·연속 브릿지처럼 어두운 창이 없는 구간에서는 포지션을 유지한다(REQ-064의 무버 소등 규칙이 적용될 수 없는 예외 상태). | `final-verification-20260921.md` "규칙 결함 ③ — 연속 후렴·연속 브릿지에서 어두운 창 없는 포지션 변경 → 유지" |
