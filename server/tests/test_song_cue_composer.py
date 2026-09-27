@@ -325,6 +325,67 @@ def test_mib_is_modeled_as_inserted_position_only_data_not_console_text() -> Non
     assert reveal.position.mib_premoved_by == 1.5
 
 
+def _blackout_then_reveal(reveal_ms: int):
+    """어둠 큐(0ms) → 새 포지션으로 켜지는 큐(reveal_ms) — 카드 t471."""
+    plan = _plan(
+        sections=(
+            _section(
+                1, "Blackout", 0, d_level=1, position="Center", accents=("blackout",), cue_number=1
+            ),
+            _section(2, "Reveal", reveal_ms, d_level=3, position="Cross", cue_number=2),
+        ),
+        timing=TimingPlan.trig_time(),
+    )
+    result = compose_song_cue_bundle(plan)
+    assert result.bundle is not None
+    blackout, premove, reveal = result.bundle.cues
+    assert premove.kind == "mib_premove"
+    return premove, reveal
+
+
+class TestComposerMibDarkWindow:
+    """카드 t471 — 조립기 사전이동이 어둠 길이를 재고, 모자라면 경고만 한다.
+
+    기준은 컨셉 판정기와 같은 ``resolver.MOVE_SECONDS + SETTLE_SECONDS``
+    (t464 실측 → t468 에서 4.1 + 0.5). 감독: 어둠 길이는 음악이 정한다 —
+    늘리지 않고 경고만(REQ-066 ``live_move``).
+    """
+
+    def test_short_dark_is_flagged_live_move_but_not_lengthened(self):
+        premove, reveal = _blackout_then_reveal(2_000)
+        assert premove.mib.dark_window_seconds == 2.0
+        assert premove.mib.live_move is True
+        assert premove.mib.reason is not None and "live_move" in premove.mib.reason
+        # 어둠을 늘리지 않는다 — 켜지는 큐의 시각은 그대로, 사전이동도 그대로 들어간다
+        assert reveal.timing.start_ms == 2_000
+        assert premove.position.stored == "Cross"
+
+    def test_long_dark_is_not_flagged(self):
+        premove, _ = _blackout_then_reveal(10_000)
+        assert premove.mib.dark_window_seconds == 10.0
+        assert premove.mib.live_move is False
+
+    def test_threshold_is_the_concept_judge_threshold(self):
+        from server.concept.resolver import MOVE_SECONDS, SETTLE_SECONDS
+
+        need_ms = round((MOVE_SECONDS + SETTLE_SECONDS) * 1000)
+        just_enough, _ = _blackout_then_reveal(need_ms)
+        just_short, _ = _blackout_then_reveal(need_ms - 100)
+        assert just_enough.mib.live_move is False
+        assert just_short.mib.live_move is True
+
+    def test_measured_insufficient_dark_is_flagged(self):
+        # t464 실측: 어둠 2.07초로는 사전이동이 덜 끝났다
+        premove, _ = _blackout_then_reveal(2_070)
+        assert premove.mib.live_move is True
+
+    def test_to_dict_carries_the_warning(self):
+        premove, _ = _blackout_then_reveal(2_000)
+        data = premove.mib.to_dict()
+        assert data["live_move"] is True
+        assert data["dark_window_seconds"] == 2.0
+
+
 def test_bundle_is_immutable_and_has_no_console_text_surface() -> None:
     plan = _plan(sections=(_section(1, "Verse", 0, d_level=3, cue_number=1),))
     result = compose_song_cue_bundle(plan)

@@ -1,0 +1,17 @@
+곡 | G1 | G2 | G3 | G4 | G5 | G6 | G7 | G8 | G9 | G10 | G11 | G12 | G13
+Club Diver.mp3 | PASS | n/a | PASS | PASS | PASS | n/a | n/a | PASS | PASS | n/a | PASS | PASS | PASS
+Cut and Run.mp3 | PASS | n/a | PASS | PASS | PASS | n/a | n/a | PASS | PASS | PASS | PASS | PASS | PASS
+Ice cream.mp3 | PASS | n/a | PASS | n/a | PASS | n/a | n/a | PASS | PASS | n/a | PASS | PASS | PASS
+Morning.mp3 | PASS | n/a | PASS | PASS | PASS | n/a | n/a | PASS | PASS | PASS | PASS | PASS | PASS
+Rain.mp3 | PASS | n/a | PASS | PASS | PASS | n/a | n/a | PASS | PASS | PASS | PASS | PASS | PASS
+Too Cool.mp3 | PASS | n/a | PASS | PASS | PASS | n/a | n/a | PASS | PASS | PASS | PASS | PASS | PASS
+scott-buckley-neon.mp3 | PASS | n/a | PASS | PASS | PASS | n/a | n/a | PASS | PASS | PASS | PASS | PASS | PASS
+걸그룹DinoDino_C_max최고품질.wav | PASS | n/a | n/a | n/a | PASS | n/a | n/a | PASS | PASS | PASS | PASS | PASS | PASS
+
+집계: PASS 75 · n/a 29 · FAIL 0
+
+색 게이트 상세(첫 곡):
+  G2 후렴 정체성: n/a — 입력에 색 없음 — 상수 팔레트 판정 안 함
+  G5 헤드룸 경고 0: PASS — 경고 0건 (Chorus 1 흰색 조건: 입력에 색 없음 — 상수 팔레트 판정 안 함)
+  G6 컬러: 유보색 조기 0 · 브리지 위반 0: n/a — 입력에 색 없음 — 상수 팔레트 판정 안 함
+  G7 후렴 주색 동일: n/a — 입력에 색 없음 — 상수 팔레트 판정 안 함
