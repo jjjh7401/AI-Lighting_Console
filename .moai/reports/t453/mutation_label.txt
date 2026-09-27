@@ -1,0 +1,6 @@
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_measured_pool_resolves_both_whites
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_duplicate_suffix_is_ignored
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_missing_label_is_a_reason_not_a_slot
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhitePresetSlots::test_label_in_two_slots_is_ambiguous
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestRealReadPath::test_measured_reply_resolves_through_the_real_readers
+5 failed, 10 passed in 0.38s

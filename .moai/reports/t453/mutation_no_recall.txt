@@ -1,0 +1,4 @@
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhiteCueRecallsThePresetOnWFixtures::test_cool_white_adds_a_preset_line_after_the_w_line
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestWhiteCueRecallsThePresetOnWFixtures::test_warm_white_uses_its_own_slot
+FAILED server/tests/test_song_cue_white_preset_t453.py::TestSongFlow::test_white_cue_on_w_rig_recalls_the_preset
+3 failed, 12 passed in 0.39s
