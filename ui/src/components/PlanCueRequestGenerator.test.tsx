@@ -129,10 +129,27 @@ describe("isGroupLocked — AC-037의 순수 판정 로직 (REQ-090)", () => {
 });
 
 describe("turnAccepted / applyTurnResult — AC-044의 순수 판정 로직 (REQ-095)", () => {
-  it("a depth increase is the only accept signal", () => {
-    expect(turnAccepted(2, 3)).toBe(true);
-    expect(turnAccepted(2, 2)).toBe(false);
-    expect(turnAccepted(3, 2)).toBe(false);
+  const draft = (depth: number, last_change: string[] = ["큐 3 조도 70%"]) => ({
+    dirty: depth > 0,
+    depth,
+    last_change,
+  });
+
+  it("a fresh server draft stamp with depth not dropping is the accept signal", () => {
+    expect(turnAccepted(draft(2), draft(3))).toBe(true);
+    expect(turnAccepted(undefined, draft(1))).toBe(true);
+  });
+
+  it("accepts at the 20-step history cap where depth stays 20 (deque maxlen=20)", () => {
+    expect(turnAccepted(draft(20), draft(20))).toBe(true);
+  });
+
+  it("no new stamp, an undo (depth drop), or an empty report is not an accept", () => {
+    const same = draft(2);
+    expect(turnAccepted(same, same)).toBe(false);
+    expect(turnAccepted(draft(2), undefined)).toBe(false);
+    expect(turnAccepted(draft(3), draft(2))).toBe(false);
+    expect(turnAccepted(draft(2), draft(2, []))).toBe(false);
   });
 
   it("marks the sent line applied on accept, leaving other lines untouched", () => {

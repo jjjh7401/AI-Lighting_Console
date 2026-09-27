@@ -3,6 +3,7 @@ import type {
   CueMonitorState,
   SongTimelineConceptReport,
   SongTimelineConceptRow,
+  SongTimelineDraftState,
   SongTimelinePlanStatus,
   SongTimelineReserveItem,
   SongTimelineSection,
@@ -174,7 +175,7 @@ function TimelineSectionCard({
   lifecycle,
   conceptReport,
   reserve,
-  draftDepth,
+  draft,
   onGeneratorSend,
   generatorResponding,
   generatorLastAssistantText,
@@ -186,7 +187,7 @@ function TimelineSectionCard({
   lifecycle: SongTimelineView["lifecycle"];
   conceptReport?: SongTimelineConceptReport;
   reserve?: SongTimelineReserveItem[];
-  draftDepth: number;
+  draft?: SongTimelineDraftState;
   /** t460 — REQ-087: PLAN CUE 수정요청 생성기. App.tsx가 이 함수를 안
    * 넘기면 카드는 REQ-083 문언 그대로 읽기 전용에 머문다(AC-034). */
   onGeneratorSend?: (text: string, cueNumber: number) => void;
@@ -248,7 +249,7 @@ function TimelineSectionCard({
           allSections={allSections}
           conceptRow={conceptRow}
           reserve={reserve}
-          draftDepth={draftDepth}
+          draft={draft}
           onSend={onGeneratorSend}
           responding={generatorResponding}
           lastAssistantText={generatorLastAssistantText}
@@ -367,7 +368,7 @@ export function SongTimeline({
             lifecycle={timeline.lifecycle}
             conceptReport={timeline.concept_report}
             reserve={timeline.concept_report?.reserve}
-            draftDepth={timeline.draft?.depth ?? 0}
+            draft={timeline.draft}
             onGeneratorSend={onGeneratorSend}
             generatorResponding={generatorResponding}
             generatorLastAssistantText={generatorLastAssistantText}

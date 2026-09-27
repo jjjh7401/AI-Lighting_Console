@@ -19,7 +19,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 
-import type { SongTimelineConceptRow, SongTimelineReserveItem, SongTimelineSection } from "../protocol";
+import type {
+  SongTimelineConceptRow,
+  SongTimelineDraftState,
+  SongTimelineReserveItem,
+  SongTimelineSection,
+} from "../protocol";
 import {
   fetchPresetPool,
   PresetPoolPopup,
@@ -46,8 +51,6 @@ const POOL_EFFECT = 21;
 
 /** `cue_sheet_edit.py` `_GROUP_COLOR_FIELD` — 컬러 칸을 가진 그룹은 이
  * 둘뿐이다. 새 그룹을 여기서 지어내지 않는다. */
-const COLOR_CAPABLE_GROUPS = new Set(["KEY", "BACK"]);
-
 export type LineState = "selected" | "requested" | "applied" | "rejected";
 
 export interface StackEntry {
@@ -87,12 +90,19 @@ export function isGroupLocked(
   return item.released_q === null || cueNumber < item.released_q;
 }
 
-/** REQ-095 — depth 증가만이 수락의 증거다: 되돌리기 깊이의 진실 지점은
- * 서버(`TimelineDraftHistory.depth`)이고, 이 함수는 그 비교만 한다(별도
- * 판정 로직을 만들지 않는다). 순수 함수라 useEffect 타이밍과 분리해
- * 검증할 수 있다. */
-export function turnAccepted(depthBefore: number, depthAfter: number): boolean {
-  return depthAfter > depthBefore;
+/** REQ-095 — 수락의 증거는 서버가 편집 성공 때만 새로 찍어 보내는 초안
+ * 표식(`_draft_badge`)이다. depth 증가만 보면 안 된다: 서버 되돌리기 기록은
+ * `deque(maxlen=20)`(`server/web/timeline_draft.py`)이라 20단계에서는 편집이
+ * 성공해도 depth 가 20 그대로다 — 수락을 거절로 읽는다. 그래서 「이 턴에 새
+ * 표식이 왔고, depth 가 줄지 않았고(되돌리기가 아니다), 바뀐 내용 보고가
+ * 있다」로 판정한다. 별도 검증 로직이 아니라 서버 표식의 비교뿐이다. 순수
+ * 함수라 useEffect 타이밍과 분리해 검증할 수 있다. */
+export function turnAccepted(
+  before: SongTimelineDraftState | undefined,
+  after: SongTimelineDraftState | undefined,
+): boolean {
+  if (after === undefined || after === before) return false;
+  return after.depth >= (before?.depth ?? 0) && after.last_change.length > 0;
 }
 
 /** 한 줄 전송의 결과를 스택에 반영한다 — 수락 → applied, 거절 → rejected +
@@ -117,9 +127,9 @@ export interface PlanCueRequestGeneratorProps {
   allSections: SongTimelineSection[];
   conceptRow: SongTimelineConceptRow | undefined;
   reserve?: SongTimelineReserveItem[];
-  /** REQ-095 — 되돌리기 깊이의 진실 지점(`TimelineDraftHistory.depth`).
-   * 요청 수락 여부는 이 값이 전송 직전보다 늘었는지로만 판단한다. */
-  draftDepth: number;
+  /** REQ-095 — 서버 초안 표식(`timeline.draft`). 요청 수락 여부는 전송
+   * 뒤 이 표식이 새로 왔는지로 판단한다(`turnAccepted`). */
+  draft?: SongTimelineDraftState;
   /** 한 번 호출 = 한 줄 전송. 기존 `sendChat`과 같은 모양이라, 생성기가
    * 보낸 요청도 감독이 손으로 친 것과 같은 대화 경로를 탄다(REQ-094). */
   onSend: (text: string, cueNumber: number) => void;
@@ -172,7 +182,7 @@ export function usePlanCueRequestGenerator({
   allSections,
   conceptRow,
   reserve,
-  draftDepth,
+  draft,
   onSend,
   responding,
   lastAssistantText,
@@ -191,7 +201,7 @@ export function usePlanCueRequestGenerator({
   const [popup, setPopup] = useState<{ field: PopupField; state: PresetPopupState } | null>(null);
 
   const [sendingId, setSendingId] = useState<string | null>(null);
-  const baselineDepthRef = useRef(draftDepth);
+  const baselineDraftRef = useRef(draft);
   const queueRef = useRef<{ id: string; sentence: string }[]>([]);
   const prevResponding = useRef(responding);
 
@@ -200,12 +210,12 @@ export function usePlanCueRequestGenerator({
   // 턴 종료(D1) 감시 — responding: true → false 전이에서만 판정한다.
   useEffect(() => {
     if (prevResponding.current && !responding && sendingId !== null) {
-      const accepted = turnAccepted(baselineDepthRef.current, draftDepth);
+      const accepted = turnAccepted(baselineDraftRef.current, draft);
       if (accepted) {
         setStack((prev) => applyTurnResult(prev, sendingId, { accepted: true }));
         const next = queueRef.current.shift();
         if (next) {
-          baselineDepthRef.current = draftDepth;
+          baselineDraftRef.current = draft;
           setSendingId(next.id);
           setStack((prev) => prev.map((e) => (e.id === next.id ? { ...e, state: "requested" } : e)));
           onSend(next.sentence, cueNumber);
@@ -228,7 +238,7 @@ export function usePlanCueRequestGenerator({
     }
     prevResponding.current = responding;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [responding, draftDepth, sendingId, lastAssistantText, onSend, cueNumber]);
+  }, [responding, draft, sendingId, lastAssistantText, onSend, cueNumber]);
 
   function upsertChange(change: GeneratorChange) {
     const warnings = deriveWarningsForChange({ section, allSections, conceptRow, reserve }, change);
@@ -314,7 +324,7 @@ export function usePlanCueRequestGenerator({
     const queue = stack.map((entry, index) => ({ id: entry.id, sentence: sentences[index] }));
     queueRef.current = queue.slice(1);
     const first = queue[0];
-    baselineDepthRef.current = draftDepth;
+    baselineDraftRef.current = draft;
     setStack((prev) => prev.map((entry) => (entry.id === first.id ? { ...entry, state: "requested" } : entry)));
     setSendingId(first.id);
     onSend(first.sentence, cueNumber);
@@ -340,7 +350,10 @@ export function usePlanCueRequestGenerator({
       return;
     }
     if (field === "palette_primary") {
-      if (selectedGroups.length !== 1 || !COLOR_CAPABLE_GROUPS.has(selectedGroups[0])) return;
+      // 컬러는 그룹 하나에만 싣는다(문장 문법). 어느 그룹이 컬러 칸을 갖는지는
+      // 서버(`_GROUP_COLOR_FIELD`)가 판정하고 거절 사유를 그 줄에 돌려준다
+      // — UI 가 같은 표를 복제하지 않는다(REQ-092).
+      if (selectedGroups.length !== 1) return;
       setColorName(entry.name);
       upsertChange({
         field: "palette_primary",
@@ -357,8 +370,7 @@ export function usePlanCueRequestGenerator({
     setDimName(entry.name);
   }
 
-  const colorButtonDisabled =
-    selectedGroups.length !== 1 || !COLOR_CAPABLE_GROUPS.has(selectedGroups[0]);
+  const colorButtonDisabled = selectedGroups.length !== 1;
 
   return {
     cueNumber,
