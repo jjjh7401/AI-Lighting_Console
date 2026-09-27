@@ -33,15 +33,17 @@ for song, raw, bpm in (("Ice cream", _ICE_CREAM_SECTIONS, 100.4), ("Rain", _RAIN
                     bpm=tempo,
                 )
                 body = "\n".join(bundle.commands)
-                extra = (
-                    f"returns={[(r.source_cue_number, r.inserted_cue_number, r.inserted_start_ms, r.cap_beats) for r in bundle.climax_returns]} "
-                    f"withheld={len(bundle.withheld_climax_returns)}"
-                )
+                returns = [
+                    (r.source_cue_number, r.inserted_cue_number, r.inserted_start_ms, r.cap_beats)
+                    for r in bundle.climax_returns
+                ]
+                extra = f"returns={returns} withheld={len(bundle.withheld_climax_returns)}"
             except Exception as error:  # noqa: BLE001 — 실패 모양도 바이트 비교 대상이다
                 body = f"ERROR {type(error).__name__}: {error}"
                 extra = ""
             digest = hashlib.sha256(body.encode()).hexdigest()
             total.update(body.encode())
-            print(f"## {song} {genre} bpm={tempo} lines={body.count(chr(10)) + 1} sha={digest[:16]} {extra}")
+            lines = body.count(chr(10)) + 1
+            print(f"## {song} {genre} bpm={tempo} lines={lines} sha={digest[:16]} {extra}")
             print(body)
 print(f"TOTAL sha256={total.hexdigest()}")
