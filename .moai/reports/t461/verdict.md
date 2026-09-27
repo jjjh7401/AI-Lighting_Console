@@ -84,6 +84,7 @@ q30 intensity: [KEY 70, SIDE 40]  fixture_groups: [KEY, BACK, SIDE-L, SIDE-R]
 | ⚠1 반영 관련 | 반영·편집·세션 파일 15개 | `776 passed, 23 skipped` (`pytest_scoped_step2.txt`) |
 | ② | `pytest test_concept_reserve_t461.py` + 컨셉 리포트 배선 4파일 | `36 passed` (`pytest_reserve.txt`) |
 | 린트 | `ruff check` / `ruff format --check` (변경 파일 + 증거 스크립트) | 통과 |
+| main 합류 뒤 | 위 두 목록 + ② + overlap 가드 + t457·t455 행 키 시험, 45파일 (`scoped_postmerge.txt`) | 첫 실행 `8 failed` — t457 행 키 고정 시험이 ②의 `unused_groups` 를 몰랐다(의미 충돌, 코드 결함 아님). 키 한 줄 추가 뒤 `2067 passed, 23 skipped` (`pytest_scoped_postmerge.txt`) |
 
 ## 안 잰 것 (Gaps)
 

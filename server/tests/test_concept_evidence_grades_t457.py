@@ -43,6 +43,7 @@ _ROW_KEYS = {
     "one_shot",
     "evidence",
     "screen_position",
+    "unused_groups",  # t461 — 행별 잔여 그룹 수(추가만)
 }
 
 
