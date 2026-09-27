@@ -456,6 +456,19 @@ export interface SongTimelineConceptReport {
   /** t455 — 행 ↔ 화면 구간 짝짓기가 됐는가. false 면 모든 행의
    * `screen_position` 이 null 이다. */
   row_pairing?: { available: boolean; reason: string | null };
+  /** t460 — 리저브(BLIND·STROBE·유보색) 해제 시점. `server/concept/
+   * session_bridge.py`의 `_concept_reserve`가 낸다. 그룹은 해제 큐 전까지
+   * 잠금(REQ-090), 색은 입력 색으로 판정한 곡에서만 해제 큐가 잡힌다. */
+  reserve?: SongTimelineReserveItem[];
+}
+
+/** t460 — 리저브 그룹/색 한 항목. `released_q` 가 null 이면 아직 해제되지
+ * 않았다(한 번도 안 켜졌다). */
+export interface SongTimelineReserveItem {
+  name: string;
+  kind: "group" | "color";
+  released_q: number | null;
+  screen_position: number | null;
 }
 
 /** t455 — 컨셉 큐 한 행. 구간 이름은 `section` 이 아니라 `screen_position`
@@ -477,6 +490,10 @@ export interface SongTimelineConceptRow {
   evidence: string | null;
   /** `sections` 의 0-base 위치. safety 행과 짝짓기 실패 때는 null. */
   screen_position: number | null;
+  /** t460 — 카드 t461 REQ-093 (4) 헤드룸 경고의 원천. 컨셉 그룹 로스터
+   * 기준 꺼진 그룹 수(`compute_cue_headroom(state).unused_groups`) — PLAN
+   * CUE 카드·생성기 경고 모두 이 값을 그대로 읽고 재계산하지 않는다(AC-040). */
+  unused_groups?: number;
 }
 
 /** t281 — 초안이 원본에서 얼마나 벌어졌는지. 서버 `_draft_badge` 가 만든다. */

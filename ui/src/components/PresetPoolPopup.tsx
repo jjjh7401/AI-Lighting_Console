@@ -151,6 +151,11 @@ export interface PresetPoolPopupProps {
   state: PresetPopupState;
   onClose: () => void;
   onRefresh: () => void;
+  /** t460 — REQ-089: PLAN CUE 수정요청 생성기의 콘솔 반영 값 패널이 이
+   * 컴포넌트를 그대로 마운트해 재사용한다(재구현 금지). 없으면(메인
+   * 화면의 읽기 전용 팝업) 타일은 오늘과 바이트 동일하게 눌리지 않는다 —
+   * 이 prop 은 순수 추가라 기존 호출부는 아무것도 바꾸지 않아도 된다. */
+  onSelect?: (entry: PresetEntry) => void;
 }
 
 /** The console's ⋯ split circle: N step colours as N equal conic segments.
@@ -163,7 +168,7 @@ export function phaserGradient(colors: string[]): string {
   return `conic-gradient(from 270deg, ${stops.join(", ")})`;
 }
 
-export function PresetPoolPopup({ state, onClose, onRefresh }: PresetPoolPopupProps) {
+export function PresetPoolPopup({ state, onClose, onRefresh, onSelect }: PresetPoolPopupProps) {
   return (
     <div className="preset-popup-overlay" onClick={onClose} role="presentation">
       <div
@@ -194,27 +199,48 @@ export function PresetPoolPopup({ state, onClose, onRefresh }: PresetPoolPopupPr
               <div className="preset-popup-empty">이 풀은 비어 있습니다</div>
             ) : (
               <div className="preset-popup-grid">
-                {state.contents.presets.map((preset) => (
-                  <div key={preset.no} className="pool-tile pool-tile-info preset-popup-tile">
-                    <span className="pool-tile-no">{preset.no}</span>
-                    {preset.colors ? (
-                      <span
-                        className="preset-popup-swatch"
-                        role="img"
-                        style={{ background: phaserGradient(preset.colors) }}
-                        aria-label={`색 ${preset.colors.join("/")}`}
-                      />
-                    ) : preset.color ? (
-                      <span
-                        className="preset-popup-swatch"
-                        role="img"
-                        style={{ background: preset.color }}
-                        aria-label={`색 ${preset.color}`}
-                      />
-                    ) : null}
-                    <span className="pool-tile-name">{preset.name || "—"}</span>
-                  </div>
-                ))}
+                {state.contents.presets.map((preset) => {
+                  const swatch = preset.colors ? (
+                    <span
+                      className="preset-popup-swatch"
+                      role="img"
+                      style={{ background: phaserGradient(preset.colors) }}
+                      aria-label={`색 ${preset.colors.join("/")}`}
+                    />
+                  ) : preset.color ? (
+                    <span
+                      className="preset-popup-swatch"
+                      role="img"
+                      style={{ background: preset.color }}
+                      aria-label={`색 ${preset.color}`}
+                    />
+                  ) : null;
+                  // t460 — onSelect 가 없으면(메인 화면) div 그대로: 오늘과
+                  // 바이트 동일한 읽기 전용 렌더. 있으면(생성기) 같은 시각
+                  // 요소를 누를 수 있는 button 으로만 감싼다 — 타일 내용
+                  // 자체는 재구현하지 않는다.
+                  if (!onSelect) {
+                    return (
+                      <div key={preset.no} className="pool-tile pool-tile-info preset-popup-tile">
+                        <span className="pool-tile-no">{preset.no}</span>
+                        {swatch}
+                        <span className="pool-tile-name">{preset.name || "—"}</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <button
+                      key={preset.no}
+                      type="button"
+                      className="pool-tile pool-tile-info preset-popup-tile preset-popup-tile-pressable"
+                      onClick={() => onSelect(preset)}
+                    >
+                      <span className="pool-tile-no">{preset.no}</span>
+                      {swatch}
+                      <span className="pool-tile-name">{preset.name || "—"}</span>
+                    </button>
+                  );
+                })}
               </div>
             ))}
         </div>
