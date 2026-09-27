@@ -1887,6 +1887,75 @@ body {
 .song-timeline-notes p { margin: 0; }
 .song-timeline-notes b { color: #dce7f5; font: 700 10px ui-monospace, monospace; }
 
+/* t460 — REQ-083 Q### 배지. 타임라인·CUE SHEET·PLAN CUE 카드 3곳이 같은
+   토큰(design/tokens-final.md)을 쓴다 — 비선택 배경/글자색만, 여기서는
+   선택 상태(콘솔 반영)를 다루지 않으므로 채움색은 두지 않는다. */
+.song-timeline-q-badge {
+  padding: 1px 5px;
+  background: #2a3142;
+  border: 1px solid #3b465c;
+  color: #cfd6e4;
+  font: 700 10px ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* t460 — REQ-083 하단 3줄(Fade/Track · MIB/남김 · 헤드룸 요약). */
+.song-timeline-plan-detail { margin-top: 10px; }
+.song-timeline-plan-detail p {
+  margin: 4px 0 0;
+  color: #9baec5;
+  font-size: 11px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+/* t460 — PLAN CUE 수정요청 생성기 (REQ-087~095, 100~101). 좌(그룹 다중
+   선택 편집기) / 우(콘솔 반영 값 패널) 2단 + 하단 변경 스택. 시각 완성도는
+   최소치다(감독 리뷰 뒤 다듬을 대상) — 핵심은 문장 조립·전송 순서·경고
+   병기·되돌리기 라벨 충돌 방지의 정확성이다. */
+.plan-cue-generator {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #3b465c;
+  background: rgba(10, 15, 22, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+.plan-cue-generator-status {
+  margin-bottom: 8px;
+  color: #d9e5f5;
+  font: 700 11px ui-monospace, monospace;
+}
+.plan-cue-generator-body { display: flex; flex-direction: column; gap: 10px; }
+.plan-cue-generator-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.plan-cue-chip {
+  padding: 3px 7px;
+  border: 1px solid #536986;
+  background: transparent;
+  color: #8eb8f7;
+  font: 700 10px ui-monospace, monospace;
+  cursor: pointer;
+}
+.plan-cue-chip.is-selected { background: #4f8cff; color: #0d0f12; }
+.plan-cue-chip.is-locked { opacity: 0.45; cursor: not-allowed; }
+.plan-cue-generator-field { display: flex; align-items: center; gap: 8px; margin: 6px 0; color: #9baec5; font-size: 11px; }
+.plan-cue-generator-field input { width: 64px; }
+.plan-cue-generator-before { color: #74869d; }
+.plan-cue-generator-trans { padding: 2px 8px; border: 1px solid #536986; background: transparent; color: #8eb8f7; }
+.plan-cue-generator-trans.is-selected { background: #4f8cff; color: #0d0f12; }
+.plan-cue-generator-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; color: #d1ddeb; font-size: 12px; }
+.plan-cue-generator-stack ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.plan-cue-generator-diff { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; padding: 4px 6px; border-left: 2px solid #536986; font-size: 11px; color: #d1ddeb; }
+.plan-cue-generator-diff.is-requested { border-left-color: #f4bb4f; }
+.plan-cue-generator-diff.is-applied { border-left-color: #5dc48c; }
+.plan-cue-generator-diff.is-rejected { border-left-color: #f06e75; }
+.plan-cue-generator-warning { color: #f4bb4f; }
+.plan-cue-generator-rejection { color: #f06e75; }
+.plan-cue-generator-remove { margin-left: auto; background: transparent; border: none; color: #8fa2ba; cursor: pointer; }
+.plan-cue-generator-empty { color: #74869d; font-size: 11px; }
+.plan-cue-generator-free-text input { width: 100%; margin: 8px 0; }
+.plan-cue-generator-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.plan-cue-generator-submit { background: #4f8cff; color: #0d0f12; font-weight: 700; }
+
 @media (max-width: 700px) {
   .song-timeline { padding: 16px; overflow-x: auto; }
   .song-timeline-header { display: block; }

@@ -1,10 +1,15 @@
 import type {
   CueExecutorEntry,
   CueMonitorState,
+  SongTimelineConceptReport,
+  SongTimelineConceptRow,
   SongTimelinePlanStatus,
+  SongTimelineReserveItem,
   SongTimelineSection,
   SongTimelineView,
 } from "../protocol";
+import { cueLabel } from "./CueSheetTimeline";
+import { PlanCueRequestGenerator } from "./PlanCueRequestGenerator";
 
 const LIFECYCLE_LABEL: Record<SongTimelineView["lifecycle"], string> = {
   draft: "초안",
@@ -116,20 +121,82 @@ export function liveExecutorForSection(
   return status === "stored" || status === "verified" ? executor : null;
 }
 
+const EMPTY_DETAIL = "—";
+
+/** t460 — REQ-083 하단 3줄이 읽는 컨셉 행. `screen_position` 이 이 구간의
+ * 화면 인덱스와 같은 section 종류 행만 짝짓는다. `row_pairing`이 실패하면
+ * (available=false) 모든 행의 screen_position 이 null 이라 항상 매칭되지
+ * 않고, 아래 3줄은 정직하게 '—'로 떨어진다(값을 지어내지 않는다). */
+export function conceptRowForSection(
+  report: SongTimelineConceptReport | undefined,
+  sectionIndex: number,
+): SongTimelineConceptRow | undefined {
+  return report?.rows?.find(
+    (row) => row.kind === "section" && row.screen_position === sectionIndex,
+  );
+}
+
+/** `Fade/Track` 줄 — REQ-083. Fade 는 구간 자체 값(`fade_seconds`), Track 은
+ * 컨셉 행의 `tracking`(기본값 "track"일 때만 빈 칸 — AC-019 「Track 예외」
+ * 열과 같은 규칙, 새로 지어내지 않는다). */
+export function fadeTrackLine(
+  section: SongTimelineSection,
+  row: SongTimelineConceptRow | undefined,
+): string {
+  const fade = section.fade_seconds !== undefined ? `${section.fade_seconds}s` : EMPTY_DETAIL;
+  const tracking = row?.tracking;
+  const track = tracking === undefined || tracking === "track" ? EMPTY_DETAIL : tracking;
+  return `Fade ${fade} · Track ${track}`;
+}
+
+/** `MIB/남김` 줄 — REQ-083. 둘 다 컨셉 행에서 그대로 읽는다 — 재계산하지
+ * 않는다(REQ-093 (4)·(5)와 같은 소비 원칙, AC-040). 행이 없으면(짝짓기
+ * 실패·컨셉 파이프라인 미가동) 둘 다 '—'다. */
+export function mibHeadroomLine(row: SongTimelineConceptRow | undefined): string {
+  const mib = row?.mib ?? EMPTY_DETAIL;
+  const remaining = row?.unused_groups !== undefined ? `${row.unused_groups}` : EMPTY_DETAIL;
+  return `MIB ${mib} · 남김 ${remaining}`;
+}
+
+/** 헤드룸 요약 줄 — REQ-083. 임계값 "<4"는 REQ-093 (4)가 이미 정한 값을
+ * 재사용한다(새 임계값을 여기서 지어내지 않는다). */
+export function headroomSummaryLine(row: SongTimelineConceptRow | undefined): string {
+  const remaining = row?.unused_groups;
+  if (remaining === undefined) return `헤드룸 ${EMPTY_DETAIL}`;
+  return remaining < 4 ? `헤드룸 부족 · 잔여 ${remaining}그룹` : `헤드룸 여유 · 잔여 ${remaining}그룹`;
+}
+
 function TimelineSectionCard({
   section,
   next,
+  allSections,
   executor,
   lifecycle,
+  conceptReport,
+  reserve,
+  draftDepth,
+  onGeneratorSend,
+  generatorResponding,
+  generatorLastAssistantText,
 }: {
   section: SongTimelineSection;
   next?: SongTimelineSection;
+  allSections: SongTimelineSection[];
   executor: CueExecutorEntry | null;
   lifecycle: SongTimelineView["lifecycle"];
+  conceptReport?: SongTimelineConceptReport;
+  reserve?: SongTimelineReserveItem[];
+  draftDepth: number;
+  /** t460 — REQ-087: PLAN CUE 수정요청 생성기. App.tsx가 이 함수를 안
+   * 넘기면 카드는 REQ-083 문언 그대로 읽기 전용에 머문다(AC-034). */
+  onGeneratorSend?: (text: string, cueNumber: number) => void;
+  generatorResponding: boolean;
+  generatorLastAssistantText: string | null;
 }) {
   const width = sectionWidth(section, next);
   const status = sectionPlanStatus(section, lifecycle);
   const onConsole = status === "stored" || status === "verified";
+  const conceptRow = conceptRowForSection(conceptReport, section.index);
   const liveExecutor = liveExecutorForSection(status, executor);
   const current = isTimelineCurrentCue(liveExecutor, section.cue_number);
   return (
@@ -140,6 +207,9 @@ function TimelineSectionCard({
     >
       <div className="song-timeline-section-head">
         <span>{formatTimestamp(section.start_ms)}</span>
+        {/* t460 — REQ-083 Q### 배지. `cueLabel` 은 CUE SHEET(REQ-082)가 이미
+            같은 규칙으로 쓰는 그 함수다 — 새로 지어내지 않는다(AC-019). */}
+        <span className="song-timeline-q-badge">{cueLabel(section)}</span>
       </div>
       <h3>{sectionCardTitle(section, status)}</h3>
       <p className={`song-timeline-plan-state is-${status}`}>{PLAN_STATUS_LINE[status]}</p>
@@ -163,6 +233,27 @@ function TimelineSectionCard({
           {current ? `LIVE · EXEC ${liveExecutor.executor_no}` : `PLANNED · EXEC ${liveExecutor.executor_no}`}
         </p>
       )}
+      {/* t460 — REQ-083: PLAN CUE 카드(콘솔 미저장)에만 하단 3줄을 더한다.
+          이미 콘솔에 저장·검증된 큐는 위 EXEC 배지가 이미 그 정보를 준다. */}
+      {!onConsole && (
+        <div className="song-timeline-plan-detail" aria-label="PLAN CUE 상세">
+          <p>{fadeTrackLine(section, conceptRow)}</p>
+          <p>{mibHeadroomLine(conceptRow)}</p>
+          <p>{headroomSummaryLine(conceptRow)}</p>
+        </div>
+      )}
+      {!onConsole && onGeneratorSend && (
+        <PlanCueRequestGenerator
+          section={section}
+          allSections={allSections}
+          conceptRow={conceptRow}
+          reserve={reserve}
+          draftDepth={draftDepth}
+          onSend={onGeneratorSend}
+          responding={generatorResponding}
+          lastAssistantText={generatorLastAssistantText}
+        />
+      )}
     </article>
   );
 }
@@ -185,6 +276,16 @@ export interface SongTimelineProps {
   cueMonitor: CueMonitorState;
   stale?: boolean;
   isExample?: boolean;
+  /** t460 — REQ-087~101 PLAN CUE 수정요청 생성기 배선. 전부 선택 prop이라
+   * 넘기지 않으면(App.tsx가 조립 안 했으면) 카드는 REQ-083 문언 그대로
+   * 읽기 전용에 머문다(AC-034). 한 번 호출 = 한 줄 전송(기존 `sendChat`과
+   * 같은 모양) — 순차 전송 루프는 생성기 자신이 `responding` 전이를 보고
+   * 몬다(D1). */
+  onGeneratorSend?: (text: string, cueNumber: number) => void;
+  generatorResponding?: boolean;
+  /** REQ-092 — 코파일럿이 거절하면 그 사유 문장을 diff 줄에 그대로 노출.
+   * 최근 `assistant` 채팅 항목의 `text`(App.tsx가 계산해 내려준다). */
+  generatorLastAssistantText?: string | null;
 }
 
 export function SongTimeline({
@@ -192,6 +293,9 @@ export function SongTimeline({
   cueMonitor,
   stale = false,
   isExample = false,
+  onGeneratorSend,
+  generatorResponding = false,
+  generatorLastAssistantText = null,
 }: SongTimelineProps) {
   if (timeline === null) {
     return (
@@ -258,8 +362,15 @@ export function SongTimeline({
             key={`${section.index}-${section.cue_number}`}
             section={section}
             next={timeline.sections[index + 1]}
+            allSections={timeline.sections}
             executor={executor}
             lifecycle={timeline.lifecycle}
+            conceptReport={timeline.concept_report}
+            reserve={timeline.concept_report?.reserve}
+            draftDepth={timeline.draft?.depth ?? 0}
+            onGeneratorSend={onGeneratorSend}
+            generatorResponding={generatorResponding}
+            generatorLastAssistantText={generatorLastAssistantText}
           />
         ))}
       </div>
