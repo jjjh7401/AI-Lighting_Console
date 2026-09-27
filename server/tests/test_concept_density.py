@@ -433,13 +433,27 @@ class TestVerseBrightnessShape:
         # 회귀 방지 — Verse occurrence==1 이 remove 를 빠뜨리면 직전
         # 후렴의 WASH/MOVER 디머가 그대로 새어 들어와 밝기가 45 가 아니라
         # 훨씬 큰 값으로 나온다.
+        #
+        # 카드 t446 — 감독 결정(2026-09-27): 다음 후렴이 새 포지션을
+        # 요구하지 않으면 무버를 끄지 않고 절 밝기로 낮춘다. 그래서 "무버
+        # 소등"이 아니라 "무버가 켜져 있다면 절 밝기 이하이고 포지션은
+        # 그대로"를 단언한다.
         sections = _remap(TOO_COOL_RAW)
         result = compile_density(sections, TOO_COOL_BPM)
         states = resolve_sequence(result.sequence)
+        prev = None
+        seen = 0
         for row, state in zip(result.sequence, states, strict=True):
             if row["section"] == "Verse" and row["occurrence"] == 1 and row["kind"] == "section":
+                seen += 1
                 assert max(state.dim.values(), default=0) == 45
-                assert not (frozenset(MOVER_GROUPS) & {r for r, v in state.dim.items() if v > 0})
+                movers_on = {r for r in MOVER_GROUPS if state.dim.get(r, 0) > 0}
+                if movers_on:
+                    assert all(state.dim[r] <= 45 for r in movers_on)
+                    assert prev is not None and state.pos == prev.pos
+            if row.get("tracking") != "cue_only":
+                prev = state
+        assert seen
 
 
 class TestColorForCallback:
