@@ -1,0 +1,17 @@
+
+>>> exec 'Goto Sequence 900 Cue 11'
+<<< {"id": "6ee6fbe9", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Go+ Sequence 900'
+<<< {"id": "29a64255", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Goto Sequence 900 Cue 11'
+<<< {"id": "f80d7fb9", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Go+ Sequence 900'
+<<< {"id": "fd5b28b8", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Off Sequence 900'
+<<< {"id": "3194ef7d", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=5 not_ok_or_timeout=0

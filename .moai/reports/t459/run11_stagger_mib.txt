@@ -1,0 +1,50 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "08427e55", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 0"
+<<< {"id": "6fd4a611", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 5 'Q5 pan0 only NO block'"
+<<< {"id": "4d881bd9", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "8aa54bc0", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Set Cue 2 Sequence 900 Property 'DelayToQ' 2"
+<<< {"error": "Illegal property", "id": "ee7a87a6", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> exec "Set Cue 2 Sequence 900 Property 'DelayToX' 2"
+<<< {"error": "Illegal property", "id": "7469832c", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> exec "Set Cue 2 Sequence 900 Property 'Preset2Delay' 1"
+<<< {"id": "d31ced0d", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/4/1' 'PRESET2DELAY'
+<<< {"id": "b22d6112", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4/1", "property": "PRESET2DELAY", "v": 1, "value": "1.0"}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/4/1' 'INDIVDELAY'
+<<< {"id": "56db432b", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4/1", "property": "INDIVDELAY", "v": 1, "value": "0.0"}
+
+>>> exec "Set Cue 3 Sequence 900 Property 'MIBPreference' 'Blorp'"
+<<< {"error": "Illegal value", "id": "84ef0fbc", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> exec "Set Cue 3 Sequence 900 Property 'MIBPreference' 'Early'"
+<<< {"error": "Illegal value", "id": "a8feb612", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/5' 'MIBPREFERENCE'
+<<< {"id": "8856e97c", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/5", "property": "MIBPREFERENCE", "v": 1, "value": "Normal"}
+
+>>> exec "Set Cue 3 Sequence 900 Property 'MIBFade' 1.5"
+<<< {"error": "Illegal property", "id": "a80639b9", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> exec "Set Cue 3 Sequence 900 Property 'MIBDelay' 0.5"
+<<< {"error": "Illegal property", "id": "f2a8a57e", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIB'
+<<< {"id": "5847f8f9", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIB", "v": 1, "value": "Enabled"}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIBMODE'
+<<< {"id": "227dcbe8", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIBMODE", "v": 1, "value": "None"}
+
+=== steps=16 not_ok_or_timeout=6

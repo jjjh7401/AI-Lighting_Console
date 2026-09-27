@@ -1,0 +1,17 @@
+
+>>> exec "Set Cue 2 Part 0 Sequence 900 Property 'Delay To X' 2"
+<<< {"error": "Illegal property", "id": "09c760bc", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> exec "Set Cue 3 Part 0 Sequence 900 Property 'MIB Fade' 1.5"
+<<< {"error": "Illegal property", "id": "0c7d16ba", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> exec "Set Cue 3 Part 0 Sequence 900 Property 'MIB Delay' 0.5"
+<<< {"error": "Illegal property", "id": "b3246c65", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> exec "Set Cue 2 Part 0 Sequence 900 Property 'Preset2Delay' 1.5"
+<<< {"id": "b21486ae", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/4/1' 'PRESET2DELAY'
+<<< {"id": "3ddf835f", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4/1", "property": "PRESET2DELAY", "v": 1, "value": "1.5"}
+
+=== steps=5 not_ok_or_timeout=3

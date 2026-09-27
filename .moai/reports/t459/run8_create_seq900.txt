@@ -1,0 +1,47 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "d6efc2c2", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 0"
+<<< {"id": "ab6dcbd2", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 1 'Q1 on center'"
+<<< {"id": "68ee450a", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "aa2f8fe8", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 30"
+<<< {"id": "005d0bad", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 2 'Q2 pan30 only'"
+<<< {"id": "2d7a0606", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "c0c2a05b", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Dimmer' At 0"
+<<< {"id": "f98a18a6", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 3 'Q3 dark'"
+<<< {"id": "470cd515", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "ae723673", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At -30"
+<<< {"id": "729b1b5d", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 4 'Q4 on pan-30'"
+<<< {"id": "a5f9655c", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "94016f0c", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Label Sequence 900 'T459 SCRATCH DELETABLE'"
+<<< {"id": "1ce182f0", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900'
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Q1 on center"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Q2 pan30 only"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Q3 dark"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Q4 on pan-30"}], "id": "353e76e7", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "T459 SCRATCH DELETABLE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+=== steps=15 not_ok_or_timeout=0

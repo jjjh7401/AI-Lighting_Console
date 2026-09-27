@@ -1,0 +1,32 @@
+
+>>> exec 'Unblock Sequence 900 Cue 2'
+<<< {"id": "e855e80f", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "6a455bc2", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 60"
+<<< {"id": "261a5e85", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Attribute 'Pan' At Delay 0 Thru 2"
+<<< {"id": "d1072c30", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 7 'Q7 pan60 delay0thru2 clean'"
+<<< {"id": "e060c811", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "86b0fd16", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At -60"
+<<< {"id": "24e21072", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 8 'Q8 pan-60 no delay'"
+<<< {"id": "c8dba574", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "bdfc8c5b", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900'
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Q1 on center"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Q2 pan30 only"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Q3 dark"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Q4 on pan-30"}, {"class": "Cue", "cueNo": 5, "i": 7, "name": "Q5 pan0 only NO block"}, {"class": "Cue", "cueNo": 6, "i": 8, "name": "Q6 pan60 delay0thru2"}, {"class": "Cue", "cueNo": 7, "i": 9, "name": "Q7 pan60 delay0thru2 clean"}, {"class": "Cue", "cueNo": 8, "i": 10, "name": "Q8 pan-60 no delay"}], "id": "990fa97d", "kind": "state", "node": {"childCount": 10, "class": "Sequence", "enumeration": "ok", "name": "T459 SCRATCH DELETABLE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+=== steps=10 not_ok_or_timeout=0
