@@ -4991,6 +4991,9 @@ class ChatSession:
         # `query_property` · `query_properties` 세 읽기를 다 갖춘 유일한 물건).
         # 테스트는 이 속성을 직접 스텁한다.
         self._rig_capability_port = gate.state_port
+        # 카드 t479 — 곡 되읽기가 큐 속성(TrigType·TrigTime)을 읽는 포트. 실기 응답기의
+        # 시퀀스 `state` 자식에는 속성이 없어서 큐 경로를 `props` 로 따로 읽는다.
+        self._readback_props_port = gate.state_port
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -8474,7 +8477,12 @@ class ChatSession:
                     paths=tuple(paths),
                     failure=f"{path} query_state JSON 해석 실패: {error}",
                 )
-        sequence_failure = _validate_song_sequence_readback(payloads.get(sequence_path), timed_cues)
+        sequence_payload, props_failure = self._fill_readback_cue_properties(
+            payloads.get(sequence_path), sequence_path, timed_cues
+        )
+        if props_failure is not None:
+            return _SongReadbackResult(paths=tuple(paths), failure=props_failure)
+        sequence_failure = _validate_song_sequence_readback(sequence_payload, timed_cues)
         if sequence_failure is not None:
             return _SongReadbackResult(paths=tuple(paths), failure=sequence_failure)
         if timing.timecode_number is not None:
@@ -8485,6 +8493,50 @@ class ChatSession:
             if timecode_failure is not None:
                 return _SongReadbackResult(paths=tuple(paths), failure=timecode_failure)
         return _SongReadbackResult(paths=tuple(paths))
+
+    def _fill_readback_cue_properties(
+        self,
+        payload: object,
+        sequence_path: str,
+        timed_cues: Sequence[_SongTimedCueExpectation],
+    ) -> tuple[object, str | None]:
+        """시퀀스 `state` 자식에 없는 TrigType·TrigTime 을 큐 경로 `props` 로 채운다 (카드 t479).
+
+        실기 응답기의 시퀀스 `state` 자식은 `class`·`i`·`name`·`cueNo` 만 싣는다(t474
+        `run7_seq210_state.txt`). 그래서 속성이 빠진 기대 큐만 `<시퀀스 경로>/<i>` 를
+        `props` 로 읽어 자식에 덧붙인다. 이미 속성이 실린 자식(가짜 콘솔 모양)은 읽지 않는다.
+        판정은 그대로 `_validate_song_sequence_readback` 이 한다 — 여기서는 값을 모을 뿐이다.
+        읽기가 실패하면 그 사실을 실패 사유로 돌려준다(못 읽은 것을 통과로 치지 않는다).
+        """
+        if not isinstance(payload, Mapping) or not isinstance(payload.get("children"), list):
+            return payload, None
+        children = list(payload["children"])
+        for expected in timed_cues:
+            cue = _find_readback_cue(children, expected.cue_no)
+            if cue is None:
+                continue
+            if (
+                _readback_property(cue, "TrigType") is not None
+                and _readback_property(cue, "TrigTime") is not None
+            ):
+                continue
+            index = cue.get("i")
+            if not isinstance(index, int) or isinstance(index, bool):
+                continue
+            cue_path = f"{sequence_path}/{index}"
+            try:
+                reads = self._readback_props_port.query_properties(
+                    cue_path, ("TRIGTYPE", "TRIGTIME")
+                )
+            except Exception as error:  # noqa: BLE001 — 사유를 그대로 감독에게 보인다
+                return payload, f"{cue_path} 큐 속성(props) 판독 실패: {error}"
+            values = {
+                read["n"]: read.get("v")
+                for read in (reads.get("reads") or [] if isinstance(reads, Mapping) else [])
+                if isinstance(read, Mapping) and read.get("ok") and isinstance(read.get("n"), str)
+            }
+            children[children.index(cue)] = {**cue, **values}
+        return {**payload, "children": children}, None
 
     def _song_design_interview(self, text: str) -> InstructionResult | None:
         """디자인 요청 한 턴 — 본문은 ``_song_design_interview_run``.

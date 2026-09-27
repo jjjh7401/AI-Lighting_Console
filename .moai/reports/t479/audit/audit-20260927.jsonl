@@ -1,0 +1,13 @@
+{"ts": "2026-09-27T23:42:40.140106+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/3 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.207099+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/4 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.273852+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/5 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.340621+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/6 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.406627+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/7 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.474051+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/8 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.540447+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/9 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.607313+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/10 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.674149+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/11 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.741177+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/12 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.807438+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/13 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.874143+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/14 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-09-27T23:42:40.940931+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/210/15 TRIGTYPE,TRIGTIME", "kind": "props_query", "ok": true, "detail": ""}
