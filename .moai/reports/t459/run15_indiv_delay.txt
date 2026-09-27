@@ -1,0 +1,29 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "4874fa5d", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 60"
+<<< {"id": "e8049ae2", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Attribute 'Pan' At Delayzz 0 Thru 2"
+<<< {"id": "1dab3368", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Attribute 'Pan' At Delay 0 Thru 2"
+<<< {"id": "4287eabb", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 6 'Q6 pan60 delay0thru2'"
+<<< {"id": "78350960", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "7e3b234e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/8/1' 'INDIVDELAY'
+<<< {"id": "dcb86c8e", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/8/1", "property": "INDIVDELAY", "v": 1, "value": "0.0"}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/7/1' 'INDIVDELAY'
+<<< {"id": "381a21b3", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/7/1", "property": "INDIVDELAY", "v": 1, "value": "0.0"}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900'
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Q1 on center"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Q2 pan30 only"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Q3 dark"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Q4 on pan-30"}, {"class": "Cue", "cueNo": 5, "i": 7, "name": "Q5 pan0 only NO block"}, {"class": "Cue", "cueNo": 6, "i": 8, "name": "Q6 pan60 delay0thru2"}], "id": "039fd0d0", "kind": "state", "node": {"childCount": 8, "class": "Sequence", "enumeration": "ok", "name": "T459 SCRATCH DELETABLE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+=== steps=9 not_ok_or_timeout=0

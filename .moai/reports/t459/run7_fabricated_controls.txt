@@ -1,0 +1,11 @@
+
+>>> exec 'Blorkify Sequence 900 Cue 1'
+<<< {"error": "Illegal object", "id": "bf205fc2", "kind": "result", "ok": false, "result": "Illegal object", "v": 1}
+
+>>> exec "Set Cue 1 Sequence 900 Property 'Release' 1"
+<<< {"error": "Illegal object", "id": "62e505da", "kind": "result", "ok": false, "result": "Illegal object", "v": 1}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900'
+<<< {"error": "path segment not found: '900' (in ShowData/DataPools/Default/Sequences/900)", "id": "7f80d714", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/900", "v": 1}
+
+=== steps=3 not_ok_or_timeout=3

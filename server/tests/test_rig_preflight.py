@@ -350,7 +350,12 @@ def test_a_cue_with_an_address_but_no_binding_look_carries_applys_own_reason() -
     text = render_rig_preflight(report)
     assert "P99 범례에 없는 색" in text
     assert "색을 지어내지 않습니다" in text
-    assert "일부만 나가는 큐 1건" in text
+    # t461 ⚠1 — 큐 30(KEY 70 / SIDE 40)은 콘솔 주소록에 'SIDE' 가 없어(SIDE-L·SIDE-R
+    # 만 있다) 그룹별로 나눠 보내지 못하고 한 값(70)만 나간다. 예전에도 70 이
+    # 나갔지만 말하지 않았다 — 이제 사유가 붙어 「일부만 나가는 큐」가 된다
+    # (.moai/reports/t461/probe_preflight_after.txt).
+    assert "일부만 나가는 큐 2건" in text
+    assert "그룹별 조도를 나눠 보내지 못했습니다 — 콘솔 그룹 번호를 모르는 그룹: SIDE" in text
 
 
 def test_every_cue_verdict_matches_what_apply_would_do_with_the_same_rig() -> None:

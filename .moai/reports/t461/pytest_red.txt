@@ -1,0 +1,116 @@
+F.FFF.FFFFFF..                                                           [100%]
+=================================== FAILURES ===================================
+_______________ test_1_one_group_absolute_leaves_the_other_group _______________
+
+    def test_1_one_group_absolute_leaves_the_other_group() -> None:
+        request = parse_cue_sheet_edit_request("큐 3 BACK 밝기 70%로 바꿔줘")
+>       assert request == {"cue": 3, "changes": {"intensity": 70, "groups": ["BACK"]}}
+E       AssertionError: assert {'cue': 3, 'c...tensity': 70}} == {'cue': 3, 'c...s': ['BACK']}}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'changes': {'intensity': 70}} != {'changes': {'intensity': 70, 'groups': ['BACK']}}
+E         Use -v to get more diff
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:55: AssertionError
+__________________________ test_3_one_group_relative ___________________________
+
+    def test_3_one_group_relative() -> None:
+        updated, report = _edit("큐 3 BACK 더 밝게 해줘")
+>       assert _levels(updated) == {"KEY": 90, "BACK": 92}
+E       AssertionError: assert {'KEY': 100, 'BACK': 82} == {'KEY': 90, 'BACK': 92}
+E         
+E         Differing items:
+E         {'KEY': 100} != {'KEY': 90}
+E         {'BACK': 82} != {'BACK': 92}
+E         Use -v to get more diff
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:71: AssertionError
+______ test_3b_relative_hits_the_ceiling_with_the_existing_refusal_shape _______
+
+    def test_3b_relative_hits_the_ceiling_with_the_existing_refusal_shape() -> None:
+>       with pytest.raises(CueSheetEditError, match="천장 100"):
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: '천장 100'
+E         Actual message: "'groups'은(는) 큐시트가 가진 항목이 아닙니다. 수정 가능한 항목: 무드, 컬러(주), 컬러(보조), 조도, 무브먼트, 이펙트, 전환, 페이드, 노트."
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:76: AssertionError
+________________ test_4_back_colour_goes_to_the_secondary_slot _________________
+
+    def test_4_back_colour_goes_to_the_secondary_slot() -> None:
+        updated, report = _edit("큐 3 BACK 컬러 앰버로 바꿔줘")
+        section = updated["sections"][0]
+>       assert section["palette_secondary"] == "앰버"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'palette_secondary'
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:94: KeyError
+_____________________ test_6_anchorless_with_selected_cue ______________________
+
+    def test_6_anchorless_with_selected_cue() -> None:
+        request = parse_cue_sheet_edit_request("BACK 밝기 50%로 해줘", cue_selected=True)
+>       assert request == {"cue": None, "changes": {"intensity": 50, "groups": ["BACK"]}}
+E       AssertionError: assert {'cue': None,...tensity': 50}} == {'cue': None,...s': ['BACK']}}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'changes': {'intensity': 50}} != {'changes': {'intensity': 50, 'groups': ['BACK']}}
+E         Use -v to get more diff
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:106: AssertionError
+_____________________ test_group_list_separators_and_case ______________________
+
+    def test_group_list_separators_and_case() -> None:
+        for text in ("큐 3 key, back 밝기 60%로 바꿔줘", "큐 3 KEY와 BACK 밝기 60%로 바꿔줘"):
+            request = parse_cue_sheet_edit_request(text)
+>           assert request is not None and [g.upper() for g in request["changes"]["groups"]] == [
+                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                "KEY",
+                "BACK",
+            ], text
+E           KeyError: 'groups'
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:112: KeyError
+_____________ test_a_unknown_group_is_refused_with_the_known_names _____________
+
+    def test_a_unknown_group_is_refused_with_the_known_names() -> None:
+>       with pytest.raises(CueSheetEditError) as caught:
+E       Failed: DID NOT RAISE CueSheetEditError
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:122: Failed
+_________________ test_b_colour_for_several_groups_is_refused __________________
+
+    def test_b_colour_for_several_groups_is_refused() -> None:
+>       with pytest.raises(CueSheetEditError, match="그룹 하나에만"):
+E       Failed: DID NOT RAISE CueSheetEditError
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:129: Failed
+____________________ test_c_cue_wide_fields_refuse_a_group _____________________
+
+    def test_c_cue_wide_fields_refuse_a_group() -> None:
+        for text in ("큐 3 BACK 페이드 2초로 바꿔줘", "큐 3 BACK 무브먼트 스윕으로 바꿔줘"):
+>           with pytest.raises(CueSheetEditError, match="큐 전체 값"):
+E           Failed: DID NOT RAISE CueSheetEditError
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:135: Failed
+_______________ test_d_cue_without_group_levels_refuses_a_group ________________
+
+    def test_d_cue_without_group_levels_refuses_a_group() -> None:
+        request = parse_cue_sheet_edit_request("큐 4 BACK 밝기 50%로 바꿔줘")
+        assert request is not None
+>       with pytest.raises(CueSheetEditError, match="그룹별 조도가 없습니다"):
+E       Failed: DID NOT RAISE CueSheetEditError
+
+server/tests/test_cue_sheet_edit_group_scope_t461.py:142: Failed
+=========================== short test summary info ============================
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_1_one_group_absolute_leaves_the_other_group
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_3_one_group_relative
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_3b_relative_hits_the_ceiling_with_the_existing_refusal_shape
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_4_back_colour_goes_to_the_secondary_slot
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_6_anchorless_with_selected_cue
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_group_list_separators_and_case
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_a_unknown_group_is_refused_with_the_known_names
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_b_colour_for_several_groups_is_refused
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_c_cue_wide_fields_refuse_a_group
+FAILED server/tests/test_cue_sheet_edit_group_scope_t461.py::test_d_cue_without_group_levels_refuses_a_group
+10 failed, 4 passed in 0.08s

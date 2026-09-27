@@ -443,6 +443,66 @@ def _fade_seconds(section: Mapping[str, object]) -> float | None:
     return float(value)
 
 
+def _group_dimmer_overrides(
+    section: Mapping[str, object],
+    layer_mapping: Sequence[Mapping[str, object]],
+    numbers: Sequence[int],
+    unresolved: Sequence[str],
+    percent: int,
+) -> tuple[list[str], list[str], str | None]:
+    """카드 t461 — 최댓값보다 낮은 그룹의 Dimmer 덮어쓰기 줄.
+
+    ``(줄들, 요약 조각들, 못 나눈 사유)``. 그룹 이름 → 콘솔 번호는
+    :func:`_group_numbers` 와 같은 주소록(``layer_mapping`` 의 group_name·role,
+    정확 일치)으로만 푼다. 번호를 모르거나 이 큐가 지목하지 않은 그룹이면 줄을
+    하나도 내지 않고(한 값 그대로) 사유를 낸다 — 지어내지 않는다. 이미 이 큐의
+    대상에서 빠진 그룹(``unresolved``)은 기존 사유가 말하므로 새 사유를 달지 않는다.
+    """
+    entries = section.get("intensity")
+    if not isinstance(entries, list):
+        return [], [], None
+    lower: list[tuple[str, int]] = []
+    for entry in entries:
+        if not isinstance(entry, Mapping) or not entry.get("group"):
+            continue
+        level = entry.get("level")
+        if isinstance(level, bool) or not isinstance(level, (int, float)):
+            continue
+        if int(level) != percent:
+            lower.append((str(entry["group"]).strip(), int(level)))
+    if not lower:
+        return [], [], None
+    index: dict[str, int] = {}
+    for mapping in layer_mapping:
+        number = mapping.get("group_no")
+        if not isinstance(number, int):
+            continue
+        for key in (mapping.get("group_name"), mapping.get("role")):
+            if isinstance(key, str) and key.strip():
+                index.setdefault(key.strip().casefold(), number)
+    already_out = {name.casefold() for name in unresolved}
+    lines: list[str] = []
+    parts: list[str] = []
+    missing: list[str] = []
+    for name, level in lower:
+        number = index.get(name.casefold())
+        if number is None or number not in numbers:
+            if name.casefold() not in already_out:
+                missing.append(name)
+            continue
+        lines.append(f"Group {number} ; Attribute 'Dimmer' At {level:g}")
+        parts.append(f"{name} {level}%")
+    if missing:
+        return (
+            [],
+            [],
+            "그룹별 조도를 나눠 보내지 못했습니다 — 콘솔 그룹 번호를 모르는 그룹: "
+            + ", ".join(missing)
+            + f". 큐 전체 {percent}% 한 값으로 보냈습니다.",
+        )
+    return lines, parts, None
+
+
 def plan_cue_console_apply(
     section: Mapping[str, object],
     previous: Mapping[str, object] | None,
@@ -587,6 +647,20 @@ def plan_cue_console_apply(
             else:
                 value_line += f" ; Group {back_no} ; " + _color_line(secondary_rgb)
                 parts.append(f"보조컬러 {secondary}")
+
+    # 카드 t461(리드 판정) — 그룹별 조도가 서로 다르면 위 한 값(최댓값) 뒤에
+    # 낮은 그룹만 자기 Dimmer 줄로 덮는다(last-wins — back 레이어 줄과 같은 방식).
+    # 값이 모두 같으면 아무것도 붙지 않아 명령이 바이트 그대로다.
+    overrides, override_parts, split_failure = _group_dimmer_overrides(
+        section, layer_mapping, numbers, unresolved, percent
+    )
+    if overrides:
+        value_line += " ; " + " ; ".join(overrides)
+        parts.extend(override_parts)
+    elif split_failure:
+        skips.append(
+            CueSkip(cue_number=cue, label=label, reason=ROLE_UNADDRESSED, detail=split_failure)
+        )
 
     fade = _fade_seconds(section) if fade_changed else None
     if fade is not None:

@@ -1,0 +1,8 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/900@14
+    wire: Plugin "CopilotResponder" "state 42bc83bd ShowData/DataPools/Default/Sequences/900 offset=14"
+<<< {"children": [{"class": "Cue", "cueNo": 15, "i": 15, "name": "Q15 lit pan-30"}], "id": "42bc83bd", "kind": "state", "node": {"childCount": 15, "class": "Sequence", "enumeration": "ok", "name": "T459 SCRATCH DELETABLE"}, "offset": 14, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/12/1|INDIVDELAY,DURATION,NAME
+    wire: Plugin "CopilotResponder" "props 0125ac65 INDIVDELAY,DURATION,NAME ShowData/DataPools/Default/Sequences/900/12/1"
+<<< {"id": "0125ac65", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/12/1", "reads": [{"n": "INDIVDELAY", "ok": true, "t": "number", "v": "2.0"}, {"n": "DURATION", "ok": true, "t": "number", "v": "2.0"}, {"n": "NAME", "ok": true, "t": "string", "v": "Q12 pan60 delay0thru2"}], "truncated": false, "v": 1}

@@ -1,0 +1,11 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "7590d529", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Fixture 521 Thru 522 ; At 100'
+<<< {"id": "245bee45", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'Selection' 'COUNTTOTALSELECTED'
+<<< {"id": "7ea98474", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "2"}
+
+=== steps=3 not_ok_or_timeout=0

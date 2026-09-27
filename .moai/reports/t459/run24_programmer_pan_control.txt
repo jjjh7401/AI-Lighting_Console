@@ -1,0 +1,17 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "d260a895", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'Pan' At -60"
+<<< {"id": "e997ddb1", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 60"
+<<< {"id": "2e86afc9", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At -60"
+<<< {"id": "1b073f7e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "73ee0e24", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=5 not_ok_or_timeout=0

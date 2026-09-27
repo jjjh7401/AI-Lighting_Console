@@ -1,0 +1,12 @@
+10,11c10,11
+< value_line: Group 11 + 12 ; Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+< summary: 조도 90% · 컬러 블루 · 페이드 1.5초
+---
+> value_line: Group 11 + 12 ; Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Group 12 ; Attribute 'Dimmer' At 70
+> summary: 조도 90% · 컬러 블루 · BACK 70% · 페이드 1.5초
+14,15c14,15
+< value_line: Group 11 + 12 ; Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Group 12 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+< summary: 조도 90% · 컬러 블루 · 보조컬러 앰버 · 페이드 1.5초
+---
+> value_line: Group 11 + 12 ; Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Group 12 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5 ; Group 11 ; Attribute 'Dimmer' At 50
+> summary: 조도 90% · 컬러 블루 · 보조컬러 앰버 · KEY 50% · 페이드 1.5초
