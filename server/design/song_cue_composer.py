@@ -5,6 +5,8 @@ import math
 from dataclasses import dataclass
 from typing import Literal
 
+from server.concept.mib import live_move_note
+from server.concept.resolver import MOVE_SECONDS, SETTLE_SECONDS
 from server.design.energy import AxisBudget, axis_budget, beats_to_seconds
 from server.design.lint import (
     POSITION_WIDTH_TIERS,
@@ -272,10 +274,18 @@ class CueMibData:
     inserted: bool = False
     reason: str | None = None
     source_cue_number: float | None = None
+    #: 카드 t471 — 사전이동 큐가 나간 뒤 켜지는 큐까지의 시간(초). 두 큐 중
+    #: 하나라도 시각이 없으면 ``None``(재지 못함 — 「문제없음」이 아니다).
+    dark_window_seconds: float | None = None
+    #: 카드 t471 — 위 시간이 이동+정착(``resolver.MOVE_SECONDS +
+    #: SETTLE_SECONDS``)보다 짧으면 ``True``. 어둠은 늘리지 않고 경고만 한다.
+    live_move: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.premove, bool) or not isinstance(self.inserted, bool):
             raise SongCueComposerError("MIB flags must be bool values")
+        if not isinstance(self.live_move, bool):
+            raise SongCueComposerError("MIB live_move must be a bool value")
         if self.reason is not None and not self.reason.strip():
             raise SongCueComposerError("MIB reason must be non-empty or None")
 
@@ -285,6 +295,8 @@ class CueMibData:
             "inserted": self.inserted,
             "reason": self.reason,
             "source_cue_number": self.source_cue_number,
+            "dark_window_seconds": self.dark_window_seconds,
+            "live_move": self.live_move,
         }
 
 
@@ -971,6 +983,7 @@ def _apply_mib(cues: tuple[ComposedCue, ...]) -> tuple[ComposedCue, ...]:
     dark = False
     parked_position: str | None = None
     previous_cue_number: float | None = None
+    previous_start_ms: int | None = None
     for cue in cues:
         stored_position = cue.position.stored
         key_pct = cue.dimmer.key_pct
@@ -984,7 +997,14 @@ def _apply_mib(cues: tuple[ComposedCue, ...]) -> tuple[ComposedCue, ...]:
         )
         if fires:
             midpoint = (previous_cue_number + cue.cue_number) / 2.0
-            result.append(_mib_premove(cue, cue_number=midpoint, follows=previous_cue_number))
+            result.append(
+                _mib_premove(
+                    cue,
+                    cue_number=midpoint,
+                    follows=previous_cue_number,
+                    dark_window_seconds=_premove_window_seconds(previous_start_ms, cue),
+                )
+            )
             result.append(_mib_reveal(cue, premove_cue_number=midpoint))
         else:
             result.append(cue)
@@ -993,10 +1013,37 @@ def _apply_mib(cues: tuple[ComposedCue, ...]) -> tuple[ComposedCue, ...]:
         if key_pct is not None:
             dark = key_pct == 0.0
         previous_cue_number = cue.cue_number
+        previous_start_ms = cue.timing.start_ms
     return tuple(result)
 
 
-def _mib_premove(reveal: ComposedCue, *, cue_number: float, follows: float) -> ComposedCue:
+def _premove_window_seconds(previous_start_ms: int | None, reveal: ComposedCue) -> float | None:
+    """카드 t471 — 사전이동 큐는 앞 큐를 따라 바로 나가므로(``follow_previous``),
+    이동에 쓸 수 있는 시간은 앞 큐 시작부터 켜지는 큐 시작까지다. 둘 중 하나라도
+    시각이 없으면 재지 못한 것으로 ``None`` 을 돌려준다."""
+    if previous_start_ms is None or reveal.timing.start_ms is None:
+        return None
+    return round((reveal.timing.start_ms - previous_start_ms) / 1000.0, 3)
+
+
+def _mib_premove(
+    reveal: ComposedCue,
+    *,
+    cue_number: float,
+    follows: float,
+    dark_window_seconds: float | None,
+) -> ComposedCue:
+    # 카드 t471 — 컨셉 판정기(G12)와 같은 기준으로 어둠이 모자란지 본다.
+    # 어둠은 음악이 정하므로 늘리지 않는다: 사전이동은 그대로 넣고 경고만 싣는다
+    # (REQ-066 live_move). fade_seconds=1.0 은 이 큐 자체의 포지션 페이드이고,
+    # 필요한 어둠 길이(MOVE_SECONDS)와는 다른 양이다.
+    need_seconds = MOVE_SECONDS + SETTLE_SECONDS
+    live_move = dark_window_seconds is not None and dark_window_seconds < need_seconds
+    reason = (
+        f"{live_move_note()} (어둠 {dark_window_seconds:g}초 < 필요 {need_seconds:g}초)"
+        if live_move
+        else "dark reveal moves before intensity"
+    )
     return ComposedCue(
         kind="mib_premove",
         section_index=reveal.section_index,
@@ -1032,8 +1079,10 @@ def _mib_premove(reveal: ComposedCue, *, cue_number: float, follows: float) -> C
         mib=CueMibData(
             premove=True,
             inserted=True,
-            reason="dark reveal moves before intensity",
+            reason=reason,
             source_cue_number=reveal.cue_number,
+            dark_window_seconds=dark_window_seconds,
+            live_move=live_move,
         ),
         timing=CueTimingData(
             mode=reveal.timing.mode,

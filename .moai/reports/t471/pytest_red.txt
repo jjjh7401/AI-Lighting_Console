@@ -1,0 +1,8 @@
+server/tests/test_song_cue_composer.py:385: KeyError
+=========================== short test summary info ============================
+FAILED server/tests/test_song_cue_composer.py::TestComposerMibDarkWindow::test_short_dark_is_flagged_live_move_but_not_lengthened
+FAILED server/tests/test_song_cue_composer.py::TestComposerMibDarkWindow::test_long_dark_is_not_flagged
+FAILED server/tests/test_song_cue_composer.py::TestComposerMibDarkWindow::test_threshold_is_the_concept_judge_threshold
+FAILED server/tests/test_song_cue_composer.py::TestComposerMibDarkWindow::test_measured_insufficient_dark_is_flagged
+FAILED server/tests/test_song_cue_composer.py::TestComposerMibDarkWindow::test_to_dict_carries_the_warning
+5 failed, 8 deselected in 0.48s
