@@ -1,0 +1,12 @@
+sent 12:35:25
+
+>>> exec 'Go Executor 201'
+<<< {"id": "6b7a4d4b", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0
+sent 12:36:11
+
+>>> exec 'Go Executor 201'
+<<< {"id": "782c69db", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=1 not_ok_or_timeout=0

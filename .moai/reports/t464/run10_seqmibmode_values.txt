@@ -1,0 +1,35 @@
+
+>>> exec "Set Sequence 900 Property 'SeqMIBMode' 'Blorp'"
+<<< {"error": "Illegal property", "id": "2ee65638", "kind": "result", "ok": false, "result": "Illegal property", "v": 1}
+
+>>> exec "Set Sequence 900 Property 'MIBMode' 'Blorp'"
+<<< {"error": "Illegal value", "id": "af3572c3", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> exec "Set Sequence 900 Property 'SEQUMIBMODE' 'Blorp'"
+<<< {"error": "Illegal value", "id": "07cbc033", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> exec "Set Sequence 900 Property 'SEQUMIBMODE' 'Early'"
+<<< {"id": "a73627f7", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIBMODE'
+<<< {"id": "3ad069e8", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIBMODE", "v": 1, "value": "Early"}
+
+>>> exec "Set Sequence 900 Property 'SEQUMIBMODE' 'Late'"
+<<< {"id": "1de8d0fb", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIBMODE'
+<<< {"id": "c71182dc", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIBMODE", "v": 1, "value": "Late"}
+
+>>> exec "Set Sequence 900 Property 'SEQUMIBMODE' 'Dimmer'"
+<<< {"error": "Illegal value", "id": "fe35eb9e", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIBMODE'
+<<< {"id": "675387e3", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIBMODE", "v": 1, "value": "Late"}
+
+>>> exec "Set Sequence 900 Property 'SEQUMIBMODE' 'Mark'"
+<<< {"error": "Illegal value", "id": "aa2e46c6", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900' 'SEQUMIBMODE'
+<<< {"id": "e6ffc007", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "property": "SEQUMIBMODE", "v": 1, "value": "Late"}
+
+=== steps=11 not_ok_or_timeout=5

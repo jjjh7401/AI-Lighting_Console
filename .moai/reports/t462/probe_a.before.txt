@@ -1,0 +1,12 @@
+requery: 0
+    1 section      Intro          D2 key=50.0 fade=2.0 accents=() start=0
+    2 section      Verse 1        D3 key=70.0 fade=1.5 accents=() start=16000
+    3 section      Verse 2        D4 key=90.0 fade=0.75 accents=() start=32000
+    4 section      Chorus 1       D5 key=100.0 fade=0.25 accents=() start=48000
+    5 section      Verse 3        D3 key=70.0 fade=1.5 accents=() start=64000
+    6 section      Verse 4        D4 key=90.0 fade=0.75 accents=() start=80000
+    7 section      Chorus 2       D5 key=100.0 fade=0.25 accents=('moving position hit',) start=96000
+    8 section      Bridge 1       D2 key=50.0 fade=2.0 accents=() start=112000
+    9 section      Verse 5        D4 key=90.0 fade=0.75 accents=() start=128000
+   10 section      Chorus 3       D5 key=100.0 fade=0.25 accents=('climax accent',) start=144000
+   11 section      Finale         D5 key=100.0 fade=4.0 accents=('white flash',) start=160000

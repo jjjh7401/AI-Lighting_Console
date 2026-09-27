@@ -1,0 +1,46 @@
+
+[12:52:37.128] >>> exec "Set Cue 11 Sequence 900 Property 'TrigType' 'Time'"
+[12:52:37.169] <<< {"id": "f6a95882", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:37.421] >>> exec "Set Cue 11 Sequence 900 Property 'TrigTime' 2"
+[12:52:37.469] <<< {"id": "2bc9846e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:37.722] >>> exec "Set Cue 13 Sequence 900 Property 'TrigType' 'Time'"
+[12:52:37.769] <<< {"id": "eebc1269", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:38.024] >>> exec "Set Cue 13 Sequence 900 Property 'TrigTime' 2"
+[12:52:38.068] <<< {"id": "7d388d4e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:38.324] >>> exec "Set Cue 14 Sequence 900 Property 'TrigType' 'Time'"
+[12:52:38.369] <<< {"id": "fd871e2e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:38.619] >>> exec "Set Cue 14 Sequence 900 Property 'TrigTime' 2"
+[12:52:38.669] <<< {"id": "feefa30d", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:38.924] >>> exec "Set Cue 15 Sequence 900 Property 'TrigType' 'Time'"
+[12:52:38.969] <<< {"id": "d3285cc3", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+[12:52:39.221] >>> exec "Set Cue 15 Sequence 900 Property 'TrigTime' 2"
+[12:52:39.269] <<< {"id": "a05d3985", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+=== steps=8 not_ok_or_timeout=0
+
+>>> props:ShowData/DataPools/Default/Sequences/900/3|TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 5f77defc TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/900/3"
+<<< {"id": "5f77defc", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/3", "reads": [{"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "2.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/4|TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 3e962cdd TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/900/4"
+<<< {"id": "3e962cdd", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4", "reads": [{"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "2.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/5|TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 0abcd89f TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/900/5"
+<<< {"id": "0abcd89f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/5", "reads": [{"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "2.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/6|TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 5855bd91 TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/900/6"
+<<< {"id": "5855bd91", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/6", "reads": [{"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "2.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/7|TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 8d015e66 TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/900/7"
+<<< {"id": "8d015e66", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/7", "reads": [{"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "2.0"}], "truncated": false, "v": 1}

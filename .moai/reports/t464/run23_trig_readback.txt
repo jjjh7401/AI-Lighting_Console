@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/900/4|TRIGTYPE,TRIGTIME,NAME
+    wire: Plugin "CopilotResponder" "props a5743506 TRIGTYPE,TRIGTIME,NAME ShowData/DataPools/Default/Sequences/900/4"
+<<< {"id": "a5743506", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4", "reads": [{"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "2.0"}, {"n": "NAME", "ok": true, "t": "string", "v": "Q12 pan60 tilt30 delay0thru2"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/900/5|TRIGTYPE,TRIGTIME,NAME
+    wire: Plugin "CopilotResponder" "props 4b2e52e2 TRIGTYPE,TRIGTIME,NAME ShowData/DataPools/Default/Sequences/900/5"
+<<< {"id": "4b2e52e2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/5", "reads": [{"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Go"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}, {"n": "NAME", "ok": true, "t": "string", "v": "Q13 lit pan30 tilt-30"}], "truncated": false, "v": 1}
