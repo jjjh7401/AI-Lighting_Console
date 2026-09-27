@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/zipfile.py", line 1392, in _RealGetContents
+    endrec = _EndRecData(fp)
+             ^^^^^^^^^^^^^^^
+  File "/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/zipfile.py", line 320, in _EndRecData
+    data = fpin.read()
+           ^^^^^^^^^^^
+TimeoutError: [Errno 60] Operation timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t432/.moai/reports/t432/gdtf_emitters.py", line 62, in <module>
+    for label, blob in gdtf_blobs(Path(arg)):
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t432/.moai/reports/t432/gdtf_emitters.py", line 20, in gdtf_blobs
+    with zipfile.ZipFile(path) as archive:
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/zipfile.py", line 1329, in __init__
+    self._RealGetContents()
+  File "/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/zipfile.py", line 1394, in _RealGetContents
+    raise BadZipFile("File is not a zip file")
+zipfile.BadZipFile: File is not a zip file

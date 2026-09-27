@@ -1,0 +1,60 @@
+== Martin Professional@MAC Encore Performance CLD.gdtf
+   XML ParseError: not well-formed (invalid token): line 1205, column 0 — regex fallback
+   Emitter: 1
+     <Emitter Name="White" Color="0.324999,0.335004,100.004386" DominantWaveLength="0.000000" DiodePart="">
+   Filter: 4
+     <Filter Name="Cyan" Color="0.139005,0.135500,12.210178">
+     <Filter Name="Magenta" Color="0.319501,0.105404,11.140573">
+     <Filter Name="Yellow" Color="0.458790,0.533200,85.474119">
+     <Filter Name="CTO" Color="0.459850,0.410604,50.002548">
+   ColorSpace: 1
+     <ColorSpace Name="" Mode="sRGB"/>
+   AdditionalColorSpaces: 1
+     <AdditionalColorSpaces/>
+   Gamut: 0
+   Measurement: 5
+     <Measurement Physical="100.000000" Transmission="0.000000" InterpolationTo="Linear"/>
+     <Measurement Physical="100.000000" Transmission="0.000000" InterpolationTo="Linear"/>
+     <Measurement Physical="100.000000" Transmission="0.000000" InterpolationTo="Linear"/>
+     <Measurement Physical="100.000000" Transmission="0.000000" InterpolationTo="Linear"/>
+     <Measurement Physical="100.000000" LuminousIntensity="691880.812500" InterpolationTo="Linear"/>
+== Martin@Mac Aura XB.gdtf
+   XML ParseError: not well-formed (invalid token): line 813, column 0 — regex fallback
+   Emitter: 0
+   Filter: 0
+   ColorSpace: 1
+     <ColorSpace Name="" Mode="sRGB"/>
+   AdditionalColorSpaces: 1
+     <AdditionalColorSpaces/>
+   Gamut: 0
+   Measurement: 0
+== Martin@Rush Par 2 RGBW Zoom.gdtf
+   XML ParseError: not well-formed (invalid token): line 109, column 0 — regex fallback
+   Emitter: 0
+   Filter: 0
+   ColorSpace: 1
+     <ColorSpace Name="" Mode="sRGB"/>
+   AdditionalColorSpaces: 1
+     <AdditionalColorSpaces/>
+   Gamut: 0
+   Measurement: 0
+== Generic@Led Tile RGB8 Wall.gdtf
+   XML ParseError: not well-formed (invalid token): line 88, column 0 — regex fallback
+   Emitter: 0
+   Filter: 0
+   ColorSpace: 1
+     <ColorSpace Name="" Mode="sRGB"/>
+   AdditionalColorSpaces: 1
+     <AdditionalColorSpaces/>
+   Gamut: 0
+   Measurement: 0
+== Generic@LED steps small.gdtf
+   XML ParseError: not well-formed (invalid token): line 88, column 0 — regex fallback
+   Emitter: 0
+   Filter: 0
+   ColorSpace: 1
+     <ColorSpace Name="" Mode="sRGB"/>
+   AdditionalColorSpaces: 1
+     <AdditionalColorSpaces/>
+   Gamut: 0
+   Measurement: 0
