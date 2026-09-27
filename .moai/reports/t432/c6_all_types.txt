@@ -1,0 +1,481 @@
+{"steps": 120}
+
+>>> state:Patch/FixtureTypes/8
+    wire: Plugin "CopilotResponder" "state cc2f8d8d Patch/FixtureTypes/8"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "cc2f8d8d", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Mac Aura XB"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters
+    wire: Plugin "CopilotResponder" "state ab586992 Patch/FixtureTypes/8/PhysicalDescriptions/Emitters"
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}, {"class": "Emitter", "i": 4, "name": "White"}], "id": "ab586992", "kind": "state", "node": {"childCount": 4, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/PhysicalDescriptions/CRIs
+    wire: Plugin "CopilotResponder" "state 1bfd8bda Patch/FixtureTypes/8/PhysicalDescriptions/CRIs"
+<<< {"children": [], "id": "1bfd8bda", "kind": "state", "node": {"childCount": 0, "class": "CRIs", "enumeration": "ok", "name": "CRIs"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/CRIs", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/PhysicalDescriptions/FTFilters
+    wire: Plugin "CopilotResponder" "state 1b925b9e Patch/FixtureTypes/8/PhysicalDescriptions/FTFilters"
+<<< {"children": [], "id": "1b925b9e", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/PhysicalDescriptions/ColorSpaceCollect
+    wire: Plugin "CopilotResponder" "state ae8b7e33 Patch/FixtureTypes/8/PhysicalDescriptions/ColorSpaceCollect"
+<<< {"children": [], "id": "ae8b7e33", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/PhysicalDescriptions/GamutCollect
+    wire: Plugin "CopilotResponder" "state 98fdacd7 Patch/FixtureTypes/8/PhysicalDescriptions/GamutCollect"
+<<< {"children": [], "id": "98fdacd7", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props c2632498 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/1"
+<<< {"id": "c2632498", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "R"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props e58beb4d NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/2"
+<<< {"id": "e58beb4d", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "G"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props a1d9998d NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/3"
+<<< {"id": "a1d9998d", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 16297174 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/4"
+<<< {"id": "16297174", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "White"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/5|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 028dc333 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/5"
+<<< {"error": "path segment not found: '5' (in Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/5)", "id": "028dc333", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/5", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/6|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props ef58186e NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/6"
+<<< {"error": "path segment not found: '6' (in Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/6)", "id": "ef58186e", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/6", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/7|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 2fea118e NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/7"
+<<< {"error": "path segment not found: '7' (in Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/7)", "id": "2fea118e", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/7", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/8|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 53340bf2 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/8"
+<<< {"error": "path segment not found: '8' (in Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/8)", "id": "53340bf2", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/8/PhysicalDescriptions/Emitters/8", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/Wheels
+    wire: Plugin "CopilotResponder" "state 022bc3c2 Patch/FixtureTypes/8/Wheels"
+<<< {"children": [], "id": "022bc3c2", "kind": "state", "node": {"childCount": 0, "class": "Wheels", "enumeration": "ok", "name": "Wheels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/Wheels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9
+    wire: Plugin "CopilotResponder" "state 4d002036 Patch/FixtureTypes/9"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "4d002036", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Rush Par 2 RGBW Zoom"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters
+    wire: Plugin "CopilotResponder" "state 18c6bdcf Patch/FixtureTypes/9/PhysicalDescriptions/Emitters"
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}, {"class": "Emitter", "i": 4, "name": "White"}], "id": "18c6bdcf", "kind": "state", "node": {"childCount": 4, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/PhysicalDescriptions/CRIs
+    wire: Plugin "CopilotResponder" "state 1dad9297 Patch/FixtureTypes/9/PhysicalDescriptions/CRIs"
+<<< {"children": [], "id": "1dad9297", "kind": "state", "node": {"childCount": 0, "class": "CRIs", "enumeration": "ok", "name": "CRIs"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/CRIs", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/PhysicalDescriptions/FTFilters
+    wire: Plugin "CopilotResponder" "state 100dd995 Patch/FixtureTypes/9/PhysicalDescriptions/FTFilters"
+<<< {"children": [], "id": "100dd995", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/PhysicalDescriptions/ColorSpaceCollect
+    wire: Plugin "CopilotResponder" "state 4463f5ba Patch/FixtureTypes/9/PhysicalDescriptions/ColorSpaceCollect"
+<<< {"children": [], "id": "4463f5ba", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/PhysicalDescriptions/GamutCollect
+    wire: Plugin "CopilotResponder" "state 1a117b50 Patch/FixtureTypes/9/PhysicalDescriptions/GamutCollect"
+<<< {"children": [], "id": "1a117b50", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 05708dbb NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/1"
+<<< {"id": "05708dbb", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "R"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props bdbad9cc NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/2"
+<<< {"id": "bdbad9cc", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "G"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 251d21aa NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/3"
+<<< {"id": "251d21aa", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 71561be4 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/4"
+<<< {"id": "71561be4", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "White"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/5|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props a4e860ca NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/5"
+<<< {"error": "path segment not found: '5' (in Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/5)", "id": "a4e860ca", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/5", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/6|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props f7bb107b NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/6"
+<<< {"error": "path segment not found: '6' (in Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/6)", "id": "f7bb107b", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/6", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/7|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 2da339e4 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/7"
+<<< {"error": "path segment not found: '7' (in Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/7)", "id": "2da339e4", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/7", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/8|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 3154bef1 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/8"
+<<< {"error": "path segment not found: '8' (in Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/8)", "id": "3154bef1", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters/8", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/Wheels
+    wire: Plugin "CopilotResponder" "state 837e148b Patch/FixtureTypes/9/Wheels"
+<<< {"children": [], "id": "837e148b", "kind": "state", "node": {"childCount": 0, "class": "Wheels", "enumeration": "ok", "name": "Wheels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/Wheels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10
+    wire: Plugin "CopilotResponder" "state 4655e16f Patch/FixtureTypes/10"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "4655e16f", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Source 4 LED Series 3 Lustr X8"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters
+    wire: Plugin "CopilotResponder" "state da1eea0d Patch/FixtureTypes/10/PhysicalDescriptions/Emitters"
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}, {"class": "Emitter", "i": 4, "name": "Amber"}, {"class": "Emitter", "i": 5, "name": "Lime"}, {"class": "Emitter", "i": 6, "name": "Cyan"}, {"class": "Emitter", "i": 7, "name": "Indigo"}], "id": "da1eea0d", "kind": "state", "node": {"childCount": 7, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/PhysicalDescriptions/CRIs
+    wire: Plugin "CopilotResponder" "state 3eb23f45 Patch/FixtureTypes/10/PhysicalDescriptions/CRIs"
+<<< {"children": [], "id": "3eb23f45", "kind": "state", "node": {"childCount": 0, "class": "CRIs", "enumeration": "ok", "name": "CRIs"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/CRIs", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/PhysicalDescriptions/FTFilters
+    wire: Plugin "CopilotResponder" "state 645898bc Patch/FixtureTypes/10/PhysicalDescriptions/FTFilters"
+<<< {"children": [], "id": "645898bc", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/PhysicalDescriptions/ColorSpaceCollect
+    wire: Plugin "CopilotResponder" "state 9634a929 Patch/FixtureTypes/10/PhysicalDescriptions/ColorSpaceCollect"
+<<< {"children": [], "id": "9634a929", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/PhysicalDescriptions/GamutCollect
+    wire: Plugin "CopilotResponder" "state 698c2622 Patch/FixtureTypes/10/PhysicalDescriptions/GamutCollect"
+<<< {"children": [], "id": "698c2622", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 4109359b NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/1"
+<<< {"id": "4109359b", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "R"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 3654f374 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/2"
+<<< {"id": "3654f374", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "G"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props f44c21bd NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/3"
+<<< {"id": "f44c21bd", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 44be2ef4 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/4"
+<<< {"id": "44be2ef4", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Amber"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/5|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 045b5cdf NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/5"
+<<< {"id": "045b5cdf", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Lime"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/6|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 4ea53d9d NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/6"
+<<< {"id": "4ea53d9d", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Cyan"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/7|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props cf4b7f33 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/7"
+<<< {"id": "cf4b7f33", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/7", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Indigo"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/8|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 4eec6bb7 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/8"
+<<< {"error": "path segment not found: '8' (in Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/8)", "id": "4eec6bb7", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters/8", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/Wheels
+    wire: Plugin "CopilotResponder" "state 9ef556cf Patch/FixtureTypes/10/Wheels"
+<<< {"children": [], "id": "9ef556cf", "kind": "state", "node": {"childCount": 0, "class": "Wheels", "enumeration": "ok", "name": "Wheels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/Wheels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4
+    wire: Plugin "CopilotResponder" "state f812e595 Patch/FixtureTypes/4"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "f812e595", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Robin Spiider"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters
+    wire: Plugin "CopilotResponder" "state 885ead52 Patch/FixtureTypes/4/PhysicalDescriptions/Emitters"
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}, {"class": "Emitter", "i": 4, "name": "White"}], "id": "885ead52", "kind": "state", "node": {"childCount": 4, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/PhysicalDescriptions/CRIs
+    wire: Plugin "CopilotResponder" "state 75cd879d Patch/FixtureTypes/4/PhysicalDescriptions/CRIs"
+<<< {"children": [], "id": "75cd879d", "kind": "state", "node": {"childCount": 0, "class": "CRIs", "enumeration": "ok", "name": "CRIs"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/CRIs", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/PhysicalDescriptions/FTFilters
+    wire: Plugin "CopilotResponder" "state d1f03fb3 Patch/FixtureTypes/4/PhysicalDescriptions/FTFilters"
+<<< {"children": [], "id": "d1f03fb3", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/PhysicalDescriptions/ColorSpaceCollect
+    wire: Plugin "CopilotResponder" "state 0ae7e28b Patch/FixtureTypes/4/PhysicalDescriptions/ColorSpaceCollect"
+<<< {"children": [], "id": "0ae7e28b", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/PhysicalDescriptions/GamutCollect
+    wire: Plugin "CopilotResponder" "state 86989f18 Patch/FixtureTypes/4/PhysicalDescriptions/GamutCollect"
+<<< {"children": [], "id": "86989f18", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props de27dd8f NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1"
+<<< {"id": "de27dd8f", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "R"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props bdb9d7fc NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/2"
+<<< {"id": "bdb9d7fc", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "G"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 96574b80 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/3"
+<<< {"id": "96574b80", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 6cb264d8 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/4"
+<<< {"id": "6cb264d8", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "White"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/5|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 5863f460 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/5"
+<<< {"error": "path segment not found: '5' (in Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/5)", "id": "5863f460", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/5", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/6|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 53787476 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/6"
+<<< {"error": "path segment not found: '6' (in Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/6)", "id": "53787476", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/6", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/7|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props aba0accc NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/7"
+<<< {"error": "path segment not found: '7' (in Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/7)", "id": "aba0accc", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/7", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/8|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 6b2e3f6e NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/8"
+<<< {"error": "path segment not found: '8' (in Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/8)", "id": "6b2e3f6e", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/8", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/Wheels
+    wire: Plugin "CopilotResponder" "state 99045fab Patch/FixtureTypes/4/Wheels"
+<<< {"children": [{"class": "Wheel", "i": 1, "name": "E"}], "id": "99045fab", "kind": "state", "node": {"childCount": 1, "class": "Wheels", "enumeration": "ok", "name": "Wheels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/Wheels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11
+    wire: Plugin "CopilotResponder" "state 3f939ca3 Patch/FixtureTypes/11"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "3f939ca3", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Robin MegaPointe"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters
+    wire: Plugin "CopilotResponder" "state eeb36c87 Patch/FixtureTypes/11/PhysicalDescriptions/Emitters"
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}], "id": "eeb36c87", "kind": "state", "node": {"childCount": 3, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/PhysicalDescriptions/CRIs
+    wire: Plugin "CopilotResponder" "state 15255e35 Patch/FixtureTypes/11/PhysicalDescriptions/CRIs"
+<<< {"children": [], "id": "15255e35", "kind": "state", "node": {"childCount": 0, "class": "CRIs", "enumeration": "ok", "name": "CRIs"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/CRIs", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/PhysicalDescriptions/FTFilters
+    wire: Plugin "CopilotResponder" "state af317923 Patch/FixtureTypes/11/PhysicalDescriptions/FTFilters"
+<<< {"children": [], "id": "af317923", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/PhysicalDescriptions/ColorSpaceCollect
+    wire: Plugin "CopilotResponder" "state f77dcdf2 Patch/FixtureTypes/11/PhysicalDescriptions/ColorSpaceCollect"
+<<< {"children": [], "id": "f77dcdf2", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/PhysicalDescriptions/GamutCollect
+    wire: Plugin "CopilotResponder" "state ad1c3f39 Patch/FixtureTypes/11/PhysicalDescriptions/GamutCollect"
+<<< {"children": [], "id": "ad1c3f39", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 887ebebc NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/1"
+<<< {"id": "887ebebc", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "R"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 77311b7b NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/2"
+<<< {"id": "77311b7b", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "G"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 9cdbf5a4 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/3"
+<<< {"id": "9cdbf5a4", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props f1d942ea NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/4"
+<<< {"error": "path segment not found: '4' (in Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/4)", "id": "f1d942ea", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/4", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/5|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props cd2e9524 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/5"
+<<< {"error": "path segment not found: '5' (in Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/5)", "id": "cd2e9524", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/5", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/6|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 9f838586 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/6"
+<<< {"error": "path segment not found: '6' (in Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/6)", "id": "9f838586", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/6", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/7|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 270904dc NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/7"
+<<< {"error": "path segment not found: '7' (in Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/7)", "id": "270904dc", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/7", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/8|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 5257e2cb NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/8"
+<<< {"error": "path segment not found: '8' (in Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/8)", "id": "5257e2cb", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters/8", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/Wheels
+    wire: Plugin "CopilotResponder" "state 976786a6 Patch/FixtureTypes/11/Wheels"
+<<< {"children": [{"class": "Wheel", "i": 1, "name": "C1"}, {"class": "Wheel", "i": 2, "name": "AnimationWheel"}, {"class": "Wheel", "i": 3, "name": "G1"}, {"class": "Wheel", "i": 4, "name": "G2"}, {"class": "Wheel", "i": 5, "name": "E"}, {"class": "Wheel", "i": 6, "name": "E2"}, {"class": "Wheel", "i": 7, "name": "E3"}], "id": "976786a6", "kind": "state", "node": {"childCount": 7, "class": "Wheels", "enumeration": "ok", "name": "Wheels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/Wheels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13
+    wire: Plugin "CopilotResponder" "state e904d1ce Patch/FixtureTypes/13"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "e904d1ce", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "CuePix Blinder WW2"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters
+    wire: Plugin "CopilotResponder" "state 8f1a8fc0 Patch/FixtureTypes/13/PhysicalDescriptions/Emitters"
+<<< {"children": [], "id": "8f1a8fc0", "kind": "state", "node": {"childCount": 0, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/PhysicalDescriptions/CRIs
+    wire: Plugin "CopilotResponder" "state 2e4c7c1b Patch/FixtureTypes/13/PhysicalDescriptions/CRIs"
+<<< {"children": [], "id": "2e4c7c1b", "kind": "state", "node": {"childCount": 0, "class": "CRIs", "enumeration": "ok", "name": "CRIs"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/CRIs", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/PhysicalDescriptions/FTFilters
+    wire: Plugin "CopilotResponder" "state 10624ac5 Patch/FixtureTypes/13/PhysicalDescriptions/FTFilters"
+<<< {"children": [], "id": "10624ac5", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/PhysicalDescriptions/ColorSpaceCollect
+    wire: Plugin "CopilotResponder" "state 4cf7cc8e Patch/FixtureTypes/13/PhysicalDescriptions/ColorSpaceCollect"
+<<< {"children": [], "id": "4cf7cc8e", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/PhysicalDescriptions/GamutCollect
+    wire: Plugin "CopilotResponder" "state 129bb67f Patch/FixtureTypes/13/PhysicalDescriptions/GamutCollect"
+<<< {"children": [], "id": "129bb67f", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 052bc0e3 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/1"
+<<< {"error": "path segment not found: '1' (in Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/1)", "id": "052bc0e3", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/1", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 24d698fa NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/2"
+<<< {"error": "path segment not found: '2' (in Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/2)", "id": "24d698fa", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/2", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props e3b2db79 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/3"
+<<< {"error": "path segment not found: '3' (in Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/3)", "id": "e3b2db79", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/3", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 4a714eb6 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/4"
+<<< {"error": "path segment not found: '4' (in Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/4)", "id": "4a714eb6", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/4", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/5|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props d3cca310 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/5"
+<<< {"error": "path segment not found: '5' (in Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/5)", "id": "d3cca310", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/5", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/6|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 411774d1 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/6"
+<<< {"error": "path segment not found: '6' (in Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/6)", "id": "411774d1", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/6", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/7|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props b3139068 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/7"
+<<< {"error": "path segment not found: '7' (in Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/7)", "id": "b3139068", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/7", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/8|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props e4b3edac NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/8"
+<<< {"error": "path segment not found: '8' (in Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/8)", "id": "e4b3edac", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/13/PhysicalDescriptions/Emitters/8", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/Wheels
+    wire: Plugin "CopilotResponder" "state fc628ff4 Patch/FixtureTypes/13/Wheels"
+<<< {"children": [], "id": "fc628ff4", "kind": "state", "node": {"childCount": 0, "class": "Wheels", "enumeration": "ok", "name": "Wheels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13/Wheels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14
+    wire: Plugin "CopilotResponder" "state 8c84f06b Patch/FixtureTypes/14"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "8c84f06b", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Atomic 3000 LED"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/14", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters
+    wire: Plugin "CopilotResponder" "state 26d40350 Patch/FixtureTypes/14/PhysicalDescriptions/Emitters"
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}], "id": "26d40350", "kind": "state", "node": {"childCount": 3, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/PhysicalDescriptions/CRIs
+    wire: Plugin "CopilotResponder" "state 5a479335 Patch/FixtureTypes/14/PhysicalDescriptions/CRIs"
+<<< {"children": [], "id": "5a479335", "kind": "state", "node": {"childCount": 0, "class": "CRIs", "enumeration": "ok", "name": "CRIs"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/CRIs", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/PhysicalDescriptions/FTFilters
+    wire: Plugin "CopilotResponder" "state d4f20332 Patch/FixtureTypes/14/PhysicalDescriptions/FTFilters"
+<<< {"children": [], "id": "d4f20332", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/PhysicalDescriptions/ColorSpaceCollect
+    wire: Plugin "CopilotResponder" "state 82a92cb0 Patch/FixtureTypes/14/PhysicalDescriptions/ColorSpaceCollect"
+<<< {"children": [], "id": "82a92cb0", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/PhysicalDescriptions/GamutCollect
+    wire: Plugin "CopilotResponder" "state 0dcb0ab2 Patch/FixtureTypes/14/PhysicalDescriptions/GamutCollect"
+<<< {"children": [], "id": "0dcb0ab2", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props e23f8874 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/1"
+<<< {"id": "e23f8874", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "R"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 4ec185e8 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/2"
+<<< {"id": "4ec185e8", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "G"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 4ccd0dbe NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/3"
+<<< {"id": "4ccd0dbe", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 79706f68 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/4"
+<<< {"error": "path segment not found: '4' (in Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/4)", "id": "79706f68", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/4", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/5|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 6ec19e3e NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/5"
+<<< {"error": "path segment not found: '5' (in Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/5)", "id": "6ec19e3e", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/5", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/6|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 38244b8b NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/6"
+<<< {"error": "path segment not found: '6' (in Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/6)", "id": "38244b8b", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/6", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/7|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 5b99d208 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/7"
+<<< {"error": "path segment not found: '7' (in Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/7)", "id": "5b99d208", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/7", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/8|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props a5239c1a NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/8"
+<<< {"error": "path segment not found: '8' (in Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/8)", "id": "a5239c1a", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/14/PhysicalDescriptions/Emitters/8", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/14/Wheels
+    wire: Plugin "CopilotResponder" "state 34b1cd81 Patch/FixtureTypes/14/Wheels"
+<<< {"children": [], "id": "34b1cd81", "kind": "state", "node": {"childCount": 0, "class": "Wheels", "enumeration": "ok", "name": "Wheels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/14/Wheels", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15
+    wire: Plugin "CopilotResponder" "state b727417d Patch/FixtureTypes/15"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "b727417d", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Unique 2 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/15", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters
+    wire: Plugin "CopilotResponder" "state b2e126a5 Patch/FixtureTypes/15/PhysicalDescriptions/Emitters"
+<<< {"children": [], "id": "b2e126a5", "kind": "state", "node": {"childCount": 0, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/PhysicalDescriptions/CRIs
+    wire: Plugin "CopilotResponder" "state 1e713f62 Patch/FixtureTypes/15/PhysicalDescriptions/CRIs"
+<<< {"children": [], "id": "1e713f62", "kind": "state", "node": {"childCount": 0, "class": "CRIs", "enumeration": "ok", "name": "CRIs"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/CRIs", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/PhysicalDescriptions/FTFilters
+    wire: Plugin "CopilotResponder" "state b38a011d Patch/FixtureTypes/15/PhysicalDescriptions/FTFilters"
+<<< {"children": [], "id": "b38a011d", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/PhysicalDescriptions/ColorSpaceCollect
+    wire: Plugin "CopilotResponder" "state 057c4a83 Patch/FixtureTypes/15/PhysicalDescriptions/ColorSpaceCollect"
+<<< {"children": [], "id": "057c4a83", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/PhysicalDescriptions/GamutCollect
+    wire: Plugin "CopilotResponder" "state 75aad693 Patch/FixtureTypes/15/PhysicalDescriptions/GamutCollect"
+<<< {"children": [], "id": "75aad693", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 0fc02a16 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/1"
+<<< {"error": "path segment not found: '1' (in Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/1)", "id": "0fc02a16", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/1", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 4308f79a NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/2"
+<<< {"error": "path segment not found: '2' (in Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/2)", "id": "4308f79a", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/2", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 25a247cb NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/3"
+<<< {"error": "path segment not found: '3' (in Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/3)", "id": "25a247cb", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/3", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 9e6d829e NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/4"
+<<< {"error": "path segment not found: '4' (in Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/4)", "id": "9e6d829e", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/4", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/5|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 93b80e8f NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/5"
+<<< {"error": "path segment not found: '5' (in Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/5)", "id": "93b80e8f", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/5", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/6|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props d39a7c3c NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/6"
+<<< {"error": "path segment not found: '6' (in Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/6)", "id": "d39a7c3c", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/6", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/7|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 1292bd97 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/7"
+<<< {"error": "path segment not found: '7' (in Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/7)", "id": "1292bd97", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/7", "reads": [], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/8|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 3b58e380 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/8"
+<<< {"error": "path segment not found: '8' (in Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/8)", "id": "3b58e380", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/15/PhysicalDescriptions/Emitters/8", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/15/Wheels
+    wire: Plugin "CopilotResponder" "state d9b1d7e7 Patch/FixtureTypes/15/Wheels"
+<<< {"children": [], "id": "d9b1d7e7", "kind": "state", "node": {"childCount": 0, "class": "Wheels", "enumeration": "ok", "name": "Wheels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/15/Wheels", "truncated": false, "v": 1}

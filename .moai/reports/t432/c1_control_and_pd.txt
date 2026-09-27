@@ -1,0 +1,16 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t432b
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t432b
+Installed 97 packages in 219ms
+
+>>> state 'Patch/FixtureTypes/9'
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "e24b3e9e", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Rush Par 2 RGBW Zoom"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/9/PhysicalDescriptions'
+<<< {"children": [{"class": "Emitters", "i": 1, "name": "Emitters"}, {"class": "CRIs", "i": 2, "name": "CRIs"}, {"class": "FTFilters", "i": 3, "name": "FTFilters"}, {"class": "PhysicalProperties", "i": 4, "name": "PhysicalProperties"}, {"class": "ColorSpaceCollect", "i": 5, "name": "ColorSpaceCollect"}, {"class": "GamutCollect", "i": 6, "name": "GamutCollect"}], "id": "34794a19", "kind": "state", "node": {"childCount": 6, "class": "PhysicalDescriptions", "enumeration": "ok", "name": "PhysicalDescriptions"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/4/PhysicalDescriptions'
+<<< {"children": [{"class": "Emitters", "i": 1, "name": "Emitters"}, {"class": "CRIs", "i": 2, "name": "CRIs"}, {"class": "FTFilters", "i": 3, "name": "FTFilters"}, {"class": "PhysicalProperties", "i": 4, "name": "PhysicalProperties"}, {"class": "ColorSpaceCollect", "i": 5, "name": "ColorSpaceCollect"}, {"class": "GamutCollect", "i": 6, "name": "GamutCollect"}], "id": "2f51e1aa", "kind": "state", "node": {"childCount": 6, "class": "PhysicalDescriptions", "enumeration": "ok", "name": "PhysicalDescriptions"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions", "truncated": false, "v": 1}
+
+=== steps=3 not_ok_or_timeout=0

@@ -1,0 +1,26 @@
+
+>>> state 'Patch/FixtureTypes/4/PhysicalDescriptions/Emitters'
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}, {"class": "Emitter", "i": 4, "name": "White"}], "id": "e9d59132", "kind": "state", "node": {"childCount": 4, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/4/PhysicalDescriptions/FTFilters'
+<<< {"children": [], "id": "4b4471fb", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/4/PhysicalDescriptions/ColorSpaceCollect'
+<<< {"children": [], "id": "5e17e2a9", "kind": "state", "node": {"childCount": 0, "class": "ColorSpaceCollect", "enumeration": "ok", "name": "ColorSpaceCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/ColorSpaceCollect", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/4/PhysicalDescriptions/GamutCollect'
+<<< {"children": [], "id": "d15e48c4", "kind": "state", "node": {"childCount": 0, "class": "GamutCollect", "enumeration": "ok", "name": "GamutCollect"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/GamutCollect", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/11/PhysicalDescriptions/Emitters'
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}], "id": "47b1929d", "kind": "state", "node": {"childCount": 3, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/11/PhysicalDescriptions/FTFilters'
+<<< {"children": [], "id": "a4a357bf", "kind": "state", "node": {"childCount": 0, "class": "FTFilters", "enumeration": "ok", "name": "FTFilters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/PhysicalDescriptions/FTFilters", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/10/PhysicalDescriptions/Emitters'
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}, {"class": "Emitter", "i": 4, "name": "Amber"}, {"class": "Emitter", "i": 5, "name": "Lime"}, {"class": "Emitter", "i": 6, "name": "Cyan"}, {"class": "Emitter", "i": 7, "name": "Indigo"}], "id": "a45086ff", "kind": "state", "node": {"childCount": 7, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+>>> state 'Patch/FixtureTypes/9/PhysicalDescriptions/Emitters'
+<<< {"children": [{"class": "Emitter", "i": 1, "name": "R"}, {"class": "Emitter", "i": 2, "name": "G"}, {"class": "Emitter", "i": 3, "name": "B"}, {"class": "Emitter", "i": 4, "name": "White"}], "id": "baf34246", "kind": "state", "node": {"childCount": 4, "class": "Emitters", "enumeration": "ok", "name": "Emitters"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/PhysicalDescriptions/Emitters", "truncated": false, "v": 1}
+
+=== steps=8 not_ok_or_timeout=0

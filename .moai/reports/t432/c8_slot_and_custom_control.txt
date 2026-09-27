@@ -1,0 +1,16 @@
+
+>>> introspect:Patch/FixtureTypes/11/Wheels/1/2@27
+    wire: Plugin "CopilotResponder" "introspect 6921957f Patch/FixtureTypes/11/Wheels/1/2 offset=27"
+<<< {"class": "Slot", "fields": [{"n": "BACKR", "t": "UInt8"}, {"n": "BACKG", "t": "UInt8"}, {"n": "BACKB", "t": "UInt8"}, {"n": "BACKALPHA", "t": "UInt8"}, {"n": "BACKRGBA", "t": "String"}, {"n": "MEDIAFILENAME", "t": "String"}, {"n": "IMAGEROTATION", "t": "UInt8"}, {"n": "IMAGEMIRROR", "t": "UInt8"}, {"n": "CREATEDBY", "t": "UInt8"}, {"n": "IPX", "t": "Int16"}, {"n": "IPY", "t": "Int16"}, {"n": "IPW", "t": "Int16"}, {"n": "IPH", "t": "Int16"}, {"n": "IMAGE", "t": "Handle"}, {"n": "ANIMATIONSYSTEMP1", "t": "Custom"}, {"n": "ANIMATIONSYSTEMP2", "t": "Custom"}, {"n": "ANIMATIONSYSTEMP3", "t": "Custom"}, {"n": "ANIMATIONSYSTEMRADIUS", "t": "Float"}, {"n": "FILTER", "t": "Handle"}], "id": "6921957f", "kind": "introspect", "offset": 27, "ok": true, "path": "Patch/FixtureTypes/11/Wheels/1/2", "source": "property_accessors", "total": 46, "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/Wheels/1/2|NAME,COLOR,GUID,TAGS,IMAGEMODE,IMAGER,IMAGEG,IMAGEB,IMAGERGBA
+    wire: Plugin "CopilotResponder" "props 82e1ba1c NAME,COLOR,GUID,TAGS,IMAGEMODE,IMAGER,IMAGEG,IMAGEB,IMAGERGBA Patch/FixtureTypes/11/Wheels/1/2"
+<<< {"id": "82e1ba1c", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/Wheels/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "dark red"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"e": "property not readable: GUID", "n": "GUID", "ok": false}, {"n": "TAGS", "ok": true, "t": "string", "v": ""}, {"n": "IMAGEMODE", "ok": true, "t": "string", "v": "Bar"}, {"n": "IMAGER", "ok": true, "t": "number", "v": "106"}, {"n": "IMAGEG", "ok": true, "t": "number", "v": "0"}, {"n": "IMAGEB", "ok": true, "t": "number", "v": "0"}, {"n": "IMAGERGBA", "ok": true, "t": "string", "v": "6A0000FF"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/Wheels/1/14|NAME,COLOR,IMAGER,IMAGEG,IMAGEB,IMAGERGBA
+    wire: Plugin "CopilotResponder" "props 519ea64d NAME,COLOR,IMAGER,IMAGEG,IMAGEB,IMAGERGBA Patch/FixtureTypes/11/Wheels/1/14"
+<<< {"id": "519ea64d", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/Wheels/1/14", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "congo blue"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "IMAGER", "ok": true, "t": "number", "v": "48"}, {"n": "IMAGEG", "ok": true, "t": "number", "v": "0"}, {"n": "IMAGEB", "ok": true, "t": "number", "v": "80"}, {"n": "IMAGERGBA", "ok": true, "t": "string", "v": "300050FF"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1|GUID,DEPENDENCYEXPORT,NOTE
+    wire: Plugin "CopilotResponder" "props 82c429c3 GUID,DEPENDENCYEXPORT,NOTE Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1"
+<<< {"id": "82c429c3", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "reads": [{"e": "property not readable: GUID", "n": "GUID", "ok": false}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
