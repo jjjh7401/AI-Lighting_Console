@@ -1,0 +1,81 @@
+## type 8 Mac Aura XB
+   Emitters: 4 ['R', 'G', 'B', 'White']
+   CRIs: 0 []
+   FTFilters: 0 []
+   ColorSpaceCollect: 0 []
+   GamutCollect: 0 []
+   Wheels: 0 []
+   emitter R: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter G: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter B: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter White: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+## type 9 Rush Par 2 RGBW Zoom
+   Emitters: 4 ['R', 'G', 'B', 'White']
+   CRIs: 0 []
+   FTFilters: 0 []
+   ColorSpaceCollect: 0 []
+   GamutCollect: 0 []
+   Wheels: 0 []
+   emitter R: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter G: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter B: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter White: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+## type 10 Source 4 LED Series 3 Lustr X8
+   Emitters: 7 ['R', 'G', 'B', 'Amber', 'Lime', 'Cyan', 'Indigo']
+   CRIs: 0 []
+   FTFilters: 0 []
+   ColorSpaceCollect: 0 []
+   GamutCollect: 0 []
+   Wheels: 0 []
+   emitter R: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter G: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter B: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter Amber: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter Lime: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter Cyan: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter Indigo: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+## type 4 Robin Spiider
+   Emitters: 4 ['R', 'G', 'B', 'White']
+   CRIs: 0 []
+   FTFilters: 0 []
+   ColorSpaceCollect: 0 []
+   GamutCollect: 0 []
+   Wheels: 1 ['E']
+   emitter R: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter G: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter B: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter White: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+## type 11 Robin MegaPointe
+   Emitters: 3 ['R', 'G', 'B']
+   CRIs: 0 []
+   FTFilters: 0 []
+   ColorSpaceCollect: 0 []
+   GamutCollect: 0 []
+   Wheels: 7 ['C1', 'AnimationWheel', 'G1', 'G2', 'E', 'E2', 'E3']
+   emitter R: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter G: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter B: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+## type 13 CuePix Blinder WW2
+   Emitters: 0 []
+   CRIs: 0 []
+   FTFilters: 0 []
+   ColorSpaceCollect: 0 []
+   GamutCollect: 0 []
+   Wheels: 0 []
+## type 14 Atomic 3000 LED
+   Emitters: 3 ['R', 'G', 'B']
+   CRIs: 0 []
+   FTFilters: 0 []
+   ColorSpaceCollect: 0 []
+   GamutCollect: 0 []
+   Wheels: 0 []
+   emitter R: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter G: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+   emitter B: COLOR=✗property not readable: COLOR INTENSITY=1.0 DWL=0.0 DIODEPART=''
+## type 15 Unique 2 1
+   Emitters: 0 []
+   CRIs: 0 []
+   FTFilters: 0 []
+   ColorSpaceCollect: 0 []
+   GamutCollect: 0 []
+   Wheels: 0 []

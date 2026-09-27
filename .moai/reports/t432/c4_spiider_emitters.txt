@@ -1,0 +1,16 @@
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 46d0138c NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1"
+<<< {"id": "46d0138c", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "R"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/2|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 52c85fa3 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/2"
+<<< {"id": "52c85fa3", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "G"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/3|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 948c5698 NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/3"
+<<< {"id": "948c5698", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/4|NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART
+    wire: Plugin "CopilotResponder" "props 12c3d28f NAME,COLOR,INTENSITY,DOMINANTWAVELENGTH,DIODEPART Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/4"
+<<< {"id": "12c3d28f", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "White"}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}, {"n": "INTENSITY", "ok": true, "t": "number", "v": "1.0"}, {"n": "DOMINANTWAVELENGTH", "ok": true, "t": "number", "v": "0.0"}, {"n": "DIODEPART", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}

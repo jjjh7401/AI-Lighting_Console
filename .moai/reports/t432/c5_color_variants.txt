@@ -1,0 +1,12 @@
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1|Color,color,COLOR
+    wire: Plugin "CopilotResponder" "props 64a26728 Color,color,COLOR Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1"
+<<< {"id": "64a26728", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "reads": [{"e": "property not readable: Color", "n": "Color", "ok": false}, {"e": "property not readable: color", "n": "color", "ok": false}, {"e": "property not readable: COLOR", "n": "COLOR", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1|COLORX,COLORY,X,Y,CIEX,CIEY,COLORCIE,XYY
+    wire: Plugin "CopilotResponder" "props 0bdc3345 COLORX,COLORY,X,Y,CIEX,CIEY,COLORCIE,XYY Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1"
+<<< {"id": "0bdc3345", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "reads": [{"e": "property not readable: COLORX", "n": "COLORX", "ok": false}, {"e": "property not readable: COLORY", "n": "COLORY", "ok": false}, {"e": "property not readable: X", "n": "X", "ok": false}, {"e": "property not readable: Y", "n": "Y", "ok": false}, {"e": "property not readable: CIEX", "n": "CIEX", "ok": false}, {"e": "property not readable: CIEY", "n": "CIEY", "ok": false}, {"e": "property not readable: COLORCIE", "n": "COLORCIE", "ok": false}, {"e": "property not readable: XYY", "n": "XYY", "ok": false}], "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1@19
+    wire: Plugin "CopilotResponder" "introspect f7782bc3 Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1 offset=19"
+<<< {"class": "Emitter", "fields": [], "id": "f7782bc3", "kind": "introspect", "offset": 19, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "source": "property_accessors", "total": 19, "truncated": false, "v": 1}

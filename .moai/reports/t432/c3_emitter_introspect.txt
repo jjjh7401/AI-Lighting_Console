@@ -1,0 +1,12 @@
+
+>>> introspect:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1
+    wire: Plugin "CopilotResponder" "introspect 179be266 Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1"
+<<< {"class": "Emitter", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "COLOR", "t": "Custom"}, {"n": "INTENSITY", "t": "Float"}, {"n": "DOMINANTWAVELENGTH", "t": "Float"}, {"n": "DIODEPART", "t": "String"}], "id": "179be266", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "source": "property_accessors", "total": 19, "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1@26
+    wire: Plugin "CopilotResponder" "introspect 342eceac Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1 offset=26"
+<<< {"class": "Emitter", "fields": [], "id": "342eceac", "kind": "introspect", "offset": 26, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "source": "property_accessors", "total": 19, "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1
+    wire: Plugin "CopilotResponder" "state b88d6008 Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1"
+<<< {"children": [], "id": "b88d6008", "kind": "state", "node": {"childCount": 0, "class": "Emitter", "enumeration": "ok", "name": "R"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/PhysicalDescriptions/Emitters/1", "truncated": false, "v": 1}

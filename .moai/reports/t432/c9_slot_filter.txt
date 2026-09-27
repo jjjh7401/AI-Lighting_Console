@@ -1,0 +1,8 @@
+
+>>> props:Patch/FixtureTypes/11/Wheels/1/2|FILTER,APPEARANCE,BACKRGBA
+    wire: Plugin "CopilotResponder" "props 65fb897e FILTER,APPEARANCE,BACKRGBA Patch/FixtureTypes/11/Wheels/1/2"
+<<< {"id": "65fb897e", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/Wheels/1/2", "reads": [{"e": "property not readable: FILTER", "n": "FILTER", "ok": false}, {"e": "property not readable: APPEARANCE", "n": "APPEARANCE", "ok": false}, {"n": "BACKRGBA", "ok": true, "t": "string", "v": "None"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/Wheels/1/10|NAME,FILTER,IMAGERGBA
+    wire: Plugin "CopilotResponder" "props 39fb9dd9 NAME,FILTER,IMAGERGBA Patch/FixtureTypes/11/Wheels/1/10"
+<<< {"id": "39fb9dd9", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/Wheels/1/10", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "CTO 2700K"}, {"e": "property not readable: FILTER", "n": "FILTER", "ok": false}, {"n": "IMAGERGBA", "ok": true, "t": "string", "v": "DE4400FF"}], "truncated": false, "v": 1}
