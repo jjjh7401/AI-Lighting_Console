@@ -504,6 +504,14 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     162,
     171,
     184,
+    # 카드 t476 (값 줄 중복 제거 면제, 2026-09-27) 갱신: 80 -> **82** hunks. 새 시작점
+    # 둘 — 233(튜플 앞 근거 주석·상수 블록 삽입)과 237(튜플 안 한 줄 삽입). 사라진
+    # 시작점 **0**. 237 은 보호 구간(234..238)과 **겹친다** — 이 카드의 목적이 바로 그
+    # 튜플(면제 집합)을 넓히는 것이고 감독이 승인했다. 그래서 겹침 단언을 없애지 않고
+    # 그 한 줄만 글자까지 고정한 허용분(`_T476_GRANTED_TUPLE_LINE`)으로 좁혀 둔다.
+    # 커밋 **뒤에** 잰 값이다.
+    233,
+    237,
     302,
     304,
     306,
@@ -955,12 +963,43 @@ def test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state():
 
     assert hunks
     assert tuple(start for start, _count in hunks) == _TOOLS_EXPECTED_HUNK_OLD_STARTS
-    assert [
+    crossings = [
         (start, count)
         for start, count in hunks
         for protected_start, protected_end in _TOOLS_PROTECTED_OLD_RANGES
         if _overlaps(start, count, protected_start, protected_end)
-    ] == []
+    ]
+    # 카드 t476 허용분 하나만 겹칠 수 있다 — 자리(237 뒤 순수 삽입)와 글자가 둘 다 맞아야 한다.
+    assert crossings == [(_T476_GRANTED_OLD_START, 0)]
+    assert _added_lines_of_hunk(_T476_GRANTED_OLD_START) == [_T476_GRANTED_TUPLE_LINE]
+
+
+#: 카드 t476 — 보호 구간(면제 튜플) 안에 허락된 유일한 삽입. 기존 세 항목은 바이트 그대로다.
+_T476_GRANTED_OLD_START = 237
+_T476_GRANTED_TUPLE_LINE = (
+    "    re.compile(_SELECTED_VALUE_LINE, re.IGNORECASE),  # selected value line (t476)"
+)
+
+
+def _added_lines_of_hunk(old_start: int) -> list[str]:
+    """``--unified=0`` diff 에서 옛 시작점이 ``old_start`` 인 헝크의 ``+`` 줄들."""
+    result = subprocess.run(  # noqa: S603
+        ["git", "diff", "--unified=0", f"{_RUN_PHASE_BASE}..HEAD", "--", _TOOLS_PATH],
+        cwd=_REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    added: list[str] = []
+    inside = False
+    for line in result.stdout.splitlines():
+        match = _HUNK_RE.match(line)
+        if match is not None:
+            inside = int(match.group("old_start")) == old_start
+            continue
+        if inside and line.startswith("+"):
+            added.append(line[1:])
+    return added
 
 
 def test_value_line_collision_skips_later_section_without_pulling_next_cue():
