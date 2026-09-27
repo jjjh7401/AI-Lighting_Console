@@ -76,7 +76,8 @@ export interface WarningContext {
  * 하단에 모아 쓰지 않는다). 필드별 대응:
  *  - intensity/palette_primary → 그 변경이 다루는 그룹·색이 리저브 대상인지
  *  - intensity → 후렴 역전(제안값 기준) + 헤드룸(그 큐의 값을 그대로 읽음)
- *  - movement → MIB(포지션 변화가 있을 때만 의미 있는 필드이므로 여기 붙인다)
+ *  - movement/position → MIB(포지션 변화가 있을 때만 의미 있는 필드이므로 여기 붙인다.
+ *    t470 — 포지션 행이 `movement` 대신 `position` 문장을 내므로 둘 다 받는다)
  */
 export function deriveWarningsForChange(context: WarningContext, change: GeneratorChange): string[] {
   const warnings: string[] = [];
@@ -102,7 +103,7 @@ export function deriveWarningsForChange(context: WarningContext, change: Generat
     if (colorReserveHit) warnings.push(colorReserveHit);
   }
 
-  if (change.field === "movement") {
+  if (change.field === "movement" || change.field === "position") {
     const mibHit = mibLiveWarning(context.conceptRow);
     if (mibHit) warnings.push(mibHit);
   }
