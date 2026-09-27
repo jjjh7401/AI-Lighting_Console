@@ -140,9 +140,9 @@
 - 트래킹 4모드 해석(REQ-053~057).
 - 타이밍 필드 배정(REQ-058~061) — 축별 딜레이 실제 명령 방출은 M8 이후
   별도 SPEC(§4 B군).
-- MIB 판정기(REQ-062~067) — 어두운 창 판정은 §F 잠정값(이동 1.5초 +
-  정착 0.5초)으로 구현하고, M8 프로브 실측 후 상수만 교체 가능하도록
-  단일 지점에 둔다.
+- MIB 판정기(REQ-062~067) — 어두운 창 판정은 이동 4.1초 + 정착 0.5초
+  (M8 콘솔 실측 t464, §F)로 구현했다. 상수는 `server/concept/
+  resolver.py` 단일 지점에 둔다.
 - 안전 큐 Q0.5/끝 Release(REQ-068~069), 근거 등급(REQ-071~072).
 - 파일: `server/concept/tracking.py`(신규), `server/concept/timing.py`
   (신규), `server/concept/mib.py`(신규, `server/director/validate/mib.py`
@@ -324,7 +324,8 @@ M7은 별도 마일스톤으로 쪼개지 않지만, 내부 착수 순서는 다
   계획에 있는가.
 - [ ] §F 잠정값 3건이 Implementation Kickoff Approval 시점에 감독
   재확인을 거쳤는가(잠정값 그대로 착수 승인 받았는지, 또는 값이
-  바뀌었는지).
+  바뀌었는지). (MIB 이동/정착 초 항목은 카드 t468로 실측치 교체
+  완료 — §F 참조.)
 - [ ] 8곡 게이트 회귀 기준선(§C M6)이 오늘 실측치보다 나빠지지 않는가.
 
 ## §F. 잠정값 — M8 콘솔 프로브로 확정
@@ -334,12 +335,18 @@ M7은 별도 마일스톤으로 쪼개지 않지만, 내부 착수 순서는 다
 세 값을 재확인하고, 실제 콘솔 값은 M8 프로브(acceptance.md
 AC-LDDESIGN-022~024)로 실측치로 교체한다.
 
-- **MIB 이동/정착 초 = 이동 1.5초 + 정착 0.5초**(프로토타입 가정값,
-  REQ-LDDESIGN-062가 그대로 채택). 근거: `tracking-timing-mib-
-  20260921.md` 한계 절 — "이동 1.5s + 정착 0.5s는 가정. 기종별 실측
-  없음". M5는 이 값을 상수로 구현하되 단일 지점에 두어 M8 실측 후
-  교체가 한 곳만 바뀌도록 한다. 잠정값임을 큐 설명(REQ-023)과 근거
-  등급(`evidence: designed_rule`)에 명시한다.
+- **MIB 이동/정착 초 = 이동 4.1초 + 정착 0.5초**(M8 콘솔 실측 t464로
+  교체, REQ-LDDESIGN-062가 그대로 채택). 근거: `.moai/reports/t464/
+  verdict.md` §3b — grandMA3 onPC, Spiider 무버, pan 60°, 콘솔
+  자체 MIB(SEQUMIBMODE Early)로 측정. 소등 2.07초는 이동 미완료,
+  소등 4.05초는 점등 시점에 이미 도착 — 4.05초 이상인 0.1초 단위
+  값 4.1초를 채택한다. 이 측정은 콘솔 자체 MIB를 관측한 것이며 이
+  SPEC이 삽입하는 Mark 큐 자체를 실측한 것은 아니다(무버 1종·onPC
+  세션 1회 한정) — 근거 등급은 `evidence: designed_rule`을
+  유지한다(`server/concept/evidence.py` `EVIDENCE_FOR_MIB_TIMING`
+  불변). 이 파이프라인은 콘솔 MIB에 의존하지 않고 명시적
+  Mark/사전 이동 큐를 직접 삽입하므로, 콘솔 기본값(SEQUMIBMODE
+  None)에서도 별도의 SEQUMIBMODE 방출이 필요하지 않다.
 - **콘솔 문법 3종(Block/Release, 축별 딜레이/순차, Mark)은 M8 프로브
   결과로 확정한다.** 이 저장소에서 실기 관측 0건이다(`server/
   director/emit.py:60` `AXIS_TIMING_OBSERVED` 주석, `tracking-timing-

@@ -1,0 +1,15 @@
+    def test_mark_leaves_at_least_the_measured_move_time(self, window):
+        ts, verdict = self._reveal(window)
+        assert verdict.status == "mark"
+>       assert ts - verdict.mark_insert_at >= self.MEASURED_SUFFICIENT
+E       AssertionError: assert (100.0 - 96.0) >= 4.05
+E        +  where 96.0 = MibVerdict(status='mark', window_seconds=40.0, mark_insert_at=96.0).mark_insert_at
+E        +  and   4.05 = <server.tests.test_concept_resolver.TestMibTimingMeasured object at 0x107f0ded0>.MEASURED_SUFFICIENT
+
+server/tests/test_concept_resolver.py:492: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_concept_resolver.py::TestMibTimingMeasured::test_measured_insufficient_window_is_live
+FAILED server/tests/test_concept_resolver.py::TestMibTimingMeasured::test_mark_leaves_at_least_the_measured_move_time[2.0]
+FAILED server/tests/test_concept_resolver.py::TestMibTimingMeasured::test_mark_leaves_at_least_the_measured_move_time[6.0]
+FAILED server/tests/test_concept_resolver.py::TestMibTimingMeasured::test_mark_leaves_at_least_the_measured_move_time[40.0]
+4 failed, 1 passed, 40 deselected in 0.09s

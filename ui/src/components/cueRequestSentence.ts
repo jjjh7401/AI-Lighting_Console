@@ -65,13 +65,51 @@ export interface TransChange {
   before: string;
 }
 
+/** t466/t470 — 트래킹. 큐 전체(REQ-089). `cue_sheet_edit.py`
+ * `TRACKING_VALUES` 4종뿐이다. */
+export interface TrackingChange {
+  field: "tracking";
+  value: "Track" | "Block" | "Cue Only" | "Release";
+  before: string;
+}
+
+/** t466/t470 — MIB. 큐 전체(REQ-089). `cue_sheet_edit.py` `MIB_MODES` 4종뿐이다
+ * — 조립기가 계산한 기존 `mib`(참/거짓)와는 다른 칸이다. */
+export interface MibChange {
+  field: "mib_mode";
+  value: "none" | "dark" | "mark" | "live";
+  before: string;
+}
+
+/** t466/t470 — 페이저. 큐 전체(REQ-089). 값은 프리셋 이름(딤머 풀 1 또는
+ * 컬러 풀 4에서 고른다 — 어느 풀이든 값은 이름 문자열 하나). */
+export interface PhaserChange {
+  field: "phaser";
+  value: string;
+  before: string;
+}
+
+/** t466/t470 — 포지션. 큐 전체(REQ-089). 값은 프리셋 이름 + 번호(풀 2만,
+ * "2.<point>" 형태) — t460 이 임시로 쓰던 `movement` 문장을 이 필드가
+ * 대체한다(포지션 행 전용). */
+export interface PositionChange {
+  field: "position";
+  value: string;
+  presetNo: string;
+  before: string;
+}
+
 export type GeneratorChange =
   | IntensityChange
   | ColorChange
   | MovementChange
   | EffectChange
   | FadeChange
-  | TransChange;
+  | TransChange
+  | TrackingChange
+  | MibChange
+  | PhaserChange
+  | PositionChange;
 
 /** 변경 스택 한 항목 — 화면 표시·전송 순서 유지를 위한 안정적 id. */
 export interface GeneratorChangeItem {
@@ -82,6 +120,34 @@ export interface GeneratorChangeItem {
 function groupPrefix(groups: string[] | null | undefined): string {
   return groups && groups.length > 0 ? `${groups.join("·")} ` : "";
 }
+
+// t470 — 트래킹·MIB는 닫힌 4택이라(server TRACKING_VALUES·MIB_MODES) 값마다
+// 받침 유무가 고정돼 있다. 파서 정규식(`_SET_TAIL`)은 "으로"·"로" 둘 다
+// 받으므로(어느 쪽을 써도 판정은 갈리지 않는다) 문법적으로 자연스러운 쪽을
+// 표에 직접 박는다 — 일반 한글 받침 알고리즘은 영문 프리셋 이름(포지션·
+// 페이저)까지 일반화할 수 없어 짓지 않는다(기존 무브먼트/이펙트 필드처럼
+// "로" 고정이 그 두 칸의 방식이다).
+const TRACKING_PARTICLE: Record<TrackingChange["value"], "으로" | "로"> = {
+  Track: "으로", // 트랙 — 받침 ㄱ
+  Block: "으로", // 블록 — 받침 ㄱ
+  "Cue Only": "로", // 큐온리 — 받침 없음
+  Release: "로", // 릴리즈 — 받침 없음
+};
+
+// MIB 표시 라벨 — 서버 `_mib_label`과 같은 규칙("none"만 "없음"으로 보인다).
+const MIB_LABEL: Record<MibChange["value"], string> = {
+  none: "없음",
+  dark: "dark",
+  mark: "mark",
+  live: "live",
+};
+
+const MIB_PARTICLE: Record<MibChange["value"], "으로" | "로"> = {
+  none: "으로", // 없음 — 받침 ㅁ
+  dark: "로", // 다크 — 받침 없음
+  mark: "로", // 마크 — 받침 없음
+  live: "로", // 라이브 — 받침 없음
+};
 
 /** 선택 하나 → 파서가 읽는 한 문장. 큐 번호는 `_CUE_NUMBER`/`_CUE_ANCHOR`가
  * 요구하는 지시어("큐 N")를 그대로 건다 — cue_selected 지름길(t290)에
@@ -101,6 +167,14 @@ export function cueRequestSentence(cueNumber: number, change: GeneratorChange): 
       return `큐 ${cueNumber} 페이드 ${change.value}초로 바꿔줘`;
     case "trans":
       return `큐 ${cueNumber} 전환을 ${change.value}로 바꿔줘`;
+    case "tracking":
+      return `큐 ${cueNumber} 트래킹 ${change.value}${TRACKING_PARTICLE[change.value]} 바꿔줘`;
+    case "mib_mode":
+      return `큐 ${cueNumber} MIB ${MIB_LABEL[change.value]}${MIB_PARTICLE[change.value]} 설정`;
+    case "phaser":
+      return `큐 ${cueNumber} 페이저 ${change.value}로 바꿔줘`;
+    case "position":
+      return `큐 ${cueNumber} 포지션 ${change.presetNo} ${change.value}로 바꿔줘`;
   }
 }
 
@@ -119,6 +193,14 @@ export function cueRequestDiffLabel(change: GeneratorChange): string {
       return `~ 페이드 ${change.before} → ${change.value}초`;
     case "trans":
       return `~ 전환 ${change.before} → ${change.value}`;
+    case "tracking":
+      return `~ 트래킹 ${change.before} → ${change.value}`;
+    case "mib_mode":
+      return `~ MIB ${change.before} → ${MIB_LABEL[change.value]}`;
+    case "phaser":
+      return `~ 페이저 ${change.before} → ${change.value}`;
+    case "position":
+      return `~ 포지션 ${change.before} → ${change.presetNo} ${change.value}`;
   }
 }
 

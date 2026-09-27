@@ -1,0 +1,56 @@
+기준 상수(코드): MOVE=4.1 SETTLE=0.5 · 곡 8
+
+== 문턱 2.0초 (MOVE 1.5 + SETTLE 0.5)
+  Club Diver.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  Cut and Run.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  Ice cream.mp3: PASS — 어둠 2 · Mark 0 · 켜진 채 0
+  Morning.mp3: PASS — 어둠 2 · Mark 2 · 켜진 채 0
+  Rain.mp3: PASS — 어둠 2 · Mark 2 · 켜진 채 0
+  Too Cool.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  scott-buckley-neon.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  걸그룹DinoDino_C_max최고품질.wav: PASS — 어둠 1 · Mark 0 · 켜진 채 0
+  G12 PASS 8/8
+
+== 문턱 2.1초 (MOVE 1.6 + SETTLE 0.5)
+  Club Diver.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  Cut and Run.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  Ice cream.mp3: PASS — 어둠 2 · Mark 0 · 켜진 채 0
+  Morning.mp3: PASS — 어둠 2 · Mark 2 · 켜진 채 0
+  Rain.mp3: PASS — 어둠 2 · Mark 2 · 켜진 채 0
+  Too Cool.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  scott-buckley-neon.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  걸그룹DinoDino_C_max최고품질.wav: PASS — 어둠 1 · Mark 0 · 켜진 채 0
+  G12 PASS 8/8
+
+== 문턱 4.1초 (MOVE 3.6 + SETTLE 0.5)
+  Club Diver.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  Cut and Run.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  Ice cream.mp3: PASS — 어둠 2 · Mark 0 · 켜진 채 0
+  Morning.mp3: PASS — 어둠 2 · Mark 2 · 켜진 채 0
+  Rain.mp3: PASS — 어둠 2 · Mark 2 · 켜진 채 0
+  Too Cool.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  scott-buckley-neon.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  걸그룹DinoDino_C_max최고품질.wav: PASS — 어둠 1 · Mark 0 · 켜진 채 0
+  G12 PASS 8/8
+
+== 문턱 100.0초 (MOVE 99.5 + SETTLE 0.5)
+  Club Diver.mp3: FAIL — 어둠 2 · Mark 0 · 켜진 채 1
+  Cut and Run.mp3: FAIL — 어둠 2 · Mark 0 · 켜진 채 1
+  Ice cream.mp3: PASS — 어둠 2 · Mark 0 · 켜진 채 0
+  Morning.mp3: FAIL — 어둠 2 · Mark 0 · 켜진 채 2
+  Rain.mp3: FAIL — 어둠 2 · Mark 1 · 켜진 채 1
+  Too Cool.mp3: FAIL — 어둠 2 · Mark 0 · 켜진 채 1
+  scott-buckley-neon.mp3: PASS — 어둠 2 · Mark 1 · 켜진 채 0
+  걸그룹DinoDino_C_max최고품질.wav: PASS — 어둠 1 · Mark 0 · 켜진 채 0
+  G12 PASS 3/8
+
+== 현행 문턱에서 mark/live 전환의 어둠 창(window_seconds)
+  Club Diver.mp3: [40.0]
+  Cut and Run.mp3: [35.0]
+  Ice cream.mp3: []
+  Morning.mp3: [49.0, 17.0]
+  Rain.mp3: [106.0, 13.0]
+  Too Cool.mp3: [22.0]
+  scott-buckley-neon.mp3: [136.0]
+  걸그룹DinoDino_C_max최고품질.wav: []
+  최소 13.0 · 개수 8

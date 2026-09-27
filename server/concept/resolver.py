@@ -34,9 +34,14 @@ __all__ = [
     "section_base_name",
 ]
 
-# plan.md §F 잠정값 — 이동 1.5초 + 정착 0.5초. M8 콘솔 프로브 실측치로
-# 교체될 때까지의 자리표시자다(REQ-062, spec.md §4 비목표 B군).
-MOVE_SECONDS: float = 1.5
+# plan.md §F — MOVE_SECONDS 는 Mark 큐가 켜지는 큐보다 먼저 나가야 하는
+# 최소 이동 시간, SETTLE_SECONDS 는 무버가 꺼진 뒤 Mark 큐를 쏘기까지의
+# 여유다(REQ-062/063). 잠정값 1.5초는 M8 콘솔 실측(카드 t464, Spiider 팬 60°,
+# onPC)에서 모자랐다 — 어둠 2.07초로는 사전이동이 덜 끝났고 4.05초면 켜질 때
+# 이미 도착해 있었다. 그래서 실측 충분값 4.05초 이상인 0.1초 격자값 4.1초로
+# 올린다(카드 t468). 이 실측은 콘솔 자체 MIB(SEQUMIBMODE Early) 기준이며,
+# 우리가 넣는 Mark 큐(페이드 1초 + 기구 자체 속도)로 잰 값은 아니다.
+MOVE_SECONDS: float = 4.1
 SETTLE_SECONDS: float = 0.5
 
 
@@ -223,7 +228,12 @@ def mib_verdict(
     else:
         status = "live"
 
-    mark_insert_at = round(ts - min(window - 0.5, 4.0), 1) if status == "mark" else None
+    # Mark 큐는 어둠이 열리고 SETTLE_SECONDS 뒤에 나가되, 켜지는 큐보다
+    # MOVE_SECONDS 넘게 앞서지는 않는다(카드 t468 — 옛 상한 4.0 은 실측 이동
+    # 시간 4.05초보다 짧아 긴 창에서도 이동 시간을 모자라게 줬다).
+    mark_insert_at = (
+        round(ts - min(window - SETTLE_SECONDS, MOVE_SECONDS), 1) if status == "mark" else None
+    )
     return MibVerdict(status=status, window_seconds=window, mark_insert_at=mark_insert_at)
 
 

@@ -37,8 +37,9 @@ NO_PUBLIC_EVIDENCE_MARKER = "[공개 근거 없음]"
 EVIDENCE_FOR_SAFETY = "verified"
 EVIDENCE_FOR_FADE = "verified"
 
-# §F 잠정값(MOVE_SECONDS/SETTLE_SECONDS)은 M8 콘솔 프로브 전까지 이
-# SPEC이 구성한 규칙이다 → designed_rule.
+# §F 값(MOVE_SECONDS/SETTLE_SECONDS)은 M8 콘솔 실측(카드 t464)으로 4.1초로
+# 올렸지만(카드 t468), 그 실측은 콘솔 자체 MIB 기준이고 우리가 넣는 Mark 큐로
+# 잰 값이 아니다. 기구 1종·onPC 한 번의 구간 측정이기도 하다 → designed_rule 유지.
 EVIDENCE_FOR_MIB_TIMING = "designed_rule"
 
 

@@ -39,6 +39,8 @@ import {
   mixedIntensityLabel,
   type GeneratorChange,
   type GeneratorChangeItem,
+  type MibChange,
+  type TrackingChange,
 } from "./cueRequestSentence";
 import { deriveWarningsForChange } from "./cueRequestWarnings";
 
@@ -61,7 +63,23 @@ export interface StackEntry {
   rejectionReason?: string;
 }
 
-export type PopupField = "movement" | "effect" | "palette_primary" | "dimmer";
+// t470 — "position"이 포지션 행 전용 새 필드다(t460 이 임시로 쓰던
+// "movement"는 그대로 둔다 — 다른 곳에서 참조하지 않지만 타입/시험 호환을
+// 위해 지우지 않는다). "phaser"는 딤머 풀 1·컬러 풀 4 두 버튼이 공유한다.
+export type PopupField = "movement" | "effect" | "palette_primary" | "dimmer" | "position" | "phaser";
+
+/** t470 — 트래킹 4택(`cue_sheet_edit.py` TRACKING_VALUES 그대로). */
+const TRACKING_VALUES = ["Track", "Block", "Cue Only", "Release"] as const;
+
+/** t470 — MIB 4택. 버튼 라벨은 서버 `_mib_label`과 같은 규칙("none"만
+ * "없음"으로 보인다) — 값 자체는 `cue_sheet_edit.py` MIB_MODES 그대로다. */
+const MIB_VALUES = ["none", "dark", "mark", "live"] as const;
+const MIB_BUTTON_LABEL: Record<MibChange["value"], string> = {
+  none: "없음",
+  dark: "dark",
+  mark: "mark",
+  live: "live",
+};
 
 let stackIdSeq = 0;
 function nextStackId(): string {
@@ -154,11 +172,19 @@ export interface PlanCueRequestGeneratorViewModel {
   onApplyFade: () => void;
   transValue: "SNAP" | "XFADE" | "FADE";
   onApplyTrans: (value: "SNAP" | "XFADE" | "FADE") => void;
+  /** t470 — 트래킹 4택. */
+  trackingValue: TrackingChange["value"];
+  onApplyTracking: (value: TrackingChange["value"]) => void;
+  /** t470 — MIB 4택. */
+  mibValue: MibChange["value"];
+  onApplyMib: (value: MibChange["value"]) => void;
   positionLabel: string;
   colorLabel: string;
   colorButtonDisabled: boolean;
   dimLabel: string;
   effectLabel: string;
+  /** t470 — 페이저 프리셋 이름(딤머 풀 1 또는 컬러 풀 4에서 고른 것). */
+  phaserLabel: string;
   onOpenPopup: (field: PopupField, poolNo: number) => void;
   stack: StackEntry[];
   onRemoveEntry: (id: string) => void;
@@ -190,12 +216,20 @@ export function usePlanCueRequestGenerator({
   const groups = (section.intensity ?? []).map((entry) => entry.group);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [intensityInput, setIntensityInput] = useState("");
-  const [movementName, setMovementName] = useState<string | null>(null);
   const [effectName, setEffectName] = useState<string | null>(null);
   const [colorName, setColorName] = useState<string | null>(null);
   const [dimName, setDimName] = useState<string | null>(null);
+  // t470 — 포지션 행은 이제 "position" 문장을 만든다(무브먼트가 아니다).
+  // 번호("2.<no>")는 선택 시점에 합성해 upsertChange 로 바로 넘긴다 — 화면
+  // 표시(positionLabel)는 이름만 보이므로 따로 상태에 들고 있지 않는다.
+  const [positionName, setPositionName] = useState<string | null>(null);
+  const [phaserName, setPhaserName] = useState<string | null>(null);
   const [fadeInput, setFadeInput] = useState("");
   const [transValue, setTransValue] = useState<"SNAP" | "XFADE" | "FADE">("SNAP");
+  // t470 — trans 와 같은 방식: 로컬 버튼 상태는 이전에 고른 값을 기억할
+  // 뿐(첫 기본값), 실제 이전값은 적용 시점에 section 에서 읽는다.
+  const [trackingValue, setTrackingValue] = useState<TrackingChange["value"]>("Track");
+  const [mibValue, setMibValue] = useState<MibChange["value"]>("none");
   const [freeText, setFreeText] = useState("");
   const [stack, setStack] = useState<StackEntry[]>([]);
   const [popup, setPopup] = useState<{ field: PopupField; state: PresetPopupState } | null>(null);
@@ -305,6 +339,22 @@ export function usePlanCueRequestGenerator({
     upsertChange({ field: "trans", value, before: section.trans ?? "—" });
   }
 
+  // t466/t470 — 이전값 없으면 "Track"으로 본다(서버 `_set_default` 규칙과 동일).
+  function applyTracking(value: TrackingChange["value"]) {
+    setTrackingValue(value);
+    upsertChange({ field: "tracking", value, before: section.tracking ?? "Track" });
+  }
+
+  // t466/t470 — `mib_mode`는 조립기가 계산한 기존 `mib`(참/거짓)와는 다른
+  // 칸이다(건드리지 않는다). 이전값은 `section.mib_mode`만 읽고, 없으면
+  // "없음"으로 보인다(서버 `_mib_label` 규칙과 동일).
+  function applyMib(value: MibChange["value"]) {
+    setMibValue(value);
+    const before = section.mib_mode;
+    const beforeLabel = before ? MIB_BUTTON_LABEL[before as MibChange["value"]] ?? before : "없음";
+    upsertChange({ field: "mib_mode", value, before: beforeLabel });
+  }
+
   function removeEntry(id: string) {
     if (sendingId === id) return; // 전송 중인 줄은 항목별 제거로 지우지 않는다.
     setStack((prev) => prev.filter((entry) => entry.id !== id));
@@ -340,8 +390,31 @@ export function usePlanCueRequestGenerator({
     const field = popup.field;
     setPopup(null);
     if (field === "movement") {
-      setMovementName(entry.name);
+      // t470 — 포지션 행이 이제 이 필드 대신 "position"을 쓴다(아래). 이
+      // 분기는 다른 곳에서 field: "movement" 팝업을 열지 않아 지금은 UI에서
+      // 도달하지 않지만, `MovementChange` 타입·PopupField 값을 지우지 않고
+      // 그대로 둔다(범위 밖 변경 금지).
       upsertChange({ field: "movement", value: entry.name, before: section.movement ?? "—" });
+      return;
+    }
+    if (field === "position") {
+      // t470 — 포지션 프리셋은 풀 2에서만 온다(`_POSITION_POOL`). 번호는
+      // "2.<point>" 형태로 합성한다 — entry.no 는 그 풀 안의 진짜 번호다.
+      const presetNo = `${POOL_POSITION}.${entry.no}`;
+      setPositionName(entry.name);
+      upsertChange({
+        field: "position",
+        value: entry.name,
+        presetNo,
+        before: section.position ?? "—",
+      });
+      return;
+    }
+    if (field === "phaser") {
+      // t470 — 딤머 풀 1·컬러 풀 4 어느 쪽에서 골라도 값은 이름 문자열
+      // 하나뿐이다(REQ-089 P4).
+      setPhaserName(entry.name);
+      upsertChange({ field: "phaser", value: entry.name, before: section.phaser ?? "—" });
       return;
     }
     if (field === "effect") {
@@ -388,11 +461,16 @@ export function usePlanCueRequestGenerator({
     onApplyFade: applyFade,
     transValue,
     onApplyTrans: applyTrans,
-    positionLabel: movementName ?? section.movement ?? "—",
+    trackingValue,
+    onApplyTracking: applyTracking,
+    mibValue,
+    onApplyMib: applyMib,
+    positionLabel: positionName ?? section.position ?? "—",
     colorLabel: colorName ?? beforeColorLabel(),
     colorButtonDisabled,
     dimLabel: dimName ?? "—",
     effectLabel: effectName ?? section.effect ?? "—",
+    phaserLabel: phaserName ?? section.phaser ?? "—",
     onOpenPopup: openPopup,
     stack,
     onRemoveEntry: removeEntry,
@@ -487,13 +565,39 @@ export function PlanCueRequestGeneratorView(vm: PlanCueRequestGeneratorViewModel
               </button>
             ))}
           </div>
+
+          <div className="plan-cue-generator-field" role="group" aria-label="트래킹">
+            {TRACKING_VALUES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={`plan-cue-generator-trans${vm.trackingValue === value ? " is-selected" : ""}`}
+                onClick={() => vm.onApplyTracking(value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+
+          <div className="plan-cue-generator-field" role="group" aria-label="MIB">
+            {MIB_VALUES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={`plan-cue-generator-trans${vm.mibValue === value ? " is-selected" : ""}`}
+                onClick={() => vm.onApplyMib(value)}
+              >
+                {MIB_BUTTON_LABEL[value]}
+              </button>
+            ))}
+          </div>
         </section>
 
         <section className="plan-cue-generator-console-values" aria-label="콘솔 반영 값">
           <div className="plan-cue-generator-row">
             <span>포지션</span>
             <span>{vm.positionLabel}</span>
-            <button type="button" onClick={() => vm.onOpenPopup("movement", POOL_POSITION)}>
+            <button type="button" onClick={() => vm.onOpenPopup("position", POOL_POSITION)}>
               바꾸기
             </button>
           </div>
@@ -520,6 +624,18 @@ export function PlanCueRequestGeneratorView(vm: PlanCueRequestGeneratorViewModel
             <span>{vm.effectLabel}</span>
             <button type="button" onClick={() => vm.onOpenPopup("effect", POOL_EFFECT)}>
               바꾸기
+            </button>
+          </div>
+          <div className="plan-cue-generator-row">
+            <span>페이저</span>
+            <span>{vm.phaserLabel}</span>
+            {/* t470 P4 — 페이저 프리셋은 딤머 풀 1·컬러 풀 4 둘 다에 있다.
+                고른 이름 하나로 같은 "phaser" 문장을 만든다. */}
+            <button type="button" onClick={() => vm.onOpenPopup("phaser", POOL_DIMMER)}>
+              딤머 풀 바꾸기
+            </button>
+            <button type="button" onClick={() => vm.onOpenPopup("phaser", POOL_COLOR)}>
+              컬러 풀 바꾸기
             </button>
           </div>
         </section>
