@@ -1,0 +1,53 @@
+
+>>> exec 'ChangeDestination Root'
+<<< {"id": "91b624bd", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "954c592b", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Group 12 ; Attribute 'Dimmer' At 100 ; Group 12 ; At Preset 2.5"
+<<< {"id": "9ddabef1", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Store Sequence 900 Cue 11 /Merge'
+<<< {"id": "c0811aeb", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "c878d978", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Set Cue 11 Sequence 900 Property 'Release' 1"
+<<< {"id": "b216d67a", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "330f33a4", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Group 12 ; Attribute 'Dimmer' At 60"
+<<< {"id": "e907bf52", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Store Sequence 900 Cue 12 /Merge /CueOnly'
+<<< {"id": "8b76cf1f", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "7786d4a4", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "3e245f0e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Group 12 ; Attribute 'Dimmer' At 90"
+<<< {"id": "966140b1", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Store Sequence 900 Cue 13 /Merge'
+<<< {"id": "a67e9d9e", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "642a3f31", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Block Sequence 900 Cue 13'
+<<< {"id": "95cbc862", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900@10'
+<<< {"error": "path segment not found: '900@10' (in ShowData/DataPools/Default/Sequences/900@10)", "id": "fcab555b", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/900@10", "v": 1}
+
+>>> prop 'Selection' 'COUNTTOTALSELECTED'
+<<< {"id": "0ef72ab4", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+=== steps=17 not_ok_or_timeout=1

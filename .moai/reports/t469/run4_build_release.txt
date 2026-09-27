@@ -1,0 +1,65 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "2e9b1dec", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; At 100 ; Attribute 'Pan' At 0"
+<<< {"id": "63071743", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 1 'Q1 lit pan0'"
+<<< {"id": "cd07eab2", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "9700e5d6", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 30"
+<<< {"id": "101f6560", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 2 'Q2 pan30'"
+<<< {"id": "2ec0b538", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "1b4b2f31", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Fixture 521 Thru 522 ; At 50'
+<<< {"id": "095734af", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 3 'Q3 dim50'"
+<<< {"id": "b08c7f87", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "577709c3", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At -30"
+<<< {"id": "2ceec9fa", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Store Sequence 900 Cue 4 'Q4 pan-30'"
+<<< {"id": "df4fe4ae", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "41957429", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Label Sequence 900 'T469 SCRATCH DELETABLE'"
+<<< {"id": "058bc397", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Set Cue 2 Sequence 900 Property 'Release' 1"
+<<< {"id": "27424e12", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/4' 'RELEASE'
+<<< {"id": "4785faf2", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4", "property": "RELEASE", "v": 1, "value": "true"}
+
+>>> exec "Set Cue 2 Sequence 900 Property 'Release' 0"
+<<< {"id": "f5513108", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> prop 'ShowData/DataPools/Default/Sequences/900/4' 'RELEASE'
+<<< {"id": "2812435b", "kind": "prop", "ok": true, "path": "ShowData/DataPools/Default/Sequences/900/4", "property": "RELEASE", "v": 1, "value": "false"}
+
+>>> exec "Set Cue 2 Sequence 900 Property 'Release' 'Blorp'"
+<<< {"error": "Illegal value", "id": "1fdbe534", "kind": "result", "ok": false, "result": "Illegal value", "v": 1}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900'
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Q1 lit pan0"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Q2 pan30"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Q3 dim50"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Q4 pan-30"}], "id": "429b4c5a", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "T469 SCRATCH DELETABLE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+>>> prop 'Selection' 'COUNTTOTALSELECTED'
+<<< {"id": "d309ef6e", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+=== steps=21 not_ok_or_timeout=1

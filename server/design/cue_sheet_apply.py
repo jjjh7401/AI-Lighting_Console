@@ -46,7 +46,16 @@
   적었고(``Property 'Fade'`` 는 금지), ``/Merge`` 와 함께 쓴 실행 기록은
   `.moai/specs/SPEC-COPILOT-INTENT-001/progress.md:66` 에 있다.
 
-무드·보조컬러·무브먼트·이펙트·전환·노트는 출처를 못 대서 **넓히지 않았다**.
+카드 t469 가 실기 실측 뒤 두 칸을 더했다(`.moai/reports/t469/verdict.md`):
+
+* 트래킹 — Release 는 ``Set Cue N Sequence S Property 'Release' 1|0`` (되읽힘),
+  Block 은 ``Block``/``Unblock Sequence S Cue N``, Cue Only 는 저장 옵션
+  ``/CueOnly`` (둘 다 트래킹 시트로 확인). Cue Only 는 되돌리는 명령이 없다.
+* 포지션 — 초안에 **번호**(``2.<n>``)가 있을 때만 ``<그룹> ; At Preset 2.<n>`` 을
+  값 줄에 붙인다. 그 프리셋에 선택 기구 값이 없으면 콘솔은 OK 를 돌려주고
+  아무것도 싣지 않는다 — 요약의 번호를 화면에서 확인해야 한다.
+
+무드·무브먼트·이펙트·전환·노트·MIB 모드·페이저는 출처를 못 대서 **넓히지 않았다**.
 칸마다 왜 못 보내는지는 :data:`UNSOURCED_FIELD_REASONS` 에 적혀 있고, 그
 문장이 건너뜀 사유로 그대로 나간다. 사유 **코드**는 새로 만들지 않고 t277 이
 이미 쓰던 두 개를 그대로 쓴다:
@@ -106,6 +115,9 @@ CONSOLE_APPLIABLE_FIELDS: tuple[str, ...] = (
     "palette_primary",
     "palette_secondary",
     "fade_seconds",
+    # 카드 t469 — 실측 뒤 합류(`.moai/reports/t469/verdict.md`).
+    "tracking",
+    "position_preset_no",
 )
 
 #: 콘솔로 못 보내는 칸과 **그 이유**. 「지원 안 함」이라고만 적으면 감독은 이게
@@ -128,24 +140,28 @@ UNSOURCED_FIELD_REASONS: dict[str, str] = {
         "없습니다 — 페이드는 초 값이 적힌 큐만 나갑니다"
     ),
     "note": "노트는 콘솔에 값이 없는 칸입니다 — 초안과 저장본에만 남습니다",
-    # 카드 t466 — 파서가 새로 읽는 네 칸. 콘솔 명령 형태를 실기에서 잰 적이 없어
-    # 지어내지 않는다. 콘솔 전송은 실측부터 하는 별도 카드의 일이다.
-    "tracking": (
-        "트래킹(Track/Block/Cue Only/Release)을 큐에 거는 콘솔 명령 형태가 이 "
-        "저장소에서 실측된 적이 없습니다 — 지어내지 않습니다"
-    ),
+    # 카드 t466 이 파서에 넣은 네 칸 중 트래킹·포지션은 카드 t469 가 실측 뒤 콘솔로
+    # 보낸다(아래 `_tracking_plan`·`_position_recall`). 남은 두 칸의 사유:
     "mib_mode": (
-        "MIB 모드(dark/mark/live)를 큐에 거는 콘솔 명령 형태가 이 저장소에서 "
-        "실측된 적이 없습니다 — 지어내지 않습니다"
+        "MIB 모드는 콘솔 값이 아닙니다 — 이 저장소의 MIB 는 곡 큐 조립기가 어둠 속 "
+        "사전이동 큐를 직접 넣는 방식이라(카드 t468), 콘솔 MIB 속성을 켜면 옮기는 "
+        "쪽이 둘이 됩니다. 곡을 다시 조립할 때 반영됩니다"
     ),
     "phaser": (
-        "페이저를 이름으로 큐에 거는 경로는 곡 확정 경로에만 있고, 초안 반영 경로에는 아직 없습니다"
-    ),
-    "position": (
-        "포지션 프리셋을 이름으로 큐에 거는 경로는 곡 확정 경로에만 있고, 초안 "
-        "반영 경로에는 아직 없습니다"
+        "페이저 프리셋을 큐에 싣는 형태(`At Preset <풀>.<번호>` 뒤 `/Merge`)는 실측됐지만"
+        "(카드 t469), 초안에는 이름만 있고 그 이름의 콘솔 풀 번호를 이 경로가 알 수 "
+        "없습니다 — 번호를 지어내지 않습니다"
     ),
 }
+
+#: 카드 t469 — 초안 ``tracking`` 칸이 받는 값(`cue_sheet_edit.TRACKING_VALUES` 와 같다).
+_TRACK = "Track"
+_BLOCK = "Block"
+_CUE_ONLY = "Cue Only"
+_RELEASE = "Release"
+_TRACKING_VALUES = (_TRACK, _BLOCK, _CUE_ONLY, _RELEASE)
+#: 포지션 프리셋 번호 — 풀 2 만(`cue_sheet_edit` 이 이미 막는 규칙을 반영 쪽에서도 지킨다).
+_POSITION_PRESET_NO = re.compile(r"2\.[1-9]\d*")
 
 
 class ConsoleApplyError(ValueError):
@@ -182,6 +198,12 @@ class CuePlan:
     summary: str = ""
     #: 이 큐에서 **못 보낸 것**과 사유. 나가는 큐에도 붙을 수 있다(부분 성공).
     skips: tuple[CueSkip, ...] = ()
+    #: 카드 t469 — ``Store … /Merge`` 뒤에 붙는 저장 옵션(Cue Only 는 ``/CueOnly``).
+    store_options: tuple[str, ...] = ()
+    #: 카드 t469 — 저장 뒤 거는 트래킹 동작. 시퀀스 번호가 필요한 명령이라 여기서는
+    #: 이름만 들고(``release_on``·``release_off``·``block``·``unblock``), 문면은 번호를
+    #: 아는 :func:`plan_console_apply` 가 짓는다(t304 — 큐 판정은 번호를 모른다).
+    tracking_ops: tuple[str, ...] = ()
 
     @property
     def would_apply(self) -> bool:
@@ -520,6 +542,95 @@ def _group_dimmer_overrides(
     return lines, parts, None
 
 
+def _tracking_value(section: Mapping[str, object] | None) -> object:
+    """초안 트래킹 값. 칸이 없거나 비면 ``Track``(콘솔 기본값)으로 본다."""
+    value = None if section is None else section.get("tracking")
+    return _TRACK if value in (None, "") else value
+
+
+def _tracking_plan(
+    previous: Mapping[str, object] | None, section: Mapping[str, object]
+) -> tuple[tuple[str, ...], tuple[str, ...], str | None, str | None]:
+    """카드 t469 — 트래킹 전환을 ``(저장 옵션, 저장 뒤 동작, 요약, 건너뜀 사유)`` 로.
+
+    실측(`.moai/reports/t469/verdict.md`): Release 는 큐 속성이라 켜고 끄기가 되읽힌다.
+    Block 은 키워드 명령이고 ``Unblock`` 으로 푼다. Cue Only 는 **저장 옵션**이라
+    저장 순간 다음 큐에 값을 박는다 — 되돌리는 명령이 없으므로 Cue Only → Track 은
+    보내지 않고 사유를 단다.
+    """
+    before = _tracking_value(previous)
+    after = _tracking_value(section)
+    if previous is not None and before == after:
+        return (), (), None, None
+    if after not in _TRACKING_VALUES:
+        if previous is None:
+            return (), (), None, None
+        return (
+            (),
+            (),
+            None,
+            (
+                f"트래킹 값 {after!r} 은(는) Track, Block, Cue Only, Release 중 하나가 아닙니다 "
+                "— 짐작해서 보내지 않습니다"
+            ),
+        )
+    ops: list[str] = []
+    # 앞 표시를 먼저 푼다(Block→Release 면 Unblock 뒤 Release).
+    if before == _BLOCK and after != _BLOCK:
+        ops.append("unblock")
+    if before == _RELEASE and after != _RELEASE:
+        ops.append("release_off")
+    if after == _RELEASE:
+        ops.append("release_on")
+    elif after == _BLOCK:
+        ops.append("block")
+    options = ("/CueOnly",) if after == _CUE_ONLY else ()
+    if before == _CUE_ONLY and after != _CUE_ONLY:
+        return (
+            options,
+            tuple(ops),
+            None,
+            (
+                "Cue Only 는 저장 순간 다음 큐에 값을 박는 저장 옵션이라 되돌리는 콘솔 명령이 "
+                "없습니다 — 다음 큐의 값은 콘솔에서 직접 확인해 주세요"
+            ),
+        )
+    if not ops and not options:
+        return (), (), None, None
+    return options, tuple(ops), f"트래킹 {after}", None
+
+
+def _position_recall(
+    previous: Mapping[str, object] | None, section: Mapping[str, object]
+) -> tuple[str | None, str | None]:
+    """카드 t469 — 포지션 프리셋을 ``(프리셋 번호, 건너뜀 사유)`` 로.
+
+    ``<선택> ; At Preset 2.<n>`` 뒤 ``/Merge`` 가 큐에 프리셋을 싣는 것을 실측했다(2.2·2.5).
+    단 **그 프리셋에 선택 기구 값이 없으면 콘솔은 OK 를 돌려주고 아무것도 싣지 않는다**
+    (2.1·2.3·2.4·2.6 실측) — 이 경로는 그 차이를 알 수 없으므로 요약에 번호를 적어
+    감독이 화면에서 확인하게 한다.
+    """
+    keys = ("position", "position_preset_no")
+    if previous is not None and all(previous.get(k) == section.get(k) for k in keys):
+        return None, None
+    number = section.get("position_preset_no")
+    if number in (None, ""):
+        # 곡 전체 반영(`previous is None`)의 ``position`` 은 조립기가 붙인 움직임
+        # 이름(``STATIC``·``TILT-UP @slow`` …)이지 감독이 고른 프리셋이 아니다 — 기존
+        # UNSOURCED 칸처럼, 감독이 초안에서 **고친** 경우에만 사유를 단다.
+        if previous is None or section.get("position") in (None, ""):
+            return None, None
+        return None, (
+            f"포지션 {section.get('position')!r} 은(는) 프리셋 번호 없이 이름만 있습니다 — "
+            "이름으로 콘솔 풀 번호를 찾지 않습니다(번호를 지어내지 않음)"
+        )
+    if not isinstance(number, str) or not _POSITION_PRESET_NO.fullmatch(number):
+        if previous is None:
+            return None, None
+        return None, f"포지션 프리셋 번호 {number!r} 는 풀 2(`2.<n>`) 번호가 아닙니다"
+    return number, None
+
+
 def plan_cue_console_apply(
     section: Mapping[str, object],
     previous: Mapping[str, object] | None,
@@ -551,9 +662,20 @@ def plan_cue_console_apply(
         for name in UNSOURCED_FIELD_REASONS
         if previous is not None and previous.get(name) != section.get(name)
     ]
+    # 카드 t469 — 트래킹·포지션. 못 보내는 경우의 사유는 칸마다 따로 든다.
+    store_options, tracking_ops, tracking_part, tracking_reason = _tracking_plan(previous, section)
+    position_no, position_reason = _position_recall(previous, section)
+    field_reasons = [reason for reason in (tracking_reason, position_reason) if reason]
 
-    if not (intensity_changed or color_changed or fade_changed):
-        reasons = "; ".join(UNSOURCED_FIELD_REASONS[name] for name in unsourced)
+    if not (
+        intensity_changed
+        or color_changed
+        or fade_changed
+        or store_options
+        or tracking_ops
+        or position_no
+    ):
+        reasons = "; ".join([UNSOURCED_FIELD_REASONS[name] for name in unsourced] + field_reasons)
         return CuePlan(
             cue_number=cue,
             label=label,
@@ -683,6 +805,16 @@ def plan_cue_console_apply(
     if fade is not None:
         parts.append(f"페이드 {fade:g}초")
 
+    # 카드 t469 — 포지션 프리셋은 이 큐의 그룹 선택에 다시 걸어 싣는다(앞에서 보조
+    # 컬러가 선택을 back 그룹으로 옮겼을 수 있으므로 선택부터 다시 적는다).
+    if position_no is not None:
+        value_line += f" ; {selection} ; At Preset {position_no}"
+        parts.append(f"포지션 {position_no}")
+    if tracking_part is not None:
+        parts.append(tracking_part)
+    for detail in field_reasons:
+        skips.append(CueSkip(cue_number=cue, label=label, reason=UNMAPPED_LOOK, detail=detail))
+
     if unsourced:
         skips.append(
             CueSkip(
@@ -717,7 +849,22 @@ def plan_cue_console_apply(
         percent=percent,
         summary=" · ".join(parts),
         skips=tuple(skips),
+        store_options=store_options,
+        tracking_ops=tracking_ops,
     )
+
+
+def _tracking_command(op: str, sequence_number: int, cue: int) -> str:
+    """카드 t469 — 트래킹 동작 이름을 실측된 문면으로(`.moai/reports/t469/verdict.md`)."""
+    if op == "release_on":
+        return f"Set Cue {cue} Sequence {sequence_number} Property 'Release' 1"
+    if op == "release_off":
+        return f"Set Cue {cue} Sequence {sequence_number} Property 'Release' 0"
+    if op == "block":
+        return f"Block Sequence {sequence_number} Cue {cue}"
+    if op == "unblock":
+        return f"Unblock Sequence {sequence_number} Cue {cue}"
+    raise ValueError(f"unknown tracking op {op!r}")
 
 
 def plan_console_apply(
@@ -766,7 +913,10 @@ def plan_console_apply(
         store = store_with_fade(
             f"Store Sequence {sequence_number} Cue {cue}", decision.fade_seconds
         )
-        commands.extend((_CLEAR, decision.value_line, f"{store} /Merge", _CLEAR))
+        options = "".join(f" {option}" for option in decision.store_options)
+        commands.extend((_CLEAR, decision.value_line, f"{store} /Merge{options}", _CLEAR))
+        # 카드 t469 — 트래킹 표시는 큐가 저장된 **뒤에** 건다(실측 순서).
+        commands.extend(_tracking_command(op, sequence_number, cue) for op in decision.tracking_ops)
         applied.append(cue)
         if decision.percent is not None:
             targets[cue] = decision.percent

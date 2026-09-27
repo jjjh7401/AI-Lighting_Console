@@ -1,0 +1,22 @@
+server/tests/test_cue_sheet_apply_t469.py:150: AssertionError
+__________ test_mib_mode_reason_points_at_the_composer_premove_design __________
+
+    def test_mib_mode_reason_points_at_the_composer_premove_design():
+        # t468 — 우리 MIB 는 조립기가 사전이동 큐를 직접 넣는다. 콘솔 MIB 속성을 건드리지 않는다.
+>       assert "사전이동" in UNSOURCED_FIELD_REASONS["mib_mode"]
+E       AssertionError: assert '사전이동' in 'MIB 모드(dark/mark/live)를 큐에 거는 콘솔 명령 형태가 이 저장소에서 실측된 적이 없습니다 — 지어내지 않습니다'
+
+server/tests/test_cue_sheet_apply_t469.py:172: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_release_is_set_after_the_store
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_block_uses_the_block_keyword
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_cue_only_is_a_store_option_not_a_property
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_back_to_track_undoes_the_previous_mark[Release-Set Cue 20 Sequence 210 Property 'Release' 0]
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_back_to_track_undoes_the_previous_mark[Block-Unblock Sequence 210 Cue 20]
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_switching_block_to_release_unblocks_first
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_an_unknown_tracking_value_is_rejected_not_guessed
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_full_apply_with_default_track_sends_no_tracking_command
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_position_preset_number_is_recalled_on_the_cue_groups_before_the_store
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_position_name_without_number_is_skipped_with_a_reason
+FAILED server/tests/test_cue_sheet_apply_t469.py::test_mib_mode_reason_points_at_the_composer_premove_design
+11 failed, 7 passed in 0.19s
