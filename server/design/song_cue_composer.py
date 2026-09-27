@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal
 
-from server.design.energy import AxisBudget, axis_budget
+from server.design.energy import AxisBudget, axis_budget, beats_to_seconds
 from server.design.lint import (
     POSITION_WIDTH_TIERS,
     DisabledRuleNote,
@@ -27,12 +27,18 @@ from server.design.song_plan import (
     TimingMode,
     UnifiedSongLightingPlan,
 )
+from server.looks.section_intent import intent_for_label
+from server.looks.section_vocab import ROW_CHORUS
+from server.looks.songcue import LADDER_BLINDER_OR_FLASH, climax_cap_beats, darkness_target
 
 __all__ = [
     "CardRequeryRequirement",
     "CueColorData",
     "CueDimmerData",
     "CueFxData",
+    "ARC_BLINDER_GROUP_ABSENT",
+    "ARC_BLINDER_ROW_ABSENT",
+    "CueAccentFixtureData",
     "CueMibData",
     "CuePositionData",
     "CueTimingData",
@@ -45,7 +51,7 @@ __all__ = [
     "compose_song_cue_bundle",
 ]
 
-CueKind = Literal["section", "mib_premove"]
+CueKind = Literal["section", "mib_premove", "climax_return"]
 CueTrigger = Literal["manual_go", "trig_time", "timecode", "follow_previous"]
 
 _POSITION_WIDTH_FROM_ENERGY: tuple[tuple[float, str], ...] = (
@@ -282,6 +288,38 @@ class CueMibData:
         }
 
 
+#: 카드 t462 — 절정 액센트를 블라인더로 못 낸 사유(``SongCueBundle.arc_notes``).
+ARC_BLINDER_GROUP_ABSENT = "blinder_group_absent"
+ARC_BLINDER_ROW_ABSENT = "blinder_six_row_absent"
+
+#: 대화 길이 스스로 붙이는 절정 액센트 이름표 중 블라인더로 내보내는 것
+#: (``server.web.session._occurrence_accent_label`` · ``_accent_decision``).
+#: 「moving position hit」은 블라인더가 아니므로 여기 없다.
+_BLINDER_ACCENT_PREFIXES = ("white flash", "climax accent")
+
+
+@dataclass(frozen=True)
+class CueAccentFixtureData:
+    """이 큐가 켜는 블라인더 그룹과 밝기 (카드 t462).
+
+    ``rung`` 과 ``dimmer_pct`` 는 업로드 길(``server/looks/songcue.py``)의 값을
+    그대로 쓴다 — 칸 이름은 :data:`LADDER_BLINDER_OR_FLASH`, 밝기는 그 구간 §6
+    행의 아래끝(B 의 ``_accent_fixture_commands`` 가 고르는 첫 값)이다.
+    """
+
+    rung: str
+    group_no: int
+    dimmer_pct: float
+
+    def __post_init__(self) -> None:
+        if isinstance(self.group_no, bool) or not isinstance(self.group_no, int):
+            raise SongCueComposerError(f"group_no must be an int, got {self.group_no!r}")
+        _validate_percent("dimmer_pct", self.dimmer_pct)
+
+    def to_dict(self) -> dict[str, object]:
+        return {"rung": self.rung, "group_no": self.group_no, "dimmer_pct": self.dimmer_pct}
+
+
 @dataclass(frozen=True)
 class CueTimingData:
     mode: TimingMode
@@ -339,9 +377,13 @@ class ComposedCue:
     accents: tuple[str, ...]
     mib: CueMibData
     timing: CueTimingData
+    #: 카드 t462 — 이 큐가 켜는 블라인더(없으면 ``None``).
+    accent_fixture: CueAccentFixtureData | None = None
+    #: 카드 t462 — 드롭 앞 어둠이 내리기 **전** 밝기(안 내렸으면 ``None``).
+    pre_drop_from: float | None = None
 
     def __post_init__(self) -> None:
-        if self.kind not in ("section", "mib_premove"):
+        if self.kind not in ("section", "mib_premove", "climax_return"):
             raise SongCueComposerError(f"unknown cue kind {self.kind!r}")
         if isinstance(self.section_index, bool) or not isinstance(self.section_index, int):
             raise SongCueComposerError(f"section_index must be an int, got {self.section_index!r}")
@@ -383,6 +425,10 @@ class ComposedCue:
             "accents": list(self.accents),
             "mib": self.mib.to_dict(),
             "timing": self.timing.to_dict(),
+            "accent_fixture": (
+                self.accent_fixture.to_dict() if self.accent_fixture is not None else None
+            ),
+            "pre_drop_from": self.pre_drop_from,
         }
 
 
@@ -394,10 +440,13 @@ class SongCueBundle:
     lint_findings: tuple[LintFinding, ...] = ()
     disabled_rule_notes: tuple[DisabledRuleNote, ...] = ()
     disabled_plan_notes: tuple[DisabledNote, ...] = ()
+    #: 카드 t462 — 드롭 앞 어둠·블라인더·복귀 큐를 못 한 자리와 그 사유.
+    arc_notes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.song_title, str) or not self.song_title.strip():
             raise SongCueComposerError("song_title must be non-empty")
+        object.__setattr__(self, "arc_notes", _tuple_of_str("arc_notes", self.arc_notes))
         cues = tuple(self.cues)
         if not cues:
             raise SongCueComposerError("a composed bundle must contain at least one cue")
@@ -423,6 +472,14 @@ class SongCueBundle:
     def section_cues(self) -> tuple[ComposedCue, ...]:
         return tuple(cue for cue in self.cues if cue.kind == "section")
 
+    @property
+    def timed_cues(self) -> tuple[ComposedCue, ...]:
+        """시각을 갖고 콘솔 타이밍에 실리는 큐 — 구간 큐와 절정 복귀 큐(카드 t462).
+
+        MIB 사전이동은 앞 큐를 따라가므로(``follow_previous``) 여기 없다.
+        """
+        return tuple(cue for cue in self.cues if cue.kind in ("section", "climax_return"))
+
     def to_dict(self) -> dict[str, object]:
         return {
             "song_title": self.song_title,
@@ -431,6 +488,7 @@ class SongCueBundle:
             "lint_findings": [_lint_finding_dict(finding) for finding in self.lint_findings],
             "disabled_rule_notes": [_disabled_rule_dict(note) for note in self.disabled_rule_notes],
             "disabled_plan_notes": [note.to_dict() for note in self.disabled_plan_notes],
+            "arc_notes": list(self.arc_notes),
         }
 
 
@@ -495,16 +553,21 @@ def compose_song_cue_bundle(plan: UnifiedSongLightingPlan) -> SongCueComposition
             disabled_plan_notes=disabled_plan_notes,
         )
 
-    cues = _apply_mib(
-        tuple(
-            _section_cue(plan, decision, payload)
-            for decision, payload in zip(
-                plan.sections,
-                plan.cue_payloads(),
-                strict=True,
-            )
+    section_cues = tuple(
+        _section_cue(plan, decision, payload)
+        for decision, payload in zip(
+            plan.sections,
+            plan.cue_payloads(),
+            strict=True,
         )
     )
+    labels = {decision.section.index: decision.section.label for decision in plan.sections}
+    # 카드 t462 — 업로드 길의 드롭 전 어둠·절정 길이 상한을 여기서도 건다. MIB 앞에
+    # 둔다: MIB 는 「앞 큐가 어두운가」를 보는데, 어둠의 바닥(DARKNESS_FLOOR=20)은
+    # 0 이 아니므로 MIB 판정을 바꾸지 않는다.
+    darkened = _apply_pre_drop_darkness(section_cues, labels)
+    accented, arc_notes = _apply_blinder_accents(plan, darkened, labels)
+    cues = _apply_mib(_apply_climax_returns(plan, accented))
     lint_report = _lint_report(plan, cues)
     bundle = SongCueBundle(
         song_title=plan.song_title,
@@ -513,6 +576,7 @@ def compose_song_cue_bundle(plan: UnifiedSongLightingPlan) -> SongCueComposition
         lint_findings=lint_report.findings,
         disabled_rule_notes=lint_report.disabled_rules,
         disabled_plan_notes=disabled_plan_notes,
+        arc_notes=arc_notes,
     )
     return SongCueCompositionResult(
         bundle=bundle,
@@ -754,6 +818,152 @@ def _timing_data(timing: CueTimingPayload) -> CueTimingData:
     )
 
 
+def _is_drop_row(label: str) -> bool:
+    """이 이름이 §6 표의 chorus · drop 행인가 — 업로드 길의 판정과 같은 표를 읽는다."""
+    intent = intent_for_label(label)
+    return intent is not None and intent.row == ROW_CHORUS
+
+
+# @MX:NOTE: [AUTO] 드롭 앞 어둠(정본 §8) — 값은 업로드 길의 `darkness_target` 하나에서
+#   온다(카드 t462). 형태는 B 와 같은 「줄인 워시」: 앞 큐의 밝기를 그 행의 바닥까지
+#   내린다. 같은 행(후렴 뒤 후렴)·이미 어두운 큐·블랙아웃은 건드리지 않는다.
+def _apply_pre_drop_darkness(
+    cues: tuple[ComposedCue, ...], labels: dict[int, str]
+) -> tuple[ComposedCue, ...]:
+    result = list(cues)
+    for position in range(1, len(result)):
+        if not _is_drop_row(labels[result[position].section_index]):
+            continue
+        previous = result[position - 1]
+        intent = intent_for_label(labels[previous.section_index])
+        if intent is None or intent.row == ROW_CHORUS:
+            continue
+        key_pct = previous.dimmer.key_pct
+        target = float(darkness_target(intent))
+        if key_pct is None or previous.dimmer.blackout or key_pct <= target:
+            continue
+        back_pct = previous.dimmer.back_pct
+        result[position - 1] = dataclasses.replace(
+            previous,
+            dimmer=dataclasses.replace(
+                previous.dimmer,
+                key_pct=target,
+                back_pct=None if back_pct is None else target * 0.8,
+            ),
+            pre_drop_from=key_pct,
+        )
+    return tuple(result)
+
+
+def _apply_blinder_accents(
+    plan: UnifiedSongLightingPlan, cues: tuple[ComposedCue, ...], labels: dict[int, str]
+) -> tuple[tuple[ComposedCue, ...], tuple[str, ...]]:
+    """대화 길이 스스로 붙인 절정 액센트를 블라인더 그룹으로 낸다 (카드 t462).
+
+    밝기는 그 구간 §6 행의 아래끝 — 업로드 길이 블라인더에 주는 첫 값과 같다.
+    그룹이 없거나 행이 없으면 켜지 않고 사유를 남긴다(숫자를 지어내지 않는다).
+    """
+    result: list[ComposedCue] = []
+    notes: list[str] = []
+    for cue in cues:
+        wants_blinder = any(
+            accent.strip().casefold().startswith(_BLINDER_ACCENT_PREFIXES) for accent in cue.accents
+        )
+        if not wants_blinder:
+            result.append(cue)
+            continue
+        where = f"Q{cue.cue_number:g} {cue.cue_name!r}"
+        if plan.blinder_group_no is None:
+            notes.append(
+                f"{ARC_BLINDER_GROUP_ABSENT}: {where} 절정 액센트 — 콘솔에 BLIND/BLINDER "
+                "그룹이 없어 블라인더를 켜지 않음"
+            )
+            result.append(cue)
+            continue
+        intent = intent_for_label(labels[cue.section_index])
+        if intent is None:
+            notes.append(
+                f"{ARC_BLINDER_ROW_ABSENT}: {where} 절정 액센트 — 구간 이름이 §6 표의 한 행에 "
+                "맞지 않아 블라인더 밝기를 정할 근거가 없음"
+            )
+            result.append(cue)
+            continue
+        result.append(
+            dataclasses.replace(
+                cue,
+                accent_fixture=CueAccentFixtureData(
+                    rung=LADDER_BLINDER_OR_FLASH,
+                    group_no=plan.blinder_group_no,
+                    dimmer_pct=float(intent.brightness[0]),
+                ),
+            )
+        )
+    return tuple(result), tuple(notes)
+
+
+# @MX:NOTE: [AUTO] 절정 길이 상한(REQ-LDCLIMAX-006~009) — 박수는 업로드 길의
+#   `climax_cap_beats` 하나에서 온다(카드 t462). BPM 이 없거나 수동 GO 면 박을 잴
+#   시계가 없으므로 끼우지 않는다 — 수동 GO 에 복귀 큐를 끼우면 감독이 GO 를 한 번
+#   더 눌러야 블라인더가 꺼진다.
+def _apply_climax_returns(
+    plan: UnifiedSongLightingPlan, cues: tuple[ComposedCue, ...]
+) -> tuple[ComposedCue, ...]:
+    bpm = plan.music_profile.bpm
+    if bpm is None or plan.timing.mode == MANUAL_GO:
+        return cues
+    result: list[ComposedCue] = []
+    for position, cue in enumerate(cues):
+        result.append(cue)
+        fixture = cue.accent_fixture
+        if fixture is None or cue.timing.start_ms is None:
+            continue
+        cap_ms = cue.timing.start_ms + round(
+            beats_to_seconds(climax_cap_beats(fixture.rung), bpm) * 1000
+        )
+        following = cues[position + 1] if position + 1 < len(cues) else None
+        if (
+            following is not None
+            and following.timing.start_ms is not None
+            and cap_ms >= following.timing.start_ms
+        ):
+            continue
+        cue_number = (
+            (cue.cue_number + following.cue_number) / 2.0
+            if following is not None
+            else cue.cue_number + 1
+        )
+        result.append(_climax_return(cue, cue_number=cue_number, cap_ms=cap_ms))
+    return tuple(result)
+
+
+def _climax_return(climax: ComposedCue, *, cue_number: float, cap_ms: int) -> ComposedCue:
+    """블라인더를 끄고 절정 큐의 밝기로 돌아가는 큐 — 즉시 복귀(페이드 0).
+
+    포지션·색·효과는 다시 싣지 않는다: 콘솔이 앞 큐 값을 그대로 이어 가므로
+    바뀌는 것은 블라인더가 꺼지는 것뿐이다(끄는 줄은 명령 생성기가 낸다).
+    """
+    return dataclasses.replace(
+        climax,
+        kind="climax_return",
+        cue_number=cue_number,
+        cue_name=f"{climax.cue_name} Return",
+        fade_seconds=0.0,
+        position=dataclasses.replace(climax.position, stored=None),
+        fx=CueFxData(requested=(), permitted=(), disabled=(), density=0, axis_budget=0),
+        accents=(),
+        accent_fixture=None,
+        pre_drop_from=None,
+        mib=CueMibData(),
+        timing=dataclasses.replace(
+            climax.timing,
+            start_ms=cap_ms,
+            trig_time_seconds=(
+                cap_ms / 1000.0 if climax.timing.trig_time_seconds is not None else None
+            ),
+        ),
+    )
+
+
 def _apply_mib(cues: tuple[ComposedCue, ...]) -> tuple[ComposedCue, ...]:
     if not cues:
         return ()
@@ -881,7 +1091,11 @@ def _lint_cue(cue: ComposedCue, section_ordinal: int) -> LintCue:
         effect_speed_beats=cue.fx.speed_beats,
         is_accent=bool(cue.accents),
         is_blackout=cue.dimmer.blackout,
-        is_audience_or_blinder=_contains_any(
+        # 카드 t462 — 드롭 앞 어둠은 D 레벨 예산(L2) 아래로 **일부러** 내린 값이다
+        # (정본 §8). 린트의 의도적 위반 선언으로 그 한 규칙만 억제한다.
+        tags=frozenset({"L2"}) if cue.pre_drop_from is not None else frozenset(),
+        is_audience_or_blinder=cue.accent_fixture is not None
+        or _contains_any(
             (*cue.accents, *cue.fx.permitted),
             _AUDIENCE_TOKENS,
         ),

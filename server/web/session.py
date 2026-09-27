@@ -1276,6 +1276,46 @@ def _back_layer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) 
     return (f"Group {back_no} ; Attribute 'Dimmer' At {back_pct:g}",)
 
 
+#: 카드 t462 — 블라인더 그룹으로 인정하는 콘솔 그룹 이름(정확 일치만, RG5).
+#: `server/design/rig.py` 의 `_LAYER_GROUP_ALIASES` 는 BLIND 를 STROBE·HAZE 와 같은
+#: ``effect`` 역할로 묶으므로(2026-09-15 감독 답), 역할만으로는 블라인더를 가를 수
+#: 없어 이름을 한 번 더 본다.
+_BLINDER_GROUP_NAMES = frozenset({"blind", "blinder"})
+
+
+def _blinder_group_no(layer_mapping: Sequence[Mapping[str, object]]) -> int | None:
+    """콘솔이 보고한 그룹 중 이름이 BLIND/BLINDER 와 정확히 같은 그룹 번호 (카드 t462)."""
+    for entry in layer_mapping or ():
+        name = str(entry.get("group_name") or "").strip().casefold()
+        number = entry.get("group_no")
+        if name in _BLINDER_GROUP_NAMES and isinstance(number, int) and number > 0:
+            return number
+    return None
+
+
+def _accent_fixture_value_lines(cue, previous_fixture) -> tuple[str, ...]:
+    """블라인더를 켜는 줄, 또는 앞 큐가 켠 블라인더를 끄는 줄 (카드 t462).
+
+    콘솔은 값을 다음 큐로 이어 가므로(트래킹) 켠 블라인더는 누가 끄기 전까지
+    켜진 채 남는다. 그래서 블라인더 큐 **다음** 큐(복귀 큐든 다음 구간이든)가
+    같은 그룹을 0 으로 내린다. 줄은 전체 기구 밝기 줄 **뒤**에 와서 이긴다.
+    """
+    fixture = cue.accent_fixture
+    if fixture is not None:
+        return (f"Group {fixture.group_no} ; Attribute 'Dimmer' At {fixture.dimmer_pct:g}",)
+    if previous_fixture is not None:
+        return (f"Group {previous_fixture.group_no} ; Attribute 'Dimmer' At 0",)
+    return ()
+
+
+def _arc_note(bundle) -> str:
+    """드롭 앞 어둠·블라인더를 못 한 사유를 최종 회신에 노출한다(카드 t462)."""
+    notes = getattr(bundle, "arc_notes", ()) if bundle is not None else ()
+    if not notes:
+        return ""
+    return " 절정 연출 미반영: " + "; ".join(notes) + "."
+
+
 #: The placeholder title `_build_unified_song_plan` stamps on a fresh design —
 #: auto-snapshots fall back to the sequence name instead of versioning it.
 _DESIGN_INTERVIEW_TITLE = "Design Interview"
@@ -1821,6 +1861,7 @@ def _build_unified_song_plan(
     fx_overrides: Mapping[int, bool] | None = None,
     section_origin: Sequence[int] | None = None,
     position_disabled_reason: str = "",
+    blinder_group_no: int | None = None,
 ) -> UnifiedSongLightingPlan:
     arc_positions, head_indexes, units, section_count, climax_index = _section_arc_geometry(
         sections, section_origin
@@ -2032,6 +2073,7 @@ def _build_unified_song_plan(
         director_decisions=_director_decisions(records),
         unresolved=tuple(unresolved),
         disabled=disabled,
+        blinder_group_no=blinder_group_no,
     )
 
 
@@ -2576,7 +2618,7 @@ def _song_timed_cue_expectations(
     if not timing.uses_trig_time:
         return ()
     expectations: list[_SongTimedCueExpectation] = []
-    for cue in bundle.section_cues:
+    for cue in bundle.timed_cues:
         start_ms = cue.timing.start_ms
         if start_ms is None:
             continue
@@ -8165,6 +8207,8 @@ class ChatSession:
         # 그대로 전달한다. 빈 집합이면 오늘과 바이트 동일.
         color_failures: dict[str, str] = {}
         commands: list[str] = ["ChangeDestination Root"]
+        # 카드 t462 — 앞 저장 큐가 켠 블라인더(다음 큐가 끈다).
+        previous_fixture = None
         for cue in bundle.cues:
             preset_no = None
             if cue.position.stored is not None:
@@ -8175,6 +8219,8 @@ class ChatSession:
                 color_failures[f"{cue.cue_number:g}"] = color_failure
             if preset_no is None and dimmer is None:
                 continue
+            accent_lines = _accent_fixture_value_lines(cue, previous_fixture)
+            previous_fixture = cue.accent_fixture
             plan = PositionCuePlan(
                 cue_no=cue.cue_number,
                 name=_safe_song_cue_name(cue.cue_name, cue.cue_number),
@@ -8192,6 +8238,7 @@ class ChatSession:
                         *color_lines,
                         *_back_layer_value_lines(cue, layer_mapping),
                         *_phaser_cue_value_lines(cue, fids, phaser_slots),
+                        *accent_lines,
                     ),
                 )
             )
@@ -8231,7 +8278,8 @@ class ChatSession:
         if timing.mode == "manual_go":
             return ()
         sections: list[SongCueSectionBundle] = []
-        for cue in bundle.section_cues:
+        # 카드 t462 — 절정 복귀 큐도 시각을 갖고 타이밍에 실린다(``timed_cues``).
+        for cue in bundle.timed_cues:
             if cue.timing.start_ms is None:
                 continue
             section = SongCueSection(
@@ -8245,7 +8293,12 @@ class ChatSession:
             sections.append(
                 SongCueSectionBundle(
                     section=section,
-                    cue_number=int(cue.cue_number),
+                    # 정수 큐는 전과 같은 글자(`Set Cue 4`), 복귀 큐만 소수(`Set Cue 4.5`).
+                    cue_number=(
+                        int(cue.cue_number)
+                        if float(cue.cue_number).is_integer()
+                        else cue.cue_number
+                    ),
                     cue_name=_safe_song_cue_name(cue.cue_name, cue.cue_number),
                     selection=selection,
                     commands=("reviewed",),
@@ -8811,6 +8864,7 @@ class ChatSession:
             concept_colors=state.concept_colors,
             section_origin=state.section_origin or None,
             position_disabled_reason=state.position_disabled_reason,
+            blinder_group_no=_blinder_group_no(state.layer_mapping),
         )
         return built, compose_song_cue_bundle(built)
 
@@ -11007,6 +11061,7 @@ class ChatSession:
                     f"{review_text} readback 요청: {', '.join(readback.paths)}.{snapshot_note}"
                     f"{_phaser_failure_note(self._last_phaser_failures)}"
                     f"{_color_failure_note(self._last_color_failures)}"
+                    f"{_arc_note(approved_composition.bundle)}"
                 ),
                 command_outcomes=tuple(executed.command_outcomes),
                 retries_used=0,
@@ -11030,6 +11085,7 @@ class ChatSession:
                 f"{review_text} readback 검증 완료: {', '.join(readback.paths)}.{snapshot_note}"
                 f"{_phaser_failure_note(self._last_phaser_failures)}"
                 f"{_color_failure_note(self._last_color_failures)}"
+                f"{_arc_note(approved_composition.bundle)}"
             ),
             command_outcomes=tuple(executed.command_outcomes),
             retries_used=0,

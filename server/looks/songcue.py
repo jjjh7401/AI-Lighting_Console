@@ -1419,6 +1419,17 @@ def _climax_return_bumped(
 #   분기(F4 후속) — 새로 끼우는 복귀 큐의 값이 이미 번들 안에 있으면
 #   `_climax_return_bumped` 로 자신을 넛지하고(REQ-001~002), 넛지도 실패하면
 #   삽입을 유보하고 명시적으로 보고한다(REQ-003, REQ-008) — 예외를 던지지 않는다.
+def climax_cap_beats(rung: str) -> float:
+    """절정 칸이 켜진 채 머무를 수 있는 박수 — 블라인더 2박, 스트로브 4박
+    (REQ-LDCLIMAX-006·007).
+
+    값은 이 함수 **한 곳**에만 있다. 대화 길 조립기(``server/design/
+    song_cue_composer.py``, 카드 t462)도 이 함수를 불러 쓴다 — 두 길이 같은
+    상한을 쓰게 하려고 값을 옮겨 적지 않았다.
+    """
+    return 2.0 if rung == LADDER_BLINDER_OR_FLASH else 4.0
+
+
 def _apply_climax_duration_cap(bundle: SongCueBundle, *, bpm: float | None) -> SongCueBundle:
     """완성된 번들을 훑어 blinder_or_flash/strobe_hit 를 실은 큐마다 상한을
     계산하고, 다음 큐가 상한보다 늦게 오면 그 사이에 복귀 큐를 끼운다.
@@ -1438,7 +1449,7 @@ def _apply_climax_duration_cap(bundle: SongCueBundle, *, bpm: float | None) -> S
         rung = original.accent_fixture.rung if original.accent_fixture is not None else None
         if rung not in (LADDER_BLINDER_OR_FLASH, LADDER_STROBE_HIT):
             continue
-        cap_beats = 2.0 if rung == LADDER_BLINDER_OR_FLASH else 4.0
+        cap_beats = climax_cap_beats(rung)
         cap_ms = original.section.start_ms + round(beats_to_seconds(cap_beats, bpm) * 1000)
         climax_index = original.cue_number - 1 + shift
         climax = sections[climax_index]

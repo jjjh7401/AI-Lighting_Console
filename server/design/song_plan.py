@@ -663,10 +663,16 @@ class UnifiedSongLightingPlan:
     unresolved: tuple[UnresolvedNote, ...] = ()
     disabled: tuple[DisabledNote, ...] = ()
     sequence_name: str | None = None
+    #: 카드 t462 — 콘솔이 보고한 블라인더 그룹 번호(그룹 이름 ``BLIND``/``BLINDER``
+    #: 정확 일치, ``server.web.session._blinder_group_no``). ``None`` 이면 조립기는
+    #: 절정 액센트를 블라인더로 내지 않고 사유만 남긴다(없는 그룹에 쏘지 않는다).
+    blinder_group_no: int | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.song_title, str) or not self.song_title.strip():
             raise SongPlanError(f"song_title must be a non-empty string, got {self.song_title!r}")
+        if self.blinder_group_no is not None:
+            _validate_int("blinder_group_no", self.blinder_group_no, minimum=1)
         object.__setattr__(self, "sections", tuple(self.sections))
         object.__setattr__(self, "director_decisions", tuple(self.director_decisions))
         object.__setattr__(self, "unresolved", tuple(self.unresolved))

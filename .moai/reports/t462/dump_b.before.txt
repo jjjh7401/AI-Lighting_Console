@@ -1,0 +1,771 @@
+## Ice cream rock bpm=100.4 lines=53 sha=c4c614f472ae24dc returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 60 ; Attribute 'ColorRGB_G' At 8 ; Attribute 'ColorRGB_B' At 30
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Ice cream'
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 48 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 15
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 60 ; Attribute 'ColorRGB_G' At 8 ; Attribute 'ColorRGB_B' At 30
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 88 ; Attribute 'ColorRGB_G' At 96 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 10
+Attribute 'Pan' At Relative -30
+Attribute 'Tilt' At Relative -15
+Step 2
+Attribute 'Pan' At Relative 30
+Attribute 'Tilt' At Relative 15
+Attribute 'Pan' At Phase 0
+Attribute 'Tilt' At Phase 0
+Attribute 'Pan' At Speed 110 ; Attribute 'Tilt' At Speed 110
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 13
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 65 ; Attribute 'ColorRGB_G' At 10 ; Attribute 'ColorRGB_B' At 22
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 88 ; Attribute 'ColorRGB_G' At 96 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 5
+Store Sequence 1 Cue 6 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 17 + 18
+Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 25
+Store Sequence 1 Cue 7 'Finale'
+ClearAll
+## Ice cream rock bpm=None lines=53 sha=c4c614f472ae24dc returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 60 ; Attribute 'ColorRGB_G' At 8 ; Attribute 'ColorRGB_B' At 30
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Ice cream'
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 48 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 15
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 60 ; Attribute 'ColorRGB_G' At 8 ; Attribute 'ColorRGB_B' At 30
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 88 ; Attribute 'ColorRGB_G' At 96 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 10
+Attribute 'Pan' At Relative -30
+Attribute 'Tilt' At Relative -15
+Step 2
+Attribute 'Pan' At Relative 30
+Attribute 'Tilt' At Relative 15
+Attribute 'Pan' At Phase 0
+Attribute 'Tilt' At Phase 0
+Attribute 'Pan' At Speed 110 ; Attribute 'Tilt' At Speed 110
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 13
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 65 ; Attribute 'ColorRGB_G' At 10 ; Attribute 'ColorRGB_B' At 22
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 88 ; Attribute 'ColorRGB_G' At 96 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 5
+Store Sequence 1 Cue 6 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 17 + 18
+Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 25
+Store Sequence 1 Cue 7 'Finale'
+ClearAll
+## Ice cream edm bpm=100.4 lines=55 sha=99f3f2e01221e04c returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 15
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Ice cream'
+ClearAll
+ClearAll
+Group 14 + 15 + 17
+Attribute 'Dimmer' At 45 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 100
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 10
+Attribute 'Pan' At Relative -28
+Attribute 'Tilt' At Relative -14
+Step 2
+Attribute 'Pan' At Relative 28
+Attribute 'Tilt' At Relative 14
+Attribute 'Pan' At Phase 0
+Attribute 'Tilt' At Phase 0
+Attribute 'Pan' At Speed 96 ; Attribute 'Tilt' At Speed 96
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 5 'Bridge 2' CueFade 0
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 5
+Store Sequence 1 Cue 6 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 17 + 19
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 70 ; Attribute 'ColorRGB_G' At 88 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 5
+Group 12
+Attribute 'Dimmer' At 24 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 7 'Finale'
+ClearAll
+## Ice cream edm bpm=None lines=55 sha=99f3f2e01221e04c returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 15
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Ice cream'
+ClearAll
+ClearAll
+Group 14 + 15 + 17
+Attribute 'Dimmer' At 45 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 100
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 10
+Attribute 'Pan' At Relative -28
+Attribute 'Tilt' At Relative -14
+Step 2
+Attribute 'Pan' At Relative 28
+Attribute 'Tilt' At Relative 14
+Attribute 'Pan' At Phase 0
+Attribute 'Tilt' At Phase 0
+Attribute 'Pan' At Speed 96 ; Attribute 'Tilt' At Speed 96
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 5 'Bridge 2' CueFade 0
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 5
+Store Sequence 1 Cue 6 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 17 + 19
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 70 ; Attribute 'ColorRGB_G' At 88 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 5
+Group 12
+Attribute 'Dimmer' At 24 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 7 'Finale'
+ClearAll
+## Ice cream pop bpm=100.4 lines=1 sha=e3b0c44298fc1c14 returns=[] withheld=0
+
+## Ice cream pop bpm=None lines=1 sha=e3b0c44298fc1c14 returns=[] withheld=0
+
+## Ice cream ballad bpm=100.4 lines=43 sha=e2e6eccc00d76591 returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 11 + 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 35 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 92
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Ice cream'
+ClearAll
+ClearAll
+Group 12 + 16
+Attribute 'Dimmer' At 50 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 15
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 35 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 92
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 35 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 92
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 6 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 15 + 18
+Attribute 'Dimmer' At 82 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 62
+Store Sequence 1 Cue 7 'Finale'
+ClearAll
+## Ice cream ballad bpm=None lines=43 sha=e2e6eccc00d76591 returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 11 + 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 35 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 92
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Ice cream'
+ClearAll
+ClearAll
+Group 12 + 16
+Attribute 'Dimmer' At 50 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 15
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 35 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 92
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 35 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 92
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 6 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 15 + 18
+Attribute 'Dimmer' At 82 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 62
+Store Sequence 1 Cue 7 'Finale'
+ClearAll
+## Rain rock bpm=76.0 lines=77 sha=bed33366a8b3160b returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 60 ; Attribute 'ColorRGB_G' At 8 ; Attribute 'ColorRGB_B' At 30
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Rain'
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 48 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Verse 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 95 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 20
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 17 + 18
+Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 25
+Attribute 'Pan' At Relative -24
+Step 2
+Attribute 'Pan' At Relative 24
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Speed 48
+Store Sequence 1 Cue 5 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 6 'Verse 3' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 20
+Store Sequence 1 Cue 7 'Chorus 3' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 17 + 18
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 25
+Store Sequence 1 Cue 8 'Chorus 4' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 15
+Store Sequence 1 Cue 9 'Chorus 5' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 35 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 24 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 10 'Verse 4' CueFade 0
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 95 ; Attribute 'Zoom' At 20
+Store Sequence 1 Cue 11 'Chorus 6' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 17 + 18
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 20
+Store Sequence 1 Cue 12 'Finale'
+ClearAll
+## Rain rock bpm=None lines=77 sha=bed33366a8b3160b returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 60 ; Attribute 'ColorRGB_G' At 8 ; Attribute 'ColorRGB_B' At 30
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Rain'
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 48 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Verse 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 95 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 20
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 17 + 18
+Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 25
+Attribute 'Pan' At Relative -24
+Step 2
+Attribute 'Pan' At Relative 24
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Speed 48
+Store Sequence 1 Cue 5 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 6 'Verse 3' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 20
+Store Sequence 1 Cue 7 'Chorus 3' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 17 + 18
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 25
+Store Sequence 1 Cue 8 'Chorus 4' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 15
+Store Sequence 1 Cue 9 'Chorus 5' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 13 + 17
+Attribute 'Dimmer' At 35 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 24 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 10 'Verse 4' CueFade 0
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 95 ; Attribute 'Zoom' At 20
+Store Sequence 1 Cue 11 'Chorus 6' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 17 + 18
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 20
+Store Sequence 1 Cue 12 'Finale'
+ClearAll
+## Rain edm bpm=76.0 lines=77 sha=a123c2267de9c369 returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 15
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Rain'
+ClearAll
+ClearAll
+Group 14 + 15 + 17
+Attribute 'Dimmer' At 45 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 100
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 12 + 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 12 ; Attribute 'ColorRGB_G' At 25 ; Attribute 'ColorRGB_B' At 85
+Store Sequence 1 Cue 3 'Verse 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 15 + 17
+Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 18
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 10
+Attribute 'Pan' At Relative -28
+Attribute 'Tilt' At Relative -14
+Step 2
+Attribute 'Pan' At Relative 28
+Attribute 'Tilt' At Relative 14
+Attribute 'Pan' At Phase 0
+Attribute 'Tilt' At Phase 0
+Attribute 'Pan' At Speed 96 ; Attribute 'Tilt' At Speed 96
+Store Sequence 1 Cue 5 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 12 + 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 12 ; Attribute 'ColorRGB_G' At 25 ; Attribute 'ColorRGB_B' At 85
+Store Sequence 1 Cue 6 'Verse 3' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 15 + 17
+Attribute 'Dimmer' At 95 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 18
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 7 'Chorus 3' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 5
+Store Sequence 1 Cue 8 'Chorus 4' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 17 + 19
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 70 ; Attribute 'ColorRGB_G' At 88 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 5
+Group 12
+Attribute 'Dimmer' At 24 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 9 'Chorus 5' CueFade 0.2
+ClearAll
+ClearAll
+Group 12 + 15
+Attribute 'Dimmer' At 35 ; Attribute 'ColorRGB_R' At 12 ; Attribute 'ColorRGB_G' At 25 ; Attribute 'ColorRGB_B' At 85
+Store Sequence 1 Cue 10 'Verse 4' CueFade 0
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 15 + 17
+Attribute 'Dimmer' At 95 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 13
+Group 12
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 11 'Chorus 6' CueFade 0.2
+ClearAll
+## Rain edm bpm=None lines=77 sha=a123c2267de9c369 returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 15
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 70
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Rain'
+ClearAll
+ClearAll
+Group 14 + 15 + 17
+Attribute 'Dimmer' At 45 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 100
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 12 + 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 12 ; Attribute 'ColorRGB_G' At 25 ; Attribute 'ColorRGB_B' At 85
+Store Sequence 1 Cue 3 'Verse 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 15 + 17
+Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 18
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 10
+Attribute 'Pan' At Relative -28
+Attribute 'Tilt' At Relative -14
+Step 2
+Attribute 'Pan' At Relative 28
+Attribute 'Tilt' At Relative 14
+Attribute 'Pan' At Phase 0
+Attribute 'Tilt' At Phase 0
+Attribute 'Pan' At Speed 96 ; Attribute 'Tilt' At Speed 96
+Store Sequence 1 Cue 5 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 12 + 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 12 ; Attribute 'ColorRGB_G' At 25 ; Attribute 'ColorRGB_B' At 85
+Store Sequence 1 Cue 6 'Verse 3' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 15 + 17
+Attribute 'Dimmer' At 95 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 18
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 7 'Chorus 3' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16 + 17 + 18
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 15 ; Attribute 'Zoom' At 5
+Store Sequence 1 Cue 8 'Chorus 4' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 17 + 19
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 70 ; Attribute 'ColorRGB_G' At 88 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 5
+Group 12
+Attribute 'Dimmer' At 24 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 9 'Chorus 5' CueFade 0.2
+ClearAll
+ClearAll
+Group 12 + 15
+Attribute 'Dimmer' At 35 ; Attribute 'ColorRGB_R' At 12 ; Attribute 'ColorRGB_G' At 25 ; Attribute 'ColorRGB_B' At 85
+Store Sequence 1 Cue 10 'Verse 4' CueFade 0
+ClearAll
+ClearAll
+Group 11 + 13 + 14 + 15 + 17
+Attribute 'Dimmer' At 95 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 13
+Group 12
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 11 'Chorus 6' CueFade 0.2
+ClearAll
+## Rain pop bpm=76.0 lines=1 sha=e3b0c44298fc1c14 returns=[] withheld=0
+
+## Rain pop bpm=None lines=1 sha=e3b0c44298fc1c14 returns=[] withheld=0
+
+## Rain ballad bpm=76.0 lines=70 sha=e263d22fba3bdcfc returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 11 + 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 35 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 92
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Rain'
+ClearAll
+ClearAll
+Group 12 + 16
+Attribute 'Dimmer' At 50 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 13 + 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 62 ; Attribute 'ColorRGB_G' At 40 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Verse 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 15 + 18
+Attribute 'Dimmer' At 82 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 62
+Store Sequence 1 Cue 5 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 13 + 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 62 ; Attribute 'ColorRGB_G' At 40 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 6 'Verse 3' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 7 'Chorus 3' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 15 + 18
+Attribute 'Dimmer' At 87 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 62
+Store Sequence 1 Cue 8 'Chorus 4' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 73
+Store Sequence 1 Cue 9 'Chorus 5' CueFade 0.2
+ClearAll
+ClearAll
+Group 13 + 15
+Attribute 'Dimmer' At 35 ; Attribute 'ColorRGB_R' At 62 ; Attribute 'ColorRGB_G' At 40 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 10 'Verse 4' CueFade 0
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 95 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 11 'Chorus 6' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 15 + 18
+Attribute 'Dimmer' At 87 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 57
+Store Sequence 1 Cue 12 'Finale'
+ClearAll
+## Rain ballad bpm=None lines=70 sha=e263d22fba3bdcfc returns=[] withheld=0
+ChangeDestination Root
+ClearAll
+Group 11 + 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 35 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 92
+Group 12
+Attribute 'Dimmer' At 20 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 1 'Intro' CueFade 2
+Label Sequence 1 'Rain'
+ClearAll
+ClearAll
+Group 12 + 16
+Attribute 'Dimmer' At 50 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 2 'Verse 1' CueFade 2
+ClearAll
+ClearAll
+Group 13 + 15
+Attribute 'Dimmer' At 25 ; Attribute 'ColorRGB_R' At 62 ; Attribute 'ColorRGB_G' At 40 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 21 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 3 'Verse 2' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 4 'Chorus 1' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 15 + 18
+Attribute 'Dimmer' At 82 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 62
+Store Sequence 1 Cue 5 'Chorus 2' CueFade 0.2
+ClearAll
+ClearAll
+Group 13 + 15
+Attribute 'Dimmer' At 30 ; Attribute 'ColorRGB_R' At 62 ; Attribute 'ColorRGB_G' At 40 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 22 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 6 'Verse 3' CueFade 2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 7 'Chorus 3' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 15 + 18
+Attribute 'Dimmer' At 87 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 62
+Store Sequence 1 Cue 8 'Chorus 4' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 97 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 73
+Store Sequence 1 Cue 9 'Chorus 5' CueFade 0.2
+ClearAll
+ClearAll
+Group 13 + 15
+Attribute 'Dimmer' At 35 ; Attribute 'ColorRGB_R' At 62 ; Attribute 'ColorRGB_G' At 40 ; Attribute 'ColorRGB_B' At 95
+Group 12
+Attribute 'Dimmer' At 23 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52
+Store Sequence 1 Cue 10 'Verse 4' CueFade 0
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 14 + 15 + 16
+Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 95 ; Attribute 'Zoom' At 78
+Store Sequence 1 Cue 11 'Chorus 6' CueFade 0.2
+ClearAll
+ClearAll
+Group 11 + 12 + 13 + 15 + 18
+Attribute 'Dimmer' At 87 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 57
+Store Sequence 1 Cue 12 'Finale'
+ClearAll
+TOTAL sha256=022bf9926dd0c49be7e91ebcf6068223a787bbbbcecad03bdd08f98c83cde738
