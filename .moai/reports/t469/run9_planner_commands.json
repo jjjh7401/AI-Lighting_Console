@@ -1,0 +1,30 @@
+{
+ "commands": [
+  "ChangeDestination Root",
+  "ClearAll",
+  "Group 12 ; Attribute 'Dimmer' At 100 ; Group 12 ; At Preset 2.5",
+  "Store Sequence 900 Cue 11 /Merge",
+  "ClearAll",
+  "Set Cue 11 Sequence 900 Property 'Release' 1",
+  "ClearAll",
+  "Group 12 ; Attribute 'Dimmer' At 60",
+  "Store Sequence 900 Cue 12 /Merge /CueOnly",
+  "ClearAll",
+  "ClearAll",
+  "Group 12 ; Attribute 'Dimmer' At 90",
+  "Store Sequence 900 Cue 13 /Merge",
+  "ClearAll",
+  "Block Sequence 900 Cue 13"
+ ],
+ "applied": [
+  11,
+  12,
+  13
+ ],
+ "summaries": {
+  "11": "조도 100% · 포지션 2.5 · 트래킹 Release",
+  "12": "조도 60% · 트래킹 Cue Only",
+  "13": "조도 90% · 트래킹 Block"
+ },
+ "skipped": []
+}

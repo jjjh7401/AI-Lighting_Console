@@ -1,0 +1,56 @@
+
+>>> exec 'ClearAll'
+<<< {"id": "8b618b90", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 45"
+<<< {"id": "df5d2f30", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Store Sequence 900 Cue 3 /Merge /CueOnlyzz'
+<<< {"id": "056877a0", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "92587a30", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900'
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Q1 lit pan0"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Q2 pan30"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "zz"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Q4 pan-30"}], "id": "64768904", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "T469 SCRATCH DELETABLE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "d492c501", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec "Fixture 521 Thru 522 ; Attribute 'Pan' At 60"
+<<< {"id": "20134d7a", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Store Sequence 900 Cue 3 /Merge /CueOnly'
+<<< {"id": "b7dbbedd", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "60f3561f", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Fixture 521 Thru 522 ; At Preset 2.1'
+<<< {"id": "36d3fc7c", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Store Sequence 900 Cue 2 /Merge'
+<<< {"id": "fc4a5fd5", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "35f1c95a", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Fixture 521 Thru 522 ; At Preset 21.4'
+<<< {"id": "748f090d", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'Store Sequence 900 Cue 4 /Merge'
+<<< {"id": "b8b60379", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> exec 'ClearAll'
+<<< {"id": "be57d475", "kind": "result", "ok": true, "result": "OK", "v": 1}
+
+>>> state 'ShowData/DataPools/Default/Sequences/900'
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Q1 lit pan0"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Q2 pan30"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "zz"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Q4 pan-30"}], "id": "954f1fba", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "T469 SCRATCH DELETABLE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/900", "truncated": false, "v": 1}
+
+>>> state 'ShowData/DataPools/Default/PresetPools/2'
+<<< {"children": [{"class": "Preset", "i": 1, "name": "POS01 보컬 센터 페이스 · 합성좌표"}, {"class": "Preset", "i": 2, "name": "POS02 무대 전체 커버 · 합성좌표"}, {"class": "Preset", "i": 3, "name": "POS03 밴드 라인 백 · 합성좌표"}, {"class": "Preset", "i": 4, "name": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표"}, {"class": "Preset", "i": 5, "name": "POS05 팬아웃 종점 (객석 상단) · 합성좌표"}, {"class": "Preset", "i": 6, "name": "POS06 센터 집중 (브리지) · 합성좌표"}], "id": "bcc7bad7", "kind": "state", "node": {"childCount": 6, "class": "Presets", "enumeration": "ok", "name": "Position"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2", "truncated": false, "v": 1}
+
+>>> prop 'Selection' 'COUNTTOTALSELECTED'
+<<< {"id": "34591b5d", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+=== steps=18 not_ok_or_timeout=0
