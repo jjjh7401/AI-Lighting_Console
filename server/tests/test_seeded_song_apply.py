@@ -245,7 +245,11 @@ def test_a_fade_change_reaches_the_desk_as_a_fade_command(full_rig):
     event = _run_with_auto_approval(session, sent, channel, "시퀀스 3에 초안을 콘솔에 반영해줘")
 
     assert "Store Sequence 3 Cue 20 CueFade 3 /Merge" in console.executed
-    assert "Group 1 + 2 ; Attribute 'Dimmer' At 70" in console.executed
+    # t461 ⚠1 — BACK 이 이제 초안 값(35)으로 따로 나간다(반영이 back 비율을 잃던 결함 수정).
+    assert (
+        "Group 1 + 2 ; Attribute 'Dimmer' At 70 ; Group 2 ; Attribute 'Dimmer' At 35"
+        in console.executed
+    )
     assert not any("Property 'Fade'" in command for command in console.executed)
     assert "페이드 3초" in event["text"]
     assert "미반영" not in event["text"]

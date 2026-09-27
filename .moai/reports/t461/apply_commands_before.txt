@@ -1,0 +1,20 @@
+## equal_levels
+value_line: Group 11 + 12 ; Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+summary: 조도 90% · 컬러 블루 · 페이드 1.5초
+skips: []
+## equal_levels_with_secondary
+value_line: Group 11 + 12 ; Attribute 'Dimmer' At 80 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Group 12 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+summary: 조도 80% · 컬러 블루 · 보조컬러 앰버 · 페이드 1.5초
+skips: []
+## back_lower
+value_line: Group 11 + 12 ; Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+summary: 조도 90% · 컬러 블루 · 페이드 1.5초
+skips: []
+## key_lower_with_secondary
+value_line: Group 11 + 12 ; Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Group 12 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+summary: 조도 90% · 컬러 블루 · 보조컬러 앰버 · 페이드 1.5초
+skips: []
+## back_lower_unmapped_back
+value_line: Group 11 ; Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+summary: 조도 90% · 컬러 블루 · 페이드 1.5초
+skips: ["일부 대상만 반영했습니다 — 콘솔 그룹 번호를 모르는 대상: BACK"]

@@ -119,6 +119,21 @@ _NOTE = re.compile(
     r"(노트|메모)\s*(를|을)?\s*(?P<v>[^\n]+?)\s*(으로|로)?\s*(적어|남겨|바꿔|해줘|설정)"
 )
 
+#: 카드 t461 — **그룹 스코프**(SPEC-LDDESIGN-001 REQ-087 전제, 리드 승인 문법).
+#: 라틴 그룹 이름 목록(· , + / 와 과 랑 하고 로 잇는다) 바로 뒤에 편집 항목
+#: 낱말이 와야 그룹으로 읽는다 — 「큐 3 BACK 밝기 70%」, 「큐 2 KEY·BACK 더
+#: 밝게」. 받을지 말지(그 큐에 있는 이름인가)는 :func:`apply_cue_sheet_edit`
+#: 가 판정한다. 한국어 그룹 이름('백')과 콘솔 그룹 이름은 첫판에서 받지 않는다.
+_GROUP_NAME = r"[A-Za-z][A-Za-z0-9_-]*"
+_GROUP_SCOPE = re.compile(
+    rf"(?<![A-Za-z0-9_-])(?P<groups>{_GROUP_NAME}"
+    rf"(?:\s*(?:[·,+/]|와|과|랑|하고)\s*{_GROUP_NAME})*)"
+    r"\s*(?:그룹\s*)?(?:의\s*)?"
+    r"(?:조도|밝기|인텐시티|컬러|색상|색|팔레트|페이드|무브먼트|무브|움직임|이펙트|효과"
+    r"|전환|트랜스|무드|노트|메모|더\s*밝|더\s*어둡|밝게|밝혀|어둡게|올려|높여|낮춰|내려)"
+)
+_GROUP_SPLIT = re.compile(r"\s*(?:[·,+/]|와|과|랑|하고)\s*")
+
 #: 이 모듈이 「내 요청」이라고 인정하는 최소 신호. 하나도 없으면 None 을 돌려
 #: 기존 라우트 사슬로 그대로 흘려보낸다(오라우팅 방지).
 _EDIT_VERB = re.compile(r"(바꿔|변경|수정|해줘|설정|적어|남겨|밝게|어둡게|올려|낮춰|높여|내려)")
@@ -254,6 +269,10 @@ def parse_cue_sheet_edit_request(
 
     if not changes:
         return None
+    # t461 — 그룹 스코프는 이미 읽힌 편집에만 붙는다(그룹 이름만으로 이 라우트를
+    # 열지 않는다). 그룹 토큰이 없는 문장은 이 줄을 지나도 사전이 그대로다.
+    if (match := _GROUP_SCOPE.search(text)) is not None:
+        changes["groups"] = _GROUP_SPLIT.split(match.group("groups").strip())
     cue_match = _CUE_NUMBER.search(text)
     return {
         "cue": int(cue_match.group("cue")) if cue_match is not None else None,
@@ -389,6 +408,116 @@ def _lift_intensity(section: dict, delta: int, report: list[str]) -> None:
     )
 
 
+#: t461 — 그룹을 지정할 수 있는 항목. 나머지(페이드·전환·무브먼트·이펙트·무드·
+#: 노트)는 큐 전체 값이다(REQ-089 — 포지션·이펙트는 큐 전체에 적용).
+_GROUP_SCOPED_FIELDS = frozenset({"intensity", "intensity_delta", "palette_primary"})
+
+#: t461 — 그룹 하나에 주는 컬러가 가는 칸. 주색은 전체, 보조색은 back 역할 그룹
+#: 절로 콘솔에 나간다(``cue_sheet_apply.plan_cue_console_apply``, 카드 t409).
+_GROUP_COLOR_FIELD = {"KEY": "palette_primary", "BACK": "palette_secondary"}
+
+
+def _resolve_group_scope(
+    section: Mapping[str, object], changes: Mapping[str, object]
+) -> tuple[dict[str, object], list[int] | None]:
+    """t461 — 그룹 지정 문장을 검증해 (그룹 키를 뺀 changes, 대상 칸 번호)를 낸다.
+
+    대상 칸이 ``None`` 이면 큐 전체 편집이다(그룹을 지정하지 않았거나, 그 큐의
+    그룹을 전부 지정한 경우 — 결과가 기존 문장과 같다). 모르는 그룹 이름은
+    지어내지 않고 거절한다. 거절은 쓰기 전에 난다(부분 적용 없음).
+    """
+    rest = {key: value for key, value in changes.items() if key != "groups"}
+    raw = changes.get("groups")
+    if raw is None:
+        return rest, None
+    names = [str(name).strip() for name in raw] if isinstance(raw, list) else []
+    cue_label = section.get("cue_number")
+    cue_wide = [key for key in rest if key not in _GROUP_SCOPED_FIELDS]
+    if cue_wide:
+        labels = ", ".join(EDITABLE_FIELD_LABELS.get(key, key) for key in cue_wide)
+        raise CueSheetEditError(
+            f"{labels}은(는) 큐 전체 값입니다 — 그룹({', '.join(names)})을 빼고 말해 주세요."
+        )
+    levels = _group_levels(section)
+    if not levels:
+        raise CueSheetEditError(
+            f"큐 {cue_label}에는 그룹별 조도가 없습니다 — 그룹을 빼고 말해 주세요."
+        )
+    by_name = {name.upper(): slot for slot, name, _level in levels}
+    known = ", ".join(name for _slot, name, _level in levels)
+    unknown = [name for name in names if name.upper() not in by_name]
+    if unknown or not names:
+        raise CueSheetEditError(
+            f"큐 {cue_label}에는 {', '.join(repr(name) for name in unknown)} 그룹이 "
+            f"없습니다 — 이 큐의 그룹: {known}. 그룹 이름을 지어내지 않습니다."
+        )
+    if "palette_primary" in rest:
+        if len(set(name.upper() for name in names)) > 1:
+            raise CueSheetEditError(
+                "컬러는 그룹 하나에만 지정할 수 있습니다 (KEY=주색, BACK=보조색)."
+            )
+        field = _GROUP_COLOR_FIELD.get(names[0].upper())
+        if field is None:
+            raise CueSheetEditError(
+                f"'{names[0]}' 그룹에는 컬러 칸이 없습니다 — 컬러는 KEY(주색)·BACK(보조색)만 "
+                "지정할 수 있습니다."
+            )
+        rest[field] = rest.pop("palette_primary")
+    slots = sorted({by_name[name.upper()] for name in names})
+    if slots == sorted(slot for slot, _name, _level in levels):
+        return rest, None
+    return rest, slots
+
+
+def _set_group_intensity(section: dict, slots: list[int], percent: int, report: list[str]) -> None:
+    """t461 — **지정**을 고른 그룹에만. 나머지 그룹 값은 그대로 둔다."""
+    chosen = [level for level in _group_levels(section) if level[0] in slots]
+    entries = list(section["intensity"])
+    for slot in slots:
+        entries[slot] = {**entries[slot], "level": percent}
+    section["intensity"] = entries
+    after = {slot: percent for slot in slots}
+    names = "·".join(name for _slot, name, _level in chosen)
+    report.append(
+        f"{EDITABLE_FIELD_LABELS['intensity']} {names} {percent} (그룹 지정) — "
+        + _per_group_report(chosen, after)
+    )
+    _write_d_level(section, section_intensity_percent(section))
+
+
+def _lift_group_intensity(section: dict, slots: list[int], delta: int, report: list[str]) -> None:
+    """t461 — **올림/내림**을 고른 그룹에만. 천장·바닥 처리는 :func:`_lift_intensity`
+    와 같은 규칙(한 걸음 전체를 줄인다)을 고른 그룹 안에서 적용한다."""
+    chosen = [level for level in _group_levels(section) if level[0] in slots]
+    low = min(level for _slot, _name, level in chosen)
+    high = max(level for _slot, _name, level in chosen)
+    if delta > 0:
+        effective = min(delta, _INTENSITY_MAX - high)
+        limit = f"천장 {_INTENSITY_MAX}"
+    else:
+        effective = max(delta, _INTENSITY_MIN - low)
+        limit = f"바닥 {_INTENSITY_MIN}"
+    if effective == 0:
+        raise CueSheetEditError(
+            f"이 그룹은 이미 {limit}에 닿아 있어 더 옮길 수 없습니다 "
+            f"(그룹별 값: {', '.join(f'{name} {level}' for _slot, name, level in chosen)})."
+        )
+    entries = list(section["intensity"])
+    after: dict[int, int] = {}
+    for slot, _name, level in chosen:
+        after[slot] = level + effective
+        entries[slot] = {**entries[slot], "level": after[slot]}
+    section["intensity"] = entries
+    _write_d_level(section, section_intensity_percent(section))
+    step = f"{effective:+d}"
+    clipped = "" if effective == delta else f", 요청 {delta:+d} → {limit}에 맞춰 {step}"
+    names = "·".join(name for _slot, name, _level in chosen)
+    report.append(
+        f"{EDITABLE_FIELD_LABELS['intensity']} {names} {step} (그룹 지정{clipped}) — "
+        + _per_group_report(chosen, after)
+    )
+
+
 def apply_cue_sheet_edit(
     timeline: Mapping[str, object],
     cue_number: int,
@@ -407,7 +536,8 @@ def apply_cue_sheet_edit(
     unknown = [
         key
         for key in changes
-        if key not in EDITABLE_FIELD_LABELS and key not in ("intensity_delta", "fade_delta")
+        if key not in EDITABLE_FIELD_LABELS
+        and key not in ("intensity_delta", "fade_delta", "groups")
     ]
     if unknown:
         editable = ", ".join(EDITABLE_FIELD_LABELS.values())
@@ -416,6 +546,9 @@ def apply_cue_sheet_edit(
         )
 
     slot, section = _find_section(timeline, cue_number)
+    # t461 — 그룹 지정이 있으면 먼저 검증하고 그룹 키를 걷어낸다. 그룹이 없거나
+    # 큐의 그룹을 전부 지정했으면 group_slots 는 None 이고 아래는 기존 경로다.
+    changes, group_slots = _resolve_group_scope(section, changes)
 
     # --- 검증을 전부 끝낸 뒤에 쓴다 (부분 적용 금지) ---
     # 「지정」과 「올림」은 다른 지시다(t289). 지정은 모든 그룹을 한 값으로
@@ -490,7 +623,11 @@ def apply_cue_sheet_edit(
     # 조도가 맨 앞이다. 「더 옮길 곳이 없다」 거절은 여기서 나며, 그 시점에는
     # 아직 아무 칸도 쓰지 않았으므로 부분 적용이 생기지 않는다.
     report: list[str] = []
-    if target_percent is not None:
+    if target_percent is not None and group_slots is not None:
+        _set_group_intensity(section, group_slots, target_percent, report)
+    elif lift_delta is not None and group_slots is not None:
+        _lift_group_intensity(section, group_slots, lift_delta, report)
+    elif target_percent is not None:
         _set_intensity(section, target_percent, report)
     elif lift_delta is not None:
         _lift_intensity(section, lift_delta, report)

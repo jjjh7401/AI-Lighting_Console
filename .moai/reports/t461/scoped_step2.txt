@@ -1,0 +1,15 @@
+server/tests/test_cue_sheet_apply_group_dimmer_t461.py
+server/tests/test_cue_sheet_apply.py
+server/tests/test_cue_sheet_edit_group_scope_t461.py
+server/tests/test_cue_sheet_edit.py
+server/tests/test_draft_apply_routing.py
+server/tests/test_rig_preflight.py
+server/tests/test_seeded_song_apply.py
+server/tests/test_song_cue_color_emission.py
+server/tests/test_song_palette_occurrence_t406.py
+server/tests/test_web_session_preshow.py
+server/tests/test_web_session_progress.py
+server/tests/test_web_session.py
+server/tests/test_write_dispatch_census.py
+server/tests/test_writegate_merge_gap.py
+server/tests/test_writegate_session_sites.py

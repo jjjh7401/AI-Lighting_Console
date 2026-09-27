@@ -1,0 +1,23 @@
+GROUP_ROSTER: ('KEY', 'FOH', 'BACK', 'SIDE-L', 'SIDE-R', 'WASH-U', 'WASH-D', 'MOVER-U', 'MOVER-D', 'BLIND', 'STROBE')
+reserved(input): ()
+q= 1 safety  Intro                BLIND=  0 STROBE=  0 unused=10
+q= 2 section Intro                BLIND=  0 STROBE=  0 unused=9
+q= 3 phrase  Intro                BLIND=  0 STROBE=  0 unused=7
+q= 4 section Verse                BLIND=  0 STROBE=  0 unused=7
+q= 5 phrase  Pre-Chorus           BLIND=  0 STROBE=  0 unused=6
+q= 6 section Chorus               BLIND=  0 STROBE=  0 unused=6
+q= 7 phrase  Chorus               BLIND=  0 STROBE=  0 unused=4
+q= 8 section Verse                BLIND=  0 STROBE=  0 unused=7
+q= 9 phrase  Pre-Chorus           BLIND=  0 STROBE=  0 unused=6
+q=10 section Chorus               BLIND=  0 STROBE=  0 unused=4
+q=11 phrase  Chorus               BLIND=  0 STROBE=  0 unused=4
+q=12 phrase  Chorus               BLIND=  0 STROBE=  0 unused=4
+q=13 section Bridge               BLIND=  0 STROBE=  0 unused=9
+q=14 phrase  Pre-Chorus           BLIND=  0 STROBE=  0 unused=6
+q=15 section Final Chorus         BLIND= 90 STROBE=  0 unused=1
+q=16 phrase  Final Chorus         BLIND= 90 STROBE=  0 unused=1
+q=17 phrase  Final Chorus         BLIND= 90 STROBE=  0 unused=1
+q=18 phrase  Final Chorus         BLIND= 90 STROBE=  0 unused=1
+q=19 section Rap/Solo/Dance Break BLIND= 90 STROBE=  0 unused=1
+q=20 safety  Outro                BLIND=  0 STROBE=  0 unused=11
+one_shots: [(40.0, 'White hit', 'KEY+FOH'), (85.0, 'White hit', 'KEY+FOH'), (125.0, 'Blinder hit', 'BLIND')]

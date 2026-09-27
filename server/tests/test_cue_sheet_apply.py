@@ -201,11 +201,13 @@ def test_a_colour_edit_emits_the_sourced_colorrgb_line():
     plan = plan_console_apply(baseline, current)
     assert plan.applied == (20,)
     # #FF3C9E → 255,60,158 → 100,24,62 (백분율 축은 룩 라이브러리와 같다).
+    # t461 ⚠1 — BACK 이 이제 초안 값(35)으로 따로 나간다(반영이 back 비율을 잃던 결함 수정).
     assert (
         "Group 11 + 12 ; Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 100 ; "
-        "Attribute 'ColorRGB_G' At 24 ; Attribute 'ColorRGB_B' At 62" in plan.commands
+        "Attribute 'ColorRGB_G' At 24 ; Attribute 'ColorRGB_B' At 62 ; "
+        "Group 12 ; Attribute 'Dimmer' At 35" in plan.commands
     )
-    assert plan.summaries[20] == "조도 70% · 컬러 P4 핫핑크"
+    assert plan.summaries[20] == "조도 70% · 컬러 P4 핫핑크 · BACK 35%"
 
 
 def test_a_colour_name_absent_from_the_legend_is_skipped_not_guessed():
@@ -234,9 +236,11 @@ def test_a_bare_color_name_with_no_legend_at_all_still_emits_colorrgb():
     plan = plan_console_apply(baseline, current)
     assert plan.applied == (20,)
     # Warm White (100,75,40) — spec.md §A.2 표준 팔레트, 지어낸 값이 아니다.
+    # t461 ⚠1 — BACK 이 이제 초안 값(35)으로 따로 나간다(반영이 back 비율을 잃던 결함 수정).
     assert (
         "Group 11 + 12 ; Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 100 ; "
-        "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40" in plan.commands
+        "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40 ; "
+        "Group 12 ; Attribute 'Dimmer' At 35" in plan.commands
     )
 
 
@@ -312,9 +316,11 @@ def test_a_secondary_colour_rides_the_back_role_group():
         "Group 11 + 12 ; Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 100 ; "
         "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40 ; "
         "Group 12 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; "
-        "Attribute 'ColorRGB_B' At 100"
+        "Attribute 'ColorRGB_B' At 100 ; "
+        # t461 ⚠1 — BACK 이 이제 초안 값(35)으로 따로 나간다(반영이 back 비율을 잃던 결함 수정).
+        "Group 12 ; Attribute 'Dimmer' At 35"
     )
-    assert plan.summaries[20] == "조도 70% · 컬러 warm white · 보조컬러 cyan"
+    assert plan.summaries[20] == "조도 70% · 컬러 warm white · 보조컬러 cyan · BACK 35%"
 
 
 def test_a_secondary_colour_with_no_back_group_fails_loudly_not_silently():
@@ -357,7 +363,8 @@ def test_a_fade_edit_rides_the_store_line_as_cuefade():
     current["sections"][1]["fade_seconds"] = 3.5
     plan = plan_console_apply(baseline, current)
     assert "Store Sequence 210 Cue 20 CueFade 3.5 /Merge" in plan.commands
-    assert plan.summaries[20] == "조도 70% · 페이드 3.5초"
+    # t461 ⚠1 — BACK 이 이제 초안 값(35)으로 따로 나간다(반영이 back 비율을 잃던 결함 수정).
+    assert plan.summaries[20] == "조도 70% · BACK 35% · 페이드 3.5초"
 
 
 def test_an_unchanged_fade_does_not_reappear_on_the_store_line():
