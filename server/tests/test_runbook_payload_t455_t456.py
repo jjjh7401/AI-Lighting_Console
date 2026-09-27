@@ -130,9 +130,18 @@ class TestConceptRowsOnPayload:
             None if entry is None else entry["status"] for entry in report["mib"]
         ]
 
-    def test_evidence_is_null_everywhere(self) -> None:
-        # 큐마다 근거 등급을 매기는 생산자가 없다(리드 결정 A — 생산자는 t457)
-        assert all(row["evidence"] is None for row in self._report()["rows"])
+    def test_evidence_follows_the_approved_grade_table(self) -> None:
+        # 카드 t457 — 생산자 배선(리드 승인 표, REQ-022/071). 조문이 받치지 않는
+        # 행은 여전히 None 이다.
+        from server.concept.evidence import evidence_for_row
+
+        rows = self._report()["rows"]
+        for row in rows:
+            assert row["evidence"] == evidence_for_row(
+                row["kind"], row["section"], row["trigger"], row["occurrence"]
+            )
+        assert rows[0]["evidence"] == rows[-1]["evidence"] == "verified"
+        assert any(row["evidence"] is None for row in rows)
 
     def test_pairing_follows_the_approved_rule(self) -> None:
         report = self._report()
