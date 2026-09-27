@@ -1,6 +1,6 @@
 """판정서 §0 문면 확인 — 가짜 콘솔(t469 캡처)로 반영을 돌려 메시지와 프리셋 줄을 찍는다.
 
-    uv run python .moai/reports/t477/show_messages.py
+uv run python .moai/reports/t477/show_messages.py
 """
 
 import sys
