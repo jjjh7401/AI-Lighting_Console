@@ -16,7 +16,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { buildAnalysisSummary } from "./analysisSummary";
-import { NO_DATA, intensityTrend, mibCellText } from "./runbookM7";
+import {
+  NO_DATA,
+  conceptBySection,
+  conceptCells,
+  intensityTrend,
+  sectionHex,
+  timelineDots,
+} from "./runbookM7";
 import type {
   SongTimelinePaletteEntry,
   SongTimelineSection,
@@ -183,17 +190,14 @@ export function cueIndexAtMs(sections: SongTimelineSection[], ms: number): numbe
   return index;
 }
 
-/** 팔레트 범례에서 색을 찾는다. `palette_primary` 는 "P4 핫핑크" 형태라
- * 앞 토큰(P4)이 범례 id 다. 못 찾으면 중립색으로 떨어진다. */
+/** 구간 색. t458 — 서버 HEX(`palette_primary_hex`, t456)가 먼저이고, 없으면
+ * 팔레트 범례(`palette_primary` 는 "P4 핫핑크" 형태라 앞 토큰 P4 가 범례 id),
+ * 그것도 없으면 중립색으로 떨어진다(`runbookM7.sectionHex`). */
 export function paletteColorFor(
   section: SongTimelineSection,
   legend: SongTimelinePaletteEntry[] | undefined,
 ): string {
-  if (!legend || legend.length === 0) return FALLBACK_CUE_COLOR;
-  const token = (section.palette_primary ?? section.palette[0] ?? "").trim().split(/\s+/)[0];
-  if (!token) return FALLBACK_CUE_COLOR;
-  const hit = legend.find((entry) => entry.id === token || entry.name === token);
-  return hit?.color ?? FALLBACK_CUE_COLOR;
+  return sectionHex(section, legend) ?? FALLBACK_CUE_COLOR;
 }
 
 /** 틱 레일 눈금 — 16초 간격, 정본 산출물과 같은 간격이다. */
@@ -225,8 +229,10 @@ function intensityPolyline(
 
 // t454 — REQ-LDDESIGN-082 14열(src/DESIGN.md §4.4 순서). 옛 5열(TC Out·Dur·
 // Mood·Trans·Note)은 화면에서만 뺐다 — `trans` 값은 데이터 모델과 대화창 수정
-// 경로에 그대로 남는다(REQ-096, server/design/cue_sheet_edit.py). 회차·Trigger·
-// Track 예외·근거 등급은 서버가 구간 단위로 내지 않아 「데이터 없음」 칸이다.
+// 경로에 그대로 남는다(REQ-096, server/design/cue_sheet_edit.py). t458 — 회차·
+// Trigger·MIB·근거 등급은 서버 `concept_report.rows`(t455)를 `screen_position`
+// 으로 모아 채운다. 짝짓기가 안 되면(row_pairing.available=false) t454 처럼
+// 「데이터 없음」이다. Track 예외는 아직 「데이터 없음」 칸이다.
 const SHEET_COLUMNS = [
   "Q#",
   "구간",
@@ -417,6 +423,11 @@ export function CueSheetTimeline({
   }
 
   const legend = timeline.palette_legend ?? [];
+  // t458 — 서버 t455 행 표를 화면 구간 위치로 모은다. 짝짓기가 안 됐으면 null
+  // 이고, 그때 회차·Trigger·근거 등급 칸과 점 줄은 t454 그대로(데이터 없음)다.
+  const concept = conceptBySection(timeline.concept_report, sections.length);
+  const dots = timelineDots(timeline.concept_report, sections, totalMs);
+  const anyHex = sections.some((section) => Boolean(section.palette_primary_hex));
   const draftBadge = draftBadgeText(timeline);
   const changeReport = draftChangeReport(timeline);
   const selected = sections[selectedIndex];
@@ -562,6 +573,23 @@ export function CueSheetTimeline({
                 vectorEffect="non-scaling-stroke"
               />
             </svg>
+
+            {/* t458 — REQ-081 원샷·Mark 점 줄. 서버 행 ts 위치에 찍는다. */}
+            {dots && dots.length > 0 && (
+              <div className="cst-dots" aria-label="원샷·Mark 점 줄">
+                {dots.map((dot) => (
+                  <span
+                    className={`cst-dot is-${dot.kind === "mark" ? "mark" : "shot"}`}
+                    key={dot.key}
+                    title={dot.title}
+                    style={{ left: `${dot.leftPct}%` }}
+                  >
+                    <i />
+                    {dot.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -576,18 +604,30 @@ export function CueSheetTimeline({
             <i className="cst-legend-snap" />
             흰 좌측선 = SNAP 전환
           </span>
-          {/* t454 — REQ-081. 범례가 없으면 색 이름을 색값으로 바꿀 원천이 화면에
-              없다(색 표는 서버 color_names.py 에만 있다 — 카드 t456). 원샷·Mark
-              점 줄도 서버가 구간 단위로 내지 않는다(카드 t455). 둘 다 그리지 않고
-              그렇다고 적는다. */}
-          {legend.length === 0 && (
+          {/* t454 — REQ-081. 색값 원천(범례·서버 HEX)이 하나도 없거나 짝짓기가
+              안 됐으면 그렇다고 적는다. t458 — 서버 HEX(t456)가 있는 구간은
+              실색이고, 해석 못 한 구간만 중립색이다. */}
+          {legend.length === 0 && !anyHex && (
             <span className="cst-legend-item cst-legend-nodata">
               블록 색 · 색값 원천 없음(중립색)
             </span>
           )}
-          <span className="cst-legend-item cst-legend-nodata">
-            원샷·Mark 점 줄 · {NO_DATA}
-          </span>
+          {legend.length === 0 && anyHex && (
+            <span className="cst-legend-item">
+              <i style={{ background: FALLBACK_CUE_COLOR }} />
+              회색 블록 = 색값을 못 찾은 색 이름
+            </span>
+          )}
+          {dots === null ? (
+            <span className="cst-legend-item cst-legend-nodata">
+              원샷·Mark 점 줄 · {NO_DATA}
+            </span>
+          ) : (
+            <span className="cst-legend-item">
+              <i className="cst-legend-dot" />
+              점 = 원샷 · ◇ = MIB Mark
+            </span>
+          )}
         </div>
       </div>
 
@@ -690,6 +730,8 @@ export function CueSheetTimeline({
               const selected = index === selectedIndex;
               const sectionStart = index === 0 || sections[index - 1].label !== section.label;
               const railColor = paletteColorFor(section, legend);
+              const cells = conceptCells(concept ? concept[index] : null, section);
+              const conceptClass = cells.nodata ? "nodata" : undefined;
               const rowClass = [
                 selected ? "is-selected" : "",
                 sectionStart ? "is-section-start" : "is-section-cont",
@@ -708,8 +750,8 @@ export function CueSheetTimeline({
                     {cueLabel(section)}
                   </td>
                   <td className="cst-sec">{cell(section.label)}</td>
-                  <td className="nodata">{NO_DATA}</td>
-                  <td className="nodata">{NO_DATA}</td>
+                  <td className={conceptClass}>{cells.occurrence}</td>
+                  <td className={conceptClass}>{cells.trigger}</td>
                   <td className="m">{formatTc(section.start_ms)}</td>
                   <td>
                     {section.palette_primary === undefined
@@ -732,9 +774,9 @@ export function CueSheetTimeline({
                       ? EMPTY_CELL
                       : section.fade_seconds.toFixed(2)}
                   </td>
-                  <td>{mibCellText(section)}</td>
+                  <td>{cells.mib}</td>
                   <td className="nodata">{NO_DATA}</td>
-                  <td className="nodata">{NO_DATA}</td>
+                  <td className={conceptClass}>{cells.evidence}</td>
                 </tr>
               );
             })}

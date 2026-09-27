@@ -1,0 +1,10 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t458/ui
+
+ ✓ src/components/runbookM7Third.test.tsx (16 tests) 4ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  11:16:01
+   Duration  267ms (transform 50ms, setup 0ms, collect 73ms, tests 4ms, environment 0ms, prepare 28ms)
+

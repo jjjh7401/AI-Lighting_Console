@@ -3978,3 +3978,47 @@ body {
 .concept-grammar td.m {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+
+/* ── t458 SPEC-LDDESIGN-001 M7 3차 — REQ-081 원샷·Mark 점 줄(런북 전용) ──── */
+.cst-dots {
+  position: relative;
+  height: 22px;
+  margin-top: 4px;
+  border-top: 1px dashed #2a3243;
+}
+
+.cst-dot {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-5px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #d0d5dd;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.cst-dot i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffd400;
+}
+
+.cst-dot.is-mark {
+  top: 13px;
+  color: #98a2b3;
+}
+
+.cst-dot.is-mark i {
+  border-radius: 1px;
+  background: transparent;
+  border: 1.5px solid #98a2b3;
+  transform: rotate(45deg);
+}
+
+.cst-legend-dot {
+  border-radius: 50%;
+  background: #ffd400;
+}
