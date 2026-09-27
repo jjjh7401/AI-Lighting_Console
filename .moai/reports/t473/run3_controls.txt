@@ -1,0 +1,20 @@
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/2|PRESETDATA,SELECTIONDATA,OWNDATAPRESENT,STOREDDATA,NAME
+    wire: Plugin "CopilotResponder" "props 254cd66e PRESETDATA,SELECTIONDATA,OWNDATAPRESENT,STOREDDATA,NAME ShowData/DataPools/Default/PresetPools/2/2"
+<<< {"id": "254cd66e", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/2", "reads": [{"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}, {"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}, {"n": "NAME", "ok": true, "t": "string", "v": "POS02 무대 전체 커버 · 합성좌표"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/21/4|PRESETDATA,SELECTIONDATA,OWNDATAPRESENT,SPEEDMASTER,SPEEDSCALE,NAME
+    wire: Plugin "CopilotResponder" "props 91b6a2e1 PRESETDATA,SELECTIONDATA,OWNDATAPRESENT,SPEEDMASTER,SPEEDSCALE,NAME ShowData/DataPools/Default/PresetPools/21/4"
+<<< {"id": "91b6a2e1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/4", "reads": [{"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}, {"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "SPEEDMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NAME", "ok": true, "t": "string", "v": "DIM-BREATHE"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/1|PRESETDATA,OWNDATAPRESENT,NAME
+    wire: Plugin "CopilotResponder" "props 41cc73b2 PRESETDATA,OWNDATAPRESENT,NAME ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"id": "41cc73b2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "reads": [{"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "false"}, {"n": "NAME", "ok": true, "t": "string", "v": "POS01 보컬 센터 페이스 · 합성좌표"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/21/2|NOSUCHPROPT473
+    wire: Plugin "CopilotResponder" "props 1d9b4a62 NOSUCHPROPT473 ShowData/DataPools/Default/PresetPools/21/2"
+<<< {"id": "1d9b4a62", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/2", "reads": [{"e": "property not readable: NOSUCHPROPT473", "n": "NOSUCHPROPT473", "ok": false}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/21/4
+    wire: Plugin "CopilotResponder" "state 442926fb ShowData/DataPools/Default/PresetPools/21/4"
+<<< {"children": [], "id": "442926fb", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "DIM-BREATHE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/4", "truncated": false, "v": 1}
