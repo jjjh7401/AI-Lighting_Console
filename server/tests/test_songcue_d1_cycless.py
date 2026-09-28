@@ -28,11 +28,13 @@ import pytest
 
 from server.looks.busking import looks_for_genre
 from server.looks.loader import load_library_from_dir
-from server.tests.test_songcue_rig_aware_look import (
-    _CYC_RIG,
-    _REAL_RIG,
-    _stored_cues,
-)
+
+# 카드 t480 — 실제 입구(``prepare_songcue``)로 「구간이 콘솔에 닿는가」를 잰 두 시험
+# (``test_the_ambient_band_now_stores_a_cue`` · ``test_the_cyc_rig_still_stores_its_ambient_cue``)
+# 은 뺐다. 업로드 길이 대화 길 조립기로 합쳐지며 큐가 룩의 역할 그룹이 아니라 패치된
+# 기구 번호에 저장되므로(감독 결정 2026-09-28, D1) 그 검사는 무엇을 넣어도 통과한다.
+# 남은 검사는 룩 라이브러리 **내용**(두 D1 룩의 존재·역할·정렬)을 잰다 — 라이브러리는
+# 버스킹 도구가 계속 쓴다.
 
 #: 들어온 룩 — 장르별 look_id 와, 그 룩이 실기 리그에서 묶이는 근거가 되는 역할.
 #: 역할은 `resolve_roles` 로 실측했다: 실기 18그룹에서 백라이트·프론트·사이드·스페셜
@@ -69,10 +71,6 @@ class TestTheCycLessRigGainsItsQuietCue:
         # skip 게이트를 대체한다 — 부재는 이제 skip 이 아니라 실패다.
         look_id, _role = _ADDED[genre]
         assert look_id in _look_ids(library, genre)
-
-    @pytest.mark.parametrize("genre", tuple(_ADDED))
-    def test_the_ambient_band_now_stores_a_cue(self, library, genre):
-        assert _stored_cues(library, genre, "ambient", _REAL_RIG)
 
     @pytest.mark.parametrize("genre", tuple(_ADDED))
     def test_the_look_that_binds_is_the_added_one(self, library, genre):
@@ -115,7 +113,3 @@ class TestTheCycRigDoesNotMove:
     def test_the_incumbent_backdrop_look_still_comes_first(self, library, genre):
         d1 = [look.look_id for look in looks_for_genre(library, genre) if look.dynamics == 1]
         assert d1[0] == _INCUMBENT_D1[genre]
-
-    @pytest.mark.parametrize("genre", tuple(_ADDED))
-    def test_the_cyc_rig_still_stores_its_ambient_cue(self, library, genre):
-        assert _stored_cues(library, genre, "ambient", _CYC_RIG)
