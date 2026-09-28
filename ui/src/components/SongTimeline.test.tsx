@@ -202,6 +202,60 @@ describe("REQ-LDDESIGN-083 — 하단 3줄이 읽는 컨셉 행 짝짓기 (t460)
   });
 });
 
+describe("t481 — PLAN CUE 카드는 자기 구간의 컨셉 행을 읽는다(한 칸 밀림 방지)", () => {
+  // 실제 앱처럼 section.index 는 1부터(song_plan.py `minimum=1`), 서버
+  // screen_position 은 `sections` 의 0부터 위치다. 두 번호를 일부러 다르게
+  // 둔다 — 같게 두면 이 결함이 안 보인다(t454~t460 시험이 그랬다).
+  const labels = ["Intro", "Verse 1", "Pre-Chorus 1", "Chorus 1", "Verse 2", "Pre-Chorus 2", "Chorus 2", "Bridge 1", "Chorus 3"];
+  const rowFor = (position: number, unused: number, mib: "dark" | "mark" | "live" | null) => ({
+    q: position + 2,
+    ts: position * 5,
+    kind: "section" as const,
+    section: labels[position],
+    occurrence: 1,
+    trigger: null,
+    tracking: "track",
+    mib,
+    one_shot: null,
+    evidence: null,
+    screen_position: position,
+    unused_groups: unused,
+  });
+  const timeline: SongTimelineView = {
+    ...SONG_TIMELINE_EXAMPLE,
+    lifecycle: "draft",
+    sections: labels.map((label, i) => ({
+      ...SECTION,
+      plan_status: "draft",
+      index: i + 1,
+      cue_number: 101 + i,
+      label,
+      start_ms: i * 5000,
+    })),
+    concept_report: {
+      available: true,
+      rows: labels.map((_, i) => rowFor(i, [8, 7, 6, 7, 7, 4, 4, 9, 2][i], i === 8 ? "mark" : null)),
+    },
+  };
+  const cueMonitor: CueMonitorState = { executors: [], history: [], lastSyncAt: 0, stale: false };
+
+  it("「108 · Bridge 1」 카드는 Bridge 1 행(남김 9)을 읽고, Chorus 3 행(MIB mark · 남김 2)을 읽지 않는다", () => {
+    const el = SongTimeline({ timeline, cueMonitor });
+    const details = findAllByClassIncludes(el, "song-timeline-plan-detail");
+    expect(details).toHaveLength(9);
+    const bridge = details[7];
+    expect(textOf(bridge)).toContain("MIB — · 남김 9");
+    expect(textOf(bridge)).not.toContain("남김 2");
+  });
+
+  it("첫 카드(Intro)도 자기 행을 읽는다 — 짝이 없는 행으로 떨어지지 않는다", () => {
+    const el = SongTimeline({ timeline, cueMonitor });
+    const details = findAllByClassIncludes(el, "song-timeline-plan-detail");
+    expect(textOf(details[0])).toContain("남김 8");
+    expect(textOf(details[8])).toContain("MIB mark · 남김 2");
+  });
+});
+
 describe("SongTimeline render — REQ-083 Q### 배지 + 하단 3줄, AC-034 마운트 게이트", () => {
   const planTimeline: SongTimelineView = {
     ...SONG_TIMELINE_EXAMPLE,
@@ -242,6 +296,19 @@ describe("SongTimeline render — REQ-083 Q### 배지 + 하단 3줄, AC-034 마�
     expect(mounted).toHaveLength(1);
     expect(mounted[0].props.onSend).toBe(onGeneratorSend);
     expect(mounted[0].props.section.cue_number).toBe(7);
+  });
+
+  it("t481 — marks only a generator-carrying card as has-generator (the wider card)", () => {
+    const withGenerator = SongTimeline({
+      timeline: planTimeline,
+      cueMonitor,
+      onGeneratorSend: vi.fn(),
+      generatorResponding: false,
+      generatorLastAssistantText: null,
+    });
+    const without = SongTimeline({ timeline: planTimeline, cueMonitor });
+    expect(findAllByClassIncludes(withGenerator, "has-generator", [PlanCueRequestGenerator])).toHaveLength(1);
+    expect(findAllByClassIncludes(without, "has-generator")).toHaveLength(0);
   });
 
   it("does not mount the generator on a console-stored (non-PLAN) cue", () => {

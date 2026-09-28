@@ -10,6 +10,7 @@
 // 역전(1)만 이 파일이 직접 계산한다(REQ-093 (1)이 "신규"라고 명시).
 import type { SongTimelineConceptRow, SongTimelineReserveItem, SongTimelineSection } from "../protocol";
 import { sectionIntensityPercent } from "./CueSheetTimeline";
+import { sectionPosition } from "./runbookM7";
 import type { GeneratorChange } from "./cueRequestSentence";
 
 /** REQ-093 (1) — 이 큐가 후렴(role === "chorus")이고, 제안된 밝기가 뒤에
@@ -32,23 +33,41 @@ export function chorusReversalWarning(
   return null;
 }
 
-/** REQ-093 (3) — 리저브(BLIND·STROBE·유보색) 대상을 해제 큐 이전에 쓰면
- * 위반. `reserve` 는 `concept_report.reserve` 를 그대로 읽는다(재계산
- * 금지, REQ-027·REQ-090의 서버 원천). 이름 대조는 대소문자 무시(서버
- * 그룹명은 대문자, 색 이름은 표기가 다를 수 있어 정확 일치만 본다 —
- * 지어낸 근사 매칭은 하지 않는다). */
+/** REQ-090·REQ-093 (3) 리저브 판정 한 곳 — BLIND 잠금과 리저브 경고가 함께
+ * 쓴다. `reserve` 는 `concept_report.reserve` 를 그대로 읽는다(재계산 금지,
+ * REQ-027·REQ-090의 서버 원천). 이름 대조는 대소문자 무시(서버 그룹명은
+ * 대문자, 색 이름은 표기가 다를 수 있어 정확 일치만 본다 — 지어낸 근사
+ * 매칭은 하지 않는다).
+ *
+ * t481 — 해제 시점은 `screen_position`(구간 0부터 위치)으로 비교한다.
+ * `released_q` 는 컨셉 **행** 번호라 구간 큐 번호와 단위가 다르다(행 49개 곡에서
+ * 45 = 구간 33). `position` 은 `sectionPosition()` 이 낸 값이어야 한다.
+ * 잠겨 있으면 이름과 해제 큐 라벨을, 아니면 null 을 낸다. 해제 행이 화면
+ * 구간과 짝이 안 됐으면(`screen_position` null) 위치를 지어내지 않고 잠그지
+ * 않는다. */
+export function reserveLock(
+  name: string,
+  reserve: SongTimelineReserveItem[] | undefined,
+  position: number,
+  sections: ReadonlyArray<Pick<SongTimelineSection, "cue_number">>,
+): { name: string; release: string } | null {
+  const item = reserve?.find((entry) => entry.name.toUpperCase() === name.toUpperCase());
+  if (!item) return null;
+  if (item.released_q === null) return { name: item.name, release: "미해제" };
+  if (item.screen_position === null || position >= item.screen_position) return null;
+  const cue = sections[item.screen_position]?.cue_number;
+  return { name: item.name, release: cue === undefined ? "위치 불명" : `Q${cue}` };
+}
+
+/** REQ-093 (3) — 리저브(BLIND·STROBE·유보색) 대상을 해제 큐 이전에 쓰면 위반. */
 export function reserveViolationWarning(
-  cueNumber: number,
+  position: number,
   reserve: SongTimelineReserveItem[] | undefined,
   proposedName: string,
+  sections: ReadonlyArray<Pick<SongTimelineSection, "cue_number">>,
 ): string | null {
-  const item = reserve?.find((entry) => entry.name.toUpperCase() === proposedName.toUpperCase());
-  if (!item) return null;
-  if (item.released_q === null || cueNumber < item.released_q) {
-    const releaseLabel = item.released_q === null ? "미해제" : `Q${item.released_q}`;
-    return `⚠ ${item.name}은(는) 리저브 대상이다 — 해제 큐(${releaseLabel}) 이전`;
-  }
-  return null;
+  const lock = reserveLock(proposedName, reserve, position, sections);
+  return lock === null ? null : `⚠ ${lock.name}은(는) 리저브 대상이다 — 해제 큐(${lock.release}) 이전`;
 }
 
 /** REQ-093 (4) — 잔여 그룹 < 4. `row.unused_groups` 는 REQ-050의 헤드룸
@@ -81,13 +100,13 @@ export interface WarningContext {
  */
 export function deriveWarningsForChange(context: WarningContext, change: GeneratorChange): string[] {
   const warnings: string[] = [];
-  const cueNumber = context.section.cue_number;
+  const position = sectionPosition(context.section, context.allSections);
 
   if (change.field === "intensity") {
     const reversal = chorusReversalWarning(context.section, context.allSections, change.value);
     if (reversal) warnings.push(reversal);
     for (const group of change.groups ?? []) {
-      const reserveHit = reserveViolationWarning(cueNumber, context.reserve, group);
+      const reserveHit = reserveViolationWarning(position, context.reserve, group, context.allSections);
       if (reserveHit) warnings.push(reserveHit);
     }
     const headroom = headroomWarning(context.conceptRow);
@@ -96,10 +115,10 @@ export function deriveWarningsForChange(context: WarningContext, change: Generat
 
   if (change.field === "palette_primary") {
     for (const group of change.groups) {
-      const reserveHit = reserveViolationWarning(cueNumber, context.reserve, group);
+      const reserveHit = reserveViolationWarning(position, context.reserve, group, context.allSections);
       if (reserveHit) warnings.push(reserveHit);
     }
-    const colorReserveHit = reserveViolationWarning(cueNumber, context.reserve, change.value);
+    const colorReserveHit = reserveViolationWarning(position, context.reserve, change.value, context.allSections);
     if (colorReserveHit) warnings.push(colorReserveHit);
   }
 

@@ -1,0 +1,227 @@
+{
+ "label": "before_css",
+ "viewport": "1600x1000",
+ "container": {
+  "overflowX": "hidden",
+  "scrollWidth": 4841,
+  "clientWidth": 1178,
+  "userScrollable": false,
+  "cardsTotal": 36,
+  "cardsFullyVisibleWithoutScroll": 8,
+  "cardWidths": [
+   130,
+   130,
+   130,
+   130,
+   130
+  ]
+ },
+ "cards": [
+  {
+   "card": 0,
+   "label": "00:00 Intro, D3",
+   "article_width": 130,
+   "generator_scrollWidth": 248,
+   "generator_clientWidth": 100,
+   "controls": 26,
+   "clickable": 20,
+   "blocked": [
+    {
+     "el": "적용",
+     "why": "00:05 Verse 1, D3"
+    },
+    {
+     "el": "FADE",
+     "why": "00:05 Verse 1, D3"
+    },
+    {
+     "el": "Cue Only",
+     "why": "00:05 Verse 1, D3"
+    },
+    {
+     "el": "Release",
+     "why": "00:05 Verse 1, D3"
+    },
+    {
+     "el": "mark",
+     "why": "00:05 Verse 1, D3"
+    },
+    {
+     "el": "live",
+     "why": "00:05 Verse 1, D3"
+    }
+   ]
+  },
+  {
+   "card": 3,
+   "label": "00:15 Chorus 1, D3",
+   "article_width": 130,
+   "generator_scrollWidth": 248,
+   "generator_clientWidth": 100,
+   "controls": 26,
+   "clickable": 20,
+   "blocked": [
+    {
+     "el": "적용",
+     "why": "00:20 Verse 2, D3"
+    },
+    {
+     "el": "FADE",
+     "why": "00:20 Verse 2, D3"
+    },
+    {
+     "el": "Cue Only",
+     "why": "00:20 Verse 2, D3"
+    },
+    {
+     "el": "Release",
+     "why": "00:20 Verse 2, D3"
+    },
+    {
+     "el": "mark",
+     "why": "00:20 Verse 2, D3"
+    },
+    {
+     "el": "live",
+     "why": "00:20 Verse 2, D3"
+    }
+   ]
+  },
+  {
+   "card": 8,
+   "label": "00:40 Chorus 3, D3",
+   "article_width": 130,
+   "generator_scrollWidth": 248,
+   "generator_clientWidth": 100,
+   "controls": 26,
+   "clickable": 17,
+   "blocked": [
+    {
+     "el": "적용",
+     "why": ""
+    },
+    {
+     "el": "적용",
+     "why": "song-timeline"
+    },
+    {
+     "el": "XFADE",
+     "why": ""
+    },
+    {
+     "el": "FADE",
+     "why": ""
+    },
+    {
+     "el": "Cue Only",
+     "why": ""
+    },
+    {
+     "el": "Release",
+     "why": ""
+    },
+    {
+     "el": "mark",
+     "why": ""
+    },
+    {
+     "el": "live",
+     "why": ""
+    }
+   ]
+  },
+  {
+   "card": 20,
+   "label": "01:40 Pre-Chorus 5, D3",
+   "article_width": 130,
+   "generator_scrollWidth": 248,
+   "generator_clientWidth": 100,
+   "controls": 26,
+   "clickable": 0,
+   "blocked": [
+    {
+     "el": "KEY",
+     "why": "offscreen"
+    },
+    {
+     "el": "BACK",
+     "why": "offscreen"
+    },
+    {
+     "el": "number",
+     "why": "offscreen"
+    },
+    {
+     "el": "적용",
+     "why": "offscreen"
+    },
+    {
+     "el": "number",
+     "why": "offscreen"
+    },
+    {
+     "el": "적용",
+     "why": "offscreen"
+    },
+    {
+     "el": "SNAP",
+     "why": "offscreen"
+    },
+    {
+     "el": "XFADE",
+     "why": "offscreen"
+    }
+   ]
+  },
+  {
+   "card": 35,
+   "label": "02:55 Outro, D3",
+   "article_width": 130,
+   "generator_scrollWidth": 248,
+   "generator_clientWidth": 100,
+   "controls": 26,
+   "clickable": 0,
+   "blocked": [
+    {
+     "el": "KEY",
+     "why": "offscreen"
+    },
+    {
+     "el": "BACK",
+     "why": "offscreen"
+    },
+    {
+     "el": "number",
+     "why": "offscreen"
+    },
+    {
+     "el": "적용",
+     "why": "offscreen"
+    },
+    {
+     "el": "number",
+     "why": "offscreen"
+    },
+    {
+     "el": "적용",
+     "why": "offscreen"
+    },
+    {
+     "el": "SNAP",
+     "why": "offscreen"
+    },
+    {
+     "el": "XFADE",
+     "why": "offscreen"
+    }
+   ]
+  }
+ ],
+ "card3_real_mouse_click_apply": {
+  "clicked": false,
+  "error": "locator.click: Timeout 5000ms exceeded."
+ },
+ "blind": "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLuuu",
+ "blind_legend": "L=잠김 u=풀림, 카드 0..35 순서. 서버 reserve BLIND released_q=45 screen_position=33",
+ "page_errors": []
+}

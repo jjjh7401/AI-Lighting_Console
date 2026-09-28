@@ -1,0 +1,78 @@
+{
+ "label": "after_css",
+ "viewport": "1600x1000",
+ "container": {
+  "overflowX": "auto",
+  "scrollWidth": 10080,
+  "clientWidth": 1125,
+  "userScrollable": true,
+  "cardsTotal": 36,
+  "cardsFullyVisibleWithoutScroll": 4,
+  "cardWidths": [
+   280,
+   280,
+   280,
+   280,
+   280
+  ]
+ },
+ "cards": [
+  {
+   "card": 0,
+   "label": "00:00 Intro, D3",
+   "article_width": 280,
+   "generator_scrollWidth": 250,
+   "generator_clientWidth": 250,
+   "controls": 26,
+   "clickable": 26,
+   "blocked": []
+  },
+  {
+   "card": 3,
+   "label": "00:15 Chorus 1, D3",
+   "article_width": 280,
+   "generator_scrollWidth": 250,
+   "generator_clientWidth": 250,
+   "controls": 26,
+   "clickable": 26,
+   "blocked": []
+  },
+  {
+   "card": 8,
+   "label": "00:40 Chorus 3, D3",
+   "article_width": 280,
+   "generator_scrollWidth": 250,
+   "generator_clientWidth": 250,
+   "controls": 26,
+   "clickable": 26,
+   "blocked": []
+  },
+  {
+   "card": 20,
+   "label": "01:40 Pre-Chorus 5, D3",
+   "article_width": 280,
+   "generator_scrollWidth": 250,
+   "generator_clientWidth": 250,
+   "controls": 26,
+   "clickable": 26,
+   "blocked": []
+  },
+  {
+   "card": 35,
+   "label": "02:55 Outro, D3",
+   "article_width": 280,
+   "generator_scrollWidth": 250,
+   "generator_clientWidth": 250,
+   "controls": 26,
+   "clickable": 26,
+   "blocked": []
+  }
+ ],
+ "card3_real_mouse_click_apply": {
+  "clicked": true,
+  "stack": 1
+ },
+ "blind": "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLuuu",
+ "blind_legend": "L=잠김 u=풀림, 카드 0..35 순서. 서버 reserve BLIND released_q=45 screen_position=33",
+ "page_errors": []
+}

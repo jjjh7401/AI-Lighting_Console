@@ -1,0 +1,15 @@
+## AC-051 build output (/private/tmp/claude-501/acui-dist)
+index.html
+assets/index-eFSn1EGk.js
+assets/index-B4Fmk7Gx.css
+favicon.svg
+font files (.woff/.woff2/.ttf/.otf):
+       0
+font CDN / @font-face refs:
+       0
+tabular-nums occurrences in built css:
+      14
+
+## AC-019 REQ-096 Trans still valid on server
+TRANS_VALUES= ('SNAP', 'XFADE', 'FADE')
+label[trans]= 전환

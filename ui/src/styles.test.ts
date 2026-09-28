@@ -161,6 +161,24 @@ describe("진행 순서 보드 (2026-08-15) — the executor list is VERTICAL", 
   });
 });
 
+// t481 — 런북 PLAN CUE 카드 레이아웃. 헤드리스 Chrome 1600×1000 실측(.moai/reports/t481):
+// 카드 줄이 가로로 굴러가지 않으면 36장 중 28장에 닿을 수 없었고, 생성기(내용 폭
+// 250px)가 130px 카드 밖으로 넘쳐 버튼 6/26 이 옆 카드에 덮였다.
+describe("런북 PLAN CUE 카드 — 닿을 수 있고 눌릴 수 있다 (t481)", () => {
+  it("카드 줄(.song-timeline-track)은 가로로 굴러간다 — 바깥 .song-timeline 은 overflow: hidden", () => {
+    const block = blocks.find((b) => b.selector === ".song-timeline-track");
+    expect(block).toBeDefined();
+    expect(block!.body).toMatch(/overflow-x:\s*auto/);
+  });
+
+  it("생성기가 붙은 카드는 생성기 내용 폭(250px) 이상으로 넓다", () => {
+    const block = blocks.find((b) => b.selector === ".song-timeline-section.has-generator");
+    expect(block).toBeDefined();
+    const width = Number(block!.body.match(/min-width:\s*(\d+)px/)?.[1]);
+    expect(width).toBeGreaterThanOrEqual(260);
+  });
+});
+
 // t435 — SPEC-LDDESIGN-001 REQ-099 / AC-LDDESIGN-051. 웹폰트를 싣지 않는 대신
 // 런북 모드의 수치 칸이 세로로 어긋나지 않게 `tabular-nums` 를 건다. 세 자리
 // (CUE SHEET 수치 열 · PLAN CUE 카드 · 타임라인 시간 눈금) 중 하나라도 빠지면

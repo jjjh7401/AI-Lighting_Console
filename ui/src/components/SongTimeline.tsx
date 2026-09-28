@@ -11,6 +11,7 @@ import type {
 } from "../protocol";
 import { cueLabel } from "./CueSheetTimeline";
 import { PlanCueRequestGenerator } from "./PlanCueRequestGenerator";
+import { sectionPosition } from "./runbookM7";
 
 const LIFECYCLE_LABEL: Record<SongTimelineView["lifecycle"], string> = {
   draft: "초안",
@@ -125,7 +126,7 @@ export function liveExecutorForSection(
 const EMPTY_DETAIL = "—";
 
 /** t460 — REQ-083 하단 3줄이 읽는 컨셉 행. `screen_position` 이 이 구간의
- * 화면 인덱스와 같은 section 종류 행만 짝짓는다. `row_pairing`이 실패하면
+ * 화면 위치(`sectionPosition()` — 0부터, t481)와 같은 section 종류 행만 짝짓는다. `row_pairing`이 실패하면
  * (available=false) 모든 행의 screen_position 이 null 이라 항상 매칭되지
  * 않고, 아래 3줄은 정직하게 '—'로 떨어진다(값을 지어내지 않는다). */
 export function conceptRowForSection(
@@ -197,12 +198,12 @@ function TimelineSectionCard({
   const width = sectionWidth(section, next);
   const status = sectionPlanStatus(section, lifecycle);
   const onConsole = status === "stored" || status === "verified";
-  const conceptRow = conceptRowForSection(conceptReport, section.index);
+  const conceptRow = conceptRowForSection(conceptReport, sectionPosition(section, allSections));
   const liveExecutor = liveExecutorForSection(status, executor);
   const current = isTimelineCurrentCue(liveExecutor, section.cue_number);
   return (
     <article
-      className={`song-timeline-section d-level-${section.d_level}${onConsole ? "" : " is-plan-cue"}${current ? " is-current" : ""}`}
+      className={`song-timeline-section d-level-${section.d_level}${onConsole ? "" : " is-plan-cue"}${!onConsole && onGeneratorSend ? " has-generator" : ""}${current ? " is-current" : ""}`}
       style={{ flexGrow: width, flexBasis: 0 }}
       aria-label={`${formatTimestamp(section.start_ms)} ${section.label}, D${section.d_level}`}
     >

@@ -1,0 +1,77 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/ac-ui
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/ac-ui
+Installed 97 packages in 215ms
+============================= test session starts ==============================
+platform darwin -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/ac-ui/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/ac-ui
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.2
+collecting ... collected 62 items
+
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_fixture_has_the_nine_representative_operations PASSED [  1%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[group-multi-intensity] PASSED [  3%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[colour-single-group] PASSED [  4%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[effect-preset-name] PASSED [  6%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[fade] PASSED [  8%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[trans] PASSED [  9%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[tracking] PASSED [ 11%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[mib] PASSED [ 12%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[phaser] PASSED [ 14%]
+server/tests/test_plan_cue_generator_vocabulary_t460.py::test_generator_sentence_resolves_to_the_expected_changes[position] PASSED [ 16%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_tracking_sentences_are_read_into_the_closed_vocabulary[\ud050 3 \ud2b8\ub798\ud0b9 Block\uc73c\ub85c \ubc14\uafd4\uc918-Block] PASSED [ 17%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_tracking_sentences_are_read_into_the_closed_vocabulary[\ud050 3 \ud2b8\ub798\ud0b9\uc744 Cue Only\ub85c \uc124\uc815-Cue Only] PASSED [ 19%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_tracking_sentences_are_read_into_the_closed_vocabulary[\ud050 3 \ud2b8\ub798\ud0b9 Release\ub85c \ubc14\uafd4\uc918-Release] PASSED [ 20%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_tracking_sentences_are_read_into_the_closed_vocabulary[\ud050 3 \ud2b8\ub798\ud0b9 Track\uc73c\ub85c \ubc14\uafd4\uc918-Track] PASSED [ 22%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_tracking_sentences_are_read_into_the_closed_vocabulary[\ud050 3 \ud2b8\ub798\ud0b9 \ube14\ub85d\uc73c\ub85c \ubc14\uafd4\uc918-Block] PASSED [ 24%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_tracking_sentences_are_read_into_the_closed_vocabulary[\ud050 3 \ud2b8\ub798\ud0b9 \ud050\uc628\ub9ac\ub85c \ubc14\uafd4\uc918-Cue Only] PASSED [ 25%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_tracking_sentences_are_read_into_the_closed_vocabulary[\ud050 3 \ud2b8\ub798\ud0b9 \ub9b4\ub9ac\uc988\ub85c \ubc14\uafd4\uc918-Release] PASSED [ 27%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_tracking_sentences_are_read_into_the_closed_vocabulary[\ud050 3 \ud2b8\ub798\ud0b9 \ud2b8\ub799\uc73c\ub85c \ubc14\uafd4\uc918-Track] PASSED [ 29%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_mib_sentences_are_read_into_the_closed_vocabulary[\ud050 3 MIB dark\ub85c \uc124\uc815-dark] PASSED [ 30%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_mib_sentences_are_read_into_the_closed_vocabulary[\ud050 3 MIB mark\ub85c \ubc14\uafd4\uc918-mark] PASSED [ 32%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_mib_sentences_are_read_into_the_closed_vocabulary[\ud050 3 MIB live\ub85c \ubc14\uafd4\uc918-live] PASSED [ 33%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_mib_sentences_are_read_into_the_closed_vocabulary[\ud050 3 MIB \uc5c6\uc74c\uc73c\ub85c \ubc14\uafd4\uc918-none] PASSED [ 35%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_mib_sentences_are_read_into_the_closed_vocabulary[\ud050 3 MIB \ub2e4\ud06c\ub85c \ubc14\uafd4\uc918-dark] PASSED [ 37%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_mib_sentences_are_read_into_the_closed_vocabulary[\ud050 3 MIB \ub77c\uc774\ube0c\ub85c \ubc14\uafd4\uc918-live] PASSED [ 38%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_phaser_sentence_carries_the_preset_name PASSED [ 40%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_position_sentence_splits_number_and_name PASSED [ 41%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_position_sentence_by_name_only PASSED [ 43%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_the_selected_cue_path_reads_the_new_vocabulary_without_an_anchor PASSED [ 45%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_an_unknown_tracking_value_is_passed_through_raw_for_apply_to_reject PASSED [ 46%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_writes_the_new_field_and_reports_it[changes0-tracking-Block-\ud2b8\ub798\ud0b9 Track \u2192 Block] PASSED [ 48%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_writes_the_new_field_and_reports_it[changes1-mib_mode-dark-MIB \uc5c6\uc74c \u2192 dark] PASSED [ 50%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_writes_the_new_field_and_reports_it[changes2-phaser-Ph 2 step-\ud398\uc774\uc800 \u2014 \u2192 Ph 2 step] PASSED [ 51%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_keeps_the_computed_mib_flag_untouched PASSED [ 53%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_writes_position_name_and_number PASSED [ 54%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_rejects_out_of_vocabulary_values_before_writing[changes0-\ud2b8\ub798\ud0b9 \uac12\uc740 Track, Block, Cue Only, Release \uc911 \ud558\ub098] PASSED [ 56%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_rejects_out_of_vocabulary_values_before_writing[changes1-MIB \uac12\uc740 \uc5c6\uc74c, dark, mark, live \uc911 \ud558\ub098] PASSED [ 58%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_rejects_out_of_vocabulary_values_before_writing[changes2-\ubc88\ud638\ub9cc\uc73c\ub85c\ub294 \ud3ec\uc9c0\uc158 \uc774\ub984\uc744 \uc54c \uc218 \uc5c6\uc2b5\ub2c8\ub2e4] PASSED [ 59%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_rejects_out_of_vocabulary_values_before_writing[changes3-\ud3ec\uc9c0\uc158 \ud504\ub9ac\uc14b\uc740 \ud480 2] PASSED [ 61%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_apply_rejects_out_of_vocabulary_values_before_writing[changes4-\ud398\uc774\uc800 \uac12\uc774 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4] PASSED [ 62%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_new_fields_are_cue_wide_and_refuse_a_group_scope PASSED [ 64%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_the_new_fields_are_skipped_on_the_console_with_their_own_reason[mib_mode] PASSED [ 66%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_the_new_fields_are_skipped_on_the_console_with_their_own_reason[phaser] PASSED [ 67%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_existing_sentences_parse_exactly_as_before PASSED [ 69%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_the_session_routes_the_new_sentences_to_the_draft_without_touching_the_console[\ud050 1 \ud2b8\ub798\ud0b9 Block\uc73c\ub85c \ubc14\uafd4\uc918-tracking-Block] PASSED [ 70%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_the_session_routes_the_new_sentences_to_the_draft_without_touching_the_console[\ud050 1 MIB dark\ub85c \uc124\uc815-mib_mode-dark] PASSED [ 72%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_the_session_routes_the_new_sentences_to_the_draft_without_touching_the_console[\ud050 1 \ud398\uc774\uc800 Ph 2 step\uc73c\ub85c \ubc14\uafd4\uc918-phaser-Ph 2 step] PASSED [ 74%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_the_session_routes_the_new_sentences_to_the_draft_without_touching_the_console[\ud050 1 \ud398\uc774\uc800 Breathe Soft\ub85c \ubc14\uafd4\uc918-phaser-Breathe Soft] PASSED [ 75%]
+server/tests/test_cue_sheet_edit_vocab_t466.py::test_the_session_routes_the_new_sentences_to_the_draft_without_touching_the_console[\ud050 1 \ud3ec\uc9c0\uc158 2.11 Sweep L\ub85c \ubc14\uafd4\uc918-position-Sweep L] PASSED [ 77%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_1_one_group_absolute_leaves_the_other_group PASSED [ 79%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_2_all_groups_named_behaves_like_the_whole_cue PASSED [ 80%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_3_one_group_relative PASSED [ 82%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_3b_relative_hits_the_ceiling_with_the_existing_refusal_shape PASSED [ 83%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_4_back_colour_goes_to_the_secondary_slot PASSED [ 85%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_5_key_colour_is_the_primary_slot PASSED [ 87%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_6_anchorless_with_selected_cue PASSED [ 88%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_group_list_separators_and_case PASSED [ 90%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_a_unknown_group_is_refused_with_the_known_names PASSED [ 91%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_b_colour_for_several_groups_is_refused PASSED [ 93%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_c_cue_wide_fields_refuse_a_group PASSED [ 95%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_d_cue_without_group_levels_refuses_a_group PASSED [ 96%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_refusal_writes_nothing PASSED [ 98%]
+server/tests/test_cue_sheet_edit_group_scope_t461.py::test_existing_sentences_parse_exactly_as_before PASSED [100%]
+
+============================== 62 passed in 1.47s ==============================

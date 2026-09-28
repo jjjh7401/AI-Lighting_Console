@@ -92,6 +92,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
+from server.design.color_names import resolve_color_name
 from server.design.profile import (
     CONCEPT_SEED_TABLE,
     GENRE_DEFAULT_TABLE,
@@ -1020,7 +1021,24 @@ def _palette_value_tokens(value: object) -> tuple[str, ...]:
                 break
         if cleaned and cleaned not in tokens:
             tokens.append(cleaned)
-    return tuple(tokens) or (str(value),)
+    return _promote_first_color(tuple(tokens)) or (str(value),)
+
+
+def _promote_first_color(tokens: tuple[str, ...]) -> tuple[str, ...]:
+    """카드 t483 — 첫 토큰이 주색이 된다(``_arc_palette`` 는 반환 첫 칸을 항상
+    ``profile.palette[0]`` 로 고정한다). 표준 §7 edm 행 '단색 볼드, 퍼플/...'
+    처럼 문장 앞에 색이 아닌 수식어가 오면 주색이 '단색' 이 되어 RGB 로 안
+    풀리고 색 줄이 0 이었다. 앞머리의 **표준 표 어휘이면서 색으로 안 풀리는**
+    토큰만 건너뛰어 첫 색 이름을 맨 앞으로 올린다 — 버리지 않고 순서만
+    바꾼다. 감독이 쓴 모르는 말(``민트``)을 만나면 멈춘다(그 자리를 뺏지 않는다)."""
+    for index, token in enumerate(tokens):
+        if resolve_color_name(token) is not None:
+            if index == 0:
+                return tokens
+            return (token, *tokens[:index], *tokens[index + 1 :])
+        if token.casefold() not in _KNOWN_COLOR_TOKENS:
+            return tokens
+    return tokens
 
 
 #: spec.md §2 D1 — Q2B 자유 입력 키워드 그룹 (단색/하나/only/single →
