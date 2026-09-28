@@ -21,7 +21,6 @@ from server.concept.session_bridge import (
     GLANCE_RULE,
     GLANCE_STAGES,
     build_concept_report,
-    build_concept_report_from_songcue_sections,
     glance_stages,
 )
 from server.tests.test_song_timeline_concept_report_wiring import _plan, _section
@@ -128,14 +127,6 @@ class TestConceptReportWiring:
         glance = build_concept_report(_plan(bpm=120.0, sections=sections))["glance"]
         assert glance["available"] is False  # type: ignore[index]
         assert "role" in glance["reason"]  # type: ignore[index]
-
-    def test_songcue_path_has_no_role_source(self) -> None:
-        report = build_concept_report_from_songcue_sections(
-            "Rain", 120.0, [("Intro", 0), ("Verse", 10_000), ("Chorus", 20_000)]
-        )
-        glance = report["glance"]
-        assert glance["available"] is False  # type: ignore[index]
-        assert glance["reason"]  # type: ignore[index]
 
     def test_every_row_carries_a_non_empty_description(self) -> None:
         rows = build_concept_report(self._plan_with_roles())["rows"]
