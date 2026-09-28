@@ -1,0 +1,344 @@
+
+>>> props:Patch/Stages/1/Fixtures/1|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props b4daf267 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/1"
+<<< {"id": "b4daf267", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/1", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "101"}, {"n": "Name", "ok": true, "t": "string", "v": "KEY 101"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/2|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props d3289133 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/2"
+<<< {"id": "d3289133", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/2", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "102"}, {"n": "Name", "ok": true, "t": "string", "v": "KEY 102"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/3|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props adbe37bc FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/3"
+<<< {"id": "adbe37bc", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/3", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "103"}, {"n": "Name", "ok": true, "t": "string", "v": "KEY 103"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/4|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 8ba47ac9 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/4"
+<<< {"id": "8ba47ac9", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/4", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "104"}, {"n": "Name", "ok": true, "t": "string", "v": "KEY 104"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/5|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props d3fa68b3 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/5"
+<<< {"id": "d3fa68b3", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/5", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "105"}, {"n": "Name", "ok": true, "t": "string", "v": "KEY 105"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/6|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 3700b1a6 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/6"
+<<< {"id": "3700b1a6", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/6", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "106"}, {"n": "Name", "ok": true, "t": "string", "v": "KEY 106"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/7|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 1a8aece3 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/7"
+<<< {"id": "1a8aece3", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/7", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "111"}, {"n": "Name", "ok": true, "t": "string", "v": "FOH 111"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/8|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 1f7e8eff FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/8"
+<<< {"id": "1f7e8eff", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/8", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "112"}, {"n": "Name", "ok": true, "t": "string", "v": "FOH 112"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/9|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props aea60caa FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/9"
+<<< {"id": "aea60caa", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/9", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "113"}, {"n": "Name", "ok": true, "t": "string", "v": "FOH 113"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/10|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 82354796 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/10"
+<<< {"id": "82354796", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/10", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "114"}, {"n": "Name", "ok": true, "t": "string", "v": "FOH 114"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/11|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 3bd7d9d9 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/11"
+<<< {"id": "3bd7d9d9", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/11", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "115"}, {"n": "Name", "ok": true, "t": "string", "v": "FOH 115"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/12|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 75d3102a FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/12"
+<<< {"id": "75d3102a", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/12", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "116"}, {"n": "Name", "ok": true, "t": "string", "v": "FOH 116"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/13|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 32d568b6 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/13"
+<<< {"id": "32d568b6", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/13", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "117"}, {"n": "Name", "ok": true, "t": "string", "v": "FOH 117"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/14|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props e31e9cdd FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/14"
+<<< {"id": "e31e9cdd", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/14", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "118"}, {"n": "Name", "ok": true, "t": "string", "v": "FOH 118"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 10"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Direct"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/15|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props c64d0c66 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/15"
+<<< {"id": "c64d0c66", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/15", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "601"}, {"n": "Name", "ok": true, "t": "string", "v": "BLIND 601"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 13"}, {"n": "Mode", "ok": true, "t": "string", "v": "4 4 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/16|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props a92d6b62 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/16"
+<<< {"id": "a92d6b62", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/16", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "602"}, {"n": "Name", "ok": true, "t": "string", "v": "BLIND 602"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 13"}, {"n": "Mode", "ok": true, "t": "string", "v": "4 4 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/17|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props af38b95b FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/17"
+<<< {"id": "af38b95b", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/17", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "603"}, {"n": "Name", "ok": true, "t": "string", "v": "BLIND 603"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 13"}, {"n": "Mode", "ok": true, "t": "string", "v": "4 4 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/18|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 69c01367 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/18"
+<<< {"id": "69c01367", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/18", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "604"}, {"n": "Name", "ok": true, "t": "string", "v": "BLIND 604"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 13"}, {"n": "Mode", "ok": true, "t": "string", "v": "4 4 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/19|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props b4fc2a25 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/19"
+<<< {"id": "b4fc2a25", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/19", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "605"}, {"n": "Name", "ok": true, "t": "string", "v": "BLIND 605"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 13"}, {"n": "Mode", "ok": true, "t": "string", "v": "4 4 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/20|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props bcecfe15 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/20"
+<<< {"id": "bcecfe15", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/20", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "606"}, {"n": "Name", "ok": true, "t": "string", "v": "BLIND 606"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 13"}, {"n": "Mode", "ok": true, "t": "string", "v": "4 4 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/21|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props edd2fc67 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/21"
+<<< {"id": "edd2fc67", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/21", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "611"}, {"n": "Name", "ok": true, "t": "string", "v": "STROBE 611"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 14"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/22|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 12da0305 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/22"
+<<< {"id": "12da0305", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/22", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "612"}, {"n": "Name", "ok": true, "t": "string", "v": "STROBE 612"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 14"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/23|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props bb917364 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/23"
+<<< {"id": "bb917364", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/23", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "613"}, {"n": "Name", "ok": true, "t": "string", "v": "STROBE 613"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 14"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/24|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props a5689cfe FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/24"
+<<< {"id": "a5689cfe", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/24", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "614"}, {"n": "Name", "ok": true, "t": "string", "v": "STROBE 614"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 14"}, {"n": "Mode", "ok": true, "t": "string", "v": "3 Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/25|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 355f71f3 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/25"
+<<< {"id": "355f71f3", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/25", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "621"}, {"n": "Name", "ok": true, "t": "string", "v": "HAZE 621"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 15"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/26|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 5b2021c5 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/26"
+<<< {"id": "5b2021c5", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/26", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "622"}, {"n": "Name", "ok": true, "t": "string", "v": "HAZE 622"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 15"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/27|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props ec05805a FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/27"
+<<< {"id": "ec05805a", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/27", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "501"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-U 501"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/28|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 7ee19196 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/28"
+<<< {"id": "7ee19196", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/28", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "502"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-U 502"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/29|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 60699cfa FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/29"
+<<< {"id": "60699cfa", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/29", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "503"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-U 503"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/30|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props bfef5997 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/30"
+<<< {"id": "bfef5997", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/30", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "504"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-U 504"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/31|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 184404be FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/31"
+<<< {"id": "184404be", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/31", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "505"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-U 505"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/32|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 3ec00799 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/32"
+<<< {"id": "3ec00799", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/32", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "506"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-U 506"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/33|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props f5725726 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/33"
+<<< {"id": "f5725726", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/33", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "507"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-U 507"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/34|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props e9364395 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/34"
+<<< {"id": "e9364395", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/34", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "508"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-U 508"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/35|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props e776c7d0 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/35"
+<<< {"id": "e776c7d0", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/35", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "521"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-D 521"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/36|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props efc21c73 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/36"
+<<< {"id": "efc21c73", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/36", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "522"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-D 522"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/37|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 43335f3d FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/37"
+<<< {"id": "43335f3d", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/37", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "523"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-D 523"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/38|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 69f54911 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/38"
+<<< {"id": "69f54911", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/38", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "524"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-D 524"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/39|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 44e38f48 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/39"
+<<< {"id": "44e38f48", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/39", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "525"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-D 525"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/40|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 4fedd0a3 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/40"
+<<< {"id": "4fedd0a3", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/40", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "526"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-D 526"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/41|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 121dce50 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/41"
+<<< {"id": "121dce50", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/41", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "527"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-D 527"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/42|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 216dcb48 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/42"
+<<< {"id": "216dcb48", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/42", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "528"}, {"n": "Name", "ok": true, "t": "string", "v": "MOVER-D 528"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Mode 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/43|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props fcb4a7fc FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/43"
+<<< {"id": "fcb4a7fc", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "201"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 201"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/44|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 828b9d13 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/44"
+<<< {"id": "828b9d13", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/44", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "202"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 202"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/45|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 8be79763 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/45"
+<<< {"id": "8be79763", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/45", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "203"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 203"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/46|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props d50a93de FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/46"
+<<< {"id": "d50a93de", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/46", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "204"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 204"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/47|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 63dcaeb6 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/47"
+<<< {"id": "63dcaeb6", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/47", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "205"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 205"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/48|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 4be5edd7 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/48"
+<<< {"id": "4be5edd7", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/48", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "206"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 206"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/49|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 25a6c5e2 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/49"
+<<< {"id": "25a6c5e2", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/49", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "207"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 207"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/50|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 51e8d341 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/50"
+<<< {"id": "51e8d341", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/50", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "208"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 208"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/51|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props a9948c67 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/51"
+<<< {"id": "a9948c67", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/51", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "209"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 209"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/52|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props f6c185e8 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/52"
+<<< {"id": "f6c185e8", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/52", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "210"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 210"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/53|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props f87e19b7 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/53"
+<<< {"id": "f87e19b7", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/53", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "211"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 211"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/54|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 20393da6 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/54"
+<<< {"id": "20393da6", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/54", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "212"}, {"n": "Name", "ok": true, "t": "string", "v": "BACK 212"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/55|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 4dd1505a FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/55"
+<<< {"id": "4dd1505a", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "301"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-L 301"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/56|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 8ecf8892 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/56"
+<<< {"id": "8ecf8892", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/56", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "302"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-L 302"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/57|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 6323f9ea FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/57"
+<<< {"id": "6323f9ea", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/57", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "303"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-L 303"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/58|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props ccb43075 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/58"
+<<< {"id": "ccb43075", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/58", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "304"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-L 304"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/59|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 62c2f753 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/59"
+<<< {"id": "62c2f753", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/59", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "305"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-L 305"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/60|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 65448d8e FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/60"
+<<< {"id": "65448d8e", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/60", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "306"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-L 306"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/61|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 4fd0b50a FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/61"
+<<< {"id": "4fd0b50a", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/61", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "311"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-R 311"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/62|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 55fe9ac8 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/62"
+<<< {"id": "55fe9ac8", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/62", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "312"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-R 312"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/63|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 7cf33195 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/63"
+<<< {"id": "7cf33195", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/63", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "313"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-R 313"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/64|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props bd78d7ef FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/64"
+<<< {"id": "bd78d7ef", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/64", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "314"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-R 314"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/65|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 52ebfebc FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/65"
+<<< {"id": "52ebfebc", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/65", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "315"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-R 315"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/66|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props d7fa6fcb FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/66"
+<<< {"id": "d7fa6fcb", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/66", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "316"}, {"n": "Name", "ok": true, "t": "string", "v": "SIDE-R 316"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 8"}, {"n": "Mode", "ok": true, "t": "string", "v": "1 Extended - Extended"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/67|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 70b8cdb3 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/67"
+<<< {"id": "70b8cdb3", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/67", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "401"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 401"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/68|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 8433949d FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/68"
+<<< {"id": "8433949d", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/68", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "402"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 402"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/69|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props c3f7faea FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/69"
+<<< {"id": "c3f7faea", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/69", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "403"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 403"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/70|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props c6fd2000 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/70"
+<<< {"id": "c6fd2000", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/70", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "404"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 404"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/71|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 8797eca4 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/71"
+<<< {"id": "8797eca4", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/71", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "405"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 405"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/72|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 6b6bedbf FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/72"
+<<< {"id": "6b6bedbf", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/72", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "406"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 406"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/73|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props e04564e2 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/73"
+<<< {"id": "e04564e2", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/73", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "407"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 407"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/74|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 0e0735a8 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/74"
+<<< {"id": "0e0735a8", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/74", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "408"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 408"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/75|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 2695eb51 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/75"
+<<< {"id": "2695eb51", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/75", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "409"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 409"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/76|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 350ca0a6 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/76"
+<<< {"id": "350ca0a6", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/76", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "410"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-U 410"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/77|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 6a98ded7 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/77"
+<<< {"id": "6a98ded7", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/77", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "421"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 421"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/78|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props b097b16e FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/78"
+<<< {"id": "b097b16e", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/78", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "422"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 422"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/79|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 6b0d5ca1 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/79"
+<<< {"id": "6b0d5ca1", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/79", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "423"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 423"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/80|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 00c6747a FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/80"
+<<< {"id": "00c6747a", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/80", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "424"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 424"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/81|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 34a38db7 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/81"
+<<< {"id": "34a38db7", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/81", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "425"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 425"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/82|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 5ba72980 FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/82"
+<<< {"id": "5ba72980", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/82", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "426"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 426"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/83|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 4b2ad5ca FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/83"
+<<< {"id": "4b2ad5ca", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/83", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "427"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 427"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/84|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props d5eea57f FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/84"
+<<< {"id": "d5eea57f", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/84", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "428"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 428"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/85|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 28f5c2cf FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/85"
+<<< {"id": "28f5c2cf", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/85", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "429"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 429"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/86|FID,Name,FixtureType,Mode
+    wire: Plugin "CopilotResponder" "props 70fd9cde FID,Name,FixtureType,Mode Patch/Stages/1/Fixtures/86"
+<<< {"id": "70fd9cde", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/86", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "430"}, {"n": "Name", "ok": true, "t": "string", "v": "WASH-D 430"}, {"n": "FixtureType", "ok": true, "t": "userdata", "v": "FixtureType 9"}, {"n": "Mode", "ok": true, "t": "string", "v": "2 9 channel"}], "truncated": false, "v": 1}

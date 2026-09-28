@@ -21,9 +21,18 @@ from server.safety.bootstrap import build_console_stack
 
 OUT = Path(sys.argv[1])
 EXECUTE = "--execute" in sys.argv
-CMD_FILE = Path(".moai/reports/t498/cmd_saveshow_copy.txt")
+# 1차 파일(큰따옴표)은 브리지 검증(protocol.py _validate_rest)이 송신 전에 거절했다.
+# 2차 파일(작은따옴표)을 --cmd 로 지정한다. 어느 쪽이든 아래 두 줄 중 하나와 글자까지 같아야 한다.
+CMD_FILE = Path(
+    sys.argv[sys.argv.index("--cmd") + 1]
+    if "--cmd" in sys.argv
+    else ".moai/reports/t498/cmd_saveshow_copy.txt"
+)
 COMMANDS = CMD_FILE.read_text("utf-8").splitlines()
-assert COMMANDS == ['SaveShow "copilot-rehearsal-20260928"'], COMMANDS
+assert COMMANDS in (
+    ['SaveShow "copilot-rehearsal-20260928"'],
+    ["SaveShow 'copilot-rehearsal-20260928'"],
+), COMMANDS
 OUT.mkdir(parents=True, exist_ok=True)
 print("command file:", CMD_FILE, COMMANDS)
 if not EXECUTE:
@@ -56,11 +65,22 @@ stack = build_console_stack(
 )
 skipped_backups: list[str] = []
 stack.backup._backup_action = lambda: skipped_backups.append("SaveShow skipped (no-arg)")
+# 앱의 run_commands 와 같은 순서: screen(분류·승인) → 통과했을 때만 execution_port.execute.
+# (1차 실행은 존재하지 않는 gate.execute 를 불러 송신 전에 죽었다 — 감사 로그 0.)
+result = None
 try:
-    result = stack.gate.execute(COMMANDS[0])
+    decision = stack.gate.screen(COMMANDS)
+    if decision.cleared:
+        result = stack.gate.execution_port.execute(COMMANDS[0])
 finally:
     stack.stop()
 summary = {
+    "screen": {
+        "cleared": decision.cleared,
+        "status": decision.status,
+        "notice": decision.notice,
+        "commands": [(d.command, d.status, list(d.reasons)) for d in decision.commands],
+    },
     "result": repr(result),
     "approval_requests": approval.requests,
     "skipped_backups": skipped_backups,
