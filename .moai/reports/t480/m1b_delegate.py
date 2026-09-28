@@ -1,3 +1,4 @@
+# ruff: noqa: E501 — 아래 NEW 는 session.py 에 그대로 들어간 메서드 원문이다(줄바꿈 불가).
 """t480 M1b — ChatSession 의 풀 판독 메서드 다섯을 console_slots 위임으로 바꾼다.
 
 메서드 이름·시그니처·프로브 id 는 그대로 둔다(시험 대역이 이 메서드들을 묶어 쓴다).

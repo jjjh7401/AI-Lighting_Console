@@ -31,8 +31,9 @@ for song, raw, bpm in (("Ice cream", _ICE_CREAM_SECTIONS, 100.4), ("Rain", _RAIN
         result = compose_song_cue_bundle(plan)
         bundle = result.bundle
         roles = [d.role for d in plan.sections]
+        cue_count = len(bundle.cues) if bundle else None
         print(
-            f"## {song} bpm={tempo} sections={len(sections)} cues={len(bundle.cues) if bundle else None}"
+            f"## {song} bpm={tempo} sections={len(sections)} cues={cue_count}"
             f" requery={len(result.requery_requirements)} notes={len(notes)}"
         )
         print("   roles:", roles)
