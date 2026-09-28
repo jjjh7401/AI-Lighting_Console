@@ -1,0 +1,107 @@
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 40
+Store Sequence 211 Cue 1 'Intro' CueFade 3.15733
+ClearAll
+Fixture 20 + 26 ; At Preset 2.21
+Fixture 20 + 26 ; Attribute 'Dimmer' At 70
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 56
+Store Sequence 211 Cue 2 'Verse 1' CueFade 2.368
+ClearAll
+Fixture 20 + 26 ; At Preset 2.21
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 20
+Store Sequence 211 Cue 3 'Verse 2' CueFade 2.368
+ClearAll
+Fixture 20 + 26 ; At Preset 2.25
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 80
+Store Sequence 211 Cue 4 'Chorus 1' CueFade 0.394667
+ClearAll
+Fixture 20 + 26 ; At Preset 2.24
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 80
+Store Sequence 211 Cue 5 'Chorus 2' CueFade 0.394667
+ClearAll
+Fixture 20 + 26 ; At Preset 2.24
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 20
+Store Sequence 211 Cue 6 'Verse 3' CueFade 2.368
+ClearAll
+Fixture 20 + 26 ; At Preset 2.22
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 80
+Store Sequence 211 Cue 7 'Chorus 3' CueFade 0.394667
+ClearAll
+Fixture 20 + 26 ; At Preset 2.22
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 80
+Store Sequence 211 Cue 8 'Chorus 4' CueFade 0.394667
+ClearAll
+Fixture 20 + 26 ; At Preset 2.28
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 80
+Store Sequence 211 Cue 9 'Chorus 5' CueFade 0.394667
+ClearAll
+Fixture 20 + 26 ; At Preset 2.26
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 20
+Store Sequence 211 Cue 10 'Verse 4' CueFade 1.184
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 80
+Group 14 ; Attribute 'Dimmer' At 80
+Store Sequence 211 Cue 11 'Chorus 6' CueFade 0.394667
+ClearAll
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Group 14 ; Attribute 'Dimmer' At 0
+Store Sequence 211 Cue 11.5 'Chorus 6 Return' CueFade 0
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 4 ; Attribute 'Dimmer' At 80
+Store Sequence 211 Cue 12 'Finale' CueFade 6.31467
+ClearAll
+Store Timecode 11
+Set Timecode 11 Property 'Name' 'Sequence 211 Timecode'
+Assign Sequence 211 At Timecode 11
+Set Cue 1 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 211 Property 'TrigTime' 0
+Set Cue 2 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 211 Property 'TrigTime' 20.939
+Set Cue 3 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 211 Property 'TrigTime' 33.568
+Set Cue 4 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 211 Property 'TrigTime' 49.515
+Set Cue 5 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 211 Property 'TrigTime' 66.517
+Set Cue 6 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 211 Property 'TrigTime' 79.595
+Set Cue 7 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 211 Property 'TrigTime' 106.432
+Set Cue 8 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 211 Property 'TrigTime' 123.008
+Set Cue 9 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 211 Property 'TrigTime' 138.581
+Set Cue 10 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 211 Property 'TrigTime' 166.421
+Set Cue 11 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 211 Property 'TrigTime' 179.061
+Set Cue 11.5 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 11.5 Sequence 211 Property 'TrigTime' 180.64
+Set Cue 12 Sequence 211 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 211 Property 'TrigTime' 209.141

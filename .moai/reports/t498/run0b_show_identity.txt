@@ -1,0 +1,12 @@
+
+>>> introspect:ShowData
+    wire: Plugin "CopilotResponder" "introspect e81f3cae ShowData"
+<<< {"class": "ShowData", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "MEMORYLIMIT", "t": "Int64"}, {"n": "PARAMETERCOUNT", "t": "UInt32"}], "id": "e81f3cae", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData", "source": "property_accessors", "total": 22, "truncated": false, "v": 1}
+
+>>> props:ShowData|Name,FileName,ShowFile,Path
+    wire: Plugin "CopilotResponder" "props f85eb0b4 Name,FileName,ShowFile,Path ShowData"
+<<< {"id": "f85eb0b4", "kind": "props", "ok": true, "path": "ShowData", "reads": [{"n": "Name", "ok": true, "t": "string", "v": "ShowData"}, {"e": "property not readable: FileName", "n": "FileName", "ok": false}, {"e": "property not readable: ShowFile", "n": "ShowFile", "ok": false}, {"e": "property not readable: Path", "n": "Path", "ok": false}], "truncated": false, "v": 1}
+
+>>> state:ShowData/ShowSettings
+    wire: Plugin "CopilotResponder" "state 74e04874 ShowData/ShowSettings"
+<<< {"children": [{"class": "DefaultPlaybackSettings", "i": 1, "name": "DefaultPlaybackSettings"}, {"class": "GlobalSettings", "i": 2, "name": "GlobalSettings"}, {"class": "MidiSettings", "i": 3, "name": "MidiSettings"}, {"class": "SoundSettings", "i": 4, "name": "SoundSettings"}, {"class": "TimecodeStatuses", "i": 5, "name": "TimecodeStatuses"}, {"class": "Variables", "i": 6, "name": "GlobalVariables"}, {"class": "AddonVariables", "i": 7, "name": "AddonVariables"}, {"class": "ShowMetaData", "i": 8, "name": "ShowMetaData"}, {"class": "ShowDeletedData", "i": 9, "name": "ShowDeletedData"}, {"class": "ScreenEncoder", "i": 10, "name": "ScreenEncoder"}], "id": "74e04874", "kind": "state", "node": {"childCount": 10, "class": "ShowSettings", "enumeration": "ok", "name": "ShowSettings"}, "offset": 0, "ok": true, "path": "ShowData/ShowSettings", "truncated": false, "v": 1}
