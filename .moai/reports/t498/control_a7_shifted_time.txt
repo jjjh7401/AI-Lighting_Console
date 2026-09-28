@@ -1,0 +1,2 @@
+cue 7: name 'Chorus 3' want 'Chorus 3' | type Time want Time | time 106.432 want 106.434 | MISMATCH
+A7 match 12 / 13 (console cues read: 13)

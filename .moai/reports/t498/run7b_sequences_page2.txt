@@ -1,0 +1,4 @@
+
+>>> state:ShowData/DataPools/Default/Sequences@18
+    wire: Plugin "CopilotResponder" "state 422e6c07 ShowData/DataPools/Default/Sequences offset=18"
+<<< {"children": [{"class": "Sequence", "i": 2000, "name": "Sequence 2000"}], "id": "422e6c07", "kind": "state", "node": {"childCount": 19, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 18, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": false, "v": 1}
