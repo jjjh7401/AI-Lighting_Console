@@ -111,25 +111,44 @@ function stackEntry(overrides: Partial<StackEntry> = {}): StackEntry {
 }
 
 describe("isGroupLocked — AC-037의 순수 판정 로직 (REQ-090)", () => {
+  // t481 — released_q 는 컨셉 행 번호(행 49개 중 45번째)이고 구간 큐 번호가
+  // 아니다. 해제 위치는 screen_position(구간 0부터 위치 33 = Q134)이다. 두
+  // 번호를 같게 두던 예전 시험(released_q 23 = 큐 23)은 이 결함을 못 잡았다.
+  const sections = Array.from({ length: 36 }, (_, i) => ({ cue_number: 101 + i }));
   const reserve: SongTimelineReserveItem[] = [
-    { name: "BLIND", kind: "group", released_q: 23, screen_position: 5 },
+    { name: "BLIND", kind: "group", released_q: 45, screen_position: 33 },
+    { name: "STROBE", kind: "group", released_q: null, screen_position: null },
   ];
 
-  it("locks before the release cue", () => {
-    expect(isGroupLocked("BLIND", reserve, 10)).toBe(true);
+  it("locks every section before the release section (Q104 = position 3)", () => {
+    expect(isGroupLocked("BLIND", reserve, 0, sections)).toBe(true);
+    expect(isGroupLocked("BLIND", reserve, 3, sections)).toBe(true);
+    expect(isGroupLocked("BLIND", reserve, 32, sections)).toBe(true);
   });
 
-  it("unlocks at and after the release cue", () => {
-    expect(isGroupLocked("BLIND", reserve, 23)).toBe(false);
-    expect(isGroupLocked("BLIND", reserve, 30)).toBe(false);
+  it("unlocks at and after the release section — even though 34 < released_q 45", () => {
+    expect(isGroupLocked("BLIND", reserve, 33, sections)).toBe(false);
+    expect(isGroupLocked("BLIND", reserve, 34, sections)).toBe(false);
+    expect(isGroupLocked("BLIND", reserve, 35, sections)).toBe(false);
+  });
+
+  it("stays locked when the group is never released", () => {
+    expect(isGroupLocked("STROBE", reserve, 35, sections)).toBe(true);
+  });
+
+  it("does not invent a lock when the release row has no screen section (pairing failed)", () => {
+    const unpaired: SongTimelineReserveItem[] = [
+      { name: "BLIND", kind: "group", released_q: 45, screen_position: null },
+    ];
+    expect(isGroupLocked("BLIND", unpaired, 3, sections)).toBe(false);
   });
 
   it("never locks a non-reserve group", () => {
-    expect(isGroupLocked("KEY", reserve, 1)).toBe(false);
+    expect(isGroupLocked("KEY", reserve, 1, sections)).toBe(false);
   });
 
   it("does not lock when reserve data is absent (no fabricated lock)", () => {
-    expect(isGroupLocked("BLIND", undefined, 1)).toBe(false);
+    expect(isGroupLocked("BLIND", undefined, 1, sections)).toBe(false);
   });
 });
 

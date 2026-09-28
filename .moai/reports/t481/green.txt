@@ -1,0 +1,12 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t481/ui
+
+ ✓ src/components/cueRequestWarnings.test.ts (19 tests) 2ms
+ ✓ src/components/SongTimeline.test.tsx (20 tests) 6ms
+ ✓ src/components/PlanCueRequestGenerator.test.tsx (30 tests) 13ms
+
+ Test Files  3 passed (3)
+      Tests  69 passed (69)
+   Start at  11:55:22
+   Duration  283ms (transform 109ms, setup 0ms, collect 229ms, tests 20ms, environment 0ms, prepare 110ms)
+

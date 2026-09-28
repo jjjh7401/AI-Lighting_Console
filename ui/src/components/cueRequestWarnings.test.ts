@@ -51,30 +51,33 @@ describe("chorusReversalWarning", () => {
 });
 
 describe("reserveViolationWarning", () => {
+  // t481 — 해제 위치는 released_q(컨셉 행 번호)가 아니라 screen_position
+  // (구간 0부터 위치)이다. 경고에 적는 해제 큐는 그 구간의 큐 번호다.
+  const sections = Array.from({ length: 36 }, (_, i) => section({ index: i + 1, cue_number: 101 + i }));
   const reserve: SongTimelineReserveItem[] = [
-    { name: "BLIND", kind: "group", released_q: 23, screen_position: 5 },
+    { name: "BLIND", kind: "group", released_q: 45, screen_position: 33 },
     { name: "흰색", kind: "color", released_q: null, screen_position: null },
   ];
 
-  it("warns when used before its release cue", () => {
-    expect(reserveViolationWarning(10, reserve, "BLIND")).toMatch(/해제 큐\(Q23\) 이전/);
+  it("warns before the release section, naming the release section's cue (Q134, not Q45)", () => {
+    expect(reserveViolationWarning(3, reserve, "BLIND", sections)).toMatch(/해제 큐\(Q134\) 이전/);
   });
 
-  it("does not warn at or after the release cue", () => {
-    expect(reserveViolationWarning(23, reserve, "BLIND")).toBeNull();
-    expect(reserveViolationWarning(30, reserve, "BLIND")).toBeNull();
+  it("does not warn at or after the release section", () => {
+    expect(reserveViolationWarning(33, reserve, "BLIND", sections)).toBeNull();
+    expect(reserveViolationWarning(35, reserve, "BLIND", sections)).toBeNull();
   });
 
   it("warns 미해제 when the colour has never been released", () => {
-    expect(reserveViolationWarning(1, reserve, "흰색")).toMatch(/미해제/);
+    expect(reserveViolationWarning(1, reserve, "흰색", sections)).toMatch(/미해제/);
   });
 
   it("is silent for a name that is not a reserve item", () => {
-    expect(reserveViolationWarning(1, reserve, "FOH")).toBeNull();
+    expect(reserveViolationWarning(1, reserve, "FOH", sections)).toBeNull();
   });
 
   it("is silent when there is no reserve list at all", () => {
-    expect(reserveViolationWarning(1, undefined, "BLIND")).toBeNull();
+    expect(reserveViolationWarning(1, undefined, "BLIND", sections)).toBeNull();
   });
 });
 

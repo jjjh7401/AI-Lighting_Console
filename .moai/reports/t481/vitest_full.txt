@@ -1,0 +1,732 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t481/ui
+
+ ✓ src/styles.test.ts > styles.css — @media is restricted to the T-H prefers-reduced-motion carve-out > every @media block is an allowed carve-out (reduced-motion or responsive)
+ ✓ src/styles.test.ts > styles.css — @media is restricted to the T-H prefers-reduced-motion carve-out > parsed at least one block (sanity check the regex actually matched)
+ ✓ src/styles.test.ts > --live-amber token exclusivity (REQ-DASHUI-017) > is defined exactly once, inside :root
+ ✓ src/styles.test.ts > --live-amber token exclusivity (REQ-DASHUI-017) > is referenced (var(--live-amber)) ONLY inside a .pool-tile-running-scoped selector — never for any other, non-running state
+ ✓ src/styles.test.ts > --live-amber token exclusivity (REQ-DASHUI-017) > is never referenced by an 'occupied slot' or generic tile selector (.pool-tile alone, .pool-tile-press, .pool-tile-info)
+ ✓ src/styles.test.ts > 15px label floor for M4 primary labels (design.md §3 '라벨 최소 15px') > .pool-tile-no declares font-size >= 15px
+ ✓ src/styles.test.ts > 15px label floor for M4 primary labels (design.md §3 '라벨 최소 15px') > .pool-tile-name declares font-size >= 15px
+ ✓ src/styles.test.ts > 15px label floor for M4 primary labels (design.md §3 '라벨 최소 15px') > .pool-tile-verb declares font-size >= 15px
+ ✓ src/styles.test.ts > 15px label floor for M4 primary labels (design.md §3 '라벨 최소 15px') > .pool-section-label declares font-size >= 15px
+ ✓ src/styles.test.ts > 15px label floor for M4 primary labels (design.md §3 '라벨 최소 15px') > .dashboard-summary declares font-size >= 15px
+ ✓ src/styles.test.ts > existing :root tokens are additive-only (REQ-DASHUI-016 — extend, never replace) > --bg is still defined in :root
+ ✓ src/styles.test.ts > existing :root tokens are additive-only (REQ-DASHUI-016 — extend, never replace) > --panel is still defined in :root
+ ✓ src/styles.test.ts > existing :root tokens are additive-only (REQ-DASHUI-016 — extend, never replace) > --text is still defined in :root
+ ✓ src/styles.test.ts > existing :root tokens are additive-only (REQ-DASHUI-016 — extend, never replace) > --muted is still defined in :root
+ ✓ src/styles.test.ts > existing :root tokens are additive-only (REQ-DASHUI-016 — extend, never replace) > --accent is still defined in :root
+ ✓ src/styles.test.ts > existing :root tokens are additive-only (REQ-DASHUI-016 — extend, never replace) > --ok is still defined in :root
+ ✓ src/styles.test.ts > existing :root tokens are additive-only (REQ-DASHUI-016 — extend, never replace) > --warn is still defined in :root
+ ✓ src/styles.test.ts > existing :root tokens are additive-only (REQ-DASHUI-016 — extend, never replace) > --bad is still defined in :root
+ ✓ src/styles.test.ts > --live-amber stays exclusive to .pool-tile-running even after T-H5's action-button colours > no cue-monitor-action-btn selector references var(--live-amber)
+ ✓ src/styles.test.ts > 진행 순서 보드 (2026-08-15) — the executor list is VERTICAL > cue-monitor-grid is a column flex list, not a multi-column grid
+ ✓ src/styles.test.ts > 진행 순서 보드 (2026-08-15) — the executor list is VERTICAL > each cue tile is a horizontal row
+ ✓ src/styles.test.ts > 런북 PLAN CUE 카드 — 닿을 수 있고 눌릴 수 있다 (t481) > 카드 줄(.song-timeline-track)은 가로로 굴러간다 — 바깥 .song-timeline 은 overflow: hidden
+ ✓ src/styles.test.ts > 런북 PLAN CUE 카드 — 닿을 수 있고 눌릴 수 있다 (t481) > 생성기가 붙은 카드는 생성기 내용 폭(250px) 이상으로 넓다
+ ✓ src/styles.test.ts > 런북 모드 수치 정렬 — tabular-nums (REQ-LDDESIGN-099) > .cst-sheet 는 tabular-nums 를 건다
+ ✓ src/styles.test.ts > 런북 모드 수치 정렬 — tabular-nums (REQ-LDDESIGN-099) > .song-timeline-section 는 tabular-nums 를 건다
+ ✓ src/styles.test.ts > 런북 모드 수치 정렬 — tabular-nums (REQ-LDDESIGN-099) > .cst-tick span 는 tabular-nums 를 건다
+ ✓ src/styles.test.ts > 런북 모드 수치 정렬 — tabular-nums (REQ-LDDESIGN-099) > 웹폰트를 싣지 않는다 — @font-face·폰트 CDN·폰트 파일 참조 0건
+ ✓ src/styles.test.ts > 런북 모드 수치 정렬 — tabular-nums (REQ-LDDESIGN-099) > 런북 모노 칸은 시스템 모노스페이스(ui-monospace)로 시작한다 — Consolas 단독 금지
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > 음악 판독 줄을 bpm·박자·마디·tc_method 로부터 만든다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > tc_method 가 DERIVED 면 경고 문구를 별도 줄로 낸다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > tc_method 가 없으면 음악 판독 줄도 경고 줄도 안 낸다 — 지어내지 않는다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > director_decisions 의 palette 축 답변을 색 줄에 싣는다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > palette 축과 color_usage 축이 함께 있으면 한 색 줄에 둘 다 담긴다 (sync-audit F4)
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > director_decisions 의 color_usage 축(modulate)을 색 줄에 이어 붙인다 (AC-COLORMODE-009)
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > color_usage 축(single)을 색 줄에 이어 붙인다 (AC-COLORMODE-009)
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > color_usage 축(per_chorus)을 색 줄에 이어 붙인다 (AC-COLORMODE-009)
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > color_usage 의 source 가 default_accepted 면 기본값 수용 표시를 덧붙인다 (AC-COLORMODE-010)
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > color_usage 의 source 가 option 이면 기본값 수용 표시를 붙이지 않는다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > 구간 role 이 여러 종류면 색 줄에 역할 갈래를 같이 낸다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > director_decisions 도 role 도 없으면 색 줄을 안 낸다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > 구간의 fx 값을 모아 이펙트 줄을 만든다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > disabled[] 의 사유를 꺼진 축 줄로 낸다
+ ✓ src/components/analysisSummary.test.ts > buildAnalysisSummary > console_stored 를 정직하게 그대로 반영한다 — 지어내지 않는다
+ ✓ src/provision.test.ts > RESPONDER_ASSETS > is the native import XML + the Lua component
+ ✓ src/provision.test.ts > parseResponderStatus > parses a well-formed status response
+ ✓ src/provision.test.ts > parseResponderStatus > returns null on invalid JSON
+ ✓ src/provision.test.ts > parseResponderStatus > returns null when the guide is missing (boundary discipline)
+ ✓ src/provision.test.ts > parseResponderStatus > returns null when installed is not an object
+ ✓ src/provision.test.ts > allInstalled > is false when any asset is missing
+ ✓ src/provision.test.ts > allInstalled > is true when the server reports installed_all
+ ✓ src/provision.test.ts > OSC_TEMPLATE_ASSETS > is the receive + send row template pair
+ ✓ src/provision.test.ts > allOscTemplatesInstalled > is false when the field is absent (older backend)
+ ✓ src/provision.test.ts > allOscTemplatesInstalled > is false when any template is missing
+ ✓ src/provision.test.ts > allOscTemplatesInstalled > is true when the server reports osc_templates_installed_all
+ ✓ src/provision.test.ts > parseResponderStatus with the OSC bootstrap guide > parses osc_bootstrap_guide when present
+ ✓ src/provision.test.ts > parseResponderStatus with the OSC bootstrap guide > still parses when the OSC fields are absent (older backend)
+ ✓ src/provision.test.ts > parseInstalledList > extracts the installed filenames from a POST body
+ ✓ src/provision.test.ts > parseInstalledList > returns an empty list on invalid JSON or a missing field
+ ✓ src/provision.test.ts > parseInstalledList > filters out non-string entries
+ ✓ src/provision.test.ts > installSummary > names the installed files in a Korean confirmation
+ ✓ src/provision.test.ts > installSummary > handles an empty install list without crashing
+ ✓ src/provision.test.ts > oscSlotWarning > is silent when the values agree
+ ✓ src/provision.test.ts > oscSlotWarning > is silent on a first install
+ ✓ src/provision.test.ts > oscSlotWarning > names BOTH numbers so the operator can tell which way to resolve it
+ ✓ src/provision.test.ts > oscSlotWarning > says the value is unknown rather than inventing one
+ ✓ src/provision.test.ts > oscSlotWarning > is silent when the server did not report the fields at all
+ ✓ src/components/PoolTile.test.tsx > PoolTile > renders a slot cell with the REAL no as a first-class element and the name
+ ✓ src/components/PoolTile.test.tsx > PoolTile > renders an appearance chip when the item carries one, and omits it otherwise
+ ✓ src/components/PoolTile.test.tsx > PoolTile > read-only tile (pressable=false) carries NO verb button — design.md §7 rule 7
+ ✓ src/components/PoolTile.test.tsx > PoolTile > press-able tile renders a verb button with press-affordance class + onClick wired
+ ✓ src/components/PoolTile.test.tsx > PoolTile > press-able tile with no onPress still renders the button but its onClick is a no-op (undefined)
+ ✓ src/components/PoolTile.test.tsx > PoolTile > unresolved executor (pressable=false, meta.resolved=false) renders an info-only badge, no click affordance
+ ✓ src/components/PoolTile.test.tsx > PoolTile > resolved executor rendered as pressable carries no info-only badge
+ ✓ src/components/PoolTile.test.tsx > PoolTile > empty name falls back to an em-dash placeholder rather than rendering blank
+ ✓ src/components/PoolTile.test.tsx > PoolTile > running (M5) > press-able + running carries the exclusive live-amber class
+ ✓ src/components/PoolTile.test.tsx > PoolTile > running (M5) > press-able + not running carries no running class
+ ✓ src/components/PoolTile.test.tsx > PoolTile > running (M5) > running is ignored on a read-only (non-pressable) tile — never fabricates a press-only class
+ ✓ src/components/PoolTile.test.tsx > PoolTile > running (M5) > the verb button still renders whatever verb the caller passes (e.g. 'Off' while running)
+ ✓ src/components/PoolTile.test.tsx > stored-count badge (2026-08-15 방향) — 실측된 풀에만 > shows the measured stored_count top-right
+ ✓ src/components/PoolTile.test.tsx > stored-count badge (2026-08-15 방향) — 실측된 풀에만 > a pool the drilldown never opened wears NO badge — unknown is not zero
+ ✓ src/components/PoolTile.test.tsx > stored-count badge (2026-08-15 방향) — 실측된 풀에만 > a measured ZERO still shows — empty is a fact, not an unknown
+ ✓ src/components/PoolSection.test.tsx > sectionHealthLabel > returns null for a fully-healthy section with no flags
+ ✓ src/components/PoolSection.test.tsx > sectionHealthLabel > distinguishes path_not_resolved from console_unreachable — never a generic 'error'
+ ✓ src/components/PoolSection.test.tsx > sectionHealthLabel > surfaces truncated/drilldown_capped/contents_unavailable honestly instead of silent capping
+ ✓ src/components/PoolSection.test.tsx > PoolSection > renders a header with the label and no health badge when healthy
+ ✓ src/components/PoolSection.test.tsx > PoolSection > renders items in WIRE order — no sort/reflow (AC-DASHUI-010)
+ ✓ src/components/PoolSection.test.tsx > PoolSection > renders an empty-state placeholder for a section with zero items — not an error
+ ✓ src/components/PoolSection.test.tsx > PoolSection > delegates per-item pressability to the caller predicate — never decides it itself
+ ✓ src/components/PoolSection.test.tsx > PoolSection > passes onPress through to every tile unchanged
+ ✓ src/components/PoolSection.test.tsx > PoolSection > running verb switch (M5) > running item gets the runningVerb + running=true; idle item keeps the default verb + running=false
+ ✓ src/components/PoolSection.test.tsx > PoolSection > running verb switch (M5) > omitting isRunning defaults every tile to not-running (backward compatible with M4 callers)
+ ✓ src/components/PoolSection.test.tsx > PoolSection > running verb switch (M5) > a one-shot section with no runningVerb (macros) never switches its verb even when isRunning reports true
+ ✓ src/components/PoolSection.test.tsx > PoolSection > running verb switch (M5) > running never applies to a non-pressable item, even if isRunning would report true
+ ✓ src/components/PoolSection.test.tsx > PoolSection > shows the health badge text inside the header when the section is not fully healthy
+ ✓ src/components/PoolSection.test.tsx > PoolSection — square cells + window area > clamps cell size and window area into their legal ranges
+ ✓ src/components/PoolSection.test.tsx > PoolSection — square cells + window area > renders fixed SQUARE cell columns from tileSize and the window area from the area prop
+ ✓ src/components/PoolSection.test.tsx > PoolSection — square cells + window area > defaults tileSize when omitted, and AUTO-FITS the window (2026-08-15)
+ ✓ src/components/PoolSection.test.tsx > PoolSection — square cells + window area > −/+ step the cell size (clamped) ONLY when onTileSizeChange is provided
+ ✓ src/components/PoolSection.test.tsx > PoolSection — square cells + window area > the corner handle forwards its mouse-down ONLY when onAreaResizeStart is provided
+ ✓ src/components/PoolSection.test.tsx > auto-fit window sizing (2026-08-15 방향) — 내용에 맞추고, 드래그가 이기고 > no dragged area -> the window fits its contents under a viewport cap
+ ✓ src/components/PoolSection.test.tsx > auto-fit window sizing (2026-08-15 방향) — 내용에 맞추고, 드래그가 이기고 > a dragged area still wins for that section
+ ✓ src/components/PresetPoolPopup.test.tsx > parsePresetPoolResponse — GET /api/presets/{no}의 와이어 형태 > parses the pool, its presets and the completeness flags
+ ✓ src/components/PresetPoolPopup.test.tsx > parsePresetPoolResponse — GET /api/presets/{no}의 와이어 형태 > drops a name-only slot — a tile without a REAL console number invites position addressing
+ ✓ src/components/PresetPoolPopup.test.tsx > parsePresetPoolResponse — GET /api/presets/{no}의 와이어 형태 > carries a well-formed palette colour and drops anything else — never a CSS injection channel
+ ✓ src/components/PresetPoolPopup.test.tsx > parsePresetPoolResponse — GET /api/presets/{no}의 와이어 형태 > carries a phaser's step colours only when every hex is well-formed and there are 2+
+ ✓ src/components/PresetPoolPopup.test.tsx > parsePresetPoolResponse — GET /api/presets/{no}의 와이어 형태 > malformed JSON or a missing pool is null, never a fabricated shape
+ ✓ src/components/PresetPoolPopup.test.tsx > phaserGradient — 콘솔의 ⋯ 분할 원 > splits 2 steps into horizontal halves and 3 into thirds
+ ✓ src/components/PresetPoolPopup.test.tsx > presetPoolErrorMessage — API detail 우선, 상태줄 폴백 > uses the API's own detail when present
+ ✓ src/components/PresetPoolPopup.test.tsx > presetPoolErrorMessage — API detail 우선, 상태줄 폴백 > falls back to the HTTP status line
+ ✓ src/components/PresetPoolPopup.test.tsx > presetPopupTitle — 개수는 아는 만큼만 > ready shows the pool and an honest count
+ ✓ src/components/PresetPoolPopup.test.tsx > presetPopupTitle — 개수는 아는 만큼만 > a truncated read with no total claim says N개 이상, never a flat count
+ ✓ src/components/PresetPoolPopup.test.tsx > presetPopupTitle — 개수는 아는 만큼만 > loading/error show the pool identity only
+ ✓ src/components/PresetPoolPopup.test.tsx > PresetPoolPopup — onSelect prop (t460, REQ-089 재사용 규칙) > renders plain divs (unchanged) when onSelect is omitted
+ ✓ src/components/PresetPoolPopup.test.tsx > PresetPoolPopup — onSelect prop (t460, REQ-089 재사용 규칙) > renders each tile as a pressable button when onSelect is provided
+ ✓ src/components/PresetPoolPopup.test.tsx > PresetPoolPopup — onSelect prop (t460, REQ-089 재사용 규칙) > reports the selected entry (number + name) and nothing else
+ ✓ src/components/PaperworkPanel.test.tsx > paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따라 나타난다/사라진다 > patch_sheet: no badge when observed matches declared and completeness is complete
+ ✓ src/components/PaperworkPanel.test.tsx > paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따라 나타난다/사라진다 > patch_sheet: names the observed/declared gap and flags incompleteness
+ ✓ src/components/PaperworkPanel.test.tsx > paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따라 나타난다/사라진다 > cue_sheet: truncated flag surfaces as a badge
+ ✓ src/components/PaperworkPanel.test.tsx > paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따라 나타난다/사라진다 > cue_sheet/preset_list: no badge when neither flag is set
+ ✓ src/components/PaperworkPanel.test.tsx > paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따라 나타난다/사라진다 > preset_list: drilldown_capped surfaces independently of truncated
+ ✓ src/components/PaperworkPanel.test.tsx > paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따라 나타난다/사라진다 > magic_sheet: the membership badge is unconditional — a complete read still carries it
+ ✓ src/components/PaperworkPanel.test.tsx > paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따라 나타난다/사라진다 > magic_sheet: a partial placement read adds its own badge beside it
+ ✓ src/components/PaperworkPanel.test.tsx > paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따라 나타난다/사라진다 > magic_sheet: truncated/drilldown_capped do not leak in from the pool kinds
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkCard — hook-free structural render > renders the kind label and a [생성] button when no result yet
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkCard — hook-free structural render > ② 생성 클릭 시 onGenerate(kind)가 호출된다 (App/PaperworkPanel이 fetch로 연결)
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkCard — hook-free structural render > shows '생성 중…' and disables the button while busy
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkCard — hook-free structural render > ③ 배지가 나타난다 — an incomplete result shows badges + preview/download buttons
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkCard — hook-free structural render > ③ 배지가 사라진다 — a complete result shows no badges box at all
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkCard — hook-free structural render > the [미리보기]/[다운로드] buttons fire onPreview/onDownload with the kind
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkPanelView — ① 4종 렌더 > renders exactly one card per PAPERWORK_KINDS entry, in order
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkPanelView — ① 4종 렌더 > passes each kind's own result (or null) down to its card, keyed by kind
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkPanelView — ① 4종 렌더 > marks only the busy kind's card as busy
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkPanelView — ① 4종 렌더 > marks only the previewed kind's card as previewing
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkPanelView — ① 4종 렌더 > renders a notice line only when one is present
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkPanelView — ① 4종 렌더 > shows the empty preview placeholder until a preview kind is chosen
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkPanelView — ① 4종 렌더 > renders the preview iframe for the chosen kind
+ ✓ src/components/PaperworkPanel.test.tsx > PaperworkPanelView — ① 4종 렌더 > the close button fires onClose
+ ✓ src/components/PaperworkPanel.test.tsx > parsePaperworkListResponse > parses kinds + per-kind last_results
+ ✓ src/components/PaperworkPanel.test.tsx > parsePaperworkListResponse > returns null on malformed JSON
+ ✓ src/components/PaperworkPanel.test.tsx > parsePaperworkListResponse > returns null when kinds is not an array of strings
+ ✓ src/components/PaperworkPanel.test.tsx > parsePaperworkGenerateResponse > parses a 200 success body into ok:true with derived badges
+ ✓ src/components/PaperworkPanel.test.tsx > parsePaperworkGenerateResponse > ④ capability_unavailable(503)와 query_failed(502)는 서로 다른 message로 도착한다
+ ✓ src/components/PaperworkPanel.test.tsx > parsePaperworkGenerateResponse > falls back to a generic message when the body has no message field
+ ✓ src/components/PaperworkPanel.test.tsx > parsePaperworkGenerateResponse > returns ok:false on malformed JSON rather than throwing
+ ✓ src/components/PaperworkPanel.test.tsx > contentUrl / downloadUrl > builds the same-origin API urls for preview and download
+ ✓ src/components/PaperworkPanel.test.tsx > fetch wrappers — ② 생성 클릭 시 fetch 호출 (실제 네트워크 계층) > fetchPaperworkList calls GET /api/paperwork
+ ✓ src/components/PaperworkPanel.test.tsx > fetch wrappers — ② 생성 클릭 시 fetch 호출 (실제 네트워크 계층) > generatePaperworkDocument POSTs /api/paperwork/{kind}
+ ✓ src/components/PaperworkPanel.test.tsx > fetch wrappers — ② 생성 클릭 시 fetch 호출 (실제 네트워크 계층) > a 502 query_failed response surfaces as ok:false with the server message
+ ✓ src/components/PaperworkPanel.test.tsx > render() smoke — PaperworkPanelView descends into real PaperworkCard elements > a card pulled from the rendered tree, re-rendered one level deeper, shows its label
+stdout | src/components/DashBoard.test.tsx > DashBoard > refresh button click does not throw when onRefresh is omitted (M4 placeholder path)
+dash: manual refresh requested (M5 wires dash_catalog_request)
+
+stdout | src/components/CueMonitor.test.tsx > CueMonitor > refresh button click does not throw when onRefresh is omitted
+cue monitor: manual refresh requested
+
+ ✓ src/components/CueMonitor.test.tsx > sequenceLabel > shows the sequence name when the read succeeded
+ ✓ src/components/CueMonitor.test.tsx > sequenceLabel > falls back to the sequence number when the name is empty
+ ✓ src/components/CueMonitor.test.tsx > sequenceLabel > explains an unassigned executor
+ ✓ src/components/CueMonitor.test.tsx > sequenceLabel > explains an unavailable executor
+ ✓ src/components/CueMonitor.test.tsx > currentCueLabel — independently Optional (contract item 1) > renders the value when the read succeeded
+ ✓ src/components/CueMonitor.test.tsx > currentCueLabel — independently Optional (contract item 1) > explains WHY it is unavailable rather than rendering a blank
+ ✓ src/components/CueMonitor.test.tsx > currentCueLabel — independently Optional (contract item 1) > never renders a percentage or a countdown
+ ✓ src/components/CueMonitor.test.tsx > currentCueLabel — independently Optional (contract item 1) > treats a null current_cue the same as an unavailable one
+ ✓ src/components/CueMonitor.test.tsx > formatHistoryTime — local HH:MM:SS (T-H4 defect 2) > formats an ISO timestamp as local HH:MM:SS
+ ✓ src/components/CueMonitor.test.tsx > formatHistoryTime — local HH:MM:SS (T-H4 defect 2) > never renders the raw ISO 'T' marker for a parseable timestamp
+ ✓ src/components/CueMonitor.test.tsx > formatHistoryTime — local HH:MM:SS (T-H4 defect 2) > falls back to the raw string (never blank) when unparseable
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — history row (T-H4 defect 2: format + separation) > renders the timestamp and command as SEPARATE elements, never one glued string
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor > renders one tile per executor plus a history section
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor > shows an empty-state placeholder for both the grid and history when nothing has synced
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor > marks a stale snapshot in the sync line
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor > refresh button click dispatches the provided callback
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor > refresh button click does not throw when onRefresh is omitted
+ ✓ src/components/CueMonitor.test.tsx > lastActionGrade > grades a nonexistent action as unknown — the app never sent this executor anything
+ ✓ src/components/CueMonitor.test.tsx > lastActionGrade > grades an ok action as confirmed
+ ✓ src/components/CueMonitor.test.tsx > lastActionGrade > grades a failed action as failed
+ ✓ src/components/CueMonitor.test.tsx > formatRelativeAgo > renders a just-now action as 방금 전
+ ✓ src/components/CueMonitor.test.tsx > formatRelativeAgo > renders seconds for a recent-but-not-instant action
+ ✓ src/components/CueMonitor.test.tsx > formatRelativeAgo > renders minutes once past 60 seconds
+ ✓ src/components/CueMonitor.test.tsx > formatRelativeAgo > renders an empty string for an unparseable timestamp
+ ✓ src/components/CueMonitor.test.tsx > isRecentAppAction — the pulse window > is true just after the action
+ ✓ src/components/CueMonitor.test.tsx > isRecentAppAction — the pulse window > is false once the pulse window has elapsed
+ ✓ src/components/CueMonitor.test.tsx > isRecentAppAction — the pulse window > is false for an unparseable timestamp
+ ✓ src/components/CueMonitor.test.tsx > ExecutorStatusChip — problem-only (user direction 2026-08-15) > renders NOTHING for an untouched executor — '미확인' is not a problem
+ ✓ src/components/CueMonitor.test.tsx > ExecutorStatusChip — problem-only (user direction 2026-08-15) > renders confirmed + pulsing right after a fresh ok action
+ ✓ src/components/CueMonitor.test.tsx > ExecutorStatusChip — problem-only (user direction 2026-08-15) > keeps a confirmed action visible (no pulse) inside the 60s window
+ ✓ src/components/CueMonitor.test.tsx > ExecutorStatusChip — problem-only (user direction 2026-08-15) > hides a confirmed action once it is stale — '확인됨 22분 전' is noise
+ ✓ src/components/CueMonitor.test.tsx > ExecutorStatusChip — problem-only (user direction 2026-08-15) > keeps a FAILED action on screen no matter how old — the one real warning
+ ✓ src/components/CueMonitor.test.tsx > executorFireDisabledReason — fail-closed posture > is disabled with a reason for an unavailable (unresolved-right-now) executor
+ ✓ src/components/CueMonitor.test.tsx > executorFireDisabledReason — fail-closed posture > is fireable for an ok executor
+ ✓ src/components/CueMonitor.test.tsx > executorFireDisabledReason — fail-closed posture > is fireable for an unassigned (console-answered, just no sequence) executor
+ ✓ src/components/CueMonitor.test.tsx > gotoDisabledReason — Goto's STRICTER fail-closed posture (T-H5) > is fireable for an ok executor (known sequence)
+ ✓ src/components/CueMonitor.test.tsx > gotoDisabledReason — Goto's STRICTER fail-closed posture (T-H5) > is disabled for an unavailable executor, same as every other verb
+ ✓ src/components/CueMonitor.test.tsx > gotoDisabledReason — Goto's STRICTER fail-closed posture (T-H5) > is ALSO disabled for an unassigned executor — unlike Go+/Go-/Off
+ ✓ src/components/CueMonitor.test.tsx > cueRowIsGotoable — only a responder-numbered cue is a valid jump target > is true when the cue carries a responder cue_no
+ ✓ src/components/CueMonitor.test.tsx > cueRowIsGotoable — only a responder-numbered cue is a valid jump target > is false when the cue has no cue_no — the server never registers it as a Goto target
+ ✓ src/components/CueMonitor.test.tsx > ExecutorActions — T-H5 three explicit console-verb buttons > renders exactly three buttons: Go- (이전), Go+ (다음), Off (정지)
+ ✓ src/components/CueMonitor.test.tsx > ExecutorActions — T-H5 three explicit console-verb buttons > all three buttons are enabled for a fireable executor
+ ✓ src/components/CueMonitor.test.tsx > ExecutorActions — T-H5 three explicit console-verb buttons > Go- fires onBack only
+ ✓ src/components/CueMonitor.test.tsx > ExecutorActions — T-H5 three explicit console-verb buttons > Go+ fires onExecute only
+ ✓ src/components/CueMonitor.test.tsx > ExecutorActions — T-H5 three explicit console-verb buttons > Off fires onStop only
+ ✓ src/components/CueMonitor.test.tsx > ExecutorActions — T-H5 three explicit console-verb buttons > disables all three buttons and shows one reason for an unavailable executor — fail-closed
+ ✓ src/components/CueMonitor.test.tsx > ExecutorActions — T-H5 three explicit console-verb buttons > a fail-closed button click never calls its handler, even if somehow invoked
+ ✓ src/components/CueMonitor.test.tsx > ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T-H4 defect 1) > renders the executor number, sequence name, and current cue as three distinct elements
+ ✓ src/components/CueMonitor.test.tsx > ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T-H4 defect 1) > regression: the number never appears glued to the sequence name text (old 'Executor 101Sequence 50' defect)
+ ✓ src/components/CueMonitor.test.tsx > ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T-H4 defect 1) > the tile is the click target that toggles its own cue sheet
+ ✓ src/components/CueMonitor.test.tsx > ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T-H4 defect 1) > aria-expanded reflects the isOpen prop
+ ✓ src/components/CueMonitor.test.tsx > ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T-H4 defect 1) > carries an open/closed modifier class for styling
+ ✓ src/components/CueMonitor.test.tsx > ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T-H4 defect 1) > the Go/Off footer stops its click from bubbling to the tile's own open/close toggle
+ ✓ src/components/CueMonitor.test.tsx > ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T-H4 defect 1) > passes running/onExecute/onBack/onStop through to the nested ExecutorActions
+ ✓ src/components/CueMonitor.test.tsx > ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T-H4 defect 1) > no cue LIST is rendered on the tile itself — the sheet owns that (collapsed by default)
+ ✓ src/components/CueMonitor.test.tsx > currentCueIndexFromValue > parses the leading integer from an 'index — name' value
+ ✓ src/components/CueMonitor.test.tsx > currentCueIndexFromValue > parses a bare index with no name
+ ✓ src/components/CueMonitor.test.tsx > currentCueIndexFromValue > is null for null/undefined/empty
+ ✓ src/components/CueMonitor.test.tsx > currentCueMatch / isCueRowCurrent > matches by the responder's real cue number (cue_no) first
+ ✓ src/components/CueMonitor.test.tsx > currentCueMatch / isCueRowCurrent > falls back to the pool slot (no) when no cue_no matches
+ ✓ src/components/CueMonitor.test.tsx > currentCueMatch / isCueRowCurrent > is null when there is no current-cue value
+ ✓ src/components/CueMonitor.test.tsx > currentCueMatch / isCueRowCurrent > is null when the index matches no cue in the list
+ ✓ src/components/CueMonitor.test.tsx > currentCueMatch / isCueRowCurrent > isCueRowCurrent is false for every row when match is null
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — the collapsed cue list, opened one at a time (T-H4) > renders a table with ONLY [Cue No] [이름] columns — no invented columns
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — the collapsed cue list, opened one at a time (T-H4) > renders one row per cue, cue number and name in their own cells
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — the collapsed cue list, opened one at a time (T-H4) > highlights the row matching the current cue
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — the collapsed cue list, opened one at a time (T-H4) > shows an empty-cue placeholder row when the sequence has no cues
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — the collapsed cue list, opened one at a time (T-H4) > close button fires onClose
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — clicking a row jumps to that cue (T-H5) > a goto-able row (has cue_no) is a clickable 'button' role and fires onGoto with its cue number
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — clicking a row jumps to that cue (T-H5) > a row with no cue_no carries no click affordance at all
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — clicking a row jumps to that cue (T-H5) > fail-closed: when the executor itself is not goto-able (unassigned), no row fires onGoto
+ ✓ src/components/CueMonitor.test.tsx > CueSheet — clicking a row jumps to that cue (T-H5) > Enter/Space on a goto-able row also fires onGoto (keyboard access)
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — cue sheet open/close (T-H4) > renders no sheet when openExecutorNo is omitted
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — cue sheet open/close (T-H4) > renders exactly the open executor's sheet, and only that one
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — cue sheet open/close (T-H4) > the tile for the open executor reports isOpen=true; the others do not
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — cue sheet open/close (T-H4) > the sheet's close button calls onToggleExecutor with the same executor number (close = re-toggle)
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — cue sheet open/close (T-H4) > T-H5: onGoto passed to CueMonitor reaches the open sheet's onGoto prop
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — cue sheet open/close (T-H4) > T-H5: onBack passed to CueMonitor reaches every tile's onBack prop
+ ✓ src/components/CueMonitor.test.tsx > currentCueUnavailableReason > is null when the entry actually has a value — nothing to explain
+ ✓ src/components/CueMonitor.test.tsx > currentCueUnavailableReason > names the tried property list in the reason text
+ ✓ src/components/CueMonitor.test.tsx > currentCueUnavailableReason > two entries with the same tried list produce the identical reason text
+ ✓ src/components/CueMonitor.test.tsx > currentCueUnavailableReason > a different tried list produces different reason text
+ ✓ src/components/CueMonitor.test.tsx > currentCueRowView — the SHORT per-row placeholder > shows the value when the entry has one
+ ✓ src/components/CueMonitor.test.tsx > currentCueRowView — the SHORT per-row placeholder > is a short dash placeholder (never the long sentence) when unavailable
+ ✓ src/components/CueMonitor.test.tsx > currentCueRowView — the SHORT per-row placeholder > still carries the full reason (for a tooltip), just not in the row body
+ ✓ src/components/CueMonitor.test.tsx > currentCueRowView — the SHORT per-row placeholder > never renders a blank — the placeholder is always non-empty
+ ✓ src/components/CueMonitor.test.tsx > currentCueRowView — the SHORT per-row placeholder > T-H3: renders the server's 'index — name' current-cue value verbatim
+ ✓ src/components/CueMonitor.test.tsx > currentCueBannerState — the three-way branch (REQ T-H2 §3) > branch 1: every ok-status executor unavailable for the SAME reason -> uniform banner
+ ✓ src/components/CueMonitor.test.tsx > currentCueBannerState — the three-way branch (REQ T-H2 §3) > branch 2: reasons are mixed across rows -> no blanket banner (mixed)
+ ✓ src/components/CueMonitor.test.tsx > currentCueBannerState — the three-way branch (REQ T-H2 §3) > branch 3: at least one row already has a value -> no blanket claim (none)
+ ✓ src/components/CueMonitor.test.tsx > currentCueBannerState — the three-way branch (REQ T-H2 §3) > ignores non-ok-status executors (they never attempt a current-cue read at all)
+ ✓ src/components/CueMonitor.test.tsx > currentCueBannerState — the three-way branch (REQ T-H2 §3) > no ok-status executors at all -> none
+ ✓ src/components/CueMonitor.test.tsx > currentCueBannerState — the three-way branch (REQ T-H2 §3) > all ok-status executors have values -> none (nothing to bannner)
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — panel-level banner rendering (T-H2) > renders exactly one banner when every row shares the same unavailable reason
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — panel-level banner rendering (T-H2) > renders no banner when reasons are mixed
+ ✓ src/components/CueMonitor.test.tsx > CueMonitor — panel-level banner rendering (T-H2) > renders no banner when some rows already have a value
+ ✓ src/components/CueMonitor.test.tsx > 진행 순서 보드 (2026-08-15) — 진행도와 계획 배지 > cueProgressLabel counts PLAYABLE cues only (OffCue/CueZero are plumbing)
+ ✓ src/components/CueMonitor.test.tsx > 진행 순서 보드 (2026-08-15) — 진행도와 계획 배지 > no confirmed current cue -> no guessed progress
+ ✓ src/components/CueMonitor.test.tsx > 진행 순서 보드 (2026-08-15) — 진행도와 계획 배지 > no playable cues -> no progress line at all
+ ✓ src/components/QuestionCard.test.tsx > QuestionCard handover commands > renders each command verbatim with a copy button
+ ✓ src/components/QuestionCard.test.tsx > QuestionCard handover commands > renders no command block when there is nothing to hand over
+ ✓ src/components/QuestionCard.test.tsx > QuestionCard multi-select > renders checkboxes and a confirm button when multi
+ ✓ src/components/QuestionCard.test.tsx > QuestionCard multi-select > disables the confirm button until something is checked
+ ✓ src/components/QuestionCard.test.tsx > QuestionCard multi-select > keeps the single-select buttons when not multi
+ ✓ src/components/QuestionCard.test.tsx > QuestionCard multi-select > keeps the freeform box on both shapes
+ ✓ src/components/QuestionCard.test.tsx > QuestionCard multi-select > starts with the server-selected options checked
+ ✓ src/components/QuestionCard.test.tsx > joinChosenLabels — 다중 선택 답 형식 > joins the chosen labels with a comma + space
+ ✓ src/components/QuestionCard.test.tsx > joinChosenLabels — 다중 선택 답 형식 > uses the card's order, not the click order
+ ✓ src/components/QuestionCard.test.tsx > joinChosenLabels — 다중 선택 답 형식 > returns an empty string when nothing is chosen
+ ✓ src/components/QuestionCard.test.tsx > joinChosenLabels — 다중 선택 답 형식 > ignores a label that is not on the card
+ ✓ src/components/QuestionCard.test.tsx > toggleChosenLabel — 체크박스 하나가 바뀐 뒤 > adds a newly checked label
+ ✓ src/components/QuestionCard.test.tsx > toggleChosenLabel — 체크박스 하나가 바뀐 뒤 > removes an unchecked label and leaves the rest
+ ✓ src/components/QuestionCard.test.tsx > toggleChosenLabel — 체크박스 하나가 바뀐 뒤 > never stores the same label twice
+ ✓ src/components/QuestionCard.test.tsx > toggleChosenLabel — 체크박스 하나가 바뀐 뒤 > is a no-op when unchecking something that was never chosen
+ ✓ src/components/QuestionCard.test.tsx > toggleChosenLabel — 체크박스 하나가 바뀐 뒤 > does not mutate the previous list
+ ✓ src/components/DashBoard.test.tsx > formatSyncTime > renders a not-yet-synced placeholder before the first dash_catalog
+ ✓ src/components/DashBoard.test.tsx > formatSyncTime > formats HH:MM:SS from a wall-clock timestamp
+ ✓ src/components/DashBoard.test.tsx > fixtureCount > returns null when the fixtures section has not synced yet
+ ✓ src/components/DashBoard.test.tsx > fixtureCount > reads the synthetic count out of the count-only fixtures section
+ ✓ src/components/DashBoard.test.tsx > fixtureCount > returns null (never a guess) when the expected count meta is missing
+ ✓ src/components/DashBoard.test.tsx > fixtureSummaryLabel > is honest ('확인 불가') when the section is missing
+ ✓ src/components/DashBoard.test.tsx > fixtureSummaryLabel > is honest ('확인 불가') when the section failed — never a stale/guessed count
+ ✓ src/components/DashBoard.test.tsx > fixtureSummaryLabel > renders the count with a '대' unit when the section is healthy
+ ✓ src/components/DashBoard.test.tsx > dashboardSummaryText > composes the fixture count + sync time on one line, with no stale suffix when fresh
+ ✓ src/components/DashBoard.test.tsx > dashboardSummaryText > appends the stale suffix when the freshness claim was withdrawn on disconnect
+ ✓ src/components/DashBoard.test.tsx > dashItemIsPressable > macros are always press-able regardless of item shape
+ ✓ src/components/DashBoard.test.tsx > dashItemIsPressable > executors are press-able ONLY when the resolution report confirms them
+ ✓ src/components/DashBoard.test.tsx > dashItemIsPressable > groups/preset_pools/plugins/fixtures are never press-able — structural read-only
+ ✓ src/components/DashBoard.test.tsx > DashBoard > renders an aside with a header, a header-strip syncline, and a body region
+ ✓ src/components/DashBoard.test.tsx > DashBoard > header carries a title and a collapse-affordance button
+ ✓ src/components/DashBoard.test.tsx > DashBoard > wires the collapse button's onClick to the provided callback
+ ✓ src/components/DashBoard.test.tsx > DashBoard > syncline shows the not-yet-synced placeholder and an honest 'unavailable' fixture count on the M1-frozen empty state
+ ✓ src/components/DashBoard.test.tsx > DashBoard > syncline shows the formatted fixture count + sync time once dash has data
+ ✓ src/components/DashBoard.test.tsx > DashBoard > syncline appends a stale suffix when dash.stale is true (post-disconnect freshness withdrawal)
+ ✓ src/components/DashBoard.test.tsx > DashBoard > refresh button dispatches the provided onRefresh callback exactly once per click
+ ✓ src/components/DashBoard.test.tsx > DashBoard > refresh button click does not throw when onRefresh is omitted (M4 placeholder path)
+ ✓ src/components/DashBoard.test.tsx > DashBoard > renders the loading placeholder on the M1-frozen empty/default dash state — no crash on absent data
+ ✓ src/components/DashBoard.test.tsx > DashBoard > mounts one PoolSection per non-fixtures section, in wire order, excluding fixtures from the pool grid
+ ✓ src/components/DashBoard.test.tsx > DashBoard > wires the correct Korean label + press verb + pressability predicate per section
+ ✓ src/components/DashBoard.test.tsx > DashBoard > does not dispatch a dash_catalog_request or fetch data itself — presentation only (M4 scope)
+ ✓ src/components/DashBoard.test.tsx > DashBoard > running/press wiring (M5) > gives executors a runningVerb ('Off') and macros none (one-shot, no Off affordance)
+ ✓ src/components/DashBoard.test.tsx > DashBoard > running/press wiring (M5) > threads section name + item through onItemPress/isItemRunning into PoolSection's per-item callbacks
+ ✓ src/components/DashBoard.test.tsx > DashBoard > running/press wiring (M5) > omitting onItemPress/isItemRunning leaves PoolSection's onPress/isRunning undefined — no forced stub
+ ✓ src/components/DashBoard.test.tsx > presetPoolHasInfo — 정보가 있는 카테고리만 카드로 (2026-08-15 방향) > a pool measured EMPTY (stored_count 0) is hidden as noise
+ ✓ src/components/DashBoard.test.tsx > presetPoolHasInfo — 정보가 있는 카테고리만 카드로 (2026-08-15 방향) > a pool with stored presets stays visible
+ ✓ src/components/DashBoard.test.tsx > presetPoolHasInfo — 정보가 있는 카테고리만 카드로 (2026-08-15 방향) > a pool the drilldown never opened stays visible — 'not opened' is not 'empty'
+ ✓ src/components/DashBoard.test.tsx > presetPoolHasInfo — 정보가 있는 카테고리만 카드로 (2026-08-15 방향) > visibleSection applies the filter to preset_pools only
+ ✓ src/components/CueSheetTimeline.test.tsx > 두 축의 연동 — 선택은 한 곳에서만 산다 > 보이는 행 범위는 페이지 번호가 아니라 실제 스크롤 위치에서 나온다
+ ✓ src/components/CueSheetTimeline.test.tsx > 두 축의 연동 — 선택은 한 곳에서만 산다 > 반 줄만 걸쳐도 보이는 행으로 센다 — 창 높이가 범위를 정한다
+ ✓ src/components/CueSheetTimeline.test.tsx > 두 축의 연동 — 선택은 한 곳에서만 산다 > 끝까지 내리면 마지막 행에서 멈춘다
+ ✓ src/components/CueSheetTimeline.test.tsx > 두 축의 연동 — 선택은 한 곳에서만 산다 > 행이 창보다 적으면 있는 만큼만 센다
+ ✓ src/components/CueSheetTimeline.test.tsx > 두 축의 연동 — 선택은 한 곳에서만 산다 > 타임라인을 가로로 스크롤하면 그 위치의 큐가 선택된다 (반대 방향)
+ ✓ src/components/CueSheetTimeline.test.tsx > 두 축의 연동 — 선택은 한 곳에서만 산다 > t288 — 코드가 만든 스크롤은 클릭한 큐를 앞 큐로 되돌리지 못한다
+ ✓ src/components/CueSheetTimeline.test.tsx > 두 축의 연동 — 선택은 한 곳에서만 산다 > 사람이 굴린 스크롤만 선택을 옮긴다
+ ✓ src/components/CueSheetTimeline.test.tsx > 두 축의 연동 — 선택은 한 곳에서만 산다 > 스크롤로 고른 큐는 그 행이 보이는 범위 안에 든다 — 두 축이 어긋나지 않는다
+ ✓ src/components/CueSheetTimeline.test.tsx > DERIVED 배너 > tc_method 가 DERIVED 이면 띄운다
+ ✓ src/components/CueSheetTimeline.test.tsx > DERIVED 배너 > MEASURED 이거나 값이 없으면 띄우지 않는다
+ ✓ src/components/CueSheetTimeline.test.tsx > DERIVED 배너 > 서버 문구가 없어도 기본 고지 문구를 낸다 — 배너가 비어 보이지 않는다
+ ✓ src/components/CueSheetTimeline.test.tsx > 없는 필드는 조용히 떨어진다 — undefined 를 그리지 않는다 > 헤더 메타가 전부 비어도 각 칸이 em-dash 로 나온다
+ ✓ src/components/CueSheetTimeline.test.tsx > 없는 필드는 조용히 떨어진다 — undefined 를 그리지 않는다 > 큐시트 확장 열이 전부 비어도 em-dash 로 나온다
+ ✓ src/components/CueSheetTimeline.test.tsx > 없는 필드는 조용히 떨어진다 — undefined 를 그리지 않는다 > 빈 문자열과 빈 배열도 값 없음으로 본다
+ ✓ src/components/CueSheetTimeline.test.tsx > 없는 필드는 조용히 떨어진다 — undefined 를 그리지 않는다 > end_ms 가 없으면 다음 구간 시작으로, 마지막은 곡 끝으로 메운다
+ ✓ src/components/CueSheetTimeline.test.tsx > 없는 필드는 조용히 떨어진다 — undefined 를 그리지 않는다 > 끝을 못 구하면 Dur 은 추정하지 않고 em-dash 로 둔다
+ ✓ src/components/CueSheetTimeline.test.tsx > 없는 필드는 조용히 떨어진다 — undefined 를 그리지 않는다 > 그룹별 인텐시티가 없으면 d_level 로 % 를 만든다 — 표는 비지 않는다
+ ✓ src/components/CueSheetTimeline.test.tsx > 없는 필드는 조용히 떨어진다 — undefined 를 그리지 않는다 > 팔레트 범례가 없으면 중립색으로 떨어진다 — 색이 없어 깨지지 않는다
+ ✓ src/components/CueSheetTimeline.test.tsx > 없는 필드는 조용히 떨어진다 — undefined 를 그리지 않는다 > 확장 필드가 하나도 없어도 창 계산이 그대로 돈다
+ ✓ src/components/CueSheetTimeline.test.tsx > 정본 산출물의 표기를 따른다 > TC 는 MM:SS.d
+ ✓ src/components/CueSheetTimeline.test.tsx > 정본 산출물의 표기를 따른다 > BPM 은 화면에서만 최대 소수점 2자리로 줄인다 — 원본 계산값은 건드리지 않는다
+ ✓ src/components/CueSheetTimeline.test.tsx > 정본 산출물의 표기를 따른다 > Q# 는 세 자리
+ ✓ src/components/CueSheetTimeline.test.tsx > 정본 산출물의 표기를 따른다 > SNAP 인 큐만 흰 좌측선을 받는다
+ ✓ src/components/CueSheetTimeline.test.tsx > 정본 산출물의 표기를 따른다 > 팔레트 범례 id 로 큐 색을 찾는다
+ ✓ src/components/CueSheetTimeline.test.tsx > 정본 산출물의 표기를 따른다 > 그룹별 인텐시티는 그대로 적는다
+ ✓ src/components/CueSheetTimeline.test.tsx > 정본 산출물의 표기를 따른다 > 곡 길이는 헤더 메타를 그대로 쓴다
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > 표가 전용 가로 스크롤 컨테이너(cst-sheet-scroll) 안에 있다
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > 감독이 잘려 보인다고 신고한 Fade 열은 오른쪽 끝 근처에 실재한다 — 스크롤로 닿을 위치
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > 스크롤바를 오버레이가 아니라 항상 자리를 차지하는 굵은 형태로 강제한다
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > 오른쪽 가장자리에 '더 있다' 그라디언트(cst-sheet-edge-fade)가 창틀에 고정된 채 존재한다
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > 그라디언트는 '아직 스크롤할 게 남았을 때만' 켜진다 — 항상 켜진 장식이 아니다
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > BPM 표시는 formatBpm 을 거친다 — 원본 부동소수점을 그대로 찍지 않는다
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > Fade 표시는 소수점 2자리로 반올림한다
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > 표 자체가 스크롤 컨테이너보다 넓게 강제된다(min-width) — 그래야 잘림이 아니라 스크롤이 생긴다
+ ✓ src/components/CueSheetTimeline.test.tsx > t388 재작업 — 스크롤 자체가 아니라 「더 있다」는 신호를 보이게 만든다 > 조상 사슬 감사 — min-width:0 가드가 새 창틀(cst-sheet-scrollarea)까지 덮는다
+ ✓ src/components/runbookM7.test.tsx > REQ-084 GATE — 원천은 concept_report.gates 뿐이다 > passed 세 값을 통과·실패·해당없음으로 센다
+ ✓ src/components/runbookM7.test.tsx > REQ-084 GATE — 원천은 concept_report.gates 뿐이다 > 리포트가 없거나 available:false 면 개수를 지어내지 않는다
+ ✓ src/components/runbookM7.test.tsx > REQ-084 GATE — 원천은 concept_report.gates 뿐이다 > 상세 행은 서버 detail 문자열을 그대로 싣는다
+ ✓ src/components/runbookM7.test.tsx > REQ-084 GATE — 원천은 concept_report.gates 뿐이다 > 상태줄은 개수 3종을 보이고, 경고(WARN)는 원천이 없다고 적는다
+ ✓ src/components/runbookM7.test.tsx > REQ-084 GATE — 원천은 concept_report.gates 뿐이다 > 리포트를 못 만들었으면 서버 사유를 그대로 보인다
+ ✓ src/components/runbookM7.test.tsx > REQ-084 GATE — 원천은 concept_report.gates 뿐이다 > 리포트 키 자체가 없으면(예전 페이로드) 데이터 없음
+ ✓ src/components/runbookM7.test.tsx > REQ-079/080/097/098 컨셉 패널 > 기본 접힘이고 헤더는 「이 곡의 컨셉」이다
+ ✓ src/components/runbookM7.test.tsx > REQ-079/080/097/098 컨셉 패널 > 탭 라벨 3개는 REQ-098 고정 문자열이고, 영어는 보조 표기다
+ ✓ src/components/runbookM7.test.tsx > REQ-079/080/097/098 컨셉 패널 > 6칸 표 헤더는 REQ-080 고정 문자열이다
+ ✓ src/components/runbookM7.test.tsx > REQ-079/080/097/098 컨셉 패널 > 「한눈에」·인과 불릿·「그래서 보이는 것」은 원천이 없어 데이터 없음이다
+ ✓ src/components/runbookM7.test.tsx > REQ-079/080/097/098 컨셉 패널 > 표의 다섯 칸은 구간 값을 그대로 쓴다
+ ✓ src/components/runbookM7.test.tsx > REQ-082 CUE SHEET 14열 > 정확히 14열이고 순서는 src/DESIGN.md §4.4 그대로다
+ ✓ src/components/runbookM7.test.tsx > REQ-082 CUE SHEET 14열 > 제거된 5열(TC Out·Dur·Mood·Trans·Note)은 화면 헤더에 없다
+ ✓ src/components/runbookM7.test.tsx > REQ-082 CUE SHEET 14열 > Trans 값은 데이터 모델에 남는다 — 타입 필드를 지우지 않았다(REQ-096)
+ ✓ src/components/runbookM7.test.tsx > REQ-082 CUE SHEET 14열 > 짝짓기가 없으면 MIB 는 bool 표기다
+ ✓ src/components/runbookM7.test.tsx > REQ-082 CUE SHEET 14열 > 밝기 증감 기호는 직전 큐와의 비교에서만 나온다
+ ✓ src/components/runbookM7.test.tsx > REQ-082 CUE SHEET 14열 > 늘 원천 없는 칸은 Track 예외 하나, 짝짓기에 따라 갈리는 칸은 셋이다
+ ✓ src/components/runbookM7.test.tsx > 배치 — 메인 화면 컴포넌트 불가침 > 컨셉 패널은 블록 1(오늘의 곡)과 타임라인 사이, GATE 는 그 뒤다
+ ✓ src/components/runbookM7.test.tsx > 배치 — 메인 화면 컴포넌트 불가침 > GATE 는 앱 셸의 StatusBanner 를 가져다 쓰지 않는다
+ ✓ src/components/SongTimeline.test.tsx > linkedTimelineExecutor > links a plan only to an executor with the same console sequence number
+ ✓ src/components/SongTimeline.test.tsx > linkedTimelineExecutor > does not infer a match from an unrelated executor name or cue
+ ✓ src/components/SongTimeline.test.tsx > linkedTimelineExecutor > marks only the matching planned cue as live
+ ✓ src/components/SongTimeline.test.tsx > linkedTimelineExecutor > matches a console value carrying the cue name ('5 — Section 5', live onPC format)
+ ✓ src/components/SongTimeline.test.tsx > plan vs console cue separation > titles design-only sections as PLAN CUE and console cues as CUE
+ ✓ src/components/SongTimeline.test.tsx > plan vs console cue separation > never links a live executor to a PLAN cue, even with a matching sequence
+ ✓ src/components/SongTimeline.test.tsx > plan vs console cue separation > uses the server plan_status when present and derives it from lifecycle otherwise
+ ✓ src/components/SongTimeline.test.tsx > plan vs console cue separation > treats the console as holding cues only after a write
+ ✓ src/components/SongTimeline.test.tsx > REQ-LDDESIGN-083 — 하단 3줄이 읽는 컨셉 행 짝짓기 (t460) > matches the section-kind row whose screen_position equals this section's index
+ ✓ src/components/SongTimeline.test.tsx > REQ-LDDESIGN-083 — 하단 3줄이 읽는 컨셉 행 짝짓기 (t460) > is honestly absent when row_pairing failed (no report, or no matching row)
+ ✓ src/components/SongTimeline.test.tsx > REQ-LDDESIGN-083 — 하단 3줄이 읽는 컨셉 행 짝짓기 (t460) > Fade/Track line reads fade_seconds and the tracking exception (blank when default)
+ ✓ src/components/SongTimeline.test.tsx > REQ-LDDESIGN-083 — 하단 3줄이 읽는 컨셉 행 짝짓기 (t460) > MIB/남김 line reads both fields straight from the row — never recomputed
+ ✓ src/components/SongTimeline.test.tsx > REQ-LDDESIGN-083 — 하단 3줄이 읽는 컨셉 행 짝짓기 (t460) > headroom summary reuses the REQ-093 (4) <4 threshold, never a new one
+ ✓ src/components/SongTimeline.test.tsx > t481 — PLAN CUE 카드는 자기 구간의 컨셉 행을 읽는다(한 칸 밀림 방지) > 「108 · Bridge 1」 카드는 Bridge 1 행(남김 9)을 읽고, Chorus 3 행(MIB mark · 남김 2)을 읽지 않는다
+ ✓ src/components/SongTimeline.test.tsx > t481 — PLAN CUE 카드는 자기 구간의 컨셉 행을 읽는다(한 칸 밀림 방지) > 첫 카드(Intro)도 자기 행을 읽는다 — 짝이 없는 행으로 떨어지지 않는다
+ ✓ src/components/SongTimeline.test.tsx > SongTimeline render — REQ-083 Q### 배지 + 하단 3줄, AC-034 마운트 게이트 > renders the Q### badge on the PLAN CUE card using the shared cueLabel rule
+ ✓ src/components/SongTimeline.test.tsx > SongTimeline render — REQ-083 Q### 배지 + 하단 3줄, AC-034 마운트 게이트 > renders the 3 REQ-083 detail lines on a PLAN CUE card
+ ✓ src/components/SongTimeline.test.tsx > SongTimeline render — REQ-083 Q### 배지 + 하단 3줄, AC-034 마운트 게이트 > does NOT mount the generator when onGeneratorSend is omitted (AC-034)
+ ✓ src/components/SongTimeline.test.tsx > SongTimeline render — REQ-083 Q### 배지 + 하단 3줄, AC-034 마운트 게이트 > mounts the generator under the PLAN CUE card once onGeneratorSend is wired (AC-034)
+ ✓ src/components/SongTimeline.test.tsx > SongTimeline render — REQ-083 Q### 배지 + 하단 3줄, AC-034 마운트 게이트 > t481 — marks only a generator-carrying card as has-generator (the wider card)
+ ✓ src/components/SongTimeline.test.tsx > SongTimeline render — REQ-083 Q### 배지 + 하단 3줄, AC-034 마운트 게이트 > does not mount the generator on a console-stored (non-PLAN) cue
+ ✓ src/components/RunbookMode.test.tsx > runbookCaution > returns null when the current cue is known — nothing to warn about
+ ✓ src/components/RunbookMode.test.tsx > runbookCaution > explains an unavailable current cue on an otherwise-ok row
+ ✓ src/components/RunbookMode.test.tsx > runbookCaution > explains an unassigned executor
+ ✓ src/components/RunbookMode.test.tsx > runbookCaution > explains an unavailable console
+ ✓ src/components/RunbookMode.test.tsx > runbookButtonLabel — literal, never the generic '지금 실행' > names the known cue number when running
+ ✓ src/components/RunbookMode.test.tsx > runbookButtonLabel — literal, never the generic '지금 실행' > falls back to a literal 'next cue' label when the cue number is unknown
+ ✓ src/components/RunbookMode.test.tsx > runbookButtonLabel — literal, never the generic '지금 실행' > shows stop when already running
+ ✓ src/components/RunbookMode.test.tsx > runbookButtonLabel — literal, never the generic '지금 실행' > is disabled-labeled for unassigned/unavailable rows
+ ✓ src/components/RunbookMode.test.tsx > runbookIsRunnable > only an 'ok' row is fireable — fail-closed for unassigned/unavailable
+ ✓ src/components/RunbookMode.test.tsx > runbookSection > classifies recognised musical structure without inventing time data
+ ✓ src/components/RunbookMode.test.tsx > RunbookMode > renders one list item per executor, in wire order, numbered from 1
+ ✓ src/components/RunbookMode.test.tsx > RunbookMode > explains an empty executor list instead of rendering a silent blank
+ ✓ src/components/RunbookMode.test.tsx > RunbookMode > marks a stale snapshot instead of presenting it as live
+ ✓ src/components/RunbookMode.test.tsx > RunbookMode > wires onExecute to the pressed row's executor number
+ ✓ src/components/RunbookMode.test.tsx > RunbookMode > highlights the row the real console's composed current_cue value points at (real-console shape, not the bare-number fixture)
+ ✓ src/components/RunbookMode.test.tsx > RunbookMode > dispatches manual refresh via onRefresh
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > locks every section before the release section (Q104 = position 3)
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > unlocks at and after the release section — even though 34 < released_q 45
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > stays locked when the group is never released
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > does not invent a lock when the release row has no screen section (pairing failed)
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > never locks a non-reserve group
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > does not lock when reserve data is absent (no fabricated lock)
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > turnAccepted / applyTurnResult — AC-044의 순수 판정 로직 (REQ-095) > a fresh server draft stamp with depth not dropping is the accept signal
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > turnAccepted / applyTurnResult — AC-044의 순수 판정 로직 (REQ-095) > accepts at the 20-step history cap where depth stays 20 (deque maxlen=20)
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > turnAccepted / applyTurnResult — AC-044의 순수 판정 로직 (REQ-095) > no new stamp, an undo (depth drop), or an empty report is not an accept
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > turnAccepted / applyTurnResult — AC-044의 순수 판정 로직 (REQ-095) > marks the sent line applied on accept, leaving other lines untouched
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > turnAccepted / applyTurnResult — AC-044의 순수 판정 로직 (REQ-095) > marks the sent line rejected with the server's reason on refusal
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-035 혼합 표시 > shows the mixed-value label when selected groups disagree
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-036 프리셋 이름 저장·표시 > shows the selected preset NAME, not a raw value, in the console-values panel
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-037 BLIND 잠금 > renders a locked chip as disabled and does not fire onToggleGroup
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-038 상태 라벨 + 항목별 경고 병기 > shows the 확인 대기 status label and attaches warnings to their own diff line
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-038 상태 라벨 + 항목별 경고 병기 > keeps the 확인 대기 label even for a 'requested' (in-flight) line — never 반영됨 prematurely
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-042 선택 취소는 onSend류를 부르지 않는다 > 선택 취소 button calls only onCancelSelection, never onSendAll
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-043 라벨 문자열 충돌 금지 > never renders the exact string 되돌리기 anywhere in this component
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-052 항목별 ✕는 그 줄만 지운다 > ✕ on one diff line calls onRemoveEntry with only that line's id
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-052 항목별 ✕는 그 줄만 지운다 > disables ✕ only for the line currently in flight
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-053 자유 입력 > renders the free-text input bound to the view model
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — AC-034 컴포넌트 존재 여부 스냅샷 > renders a recognisable, single generator root
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — 반영 요청 버튼 > is disabled with an empty stack and enabled once a line is selected
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — t470 트래킹 4택 > renders the four TRACKING_VALUES buttons and marks the current one selected
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — t470 트래킹 4택 > calls onApplyTracking with the pressed value
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — t470 MIB 4택 > renders 없음/dark/mark/live button labels
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — t470 MIB 4택 > calls onApplyMib with the canonical enum value, not the display label
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — t470 페이저 두 풀 > shows the phaser label and two 바꾸기 buttons opening the phaser field
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — t470 포지션 행은 position 필드를 연다 > opens the popup with field 'position' (not the old 'movement')
+ ✓ src/components/PlanCueRequestGenerator.test.tsx > PlanCueRequestGeneratorView — 프리셋 팝업 마운트(REQ-089 재사용) > mounts PresetPoolPopup only while popup state is set, wired to onPopupSelect
+ ✓ src/settings.test.ts > parseSettingsResponse > parses a well-formed response
+ ✓ src/settings.test.ts > parseSettingsResponse > returns null on invalid JSON
+ ✓ src/settings.test.ts > parseSettingsResponse > returns null when the settings block is missing
+ ✓ src/settings.test.ts > formFromSettings > extracts the editable non-sensitive subset
+ ✓ src/settings.test.ts > validateSettingsForm > accepts a valid form
+ ✓ src/settings.test.ts > validateSettingsForm > rejects an out-of-range console port
+ ✓ src/settings.test.ts > validateSettingsForm > rejects a zero / negative receive port
+ ✓ src/settings.test.ts > validateSettingsForm > rejects a non-integer port
+ ✓ src/settings.test.ts > validateSettingsForm > rejects an empty plugin import directory
+ ✓ src/settings.test.ts > validateSettingsForm > rejects an unsupported provider
+ ✓ src/settings.test.ts > buildSettingsPayload > serialises exactly the non-sensitive form fields
+ ✓ src/settings.test.ts > buildKeyPayload > carries provider + key, no session flag by default
+ ✓ src/settings.test.ts > buildKeyPayload > includes session_only when the session fallback is chosen
+ ✓ src/settings.test.ts > missingKeyProviders > lists only the providers whose key is unset
+ ✓ src/settings.test.ts > onboardingMessage > prompts when the active provider's key is unset
+ ✓ src/settings.test.ts > onboardingMessage > is silent once the active provider has a key
+ ✓ src/settings.test.ts > osc_slot > rides the settings payload so the backend can render it into the Lua
+ ✓ src/settings.test.ts > osc_slot > is carried from the effective settings into the editable form
+ ✓ src/settings.test.ts > osc_slot > rejects a value outside the OSC row range
+ ✓ src/settings.test.ts > osc_slot > rejects a port number pasted into the row field
+ ✓ src/settings.test.ts > osc_slot > accepts the rows an operator actually uses
+ ✓ src/useCopilotSocket.test.ts > reducer — disconnect clears stale pending cards > clears pendingApprovals and pendingReviews on disconnect
+ ✓ src/useCopilotSocket.test.ts > reducer — disconnect clears stale pending cards > leaves chat entries and status untouched on disconnect
+ ✓ src/useCopilotSocket.test.ts > reducer — disconnect clears stale pending cards > is a no-op when nothing is pending
+ ✓ src/useCopilotSocket.test.ts > launch-token seam > reads the token from the injected runtime context
+ ✓ src/useCopilotSocket.test.ts > launch-token seam > returns undefined in Stage-1 browser mode (no injected context)
+ ✓ src/useCopilotSocket.test.ts > launch-token seam > presents the token as a subprotocol alongside the base protocol
+ ✓ src/useCopilotSocket.test.ts > launch-token seam > offers no subprotocols when no token is available
+ ✓ src/useCopilotSocket.test.ts > connectResyncFrames — reconnect resync dispatch (AC-DASHUI-017) > returns exactly four frames: panel_catalog_request, dash_catalog_request, cue_monitor_request, status_request
+ ✓ src/useCopilotSocket.test.ts > connectResyncFrames — reconnect resync dispatch (AC-DASHUI-017) > every frame is protocol v1 and payload-free besides v/type
+ ✓ src/useCopilotSocket.test.ts > connectResyncFrames — reconnect resync dispatch (AC-DASHUI-017) > is deterministic and side-effect-free — calling it twice sends nothing on its own
+ ✓ src/useCopilotSocket.test.ts > dashResyncFrame > returns a dash_catalog_request for a chat_response carrying an executed command
+ ✓ src/useCopilotSocket.test.ts > dashResyncFrame > returns null when nothing was actually executed (refresh-on-demand stays the rule)
+ ✓ src/useCopilotSocket.test.ts > 조작자를 기다리는 동안 콘솔을 방해하지 않는다 > 물음이 하나라도 떠 있으면 멈춘다
+ ✓ src/useCopilotSocket.test.ts > 조작자를 기다리는 동안 콘솔을 방해하지 않는다 > 물음이 없으면 평소대로 돈다
+ ✓ src/useCopilotSocket.test.ts > 조작자를 기다리는 동안 콘솔을 방해하지 않는다 > 승인 카드만 떠 있는 것으로는 멈추지 않는다
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a group-multi intensity sentence the parser accepts
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a cue-wide intensity sentence with no group prefix
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a single-group colour sentence
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a cue-wide effect/preset-name sentence
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a cue-wide movement/preset-name sentence
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a fade sentence
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a trans sentence
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a tracking sentence with the 으로 particle (t466/t470)
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a tracking sentence with the 로 particle for a no-batchim value
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a MIB sentence, using the 없음 label for none
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a phaser preset-name sentence
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > builds a position preset sentence with its pool-2 number
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > renders the REQ-091 diff-line label format
+ ✓ src/components/cueRequestSentence.test.ts > cueRequestSentence > renders diff labels for the t466/t470 fields
+ ✓ src/components/cueRequestSentence.test.ts > buildCueRequestSentences > emits one sentence per diff line, in order
+ ✓ src/components/cueRequestSentence.test.ts > buildCueRequestSentences > appends free text to the LAST sentence only (REQ-101)
+ ✓ src/components/cueRequestSentence.test.ts > buildCueRequestSentences > sends nothing when there are no diff lines, even with free text
+ ✓ src/components/cueRequestSentence.test.ts > buildCueRequestSentences > ignores whitespace-only free text
+ ✓ src/components/cueRequestSentence.test.ts > mixedIntensityLabel > returns the shared value when all selected groups agree
+ ✓ src/components/cueRequestSentence.test.ts > mixedIntensityLabel > returns 혼합 when selected groups disagree
+ ✓ src/components/cueRequestSentence.test.ts > mixedIntensityLabel > returns the empty placeholder when nothing is selected
+ ✓ src/components/cueRequestSentence.test.ts > AC-LDDESIGN-039 — 어휘 공유 고정(fixture) — TS 빌더 쪽 > produces exactly the fixture sentence for every representative operation
+ ✓ src/components/cueRequestSentence.test.ts > mixedColorLabel > returns the shared colour when all selected groups agree
+ ✓ src/components/cueRequestSentence.test.ts > mixedColorLabel > returns 혼합 2색 when two colours differ (REQ-088)
+ ✓ src/components/cueRequestSentence.test.ts > mixedColorLabel > ignores groups with no colour on record
+ ✓ src/components/cueRequestSentence.test.ts > mixedColorLabel > returns the empty placeholder when nothing is known
+ ✓ src/components/cueRequestWarnings.test.ts > chorusReversalWarning > warns when the proposed value exceeds a later chorus
+ ✓ src/components/cueRequestWarnings.test.ts > chorusReversalWarning > does not warn when the proposed value stays at or below later choruses
+ ✓ src/components/cueRequestWarnings.test.ts > chorusReversalWarning > is n/a for a non-chorus section (role missing)
+ ✓ src/components/cueRequestWarnings.test.ts > chorusReversalWarning > is n/a when there is no later chorus
+ ✓ src/components/cueRequestWarnings.test.ts > reserveViolationWarning > warns before the release section, naming the release section's cue (Q134, not Q45)
+ ✓ src/components/cueRequestWarnings.test.ts > reserveViolationWarning > does not warn at or after the release section
+ ✓ src/components/cueRequestWarnings.test.ts > reserveViolationWarning > warns 미해제 when the colour has never been released
+ ✓ src/components/cueRequestWarnings.test.ts > reserveViolationWarning > is silent for a name that is not a reserve item
+ ✓ src/components/cueRequestWarnings.test.ts > reserveViolationWarning > is silent when there is no reserve list at all
+ ✓ src/components/cueRequestWarnings.test.ts > headroomWarning / mibLiveWarning — consume, never recompute (AC-040) > warns when the server's own unused_groups is below the reused threshold
+ ✓ src/components/cueRequestWarnings.test.ts > headroomWarning / mibLiveWarning — consume, never recompute (AC-040) > does not warn at or above the threshold
+ ✓ src/components/cueRequestWarnings.test.ts > headroomWarning / mibLiveWarning — consume, never recompute (AC-040) > is n/a when the field is absent (no fabricated defect)
+ ✓ src/components/cueRequestWarnings.test.ts > headroomWarning / mibLiveWarning — consume, never recompute (AC-040) > warns MIB live straight from the server field
+ ✓ src/components/cueRequestWarnings.test.ts > headroomWarning / mibLiveWarning — consume, never recompute (AC-040) > is silent for dark/mark/null
+ ✓ src/components/cueRequestWarnings.test.ts > deriveWarningsForChange > attaches reversal + headroom to an intensity change, not to a movement change
+ ✓ src/components/cueRequestWarnings.test.ts > deriveWarningsForChange > attaches a reserve violation when the intensity change targets a locked group
+ ✓ src/components/cueRequestWarnings.test.ts > deriveWarningsForChange > attaches MIB-live only to a movement change (position-change field)
+ ✓ src/components/cueRequestWarnings.test.ts > deriveWarningsForChange > t470 — attaches MIB-live to a position change too (the position row now emits `position`)
+ ✓ src/components/cueRequestWarnings.test.ts > deriveWarningsForChange > carries no warnings for a fade change (none of the 4 reused signals apply)
+ ✓ src/components/ExecutionPreviewCard.test.tsx > previewCommandMeta > combines target and action for dense command rows
+ ✓ src/components/ExecutionPreviewCard.test.tsx > ExecutionPreviewCardView > renders risk, commands, warnings, and scope caveat when open
+ ✓ src/components/ExecutionPreviewCard.test.tsx > ExecutionPreviewCardView > collapsed: hides the command list but keeps summary, toggle, and warnings
+ ✓ src/components/ExecutionPreviewCard.test.tsx > ExecutionPreviewCardView > every preview collapses by default (operator decision)
+ ✓ src/App.test.tsx > targetKindForDashSection (M5) > maps executors → 'executor' and macros → 'macro'
+ ✓ src/App.test.tsx > targetKindForDashSection (M5) > read-only dash sections (groups/preset_pools/plugins/fixtures) map to null — structurally never fire
+ ✓ src/App.test.tsx > dashPressTargetNo > executors fire meta.console_no, not the pool-slot no
+ ✓ src/App.test.tsx > dashPressTargetNo > an executor without a verified console number never fires (fail-closed)
+ ✓ src/App.test.tsx > dashPressTargetNo > macros fire their own pool number unchanged
+ ✓ src/App.test.tsx > dashPressTargetNo > read-only sections have no press target at all
+ ✓ src/App.test.tsx > composerViewState > keeps the composer closed while the server is disconnected
+ ✓ src/App.test.tsx > composerViewState > keeps the composer closed until a gate status arrives
+ ✓ src/App.test.tsx > composerViewState > blocks new chat input when the gate reports executions_blocked
+ ✓ src/App.test.tsx > composerViewState > allows text entry but not empty submission when the gate is healthy
+ ✓ src/App.test.tsx > composerViewState > keeps the composer open while responding: typing queues, empty cannot submit
+ ✓ src/App.test.tsx > composerViewState > keeps live-lock proposal mode available instead of treating it as offline
+ ✓ src/App.test.tsx > attachmentControlState > disables attachment while responding and explains why in the title
+ ✓ src/App.test.tsx > attachmentControlState > disables attachment while requests are queued (the next turn starts immediately)
+ ✓ src/App.test.tsx > attachmentControlState > stays disabled when the composer itself is closed, without the busy message
+ ✓ src/App.test.tsx > attachmentControlState > attachmentInputDisabled (t271) > stays closed while the server is disconnected or its status is unknown
+ ✓ src/App.test.tsx > attachmentControlState > attachmentInputDisabled (t271) > opens when the console is offline — uploads never touch the console
+ ✓ src/App.test.tsx > attachmentControlState > attachmentInputDisabled (t271) > is what the attach button reads, so console-offline no longer locks it
+ ✓ src/App.test.tsx > attachmentControlState > allows attachment when idle with the default file-format title
+ ✓ src/App.test.tsx > AppShell — console-primary split layout (M6 inversion) > chat open: mounts exactly one DashBoard node alongside the untouched chat children
+ ✓ src/App.test.tsx > AppShell — console-primary split layout (M6 inversion) > chat collapsed: DashBoard STILL mounts (console pane is permanent) and a chat-rail re-open button replaces the chat children
+ ✓ src/App.test.tsx > AppShell — console-primary split layout (M6 inversion) > does not offer a dashboard collapse affordance — DashBoard's onToggleCollapse slot stays undefined
+ ✓ src/App.test.tsx > AppShell — console-primary split layout (M6 inversion) > threads onRefresh/isItemRunning/onItemPress through to DashBoard unchanged
+ ✓ src/App.test.tsx > AppShell — console-primary split layout (M6 inversion) > omitting onRefresh/isItemRunning/onItemPress leaves DashBoard's slots undefined — no forced stub
+ ✓ src/App.test.tsx > AppShell — console-primary split layout (M6 inversion) > never mutates or wraps the passed children — same value passes through unchanged when chat is open
+ ✓ src/App.test.tsx > runbook-mode localStorage persistence (T-E) > defaults to off when nothing was ever stored
+ ✓ src/App.test.tsx > runbook-mode localStorage persistence (T-E) > round-trips on → off through write/read
+ ✓ src/App.test.tsx > runbook-mode localStorage persistence (T-E) > never throws when storage is unavailable — degrades to off
+ ✓ src/App.test.tsx > AppShell — 타임라인 라이브러리 도달 가능성 (t309) > 타임라인이 없어도(hasTimeline=false) 기본 화면에 라이브러리가 mount 된다
+ ✓ src/App.test.tsx > AppShell — 타임라인 라이브러리 도달 가능성 (t309) > 슬롯을 안 주면 라이브러리 노드도 없다 — 슬롯이 실제 렌더 경로다
+ ✓ src/attachmentCopy.test.ts > 첨부 경로의 문구는 판정 전에 나가므로 종류를 단정하지 않는다 > 정규식 자체가 판별력이 있다 (날조 대조군)
+ ✓ src/attachmentCopy.test.ts > 첨부 경로의 문구는 판정 전에 나가므로 종류를 단정하지 않는다 > src/App.tsx에 종류를 단정하는 문구가 없다
+ ✓ src/attachmentCopy.test.ts > 첨부 경로의 문구는 판정 전에 나가므로 종류를 단정하지 않는다 > src/useCopilotSocket.ts에 종류를 단정하는 문구가 없다
+ ✓ src/attachmentCopy.test.ts > 첨부 경로의 문구는 판정 전에 나가므로 종류를 단정하지 않는다 > 라우터 옆에 유산 프레임 앵커 주석이 있다
+ ✓ src/components/ApprovalCard.test.tsx > collapsed approval summaries > dedupes risk reasons across items so the folded card still says WHY
+ ✓ src/components/ApprovalCard.test.tsx > collapsed approval summaries > dedupes warnings across items — safety stays visible while collapsed
+ ✓ src/components/ApprovalCard.test.tsx > createDecisionGuard > submits the first decision and reports success
+ ✓ src/components/ApprovalCard.test.tsx > createDecisionGuard > ignores a second call for the same approval — quick double-click debounce
+ ✓ src/components/ApprovalCard.test.tsx > createDecisionGuard > ignores a later opposite decision once the first has landed — reject after approve is a no-op
+ ✓ src/components/ApprovalCard.test.tsx > createDecisionGuard > each ApprovalCard instance gets its own independent guard
+ ✓ src/components/ApprovalCard.test.tsx > createDecisionGuard > many rapid repeated calls still submit exactly once
+ ✓ src/components/TimelineLibrary.test.tsx > TimelineLibraryView — 접힌 라벨이 스스로 상태를 말한다 (t309) > 저장본이 있으면 개수를 붙인다
+ ✓ src/components/TimelineLibrary.test.tsx > TimelineLibraryView — 접힌 라벨이 스스로 상태를 말한다 (t309) > 비었으면 빈 틀을 내지 않고 비었다고 말한다 — 타임라인이 있다는 인상을 주지 않는다
+ ✓ src/components/TimelineLibrary.test.tsx > TimelineLibraryView — 접힌 라벨이 스스로 상태를 말한다 (t309) > 아직/못 읽었으면(items === null) 개수도 '없음'도 꾸며내지 않는다
+ ✓ src/components/ChatView.test.tsx > commandDetailText > returns trimmed detail when the server provided one
+ ✓ src/components/ChatView.test.tsx > commandDetailText > returns null for empty detail
+ ✓ src/components/ChatView.test.tsx > CommandRow > renders command, Korean status label, raw detail, and a copy affordance
+ ✓ src/components/ChatView.test.tsx > collapsed command summary > rolls statuses up per Korean label, insertion-ordered
+ ✓ src/components/ChatView.test.tsx > collapsed command summary > every command list collapses by default (operator decision)
+ ✓ src/components/ChatView.test.tsx > firstSentence — collapsed assistant body > cuts at the first sentence end
+ ✓ src/components/ChatView.test.tsx > firstSentence — collapsed assistant body > falls back to the first line when no period ends it
+ ✓ src/components/ChatView.test.tsx > firstSentence — collapsed assistant body > a single short sentence needs no toggle (preview equals text)
+ ✓ src/components/ChatView.test.tsx > ChatView — 진행 스트리밍 한 줄 > renders the in-flight progress line under the transcript
+ ✓ src/components/ChatView.test.tsx > ChatView — 진행 스트리밍 한 줄 > shows nothing when the turn is over (progress null) — 종료 시 사라진다
+ ✓ src/components/ChatView.test.tsx > ChatView — 진행 스트리밍 한 줄 > omitting the prop behaves like a finished turn (구버전 서버 호환)
+ ✓ src/components/ChatView.test.tsx > ChatView — 진행 스트리밍 한 줄 > keeps exactly ONE progress line — 대화록에 쌓이지 않는다
+ ✓ src/components/CueSheetDraft.test.tsx > 초안 배지 > 표식이 없는 타임라인은 배지를 안 그린다 (기존 페이로드 호환)
+ ✓ src/components/CueSheetDraft.test.tsx > 초안 배지 > dirty=false 는 「수정됨」이 아니다 — 되돌려 원본으로 돌아온 상태
+ ✓ src/components/CueSheetDraft.test.tsx > 초안 배지 > 수정된 초안은 되돌리기 단계 수까지 적는다
+ ✓ src/components/CueSheetDraft.test.tsx > 변경 보고 > 직전 편집의 칸별 보고를 그대로 내보낸다 — 눈으로 diff 하지 않게
+ ✓ src/components/CueSheetDraft.test.tsx > 변경 보고 > 표식이 없으면 빈 배열이다 (undefined 를 그리지 않는다)
+ ✓ src/components/CueSheetDraft.test.tsx > chat 프레임의 선택 전달 > 선택이 있으면 selected_cue 를 싣는다
+ ✓ src/components/CueSheetDraft.test.tsx > chat 프레임의 선택 전달 > 선택이 없으면 필드 자체가 없다 — 기존 서버와 호환된다
+ ✓ src/components/CueSheetDraft.test.tsx > chat 프레임의 선택 전달 > 0·음수·소수는 큐 번호가 아니므로 싣지 않는다
+ ✓ src/components/CueSheetDraft.test.tsx > 초안 되돌리기/다시하기 프레임 > 페이로드가 없다 — 무엇을 되돌릴지는 서버의 이력이 안다
+ ✓ src/components/CueSheetDraft.test.tsx > 초안 되돌리기/다시하기 프레임 > 어느 프레임에도 콘솔 명령이 실리지 않는다
+ ✓ src/timelineLibrary.test.ts > parseTimelineListResponse > parses a well-formed listing
+ ✓ src/timelineLibrary.test.ts > parseTimelineListResponse > returns null on any shape mismatch instead of fabricating an empty library
+ ✓ src/timelineLibrary.test.ts > parseTimelineLoadResponse > returns the timeline payload when sections are present
+ ✓ src/timelineLibrary.test.ts > parseTimelineLoadResponse > rejects payloads without a sections array carrier
+ ✓ src/timelineLibrary.test.ts > timelineItemMeta > joins saved time, sequence, and section count
+ ✓ src/components/StatusBanner.test.tsx > statusDetails > shows a server reconnect detail while disconnected
+ ✓ src/components/StatusBanner.test.tsx > statusDetails > shows an explicit gate-pending row before the first status event
+ ✓ src/components/StatusBanner.test.tsx > statusDetails > surfaces console, OSC input, execution, and live-lock state for operators
+ ✓ src/components/StatusBanner.test.tsx > statusDetails > names a reply-port mismatch only when both observed numbers are present
+ ✓ src/components/runbookMibWarning.test.tsx > live_move 경고 문구 > 어둠 길이를 초로 적는다
+ ✓ src/components/runbookMibWarning.test.tsx > live_move 경고 문구 > 경고가 아니면 null 이다
+ ✓ src/components/runbookMibWarning.test.tsx > bool 표기 경로(컨셉 짝 없음) > 켜진 채 이동이면 경고를 띄운다
+ ✓ src/components/runbookMibWarning.test.tsx > bool 표기 경로(컨셉 짝 없음) > 어둠이 충분하면 지금과 같다
+ ✓ src/components/runbookMibWarning.test.tsx > 컨셉 3상태 경로(짝 있음) > 기호 뒤에 경고를 덧붙인다
+ ✓ src/components/runbookMibWarning.test.tsx > 컨셉 3상태 경로(짝 있음) > 경고가 없으면 기호만 — 지금과 같다
+ ✓ src/components/runbookM7Third.test.tsx > 서버 실출력 전제 — 이 파일이 재는 데이터가 맞는가 > 20행이 8구간에 짝지어져 있다
+ ✓ src/components/runbookM7Third.test.tsx > REQ-082 회차·Trigger·MIB·근거 등급 — rows 를 screen_position 으로 모은다 > 회차는 그 구간 section 행의 occurrence 다
+ ✓ src/components/runbookM7Third.test.tsx > REQ-082 회차·Trigger·MIB·근거 등급 — rows 를 screen_position 으로 모은다 > Trigger 는 구간 안 phrase 행에서 온다 — Pre-Chorus 는 앞 구간(Verse 1)에 모인다
+ ✓ src/components/runbookM7Third.test.tsx > REQ-082 회차·Trigger·MIB·근거 등급 — rows 를 screen_position 으로 모은다 > MIB 는 3상태 기호로 보인다 — 없는 구간은 「—」
+ ✓ src/components/runbookM7Third.test.tsx > REQ-082 회차·Trigger·MIB·근거 등급 — rows 를 screen_position 으로 모은다 > 근거 등급이 null 이면 「[공개 근거 없음]」, 값이 있으면 그 등급(REQ-072)
+ ✓ src/components/runbookM7Third.test.tsx > REQ-082 회차·Trigger·MIB·근거 등급 — rows 를 screen_position 으로 모은다 > 짝짓기가 안 되면 t454 표기로 돌아간다 — 회차·Trigger·근거 등급은 데이터 없음, MIB 는 bool
+ ✓ src/components/runbookM7Third.test.tsx > REQ-081 원샷·Mark 점 줄 > 원샷 3개 + Mark 1개, 구간 이름은 행 section 이 아니라 화면 구간 label
+ ✓ src/components/runbookM7Third.test.tsx > REQ-081 원샷·Mark 점 줄 > 점 위치는 행 ts(초)를 곡 길이에 대한 비율로 둔다
+ ✓ src/components/runbookM7Third.test.tsx > REQ-081 원샷·Mark 점 줄 > 짝짓기가 안 되면 점을 그리지 않는다
+ ✓ src/components/runbookM7Third.test.tsx > REQ-081 블록 실색 — 서버 HEX 먼저, 없으면 범례, 그것도 없으면 중립색 > HEX 가 있으면 그 색, null 이면 null(호출자가 중립색)
+ ✓ src/components/runbookM7Third.test.tsx > REQ-081 블록 실색 — 서버 HEX 먼저, 없으면 범례, 그것도 없으면 중립색 > HEX 가 없는 옛 페이로드는 범례로 찾는다
+ ✓ src/components/runbookM7Third.test.tsx > 화면 — 서버 실출력으로 그린 CueSheetTimeline > 블록에 서버 HEX 가 칠해지고, 해석 못 한 구간은 중립색이다
+ ✓ src/components/runbookM7Third.test.tsx > 화면 — 서버 실출력으로 그린 CueSheetTimeline > MIB 기호·Trigger·근거 등급 마커가 시트에 보인다
+ ✓ src/components/runbookM7Third.test.tsx > 화면 — 서버 실출력으로 그린 CueSheetTimeline > 점 줄이 그려지고, 범례의 「원샷·Mark 점 줄 · 데이터 없음」은 사라진다
+ ✓ src/components/runbookM7Third.test.tsx > 화면 — 서버 실출력으로 그린 CueSheetTimeline > Track 예외 칸만 아직 데이터 없음이다(이 카드 범위 밖)
+ ✓ src/components/runbookM7Third.test.tsx > 화면 — 서버 실출력으로 그린 CueSheetTimeline > 짝짓기가 안 되면 t454 화면 그대로 — 4칸 데이터 없음, 점 줄 없음
+ ✓ src/protocol.test.ts > parseServerEvent > parses a known event
+ ✓ src/protocol.test.ts > parseServerEvent > rejects non-JSON, wrong version, and unknown types
+ ✓ src/protocol.test.ts > builders > builds versioned client frames
+ ✓ src/protocol.test.ts > encodeSongAudioChunks (REQ-MUSICSYNC-027) > round-trips bytes and keeps every chunk under the server's 4 MiB base64 ceiling 669ms
+ ✓ src/protocol.test.ts > reduceServerEvent > appends chat responses to the transcript
+ ✓ src/protocol.test.ts > reduceServerEvent > tracks pending approvals until resolved
+ ✓ src/protocol.test.ts > reduceServerEvent > appends execution previews to the transcript
+ ✓ src/protocol.test.ts > reduceServerEvent > stores the latest status
+ ✓ src/protocol.test.ts > reduceServerEvent > appends proposal, error, busy, and notice entries
+ ✓ src/protocol.test.ts > reduceServerEvent > echoes user messages locally
+ ✓ src/protocol.test.ts > healthLabel > maps all three health states to Korean and passes unknown through
+ ✓ src/protocol.test.ts > responder version health states > labels a low responder version with the re-import instruction
+ ✓ src/protocol.test.ts > responder version health states > labels an unrecognized version differently from a low one
+ ✓ src/protocol.test.ts > responder version health states > directs a low version to re-import
+ ✓ src/protocol.test.ts > responder version health states > directs an unrecognized version to investigate, NOT to re-import
+ ✓ src/protocol.test.ts > responder version health states > ignores the console-input discriminator for both version states
+ ✓ src/protocol.test.ts > responder version health states > never leaks a stack trace or raw-SDK marker in either guidance
+ ✓ src/protocol.test.ts > healthGuidance > gives console_offline a cause+action instruction (REQ-DEPLOY-018)
+ ✓ src/protocol.test.ts > healthGuidance > gives responder_degraded a responder-load + OSC-output-port instruction (REQ-DEPLOY-019)
+ ✓ src/protocol.test.ts > healthGuidance > shows no guidance for the healthy or unknown states
+ ✓ src/protocol.test.ts > healthGuidance > never leaks a stack trace or raw-SDK marker in any guidance string
+ ✓ src/protocol.test.ts > healthGuidance with the console-input discriminator > names the responder when the console's OSC input port IS listening
+ ✓ src/protocol.test.ts > healthGuidance with the console-input discriminator > names the Preferred IP / lo0 fix when nothing is listening on the console port
+ ✓ src/protocol.test.ts > healthGuidance with the console-input discriminator > keeps the current message when the probe is undetermined (remote console)
+ ✓ src/protocol.test.ts > healthGuidance with the console-input discriminator > ignores the discriminator for every other health state
+ ✓ src/protocol.test.ts > healthGuidance with the console-input discriminator > never leaks a stack trace or raw-SDK marker in the silent-port guidance
+ ✓ src/protocol.test.ts > healthGuidance with the console-input discriminator > never leaks a stack trace or raw-SDK marker in the new guidance
+ ✓ src/protocol.test.ts > healthGuidance with the console-input discriminator > keeps the console_input verdict on the reduced status state
+ ✓ src/protocol.test.ts > healthGuidance with the console-input discriminator > tolerates a status frame from a server that sends no verdict
+ ✓ src/protocol.test.ts > healthGuidance with the reply-port mismatch > names BOTH ports so the operator can reconcile them
+ ✓ src/protocol.test.ts > healthGuidance with the reply-port mismatch > offers both fixes and applies neither
+ ✓ src/protocol.test.ts > healthGuidance with the reply-port mismatch > takes priority over the responder message when both apply
+ ✓ src/protocol.test.ts > healthGuidance with the reply-port mismatch > falls back to the responder message when discovery found nothing
+ ✓ src/protocol.test.ts > healthGuidance with the reply-port mismatch > ignores a reported port that equals the configured one
+ ✓ src/protocol.test.ts > healthGuidance with the reply-port mismatch > ignores the mismatch for every other health state
+ ✓ src/protocol.test.ts > healthGuidance with the reply-port mismatch > keeps both port numbers on the reduced status state
+ ✓ src/protocol.test.ts > healthGuidance with the reply-port mismatch > tolerates a status frame from a server that does not diagnose
+ ✓ src/protocol.test.ts > M7 deploy review flow > parses a review_request event
+ ✓ src/protocol.test.ts > M7 deploy review flow > builds a review_decision frame
+ ✓ src/protocol.test.ts > M7 deploy review flow > tracks pending reviews across request and resolution
+ ✓ src/protocol.test.ts > M7 deploy review flow > keeps unrelated pending reviews on resolution
+ ✓ src/protocol.test.ts > panel protocol parity (AC-SHOWUI-001, client half) > parses every new panel event
+ ✓ src/protocol.test.ts > panel protocol parity (AC-SHOWUI-001, client half) > still drops the wrong version and unknown types silently
+ ✓ src/protocol.test.ts > panel protocol parity (AC-SHOWUI-001, client half) > builds every new client frame at v1
+ ✓ src/protocol.test.ts > panel protocol parity (AC-SHOWUI-001, client half) > keys tiles by the real object number, never by list position
+ ✓ src/protocol.test.ts > panel reducer > starts with an empty panel
+ ✓ src/protocol.test.ts > panel reducer > stores the catalog in wire order without sorting it
+ ✓ src/protocol.test.ts > panel reducer > keeps the two catalog failure causes distinct (REQ-SHOWUI-002)
+ ✓ src/protocol.test.ts > panel reducer > carries the completeness flags through to the UI (REQ-SHOWUI-001)
+ ✓ src/protocol.test.ts > panel reducer > replaces the catalog on refresh rather than appending a duplicate
+ ✓ src/protocol.test.ts > panel reducer > tracks per-tile running state keyed by the real object number
+ ✓ src/protocol.test.ts > panel reducer > records a busy refusal against the tile that was pressed
+ ✓ src/protocol.test.ts > panel reducer > leaves the rest of the UI state untouched
+ ✓ src/protocol.test.ts > clearOnDisconnect (REQ-SHOWUI-015/016 — fail closed) > erases running state — never renders 'probably still running'
+ ✓ src/protocol.test.ts > clearOnDisconnect (REQ-SHOWUI-015/016 — fail closed) > keeps the catalog so the panel can re-render while offline
+ ✓ src/protocol.test.ts > clearOnDisconnect (REQ-SHOWUI-015/016 — fail closed) > also denies the pending approval cards it already cleared
+ ✓ src/protocol.test.ts > clearOnDisconnect (REQ-SHOWUI-015/016 — fail closed) > is a no-op on an already-clean state
+ ✓ src/protocol.test.ts > dash protocol parity (AC-DASHUI-001, client half) > keeps the protocol at v1
+ ✓ src/protocol.test.ts > dash protocol parity (AC-DASHUI-001, client half) > parses a dash_catalog event
+ ✓ src/protocol.test.ts > dash protocol parity (AC-DASHUI-001, client half) > still drops the wrong version and unknown types silently
+ ✓ src/protocol.test.ts > dash protocol parity (AC-DASHUI-001, client half) > builds the dash_catalog_request frame at v1
+ ✓ src/protocol.test.ts > dash protocol parity (AC-DASHUI-001, client half) > builds a macro panel_execute frame (additive target class)
+ ✓ src/protocol.test.ts > dash reducer (REQ-DASHUI-006 replace + freshness) > starts empty, never-synced, and not stale
+ ✓ src/protocol.test.ts > dash reducer (REQ-DASHUI-006 replace + freshness) > stores sections in wire order and stamps the sync time
+ ✓ src/protocol.test.ts > dash reducer (REQ-DASHUI-006 replace + freshness) > REPLACES the catalog on refresh rather than merging
+ ✓ src/protocol.test.ts > dash reducer (REQ-DASHUI-006 replace + freshness) > keeps the two failure causes distinct (REQ-DASHUI-004)
+ ✓ src/protocol.test.ts > dash reducer (REQ-DASHUI-006 replace + freshness) > carries info entries through without inventing a fire address
+ ✓ src/protocol.test.ts > dash reducer (REQ-DASHUI-006 replace + freshness) > leaves chat, status, and panel state untouched
+ ✓ src/protocol.test.ts > clearOnDisconnect dash extension (AC-DASHUI-017, reducer half) > marks a synced dash catalog stale instead of guessing freshness
+ ✓ src/protocol.test.ts > clearOnDisconnect dash extension (AC-DASHUI-017, reducer half) > keeps the dash sections so the dashboard renders (inert) offline
+ ✓ src/protocol.test.ts > clearOnDisconnect dash extension (AC-DASHUI-017, reducer half) > still clears the panel volatile state alongside
+ ✓ src/protocol.test.ts > clearOnDisconnect dash extension (AC-DASHUI-017, reducer half) > a fresh catalog after reconnect clears the stale mark
+ ✓ src/protocol.test.ts > clearOnDisconnect dash extension (AC-DASHUI-017, reducer half) > does not mark stale when the dash never synced
+ ✓ src/protocol.test.ts > clearOnDisconnect dash extension (AC-DASHUI-017, reducer half) > remains a no-op on an already-clean state
+ ✓ src/protocol.test.ts > cue monitor protocol parity (client half) > keeps the protocol at v1
+ ✓ src/protocol.test.ts > cue monitor protocol parity (client half) > parses a cue_monitor event
+ ✓ src/protocol.test.ts > cue monitor protocol parity (client half) > still drops the wrong version and unknown types silently
+ ✓ src/protocol.test.ts > cue monitor protocol parity (client half) > builds the cue_monitor_request frame at v1, payload-free
+ ✓ src/protocol.test.ts > cue monitor reducer (replace + freshness) > starts empty, never-synced, and not stale
+ ✓ src/protocol.test.ts > cue monitor reducer (replace + freshness) > stores executors/history and stamps the sync time
+ ✓ src/protocol.test.ts > cue monitor reducer (replace + freshness) > REPLACES both lists on refresh rather than merging
+ ✓ src/protocol.test.ts > cue monitor reducer (replace + freshness) > leaves chat, status, panel, and dash state untouched
+ ✓ src/protocol.test.ts > clearOnDisconnect cue monitor extension (reducer half) > marks a synced cue monitor stale instead of guessing freshness
+ ✓ src/protocol.test.ts > clearOnDisconnect cue monitor extension (reducer half) > keeps the executors/history so the panel renders (inert) offline
+ ✓ src/protocol.test.ts > clearOnDisconnect cue monitor extension (reducer half) > does not mark stale when the cue monitor never synced
+ ✓ src/protocol.test.ts > clearOnDisconnect cue monitor extension (reducer half) > a fresh snapshot after reconnect clears the stale mark
+ ✓ src/protocol.test.ts > clearOnDisconnect cue monitor extension (reducer half) > remains a no-op on an already-clean state
+ ✓ src/protocol.test.ts > director timeline protocol > stores the server-authored plan as a review-only state slice
+ ✓ src/protocol.test.ts > director timeline protocol > marks a received plan stale on disconnect rather than inventing a fresh plan
+ ✓ src/protocol.test.ts > chat transcript persistence > round-trips entries and drops transient busy lines
+ ✓ src/protocol.test.ts > chat transcript persistence > caps the stored transcript at the bound, keeping the newest tail
+ ✓ src/protocol.test.ts > chat transcript persistence > degrades malformed storage to zero/fewer entries, never a crash
+ ✓ src/protocol.test.ts > buildHistoryRestore > maps user/assistant entries, skips other kinds, caps the window
+ ✓ src/protocol.test.ts > buildHistoryRestore > falls back to the summary when the assistant body is empty
+ ✓ src/protocol.test.ts > buildHistoryRestore > returns null when nothing is worth reinjecting
+ ✓ src/protocol.test.ts > buildHistoryRestore > keeps only the newest window
+ ✓ src/protocol.test.ts > cached snapshots — stale-while-revalidate first paint (2026-08-15) > a cached dash_catalog renders sections but keeps the stale badge and the old stamp
+ ✓ src/protocol.test.ts > cached snapshots — stale-while-revalidate first paint (2026-08-15) > the following FRESH dash_catalog clears the badge and stamps the clock
+ ✓ src/protocol.test.ts > cached snapshots — stale-while-revalidate first paint (2026-08-15) > a cached cue_monitor behaves the same way
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > is on the client allowlist (server/web/messages.py progress_event와 짝)
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > holds only the LAST line — 대화록에 쌓지 않는다
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > drops a frame whose seq goes BACKWARD — 늦게 온 옛 줄이 최신을 덮지 않는다
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > chat_response clears it — 턴이 끝나면 사라진다
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > error also clears it — 예외로 끝난 턴도 종결이다
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > survives a mid-turn notice — 진행은 다른 이벤트로 지워지지 않는다
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > a disconnect clears it — 끊긴 뒤의 '…중'은 정보가 아니다
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > clearOnDisconnect is a no-op identity when nothing is in flight
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > a turn's seq restart is safe because the terminal frame already cleared it
+ ✓ src/protocol.test.ts > progress — 진행 스트리밍 (지연 개선) > initialState carries no progress
+ ✓ src/protocol.test.ts > question card — multi (additive) > carries multi through to the pending question
+ ✓ src/protocol.test.ts > question card — multi (additive) > re-sending the same card does not stack a second copy (t316)
+ ✓ src/protocol.test.ts > question card — multi (additive) > reads a server that sends no multi as single-select
+ ✓ src/protocol.test.ts > question card — multi (additive) > retires the card on the answer echo
+ ✓ src/protocol.test.ts > answer_delta > 조각을 순서대로 이어 붙인다
+ ✓ src/protocol.test.ts > answer_delta > 늦게 도착한 조각은 본문을 되돌리지 않는다
+ ✓ src/protocol.test.ts > answer_delta > 대화록에는 쌓지 않는다 — 소멸성 상태다
+ ✓ src/protocol.test.ts > answer_delta > chat_response가 누적분을 버린다 — 같은 답이 두 번 보이면 안 된다
+ ✓ src/protocol.test.ts > answer_delta > error도 턴 종결이므로 누적분을 버린다
+
+ Test Files  31 passed (31)
+      Tests  717 passed (717)
+   Start at  11:58:43
+   Duration  1.11s (transform 1.64s, setup 0ms, collect 4.00s, tests 897ms, environment 4ms, prepare 2.78s)
+

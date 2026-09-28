@@ -1,0 +1,6 @@
+CAUGHT  한 칸 밀림 되살림  exit=1  Tests  2 failed | 19 passed (21)
+CAUGHT  리저브를 행 번호로 비교  exit=1  Tests  3 failed | 46 passed (49)
+CAUGHT  카드 줄 가로 스크롤 제거  exit=1  Tests  1 failed | 27 passed (28)
+CAUGHT  생성기 카드 폭 되돌림  exit=1  Tests  1 failed | 27 passed (28)
+CAUGHT  has-generator 클래스 제거  exit=1  Tests  1 failed | 20 passed (21)
+restored (tracked ui/src changes after run): '?? ui/src/acuiHarness.tsx\n?? ui/src/acuiPayload.json'

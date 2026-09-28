@@ -16,6 +16,17 @@ import type {
  * 아직 내보내지 않는다는 뜻이다. */
 export const NO_DATA = "데이터 없음";
 
+/** t481 — 서버 `screen_position`(컨셉 행·리저브 해제 위치)과 비교할 구간 위치.
+ * `sections` 배열 안의 0부터 위치다. `section.index` 는 1부터(서버
+ * `TimestampedSection` minimum=1)라 섞으면 한 칸 밀린다 — 구간 위치는 이
+ * 함수 하나로만 계산한다. 목록에 없는 구간이면 -1(어느 행과도 짝이 안 된다). */
+export function sectionPosition(
+  section: SongTimelineSection,
+  sections: readonly SongTimelineSection[],
+): number {
+  return sections.indexOf(section);
+}
+
 export type GateVerdict = "pass" | "fail" | "na";
 
 export interface GateTally {
