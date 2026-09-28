@@ -159,6 +159,22 @@ def _raw_sections_from_pairs(
     return raw
 
 
+#: 카드 t486 — 「최대 N%」 절을 뺐더니 남는 것이 없는 행의 문장.
+_NO_GROUP_OR_COLOR_CHANGE = "그룹·색 변화 없음"
+
+
+def _screen_description(text: str) -> str:
+    """``describe()`` 문장에서 「최대 N%」 절을 뺀다 (카드 t486, 리드 결정 A).
+
+    그 수치는 컨셉 파이프라인의 고정 밝기 사다리(``density.py``)에서 나오고 D 레벨을
+    읽지 않는다 — 같은 화면의 CUE SHEET KEY(조립기 D 예산)와 실측 10구간 중 1구간만
+    맞았다(``.moai/reports/t486/brightness_probe.txt``). 틀린 숫자를 시트 옆에 두지
+    않는다. ``describe()`` 자체(REQ-023)는 바꾸지 않는다.
+    """
+    kept = [part for part in text.split(" · ") if not part.startswith("최대 ")]
+    return " · ".join(kept) or _NO_GROUP_OR_COLOR_CHANGE
+
+
 def _concept_rows(
     build: SongBuild, *, screen_count: int
 ) -> tuple[list[dict[str, object]], dict[str, object]]:
@@ -181,11 +197,13 @@ def _concept_rows(
         if row.kind == "section":
             position = seen_sections
             seen_sections += 1
-        description = describe(
-            prev_state,
-            state,
-            raw.get("ops", ()),
-            compute_cue_headroom(state),  # type: ignore[arg-type]
+        description = _screen_description(
+            describe(
+                prev_state,
+                state,
+                raw.get("ops", ()),
+                compute_cue_headroom(state),  # type: ignore[arg-type]
+            )
         )
         prev_state = state
         rows.append(

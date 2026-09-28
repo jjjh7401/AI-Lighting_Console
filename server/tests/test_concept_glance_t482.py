@@ -135,8 +135,9 @@ class TestConceptReportWiring:
 
     def test_description_is_exactly_describe_over_the_resolved_states(self) -> None:
         # 지어낸 문장이 아니다: 같은 입력으로 describe() 를 직접 불러 한 행씩 대조한다.
+        # 카드 t486 — 화면 문장은 describe() 에서 「최대 N%」 절만 뺀 것이다.
         from server.concept.gates import build_song
-        from server.concept.session_bridge import _raw_sections
+        from server.concept.session_bridge import _raw_sections, _screen_description
 
         plan = self._plan_with_roles()
         raw_song = {
@@ -149,5 +150,6 @@ class TestConceptReportWiring:
         prev = CueState(dim={}, color=None, pos="home", motion=0)
         for row, raw, state in zip(rows, build.rows, build.states, strict=True):  # type: ignore[arg-type]
             ops = raw.get("ops", ())
-            assert row["description"] == describe(prev, state, ops, compute_cue_headroom(state))  # type: ignore[index]
+            expected = _screen_description(describe(prev, state, ops, compute_cue_headroom(state)))
+            assert row["description"] == expected  # type: ignore[index]
             prev = state
