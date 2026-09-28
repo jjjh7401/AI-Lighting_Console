@@ -1,0 +1,152 @@
+roots (production imports): ['EXPLICIT_DYNAMICS_REQUIRED', 'LADDER_BLINDER_OR_FLASH', 'PROPERTY_UNOBSERVED_NOTE', 'ROLE_UNADDRESSED', 'SectionTimeError', 'SequenceNumberError', 'SongCueBundle', 'SongCueLookSelection', 'SongCueSection', 'SongCueSectionBundle', 'SongCueTimingAxes', 'SongCueTimingPlan', 'SongCueTimingSkip', 'TRIGGER_TYPE_TIME', 'UNMAPPED_LOOK', '_ascii_label', '_format_seconds', 'build_songcue_timing', 'climax_cap_beats', 'darkness_target', 'normalise_start_ms', 'parse_sections', 'select_sequence_number']
+reached: 59  unreached: 127  lines: {'server.looks.songcue': 2322, 'server.looks.songcue_report': 257}
+  songcue:47 EMPTY_SECTIONS
+  songcue:52 LOOK_POOL_EXHAUSTED
+  songcue:55 MOVEMENT_BAND_STILL
+  songcue:56 MOVEMENT_TURN_BOUNDARY
+  songcue:57 MOVEMENT_LINE_COLLISION
+  songcue:71 DARKNESS_NO_PRECEDING_CUE
+  songcue:72 DARKNESS_SIX_ROW_ABSENT
+  songcue:73 DARKNESS_SAME_SIX_ROW
+  songcue:74 DARKNESS_ALREADY_DARK
+  songcue:75 DARKNESS_NO_DIMMER
+  songcue:79 DARKNESS_CUE_NOT_STORED
+  songcue:86 CLIMAX_RETURN_DIMMER_EXHAUSTED
+  songcue:87 _DESTINATION
+  songcue:88 _CLEAR
+  songcue:89 _IMPLICIT_SYSTEM_CUE_COUNT
+  songcue:130 LADDER_DIMMER_HIT
+  songcue:131 LADDER_ZOOM_PINCH
+  songcue:132 LADDER_IRIS_PINCH
+  songcue:145 LADDER_COLOR_SNAP
+  songcue:146 LADDER_RUNGS
+  songcue:163 LADDER_STROBE_HIT
+  songcue:171 LADDER_DIMMER_YIELD
+  songcue:173 _DIMMER
+  songcue:174 _ZOOM
+  songcue:175 _IRIS
+  songcue:178 _HIT_STEP
+  songcue:179 _PINCH_STEP
+  songcue:180 _DIMMER_CEILING
+  songcue:181 _BEAM_FLOOR
+  songcue:203 _MARKING_ACCENTS
+  songcue:212 _MARKING_ACCENT_AXIS
+  songcue:219 ACCENT_NO_EFFECTIVE_CANDIDATE
+  songcue:222 _look_has_attribute
+  songcue:230 _COLOR_ATTRIBUTES
+  songcue:233 _look_color
+  songcue:243 _color_snap_is_effective
+  songcue:268 _accent_is_effective
+  songcue:299 _no_effective_candidate_detail
+  songcue:360 _marking_accents
+  songcue:401 _exhausted_rungs
+  songcue:431 _max_climb
+  songcue:483 FRONT_FILL_ROLE
+  songcue:492 FRONT_FILL_DIMMER
+  songcue:498 FRONT_FILL_COLOR
+  songcue:516 _ACCENT_FIXTURE_ROLE
+  songcue:901 SongCueBundleError
+  songcue:963 map_sections_to_looks
+  songcue:1011 SONGCUE_VARIANT_LABEL
+  songcue:1014 split_selections_for_density
+  songcue:1075 build_songcue_bundle
+  songcue:1170 _collect_withheld_accents
+  songcue:1182 _assembled
+  songcue:1241 _LABEL_SEQUENCE_PREFIX
+  songcue:1244 _delabelled
+  songcue:1255 _flatten_commands
+  songcue:1287 _renumbered
+  songcue:1317 _climax_return_bundle
+  songcue:1366 _climax_return_bumped
+  songcue:1433 _apply_climax_duration_cap
+  songcue:1567 _rescue_value_line_collisions
+  songcue:1676 _reorder_yields_by_repetition
+  songcue:1748 _VALUE_TOKEN_RE
+  songcue:1751 _parse_values_line
+  songcue:1762 _CUE_FADE_SUFFIX_RE
+  songcue:1765 _forced_zero_fade_store
+  songcue:1780 _ALL_MARKING_RUNGS
+  songcue:1783 _accent_insertion_index
+  songcue:1807 _strip_marking_accent_from_base_occurrence
+  songcue:1855 _reconcile_accent_fixture
+  songcue:1914 _finalize_marking_accents
+  songcue:2078 _dimmer_from_values_line
+  songcue:2092 _is_literal_drop
+  songcue:2102 _yield_bundle
+  songcue:2158 _movement_carrier
+  songcue:2248 _pre_drop_positions
+  songcue:2286 _is_drop_row
+  songcue:2310 _pre_drop_darkened
+  songcue:2415 _darkness_withheld
+  songcue:2453 _attribute_value
+  songcue:2460 _at_value
+  songcue:2472 _guard_bundle_collision
+  songcue:2493 render_songcue_report
+  songcue:2513 observed_user_cue_count
+  songcue:2557 plan_prepare_songcue_timing
+  songcue:2616 _map_section_to_look
+  songcue:2655 _ranked_against_history
+  songcue:2706 _bound_groups
+  songcue:2721 _select_bindable
+  songcue:2747 _unique_floor_climb
+  songcue:2768 _FRONT_FILL_CEILING
+  songcue:2771 _front_fill
+  songcue:2811 _accent_fixture_commands
+  songcue:2867 _previous_stored_color
+  songcue:2886 _label_return_palette
+  songcue:2908 _section_bundle
+  songcue:3152 _distinct_values_line
+  songcue:3211 _ladder_start
+  songcue:3232 _climb_rungs
+  songcue:3274 escalate_attributes
+  songcue:3307 _climb_depth_reached
+  songcue:3318 _ensure_marking_accent
+  songcue:3394 _rung_applied
+  songcue:3419 _stepped
+  songcue:3466 _selected_groups
+  songcue:3473 _selection_line
+  songcue:3477 _first_store_index
+  songcue:3502 _cue_names
+  songcue:3531 _explicit_dynamics_for
+  songcue:3539 _validated_dynamics
+  songcue:3561 _prepare_songcue_timecode_number
+  songcue_report:21 UNKNOWN_VOCABULARY
+  songcue_report:22 DYNAMICS_LOOK_MISSING
+  songcue_report:24 VALUE_SKIPPED
+  songcue_report:25 VERDICTS
+  songcue_report:30 _NOTICE_REASONS
+  songcue_report:38 SongCueSectionVerdict
+  songcue_report:51 SongCueReport
+  songcue_report:142 build_songcue_report
+  songcue_report:183 _section_verdict
+  songcue_report:209 _gap_reason
+  songcue_report:231 _reason_kind
+  songcue_report:243 _generated_cue
+  songcue_report:252 _unmapped_section
+  songcue_report:262 _skipped_save
+  songcue_report:271 _verify_requery
+  songcue_report:284 _observed_cues
+  songcue_report:307 _status_of
+
+tests importing an unreached name:
+  test_chorus_color_two_paths_t439.py: ['_look_color', 'build_songcue_bundle', 'map_sections_to_looks']
+  test_chorus_color_two_paths_t441.py: ['_look_color', 'build_songcue_bundle', 'map_sections_to_looks', 'split_selections_for_density']
+  test_chorus_split_color_t445.py: ['_look_color', 'map_sections_to_looks', 'split_selections_for_density']
+  test_cue_density_wrap.py: ['SONGCUE_VARIANT_LABEL']
+  test_section_vocab.py: ['map_sections_to_looks']
+  test_songcue_accent_fixture.py: ['LADDER_IRIS_PINCH', 'LADDER_STROBE_HIT', 'LADDER_ZOOM_PINCH', 'build_songcue_bundle']
+  test_songcue_accent_ladder_t382.py: ['LADDER_DIMMER_YIELD', 'LADDER_IRIS_PINCH', 'LADDER_ZOOM_PINCH', '_MARKING_ACCENTS', '_dimmer_from_values_line', 'build_songcue_bundle', 'map_sections_to_looks']
+  test_songcue_bundle.py: ['EMPTY_SECTIONS', 'SongCueBundleError', 'build_songcue_bundle', 'observed_user_cue_count', 'render_songcue_report']
+  test_songcue_chorus_rescue.py: ['LADDER_DIMMER_YIELD', '_dimmer_from_values_line', 'build_songcue_bundle', 'map_sections_to_looks']
+  test_songcue_climax_001.py: ['CLIMAX_RETURN_DIMMER_EXHAUSTED', 'LADDER_COLOR_SNAP', 'LADDER_STROBE_HIT', 'build_songcue_bundle']
+  test_songcue_cross_song.py: ['LADDER_DIMMER_HIT', 'LOOK_POOL_EXHAUSTED', 'build_songcue_bundle', 'map_sections_to_looks']
+  test_songcue_front_fill.py: ['FRONT_FILL_COLOR', 'FRONT_FILL_DIMMER', 'build_songcue_bundle']
+  test_songcue_ladder.py: ['LADDER_COLOR_SNAP', 'LADDER_DIMMER_HIT', 'LADDER_DIMMER_YIELD', 'LADDER_IRIS_PINCH', 'LADDER_RUNGS', 'LADDER_ZOOM_PINCH', 'MOVEMENT_TURN_BOUNDARY', 'build_songcue_bundle', 'map_sections_to_looks']
+  test_songcue_map.py: ['map_sections_to_looks']
+  test_songcue_movement.py: ['MOVEMENT_BAND_STILL', 'MOVEMENT_LINE_COLLISION', 'MOVEMENT_TURN_BOUNDARY', 'SongCueBundleError', '_assembled', '_guard_bundle_collision', 'build_songcue_bundle']
+  test_songcue_pre_drop_darkness.py: ['DARKNESS_ALREADY_DARK', 'DARKNESS_NO_PRECEDING_CUE', 'DARKNESS_SAME_SIX_ROW', 'DARKNESS_SIX_ROW_ABSENT', 'build_songcue_bundle', 'map_sections_to_looks']
+  test_songcue_report.py: ['DYNAMICS_LOOK_MISSING', 'UNKNOWN_VOCABULARY', 'VALUE_SKIPPED', 'VERDICTS', 'build_songcue_bundle', 'build_songcue_report']
+  test_songcue_rig_aware_look.py: ['build_songcue_bundle', 'map_sections_to_looks']
+  test_songcue_section_intent.py: ['LADDER_DIMMER_HIT', 'LADDER_ZOOM_PINCH', 'build_songcue_bundle', 'escalate_attributes', 'map_sections_to_looks']
+  test_songcue_t429_repeat_chorus_collision.py: ['SongCueBundleError', 'build_songcue_bundle', 'map_sections_to_looks']
+  test_songcue_timing.py: ['build_songcue_bundle', 'plan_prepare_songcue_timing']
