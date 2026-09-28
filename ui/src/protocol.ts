@@ -477,6 +477,17 @@ export interface SongTimelineConceptReport {
    * session_bridge.py`의 `_concept_reserve`가 낸다. 그룹은 해제 큐 전까지
    * 잠금(REQ-090), 색은 입력 색으로 판정한 곡에서만 해제 큐가 잡힌다. */
   reserve?: SongTimelineReserveItem[];
+  /** t482 — "한눈에" 5단계에 어느 화면 구간이 드는지(`session_bridge.glance_stages`).
+   * 카드 수치는 여기 없다 — UI 가 CUE SHEET 와 같은 `sections` 에서 계산한다. */
+  glance?: SongTimelineGlance;
+}
+
+/** t482 — 서버 단계 배정. `rule` 은 배정 규칙 출처 표식(감독 확인 전 제안 규칙). */
+export interface SongTimelineGlance {
+  available: boolean;
+  rule: string;
+  reason: string | null;
+  stages: { stage: string; positions: number[]; reason: string | null }[];
 }
 
 /** t460 — 리저브 그룹/색 한 항목. `released_q` 가 null 이면 아직 해제되지
@@ -511,6 +522,9 @@ export interface SongTimelineConceptRow {
    * 기준 꺼진 그룹 수(`compute_cue_headroom(state).unused_groups`) — PLAN
    * CUE 카드·생성기 경고 모두 이 값을 그대로 읽고 재계산하지 않는다(AC-040). */
   unused_groups?: number;
+  /** t482 — 큐 설명(REQ-023/070, 서버 `describe()`) — 해석된 상태 차이로만
+   * 조립한 한 문장. 예전 페이로드에는 없다. */
+  description?: string;
 }
 
 /** t281 — 초안이 원본에서 얼마나 벌어졌는지. 서버 `_draft_badge` 가 만든다. */

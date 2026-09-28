@@ -1,0 +1,18 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t482/ui
+
+ ❯ src/components/conceptGlance.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/conceptGlance.test.ts [ src/components/conceptGlance.test.ts ]
+Error: Failed to load url ./conceptGlance (resolved id: ./conceptGlance) in /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t482/ui/src/components/conceptGlance.test.ts. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:51920:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  12:20:06
+   Duration  182ms (transform 15ms, setup 0ms, collect 0ms, tests 0ms, environment 0ms, prepare 23ms)
+

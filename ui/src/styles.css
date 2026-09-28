@@ -4010,6 +4010,73 @@ body {
   font-size: 13px;
 }
 
+/* t482 — "한눈에" 5단계 카드(REQ-097). 카드 수는 서버 배정대로, 폭은 줄바꿈. */
+.concept-glance-analysis {
+  margin: 0 0 8px;
+  color: #a9b4c3;
+  font-size: 12px;
+}
+
+.concept-glance-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.concept-glance-card {
+  flex: 1 1 170px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #2c3441;
+  background: #151a22;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.concept-glance-card.is-empty { opacity: 0.7; }
+
+.concept-glance-bar {
+  display: block;
+  height: 6px;
+  margin-bottom: 6px;
+  background: #3a4350;
+}
+
+.concept-glance-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  margin: 6px 0 0;
+}
+
+.concept-glance-card dt { color: #7d8898; }
+.concept-glance-card dd { margin: 0; color: #d6dbe3; overflow-wrap: anywhere; }
+
+/* t482 — 표 구간 행을 누르면 4칸 설명(REQ-079)을 편다. */
+.concept-row-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #a9c4ff;
+  font: inherit;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+.concept-explain {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.concept-explain dt { color: #7d8898; font-size: 11px; }
+.concept-explain dd { margin: 2px 0 0; color: #d6dbe3; }
+.concept-explain-source { display: block; margin-top: 2px; color: #d9a85b; font-size: 10.5px; }
+
 .concept-tabs {
   display: flex;
   flex-wrap: wrap;

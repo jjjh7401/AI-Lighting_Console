@@ -113,7 +113,8 @@ class TestConceptRowsOnPayload:
         report = self._report()
         assert report["available"] is True, report
         # t461 — 리저브 해제 큐(`reserve`)가 추가됐다(추가만, 기존 키 불변).
-        assert set(report) - _T454_REPORT_KEYS == {"rows", "row_pairing", "reserve"}
+        # t482 — "한눈에" 단계 배정(`glance`)이 추가됐다(추가만).
+        assert set(report) - _T454_REPORT_KEYS == {"rows", "row_pairing", "reserve", "glance"}
 
     def test_one_row_per_concept_cue_with_the_fixed_fields(self) -> None:
         report = self._report()
@@ -124,6 +125,7 @@ class TestConceptRowsOnPayload:
             "q", "ts", "kind", "section", "occurrence", "trigger", "tracking",
             "mib", "one_shot", "evidence", "screen_position",
             "unused_groups",  # t461 — 행별 잔여 그룹 수(추가만)
+            "description",  # t482 — 큐 설명 describe()(추가만)
         }  # fmt: skip
 
     def test_mib_matches_the_existing_mib_list(self) -> None:
