@@ -1,12 +1,13 @@
-from server.looks.loader import load_library_from_dir
-from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
-from server.tests.busking_fixtures import FULL_RIG
-from server.tests.test_looks_instantiate import _groups
 from server.tests.test_songcue_chorus_rescue import (
     _WORSHIP_NINE_SECTIONS_FOUR_CHORUS,
     _chorus_sections,
     _sequences,
 )
+
+from server.looks.loader import load_library_from_dir
+from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
+from server.tests.busking_fixtures import FULL_RIG
+from server.tests.test_looks_instantiate import _groups
 
 library = load_library_from_dir()
 sections = parse_sections(_WORSHIP_NINE_SECTIONS_FOUR_CHORUS)

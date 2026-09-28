@@ -1,0 +1,71 @@
+--- .moai/reports/t462/dump_b.py
++++ .moai/reports/t462/dump_b.py
+@@ -9,14 +9,15 @@
+ 
+ import hashlib
+ 
+-from server.looks.loader import load_library_from_dir
+-from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
+-from server.tests.test_looks_instantiate import FULL_RIG, _groups
+ from server.tests.test_songcue_t429_repeat_chorus_collision import (
+     _ICE_CREAM_SECTIONS,
+     _RAIN_SECTIONS,
+ )
+ 
++from server.looks.loader import load_library_from_dir
++from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
++from server.tests.test_looks_instantiate import FULL_RIG, _groups
++
+ library = load_library_from_dir()
+ total = hashlib.sha256()
+ for song, raw, bpm in (("Ice cream", _ICE_CREAM_SECTIONS, 100.4), ("Rain", _RAIN_SECTIONS, 76.0)):
+
+--- .moai/reports/t476/upload_path_control.py
++++ .moai/reports/t476/upload_path_control.py
+@@ -9,15 +9,16 @@
+ 
+ from __future__ import annotations
+ 
++from server.tests.test_songcue_t429_repeat_chorus_collision import (
++    _ICE_CREAM_SECTIONS,
++    _RAIN_SECTIONS,
++)
++
+ import server.looks.songcue as songcue
+ from server.fx.instantiate import is_programmer_state
+ from server.looks.loader import load_library_from_dir
+ from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
+ from server.tests.test_looks_instantiate import FULL_RIG, _groups
+-from server.tests.test_songcue_t429_repeat_chorus_collision import (
+-    _ICE_CREAM_SECTIONS,
+-    _RAIN_SECTIONS,
+-)
+ 
+ calls: list[str] = []
+ 
+
+--- .moai/reports/t476/upload_path_bytes.py
++++ .moai/reports/t476/upload_path_bytes.py
+@@ -13,15 +13,16 @@
+ import hashlib
+ import re
+ 
+-import server.looks.songcue as songcue
+-from server.looks.loader import load_library_from_dir
+-from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
+-from server.tests.test_looks_instantiate import FULL_RIG, _groups
+ from server.tests.test_songcue_t429_repeat_chorus_collision import (
+     _ICE_CREAM_SECTIONS,
+     _RAIN_SECTIONS,
+ )
+ 
++import server.looks.songcue as songcue
++from server.looks.loader import load_library_from_dir
++from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
++from server.tests.test_looks_instantiate import FULL_RIG, _groups
++
+ _OPERAND = r"\d+(?:\s*[-+]\s*\d+|\s+Thru(?:\s+\d+)?)*"
+ _BEFORE = (
+     re.compile(r"Clear", re.IGNORECASE),
+
+Would fix 3 errors.

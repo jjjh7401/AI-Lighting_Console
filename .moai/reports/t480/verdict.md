@@ -143,7 +143,11 @@ M3 가 초록(8곡 게이트 바이트 동일 · 업로드 전후 diff 설명 §
 | 8곡 게이트 | `t444/gates_8songs.txt` 와 `cmp` 동일 | `merge_gates.txt` |
 | 업로드 길 명령 | edm·인터뷰 없음 **4조합만** 바뀜. 추가 38줄이 전부 `ColorRGB`(7+7+12+12), 지운 줄 0 — t483 의 효과 그대로. 나머지 12조합 sha 동일 | `merge_upload_dump.txt` · `merge_upload_diff.txt` |
 
-교훈(이 카드에서 두 번째): 내 트리의 초록은 머지 뒤 초록이 아니다. 시험 도우미를 지울 때는 main 에 막 들어온 파일까지 import 를 봐야 하고, 그것을 하는 가장 싼 방법이 푸시 전 `origin/main` 머지다.
+**두 번째 빨강(`77f48734`, `ci_fail_77f48734.txt`) — ruff 캐시가 가린 린트.** 형제 게이트 `TestTouchedFilesPassLint` 가 다른 카드의 증거 스크립트 5개(`reports/t377/probe_cross_song.py` · `probe_worship.py` · `.moai/reports/t462/dump_b.py` · `.moai/reports/t476/upload_path_bytes.py` · `upload_path_control.py`)에서 I001(import 정렬)을 냈다. 원인: 이 스크립트들이 D3 로 지운 시험 모듈(`test_songcue_t429_…` · `test_songcue_cross_song` · `test_songcue_chorus_rescue`)을 import 하는데, 모듈 파일이 사라지자 ruff 가 그 import 를 1st-party 가 아닌 쪽으로 분류해 정렬 기대가 바뀌었다. 로컬에서는 **ruff 캐시**가 삭제 전 판정을 돌려줘 초록이었다 — 캐시 키에 「다른 파일의 존재」가 들어가지 않는다. `--no-cache` 로 5건 재현.
+
+처리: import 정렬만 고쳤다(`ruff check --fix --select I001`). 이 5개는 D3 이후 **실행할 수 없다**(은퇴한 `build_songcue_bundle` 등을 import) — 그 출력은 각 카드 커밋 시점에 기록된 증거로 남고, 증거 사슬 때문에 지우거나 고쳐 쓰지 않았다. 확인: `RUFF_NO_CACHE=true` 로 린트 게이트 13 passed, 대조군(수정 전 사본)은 같은 설정에서 I001 로 걸림.
+
+교훈(이 카드에서 두 번째): 내 트리의 초록은 머지 뒤 초록이 아니다. 그리고 모듈을 지운 변경은 린트도 캐시 없이 돌려야 한다. 시험 도우미를 지울 때는 main 에 막 들어온 파일까지 import 를 봐야 하고, 그것을 하는 가장 싼 방법이 푸시 전 `origin/main` 머지다.
 
 ## 9. 안 잰 것
 

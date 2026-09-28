@@ -9,13 +9,14 @@
 
 import hashlib
 
-from server.looks.loader import load_library_from_dir
-from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
-from server.tests.test_looks_instantiate import FULL_RIG, _groups
 from server.tests.test_songcue_t429_repeat_chorus_collision import (
     _ICE_CREAM_SECTIONS,
     _RAIN_SECTIONS,
 )
+
+from server.looks.loader import load_library_from_dir
+from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
+from server.tests.test_looks_instantiate import FULL_RIG, _groups
 
 library = load_library_from_dir()
 total = hashlib.sha256()
