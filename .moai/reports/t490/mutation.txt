@@ -1,0 +1,10 @@
+M1 CUE SHEET 가 undefined 만 막는다(원래 결함): CAUGHT
+    × CUE SHEET 는 null 페이드로 터지지 않는다 > 실제 재질의 대기 페이로드를 그린다 5ms
+    × CUE SHEET 는 null 페이드로 터지지 않는다 > null 페이드 칸은 빈 칸 표식이다 1ms
+    × 런북 화면 전체 — 브라우저에서 #root 가 비던 그 트리 > RunbookMode 가 실제 재질의 대기 페이로드로 그려지고 CUE SHEET 를 담는다 2ms
+M2 Fade/Track 줄이 undefined 만 막는다: CAUGHT
+    × 런북 화면 전체 — 브라우저에서 #root 가 비던 그 트리 > RunbookMode 가 실제 재질의 대기 페이로드로 그려지고 CUE SHEET 를 담는다 7ms
+    × 다른 두 소비처도 null 을 글자로 찍지 않는다 > Fade/Track 줄 1ms
+M3 수정 요청 이전 값이 undefined 만 막는다: CAUGHT
+    × 다른 두 소비처도 null 을 글자로 찍지 않는다 > 수정 요청 생성기의 이전 값 3ms
+restored: True
