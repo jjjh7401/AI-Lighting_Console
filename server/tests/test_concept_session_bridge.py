@@ -15,8 +15,9 @@ import pytest
 
 from server.concept import gates as gates_module
 from server.concept.session_bridge import (
+    _raw_sections_from_pairs,
+    _run_concept_pipeline,
     build_concept_report,
-    build_concept_report_from_songcue_sections,
 )
 from server.design.profile import MusicProfile
 from server.design.rig import build_rig_profile
@@ -160,10 +161,11 @@ class TestConceptPipelineFailureIsSwallowed:
 
 
 class TestBuildConceptReportFromSongcueSections:
-    """tools.py 경로(``prepare_songcue`` 사다리) 어댑터 —
-    ``(baseline_name, start_ms)`` 쌍 목록을 직접 받는다. ``label``+
-    ``instance`` 를 호출자가 이미 합쳐 넘긴다는 계약(모듈 독스트링)을
-    이 시험이 검증한다."""
+    """``(baseline_name, start_ms)`` 쌍 목록으로 공통 실행기를 돌린다.
+
+    카드 t486 — 사다리 경로 어댑터(``build_concept_report_from_songcue_sections``)는
+    운영 호출처 0 이라 은퇴했다. 이 시험들이 재던 것은 어댑터가 아니라 공통 실행기의
+    동작(BPM 없음·빈 구간·마지막 구간 꼬리)이라 입구만 바꿔 그대로 둔다."""
 
     def test_label_instance_pairs_produce_available_report(self) -> None:
         # label+instance 를 미리 "Chorus 2" 류로 합친 것이 이 함수의
@@ -175,14 +177,14 @@ class TestBuildConceptReportFromSongcueSections:
             ("Chorus 1", 26_000),
             ("Finale", 39_000),
         ]
-        report = build_concept_report_from_songcue_sections("Ladder Test", 100.0, sections)
+        report = _run_concept_pipeline("Ladder Test", 100.0, _raw_sections_from_pairs(sections))
 
         assert report["available"] is True
         assert set(report["gates"]) == set(gates_module.GATE_NAMES)
 
     def test_bpm_none_returns_unavailable_with_reason(self) -> None:
         sections = [("Intro", 0), ("Verse", 13_000)]
-        report = build_concept_report_from_songcue_sections("Ladder Test", None, sections)
+        report = _run_concept_pipeline("Ladder Test", None, _raw_sections_from_pairs(sections))
 
         assert report == {
             "available": False,
@@ -190,12 +192,12 @@ class TestBuildConceptReportFromSongcueSections:
         }
 
     def test_empty_sections_returns_unavailable_without_raising(self) -> None:
-        report = build_concept_report_from_songcue_sections("Ladder Test", 120.0, [])
+        report = _run_concept_pipeline("Ladder Test", 120.0, _raw_sections_from_pairs([]))
         assert report == {"available": False, "reason": "구간이 없다"}
 
     def test_last_section_uses_fallback_tail_since_songcue_has_no_end_ms(self) -> None:
         # SongCueSection 자체에 end_ms 필드가 없다(songcue.py) — 이 시험은
         # 그 구조적 결손이 예외로 새지 않는다는 것만 확인한다.
         sections = [("Intro", 0), ("Verse", 13_000), ("Chorus 1", 26_000), ("Finale", 39_000)]
-        report = build_concept_report_from_songcue_sections("Ladder Test", 100.0, sections)
+        report = _run_concept_pipeline("Ladder Test", 100.0, _raw_sections_from_pairs(sections))
         assert report["available"] is True

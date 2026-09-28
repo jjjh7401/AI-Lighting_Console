@@ -36,8 +36,9 @@ from server.concept.gates import (
 )
 from server.concept.session_bridge import (
     _raw_sections,
+    _raw_sections_from_pairs,
+    _run_concept_pipeline,
     build_concept_report,
-    build_concept_report_from_songcue_sections,
 )
 from server.tests.test_chorus_color_two_paths_t441 import (
     _records,
@@ -200,25 +201,22 @@ class TestPathAAdapterCarriesPalette:
 
 
 class TestPathBAdapterCarriesPalette:
+    """카드 t486 — 사다리 어댑터는 은퇴했다. 원시 구간의 ``palette`` 가 색 게이트로
+    가는지는 공통 실행기에서 그대로 잰다. 어댑터만의 검사(팔레트 개수 짝 불일치)는
+    어댑터와 함께 지웠다."""
+
     _PAIRS = [("Intro 1", 0), ("Verse 1", 13_000), ("Chorus 1", 26_000), ("Outro 1", 39_000)]
 
     def test_without_palettes_color_gates_are_na(self) -> None:
-        report = build_concept_report_from_songcue_sections("t444", 120.0, self._PAIRS)
+        report = _run_concept_pipeline("t444", 120.0, _raw_sections_from_pairs(self._PAIRS))
         assert report["gates"][_G6] == {"passed": None, "detail": NO_INPUT_COLOR_REASON}
 
     def test_with_palettes_g6_is_judged(self) -> None:
         palettes = [("blue",), ("blue",), ("red",), ("red",)]
-        report = build_concept_report_from_songcue_sections(
-            "t444", 120.0, self._PAIRS, palettes=palettes
+        report = _run_concept_pipeline(
+            "t444", 120.0, _raw_sections_from_pairs(self._PAIRS, palettes)
         )
         assert report["gates"][_G6]["passed"] is False
-
-    def test_mismatched_palette_count_is_reported_not_raised(self) -> None:
-        report = build_concept_report_from_songcue_sections(
-            "t444", 120.0, self._PAIRS, palettes=[("blue",)]
-        )
-        assert report["available"] is False
-        assert "짝이 안 맞는다" in report["reason"]
 
 
 class TestPrepareSongcueWiresPalettes:

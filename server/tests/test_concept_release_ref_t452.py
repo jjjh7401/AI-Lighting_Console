@@ -14,7 +14,7 @@ from __future__ import annotations
 from server.concept.gates import _RELEASE_REF_BASE_NAME, build_song, evaluate_song
 from server.concept.session_bridge import (
     _raw_sections_from_pairs,
-    build_concept_report_from_songcue_sections,
+    _run_concept_pipeline,
 )
 from server.concept.tracking import verify_no_cue_only_leak
 
@@ -52,8 +52,8 @@ def test_g9_is_judged_not_raised() -> None:
 
 
 def test_production_report_is_available() -> None:
-    """운영 경로 — 예외가 ``available: False`` 로 삼켜지지 않고 리포트가 선다."""
-    report = build_concept_report_from_songcue_sections(
-        "t452", 120.0, [(name, start_ms) for name, start_ms in _PAIRS]
-    )
+    """공통 실행기 — 예외가 ``available: False`` 로 삼켜지지 않고 리포트가 선다.
+
+    카드 t486 — 사다리 어댑터 은퇴로 입구를 공통 실행기로 바꿨다(재는 것은 같다)."""
+    report = _run_concept_pipeline("t452", 120.0, _raw_sections_from_pairs(_PAIRS))
     assert report["available"] is True, report

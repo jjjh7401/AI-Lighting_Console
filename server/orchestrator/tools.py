@@ -96,7 +96,6 @@ from server.looks.report import build_report, to_korean
 from server.looks.resolver import resolve_roles
 from server.looks.rig_axes import MEASURED_ATTRIBUTE_SPELLINGS, RigAxisPresence
 from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, LookLibrary
-from server.looks.song_history import SongLookMemory
 from server.looks.songcue import (
     EXPLICIT_DYNAMICS_REQUIRED,
     TRIGGER_TYPE_TIME,
@@ -2350,7 +2349,6 @@ def build_toolset(
     uploaded_sheet: UploadedSheetPort | None = None,
     spatial_memory: SpatialMemory | None = None,
     song_analysis: SongAnalysisPort | None = None,
-    song_look_memory: SongLookMemory | None = None,
     interview_records: InterviewRecordsPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
@@ -2421,13 +2419,6 @@ def build_toolset(
     as before and spends the full per-fixture walk every call — deliberate, so
     the existing suites that count round trips keep measuring the unchanged
     path and only production wiring opts in.
-
-    ``song_look_memory`` (카드 t358) 는 이 **세션**이 이미 무대에 올린 룩의 기억이고,
-    ``prepare_songcue`` 가 다음 곡의 룩을 고를 때 피할 대상이다(정본 §7: 곡 사이
-    재사용은 결함). 생략하면(기본값) 피할 것이 없어 룩 선택이 고치기 전과 바이트
-    동일하다 — 기억을 여기서 만들지 않는 이유는 수명이다. ``build_toolset`` 은 세션마다
-    한 번 불리지만 이 객체의 주인은 세션이어야 하고(``server/web/session.py``),
-    툴 레지스트리가 만들면 「누가 이 기억을 비우는가」의 답이 사라진다.
 
     ``interview_records`` (카드 t441, SPEC-LDDESIGN-001 REQ-003) 는 ``song_analysis``
     와 같은 읽기 투과 자리다 — 경로 A(채팅 연출 인터뷰)가 이미 끝났으면
