@@ -1,0 +1,60 @@
+AC 분류
+AC-001 PASS-measured
+AC-002 PASS-test
+AC-003 PASS-measured
+AC-004 PASS-measured
+AC-005 PASS-measured
+AC-006 PASS-test
+AC-007 PASS-test
+AC-008 PASS-measured
+AC-009 PASS-measured
+AC-010 PASS-measured
+AC-011 PASS-measured
+AC-012 PASS-measured
+AC-013 PASS-measured
+AC-014 PASS-test
+AC-015 PASS-test
+AC-016 PASS-test
+AC-017 UNVERIFIED
+AC-018 PASS-test(미실행)
+AC-019 PASS-test(미실행)
+AC-020 UNVERIFIED
+AC-021 PASS-measured(부분 불일치)
+AC-022 n/a(관측 완료)
+AC-023 n/a(관측 완료, 미확정)
+AC-024 n/a(관측 완료, 미확정)
+AC-025 PASS-measured
+AC-026 PASS-test
+AC-027 PASS-test
+AC-028 PASS-test
+AC-029 PASS-test
+AC-030 PASS-test
+AC-031 PASS-test
+AC-032 PASS-test
+AC-033 PASS-test
+AC-034 PASS-test(미실행)
+AC-035 PASS-test(미실행)
+AC-036 PASS-test(미실행)
+AC-037 PASS-test(미실행)
+AC-038 PASS-test(미실행)
+AC-039 UNVERIFIED
+AC-040 UNVERIFIED(부분)
+AC-041 UNVERIFIED
+AC-042 PASS-test(미실행)
+AC-043 PASS-test(미실행)
+AC-044 PASS-test(미실행)
+AC-045 PASS-test
+AC-046 PASS-test
+AC-047 PASS-test
+AC-048 PASS-test
+AC-049 PASS-test(미실행)
+AC-050 PASS-test(미실행)
+AC-051 PASS-test
+AC-052 PASS-test(미실행)
+AC-053 PASS-test(미실행)
+AC 확인에 필요한 것
+AC-017 `server/web/session.py` 경로와 `tools.py:3230` 경로에 같은 워크시트를 넣어 전체 `CueRow` 시퀀스를 diff하는 통합 시험 신설
+AC-020 `CueSheetTimeline.test.tsx`/`SongTimeline.test.tsx` 전체를 REQ-081/085 키워드로 재검색하거나, jsdom 스크롤 시뮬레이션 테스트 신설
+AC-039 `parse_cue_sheet_edit_request` 호출부를 실제로 거치는 5건(그룹+밝기/색/프리셋/페이드/트래킹) e2e 테스트 신설 또는 기존 파일에서 재검색
+AC-040 각 조건이 REQ-027/090/050/066 기존 필드를 그대로 읽는지(재계산 로직 부재) 검사하는 5개 개별 테스트 또는 코드 검사
+AC-041 `ChatView` 계열 테스트에서 생성기 발신 메시지가 손입력 메시지와 같은 컴포넌트로 렌더되는지 확인하는 테스트 신설/검색

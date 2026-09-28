@@ -2,9 +2,9 @@
 id: SPEC-LDDESIGN-001
 title: "감독 워크시트 기반 조명 연출 컴파일러 — 컨셉·컬러 스크립트·3층 큐 밀도·회차 에스컬레이션·트래킹/타이밍/MIB"
 version: "0.1.0"
-status: in-progress
+status: implemented
 created: 2026-09-21
-updated: 2026-09-23
+updated: 2026-09-28
 author: jaihyun
 priority: P1
 phase: "Lighting Copilot v1.0 target"
@@ -149,7 +149,7 @@ REQ 번호는 이 SPEC 전체에서 연속이다(절 단위로 다시 시작하�
 | REQ | 요구사항 | 근거 |
 |---|---|---|
 | REQ-LDDESIGN-001 | **Where** `WT-chorus-collision`(커밋 `4d4cc94f`)의 후렴 재정렬 액센트 제거 수정이 `origin/main`에 머지되어 있지 않으면, 이 SPEC의 M1 이후 마일스톤은 **SHALL NOT** 착수한다 — 후렴 2회 이상 곡 8곡 중 7곡이 큐 생성 자체에 실패하는 트리(카드 t429) 위에 새 계층을 얹으면 검증이 무의미하다. | `lighting-director-verification-20260921.md` X1, 카드 t429 |
-| REQ-LDDESIGN-002 | **When** M0이 완료되면, `server/orchestrator/tools.py:3230`(`prepare_songcue` 핸들러, 2954행)의 `build_songcue_bundle(...)` 호출은 **SHALL** `bpm=density_bpm`(이미 `tools.py:3177`에서 계산됨)을 실제로 전달한다 — SPEC-LDRETURN-001이 확보한 값 충돌 회피 경로 위에서 절정 지속시간 상한이 프로덕션에서 처음 발동한다. **Where** SPEC-LDRETURN-001의 `status`가 이 REQ 착수 시점에도 `completed`가 아니면(현재 `draft`), M0은 **SHALL** 그 SPEC의 완료를 대기하거나, 원인을 로그(`.moai/logs/depends-on-override.log`)에 남긴 명시적 override로만 진행한다 — 조용히 우회하지 않는다. | `lighting-director-upgrade-20260921.md` 로드맵 0, SPEC-LDRETURN-001 §4 Out of Scope("후속 SPEC이 bpm=density_bpm 한 줄만 추가하면 배선이 끝난다"), `spec-workflow.md` § Depends_on Pre-flight Check |
+| REQ-LDDESIGN-002 | **When** M0이 완료되면, `server/orchestrator/tools.py:3230`(`prepare_songcue` 핸들러, 2954행)의 `build_songcue_bundle(...)` 호출은 **SHALL** `bpm=density_bpm`(이미 `tools.py:3177`에서 계산됨)을 실제로 전달한다 — SPEC-LDRETURN-001이 확보한 값 충돌 회피 경로 위에서 절정 지속시간 상한이 프로덕션에서 처음 발동한다. **Where** SPEC-LDRETURN-001의 `status`가 이 REQ 착수 시점에도 `completed`가 아니면(2026-09-22 M0 착수 시점에 이미 `completed` — 대기·override 경로 모두 발동하지 않음, plan.md §M0), M0은 **SHALL** 그 SPEC의 완료를 대기하거나, 원인을 로그(`.moai/logs/depends-on-override.log`)에 남긴 명시적 override로만 진행한다 — 조용히 우회하지 않는다. | `lighting-director-upgrade-20260921.md` 로드맵 0, SPEC-LDRETURN-001 §4 Out of Scope("후속 SPEC이 bpm=density_bpm 한 줄만 추가하면 배선이 끝난다"), `spec-workflow.md` § Depends_on Pre-flight Check |
 | REQ-LDDESIGN-003 | **When** 곡 큐가 생성되면(채팅/웹 세션 경로 `server/web/session.py`의 확정 단계, LLM 툴 경로 `server/orchestrator/tools.py:3230` 둘 다), 두 경로는 **SHALL** 이 SPEC이 §3.4에서 정의하는 단일 컴포저(`server/design/song_cue_composer.py` 확장, 또는 그 자리를 대체하는 신규 모듈)를 거친다 — `server/looks/songcue.py`의 사다리 로직(`_arc_palette`·회차 사다리)은 데이터(§3.7 회차 규칙)로 흡수되고 별도 코드 경로로 남지 않는다. | `lighting-director-upgrade-20260921.md` 구조적 문제 1, 로드맵 1 |
 | REQ-LDDESIGN-004 | **When** M0~M6이 완료되면, `server/web/session.py`의 `_arc_palette`(1083행, `origin/main@9dd21171` 실측)와 `_per_chorus_palette`(1124행, `per_chorus` 색 운용 분기)는 **SHALL** 더 이상 후렴 회차마다 보조색을 회전시키지 않는다 — §3.4의 컬러 규칙(정체성 유지 + 회차 회전 폐기)으로 대체된다. 이는 기본값(`palette_mode`/`color_usage` 기본 `modulate`)이며, 감독이 곡별로 고른 색 운용(`per_chorus` 등, Q2B)은 예외로 회차마다 색을 바꾼다. | `document-gap-audit-20260921.md` §3 표, `_arc_palette` 실측 (blue,warm white)(blue,magenta) 반복 |
 
