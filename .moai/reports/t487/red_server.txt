@@ -1,0 +1,18 @@
+F..........                                                              [100%]
+=================================== FAILURES ===================================
+_________ TestGlanceStages.test_stage_names_and_rule_marker_are_fixed __________
+
+self = <server.tests.test_concept_glance_t482.TestGlanceStages object at 0x10ae83610>
+
+    def test_stage_names_and_rule_marker_are_fixed(self) -> None:
+        assert GLANCE_STAGES == ("시작", "쌓기", "강조", "예고", "정점→마무리")
+>       assert GLANCE_RULE == "director-confirmed-2026-09-28"
+E       AssertionError: assert 'lead-proposed-2026-09-28' == 'director-con...ed-2026-09-28'
+E         
+E         - director-confirmed-2026-09-28
+E         + lead-proposed-2026-09-28
+
+server/tests/test_concept_glance_t482.py:54: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_concept_glance_t482.py::TestGlanceStages::test_stage_names_and_rule_marker_are_fixed
+1 failed, 10 passed in 1.38s

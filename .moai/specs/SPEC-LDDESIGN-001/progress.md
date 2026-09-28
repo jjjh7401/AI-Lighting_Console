@@ -579,8 +579,9 @@ m1_to_mN_commit_strategy: "M0(선행 회귀 #475/#476) → M1(어휘 닫힘 #477
 ## §E.4 Sync-phase Audit-Ready Signal
 
 ```yaml
-sync_status: implemented-not-completed
-sync_commit_sha: pending-backfill
+sync_status: completed-with-open-followups  # 2026-09-28 t487 종결(이전 값 implemented-not-completed). 값은 SPEC-LDCOMPILE-001 관행 — completed + 후속 카드(t492·t493) 열림
+sync_commit_sha: 924871e5  # 종결 커밋(implemented → completed) — PRESETGUARD progress.md:192 관행
+sync_artifacts_commit_sha: 9c1ec62a  # sync 산출물 커밋(in-progress → implemented, #529 머지 30f02eb5 의 둘째 부모)
 sync_date: 2026-09-28
 evidence_files:
   - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/pytest_full.txt
@@ -650,6 +651,8 @@ AC-021(실기 콘솔 1곡, Rain): 회귀(흰↔빨강 교대 재현 안 됨·회
 1. AC-017/020/039/040/041 각각의 확인에 필요한 시험을 신설하거나 기존 파일에서 재검색해 판정을 확정한다(필요한 것 목록은 `ac_class_recount.txt` 하단 "AC 확인에 필요한 것" 표).
 2. AC-021 의 색상 문구("노랑 계열")가 예시였는지 확정값이었는지 SPEC 소유자가 재확인하고, 필요하면 spec.md 본문(REQ 또는 AC 문면)을 manager-spec 경로로 정정한다 — manager-docs 는 본문을 직접 고치지 않는다.
 
+**이 절은 아래 「종결」 절로 대체됐다.** 위 5건·1건은 이후 카드(t480·t481·t482·t485·beabbbc1)에서 전부 재확인됐다 — 숫자를 여기서 고치지 않고 아래에 새로 적는다(날짜 붙은 측정은 만료 고지만, 처방은 아래에서).
+
 ### 이월(범위 밖, 후속 카드)
 
 - **t432** — 이미터 COLOR(Custom) CIE x·y 축. 선행 측정(#525/#527): 원색 좌표 칸은 있으나 응답기 1.6.5 가 GUID 대조로 못 읽음.
@@ -662,6 +665,35 @@ AC-021(실기 콘솔 1곡, Rain): 회귀(흰↔빨강 교대 재현 안 됨·회
 - 이번 sync 세션에서 콘솔을 손대지 않았다(콘솔 실행 0회) — M8 의 실기 콘솔 반영은 이전 카드(t474 등)에서 이미 수행된 것을 그대로 인용했다.
 - 이 SPEC 을 제외한 다른 23개 SPEC 의 drift(`spec_drift_before.json`)는 이번 sync 의 범위 밖이라 손대지 않았다.
 - `ac_evidence_map.md` §4 가 이미 밝힌 안 잰 것(t445~t471 사이 카드 판정서 전수 정독 미실시, `gen_gates_8songs.py` 스크립트 재실행 안 함 등)은 이번 sync 에서도 재검증하지 않고 그대로 승계한다.
+
+### 종결 (2026-09-28, 카드 t487)
+
+위 "상태 결정"(2026-09-28 sync, 커밋 `9c1ec62a`)이 `implemented`로 멈춘 근거였던 UNVERIFIED 5건·부분 불일치 1건은 이후 카드에서 전부 재확인됐다. 아래는 그 재확인을 모아 종결로 옮기는 절이다 — 위 절의 숫자는 고치지 않고 그대로 둔다(날짜 붙은 측정, 처방은 여기).
+
+**AC 재검수 (53건).** `sync-evidence/ac_class_recount.txt`(53건 분류 baseline) + 아래 근거로 갱신:
+
+- **PASS-test(미실행) 14건**(018·019·034·035·036·037·038·042·043·044·049·050·052·053) 은 14건 전부 브라우저·vitest 로 실행됐다(`sync-evidence/ac_ui_closeout.md` §3) — 019·034·035·036·038·042·043·050·052·053 PASS(같은 표 38·40·41·42·44·48·49·52·54·55행); 037 FAIL→PASS(t481, `.moai/reports/t481/verdict.md:45`); 044 PASS(문면 정정, beabbbc1); 049 FAIL→PASS(t482 조건부 → f687a9e8 에서 조건 해소, 아래 항목 참조). 남은 1건(018)은 부분 PASS로 아래 별항.
+- **UNVERIFIED 5건**(017·020·039·040·041) 전부 PASS로 재확인 — 017 PASS(`.moai/reports/t480/verdict.md:20`); 020·039·041 PASS(`sync-evidence/ac_ui_closeout.md:39,45,47`); 040 PASS, n/a 2종((2) 팬 폭·(6) 페이저=BPM, 감독 결정 2026-09-27·t467) 제외(`sync-evidence/ac_server_closeout.md:13` + `.moai/reports/t481/verdict.md:46` + `.moai/reports/t467/verdict.md:6`).
+- **AC-021**(PASS-measured 부분 불일치 1건): 실기 색은 파랑, AC 문면 "노랑 계열"과 불일치했던 것을 beabbbc1 에서 "후렴 주색 하나 — 회차 전부 동일"로 정정 — 실측과 문면이 일치, 무조건 PASS(`.moai/reports/t474/verdict.md` §3 ③).
+- **AC-018**: FAIL(일부, `ac_ui_closeout.md` §3) → t485 에서 인과 불릿 부분이 PASS(조건부, 원천=인터뷰 Q1) — 감독 2026-09-28 확인으로 그 부분은 조건 없이 PASS. 나머지 3건(「그래서 보이는 것」 칸, 불릿 클릭 4칸 설명, 탭 2·3 본문)은 원천 카드가 없어 **부분 PASS — 후속 카드 t492**로 이월한다.
+- **AC-049**: t482 FAIL→PASS(조건부, `rule:"lead-proposed-2026-09-28"`, 감독 확인 전 표식) → 감독이 2026-09-28 리드 제안 5단계 규칙을 그대로 확정 → f687a9e8 에서 `GLANCE_RULE = "director-confirmed-2026-09-28"`로 표식 갱신, 화면 「감독 확인 전」 문구 제거 → 무조건 PASS(`server/concept/session_bridge.py:123`, `ui/src/components/runbookM7.test.tsx:141-142`).
+
+**재검수 결과표**
+
+| 분류 | 건수 |
+|---|---|
+| PASS | 49 |
+| 부분 PASS(AC-018, t492 후속) | 1 |
+| n/a(AC-022~024) | 3 |
+| UNVERIFIED | 0 |
+| FAIL | 0 |
+| 합계 | 53 |
+
+**PLAN CUE 카드 폭 감독 결정(2026-09-28).** t481 에서 생성기 카드 폭을 280px 로 고정하면서 PLAN CUE 카드 폭이 더는 곡 시간에 비례하지 않게 됐다(감독에게 묻지 않은 채 남아 있던 항목). 감독 결정: 280px 고정을 그대로 둔다 — 코드 변경 없음, 결정만 기록(`.moai/reports/t481/verdict.md:55`).
+
+**상태**: `implemented → completed`(spec.md frontmatter). 근거 — AC 53건 중 FAIL 0·UNVERIFIED 0, 부분 PASS 1건(AC-018)은 미충족 인수 기준이 아니라 후속 제안(§ 앞 LDDESIGN M1 패턴과 동일 — "열린 항목은 후속이지 미충족 AC 아니다"). sync 산출물 커밋 `9c1ec62a`, 종결 커밋 `924871e5`(SHA는 자기참조라 `pending-backfill-close` 자리표시자로 실었다가 본 커밋에서 채웠다 — 스키마 §D3 자기참조 예외).
+
+**이월(변경 없음)**: t432·t433·t478(색 미세 조정, 감독 지시로 전체 완료 뒤 배차) · t492(AC-018 잔여 3건) · t493(UI 저장 payload 재생성, 범위 밖).
 
 ## §G M2(카드 t434) Gaps · Residual-risk
 

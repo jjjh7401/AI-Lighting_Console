@@ -119,8 +119,8 @@ CONCEPT_BULLET_AUTO_DRAFT_REASON = (
 GLANCE_STAGES = ("시작", "쌓기", "강조", "예고", "정점→마무리")
 #: 구간 → 단계 배정 규칙의 출처 표식. DESIGN.md §4.2 는 배정 규칙을 적지 않았고
 #: (「모든 수치는 큐 데이터에서 파생」만 요구), 아래 규칙은 리드가 2026-09-28 에
-#: 제안한 것이다 — 감독 확인 전이라 화면이 이 표식을 그대로 보인다.
-GLANCE_RULE = "lead-proposed-2026-09-28"
+#: 제안하고 같은 날 감독이 그대로 확정했다(카드 t487, SPEC-LDDESIGN-001 AC-049).
+GLANCE_RULE = "director-confirmed-2026-09-28"
 
 #: 마지막 구간의 끝 시각을 모를 때 쓰는 고정 꼬리(밀리초) — 실제 곡
 #: 길이를 아는 자리가 아니므로 자리표시자임을 리포트에도 남긴다.
@@ -295,7 +295,7 @@ def _concept_reserve(
 def glance_stages(roles: Sequence[str | None]) -> dict[str, object]:
     """카드 t482 — "한눈에" 5단계에 어느 화면 구간(0부터 위치)이 드는지 정한다.
 
-    규칙(``GLANCE_RULE``, 리드 제안 — 감독 확인 전). ``roles`` 는 화면 구간
+    규칙(``GLANCE_RULE``, 리드 제안 — 감독 확정 2026-09-28). ``roles`` 는 화면 구간
     순서의 아크 역할(``SectionDecision.role``: intro/verse/chorus/bridge/finale)
     이다. 첫 후렴 f, 마지막 후렴 l, 끝에서 둘째 후렴 p 라 하면:
 

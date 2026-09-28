@@ -496,7 +496,7 @@ export interface SongTimelineConceptReport {
   glance?: SongTimelineGlance;
 }
 
-/** t482 — 서버 단계 배정. `rule` 은 배정 규칙 출처 표식(감독 확인 전 제안 규칙). */
+/** t482 — 서버 단계 배정. `rule` 은 배정 규칙 출처 표식(리드 제안 → 감독 확정 2026-09-28, t487). */
 export interface SongTimelineGlance {
   available: boolean;
   rule: string;

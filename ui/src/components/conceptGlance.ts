@@ -102,7 +102,7 @@ export function glanceView(timeline: SongTimelineView): GlanceView {
   return {
     status: "ok",
     rule: glance.rule,
-    analysis: `구간 ${count}개 · ${cards.length}단계 중 ${filled}단계에 구간 배정 · 규칙 ${glance.rule}(감독 확인 전)`,
+    analysis: `구간 ${count}개 · ${cards.length}단계 중 ${filled}단계에 구간 배정 · 규칙 ${glance.rule}`,
     cards,
   };
 }
