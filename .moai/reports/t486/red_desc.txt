@@ -1,0 +1,47 @@
+FF..F                                                                    [100%]
+=================================== FAILURES ===================================
+_ TestNoBrightnessNumberOnScreen.test_no_description_carries_a_percent_number __
+
+self = <server.tests.test_concept_description_no_brightness_t486.TestNoBrightnessNumberOnScreen object at 0x10b189f50>
+
+    def test_no_description_carries_a_percent_number(self):
+        leaked = [text for text in _descriptions(_report(SONG)) if _PERCENT.search(text)]
+>       assert leaked == []
+E       AssertionError: assert ['+KEY · 색 bl... 최대 60%', ...] == []
+E         
+E         Left contains 20 more items, first extra item: '+KEY · 색 blue · 최대 10%'
+E         Use -v to get more diff
+
+server/tests/test_concept_description_no_brightness_t486.py:59: AssertionError
+_ TestNoBrightnessNumberOnScreen.test_changing_d_level_cannot_bring_a_number_back _
+
+self = <server.tests.test_concept_description_no_brightness_t486.TestNoBrightnessNumberOnScreen object at 0x10cbc9ad0>
+
+    def test_changing_d_level_cannot_bring_a_number_back(self):
+        """대조군 — 시트가 움직이는 입력(D 5 → 2)에서도 설명은 숫자를 내지 않는다."""
+        changed = list(SONG)
+        changed[3] = ("Chorus 1", 2, "red")
+        leaked = [text for text in _descriptions(_report(changed)) if _PERCENT.search(text)]
+>       assert leaked == []
+E       AssertionError: assert ['+KEY · 색 bl... 최대 60%', ...] == []
+E         
+E         Left contains 20 more items, first extra item: '+KEY · 색 blue · 최대 10%'
+E         Use -v to get more diff
+
+server/tests/test_concept_description_no_brightness_t486.py:66: AssertionError
+_ TestChangeNarrativeIsKept.test_a_row_that_only_had_brightness_says_so_without_a_number _
+
+self = <server.tests.test_concept_description_no_brightness_t486.TestChangeNarrativeIsKept object at 0x10c4b6c10>
+
+    def test_a_row_that_only_had_brightness_says_so_without_a_number(self):
+        texts = _descriptions(_report(SONG))
+>       assert "그룹·색 변화 없음" in texts, texts
+E       AssertionError: ['+KEY · 색 blue · 최대 10%', '+BACK · 최대 25%', '+SIDE-L·SIDE-R · 최대 35%', '최대 45%', '색 amber · 최대 45%', '+FOH · 최대 60%', ...]
+E       assert '그룹·색 변화 없음' in ['+KEY · 색 blue · 최대 10%', '+BACK · 최대 25%', '+SIDE-L·SIDE-R · 최대 35%', '최대 45%', '색 amber · 최대 45%', '+FOH · 최대 60%', ...]
+
+server/tests/test_concept_description_no_brightness_t486.py:81: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_concept_description_no_brightness_t486.py::TestNoBrightnessNumberOnScreen::test_no_description_carries_a_percent_number
+FAILED server/tests/test_concept_description_no_brightness_t486.py::TestNoBrightnessNumberOnScreen::test_changing_d_level_cannot_bring_a_number_back
+FAILED server/tests/test_concept_description_no_brightness_t486.py::TestChangeNarrativeIsKept::test_a_row_that_only_had_brightness_says_so_without_a_number
+3 failed, 2 passed in 0.84s

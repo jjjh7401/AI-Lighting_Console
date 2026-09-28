@@ -109,14 +109,6 @@ class SongCueLookSelection:
     선택(기존 호출자·테스트)은 예전과 똑같이 ``look`` 하나로 동작한다.
     """
 
-    reuse_reason: str | None = None
-    """앞 곡의 룩으로 내려앉았으면 :data:`LOOK_POOL_EXHAUSTED`, 아니면 ``None`` (카드 t358).
-
-    ``reason`` 과 갈라 두는 이유는 둘이 반대말이기 때문이다 — ``reason`` 은 **룩이 없다**,
-    이 필드는 **룩은 있는데 새것이 아니다**. 합치면 큐가 나가는 갈래와 안 나가는 갈래가
-    한 문자열에 섞이고, 보고에서 둘을 다시 가를 방법이 없어진다.
-    """
-
 
 @dataclass(frozen=True)
 class SongCueSkippedSection:

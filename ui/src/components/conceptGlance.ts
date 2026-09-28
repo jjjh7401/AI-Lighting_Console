@@ -114,10 +114,11 @@ export interface ExplanationCell {
   source?: string;
 }
 
-/** 큐 설명은 컨셉 파이프라인의 해석 상태에서 나온다. CUE SHEET 밝기는 조립기
- * 경로 값이라 둘이 다를 수 있다(REQ-003 두 경로 미통합 — 실측: Chorus 1 시트
- * KEY 100 / 설명 「최대 75%」, .moai/reports/t482). 출처를 숨기지 않는다. */
-export const DESCRIPTION_SOURCE = "컨셉 파이프라인 계산 — CUE SHEET 밝기와 다를 수 있다(큐 생성 경로 미통합, REQ-003)";
+/** 큐 설명은 컨셉 파이프라인의 해석 상태에서 나온다. 그 밝기는 D 레벨을 읽지 않아
+ * CUE SHEET(조립기)와 10구간 중 1구간만 맞았다(.moai/reports/t486) — 카드 t486 이
+ * 서버에서 「최대 N%」 수치를 뺐다. 설명은 변화 서술만 싣고, 밝기는 시트가 기준이다.
+ * 출처를 숨기지 않는다. */
+export const DESCRIPTION_SOURCE = "컨셉 파이프라인 계산 — 밝기 수치는 CUE SHEET 기준(큐 생성 경로 미통합, REQ-003)";
 
 /** REQ-079 항목 클릭 4칸 설명. 「무대에서」만 원천이 있다 — 그 구간 section
  * 행의 서버 큐 설명(`description`, REQ-070). 나머지 셋은 원천이 없어 사유와 함께

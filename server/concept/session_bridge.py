@@ -8,13 +8,11 @@
 - :func:`build_concept_report` — ``server.web.session`` 의
   :class:`~server.design.song_plan.UnifiedSongLightingPlan` 에서 뽑는다
   (``TimestampedSection.label``/``start_ms``/``end_ms``).
-- :func:`build_concept_report_from_songcue_sections` —
-  ``server.orchestrator.tools`` 의 ``prepare_songcue``(사다리 경로,
-  ``server.looks.songcue.SongCueSection``)에서 뽑는다. 이쪽은
-  ``label``+``instance`` 가 이미 분리돼 있어(``SongCueSection``
-  독스트링 — "라벨 + 회차") gates.py 가 기대하는 ``baseline_name``
-  형식("Chorus 2" 류)을 ``f"{label} {instance}"`` 로 직접 조립한다 —
-  session.py 경로보다 오히려 더 정확한 원천이다.
+- (은퇴, 카드 t486) ``build_concept_report_from_songcue_sections`` —
+  ``prepare_songcue`` 사다리 경로의 어댑터였다. t480 이 업로드 길을 대화 길
+  조립기로 합친 뒤 운영 호출처가 0 이 되어 지웠다. 그 입력 모양을 만들던
+  :func:`_raw_sections_from_pairs` 는 시험이 컨셉 파이프라인에 곡을 넣는
+  입구로 쓰므로 남긴다.
 
 두 어댑터 모두 (baseline_name, start "M:SS", end "M:SS") 목록을 만들어
 공통 실행기(``_run_concept_pipeline``)로 넘긴다 — 그 결과(13게이트·
@@ -102,7 +100,6 @@ __all__ = [
     "GLANCE_RULE",
     "GLANCE_STAGES",
     "build_concept_report",
-    "build_concept_report_from_songcue_sections",
     "concept_bullet",
     "glance_stages",
 ]
@@ -182,6 +179,22 @@ def _raw_sections_from_pairs(
     return raw
 
 
+#: 카드 t486 — 「최대 N%」 절을 뺐더니 남는 것이 없는 행의 문장.
+_NO_GROUP_OR_COLOR_CHANGE = "그룹·색 변화 없음"
+
+
+def _screen_description(text: str) -> str:
+    """``describe()`` 문장에서 「최대 N%」 절을 뺀다 (카드 t486, 리드 결정 A).
+
+    그 수치는 컨셉 파이프라인의 고정 밝기 사다리(``density.py``)에서 나오고 D 레벨을
+    읽지 않는다 — 같은 화면의 CUE SHEET KEY(조립기 D 예산)와 실측 10구간 중 1구간만
+    맞았다(``.moai/reports/t486/brightness_probe.txt``). 틀린 숫자를 시트 옆에 두지
+    않는다. ``describe()`` 자체(REQ-023)는 바꾸지 않는다.
+    """
+    kept = [part for part in text.split(" · ") if not part.startswith("최대 ")]
+    return " · ".join(kept) or _NO_GROUP_OR_COLOR_CHANGE
+
+
 def _concept_rows(
     build: SongBuild, *, screen_count: int
 ) -> tuple[list[dict[str, object]], dict[str, object]]:
@@ -204,11 +217,13 @@ def _concept_rows(
         if row.kind == "section":
             position = seen_sections
             seen_sections += 1
-        description = describe(
-            prev_state,
-            state,
-            raw.get("ops", ()),
-            compute_cue_headroom(state),  # type: ignore[arg-type]
+        description = _screen_description(
+            describe(
+                prev_state,
+                state,
+                raw.get("ops", ()),
+                compute_cue_headroom(state),  # type: ignore[arg-type]
+            )
         )
         prev_state = state
         rows.append(
@@ -440,44 +455,4 @@ def build_concept_report(
     # ``{available: False, reason}`` 두 키 계약은 그대로 둔다.
     if report.get("available"):
         report["glance"] = glance_stages([decision.role for decision in plan.sections])
-    return report
-
-
-def build_concept_report_from_songcue_sections(
-    song_title: str,
-    bpm: float | None,
-    sections: Sequence[tuple[str, int]],
-    *,
-    palettes: Sequence[Sequence[str]] | None = None,
-) -> dict[str, object]:
-    """REQ-073/074 §④b — tools.py 경로(``prepare_songcue``, 사다리
-    ``build_songcue_bundle``) 어댑터. ``sections`` 는 시간순
-    ``(baseline_name, start_ms)`` 쌍이다 — 호출자가
-    ``SongCueSection.label``/``.instance`` 를 ``f"{label}
-    {instance}"`` 로 합쳐 넘긴다(gates.py 의 "Chorus 2" 류 baseline_name
-    형식과 맞춘다; ``label``/``instance`` 분리가 이미 이 형식의 근원이다
-    — ``songcue.py`` ``SongCueSection`` 독스트링). ``palettes`` 는
-    ``sections`` 와 같은 순서의 구간별 실제 색 이름 목록이다(카드 t444,
-    생략하면 입력에 색 없음). 자세한 원칙은 모듈 독스트링 참고."""
-    if not sections:
-        return {"available": False, "reason": "구간이 없다"}
-    if palettes is not None and len(palettes) != len(sections):
-        # 예외를 밖으로 내지 않는다(모듈 독스트링 ADDITIVE 원칙) — 색이
-        # 어느 구간 것인지 모르면 짝을 추측하지 않는다.
-        return {
-            "available": False,
-            "reason": f"구간 색 {len(palettes)}개가 구간 {len(sections)}개와 짝이 안 맞는다",
-        }
-    report = _run_concept_pipeline(
-        song_title, bpm, _raw_sections_from_pairs(list(sections), palettes)
-    )
-    # 카드 t482 — 사다리 경로에는 아크 역할 원천이 없다(이름+회차 쌍만 온다).
-    if not report.get("available"):
-        return report
-    report["glance"] = {
-        "available": False,
-        "rule": GLANCE_RULE,
-        "reason": "이 경로(사다리 prepare_songcue)에는 구간 역할(role) 원천이 없다",
-        "stages": [],
-    }
     return report

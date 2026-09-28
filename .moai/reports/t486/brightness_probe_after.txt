@@ -1,0 +1,18 @@
+label | D | sheet KEY | concept section | description max %
+Intro | 2 | 50 | Intro | None
+Verse 1 | 3 | 70 | Verse | None
+Pre-Chorus 1 | 4 | 40 | Rap/Solo/Dance Break | None
+Chorus 1 | 5 | 100 | Chorus | None
+Verse 2 | 3 | 70 | Verse | None
+Pre-Chorus 2 | 4 | 40 | Rap/Solo/Dance Break | None
+Chorus 2 | 5 | 100 | Chorus | None
+Bridge | 2 | 20 | Bridge | None
+Chorus 3 | 5 | 100 | Final Chorus | None
+Outro | 3 | 70 | Rap/Solo/Dance Break | None
+sheet == description: 0/10
+
+control: Chorus 1 D 5 -> 2
+  before: ('Chorus 1', 5, 100, 'Chorus', None)
+  after:  ('Chorus 1', 2, 50, 'Chorus', None)
+  sheet moved: True
+  description moved: False
