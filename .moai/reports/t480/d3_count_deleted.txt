@@ -1,0 +1,7 @@
+test_songcue_accent_fixture: 7
+test_songcue_chorus_rescue: 8
+test_songcue_cross_song: 5
+test_songcue_front_fill: 6
+test_songcue_report: 8
+test_songcue_t429_repeat_chorus_collision: 2
+total: 36
