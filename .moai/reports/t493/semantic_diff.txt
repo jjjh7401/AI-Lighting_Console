@@ -1,0 +1,80 @@
+ADD $.concept_bullet {"available": false, "reason": "인터뷰 Q1(컨셉) 기록이 없다"}
+CHG $.concept_report.energy_report_count 20 -> 21
+CHG $.concept_report.gates.G11 타이밍 전 큐 배정.detail "snap 3 · short 16 · long 1 · 후렴 순차 3" -> "snap 4 · short 15 · long 2 · 후렴 순차 3"
+CHG $.concept_report.gates.G13 큐 밀도 10~45.detail "시퀀스 큐 20 + 원샷 3" -> "시퀀스 큐 21 + 원샷 3"
+CHG $.concept_report.gates.G9 트래킹: Block·Release·누출 0.detail "Block 처음 True · Release 마지막 True · cue_only 10 · 누출 없음 True" -> "Block 처음 True · Release 마지막 True · cue_only 11 · 누출 없음 True"
+ADD $.concept_report.glance {"available": false, "rule": "director-confirmed-2026-09-28", "reason": "구간 역할(role) 원천이 없다 — 서버가 아크 역할을 판독하지 않은 곡", "st
+CHG $.concept_report.lint_finding_count 13 -> 14
+LEN $.concept_report.mib 20 -> 21
+ADD $.concept_report.reserve [{"name": "BLIND", "kind": "group", "released_q": 15, "screen_position": 6}, {"name": "STROBE", "kind": "group", "releas
+LEN $.concept_report.rows 20 -> 21
+ADD $.concept_report.rows[0].description "+KEY · 색 Blue"
+TYPE $.concept_report.rows[0].evidence NoneType -> str
+ADD $.concept_report.rows[0].unused_groups 10
+ADD $.concept_report.rows[1].description "+BACK"
+ADD $.concept_report.rows[1].unused_groups 9
+ADD $.concept_report.rows[2].description "+SIDE-L·SIDE-R"
+ADD $.concept_report.rows[2].unused_groups 7
+ADD $.concept_report.rows[3].description "색 블루"
+ADD $.concept_report.rows[3].unused_groups 7
+ADD $.concept_report.rows[4].description "+FOH"
+TYPE $.concept_report.rows[4].evidence NoneType -> str
+ADD $.concept_report.rows[4].unused_groups 6
+ADD $.concept_report.rows[5].description "색 Warm White"
+ADD $.concept_report.rows[5].unused_groups 6
+ADD $.concept_report.rows[6].description "+WASH-D·WASH-U"
+TYPE $.concept_report.rows[6].evidence NoneType -> str
+ADD $.concept_report.rows[6].unused_groups 4
+ADD $.concept_report.rows[7].description "Verse 1 복원 · -FOH·WASH-D·WASH-U · 색 흰색"
+ADD $.concept_report.rows[7].unused_groups 7
+ADD $.concept_report.rows[8].description "+FOH"
+TYPE $.concept_report.rows[8].evidence NoneType -> str
+ADD $.concept_report.rows[8].unused_groups 6
+ADD $.concept_report.rows[9].description "Chorus 1 복원 · +WASH-D·WASH-U · 색 gold"
+TYPE $.concept_report.rows[9].evidence NoneType -> str
+ADD $.concept_report.rows[9].unused_groups 4
+ADD $.concept_report.rows[10].description "그룹·색 변화 없음"
+TYPE $.concept_report.rows[10].evidence NoneType -> str
+ADD $.concept_report.rows[10].unused_groups 4
+ADD $.concept_report.rows[11].description "그룹·색 변화 없음"
+TYPE $.concept_report.rows[11].evidence NoneType -> str
+ADD $.concept_report.rows[11].unused_groups 4
+ADD $.concept_report.rows[12].description "-FOH·SIDE-L·SIDE-R·WASH-D·WASH-U · 색 Lavender"
+ADD $.concept_report.rows[12].unused_groups 9
+ADD $.concept_report.rows[13].description "+FOH·SIDE-L·SIDE-R"
+TYPE $.concept_report.rows[13].evidence NoneType -> str
+ADD $.concept_report.rows[13].unused_groups 6
+ADD $.concept_report.rows[14].description "Chorus 1 복원 · +BLIND·MOVER-D·MOVER-U·WASH-D·WASH-U · 색 Cyan"
+TYPE $.concept_report.rows[14].evidence NoneType -> str
+ADD $.concept_report.rows[14].unused_groups 1
+ADD $.concept_report.rows[15].description "그룹·색 변화 없음"
+TYPE $.concept_report.rows[15].evidence NoneType -> str
+ADD $.concept_report.rows[15].unused_groups 1
+ADD $.concept_report.rows[16].description "그룹·색 변화 없음"
+TYPE $.concept_report.rows[16].evidence NoneType -> str
+ADD $.concept_report.rows[16].unused_groups 1
+ADD $.concept_report.rows[17].description "그룹·색 변화 없음"
+TYPE $.concept_report.rows[17].evidence NoneType -> str
+ADD $.concept_report.rows[17].unused_groups 1
+ADD $.concept_report.rows[18].description "그룹·색 변화 없음"
+TYPE $.concept_report.rows[18].evidence NoneType -> str
+CHG $.concept_report.rows[18].kind "section" -> "phrase"
+CHG $.concept_report.rows[18].screen_position 7 -> 6
+CHG $.concept_report.rows[18].section "Rap/Solo/Dance Break" -> "Final Chorus"
+CHG $.concept_report.rows[18].tracking "track" -> "cue_only"
+TYPE $.concept_report.rows[18].trigger NoneType -> str
+CHG $.concept_report.rows[18].ts 150.0 -> 148.0
+ADD $.concept_report.rows[18].unused_groups 1
+ADD $.concept_report.rows[19].description "-BLIND·FOH·MOVER-D·MOVER-U·SIDE-L·SIDE-R·WASH-D·WASH-U · 색 핑크"
+CHG $.concept_report.rows[19].kind "safety" -> "section"
+CHG $.concept_report.rows[19].occurrence 0 -> 1
+TYPE $.concept_report.rows[19].screen_position NoneType -> int
+CHG $.concept_report.rows[19].tracking "release" -> "track"
+CHG $.concept_report.rows[19].ts 166.0 -> 150.0
+ADD $.concept_report.rows[19].unused_groups 9
+CHG $.sections[1].intensity[0].level 70 -> 25
+CHG $.sections[1].intensity[1].level 56 -> 20
+CHG $.sections[3].intensity[0].level 70 -> 25
+CHG $.sections[3].intensity[1].level 56 -> 20
+CHG $.sections[5].intensity[0].level 70 -> 20
+CHG $.sections[5].intensity[1].level 56 -> 16

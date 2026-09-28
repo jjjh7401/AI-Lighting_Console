@@ -1,0 +1,242 @@
+85c85
+<      "level": 70
+---
+>      "level": 25
+89c89
+<      "level": 56
+---
+>      "level": 20
+167c167
+<      "level": 70
+---
+>      "level": 25
+171c171
+<      "level": 56
+---
+>      "level": 20
+251c251
+<      "level": 70
+---
+>      "level": 20
+255c255
+<      "level": 56
+---
+>      "level": 16
+391c391
+<     "detail": "Block 처음 True · Release 마지막 True · cue_only 10 · 누출 없음 True"
+---
+>     "detail": "Block 처음 True · Release 마지막 True · cue_only 11 · 누출 없음 True"
+399c399
+<     "detail": "snap 3 · short 16 · long 1 · 후렴 순차 3"
+---
+>     "detail": "snap 4 · short 15 · long 2 · 후렴 순차 3"
+407c407
+<     "detail": "시퀀스 큐 20 + 원샷 3"
+---
+>     "detail": "시퀀스 큐 21 + 원샷 3"
+435a436
+>    null,
+438c439
+<   "lint_finding_count": 13,
+---
+>   "lint_finding_count": 14,
+440c441
+<   "energy_report_count": 20,
+---
+>   "energy_report_count": 21,
+452,453c453,456
+<     "evidence": null,
+<     "screen_position": null
+---
+>     "evidence": "verified",
+>     "screen_position": null,
+>     "unused_groups": 10,
+>     "description": "+KEY · 색 Blue"
+466c469,471
+<     "screen_position": 0
+---
+>     "screen_position": 0,
+>     "unused_groups": 9,
+>     "description": "+BACK"
+479c484,486
+<     "screen_position": 0
+---
+>     "screen_position": 0,
+>     "unused_groups": 7,
+>     "description": "+SIDE-L·SIDE-R"
+492c499,501
+<     "screen_position": 1
+---
+>     "screen_position": 1,
+>     "unused_groups": 7,
+>     "description": "색 블루"
+504,505c513,516
+<     "evidence": null,
+<     "screen_position": 1
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 1,
+>     "unused_groups": 6,
+>     "description": "+FOH"
+521c532,534
+<     "screen_position": 2
+---
+>     "screen_position": 2,
+>     "unused_groups": 6,
+>     "description": "색 Warm White"
+533,534c546,549
+<     "evidence": null,
+<     "screen_position": 2
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 2,
+>     "unused_groups": 4,
+>     "description": "+WASH-D·WASH-U"
+547c562,564
+<     "screen_position": 3
+---
+>     "screen_position": 3,
+>     "unused_groups": 7,
+>     "description": "Verse 1 복원 · -FOH·WASH-D·WASH-U · 색 흰색"
+559,560c576,579
+<     "evidence": null,
+<     "screen_position": 3
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 3,
+>     "unused_groups": 6,
+>     "description": "+FOH"
+575,576c594,597
+<     "evidence": null,
+<     "screen_position": 4
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 4,
+>     "unused_groups": 4,
+>     "description": "Chorus 1 복원 · +WASH-D·WASH-U · 색 gold"
+588,589c609,612
+<     "evidence": null,
+<     "screen_position": 4
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 4,
+>     "unused_groups": 4,
+>     "description": "그룹·색 변화 없음"
+601,602c624,627
+<     "evidence": null,
+<     "screen_position": 4
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 4,
+>     "unused_groups": 4,
+>     "description": "그룹·색 변화 없음"
+615c640,642
+<     "screen_position": 5
+---
+>     "screen_position": 5,
+>     "unused_groups": 9,
+>     "description": "-FOH·SIDE-L·SIDE-R·WASH-D·WASH-U · 색 Lavender"
+627,628c654,657
+<     "evidence": null,
+<     "screen_position": 5
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 5,
+>     "unused_groups": 6,
+>     "description": "+FOH·SIDE-L·SIDE-R"
+643,644c672,675
+<     "evidence": null,
+<     "screen_position": 6
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 6,
+>     "unused_groups": 1,
+>     "description": "Chorus 1 복원 · +BLIND·MOVER-D·MOVER-U·WASH-D·WASH-U · 색 Cyan"
+656,657c687,690
+<     "evidence": null,
+<     "screen_position": 6
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 6,
+>     "unused_groups": 1,
+>     "description": "그룹·색 변화 없음"
+669,670c702,705
+<     "evidence": null,
+<     "screen_position": 6
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 6,
+>     "unused_groups": 1,
+>     "description": "그룹·색 변화 없음"
+682,683c717,720
+<     "evidence": null,
+<     "screen_position": 6
+---
+>     "evidence": "practitioner_pattern",
+>     "screen_position": 6,
+>     "unused_groups": 1,
+>     "description": "그룹·색 변화 없음"
+686a724,738
+>     "ts": 148.0,
+>     "kind": "phrase",
+>     "section": "Final Chorus",
+>     "occurrence": 1,
+>     "trigger": "드롭 직전의 정적",
+>     "tracking": "cue_only",
+>     "mib": null,
+>     "one_shot": null,
+>     "evidence": "designed_rule",
+>     "screen_position": 6,
+>     "unused_groups": 1,
+>     "description": "그룹·색 변화 없음"
+>    },
+>    {
+>     "q": 20,
+689c741
+<     "section": "Rap/Solo/Dance Break",
+---
+>     "section": "Outro",
+696c748,750
+<     "screen_position": 7
+---
+>     "screen_position": 7,
+>     "unused_groups": 9,
+>     "description": "-BLIND·FOH·MOVER-D·MOVER-U·SIDE-L·SIDE-R·WASH-D·WASH-U · 색 핑크"
+699c753
+<     "q": 20,
+---
+>     "q": 21,
+708,709c762,765
+<     "evidence": null,
+<     "screen_position": null
+---
+>     "evidence": "verified",
+>     "screen_position": null,
+>     "unused_groups": 11,
+>     "description": "-BACK·KEY"
+714a771,790
+>   },
+>   "reserve": [
+>    {
+>     "name": "BLIND",
+>     "kind": "group",
+>     "released_q": 15,
+>     "screen_position": 6
+>    },
+>    {
+>     "name": "STROBE",
+>     "kind": "group",
+>     "released_q": null,
+>     "screen_position": null
+>    }
+>   ],
+>   "glance": {
+>    "available": false,
+>    "rule": "director-confirmed-2026-09-28",
+>    "reason": "구간 역할(role) 원천이 없다 — 서버가 아크 역할을 판독하지 않은 곡",
+>    "stages": []
+716a793,796
+>  "concept_bullet": {
+>   "available": false,
+>   "reason": "인터뷰 Q1(컨셉) 기록이 없다"
+>  },
