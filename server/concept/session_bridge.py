@@ -83,12 +83,27 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from server.concept.compile import compile_song
+from server.concept.cue_model import CueState
+from server.concept.description import describe
 from server.concept.evidence import evidence_for_row
 from server.concept.gates import SongBuild, build_song, evaluate_song
 from server.concept.headroom import compute_cue_headroom
 from server.design.song_plan import UnifiedSongLightingPlan
 
-__all__ = ["build_concept_report", "build_concept_report_from_songcue_sections"]
+__all__ = [
+    "GLANCE_RULE",
+    "GLANCE_STAGES",
+    "build_concept_report",
+    "build_concept_report_from_songcue_sections",
+    "glance_stages",
+]
+
+#: 카드 t482 — 컨셉 패널 "한눈에" 5단계(REQ-097, 감독 채택 DESIGN.md §4.2 의 이름).
+GLANCE_STAGES = ("시작", "쌓기", "강조", "예고", "정점→마무리")
+#: 구간 → 단계 배정 규칙의 출처 표식. DESIGN.md §4.2 는 배정 규칙을 적지 않았고
+#: (「모든 수치는 큐 데이터에서 파생」만 요구), 아래 규칙은 리드가 2026-09-28 에
+#: 제안한 것이다 — 감독 확인 전이라 화면이 이 표식을 그대로 보인다.
+GLANCE_RULE = "lead-proposed-2026-09-28"
 
 #: 마지막 구간의 끝 시각을 모를 때 쓰는 고정 꼬리(밀리초) — 실제 곡
 #: 길이를 아는 자리가 아니므로 자리표시자임을 리포트에도 남긴다.
@@ -160,10 +175,19 @@ def _concept_rows(
     rows: list[dict[str, object]] = []
     position: int | None = None
     seen_sections = 0
-    for row, verdict, state in zip(build.table, build.mib, build.states, strict=True):
+    # 카드 t482 — 큐 설명(REQ-023/070, ``describe()``)의 "직전 상태". 첫 큐는
+    # ``resolver.resolve_sequence`` 가 쓰는 초기 상태와 같다.
+    prev_state = CueState(dim={}, color=None, pos="home", motion=0)
+    for raw, row, verdict, state in zip(
+        build.rows, build.table, build.mib, build.states, strict=True
+    ):
         if row.kind == "section":
             position = seen_sections
             seen_sections += 1
+        description = describe(
+            prev_state, state, raw.get("ops", ()), compute_cue_headroom(state)  # type: ignore[arg-type]
+        )
+        prev_state = state
         rows.append(
             {
                 "q": row.q,
@@ -180,6 +204,8 @@ def _concept_rows(
                 # 카드 t461 — REQ-093 (4) 헤드룸 경고의 원천. 컨셉 그룹 로스터
                 # (density.GROUP_ROSTER) 기준 꺼진 그룹 수, headroom 재사용.
                 "unused_groups": compute_cue_headroom(state).unused_groups,
+                # 카드 t482 — 해석된 상태 차이로만 조립한 한 문장(지어낸 문장 0).
+                "description": description,
             }
         )
     reason = (
@@ -226,6 +252,72 @@ def _concept_reserve(
             q, position = None, None
         items.append({"name": color, "kind": "color", "released_q": q, "screen_position": position})
     return items
+
+
+def glance_stages(roles: Sequence[str | None]) -> dict[str, object]:
+    """카드 t482 — "한눈에" 5단계에 어느 화면 구간(0부터 위치)이 드는지 정한다.
+
+    규칙(``GLANCE_RULE``, 리드 제안 — 감독 확인 전). ``roles`` 는 화면 구간
+    순서의 아크 역할(``SectionDecision.role``: intro/verse/chorus/bridge/finale)
+    이다. 첫 후렴 f, 마지막 후렴 l, 끝에서 둘째 후렴 p 라 하면:
+
+    - 시작 = f 앞의 intro 구간
+    - 쌓기 = f 앞의 나머지 구간(verse·pre 등)
+    - 강조 = f 부터 p 까지(사이의 verse 포함) — 마지막 후렴을 뺀 후렴 구간
+    - 예고 = p 와 l 사이 구간(마지막 후렴 직전 bridge/verse)
+    - 정점→마무리 = l 부터 곡 끝까지(outro/finale 포함)
+
+    후렴이 없으면 끝의 finale 연속 구간을 정점→마무리로, 나머지를 시작/쌓기로
+    둔다. 구간이 없는 단계는 빈 위치 목록과 사유를 낸다. 역할이 하나라도
+    없으면(서버가 판독하지 않은 곡) 배정하지 않는다 — 지어내지 않는다.
+    카드 수치(Q 범위·시간·색·밝기)는 여기서 만들지 않는다: UI 가 CUE SHEET 와
+    같은 구간 데이터에서 계산한다(REQ-097, 원천을 둘로 나누지 않는다).
+    """
+    if not roles or any(role is None for role in roles):
+        return {
+            "available": False,
+            "rule": GLANCE_RULE,
+            "reason": "구간 역할(role) 원천이 없다 — 서버가 아크 역할을 판독하지 않은 곡",
+            "stages": [],
+        }
+    n = len(roles)
+    choruses = [i for i, role in enumerate(roles) if role == "chorus"]
+    buckets: dict[str, list[int]] = {stage: [] for stage in GLANCE_STAGES}
+    reasons: dict[str, str | None] = {stage: None for stage in GLANCE_STAGES}
+    if choruses:
+        first, last = choruses[0], choruses[-1]
+        buckets["시작"] = [i for i in range(first) if roles[i] == "intro"]
+        buckets["쌓기"] = [i for i in range(first) if roles[i] != "intro"]
+        buckets["정점→마무리"] = list(range(last, n))
+        if len(choruses) >= 2:
+            before_last = choruses[-2]
+            buckets["강조"] = list(range(first, before_last + 1))
+            buckets["예고"] = list(range(before_last + 1, last))
+            if not buckets["예고"]:
+                reasons["예고"] = "마지막 후렴 바로 앞도 후렴이다"
+        else:
+            reasons["강조"] = "후렴이 하나뿐이라 그 후렴을 정점으로 셌다"
+            reasons["예고"] = "끝에서 둘째 후렴이 없다"
+    else:
+        tail_start = n
+        while tail_start > 0 and roles[tail_start - 1] == "finale":
+            tail_start -= 1
+        buckets["시작"] = [i for i in range(tail_start) if roles[i] == "intro"]
+        buckets["쌓기"] = [i for i in range(tail_start) if roles[i] != "intro"]
+        buckets["정점→마무리"] = list(range(tail_start, n))
+        reasons["강조"] = reasons["예고"] = "후렴(chorus) 구간이 없다"
+    for stage in GLANCE_STAGES:
+        if not buckets[stage] and reasons[stage] is None:
+            reasons[stage] = "이 단계에 드는 구간이 없다"
+    return {
+        "available": True,
+        "rule": GLANCE_RULE,
+        "reason": None,
+        "stages": [
+            {"stage": stage, "positions": buckets[stage], "reason": reasons[stage]}
+            for stage in GLANCE_STAGES
+        ],
+    }
 
 
 def _run_concept_pipeline(
@@ -287,12 +379,17 @@ def build_concept_report(
     자세한 원칙은 모듈 독스트링 참고."""
     if not plan.sections:
         return {"available": False, "reason": "구간이 없다"}
-    return _run_concept_pipeline(
+    report = _run_concept_pipeline(
         plan.song_title,
         plan.music_profile.bpm,
         _raw_sections(plan),
         color_usage=color_usage,
     )
+    # 카드 t482 — "한눈에" 단계 배정(역할만 본다). 리포트를 못 만든 경우의
+    # ``{available: False, reason}`` 두 키 계약은 그대로 둔다.
+    if report.get("available"):
+        report["glance"] = glance_stages([decision.role for decision in plan.sections])
+    return report
 
 
 def build_concept_report_from_songcue_sections(
@@ -320,6 +417,16 @@ def build_concept_report_from_songcue_sections(
             "available": False,
             "reason": f"구간 색 {len(palettes)}개가 구간 {len(sections)}개와 짝이 안 맞는다",
         }
-    return _run_concept_pipeline(
+    report = _run_concept_pipeline(
         song_title, bpm, _raw_sections_from_pairs(list(sections), palettes)
     )
+    # 카드 t482 — 사다리 경로에는 아크 역할 원천이 없다(이름+회차 쌍만 온다).
+    if not report.get("available"):
+        return report
+    report["glance"] = {
+        "available": False,
+        "rule": GLANCE_RULE,
+        "reason": "이 경로(사다리 prepare_songcue)에는 구간 역할(role) 원천이 없다",
+        "stages": [],
+    }
+    return report

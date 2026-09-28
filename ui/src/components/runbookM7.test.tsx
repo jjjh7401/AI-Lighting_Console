@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SongTimelineConceptReport, SongTimelineSection } from "../protocol";
 import { CUE_SHEET_EXAMPLE } from "./cueSheetExample";
+import { cueLabel } from "./CueSheetTimeline";
 import { ConceptPanel } from "./ConceptPanel";
 import { RunbookGateBar } from "./RunbookGateBar";
 import {
@@ -109,6 +110,39 @@ describe("REQ-079/080/097/098 컨셉 패널", () => {
     const noData = html.split(NO_DATA).length - 1;
     // 한눈에 1 + 인과 불릿 1 + 표 마지막 칸 × 행 수
     expect(noData).toBeGreaterThanOrEqual(2 + sections.length);
+  });
+
+  it("t482 — 서버 단계 배정이 오면 「한눈에」 카드를 규칙 표식과 함께 그린다(수치는 구간 값)", () => {
+    const withGlance = renderToStaticMarkup(
+      <ConceptPanel
+        sections={sections}
+        timeline={{
+          ...CUE_SHEET_EXAMPLE,
+          concept_report: {
+            available: true,
+            glance: {
+              available: true,
+              rule: "lead-proposed-2026-09-28",
+              reason: null,
+              stages: [
+                { stage: "시작", positions: [0], reason: null },
+                { stage: "쌓기", positions: [], reason: "이 단계에 드는 구간이 없다" },
+                { stage: "강조", positions: [], reason: "이 단계에 드는 구간이 없다" },
+                { stage: "예고", positions: [], reason: "이 단계에 드는 구간이 없다" },
+                { stage: "정점→마무리", positions: [1], reason: null },
+              ],
+            },
+          },
+        }}
+      />,
+    );
+    for (const stage of ["시작", "쌓기", "강조", "예고", "정점→마무리"]) expect(withGlance).toContain(stage);
+    expect(withGlance).toContain("lead-proposed-2026-09-28(감독 확인 전)");
+    expect(withGlance).toContain(cueLabel(sections[0]));
+    expect(withGlance).not.toContain("단계 배정 원천이 서버에 없다");
+    // 인과 불릿·「그래서 보이는 것」은 여전히 원천이 없다.
+    expect(withGlance).not.toContain("원문 그대로");
+    expect(withGlance).toContain("인과 불릿 · 데이터 없음");
   });
 
   it("표의 다섯 칸은 구간 값을 그대로 쓴다", () => {

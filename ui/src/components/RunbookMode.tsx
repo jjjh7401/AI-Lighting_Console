@@ -233,7 +233,7 @@ export function RunbookMode({
       ) : (
         <>
           {/* t454 — REQ-079: 컨셉 패널은 블록 1(오늘의 곡)과 타임라인 사이. */}
-          <ConceptPanel sections={timeline.sections} />
+          <ConceptPanel sections={timeline.sections} timeline={timeline} />
           {/* t280 — 두 축(가로 타임라인 창 + 세로 큐시트) 읽기 전용 뷰.
               기존 카드형 타임라인은 아래에 그대로 남는다. */}
           <CueSheetTimeline

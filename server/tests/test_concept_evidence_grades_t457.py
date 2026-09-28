@@ -44,6 +44,7 @@ _ROW_KEYS = {
     "evidence",
     "screen_position",
     "unused_groups",  # t461 — 행별 잔여 그룹 수(추가만)
+    "description",  # t482 — 큐 설명 describe()(추가만)
 }
 
 
