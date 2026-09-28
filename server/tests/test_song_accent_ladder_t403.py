@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from server.design.profile import MusicProfile
 from server.design.rig import build_rig_profile
+from server.design.song_cue_render import _climax_section_index
 from server.design.song_plan import TimingPlan
 from server.spatial.position_cuesheet import PositionSheetSection
 from server.web.session import (
     _build_unified_song_plan,
-    _climax_section_index,
     _confirmed_section_names,
     _infer_confirmed_role,
 )

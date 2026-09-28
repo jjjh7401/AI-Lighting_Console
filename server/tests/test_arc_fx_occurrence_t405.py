@@ -24,9 +24,9 @@ from __future__ import annotations
 
 import pytest
 
+from server.design.song_cue_render import _ARC_FX, _ARC_FX_LADDER, _arc_fx_allowed
 from server.fx.loader import load_library_from_dir
 from server.fx.matching import match_fx
-from server.web.session import _ARC_FX, _ARC_FX_LADDER, _arc_fx_allowed
 
 #: 이 카드가 새로 들여온 이름 → 걸려야 하는 라이브러리 항목.
 NEW_LABEL_TO_FX_ID = {
