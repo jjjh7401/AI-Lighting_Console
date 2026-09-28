@@ -1,0 +1,68 @@
+/**
+ * AC-UI 마무리 하니스(임시, 커밋 안 함 — 사본은 sync-evidence/ac_ui/ 에 둔다).
+ * 런북 화면을 App 과 같은 prop 모양으로 띄우고, 서버로 나가는 호출을
+ * window.__calls 에 기록한다. 수락 턴은 window.__accept() 로 흉내 낸다
+ * (서버 `_draft_badge` 가 depth+1·last_change 를 내는 모양 그대로).
+ */
+import React, { useEffect, useState } from "react";
+import ReactDOM from "react-dom/client";
+
+import type { SongTimelineView } from "./protocol";
+import { RunbookMode } from "./components/RunbookMode";
+import payload from "./acuiPayload.json";
+import "./styles.css";
+
+type Call = { kind: string; text?: string; cue?: number };
+declare global {
+  interface Window {
+    __calls: Call[];
+    __accept: () => void;
+  }
+}
+window.__calls = [];
+
+// `?blind` — AC-037 관찰용: 각 구간 밝기 목록에 BLIND(0%)를 덧붙여 생성기 칩으로
+// 보이게 한다. reserve(해제 큐)는 서버 값 그대로 둔다 — 잠금 판정만 관찰한다.
+function initialTimeline(): SongTimelineView {
+  const base = payload as unknown as SongTimelineView;
+  if (!new URLSearchParams(location.search).has("blind")) return base;
+  return {
+    ...base,
+    sections: base.sections.map((s) => ({ ...s, intensity: [...(s.intensity ?? []), { group: "BLIND", level: 0 }] })),
+  };
+}
+
+function Harness() {
+  const [timeline, setTimeline] = useState<SongTimelineView>(initialTimeline);
+  const [responding, setResponding] = useState(false);
+  useEffect(() => {
+    window.__accept = () => {
+      setTimeline((t) => {
+        const depth = (t.draft?.depth ?? 0) + 1;
+        return { ...t, draft: { dirty: true, depth, last_change: ["accepted"] } };
+      });
+      setResponding(false);
+    };
+  }, []);
+  return (
+    <div style={{ background: "var(--bg)", minHeight: "100vh", padding: 20 }}>
+      <RunbookMode
+        cueMonitor={{ executors: [], history: [], lastSyncAt: null, stale: false }}
+        timeline={timeline}
+        onSelectCue={(cue) => window.__calls.push({ kind: "select_cue", cue })}
+        onUndoDraft={() => window.__calls.push({ kind: "timeline_draft_undo" })}
+        onRedoDraft={() => window.__calls.push({ kind: "timeline_draft_redo" })}
+        onSaveDraft={() => window.__calls.push({ kind: "save" })}
+        onApplyDraft={() => window.__calls.push({ kind: "apply_draft" })}
+        onGeneratorSend={(text, cue) => {
+          window.__calls.push({ kind: "chat", text, cue });
+          setResponding(true);
+        }}
+        generatorResponding={responding}
+        generatorLastAssistantText={null}
+      />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")!).render(<Harness />);
