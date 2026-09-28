@@ -1,0 +1,18 @@
+F......                                                                  [100%]
+=================================== FAILURES ===================================
+_ TestVocabularyLabelsKeepTheirName.test_pre_chorus_post_chorus_outro_are_not_fallback _
+
+self = <server.tests.test_concept_section_remap_t489.TestVocabularyLabelsKeepTheirName object at 0x107bce910>
+
+    def test_pre_chorus_post_chorus_outro_are_not_fallback(self) -> None:
+        got = _sections("Intro", "Pre-Chorus 1", "Chorus 1", "Post-Chorus 1", "Outro")
+>       assert got == ["Intro", "Pre-Chorus", "Chorus", "Post-Chorus", "Outro"]
+E       AssertionError: assert ['Intro', 'Pr...eak', 'Outro'] == ['Intro', 'Pr...rus', 'Outro']
+E         
+E         At index 3 diff: 'Rap/Solo/Dance Break' != 'Post-Chorus'
+E         Use -v to get more diff
+
+server/tests/test_concept_section_remap_t489.py:41: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_concept_section_remap_t489.py::TestVocabularyLabelsKeepTheirName::test_pre_chorus_post_chorus_outro_are_not_fallback
+1 failed, 6 passed in 0.35s

@@ -119,8 +119,9 @@ class TestConceptRowsOnPayload:
     def test_one_row_per_concept_cue_with_the_fixed_fields(self) -> None:
         report = self._report()
         rows = report["rows"]
-        assert len(rows) == len(report["mib"]) == 20
-        assert [row["q"] for row in rows] == list(range(1, 21))
+        # t489 — Outro 가 제 칸으로 가며 REQ-038 눈 리셋 행이 하나 생겼다(20 → 21).
+        assert len(rows) == len(report["mib"]) == 21
+        assert [row["q"] for row in rows] == list(range(1, 22))
         assert set(rows[0]) == {
             "q", "ts", "kind", "section", "occurrence", "trigger", "tracking",
             "mib", "one_shot", "evidence", "screen_position",
@@ -156,7 +157,11 @@ class TestConceptRowsOnPayload:
         assert [row["screen_position"] for row in section_rows] == list(range(8))
         # safety 는 곡 구간 바깥
         assert by_q[1]["screen_position"] is None
-        assert by_q[20]["screen_position"] is None
+        assert by_q[21]["screen_position"] is None
+        # t489 — 마지막 section 행은 Outro(폴백 이름이 아니다)
+        assert (by_q[20]["section"], by_q[20]["screen_position"]) == ("Outro", 7)
+        # REQ-038 눈 리셋 phrase 는 Final Chorus 에 붙는다
+        assert (by_q[19]["trigger"], by_q[19]["screen_position"]) == ("드롭 직전의 정적", 6)
         # Pre-Chorus(화면에 없는 이름)는 앞 section — Verse 1·Verse 2·Bridge
         assert (by_q[5]["section"], by_q[5]["screen_position"]) == ("Pre-Chorus", 1)
         assert by_q[9]["screen_position"] == 3
@@ -182,4 +187,4 @@ class TestPairingRefusesOnCountMismatch:
         assert pairing["available"] is False
         assert "8" in pairing["reason"] and "7" in pairing["reason"]
         assert all(row["screen_position"] is None for row in rows)
-        assert len(rows) == 20
+        assert len(rows) == 21  # t489 — REQ-038 눈 리셋 행 포함

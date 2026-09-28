@@ -1,0 +1,76 @@
+FF..F.F                                                                  [100%]
+=================================== FAILURES ===================================
+_ TestVocabularyLabelsKeepTheirName.test_pre_chorus_post_chorus_outro_are_not_fallback _
+
+self = <server.tests.test_concept_section_remap_t489.TestVocabularyLabelsKeepTheirName object at 0x10ab95590>
+
+    def test_pre_chorus_post_chorus_outro_are_not_fallback(self) -> None:
+        got = _sections("Intro", "Pre-Chorus 1", "Chorus 1", "Post-Chorus 1", "Outro")
+>       assert got == ["Intro", "Pre-Chorus", "Chorus", "Post-Chorus", "Outro"]
+E       AssertionError: assert ['Intro', 'Ra.../Dance Break'] == ['Intro', 'Pr...rus', 'Outro']
+E         
+E         At index 1 diff: 'Rap/Solo/Dance Break' != 'Pre-Chorus'
+E         Use -v to get more diff
+
+server/tests/test_concept_section_remap_t489.py:41: AssertionError
+_____ TestVocabularyLabelsKeepTheirName.test_occurrence_counts_per_section _____
+
+self = <server.tests.test_concept_section_remap_t489.TestVocabularyLabelsKeepTheirName object at 0x10ab81890>
+
+    def test_occurrence_counts_per_section(self) -> None:
+        got = remap_baseline_sections(_raw("Pre-Chorus 1", "Chorus 1", "Pre-Chorus 2"))
+>       assert [(s.section, s.occurrence) for s in got] == [
+            ("Pre-Chorus", 1),
+            ("Chorus", 1),
+            ("Pre-Chorus", 2),
+        ]
+E       AssertionError: assert [('Rap/Solo/D...ce Break', 2)] == [('Pre-Chorus...e-Chorus', 2)]
+E         
+E         At index 0 diff: ('Rap/Solo/Dance Break', 1) != ('Pre-Chorus', 1)
+E         Use -v to get more diff
+
+server/tests/test_concept_section_remap_t489.py:45: AssertionError
+__ TestExistingBehaviourUnchanged.test_last_of_three_choruses_still_promoted ___
+
+self = <server.tests.test_concept_section_remap_t489.TestExistingBehaviourUnchanged object at 0x10ab8f6d0>
+
+    def test_last_of_three_choruses_still_promoted(self) -> None:
+        got = _sections("Chorus 1", "Pre-Chorus 1", "Chorus 2", "Chorus 3", "Outro")
+>       assert got == ["Chorus", "Pre-Chorus", "Chorus", "Final Chorus", "Outro"]
+E       AssertionError: assert ['Chorus', 'R.../Dance Break'] == ['Chorus', 'P...rus', 'Outro']
+E         
+E         At index 1 diff: 'Rap/Solo/Dance Break' != 'Pre-Chorus'
+E         Use -v to get more diff
+
+server/tests/test_concept_section_remap_t489.py:61: AssertionError
+_ TestSessionPathSectionNames.test_every_screen_section_gets_its_own_concept_section _
+
+self = <server.tests.test_concept_section_remap_t489.TestSessionPathSectionNames object at 0x10b378910>
+
+    def test_every_screen_section_gets_its_own_concept_section(self) -> None:
+        payload = _payload()
+        rows = {
+            r["screen_position"]: r["section"]
+            for r in payload["concept_report"]["rows"]
+            if r["kind"] == "section" and r["screen_position"] is not None
+        }
+        got = [rows.get(i) for i in range(len(SONG))]
+>       assert got == [
+            "Intro",
+            "Verse",
+            "Pre-Chorus",
+            "Chorus",
+            "Verse",
+            "Pre-Chorus",
+            "Chorus",
+            "Bridge",
+            "Final Chorus",
+            "Outro",
+        ]
+E       AssertionError: assert ['Intro', 'Ve...e Break', ...] == ['Intro', 'Ve...-Chorus', ...]
+E         
+E         At index 2 diff: 'Rap/Solo/Dance Break' != 'Pre-Chorus'
+E         Use -v to get more diff
+
+server/tests/test_concept_section_remap_t489.py:119: AssertionError
+4 failed, 3 passed in 1.16s

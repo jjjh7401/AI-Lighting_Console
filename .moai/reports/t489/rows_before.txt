@@ -1,0 +1,21 @@
+1 -1.0 safety Intro 0 None
+2 0.0 section Intro 1 None
+3 7.0 phrase Intro 1 보컬 시작
+4 15.0 section Verse 1 None
+5 32.0 phrase Pre-Chorus 1 빌드업 시작
+6 40.0 section Chorus 1 None
+7 44.0 phrase Chorus 1 악기 추가
+8 60.0 section Verse 2 None
+9 77.0 phrase Pre-Chorus 2 빌드업 시작
+10 85.0 section Chorus 2 None
+11 89.0 phrase Chorus 2 악기 추가
+12 93.0 phrase Chorus 2 악기 추가
+13 105.0 section Bridge 1 None
+14 121.0 phrase Pre-Chorus 3 빌드업 시작
+15 125.0 section Final Chorus 1 None
+16 129.0 phrase Final Chorus 1 악기 추가
+17 133.0 phrase Final Chorus 1 악기 추가
+18 137.0 phrase Final Chorus 1 악기 추가
+19 150.0 section Rap/Solo/Dance Break 1 None
+20 166.0 safety Outro 0 None
+rows: 20

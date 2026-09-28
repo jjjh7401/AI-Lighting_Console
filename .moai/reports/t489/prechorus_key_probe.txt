@@ -1,0 +1,11 @@
+label | D | KEY | pre_drop_from | KEY without pre-drop darkness
+Intro | 2 | 50.0 | None | 50.0
+Verse 1 | 3 | 70.0 | None | 70.0
+Pre-Chorus 1 | 4 | 40.0 | 90.0 | 90.0
+Chorus 1 | 5 | 100.0 | None | 100.0
+Verse 2 | 3 | 70.0 | None | 70.0
+Pre-Chorus 2 | 4 | 40.0 | 90.0 | 90.0
+Chorus 2 | 5 | 100.0 | None | 100.0
+Bridge | 2 | 20.0 | 50.0 | 50.0
+Chorus 3 | 5 | 100.0 | None | 100.0
+Outro | 3 | 70.0 | None | 70.0

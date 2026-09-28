@@ -142,6 +142,12 @@ def remap_baseline_sections(
     Chorus 는 전체 Chorus 발생이 3회 이상일 때만 Final Chorus 로
     승급하고, ``Finale`` 은 Outro 로, 그 밖의 이름은 Rap/Solo/Dance
     Break 로 묶는다.
+
+    카드 t489 — 9종 어휘에 이미 있는 이름(``Pre-Chorus`` · ``Post-Chorus`` ·
+    ``Outro``)은 제 이름으로 둔다. 프로토타입은 판정기 역할 5종만 받아서
+    이 이름들이 들어올 일이 없었지만, 직접 지시 경로는 자유 라벨을 그대로
+    넘기므로 ``Pre-Chorus 1`` · ``Outro`` 가 Rap/Solo/Dance Break 로 가고
+    있었다(t486 실측 10구간 중 3구간).
     """
     chorus_positions = [
         i for i, x in enumerate(raw_sections) if str(x["baseline_name"]).startswith("Chorus")
@@ -155,7 +161,7 @@ def remap_baseline_sections(
             section = "Final Chorus"
         elif name == "Finale":
             section = "Outro"
-        elif name in ("Intro", "Verse", "Chorus", "Bridge"):
+        elif name in ("Intro", "Verse", "Pre-Chorus", "Chorus", "Post-Chorus", "Bridge", "Outro"):
             section = name
         else:
             section = "Rap/Solo/Dance Break"
