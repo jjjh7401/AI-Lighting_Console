@@ -21,7 +21,6 @@ from server.concept.session_bridge import (
     GLANCE_RULE,
     GLANCE_STAGES,
     build_concept_report,
-    build_concept_report_from_songcue_sections,
     glance_stages,
 )
 from server.tests.test_song_timeline_concept_report_wiring import _plan, _section
@@ -129,14 +128,6 @@ class TestConceptReportWiring:
         assert glance["available"] is False  # type: ignore[index]
         assert "role" in glance["reason"]  # type: ignore[index]
 
-    def test_songcue_path_has_no_role_source(self) -> None:
-        report = build_concept_report_from_songcue_sections(
-            "Rain", 120.0, [("Intro", 0), ("Verse", 10_000), ("Chorus", 20_000)]
-        )
-        glance = report["glance"]
-        assert glance["available"] is False  # type: ignore[index]
-        assert glance["reason"]  # type: ignore[index]
-
     def test_every_row_carries_a_non_empty_description(self) -> None:
         rows = build_concept_report(self._plan_with_roles())["rows"]
         assert rows  # type: ignore[truthy-bool]
@@ -144,8 +135,9 @@ class TestConceptReportWiring:
 
     def test_description_is_exactly_describe_over_the_resolved_states(self) -> None:
         # 지어낸 문장이 아니다: 같은 입력으로 describe() 를 직접 불러 한 행씩 대조한다.
+        # 카드 t486 — 화면 문장은 describe() 에서 「최대 N%」 절만 뺀 것이다.
         from server.concept.gates import build_song
-        from server.concept.session_bridge import _raw_sections
+        from server.concept.session_bridge import _raw_sections, _screen_description
 
         plan = self._plan_with_roles()
         raw_song = {
@@ -158,5 +150,6 @@ class TestConceptReportWiring:
         prev = CueState(dim={}, color=None, pos="home", motion=0)
         for row, raw, state in zip(rows, build.rows, build.states, strict=True):  # type: ignore[arg-type]
             ops = raw.get("ops", ())
-            assert row["description"] == describe(prev, state, ops, compute_cue_headroom(state))  # type: ignore[index]
+            expected = _screen_description(describe(prev, state, ops, compute_cue_headroom(state)))
+            assert row["description"] == expected  # type: ignore[index]
             prev = state

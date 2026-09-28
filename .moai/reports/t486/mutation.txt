@@ -1,0 +1,5 @@
+M1 분할 접미사 변환 제거: CAUGHT — 4 failed, 2 passed in 0.64s
+M2 허용 문자 표에 괄호·빗금 추가: CAUGHT — 2 failed, 4 passed in 0.56s
+M3 화면 설명이 describe() 원문 그대로: CAUGHT — 3 failed, 2 passed in 0.74s
+M4 빈 문장 대체 문구 제거: CAUGHT — 2 failed, 3 passed in 0.67s
+restored: True
