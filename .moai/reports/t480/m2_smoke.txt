@@ -1,0 +1,46 @@
+## Ice cream bpm=100.4 sections=7 cues=7 requery=0 notes=0
+   roles: ['intro', 'verse', 'bridge', 'chorus', 'bridge', 'chorus', 'finale']
+   Q1 section      Intro              D2 dim=50.0 color=('중립', 'cyan') pos=None accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('중립', 'cyan') pos=None accent=()
+   Q3 section      Bridge 1           D2 dim=20.0 color=('중립', 'lavender') pos=None accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q5 section      Bridge 2           D2 dim=20.0 color=('중립', 'lavender') pos=None accent=()
+   Q6 section      Chorus 2           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('climax accent',)
+   Q7 section      Finale             D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('white flash',)
+## Ice cream bpm=None sections=7 cues=7 requery=0 notes=1
+   roles: ['intro', 'verse', 'bridge', 'chorus', 'bridge', 'chorus', 'finale']
+   Q1 section      Intro              D2 dim=50.0 color=('중립', 'cyan') pos=None accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('중립', 'cyan') pos=None accent=()
+   Q3 section      Bridge 1           D2 dim=20.0 color=('중립', 'lavender') pos=None accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q5 section      Bridge 2           D2 dim=20.0 color=('중립', 'lavender') pos=None accent=()
+   Q6 section      Chorus 2           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('climax accent',)
+   Q7 section      Finale             D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('white flash',)
+## Rain bpm=76.0 sections=12 cues=12 requery=0 notes=0
+   roles: ['intro', 'verse', 'verse', 'chorus', 'chorus', 'verse', 'chorus', 'chorus', 'chorus', 'verse', 'chorus', 'finale']
+   Q1 section      Intro              D2 dim=50.0 color=('중립', 'cyan') pos=None accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('중립', 'cyan') pos=None accent=()
+   Q3 section      Verse 2            D3 dim=25.0 color=('중립', 'blue') pos=None accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q5 section      Chorus 2           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q6 section      Verse 3            D3 dim=25.0 color=('중립', 'cyan') pos=None accent=()
+   Q7 section      Chorus 3           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('moving position hit',)
+   Q8 section      Chorus 4           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q9 section      Chorus 5           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q10 section      Verse 4            D3 dim=25.0 color=('중립', 'blue') pos=None accent=()
+   Q11 section      Chorus 6           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('climax accent',)
+   Q12 section      Finale             D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('white flash',)
+## Rain bpm=None sections=12 cues=12 requery=0 notes=1
+   roles: ['intro', 'verse', 'verse', 'chorus', 'chorus', 'verse', 'chorus', 'chorus', 'chorus', 'verse', 'chorus', 'finale']
+   Q1 section      Intro              D2 dim=50.0 color=('중립', 'cyan') pos=None accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('중립', 'cyan') pos=None accent=()
+   Q3 section      Verse 2            D3 dim=25.0 color=('중립', 'blue') pos=None accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q5 section      Chorus 2           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q6 section      Verse 3            D3 dim=25.0 color=('중립', 'cyan') pos=None accent=()
+   Q7 section      Chorus 3           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('moving position hit',)
+   Q8 section      Chorus 4           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q9 section      Chorus 5           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=()
+   Q10 section      Verse 4            D3 dim=25.0 color=('중립', 'blue') pos=None accent=()
+   Q11 section      Chorus 6           D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('climax accent',)
+   Q12 section      Finale             D5 dim=100.0 color=('중립', 'warm white') pos=None accent=('white flash',)

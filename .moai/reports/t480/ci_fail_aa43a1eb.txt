@@ -1,0 +1,60 @@
+test	Python tests	﻿2026-09-28T03:50:50.5750552Z ##[group]Run uv run pytest -q -rs
+test	Python tests	2026-09-28T03:50:50.5750878Z [36;1muv run pytest -q -rs[0m
+test	Python tests	2026-09-28T03:50:50.5789406Z shell: /usr/bin/bash -e {0}
+test	Python tests	2026-09-28T03:50:50.5789690Z env:
+test	Python tests	2026-09-28T03:50:50.5789900Z   TZ: Asia/Seoul
+test	Python tests	2026-09-28T03:50:50.5790182Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
+test	Python tests	2026-09-28T03:50:50.5790607Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
+test	Python tests	2026-09-28T03:50:50.5791047Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test	Python tests	2026-09-28T03:50:50.5791418Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test	Python tests	2026-09-28T03:50:50.5791792Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test	Python tests	2026-09-28T03:50:50.5792163Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
+test	Python tests	2026-09-28T03:50:50.5792491Z ##[endgroup]
+test	Python tests	2026-09-28T03:50:50.6307761Z Using CPython 3.11.15 interpreter at: /opt/hostedtoolcache/Python/3.11.15/x64/bin/python3.11
+test	Python tests	2026-09-28T03:50:50.6308447Z Creating virtual environment at: .venv
+test	Python tests	2026-09-28T03:50:50.6419640Z    Building ma3-copilot-server @ file:///home/runner/work/AI-Lighting_Console/AI-Lighting_Console
+test	Python tests	2026-09-28T03:50:50.7260573Z Downloading pygments (1.2MiB)
+test	Python tests	2026-09-28T03:50:50.7508061Z Downloading llvmlite (57.1MiB)
+test	Python tests	2026-09-28T03:50:50.7510445Z Downloading scikit-learn (8.9MiB)
+test	Python tests	2026-09-28T03:50:50.7513538Z Downloading numpy (16.1MiB)
+test	Python tests	2026-09-28T03:50:50.7514870Z Downloading scipy (33.7MiB)
+test	Python tests	2026-09-28T03:50:50.7518772Z Downloading lupa (2.3MiB)
+test	Python tests	2026-09-28T03:50:50.7521374Z Downloading cryptography (4.5MiB)
+test	Python tests	2026-09-28T03:50:50.7527002Z Downloading pydantic-core (2.0MiB)
+test	Python tests	2026-09-28T03:50:50.7531641Z Downloading soundfile (1.3MiB)
+test	Python tests	2026-09-28T03:50:50.7532887Z Downloading ruff (11.0MiB)
+test	Python tests	2026-09-28T03:50:50.7536198Z Downloading numba (3.6MiB)
+test	Python tests	2026-09-28T03:50:50.9923702Z  Downloaded pygments
+test	Python tests	2026-09-28T03:50:50.9924873Z  Downloaded soundfile
+test	Python tests	2026-09-28T03:50:51.0230150Z  Downloaded pydantic-core
+test	Python tests	2026-09-28T03:50:51.0380495Z  Downloaded lupa
+test	Python tests	2026-09-28T03:50:51.0879918Z  Downloaded numba
+test	Python tests	2026-09-28T03:50:51.1112882Z  Downloaded cryptography
+test	Python tests	2026-09-28T03:50:51.2428097Z  Downloaded scikit-learn
+test	Python tests	2026-09-28T03:50:51.2601560Z  Downloaded ruff
+test	Python tests	2026-09-28T03:50:51.3128443Z  Downloaded numpy
+test	Python tests	2026-09-28T03:50:51.4773447Z  Downloaded scipy
+test	Python tests	2026-09-28T03:50:51.5901421Z       Built ma3-copilot-server @ file:///home/runner/work/AI-Lighting_Console/AI-Lighting_Console
+test	Python tests	2026-09-28T03:50:51.6452837Z  Downloaded llvmlite
+test	Python tests	2026-09-28T03:50:51.7062349Z Installed 98 packages in 60ms
+test	Python tests	2026-09-28T03:51:19.2314195Z 
+test	Python tests	2026-09-28T03:51:19.2315158Z ==================================== ERRORS ====================================
+test	Python tests	2026-09-28T03:51:19.2316290Z _____ ERROR collecting server/tests/test_q2_modifier_token_primary_t483.py _____
+test	Python tests	2026-09-28T03:51:19.2318322Z ImportError while importing test module '/home/runner/work/AI-Lighting_Console/AI-Lighting_Console/server/tests/test_q2_modifier_token_primary_t483.py'.
+test	Python tests	2026-09-28T03:51:19.2320037Z Hint: make sure your test modules/packages have valid Python names.
+test	Python tests	2026-09-28T03:51:19.2320533Z Traceback:
+test	Python tests	2026-09-28T03:51:19.2321143Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/importlib/__init__.py:126: in import_module
+test	Python tests	2026-09-28T03:51:19.2321827Z     return _bootstrap._gcd_import(name[level:], package, level)
+test	Python tests	2026-09-28T03:51:19.2322308Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+test	Python tests	2026-09-28T03:51:19.2322855Z server/tests/test_q2_modifier_token_primary_t483.py:24: in <module>
+test	Python tests	2026-09-28T03:51:19.2323526Z     from server.tests.test_chorus_color_two_paths_t441 import _path_b_selections, _records
+test	Python tests	2026-09-28T03:51:19.2324917Z E   ImportError: cannot import name '_path_b_selections' from 'server.tests.test_chorus_color_two_paths_t441' (/home/runner/work/AI-Lighting_Console/AI-Lighting_Console/server/tests/test_chorus_color_two_paths_t441.py)
+test	Python tests	2026-09-28T03:51:19.2326033Z =============================== warnings summary ===============================
+test	Python tests	2026-09-28T03:51:19.2328699Z .venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+test	Python tests	2026-09-28T03:51:19.2330768Z   /home/runner/work/AI-Lighting_Console/AI-Lighting_Console/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+test	Python tests	2026-09-28T03:51:19.2333213Z     from starlette.testclient import TestClient as TestClient  # noqa
+test	Python tests	2026-09-28T03:51:19.2333759Z 
+test	Python tests	2026-09-28T03:51:19.2334349Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+test	Python tests	2026-09-28T03:51:19.2335442Z !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+test	Python tests	2026-09-28T03:51:19.2336181Z 1 warning, 1 error in 26.32s
+test	Python tests	2026-09-28T03:51:20.5516438Z ##[error]Process completed with exit code 2.

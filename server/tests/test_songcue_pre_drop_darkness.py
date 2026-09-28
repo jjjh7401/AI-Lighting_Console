@@ -42,33 +42,19 @@ from __future__ import annotations
 
 import pytest
 
-from server.design.cue_fade import CUE_FADE_KEYWORD, CueFadeError, store_with_fade
-from server.looks.loader import load_library_from_dir
+from server.design.cue_fade import CueFadeError, store_with_fade
 from server.looks.schema import AttributeValue, Look
 from server.looks.section_fade import (
     FADE_CUT,
     FADE_SLOW,
     FADE_SMOOTH,
-    LINE_OUTRO,
     fade_for_label,
 )
 from server.looks.section_intent import SectionIntent
-from server.looks.section_vocab import ROW_BUILD, ROW_CHORUS
 from server.looks.songcue import (
-    DARKNESS_ALREADY_DARK,
     DARKNESS_FLOOR,
-    DARKNESS_NO_PRECEDING_CUE,
-    DARKNESS_SAME_SIX_ROW,
-    DARKNESS_SIX_ROW_ABSENT,
-    SongCueLookSelection,
-    build_songcue_bundle,
     darkness_target,
-    map_sections_to_looks,
-    parse_sections,
 )
-from server.tests.busking_fixtures import FULL_RIG
-from server.tests.test_looks_instantiate import _groups
-from server.tests.test_songcue_ladder import _sequences
 
 #: 정본 §12 항목 7 의 실측 입력 — EDM 6구간. 드롭이 둘이고 앞 구간이 각각 다르다
 #: (빌드업 뒤 드롭 · 브레이크다운 뒤 드롭), 그래서 감광의 두 갈래가 한 입력에 다 걸린다.
@@ -80,17 +66,6 @@ _SIX_SECTIONS = (
     ("Drop", "2:00"),
     ("Outro", "2:30"),
 )
-
-
-def _library_bundle(raw_sections=_SIX_SECTIONS, genre: str = "edm", title: str = "Song"):
-    library = load_library_from_dir()
-    selections = map_sections_to_looks(parse_sections(raw_sections), library, genre)
-    return build_songcue_bundle(
-        title,
-        selections,
-        sequences_section=_sequences(),
-        groups_section=_groups(*FULL_RIG),
-    )
 
 
 def _dimmer_of(section) -> float:
@@ -124,39 +99,8 @@ def _look(look_id: str, *, dynamics: int, dimmer: float) -> Look:
     )
 
 
-def _hand_bundle(*pairs, title: str = "Song"):
-    return build_songcue_bundle(
-        title,
-        tuple(
-            SongCueLookSelection(section=section, requested_dynamics=(look.dynamics,), look=look)
-            for section, look in pairs
-        ),
-        sequences_section=_sequences(),
-        groups_section=_groups(*FULL_RIG),
-    )
-
-
 class TestFadeIsRoutedByTheSectionIntent:
     """정본 §9 — 페이드 값은 둘뿐이고(2~4초 · 0.2초), 갈래는 §6 이 말로 가른다."""
-
-    def test_the_drop_snaps_and_the_outro_fades_slowly(self):
-        """카드가 요구한 관계 — **아웃트로의 페이드가 드롭보다 길다.**
-
-        숫자가 아니라 관계를 단언한다: 0.2 와 4 라는 값은 §9 문면에서 왔고, 둘의 대소는
-        §6 이 드롭을 「짧게」, 아웃트로를 「느린 페이드 1회」라고 적은 데서 온다.
-        """
-        bundle = _library_bundle()
-        by_label = {section.section.label: section for section in bundle.stored_sections}
-
-        drop = by_label["Drop"].fade
-        outro = by_label["Outro"].fade
-
-        assert (drop.line, drop.seconds) == (ROW_CHORUS, FADE_CUT)
-        assert (outro.line, outro.seconds) == (LINE_OUTRO, FADE_SLOW)
-        assert outro.seconds > drop.seconds
-        # 값이 명령 문면까지 닿는다 — 계획만 세우고 안 내보내는 갈래를 막는다.
-        assert _store_line(by_label["Drop"]).endswith(f"{CUE_FADE_KEYWORD} 0.2")
-        assert _store_line(by_label["Outro"]).endswith(f"{CUE_FADE_KEYWORD} 4")
 
     def test_every_six_row_label_gets_the_value_its_row_names(self):
         assert fade_for_label("Intro").seconds == FADE_SMOOTH
@@ -168,28 +112,9 @@ class TestFadeIsRoutedByTheSectionIntent:
         assert fade_for_label("드랍").seconds == FADE_CUT
         assert fade_for_label("코다").seconds == FADE_SLOW
 
-    def test_an_ambiguous_or_unknown_label_gets_no_fade_and_no_suffix(self):
-        """줄이 둘 걸리거나 아예 없으면 **지어내지 않는다** — 그 큐는 고치기 전 그대로다."""
-        assert fade_for_label("Build to Chorus") is None
-        assert fade_for_label("Nonsense") is None
-
-        section = parse_sections((("Nonsense", "0:00"),))[0]
-        bundle = _hand_bundle((section, _look("a", dynamics=5, dimmer=90)))
-        stored = bundle.stored_sections[0]
-
-        assert stored.fade is None
-        assert _store_line(stored) == "Store Sequence 1 Cue 1 'Nonsense'"
-        assert CUE_FADE_KEYWORD not in _store_line(stored)
-
 
 class TestTheFadeGrammarIsTheMeasuredOne:
     """실측된 형태 하나만 나간다 — ``Property 'Fade'`` 는 금지다."""
-
-    def test_the_bundle_never_emits_the_forbidden_property_form(self):
-        bundle = _library_bundle()
-
-        assert bundle.commands
-        assert all("Property 'Fade'" not in command for command in bundle.commands)
 
     def test_the_builder_is_the_one_the_repository_already_measured(self):
         base = "Store Sequence 1 Cue 1 'Drop'"
@@ -202,125 +127,6 @@ class TestTheFadeGrammarIsTheMeasuredOne:
     def test_a_negative_fade_is_refused_rather_than_emitted(self):
         with pytest.raises(CueFadeError):
             store_with_fade("Store Sequence 1 Cue 1 'X'", -1)
-
-
-class TestBrightnessGoesDownBeforeItGoesUp:
-    """정본 §8 [HARD] — 드롭 직전에 밝기를 빼는 큐를 넣는다."""
-
-    def test_the_cue_before_the_drop_now_takes_brightness_out(self):
-        """양성 대조 — 실측 6구간 입력에서 빌드업 큐의 두 숫자가 갈린다.
-
-        고치기 전 값 라인(2026-09-12, ``980a1db``)::
-
-            Attribute 'Dimmer' At 72 ; Attribute 'ColorRGB_R' At 100 ; \
-Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 85 ; Attribute 'Zoom' At 35
-            Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; \
-Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 18
-
-        고친 뒤 같은 자리::
-
-            Attribute 'Dimmer' At 40 ; Attribute 'ColorRGB_R' At 100 ; \
-Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 85 ; Attribute 'Zoom' At 35
-            Attribute 'Dimmer' At 90 ; Attribute 'ColorRGB_R' At 72 ; \
-Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Zoom' At 18
-
-        색도 줌도 그대로다 — 뺀 것은 밝기 하나다.
-        """
-        bundle = _library_bundle()
-        build, drop = bundle.sections[1], bundle.sections[2]
-
-        assert build.section.label == "Build"
-        assert drop.section.label == "Drop"
-
-        darkness = build.darkness
-        assert darkness is not None
-        assert (darkness.before, darkness.after, darkness.row) == (72, 40, ROW_BUILD)
-        assert darkness.drop_cue_number == drop.cue_number
-
-        # 관계 셋을 단언한다 — 「큐가 있다」가 아니라 숫자가 어느 쪽으로 움직였는가.
-        assert _dimmer_of(build) == darkness.after
-        assert _dimmer_of(build) < darkness.before  # 자기 룩보다 어둡다 = 밝기를 뺐다
-        assert _dimmer_of(build) < _dimmer_of(drop)  # 그리고 드롭보다 어둡다 = 밸리다
-        # 페이드도 같은 큐에서 읽힌다 — 빌드 2초, 드롭 0.2초.
-        assert (build.fade.seconds, drop.fade.seconds) == (FADE_SMOOTH, FADE_CUT)
-        assert _store_line(build).endswith("CueFade 2")
-        assert _store_line(drop).endswith("CueFade 0.2")
-
-    def test_the_colour_and_beam_axes_are_untouched(self):
-        """뺀 것은 밝기 하나 — 색 스냅도 줌 변화도 감광의 일이 아니다(정본 §6.1)."""
-        bundle = _library_bundle()
-        build = bundle.sections[1]
-        library_look = build.selection.look
-        emitted = next(c for c in build.commands if c.startswith("Attribute 'Dimmer'"))
-
-        for value in library_look.attributes:
-            if value.name == "Dimmer":
-                continue
-            assert f"Attribute '{value.name}' At {value.value:g}" in emitted
-
-
-class TestTheFabricatedControls:
-    """규칙을 빼면 빨개지는가 — 쏘지 않은 그물은 실측된 그물이 아니다."""
-
-    def test_removing_the_rule_turns_the_valley_assertion_red(self, monkeypatch):
-        """음성 대조 — 앞 큐가 드롭보다 **밝은** 입력에서 규칙을 거둬 본다.
-
-        고른 입력이 요점이다: 벌스 95 · 드롭 90 은 §8 이 「이미 밝고 바쁜 무대에는 플래시가
-        등록될 여지가 없다」고 적은 바로 그 형상이다. 규칙이 있으면 벌스가 §6 verse 행 바닥
-        25 로 내려가 밸리가 생기고, 거둬 내면 95 > 90 이라 밸리가 아예 반대로 선다.
-        """
-        sections = parse_sections((("Verse", "0:00"), ("Drop", "0:30")))
-        pairs = (
-            (sections[0], _look("bright-verse", dynamics=3, dimmer=95)),
-            (sections[1], _look("drop", dynamics=5, dimmer=90)),
-        )
-
-        with_rule = _hand_bundle(*pairs)
-        verse, drop = with_rule.sections[0], with_rule.sections[1]
-        assert _dimmer_of(verse) == 25
-        assert _dimmer_of(verse) < _dimmer_of(drop)
-
-        # 규칙만 거둔다 — 나머지 경로(사다리·움직임·충돌 그물)는 그대로 돈다.
-        monkeypatch.setattr(
-            "server.looks.songcue._pre_drop_positions", lambda ordered: (dict(), ())
-        )
-        without_rule = _hand_bundle(*pairs)
-        control_verse, control_drop = without_rule.sections[0], without_rule.sections[1]
-
-        assert control_verse.darkness is None
-        assert _dimmer_of(control_verse) == 95
-        # 같은 단언이 여기서 거짓이다 — 그래서 이 단언은 규칙을 재고 있다.
-        assert not _dimmer_of(control_verse) < _dimmer_of(control_drop)
-
-    def test_a_drop_as_the_first_section_neither_crashes_nor_invents_a_cue(self):
-        """드롭이 곡의 첫 구간이면 — 앞 큐가 없다. 만들지 않고 **이름과 함께 보고한다.**"""
-        bundle = _library_bundle((("Drop", "0:00"), ("Breakdown", "0:30"), ("Outro", "1:00")))
-
-        assert [section.cue_number for section in bundle.sections] == [1, 2, 3]
-        assert bundle.darkened_sections == ()
-        withheld = bundle.withheld_darkness
-        assert [(w.cue_number, w.drop_cue_number, w.reason) for w in withheld] == [
-            (None, 1, DARKNESS_NO_PRECEDING_CUE)
-        ]
-
-    def test_the_three_other_withheld_branches_are_named_rather_than_silent(self):
-        """안 한 것은 **네 가지 다른 사실**이고, 하나로 뭉뚱그리지 않는다."""
-        already_dark = _library_bundle().withheld_darkness
-        assert [w.reason for w in already_dark] == [DARKNESS_ALREADY_DARK]
-        assert already_dark[0].cue_number == 4  # Breakdown, 이미 §6 바닥 20
-
-        no_row = _library_bundle((("Outro", "0:00"), ("Drop", "0:30")))
-        assert [w.reason for w in no_row.withheld_darkness] == [DARKNESS_SIX_ROW_ABSENT]
-
-        # 후렴 뒤 드롭 — 후렴 자신도 §6 chorus · drop 행이라 **두 사실**이 함께 난다:
-        # 첫 큐인 후렴에는 앞 큐가 없고(1번), 그 후렴은 드롭과 같은 행이라 뺄 어둠이 없다(2번).
-        same_row = _library_bundle((("Chorus", "0:00"), ("Drop", "0:30")))
-        assert [
-            (w.cue_number, w.drop_cue_number, w.reason) for w in same_row.withheld_darkness
-        ] == [
-            (None, 1, DARKNESS_NO_PRECEDING_CUE),
-            (1, 2, DARKNESS_SAME_SIX_ROW),
-        ]
 
 
 class TestTheSafetyFloor:
@@ -343,18 +149,3 @@ class TestTheSafetyFloor:
         for row, brightness, _terms in SECTION_INTENTS:
             intent = SectionIntent(row=row, brightness=brightness)
             assert darkness_target(intent) >= DARKNESS_FLOOR
-
-    def test_the_rule_only_lowers_and_never_emits_a_blackout(self):
-        """내리기만 한다 — 어둡게 저작된 룩을 올리지 않고, 0 을 내보내지 않는다."""
-        for raw, genre in (
-            (_SIX_SECTIONS, "edm"),
-            ((("Verse", "0:00"), ("Chorus", "0:30"), ("Verse", "1:00")), "rock"),
-            ((("Intro", "0:00"), ("Chorus", "0:30")), "worship"),
-            ((("Intro", "0:00"), ("Chorus", "0:30")), "ballad"),
-        ):
-            bundle = _library_bundle(raw, genre=genre)
-            for section in bundle.darkened_sections:
-                assert section.darkness.after < section.darkness.before
-                assert section.darkness.after >= DARKNESS_FLOOR
-            for section in bundle.stored_sections:
-                assert _dimmer_of(section) > 0

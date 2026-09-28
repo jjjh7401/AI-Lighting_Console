@@ -23,20 +23,35 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
-from server.concept.session_bridge import build_concept_report_from_songcue_sections
-from server.design import color_names as _COLOR_NAMES
+from server.concept.session_bridge import (
+    build_concept_report,
+)
 from server.design.capability_verdict import group_capability_source
-from server.design.cue_density import rotate_palette
-from server.design.interview import Q2_PALETTE, Q2B_COLOR_USAGE, _palette_value_tokens
+from server.design.console_slots import (
+    paged_pool_children,
+    phaser_slot_by_label,
+    resolve_named_pool_no,
+    resolve_position_preset_labels,
+)
+from server.design.interview import Q2B_COLOR_USAGE
 from server.design.override_look import (
     DEFAULT_OVERRIDE_SLOTS,
     OverrideLookError,
     OverrideSafetyAnswers,
     plan_override_solo_spot,
 )
-from server.design.profile import MusicProfile
+from server.design.rig import build_rig_profile
 from server.design.rig_capability_read import RIG_GAP_UNREADABLE, read_design_rig
-from server.design.section_palette import _section_palette_choice, role_for_songcue_label
+from server.design.song_cue_composer import compose_song_cue_bundle
+from server.design.song_cue_render import (
+    _blinder_group_no,
+    _phaser_label_for_cue,
+    reviewed_song_commands,
+    reviewed_song_timing,
+)
+from server.design.song_plan import TimingPlan
+from server.design.upload_song_plan import build_upload_song_plan, upload_plan_sections
+from server.design.upload_song_report import build_upload_song_report, stored_cues
 from server.fx.instantiate import FxInstantiationError, build_fx_preset_bundle, select_preset_number
 from server.fx.instantiate import instantiate_fx as bind_fx
 from server.fx.loader import DEFAULT_LIBRARY_DIR as FX_LIBRARY_DIR
@@ -80,25 +95,19 @@ from server.looks.matching import match_looks
 from server.looks.report import build_report, to_korean
 from server.looks.resolver import resolve_roles
 from server.looks.rig_axes import MEASURED_ATTRIBUTE_SPELLINGS, RigAxisPresence
-from server.looks.schema import AttributeValue, Look, LookLibrary
+from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, LookLibrary
 from server.looks.song_history import SongLookMemory
 from server.looks.songcue import (
     EXPLICIT_DYNAMICS_REQUIRED,
-    LOOK_POOL_EXHAUSTED,
     TRIGGER_TYPE_TIME,
     SectionTimeError,
     SequenceNumberError,
-    SongCueBundleError,
-    SongCueLookSelection,
     SongCueTimingAxes,
+    _ascii_label,
     _format_seconds,
-    build_songcue_bundle,
-    build_songcue_timing,
-    map_sections_to_looks,
     parse_sections,
-    split_selections_for_density,
+    select_sequence_number,
 )
-from server.looks.songcue_report import build_songcue_report
 from server.lxseq.cue_parser import CueColumnSetError, parse_cue_csv
 from server.lxseq.cue_time import (
     DERIVED_NOT_FINAL_LITERAL,
@@ -197,8 +206,12 @@ from server.spatial.naming import (
     name_lateral_bucket,
     name_vertical_bucket,
 )
-from server.spatial.pointing import PointingTarget, SpatialPointingError
-from server.spatial.position_cuesheet import PositionSheetSection
+from server.spatial.pointing import (
+    BASIC_POSITION_SEQUENCE,
+    POSITION_PRESET_POOL,
+    PointingTarget,
+    SpatialPointingError,
+)
 from server.spatial.presets import (
     SPATIAL_PRESETS,
     SpatialPlacement,
@@ -682,6 +695,25 @@ def _confirmed_section_input(
         "dynamics": section.d_level,
         "confirmed_index": section.index,
     }
+
+
+def _state_port_query(state_port: StateQueryPort):
+    """상태 포트를 ``server.design.console_slots`` 판독기의 콘솔 질의 함수로 감싼다
+    (카드 t480). 세션이 ``query_state`` 도구로 하는 것과 같은 인자·같은 응답이고,
+    실패(예외)는 ``None`` — 판독기가 그것을 「못 읽었다」로 다룬다."""
+
+    def query(probe_id: str, arguments: Mapping[str, object]) -> object | None:
+        del probe_id  # 도구 호출 id 는 세션 감사용이다 — 포트 직접 조회에는 없다.
+        path = str(arguments["path"])
+        offset = arguments.get("offset")
+        try:
+            if offset:
+                return state_port.query_state(path, offset=offset)  # type: ignore[call-arg]
+            return state_port.query_state(path)
+        except Exception:  # noqa: BLE001 — 포트마다 예외 형태가 달라 폭넓게 「못 읽음」
+            return None
+
+    return query
 
 
 def _confirmed_density_bpm(confirmed: ConfirmedSongAnalysisPort | None) -> float | None:
@@ -2295,161 +2327,6 @@ def _interview_record_value(
     return fallback
 
 
-def _songcue_role_occurrences(
-    selections: Sequence[SongCueLookSelection],
-) -> tuple[tuple[str, int], ...]:
-    """선택 목록과 같은 길이·순서로 (경로 A 역할, 그 역할의 몇 번째 회차) 를
-    낸다 (카드 t441) — 경로 A 의 ``_build_unified_song_plan`` 이 원본 구간을
-    ``head_indexes`` 로 묶어 회차를 세는 것과 같은 규율이다.
-
-    마디 분할로 갈린 조각(``split_selections_for_density``)은 원본과 같은
-    ``section.label``·``section.instance`` 를 그대로 물려받는다(시작 시각만
-    다르다, ``dataclasses.replace(source.section, start_ms=...)``) — 그래서
-    그 쌍으로 원본을 식별하면 조각들이 같은 회차를 공유한다. 라벨 문자열이
-    달라도(예: ``Chorus`` 다음 ``Drop``) 같은 §6 행으로 접히면(
-    ``role_for_songcue_label``) 같은 역할의 연속 회차로 센다 — 텍스트가 아니라
-    **역할**을 세는 것이 경로 A 와 같은 의미다.
-    """
-    role_running: dict[str, int] = {}
-    seen: dict[tuple[str, int], tuple[str, int]] = {}
-    result: list[tuple[str, int]] = []
-    for selection in selections:
-        section = selection.section
-        key = (section.label, section.instance)
-        cached = seen.get(key)
-        if cached is not None:
-            result.append(cached)
-            continue
-        role = role_for_songcue_label(section.label)
-        role_running[role] = role_running.get(role, 0) + 1
-        entry = (role, role_running[role])
-        seen[key] = entry
-        result.append(entry)
-    return tuple(result)
-
-
-def _override_songcue_main_color(
-    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
-) -> tuple[tuple[SongCueLookSelection, ...], tuple[str, ...]]:
-    """경로 A 와 같은 함수(``_section_palette_choice``)로 구간별 주색을 정해,
-    이미 고른 룩의 ``ColorRGB_R/G/B`` 만 덮는다 (카드 t441, REQ-003).
-
-    ``records`` 가 없거나(``None``/빈 시퀀스) Q2(팔레트) 답이 없으면 오늘과
-    바이트 동일하게 아무 것도 바꾸지 않는다 — 색을 지어내지 않는다는 규율은
-    ``_song_color_value_lines``(``session.py``) 와 같다.
-
-    **적용 순서 — 룩 선택·마디 분할 뒤, ``build_songcue_bundle`` 호출 전.**
-    LDACCENT 색 스냅(``_color_snap_is_effective``)과 LDRETURN 복귀 판정
-    (``_label_return_palette``) 모두 ``selection.look.attributes`` 를 그
-    구간이 "원래" 낸 색으로 읽는다(``server/looks/songcue.py``). 이 함수가
-    그 전에 값을 덮어 두면 스냅은 감독 색끼리 비교하고 복귀는 감독 색으로
-    돌아온다(둘 다 원하는 동작) — 나중에 덮으면 사다리·복귀가 이미 룩
-    고유색으로 판정을 끝낸 뒤라 감독 색이 두 축 모두에서 무시된다.
-
-    보조색(``colors[1]``)은 내지 않는다 — 경로 A 의 콘솔 명령 생성기
-    (``_song_color_value_lines``)도 주색 한 줄만 낸다("보조색·유보색·
-    언더페인팅은 M3 의 몫" 독스트링). 다이내믹스·포지션·이펙트·클라이맥스
-    상한·아껴두기 사다리·복귀 로직 자체는 건드리지 않는다 — 바꾸는 것은
-    그 룩 자신의 색 세 채널뿐이다. ``ColorRGB_W`` 는 내지 않는다 — 이
-    라이브러리의 룩에는 W 채널 축이 없다(``_COLOR_ATTRIBUTES =
-    ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")``, ``songcue.py``).
-
-    색 이름이 표준 10색(``server/design/color_names.py``)에 없어 RGB 로
-    못 바뀌면 그 구간의 룩은 그대로 두고(색을 지어내지 않는다) 그 사실을
-    두 번째 반환값(``notes``)에 적는다 — 실패를 조용히 삼키지 않는다.
-
-    룩이 애초에 ``ColorRGB_R/G/B`` 채널을 하나도 안 실었으면(``attributes``
-    에 그 세 이름이 없음 — 예: 색 없는 헤이즈/무빙 전용 기구) 아무것도
-    바뀌지 않는다. 없는 축에 새 값을 만들어 얹지 않는다 — 이 라이브러리
-    전역의 규율이다(``_look_has_attribute``, ``server/looks/songcue.py``).
-
-    **``selection.look`` 하나만 덮으면 부족하다 — ``dynamics_matches`` 전부를
-    덮는다.** ``build_songcue_bundle`` 은 최종 저장 색을 ``selection.look``
-    에서 읽지 않는다: ``_select_bindable`` 이 ``selection.dynamics_matches``
-    (요청 다이내믹스에 맞는 룩 **전량**, 버스킹 순서 그대로)를 앞에서부터
-    훑어 **이 리그에 실제로 묶이는 첫 룩**을 고르고, 그 룩이 저장된다
-    (``SongCueLookSelection.dynamics_matches`` 독스트링 — "리그에 실제로
-    묶이는 룩을 이 중에서 고르는 것은 ... ``_section_bundle`` 의 일이다").
-    ``look`` 만 덮으면 리그가 그 룩을 못 묶었을 때(``_select_bindable`` 이
-    ``matches`` 의 다른 항목으로 넘어갈 때) 덮은 색이 조용히 사라진다 —
-    그래서 ``dynamics_matches`` 의 모든 후보에 같은 덮어쓰기를 적용해,
-    어느 후보가 최종 선택돼도 감독 색을 낸다.
-    """
-    if not records:
-        return tuple(selections), ()
-    palette_answer = _interview_record_value(records, Q2_PALETTE, None)
-    if palette_answer is None:
-        return tuple(selections), ()
-    palette_value = _palette_value_tokens(palette_answer)
-    color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
-    profile = MusicProfile(palette=palette_value)
-    role_occurrences = _songcue_role_occurrences(selections)
-    # 카드 t445 — 마디 분할 조각의 순번(0 = 여는 큐). 조각들은 부모의
-    # (label, instance) 를 그대로 물려받으므로 연속한 같은 키를 센다.
-    units: list[int] = []
-    previous_key: tuple[object, object] | None = None
-    for selection in selections:
-        key = (selection.section.label, selection.section.instance)
-        units.append(units[-1] + 1 if key == previous_key and units else 0)
-        previous_key = key
-    overridden: list[SongCueLookSelection] = []
-    notes: list[str] = []
-    for selection, (role, occurrence), unit_index in zip(
-        selections, role_occurrences, units, strict=True
-    ):
-        if selection.look is None:
-            overridden.append(selection)
-            continue
-        colors, _source, _weight = _section_palette_choice(
-            PositionSheetSection(
-                name=selection.section.label or selection.section.name, start_ms=0, mood=""
-            ),
-            role=role,
-            profile=profile,
-            color_tendency="white",
-            palette_mode="palette",
-            concept_colors=(),
-            occurrence=occurrence,
-            color_usage=str(color_usage),
-        )
-        # 카드 t445 — 감독이 split_swap 을 고른 곡은 경로 A 처럼 한 후렴의 분할
-        # 조각마다 주·보조색을 맞바꾼다. 기본은 조각 모두 같은 주색이다.
-        if color_usage == "split_swap" and role in ("chorus", "finale") and unit_index > 0:
-            colors = rotate_palette(colors, unit_index)
-        primary = colors[0] if colors else None
-        rgb = _COLOR_NAMES.resolve_color_name(primary) if primary else None
-        if rgb is None:
-            notes.append(
-                f"section {selection.section.label!r} instance {selection.section.instance}: "
-                f"director color {primary!r} is not in the standard 10-color palette — "
-                "this section's look color was left unchanged"
-            )
-            overridden.append(selection)
-            continue
-        red, green, blue = rgb
-        override_values = {"ColorRGB_R": red, "ColorRGB_G": green, "ColorRGB_B": blue}
-
-        def _recolor(look: Look, _override_values: dict[str, int] = override_values) -> Look:
-            new_attributes = tuple(
-                AttributeValue(value.name, _override_values[value.name])
-                if value.name in _override_values
-                else value
-                for value in look.attributes
-            )
-            return replace(look, attributes=new_attributes)
-
-        overridden.append(
-            replace(
-                selection,
-                look=_recolor(selection.look),
-                dynamics_matches=tuple(
-                    _recolor(candidate) for candidate in selection.dynamics_matches
-                ),
-            )
-        )
-    return tuple(overridden), tuple(notes)
-
-
 def build_toolset(
     *,
     execution_port: CommandExecutionPort,
@@ -3200,6 +3077,13 @@ def build_toolset(
             or timecode_number < 1
         ):
             return _error_result(call, "'timecode_number' must be a positive integer")
+        # 카드 t480 D2 — 포지션 프리셋 시작 번호(선택). 주면 대화 길처럼 기본 10라벨을
+        # 그 범위에서 라벨로 찾고, 안 주면 포지션 축을 끈다(번호를 지어내지 않는다).
+        preset_start = call.arguments.get("preset_start")
+        if preset_start is not None and (
+            isinstance(preset_start, bool) or not isinstance(preset_start, int) or preset_start < 1
+        ):
+            return _error_result(call, "'preset_start' must be a positive integer")
         raw_sections = call.arguments.get("sections")
         # SPEC-COPILOT-SONGCONFIRM-001 (REQ-SONGCONFIRM-009/010/011) — 세션이 확정
         # 기록을 들고 있고 모델이 'sections' 를 **주지 않았으면** 채택 구간이
@@ -3347,44 +3231,20 @@ def build_toolset(
             if explicit_dynamics is None:
                 explicit_dynamics = {}
             explicit_dynamics[index] = value
-        if looks is None:
-            try:
-                looks = load_library_from_dir()
-            except LookSchemaError as error:
-                return _error_result(call, f"look library unavailable: {error}")
-        genre_selection = select_genre(looks, genre)
-        if genre_selection.genre is None:
-            content = json.dumps(
-                {
-                    "error": f"unknown genre {genre!r}",
-                    "reason": genre_selection.reason,
-                    "candidates": list(genre_selection.candidates),
-                },
-                ensure_ascii=False,
-            )
-            return ToolExecution(
-                result=ToolResult(
-                    tool_call_id=call.id, name=call.name, content=content, is_error=True
-                )
-            )
-        # 카드 t358 — 앞 곡들이 이미 쓴 룩. **스냅샷**이라는 것이 요점이다: 이 곡을
-        # 만드는 동안 기억은 안 자라므로, 같은 곡의 후렴 2회차가 1회차를 피하는 일이
-        # 없다(정본 §7 의 비대칭 — 곡 안의 반복은 미덕이다).
-        history_before = song_look_memory.used() if song_look_memory is not None else ()
-        try:
-            selections = map_sections_to_looks(
-                sections,
-                looks,
-                genre_selection.genre,
-                explicit_dynamics=explicit_dynamics,
-                used_look_ids=history_before,
-            )
-        except ValueError as error:
-            return _error_result(call, f"song sections cannot be mapped: {error}")
+        # 카드 t480 (SPEC-LDDESIGN-001 REQ-003, AC-017) — 여기부터 큐는 **대화 길과 같은
+        # 조립기**(`compose_song_cue_bundle`)가 만든다. 업로드 길이 따로 쓰던 룩 라이브러리
+        # 조립기(`build_songcue_bundle`)는 거치지 않는다 — 감독 결정 2026-09-28(D1):
+        # 장르 룩 선택·곡 사이 룩 기억은 사라진다. `genre` 는 음악 프로필의 장르로만
+        # 남아 Q2 추천 팔레트(D4)를 정한다.
+        #
+        # 이름 모르는 구간은 여전히 D 레벨을 지어내지 않는다 — 옛 길의
+        # `EXPLICIT_DYNAMICS_REQUIRED` 계약을 그대로 지킨다(판정은 룩이 아니라
+        # `parse_sections` 가 한다).
         unknown_sections = [
-            {"index": selection.section.index, "name": selection.section.name}
-            for selection in selections
-            if selection.reason == EXPLICIT_DYNAMICS_REQUIRED
+            {"index": section.index, "name": section.name}
+            for section in sections
+            if section.requires_explicit_dynamics
+            and (explicit_dynamics is None or section.index not in explicit_dynamics)
         ]
         if unknown_sections:
             content = json.dumps(
@@ -3400,65 +3260,23 @@ def build_toolset(
                     tool_call_id=call.id, name=call.name, content=content, is_error=True
                 )
             )
-        # 카드 t306 — 여기까지는 구간 하나에 큐 하나였다(2026-09-06 실기: 4구간
-        # → 3큐). 감독 인터뷰 경로는 t305 에서 이미 마디 경계로 쪼개는데 업로드
-        # 경로만 안 쪼개면, 같은 앱이 어느 문으로 들어왔느냐에 따라 설계 품질이
-        # 달라진다. 규칙은 `plan_cue_density` 하나를 **공유**한다.
-        #
-        # 이 자리인 이유: `EXPLICIT_DYNAMICS_REQUIRED` 오류는 위에서 이미
-        # 갈렸으므로 그 갈래는 바이트 동일하고, 아래 번들·타이밍·보고는 모두
-        # 「선택 목록」만 보므로 넓힌 목록이 그대로 흘러간다.
+        for index, value in (explicit_dynamics or {}).items():
+            if value < DYNAMICS_MIN or value > DYNAMICS_MAX:
+                return _error_result(
+                    call,
+                    f"song sections cannot be mapped: section index {index} explicit dynamics "
+                    f"must be between {DYNAMICS_MIN} and {DYNAMICS_MAX}: {value!r}",
+                )
         density_bpm = _confirmed_density_bpm(confirmed)
+        # 카드 t306 — 확정 기록은 구간마다 끝을 안다. 그 길로 온 구간이면 마지막
+        # 구간도 쪼갤 수 있게 곡 끝을 넘긴다(명시 구간에는 끝이 없다).
         density_end_ms = (
             _confirmed_song_end_ms(accepted) if sections_source == "confirmed_analysis" else None
         )
-        selections, density_notes = split_selections_for_density(
-            selections,
-            bpm=density_bpm,
-            song_end_ms=density_end_ms,
-        )
-        songconfirm_fields["cue_density"] = {
-            "cue_count": len(selections),
-            "section_count": len(sections),
-            "bpm": density_bpm,
-            "bpm_source": getattr(getattr(confirmed, "bpm", None), "source", None),
-            "song_end_ms": density_end_ms,
-            "notes": list(density_notes),
-        }
-        # 카드 t441, SPEC-LDDESIGN-001 REQ-003 — 경로 A(채팅 연출 인터뷰)가 이
-        # 세션에서 이미 끝났으면(Q2 팔레트 답 포함) 경로 A 와 **같은 함수**
-        # (`server.design.section_palette._section_palette_choice`)로 구간별
-        # 주색을 정해 이미 고른 룩의 ColorRGB_R/G/B 만 덮는다. 기록이 없거나
-        # Q2 답이 없으면(`interview_records` 생략, 대화 전용 사용 포함) 오늘과
-        # 바이트 동일 — 색을 지어내지 않는다(`_override_songcue_main_color`
-        # 독스트링). 룩 선택·마디 분할이 이미 끝난 자리, `build_songcue_bundle`
-        # 호출 **전**인 이유도 그 독스트링에 적는다(LDACCENT 색 스냅·LDRETURN
-        # 복귀가 이 덮어쓴 색을 "그 구간의 색"으로 읽어야 한다).
         interview_records_current = (
             interview_records.current if interview_records is not None else None
         )
-        selections, director_color_notes = _override_songcue_main_color(
-            selections, records=interview_records_current
-        )
-        if director_color_notes:
-            songconfirm_fields["director_color_override_notes"] = list(director_color_notes)
-        # 카드 t439 — SPEC-LDDESIGN-001 M6 §④b. 컨셉 v2 파이프라인(13게이트·
-        # MIB·린트/에너지)을 이 곡에 대해 돌려 부가 정보로 붙인다. ADDITIVE 다
-        # — 아래 사다리 경로(`build_songcue_bundle`)가 오늘 내는 콘솔 명령은
-        # 이 값과 무관하게 그대로 나간다. `songconfirm_fields` 에 실어 두면
-        # 성공/무명령 두 반환 갈래 모두에 자동으로 실린다(둘 다
-        # `songconfirm_fields` 를 펼친다). 실패해도(`build_concept_report_
-        # from_songcue_sections` 는 예외를 밖으로 안 낸다, `server/concept/
-        # session_bridge.py` 독스트링) `available: False` 로 계속 진행된다.
-        songconfirm_fields["concept_report"] = build_concept_report_from_songcue_sections(
-            song_title,
-            density_bpm,
-            [
-                (f"{item.section.label} {item.section.instance}".strip(), item.section.start_ms)
-                for item in selections
-            ],
-            palettes=_songcue_concept_palettes(selections, records=interview_records_current),
-        )
+        records = tuple(interview_records_current or ())
         missing = [section for section in SONGCUE_RIG_SECTIONS if section not in rig_paths]
         if missing:
             return _error_result(
@@ -3495,18 +3313,130 @@ def build_toolset(
                 )
             )
         try:
-            bundle = build_songcue_bundle(
-                song_title,
-                selections,
-                sequences_section=rig_sections["sequences"],  # type: ignore[arg-type]
-                groups_section=rig_sections["groups"],  # type: ignore[arg-type]
-                # 카드 t428 — 절정 지속시간 상한(REQ-LDCLIMAX-006~009)이 실기에서
-                # 발화하려면 이 자리에서 곡 BPM 을 실어야 한다. `density_bpm` 은
-                # 위 마디 분할에 이미 쓰고 있던 같은 값이다(확정 기록이 채택한
-                # BPM, 없으면 None — 상한도 마디 분할과 같은 "안 재고는 안 쓴다"
-                # 규율을 탄다).
-                bpm=density_bpm,
+            sequence_number = select_sequence_number(rig_sections["sequences"])  # type: ignore[arg-type]
+        except SequenceNumberError as error:
+            return _error_result(call, f"song cue list cannot be built: {error}")
+        # 기구 번호와 기종 능력 — 대화 길과 같은 판독기(`read_design_rig`). 못 읽으면
+        # 빈 리그를 짓지 않고 거절한다(기구 없이 만든 큐는 아무것도 안 켠다).
+        types_root = str(rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"]))
+        rig_read = read_design_rig(state_port, fixture_types_root=types_root)
+        fids = [int(entry["fid"]) for entry in rig_read.patch if isinstance(entry.get("fid"), int)]
+        if not fids:
+            rig_gap = rig_read.gap or "no fixtures"
+            if rig_read.detail:
+                rig_gap += f": {rig_read.detail}"
+            return _error_result(
+                call,
+                "song cue list cannot be built: "
+                f"리그 패치에서 기구 번호를 읽지 못했습니다 ({rig_gap})",
             )
+        rig = build_rig_profile(patch=list(rig_read.patch), groups={}, coords=[])
+        # 감독 결정 D2 — 포지션은 운영자가 준 프리셋 시작 번호가 있을 때만 켠다. 번호를
+        # 지어내지 않는다: 없으면 축을 끄고 그 사유를 회신에 적는다.
+        position_disabled_reason = (
+            ""
+            if preset_start is not None
+            else (
+                "업로드 길: 포지션 프리셋 시작 번호(preset_start)가 없어 포지션(무브) 축을 "
+                "껐습니다 — 번호를 주면 대화 길처럼 라벨로 슬롯을 찾습니다"
+            )
+        )
+        groups_section = rig_sections["groups"]
+        group_entries = [
+            {"group_name": child.get("name"), "group_no": child.get("i", child.get("no"))}
+            for child in (groups_section.get("objects") or groups_section.get("children") or ())
+            if isinstance(child, dict)
+        ]
+        blinder_group_no = _blinder_group_no(group_entries)
+        timing_request = TimingPlan.timecode(timecode_number)
+        confirmed_default = sections_source == "confirmed_analysis" and section_names is None
+        planned_sections = upload_plan_sections(
+            sections,
+            explicit_dynamics=explicit_dynamics,
+            confirmed_default=confirmed_default,
+        )
+        plan, density_notes, palette_source = build_upload_song_plan(
+            song_title=song_title,
+            sections=planned_sections,
+            bpm=density_bpm,
+            genre=genre,
+            records=records,
+            rig=rig,
+            sequence_no=sequence_number,
+            timing=timing_request,
+            position_disabled_reason=position_disabled_reason,
+            blinder_group_no=blinder_group_no,
+            song_end_ms=density_end_ms,
+            # 옛 업로드 길과 같은 시퀀스 이름 — 콘솔 라벨과 타임코드 이름이 이 값을 쓴다.
+            sequence_name=_ascii_label(song_title, fallback=f"Song {sequence_number}"),
+        )
+        songconfirm_fields["cue_density"] = {
+            "cue_count": len(plan.sections),
+            "section_count": len(sections),
+            "bpm": density_bpm,
+            "bpm_source": getattr(getattr(confirmed, "bpm", None), "source", None),
+            "song_end_ms": density_end_ms,
+            "notes": list(density_notes),
+        }
+        songconfirm_fields["palette"] = {
+            "source": palette_source.kind,
+            "label": palette_source.label,
+            "color_tendency": palette_source.color_tendency,
+            "genre_in_table": palette_source.genre_in_table,
+        }
+        # 카드 t439 — 컨셉 v2 파이프라인 부가 정보. 대화 길과 같은 입구(계획 기준)로 돌린다.
+        songconfirm_fields["concept_report"] = build_concept_report(
+            plan, color_usage=str(_interview_record_value(records, Q2B_COLOR_USAGE, "modulate"))
+        )
+        composition = compose_song_cue_bundle(plan)
+        if composition.bundle is None:
+            return _error_result(
+                call,
+                "song cue list cannot be built: 계획에 미해결 입력이 있습니다 — "
+                + "; ".join(req.prompt for req in composition.requery_requirements),
+            )
+        bundle = composition.bundle
+        # 콘솔 슬롯 판독 — 대화 길과 같은 판독기(`server.design.console_slots`).
+        pool_root = str(rig_paths.get("preset_pools", "DataPool/PresetPools"))
+        query = _state_port_query(state_port)
+
+        def resolve_pool_no(target_name: str, *, probe_id: str) -> int | None:
+            return resolve_named_pool_no(query, pool_root, target_name, probe_id=probe_id)
+
+        def read_pool(path: str, *, probe_id: str) -> dict[int, str | None] | None:
+            return paged_pool_children(query, path, probe_id=probe_id)
+
+        needed_positions = {
+            cue.position.stored for cue in bundle.cues if cue.position.stored is not None
+        }
+        try:
+            position_slots = (
+                resolve_position_preset_labels(
+                    read_pool(
+                        f"{pool_root}/{POSITION_PRESET_POOL}",
+                        probe_id="songcue-position-pool-read",
+                    ),
+                    needed_positions,
+                    start=int(preset_start or 0),
+                    span=len(BASIC_POSITION_SEQUENCE),
+                    pool_no=POSITION_PRESET_POOL,
+                )
+                if needed_positions
+                else {}
+            )
+        except SpatialPointingError as error:
+            return _error_result(call, f"song cue list cannot be built: {error}")
+        phaser_slots: dict[str, tuple[int, int]] = {}
+        phaser_failures: dict[str, str] = {}
+        for label in sorted(
+            {label for cue in bundle.cues if (label := _phaser_label_for_cue(cue)) is not None}
+        ):
+            slot = phaser_slot_by_label(resolve_pool_no, read_pool, pool_root, label)
+            if slot is None:
+                phaser_failures[label] = f"'{label}' 페이저 프리셋을 콘솔에서 찾지 못했습니다"
+            else:
+                phaser_slots[label] = slot
+        try:
             occupied, axes = timecode_slot_verdict(
                 state_port,
                 rig_paths.get("timecodes", TIMECODE_POOL_PATH),
@@ -3521,46 +3451,54 @@ def build_toolset(
                     "Pass a free 'timecode_number' or ask the operator which "
                     "one to replace.",
                 )
-            timing = build_songcue_timing(bundle, timecode_number=timecode_number, axes=axes)
-        except (SequenceNumberError, SongCueBundleError, ValueError) as error:
-            return _error_result(call, f"song cue list cannot be built: {error}")
-        # 카드 t358 — 곡 사이 재사용을 **의도가 아니라 결과로** 잰다. 선택 단계의
-        # `reuse_reason` 은 「그 세기에 남은 새 룩이 없었다」를 말하고, `reused_look_ids`
-        # 는 저장될 큐의 룩을 앞 곡 기억과 실제로 대조한 것이다. 둘을 나란히 두는 이유는
-        # 재사용으로 내려앉는 길이 둘이기 때문이다: 풀 고갈(선택 단계), 그리고 새 룩이
-        # 리그에 안 묶이거나 밀도 회전이 쓴 룩을 앞으로 데려온 경우(조립 단계). 앞쪽만
-        # 보고하면 뒤쪽은 조용히 지나간다.
-        remembered_before = set(history_before)
-        stored_look_ids = tuple(
-            dict.fromkeys(
-                section.selection.look.look_id
-                for section in bundle.stored_sections
-                if section.selection.look is not None
+            cue_commands, color_failures = reviewed_song_commands(
+                bundle,
+                sequence_no=sequence_number,
+                fids=fids,
+                timing=TimingPlan.manual_go(),
+                position_slots=position_slots,
+                phaser_slots=phaser_slots,
+                white_presets=None,
             )
-        )
-        cross_song_looks: dict[str, object] = {
-            "memory_wired": song_look_memory is not None,
-            "history_before": list(history_before),
-            "stored_look_ids": list(stored_look_ids),
-            "reused_look_ids": [
-                look_id for look_id in stored_look_ids if look_id in remembered_before
+            # 옛 업로드 길과 같은 규칙 — 저장하는 첫 큐 바로 뒤에 시퀀스 이름을 한 번
+            # 붙인다(``songcue._flatten_commands``). 대화 길 명령 생성기는 이 줄을 내지
+            # 않으므로 업로드 길이 스스로 끼운다 — 곡 이름이 콘솔 시퀀스에 남는다.
+            sequence_label = plan.sequence_name
+            store_prefix = f"Store Sequence {sequence_number} Cue "
+            store_at = next(
+                (i for i, line in enumerate(cue_commands) if line.startswith(store_prefix)),
+                None,
+            )
+            if store_at is not None:
+                cue_commands = (
+                    *cue_commands[: store_at + 1],
+                    f"Label Sequence {sequence_number} '{sequence_label}'",
+                    *cue_commands[store_at + 1 :],
+                )
+            timing = reviewed_song_timing(bundle, sequence_number, timing_request, axes=axes)
+        except (SpatialPointingError, ValueError) as error:
+            return _error_result(call, f"song cue list cannot be built: {error}")
+        notes = [
+            palette_source.notice(),
+            position_disabled_reason,
+            *density_notes,
+            *(f"색 미반영 큐 {cue}: {reason}" for cue, reason in color_failures.items()),
+            *(f"페이저 미반영: {reason}" for reason in phaser_failures.values()),
+            *(f"절정 연출 미반영: {note}" for note in bundle.arc_notes),
+        ]
+        timing_commands = () if timing is None else timing.commands
+        timing_payload = {
+            "commands": list(timing_commands),
+            "timecode_commands": [] if timing is None else list(timing.timecode_commands),
+            "auto_advance_commands": [] if timing is None else list(timing.auto_advance_commands),
+            "skipped_axes": []
+            if timing is None
+            else [
+                {"axis": skipped.axis, "reason": skipped.reason} for skipped in timing.skipped_axes
             ],
-            "pool_exhausted_sections": [
-                {
-                    "index": selection.section.index,
-                    "name": selection.section.name,
-                    "look_id": None if selection.look is None else selection.look.look_id,
-                    "reason": LOOK_POOL_EXHAUSTED,
-                }
-                for selection in selections
-                if selection.reuse_reason == LOOK_POOL_EXHAUSTED
-            ],
-            # 콘솔에 나간 뒤에만 채워진다 — 아래 실행 갈래에서 덮어쓴다.
-            "remembered": [],
         }
-        songconfirm_fields["cross_song_looks"] = cross_song_looks
-        if not bundle.commands:
-            report = build_songcue_report(bundle)
+        if not stored_cues(bundle):
+            report = build_upload_song_report(bundle, sequence=sequence_number, notes=notes)
             return ToolExecution(
                 result=ToolResult(
                     tool_call_id=call.id,
@@ -3569,7 +3507,7 @@ def build_toolset(
                         {
                             "executed": False,
                             "song_title": bundle.song_title,
-                            "sequence": bundle.sequence_number,
+                            "sequence": sequence_number,
                             "report": report.to_dict(),
                             "summary_ko": report.to_korean(),
                             "timing": {
@@ -3586,18 +3524,19 @@ def build_toolset(
                 ),
                 # 한 건도 저장되지 않은 갈래다. 명령이 0개라 명령 표도 비고,
                 # 여기서 말하지 않으면 화면에는 아무 일도 없었던 것으로 보인다.
-                operator_notice=report.to_operator_notice(),
+                operator_notice=report.to_operator_notice()
+                or "저장할 값이 있는 큐가 없어 콘솔에 0건 나갔습니다.",
             )
-        command_bundle = bundle.commands + timing.commands
+        command_bundle = (*cue_commands, *timing_commands)
         # SPEC-COPILOT-BULKGATE-001 — 곡 하나가 시퀀스 하나와 타임코드 슬롯
         # 하나를 통째로 만든다. 명령 텍스트 분류로는 이 묶음이 안 잡히므로
         # (`Store Sequence` 는 `blacklist.yaml` 에 없다) 호출자가 직접
         # 선언한다. 새 디스패치 경로가 아니라 오늘과 같은 `run_commands`
         # 재진입이며, 게이트·LiveLock·중복 제거·감사가 전부 그대로 붙는다.
-        cue_count = len(bundle.stored_sections)
+        cue_count = len(stored_cues(bundle))
         songcue_risk = BatchRisk(
             reason=(
-                f"쇼파일 쓰기 — Sequence {bundle.sequence_number} 에 큐 {cue_count}건을 저장하고 "
+                f"쇼파일 쓰기 — Sequence {sequence_number} 에 큐 {cue_count}건을 저장하고 "
                 f"Timecode {timecode_number} 슬롯을 씁니다 "
                 "(이 앱에는 시퀀스·타임코드 복원 경로가 없습니다)."
             ),
@@ -3612,35 +3551,27 @@ def build_toolset(
         is_error = execution.result.is_error
         if payload.get("gate_status") == _LOCKED:
             is_error = False
-        # 무대에 **실제로 나간** 룩만 기억한다. 게이트가 막았거나 감독이 거절한 회차는
-        # 콘솔에 0건이 나갔으므로(아래 `songcue_refusal`), 다음 곡이 피할 이유가 없다 —
-        # 안 나간 룩을 기억하면 팔레트만 조용히 좁아진다.
-        if song_look_memory is not None and not execution.result.is_error:
-            cross_song_looks["remembered"] = list(song_look_memory.remember(stored_look_ids))
         requery_payload = None
         if not execution.result.is_error:
             try:
                 requery_payload = state_port.query_state(
-                    f"{rig_paths['sequences']}/{bundle.sequence_number}"
+                    f"{rig_paths['sequences']}/{sequence_number}"
                 )
             except Exception as error:
                 payload["requery_error"] = str(error)
-        report = build_songcue_report(
-            bundle, execution.command_outcomes, requery_payload=requery_payload
+        report = build_upload_song_report(
+            bundle,
+            sequence=sequence_number,
+            outcomes=execution.command_outcomes,
+            requery_payload=requery_payload,
+            notes=notes,
         )
         payload["executed"] = not execution.result.is_error
         payload["song_title"] = bundle.song_title
-        payload["sequence"] = bundle.sequence_number
+        payload["sequence"] = sequence_number
         payload["report"] = report.to_dict()
         payload["summary_ko"] = report.to_korean()
-        payload["timing"] = {
-            "commands": list(timing.commands),
-            "timecode_commands": list(timing.timecode_commands),
-            "auto_advance_commands": list(timing.auto_advance_commands),
-            "skipped_axes": [
-                {"axis": skipped.axis, "reason": skipped.reason} for skipped in timing.skipped_axes
-            ],
-        }
+        payload["timing"] = timing_payload
         payload.update(songconfirm_fields)
         # SPEC-COPILOT-BULKGATE-001 REQ-009 — 감독이 거절하면 「콘솔에 0건
         # 나갔다」를 문면으로 말하고 **부분 반영을 주장하지 않는다**. 확정
@@ -3649,7 +3580,7 @@ def build_toolset(
         if payload.get("gate_status") == "rejected":
             songcue_refusal = (
                 "감독이 승인을 거절해 콘솔에 0건 나갔습니다 — "
-                f"Sequence {bundle.sequence_number} 도 Timecode {timecode_number} 도 "
+                f"Sequence {sequence_number} 도 Timecode {timecode_number} 도 "
                 "바뀌지 않았고, 확정 구간과 타임라인은 그대로 남아 있습니다."
             )
             payload["console_commands_sent"] = 0
@@ -3658,7 +3589,7 @@ def build_toolset(
         # 무장 상태로 만들고 해제 경로가 실측 1회뿐이라, 앱은 발화하지 않고
         # 넘긴다(REQ-MUSICSYNC-020). 이 자리는 `run_commands` 로 간 번들
         # (`command_bundle`) 밖이며, 인계분은 그 번들에 섞이지 않는다.
-        if timing.timecode_commands:
+        if timing is not None and timing.timecode_commands:
             payload["timing"]["operator_handoff"] = {
                 "commands": list(operator_handoff_commands(timecode_number)),
                 "note": (
@@ -3666,16 +3597,6 @@ def build_toolset(
                     "끝나면 앱이 되읽어 확인합니다."
                 ),
             }
-        # 카드 t358 — 재사용으로 내려앉은 것을 **감독이 읽는 자리**에도 적는다. 페이로드
-        # 에만 적으면 모델이 옮겨 말해 주기를 기대하는 것이고, 그 기대는 화면에서
-        # 「조용한 재사용」과 구별되지 않는다. 재사용이 0건이면 한 글자도 안 붙는다
-        # (오늘의 문면과 바이트 동일) — 침묵이 결함인 것은 되풀이가 있을 때뿐이다.
-        reuse_notice = ""
-        reused_ids = cross_song_looks["reused_look_ids"]
-        if isinstance(reused_ids, list) and reused_ids:
-            reuse_notice = "앞 곡이 쓴 룩을 이 곡이 다시 썼습니다 — " + " · ".join(reused_ids) + "."
-            if cross_song_looks["pool_exhausted_sections"]:
-                reuse_notice += " 그 세기에 아직 안 쓴 룩이 남아 있지 않습니다."
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -3684,11 +3605,7 @@ def build_toolset(
                 is_error=is_error,
             ),
             command_outcomes=execution.command_outcomes,
-            # 카드 t277 — 명령은 다 실행됐는데 구간 하나가 큐를 못 받은 회차가
-            # 여기다. 「요청한 명령을 모두 실행했습니다」는 참이고, 그래서 더
-            # 위험하다: 보내지 않은 명령은 어느 표에도 안 나타난다.
-            operator_notice=songcue_refusal
-            or " ".join(part for part in (report.to_operator_notice(), reuse_notice) if part),
+            operator_notice=songcue_refusal or report.to_operator_notice(),
         )
 
     # -- precheck_patch (REQ-PRECHK-018 — the pre-show rig check) --------------
@@ -10928,11 +10845,14 @@ def build_toolset(
             description=(
                 "Prepare one song-structure cue list on THIS rig. Provide the song "
                 "title, genre, section names and section start times; the tool reads "
-                "the current groups and sequences itself, maps sections through the "
-                "look library, stores one Sequence with one Cue per section, adds the "
-                "measured Timecode and TrigType/TrigTime commands, and sends the "
-                "whole bundle through the same run_commands path as any direct "
-                "console execution. Do not pass rig numbers or copied rig sections."
+                "the current groups, sequences and patch itself, designs the cues with "
+                "the same composer the director-interview path uses (the finished "
+                "interview's palette when there is one, otherwise the interview's "
+                "first recommended palette for the genre — the reply names which), "
+                "stores one Sequence, adds the measured Timecode and TrigType/TrigTime "
+                "commands, and sends the whole bundle through the same run_commands "
+                "path as any direct console execution. Do not pass rig numbers or "
+                "copied rig sections."
             ),
             parameters={
                 "type": "object",
@@ -11017,6 +10937,17 @@ def build_toolset(
                         "description": (
                             "Optional map from zero-based section index to explicit dynamics "
                             "for unknown section names."
+                        ),
+                    },
+                    "preset_start": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": (
+                            "Optional first slot of the operator's ten basic position "
+                            "presets (Position pool). Pass it only when the operator named "
+                            "it; the tool then finds each position by its label near that "
+                            "slot. Omit it and the cues carry no position moves — the reply "
+                            "says so. Never guess this number."
                         ),
                     },
                 },
@@ -13394,75 +13325,3 @@ def build_toolset(
         "plan_override_look": plan_override_look,
     }
     return ToolRegistry(definitions, handlers)
-
-
-# 카드 t444 — 아래 두 함수가 파일 끝에 있는 이유: `test_songcue_bundle.py`
-# 의 헝크 재고 가드(`_TOOLS_EXPECTED_HUNK_OLD_STARTS`)는 기준 커밋과의
-# `--unified=0` diff 시작점을 센다. 같은 두 함수를 `_override_songcue_main_color`
-# 곁(2300번대)에 끼우면, 내용은 한 줄도 안 바뀐 `run_commands` 가 diff 정렬상
-# "지웠다 다시 넣은 것"으로 보여 헝크가 79 -> 112 로 늘고 보호 구간
-# (524..569)과 겹친다(`.moai/reports/t444/verdict.md` 헝크 절). 파일 끝에 두면
-# 79 -> 80, 겹침 0 이다. 같은 이유로 `_override_songcue_main_color` 본문은
-# 손대지 않았다 — 감독 주색 결정이 두 곳에 있고, 둘이 같은 답을 내는지는
-# `test_concept_color_input_t444.py` 의 교차 대조 시험이 잡는다.
-def _songcue_director_primaries(
-    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
-) -> tuple[str | None, ...] | None:
-    """구간마다 경로 A 와 같은 함수(``_section_palette_choice``)가 고른 감독
-    주색 이름. 기록이 없거나 Q2(팔레트) 답이 없으면 ``None`` — 색을 정할
-    근거가 없다(카드 t441 규율). :func:`_override_songcue_main_color` 본문의
-    결정과 같은 호출·같은 인자다(위 주석 — 두 곳이 같은 답을 내는지는 시험이
-    대조한다)."""
-    if not records:
-        return None
-    palette_answer = _interview_record_value(records, Q2_PALETTE, None)
-    if palette_answer is None:
-        return None
-    palette_value = _palette_value_tokens(palette_answer)
-    color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
-    profile = MusicProfile(palette=palette_value)
-    primaries: list[str | None] = []
-    for selection, (role, occurrence) in zip(
-        selections, _songcue_role_occurrences(selections), strict=True
-    ):
-        colors, _source, _weight = _section_palette_choice(
-            PositionSheetSection(
-                name=selection.section.label or selection.section.name, start_ms=0, mood=""
-            ),
-            role=role,
-            profile=profile,
-            color_tendency="white",
-            palette_mode="palette",
-            concept_colors=(),
-            occurrence=occurrence,
-            color_usage=str(color_usage),
-        )
-        primaries.append(colors[0] if colors else None)
-    return tuple(primaries)
-
-
-def _songcue_concept_palettes(
-    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
-) -> tuple[tuple[str, ...], ...] | None:
-    """카드 t444 — 컨셉 리포트에 실을 구간별 색. 감독 주색 덮어쓰기가
-    **실제로 적용되는** 구간(룩이 있고, 색 이름이 표준 10색이고, 룩이
-    ``ColorRGB_R/G/B`` 를 싣는다)만 그 주색 한 개를 싣고, 나머지는 빈
-    튜플이다. 이 경로는 보조색을 내지 않으므로 둘째 색을 싣지 않는다 —
-    룩 고유색은 RGB 값뿐이라 색 이름으로 옮기지 않는다(지어내지 않는다).
-    감독 기록이 없으면 ``None``(입력에 색 없음)."""
-    primaries = _songcue_director_primaries(selections, records=records)
-    if primaries is None:
-        return None
-    palettes: list[tuple[str, ...]] = []
-    for selection, primary in zip(selections, primaries, strict=True):
-        applied = (
-            selection.look is not None
-            and primary is not None
-            and _COLOR_NAMES.resolve_color_name(primary) is not None
-            and any(
-                value.name in ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
-                for value in selection.look.attributes
-            )
-        )
-        palettes.append((primary,) if applied and primary is not None else ())
-    return tuple(palettes)

@@ -1,0 +1,5 @@
+hunks: 82 -> 83
+new starts: [620, 705, 1081]
+gone starts: [621, 704]
+protected overlaps: 1 [(237, 0)]
+sibling overlaps: 0 []

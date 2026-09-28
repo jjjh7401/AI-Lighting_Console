@@ -13,12 +13,15 @@ from server.orchestrator.tools import TOOL_NAMES, build_toolset, timecode_slot_v
 from server.safety.gate import SafetyGate
 from server.safety.lock import LiveLock
 from server.tests.test_looks_tool import _RecordingGate, _RecordingPort
+from server.tests.upload_console_fixture import UploadConsole
 
 _TOOL = "prepare_songcue"
 _TOOLS_MODULE = Path("server/orchestrator/tools.py")
 _SPEC_MODULES = (
     Path("server/looks/songcue.py"),
-    Path("server/looks/songcue_report.py"),
+    # 카드 t480 D3 — 룩 라이브러리 보고서(``songcue_report.py``)가 은퇴하고 업로드 길
+    # 보고는 이 모듈이 한다. 실행 경로를 안 건드린다는 같은 검사를 받는다.
+    Path("server/design/upload_song_report.py"),
 )
 _GROUPS_PATH = "DataPool/Groups"
 _SEQUENCES_PATH = "DataPool/Sequences"
@@ -39,15 +42,29 @@ _FULL_GROUPS = (
 
 
 class _SongCueStatePort:
+    """시험이 짠 그룹·시퀀스·타임코드 트리를 답하고, 그 밖의 경로(리그 패치·기종·
+    프리셋 풀)는 카드 t480 공용 가짜 콘솔에 넘긴다 — 업로드 길이 조립기로 합쳐지면서
+    기구 번호와 라벨 슬롯을 읽게 됐기 때문이다. 트리에 없는 경로는 두 대역 모두
+    ``LookupError`` 다(실제 게이트 포트와 같은 규율)."""
+
     def __init__(self, tree: dict[str, dict]) -> None:
         self._tree = tree
+        self._rig = UploadConsole()
         self.queried: list[str] = []
 
-    def query_state(self, path: str) -> dict:
+    def query_state(self, path: str, *, offset: int = 0) -> dict:
         self.queried.append(path)
-        if path not in self._tree:
-            raise LookupError(f"unknown object path: {path}")
-        return self._tree[path]
+        if path in self._tree:
+            return self._tree[path]
+        if path.startswith(("Patch/", "DataPool/PresetPools")):
+            return self._rig.query_state(path, offset=offset)
+        raise LookupError(f"unknown object path: {path}")
+
+    def query_property(self, path: str, name: str) -> dict:
+        return self._rig.query_property(path, name)
+
+    def query_properties(self, path: str, property_names) -> dict:
+        return self._rig.query_properties(path, property_names)
 
 
 def _registry(*, port=None, state=None, gate=None, library=None, rig_paths=None):
@@ -212,19 +229,27 @@ class TestIsErrorContract:
         assert payload["reason"] == "explicit_dynamics_required"
         assert payload["unknown_sections"] == [{"index": 1, "name": "Zzyzx"}]
 
-    def test_storing_nothing_is_an_answer_not_a_failure(self):
+    # 카드 t480 — 「역할 그룹이 안 묶여 한 건도 저장 못 함(role_unmapped)」 시험은
+    # 뺐다. 업로드 길이 조립기로 합쳐지면서 큐는 룩의 역할 그룹이 아니라 패치된 기구
+    # 번호에 저장된다(감독 결정 D1, 2026-09-28) — 그 갈래가 생기는 입력이 없다.
+    # 기구 번호를 못 읽는 리그는 이제 「답」이 아니라 거절이다
+    # (``test_an_unreadable_patch_is_refused_before_any_write``).
+
+    def test_an_unreadable_patch_is_refused_before_any_write(self):
         port = _RecordingPort()
-        library = _library(_look("chorus", dynamics=4, roles=("없는역할",)))
+        tree = _tree()
 
-        execution, payload = _call(
-            _registry(port=port, library=library),
-            sections=({"name": "Chorus", "start": "0:10"},),
-        )
+        class _NoPatch(_SongCueStatePort):
+            def query_state(self, path: str, *, offset: int = 0) -> dict:
+                if path.startswith("Patch/"):
+                    raise LookupError("patch unreadable")
+                return super().query_state(path, offset=offset)
 
-        assert execution.result.is_error is False
-        assert payload["executed"] is False
+        execution, payload = _call(_registry(port=port, state=_NoPatch(tree)))
+
+        assert execution.result.is_error is True
+        assert "기구 번호" in payload["error"]
         assert port.executed == []
-        assert payload["report"]["sections"][0]["reason"] == "role_unmapped"
 
     def test_unavailable_rig_section_returns_before_bundle_construction(self):
         class _Dead:
@@ -281,10 +306,10 @@ class TestPayload:
         _execution, payload = _call(_registry())
         command_lines = [entry["command"] for entry in payload["commands"]]
 
-        assert payload["report"]["sections"]
+        assert payload["report"]["generated_cues"]
         assert payload["report"]["property_unobserved"]
         assert payload["report"]["requery"]["matched"] is True
-        assert "섹션" in payload["summary_ko"]
+        assert "큐" in payload["summary_ko"]
         assert any(command.startswith("Store Timecode 7") for command in command_lines)
         assert any("Property 'TrigType' 'Time'" in command for command in command_lines)
 

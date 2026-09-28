@@ -33,6 +33,7 @@ from server.design.energy import EFFECT_AXIS_CAPABILITY
 from server.design.profile import MusicProfile
 from server.design.rig import build_rig_profile
 from server.design.song_cue_composer import compose_song_cue_bundle
+from server.design.song_cue_render import _song_color_value_lines
 from server.design.song_plan import (
     AccentDecision,
     ApprovalState,
@@ -50,7 +51,6 @@ from server.spatial.pointing import BASIC_POSITION_SEQUENCE
 from server.web.session import (
     ChatSession,
     _color_failure_note,
-    _song_color_value_lines,
 )
 
 _FIDS = (1, 2, 3, 4)
@@ -249,7 +249,7 @@ class TestTheFabricatedControl:
         # (기본값이라도) 대역도 받아야 한다. 카드 t453 — 네 번째 인자
         # (white_presets)도 위치 인자로 넘어온다.
         monkeypatch.setattr(
-            "server.web.session._song_color_value_lines",
+            "server.design.song_cue_render._song_color_value_lines",
             lambda cue, fids, w_fids=frozenset(), white_presets=None: ((), None),
         )
         after = _color_lines(_commands(composition)[0])

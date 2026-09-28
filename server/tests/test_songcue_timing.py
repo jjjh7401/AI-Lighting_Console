@@ -1,23 +1,25 @@
 from __future__ import annotations
 
-import inspect
 import re
 
 import pytest
 
-from server.looks.schema import AttributeValue, Look
 from server.looks.songcue import (
     AUTO_ADVANCE_DESCOPE,
     TIMECODE_DESCOPE,
+    SongCueBundle,
     SongCueLookSelection,
+    SongCueSectionBundle,
     SongCueTimingAxes,
-    build_songcue_bundle,
     build_songcue_timing,
     parse_sections,
-    plan_prepare_songcue_timing,
 )
-from server.tests.busking_fixtures import FULL_RIG
-from server.tests.test_looks_instantiate import _groups
+
+# 카드 t480 D3 — 룩 라이브러리 조립기(``build_songcue_bundle``)가 은퇴했다. 이 파일이
+# 지키는 것은 **타이밍 명령 생성**(``build_songcue_timing``, 대화 길·업로드 길이 함께
+# 쓴다)이므로 시험 재료를 조립기 대신 손으로 만든 번들로 바꿨다(``_bundle``). 은퇴한
+# 두 부분 — 「조립기 번들 혼자서는 타이밍이 없다」와 ``plan_prepare_songcue_timing``
+# (생산 호출처 0) — 의 시험은 뺐다.
 
 _TIMECODE_COMMANDS = (
     re.compile(r"^Store Timecode \d+$"),
@@ -30,25 +32,8 @@ _TRIG_TIME_RE = re.compile(
 )
 
 
-class TestBundleAloneCarriesNoTiming:
-    """카드 t380 — 현장 스크립트가 반복한 그 착시를 회귀로 고정한다.
-
-    `reports/onsite-round-20260912/{diag,real_song_cues}.py` 는 둘 다
-    `build_songcue_bundle(...)` 만 부르고 `build_songcue_timing` 은 부르지
-    않았다. 그 결과 발사된 90줄에 `Timecode`/`TrigTime`/`Follow` 가 0건이었고,
-    이것이 "곡이 리듬에 안 맞는다" 관측의 진짜 원인이었다 — 자동 진행 기능이
-    없어서가 아니라, 그 기능을 켜는 별도 호출을 진단 스크립트가 하지 않아서다.
-
-    `build_songcue_bundle` 혼자서는 타이밍 축을 절대 안 낸다는 것을,
-    그리고 `build_songcue_timing` 과 합치면 저장된 큐마다 정확히 한 쌍씩
-    나온다는 것을 여기서 기계로 고정한다 — 다음에 같은 착시가 재발하지
-    않도록.
-    """
-
-    def test_bundle_commands_alone_have_zero_sync_lines(self):
-        bundle = _bundle()
-
-        assert not _commands_matching(bundle.commands, r"Timecode|TrigTime|TrigType|Follow")
+class TestTimingPairsPerStoredCue:
+    """카드 t380 — ``build_songcue_timing`` 은 저장된 큐마다 정확히 한 쌍을 낸다."""
 
     def test_combining_with_build_songcue_timing_yields_one_pair_per_stored_cue(self):
         bundle = _bundle()
@@ -137,58 +122,6 @@ def test_disabled_timecode_axis_keeps_auto_advance_go_independent():
     assert _skip_axes(plan) == {TIMECODE_DESCOPE}
 
 
-def test_prepare_songcue_timing_plan_preserves_existing_command_formation():
-    bundle = _bundle()
-    request = {
-        "song_title": "테스트 곡",
-        "genre": "록",
-        "timecode_number": 7,
-        "sections": [{"name": "Chorus", "start": "0:10"}],
-    }
-
-    plan = plan_prepare_songcue_timing(bundle, request)
-
-    assert plan == build_songcue_timing(bundle, timecode_number=7)
-    assert plan.timecode_commands == (
-        "Store Timecode 7",
-        f"Set Timecode 7 Property 'Name' '{bundle.sequence_name} Timecode'",
-        f"Assign Sequence {bundle.sequence_number} At Timecode 7",
-    )
-    assert plan.auto_advance_commands == (
-        f"Set Cue 1 Sequence {bundle.sequence_number} Property 'TrigType' 'Time'",
-        f"Set Cue 1 Sequence {bundle.sequence_number} Property 'TrigTime' 10",
-        f"Set Cue 2 Sequence {bundle.sequence_number} Property 'TrigType' 'Time'",
-        f"Set Cue 2 Sequence {bundle.sequence_number} Property 'TrigTime' 14",
-    )
-
-
-@pytest.mark.parametrize(
-    "request_payload",
-    (
-        {},
-        {"timecode": 7},
-        {"timecode_number": 0},
-        {"timecode_number": True},
-        {"timecode_number": "7"},
-        {"timecode_number": 7.0},
-    ),
-)
-def test_prepare_songcue_timing_plan_rejects_non_prepare_songcue_timecode_grammar(
-    request_payload,
-):
-    with pytest.raises(
-        ValueError,
-        match=re.escape("'timecode_number' must be a positive integer"),
-    ):
-        plan_prepare_songcue_timing(_bundle(), request_payload)
-
-
-def test_prepare_songcue_timing_plan_has_no_console_io_surface():
-    parameters = set(inspect.signature(plan_prepare_songcue_timing).parameters)
-
-    assert parameters == {"bundle", "request", "axes"}
-
-
 @pytest.mark.skip(reason="ASSUMPTION-20 is GO in M4; DESCOPE branch retained for a future rerun")
 def test_axis1_timecode_descope_branch_retains_required_reason():
     bundle = _bundle()
@@ -221,45 +154,32 @@ def test_axis2_auto_advance_descope_branch_retains_required_reason():
     )
 
 
-def _bundle():
+def _bundle() -> SongCueBundle:
+    """저장된 큐 둘(Chorus 0:10 · Drop 0:14)을 가진 번들 — 타이밍 함수가 읽는 것만 채운다.
+
+    예전에는 은퇴한 조립기로 만들었다(한국어 제목 → ``Song 3``, 빈 시퀀스 3). 타이밍 함수는
+    시퀀스 번호·이름과 **명령이 있는**(저장된) 구간의 시작 시각만 읽으므로 같은 값을
+    손으로 싣는다. 대화 길(``song_cue_render.reviewed_song_timing``)도 같은 방식으로 번들을
+    짓는다.
+    """
     sections = parse_sections((("Chorus", "0:10"), ("Drop", "0:14")))
-    selections = tuple(
-        SongCueLookSelection(
+    stored = tuple(
+        SongCueSectionBundle(
             section=section,
-            requested_dynamics=(look.dynamics,),
-            look=look,
+            cue_number=number,
+            cue_name=section.name,
+            selection=SongCueLookSelection(section=section, requested_dynamics=(4,)),
+            commands=("stored",),
         )
-        for section, look in zip(
-            sections,
-            (_look("chorus", dynamics=4, value=70), _look("drop", dynamics=5, value=90)),
-            strict=True,
-        )
+        for number, section in enumerate(sections, start=1)
     )
-    return build_songcue_bundle(
-        "테스트 곡",
-        selections,
-        sequences_section=_sequences(1, 2, 4),
-        groups_section=_groups(*FULL_RIG),
+    return SongCueBundle(
+        song_title="테스트 곡",
+        sequence_number=3,
+        sequence_name="Song 3",
+        commands=("stored",),
+        sections=stored,
     )
-
-
-def _look(look_id: str, *, dynamics: int, value: float) -> Look:
-    return Look(
-        look_id=look_id,
-        display_name=look_id,
-        genre="rock",
-        dynamics=dynamics,
-        roles=("백라이트",),
-        attributes=(AttributeValue("Dimmer", value),),
-    )
-
-
-def _sequences(*numbers: int) -> dict[str, object]:
-    return {
-        "objects": [{"no": number, "name": f"Sequence {number}"} for number in numbers],
-        "truncated": False,
-        "total": len(numbers),
-    }
 
 
 def _commands_matching(commands: tuple[str, ...], pattern: str) -> list[str]:

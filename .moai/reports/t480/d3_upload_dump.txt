@@ -1,0 +1,1231 @@
+## Ice cream genre=rock interview=False preset_start=None error=False lines=55 sha=0018745d5697375a
+   summary: 큐 7개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Ice cream'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 6 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 7 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Ice cream Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 17
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 27
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 37
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 47
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 58
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 68
+## Ice cream genre=rock interview=False preset_start=21 error=False lines=62 sha=4dd1704bf191e7ff
+   summary: 큐 7개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Ice cream'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 6 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 7 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Ice cream Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 17
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 27
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 37
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 47
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 58
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 68
+## Ice cream genre=rock interview=True preset_start=None error=False lines=55 sha=ed22c3db5a152cc0
+   summary: 큐 7개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Ice cream'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 6 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 7 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Ice cream Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 17
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 27
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 37
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 47
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 58
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 68
+## Ice cream genre=rock interview=True preset_start=21 error=False lines=62 sha=2de1503a31569a29
+   summary: 큐 7개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Ice cream'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 6 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 7 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Ice cream Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 17
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 27
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 37
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 47
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 58
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 68
+## Ice cream genre=edm interview=False preset_start=None error=False lines=48 sha=035b76e6c81b493b
+   summary: 큐 7개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Ice cream'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 6 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 7 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Ice cream Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 17
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 27
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 37
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 47
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 58
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 68
+## Ice cream genre=edm interview=False preset_start=21 error=False lines=55 sha=27d1545e88350ee4
+   summary: 큐 7개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Ice cream'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 6 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 7 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Ice cream Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 17
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 27
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 37
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 47
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 58
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 68
+## Ice cream genre=edm interview=True preset_start=None error=False lines=55 sha=ed22c3db5a152cc0
+   summary: 큐 7개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Ice cream'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 6 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 7 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Ice cream Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 17
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 27
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 37
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 47
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 58
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 68
+## Ice cream genre=edm interview=True preset_start=21 error=False lines=62 sha=2de1503a31569a29
+   summary: 큐 7개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Ice cream'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 3 'Bridge 1' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 20
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.12
+Store Sequence 3 Cue 5 'Bridge 2' CueFade 2
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 6 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 7 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Ice cream Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 17
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 27
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 37
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 47
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 58
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 68
+## Rain genre=rock interview=False preset_start=None error=False lines=90 sha=2339a2971f99bcb4
+   summary: 큐 12개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Rain'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 3 'Verse 2' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 6 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 7 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 8 'Chorus 4' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 9 'Chorus 5' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 10 'Verse 4' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 11 'Chorus 6' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 12 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Rain Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 20
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 33
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 49
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 66
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 79
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 106
+Set Cue 8 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 3 Property 'TrigTime' 123
+Set Cue 9 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 3 Property 'TrigTime' 138
+Set Cue 10 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 3 Property 'TrigTime' 166
+Set Cue 11 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 3 Property 'TrigTime' 179
+Set Cue 12 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 3 Property 'TrigTime' 209
+## Rain genre=rock interview=False preset_start=21 error=False lines=102 sha=d36b958b48a7b7c5
+   summary: 큐 12개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Rain'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 3 'Verse 2' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 6 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 7 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 8 'Chorus 4' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 9 'Chorus 5' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 10 'Verse 4' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 11 'Chorus 6' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 12 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Rain Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 20
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 33
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 49
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 66
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 79
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 106
+Set Cue 8 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 3 Property 'TrigTime' 123
+Set Cue 9 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 3 Property 'TrigTime' 138
+Set Cue 10 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 3 Property 'TrigTime' 166
+Set Cue 11 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 3 Property 'TrigTime' 179
+Set Cue 12 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 3 Property 'TrigTime' 209
+## Rain genre=rock interview=True preset_start=None error=False lines=90 sha=01d04d007305e884
+   summary: 큐 12개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Rain'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 3 'Verse 2' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 6 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 7 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 8 'Chorus 4' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 9 'Chorus 5' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 10 'Verse 4' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 11 'Chorus 6' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 12 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Rain Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 20
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 33
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 49
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 66
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 79
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 106
+Set Cue 8 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 3 Property 'TrigTime' 123
+Set Cue 9 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 3 Property 'TrigTime' 138
+Set Cue 10 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 3 Property 'TrigTime' 166
+Set Cue 11 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 3 Property 'TrigTime' 179
+Set Cue 12 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 3 Property 'TrigTime' 209
+## Rain genre=rock interview=True preset_start=21 error=False lines=102 sha=d0eec4380ca60077
+   summary: 큐 12개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Rain'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 3 'Verse 2' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 6 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 7 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 8 'Chorus 4' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 9 'Chorus 5' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 10 'Verse 4' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 11 'Chorus 6' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 12 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Rain Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 20
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 33
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 49
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 66
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 79
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 106
+Set Cue 8 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 3 Property 'TrigTime' 123
+Set Cue 9 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 3 Property 'TrigTime' 138
+Set Cue 10 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 3 Property 'TrigTime' 166
+Set Cue 11 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 3 Property 'TrigTime' 179
+Set Cue 12 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 3 Property 'TrigTime' 209
+## Rain genre=edm interview=False preset_start=None error=False lines=78 sha=d9cd90b974f1482e
+   summary: 큐 12개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Rain'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 3 'Verse 2' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 6 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 7 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 8 'Chorus 4' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 9 'Chorus 5' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 10 'Verse 4' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 11 'Chorus 6' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 12 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Rain Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 20
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 33
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 49
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 66
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 79
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 106
+Set Cue 8 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 3 Property 'TrigTime' 123
+Set Cue 9 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 3 Property 'TrigTime' 138
+Set Cue 10 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 3 Property 'TrigTime' 166
+Set Cue 11 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 3 Property 'TrigTime' 179
+Set Cue 12 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 3 Property 'TrigTime' 209
+## Rain genre=edm interview=False preset_start=21 error=False lines=90 sha=e17c3b17c1a26f64
+   summary: 큐 12개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Rain'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 3 'Verse 2' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 6 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 7 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 8 'Chorus 4' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 9 'Chorus 5' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 10 'Verse 4' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 11 'Chorus 6' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 12 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Rain Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 20
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 33
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 49
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 66
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 79
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 106
+Set Cue 8 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 3 Property 'TrigTime' 123
+Set Cue 9 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 3 Property 'TrigTime' 138
+Set Cue 10 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 3 Property 'TrigTime' 166
+Set Cue 11 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 3 Property 'TrigTime' 179
+Set Cue 12 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 3 Property 'TrigTime' 209
+## Rain genre=edm interview=True preset_start=None error=False lines=90 sha=01d04d007305e884
+   summary: 큐 12개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Rain'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 3 'Verse 2' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 6 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 7 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 8 'Chorus 4' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 9 'Chorus 5' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 10 'Verse 4' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 11 'Chorus 6' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 12 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Rain Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 20
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 33
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 49
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 66
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 79
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 106
+Set Cue 8 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 3 Property 'TrigTime' 123
+Set Cue 9 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 3 Property 'TrigTime' 138
+Set Cue 10 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 3 Property 'TrigTime' 166
+Set Cue 11 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 3 Property 'TrigTime' 179
+Set Cue 12 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 3 Property 'TrigTime' 209
+## Rain genre=edm interview=True preset_start=21 error=False lines=102 sha=d0eec4380ca60077
+   summary: 큐 12개 · 건너뜀 0개 · 미실행 0개 · 실패 0개
+ChangeDestination Root
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 50
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 3 Cue 1 'Intro' CueFade 2
+Label Sequence 3 'Rain'
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 70
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 3 'Verse 2' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 4 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 6 'Verse 3' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 7 'Chorus 3' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 8 'Chorus 4' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Store Sequence 3 Cue 9 'Chorus 5' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 25
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.11
+Store Sequence 3 Cue 10 'Verse 4' CueFade 1.5
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 4.15
+Group 17 ; Attribute 'Dimmer' At 80
+Store Sequence 3 Cue 11 'Chorus 6' CueFade 0.25
+ClearAll
+Fixture 101 + 102 + 103 + 104 ; At Preset 2.21
+Fixture 101 + 102 + 103 + 104 ; Attribute 'Dimmer' At 100
+Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 101 + 102 + 103 + 104 ; At Preset 21.20
+Group 17 ; Attribute 'Dimmer' At 0
+Store Sequence 3 Cue 12 'Finale' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Rain Timecode'
+Assign Sequence 3 At Timecode 7
+Set Cue 1 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 3 Property 'TrigTime' 0
+Set Cue 2 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 3 Property 'TrigTime' 20
+Set Cue 3 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 3 Property 'TrigTime' 33
+Set Cue 4 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 3 Property 'TrigTime' 49
+Set Cue 5 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 3 Property 'TrigTime' 66
+Set Cue 6 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 3 Property 'TrigTime' 79
+Set Cue 7 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 7 Sequence 3 Property 'TrigTime' 106
+Set Cue 8 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 8 Sequence 3 Property 'TrigTime' 123
+Set Cue 9 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 9 Sequence 3 Property 'TrigTime' 138
+Set Cue 10 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 10 Sequence 3 Property 'TrigTime' 166
+Set Cue 11 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 11 Sequence 3 Property 'TrigTime' 179
+Set Cue 12 Sequence 3 Property 'TrigType' 'Time'
+Set Cue 12 Sequence 3 Property 'TrigTime' 209
+TOTAL sha256=fb7ff09c9a812919742ec2facf2755e0ff7d37ade8db27db1e21ad9071dfe71b

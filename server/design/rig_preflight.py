@@ -62,7 +62,7 @@ from server.design.cue_sheet_apply import (
     plan_cue_console_apply,
     timeline_group_names,
 )
-from server.looks.songcue_report import ROLE_UNADDRESSED
+from server.looks.songcue import ROLE_UNADDRESSED
 
 __all__ = [
     "ROLE_UNADDRESSED",

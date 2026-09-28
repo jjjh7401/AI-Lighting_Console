@@ -19,11 +19,11 @@ section-palette computation (spec.md §2 D5, plan.md §C M2).
 from __future__ import annotations
 
 from server.design.profile import MusicProfile
+from server.design.section_palette import _section_palette_choice
+from server.design.song_cue_render import _section_palette_sizes
 from server.spatial.position_cuesheet import PositionSheetSection
 from server.web.session import (
     _arc_palette,
-    _section_palette_choice,
-    _section_palette_sizes,
     _split_sections_for_density,
 )
 

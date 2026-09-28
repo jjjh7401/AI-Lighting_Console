@@ -22,7 +22,8 @@ from .test_songcue_confirmed_default import (
     _TOOL,
     _AnalysisPort,
     _call,
-    _dimmer_values,
+    _cue_names,
+    _d_levels,
     _record,
     _registry,
 )
@@ -32,7 +33,7 @@ _VOCAB_NAMES = ["Intro", "Chorus", "Drop"]
 
 
 def _cue_labels(payload) -> list[str]:
-    return [section["name"] for section in payload["report"]["sections"]]
+    return _cue_names(payload)
 
 
 def _stored_cue_names(port) -> list[str]:
@@ -60,36 +61,38 @@ class TestOperatorNamesReachTheCueLabel:
         assert _cue_labels(payload) == ["Intro", "Verse", "Chorus"]
         assert _stored_cue_names(port) == ["Intro", "Verse", "Chorus"]
 
-    def test_omitting_the_argument_keeps_todays_neutral_names(self):
-        # 대조군 — 인자가 없으면 오늘과 바이트 동일하다(S<n>).
+    def test_omitting_the_argument_uses_the_chat_paths_role_names(self):
+        # 대조군 — 인자가 없으면 운영자 이름 대신 기본 이름이 선다. 카드 t480 이후
+        # 기본 이름은 대화 길과 같은 역할+회차(t391)다 — 두 길이 한 조립기를 쓴다.
         registry, port = _registry(song_analysis=_AnalysisPort(_record()))
         _execution, payload = _call(registry)
         assert payload["section_names_source"] == "default"
-        assert _cue_labels(payload) == ["S1", "S2", "S3"]
-        assert _stored_cue_names(port) == ["S1", "S2", "S3"]
+        assert _cue_labels(payload) == ["Intro", "Verse 1", "Finale"]
+        assert _stored_cue_names(port) == ["Intro", "Verse 1", "Finale"]
 
 
 class TestNamesNeverDecideDynamics:
     """이 카드의 핵심 — 이름은 dynamics 의 출처가 아니다.
 
-    ``_record()`` 의 채택 구간은 D1 / D3 / D5 이고 라이브러리는 dynamics 마다 Dimmer
-    값이 다른 룩 하나씩(``d1``=10 … ``d5``=50)이다. 이름을 어휘 낱말로 줘도 골라진
-    룩의 Dimmer 는 여전히 10 / 30 / 50 이어야 한다 — 이름이 dynamics 를 다시 매겼다면
-    ``Intro``(1,2) · ``Chorus``(4,5) · ``Drop``(4,5) 를 따라 값이 달라진다.
+    ``_record()`` 의 채택 구간은 D1 / D3 / D5 다. 이름을 어휘 낱말로 줘도 큐의 D 레벨은
+    여전히 1 / 3 / 5 여야 한다 — 이름이 dynamics 를 다시 매겼다면 ``Intro``(1,2) ·
+    ``Chorus``(4,5) · ``Drop``(4,5) 를 따라 값이 달라진다. (카드 t480 — 예전에는 룩
+    라이브러리가 고른 룩의 Dimmer 10/30/50 으로 쟀다. 업로드 길이 조립기로 합쳐져
+    룩을 고르지 않으므로 같은 계약을 보고서의 D 레벨로 잰다.)
     """
 
-    def test_vocabulary_names_do_not_move_the_look_selection(self):
+    def test_vocabulary_names_do_not_move_the_d_level(self):
         registry, _port = _registry(song_analysis=_AnalysisPort(_record()))
         _execution, payload = _call(registry, section_names=_VOCAB_NAMES)
         assert _cue_labels(payload) == _VOCAB_NAMES
-        assert _dimmer_values(payload) == [10, 30, 50]
+        assert _d_levels(payload) == [1, 3, 5]
 
     def test_the_inverted_case_is_the_same_answer(self):
         # 어휘 밴드와 정반대로 이름을 붙인다 — D5 구간에 ``Intro``(1,2), D1 구간에
         # ``Drop``(4,5). 이름이 이겼다면 값이 뒤집힌다.
         registry, _port = _registry(song_analysis=_AnalysisPort(_record()))
         _execution, payload = _call(registry, section_names=["Drop", "Verse", "Intro"])
-        assert _dimmer_values(payload) == [10, 30, 50]
+        assert _d_levels(payload) == [1, 3, 5]
 
 
 class TestNamesAreRefusedRatherThanSilentlyMangled:

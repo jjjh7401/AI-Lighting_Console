@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from server.design.color_names import resolve_color_name
+from server.design.song_cue_render import _song_color_value_lines
 from server.design.song_plan import TimingPlan
 from server.tests.test_runner_self_correction import ScriptedProvider
 from server.tests.test_song_cue_color_emission import (
@@ -40,7 +41,6 @@ from server.tests.test_web_session import (
 from server.web.session import (
     ChatSession,
     _color_apply_command,
-    _song_color_value_lines,
 )
 
 # --------------------------------------------------------------------------

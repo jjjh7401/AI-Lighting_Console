@@ -79,8 +79,7 @@ from server.design.color_names import resolve_color_name
 from server.design.cue_fade import store_with_fade
 from server.design.cue_sheet_edit import section_intensity_percent
 from server.design.rig import _LAYER_GROUP_ALIASES
-from server.looks.songcue import UNMAPPED_LOOK
-from server.looks.songcue_report import ROLE_UNADDRESSED
+from server.looks.songcue import ROLE_UNADDRESSED, UNMAPPED_LOOK
 
 __all__ = [
     "CONSOLE_APPLIABLE_FIELDS",

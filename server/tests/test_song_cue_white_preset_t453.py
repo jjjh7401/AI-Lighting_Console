@@ -18,11 +18,12 @@ from __future__ import annotations
 
 import json
 
+from server.design.song_cue_render import _song_color_value_lines
 from server.design.song_plan import TimingPlan
 from server.llm.types import ToolResult
 from server.orchestrator.tools import ToolExecution
 from server.tests.test_song_cue_color_emission import _FIDS, _composition, _Stub
-from server.web.session import ChatSession, _song_color_value_lines
+from server.web.session import ChatSession
 
 COOL = "뉴트럴 화이트 (=P3)"
 WARM = "웜 화이트 (=P2)"

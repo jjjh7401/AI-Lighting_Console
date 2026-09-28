@@ -1,0 +1,41 @@
+def _bundle() -> SongCueBundle:
+    """저장된 큐 둘(Chorus 0:10 · Drop 0:14)을 가진 번들 — 타이밍 함수가 읽는 것만 채운다.
+
+    예전에는 은퇴한 조립기로 만들었다(한국어 제목 → ``Song 3``, 빈 시퀀스 3). 타이밍 함수는
+    시퀀스 번호·이름과 **명령이 있는**(저장된) 구간의 시작 시각만 읽으므로 같은 값을
+    손으로 싣는다. 대화 길(``song_cue_render.reviewed_song_timing``)도 같은 방식으로 번들을
+    짓는다.
+    """
+    sections = parse_sections((("Chorus", "0:10"), ("Drop", "0:14")))
+    stored = tuple(
+        SongCueSectionBundle(
+            section=section,
+            cue_number=number,
+            cue_name=section.name,
+            selection=SongCueLookSelection(section=section, requested_dynamics=(4,)),
+            commands=("stored",),
+        )
+        for number, section in enumerate(sections, start=1)
+    )
+    return SongCueBundle(
+        song_title="테스트 곡",
+        sequence_number=3,
+        sequence_name="Song 3",
+        commands=("stored",),
+        sections=stored,
+    )
+
+
+def _commands_matching(commands: tuple[str, ...], pattern: str) -> list[str]:
+    regex = re.compile(pattern, re.IGNORECASE)
+    return [command for command in commands if regex.search(command)]
+
+
+def _trig_times(commands: tuple[str, ...]) -> list[str]:
+    return [
+        match.group("time") for command in commands if (match := _TRIG_TIME_RE.fullmatch(command))
+    ]
+
+
+def _skip_axes(plan) -> set[str]:
+    return {skip.axis for skip in plan.skipped_axes}

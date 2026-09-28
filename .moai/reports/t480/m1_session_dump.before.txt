@@ -1,0 +1,938 @@
+# call 0 ncmd=25
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+Store Sequence 210 Cue 102 'Verse' CueFade 0.75
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 70
+Store Sequence 210 Cue 103 'Chorus' CueFade 0.25
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 102 Sequence 210 Property 'TrigTime' 20
+Set Cue 103 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 103 Sequence 210 Property 'TrigTime' 40
+# call 26 ncmd=11
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 38 ncmd=11
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 50 ncmd=10
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 61 ncmd=10
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 72 ncmd=10
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 83 ncmd=10
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 94 ncmd=10
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 105 ncmd=10
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 116 ncmd=11
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 128 ncmd=10
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 139 ncmd=18
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 90
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+Store Sequence 210 Cue 102 'Verse' CueFade 0.75
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 102 Sequence 210 Property 'TrigTime' 20
+# call 158 ncmd=16
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 90
+Store Sequence 210 Cue 102 'Verse' CueFade 0.75
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 102 Sequence 210 Property 'TrigTime' 20
+# call 175 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Sequence 110 Timecode'
+Assign Sequence 110 At Timecode 7
+Set Cue 1 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 110 Property 'TrigTime' 0
+Set Cue 2 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 110 Property 'TrigTime' 40
+# call 194 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 2 'Section 2' CueFade 0.25
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Sequence 110 Timecode'
+Assign Sequence 110 At Timecode 7
+Set Cue 1 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 110 Property 'TrigTime' 0
+Set Cue 2 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 110 Property 'TrigTime' 40
+# call 213 ncmd=19
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 20 + 26 ; At Preset 4.35
+Store Sequence 110 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Sequence 110 Timecode'
+Assign Sequence 110 At Timecode 7
+Set Cue 1 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 110 Property 'TrigTime' 0
+Set Cue 2 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 110 Property 'TrigTime' 40
+# call 233 ncmd=31
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.25
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 12 ; Attribute 'Dimmer' At 40
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.26
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 12 ; Attribute 'Dimmer' At 20
+Store Sequence 110 Cue 2 'Section 2' CueFade 1.5
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 12 ; Attribute 'Dimmer' At 80
+Store Sequence 110 Cue 3 'Section 3' CueFade 0.25
+ClearAll
+Fixture 20 + 26 ; At Preset 2.22
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 12 ; Attribute 'Dimmer' At 40
+Store Sequence 110 Cue 4 'Section 4' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 12 ; Attribute 'Dimmer' At 80
+Store Sequence 110 Cue 5 'Section 5' CueFade 4
+ClearAll
+# call 265 ncmd=21
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.25
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.26
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 2 'Section 2' CueFade 1.5
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 3 'Section 3' CueFade 0.25
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 4 'Section 4' CueFade 4
+ClearAll
+# call 287 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 120 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 120 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Sequence 120 Timecode'
+Assign Sequence 120 At Timecode 7
+Set Cue 1 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 120 Property 'TrigTime' 0
+Set Cue 2 Sequence 120 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 120 Property 'TrigTime' 40
+# call 306 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 8
+Set Timecode 8 Property 'Name' 'Sequence 110 Timecode'
+Assign Sequence 110 At Timecode 8
+Set Cue 1 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 110 Property 'TrigTime' 0
+Set Cue 2 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 110 Property 'TrigTime' 40
+# call 325 ncmd=21
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.25
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 120 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.26
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 120 Cue 2 'Section 2' CueFade 1.5
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 120 Cue 3 'Section 3' CueFade 0.25
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 120 Cue 4 'Section 4' CueFade 4
+ClearAll
+# call 347 ncmd=21
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.25
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.26
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 2 'Section 2' CueFade 1.5
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 3 'Section 3' CueFade 0.25
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 4 'Section 4' CueFade 4
+ClearAll
+# call 369 ncmd=21
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.25
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.26
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 2 'Section 2' CueFade 1.5
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 3 'Section 3' CueFade 0.25
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 4 'Section 4' CueFade 4
+ClearAll
+# call 391 ncmd=21
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.25
+Fixture 20 + 26 ; Attribute 'Dimmer' At 50
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.26
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 2 'Section 2' CueFade 1.5
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 3 'Section 3' CueFade 0.25
+ClearAll
+Fixture 20 + 26 ; At Preset 2.23
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 4 'Section 4' CueFade 4
+ClearAll
+# call 413 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 110 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 7
+Set Timecode 7 Property 'Name' 'Sequence 110 Timecode'
+Assign Sequence 110 At Timecode 7
+Set Cue 1 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 110 Property 'TrigTime' 0
+Set Cue 2 Sequence 110 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 110 Property 'TrigTime' 40
+# call 432 ncmd=18
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 90
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+Store Sequence 210 Cue 102 'Verse' CueFade 0.75
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 102 Sequence 210 Property 'TrigTime' 20
+# call 451 ncmd=20
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 3 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 2 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorRGB_W' At 0
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 90
+Fixture 1 + 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+Fixture 2 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5 ; Attribute 'ColorRGB_W' At 0
+Store Sequence 210 Cue 102 'Verse' CueFade 0.75
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 102 Sequence 210 Property 'TrigTime' 20
+# call 472 ncmd=10
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 483 ncmd=21
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 3 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 2 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorRGB_W' At 0
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 90
+Fixture 1 + 3 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 95 ; Attribute 'ColorRGB_B' At 100
+Fixture 2 + 4 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 95 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorRGB_W' At 0
+Fixture 2 + 4 ; At Preset 4.8
+Store Sequence 210 Cue 102 'Verse' CueFade 0.75
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 102 Sequence 210 Property 'TrigTime' 20
+# call 505 ncmd=20
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 3 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Fixture 2 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorRGB_W' At 0
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 90
+Fixture 1 + 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+Fixture 2 + 4 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5 ; Attribute 'ColorRGB_W' At 0
+Store Sequence 210 Cue 102 'Verse' CueFade 0.75
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 102 Sequence 210 Property 'TrigTime' 20
+# call 526 ncmd=11
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 95 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 538 ncmd=12
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 3 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 95 ; Attribute 'ColorRGB_B' At 100
+Fixture 2 + 4 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 95 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorRGB_W' At 0
+Store Sequence 210 Cue 101 'Intro' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Color Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+# call 551 ncmd=50
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 50
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Intro' CueFade 2
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 3 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 4 'Verse 2' CueFade 0.75
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 14 ; Attribute 'Dimmer' At 80
+Store Sequence 210 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Group 14 ; Attribute 'Dimmer' At 0
+Store Sequence 210 Cue 5.5 'Chorus 2 Return' CueFade 0
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 6 'Finale' CueFade 0.25
+ClearAll
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 16
+Set Cue 3 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 210 Property 'TrigTime' 32
+Set Cue 4 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 210 Property 'TrigTime' 48
+Set Cue 5 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 210 Property 'TrigTime' 64
+Set Cue 5.5 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 5.5 Sequence 210 Property 'TrigTime' 65
+Set Cue 6 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 210 Property 'TrigTime' 80
+# call 602 ncmd=50
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 50
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Intro' CueFade 2
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 3 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 4 'Verse 2' CueFade 0.75
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 14 ; Attribute 'Dimmer' At 80
+Store Sequence 210 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Group 14 ; Attribute 'Dimmer' At 0
+Store Sequence 210 Cue 5.5 'Chorus 2 Return' CueFade 0
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 6 'Finale' CueFade 0.25
+ClearAll
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 16
+Set Cue 3 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 210 Property 'TrigTime' 32
+Set Cue 4 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 210 Property 'TrigTime' 48
+Set Cue 5 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 210 Property 'TrigTime' 64
+Set Cue 5.5 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 5.5 Sequence 210 Property 'TrigTime' 65
+Set Cue 6 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 210 Property 'TrigTime' 80
+# call 653 ncmd=50
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 50
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Intro' CueFade 2
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 3 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 4 'Verse 2' CueFade 0.75
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 14 ; Attribute 'Dimmer' At 80
+Store Sequence 210 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Group 14 ; Attribute 'Dimmer' At 0
+Store Sequence 210 Cue 5.5 'Chorus 2 Return' CueFade 0
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 6 'Finale' CueFade 0.25
+ClearAll
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 16
+Set Cue 3 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 210 Property 'TrigTime' 32
+Set Cue 4 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 210 Property 'TrigTime' 48
+Set Cue 5 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 210 Property 'TrigTime' 64
+Set Cue 5.5 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 5.5 Sequence 210 Property 'TrigTime' 65
+Set Cue 6 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 210 Property 'TrigTime' 80
+# call 704 ncmd=50
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 50
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Intro' CueFade 2
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Verse 1' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 3 'Chorus 1' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 25
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 4 'Verse 2' CueFade 0.75
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 14 ; Attribute 'Dimmer' At 80
+Store Sequence 210 Cue 5 'Chorus 2' CueFade 0.25
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Group 14 ; Attribute 'Dimmer' At 0
+Store Sequence 210 Cue 5.5 'Chorus 2 Return' CueFade 0
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.4
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 100
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 6 'Finale' CueFade 0.25
+ClearAll
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 16
+Set Cue 3 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 210 Property 'TrigTime' 32
+Set Cue 4 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 210 Property 'TrigTime' 48
+Set Cue 5 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 210 Property 'TrigTime' 64
+Set Cue 5.5 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 5.5 Sequence 210 Property 'TrigTime' 65
+Set Cue 6 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 6 Sequence 210 Property 'TrigTime' 80
+# call 755 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Sequence 210 Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 40
+# call 774 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Sequence 210 Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 40
+# call 793 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Sequence 210 Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 40
+# call 812 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Sequence 210 Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 40
+# call 831 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Sequence 210 Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 40
+# call 850 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Sequence 210 Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 40
+# call 869 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Sequence 210 Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 40
+# call 888 ncmd=18
+ChangeDestination Root
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 20
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 1 'Section 1' CueFade 2
+ClearAll
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 2 'Section 2' CueFade 4
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Sequence 210 Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 1 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 210 Property 'TrigTime' 0
+Set Cue 2 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 210 Property 'TrigTime' 40
+# call 907 ncmd=18
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.24
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Section 1' CueFade 1.5
+ClearAll
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.30
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 102 'Section 2' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Position Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0
+Set Cue 102 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 102 Sequence 210 Property 'TrigTime' 20
+# call 926 ncmd=11
+ChangeDestination Root
+Fixture 1 + 2 + 3 + 4 ; At Preset 2.41
+Fixture 1 + 2 + 3 + 4 ; Attribute 'Dimmer' At 70
+Fixture 1 + 2 + 3 + 4 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 210 Cue 101 'Section 1' CueFade 1.5
+ClearAll
+Store Timecode 9
+Set Timecode 9 Property 'Name' 'Position Seq Timecode'
+Assign Sequence 210 At Timecode 9
+Set Cue 101 Sequence 210 Property 'TrigType' 'Time'
+Set Cue 101 Sequence 210 Property 'TrigTime' 0

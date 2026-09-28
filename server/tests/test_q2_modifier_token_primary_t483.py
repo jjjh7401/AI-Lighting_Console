@@ -21,7 +21,8 @@ import pytest
 from server.design.color_names import resolve_color_name
 from server.design.interview import _palette_value_tokens
 from server.design.profile import GENRE_DEFAULT_TABLE
-from server.tests.test_chorus_color_two_paths_t441 import _path_b_selections, _records
+from server.tests.test_chorus_color_two_paths_t441 import _records
+from server.tests.test_upload_composer_t480 import _dispatch
 
 _GENRE_ROWS = {entry.genre: entry.color_tendency for entry in GENRE_DEFAULT_TABLE}
 
@@ -55,8 +56,32 @@ def test_pop_row_has_no_resolvable_color_out_of_scope() -> None:
     assert all(resolve_color_name(token) is None for token in tokens), tokens
 
 
+def _upload_color_counts(palette: str) -> tuple[int, int, list[str]]:
+    """실제 업로드 입구(``prepare_songcue``)로 쏘고 저장 큐 수·색 줄 수·색 실패 고지를 센다."""
+    port, execution, payload = _dispatch(genre="edm", records=_records(palette=palette))
+    assert execution.result.is_error is False, payload
+    stores = sum("Store Sequence" in command for command in port.executed)
+    colors = sum("ColorRGB" in command for command in port.executed)
+    failures = [note for note in payload["report"]["notes"] if note.startswith("색 미반영")]
+    return stores, colors, failures
+
+
 def test_edm_answer_reaches_every_songcue_cue_as_rgb() -> None:
-    """곡 큐 경로(LLM 도구, ``_override_songcue_main_color``)까지 — 실측
-    Ice cream 7/7 · Rain 12/12 가 색 줄 0 이던 그 경로."""
-    selections, notes = _path_b_selections(records=_records(palette=_GENRE_ROWS["edm"]))
-    assert not notes, notes
+    """곡 큐 경로(LLM 도구)까지 — 실측 Ice cream 7/7 · Rain 12/12 가 색 줄 0 이던 그 경로.
+
+    카드 t480 — 업로드 길이 대화 길 조립기로 합쳐지며 이 경로를 재던 옛 도우미
+    (``_override_songcue_main_color`` · 시험 쪽 ``_path_b_selections``)가 은퇴했다. 같은
+    의도를 새 입구에서 잰다: 저장된 큐마다 색 줄이 하나씩 있고, 색 실패 고지가 없다.
+    """
+    stores, colors, failures = _upload_color_counts(_GENRE_ROWS["edm"])
+    assert stores > 0
+    assert colors == stores, (colors, stores)
+    assert not failures, failures
+
+
+def test_a_palette_without_any_color_is_reported_not_silently_dropped() -> None:
+    """대조군 — 위 검사가 색 줄을 못 보는 공허한 계기가 아님을 보인다. 색 이름이
+    하나도 없는 답이면 색 줄이 저장 큐보다 적고, 회신이 그 사실을 말한다."""
+    stores, colors, failures = _upload_color_counts("단색, 볼드")
+    assert colors < stores, (colors, stores)
+    assert failures

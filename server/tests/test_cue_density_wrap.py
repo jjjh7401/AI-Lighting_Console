@@ -24,7 +24,6 @@ from server.design.cue_density import (
     plan_cue_density,
     rotate_palette,
 )
-from server.looks.songcue import SONGCUE_VARIANT_LABEL
 
 #: 3단위(48초 @120BPM · 8마디 16초) · 변주 2가지 — t306 이 중복을 실측한 모양.
 _THREE_UNITS = [0, 48_000]
@@ -73,50 +72,3 @@ def test_an_unmeasured_variant_count_is_not_a_cap():
     plan = plan_cue_density(_THREE_UNITS, bpm=_BPM, meter=_METER)
     assert len(_cues_for(0, plan)) == 3
     assert plan.notes == ()
-
-
-class TestBothPathsAgree:
-    """감독 인터뷰 경로와 업로드 경로가 **같은 규칙**을 탄다.
-
-    t306 이 남긴 갈림은 하나였다 — 업로드 경로에서는 중복 큐가 값 줄 충돌로
-    접히고 그 수가 고지에 나오는데, 인터뷰 경로에는 그 방어가 없어 같은 큐가
-    그냥 섰다. 상한을 공유 규칙(``plan_cue_density``)에 씌웠으므로 두 경로 모두
-    중복 큐를 애초에 만들지 않는다. 아래는 그 동치를 값으로 잰다.
-    """
-
-    def test_the_same_shape_yields_the_same_cues_on_both_paths(self):
-        interview = plan_cue_density(
-            _THREE_UNITS,
-            bpm=_BPM,
-            meter=_METER,
-            palette_sizes=[2, 2],
-            variant_label=DEFAULT_VARIANT_LABEL,
-        )
-        upload = plan_cue_density(
-            _THREE_UNITS,
-            bpm=_BPM,
-            meter=_METER,
-            palette_sizes=[2, 2],
-            song_end_ms=None,
-            variant_label=SONGCUE_VARIANT_LABEL,
-        )
-        assert interview.splits == upload.splits
-        assert interview.source_origins == upload.source_origins
-        assert len(interview.notes) == len(upload.notes) == 1
-
-    def test_only_the_wording_of_the_reason_differs(self):
-        """두 경로가 돌리는 것의 **이름**만 다르다 — 규칙이 아니라 낱말이다."""
-        interview = plan_cue_density(_THREE_UNITS, bpm=_BPM, meter=_METER, palette_sizes=[2, 2])
-        upload = plan_cue_density(
-            _THREE_UNITS,
-            bpm=_BPM,
-            meter=_METER,
-            palette_sizes=[2, 2],
-            variant_label=SONGCUE_VARIANT_LABEL,
-        )
-        assert DEFAULT_VARIANT_LABEL in interview.notes[0]
-        assert SONGCUE_VARIANT_LABEL in upload.notes[0]
-        assert (
-            interview.notes[0].replace(DEFAULT_VARIANT_LABEL, SONGCUE_VARIANT_LABEL)
-            == upload.notes[0]
-        )

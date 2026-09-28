@@ -1,0 +1,81 @@
+## Ice cream genre=rock bpm=100.4 sections=7 cues=7 requery=0 notes=0
+   roles: ['intro', 'verse', 'bridge', 'chorus', 'bridge', 'chorus', 'finale']
+   팔레트: 인터뷰 없음 → Q2 추천 '록 느낌 색 조합' (레드+화이트 시그니처, 웜/쿨 대비) | profile.palette = ('레드', '화이트', '시그니처', '웜', '쿨', '대비')
+   Q1 section      Intro              D2 dim=50.0 color=('레드', 'cyan') rgb=(100, 0, 0) accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('레드', 'cyan') rgb=(100, 0, 0) accent=()
+   Q3 section      Bridge 1           D2 dim=20.0 color=('레드', 'lavender') rgb=(100, 0, 0) accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=()
+   Q5 section      Bridge 2           D2 dim=20.0 color=('레드', 'lavender') rgb=(100, 0, 0) accent=()
+   Q6 section      Chorus 2           D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=('climax accent',)
+   Q7 section      Finale             D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=('white flash',)
+   primary colours without RGB: 0/7
+## Ice cream genre=edm bpm=None sections=7 cues=7 requery=0 notes=1
+   roles: ['intro', 'verse', 'bridge', 'chorus', 'bridge', 'chorus', 'finale']
+   팔레트: 인터뷰 없음 → Q2 추천 'edm 느낌 색 조합' (단색 볼드, 퍼플/레드/화이트) | profile.palette = ('단색', '볼드', '퍼플', '레드', '화이트')
+   Q1 section      Intro              D2 dim=50.0 color=('단색', 'cyan') rgb=None accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('단색', 'cyan') rgb=None accent=()
+   Q3 section      Bridge 1           D2 dim=20.0 color=('단색', 'lavender') rgb=None accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=()
+   Q5 section      Bridge 2           D2 dim=20.0 color=('단색', 'lavender') rgb=None accent=()
+   Q6 section      Chorus 2           D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=('climax accent',)
+   Q7 section      Finale             D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=('white flash',)
+   primary colours without RGB: 7/7
+## Ice cream genre=jazz bpm=100.4 sections=7 cues=7 requery=0 notes=0
+   roles: ['intro', 'verse', 'bridge', 'chorus', 'bridge', 'chorus', 'finale']
+   팔레트: 인터뷰 없음 → Q2 추천 'Vocal DSC 색 조합' (블루/웜화이트) — 장르가 표준 §7 장르 표에 없어 무드 표 첫 후보를 썼습니다 | profile.palette = ('블루', '웜화이트')
+   Q1 section      Intro              D2 dim=50.0 color=('블루', 'cyan') rgb=(5, 20, 100) accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('블루', 'cyan') rgb=(5, 20, 100) accent=()
+   Q3 section      Bridge 1           D2 dim=20.0 color=('블루', 'lavender') rgb=(5, 20, 100) accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=()
+   Q5 section      Bridge 2           D2 dim=20.0 color=('블루', 'lavender') rgb=(5, 20, 100) accent=()
+   Q6 section      Chorus 2           D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=('climax accent',)
+   Q7 section      Finale             D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=('white flash',)
+   primary colours without RGB: 0/7
+## Rain genre=rock bpm=76.0 sections=12 cues=12 requery=0 notes=0
+   roles: ['intro', 'verse', 'verse', 'chorus', 'chorus', 'verse', 'chorus', 'chorus', 'chorus', 'verse', 'chorus', 'finale']
+   팔레트: 인터뷰 없음 → Q2 추천 '록 느낌 색 조합' (레드+화이트 시그니처, 웜/쿨 대비) | profile.palette = ('레드', '화이트', '시그니처', '웜', '쿨', '대비')
+   Q1 section      Intro              D2 dim=50.0 color=('레드', 'cyan') rgb=(100, 0, 0) accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('레드', 'cyan') rgb=(100, 0, 0) accent=()
+   Q3 section      Verse 2            D3 dim=25.0 color=('레드', 'blue') rgb=(100, 0, 0) accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=()
+   Q5 section      Chorus 2           D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=()
+   Q6 section      Verse 3            D3 dim=25.0 color=('레드', 'cyan') rgb=(100, 0, 0) accent=()
+   Q7 section      Chorus 3           D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=('moving position hit',)
+   Q8 section      Chorus 4           D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=()
+   Q9 section      Chorus 5           D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=()
+   Q10 section      Verse 4            D3 dim=25.0 color=('레드', 'blue') rgb=(100, 0, 0) accent=()
+   Q11 section      Chorus 6           D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=('climax accent',)
+   Q12 section      Finale             D5 dim=100.0 color=('레드', 'warm white') rgb=(100, 0, 0) accent=('white flash',)
+   primary colours without RGB: 0/12
+## Rain genre=edm bpm=None sections=12 cues=12 requery=0 notes=1
+   roles: ['intro', 'verse', 'verse', 'chorus', 'chorus', 'verse', 'chorus', 'chorus', 'chorus', 'verse', 'chorus', 'finale']
+   팔레트: 인터뷰 없음 → Q2 추천 'edm 느낌 색 조합' (단색 볼드, 퍼플/레드/화이트) | profile.palette = ('단색', '볼드', '퍼플', '레드', '화이트')
+   Q1 section      Intro              D2 dim=50.0 color=('단색', 'cyan') rgb=None accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('단색', 'cyan') rgb=None accent=()
+   Q3 section      Verse 2            D3 dim=25.0 color=('단색', 'blue') rgb=None accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=()
+   Q5 section      Chorus 2           D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=()
+   Q6 section      Verse 3            D3 dim=25.0 color=('단색', 'cyan') rgb=None accent=()
+   Q7 section      Chorus 3           D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=('moving position hit',)
+   Q8 section      Chorus 4           D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=()
+   Q9 section      Chorus 5           D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=()
+   Q10 section      Verse 4            D3 dim=25.0 color=('단색', 'blue') rgb=None accent=()
+   Q11 section      Chorus 6           D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=('climax accent',)
+   Q12 section      Finale             D5 dim=100.0 color=('단색', 'warm white') rgb=None accent=('white flash',)
+   primary colours without RGB: 12/12
+## Rain genre=jazz bpm=76.0 sections=12 cues=12 requery=0 notes=0
+   roles: ['intro', 'verse', 'verse', 'chorus', 'chorus', 'verse', 'chorus', 'chorus', 'chorus', 'verse', 'chorus', 'finale']
+   팔레트: 인터뷰 없음 → Q2 추천 'Vocal DSC 색 조합' (블루/웜화이트) — 장르가 표준 §7 장르 표에 없어 무드 표 첫 후보를 썼습니다 | profile.palette = ('블루', '웜화이트')
+   Q1 section      Intro              D2 dim=50.0 color=('블루', 'cyan') rgb=(5, 20, 100) accent=()
+   Q2 section      Verse 1            D3 dim=70.0 color=('블루', 'cyan') rgb=(5, 20, 100) accent=()
+   Q3 section      Verse 2            D3 dim=25.0 color=('블루', 'cyan') rgb=(5, 20, 100) accent=()
+   Q4 section      Chorus 1           D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=()
+   Q5 section      Chorus 2           D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=()
+   Q6 section      Verse 3            D3 dim=25.0 color=('블루', 'cyan') rgb=(5, 20, 100) accent=()
+   Q7 section      Chorus 3           D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=('moving position hit',)
+   Q8 section      Chorus 4           D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=()
+   Q9 section      Chorus 5           D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=()
+   Q10 section      Verse 4            D3 dim=25.0 color=('블루', 'cyan') rgb=(5, 20, 100) accent=()
+   Q11 section      Chorus 6           D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=('climax accent',)
+   Q12 section      Finale             D5 dim=100.0 color=('블루', 'warm white') rgb=(5, 20, 100) accent=('white flash',)
+   primary colours without RGB: 0/12

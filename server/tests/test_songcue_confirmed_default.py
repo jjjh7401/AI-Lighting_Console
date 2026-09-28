@@ -117,6 +117,15 @@ def _call(registry, **arguments):
     return execution, json.loads(execution.result.content)
 
 
+def _d_levels(payload) -> list[int]:
+    """저장된 큐마다의 D 레벨(카드 t480 — 업로드 길이 조립기로 합쳐진 뒤의 보고서)."""
+    return [cue["d_level"] for cue in payload["report"]["generated_cues"]]
+
+
+def _cue_names(payload) -> list[str]:
+    return [cue["name"] for cue in payload["report"]["generated_cues"]]
+
+
 def _dimmer_values(payload) -> list[int]:
     values = []
     for entry in payload["commands"]:
@@ -139,22 +148,23 @@ class TestConfirmedSectionsAreTheDefault:
         execution, payload = _call(registry)
         assert execution.result.is_error is False
         assert payload["sections_source"] == "confirmed_analysis"
-        assert len(payload["report"]["sections"]) == 3
-        # 손실 0 — start_ms 가 정확히 옮겨진다(B2). ``report.sections`` 는 server/looks
-        # 소유라 키를 더할 수 없어(REQ-014 보존 경계) 도구 페이로드에 싣는다.
+        assert len(payload["report"]["generated_cues"]) == 3
+        # 손실 0 — start_ms 가 정확히 옮겨진다(B2). 도구 입력으로 옮긴 raw 구간은
+        # 여전히 중립 ASCII S<n> 이름을 든다(어휘 밖 — B3).
         used = payload["confirmed_sections"]
         assert [s["start_ms"] for s in used] == [0, 15_952, 32_020]
         assert [s["dynamics"] for s in used] == [1, 3, 5]
-        names = [s["name"] for s in payload["report"]["sections"]]
-        assert names == ["S1", "S2", "S3"]
+        # 카드 t480 — 큐 라벨은 대화 길과 같은 규칙(t391 역할+회차)으로 붙는다. 업로드
+        # 길이 대화 길 조립기로 합쳐졌으므로, 같은 확정 곡은 어느 문으로 들어와도 같은
+        # 이름을 받는다. 예전 S1/S2/S3 라벨은 은퇴했다.
+        names = _cue_names(payload)
+        assert names == ["Intro", "Verse 1", "Finale"]
         assert all(name.isascii() for name in names)
-        # 같은 raw 구간을 오늘의 파서로 다시 넣어도 손실 0 이고, 중립 이름은 라이브러리
-        # 어휘 밖이다(B3) — dynamics 는 d_level 에서 명시 경로로 온다.
         parsed = parse_sections([{"name": s["name"], "start": s["start"]} for s in used])
         assert [p.start_ms for p in parsed] == [0, 15_952, 32_020]
         assert all(p.requires_explicit_dynamics is True for p in parsed)
-        # 골라진 룩의 dynamics 가 1 / 3 / 5 다.
-        assert _dimmer_values(payload) == [10, 30, 50]
+        # D 레벨은 확정 기록의 d_level 그대로 1 / 3 / 5 다.
+        assert _d_levels(payload) == [1, 3, 5]
         # 번들은 오늘 ``TestPayload`` 와 같은 경로(run_commands → 가짜 실행 포트)로 갔다.
         assert any(command.startswith("Store Timecode 7") for command in port.executed)
         assert any(command.startswith("Store Sequence") for command in port.executed)
@@ -183,7 +193,7 @@ class TestExplicitSectionsWinAndMismatchIsReported:
             sections=[{"name": "Intro", "start": "0:00"}, {"name": "Chorus", "start": "0:20"}],
         )
         assert payload["sections_source"] == "explicit"
-        assert [s["name"] for s in payload["report"]["sections"]] == ["Intro", "Chorus"]
+        assert _cue_names(payload) == ["Intro", "Chorus"]
         mismatch = payload["confirmed_analysis_mismatch"]
         assert mismatch["matches"] is False
         assert mismatch["explicit_count"] == 2

@@ -1,0 +1,96 @@
+243c243
+< ## Ice cream genre=edm interview=False preset_start=None error=False lines=48 sha=035b76e6c81b493b
+---
+> ## Ice cream genre=edm interview=False preset_start=None error=False lines=55 sha=4a5515e273d9b972
+246a247
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+250a252
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+254a257
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+258a262
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+262a267
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+266a272
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+271a278
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+293c300
+< ## Ice cream genre=edm interview=False preset_start=21 error=False lines=55 sha=27d1545e88350ee4
+---
+> ## Ice cream genre=edm interview=False preset_start=21 error=False lines=62 sha=bca520ed3185e2fd
+297a305
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+302a311
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+307a317
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+312a323
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+317a329
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+322a335
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+328a342
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+863c877
+< ## Rain genre=edm interview=False preset_start=None error=False lines=78 sha=d9cd90b974f1482e
+---
+> ## Rain genre=edm interview=False preset_start=None error=False lines=90 sha=96c8e96bedf47f2a
+866a881
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+870a886
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+874a891
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+878a896
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+882a901
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+886a906
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+890a911
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+894a916
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+898a921
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+902a926
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+906a931
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+911a937
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+943c969
+< ## Rain genre=edm interview=False preset_start=21 error=False lines=90 sha=e17c3b17c1a26f64
+---
+> ## Rain genre=edm interview=False preset_start=21 error=False lines=102 sha=f6df2109b136d4d4
+947a974
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+952a980
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+957a986
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+962a992
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+967a998
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+972a1004
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+977a1010
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+982a1016
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+987a1022
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+992a1028
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+997a1034
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+1003a1041
+> Fixture 101 + 102 + 103 + 104 ; Attribute 'ColorRGB_R' At 55 ; Attribute 'ColorRGB_G' At 35 ; Attribute 'ColorRGB_B' At 100
+1231c1269
+< TOTAL sha256=fb7ff09c9a812919742ec2facf2755e0ff7d37ade8db27db1e21ad9071dfe71b
+---
+> TOTAL sha256=f259638664d8f00b8a40f7ca56d8f17b5ea9f3d9625ffe1b4dc9b22feb796bc0

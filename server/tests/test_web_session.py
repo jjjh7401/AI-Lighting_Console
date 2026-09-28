@@ -31,6 +31,7 @@ from server.design.song_cue_composer import (
     CuePositionData,
     CueTimingData,
 )
+from server.design.song_cue_render import _phaser_cue_value_lines
 from server.design.song_plan import MANUAL_GO
 from server.llm.anthropic_adapter import AnthropicAdapter
 from server.llm.config import AnthropicSettings, GeminiSettings
@@ -61,7 +62,6 @@ from server.web.session import (
     DIMMER_PHASER_SEQUENCE,
     HISTORY_MAX_MESSAGES,
     ChatSession,
-    _phaser_cue_value_lines,
     _phaser_failure_note,
     _phaser_label_for_cue,
     _phaser_sequence_commands,

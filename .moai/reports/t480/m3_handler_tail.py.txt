@@ -1,0 +1,350 @@
+        # 카드 t480 (SPEC-LDDESIGN-001 REQ-003, AC-017) — 여기부터 큐는 **대화 길과 같은
+        # 조립기**(`compose_song_cue_bundle`)가 만든다. 업로드 길이 따로 쓰던 룩 라이브러리
+        # 조립기(`build_songcue_bundle`)는 거치지 않는다 — 감독 결정 2026-09-28(D1):
+        # 장르 룩 선택·곡 사이 룩 기억은 사라진다. `genre` 는 음악 프로필의 장르로만
+        # 남아 Q2 추천 팔레트(D4)를 정한다.
+        #
+        # 이름 모르는 구간은 여전히 D 레벨을 지어내지 않는다 — 옛 길의
+        # `EXPLICIT_DYNAMICS_REQUIRED` 계약을 그대로 지킨다(판정은 룩이 아니라
+        # `parse_sections` 가 한다).
+        unknown_sections = [
+            {"index": section.index, "name": section.name}
+            for section in sections
+            if section.requires_explicit_dynamics
+            and (explicit_dynamics is None or section.index not in explicit_dynamics)
+        ]
+        if unknown_sections:
+            content = json.dumps(
+                {
+                    "error": "unknown section names need explicit dynamics",
+                    "reason": EXPLICIT_DYNAMICS_REQUIRED,
+                    "unknown_sections": unknown_sections,
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        for index, value in (explicit_dynamics or {}).items():
+            if value < DYNAMICS_MIN or value > DYNAMICS_MAX:
+                return _error_result(
+                    call,
+                    f"song sections cannot be mapped: section index {index} explicit dynamics "
+                    f"must be between {DYNAMICS_MIN} and {DYNAMICS_MAX}: {value!r}",
+                )
+        density_bpm = _confirmed_density_bpm(confirmed)
+        interview_records_current = (
+            interview_records.current if interview_records is not None else None
+        )
+        records = tuple(interview_records_current or ())
+        missing = [section for section in SONGCUE_RIG_SECTIONS if section not in rig_paths]
+        if missing:
+            return _error_result(
+                call,
+                f"rig context has no path configured for {missing} — a song cue list "
+                f"cannot be built without them",
+            )
+        rig_sections, _resolved, _failed = collect_rig_sections(
+            state_port,
+            {section: rig_paths[section] for section in SONGCUE_RIG_SECTIONS},
+            drilldown,
+            RIG_DRILLDOWN_QUERY_CAP,
+        )
+        unavailable = {
+            name: entry
+            for name, entry in rig_sections.items()
+            if isinstance(entry, dict) and "reason" in entry
+        }
+        if unavailable:
+            content = json.dumps(
+                {
+                    "error": (
+                        "the rig sections a song cue list is built against did not "
+                        "arrive: "
+                        + "; ".join(f"{n}: {e['reason']}" for n, e in unavailable.items())
+                    ),
+                    "rig_unavailable": unavailable,
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        try:
+            sequence_number = select_sequence_number(rig_sections["sequences"])  # type: ignore[arg-type]
+        except SequenceNumberError as error:
+            return _error_result(call, f"song cue list cannot be built: {error}")
+        # 기구 번호와 기종 능력 — 대화 길과 같은 판독기(`read_design_rig`). 못 읽으면
+        # 빈 리그를 짓지 않고 거절한다(기구 없이 만든 큐는 아무것도 안 켠다).
+        types_root = str(rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"]))
+        rig_read = read_design_rig(state_port, fixture_types_root=types_root)
+        fids = [int(entry["fid"]) for entry in rig_read.patch if isinstance(entry.get("fid"), int)]
+        if not fids:
+            return _error_result(
+                call,
+                "song cue list cannot be built: 리그 패치에서 기구 번호를 읽지 못했습니다 "
+                f"({rig_read.gap or 'no fixtures'}{': ' + rig_read.detail if rig_read.detail else ''})",
+            )
+        rig = build_rig_profile(patch=list(rig_read.patch), groups={}, coords=[])
+        # 감독 결정 D2 — 포지션은 운영자가 준 프리셋 시작 번호가 있을 때만 켠다. 번호를
+        # 지어내지 않는다: 없으면 축을 끄고 그 사유를 회신에 적는다.
+        position_disabled_reason = (
+            ""
+            if preset_start is not None
+            else (
+                "업로드 길: 포지션 프리셋 시작 번호(preset_start)가 없어 포지션(무브) 축을 "
+                "껐습니다 — 번호를 주면 대화 길처럼 라벨로 슬롯을 찾습니다"
+            )
+        )
+        groups_section = rig_sections["groups"]
+        group_entries = [
+            {"group_name": child.get("name"), "group_no": child.get("i", child.get("no"))}
+            for child in (groups_section.get("objects") or groups_section.get("children") or ())
+            if isinstance(child, dict)
+        ]
+        blinder_group_no = _blinder_group_no(group_entries)
+        timing_request = TimingPlan.timecode(timecode_number)
+        confirmed_default = sections_source == "confirmed_analysis" and section_names is None
+        planned_sections = upload_plan_sections(
+            sections,
+            explicit_dynamics=explicit_dynamics,
+            confirmed_default=confirmed_default,
+        )
+        plan, density_notes, palette_source = build_upload_song_plan(
+            song_title=song_title,
+            sections=planned_sections,
+            bpm=density_bpm,
+            genre=genre,
+            records=records,
+            rig=rig,
+            sequence_no=sequence_number,
+            timing=timing_request,
+            position_disabled_reason=position_disabled_reason,
+            blinder_group_no=blinder_group_no,
+        )
+        songconfirm_fields["cue_density"] = {
+            "cue_count": len(plan.sections),
+            "section_count": len(sections),
+            "bpm": density_bpm,
+            "bpm_source": getattr(getattr(confirmed, "bpm", None), "source", None),
+            "notes": list(density_notes),
+        }
+        songconfirm_fields["palette"] = {
+            "source": palette_source.kind,
+            "label": palette_source.label,
+            "color_tendency": palette_source.color_tendency,
+            "genre_in_table": palette_source.genre_in_table,
+        }
+        # 카드 t439 — 컨셉 v2 파이프라인 부가 정보. 대화 길과 같은 입구(계획 기준)로 돌린다.
+        songconfirm_fields["concept_report"] = build_concept_report(
+            plan, color_usage=str(_interview_record_value(records, Q2B_COLOR_USAGE, "modulate"))
+        )
+        composition = compose_song_cue_bundle(plan)
+        if composition.bundle is None:
+            return _error_result(
+                call,
+                "song cue list cannot be built: 계획에 미해결 입력이 있습니다 — "
+                + "; ".join(req.prompt for req in composition.requery_requirements),
+            )
+        bundle = composition.bundle
+        # 콘솔 슬롯 판독 — 대화 길과 같은 판독기(`server.design.console_slots`).
+        pool_root = str(rig_paths.get("preset_pools", "DataPool/PresetPools"))
+        query = _state_port_query(state_port)
+
+        def resolve_pool_no(target_name: str, *, probe_id: str) -> int | None:
+            return resolve_named_pool_no(query, pool_root, target_name, probe_id=probe_id)
+
+        def read_pool(path: str, *, probe_id: str) -> dict[int, str | None] | None:
+            return paged_pool_children(query, path, probe_id=probe_id)
+
+        needed_positions = {
+            cue.position.stored for cue in bundle.cues if cue.position.stored is not None
+        }
+        try:
+            position_slots = (
+                resolve_position_preset_labels(
+                    read_pool(
+                        f"{pool_root}/{POSITION_PRESET_POOL}",
+                        probe_id="songcue-position-pool-read",
+                    ),
+                    needed_positions,
+                    start=int(preset_start or 0),
+                    span=len(BASIC_POSITION_SEQUENCE),
+                    pool_no=POSITION_PRESET_POOL,
+                )
+                if needed_positions
+                else {}
+            )
+        except SpatialPointingError as error:
+            return _error_result(call, f"song cue list cannot be built: {error}")
+        phaser_slots: dict[str, tuple[int, int]] = {}
+        phaser_failures: dict[str, str] = {}
+        for label in sorted(
+            {label for cue in bundle.cues if (label := _phaser_label_for_cue(cue)) is not None}
+        ):
+            slot = phaser_slot_by_label(resolve_pool_no, read_pool, pool_root, label)
+            if slot is None:
+                phaser_failures[label] = f"'{label}' 페이저 프리셋을 콘솔에서 찾지 못했습니다"
+            else:
+                phaser_slots[label] = slot
+        try:
+            occupied, axes = timecode_slot_verdict(
+                state_port,
+                rig_paths.get("timecodes", TIMECODE_POOL_PATH),
+                timecode_number,
+            )
+            if occupied is not None:
+                return _error_result(
+                    call,
+                    f"Timecode {timecode_number} is already in use "
+                    f"({occupied}) — storing over it would discard an existing "
+                    "timecode track, and this application has no restore path. "
+                    "Pass a free 'timecode_number' or ask the operator which "
+                    "one to replace.",
+                )
+            cue_commands, color_failures = reviewed_song_commands(
+                bundle,
+                sequence_no=sequence_number,
+                fids=fids,
+                timing=TimingPlan.manual_go(),
+                position_slots=position_slots,
+                phaser_slots=phaser_slots,
+                white_presets=None,
+            )
+            timing = reviewed_song_timing(bundle, sequence_number, timing_request, axes=axes)
+        except (SpatialPointingError, ValueError) as error:
+            return _error_result(call, f"song cue list cannot be built: {error}")
+        notes = [
+            palette_source.notice(),
+            position_disabled_reason,
+            *density_notes,
+            *(f"색 미반영 큐 {cue}: {reason}" for cue, reason in color_failures.items()),
+            *(f"페이저 미반영: {reason}" for reason in phaser_failures.values()),
+            *(f"절정 연출 미반영: {note}" for note in bundle.arc_notes),
+        ]
+        timing_commands = () if timing is None else timing.commands
+        timing_payload = {
+            "commands": list(timing_commands),
+            "timecode_commands": [] if timing is None else list(timing.timecode_commands),
+            "auto_advance_commands": [] if timing is None else list(timing.auto_advance_commands),
+            "skipped_axes": []
+            if timing is None
+            else [
+                {"axis": skipped.axis, "reason": skipped.reason} for skipped in timing.skipped_axes
+            ],
+        }
+        if not stored_cues(bundle):
+            report = build_upload_song_report(bundle, sequence=sequence_number, notes=notes)
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {
+                            "executed": False,
+                            "song_title": bundle.song_title,
+                            "sequence": sequence_number,
+                            "report": report.to_dict(),
+                            "summary_ko": report.to_korean(),
+                            "timing": {
+                                "commands": [],
+                                "timecode_commands": [],
+                                "auto_advance_commands": [],
+                                "skipped_axes": [],
+                            },
+                            **songconfirm_fields,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    is_error=False,
+                ),
+                # 한 건도 저장되지 않은 갈래다. 명령이 0개라 명령 표도 비고,
+                # 여기서 말하지 않으면 화면에는 아무 일도 없었던 것으로 보인다.
+                operator_notice=report.to_operator_notice()
+                or "저장할 값이 있는 큐가 없어 콘솔에 0건 나갔습니다.",
+            )
+        command_bundle = (*cue_commands, *timing_commands)
+        # SPEC-COPILOT-BULKGATE-001 — 곡 하나가 시퀀스 하나와 타임코드 슬롯
+        # 하나를 통째로 만든다. 명령 텍스트 분류로는 이 묶음이 안 잡히므로
+        # (`Store Sequence` 는 `blacklist.yaml` 에 없다) 호출자가 직접
+        # 선언한다. 새 디스패치 경로가 아니라 오늘과 같은 `run_commands`
+        # 재진입이며, 게이트·LiveLock·중복 제거·감사가 전부 그대로 붙는다.
+        cue_count = len(stored_cues(bundle))
+        songcue_risk = BatchRisk(
+            reason=(
+                f"쇼파일 쓰기 — Sequence {sequence_number} 에 큐 {cue_count}건을 저장하고 "
+                f"Timecode {timecode_number} 슬롯을 씁니다 "
+                "(이 앱에는 시퀀스·타임코드 복원 경로가 없습니다)."
+            ),
+            kind="songcue",
+        )
+        execution = run_commands(
+            ToolCall(id=call.id, name="run_commands", arguments={"commands": list(command_bundle)}),
+            context,
+            risk=songcue_risk,
+        )
+        payload = json.loads(execution.result.content)
+        is_error = execution.result.is_error
+        if payload.get("gate_status") == _LOCKED:
+            is_error = False
+        requery_payload = None
+        if not execution.result.is_error:
+            try:
+                requery_payload = state_port.query_state(
+                    f"{rig_paths['sequences']}/{sequence_number}"
+                )
+            except Exception as error:
+                payload["requery_error"] = str(error)
+        report = build_upload_song_report(
+            bundle,
+            sequence=sequence_number,
+            outcomes=execution.command_outcomes,
+            requery_payload=requery_payload,
+            notes=notes,
+        )
+        payload["executed"] = not execution.result.is_error
+        payload["song_title"] = bundle.song_title
+        payload["sequence"] = sequence_number
+        payload["report"] = report.to_dict()
+        payload["summary_ko"] = report.to_korean()
+        payload["timing"] = timing_payload
+        payload.update(songconfirm_fields)
+        # SPEC-COPILOT-BULKGATE-001 REQ-009 — 감독이 거절하면 「콘솔에 0건
+        # 나갔다」를 문면으로 말하고 **부분 반영을 주장하지 않는다**. 확정
+        # 구간·초안·타임라인은 어느 쪽도 소실되지 않는다.
+        songcue_refusal = ""
+        if payload.get("gate_status") == "rejected":
+            songcue_refusal = (
+                "감독이 승인을 거절해 콘솔에 0건 나갔습니다 — "
+                f"Sequence {sequence_number} 도 Timecode {timecode_number} 도 "
+                "바뀌지 않았고, 확정 구간과 타임라인은 그대로 남아 있습니다."
+            )
+            payload["console_commands_sent"] = 0
+            payload["summary_ko"] = songcue_refusal
+        # 슬롯이 준비됐으면 녹화는 **운영자의 몫**이다 — 그 명령은 콘솔을 녹화
+        # 무장 상태로 만들고 해제 경로가 실측 1회뿐이라, 앱은 발화하지 않고
+        # 넘긴다(REQ-MUSICSYNC-020). 이 자리는 `run_commands` 로 간 번들
+        # (`command_bundle`) 밖이며, 인계분은 그 번들에 섞이지 않는다.
+        if timing is not None and timing.timecode_commands:
+            payload["timing"]["operator_handoff"] = {
+                "commands": list(operator_handoff_commands(timecode_number)),
+                "note": (
+                    "앱은 이 명령을 발화하지 않습니다 — 콘솔에서 직접 실행해 주세요. "
+                    "끝나면 앱이 되읽어 확인합니다."
+                ),
+            }
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
+            operator_notice=songcue_refusal or report.to_operator_notice(),
+        )
+

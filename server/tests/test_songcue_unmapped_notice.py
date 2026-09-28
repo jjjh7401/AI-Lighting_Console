@@ -17,9 +17,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from server.design.upload_song_report import UploadSongReport
 from server.llm.types import ModelTurn, ToolCall, ToolDefinition, Usage
 from server.looks.loader import load_library_from_dir
-from server.looks.songcue_report import build_songcue_report
 from server.orchestrator.runner import InstructionResult, Orchestrator
 from server.orchestrator.tools import ToolExecution, ToolResult, build_toolset
 from server.tests.test_looks_tool import _RecordingPort
@@ -114,31 +114,24 @@ def _gapped_call() -> tuple[object, dict]:
 
 
 def test_the_live_rig_now_stores_every_section():
-    """카드 t277 이 실기에서 본 손해가 닫혔다 — 같은 리그, 같은 네 구간, 이제 4건.
+    """카드 t277 이 실기에서 본 손해가 닫혔다 — 같은 리그, 같은 네 구간, 4건.
 
-    **전.** 이 검사는 ``test_live_rig_drops_the_first_section_without_a_cue`` 였고
-    ``generated_count == 3`` · ``unmapped_sections == ["Intro"]`` ·
-    ``reason_kind == "role_unaddressed"`` 를 회귀로 고정했다. 감독이 확정한 4구간 중
-    3건만 콘솔에 남은 2026-09-06 실기 회차 그대로다. 건너뜀 자체는 옳았고(그룹 없이
-    큐를 저장하는 쪽이 더 나쁘다), 카드 t277 이 고친 것은 그 **침묵**이었다.
+    **전(t277).** 감독이 확정한 4구간 중 3건만 콘솔에 남았다 — ``Intro``(D1) 룩이
+    요구한 ``배경`` 역할 그룹이 실기 리그에 없었다.
 
-    **후.** SPEC-COPILOT-D1GRANT-001 이 edm 에 ``edm-haze-shafts``(``백라이트``)를
-    넣었다. 실기 리그의 ``BACK`` 이 ``백라이트`` 로 묶이므로 첫 구간이 이제 큐를 받고,
-    건너뜀이 0건이라 고지도 비어 있다 — 고지 기계가 죽은 것이 아니라 **울릴 일이
-    없어진 것**이고, 그 구별은 :func:`test_the_notice_still_fires_when_a_section_is_
-    dropped` 가 잰다.
-
-    이 검사가 이 SPEC 의 가장 강한 증거다: 문자열 검색이 아니라 도구 → 게이트 →
-    실행 포트까지 실제 경로를 탄 뒤의 보고를 읽는다.
+    **후(카드 t480).** 업로드 길이 대화 길 조립기로 합쳐져(감독 결정 2026-09-28, D1)
+    큐는 룩의 역할 그룹이 아니라 **패치된 기구 번호**에 저장된다. 그래서 역할 그룹이
+    없어 구간이 빠지는 갈래 자체가 없다. 이 검사는 도구 → 게이트 → 실행 포트까지
+    실제 경로를 탄 뒤의 보고를 읽는다.
     """
     _execution, payload = _live_call()
 
     report = payload["report"]
-    assert report["summary"]["section_count"] == 4
     assert report["summary"]["generated_count"] == 4
+    assert report["summary"]["skipped_count"] == 0
     stored = [cue["name"] for cue in report["generated_cues"]]
     assert stored == ["Intro", "Build", "Drop", "Outro"]
-    assert report["unmapped_sections"] == []
+    assert report["skipped_cues"] == []
 
 
 def test_the_notice_is_silent_when_the_live_rig_drops_nothing():
@@ -148,29 +141,23 @@ def test_the_notice_is_silent_when_the_live_rig_drops_nothing():
     assert execution.operator_notice == ""
 
 
-def test_the_notice_still_fires_when_a_section_is_dropped():
-    """감독이 읽는 한 문장 — 몇 건 중 몇 건, 어느 구간이, 왜.
+def test_the_rig_without_backlight_no_longer_drops_the_intro():
+    """t277 의 「4건 중 3건」 형상(``BACK`` 을 뺀 리그)을 다시 쏜다.
 
-    시험대만 바뀌었다(실기 리그 → ``BACK`` 을 뺀 리그). 재는 성질은 그대로다:
-    건너뛴 구간이 있으면 고지가 건수·구간 이름·빠진 역할을 전부 담는다.
+    예전에는 edm D1 후보 둘이 요구한 역할(``백라이트``·``배경``)이 둘 다 안 묶여 첫
+    구간이 빠졌다. 조립기 길은 역할 그룹을 거치지 않으므로 같은 리그에서도 4건을
+    저장하고 고지는 비어 있다(카드 t480).
     """
     execution, payload = _gapped_call()
 
     report = payload["report"]
-    assert report["summary"]["generated_count"] == 3
-    dropped = [section["name"] for section in report["unmapped_sections"]]
-    assert dropped == ["Intro"]
-    assert report["unmapped_sections"][0]["reason_kind"] == "role_unaddressed"
-
-    notice = execution.operator_notice
-    assert notice, "건너뛴 구간이 있는데 감독용 고지가 비어 있다"
-    assert "구간 4건 중 큐 3건" in notice
-    assert "Intro" in notice
-    assert "배경" in notice
+    assert report["summary"]["generated_count"] == 4
+    assert [cue["name"] for cue in report["generated_cues"]] == ["Intro", "Build", "Drop", "Outro"]
+    assert execution.operator_notice == ""
 
 
 def test_notice_is_empty_when_every_section_got_a_cue():
-    """건너뜀 0건이면 고지도 없다 — 오늘의 출력과 바이트 동일해야 한다."""
+    """건너뜀 0건이면 고지도 없다."""
     registry = build_toolset(
         execution_port=_RecordingPort(),
         state_port=_SongCueStatePort(_tree()),
@@ -192,21 +179,39 @@ def test_notice_is_empty_when_every_section_got_a_cue():
     )
     payload = json.loads(execution.result.content)
 
-    assert payload["report"]["summary"]["unmapped_count"] == 0
+    assert payload["report"]["summary"]["skipped_count"] == 0
     assert execution.operator_notice == ""
 
 
 def test_notice_is_built_from_the_report_alone():
     """보고 계층이 고지의 주인이다 — 도구 핸들러는 옮기기만 한다.
 
-    시험대가 ``BACK`` 을 뺀 리그로 바뀐 이유는 위와 같다: 실기 리그는 이제 건너뜀이
-    0건이라 고지가 비고, 빈 문자열로는 「보고 계층이 문장을 만든다」를 못 잰다.
+    카드 t480 — 조립기 길에서는 실기 리그로 건너뜀을 만들 수 없어, 보고 객체에 저장
+    못 한 큐를 직접 싣고 문장을 잰다(``UploadSongReport.to_operator_notice``).
     """
-    execution, payload = _gapped_call()
-    del payload  # 아래는 보고 객체만으로 같은 문장이 나오는지 본다.
-
-    assert build_songcue_report is not None
-    assert execution.operator_notice.endswith(".")
+    report = UploadSongReport(
+        song_title="Synth Test",
+        sequence=3,
+        planned=({"cue_number": "1", "name": "Intro"},),
+        skipped=({"cue_number": "2", "name": "Build", "kind": "section"},),
+        not_executed=0,
+        failed=0,
+        notes=(),
+    )
+    notice = report.to_operator_notice()
+    assert notice.endswith(".")
+    assert "1건" in notice
+    assert "Build" in notice
+    empty = UploadSongReport(
+        song_title="Synth Test",
+        sequence=3,
+        planned=({"cue_number": "1", "name": "Intro"},),
+        skipped=(),
+        not_executed=0,
+        failed=0,
+        notes=(),
+    )
+    assert empty.to_operator_notice() == ""
 
 
 # -- 감독의 화면까지 가는 두 구간 -------------------------------------------------

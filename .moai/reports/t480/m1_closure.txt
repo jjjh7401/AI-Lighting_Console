@@ -1,0 +1,92 @@
+roots: ['_build_unified_song_plan', '_song_color_value_lines', '_accent_fixture_value_lines', '_safe_song_cue_name', '_back_layer_value_lines', '_phaser_cue_value_lines', '_phaser_label_for_cue']
+closure names: 48 lines: 775
+imported names used: 41
+  import collections.abc.Mapping as Mapping
+  import collections.abc.Sequence as Sequence
+  import dataclasses.replace as replace
+  import re.re as re
+  import server.design.color_names as _COLOR_NAMES
+  import server.design.cue_density.rotate_palette as rotate_palette
+  import server.design.interview.Q1_CONCEPT as Q1_CONCEPT
+  import server.design.interview.Q2B_COLOR_USAGE as Q2B_COLOR_USAGE
+  import server.design.interview.Q2_PALETTE as Q2_PALETTE
+  import server.design.interview.Q3_CLIMAX as Q3_CLIMAX
+  import server.design.interview.Q4_SPATIAL_STORY as Q4_SPATIAL_STORY
+  import server.design.interview.Q5_TEXTURE as Q5_TEXTURE
+  import server.design.profile.DirectorOverride as DirectorOverride
+  import server.design.profile.MusicProfile as MusicProfile
+  import server.design.profile.SOURCE_GLOBAL_DEFAULT as SOURCE_GLOBAL_DEFAULT
+  import server.design.profile.SectionMoodResolution as SectionMoodResolution
+  import server.design.profile.UnresolvedMood as UnresolvedMood
+  import server.design.profile.resolve_section as resolve_section
+  import server.design.section_palette._section_palette_choice as _section_palette_choice
+  import server.design.song_plan.AccentDecision as AccentDecision
+  import server.design.song_plan.ApprovalState as ApprovalState
+  import server.design.song_plan.COLOR_USAGE_AXIS as COLOR_USAGE_AXIS
+  import server.design.song_plan.DLevelDecision as DLevelDecision
+  import server.design.song_plan.D_AXIS as D_AXIS
+  import server.design.song_plan.DirectorDecision as DirectorDecision
+  import server.design.song_plan.DisabledNote as DisabledNote
+  import server.design.song_plan.FX_AXIS as FX_AXIS
+  import server.design.song_plan.FxDecision as FxDecision
+  import server.design.song_plan.PALETTE_AXIS as PALETTE_AXIS
+  import server.design.song_plan.POSITION_AXIS as POSITION_AXIS
+  import server.design.song_plan.PaletteDecision as PaletteDecision
+  import server.design.song_plan.PositionDecision as PositionDecision
+  import server.design.song_plan.SectionDecision as SectionDecision
+  import server.design.song_plan.TEXTURE_AXIS as TEXTURE_AXIS
+  import server.design.song_plan.TextureDecision as TextureDecision
+  import server.design.song_plan.TimestampedSection as TimestampedSection
+  import server.design.song_plan.TimingPlan as TimingPlan
+  import server.design.song_plan.UnifiedSongLightingPlan as UnifiedSongLightingPlan
+  import server.design.song_plan.UnresolvedNote as UnresolvedNote
+  import server.spatial.pointing.SpatialPointingError as SpatialPointingError
+  import server.spatial.position_cuesheet.PositionSheetSection as PositionSheetSection
+     513 _SONG_CLIMAX_SECTION
+     516 _SAFE_SONG_CUE_NAME
+     518 _DI_RECORD_AXES
+     573 _safe_song_cue_name
+     580 _director_decisions
+     591 _projection
+     598 _record_value
+     605 _record_source
+     613 _climax_section_index
+     640 _distributed_position
+     651 _section_director_override
+     691 _texture_decision
+     696 _fx_decision
+     711 _occurrence_accent_label
+     732 _accent_decision
+     765 _SECTION_ROLE_INTRO
+     766 _SECTION_ROLE_BRIDGE
+     767 _SECTION_ROLE_VERSE
+     768 _SECTION_ROLE_FINALE
+     770 _ARC_D_LEVEL
+     771 _ARC_TEXTURE
+     778 _ARC_FX
+     805 _ARC_FX_LADDER
+     819 _arc_fx_allowed
+     943 _DIRECT_POSITION_INTENTS
+     951 _section_role
+     975 _direct_position_intent
+     982 _section_texture_decision
+    1000 _section_fx_decision
+    1074 _unresolved_prompt
+    1125 _PHASER_PEAK_SECTION
+    1126 _PHASER_CHORUS_SECTION
+    1129 _phaser_label_for_cue
+    1156 _phaser_cue_value_lines
+    1219 _WHITE_PRESET_LABELS
+    1224 _WHITE_NAME_BY_RGB
+    1229 _white_palette_name
+    1237 _song_color_value_lines
+    1302 _back_layer_value_lines
+    1345 _accent_fixture_value_lines
+    1370 _DESIGN_INTERVIEW_TITLE
+    1706 _plan_edit_fx
+    1764 _section_arc_geometry
+    1852 _SPLIT_PRIMARY_UNPINNED_USAGES
+    1855 _pins_split_primary
+    1906 _build_unified_song_plan
+    4162 _preset_recall_command
+    4234 _color_apply_command
