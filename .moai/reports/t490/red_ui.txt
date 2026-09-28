@@ -1,0 +1,69 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t490/ui
+
+ ❯ src/components/nullFade.t490.test.tsx (6 tests | 4 failed) 11ms
+   × CUE SHEET 는 null 페이드로 터지지 않는다 > 실제 재질의 대기 페이로드를 그린다 5ms
+     → Cannot read properties of null (reading 'toFixed')
+   × CUE SHEET 는 null 페이드로 터지지 않는다 > null 페이드 칸은 빈 칸 표식이다 0ms
+     → Cannot read properties of null (reading 'toFixed')
+   × 다른 두 소비처도 null 을 글자로 찍지 않는다 > Fade/Track 줄 1ms
+     → expected 'Fade nulls · Track —' to be 'Fade — · Track —' // Object.is equality
+   × 다른 두 소비처도 null 을 글자로 찍지 않는다 > 수정 요청 생성기의 이전 값 0ms
+     → fadeBeforeLabel is not a function
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/nullFade.t490.test.tsx > CUE SHEET 는 null 페이드로 터지지 않는다 > 실제 재질의 대기 페이로드를 그린다
+ FAIL  src/components/nullFade.t490.test.tsx > CUE SHEET 는 null 페이드로 터지지 않는다 > null 페이드 칸은 빈 칸 표식이다
+TypeError: Cannot read properties of null (reading 'toFixed')
+ ❯ src/components/CueSheetTimeline.tsx:775:46
+    773|                     {section.fade_seconds === undefined
+    774|                       ? EMPTY_CELL
+    775|                       : section.fade_seconds.toFixed(2)}
+       |                                              ^
+    776|                   </td>
+    777|                   <td>{cells.mib}</td>
+ ❯ CueSheetTimeline src/components/CueSheetTimeline.tsx:729:23
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:5662:16
+ ❯ renderIndeterminateComponent node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:5736:15
+ ❯ renderElement node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:5961:7
+ ❯ renderNodeDestructiveImpl node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:6119:11
+ ❯ renderNodeDestructive node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:6091:14
+ ❯ retryTask node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:6543:5
+ ❯ performWork node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:6591:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/components/nullFade.t490.test.tsx > 다른 두 소비처도 null 을 글자로 찍지 않는다 > Fade/Track 줄
+AssertionError: expected 'Fade nulls · Track —' to be 'Fade — · Track —' // Object.is equality
+
+Expected: "Fade — · Track —"
+Received: "Fade nulls · Track —"
+
+ ❯ src/components/nullFade.t490.test.tsx:55:47
+     53| 
+     54|   it("Fade/Track 줄", () => {
+     55|     expect(fadeTrackLine(section, undefined)).toBe("Fade — · Track —");
+       |                                               ^
+     56|     expect(fadeTrackLine({ ...section, fade_seconds: 2 }, undefined)).…
+     57|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/components/nullFade.t490.test.tsx > 다른 두 소비처도 null 을 글자로 찍지 않는다 > 수정 요청 생성기의 이전 값
+TypeError: fadeBeforeLabel is not a function
+ ❯ src/components/nullFade.t490.test.tsx:60:12
+     58| 
+     59|   it("수정 요청 생성기의 이전 값", () => {
+     60|     expect(fadeBeforeLabel(section)).toBe("—");
+       |            ^
+     61|     expect(fadeBeforeLabel({ ...section, fade_seconds: 2 })).toBe("2초…
+     62|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 2 passed (6)
+   Start at  14:43:47
+   Duration  340ms (transform 79ms, setup 0ms, collect 105ms, tests 11ms, environment 0ms, prepare 36ms)
+

@@ -1,0 +1,217 @@
+{
+ "song_title": "Design Interview",
+ "sequence_name": "Sequence 110",
+ "sequence_number": 110,
+ "timing_mode": "timecode",
+ "timecode_number": 7,
+ "lifecycle": "requires_requery",
+ "approval": "pending_review",
+ "director_decisions": [
+  {
+   "step": "Q1_CONCEPT",
+   "axis": "palette",
+   "value": "이 곡은 이별 노래다 → 그래서 주조색은 차가운 파랑\n→ 후렴에서만 흰색을 터뜨린다",
+   "confirmed": true,
+   "source": "free_text"
+  },
+  {
+   "step": "Q2_PALETTE",
+   "axis": "palette",
+   "value": "블루와 화이트",
+   "confirmed": true,
+   "source": "free_text"
+  },
+  {
+   "step": "Q2B_COLOR_USAGE",
+   "axis": "color_usage",
+   "value": "modulate",
+   "confirmed": true,
+   "source": "default_accepted"
+  },
+  {
+   "step": "Q3_CLIMAX",
+   "axis": "d",
+   "value": {
+    "d_level": 5,
+    "color_tendency": "블루 쿨 볼드",
+    "position_candidates": [
+     "Ring In",
+     "Center",
+     "Wall"
+    ]
+   },
+   "confirmed": true,
+   "source": "option"
+  },
+  {
+   "step": "Q4_SPATIAL_STORY",
+   "axis": "position",
+   "value": {
+    "d_level": null,
+    "color_tendency": null,
+    "position_candidates": [
+     "Audience",
+     "Ring In",
+     "Fan Out",
+     "Cross",
+     "Wall",
+     "Center",
+     "Vocal DSC",
+     "Home"
+    ]
+   },
+   "confirmed": false,
+   "source": "auto_draft"
+  },
+  {
+   "step": "Q5_TEXTURE",
+   "axis": "texture",
+   "value": "중간",
+   "confirmed": false,
+   "source": "auto_draft"
+  }
+ ],
+ "sections": [
+  {
+   "index": 1,
+   "label": "Intro",
+   "start_ms": 0,
+   "cue_number": 1,
+   "plan_status": "draft",
+   "d_level": 2,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "position": "Audience",
+   "texture": "긴 페이드 · 정적",
+   "fx": [],
+   "fade_seconds": null,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 0.0,
+   "d_source": "confirmed_song_analysis",
+   "palette_source": "section_arc",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": "#00E6FF",
+   "position_source": "director_intent",
+   "position_candidates": [
+    "Audience"
+   ],
+   "texture_source": "section_arc",
+   "role": "intro",
+   "end_ms": 24000,
+   "duration_ms": 24000,
+   "palette_primary": "블루",
+   "palette_secondary": "cyan"
+  },
+  {
+   "index": 2,
+   "label": "Chorus 1",
+   "start_ms": 24000,
+   "cue_number": 2,
+   "plan_status": "draft",
+   "d_level": 5,
+   "palette": [
+    "블루",
+    "warm white"
+   ],
+   "position": "Ring In",
+   "texture": "샤프 히트",
+   "fx": [
+    "dimmer chase"
+   ],
+   "fade_seconds": null,
+   "accents": [
+    "climax accent 블루 쿨 볼드"
+   ],
+   "mib": false,
+   "trig_time_seconds": 24.0,
+   "d_source": "director_intent",
+   "palette_source": "section_arc",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": "#FFBF66",
+   "position_source": "director_intent",
+   "position_candidates": [
+    "Ring In",
+    "Center",
+    "Wall"
+   ],
+   "texture_source": "section_arc",
+   "role": "chorus",
+   "end_ms": 48000,
+   "duration_ms": 24000,
+   "palette_primary": "블루",
+   "palette_secondary": "warm white"
+  },
+  {
+   "index": 3,
+   "label": "Finale",
+   "start_ms": 48000,
+   "cue_number": 3,
+   "plan_status": "draft",
+   "d_level": 5,
+   "palette": [
+    "블루",
+    "warm white"
+   ],
+   "position": "Home",
+   "texture": "서스테인 히트",
+   "fx": [
+    "dimmer chase"
+   ],
+   "fade_seconds": null,
+   "accents": [
+    "white flash"
+   ],
+   "mib": false,
+   "trig_time_seconds": 48.0,
+   "d_source": "section_arc_invariant",
+   "palette_source": "section_arc",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": "#FFBF66",
+   "position_source": "director_intent",
+   "position_candidates": [
+    "Home"
+   ],
+   "texture_source": "section_arc",
+   "role": "finale",
+   "palette_primary": "블루",
+   "palette_secondary": "warm white"
+  }
+ ],
+ "lint": [],
+ "unresolved": [],
+ "disabled": [
+  {
+   "axis": "fx",
+   "section_index": null,
+   "reason": "RG1: no layer mapping declared or inferred from group names — this rig degrades to single-layer. Layer-conditioned rules (I1-I3) and lint L6/L7 are inactive; report this explicitly rather than a false violation."
+  }
+ ],
+ "readback": {
+  "verified": null,
+  "message": null
+ },
+ "console_stored": false,
+ "warnings": [
+  "베이스 컬러 미결정 — 감독 결정 전까지 Q2 팔레트를 유지합니다.",
+  "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다.",
+  "BPM 미선언 — 마디를 계산할 수 없어 구간을 쪼개지 않았습니다"
+ ],
+ "layer_mapping": [],
+ "preset_start": 21,
+ "concept_report": {
+  "available": false,
+  "reason": "BPM이 선언되지 않았다 — 컨셉 파이프라인의 마디 계산 전제가 없다"
+ },
+ "concept_bullet": {
+  "available": true,
+  "text": "이 곡은 이별 노래다 → 그래서 주조색은 차가운 파랑\n→ 후렴에서만 흰색을 터뜨린다",
+  "origin": "free_text",
+  "origin_label": "인터뷰 Q1 — 직접 입력"
+ },
+ "time_signature": "4/4",
+ "tc_method": "DERIVED",
+ "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+}

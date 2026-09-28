@@ -145,7 +145,7 @@ export function fadeTrackLine(
   section: SongTimelineSection,
   row: SongTimelineConceptRow | undefined,
 ): string {
-  const fade = section.fade_seconds !== undefined ? `${section.fade_seconds}s` : EMPTY_DETAIL;
+  const fade = section.fade_seconds != null ? `${section.fade_seconds}s` : EMPTY_DETAIL;
   const tracking = row?.tracking;
   const track = tracking === undefined || tracking === "track" ? EMPTY_DETAIL : tracking;
   return `Fade ${fade} · Track ${track}`;
