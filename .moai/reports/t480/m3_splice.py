@@ -1,3 +1,4 @@
+# ruff: noqa: E501 — 표지 문자열은 tools.py 원문 그대로여야 한다(줄바꿈 불가).
 """t480 M3 — tools.py 의 prepare_songcue 꼬리를 조립기 길로 바꿔 끼운다(정확한 표지로만).
 
 1. `timecode_number` 검사 바로 뒤에 선택 인자 `preset_start` 검사를 넣는다(D2).
@@ -13,13 +14,17 @@ TOOLS = Path("server/orchestrator/tools.py")
 TAIL = Path(".moai/reports/t480/m3_handler_tail.py.txt").read_text()
 src = TOOLS.read_text()
 
-handler_at = src.index("    def prepare_songcue(call: ToolCall, context: ExecutionContext) -> ToolExecution:")
+handler_at = src.index(
+    "    def prepare_songcue(call: ToolCall, context: ExecutionContext) -> ToolExecution:"
+)
 end_at = src.index("    # -- precheck_patch", handler_at)
 start_at = src.index("        if looks is None:\n", handler_at)
 assert start_at < end_at
 src = src[:start_at] + TAIL + src[end_at:]
 
-anchor = "            return _error_result(call, \"'timecode_number' must be a positive integer\")\n"
+anchor = (
+    "            return _error_result(call, \"'timecode_number' must be a positive integer\")\n"
+)
 assert src.count(anchor) == 1
 preset_block = anchor + (
     "        # 카드 t480 D2 — 포지션 프리셋 시작 번호(선택). 주면 대화 길처럼 기본 10라벨을\n"
