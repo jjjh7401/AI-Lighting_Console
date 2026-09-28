@@ -42,7 +42,8 @@ import {
   type MibChange,
   type TrackingChange,
 } from "./cueRequestSentence";
-import { deriveWarningsForChange } from "./cueRequestWarnings";
+import { deriveWarningsForChange, reserveLock } from "./cueRequestWarnings";
+import { sectionPosition } from "./runbookM7";
 
 /** REQ-LDDESIGN-089 — 콘솔 반영 값 패널이 여는 풀 번호(포지션 2·컬러 4·
  * 딤머 1·이펙트 21). 감독 확정 문언 그대로다 — 지어내지 않는다. */
@@ -95,17 +96,18 @@ function changeSignature(change: GeneratorChange): string {
   return `${change.field}:${groups}`;
 }
 
-/** REQ-090 — BLIND 는 해제 큐(reserve 항목의 released_q) 전까지 잠금.
- * 리저브 정보 자체가 없으면(구버전 페이로드) 잠그지 않는다 — 정보 부재를
- * 잠금 사유로 쓰지 않는다. */
+/** REQ-090 — BLIND 는 해제 구간(reserve 항목의 screen_position) 전까지 잠금.
+ * `position` 은 `sectionPosition()` 값이다(t481 — released_q 는 컨셉 행 번호라
+ * 구간 큐 번호와 비교하면 안 된다). 리저브 정보 자체가 없으면(구버전 페이로드)
+ * 잠그지 않는다 — 정보 부재를 잠금 사유로 쓰지 않는다. */
 export function isGroupLocked(
   groupName: string,
   reserve: SongTimelineReserveItem[] | undefined,
-  cueNumber: number,
+  position: number,
+  sections: ReadonlyArray<Pick<SongTimelineSection, "cue_number">>,
 ): boolean {
-  const item = reserve?.find((entry) => entry.name.toUpperCase() === groupName.toUpperCase());
-  if (!item) return false;
-  return item.released_q === null || cueNumber < item.released_q;
+  // t481 — 판정은 리저브 경고와 같은 한 곳(`reserveLock`)에서 한다.
+  return reserveLock(groupName, reserve, position, sections) !== null;
 }
 
 /** REQ-095 — 수락의 증거는 서버가 편집 성공 때만 새로 찍어 보내는 초안
@@ -240,6 +242,7 @@ export function usePlanCueRequestGenerator({
   const prevResponding = useRef(responding);
 
   const cueNumber = section.cue_number;
+  const position = sectionPosition(section, allSections);
 
   // 턴 종료(D1) 감시 — responding: true → false 전이에서만 판정한다.
   useEffect(() => {
@@ -290,7 +293,7 @@ export function usePlanCueRequestGenerator({
   }
 
   function toggleGroup(group: string) {
-    if (isGroupLocked(group, reserve, cueNumber)) return; // REQ-090 — 잠긴 그룹은 선택되지 않는다.
+    if (isGroupLocked(group, reserve, position, allSections)) return; // REQ-090 — 잠긴 그룹은 선택되지 않는다.
     setSelectedGroups((prev) =>
       prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group],
     );
@@ -450,7 +453,7 @@ export function usePlanCueRequestGenerator({
     statusLabel: stack.length === 0 ? "바뀐 항목 없음" : `바꾼 것 ${stack.length} — 코파일럿 확인 대기`,
     groups,
     selectedGroups,
-    isGroupLocked: (group) => isGroupLocked(group, reserve, cueNumber),
+    isGroupLocked: (group) => isGroupLocked(group, reserve, position, allSections),
     onToggleGroup: toggleGroup,
     intensityInput,
     onIntensityInputChange: setIntensityInput,

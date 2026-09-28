@@ -1812,6 +1812,9 @@ body {
 .song-timeline-plan-state.is-stored { color: #7fa8d9; }
 .song-timeline-plan-state.is-verified { color: #5dc48c; }
 .song-timeline-section.is-plan-cue { border-style: dashed; opacity: 0.92; }
+/* t481 — 생성기가 붙은 카드는 130px 로는 버튼이 옆 카드 밑으로 넘친다
+   (생성기 내용 248px). 생성기 폭만큼 넓힌다. */
+.song-timeline-section.has-generator { min-width: 280px; }
 .song-timeline-warnings {
   margin: 10px 0 0;
   padding: 8px 12px;
@@ -1855,6 +1858,9 @@ body {
   min-width: 760px;
   border-left: 1px solid var(--timeline-line);
   border-bottom: 1px solid var(--timeline-line);
+  /* t481 — 카드가 화면보다 많으면 가로로 굴린다. 바깥 .song-timeline 은
+     overflow: hidden 이라 이게 없으면 넘친 카드(36장 중 28장)에 닿을 수 없었다. */
+  overflow-x: auto;
 }
 
 .song-timeline-section {
@@ -1937,12 +1943,12 @@ body {
 }
 .plan-cue-chip.is-selected { background: #4f8cff; color: #0d0f12; }
 .plan-cue-chip.is-locked { opacity: 0.45; cursor: not-allowed; }
-.plan-cue-generator-field { display: flex; align-items: center; gap: 8px; margin: 6px 0; color: #9baec5; font-size: 11px; }
+.plan-cue-generator-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; color: #9baec5; font-size: 11px; }
 .plan-cue-generator-field input { width: 64px; }
 .plan-cue-generator-before { color: #74869d; }
 .plan-cue-generator-trans { padding: 2px 8px; border: 1px solid #536986; background: transparent; color: #8eb8f7; }
 .plan-cue-generator-trans.is-selected { background: #4f8cff; color: #0d0f12; }
-.plan-cue-generator-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; color: #d1ddeb; font-size: 12px; }
+.plan-cue-generator-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; color: #d1ddeb; font-size: 12px; }
 .plan-cue-generator-stack ul { list-style: none; margin: 8px 0 0; padding: 0; }
 .plan-cue-generator-diff { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; padding: 4px 6px; border-left: 2px solid #536986; font-size: 11px; color: #d1ddeb; }
 .plan-cue-generator-diff.is-requested { border-left-color: #f4bb4f; }
