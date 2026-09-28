@@ -24,15 +24,11 @@ from pathlib import Path
 
 import pytest
 
-from server.llm.types import ToolCall
 from server.looks.busking import looks_for_genre
 from server.looks.loader import load_library_from_dir
 from server.looks.resolver import resolve_roles
 from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN
 from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
-from server.orchestrator.tools import build_toolset
-from server.tests.test_looks_tool import _RecordingPort
-from server.tests.test_songcue_tool import _SongCueStatePort, _tree
 
 _TOOL = "prepare_songcue"
 _GENRES = ("ballad", "edm", "rock", "worship")
@@ -104,33 +100,7 @@ def _sequences_section() -> dict[str, object]:
     return {"objects": [{"no": 1, "name": "Sequence 1"}], "truncated": False}
 
 
-def _stored_cues(library, genre: str, section_name: str, rig: tuple[str, ...]) -> list[str]:
-    """도구를 실제로 발사하고 **기록 포트에 도달한** ``Store Sequence`` 줄을 돌려준다.
-
-    페이로드를 문자열로 훑지 않는다: 발화 직전에 접히는 커맨드가 있기 때문에
-    「번들에 들어 있다」와 「포트에 닿았다」는 같은 사실이 아니다.
-    """
-    port = _RecordingPort()
-    registry = build_toolset(
-        execution_port=port,
-        state_port=_SongCueStatePort(_tree(groups=_numbered(rig))),
-        bundle_gate=None,
-        look_library=library,
-    )
-    execution = registry.dispatch(
-        ToolCall(
-            id="songcue-rig-aware",
-            name=_TOOL,
-            arguments={
-                "song_title": "리그 인식 테스트",
-                "genre": genre,
-                "timecode_number": 7,
-                "sections": [{"name": section_name, "start": "0:10"}],
-            },
-        )
-    )
-    assert execution.result.is_error is False, execution.result.content
-    return [command for command in port.executed if command.startswith("Store Sequence")]
+# 카드 t480 — 실제 입구를 쏘던 ``_stored_cues`` 는 뺐다(파일 끝 주석 참고).
 
 
 def _chosen(library, genre: str, rig: tuple[str, ...], *, dynamics: int):
@@ -179,17 +149,6 @@ class TestRealRigCoverage:
             "배경": "no_match",
         }
 
-    @pytest.mark.parametrize("genre", _GENRES)
-    @pytest.mark.parametrize("section_name", _REACHABLE_SECTIONS)
-    def test_every_named_section_reaches_the_console(self, library, genre, section_name):
-        """4장르 × 구간 이름 4종이 전부 O — 인트로가 더는 침묵하지 않는다."""
-        assert _stored_cues(library, genre, section_name, _REAL_RIG)
-
-    @pytest.mark.parametrize("genre", ("edm", "rock", "worship"))
-    def test_the_intro_was_silent_and_is_the_defect_this_card_closes(self, library, genre):
-        """인트로는 밴드 (1, 2) 다. 고치기 전 이 셋은 전부 X 였다."""
-        assert _stored_cues(library, genre, "intro", _REAL_RIG)
-
 
 class TestRootFixSignature:
     """``_select_bindable`` 코드를 한 줄도 안 고치고 worship D1 이 묶이는 룩을 고르는가.
@@ -228,11 +187,6 @@ class TestCycRigIsUnchanged:
     """무회귀: cyc 를 갖춘 리그에서는 첫 룩이 이미 묶이므로 선택이 그대로여야 한다."""
 
     @pytest.mark.parametrize("genre", _GENRES)
-    @pytest.mark.parametrize(("section_name", "band"), _SECTION_BANDS)
-    def test_the_cyc_rig_still_stores_every_section(self, library, genre, section_name, band):
-        assert _stored_cues(library, genre, section_name, _CYC_RIG)
-
-    @pytest.mark.parametrize("genre", _GENRES)
     @pytest.mark.parametrize("dynamics", tuple(range(DYNAMICS_MIN, DYNAMICS_MAX + 1)))
     def test_the_cyc_rig_picks_the_same_look_as_the_naive_first_match(
         self, library, genre, dynamics
@@ -246,10 +200,6 @@ class TestCycRigIsUnchanged:
 
 class TestInstrumentIsNotVacuous:
     """아무것도 안 묶이는 리그에서는 여전히 X 이고, 사유도 오늘의 것 그대로다."""
-
-    @pytest.mark.parametrize("genre", _GENRES)
-    def test_nothing_reaches_the_port_when_no_role_binds(self, library, genre):
-        assert _stored_cues(library, genre, "chorus", _UNBINDABLE_RIG) == []
 
     @pytest.mark.parametrize("genre", _GENRES)
     def test_the_skip_reason_is_unchanged(self, library, genre):
@@ -297,41 +247,10 @@ class TestWhatThisFixCouldNotReachUntilTheLibraryGrew:
             "이 장르의 ambient 구간은 다시 침묵한다"
         )
 
-    @pytest.mark.parametrize("genre", _GENRES)
-    def test_the_ambient_only_band_now_reaches_the_console(self, library, genre):
-        assert _stored_cues(library, genre, "ambient", _REAL_RIG)
 
-
-def test_the_matrix_is_recorded_for_the_report(library):
-    """보고서에 싣는 O/X 행렬을 한 자리에서 만든다 — 요약이 아니라 실측이다.
-
-    전량 O 인 행렬만 실으면 「쟀는데 통과했다」와 「계측기가 공허하다」가 밖에서
-    구별되지 않는다. 그래서 음성 대조 행렬을 **같은 함수 안에서** 같은 계측기로
-    만들어 나란히 단언한다.
-    """
-
-    def matrix(rig: tuple[str, ...]) -> dict[str, str]:
-        return {
-            genre: "".join(
-                "O" if _stored_cues(library, genre, name, rig) else "X"
-                for name, _band in _SECTION_BANDS
-            )
-            for genre in _GENRES
-        }
-
-    # 실기 리그 — 네 장르 전량 O. edm·rock 의 첫 칸은 이 SPEC 이전까지 X 였다.
-    assert matrix(_REAL_RIG) == {
-        "ballad": "OOOOO",
-        "edm": "OOOOO",
-        "rock": "OOOOO",
-        "worship": "OOOOO",
-    }
-
-    # 음성 대조 — 어느 역할에도 안 걸리는 리그에서는 전량 X. 계측기가 O 를
-    # 찍어내고 있는 것이 아니라는 증거다.
-    assert matrix(_UNBINDABLE_RIG) == {
-        "ballad": "XXXXX",
-        "edm": "XXXXX",
-        "rock": "XXXXX",
-        "worship": "XXXXX",
-    }
+# 카드 t480 — ``prepare_songcue`` 실제 입구로 「구간이 콘솔에 닿는가」를 잰 시험들
+# (``_stored_cues`` 를 쓰던 여섯 자리와 O/X 행렬)은 뺐다. 업로드 길이 대화 길 조립기로
+# 합쳐지며 큐가 룩의 역할 그룹이 아니라 패치된 기구 번호에 저장되므로(감독 결정
+# 2026-09-28, D1) 음성 대조(안 묶이는 리그 → X)는 성립하지 않고, 양성 쪽은 무엇을 넣어도
+# O 라 공허하게 통과한다. 남은 시험은 룩 라이브러리 조립기를 직접 부르는 것들이며,
+# 같은 PR 의 조립기 은퇴 커밋(D3)에서 함께 정리한다.

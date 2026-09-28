@@ -66,6 +66,7 @@ from server.looks.songcue import (
     SongCueSection,
     SongCueSectionBundle,
     SongCueTimingAxes,
+    SongCueTimingPlan,
     build_songcue_timing,
 )
 from server.spatial.mib import PositionCuePlan, position_cue_bundle, premove_follow_command
@@ -1060,8 +1061,26 @@ def reviewed_song_timing_commands(
     timing: TimingPlan,
 ) -> tuple[str, ...]:
     """조립기 번들의 타이밍 명령(타임코드·큐 타임) — 카드 t480, 원래 세션 메서드."""
+    plan = reviewed_song_timing(bundle, sequence_no, timing)
+    return () if plan is None else plan.commands
+
+
+def reviewed_song_timing(
+    bundle,
+    sequence_no: int,
+    timing: TimingPlan,
+    *,
+    axes: SongCueTimingAxes | None = None,
+) -> SongCueTimingPlan | None:
+    """조립기 번들의 타이밍 계획 전체 — 명령·타임코드/자동진행 갈래·건너뛴 축.
+
+    카드 t480 — 업로드 길은 명령만이 아니라 갈래별 목록과 건너뛴 축까지 회신에
+    싣는다. ``axes`` 는 업로드 길이 타임코드 슬롯 점검에서 잰 값이고, 대화 길은
+    넘기지 않는다(``None`` 이면 옮기기 전과 같은 호출). 수동 Go 이거나 타임코드
+    번호가 없으면 ``None``.
+    """
     if timing.mode == "manual_go":
-        return ()
+        return None
     sections: list[SongCueSectionBundle] = []
     # 카드 t462 — 절정 복귀 큐도 시각을 갖고 타이밍에 실린다(``timed_cues``).
     for cue in bundle.timed_cues:
@@ -1099,13 +1118,12 @@ def reviewed_song_timing_commands(
             timing_bundle,
             timecode_number=1,
             axes=SongCueTimingAxes(timecode_go=False, auto_advance_go=True),
-        ).commands
+        )
     if timing.timecode_number is None:
-        return ()
-    return build_songcue_timing(
-        timing_bundle,
-        timecode_number=timing.timecode_number,
-    ).commands
+        return None
+    if axes is None:
+        return build_songcue_timing(timing_bundle, timecode_number=timing.timecode_number)
+    return build_songcue_timing(timing_bundle, timecode_number=timing.timecode_number, axes=axes)
 
 
 #: 카드 t396 — bridge 로 볼 수 있는 **절대** 상한. 정본 6절 표가 breakdown·bridge 를
@@ -1284,11 +1302,16 @@ def _split_sections_for_density(
     palette_mode: str = "palette",
     concept_colors: tuple[str, ...] = (),
     color_usage: str = "modulate",
+    song_end_ms: int | None = None,
 ) -> tuple[list[PositionSheetSection], list[int], tuple[str, ...]]:
     """구간 목록을 마디 경계에서 쪼갠 큐 목록으로 넓힌다 (카드 t305).
 
     돌려주는 것은 (넓힌 구간 목록, 큐마다의 원래 구간 번호, 공개할 사유).
     BPM 이 선언되지 않았으면 입력이 그대로 나온다 — 오늘과 동일.
+
+    카드 t480 — ``song_end_ms`` 를 주면 **마지막 구간도** 쪼갠다. 대화 길은 곡 끝을
+    모르므로 넘기지 않는다(``None`` — 옮기기 전과 같다). 업로드 길의 확정 분석 기록은
+    구간마다 ``end_ms`` 를 들고 있어, 옛 업로드 길(t306)이 하던 대로 넘긴다.
 
     카드 t391 — 한 구간이 여러 큐로 갈리면(``plan.splits`` 에서 같은
     ``source_index`` 가 둘 이상) 부모 이름을 그대로 물려받아 라벨이
@@ -1307,6 +1330,7 @@ def _split_sections_for_density(
             concept_colors=concept_colors,
             color_usage=color_usage,
         ),
+        song_end_ms=song_end_ms,
     )
     source_origins = list(plan.source_origins)
     names = _disambiguate_split_names(

@@ -510,7 +510,16 @@ class TestToolsetEmitsDirectorColorInCommands:
         assert any(self._BLUE in command for command in commands)
         assert not any(self._CRIMSON in command for command in commands)
 
-    def test_records_absent_commands_keep_the_look_library_colour(self):
-        """대조군 — 인터뷰 기록이 없으면 오늘처럼 룩 라이브러리 색(crimson)."""
-        commands = self._commands(None)
-        assert any(self._CRIMSON in command for command in commands)
+    def test_records_absent_uses_the_q2_default_palette_not_a_look_colour(self):
+        """대조군 — 인터뷰 기록이 없으면 대화 길 Q2 카드의 추천 1순위 팔레트를 쓴다
+        (카드 t480, 감독 결정 D4). 업로드 길이 조립기로 합쳐져 룩 라이브러리 색
+        (crimson)은 더 이상 나가지 않는다(D1).
+
+        이 시험의 장르(``edm``)는 추천 팔레트 첫 토큰이 색 이름이 아니라서('단색')
+        색 줄이 0 이 된다 — 카드 t483 이 따로 고친다. 여기서는 출처만 잰다."""
+        wiring = TestToolsetWiring()
+        _execution, payload = wiring._dispatch(wiring._registry())
+        commands = [entry["command"] for entry in payload["commands"]]
+        assert payload["palette"]["source"] == "q2_default"
+        assert "edm" in payload["palette"]["label"]
+        assert not any(self._CRIMSON in command for command in commands)

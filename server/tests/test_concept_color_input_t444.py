@@ -308,7 +308,10 @@ class TestPrepareSongcueWiresPalettes:
         assert report["gates"][_G6]["detail"] != NO_INPUT_COLOR_REASON
         assert report["gates"][_G6]["passed"] is True  # 전 구간 감독 주색 하나
 
-    def test_records_absent_color_gates_are_na(self) -> None:
+    def test_records_absent_color_gates_are_judged_on_the_q2_default(self) -> None:
+        # 카드 t480 D4 — 인터뷰가 없어도 업로드 길은 대화 길 Q2 추천 1순위 팔레트를
+        # 입력으로 쓴다. 그래서 색 게이트는 「입력에 색 없음(n/a)」이 아니라 그
+        # 팔레트로 판정된다 — 상수 팔레트가 아니라 곡 계획에 실린 색이다.
         report = self._report(None)
         assert report["available"] is True, report
-        assert report["gates"][_G6] == {"passed": None, "detail": NO_INPUT_COLOR_REASON}
+        assert report["gates"][_G6]["detail"] != NO_INPUT_COLOR_REASON

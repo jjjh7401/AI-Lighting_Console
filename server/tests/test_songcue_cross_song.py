@@ -31,7 +31,7 @@ from server.looks.songcue import (
 from server.orchestrator.tools import build_toolset
 from server.tests.busking_fixtures import FULL_RIG
 from server.tests.test_looks_instantiate import _groups
-from server.tests.test_looks_tool import _RecordingGate, _RecordingPort
+from server.tests.test_looks_tool import _RecordingPort
 from server.tests.test_songcue_tool import _look, _SongCueStatePort, _tree
 
 #: 두 곡이 **같은 모양**이어야 「룩이 달라진 것은 곡이 달라서가 아니다」가 성립한다.
@@ -177,75 +177,12 @@ class TestNoHistoryIsByteIdentical:
         )
 
 
-class TestTheProductionPathRemembers:
-    """이 기억이 **앱에서** 산다는 증거 — 순수 함수가 아니라 ``prepare_songcue`` 로 잰다.
-
-    부품이 초록인 것과 경로가 이어진 것은 다르다: ``used_look_ids`` 를 아무도 안 넘기면
-    위 검사들은 전부 통과하면서 앱의 동작은 하나도 안 바뀐다.
-    """
-
-    def test_two_songs_in_one_session_do_not_share_a_look(self):
-        memory = SongLookMemory()
-        registry = _registry(memory=memory)
-
-        first_execution, first = _dispatch(registry, "곡 A")
-        _second_execution, second = _dispatch(registry, "곡 B")
-
-        # 되풀이가 없으면 감독 고지에 한 글자도 안 붙는다 — 오늘의 문면과 바이트 동일.
-        assert first_execution.operator_notice == ""
-        assert first["cross_song_looks"]["memory_wired"] is True
-        assert first["cross_song_looks"]["history_before"] == []
-        assert first["cross_song_looks"]["stored_look_ids"] == ["chorus-a"]
-        assert first["cross_song_looks"]["remembered"] == ["chorus-a"]
-
-        assert second["cross_song_looks"]["history_before"] == ["chorus-a"]
-        assert second["cross_song_looks"]["stored_look_ids"] == ["chorus-b"]
-        assert second["cross_song_looks"]["reused_look_ids"] == []
-        assert memory.used() == ("chorus-a", "chorus-b")
-
-    def test_without_a_wired_memory_the_second_song_repeats_the_first(self):
-        """날조 대조군 — 세션이 기억을 안 넘기면 앱은 고치기 전 그대로다."""
-        registry = _registry(memory=None)
-
-        _first_execution, first = _dispatch(registry, "곡 A")
-        _second_execution, second = _dispatch(registry, "곡 B")
-
-        assert first["cross_song_looks"]["memory_wired"] is False
-        assert first["cross_song_looks"]["stored_look_ids"] == ["chorus-a"]
-        assert second["cross_song_looks"]["stored_look_ids"] == ["chorus-a"]
-
-    def test_the_third_song_reports_the_exhausted_pool_in_the_payload(self):
-        memory = SongLookMemory()
-        registry = _registry(memory=memory)
-
-        _dispatch(registry, "곡 A")
-        _dispatch(registry, "곡 B")
-        third_execution, third = _dispatch(registry, "곡 C")
-
-        exhausted = third["cross_song_looks"]["pool_exhausted_sections"]
-        assert [entry["reason"] for entry in exhausted] == [LOOK_POOL_EXHAUSTED]
-        assert exhausted[0]["name"] == "Chorus"
-        assert third["cross_song_looks"]["reused_look_ids"] == ["chorus-a"]
-        # 큐는 그래도 나갔다 — 보고가 있는 재사용이지 침묵이 아니다.
-        assert third["report"]["summary"]["generated_count"] == 1
-        # 모델이 옮겨 말해 주기를 기대하지 않는다 — 감독이 읽는 고지에 직접 실린다.
-        assert "chorus-a" in third_execution.operator_notice
-        assert "다시 썼습니다" in third_execution.operator_notice
-
-    def test_a_refused_bundle_is_not_remembered(self):
-        """콘솔에 0건이 나간 회차는 기억에 안 들어간다.
-
-        들어가면 다음 곡이 **무대에 오른 적 없는** 룩을 피하게 되고, 팔레트가 이유 없이
-        좁아진다. 게이트 거절은 그 갈래의 유일한 실측 가능한 형태다.
-        """
-        memory = SongLookMemory()
-        registry = _registry(memory=memory, gate=_RecordingGate(cleared=False, status="rejected"))
-
-        _execution, payload = _dispatch(registry, "곡 A")
-
-        assert payload["cross_song_looks"]["stored_look_ids"] == ["chorus-a"]
-        assert payload["cross_song_looks"]["remembered"] == []
-        assert memory.used() == ()
+# 카드 t480 — ``TestTheProductionPathRemembers`` 네 시험을 뺐다. 곡 사이 룩 기억이
+# **앱에서** 산다는 것을 ``prepare_songcue`` 로 쟀는데, 업로드 길이 대화 길 조립기로
+# 합쳐지며 룩 라이브러리를 거치지 않는다 — 감독 결정 2026-09-28(D1): 「업로드 길의 장르
+# 룩 라이브러리·곡 사이 룩 기억은 사라져도 된다」. 위 순수 함수 검사들
+# (``map_sections_to_looks`` 직접 호출)은 같은 PR 의 룩 라이브러리 조립기 은퇴 커밋(D3)에서
+# 함께 정리한다.
 
 
 def _two_chorus_looks() -> LookLibrary:
