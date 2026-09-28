@@ -2,7 +2,7 @@
 id: SPEC-LDDESIGN-001
 title: "감독 워크시트 기반 조명 연출 컴파일러 — 컨셉·컬러 스크립트·3층 큐 밀도·회차 에스컬레이션·트래킹/타이밍/MIB"
 version: "0.1.0"
-status: implemented
+status: completed
 created: 2026-09-21
 updated: 2026-09-28
 author: jaihyun
