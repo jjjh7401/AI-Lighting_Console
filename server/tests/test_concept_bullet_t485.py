@@ -128,3 +128,38 @@ class TestRunbookPayloadCarriesTheBullet:
             "available": False,
             "reason": "인터뷰 Q1(컨셉) 기록이 없다",
         }
+
+
+class TestRealSendSiteCarriesTheBullet:
+    """호출 지점(``_song_send_timeline``)이 인터뷰 기록을 넘기는지 — 페이로드 함수를
+    직접 부르는 위 시험은 이 배선이 빠져도 초록이다. 실제 세션을 인터뷰부터 끝까지
+    돌려(콘솔은 가짜) 나간 타임라인 이벤트를 읽는다."""
+
+    @staticmethod
+    def _timeline(tmp_path, monkeypatch, answers: list[str]) -> dict:
+        from server.tests import test_song_analysis_to_timeline as seam
+
+        monkeypatch.setattr(seam, "_INTERVIEW_ANSWERS", answers)
+        analysis = seam._confirmed((0, 24_000, 2), (24_000, 48_000, 3), (48_000, 72_000, 5))
+        events = seam._timeline_events(seam._drive(tmp_path, seam._NO_SECTIONS, analysis))
+        assert events, "타임라인 이벤트가 하나도 안 나갔다"
+        return events[0]["timeline"]
+
+    def test_director_q1_answer_reaches_the_runbook_timeline(self, tmp_path, monkeypatch) -> None:
+        from server.tests.test_song_analysis_to_timeline import _INTERVIEW_ANSWERS
+
+        timeline = self._timeline(tmp_path, monkeypatch, list(_INTERVIEW_ANSWERS))
+        assert timeline["concept_bullet"]["available"] is True
+        assert timeline["concept_bullet"]["text"] == _INTERVIEW_ANSWERS[0]
+
+    def test_blank_q1_answer_reaches_the_timeline_as_not_verbatim(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        from server.tests.test_song_analysis_to_timeline import _INTERVIEW_ANSWERS
+
+        answers = ["", *_INTERVIEW_ANSWERS[1:]]
+        timeline = self._timeline(tmp_path, monkeypatch, answers)
+        assert timeline["concept_bullet"] == {
+            "available": False,
+            "reason": CONCEPT_BULLET_AUTO_DRAFT_REASON,
+        }
