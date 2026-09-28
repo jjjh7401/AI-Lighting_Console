@@ -1,0 +1,929 @@
+{
+ "song_title": "Timeline Wiring Test",
+ "sequence_name": "Timeline Wiring Seq",
+ "sequence_number": 1,
+ "timing_mode": "timecode",
+ "timecode_number": 9,
+ "lifecycle": "pending_approval",
+ "approval": "approved",
+ "director_decisions": [],
+ "sections": [
+  {
+   "index": 1,
+   "label": "Intro",
+   "start_ms": 0,
+   "cue_number": 101,
+   "plan_status": "draft",
+   "d_level": 2,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 2.0,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 0.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "intro",
+   "end_ms": 12000,
+   "duration_ms": 12000,
+   "bar_start": 1,
+   "bar_count": 6,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 50
+    },
+    {
+     "group": "BACK",
+     "level": 40
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 2,
+   "label": "Verse 1",
+   "start_ms": 12000,
+   "cue_number": 102,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 12.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "verse",
+   "end_ms": 24000,
+   "duration_ms": 12000,
+   "bar_start": 7,
+   "bar_count": 6,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 3,
+   "label": "Pre-Chorus 1",
+   "start_ms": 24000,
+   "cue_number": 103,
+   "plan_status": "draft",
+   "d_level": 4,
+   "palette": [
+    "amber"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 0.75,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 24.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF8C0D",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "verse",
+   "end_ms": 36000,
+   "duration_ms": 12000,
+   "bar_start": 13,
+   "bar_count": 6,
+   "palette_primary": "amber",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 4,
+   "label": "Chorus 1",
+   "start_ms": 36000,
+   "cue_number": 104,
+   "plan_status": "draft",
+   "d_level": 5,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 0.25,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 36.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "chorus",
+   "end_ms": 48000,
+   "duration_ms": 12000,
+   "bar_start": 19,
+   "bar_count": 6,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 100
+    },
+    {
+     "group": "BACK",
+     "level": 80
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 5,
+   "label": "Verse 2",
+   "start_ms": 48000,
+   "cue_number": 105,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 48.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "verse",
+   "end_ms": 60000,
+   "duration_ms": 12000,
+   "bar_start": 25,
+   "bar_count": 6,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 6,
+   "label": "Pre-Chorus 2",
+   "start_ms": 60000,
+   "cue_number": 106,
+   "plan_status": "draft",
+   "d_level": 4,
+   "palette": [
+    "amber"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 0.75,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 60.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF8C0D",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "verse",
+   "end_ms": 72000,
+   "duration_ms": 12000,
+   "bar_start": 31,
+   "bar_count": 6,
+   "palette_primary": "amber",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 7,
+   "label": "Chorus 2",
+   "start_ms": 72000,
+   "cue_number": 107,
+   "plan_status": "draft",
+   "d_level": 5,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 0.25,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 72.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "chorus",
+   "end_ms": 84000,
+   "duration_ms": 12000,
+   "bar_start": 37,
+   "bar_count": 6,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 100
+    },
+    {
+     "group": "BACK",
+     "level": 80
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 8,
+   "label": "Bridge",
+   "start_ms": 84000,
+   "cue_number": 108,
+   "plan_status": "draft",
+   "d_level": 2,
+   "palette": [
+    "cyan"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 2.0,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 84.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00E6FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "bridge",
+   "end_ms": 96000,
+   "duration_ms": 12000,
+   "bar_start": 43,
+   "bar_count": 6,
+   "palette_primary": "cyan",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 20
+    },
+    {
+     "group": "BACK",
+     "level": 16
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 9,
+   "label": "Chorus 3",
+   "start_ms": 96000,
+   "cue_number": 109,
+   "plan_status": "draft",
+   "d_level": 5,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 0.25,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 96.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "chorus",
+   "end_ms": 108000,
+   "duration_ms": 12000,
+   "bar_start": 49,
+   "bar_count": 6,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 100
+    },
+    {
+     "group": "BACK",
+     "level": 80
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 10,
+   "label": "Outro",
+   "start_ms": 108000,
+   "cue_number": 110,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 4.0,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 108.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "role": "finale",
+   "bar_start": 55,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  }
+ ],
+ "lint": [],
+ "unresolved": [],
+ "disabled": [],
+ "readback": {
+  "verified": null,
+  "message": null
+ },
+ "console_stored": false,
+ "warnings": [],
+ "layer_mapping": [],
+ "preset_start": null,
+ "concept_report": {
+  "available": true,
+  "gates": {
+   "G1 어휘 닫힘": {
+    "passed": true,
+    "detail": "구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)"
+   },
+   "G2 후렴 정체성": {
+    "passed": true,
+    "detail": "2/2 쌍 정체성 유지"
+   },
+   "G3 회차마다 새 축(5회차까지)": {
+    "passed": true,
+    "detail": "새 축 0인 쌍(5회차 이내) 0개"
+   },
+   "G4 피날레 새 축 + 여유": {
+    "passed": true,
+    "detail": "피날레 새 축 ['area', 'brightness', 'direction', 'groups', 'motion'] · 직전 남은 모션 단계 2"
+   },
+   "G5 헤드룸 경고 0": {
+    "passed": true,
+    "detail": "경고 0건"
+   },
+   "G6 컬러: 유보색 조기 0 · 브리지 위반 0": {
+    "passed": false,
+    "detail": "유보색 n/a(입력에 유보색 없음) · 브리지 fail(위반 8)"
+   },
+   "G7 후렴 주색 동일": {
+    "passed": true,
+    "detail": "chorus_primary_color_identity: pass (위반 0건)"
+   },
+   "G8 후렴 앞 빌드업": {
+    "passed": true,
+    "detail": "빌드업 3 / 필요 3"
+   },
+   "G9 트래킹: Block·Release·누출 0": {
+    "passed": true,
+    "detail": "Block 처음 True · Release 마지막 True · cue_only 9 · 누출 없음 True"
+   },
+   "G10 상대 감소 겹침 없음": {
+    "passed": null,
+    "detail": "절 밝기 [45, 38](2개 이하 — n/a)"
+   },
+   "G11 타이밍 전 큐 배정": {
+    "passed": true,
+    "detail": "snap 3 · short 17 · long 1 · 후렴 순차 3"
+   },
+   "G12 MIB: 켜진 채 이동 0": {
+    "passed": true,
+    "detail": "어둠 2 · Mark 1 · 켜진 채 0"
+   },
+   "G13 큐 밀도 10~45": {
+    "passed": true,
+    "detail": "시퀀스 큐 21 + 원샷 3"
+   }
+  },
+  "mib": [
+   null,
+   {
+    "status": "dark"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "status": "dark"
+   },
+   null,
+   null,
+   null,
+   null,
+   {
+    "status": "mark"
+   },
+   null,
+   null,
+   null,
+   null
+  ],
+  "lint_finding_count": 11,
+  "lint_disabled_rule_count": 2,
+  "energy_report_count": 21,
+  "rows": [
+   {
+    "q": 1,
+    "ts": -1.0,
+    "kind": "safety",
+    "section": "Intro",
+    "occurrence": 0,
+    "trigger": null,
+    "tracking": "block",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "verified",
+    "screen_position": null,
+    "unused_groups": 10,
+    "description": "+KEY · 색 blue"
+   },
+   {
+    "q": 2,
+    "ts": 0.0,
+    "kind": "section",
+    "section": "Intro",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": "dark",
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 0,
+    "unused_groups": 9,
+    "description": "+BACK"
+   },
+   {
+    "q": 3,
+    "ts": 4.0,
+    "kind": "phrase",
+    "section": "Intro",
+    "occurrence": 1,
+    "trigger": "보컬 시작",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 0,
+    "unused_groups": 7,
+    "description": "+SIDE-L·SIDE-R"
+   },
+   {
+    "q": 4,
+    "ts": 12.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 1,
+    "unused_groups": 7,
+    "description": "그룹·색 변화 없음"
+   },
+   {
+    "q": 5,
+    "ts": 24.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 2,
+    "unused_groups": 7,
+    "description": "색 amber"
+   },
+   {
+    "q": 6,
+    "ts": 28.0,
+    "kind": "phrase",
+    "section": "Pre-Chorus",
+    "occurrence": 1,
+    "trigger": "빌드업 시작",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 2,
+    "unused_groups": 6,
+    "description": "+FOH"
+   },
+   {
+    "q": 7,
+    "ts": 36.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": null,
+    "screen_position": 3,
+    "unused_groups": 6,
+    "description": "색 red"
+   },
+   {
+    "q": 8,
+    "ts": 40.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 1,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 3,
+    "unused_groups": 4,
+    "description": "+WASH-D·WASH-U"
+   },
+   {
+    "q": 9,
+    "ts": 48.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 2,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 4,
+    "unused_groups": 7,
+    "description": "Verse 1 복원 · -FOH·WASH-D·WASH-U · 색 blue"
+   },
+   {
+    "q": 10,
+    "ts": 60.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 2,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 5,
+    "unused_groups": 7,
+    "description": "색 amber"
+   },
+   {
+    "q": 11,
+    "ts": 64.0,
+    "kind": "phrase",
+    "section": "Pre-Chorus",
+    "occurrence": 2,
+    "trigger": "빌드업 시작",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 5,
+    "unused_groups": 6,
+    "description": "+FOH"
+   },
+   {
+    "q": 12,
+    "ts": 72.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 2,
+    "trigger": null,
+    "tracking": "track",
+    "mib": "dark",
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 6,
+    "unused_groups": 4,
+    "description": "Chorus 1 복원 · +WASH-D·WASH-U · 색 red"
+   },
+   {
+    "q": 13,
+    "ts": 76.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 2,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 6,
+    "unused_groups": 4,
+    "description": "그룹·색 변화 없음"
+   },
+   {
+    "q": 14,
+    "ts": 80.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 2,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 6,
+    "unused_groups": 4,
+    "description": "그룹·색 변화 없음"
+   },
+   {
+    "q": 15,
+    "ts": 84.0,
+    "kind": "section",
+    "section": "Bridge",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 7,
+    "unused_groups": 9,
+    "description": "-FOH·SIDE-L·SIDE-R·WASH-D·WASH-U · 색 cyan"
+   },
+   {
+    "q": 16,
+    "ts": 92.0,
+    "kind": "phrase",
+    "section": "Pre-Chorus",
+    "occurrence": 3,
+    "trigger": "빌드업 시작",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 7,
+    "unused_groups": 6,
+    "description": "+FOH·SIDE-L·SIDE-R"
+   },
+   {
+    "q": 17,
+    "ts": 96.0,
+    "kind": "section",
+    "section": "Final Chorus",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": "mark",
+    "one_shot": {
+     "shot": "Blinder hit",
+     "target": "BLIND"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 8,
+    "unused_groups": 1,
+    "description": "Chorus 1 복원 · +BLIND·MOVER-D·MOVER-U·WASH-D·WASH-U · 색 red"
+   },
+   {
+    "q": 18,
+    "ts": 100.0,
+    "kind": "phrase",
+    "section": "Final Chorus",
+    "occurrence": 1,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 8,
+    "unused_groups": 1,
+    "description": "그룹·색 변화 없음"
+   },
+   {
+    "q": 19,
+    "ts": 104.0,
+    "kind": "phrase",
+    "section": "Final Chorus",
+    "occurrence": 1,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 8,
+    "unused_groups": 1,
+    "description": "그룹·색 변화 없음"
+   },
+   {
+    "q": 20,
+    "ts": 108.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 3,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 9,
+    "unused_groups": 1,
+    "description": "색 blue"
+   },
+   {
+    "q": 21,
+    "ts": 124.0,
+    "kind": "safety",
+    "section": "Outro",
+    "occurrence": 0,
+    "trigger": null,
+    "tracking": "release",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "verified",
+    "screen_position": null,
+    "unused_groups": 11,
+    "description": "-BACK·BLIND·FOH·KEY·MOVER-D·MOVER-U·SIDE-L·SIDE-R·WASH-D·WASH-U"
+   }
+  ],
+  "row_pairing": {
+   "available": true,
+   "reason": null
+  },
+  "reserve": [
+   {
+    "name": "BLIND",
+    "kind": "group",
+    "released_q": 17,
+    "screen_position": 8
+   },
+   {
+    "name": "STROBE",
+    "kind": "group",
+    "released_q": null,
+    "screen_position": null
+   }
+  ],
+  "glance": {
+   "available": true,
+   "rule": "lead-proposed-2026-09-28",
+   "reason": null,
+   "stages": [
+    {
+     "stage": "시작",
+     "positions": [
+      0
+     ],
+     "reason": null
+    },
+    {
+     "stage": "쌓기",
+     "positions": [
+      1,
+      2
+     ],
+     "reason": null
+    },
+    {
+     "stage": "강조",
+     "positions": [
+      3,
+      4,
+      5,
+      6
+     ],
+     "reason": null
+    },
+    {
+     "stage": "예고",
+     "positions": [
+      7
+     ],
+     "reason": null
+    },
+    {
+     "stage": "정점→마무리",
+     "positions": [
+      8,
+      9
+     ],
+     "reason": null
+    }
+   ]
+  }
+ },
+ "concept_bullet": {
+  "available": false,
+  "reason": "인터뷰 Q1(컨셉) 기록이 없다"
+ },
+ "bpm": 120.0,
+ "time_signature": "4/4",
+ "seconds_per_bar": 2.0,
+ "tc_method": "DERIVED",
+ "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+}

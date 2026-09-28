@@ -36,7 +36,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
-from server.concept.session_bridge import build_concept_report
+from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
 from server.design.capability_verdict import position_verdict
@@ -1403,6 +1403,7 @@ def _song_timeline_payload(
     layer_mapping: Sequence[Mapping[str, object]] = (),
     preset_start: int | None = None,
     color_usage: str = "modulate",
+    interview_records: Sequence[object] = (),
 ) -> dict[str, object]:
     """Project the reviewed plan for the runbook UI without exposing commands."""
     bundle = composition.bundle
@@ -1597,6 +1598,9 @@ def _song_timeline_payload(
             # 낸다, `server/concept/session_bridge.py` 독스트링) `available:
             # False` 로 계속 진행된다.
             "concept_report": build_concept_report(plan, color_usage=color_usage),
+            # 카드 t485 — 컨셉 패널 탭 1 인과 불릿 원문(인터뷰 Q1, REQ-013·032·080).
+            # ADDITIVE — 원문이 없으면 `available: False` + 사유.
+            "concept_bullet": concept_bullet(interview_records),
         },
         _song_cue_sheet_view_fields(plan),
     )
@@ -7741,6 +7745,7 @@ class ChatSession:
             layer_mapping=state.layer_mapping,
             preset_start=state.preset_start,
             color_usage=_record_value(state.records, Q2B_COLOR_USAGE, "modulate"),
+            interview_records=state.records,
         )
         # Keep the LAST projection process-wide so a refreshed browser (new
         # WebSocket) is replayed the current timeline instead of a blank pane.

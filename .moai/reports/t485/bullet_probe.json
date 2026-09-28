@@ -1,0 +1,47 @@
+{
+ "viewport": "1600x1000",
+ "causal": {
+  "panel_open_by_default": false,
+  "runbook_blocks_before_open": 20,
+  "active_tab": "이 곡의 연출Master Concept",
+  "badge": "원문 그대로",
+  "origin": "인터뷰 Q1 — 직접 입력",
+  "lines": [
+   "이 곡은 이별 노래다 → 그래서 주조색은 차가운 파랑",
+   "→ 후렴에서만 흰색을 터뜨린다"
+  ],
+  "nodata": [],
+  "grammar_last_header": "그래서 보이는 것",
+  "page_errors": [],
+  "expected_lines": [
+   "이 곡은 이별 노래다 → 그래서 주조색은 차가운 파랑",
+   "→ 후렴에서만 흰색을 터뜨린다"
+  ],
+  "lines_match": true,
+  "origin_match": true
+ },
+ "blank": {
+  "panel_open_by_default": false,
+  "runbook_blocks_before_open": 20,
+  "active_tab": "이 곡의 연출Master Concept",
+  "badge": null,
+  "origin": null,
+  "lines": [],
+  "nodata": [
+   "인과 불릿 · 데이터 없음 — Q1 컨셉에 감독 답이 없다 — 빈 답이라 첫 제안이 자동 초안으로 들어갔다(원문 아님)"
+  ],
+  "grammar_last_header": "그래서 보이는 것",
+  "page_errors": [],
+  "reason_shown": true
+ },
+ "raw_payload_without_workaround": {
+  "panel_missing": true,
+  "root_html_length": 0,
+  "page_errors": [
+   "Cannot read properties of null (reading 'toFixed')",
+   "Cannot read properties of null (reading 'toFixed')",
+   "console: The above error occurred in the <CueSheetTimeline> component:\n\n    at CueSheetTimeline (http://localhost:5485/src/components/CueSheetTimeline.tsx:166:3)\n    at section\n    at RunbookMode (http://localhost:5485/src/components/RunbookMode.tsx:201:3)\n    at div\n\nConsider adding an error boundary to your tree to customize error handling behavior.\nVisit https://reactjs.org/link/error-boundaries to lear",
+   "Cannot read properties of null (reading 'toFixed')"
+  ]
+ }
+}

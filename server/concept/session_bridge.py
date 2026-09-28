@@ -80,20 +80,40 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from server.concept.color_strip import render_concept_bullet
 from server.concept.compile import compile_song
 from server.concept.cue_model import CueState
 from server.concept.description import describe
 from server.concept.evidence import evidence_for_row
 from server.concept.gates import SongBuild, build_song, evaluate_song
 from server.concept.headroom import compute_cue_headroom
+from server.design.interview import (
+    Q1_CONCEPT,
+    SOURCE_FREE_TEXT,
+    SOURCE_OPTION,
+    SOURCE_PRE_SPECIFIED,
+)
 from server.design.song_plan import UnifiedSongLightingPlan
 
 __all__ = [
+    "CONCEPT_BULLET_AUTO_DRAFT_REASON",
     "GLANCE_RULE",
     "GLANCE_STAGES",
     "build_concept_report",
+    "concept_bullet",
     "glance_stages",
 ]
+
+#: 카드 t485 — 인과 불릿 원천(인터뷰 Q1 기록의 ``source``)별 화면 출처 표식.
+#: 여기 없는 출처(``auto_draft`` 등)는 감독이 한 말이 아니므로 원문으로 싣지 않는다.
+_CONCEPT_BULLET_ORIGINS = {
+    SOURCE_FREE_TEXT: "인터뷰 Q1 — 직접 입력",
+    SOURCE_OPTION: "인터뷰 Q1 — 제안 중 선택",
+    SOURCE_PRE_SPECIFIED: "인터뷰 Q1 — 요청 문장에서 읽음",
+}
+CONCEPT_BULLET_AUTO_DRAFT_REASON = (
+    "Q1 컨셉에 감독 답이 없다 — 빈 답이라 첫 제안이 자동 초안으로 들어갔다(원문 아님)"
+)
 
 #: 카드 t482 — 컨셉 패널 "한눈에" 5단계(REQ-097, 감독 채택 DESIGN.md §4.2 의 이름).
 GLANCE_STAGES = ("시작", "쌓기", "강조", "예고", "정점→마무리")
@@ -386,6 +406,34 @@ def _run_concept_pipeline(
         "rows": rows,
         "row_pairing": row_pairing,
         "reserve": reserve,
+    }
+
+
+def concept_bullet(records: Sequence[object]) -> dict[str, object]:
+    """카드 t485 — REQ-013·032·080 인과 불릿 원문. ``records`` 는
+    ``DirectorInterview.audit_trail()`` 이다.
+
+    원천은 인터뷰 Q1(컨셉) 기록 하나다 — 워크시트 YAML 로더(``load_worksheet``)는 앱
+    경로에서 불리지 않는다. 감독이 실제로 준 글자(직접 입력·제안 선택·요청 문장)만
+    바이트 그대로 싣는다(``render_concept_bullet``, 요약·윤문 없음). 빈 답으로 첫
+    제안이 들어간 자동 초안은 감독 말이 아니므로 원문으로 싣지 않고 사유를 낸다.
+    """
+    record = next((r for r in records if getattr(r, "step", None) == Q1_CONCEPT), None)
+    if record is None:
+        return {"available": False, "reason": "인터뷰 Q1(컨셉) 기록이 없다"}
+    source = getattr(record, "source", None)
+    origin_label = _CONCEPT_BULLET_ORIGINS.get(source) if isinstance(source, str) else None
+    if origin_label is None or not getattr(record, "confirmed", False):
+        return {"available": False, "reason": CONCEPT_BULLET_AUTO_DRAFT_REASON}
+    free_text = getattr(record, "free_text", None)
+    text = free_text if isinstance(free_text, str) else str(getattr(record, "value", ""))
+    if not text.strip():
+        return {"available": False, "reason": "Q1 컨셉 답이 비어 있다"}
+    return {
+        "available": True,
+        "text": render_concept_bullet(text),
+        "origin": source,
+        "origin_label": origin_label,
     }
 
 
