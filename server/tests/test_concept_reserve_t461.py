@@ -38,9 +38,11 @@ def _build(reserved: tuple[str, ...] = ()):
 
 def test_rows_carry_unused_group_count() -> None:
     rows, _pairing = _concept_rows(_build(), screen_count=8)
-    # .moai/reports/t461/measure_reserve.out.txt 실측
+    # .moai/reports/t461/measure_reserve.out.txt 실측.
+    # t489 — Outro 가 제 칸으로 가며 REQ-038 눈 리셋 행(1)이 생기고, Outro 행은
+    # KEY·BACK 만 남겨 9(이전엔 폴백 retain 이라 1). 실측 .moai/reports/t489/reserve_after.txt
     assert [row["unused_groups"] for row in rows] == [
-        10, 9, 7, 7, 6, 6, 4, 7, 6, 4, 4, 4, 9, 6, 1, 1, 1, 1, 1, 11,
+        10, 9, 7, 7, 6, 6, 4, 7, 6, 4, 4, 4, 9, 6, 1, 1, 1, 1, 1, 9, 11,
     ]  # fmt: skip
 
 
