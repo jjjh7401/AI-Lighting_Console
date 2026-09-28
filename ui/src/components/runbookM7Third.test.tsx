@@ -1,6 +1,7 @@
 // t458 — SPEC-LDDESIGN-001 M7 3차. 서버 #503(t455·t456)이 내보내는 데이터로
 // t454 가 「데이터 없음」으로 둔 칸을 채운다. 데이터는 서버 실출력 사본
-// (`runbookServerPayload.json` — `.moai/reports/t458/measure_payload.py`).
+// (`runbookServerPayload.json` — `.moai/reports/t458/measure_payload.py`,
+// t493 이 t489 수정 뒤 같은 스크립트로 재생성: `.moai/reports/t493/measure_payload.py`).
 // 원칙: 짝짓기가 안 되면(row_pairing.available=false) t454 표기로 돌아간다.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -30,9 +31,9 @@ function unpaired(report: SongTimelineConceptReport): SongTimelineConceptReport 
 }
 
 describe("서버 실출력 전제 — 이 파일이 재는 데이터가 맞는가", () => {
-  it("20행이 8구간에 짝지어져 있다", () => {
+  it("21행이 8구간에 짝지어져 있다", () => {
     expect(REPORT.row_pairing).toEqual({ available: true, reason: null });
-    expect(REPORT.rows).toHaveLength(20);
+    expect(REPORT.rows).toHaveLength(21);
     expect(SECTIONS).toHaveLength(8);
   });
 });
