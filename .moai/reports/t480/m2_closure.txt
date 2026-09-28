@@ -1,0 +1,23 @@
+roots: ['_split_sections_for_density', '_infer_confirmed_role', '_confirmed_section_names', '_blinder_group_no']
+closure names: 10 lines: 174
+imported names used: 10
+  import collections.abc.Mapping as Mapping
+  import collections.abc.Sequence as Sequence
+  import dataclasses.replace as replace
+  import server.design.cue_density.plan_cue_density as plan_cue_density
+  import server.design.profile.MusicProfile as MusicProfile
+  import server.design.profile.resolve_section as resolve_section
+  import server.design.section_palette._section_palette_choice as _section_palette_choice
+  import server.design.song_cue_render._pins_split_primary as _pins_split_primary
+  import server.design.song_cue_render._section_role as _section_role
+  import server.spatial.position_cuesheet.PositionSheetSection as PositionSheetSection
+     566 _BRIDGE_MAX_D_LEVEL
+     569 _infer_confirmed_role
+     602 _CONFIRMED_ROLE_DISPLAY_NAME
+     614 _CONFIRMED_ROLE_SINGLETON
+     617 _confirmed_section_names
+     648 _disambiguate_split_names
+     786 _BLINDER_GROUP_NAMES
+     812 _blinder_group_no
+    1214 _section_palette_sizes
+    1254 _split_sections_for_density

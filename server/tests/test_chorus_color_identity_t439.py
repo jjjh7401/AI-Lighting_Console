@@ -18,13 +18,13 @@ from __future__ import annotations
 
 from server.design.profile import MusicProfile
 from server.design.rig import build_rig_profile
+from server.design.section_palette import _section_palette_choice
 from server.design.song_plan import TimingPlan
 from server.spatial.position_cuesheet import PositionSheetSection
 from server.web.session import (
     _arc_palette,
     _build_unified_song_plan,
     _per_chorus_palette,
-    _section_palette_choice,
 )
 
 

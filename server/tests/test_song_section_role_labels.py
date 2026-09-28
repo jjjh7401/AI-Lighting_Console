@@ -16,10 +16,10 @@ S11 S12 S13 S14 S15 S16`` — 8번째·9번째가 둘 다 ``S8`` 이다. 원인�
 from __future__ import annotations
 
 from server.design.profile import MusicProfile
+from server.design.song_cue_render import _disambiguate_split_names
 from server.spatial.position_cuesheet import PositionSheetSection
 from server.web.session import (
     _confirmed_section_names,
-    _disambiguate_split_names,
     _infer_confirmed_role,
     _split_sections_for_density,
 )

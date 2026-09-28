@@ -47,7 +47,6 @@ from server.design.console_slots import (  # 카드 t480 — 업로드 길 공�
     resolve_position_preset_labels,
     white_preset_slots,
 )
-from server.design.cue_density import plan_cue_density
 from server.design.cue_sheet_apply import (
     ConsoleApplyError,
     changed_cue_numbers,
@@ -88,7 +87,6 @@ from server.design.profile import (
     MusicProfile,
     parse_sheet_bpm,
     resolve_bpm,
-    resolve_section,
 )
 from server.design.rig import _LAYER_GROUP_ALIASES, build_rig_profile
 from server.design.rig_capability_read import (
@@ -111,7 +109,6 @@ from server.design.section_palette import (
     _COLOR_WORDS,
     _extract_color_words,
     _palette_colors,
-    _section_palette_choice,
 )
 from server.design.section_palette import _CHORUS_IDENTITY_ROLES as _CHORUS_IDENTITY_ROLES
 from server.design.section_palette import _arc_accent_weight as _arc_accent_weight
@@ -124,17 +121,20 @@ from server.design.song_cue_composer import (
     compose_song_cue_bundle,
     position_axis_disabled,
 )
-from server.design.song_cue_render import (  # 카드 t480 — 자리만 옮김
+from server.design.song_cue_render import (  # 카드 t480 — 자리만 옮김  # 카드 t480 — 자리만 옮김
     _ARC_D_LEVEL,
     _DESIGN_INTERVIEW_TITLE,
+    _blinder_group_no,
     _build_unified_song_plan,
     _color_apply_command,
+    _confirmed_section_names,
     _direct_position_intent,
+    _infer_confirmed_role,
     _phaser_label_for_cue,
-    _pins_split_primary,
     _preset_recall_command,
     _record_value,
     _section_role,
+    _split_sections_for_density,
     _white_palette_name,
     reviewed_song_commands,
     reviewed_song_timing_commands,
@@ -557,117 +557,6 @@ def _timecode_number_from_text(text: str) -> int | None:
     return int(match.group("no")) if match is not None else None
 
 
-#: 카드 t396 — bridge 로 볼 수 있는 **절대** 상한. 정본 6절 표가 breakdown·bridge 를
-#: 20~35% 대역에 두므로 D1·D2 만 해당한다. 이웃 대비(상대) 조건만 쓰면 두 방향으로
-#: 틀렸다(실측 2026-09-15, 감독 음원 8곡): 밝은 D4 가 이웃보다 낮다는 이유로 bridge 가
-#: 되고(5건), 낮은 구간이 둘 연속이면 서로가 서로의 이웃이 되어 조건이 깨져 verse 로
-#: 남았다(4건). 절대 대역으로 바꾸면 두 방향이 함께 닫힌다 — t371·t375 가 같은 계열의
-#: 실수를 상대 문턱에 절대 대역을 섞어 고친 그 처방이다.
-_BRIDGE_MAX_D_LEVEL = 2
-
-
-def _infer_confirmed_role(index: int, d_levels: Sequence[int]) -> str:
-    """오디오 확정 구간 하나의 아크 역할을 D 레벨만으로 추정한다 (카드 t393).
-
-    이름·무드가 비어 있어 ``_section_role`` 의 자연어 판독이 닿지 않는 구간을
-    위한 대체 판정기다. ``_ARC_D_LEVEL``(intro 2 · verse 3 · chorus 5 ·
-    bridge 2 · finale 5)의 역표를 그대로 따른다: 첫 구간은 intro, 마지막
-    구간은 finale, 최고 D 레벨 구간은(동률 허용) chorus, :data:`_BRIDGE_MAX_D_LEVEL`
-    이하의 낮은 대역은 bridge, 나머지는 verse. 순전히 서수·측정값 기반이라 무드
-    단어를 지어내지 않는다.
-
-    bridge 판정은 **절대 대역**이다(카드 t396). 이웃 대비만 보던 앞선 규칙은 밝은
-    구간을 bridge 로 오인하고 연속 저강도 구간을 놓쳤다 — 근거는
-    :data:`_BRIDGE_MAX_D_LEVEL` 주석의 실측이다.
-    """
-    count = len(d_levels)
-    if count == 0:
-        return "other"
-    if index == 0:
-        return "intro"
-    if index == count - 1:
-        return "finale"
-    level = d_levels[index]
-    if level >= max(d_levels):
-        return "chorus"
-    if level <= _BRIDGE_MAX_D_LEVEL:
-        return "bridge"
-    return "verse"
-
-
-#: 카드 t391 — 역할 → 표시 이름 앞머리. 콘솔 큐 목록이 이미 쓰는 어휘
-#: (Intro / Verse N / Chorus N / Bridge N / Finale, 감독 실측)와 맞춘다.
-#: `_infer_confirmed_role` 이 내는 역할 5종만 다루면 되므로 "other" 는
-#: 방어적으로만 존재한다 — 확정 구간 경로에서는 나오지 않는다.
-_CONFIRMED_ROLE_DISPLAY_NAME: dict[str, str] = {
-    "intro": "Intro",
-    "verse": "Verse",
-    "chorus": "Chorus",
-    "bridge": "Bridge",
-    "finale": "Finale",
-    "other": "Section",
-}
-
-#: 이 역할은 곡에 한 번뿐이라 뒤에 회차 번호를 붙이지 않는다 — "Intro 1" 은
-#: 감독 화면의 콘솔 큐 이름(Intro / Verse 1 / Verse 2 / ...)과 다른 어휘가
-#: 된다.
-_CONFIRMED_ROLE_SINGLETON = frozenset({"intro", "finale"})
-
-
-def _confirmed_section_names(roles: Sequence[str]) -> list[str]:
-    """오디오 확정 구간의 표시 이름 — 역할 + 회차 번호 (카드 t391).
-
-    고침 전: 이름이 전부 중립 ASCII ``S<n>`` 이라 곡 하나에 같은 라벨이
-    중복됐다(실측: 17개 라벨 중 8번째·9번째가 둘 다 ``S8`` — 마디 분할이
-    한 구간을 두 큐로 쪼개면서 부모 이름을 그대로 물려받았기 때문). 콘솔의
-    큐 목록은 같은 화면에서 ``Intro / Verse 1 / Verse 2 / Chorus 1 ...``
-    처럼 역할+회차로 감독이 하나를 짚을 수 있게 이름 붙인다 — 이 함수는
-    확정 구간에도 같은 어휘를 쓴다.
-
-    ``dynamics``(D 레벨)는 이 이름과 **무관한 경로**로 전달된다
-    (``_confirmed_section_input`` 의 ``dynamics`` 키, ``_map_section_to_look``
-    이 명시 dynamics 를 이름보다 먼저 본다) — 그래서 이름을 "Chorus 1" 로
-    바꿔도 D 레벨 판정을 우회하지 않는다(plan.md §C D5 가 지키려던 것과
-    같은 불변식).
-
-    지시문이 직접 구간을 적은 경로(``section_names``)는 이 함수를 타지
-    않는다 — 그 경로는 이미 감독이 준 이름이 정본이다.
-    """
-    occurrence: dict[str, int] = {}
-    names: list[str] = []
-    for role in roles:
-        prefix = _CONFIRMED_ROLE_DISPLAY_NAME.get(role, role.title() or "Section")
-        if role in _CONFIRMED_ROLE_SINGLETON:
-            names.append(prefix)
-            continue
-        occurrence[role] = occurrence.get(role, 0) + 1
-        names.append(f"{prefix} {occurrence[role]}")
-    return names
-
-
-def _disambiguate_split_names(names: Sequence[str], source_origins: Sequence[int]) -> list[str]:
-    """마디 분할로 한 구간이 여러 큐로 갈리면 라벨을 서로 다르게 만든다
-    (카드 t391). ``plan_cue_density`` 는 시작 시각만 갈라 주고 이름은 부모
-    구간 것을 그대로 물려주므로(``replace(sections[split.source_index], ...)``
-    이 ``name`` 은 안 바꾼다), 같은 이름이 연달아 여러 번 나올 수 있다 —
-    이 함수가 그 자리에만 회차 접미사(" (2/2)" 형태)를 붙인다. 쪼개지지
-    않은 구간(부모당 큐 하나)의 이름은 바이트 그대로 둔다.
-    """
-    counts: dict[int, int] = {}
-    for origin in source_origins:
-        counts[origin] = counts.get(origin, 0) + 1
-    seen: dict[int, int] = {}
-    disambiguated: list[str] = []
-    for name, origin in zip(names, source_origins, strict=True):
-        total = counts[origin]
-        if total <= 1:
-            disambiguated.append(name)
-            continue
-        seen[origin] = seen.get(origin, 0) + 1
-        disambiguated.append(f"{name} ({seen[origin]}/{total})")
-    return disambiguated
-
-
 #: 카드 t441 — 아크 팔레트 회전(`_hue_key`·`_distinct_from_primary`·
 #: `_ACCENT_WEIGHT_LADDER`·`_arc_accent_weight`·`_CHORUS_IDENTITY_ROLES`·
 #: `_arc_palette`·`_per_chorus_palette`)은 `server/design/section_palette.py`
@@ -779,13 +668,6 @@ def _color_failure_note(failures: Mapping[str, str]) -> str:
     return " 색 미반영: " + "; ".join(failures.values()) + "."
 
 
-#: 카드 t462 — 블라인더 그룹으로 인정하는 콘솔 그룹 이름(정확 일치만, RG5).
-#: `server/design/rig.py` 의 `_LAYER_GROUP_ALIASES` 는 BLIND 를 STROBE·HAZE 와 같은
-#: ``effect`` 역할로 묶으므로(2026-09-15 감독 답), 역할만으로는 블라인더를 가를 수
-#: 없어 이름을 한 번 더 본다.
-_BLINDER_GROUP_NAMES = frozenset({"blind", "blinder"})
-
-
 def _registry_state_query(registry):
     """도구 레지스트리를 ``console_slots`` 판독기의 콘솔 질의 함수로 감싼다(카드 t480).
 
@@ -807,16 +689,6 @@ def _registry_state_query(registry):
             return None
 
     return query
-
-
-def _blinder_group_no(layer_mapping: Sequence[Mapping[str, object]]) -> int | None:
-    """콘솔이 보고한 그룹 중 이름이 BLIND/BLINDER 와 정확히 같은 그룹 번호 (카드 t462)."""
-    for entry in layer_mapping or ():
-        name = str(entry.get("group_name") or "").strip().casefold()
-        number = entry.get("group_no")
-        if name in _BLINDER_GROUP_NAMES and isinstance(number, int) and number > 0:
-            return number
-    return None
 
 
 def _arc_note(bundle) -> str:
@@ -1209,88 +1081,6 @@ def _plan_insert_start_ms(sections: Sequence[PositionSheetSection], insert_slot:
     if prev_ms is not None:
         return prev_ms + 30_000
     return (next_ms or 0) // 2
-
-
-def _section_palette_sizes(
-    sections: Sequence[PositionSheetSection],
-    *,
-    profile: MusicProfile,
-    palette_mode: str,
-    concept_colors: tuple[str, ...],
-    color_usage: str = "modulate",
-) -> list[int]:
-    """구간별 팔레트 색 수 — 쪼갠 큐가 서로 달라질 수 있는지의 판정 재료.
-
-    감독 재질의 답변(``requery_overrides``)은 아직 없는 시점이라 여기서는
-    보지 않는다. 오버라이드는 색을 **더하는** 쪽이므로 이 값은 실제보다
-    작거나 같다 — 즉 이 판정은 덜 쪼개는 쪽으로만 틀린다. 같은 큐 둘을
-    내는 것보다 안 쪼개는 쪽이 낫다는 카드의 방향과 같다.
-
-    ``color_usage`` — SPEC-COPILOT-COLORMODE-001. 실제 산출(`_section_palette_choice`)
-    과 어긋나지 않도록 여기도 같은 값을 전달한다(research.md §6).
-    """
-    count = len(sections)
-    sizes: list[int] = []
-    for index, section in enumerate(sections, start=1):
-        role = _section_role(section, section_index=index, section_count=count)
-        resolved = resolve_section(section.mood, profile, director_intent=None)
-        tendency = getattr(resolved, "color_tendency", "white")
-        colors, _source, _weight = _section_palette_choice(
-            section,
-            role=role,
-            profile=profile,
-            color_tendency=tendency,
-            palette_mode=palette_mode,
-            concept_colors=concept_colors,
-            color_usage=color_usage,
-        )
-        # 카드 t445 — 주색을 고정하는 후렴은 보조색만 돌므로, 쪼갤 수 있는지도
-        # 보조색 개수로 센다. 2색 팔레트면 돌릴 것이 없어 쪼개지 않는다.
-        pinned = _pins_split_primary(role, color_usage) and len(colors) > 1
-        sizes.append(len(colors) - 1 if pinned else len(colors))
-    return sizes
-
-
-def _split_sections_for_density(
-    sections: Sequence[PositionSheetSection],
-    *,
-    profile: MusicProfile,
-    palette_mode: str = "palette",
-    concept_colors: tuple[str, ...] = (),
-    color_usage: str = "modulate",
-) -> tuple[list[PositionSheetSection], list[int], tuple[str, ...]]:
-    """구간 목록을 마디 경계에서 쪼갠 큐 목록으로 넓힌다 (카드 t305).
-
-    돌려주는 것은 (넓힌 구간 목록, 큐마다의 원래 구간 번호, 공개할 사유).
-    BPM 이 선언되지 않았으면 입력이 그대로 나온다 — 오늘과 동일.
-
-    카드 t391 — 한 구간이 여러 큐로 갈리면(``plan.splits`` 에서 같은
-    ``source_index`` 가 둘 이상) 부모 이름을 그대로 물려받아 라벨이
-    중복됐다(실측: 17개 라벨 중 8번째·9번째가 둘 다 ``S8``). 이름이
-    바뀌는 구간은 쪼개진 자리에 한해서만이고, 쪼개지지 않은 구간의
-    이름은 바이트 그대로 둔다(``_disambiguate_split_names``).
-    """
-    plan = plan_cue_density(
-        [section.start_ms for section in sections],
-        bpm=profile.bpm,
-        meter=profile.meter,
-        palette_sizes=_section_palette_sizes(
-            sections,
-            profile=profile,
-            palette_mode=palette_mode,
-            concept_colors=concept_colors,
-            color_usage=color_usage,
-        ),
-    )
-    source_origins = list(plan.source_origins)
-    names = _disambiguate_split_names(
-        [sections[split.source_index].name for split in plan.splits], source_origins
-    )
-    expanded = [
-        replace(sections[split.source_index], start_ms=split.start_ms, name=name)
-        for split, name in zip(plan.splits, names, strict=True)
-    ]
-    return expanded, source_origins, plan.notes
 
 
 _REVIEW_TRIGGER_LABELS = {
