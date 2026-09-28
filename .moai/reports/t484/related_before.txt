@@ -1,0 +1,110 @@
+........................................................................ [  4%]
+........................................................................ [  9%]
+........................................................................ [ 13%]
+........................................................................ [ 18%]
+........................................................................ [ 22%]
+........................................................................ [ 27%]
+........................................................................ [ 32%]
+........................................................................ [ 36%]
+..................................................F..................... [ 41%]
+...............................F........................................ [ 45%]
+........................................................................ [ 50%]
+...............................................................F.F...... [ 54%]
+........................................................................ [ 59%]
+........................................................................ [ 64%]
+........................................................................ [ 68%]
+........................................................................ [ 73%]
+........................................................................ [ 77%]
+...........................................ss........................... [ 82%]
+........................................................................ [ 87%]
+........................................................................ [ 91%]
+........................................................................ [ 96%]
+...........................................................              [100%]
+=================================== FAILURES ===================================
+________ TestEndToEndPureFlow.test_full_chain_from_profile_through_lint ________
+
+self = <server.tests.test_design_integration.TestEndToEndPureFlow object at 0x10ee29350>
+
+    def test_full_chain_from_profile_through_lint(self):
+        profile = MusicProfile(bpm=128.0, genre="록", palette=("레드", "화이트"))
+        rig = _single_tier_rig()
+        assert rig.layer_rules_active() is False  # single-tier: RG1 degrades
+    
+        # Finale section: the standard's own "웅장한 피날레" worked example,
+        # but the director overrides D level down from the matched D5 to
+        # D4 — the override must win over the matched section-mood entry
+        # for the axis it actually covers, while the un-overridden axes
+        # (color, position) still come from the matched section mood.
+        override = DirectorOverride(d_level=4)
+        finale = resolve_section("웅장한 피날레 연출", profile, director_intent=override)
+        assert isinstance(finale, SectionMoodResolution)
+        assert finale.d_level == 4
+        assert finale.d_source == SOURCE_DIRECTOR_INTENT
+>       assert finale.color_tendency == "쿨 볼드"
+E       AssertionError: assert '블루 쿨 볼드' == '쿨 볼드'
+E         
+E         - 쿨 볼드
+E         + 블루 쿨 볼드
+
+server/tests/test_design_integration.py:57: AssertionError
+_ TestFreeTextPath.test_q3_free_text_resolves_via_resolve_section_into_a_director_override _
+
+self = <server.tests.test_design_interview.TestFreeTextPath object at 0x10f40c4d0>
+
+    def test_q3_free_text_resolves_via_resolve_section_into_a_director_override(self):
+        interview = DirectorInterview(MusicProfile(), _rig())
+        interview.submit_answer(None)
+        interview.submit_answer(None)
+        interview.submit_answer(None)  # Q2B default-accepted
+        record = interview.submit_answer("웅장한 피날레 연출")
+        assert isinstance(record, AnswerRecord)
+        assert isinstance(record.value, DirectorOverride)
+        assert record.value.d_level == 5
+>       assert record.value.color_tendency == "쿨 볼드"
+E       AssertionError: assert '블루 쿨 볼드' == '쿨 볼드'
+E         
+E         - 쿨 볼드
+E         + 블루 쿨 볼드
+
+server/tests/test_design_interview.py:550: AssertionError
+_ TestUnifiedMoodTableContract.test_worked_example_grand_finale_is_d5_cool_bold_ring_in _
+
+self = <server.tests.test_design_profile.TestUnifiedMoodTableContract object at 0x10f5cc9d0>
+
+    def test_worked_example_grand_finale_is_d5_cool_bold_ring_in(self):
+        # 표준 §2b M4 예시: "웅장한 피날레" → D5 + 쿨 볼드 + Ring In.
+        entry = next(e for e in UNIFIED_MOOD_TABLE if e.label == "Ring In")
+        assert entry.d_level == 5
+>       assert entry.color_tendency == "쿨 볼드"
+E       AssertionError: assert '블루 쿨 볼드' == '쿨 볼드'
+E         
+E         - 쿨 볼드
+E         + 블루 쿨 볼드
+
+server/tests/test_design_profile.py:108: AssertionError
+_ TestResolveSectionTupleOutput.test_grand_finale_resolves_the_full_triple_from_section_mood _
+
+self = <server.tests.test_design_profile.TestResolveSectionTupleOutput object at 0x10f5cdc50>
+
+    def test_grand_finale_resolves_the_full_triple_from_section_mood(self):
+        result = resolve_section("웅장한 피날레 연출", MusicProfile())
+        assert isinstance(result, SectionMoodResolution)
+>       assert result.as_tuple() == (5, "쿨 볼드", ("Ring In", "Center", "Wall"))
+E       AssertionError: assert (5, '블루 쿨 볼드'...ter', 'Wall')) == (5, '쿨 볼드', (...ter', 'Wall'))
+E         
+E         At index 1 diff: '블루 쿨 볼드' != '쿨 볼드'
+E         Use -v to get more diff
+
+server/tests/test_design_profile.py:121: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t484/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED server/tests/test_design_integration.py::TestEndToEndPureFlow::test_full_chain_from_profile_through_lint
+FAILED server/tests/test_design_interview.py::TestFreeTextPath::test_q3_free_text_resolves_via_resolve_section_into_a_director_override
+FAILED server/tests/test_design_profile.py::TestUnifiedMoodTableContract::test_worked_example_grand_finale_is_d5_cool_bold_ring_in
+FAILED server/tests/test_design_profile.py::TestResolveSectionTupleOutput::test_grand_finale_resolves_the_full_triple_from_section_mood
+4 failed, 1565 passed, 2 skipped, 12824 deselected, 1 warning in 14.60s
