@@ -1,0 +1,10 @@
+"""페이저 프리셋 카탈로그 30종과 라벨 → 풀 이름 표.
+
+카드 t480(SPEC-LDDESIGN-001 REQ-003) — 원래 ``server/web/session.py`` 에 있었다.
+업로드 길(``server/orchestrator/tools.py``)도 조립기 큐의 페이저 라벨을 콘솔 슬롯으로
+찾아야 하는데, 그 길은 층 경계 때문에 ``server.web`` 을 import 할 수 없다. 값은 한 글자도
+바꾸지 않고 자리만 옮겼다.
+"""
+
+from __future__ import annotations
+
