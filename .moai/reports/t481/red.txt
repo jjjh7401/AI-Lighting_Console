@@ -1,0 +1,134 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t481/ui
+
+ ❯ src/components/cueRequestWarnings.test.ts (19 tests | 2 failed) 7ms
+   × reserveViolationWarning > warns before the release section, naming the release section's cue (Q134, not Q45) 3ms
+     → expected '⚠ BLIND은(는) 리저브 대상이다 — 해제 큐(Q45) 이전' to match /해제 큐\(Q134\) 이전/
+   × reserveViolationWarning > does not warn at or after the release section 1ms
+     → expected '⚠ BLIND은(는) 리저브 대상이다 — 해제 큐(Q45) 이전' to be null
+ ❯ src/components/SongTimeline.test.tsx (20 tests | 2 failed) 10ms
+   × t481 — PLAN CUE 카드는 자기 구간의 컨셉 행을 읽는다(한 칸 밀림 방지) > 「108 · Bridge 1」 카드는 Bridge 1 행(남김 9)을 읽고, Chorus 3 행(MIB mark · 남김 2)을 읽지 않는다 5ms
+     → expected 'Fade — · Track —MIB mark · 남김 2헤드룸 부족…' to contain 'MIB — · 남김 9'
+   × t481 — PLAN CUE 카드는 자기 구간의 컨셉 행을 읽는다(한 칸 밀림 방지) > 첫 카드(Intro)도 자기 행을 읽는다 — 짝이 없는 행으로 떨어지지 않는다 1ms
+     → expected 'Fade — · Track —MIB — · 남김 7헤드룸 여유 · …' to contain '남김 8'
+ ❯ src/components/PlanCueRequestGenerator.test.tsx (30 tests | 2 failed) 17ms
+   × isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > unlocks at and after the release section — even though 34 < released_q 45 4ms
+     → expected true to be false // Object.is equality
+   × isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > does not invent a lock when the release row has no screen section (pairing failed) 0ms
+     → expected true to be false // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/PlanCueRequestGenerator.test.tsx > isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > unlocks at and after the release section — even though 34 < released_q 45
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/components/PlanCueRequestGenerator.test.tsx:130:59
+    128| 
+    129|   it("unlocks at and after the release section — even though 34 < rele…
+    130|     expect(isGroupLocked("BLIND", reserve, 33, sections)).toBe(false);
+       |                                                           ^
+    131|     expect(isGroupLocked("BLIND", reserve, 34, sections)).toBe(false);
+    132|     expect(isGroupLocked("BLIND", reserve, 35, sections)).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/components/PlanCueRequestGenerator.test.tsx > isGroupLocked — AC-037의 순수 판정 로직 (REQ-090) > does not invent a lock when the release row has no screen section (pairing failed)
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/components/PlanCueRequestGenerator.test.tsx:143:59
+    141|       { name: "BLIND", kind: "group", released_q: 45, screen_position:…
+    142|     ];
+    143|     expect(isGroupLocked("BLIND", unpaired, 3, sections)).toBe(false);
+       |                                                           ^
+    144|   });
+    145| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  src/components/SongTimeline.test.tsx > t481 — PLAN CUE 카드는 자기 구간의 컨셉 행을 읽는다(한 칸 밀림 방지) > 「108 · Bridge 1」 카드는 Bridge 1 행(남김 9)을 읽고, Chorus 3 행(MIB mark · 남김 2)을 읽지 않는다
+AssertionError: expected 'Fade — · Track —MIB mark · 남김 2헤드룸 부족…' to contain 'MIB — · 남김 9'
+
+Expected: "MIB — · 남김 9"
+Received: "Fade — · Track —MIB mark · 남김 2헤드룸 부족 · 잔여 2그룹"
+
+ ❯ src/components/SongTimeline.test.tsx:247:28
+    245|     expect(details).toHaveLength(9);
+    246|     const bridge = details[7];
+    247|     expect(textOf(bridge)).toContain("MIB — · 남김 9");
+       |                            ^
+    248|     expect(textOf(bridge)).not.toContain("남김 2");
+    249|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  src/components/SongTimeline.test.tsx > t481 — PLAN CUE 카드는 자기 구간의 컨셉 행을 읽는다(한 칸 밀림 방지) > 첫 카드(Intro)도 자기 행을 읽는다 — 짝이 없는 행으로 떨어지지 않는다
+AssertionError: expected 'Fade — · Track —MIB — · 남김 7헤드룸 여유 · …' to contain '남김 8'
+
+Expected: "남김 8"
+Received: "Fade — · Track —MIB — · 남김 7헤드룸 여유 · 잔여 7그룹"
+
+ ❯ src/components/SongTimeline.test.tsx:254:32
+    252|     const el = SongTimeline({ timeline, cueMonitor });
+    253|     const details = findAllByClassIncludes(el, "song-timeline-plan-det…
+    254|     expect(textOf(details[0])).toContain("남김 8");
+       |                                ^
+    255|     expect(textOf(details[8])).toContain("MIB mark · 남김 2");
+    256|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  src/components/cueRequestWarnings.test.ts > reserveViolationWarning > warns before the release section, naming the release section's cue (Q134, not Q45)
+AssertionError: expected '⚠ BLIND은(는) 리저브 대상이다 — 해제 큐(Q45) 이전' to match /해제 큐\(Q134\) 이전/
+
+- Expected: 
+/해제 큐\(Q134\) 이전/
+
++ Received: 
+"⚠ BLIND은(는) 리저브 대상이다 — 해제 큐(Q45) 이전"
+
+ ❯ src/components/cueRequestWarnings.test.ts:63:68
+     61| 
+     62|   it("warns before the release section, naming the release section's c…
+     63|     expect(reserveViolationWarning(3, reserve, "BLIND", sections)).toM…
+       |                                                                    ^
+     64|   });
+     65| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  src/components/cueRequestWarnings.test.ts > reserveViolationWarning > does not warn at or after the release section
+AssertionError: expected '⚠ BLIND은(는) 리저브 대상이다 — 해제 큐(Q45) 이전' to be null
+
+- Expected: 
+null
+
++ Received: 
+"⚠ BLIND은(는) 리저브 대상이다 — 해제 큐(Q45) 이전"
+
+ ❯ src/components/cueRequestWarnings.test.ts:67:69
+     65| 
+     66|   it("does not warn at or after the release section", () => {
+     67|     expect(reserveViolationWarning(33, reserve, "BLIND", sections)).to…
+       |                                                                     ^
+     68|     expect(reserveViolationWarning(35, reserve, "BLIND", sections)).to…
+     69|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+ Test Files  3 failed (3)
+      Tests  6 failed | 63 passed (69)
+   Start at  11:54:15
+   Duration  280ms (transform 128ms, setup 0ms, collect 238ms, tests 34ms, environment 0ms, prepare 112ms)
+
