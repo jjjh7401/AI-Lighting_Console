@@ -5,7 +5,8 @@
 1. ``concept_report.rows[].description`` — 이미 구현된 ``describe()``(REQ-023/070)를
    런북 경로에 연결한다. 값은 해석된 큐 상태에서만 나온다(지어낸 문장 0).
 2. ``concept_report.glance`` — "한눈에" 5단계에 어느 화면 구간이 드는지만 정한다.
-   규칙은 리드 제안(2026-09-28, 감독 확인 전)이라 ``rule`` 표식을 단다. 카드 수치는
+   규칙은 리드가 제안하고 감독이 확정(2026-09-28, 카드 t487)했다 — ``rule`` 표식이
+   그 출처를 적는다. 카드 수치는
    UI 가 CUE SHEET 와 같은 구간 데이터에서 계산한다(REQ-097 — 원천을 둘로 나누지
    않는다).
 """
@@ -50,7 +51,7 @@ def _reasons(result: dict[str, object]) -> dict[str, str | None]:
 class TestGlanceStages:
     def test_stage_names_and_rule_marker_are_fixed(self) -> None:
         assert GLANCE_STAGES == ("시작", "쌓기", "강조", "예고", "정점→마무리")
-        assert GLANCE_RULE == "lead-proposed-2026-09-28"
+        assert GLANCE_RULE == "director-confirmed-2026-09-28"
         result = glance_stages(list(ROLES))
         assert result["available"] is True
         assert result["rule"] == GLANCE_RULE

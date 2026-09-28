@@ -46,7 +46,7 @@ const REPORT: SongTimelineConceptReport = {
   })),
   glance: {
     available: true,
-    rule: "lead-proposed-2026-09-28",
+    rule: "director-confirmed-2026-09-28",
     reason: null,
     stages: [
       { stage: "시작", positions: [0], reason: null },
@@ -71,7 +71,7 @@ describe("glanceView — 5단계 카드는 구간 데이터에서만 파생한�
   it("서버 배정이 있으면 5장을 규칙 표식과 함께 낸다", () => {
     expect(view.status).toBe("ok");
     if (view.status !== "ok") return;
-    expect(view.rule).toBe("lead-proposed-2026-09-28");
+    expect(view.rule).toBe("director-confirmed-2026-09-28");
     expect(view.cards.map((card) => card.stage)).toEqual(["시작", "쌓기", "강조", "예고", "정점→마무리"]);
   });
 
@@ -90,7 +90,7 @@ describe("glanceView — 5단계 카드는 구간 데이터에서만 파생한�
   it("한 줄 설명은 수치로만 조립한다 — 형용 문장이 없다", () => {
     if (view.status !== "ok") throw new Error("glance unavailable");
     expect(view.cards[1].line).toBe("구간 2개 · 20.0초 · 밝기 35–50%");
-    expect(view.analysis).toBe("구간 9개 · 5단계 중 4단계에 구간 배정 · 규칙 lead-proposed-2026-09-28(감독 확인 전)");
+    expect(view.analysis).toBe("구간 9개 · 5단계 중 4단계에 구간 배정 · 규칙 director-confirmed-2026-09-28");
   });
 
   it("마지막 카드의 끝 시각은 곡 길이에서 온다 — 끝을 지어내지 않는다", () => {
@@ -121,7 +121,7 @@ describe("glanceView — 5단계 카드는 구간 데이터에서만 파생한�
     expect(none.status).toBe("none");
     const unavailable = glanceView({
       ...TIMELINE,
-      concept_report: { ...REPORT, glance: { available: false, rule: "lead-proposed-2026-09-28", reason: "역할 없음", stages: [] } },
+      concept_report: { ...REPORT, glance: { available: false, rule: "director-confirmed-2026-09-28", reason: "역할 없음", stages: [] } },
     } as SongTimelineView);
     expect(unavailable).toEqual({ status: "none", reason: "역할 없음" });
   });

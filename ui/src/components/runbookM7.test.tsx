@@ -122,7 +122,7 @@ describe("REQ-079/080/097/098 컨셉 패널", () => {
             available: true,
             glance: {
               available: true,
-              rule: "lead-proposed-2026-09-28",
+              rule: "director-confirmed-2026-09-28",
               reason: null,
               stages: [
                 { stage: "시작", positions: [0], reason: null },
@@ -137,7 +137,9 @@ describe("REQ-079/080/097/098 컨셉 패널", () => {
       />,
     );
     for (const stage of ["시작", "쌓기", "강조", "예고", "정점→마무리"]) expect(withGlance).toContain(stage);
-    expect(withGlance).toContain("lead-proposed-2026-09-28(감독 확인 전)");
+    expect(withGlance).toContain("director-confirmed-2026-09-28");
+    // t487 — 감독 확정(2026-09-28) 뒤에는 「감독 확인 전」 표식이 화면에 남지 않는다
+    expect(withGlance).not.toContain("감독 확인 전");
     expect(withGlance).toContain(cueLabel(sections[0]));
     expect(withGlance).not.toContain("단계 배정 원천이 서버에 없다");
     // 인과 불릿·「그래서 보이는 것」은 여전히 원천이 없다.
