@@ -579,8 +579,9 @@ m1_to_mN_commit_strategy: "M0(선행 회귀 #475/#476) → M1(어휘 닫힘 #477
 ## §E.4 Sync-phase Audit-Ready Signal
 
 ```yaml
-sync_status: implemented-not-completed
-sync_commit_sha: 924871e5
+sync_status: completed-with-open-followups  # 2026-09-28 t487 종결(이전 값 implemented-not-completed). 값은 SPEC-LDCOMPILE-001 관행 — completed + 후속 카드(t492·t493) 열림
+sync_commit_sha: 924871e5  # 종결 커밋(implemented → completed) — PRESETGUARD progress.md:192 관행
+sync_artifacts_commit_sha: 9c1ec62a  # sync 산출물 커밋(in-progress → implemented, #529 머지 30f02eb5 의 둘째 부모)
 sync_date: 2026-09-28
 evidence_files:
   - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/pytest_full.txt

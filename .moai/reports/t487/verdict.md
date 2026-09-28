@@ -45,7 +45,9 @@ progress.md 「종결」 절에 감독 결정 기록(`.moai/reports/t481/verdict
 progress.md:192  `sync_commit_sha: 5b30a66` (종결 커밋 …) sync 산출물 커밋은 `0d5760c`.
 ```
 
-→ 값은 **completed 커밋**. 이번: sync 산출물 커밋 `9c1ec62a`(in-progress→implemented, #529 머지 `30f02eb5` 의 둘째 부모), 종결 커밋 `924871e5`(`git show 924871e5 -- spec.md` → `-status: implemented / +status: completed`). 자리표시자 `pending-backfill-close` → 후속 커밋 `ffdc46f2` 에서 채움.
+→ 값은 **completed 커밋**.
+
+**같은 yaml 블록의 `sync_status` (리드 지적, 2026-09-28).** `implemented-not-completed` 가 그대로 남아 바로 아래 `sync_commit_sha`(종결 커밋)와 반대를 말하고 있었다. PRESETGUARD progress.md 에는 `sync_status` 필드가 **없다**(`grep -n sync_status` → 0) — 그래서 그 관행에서 값을 가져올 수 없었다. 저장소 전수(`grep -rh "^ *sync_status:"`): completed SPEC 은 `complete` 6 · `completed` 3 · `completed-with-open-followups` 1. 마지막이 같은 LD 계열 SPEC-LDCOMPILE-001(progress.md:913, status completed)로, 이번처럼 후속 카드가 열린 채 닫은 경우다 → `completed-with-open-followups`. sync 산출물 커밋은 새 필드 `sync_artifacts_commit_sha: 9c1ec62a` 로 블록에 남겼다(era 파서가 읽는 `sync_commit_sha` 와 문자열이 겹치지 않는다). yaml 파싱 확인: `{'sync_status': 'completed-with-open-followups', 'sync_commit_sha': '924871e5', 'sync_artifacts_commit_sha': '9c1ec62a'}`. 이번: sync 산출물 커밋 `9c1ec62a`(in-progress→implemented, #529 머지 `30f02eb5` 의 둘째 부모), 종결 커밋 `924871e5`(`git show 924871e5 -- spec.md` → `-status: implemented / +status: completed`). 자리표시자 `pending-backfill-close` → 후속 커밋 `ffdc46f2` 에서 채움.
 
 ### ⑦ AC 재집계 → completed
 sync 기준선(`sync-evidence/ac_class_recount.txt` 53건: PASS-measured 12 · PASS-test 33(실행 19 + 미실행 14) · n/a 3 · UNVERIFIED 5)에 이후 증거를 이어붙였다:
