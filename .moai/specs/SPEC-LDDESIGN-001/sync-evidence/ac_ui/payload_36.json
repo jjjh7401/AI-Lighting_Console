@@ -1,0 +1,2359 @@
+{
+ "song_title": "Timeline Wiring Test",
+ "sequence_name": "Timeline Wiring Seq",
+ "sequence_number": 1,
+ "timing_mode": "timecode",
+ "timecode_number": 9,
+ "lifecycle": "pending_approval",
+ "approval": "approved",
+ "director_decisions": [],
+ "sections": [
+  {
+   "index": 1,
+   "label": "Intro",
+   "start_ms": 0,
+   "cue_number": 101,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 0.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 5000,
+   "duration_ms": 5000,
+   "bar_start": 1,
+   "bar_count": 2,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 2,
+   "label": "Verse 1",
+   "start_ms": 5000,
+   "cue_number": 102,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 5.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 10000,
+   "duration_ms": 5000,
+   "bar_start": 3,
+   "bar_count": 2,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 3,
+   "label": "Pre-Chorus 1",
+   "start_ms": 10000,
+   "cue_number": 103,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "amber"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 10.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF8C0D",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 15000,
+   "duration_ms": 5000,
+   "bar_start": 6,
+   "bar_count": 2,
+   "palette_primary": "amber",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 4,
+   "label": "Chorus 1",
+   "start_ms": 15000,
+   "cue_number": 104,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "green"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 15.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00FF1A",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 20000,
+   "duration_ms": 5000,
+   "bar_start": 9,
+   "bar_count": 2,
+   "palette_primary": "green",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 5,
+   "label": "Verse 2",
+   "start_ms": 20000,
+   "cue_number": 105,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "magenta"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 20.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF00B2",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 25000,
+   "duration_ms": 5000,
+   "bar_start": 11,
+   "bar_count": 2,
+   "palette_primary": "magenta",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 6,
+   "label": "Pre-Chorus 2",
+   "start_ms": 25000,
+   "cue_number": 106,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "cyan"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 25.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00E6FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 30000,
+   "duration_ms": 5000,
+   "bar_start": 13,
+   "bar_count": 2,
+   "palette_primary": "cyan",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 7,
+   "label": "Chorus 2",
+   "start_ms": 30000,
+   "cue_number": 107,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 30.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 35000,
+   "duration_ms": 5000,
+   "bar_start": 16,
+   "bar_count": 2,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 8,
+   "label": "Bridge 1",
+   "start_ms": 35000,
+   "cue_number": 108,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 35.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 40000,
+   "duration_ms": 5000,
+   "bar_start": 19,
+   "bar_count": 2,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 20
+    },
+    {
+     "group": "BACK",
+     "level": 16
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 9,
+   "label": "Chorus 3",
+   "start_ms": 40000,
+   "cue_number": 109,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "amber"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 40.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF8C0D",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 45000,
+   "duration_ms": 5000,
+   "bar_start": 21,
+   "bar_count": 2,
+   "palette_primary": "amber",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 10,
+   "label": "Verse 3",
+   "start_ms": 45000,
+   "cue_number": 110,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "green"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 45.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00FF1A",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 50000,
+   "duration_ms": 5000,
+   "bar_start": 23,
+   "bar_count": 2,
+   "palette_primary": "green",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 11,
+   "label": "Verse 4",
+   "start_ms": 50000,
+   "cue_number": 111,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "magenta"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 50.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF00B2",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 55000,
+   "duration_ms": 5000,
+   "bar_start": 26,
+   "bar_count": 2,
+   "palette_primary": "magenta",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 12,
+   "label": "Pre-Chorus 3",
+   "start_ms": 55000,
+   "cue_number": 112,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "cyan"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 55.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00E6FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 60000,
+   "duration_ms": 5000,
+   "bar_start": 29,
+   "bar_count": 2,
+   "palette_primary": "cyan",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 13,
+   "label": "Chorus 4",
+   "start_ms": 60000,
+   "cue_number": 113,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 60.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 65000,
+   "duration_ms": 5000,
+   "bar_start": 31,
+   "bar_count": 2,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 14,
+   "label": "Verse 5",
+   "start_ms": 65000,
+   "cue_number": 114,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 65.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 70000,
+   "duration_ms": 5000,
+   "bar_start": 33,
+   "bar_count": 2,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 15,
+   "label": "Pre-Chorus 4",
+   "start_ms": 70000,
+   "cue_number": 115,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "amber"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 70.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF8C0D",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 75000,
+   "duration_ms": 5000,
+   "bar_start": 36,
+   "bar_count": 2,
+   "palette_primary": "amber",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 16,
+   "label": "Chorus 5",
+   "start_ms": 75000,
+   "cue_number": 116,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "green"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 75.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00FF1A",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 80000,
+   "duration_ms": 5000,
+   "bar_start": 39,
+   "bar_count": 2,
+   "palette_primary": "green",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 17,
+   "label": "Bridge 2",
+   "start_ms": 80000,
+   "cue_number": 117,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "magenta"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 80.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF00B2",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 85000,
+   "duration_ms": 5000,
+   "bar_start": 41,
+   "bar_count": 2,
+   "palette_primary": "magenta",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 20
+    },
+    {
+     "group": "BACK",
+     "level": 16
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 18,
+   "label": "Chorus 6",
+   "start_ms": 85000,
+   "cue_number": 118,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "cyan"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 85.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00E6FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 90000,
+   "duration_ms": 5000,
+   "bar_start": 43,
+   "bar_count": 2,
+   "palette_primary": "cyan",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 19,
+   "label": "Verse 6",
+   "start_ms": 90000,
+   "cue_number": 119,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 90.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 95000,
+   "duration_ms": 5000,
+   "bar_start": 46,
+   "bar_count": 2,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 20,
+   "label": "Verse 7",
+   "start_ms": 95000,
+   "cue_number": 120,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 95.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 100000,
+   "duration_ms": 5000,
+   "bar_start": 49,
+   "bar_count": 2,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 21,
+   "label": "Pre-Chorus 5",
+   "start_ms": 100000,
+   "cue_number": 121,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "amber"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 100.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF8C0D",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 105000,
+   "duration_ms": 5000,
+   "bar_start": 51,
+   "bar_count": 2,
+   "palette_primary": "amber",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 22,
+   "label": "Chorus 7",
+   "start_ms": 105000,
+   "cue_number": 122,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "green"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 105.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00FF1A",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 110000,
+   "duration_ms": 5000,
+   "bar_start": 53,
+   "bar_count": 2,
+   "palette_primary": "green",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 23,
+   "label": "Verse 8",
+   "start_ms": 110000,
+   "cue_number": 123,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "magenta"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 110.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF00B2",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 115000,
+   "duration_ms": 5000,
+   "bar_start": 56,
+   "bar_count": 2,
+   "palette_primary": "magenta",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 24,
+   "label": "Pre-Chorus 6",
+   "start_ms": 115000,
+   "cue_number": 124,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "cyan"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 115.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00E6FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 120000,
+   "duration_ms": 5000,
+   "bar_start": 59,
+   "bar_count": 2,
+   "palette_primary": "cyan",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 25,
+   "label": "Chorus 8",
+   "start_ms": 120000,
+   "cue_number": 125,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 120.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 125000,
+   "duration_ms": 5000,
+   "bar_start": 61,
+   "bar_count": 2,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 26,
+   "label": "Bridge 3",
+   "start_ms": 125000,
+   "cue_number": 126,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 125.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 130000,
+   "duration_ms": 5000,
+   "bar_start": 63,
+   "bar_count": 2,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 20
+    },
+    {
+     "group": "BACK",
+     "level": 16
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 27,
+   "label": "Chorus 9",
+   "start_ms": 130000,
+   "cue_number": 127,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "amber"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 130.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF8C0D",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 135000,
+   "duration_ms": 5000,
+   "bar_start": 66,
+   "bar_count": 2,
+   "palette_primary": "amber",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 28,
+   "label": "Verse 9",
+   "start_ms": 135000,
+   "cue_number": 128,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "green"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 135.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00FF1A",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 140000,
+   "duration_ms": 5000,
+   "bar_start": 69,
+   "bar_count": 2,
+   "palette_primary": "green",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 29,
+   "label": "Verse 10",
+   "start_ms": 140000,
+   "cue_number": 129,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "magenta"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 140.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF00B2",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 145000,
+   "duration_ms": 5000,
+   "bar_start": 71,
+   "bar_count": 2,
+   "palette_primary": "magenta",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 30,
+   "label": "Pre-Chorus 7",
+   "start_ms": 145000,
+   "cue_number": 130,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "cyan"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 145.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00E6FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 150000,
+   "duration_ms": 5000,
+   "bar_start": 73,
+   "bar_count": 2,
+   "palette_primary": "cyan",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 31,
+   "label": "Chorus 10",
+   "start_ms": 150000,
+   "cue_number": 131,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "blue"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 150.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#0D33FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 155000,
+   "duration_ms": 5000,
+   "bar_start": 76,
+   "bar_count": 2,
+   "palette_primary": "blue",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 32,
+   "label": "Verse 11",
+   "start_ms": 155000,
+   "cue_number": 132,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "red"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 155.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF0000",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 160000,
+   "duration_ms": 5000,
+   "bar_start": 79,
+   "bar_count": 2,
+   "palette_primary": "red",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 33,
+   "label": "Pre-Chorus 8",
+   "start_ms": 160000,
+   "cue_number": 133,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "amber"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 160.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF8C0D",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 165000,
+   "duration_ms": 5000,
+   "bar_start": 81,
+   "bar_count": 2,
+   "palette_primary": "amber",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 40
+    },
+    {
+     "group": "BACK",
+     "level": 32
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 34,
+   "label": "Chorus 11",
+   "start_ms": 165000,
+   "cue_number": 134,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "green"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 165.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00FF1A",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 170000,
+   "duration_ms": 5000,
+   "bar_start": 83,
+   "bar_count": 2,
+   "palette_primary": "green",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 35,
+   "label": "Bridge 4",
+   "start_ms": 170000,
+   "cue_number": 135,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "magenta"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 170.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#FF00B2",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "end_ms": 175000,
+   "duration_ms": 5000,
+   "bar_start": 86,
+   "bar_count": 2,
+   "palette_primary": "magenta",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  },
+  {
+   "index": 36,
+   "label": "Outro",
+   "start_ms": 175000,
+   "cue_number": 136,
+   "plan_status": "draft",
+   "d_level": 3,
+   "palette": [
+    "cyan"
+   ],
+   "position": "Center",
+   "texture": "long fade",
+   "fx": [],
+   "fade_seconds": 1.5,
+   "accents": [],
+   "mib": false,
+   "trig_time_seconds": 175.0,
+   "d_source": "section_mood",
+   "palette_source": "director",
+   "palette_primary_hex": "#00E6FF",
+   "palette_secondary_hex": null,
+   "position_source": "director",
+   "texture_source": "genre",
+   "bar_start": 89,
+   "palette_primary": "cyan",
+   "intensity": [
+    {
+     "group": "KEY",
+     "level": 70
+    },
+    {
+     "group": "BACK",
+     "level": 56
+    }
+   ],
+   "movement": "Center",
+   "trans": "FADE"
+  }
+ ],
+ "lint": [],
+ "unresolved": [],
+ "disabled": [],
+ "readback": {
+  "verified": null,
+  "message": null
+ },
+ "console_stored": false,
+ "warnings": [],
+ "layer_mapping": [],
+ "preset_start": null,
+ "concept_report": {
+  "available": true,
+  "gates": {
+   "G1 어휘 닫힘": {
+    "passed": true,
+    "detail": "구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)"
+   },
+   "G2 후렴 정체성": {
+    "passed": false,
+    "detail": "1/10 쌍 정체성 유지"
+   },
+   "G3 회차마다 새 축(5회차까지)": {
+    "passed": true,
+    "detail": "새 축 0인 쌍(5회차 이내) 0개"
+   },
+   "G4 피날레 새 축 + 여유": {
+    "passed": true,
+    "detail": "피날레 새 축 ['area', 'direction', 'groups', 'motion'] · 직전 남은 모션 단계 1"
+   },
+   "G5 헤드룸 경고 0": {
+    "passed": true,
+    "detail": "경고 0건"
+   },
+   "G6 컬러: 유보색 조기 0 · 브리지 위반 0": {
+    "passed": false,
+    "detail": "유보색 n/a(입력에 유보색 없음) · 브리지 fail(위반 35)"
+   },
+   "G7 후렴 주색 동일": {
+    "passed": false,
+    "detail": "chorus_primary_color_identity: fail (위반 10건)"
+   },
+   "G8 후렴 앞 빌드업": {
+    "passed": true,
+    "detail": "빌드업 0 / 필요 0"
+   },
+   "G9 트래킹: Block·Release·누출 0": {
+    "passed": true,
+    "detail": "Block 처음 True · Release 마지막 True · cue_only 11 · 누출 없음 True"
+   },
+   "G10 상대 감소 겹침 없음": {
+    "passed": true,
+    "detail": "절 밝기 [45, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38]"
+   },
+   "G11 타이밍 전 큐 배정": {
+    "passed": true,
+    "detail": "snap 11 · short 37 · long 1 · 후렴 순차 11"
+   },
+   "G12 MIB: 켜진 채 이동 0": {
+    "passed": true,
+    "detail": "어둠 2 · Mark 2 · 켜진 채 0"
+   },
+   "G13 큐 밀도 10~45": {
+    "passed": false,
+    "detail": "시퀀스 큐 49 + 원샷 11"
+   }
+  },
+  "mib": [
+   null,
+   {
+    "status": "dark"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "status": "dark"
+   },
+   null,
+   null,
+   {
+    "status": "mark"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "status": "mark"
+   },
+   null,
+   null,
+   null,
+   null
+  ],
+  "lint_finding_count": 3,
+  "lint_disabled_rule_count": 2,
+  "energy_report_count": 49,
+  "rows": [
+   {
+    "q": 1,
+    "ts": -1.0,
+    "kind": "safety",
+    "section": "Intro",
+    "occurrence": 0,
+    "trigger": null,
+    "tracking": "block",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "verified",
+    "screen_position": null,
+    "unused_groups": 10
+   },
+   {
+    "q": 2,
+    "ts": 0.0,
+    "kind": "section",
+    "section": "Intro",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": "dark",
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 0,
+    "unused_groups": 9
+   },
+   {
+    "q": 3,
+    "ts": 5.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 1,
+    "unused_groups": 7
+   },
+   {
+    "q": 4,
+    "ts": 10.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 2,
+    "unused_groups": 7
+   },
+   {
+    "q": 5,
+    "ts": 15.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": null,
+    "screen_position": 3,
+    "unused_groups": 6
+   },
+   {
+    "q": 6,
+    "ts": 19.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 1,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 3,
+    "unused_groups": 4
+   },
+   {
+    "q": 7,
+    "ts": 20.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 2,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 4,
+    "unused_groups": 7
+   },
+   {
+    "q": 8,
+    "ts": 25.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 2,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 5,
+    "unused_groups": 7
+   },
+   {
+    "q": 9,
+    "ts": 30.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 2,
+    "trigger": null,
+    "tracking": "track",
+    "mib": "dark",
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 6,
+    "unused_groups": 4
+   },
+   {
+    "q": 10,
+    "ts": 34.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 2,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 6,
+    "unused_groups": 4
+   },
+   {
+    "q": 11,
+    "ts": 35.0,
+    "kind": "section",
+    "section": "Bridge",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 7,
+    "unused_groups": 9
+   },
+   {
+    "q": 12,
+    "ts": 40.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 3,
+    "trigger": null,
+    "tracking": "track",
+    "mib": "mark",
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 8,
+    "unused_groups": 2
+   },
+   {
+    "q": 13,
+    "ts": 44.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 3,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 8,
+    "unused_groups": 2
+   },
+   {
+    "q": 14,
+    "ts": 45.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 3,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 9,
+    "unused_groups": 5
+   },
+   {
+    "q": 15,
+    "ts": 50.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 4,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 10,
+    "unused_groups": 5
+   },
+   {
+    "q": 16,
+    "ts": 55.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 3,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 11,
+    "unused_groups": 5
+   },
+   {
+    "q": 17,
+    "ts": 60.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 4,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 12,
+    "unused_groups": 2
+   },
+   {
+    "q": 18,
+    "ts": 64.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 4,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 12,
+    "unused_groups": 2
+   },
+   {
+    "q": 19,
+    "ts": 65.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 5,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 13,
+    "unused_groups": 5
+   },
+   {
+    "q": 20,
+    "ts": 70.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 4,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 14,
+    "unused_groups": 5
+   },
+   {
+    "q": 21,
+    "ts": 75.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 5,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 15,
+    "unused_groups": 2
+   },
+   {
+    "q": 22,
+    "ts": 79.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 5,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 15,
+    "unused_groups": 2
+   },
+   {
+    "q": 23,
+    "ts": 80.0,
+    "kind": "section",
+    "section": "Bridge",
+    "occurrence": 2,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 16,
+    "unused_groups": 9
+   },
+   {
+    "q": 24,
+    "ts": 85.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 6,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 17,
+    "unused_groups": 2
+   },
+   {
+    "q": 25,
+    "ts": 89.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 6,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 17,
+    "unused_groups": 2
+   },
+   {
+    "q": 26,
+    "ts": 90.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 6,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 18,
+    "unused_groups": 5
+   },
+   {
+    "q": 27,
+    "ts": 95.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 7,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 19,
+    "unused_groups": 5
+   },
+   {
+    "q": 28,
+    "ts": 100.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 5,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 20,
+    "unused_groups": 5
+   },
+   {
+    "q": 29,
+    "ts": 105.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 7,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 21,
+    "unused_groups": 2
+   },
+   {
+    "q": 30,
+    "ts": 109.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 7,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 21,
+    "unused_groups": 2
+   },
+   {
+    "q": 31,
+    "ts": 110.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 8,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 22,
+    "unused_groups": 5
+   },
+   {
+    "q": 32,
+    "ts": 115.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 6,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 23,
+    "unused_groups": 5
+   },
+   {
+    "q": 33,
+    "ts": 120.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 8,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 24,
+    "unused_groups": 2
+   },
+   {
+    "q": 34,
+    "ts": 124.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 8,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 24,
+    "unused_groups": 2
+   },
+   {
+    "q": 35,
+    "ts": 125.0,
+    "kind": "section",
+    "section": "Bridge",
+    "occurrence": 3,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 25,
+    "unused_groups": 9
+   },
+   {
+    "q": 36,
+    "ts": 130.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 9,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 26,
+    "unused_groups": 2
+   },
+   {
+    "q": 37,
+    "ts": 134.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 9,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 26,
+    "unused_groups": 2
+   },
+   {
+    "q": 38,
+    "ts": 135.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 9,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 27,
+    "unused_groups": 5
+   },
+   {
+    "q": 39,
+    "ts": 140.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 10,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 28,
+    "unused_groups": 5
+   },
+   {
+    "q": 40,
+    "ts": 145.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 7,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 29,
+    "unused_groups": 5
+   },
+   {
+    "q": 41,
+    "ts": 150.0,
+    "kind": "section",
+    "section": "Chorus",
+    "occurrence": 10,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": {
+     "shot": "White hit",
+     "target": "KEY+FOH"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 30,
+    "unused_groups": 2
+   },
+   {
+    "q": 42,
+    "ts": 154.0,
+    "kind": "phrase",
+    "section": "Chorus",
+    "occurrence": 10,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 30,
+    "unused_groups": 2
+   },
+   {
+    "q": 43,
+    "ts": 155.0,
+    "kind": "section",
+    "section": "Verse",
+    "occurrence": 11,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 31,
+    "unused_groups": 7
+   },
+   {
+    "q": 44,
+    "ts": 160.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 8,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 32,
+    "unused_groups": 7
+   },
+   {
+    "q": 45,
+    "ts": 165.0,
+    "kind": "section",
+    "section": "Final Chorus",
+    "occurrence": 1,
+    "trigger": null,
+    "tracking": "track",
+    "mib": "mark",
+    "one_shot": {
+     "shot": "Blinder hit",
+     "target": "BLIND"
+    },
+    "evidence": "practitioner_pattern",
+    "screen_position": 33,
+    "unused_groups": 1
+   },
+   {
+    "q": 46,
+    "ts": 169.0,
+    "kind": "phrase",
+    "section": "Final Chorus",
+    "occurrence": 1,
+    "trigger": "악기 추가",
+    "tracking": "cue_only",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "practitioner_pattern",
+    "screen_position": 33,
+    "unused_groups": 1
+   },
+   {
+    "q": 47,
+    "ts": 170.0,
+    "kind": "section",
+    "section": "Bridge",
+    "occurrence": 4,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": null,
+    "screen_position": 34,
+    "unused_groups": 9
+   },
+   {
+    "q": 48,
+    "ts": 175.0,
+    "kind": "section",
+    "section": "Rap/Solo/Dance Break",
+    "occurrence": 9,
+    "trigger": null,
+    "tracking": "track",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "director",
+    "screen_position": 35,
+    "unused_groups": 9
+   },
+   {
+    "q": 49,
+    "ts": 191.0,
+    "kind": "safety",
+    "section": "Outro",
+    "occurrence": 0,
+    "trigger": null,
+    "tracking": "release",
+    "mib": null,
+    "one_shot": null,
+    "evidence": "verified",
+    "screen_position": null,
+    "unused_groups": 11
+   }
+  ],
+  "row_pairing": {
+   "available": true,
+   "reason": null
+  },
+  "reserve": [
+   {
+    "name": "BLIND",
+    "kind": "group",
+    "released_q": 45,
+    "screen_position": 33
+   },
+   {
+    "name": "STROBE",
+    "kind": "group",
+    "released_q": null,
+    "screen_position": null
+   }
+  ]
+ },
+ "bpm": 120.0,
+ "time_signature": "4/4",
+ "seconds_per_bar": 2.0,
+ "tc_method": "DERIVED",
+ "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+}

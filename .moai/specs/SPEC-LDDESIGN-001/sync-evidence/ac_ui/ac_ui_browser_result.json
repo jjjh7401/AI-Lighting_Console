@@ -1,0 +1,456 @@
+{
+ "AC-018": {
+  "block_order": [
+   "runbook-header",
+   "concept-panel",
+   "cue-sheet-timeline",
+   "song-timeline",
+   "runbook-gate"
+  ],
+  "timeline_before_sheet_inside_cue_sheet_timeline": true,
+  "concept_panel_open_by_default": false,
+  "concept_panel_after_click": {
+   "open": true,
+   "clickable_items_besides_tabs": 0,
+   "explanation_cells_4": 0,
+   "nodata_lines": [
+    "데이터 없음 — 단계 배정 원천이 서버에 없다",
+    "인과 불릿 · 데이터 없음 — 워크시트 concept 원문이 서버에서 오지 않는다",
+    "데이터 없음"
+   ],
+   "grammar_headers": [
+    "구간",
+    "색",
+    "기구·밝기",
+    "움직임",
+    "효과",
+    "그래서 보이는 것"
+   ],
+   "grammar_first_row": [
+    "Intro",
+    "blue",
+    "KEY 70 / BACK 56",
+    "Center",
+    "—",
+    "데이터 없음"
+   ]
+  }
+ },
+ "AC-050": {
+  "tabs": [
+   {
+    "label": "이 곡의 연출",
+    "sub": "Master Concept",
+    "label_font_px": 13,
+    "sub_font_px": 11
+   },
+   {
+    "label": "이 곡의 재료",
+    "sub": "Micro Concept",
+    "label_font_px": 13,
+    "sub_font_px": 11
+   },
+   {
+    "label": "지키는 것·하지 않는 것·아껴 두는 것",
+    "sub": "Visual Grammar",
+    "label_font_px": 13,
+    "sub_font_px": 11
+   }
+  ]
+ },
+ "AC-019": {
+  "q_label_three_places_idx3": {
+   "chip": "Q104",
+   "row": "Q104",
+   "plan_cue_badges_in_order": [
+    "Q101",
+    "Q102",
+    "Q103",
+    "Q104",
+    "Q105",
+    "Q106"
+   ]
+  },
+  "all_36_consistent": {
+   "n": 36,
+   "chips_eq_rows": true,
+   "chips_eq_badges": true,
+   "badges_n": 36
+  },
+  "sheet_headers": [
+   "Q#",
+   "구간",
+   "회차",
+   "Trigger",
+   "시각",
+   "색",
+   "밝기",
+   "기구 그룹",
+   "움직임",
+   "효과",
+   "Fade",
+   "MIB",
+   "Track 예외",
+   "근거 등급"
+  ],
+  "color_rail_vs_hex_first6": [
+   {
+    "q": "Q101",
+    "boxShadow": "rgb(79, 140, 255) 5px 0px 0px 0px inset",
+    "borderLeft": "7px rgb(13, 51, 255)"
+   },
+   {
+    "q": "Q102",
+    "boxShadow": "none",
+    "borderLeft": "7px rgb(255, 0, 0)"
+   },
+   {
+    "q": "Q103",
+    "boxShadow": "none",
+    "borderLeft": "7px rgb(255, 140, 13)"
+   },
+   {
+    "q": "Q104",
+    "boxShadow": "none",
+    "borderLeft": "7px rgb(0, 255, 26)"
+   },
+   {
+    "q": "Q105",
+    "boxShadow": "none",
+    "borderLeft": "7px rgb(255, 0, 178)"
+   },
+   {
+    "q": "Q106",
+    "boxShadow": "none",
+    "borderLeft": "7px rgb(0, 230, 255)"
+   }
+  ]
+ },
+ "AC-020": {
+  "block_color_vs_hex": {
+   "total": 36,
+   "match": 36,
+   "mismatches": []
+  },
+  "sheet_wheel_scroll": {
+   "before": {
+    "sheetScrollTop": 0,
+    "railScrollLeft": 0,
+    "centerRowIndex": 2,
+    "centerChipVisibleInRail": true,
+    "selected": "Q101"
+   },
+   "after": {
+    "sheetScrollTop": 830,
+    "railScrollLeft": 3219,
+    "centerRowIndex": 32,
+    "centerChipVisibleInRail": true,
+    "selected": "Q101"
+   }
+  },
+  "gate_bar": "GATE✓ 통과 9✕ 실패 4– 해당없음 0! 경고 · 데이터 없음GATE 상세 보기 ▼판정게이트근거 — 실제 값✓ 통과G1 어휘 닫힘구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)✕ 실"
+ },
+ "AC-034": {
+  "generators_mounted_with_onGeneratorSend": 36,
+  "generators_mounted_without_onGeneratorSend(runbook-preview.html)": 0,
+  "plan_cue_cards_in_preview": 0
+ },
+ "HIT": {
+  "card3_controls_hit_test": [
+   {
+    "el": "KEY",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "BACK",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "number",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "적용",
+    "hitsItself": false,
+    "coveredBy": "00:20 Verse 2, D3"
+   },
+   {
+    "el": "number",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "적용",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "SNAP",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "XFADE",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "FADE",
+    "hitsItself": false,
+    "coveredBy": "00:20 Verse 2, D3"
+   },
+   {
+    "el": "Track",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "Block",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "Cue Only",
+    "hitsItself": false,
+    "coveredBy": "00:20 Verse 2, D3"
+   },
+   {
+    "el": "Release",
+    "hitsItself": false,
+    "coveredBy": "00:20 Verse 2, D3"
+   },
+   {
+    "el": "없음",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "dark",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "mark",
+    "hitsItself": false,
+    "coveredBy": "00:20 Verse 2, D3"
+   },
+   {
+    "el": "live",
+    "hitsItself": false,
+    "coveredBy": "00:20 Verse 2, D3"
+   },
+   {
+    "el": "바꾸기",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "바꾸기",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "바꾸기",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "바꾸기",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "딤머 풀 바꾸기",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "컬러 풀 바꾸기",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "자유 입력 한 줄 (예: ",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "선택 취소",
+    "hitsItself": true,
+    "coveredBy": null
+   },
+   {
+    "el": "코파일럿에게 반영 요청",
+    "hitsItself": true,
+    "coveredBy": null
+   }
+  ],
+  "card_vs_generator_width": {
+   "article_width": 130,
+   "generator_scroll_width": 248,
+   "generator_client_width": 100
+  }
+ },
+ "AC-035": {
+  "intensity_before_label": {
+   "no_selection": "현재 70%",
+   "key_and_back": "현재 혼합"
+  },
+  "color_label_key_and_back": "컬러green바꾸기"
+ },
+ "AC-052": {
+  "stack_before": [
+   "~ KEY·BACK 밝기 혼합 → 90%",
+   "~ 페이드 1.5초 → 3초",
+   "~ 전환 FADE → SNAP",
+   "~ 트래킹 Track → Block"
+  ],
+  "stack_after_x_on_line2": [
+   "~ KEY·BACK 밝기 혼합 → 90%",
+   "~ 전환 FADE → SNAP",
+   "~ 트래킹 Track → Block"
+  ],
+  "stack_after_cancel_all": []
+ },
+ "AC-043": {
+  "buttons_containing_되돌리기_with_stack_filled": [
+   "↶ 되돌리기"
+  ],
+  "buttons_exact_선택취소_count": 36
+ },
+ "AC-042": {
+  "calls_emitted_by_cancel": [],
+  "timeline_draft_undo_count_total": 0
+ },
+ "AC-036": {
+  "popup_entries": [
+   "181.18 Dim 90",
+   "19Dim 90 Warm"
+  ],
+  "dimmer_row_label": "딤머1.18 Dim 90바꾸기"
+ },
+ "AC-038": {
+  "status_label_before_send": "바꾼 것 2 — 코파일럿 확인 대기",
+  "stack_lines_with_their_warnings": [
+   {
+    "cls": "plan-cue-generator-diff is-selected",
+    "diff": "~ KEY 밝기 70% → 95%",
+    "warnings": []
+   },
+   {
+    "cls": "plan-cue-generator-diff is-selected",
+    "diff": "~ KEY 컬러 green → Red",
+    "warnings": []
+   }
+  ],
+  "warnings_outside_diff_lines": 0,
+  "status_label_after_send": "바꾼 것 2 — 코파일럿 확인 대기",
+  "line_states_after_send": [
+   "plan-cue-generator-diff is-requested",
+   "plan-cue-generator-diff is-selected"
+  ],
+  "line_states_after_first_accept": [
+   "plan-cue-generator-diff is-applied",
+   "plan-cue-generator-diff is-requested"
+  ]
+ },
+ "AC-041": {
+  "sentences_sent_via_chat": [
+   {
+    "kind": "chat",
+    "text": "큐 104 KEY 밝기 95%로 바꿔줘",
+    "cue": 104
+   },
+   {
+    "kind": "select_cue",
+    "cue": 101
+   },
+   {
+    "kind": "select_cue",
+    "cue": 101
+   },
+   {
+    "kind": "chat",
+    "text": "큐 104 KEY 컬러 Red로 바꿔줘 그리고 이 구간 전체를 반 박자 당겨줘",
+    "cue": 104
+   },
+   {
+    "kind": "select_cue",
+    "cue": 101
+   },
+   {
+    "kind": "select_cue",
+    "cue": 101
+   }
+  ]
+ },
+ "AC-053": {
+  "free_text_appended_verbatim": [
+   false,
+   null,
+   null,
+   true,
+   null,
+   null
+  ]
+ },
+ "AC-044": {
+  "stack_after_all_accepted": [],
+  "undo_badge": {
+   "before": null,
+   "after": "수정됨 · 미저장 (되돌리기 2단계)",
+   "items_sent": 6
+  }
+ },
+ "AC-037": {
+  "reserve_from_server": [
+   {
+    "name": "BLIND",
+    "kind": "group",
+    "released_q": 45,
+    "screen_position": 33
+   },
+   {
+    "name": "STROBE",
+    "kind": "group",
+    "released_q": null,
+    "screen_position": null
+   }
+  ],
+  "blind_chip_state_by_card": [
+   {
+    "card": 0,
+    "locked": false
+   },
+   {
+    "card": 3,
+    "locked": false
+   },
+   {
+    "card": 31,
+    "locked": false
+   },
+   {
+    "card": 32,
+    "locked": false
+   },
+   {
+    "card": 33,
+    "locked": false
+   },
+   {
+    "card": 34,
+    "locked": false
+   },
+   {
+    "card": 35,
+    "locked": false
+   }
+  ],
+  "card3_blind_selected_after_click": "true"
+ },
+ "page_errors": []
+}
