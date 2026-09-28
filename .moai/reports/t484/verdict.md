@@ -57,7 +57,7 @@
 
 ## 문구를 바꿀 때의 영향 (아직 재지 않음)
 
-- `color_tendency`는 Q2 밖에서도 읽힌다. `interview.py`에서 15곳, `web/session.py` 8곳, `section_palette.py` 2곳, `orchestrator/tools.py` 2곳이다(`grep -rn color_tendency server`, 시험 제외).
+- `color_tendency`는 Q2 밖에서도 읽힌다. `interview.py`에서 15곳, `web/session.py` 8곳, `section_palette.py` 2곳, `orchestrator/tools.py` 2곳이다(`grep -rn color_tendency server`, 시험 제외). (1단계 당시 수치다. 2단계에서 t480 합류 뒤 다시 센 값은 아래 2단계 절을 본다.)
   예를 들어 무드 문구를 바꾸면 구간 무드 해석과 린트가 같이 바뀔 수 있다. 문구를 고치는 카드에서 8곡 게이트와 함께 다시 재야 한다.
 - t483 이후에는 문구 앞머리에 표준 어휘가 오고 뒤에 색 이름이 와도 색 이름이 주색이 된다(`쿨 볼드 블루` → `블루`).
   색 이름을 넣는 위치는 제약되지 않는다.
@@ -68,3 +68,56 @@
 - 실제 곡(Ice cream, Rain)의 큐 수 — 5구간 픽스처만 썼다.
 - Q2 카드 화면에 실제로 몇 개 후보가 보이는지(추천 순위 상위 몇 개만 보이는지) — 후보 목록 함수만 읽었다.
 - 제안 색이 무대에서 어떻게 보이는지 — 콘솔 0.
+
+---
+
+# 2단계 — 감독 결정 적용 (2026-09-28)
+
+- 기준 트리: `origin/main` = `4d575fc7`(t480의 `5bfc009e` 포함). `git merge origin/main`은 fast-forward, 뒤진 커밋 0 · 콘솔 쓰기 0
+
+## 판정: PASS
+
+## 적용한 감독 결정
+
+| # | 결정 | 적용 위치 | 결과 |
+|---|---|---|---|
+| ① | 문구 보강: Ring In +블루 · Cross +앰버 · Wall +블루/시안 | `server/design/profile.py` `_D_LEVEL_AND_COLOR_BY_LABEL` | `블루 쿨 볼드` · `앰버 웜 볼드` · `블루/시안 쿨 유사색` |
+| ② | 흰색 별칭 웜화이트→Warm White · 쿨화이트→Cool White | `server/design/color_names.py` `_KO_EN_COLOR_EQUIV` | 빈티지 `웜화이트 웜 CTO` · Home `웜화이트 웜 3000K` · Center `쿨화이트 중립~쿨` |
+| ③ | 팝·Fan Out은 '색 미정' 표시 | `server/design/interview.py` `_q2_color_candidates` → `_mark_colorless` | 라벨에 `(색 미정)`, 설명에 "원하는 색을 직접 적어 주세요" |
+| ④ | 기본 색 조합은 미해소 유지, 맨 '화이트'도 미해소 | 바꾸지 않음 | `resolve_color_name('화이트')`·`('흰색')` = None (시험으로 고정) |
+
+- 색 이름은 문구 **맨 앞**에 넣었다. 그래서 t483의 순서 조정에 기대지 않아도, 첫 단어를 주색으로 쓰는 다른 분리 함수(`section_palette._palette_colors`)에서도 색이 주색이 된다.
+- 표준 문서(`docs/proposals/song-lighting-design-standard.md`)의 §2b 빈티지 시드와 M4 예시("웅장한 피날레 → D5 + 블루 쿨 볼드")를 같은 문구로 맞췄다.
+- **결정 ④와 겹치는 점 — 확인이 필요하다**: '색 미정' 표시는 "풀리는 색 이름이 하나도 없는 후보"라는 **일반 규칙**으로 넣었다. 그래서 **기본 색 조합에도 `(색 미정)`이 붙는다**. 색은 미해소 그대로이고, 표시만 추가된다. 기본 조합에 표시가 붙지 않아야 한다면 예외를 한 줄 넣으면 된다.
+
+## 증거
+
+| 주장 | 명령 | 관측 |
+|---|---|---|
+| RED | `uv run python -m pytest -q -rf server/tests/test_q2_colorless_candidates_t484.py` → `red_before.txt` | `17 failed, 2 passed`. 곡 큐 경로는 `('Cross', 0, 4)` 등 — 저장 큐 4개에 색 줄 0 |
+| GREEN | 같은 명령 → `green_after.txt` | `19 passed` |
+| 관련 시험 | `pytest -k "interview or palette or songcue or color or q2 or design or concept or upload or mood or profile"` | `related_before.txt`: 수정 전 `4 failed` — 옛 문구 `쿨 볼드`를 못박은 시험 4개(M4 예시). 기대값을 고친 뒤 `1569 passed, 2 skipped` |
+| 서버 전체 | `uv run python -m pytest -q server/tests` → `pytest_server_full.txt` | `14360 passed, 35 skipped`, 실패 0 |
+| 8곡 게이트 | `uv run python .moai/reports/t444/gen_gates_8songs.py` → `gates_8songs.txt` | `집계: PASS 75 · n/a 29 · FAIL 0`. t483 게이트 출력과 `diff` — 가상환경 생성 안내 5줄 말고는 **줄 단위로 같다** |
+
+곡 큐 경로의 계기는 t483 시험의 `_upload_color_counts`(t480 이후의 `prepare_songcue` 입구)를 그대로 썼다. 그 계기의 대조군(색 없는 답이면 색 줄 < 저장 큐)은 t483 시험에서 계속 통과한다.
+
+## `color_tendency`를 읽는 곳 (시험 제외, 31줄)
+
+`grep -rn color_tendency server --include='*.py'`(시험과 `profile.py` 제외)로 센 결과 31줄이다. 리드 배차의 "27곳"과 다른데, t480 합류 뒤에 다시 셌다. 표의 "영향" 칸은 코드를 읽고 판단한 것이다. 실행으로 확인한 칸에는 **[실행]**을 붙였다.
+
+| 파일 | 곳 | 무엇을 읽나 | 이번 변경의 영향 |
+|---|---|---|---|
+| `interview.py` | 15 | Q1·Q2·Q3 카드 문구, Q2 후보 목록, `_KNOWN_COLOR_TOKENS`, 자유 입력 해석 | 카드에 보이는 문장이 바뀐다(예: Q3 절정 "블루 쿨 볼드 색으로…"). 새 어휘(앰버·웜화이트·쿨화이트)는 모두 색으로 풀리므로 t483의 건너뛰기 규칙과 부딪히지 않는다 |
+| `section_palette.py` | 2 | `profile.palette or color_tendency` — Q2 답이 없을 때 무드 문구가 팔레트 대신 쓰인다 | 이 대체 경로에서 Ring In·Cross·Wall·Center·Home·빈티지의 주색이 예전에는 안 풀렸고 이제 풀린다(의도한 개선). **[실행]** `_palette_colors` 첫 칸 → 6개 문구 모두 RGB로 풀림(블루·앰버·블루·Cool White·Warm White·Warm White) |
+| `song_cue_render.py` | 5 | 위와 같은 대체 경로, 그리고 마디 분할 판정에서 색 개수를 센다 | 분할 판정: 문구의 토큰 수가 늘어(`쿨 볼드` 2 → `블루 쿨 볼드` 3) Q2 답이 없는 곡에서 분할 결과가 달라질 수 **있다** — 아래 "안 잰 것" |
+| `web/session.py` | 3 | 요약 문구, 팔레트 첫 색 | 문구가 바뀐다 |
+| `upload_song_plan.py` | 5 | 인터뷰가 없을 때 Q2 추천 1순위의 라벨과 문구 | 팝 장르처럼 1순위가 색 없는 후보면 라벨에 `(색 미정)`이 붙는다. **[실행]** `_q2_color_candidates(genre='팝')[0]` = `팝 느낌 색 조합 (색 미정)`, 록은 표시 없음. 색은 여전히 안 선다 |
+| `orchestrator/tools.py` | 1 | 회신 JSON의 `color_tendency` 문구 | 문구가 바뀐다 |
+
+## 안 잰 것
+
+- **Q2 답이 없는 곡의 마디 분할이 달라지는지** — 8곡 게이트 출력과 서버 시험 전체는 변하지 않았다. 다만 무드 문구로 대체 경로를 타는 곡을 따로 만들어 분할 수를 비교하지는 않았다.
+- 대화 카드 선택지 설명(`_build_q2`의 "… 색을 중심으로 써요")에는 '색 미정'이 들어가지 않는다. 라벨에만 보인다. 후보 설명(`_q2_color_candidates`)에는 들어간다.
+- 실제 곡(Ice cream, Rain)과 실기 콘솔 — 콘솔 0.
+- 팝 장르로 업로드한 곡은 추천 1순위가 '색 미정'이라 여전히 색 줄이 서지 않는다(결정 ③대로다). 색을 적어야 한다는 안내가 회신 문구에서 충분히 보이는지는 화면으로 확인하지 않았다.

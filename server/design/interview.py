@@ -570,7 +570,24 @@ def _q2_color_candidates(profile: MusicProfile) -> list[tuple[str, str, str]]:
             GLOBAL_DEFAULT_COLOR_TENDENCY,
         )
     )
-    return candidates
+    return [_mark_colorless(candidate) for candidate in candidates]
+
+
+#: 카드 t484 감독 결정(2026-09-28) — 색 이름이 하나도 안 풀리는 후보는 골라도
+#: 주색이 없어 곡 큐에 색 줄이 안 선다. 색을 지어내지 않고 '색 미정' 이라고
+#: 알린다(팝·Fan Out, 그리고 감독이 Warm/Cool 을 고를 기본 조합).
+_COLORLESS_MARK = "색 미정"
+
+
+def _mark_colorless(candidate: tuple[str, str, str]) -> tuple[str, str, str]:
+    label, description, color_tendency = candidate
+    if any(resolve_color_name(token) for token in _palette_value_tokens(color_tendency)):
+        return candidate
+    return (
+        f"{label} ({_COLORLESS_MARK})",
+        f"{description} 이 조합은 {_COLORLESS_MARK}이라 원하는 색을 직접 적어 주세요.",
+        color_tendency,
+    )
 
 
 def _build_q2(profile: MusicProfile, rig: RigProfile) -> QuestionCard:

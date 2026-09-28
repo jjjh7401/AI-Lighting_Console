@@ -10,7 +10,7 @@ value. :func:`resolve_section` is the unified mood dictionary the standard's
 sentence one position suggestion, this gives every section three axes at
 once — extending ``server.spatial.position_moods``' own eight looks with the
 D level and color tendency the standard's worked examples name for each one
-('"웅장한 피날레" → D5 + 쿨 볼드 + Ring In', '"잔잔한 발라드" → D2 + 블루/
+('"웅장한 피날레" → D5 + 블루 쿨 볼드 + Ring In', '"잔잔한 발라드" → D2 + 블루/
 웜화이트 + Vocal DSC').
 
 ``server.spatial.position_moods`` keeps running unmodified for its existing
@@ -110,21 +110,26 @@ SOURCE_GLOBAL_DEFAULT = "global_default"
 #: * Vocal DSC (조용/발라드) — §2b M4 예시 그대로: D2 + 블루/웜화이트.
 #: * Center (오프닝/등장/드라마틱) — 진입 순간의 중간 텐션. §3 D3 행의
 #:   CCT "중립~쿨"을 그대로 옮김.
-#: * Ring In (웅장/장엄/클라이맥스) — §2b M4 예시 그대로: D5 + 쿨 볼드.
+#: * Ring In (웅장/장엄/클라이맥스) — §2b M4 예시 그대로: D5 + 쿨 볼드 (t484 +블루).
 #: * Cross (후렴/파티/edm) — §4b C4 "코러스는 웜(록)"의 코러스 기본값.
 #: * Fan Out (화려/개방/스케일) — §3 D4 행의 채도 "높음"을 "비비드"로.
 #: * Audience (호응/떼창) — §4c P4 "Audience는 D5 전용" + §4b C4 "피크=레드".
 #: * Wall (배경/커튼/합창) — §3 D3 행의 CCT "중립~쿨"을 유사색 배경으로.
 #: * Home (정리/리셋/대기) — §3 D1 행의 CCT "웜 3000~4000K" 그대로.
+#:
+#: 카드 t484 감독 결정(2026-09-28) — 색 이름이 없어 주색이 안 풀리던 행에 색
+#: 이름을 앞에 보강했다: Ring In +블루, Cross +앰버, Wall +블루/시안, Center
+#: 쿨화이트, Home 웜화이트. Fan Out("비비드")은 색상 근거가 없어 그대로 두고
+#: Q2 후보에 '색 미정' 으로 표시한다(`interview._q2_color_candidates`).
 _D_LEVEL_AND_COLOR_BY_LABEL: dict[str, tuple[int, str]] = {
     "Vocal DSC": (2, "블루/웜화이트"),
-    "Center": (3, "중립~쿨 화이트"),
-    "Ring In": (5, "쿨 볼드"),
-    "Cross": (4, "웜 볼드"),
+    "Center": (3, "쿨화이트 중립~쿨"),
+    "Ring In": (5, "블루 쿨 볼드"),
+    "Cross": (4, "앰버 웜 볼드"),
     "Fan Out": (4, "비비드"),
     "Audience": (5, "레드 액센트"),
-    "Wall": (3, "쿨 유사색"),
-    "Home": (1, "웜 3000K"),
+    "Wall": (3, "블루/시안 쿨 유사색"),
+    "Home": (1, "웜화이트 웜 3000K"),
 }
 
 
@@ -199,9 +204,9 @@ CONCEPT_SEED_TABLE: tuple[ConceptSeed, ...] = (
     ),
     ConceptSeed(
         concept="빈티지",
-        color_tendency="웜 CTO",
+        color_tendency="웜화이트 웜 CTO",
         position_bias=("Wall",),
-        reason='표준 §2b: "빈티지"=웜 CTO+Wall.',
+        reason='표준 §2b: "빈티지"=웜화이트 웜 CTO+Wall (카드 t484 감독 결정으로 웜화이트 보강).',
     ),
 )
 

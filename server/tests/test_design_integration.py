@@ -54,7 +54,7 @@ class TestEndToEndPureFlow:
         assert isinstance(finale, SectionMoodResolution)
         assert finale.d_level == 4
         assert finale.d_source == SOURCE_DIRECTOR_INTENT
-        assert finale.color_tendency == "쿨 볼드"
+        assert finale.color_tendency == "블루 쿨 볼드"  # t484 감독 결정: +블루
         assert finale.color_source == SOURCE_SECTION_MOOD
 
         # Verse section: no director involvement — resolves purely from the

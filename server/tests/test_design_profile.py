@@ -102,10 +102,10 @@ class TestUnifiedMoodTableContract:
                 assert candidate in names
 
     def test_worked_example_grand_finale_is_d5_cool_bold_ring_in(self):
-        # 표준 §2b M4 예시: "웅장한 피날레" → D5 + 쿨 볼드 + Ring In.
+        # 표준 §2b M4 예시: "웅장한 피날레" → D5 + 블루 쿨 볼드 + Ring In (t484 +블루).
         entry = next(e for e in UNIFIED_MOOD_TABLE if e.label == "Ring In")
         assert entry.d_level == 5
-        assert entry.color_tendency == "쿨 볼드"
+        assert entry.color_tendency == "블루 쿨 볼드"
 
     def test_worked_example_quiet_ballad_is_d2_blue_warm_white_vocal_dsc(self):
         # 표준 §2b M4 예시: "잔잔한 발라드" → D2 + 블루/웜화이트 + Vocal DSC.
@@ -118,7 +118,7 @@ class TestResolveSectionTupleOutput:
     def test_grand_finale_resolves_the_full_triple_from_section_mood(self):
         result = resolve_section("웅장한 피날레 연출", MusicProfile())
         assert isinstance(result, SectionMoodResolution)
-        assert result.as_tuple() == (5, "쿨 볼드", ("Ring In", "Center", "Wall"))
+        assert result.as_tuple() == (5, "블루 쿨 볼드", ("Ring In", "Center", "Wall"))
         assert result.d_source == SOURCE_SECTION_MOOD
         assert result.color_source == SOURCE_SECTION_MOOD
         assert result.position_source == SOURCE_SECTION_MOOD

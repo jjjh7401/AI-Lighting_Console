@@ -547,7 +547,7 @@ class TestFreeTextPath:
         assert isinstance(record, AnswerRecord)
         assert isinstance(record.value, DirectorOverride)
         assert record.value.d_level == 5
-        assert record.value.color_tendency == "쿨 볼드"
+        assert record.value.color_tendency == "블루 쿨 볼드"  # t484 감독 결정: +블루
 
     def test_q4_free_text_resolves_to_position_candidates_only(self):
         interview = DirectorInterview(MusicProfile(), _rig())

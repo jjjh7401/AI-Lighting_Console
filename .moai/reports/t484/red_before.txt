@@ -1,0 +1,259 @@
+F.FFFFFFFFFFFFFFF.F                                                      [100%]
+=================================== FAILURES ===================================
+__________________________ test_white_aliases_resolve __________________________
+
+    def test_white_aliases_resolve() -> None:
+>       assert resolve_color_name("웜화이트") == _RGB["Warm White"]
+E       AssertionError: assert None == (100, 75, 40)
+E        +  where None = resolve_color_name('웜화이트')
+
+server/tests/test_q2_colorless_candidates_t484.py:59: AssertionError
+_________ test_decided_candidate_primary_is_the_decided_color[Center] __________
+
+name = 'Center'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_primary_is_the_decided_color(name: str) -> None:
+        tokens = _palette_value_tokens(_tendency(name))
+>       assert resolve_color_name(tokens[0]) == _RGB[_DECIDED_PRIMARY[name]], (name, tokens)
+E       AssertionError: ('Center', ('중립~쿨', '화이트'))
+E       assert None == (85, 95, 100)
+E        +  where None = resolve_color_name('중립~쿨')
+
+server/tests/test_q2_colorless_candidates_t484.py:72: AssertionError
+__________ test_decided_candidate_primary_is_the_decided_color[Cross] __________
+
+name = 'Cross'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_primary_is_the_decided_color(name: str) -> None:
+        tokens = _palette_value_tokens(_tendency(name))
+>       assert resolve_color_name(tokens[0]) == _RGB[_DECIDED_PRIMARY[name]], (name, tokens)
+E       AssertionError: ('Cross', ('웜', '볼드'))
+E       assert None == (100, 55, 5)
+E        +  where None = resolve_color_name('웜')
+
+server/tests/test_q2_colorless_candidates_t484.py:72: AssertionError
+__________ test_decided_candidate_primary_is_the_decided_color[Home] ___________
+
+name = 'Home'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_primary_is_the_decided_color(name: str) -> None:
+        tokens = _palette_value_tokens(_tendency(name))
+>       assert resolve_color_name(tokens[0]) == _RGB[_DECIDED_PRIMARY[name]], (name, tokens)
+E       AssertionError: ('Home', ('웜', '3000K'))
+E       assert None == (100, 75, 40)
+E        +  where None = resolve_color_name('웜')
+
+server/tests/test_q2_colorless_candidates_t484.py:72: AssertionError
+_________ test_decided_candidate_primary_is_the_decided_color[Ring In] _________
+
+name = 'Ring In'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_primary_is_the_decided_color(name: str) -> None:
+        tokens = _palette_value_tokens(_tendency(name))
+>       assert resolve_color_name(tokens[0]) == _RGB[_DECIDED_PRIMARY[name]], (name, tokens)
+E       AssertionError: ('Ring In', ('쿨', '볼드'))
+E       assert None == (5, 20, 100)
+E        +  where None = resolve_color_name('쿨')
+
+server/tests/test_q2_colorless_candidates_t484.py:72: AssertionError
+__________ test_decided_candidate_primary_is_the_decided_color[Wall] ___________
+
+name = 'Wall'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_primary_is_the_decided_color(name: str) -> None:
+        tokens = _palette_value_tokens(_tendency(name))
+>       assert resolve_color_name(tokens[0]) == _RGB[_DECIDED_PRIMARY[name]], (name, tokens)
+E       AssertionError: ('Wall', ('쿨', '유사색'))
+E       assert None == (5, 20, 100)
+E        +  where None = resolve_color_name('쿨')
+
+server/tests/test_q2_colorless_candidates_t484.py:72: AssertionError
+___ test_decided_candidate_primary_is_the_decided_color[\ube48\ud2f0\uc9c0] ____
+
+name = '빈티지'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_primary_is_the_decided_color(name: str) -> None:
+        tokens = _palette_value_tokens(_tendency(name))
+>       assert resolve_color_name(tokens[0]) == _RGB[_DECIDED_PRIMARY[name]], (name, tokens)
+E       AssertionError: ('빈티지', ('웜', 'CTO'))
+E       assert None == (100, 75, 40)
+E        +  where None = resolve_color_name('웜')
+
+server/tests/test_q2_colorless_candidates_t484.py:72: AssertionError
+___________ test_decided_candidate_reaches_every_songcue_cue[Center] ___________
+
+name = 'Center'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_reaches_every_songcue_cue(name: str) -> None:
+        stores, colors, failures = _upload_color_counts(_tendency(name))
+        assert stores > 0
+>       assert colors == stores, (name, colors, stores)
+E       AssertionError: ('Center', 0, 4)
+E       assert 0 == 4
+
+server/tests/test_q2_colorless_candidates_t484.py:79: AssertionError
+___________ test_decided_candidate_reaches_every_songcue_cue[Cross] ____________
+
+name = 'Cross'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_reaches_every_songcue_cue(name: str) -> None:
+        stores, colors, failures = _upload_color_counts(_tendency(name))
+        assert stores > 0
+>       assert colors == stores, (name, colors, stores)
+E       AssertionError: ('Cross', 0, 4)
+E       assert 0 == 4
+
+server/tests/test_q2_colorless_candidates_t484.py:79: AssertionError
+____________ test_decided_candidate_reaches_every_songcue_cue[Home] ____________
+
+name = 'Home'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_reaches_every_songcue_cue(name: str) -> None:
+        stores, colors, failures = _upload_color_counts(_tendency(name))
+        assert stores > 0
+>       assert colors == stores, (name, colors, stores)
+E       AssertionError: ('Home', 0, 4)
+E       assert 0 == 4
+
+server/tests/test_q2_colorless_candidates_t484.py:79: AssertionError
+__________ test_decided_candidate_reaches_every_songcue_cue[Ring In] ___________
+
+name = 'Ring In'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_reaches_every_songcue_cue(name: str) -> None:
+        stores, colors, failures = _upload_color_counts(_tendency(name))
+        assert stores > 0
+>       assert colors == stores, (name, colors, stores)
+E       AssertionError: ('Ring In', 0, 4)
+E       assert 0 == 4
+
+server/tests/test_q2_colorless_candidates_t484.py:79: AssertionError
+____________ test_decided_candidate_reaches_every_songcue_cue[Wall] ____________
+
+name = 'Wall'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_reaches_every_songcue_cue(name: str) -> None:
+        stores, colors, failures = _upload_color_counts(_tendency(name))
+        assert stores > 0
+>       assert colors == stores, (name, colors, stores)
+E       AssertionError: ('Wall', 0, 4)
+E       assert 0 == 4
+
+server/tests/test_q2_colorless_candidates_t484.py:79: AssertionError
+_____ test_decided_candidate_reaches_every_songcue_cue[\ube48\ud2f0\uc9c0] _____
+
+name = '빈티지'
+
+    @pytest.mark.parametrize("name", sorted(_DECIDED_PRIMARY))
+    def test_decided_candidate_reaches_every_songcue_cue(name: str) -> None:
+        stores, colors, failures = _upload_color_counts(_tendency(name))
+        assert stores > 0
+>       assert colors == stores, (name, colors, stores)
+E       AssertionError: ('빈티지', 0, 4)
+E       assert 0 == 4
+
+server/tests/test_q2_colorless_candidates_t484.py:79: AssertionError
+______________ test_colorless_candidate_is_marked_undecided[pop] _______________
+
+profile = MusicProfile(bpm=None, meter='4/4', genre='팝', key_mode=None, concept=None, palette=())
+value = '유사색 3~4 + 액센트 1'
+
+    @pytest.mark.parametrize(
+        ("profile", "value"),
+        [
+            (MusicProfile(genre="팝"), _tendency("팝")),
+            (MusicProfile(), _tendency("Fan Out")),
+            (MusicProfile(), GLOBAL_DEFAULT_COLOR_TENDENCY),
+        ],
+        ids=["pop", "fan-out", "global-default"],
+    )
+    def test_colorless_candidate_is_marked_undecided(profile: MusicProfile, value: str) -> None:
+        label, description, _value = _candidate(profile, value)
+>       assert "색 미정" in label
+E       AssertionError: assert '색 미정' in '팝 느낌 색 조합'
+
+server/tests/test_q2_colorless_candidates_t484.py:101: AssertionError
+____________ test_colorless_candidate_is_marked_undecided[fan-out] _____________
+
+profile = MusicProfile(bpm=None, meter='4/4', genre=None, key_mode=None, concept=None, palette=())
+value = '비비드'
+
+    @pytest.mark.parametrize(
+        ("profile", "value"),
+        [
+            (MusicProfile(genre="팝"), _tendency("팝")),
+            (MusicProfile(), _tendency("Fan Out")),
+            (MusicProfile(), GLOBAL_DEFAULT_COLOR_TENDENCY),
+        ],
+        ids=["pop", "fan-out", "global-default"],
+    )
+    def test_colorless_candidate_is_marked_undecided(profile: MusicProfile, value: str) -> None:
+        label, description, _value = _candidate(profile, value)
+>       assert "색 미정" in label
+E       AssertionError: assert '색 미정' in 'Fan Out 색 조합'
+
+server/tests/test_q2_colorless_candidates_t484.py:101: AssertionError
+_________ test_colorless_candidate_is_marked_undecided[global-default] _________
+
+profile = MusicProfile(bpm=None, meter='4/4', genre=None, key_mode=None, concept=None, palette=())
+value = '중립 화이트'
+
+    @pytest.mark.parametrize(
+        ("profile", "value"),
+        [
+            (MusicProfile(genre="팝"), _tendency("팝")),
+            (MusicProfile(), _tendency("Fan Out")),
+            (MusicProfile(), GLOBAL_DEFAULT_COLOR_TENDENCY),
+        ],
+        ids=["pop", "fan-out", "global-default"],
+    )
+    def test_colorless_candidate_is_marked_undecided(profile: MusicProfile, value: str) -> None:
+        label, description, _value = _candidate(profile, value)
+>       assert "색 미정" in label
+E       AssertionError: assert '색 미정' in '기본 색 조합'
+
+server/tests/test_q2_colorless_candidates_t484.py:101: AssertionError
+_____________ test_every_q2_candidate_is_either_colored_or_marked ______________
+
+    def test_every_q2_candidate_is_either_colored_or_marked() -> None:
+        """전수 — 풀리는 색 이름이 없는데 표시도 없는 후보가 하나도 남지 않는다."""
+        profile = MusicProfile(concept="빈티지", genre="팝")
+        seen = [c for c in _q2_color_candidates(profile)]
+        seen += [c for c in _q2_color_candidates(MusicProfile(concept="우주", genre="edm"))]
+        for label, _description, value in seen:
+            colored = any(resolve_color_name(t) is not None for t in _palette_value_tokens(value))
+>           assert colored or "색 미정" in label, (label, value)
+E           AssertionError: ('빈티지 색 조합', '웜 CTO')
+E           assert (False or '색 미정' in '빈티지 색 조합')
+
+server/tests/test_q2_colorless_candidates_t484.py:118: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_white_aliases_resolve
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_primary_is_the_decided_color[Center]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_primary_is_the_decided_color[Cross]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_primary_is_the_decided_color[Home]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_primary_is_the_decided_color[Ring In]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_primary_is_the_decided_color[Wall]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_primary_is_the_decided_color[\ube48\ud2f0\uc9c0]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_reaches_every_songcue_cue[Center]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_reaches_every_songcue_cue[Cross]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_reaches_every_songcue_cue[Home]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_reaches_every_songcue_cue[Ring In]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_reaches_every_songcue_cue[Wall]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_decided_candidate_reaches_every_songcue_cue[\ube48\ud2f0\uc9c0]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_colorless_candidate_is_marked_undecided[pop]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_colorless_candidate_is_marked_undecided[fan-out]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_colorless_candidate_is_marked_undecided[global-default]
+FAILED server/tests/test_q2_colorless_candidates_t484.py::test_every_q2_candidate_is_either_colored_or_marked
+17 failed, 2 passed in 0.37s
