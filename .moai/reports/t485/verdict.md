@@ -69,6 +69,7 @@ t482 가 서버 실경로로 만든 10구간 페이로드(`.moai/reports/t482/pa
 - 색을 말한 설명 **8/8** 이 같은 줄 「색」 칸과 같은 색이다 → 순수 중복.
 - 「최대 N%」 는 같은 구간 CUE SHEET 밝기(KEY 값)와 **1/10** 만 같다(예: Chorus 1 설명 75% ↔ 시트 KEY 100, Bridge 30% ↔ KEY 20). t482 §3 이 이미 찾은 두 경로 차이(REQ-003·AC-017)다.
 - 따라서 이 설명을 「그래서 보이는 것」에 넣으면 (1) 앞 칸을 되풀이하고 (2) 한 줄에 **서로 다른 밝기 숫자 두 개**가 생겨 REQ-097 이 경고한 "어느 쪽을 믿을지 모르는" 상태가 된다.
+- **t486 병합 뒤 재측정(§8)**: t486 이 설명에서 「최대 N%」 를 뺐다. 같은 곡을 병합 트리로 다시 내면(`remeasure_desc.py` → `payload_roles_after_t486.json`) 설명은 「그룹 증감 · 색 X · (Y 복원)」 만 남고 밝기 숫자는 0/10 이다. 밝기 모순 근거는 사라졌지만 **색 8/8 중복은 그대로**이고 설명은 여전히 "무엇이 바뀌었나"다 — 결론(비워 둠)은 바뀌지 않는다.
 - REQ-080 의 이 칸은 앞 다섯 칸의 결과(관객이 보는 효과)를 말하는 자리다. 그 원천은 현재 서버에 없다 — 설명은 "무엇이 바뀌었나"이지 "그래서 무엇이 보이나"가 아니다. 4칸 설명의 「무대에서」 칸(t482)에 출처 표식과 함께 이미 쓰이고 있으므로 원천이 버려지는 것도 아니다.
 
 ## 5. 찾은 것 — 재질의 대기 타임라인에서 런북 화면 전체가 빈다(기존 결함, 범위 밖)
@@ -91,3 +92,13 @@ t482 가 서버 실경로로 만든 10구간 페이로드(`.moai/reports/t482/pa
 
 1. 인과 불릿 원천을 **인터뷰 Q1** 로 둔 것(REQ-013 은 워크시트를 적었다). 워크시트 YAML 입구를 앱에 열지는 별도 결정.
 2. 「그래서 보이는 것」 은 §4 대로 비워 둔다 — 채우려면 구간별 "결과 효과" 원천이 필요하다.
+
+## 8. t486(PR #539) 병합 — 충돌 해소와 재검증
+
+- `origin/main` = `7f8990fc`(t486) 병합, 병합 커밋 `107420f1`.
+- 충돌 1곳: `server/concept/session_bridge.py` `__all__`. t486 이 사다리 경로 어댑터 `build_concept_report_from_songcue_sections` 를 은퇴시켰고(함수 정의도 삭제 — 병합 트리 `grep "def build_concept_report_from_songcue_sections"` → 0) 이쪽은 `concept_bullet` 을 더했다 → `concept_bullet` 만 남겼다. `session.py` 는 자동 병합(t486 의 SongLookMemory 삭제와 이쪽 `concept_bullet` 줄이 겹치지 않음).
+- 의미 충돌 없음: 인과 불릿의 원천은 인터뷰 Q1 이고, t486 이 바꾼 것은 큐 설명(`rows[].description`)과 그 출처 문구(`conceptGlance.ts` `DESCRIPTION_SOURCE` 「밝기 수치는 CUE SHEET 기준」)다. 두 원천이 다르고 이 카드는 그 문구를 건드리지 않는다. 영향은 판정서 §4 의 근거 하나(밝기 불일치)뿐이라 §4 를 재측정값으로 고쳤다.
+- 재검증(병합 커밋 뒤):
+  - 서버 전체 `pytest server/tests` → **14380 passed, 35 skipped, 0 failed** (`pytest_full_after_t486.txt`)
+  - UI `vitest run` → 33 파일 · **734 passed** (`vitest_after_t486.txt`) · `tsc --noEmit` 오류 0 (`tsc_after_t486.txt`)
+  - 주의: 병합을 커밋하기 **전에** 돌린 첫 전체 실행은 2 failed 였다 — `test_overlap_preserve` 의 건드린 파일 집합(t486 이 지운 `server/looks/song_history.py` 를 git 은 세고 게이트는 못 봄)과 `test_songcue_bundle` 헝크 대조. 둘 다 `<BASE>..HEAD` 를 보는 커밋 경계 가드다(규약 §3.1). 병합 커밋 뒤 두 파일 86 passed(`gates_after_merge_commit.txt`), 이어서 위 전체 실행 0 failed.
