@@ -1,0 +1,54 @@
+
+> ma3-copilot-ui@0.1.0 test
+> vitest run
+
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t487/ui
+
+ ✓ src/styles.test.ts (28 tests) 4ms
+ ✓ src/provision.test.ts (23 tests) 4ms
+ ✓ src/components/analysisSummary.test.ts (15 tests) 4ms
+ ✓ src/components/PoolTile.test.tsx (15 tests) 4ms
+ ✓ src/components/PoolSection.test.tsx (20 tests) 5ms
+ ✓ src/components/PresetPoolPopup.test.tsx (14 tests) 4ms
+ ✓ src/components/PaperworkPanel.test.tsx (34 tests) 9ms
+stdout | src/components/CueMonitor.test.tsx > CueMonitor > refresh button click does not throw when onRefresh is omitted
+cue monitor: manual refresh requested
+
+ ✓ src/components/CueMonitor.test.tsx (99 tests) 20ms
+ ✓ src/components/QuestionCard.test.tsx (16 tests) 7ms
+stdout | src/components/DashBoard.test.tsx > DashBoard > refresh button click does not throw when onRefresh is omitted (M4 placeholder path)
+dash: manual refresh requested (M5 wires dash_catalog_request)
+
+ ✓ src/components/DashBoard.test.tsx (32 tests) 9ms
+ ✓ src/components/CueSheetTimeline.test.tsx (35 tests) 6ms
+ ✓ src/components/runbookM7.test.tsx (20 tests) 7ms
+ ✓ src/components/SongTimeline.test.tsx (21 tests) 9ms
+ ✓ src/components/PlanCueRequestGenerator.test.tsx (30 tests) 33ms
+ ✓ src/components/RunbookMode.test.tsx (16 tests) 7ms
+ ✓ src/components/cueRequestSentence.test.ts (26 tests) 3ms
+ ✓ src/useCopilotSocket.test.ts (15 tests) 4ms
+ ✓ src/components/conceptGlance.test.ts (10 tests) 3ms
+ ✓ src/components/cueRequestWarnings.test.ts (19 tests) 4ms
+ ✓ src/settings.test.ts (21 tests) 4ms
+ ✓ src/App.test.tsx (30 tests) 8ms
+ ✓ src/components/ExecutionPreviewCard.test.tsx (4 tests) 3ms
+ ✓ src/components/ApprovalCard.test.tsx (7 tests) 4ms
+ ✓ src/components/conceptBullet.test.ts (6 tests) 3ms
+ ✓ src/components/ChatView.test.tsx (12 tests) 8ms
+ ✓ src/components/TimelineLibrary.test.tsx (3 tests) 3ms
+ ✓ src/components/CueSheetDraft.test.tsx (10 tests) 2ms
+ ✓ src/attachmentCopy.test.ts (4 tests) 2ms
+ ✓ src/components/runbookM7Third.test.tsx (16 tests) 5ms
+ ✓ src/components/runbookMibWarning.test.tsx (6 tests) 1ms
+ ✓ src/timelineLibrary.test.ts (5 tests) 2ms
+ ✓ src/components/nullFade.t490.test.tsx (7 tests) 13ms
+ ✓ src/components/StatusBanner.test.tsx (4 tests) 2ms
+ ✓ src/protocol.test.ts (118 tests) 650ms
+   ✓ encodeSongAudioChunks (REQ-MUSICSYNC-027) > round-trips bytes and keeps every chunk under the server's 4 MiB base64 ceiling 642ms
+
+ Test Files  34 passed (34)
+      Tests  741 passed (741)
+   Start at  15:01:06
+   Duration  998ms (transform 1.44s, setup 0ms, collect 3.56s, tests 856ms, environment 3ms, prepare 2.27s)
+

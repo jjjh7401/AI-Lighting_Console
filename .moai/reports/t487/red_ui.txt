@@ -1,0 +1,49 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t487
+
+ ❯ ui/src/components/conceptGlance.test.ts (10 tests | 1 failed) 5ms
+   × glanceView — 5단계 카드는 구간 데이터에서만 파생한다 (REQ-097) > 한 줄 설명은 수치로만 조립한다 — 형용 문장이 없다 2ms
+     → expected '구간 9개 · 5단계 중 4단계에 구간 배정 · 규칙 directo…' to be '구간 9개 · 5단계 중 4단계에 구간 배정 · 규칙 directo…' // Object.is equality
+ ❯ ui/src/components/runbookM7.test.tsx (20 tests | 1 failed) 13ms
+   × REQ-079/080/097/098 컨셉 패널 > t482 — 서버 단계 배정이 오면 「한눈에」 카드를 규칙 표식과 함께 그린다(수치는 구간 값) 7ms
+     → expected '<details class="concept-panel"><summa…' not to contain '감독 확인 전'
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ui/src/components/conceptGlance.test.ts > glanceView — 5단계 카드는 구간 데이터에서만 파생한다 (REQ-097) > 한 줄 설명은 수치로만 조립한다 — 형용 문장이 없다
+AssertionError: expected '구간 9개 · 5단계 중 4단계에 구간 배정 · 규칙 directo…' to be '구간 9개 · 5단계 중 4단계에 구간 배정 · 규칙 directo…' // Object.is equality
+
+Expected: "구간 9개 · 5단계 중 4단계에 구간 배정 · 규칙 director-confirmed-2026-09-28"
+Received: "구간 9개 · 5단계 중 4단계에 구간 배정 · 규칙 director-confirmed-2026-09-28(감독 확인 전)"
+
+ ❯ ui/src/components/conceptGlance.test.ts:93:27
+     91|     if (view.status !== "ok") throw new Error("glance unavailable");
+     92|     expect(view.cards[1].line).toBe("구간 2개 · 20.0초 · 밝기 35–50%");
+     93|     expect(view.analysis).toBe("구간 9개 · 5단계 중 4단계에 구간 배정 …
+       |                           ^
+     94|   });
+     95| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  ui/src/components/runbookM7.test.tsx > REQ-079/080/097/098 컨셉 패널 > t482 — 서버 단계 배정이 오면 「한눈에」 카드를 규칙 표식과 함께 그린다(수치는 구간 값)
+AssertionError: expected '<details class="concept-panel"><summa…' not to contain '감독 확인 전'
+
+Expected: "감독 확인 전"
+Received: "<details class="concept-panel"><summary class="concept-panel-head">이 곡의 컨셉</summary><div class="concept-panel-body"><section class="concept-glance" aria-label="한눈에"><h4>한눈에 — 이 곡을 이렇게 끌고 간다</h4><p class="concept-glance-analysis">구간 18개 · 5단계 중 2단계에 구간 배정 · 규칙 director-confirmed-2026-09-28(감독 확인 전)</p><ol class="concept-glance-cards"><li class="concept-glance-card"><span class="concept-glance-bar" style="background:#FFB43C" aria-hidden="true"></span><strong>시작</strong><dl><dt>Q</dt><dd>Q010</dd><dt>구간</dt><dd>INTRO</dd><dt>시간</dt><dd>00:00.0–00:08.0</dd><dt>색</dt><dd>#FFB43C</dd><dt>밝기</dt><dd>60–60%</dd><dt>한 줄</dt><dd>구간 1개 · 8.0초 · 밝기 60–60%</dd></dl></li><li class="concept-glance-card is-empty"><span class="concept-glance-bar" aria-hidden="true"></span><strong>쌓기</strong><p class="concept-nodata">이 단계에 드는 구간이 없다</p></li><li class="concept-glance-card is-empty"><span class="concept-glance-bar" aria-hidden="true"></span><strong>강조</strong><p class="concept-nodata">이 단계에 드는 구간이 없다</p></li><li class="concept-glance-card is-empty"><span class="concept-glance-bar" aria-hidden="true"></span><strong>예고</strong><p class="concept-nodata">이 단계에 드는 구간이 없다</p></li><li class="concept-glance-card"><span class="concept-glance-bar" style="background:#FFE0B0" aria-hidden="true"></span><strong>정점→마무리</strong><dl><dt>Q</dt><dd>Q020</dd><dt>구간</dt><dd>VERSE1</dd><dt>시간</dt><dd>00:08.0–00:24.0</dd><dt>색</dt><dd>#FFE0B0</dd><dt>밝기</dt><dd>35–70%</dd><dt>한 줄</dt><dd>구간 1개 · 16.0초 · 밝기 35–70%</dd></dl></li></ol></section><div class="concept-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" class="concept-tab is-active">이 곡의 연출<small>Master Concept</small></button><button type="button" role="tab" aria-selected="false" class="concept-tab">이 곡의 재료<small>Micro Concept</small></button><button type="button" role="tab" aria-selected="false" class="concept-tab">지키는 것·하지 않는 것·아껴 두는 것<small>Visual Grammar</small></button></div><div class="concept-tab-body" role="tabpanel"><p class="concept-nodata">인과 불릿 · 데이터 없음 — 서버가 인과 불릿 원문을 보내지 않았다(예전 페이로드)</p><div class="concept-grammar-scroll"><table class="concept-grammar"><thead><tr><th>구간</th><th>색</th><th>기구·밝기</th><th>움직임</th><th>효과</th><th>그래서 보이는 것</th></tr></thead><tbody><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">INTRO</button></td><td>P1 골드앰버 / P2 웜화이트</td><td class="m">D3 · BACK+WASH-U+HAZE</td><td>STATIC</td><td>NONE</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">VERSE1</button></td><td>P2 웜화이트 / P1 골드앰버</td><td class="m">KEY 70 / BACK 35 · KEY+BACK</td><td>STATIC</td><td>NONE</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">VERSE1</button></td><td>P2 웜화이트 / P6 터쿼이즈</td><td class="m">KEY 70 / SIDE 40 · KEY+BACK+SIDE-L+SIDE-R</td><td>STATIC</td><td>PULSE @2bar</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">PRE1</button></td><td>P6 터쿼이즈 / P5 딥퍼플</td><td class="m">ALL 60 · SIDE-L+SIDE-R+MOVER-U</td><td>TILT-UP @slow</td><td>BREATHE @1bar</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">CHORUS1</button></td><td>P4 핫핑크 / P1 골드앰버</td><td class="m">ALL 90 · MOVER-U+MOVER-D+BACK+WASH-D</td><td>FAN-OUT @mid</td><td>CHASE @1/8</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">CHORUS1</button></td><td>P4 핫핑크 / P6 터쿼이즈</td><td class="m">ALL 90 · MOVER-U+MOVER-D+BACK</td><td>CIRCLE @mid</td><td>CHASE @1/8</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">VERSE2</button></td><td>P2 웜화이트 / P5 딥퍼플</td><td class="m">KEY 65 / BACK 30 · KEY+BACK</td><td>STATIC</td><td>NONE</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">PRE2</button></td><td>P6 터쿼이즈 / P4 핫핑크</td><td class="m">ALL 70 · SIDE-L+SIDE-R+MOVER-U+LED-W</td><td>TILT-UP @mid</td><td>PULSE @1beat</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">CHORUS2</button></td><td>P4 핫핑크 / P7 선셋오렌지</td><td class="m">ALL 95 · MOVER-U+MOVER-D+BACK+WASH-D+LED-W</td><td>FAN-OUT @fast</td><td>CHASE @1/8</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">CHORUS2</button></td><td>P1 골드앰버 / P4 핫핑크</td><td class="m">ALL 95 · MOVER-U+MOVER-D+BACK+WASH-D+LED-W+BLIND</td><td>SWEEP-H @fast</td><td>CHASE @1/8</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">BRIDGE</button></td><td>P5 딥퍼플</td><td class="m">ALL 35 · KEY+BACK</td><td>STATIC</td><td>NONE</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">BRIDGE</button></td><td>P5 딥퍼플 / P4 핫핑크</td><td class="m">ALL 75 · KEY+BACK+SIDE-L+SIDE-R</td><td>TILT-UP @fast</td><td>BREATHE @1bar</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">CHORUS3</button></td><td>P4 핫핑크 / P1 골드앰버</td><td class="m">ALL 100 · MOVER-U+MOVER-D+BACK+WASH-D+WASH-U+SIDE-L+SIDE-R+LED-W</td><td>FAN-OUT @fast</td><td>CHASE @1/8</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">CHORUS3</button></td><td>P7 선셋오렌지 / P6 터쿼이즈</td><td class="m">ALL 100 · MOVER-U+MOVER-D+BACK+WASH-D+WASH-U+SIDE-L+SIDE-R+LED-W</td><td>CIRCLE @fast</td><td>RAINBOW</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">CHORUS3</button></td><td>P4 핫핑크 / P6 터쿼이즈</td><td class="m">ALL 100 · MOVER-U+MOVER-D+BACK+WASH-D+SIDE-L+SIDE-R+LED-W+BLIND+STROBE</td><td>SWEEP-H @fast</td><td>STROBE @2bar</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">CHORUS3</button></td><td>P1 골드앰버 / P2 웜화이트</td><td class="m">ALL 85 · MOVER-U+MOVER-D+BACK+WASH-D</td><td>CIRCLE @mid</td><td>TWINKLE</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">OUTRO</button></td><td>P1 골드앰버</td><td class="m">ALL 20 · BACK+WASH-U</td><td>STATIC</td><td>NONE</td><td class="concept-nodata">데이터 없음</td></tr><tr><td><button type="button" class="concept-row-toggle" aria-expanded="false">OUTRO</button></td><td>P8 블랙아웃</td><td class="m">ALL 0 · ALL</td><td>STATIC</td><td>NONE</td><td class="concept-nodata">데이터 없음</td></tr></tbody></table></div></div></div></details>"
+
+ ❯ ui/src/components/runbookM7.test.tsx:142:28
+    140|     expect(withGlance).toContain("director-confirmed-2026-09-28");
+    141|     // t487 — 감독 확정(2026-09-28) 뒤에는 「감독 확인 전」 표식이 화…
+    142|     expect(withGlance).not.toContain("감독 확인 전");
+       |                            ^
+    143|     expect(withGlance).toContain(cueLabel(sections[0]));
+    144|     expect(withGlance).not.toContain("단계 배정 원천이 서버에 없다");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 28 passed (30)
+   Start at  15:00:45
+   Duration  397ms (transform 113ms, setup 0ms, collect 185ms, tests 17ms, environment 0ms, prepare 87ms)
+

@@ -671,7 +671,7 @@ AC-021(실기 콘솔 1곡, Rain): 회귀(흰↔빨강 교대 재현 안 됨·회
 
 **AC 재검수 (53건).** `sync-evidence/ac_class_recount.txt`(53건 분류 baseline) + 아래 근거로 갱신:
 
-- **PASS-test(미실행) 14건**(018·019·034·035·036·037·038·042·043·044·049·050·052·053) 중 13건이 브라우저·vitest 로 실행 확인됐다 — 019·034·035·036·038·042·043·050·052·053 PASS(`sync-evidence/ac_ui_closeout.md` §3, 라인 39/45/47 등 표 전체); 037 FAIL→PASS(t481, `.moai/reports/t481/verdict.md:45`); 044 PASS(문면 정정, beabbbc1); 049 FAIL→PASS(t482 조건부 → f687a9e8 에서 조건 해소, 아래 항목 참조). 남은 1건(018)은 부분 PASS로 아래 별항.
+- **PASS-test(미실행) 14건**(018·019·034·035·036·037·038·042·043·044·049·050·052·053) 은 14건 전부 브라우저·vitest 로 실행됐다(`sync-evidence/ac_ui_closeout.md` §3) — 019·034·035·036·038·042·043·050·052·053 PASS(같은 표 38·40·41·42·44·48·49·52·54·55행); 037 FAIL→PASS(t481, `.moai/reports/t481/verdict.md:45`); 044 PASS(문면 정정, beabbbc1); 049 FAIL→PASS(t482 조건부 → f687a9e8 에서 조건 해소, 아래 항목 참조). 남은 1건(018)은 부분 PASS로 아래 별항.
 - **UNVERIFIED 5건**(017·020·039·040·041) 전부 PASS로 재확인 — 017 PASS(`.moai/reports/t480/verdict.md:20`); 020·039·041 PASS(`sync-evidence/ac_ui_closeout.md:39,45,47`); 040 PASS, n/a 2종((2) 팬 폭·(6) 페이저=BPM, 감독 결정 2026-09-27·t467) 제외(`sync-evidence/ac_server_closeout.md:13` + `.moai/reports/t481/verdict.md:46` + `.moai/reports/t467/verdict.md:6`).
 - **AC-021**(PASS-measured 부분 불일치 1건): 실기 색은 파랑, AC 문면 "노랑 계열"과 불일치했던 것을 beabbbc1 에서 "후렴 주색 하나 — 회차 전부 동일"로 정정 — 실측과 문면이 일치, 무조건 PASS(`.moai/reports/t474/verdict.md` §3 ③).
 - **AC-018**: FAIL(일부, `ac_ui_closeout.md` §3) → t485 에서 인과 불릿 부분이 PASS(조건부, 원천=인터뷰 Q1) — 감독 2026-09-28 확인으로 그 부분은 조건 없이 PASS. 나머지 3건(「그래서 보이는 것」 칸, 불릿 클릭 4칸 설명, 탭 2·3 본문)은 원천 카드가 없어 **부분 PASS — 후속 카드 t492**로 이월한다.

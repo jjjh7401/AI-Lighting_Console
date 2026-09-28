@@ -1,0 +1,107 @@
+diff --git a/.moai/specs/SPEC-LDDESIGN-001/acceptance.md b/.moai/specs/SPEC-LDDESIGN-001/acceptance.md
+index e301b334..96d234e4 100644
+--- a/.moai/specs/SPEC-LDDESIGN-001/acceptance.md
++++ b/.moai/specs/SPEC-LDDESIGN-001/acceptance.md
+@@ -225,6 +225,9 @@ white)(blue,magenta) 교대 반복을 재현하는 입력).
+ 수정되지 않은 채 그대로이고, 런북 모드가 표시하는 프리셋 풀 이름·
+ 번호·콘솔 연결 상태는 메인 화면에서 읽어온 값과 일치하며, 메인
+ 화면 쪽에는 런북 모드의 제안(초안) 상태가 반영되지 않는다(REQ-086).
++**감독 확인(2026-09-28, 카드 t485)**: 현재 앱 화면에서는 이 자리에
++워크시트 `concept` 필드 대신 인터뷰 Q1 답변이 원문 그대로 노출된다
++(워크시트 YAML은 앱이 읽지 않는다, `.moai/reports/t485/verdict.md` §2).
+ 
+ ## AC-LDDESIGN-019 — `Q###` 배지가 세 곳에서 동일하고 CUE SHEET가 정확히 14열로 재구성됐다 (검증: REQ-LDDESIGN-083, REQ-LDDESIGN-082, REQ-LDDESIGN-096)
+ 
+@@ -267,8 +270,8 @@ Fade) 유지 + 신규 5열(회차·Trigger·MIB·Track 예외·근거 등급) 
+ 
+ **Then**
+ - Sequence + Cue + Timecode가 콘솔에 실제로 저장된다(리드백으로 확인).
+-- 육안으로 후렴 6회 전체가 동일한 색(노랑 계열)으로 보인다 — 흰색↔빨강
+-  교대(오늘 회귀 실측)가 재현되지 않는다.
++- 육안으로 후렴 6회 전체가 동일한 색(후렴 주색 하나 — 회차 전부 동일)으로
++  보인다 — 흰색↔빨강 교대(오늘 회귀 실측)가 재현되지 않는다.
+ - 이 AC 없이는 이 SPEC의 M8은 완료로 간주되지 않는다(사용자 명시 요구).
+ 
+ ## AC-LDDESIGN-022 — B군: Block/Release 콘솔 문법 프로브 (검증: 후속 SPEC 전제)
+@@ -525,7 +528,11 @@ REQ-083 문언 그대로(하단 3줄 + `Q###` 배지) 읽기 전용에 머문다
+ 페이저=BPM) 중 성립하는 것만 표시되고, 그중 리저브 위반·헤드룸·MIB
+ live 3종은 REQ-LDDESIGN-027(유보색)·REQ-LDDESIGN-090(BLIND 잠금)·
+ REQ-LDDESIGN-050·REQ-LDDESIGN-066이 이미 계산한 필드 값을 그대로
+-소비한다(별도 재계산 로직을 갖지 않는다 — 코드 검사).
++소비한다(별도 재계산 로직을 갖지 않는다 — 코드 검사). **감독 결정
++(2026-09-27, 카드 t467)**: 조건 (2) 팬 폭과 (6) 페이저=BPM은 서버가
++그 경고에 필요한 의미의 값을 갖지 않아 n/a다 — 실제로 평가되는
++조건은 4개(밝기 역전·리저브 위반·헤드룸<4·MIB live)다
++(`.moai/reports/t467/verdict.md:6,56`).
+ 
+ ## AC-LDDESIGN-041 — 생성기 요청이 대화 기록에 사람이 읽는 문장으로 남는다 (검증: REQ-LDDESIGN-094)
+ 
+@@ -569,7 +576,9 @@ REQ-LDDESIGN-050·REQ-LDDESIGN-066이 이미 계산한 필드 값을 그대로
+ 
+ **Then** 변경 스택은 비워지고, CUE SHEET 배지의 되돌리기 단계 수
+ (`되돌리기 N단계`, `TimelineDraftHistory.depth` 기반)가 수락 전보다
+-1 증가한다.
++**N만큼** 증가한다 — 생성기는 바뀐 줄마다 별도 요청을 서버로 보내므로
++N=1이면 1 증가한다(실측: 2줄 변경 시 깊이 2 증가,
++`.moai/specs/SPEC-LDDESIGN-001/sync-evidence/ac_ui_closeout.md:50`).
+ 
+ ## AC-LDDESIGN-045 — 후렴 3회 이상 곡의 언더페인팅 최소 1회 (검증: REQ-LDDESIGN-028)
+ 
+@@ -583,6 +592,9 @@ REQ-LDDESIGN-050·REQ-LDDESIGN-066이 이미 계산한 필드 값을 그대로
+ ## AC-LDDESIGN-046 — 인과 불릿은 요약·재작성 없이 원문 그대로다 (검증: REQ-LDDESIGN-032)
+ 
+ **Given** 컨셉 패널이 노출하는 인과 불릿과 워크시트 `concept` 원문.
++**감독 확인(2026-09-28, 카드 t485)**: 현재 앱 화면에서는 이 자리에
++워크시트 필드 대신 인터뷰 Q1 답변이 원문 그대로 노출된다
++(`.moai/reports/t485/verdict.md` §2).
+ 
+ **When** 두 값을 바이트 단위로 비교한다(REQ-032).
+ 
+diff --git a/.moai/specs/SPEC-LDDESIGN-001/spec.md b/.moai/specs/SPEC-LDDESIGN-001/spec.md
+index 796ab07b..3da53328 100644
+--- a/.moai/specs/SPEC-LDDESIGN-001/spec.md
++++ b/.moai/specs/SPEC-LDDESIGN-001/spec.md
+@@ -30,6 +30,7 @@ depends_on: [SPEC-LDRETURN-001]
+ | 2026-09-23 | **비목표 기록 — 색 표현 방식 확장(감독 발의).** 감독 질의("10색만 정의할 필요가 있나, LED 장비는 표현 방법이 많아졌다") 후속 조사를 `docs/proposals/2026-09-23-color-representation-expansion.md`로 남기고, §4에 "색 표현 방식 확장" 절을 신설해 후속 카드 t430~t433(W 채널 구동/젤 번호/CIE 좌표/쇼별 색 사전)로 범위 밖에 둔다. §5에 흰색 웜/쿨 판정이 t430 이전에는 확정되지 않는다는 의존관계를 기록한다. **문서 전용 편집 — REQ 신설 없음.** REQ 총량과 AC 총량은 변하지 않는다(101 / 53). |
+ | 2026-09-23 | **REQ-062 문장 정정(t438).** 판정 규칙을 "창이 충분하면 dark, 부족하면 mark"에서 "계속 꺼져 있으면 dark / 꺼져 있다가 켜지고 창이 이동+정착 잠정값 이상이면 mark(REQ-063 삽입) / 그 외 live(경고)"로 바로잡았다. 근거: REQ-063(mark일 때 Mark 큐 삽입), `reports/tracking-timing-mib-20260921.md`:70, `server/concept/resolver.py` `mib_verdict`(프로토타입 `final_integrated.py`:114와 같은 규칙). 원래 문장대로면 창이 부족할 때 Mark 큐가 들어갈 자리가 없다. REQ 총량과 AC 총량은 변하지 않는다(101 / 53). |
+ | 2026-09-23 | **REQ-004·REQ-030 예외 구절(t439).** 감독 결정 인용: 「음악 스타일마다 다르니 하나로 고정은 무리」 → 후렴 회차 색 고정은 기본값(modulate)으로 두고, 감독이 곡마다 고르는 `per_chorus`(Q2B)는 회차마다 색을 바꾸는 예외로 둔다. 해당 곡의 G7(후렴 주색 동일)은 n/a. 곡별 스위치 정식화(분할 큐 주·보조색 맞바꾸기를 `palette_mode`로 끌어올리기·UI)는 카드 t445. |
++| 2026-09-28 | **완료 문면을 감독 확정·실측과 정합화(t487).** AC-LDDESIGN-021의 실측 색을 「노랑 계열」 예시에서 「후렴 주색 하나 — 회차 전부 동일」로 일반화한다(실측 색은 파랑이었다). AC-LDDESIGN-044의 되돌리기 단계 증가치를 고정 「1」에서 변경 줄 수 N으로 정정한다(생성기는 바뀐 줄마다 별도 요청을 보낸다, 실측: 2줄 변경 시 2단계 증가). AC-LDDESIGN-040·REQ-LDDESIGN-093의 파생 경고 6종 중 (2) 팬 폭·(6) 페이저=BPM을 감독 결정(2026-09-27, 카드 t467)에 따라 n/a로 명시한다(서버가 해당 의미의 값을 갖지 않는다). REQ-LDDESIGN-013·032·080과 AC-LDDESIGN-018·046에, 현재 앱 화면의 컨셉 인과 불릿이 워크시트 `concept` 필드가 아니라 인터뷰 Q1 답변 원문을 노출한다는 사실을 병기한다(감독 확인 2026-09-28, 카드 t485). 문면 정정으로 REQ·AC 신설은 없다 — 총량은 변하지 않는다(101 / 53). |
+ 
+ ## 1. 배경
+ 
+@@ -170,7 +171,7 @@ REQ 번호는 이 SPEC 전체에서 연속이다(절 단위로 다시 시작하
+ |---|---|---|
+ | REQ-LDDESIGN-011 | **The** 워크시트는 **SHALL** YAML 파일로 입력받으며 최소 다음 4개 최상위 구획을 갖는다 — `palette`(§3.4 팔레트 4칸), `concept`(컨셉 인과 불릿), `sections`(구간·트리거·원샷 줄), `notes`(자유 메모). | 감독 확정(2026-09-21) — "컨셉 입력은 YAML 워크시트" |
+ | REQ-LDDESIGN-012 | **The** `palette` 구획은 **SHALL** 정확히 4개 필드를 갖는다 — `primary`(주색), `secondary`(보조색), `climax`(클라이맥스 색), `reserved`(유보색 목록, 기본값은 `climax`와 동일). | `apply-candidates-20260921.md` C1, 문서 §2.1 Micro Concept |
+-| REQ-LDDESIGN-013 | **The** `concept` 구획은 **SHALL** 인과 관계를 기입하는 자유 문장 필드(예: "이 곡은 → 그래서 주조색 → 분위기 → 그래서 효과")를 갖는다 — 이 문장은 UI 컨셉 패널의 인과 불릿(§3.14)을 만드는 원천이다. | 감독 UI 요구 — "연출 설명은 인과 불릿" |
++| REQ-LDDESIGN-013 | **The** `concept` 구획은 **SHALL** 인과 관계를 기입하는 자유 문장 필드(예: "이 곡은 → 그래서 주조색 → 분위기 → 그래서 효과")를 갖는다 — 이 문장은 UI 컨셉 패널의 인과 불릿(§3.14)을 만드는 원천이다. **감독 확인(2026-09-28, 카드 t485)**: 현재 앱 화면의 인과 불릿은 이 워크시트 필드가 아니라 인터뷰 Q1 답변을 원문 그대로 노출한다(워크시트 YAML은 앱이 읽지 않는다). | 감독 UI 요구 — "연출 설명은 인과 불릿"; 앱 경로 확인: `.moai/reports/t485/verdict.md` §2 |
+ | REQ-LDDESIGN-014 | **The** `sections` 구획의 각 줄은 **SHALL** 최소 다음 필드를 갖는다 — `section`(9종 어휘 중 하나, REQ-005), `occurrence`(회차 번호, 정수), `trigger`(트리거 어휘 또는 생략, REQ-006), `operation`(§3.5 동작 어휘), `memo`(자유 텍스트, 선택). | `vocab-closed-verification-20260921.md` Rain 문서 어휘 큐시트 |
+ | REQ-LDDESIGN-015 | **The** `sections` 구획은 원샷을 별도 하위 목록 `one_shots`로 **SHALL** 가지며, 각 항목은 `shot`(원샷 어휘 중 하나, REQ-007), `anchor_section`, `anchor_occurrence`, `at`(구간 내 상대 위치 서술 또는 초)를 갖는다. | `cue-density-director-view-20260921.md` §"원샷 8" |
+ | REQ-LDDESIGN-016 | **When** 워크시트의 `section`·`trigger`·`operation`·`shot` 필드에 각 어휘(REQ-005~007, §3.5)에 없는 값이 오면, 워크시트 로더는 **SHALL** 조립을 거부하고 어느 필드에 어떤 값이 왔는지 명시한 오류를 낸다(`memo`/자유 메모 필드는 이 검사 밖이다). | 감독 확정 — "그 밖의 이름은 스크립트가 거부" |
+@@ -199,7 +200,7 @@ REQ 번호는 이 SPEC 전체에서 연속이다(절 단위로 다시 시작하
+ | REQ-LDDESIGN-029 | **The** 인접한 두 구간 큐는 **SHALL** 공통색을 최소 1개 유지한다(브리지) — 위반은 컬러 검사 실패로 기록된다(G6). 단 두 구간이 켜진 그룹 집합을 전혀 공유하지 않으면(예: 완전한 암전 전환) 이 규칙은 적용하지 않는다. | `document-gap-audit-20260921.md` 규칙셋 (c) |
+ | REQ-LDDESIGN-030 | **The** 후렴(Chorus) 구간 전체는 **SHALL** 동일한 주색을 유지한다(Final Chorus의 클라이맥스 색 전환은 예외) — 이는 기본값이며, 곡별 `palette_mode`/`color_usage` 선택(`per_chorus` 등)은 예외다(그 곡의 G7은 n/a) — 8곡 실측 전부 후렴 주색 동일(`apply-candidates-20260921.md` C1 표). | `apply-candidates-20260921.md` C1, G7 정의 |
+ | REQ-LDDESIGN-031 | **When** 컨셉 계층이 컴파일되면, `server/web/session.py`의 `_arc_palette`(회차마다 보조색 2색 순환)와 `_per_chorus_palette`("한 번에 하나씩" per_chorus 6색 순환, Q2B)는 **SHALL** 후렴 정체성 판정(REQ-030) 경로에서 더 이상 호출되지 않는다 — 회차 축은 색이 아니라 §3.7의 그룹 수·면적·밝기·모션으로 표현한다. | `document-gap-audit-20260921.md` §3 표 마지막 행, §4.1 원칙과 직접 충돌 실측 |
+-| REQ-LDDESIGN-032 | **The** 워크시트 `concept` 필드는 **SHALL** UI 컨셉 패널(§3.14)의 인과 불릿 원문으로 그대로 노출된다 — 컴파일 과정에서 요약·재작성되지 않는다. | 감독 UI 요구 |
++| REQ-LDDESIGN-032 | **The** 워크시트 `concept` 필드는 **SHALL** UI 컨셉 패널(§3.14)의 인과 불릿 원문으로 그대로 노출된다 — 컴파일 과정에서 요약·재작성되지 않는다. **감독 확인(2026-09-28, 카드 t485)**: 현재 앱 화면의 인과 불릿은 이 워크시트 필드가 아니라 인터뷰 Q1 답변을 원문 그대로 노출한다(워크시트 YAML은 앱이 읽지 않는다). | 감독 UI 요구; 앱 경로 확인: `.moai/reports/t485/verdict.md` §2 |
+ | REQ-LDDESIGN-033 | **The** Color Strip은 **SHALL** 구간 큐(프레이즈·원샷 큐 제외)만을 대상으로 산출한다 — UI 타임라인 띠 색(§3.14)이 이 스트립을 직접 그린다. | `cue-density-director-view-20260921.md` "컬러 스트립(구간 큐만)" |
+ | REQ-LDDESIGN-034 | **Where** 워크시트에 의상·세트·LED·피부톤 등 고정 제약이 입력되지 않으면, 컨셉 계층은 **SHALL** 그 제약을 빈 값으로 처리하고 관련 린트 규칙(문서 §7.5류 색-피부톤 경고)은 평가하지 않는다 — 안 재고는 안 쓴다. | `document-gap-audit-20260921.md` 구체안 5, 문서 §3.2 절차 3 |
+ | REQ-LDDESIGN-035 | **The** 컨셉 계층은 **SHALL** 팔레트 4칸(REQ-012)을 워크시트가 아예 채우지 않았을 때, 인터뷰 경로(Q1~Q5, Q2B)의 기존 답변을 자동 초안으로 채워 넣는다 — 인터뷰는 폐기되지 않고 워크시트의 기본값 생성기로 남는다. | 감독 결정 — "인터뷰(`design/interview.py`) 유지, 워크시트가 자동 초안" |
+@@ -292,7 +293,7 @@ REQ 번호는 이 SPEC 전체에서 연속이다(절 단위로 다시 시작하
+ |---|---|---|
+ | REQ-LDDESIGN-078 | **The** M7의 대상 화면은 런북 모드(Runbook Mode, `ui/src/components/RunbookMode.tsx`, 이미 존재)다 — 코파일럿 메인 화면(리그 대시보드·프리셋 풀 브라우저·큐 모니터·채팅·설정·페이퍼워크, `App.tsx`에서 `runbookMode`가 거짓일 때 렌더되는 화면)과 그 컴포넌트는 이 SPEC이 수정하지 않는다. 런북 모드의 기존 5블록 순서(오늘의 곡·큐 순서 → 타임라인+에너지선+Q줄 → CUE SHEET → PLAN CUE 카드 → 상태줄)는 **SHALL** 유지된다 — 새 최상위 내비게이션 항목을 만드는 것이 아니라, 이미 존재하는 모드 전환(헤더의 「런북 모드」 토글) 안에서 작업한다. | 감독 확정 — `src/DESIGN.md` §0, 실측 `App.tsx:1074`(`runbookMode ? … : …` 분기), `RunbookMode.tsx`(263행, `CueSheetTimeline`·`SongTimeline`을 마운트하는 유일한 지점) |
+ | REQ-LDDESIGN-079 | **The** UI는 **SHALL** 새 컨셉 패널을 갖는다 — 기본 접힘, 헤더 라벨 `이 곡의 컨셉`. 펼치면 **SHALL** 최상단에 "한눈에" 구획(REQ-LDDESIGN-097)을 두고, 그 아래 탭 3개(REQ-LDDESIGN-098)를 둔다. 탭 안의 항목(불릿·칩)을 클릭하면 **SHALL** 설명 4칸(무슨 뜻 / 무대에서 / 왜 이렇게 제안했나 / 바꾸려면)을 편다. | 감독 확정(2026-09-22) — `src/DESIGN.md` §4.2 전체 채택, REQ-097·098로 확장 |
+-| REQ-LDDESIGN-080 | **The** 탭 1(`이 곡의 연출`, Master Concept)의 본문은 **SHALL** 인과 불릿(워크시트 `concept` 필드 원문, REQ-013·032 그대로, 요약·윤문 없이 "원문 그대로" 배지와 함께 표시) + 여섯 칸 문법 요약 표(헤더 문자열 고정 `구간 / 색 / 기구·밝기 / 움직임 / 효과 / 그래서 보이는 것`, 표 자체가 세로 스크롤)로 구성된다 — 비유 표현이 아니라 실제 값(실제 색 이름, 실제 밝기 %, 실제 그룹 이름)으로 채운다. **The** 불릿·칩 항목 수는 **SHALL** 곡마다 가변이며, 고정 개수 그리드를 쓰지 않고 칩 wrap 레이아웃을 쓴다. | 감독 확정 — "비유 표현 금지, 실제 값으로"; 감독 확정(2026-09-22) — `src/DESIGN.md` §4.2 |
++| REQ-LDDESIGN-080 | **The** 탭 1(`이 곡의 연출`, Master Concept)의 본문은 **SHALL** 인과 불릿(워크시트 `concept` 필드 원문, REQ-013·032 그대로, 요약·윤문 없이 "원문 그대로" 배지와 함께 표시) + 여섯 칸 문법 요약 표(헤더 문자열 고정 `구간 / 색 / 기구·밝기 / 움직임 / 효과 / 그래서 보이는 것`, 표 자체가 세로 스크롤)로 구성된다 — 비유 표현이 아니라 실제 값(실제 색 이름, 실제 밝기 %, 실제 그룹 이름)으로 채운다. **The** 불릿·칩 항목 수는 **SHALL** 곡마다 가변이며, 고정 개수 그리드를 쓰지 않고 칩 wrap 레이아웃을 쓴다. **감독 확인(2026-09-28, 카드 t485)**: 현재 앱 화면의 인과 불릿은 워크시트 `concept` 필드가 아니라 인터뷰 Q1 답변을 원문 그대로 노출한다(워크시트 YAML은 앱이 읽지 않는다). | 감독 확정 — "비유 표현 금지, 실제 값으로"; 감독 확정(2026-09-22) — `src/DESIGN.md` §4.2; 앱 경로 확인: `.moai/reports/t485/verdict.md` §2 |
+ | REQ-LDDESIGN-081 | **The** 타임라인 블록 색은 **SHALL** Color Strip(REQ-026·033)에서 직접 가져온다 — 원샷·Mark 지점은 점 줄(dot row)로 타임라인에 겹쳐 표시된다. | 감독 UI 요구 |
+ | REQ-LDDESIGN-082 | **The** CUE SHEET는 **SHALL** 정확히 14열을 갖는다 — 기존 9열(Q#·Section→구간·TC In→시각·Color→색·Intensity→밝기·Fixture Group→기구 그룹·Movement→움직임·Effect→효과·Fade) 유지 + 신규 5열(회차·`Trigger`[REQ-006 어휘]·MIB·`Track 예외`[REQ-053의 `tracking` 값이 기본값 `Track`이 아닐 때만 값을 채움]·근거 등급) 추가. **The** 기존에만 있던 5열(`TC Out`·`Dur`·`Mood`·`Trans`·`Note`)은 **SHALL** 제거된다(감독 결정, 2026-09-22). 실측(`CueSheetTimeline.tsx:225` `SHEET_COLUMNS`) 결과 기존 CUE SHEET는 이미 14열(`Q# / Section / TC In / TC Out / Dur / Mood / Color(주/보조) / Intensity / Fixture Group / Movement / Effect / Trans / Fade / Note`)이었다 — "기존 12열에 2열 추가"라는 최초 전제는 틀렸었다. 제거되는 5열 중 `Trans` 값의 데이터 모델 존속은 REQ-LDDESIGN-096이 별도로 정한다. 행 표시는 **SHALL** 좌측 7px 색 레일(그 큐 구간의 Color Strip 색), 구간 전환 행의 상단 구분선, 밝기 칸의 값+구간색 막대+직전 큐 대비 증감 기호(▲▼), MIB 칸의 기호 3종(`◐ dark`/`◇ mark`/`◑ live`), 선택 행의 좌측 5px 바+아웃라인 표시를 포함한다. | 감독 UI 요구 재확정 + 감독 결정(2026-09-22 — CUE SHEET 14열 확정) — 실측 `CueSheetTimeline.tsx:225-239`, `src/DESIGN.md` §4.4 |
+ | REQ-LDDESIGN-083 | **The** PLAN CUE 카드는 **SHALL** 하단에 3줄(`Fade/Track`, `MIB/남김`, 헤드룸 요약)과 `Q###` 배지(실행기 번호 규칙 — Page children의 i+100, 기존 배선 그대로)를 추가로 갖는다. | 감독 UI 요구, 기존 실행기 번호 규칙(`project-songcue-on-console-0913.md` 메모리) |
+@@ -329,7 +330,7 @@ REQ-LDDESIGN-101(자유 입력 한 줄)로 요구사항화됐다.
+ | REQ-LDDESIGN-090 | **The** BLIND(리저브) 그룹은 **SHALL** 해제 큐(`palette.reserved` 해제 큐, REQ-027과 같은 기준) 이전에는 생성기에서 잠금 상태로 표시되고 선택할 수 없다. | `src/DESIGN.md` §4.5 "BLIND는 Q023 전까지 잠금" |
+ | REQ-LDDESIGN-091 | **The** 변경 스택(`src/DESIGN.md` §4.5 항목 7)은 **SHALL** 바꾼 항목만 diff로 누적하고(예: `~ FOH 밝기 90% → 95%`), 상단 또는 헤더에 상태 라벨(`바꾼 것 N — 코파일럿 확인 대기` 류)을 갖는다 — 요청 → 수락 → 반영은 서로 구분되는 상태이며, 감독이 `코파일럿에게 반영 요청`을 누른 것만으로 초안이 바뀌었다고 표시하지 않는다. 규칙 위반 경고는 **SHALL** 스택 하단에 모아 쓰지 않고, 그 경고를 유발한 diff 줄에 병기한다(예: `~ 포지션 Sweep L → Sweep L (팬 ±30°) ⚠ Chorus 6 ±25°와 같아져 정점 구분이 약해진다`, REQ-093의 경고 내용을 이 형식으로 노출). 선택을 버리는 동작은 **SHALL** `선택 취소`로 제공한다(REQ-095 — `되돌리기`가 아니다). 코파일럿(파서 경로)이 거절하면 그 사유 문장은 **SHALL** 해당 diff 줄에 그대로 노출된다(REQ-092). | `src/DESIGN.md:160-161` §4.5 항목 7 + 감독이 확인한 렌더 형태(2026-09-22) |
+ | REQ-LDDESIGN-092 | **The** 생성기는 **SHALL NOT** 큐시트 타임라인 객체를 로컬에서 변형하거나 `changes` 매핑을 직접 만들어 기존 파서(`parse_cue_sheet_edit_request`)를 우회한다 — 생성기의 산출물은 **문장뿐**이며, 그 문장이 기존 경로(`server/web/session.py:9351` `_cue_sheet_draft_edit` → 파서 → `server/design/cue_sheet_edit.py:392` `apply_cue_sheet_edit`)를 거쳐 `changes`로 변환된다. 값 범위(조도 0-100, 페이드 ≤60초, `TRANS_VALUES` 3종)·부분 적용 금지·거절 사유 문자열은 **SHALL** 서버(`apply_cue_sheet_edit`)가 단일 진실 지점이다 — 생성기는 입력 위젯에 상한·하한을 표시만 하고 최종 판정은 서버 응답을 그대로 표시한다. 두 갈래(생성기 직접 생성 vs 파서 생성)가 생기면 검증 규칙이 갈라진다. | 감독 클래리피케이션(2026-09-22) ×2, `cue_sheet_edit.py:38,392`, `session.py:9351` |
+-| REQ-LDDESIGN-093 | **The** 생성기는 **SHALL** 다음 6개 파생 경고를 매 요청 조립 시점에 큐 데이터에서 계산한다(하드코딩 금지, REQ-091의 형식으로 diff 줄에 병기) — (1) 밝기가 뒤 후렴(예: C4 92%·C5 94%)을 역전하면 후렴 상승 곡선 경고 [신규], (2) 팬 폭이 정점값(±25°) 이상이면 정점 구분 약화 경고 [신규], (3) 리저브 항목(BLIND·짧은 Strobe·흰색)을 해제 큐 이전에 쓰면 리저브 위반 경고 [REQ-LDDESIGN-027(유보색)·REQ-LDDESIGN-090(BLIND 잠금) 재사용 — 신규 REQ 아님], (4) 잔여 그룹이 4 미만이면 헤드룸 경고 [REQ-LDDESIGN-050의 미사용 그룹 축 재사용, 임계값 "<4"만 신규], (5) MIB 판정이 `live`이면 GATE WARN 예고 [REQ-LDDESIGN-066 재사용 — 신규 REQ 아님], (6) 페이저 스피드가 곡 BPM과 같으면 박자 동기 경고 [신규]. | `src/DESIGN.md` §4.5, 감독 UI 요구; overlap 검토 대상: REQ-LDDESIGN-050~052 |
++| REQ-LDDESIGN-093 | **The** 생성기는 **SHALL** 다음 6개 파생 경고를 매 요청 조립 시점에 큐 데이터에서 계산한다(하드코딩 금지, REQ-091의 형식으로 diff 줄에 병기) — (1) 밝기가 뒤 후렴(예: C4 92%·C5 94%)을 역전하면 후렴 상승 곡선 경고 [신규], (2) 팬 폭이 정점값(±25°) 이상이면 정점 구분 약화 경고 [신규], (3) 리저브 항목(BLIND·짧은 Strobe·흰색)을 해제 큐 이전에 쓰면 리저브 위반 경고 [REQ-LDDESIGN-027(유보색)·REQ-LDDESIGN-090(BLIND 잠금) 재사용 — 신규 REQ 아님], (4) 잔여 그룹이 4 미만이면 헤드룸 경고 [REQ-LDDESIGN-050의 미사용 그룹 축 재사용, 임계값 "<4"만 신규], (5) MIB 판정이 `live`이면 GATE WARN 예고 [REQ-LDDESIGN-066 재사용 — 신규 REQ 아님], (6) 페이저 스피드가 곡 BPM과 같으면 박자 동기 경고 [신규]. **감독 결정(2026-09-27, 카드 t467)**: (2) 팬 폭과 (6) 페이저=BPM은 서버에 그 경고에 필요한 의미의 값이 없어 n/a로 처리한다 — 실제로 평가되는 조건은 4개다. | `src/DESIGN.md` §4.5, 감독 UI 요구; overlap 검토 대상: REQ-LDDESIGN-050~052; n/a 결정: `.moai/reports/t467/verdict.md:6,56` |
+ | REQ-LDDESIGN-094 | **When** 생성기가 요청을 코파일럿에게 보내면, 그 요청은 **SHALL** 감독이 대화창에 손으로 입력한 요청과 같은 자리(대화 기록)에 같은 형태로 남는다 — 사람이 읽을 수 있는 문장으로 표시된다. 승인 경로(REQ-LDDESIGN-086의 `onApplyDraft` → 승인 카드 → 콘솔)는 입력 방식과 무관하게 **SHALL** 동일하게 적용된다 — 생성기는 대화 경로의 우회로를 만들지 않는다. | 감독 클래리피케이션(2026-09-22) |
+ | REQ-LDDESIGN-095 | **The** 변경 스택은 **SHALL** 3개 상태를 구분한다 — **선택**(미전송, diff만 쌓임) / **요청**(전송됨·미수락) / **초안 반영**(코파일럿 수락됨). "선택" 상태를 버리는 버튼은 **SHALL** `src/DESIGN.md` 표기와 달리 **"선택 취소"**로 표기한다 — 기존 CUE SHEET의 `↶ 되돌리기`(`CueSheetTimeline.tsx:612`, 프로토콜 `timeline_draft_undo`, 배지 `되돌리기 N단계`, `CueSheetTimeline.tsx:246,258`)와 라벨이 겹치면 한 화면에 같은 낱말의 버튼 둘이 서로 다른 일을 한다. "선택 취소"는 **SHALL NOT** 서버에 어떤 메시지도 보내지 않는다 — `timeline_draft_undo`를 호출하지 않는다. 이 둘(선택 취소, 기존 초안 되돌리기)을 같은 핸들러로 묶는 구현은 **SHALL NOT** 이다 — 묶이면 전송된 적 없는 취소가 이미 반영된 초안을 한 걸음 되돌린다. 코파일럿이 요청을 수락하면 변경 스택은 **SHALL** 비워지고, 그 지점부터 되돌릴 대상은 기존 `↶ 되돌리기`(`server/web/timeline_draft.py` `TimelineDraftHistory`, 상한 20단계)로 넘어간다 — 되돌리기 깊이의 진실 지점은 **SHALL** 서버(`TimelineDraftHistory.depth`)이고 화면은 자체 카운터를 두지 않는다. **When** 코파일럿이 요청을 거절하면, 스택은 **SHALL** 그대로 남고 거절 사유(REQ-092)가 표시된다. | 감독 클래리피케이션(2026-09-22) — `CueSheetTimeline.tsx:246,258,612,617` 실측, `server/web/timeline_draft.py` `TimelineDraftHistory` |
+ 
