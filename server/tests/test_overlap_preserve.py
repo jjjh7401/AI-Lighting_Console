@@ -2109,12 +2109,18 @@ class TestTouchedFilesPassLint:
         )
         # 계기 검산 — git 이 몇 개를 보고했는지와 게이트가 몇 개를 보는지를 나란히
         # 둔다. 두 수가 갈리면 그 차이가 곧 조용히 빠진 파일 수다.
+        #
+        # 카드 t480 — 지워진 파일(``--diff-filter=d`` 로 뺀다)은 린트할 대상이 아니라
+        # 게이트의 ``is_file()`` 이 떨어뜨리는 것이 맞다. 그것까지 세면 파일 삭제가
+        # 「조용히 빠진 파일」로 잘못 잡힌다(룩 라이브러리 조립기 은퇴가 처음 밟았다).
+        # 이 검산이 겨누는 것은 **있는데 못 보는** 파일(t115 의 따옴표 경로)이다.
         reported = (
             _git(
                 "-c",
                 "core.quotePath=false",
                 "diff",
                 "--name-only",
+                "--diff-filter=d",
                 f"{_OVERLAP_BASE}..HEAD",
                 "--",
                 "*.py",

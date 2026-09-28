@@ -11,11 +11,9 @@ import json
 
 from server.llm.types import ToolCall
 from server.orchestrator.tools import build_toolset
+from server.tests.song_section_fixtures import ICE_CREAM_SECTIONS as _ICE_CREAM_SECTIONS
+from server.tests.song_section_fixtures import RAIN_SECTIONS as _RAIN_SECTIONS
 from server.tests.test_chorus_color_two_paths_t441 import _records, _RecordsPort
-from server.tests.test_songcue_t429_repeat_chorus_collision import (
-    _ICE_CREAM_SECTIONS,
-    _RAIN_SECTIONS,
-)
 from server.tests.test_songcue_tool import _RecordingPort
 from server.tests.upload_console_fixture import POSITION_START, UploadConsole
 

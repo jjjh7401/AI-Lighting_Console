@@ -12,10 +12,8 @@ from server.design.song_cue_composer import compose_song_cue_bundle
 from server.design.song_plan import TimingPlan
 from server.design.upload_song_plan import build_upload_song_plan, upload_plan_sections
 from server.looks.songcue import parse_sections
-from server.tests.test_songcue_t429_repeat_chorus_collision import (
-    _ICE_CREAM_SECTIONS,
-    _RAIN_SECTIONS,
-)
+from server.tests.song_section_fixtures import ICE_CREAM_SECTIONS as _ICE_CREAM_SECTIONS
+from server.tests.song_section_fixtures import RAIN_SECTIONS as _RAIN_SECTIONS
 
 for song, raw, bpm in (("Ice cream", _ICE_CREAM_SECTIONS, 100.4), ("Rain", _RAIN_SECTIONS, 76.0)):
     for tempo, genre in ((bpm, "rock"), (None, "edm"), (bpm, "jazz")):

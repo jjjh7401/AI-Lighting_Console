@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING, Protocol
 from server.concept.session_bridge import (
     build_concept_report,
 )
-from server.design import color_names as _COLOR_NAMES
 from server.design.capability_verdict import group_capability_source
 from server.design.console_slots import (
     paged_pool_children,
@@ -34,18 +33,15 @@ from server.design.console_slots import (
     resolve_named_pool_no,
     resolve_position_preset_labels,
 )
-from server.design.cue_density import rotate_palette
-from server.design.interview import Q2_PALETTE, Q2B_COLOR_USAGE, _palette_value_tokens
+from server.design.interview import Q2B_COLOR_USAGE
 from server.design.override_look import (
     DEFAULT_OVERRIDE_SLOTS,
     OverrideLookError,
     OverrideSafetyAnswers,
     plan_override_solo_spot,
 )
-from server.design.profile import MusicProfile
 from server.design.rig import build_rig_profile
 from server.design.rig_capability_read import RIG_GAP_UNREADABLE, read_design_rig
-from server.design.section_palette import _section_palette_choice, role_for_songcue_label
 from server.design.song_cue_composer import compose_song_cue_bundle
 from server.design.song_cue_render import (
     _blinder_group_no,
@@ -99,14 +95,13 @@ from server.looks.matching import match_looks
 from server.looks.report import build_report, to_korean
 from server.looks.resolver import resolve_roles
 from server.looks.rig_axes import MEASURED_ATTRIBUTE_SPELLINGS, RigAxisPresence
-from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, AttributeValue, Look, LookLibrary
+from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, LookLibrary
 from server.looks.song_history import SongLookMemory
 from server.looks.songcue import (
     EXPLICIT_DYNAMICS_REQUIRED,
     TRIGGER_TYPE_TIME,
     SectionTimeError,
     SequenceNumberError,
-    SongCueLookSelection,
     SongCueTimingAxes,
     _ascii_label,
     _format_seconds,
@@ -217,7 +212,6 @@ from server.spatial.pointing import (
     PointingTarget,
     SpatialPointingError,
 )
-from server.spatial.position_cuesheet import PositionSheetSection
 from server.spatial.presets import (
     SPATIAL_PRESETS,
     SpatialPlacement,
@@ -2331,161 +2325,6 @@ def _interview_record_value(
         if getattr(record, "step", None) == step:
             return getattr(record, "value", fallback)
     return fallback
-
-
-def _songcue_role_occurrences(
-    selections: Sequence[SongCueLookSelection],
-) -> tuple[tuple[str, int], ...]:
-    """선택 목록과 같은 길이·순서로 (경로 A 역할, 그 역할의 몇 번째 회차) 를
-    낸다 (카드 t441) — 경로 A 의 ``_build_unified_song_plan`` 이 원본 구간을
-    ``head_indexes`` 로 묶어 회차를 세는 것과 같은 규율이다.
-
-    마디 분할로 갈린 조각(``split_selections_for_density``)은 원본과 같은
-    ``section.label``·``section.instance`` 를 그대로 물려받는다(시작 시각만
-    다르다, ``dataclasses.replace(source.section, start_ms=...)``) — 그래서
-    그 쌍으로 원본을 식별하면 조각들이 같은 회차를 공유한다. 라벨 문자열이
-    달라도(예: ``Chorus`` 다음 ``Drop``) 같은 §6 행으로 접히면(
-    ``role_for_songcue_label``) 같은 역할의 연속 회차로 센다 — 텍스트가 아니라
-    **역할**을 세는 것이 경로 A 와 같은 의미다.
-    """
-    role_running: dict[str, int] = {}
-    seen: dict[tuple[str, int], tuple[str, int]] = {}
-    result: list[tuple[str, int]] = []
-    for selection in selections:
-        section = selection.section
-        key = (section.label, section.instance)
-        cached = seen.get(key)
-        if cached is not None:
-            result.append(cached)
-            continue
-        role = role_for_songcue_label(section.label)
-        role_running[role] = role_running.get(role, 0) + 1
-        entry = (role, role_running[role])
-        seen[key] = entry
-        result.append(entry)
-    return tuple(result)
-
-
-def _override_songcue_main_color(
-    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
-) -> tuple[tuple[SongCueLookSelection, ...], tuple[str, ...]]:
-    """경로 A 와 같은 함수(``_section_palette_choice``)로 구간별 주색을 정해,
-    이미 고른 룩의 ``ColorRGB_R/G/B`` 만 덮는다 (카드 t441, REQ-003).
-
-    ``records`` 가 없거나(``None``/빈 시퀀스) Q2(팔레트) 답이 없으면 오늘과
-    바이트 동일하게 아무 것도 바꾸지 않는다 — 색을 지어내지 않는다는 규율은
-    ``_song_color_value_lines``(``session.py``) 와 같다.
-
-    **적용 순서 — 룩 선택·마디 분할 뒤, ``build_songcue_bundle`` 호출 전.**
-    LDACCENT 색 스냅(``_color_snap_is_effective``)과 LDRETURN 복귀 판정
-    (``_label_return_palette``) 모두 ``selection.look.attributes`` 를 그
-    구간이 "원래" 낸 색으로 읽는다(``server/looks/songcue.py``). 이 함수가
-    그 전에 값을 덮어 두면 스냅은 감독 색끼리 비교하고 복귀는 감독 색으로
-    돌아온다(둘 다 원하는 동작) — 나중에 덮으면 사다리·복귀가 이미 룩
-    고유색으로 판정을 끝낸 뒤라 감독 색이 두 축 모두에서 무시된다.
-
-    보조색(``colors[1]``)은 내지 않는다 — 경로 A 의 콘솔 명령 생성기
-    (``_song_color_value_lines``)도 주색 한 줄만 낸다("보조색·유보색·
-    언더페인팅은 M3 의 몫" 독스트링). 다이내믹스·포지션·이펙트·클라이맥스
-    상한·아껴두기 사다리·복귀 로직 자체는 건드리지 않는다 — 바꾸는 것은
-    그 룩 자신의 색 세 채널뿐이다. ``ColorRGB_W`` 는 내지 않는다 — 이
-    라이브러리의 룩에는 W 채널 축이 없다(``_COLOR_ATTRIBUTES =
-    ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")``, ``songcue.py``).
-
-    색 이름이 표준 10색(``server/design/color_names.py``)에 없어 RGB 로
-    못 바뀌면 그 구간의 룩은 그대로 두고(색을 지어내지 않는다) 그 사실을
-    두 번째 반환값(``notes``)에 적는다 — 실패를 조용히 삼키지 않는다.
-
-    룩이 애초에 ``ColorRGB_R/G/B`` 채널을 하나도 안 실었으면(``attributes``
-    에 그 세 이름이 없음 — 예: 색 없는 헤이즈/무빙 전용 기구) 아무것도
-    바뀌지 않는다. 없는 축에 새 값을 만들어 얹지 않는다 — 이 라이브러리
-    전역의 규율이다(``_look_has_attribute``, ``server/looks/songcue.py``).
-
-    **``selection.look`` 하나만 덮으면 부족하다 — ``dynamics_matches`` 전부를
-    덮는다.** ``build_songcue_bundle`` 은 최종 저장 색을 ``selection.look``
-    에서 읽지 않는다: ``_select_bindable`` 이 ``selection.dynamics_matches``
-    (요청 다이내믹스에 맞는 룩 **전량**, 버스킹 순서 그대로)를 앞에서부터
-    훑어 **이 리그에 실제로 묶이는 첫 룩**을 고르고, 그 룩이 저장된다
-    (``SongCueLookSelection.dynamics_matches`` 독스트링 — "리그에 실제로
-    묶이는 룩을 이 중에서 고르는 것은 ... ``_section_bundle`` 의 일이다").
-    ``look`` 만 덮으면 리그가 그 룩을 못 묶었을 때(``_select_bindable`` 이
-    ``matches`` 의 다른 항목으로 넘어갈 때) 덮은 색이 조용히 사라진다 —
-    그래서 ``dynamics_matches`` 의 모든 후보에 같은 덮어쓰기를 적용해,
-    어느 후보가 최종 선택돼도 감독 색을 낸다.
-    """
-    if not records:
-        return tuple(selections), ()
-    palette_answer = _interview_record_value(records, Q2_PALETTE, None)
-    if palette_answer is None:
-        return tuple(selections), ()
-    palette_value = _palette_value_tokens(palette_answer)
-    color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
-    profile = MusicProfile(palette=palette_value)
-    role_occurrences = _songcue_role_occurrences(selections)
-    # 카드 t445 — 마디 분할 조각의 순번(0 = 여는 큐). 조각들은 부모의
-    # (label, instance) 를 그대로 물려받으므로 연속한 같은 키를 센다.
-    units: list[int] = []
-    previous_key: tuple[object, object] | None = None
-    for selection in selections:
-        key = (selection.section.label, selection.section.instance)
-        units.append(units[-1] + 1 if key == previous_key and units else 0)
-        previous_key = key
-    overridden: list[SongCueLookSelection] = []
-    notes: list[str] = []
-    for selection, (role, occurrence), unit_index in zip(
-        selections, role_occurrences, units, strict=True
-    ):
-        if selection.look is None:
-            overridden.append(selection)
-            continue
-        colors, _source, _weight = _section_palette_choice(
-            PositionSheetSection(
-                name=selection.section.label or selection.section.name, start_ms=0, mood=""
-            ),
-            role=role,
-            profile=profile,
-            color_tendency="white",
-            palette_mode="palette",
-            concept_colors=(),
-            occurrence=occurrence,
-            color_usage=str(color_usage),
-        )
-        # 카드 t445 — 감독이 split_swap 을 고른 곡은 경로 A 처럼 한 후렴의 분할
-        # 조각마다 주·보조색을 맞바꾼다. 기본은 조각 모두 같은 주색이다.
-        if color_usage == "split_swap" and role in ("chorus", "finale") and unit_index > 0:
-            colors = rotate_palette(colors, unit_index)
-        primary = colors[0] if colors else None
-        rgb = _COLOR_NAMES.resolve_color_name(primary) if primary else None
-        if rgb is None:
-            notes.append(
-                f"section {selection.section.label!r} instance {selection.section.instance}: "
-                f"director color {primary!r} is not in the standard 10-color palette — "
-                "this section's look color was left unchanged"
-            )
-            overridden.append(selection)
-            continue
-        red, green, blue = rgb
-        override_values = {"ColorRGB_R": red, "ColorRGB_G": green, "ColorRGB_B": blue}
-
-        def _recolor(look: Look, _override_values: dict[str, int] = override_values) -> Look:
-            new_attributes = tuple(
-                AttributeValue(value.name, _override_values[value.name])
-                if value.name in _override_values
-                else value
-                for value in look.attributes
-            )
-            return replace(look, attributes=new_attributes)
-
-        overridden.append(
-            replace(
-                selection,
-                look=_recolor(selection.look),
-                dynamics_matches=tuple(
-                    _recolor(candidate) for candidate in selection.dynamics_matches
-                ),
-            )
-        )
-    return tuple(overridden), tuple(notes)
 
 
 def build_toolset(
@@ -13486,75 +13325,3 @@ def build_toolset(
         "plan_override_look": plan_override_look,
     }
     return ToolRegistry(definitions, handlers)
-
-
-# 카드 t444 — 아래 두 함수가 파일 끝에 있는 이유: `test_songcue_bundle.py`
-# 의 헝크 재고 가드(`_TOOLS_EXPECTED_HUNK_OLD_STARTS`)는 기준 커밋과의
-# `--unified=0` diff 시작점을 센다. 같은 두 함수를 `_override_songcue_main_color`
-# 곁(2300번대)에 끼우면, 내용은 한 줄도 안 바뀐 `run_commands` 가 diff 정렬상
-# "지웠다 다시 넣은 것"으로 보여 헝크가 79 -> 112 로 늘고 보호 구간
-# (524..569)과 겹친다(`.moai/reports/t444/verdict.md` 헝크 절). 파일 끝에 두면
-# 79 -> 80, 겹침 0 이다. 같은 이유로 `_override_songcue_main_color` 본문은
-# 손대지 않았다 — 감독 주색 결정이 두 곳에 있고, 둘이 같은 답을 내는지는
-# `test_concept_color_input_t444.py` 의 교차 대조 시험이 잡는다.
-def _songcue_director_primaries(
-    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
-) -> tuple[str | None, ...] | None:
-    """구간마다 경로 A 와 같은 함수(``_section_palette_choice``)가 고른 감독
-    주색 이름. 기록이 없거나 Q2(팔레트) 답이 없으면 ``None`` — 색을 정할
-    근거가 없다(카드 t441 규율). :func:`_override_songcue_main_color` 본문의
-    결정과 같은 호출·같은 인자다(위 주석 — 두 곳이 같은 답을 내는지는 시험이
-    대조한다)."""
-    if not records:
-        return None
-    palette_answer = _interview_record_value(records, Q2_PALETTE, None)
-    if palette_answer is None:
-        return None
-    palette_value = _palette_value_tokens(palette_answer)
-    color_usage = _interview_record_value(records, Q2B_COLOR_USAGE, "modulate")
-    profile = MusicProfile(palette=palette_value)
-    primaries: list[str | None] = []
-    for selection, (role, occurrence) in zip(
-        selections, _songcue_role_occurrences(selections), strict=True
-    ):
-        colors, _source, _weight = _section_palette_choice(
-            PositionSheetSection(
-                name=selection.section.label or selection.section.name, start_ms=0, mood=""
-            ),
-            role=role,
-            profile=profile,
-            color_tendency="white",
-            palette_mode="palette",
-            concept_colors=(),
-            occurrence=occurrence,
-            color_usage=str(color_usage),
-        )
-        primaries.append(colors[0] if colors else None)
-    return tuple(primaries)
-
-
-def _songcue_concept_palettes(
-    selections: Sequence[SongCueLookSelection], *, records: Sequence[object] | None
-) -> tuple[tuple[str, ...], ...] | None:
-    """카드 t444 — 컨셉 리포트에 실을 구간별 색. 감독 주색 덮어쓰기가
-    **실제로 적용되는** 구간(룩이 있고, 색 이름이 표준 10색이고, 룩이
-    ``ColorRGB_R/G/B`` 를 싣는다)만 그 주색 한 개를 싣고, 나머지는 빈
-    튜플이다. 이 경로는 보조색을 내지 않으므로 둘째 색을 싣지 않는다 —
-    룩 고유색은 RGB 값뿐이라 색 이름으로 옮기지 않는다(지어내지 않는다).
-    감독 기록이 없으면 ``None``(입력에 색 없음)."""
-    primaries = _songcue_director_primaries(selections, records=records)
-    if primaries is None:
-        return None
-    palettes: list[tuple[str, ...]] = []
-    for selection, primary in zip(selections, primaries, strict=True):
-        applied = (
-            selection.look is not None
-            and primary is not None
-            and _COLOR_NAMES.resolve_color_name(primary) is not None
-            and any(
-                value.name in ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
-                for value in selection.look.attributes
-            )
-        )
-        palettes.append((primary,) if applied and primary is not None else ())
-    return tuple(palettes)

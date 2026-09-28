@@ -1,14 +1,14 @@
 """업로드 길(``prepare_songcue``) 보고서 — 조립기 번들 기준 (카드 t480).
 
 업로드 길이 룩 라이브러리 조립기(``build_songcue_bundle``)를 쓰던 때의 보고서
-(``server/looks/songcue_report.py``)는 그 번들의 구간·룩 판정 모양에 묶여 있었다.
-조립기(``compose_song_cue_bundle``)로 합치면서 보고는 이 모듈이 한다. 지키는 규율은
-같다:
+(``server/looks/songcue_report.py``, 카드 t480 D3 에서 조립기와 함께 은퇴)는 그 번들의
+구간·룩 판정 모양에 묶여 있었다. 조립기(``compose_song_cue_bundle``)로 합치면서 보고는
+이 모듈이 한다. 지키는 규율은 같다:
 
 * 명령 수신은 효과의 증거가 아니다 — 저장 뒤 시퀀스를 **되읽어** 계획한 큐와 대조한다.
 * 되읽기가 안 왔으면 「없다」가 아니라 「못 읽었다」다(``requery`` 가 ``None``).
 * 시스템 큐(``OffCue``·``CueZero`` — 번호가 없거나 1 미만)는 대조에서 뺀다
-  (``songcue_report._observed_cues`` 와 같은 M0 실측 규율).
+  (옛 보고서 ``_observed_cues`` 와 같은 M0 실측 규율).
 * 감독이 채팅에서 스쳐 읽는 고지(``to_operator_notice``)는 빠진 것이 있을 때만 말한다.
 """
 
@@ -18,7 +18,14 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from server.design.song_cue_render import _safe_song_cue_name
-from server.looks.songcue_report import PROPERTY_UNOBSERVED_NOTE
+
+#: 되읽기가 확인하는 것의 한계 — 옛 보고서(``songcue_report.py``)의 문장을 값 그대로
+#: 옮겼다(카드 t480 D3). 상태 조회는 큐가 있는지와 이름만 보고, 값은 보지 않는다.
+PROPERTY_UNOBSERVED_NOTE = (
+    "State query confirms cue existence and names only; CueFade and TrigType are not "
+    "present in state snapshots, while the responder prop command can read them when "
+    "a separate property readback is explicitly requested."
+)
 
 
 def stored_cues(bundle) -> tuple[object, ...]:

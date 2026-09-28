@@ -1,0 +1,5 @@
+## test_concept_color_input_t444.py: removed 3 tests
+   - TestPathBAdapterCarriesPalette.test_songcue_concept_palettes_follow_the_director_override
+   - TestPathBAdapterCarriesPalette.test_concept_palettes_match_what_the_override_applied
+   - TestPathBAdapterCarriesPalette.test_songcue_concept_palettes_none_without_records
+## test_chorus_split_color_t445.py: removed 0 tests

@@ -27,8 +27,6 @@ import pytest
 from server.looks.busking import looks_for_genre
 from server.looks.loader import load_library_from_dir
 from server.looks.resolver import resolve_roles
-from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN
-from server.looks.songcue import build_songcue_bundle, map_sections_to_looks, parse_sections
 
 _TOOL = "prepare_songcue"
 _GENRES = ("ballad", "edm", "rock", "worship")
@@ -103,25 +101,6 @@ def _sequences_section() -> dict[str, object]:
 # 카드 t480 — 실제 입구를 쏘던 ``_stored_cues`` 는 뺐다(파일 끝 주석 참고).
 
 
-def _chosen(library, genre: str, rig: tuple[str, ...], *, dynamics: int):
-    """그 다이내믹스를 명시했을 때 번들이 실제로 세운 룩과 건너뛴 사유."""
-    section = parse_sections((("Custom", "0:10"),))[0]
-    selections = map_sections_to_looks((section,), library, genre, explicit_dynamics={0: dynamics})
-    bundle = build_songcue_bundle(
-        "리그 인식 테스트",
-        selections,
-        sequences_section=_sequences_section(),
-        groups_section=_groups_section(rig),
-    )
-    stored = bundle.sections[0]
-    look = stored.selection.look
-    return (
-        bool(bundle.commands),
-        look.look_id if look is not None else None,
-        stored.skipped[0].reason if stored.skipped else None,
-    )
-
-
 def _naive_first_match(library, genre: str, band: tuple[int, ...]) -> str | None:
     """오늘의 규칙 그 자체 — 다이내믹스가 맞는 **첫** 룩. 무회귀 대조의 기준선이다."""
     for look in looks_for_genre(library, genre):
@@ -148,66 +127,6 @@ class TestRealRigCoverage:
             "탑": "no_match",
             "배경": "no_match",
         }
-
-
-class TestRootFixSignature:
-    """``_select_bindable`` 코드를 한 줄도 안 고치고 worship D1 이 묶이는 룩을 고르는가.
-
-    「라이브러리 변경 0건」자체는 여기서 재지 않는다 — 그 불변식의 주인은
-    ``test_overlap_preserve.py`` 이고, ``server/looks/library/`` 는 그 게이트의
-    ``_PRESERVE_PATHS`` 에 이미 들어 있어 매 스위트 실행마다 다시 확인된다.
-    여기서 같은 것을 브랜치 기준으로 한 번 더 재면 기준이 흐르는 검사가 하나
-    늘 뿐이다(머지 뒤에는 그 범위가 남의 변경까지 삼킨다).
-
-    **2026-09-13 갱신 — 카드 t379.** 이 클래스 이름의 「고침」은 선택 **로직**
-    (``_select_bindable`` 이 「묶이는 첫 룩」을 고르는 규칙)을 가리키고, 그 로직은
-    안 바뀌었다. 바뀐 것은 **입력**이다 — t379 가 `worship-prayer-wash` 에 `워시`
-    역할을 더했고(그 역할은 `_REAL_RIG` 의 `WASH-U`/`WASH-D`/`WASH-ALL` 에 실제로
-    묶인다), 그래서 이 룩이 이제 그 리그에서 **처음부터 묶인다**. `(dynamics,
-    look_id)` 순서에서 `worship-prayer-wash` 가 `worship-scripture-key` 보다
-    앞이므로, 로직은 (변경 없이) 더 앞의 묶이는 룩을 그대로 고른다 — 옛 기대값은
-    「그 시점 라이브러리에서는 이 룩이 아직 안 묶였다」는 사실을 쟀을 뿐이고, 그
-    사실이 이제 거짓이 됐다.
-    """
-
-    def test_worship_d1_now_selects_the_bindable_look_that_already_existed(self, library):
-        """``worship-prayer-wash`` 는 처음부터 있었다 — 이제는 워시 역할로 묶인다.
-
-        (t379 이전에는 ``worship-scripture-key`` 가 기대값이었다 — 그때는
-        ``worship-prayer-wash`` 가 배경·탑 뿐이라 이 리그(호리·탑 없음)에서
-        하나도 안 묶였다. t379 가 그 룩에 워시를 더하면서 WASH-* 그룹에 묶이기
-        시작했고, 사전순으로 더 앞이라 이제 이쪽이 뽑힌다.)
-        """
-        stored, look_id, reason = _chosen(library, "worship", _REAL_RIG, dynamics=1)
-
-        assert (stored, look_id, reason) == (True, "worship-prayer-wash", None)
-
-
-class TestCycRigIsUnchanged:
-    """무회귀: cyc 를 갖춘 리그에서는 첫 룩이 이미 묶이므로 선택이 그대로여야 한다."""
-
-    @pytest.mark.parametrize("genre", _GENRES)
-    @pytest.mark.parametrize("dynamics", tuple(range(DYNAMICS_MIN, DYNAMICS_MAX + 1)))
-    def test_the_cyc_rig_picks_the_same_look_as_the_naive_first_match(
-        self, library, genre, dynamics
-    ):
-        """오늘의 규칙과 **같은 룩**을 고른다 — 출력이 바이트 동일하다는 성질."""
-        stored, look_id, _reason = _chosen(library, genre, _CYC_RIG, dynamics=dynamics)
-
-        assert stored is True
-        assert look_id == _naive_first_match(library, genre, (dynamics,))
-
-
-class TestInstrumentIsNotVacuous:
-    """아무것도 안 묶이는 리그에서는 여전히 X 이고, 사유도 오늘의 것 그대로다."""
-
-    @pytest.mark.parametrize("genre", _GENRES)
-    def test_the_skip_reason_is_unchanged(self, library, genre):
-        stored, look_id, reason = _chosen(library, genre, _UNBINDABLE_RIG, dynamics=4)
-
-        assert stored is False
-        assert reason == "role_unmapped"
-        assert look_id == _naive_first_match(library, genre, (4,))
 
 
 class TestWhatThisFixCouldNotReachUntilTheLibraryGrew:

@@ -19,7 +19,9 @@ _TOOL = "prepare_songcue"
 _TOOLS_MODULE = Path("server/orchestrator/tools.py")
 _SPEC_MODULES = (
     Path("server/looks/songcue.py"),
-    Path("server/looks/songcue_report.py"),
+    # 카드 t480 D3 — 룩 라이브러리 보고서(``songcue_report.py``)가 은퇴하고 업로드 길
+    # 보고는 이 모듈이 한다. 실행 경로를 안 건드린다는 같은 검사를 받는다.
+    Path("server/design/upload_song_report.py"),
 )
 _GROUPS_PATH = "DataPool/Groups"
 _SEQUENCES_PATH = "DataPool/Sequences"

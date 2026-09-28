@@ -1,0 +1,6 @@
+names: before=4 after=4
+  same DARKNESS_FLOOR
+  same LADDER_BLINDER_OR_FLASH
+  same climax_cap_beats
+  same darkness_target
+ALL SAME

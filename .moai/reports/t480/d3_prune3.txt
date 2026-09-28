@@ -1,0 +1,6 @@
+## test_songcue_accent_ladder_t382.py: removed 1 tests
+   - TestForcedAccentReachesTheConsoleWhenItPicksTheBlinder.test_a_direct_success_landing_on_the_base_line_still_lights_the_blinder
+## test_songcue_climax_001.py: removed 3 tests
+   - TestClimaxReturnIsInsertedForALongClimax.test_a_return_cue_lands_at_the_two_beat_cap
+   - TestNaturalTransitionAlreadyRespectsTheCap.test_no_next_cue_at_all_is_treated_the_same_as_arriving_within_the_cap
+   - TestUndeclaredBpmIsANoOp.test_bpm_none_returns_the_input_untouched
