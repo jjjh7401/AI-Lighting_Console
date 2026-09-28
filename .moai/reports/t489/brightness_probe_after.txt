@@ -1,0 +1,18 @@
+label | D | sheet KEY | concept section | description max %
+Intro | 2 | 50 | Intro | 25
+Verse 1 | 3 | 70 | Verse | 45
+Pre-Chorus 1 | 4 | 40 | Pre-Chorus | 45
+Chorus 1 | 5 | 100 | Chorus | 75
+Verse 2 | 3 | 70 | Verse | 38
+Pre-Chorus 2 | 4 | 40 | Pre-Chorus | 38
+Chorus 2 | 5 | 100 | Chorus | 76
+Bridge | 2 | 20 | Bridge | 30
+Chorus 3 | 5 | 100 | Final Chorus | 100
+Outro | 3 | 70 | Outro | 20
+sheet == description: 1/10
+
+control: Chorus 1 D 5 -> 2
+  before: ('Chorus 1', 5, 100, 'Chorus', 75)
+  after:  ('Chorus 1', 2, 50, 'Chorus', 75)
+  sheet moved: True
+  description moved: False
