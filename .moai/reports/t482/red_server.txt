@@ -1,0 +1,21 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t482
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t482
+Installed 97 packages in 185ms
+
+==================================== ERRORS ====================================
+__________ ERROR collecting server/tests/test_concept_glance_t482.py ___________
+ImportError while importing test module '/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t482/server/tests/test_concept_glance_t482.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/tests/test_concept_glance_t482.py:20: in <module>
+    from server.concept.session_bridge import (
+E   ImportError: cannot import name 'GLANCE_RULE' from 'server.concept.session_bridge' (/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t482/server/concept/session_bridge.py)
+=========================== short test summary info ============================
+ERROR server/tests/test_concept_glance_t482.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.29s

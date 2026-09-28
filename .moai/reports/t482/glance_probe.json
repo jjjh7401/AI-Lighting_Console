@@ -1,0 +1,254 @@
+{
+ "viewport": "1600x1000",
+ "panel_open_by_default": false,
+ "analysis": "구간 10개 · 5단계 중 5단계에 구간 배정 · 규칙 lead-proposed-2026-09-28(감독 확인 전)",
+ "cards": [
+  {
+   "stage": "시작",
+   "empty": null,
+   "bar": "rgb(13, 51, 255)",
+   "Q": "Q101",
+   "구간": "Intro",
+   "시간": "00:00.0–00:12.0",
+   "색": "#0D33FF",
+   "밝기": "40–50%",
+   "한 줄": "구간 1개 · 12.0초 · 밝기 40–50%"
+  },
+  {
+   "stage": "쌓기",
+   "empty": null,
+   "bar": "rgb(13, 51, 255)",
+   "Q": "Q102–Q103",
+   "구간": "Verse 1 · Pre-Chorus 1",
+   "시간": "00:12.0–00:36.0",
+   "색": "#0D33FF #FF8C0D",
+   "밝기": "32–70%",
+   "한 줄": "구간 2개 · 24.0초 · 밝기 32–70%"
+  },
+  {
+   "stage": "강조",
+   "empty": null,
+   "bar": "rgb(255, 0, 0)",
+   "Q": "Q104–Q107",
+   "구간": "Chorus 1 · Verse 2 · Pre-Chorus 2 · Chorus 2",
+   "시간": "00:36.0–01:24.0",
+   "색": "#FF0000 #0D33FF #FF8C0D",
+   "밝기": "32–100%",
+   "한 줄": "구간 4개 · 48.0초 · 밝기 32–100%"
+  },
+  {
+   "stage": "예고",
+   "empty": null,
+   "bar": "rgb(0, 230, 255)",
+   "Q": "Q108",
+   "구간": "Bridge",
+   "시간": "01:24.0–01:36.0",
+   "색": "#00E6FF",
+   "밝기": "16–20%",
+   "한 줄": "구간 1개 · 12.0초 · 밝기 16–20%"
+  },
+  {
+   "stage": "정점→마무리",
+   "empty": null,
+   "bar": "rgb(255, 0, 0)",
+   "Q": "Q109–Q110",
+   "구간": "Chorus 3 · Outro",
+   "시간": "01:36.0–02:03.0",
+   "색": "#FF0000 #0D33FF",
+   "밝기": "56–100%",
+   "한 줄": "구간 2개 · 27.0초 · 밝기 56–100%"
+  }
+ ],
+ "sheet": [
+  {
+   "q": "Q101",
+   "section": "Intro",
+   "time": "00:00.0",
+   "bright": "KEY 50 / BACK 40",
+   "rail": "rgb(13, 51, 255)"
+  },
+  {
+   "q": "Q102",
+   "section": "Verse 1",
+   "time": "00:12.0",
+   "bright": "KEY 70 / BACK 56▲",
+   "rail": "rgb(13, 51, 255)"
+  },
+  {
+   "q": "Q103",
+   "section": "Pre-Chorus 1",
+   "time": "00:24.0",
+   "bright": "KEY 40 / BACK 32▼",
+   "rail": "rgb(255, 140, 13)"
+  },
+  {
+   "q": "Q104",
+   "section": "Chorus 1",
+   "time": "00:36.0",
+   "bright": "KEY 100 / BACK 80▲",
+   "rail": "rgb(255, 0, 0)"
+  },
+  {
+   "q": "Q105",
+   "section": "Verse 2",
+   "time": "00:48.0",
+   "bright": "KEY 70 / BACK 56▼",
+   "rail": "rgb(13, 51, 255)"
+  },
+  {
+   "q": "Q106",
+   "section": "Pre-Chorus 2",
+   "time": "01:00.0",
+   "bright": "KEY 40 / BACK 32▼",
+   "rail": "rgb(255, 140, 13)"
+  },
+  {
+   "q": "Q107",
+   "section": "Chorus 2",
+   "time": "01:12.0",
+   "bright": "KEY 100 / BACK 80▲",
+   "rail": "rgb(255, 0, 0)"
+  },
+  {
+   "q": "Q108",
+   "section": "Bridge",
+   "time": "01:24.0",
+   "bright": "KEY 20 / BACK 16▼",
+   "rail": "rgb(0, 230, 255)"
+  },
+  {
+   "q": "Q109",
+   "section": "Chorus 3",
+   "time": "01:36.0",
+   "bright": "KEY 100 / BACK 80▲",
+   "rail": "rgb(255, 0, 0)"
+  },
+  {
+   "q": "Q110",
+   "section": "Outro",
+   "time": "01:48.0",
+   "bright": "KEY 70 / BACK 56▼",
+   "rail": "rgb(13, 51, 255)"
+  }
+ ],
+ "cross_check": [
+  {
+   "stage": "시작",
+   "q_card": "Q101",
+   "q_sheet": "Q101",
+   "q_match": true,
+   "sections_card": "Intro",
+   "sections_sheet": "Intro",
+   "time_start_card": "00:00.0",
+   "time_start_sheet": "00:00.0",
+   "time_match": true,
+   "hex_card": "#0D33FF",
+   "hex_sheet_rails": "#0D33FF",
+   "hex_match": true,
+   "bright_card": "40–50%",
+   "bright_sheet_minmax": "40–50%",
+   "bright_match": true,
+   "line": "구간 1개 · 12.0초 · 밝기 40–50%"
+  },
+  {
+   "stage": "쌓기",
+   "q_card": "Q102–Q103",
+   "q_sheet": "Q102–Q103",
+   "q_match": true,
+   "sections_card": "Verse 1 · Pre-Chorus 1",
+   "sections_sheet": "Verse 1 · Pre-Chorus 1",
+   "time_start_card": "00:12.0",
+   "time_start_sheet": "00:12.0",
+   "time_match": true,
+   "hex_card": "#0D33FF #FF8C0D",
+   "hex_sheet_rails": "#0D33FF #FF8C0D",
+   "hex_match": true,
+   "bright_card": "32–70%",
+   "bright_sheet_minmax": "32–70%",
+   "bright_match": true,
+   "line": "구간 2개 · 24.0초 · 밝기 32–70%"
+  },
+  {
+   "stage": "강조",
+   "q_card": "Q104–Q107",
+   "q_sheet": "Q104–Q107",
+   "q_match": true,
+   "sections_card": "Chorus 1 · Verse 2 · Pre-Chorus 2 · Chorus 2",
+   "sections_sheet": "Chorus 1 · Verse 2 · Pre-Chorus 2 · Chorus 2",
+   "time_start_card": "00:36.0",
+   "time_start_sheet": "00:36.0",
+   "time_match": true,
+   "hex_card": "#FF0000 #0D33FF #FF8C0D",
+   "hex_sheet_rails": "#FF0000 #0D33FF #FF8C0D",
+   "hex_match": true,
+   "bright_card": "32–100%",
+   "bright_sheet_minmax": "32–100%",
+   "bright_match": true,
+   "line": "구간 4개 · 48.0초 · 밝기 32–100%"
+  },
+  {
+   "stage": "예고",
+   "q_card": "Q108",
+   "q_sheet": "Q108",
+   "q_match": true,
+   "sections_card": "Bridge",
+   "sections_sheet": "Bridge",
+   "time_start_card": "01:24.0",
+   "time_start_sheet": "01:24.0",
+   "time_match": true,
+   "hex_card": "#00E6FF",
+   "hex_sheet_rails": "#00E6FF",
+   "hex_match": true,
+   "bright_card": "16–20%",
+   "bright_sheet_minmax": "16–20%",
+   "bright_match": true,
+   "line": "구간 1개 · 12.0초 · 밝기 16–20%"
+  },
+  {
+   "stage": "정점→마무리",
+   "q_card": "Q109–Q110",
+   "q_sheet": "Q109–Q110",
+   "q_match": true,
+   "sections_card": "Chorus 3 · Outro",
+   "sections_sheet": "Chorus 3 · Outro",
+   "time_start_card": "01:36.0",
+   "time_start_sheet": "01:36.0",
+   "time_match": true,
+   "hex_card": "#FF0000 #0D33FF",
+   "hex_sheet_rails": "#FF0000 #0D33FF",
+   "hex_match": true,
+   "bright_card": "56–100%",
+   "bright_sheet_minmax": "56–100%",
+   "bright_match": true,
+   "line": "구간 2개 · 27.0초 · 밝기 56–100%"
+  }
+ ],
+ "explain_row3": [
+  {
+   "title": "무슨 뜻",
+   "text": "데이터 없음 — 항목 뜻풀이 원천이 서버에 없다"
+  },
+  {
+   "title": "무대에서",
+   "text": "색 red · 최대 75%컨셉 파이프라인 계산 — CUE SHEET 밝기와 다를 수 있다(큐 생성 경로 미통합, REQ-003)"
+  },
+  {
+   "title": "왜 이렇게 제안했나",
+   "text": "데이터 없음 — 제안 사유 문장 원천이 서버에 없다"
+  },
+  {
+   "title": "바꾸려면",
+   "text": "데이터 없음 — 변경 안내 원천이 서버에 없다"
+  }
+ ],
+ "explain_expected_description": "색 red · 최대 75%",
+ "still_nodata": {
+  "causal": [
+   "인과 불릿 · 데이터 없음 — 워크시트 concept 원문이 서버에서 오지 않는다"
+  ],
+  "so_visible_cells": [
+   "데이터 없음"
+  ]
+ },
+ "page_errors": []
+}
