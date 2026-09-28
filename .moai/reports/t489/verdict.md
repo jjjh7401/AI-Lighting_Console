@@ -98,6 +98,8 @@ fallback {}
 
 10구간 전부 제 칸이다. Pre-Chorus 의 설명 값이 안 바뀐 것은 정상이다 — `density.py` 가 Pre-Chorus·Post-Chorus·Rap 을 같은 else 분기(retain)로 다룬다. Outro 는 Outro 규칙(KEY·BACK 20)을 타서 100 → 20 이 됐다.
 
+> ⚠️ **만료 고지(같은 날, main 7f8990fc 머지 뒤)**: t486(#539)이 큐 설명에서 밝기 수치를 없앴다. 위 표의 「설명 최대 %」 열은 그 머지 **전** 트리에서 잰 값이다. 구간 이름 열(이 카드의 결과)은 그대로 유효하다. 머지 뒤 관련 35파일 `620 passed` (`related_after_merge.txt`).
+
 `sheet == description: 1/10` 은 그대로다 — 시트 값과 설명 값이 갈리는 건 t486(lane-1) 이 다루는 축이고 이 카드 범위 밖이다.
 
 ## 6. 부수 관찰 — Pre-Chorus D4 → KEY 40 이 Verse D3 → 70 보다 낮은 원인
