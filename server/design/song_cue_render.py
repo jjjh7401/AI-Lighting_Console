@@ -79,6 +79,9 @@ _SONG_CLIMAX_SECTION = re.compile(
 
 
 _SAFE_SONG_CUE_NAME = re.compile(r"[A-Za-z0-9 _-]+")
+# 카드 t486 — 마디 분할 접미사 ``(1/2)``(``_disambiguate_split_names``)를 허용 문자 안의
+# ``1 of 2`` 로 옮긴다. 옮기지 않으면 괄호·빗금만 지워져 ``Intro 12`` 가 된다.
+_SPLIT_SUFFIX = re.compile(r"\((\d+)/(\d+)\)")
 
 
 _DI_RECORD_AXES = {
@@ -92,6 +95,7 @@ _DI_RECORD_AXES = {
 
 
 def _safe_song_cue_name(label: str, cue_number: float) -> str:
+    label = _SPLIT_SUFFIX.sub(r"\1 of \2", label)
     kept = "".join(_SAFE_SONG_CUE_NAME.findall(label)).strip()
     if not kept or kept.isdigit():
         return f"Section {cue_number:g}"

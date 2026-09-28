@@ -1,0 +1,75 @@
+FF..FF                                                                   [100%]
+=================================== FAILURES ===================================
+____ TestSplitSuffixSurvivesTheConsoleName.test_split_suffix_becomes_k_of_n ____
+
+self = <server.tests.test_split_cue_console_name_t486.TestSplitSuffixSurvivesTheConsoleName object at 0x10a519e50>
+
+    def test_split_suffix_becomes_k_of_n(self):
+>       assert _safe_song_cue_name("Intro (1/2)", 1) == "Intro 1 of 2"
+E       AssertionError: assert 'Intro 12' == 'Intro 1 of 2'
+E         
+E         - Intro 1 of 2
+E         ?        ----
+E         + Intro 12
+
+server/tests/test_split_cue_console_name_t486.py:23: AssertionError
+_ TestSplitSuffixSurvivesTheConsoleName.test_digits_of_the_suffix_are_not_glued_together _
+
+self = <server.tests.test_split_cue_console_name_t486.TestSplitSuffixSurvivesTheConsoleName object at 0x10accbcd0>
+
+    def test_digits_of_the_suffix_are_not_glued_together(self):
+        """결함의 모양 그 자체 — 회차 숫자 둘이 한 숫자로 붙으면 안 된다."""
+>       assert "12" not in _safe_song_cue_name("Intro (1/2)", 1)
+E       AssertionError: assert '12' not in 'Intro 12'
+E         
+E         '12' is contained here:
+E           Intro 12
+E         ?       ++
+
+server/tests/test_split_cue_console_name_t486.py:28: AssertionError
+_ TestSplitSuffixSurvivesTheConsoleName.test_empty_or_digit_only_falls_back_to_section_number _
+
+self = <server.tests.test_split_cue_console_name_t486.TestSplitSuffixSurvivesTheConsoleName object at 0x10acdcf90>
+
+    def test_empty_or_digit_only_falls_back_to_section_number(self):
+>       assert _safe_song_cue_name("(1/2)", 4) == "1 of 2"
+E       AssertionError: assert 'Section 4' == '1 of 2'
+E         
+E         - 1 of 2
+E         + Section 4
+
+server/tests/test_split_cue_console_name_t486.py:40: AssertionError
+_ TestSplitPathEndToEnd.test_split_cues_carry_distinct_readable_console_names __
+
+self = <server.tests.test_split_cue_console_name_t486.TestSplitPathEndToEnd object at 0x10acdd690>
+
+    def test_split_cues_carry_distinct_readable_console_names(self):
+        profile = MusicProfile(bpm=120.0, genre=None)
+        sections = [
+            PositionSheetSection(name="Intro", start_ms=0, mood="", role="intro"),
+            PositionSheetSection(name="Chorus 3", start_ms=10_000, mood="", role="chorus"),
+            PositionSheetSection(name="Finale", start_ms=74_000, mood="", role="finale"),
+        ]
+        expanded, origins, _notes = _split_sections_for_density(
+            sections, profile=profile, color_usage="split_swap"
+        )
+        split = [
+            _safe_song_cue_name(section.name, index + 1)
+            for index, (section, origin) in enumerate(zip(expanded, origins, strict=True))
+            if origin == 1
+        ]
+        total = len(split)
+        assert total > 1, "전제가 깨졌다 — 구간이 안 쪼개졌다"
+>       assert split == [f"Chorus 3 {k} of {total}" for k in range(1, total + 1)]
+E       AssertionError: assert ['Chorus 3 12', 'Chorus 3 22'] == ['Chorus 3 1 ...rus 3 2 of 2']
+E         
+E         At index 0 diff: 'Chorus 3 12' != 'Chorus 3 1 of 2'
+E         Use -v to get more diff
+
+server/tests/test_split_cue_console_name_t486.py:64: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_split_cue_console_name_t486.py::TestSplitSuffixSurvivesTheConsoleName::test_split_suffix_becomes_k_of_n
+FAILED server/tests/test_split_cue_console_name_t486.py::TestSplitSuffixSurvivesTheConsoleName::test_digits_of_the_suffix_are_not_glued_together
+FAILED server/tests/test_split_cue_console_name_t486.py::TestSplitSuffixSurvivesTheConsoleName::test_empty_or_digit_only_falls_back_to_section_number
+FAILED server/tests/test_split_cue_console_name_t486.py::TestSplitPathEndToEnd::test_split_cues_carry_distinct_readable_console_names
+4 failed, 2 passed in 1.22s
