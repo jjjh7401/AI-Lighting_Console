@@ -534,6 +534,14 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     483,
     591,
     593,
+    # 카드 t480 (업로드 길을 대화 길 조립기로 전환, 2026-09-28) 갱신: 82 -> **83** hunks.
+    # 새 시작점 셋(620 · 705 · 1081), 사라진 시작점 둘(621 · 704). 621 -> 620 과
+    # 704 -> 705 는 한 줄씩 옮겨진 것이고 1081 은 새 경계다 — `prepare_songcue` 꼬리를
+    # 조립기 길로 바꾸고 `_state_port_query` 도우미와 새 임포트(console_slots ·
+    # song_cue_render · upload_song_plan/report · pointing)를 넣으면서 `--unified=0`
+    # 경계가 재정렬됐다(위 t306 · t317 · t350 · t441 과 같은 기제). 보호 구간 겹침은
+    # t476 허용분 (237, 0) 하나뿐이고 형제 게이트 구간(247..251 / 537..582)은 **0** —
+    # 커밋 **뒤에** 잰 값이다(`.moai/reports/t480/measure_hunks.out.txt`).
     # 카드 t319 (2026-09-07): 새 시작점 넷. `instantiate_look`·`prepare_busking`·
     # `precheck_patch`·`_deliver_fx_plan`·`compile_scene`·`arrange_fixtures` 여섯
     # 자리가 번들 위험 선언(`risk=showfile_write_risk(...)`)을 달면서 이 근처에
@@ -548,8 +556,8 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     # 781 · 789 · 794 는 `instantiate_look` 앞에 들어간 `_look_axis_source` 클로저와
     # `axes=` 인자, 그리고 payload 두 갈래의 `capability` 절이 기존 헝크를 쪼갠
     # 자리다. 804 는 그 아래 첫 경계다.
-    621,
-    704,
+    620,
+    705,
     775,
     781,
     789,
@@ -595,6 +603,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     989,
     1007,
     1067,
+    1081,
     1088,
     1096,
     1103,
