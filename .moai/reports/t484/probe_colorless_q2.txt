@@ -1,0 +1,45 @@
+== Q2 후보 전수 (토큰 → RGB 해소) ==
+장르	메탈	'스래시=레드/웜, 블랙=콜드블루/화이트, 파워=비비드'	('레드', '스래시', '웜', '블랙', '콜드블루', '화이트', '파워', '비비드')	주색 레드
+장르	록	'레드+화이트 시그니처, 웜/쿨 대비'	('레드', '화이트', '시그니처', '웜', '쿨', '대비')	주색 레드
+장르	edm	'단색 볼드, 퍼플/레드/화이트'	('퍼플', '단색', '볼드', '레드', '화이트')	주색 퍼플
+장르	발라드	'블루/퍼플 백 + 소프트 화이트 프런트'	('블루', '퍼플', '백', '소프트', '화이트', '프런트')	주색 블루
+장르	팝	'유사색 3~4 + 액센트 1'	('유사색', '3~4', '액센트', '1')	색 0개
+컨셉	우주	'블루/퍼플'	('블루', '퍼플')	주색 블루
+컨셉	네온	'마젠타/시안'	('마젠타', '시안')	주색 마젠타
+컨셉	빈티지	'웜 CTO'	('웜', 'CTO')	색 0개
+무드	Vocal DSC	'블루/웜화이트'	('블루', '웜화이트')	주색 블루
+무드	Center	'중립~쿨 화이트'	('중립~쿨', '화이트')	색 0개
+무드	Ring In	'쿨 볼드'	('쿨', '볼드')	색 0개
+무드	Cross	'웜 볼드'	('웜', '볼드')	색 0개
+무드	Fan Out	'비비드'	('비비드',)	색 0개
+무드	Audience	'레드 액센트'	('레드', '액센트')	주색 레드
+무드	Wall	'쿨 유사색'	('쿨', '유사색')	색 0개
+무드	Home	'웜 3000K'	('웜', '3000K')	색 0개
+기본	기본 색 조합	'중립 화이트'	('중립', '화이트')	색 0개
+
+색 이름 0개 후보: 9개
+
+== 곡 큐 경로 실행 (5구간 픽스처, t441) — 주색 실패 사유 수 ==
+장르	팝	실패 5	section 'Intro' instance 1: director color '유사색' is not in the standard 10-color palette — this section's look color was left unchanged
+컨셉	빈티지	실패 5	section 'Intro' instance 1: director color '웜' is not in the standard 10-color palette — this section's look color was left unchanged
+무드	Center	실패 5	section 'Intro' instance 1: director color '중립~쿨' is not in the standard 10-color palette — this section's look color was left unchanged
+무드	Ring In	실패 5	section 'Intro' instance 1: director color '쿨' is not in the standard 10-color palette — this section's look color was left unchanged
+무드	Cross	실패 5	section 'Intro' instance 1: director color '웜' is not in the standard 10-color palette — this section's look color was left unchanged
+무드	Fan Out	실패 5	section 'Intro' instance 1: director color '비비드' is not in the standard 10-color palette — this section's look color was left unchanged
+무드	Wall	실패 5	section 'Intro' instance 1: director color '쿨' is not in the standard 10-color palette — this section's look color was left unchanged
+무드	Home	실패 5	section 'Intro' instance 1: director color '웜' is not in the standard 10-color palette — this section's look color was left unchanged
+기본	기본 색 조합	실패 5	section 'Intro' instance 1: director color '중립' is not in the standard 10-color palette — this section's look color was left unchanged
+대조군	'블루'	실패 0
+
+== 제안에 쓸 색 이름의 현재 해소 여부 ==
+'앰버'	resolve=(100, 55, 5)	tokens=('앰버',)
+'블루'	resolve=(5, 20, 100)	tokens=('블루',)
+'시안'	resolve=(0, 90, 100)	tokens=('시안',)
+'레드'	resolve=(100, 0, 0)	tokens=('레드',)
+'마젠타'	resolve=(100, 0, 70)	tokens=('마젠타',)
+'퍼플'	resolve=(55, 35, 100)	tokens=('퍼플',)
+'웜화이트'	resolve=None	tokens=('웜화이트',)
+'쿨화이트'	resolve=None	tokens=('쿨화이트',)
+'Warm White'	resolve=(100, 75, 40)	tokens=('Warm', 'White')
+'Cool White'	resolve=(85, 95, 100)	tokens=('Cool', 'White')
+'화이트'	resolve=None	tokens=('화이트',)
