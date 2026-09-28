@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+__________ ERROR collecting server/tests/test_concept_bullet_t485.py ___________
+ImportError while importing test module '/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t485/server/tests/test_concept_bullet_t485.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/studiox/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+server/tests/test_concept_bullet_t485.py:18: in <module>
+    from server.concept.session_bridge import concept_bullet
+E   ImportError: cannot import name 'concept_bullet' from 'server.concept.session_bridge' (/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t485/server/concept/session_bridge.py)
+=========================== short test summary info ============================
+ERROR server/tests/test_concept_bullet_t485.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.29s

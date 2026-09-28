@@ -1,0 +1,44 @@
+/**
+ * t485 브라우저 확인 하니스(임시, 커밋 안 함 — 사본은 .moai/reports/t485/ 에 둔다).
+ * t482/AC-UI 하니스와 같은 모양으로 런북 화면을 띄운다. 페이로드는 실제 세션을
+ * 인터뷰부터 돌려 나온 타임라인 이벤트(make_payload.py). `?blank` 면 Q1 빈 답 곡.
+ */
+import ReactDOM from "react-dom/client";
+
+import type { SongTimelineView } from "./protocol";
+import { RunbookMode } from "./components/RunbookMode";
+import blank from "./acuiPayloadBlank.json";
+import causal from "./acuiPayloadCausal.json";
+import "./styles.css";
+
+const raw = (new URLSearchParams(location.search).has("blank") ? blank : causal) as unknown as SongTimelineView;
+// 우회(t485 판정서 §5): 재질의 대기 페이로드는 구간마다 `fade_seconds: null` 을 싣고,
+// CUE SHEET 가 `null.toFixed` 로 터져 런북 전체가 빈다(기존 결함). `?raw` 면 우회하지 않는다.
+const timeline: SongTimelineView = new URLSearchParams(location.search).has("raw")
+  ? raw
+  : {
+      ...raw,
+      sections: raw.sections.map((s) => {
+        if (s.fade_seconds !== null) return s;
+        const { fade_seconds: _drop, ...rest } = s;
+        return rest;
+      }),
+    };
+const noop = () => undefined;
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <div style={{ background: "var(--bg)", minHeight: "100vh", padding: 20 }}>
+    <RunbookMode
+      cueMonitor={{ executors: [], history: [], lastSyncAt: null, stale: false }}
+      timeline={timeline}
+      onSelectCue={noop}
+      onUndoDraft={noop}
+      onRedoDraft={noop}
+      onSaveDraft={noop}
+      onApplyDraft={noop}
+      onGeneratorSend={noop}
+      generatorResponding={false}
+      generatorLastAssistantText={null}
+    />
+  </div>,
+);

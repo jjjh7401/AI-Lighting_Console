@@ -1,0 +1,16 @@
+CAUGHT  S1 호출 지점이 기록을 안 넘김  (exit=1)
+    FAILED server/tests/test_concept_bullet_t485.py::TestRealSendSiteCarriesTheBullet::test_director_q1_answer_reaches_the_runbook_timeline
+    FAILED server/tests/test_concept_bullet_t485.py::TestRealSendSiteCarriesTheBullet::test_blank_q1_answer_reaches_the_timeline_as_not_verbatim
+CAUGHT  S2 자동 초안도 원문으로 인정  (exit=1)
+    FAILED server/tests/test_concept_bullet_t485.py::TestConceptBulletAbsent::test_auto_draft_is_not_the_directors_words
+    FAILED server/tests/test_concept_bullet_t485.py::TestRealSendSiteCarriesTheBullet::test_blank_q1_answer_reaches_the_timeline_as_not_verbatim
+CAUGHT  S3 감독 입력 대신 해석값  (exit=1)
+    FAILED server/tests/test_concept_bullet_t485.py::TestConceptBulletSource::test_free_text_wins_over_value_when_they_differ
+CAUGHT  S4 원문 공백 접기(윤문)  (exit=1)
+    FAILED server/tests/test_concept_bullet_t485.py::TestConceptBulletSource::test_free_text_is_carried_byte_for_byte
+    FAILED server/tests/test_concept_bullet_t485.py::TestRunbookPayloadCarriesTheBullet::test_payload_has_concept_bullet_from_records
+CAUGHT  U1 화면에서 줄 앞뒤 공백 깎기  (exit=1)
+    × conceptBulletView > keeps every line byte-for-byte and only drops blank lines 4ms
+CAUGHT  U2 배지 문자열 변경  (exit=1)
+    × conceptBulletView > badge text is fixed 2ms
+6/6 CAUGHT
