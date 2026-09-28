@@ -555,25 +555,115 @@ Warm White는 「웜 화이트 (=P2)」이고, 슬롯은 풀 판독으로 찾는
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_complete_at: null  # M2 만 완료 — SPEC 전체는 M3~M9 남음, sync 대상 아님
-run_status: milestone-partial  # M2 완료, M1 은 선행 커밋(PR #477/#478)에서 완료
-ac_pass_count: null  # M2 는 AC-LDDESIGN-010/030 의 "모양"만 단위 시험으로 선반영 —
-  # 두 AC 의 공식 PASS/FAIL 판정은 8곡 게이트 고정(M6, REQ-075)이 서고 난 뒤다.
-ac_fail_count: null
-preserve_list_post_run_count: null  # 이 카드는 PRESERVE 목록 갱신 대상 아님(신규 파일만)
-l44_pre_commit_fetch: not_applicable  # lane-local 카드, 별도 정책 미적용
+run_complete_at: 2026-09-27  # M0~M8 전 마일스톤 머지 완료(#528 이 마지막 머지)
+run_status: complete-with-unverified-ac  # 9개 마일스톤 전부 머지됐으나 AC 53개 중 5개 UNVERIFIED, 1개 부분 불일치
+ac_pass_count: 31  # PASS-measured 11 + PASS-measured(부분 불일치) 1(AC-021) + PASS-test 실행 확인 19
+ac_pass_test_not_executed_count: 14  # UI(vitest) 미실행 환경 — 시험 파일·AC 인용명만 확인
+ac_na_count: 3  # AC-022~024, 관측 자체가 완료 기준
+ac_unverified_count: 5  # AC-017/020/039/040/041
+preserve_list_post_run_count: null  # 이 SPEC 은 신규 패키지(server/concept/) 위주라 PRESERVE 목록 갱신 대상 카드가 산발적 — 마일스톤별 progress.md §E.2 각 절 참조
+l44_pre_commit_fetch: not_applicable  # 개별 카드/레인 단위로 처리, SPEC 레벨 단일 값 없음
 l44_post_push_fetch: not_applicable
-new_warnings_or_lints_introduced: 0
+new_warnings_or_lints_introduced: 0  # uv run ruff check server → 클린(2026-09-28 실측)
 cross_platform_build:
-  status: not_applicable  # 순수 Python 데이터 모듈, 플랫폼 의존 없음
-total_run_phase_files: 6  # 신규 3(cue_model/resolver/description) + 시험 1 +
-  # __init__ 주석 갱신 1 + progress.md 1(spec.md frontmatter 는 별도 카운트 안 함)
-m1_to_mN_commit_strategy: "M1(REQ-005~016, 이 SPEC 밖 선행 카드) 완료 후
-  M2(REQ-017~025, 이 카드 t434) 를 별도 3커밋(RED/GREEN/문서)으로 쌓는다 —
-  M3~M9 는 후속 카드."
+  status: not_applicable  # 순수 Python + TypeScript, 플랫폼 의존 없음
+total_run_phase_files: null  # M0~M8 누적 — 마일스톤별 progress.md §E.2 신규 파일 목록 참조(단일 카운트 미집계)
+m1_to_mN_commit_strategy: "M0(선행 회귀 #475/#476) → M1(어휘 닫힘 #477) →
+  M2(큐 모델 v2 #478/#481, 카드 t434) → M3(Color Strip #483, 카드 t436) →
+  M4(3층 밀도·회차·헤드룸 #485, 카드 t437) → M5(트래킹·타이밍·MIB·안전 큐·근거등급
+  #484, 카드 t438) → M6(기존 하류 브리지 + 8곡 게이트 고정 #489, 카드 t439) →
+  M7(런북 UI, 4차 #479/#501/#504/#512) → M8(콘솔 프로브 + 실기 1곡, #507 외
+  다수, 마지막 머지 #528). 근거: .moai/specs/SPEC-LDDESIGN-001/sync-evidence/merged_prs_since_0921.txt"
 ```
 
-## §E.4 — Gaps(명시적으로 안 잰 것) · Residual-risk
+## §E.4 Sync-phase Audit-Ready Signal
+
+```yaml
+sync_status: implemented-not-completed
+sync_commit_sha: pending-backfill
+sync_date: 2026-09-28
+evidence_files:
+  - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/pytest_full.txt
+  - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/ruff_check.txt
+  - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/spec_lint_before.txt
+  - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/spec_drift_before.json
+  - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/merged_prs_since_0921.txt
+  - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/ac_evidence_map.md
+  - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/ac_class_recount.txt
+  - .moai/reports/t453/gates_after_merge.txt
+```
+
+### 마일스톤별 머지 PR
+
+| 마일스톤 | 내용 | PR |
+|---|---|---|
+| M0 | 선행 회귀(반복 후렴 큐 0개, BPM 배선) | #475, #476 |
+| M1 | 어휘 닫힘(레이어 5·트래킹 4·증거 4종) + 워크시트 YAML + 판정기 5→9 재매핑 | #477 |
+| M2 | 큐 모델 v2(`cue_model`/`resolver`/`description`, 카드 t434) + 감독 확정 경로 색 배선 | #478, #481 |
+| M3 | Color Strip + 컬러 검사기(카드 t436) | #483 |
+| M4 | 3층 밀도·회차 규칙·헤드룸(카드 t437) | #485 |
+| M5 | 트래킹·타이밍·MIB·안전 큐·근거 등급(카드 t438) | #484 |
+| M6 | 기존 하류 브리지 재사용 + 8곡 게이트 고정(카드 t439) | #489 |
+| M7 | 런북 UI 4차(수치 칸 tabular-nums·CUE SHEET 14열·컨셉 패널·수정요청 생성기) | #479, #501, #504, #512 (+ 관련 다수) |
+| M8 | 콘솔 프로브(트래킹·MIB·페이저·포지션) + 실기 1곡(Rain, 카드 t474) | #507, #510, #518~#528 (마지막 머지 #528) |
+
+전체 목록: `sync-evidence/merged_prs_since_0921.txt`.
+
+### 검증
+
+- `uv run pytest -q -p no:cacheprovider server/tests` (HEAD `c917c979`) → `14562 passed, 35 skipped`, exit 0 — `sync-evidence/pytest_full.txt`
+- `uv run ruff check server` → 클린, exit 0 — `sync-evidence/ruff_check.txt`
+- `moai spec lint .moai/specs/SPEC-LDDESIGN-001/spec.md` → 결함 0, exit 0 — `sync-evidence/spec_lint_before.txt`
+- `moai spec drift --json --no-cache` → SPEC-LDDESIGN-001 Drifted=false(era-exempt) — `sync-evidence/spec_drift_before.json` (다른 23개 SPEC 의 drift 는 이 SPEC 범위 밖, 손대지 않음)
+- 8곡 기준선 13게이트: PASS 75 · n/a 29 · FAIL 0 — `.moai/reports/t453/gates_after_merge.txt`
+
+### AC 판정 요약 (53건)
+
+`sync-evidence/ac_evidence_map.md` + `sync-evidence/ac_class_recount.txt` 재검수 결과:
+
+| 분류 | 건수 |
+|---|---|
+| PASS-measured | 11 |
+| PASS-measured(부분 불일치) | 1 (AC-021) |
+| PASS-test(이 세션에서 실행 확인) | 19 |
+| PASS-test(미실행 — 시험 파일·AC 인용명만 확인, UI vitest 미설치) | 14 |
+| n/a(관측 자체가 완료 기준) | 3 (AC-022~024) |
+| UNVERIFIED | 5 (AC-017, AC-020, AC-039, AC-040, AC-041) |
+| 합계 | 53 |
+
+UNVERIFIED 5건 사유(한 줄):
+
+- **AC-017** — 두 큐 생성 경로가 큐시트 전체(구간·순서·값)를 동일하게 내는지는 시험되지 않았다. 주색(primary color) 일치만 확인됨(`test_chorus_color_two_paths_t441.py`).
+- **AC-020** — 스크롤 연동(REQ-085)과 타임라인 색=Color Strip 일치(REQ-081) 전용 시험을 찾지 못했다.
+- **AC-039** — 생성기 5종 조작이 `parse_cue_sheet_edit_request` 를 실제로 통과하는 e2e 시험, 파서 우회 여부를 확인하는 정적 검사 둘 다 못 찾았다.
+- **AC-040** — 파생 경고 6종 중 헤드룸<4 하나만 재사용(비-재계산) 확인됐고, 나머지 5종(밝기 역전·팬 폭·리저브 위반·MIB live·페이저=BPM)은 미확인이다.
+- **AC-041** — 생성기 발신 메시지가 손입력 메시지와 같은 대화 렌더 컴포넌트를 쓰는지 확인하는 전용 시험을 찾지 못했다.
+
+AC-021(실기 콘솔 1곡, Rain): 회귀(흰↔빨강 교대 재현 안 됨·회차 전부 동일색)는 실측 PASS이나, AC 문면이 명시한 "노랑 계열"과 달리 t474 감독 육안 확인 색은 파랑이었다(`.moai/reports/t474/verdict.md:52-66`). 회귀 해소라는 실질은 충족, 색상 리터럴 문구는 실측과 어긋난다.
+
+### 상태 결정
+
+이 SPEC 은 이번 sync 에서 `completed`로 닫지 않는다. `status: in-progress` → `implemented`로만 전이한다(spec.md frontmatter, `updated: 2026-09-28`). 근거: AC 53건 중 5건이 UNVERIFIED, 1건(AC-021)이 문면-실측 부분 불일치 상태이고, 두 상태 모두 SPEC 소유자의 재확인 없이 자동으로 PASS 처리할 수 없다.
+
+`completed`로 닫으려면:
+
+1. AC-017/020/039/040/041 각각의 확인에 필요한 시험을 신설하거나 기존 파일에서 재검색해 판정을 확정한다(필요한 것 목록은 `ac_class_recount.txt` 하단 "AC 확인에 필요한 것" 표).
+2. AC-021 의 색상 문구("노랑 계열")가 예시였는지 확정값이었는지 SPEC 소유자가 재확인하고, 필요하면 spec.md 본문(REQ 또는 AC 문면)을 manager-spec 경로로 정정한다 — manager-docs 는 본문을 직접 고치지 않는다.
+
+### 이월(범위 밖, 후속 카드)
+
+- **t432** — 이미터 COLOR(Custom) CIE x·y 축. 선행 측정(#525/#527): 원색 좌표 칸은 있으나 응답기 1.6.5 가 GUID 대조로 못 읽음.
+- **t478** — 응답기 presetdata 읽기 동사(페이저 속도·팬 진폭). 현 응답기로는 못 읽음(#520).
+- 감독 결정(2026-09-28): 색 미세 조정(t432·t433·t478)은 전체를 마친 뒤 배차한다 — 이번 sync 에서 착수하지 않음.
+
+### 안 잰 것
+
+- UI(`ui/src/components/*.test.tsx`) vitest 스위트를 이 환경에서 실행하지 못했다(`@vitejs/plugin-react` 미설치) — PASS-test(미실행) 14건은 시험 파일 존재 + `describe`/`it` 이름의 AC 번호 직접 인용만 근거로 삼았다.
+- 이번 sync 세션에서 콘솔을 손대지 않았다(콘솔 실행 0회) — M8 의 실기 콘솔 반영은 이전 카드(t474 등)에서 이미 수행된 것을 그대로 인용했다.
+- 이 SPEC 을 제외한 다른 23개 SPEC 의 drift(`spec_drift_before.json`)는 이번 sync 의 범위 밖이라 손대지 않았다.
+- `ac_evidence_map.md` §4 가 이미 밝힌 안 잰 것(t445~t471 사이 카드 판정서 전수 정독 미실시, `gen_gates_8songs.py` 스크립트 재실행 안 함 등)은 이번 sync 에서도 재검증하지 않고 그대로 승계한다.
+
+## §G M2(카드 t434) Gaps · Residual-risk
 
 - **기준선 지연(해소됨).** 에이전트 트리는 `origin/main` 보다 7커밋 뒤였다(`7 0`).
   레인이 `origin/main@20c027ff` 로 fast-forward 한 뒤 3커밋을 cherry-pick 해서
