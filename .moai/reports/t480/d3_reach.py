@@ -40,9 +40,7 @@ def defs_of(path: Path) -> dict[str, ast.AST]:
 
 
 production = [
-    p
-    for p in Path("server").rglob("*.py")
-    if "tests" not in p.parts and p not in MODULES.values()
+    p for p in Path("server").rglob("*.py") if "tests" not in p.parts and p not in MODULES.values()
 ]
 tests = list(Path("server/tests").glob("*.py"))
 
