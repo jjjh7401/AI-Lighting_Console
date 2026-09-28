@@ -1,0 +1,17 @@
+{
+ "screen": {
+  "cleared": true,
+  "status": "cleared",
+  "notice": "",
+  "commands": [
+   [
+    "SaveShow 'copilot-rehearsal-20260928'",
+    "cleared",
+    []
+   ]
+  ]
+ },
+ "result": "ExecutionResult(ok=False, detail='User Canceled Command', outcome='failed')",
+ "approval_requests": [],
+ "skipped_backups": []
+}
