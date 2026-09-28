@@ -96,6 +96,12 @@ function changeSignature(change: GeneratorChange): string {
   return `${change.field}:${groups}`;
 }
 
+/** 페이드 변경 줄의 「이전 값」. 카드 t490 — 재질의 대기에서는 값이 `null`(미정)이라
+ * 없는 키와 같이 「—」다(`null초` 로 찍지 않는다). */
+export function fadeBeforeLabel(section: SongTimelineSection): string {
+  return section.fade_seconds != null ? `${section.fade_seconds}초` : "—";
+}
+
 /** REQ-090 — BLIND 는 해제 구간(reserve 항목의 screen_position) 전까지 잠금.
  * `position` 은 `sectionPosition()` 값이다(t481 — released_q 는 컨셉 행 번호라
  * 구간 큐 번호와 비교하면 안 된다). 리저브 정보 자체가 없으면(구버전 페이로드)
@@ -333,7 +339,7 @@ export function usePlanCueRequestGenerator({
     upsertChange({
       field: "fade_seconds",
       value,
-      before: section.fade_seconds !== undefined ? `${section.fade_seconds}초` : "—",
+      before: fadeBeforeLabel(section),
     });
   }
 

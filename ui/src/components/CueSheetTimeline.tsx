@@ -770,7 +770,7 @@ export function CueSheetTimeline({
                   <td>{cell(section.movement)}</td>
                   <td>{cell(section.effect ?? (section.fx.length ? section.fx.join(" · ") : null))}</td>
                   <td className={`m${isSnapCue(section) ? " snap" : ""}`}>
-                    {section.fade_seconds === undefined
+                    {section.fade_seconds == null
                       ? EMPTY_CELL
                       : section.fade_seconds.toFixed(2)}
                   </td>

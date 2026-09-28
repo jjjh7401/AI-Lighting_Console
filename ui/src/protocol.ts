@@ -363,8 +363,9 @@ export interface SongTimelineSection {
   effect?: string;
   /** Trans — 정본 `Snap` */
   trans?: "SNAP" | "XFADE" | "FADE" | string;
-  /** Fade — 정본 `I-Fade` */
-  fade_seconds?: number;
+  /** Fade — 정본 `I-Fade`. 카드 t490 — 재질의 대기(`requires_requery`)에서는 조립기
+   * 결과가 없어 서버가 `null`(값 미정)을 싣는다. 없는 키(`undefined`)와 같이 빈 칸이다. */
+  fade_seconds?: number | null;
   /** Note */
   note?: string;
   /** Note 의 `[MANUAL]` 표기 */
