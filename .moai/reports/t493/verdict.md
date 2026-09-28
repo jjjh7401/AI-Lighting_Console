@@ -79,3 +79,8 @@ stdout (`regen_stdout.txt`):
   채 UI 시험이 초록이었다. 잠금 숫자 하나는 행 수만 문다 — 새 키 추가는 못 잡는다.
   (서버 쪽에 「사본 == 현재 실출력」 대조 시험을 두면 잡히지만, 범위를 넓히는 일이라 여기선
   안 했다 — 카드로 세울지는 리드 판단.)
+
+## 6. 커밋 뒤 가드 (§3.1 순서)
+
+커밋 `f9e2abc9` 뒤 `PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_overlap_preserve.py server/tests/test_runbook_payload_t455_t456.py -q`
+→ `86 passed` (`server_guard_after_commit.txt`). 서버 쪽 21행 잠금(t489)과 이 사본이 같은 행 수를 문다.
