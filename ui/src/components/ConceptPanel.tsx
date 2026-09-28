@@ -149,7 +149,10 @@ export function ConceptPanel({ sections, timeline }: ConceptPanelProps) {
                             {explanationCells(report, position).map((cell) => (
                               <div key={cell.title}>
                                 <dt>{cell.title}</dt>
-                                <dd>{cell.text}</dd>
+                                <dd>
+                                  {cell.text}
+                                  {cell.source && <small className="concept-explain-source">{cell.source}</small>}
+                                </dd>
                               </div>
                             ))}
                           </dl>

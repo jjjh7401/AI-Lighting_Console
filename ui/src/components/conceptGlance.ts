@@ -110,7 +110,14 @@ export function glanceView(timeline: SongTimelineView): GlanceView {
 export interface ExplanationCell {
   title: string;
   text: string;
+  /** 값의 출처가 CUE SHEET 와 다를 때 함께 보이는 표식. */
+  source?: string;
 }
+
+/** 큐 설명은 컨셉 파이프라인의 해석 상태에서 나온다. CUE SHEET 밝기는 조립기
+ * 경로 값이라 둘이 다를 수 있다(REQ-003 두 경로 미통합 — 실측: Chorus 1 시트
+ * KEY 100 / 설명 「최대 75%」, .moai/reports/t482). 출처를 숨기지 않는다. */
+export const DESCRIPTION_SOURCE = "컨셉 파이프라인 계산 — CUE SHEET 밝기와 다를 수 있다(큐 생성 경로 미통합, REQ-003)";
 
 /** REQ-079 항목 클릭 4칸 설명. 「무대에서」만 원천이 있다 — 그 구간 section
  * 행의 서버 큐 설명(`description`, REQ-070). 나머지 셋은 원천이 없어 사유와 함께
@@ -122,10 +129,9 @@ export function explanationCells(
   const row = report?.rows?.find((entry) => entry.kind === "section" && entry.screen_position === position);
   return [
     { title: "무슨 뜻", text: `${NO_DATA} — 항목 뜻풀이 원천이 서버에 없다` },
-    {
-      title: "무대에서",
-      text: row?.description ? row.description : `${NO_DATA} — 이 구간과 짝지어진 컨셉 행 설명이 없다`,
-    },
+    row?.description
+      ? { title: "무대에서", text: row.description, source: DESCRIPTION_SOURCE }
+      : { title: "무대에서", text: `${NO_DATA} — 이 구간과 짝지어진 컨셉 행 설명이 없다` },
     { title: "왜 이렇게 제안했나", text: `${NO_DATA} — 제안 사유 문장 원천이 서버에 없다` },
     { title: "바꾸려면", text: `${NO_DATA} — 변경 안내 원천이 서버에 없다` },
   ];

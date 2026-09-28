@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SongTimelineConceptReport, SongTimelineSection, SongTimelineView } from "../protocol";
-import { explanationCells, glanceView } from "./conceptGlance";
+import { DESCRIPTION_SOURCE, explanationCells, glanceView } from "./conceptGlance";
 import { NO_DATA } from "./runbookM7";
 
 const LABELS = ["Intro", "Verse 1", "Pre-Chorus 1", "Chorus 1", "Verse 2", "Chorus 2", "Bridge", "Chorus 3", "Outro"];
@@ -143,6 +143,8 @@ describe("explanationCells — 항목 클릭 4칸 설명 (REQ-079)", () => {
     const cells = explanationCells(REPORT, 3);
     expect(cells.map((cell) => cell.title)).toEqual(["무슨 뜻", "무대에서", "왜 이렇게 제안했나", "바꾸려면"]);
     expect(cells[1].text).toBe("설명 3");
+    // 설명은 컨셉 파이프라인 값이라 CUE SHEET 와 다를 수 있다 — 출처 표식이 붙는다.
+    expect(cells[1].source).toBe(DESCRIPTION_SOURCE);
     for (const i of [0, 2, 3]) {
       expect(cells[i].text.startsWith(NO_DATA)).toBe(true);
     }
@@ -150,6 +152,7 @@ describe("explanationCells — 항목 클릭 4칸 설명 (REQ-079)", () => {
 
   it("짝이 되는 행이 없으면 「무대에서」도 데이터 없음이다", () => {
     expect(explanationCells(REPORT, 42)[1].text.startsWith(NO_DATA)).toBe(true);
+    expect(explanationCells(REPORT, 42)[1].source).toBeUndefined();
     expect(explanationCells(undefined, 0)[1].text.startsWith(NO_DATA)).toBe(true);
   });
 });

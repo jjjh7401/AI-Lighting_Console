@@ -185,7 +185,10 @@ def _concept_rows(
             position = seen_sections
             seen_sections += 1
         description = describe(
-            prev_state, state, raw.get("ops", ()), compute_cue_headroom(state)  # type: ignore[arg-type]
+            prev_state,
+            state,
+            raw.get("ops", ()),
+            compute_cue_headroom(state),  # type: ignore[arg-type]
         )
         prev_state = state
         rows.append(

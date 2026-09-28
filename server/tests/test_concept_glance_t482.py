@@ -26,7 +26,17 @@ from server.concept.session_bridge import (
 )
 from server.tests.test_song_timeline_concept_report_wiring import _plan, _section
 
-LABELS = ("Intro", "Verse 1", "Pre-Chorus 1", "Chorus 1", "Verse 2", "Chorus 2", "Bridge", "Chorus 3", "Outro")
+LABELS = (
+    "Intro",
+    "Verse 1",
+    "Pre-Chorus 1",
+    "Chorus 1",
+    "Verse 2",
+    "Chorus 2",
+    "Bridge",
+    "Chorus 3",
+    "Outro",
+)
 ROLES = ("intro", "verse", "verse", "chorus", "verse", "chorus", "bridge", "chorus", "finale")
 
 
@@ -59,12 +69,20 @@ class TestGlanceStages:
         }
 
     def test_every_section_lands_in_exactly_one_stage(self) -> None:
-        placed = sorted(p for positions in _positions(glance_stages(list(ROLES))).values() for p in positions)
+        placed = sorted(
+            p for positions in _positions(glance_stages(list(ROLES))).values() for p in positions
+        )
         assert placed == list(range(len(ROLES)))
 
     def test_single_chorus_leaves_emphasis_and_preview_empty_with_reasons(self) -> None:
         result = glance_stages(["intro", "verse", "chorus", "finale"])
-        assert _positions(result) == {"시작": [0], "쌓기": [1], "강조": [], "예고": [], "정점→마무리": [2, 3]}
+        assert _positions(result) == {
+            "시작": [0],
+            "쌓기": [1],
+            "강조": [],
+            "예고": [],
+            "정점→마무리": [2, 3],
+        }
         reasons = _reasons(result)
         assert reasons["강조"] and reasons["예고"]
         assert reasons["시작"] is None and reasons["정점→마무리"] is None
@@ -76,7 +94,13 @@ class TestGlanceStages:
 
     def test_no_chorus_puts_trailing_finale_at_the_peak_and_explains_the_gaps(self) -> None:
         result = glance_stages(["intro", "verse", "bridge", "finale"])
-        assert _positions(result) == {"시작": [0], "쌓기": [1, 2], "강조": [], "예고": [], "정점→마무리": [3]}
+        assert _positions(result) == {
+            "시작": [0],
+            "쌓기": [1, 2],
+            "강조": [],
+            "예고": [],
+            "정점→마무리": [3],
+        }
         assert _reasons(result)["강조"] and _reasons(result)["예고"]
 
     def test_missing_role_anywhere_makes_the_whole_glance_unavailable(self) -> None:
@@ -124,7 +148,11 @@ class TestConceptReportWiring:
         from server.concept.session_bridge import _raw_sections
 
         plan = self._plan_with_roles()
-        raw_song = {"song": plan.song_title, "bpm": plan.music_profile.bpm, "sections": _raw_sections(plan)}
+        raw_song = {
+            "song": plan.song_title,
+            "bpm": plan.music_profile.bpm,
+            "sections": _raw_sections(plan),
+        }
         build = build_song(raw_song)
         rows = build_concept_report(plan)["rows"]
         prev = CueState(dim={}, color=None, pos="home", motion=0)
