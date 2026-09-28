@@ -17,7 +17,17 @@ from server.web.session import _song_timeline_payload
 
 OUT = Path(__file__).with_name("payload_36.json")
 
-BLOCK = ["Intro", "Verse", "Pre-Chorus", "Chorus", "Verse", "Pre-Chorus", "Chorus", "Bridge", "Chorus"]
+BLOCK = [
+    "Intro",
+    "Verse",
+    "Pre-Chorus",
+    "Chorus",
+    "Verse",
+    "Pre-Chorus",
+    "Chorus",
+    "Bridge",
+    "Chorus",
+]
 COLORS = ["blue", "red", "amber", "green", "magenta", "cyan"]
 
 labels: list[str] = []
@@ -37,7 +47,9 @@ for i, label in enumerate(labels):
     secs.append(dataclasses.replace(sec, palette=palette))
 
 plan = _plan(bpm=120.0, sections=tuple(secs))
-payload = _song_timeline_payload(plan, compose_song_cue_bundle(plan), lifecycle="pending_approval", sequence_no=1)
+payload = _song_timeline_payload(
+    plan, compose_song_cue_bundle(plan), lifecycle="pending_approval", sequence_no=1
+)
 OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
 
 cr = payload["concept_report"]
