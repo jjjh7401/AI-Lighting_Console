@@ -8,11 +8,14 @@
 //   배정 규칙은 감독 확인 전 제안 규칙이라 규칙 표식을 그대로 보인다.
 // - 항목 클릭 4칸 설명(t482) — 표의 구간 행을 누르면 편다. 「무대에서」만 원천이
 //   있다(서버 큐 설명 `rows[].description`). 나머지 셋은 사유와 함께 데이터 없음.
-// - 「그래서 보이는 것」·인과 불릿(워크시트 `concept` 원문)·탭 2·3 본문 — 서버가
-//   내지 않는다 → 데이터 없음. 문장을 지어 넣지 않는다.
+// - 인과 불릿(t485) — 서버 `concept_bullet`(인터뷰 Q1 원문)을 "원문 그대로" 배지와
+//   출처와 함께 싣는다(`conceptBullet.ts`). 원문이 없으면 서버 사유를 보인다.
+// - 「그래서 보이는 것」·탭 2·3 본문 — 서버가 내지 않는다 → 데이터 없음. 문장을
+//   지어 넣지 않는다(「그래서 보이는 것」 판단: .moai/reports/t485/verdict.md).
 import { useState } from "react";
 
 import type { SongTimelineSection, SongTimelineView } from "../protocol";
+import { conceptBulletView } from "./conceptBullet";
 import { explanationCells, glanceView } from "./conceptGlance";
 import { NO_DATA, grammarRows } from "./runbookM7";
 
@@ -42,6 +45,7 @@ export function ConceptPanel({ sections, timeline }: ConceptPanelProps) {
     ? glanceView(timeline)
     : ({ status: "none", reason: "단계 배정 원천이 서버에 없다" } as const);
   const report = timeline?.concept_report;
+  const bullet = conceptBulletView(timeline?.concept_bullet);
 
   return (
     <details className="concept-panel">
@@ -108,7 +112,25 @@ export function ConceptPanel({ sections, timeline }: ConceptPanelProps) {
 
         {tab === "master" ? (
           <div className="concept-tab-body" role="tabpanel">
-            <p className="concept-nodata">인과 불릿 · {NO_DATA} — 워크시트 concept 원문이 서버에서 오지 않는다</p>
+            {bullet.status === "none" ? (
+              <p className="concept-nodata">
+                인과 불릿 · {NO_DATA} — {bullet.reason}
+              </p>
+            ) : (
+              <div className="concept-bullets" aria-label="인과 불릿">
+                <p className="concept-bullets-head">
+                  <span className="concept-verbatim-badge">{bullet.badge}</span>
+                  {bullet.origin && <small className="concept-explain-source">{bullet.origin}</small>}
+                </p>
+                <ul>
+                  {bullet.lines.map((line, i) => (
+                    <li key={i} className="concept-bullet">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="concept-grammar-scroll">
               <table className="concept-grammar">
                 <thead>

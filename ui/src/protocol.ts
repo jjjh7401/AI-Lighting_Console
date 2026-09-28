@@ -448,6 +448,19 @@ export interface SongTimelineView {
   /** t454 — 서버 `build_concept_report`(server/concept/session_bridge.py)가
    * 내는 모양 그대로다. 예전 페이로드에는 없으므로 선택 필드다. */
   concept_report?: SongTimelineConceptReport;
+
+  /** t485 — 컨셉 패널 탭 1 인과 불릿 원문(서버 `concept_bullet`, 인터뷰 Q1).
+   * `available: false` 면 `reason` 만 온다. 예전 페이로드에는 없으므로 선택 필드다. */
+  concept_bullet?: SongTimelineConceptBullet;
+}
+
+/** t485 — REQ-013·032·080. `text` 는 감독 답 원문 그대로다(요약·윤문 없음). */
+export interface SongTimelineConceptBullet {
+  available: boolean;
+  reason?: string;
+  text?: string;
+  origin?: string;
+  origin_label?: string;
 }
 
 /** 게이트 하나의 판정. `passed` 는 세 값뿐이다 — true(통과)·false(실패)·
