@@ -580,7 +580,7 @@ m1_to_mN_commit_strategy: "M0(선행 회귀 #475/#476) → M1(어휘 닫힘 #477
 
 ```yaml
 sync_status: implemented-not-completed
-sync_commit_sha: pending-backfill-close
+sync_commit_sha: 924871e5
 sync_date: 2026-09-28
 evidence_files:
   - .moai/specs/SPEC-LDDESIGN-001/sync-evidence/pytest_full.txt
@@ -690,7 +690,7 @@ AC-021(실기 콘솔 1곡, Rain): 회귀(흰↔빨강 교대 재현 안 됨·회
 
 **PLAN CUE 카드 폭 감독 결정(2026-09-28).** t481 에서 생성기 카드 폭을 280px 로 고정하면서 PLAN CUE 카드 폭이 더는 곡 시간에 비례하지 않게 됐다(감독에게 묻지 않은 채 남아 있던 항목). 감독 결정: 280px 고정을 그대로 둔다 — 코드 변경 없음, 결정만 기록(`.moai/reports/t481/verdict.md:55`).
 
-**상태**: `implemented → completed`(spec.md frontmatter). 근거 — AC 53건 중 FAIL 0·UNVERIFIED 0, 부분 PASS 1건(AC-018)은 미충족 인수 기준이 아니라 후속 제안(§ 앞 LDDESIGN M1 패턴과 동일 — "열린 항목은 후속이지 미충족 AC 아니다"). sync 산출물 커밋 `9c1ec62a`, 종결 커밋은 이 커밋(SHA는 자기참조라 `pending-backfill-close` 자리표시자로 실었다가 후속 커밋에서 채운다).
+**상태**: `implemented → completed`(spec.md frontmatter). 근거 — AC 53건 중 FAIL 0·UNVERIFIED 0, 부분 PASS 1건(AC-018)은 미충족 인수 기준이 아니라 후속 제안(§ 앞 LDDESIGN M1 패턴과 동일 — "열린 항목은 후속이지 미충족 AC 아니다"). sync 산출물 커밋 `9c1ec62a`, 종결 커밋 `924871e5`(SHA는 자기참조라 `pending-backfill-close` 자리표시자로 실었다가 본 커밋에서 채웠다 — 스키마 §D3 자기참조 예외).
 
 **이월(변경 없음)**: t432·t433·t478(색 미세 조정, 감독 지시로 전체 완료 뒤 배차) · t492(AC-018 잔여 3건) · t493(UI 저장 payload 재생성, 범위 밖).
 
