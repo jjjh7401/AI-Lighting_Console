@@ -1024,8 +1024,23 @@ def _apply_climax_returns(
 def _climax_return(climax: ComposedCue, *, cue_number: float, cap_ms: int) -> ComposedCue:
     """블라인더를 끄고 절정 큐의 밝기로 돌아가는 큐 — 즉시 복귀(페이드 0).
 
-    포지션·색·효과는 다시 싣지 않는다: 콘솔이 앞 큐 값을 그대로 이어 가므로
-    바뀌는 것은 블라인더가 꺼지는 것뿐이다(끄는 줄은 명령 생성기가 낸다).
+    이 조립(compose) 층에서 포지션·색·디머는 다시 계산하지 않는다 —
+    ``dataclasses.replace``가 교체 인자로 주지 않은 필드(``position``은
+    ``stored=None``만 바꾸고, ``dimmer``/``color``는 아예 건드리지 않는다)는
+    climax 큐 자신의 값을 바이트 동일하게 그대로 들고 간다. 효과(``fx``)만
+    예외로, 명시적으로 빈 값으로 교체한다(복사가 아니다 — 블라인더가 꺼지는
+    것 외에 새 효과가 없다는 뜻).
+
+    **송신(render) 층의 재사용(SPEC-LDRENDER-001 M3 후속, t501)**: 포지션은
+    송신기도 다시 싣지 않는다(``position.stored=None`` → ``preset_no=None``).
+    디머·색은 다르다 — ``reviewed_song_commands``가 모든 저장 큐에 내는 전체
+    기구 키 디머 줄이 climax_return 에도 kind 와 무관하게 나가 전체 기구를
+    ``key_pct`` 하나로 되감으므로, 송신기(``song_cue_render._role_dimmer_
+    value_lines``/``_song_color_value_lines``)가 이 climax_return 큐에도
+    역할별 디머·색 줄을 **명시적으로 다시 내어** 그 되감김을 바로잡는다(콘솔
+    트래킹에 맡기지 않는다 — `_ROLE_VALUE_LINE_KINDS` 참조). 낼 값은 이
+    함수가 바이트 동일하게 들고 온 climax 큐 자신의 값이므로 새 값을
+    발명하지 않는다.
     """
     return dataclasses.replace(
         climax,

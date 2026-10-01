@@ -885,6 +885,260 @@ cue 12 (section):
 - **`groups`-heuristic 경로**(실측상 프로덕션 미사용, M2/M3 §Gaps 와 동일) —
   이번에도 건드리지 않았다.
 
+### M3 후속 — climax_return (카드 t501, M4 §Gaps 1 해소, REQ-LDRENDER-001/004)
+
+**착수 베이스라인**: `git fetch origin WT-ldrender-run` → `git merge --ff-only`
+→ HEAD `61b1695b`(M4 완료 커밋) — `git log --oneline -1` 로 확인.
+
+#### 결정 — kind 허용 집합을 명시 열거로 확장(`!= "section"` 반전 금지)
+
+`server/design/song_cue_render.py` 에 공유 상수
+`_ROLE_VALUE_LINE_KINDS: frozenset[str] = frozenset({"section", "climax_return"})`
+를 새로 선언하고, 아래 네 함수의 `cue.kind != "section"` 가드를
+`cue.kind not in _ROLE_VALUE_LINE_KINDS` 로 바꿨다 — 지시문이 요구한 "명시
+허용집합 우선(`!=` 반전 지양)" 그대로다. `mib_premove`/블랙아웃
+(`cue.dimmer.blackout`, kind 자체는 여전히 `"section"`)은 이 집합 밖에
+머물러 AC-001 명시 예외(acceptance.md AC-001: "블랙아웃 큐... 및 MIB
+사전이동 큐... 는 명시 예외")와 바이트 동일하게 보존된다:
+
+| 함수 | 줄 | 바꾼 것 |
+|---|---|---|
+| `_white_palette_name` | 594 | `!= "section"` → `not in _ROLE_VALUE_LINE_KINDS` |
+| `_role_color_value_lines` | 643 | 〃 |
+| `_song_color_value_lines` | 725 | 〃 |
+| `_role_dimmer_value_lines` | 815 | 〃 |
+
+**이 네 kind(함수 범위를 왜 `_role_color_value_lines`·`_white_palette_name`
+까지 넓혔나)**: 배차서 결함 서술은 `_song_color_value_lines`와
+`_role_dimmer_value_lines` 둘만 명명했지만, `_song_color_value_lines` 는
+내부에서 `_role_color_value_lines`를 호출해 역할 델타를 내므로(`song_cue_
+render.py:694` 부근) 그 함수의 kind 가드를 같이 넓히지 않으면
+`_song_color_value_lines`쪽 가드만 열어도 역할 델타가 여전히 안 나간다.
+`_white_palette_name`은 W 채널(`w_fids`)이 비어 있지 않은 리그에서만 실제로
+호출되므로(이 카드의 8곡 측정에선 `w_fids` 가 항상 비어 호출 자체가 없다 —
+`server/web/session.py:7604-7613` 코드 판독, `_color_rig_fixture_pairs`가
+합성 리그에서 W 능력을 선언받지 못한다) 측정 결과에는 영향이 없지만, 고치지
+않으면 W 채널이 있는 리그에서 climax_return 의 흰색 프리셋 recall 줄만
+조용히 비선택되는 **잠재 비대칭**이 남는다 — 같은 상수로 네 함수를 함께
+닫아 그 비대칭을 없앴다(`server/tests/test_song_cue_climax_return_t501.py`
+`TestStubLevelWhitePaletteName` 이 이 결정을 직접 겨눈다).
+
+**`_climax_return()`이 climax 큐 자신의 값을 바이트 동일하게 들고 온다는
+근거(인용)**: `song_cue_composer.py:1024-1049` `_climax_return(climax, ...)`
+가 `dataclasses.replace(climax, kind="climax_return", cue_number=..., cue_
+name=..., fade_seconds=0.0, position=dataclasses.replace(climax.position,
+stored=None), fx=CueFxData(...), accents=(), accent_fixture=None, pre_drop_
+from=None, mib=CueMibData(), timing=...)` 를 호출한다 — 교체 인자 목록에
+`dimmer`도 `color`도 없다. `dataclasses.replace`의미론상 교체하지 않은
+필드는 원본 **참조** 그대로 남는다(값 복사조차 아니다) — 이 카드의
+`TestComposerIntegration.test_climax_return_dimmer_and_color_are_the_same_
+object_as_the_climax_cue`가 `ret.dimmer is climax.dimmer`/`ret.color is
+climax.color`(`is`, `==` 아님)로 이 사실을 직접 확인한다. `position`은
+`stored=None`으로 **바뀐다**(재송신 안 함, 변경 없음), `fx`는 **명시적으로
+빈 값**으로 교체된다(복사가 아니다 — 블라인더가 꺼지는 것 외 새 효과
+없음). 그래서 이 함수들이 climax_return 에도 역할별 줄을 내는 것은 새 값을
+발명하는 게 아니라 climax 큐 자신이 이미 가진 값을 재사용하는 것이다.
+`_climax_return()`의 독스트링도 이 구분(조립 층의 "다시 계산 안 함" vs
+송신 층의 "다시 내는가")을 명시하도록 갱신했다(song_cue_composer.py).
+
+#### 진단 — 실패 원인 실측(M4 §Gaps 1 의 가설을 코드 실행으로 대조)
+
+M4 §Gaps 1 은 "FOH 그룹이 key 델타 대상이 아니라서 베이스라인 색을 그대로
+들고 있다"는 **코드 판독 가설**을 적어 뒀다. 착수 전 Club Diver 큐 12(절정)
+/12.5(절정 복귀) 의 실제 `role_view` 를 1회성 진단 스크립트로 직접 찍어
+대조했다(스크립트는 쓰고 지웠다 — 아래 수치는 그 출력의 인용):
+
+```
+cue 12 (section):     layer_diversity = 4
+  back/mover : dim=80  rgb=Blue(5,20,100)        → 버킷 A
+  side/wash  : dim=80  rgb=WarmWhite(100,75,40)  → 버킷 B
+  key        : dim=100 rgb=Blue 외 rgb=WarmWhite (물리적으로 KEY+FOH 혼재) → 버킷 C·D
+  effect     : dim=80(점등) rgb=Blue              → 버킷 A 와 겹침(기존 동작)
+
+cue 12.5 (climax_return, 고치기 전): layer_diversity = 2
+  back/mover : dim=100(전체 기구 재동기화) rgb=Blue        → 버킷 A′
+  side/wash  : dim=100(전체 기구 재동기화) rgb=WarmWhite   → 버킷 B′
+  key        : dim=100 rgb=Blue 외 rgb=WarmWhite            → A′/B′ 와 **병합**(dim 도 100 으로 같아졌으므로)
+  effect     : dim=0(블라인더 꺼짐, LIT 아님 — 집계 제외)
+```
+
+**정정(측정이 가설을 대체)**: 진짜 원인은 "FOH 가 베이스라인을 들고
+있어서"가 아니라 — **색은 트래킹으로 멀쩡히 2그룹(Blue/WarmWhite)으로 남아
+있는데, 역할 델타 줄이 재발화하지 않아 디머가 전체 `key_pct`(100)로
+재동기화되면서 `key` 역할의 상태(dim=100, rgb=Blue 또는 WarmWhite)가
+back/mover·side/wash 의 재동기화된 상태(마찬가지로 dim=100)와 **우연히
+같아져 버킷이 병합**된 것이다. `{pos,dim,rgb}` 전체가 상태 키이므로(M4 §Part
+C 항목 3 의 상태 키 실측과 같은 메커니즘), dim 이 유일한 분기였던 자리가
+사라지면 rgb 만 같아도 바로 병합된다. 고친 뒤(아래 §검증)에는 역할 델타가
+back/mover=80, side/wash=80 으로 다시 갈라지며 cue 12 와 바이트 동일한
+`layer_diversity=4` 가 나온다 — 측정으로 직접 확인(§검증 1).
+
+#### 테스트 — 신규 `server/tests/test_song_cue_climax_return_t501.py` (15개)
+
+두 축으로 나눴다: 대역(stub) 수준 11개(`_role_dimmer_value_lines`·
+`_role_color_value_lines`·`_song_color_value_lines`·`_white_palette_name`
+각각 "climax_return 이 section 과 같은 줄을 낸다" + "mib_premove 는 여전히
+아무 줄도 안 낸다"의 두 팔, 블랙아웃 key_pct<=0 가드 보존 1건 추가) +
+`compose_song_cue_bundle` 실조립 통합 4개(climax_return 큐가 정확히 1개
+생성됨, `dimmer`/`color` 가 climax 큐와 같은 객체 참조(`is`), 역할 디머/색
+줄이 climax 큐와 바이트 동일, 일반 section 큐(Finale)는 이 변경과 무관함을
+대조로 확인).
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_song_cue_climax_return_t501.py -q
+...............
+15 passed in 0.19s
+```
+
+#### 뮤테이션 — 새 단언에 걸기 (§3.3 규율, 5건 — 축 분리 확인)
+
+| # | 변조 | 대상 | 죽은 테스트 수 | 확인 |
+|---|---|---|---|---|
+| A | `_ROLE_VALUE_LINE_KINDS` 를 `{"section"}` 으로 축소(climax_return 제거, 네 함수 동시 영향) | `song_cue_render.py:588` | 7(stub 5 + 통합 2) | `diff`로 치환 확인 → 복원 → `diff` 로 원복 확인(무차이) → 지정 범위 재실행 PASS |
+| B | `_role_dimmer_value_lines` 가드만 `!= "section"` 으로 되돌림(다른 셋은 그대로) | `:815` | 정확히 2(디머 축 stub+통합만) | 상동, 색 관련 테스트 13개는 전부 그대로 초록 — 축 분리 확인 |
+| C | `_song_color_value_lines` 가드만 되돌림 | `:725` | 정확히 3(song_color stub 2 + 통합 1) | 상동, 다른 12개 초록 |
+| D | `_white_palette_name` 가드만 되돌림 | `:594` | 정확히 1 | 상동, 다른 14개 초록 |
+| E | `_role_color_value_lines` 가드만 되돌림 | `:643` | 정확히 3(role_color stub 1 + song_color 가 그 함수를 내부 호출하므로 song_color stub 1 + 통합 1) | 상동, 다른 12개 초록 |
+
+5건 전부 `PYTHONDONTWRITEBYTECODE=1`로 실행, 매 회차 `diff /tmp/song_cue_
+render.py.orig server/design/song_cue_render.py` 로 (1) 변조 적용 확인
+(2) 복원 후 무차이 확인 두 번씩 거쳤다. 각 뮤테이션이 **정확히 그 축의
+테스트만** 죽여(3.3 "자극은 재려는 축 하나만 건드려야 한다") 공유 상수 하나
+뒤에 네 개의 독립된 가드가 각자 자기 몫을 지키고 있음을 확인했다 — A(상수
+자체)가 7개를 죽이고 B+C+D+E(개별 가드)가 합쳐 2+3+1+3=9인데 7과 안 맞는
+이유는 겹침이다: `_song_color_value_lines`가 `_role_color_value_lines`를
+내부 호출하므로 C·E 뮤테이션은 서로 다른 지점이지만 둘 다
+`test_climax_return_emits_the_same_lines_as_section`(song_color stub) 를
+함께 죽인다 — 축이 "함수 하나"가 아니라 "그 함수가 실제로 거치는 호출
+경로"이므로 당연한 중복이고, 공허 단언이 아니라는 것은 B/D 가 각자
+독립적으로 정확한 카디널리티(2·1)를 낸 것으로 교차 확인된다.
+
+#### 검증 1 — AC-001 재측정, 8곡 전부 120/120 (기존 측정 스크립트 재사용)
+
+배차서가 지정한 세 스크립트(`measure_ac001_8songs.py`·`measure_dimmer_
+only_8songs.py`·`measure_ac004_8songs.py`)를 한 글자도 안 고치고 그대로
+재사용했다 — 출력 파일명에만 `_climaxfix` 접미사를 끼워 넣는 드라이버
+(`.moai/reports/t501/run_climaxfix_measurements.py`, `pathlib.Path.
+write_text` 를 실행 중에만 가로챈다)를 새로 써서 M4 가 이미 저장해 둔
+`ac001_8songs.json`/`.txt`·`dimmer_only_8songs.json`·`ac004_8songs.json`
+(고치기 전 값)을 덮어쓰지 않았다.
+
+```
+$ uv run python .moai/reports/t501/run_climaxfix_measurements.py
+Club Diver: 구간 큐 14개 · LIT≥3 14개 · LIT<3 0개 · 색 4종 · 효과줄 0 · 경고 YES
+Cut and Run: 구간 큐 18개 · LIT≥3 18개 · LIT<3 0개 · 색 3종 · 효과줄 0 · 경고 YES
+Ice cream: 구간 큐 8개 · LIT≥3 8개 · LIT<3 0개 · 색 4종 · 효과줄 0 · 경고 YES
+Morning: 구간 큐 14개 · LIT≥3 14개 · LIT<3 0개 · 색 3종 · 효과줄 0 · 경고 YES
+Rain: 구간 큐 13개 · LIT≥3 13개 · LIT<3 0개 · 색 3종 · 효과줄 0 · 경고 no
+Too Cool: 구간 큐 24개 · LIT≥3 24개 · LIT<3 0개 · 색 4종 · 효과줄 0 · 경고 YES
+scott-buckley-neon: 구간 큐 18개 · LIT≥3 18개 · LIT<3 0개 · 색 4종 · 효과줄 0 · 경고 YES
+걸그룹DinoDino_C_max최고품질: 구간 큐 11개 · LIT≥3 11개 · LIT<3 0개 · 색 4종 · 효과줄 0 · 경고 YES
+```
+
+**AC-001 — 8곡 전체 before→after**
+
+| 곡 | before(M4) LIT≥3/전체 | after(이 카드) LIT≥3/전체 |
+|---|---|---|
+| Club Diver | 13/14 | **14/14** |
+| Cut and Run | 17/18 | **18/18** |
+| Ice cream | 7/8 | **8/8** |
+| Morning | 13/14 | **14/14** |
+| Rain | 12/13 | **13/13** |
+| Too Cool | 23/24 | **24/24** |
+| scott-buckley-neon | 17/18 | **18/18** |
+| 걸그룹DinoDino | 10/11 | **11/11** |
+| **합계** | **112/120(93.3%)** | **120/120(100%)** |
+
+남은 경고(색 수 4개·효과 송신 0줄)는 이 카드 범위 밖(AC-004(a) 웜화이트
+집계 플래그·M6 효과 송신 — M4 §Gaps 2 와 동일, 손대지 않았다)이고 AC-001
+자체(LIT 층 3 미만 경고)는 8곡 전부 자취를 감췄다.
+
+**디머-전용 대조(리드 예측 "밝기 대비는 R5 이월" 재확인 — 변화 없음을
+기대하고 쟀다)**:
+
+```
+$ (run_climaxfix_measurements.py 의 두 번째 구간, 위 §검증 1 명령과 같은 1회 실행)
+Club Diver: 구간/큐 14개 · 전체상태(색+디머) 최소버킷 4 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+(8곡 전부 디머전용 최대버킷 2, >=3 인 큐 0개 — M4 측정값과 바이트 동일)
+```
+
+전체상태(색+디머) 최소버킷이 2(M4, climax_return 이 끌어내린 전곡 최솟값)
+→ 4(이 카드, climax 큐와 동일하게 복원)로 올랐지만, 디머-전용 축은
+**건드리지 않았다**(여전히 최대 2, >=3 인 큐 0개) — 리드 예측("층 대비는
+색, 밝기 대비는 R5 이월")이 이 카드 이후에도 그대로 지켜짐을 재확인한다.
+
+**AC-004 대조(변화 없음을 기대하고 쟀다 — color_count/색변화/역할 확인
+전부 M4 값과 바이트 동일)**: 8곡 전부 고유 RGB 수·색변화 횟수·역할별 수신
+색 확인(`back==dominant`·`side==accent`·`key==warmwhite` 전부 `True`)이
+M4 측정값과 일치 — climax_return 이 색은 이미 트래킹으로 멀쩡했으므로
+(§진단 참조) 색 집계 축은 이 카드로 달라질 이유가 없었고, 측정도 그것을
+확인했다.
+
+산출물(수정 없이 재사용한 세 스크립트의 climaxfix 출력): `.moai/reports/
+t501/ac001_8songs_climaxfix.json`·`.txt`, `dimmer_only_8songs_climaxfix.json`,
+`ac004_8songs_climaxfix.json` — M4 가 저장한 동일 이름의 원본은 변경하지
+않았다(`git status` 로 확인, `M` 표시 없음).
+
+#### 회귀 — 지정 범위 + 전체 스위트
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_layer_mapping_effect_role.py server/tests/test_layer_mapping_foh_front.py server/tests/test_design_rig.py server/tests/test_song_cue_color_emission.py server/tests/test_song_cue_white_preset_t453.py server/tests/test_seeded_song_apply.py server/tests/test_song_cue_composer.py server/tests/test_song_cue_arc_t462.py server/tests/test_song_cue_role_dimmer_t501.py server/tests/test_song_cue_role_color_t501.py server/tests/test_ldrender_gate.py server/tests/test_web_session.py server/tests/test_dedupe_value_lines_t476.py server/tests/test_song_readback_props_t479.py server/tests/test_song_cue_climax_return_t501.py -q
+646 passed in 5.98s
+```
+
+M4 기록값(지정 범위) 631 → 646(**+15, 이 카드 신규 테스트 수와 정확히
+일치** — 삭제 0 · 교체 0 · 전체 FAIL 0건).
+
+전체 스위트(베이스라인 `61b1695b`, M4 완료 시점 기록값 14441 passed/35
+skipped):
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+14456 passed, 35 skipped in 233.67s
+```
+
+14441 → 14456(**+15, 신규 테스트 수와 정확히 일치** — 삭제 0 · 교체 0 ·
+전체 FAIL 0건, skipped 35 불변).
+
+#### 린트/포맷
+
+```
+$ uv run ruff check server/design/song_cue_render.py server/design/song_cue_composer.py server/tests/test_song_cue_climax_return_t501.py .moai/reports/t501/run_climaxfix_measurements.py
+All checks passed!
+$ uv run ruff format --check <동일 목록>
+4 files already formatted
+```
+
+#### @MX 태그
+
+`_ROLE_VALUE_LINE_KINDS`(신규 모듈 상수, `song_cue_render.py`)의 fan_in 은
+4(`_white_palette_name`·`_role_color_value_lines`·`_song_color_value_lines`·
+`_role_dimmer_value_lines`) — ANCHOR 요건(fan_in>=3) 충족, 독스트링에 이미
+`@MX:ANCHOR` 수준 서술(결함 인용·설계 근거·REASON)을 담았으나 명시 태그
+문법(`// @MX:ANCHOR: ...` 류)은 Python 모듈 주석 관행과 맞춰 생략했다(이
+저장소의 기존 `_COLOR_ACCENT_ROLES`/`_DIMMER_DELTA_EXCLUDED_ROLES` 도 같은
+형태의 서술형 주석만 쓰고 명시 `@MX` 태그 문법을 달지 않는다 — 일관성
+유지). 위험한 패턴(goroutine 류·복잡도>=15) 없음. 전부 테스트 커버(신규
+15건) 있어 TODO 불필요.
+
+#### 이 카드가 하지 않은 것 (§Gaps — 명시)
+
+- **AC-004(a) 웜화이트 집계 플래그(M4 §Gaps 2)는 그대로 미해소** — 이 카드
+  범위 밖(배차서가 climax_return 결함만 지시).
+- **M6(효과 송신)·M5(effect 기구 분리)는 여전히 미착수** — 8곡 전부 효과
+  요청 대비 송신 0줄(Rain 제외)이 그대로 남아 있다(배차서 범위 밖).
+- **진단 스크립트는 저장하지 않았다** — 착수 전 Club Diver 큐 12/12.5 상태를
+  직접 찍어 본 1회성 조회이고(위 §진단), 재사용 하네스로 남기지 않았다(M4
+  의 "상태 키 실측 증거"와 같은 1회성 조회 선례).
+- **원곡 오디오 직접 재현 없음** — M3/M4 와 동일한 이 워크트리 제약(mp3/wav
+  0건) 계승.
+- **W 채널(`w_fids`)이 있는 리그에서의 climax_return 흰색 프리셋 recall 은
+  실측 대상이 아니었다** — 이 8곡 측정에서 `w_fids` 가 항상 비어 있어
+  `_white_palette_name`의 climax_return 분기가 실제로 호출되지 않는다(위
+  "함수 범위" 절 참조). `TestStubLevelWhitePaletteName` 단위 테스트로만
+  확인했고, `compose_song_cue_bundle`→`reviewed_song_commands` 종단 경로로
+  W 채널이 있는 합성 리그를 돌리는 새 테스트는 추가하지 않았다.
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<sync-phase 대기>_

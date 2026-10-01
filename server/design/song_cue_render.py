@@ -545,9 +545,53 @@ _WHITE_NAME_BY_RGB: dict[tuple[int, int, int], str] = {
 }
 
 
+#: SPEC-LDRENDER-001 M3 후속(t501, 카드 t501) — 역할별 디머/색 값 줄을 내는
+#: 이 네 함수(``_white_palette_name``·``_role_color_value_lines``·
+#: ``_song_color_value_lines``·``_role_dimmer_value_lines``)가 공유하는
+#: 허용 kind 집합. ``climax_return``은 AC-LDRENDER-001 이 "구간 큐 전부"
+#: 요구에서 **명시 예외하지 않는** 유일한 비-section kind 다(명시 예외는
+#: 블랙아웃 큐 ``cue.dimmer.blackout`` 과 MIB 사전이동 큐
+#: ``kind == "mib_premove"`` 둘뿐 — acceptance.md AC-001 본문). 이 집합은
+#: ``ComposedBundle.timed_cues``(song_cue_composer.py:506-512, "시각을 갖고
+#: 콘솔 타이밍에 실리는 큐")가 쓰는 두 kind 와 바이트 동일하다.
+#:
+#: climax_return 의 dimmer/color 필드를 이 함수들이 재사용해도 되는 이유 —
+#: ``_climax_return()``(song_cue_composer.py:1024-1049)이
+#: ``dataclasses.replace(climax, kind="climax_return", ...)`` 로 climax 큐를
+#: 복제할 때 ``dimmer``·``color`` 필드는 교체 인자로 주지 **않는다**(교체
+#: 안 한 필드는 원본 참조 그대로 남는 ``dataclasses.replace`` 의미론) — 즉
+#: climax_return 의 ``cue.dimmer``/``cue.color`` 는 그 climax 큐 자신의 값과
+#: 바이트 동일하다. 이 함수들이 climax_return 에도 역할별 줄을 내는 것은
+#: 그래서 **새 값을 발명하는 게 아니라 climax 큐 자신이 이미 가진 값을
+#: 그대로 재사용**하는 것이다.
+#:
+#: 결함(M4 보고서 §4 Gaps 1, `.moai/reports/t501/M4.md`): ``position_cue_bundle``
+#: (``server/spatial/mib.py:143-181``)의 전체 기구 디머 줄(``plan.dimmer``,
+#: ``reviewed_song_commands`` 의 ``dimmer = cue.dimmer.key_pct``)은 kind 와
+#: 무관하게 항상 나간다 — climax_return 에도 나가 전체 기구를 ``key_pct``
+#: 하나로 되감는다. 이 재동기화 자체는 막을 수 없다(climax_return 이 저장된
+#: 큐로 존재하려면 ``preset_no``·``dimmer`` 중 최소 하나가 non-None 이어야
+#: 하고, ``position.stored`` 는 ``None`` 으로 고정이므로 ``dimmer`` 가 비면
+#: 그 큐 자체가 생성되지 않는다). 역할별 델타 줄이 **뒤따르지 않으면**
+#: back/mover/side/wash 가 전부 key_pct 값으로 뭉개져
+#: ``ldrender_gate.layer_diversity`` 가 재는 LIT 버킷이 무너진다(실측:
+#: `.moai/reports/t501/M3b.md` §2).
+#:
+#: ``_climax_return()``의 독스트링("포지션·색·효과는 다시 싣지 않는다")은
+#: **조립기(compose) 층의 데이터 모델**을 말한다 — climax_return 의 필드가
+#: climax 큐와 바이트 동일하게 "새로 계산되지 않는다"는 뜻이지, 송신기
+#: (render) 층이 그 값을 명령으로 **내는지 여부**를 규정하지 않는다. 포지션은
+#: 여전히 재송신하지 않는다(``position.stored=None`` 이 preset_no 를 None
+#: 으로 만든다, 변경 없음). 효과(fx)도 재송신하지 않는다 — ``_climax_return()``
+#: 이 ``fx=CueFxData(...)`` 를 **복사가 아니라 명시적으로 빈 값으로 교체**하기
+#: 때문이다(dimmer/color 와 다른 축 — 복사된 값이 없으니 재사용할 것도 없다).
+_ROLE_VALUE_LINE_KINDS: frozenset[str] = frozenset({"section", "climax_return"})
+
+
 def _white_palette_name(cue) -> str | None:
-    """구간 큐의 주색이 표준 팔레트 흰색 둘 중 하나면 그 이름, 아니면 None."""
-    if cue.kind != "section" or not cue.color.palette:
+    """구간 큐(및 climax_return, `_ROLE_VALUE_LINE_KINDS` 참조)의 주색이
+    표준 팔레트 흰색 둘 중 하나면 그 이름, 아니면 None."""
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS or not cue.color.palette:
         return None
     rgb = _COLOR_NAMES.resolve_color_name(cue.color.palette[0])
     return None if rgb is None else _WHITE_NAME_BY_RGB.get(rgb)
@@ -590,8 +634,13 @@ def _role_color_value_lines(
     이 §6.3 "최대 2개(지배 1 + 액센트 1)" 집계 밖(중립 기준광)으로 읽는다
     — 그래서 한 큐가 동시에 3색(지배·보조·웜화이트)을 낼 수 있어도 §6.3
     위반이 아니다. 이 읽음은 유일한 해석이 아니라고 spec.md 가 명시
-    플래그했다(재확인 여지)."""
-    if cue.kind != "section" or len(palette) < 2:
+    플래그했다(재확인 여지).
+
+    **climax_return(t501 M3 후속)**: `_ROLE_VALUE_LINE_KINDS` 에 포함돼
+    `cue.kind == "climax_return"` 인 큐도 이 함수를 통과한다 — `palette`가
+    climax 큐 자신의 값과 바이트 동일하므로(위 상수 독스트링 참조) 같은
+    역할별 델타 줄을 낸다."""
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS or len(palette) < 2:
         return ()
     role_numbers = _role_group_numbers(layer_mapping)
     lines: list[str] = []
@@ -643,7 +692,18 @@ def _song_color_value_lines(
 
     MIB 사전이동 큐(``kind == "mib_premove"``)는 건너뛴다 — 어둠 속 이동
     큐라 색 값이 공연에 보이지 않고, 사전에 색까지 얹을지는 아직 안 잰
-    별도 판단이다.
+    별도 판단이다. 블랙아웃 큐(``cue.dimmer.blackout``)도 이 함수가 걸러내지
+    않지만 ``cue.color.palette``가 비어 있어 두 번째 가드에서 빈 결과로
+    자연히 빠진다.
+
+    SPEC-LDRENDER-001 M3 후속(t501) — climax_return 큐(``kind ==
+    "climax_return"``)도 이 함수를 통과한다(``_ROLE_VALUE_LINE_KINDS`` 참조).
+    MIB 사전이동과 달리 climax_return 은 **암전이 아니라 무대가 계속 보이는
+    큐**이고, ``cue.color.palette`` 가 그 직전 climax 큐와 바이트 동일하므로
+    같은 베이스라인+역할별 색 줄을 다시 낸다 — 콘솔 트래킹에 맡기는 대신
+    명시적으로 재단언해, ``position_cue_bundle`` 이 그 큐에 항상 내보내는
+    전체 기구 디머 재동기화(아래 ``_role_dimmer_value_lines`` 참조)와 짝을
+    맞춘다(M4 결함 보고 `.moai/reports/t501/M4.md` §4 Gaps 1).
 
     카드 t430 — ``w_fids``(W 채널 확인 기구, 기본 빈 집합)에 든 fid는
     ``fids``에서 빼고 별도 줄로 낸다: 오늘과 같은 R/G/B 줄에
@@ -662,7 +722,7 @@ def _song_color_value_lines(
     ``None``(판독 안 함)이면 t430 동작 그대로다. 역할별 배정 줄은 이 실패
     여부와 무관하게 항상 시도한다(w_fids/화이트 프리셋 축과 별개 축이다).
     """
-    if cue.kind != "section":
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS:
         return (), None
     palette = cue.color.palette
     if not palette:
@@ -739,9 +799,20 @@ def _role_dimmer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]])
 
     ``cue.dimmer.role_pct``에 값이 없는 역할(아직 산출 규칙이 없는 side/wash/
     mover 등, M3.md §미해결)은 조용히 건너뛴다 — 발명하지 않는다. 블랙아웃·
-    MIB 사전이동 큐는 손대지 않는다(``kind != "section"`` 또는 key_pct<=0 가드,
-    기존 ``_back_layer_value_lines``와 같은 안전 규율)."""
-    if cue.kind != "section":
+    MIB 사전이동 큐는 손대지 않는다(``kind not in _ROLE_VALUE_LINE_KINDS``
+    또는 key_pct<=0 가드, 기존 ``_back_layer_value_lines``와 같은 안전 규율).
+
+    SPEC-LDRENDER-001 M3 후속(t501) — climax_return 큐도 이 함수를 통과한다
+    (``_ROLE_VALUE_LINE_KINDS`` 참조). ``position_cue_bundle``의 전체 기구
+    키 디머 줄은 climax_return 에도 kind 와 무관하게 늘 나가(막을 수 없다,
+    위 상수 독스트링 참조) 전체 기구를 ``key_pct`` 하나로 되감는데, 이 함수가
+    여기서 멈추면 그 되감김을 아무도 바로잡지 않아 back/mover/side/wash 가
+    전부 같은 값으로 뭉개진다(``ldrender_gate.layer_diversity`` LIT 버킷
+    붕괴, AC-LDRENDER-001 FAIL — 실측 `.moai/reports/t501/M4.md` §4 Gaps 1).
+    climax_return 의 ``role_pct`` 는 그 climax 큐 자신의 값과 바이트
+    동일하므로(위 상수 독스트링), 이 함수를 통과시키는 것은 그 climax 큐가
+    이미 냈던 것과 **같은 값**을 다시 내려 덮어쓰는 것뿐이다."""
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS:
         return ()
     key_pct = cue.dimmer.key_pct
     if key_pct is None or key_pct <= 0:

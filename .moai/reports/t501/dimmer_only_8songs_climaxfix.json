@@ -1,0 +1,674 @@
+[
+ {
+  "song": "Club Diver",
+  "n_section_cues": 14,
+  "min_full_lit_buckets": 4,
+  "max_dimmer_only_buckets": 2,
+  "n_cues_dimmer_only_ge_3": 0,
+  "cues": [
+   {
+    "cue_no": "1",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "2",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "4",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "7",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "8",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "9",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "10",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "11",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "12",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "12.5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "13",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   }
+  ]
+ },
+ {
+  "song": "Cut and Run",
+  "n_section_cues": 18,
+  "min_full_lit_buckets": 4,
+  "max_dimmer_only_buckets": 2,
+  "n_cues_dimmer_only_ge_3": 0,
+  "cues": [
+   {
+    "cue_no": "1",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "2",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "4",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "7",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "8",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "9",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "10",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "11",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "12",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "13",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "14",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "15",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "16",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "16.5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "17",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   }
+  ]
+ },
+ {
+  "song": "Ice cream",
+  "n_section_cues": 8,
+  "min_full_lit_buckets": 4,
+  "max_dimmer_only_buckets": 2,
+  "n_cues_dimmer_only_ge_3": 0,
+  "cues": [
+   {
+    "cue_no": "1",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "2",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "4",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6.5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "7",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   }
+  ]
+ },
+ {
+  "song": "Morning",
+  "n_section_cues": 14,
+  "min_full_lit_buckets": 4,
+  "max_dimmer_only_buckets": 2,
+  "n_cues_dimmer_only_ge_3": 0,
+  "cues": [
+   {
+    "cue_no": "1",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "2",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "4",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "7",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "8",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "9",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "10",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "11",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "12",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "12.5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "13",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   }
+  ]
+ },
+ {
+  "song": "Rain",
+  "n_section_cues": 13,
+  "min_full_lit_buckets": 4,
+  "max_dimmer_only_buckets": 2,
+  "n_cues_dimmer_only_ge_3": 0,
+  "cues": [
+   {
+    "cue_no": "1",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "2",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "4",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "7",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "8",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "9",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "10",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "11",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "11.5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "12",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   }
+  ]
+ },
+ {
+  "song": "Too Cool",
+  "n_section_cues": 24,
+  "min_full_lit_buckets": 4,
+  "max_dimmer_only_buckets": 2,
+  "n_cues_dimmer_only_ge_3": 0,
+  "cues": [
+   {
+    "cue_no": "1",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "2",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "4",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "7",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "8",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "9",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "10",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "11",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "12",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "13",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "14",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "15",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "16",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "17",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "18",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "18.5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "19",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "20",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "21",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "22",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "23",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   }
+  ]
+ },
+ {
+  "song": "scott-buckley-neon",
+  "n_section_cues": 18,
+  "min_full_lit_buckets": 4,
+  "max_dimmer_only_buckets": 2,
+  "n_cues_dimmer_only_ge_3": 0,
+  "cues": [
+   {
+    "cue_no": "1",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "2",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "4",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "7",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "8",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "9",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "10",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "11",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "12",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "13",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "14",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "15",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "16",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "16.5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "17",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   }
+  ]
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질",
+  "n_section_cues": 11,
+  "min_full_lit_buckets": 4,
+  "max_dimmer_only_buckets": 2,
+  "n_cues_dimmer_only_ge_3": 0,
+  "cues": [
+   {
+    "cue_no": "1",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "2",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "3.5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "4",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "5",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "6",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "7",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "8",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "9",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   },
+   {
+    "cue_no": "10",
+    "full_lit_buckets": 4,
+    "dimmer_only_buckets": 2
+   }
+  ]
+ }
+]
