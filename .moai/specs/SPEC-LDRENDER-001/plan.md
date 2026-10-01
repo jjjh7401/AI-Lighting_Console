@@ -1,5 +1,7 @@
 # SPEC-LDRENDER-001 — 구현 계획
 
+> **개정 2026-10-01 (plan-auditor iteration 1 FAIL 0.74 대응)**: §B 위험 7 신설(`RIG_LAYER_ROLES` 닫힌 어휘), §C 에 결정 2 비용표 + M1 읽기 전용 경계 신설, M1/M2/M4 서술 정정(D6/D7/D3). spec.md HISTORY 의 같은 날짜 항목이 7건 전체(D1~D7, D9/D10)의 정본이다.
+
 ## §A 맥락
 
 - **입력**: `.moai/specs/SPEC-LDRENDER-001/research-input-design-readout.md`(리드 요약) · `.moai/reports/t499/verdict.md`(8곡 오프라인 판독) · `.moai/reports/t498/verdict.md`(Rain 실기 파일럿).
@@ -15,6 +17,7 @@
 4. **`_phaser_cue_value_lines`는 이미 호출되고 있다**(`song_cue_render.py:1051`). R4 의 결함은 "함수가 없다"가 아니라 "호출 전제(`fx.permitted`≠0 또는 `phaser_slots` 비어있지 않음)가 8곡 전부 성립하지 않는다"이다 — 새 함수를 만들지 말고 호출 전제의 원인(M1)부터 닫아라.
 5. **효과 송신은 기계로 검증할 수 없다**(FXLIB/FXGEN 의 측정된 경계). 큐가 페이저 recall 줄을 담고 있는지는 송신 문자열 정적 검사로 확인 가능하지만, 그 효과가 실제로 보이는지는 **사람의 콘솔 GUI 관측뿐**이다. AC 는 두 증거를 분리한다(오프라인 송신 목록 검사 vs 실기 육안).
 6. **`palette_mode`/`color_usage` 를 우회하지 마라.** R2 의 보조색 송신은 `_section_palette_choice` 가 이미 결정한 값을 그대로 옮기는 것이지, 새 색 선택 로직을 만드는 것이 아니다. `single` 모드에서 보조색 칸이 베이스와 같아지는 경우(§D5) 중복 줄을 내지 않도록 주의.
+7. **`RIG_LAYER_ROLES` 는 닫힌 어휘다 — SIDE/WASH/MOVER 를 조용히 새 역할로 추가하지 마라.** `server/design/rig.py:44` `RIG_LAYER_ROLES = ("key", "back", "effect", "audience")` 는 `docs/proposals/song-lighting-design-standard.md` §2c 를 근거로 닫혀 있고, `rig.py:305-308` `_build_layers` 는 `declared_layers` 경로(`server/web/session.py:7550-7556` 가 `_confirm_song_layer_mapping` 의 `layer_mapping` 에서 이 딕셔너리를 만든다)에 이 튜플 밖의 역할이 들어오면 `RigProfileError` 를 던진다. `_LAYER_GROUP_ALIASES`(코드 판독에만 쓰이는 휴리스틱 테이블)에 `side`/`wash`/`mover` 토큰을 추가하면, 그 역할 문자열이 `layer_mapping` 라이브러리 → `declared_layers` 로 **자동 전파되어 런타임에 크래시**한다 — M2 는 이 전파 경로를 반드시 끊거나(옵션 (c), `declared_layers` 구성 시 `role in RIG_LAYER_ROLES` 필터 추가) §5 결정 2 가 (a)/(b)로 확정된 뒤에만 진행해야 한다. **M2 는 §5 결정 2 에 의존한다** — 단, REQ-001(key/back/effect 세 역할)은 이 결정과 무관하게 즉시 착수 가능하다(아래 M2 서술 참조).
 
 ## §C 사전 점검 (M1 착수 직전)
 
@@ -37,6 +40,22 @@ uv run python .moai/reports/t499/readout.py --help 2>&1 | head -20
 
 manager-develop 은 M1 측정 결과와 함께 이 표를 감독에게 다시 제시하고, 착수 전 AskUserQuestion 으로 확정한다(스펙 §5 결정 1 — 아직 미확정).
 
+### R1 SIDE/WASH/MOVER 역할 해석 — 세 선택지의 비용 (§5 열린 결정 2 상세, D6)
+
+| | (a) 정본·`RIG_LAYER_ROLES` 확장 | (b) 기존 역할로 흡수 | (c) 역할 어휘는 닫아 두고 원시 주소만 확장 |
+|---|---|---|---|
+| `RigProfileError` 위험 | 없음(튜플 확장이 먼저 됨) | 없음(새 역할 문자열 자체가 없음) | 없음(`declared_layers` 필터가 막음) |
+| 정본 문서 개정 | 필요(`song-lighting-design-standard.md` §2c) | 불요 | 불요 |
+| `has_layer()` 류 규칙(I1~I3·L6/L7) 인식 | 예 | 아니오(기존 역할에 흡수되어 구분 불가) | 아니오(원시 주소는 `RigProfile` 밖) |
+| AC-001 의 "3개 이상 층" 목표에 추가 기여 | 있음(신규 버킷) | **없음**(BACK/effect 와 같은 값 — 순수 어휘 정리) | 있음(신규 버킷, 단 역할 이름 없이 그룹 번호로만) |
+| 구현 비용 | 중간(튜플+정본+파급 검토) | 최소(토큰 추가뿐) | 중간(`declared_layers` 필터 + 두 계층 분리 문서화) |
+
+**권장**: REQ-001 이 key/back/effect 만으로 이미 "3개 이상 층" 목표를 충족하므로, M2 는 이 결정과 **무관하게** 착수한다 — side/wash/mover 확장은 §5 결정 2 확정 전까지 보류하고 AC-002 는 보류 상태로 둔다(acceptance.md AC-002 참조). 감독이 지금 세분화를 원하면 (c)를 먼저 검토한다.
+
+### M1 읽기 전용 경계 (D7)
+
+[HARD] M1(REQ-LDRENDER-009)의 실기 측정은 **읽기 전용**이다 — 응답기 `state`/`prop` 류 조회만 쓰고, `exec`/`Store`/`Label` 등 콘솔을 변경하는 어떤 커맨드도 발화하지 않는다. 이 측정은 §C 사전 점검의 `grep` 코드 판독과, (가능하면) 실기 또는 실기와 동형의 패치 데이터를 읽기만 하는 1회 왕복으로 완료된다 — 콘솔 쓰기가 필요한 어떤 조치(예: §5 결정 1 의 (a) 안)도 M1 의 범위 밖이며 M5 에서만 다룬다.
+
 ## §D 제약 (위반 금지)
 
 - **PRESERVE**: `server/safety/**`(byte-diff 0) · `server/looks/{schema,loader,roles,resolver,instantiate,matching}.py`(FXLIB/LOOKLIB 잠금 계승) · `server/rulebook/assets/v2.4.2/**`(PRESERVE, R4 가 (a) 를 택해도 FXGEN 이 이미 연 경로만 재사용한다 — 신규 자산 추가 없음) · `console/lua/copilot_responder.lua`.
@@ -49,18 +68,18 @@ manager-develop 은 M1 측정 결과와 함께 이 표를 감독에게 다시 �
 
 ### M1 — 측정: fx.permitted 원인 + 판독 하네스 제품화
 
-REQ-LDRENDER-009, REQ-LDRENDER-013. **착수 전 결정**: §C 의 R4 방법 선택 표를 감독에게 제시하고 확정받는다 — 이 결정이 M4 의 설계를 바꾼다.
+REQ-LDRENDER-009, REQ-LDRENDER-013. **착수 전 결정**: §C 의 R4 방법 선택 표를 감독에게 제시하고 확정받는다 — 이 결정이 M5 의 설계를 바꾼다. **이 마일스톤은 읽기 전용이다 — 콘솔 쓰기 0건**(위 "M1 읽기 전용 경계" 참조).
 
 - `server/design/rig_capability_read.py`/`capability_verdict.py` 를 코드 판독해 "effect" 능력 선언 경로를 정확히 지목.
-- 실기(또는 실기와 동형의 패치 데이터)로 BLIND/STROBE/HAZE 그룹 소속 기구가 실제로 `capabilities={"effect",...}` 선언을 받는지 1곡 왕복으로 측정.
+- 실기(또는 실기와 동형의 패치 데이터)를 **재조회로만** 읽어 BLIND/STROBE/HAZE 그룹 소속 기구가 실제로 `capabilities={"effect",...}` 선언을 받는지 1곡 왕복으로 측정(쓰기 커맨드 발화 금지).
 - `.moai/reports/t499/readout.py` 의 판정 함수(색 수·층 수·효과 줄 수 판정 로직)를 `server/design/` 아래 임포트 가능한 모듈로 옮긴다(스크립트 복사가 아니라 함수 추출 — 기존 CLI 는 그 모듈을 호출하는 얇은 래퍼로 남긴다).
 
-### M2 — 큐 디머 데이터 모델 확장 (R1 기반)
+### M2 — 큐 디머 데이터 모델 확장 (R1 기반, key/back/effect 세 역할만 — SIDE/WASH/MOVER 는 §5 결정 2 확정 후 별도)
 
-REQ-LDRENDER-001, REQ-LDRENDER-002, REQ-LDRENDER-003. **가장 되돌리기 비싼 축** — `CueDimmerData`(`song_cue_composer.py:157`)에 역할별 퍼센트를 담을 구조(기존 `key_pct`/`back_pct` 명명 필드 패턴을 유지하는 매핑형 확장 — 예: `role_pct: Mapping[str, float]`)를 더하고, `rig.py` 의 `_LAYER_GROUP_ALIASES` 에 `side`/`wash`/`mover` 접두 토큰 해석을 추가한다. `_back_layer_value_lines` 를 다중 역할 함수로 일반화한다(함수명 변경 포함 — 호출부 전수 갱신).
+REQ-LDRENDER-001, REQ-LDRENDER-003. **가장 되돌리기 비싼 축** — `CueDimmerData`(`song_cue_composer.py:157`)에 역할별 퍼센트를 담을 구조(기존 `key_pct`/`back_pct` 명명 필드 패턴을 유지하는 매핑형 확장 — 예: `role_pct: Mapping[str, float]`, 키는 `RIG_LAYER_ROLES` 소속 `key`/`back`/`effect` 로 한정)를 더한다. `_back_layer_value_lines` 를 `key`/`back`/`effect` 세 역할을 순회하는 다중 역할 함수로 일반화한다(함수명 변경 포함 — 호출부 전수 갱신). **이 마일스톤은 §5 결정 2 와 무관하게 착수한다** — `_LAYER_GROUP_ALIASES` 에 `side`/`wash`/`mover` 토큰을 추가하는 작업은 결정 2 가 (a) 또는 (c)로 확정된 뒤 별도 후속 작업(이 마일스톤의 범위 밖)으로 미룬다.
 
-- PRESERVE 확인: `rig.py` 의 기존 4역할(`key`/`back`/`effect`/`audience`) 정확 일치 동작은 바이트 동일.
-- 회귀: `test_layer_mapping_effect_role.py` 의 기존 통과 케이스 전부 유지, `test_mover_and_wash_groups_remain_unmatched_documented_residual` 는 이 마일스톤에서 **의도적으로 뒤집는다**(이제 매칭됨) — 테스트명·단언을 함께 갱신.
+- PRESERVE 확인: `rig.py` 의 기존 4역할(`key`/`back`/`effect`/`audience`) 정확 일치 동작은 바이트 동일, `RIG_LAYER_ROLES` 튜플·`declared_layers` 구성 로직 무변경.
+- 회귀: `test_layer_mapping_effect_role.py` 의 기존 통과 케이스 전부 유지 — `test_mover_and_wash_groups_remain_unmatched_documented_residual` 는 이 마일스톤에서 **변경하지 않는다**(§5 결정 2 미확정이므로 SIDE/WASH/MOVER 는 여전히 미매칭이 맞다 — plan-auditor D6 이전 버전의 "이 테스트를 뒤집는다"는 서술은 철회한다).
 
 ### M3 — 색 송신 확장 (R2, M2 배선 재사용)
 
@@ -70,9 +89,9 @@ REQ-LDRENDER-004, REQ-LDRENDER-005, REQ-LDRENDER-006. `_song_color_value_lines` 
 
 ### M4 — 효과 기구 분리 (R3, M2 의 effect 역할 재사용)
 
-REQ-LDRENDER-007, REQ-LDRENDER-008. 전체 기구 선택에서 `effect` 역할 그룹 제외, 액센트 상승 방향 정정.
+REQ-LDRENDER-007, REQ-LDRENDER-008. **D3 정정 — 디머 줄 하나만 좁히지 않는다.** `reviewed_song_commands` 가 비액센트 큐마다 `position_cue_bundle(sequence_no, plan, fids, extra_value_lines=(*color_lines, *_back_layer_value_lines(...), *_phaser_cue_value_lines(cue, fids, ...), *accent_lines))` 를 호출할 때 쓰는 **공유 `fids` 자체**에서 `effect` 역할 그룹 기구를 제외한다 — 별도의 "디머 전용 좁은 선택"을 만드는 것이 아니다. 이렇게 하면 색(`_song_color_value_lines(cue, fids, ...)`)·포지션(`position_cue_bundle` 의 preset 호출)·페이저(`_phaser_cue_value_lines(cue, fids, ...)`) 줄도 자동으로 effect 기구를 겨냥하지 않게 된다. 액센트 상승 방향 정정(REQ-008)은 이 제외가 선행된 뒤에만 의미가 있다 — effect 기구가 비액센트 큐에서 이미 100 을 받지 않으므로 액센트 줄의 상승값이 실제 상승으로 읽힌다.
 
-- 회귀: t498/t497 가 지정한 A1~A7·C 항목(기계 동작 PASS)이 깨지지 않는지 재확인 — 되읽기·트래킹·기존 쇼 보존 전부.
+- 회귀: t498 가 지정한 A1~A7·C 항목(기계 동작 PASS)이 깨지지 않는지 재확인 — 되읽기·트래킹·기존 쇼 보존 전부. (t497 은 spec.md §4 에서 **이 SPEC 의 범위 밖으로 판정**됐다 — 여기서는 t498/t497 두 리포트가 공유하는 Rain 기계-동작 회귀 스위트의 출처로만 인용하며, t497 자신의 결함 — 승인 밖 `ClearAll` — 은 이 마일스톤이 다루지 않는다.)
 
 ### M5 — 효과 송신 통로 (R4, M1 결정 + M2 배선 소비)
 
@@ -94,5 +113,6 @@ REQ-LDRENDER-014, REQ-LDRENDER-015, REQ-LDRENDER-016. M1 이 제품화한 게이
 ## §G 교차 참조
 
 - `docs/proposals/song-structure-lighting-standard.md` §6.1~§6.3·§11.2(색·층·분위기 그룹 규율).
+- `docs/proposals/song-lighting-design-standard.md` §2c(`RigProfile`/`RIG_LAYER_ROLES` 닫힌 어휘 정본)·§4a I1(키/백/이펙트 3층 정의)·§4b C1/C3(팔레트 3~5색, 프런트 중립 유지) — D2/D6 의 정본 근거.
 - `src/Lighting_Designer/01_스펙/LX-SEQ-SPEC-v2.1.md` §11.2 규칙 6(분위기 그룹 Intensity 정합 제외).
 - `.moai/specs/SPEC-LDDESIGN-001/spec.md` §3.9(트래킹 모드)·§3.7(회차 에스컬레이션) — 이 SPEC 이 건드리지 않는 인접 축.

@@ -4,17 +4,18 @@
 
 ## AC-LDRENDER-001 — 구간 큐마다 3개 이상의 층이 다른 값을 받는다 [REQ-LDRENDER-001]
 
-- **Given** 층 매핑이 KEY/FOH·BACK·SIDE·WASH·MOVER·effect 중 3개 이상 역할을 해석한 곡의 송신 명령 목록
-- **When** 오프라인 판독 게이트로 각 구간 큐의 역할별 값(디머·색)을 8그룹으로 펼쳐 세면
-- **Then** 서로 다른 값을 받는 역할 묶음이 3개 이상인 구간 큐가 전체 구간 큐 중 과반 이상이다(전 큐 ≤2 였던 t499 §2 §6.2 위반이 해소됨)
+- **Given** 층 매핑이 `RIG_LAYER_ROLES` 닫힌 어휘 `key`/`back`/`effect` 중 2개 이상 역할을 해석한 곡의 송신 명령 목록(`audience` 는 이 리그에 매핑 그룹이 없어 제외)
+- **When** 오프라인 판독 게이트로 각 구간 큐의 역할별 값(디머·색)을 펼쳐 세면 — t499 §1 의 트래킹 가정(값을 안 받은 기구는 직전 값을 잇는다)을 그대로 적용
+- **Then** `key`(또는 전체 기본) 값·`back` 값·`effect`(비액센트 큐에서는 공유 `fids` 제외로 트래킹된 별개 상태) 값이 서로 다른 3개 버킷을 이루는 구간 큐가 전체 구간 큐 중 과반 이상이다(전 큐 ≤2 였던 t499 §2 §6.2 위반이 해소됨) — SIDE/WASH/MOVER 세분화(REQ-002, §5 결정 2 미확정) 없이도 이 AC 는 PASS 해야 한다
 - **측정**: `uv run python -c "from server.design.ldrender_gate import layer_diversity; ..."`(M1 제품화 모듈) 또는 과도기엔 `uv run python .moai/reports/t499/readout.py` 재사용 — §3.2 참조 레이어 카운트 산출
 
-## AC-LDRENDER-002 — SIDE/WASH/MOVER 그룹이 역할로 해석된다 [REQ-LDRENDER-002]
+## AC-LDRENDER-002 — SIDE/WASH/MOVER 그룹의 역할 해석 (§5 결정 2 확정 후에만 발동) [REQ-LDRENDER-002]
 
-- **Given** `SIDE-L`/`SIDE-R`/`WASH-U`/`WASH-D`/`MOVER-U`/`MOVER-D` 이름의 콘솔 그룹을 포함한 층 매핑 입력
-- **When** `_LAYER_GROUP_ALIASES` 해석을 거치면
-- **Then** 각각 `side`/`wash`/`mover` 역할로 매핑되고, 부분 문자열 추측 없이 접두 토큰 정확 일치로만 성립한다(`SIDEWALK` 류 오인 매칭 0건)
-- **측정**: `uv run pytest server/tests/test_layer_mapping_effect_role.py -q -k "mover_and_wash or side"` — 기존 `test_mover_and_wash_groups_remain_unmatched_documented_residual` 의 단언이 뒤집혀 PASS
+- **상태**: REQ-LDRENDER-002 는 §5 결정 2(옵션 a/b/c) 확정 전까지 **보류**다 — 이 AC 는 그 결정이 내려진 뒤에만 PASS/FAIL 판정 대상이며, M2 완료 조건(AC-001)에는 포함되지 않는다.
+- **Given** `SIDE-L`/`SIDE-R`/`WASH-U`/`WASH-D`/`MOVER-U`/`MOVER-D` 이름의 콘솔 그룹을 포함한 층 매핑 입력, §5 결정 2 가 (a) 또는 (c)로 확정된 상태
+- **When** 역할 해석 경로(결정에 따라 `_LAYER_GROUP_ALIASES` 확장 또는 원시 `layer_mapping` 리스트의 역할 없는 그룹-번호 주소)를 거치면
+- **Then** (a)/(c) 각각의 형상대로 그룹이 식별되고, 부분 문자열 추측 없이 접두 토큰 정확 일치로만 성립한다(`SIDEWALK` 류 오인 매칭 0건). §5 결정 2 가 (b)로 확정되면 이 AC 는 "SIDE/WASH/MOVER 가 `back`/`effect` 와 동일 값을 받는다"로 재작성한다(별도 층 버킷을 만들지 않음, §5 결정 2 (b) 설명 참조)
+- **측정**: `uv run pytest server/tests/test_layer_mapping_effect_role.py -q -k "mover_and_wash or side"` — 기존 `test_mover_and_wash_groups_remain_unmatched_documented_residual` 의 단언이 뒤집혀 PASS(결정이 (a)/(c)일 때만; (b)일 때는 해당 테스트의 "역할 미매칭" 단언이 "effect/back 으로 흡수됨" 단언으로 교체된다)
 
 ## AC-LDRENDER-003 — 단일 레이어 리그는 오늘과 바이트 동일 [REQ-LDRENDER-003]
 
@@ -23,12 +24,12 @@
 - **Then** 출력 명령 목록이 이 SPEC 착수 전 커밋과 바이트 동일하다
 - **측정**: `git stash` 없이 변경 전/후 두 트리에서 같은 입력으로 `reviewed_song_commands` 호출 → `diff`
 
-## AC-LDRENDER-004 — 곡 전체 송신 색이 2~3종이고 구간 간 변화가 있다 [REQ-LDRENDER-004, REQ-LDRENDER-005]
+## AC-LDRENDER-004 — 곡 전체 송신 색이 2~3종이고 구간 간 변화가 있으며, 한 큐의 동시 색은 최대 2개다 [REQ-LDRENDER-004, REQ-LDRENDER-005]
 
-- **Given** 설계 층 팔레트가 2개 이상 색을 담은 8곡
-- **When** 오프라인 판독으로 송신 RGB 집합을 세면
-- **Then** 곡당 고유 송신 RGB 2~3개, 그리고 연속한 두 구간 큐 사이에 색이 바뀌는 지점이 1회 이상이다(8곡 전부 — 현재 7/8이 1색·0회 변화인 §6.3 위반이 해소됨)
-- **측정**: 제품화 게이트의 색 수·색 변화 횟수 산출 + `uv run pytest server/tests/test_song_cue_color_emission.py -q`
+- **Given** 설계 층 팔레트가 2개 이상 색을 담은 8곡(일부 팔레트는 3개 이상도 포함)
+- **When** 오프라인 판독으로 (a) 곡당 고유 송신 RGB 집합과 (b) 큐 1개가 동시에 내는 구별 RGB 수를 각각 세면
+- **Then** (a) 곡당 고유 송신 RGB 2~3개, 연속한 두 구간 큐 사이에 색이 바뀌는 지점이 1회 이상이다(8곡 전부 — 현재 7/8이 1색·0회 변화인 §6.3 위반이 해소됨). (b) **어느 큐도 동시에 3개 이상의 구별 RGB 를 내지 않는다**(§6.3 "최대 2개" 상한 — `len(palette) > 2`인 큐에서도 성립). 역할→색 배정(§5 결정 3)이 아직 미확정이어도 (a)/(b) 두 수치는 측정·PASS 가능하다(배정은 "어느 역할이 무엇을 받는가"이지 "몇 색이 나가는가"가 아니므로 독립적으로 검증된다)
+- **측정**: 제품화 게이트의 색 수·색 변화 횟수·큐당 동시 색 수 산출 + `uv run pytest server/tests/test_song_cue_color_emission.py -q`
 
 ## AC-LDRENDER-005 — `color_usage` 비기본 모드는 회귀 없이 그대로 소비된다 [REQ-LDRENDER-006]
 
@@ -37,12 +38,12 @@
 - **Then** `modulate` 경로는 이 SPEC 적용 전후 바이트 동일하고(단, 보조색 줄이 **추가**되는 것은 의도된 변화이므로 "값 줄 추가분 제외하고 바이트 동일" 기준으로 비교), `single`/`per_chorus` 는 `_section_palette_choice` 가 낸 값을 그대로 옮긴 결과와 일치한다
 - **측정**: `uv run pytest server/tests/test_song_cue_color_emission.py server/tests/test_song_cue_white_preset_t453.py -q`(SPEC-COPILOT-COLORMODE-001 회귀 스위트 포함)
 
-## AC-LDRENDER-006 — 효과 기구가 전체 디머 줄에서 빠진다 [REQ-LDRENDER-007]
+## AC-LDRENDER-006 — 효과 기구가 비액센트 큐의 모든 값 줄(디머·색·포지션·페이저)에서 빠진다 [REQ-LDRENDER-007]
 
 - **Given** BLIND/STROBE/HAZE 역할(`effect`)이 해석된 층 매핑
-- **When** 비액센트 구간 큐의 전체 기구 디머 값 줄을 검사하면
-- **Then** 그 값 줄의 선택 집합(`fids`)에 `effect` 역할 그룹의 기구가 포함되지 않는다(8곡 전부 — 현재 86대 전체 묶음에 효과 기구가 끼어 있는 P3′ 위반이 해소됨)
-- **측정**: 제품화 게이트의 "효과 기구 전체 디머 포함 여부" 산출(그룹 포함 집합과 효과 그룹 집합의 교집합이 빈 집합인지 assert)
+- **When** 비액센트 구간 큐가 공유하는 `fids` 선택과, 그 `fids` 로부터 파생되는 **4종 값 줄 전부**(전체 기구 디머, `_song_color_value_lines` 의 색 줄, `position_cue_bundle` 의 포지션 프리셋 줄, `_phaser_cue_value_lines` 의 페이저 recall 줄)를 각각 검사하면
+- **Then** 4종 값 줄 전부에서 그 선택 집합에 `effect` 역할 그룹의 기구가 포함되지 않는다(8곡 전부 — 현재 86대 전체 묶음에 효과 기구가 끼어 있는 P3′ 위반이 해소됨; 디머 줄만 좁히고 색/포지션/페이저 줄이 여전히 effect 기구를 겨냥하는 상태는 FAIL)
+- **측정**: 제품화 게이트의 "비액센트 큐 4종 값 줄의 `fids` ∩ effect 그룹 = ∅" 산출(각 값 줄 종류별로 개별 assert) + `uv run pytest server/tests/test_layer_mapping_effect_role.py server/tests/test_song_cue_color_emission.py -q`(새 테스트 케이스로 색/포지션/페이저 라인의 effect 제외를 추가 단언)
 
 ## AC-LDRENDER-007 — 블라인더 액센트는 상승이다, 하강이 아니다 [REQ-LDRENDER-008]
 
@@ -114,7 +115,7 @@
 
 ## AC-LDRENDER-016 — 실기 감독 판정 ≥3점 (판독을 통과한 곡만, 사람 판정) [인간 판정 AC]
 
-- **Given** AC-001~016 오프라인 판독을 통과한 곡
+- **Given** AC-001~015 오프라인 판독을 통과한 곡
 - **When** 실 콘솔에 올려 감독이 육안으로 판정하면
 - **Then** 곡 점수가 5점 만점 중 3점 이상이다 — **이 AC 는 사람이 판정하며 기계로 대체 불가**
 - **측정**: 실기 세션 체크리스트에 감독 점수 기록(t498 §1 B3~B12 선례 형식)

@@ -30,7 +30,13 @@ t499 가 "추정"으로 남긴 서술(`.moai/reports/t499/verdict.md` §3 P5a): 
 - **이미 존재하는 기능**: `_phaser_cue_value_lines`(recall 메커니즘)와 `_back_layer_value_lines`(단일 역할 렌더링) 둘 다 "새로 만들 필요가 없는" 기존 코드다. R4·R1 이 재구현하지 않도록 plan.md §F 안티패턴에 명시했다.
 - **t499 추정 중 하나가 이 조사로 더 좁혀짐**: DinoDino 2색이 "구간 분할 큐 팔레트 회전 탓"이라는 추정(`server/design/cue_density.py` `rotate_palette` 관련, t499 §3 P1 각주)은 이번 조사에서도 **코드 판독하지 않았다** — `section_palette.py` 가 `rotate_palette` 를 import 하는 것만 확인(`:26`), 실제 분기 조건은 안 읽었다. 이 SPEC 의 AC-004 는 색 수만 재므로 이 미확정 사실에 의존하지 않는다.
 
-## 4. 안 잰 것 (이 plan-phase 조사의 한계)
+## 4. plan-auditor iteration 1 FAIL(0.74) 재조사로 확정된 것 (2026-10-01, D6/D2 근거)
+
+- **두 개의 서로 다른 정본 문서가 존재한다 — 이름이 비슷해 혼동하기 쉽다.** `docs/proposals/song-structure-lighting-standard.md`(구간 구조·타이밍·§6 조명 의도 — v1 조사, 원 spec.md 가 §6.1~§6.3/§11.2 로 인용)와 `docs/proposals/song-lighting-design-standard.md`(§2c `RigProfile` 축 정의·§4 축별 규칙 — `server/design/rig.py` 의 모듈 독스트링이 직접 인용하는 **코드 구속력 있는** 정본)는 **별개 파일**이다(**코드 판독** — `rig.py:1-3` 독스트링이 후자를 "docs/proposals/song-lighting-design-standard.md §2c"로 명시 인용). 전자는 §6.3 에서 "동시에 보이는 색은 최대 2개(지배색 1+액센트 1)"를 말하고, 후자는 §4b C1/C3 에서 "팔레트 3~5색"·"프런트(키층)는 중립/웜 화이트 유지"를 말한다 — 둘은 **서로 모순되지 않는다**(§6.3 의 "최대 2개"는 동시성 상한, §4b C1 의 "3~5색"은 곡 전체 팔레트 크기, 서로 다른 축을 말한다). 그러나 원 spec.md 는 전자만 인용했고 후자(코드가 실제로 구속받는 정본)는 인용하지 않았다 — 이것이 D2/D6 의 근본 원인이다.
+- **`RIG_LAYER_ROLES` 는 코드로 강제되는 닫힌 어휘다**(**코드 판독**, `server/design/rig.py:44` `= ("key", "back", "effect", "audience")`, `:305-308` `_build_layers` 가 `declared_layers` 경로에서 이 밖의 역할에 `RigProfileError` 를 던짐). 근거는 `song-lighting-design-standard.md` §2c("role층 → 그룹 매핑(key/back/effect/audience)")다. 원 spec.md REQ-001/002 는 SIDE/WASH/MOVER 를 새 역할로 추가하는 것을 이미 결정된 일처럼 서술했으나, 이 튜플과 그 검증 경로를 **인용하지 않았다** — 코드 판독 범위가 `_LAYER_GROUP_ALIASES`(휴리스틱 테이블, 검증 없음)에만 머물고 `declared_layers` 구성·검증 경로(`session.py:7550-7556` → `rig.py:305-308`)까지 가지 않았던 것이 누락의 직접 원인이다.
+- **같은 정본 §4a I1 이 "3층 구조(키/백/이펙트)"를 직접 정의한다** — 이것은 REQ-001 의 "3개 이상 층" 목표가 `RIG_LAYER_ROLES` 의 기존 3역할(`key`/`back`/`effect`)만으로 이미 달성 가능함을 뜻한다(**코드 판독 + 추론** — I1 의 정의와 t499 §1 의 트래킹 집계 방식을 결합). SIDE/WASH/MOVER 세분화는 이 완료 조건에 **필수가 아니라 선택**이라는 것이, 이번 재조사가 바로잡은 가장 큰 범위 오판이다.
+
+## 5. 안 잰 것 (이 plan-phase 조사의 한계)
 
 - `rig_capability_read.py`/`capability_verdict.py` 의 "effect" 능력 선언 로직을 **실행해 보지 않았다** — 함수 시그니처와 호출 체인만 grep 으로 확인(코드 판독). M1 이 실제 실행/실기 측정을 한다.
 - FXGEN 의 `compose_fx`가 송신 경로에 통합될 때 instruction-scoped dedupe(한 지시 턴에 fx 인스턴스화 1회 제한, SPEC-COPILOT-FXLIB-001 REQ-FXLIB-011 (b))가 곡 전체 송신(여러 큐가 각자 페이저 recall 을 쏘는 경우)과 충돌하는지 — **미검증**, §5 결정 1 에서 (a) 가 선택되면 M5 가 확인해야 한다.
