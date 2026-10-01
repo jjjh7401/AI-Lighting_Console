@@ -88,7 +88,7 @@ from server.design.profile import (
     parse_sheet_bpm,
     resolve_bpm,
 )
-from server.design.rig import _LAYER_GROUP_ALIASES, build_rig_profile
+from server.design.rig import build_rig_profile, resolve_layer_role
 from server.design.rig_capability_read import (
     DesignRigRead,
     read_design_rig,
@@ -746,10 +746,19 @@ def _requery_card_options(
 
 def _layer_mapping_from_group_children(payload: object) -> list[dict[str, object]]:
     """Role → group-number mapping inferred from console group NAMES, using
-    the same exact-match alias table as ``server.design.rig`` (RG5: no
-    substring guessing). Group MEMBERSHIP is not readable from the console
-    (the drilldown wall), so this records which group carries a role — it
-    never claims to know the member fixtures."""
+    the same resolver as ``server.design.rig`` (``resolve_layer_role`` —
+    exact-match first, then RG5-1 hyphen-prefix-token match for
+    side/wash/mover; RG5: no substring guessing). Group MEMBERSHIP is not
+    readable from the console (the drilldown wall), so this records which
+    group carries a role — it never claims to know the member fixtures.
+
+    카드 t501(SPEC-LDRENDER-001 M2) — 한 그룹 이름은 역할을 **최대 1개**만
+    받는다(`resolve_layer_role` 이 `None`이 아닌 첫 매치를 돌려준다). 같은
+    역할에 여러 그룹이 매칭되면(`SIDE-L`/`SIDE-R`/`SIDE-ALL` 전부 `side`)
+    이 함수는 매칭된 **전부**를 리스트에 싣는다 — role→group_no 로 하나만
+    남기는 것은 이 함수를 부르는 `_confirm_song_layer_mapping`(호출부, 역할
+    -> 그룹번호 dict 컴프리헨션)의 "이터레이션 순서상 마지막 항목이 이긴다"
+    의미론이다(이 함수 자체는 바꾸지 않는다, REQ-LDRENDER-002 ⑤)."""
     if not isinstance(payload, Mapping):
         return []
     children = payload.get("children")
@@ -763,10 +772,9 @@ def _layer_mapping_from_group_children(payload: object) -> list[dict[str, object
         number = child.get("i") if isinstance(child.get("i"), int) else child.get("no")
         if not name or not isinstance(number, int):
             continue
-        key = name.strip().casefold()
-        for role, aliases in _LAYER_GROUP_ALIASES.items():
-            if key in aliases:
-                mapping.append({"role": role, "group_no": number, "group_name": name})
+        role = resolve_layer_role(name)
+        if role is not None:
+            mapping.append({"role": role, "group_no": number, "group_name": name})
     return mapping
 
 

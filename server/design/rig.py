@@ -38,11 +38,25 @@ from server.spatial.rows import SPATIAL_ROW_NOISE_SPAN
 from server.spatial.schema import spatial_fixtures_from_records
 from server.spatial.topology import TopologyKind, classify
 
-#: The standard's closed layer-role vocabulary (docs/proposals/song-lighting-
-#: design-standard.md §2c: "role층 → 그룹 매핑 (key/back/effect/audience)").
-#: Closed on purpose — a role outside this set is a caller typo, not a new
-#: role the standard recognises, and RG5 forbids guessing.
-RIG_LAYER_ROLES: tuple[str, ...] = ("key", "back", "effect", "audience")
+#: The standard's layer-role vocabulary (docs/proposals/song-lighting-
+#: design-standard.md §2c: "role층 → 그룹 매핑
+#: (key/back/effect/audience/side/wash/mover)").
+#:
+#: 2026-10-01 — 감독 결정 1(SPEC-LDRENDER-001 REQ-LDRENDER-002, 옵션 a)로
+#: `side`/`wash`/`mover` 세 역할이 추가됐다. 이 튜플은 더 이상 네 역할로
+#: 닫혀 있지 않다 — 그러나 여전히 **정본 §2c + 이 튜플이 함께 선언한
+#: 역할만** 인정한다(여전히 추측 금지, RG5): 튜플 밖 문자열은 여전히
+#: caller typo 취급이다. `_build_layers`(아래)는 `RIG_LAYER_ROLES` 밖의
+#: `declared_layers` 키를 여전히 `RigProfileError` 로 거부한다.
+RIG_LAYER_ROLES: tuple[str, ...] = (
+    "key",
+    "back",
+    "effect",
+    "audience",
+    "side",
+    "wash",
+    "mover",
+)
 
 #: Where a rig's ``layers`` mapping came from (RG5 priority order, highest
 #: first). A first-class field rather than something a caller has to infer
@@ -111,6 +125,53 @@ _LAYER_GROUP_ALIASES: Mapping[str, frozenset[str]] = {
     # 없다. 어휘는 남겨 둔다 — 객석 전용 그룹을 둔 리그에서는 여전히 발화한다.
     "audience": frozenset({"audience", "house"}),
 }
+
+#: RG5-1 prefix-token aliases (2026-10-01, 감독 결정 1, SPEC-LDRENDER-001
+#: REQ-LDRENDER-002) — ``side``/``wash``/``mover`` 그룹은 접미사가 붙은
+#: 이름(``SIDE-L``/``SIDE-R``/``SIDE-ALL``, ``WASH-U``/``WASH-D``/``WASH-ALL``,
+#: ``MOVER-U``/``MOVER-D``/``MOVER-ALL``)이라 `_LAYER_GROUP_ALIASES` 의
+#: **정확 일치**로는 잡히지 않는다(`test_mover_and_wash_groups_remain_
+#: unmatched_documented_residual` 이 고치기 전 이 잔여를 고정했던 이유).
+#: `resolve_layer_role` 이 이 표를 **접두 토큰**(하이픈 앞)으로만 매칭한다
+#: — 부분 문자열 추측(RG5)은 여전히 하지 않는다: "SIDEWALK" 는 하이픈이
+#: 없어 매칭되지 않고, "XSIDE-L"/"SIDES-L" 은 접두 토큰이 "side" 와
+#: 바이트 동일하지 않아 매칭되지 않는다.
+_LAYER_GROUP_PREFIX_ROLES: Mapping[str, str] = {
+    "side": "side",
+    "wash": "wash",
+    "mover": "mover",
+}
+
+
+def resolve_layer_role(group_name: str) -> str | None:
+    """콘솔 그룹 이름 하나를 층 역할로 해석한다(없으면 ``None``).
+
+    두 단계, 이 순서로:
+
+    1. **정확 일치** — :data:`_LAYER_GROUP_ALIASES` 대조(기존 4역할 동작,
+       이 함수 추가로 바이트 하나도 바뀌지 않는다).
+    2. **접두 토큰 일치**(RG5-1, REQ-LDRENDER-002) — 정확 일치가 실패하면
+       그룹 이름을 **첫** 하이픈에서 자르고, 그 앞 토큰을
+       :data:`_LAYER_GROUP_PREFIX_ROLES` 와 정확히(케이스 무시) 비교한다.
+       하이픈이 없는 이름은 이 단계에 들어오지 않는다 — "SIDEWALK" 는
+       `None` 을 받는다. 접두 토큰이 정확히 일치하지 않는 이름도 마찬가지다
+       — "XSIDE-L" 의 접두 토큰은 "xside"(≠"side"), "SIDES-L" 의 접두
+       토큰은 "sides"(≠"side") 라 둘 다 `None`.
+
+    이 함수는 `server.design.rig._build_layers` 와
+    `server.web.session._layer_mapping_from_group_children` 이 공유한다 —
+    두 소비자가 각자 판정 루프를 들고 있으면 한쪽만 갱신해 어긋나는 사고가
+    난다(§B 위험 7 (d)와 같은 종류의 함정).
+    """
+    key = group_name.strip().casefold()
+    for role, aliases in _LAYER_GROUP_ALIASES.items():
+        if key in aliases:
+            return role
+    prefix, separator, _rest = key.partition("-")
+    if not separator:
+        return None
+    return _LAYER_GROUP_PREFIX_ROLES.get(prefix)
+
 
 #: RG6 default budget-scale threshold — the capable-fixture count at which
 #: an instant-action / simultaneous-effect budget reaches full scale (1.0).
@@ -313,10 +374,9 @@ def _build_layers(
 
     heuristic: dict[str, set[int]] = {}
     for group_name, fids in groups.items():
-        key = group_name.strip().casefold()
-        for role, aliases in _LAYER_GROUP_ALIASES.items():
-            if key in aliases:
-                heuristic.setdefault(role, set()).update(fids)
+        role = resolve_layer_role(group_name)
+        if role is not None:
+            heuristic.setdefault(role, set()).update(fids)
     if heuristic:
         mapping = {role: tuple(sorted(fids)) for role, fids in heuristic.items()}
         return (
