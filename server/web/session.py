@@ -621,11 +621,23 @@ _REQUERY_OPTIONS_DEFAULT: tuple[str, ...] = (
 _SONG_REQUERY_CANCEL = re.compile(r"^\s*(취소|중단|그만|cancel)\s*$", re.IGNORECASE)
 
 # Korean role labels for the one-time rig-layer confirmation card (결함 6).
+#
+# 카드 t501(SPEC-LDRENDER-001 M2 ④) — side/wash/mover 추가 후 실측으로 잡힌
+# 실제 영향: `_confirm_song_layer_mapping` 의 확인 카드 문구 조립
+# (`_LAYER_ROLE_LABELS[str(entry['role'])]`)이 새 역할에 대해 KeyError 로
+# 죽었다(test_song_readback_props_t479.py 등 4건 — SIDE-L/SIDE-R 를 포함한
+# 리그 그룹으로 송신을 재현하는 회귀가 전부 실패). has_layer() 호출부(§B
+# 위험 7 (d))는 "back" 만 읽어 안전했지만, 이 라벨 표는 **모든** 해석된
+# 역할을 순회해 조립하므로 네 역할 밖을 만나면 즉시 깨진다 — 이 표가 바로
+# 그 "예상 밖 영향"이었다.
 _LAYER_ROLE_LABELS: dict[str, str] = {
     "key": "Key/Front",
     "back": "Back",
     "effect": "Effect/Beam",
     "audience": "Audience",
+    "side": "Side",
+    "wash": "Wash",
+    "mover": "Mover",
 }
 
 _SINGLE_LAYER_WARNING = (

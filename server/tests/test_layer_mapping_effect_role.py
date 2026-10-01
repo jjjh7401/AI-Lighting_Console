@@ -34,8 +34,8 @@ MOVER-*/WASH-* 는 접미사가 붙어 있어 여전히
 
 from __future__ import annotations
 
-from server.design.rig import _LAYER_GROUP_ALIASES
-from server.web.session import _layer_mapping_from_group_children
+from server.design.rig import _LAYER_GROUP_ALIASES, RIG_LAYER_ROLES
+from server.web.session import _LAYER_ROLE_LABELS, _layer_mapping_from_group_children
 
 # 카드 t379 실측 — 이 리그의 DataPool/Groups 그룹 이름 전수.
 _MEASURED_GROUP_NAMES = (
@@ -173,3 +173,17 @@ class TestEffectRoleNowInfersFromThisRigsGroupNames:
         """RG5 정책 불변식 — "MOVERHEAD" 같은 유사 문자열이 실수로 안 걸리는지."""
         assert "mover" not in _LAYER_GROUP_ALIASES["effect"]
         assert "wash" not in _LAYER_GROUP_ALIASES["effect"]
+
+    def test_every_rig_layer_role_has_a_confirmation_card_label(self):
+        """카드 t501 M2 ④ — 실측으로 잡힌 실제 영향에 대한 회귀 잠금.
+
+        `_LAYER_ROLE_LABELS` 가 `RIG_LAYER_ROLES` 전 역할을 커버하지 못하면
+        `_confirm_song_layer_mapping` 의 확인 카드 문구 조립이 KeyError 로
+        죽는다(이 카드에서 side/wash/mover 추가 직후 실측: test_song_
+        readback_props_t479.py 등 4건이 이 경로로 떨어졌었다). 이 테스트는
+        그 사고가 재발하지 않도록 두 집합의 포함 관계를 직접 고정한다 —
+        has_layer() 호출부(§B 위험 7 (d))는 "back" 만 읽어 안전했지만, 이
+        라벨 표는 해석된 역할 전부를 순회하므로 다른 종류의 소비자다.
+        """
+        missing = set(RIG_LAYER_ROLES) - _LAYER_ROLE_LABELS.keys()
+        assert not missing, f"라벨 누락 역할: {missing}"
