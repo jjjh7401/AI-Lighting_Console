@@ -165,6 +165,52 @@ def test_group_name_heuristic_is_deterministic() -> None:
     assert profile_a.layers.mapping == profile_b.layers.mapping
 
 
+def test_group_name_heuristic_maps_side_wash_mover_via_prefix_token() -> None:
+    """RG5-1(REQ-LDRENDER-002 ⑤) — 접두 토큰(하이픈 앞) 매칭.
+
+    여러 그룹 이름이 같은 역할에 매칭되면 이 heuristic 경로는 그 fid 를
+    **합집합**으로 쌓는다 — 기존 다중-별칭 역할(예: `back`/`backlight`/
+    `rear`)이 이미 하던 동작과 같은 의미론이다(이 카드가 새로 발명하지
+    않는다, §E M2 ⑤ "follow the existing semantics/tie rules").
+    """
+    groups = {
+        "SIDE-L": [1, 2],
+        "SIDE-R": [3, 4],
+        "SIDE-ALL": [1, 2, 3, 4],
+        "WASH-U": [5],
+        "WASH-D": [6],
+        "MOVER-ALL": [7, 8],
+    }
+    profile = build_rig_profile(patch=_patch(count=8), groups=groups, coords=[])
+
+    assert profile.layers.source == RIG_LAYER_SOURCE_GROUP_HEURISTIC
+    assert profile.layer_rules_active() is True
+    assert profile.has_layer("side") is True
+    assert profile.has_layer("wash") is True
+    assert profile.has_layer("mover") is True
+    assert profile.layers.fids_for("side") == (1, 2, 3, 4)
+    assert profile.layers.fids_for("wash") == (5, 6)
+    assert profile.layers.fids_for("mover") == (7, 8)
+
+
+def test_group_name_heuristic_prefix_token_rejects_lookalikes() -> None:
+    """RG5(추측 금지) 그대로 — 접두 토큰이 하이픈으로 정확히 분리되고
+    "side"/"wash"/"mover" 와 바이트 동일할 때만 매칭한다.
+
+    - ``SIDEWALK``: 하이픈이 없다 — 접두 토큰 분리 자체가 안 된다.
+    - ``XSIDE-L``: 접두 토큰이 "xside"(≠"side").
+    - ``SIDES-L``: 접두 토큰이 "sides"(≠"side").
+
+    셋 다 매칭되지 않아야 하고, 다른 매칭도 없으므로 이 리그는 단일층으로
+    축퇴한다.
+    """
+    groups = {"SIDEWALK": [1], "XSIDE-L": [2], "SIDES-L": [3]}
+    profile = build_rig_profile(patch=_patch(count=3), groups=groups, coords=[])
+
+    assert profile.layers.source == RIG_LAYER_SOURCE_SINGLE_LAYER
+    assert profile.layer_rules_active() is False
+
+
 def test_declared_layers_activate_layer_rules() -> None:
     declared = {"key": [1, 2], "back": [3, 4]}
     # A group-name heuristic hit is present too, but declaration outranks it.
@@ -188,8 +234,47 @@ def test_declared_layers_reject_unknown_role() -> None:
         )
 
 
-def test_declared_layers_role_vocabulary_is_the_standard_four() -> None:
-    assert RIG_LAYER_ROLES == ("key", "back", "effect", "audience")
+def test_declared_layers_accept_side_wash_mover_roles() -> None:
+    """카드 t501(SPEC-LDRENDER-001 M2 ③) — 두 팔 중 수용 팔.
+
+    `declared_layers={"side": ..., "wash": ..., "mover": ...}` 가
+    `RigProfileError` 없이 수용되는지(§E M2 ③ "accepts ... without
+    RigProfileError"). 거부 팔은 바로 위 `test_declared_layers_reject_
+    unknown_role`(여전히 모르는 역할을 거부) — 두 팔이 한 쌍이다.
+    """
+    declared = {"side": [1, 2], "wash": [3], "mover": [4, 5]}
+    profile = build_rig_profile(
+        patch=_patch(count=5), groups={}, coords=[], declared_layers=declared
+    )
+    assert profile.layers.source == RIG_LAYER_SOURCE_DECLARED
+    assert profile.layer_rules_active() is True
+    assert profile.has_layer("side") is True
+    assert profile.has_layer("wash") is True
+    assert profile.has_layer("mover") is True
+    assert profile.layers.fids_for("side") == (1, 2)
+    assert profile.layers.fids_for("wash") == (3,)
+    assert profile.layers.fids_for("mover") == (4, 5)
+    assert profile.notes == ()
+
+
+def test_declared_layers_role_vocabulary_is_the_standard_seven() -> None:
+    """카드 t501(SPEC-LDRENDER-001 M2, REQ-LDRENDER-002) — 의도적 뒤집음.
+
+    이 단언은 고치기 전 ``("key", "back", "effect", "audience")`` 네 역할을
+    "표준"이라 못박고 있었다. 감독 결정 1(2026-10-01)로 `side`/`wash`/
+    `mover` 세 역할이 §2c 정본 + `RIG_LAYER_ROLES` 양쪽에 추가됐으므로 이
+    단언은 더 이상 참이 아니다 — 조용히 깨뜨리지 않고 이름·단언·독스트링을
+    함께 갱신한다(REQ-002 본문의 `:119` 테스트 뒤집음과 같은 규율).
+    """
+    assert RIG_LAYER_ROLES == (
+        "key",
+        "back",
+        "effect",
+        "audience",
+        "side",
+        "wash",
+        "mover",
+    )
 
 
 def test_empty_declared_layers_falls_through_to_heuristic() -> None:
