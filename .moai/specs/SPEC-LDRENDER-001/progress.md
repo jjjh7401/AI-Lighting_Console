@@ -285,9 +285,286 @@ $ uv run ruff format --check server/design/rig.py server/web/session.py server/t
 - **`_SINGLE_LAYER_WARNING`("Front/Back/Beam/Audience 분리 연출은...") 문구는 side/wash/mover 를 나열하도록 갱신하지 않았다** — 이 문구는 단일 레이어 축퇴 상태를 설명하는 일반 경고라 특정 역할 목록을 열거할 필요가 없다고 판단했으나(§4 안티패턴 "정본 문서 편집 범위를 §2c 밖으로 넓히지 마라"의 코드판 — 이 문구는 §2c 밖 코드 상수), 이 판단 자체는 감독 재확인을 받지 않았다 — 재확인이 필요하면 후속으로 갱신한다.
 - **`groups`-heuristic 의 "여러 그룹이 한 역할에 매칭 → 합집합" 의미론은 side/wash/mover 전에도 이미 있던 기존 동작이지만, 이 동작이 "옳은지"(여러 물리 그룹을 하나의 역할 fid 집합으로 합치는 것이 항상 맞는지) 자체는 이 카드의 범위 밖 — M2 는 기존 동작을 바꾸지 않았을 뿐, 그 동작의 설계적 정당성을 재검토하지 않았다.**
 
-## §E.3 Run-phase Audit-Ready Signal
+### M3 — 큐 디머 데이터 모델 확장 + 다중 역할 렌더링 (카드 t501, REQ-LDRENDER-001/003, M2 소비)
 
-_<run-phase 대기>_
+**착수 베이스라인**: `git merge --ff-only origin/WT-ldrender-run` → HEAD
+`a037ad24`(M2 완료 커밋) — `git log --oneline -1` 로 확인.
+
+#### ① `CueDimmerData` 확장 (REQ-001 본문, plan.md §B 위험 3)
+
+`server/design/song_cue_composer.py` — `role_pct: Mapping[str, float]` 필드를
+추가했다(기존 `key_pct`/`back_pct` 는 바이트 동일하게 유지). 두 생산 지점이
+공유 헬퍼 `_role_pct_for(key_pct, back_pct)` 로 `role_pct` 를 계산한다:
+
+- `_dimmer_data`(정상·블랙아웃 두 분기 모두) — `{"key": key_pct, "back": back_pct}`
+  (각각 `None` 이 아닐 때만 포함).
+- `_apply_pre_drop_darkness`(드롭 앞 어둠, `dataclasses.replace`) — **뮤테이션으로
+  잡은 실제 버그**: `dataclasses.replace(previous.dimmer, key_pct=target,
+  back_pct=...)` 처럼 지정 안 한 필드는 옛 값을 그대로 들고 온다. `role_pct` 를
+  다시 계산해 넘기지 않으면 `back_pct` 필드는 내려갔는데 `role_pct["back"]`은
+  드롭 앞 값으로 남는 불일치가 생긴다(아래 뮤테이션 D 가 이 경로를 확인).
+
+```
+$ uv run python -c "from server.design.song_cue_composer import CueDimmerData; d = CueDimmerData(key_pct=50.0, back_pct=40.0, budget_range_pct=(0.0,100.0)); print(d.role_pct)"
+{}
+```
+(직접 생성 시 `role_pct` 기본값은 빈 매핑 — 유일한 생산 경로인 `_dimmer_data`
+를 거쳐야 채워진다.)
+
+#### ② `_back_layer_value_lines` → `_role_dimmer_value_lines` 일반화 (REQ-001 본문)
+
+`server/design/song_cue_render.py` — `role == "back"` 단일 분기를
+`_role_group_numbers(layer_mapping)`(역할 → 그룹 번호, **마지막 일치 항목이
+이긴다** — `session.py::_confirm_song_layer_mapping` 의 `declared_layers`
+딕셔너리 컴프리헨션과 같은 동점 규율, M2 progress.md 선례)로 역할마다 독립된
+`Group <n> ; Attribute 'Dimmer' At <pct>` 줄을 내는 함수로 교체했다. 호출부
+(`reviewed_song_commands`) 1곳을 갱신했다(grep 확인: `_back_layer_value_lines`
+문자열은 이제 docstring 인용(옛 이름 보존)에만 남는다, 코드 호출 0건).
+
+**구조적 가드(`_DIMMER_DELTA_EXCLUDED_ROLES = {"key", "effect"}`)**: `key` 는
+전체 기구 키 디머 줄로 이미 나가 있어 델타로 또 내면 중복이다. `effect` 는
+R3(REQ-007, M5 — 아직 미착수)가 비액센트 큐의 **어떤** 값 줄에도 effect 역할
+기구가 실리지 않기를 요구하는데(spec.md §3.1 HARD), 이 그룹-주소 델타 경로가
+`role_pct["effect"]` 를 읽어 값을 내면 공유 `fids` 제외와 무관하게 R3 를
+어기게 된다 — 그래서 M5 를 기다리지 않고 여기서 구조적으로 막았다(현재
+`_dimmer_data` 는 `role_pct` 에 `effect` 키를 애초에 채우지 않으므로 이
+가드는 방어적 이중 장치다, `test_effect_role_is_never_emitted_even_if_role_pct_has_a_value`
+가 뮤테이션으로 확인).
+
+#### ③ 수용 테스트 + ⑥ 의도적 뒤집음은 이 카드 범위에 없음 — 정정
+
+배차서의 ③·⑥ 항목(`_build_layers` 수용 테스트·테스트 뒤집음)은 M2 의 몫으로
+이미 끝나 있었다(progress.md M2 §③·⑥) — M3 는 M2 가 확장한 역할 어휘를
+**소비**만 한다. 착수 전 `git log` 로 M2 커밋(`a5971fe0`·`f4a4dc62` 등) 을
+확인해 중복 작업하지 않았다.
+
+#### R4 측 효과 — side/wash/mover 디머 퍼센트 산출 규칙 **미해결** (§미해결 참조)
+
+배차서 지시문대로 착수 전 6단계 검색을 순서대로 훑었다(`.moai/docs/lane-protocol.md`
+§1 "「없다」를 쓰기 전에 여섯을 순서대로 훑는다" — 0번 메모리는 나(서브에이전트)에게
+없다고 명시돼 있어 1번부터 시작):
+
+| # | 자리 | 결과 |
+|---|---|---|
+| 1 | `src/Lighting_Designer/01_스펙/LX-SEQ-SPEC-v2.1.md` §11 CUE-EX(17열, `Dim` 열) | **없음** — `Dim` 은 "0–100(%), 빈칸=트래킹"일 뿐 역할별 산출 공식이 아니다. §3.7 예시 행(Q020/Q030)에서도 `KEY 45 / BACK 25` 류 수치는 **디자이너가 직접 적은 값**이지 파생 공식이 아니다. side/wash/mover 류 역할에 대한 비율 언급 0건(전문 grep 확인) |
+| 2 | `docs/proposals/song-lighting-design-standard.md` §4a I1·§4b C1/C3 | §4a I1 "층 정의: 키/백/이펙트" — **3층 구조로 고정 서술**(side/wash/mover 언급 0, RG5-1 이 역할 어휘를 확장한 §2c 와 §4a 사이에 아직 정합이 안 맞은 상태로 보인다 — 이 역시 M3 범위 밖). I2 "백층 = 키층의 30~50%" — 코드가 실제로 쓰는 `0.8`(80%) 과 **다른 수치**다(기존 불일치, R5/디머 대역 영역 — 이 SPEC 의 Out of Scope, spec.md §4). §4b C1/C3 은 색 규칙뿐, 디머 퍼센트 언급 없음 |
+| 3 | `docs/proposals/song-structure-lighting-standard.md` §6.1~6.3 | §6.2 "기구는 세 층으로 역할을 나눈다 — 앰비언트 워시/텍스처/에너지"는 **다른 어휘 체계**(key/back/effect/side/wash/mover 와 매핑되지 않는다)이고 퍼센트도 없다. §6.3 은 색 규칙 |
+| 4 | `.moai/specs/` 기존 SPEC(특히 SPEC-LDDESIGN-001) | `grep -rn "side_pct\|wash_pct\|mover_pct\|side.*pct\|wash.*pct\|mover.*pct" server/ docs/ .moai/specs/` → SPEC-LDRENDER-001 자신의 문서 밖 매치 0건 |
+| 5 | 코드(`song_cue_composer.py` `_dimmer_data`/`_D_LEVEL_ROWS`) | `back_pct = key_pct * 0.8 if plan.rig_profile.has_layer("back") else None`(`:735`) 가 **유일한** 역할별 파생 공식이다 — "back" 전용으로만 쓰여 왔다. `_D_LEVEL_ROWS`(R5, Out of Scope)는 구간 전체 디머 대역이지 역할별 분배가 아니다 |
+| 6 | `.moai/reports/t499`·`t498` | t499 verdict.md: "KEY·FOH·SIDE·WASH·MOVER·STROBE 는 전 곡 전 큐에서 같은 값"(송신이 안 갈라졌다는 **결함 서술**일 뿐 목표 비율 서술 아님). t498: 같은 결함의 실기 재현. 둘 다 "어떻게 나눠야 하는가"에 답하지 않는다 |
+
+**결론**: side/wash/mover 디머 퍼센트의 **정본 산출 규칙이 어디에도 없다**.
+유일하게 존재하는 역할별 공식(`key_pct * 0.8`)은 "back" 전용으로만 쓰여
+왔고, 이것을 side/wash/mover 에 그대로 복제하면 — **디머 값이 서로 같아져
+AC-001 의 "서로 다른 값 버킷"에 전혀 기여하지 못한다**(`ldrender_gate.layer_diversity`
+가 역할이 아니라 **직렬화된 상태 값**으로 버킷을 세기 때문 — `server/design/ldrender_gate.py:106-126`
+코드 판독. side 가 back 과 같은 0.8×key 를 받으면 둘은 **같은 버킷**이다).
+지시문의 "숫자를 지어내지 마라"는 이 지점에서 특히 날카롭다 — back 비율을
+그대로 베끼는 것은 숫자를 안 지어내는 것처럼 보이지만, 그 숫자가 만드는
+**효과**(새 버킷 생성)는 정확히 발명한 것과 같다.
+
+**블로커 — 아래 § 블록 참조**: side/wash/mover 의 퍼센트는 구현하지 않았다
+(결정 없이는 진행 불가). 대신 **결정과 무관한 ①·②(위)와 아래 측정·테스트만
+완료**했다.
+
+#### ④ `_SINGLE_LAYER_WARNING` 판정
+
+M2 §Gaps 가 "재확인이 필요하면 후속으로 갱신" 으로 남겨 둔 결정을 이번에
+내렸다. **판정: 이제 부정확하다 — 갱신한다.** 근거: 이 문구(와 같은 자리의
+확인 카드 `why` 문구, `session.py:7723` 둘 다)는 "단일 레이어 축퇴 상태에서
+검증되지 않는 분리 연출"의 **전수**를 나열하는 문장이다(기존 네 역할
+key/back/effect/audience 를 **전부** 나열했었다 — "일부 대표"가 아니라
+"전부" 였다). M2 가 역할을 일곱으로 넓혔고, `_role_dimmer_value_lines`(위 ②)는
+층 매핑이 비면(단일 레이어) **어느 역할도** 줄을 못 낸다 — 즉 단일 레이어
+축퇴에서 미검증인 역할은 이제 일곱 전부다. 넷만 적힌 문구는 "전수 나열"이라는
+그 문장 자신의 전제를 어긴다(부분집합으로 전체를 사칭). 두 자리
+(`_SINGLE_LAYER_WARNING`, `_confirm_song_layer_mapping` 의 `why`) 모두
+"Front/Back/Beam/Audience" → "Front/Back/Beam/Audience/Side/Wash/Mover" 로
+고치고, 전자를 단언하는 기존 잠금 테스트(`test_web_session.py:5604`)를 같은
+문자열로 갱신했다(조용히 깨뜨리지 않음, 후자는 잠금 테스트가 없어 문구만 고침).
+
+#### ⑤ AC-001 오프라인 판독 — t499 8곡 재현(실기 그룹), 결과: 전곡 LIT<3
+
+**방법론(이 워크트리의 제약)**: 원곡 오디오(`src/sample music/*.mp3`)가 이
+워크트리에 없다(`find . -iname "*.mp3" -o -iname "*.wav"` → scipy 테스트
+픽스처 외 0건) — t499 의 `rehearse_song.py`/`run_all.py` 를 그대로 돌릴 수
+없다. 대신 t499 가 이미 DSP 로 측정해 **커밋해 둔**
+`.moai/reports/t499/runs/<곡>/analysis.json`(BPM·구간 D레벨 — 실측값)을
+`ConfirmedSongAnalysis`/`BpmResolution` 으로 직접 재구성해 세션에 꽂았다
+(`.moai/reports/t501/measure_ac001_8songs.py`, DSP 재실행 없음·확정값
+재사용). 이 대체가 판정에 영향을 안 주는 이유: 디머 렌더링은 곡 내용(BPM·구간
+D레벨)에 의존하지만 **역할 집합**(`role_pct` 가 key/back 만 채운다는 사실)에는
+의존하지 않는다 — 그 스크립트 머리말에 코드 판독 근거를 적었다. 실기 그룹은
+t498 run0 실측(`REAL_GROUPS`, 1~18번)을 그대로 썼다.
+
+```
+$ uv run python .moai/reports/t501/measure_ac001_8songs.py
+Club Diver: 구간 큐 14개 · LIT≥3 0개 · LIT<3 14개 · 색 1종 · 효과줄 0 · 경고 YES
+Cut and Run: 구간 큐 18개 · LIT≥3 0개 · LIT<3 18개 · 색 1종 · 효과줄 0 · 경고 YES
+Ice cream: 구간 큐 8개 · LIT≥3 0개 · LIT<3 8개 · 색 1종 · 효과줄 0 · 경고 YES
+Morning: 구간 큐 14개 · LIT≥3 0개 · LIT<3 14개 · 색 1종 · 효과줄 0 · 경고 YES
+Rain: 구간 큐 13개 · LIT≥3 0개 · LIT<3 13개 · 색 1종 · 효과줄 0 · 경고 YES
+Too Cool: 구간 큐 24개 · LIT≥3 0개 · LIT<3 24개 · 색 1종 · 효과줄 0 · 경고 YES
+scott-buckley-neon: 구간 큐 18개 · LIT≥3 0개 · LIT<3 18개 · 색 1종 · 효과줄 0 · 경고 YES
+걸그룹DinoDino_C_max최고품질: 구간 큐 11개 · LIT≥3 0개 · LIT<3 11개 · 색 2종 · 효과줄 0 · 경고 YES
+```
+
+8곡 전부 **모든** 구간 큐가 LIT<3(AC-001 FAIL, 전수) — t499 가 측정한 "최대
+2버킷"(전체 값 + BACK) 과 일치한다. **예측과 일치**: ②의 구조적 가드로 side/
+wash/mover 는 애초에 role_pct 값이 없어 렌더링되지 않으므로, M3 단독으로는
+LIT 버킷이 늘지 않는다 — side/wash/mover 디머 퍼센트 결정(위 R4 블로커)이
+풀려야 AC-001 이 PASS 할 길이 열린다. 산출물(`ac001_8songs.json`/`.txt`)을
+`.moai/reports/t501/` 에 저장했다.
+
+#### 뮤테이션 — 새 단언에 걸기 (§3.3 규율, 4건)
+
+| 뮤테이션 | 대상 | 죽인 테스트 | 결과 |
+|---|---|---|---|
+| A: `_DIMMER_DELTA_EXCLUDED_ROLES` 에서 `"effect"` 제거 | `song_cue_render.py` | `test_effect_role_is_never_emitted_even_if_role_pct_has_a_value` | 1건 FAIL(의도대로 빨강) |
+| B: `_role_group_numbers` 를 `numbers[role]=...`→`numbers.setdefault(role,...)`(first-wins 로 완화) | `song_cue_render.py` | `test_every_role_with_a_role_pct_value_gets_its_own_group_line`·`test_a_role_with_multiple_matching_groups_uses_the_last_one_iteration_order_wins`·`test_last_matching_entry_per_role_wins` | 3건 FAIL(의도대로 빨강) |
+| C: `CueDimmerData.__post_init__` 에서 `role_pct` 값 검증 루프 제거 | `song_cue_composer.py` | `test_role_pct_is_validated_like_key_pct`·`test_role_pct_rejects_an_empty_string_role_key` | 2건 FAIL(의도대로 빨강) |
+| D: `_apply_pre_drop_darkness` 의 `dataclasses.replace` 에서 `role_pct=_role_pct_for(...)` 인자 제거 | `song_cue_composer.py` | `test_complete_bundle_contains_section_axis_data_and_structured_timing`(신규 role_pct 단언) | 1건 FAIL(의도대로 빨강) |
+
+4건 전부 `PYTHONDONTWRITEBYTECODE=1` 로 실행, 백업 파일과 `diff`(치환 적용
+확인) 후 복원해 `git diff --stat` 으로 원복을 확인했다. 복원 후 전체 지정
+범위 재실행 PASS(아래 회귀 절). 각 뮤테이션이 **의도한 테스트만** 빨갛게
+만들었다(axis 분리 확인, §3.3 "자극은 재려는 축 하나만 건드려야 한다").
+
+#### AC-LDRENDER-003 — 바이트 동일성 (단일 레이어 리그, 두 버전 직접 대조)
+
+**직접 단위 테스트**(`TestSingleLayerIsByteIdentical`, 4개 role_pct 조합 ×
+파라미터화): `layer_mapping=()` 이면 `role_pct` 에 무엇이 있어도 항상 빈
+튜플 — `_role_group_numbers(())` 가 항상 `{}` 이므로 구성상 참인 속성.
+
+**고치기 전/후 직접 대조**(`.moai/reports/t501/ac003_byte_diff.py` —
+이 워크트리에 원곡 오디오가 없어 전체 세션 리허설로 두 "트리"를 비교할 수
+없다는 §방법론 참조에 따라, `a037ad24`(M3 착수 베이스라인) 의
+`_back_layer_value_lines` 소스를 `git show` 로 읽어 격리 네임스페이스에서
+실행하고 지금 트리의 `_role_dimmer_value_lines` 와 같은 입력에 대조):
+
+```
+$ uv run python .moai/reports/t501/ac003_byte_diff.py
+single_layer_no_mapping: OK  old=()  new=()
+back_only_lit: OK  old=("Group 12 ; Attribute 'Dimmer' At 64",)  new=("Group 12 ; Attribute 'Dimmer' At 64",)
+back_only_dark: OK  old=()  new=()
+back_only_no_dimmer_role_pct_fallback: OK  old=("Group 12 ; Attribute 'Dimmer' At 40",)  new=("Group 12 ; Attribute 'Dimmer' At 40",)
+mapping_with_only_side_no_role_pct_value: OK  old=()  new=()
+mib_premove_untouched: OK  old=()  new=()
+
+PASS — 6건 전부 바이트 동일.
+```
+
+**세션 레벨 회귀**(기존 통합 시험, 변경 없이 그대로 PASS — back-only 리그의
+바이트 동일성을 end-to-end 로 증명): `test_confirmed_back_layer_adds_group_dimmer_lines_to_the_bundle`
+(`test_web_session.py`) — back 역할 1개만 매핑된 리그에서 5개 LIT 큐 전부
+`back_pct == key_pct*0.8` 을 확인하는 기존 시험, 수정 없이 PASS.
+
+#### 테스트 — 신규 `server/tests/test_song_cue_role_dimmer_t501.py` (19개) + 기존 파일 보강
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_song_cue_role_dimmer_t501.py -q
+...................
+19 passed in 0.15s
+```
+
+`test_song_cue_composer.py` 의 기존 `test_complete_bundle_contains_section_axis_data_and_structured_timing`
+에 `role_pct` 단언 1줄을 보강(새 테스트 함수 아님 — §3.5 "불변식 팔의 값어치는
+뮤테이션에서 드러난다"에 따라 기존 드롭-앞-어둠 경로를 직접 겨눈다). `test_web_session.py`
+의 기존 단일 레이어 경고 잠금 테스트 1건을 ④의 문구 변경에 맞춰 갱신.
+
+#### 회귀 — 지정 범위 + 전체 스위트
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_layer_mapping_effect_role.py server/tests/test_layer_mapping_foh_front.py server/tests/test_design_rig.py server/tests/test_song_cue_color_emission.py server/tests/test_song_cue_white_preset_t453.py server/tests/test_seeded_song_apply.py server/tests/test_song_cue_composer.py server/tests/test_song_cue_arc_t462.py server/tests/test_song_cue_role_dimmer_t501.py server/tests/test_ldrender_gate.py server/tests/test_web_session.py server/tests/test_dedupe_value_lines_t476.py server/tests/test_song_readback_props_t479.py -q
+609 passed in 4.73s
+```
+
+전체 스위트(베이스라인 `a037ad24`, M2 완료 시점 기록값 14400 passed/35 skipped):
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+14419 passed, 35 skipped in 200.80s
+```
+
+14400 → 14419(**+19, 신규 테스트 수와 정확히 일치** — 삭제 0 · 교체 0 ·
+전체 FAIL 0건). **중간 1회차**(이 측정 전 별도 전체 스위트 실행)에서
+`test_spatial_context.py::TestBulkPropertyReads::test_a_1_6_0_responder_falls_back_silently_to_the_single_reads`
+1건이 FAIL 했다 — 벽시계 타임스탬프(`read_at`)가 두 호출 사이 초 경계를
+넘어간 **플레이키**(해당 파일은 이 SPEC 이 건드리지 않는다, 코드 판독으로
+확인). 그 1건만 격리 재실행해 PASS 확인(`1 passed in 0.38s`) 후 전체
+스위트를 재실행한 것이 위 14419(FAIL 0) 결과다.
+
+#### 린트/포맷
+
+```
+$ uv run ruff check server/design/song_cue_composer.py server/design/song_cue_render.py server/web/session.py server/tests/test_song_cue_role_dimmer_t501.py server/tests/test_song_cue_composer.py server/tests/test_web_session.py .moai/reports/t501/measure_ac001_8songs.py .moai/reports/t501/ac003_byte_diff.py
+All checks passed!
+$ uv run ruff format --check <동일 목록>
+전부 이미 포맷됨
+```
+
+#### @MX 태그
+
+`_role_dimmer_value_lines`(신규 공개 함수, `song_cue_render.py`)의 fan_in 은
+1(`reviewed_song_commands` 호출 1곳) — ANCHOR 요건(fan_in>=3) 미달, ANCHOR
+미부착. `_role_group_numbers`(fan_in 1, `_role_dimmer_value_lines` 내부
+호출만)도 동일. `_role_pct_for`(`song_cue_composer.py`, fan_in 2 —
+`_dimmer_data`·`_apply_pre_drop_darkness`)도 미달. 위험한 패턴(goroutine
+류·복잡도>=15) 없음 — WARN 불필요. 전부 테스트 커버(신규 19건 + 간접 커버) 있어
+TODO 불필요.
+
+#### M3 이 하지 않은 것 (§Gaps — 명시)
+
+- **side/wash/mover 디머 퍼센트는 구현하지 않았다** — 정본 산출 규칙이
+  어디에도 없다(위 §R4 측 효과 6단계 검색 표). 블로커로 리드에 보고한다
+  (아래 § 블록). M3 는 ①·②(데이터 모델+렌더 함수, 결정과 무관) 와 ④·⑤
+  (경고 문구·측정, 결정과 무관)만 완료했다.
+- **AC-001 은 여전히 FAIL 이다** — side/wash/mover 결정이 풀리지 않는 한
+  M3 가 할 수 있는 한도 내에서는 이것이 구조적 상한이다(⑤ 측정 참조). M4
+  (색 송신)도 side/wash/mover 그룹에 색을 보내려면 같은 그룹 번호 배선을
+  재사용하지만, 디머가 0(또는 미점등)이면 `layer_diversity` 의 LIT 필터에
+  애초에 안 걸려 색이 있어도 버킷에 안 들어간다 — **디머 % 결정은 M4 의
+  선행 조건이기도 하다**(색만으로는 못 돌아간다).
+- **M5(effect 기구 분리)는 하지 않았다** — `_DIMMER_DELTA_EXCLUDED_ROLES` 의
+  `"effect"` 제외는 이 함수 하나의 방어적 가드일 뿐, 공유 `fids`(색·포지션·
+  페이저)에서 effect 기구를 빼는 일(REQ-007 본 범위)은 손대지 않았다.
+- **AC-001 8곡 측정은 원곡 오디오 없이 analysis.json 재구성으로 수행했다** —
+  §⑤ 방법론 참조. 8곡 전부 코드 판독 예측(§R4 효과)과 일치하는 결과를 냈지만,
+  이것은 "다른 경로로도 같은 결론에 도달했다"는 교차검증이지 "원곡 오디오로
+  직접 재현했다"는 것과는 등급이 다르다(이 트리의 제약, §방법론).
+- **`groups`-heuristic 경로**(실측상 프로덕션 미사용, M2 §Gaps 와 동일 — M3
+  도 바꾸지 않았다)는 이번에도 건드리지 않았다.
+
+## §블로커 — side/wash/mover 디머 퍼센트 산출 규칙 미정 (REQ-LDRENDER-001 잔여)
+
+**상태**: 구현 불가(결정 없이는 숫자를 지어내지 않는다는 지시문의 명시 제약).
+배차서 구속: "정본 어디에도 산출 규칙이 없으면 그 부분을 구현하기 전에 멈추고
+2-3개 구체적 선택지를 제시하라."
+
+**왜 블로커인가(①·②와 분리 가능함을 확인한 뒤의 결론)**: `_role_dimmer_value_lines`
+(위 ②)는 `role_pct` 에 값이 있는 역할만 렌더링하므로, side/wash/mover 값을
+비워 둔 채로도 ①·②·④·⑤ 는 결정과 **독립적으로** 완결됐다(회귀·뮤테이션·
+AC-003 바이트 동일성 전부 PASS). 그러나 AC-001(REQ-001 의 핵심 완료 조건)은
+side/wash/mover 퍼센트 없이는 구조적으로 도달 불가능하다(§⑤ 측정이 실측으로
+확인) — 그래서 M3 는 "완료"가 아니라 "결정 대기로 블록"이다.
+
+**선택지 (3개, 각각 출처·트레이드오프)**:
+
+| | 옵션 (a) back 비율 재사용 | 옵션 (b) 역할별 감독 결정 요청(결정 5) | 옵션 (c) 설계 층 입력 계약으로 전가 |
+|---|---|---|---|
+| 내용 | `role_pct[role] = key_pct * 0.8` 을 side/wash/mover 에도 동일 적용(back 과 같은 공식 재사용) | R1/R2/R4 처럼 리드 경유로 "side/wash/mover 디머를 back 대비 몇 %로 할지" 새 감독 결정을 요청 | §11 CUE-EX 의 역할별 `Dim` 열처럼, 디자인 인터뷰/곡 설계 명세(`SectionDecision` 상위)에서 역할별 퍼센트를 **입력**으로 받는 축을 새로 연다 |
+| 근거 | 코드에 이미 있는 유일한 역할별 공식 재사용(새 공식 발명 아님) | 이 SPEC 자신이 이미 4번 쓴 절차(spec.md §5 결정 1~4) — 선례와 동형 | §11 CUE-EX 의 기존 입력 계약을 그대로 일반화(새 모델 발명 아님) |
+| 치명적 결함 | **AC-001 에 기여 못함** — side 가 back 과 같은 값(0.8×key)을 받으면 같은 버킷(`layer_diversity` 가 값으로 버킷을 센다, 코드 판독 위 §R4 참조). "back 전용으로만 검증된 공식을 다른 역할에 복제"는 숫자를 안 지어낸 것처럼 보이지만 효과는 발명과 같다 | 비용 — M4(색 송신) 착수 전 확인 라운드 1회 추가. 단, 이미 확립된 절차라 새 메커니즘 비용은 0 | 비용 최대 — 인터뷰 질문 추가(§2d DI1~DI6 재설계), `SectionDecision`/`song_plan.py` 확장, 사실상 이 SPEC 범위를 넘는 작은 SPEC 분량의 작업 |
+| 구현 범위 | `_dimmer_data` 한 곳(`_role_pct_for` 확장) | `_dimmer_data` 한 곳 + 결정 수신 후 값 반영(구현 자체는 (a)와 같은 크기, 입력값만 감독 결정) | `song_plan.py`/인터뷰/`song_cue_composer.py` 다수 지점 |
+| 권장 여부 | 비권장(치명적 결함으로 목표 미달) | **권장** — 이미 감독이 유사 결정을 4회 내린 선례(spec.md §5)와 같은 절차, 비용 최소, 발명 없음 | 비권장(이 카드 범위를 크게 벗어남 — 별도 SPEC 분량) |
+
+**권장**: 옵션 (b) — R2(결정 3, 층→색 배정)와 **같은 모양의 질문**이다.
+"back+mover=지배색, side+wash=보조색, key=중립"처럼 **디머에서도 지배/보조
+구분을 둘지**(예: back+mover 를 80%, side+wash 를 50% 등)를 감독에게 물으면
+된다 — 색 배정 결정이 이미 back/mover 를 "지배", side/wash 를 "보조"로
+묶어 뒀으므로(spec.md §3.2 [HARD], 감독 결정 3), 디머 결정도 그 축을 따라
+"지배 그룹 비율 vs 보조 그룹 비율" 둘만 물으면 충분할 가능성이 높다(발명
+아님 — 이미 난 결정의 연장을 확인하는 질문).
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
