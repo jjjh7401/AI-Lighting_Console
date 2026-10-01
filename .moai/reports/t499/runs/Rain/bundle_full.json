@@ -1,0 +1,832 @@
+{
+ "song_title": "Design Interview",
+ "cues": [
+  {
+   "kind": "section",
+   "section_index": 1,
+   "cue_number": 1.0,
+   "cue_name": "Intro",
+   "d_level": 2,
+   "fade_seconds": 3.1573333333333267,
+   "position": {
+    "requested": "Ring In",
+    "stored": "Ring In",
+    "width_tier": "narrow",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 50.0,
+    "back_pct": 40.0,
+    "budget_range_pct": [
+     40.0,
+     60.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "중간",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 0,
+    "trig_time_seconds": 0.0,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  },
+  {
+   "kind": "section",
+   "section_index": 2,
+   "cue_number": 2.0,
+   "cue_name": "Verse 1",
+   "d_level": 3,
+   "fade_seconds": 2.367999999999995,
+   "position": {
+    "requested": "Home",
+    "stored": "Home",
+    "width_tier": "medium",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 70.0,
+    "back_pct": 56.0,
+    "budget_range_pct": [
+     60.0,
+     80.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "중간~높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "slow pan"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 20939,
+    "trig_time_seconds": 20.939,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  },
+  {
+   "kind": "section",
+   "section_index": 3,
+   "cue_number": 3.0,
+   "cue_name": "Verse 2",
+   "d_level": 3,
+   "fade_seconds": 2.367999999999995,
+   "position": {
+    "requested": "Home",
+    "stored": "Home",
+    "width_tier": "medium",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 25.0,
+    "back_pct": 20.0,
+    "budget_range_pct": [
+     60.0,
+     80.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "중간~높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "slow tilt"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 33568,
+    "trig_time_seconds": 33.568,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": 70.0
+  },
+  {
+   "kind": "section",
+   "section_index": 4,
+   "cue_number": 4.0,
+   "cue_name": "Chorus 1",
+   "d_level": 5,
+   "fade_seconds": 0.39466666666666583,
+   "position": {
+    "requested": "Vocal DSC",
+    "stored": "Vocal DSC",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "dimmer chase",
+     "pan sweep"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 49515,
+    "trig_time_seconds": 49.515,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  },
+  {
+   "kind": "section",
+   "section_index": 5,
+   "cue_number": 5.0,
+   "cue_name": "Chorus 2",
+   "d_level": 5,
+   "fade_seconds": 0.39466666666666583,
+   "position": {
+    "requested": "Center",
+    "stored": "Center",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "horizontal chase",
+     "pan sweep"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 66517,
+    "trig_time_seconds": 66.517,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  },
+  {
+   "kind": "section",
+   "section_index": 6,
+   "cue_number": 6.0,
+   "cue_name": "Verse 3",
+   "d_level": 3,
+   "fade_seconds": 2.367999999999995,
+   "position": {
+    "requested": "Center",
+    "stored": "Center",
+    "width_tier": "medium",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 25.0,
+    "back_pct": 20.0,
+    "budget_range_pct": [
+     60.0,
+     80.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "중간~높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "soft wave"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 79595,
+    "trig_time_seconds": 79.595,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": 70.0
+  },
+  {
+   "kind": "section",
+   "section_index": 7,
+   "cue_number": 7.0,
+   "cue_name": "Chorus 3",
+   "d_level": 5,
+   "fade_seconds": 0.39466666666666583,
+   "position": {
+    "requested": "Wall",
+    "stored": "Wall",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "bounce chase",
+     "v-shape swing"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [
+    "moving position hit"
+   ],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 106432,
+    "trig_time_seconds": 106.432,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  },
+  {
+   "kind": "section",
+   "section_index": 8,
+   "cue_number": 8.0,
+   "cue_name": "Chorus 4",
+   "d_level": 5,
+   "fade_seconds": 0.39466666666666583,
+   "position": {
+    "requested": "Wall",
+    "stored": "Wall",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "cross diagonal",
+     "dimmer chase"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 123008,
+    "trig_time_seconds": 123.008,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  },
+  {
+   "kind": "section",
+   "section_index": 9,
+   "cue_number": 9.0,
+   "cue_name": "Chorus 5",
+   "d_level": 5,
+   "fade_seconds": 0.39466666666666583,
+   "position": {
+    "requested": "Cross",
+    "stored": "Cross",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "dimmer chase",
+     "pan sweep"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 138581,
+    "trig_time_seconds": 138.581,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  },
+  {
+   "kind": "section",
+   "section_index": 10,
+   "cue_number": 10.0,
+   "cue_name": "Verse 4",
+   "d_level": 4,
+   "fade_seconds": 1.1839999999999975,
+   "position": {
+    "requested": "Fan Out",
+    "stored": "Fan Out",
+    "width_tier": "wide",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 25.0,
+    "back_pct": 20.0,
+    "budget_range_pct": [
+     80.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "slow pan"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 166421,
+    "trig_time_seconds": 166.421,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": 90.0
+  },
+  {
+   "kind": "section",
+   "section_index": 11,
+   "cue_number": 11.0,
+   "cue_name": "Chorus 6",
+   "d_level": 5,
+   "fade_seconds": 0.39466666666666583,
+   "position": {
+    "requested": "Ring In",
+    "stored": "Ring In",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "horizontal chase",
+     "pan sweep"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [
+    "climax accent 블루 쿨 볼드"
+   ],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 179061,
+    "trig_time_seconds": 179.061,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": {
+    "rung": "blinder_or_flash",
+    "group_no": 14,
+    "dimmer_pct": 80.0
+   },
+   "pre_drop_from": null
+  },
+  {
+   "kind": "climax_return",
+   "section_index": 11,
+   "cue_number": 11.5,
+   "cue_name": "Chorus 6 Return",
+   "d_level": 5,
+   "fade_seconds": 0.0,
+   "position": {
+    "requested": "Ring In",
+    "stored": null,
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 180640,
+    "trig_time_seconds": 180.64,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  },
+  {
+   "kind": "section",
+   "section_index": 12,
+   "cue_number": 12.0,
+   "cue_name": "Finale",
+   "d_level": 5,
+   "fade_seconds": 6.314666666666653,
+   "position": {
+    "requested": "Audience",
+    "stored": "Audience",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "fx": {
+    "requested": [],
+    "permitted": [],
+    "disabled": [
+     "dimmer chase",
+     "accent sweep"
+    ],
+    "density": 0,
+    "axis_budget": 0,
+    "speed_beats": null
+   },
+   "accents": [
+    "white flash"
+   ],
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "timing": {
+    "mode": "timecode",
+    "trigger": "timecode",
+    "start_ms": 209141,
+    "trig_time_seconds": 209.141,
+    "timecode_number": 11,
+    "follows_cue_number": null
+   },
+   "accent_fixture": null,
+   "pre_drop_from": null
+  }
+ ],
+ "arc_notes": [
+  "blinder_six_row_absent: Q12 'Finale' 절정 액센트 — 구간 이름이 §6 표의 한 행에 맞지 않아 블라인더 밝기를 정할 근거가 없음"
+ ],
+ "lint_findings": [
+  "LintFinding(rule_id='L9', cue_number=11.5, description='snap fade (0s) used outside an accent/hit/drop/button cue (G1)')"
+ ],
+ "disabled_rule_notes": [],
+ "disabled_plan_notes": []
+}

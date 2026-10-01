@@ -1,0 +1,5 @@
+baseline {'sent_rgb': 1, 'layers_max': 2, 'selection_max': 1, 'fx_sent': 0, 'presets': 8}
+color moved: {"sent_rgb": [1, 2], "layers_max": [2, 3], "selection_max": [1, 2]}
+layer moved: {"layers_max": [2, 3]}
+effect moved: {"layers_max": [2, 3], "selection_max": [1, 2], "fx_sent": [0, 1], "presets": [8, 9]}
+position moved: {"layers_max": [2, 3], "selection_max": [1, 2], "presets": [8, 9]}

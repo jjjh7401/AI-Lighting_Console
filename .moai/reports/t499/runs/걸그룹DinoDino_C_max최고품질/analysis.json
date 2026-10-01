@@ -1,0 +1,79 @@
+{
+ "sha256": "0edb6c667267b6459a5097b4bb187806fd2bd00dc6e6af5d591908ab1b81dee3",
+ "bpm": 126.04801829268435,
+ "bpm_source": "measured",
+ "sections": [
+  {
+   "i": 0,
+   "label": "0:00–0:20 · D2",
+   "start_ms": 0,
+   "end_ms": 20294,
+   "d": 2,
+   "selected": true
+  },
+  {
+   "i": 1,
+   "label": "0:20–0:46 · D4",
+   "start_ms": 20294,
+   "end_ms": 46626,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 2,
+   "label": "0:46–1:09 · D5",
+   "start_ms": 46626,
+   "end_ms": 69045,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 3,
+   "label": "1:09–1:16 · D1",
+   "start_ms": 69045,
+   "end_ms": 76858,
+   "d": 1,
+   "selected": true
+  },
+  {
+   "i": 4,
+   "label": "1:16–2:00 · D4",
+   "start_ms": 76858,
+   "end_ms": 120094,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 5,
+   "label": "2:00–2:10 · D4",
+   "start_ms": 120094,
+   "end_ms": 130067,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 6,
+   "label": "2:10–2:29 · D4",
+   "start_ms": 130067,
+   "end_ms": 149188,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 7,
+   "label": "2:29–2:42 · D1",
+   "start_ms": 149188,
+   "end_ms": 162377,
+   "d": 1,
+   "selected": true
+  },
+  {
+   "i": 8,
+   "label": "2:42–2:58 · D5",
+   "start_ms": 162377,
+   "end_ms": 178339,
+   "d": 5,
+   "selected": true
+  }
+ ]
+}

@@ -1,0 +1,111 @@
+{
+ "sha256": "25a18be2e8b47ee75c336d9e27ac709bf71f0409806d696ab49ea2bddc113d80",
+ "bpm": 117.45383522727278,
+ "bpm_source": "measured",
+ "sections": [
+  {
+   "i": 0,
+   "label": "0:00–0:10 · D5",
+   "start_ms": 0,
+   "end_ms": 10820,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 1,
+   "label": "0:10–0:20 · D4",
+   "start_ms": 10820,
+   "end_ms": 20062,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 2,
+   "label": "0:20–0:36 · D5",
+   "start_ms": 20062,
+   "end_ms": 36049,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 3,
+   "label": "0:36–0:49 · D5",
+   "start_ms": 36049,
+   "end_ms": 49528,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 4,
+   "label": "0:49–1:08 · D5",
+   "start_ms": 49528,
+   "end_ms": 68336,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 5,
+   "label": "1:08–1:20 · D5",
+   "start_ms": 68336,
+   "end_ms": 80538,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 6,
+   "label": "1:20–1:33 · D5",
+   "start_ms": 80538,
+   "end_ms": 93495,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 7,
+   "label": "1:33–1:42 · D5",
+   "start_ms": 93495,
+   "end_ms": 102330,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 8,
+   "label": "1:42–1:52 · D5",
+   "start_ms": 102330,
+   "end_ms": 112466,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 9,
+   "label": "1:52–2:01 · D4",
+   "start_ms": 112466,
+   "end_ms": 121615,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 10,
+   "label": "2:01–2:09 · D4",
+   "start_ms": 121615,
+   "end_ms": 129823,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 11,
+   "label": "2:09–2:21 · D5",
+   "start_ms": 129823,
+   "end_ms": 141642,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 12,
+   "label": "2:21–2:33 · D3",
+   "start_ms": 141642,
+   "end_ms": 153313,
+   "d": 3,
+   "selected": true
+  }
+ ]
+}

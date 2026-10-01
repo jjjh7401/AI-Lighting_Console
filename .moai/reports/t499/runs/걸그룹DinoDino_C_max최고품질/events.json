@@ -1,0 +1,4419 @@
+[
+ {
+  "v": 1,
+  "type": "notice",
+  "message": "'걸그룹DinoDino_C_max최고품질.wav' 첨부됨 — 오디오 · sha256 0edb6c667267b6459a5097b4bb187806fd2bd00dc6e6af5d591908ab1b81dee3 · 31459042바이트. 아직 분석한 것은 없습니다 — 무엇을 할지 말씀해 주세요."
+ },
+ {
+  "v": 1,
+  "type": "notice",
+  "message": "BPM 126.048 로 확정했습니다 (measured). 채택 우선순위: 측정 > 시트 HEAD.BPM > 기본값 120. 구간 9건 채택 · 0건 제외. 이 곡의 큐 리스트를 만들려면 타임코드 번호와 함께 말씀해 주세요 — 확정한 구간을 그대로 씁니다."
+ },
+ {
+  "v": 1,
+  "type": "song_timeline",
+  "timeline": {
+   "song_title": "Design Interview",
+   "sequence_name": "Sequence 211",
+   "sequence_number": 211,
+   "timing_mode": "timecode",
+   "timecode_number": 11,
+   "lifecycle": "pending_approval",
+   "approval": "pending_review",
+   "director_decisions": [
+    {
+     "step": "Q1_CONCEPT",
+     "axis": "palette",
+     "value": "우주",
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q2_PALETTE",
+     "axis": "palette",
+     "value": "블루/퍼플",
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q2B_COLOR_USAGE",
+     "axis": "color_usage",
+     "value": "modulate",
+     "confirmed": true,
+     "source": "default_accepted"
+    },
+    {
+     "step": "Q3_CLIMAX",
+     "axis": "d",
+     "value": {
+      "d_level": 5,
+      "color_tendency": "블루 쿨 볼드",
+      "position_candidates": [
+       "Ring In",
+       "Center",
+       "Wall"
+      ]
+     },
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q4_SPATIAL_STORY",
+     "axis": "position",
+     "value": {
+      "d_level": null,
+      "color_tendency": null,
+      "position_candidates": [
+       "Ring In",
+       "Home",
+       "Vocal DSC",
+       "Center",
+       "Wall",
+       "Cross",
+       "Fan Out",
+       "Audience"
+      ]
+     },
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q5_TEXTURE",
+     "axis": "texture",
+     "value": "중간",
+     "confirmed": true,
+     "source": "option"
+    }
+   ],
+   "sections": [
+    {
+     "index": 1,
+     "label": "Intro",
+     "start_ms": 0,
+     "cue_number": 1,
+     "plan_status": "draft",
+     "d_level": 2,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Ring In",
+     "texture": "긴 페이드 · 정적",
+     "fx": [],
+     "fade_seconds": 1.904036281179117,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 0.0,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Ring In"
+     ],
+     "texture_source": "section_arc",
+     "role": "intro",
+     "end_ms": 20294,
+     "duration_ms": 20294,
+     "bar_start": 1,
+     "bar_count": 11,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 50
+      },
+      {
+       "group": "BACK",
+       "level": 40
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Ring In",
+     "trans": "FADE"
+    },
+    {
+     "index": 2,
+     "label": "Verse 1",
+     "start_ms": 20294,
+     "cue_number": 2,
+     "plan_status": "draft",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Home",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow pan"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 20.294,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Home"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 46626,
+     "duration_ms": 26332,
+     "bar_start": 12,
+     "bar_count": 14,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 25
+      },
+      {
+       "group": "BACK",
+       "level": 20
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Home",
+     "trans": "FADE"
+    },
+    {
+     "index": 3,
+     "label": "Chorus 1",
+     "start_ms": 46626,
+     "cue_number": 3,
+     "plan_status": "draft",
+     "d_level": 5,
+     "palette": [
+      "블루",
+      "warm white"
+     ],
+     "position": "Ring In",
+     "texture": "샤프 히트",
+     "fx": [
+      "dimmer chase"
+     ],
+     "fade_seconds": 0.23800453514738962,
+     "accents": [
+      "climax accent 블루 쿨 볼드"
+     ],
+     "mib": false,
+     "trig_time_seconds": 46.626,
+     "d_source": "director_intent",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#FFBF66",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Ring In",
+      "Center",
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "chorus",
+     "end_ms": 69045,
+     "duration_ms": 22419,
+     "bar_start": 25,
+     "bar_count": 12,
+     "palette_primary": "블루",
+     "palette_secondary": "warm white",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 100
+      },
+      {
+       "group": "BACK",
+       "level": 80
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Ring In",
+     "trans": "FADE"
+    },
+    {
+     "index": 4,
+     "label": "Bridge 1",
+     "start_ms": 69045,
+     "cue_number": 4,
+     "plan_status": "draft",
+     "d_level": 1,
+     "palette": [
+      "블루",
+      "lavender"
+     ],
+     "position": "Center",
+     "texture": "스파스 · 고립",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 69.045,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#8C59FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Center"
+     ],
+     "texture_source": "section_arc",
+     "role": "bridge",
+     "end_ms": 76858,
+     "duration_ms": 7813,
+     "bar_start": 37,
+     "bar_count": 4,
+     "palette_primary": "블루",
+     "palette_secondary": "lavender",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 30
+      },
+      {
+       "group": "BACK",
+       "level": 24
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Center",
+     "trans": "FADE"
+    },
+    {
+     "index": 5,
+     "label": "Verse 2 (1/2)",
+     "start_ms": 76858,
+     "cue_number": 5,
+     "plan_status": "draft",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 76.858,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 92090,
+     "duration_ms": 15232,
+     "bar_start": 41,
+     "bar_count": 8,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 6,
+     "label": "Verse 2 (2/2)",
+     "start_ms": 92090,
+     "cue_number": 6,
+     "plan_status": "draft",
+     "d_level": 4,
+     "palette": [
+      "cyan",
+      "블루"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 92.09,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#00E6FF",
+     "palette_secondary_hex": "#0D33FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 120094,
+     "duration_ms": 28004,
+     "bar_start": 49,
+     "bar_count": 15,
+     "palette_primary": "cyan",
+     "palette_secondary": "블루",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 7,
+     "label": "Verse 3",
+     "start_ms": 120094,
+     "cue_number": 7,
+     "plan_status": "draft",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "soft wave"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 120.094,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "연한",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 130067,
+     "duration_ms": 9973,
+     "bar_start": 64,
+     "bar_count": 5,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 8,
+     "label": "Verse 4",
+     "start_ms": 130067,
+     "cue_number": 8,
+     "plan_status": "draft",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Cross",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow pan"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 130.067,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "쿨톤",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Cross"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 149188,
+     "duration_ms": 19121,
+     "bar_start": 69,
+     "bar_count": 10,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Cross",
+     "trans": "FADE"
+    },
+    {
+     "index": 9,
+     "label": "Bridge 2",
+     "start_ms": 149188,
+     "cue_number": 9,
+     "plan_status": "draft",
+     "d_level": 1,
+     "palette": [
+      "블루",
+      "lavender"
+     ],
+     "position": "Fan Out",
+     "texture": "스파스 · 고립",
+     "fx": [
+      "orbit"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 149.188,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#8C59FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Fan Out"
+     ],
+     "texture_source": "section_arc",
+     "role": "bridge",
+     "end_ms": 162377,
+     "duration_ms": 13189,
+     "bar_start": 79,
+     "bar_count": 7,
+     "palette_primary": "블루",
+     "palette_secondary": "lavender",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 30
+      },
+      {
+       "group": "BACK",
+       "level": 24
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Fan Out",
+     "trans": "FADE"
+    },
+    {
+     "index": 10,
+     "label": "Finale",
+     "start_ms": 162377,
+     "cue_number": 10,
+     "plan_status": "draft",
+     "d_level": 5,
+     "palette": [
+      "블루",
+      "warm white"
+     ],
+     "position": "Audience",
+     "texture": "서스테인 히트",
+     "fx": [
+      "dimmer chase"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [
+      "white flash"
+     ],
+     "mib": false,
+     "trig_time_seconds": 162.377,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#FFBF66",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Audience"
+     ],
+     "texture_source": "section_arc",
+     "role": "finale",
+     "bar_start": 86,
+     "palette_primary": "블루",
+     "palette_secondary": "warm white",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 100
+      },
+      {
+       "group": "BACK",
+       "level": 80
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Audience",
+     "trans": "FADE"
+    }
+   ],
+   "lint": [
+    {
+     "rule_id": "L9",
+     "cue_number": 3.5,
+     "description": "snap fade (0s) used outside an accent/hit/drop/button cue (G1)"
+    },
+    {
+     "rule_id": "L13",
+     "cue_number": 7.0,
+     "description": "identical (position, palette, effect) combo for 3 consecutive cues (V2)"
+    }
+   ],
+   "unresolved": [],
+   "disabled": [],
+   "readback": {
+    "verified": null,
+    "message": null
+   },
+   "console_stored": false,
+   "warnings": [],
+   "layer_mapping": [
+    {
+     "role": "key",
+     "group_no": 2,
+     "group_name": "KEY"
+    },
+    {
+     "role": "key",
+     "group_no": 3,
+     "group_name": "FOH"
+    },
+    {
+     "role": "back",
+     "group_no": 4,
+     "group_name": "BACK"
+    },
+    {
+     "role": "effect",
+     "group_no": 14,
+     "group_name": "BLIND"
+    },
+    {
+     "role": "effect",
+     "group_no": 15,
+     "group_name": "STROBE"
+    },
+    {
+     "role": "effect",
+     "group_no": 16,
+     "group_name": "HAZE"
+    }
+   ],
+   "preset_start": 21,
+   "concept_report": {
+    "available": true,
+    "gates": {
+     "G1 어휘 닫힘": {
+      "passed": true,
+      "detail": "구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)"
+     },
+     "G2 후렴 정체성": {
+      "passed": null,
+      "detail": "후렴 쌍 없음(구조상 n/a)"
+     },
+     "G3 회차마다 새 축(5회차까지)": {
+      "passed": null,
+      "detail": "후렴 쌍 없음(구조상 n/a)"
+     },
+     "G4 피날레 새 축 + 여유": {
+      "passed": null,
+      "detail": "Final Chorus 없음(구조상 n/a)"
+     },
+     "G5 헤드룸 경고 0": {
+      "passed": true,
+      "detail": "경고 0건"
+     },
+     "G6 컬러: 유보색 조기 0 · 브리지 위반 0": {
+      "passed": true,
+      "detail": "유보색 n/a(입력에 유보색 없음) · 브리지 pass(위반 0)"
+     },
+     "G7 후렴 주색 동일": {
+      "passed": true,
+      "detail": "chorus_primary_color_identity: pass (위반 0건)"
+     },
+     "G8 후렴 앞 빌드업": {
+      "passed": true,
+      "detail": "빌드업 1 / 필요 1"
+     },
+     "G9 트래킹: Block·Release·누출 0": {
+      "passed": true,
+      "detail": "Block 처음 True · Release 마지막 True · cue_only 3 · 누출 없음 True"
+     },
+     "G10 상대 감소 겹침 없음": {
+      "passed": true,
+      "detail": "절 밝기 [45, 38, 38, 38, 38]"
+     },
+     "G11 타이밍 전 큐 배정": {
+      "passed": true,
+      "detail": "snap 1 · short 12 · long 2 · 후렴 순차 1"
+     },
+     "G12 MIB: 켜진 채 이동 0": {
+      "passed": true,
+      "detail": "어둠 1 · Mark 0 · 켜진 채 0"
+     },
+     "G13 큐 밀도 10~45": {
+      "passed": true,
+      "detail": "시퀀스 큐 15 + 원샷 1"
+     }
+    },
+    "mib": [
+     null,
+     {
+      "status": "dark"
+     },
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "lint_finding_count": 6,
+    "lint_disabled_rule_count": 2,
+    "energy_report_count": 15,
+    "rows": [
+     {
+      "q": 1,
+      "ts": -1.0,
+      "kind": "safety",
+      "section": "Intro",
+      "occurrence": 0,
+      "trigger": null,
+      "tracking": "block",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "verified",
+      "screen_position": null,
+      "unused_groups": 10,
+      "description": "+KEY · 색 블루"
+     },
+     {
+      "q": 2,
+      "ts": 0.0,
+      "kind": "section",
+      "section": "Intro",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": "dark",
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 0,
+      "unused_groups": 9,
+      "description": "+BACK"
+     },
+     {
+      "q": 3,
+      "ts": 12.4,
+      "kind": "phrase",
+      "section": "Intro",
+      "occurrence": 1,
+      "trigger": "보컬 시작",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 0,
+      "unused_groups": 7,
+      "description": "+SIDE-L·SIDE-R"
+     },
+     {
+      "q": 4,
+      "ts": 20.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 1,
+      "unused_groups": 7,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 5,
+      "ts": 38.4,
+      "kind": "phrase",
+      "section": "Pre-Chorus",
+      "occurrence": 1,
+      "trigger": "빌드업 시작",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "practitioner_pattern",
+      "screen_position": 1,
+      "unused_groups": 6,
+      "description": "+FOH"
+     },
+     {
+      "q": 6,
+      "ts": 46.0,
+      "kind": "section",
+      "section": "Chorus",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": {
+       "shot": "White hit",
+       "target": "KEY+FOH"
+      },
+      "evidence": null,
+      "screen_position": 2,
+      "unused_groups": 6,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 7,
+      "ts": 49.8,
+      "kind": "phrase",
+      "section": "Chorus",
+      "occurrence": 1,
+      "trigger": "악기 추가",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "practitioner_pattern",
+      "screen_position": 2,
+      "unused_groups": 4,
+      "description": "+WASH-D·WASH-U"
+     },
+     {
+      "q": 8,
+      "ts": 69.0,
+      "kind": "section",
+      "section": "Bridge",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 3,
+      "unused_groups": 9,
+      "description": "-FOH·SIDE-L·SIDE-R·WASH-D·WASH-U"
+     },
+     {
+      "q": 9,
+      "ts": 76.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 2,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 4,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · +SIDE-L·SIDE-R"
+     },
+     {
+      "q": 10,
+      "ts": 92.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 3,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 5,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · 색 cyan"
+     },
+     {
+      "q": 11,
+      "ts": 120.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 4,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 6,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · 색 블루"
+     },
+     {
+      "q": 12,
+      "ts": 130.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 5,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 7,
+      "unused_groups": 7,
+      "description": "Verse 1 복원"
+     },
+     {
+      "q": 13,
+      "ts": 149.0,
+      "kind": "section",
+      "section": "Bridge",
+      "occurrence": 2,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 8,
+      "unused_groups": 9,
+      "description": "-SIDE-L·SIDE-R"
+     },
+     {
+      "q": 14,
+      "ts": 162.0,
+      "kind": "section",
+      "section": "Outro",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 9,
+      "unused_groups": 9,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 15,
+      "ts": 178.0,
+      "kind": "safety",
+      "section": "Outro",
+      "occurrence": 0,
+      "trigger": null,
+      "tracking": "release",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "verified",
+      "screen_position": null,
+      "unused_groups": 11,
+      "description": "-BACK·KEY"
+     }
+    ],
+    "row_pairing": {
+     "available": true,
+     "reason": null
+    },
+    "reserve": [
+     {
+      "name": "BLIND",
+      "kind": "group",
+      "released_q": null,
+      "screen_position": null
+     },
+     {
+      "name": "STROBE",
+      "kind": "group",
+      "released_q": null,
+      "screen_position": null
+     }
+    ],
+    "glance": {
+     "available": true,
+     "rule": "director-confirmed-2026-09-28",
+     "reason": null,
+     "stages": [
+      {
+       "stage": "시작",
+       "positions": [
+        0
+       ],
+       "reason": null
+      },
+      {
+       "stage": "쌓기",
+       "positions": [
+        1
+       ],
+       "reason": null
+      },
+      {
+       "stage": "강조",
+       "positions": [],
+       "reason": "후렴이 하나뿐이라 그 후렴을 정점으로 셌다"
+      },
+      {
+       "stage": "예고",
+       "positions": [],
+       "reason": "끝에서 둘째 후렴이 없다"
+      },
+      {
+       "stage": "정점→마무리",
+       "positions": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+       ],
+       "reason": null
+      }
+     ]
+    }
+   },
+   "concept_bullet": {
+    "available": true,
+    "text": "우주",
+    "origin": "option",
+    "origin_label": "인터뷰 Q1 — 제안 중 선택"
+   },
+   "bpm": 126.04801829268435,
+   "time_signature": "4/4",
+   "seconds_per_bar": 1.904036281179117,
+   "tc_method": "DERIVED",
+   "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+  }
+ },
+ {
+  "v": 1,
+  "type": "song_timeline",
+  "timeline": {
+   "song_title": "Design Interview",
+   "sequence_name": "Sequence 211",
+   "sequence_number": 211,
+   "timing_mode": "timecode",
+   "timecode_number": 11,
+   "lifecycle": "approved",
+   "approval": "approved",
+   "director_decisions": [
+    {
+     "step": "Q1_CONCEPT",
+     "axis": "palette",
+     "value": "우주",
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q2_PALETTE",
+     "axis": "palette",
+     "value": "블루/퍼플",
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q2B_COLOR_USAGE",
+     "axis": "color_usage",
+     "value": "modulate",
+     "confirmed": true,
+     "source": "default_accepted"
+    },
+    {
+     "step": "Q3_CLIMAX",
+     "axis": "d",
+     "value": {
+      "d_level": 5,
+      "color_tendency": "블루 쿨 볼드",
+      "position_candidates": [
+       "Ring In",
+       "Center",
+       "Wall"
+      ]
+     },
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q4_SPATIAL_STORY",
+     "axis": "position",
+     "value": {
+      "d_level": null,
+      "color_tendency": null,
+      "position_candidates": [
+       "Ring In",
+       "Home",
+       "Vocal DSC",
+       "Center",
+       "Wall",
+       "Cross",
+       "Fan Out",
+       "Audience"
+      ]
+     },
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q5_TEXTURE",
+     "axis": "texture",
+     "value": "중간",
+     "confirmed": true,
+     "source": "option"
+    }
+   ],
+   "sections": [
+    {
+     "index": 1,
+     "label": "Intro",
+     "start_ms": 0,
+     "cue_number": 1,
+     "plan_status": "approved",
+     "d_level": 2,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Ring In",
+     "texture": "긴 페이드 · 정적",
+     "fx": [],
+     "fade_seconds": 1.904036281179117,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 0.0,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Ring In"
+     ],
+     "texture_source": "section_arc",
+     "role": "intro",
+     "end_ms": 20294,
+     "duration_ms": 20294,
+     "bar_start": 1,
+     "bar_count": 11,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 50
+      },
+      {
+       "group": "BACK",
+       "level": 40
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Ring In",
+     "trans": "FADE"
+    },
+    {
+     "index": 2,
+     "label": "Verse 1",
+     "start_ms": 20294,
+     "cue_number": 2,
+     "plan_status": "approved",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Home",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow pan"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 20.294,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Home"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 46626,
+     "duration_ms": 26332,
+     "bar_start": 12,
+     "bar_count": 14,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 25
+      },
+      {
+       "group": "BACK",
+       "level": 20
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Home",
+     "trans": "FADE"
+    },
+    {
+     "index": 3,
+     "label": "Chorus 1",
+     "start_ms": 46626,
+     "cue_number": 3,
+     "plan_status": "approved",
+     "d_level": 5,
+     "palette": [
+      "블루",
+      "warm white"
+     ],
+     "position": "Ring In",
+     "texture": "샤프 히트",
+     "fx": [
+      "dimmer chase"
+     ],
+     "fade_seconds": 0.23800453514738962,
+     "accents": [
+      "climax accent 블루 쿨 볼드"
+     ],
+     "mib": false,
+     "trig_time_seconds": 46.626,
+     "d_source": "director_intent",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#FFBF66",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Ring In",
+      "Center",
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "chorus",
+     "end_ms": 69045,
+     "duration_ms": 22419,
+     "bar_start": 25,
+     "bar_count": 12,
+     "palette_primary": "블루",
+     "palette_secondary": "warm white",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 100
+      },
+      {
+       "group": "BACK",
+       "level": 80
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Ring In",
+     "trans": "FADE"
+    },
+    {
+     "index": 4,
+     "label": "Bridge 1",
+     "start_ms": 69045,
+     "cue_number": 4,
+     "plan_status": "approved",
+     "d_level": 1,
+     "palette": [
+      "블루",
+      "lavender"
+     ],
+     "position": "Center",
+     "texture": "스파스 · 고립",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 69.045,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#8C59FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Center"
+     ],
+     "texture_source": "section_arc",
+     "role": "bridge",
+     "end_ms": 76858,
+     "duration_ms": 7813,
+     "bar_start": 37,
+     "bar_count": 4,
+     "palette_primary": "블루",
+     "palette_secondary": "lavender",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 30
+      },
+      {
+       "group": "BACK",
+       "level": 24
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Center",
+     "trans": "FADE"
+    },
+    {
+     "index": 5,
+     "label": "Verse 2 (1/2)",
+     "start_ms": 76858,
+     "cue_number": 5,
+     "plan_status": "approved",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 76.858,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 92090,
+     "duration_ms": 15232,
+     "bar_start": 41,
+     "bar_count": 8,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 6,
+     "label": "Verse 2 (2/2)",
+     "start_ms": 92090,
+     "cue_number": 6,
+     "plan_status": "approved",
+     "d_level": 4,
+     "palette": [
+      "cyan",
+      "블루"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 92.09,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#00E6FF",
+     "palette_secondary_hex": "#0D33FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 120094,
+     "duration_ms": 28004,
+     "bar_start": 49,
+     "bar_count": 15,
+     "palette_primary": "cyan",
+     "palette_secondary": "블루",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 7,
+     "label": "Verse 3",
+     "start_ms": 120094,
+     "cue_number": 7,
+     "plan_status": "approved",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "soft wave"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 120.094,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "연한",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 130067,
+     "duration_ms": 9973,
+     "bar_start": 64,
+     "bar_count": 5,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 8,
+     "label": "Verse 4",
+     "start_ms": 130067,
+     "cue_number": 8,
+     "plan_status": "approved",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Cross",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow pan"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 130.067,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "쿨톤",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Cross"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 149188,
+     "duration_ms": 19121,
+     "bar_start": 69,
+     "bar_count": 10,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Cross",
+     "trans": "FADE"
+    },
+    {
+     "index": 9,
+     "label": "Bridge 2",
+     "start_ms": 149188,
+     "cue_number": 9,
+     "plan_status": "approved",
+     "d_level": 1,
+     "palette": [
+      "블루",
+      "lavender"
+     ],
+     "position": "Fan Out",
+     "texture": "스파스 · 고립",
+     "fx": [
+      "orbit"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 149.188,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#8C59FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Fan Out"
+     ],
+     "texture_source": "section_arc",
+     "role": "bridge",
+     "end_ms": 162377,
+     "duration_ms": 13189,
+     "bar_start": 79,
+     "bar_count": 7,
+     "palette_primary": "블루",
+     "palette_secondary": "lavender",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 30
+      },
+      {
+       "group": "BACK",
+       "level": 24
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Fan Out",
+     "trans": "FADE"
+    },
+    {
+     "index": 10,
+     "label": "Finale",
+     "start_ms": 162377,
+     "cue_number": 10,
+     "plan_status": "approved",
+     "d_level": 5,
+     "palette": [
+      "블루",
+      "warm white"
+     ],
+     "position": "Audience",
+     "texture": "서스테인 히트",
+     "fx": [
+      "dimmer chase"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [
+      "white flash"
+     ],
+     "mib": false,
+     "trig_time_seconds": 162.377,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#FFBF66",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Audience"
+     ],
+     "texture_source": "section_arc",
+     "role": "finale",
+     "bar_start": 86,
+     "palette_primary": "블루",
+     "palette_secondary": "warm white",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 100
+      },
+      {
+       "group": "BACK",
+       "level": 80
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Audience",
+     "trans": "FADE"
+    }
+   ],
+   "lint": [
+    {
+     "rule_id": "L9",
+     "cue_number": 3.5,
+     "description": "snap fade (0s) used outside an accent/hit/drop/button cue (G1)"
+    },
+    {
+     "rule_id": "L13",
+     "cue_number": 7.0,
+     "description": "identical (position, palette, effect) combo for 3 consecutive cues (V2)"
+    }
+   ],
+   "unresolved": [],
+   "disabled": [],
+   "readback": {
+    "verified": null,
+    "message": null
+   },
+   "console_stored": false,
+   "warnings": [],
+   "layer_mapping": [
+    {
+     "role": "key",
+     "group_no": 2,
+     "group_name": "KEY"
+    },
+    {
+     "role": "key",
+     "group_no": 3,
+     "group_name": "FOH"
+    },
+    {
+     "role": "back",
+     "group_no": 4,
+     "group_name": "BACK"
+    },
+    {
+     "role": "effect",
+     "group_no": 14,
+     "group_name": "BLIND"
+    },
+    {
+     "role": "effect",
+     "group_no": 15,
+     "group_name": "STROBE"
+    },
+    {
+     "role": "effect",
+     "group_no": 16,
+     "group_name": "HAZE"
+    }
+   ],
+   "preset_start": 21,
+   "concept_report": {
+    "available": true,
+    "gates": {
+     "G1 어휘 닫힘": {
+      "passed": true,
+      "detail": "구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)"
+     },
+     "G2 후렴 정체성": {
+      "passed": null,
+      "detail": "후렴 쌍 없음(구조상 n/a)"
+     },
+     "G3 회차마다 새 축(5회차까지)": {
+      "passed": null,
+      "detail": "후렴 쌍 없음(구조상 n/a)"
+     },
+     "G4 피날레 새 축 + 여유": {
+      "passed": null,
+      "detail": "Final Chorus 없음(구조상 n/a)"
+     },
+     "G5 헤드룸 경고 0": {
+      "passed": true,
+      "detail": "경고 0건"
+     },
+     "G6 컬러: 유보색 조기 0 · 브리지 위반 0": {
+      "passed": true,
+      "detail": "유보색 n/a(입력에 유보색 없음) · 브리지 pass(위반 0)"
+     },
+     "G7 후렴 주색 동일": {
+      "passed": true,
+      "detail": "chorus_primary_color_identity: pass (위반 0건)"
+     },
+     "G8 후렴 앞 빌드업": {
+      "passed": true,
+      "detail": "빌드업 1 / 필요 1"
+     },
+     "G9 트래킹: Block·Release·누출 0": {
+      "passed": true,
+      "detail": "Block 처음 True · Release 마지막 True · cue_only 3 · 누출 없음 True"
+     },
+     "G10 상대 감소 겹침 없음": {
+      "passed": true,
+      "detail": "절 밝기 [45, 38, 38, 38, 38]"
+     },
+     "G11 타이밍 전 큐 배정": {
+      "passed": true,
+      "detail": "snap 1 · short 12 · long 2 · 후렴 순차 1"
+     },
+     "G12 MIB: 켜진 채 이동 0": {
+      "passed": true,
+      "detail": "어둠 1 · Mark 0 · 켜진 채 0"
+     },
+     "G13 큐 밀도 10~45": {
+      "passed": true,
+      "detail": "시퀀스 큐 15 + 원샷 1"
+     }
+    },
+    "mib": [
+     null,
+     {
+      "status": "dark"
+     },
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "lint_finding_count": 6,
+    "lint_disabled_rule_count": 2,
+    "energy_report_count": 15,
+    "rows": [
+     {
+      "q": 1,
+      "ts": -1.0,
+      "kind": "safety",
+      "section": "Intro",
+      "occurrence": 0,
+      "trigger": null,
+      "tracking": "block",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "verified",
+      "screen_position": null,
+      "unused_groups": 10,
+      "description": "+KEY · 색 블루"
+     },
+     {
+      "q": 2,
+      "ts": 0.0,
+      "kind": "section",
+      "section": "Intro",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": "dark",
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 0,
+      "unused_groups": 9,
+      "description": "+BACK"
+     },
+     {
+      "q": 3,
+      "ts": 12.4,
+      "kind": "phrase",
+      "section": "Intro",
+      "occurrence": 1,
+      "trigger": "보컬 시작",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 0,
+      "unused_groups": 7,
+      "description": "+SIDE-L·SIDE-R"
+     },
+     {
+      "q": 4,
+      "ts": 20.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 1,
+      "unused_groups": 7,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 5,
+      "ts": 38.4,
+      "kind": "phrase",
+      "section": "Pre-Chorus",
+      "occurrence": 1,
+      "trigger": "빌드업 시작",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "practitioner_pattern",
+      "screen_position": 1,
+      "unused_groups": 6,
+      "description": "+FOH"
+     },
+     {
+      "q": 6,
+      "ts": 46.0,
+      "kind": "section",
+      "section": "Chorus",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": {
+       "shot": "White hit",
+       "target": "KEY+FOH"
+      },
+      "evidence": null,
+      "screen_position": 2,
+      "unused_groups": 6,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 7,
+      "ts": 49.8,
+      "kind": "phrase",
+      "section": "Chorus",
+      "occurrence": 1,
+      "trigger": "악기 추가",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "practitioner_pattern",
+      "screen_position": 2,
+      "unused_groups": 4,
+      "description": "+WASH-D·WASH-U"
+     },
+     {
+      "q": 8,
+      "ts": 69.0,
+      "kind": "section",
+      "section": "Bridge",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 3,
+      "unused_groups": 9,
+      "description": "-FOH·SIDE-L·SIDE-R·WASH-D·WASH-U"
+     },
+     {
+      "q": 9,
+      "ts": 76.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 2,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 4,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · +SIDE-L·SIDE-R"
+     },
+     {
+      "q": 10,
+      "ts": 92.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 3,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 5,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · 색 cyan"
+     },
+     {
+      "q": 11,
+      "ts": 120.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 4,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 6,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · 색 블루"
+     },
+     {
+      "q": 12,
+      "ts": 130.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 5,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 7,
+      "unused_groups": 7,
+      "description": "Verse 1 복원"
+     },
+     {
+      "q": 13,
+      "ts": 149.0,
+      "kind": "section",
+      "section": "Bridge",
+      "occurrence": 2,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 8,
+      "unused_groups": 9,
+      "description": "-SIDE-L·SIDE-R"
+     },
+     {
+      "q": 14,
+      "ts": 162.0,
+      "kind": "section",
+      "section": "Outro",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 9,
+      "unused_groups": 9,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 15,
+      "ts": 178.0,
+      "kind": "safety",
+      "section": "Outro",
+      "occurrence": 0,
+      "trigger": null,
+      "tracking": "release",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "verified",
+      "screen_position": null,
+      "unused_groups": 11,
+      "description": "-BACK·KEY"
+     }
+    ],
+    "row_pairing": {
+     "available": true,
+     "reason": null
+    },
+    "reserve": [
+     {
+      "name": "BLIND",
+      "kind": "group",
+      "released_q": null,
+      "screen_position": null
+     },
+     {
+      "name": "STROBE",
+      "kind": "group",
+      "released_q": null,
+      "screen_position": null
+     }
+    ],
+    "glance": {
+     "available": true,
+     "rule": "director-confirmed-2026-09-28",
+     "reason": null,
+     "stages": [
+      {
+       "stage": "시작",
+       "positions": [
+        0
+       ],
+       "reason": null
+      },
+      {
+       "stage": "쌓기",
+       "positions": [
+        1
+       ],
+       "reason": null
+      },
+      {
+       "stage": "강조",
+       "positions": [],
+       "reason": "후렴이 하나뿐이라 그 후렴을 정점으로 셌다"
+      },
+      {
+       "stage": "예고",
+       "positions": [],
+       "reason": "끝에서 둘째 후렴이 없다"
+      },
+      {
+       "stage": "정점→마무리",
+       "positions": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+       ],
+       "reason": null
+      }
+     ]
+    }
+   },
+   "concept_bullet": {
+    "available": true,
+    "text": "우주",
+    "origin": "option",
+    "origin_label": "인터뷰 Q1 — 제안 중 선택"
+   },
+   "bpm": 126.04801829268435,
+   "time_signature": "4/4",
+   "seconds_per_bar": 1.904036281179117,
+   "tc_method": "DERIVED",
+   "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+  }
+ },
+ {
+  "v": 1,
+  "type": "execution_preview",
+  "preview_id": "preview-1",
+  "summary": "실행 전 미리보기 — 91개 명령",
+  "risk_level": "caution",
+  "commands": [
+   {
+    "command": "ChangeDestination Root",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.30",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 50",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 40",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 1 'Intro' CueFade 1.90404",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.21",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 25",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 20",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 2 'Verse 1' CueFade 0.714014",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.30",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 80",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Group 14 ; Attribute 'Dimmer' At 80",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "14",
+    "label": "Group 14 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 3 'Chorus 1' CueFade 0.238005",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 14 ; Attribute 'Dimmer' At 0",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "14",
+    "label": "Group 14 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 3.5 'Chorus 1 Return' CueFade 0",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.24",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 30",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 24",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 4 'Bridge 1' CueFade 3.80807",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.22",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 90",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 72",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 5 'Verse 2 1 of 2' CueFade 0.714014",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.22",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 90",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 72",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 6 'Verse 2 2 of 2' CueFade 0.714014",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.22",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 90",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 72",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 7 'Verse 3' CueFade 0.714014",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.28",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 90",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 72",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 8 'Verse 4' CueFade 0.714014",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.26",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 30",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 24",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 9 'Bridge 2' CueFade 3.80807",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.23",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "action": "modify",
+    "target_kind": "fixture",
+    "target": "101",
+    "label": "Fixture 101 수정"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 80",
+    "action": "modify",
+    "target_kind": "group",
+    "target": "4",
+    "label": "Group 4 수정"
+   },
+   {
+    "command": "Store Sequence 211 Cue 10 'Finale' CueFade 3.80807",
+    "action": "store",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 저장"
+   },
+   {
+    "command": "ClearAll",
+    "action": "unknown",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 명령"
+   },
+   {
+    "command": "Store Timecode 11",
+    "action": "store",
+    "target_kind": "unknown",
+    "target": null,
+    "label": "대상 미확인 저장"
+   },
+   {
+    "command": "Set Timecode 11 Property 'Name' 'Sequence 211 Timecode'",
+    "action": "unknown",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 명령"
+   },
+   {
+    "command": "Assign Sequence 211 At Timecode 11",
+    "action": "modify",
+    "target_kind": "sequence",
+    "target": "211",
+    "label": "Sequence 211 수정"
+   },
+   {
+    "command": "Set Cue 1 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "1",
+    "label": "Cue 1 명령"
+   },
+   {
+    "command": "Set Cue 1 Sequence 211 Property 'TrigTime' 0",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "1",
+    "label": "Cue 1 명령"
+   },
+   {
+    "command": "Set Cue 2 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "2",
+    "label": "Cue 2 명령"
+   },
+   {
+    "command": "Set Cue 2 Sequence 211 Property 'TrigTime' 20.294",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "2",
+    "label": "Cue 2 명령"
+   },
+   {
+    "command": "Set Cue 3 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "3",
+    "label": "Cue 3 명령"
+   },
+   {
+    "command": "Set Cue 3 Sequence 211 Property 'TrigTime' 46.626",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "3",
+    "label": "Cue 3 명령"
+   },
+   {
+    "command": "Set Cue 3.5 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "3.5",
+    "label": "Cue 3.5 명령"
+   },
+   {
+    "command": "Set Cue 3.5 Sequence 211 Property 'TrigTime' 47.578",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "3.5",
+    "label": "Cue 3.5 명령"
+   },
+   {
+    "command": "Set Cue 4 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "4",
+    "label": "Cue 4 명령"
+   },
+   {
+    "command": "Set Cue 4 Sequence 211 Property 'TrigTime' 69.045",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "4",
+    "label": "Cue 4 명령"
+   },
+   {
+    "command": "Set Cue 5 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "5",
+    "label": "Cue 5 명령"
+   },
+   {
+    "command": "Set Cue 5 Sequence 211 Property 'TrigTime' 76.858",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "5",
+    "label": "Cue 5 명령"
+   },
+   {
+    "command": "Set Cue 6 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "6",
+    "label": "Cue 6 명령"
+   },
+   {
+    "command": "Set Cue 6 Sequence 211 Property 'TrigTime' 92.09",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "6",
+    "label": "Cue 6 명령"
+   },
+   {
+    "command": "Set Cue 7 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "7",
+    "label": "Cue 7 명령"
+   },
+   {
+    "command": "Set Cue 7 Sequence 211 Property 'TrigTime' 120.094",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "7",
+    "label": "Cue 7 명령"
+   },
+   {
+    "command": "Set Cue 8 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "8",
+    "label": "Cue 8 명령"
+   },
+   {
+    "command": "Set Cue 8 Sequence 211 Property 'TrigTime' 130.067",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "8",
+    "label": "Cue 8 명령"
+   },
+   {
+    "command": "Set Cue 9 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "9",
+    "label": "Cue 9 명령"
+   },
+   {
+    "command": "Set Cue 9 Sequence 211 Property 'TrigTime' 149.188",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "9",
+    "label": "Cue 9 명령"
+   },
+   {
+    "command": "Set Cue 10 Sequence 211 Property 'TrigType' 'Time'",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "10",
+    "label": "Cue 10 명령"
+   },
+   {
+    "command": "Set Cue 10 Sequence 211 Property 'TrigTime' 162.377",
+    "action": "unknown",
+    "target_kind": "cue",
+    "target": "10",
+    "label": "Cue 10 명령"
+   }
+  ],
+  "warnings": [
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100"
+   },
+   {
+    "severity": "caution",
+    "label": "풀 인텐시티",
+    "detail": "디머 또는 fixture intensity가 100%로 올라갈 수 있습니다.",
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100"
+   }
+  ]
+ },
+ {
+  "v": 1,
+  "type": "song_timeline",
+  "timeline": {
+   "song_title": "Design Interview",
+   "sequence_name": "Sequence 211",
+   "sequence_number": 211,
+   "timing_mode": "timecode",
+   "timecode_number": 11,
+   "lifecycle": "verified",
+   "approval": "approved",
+   "director_decisions": [
+    {
+     "step": "Q1_CONCEPT",
+     "axis": "palette",
+     "value": "우주",
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q2_PALETTE",
+     "axis": "palette",
+     "value": "블루/퍼플",
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q2B_COLOR_USAGE",
+     "axis": "color_usage",
+     "value": "modulate",
+     "confirmed": true,
+     "source": "default_accepted"
+    },
+    {
+     "step": "Q3_CLIMAX",
+     "axis": "d",
+     "value": {
+      "d_level": 5,
+      "color_tendency": "블루 쿨 볼드",
+      "position_candidates": [
+       "Ring In",
+       "Center",
+       "Wall"
+      ]
+     },
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q4_SPATIAL_STORY",
+     "axis": "position",
+     "value": {
+      "d_level": null,
+      "color_tendency": null,
+      "position_candidates": [
+       "Ring In",
+       "Home",
+       "Vocal DSC",
+       "Center",
+       "Wall",
+       "Cross",
+       "Fan Out",
+       "Audience"
+      ]
+     },
+     "confirmed": true,
+     "source": "option"
+    },
+    {
+     "step": "Q5_TEXTURE",
+     "axis": "texture",
+     "value": "중간",
+     "confirmed": true,
+     "source": "option"
+    }
+   ],
+   "sections": [
+    {
+     "index": 1,
+     "label": "Intro",
+     "start_ms": 0,
+     "cue_number": 1,
+     "plan_status": "verified",
+     "d_level": 2,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Ring In",
+     "texture": "긴 페이드 · 정적",
+     "fx": [],
+     "fade_seconds": 1.904036281179117,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 0.0,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Ring In"
+     ],
+     "texture_source": "section_arc",
+     "role": "intro",
+     "end_ms": 20294,
+     "duration_ms": 20294,
+     "bar_start": 1,
+     "bar_count": 11,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 50
+      },
+      {
+       "group": "BACK",
+       "level": 40
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Ring In",
+     "trans": "FADE"
+    },
+    {
+     "index": 2,
+     "label": "Verse 1",
+     "start_ms": 20294,
+     "cue_number": 2,
+     "plan_status": "verified",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Home",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow pan"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 20.294,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Home"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 46626,
+     "duration_ms": 26332,
+     "bar_start": 12,
+     "bar_count": 14,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 25
+      },
+      {
+       "group": "BACK",
+       "level": 20
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Home",
+     "trans": "FADE"
+    },
+    {
+     "index": 3,
+     "label": "Chorus 1",
+     "start_ms": 46626,
+     "cue_number": 3,
+     "plan_status": "verified",
+     "d_level": 5,
+     "palette": [
+      "블루",
+      "warm white"
+     ],
+     "position": "Ring In",
+     "texture": "샤프 히트",
+     "fx": [
+      "dimmer chase"
+     ],
+     "fade_seconds": 0.23800453514738962,
+     "accents": [
+      "climax accent 블루 쿨 볼드"
+     ],
+     "mib": false,
+     "trig_time_seconds": 46.626,
+     "d_source": "director_intent",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#FFBF66",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Ring In",
+      "Center",
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "chorus",
+     "end_ms": 69045,
+     "duration_ms": 22419,
+     "bar_start": 25,
+     "bar_count": 12,
+     "palette_primary": "블루",
+     "palette_secondary": "warm white",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 100
+      },
+      {
+       "group": "BACK",
+       "level": 80
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Ring In",
+     "trans": "FADE"
+    },
+    {
+     "index": 4,
+     "label": "Bridge 1",
+     "start_ms": 69045,
+     "cue_number": 4,
+     "plan_status": "verified",
+     "d_level": 1,
+     "palette": [
+      "블루",
+      "lavender"
+     ],
+     "position": "Center",
+     "texture": "스파스 · 고립",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 69.045,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#8C59FF",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Center"
+     ],
+     "texture_source": "section_arc",
+     "role": "bridge",
+     "end_ms": 76858,
+     "duration_ms": 7813,
+     "bar_start": 37,
+     "bar_count": 4,
+     "palette_primary": "블루",
+     "palette_secondary": "lavender",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 30
+      },
+      {
+       "group": "BACK",
+       "level": 24
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Center",
+     "trans": "FADE"
+    },
+    {
+     "index": 5,
+     "label": "Verse 2 (1/2)",
+     "start_ms": 76858,
+     "cue_number": 5,
+     "plan_status": "verified",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 76.858,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 92090,
+     "duration_ms": 15232,
+     "bar_start": 41,
+     "bar_count": 8,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 6,
+     "label": "Verse 2 (2/2)",
+     "start_ms": 92090,
+     "cue_number": 6,
+     "plan_status": "verified",
+     "d_level": 4,
+     "palette": [
+      "cyan",
+      "블루"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow tilt"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 92.09,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#00E6FF",
+     "palette_secondary_hex": "#0D33FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 120094,
+     "duration_ms": 28004,
+     "bar_start": 49,
+     "bar_count": 15,
+     "palette_primary": "cyan",
+     "palette_secondary": "블루",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 7,
+     "label": "Verse 3",
+     "start_ms": 120094,
+     "cue_number": 7,
+     "plan_status": "verified",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Wall",
+     "texture": "점진 빌드",
+     "fx": [
+      "soft wave"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 120.094,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "연한",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Wall"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 130067,
+     "duration_ms": 9973,
+     "bar_start": 64,
+     "bar_count": 5,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Wall",
+     "trans": "FADE"
+    },
+    {
+     "index": 8,
+     "label": "Verse 4",
+     "start_ms": 130067,
+     "cue_number": 8,
+     "plan_status": "verified",
+     "d_level": 4,
+     "palette": [
+      "블루",
+      "cyan"
+     ],
+     "position": "Cross",
+     "texture": "점진 빌드",
+     "fx": [
+      "slow pan"
+     ],
+     "fade_seconds": 0.7140136054421689,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 130.067,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#00E6FF",
+     "palette_accent_weight": "쿨톤",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Cross"
+     ],
+     "texture_source": "section_arc",
+     "role": "verse",
+     "end_ms": 149188,
+     "duration_ms": 19121,
+     "bar_start": 69,
+     "bar_count": 10,
+     "palette_primary": "블루",
+     "palette_secondary": "cyan",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 90
+      },
+      {
+       "group": "BACK",
+       "level": 72
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Cross",
+     "trans": "FADE"
+    },
+    {
+     "index": 9,
+     "label": "Bridge 2",
+     "start_ms": 149188,
+     "cue_number": 9,
+     "plan_status": "verified",
+     "d_level": 1,
+     "palette": [
+      "블루",
+      "lavender"
+     ],
+     "position": "Fan Out",
+     "texture": "스파스 · 고립",
+     "fx": [
+      "orbit"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [],
+     "mib": false,
+     "trig_time_seconds": 149.188,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#8C59FF",
+     "palette_accent_weight": "짙은",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Fan Out"
+     ],
+     "texture_source": "section_arc",
+     "role": "bridge",
+     "end_ms": 162377,
+     "duration_ms": 13189,
+     "bar_start": 79,
+     "bar_count": 7,
+     "palette_primary": "블루",
+     "palette_secondary": "lavender",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 30
+      },
+      {
+       "group": "BACK",
+       "level": 24
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Fan Out",
+     "trans": "FADE"
+    },
+    {
+     "index": 10,
+     "label": "Finale",
+     "start_ms": 162377,
+     "cue_number": 10,
+     "plan_status": "verified",
+     "d_level": 5,
+     "palette": [
+      "블루",
+      "warm white"
+     ],
+     "position": "Audience",
+     "texture": "서스테인 히트",
+     "fx": [
+      "dimmer chase"
+     ],
+     "fade_seconds": 3.808072562358234,
+     "accents": [
+      "white flash"
+     ],
+     "mib": false,
+     "trig_time_seconds": 162.377,
+     "d_source": "confirmed_song_analysis",
+     "palette_source": "section_arc",
+     "palette_primary_hex": "#0D33FF",
+     "palette_secondary_hex": "#FFBF66",
+     "position_source": "director_intent",
+     "position_candidates": [
+      "Audience"
+     ],
+     "texture_source": "section_arc",
+     "role": "finale",
+     "bar_start": 86,
+     "palette_primary": "블루",
+     "palette_secondary": "warm white",
+     "intensity": [
+      {
+       "group": "KEY",
+       "level": 100
+      },
+      {
+       "group": "BACK",
+       "level": 80
+      }
+     ],
+     "fixture_groups": [
+      "BACK"
+     ],
+     "movement": "Audience",
+     "trans": "FADE"
+    }
+   ],
+   "lint": [
+    {
+     "rule_id": "L9",
+     "cue_number": 3.5,
+     "description": "snap fade (0s) used outside an accent/hit/drop/button cue (G1)"
+    },
+    {
+     "rule_id": "L13",
+     "cue_number": 7.0,
+     "description": "identical (position, palette, effect) combo for 3 consecutive cues (V2)"
+    }
+   ],
+   "unresolved": [],
+   "disabled": [],
+   "readback": {
+    "verified": true,
+    "message": "Sequence 및 타이밍 readback 검증 완료"
+   },
+   "console_stored": true,
+   "warnings": [],
+   "layer_mapping": [
+    {
+     "role": "key",
+     "group_no": 2,
+     "group_name": "KEY"
+    },
+    {
+     "role": "key",
+     "group_no": 3,
+     "group_name": "FOH"
+    },
+    {
+     "role": "back",
+     "group_no": 4,
+     "group_name": "BACK"
+    },
+    {
+     "role": "effect",
+     "group_no": 14,
+     "group_name": "BLIND"
+    },
+    {
+     "role": "effect",
+     "group_no": 15,
+     "group_name": "STROBE"
+    },
+    {
+     "role": "effect",
+     "group_no": 16,
+     "group_name": "HAZE"
+    }
+   ],
+   "preset_start": 21,
+   "concept_report": {
+    "available": true,
+    "gates": {
+     "G1 어휘 닫힘": {
+      "passed": true,
+      "detail": "구간·트리거·원샷 전부 문서 어휘(vocab.validate_* 실제 검증)"
+     },
+     "G2 후렴 정체성": {
+      "passed": null,
+      "detail": "후렴 쌍 없음(구조상 n/a)"
+     },
+     "G3 회차마다 새 축(5회차까지)": {
+      "passed": null,
+      "detail": "후렴 쌍 없음(구조상 n/a)"
+     },
+     "G4 피날레 새 축 + 여유": {
+      "passed": null,
+      "detail": "Final Chorus 없음(구조상 n/a)"
+     },
+     "G5 헤드룸 경고 0": {
+      "passed": true,
+      "detail": "경고 0건"
+     },
+     "G6 컬러: 유보색 조기 0 · 브리지 위반 0": {
+      "passed": true,
+      "detail": "유보색 n/a(입력에 유보색 없음) · 브리지 pass(위반 0)"
+     },
+     "G7 후렴 주색 동일": {
+      "passed": true,
+      "detail": "chorus_primary_color_identity: pass (위반 0건)"
+     },
+     "G8 후렴 앞 빌드업": {
+      "passed": true,
+      "detail": "빌드업 1 / 필요 1"
+     },
+     "G9 트래킹: Block·Release·누출 0": {
+      "passed": true,
+      "detail": "Block 처음 True · Release 마지막 True · cue_only 3 · 누출 없음 True"
+     },
+     "G10 상대 감소 겹침 없음": {
+      "passed": true,
+      "detail": "절 밝기 [45, 38, 38, 38, 38]"
+     },
+     "G11 타이밍 전 큐 배정": {
+      "passed": true,
+      "detail": "snap 1 · short 12 · long 2 · 후렴 순차 1"
+     },
+     "G12 MIB: 켜진 채 이동 0": {
+      "passed": true,
+      "detail": "어둠 1 · Mark 0 · 켜진 채 0"
+     },
+     "G13 큐 밀도 10~45": {
+      "passed": true,
+      "detail": "시퀀스 큐 15 + 원샷 1"
+     }
+    },
+    "mib": [
+     null,
+     {
+      "status": "dark"
+     },
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "lint_finding_count": 6,
+    "lint_disabled_rule_count": 2,
+    "energy_report_count": 15,
+    "rows": [
+     {
+      "q": 1,
+      "ts": -1.0,
+      "kind": "safety",
+      "section": "Intro",
+      "occurrence": 0,
+      "trigger": null,
+      "tracking": "block",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "verified",
+      "screen_position": null,
+      "unused_groups": 10,
+      "description": "+KEY · 색 블루"
+     },
+     {
+      "q": 2,
+      "ts": 0.0,
+      "kind": "section",
+      "section": "Intro",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": "dark",
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 0,
+      "unused_groups": 9,
+      "description": "+BACK"
+     },
+     {
+      "q": 3,
+      "ts": 12.4,
+      "kind": "phrase",
+      "section": "Intro",
+      "occurrence": 1,
+      "trigger": "보컬 시작",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 0,
+      "unused_groups": 7,
+      "description": "+SIDE-L·SIDE-R"
+     },
+     {
+      "q": 4,
+      "ts": 20.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 1,
+      "unused_groups": 7,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 5,
+      "ts": 38.4,
+      "kind": "phrase",
+      "section": "Pre-Chorus",
+      "occurrence": 1,
+      "trigger": "빌드업 시작",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "practitioner_pattern",
+      "screen_position": 1,
+      "unused_groups": 6,
+      "description": "+FOH"
+     },
+     {
+      "q": 6,
+      "ts": 46.0,
+      "kind": "section",
+      "section": "Chorus",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": {
+       "shot": "White hit",
+       "target": "KEY+FOH"
+      },
+      "evidence": null,
+      "screen_position": 2,
+      "unused_groups": 6,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 7,
+      "ts": 49.8,
+      "kind": "phrase",
+      "section": "Chorus",
+      "occurrence": 1,
+      "trigger": "악기 추가",
+      "tracking": "cue_only",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "practitioner_pattern",
+      "screen_position": 2,
+      "unused_groups": 4,
+      "description": "+WASH-D·WASH-U"
+     },
+     {
+      "q": 8,
+      "ts": 69.0,
+      "kind": "section",
+      "section": "Bridge",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 3,
+      "unused_groups": 9,
+      "description": "-FOH·SIDE-L·SIDE-R·WASH-D·WASH-U"
+     },
+     {
+      "q": 9,
+      "ts": 76.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 2,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 4,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · +SIDE-L·SIDE-R"
+     },
+     {
+      "q": 10,
+      "ts": 92.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 3,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 5,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · 색 cyan"
+     },
+     {
+      "q": 11,
+      "ts": 120.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 4,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 6,
+      "unused_groups": 7,
+      "description": "Verse 1 복원 · 색 블루"
+     },
+     {
+      "q": 12,
+      "ts": 130.0,
+      "kind": "section",
+      "section": "Verse",
+      "occurrence": 5,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 7,
+      "unused_groups": 7,
+      "description": "Verse 1 복원"
+     },
+     {
+      "q": 13,
+      "ts": 149.0,
+      "kind": "section",
+      "section": "Bridge",
+      "occurrence": 2,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 8,
+      "unused_groups": 9,
+      "description": "-SIDE-L·SIDE-R"
+     },
+     {
+      "q": 14,
+      "ts": 162.0,
+      "kind": "section",
+      "section": "Outro",
+      "occurrence": 1,
+      "trigger": null,
+      "tracking": "track",
+      "mib": null,
+      "one_shot": null,
+      "evidence": null,
+      "screen_position": 9,
+      "unused_groups": 9,
+      "description": "그룹·색 변화 없음"
+     },
+     {
+      "q": 15,
+      "ts": 178.0,
+      "kind": "safety",
+      "section": "Outro",
+      "occurrence": 0,
+      "trigger": null,
+      "tracking": "release",
+      "mib": null,
+      "one_shot": null,
+      "evidence": "verified",
+      "screen_position": null,
+      "unused_groups": 11,
+      "description": "-BACK·KEY"
+     }
+    ],
+    "row_pairing": {
+     "available": true,
+     "reason": null
+    },
+    "reserve": [
+     {
+      "name": "BLIND",
+      "kind": "group",
+      "released_q": null,
+      "screen_position": null
+     },
+     {
+      "name": "STROBE",
+      "kind": "group",
+      "released_q": null,
+      "screen_position": null
+     }
+    ],
+    "glance": {
+     "available": true,
+     "rule": "director-confirmed-2026-09-28",
+     "reason": null,
+     "stages": [
+      {
+       "stage": "시작",
+       "positions": [
+        0
+       ],
+       "reason": null
+      },
+      {
+       "stage": "쌓기",
+       "positions": [
+        1
+       ],
+       "reason": null
+      },
+      {
+       "stage": "강조",
+       "positions": [],
+       "reason": "후렴이 하나뿐이라 그 후렴을 정점으로 셌다"
+      },
+      {
+       "stage": "예고",
+       "positions": [],
+       "reason": "끝에서 둘째 후렴이 없다"
+      },
+      {
+       "stage": "정점→마무리",
+       "positions": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+       ],
+       "reason": null
+      }
+     ]
+    }
+   },
+   "concept_bullet": {
+    "available": true,
+    "text": "우주",
+    "origin": "option",
+    "origin_label": "인터뷰 Q1 — 제안 중 선택"
+   },
+   "bpm": 126.04801829268435,
+   "time_signature": "4/4",
+   "seconds_per_bar": 1.904036281179117,
+   "tc_method": "DERIVED",
+   "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+  }
+ },
+ {
+  "v": 1,
+  "type": "chat_response",
+  "status": "ok",
+  "summary": "요청한 명령을 모두 실행했습니다. 장비 능력을 콘솔에서 읽지 못해 기종별 판정(팬틸트·줌 범위) 없이 설계했습니다 — RuntimeError: path segment not found: Patch/Stages/1/Fixtures",
+  "text": "연출 인터뷰 결과 — Q1 컨셉: 우주 (확정) / Q2 팔레트: 블루/퍼플 (확정) / Q2B 색 운용: modulate (확정) / Q3 클라이맥스: D5, 블루 쿨 볼드, Ring In → Center → Wall (확정) / Q4 공간 스토리: Ring In → Home → Vocal DSC → Center → Wall → Cross → Fan Out → Audience (확정) / Q5 전환 방식: 중간 (확정). 감독 승인 후 시퀀스 211에 리뷰 번들 1건을 원자 실행 요청했습니다. 전곡 리뷰 번들 — 시퀀스 211 · 진행 타임코드 11번 슬롯 자동 진행.\n큐 1 Intro — D2 · Ring In · 블루/cyan · 타임코드\n큐 2 Verse 1 — D4 · Home · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm\n큐 3 Chorus 1 — D5 · Ring In · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 3.5 Chorus 1 Return — D5 · 포지션 유지 · 블루/warm white · 타임코드\n큐 4 Bridge 1 — D1 · Center · 블루/lavender · 타임코드 · 페이저 제안: Breathe Cool\n큐 5 Verse 2 (1/2) — D4 · Wall · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm\n큐 6 Verse 2 (2/2) — D4 · Wall · cyan/블루 · 타임코드 · 페이저 제안: Breathe Warm\n큐 7 Verse 3 — D4 · Wall · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm\n큐 8 Verse 4 — D4 · Cross · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm\n큐 9 Bridge 2 — D1 · Fan Out · 블루/lavender · 타임코드 · 페이저 제안: Breathe Cool\n큐 10 Finale — D5 · Audience · 블루/warm white · 타임코드 · 페이저 제안: Finale Slam\n확인 포인트 2건: L9 큐 3.5: snap fade (0s) used outside an accent/hit/drop/button cue (G1); L13 큐 7: identical (position, palette, effect) combo for 3 consecutive cues (V2). 페이저 제안은 승인 후 실기 슬롯을 조회해 배정합니다(못 찾으면 그 큐는 페이저 없이 진행). recall이 페이저를 싣는 것은 실기 확인됐고(2026-08-19), 저장된 큐가 그 참조를 보존하는지는 판독할 수 없어 ASSUMPTION입니다 — 곡 큐 재생은 콘솔 화면에서 직접 확인해 주세요. readback 검증 완료: DataPool/Sequences/211, DataPool/Timecodes/11. 페이저 미배정: 'Breathe Warm' 페이저 프리셋을 콘솔에서 찾지 못했습니다; 'Finale Slam' 페이저 프리셋을 콘솔에서 찾지 못했습니다; 'Breathe Cool' 페이저 프리셋을 콘솔에서 찾지 못했습니다; 'Wave CM' 페이저 프리셋을 콘솔에서 찾지 못했습니다. 절정 연출 미반영: blinder_six_row_absent: Q10 'Finale' 절정 액센트 — 구간 이름이 §6 표의 한 행에 맞지 않아 블라인더 밝기를 정할 근거가 없음.",
+  "commands": [
+   {
+    "command": "ChangeDestination Root",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.30",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 50",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 40",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 1 'Intro' CueFade 1.90404",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.21",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 25",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 20",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 2 'Verse 1' CueFade 0.714014",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.30",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 80",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 14 ; Attribute 'Dimmer' At 80",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 3 'Chorus 1' CueFade 0.238005",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 14 ; Attribute 'Dimmer' At 0",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 3.5 'Chorus 1 Return' CueFade 0",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.24",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 30",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 24",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 4 'Bridge 1' CueFade 3.80807",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.22",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 90",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 72",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 5 'Verse 2 1 of 2' CueFade 0.714014",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.22",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 90",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 72",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 6 'Verse 2 2 of 2' CueFade 0.714014",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.22",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 90",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 72",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 7 'Verse 3' CueFade 0.714014",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.28",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 90",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 72",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 8 'Verse 4' CueFade 0.714014",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.26",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 30",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 24",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 9 'Bridge 2' CueFade 3.80807",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; At Preset 2.23",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Fixture 101 + 102 + 103 + 104 + 105 + 106 + 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 + 601 + 602 + 603 + 604 + 605 + 606 + 611 + 612 + 613 + 614 + 621 + 622 + 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 + 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 + 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 + 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Group 4 ; Attribute 'Dimmer' At 80",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Sequence 211 Cue 10 'Finale' CueFade 3.80807",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "ClearAll",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Store Timecode 11",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Timecode 11 Property 'Name' 'Sequence 211 Timecode'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Assign Sequence 211 At Timecode 11",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 1 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 1 Sequence 211 Property 'TrigTime' 0",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 2 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 2 Sequence 211 Property 'TrigTime' 20.294",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 3 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 3 Sequence 211 Property 'TrigTime' 46.626",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 3.5 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 3.5 Sequence 211 Property 'TrigTime' 47.578",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 4 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 4 Sequence 211 Property 'TrigTime' 69.045",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 5 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 5 Sequence 211 Property 'TrigTime' 76.858",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 6 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 6 Sequence 211 Property 'TrigTime' 92.09",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 7 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 7 Sequence 211 Property 'TrigTime' 120.094",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 8 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 8 Sequence 211 Property 'TrigTime' 130.067",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 9 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 9 Sequence 211 Property 'TrigTime' 149.188",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 10 Sequence 211 Property 'TrigType' 'Time'",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   },
+   {
+    "command": "Set Cue 10 Sequence 211 Property 'TrigTime' 162.377",
+    "status": "executed_ok",
+    "label": "실행 완료",
+    "detail": "OK"
+   }
+  ]
+ }
+]

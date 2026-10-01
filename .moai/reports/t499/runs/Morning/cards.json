@@ -1,0 +1,110 @@
+[
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "구간과 BPM 을 확인해 주세요.",
+  "options": [
+   "0:00–0:10 · D5",
+   "0:10–0:20 · D4",
+   "0:20–0:36 · D5",
+   "0:36–0:49 · D5",
+   "0:49–1:08 · D5",
+   "1:08–1:20 · D5",
+   "1:20–1:33 · D5",
+   "1:33–1:42 · D5",
+   "1:42–1:52 · D5",
+   "1:52–2:01 · D4",
+   "2:01–2:09 · D4",
+   "2:09–2:21 · D5",
+   "2:21–2:33 · D3"
+  ],
+  "answer": "확인"
+ },
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "공연 전체가 어떤 느낌이면 좋겠어요?",
+  "options": [
+   "우주",
+   "네온",
+   "빈티지"
+  ],
+  "answer": "우주"
+ },
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "어떤 색이 가장 잘 어울릴까요?",
+  "options": [
+   "우주 색 조합",
+   "Vocal DSC 색 조합",
+   "Center 색 조합"
+  ],
+  "answer": "우주 색 조합"
+ },
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "이 색을 곡 전체에서 어떻게 쓸까요?",
+  "options": [
+   "메인 컬러 중심 변조 + 임팩트에서 터뜨림 (기본)",
+   "이 색 계열로만 간다",
+   "후렴마다 다른 포인트 색"
+  ],
+  "answer": ""
+ },
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?",
+  "options": [
+   "Ring In",
+   "Audience",
+   "Cross"
+  ],
+  "answer": "Ring In"
+ },
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?",
+  "options": [
+   "우주 컨셉 우선 배치",
+   "넓음→좁음 (역순)",
+   "좁음→넓음 (E3 기본)"
+  ],
+  "answer": "우주 컨셉 우선 배치"
+ },
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요.",
+  "options": [
+   "템포 맞춤 (BPM 기준)",
+   "메탈 스타일 전환(참고)",
+   "록 스타일 전환(참고)"
+  ],
+  "answer": "템포 맞춤 (BPM 기준)"
+ },
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "콘솔 그룹 이름에서 레이어 역할을 추정했습니다: Group 2 'KEY' = Key/Front, Group 3 'FOH' = Key/Front, Group 4 'BACK' = Back, Group 14 'BLIND' = Effect/Beam, Group 15 'STROBE' = Effect/Beam, Group 16 'HAZE' = Effect/Beam. 이 매핑을 기록할까요? (그룹 멤버십은 콘솔에서 읽을 수 없어 역할 라벨로만 기록합니다.)",
+  "options": [
+   "이 매핑 사용",
+   "단일 레이어로 진행"
+  ],
+  "answer": "이 매핑 사용"
+ },
+ {
+  "type": "QuestionRequest",
+  "header": null,
+  "question": "전곡 리뷰 번들 — 시퀀스 211 · 진행 타임코드 11번 슬롯 자동 진행.\n큐 1 Intro — D5 · Ring In · 블루/cyan · 타임코드\n큐 2 Verse 1 — D4 · Home · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm\n큐 3 Chorus 1 — D5 · Home · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 4 Chorus 2 — D5 · Vocal DSC · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 5 Chorus 3 — D5 · Vocal DSC · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 6 Chorus 4 — D5 · Center · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 7 Chorus 5 — D5 · Wall · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 8 Chorus 6 — D5 · Wall · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 9 Chorus 7 — D5 · Cross · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 10 Verse 2 — D4 · Cross · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm\n큐 11 Verse 3 — D4 · Fan Out · 블루/cyan · 타임코드 · 페이저 제안: Breathe Warm\n큐 12 Chorus 8 — D5 · Ring In · 블루/warm white · 타임코드 · 페이저 제안: Wave CM\n큐 12.5 Chorus 8 Return — D5 · 포지션 유지 · 블루/warm white · 타임코드\n큐 13 Finale — D5 · Audience · 블루/warm white · 타임코드 · 페이저 제안: Finale Slam\n확인 포인트 1건: L9 큐 12.5: snap fade (0s) used outside an accent/hit/drop/button cue (G1). 페이저 제안은 승인 후 실기 슬롯을 조회해 배정합니다(못 찾으면 그 큐는 페이저 없이 진행). recall이 페이저를 싣는 것은 실기 확인됐고(2026-08-19), 저장된 큐가 그 참조를 보존하는지는 판독할 수 없어 ASSUMPTION입니다 — 곡 큐 재생은 콘솔 화면에서 직접 확인해 주세요.\n\n영향 요약 — 시퀀스 211: 비어 있음 확인(신규 저장) · 타임코드 11번 슬롯: 비어 있음 확인 · 기존 데이터 덮어쓰기: 없음.\n\n이 전체 리뷰 번들을 시퀀스 211에 원자적으로 저장할까요?",
+  "options": [
+   "승인",
+   "수정",
+   "취소"
+  ],
+  "answer": "승인"
+ }
+]
