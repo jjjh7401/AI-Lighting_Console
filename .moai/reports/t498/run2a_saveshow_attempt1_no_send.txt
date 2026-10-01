@@ -1,0 +1,6 @@
+command file: .moai/reports/t498/cmd_saveshow_copy.txt ['SaveShow "copilot-rehearsal-20260928"']
+Traceback (most recent call last):
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t498/.moai/reports/t498/save_show_copy.py", line 60, in <module>
+    result = stack.gate.execute(COMMANDS[0])
+             ^^^^^^^^^^^^^^^^^^
+AttributeError: 'SafetyGate' object has no attribute 'execute'. Did you mean: '_executor'?

@@ -1,0 +1,12 @@
+
+>>> state:ShowData/DataPools/Default/Timecodes/11/1/2
+    wire: Plugin "CopilotResponder" "state 0278ef1c ShowData/DataPools/Default/Timecodes/11/1/2"
+<<< {"children": [{"class": "TimeRange", "i": 1, "name": "TimeRange 1"}], "id": "0278ef1c", "kind": "state", "node": {"childCount": 1, "class": "Track", "enumeration": "ok", "name": "<Sequence 211>"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/11/1/2", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Timecodes/11/1/2
+    wire: Plugin "CopilotResponder" "introspect 205ebfff ShowData/DataPools/Default/Timecodes/11/1/2"
+<<< {"class": "Track", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "TARGET", "t": "Handle"}, {"n": "PLAY", "t": "UInt64"}, {"n": "REC", "t": "UInt64"}], "id": "205ebfff", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/11/1/2", "source": "property_accessors", "total": 23, "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/1/1
+    wire: Plugin "CopilotResponder" "state 7f9006a0 ShowData/DataPools/Default/Timecodes/1/1"
+<<< {"children": [{"class": "MarkerTrack", "i": 1, "name": "Marker"}, {"class": "Track", "i": 2, "name": "<DinoSync>"}], "id": "7f9006a0", "kind": "state", "node": {"childCount": 2, "class": "TrackGroup", "enumeration": "ok", "name": "TrackGroup 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/1/1", "truncated": false, "v": 1}

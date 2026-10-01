@@ -1,0 +1,12 @@
+
+>>> props:ShowData/DataPools/Default/Timecodes/11|NAME,DURATION,OFFSETTCSLOT,LOOPMODE,CURSOR
+    wire: Plugin "CopilotResponder" "props d2f88ee7 NAME,DURATION,OFFSETTCSLOT,LOOPMODE,CURSOR ShowData/DataPools/Default/Timecodes/11"
+<<< {"id": "d2f88ee7", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/11", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Sequence 211 Timecode"}, {"n": "DURATION", "ok": true, "t": "string", "v": "0.00"}, {"n": "OFFSETTCSLOT", "ok": true, "t": "string", "v": "0.00"}, {"n": "LOOPMODE", "ok": true, "t": "string", "v": "Off"}, {"n": "CURSOR", "ok": true, "t": "string", "v": "0.00"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/11/1
+    wire: Plugin "CopilotResponder" "state c0bb3748 ShowData/DataPools/Default/Timecodes/11/1"
+<<< {"children": [{"class": "MarkerTrack", "i": 1, "name": "Marker"}, {"class": "Track", "i": 2, "name": "<Sequence 211>"}], "id": "c0bb3748", "kind": "state", "node": {"childCount": 2, "class": "TrackGroup", "enumeration": "ok", "name": "TrackGroup 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/11/1", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/9|NAME,DURATION,OFFSETTCSLOT,LOOPMODE,CURSOR
+    wire: Plugin "CopilotResponder" "props 70988531 NAME,DURATION,OFFSETTCSLOT,LOOPMODE,CURSOR ShowData/DataPools/Default/Timecodes/9"
+<<< {"id": "70988531", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/9", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Sequence 210 Timecode"}, {"n": "DURATION", "ok": true, "t": "string", "v": "0.00"}, {"n": "OFFSETTCSLOT", "ok": true, "t": "string", "v": "0.00"}, {"n": "LOOPMODE", "ok": true, "t": "string", "v": "Off"}, {"n": "CURSOR", "ok": true, "t": "string", "v": "0.00"}], "truncated": false, "v": 1}

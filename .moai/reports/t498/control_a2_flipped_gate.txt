@@ -1,0 +1,3 @@
+A2 gates=13 passed=12 not_passed=['G7 후렴 주색 동일']
+A2 gates=13 passed=12 not_passed=['G7 후렴 주색 동일']
+A2 gates=13 passed=12 not_passed=['G7 후렴 주색 동일']

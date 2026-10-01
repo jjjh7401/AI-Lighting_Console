@@ -1,0 +1,8 @@
+
+>>> introspect:ShowData/ShowSettings/ShowMetaData
+    wire: Plugin "CopilotResponder" "introspect 489bedad ShowData/ShowSettings/ShowMetaData"
+<<< {"class": "ShowMetaData", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "DESCRIPTION", "t": "String"}, {"n": "SHOWSHOWHISTORY", "t": "Bool"}], "id": "489bedad", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/ShowSettings/ShowMetaData", "source": "property_accessors", "total": 17, "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/2@10
+    wire: Plugin "CopilotResponder" "state 7a25b052 ShowData/DataPools/Default/PresetPools/2 offset=10"
+<<< {"children": [{"class": "Preset", "i": 25, "name": "Vocal DSC"}, {"class": "Preset", "i": 26, "name": "Fan Out"}, {"class": "Preset", "i": 27, "name": "Fan In"}, {"class": "Preset", "i": 28, "name": "Cross"}, {"class": "Preset", "i": 29, "name": "Ring Out"}, {"class": "Preset", "i": 30, "name": "Ring In"}], "id": "7a25b052", "kind": "state", "node": {"childCount": 16, "class": "Presets", "enumeration": "ok", "name": "Position"}, "offset": 10, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2", "truncated": false, "v": 1}

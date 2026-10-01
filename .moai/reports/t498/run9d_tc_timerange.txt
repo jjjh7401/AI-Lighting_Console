@@ -1,0 +1,12 @@
+
+>>> state:ShowData/DataPools/Default/Timecodes/11/1/2/1
+    wire: Plugin "CopilotResponder" "state f96d728f ShowData/DataPools/Default/Timecodes/11/1/2/1"
+<<< {"children": [], "id": "f96d728f", "kind": "state", "node": {"childCount": 0, "class": "TimeRange", "enumeration": "ok", "name": "TimeRange 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/11/1/2/1", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/1/1/2
+    wire: Plugin "CopilotResponder" "state aa832ea9 ShowData/DataPools/Default/Timecodes/1/1/2"
+<<< {"children": [{"class": "TimeRange", "i": 1, "name": "TimeRange 1"}], "id": "aa832ea9", "kind": "state", "node": {"childCount": 1, "class": "Track", "enumeration": "ok", "name": "<DinoSync>"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/1/1/2", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/1/1/2/1
+    wire: Plugin "CopilotResponder" "state 9b443827 ShowData/DataPools/Default/Timecodes/1/1/2/1"
+<<< {"children": [], "id": "9b443827", "kind": "state", "node": {"childCount": 0, "class": "TimeRange", "enumeration": "ok", "name": "TimeRange 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/1/1/2/1", "truncated": false, "v": 1}

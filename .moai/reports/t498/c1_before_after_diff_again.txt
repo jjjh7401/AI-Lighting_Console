@@ -1,0 +1,7 @@
+DIFF ShowData/DataPools/Default/Groups: removed=[] added=[]
+DIFF ShowData/DataPools/Default/PresetPools: removed=[] added=[]
+DIFF ShowData/DataPools/Default/PresetPools/2: removed=[] added=[]
+DIFF ShowData/DataPools/Default/Sequences: removed=[] added=[(211, 'Sequence 211')]
+DIFF ShowData/DataPools/Default/Sequences/211: removed=[] added=[(1, 'OffCue'), (2, 'CueZero'), (3, 'Intro'), (4, 'Verse 1'), (5, 'Verse 2'), (6, 'Chorus 1'), (
+DIFF ShowData/DataPools/Default/Timecodes: removed=[] added=[(11, 'Sequence 211 Timecode')]
+DIFF ShowData/DataPools/Default/Timecodes/11: removed=[] added=[(1, 'TrackGroup 1')]

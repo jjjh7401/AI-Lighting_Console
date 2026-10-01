@@ -1,0 +1,3 @@
+real-only lines: W-channel=12 other=1
+  UNEXPLAINED real-only: Delete Sequence 14
+VERDICT all diff lines explained by fixture-set + W-channel: False

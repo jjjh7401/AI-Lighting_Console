@@ -1,0 +1,6 @@
+ShowData/DataPools/Default/Sequences: 18 -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 210, 1999, 2000]
+ShowData/DataPools/Default/Timecodes: 5 -> [1, 2, 7, 8, 9]
+ShowData/DataPools/Default/Groups: 18 -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+ShowData/DataPools/Default/PresetPools/2: 16 -> [1, 2, 3, 4, 5, 6, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+ShowData/DataPools/Default/PresetPools: 14 -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 21, 22, 23, 24, 25]
+TRUNCATED run7_after_write.txt ShowData/DataPools/Default/Sequences: read 18 of 19
