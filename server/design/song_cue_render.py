@@ -485,7 +485,7 @@ def _phaser_label_for_cue(cue) -> str | None:
     제외한다 — 페이저는 보이는 연출이므로 암전 이동에 실을 이유가 없다.
     블랙아웃 큐(``dimmer.blackout`` 또는 key_pct 없음/0)도 제외한다 —
     페이저 recall이 프로그래머 Dimmer 값을 되살려 의도한 암전을 깰 수
-    있다(``_back_layer_value_lines``와 같은 안전 규율, key_pct<=0 가드).
+    있다(``_role_dimmer_value_lines``와 같은 안전 규율, key_pct<=0 가드).
     """
     if cue.kind != "section":
         return None
@@ -618,30 +618,67 @@ def _song_color_value_lines(
     return tuple(lines), None
 
 
-def _back_layer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
-    """결함 6 후속 (priority 6): Front/Back 분리 연출 — the director-confirmed
-    'back' role group adds ONE group-addressed dimmer line to every LIT
-    section cue, at 80% of the key level (the same key→back ratio the
-    composer's layered-rig path uses). The group NUMBER is console-addressable
-    without membership knowledge (RG5 — fids are never claimed); blackouts and
-    MIB pre-moves stay untouched. The line comes AFTER the all-fixture key
-    dimmer, so the console's last-wins programmer order lowers only the back
-    group."""
-    back_no = next(
-        (
-            entry["group_no"]
-            for entry in layer_mapping
-            if entry.get("role") == "back" and isinstance(entry.get("group_no"), int)
-        ),
-        None,
-    )
-    if back_no is None or cue.kind != "section":
+#: SPEC-LDRENDER-001 REQ-LDRENDER-001/REQ-LDRENDER-007 — 역할마다 독립된 그룹
+#: 주소 디머 줄을 낼 때, 이 두 역할은 그 "역할별 델타" 순회에서 제외한다:
+#:   - ``key``  — 이미 전체 기구 키 디머 줄(공유 `fids`)로 나가 있다. 델타가
+#:     아니라 베이스라인이라 역할 줄로 또 내면 중복이다.
+#:   - ``effect`` — R3(REQ-LDRENDER-007)가 비액센트 큐의 **어떤** 값 줄에도
+#:     effect 역할 그룹 기구가 실리지 않기를 요구한다(HARD, spec.md §3.1).
+#:     M5 가 공유 `fids`에서 effect 기구를 빼는 일을 아직 하지 않았더라도,
+#:     이 그룹-주소 델타 경로가 `role_pct["effect"]`를 읽어 값을 내보내면
+#:     공유 `fids` 제외와 무관하게 R3 를 어기게 된다 — 그래서 이 제외는
+#:     M5 를 기다리지 않고 여기서 구조적으로 막는다. (현재 `_dimmer_data`는
+#:     `role_pct`에 `effect` 키를 애초에 채우지 않으므로 이 가드는 방어적
+#:     이중 장치다 — 호출자가 실수로 채워도 R3 는 깨지지 않는다.)
+_DIMMER_DELTA_EXCLUDED_ROLES = frozenset({"key", "effect"})
+
+
+def _role_group_numbers(layer_mapping: Sequence[Mapping[str, object]]) -> dict[str, int]:
+    """역할 → 그룹 번호, 마지막으로 일치한 항목이 이긴다.
+
+    side/wash/mover 는 한 역할에 여러 콘솔 그룹(-L/-R/-ALL)이 매칭될 수 있다
+    (카드 t379 실측). `session.py::_confirm_song_layer_mapping`이 만드는
+    `declared_layers` 딕셔너리 컴프리헨션(`RigProfile.layers.mapping`이
+    `has_layer()`로 보는 그 그룹)과 **같은 동점 규율**(이터레이션 순서상 마지막
+    항목이 이긴다, M2 progress.md "여러 그룹이 한 역할에 매칭될 때" 절)을 여기서도
+    써야 `has_layer("side")`가 참인 리그에서 렌더러가 실제로 다른 그룹을
+    겨냥하는 불일치를 막는다."""
+    numbers: dict[str, int] = {}
+    for entry in layer_mapping:
+        role = entry.get("role")
+        group_no = entry.get("group_no")
+        if isinstance(role, str) and isinstance(group_no, int):
+            numbers[role] = group_no
+    return numbers
+
+
+def _role_dimmer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
+    """REQ-LDRENDER-001 — 매핑된 모든 역할을 순회하는 다중 역할 디머 값 줄.
+
+    결함 6 의 ``_back_layer_value_lines``(``role == "back"`` 단일 분기)의
+    일반화다. 역할마다 독립된 ``Group <n>`` 주소로 값을 낸다 — fid 집합이
+    필요 없다(RG5, plan.md §B 위험 2). 줄은 전체 기구 키 디머 줄 **뒤**에
+    오므로 콘솔의 last-wins 프로그래머 순서가 역할별 그룹만 내린다.
+
+    ``cue.dimmer.role_pct``에 값이 없는 역할(아직 산출 규칙이 없는 side/wash/
+    mover 등, M3.md §미해결)은 조용히 건너뛴다 — 발명하지 않는다. 블랙아웃·
+    MIB 사전이동 큐는 손대지 않는다(``kind != "section"`` 또는 key_pct<=0 가드,
+    기존 ``_back_layer_value_lines``와 같은 안전 규율)."""
+    if cue.kind != "section":
         return ()
     key_pct = cue.dimmer.key_pct
     if key_pct is None or key_pct <= 0:
         return ()
-    back_pct = cue.dimmer.back_pct if cue.dimmer.back_pct is not None else key_pct * 0.8
-    return (f"Group {back_no} ; Attribute 'Dimmer' At {back_pct:g}",)
+    role_pct = cue.dimmer.role_pct
+    lines: list[str] = []
+    for role, group_no in _role_group_numbers(layer_mapping).items():
+        if role in _DIMMER_DELTA_EXCLUDED_ROLES:
+            continue
+        pct = role_pct.get(role)
+        if pct is None:
+            continue
+        lines.append(f"Group {group_no} ; Attribute 'Dimmer' At {pct:g}")
+    return tuple(lines)
 
 
 def _accent_fixture_value_lines(cue, previous_fixture) -> tuple[str, ...]:
@@ -1047,7 +1084,7 @@ def reviewed_song_commands(
                 fids,
                 extra_value_lines=(
                     *color_lines,
-                    *_back_layer_value_lines(cue, layer_mapping),
+                    *_role_dimmer_value_lines(cue, layer_mapping),
                     *_phaser_cue_value_lines(cue, fids, phaser_slots),
                     *accent_lines,
                 ),

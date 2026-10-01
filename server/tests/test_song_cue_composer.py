@@ -148,6 +148,11 @@ def test_complete_bundle_contains_section_axis_data_and_structured_timing() -> N
     assert first.pre_drop_from == pytest.approx(90.0)
     assert first.dimmer.key_pct == pytest.approx(25.0)
     assert first.dimmer.back_pct == pytest.approx(20.0)
+    # SPEC-LDRENDER-001 M3 — 드롭 앞 어둠(`_apply_pre_drop_darkness`)이
+    # `dataclasses.replace`로 key_pct/back_pct 만 내려도 role_pct 가 같은
+    # 값으로 따라와야 한다(`_role_pct_for` 재계산 — 안 따라오면 back_pct 필드와
+    # role_pct["back"]이 어긋난다, M3.md 뮤테이션 참조).
+    assert dict(first.dimmer.role_pct) == {"key": pytest.approx(25.0), "back": pytest.approx(20.0)}
     assert first.color.palette == ("blue", "white")
     assert first.color.saturation == "높음"
     assert first.fx.permitted == ("dimmer chase", "pan sweep")
