@@ -1,5 +1,31 @@
 # t500 판정서 — SPEC-LDRENDER-001 plan (송신 층 연출 복원)
 
+## 최종 판정 (3차): plan 감사 PASS 0.88 (Tier M 통과선 0.80) — 차단 결함 0, minor 2
+
+감독 결정 4건(2026-10-01, 리드 경유)을 반영한 뒤 3차 감사가 통과했다. 감사 경과: 1차 0.74 FAIL → 2차 0.68 FAIL·정지 → 결정 반영 → 3차 0.88 PASS(`audit-plan-003.md`).
+
+| 결정 | SPEC 반영 |
+|---|---|
+| ① 역할 어휘 (a) | REQ-002·AC-002 — 정본 `song-lighting-design-standard.md` §2c 에 side·wash·mover 추가(버전 올림) + `RIG_LAYER_ROLES` 확장, 접두 토큰 판정, `test_layer_mapping_effect_role.py:119` 의도적 뒤집음. plan M2(R1 선행) |
+| ② 꺼진 층 안 셈 · 큐마다 | REQ-001/013/014 · AC-001/012/013 — 「구간 큐 전부 LIT 층 ≥3」, 예외는 블랙아웃·MIB 사전이동 큐뿐. key+back 만으로는 통과 불가 명시 |
+| ③ 층→색 | REQ-004 · AC-004 — back+mover=주색, side+wash=보조색, key=웜화이트(§4b C3), 동시 색 ≤2 |
+| ④ R4 (a) | REQ-011 · AC-010 — FXGEN/FXLIB 생성, 기존 승인 게이트 경유(새 무승인 경로 없음, grep 으로 측정), 풀 번호 충돌 사전 판독(`server/fx/instantiate.py` `PRESET_OCCUPIED` 등 기존 사유 코드 재사용) |
+
+REQ 16 · AC 16(Tier M 상한과 같음, 여유 0). 열린 결정 0.
+
+### 🔴 run 착수 승인 전에 감독께 한 번 더 확인할 것 (감사 권고)
+
+- **정면 웜화이트가 §6.3 「동시에 보이는 색 최대 2개」에 들어가는가.** SPEC 은 §4b C1 「+화이트/CTO」 병기를 근거로 **안 센다**로 읽었고 「유일한 해석 아님」으로 표시해 두었다. 센다면 주색+보조색+웜화이트가 3색이라 M4(색 배정)를 다시 해야 한다.
+
+### 선택 사항
+
+- D13(minor) AC-002 조건 5개에 「전부 성립해야 PASS」 문장 없음 · D14(정보) REQ·AC 가 상한과 같다
+- side/wash/mover 그룹이 없는 리그는 AC-001 이 구조적으로 실패한다 — 실기 리그엔 WASH-U/D·MOVER-D 가 있다(t498 run4 판독, 감사 인용). M1/M2 사전점검에 한 줄 확인 권장
+
+---
+
+## (아래는 2차 정지 시점 기록 — 결정 반영 전)
+
 ## 판정: plan 감사 2회 FAIL, 점수 하락으로 정지(0.74 → 0.68). 감독 결정 없이는 3차를 돌리지 않는다
 
 - 카드: t500 · 브랜치 `WT-ldrender-plan` · 워크트리 `.claude/worktrees/t500`
