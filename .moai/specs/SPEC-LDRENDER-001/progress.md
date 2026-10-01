@@ -1139,6 +1139,150 @@ $ uv run ruff format --check <동일 목록>
   확인했고, `compose_song_cue_bundle`→`reviewed_song_commands` 종단 경로로
   W 채널이 있는 합성 리그를 돌리는 새 테스트는 추가하지 않았다.
 
+### M5 — 효과 기구 분리 (카드 t501, REQ-LDRENDER-007/008, M2 의 effect 역할 재사용) — **블록(결정 대기)**
+
+**착수 베이스라인**: `git merge --ff-only origin/WT-ldrender-run` → HEAD `4d93e1dc`
+(M3 후속 climax_return 완료 커밋) — `git rev-parse --short HEAD`로 확인.
+
+#### 배차서 지시 6단계 검색 — 결론: 효과 역할 그룹의 fid 멤버십을 읽는 production 경로가 어디에도 없다
+
+| # | 자리 | 결과 |
+|---|---|---|
+| 1 | `.moai/specs/` 기존 SPEC(특히 SPEC-LDDESIGN-001·SPEC-COPILOT-GROUPGEN-001) | GROUPGEN SPEC §A.4 M0 게이트(실측, 2026-09)가 **그룹 멤버십 판독 채널 자체가 없음**을 확정했다: "`Group 13 'All'`은 `exec`이 `OK`인 실사용 그룹인데 `query_state`는 `childCount: 0`을 준다... **그룹 멤버십은 오브젝트 트리 경로로 노출되지 않는다**"(`SPEC-COPILOT-GROUPGEN-001/spec.md:104-105`, `progress.md:43-44`·`:248`·`:255` 재확인 — `state …/13` → `childCount: 0`, `state …/14` → `childCount: 0`). LDDESIGN REQ-053/054(HAZE 안전 큐)도 그룹 **번호**(Block/Release) 주소만 쓰고 fid 멤버십을 요구하지 않는다 |
+| 2 | `server/design/rig.py` `RigLayers`/`fids_for` | `RigLayers.mapping`(역할→fid)은 **존재**하지만(`:251-262`), 채우는 유일한 두 경로(`RIG_LAYER_SOURCE_DECLARED`/`RIG_LAYER_SOURCE_GROUP_HEURISTIC`, `_build_layers`, `:359-393`) 중 `declared_layers`는 그룹 **번호**만 나르고(`session.py:7580-7584`, `str(entry["role"]): (int(entry["group_no"]),)`), `groups`(그룹이름→fid)는 모든 production 호출부에서 **하드코딩 빈 딕셔너리**다(아래 #3). 즉 `fids_for("effect")`는 오늘 프로덕션 어디서도 비지 않는 값을 낸 적이 없다 |
+| 3 | `server/web/session.py`(`_reviewed_song_commands`·`_confirm_song_layer_mapping`) | `grep -rn "build_rig_profile(" server/` → 4개 production 호출부(`session.py:7475`·`:7586`, `concept/compile.py:190`, `orchestrator/tools.py:3324`) **전부** `groups={}`. `state.fids = [fid for fid, _position in fixtures]`(`session.py:7620`)는 `_try_pointing_coordinates`가 돌려주는 **좌표 있는 기구 전부**(effect 기구 제외 없음) — plan.md §B 위험 2가 이미 경고한 바로 그 지점 |
+| 4 | `server/orchestrator/tools.py` | `:3324` 동일 패턴(`groups={}`) — 2곳 다 같은 제약 |
+| 5 | `.moai/reports/t499/fid_names.json`·`readout.py members()` | `members(group_no)`는 **이름 첫 단어** 매칭으로 fid를 모은다(`readout.py:54-61`). 원본 생성 스크립트(`fid_names.py`) 자신의 머리말이 명시: "콘솔 그룹 풀의 **실제 구성원은 응답기로 못 읽는다**(t498 §6) — 이 표는 **이름 기반 추정**이며, 판독 도구는 그 사실을 **INFERRED**로 표기한다." 즉 이 테이블 자체가 "검증된 멤버십"이 아니라 "이름 규약이 지켜진다는 가정 위의 추정"이라고 스스로 밝힌다 |
+| 6 | `server/design/ldrender_gate.py`(M1 이 미리 만든 `effect_group_in_value_lines`) | 이 함수는 **이미 조립된 `Group <n> ; ...` 송신 문자열**에서 그룹 이름이 들어있는 줄을 찾아 플래그하는 **문자열 검사**다(`ldrender_gate.py:168-179`). `position_cue_bundle`/`_preset_recall_command`/`_color_apply_command`가 요구하는 `Fixture <f1> + <f2> + ...`(`mib.py:167`, `song_cue_render.py:1166`·`:1177`)에 들어갈 **fid 목록**을 만들어 주지 못한다 — 역할이 다르다(M1 progress.md 자신이 "선행 유틸, 아직 아무 데도 배선 안 함"으로 명시) |
+
+**production 코드 자신의 결론(2026-10-01 작성, M2 가 이미 적어 둔 것)**:
+`_layer_mapping_from_group_children`(`session.py:766-780`) 독스트링 — "Group
+**MEMBERSHIP** is not readable from the console (the drilldown wall), so
+this records which group carries a role — it **never claims to know the
+member fixtures**." 이 SPEC 자신이 M2 단계에서 이미 같은 결론에 도달해
+문서화해 두었다 — M5 가 이번에 독립적으로 재확인한 것은 "그 결론이 REQ-007
+구현에 실제로 길을 막는다"는 점이다.
+
+#### 왜 "Group 번호"로는 부족한가 — REQ-007 이 요구하는 것은 fid 수준 뺄셈
+
+`_role_dimmer_value_lines`(M3)·`_role_color_value_lines`(M4)는 역할마다
+`Group <n> ; Attribute ... At ...` 줄을 **따로** 내는 방식으로 그룹 번호만
+있으면 충분했다(RG5, plan.md §B 위험 2가 이미 지적). 그러나 REQ-007은 이와
+다른 종류의 요구다 — "비액센트 큐가 공유하는 **`fids` 선택 자체**"
+(`reviewed_song_commands`의 `fids` 매개변수, `song_cue_render.py:1189`)에서
+effect 역할 기구를 **빼라**는 것이고, 이 `fids`는 `position_cue_bundle`
+(`mib.py:167`, `selection = " + ".join(str(fid) for fid in fids)`)·
+`_preset_recall_command`(`:1166`)·`_color_apply_command`(`:1177`)가 전부
+**개별 fid를 나열한 `Fixture <f1> + <f2> + ...` 문자열**을 만드는 데 직접
+쓰인다 — 그룹 번호로 대체할 길이 코드 어디에도 없다(`"Group <n> Except
+Group <m>"`류 뺄셈 문법은 이 저장소 어디서도 쓰지 않는다, 전수 grep 확인).
+`_DIMMER_DELTA_EXCLUDED_ROLES`(M3)·`_COLOR_ACCENT_ROLES`류 구조적 가드는
+**그룹-주소 델타 줄**(`Group <n>` 경로)에서만 effect를 막을 뿐, 공유 `fids`
+자체는 오늘도 86대 전체를 그대로 들고 있다 — REQ-007 본 범위(공유 `fids`
+자체에서 제외)는 아직 손대지 않았다.
+
+#### 블로커 — effect 역할(BLIND/STROBE/HAZE) 그룹의 fid 멤버십을 얻을 production-safe 경로가 없다
+
+**상태**: 구현 불가(결정 없이는 멤버십을 지어내지 않는다는 배차서의 명시
+제약 — "Do not invent a membership source. If membership is genuinely
+unavailable in production, STOP and return a blocker report"). M5(REQ-007/
+REQ-008) 전체가 이 결정에 막힌다 — REQ-008조차 spec.md 본문이 "REQ-007 적용
+후 기준(이전 비점등 상태, 통상 0)"을 요구해 REQ-007 선행 없이는 AC-007의
+"경쟁 줄이 존재하지 않는다" 조건을 검증할 수 없다(아래 §AC-007 절 참조).
+
+**선택지 (3개 + 기각 1개, 각각 출처·트레이드오프)**:
+
+| | 옵션 (a) 패치명 기반(fixture `Name` 접두 매칭) | 옵션 (b) 운용자 명시 선언(`groups`/`declared_layers` 확장) | 옵션 (c) 콘솔 그룹 멤버십 직접 판독 | 옵션 (d, 기각) 기구-타입/능력 축 재사용 |
+|---|---|---|---|---|
+| 내용 | 패치된 기구마다 `Name` 속성을 1회 재조회(읽기 전용)하고, `resolve_layer_role`(`rig.py:146`, 정확 일치+RG5-1 접두 토큰)과 같은 규율로 이름 첫 토큰을 역할에 매칭 — t499 `fid_names.py`가 쓴 바로 그 기법을 production 경로로 승격 | `_build_layers`가 이미 받는 `groups: Mapping[str, Sequence[int]]`(그룹이름→fid) 매개변수를(지금은 production 전부에서 `{}`) 운용자가 레이어 매핑 확인 카드에서 role→fid를 **직접 확인/입력**하도록 확장 — `_confirm_song_layer_mapping`의 role→group_no 확인 패턴과 같은 UX 축 | `query_state`로 그룹의 자식(member fid)을 직접 읽는다 | `RigInventory.capability_fids["effect"]`(패치 선언 능력 축)를 역할 축 대용으로 쓴다 |
+| 근거 | 코드에 이미 있는 유일한 기법(새 발명 아님), `resolve_layer_role` 재사용 | 새 멤버십 판독 채널을 발명하지 않는다 — 콘솔이 못 주는 정보를 사람이 확정해 주는, 이 코드베이스가 이미 쓰는 패턴(RG5 우선순위 1위 "operator declaration") | 가장 직접적 — 새 UX 비용 없음 | 이미 측정 배선된 축 재사용 시도 |
+| 치명적 결함 | **이름 규약 의존** — 효과 기구 이름이 "BLIND"/"STROBE"/"HAZE"(또는 매칭 접두)로 시작하지 않는 리그에서는 **조용히 제외 실패**(R3 HARD 위반이 FAIL 신호 없이 발생 — t499 자신이 이 테이블을 "INFERRED"로 낮춰 부른 이유와 같다). 또한 이 M5 배차서 자체가 "no console contact"를 명시해 이번 카드 범위에서 새 재조회를 추가할 수 없다 | 비용 — `_confirm_song_layer_mapping` 확인 카드 UX 확장(새 질문/새 입력 형식) 필요, M5 "fids 자체에서 제외"보다 범위가 커진다(레이어-매핑 확인 플로우 자체를 건드림 — plan.md §D 제약이 다루지 않은 새 표면) | **실측으로 확정 불가** — GROUPGEN SPEC M0(실사용 그룹에서도 `childCount: 0`), `_layer_mapping_from_group_children` 독스트링(이 SPEC 자신의 M2 결론)이 **동일 결론**을 두 번 확정했다. 이번 M5는 "no console contact" 제약이라 재확인 시도조차 불가 | **축이 다르다**(plan.md §B 위험 1, HARD 경고) — M1 실측이 이미 확인: 이 저장소의 `CAPABILITY_VOCABULARY`에는 `"effect"` 키 자체가 없어 `capability_fids["effect"]`는 오늘 **항상 빈 집합**이다(M1 progress.md). 설령 채워도 "Strobe/Shutter 속성 선언"과 "BLIND/STROBE/HAZE 그룹 소속"은 다른 사실이라 오분류 위험 |
+| 권장 여부 | 비권장(조용한 R3 위반 위험, 이번 카드에서 재조회 불가) | 결정 필요 시 **차선** — 비용은 있으나 발명이 아니다 | 기각(실측 2회 확정) | 기각(축 자체가 다름, HARD 경고 재확인) |
+
+**이 보고서는 권장안을 하나로 좁히지 않는다** — 배차서의 명시 지시("do not
+guess")를 따라, (a)와 (b) 둘 다 각자의 비용(은닉 결함 위험 vs UX 확장 범위)을
+그대로 리드에게 넘긴다. (c)는 두 차례(GROUPGEN M0 + 이 SPEC 자신의 M2
+결론) 독립적으로 반증됐으므로 선택지에서 사실상 제외됐고, (d)는 축
+혼동이라는 구조적 결함(plan.md HARD 위험 1)으로 기각한다.
+
+#### AC-LDRENDER-007(블라인더 액센트 상승) — REQ-007 선행 조건 미충족으로 측정 불가
+
+`_accent_fixture_value_lines`(`song_cue_render.py:832-844`)의 현재 "80"
+근원은 코드 판독으로 확인했다: `CueAccentFixtureData.dimmer_pct =
+float(intent.brightness[0])`(`song_cue_composer.py:982`), `intent =
+intent_for_label(labels[cue.section_index])`가 돌려주는
+`SectionIntent.brightness`는 §6 표의 **구간 밝기 구간의 하한**이다 — chorus
+행은 `(80, 100)`(`section_intent.py:124-126`), `[0]`이 80을 고른다. t498
+큐 11(`verdict.md:22` — "Group 4 80 · Group 14(BLIND) 80")에서 관측된
+"100→80"은 같은 큐 안에서 전체 기구 디머 줄(100, effect 기구 포함)이 먼저
+나가고 액센트 줄(80)이 콘솔 last-wins로 그 뒤를 덮어써 **하강**하는 것이다
+— spec.md 본문이 "REQ-007 적용 후 기준(이전 비점등 상태, 통상 0)"을
+요구하는 이유가 바로 이것이다: REQ-007이 먼저 effect 기구를 공유 `fids`에서
+빼야, 그 기준이 100(전체 기구 값)에서 0(effect 기구가 애초에 값을 안
+받음)으로 바뀌고, 그제서야 액센트 줄의 80이 **상승**이 된다. REQ-007이
+블록된 채로는 "경쟁 줄(전체 디머)이 존재하지 않는다"(AC-007 측정 조건)를
+검증할 방법이 없다 — 억지로 `_accent_fixture_value_lines`만 고치면
+독립적으로는 녹색이어도 AC-007이 실제로 요구하는 불변식(공유 `fids` 제외가
+선행된 뒤의 상승)을 증명하지 못하는 거짓 PASS가 된다. 그래서 이 카드는
+`_accent_fixture_value_lines`를 **건드리지 않았다**.
+
+#### 측정 항목 1-3(8곡 디머/색/포지션/페이저 줄 + 액센트 방향) — 수행하지 않음, 이유
+
+배차서 측정 항목 1("비액센트 큐 중 effect 기구가 점등값을 받는 큐 수")은
+현재 트리에서 **코드 판독만으로 자명**하다 — `fids`에 제외 로직이 전혀
+없으므로(위 §왜 Group 번호로는 부족한가), 8곡·모든 비액센트 큐에서 효과
+기구는 예외 없이 전체 기구 묶음에 포함된 채 디머·색·포지션·페이저 네 값
+줄 전부를 받는다(t499 P3′·t498 큐 전체와 바이트 동일한 구조 — 새 리허설로
+다시 재도 같은 "0% 제외"가 나올 뿐, 새 정보가 없다). 8곡 표를 만드는 대신
+이 코드-구조적 사실을 명시한다 — 억지로 숫자를 지어내지 않는다. 항목 2(액센트
+방향)는 위 §AC-007 절 참조. 항목 3(AC-001/AC-004 재측정)은 M5가 `fids`를
+바꾸지 않았으므로 M4 측정과 바이트 동일할 것이 코드-구조적으로 보장된다(새
+측정이 정보를 안 준다) — 재실행하지 않았다.
+
+#### AC-LDRENDER-015 — t498 오프라인 스위트 재실행하지 않음, 이유
+
+t498의 `judge_a1_a5.py`/`judge_a7.py`/`classify_diff.py`는 `run1_fake_rain_1`/
+`run1_fake_rain_2`류 **고정 폴더**를 인자로 받아 읽기만 한다(`judge_a1_a5.py:11`
+`R1, R2 = Path(sys.argv[1]), Path(sys.argv[2])`) — 새 리허설 없이 그 스크립트를
+돌려도 M5 "적용 후" 증거가 아니라 **M5 이전에 이미 저장된 과거 데이터의
+재판정**일 뿐이다(결과는 이전 실행과 바이트 동일할 수밖에 없다). 이 워크트리에
+원곡 오디오가 없어(M3/M4가 이미 기록한 제약, find 재확인 0건) 새 리허설로
+"이 SPEC 적용 후" 송신 목록을 만들 방법도 없다. 거짓 증거(과거 데이터를 새
+증거처럼 제시)를 만들지 않기 위해 재실행을 스킵했다 — M5 구현 자체가
+블록됐으므로 "적용 후" 상태가 아직 존재하지 않는다는 사실을 그대로 보고한다.
+
+#### 회귀 — 베이스라인 안정성만 재확인(M5 코드 변경 0)
+
+```
+$ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+14456 passed, 35 skipped, 1 warning in 295.80s
+```
+
+배차서가 명시한 베이스라인(HEAD `4d93e1dc`, 14456 passed/35 skipped)과
+바이트 동일 — M5가 코드를 건드리지 않았으므로 **변경 없음을 재확인**한
+것이지, M5 "적용 후" 테스트 결과가 아니다. 뮤테이션은 해당 없음(새 단언
+0건, 구현 코드 변경 0건). 린트/포맷도 해당 없음(변경 파일 0건).
+
+#### @MX 태그 — 해당 없음(코드 변경 0)
+
+#### M5 이 하지 않은 것 (§Gaps — 명시)
+
+- **REQ-LDRENDER-007(공유 `fids`에서 effect 기구 제외)은 구현하지 않았다**
+  — fid 멤버십 판독 경로 부재(위 §블로커)로 결정 없이는 숫자(fid 목록)를
+  지어낼 수 없다.
+- **REQ-LDRENDER-008(블라인더 액센트 상승 방향)도 구현하지 않았다** —
+  REQ-007 선행 조건 미충족(spec.md 본문 명시), 독립 수정은 거짓 PASS
+  위험(위 §AC-007).
+- **AC-LDRENDER-006/007 모두 미검증**(FAIL 아님 — 검증 자체가 불가능한
+  상태, PASS/FAIL 판정을 내리지 않는다).
+- **측정 항목 1-3(8곡 테이블)·AC-015 오프라인 스위트는 수행하지 않았다** —
+  각각 "코드-구조적으로 이미 자명"·"거짓 증거 위험" 사유, 위 해당 절 참조.
+- **뮤테이션·@MX·린트 다이프는 해당 없음** — 구현 코드 변경이 0건이기
+  때문이다.
+- **이 블로커는 멤버십 "확보 방법"의 선택이지 멤버십 "읽기 시도"가 아니다**
+  — 이번 M5는 "no console contact"가 명시돼 옵션 (a)/(c)의 실측 재시도
+  자체도 이 카드 범위 밖이다(결정이 난 뒤 후속 카드가 수행).
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<sync-phase 대기>_
