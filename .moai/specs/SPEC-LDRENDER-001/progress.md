@@ -120,6 +120,171 @@ $ uv run ruff format --check server/design/ldrender_gate.py server/tests/test_ld
 - **실기 콘솔 접촉 없음** — §C 의 "M1 읽기 전용 경계"를 지키기 위해 의도적으로 생략했다. 합성 패치 데이터로 수행한 측정(위)이 실기 접촉 없이도 결론이 구조적으로 불변함을 보여주므로, 이 Gap 은 결론의 신뢰도를 낮추지 않는다(위 §D 질문 응답).
 - **이 워크트리는 `WT-ldrender-run`(t501) 의 canonical 1커밋 뒤처져 있다** — `git branch --show-current` 결과가 `worktree-agent-af2ef34f7d94f8ec7`이고 `HEAD`는 `5220ca4e`(canonical `c11ee839` 보다 1커밋 뒤). 차이 커밋(`c11ee839`)을 `git show`로 대조한 결과 AC-002(M2 범위, acceptance.md 문면 1줄 — "다섯 조건 전부 성립해야 PASS") 뿐이었고 M1 범위(REQ-009/013)에 영향 없음을 확인했다.
 
+### M2 — 역할 어휘 확장: 정본 §2c 버전 올림 + `RIG_LAYER_ROLES` + 그룹 이름 해석 (카드 t501, REQ-LDRENDER-002, 감독 결정 1)
+
+**착수 베이스라인**: `git merge --ff-only origin/WT-ldrender-run` → HEAD `d5a82c26`(M1 완료 커밋) — `git log --oneline -1` 로 확인. 6개 순서 단계(①~⑥, 배차서) 전부 별도 또는 그룹 커밋으로 수행:
+
+| 단계 | 내용 | 커밋 |
+|---|---|---|
+| ① | 정본 §2c "role층 → 그룹 매핑" 표에 side/wash/mover 추가 + 문서 버전 v0.4→v0.5(§2c 섹션도 동일), RG5-1 신설 | `c9ac4e63`(단독) |
+| ② | `rig.py:44` `RIG_LAYER_ROLES` 튜플 확장(key/back/effect/audience/side/wash/mover) | `a5971fe0` |
+| ③ | `_build_layers` 가 `declared_layers={"side":...,"wash":...,"mover":...}` 를 `RigProfileError` 없이 수용 — 신규 테스트 | `f4a4dc62` |
+| ④ | `has_layer()`/`RIG_LAYER_ROLES`/`layers.mapping` 소비자 전수 grep + 영향 재검토 | `b7cf6bfc`(실제 영향 발견 + 수정) |
+| ⑤ | `_LAYER_GROUP_ALIASES` 접두 토큰(하이픈 앞) 해석 추가 | `a5971fe0` |
+| ⑥ | `test_mover_and_wash_groups_remain_unmatched_documented_residual` 의도적 뒤집음 | `f4a4dc62` |
+
+#### ① 정본 문서 (REQ-002, AC-002 조건 1)
+
+```
+$ head -1 docs/proposals/song-lighting-design-standard.md
+# 곡 단위 조명연출 표준 초안 (Song Lighting Design Standard, v0.5)
+$ grep -n "역할층" docs/proposals/song-lighting-design-standard.md
+85:  layers:     역할층 → 그룹 매핑 (key/back/effect/audience/side/wash/mover)  ← 조명 디자인
+$ git log -1 --format=%s -- docs/proposals/song-lighting-design-standard.md
+t501: SPEC-LDRENDER-001 M2① — 정본 §2c 버전 올림, side/wash/mover 역할 추가 (감독 결정 1)
+```
+RG5-1 신설 단락(§2c)에 접두 토큰 매칭 규칙을 명문화 — SIDE-L/R/ALL→side, WASH-U/D/ALL→wash, MOVER-U/D/ALL→mover, 부분 문자열 추측 금지.
+
+#### ② `RIG_LAYER_ROLES` 확장 (REQ-002, AC-002 조건 2)
+
+```
+$ uv run python -c "from server.design.rig import RIG_LAYER_ROLES; print(RIG_LAYER_ROLES); assert {'side','wash','mover'} <= set(RIG_LAYER_ROLES)"
+('key', 'back', 'effect', 'audience', 'side', 'wash', 'mover')
+```
+기존 네 역할의 순서·값은 바이트 동일(앞에 유지, 뒤에 세 역할만 추가).
+
+#### ③ `_build_layers` 수용 (REQ-002, AC-002 조건 3) — 두 팔
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_design_rig.py -q -k "accept_side_wash_mover or reject_unknown_role"
+..
+2 passed, 31 deselected in 0.05s
+```
+팔 1(수용): `test_declared_layers_accept_side_wash_mover_roles` — `declared_layers={"side":...,"wash":...,"mover":...}` 가 `RigProfileError` 없이 `RIG_LAYER_SOURCE_DECLARED` 로 수용됨. 팔 2(여전히 거부): 기존 `test_declared_layers_reject_unknown_role` — 모르는 역할 문자열은 여전히 거부(변경 없음, 회귀 확인).
+
+#### ④ 소비자 전수 grep + 재검토 — **실제 영향 1건 발견·수정** (REQ-002 본문 "소비자 전수 재검토")
+
+grep 결과(`has_layer(`/`RIG_LAYER_ROLES`/`layers.mapping`/`fids_for(`/`RigLayers(`):
+
+```
+$ grep -rln "has_layer(\|RIG_LAYER_ROLES\|layers\.mapping\|fids_for(\|RigLayers(" server/
+server/design/__init__.py        (RIG_LAYER_ROLES re-export 뿐)
+server/design/ldrender_gate.py   (주석 인용 뿐)
+server/design/rig.py             (정의 자체)
+server/design/song_cue_composer.py  (has_layer("back") 두 자리, :711·:716)
+server/tests/test_design_rig.py
+server/tests/test_layer_mapping_foh_front.py
+```
+`song_cue_composer.py` 의 `has_layer()` 호출은 `"back"` 인자뿐이라(§B 위험 7 (d) 우려 대상) side/wash/mover 등장에 영향받지 않는다 — `lint.py` 의 L6/L7 도 `layer_rules_active()`(mapped 불리언)만 읽어 역할 무관. `server/orchestrator/tools.py`: 위 네 패턴 매치 0건(grep 확인).
+
+**그러나 grep 패턴 밖의 실제 영향이 전체 회귀에서 드러났다**: `session.py` 의 `_LAYER_ROLE_LABELS[str(entry['role'])]`(`_confirm_song_layer_mapping` 확인 카드 문구 조립, 결함 6 선례)가 해석된 역할 **전부**를 순회하는데, 이 표에 side/wash/mover 항목이 없어 KeyError. 이 소비자는 위 grep 패턴(`has_layer`/`RIG_LAYER_ROLES`/`layers.mapping`/`fids_for`/`RigLayers(`) 어디에도 안 걸린다 — `str(entry['role'])`로 해석된 역할 이름을 **직접** 키로 쓰기 때문이다. **교훈 기록**: grep 패턴 전수조사가 "RigProfile API 호출부"는 잡지만 "해석된 역할 이름을 문자열로 소비하는 자리"는 못 잡는다 — 두 축이 다르다.
+
+```
+# 고치기 전 재현 (session.py/rig.py 를 commit c9ac4e63 으로 되돌려 대조)
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+4 failed, 14395 passed, 35 skipped, 1 warning in 197.91s
+FAILED test_dedupe_value_lines_t476.py::test_the_whole_approved_rain_bundle_reaches_the_console
+FAILED test_song_readback_props_t479.py::test_a_live_shaped_console_that_stored_everything_reads_back_as_verified
+FAILED test_song_readback_props_t479.py::test_a_wrong_trig_time_read_through_props_still_fails
+FAILED test_song_readback_props_t479.py::test_a_props_read_failure_is_not_reported_as_verified
+
+# 원인 복원(위 commit c9ac4e63 버전으로) + 해당 4건만 재실행 → 전부 PASS (대조 확인)
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_dedupe_value_lines_t476.py server/tests/test_song_readback_props_t479.py -q -p no:cacheprovider
+27 passed in 0.62s
+
+# 수정(side/wash/mover 라벨 추가) 후 같은 4건 + 전체 재실행
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_dedupe_value_lines_t476.py server/tests/test_song_readback_props_t479.py -q -p no:cacheprovider
+27 passed in 0.93s
+```
+수정: `server/web/session.py` `_LAYER_ROLE_LABELS` 에 `"side": "Side"`, `"wash": "Wash"`, `"mover": "Mover"` 추가(commit `b7cf6bfc`). 신규 회귀 잠금: `test_every_rig_layer_role_has_a_confirmation_card_label`(`RIG_LAYER_ROLES ⊆ _LAYER_ROLE_LABELS.keys()` 직접 단언).
+
+#### ⑤ 접두 토큰 그룹 이름 해석 (REQ-002, AC-002 조건 4)
+
+`server/design/rig.py` 에 `_LAYER_GROUP_PREFIX_ROLES` + `resolve_layer_role()` 신설 — 정확 일치(기존 4역할, 바이트 동일) 우선, 실패 시 첫 하이픈 앞 접두 토큰을 SIDE/WASH/MOVER 와 정확 비교. `_build_layers`(rig.py)와 `_layer_mapping_from_group_children`(session.py) 양쪽이 이 함수를 공유(두 소비자가 각자 판정 루프를 들면 갈라지는 함정을 미리 막음, §B 위험 7 (d)와 같은 종류).
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -k "prefix_token"
+....
+4 passed, 14431 deselected, 1 warning in 9.38s
+```
+양성(SIDE-L/R/ALL→side, WASH-U/D/ALL→wash, MOVER-U/D/ALL→mover) + 음성(SIDEWALK 하이픈 없음·XSIDE-L/SIDES-L 접두 토큰 불일치, 셋 다 미매칭) 모두 커버.
+
+**여러 그룹이 한 역할에 매칭될 때의 동점 규율 — 결정 + 기록**: `_build_layers`의 groups-heuristic 경로(실측: 프로덕션에서 `groups={}` 하드코딩이라 실제로는 거치지 않는 경로, §B 위험 2)는 **합집합**(기존 다중-별칭 역할과 같은 의미론, 새 동점 규칙 발명 안 함, `test_group_name_heuristic_maps_side_wash_mover_via_prefix_token`). production 경로(`session.py::_confirm_song_layer_mapping`의 `declared_layers` 딕셔너리 컴프리헨션)는 **이터레이션 순서상 마지막 항목이 이긴다**(기존 동작, 바꾸지 않음) — 이 리그의 측정된 그룹 순서(카드 t379)에서는 그것이 자연히 `-ALL` 그룹을 선택한다(`test_last_matching_group_in_iteration_order_wins_the_role` 로 고정, 근거: `session.py` 코드 판독 — 별도 "ALL 선호" 분기를 새로 만들지 않았다).
+
+#### ⑥ 잔여 테스트 의도적 뒤집음 (REQ-002 본문 "조용히 깨뜨리지 않는다")
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_layer_mapping_effect_role.py -q -k "mover_and_wash or side"
+.
+1 passed, 8 deselected in 0.41s
+```
+`test_mover_and_wash_groups_remain_unmatched_documented_residual` → `test_mover_and_wash_and_side_groups_now_match_via_prefix_token` 으로 이름·단언·독스트링 함께 갱신(commit `f4a4dc62`). 같은 파일 안에서 `test_design_rig.py::test_declared_layers_role_vocabulary_is_the_standard_four` → `..._standard_seven` 도 같은 규율로 뒤집음(배차서에 명시된 `:119` 테스트는 아니지만, 역할 튜플 확장의 직접 귀결로 발견된 두 번째 잠금 테스트 — 조용히 깨뜨리지 않고 동일 절차 적용).
+
+#### AC-LDRENDER-002 — 다섯 조건 전부 성립 (acceptance.md "다섯 조건 전부가 성립해야 PASS")
+
+| 조건 | 내용 | 명령 | 결과 |
+|---|---|---|---|
+| 1 | 정본 §2c 가 side/wash/mover 를 담고 버전이 이전보다 높음 | `head -1 docs/...md` + `git log -1 --format=%s -- docs/...md` | PASS |
+| 2 | `RIG_LAYER_ROLES` 가 셋을 포함 | `uv run python -c "from server.design.rig import RIG_LAYER_ROLES; assert {'side','wash','mover'} <= set(RIG_LAYER_ROLES)"` | PASS |
+| 3 | `_build_layers` 가 `RigProfileError` 없이 수용 | `pytest -k accept_side_wash_mover` | PASS |
+| 4 | 그룹 이름은 하이픈 앞 접두 토큰으로만 해석(부분 문자열 오인 매칭 0건) | `pytest -k prefix_token` | PASS |
+| 5 | `:119` 테스트의 뒤집음이 이름·단언·독스트링 갱신과 함께 명시적으로 이뤄짐 | `pytest -k "mover_and_wash or side"` | PASS |
+
+**AC-002 PASS — 다섯 조건 전부 성립.**
+
+#### 뮤테이션 — 새 단언에 걸기 (§3.3 규율)
+
+| 뮤테이션 | 대상 | 죽인 테스트 | 결과 |
+|---|---|---|---|
+| A: 접두 토큰 정확 매칭 → 부분 문자열(`in`) 허용으로 완화 | `resolve_layer_role()` | `test_group_name_heuristic_prefix_token_rejects_lookalikes`, `test_prefix_token_matching_rejects_lookalikes_no_substring_guessing` | 2건 FAIL (의도대로 빨강) |
+| B: `RIG_LAYER_ROLES` 튜플에서 `"mover"` 제거 | `rig.py` | `test_declared_layers_accept_side_wash_mover_roles`, `test_declared_layers_role_vocabulary_is_the_standard_seven` | 2건 FAIL (의도대로 빨강) |
+| C: `_LAYER_ROLE_LABELS` 에서 `"mover"` 라벨 제거 | `session.py` | `test_every_rig_layer_role_has_a_confirmation_card_label` | 1건 FAIL (의도대로 빨강) |
+
+세 뮤테이션 모두 `PYTHONDONTWRITEBYTECODE=1` 로 실행, `assert mutated != original`(파이썬 스크립트 내) 로 치환 적용을 확인한 뒤 테스트를 돌렸고, 각 뮤테이션 후 `cp <원본 백업> <경로>` 로 복원해 `git diff --stat`(출력 없음)으로 원복을 확인했다. 복원 후 전체 지정 범위 재실행 PASS(아래 회귀 절).
+
+#### 회귀 — 전체 스위트 (베이스라인 `d5a82c26`, docs-only 커밋 `c9ac4e63` 에서 재측정 — python 파일 무변경이므로 바이트 동일 기준선)
+
+```
+# 베이스라인(c9ac4e63, d5a82c26 와 python 파일 동일)
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+14394 passed, 35 skipped, 1 warning in 232.46s
+
+# M2 전 커밋(a5971fe0+f4a4dc62, ④ 수정 전) — 4건 FAIL 재현(위 ④ 참조)
+14395 passed, 4 failed, 35 skipped
+
+# M2 완료(b7cf6bfc, HEAD)
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+14400 passed, 35 skipped, 1 warning in 196.08s
+```
+14394 → 14400 (**+6, 신규 테스트 수와 정확히 일치** — 삭제 0 · 교체 0 · 전체 FAIL 0건). 신규 6개: `test_design_rig.py` 3개(`test_declared_layers_accept_side_wash_mover_roles`·`test_group_name_heuristic_maps_side_wash_mover_via_prefix_token`·`test_group_name_heuristic_prefix_token_rejects_lookalikes`) + `test_layer_mapping_effect_role.py` 3개(`test_prefix_token_matching_rejects_lookalikes_no_substring_guessing`·`test_last_matching_group_in_iteration_order_wins_the_role`·`test_every_rig_layer_role_has_a_confirmation_card_label`). 이름 뒤집힘 2건(`...standard_four→seven`, `...residual→now_match_via_prefix_token`)은 교체이지 신규가 아니다(순증 불변).
+
+지정 범위(이 M2 가 직접 건드린 소비자 전부):
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_layer_mapping_effect_role.py server/tests/test_layer_mapping_foh_front.py server/tests/test_design_rig.py server/tests/test_song_cue_color_emission.py server/tests/test_song_cue_white_preset_t453.py server/tests/test_seeded_song_apply.py -q -p no:cacheprovider
+99 passed in 0.71s
+```
+
+#### 린트/포맷
+
+```
+$ uv run ruff check server/design/rig.py server/web/session.py server/tests/test_design_rig.py server/tests/test_layer_mapping_effect_role.py
+All checks passed!
+$ uv run ruff format --check server/design/rig.py server/web/session.py server/tests/test_design_rig.py server/tests/test_layer_mapping_effect_role.py
+4 files already formatted
+```
+
+#### @MX 태그
+
+`resolve_layer_role()`(신규 공개 함수, `server/design/rig.py`)의 fan_in = 2(`_build_layers` 내부 호출 + `session.py::_layer_mapping_from_group_children`) — ANCHOR 요건(fan_in>=3) 미달, ANCHOR 미부착. 위험한 패턴(goroutine류·복잡도>=15) 없음 — WARN 불필요. 테스트 커버(신규 6건 + 간접 커버 다수) 있으므로 TODO 불필요. `_LAYER_GROUP_PREFIX_ROLES`/`RIG_LAYER_ROLES` 확장 자체는 데이터 선언이라 @MX 대상 아님.
+
+#### M2 가 하지 않은 것 (§Gaps — 명시)
+
+- **M3(다중 역할 렌더링, `CueDimmerData` 확장)는 하지 않았다** — M2 는 역할 **어휘**(이름·그룹 매칭)만 확장했다. side/wash/mover 역할이 매핑에 해석되어도 송신 값 줄은 아직 `back` 만 읽는다(`song_cue_composer.py:711/716`) — AC-001(LIT 층 3개 이상)은 M3 완료 후에나 PASS 가능(plan.md §B 위험 8, 변경 없음).
+- **`groups`-heuristic 경로(`_build_layers` 의 fids-union 분기)는 실측상 프로덕션에서 호출되지 않는다**(`groups={}` 하드코딩, §B 위험 2) — 이 분기의 합집합 동작은 단위 테스트로만 검증했고 실기 데이터로는 확인하지 않았다(M1 읽기 전용 경계와 별개로, M2 는 콘솔 접촉이 아예 없다 — 읽기조차 안 함).
+- **실기 콘솔 접촉 없음** — M2 는 코드·문서 편집 + 단위/회귀 테스트만 수행했다(콘솔 조회조차 없음, M1 보다 더 좁은 범위).
+- **`_SINGLE_LAYER_WARNING`("Front/Back/Beam/Audience 분리 연출은...") 문구는 side/wash/mover 를 나열하도록 갱신하지 않았다** — 이 문구는 단일 레이어 축퇴 상태를 설명하는 일반 경고라 특정 역할 목록을 열거할 필요가 없다고 판단했으나(§4 안티패턴 "정본 문서 편집 범위를 §2c 밖으로 넓히지 마라"의 코드판 — 이 문구는 §2c 밖 코드 상수), 이 판단 자체는 감독 재확인을 받지 않았다 — 재확인이 필요하면 후속으로 갱신한다.
+- **`groups`-heuristic 의 "여러 그룹이 한 역할에 매칭 → 합집합" 의미론은 side/wash/mover 전에도 이미 있던 기존 동작이지만, 이 동작이 "옳은지"(여러 물리 그룹을 하나의 역할 fid 집합으로 합치는 것이 항상 맞는지) 자체는 이 카드의 범위 밖 — M2 는 기존 동작을 바꾸지 않았을 뿐, 그 동작의 설계적 정당성을 재검토하지 않았다.**
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
