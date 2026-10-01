@@ -5601,8 +5601,11 @@ class TestSongDesignInterviewSession:
         # 선언하지 않으므로 마디를 계산할 수 없고, 그래서 큐 밀도는 오늘과
         # 같은 "구간 하나에 큐 하나"로 남는다. 이전에는 이 목록에 단일 레이어
         # 경고 하나뿐이었다.
+        # 카드 t501 M3④ — 문구가 Side/Wash/Mover 를 포함하도록 갱신됐다(M2 가
+        # 역할을 넷에서 일곱으로 넓혔는데 문구는 그대로였다, session.py 주석 참조).
         assert timelines[-1]["warnings"] == [
-            "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다.",
+            "단일 레이어 계획입니다. Front/Back/Beam/Audience/Side/Wash/Mover 분리 연출은 "
+            "검증되지 않았습니다.",
             "BPM 미선언 — 마디를 계산할 수 없어 구간을 쪼개지 않았습니다",
         ]
         # 그리고 큐 수는 구간 수 그대로다 — 분할 없음의 관측 가능한 형태.

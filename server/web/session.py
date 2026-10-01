@@ -640,8 +640,15 @@ _LAYER_ROLE_LABELS: dict[str, str] = {
     "mover": "Mover",
 }
 
+# 카드 t501(SPEC-LDRENDER-001 M3④) — M2 가 역할을 key/back/effect/audience
+# 네 개에서 일곱 개(side/wash/mover 추가)로 넓혔는데, 이 문구는 그 전 네
+# 역할만 나열하고 있었다. 단일 레이어 축퇴 상태에서는 **일곱 전부**가
+# 미검증이므로(매핑이 비면 `_role_dimmer_value_lines`가 어떤 역할에도 줄을
+# 못 낸다, AC-LDRENDER-003), 넷만 적힌 문구는 이제 부정확하다 — 셋을
+# 추가해 바로잡는다(판단 기록: M3.md "_SINGLE_LAYER_WARNING 판정").
 _SINGLE_LAYER_WARNING = (
-    "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다."
+    "단일 레이어 계획입니다. Front/Back/Beam/Audience/Side/Wash/Mover 분리 연출은 "
+    "검증되지 않았습니다."
 )
 
 
@@ -1379,8 +1386,11 @@ def _song_cue_sheet_section_fields(
         # 둘 중 하나를 고르면 그것은 계산이 아니라 추측이다.
         trans = "SNAP" if fade_seconds == 0 else "FADE"
 
-    # 이 큐가 **그룹 번호로 지목하는** 콘솔 그룹. `_back_layer_value_lines` 와
-    # 같은 조건이다: 불이 켜진 구간 큐에만 back 역할 그룹 줄이 붙는다.
+    # 이 큐가 **그룹 번호로 지목하는** 콘솔 그룹. `_role_dimmer_value_lines`
+    # (SPEC-LDRENDER-001 M3 — 구 `_back_layer_value_lines`)와 같은 조건이다:
+    # 불이 켜진 구간 큐에만 back 역할 그룹 줄이 붙는다. 이 필드(업로드 길
+    # CUE-EX 큐시트 표시용)는 여전히 back 전용이다 — side/wash/mover 로
+    # 넓히는 것은 이 SPEC 의 송신 경로(reviewed_song_commands) 범위 밖이다.
     fixture_groups = (
         tuple(
             str(entry["group_name"])
@@ -7710,8 +7720,9 @@ class ChatSession:
                         QuestionOption(label="단일 레이어로 진행"),
                     ),
                     why=(
-                        "레이어 매핑이 없으면 Front/Back/Beam/Audience 분리 연출은 "
-                        "검증되지 않은 단일 레이어 계획으로 표시됩니다."
+                        # 카드 t501 M3④ — _SINGLE_LAYER_WARNING 과 같은 판정(위).
+                        "레이어 매핑이 없으면 Front/Back/Beam/Audience/Side/Wash/Mover "
+                        "분리 연출은 검증되지 않은 단일 레이어 계획으로 표시됩니다."
                     ),
                 )
                 if answer and "사용" in answer:
