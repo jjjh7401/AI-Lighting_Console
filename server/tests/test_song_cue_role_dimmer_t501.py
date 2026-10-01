@@ -8,6 +8,10 @@ AC-LDRENDER-003(단일 레이어 리그는 오늘과 바이트 동일)의 **직�
 비교한 실측은 ``.moai/reports/t501/ac003_byte_diff.py``(이 워크트리에 원곡
 오디오가 없어 전체 세션 리허설로 두 트리를 대조할 수 없다, 그 스크립트 머리말
 참조).
+
+M3 완료(리드 결정, 2026-10-01) — ``TestRolePctForBackRatioReuse`` 가
+side/wash/mover 디머 = back 과 같은 식(``key_pct * 0.8``)이라는 리드 결정을
+``_role_pct_for``에 직접 겨눈다(M3.md §블로커 옵션 (a) 확정).
 """
 
 from __future__ import annotations
@@ -16,8 +20,25 @@ from dataclasses import dataclass
 
 import pytest
 
-from server.design.song_cue_composer import CueDimmerData, SongCueComposerError
+from server.design.energy import EFFECT_AXIS_CAPABILITY
+from server.design.rig import build_rig_profile
+from server.design.song_cue_composer import CueDimmerData, SongCueComposerError, _role_pct_for
 from server.design.song_cue_render import _role_dimmer_value_lines, _role_group_numbers
+
+
+def _rig_with_layers(declared_layers: dict[str, list[int]]):
+    patch = [
+        {"fid": fid, "type_name": "Fixture", "capabilities": [EFFECT_AXIS_CAPABILITY]}
+        for fid in range(1, 10)
+    ]
+    return build_rig_profile(patch=patch, groups={}, coords=[], declared_layers=declared_layers)
+
+
+class _PlanStub:
+    """``_role_pct_for``가 실제로 읽는 한 필드(``rig_profile``)만 채운 대역."""
+
+    def __init__(self, rig_profile) -> None:
+        self.rig_profile = rig_profile
 
 
 @dataclass(frozen=True)
@@ -201,3 +222,63 @@ class TestCueDimmerDataRolePct:
         d = CueDimmerData(key_pct=70.0, back_pct=56.0, budget_range_pct=(0.0, 100.0))
         assert d.key_pct == 70.0
         assert d.back_pct == 56.0
+
+
+class TestRolePctForBackRatioReuse:
+    """M3 완료(리드 결정, 카드 t501, 2026-10-01) — side/wash/mover 디머는 back
+    과 바이트 동일한 식(``key_pct * 0.8``)을 재사용한다. 새 숫자를 짓지 않는다
+    — M3.md §블로커 옵션 (a) 확정, `_BACK_RATIO_ROLES` 주석 참조."""
+
+    def test_side_wash_mover_get_the_same_ratio_as_back_when_the_rig_declares_them(self) -> None:
+        rig = _rig_with_layers({"key": [1], "back": [2], "side": [3], "wash": [4], "mover": [5]})
+        role_pct = _role_pct_for(80.0, 64.0, plan=_PlanStub(rig))
+        assert role_pct == {
+            "key": 80.0,
+            "back": 64.0,
+            # back_pct 자체도 key_pct*0.8=64.0 — side/wash/mover 가 같은 식으로
+            # 독립 계산해도 back_pct 인자와 값이 갈라지지 않는다(같은 비율).
+            "side": 64.0,
+            "wash": 64.0,
+            "mover": 64.0,
+        }
+
+    def test_a_role_absent_from_the_rig_is_omitted_not_zeroed(self) -> None:
+        """side 만 선언된 리그는 wash/mover 를 0%가 아니라 생략한다(발명 금지)."""
+        rig = _rig_with_layers({"key": [1], "side": [3]})
+        role_pct = _role_pct_for(80.0, None, plan=_PlanStub(rig))
+        assert role_pct == {"key": 80.0, "side": 64.0}
+        assert "wash" not in role_pct
+        assert "mover" not in role_pct
+        assert "back" not in role_pct
+
+    def test_without_a_plan_side_wash_mover_stay_empty_legacy_behavior(self) -> None:
+        """`plan=None`(옛 호출부 호환) — side/wash/mover 는 여전히 비운다."""
+        assert _role_pct_for(80.0, 64.0) == {"key": 80.0, "back": 64.0}
+
+    def test_blackout_zero_key_pct_propagates_the_same_zero_to_side_wash_mover(self) -> None:
+        rig = _rig_with_layers({"key": [1], "side": [3], "wash": [4], "mover": [5]})
+        role_pct = _role_pct_for(0.0, None, plan=_PlanStub(rig))
+        assert role_pct == {"key": 0.0, "side": 0.0, "wash": 0.0, "mover": 0.0}
+
+    def test_effect_and_audience_stay_omitted_even_when_declared_in_the_rig(self) -> None:
+        """effect/audience 는 이 SPEC 범위 밖 — 리그에 선언돼도 role_pct 에 안 채운다."""
+        rig = _rig_with_layers({"key": [1], "effect": [2], "audience": [3]})
+        role_pct = _role_pct_for(80.0, None, plan=_PlanStub(rig))
+        assert role_pct == {"key": 80.0}
+        assert "effect" not in role_pct
+        assert "audience" not in role_pct
+
+    def test_end_to_end_role_dimmer_value_lines_renders_the_reused_ratio(self) -> None:
+        """①(role_pct)+②(_role_dimmer_value_lines) 통합 — 리드 결정이 실제
+        송신 줄까지 닿는지 직접 확인."""
+        rig = _rig_with_layers({"key": [1], "back": [2], "side": [3], "wash": [4], "mover": [5]})
+        role_pct = _role_pct_for(100.0, 80.0, plan=_PlanStub(rig))
+        cue = _Cue(kind="section", dimmer=_dimmer(role_pct, key_pct=100.0))
+        lines = _role_dimmer_value_lines(cue, _MULTI_GROUP_SIDE_MAPPING)
+        # 그룹 7(SIDE-ALL)·10(WASH-ALL)·13(MOVER-ALL)·4(BACK) 전부 같은 80.
+        assert set(lines) == {
+            "Group 4 ; Attribute 'Dimmer' At 80",
+            "Group 7 ; Attribute 'Dimmer' At 80",
+            "Group 10 ; Attribute 'Dimmer' At 80",
+            "Group 13 ; Attribute 'Dimmer' At 80",
+        }

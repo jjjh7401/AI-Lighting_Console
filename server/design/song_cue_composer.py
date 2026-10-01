@@ -596,7 +596,7 @@ def compose_song_cue_bundle(plan: UnifiedSongLightingPlan) -> SongCueComposition
     # 카드 t462 — 업로드 길의 드롭 전 어둠·절정 길이 상한을 여기서도 건다. MIB 앞에
     # 둔다: MIB 는 「앞 큐가 어두운가」를 보는데, 어둠의 바닥(DARKNESS_FLOOR=20)은
     # 0 이 아니므로 MIB 판정을 바꾸지 않는다.
-    darkened = _apply_pre_drop_darkness(section_cues, labels)
+    darkened = _apply_pre_drop_darkness(plan, section_cues, labels)
     accented, arc_notes = _apply_blinder_accents(plan, darkened, labels)
     cues = _apply_mib(_apply_climax_returns(plan, accented))
     lint_report = _lint_report(plan, cues)
@@ -717,17 +717,44 @@ def _section_cue(
     )
 
 
-def _role_pct_for(key_pct: float | None, back_pct: float | None) -> dict[str, float]:
-    """SPEC-LDRENDER-001 M3 — ``key``/``back`` 외 역할(side/wash/mover/
-    effect/audience)은 **의도적으로 채우지 않는다**(role_pct 비어 있음 = 아직
-    정본 산출 규칙이 없다는 뜻이지  0% 라는 뜻이 아니다). 이 함수를
-    ``_dimmer_data``와 ``_apply_pre_drop_darkness`` 양쪽이 공유해, 역할
-    집합이 두 자리에서 갈라지는 것을 막는다."""
+#: SPEC-LDRENDER-001 M3 완료(리드 결정, 카드 t501, 2026-10-01) — side/wash/
+#: mover 의 퍼센트 산출 규칙은 정본 어디에도 없다(M3.md §미해결 6단계 검색
+#: 표, back 전용 ``key_pct * 0.8``이 유일한 역할별 공식). 리드가 M3 블로커의
+#: 옵션 (a)(back 비율 재사용)를 확정했다 — **새 숫자를 짓지 않고** back 과
+#: 바이트 동일한 식을 side/wash/mover 에도 그대로 적용한다. 이 결정의 알려진
+#: 결과(블로커 분석이 "치명적 결함"으로 적어 둔 것): side/wash/mover 가 back
+#: 과 **같은 값**을 받으므로 ``ldrender_gate.layer_diversity``(상태값 기준
+#: 버킷)에서 디머만으로는 새 버킷이 안 생긴다 — 층 간 밝기 대비는 R5(후속
+#: SPEC)로 이월한다. 층 구분은 M4(이 SPEC 의 R2, `_song_color_value_lines`)
+#: 가 역할별로 다른 색(back+mover=지배색, side+wash=보조색, key=중립)을 내는
+#: 것으로 난다 — 디머 값이 같아도 색이 다르면 서로 다른 상태 버킷이다.
+_BACK_RATIO_ROLES: tuple[str, ...] = ("back", "side", "wash", "mover")
+
+
+def _role_pct_for(
+    key_pct: float | None,
+    back_pct: float | None,
+    *,
+    plan: UnifiedSongLightingPlan | None = None,
+) -> dict[str, float]:
+    """SPEC-LDRENDER-001 M3 — ``key``/``back``/``side``/``wash``/``mover`` 를
+    채운다. ``effect``/``audience`` 는 여전히 **의도적으로 비운다**(이 SPEC
+    범위 밖 — role_pct 비어 있음 = 아직 정본 산출 규칙이 없다는 뜻이지 0%
+    라는 뜻이 아니다). side/wash/mover 는 리드 결정(위 ``_BACK_RATIO_ROLES``
+    주석)대로 back 과 같은 ``key_pct * 0.8`` 식을 ``plan.rig_profile.
+    has_layer(role)`` 가 참인 역할에만 채운다 — ``plan`` 이 없으면(과거
+    호출부 호환) side/wash/mover 는 여전히 비운다. 이 함수를 ``_dimmer_data``
+    와 ``_apply_pre_drop_darkness`` 양쪽이 공유해, 역할 집합이 두 자리에서
+    갈라지는 것을 막는다."""
     role_pct: dict[str, float] = {}
     if key_pct is not None:
         role_pct["key"] = key_pct
     if back_pct is not None:
         role_pct["back"] = back_pct
+    if plan is not None and key_pct is not None:
+        for role in ("side", "wash", "mover"):
+            if plan.rig_profile.has_layer(role):
+                role_pct[role] = key_pct * 0.8
     return role_pct
 
 
@@ -745,7 +772,7 @@ def _dimmer_data(
             back_pct=back_pct,
             budget_range_pct=budget.dimmer_pct,
             blackout=True,
-            role_pct=_role_pct_for(0.0, back_pct),
+            role_pct=_role_pct_for(0.0, back_pct, plan=plan),
         )
     key_pct = (low + high) / 2.0
     back_pct = key_pct * 0.8 if plan.rig_profile.has_layer("back") else None
@@ -753,7 +780,7 @@ def _dimmer_data(
         key_pct=key_pct,
         back_pct=back_pct,
         budget_range_pct=budget.dimmer_pct,
-        role_pct=_role_pct_for(key_pct, back_pct),
+        role_pct=_role_pct_for(key_pct, back_pct, plan=plan),
     )
 
 
@@ -876,7 +903,9 @@ def _is_drop_row(label: str) -> bool:
 #   온다(카드 t462). 형태는 B 와 같은 「줄인 워시」: 앞 큐의 밝기를 그 행의 바닥까지
 #   내린다. 같은 행(후렴 뒤 후렴)·이미 어두운 큐·블랙아웃은 건드리지 않는다.
 def _apply_pre_drop_darkness(
-    cues: tuple[ComposedCue, ...], labels: dict[int, str]
+    plan: UnifiedSongLightingPlan,
+    cues: tuple[ComposedCue, ...],
+    labels: dict[int, str],
 ) -> tuple[ComposedCue, ...]:
     result = list(cues)
     for position in range(1, len(result)):
@@ -895,14 +924,16 @@ def _apply_pre_drop_darkness(
         # SPEC-LDRENDER-001 M3 — `role_pct`는 `dataclasses.replace`로는 저절로
         # 안 따라온다(지정 안 한 필드는 옛 값을 그대로 들고 온다). 여기서 다시
         # 계산하지 않으면 `back_pct` 필드는 내려갔는데 `role_pct["back"]`은
-        # 드롭-앞-어둠 적용 전 값으로 남는 불일치가 생긴다.
+        # 드롭-앞-어둠 적용 전 값으로 남는 불일치가 생긴다. M3 완료(리드 결정,
+        # 카드 t501) — `plan`을 넘겨 side/wash/mover 도 같은 비율로 같이
+        # 내려간다(위 `_role_pct_for`/`_BACK_RATIO_ROLES` 주석 참조).
         result[position - 1] = dataclasses.replace(
             previous,
             dimmer=dataclasses.replace(
                 previous.dimmer,
                 key_pct=target,
                 back_pct=new_back_pct,
-                role_pct=_role_pct_for(target, new_back_pct),
+                role_pct=_role_pct_for(target, new_back_pct, plan=plan),
             ),
             pre_drop_from=key_pct,
         )
