@@ -553,11 +553,80 @@ def _white_palette_name(cue) -> str | None:
     return None if rgb is None else _WHITE_NAME_BY_RGB.get(rgb)
 
 
+#: SPEC-LDRENDER-001 M4(REQ-LDRENDER-004, 감독 결정 3) — 층→색 배정 축.
+#: `back`+`mover` = 지배색(`palette[0]`, 이미 전체 기구 베이스라인 줄로
+#: 나간다 — 델타 불필요). `side`+`wash` = 보조색(`palette[1]`). `key` 는
+#: 표준 팔레트 기존 웜화이트 항목(새 RGB 발명 금지, §4b C3). 이 델타
+#: 순회에 `back`/`mover`가 없는 이유 — 베이스라인이 이미 지배색이라 같은
+#: 값을 또 내면 §D5(REQ-006)가 금지하는 "같은 값 두 줄"이 된다. `effect`가
+#: 없는 이유 — R3(REQ-LDRENDER-007, HARD)가 비액센트 큐의 **어떤** 값
+#: 줄에도 effect 역할 그룹 기구를 금지한다(`_DIMMER_DELTA_EXCLUDED_ROLES`와
+#: 같은 구조적 가드 — M5 를 기다리지 않는다).
+_COLOR_ACCENT_ROLES: tuple[str, ...] = ("side", "wash")
+
+
+def _role_color_value_lines(
+    cue,
+    layer_mapping: Sequence[Mapping[str, object]],
+    palette: Sequence[str],
+    dominant_rgb: tuple[int, int, int],
+) -> tuple[str, ...]:
+    """REQ-LDRENDER-004 — 역할별 델타 색 줄(`_role_dimmer_value_lines`와 같은
+    그룹-주소 패턴, fid 불요·RG5). 베이스라인 전체 기구 색 줄 **뒤**에 와서
+    콘솔 last-wins 로 역할별 그룹만 덮어쓴다.
+
+    REQ-004 본문의 "팔레트가 2개 이상의 색을 담고 있으면"을 그대로
+    지킨다 — `len(palette) < 2`(단색 팔레트)이면 역할 배정 자체를 하지
+    않는다(오늘처럼 베이스라인 한 줄만, 지어내지 않는다). `len(palette) > 2`
+    여도 3번째 이후 색은 쓰지 않는다(§6.3 동시성 상한).
+
+    **중복 줄 가드(REQ-004/REQ-006, §D5)**: 보조색이 지배색과 같아지면
+    (`color_usage="single"`) `side`/`wash` 델타를 **내지 않는다** — 베이스
+    라인이 이미 그 값이므로 같은 값을 두 줄로 중복 발화하지 않는다. `key`
+    도 지배색이 이미 웜화이트면 같은 이유로 생략한다. REQ-006 이 말하는
+    "별도 분기 불필요"가 바로 이 값-비교 생략이다(새 분기를 만들지 않았다).
+
+    **§6.3 집계 플래그(spec.md §3.2 [HARD])**: `key` 의 웜화이트는 이 SPEC
+    이 §6.3 "최대 2개(지배 1 + 액센트 1)" 집계 밖(중립 기준광)으로 읽는다
+    — 그래서 한 큐가 동시에 3색(지배·보조·웜화이트)을 낼 수 있어도 §6.3
+    위반이 아니다. 이 읽음은 유일한 해석이 아니라고 spec.md 가 명시
+    플래그했다(재확인 여지)."""
+    if cue.kind != "section" or len(palette) < 2:
+        return ()
+    role_numbers = _role_group_numbers(layer_mapping)
+    lines: list[str] = []
+    accent_rgb = _COLOR_NAMES.resolve_color_name(palette[1])
+    if accent_rgb is not None and accent_rgb != dominant_rgb:
+        for role in _COLOR_ACCENT_ROLES:
+            group_no = role_numbers.get(role)
+            if group_no is None:
+                continue
+            lines.append(_group_color_apply_command(group_no, accent_rgb))
+    warm_white_rgb = _COLOR_NAMES.resolve_color_name("Warm White")
+    if warm_white_rgb is not None and warm_white_rgb != dominant_rgb:
+        key_group_no = role_numbers.get("key")
+        if key_group_no is not None:
+            lines.append(_group_color_apply_command(key_group_no, warm_white_rgb))
+    return tuple(lines)
+
+
+def _group_color_apply_command(group_no: int, rgb: tuple[int, int, int]) -> str:
+    """`_color_apply_command`의 그룹-주소 쌍둥이 — fid 선택 대신 `Group <n>`
+    (`_role_dimmer_value_lines`의 `Group <n> ; Attribute 'Dimmer' ...`와 같은
+    문법 축, RG5 — 그룹 멤버십 fid 를 몰라도 그룹 번호만으로 값을 낸다)."""
+    r, g, b = rgb
+    return (
+        f"Group {group_no} ; Attribute 'ColorRGB_R' At {r} ; "
+        f"Attribute 'ColorRGB_G' At {g} ; Attribute 'ColorRGB_B' At {b}"
+    )
+
+
 def _song_color_value_lines(
     cue,
     fids: Sequence[int],
     w_fids: frozenset[int] = frozenset(),
     white_presets: Mapping[str, tuple[int, int] | str] | None = None,
+    layer_mapping: Sequence[Mapping[str, object]] = (),
 ) -> tuple[tuple[str, ...], str | None]:
     """SPEC-LDDESIGN-001 M2 — 큐의 팔레트 주색을 콘솔 값 라인으로 낸다.
 
@@ -565,8 +634,12 @@ def _song_color_value_lines(
     경로는 색을 한 줄도 보내지 않았다(`reports/lddesign-m2-cue-path/`)
     — 설계층은 팔레트를 들고 있는데 명령 생성기가 떨어뜨렸다.
 
-    주색만 낸다. 보조색·유보색·언더페인팅은 M3(컬러 규칙)의 몫이고,
-    이 자리에서 지어내면 그 규칙이 도착했을 때 두 출처가 생긴다.
+    SPEC-LDRENDER-001 M4(REQ-LDRENDER-004~006) — 이제 주색(베이스라인,
+    전체 기구) **+** 역할별 배정(`back`+`mover`=지배색, `side`+`wash`=
+    보조색, `key`=웜화이트)을 함께 낸다. 보조색 배정은 ``layer_mapping``이
+    역할을 해석했을 때만 나간다(``_role_color_value_lines``, 위 참조) —
+    ``layer_mapping=()``(기본값, 레거시 호출부)이면 오늘처럼 주색 한 줄만
+    나가 바이트 동일하다.
 
     MIB 사전이동 큐(``kind == "mib_premove"``)는 건너뛴다 — 어둠 속 이동
     큐라 색 값이 공연에 보이지 않고, 사전에 색까지 얹을지는 아직 안 잰
@@ -586,7 +659,8 @@ def _song_color_value_lines(
     값이 없는 기구는 앞 줄의 RGB 흰색을 그대로 받는다. 다음 큐의 W 기구 줄이
     늘 ``W At 0``을 적으므로 프리셋이 켠 W 는 다음 색으로 새지 않는다. 사유가
     오면 프리셋 줄 없이 오늘 줄만 내고 그 사유를 돌려준다(지어내지 않는다).
-    ``None``(판독 안 함)이면 t430 동작 그대로다.
+    ``None``(판독 안 함)이면 t430 동작 그대로다. 역할별 배정 줄은 이 실패
+    여부와 무관하게 항상 시도한다(w_fids/화이트 프리셋 축과 별개 축이다).
     """
     if cue.kind != "section":
         return (), None
@@ -597,25 +671,28 @@ def _song_color_value_lines(
     rgb = _COLOR_NAMES.resolve_color_name(name)
     if rgb is None:
         return (), f"Q{cue.cue_number:g} {cue.cue_name!r}의 색 {name!r}은 표준 팔레트 10색에 없음"
+    failure: str | None = None
     if not w_fids:
-        return (_color_apply_command(fids, rgb),), None
-    rgb_only_fids = [fid for fid in fids if fid not in w_fids]
-    w_only_fids = [fid for fid in fids if fid in w_fids]
-    lines: list[str] = []
-    if rgb_only_fids:
-        lines.append(_color_apply_command(rgb_only_fids, rgb))
-    if w_only_fids:
-        lines.append(_color_apply_command(w_only_fids, rgb) + " ; Attribute 'ColorRGB_W' At 0")
-    white = _white_palette_name(cue)
-    if white is None or white_presets is None or not w_only_fids:
-        return tuple(lines), None
-    resolved = white_presets.get(white)
-    if not isinstance(resolved, tuple):
-        reason = resolved or f"{white} 프리셋 판독 결과 없음"
-        return tuple(lines), f"Q{cue.cue_number:g} {cue.cue_name!r} 흰색 프리셋 미사용: {reason}"
-    pool_no, slot = resolved
-    lines.append(_preset_recall_command(pool_no, w_only_fids, slot))
-    return tuple(lines), None
+        lines: list[str] = [_color_apply_command(fids, rgb)]
+    else:
+        rgb_only_fids = [fid for fid in fids if fid not in w_fids]
+        w_only_fids = [fid for fid in fids if fid in w_fids]
+        lines = []
+        if rgb_only_fids:
+            lines.append(_color_apply_command(rgb_only_fids, rgb))
+        if w_only_fids:
+            lines.append(_color_apply_command(w_only_fids, rgb) + " ; Attribute 'ColorRGB_W' At 0")
+        white = _white_palette_name(cue)
+        if white is not None and white_presets is not None and w_only_fids:
+            resolved = white_presets.get(white)
+            if not isinstance(resolved, tuple):
+                reason = resolved or f"{white} 프리셋 판독 결과 없음"
+                failure = f"Q{cue.cue_number:g} {cue.cue_name!r} 흰색 프리셋 미사용: {reason}"
+            else:
+                pool_no, slot = resolved
+                lines.append(_preset_recall_command(pool_no, w_only_fids, slot))
+    lines.extend(_role_color_value_lines(cue, layer_mapping, palette, rgb))
+    return tuple(lines), failure
 
 
 #: SPEC-LDRENDER-001 REQ-LDRENDER-001/REQ-LDRENDER-007 — 역할마다 독립된 그룹
@@ -1062,7 +1139,9 @@ def reviewed_song_commands(
         if cue.position.stored is not None:
             preset_no = position_slots[cue.position.stored]
         dimmer = cue.dimmer.key_pct
-        color_lines, color_failure = _song_color_value_lines(cue, fids, w_fids, white_presets)
+        color_lines, color_failure = _song_color_value_lines(
+            cue, fids, w_fids, white_presets, layer_mapping
+        )
         if color_failure is not None:
             color_failures[f"{cue.cue_number:g}"] = color_failure
         if preset_no is None and dimmer is None:

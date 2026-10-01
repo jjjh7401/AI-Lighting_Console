@@ -63,6 +63,37 @@ T498 = HERE.parent / "t498"
 sys.path.insert(0, str(T499))
 import readout as _readout  # noqa: E402
 
+#: 카드 t501 M4 — readout.py 자신의 머리말(위 T499 경로의 그 파일, 이 측정
+#: 스크립트가 아니다)이 "SIDE-ALL·WASH-ALL·MOVER-ALL... 은 이번 송신에 안
+#: 나와서 펼침 규칙을 안 만들었다(나오면 멈춘다)"고 명시한 바로 그 경우가
+#: M4 에서 처음 발생한다 — 역할별 디머(M3, 리드 결정)/색(M4) 델타가
+#: `_role_group_numbers`의 "마지막 항목이 이긴다" 규율로 side/wash/mover 를
+#: SIDE-ALL(7)/WASH-ALL(10)/MOVER-ALL(13)로 고른다(M2 progress.md
+#: "여러 그룹이 한 역할에 매칭될 때" 선례와 동형 — `_MULTI_GROUP_SIDE_MAPPING`
+#: 테스트 픽스처가 이미 이 규율을 고정했다). readout.py 자신은 건드리지
+#: 않는다(M1 PRESERVE 경계) — 이 펼침 규칙은 이 측정 스크립트 전용 패치다.
+#: -ALL 그룹의 구성원은 그 축의 서브그룹 합집합(예: SIDE-ALL = SIDE-L ∪
+#: SIDE-R) — 콘솔 그룹 명명 관행 그대로이지 지어낸 값이 아니다.
+_ALL_GROUP_SUBGROUPS: dict[int, tuple[str, ...]] = {
+    7: ("SIDE-L", "SIDE-R"),  # SIDE-ALL
+    10: ("WASH-U", "WASH-D"),  # WASH-ALL
+    13: ("MOVER-U", "MOVER-D"),  # MOVER-ALL
+}
+_original_readout_members = _readout.members
+
+
+def _members_with_all_group_expansion(group_no: int) -> list[int]:
+    subgroups = _ALL_GROUP_SUBGROUPS.get(group_no)
+    if subgroups is None:
+        return _original_readout_members(group_no)
+    found = [f for f, row in _readout.FID_TABLE.items() if row["group"] in subgroups]
+    if not found:
+        raise SystemExit(f"Group {group_no}: -ALL 펼침 대상 서브그룹 {subgroups} 에 기구가 없다")
+    return found
+
+
+_readout.members = _members_with_all_group_expansion
+
 INSTRUCTION = "디자인 큐 시트, 시퀀스 211, 프리셋 21번부터, 타임코드 11"
 #: t499 ANSWERS 에서 첫 "확인" 하나를 뺐다 — 그 답은 `analyse_song_audio()`의
 #: 구간 확정 카드용이었는데, 이 재현은 그 카드 자체를 안 띄운다(DSP 를 다시

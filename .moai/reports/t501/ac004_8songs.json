@@ -1,0 +1,442 @@
+[
+ {
+  "song": "Club Diver",
+  "unique_sent_rgb_count": 4,
+  "colour_change_count": 5,
+  "max_simultaneous_chromatic_colours": 2,
+  "max_chromatic_cue": "1",
+  "role_colour_check": {
+   "checked": true,
+   "cue_no": 1.0,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "back": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "mover": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "side": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "wash": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "key": [
+    [
+     100.0,
+     75.0,
+     40.0
+    ]
+   ],
+   "back_matches_dominant": true,
+   "mover_matches_dominant": true,
+   "side_matches_accent": true,
+   "wash_matches_accent": true,
+   "key_matches_warm_white": true
+  }
+ },
+ {
+  "song": "Cut and Run",
+  "unique_sent_rgb_count": 3,
+  "colour_change_count": 11,
+  "max_simultaneous_chromatic_colours": 2,
+  "max_chromatic_cue": "1",
+  "role_colour_check": {
+   "checked": true,
+   "cue_no": 1.0,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "back": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "mover": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "side": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "wash": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "key": [
+    [
+     100.0,
+     75.0,
+     40.0
+    ]
+   ],
+   "back_matches_dominant": true,
+   "mover_matches_dominant": true,
+   "side_matches_accent": true,
+   "wash_matches_accent": true,
+   "key_matches_warm_white": true
+  }
+ },
+ {
+  "song": "Ice cream",
+  "unique_sent_rgb_count": 4,
+  "colour_change_count": 4,
+  "max_simultaneous_chromatic_colours": 2,
+  "max_chromatic_cue": "1",
+  "role_colour_check": {
+   "checked": true,
+   "cue_no": 1.0,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "back": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "mover": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "side": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "wash": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "key": [
+    [
+     100.0,
+     75.0,
+     40.0
+    ]
+   ],
+   "back_matches_dominant": true,
+   "mover_matches_dominant": true,
+   "side_matches_accent": true,
+   "wash_matches_accent": true,
+   "key_matches_warm_white": true
+  }
+ },
+ {
+  "song": "Morning",
+  "unique_sent_rgb_count": 3,
+  "colour_change_count": 3,
+  "max_simultaneous_chromatic_colours": 2,
+  "max_chromatic_cue": "1",
+  "role_colour_check": {
+   "checked": true,
+   "cue_no": 1.0,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "back": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "mover": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "side": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "wash": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "key": [
+    [
+     100.0,
+     75.0,
+     40.0
+    ]
+   ],
+   "back_matches_dominant": true,
+   "mover_matches_dominant": true,
+   "side_matches_accent": true,
+   "wash_matches_accent": true,
+   "key_matches_warm_white": true
+  }
+ },
+ {
+  "song": "Rain",
+  "unique_sent_rgb_count": 3,
+  "colour_change_count": 5,
+  "max_simultaneous_chromatic_colours": 2,
+  "max_chromatic_cue": "1",
+  "role_colour_check": {
+   "checked": true,
+   "cue_no": 1.0,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "back": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "mover": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "side": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "wash": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "key": [
+    [
+     100.0,
+     75.0,
+     40.0
+    ]
+   ],
+   "back_matches_dominant": true,
+   "mover_matches_dominant": true,
+   "side_matches_accent": true,
+   "wash_matches_accent": true,
+   "key_matches_warm_white": true
+  }
+ },
+ {
+  "song": "Too Cool",
+  "unique_sent_rgb_count": 4,
+  "colour_change_count": 8,
+  "max_simultaneous_chromatic_colours": 2,
+  "max_chromatic_cue": "1",
+  "role_colour_check": {
+   "checked": true,
+   "cue_no": 1.0,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "back": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "mover": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "side": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "wash": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "key": [
+    [
+     100.0,
+     75.0,
+     40.0
+    ]
+   ],
+   "back_matches_dominant": true,
+   "mover_matches_dominant": true,
+   "side_matches_accent": true,
+   "wash_matches_accent": true,
+   "key_matches_warm_white": true
+  }
+ },
+ {
+  "song": "scott-buckley-neon",
+  "unique_sent_rgb_count": 4,
+  "colour_change_count": 7,
+  "max_simultaneous_chromatic_colours": 2,
+  "max_chromatic_cue": "1",
+  "role_colour_check": {
+   "checked": true,
+   "cue_no": 1.0,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "back": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "mover": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "side": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "wash": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "key": [
+    [
+     100.0,
+     75.0,
+     40.0
+    ]
+   ],
+   "back_matches_dominant": true,
+   "mover_matches_dominant": true,
+   "side_matches_accent": true,
+   "wash_matches_accent": true,
+   "key_matches_warm_white": true
+  }
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질",
+  "unique_sent_rgb_count": 4,
+  "colour_change_count": 5,
+  "max_simultaneous_chromatic_colours": 2,
+  "max_chromatic_cue": "1",
+  "role_colour_check": {
+   "checked": true,
+   "cue_no": 1.0,
+   "palette": [
+    "블루",
+    "cyan"
+   ],
+   "back": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "mover": [
+    [
+     5.0,
+     20.0,
+     100.0
+    ]
+   ],
+   "side": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "wash": [
+    [
+     0.0,
+     90.0,
+     100.0
+    ]
+   ],
+   "key": [
+    [
+     100.0,
+     75.0,
+     40.0
+    ]
+   ],
+   "back_matches_dominant": true,
+   "mover_matches_dominant": true,
+   "side_matches_accent": true,
+   "wash_matches_accent": true,
+   "key_matches_warm_white": true
+  }
+ }
+]

@@ -1,128 +1,16 @@
-Club Diver: 구간 큐 14 LIT>=3 0 LIT<3 14 색 1 효과줄 0 경고 True
-  실패 큐 1: LIT 2
-  실패 큐 2: LIT 2
-  실패 큐 3: LIT 2
-  실패 큐 4: LIT 2
-  실패 큐 5: LIT 2
-  실패 큐 6: LIT 2
-  실패 큐 7: LIT 2
-  실패 큐 8: LIT 2
-  실패 큐 9: LIT 2
-  실패 큐 10: LIT 2
-  실패 큐 11: LIT 2
-  실패 큐 12: LIT 2
-  실패 큐 12.5: LIT 1
-  실패 큐 13: LIT 2
-Cut and Run: 구간 큐 18 LIT>=3 0 LIT<3 18 색 1 효과줄 0 경고 True
-  실패 큐 1: LIT 2
-  실패 큐 2: LIT 2
-  실패 큐 3: LIT 2
-  실패 큐 4: LIT 2
-  실패 큐 5: LIT 2
-  실패 큐 6: LIT 2
-  실패 큐 7: LIT 2
-  실패 큐 8: LIT 2
-  실패 큐 9: LIT 2
-  실패 큐 10: LIT 2
-  실패 큐 11: LIT 2
-  실패 큐 12: LIT 2
-  실패 큐 13: LIT 2
-  실패 큐 14: LIT 2
-  실패 큐 15: LIT 2
-  실패 큐 16: LIT 2
-  실패 큐 16.5: LIT 1
-  실패 큐 17: LIT 2
-Ice cream: 구간 큐 8 LIT>=3 0 LIT<3 8 색 1 효과줄 0 경고 True
-  실패 큐 1: LIT 2
-  실패 큐 2: LIT 2
-  실패 큐 3: LIT 2
-  실패 큐 4: LIT 2
-  실패 큐 5: LIT 2
-  실패 큐 6: LIT 2
-  실패 큐 6.5: LIT 1
-  실패 큐 7: LIT 2
-Morning: 구간 큐 14 LIT>=3 0 LIT<3 14 색 1 효과줄 0 경고 True
-  실패 큐 1: LIT 2
-  실패 큐 2: LIT 2
-  실패 큐 3: LIT 2
-  실패 큐 4: LIT 2
-  실패 큐 5: LIT 2
-  실패 큐 6: LIT 2
-  실패 큐 7: LIT 2
-  실패 큐 8: LIT 2
-  실패 큐 9: LIT 2
-  실패 큐 10: LIT 2
-  실패 큐 11: LIT 2
-  실패 큐 12: LIT 2
-  실패 큐 12.5: LIT 1
-  실패 큐 13: LIT 2
-Rain: 구간 큐 13 LIT>=3 0 LIT<3 13 색 1 효과줄 0 경고 True
-  실패 큐 1: LIT 2
-  실패 큐 2: LIT 2
-  실패 큐 3: LIT 2
-  실패 큐 4: LIT 2
-  실패 큐 5: LIT 2
-  실패 큐 6: LIT 2
-  실패 큐 7: LIT 2
-  실패 큐 8: LIT 2
-  실패 큐 9: LIT 2
-  실패 큐 10: LIT 2
-  실패 큐 11: LIT 2
-  실패 큐 11.5: LIT 1
-  실패 큐 12: LIT 2
-Too Cool: 구간 큐 24 LIT>=3 0 LIT<3 24 색 1 효과줄 0 경고 True
-  실패 큐 1: LIT 2
-  실패 큐 2: LIT 2
-  실패 큐 3: LIT 2
-  실패 큐 4: LIT 2
-  실패 큐 5: LIT 2
-  실패 큐 6: LIT 2
-  실패 큐 7: LIT 2
-  실패 큐 8: LIT 2
-  실패 큐 9: LIT 2
-  실패 큐 10: LIT 2
-  실패 큐 11: LIT 2
-  실패 큐 12: LIT 2
-  실패 큐 13: LIT 2
-  실패 큐 14: LIT 2
-  실패 큐 15: LIT 2
-  실패 큐 16: LIT 2
-  실패 큐 17: LIT 2
-  실패 큐 18: LIT 2
-  실패 큐 18.5: LIT 1
-  실패 큐 19: LIT 2
-  실패 큐 20: LIT 2
-  실패 큐 21: LIT 2
-  실패 큐 22: LIT 2
-  실패 큐 23: LIT 2
-scott-buckley-neon: 구간 큐 18 LIT>=3 0 LIT<3 18 색 1 효과줄 0 경고 True
-  실패 큐 1: LIT 2
-  실패 큐 2: LIT 2
-  실패 큐 3: LIT 2
-  실패 큐 4: LIT 2
-  실패 큐 5: LIT 2
-  실패 큐 6: LIT 2
-  실패 큐 7: LIT 2
-  실패 큐 8: LIT 2
-  실패 큐 9: LIT 2
-  실패 큐 10: LIT 2
-  실패 큐 11: LIT 2
-  실패 큐 12: LIT 2
-  실패 큐 13: LIT 2
-  실패 큐 14: LIT 2
-  실패 큐 15: LIT 2
-  실패 큐 16: LIT 2
-  실패 큐 16.5: LIT 1
-  실패 큐 17: LIT 2
-걸그룹DinoDino_C_max최고품질: 구간 큐 11 LIT>=3 0 LIT<3 11 색 2 효과줄 0 경고 True
-  실패 큐 1: LIT 2
-  실패 큐 2: LIT 2
-  실패 큐 3: LIT 2
-  실패 큐 3.5: LIT 1
-  실패 큐 4: LIT 2
-  실패 큐 5: LIT 2
-  실패 큐 6: LIT 2
-  실패 큐 7: LIT 2
-  실패 큐 8: LIT 2
-  실패 큐 9: LIT 2
-  실패 큐 10: LIT 2
+Club Diver: 구간 큐 14 LIT>=3 13 LIT<3 1 색 4 효과줄 0 경고 True
+  실패 큐 12.5: LIT 2
+Cut and Run: 구간 큐 18 LIT>=3 17 LIT<3 1 색 3 효과줄 0 경고 True
+  실패 큐 16.5: LIT 2
+Ice cream: 구간 큐 8 LIT>=3 7 LIT<3 1 색 4 효과줄 0 경고 True
+  실패 큐 6.5: LIT 2
+Morning: 구간 큐 14 LIT>=3 13 LIT<3 1 색 3 효과줄 0 경고 True
+  실패 큐 12.5: LIT 2
+Rain: 구간 큐 13 LIT>=3 12 LIT<3 1 색 3 효과줄 0 경고 True
+  실패 큐 11.5: LIT 2
+Too Cool: 구간 큐 24 LIT>=3 23 LIT<3 1 색 4 효과줄 0 경고 True
+  실패 큐 18.5: LIT 2
+scott-buckley-neon: 구간 큐 18 LIT>=3 17 LIT<3 1 색 4 효과줄 0 경고 True
+  실패 큐 16.5: LIT 2
+걸그룹DinoDino_C_max최고품질: 구간 큐 11 LIT>=3 10 LIT<3 1 색 4 효과줄 0 경고 True
+  실패 큐 3.5: LIT 2

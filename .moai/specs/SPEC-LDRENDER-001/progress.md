@@ -537,7 +537,17 @@ TODO 불필요.
 
 ## §블로커 — side/wash/mover 디머 퍼센트 산출 규칙 미정 (REQ-LDRENDER-001 잔여)
 
-**상태**: 구현 불가(결정 없이는 숫자를 지어내지 않는다는 지시문의 명시 제약).
+**상태(해소, 2026-10-01)**: 리드가 아래 옵션 (a)(back 비율 재사용)를 확정했다
+— 권장안이었던 옵션 (b)(역할별 감독 결정 요청) 대신 (a)를 명시 선택했다.
+리드 결정 전문: "side/wash/mover dimmer = key_pct × 0.8, i.e. the SAME
+existing formula as back ... layer brightness contrast belongs to R5 (next
+SPEC)". 아래 표가 이미 적어 둔 옵션 (a)의 "치명적 결함"(AC-001 기여 못함 —
+side 가 back 과 같은 값을 받으면 같은 버킷)은 리드가 **알고도** 받아들인
+것이다 — 층 간 구분은 디머가 아니라 M4(색)가 내기로 명시했다. 구현·측정은
+아래 "M3 완료(결정 a)" + "M4" 절 참조. 이하 표는 블로커 당시 제시한 선택지
+기록으로 보존한다(변경 없음, 결정 근거 추적용).
+
+**상태(블로커 당시)**: 구현 불가(결정 없이는 숫자를 지어내지 않는다는 지시문의 명시 제약).
 배차서 구속: "정본 어디에도 산출 규칙이 없으면 그 부분을 구현하기 전에 멈추고
 2-3개 구체적 선택지를 제시하라."
 
@@ -565,6 +575,315 @@ side/wash/mover 퍼센트 없이는 구조적으로 도달 불가능하다(§⑤
 묶어 뒀으므로(spec.md §3.2 [HARD], 감독 결정 3), 디머 결정도 그 축을 따라
 "지배 그룹 비율 vs 보조 그룹 비율" 둘만 물으면 충분할 가능성이 높다(발명
 아님 — 이미 난 결정의 연장을 확인하는 질문).
+
+### M3 완료(결정 a) — side/wash/mover 디머 = back 과 같은 식 (카드 t501, 리드 결정 2026-10-01)
+
+**구현**: `song_cue_composer.py` `_role_pct_for(key_pct, back_pct, *, plan=None)` —
+`plan` 이 주어지면 `plan.rig_profile.has_layer(role)` 이 참인
+`side`/`wash`/`mover` 각각에 `key_pct * 0.8`(back 과 바이트 동일한 식, 새
+상수 없음)을 채운다. `plan` 이 없으면(레거시 호출부 호환) side/wash/mover 는
+이전처럼 비운다 — 발명 아니라 생략 규율은 그대로다. `_dimmer_data`(정상·
+블랙아웃 두 분기)와 `_apply_pre_drop_darkness`(드롭 앞 어둠, `plan` 파라미터
+신설 + 호출부 1곳 갱신) 양쪽이 `plan=plan` 을 넘긴다 — role_pct 가 두 자리
+에서 갈라지지 않는다(M3 ①의 기존 공유 헬퍼 규율 유지).
+
+코드 주석 인용(새 상수 미도입 표시): `_BACK_RATIO_ROLES`/`_role_pct_for`
+독스트링에 "리드 결정 t501 M3 — 층 간 밝기 대비는 R5(후속 SPEC)로 이월한다"
+를 명시했다(지시문 그대로, `song_cue_composer.py:720` 부근).
+
+**테스트**: `server/tests/test_song_cue_role_dimmer_t501.py`
+`TestRolePctForBackRatioReuse`(신규 6개) — side/wash/mover 가 back 과 같은
+비율을 받는지, 리그에 없는 역할은 생략되는지(0 아님), `plan=None` 레거시
+호환, 블랙아웃 0 전파, effect/audience 여전히 비움, `_role_dimmer_value_lines`
+까지 닿는 종단 확인.
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_song_cue_role_dimmer_t501.py -q
+.........................
+25 passed in 0.17s
+```
+
+**뮤테이션(2건, §3.3 규율)**:
+
+| 뮤테이션 | 대상 | 죽인 테스트 | 결과 |
+|---|---|---|---|
+| E: `for role in ("side","wash","mover")` → `("side","wash")`(mover 제거) | `_role_pct_for` | `test_side_wash_mover_get_the_same_ratio...`·`test_blackout_zero_key_pct_propagates...`·`test_end_to_end_role_dimmer_value_lines...` | 3건 FAIL(의도대로 빨강) |
+| F: `key_pct * 0.8` → `key_pct * 0.5`(리드 결정 수치 변조) | `_role_pct_for` | `test_side_wash_mover_get_the_same_ratio...`·`test_a_role_absent_from_the_rig_is_omitted...`·`test_end_to_end_role_dimmer_value_lines...` | 3건 FAIL(의도대로 빨강) |
+
+두 뮤테이션 모두 적용 후 대상 테스트만 빨갛게 만들고(axis 분리 확인)
+`diff` 로 치환을 확인한 뒤 원본으로 복원, 복원 후 지정 범위 재실행 PASS.
+
+**AC-001 효과(측정, 아래 M4 §AC-001 재측정 참조)**: 디머만으로는 버킷이
+여전히 최대 2개다(`measure_dimmer_only_8songs.py` 8곡 전부 "디머전용 최대버킷
+2") — 블로커 당시 예측·치명적 결함 분석과 정확히 일치한다. AC-001 의 실제
+PASS 는 M4(색)가 만든다.
+
+### M4 — 색 송신 확장 + 층→색 배정 (카드 t501, REQ-LDRENDER-004/005/006, 감독 결정 3)
+
+#### 구현
+
+`server/design/song_cue_render.py`:
+
+- `_COLOR_ACCENT_ROLES = ("side", "wash")` — 보조색 델타 대상. `back`/`mover`
+  는 베이스라인(전체 `fids`, 지배색)이 이미 그 값이라 델타를 내지 않는다
+  (REQ-004 "네 그룹을 하나로 합친 선택에 동일 색 한 줄만" 의 구현 — 새 분기가
+  아니라 "델타가 필요 없다"는 사실 자체가 병합이다).
+- `_role_color_value_lines(cue, layer_mapping, palette, dominant_rgb)` —
+  `_role_dimmer_value_lines`와 같은 그룹-주소 패턴(fid 불요, RG5). `len(palette)
+  < 2`(단색)면 역할 배정 자체를 하지 않는다(REQ-004 본문 조건 그대로, 웜화이트
+  배정도 안 함 — 발명 금지). `accent_rgb == dominant_rgb`(REQ-006, `color_usage
+  =single`)면 side/wash 델타를 생략한다 — 값-비교 하나로 "별도 분기 불필요"를
+  구현(REQ-006 본문 그대로 인용). `key` 도 지배색이 이미 웜화이트면 같은 이유로
+  생략한다. `effect`/`audience` 는 배정 축(`_COLOR_ACCENT_ROLES`+`"key"`)에
+  없어 구조적으로 제외된다(`_DIMMER_DELTA_EXCLUDED_ROLES`와 같은 이중 가드
+  철학 — R3 HARD 불변식, M5 를 기다리지 않는다).
+- `_group_color_apply_command(group_no, rgb)` — `_color_apply_command`의 그룹
+  주소 쌍둥이(`Group <n> ; Attribute 'ColorRGB_R'...`).
+- `_song_color_value_lines`에 `layer_mapping: Sequence[...] = ()` 5번째 인자
+  추가(끝에 추가 — 기존 위치 인자 호출 전부 호환). 베이스라인/W채널/흰색
+  프리셋 로직은 그대로 두고(단일 종료점으로 리팩터 — 4개였던 return 지점을
+  1개로 합쳐 모든 경로가 역할 배정을 동일하게 거치게 했다), 함수 끝에서
+  `_role_color_value_lines` 결과를 항상 추가한다(흰색 프리셋 실패 여부와
+  무관 — 별개 축).
+
+**§6.3 집계 플래그 코드 주석**(지시문 요구): `_role_color_value_lines`
+독스트링에 "key 의 웜화이트는 이 SPEC 이 §6.3 '최대 2개(지배 1+액센트 1)'
+집계 밖(중립 기준광)으로 읽는다... 이 읽음은 유일한 해석이 아니라고 spec.md
+가 명시 플래그했다(재확인 여지)"를 그대로 인용해 남겼다(`song_cue_render.py`
+`_role_color_value_lines` 함수 바로 위).
+
+**웜화이트 RGB 사용처**: `_COLOR_NAMES.resolve_color_name("Warm White")` →
+`(100, 75, 40)` — `color_names.py` `COLOR_PALETTE_SEQUENCE` 의 **기존** 첫
+항목(새 RGB 미발명). 인용: `color_names.py:34` `("Warm White", (100, 75, 40))`.
+
+호출부 1곳 갱신: `reviewed_song_commands`가
+`_song_color_value_lines(cue, fids, w_fids, white_presets, layer_mapping)`
+로 `layer_mapping`을 넘긴다.
+
+#### 테스트 — 신규 `server/tests/test_song_cue_role_color_t501.py` (16개)
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_song_cue_role_color_t501.py -q
+................
+16 passed in 0.15s
+```
+
+`TestRoleColorValueLines`(11개) — back/mover 델타 없음·side/wash 보조색·key
+웜화이트, effect/audience 영구 제외, 단색 팔레트 전체 생략, 3번째 이후 색
+미발화, single-모드 중복 생략(accent==dominant), 지배색이 이미 웜화이트인
+경우 key 델타 생략, 보조색 미해석 시 생략(key 는 영향 없음), 매핑에 없는
+역할 생략, 빈 매핑 전체 생략, non-section 전체 생략, 그룹 주소 문법,
+유일 문자열(dedupe) 보존. `TestSongColorValueLinesIntegration`(3개) —
+베이스라인+역할 배정 공존·순서, `layer_mapping=()` 레거시 바이트 동일,
+미해석 지배색의 실패 보고(역할 배정 0건).
+
+**기존 테스트 시그니처 변경(보고 의무)**: `test_song_cue_color_emission.py`
+`TestTheFabricatedControl.test_silencing_the_colour_helper_brings_the_measured_defect_back`
+의 monkeypatch 람다가 4개 위치 인자(`cue, fids, w_fids=, white_presets=`)만
+받았는데, `_song_color_value_lines`가 5번째 인자(`layer_mapping`)를 추가로
+받게 되면서 `reviewed_song_commands`의 호출(5개 위치 인자)과 불일치해
+`TypeError`가 났다. 람다에 `layer_mapping=()` 키워드 매개변수를 추가해
+고쳤다 — **단언(assert) 자체는 바뀌지 않았다**, 모킹 대상 함수의 시그니처가
+늘어 대역도 같이 늘려야 했을 뿐이다(옛 동작 `((), None)` 반환은 동일).
+`palette[0]`-only 동작 자체의 의도된 종료는 이 시그니처 변경과 무관하다 —
+베이스라인 로직은 그대로 두고 역할 배정을 **추가**했을 뿐(REQ-004 본문
+"오늘처럼 palette[0] 하나만 내고 나머지를 버리는 동작은 종료한다"는 이
+추가로 충족된다 — 기존 단일-색 전용 송신을 "역할별 다색 송신"으로 대체).
+
+#### 회귀 — 지정 범위 + 전체 스위트
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_layer_mapping_effect_role.py server/tests/test_layer_mapping_foh_front.py server/tests/test_design_rig.py server/tests/test_song_cue_color_emission.py server/tests/test_song_cue_white_preset_t453.py server/tests/test_seeded_song_apply.py server/tests/test_song_cue_composer.py server/tests/test_song_cue_arc_t462.py server/tests/test_song_cue_role_dimmer_t501.py server/tests/test_song_cue_role_color_t501.py server/tests/test_ldrender_gate.py server/tests/test_web_session.py server/tests/test_dedupe_value_lines_t476.py server/tests/test_song_readback_props_t479.py -q
+631 passed in 6.28s
+```
+
+전체 스위트(베이스라인 `a5601e6e`, M3 완료 시점 기록값 14419 passed/35 skipped):
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+14441 passed, 35 skipped in 244.41s
+```
+
+14419 → 14441(**+22, 신규 테스트 수(6+16)와 정확히 일치** — 삭제 0 · 교체 0 ·
+전체 FAIL 0건, skipped 35 불변).
+
+`test_song_cue_white_preset_t453.py`·`test_song_cue_color_emission.py`
+전량 PASS(지시문 요구 — 흰색 프리셋/W채널 로직·color_usage 분기 무변경 확인).
+
+#### 린트/포맷
+
+```
+$ uv run ruff check server/design/song_cue_composer.py server/design/song_cue_render.py server/tests/test_song_cue_role_dimmer_t501.py server/tests/test_song_cue_role_color_t501.py server/tests/test_song_cue_color_emission.py .moai/reports/t501/measure_ac001_8songs.py .moai/reports/t501/measure_ac004_8songs.py .moai/reports/t501/measure_dimmer_only_8songs.py
+All checks passed!
+$ uv run ruff format --check <동일 목록>
+전부 이미 포맷됨
+```
+
+#### @MX 태그
+
+`_role_color_value_lines`(신규, `song_cue_render.py`)의 fan_in 은 1(`_song_
+color_value_lines` 내부 호출 1곳) — ANCHOR 요건(fan_in>=3) 미달. `_group_
+color_apply_command`(fan_in 1)도 동일. `_role_pct_for`는 M3 기존 fan_in 2
+(`_dimmer_data`·`_apply_pre_drop_darkness`)에서 변동 없음(호출부 수는 그대로,
+새 키워드 인자만 추가). 위험한 패턴(goroutine 류·복잡도>=15) 없음 — WARN
+불필요. 전부 테스트 커버(신규 22건: M3 6 + M4 16) 있어 TODO 불필요.
+
+#### AC-001 재측정 — 8곡 전부, M3+M4 반영 (`.moai/reports/t501/measure_ac001_8songs.py` 재실행)
+
+readout.py 자신의 머리말이 예고한 경계("SIDE-ALL·WASH-ALL·MOVER-ALL... 은
+이번 송신에 안 나와서 펼침 규칙을 안 만들었다, 나오면 멈춘다")가 M4 에서
+처음 발생했다 — `_role_group_numbers`의 "마지막 항목이 이긴다" 규율로 역할별
+디머/색 델타가 SIDE-ALL(7)/WASH-ALL(10)/MOVER-ALL(13) 그룹을 겨냥하기
+시작했기 때문(M2 progress.md 선례와 동형). readout.py 자신은 건드리지
+않고(M1 PRESERVE 경계), **측정 스크립트 전용 패치**(`measure_ac001_8songs.py`
+`_members_with_all_group_expansion`)로 -ALL 그룹을 서브그룹 합집합(SIDE-ALL
+= SIDE-L ∪ SIDE-R 등 — 콘솔 명명 관행, 지어낸 값 아님)으로 펼쳤다.
+
+```
+$ uv run python .moai/reports/t501/measure_ac001_8songs.py
+Club Diver: 구간 큐 14개 · LIT≥3 13개 · LIT<3 1개 · 색 4종 · 효과줄 0 · 경고 YES
+  위반: 색 수 4개(기준 2~3)
+  위반: LIT 층 3 미만인 구간 큐 1개: 12.5
+  위반: 효과 요청 12건 · 페이저 제안 0큐 → 송신 효과 줄 0
+Cut and Run: 구간 큐 18개 · LIT≥3 17개 · LIT<3 1개 · 색 3종 · 효과줄 0 · 경고 YES
+  위반: LIT 층 3 미만인 구간 큐 1개: 16.5
+  위반: 효과 요청 16건 · 페이저 제안 0큐 → 송신 효과 줄 0
+Ice cream: 구간 큐 8개 · LIT≥3 7개 · LIT<3 1개 · 색 4종 · 효과줄 0 · 경고 YES
+  위반: 색 수 4개(기준 2~3)
+  위반: LIT 층 3 미만인 구간 큐 1개: 6.5
+  위반: 효과 요청 6건 · 페이저 제안 0큐 → 송신 효과 줄 0
+Morning: 구간 큐 14개 · LIT≥3 13개 · LIT<3 1개 · 색 3종 · 효과줄 0 · 경고 YES
+  위반: LIT 층 3 미만인 구간 큐 1개: 12.5
+  위반: 효과 요청 12건 · 페이저 제안 0큐 → 송신 효과 줄 0
+Rain: 구간 큐 13개 · LIT≥3 12개 · LIT<3 1개 · 색 3종 · 효과줄 0 · 경고 YES
+  위반: LIT 층 3 미만인 구간 큐 1개: 11.5
+Too Cool: 구간 큐 24개 · LIT≥3 23개 · LIT<3 1개 · 색 4종 · 효과줄 0 · 경고 YES
+  위반: 색 수 4개(기준 2~3)
+  위반: LIT 층 3 미만인 구간 큐 1개: 18.5
+  위반: 효과 요청 36건 · 페이저 제안 0큐 → 송신 효과 줄 0
+scott-buckley-neon: 구간 큐 18개 · LIT≥3 17개 · LIT<3 1개 · 색 4종 · 효과줄 0 · 경고 YES
+  위반: 색 수 4개(기준 2~3)
+  위반: LIT 층 3 미만인 구간 큐 1개: 16.5
+  위반: 효과 요청 16건 · 페이저 제안 0큐 → 송신 효과 줄 0
+걸그룹DinoDino_C_max최고품질: 구간 큐 11개 · LIT≥3 10개 · LIT<3 1개 · 색 4종 · 효과줄 0 · 경고 YES
+  위반: 색 수 4개(기준 2~3)
+  위반: LIT 층 3 미만인 구간 큐 1개: 3.5
+  위반: 효과 요청 9건 · 페이저 제안 0큐 → 송신 효과 줄 0
+```
+
+**집계**: 전체 구간 큐 120개(14+18+8+14+13+24+18+11) 중 112개(93.3%)가
+LIT≥3 로 PASS(M3 착수 전 0/120 에서 상승). **실패 8개는 전부 같은 모양** —
+곡마다 정확히 1개, 전부 `.5` 큐 번호(클라이맥스 복귀 큐,
+`_climax_return`)이고 전부 LIT=2. 원인은 §Gaps 참조(아래, 이 카드 범위 밖
+잔여로 보고).
+
+#### Part C 항목 2 — 디머-전용 버킷 수 (리드 예측 "밝기 대비 0" 검증)
+
+```
+$ uv run python .moai/reports/t501/measure_dimmer_only_8songs.py
+Club Diver: 구간/큐 14개 · 전체상태(색+디머) 최소버킷 2 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+Cut and Run: 구간/큐 18개 · 전체상태(색+디머) 최소버킷 2 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+Ice cream: 구간/큐 8개 · 전체상태(색+디머) 최소버킷 2 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+Morning: 구간/큐 14개 · 전체상태(색+디머) 최소버킷 2 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+Rain: 구간/큐 13개 · 전체상태(색+디머) 최소버킷 2 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+Too Cool: 구간/큐 24개 · 전체상태(색+디머) 최소버킷 2 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+scott-buckley-neon: 구간/큐 18개 · 전체상태(색+디머) 최소버킷 2 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+걸그룹DinoDino_C_max최고품질: 구간/큐 11개 · 전체상태(색+디머) 최소버킷 2 · 디머전용 최대버킷 2 · 디머전용>=3 인 큐 0개
+```
+
+**판정(측정 지지 — 리드 예측과 일치)**: 디머 값만으로는 8곡 전부 LIT 버킷이
+**단 한 번도** 3개에 도달하지 못한다(디머전용>=3 인 큐 0개, 전 곡). 값은
+항상 둘뿐이다(`key_pct`·`key_pct*0.8`) — back/mover/side/wash/effect(값
+있으면)가 전부 같은 두 번째 값으로 뭉친다. **결론 문장(측정이 지지하는
+한에서만)**: 「층 대비는 색, 밝기 대비는 최대 2버킷(0 이 아니라 "추가
+기여 0") — R5 이월」. 원문 지시의 "밝기 대비 0"은 "back 대비 추가되는
+대비가 0"이라는 뜻으로 읽을 때만 정확하다 — key 자체와 나머지의 2-버킷
+구분은 M2 이전부터 있던 것(back 전용 공식의 유산)이라 "0"을 "버킷이 1개"로
+읽으면 과장이다. 이 구분을 명시하는 것이 "측정이 지지하는 것만 쓴다" 규율이다.
+
+#### 상태 키 실측 증거 (Part C 항목 3 — pos·dim·rgb 전체가 키)
+
+Club Diver 큐 12(절정)와 12.5(절정 복귀) 의 `role_view` 를 직접 찍었다
+(`uv run python` 1회성 조회, `.moai/reports/t501/`에 스크립트로 남기지
+않음 — 디버그 1회성 조회이지 재사용 하네스가 아니다):
+
+```
+cue 12 (section):
+  back  : {'pos': '2.30', 'dim': 80.0,  'rgb': (5.0, 20.0, 100.0)}    (Blue, 지배색)
+  mover : {'pos': '2.30', 'dim': 80.0,  'rgb': (5.0, 20.0, 100.0)}    (Blue, 지배색 — back 과 동일 dim·rgb, 같은 버킷)
+  side  : {'pos': '2.30', 'dim': 80.0,  'rgb': (100.0, 75.0, 40.0)}   (Warm White, 보조색 — dim 은 back 과 같은 80 인데 rgb 가 달라 **다른 버킷**)
+  wash  : {'pos': '2.30', 'dim': 80.0,  'rgb': (100.0, 75.0, 40.0)}   (side 와 동일 dim·rgb, 같은 버킷)
+  key   : {'pos': '2.30', 'dim': 100.0, 'rgb': (5.0, 20.0, 100.0)} 외 (6/14기구) + {..., 'rgb': (100.0,75.0,40.0)} (8/14기구)
+  effect: {'pos': '2.30', 'dim': 80.0,  'rgb': (5.0, 20.0, 100.0)} (블라인더 점등 — BLIND 그룹, LIT)
+```
+
+**직접 증거**: `side`(dim=80, rgb=웜화이트)와 `back`(dim=80, rgb=블루)은
+**디머 값이 완전히 같은데**(`_role_dimmer_value_lines` 의 §M3 결정대로)
+`layer_diversity`(`json.dumps(state, sort_keys=True)` 직렬화 비교)가 이
+둘을 **서로 다른 버킷**으로 센다 — 상태 키가 `dim` 단독이 아니라
+`{pos, dim, rgb}` 전체 딕셔너리이기 때문이다(`ldrender_gate.py:106-126`
+코드 판독, M3.md §R4 측 효과가 이미 지목한 바로 그 메커니즘 — M4 가 이것을
+실제로 가동시켰다).
+
+#### M4 이 하지 않은 것 (§Gaps — 명시)
+
+- **클라이맥스 복귀 큐(`climax_return`)의 디머/색 역할 배정 미적용** — AC-001
+  이 곡당 1개씩(전 8곡, 총 8/120 구간 큐) FAIL 하는 유일한 원인. 근본 원인
+  (코드 판독): `_climax_return()`(`song_cue_composer.py:1024`)가 "포지션·색·
+  효과는 다시 싣지 않는다 — 콘솔이 앞 큐 값을 그대로 이어 간다"는 docstring
+  대로 `dimmer`/`color` 필드를 **그대로 들고 온다**(climax 큐와 동일 객체).
+  그런데 `_song_color_value_lines`/`_role_dimmer_value_lines` 는 둘 다
+  `cue.kind != "section"` 이면 **아무 줄도 안 낸다**(역할 배정은 물론
+  베이스라인도) — 반면 `position_cue_bundle` 의 **전체 기구 디머 줄**은
+  `cue.kind` 와 무관하게 `plan.dimmer`(=`cue.dimmer.key_pct`)가 있으면 항상
+  나간다. 그 결과 climax_return 큐에서: 디머는 **전체 기구가 key_pct 로
+  재동기화**(back/mover/side/wash 도 80→100 처럼 역할 구분이 사라진 값으로
+  되돌아간다)되고, 색은 **역할 배정이 재발화하지 않아** 직전 상태를 그대로
+  들고 가는데, 우연히 key 역할이 물리적으로 두 콘솔 그룹(KEY+FOH)에
+  걸쳐 있고 그중 하나(FOH)는 M4 의 key 델타 대상이 아니라서(마지막 매칭
+  그룹만 델타를 받는다, `_role_group_numbers` 동점 규율) 베이스라인 색(지배
+  색)을 그대로 들고 있다 — 그 결과 back+mover+effect(블루) 대 side+wash+key
+  일부(웜화이트) 로 색이 딱 2그룹으로만 갈리고, 디머가 전부 100 으로
+  재동기화돼 추가 구분을 못 만든다 → LIT 버킷 2개(AC-001 미달). **이 카드
+  범위 밖**: 배차서 Part A/B 는 각각 "back 비율 재사용"과 "REQ-004 색 배정"
+  만 지시했다 — climax_return 자체의 재발화 로직 확장(M3/M4 의 역할 함수를
+  `cue.kind in ("section", "climax_return")` 으로 넓히거나, `_climax_return()`
+  이 `role_pct`/`color`를 재계산해 넣는 등)은 새 구조 변경이라 배차서가
+  지시하지 않은 범위다 — 리드에게 후속 카드로 보고한다(8/120, 6.7%, 곡마다
+  정확히 1개).
+- **AC-004(a) "곡당 고유 송신 RGB 2~3개" 미달(측정값 3~4개, 8곡 중 4곡이
+  4개)** — 원인(측정): `ldrender_gate.color_count`(및 AC-004(a) 본문의
+  문자 그대로 읽기)는 큐 전체에 걸쳐 송신된 **모든** RGB 를 센다 — 웜화이트도
+  포함한다. 반면 §6.3 "동시 최대 2개"(AC-004(b))는 spec.md §3.2 [HARD] 가
+  웜화이트를 **그 집계 밖**으로 읽기로 명시했다(§6.3 플래그). 이 SPEC 의
+  REQ-004 가 `key` 에 웜화이트를 새로 배정하면서, **곡 전체 고유 RGB 카운트
+  (AC-004a)에는 그 제외가 적용되지 않는다** — 그래서 웜화이트 1종이 항상
+  "고유 RGB" 집합에 추가되어, 챔음 2~3종이던 값이 3~4종으로 밀렸다(§6.3 의
+  "동시 2개" 자체는 8곡 전부 PASS — 아래 AC-004 측정 참조, 웜화이트 제외
+  기준으로는 전부 2 이하). 이것은 REQ-004(웜화이트 신설)와 AC-004(a)의 문자
+  그대로의 수치(2~3) 사이의 **긴장**이다 — 발명으로 해소하지 않는다(AC-004a
+  기준을 "웜화이트 제외 2~3" 으로 조용히 재해석하거나, 반대로 REQ-004 의
+  웜화이트 배정을 되돌리는 것 둘 다 이 카드의 권한 밖). 리드에게 플래그로
+  보고한다 — AC-004(a)의 "2~3"이 웜화이트 포함인지 제외인지 명문화가
+  필요하다.
+- **실제 곡 오디오로 직접 재현하지 않았다** — M3 와 동일한 이 워크트리의
+  제약(§방법론, mp3/wav 0건)을 이어받는다. t499 analysis.json 재구성 교차
+  검증이고, 원곡 오디오 직접 재현과는 등급이 다르다.
+- **AC-005(REQ-006, `color_usage=single`/`per_chorus`)는 단위 함수 수준으로만
+  확인했다** — `_role_color_value_lines` 직접 호출 테스트(단일 모드 중복 생략
+  확인)는 있지만, `compose_song_cue_bundle`→`reviewed_song_commands` 전체
+  경로로 `color_usage=single` 인 합성 곡을 끝까지 돌리는 새 종단 테스트는
+  추가하지 않았다(기존 `test_song_cue_white_preset_t453.py`/`test_song_cue_
+  color_emission.py` 회귀는 전량 PASS — 무회귀 확인은 됐지만 새 종단 확인은
+  아니다).
+- **M5(effect 기구 분리)는 이 카드 범위 밖** — 공유 `fids`(베이스라인 색·
+  디머·포지션·페이저가 모두 겨냥하는 선택)에서 effect 기구를 빼는 일은 아직
+  하지 않았다. M4 는 **역할별 델타** 경로에서만 effect 를 구조적으로
+  제외했을 뿐(`_COLOR_ACCENT_ROLES`에 "effect" 없음, M3 의 `_DIMMER_DELTA_
+  EXCLUDED_ROLES`와 같은 이중 가드) — 베이스라인 자체(효과 기구 포함 여부)는
+  M5 의 몫 그대로다.
+- **`groups`-heuristic 경로**(실측상 프로덕션 미사용, M2/M3 §Gaps 와 동일) —
+  이번에도 건드리지 않았다.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
