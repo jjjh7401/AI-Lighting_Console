@@ -20,7 +20,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from server.design.song_cue_composer import CueAccentFixtureData, CueColorData, CueDimmerData
+from server.design.song_cue_composer import (
+    CueAccentFixtureData,
+    CueColorData,
+    CueDimmerData,
+    CueFxData,
+)
 from server.design.song_cue_render import (
     _effect_dimmer_zero_lines,
     _effect_group_numbers,
@@ -241,6 +246,12 @@ class TestReviewedSongCommandsIntegration:
             position: _Position
             fade_seconds: float | None
             accent_fixture: CueAccentFixtureData | None
+            # SPEC-LDRENDER-001 M6(REQ-LDRENDER-010, t501) — `_phaser_cue_
+            # value_lines` now reads `cue.fx.permitted`. This M5 integration
+            # fixture never exercises phaser recall (no `phaser_slots` passed
+            # in any call below), so an empty budget is the correct,
+            # byte-identical-to-before stand-in.
+            fx: CueFxData
 
         return _Cue(
             cue_number=cue_number,
@@ -253,6 +264,7 @@ class TestReviewedSongCommandsIntegration:
             position=_Position(),
             fade_seconds=None,
             accent_fixture=accent_fixture,
+            fx=CueFxData(requested=(), permitted=(), disabled=(), density=0, axis_budget=0),
         )
 
     def test_line_order_whole_fixture_then_role_dimmer_incl_effect_zero_then_accent(

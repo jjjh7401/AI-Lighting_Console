@@ -5313,7 +5313,7 @@ class TestSongDesignInterviewSession:
     # T12(a)+(b) integration — when the live slot lookup SUCCEEDS, the
     # recall line lands in the real ``run_commands`` bundle exactly once,
     # and the label is resolved exactly once (batched, not per-cue).
-    def test_a_resolved_phaser_lands_in_the_final_command_bundle(self, tmp_path):
+    def test_a_resolved_phaser_lands_in_the_final_command_bundle(self, tmp_path, monkeypatch):
         provider = ScriptedProvider([])
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
         calls: list[ToolCall] = []
@@ -5325,6 +5325,16 @@ class TestSongDesignInterviewSession:
             return (4, 35) if label == "Wave CM" else None
 
         session._phaser_slot_by_label = _stub_resolve
+        # SPEC-LDRENDER-001 M6(REQ-LDRENDER-010, t501) — this fake registry's
+        # `get_spatial_context`/`query_state` never declares fixture
+        # capabilities (only fid/x/y/z), so the rig's "effect" capability
+        # measurement reads empty and `cue.fx.permitted` would stay () no
+        # matter what the catalog capability vocabulary says — unrelated to
+        # what this test actually exercises (T12 wiring, not fx-budget
+        # plumbing). Force a non-zero fx axis budget directly so the new
+        # REQ-010 precondition is met without re-mocking the whole capability
+        # read chain.
+        monkeypatch.setattr("server.design.energy._fx_axes", lambda budget, rig: max(budget, 1))
         channel = self._Channel(
             [
                 "우주",
@@ -8507,10 +8517,19 @@ def _cue(
     key_pct: float | None = 60.0,
     blackout: bool = False,
     kind: str = "section",
+    fx_permitted: tuple[str, ...] = (),
 ) -> ComposedCue:
     """A minimal, valid ``ComposedCue`` for direct classifier/builder tests —
-    only ``cue_name``/``d_level``/``dimmer`` vary; every other field is a
-    harmless constant satisfying each nested dataclass's own validation."""
+    only ``cue_name``/``d_level``/``dimmer``/``fx_permitted`` vary; every
+    other field is a harmless constant satisfying each nested dataclass's own
+    validation.
+
+    SPEC-LDRENDER-001 M6(REQ-LDRENDER-010, t501) — ``fx_permitted`` defaults
+    to empty (unchanged default for every call site that does not care about
+    the fx axis), because ``_phaser_cue_value_lines`` now gates its recall
+    line on ``cue.fx.permitted`` being non-empty. Call sites that exercise
+    that gate's "resolved -> 1 line" path pass a non-empty tuple explicitly.
+    """
     resolved_key_pct = 0.0 if blackout else key_pct
     return ComposedCue(
         kind=kind,
@@ -8527,7 +8546,9 @@ def _cue(
             blackout=blackout,
         ),
         color=CueColorData(palette=("White",), saturation="full"),
-        fx=CueFxData(requested=(), permitted=(), disabled=(), density=0, axis_budget=0),
+        fx=CueFxData(
+            requested=fx_permitted, permitted=fx_permitted, disabled=(), density=0, axis_budget=0
+        ),
         accents=(),
         mib=CueMibData(),
         timing=CueTimingData(mode=MANUAL_GO, trigger="manual_go", start_ms=0),
@@ -8600,9 +8621,18 @@ class TestPhaserSongCueMapping:
     # ---- (a)/(b) 명령 조립 — 슬롯 미해석 시 빈 튜플, 해석 시 recall 한 줄 ----
 
     def test_a_resolved_phaser_adds_exactly_one_recall_line(self):
-        cue = _cue(cue_name="후렴")
+        # REQ-LDRENDER-010(t501) — the recall also needs a non-empty
+        # cue.fx.permitted (the D-level budget actually allowed an effect on
+        # this cue); an unpermitted cue stays silent even with a resolved slot.
+        cue = _cue(cue_name="후렴", fx_permitted=("dimmer chase",))
         lines = _phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)})
         assert lines == ("Fixture 20 + 26 ; At Preset 4.35",)
+
+    def test_a_resolved_phaser_with_no_fx_budget_adds_nothing(self):
+        # REQ-LDRENDER-010(t501) — fx.permitted=() (budget 0, D레벨이 효과를
+        # 허용하지 않음) means no recall even when the label resolves cleanly.
+        cue = _cue(cue_name="후렴")
+        assert _phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)}) == ()
 
     def test_an_unresolved_phaser_adds_nothing(self):
         cue = _cue(cue_name="후렴")
@@ -8617,7 +8647,7 @@ class TestPhaserSongCueMapping:
     # 큐의 정적 key_pct를 프로그래머 last-wins로 정확히 덮어쓴다.
     def test_the_recall_line_lands_after_the_plans_own_dimmer_line_and_before_store(self):
         plan = PositionCuePlan(cue_no=1.0, name="Chorus", preset_no=None, dimmer=60.0)
-        cue = _cue(cue_name="후렴")
+        cue = _cue(cue_name="후렴", fx_permitted=("dimmer chase",))
         lines = position_cue_bundle(
             110,
             plan,

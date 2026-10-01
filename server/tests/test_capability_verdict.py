@@ -23,6 +23,8 @@ from server.design.capability_join import (
     read_rig_capabilities,
 )
 from server.design.capability_verdict import (
+    DIMMER_ATTRIBUTE,
+    EFFECT_CAPABILITY,
     POSITION_CAPABILITY,
     VERDICT_ABSENT,
     VERDICT_HELD,
@@ -286,9 +288,17 @@ class TestVocabulary:
             },
         )
 
-    def test_a_fixed_type_declares_neither(self):
+    def test_a_fixed_type_declares_effect_but_not_position_or_zoom(self):
+        """SPEC-LDRENDER-001 M6(t501) — `Dimmer` 가 "effect" 능력 어휘에
+        들어온 뒤로는, 「고정 장비」(Source 4, Dimmer 하나뿐)가 더 이상
+        능력이 전혀 없는 기종이 아니다 — position/zoom 은 여전히 없지만
+        (헤드를 못 움직이고 줌 축이 없으므로), Dimmer 를 가졌으므로 effect
+        는 선언한다. 이 시험은 이전 버전의
+        `test_a_fixed_type_declares_neither`(`capabilities == []`)를 의도적으로
+        뒤집은 것이다 — `capability_verdict.py` 모듈 독스트링 §어휘 표가
+        근거를 적는다."""
         records = patch_records(_caps((3, 5)))
-        assert records[0]["capabilities"] == []
+        assert records[0]["capabilities"] == [EFFECT_CAPABILITY]
 
     def test_position_is_any_of_not_all_of(self):
         """Pan 만 있어도 헤드는 움직인다 — all-of 로 바꾸면 그 장비가 거절된다.
@@ -319,12 +329,24 @@ class TestVocabulary:
         assert patch_records(rig)[0]["capabilities"] == [POSITION_CAPABILITY]
         assert position_verdict(rig).allowed == ("Pan Only",)
 
-    def test_the_effect_capability_is_deliberately_unmapped(self):
-        """`energy.EFFECT_AXIS_CAPABILITY` 를 추측으로 열지 않는다."""
-        from server.design.capability_verdict import CAPABILITY_VOCABULARY
+    def test_the_effect_capability_is_now_mapped_to_dimmer(self):
+        """SPEC-LDRENDER-001 M6(t501) — `energy.EFFECT_AXIS_CAPABILITY`
+        ("effect")는 더 이상 추측을 피하려고 매핑을 비워 두지 않는다. M1
+        측정(`.moai/reports/t501/M1.md`)이 이 공백을 "effect" 가 8곡 전부
+        `fx.permitted=0` 으로 고정되는 구조적 원인으로 확정했고, M6 가
+        `Dimmer`(실측 근거: `docs/proposals/song-lighting-design-standard.md`
+        §4d F1, `server/fx/library/dimmer.yaml` 전수, `.moai/reports/t241/
+        verdict.md` §2)로 그 공백을 메웠다. 이 시험은 이전 버전의
+        `test_the_effect_capability_is_deliberately_unmapped`
+        (`EFFECT_AXIS_CAPABILITY not in CAPABILITY_VOCABULARY`)를 의도적으로
+        뒤집은 것이다 — 이름·단언·독스트링을 함께 갱신했다(조용히 깨뜨리지
+        않는다, M2 의 REQ-002 테스트 뒤집음과 같은 규율)."""
+        from server.design.capability_verdict import CAPABILITY_VOCABULARY, EFFECT_CAPABILITY
         from server.design.energy import EFFECT_AXIS_CAPABILITY
 
-        assert EFFECT_AXIS_CAPABILITY not in CAPABILITY_VOCABULARY
+        assert EFFECT_AXIS_CAPABILITY == EFFECT_CAPABILITY
+        assert EFFECT_AXIS_CAPABILITY in CAPABILITY_VOCABULARY
+        assert CAPABILITY_VOCABULARY[EFFECT_AXIS_CAPABILITY] == (DIMMER_ATTRIBUTE,)
 
 
 # ── 조인 키 (item 1 의 실측) ───────────────────────────────────────────
@@ -420,7 +442,12 @@ class TestWiredCallSite:
         assert sorted(record["fid"] for record in patch) == [41, 42]
         by_fid = {record["fid"]: record for record in patch}
         assert POSITION_CAPABILITY in by_fid[41]["capabilities"]  # MegaPointe
-        assert by_fid[42]["capabilities"] == []  # Source 4 — 고정 장비
+        # SPEC-LDRENDER-001 M6(t501) — Source 4 는 여전히 고정 장비(팬/틸트
+        # 없음)이지만, Dimmer 는 가지므로 이제 "effect"를 선언한다(위
+        # TestVocabulary.test_a_fixed_type_declares_effect_but_not_position_or_zoom
+        # 과 같은 근거).
+        # Source 4 — 고정 장비(팬/틸트 없음), 그러나 Dimmer 는 있다.
+        assert by_fid[42]["capabilities"] == [EFFECT_CAPABILITY]
 
     def test_a_fixed_only_rig_skips_the_spatial_question_and_says_why(self, tmp_path, monkeypatch):
         """팬/틸트 장비가 하나도 없으면 Q4 를 묻지 않는다 — 카드 t311 과 같은 기제."""

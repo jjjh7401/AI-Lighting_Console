@@ -519,7 +519,17 @@ def _phaser_cue_value_lines(
     T11 프로브 §4] 이 recall을 담아 **저장한 큐**가 프리셋 참조를 보존하는지
     (참조 vs 평탄화)는 여전히 프로토콜로 판독 불가 — 곡 큐 재생의 육안
     확인이 남은 마지막 조각이다.
-    """
+
+    SPEC-LDRENDER-001 M6(REQ-LDRENDER-010, t501) — ``cue.fx.permitted``(설계
+    층 효과 허용값, ``_fx_data``/``energy._fx_axes`` 가 D레벨 예산으로 좁힌
+    값)가 **비어 있으면** 라벨이 해석되고 콘솔 풀에서 슬롯을 찾았어도 recall
+    을 내지 않는다 — 효과 요청(``cue.fx.requested``)은 있지만 그 큐의 D레벨
+    예산이 0이면(F3, §3 표) "허용되지 않은 효과"이므로 송신하지 않는다.
+    이전에는 이 함수가 ``cue.fx`` 축을 전혀 읽지 않아(잰 값: t499 §3
+    P5a′·spec.md REQ-010) 송신 여부가 오직 라벨 매칭·풀 해석에만 의존했다
+    — 이 가드가 그 빠진 연결을 닫는다."""
+    if not cue.fx.permitted:
+        return ()
     label = _phaser_label_for_cue(cue)
     if label is None:
         return ()
@@ -528,6 +538,37 @@ def _phaser_cue_value_lines(
         return ()
     pool_no, slot = resolved
     return (_preset_recall_command(pool_no, fids, slot),)
+
+
+def _fx_report_counts(bundle, phaser_slots: Mapping[str, tuple[int, int]]) -> tuple[int, int, int]:
+    """SPEC-LDRENDER-001 M6(REQ-LDRENDER-012) — 한 곡의 효과 3계 수치
+    ``(requested, permitted, sent)``.
+
+    - ``requested``: 설계 층이 요청한 효과 이름 수의 합(``cue.fx.requested``,
+      구간 FX 아크가 제안한 것 — D레벨 예산과 무관).
+    - ``permitted``: D레벨 예산이 실제로 허용한 효과 수의 합
+      (``cue.fx.permitted``, ``energy._fx_axes`` 가 좁힌 값).
+    - ``sent``: 송신기가 실제로 페이저 recall 줄을 낸 큐 수 —
+      ``_phaser_cue_value_lines``의 게이트(REQ-010, 위 참조)를 **값 줄을
+      만들지 않고** 그대로 재현한다(``fids`` 없이 판정 가능 — recall 문자열
+      자체는 필요 없고 "냈는가/안 냈는가"만 필요하므로, 더미 fids로
+      ``_phaser_cue_value_lines`` 를 또 부르지 않는다). 이 셈이 그 함수의
+      게이트와 어긋나면 보고가 실제 송신과 다른 숫자를 주장하게 된다 —
+      두 곳이 갈라지면 한쪽만 고쳐지는 실수를 막기 위해 조건을 바이트
+      단위로 맞춰 둔다.
+    """
+    requested = 0
+    permitted = 0
+    sent = 0
+    for cue in bundle.cues:
+        requested += len(cue.fx.requested)
+        permitted += len(cue.fx.permitted)
+        if not cue.fx.permitted:
+            continue
+        label = _phaser_label_for_cue(cue)
+        if label is not None and phaser_slots.get(label) is not None:
+            sent += 1
+    return requested, permitted, sent
 
 
 #: 카드 t453 — 흰색 큐가 부르는 콘솔 컬러 프리셋 라벨(감독 결정 2026-09-27:

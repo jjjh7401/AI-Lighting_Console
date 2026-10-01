@@ -14,19 +14,53 @@ t344 B. A 편(:mod:`server.design.capability_join`)은 「이 fid 가 무엇을 
    것과 콘솔에 가는 것이 달라진다. :class:`RangeVerdict` 는 **보류 사유에 측정 범위를
    싣는다**.
 
-## 어휘 표는 **의도적으로 부분집합**이다
-
-오늘 어떤 소비자든 실제로 읽는 능력 이름은 하나뿐이다 —
-``energy.EFFECT_AXIS_CAPABILITY`` (``"effect"``, :mod:`server.design.energy` 에서
-소비). 그래서 이 표는 이 카드가 필요한 두 개만 싣는다:
+## 어휘 표 — 이제 세 개 (M6, t501, 2026-10-01)
 
     Pan · Tilt  -> POSITION_CAPABILITY   포지션 프리셋 가능 여부
     Zoom        -> ZOOM_CAPABILITY       줌 범위 대조 대상
+    Dimmer      -> EFFECT_CAPABILITY     이펙트(페이저) 축 가능 여부 (``energy.
+                                          EFFECT_AXIS_CAPABILITY``, ``"effect"``)
 
-🔴 ``"effect"`` 는 **일부러 매핑하지 않는다.** 어떤 속성이 있으면 이펙트 축이
-열리는지는 이 저장소에서 측정된 바가 없다. 여기서 지어 넣으면
-``energy.axis_budget`` 이 추측 위에서 이펙트 어휘를 열고, 그 거짓은 실패가 아니라
-**조용히 잘못된 큐**로 나타난다. 전체 어휘 표는 후속 카드다.
+🔴 **이전 버전은 ``"effect"`` 를 일부러 매핑하지 않았다**(M1, `.moai/reports/
+t501/M1.md`) — "effect" 가 ``CAPABILITY_VOCABULARY`` 에 없어 8곡 전부
+``rig.has_capability("effect")`` 가 ``False`` 로 고정되고, ``energy._fx_axes``
+가 항상 예산 0을 돌려줬다(`fx.permitted` 가 요청 유무와 무관하게 늘 빈
+튜플). 이 어휘 공백을 메우는 처방은 **``Dimmer``** 다 — 아래가 그 근거다
+(추측 아님, 추측을 하지 않는다는 이 모듈의 원칙을 그대로 지킨다):
+
+1. ``docs/proposals/song-lighting-design-standard.md`` §4d F1(이펙트 축별
+   용도표)이 "디머 체이스·펄스=리듬 강조(D3+)"를 이펙트 어휘의 정식 항목으로
+   적는다 — Dimmer 체이스는 **발명이 아니라 정본에 이미 있는** 이펙트 축이다.
+2. ``server/fx/library/dimmer.yaml``(FXLIB 이펙트 라이브러리, 이미 검증·운용
+   중)의 모든 항목이 ``Dimmer`` 속성 하나만 스텝에 싣는다 — 전수 확인
+   (``grep -En "Attribute|attribute" server/fx/library/dimmer.yaml``에
+   ``ColorRGB``·``Pan``·``Tilt``·``Strobe`` 0건). 이것은 이 저장소가 "디머
+   페이저"로 이미 운용 중인 축이 정확히 ``Dimmer`` 하나임을 확인한다.
+3. 실기 판독(`.moai/reports/t241/verdict.md` §2, 리그 8기종 전수 — 패치/
+   DMXModes 조회)이 ``Dimmer`` 애트리뷰트의 실제 보급을 측정했다: 84/86
+   (HAZE 2대 제외 전부). 효과 역할 그룹(BLIND/STROBE)도 포함된다 — BLIND
+   (CuePix Blinder WW2) Dimmer ✓, STROBE(Atomic 3000 LED) Dimmer ✓. 이것이
+   "effect" 능력을 켜는 폭넓고 측정 가능한 신호다.
+4. **``"Strobe"``/``"Shutter"`` 는 이 자리의 근거가 될 수 없다** — 이전
+   추정(M1 `measure_fx_permitted_zero.py`)이 Strobe/Shutter 선언을 가정했지만,
+   이 저장소 자신이 그 경로를 명시적으로 범위 밖으로 닫아 뒀다
+   (``server/looks/schema.py:16-18`` "Strobe and shutter are out of scope
+   regardless: `server/web/preview.py:131-139` classifies them `danger`")
+   — 그리고 ``server/fx/library/{movement,color,dimmer}.yaml`` 전수 확인
+   (``grep -rn "Strobe" server/fx/library/``) 결과 0건, FXLIB 가 실제로
+   생성하는 어떤 이펙트도 Strobe 축을 건드리지 않는다. 또한 실기 판독
+   (`.moai/reports/t442/run7_dmx_channels.txt`)은 ``Strobe1``(모든 기종에
+   보급된 범용 셔터 메커니즘 채널)과 ``StrobeMode``/``StrobeDuration``
+   (8기종 중 Atomic **하나뿐**)을 구별한다 — 둘 중 어느 쪽으로 게이트를
+   잡아도 F1 의 "디머 체이스" 축과 무관하고, 전자는 보급이 너무 넓어
+   무의미하며 후자는 FXLIB 가 아예 소비하지 않는 축이다.
+
+에너지 모듈 자신의 docstring(``energy.py:19-22``)이 "이 축은 아직 효과
+종류별로 예산을 쪼개지 않는다 — F1 의 어휘가 넓어지면 종류별 능력으로
+나눌 수 있다"고 이미 말하고 있다 — 지금은 **하나의** 능력이 F3 전체
+(무빙·디머·컬러·줌 네 축 공통) 예산을 여닫는 스탠드인이고, 이 처방은
+F1 이 꼽는 네 축 중 가장 보편적이고 FXLIB 가 이미 전량 소비하는 축(Dimmer)
+을 그 스탠드인으로 삼는다.
 
 ## 방향과 미판독
 
@@ -61,6 +95,8 @@ from server.prechk.capability_read import (
 
 __all__ = [
     "CAPABILITY_VOCABULARY",
+    "DIMMER_ATTRIBUTE",
+    "EFFECT_CAPABILITY",
     "PAN_ATTRIBUTE",
     "POSITION_CAPABILITY",
     "TILT_ATTRIBUTE",
@@ -87,16 +123,24 @@ __all__ = [
 PAN_ATTRIBUTE = "Pan"
 TILT_ATTRIBUTE = "Tilt"
 ZOOM_ATTRIBUTE = "Zoom"
+#: M6(t501) — 실측 전수 애트리뷰트 이름("Dimmer", `reviewed_song_commands`
+#: 의 모든 디머 커맨드와 같은 철자). 위 모듈 독스트링 §어휘 표의 근거 1-4 참조.
+DIMMER_ATTRIBUTE = "Dimmer"
 
 #: 소비자가 읽는 능력 이름. ``rig.RigFixtureRecord.capabilities`` 에 실린다.
 POSITION_CAPABILITY = "position"
 ZOOM_CAPABILITY = "zoom"
+#: ``energy.EFFECT_AXIS_CAPABILITY`` 와 바이트 동일한 문자열 — 그 상수를
+#: import 하지 않는 이유는 기존 구조 그대로다(이 모듈은 energy.py 를
+#: import 하지 않는다, 순환 의존 회피).
+EFFECT_CAPABILITY = "effect"
 
 #: 능력 이름 -> 그것을 여는 속성들. **any-of** 다: Pan 만 있는 장비도 헤드가
 #: 움직이므로 포지션이 닿는다. all-of 로 하면 Tilt 전용 장비가 거절된다.
 CAPABILITY_VOCABULARY: Mapping[str, tuple[str, ...]] = {
     POSITION_CAPABILITY: (PAN_ATTRIBUTE, TILT_ATTRIBUTE),
     ZOOM_CAPABILITY: (ZOOM_ATTRIBUTE,),
+    EFFECT_CAPABILITY: (DIMMER_ATTRIBUTE,),
 }
 
 #: :class:`RangeVerdict` 의 네 갈래. 「범위 밖」과 「범위를 못 읽었다」와 「그 축이

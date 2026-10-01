@@ -1,0 +1,125 @@
+[
+  {
+    "label": "Drop Slam",
+    "pool_name": "All 1",
+    "pool_no": 21,
+    "evidence_file": ".moai/reports/t469/run3_phaser_pools.txt",
+    "evidence_captured": "t469 (pre-t501)",
+    "occupied_slots_at_capture": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "result": "REFUSED",
+    "refusal_reason_code": "value_line_collision",
+    "refusal_detail": "fx 'pregen-combo-drop-slam' would emit the line \"Attribute 'ColorRGB_R' At 100\" twice; the second one is dropped by the run_commands dedupe and the Store then runs against a programmer that is missing a step — silently, because a stored phaser cue is indistinguishable from an empty one"
+  },
+  {
+    "label": "Wave CM",
+    "pool_name": "Color",
+    "pool_no": 4,
+    "evidence_file": ".moai/reports/t469/run3_phaser_pools.txt",
+    "evidence_captured": "t469 (pre-t501)",
+    "occupied_slots_at_capture": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      32
+    ],
+    "result": "WOULD_SEND",
+    "target_slot": 9,
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 1",
+      "Attribute 'ColorRGB_R' At 0",
+      "Attribute 'ColorRGB_G' At 90",
+      "Attribute 'ColorRGB_B' At 100",
+      "Step 2",
+      "Attribute 'ColorRGB_R' At 100",
+      "Attribute 'ColorRGB_G' At 0",
+      "Attribute 'ColorRGB_B' At 70",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'ColorRGB_R' At Phase 0",
+      "Attribute 'ColorRGB_G' At Phase 120",
+      "Attribute 'ColorRGB_B' At Phase 240",
+      "Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30",
+      "Store Preset 4.9 'Wave CM' /Universal",
+      "Label Preset 4.9 'Wave CM'",
+      "ClearAll"
+    ]
+  },
+  {
+    "label": "Breathe Warm",
+    "pool_name": "Color",
+    "pool_no": 4,
+    "evidence_file": ".moai/reports/t469/run3_phaser_pools.txt",
+    "evidence_captured": "t469 (pre-t501)",
+    "occupied_slots_at_capture": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      32
+    ],
+    "result": "REFUSED",
+    "refusal_reason_code": "value_line_collision",
+    "refusal_detail": "fx 'pregen-color-breathe-warm' would emit the line \"Attribute 'ColorRGB_R' At 100\" twice; the second one is dropped by the run_commands dedupe and the Store then runs against a programmer that is missing a step — silently, because a stored phaser cue is indistinguishable from an empty one"
+  },
+  {
+    "label": "Breathe Cool",
+    "pool_name": "Color",
+    "pool_no": 4,
+    "evidence_file": ".moai/reports/t469/run3_phaser_pools.txt",
+    "evidence_captured": "t469 (pre-t501)",
+    "occupied_slots_at_capture": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      32
+    ],
+    "result": "REFUSED",
+    "refusal_reason_code": "value_line_collision",
+    "refusal_detail": "fx 'pregen-color-breathe-cool' would emit the line \"Attribute 'ColorRGB_B' At 100\" twice; the second one is dropped by the run_commands dedupe and the Store then runs against a programmer that is missing a step — silently, because a stored phaser cue is indistinguishable from an empty one"
+  },
+  {
+    "label": "Finale Slam",
+    "pool_name": "All 1",
+    "pool_no": 21,
+    "evidence_file": ".moai/reports/t469/run3_phaser_pools.txt",
+    "evidence_captured": "t469 (pre-t501)",
+    "occupied_slots_at_capture": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "result": "REFUSED",
+    "refusal_reason_code": "value_line_collision",
+    "refusal_detail": "fx 'pregen-combo-finale-slam' would emit the line \"Attribute 'ColorRGB_R' At 100\" twice; the second one is dropped by the run_commands dedupe and the Store then runs against a programmer that is missing a step — silently, because a stored phaser cue is indistinguishable from an empty one"
+  }
+]
+
+wrote /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-a7a1ed3fafe0f8fb8/.moai/reports/t501/m6_pregen_commands_rain.txt

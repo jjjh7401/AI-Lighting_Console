@@ -75,6 +75,12 @@ from server.design.phaser_catalog import (  # 카드 t480 — 자리만 옮김
     COMBO_PHASER_SEQUENCE,
     DIMMER_PHASER_SEQUENCE,
 )
+from server.design.phaser_pregen import (  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011)
+    PhaserPregenError,
+    pool_name_for_label,
+    pregenerate_phaser_bundle,
+    presets_section_from_pool_children,
+)
 from server.design.preset_names import (
     NAME_AMBIGUOUS,
     match_preset_name,
@@ -129,6 +135,7 @@ from server.design.song_cue_render import (  # 카드 t480 — 자리만 옮김 
     _color_apply_command,
     _confirmed_section_names,
     _direct_position_intent,
+    _fx_report_counts,
     _infer_confirmed_role,
     _phaser_label_for_cue,
     _preset_recall_command,
@@ -151,6 +158,7 @@ from server.design.song_plan import (
     apply_cue_sheet_section,
     apply_cue_sheet_view,
 )
+from server.fx.instantiate import FxInstantiationError  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011)
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
 from server.looks.songcue import (
@@ -715,6 +723,23 @@ def _arc_note(bundle) -> str:
     if not notes:
         return ""
     return " 절정 연출 미반영: " + "; ".join(notes) + "."
+
+
+def _fx_report_note(bundle, phaser_slots: Mapping[str, tuple[int, int]]) -> str:
+    """SPEC-LDRENDER-001 M6(REQ-LDRENDER-012, t501) — 효과 요청/허용/송신
+    3계 수치를 최종 회신에 노출한다. 요청이 0건(이 곡이 효과를 요청하지
+    않음)이면 빈 문자열 — 효과와 무관한 곡의 회신에 "효과: 0 · 0 · 0"을
+    끼워 넣지 않는다. 숫자 산출은 ``_phaser_failure_note``/
+    ``_color_failure_note``/``_arc_note``와 같은 관행(지어내지 않고 정직하게
+    고지)이며, ``song_cue_render._fx_report_counts``(그 모듈이 "sent" 를
+    ``_phaser_cue_value_lines``의 REQ-010 게이트와 바이트 단위로 맞춰 둔
+    이유는 그 함수 독스트링 참조)를 그대로 위임한다."""
+    if bundle is None:
+        return ""
+    requested, permitted, sent = _fx_report_counts(bundle, phaser_slots)
+    if requested == 0:
+        return ""
+    return f" 효과: 요청 {requested} · 허용 {permitted} · 송신 {sent}."
 
 
 #: 카드 t311 — 좌표 판독이 실패한 **두 갈래**. 문면이 아니라 코드다:
@@ -3796,6 +3821,12 @@ class ChatSession:
         # ``_reviewed_song_commands``'s existing call sites/signature.
         self._last_phaser_failures: dict[str, str] = {}
         self._last_color_failures: dict[str, str] = {}
+        # SPEC-LDRENDER-001 M6(REQ-LDRENDER-012, t501) — last reviewed-command
+        # build's RESOLVED phaser labels (label -> (pool_no, slot)), after any
+        # M6 pre-generation (REQ-011) merged in. Stashed the same way as the
+        # two dicts above, so `_fx_report_note` can compute the "sent" count
+        # without threading a new return value through `_reviewed_song_commands`.
+        self._last_phaser_slots: dict[str, tuple[int, int]] = {}
         # Rolling transcript of prior turns (user instruction + assistant reply),
         # replayed to the model so context survives across turns for EVERY
         # conversation, not just the layout special-cases. Bounded to the last
@@ -7086,7 +7117,17 @@ class ChatSession:
         bundle = composition.bundle
         if bundle is None:
             return ()
-        phaser_slots, self._last_phaser_failures = self._phaser_slots_for_bundle(bundle)
+        phaser_slots, phaser_failures = self._phaser_slots_for_bundle(bundle)
+        # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011, t501) — 미해석 라벨 중 그
+        # 큐의 D레벨 예산이 실제로 효과를 허용한 것만 사전 생성을 시도한다
+        # (아래 메서드 독스트링 참조). 승인은 호출자(이 메서드의 유일한
+        # 호출부, `_song_finalize` 의 승인 루프)가 이미 director approve 를
+        # 받은 뒤라 안전하고, 생성 자체도 기존 `run_commands` -> `gate.screen()`
+        # 를 한 번 더 거친다(plan.md §D "단일 관문 무변경").
+        phaser_slots, self._last_phaser_failures = self._pregenerate_missing_phasers(
+            bundle, phaser_slots, phaser_failures
+        )
+        self._last_phaser_slots = dict(phaser_slots)
         # 카드 t232 — 번호 참조를 라벨로 확인한다. 큐가 부르는 포지션 라벨을
         # 한 번에 모아 풀을 1회 판독으로 슬롯을 찾는다(`_phaser_slots_for_
         # bundle`과 같은 배치 규율) — `preset_start + index`는 그 슬롯이
@@ -7146,6 +7187,91 @@ class ChatSession:
                 failed[label] = f"'{label}' 페이저 프리셋을 콘솔에서 찾지 못했습니다"
             else:
                 resolved[label] = slot
+        return resolved, failed
+
+    def _pregenerate_missing_phasers(
+        self,
+        bundle,
+        resolved: dict[str, tuple[int, int]],
+        failed: dict[str, str],
+    ) -> tuple[dict[str, tuple[int, int]], dict[str, str]]:
+        """SPEC-LDRENDER-001 M6(REQ-LDRENDER-011, t501) — 풀에서 못 찾은
+        카탈로그 페이저를 ``server/fx/instantiate.py`` 의 기존 저작 경로
+        (``build_fx_preset_bundle``/``select_preset_number``, 둘 다 재사용 —
+        ``server/design/phaser_pregen.py`` 참조)로 사전 생성하고, **기존**
+        승인 게이트(``run_commands`` -> ``gate.screen()``)로 보낸다. 새
+        무승인 실행 표면을 만들지 않는다(plan.md §D).
+
+        오직 그 큐의 D레벨 예산이 실제로 효과를 허용한(``cue.fx.permitted``
+        비어있지 않음, REQ-LDRENDER-010 게이트와 같은 전제) 라벨만 시도한다
+        — 예산이 0인 큐가 제안한 라벨까지 생성하면 아무도 recall하지 않을
+        프리셋으로 콘솔 풀만 채운다. 충돌(이미 점유된 번호)은
+        ``select_preset_number``/``FxInstantiationError`` 가 던지는 FXLIB
+        기존 사유 코드(``PRESET_OCCUPIED`` 등, REQ-FXLIB-012 (c))를 그대로
+        ``failed``에 남긴다 — 새 충돌 검사를 쓰지 않고, 점유된 슬롯을
+        덮어쓰지 않는다.
+        """
+        wanted = {
+            label
+            for cue in bundle.cues
+            if cue.fx.permitted and (label := _phaser_label_for_cue(cue)) is not None
+        }
+        pending = sorted(label for label in wanted if label in failed)
+        if not pending:
+            return resolved, failed
+        resolved = dict(resolved)
+        failed = dict(failed)
+        preset_pools_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        for label in pending:
+            try:
+                pool_name = pool_name_for_label(label)
+            except PhaserPregenError as error:
+                failed[label] = str(error)
+                continue
+            probe_slug = pool_name.lower().replace(" ", "")
+            pool_no = self._resolve_named_pool_no(
+                pool_name, probe_id=f"phaser-pregen-pool-{probe_slug}"
+            )
+            if pool_no is None:
+                failed[label] = f"'{pool_name}' 풀을 못 찾아 '{label}' 페이저를 생성할 수 없습니다"
+                continue
+            children = self._paged_pool_children(
+                f"{preset_pools_root}/{pool_no}", probe_id=f"phaser-pregen-slots-{probe_slug}"
+            )
+            if children is None:
+                failed[label] = (
+                    f"Preset {pool_no}.x 를 못 읽어 '{label}' 페이저를 생성할 수 없습니다"
+                )
+                continue
+            presets_section = presets_section_from_pool_children(children)
+            try:
+                plan = pregenerate_phaser_bundle(
+                    label, presets_section=presets_section, preset_pool=pool_no
+                )
+            except (PhaserPregenError, FxInstantiationError) as error:
+                failed[label] = str(error)
+                continue
+            pregen_risk = BatchRisk(
+                reason=(
+                    f"'{label}' 카탈로그 페이저 사전 생성 — 제안된 라벨이 콘솔 풀에 없어 "
+                    "REQ-LDRENDER-011 경로로 생성(FXGEN/FXLIB 기존 저작 경로 재사용)"
+                ),
+                kind="song_design_fx_pregen",
+            )
+            executed = self._dispatch_declared(
+                ToolCall(
+                    id=f"song-design-phaser-pregen-{probe_slug}-{plan.preset}",
+                    name="run_commands",
+                    arguments={"commands": list(plan.commands)},
+                ),
+                risk=pregen_risk,
+            )
+            if executed.result.is_error:
+                detail = executed.result.content
+                failed[label] = f"'{label}' 페이저 사전 생성 명령이 거부됐습니다: {detail}"
+                continue
+            resolved[label] = (pool_no, plan.preset)
+            failed.pop(label, None)
         return resolved, failed
 
     def _reviewed_song_timing_commands(
@@ -9968,6 +10094,7 @@ class ChatSession:
                     f"{_phaser_failure_note(self._last_phaser_failures)}"
                     f"{_color_failure_note(self._last_color_failures)}"
                     f"{_arc_note(approved_composition.bundle)}"
+                    f"{_fx_report_note(approved_composition.bundle, self._last_phaser_slots)}"
                 ),
                 command_outcomes=tuple(executed.command_outcomes),
                 retries_used=0,
@@ -9992,6 +10119,7 @@ class ChatSession:
                 f"{_phaser_failure_note(self._last_phaser_failures)}"
                 f"{_color_failure_note(self._last_color_failures)}"
                 f"{_arc_note(approved_composition.bundle)}"
+                f"{_fx_report_note(approved_composition.bundle, self._last_phaser_slots)}"
             ),
             command_outcomes=tuple(executed.command_outcomes),
             retries_used=0,

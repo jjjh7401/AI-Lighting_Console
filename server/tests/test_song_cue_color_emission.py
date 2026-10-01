@@ -104,9 +104,18 @@ class _Stub:
     def __init__(self) -> None:
         self._last_phaser_failures: dict[str, str] = {}
         self._last_color_failures: dict[str, str] = {}
+        self._last_phaser_slots: dict[str, tuple[int, int]] = {}
 
     def _phaser_slots_for_bundle(self, bundle):
         return {}, {}
+
+    def _pregenerate_missing_phasers(self, bundle, resolved, failed):
+        # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011, t501) — this colour-focused
+        # stub never has phasers to resolve (`_phaser_slots_for_bundle`
+        # above always returns empty), so pre-generation never has anything
+        # to do here; the real console-backed path is exercised elsewhere
+        # (`test_web_session.py`).
+        return resolved, failed
 
     def _resolve_position_preset_labels(self, labels, *, start, span, pool_no=None):
         # t232 — a normal showfile stand-in: the ten labels sit contiguously

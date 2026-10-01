@@ -221,11 +221,18 @@ class _SongStub:
     def __init__(self, payload: dict | None) -> None:
         self._last_phaser_failures: dict[str, str] = {}
         self._last_color_failures: dict[str, str] = {}
+        self._last_phaser_slots: dict[str, tuple[int, int]] = {}
         self._rig_paths: dict[str, str] = {}
         self._registry = _FakeRegistry(payload)
 
     def _phaser_slots_for_bundle(self, bundle):
         return {}, {}
+
+    def _pregenerate_missing_phasers(self, bundle, resolved, failed):
+        # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011, t501) — this position-lookup
+        # stub never has phasers to resolve; see test_song_cue_color_emission's
+        # twin stub for the same rationale.
+        return resolved, failed
 
     _reviewed_song_timing_commands = ChatSession._reviewed_song_timing_commands
     _position_preset_pool_children = ChatSession._position_preset_pool_children

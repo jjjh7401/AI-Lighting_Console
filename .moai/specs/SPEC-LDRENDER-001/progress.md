@@ -1448,6 +1448,261 @@ c. AC-001/AC-004 재확인 — LIT>=3 **120/120**(변화 없음, M3 후속 clima
 - 옵션 (a)/(c)의 실측 재시도(이번 카드도 "no console contact") — 결정
   (g)가 둘 다 우회했으므로 더 이상 필요하지 않다.
 
+### M6 — 효과 송신 통로: fx.permitted 처방 + REQ-010/011/012 (카드 t501, 2026-10-01)
+
+**전제**: M1(REQ-009)이 "effect" 어휘 공백을 확정했고(`capability_verdict.
+CAPABILITY_VOCABULARY` 에 "effect" 키 자체가 없음), M5(결정 g)가 effect
+기구 디머 분리를 그룹 주소 override 로 닫았다. M6 는 (1) 그 공백을 메우는
+처방을 확정·구현하고(REQ-009 M1 완료), (2) `_phaser_cue_value_lines` 가
+`cue.fx.permitted` 를 읽도록 닫고(REQ-010), (3) 풀에 없는 카탈로그 페이저를
+기존 FXLIB 저작 경로로 사전 생성하고(REQ-011), (4) 효과 보고를 3계로
+가른다(REQ-012). **읽기 전용 경계는 카드 전체에 적용**(OFFLINE PART ONLY,
+"ABSOLUTELY NO CONSOLE CONTACT" — 진짜 콘솔/실기와 유사한 통로는 전부
+회피하고 가짜 콘솔 + 저장된 읽기 전용 증거만 사용).
+
+#### 1. "effect" 능력 처방 — `Dimmer` (리드 조건 ① 충족, 추측 아님)
+
+`server/design/capability_verdict.py` `CAPABILITY_VOCABULARY` 에
+`EFFECT_CAPABILITY("effect"): (DIMMER_ATTRIBUTE,)` 을 추가했다. 근거(모두
+파일:줄 인용, 모듈 독스트링에도 동일 근거를 적었다):
+
+1. `docs/proposals/song-lighting-design-standard.md` §4d F1 — "디머
+   체이스·펄스=리듬 강조(D3+)"가 이펙트 축별 용도표의 정식 항목.
+2. `server/fx/library/dimmer.yaml` 전수 확인(`grep -En "Attribute|attribute"`)
+   — 모든 항목이 `Dimmer` 하나만 스텝에 싣는다(ColorRGB·Pan·Tilt·Strobe
+   0건).
+3. 실기 판독 `.moai/reports/t241/verdict.md` §2(리그 8기종 전수 채널 표) —
+   `Dimmer` 보급 84/86(HAZE 2대만 없음), effect 역할 그룹(BLIND·STROBE)도
+   포함.
+4. `Strobe`/`Shutter` 는 근거가 **될 수 없다** — `server/looks/schema.py:16-18`
+   가 "Strobe and shutter are out of scope regardless"로 명시하고,
+   `server/fx/library/{movement,color,dimmer}.yaml` 전수 확인에서 Strobe
+   0건(FXLIB 가 실제로 생성하는 어떤 이펙트도 Strobe 축을 안 건드림).
+   실기 판독(`.moai/reports/t442/run7_dmx_channels.txt`)도 `Strobe1`(전
+   기종 보급, 범용 셔터 메커니즘)과 `StrobeMode`/`StrobeDuration`(8기종 중
+   Atomic 하나뿐)을 구별해, 어느 쪽도 F1 의 디머 체이스 축과 무관함을
+   보여준다.
+
+측정 확인(`.moai/reports/t501/measure_fx_permitted_zero_m6.py`, M1 스크립트의
+Strobe/Shutter 가정 대신 실기 실측 채널로 재현):
+
+```
+$ uv run python .moai/reports/t501/measure_fx_permitted_zero_m6.py
+rig.inventory.has_capability("effect") = True
+rig.inventory.capability_fids = {'effect': frozenset({601..606, 611..614})}
+_fx_axes(budget=10, rig) = 10   (M1 에서는 0 이었다)
+```
+
+(전문: `.moai/reports/t501/m6_fx_permitted_fixed.txt`.)
+
+**테스트 뒤집음(명시, 조용히 깨뜨리지 않음)**: `server/tests/
+test_capability_verdict.py` 의 `test_the_effect_capability_is_deliberately_
+unmapped` → `test_the_effect_capability_is_now_mapped_to_dimmer` 로 이름·
+단언·독스트링 갱신. `test_a_fixed_type_declares_neither`(Source 4, Dimmer
+하나뿐) → `test_a_fixed_type_declares_effect_but_not_position_or_zoom` 로
+뒤집음(이제 `["effect"]`를 선언). `TestWiredCallSite::test_the_call_site_
+hands_the_console_read_to_build_rig_profile` 의 같은 어서션도 갱신. 전부
+M2 의 REQ-002 테스트 뒤집음과 같은 규율(이름·단언·독스트링 동시 갱신).
+
+#### 2. REQ-LDRENDER-010 — `_phaser_cue_value_lines` 가 `cue.fx.permitted` 를 읽는다
+
+`song_cue_render.py` `_phaser_cue_value_lines` 맨 앞에 `if not cue.fx.permitted:
+return ()` 가드를 추가했다 — 이전에는 이 함수가 `cue.fx` 축을 전혀 읽지
+않아(잰 값, spec.md REQ-010 인용: "`fx.permitted`를 읽는 곳은 session.py
+의 표시용 뿐") 송신 여부가 라벨 매칭·풀 해석에만 의존했다. 이제 D레벨
+예산이 0이면(F3) 라벨이 해석되고 슬롯을 찾아도 recall 을 내지 않는다.
+
+**RED→GREEN**: 기존 `server/tests/test_web_session.py`
+`TestPhaserSongCueMapping::test_a_resolved_phaser_adds_exactly_one_recall_line`
+가 이 가드 추가로 즉시 RED(기존 `_cue()` 헬퍼 기본값 `fx.permitted=()`)가
+됐다 — `_cue()` 에 `fx_permitted` 파라미터(기본 `()`, 하위 호환)를 추가하고
+그 테스트 + `test_the_recall_line_lands_after_the_plans_own_dimmer_line_
+and_before_store` 두 곳에 `fx_permitted=("dimmer chase",)` 를 명시해 GREEN
+으로 되돌렸다(시나리오 의도는 그대로, 새 전제조건만 채움 — 단언 극성을
+뒤집은 M2 류 플립과는 다른, 전제조건 추가형 수정). 신규
+`test_a_resolved_phaser_with_no_fx_budget_adds_nothing` 로 새 게이트
+자체를 검증.
+
+#### 3. REQ-LDRENDER-011 — 사전 생성 (측정됨: 5개 중 1개만 빌드된다, 날조 아님)
+
+신설 `server/design/phaser_pregen.py` — `phaser_catalog.py` 라벨을
+`server/fx/instantiate.py` 의 **기존** 저작 경로(`build_fx_preset_bundle`/
+`select_preset_number`)로 번들화하는 순수 함수들(`fx_for_catalog_label`·
+`pool_name_for_label`·`presets_section_from_pool_children`·
+`pregenerate_phaser_bundle`). `server/web/session.py` 에
+`_pregenerate_missing_phasers`(신설)를 배선 — `_reviewed_song_commands`
+안에서 `_phaser_slots_for_bundle` 직후 호출되고, 결과를
+`self._last_phaser_slots` 로 저장한다(REQ-012 가 재사용). **감독 승인 뒤
+(`_song_finalize` 의 approve 루프 안)에만 호출되는 유일한 호출부**이고,
+생성 자체도 `BatchRisk(kind="song_design_fx_pregen")` 선언으로
+`run_commands` → `gate.screen()` 단일 관문을 한 번 더 거친다(plan.md §D
+"단일 관문 무변경" 준수 — `test_write_dispatch_census.py` 에 새 자리로
+등재, 30번째 디스패치 자리 확인됨).
+
+🔴 **측정된 블로커(추측 아님) — 5개 필요 라벨 중 `Wave CM` 하나만 이
+경로로 빌드된다.** `build_fx_preset_bundle`→`_guard_collision`
+(REQ-FXLIB-011 (a))이 "한 스텝에서 다음 스텝으로 어떤 채널이든 값이
+우연히 같으면" 번들 조립 자체를 거부한다(`server/fx/library/color.yaml`
+자신의 저작 규율 — "EVERY CHANNEL HAS TO TRAVEL"). `phaser_catalog.py` 의
+30종은 이 규율을 염두에 두고 고른 색이 아니다(손수 작성 경로가 Phase 를
+한 채널에만 실어 이 제약을 안 받기 때문). 직접 측정(`server/tests/
+test_phaser_pregen.py::TestPregenerateBundle`):
+
+| 라벨 | 결과 | 거부 사유(FXLIB 기존 코드) |
+|---|---|---|
+| Wave CM | **빌드됨** | — |
+| Drop Slam | REFUSED | `value_line_collision`(Red→Red, ColorRGB_R 중복) |
+| Breathe Warm | REFUSED | `value_line_collision`(ColorRGB_R 중복) |
+| Breathe Cool | REFUSED | `value_line_collision`(ColorRGB_B 중복) |
+| Finale Slam | REFUSED | `value_line_collision`(ColorRGB_R 중복) |
+
+이 거부는 FXLIB 기존 사유 코드 그대로 `failed` 에 남고(`_pregenerate_
+missing_phasers` 의 `except (PhaserPregenError, FxInstantiationError)`),
+카탈로그 색을 바꿔 충돌을 피하는 것(새 RGB 발명)은 하지 않았다(§D 제약
+준수). 처방(카탈로그 색 재선정 또는 FXLIB 쪽 새 빌더)은 이 카드가
+결정하지 않는다 — 후속 카드 후보(`.moai/reports/t501/m6_pregen_targets_
+rain.md` §잔여 위험 참조).
+
+**[ASSUMPTION] phase/curve 문법 괴리(Wave CM 에도 적용, 빌드는 되지만)**:
+`build_fx_preset_bundle` 이 쓰는 FXLIB 표준 문법(`Step <k> At Accel <v>`,
+속성별 Phase 체이스)은 `server/web/session.py` 손수 작성 경로(채널
+하나에만 Phase/Accel/Decel)와 **다르다**(둘 다 각자 콘솔에서 측정됐지만
+상호 교환 가능하다는 실측은 이 저장소에 없다). "같은 스텝 값·같은 색·
+같은 속도"를 재현하되 명령 문면은 FXLIB 표준을 따른다 — 전체 근거는
+`phaser_pregen.py` 모듈 독스트링.
+
+**테스트**: `server/tests/test_phaser_pregen.py`(24개, 순수 함수 전수 —
+5개 필요 라벨 변환·Wave CM 성공·나머지 4개 거부·PRESET_OCCUPIED 거부·
+풀 미판독 거부), `server/tests/test_phaser_pregen_wiring.py`(6개,
+`_pregenerate_missing_phasers` 배선 — 예산 0 스킵·이미 해석됨 스킵·성공
+디스패치·게이트 거부·충돌 거부·콘솔 쓰기 0건 확인).
+
+#### 4. REQ-LDRENDER-012 — 효과 3계 보고
+
+`song_cue_render._fx_report_counts(bundle, phaser_slots)` 신설 —
+`(requested, permitted, sent)`. "sent" 셈은 `_phaser_cue_value_lines` 의
+REQ-010 게이트와 바이트 단위로 맞췄다(같은 조건: `cue.fx.permitted` 비어
+있지 않음 + 라벨 해석 + `phaser_slots` 에 그 라벨 존재) — 두 곳이 갈리면
+보고가 실제 송신과 다른 숫자를 주장하게 되므로, 독스트링에 이 동치성
+요구를 명시했다. `server/web/session.py` `_fx_report_note`(신설)가 이
+3계 숫자를 최종 회신에 " 효과: 요청 N · 허용 M · 송신 K."로 노출한다
+(`_phaser_failure_note`/`_color_failure_note`/`_arc_note` 와 같은 관행 —
+요청 0건이면 문구 자체를 생략). `self._last_phaser_slots`(M6 신설 필드)가
+사전 생성 병합 후의 phaser_slots 를 들고 있어, 보고의 "송신" 이 REQ-011
+의 효과까지 반영한다.
+
+**테스트**: `server/tests/test_fx_report_counts_t501_m6.py`(8개) —
+요청 0건 무문구·요청 합산·예산별 필터·송신 요건(예산+풀 해석 둘 다)·
+비매칭 라벨·REQ-010 게이트 동치성·`_fx_report_note` 3수치 노출.
+
+#### 5. 5절 정지점 — Rain 사전 생성 명령 (WITHOUT SENDING, 콘솔 쓰기 0건)
+
+`.moai/reports/t501/m6_pregen_stop_point.py` 가 `.moai/reports/t469/
+run3_phaser_pools.txt`(Color 풀 4번·All 1 풀 21번의 완전 판독, 이 SPEC
+이전 카드가 저장한 읽기 전용 증거 — 이 워크트리의 t498 풀 스냅샷은
+Position 풀만 담고 있어 Color/All 1 점유를 모른다)을 저장된 읽기로 써서
+Rain 의 5개 필요 라벨 전부를 돌렸다. 산출물: `.moai/reports/t501/
+m6_pregen_commands_rain.txt`(Wave CM 의 명령 전문 + 나머지 4개의 REFUSED
+사유 주석), `.moai/reports/t501/m6_pregen_targets_rain.md`(풀 번호·슬롯·
+이름 전부 + 점유 증거 출처·캡처 시점 + "전송 전 재조회 필수" 명시),
+`.moai/reports/t501/m6_pregen_stop_point_output.json`(구조화 전문).
+
+#### 6. 8곡 측정 + 회귀 + 린트/뮤테이션
+
+```
+$ uv run python .moai/reports/t501/measure_m6_8songs.py
+Club Diver: fx 요청 12 · 허용 0 · 게이트상 송신 0 · ... LIT>=3 14/14 · 색 4종
+...(8곡)...
+합계: fx 요청 107 · 허용 0 · 게이트상 송신 0 · AC-001 LIT>=3 120/120
+```
+
+**AC-001 LIT>=3 120/120 — M5 측정과 바이트 동일**(M6 는 `fids`/디머·색
+렌더링을 건드리지 않았으므로 구조적으로 불변, 예측대로 확인). **fx 허용
+= 0, 모든 곡**(§Gaps 참조 — 측정 하네스(`measure_ac001_8songs.rehearse`,
+`get_spatial_context` 스텁)가 M1 의 전용 스크립트처럼 실기 능력 데이터를
+공급하지 않아 `_try_rig_capabilities()` 가 빈 판독으로 귀결 — 이것은
+하네스 한계이지 프로덕션 결함이 아니다. 처방 자체의 효과는 §1의 전용
+측정(`measure_fx_permitted_zero_m6.py`, 실기 실측 채널 데이터로 확인)이
+증명한다). "실제 At Preset 줄" 열은 포지션 프리셋 recall 까지 포함하는
+과다 계수라 fx 전용 교차검증으로 쓰지 않는다(측정 스크립트 자체의
+한계로 명시).
+
+**전체 스위트**:
+
+```
+$ unset MOAI_KANBAN ... && PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+14515 passed, 35 skipped, 1 warning in 306.85s
+```
+
+베이스라인(M5, HEAD `4d93e1dc` 직후 측정) `14476 passed, 35 skipped`
+대비 **+39 passed, 0 removed, skip 변화 0** — 신설 24+6+8=38개 + REQ-010
+가드 자체 검증용 신규 1개(`test_a_resolved_phaser_with_no_fx_budget_adds_
+nothing`) = 39, 정확히 일치. 기존 테스트 파일 6개(`test_capability_
+verdict.py`·`test_preset_label_lookup_t232.py`·`test_song_cue_arc_t462.py`
+·`test_song_cue_color_emission.py`·`test_song_cue_effect_zero_t501_m5.py`
+·`test_web_session.py`)에서 REQ-010 가드 추가로 생긴 스텁 보강(새
+`_pregenerate_missing_phasers` 메서드 호출을 흡수하는 passthrough 스텁 +
+`fx` 필드 추가)과 3개 테스트의 명시적 뒤집음(§1 참조) 모두 **조용히
+깨뜨리지 않고** 이름·단언·독스트링을 함께 갱신했다.
+
+**뮤테이션(4건, 각 1축, diff 로 적용 확인 후 복원)**:
+
+| 뮤테이션 | 대상 | 죽은 테스트 | 결과 |
+|---|---|---|---|
+| A: `cue.fx.permitted` 가드 제거 | `_phaser_cue_value_lines` | `test_a_resolved_phaser_with_no_fx_budget_adds_nothing` | FAIL(의도대로) |
+| B: `EFFECT_CAPABILITY` 항목 제거 | `CAPABILITY_VOCABULARY` | 3건(`test_the_effect_capability_is_now_mapped_to_dimmer` 외) | FAIL |
+| C: `_phase_bounds("0 Thru 360")` 값 조작(360→180) | `phaser_pregen.py` | `test_phase_token_0_thru_360_becomes_a_spread` | FAIL |
+| D: `wanted` 집합에서 `cue.fx.permitted` 필터 제거 | `_pregenerate_missing_phasers` | `test_a_label_with_empty_fx_permitted_is_never_attempted` | FAIL |
+
+4건 전부 적용 후 대상 테스트만 FAIL(축 분리 확인), `diff` 로 적용 재확인
+후 복원, 복원 뒤 4개 파일 전부 바이트 동일(`diff -q` 확인) + 해당 테스트
+재통과 확인. 생존 뮤턴트 0건.
+
+**린트/포맷**:
+
+```
+$ uv run ruff check <14개 변경/신설 파일>
+All checks passed!
+$ uv run ruff format --check <14개 변경/신설 파일>
+15 files already formatted
+```
+
+**@MX 태그**: 해당 없음 — `song_cue_render.py`·`capability_verdict.py`·
+`console_slots.py` 전부 @MX 태그를 쓰지 않는 기존 관례(전수 확인, 0건)를
+그대로 따랐다(`rig.py` 만 3건 — 파일별 관례가 갈림). 신설 `phaser_pregen.py`
+의 공개 함수들은 fan_in 2(session.py + 테스트)로 ANCHOR 기준(fan_in>=3)
+미만이라 해당 없음.
+
+**측정하지 않은 것(§Gaps)**:
+- 4개 라벨(Drop Slam/Breathe Warm/Breathe Cool/Finale Slam)의 실제 사전
+  생성 — FXLIB `_guard_collision` 거부로 이 경로로는 영구 불가(처방 미정,
+  §3 참조). Rain 이 가장 자주 필요로 하는 절정 라벨(Drop Slam)이 이에
+  포함된다는 점을 명시한다.
+- Wave CM 의 phase/curve 문법이 카탈로그가 약속한 것과 **같은 시각
+  효과**를 내는지 — 명령 문면이 다르므로(§3 [ASSUMPTION]) 실기 육안
+  확인 전까지는 미확인.
+- 8곡 측정에서 `fx.permitted` 실측(§6의 하네스 한계) — 전용 스크립트
+  (§1)가 대신 증명했지만, `measure_ac001_8songs.rehearse` 경로 자체의
+  보강(실기 능력 데이터 공급)은 이 카드가 하지 않았다.
+- C1~C3(기존 쇼 보존·백업·번호 충돌)의 실기 재확인 — 이번 카드도 콘솔
+  쓰기 0건 제약(M5 와 같은 사유).
+- AC-LDRENDER-009/010(기계 증거)은 Wave CM 한정으로만 충족 가능성이
+  있고, 이 카드는 실제 전송을 하지 않았으므로 AC-009 의 "기계 증거"
+  (송신 효과 줄 1줄 이상, 실제 콘솔 접촉 경로)를 PASS 로 보고하지 않는다
+  — §5 정지점 산출물이 "보낼 수 있다"만 보인다.
+- AC-LDRENDER-016(실기 감독 판정) — 사람 판정, 이 카드 범위 밖.
+
+**잔여 위험**:
+- `.moai/reports/t469/run3_phaser_pools.txt` 풀 스냅샷은 이 SPEC 이전
+  캡처라 지금 이 순간의 점유를 보장하지 않는다 — 전송 전 재조회 필수
+  (명시, m6_pregen_targets_rain.md).
+- `select_preset_number`/`build_fx_preset_bundle` 의 번호 할당은 "이번
+  재조회 순간"에 유효할 뿐이다 — 다른 세션이 그 사이 같은 슬롯을 차지할
+  경쟁 조건은 이 카드가 새로 막지 않는다(FXLIB 기존 경계 그대로 상속).
+- `group=1`(스크래치 저작 선택) 이 모든 리그에서 addressable 하다는
+  보장은 없다 — Rain 리그에서는 "All" 관례(여러 보고서가 인용)로 안전
+  하다고 보지만, 다른 리그로 일반화는 미검증.
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<sync-phase 대기>_
