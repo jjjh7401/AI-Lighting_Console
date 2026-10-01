@@ -546,8 +546,9 @@ _WHITE_NAME_BY_RGB: dict[tuple[int, int, int], str] = {
 
 
 #: SPEC-LDRENDER-001 M3 후속(t501, 카드 t501) — 역할별 디머/색 값 줄을 내는
-#: 이 네 함수(``_white_palette_name``·``_role_color_value_lines``·
-#: ``_song_color_value_lines``·``_role_dimmer_value_lines``)가 공유하는
+#: 이 다섯 함수(``_white_palette_name``·``_role_color_value_lines``·
+#: ``_song_color_value_lines``·``_role_dimmer_value_lines``·
+#: ``_effect_dimmer_zero_lines``, 마지막은 M5 추가)가 공유하는
 #: 허용 kind 집합. ``climax_return``은 AC-LDRENDER-001 이 "구간 큐 전부"
 #: 요구에서 **명시 예외하지 않는** 유일한 비-section kind 다(명시 예외는
 #: 블랙아웃 큐 ``cue.dimmer.blackout`` 과 MIB 사전이동 큐
@@ -826,6 +827,105 @@ def _role_dimmer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]])
         if pct is None:
             continue
         lines.append(f"Group {group_no} ; Attribute 'Dimmer' At {pct:g}")
+    return tuple(lines)
+
+
+#: SPEC-LDRENDER-001 M5(REQ-LDRENDER-007/008, 카드 t501, 리드 결정 g — 2026-10-01).
+#:
+#: **왜 공유 `fids` 가 아니라 그룹 주소인가** — REQ-007 본문은 "비액센트 큐가
+#: 공유하는 `fids` 선택 자체"에서 effect 기구를 빼라고 요구하지만(spec.md
+#: §3.3), 그 멤버십(어느 fid 가 BLIND/STROBE/HAZE 그룹에 속하는지)을 읽을
+#: production-safe 경로가 이 저장소 어디에도 없다 — 2차(GROUPGEN SPEC M0 +
+#: 이 SPEC 자신의 M2 `_layer_mapping_from_group_children` 독스트링)로 반증됐다
+#: (`.moai/reports/t501/M5.md` §2-4, progress.md §M5 블로커 절). 리드 결정
+#: (g)는 그 fid 뺄셈 대신 **그룹 주소**로 같은 결과(비액센트 큐에서 효과
+#: 기구가 어둡다)를 낸다 — `_role_dimmer_value_lines`/`_group_color_apply_command`
+#: 가 이미 쓰는 RG5 패턴(그룹 멤버십 fid 를 몰라도 그룹 번호만으로 값을
+#: 낸다)과 같은 축이다. 이것은 REQ-007 문면의 **직역이 아니라 outcome-equivalent
+#: 해석**이다(명시 플래그, `.moai/reports/t501/M5b.md` §해석 노트 참조) — 공유
+#: `fids` 자체(색·포지션·페이저 줄이 겨냥하는 선택)는 여전히 86대 전체를 들고
+#: 있다. 문구 쪽 수정이 필요하면 sync 단계에서 manager-spec 이 처리한다(이
+#: 함수는 spec.md 본문을 고치지 않는다).
+def _effect_group_numbers(layer_mapping: Sequence[Mapping[str, object]]) -> tuple[int, ...]:
+    """역할이 ``effect``인 **모든** 그룹 번호(정렬, 중복 제거).
+
+    `_role_group_numbers`의 "마지막 항목이 이긴다" 단일값 규율과 다르다 —
+    BLIND/STROBE/HAZE 는 전부 역할 `"effect"`로 매칭되는 **서로 다른** 콘솔
+    그룹이라(`rig._LAYER_GROUP_ALIASES["effect"]`, 세 이름 전부 정확 일치) 하나로
+    접으면 둘을 잃는다. 결정적 순서(그룹 번호 오름차순)로 돌려줘 호출자의 값
+    줄 순서가 매 실행 바이트 동일하다."""
+    numbers: set[int] = set()
+    for entry in layer_mapping:
+        role = entry.get("role")
+        group_no = entry.get("group_no")
+        if role == "effect" and isinstance(group_no, int) and not isinstance(group_no, bool):
+            numbers.add(group_no)
+    return tuple(sorted(numbers))
+
+
+def _effect_dimmer_zero_lines(
+    cue,
+    layer_mapping: Sequence[Mapping[str, object]],
+    previous_fixture=None,
+) -> tuple[str, ...]:
+    """비액센트 큐에서 effect 역할 그룹(BLIND/STROBE/HAZE)을 전체 기구 디머
+    줄 **뒤**에 0 으로 내린다(REQ-LDRENDER-007, M5 리드 결정 g).
+
+    **HAZE 를 빼지 않는 이유(요청 캡션 — 해소됨, 충돌 없음)**: spec.md REQ-007
+    본문은 HAZE 도 BLIND/STROBE 와 같은 제외 대상이라 명시한다("HAZE 는 ...
+    공유 fids 제외 대상이되, 곡 시작/종료 안전 큐(Block/Release)에서는 명시적으로
+    관리된다"). 그 Block/Release 안전 큐는 **이 송신 경로가 아니라** 별도
+    시스템(큐-시트 트래킹 메타데이터, `server/design/cue_sheet_edit.py`
+    `TRACKING_VALUES`, SPEC-LDDESIGN-001 REQ-053/054)의 몫이고, 이
+    `reviewed_song_commands` 송신 경로에는 그 트래킹 필드를 쓰는 코드가 전혀
+    없다(grep 재확인, `.moai/reports/t501/M5b.md` §HAZE 절) — 두 축이 겹치지
+    않으므로 충돌이 없다. 또한 실측(t241/verdict.md §2) — 헤이저(Look Unique
+    2.1, Mode 0 2ch)는 애초에 `Dimmer` 애트리뷰트가 **없다**(채널은 Haze1·
+    Blower1 뿐). 그래서 `Group <n(HAZE)> ; Attribute 'Dimmer' At 0` 은 그
+    기구에 아무 애트리뷰트도 겨누지 못하는 무해한 명령이다 — 오늘도 이미
+    전체 기구 디머 줄(`Fixture 1+2+...+86 ; Attribute 'Dimmer' At <v>`, HAZE
+    2대 포함)이 같은 방식으로 HAZE 에 가닿아 왔고 사고 보고가 없다(같은
+    무해성의 선례). BLIND/STROBE 는 각각 Dimmer 애트리뷰트가 있다
+    (t241/verdict.md: BLIND ✓, STROBE ✓) — 둘 다 실제로 꺼진다.
+
+    **액센트 큐**(``cue.accent_fixture is not None``): 그 액센트가 겨냥하는
+    그룹은 이 함수가 건너뛴다 — 그 그룹은 `_accent_fixture_value_lines`가
+    상승 액센트 값을 낸다("그 그룹엔 액센트 값만 낸다", 리드 결정 g). 액센트가
+    안 겨누는 다른 effect 그룹(예: BLIND 가 액센트일 때 STROBE/HAZE)은 이
+    큐에서도 그대로 0 을 낸다 — 콘솔 트래킹에 맡기지 않고 매 큐 명시적으로
+    재단언한다(`_song_color_value_lines`의 climax_return 재단언과 같은 규율).
+
+    **복귀 큐(``previous_fixture``, 리드 결정 범위를 넘는 추가 가드)**: 이 큐가
+    액센트가 없고(``cue.accent_fixture is None``) 앞 큐가 블라인더를 켜 놓았으면
+    (``previous_fixture is not None``), `_accent_fixture_value_lines`가 그
+    그룹에 독립적으로 이미 ``Group <n> ; Attribute 'Dimmer' At 0``(복귀 줄, "오늘과
+    같은 0", 배차서 요구사항 1)을 낸다 — 이 함수가 **같은 그룹에 같은 값의 줄을
+    또 내면** 문자열이 중복된다(배차서 요구사항 1 "Value lines must remain
+    unique strings"). 그래서 그 그룹은 여기서도 건너뛴다 — 복귀 큐의 "At 0"은
+    정확히 한 줄(액센트 경로의 줄)로만 난다. 배차서 문면은 액센트 큐만
+    명시했지만(§비액센트/액센트 이분), 이 복귀-큐 가드는 그 문면이 요구한
+    "고유 문자열" 불변식을 복귀 큐에도 일관되게 적용한 것이다(§M5b.md §해석
+    노트에 별도로 플래그).
+
+    **중복 줄 가드**: `_effect_group_numbers`가 그룹 번호를 집합으로 모아
+    중복을 미리 없애므로, 같은 호출 안에서는 항상 서로 다른 그룹 번호를
+    겨눈다 — 여러 effect 그룹이 있어도 같은 문자열이 두 번 나오지 않는다."""
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS:
+        return ()
+    key_pct = cue.dimmer.key_pct
+    if key_pct is None or key_pct <= 0:
+        return ()
+    accent_group_no = cue.accent_fixture.group_no if cue.accent_fixture is not None else None
+    return_group_no = (
+        previous_fixture.group_no
+        if cue.accent_fixture is None and previous_fixture is not None
+        else None
+    )
+    lines: list[str] = []
+    for group_no in _effect_group_numbers(layer_mapping):
+        if group_no in (accent_group_no, return_group_no):
+            continue
+        lines.append(f"Group {group_no} ; Attribute 'Dimmer' At 0")
     return tuple(lines)
 
 
@@ -1218,6 +1318,12 @@ def reviewed_song_commands(
         if preset_no is None and dimmer is None:
             continue
         accent_lines = _accent_fixture_value_lines(cue, previous_fixture)
+        # SPEC-LDRENDER-001 M5(t501) — `previous_fixture`는 아직 이 cue 로
+        # 갱신하기 전(앞 cue 의 액센트)이다. effect-zero 줄은 `accent_lines`와
+        # 같은 "복귀 그룹" 읽음을 공유해야 중복 "At 0" 줄이 안 생긴다(아래
+        # `_effect_dimmer_zero_lines` 독스트링 §복귀 큐 가드) — 그래서 `previous_fixture`
+        # 재할당 **전**에 계산한다.
+        effect_zero_lines = _effect_dimmer_zero_lines(cue, layer_mapping, previous_fixture)
         previous_fixture = cue.accent_fixture
         plan = PositionCuePlan(
             cue_no=cue.cue_number,
@@ -1235,6 +1341,7 @@ def reviewed_song_commands(
                 extra_value_lines=(
                     *color_lines,
                     *_role_dimmer_value_lines(cue, layer_mapping),
+                    *effect_zero_lines,
                     *_phaser_cue_value_lines(cue, fids, phaser_slots),
                     *accent_lines,
                 ),

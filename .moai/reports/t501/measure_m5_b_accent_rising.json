@@ -1,0 +1,98 @@
+[
+ {
+  "song": "Club Diver",
+  "accent_cues": [
+   {
+    "cue_no": "12",
+    "group": "BLIND",
+    "before": 0.0,
+    "after": 80.0,
+    "rises": true
+   }
+  ]
+ },
+ {
+  "song": "Cut and Run",
+  "accent_cues": [
+   {
+    "cue_no": "16",
+    "group": "BLIND",
+    "before": 0.0,
+    "after": 80.0,
+    "rises": true
+   }
+  ]
+ },
+ {
+  "song": "Ice cream",
+  "accent_cues": [
+   {
+    "cue_no": "6",
+    "group": "BLIND",
+    "before": 0.0,
+    "after": 80.0,
+    "rises": true
+   }
+  ]
+ },
+ {
+  "song": "Morning",
+  "accent_cues": [
+   {
+    "cue_no": "12",
+    "group": "BLIND",
+    "before": 0.0,
+    "after": 80.0,
+    "rises": true
+   }
+  ]
+ },
+ {
+  "song": "Rain",
+  "accent_cues": [
+   {
+    "cue_no": "11",
+    "group": "BLIND",
+    "before": 0.0,
+    "after": 80.0,
+    "rises": true
+   }
+  ]
+ },
+ {
+  "song": "Too Cool",
+  "accent_cues": [
+   {
+    "cue_no": "18",
+    "group": "BLIND",
+    "before": 0.0,
+    "after": 80.0,
+    "rises": true
+   }
+  ]
+ },
+ {
+  "song": "scott-buckley-neon",
+  "accent_cues": [
+   {
+    "cue_no": "16",
+    "group": "BLIND",
+    "before": 0.0,
+    "after": 80.0,
+    "rises": true
+   }
+  ]
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질",
+  "accent_cues": [
+   {
+    "cue_no": "3",
+    "group": "BLIND",
+    "before": 0.0,
+    "after": 80.0,
+    "rises": true
+   }
+  ]
+ }
+]

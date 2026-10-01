@@ -1,0 +1,16 @@
+A1 run1_m5: bpm=76.01351351351367 source=measured sections=12 selected=12
+A1 run2_m5: bpm=76.01351351351367 source=measured sections=12 selected=12
+event types: Counter({'song_timeline': 3, 'notice': 2, 'execution_preview': 1, 'chat_response': 1})
+A2 gates=13 passed=13 not_passed=[]
+A2 gates=13 passed=13 not_passed=[]
+A2 gates=13 passed=13 not_passed=[]
+A3 console_commands_approved.txt: run1==run2 bytes True (224 lines)
+A3 console_commands_sent.txt: run1==run2 bytes True (224 lines)
+A4 approved=224 sent=224 diff=0
+A5 sent-not-approved=0 []
+   approved-not-sent=0 []
+order equal: True
+preset store / delete / clearall lines in approved: 13 ['ClearAll', 'ClearAll', 'ClearAll', 'ClearAll', 'ClearAll', 'ClearAll', 'ClearAll', 'ClearAll', 'ClearAll', 'ClearAll']
+sequence numbers: ['211']
+timecode lines: ['Store Timecode 11', "Set Timecode 11 Property 'Name' 'Sequence 211 Timecode'", 'Assign Sequence 211 At Timecode 11']
+preset refs: ['2.21', '2.22', '2.23', '2.24', '2.25', '2.26', '2.28', '2.30']

@@ -1,0 +1,15 @@
+approved cues: 13 props per cue: ['TRIGTIME', 'TRIGTYPE', 'name']
+cue 1: name 'Intro' want 'Intro' | type Time want Time | time 0.0 want 0 | OK
+cue 2: name 'Verse 1' want 'Verse 1' | type Time want Time | time 20.939 want 20.939 | OK
+cue 3: name 'Verse 2' want 'Verse 2' | type Time want Time | time 33.568 want 33.568 | OK
+cue 4: name 'Chorus 1' want 'Chorus 1' | type Time want Time | time 49.515 want 49.515 | OK
+cue 5: name 'Chorus 2' want 'Chorus 2' | type Time want Time | time 66.517 want 66.517 | OK
+cue 6: name 'Verse 3' want 'Verse 3' | type Time want Time | time 79.595 want 79.595 | OK
+cue 7: name 'Chorus 3' want 'Chorus 3' | type Time want Time | time 106.432 want 106.432 | OK
+cue 8: name 'Chorus 4' want 'Chorus 4' | type Time want Time | time 123.008 want 123.008 | OK
+cue 9: name 'Chorus 5' want 'Chorus 5' | type Time want Time | time 138.581 want 138.581 | OK
+cue 10: name 'Verse 4' want 'Verse 4' | type Time want Time | time 166.421 want 166.421 | OK
+cue 11: name 'Chorus 6' want 'Chorus 6' | type Time want Time | time 179.061 want 179.061 | OK
+cue 11.5: name 'Chorus 6 Return' want 'Chorus 6 Return' | type Time want Time | time 180.64 want 180.64 | OK
+cue 12: name 'Finale' want 'Finale' | type Time want Time | time 209.141 want 209.141 | OK
+A7 match 13 / 13 (console cues read: 13)

@@ -1139,7 +1139,7 @@ $ uv run ruff format --check <동일 목록>
   확인했고, `compose_song_cue_bundle`→`reviewed_song_commands` 종단 경로로
   W 채널이 있는 합성 리그를 돌리는 새 테스트는 추가하지 않았다.
 
-### M5 — 효과 기구 분리 (카드 t501, REQ-LDRENDER-007/008, M2 의 effect 역할 재사용) — **블록(결정 대기)**
+### M5 — 효과 기구 분리 (카드 t501, REQ-LDRENDER-007/008, M2 의 effect 역할 재사용) — 블로커 보고(아래) → **리드 결정 (g) 로 해소, §M5 완료 절 참조**
 
 **착수 베이스라인**: `git merge --ff-only origin/WT-ldrender-run` → HEAD `4d93e1dc`
 (M3 후속 climax_return 완료 커밋) — `git rev-parse --short HEAD`로 확인.
@@ -1282,6 +1282,171 @@ $ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_
 - **이 블로커는 멤버십 "확보 방법"의 선택이지 멤버십 "읽기 시도"가 아니다**
   — 이번 M5는 "no console contact"가 명시돼 옵션 (a)/(c)의 실측 재시도
   자체도 이 카드 범위 밖이다(결정이 난 뒤 후속 카드가 수행).
+
+### M5 완료(결정 g) — 효과 기구 그룹 주소 영(0) 처리, fid 뺄셈 대신 outcome-equivalent (카드 t501, 리드 결정 2026-10-01)
+
+**전제(위 블로커 절 참조)**: REQ-007 본문이 요구하는 공유 `fids` 자체에서의
+fid 뺄셈은 멤버십 판독 경로 부재로 구현 불가(2차 반증). 리드 결정 (g)는
+fid 뺄셈을 **하지 않고**, 그룹 주소로 같은 결과(비액센트 큐에서 효과 기구가
+어둡다)를 낸다 — `.moai/reports/t501/M5b.md` §해석 노트에 outcome-equivalent
+해석을 명시 플래그.
+
+**구현**: `server/design/song_cue_render.py`에 `_effect_group_numbers`(역할
+`"effect"` 에 매칭되는 **모든** 콘솔 그룹 번호를 정렬·중복 제거해 모음 —
+`_role_group_numbers`의 last-wins 단일값과 다른 축)와
+`_effect_dimmer_zero_lines`(비액센트 큐에서 그 그룹들을 전체 기구 디머 줄
+**뒤**에 `Group <n> ; Attribute 'Dimmer' At 0`으로 내림, 액센트 큐에서는 그
+액센트가 겨냥하는 그룹만 건너뜀, 복귀 큐에서는 `_accent_fixture_value_lines`
+가 이미 내는 복귀-0 줄과 겹치지 않도록 그 그룹도 건너뜀)을 신설했다.
+`reviewed_song_commands`의 `extra_value_lines` 튜플에 `_role_dimmer_value_lines`
+직후(배차서 요구사항 1의 줄 순서: 전체 디머 → 역할 디머(effect=0 포함) →
+효과 recall → 액센트) 배선했다. `_role_dimmer_value_lines` 자체(role_pct
+경로)는 손대지 않았다 — `test_effect_role_is_never_emitted_even_if_role_pct_has_a_value`
+(기존 M3 테스트)가 여전히 통과한다(바이트 동일 가드, 아래 회귀 확인).
+
+**줄 순서 실측**(Rain 큐 11, `.moai/reports/t501/m5_rain_cue10_11_115_extract.txt`):
+전체 기구 디머(100) → 역할 디머(Group 4/7/10/13=80) → effect=0(Group 15/16,
+Group 14 는 이 큐의 액센트라 건너뜀) → 액센트(Group 14=80, 맨 끝).
+
+**HAZE 캡션(해소, 충돌 없음)**: spec.md REQ-007 본문은 HAZE 도 제외 대상이나
+"곡 시작/종료 안전 큐(Block/Release, SPEC-LDDESIGN-001 REQ-053/054)에서는
+명시적으로 관리된다"고 적는다. 그 Block/Release 트래킹 필드는 이 송신
+경로(`reviewed_song_commands`)가 전혀 쓰지 않는 **별도 시스템**(큐-시트
+메타데이터, `server/design/cue_sheet_edit.py` `TRACKING_VALUES`)이다 —
+grep 재확인(`grep -rn "Block\|Release" server/design/song_cue_render.py
+server/design/song_cue_composer.py` → 0건). 두 축이 겹치지 않아 충돌이
+없다. 추가로 실측(`.moai/reports/t241/verdict.md` §2, 기종 표):
+헤이저(Look Unique 2.1, Mode 0 2ch)는 애초에 `Dimmer` 애트리뷰트가 **없다**
+(채널은 Haze1·Blower1 뿐, `Dimmer ✗`로 표에 명시) — `Group <n> ; Attribute
+'Dimmer' At 0`은 그 기구에 아무 애트리뷰트도 겨누지 못하는 무해한 명령이다.
+오늘도 이미 전체 기구 디머 줄이 같은 방식으로 HAZE 에 가닿아 왔다(같은
+무해성의 선례, 사고 보고 0건). BLIND(✓)/STROBE(✓)는 Dimmer 가 있어 실제로
+꺼진다. **결론**: 충돌 없음 → BLIND/STROBE/HAZE 전부 포함했다(배차서
+요구사항 3 "If no conflict, include HAZE").
+
+**해석 노트(명시 플래그)**: REQ-007 문면("공유 `fids` 선택 자체에서 effect
+기구를 제외")의 **직역이 아니다** — 공유 `fids`(색·포지션·페이저 줄이
+겨냥하는 선택)는 여전히 86대 전체를 들고 있다. (g)가 달성하는 것은
+**outcome-equivalent**: 비액센트 큐에서 effect 기구가 어둡다(디머=0)는
+결과는 동일하되, 그 경로가 fid 뺄셈이 아니라 그룹 주소 override(last-wins)
+다. AC-LDRENDER-006의 문면("4종 값 줄 전부에서 effect 기구가 빠진다")은
+**디머 축만** 충족하고 색·포지션·페이저 축은 여전히 공유 `fids`를 거친다
+— 이 AC 를 "전면 PASS"로 보고하지 않는다(아래 §AC 매핑). spec.md 문구
+쪽 정정이 필요하면 sync 단계에서 manager-spec 이 처리한다 — 이 카드는
+spec.md 본문을 고치지 않았다.
+
+**테스트**: `server/tests/test_song_cue_effect_zero_t501_m5.py`(신규 20개) —
+`_effect_group_numbers`(집계·정렬·중복 제거·bool 가드, 6개),
+`_effect_dimmer_zero_lines`(비액센트/액센트/복귀/연속-액센트/kind 가드/
+byte-identical fallback, 9개), `reviewed_song_commands` 통합(줄 순서,
+t498 큐 11 재현 고침 확인, 복귀 큐 중복 없음, effect 미매핑 바이트 동일,
+4개) + 보조 1개. RED→GREEN 확인: 구현 전 손으로 호출해 `AttributeError`
+(함수 미존재)로 RED, 구현 후 전부 GREEN.
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_song_cue_effect_zero_t501_m5.py -q
+....................
+20 passed in 0.16s
+```
+
+**뮤테이션(6건, §3.3 규율 — 각 1축만 건드림, diff 로 적용 확인 후 복원)**:
+
+| 뮤테이션 | 대상 | 죽인 테스트(수) | 결과 |
+|---|---|---|---|
+| A: 액센트/복귀 그룹 제외 분기 제거(`pass`로 치환) | `_effect_dimmer_zero_lines` | 5건 | FAIL(의도대로) |
+| B: `cue.kind not in _ROLE_VALUE_LINE_KINDS` 가드 제거 | 〃 | 2건(mib_premove·blackout kind) | FAIL |
+| C: `key_pct <= 0` 가드 제거 | 〃 | 2건(blackout·None key_pct) | FAIL |
+| D: `sorted(numbers)` → `tuple(numbers)`(정렬 제거) | `_effect_group_numbers` | 7건(순서 의존 단언 전부) | FAIL |
+| E: `set` → `list`(중복 제거 제거) | 〃 | 1건(중복 입력 전용) | FAIL |
+| F: `reviewed_song_commands`에서 배선 비활성화(`effect_zero_lines = ()`) | `reviewed_song_commands` | 2건(통합 테스트) | FAIL |
+
+6건 전부 적용 후 대상 테스트만 빨갛게 만들고(axis 분리 확인), 원본과 `diff`
+로 적용을 재확인한 뒤 복원, 복원 후 `test_song_cue_effect_zero_t501_m5.py`
+20/20 재통과 확인. 생존 뮤턴트 0건.
+
+**회귀 — 전체 스위트**:
+
+```
+$ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+14476 passed, 35 skipped, 1 warning in 215.34s
+```
+
+베이스라인(M3 후속, HEAD `4d93e1dc`) 14456 passed/35 skipped 대비 **+20
+passed, 0 removed, skip 변화 0** — 신설 테스트 20개와 정확히 일치(순증
+20, 지운 검사 0). `server/design/song_cue_render.py`·기존 M3/M4/climax_return
+테스트 파일(`test_song_cue_role_dimmer_t501.py`·`test_layer_mapping_effect_role.py`
+·`test_song_cue_role_color_t501.py`·`test_song_cue_climax_return_t501.py`
+·`test_ldrender_gate.py`·`test_songcue_accent_ladder_t382.py`·
+`test_song_cue_arc_t462.py`, 92개)은 전부 바이트 동일 통과 — 기존
+동작을 건드리지 않았다.
+
+**린트/포맷**: `uv run ruff check server/design/song_cue_render.py
+server/tests/test_song_cue_effect_zero_t501_m5.py` → All checks passed.
+`uv run ruff format --check` 양쪽 → already formatted.
+
+**@MX 태그**: 해당 없음 — `song_cue_render.py` 파일 전체가 @MX 태그를 쓰지
+않는 기존 관례(grep 확인, 0건)를 그대로 따랐다. 신설 함수는 모듈-private
+(`_` 접두)이고 fan_in=1(`reviewed_song_commands` 한 곳에서만 호출)이라
+ANCHOR 기준(fan_in>=3)에도 해당하지 않는다.
+
+**측정 1-3(8곡, `.moai/reports/t501/measure_m5_8songs.py` 신설 — `measure_ac001_8songs.rehearse`
+재사용, DSP 재실행 없음·콘솔 접촉 0건)**:
+
+a. 비액센트 큐 중 effect 그룹 디머>0 인 큐 수(목표 0) — **8곡 전부 0건**
+   (BLIND/STROBE/HAZE 그룹별 위반 0, `measure_m5_a_non_accent_zero.json`).
+b. 액센트 큐 — effect 그룹 값 직전 큐→이 큐 상승 — **8곡 전부 1/1 상승**
+   (곡마다 액센트 큐 1개씩, `measure_m5_b_accent_rising.json`).
+c. AC-001/AC-004 재확인 — LIT>=3 **120/120**(변화 없음, M3 후속 climax_return
+   완료 당시와 바이트 동일), 색 수/색 변화 8곡 전부 M4 측정과 동일
+   (`measure_m5_c_ac001_ac004_recheck.json`). M5가 공유 `fids`를 바꾸지
+   않아(그룹 override 축만 추가) 디머/색 렌더링 자체는 구조적으로 불변 —
+   예측대로 확인.
+
+```
+합계: 비액센트 큐 effect>0 위반 0건(목표 0) · 액센트 상승 8/8 · AC-001 LIT>=3 120/120
+```
+
+**측정 항목 d — AC-LDRENDER-015 오프라인 스위트(t498 스크립트 재사용)**:
+
+이 워크트리에 원곡 오디오가 없다던 이전 블로커(M5.md)는 배차서가 절대경로
+(주 체크아웃 `src/sample music/Rain.mp3`, 읽기 전용)를 지정해 해소됐다.
+`rehearse_rain.py`를 이 트리(M5 적용 후)에서 2회 실행(run1_m5/run2_m5):
+
+- **A1 곡 분석 재현**: PASS — BPM 76.0135, 구간 12/12(양쪽 run 동일)
+- **A2 게이트 G1~G13**: PASS — 13/13 `passed: true`(3회 반복 이벤트 전부)
+- **A3 결정성**: PASS — run1==run2 바이트 동일(224줄, approved·sent 둘 다)
+- **A4 승인=송신**: PASS — 224=224, 순서까지 동일
+- **A5 승인 밖 명령**: PASS — sent-not-approved 0, approved-not-sent 0
+- **A7 되읽기**: PASS — 13/13 이름·TrigType·TrigTime(±0.001) 일치. **t498
+  원본 실기 판독**(`run8_cue_props.txt`·`run7_after_write.txt`, M5 이전
+  실기 캡처, 읽기만 — 새 콘솔 접촉 0)과 대조 — 큐 이름·트리거 시각은
+  M3/M4/M5 어느 것도 바꾸지 않았음을 실기 데이터로 확인
+  (`.moai/reports/t501/m5_judge_a7.txt`)
+- **classify_diff(참고, AC-015 필수 항목 아님)**: t498 실기 전부-거절
+  목록(`run3_rain_real_denyall`, M5 이전 실기 캡처)과 대조하면 신규
+  UNEXPLAINED 117줄 — **전부** M3/M4/M5 가 추가한 Group 3/4/7/10/13/14/
+  15/16 줄 패턴(역할 디머·역할 색·effect=0)으로 설명되고, 예외 1줄은
+  가짜 콘솔 좌표 대역(fid 20/26) 색 줄(기존에 문서화된 측정 하네스 자체의
+  알려진 인공물, M5 무관). 실기 전용 12줄은 전부 기존 W 채널(t430,
+  M5 이전부터 있던 축). 이 비교는 t498의 **M5 이전** 실기 캡처를 기준선으로
+  삼으므로 "회귀 0건"의 증거가 아니라 "새 UNEXPLAINED 전부가 알려진 M3/M4/
+  M5 패턴으로 설명됨"의 증거다 — AC-015가 요구하는 A1~A7·C 항목 자체는
+  아니라서 참고용으로만 싣는다(`.moai/reports/t501/m5_classify_diff.txt`).
+- **C1~C3(기존 쇼 보존·백업·번호 충돌)**: 이번 카드는 콘솔 쓰기를 하지
+  않아(가짜 콘솔만) 직접 측정하지 않았다 — M3/M4/M5 모두 값 줄 생성
+  로직만 바꾸고 `Store Sequence`/프리셋 번호 발급 경로를 건드리지 않았다
+  (코드 판독: 변경된 함수가 전부 `extra_value_lines`에만 기여, 시퀀스/큐
+  번호·프리셋 참조 로직은 무변경 — 간접 근거, 실기 재확인은 후속 실기
+  세션의 몫).
+
+**측정하지 않은 것(§Gaps)**:
+- fid-수준 뺄셈(REQ-007 문면 직역) — 멤버십 판독 경로 부재로 여전히 불가.
+  AC-LDRENDER-006 은 디머 축만 PASS, 색/포지션/페이저 축은 공유 `fids`
+  그대로라 미충족(위 §해석 노트).
+- C1~C3 의 실기 재측정(콘솔 쓰기 0건 제약, 위 참조).
+- AC-LDRENDER-016(실기 감독 판정) — 사람 판정, 이 카드 범위 밖.
+- 옵션 (a)/(c)의 실측 재시도(이번 카드도 "no console contact") — 결정
+  (g)가 둘 다 우회했으므로 더 이상 필요하지 않다.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

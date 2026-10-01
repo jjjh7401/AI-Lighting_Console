@@ -1,0 +1,44 @@
+--- Cue 10 ---
+Fixture 20 + 26 ; At Preset 2.26
+Fixture 20 + 26 ; Attribute 'Dimmer' At 25
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 7 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+Group 10 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+Group 4 ; Attribute 'Dimmer' At 20
+Group 7 ; Attribute 'Dimmer' At 20
+Group 10 ; Attribute 'Dimmer' At 20
+Group 13 ; Attribute 'Dimmer' At 20
+Group 14 ; Attribute 'Dimmer' At 0
+Group 15 ; Attribute 'Dimmer' At 0
+Group 16 ; Attribute 'Dimmer' At 0
+Store Sequence 211 Cue 10 'Verse 4' CueFade 1.184
+--- Cue 11 ---
+Fixture 20 + 26 ; At Preset 2.30
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+Group 4 ; Attribute 'Dimmer' At 80
+Group 7 ; Attribute 'Dimmer' At 80
+Group 10 ; Attribute 'Dimmer' At 80
+Group 13 ; Attribute 'Dimmer' At 80
+Group 15 ; Attribute 'Dimmer' At 0
+Group 16 ; Attribute 'Dimmer' At 0
+Group 14 ; Attribute 'Dimmer' At 80
+Store Sequence 211 Cue 11 'Chorus 6' CueFade 0.394667
+--- Cue 11.5 ---
+Fixture 20 + 26 ; Attribute 'Dimmer' At 100
+Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+Group 4 ; Attribute 'Dimmer' At 80
+Group 7 ; Attribute 'Dimmer' At 80
+Group 10 ; Attribute 'Dimmer' At 80
+Group 13 ; Attribute 'Dimmer' At 80
+Group 15 ; Attribute 'Dimmer' At 0
+Group 16 ; Attribute 'Dimmer' At 0
+Group 14 ; Attribute 'Dimmer' At 0
+Store Sequence 211 Cue 11.5 'Chorus 6 Return' CueFade 0
