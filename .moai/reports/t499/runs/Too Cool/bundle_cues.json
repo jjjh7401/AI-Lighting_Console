@@ -1,0 +1,1043 @@
+{
+ "cues": [
+  {
+   "cue": 1.0,
+   "kind": "section",
+   "name": "Intro",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 20.0,
+    "back_pct": 16.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Ring In",
+    "stored": "Ring In",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": 100.0,
+   "accent": null,
+   "start_ms": 0,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 2.0,
+   "kind": "section",
+   "name": "Chorus 1",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Ring In",
+    "stored": "Ring In",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 10066,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 3.0,
+   "kind": "section",
+   "name": "Chorus 2",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Home",
+    "stored": "Home",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 16045,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 4.0,
+   "kind": "section",
+   "name": "Chorus 3",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Home",
+    "stored": "Home",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 22071,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 5.0,
+   "kind": "section",
+   "name": "Chorus 4",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Home",
+    "stored": "Home",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 28038,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 6.0,
+   "kind": "section",
+   "name": "Chorus 5",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Vocal DSC",
+    "stored": "Vocal DSC",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 34064,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 7.0,
+   "kind": "section",
+   "name": "Chorus 6",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Vocal DSC",
+    "stored": "Vocal DSC",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 40043,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 8.0,
+   "kind": "section",
+   "name": "Verse 1",
+   "d": 3,
+   "dimmer": {
+    "key_pct": 70.0,
+    "back_pct": 56.0,
+    "budget_range_pct": [
+     60.0,
+     80.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Vocal DSC",
+    "stored": "Vocal DSC",
+    "width_tier": "medium",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "중간~높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 46068,
+   "fade": 1.1145578231292743
+  },
+  {
+   "cue": 9.0,
+   "kind": "section",
+   "name": "Verse 2",
+   "d": 3,
+   "dimmer": {
+    "key_pct": 70.0,
+    "back_pct": 56.0,
+    "budget_range_pct": [
+     60.0,
+     80.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Center",
+    "stored": "Center",
+    "width_tier": "medium",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "중간~높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 57899,
+   "fade": 1.1145578231292743
+  },
+  {
+   "cue": 10.0,
+   "kind": "section",
+   "name": "Verse 3",
+   "d": 4,
+   "dimmer": {
+    "key_pct": 25.0,
+    "back_pct": 20.0,
+    "budget_range_pct": [
+     80.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Center",
+    "stored": "Center",
+    "width_tier": "wide",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": 90.0,
+   "accent": null,
+   "start_ms": 65190,
+   "fade": 0.5572789115646372
+  },
+  {
+   "cue": 11.0,
+   "kind": "section",
+   "name": "Chorus 7",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Center",
+    "stored": "Center",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 77206,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 12.0,
+   "kind": "section",
+   "name": "Chorus 8",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Wall",
+    "stored": "Wall",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 88038,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 13.0,
+   "kind": "section",
+   "name": "Chorus 9",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Wall",
+    "stored": "Wall",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 94064,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 14.0,
+   "kind": "section",
+   "name": "Chorus 10",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Wall",
+    "stored": "Wall",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 100043,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 15.0,
+   "kind": "section",
+   "name": "Verse 4",
+   "d": 3,
+   "dimmer": {
+    "key_pct": 25.0,
+    "back_pct": 20.0,
+    "budget_range_pct": [
+     60.0,
+     80.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Wall",
+    "stored": "Wall",
+    "width_tier": "medium",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "중간~높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": 70.0,
+   "accent": null,
+   "start_ms": 111514,
+   "fade": 1.1145578231292743
+  },
+  {
+   "cue": 16.0,
+   "kind": "section",
+   "name": "Chorus 11",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Cross",
+    "stored": "Cross",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 120012,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 17.0,
+   "kind": "section",
+   "name": "Chorus 12",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Cross",
+    "stored": "Cross",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 130067,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 18.0,
+   "kind": "section",
+   "name": "Chorus 13",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Ring In",
+    "stored": "Ring In",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": {
+    "rung": "blinder_or_flash",
+    "group_no": 14,
+    "dimmer_pct": 80.0
+   },
+   "start_ms": 136046,
+   "fade": 0.1857596371882124
+  },
+  {
+   "cue": 18.5,
+   "kind": "climax_return",
+   "name": "Chorus 13 Return",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Ring In",
+    "stored": null,
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 136789,
+   "fade": 0.0
+  },
+  {
+   "cue": 19.0,
+   "kind": "section",
+   "name": "Bridge 1",
+   "d": 2,
+   "dimmer": {
+    "key_pct": 50.0,
+    "back_pct": 40.0,
+    "budget_range_pct": [
+     40.0,
+     60.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Fan Out",
+    "stored": "Fan Out",
+    "width_tier": "narrow",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "lavender"
+    ],
+    "saturation": "중간",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 144231,
+   "fade": 1.4860770975056992
+  },
+  {
+   "cue": 20.0,
+   "kind": "section",
+   "name": "Bridge 2",
+   "d": 2,
+   "dimmer": {
+    "key_pct": 50.0,
+    "back_pct": 40.0,
+    "budget_range_pct": [
+     40.0,
+     60.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Fan Out",
+    "stored": "Fan Out",
+    "width_tier": "narrow",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "lavender"
+    ],
+    "saturation": "중간",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 150361,
+   "fade": 1.4860770975056992
+  },
+  {
+   "cue": 21.0,
+   "kind": "section",
+   "name": "Verse 5",
+   "d": 4,
+   "dimmer": {
+    "key_pct": 90.0,
+    "back_pct": 72.0,
+    "budget_range_pct": [
+     80.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Fan Out",
+    "stored": "Fan Out",
+    "width_tier": "wide",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 158174,
+   "fade": 0.5572789115646372
+  },
+  {
+   "cue": 22.0,
+   "kind": "section",
+   "name": "Verse 6",
+   "d": 4,
+   "dimmer": {
+    "key_pct": 90.0,
+    "back_pct": 72.0,
+    "budget_range_pct": [
+     80.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Audience",
+    "stored": "Audience",
+    "width_tier": "wide",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "cyan"
+    ],
+    "saturation": "높음",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 164188,
+   "fade": 0.5572789115646372
+  },
+  {
+   "cue": 23.0,
+   "kind": "section",
+   "name": "Finale",
+   "d": 5,
+   "dimmer": {
+    "key_pct": 100.0,
+    "back_pct": 80.0,
+    "budget_range_pct": [
+     100.0,
+     100.0
+    ],
+    "blackout": false
+   },
+   "position": {
+    "requested": "Audience",
+    "stored": "Audience",
+    "width_tier": "max",
+    "source": "director_intent",
+    "mib_premoved_by": null
+   },
+   "color": {
+    "palette": [
+     "블루",
+     "warm white"
+    ],
+    "saturation": "최대(단색 볼드)",
+    "palette_id": null,
+    "source": "section_arc"
+   },
+   "mib": {
+    "premove": false,
+    "inserted": false,
+    "reason": null,
+    "source_cue_number": null,
+    "dark_window_seconds": null,
+    "live_move": false
+   },
+   "pre_drop_from": null,
+   "accent": null,
+   "start_ms": 170179,
+   "fade": 2.9721541950113983
+  }
+ ],
+ "arc_notes": [
+  "blinder_six_row_absent: Q23 'Finale' 절정 액센트 — 구간 이름이 §6 표의 한 행에 맞지 않아 블라인더 밝기를 정할 근거가 없음"
+ ]
+}

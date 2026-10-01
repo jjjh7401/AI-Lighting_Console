@@ -1,0 +1,143 @@
+{
+ "sha256": "3d0cb0662c74a33df9683a5650a862b4d84599affc71ccd060028f816586ff59",
+ "bpm": 120.18531976744346,
+ "bpm_source": "measured",
+ "sections": [
+  {
+   "i": 0,
+   "label": "0:00–0:11 · D2",
+   "start_ms": 0,
+   "end_ms": 11331,
+   "d": 2,
+   "selected": true
+  },
+  {
+   "i": 1,
+   "label": "0:11–0:20 · D2",
+   "start_ms": 11331,
+   "end_ms": 20863,
+   "d": 2,
+   "selected": true
+  },
+  {
+   "i": 2,
+   "label": "0:20–0:32 · D2",
+   "start_ms": 20863,
+   "end_ms": 32984,
+   "d": 2,
+   "selected": true
+  },
+  {
+   "i": 3,
+   "label": "0:32–0:48 · D4",
+   "start_ms": 32984,
+   "end_ms": 48971,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 4,
+   "label": "0:48–1:02 · D4",
+   "start_ms": 48971,
+   "end_ms": 62984,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 5,
+   "label": "1:02–1:15 · D4",
+   "start_ms": 62984,
+   "end_ms": 75987,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 6,
+   "label": "1:15–1:24 · D4",
+   "start_ms": 75987,
+   "end_ms": 84985,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 7,
+   "label": "1:24–1:32 · D5",
+   "start_ms": 84985,
+   "end_ms": 92984,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 8,
+   "label": "1:32–1:44 · D5",
+   "start_ms": 92984,
+   "end_ms": 104757,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 9,
+   "label": "1:44–1:55 · D4",
+   "start_ms": 104757,
+   "end_ms": 115612,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 10,
+   "label": "1:55–2:16 · D3",
+   "start_ms": 115612,
+   "end_ms": 136092,
+   "d": 3,
+   "selected": true
+  },
+  {
+   "i": 11,
+   "label": "2:16–2:36 · D5",
+   "start_ms": 136092,
+   "end_ms": 156735,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 12,
+   "label": "2:36–3:02 · D4",
+   "start_ms": 156735,
+   "end_ms": 182567,
+   "d": 4,
+   "selected": true
+  },
+  {
+   "i": 13,
+   "label": "3:02–3:18 · D5",
+   "start_ms": 182567,
+   "end_ms": 198728,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 14,
+   "label": "3:18–3:34 · D5",
+   "start_ms": 198728,
+   "end_ms": 214239,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 15,
+   "label": "3:34–3:54 · D5",
+   "start_ms": 214239,
+   "end_ms": 234475,
+   "d": 5,
+   "selected": true
+  },
+  {
+   "i": 16,
+   "label": "3:54–4:19 · D4",
+   "start_ms": 234475,
+   "end_ms": 259081,
+   "d": 4,
+   "selected": true
+  }
+ ]
+}
