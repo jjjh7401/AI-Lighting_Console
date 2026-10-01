@@ -1,0 +1,52 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/211/3|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props 2f92b3c1 NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/3"
+<<< {"id": "2f92b3c1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Intro"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/4|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props 097a4ae1 NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/4"
+<<< {"id": "097a4ae1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Verse 1"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "20.939"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/5|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props fed5d64a NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/5"
+<<< {"id": "fed5d64a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Verse 2"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "33.568"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/6|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props 267d869a NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/6"
+<<< {"id": "267d869a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Chorus 1"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "49.515"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/7|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props 626cd5b6 NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/7"
+<<< {"id": "626cd5b6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/7", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Chorus 2"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "66.517"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/8|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props c100ba0f NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/8"
+<<< {"id": "c100ba0f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/8", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Verse 3"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "79.595"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/9|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props 6120515e NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/9"
+<<< {"id": "6120515e", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/9", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Chorus 3"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "106.432"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/10|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props dcbbdd99 NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/10"
+<<< {"id": "dcbbdd99", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/10", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Chorus 4"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "123.008"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/11|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props 8ba0f30b NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/11"
+<<< {"id": "8ba0f30b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/11", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Chorus 5"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "138.581"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/12|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props 5ce5ea61 NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/12"
+<<< {"id": "5ce5ea61", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/12", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Verse 4"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "166.421"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/13|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props f3678bad NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/13"
+<<< {"id": "f3678bad", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/13", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Chorus 6"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "179.061"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/14|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props c4b1375d NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/14"
+<<< {"id": "c4b1375d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/14", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Chorus 6 Return"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "180.64"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/211/15|NAME,TRIGTYPE,TRIGTIME,CUEFADE
+    wire: Plugin "CopilotResponder" "props dfc43796 NAME,TRIGTYPE,TRIGTIME,CUEFADE ShowData/DataPools/Default/Sequences/211/15"
+<<< {"id": "dfc43796", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/211/15", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Finale"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Time"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "209.141"}, {"e": "property not readable: CUEFADE", "n": "CUEFADE", "ok": false}], "truncated": false, "v": 1}
