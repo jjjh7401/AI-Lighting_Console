@@ -20,7 +20,7 @@ from server.design.phaser_pregen import (
     pregenerate_phaser_bundle,
     presets_section_from_pool_children,
 )
-from server.fx.instantiate import PRESET_OCCUPIED, FxInstantiationError
+from server.fx.instantiate import PRESET_OCCUPIED, VALUE_LINE_COLLISION, FxInstantiationError
 
 
 class TestFxForCatalogLabel:
@@ -133,81 +133,28 @@ class TestPregenerateBundle:
             )
 
     def test_wave_cm_is_the_one_needed_label_that_builds_cleanly(self):
-        """측정됨(M6) — 5개 필요 라벨 중 ``Wave CM`` 은 두 스텝이 채널마다
-        다른 값이라 M6 당시에도 FXLIB 의 ``_guard_collision``을 그냥
-        통과했다. 다른 4개(``Drop Slam``·``Breathe Cool``·``Finale Slam``·
-        ``Breathe Warm``)는 두 스텝 사이에 **적어도 한 채널 값이 우연히
-        같아** M6 당시엔 ``VALUE_LINE_COLLISION`` 으로 거부됐었다 — M6b
-        (카드 t501, 2026-10-02 리드 결정)가 그 거부를 스텝 경계 단위로
-        좁혀, 같은 값이 **다른 스텝**에 있으면 더 이상 충돌이 아니게
-        했다(``test_the_other_four_needed_labels_now_build_cleanly_too``
-        참조). 이 테스트는 Wave CM 이 그 변경 전후로 계속 빌드된다는
-        것만 고정한다."""
+        """측정됨(M6) — 5개 필요 라벨 중 ``Wave CM`` 만 FXLIB 의 ``_guard_
+        collision``을 통과한다. 다른 4개(``Drop Slam``·``Breathe Cool``·
+        ``Finale Slam``·``Breathe Warm``)는 두 스텝 사이에 **적어도 한 채널
+        값이 우연히 같아** ``VALUE_LINE_COLLISION`` 으로 거부된다 — 아래
+        ``test_the_other_four_needed_labels_collide_and_are_refused_not_
+        guessed`` 가 그 전부를 개별로 확인한다. 이것은 스타일 차이가 아니라
+        **빌드 실패**다(모듈 독스트링 [ASSUMPTION] 참조 — FXLIB 의
+        "모든 채널이 스텝 사이에서 움직여야 한다" 규율, ``color.yaml``
+        자신의 저작 규율과 같은 축인데, 이 카탈로그는 그 규율을 염두에
+        두고 색을 고르지 않았다)."""
         section = presets_section_from_pool_children({})
         plan = pregenerate_phaser_bundle("Wave CM", presets_section=section, preset_pool=9)
         assert plan.label == "Wave CM"
         assert plan.commands
 
     @pytest.mark.parametrize("label", ["Drop Slam", "Breathe Cool", "Finale Slam", "Breathe Warm"])
-    def test_the_other_four_needed_labels_now_build_cleanly_too(self, label):
-        """측정됨(M6b, 카드 t501, 2026-10-02 리드 결정) — 이 4개 라벨은 M6
-        당시 ``VALUE_LINE_COLLISION`` 으로 거부됐다(두 스텝 모두 같은
-        채널 값을 낸다, 예: Drop Slam 의 두 스텝 모두
-        ``Attribute 'ColorRGB_R' At 100``). 리드가 ``run_commands`` 의
-        중복 제거 범위를 ``Step <n>`` 경계에서 리셋하도록 좁히고
-        FXLIB ``_guard_collision`` 을 그에 맞춰 완화한 뒤로는, 같은 값이
-        **스텝 경계를 건너** 반복되는 것은 충돌이 아니다 — 두 번째 줄은
-        이제 ``run_commands`` 에서도 실제로 실행된다(``skipped_already_
-        executed`` 로 떨어지지 않는다, ``server/tests/test_tools.py``
-        ``TestStepBoundaryResetsDedupeScope`` 참조). 카탈로그 색을 바꿔
-        충돌을 피하지 않는다(새 RGB 발명 금지, §D) — 이 4개는 카탈로그
-        값 그대로 빌드된다."""
-        section = presets_section_from_pool_children({})
-        plan = pregenerate_phaser_bundle(label, presets_section=section, preset_pool=9)
-        assert plan.label == label
-        assert plan.commands
-        # 두 스텝 모두 전건 살아있다 — 더 이상 2번째 스텝이 드롭되지 않는다.
-        assert any(c == "Step 2" for c in plan.commands)
-        non_exempt = [
-            c
-            for c in plan.commands
-            if c not in ("ChangeDestination Root", "ClearAll", "Group 1")
-            and not c.startswith("Store ")
-            and not c.startswith("Label ")
-        ]
-        assert non_exempt, "a bundle of nothing but structural lines would prove nothing"
-
-    def test_a_genuine_same_step_collision_is_still_refused(self, monkeypatch):
-        """``_guard_collision`` 완화는 스텝 **경계를 건넌** 반복에만 적용된다
-        — 같은 스텝 **안**에서 같은 값 줄이 두 번 나오면 여전히 거부된다
-        (리드 결정이 명시한 "collisions within one step still refused").
-        카탈로그에는 이 모양의 라벨이 없어 ``fx_for_catalog_label`` 을
-        몽키패치해 합성 Fx로 직접 재현한다."""
-        from server.fx.schema import Fx, FxStep, StepValue
-
-        def _same_step_collision(label: str):
-            return Fx(
-                fx_id="synthetic-same-step-collision",
-                display_name=label,
-                pattern="chase",
-                steps=(
-                    FxStep(
-                        values=(
-                            StepValue(attribute="ColorRGB_R", value=100),
-                            StepValue(attribute="ColorRGB_R", value=100),
-                        )
-                    ),
-                    FxStep(values=(StepValue(attribute="ColorRGB_R", value=0),)),
-                ),
-                speed=30,
-            )
-
-        import server.design.phaser_pregen as phaser_pregen
-
-        monkeypatch.setattr(phaser_pregen, "fx_for_catalog_label", _same_step_collision)
+    def test_the_other_four_needed_labels_collide_and_are_refused_not_guessed(self, label):
+        """측정됨(M6, 날조 아님) — 각 라벨이 정확히 ``VALUE_LINE_COLLISION``
+        으로 거부되는지(새로 지어낸 사유가 아니라 FXLIB 기존 사유 코드)
+        직접 확인한다. 충돌을 피하려고 색 값을 바꾸는 것(새 RGB 발명)은
+        하지 않는다 — 카탈로그 값 그대로 거부되는 것이 올바른 동작이다."""
         section = presets_section_from_pool_children({})
         with pytest.raises(FxInstantiationError) as excinfo:
-            pregenerate_phaser_bundle("Wave CM", presets_section=section, preset_pool=9)
-        from server.fx.instantiate import VALUE_LINE_COLLISION
-
+            pregenerate_phaser_bundle(label, presets_section=section, preset_pool=9)
         assert excinfo.value.reason == VALUE_LINE_COLLISION

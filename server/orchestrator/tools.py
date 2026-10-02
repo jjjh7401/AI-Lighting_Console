@@ -1119,29 +1119,6 @@ def _is_programmer_state(command: str) -> bool:
     return any(pattern.fullmatch(text) is not None for pattern in _PROGRAMMER_STATE_COMMANDS)
 
 
-# -- the step-boundary scope reset (card t501 M6b, director decision 2026-10-02) ---
-#
-# This is a SEPARATE mechanism from the exemption set above, deliberately not
-# folded into it. `_PROGRAMMER_STATE_COMMANDS` classifies a command by its OWN
-# text alone — "does this line leave a durable artifact?" — and that answer
-# never depends on where the line sits in the bundle. The step boundary is the
-# opposite shape: the very same text ("Attribute 'ColorRGB_R' At 100") is a
-# collision inside one step and NOT a collision one step later, because the
-# console step column — not the line's own grammar — is what makes the two
-# moments distinct. A per-text exemption cannot express that; a scope reset
-# can, so it stays its own mechanism rather than widening the tuple above.
-#
-# `server/fx/instantiate.py` mirrors this pattern (`_guard_collision`) for the
-# build-time half of the same rule — collisions within one step are still
-# refused there, before a bundle is ever handed to this loop.
-_STEP_BOUNDARY = re.compile(r"Step\s+\d+", re.IGNORECASE)
-
-
-def _is_step_boundary(command: str) -> bool:
-    """True for a standalone ``Step <n>`` line that opens a new phaser step."""
-    return _STEP_BOUNDARY.fullmatch(command.strip()) is not None
-
-
 class DeployPipelinePort(Protocol):
     """The M7 deploy pipeline surface consumed by the deploy_plugin tool."""
 
@@ -2569,17 +2546,6 @@ def build_toolset(
                         CommandOutcome(command=command, status="failed", detail=result.detail)
                     )
                     failed = True
-            if not failed and _is_step_boundary(command):
-                # Card t501 M6b — crossing into a new step is a SCOPE RESET,
-                # not a repetition. The marker's OWN skip/execute decision just
-                # above still ran against the PRE-reset history, so a `Step
-                # <n>` line that already fired earlier in this turn is still
-                # caught as a cross-call collision (REQ-FXLIB-011 (b)) before
-                # this reset takes effect. Only what follows is affected: a
-                # later step is free to repeat an exact line an earlier step
-                # already sent, because the two moments are distinct on the
-                # console even though the text is identical.
-                already_executed = set()
         content = json.dumps(
             {
                 "all_ok": not failed,

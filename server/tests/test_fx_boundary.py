@@ -312,48 +312,6 @@ class TestTheDedupeExemptionSetsAreEqual:
         assert _pattern_set(fx_side) != _pattern_set(tool_side[:-1])
 
 
-class TestTheStepBoundaryPatternsAreTheSameSet:
-    """Card t501 M6b (2026-10-02, director decision) — the SAME obligation as
-    ``TestTheDedupeExemptionSetsAreEqual`` above, for a SEPARATE mechanism.
-
-    ``_STEP_BOUNDARY`` decides where the dedupe SCOPE resets, not which lines
-    are exempt from it — a deliberately distinct concept (see the comment at
-    each declaration site), so it is NOT folded into the exemption tuple
-    above. It still needs the same cross-module equality: if the fx side and
-    the tool side disagree on what counts as a `Step <n>` marker, one side
-    resets where the other does not, and the two modules silently diverge on
-    which repeats are collisions.
-    """
-
-    @staticmethod
-    def _both():
-        from server.fx.instantiate import _STEP_BOUNDARY as fx_side
-        from server.orchestrator.tools import _STEP_BOUNDARY as tool_side
-
-        return fx_side, tool_side
-
-    def test_the_two_declarations_are_the_same_pattern(self):
-        fx_side, tool_side = self._both()
-        assert (fx_side.pattern, fx_side.flags) == (tool_side.pattern, tool_side.flags)
-
-    def test_both_sides_agree_on_real_and_adversarial_lines(self):
-        fx_side, tool_side = self._both()
-        lines = (
-            "Step 2",
-            "step 2",
-            "  Step 3  ",
-            "Step 2 At Accel -100",
-            "Attribute 'Dimmer' At Step 2",
-            "ClearAll",
-            "ChangeDestination Root",
-        )
-        verdicts_fx = {line: fx_side.fullmatch(line.strip()) is not None for line in lines}
-        verdicts_tool = {line: tool_side.fullmatch(line.strip()) is not None for line in lines}
-        assert verdicts_fx == verdicts_tool
-        # Non-vacuity: both verdicts must actually occur.
-        assert set(verdicts_fx.values()) == {True, False}
-
-
 class TestTheTwoExemptionPredicatesAgreeOnRealBundleLines:
     """The behavioural half of the equality above.
 
