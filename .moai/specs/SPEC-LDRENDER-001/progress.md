@@ -2071,6 +2071,25 @@ format --check` 동일 → 이미 포맷됨.
   측정에서 `w_fids` 가 항상 비어(M3/M4/M5 와 동일 하네스 제약) 그 분기는
   호출되지 않는다.
 
+### AC-016 실기 준비·쓰기 (카드 t501, lane-3, 2026-10-02) — 감독 육안 판정 대기
+
+감독 결정(리드 경유, 2026-10-02): Rain → 시퀀스 212·타임코드 12(211 의 0점 옛 버전은 비교용으로 보존),
+Club Diver → 시퀀스 213·타임코드 13. sync 는 실기 판정 뒤. 증거는 전부 `.moai/reports/t501/ac016/`.
+
+| 단계 | 명령(요지) | 관측 |
+|---|---|---|
+| 직전 판독(읽기 전용) | `probe_readonly.py` state Sequences(@0·@15)·Timecodes·PresetPools 2/4/21 | 212·213·12·13 빔, 211 있음(`../ac016_readonly_before.txt`, `presend_reread.txt`) |
+| 실기 전부-거절 | `real_song.py <곡> <seq> <tc> <out>` | Rain 237줄 · Club Diver 266줄, 쓰기 0(앱의 거절 뒤 ClearAll 1줄) |
+| 리허설 대조 | `classify_diff.py <리허설> <실기>` | Rain 차이 13줄·Club Diver 14줄 전부 W 채널(RGBW 28대), VERDICT True |
+| 동사 요약 | `verb_summary.py <실기 목록>` | Store 14/15 · Assign 1 · Delete/Overwrite/SaveShow 0, 쓰는 번호 212·12 / 213·13 뿐 |
+| 쓰기(감독 승인) | `real_song.py ... --approve <denyall 폴더>` | 두 곡 모두 승인 1/1, 앱 readback 「DataPool/Sequences/212·Timecodes/12」「…/213·…/13」 |
+| 되읽기 | `postwrite_cue_props_probe.py`(props NAME/TRIGTYPE/TRIGTIME) | 212 큐 13개·213 큐 14개, 전부 Time 트리거, 이름 일치. Rain 시각은 211 과 같음(20.939, 33.568 …) |
+| C1 | 쓰기 전/후 Sequences·Timecodes 목록 diff | 추가 4건(212·213·TC12·TC13)만, 기존 항목 변화 0(`c1_before_after_diff.txt`) |
+
+- **AC-016 상태: 대기** — 재생(`Go+ Sequence 212` / `213`)과 육안 점수는 감독이 콘솔에서 한다. 쇼 저장도 감독 몫(이 레인은 저장하지 않았다).
+- **이월(R5/R6, 이 SPEC 범위 밖)**: Rain 은 설계 층 D레벨 예산이 효과 0 이라 송신 효과 줄 0(게이트 경고 「효과 요청 0건 · 페이저 제안 11큐 → 송신 효과 줄 0」). Rain 용으로 만든 페이저 5개는 Rain 실기에서 불리지 않는다. 피날레 블라인더 근거 없음(「blinder_six_row_absent」, P9)도 그대로다.
+- **안 잰 것**: 복합 줄 페이저 스텝이 무대에서 의도대로 바뀌어 보이는지, `last-wins` 가정(M3·M4·M5 공통)이 실기에서 성립하는지 — 둘 다 감독 육안 판정에서 확인한다.
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<sync-phase 대기>_
