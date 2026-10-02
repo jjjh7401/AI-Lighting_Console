@@ -499,6 +499,27 @@ class TestMeasuredCurveAxes:
         assert (reparsed.accel, reparsed.decel) == (None, None)
 
 
+class TestCompoundStepValuesAxis:
+    """Card t501 M6c (lead decision C) — the step-text AUTHORING choice.
+
+    ``compound_step_values`` has no YAML surface and no loader key: it exists
+    only for ``server/design/phaser_pregen.py`` to construct directly, so the
+    loader and every library asset default to False and stay byte-identical to
+    before this card.
+    """
+
+    def test_the_axis_is_declared_on_the_schema_defaulting_false(self):
+        assert "compound_step_values" in Fx.__dataclass_fields__
+        fx = load_library(_library()).fx[0]
+        assert fx.compound_step_values is False
+
+    def test_the_loader_has_no_key_for_it(self):
+        # An entry that tries to set it via YAML is an unknown key — the axis
+        # is a construction-time-only parameter, not a library asset field.
+        with pytest.raises(FxSchemaError, match="unknown key"):
+            load_library(_library(_fx(compound_step_values=True)))
+
+
 class TestSerialisationRoundTrip:
     """AC-FXLIB-001 — `load(fx_to_dict(fx))` is the same fx."""
 

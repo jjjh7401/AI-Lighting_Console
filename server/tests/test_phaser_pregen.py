@@ -6,6 +6,13 @@
   - ``TestPoolNameAndSection``  : 풀 이름 조회 + ``presets_section`` 변환.
   - ``TestPregenerateBundle``   : 번들 조립(성공 + 충돌 거부, FXLIB 기존
     사유 코드 재사용).
+
+M6c(카드 t501, 리드 결정 C) — M6 이 측정한 "5개 필요 라벨 중 Wave CM 하나만
+빌드된다"는 사실은 저작 쪽 처방(``Fx.compound_step_values`` + ``pregenerate_
+phaser_bundle`` 의 충돌-후-재시도, ``phaser_pregen.py`` 모듈 독스트링 참조)으로
+해소됐다 — 이제 5개 전부 빌드된다. ``_guard_collision`` 자체는 손대지 않았다는
+증거로 ``test_a_genuinely_duplicated_step_is_still_refused_by_the_unchanged_
+guard``가 진짜 완전 중복 스텝은 여전히 거부됨을 직접 확인한다.
 """
 
 from __future__ import annotations
@@ -132,29 +139,55 @@ class TestPregenerateBundle:
                 "No Such Phaser", presets_section={"objects": []}, preset_pool=4
             )
 
-    def test_wave_cm_is_the_one_needed_label_that_builds_cleanly(self):
-        """측정됨(M6) — 5개 필요 라벨 중 ``Wave CM`` 만 FXLIB 의 ``_guard_
-        collision``을 통과한다. 다른 4개(``Drop Slam``·``Breathe Cool``·
-        ``Finale Slam``·``Breathe Warm``)는 두 스텝 사이에 **적어도 한 채널
-        값이 우연히 같아** ``VALUE_LINE_COLLISION`` 으로 거부된다 — 아래
-        ``test_the_other_four_needed_labels_collide_and_are_refused_not_
-        guessed`` 가 그 전부를 개별로 확인한다. 이것은 스타일 차이가 아니라
-        **빌드 실패**다(모듈 독스트링 [ASSUMPTION] 참조 — FXLIB 의
-        "모든 채널이 스텝 사이에서 움직여야 한다" 규율, ``color.yaml``
-        자신의 저작 규율과 같은 축인데, 이 카탈로그는 그 규율을 염두에
-        두고 색을 고르지 않았다)."""
+    def test_wave_cm_is_the_one_needed_label_that_builds_on_the_first_try(self):
+        """측정됨(M6) — 5개 필요 라벨 중 ``Wave CM`` 만 평범한 폼(채널별 한 줄)
+        으로 ``_guard_collision``을 통과했다. M6c 가 나머지 넷을 저작 쪽에서
+        고쳤으므로(``test_the_four_previously_refused_labels_now_build_
+        cleanly`` 참조), 이 시험이 증명하는 것은 ``Wave CM`` 이 그 처방의
+        재시도 경로를 **전혀 타지 않는다**는 것 — 첫 시도 성공이므로 출력이
+        바이트 동일하다는 구조적 보장의 근거다."""
         section = presets_section_from_pool_children({})
         plan = pregenerate_phaser_bundle("Wave CM", presets_section=section, preset_pool=9)
         assert plan.label == "Wave CM"
         assert plan.commands
+        # 평범한 폼 그대로(압축 안 됨) — 채널별 한 줄씩.
+        assert "Attribute 'ColorRGB_R' At 0" in plan.commands
+        assert not any(" ; " in c and c.count("At ") > 1 for c in plan.commands[:7])
 
     @pytest.mark.parametrize("label", ["Drop Slam", "Breathe Cool", "Finale Slam", "Breathe Warm"])
-    def test_the_other_four_needed_labels_collide_and_are_refused_not_guessed(self, label):
-        """측정됨(M6, 날조 아님) — 각 라벨이 정확히 ``VALUE_LINE_COLLISION``
-        으로 거부되는지(새로 지어낸 사유가 아니라 FXLIB 기존 사유 코드)
-        직접 확인한다. 충돌을 피하려고 색 값을 바꾸는 것(새 RGB 발명)은
-        하지 않는다 — 카탈로그 값 그대로 거부되는 것이 올바른 동작이다."""
+    def test_the_four_previously_refused_labels_now_build_cleanly(self, label):
+        """M6c(카드 t501, 리드 결정 C) — M6 이 측정한 ``VALUE_LINE_COLLISION``
+        거부(저작 쪽 ``compound_step_values`` 처방 전)가 이제 해소됐다. 각
+        라벨이 ``_guard_collision`` 을 통과하고, Store/Label 줄을 낸다 — 카탈로그
+        값을 바꾸지 않고(새 RGB 발명 없음) 저작 형태만 바꿔 얻은 결과다."""
+        section = presets_section_from_pool_children({})
+        plan = pregenerate_phaser_bundle(label, presets_section=section, preset_pool=9)
+        assert plan.label == label
+        quoted = f"'{label}'"
+        assert any(line.startswith("Store Preset 9.") and quoted in line for line in plan.commands)
+        assert any(line.startswith("Label Preset 9.") and quoted in line for line in plan.commands)
+
+    def test_a_genuinely_duplicated_step_is_still_refused_by_the_unchanged_guard(self, monkeypatch):
+        """두 가지 모두 증명한다: (a) 저작 처방은 ``_guard_collision`` 의 판정
+        로직을 전혀 바꾸지 않았고 — 스텝의 전체 값 집합이 진짜로 똑같으면
+        (``compound_step_values=True`` 라도) 여전히 ``VALUE_LINE_COLLISION``
+        으로 거부된다. (b) ``pregenerate_phaser_bundle`` 의 충돌-후-재시도는
+        **한 번만** 일어난다 — 압축해도 여전히 충돌하면 압축된 사유를 그대로
+        전파하지, 무한 재시도나 다른 사유로 둔갑시키지 않는다."""
+        import server.design.phaser_pregen as pregen_module
+
+        # "Drop Slam" 을 두 스텝이 완전히 동일한(색 + 디머 모두 같음) 라벨로
+        # 임시 교체 — compound 로 묶어도 텍스트가 똑같아 여전히 충돌해야 한다.
+        # ``phaser_pregen.py`` 는 `from ... import COMBO_PHASER_SEQUENCE`로 이
+        # 모듈 안에 자기 이름을 갖고 있으므로, 그 이름 자체를 patch 한다(원본
+        # ``phaser_catalog.COMBO_PHASER_SEQUENCE``를 바꾸면 이 바인딩에 안
+        # 보인다).
+        monkeypatch.setattr(
+            pregen_module,
+            "COMBO_PHASER_SEQUENCE",
+            (("Drop Slam", (("Red", 50), ("Red", 50)), "rectangle", "0"),),
+        )
         section = presets_section_from_pool_children({})
         with pytest.raises(FxInstantiationError) as excinfo:
-            pregenerate_phaser_bundle(label, presets_section=section, preset_pool=9)
+            pregenerate_phaser_bundle("Drop Slam", presets_section=section, preset_pool=9)
         assert excinfo.value.reason == VALUE_LINE_COLLISION

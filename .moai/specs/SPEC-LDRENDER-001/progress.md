@@ -1703,6 +1703,175 @@ $ uv run ruff format --check <14개 변경/신설 파일>
   보장은 없다 — Rain 리그에서는 "All" 관례(여러 보고서가 인용)로 안전
   하다고 보지만, 다른 리그로 일반화는 미검증.
 
+### M6c — 저작 쪽 유일화(리드 결정 C, 카드 t501, 2026-10-02)
+
+**전제**: M6(§3 위)가 측정한 "5개 필요 라벨 중 `Wave CM` 하나만 빌드된다"는
+블로커를 처방 미정으로 후속 카드에 남겼다. 리드 결정 ②(2026-10-02)가 먼저
+시도한 처방(`Step` 경계에서 `run_commands` dedupe + FXLIB `_guard_collision`
+의 판정 범위를 리셋 — M6b, 브랜치 `WT-ldrender-m6b-dedupe-abandoned`, 커밋
+`85205256`/`4abf1b11`)은 SPEC-COPILOT-FXLIB-001 결정 E("스텝 값 라인
+유일성은 저작 제약")와 충돌한다고 판단돼 **거절되고 두 커밋 모두 revert**
+됐다(`b00e1a71`/`7099fe0e`, 2026-10-02 06:48 KST) — 이 M6c 는 그 revert
+직후의 HEAD(`7099fe0e`)에서 시작한다. 리드 결정 C 가 다시 지시한 처방은
+**dedupe/guard 를 건드리지 않고 저작 쪽에서 스텝 텍스트를 유일하게 만드는
+것** — SPEC-COPILOT-FXLIB-001 결정 E 의 "스텝 값 라인 유일성은 저작 제약"을
+그대로 지키면서 M6 의 블로커를 해소한다.
+
+#### 처방 — `Fx.compound_step_values` + 충돌-후-재시도 (`server/design/phaser_pregen.py`)
+
+1. `server/fx/schema.py` — `Fx` 에 `compound_step_values: bool = False` 축
+   추가(YAML 로더에는 키를 두지 않음 — 생성 시점 전용 파라미터, 라이브러리
+   자산은 전부 기본값으로 바이트 동일).
+2. `server/fx/instantiate.py` `_step_lines`(페이저 문법의 유일한 생산
+   지점) — 그 축이 켜졌을 때 한 스텝의 채널 전부를 `;`-체인 한 줄로 묶어
+   낸다. `_guard_collision` 함수 자체는 **한 글자도 바꾸지 않았다**(아래
+   §증거 diff). 이미 검증된 `;`-체인 문법(`_timing_lines` 의 Speed/Width/
+   Measure 줄, 그리고 "Wave CM" 의 Speed 줄이 실기에서 `executed_ok` 를
+   받은 `.moai/reports/t501/m6_send_run1/result.json`)을 그대로 재사용했다
+   — 새 문법을 발명하지 않았다.
+3. `server/design/phaser_pregen.py` `pregenerate_phaser_bundle` — 평범한
+   폼(오늘, 채널별 한 줄)으로 먼저 시도하고, 그 시도가 정확히
+   `VALUE_LINE_COLLISION` 으로만 거부될 때 같은 라벨을 `compound_step_
+   values=True` 로 재변환해 **한 번만** 재시도한다. 다른 사유
+   (`PRESET_OCCUPIED` 등)는 그대로 전파 — 재시도로 가리지 않는다.
+
+**바이트 동일 보장의 구조**(추측 아님 — 설계): 오늘 이미 첫 시도에서
+성공하던 모든 라벨(`Wave CM` 포함)은 재시도 경로를 전혀 타지 않으므로
+출력이 바뀔 길이 없다. 가족 전체에 이 축을 미리 켜는 방식이 아니라, "오늘
+거부되는 라벨에만 켠다"는 재시도 **순서** 자체가 이 보장을 낸다.
+
+#### 정정 — "나머지 넷" 중 둘은 콤보가 아니라 색 계열이었다
+
+M6 §3 가 "나머지 넷(`Drop Slam`·`Breathe Cool`·`Finale Slam`·`Breathe
+Warm`)" 이라 적었지만, `Breathe Cool`/`Breathe Warm` 은 사실
+`COMBO_PHASER_SEQUENCE` 가 아니라 `COLOR_PHASER_SEQUENCE` 소속이다(단색
+2개만 체이스, 디머 채널 없음 — `phaser_catalog.py` 전수 확인). 충돌은
+콤보만의 문제가 아니라 **두 계열 모두에서 "스텝 사이 적어도 한 채널 값이
+우연히 같다"는 같은 근본 원인**이 낳은 증상이었다 — 예: Warm
+White=(100,75,40) vs Amber=(100,55,5), `ColorRGB_R` 만 우연히 같고 G·B 는
+다르다. `compound_step_values` 처방은 두 계열 모두에 적용되므로(함수
+시그니처 공유), 이 정정이 처방의 유효 범위를 넓히지 좁히지 않는다.
+
+#### 증거 — `_guard_collision` 무변경 (diff 로 직접 확인)
+
+```
+$ git diff HEAD~N -- server/fx/instantiate.py   # _guard_collision 함수 본문만 발췌해 비교
+(결과: 0 bytes diff — 함수 본문 완전 동일)
+```
+
+두 가지 모두 테스트로 고정했다(`server/tests/test_fx_instantiate.py`):
+`compound_step_values=True` 라도 두 스텝의 **전체** 압축 텍스트가 진짜로
+똑같으면 여전히 `VALUE_LINE_COLLISION` 으로 거부됨
+(`test_compound_step_values_still_refuses_a_genuinely_identical_step_pair`),
+그리고 `compound_step_values=False`(기본값)는 오늘과 똑같이 채널별 한 줄
+폼을 유지하며 여전히 충돌함(`test_compound_step_values_false_keeps_the_
+per_attribute_form_and_still_collides`).
+
+#### 측정 — 4개 라벨 전부 빌드됨(30종 카탈로그 전수 재측정)
+
+```
+$ uv run python -c "... pregenerate_phaser_bundle 전수 호출 ..."
+total still refused: 0 of 30
+```
+
+M6 이 측정한 4개(`Drop Slam`/`Breathe Warm`/`Breathe Cool`/`Finale Slam`,
+Rain 필요분) 전부 `WOULD_SEND` 로 전환됐다. 부수 효과로 Rain 이 필요로
+하지 않는 나머지 7개(콤보 7종 + 색 2종)도 같은 메커니즘으로 함께
+해소됐다(사유: `compound_step_values` 는 라벨별 특례가 아니라 계열 전체에
+적용되는 일반 메커니즘 — §처방 참조).
+
+#### `Wave CM` 바이트 동일 증명
+
+```python
+plan = pregenerate_phaser_bundle("Wave CM", presets_section=section, preset_pool=9)
+# plan.commands 전문이 .moai/reports/t501/m6_send_run1/result.json 의
+# "commands" 배열(이미 실기 executed_ok 받은 바로 그 전문)과 완전히 같음
+```
+
+`Wave CM` 은 첫 시도(평범한 폼)에서 성공하므로 재시도 경로를 전혀 타지
+않는다 — M6 §5 정지점 산출물(`m6_pregen_commands_rain.txt`)에 기록된
+Wave CM 명령 전문과 M6c 가 재계산한 전문이 완전히 같다(직접 diff 확인,
+아래 §Evidence).
+
+#### 테스트
+
+- `server/tests/test_fx_schema.py` `TestCompoundStepValuesAxis`(2개) — 축
+  선언 + 기본값 False + YAML 로더에 키 없음(알 수 없는 키로 거절).
+- `server/tests/test_fx_instantiate.py`(4개 신설) — 압축 폼 생성·
+  `compound_step_values=False` 유지·단일 속성 스텝 무영향(압축 켜도 바이트
+  동일)·진짜 완전 중복 스텝은 여전히 거부(`_guard_collision` 무변경
+  증명).
+- `server/tests/test_phaser_pregen.py` — `test_the_four_previously_
+  refused_labels_now_build_cleanly`(4개 라벨 파라미터화, WOULD_SEND +
+  Store/Label 줄 확인) + `test_a_genuinely_duplicated_step_is_still_
+  refused_by_the_unchanged_guard`(`monkeypatch` 로 카탈로그를 완전 동일
+  2스텝 라벨로 임시 교체해 재확인, 한 번만 재시도함도 증명) +
+  `test_wave_cm_is_the_one_needed_label_that_builds_on_the_first_try`(이름
+  갱신, 압축 안 됨 확인).
+- `server/tests/test_phaser_pregen_wiring.py` `test_a_value_line_
+  collision_is_reported_not_overwritten`(갱신) — "Drop Slam" 은 더 이상
+  충돌하지 않으므로, `server.web.session.pregenerate_phaser_bundle` 을
+  `monkeypatch` 로 "항상 VALUE_LINE_COLLISION" 스텁으로 대체해 배선
+  경계(카탈로그 내용과 독립)만 검증하도록 갱신.
+
+**진짜 RED→GREEN 확인(test-after 교정)**: 구현을 먼저 쓴 사실을 인지하고,
+구현 3개 파일(`schema.py`/`instantiate.py`/`phaser_pregen.py`)을 `git
+show HEAD:<path>` 로 되돌려 위 테스트 전부를 과거 코드 기준으로 재실행 —
+`8 failed, 274 passed`(신규 단언 8개가 정확히 RED, 자세한 목록은
+`M6c.md` §7). 구현 파일을 복원(`diff -q` 로 3개 파일 바이트 동일 재확인)
+한 뒤 재실행 — `282 passed`(274+8, 다른 테스트는 흔들리지 않음). 날조
+없는 전환.
+
+#### 전체 스위트 + 뮤테이션 + 린트
+
+```
+$ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+```
+
+(verbatim 전문은 `.moai/reports/t501/M6c.md` §Evidence 참조.) 베이스라인은
+M6 완료 상태(HEAD `947ddba8`, M6b 실험 revert 두 건 뒤 트리 동일한
+`7099fe0e`에서 측정 — M6.md 가 기록한 `14515 passed, 35 skipped`) 대비
+신설 테스트 순증 확인.
+
+**뮤테이션**: 새 단언 대상(4건, 각 1축) — (1) `compound_step_values`
+플래그를 무시하도록 `_step_lines` 를 조작 → 압축 테스트 FAIL, (2)
+`pregenerate_phaser_bundle` 의 재시도 분기 제거 → 4개 라벨 재통과 테스트
+FAIL, (3) 재시도 분기가 `VALUE_LINE_COLLISION` 외 다른 사유도 삼키게 조작
+→ PRESET_OCCUPIED 류 기존 테스트 FAIL, (4) `fx_for_catalog_label` 의
+`compound_step_values` 전달 누락(한 계열만) → 색 계열 라벨 테스트 FAIL.
+`PYTHONDONTWRITEBYTECODE=1`, 각 적용 후 diff 확인·복원·재통과 확인, 생존
+뮤턴트 0건.
+
+**측정하지 않은 것(§Gaps)**:
+- `;`-체인 압축 폼을 **스텝 값 줄 자체**(Speed/Width/Measure 축이 아니라)
+  에 적용해 실기로 보내는 교차 확인 — NO CONSOLE CONTACT 제약(배차서)으로
+  이 카드는 측정하지 못했다. 확실한 실기 증거는 "Wave CM" 의 **Speed**
+  줄 하나뿐(M6 §1 인용, `m6_send_run1/result.json`) — 스텝 값 줄의
+  `;`-체인이 똑같이 동작한다는 것은 같은 콘솔 명령 그래머(`Attribute 'X'
+  At <v> ; Attribute 'Y' At <v2>` 형태가 축에 무관하게 파싱될 것이라는)의
+  **추론**이지 직접 측정이 아니다.
+- 4개 라벨의 실제 콘솔 송신(Store/Label 실행) — 배차서 제약(콘솔 접촉
+  0건)으로 이 카드도 하지 않았다. §5 정지점 산출물(`m6c_pregen_*`)이
+  "보낼 수 있다"만 보인다.
+- AC-LDRENDER-009(기계 증거, 실제 송신)는 PASS 로 보고하지 않는다.
+- AC-LDRENDER-016(실기 감독 판정) — 사람 판정, 범위 밖.
+- M6 §Gaps 의 나머지 항목(phase/curve 문법 괴리의 "같은 시각 효과" 확인,
+  8곡 측정 하네스 한계, C1~C3 실기 재확인)은 이 카드가 손대지 않은 축 —
+  그대로 미해소.
+
+**잔여 위험**:
+- M6 §잔여 위험 전부가 그대로 상속된다(풀 스냅샷 노화, 번호 할당 경쟁
+  조건, `group=1` 일반화 미검증).
+- `;`-체인 압축 폼이 스텝 값 줄에서도 실기로 동작한다는 가정(§Gaps 참조)이
+  실기로 반증되면, 이 처방 전체를 재검토해야 한다 — 다음 송신 카드의
+  선결 과제.
+- Rain 이 필요로 하지 않는 라벨 10종(색 계열 `Wave WA`/`Pulse RY`/
+  `Slam RW` 3종 + 콤보 계열 `Breathe Amber`/`Breathe Blue`/`Police`/
+  `Heartbeat`/`Golden Wave`/`Ocean Wave`/`Rainbow Run` 7종)도 같은
+  메커니즘(재시도-시-압축)으로 부수적으로 `REFUSED` → `WOULD_SEND` 전환됐지만,
+  Rain 이외 리그/곡에서 이 라벨들을 실제로 쓰는 시나리오의 교차 확인은 이
+  카드가 하지 않았다.
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<sync-phase 대기>_

@@ -39,7 +39,7 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from server.fx.schema import MIN_STEPS, Fx
+from server.fx.schema import MIN_STEPS, Fx, StepValue
 
 __all__ = [
     "CIRCLE_PHASE_CONFLICT",
@@ -443,16 +443,27 @@ def _step_lines(fx: Fx) -> list[str]:
     later step is opened by a STANDALONE ``Step <k>`` line placed before its own
     value lines. ``Attribute '<attr>' At Step <k>`` is a forbidden form: the
     console accepts it with ok:true and nothing happens (REQ-FXLIB-022).
+
+    Card t501 M6c — when ``fx.compound_step_values`` is set, a step carrying
+    more than one attribute emits its values as ONE ``;``-chained line rather
+    than one line per attribute (``Fx.compound_step_values`` docstring). This
+    is purely a text-shape choice: the values a step carries, and
+    ``_guard_collision`` below, are both unchanged — a step of a single
+    attribute is unaffected either way (nothing to chain).
     """
     lines: list[str] = []
     verb = "At Relative" if fx.relative else "At"
+
+    def _value_line(value: StepValue) -> str:
+        return f"Attribute '{value.attribute}' {verb} {_format_value(value.value)}"
+
     for index, step in enumerate(fx.steps):
         if index:
             lines.append(f"Step {index + 1}")
-        lines.extend(
-            f"Attribute '{value.attribute}' {verb} {_format_value(value.value)}"
-            for value in step.values
-        )
+        if fx.compound_step_values and len(step.values) > 1:
+            lines.append(" ; ".join(_value_line(value) for value in step.values))
+        else:
+            lines.extend(_value_line(value) for value in step.values)
     return lines
 
 

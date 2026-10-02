@@ -204,6 +204,23 @@ class Fx:
     # True => every step value line is emitted `At Relative <n>` (V2).
     relative: bool = False
     reverse: bool = False
+    # Card t501 M6c (2026-10-02, lead decision C) — True => a step carrying more
+    # than one attribute emits ONE `;`-chained line (`Attribute 'A' At <v> ;
+    # Attribute 'B' At <v2>`) instead of one line per attribute. This is an
+    # AUTHORING choice, never a dedupe change: `_guard_collision` is untouched
+    # and still refuses an identical line twice — compounding only changes
+    # which text a step's FULL value set produces, so two steps that differ in
+    # even one attribute (e.g. a combo phaser's Dimmer channel) now emit
+    # distinct lines instead of colliding on a channel the two steps happen to
+    # share. The `;`-chain itself is not new vocabulary: `_timing_lines` below
+    # already emits one per axis across every attribute, and the same
+    # `Attribute 'x' At Speed 30 ; Attribute 'y' At Speed 30` shape fired
+    # `executed_ok` on the real console for "Wave CM"
+    # (`.moai/reports/t501/m6_send_run1/result.json`). Default False keeps
+    # every existing fx (library assets, "Wave CM" and every other
+    # non-combo catalog entry) byte-identical — only
+    # `server/design/phaser_pregen.py`'s combo-family conversion opts in.
+    compound_step_values: bool = False
     # MAtricks division axes.
     phase_from_x: float | None = None
     phase_to_x: float | None = None

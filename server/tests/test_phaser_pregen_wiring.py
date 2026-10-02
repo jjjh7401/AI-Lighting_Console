@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from server.design.song_cue_composer import CueFxData
+from server.fx.instantiate import VALUE_LINE_COLLISION, FxInstantiationError
 from server.llm.types import ToolCall, ToolResult
 from server.orchestrator.tools import CommandOutcome, ToolExecution
 from server.safety.gate import BatchRisk
@@ -135,11 +136,24 @@ class TestCollisionRefusals:
         assert resolved == {} and failed == {}
         assert stub.dispatched == []
 
-    def test_a_value_line_collision_is_reported_not_overwritten(self):
-        # "Drop Slam" (combo: Red@100 -> Red@0) collides inside
-        # build_fx_preset_bundle's own `_guard_collision` (measured,
-        # test_phaser_pregen.py) — the wiring must surface that refusal
-        # through FXLIB's existing reason, not invent a workaround.
+    def test_a_value_line_collision_is_reported_not_overwritten(self, monkeypatch):
+        # M6c(카드 t501, 리드 결정 C) — "Drop Slam" no longer collides (the
+        # authoring-side compound_step_values fix in
+        # server/design/phaser_pregen.py builds it cleanly now; see
+        # test_phaser_pregen.py::TestPregenerateBundle). This test exercises
+        # the WIRING boundary in isolation from catalog content — it proves
+        # `_pregenerate_missing_phasers` still surfaces a VALUE_LINE_COLLISION
+        # (from ANY cause) into `failed`, never into `resolved`, by patching
+        # `pregenerate_phaser_bundle` at the session module's import site to
+        # raise the one the (unchanged) `_guard_collision` would raise.
+        import server.web.session as session_module
+
+        def _always_collides(label, **_kwargs):
+            raise FxInstantiationError(
+                VALUE_LINE_COLLISION, f"fx {label!r} would emit a duplicate line"
+            )
+
+        monkeypatch.setattr(session_module, "pregenerate_phaser_bundle", _always_collides)
         stub = _PregenStub(pool_no=9, children={})
         bundle = _Bundle(cues=(_cue("드롭", permitted=("dimmer chase",)),))
         failed = {"Drop Slam": "'Drop Slam' 페이저 프리셋을 콘솔에서 찾지 못했습니다"}
