@@ -1,0 +1,139 @@
+{
+ "stopped_at": null,
+ "results": [
+  {
+   "label": "Breathe Cool",
+   "preset": "4.10",
+   "lines": 17,
+   "is_error": false,
+   "all_ok": true,
+   "executed_ok": 17,
+   "content": "{\"all_ok\": true, \"commands\": [{\"command\": \"ChangeDestination Root\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Group 1\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 95 ; Attribute 'ColorRGB_B' At 100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Accel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Decel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Accel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Decel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_G' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_B' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Store Preset 4.10 'Breathe Cool' /Universal\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Label Preset 4.10 'Breathe Cool'\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}]}"
+  },
+  {
+   "label": "Breathe Warm",
+   "preset": "4.11",
+   "lines": 17,
+   "is_error": false,
+   "all_ok": true,
+   "executed_ok": 17,
+   "content": "{\"all_ok\": true, \"commands\": [{\"command\": \"ChangeDestination Root\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Group 1\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Accel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Decel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Accel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Decel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_G' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_B' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Store Preset 4.11 'Breathe Warm' /Universal\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Label Preset 4.11 'Breathe Warm'\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}]}"
+  },
+  {
+   "label": "Drop Slam",
+   "preset": "21.7",
+   "lines": 18,
+   "is_error": false,
+   "all_ok": true,
+   "executed_ok": 18,
+   "content": "{\"all_ok\": true, \"commands\": [{\"command\": \"ChangeDestination Root\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Group 1\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Dimmer' At 100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Dimmer' At 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Accel 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Decel 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Accel 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Decel 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_G' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_B' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'Dimmer' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30 ; Attribute 'Dimmer' At Speed 30\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Store Preset 21.7 'Drop Slam' /Universal\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Label Preset 21.7 'Drop Slam'\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}]}"
+  },
+  {
+   "label": "Finale Slam",
+   "preset": "21.8",
+   "lines": 18,
+   "is_error": false,
+   "all_ok": true,
+   "executed_ok": 18,
+   "content": "{\"all_ok\": true, \"commands\": [{\"command\": \"ChangeDestination Root\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Group 1\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40 ; Attribute 'Dimmer' At 100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Dimmer' At 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Accel 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Decel 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Accel 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Decel 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_G' At Phase 90\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_B' At Phase 180\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'Dimmer' At Phase 270\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30 ; Attribute 'Dimmer' At Speed 30\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Store Preset 21.8 'Finale Slam' /Universal\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Label Preset 21.8 'Finale Slam'\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}]}"
+  }
+ ],
+ "approval_requests": [
+  {
+   "commands": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 1",
+    "Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 95 ; Attribute 'ColorRGB_B' At 100",
+    "Step 2",
+    "Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'ColorRGB_R' At Phase 0",
+    "Attribute 'ColorRGB_G' At Phase 0",
+    "Attribute 'ColorRGB_B' At Phase 0",
+    "Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30",
+    "Store Preset 4.10 'Breathe Cool' /Universal",
+    "Label Preset 4.10 'Breathe Cool'",
+    "ClearAll"
+   ],
+   "approved": true
+  },
+  {
+   "commands": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 1",
+    "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40",
+    "Step 2",
+    "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'ColorRGB_R' At Phase 0",
+    "Attribute 'ColorRGB_G' At Phase 0",
+    "Attribute 'ColorRGB_B' At Phase 0",
+    "Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30",
+    "Store Preset 4.11 'Breathe Warm' /Universal",
+    "Label Preset 4.11 'Breathe Warm'",
+    "ClearAll"
+   ],
+   "approved": true
+  },
+  {
+   "commands": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 1",
+    "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Dimmer' At 100",
+    "Step 2",
+    "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Dimmer' At 0",
+    "Step 1 At Accel 0",
+    "Step 1 At Decel 0",
+    "Step 2 At Accel 0",
+    "Step 2 At Decel 0",
+    "Attribute 'ColorRGB_R' At Phase 0",
+    "Attribute 'ColorRGB_G' At Phase 0",
+    "Attribute 'ColorRGB_B' At Phase 0",
+    "Attribute 'Dimmer' At Phase 0",
+    "Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30 ; Attribute 'Dimmer' At Speed 30",
+    "Store Preset 21.7 'Drop Slam' /Universal",
+    "Label Preset 21.7 'Drop Slam'",
+    "ClearAll"
+   ],
+   "approved": true
+  },
+  {
+   "commands": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 1",
+    "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40 ; Attribute 'Dimmer' At 100",
+    "Step 2",
+    "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; Attribute 'Dimmer' At 0",
+    "Step 1 At Accel 0",
+    "Step 1 At Decel 0",
+    "Step 2 At Accel 0",
+    "Step 2 At Decel 0",
+    "Attribute 'ColorRGB_R' At Phase 0",
+    "Attribute 'ColorRGB_G' At Phase 90",
+    "Attribute 'ColorRGB_B' At Phase 180",
+    "Attribute 'Dimmer' At Phase 270",
+    "Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30 ; Attribute 'Dimmer' At Speed 30",
+    "Store Preset 21.8 'Finale Slam' /Universal",
+    "Label Preset 21.8 'Finale Slam'",
+    "ClearAll"
+   ],
+   "approved": true
+  }
+ ],
+ "skipped_backups": [
+  "SaveShow skipped (supervisor)",
+  "SaveShow skipped (supervisor)",
+  "SaveShow skipped (supervisor)",
+  "SaveShow skipped (supervisor)"
+ ]
+}
