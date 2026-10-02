@@ -14,12 +14,10 @@
   - All 1(21번): ``.moai/reports/t501/m6_pool_reread_readonly.txt`` — 읽기
     전용 재조회(2026-10-02). 점유: 1,2,3,4,5,6.
 
-이 스크립트는 5개 라벨을 **서로 독립으로** 같은 스냅샷에 대해 시뮬레이션한다
-(``m6_pregen_stop_point.py``와 동일한 계산 모델) — 그래서 Color 풀을 쓰는
-Wave CM/Breathe Warm/Breathe Cool 세 라벨이 전부 같은 다음 빈 슬롯(.10)을
-제안한다. 실제로 다섯을 순서대로 보내면 먼저 성공한 쪽이 그 번호를 차지하고
-다음 라벨은 그다음 빈 번호로 밀린다 — 그래서 전송 직전 재조회가 여전히
-필수다(아래 산출 md 의 "전송 전 재조회 필수" 참조).
+레인 정정(2026-10-02): 처음 판은 5개 라벨을 서로 독립으로 계산해 Wave CM
+재송신과 번호 중복 제안(4.10 ×3, 21.7 ×2)을 냈다. 지금 판은 앱과 같은 순서
+(``sorted``)·누적 점유로 계산하고, 실기에 이미 있는 Wave CM(4.9)은 보내지
+않는다. 전송 직전 재조회는 여전히 필수다.
 """
 
 from __future__ import annotations
@@ -56,13 +54,31 @@ _SAVED_POOL_READS = {
 
 _RAIN_NEEDED_LABELS = ("Drop Slam", "Wave CM", "Breathe Warm", "Breathe Cool", "Finale Slam")
 
+# 레인 정정(t501, 2026-10-02): 앱(`session.py::_pregenerate_missing_phasers`)은
+# 풀에 이미 있는 라벨은 건너뛰고(`pending` 은 `failed` 에 남은 라벨만), 남은
+# 라벨을 `sorted()` 순서로 하나씩 처리하며 라벨마다 풀을 **다시 읽는다** — 앞
+# 라벨이 Store 한 번호는 다음 라벨에서 점유로 보인다. 독립 계산은 Wave CM 재송신
+# (4.10)과 같은 번호 중복 제안(4.10 ×3, 21.7 ×2)을 냈으므로, 같은 순서·같은
+# 누적 점유로 흉내 낸다. Wave CM 은 실기 Preset 4.9 로 이미 존재한다
+# (m6_postsend_reread_20261002.txt).
+_ALREADY_ON_CONSOLE = {"Wave CM": (4, 9)}
+
 targets: list[dict] = []
 command_file_lines: list[str] = []
+occupied = {name: list(saved["occupied_slots"]) for name, saved in _SAVED_POOL_READS.items()}
 
-for label in _RAIN_NEEDED_LABELS:
+for label in sorted(_RAIN_NEEDED_LABELS):
+    if label in _ALREADY_ON_CONSOLE:
+        pool_no, slot = _ALREADY_ON_CONSOLE[label]
+        targets.append(
+            {"label": label, "result": "ALREADY_ON_CONSOLE", "preset": f"{pool_no}.{slot}"}
+        )
+        command_file_lines.append(f"# {label} -> 이미 실기 Preset {pool_no}.{slot} (보내지 않음)")
+        command_file_lines.append("")
+        continue
     pool_name = pool_name_for_label(label)
     saved = _SAVED_POOL_READS[pool_name]
-    presets_section = presets_section_from_pool_children(dict.fromkeys(saved["occupied_slots"], ""))
+    presets_section = presets_section_from_pool_children(dict.fromkeys(occupied[pool_name], ""))
     entry = {
         "label": label,
         "pool_name": pool_name,
@@ -97,6 +113,7 @@ for label in _RAIN_NEEDED_LABELS:
         )
         command_file_lines.append(f"# {label} -> Preset {saved['pool_no']}.{plan.preset}")
         command_file_lines.extend(plan.commands)
+        occupied[pool_name].append(plan.preset)
     command_file_lines.append("")
     targets.append(entry)
 

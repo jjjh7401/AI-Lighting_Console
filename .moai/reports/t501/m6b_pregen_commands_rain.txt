@@ -1,3 +1,49 @@
+# Breathe Cool -> Preset 4.10
+ChangeDestination Root
+ClearAll
+Group 1
+Attribute 'ColorRGB_R' At 85
+Attribute 'ColorRGB_G' At 95
+Attribute 'ColorRGB_B' At 100
+Step 2
+Attribute 'ColorRGB_R' At 5
+Attribute 'ColorRGB_G' At 20
+Attribute 'ColorRGB_B' At 100
+Step 1 At Accel -100
+Step 1 At Decel -100
+Step 2 At Accel -100
+Step 2 At Decel -100
+Attribute 'ColorRGB_R' At Phase 0
+Attribute 'ColorRGB_G' At Phase 0
+Attribute 'ColorRGB_B' At Phase 0
+Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30
+Store Preset 4.10 'Breathe Cool' /Universal
+Label Preset 4.10 'Breathe Cool'
+ClearAll
+
+# Breathe Warm -> Preset 4.11
+ChangeDestination Root
+ClearAll
+Group 1
+Attribute 'ColorRGB_R' At 100
+Attribute 'ColorRGB_G' At 75
+Attribute 'ColorRGB_B' At 40
+Step 2
+Attribute 'ColorRGB_R' At 100
+Attribute 'ColorRGB_G' At 55
+Attribute 'ColorRGB_B' At 5
+Step 1 At Accel -100
+Step 1 At Decel -100
+Step 2 At Accel -100
+Step 2 At Decel -100
+Attribute 'ColorRGB_R' At Phase 0
+Attribute 'ColorRGB_G' At Phase 0
+Attribute 'ColorRGB_B' At Phase 0
+Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30
+Store Preset 4.11 'Breathe Warm' /Universal
+Label Preset 4.11 'Breathe Warm'
+ClearAll
+
 # Drop Slam -> Preset 21.7
 ChangeDestination Root
 ClearAll
@@ -24,76 +70,7 @@ Store Preset 21.7 'Drop Slam' /Universal
 Label Preset 21.7 'Drop Slam'
 ClearAll
 
-# Wave CM -> Preset 4.10
-ChangeDestination Root
-ClearAll
-Group 1
-Attribute 'ColorRGB_R' At 0
-Attribute 'ColorRGB_G' At 90
-Attribute 'ColorRGB_B' At 100
-Step 2
-Attribute 'ColorRGB_R' At 100
-Attribute 'ColorRGB_G' At 0
-Attribute 'ColorRGB_B' At 70
-Step 1 At Accel -100
-Step 1 At Decel -100
-Step 2 At Accel -100
-Step 2 At Decel -100
-Attribute 'ColorRGB_R' At Phase 0
-Attribute 'ColorRGB_G' At Phase 120
-Attribute 'ColorRGB_B' At Phase 240
-Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30
-Store Preset 4.10 'Wave CM' /Universal
-Label Preset 4.10 'Wave CM'
-ClearAll
-
-# Breathe Warm -> Preset 4.10
-ChangeDestination Root
-ClearAll
-Group 1
-Attribute 'ColorRGB_R' At 100
-Attribute 'ColorRGB_G' At 75
-Attribute 'ColorRGB_B' At 40
-Step 2
-Attribute 'ColorRGB_R' At 100
-Attribute 'ColorRGB_G' At 55
-Attribute 'ColorRGB_B' At 5
-Step 1 At Accel -100
-Step 1 At Decel -100
-Step 2 At Accel -100
-Step 2 At Decel -100
-Attribute 'ColorRGB_R' At Phase 0
-Attribute 'ColorRGB_G' At Phase 0
-Attribute 'ColorRGB_B' At Phase 0
-Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30
-Store Preset 4.10 'Breathe Warm' /Universal
-Label Preset 4.10 'Breathe Warm'
-ClearAll
-
-# Breathe Cool -> Preset 4.10
-ChangeDestination Root
-ClearAll
-Group 1
-Attribute 'ColorRGB_R' At 85
-Attribute 'ColorRGB_G' At 95
-Attribute 'ColorRGB_B' At 100
-Step 2
-Attribute 'ColorRGB_R' At 5
-Attribute 'ColorRGB_G' At 20
-Attribute 'ColorRGB_B' At 100
-Step 1 At Accel -100
-Step 1 At Decel -100
-Step 2 At Accel -100
-Step 2 At Decel -100
-Attribute 'ColorRGB_R' At Phase 0
-Attribute 'ColorRGB_G' At Phase 0
-Attribute 'ColorRGB_B' At Phase 0
-Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30
-Store Preset 4.10 'Breathe Cool' /Universal
-Label Preset 4.10 'Breathe Cool'
-ClearAll
-
-# Finale Slam -> Preset 21.7
+# Finale Slam -> Preset 21.8
 ChangeDestination Root
 ClearAll
 Group 1
@@ -115,6 +92,8 @@ Attribute 'ColorRGB_G' At Phase 90
 Attribute 'ColorRGB_B' At Phase 180
 Attribute 'Dimmer' At Phase 270
 Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30 ; Attribute 'Dimmer' At Speed 30
-Store Preset 21.7 'Finale Slam' /Universal
-Label Preset 21.7 'Finale Slam'
+Store Preset 21.8 'Finale Slam' /Universal
+Label Preset 21.8 'Finale Slam'
 ClearAll
+
+# Wave CM -> 이미 실기 Preset 4.9 (보내지 않음)
