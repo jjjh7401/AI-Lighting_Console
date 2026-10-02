@@ -78,8 +78,7 @@ for kind, nums in written_numbers.items():
         for combo in combos:
             fid_union.update(re.findall(r"\d+", NUM_PATTERNS["Fixture"].match(combo).group(1)))
         print(
-            f"  Fixture: 서로 다른 조합 {len(combos)}개, "
-            f"등장한 기구 번호 합집합 {len(fid_union)}개"
+            f"  Fixture: 서로 다른 조합 {len(combos)}개, 등장한 기구 번호 합집합 {len(fid_union)}개"
         )
         continue
     print(f"  {kind}: {sorted(nums, key=lambda x: float(x))}")
