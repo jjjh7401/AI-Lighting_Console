@@ -1872,6 +1872,205 @@ FAIL, (3) 재시도 분기가 `VALUE_LINE_COLLISION` 외 다른 사유도 삼키
   Rain 이외 리그/곡에서 이 라벨들을 실제로 쓰는 시나리오의 교차 확인은 이
   카드가 하지 않았다.
 
+### M7 — 연출 판독 게이트 배선 (카드 t501, REQ-LDRENDER-014/015/016, M1 하네스 소비)
+
+**착수 HEAD**: `c6773929`(M6c 완료 + 실기 4종 페이저 쓰기 커밋 4개 뒤) —
+`git fetch origin WT-ldrender-run` → `git merge --ff-only`로 확인. NO CONSOLE
+CONTACT(배차서) — 읽기 전용 저장 증거만 쓴다.
+
+#### Part A — 게이트 배선 (REQ-014/015/016)
+
+1. **배선 지점**: `server/web/session.py` `_song_finalize`의
+   `commands = self._reviewed_song_commands(...)` 직후, `run_commands`
+   디스패치(`self._dispatch_declared`) **직전** — "콘솔에 쓰기 직전"(REQ-014
+   문면)을 문자 그대로 지킨다. 경고 채널은 M5/M6 가 이미 쓰는 비차단 고지
+   패턴(`_phaser_failure_note`/`_color_failure_note`/`_arc_note`/
+   `_fx_report_note`)을 그대로 재사용한 `_ldrender_gate_note()` — 새 실행
+   표면 0건(`run_commands`/`gate.screen()` 단일 관문 무변경, §D 제약 준수).
+   업로드 길(`server/orchestrator/tools.py` `prepare_songcue`)에도 같은
+   게이트를 배선했다(`layer_mapping=()` 고정 — 그 경로는 아직 다중 역할
+   렌더링 UX 가 없어 거의 항상 경고하는 것이 정확한 신호다, REQ-003).
+2. **집계 동치성(AC-012)**: `server/design/ldrender_gate.py` `evaluate()`는
+   M1 이 만든 LIT-only·큐-단위 집계를 그대로 쓴다(한 글자도 안 바꿈) — 새로
+   만든 것은 ① `color_count(exclude_rgb=)`(웜화이트 집계 제외, 아래 3번)
+   ② `effect_role_mapped` 축(아래 4번) ③ `gate_cues_from_commands()`(송신
+   명령 문자열 → `SectionCue`, fid 멤버십 없이 `Group <n>` 주소만으로 역할별
+   상태 추적 — `role_group_map()`이 `song_cue_render._role_group_numbers`/
+   `_effect_group_numbers`와 같은 동점 규율을 재구현). **교차검증**(AC-012
+   "모든 큐 형태 일반 증명 아님" §Gaps 를 M1 보다 한 걸음 더 메운다) —
+   `test_gate_layer_count_matches_an_independent_ac001_recount`가 실제
+   `reviewed_song_commands()` 출력을 게이트로 판독한 결과와, 입력 데이터
+   (role_pct·palette·accent_fixture)에서 **독립적으로 손 유도한** LIT 버킷
+   수(비액센트 큐 3·액센트 큐 4)를 대조한다 — 일치.
+3. **색 축**: `color_count(exclude_rgb=)` 신설 — M4 §Gaps 2(AC-004(a) 웜화이트
+   집계 플래그)를 해소한다. spec.md §3.2 [HARD]의 읽음(`key` 웜화이트는
+   §6.3 "최대 2개" 집계 밖, 중립 기준광) 그대로, `evaluate(warm_white_rgb=
+   color_names.resolve_color_name("Warm White"))`로 배선. `palette_mode` 가
+   `modulate`가 아니면(REQ-015) 기존대로 색 축 자체가 n/a.
+4. **효과 축 — 두 조건**: (a) 기존(`fx_requested>0 or fx_hinted>0`인데
+   `effect_lines_sent==0`) (b) **신설** — 층 매핑에 `role=="effect"` 항목이
+   하나도 없으면(`_effect_dimmer_zero_lines`가 구조적으로 무력화됨, M5
+   블로커 보고의 조건 ①과 같은 사실) fx 요청 여부와 **무관하게** 별도
+   경고(`effect_role_mapped=False`). 세션 쪽 배선은
+   `any(entry.get("role") == "effect" for entry in state.layer_mapping)`로
+   판정.
+5. **테스트**: `server/tests/test_ldrender_gate.py` +17(신규) —
+   `role_group_map`(3, 동점 규율·멀티그룹 보존·결손 항목 무시)·
+   `kind_for_composed_cue`(4)·`gate_cues_from_commands`(5, 베이스라인/그룹
+   오버라이드/색 추적/미매핑 그룹 무시/큐 간 트래킹)·웜화이트 축(2)·
+   `effect_role_mapped` 축(1)·교차검증(2, 위 2번).
+   ```
+   $ PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests/test_ldrender_gate.py -q
+   24 passed in 0.15s
+   ```
+6. **뮤테이션(3건, §3.3 규율 — 각 1축, diff 로 적용 확인 후 복원)**:
+
+   | 뮤테이션 | 대상 | 죽인 테스트 | 결과 |
+   |---|---|---|---|
+   | A: `color_count`의 `exclude_rgb` 필터 제거 | `color_count` | 2건(웜화이트 축 전부) | FAIL(의도대로) |
+   | B: `evaluate()`의 `effect_role_mapped` 분기를 `if False and ...`로 무력화 | `evaluate` | 1건(`effect_role_mapped` 축) | FAIL |
+   | C: `gate_cues_from_commands`의 `Group` 줄 역할 해석을 `None`으로 고정 | `gate_cues_from_commands` | 4건(그룹 오버라이드·색 추적·트래킹·교차검증) | FAIL |
+
+   3건 모두 대상 축만 정확히 죽이고(axis 분리 확인) 나머지는 그대로
+   초록 — `diff` 로 적용 확인 후 복원, 복원 뒤 `server/tests/test_ldrender_
+   gate.py` 24/24 재통과 확인(`git status --short` 로 무변경 재확인). 생존
+   뮤턴트 0건.
+7. **회귀**: 지정 범위 `server/tests/test_ldrender_gate.py server/tests/
+   test_web_session.py server/tests/test_songcue_tool.py server/tests/
+   test_tools.py` — 548 passed. 22개 업로드-길 songcue 테스트 파일 —
+   335 passed, 3 skipped.
+8. **전체 스위트(커밋 후)**:
+   ```
+   $ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && PYTHONDONTWRITEBYTECODE=1 uv run pytest server/tests -q -p no:cacheprovider
+   14539 passed, 35 skipped, 1 warning in 258.51s
+   ```
+   베이스라인(배차서 지정, `c6773929` 동형) `14522 passed, 35 skipped` 대비
+   **+17, 0 removed, skip 불변** — 신규 테스트 17개와 정확히 일치.
+   `make test-fast`는 조용히 통과(exit 0 — Makefile 관례상 실패 시에만
+   stderr 출력).
+9. **린트/포맷**: `uv run ruff check server/design/ldrender_gate.py
+   server/tests/test_ldrender_gate.py server/web/session.py
+   server/orchestrator/tools.py` → All checks passed. `ruff format --check`
+   동일 4개 파일 → 이미 포맷됨.
+10. **@MX 태그**: `gate_cues_from_commands`/`role_group_map`/
+    `kind_for_composed_cue`(신규, `ldrender_gate.py`)의 fan_in — 각각 1(M7
+    배선 두 호출부(`session.py`·`tools.py`)에서 공유 호출하지만 함수 자체는
+    한 곳에서만 직접 호출, 내부 보조 함수는 그 함수들 안에서만 쓰임) —
+    ANCHOR 기준(fan_in>=3) 미달. `evaluate()`는 이제 session.py·tools.py 2곳
+    + 기존 테스트 — fan_in 2, 여전히 미달. 위험한 패턴(goroutine·복잡도
+    >=15) 없음 — WARN 불필요. 전부 테스트 커버 있어 TODO 불필요.
+11. **커밋**: `5c73cb60` "t501: M7 — 연출 판독 게이트 배선(REQ-LDRENDER-014/015/016)".
+
+#### Part B — 8곡 하네스(최종 오프라인 판정)
+
+**리드 명시 구분(2026-10-02 중간 지시)** — 이 SPEC 은 두 산출물을 분리해 둔다:
+"M7 마일스톤 측정(재구성)"(`.moai/reports/t501/measure_m7_8songs.py`,
+analysis.json 재생)과 "최종 오프라인 판정(실제 음원 DSP)"
+(`.moai/reports/t501/measure_m7_dsp_8songs.py`, `src/sample music/*.mp3`·
+`.wav` 실제 디코딩). 카드의 5개 오프라인 완료 조건은 **후자**로 검증한다 —
+전자는 재구성(빠른 교차검증)일 뿐이다.
+
+**하네스 한계 2건 보강(M6 §Gaps 가 이미 명시한 바로 그 한계)**:
+
+1. **능력 판독 — `fx.permitted` 가 그동안 0 이었던 이유**: 가짜 콘솔이
+   `Patch/Stages/1/Fixtures`를 못 읽어(`RuntimeError: path segment not
+   found`) `ChatSession._try_rig_capabilities()`가 항상 빈 `DesignRigRead`를
+   돌려줬다(M6.md "하네스 한계" 절이 이미 이 원인을 지목). `ChatSession.
+   _try_rig_capabilities`를 **읽기 전용 저장 증거**로 몽키패치했다 — fid 86개
+   (`.moai/reports/t498/run3_rain_real_denyall/approval_request_1.txt`,
+   `measure_ac001_8songs.REAL_FIDS`와 집합 일치 확인) × 기종
+   (`.moai/reports/t498/run4_fixture_names.txt`, FID→FixtureType 86개 전수
+   실측 조인) → "effect" 능력(M6 가 `CAPABILITY_VOCABULARY`에 추가한
+   `Dimmer` 채널 기준)을 `.moai/reports/t241/verdict.md` §2 채널표("Dimmer
+   84/86 — HAZE 2대만 없음")로 부여 — HAZE 2대(fid 621/622, run4 실측과
+   t241 실측이 독립적으로 일치)만 "effect" 능력 제외, 나머지 84대는
+   capabilities=["effect"]. **추측 0건** — 전부 저장된 실기 판독 인용.
+2. **페이저 풀 상태 — 5개 라벨이 그동안 못 찾았던 이유**: 가짜 콘솔이
+   `DataPool/PresetPools`(루트)·`/4`(Color)·`/21`(All 1)을 전혀 몰라
+   `resolve_named_pool_no`가 매번 거부했다. 세 경로를 저장된 읽기 전용
+   증거로 공급했다 — 루트 풀 이름→번호는
+   `.moai/reports/t216/console-presetpools-state.json`(14개 풀, 이름은
+   운영자가 거의 안 바꾸는 안정값), 풀 4/21 의 **현재** 내용은
+   `.moai/reports/t501/m6c_postsend_reread.txt`(이 SPEC 의 M6c 가
+   2026-10-02 에 4종 페이저를 **실기에 실제로 저장한 직후** 재조회한 증거 —
+   Wave CM=4.9, Breathe Cool=4.10, Breathe Warm=4.11, Drop Slam=21.7,
+   Finale Slam=21.8). 이 카드는 콘솔에 **쓰지 않는다** — 이미 쓰인 결과를
+   읽기만 한다(NO CONSOLE CONTACT 준수, M6c 가 실기 쓰기를 맡았다).
+
+**측정 — 8곡 전부, 실제 음원 DSP** (`measure_m7_dsp_8songs.py`,
+`upload_song_audio`→`analyse_song_audio` 진짜 DSP 경로, t499
+`rehearse_song.py` 몸통 재사용):
+
+| 곡 | DSP(초) | 색 수(웜화이트 제외) | 색변화 | LIT<3/전체 | fx 요청/힌트/송신 | 비액센트 effect>0 위반 | 액센트 상승 | 게이트 경고 |
+|---|---|---|---|---|---|---|---|---|
+| Club Diver | 2.64 | **3** | 5 | **0/14** | 12/12/**11** | **0**/13 | 1/1 | no |
+| Cut and Run | 0.74 | **2** | 11 | **0/18** | 16/16/**16** | **0**/17 | 1/1 | no |
+| Ice cream | 0.27 | **3** | 4 | **0/8** | 6/6/**4** | **0**/7 | 1/1 | no |
+| Morning | 0.45 | **2** | 3 | **0/14** | 12/12/**12** | **0**/13 | 1/1 | no |
+| Rain | 0.92 | **2** | 5 | **0/13** | 0/11/**0** | **0**/12 | 1/1 | YES(fx 축만) |
+| Too Cool | 0.55 | **3** | 8 | **0/24** | 36/22/**20** | **0**/23 | 1/1 | no |
+| scott-buckley-neon | 0.87 | **3** | 7 | **0/18** | 16/16/**14** | **0**/17 | 1/1 | no |
+| 걸그룹DinoDino | 0.54 | **3** | 5 | **0/11** | 9/9/**7** | **0**/10 | 1/1 | no |
+| **합계** | ~7초 | 전부 2~3 | 전부 ≥1 | **0/120** | 7/8곡 송신≥1 | **0**/122 | **8/8** | 1/8(Rain, fx 축만) |
+
+**카드의 5개 오프라인 완료 조건 — 곡별 판정**(`✓`=조건 성립):
+
+| 곡 | ① 색 2~3 | ② 색변화≥1 | ③ 모든 큐 LIT≥3 | ④ fx요청곡 송신≥1 | ⑤ 비액센트 effect=0 | 종합 |
+|---|---|---|---|---|---|---|
+| Club Diver | ✓ | ✓ | ✓ | ✓(12→11) | ✓ | **PASS** |
+| Cut and Run | ✓ | ✓ | ✓ | ✓(16→16) | ✓ | **PASS** |
+| Ice cream | ✓ | ✓ | ✓ | ✓(6→4) | ✓ | **PASS** |
+| Morning | ✓ | ✓ | ✓ | ✓(12→12) | ✓ | **PASS** |
+| Rain | ✓ | ✓ | ✓ | **n/a**(fx 요청 0건 — 조건 비해당) | ✓ | **PASS**(④ vacuous) |
+| Too Cool | ✓ | ✓ | ✓ | ✓(36→20) | ✓ | **PASS** |
+| scott-buckley-neon | ✓ | ✓ | ✓ | ✓(16→14) | ✓ | **PASS** |
+| 걸그룹DinoDino | ✓ | ✓ | ✓ | ✓(9→7) | ✓ | **PASS** |
+
+**8곡 전부 5개 조건 전부 성립**(Rain 은 조건 ④가 애초에 설계 층 fx 요청이
+0건이라 비해당 — 송신 실패가 아니다, fx_hinted=11 은 페이저 "제안"일 뿐
+D레벨 예산이 그 제안을 "요청"으로 승격한 적이 없다는 뜻이고, 이것은 Rain
+자신의 곡 내용 특성이지 M7/M6 의 결함이 아니다 — 게이트는 이 사실 그대로
+비차단 경고 1건을 낸다, 설계 의도대로).
+
+**재구성(analysis.json 재생) vs 최종 판정(실제 DSP) 교차검증** — 두 산출물
+(`measure_m7_8songs.json`/`measure_m7_dsp_8songs.json`)을 곡 이름으로
+조인해 13개 측정 필드(색 수·색변화·LIT<3·fx 3계·비액센트 위반·액센트
+상승·게이트 경고/위반문) 전부 대조 — **8곡 전부 바이트 동일**(diff 0). DSP
+재생이 `analysis.json`과 같은 BPM/구간(예: Rain 76.0135/12)을 냄 — 저장된
+analysis.json 자체가 과거 실제 DSP 실행의 기록이었음을 이 카드가 독립적으로
+재확인한다(새 정보: analysis.json 재사용이 "DSP 를 건너뛰는 것이지 확정을
+지어내는 것이 아니다"라던 M3 의 가정이 실제로 참이었다는 측정 증거).
+
+**산출물**: `.moai/reports/t501/measure_m7_8songs.py`(재구성)·
+`measure_m7_dsp_8songs.py`(최종 판정, 실제 DSP)·각각의 `.json` 출력(8곡
+전수).
+
+**린트/포맷**: `uv run ruff check .moai/reports/t501/measure_m7_8songs.py
+.moai/reports/t501/measure_m7_dsp_8songs.py` → All checks passed. `ruff
+format --check` 동일 → 이미 포맷됨.
+
+**Part B 가 하지 않은 것(§Gaps — 명시)**:
+
+- **능력 판독 패치는 "effect" 축만 메웠다** — `position`/`zoom` 축은
+  `capabilities=None`으로 남겨 뒀다(기존 8곡 측정이 이미 좌표 기반
+  포지션 경로로 잘 동작해 왔으므로 건드릴 이유가 없었다 — 이 선택은 의도적
+  생략이지 결손이 아니다).
+- **4개 재생성 라벨(Drop Slam/Breathe Cool/Breathe Warm/Finale Slam)의 실기
+  recall 육안 확인** — M6c 가 이미 실기에 **저장**(Store)까지는 확인했지만
+  (`m6c_send_run1/result.json`, `executed_ok`), 저장된 그 프리셋을 곡 큐가
+  recall 했을 때 콘솔 화면에 실제로 그 효과가 보이는지는 FXLIB/FXGEN 의
+  측정된 경계(사람 육안만 가능) — AC-LDRENDER-009 의 "기계 증거"(송신 효과
+  줄 존재)는 이 카드가 PASS 로 보여주지만, AC-LDRENDER-016(실기 감독 판정)
+  은 여전히 사람 판정 몫이다.
+- **8곡 중 7곡의 "fx 요청" 자체가 M6 §잔여위험(풀 스냅샷 노화·번호 할당
+  경쟁조건)을 재확인하지 않았다** — 이 카드가 쓴 풀 상태(m6c_postsend_
+  reread.txt)는 2026-10-02 측정 시점의 스냅샷이고, 실제 송신 시점에 재조회가
+  필요하다는 M6/M6c 의 경고는 그대로 유효하다(이 카드는 "지금 보내면
+  된다"가 아니라 "이 스냅샷 기준으로는 보낼 수 있었다"를 보인다).
+- **W 채널(`w_fids`)이 있는 리그에서의 측정은 여전히 없다** — 이 8곡
+  측정에서 `w_fids` 가 항상 비어(M3/M4/M5 와 동일 하네스 제약) 그 분기는
+  호출되지 않는다.
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<sync-phase 대기>_

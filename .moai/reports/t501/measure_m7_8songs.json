@@ -1,0 +1,172 @@
+[
+ {
+  "song": "Club Diver",
+  "color_count": 3,
+  "color_change_count": 5,
+  "n_section_cues": 14,
+  "n_cues_lit_lt_3": 0,
+  "failing_cues": [],
+  "fx_requested": 12,
+  "fx_hinted": 12,
+  "effect_lines_sent": 11,
+  "n_non_accent_cues": 13,
+  "non_accent_effect_violations": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  },
+  "n_accent_cues": 1,
+  "n_accent_rises": 1,
+  "gate_warns": false,
+  "gate_violations": []
+ },
+ {
+  "song": "Cut and Run",
+  "color_count": 2,
+  "color_change_count": 11,
+  "n_section_cues": 18,
+  "n_cues_lit_lt_3": 0,
+  "failing_cues": [],
+  "fx_requested": 16,
+  "fx_hinted": 16,
+  "effect_lines_sent": 16,
+  "n_non_accent_cues": 17,
+  "non_accent_effect_violations": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  },
+  "n_accent_cues": 1,
+  "n_accent_rises": 1,
+  "gate_warns": false,
+  "gate_violations": []
+ },
+ {
+  "song": "Ice cream",
+  "color_count": 3,
+  "color_change_count": 4,
+  "n_section_cues": 8,
+  "n_cues_lit_lt_3": 0,
+  "failing_cues": [],
+  "fx_requested": 6,
+  "fx_hinted": 6,
+  "effect_lines_sent": 4,
+  "n_non_accent_cues": 7,
+  "non_accent_effect_violations": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  },
+  "n_accent_cues": 1,
+  "n_accent_rises": 1,
+  "gate_warns": false,
+  "gate_violations": []
+ },
+ {
+  "song": "Morning",
+  "color_count": 2,
+  "color_change_count": 3,
+  "n_section_cues": 14,
+  "n_cues_lit_lt_3": 0,
+  "failing_cues": [],
+  "fx_requested": 12,
+  "fx_hinted": 12,
+  "effect_lines_sent": 12,
+  "n_non_accent_cues": 13,
+  "non_accent_effect_violations": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  },
+  "n_accent_cues": 1,
+  "n_accent_rises": 1,
+  "gate_warns": false,
+  "gate_violations": []
+ },
+ {
+  "song": "Rain",
+  "color_count": 2,
+  "color_change_count": 5,
+  "n_section_cues": 13,
+  "n_cues_lit_lt_3": 0,
+  "failing_cues": [],
+  "fx_requested": 0,
+  "fx_hinted": 11,
+  "effect_lines_sent": 0,
+  "n_non_accent_cues": 12,
+  "non_accent_effect_violations": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  },
+  "n_accent_cues": 1,
+  "n_accent_rises": 1,
+  "gate_warns": true,
+  "gate_violations": [
+   "효과 요청 0건 · 페이저 제안 11큐 → 송신 효과 줄 0"
+  ]
+ },
+ {
+  "song": "Too Cool",
+  "color_count": 3,
+  "color_change_count": 8,
+  "n_section_cues": 24,
+  "n_cues_lit_lt_3": 0,
+  "failing_cues": [],
+  "fx_requested": 36,
+  "fx_hinted": 22,
+  "effect_lines_sent": 20,
+  "n_non_accent_cues": 23,
+  "non_accent_effect_violations": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  },
+  "n_accent_cues": 1,
+  "n_accent_rises": 1,
+  "gate_warns": false,
+  "gate_violations": []
+ },
+ {
+  "song": "scott-buckley-neon",
+  "color_count": 3,
+  "color_change_count": 7,
+  "n_section_cues": 18,
+  "n_cues_lit_lt_3": 0,
+  "failing_cues": [],
+  "fx_requested": 16,
+  "fx_hinted": 16,
+  "effect_lines_sent": 14,
+  "n_non_accent_cues": 17,
+  "non_accent_effect_violations": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  },
+  "n_accent_cues": 1,
+  "n_accent_rises": 1,
+  "gate_warns": false,
+  "gate_violations": []
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질",
+  "color_count": 3,
+  "color_change_count": 5,
+  "n_section_cues": 11,
+  "n_cues_lit_lt_3": 0,
+  "failing_cues": [],
+  "fx_requested": 9,
+  "fx_hinted": 9,
+  "effect_lines_sent": 7,
+  "n_non_accent_cues": 10,
+  "non_accent_effect_violations": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  },
+  "n_accent_cues": 1,
+  "n_accent_rises": 1,
+  "gate_warns": false,
+  "gate_violations": []
+ }
+]
