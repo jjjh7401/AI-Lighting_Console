@@ -69,6 +69,13 @@ from server.design.interview import (
     DirectorInterview,
     UnresolvedAnswer,
 )
+from server.design.ldrender_gate import GateResult as LdrenderGateResult
+from server.design.ldrender_gate import (
+    evaluate as ldrender_gate_evaluate,
+)
+from server.design.ldrender_gate import (
+    gate_cues_from_commands,
+)
 from server.design.phaser_catalog import (  # 카드 t480 — 자리만 옮김
     _PHASER_LABEL_POOL_NAME,
     COLOR_PHASER_SEQUENCE,
@@ -740,6 +747,23 @@ def _fx_report_note(bundle, phaser_slots: Mapping[str, tuple[int, int]]) -> str:
     if requested == 0:
         return ""
     return f" 효과: 요청 {requested} · 허용 {permitted} · 송신 {sent}."
+
+
+def _ldrender_gate_note(result: LdrenderGateResult | None) -> str:
+    """SPEC-LDRENDER-001 M7(REQ-LDRENDER-014, t501) — 콘솔에 쓰기 직전인
+    송신 명령 목록이 연출 판독 게이트(`ldrender_gate.evaluate()`, M1 이
+    제품화·M7 이 배선)에 걸리면 비차단 경고를 최종 회신에 노출한다.
+
+    경고는 송신을 막지 않는다(SPEC-LDDESIGN-001 REQ-052 의 헤드룸 경고
+    선례를 따르는 축 — 이 SPEC 자신의 `_phaser_failure_note`/
+    `_color_failure_note`/`_arc_note`/`_fx_report_note`(M5/M6)와 같은 "지어
+    내지 않고 정직하게 고지" 관행으로 노출면만 재사용한다, 새 채널을 만들지
+    않는다). 걸리는 축이 없으면(``result is None`` 또는 `result.warns`가
+    거짓) 빈 문자열 — 문제없는 곡의 회신에 "연출 경고: 없음"을 끼워 넣지
+    않는다."""
+    if result is None or not result.warns:
+        return ""
+    return " 연출 경고: " + "; ".join(result.violations) + "."
 
 
 #: 카드 t311 — 좌표 판독이 실패한 **두 갈래**. 문면이 아니라 코드다:
@@ -3827,6 +3851,12 @@ class ChatSession:
         # two dicts above, so `_fx_report_note` can compute the "sent" count
         # without threading a new return value through `_reviewed_song_commands`.
         self._last_phaser_slots: dict[str, tuple[int, int]] = {}
+        # SPEC-LDRENDER-001 M7(REQ-LDRENDER-013/014, t501) — last reviewed-
+        # command build's gate verdict (`ldrender_gate.evaluate()`). Stashed
+        # the same way as the dicts above, so `_ldrender_gate_note` can
+        # surface the non-blocking warning in the final reply without
+        # threading a new return value through `_reviewed_song_commands`.
+        self._last_gate_result: LdrenderGateResult | None = None
         # Rolling transcript of prior turns (user instruction + assistant reply),
         # replayed to the model so context survives across turns for EVERY
         # conversation, not just the layout special-cases. Bounded to the last
@@ -9993,6 +10023,38 @@ class ChatSession:
                 return self._pointing_refusal(
                     f"리뷰 번들을 실행 명령으로 만들 수 없습니다: {error}"
                 )
+            # SPEC-LDRENDER-001 M7(REQ-LDRENDER-013/014, t501) — 콘솔에 쓰기
+            # 직전(`run_commands` 디스패치 바로 전)인 이 송신 명령 목록을
+            # 연출 판독 게이트에 돌린다. 문자열을 다시 파싱하는 것은 "이미
+            # 조립된 값을 재계산"이 아니라 "실제로 나갈 명령 그 자체를
+            # 검사"하는 것이다(gate_cues_from_commands 독스트링 참조) — 이
+            # 게이트는 송신을 막지 않는다(`_ldrender_gate_note`가 비차단
+            # 경고로만 노출, 아래 §4 결과 소비).
+            gate_bundle = approved_composition.bundle
+            if gate_bundle is not None:
+                fx_requested_total, _fx_permitted_total, _fx_sent_total = _fx_report_counts(
+                    gate_bundle, self._last_phaser_slots
+                )
+                fx_hinted_total = sum(
+                    1 for cue in gate_bundle.cues if _phaser_label_for_cue(cue) is not None
+                )
+                effect_role_mapped = any(
+                    entry.get("role") == "effect" for entry in state.layer_mapping
+                )
+                gate_cues = gate_cues_from_commands(
+                    commands, gate_bundle.cues, layer_mapping=state.layer_mapping
+                )
+                self._last_gate_result = ldrender_gate_evaluate(
+                    gate_cues,
+                    sent_lines=commands,
+                    fx_requested=fx_requested_total,
+                    fx_hinted=fx_hinted_total,
+                    palette_mode=str(_record_value(state.records, Q2B_COLOR_USAGE, "modulate")),
+                    warm_white_rgb=_COLOR_NAMES.resolve_color_name("Warm White"),
+                    effect_role_mapped=effect_role_mapped,
+                )
+            else:
+                self._last_gate_result = None
             # SPEC-COPILOT-WRITEGATE-001 — 감독이 실제로 쓰는 곡 흐름이 여기서
             # 나간다(업로드 → 분석 → 확인 → 인터뷰 → 이 번들). 2026-09-07
             # 브라우저 실측에서 `Store Sequence 210 Cue 1..4` 와
@@ -10095,6 +10157,7 @@ class ChatSession:
                     f"{_color_failure_note(self._last_color_failures)}"
                     f"{_arc_note(approved_composition.bundle)}"
                     f"{_fx_report_note(approved_composition.bundle, self._last_phaser_slots)}"
+                    f"{_ldrender_gate_note(self._last_gate_result)}"
                 ),
                 command_outcomes=tuple(executed.command_outcomes),
                 retries_used=0,
@@ -10120,6 +10183,7 @@ class ChatSession:
                 f"{_color_failure_note(self._last_color_failures)}"
                 f"{_arc_note(approved_composition.bundle)}"
                 f"{_fx_report_note(approved_composition.bundle, self._last_phaser_slots)}"
+                f"{_ldrender_gate_note(self._last_gate_result)}"
             ),
             command_outcomes=tuple(executed.command_outcomes),
             retries_used=0,

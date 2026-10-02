@@ -54,8 +54,11 @@ __all__ = [
     "effect_group_in_value_lines",
     "effect_line_count",
     "evaluate",
+    "gate_cues_from_commands",
     "is_exempt_cue",
+    "kind_for_composed_cue",
     "layer_diversity",
+    "role_group_map",
 ]
 
 #: AC-LDRENDER-001 이 "구간 큐 전부" 요구에서 명시 예외하는 두 큐 종류
@@ -141,9 +144,26 @@ def effect_line_count(sent_lines: Sequence[str]) -> int:
     return count
 
 
-def color_count(cues: Sequence[SectionCue]) -> int:
-    """곡 전체 고유 송신 RGB 수 — 예외 큐(블랙아웃/MIB)는 제외."""
-    rgbs = {rgb for cue in cues if not is_exempt_cue(cue) for rgb in cue.sent_rgb}
+def color_count(
+    cues: Sequence[SectionCue],
+    *,
+    exclude_rgb: tuple[float, float, float] | None = None,
+) -> int:
+    """곡 전체 고유 송신 RGB 수 — 예외 큐(블랙아웃/MIB)는 제외.
+
+    ``exclude_rgb``(M7, REQ-LDRENDER-004 §6.3 집계 플래그·M4 §Gaps 2 해소) —
+    주어지면 그 RGB(통상 `key` 역할의 표준 팔레트 웜화이트)는 "곡 전체 고유
+    색" 집계에서 뺀다. spec.md §3.2 [HARD]가 명시한 읽음(웜화이트는 §6.3
+    "최대 2개" 집계 밖, 중립 기준광)을 그대로 따른다 — 기본값 ``None``은
+    제외하지 않아 기존 호출부(`evaluate()`의 과거 동작 포함)와 바이트
+    동일하다."""
+    rgbs = {
+        rgb
+        for cue in cues
+        if not is_exempt_cue(cue)
+        for rgb in cue.sent_rgb
+        if exclude_rgb is None or rgb != exclude_rgb
+    }
     return len(rgbs)
 
 
@@ -176,6 +196,147 @@ def effect_group_in_value_lines(
     return tuple(line for line in group_lines if any(name in line for name in effect_group_names))
 
 
+#: M7(REQ-LDRENDER-014) 배선 전용 정규식 — `reviewed_song_commands`가 실제로
+#: 내는 송신 줄 문법(`song_cue_render.py` `position_cue_bundle`/
+#: `_group_color_apply_command`/`_color_apply_command`)의 **부분집합**만
+#: 겨냥한다. fid 멤버십은 몰라도 된다(RG5) — `Fixture <fids list>` 줄은
+#: 선택 집합을 식별할 필요 없이 "공유 베이스라인 값"으로만 읽고, `Group <n>`
+#: 줄은 ``role_group_map()``(아래)이 층 매핑에서 뽑은 역할로 옮긴다.
+_STORE_CUE_LINE = re.compile(r"^Store Sequence \d+ Cue ([\d.]+) '([^']*)'")
+_FIXTURE_VALUE_LINE = re.compile(r"^Fixture (?:\d+(?: \+ \d+)*) ;(.*)$")
+_GROUP_VALUE_LINE = re.compile(r"^Group (\d+) ;(.*)$")
+_VALUE_ATTR = re.compile(r"Attribute '(\w+)' At ([\d.]+)")
+_RGB_ATTR_KEYS = ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
+
+
+def role_group_map(layer_mapping: Sequence[Mapping[str, object]]) -> dict[int, str]:
+    """``layer_mapping`` → 그룹 번호 → 역할 (production 이 실제로 겨냥하는
+    그룹만, `song_cue_render._role_group_numbers`/`_effect_group_numbers`와
+    같은 동점 규율).
+
+    단일값 역할(`key`/`back`/`side`/`wash`/`mover`)은 마지막으로 일치한
+    항목이 이긴다(여러 콘솔 그룹이 한 역할에 매칭될 수 있어도 송신기는
+    그중 하나만 주소로 쓴다). `effect`는 반대로 **서로 다른 그룹 번호를
+    전부** 보존한다(BLIND/STROBE/HAZE가 각자 독립 주소이기 때문,
+    `_effect_group_numbers`와 동형) — 그래서 단일 딕셔너리 컴프리헨션
+    (마지막 항목이 이기는 축)을 공유하면서도 `effect`는 여러 키(그룹 번호)가
+    전부 그 값으로 모인다(각 그룹 번호가 서로 다른 키이므로 자연히 보존됨).
+    """
+    mapping: dict[int, str] = {}
+    for entry in layer_mapping:
+        role = entry.get("role")
+        group_no = entry.get("group_no")
+        if not isinstance(role, str) or not isinstance(group_no, int) or isinstance(group_no, bool):
+            continue
+        mapping[group_no] = role
+    return mapping
+
+
+def kind_for_composed_cue(cue: object) -> str:
+    """조립기 큐(``ComposedCue``) → 게이트 ``kind`` 어휘.
+
+    ``ComposedCue.kind`` 자체는 블랙아웃을 모른다(``cue.dimmer.blackout``
+    플래그로만 구분, acceptance.md AC-001 본문) — 이 함수가 그 변환을 한다.
+    ``mib_premove``는 그대로 옮기고, 그 외(``section``/``climax_return``)는
+    블랙아웃 플래그가 서면 :data:`BLACKOUT_KIND`로, 아니면 ``"section"``으로
+    접는다(``climax_return``도 AC-001 "구간 큐 전부" 요구에서 예외가 아니다
+    — spec.md §3.1 §Gaps, M3 후속에서 해소됨)."""
+    if cue.kind == MIB_PREMOVE_KIND:
+        return MIB_PREMOVE_KIND
+    if getattr(getattr(cue, "dimmer", None), "blackout", False):
+        return BLACKOUT_KIND
+    return "section"
+
+
+def gate_cues_from_commands(
+    commands: Sequence[str],
+    bundle_cues: Sequence[object] = (),
+    *,
+    layer_mapping: Sequence[Mapping[str, object]] = (),
+) -> tuple[SectionCue, ...]:
+    """송신 직전(또는 직후) 명령 목록 → :class:`SectionCue` 목록 (M7,
+    REQ-LDRENDER-013/014 배선).
+
+    ``reviewed_song_commands``가 실제로 조립한 문자열을 **그대로** 판독한다
+    — 큐별 디머/색 값을 다시 계산하지 않는다(렌더 함수들의 역할-배정 로직을
+    여기서 재구현하면 그 로직과 조용히 어긋날 위험이 있다, moai-memory 교훈
+    "코드 판독은 실측이 아니다"와 같은 이유로 **송신된 문자열 자체**를
+    1차 증거로 삼는다). ``.moai/reports/t501/measure_ac001_8songs.py``
+    `_gate_cues_from_commands`(이 SPEC 의 측정 스크립트, readout.py
+    `parse_sent`/`apply` 재사용)와 **같은 상태-추적 규율**이지만, 이 함수는
+    fid 멤버십(`fid_names.json`, INFERRED)이 전혀 없어도 동작한다 — production
+    이 실제로 쓰는 ``Group <n>`` 그룹-주소 문법(RG5)만 읽기 때문이다.
+
+    상태는 역할(그룹 주소가 가리키는 역할, ``role_group_map()``) 단위로
+    추적한다 — ``Fixture <...>`` 줄(공유 베이스라인, 전체 기구 묶음)은 이미
+    알려진 모든 역할에 같은 값을 적용하고(콘솔 트래킹 가정과 같은 last-wins
+    방향), ``Group <n>`` 줄은 그 역할 하나만 덮어쓴다. ``Store Sequence N
+    Cue X '<name>'`` 줄에서 그 시점까지의 역할별 상태를 그 큐의
+    :class:`SectionCue`로 접는다 — readout.py의 "큐 경계 = Store 줄, 그 앞
+    값 줄을 순서대로 적용" 규율과 동형이다.
+
+    ``bundle_cues``(조립기 번들, ``bundle.cues``)는 큐 번호로 교차조회해
+    ``kind``(section/climax_return→"section"/blackout/mib_premove)만
+    얻는다 — 없으면(``bundle_cues=()``) 모든 큐를 ``"section"``으로 본다
+    (보수적 기본값 — 예외 큐를 놓치면 과도하게 엄격해질 뿐 조용히 느슨해지지
+    않는다)."""
+    group_roles = role_group_map(layer_mapping)
+    all_known_roles = set(group_roles.values())
+    cues_by_number: dict[str, object] = {}
+    for cue in bundle_cues:
+        number = getattr(cue, "cue_number", None)
+        if number is not None:
+            cues_by_number[f"{number:g}"] = cue
+
+    state: dict[str, dict[str, object]] = {}
+    gate_cues: list[SectionCue] = []
+    for line in commands:
+        store = _STORE_CUE_LINE.match(line)
+        if store is not None:
+            cue_no, name = store.group(1), store.group(2)
+            composed = cues_by_number.get(cue_no)
+            kind = kind_for_composed_cue(composed) if composed is not None else "section"
+            sent_rgb = tuple(
+                sorted({tuple(v["rgb"]) for v in state.values() if "rgb" in v})  # type: ignore[arg-type]
+            )
+            role_view = {role: (dict(values),) for role, values in state.items()}
+            gate_cues.append(
+                SectionCue(
+                    cue_no=cue_no,
+                    name=name,
+                    kind=kind,
+                    role_view=role_view,
+                    sent_rgb=sent_rgb,
+                )
+            )
+            continue
+        fixture_match = _FIXTURE_VALUE_LINE.match(line)
+        group_match = None if fixture_match is not None else _GROUP_VALUE_LINE.match(line)
+        if fixture_match is None and group_match is None:
+            continue
+        body = fixture_match.group(1) if fixture_match is not None else group_match.group(2)
+        attrs = dict(_VALUE_ATTR.findall(body))
+        rgb = tuple(float(attrs[key]) for key in _RGB_ATTR_KEYS) if "ColorRGB_R" in attrs else None
+        if fixture_match is not None:
+            target_roles = all_known_roles | set(state)
+            for role in target_roles:
+                role_state = state.setdefault(role, {})
+                if "Dimmer" in attrs:
+                    role_state["dim"] = float(attrs["Dimmer"])
+                if rgb is not None:
+                    role_state["rgb"] = rgb
+        else:
+            role = group_roles.get(int(group_match.group(1)))
+            if role is None:
+                continue
+            role_state = state.setdefault(role, {})
+            if "Dimmer" in attrs:
+                role_state["dim"] = float(attrs["Dimmer"])
+            if rgb is not None:
+                role_state["rgb"] = rgb
+    return tuple(gate_cues)
+
+
 @dataclass(frozen=True)
 class GateResult:
     """REQ-013 게이트의 판정 결과 — 색 수 · 큐별 LIT 층 수 · 효과 줄 수 + 위반 목록."""
@@ -203,12 +364,26 @@ def evaluate(
     fx_requested: int = 0,
     fx_hinted: int = 0,
     palette_mode: str = "modulate",
+    warm_white_rgb: tuple[float, float, float] | None = None,
+    effect_role_mapped: bool = True,
 ) -> GateResult:
     """REQ-013/REQ-014 게이트 본체 — AC-001 과 바이트 동일한 LIT-only·큐-단위
     집계로 색 수·층 수·효과 줄 수를 판정한다.
 
     ``palette_mode`` 가 ``"modulate"``(기본)가 아니면 색 수 경고는 n/a 로
     처리된다(REQ-015/AC-014 — 비기본 모드를 결함으로 오판하지 않는다).
+
+    ``warm_white_rgb``(M7, REQ-LDRENDER-004 §6.3 집계 플래그·M4 §Gaps 2 해소)
+    — 주어지면 `color_count()`가 그 RGB(통상 `key` 역할의 표준 팔레트
+    웜화이트)를 "곡 전체 고유 색" 집계에서 뺀다(spec.md §3.2 [HARD] 의
+    읽음 — 웜화이트는 §6.3 "최대 2개" 집계 밖, 중립 기준광). 기본값
+    ``None``은 과거 동작과 바이트 동일(제외 없음).
+
+    ``effect_role_mapped``(M7, M5 블로커 보고 조건 ① — 효과 역할 그룹이
+    층 매핑에 아예 해석되지 않으면 `_effect_dimmer_zero_lines`가 구조적으로
+    아무 줄도 못 낸다, 조용한 R3 비적용) — ``False``면 효과 요청 여부와
+    무관하게 별도 경고를 낸다. 기본값 ``True``는 과거 호출부와 바이트
+    동일(경고 없음).
 
     경고는 송신을 **차단하지 않는다**(REQ-014, SPEC-LDDESIGN-001 REQ-052 의
     비차단 경고 선례) — 이 함수는 판정만 내고, 그 판정으로 무엇을 할지는
@@ -221,7 +396,7 @@ def evaluate(
 
     violations: list[str] = []
 
-    song_colors = color_count(cues)
+    song_colors = color_count(cues, exclude_rgb=warm_white_rgb)
     if palette_mode == "modulate" and not (2 <= song_colors <= 3):
         violations.append(f"색 수 {song_colors}개(기준 2~3)")
 
@@ -234,6 +409,8 @@ def evaluate(
         violations.append(
             f"효과 요청 {fx_requested}건 · 페이저 제안 {fx_hinted}큐 → 송신 효과 줄 0"
         )
+    if not effect_role_mapped:
+        violations.append("효과 역할 그룹(BLIND/STROBE/HAZE) 미매핑 — 효과 기구 분리(R3) 비적용")
 
     return GateResult(
         color_count=song_colors,
