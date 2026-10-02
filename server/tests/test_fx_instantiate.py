@@ -620,10 +620,41 @@ def test_every_pattern_bundle_carries_unique_non_exempt_lines(pattern):
     assert non_exempt, "a bundle of nothing but exempt lines would pass vacuously"
 
 
-def test_a_pattern_repeating_a_step_value_is_refused_before_the_bundle_exists():
+def test_a_value_repeated_WITHIN_one_step_is_still_refused_before_the_bundle_exists():
     # The M0-era failure shape made silent: the second `At 100` is dropped by the
-    # dedupe, `Store` then runs against a ONE-step programmer, and nothing on
-    # stage moves while every line reports ok.
+    # dedupe, `Store` then runs against a step that is missing a value, and
+    # nothing on stage moves while every line reports ok. Card t501 M6b
+    # (2026-10-02, director decision) scoped the relaxation to a repeat that
+    # crosses a `Step <n>` boundary — a collision WITHIN one step (no
+    # boundary between the two identical lines) is unaffected and still
+    # refused.
+    fx = Fx(
+        fx_id="broken_pulse",
+        display_name="Broken Pulse",
+        pattern="pulse",
+        steps=(
+            FxStep(
+                values=(
+                    StepValue(attribute="Dimmer", value=100),
+                    StepValue(attribute="Dimmer", value=100),
+                )
+            ),
+            FxStep(values=(StepValue(attribute="Dimmer", value=0),)),
+        ),
+        speed=60,
+    )
+    with pytest.raises(FxInstantiationError) as excinfo:
+        build_fx_bundle(fx, group=11, sequence=12)
+    assert excinfo.value.reason == VALUE_LINE_COLLISION
+    assert "Attribute 'Dimmer' At 100" in str(excinfo.value)
+
+
+def test_a_value_repeated_ACROSS_a_step_boundary_is_no_longer_a_collision():
+    # The exact M0-era shape from the test above, but with the repeat moved
+    # across the `Step 2` line instead of sitting inside one step — card t501
+    # M6b's whole point: this is what every one of Rain's 4 "refused" catalog
+    # phasers looked like (M6.md), and it is not a collision because the
+    # second `At 100` belongs to a DIFFERENT step and fires there.
     fx = Fx(
         fx_id="broken_pulse",
         display_name="Broken Pulse",
@@ -634,10 +665,9 @@ def test_a_pattern_repeating_a_step_value_is_refused_before_the_bundle_exists():
         ),
         speed=60,
     )
-    with pytest.raises(FxInstantiationError) as excinfo:
-        build_fx_bundle(fx, group=11, sequence=12)
-    assert excinfo.value.reason == VALUE_LINE_COLLISION
-    assert "Attribute 'Dimmer' At 100" in str(excinfo.value)
+    plan = build_fx_bundle(fx, group=11, sequence=12)
+    assert plan.commands.count("Attribute 'Dimmer' At 100") == 2
+    assert "Step 2" in plan.commands
 
 
 def test_duplicate_exempt_lines_do_not_trigger_the_in_bundle_guard():

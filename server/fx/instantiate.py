@@ -145,6 +145,16 @@ _PROGRAMMER_STATE_COMMANDS = (
     re.compile(_SELECTED_VALUE_LINE, re.IGNORECASE),
 )
 
+# Card t501 M6b (2026-10-02, director decision) — the STEP-SCOPE reset mirror.
+# A SEPARATE mechanism from the exemption tuple above: that tuple classifies a
+# command by its own text, and a step boundary is the opposite shape — the
+# SAME text is a collision inside one step and not a collision one step later.
+# `server/orchestrator/tools.py` carries the identical pattern under the same
+# name, for the same reason the exemption tuple is duplicated rather than
+# imported (the ANCHOR note above — `tools.py` imports fx at registration
+# time, so a top-level fx->tools import would be circular).
+_STEP_BOUNDARY = re.compile(r"Step\s+\d+", re.IGNORECASE)
+
 
 class FxInstantiationError(ValueError):
     """An fx cannot be turned into a bundle that is safe to fire.
@@ -586,12 +596,20 @@ def _matricks(fx: Fx) -> tuple[tuple[str, float], ...]:
 
 
 def _guard_collision(fx: Fx, commands: Sequence[str]) -> None:
-    """Refuse a bundle carrying the same non-exempt line twice (REQ-FXLIB-011 (a)).
+    """Refuse a bundle carrying the same non-exempt line twice IN ONE STEP (REQ-FXLIB-011 (a)).
 
     The mirror precedent is `server/looks/busking.py` ``_guard_collision`` and
     its ``VALUE_LINE_COLLISION`` reason — the same class of fact: this store
     cannot happen safely. It refuses rather than skips because an fx bundle is
     ONE store; there is no surviving remainder to report.
+
+    Card t501 M6b (2026-10-02, director decision): the scope resets at every
+    standalone ``Step <n>`` line. A line repeated WITHIN one step is still
+    refused — the console would genuinely lose the second occurrence. A line
+    repeated in a LATER step is no longer a collision: ``run_commands`` now
+    treats a step boundary the same way, so the second occurrence fires
+    instead of being dropped (``server/orchestrator/tools.py``
+    ``_is_step_boundary``).
 
     This guard sees only THIS bundle. A line fired by an earlier call in the
     same instruction turn is invisible here by construction — that boundary is
@@ -599,15 +617,19 @@ def _guard_collision(fx: Fx, commands: Sequence[str]) -> None:
     """
     seen: set[str] = set()
     for command in commands:
+        if _STEP_BOUNDARY.fullmatch(command.strip()) is not None:
+            seen = set()
+            continue
         if is_programmer_state(command):
             continue
         if command in seen:
             raise FxInstantiationError(
                 VALUE_LINE_COLLISION,
-                f"fx {fx.fx_id!r} would emit the line {command!r} twice; the second "
-                "one is dropped by the run_commands dedupe and the Store then runs "
-                "against a programmer that is missing a step — silently, because a "
-                "stored phaser cue is indistinguishable from an empty one",
+                f"fx {fx.fx_id!r} would emit the line {command!r} twice within "
+                "the same step; the second one is dropped by the run_commands "
+                "dedupe and the Store then runs against a programmer that is "
+                "missing a value — silently, because a stored phaser cue is "
+                "indistinguishable from an empty one",
             )
         seen.add(command)
 

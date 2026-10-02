@@ -135,11 +135,36 @@ class TestCollisionRefusals:
         assert resolved == {} and failed == {}
         assert stub.dispatched == []
 
-    def test_a_value_line_collision_is_reported_not_overwritten(self):
-        # "Drop Slam" (combo: Red@100 -> Red@0) collides inside
-        # build_fx_preset_bundle's own `_guard_collision` (measured,
-        # test_phaser_pregen.py) — the wiring must surface that refusal
-        # through FXLIB's existing reason, not invent a workaround.
+    def test_drop_slam_now_builds_and_dispatches_through_the_gate(self):
+        # M6 측정: "Drop Slam"(combo: Red@100 -> Red@0)은 두 스텝 모두
+        # `ColorRGB_R At 100`을 내어 `build_fx_preset_bundle`의 `_guard_
+        # collision`에 거부됐다. M6b(카드 t501, 2026-10-02 리드 결정)가
+        # `run_commands` 중복 제거 범위를 `Step <n>` 경계에서 리셋하도록
+        # 좁히고 `_guard_collision`을 그에 맞춰 완화한 뒤로는, 스텝 경계를
+        # 건넌 반복은 충돌이 아니다 — Drop Slam도 이제 다른 4개 필요 라벨과
+        # 같이 그냥 빌드되어 기존 게이트를 통과해 디스패치된다.
+        stub = _PregenStub(pool_no=9, children={})
+        bundle = _Bundle(cues=(_cue("드롭", permitted=("dimmer chase",)),))
+        failed = {"Drop Slam": "'Drop Slam' 페이저 프리셋을 콘솔에서 찾지 못했습니다"}
+        resolved, failed = _PREGEN(stub, bundle, {}, failed)
+        assert "Drop Slam" not in failed
+        assert resolved["Drop Slam"][0] == 9
+        assert len(stub.dispatched) == 1
+        assert stub.dispatched[0].name == "run_commands"
+
+    def test_a_genuine_same_step_collision_is_still_reported_not_overwritten(self, monkeypatch):
+        # The relaxation is scoped to a repeat that crosses a Step boundary —
+        # a TRUE same-step collision (no FXLIB catalog label reproduces this
+        # today) must still be refused and must still never touch the pool.
+        import server.web.session as session_module
+        from server.fx.instantiate import VALUE_LINE_COLLISION, FxInstantiationError
+
+        def _always_collides(label, *, presets_section, preset_pool, requested_slot=None):
+            raise FxInstantiationError(
+                VALUE_LINE_COLLISION, f"fx {label!r} would emit a line twice"
+            )
+
+        monkeypatch.setattr(session_module, "pregenerate_phaser_bundle", _always_collides)
         stub = _PregenStub(pool_no=9, children={})
         bundle = _Bundle(cues=(_cue("드롭", permitted=("dimmer chase",)),))
         failed = {"Drop Slam": "'Drop Slam' 페이저 프리셋을 콘솔에서 찾지 못했습니다"}

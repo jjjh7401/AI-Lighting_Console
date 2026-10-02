@@ -259,6 +259,91 @@ class TestRunCommands:
         assert port.executed == []
 
 
+class TestStepBoundaryResetsDedupeScope:
+    """Card t501 M6b (2026-10-02, director decision) — the effect Step boundary.
+
+    A repeated value line is a collision WITHIN one step and NOT a collision
+    across a `Step <n>` boundary: the console step column makes the two
+    moments distinct even though the text is identical. Without this, 4 of
+    Rain's 5 catalog phasers could never be pre-generated at all (M6.md) —
+    FXLIB's `_guard_collision` refused the bundle before it ever reached this
+    loop.
+    """
+
+    def test_a_value_line_repeated_after_a_step_marker_is_not_skipped(self):
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        commands = [
+            "ChangeDestination Root",
+            "ClearAll",
+            "Group 1",
+            "Attribute 'ColorRGB_R' At 100",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 100",
+            "Store Preset 9.1 'X'",
+            "ClearAll",
+        ]
+        execution = registry.dispatch(_call("run_commands", {"commands": commands}))
+        assert port.executed == commands  # every line fired — nothing dropped
+        assert execution.result.is_error is False
+        statuses = [o.status for o in execution.command_outcomes]
+        assert "skipped_already_executed" not in statuses
+
+    def test_a_value_line_repeated_WITHOUT_a_step_marker_in_between_still_skips(self):
+        # The control: the relaxation is scoped to the boundary itself, not to
+        # value lines in general — an exact repeat with no `Step <n>` between
+        # the two occurrences is still a duplicate console side effect.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        commands = ["Attribute 'ColorRGB_R' At 100", "Attribute 'ColorRGB_R' At 100"]
+        execution = registry.dispatch(_call("run_commands", {"commands": commands}))
+        assert port.executed == ["Attribute 'ColorRGB_R' At 100"]
+        statuses = [o.status for o in execution.command_outcomes]
+        assert statuses == ["executed_ok", "skipped_already_executed"]
+
+    def test_a_step_marker_already_executed_in_a_prior_call_still_folds(self):
+        # The cross-call fold this relaxation must NOT touch (REQ-FXLIB-011
+        # (b)): if `Step 2` already fired earlier in this instruction turn,
+        # THIS bundle's own `Step 2` is still a genuine repeat and still
+        # skipped — the step marker's own skip decision runs against the
+        # PRE-reset history, before the reset this card adds takes effect.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        context = ExecutionContext(executed_ok=frozenset({"Step 2"}))
+        commands = ["Step 2", "Attribute 'ColorRGB_R' At 100"]
+        execution = registry.dispatch(_call("run_commands", {"commands": commands}), context)
+        statuses = {o.command: o.status for o in execution.command_outcomes}
+        assert statuses["Step 2"] == "skipped_already_executed"
+        # ...but the reset still takes effect for what follows the marker.
+        assert statuses["Attribute 'ColorRGB_R' At 100"] == "executed_ok"
+        assert port.executed == ["Attribute 'ColorRGB_R' At 100"]
+
+    def test_a_three_step_bundle_resets_at_every_boundary(self):
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        commands = [
+            "Attribute 'Dimmer' At 50",
+            "Step 2",
+            "Attribute 'Dimmer' At 50",
+            "Step 3",
+            "Attribute 'Dimmer' At 50",
+        ]
+        execution = registry.dispatch(_call("run_commands", {"commands": commands}))
+        assert port.executed == commands
+        statuses = [o.status for o in execution.command_outcomes]
+        assert "skipped_already_executed" not in statuses
+
+    def test_the_step_boundary_classifier_matches_only_the_standalone_marker(self):
+        from server.orchestrator.tools import _is_step_boundary
+
+        assert _is_step_boundary("Step 2") is True
+        assert _is_step_boundary("step 2") is True
+        assert _is_step_boundary("  Step 3  ") is True
+        assert _is_step_boundary("Step 2 At Accel -100") is False
+        assert _is_step_boundary("Attribute 'Dimmer' At Step 2") is False
+        assert _is_step_boundary("ClearAll") is False
+
+
 class TestProgrammerStateIsExemptFromDedupe:
     """The dedupe above guards DURABLE artifacts, and only those (M4 follow-up).
 
