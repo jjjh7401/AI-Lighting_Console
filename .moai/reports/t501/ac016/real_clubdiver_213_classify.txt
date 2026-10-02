@@ -1,0 +1,8 @@
+lines rehearsal=252 real=266
+after fixture-set normalisation: only_rehearsal=0 only_real=14
+real-only lines: W-channel=14 other=0
+W line tails: Counter({"Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorRGB_W' At 0": 14})
+W fixture set used 14x: count=28 ids=[521, 522, 523, 524, 525, 526, 527, 528, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 421, 422, 423, 424, 425, 426, 427, 428, 429, 430]
+rehearsal fixture sets: [(86, [101, 102, 103, 104, 105, 106], 52)]
+real non-W fixture sets: [(86, 38), (58, 14)]
+VERDICT all diff lines explained by fixture-set + W-channel: True
