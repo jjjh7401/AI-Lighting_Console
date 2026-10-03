@@ -14,7 +14,8 @@
 2. **곡 분석은 BPM 숫자 하나만 넘긴다.** 비트 시각은 계산한 뒤 버리고, 온셋은 계산하지만 저장하지 않는다. 다운비트와 킥 검출은 없다 [잰 값].
 3. **콘솔은 BPM 동기를 기본 기능으로 갖고 있다.** 스피드 마스터(BPM 단위, 0~225, 16개)를 페이저에 걸 수 있고, `Master 3.1 At BPM 75` 한 줄로 속도를 바꾼다 [문서].
 4. **우리 규칙과 감독 요구는 정면으로 부딪치지 않는다.** §9와 REQ-036은 "룩을 얼마나 자주 바꾸나"를 정한 규칙이고, 감독이 지적한 것은 "한 룩 안의 움직임이 박자를 따르나"다. 이 축은 지금 규칙에 빈칸으로 남아 있다.
-5. **권고 방향(감독 확정 전):** 룩 전환 밀도(§9)는 그대로 둔다. 그 위에 (가) 페이저 속도를 곡 BPM에 묶고, (나) 마디·프레이즈 경계의 강조를 원샷 레인으로 얹는다. 큐를 마디마다 잘게 쪼개는 방식은 권하지 않는다.
+5. **새로 만들 것보다 연결할 것이 많다.** 실기에서 이미 확인된 것이 셋 있다. 속도 단위가 BPM이라는 것, `At SpeedMaster` 연결 문법, Pan/Tilt 무빙 페이저 문법(`server/spatial/position_fx.py`)이다. 무빙 계획 함수(`plan_movement`)도 짜여 있다. 다만 어느 것도 곡 렌더러에 연결돼 있지 않다 [잰 값].
+6. **권고 방향(감독 확정 전):** 룩 전환 밀도(§9)는 그대로 둔다. 그 위에 (가) 스피드 마스터로 페이저 속도를 곡 BPM에 묶고, (나) 기존 무빙 경로를 곡 렌더러에 연결해 큐 안 움직임을 채우고, (다) 마디·프레이즈 경계의 강조를 원샷 레인으로 얹는다. 큐를 마디마다 잘게 쪼개는 방식은 권하지 않는다.
 
 ---
 
@@ -97,7 +98,15 @@ bpm 117.45383522727278 bpm_source measured
 - **곡 송신 경로는 속도를 보내지 않는다.** `server/web/session.py`의 페이저 빌더는 `At Accel/Decel/Transition/Phase`만 만든다. 카탈로그(`server/design/phaser_catalog.py:21`, `("Wave CM", ("Cyan","Magenta"), "sine", "0 Thru 360")`)에도 속도 필드가 없다.
 - **"Wave CM Speed 30 고정"이라는 전제는 코드 근거가 없다.** 이 배차의 전제였지만, `grep -rn "Speed 30\|CM Speed\|At Speed" server`(`server/fx/`·테스트 제외)에서 곡 송신 경로에 걸리는 줄은 0건이다. `Speed 30`은 옛 미리보기 증거(`.moai/reports/t225/evidence/fx_preview_all8.json`)와 다른 SPEC 진행 기록에만 나온다. 콘솔에 저장된 Wave CM 프리셋(4.9)의 실제 속도 값은 **재지 않았다**(빈칸 G1).
 - **FX 라이브러리는 속도를 다룬다.** `server/fx/schema.py:132-199`에 `speed`(고정 BPM)와 `speed_master`(1~16, 라이브 마스터 연결)가 있고, 둘은 함께 쓸 수 없다. `server/fx/instantiate.py:561-576`은 `Attribute '<a>' At Speed <v>` 또는 `Attribute '<a>' At SpeedMaster <n>`를 보낸다. 라이브러리 예시로는 `server/fx/library/dimmer.yaml`의 `pulse-beat`(speed 60)과 `pulse-master-sync`(speed_master 1)가 있다.
-- **그 라이브러리는 곡 렌더러에 연결돼 있지 않다.** `grep -rnE "^\s*(from server\.fx|import server\.fx)" server`(`server/fx/`·테스트 제외)에서 import하는 파일은 6개다: `orchestrator/tools.py`, `scene/compile.py`, `scene/report.py`, `scene/matching.py`, `looks/movement.py`, `tools/lxseq_fx_e2e.py`. 곡 렌더러 `song_cue_render.py`에는 import가 없고 주석(332행) 한 줄만 있다. 서브에이전트는 "아무 데서도 안 쓴다"고 보고했지만 이 grep으로 바로잡았다. 간접 경로는 하나 있다. 곡 렌더러가 쓰는 `server/looks/songcue.py:10`이 `server/looks/movement.py`의 `MovementPlan`을 가져오고, `movement.py:41`은 `server.fx.instantiate.phaser_lines`를 쓴다. 하지만 t501 실기 송신 명령에는 속도 줄도 Pan/Tilt 페이저 줄도 0건이었다(§0.2 표, 위치는 프리셋 호출로만 바뀐다). 그래서 이 경로는 지금 곡 송신에서 아무 줄도 만들지 않는다고 판단한다 [잰 값: 송신 결과 / 추정: 원인 — 코드 분기는 추적하지 않았다].
+- **그 라이브러리는 곡 렌더러에 연결돼 있지 않다.** `grep -rnE "^\s*(from server\.fx|import server\.fx)" server`(`server/fx/`·테스트 제외)에서 import하는 파일은 6개다: `orchestrator/tools.py`, `scene/compile.py`, `scene/report.py`, `scene/matching.py`, `looks/movement.py`, `tools/lxseq_fx_e2e.py`. 곡 렌더러 `song_cue_render.py`에는 import가 없고 주석(332행) 한 줄만 있다. 서브에이전트는 "아무 데서도 안 쓴다"고 보고했지만 이 grep으로 바로잡았다. 간접 경로는 하나 있다. 곡 렌더러가 쓰는 `server/looks/songcue.py:10`이 `server/looks/movement.py`의 `MovementPlan`을 가져오고, `movement.py:41`은 `server.fx.instantiate.phaser_lines`를 쓴다. 하지만 t501 실기 송신 명령에는 속도 줄도 Pan/Tilt 페이저 줄도 0건이었다(§0.2 표, 위치는 프리셋 호출로만 바뀐다). 원인은 코드로 확인했다 [잰 값]:
+  - 곡 렌더러가 큐 묶음을 만드는 곳(`server/design/song_cue_render.py:1102`, `SongCueSectionBundle(...)`)은 `movement`를 넘기지 않는다. 필드 기본값이 `None`이라(`server/looks/songcue.py:206`) 무빙 줄이 생기지 않는다.
+  - 무빙 계획 함수 `plan_movement`(`server/looks/movement.py:192`)를 부르는 곳은 테스트뿐이다. `grep -rln "plan_movement" server` → `movement.py`, `tests/test_looks_library.py`, `tests/test_songcue_movement.py` 3개.
+  - `songcue.py:210` 주석이 가리키는 `_movement_carrier` 함수는 코드에 없다(`grep -rn "_movement_carrier" server` → 그 주석 한 줄).
+
+- **실기 검증된 BPM 속도 페이저가 곡 렌더러 밖에 이미 있다** (리드 지적 반영) [잰 값]. `grep -rn "At Speed" server --include='*.py' | grep -v server/fx/ | grep -v test` → 8줄. 그중 실제로 명령을 만드는 곳은 둘이다.
+  - `server/spatial/position_fx.py:145-177` `_relative_phaser_lines` — Pan/Tilt에 `At Relative`·`At Phase`·`At Speed <bpm>`을 낸다. 독스트링은 룰북 `server/rulebook/assets/v2.4.2/31_choreography_patterns.md:66-73`의 "validated command building"을 따른다고 적는다. 원, 파도, 발리후(ballyhoo, 빠르게 휘젓는 동작) 세 가지를 지원하고 `speed_bpm` 인자를 받는다(기본 60, `:207`).
+  - `server/spatial/choreography.py:381` — 같은 `At Speed` 형태.
+  - 호출처: `position_fx_commands`는 `server/web/session.py:4952`의 `_position_fx_sequence`, 즉 대화 명령 처리기에서만 불린다. 곡 렌더러는 부르지 않는다.
 - **BPM은 송신 지점까지 와 있다.** `song_cue_render.py:1328`에서 `bpm=profile.bpm`으로 이미 전달된다. 페이저 빌더에 넘기는 연결만 없다.
 
 ### 2.2 MA3 공식 문서 [문서]
@@ -111,20 +120,25 @@ bpm 117.45383522727278 bpm_source measured
 | 마스터 BPM 설정 문법 | `Master 3.1 At BPM 75` | [BPM Keyword](https://help.malighting.com/grandMA3/2.0/HTML/keyword_bpm.html) |
 | 속도 층 BPM 지정 문법 | `At Speed BPM 5` | 같은 쪽 |
 
-**확인하지 못한 것 [추정/미확인]:**
-- 페이저를 스피드 마스터에 거는 정확한 문법. 우리 코드는 `At SpeedMaster <n>`를 쓰지만, 이번에 읽은 문서 쪽에서는 그 토큰을 찾지 못했다(빈칸 G2).
-- 우리 코드의 `At Speed <v>`가 BPM으로 해석되는지. 문서 예시는 `At Speed BPM 5`처럼 단위 토큰을 붙인다. 단위 없이 보내면 콘솔의 현재 속도 표시 단위를 따를 수 있다(빈칸 G3).
+**저장소의 과거 실기 기록으로 답이 나온 것** (문서에서는 못 찾았지만 실측이 있었다):
+- **G2 — 스피드 마스터 연결 문법: 답이 나왔다.** `.moai/specs/SPEC-COPILOT-FXGEN-001/spec.md` §A.1 V3(2026-08-15, onPC 2.4.2, 오퍼레이터 GUI 관측): "`Attribute '<a>' At SpeedMaster <n>`은 페이저 속도를 라이브 마스터에 결속한다 — 마스터 BPM 변경이 페이저에 실시간 반영". 단, 고정 `At Speed`와 함께 쓰는 경우는 재지 않았다(REQ-FXGEN-005가 거부).
+- **G3 — 단위 없는 `At Speed <v>`의 단위: 답이 나왔다. BPM이다.** 룰북 `31_choreography_patterns.md:70`은 "BPM/Hz/sec per the phaser's Speed display"라고 세 후보를 같이 적어 미해결이었다. 이후 `.moai/specs/SPEC-COPILOT-FXLIB-001/spec.md:64`가 "Speed 단위는 확정됐다: BPM(ASSUMPTION-38 GO — GUI 표시 판독)", `plan.md:49`가 "M0로 해소 — 단위는 BPM"이라고 기록했다.
+- 두 기록 모두 효과는 사람이 눈으로 확인한 것이다(콘솔이 페이저 내용을 기계로 읽어 주지 않는다, FXGEN V7). 그 실기 세션 이후 지금 쇼파일의 기본 속도 표시 단위가 바뀌지 않았다는 전제가 붙는다 [추정].
 
 ### 2.3 선택지
 
 | 선택지 | 방식 | 장점 | 비용·위험 |
 |---|---|---|---|
-| A. 페이저마다 고정 BPM | 렌더 시 `speed = 곡 BPM × k`를 계산해 `At Speed` 줄을 보낸다 | 이미 있는 `server/fx` 송신문 재사용. 곡마다 결정적이다 | 프리셋이 곡마다 달라진다(프리셋 풀 소비). 단위 확인(G3) 필요 |
-| B. 곡 시작 시 스피드 마스터 설정 | 첫 큐에서 `Master 3.n At BPM <곡 BPM>`, 페이저는 마스터 n에 묶는다 | 프리셋 하나를 모든 곡에서 재사용한다. 현장 조작자가 페이더로 보정할 수 있다 | 연결 문법(G2) 실기 확인 필요. 마스터 번호 배정 규칙 필요 |
+| A. 페이저마다 고정 BPM | 렌더 시 `speed = 곡 BPM × k`를 계산해 `At Speed` 줄을 보낸다 | 이미 있는 `server/fx` 송신문 재사용. 곡마다 결정적이다. 단위는 BPM으로 확인됨(G3 해소) | 프리셋이 곡마다 달라진다(프리셋 풀 소비) |
+| B. 곡 시작 시 스피드 마스터 설정 | 첫 큐에서 `Master 3.n At BPM <곡 BPM>`, 페이저는 `At SpeedMaster n`으로 묶는다 | 프리셋 하나를 모든 곡에서 재사용한다. 현장 조작자가 페이더로 보정할 수 있다. 연결 문법은 실기 확인됨(G2 해소, FXGEN V3) | 마스터 번호 배정 규칙이 필요하다. `Master 3.n At BPM`을 큐에 싣는 방식(매크로·큐 명령)은 재지 않았다 |
+| D. 기존 실기 검증 무빙 경로 재사용 | 곡 렌더러에서 `position_fx`의 `_relative_phaser_lines`(원·파도·발리후) 또는 `plan_movement`를 불러 구간 큐에 Pan/Tilt 페이저를 싣는다 | 문법이 이미 실기 검증됐다. `speed_bpm` 인자가 있어 곡 BPM을 바로 넣을 수 있다. 지금 0인 "큐 안 위치 움직임"을 채운다 | `position_fx`는 별도 시퀀스를 저장하는 형태라 곡 시퀀스 큐 안에 싣도록 바꿔야 한다. `plan_movement`의 속도는 곡 BPM이 아니라 무드 대역(10~20 / 90~180)에서 고른다(`movement.py:89-96`) |
 | C. 마스터 16(소리 입력 BPM) | 콘솔이 오디오 입력에서 박자를 잡는다 | 코드 작업이 가장 적다 | 오디오 입력 배선이 필요하고, 결과를 우리가 재거나 재현할 수 없다 |
 | 배수 | 1/2·1·2배 등 | A·B 위에 얹는다 | 구간 에너지별 배수 규칙이 필요하다 |
 
-**권고 [추정]:** B를 기본으로 한다. 곡 하나에 마스터 한 줄이면 되고, 프리셋을 곡마다 새로 만들지 않아도 된다. 다만 G2 연결 문법을 실기에서 읽기 전용으로 확인하는 일이 착수 조건이다. A는 G2가 막힐 때의 대안이다.
+**권고 [추정]:** B와 D를 함께 쓴다.
+- **속도는 B.** 곡 하나에 마스터 한 줄이면 되고, 프리셋을 곡마다 새로 만들지 않아도 된다. 연결 문법은 이미 실기로 확인됐다(G2).
+- **무빙은 D.** 새로 만들지 않고, 실기 검증된 `position_fx` 문법과 이미 짜여 있지만 쓰이지 않는 `plan_movement`를 곡 렌더러에 연결한다. 남은 일은 연결과 속도 출처를 곡 BPM으로 바꾸는 것이다.
+- A는 B의 마스터 운용이 맞지 않을 때의 대안이다.
 
 ---
 
@@ -217,12 +231,13 @@ R1·R2는 송신 명령만 읽으면 오프라인으로 잴 수 있다. R3·R4�
 | 번호 | 내용 | 이유 | 메우는 법 |
 |---|---|---|---|
 | G1 | 콘솔에 저장된 페이저 프리셋(4.9~4.11, 21.7~21.8)의 실제 속도 값 | 이번 카드는 읽기 전용 문서 조사로 한정했다 | 콘솔 읽기 전용 `props` 조회 |
-| G2 | 페이저를 스피드 마스터에 거는 정확한 문법 | 읽은 문서 쪽에 토큰이 없었다 | 공식 문서 추가 탐색 또는 실기 읽기 전용 확인 |
-| G3 | 단위 없는 `At Speed <v>`의 단위 해석 | 문서 예시는 `At Speed BPM <v>`다 | 실기 확인 |
+| ~~G2~~ | **해소** — `At SpeedMaster <n>` 실기 확인(FXGEN spec §A.1 V3, 2026-08-15). 고정 `At Speed`와의 조합만 미측정 | — | — |
+| ~~G3~~ | **해소** — 단위 BPM(FXLIB spec.md:64, ASSUMPTION-38 GO). 그 뒤 쇼파일 속도 표시 단위가 바뀌지 않았다는 전제 | — | — |
 | G4 | 시퀀스당 큐 수·실행기 수 상한 | 해당 쪽을 직접 읽지 않았다(서브에이전트는 검색 요약만 인용) | 공식 문서 쪽 직접 확인 |
 | G5 | BPM 검출 정확도(절반·두 배 오류) | 참값 표가 없다. Rain 76 BPM이 의심 후보다 | 8곡 참값 대조 |
 | G6 | `beat_track`의 비트 시각 품질 | 오디오를 다시 분석하지 않았다 | 곡 몇 개로 비트 시각을 뽑아 육안·청취 대조 |
-| G7 | `looks/movement.py` 경로가 곡 송신에서 왜 줄을 만들지 않는지 | 송신 결과(0줄)만 쟀고 코드 분기는 추적하지 않았다 | `song_cue_render.py`에서 `MovementPlan` 사용처 추적 |
+| ~~G7~~ | **해소** — 곡 렌더러가 `movement`를 넘기지 않고, `plan_movement`는 테스트에서만 불리며, `position_fx`는 대화 명령 처리기에서만 불린다(§2.1) | — | — |
+| G9 | `Master 3.n At BPM`을 곡 시퀀스 재생 중에 싣는 방법(큐 명령·매크로) | 문서·기록 모두 확인 안 함 | 공식 문서(큐 Command 열) 확인 또는 실기 |
 | G8 | R1 기준선 11/14의 큐 단위 대응 | 프리셋 호출 수(11)와 큐 수(14)만 셌고 큐별로 짝짓지 않았다 | 승인 요청 원문을 큐 경계로 나눠 집계 |
 
 ## 증거 목록

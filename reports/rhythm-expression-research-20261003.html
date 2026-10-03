@@ -60,7 +60,8 @@ svg text{font-family:var(--sans)}
 <li><b>곡 분석은 BPM 숫자 하나만 넘긴다.</b> 비트 시각은 계산한 뒤 버리고, 다운비트(마디의 첫 박)와 킥(베이스 드럼) 검출은 없습니다. <span class="tag m">잰 값</span></li>
 <li><b>콘솔은 BPM 동기를 기본 기능으로 갖고 있다.</b> 스피드 마스터(BPM 단위의 공용 속도 손잡이)를 페이저에 걸 수 있고, <code>Master 3.1 At BPM 75</code> 한 줄로 속도를 정합니다. <span class="tag d">문서</span></li>
 <li><b>우리 규칙과 감독 요구는 정면으로 부딪치지 않는다.</b> 규칙은 "룩을 얼마나 자주 바꾸나"를 정하고, 감독은 "룩 안의 움직임이 박자를 따르나"를 묻습니다. 이 축은 지금 규칙에 빈칸입니다.</li>
-<li><b>권고(감독 확정 전):</b> 룩 전환 간격은 그대로 두고, ⓐ 페이저 속도를 곡 BPM에 묶고, ⓑ 마디 경계의 강조를 원샷 레인으로 얹습니다. 큐를 마디마다 쪼개는 방식은 권하지 않습니다. <span class="tag i">추정</span></li>
+<li><b>새로 만들 것보다 연결할 것이 많다.</b> 속도 단위가 BPM이라는 것, <code>At SpeedMaster</code> 연결 문법, Pan/Tilt 무빙 페이저 문법(<code>server/spatial/position_fx.py</code>)은 이미 실기에서 확인됐습니다. 무빙 계획 함수(<code>plan_movement</code>)도 짜여 있습니다. 다만 어느 것도 곡 렌더러에 연결돼 있지 않습니다. <span class="tag m">잰 값</span></li>
+<li><b>권고(감독 확정 전):</b> 룩 전환 간격은 그대로 둡니다. 그 위에 ⓐ 스피드 마스터로 페이저 속도를 곡 BPM에 묶고, ⓑ 기존 무빙 경로를 곡 렌더러에 연결해 큐 안 움직임을 채우고, ⓒ 마디 경계의 강조를 원샷 레인으로 얹습니다. 큐를 마디마다 쪼개는 방식은 권하지 않습니다. <span class="tag i">추정</span></li>
 </ol>
 </div>
 
@@ -204,6 +205,8 @@ flowchart TD
 <li>배차 전제였던 "Wave CM Speed 30 고정"은 코드 근거가 없습니다. <code>Speed 30</code>은 옛 미리보기 증거(t225)에만 나옵니다. 콘솔에 저장된 실제 값은 재지 않았습니다(G1).</li>
 <li>FX 라이브러리(<code>server/fx</code>)는 고정 BPM(<code>At Speed</code>)과 스피드 마스터 연결(<code>At SpeedMaster</code>)을 이미 지원합니다(<code>instantiate.py:561-576</code>). 이 라이브러리를 import하는 파일은 6개지만, 곡 렌더러는 직접 import하지 않습니다.</li>
 <li>곡 BPM은 송신 지점(<code>song_cue_render.py:1328</code>)까지 이미 와 있습니다.</li>
+<li><b>실기 검증된 BPM 속도 무빙 페이저가 곡 렌더러 밖에 이미 있습니다.</b> <code>server/spatial/position_fx.py:145-177</code>은 Pan/Tilt에 <code>At Relative</code>·<code>At Phase</code>·<code>At Speed &lt;bpm&gt;</code>을 내고, 룰북의 "validated command building"(<code>31_choreography_patterns.md:61-73</code>)을 따릅니다. 하지만 대화 명령 처리기(<code>session.py:4952</code>)에서만 불립니다.</li>
+<li>곡 렌더러가 큐 묶음을 만드는 곳(<code>song_cue_render.py:1102</code>)은 <code>movement</code>를 넘기지 않습니다. 무빙 계획 함수 <code>plan_movement</code>는 테스트에서만 불립니다. 그래서 큐 안 Pan/Tilt 움직임이 0입니다.</li>
 </ul>
 <h3>MA3 공식 문서 <span class="tag d">문서</span></h3>
 <div class="wrap"><table>
@@ -212,12 +215,19 @@ flowchart TD
 <tr><td>16번 마스터는 오디오 입력에서 BPM을 자동으로 잡는다</td><td>같은 쪽</td></tr>
 <tr><td><code>Master 3.1 At BPM 75</code> · <code>At Speed BPM 5</code></td><td><a href="https://help.malighting.com/grandMA3/2.0/HTML/keyword_bpm.html">BPM Keyword</a></td></tr>
 </table></div>
+<h3>저장소의 과거 실기 기록 <span class="tag m">잰 값</span></h3>
+<ul>
+<li><b>단위 없는 <code>At Speed &lt;v&gt;</code>는 BPM입니다.</b> FXLIB <code>spec.md:64</code>(ASSUMPTION-38 GO, GUI 표시 판독). 룰북 70행은 "BPM/Hz/sec"를 함께 적어 두었는데, 이 실측으로 확정됐습니다.</li>
+<li><b><code>Attribute '&lt;a&gt;' At SpeedMaster &lt;n&gt;</code>으로 페이저를 마스터에 묶을 수 있습니다.</b> 마스터 BPM을 바꾸면 페이저가 실시간으로 따라옵니다. FXGEN <code>spec.md</code> §A.1 V3, 2026-08-15 실기.</li>
+<li>두 기록 모두 효과는 사람이 눈으로 확인한 것입니다. 그 뒤 쇼파일의 속도 표시 단위가 바뀌지 않았다는 전제가 붙습니다 <span class="tag i">추정</span>.</li>
+</ul>
 <h3>선택지</h3>
 <div class="wrap"><table>
 <tr><th></th><th>방식</th><th>장점</th><th>비용·위험</th></tr>
-<tr><td>A</td><td>페이저마다 고정 BPM</td><td>있는 송신문 재사용, 결정적</td><td>프리셋이 곡마다 늘어남, 단위 확인(G3)</td></tr>
-<tr><td><b>B (권고)</b></td><td>곡 시작 시 스피드 마스터 설정, 페이저는 마스터에 연결</td><td>프리셋 재사용, 현장 페이더 보정 가능</td><td>연결 문법 실기 확인(G2)</td></tr>
+<tr><td>A</td><td>페이저마다 고정 BPM</td><td>있는 송신문 재사용, 결정적, 단위 BPM 확인됨</td><td>프리셋이 곡마다 늘어남</td></tr>
+<tr><td><b>B (권고: 속도)</b></td><td>곡 시작 시 스피드 마스터 설정, 페이저는 <code>At SpeedMaster n</code>으로 연결</td><td>프리셋 재사용, 현장 페이더 보정 가능, 연결 문법 실기 확인됨</td><td>마스터 번호 규칙 필요, 재생 중 마스터 설정 방법 미확인(G9)</td></tr>
 <tr><td>C</td><td>16번 오디오 BPM 마스터</td><td>코드 작업 최소</td><td>오디오 배선 필요, 결과 재현 불가</td></tr>
+<tr><td><b>D (권고: 무빙)</b></td><td>기존 실기 검증 무빙 경로(<code>position_fx</code>·<code>plan_movement</code>)를 곡 렌더러에 연결</td><td>문법 검증 완료, <code>speed_bpm</code> 인자 있음, 큐 안 움직임 0을 채움</td><td><code>position_fx</code>는 별도 시퀀스 저장형이라 곡 큐 안에 싣도록 바꿔야 함. <code>plan_movement</code> 속도는 곡 BPM이 아니라 무드 대역</td></tr>
 </table></div>
 <div class="callout"><b>예를 들면 (권고 B)</b> — Club Diver를 시작할 때 <code>Master 3.2 At BPM 139.7</code>을 한 번 보내고, Wave CM 페이저를 마스터 2에 묶어 두면 색 파형이 곡 박자에 맞춰 돕니다. 후렴에서 배수를 2배로 올리면 "빠르게"도 표현할 수 있습니다. 아직 실기에서 확인하지 않은 설계 예시입니다 <span class="tag i">추정</span>.</div>
 
@@ -270,17 +280,18 @@ flowchart TD
 </ol>
 
 <h2 id="gap">안 잰 것</h2>
-<details><summary>빈칸 G1~G8 펼치기</summary>
+<details><summary>빈칸 펼치기 (남은 것 G1·G4·G5·G6·G8·G9)</summary>
 <div class="wrap"><table>
 <tr><th>번호</th><th>내용</th><th>메우는 법</th></tr>
 <tr><td>G1</td><td>콘솔에 저장된 페이저 프리셋의 실제 속도 값</td><td>콘솔 읽기 전용 조회</td></tr>
-<tr><td>G2</td><td>페이저를 스피드 마스터에 거는 정확한 문법</td><td>공식 문서 추가 탐색 또는 실기 읽기 전용 확인</td></tr>
-<tr><td>G3</td><td>단위 없는 <code>At Speed &lt;v&gt;</code>의 해석</td><td>실기 확인</td></tr>
+<tr><td><s>G2</s></td><td><b>해소</b> — <code>At SpeedMaster</code> 실기 확인(FXGEN V3)</td><td>—</td></tr>
+<tr><td><s>G3</s></td><td><b>해소</b> — 단위 BPM(FXLIB ASSUMPTION-38)</td><td>—</td></tr>
 <tr><td>G4</td><td>시퀀스당 큐 수·실행기 상한</td><td>공식 문서 쪽 직접 확인</td></tr>
 <tr><td>G5</td><td>BPM 검출 정확도</td><td>8곡 참값 대조</td></tr>
 <tr><td>G6</td><td>비트 시각의 품질</td><td>곡 몇 개로 뽑아 청취 대조</td></tr>
-<tr><td>G7</td><td><code>looks/movement.py</code> 경로가 곡 송신에서 줄을 안 만드는 원인</td><td>코드 분기 추적</td></tr>
+<tr><td><s>G7</s></td><td><b>해소</b> — 렌더러가 movement를 안 넘기고, <code>plan_movement</code>는 테스트에서만 불림</td><td>—</td></tr>
 <tr><td>G8</td><td>R1 기준선 11/14의 큐 단위 대응</td><td>명령 원문을 큐 경계로 나눠 집계</td></tr>
+<tr><td>G9</td><td>곡 재생 중 <code>Master 3.n At BPM</code>을 싣는 방법</td><td>공식 문서(큐 Command 열) 또는 실기</td></tr>
 </table></div>
 </details>
 
