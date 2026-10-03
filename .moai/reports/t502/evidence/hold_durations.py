@@ -9,7 +9,9 @@ import re
 import sys
 from pathlib import Path
 
-src = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).with_name("t501_postwrite_cue_props.txt"))
+src = Path(
+    sys.argv[1] if len(sys.argv) > 1 else Path(__file__).with_name("t501_postwrite_cue_props.txt")
+)
 rows: dict[str, list[tuple[float, str]]] = {}
 for m in re.finditer(r"<<< (\{.*\})", src.read_text()):
     d = json.loads(m.group(1))
