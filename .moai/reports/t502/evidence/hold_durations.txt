@@ -1,0 +1,33 @@
+== Sequence 212: cues=13
+     0.000  Intro              hold= 20.9s
+    20.939  Verse 1            hold= 12.6s
+    33.568  Verse 2            hold= 15.9s
+    49.515  Chorus 1           hold= 17.0s
+    66.517  Chorus 2           hold= 13.1s
+    79.595  Verse 3            hold= 26.8s
+   106.432  Chorus 3           hold= 16.6s
+   123.008  Chorus 4           hold= 15.6s
+   138.581  Chorus 5           hold= 27.8s
+   166.421  Verse 4            hold= 12.6s
+   179.061  Chorus 6           hold=  1.6s
+   180.640  Chorus 6 Return    hold= 28.5s
+   209.141  Finale             hold=(last, song end unknown)
+  holds n=12 max=28.5s median=16.6s >=20s=4 >=10s=11
+  verse holds: ['Verse 1=12.6s', 'Verse 2=15.9s', 'Verse 3=26.8s', 'Verse 4=12.6s']
+== Sequence 213: cues=14
+     0.000  Intro              hold= 13.1s
+    13.096  Chorus 1           hold= 10.3s
+    23.382  Bridge 1           hold=  7.5s
+    30.871  Chorus 2           hold=  9.6s
+    40.519  Chorus 3           hold= 17.1s
+    57.655  Chorus 4           hold=  6.9s
+    64.540  Chorus 5           hold= 10.3s
+    74.803  Verse 1            hold= 10.9s
+    85.740  Chorus 6           hold=  9.6s
+    95.388  Chorus 7           hold= 17.1s
+   112.512  Chorus 8           hold= 10.3s
+   122.810  Chorus 9           hold=  0.9s
+   123.669  Chorus 9 Return    hold= 12.9s
+   136.533  Finale             hold=(last, song end unknown)
+  holds n=13 max=17.1s median=10.3s >=20s=0 >=10s=8
+  verse holds: ['Verse 1=10.9s']

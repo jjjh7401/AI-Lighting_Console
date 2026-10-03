@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리듬 표현 조사</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFFFFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;
+--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Noto Sans KR",system-ui,-apple-system,sans-serif;--serif:"Noto Serif KR",ui-serif,Georgia,serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:860px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font:16px/1.7 var(--sans)}
+main{max-width:var(--max-width);margin:0 auto;padding:32px 16px 64px}
+h1,h2,h3{font-family:var(--serif);line-height:1.35}
+h1{font-size:30px;margin:0 0 6px}
+h2{font-size:22px;margin:44px 0 10px;padding-top:12px;border-top:var(--border)}
+h3{font-size:17px;margin:24px 0 8px}
+.meta{color:var(--g500);font-size:14px}
+.lead{background:var(--g100);border-left:4px solid var(--clay);padding:12px 16px;border-radius:var(--radius-row);margin:12px 0}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px 20px;margin:14px 0}
+.callout{background:#F6EFE6;border:1px solid var(--oat);border-radius:var(--radius-row);padding:10px 14px;margin:12px 0;font-size:15px}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;margin-right:4px;vertical-align:1px}
+.m{background:#E8EFDF;color:#4E6236}.d{background:#E6EEF6;color:#2F5A80}.i{background:#F6E6DF;color:var(--clay-d)}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14.5px;background:var(--paper)}
+th,td{border-bottom:1px solid var(--g300);padding:7px 8px;text-align:left;vertical-align:top}
+th{background:var(--g100);font-weight:700}
+.wrap{overflow-x:auto}
+code{font-family:var(--mono);font-size:13px;background:var(--g100);padding:1px 5px;border-radius:4px}
+ol li,ul li{margin:4px 0}
+nav.toc{font-size:14px;background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:10px 16px}
+nav.toc a,a{color:var(--clay-d)}
+details{background:var(--paper);border:var(--border);border-radius:var(--radius-row);padding:8px 14px;margin:8px 0}
+summary{cursor:pointer;font-weight:700}
+.pending{border:2px dashed var(--clay);border-radius:var(--radius-panel);padding:4px 16px 12px;background:#FFF8F4}
+.big{font-size:20px;font-weight:700;color:var(--clay-d)}
+svg{max-width:100%;height:auto}
+svg text{font-family:var(--sans)}
+@media print{nav.toc{display:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>리듬 표현 조사 보고서</h1>
+<div class="meta">카드 t502 · 2026-10-03 · 기준 트리 <code>origin/main 5220ca4e</code> · 읽기 전용(코드 수정 0, 콘솔 쓰기 0)</div>
+
+<p class="lead">감독이 SPEC-LDRENDER-001 실기 화면을 보고 1~2점(5점 만점)을 줬습니다. 「작동은 하지만 Verse 하나가 20~30초 동안 단조로운 동작 하나뿐이다. 리듬·비트에 따라 빠르고 다채롭게 움직여야 한다」는 이유였습니다. 이 보고서는 그 말이 실제 송신 데이터에서 무엇에 해당하는지 재고, 고칠 방법과 <b>합격 기준 초안</b>을 정리합니다.</p>
+
+<div class="callout"><span class="tag m">잰 값</span> 이번에 명령을 돌려 출력을 본 것 · <span class="tag d">문서</span> MA Lighting 공식 도움말에서 직접 확인한 것 · <span class="tag i">추정</span> 재지 않은 판단</div>
+
+<nav class="toc"><b>목차</b> — <a href="#sum">한눈에 보기</a> · <a href="#s0">0. 감독이 본 것</a> · <a href="#s1">① 곡 분석</a> · <a href="#s2">② 페이저 속도</a> · <a href="#s3">③ 큐 세분화</a> · <a href="#s4">④ 규칙 충돌</a> · <a href="#s5">⑤ 합격 기준 초안</a> · <a href="#dec">감독이 정할 것</a> · <a href="#gap">안 잰 것</a></nav>
+
+<h2 id="sum">한눈에 보기</h2>
+<div class="card">
+<ol>
+<li><b>룩이 오래 머무는 것보다, 한 룩 안에 박자가 없다는 점이 더 크다.</b> Rain(시퀀스 212)에는 페이저(phaser, 조명이 스스로 반복해서 움직이게 하는 효과)가 하나도 없습니다. Club Diver(213)는 14큐 중 9큐가 같은 색 파형 하나를 부르고, 속도 줄을 보내지 않습니다. 무빙 라이트는 큐가 바뀔 때만 위치를 옮깁니다. <span class="tag m">잰 값</span></li>
+<li><b>곡 분석은 BPM 숫자 하나만 넘긴다.</b> 비트 시각은 계산한 뒤 버리고, 다운비트(마디의 첫 박)와 킥(베이스 드럼) 검출은 없습니다. <span class="tag m">잰 값</span></li>
+<li><b>콘솔은 BPM 동기를 기본 기능으로 갖고 있다.</b> 스피드 마스터(BPM 단위의 공용 속도 손잡이)를 페이저에 걸 수 있고, <code>Master 3.1 At BPM 75</code> 한 줄로 속도를 정합니다. <span class="tag d">문서</span></li>
+<li><b>우리 규칙과 감독 요구는 정면으로 부딪치지 않는다.</b> 규칙은 "룩을 얼마나 자주 바꾸나"를 정하고, 감독은 "룩 안의 움직임이 박자를 따르나"를 묻습니다. 이 축은 지금 규칙에 빈칸입니다.</li>
+<li><b>권고(감독 확정 전):</b> 룩 전환 간격은 그대로 두고, ⓐ 페이저 속도를 곡 BPM에 묶고, ⓑ 마디 경계의 강조를 원샷 레인으로 얹습니다. 큐를 마디마다 쪼개는 방식은 권하지 않습니다. <span class="tag i">추정</span></li>
+</ol>
+</div>
+
+<h3>권고 구조 한 장 요약</h3>
+<pre class="mermaid">
+flowchart TD
+  A[곡 분석<br/>BPM · 비트 · 강조 시각] --> B[구간 큐<br/>룩 전환 · 4~8마디 유지]
+  A --> C[스피드 마스터<br/>Master 3.n At BPM 곡BPM]
+  C --> D[구간 큐 안 페이저<br/>박자에 맞춰 움직임]
+  B --> D
+  A --> E[원샷 레인<br/>히트·드롭 진입 강조]
+  D --> F[감독 화면]
+  E --> F
+</pre>
+<noscript><p>흐름: 곡 분석에서 세 갈래가 나온다. ① 구간 큐는 지금처럼 4~8마디마다 룩을 바꾼다. ② 곡 BPM으로 스피드 마스터를 맞추고, 구간 큐 안의 페이저가 그 마스터를 따라 박자에 맞춰 움직인다. ③ 원샷 레인이 히트와 드롭 진입 같은 순간 강조를 얹는다. 세 층이 합쳐져 감독 화면이 된다.</p></noscript>
+
+<h2 id="s0">0. 감독이 본 것 — 실측</h2>
+<p class="lead">"큐 유지 시간"은 한 큐가 켜진 뒤 다음 큐가 올 때까지의 초입니다. 이 시간이 길고 그 안에 움직임이 없으면 화면이 멈춰 보입니다. 콘솔에서 되읽은 트리거 시각으로 계산했습니다.</p>
+<p><span class="tag m">잰 값</span> <code>python3 .moai/reports/t502/evidence/hold_durations.py</code> (exit 0) — 출력 원문 <code>.moai/reports/t502/evidence/hold_durations.txt</code></p>
+
+<div class="card"><b>시퀀스 212 · Rain (76 BPM)</b> — 점선은 8마디(약 25.3초)
+<svg viewBox="0 0 640 294" role="img" aria-label="큐 유지 시간 막대 그래프">
+<text x="122" y="16" font-size="12" text-anchor="end" fill="#3D3D3A">Intro</text>
+<rect x="130" y="4" width="320.5" height="16" rx="3" fill="#788C5D"/>
+<text x="455.5" y="16" font-size="11" fill="#3D3D3A">20.9초</text>
+<text x="122" y="38" font-size="12" text-anchor="end" fill="#3D3D3A">Verse 1</text>
+<rect x="130" y="26" width="193.2" height="16" rx="3" fill="#788C5D"/>
+<text x="328.2" y="38" font-size="11" fill="#3D3D3A">12.6초</text>
+<text x="122" y="60" font-size="12" text-anchor="end" fill="#3D3D3A">Verse 2</text>
+<rect x="130" y="48" width="243.8" height="16" rx="3" fill="#788C5D"/>
+<text x="378.8" y="60" font-size="11" fill="#3D3D3A">15.9초</text>
+<text x="122" y="82" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 1</text>
+<rect x="130" y="70" width="260.7" height="16" rx="3" fill="#788C5D"/>
+<text x="395.7" y="82" font-size="11" fill="#3D3D3A">17.0초</text>
+<text x="122" y="104" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 2</text>
+<rect x="130" y="92" width="200.9" height="16" rx="3" fill="#788C5D"/>
+<text x="335.9" y="104" font-size="11" fill="#3D3D3A">13.1초</text>
+<text x="122" y="126" font-size="12" text-anchor="end" fill="#3D3D3A">Verse 3</text>
+<rect x="130" y="114" width="410.9" height="16" rx="3" fill="#D97757"/>
+<text x="545.9" y="126" font-size="11" fill="#3D3D3A">26.8초</text>
+<text x="122" y="148" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 3</text>
+<rect x="130" y="136" width="254.5" height="16" rx="3" fill="#788C5D"/>
+<text x="389.5" y="148" font-size="11" fill="#3D3D3A">16.6초</text>
+<text x="122" y="170" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 4</text>
+<rect x="130" y="158" width="239.2" height="16" rx="3" fill="#788C5D"/>
+<text x="374.2" y="170" font-size="11" fill="#3D3D3A">15.6초</text>
+<text x="122" y="192" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 5</text>
+<rect x="130" y="180" width="426.3" height="16" rx="3" fill="#D97757"/>
+<text x="561.3" y="192" font-size="11" fill="#3D3D3A">27.8초</text>
+<text x="122" y="214" font-size="12" text-anchor="end" fill="#3D3D3A">Verse 4</text>
+<rect x="130" y="202" width="193.2" height="16" rx="3" fill="#788C5D"/>
+<text x="328.2" y="214" font-size="11" fill="#3D3D3A">12.6초</text>
+<text x="122" y="236" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 6</text>
+<rect x="130" y="224" width="24.5" height="16" rx="3" fill="#788C5D"/>
+<text x="159.5" y="236" font-size="11" fill="#3D3D3A">1.6초</text>
+<text x="122" y="258" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 6 Return</text>
+<rect x="130" y="246" width="437.0" height="16" rx="3" fill="#D97757"/>
+<text x="572.0" y="258" font-size="11" fill="#3D3D3A">28.5초</text>
+<line x1="517.3" y1="0" x2="517.3" y2="264" stroke="#141413" stroke-dasharray="4 3"/>
+<text x="130.0" y="282" font-size="11" fill="#87867F" text-anchor="middle">0초</text>
+<text x="283.3" y="282" font-size="11" fill="#87867F" text-anchor="middle">10초</text>
+<text x="436.7" y="282" font-size="11" fill="#87867F" text-anchor="middle">20초</text>
+<text x="590.0" y="282" font-size="11" fill="#87867F" text-anchor="middle">30초</text>
+</svg>
+</div>
+<div class="card"><b>시퀀스 213 · Club Diver (139.7 BPM)</b> — 점선은 8마디(약 13.7초)
+<svg viewBox="0 0 640 316" role="img" aria-label="큐 유지 시간 막대 그래프">
+<text x="122" y="16" font-size="12" text-anchor="end" fill="#3D3D3A">Intro</text>
+<rect x="130" y="4" width="200.9" height="16" rx="3" fill="#788C5D"/>
+<text x="335.9" y="16" font-size="11" fill="#3D3D3A">13.1초</text>
+<text x="122" y="38" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 1</text>
+<rect x="130" y="26" width="157.9" height="16" rx="3" fill="#788C5D"/>
+<text x="292.9" y="38" font-size="11" fill="#3D3D3A">10.3초</text>
+<text x="122" y="60" font-size="12" text-anchor="end" fill="#3D3D3A">Bridge 1</text>
+<rect x="130" y="48" width="115.0" height="16" rx="3" fill="#788C5D"/>
+<text x="250.0" y="60" font-size="11" fill="#3D3D3A">7.5초</text>
+<text x="122" y="82" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 2</text>
+<rect x="130" y="70" width="147.2" height="16" rx="3" fill="#788C5D"/>
+<text x="282.2" y="82" font-size="11" fill="#3D3D3A">9.6초</text>
+<text x="122" y="104" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 3</text>
+<rect x="130" y="92" width="262.2" height="16" rx="3" fill="#D97757"/>
+<text x="397.2" y="104" font-size="11" fill="#3D3D3A">17.1초</text>
+<text x="122" y="126" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 4</text>
+<rect x="130" y="114" width="105.8" height="16" rx="3" fill="#788C5D"/>
+<text x="240.8" y="126" font-size="11" fill="#3D3D3A">6.9초</text>
+<text x="122" y="148" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 5</text>
+<rect x="130" y="136" width="157.9" height="16" rx="3" fill="#788C5D"/>
+<text x="292.9" y="148" font-size="11" fill="#3D3D3A">10.3초</text>
+<text x="122" y="170" font-size="12" text-anchor="end" fill="#3D3D3A">Verse 1</text>
+<rect x="130" y="158" width="167.1" height="16" rx="3" fill="#788C5D"/>
+<text x="302.1" y="170" font-size="11" fill="#3D3D3A">10.9초</text>
+<text x="122" y="192" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 6</text>
+<rect x="130" y="180" width="147.2" height="16" rx="3" fill="#788C5D"/>
+<text x="282.2" y="192" font-size="11" fill="#3D3D3A">9.6초</text>
+<text x="122" y="214" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 7</text>
+<rect x="130" y="202" width="262.2" height="16" rx="3" fill="#D97757"/>
+<text x="397.2" y="214" font-size="11" fill="#3D3D3A">17.1초</text>
+<text x="122" y="236" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 8</text>
+<rect x="130" y="224" width="157.9" height="16" rx="3" fill="#788C5D"/>
+<text x="292.9" y="236" font-size="11" fill="#3D3D3A">10.3초</text>
+<text x="122" y="258" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 9</text>
+<rect x="130" y="246" width="13.8" height="16" rx="3" fill="#788C5D"/>
+<text x="148.8" y="258" font-size="11" fill="#3D3D3A">0.9초</text>
+<text x="122" y="280" font-size="12" text-anchor="end" fill="#3D3D3A">Chorus 9 Return</text>
+<rect x="130" y="268" width="197.8" height="16" rx="3" fill="#788C5D"/>
+<text x="332.8" y="280" font-size="11" fill="#3D3D3A">12.9초</text>
+<line x1="340.8" y1="0" x2="340.8" y2="286" stroke="#141413" stroke-dasharray="4 3"/>
+<text x="130.0" y="304" font-size="11" fill="#87867F" text-anchor="middle">0초</text>
+<text x="283.3" y="304" font-size="11" fill="#87867F" text-anchor="middle">10초</text>
+<text x="436.7" y="304" font-size="11" fill="#87867F" text-anchor="middle">20초</text>
+<text x="590.0" y="304" font-size="11" fill="#87867F" text-anchor="middle">30초</text>
+</svg>
+</div>
+
+<div class="wrap"><table>
+<tr><th>시퀀스</th><th>큐</th><th>최대</th><th>중앙값</th><th>20초 이상</th><th>페이저 호출</th><th>속도 줄</th><th>위치 프리셋 호출</th><th>큐 안 Pan/Tilt 움직임</th></tr>
+<tr><td>212 Rain</td><td>13</td><td>28.5초</td><td>16.6초</td><td>4</td><td><b>0</b></td><td>0</td><td>12</td><td>0</td></tr>
+<tr><td>213 Club Diver</td><td>14</td><td>17.1초</td><td>10.3초</td><td>0</td><td>11 (Wave CM ×9)</td><td>0</td><td>13</td><td>0</td></tr>
+</table></div>
+
+<div class="callout"><b>예를 들면</b> — Rain의 Verse 3은 79.6초에 켜져 106.4초까지 26.8초 동안 이어집니다. 그동안 색은 고정이고 페이저도 없습니다. 무빙 라이트는 큐가 켜질 때 위치 프리셋 하나로 이동한 뒤 그 자리에 멈춰 있습니다. 감독이 말한 "20~30초 단조로움"이 바로 이 장면입니다.</div>
+
+<h2 id="s1">① 곡 분석이 비트·다운비트·킥 위치를 이미 내는가</h2>
+<p class="lead">조명을 박자에 맞추려면 "박이 언제 오는가"를 알아야 합니다. 분석기는 그 정보를 잠깐 계산하지만 결과에 담지 않습니다.</p>
+<div class="wrap"><table>
+<tr><th>항목</th><th>만든다</th><th>저장한다</th><th>렌더러가 쓴다</th><th>근거</th></tr>
+<tr><td>BPM(곡 전체 1개)</td><td>O</td><td>O</td><td>O</td><td><code>server/audio/analyze.py:381</code> → <code>song_cue_render.py:1328</code></td></tr>
+<tr><td>비트 시각</td><td>계산만</td><td>X</td><td>X</td><td><code>analyze.py:352-354</code>, 결과 구조(207~215행)에 필드 없음</td></tr>
+<tr><td>온셋(소리가 터지는 순간)</td><td>O</td><td>X</td><td>X</td><td><code>analyze.py:213</code></td></tr>
+<tr><td>다운비트</td><td>X</td><td>X</td><td>X</td><td><code>grep -rln "downbeat" server</code> → 0건</td></tr>
+<tr><td>킥</td><td>X</td><td>X</td><td>X</td><td>일반 온셋 검출만 있음(librosa)</td></tr>
+</table></div>
+<p>저장된 캐시의 키는 <code>sha256, bpm, bpm_source, sections</code> 네 개뿐입니다 <span class="tag m">잰 값</span>. 비트 시각을 흘려보내는 배관은 작은 일이고, 다운비트·킥 검출은 새로 만들어야 합니다.</p>
+<div class="callout">Rain의 측정 BPM은 76.01입니다. 템포 검출은 절반이나 두 배를 잘못 잡는 일이 흔해서, 실제로는 152 BPM일 수도 있습니다 <span class="tag i">추정</span>. 속도를 BPM에 묶으면 이 오차가 화면에 그대로 드러나므로 참값 대조(R5)가 필요합니다.</div>
+
+<h2 id="s2">② 페이저 속도를 곡 BPM에 맞출 수 있는가</h2>
+<p class="lead">가능합니다. 콘솔도, 우리 FX 라이브러리도 속도를 다룰 줄 압니다. 곡 송신 경로에만 연결이 빠져 있습니다.</p>
+<h3>코드 <span class="tag m">잰 값</span></h3>
+<ul>
+<li>곡 송신 경로의 페이저 빌더(<code>server/web/session.py</code>)는 <code>At Accel/Decel/Transition/Phase</code>만 보내고 <code>At Speed</code>는 보내지 않습니다. 카탈로그(<code>server/design/phaser_catalog.py:21</code>)에도 속도 칸이 없습니다.</li>
+<li>배차 전제였던 "Wave CM Speed 30 고정"은 코드 근거가 없습니다. <code>Speed 30</code>은 옛 미리보기 증거(t225)에만 나옵니다. 콘솔에 저장된 실제 값은 재지 않았습니다(G1).</li>
+<li>FX 라이브러리(<code>server/fx</code>)는 고정 BPM(<code>At Speed</code>)과 스피드 마스터 연결(<code>At SpeedMaster</code>)을 이미 지원합니다(<code>instantiate.py:561-576</code>). 이 라이브러리를 import하는 파일은 6개지만, 곡 렌더러는 직접 import하지 않습니다.</li>
+<li>곡 BPM은 송신 지점(<code>song_cue_render.py:1328</code>)까지 이미 와 있습니다.</li>
+</ul>
+<h3>MA3 공식 문서 <span class="tag d">문서</span></h3>
+<div class="wrap"><table>
+<tr><th>사실</th><th>출처</th></tr>
+<tr><td>스피드 마스터는 0~225 BPM, 16개. 시퀀스·큐·프리셋·페이저 등에 걸 수 있다</td><td><a href="https://help.malighting.com/grandMA3/2.4/HTML/masters_speed.html">Speed Masters</a></td></tr>
+<tr><td>16번 마스터는 오디오 입력에서 BPM을 자동으로 잡는다</td><td>같은 쪽</td></tr>
+<tr><td><code>Master 3.1 At BPM 75</code> · <code>At Speed BPM 5</code></td><td><a href="https://help.malighting.com/grandMA3/2.0/HTML/keyword_bpm.html">BPM Keyword</a></td></tr>
+</table></div>
+<h3>선택지</h3>
+<div class="wrap"><table>
+<tr><th></th><th>방식</th><th>장점</th><th>비용·위험</th></tr>
+<tr><td>A</td><td>페이저마다 고정 BPM</td><td>있는 송신문 재사용, 결정적</td><td>프리셋이 곡마다 늘어남, 단위 확인(G3)</td></tr>
+<tr><td><b>B (권고)</b></td><td>곡 시작 시 스피드 마스터 설정, 페이저는 마스터에 연결</td><td>프리셋 재사용, 현장 페이더 보정 가능</td><td>연결 문법 실기 확인(G2)</td></tr>
+<tr><td>C</td><td>16번 오디오 BPM 마스터</td><td>코드 작업 최소</td><td>오디오 배선 필요, 결과 재현 불가</td></tr>
+</table></div>
+<div class="callout"><b>예를 들면 (권고 B)</b> — Club Diver를 시작할 때 <code>Master 3.2 At BPM 139.7</code>을 한 번 보내고, Wave CM 페이저를 마스터 2에 묶어 두면 색 파형이 곡 박자에 맞춰 돕니다. 후렴에서 배수를 2배로 올리면 "빠르게"도 표현할 수 있습니다. 아직 실기에서 확인하지 않은 설계 예시입니다 <span class="tag i">추정</span>.</div>
+
+<h2 id="s3">③ 큐를 어떻게 쪼갤 것인가</h2>
+<p class="lead">"박자마다 큐를 하나씩"은 직관적이지만 큐 시트가 수백 줄이 됩니다. 아래는 128 BPM, 3분 30초 곡으로 계산한 비교입니다(1박 0.469초, 1마디 1.875초).</p>
+<div class="wrap"><table>
+<tr><th></th><th>(1) 마디·박 단위 큐</th><th>(2) 원샷 레인 (REQ-040)</th><th>(3) 타임코드 이벤트</th></tr>
+<tr><td>큐 수</td><td>마디 ≈ 112 · 박 ≈ 448 (지금 10~45)</td><td>시퀀스 큐 그대로, 강조 수만 추가</td><td>시퀀스 큐 그대로</td></tr>
+<tr><td>우리 규칙</td><td>REQ-036이 금지한 기계적 분할</td><td>이미 설계됨, 콘솔 송신만 비어 있음</td><td>송신 경계(<code>emit.py:51</code>)가 timecode를 거부함</td></tr>
+<tr><td>조작자 편집</td><td>가장 어렵다</td><td>쉽다</td><td>중간</td></tr>
+<tr><td>작업량 <span class="tag i">추정</span></td><td>작다</td><td>중간</td><td>크다</td></tr>
+</table></div>
+<p>MA3에는 소리 입력의 박자로 큐를 넘기는 <b>BPM 트리거</b>도 있습니다 <span class="tag d">문서</span> (<a href="https://help.malighting.com/grandMA3/2.2/HTML/cue_sequence_sheet.html">Sequence Sheet</a>). 다만 현장 오디오에 의존해서 결과를 재현할 수 없습니다. 지금 212·213 큐는 전부 <code>Time</code> 트리거입니다 <span class="tag m">잰 값</span>.</p>
+
+<h2 id="s4">④ 저장소 정본 §9 · REQ-036과 감독 요구의 충돌</h2>
+<p class="lead">규칙 원문은 직접 대조했습니다. 결론은 "충돌이 아니라 빈칸"입니다.</p>
+<div class="wrap"><table>
+<tr><th>조항</th><th>내용</th><th>판정</th></tr>
+<tr><td>표준 §9 (312행)</td><td>"발사 지점은 비트마다가 아니라 프레이즈 단위 4~8마디마다"</td><td>겉보기 충돌 — 룩 전환 축이다. 단, Rain Verse 3(약 8.5마디)은 이 상한도 넘는다</td></tr>
+<tr><td>REQ-036 (212행)</td><td>마디 수로 기계적으로 나누지 말 것</td><td>충돌 아님 — 구간 안 움직임은 정하지 않았다</td></tr>
+<tr><td>REQ-040 (216행)</td><td>원샷은 별도 레인, 밀도 게이트 밖</td><td>충돌 아님 — 오히려 해법의 자리</td></tr>
+<tr><td>표준 §10.3</td><td>"스트로브는 BPM 카운터가 아니다", 4Hz 상한</td><td>좁은 범위의 실제 충돌 가능성 — 박마다 번쩍임을 원하면</td></tr>
+<tr><td>(없음)</td><td>움직임 속도와 BPM의 관계</td><td><b>진짜 빈칸</b></td></tr>
+</table></div>
+
+<h2 id="s5">⑤ 측정 가능한 합격 기준 초안</h2>
+<div class="pending">
+<p class="big">감독 확정 대기</p>
+<p>아래 숫자는 전부 초안입니다. 감독이 정하기 전에는 SPEC에 옮기지 않습니다. 기준선은 이번에 잰 212·213 값입니다.</p>
+<div class="wrap"><table>
+<tr><th>번호</th><th>기준</th><th>재는 법</th><th>기준선</th><th>초안 목표</th></tr>
+<tr><td>R1</td><td>점등 구간 큐마다 움직임이 있다</td><td>페이저가 실린 큐의 비율</td><td>212: 0/13 · 213: 11/14</td><td>100% + 같은 페이저 연속 반복 상한</td></tr>
+<tr><td>R2</td><td>움직임이 곡 BPM에 묶인다</td><td>속도가 BPM의 ¼·½·1·2배이거나 BPM 마스터에 묶인 페이저 비율</td><td>0%</td><td>90% 이상</td></tr>
+<tr><td>R3</td><td>변화 없는 시간의 상한</td><td>이벤트가 하나도 없는 가장 긴 구간(마디)</td><td>212 약 9마디 · 213 약 10마디</td><td>8마디 이하</td></tr>
+<tr><td>R4</td><td>강조 밀도</td><td>Chorus·Drop의 4마디당 원샷 수</td><td>0</td><td>1 이상</td></tr>
+<tr><td>R5</td><td>BPM 오검출 가드</td><td>참값 대비 절반·두 배 오류 곡 수</td><td>안 잼</td><td>0곡</td></tr>
+<tr><td>R6</td><td>사람 판정</td><td>감독 육안 판정</td><td>1~2점</td><td>3점 이상</td></tr>
+</table></div>
+<p>R1·R2는 송신 명령만으로 오프라인에서 잴 수 있습니다. R3·R4는 렌더 시각표, R5는 참값 표가 필요합니다. R6은 사람만 판정할 수 있습니다.</p>
+</div>
+
+<h2 id="dec">감독이 정할 것</h2>
+<ol>
+<li>"리듬과 비트에 따라"는 (가) 룩을 더 자주 바꾸기, (나) 룩 안 움직임이 박자를 따르기, (다) 둘 다 중 무엇에 가까운가.</li>
+<li>(가)가 들어간다면 §9의 4~8마디 간격을 올릴지, 원샷 강조로만 채울지.</li>
+<li>스트로브·디머 번쩍임을 박자 표현에 넣을지. 넣으면 §10.3에 예외를 둬야 한다.</li>
+<li>속도 기준을 곡 분석 BPM(재현 가능)으로 할지, 콘솔 오디오 BPM(현장 적응, 재현 불가)으로 할지.</li>
+<li>R1~R6의 목표 숫자, 그리고 R3에서 BPM 동기 페이저를 "변화"로 칠지.</li>
+<li>SPEC-LDRENDER-001을 연장할지, 리듬 SPEC을 새로 열지.</li>
+</ol>
+
+<h2 id="gap">안 잰 것</h2>
+<details><summary>빈칸 G1~G8 펼치기</summary>
+<div class="wrap"><table>
+<tr><th>번호</th><th>내용</th><th>메우는 법</th></tr>
+<tr><td>G1</td><td>콘솔에 저장된 페이저 프리셋의 실제 속도 값</td><td>콘솔 읽기 전용 조회</td></tr>
+<tr><td>G2</td><td>페이저를 스피드 마스터에 거는 정확한 문법</td><td>공식 문서 추가 탐색 또는 실기 읽기 전용 확인</td></tr>
+<tr><td>G3</td><td>단위 없는 <code>At Speed &lt;v&gt;</code>의 해석</td><td>실기 확인</td></tr>
+<tr><td>G4</td><td>시퀀스당 큐 수·실행기 상한</td><td>공식 문서 쪽 직접 확인</td></tr>
+<tr><td>G5</td><td>BPM 검출 정확도</td><td>8곡 참값 대조</td></tr>
+<tr><td>G6</td><td>비트 시각의 품질</td><td>곡 몇 개로 뽑아 청취 대조</td></tr>
+<tr><td>G7</td><td><code>looks/movement.py</code> 경로가 곡 송신에서 줄을 안 만드는 원인</td><td>코드 분기 추적</td></tr>
+<tr><td>G8</td><td>R1 기준선 11/14의 큐 단위 대응</td><td>명령 원문을 큐 경계로 나눠 집계</td></tr>
+</table></div>
+</details>
+
+<h2>직접 확인해 볼 것</h2>
+<ul>
+<li>콘솔에서 <code>Go+ Sequence 212</code>를 틀고 Verse 3(79.6초부터)에서 무빙 라이트와 색이 26.8초 동안 그대로인지 봅니다.</li>
+<li>증거 원본: <code>.moai/reports/t502/evidence/</code> · 측정 기록: <code>.moai/reports/t502/verdict.md</code></li>
+</ul>
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body>
+</html>
