@@ -2095,4 +2095,62 @@ Club Diver → 시퀀스 213·타임코드 13. sync 는 실기 판정 뒤. 증�
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<sync-phase 대기>_
+**status 결정: `implemented`(NOT `completed`)** — acceptance.md Definition of Done
+1행("REQ-001~016 전부 구현 + 위 AC 전부 PASS(사람 판정 AC-016 은 실기 세션 일정에
+따름 — plan-phase 종료 조건이 아니라 **run-phase 종료 조건**)")이 AC-016(사람
+판정) 을 run-phase 의 종료 조건으로 명시한다. AC-016 은 감독 육안 판정 **1~2점
+/5점(통과선 3점, 2026-10-03)** 으로 **FAIL** 이다 — DoD 1행은 성립하지 않는다.
+status enum(`draft/planned/in-progress/implemented/completed/superseded/
+archived/rejected`) 에는 "완료+후속 이월" 중간값이 없다. 리드의 종결 메시지
+("구조 복원 · 실기 감독 판정 1~2점 미달 · 리듬은 t502") 는 **종결을 승인하는
+메시지가 아니라 다음 담당(이 sync 세션)에게 판단을 넘기는 메시지**로 읽었다 —
+DoD 1행이 명시적으로 run-phase 종료 조건을 사람 판정에 매어 둔 이상, 그 조건이
+FAIL 인 채로 `completed` 를 선언하면 "AC 전부 PASS" 라는 완료 선언이 거짓이
+된다(`verification-claim-integrity.md` §1.1 surface 1, 자기보고 오염). 구조
+복원 자체(AC-001~015, 기계 판정 8곡 전부 PASS)는 완결됐고 그 사실은 아래 AC
+테이블과 sync.md 에 그대로 남긴다 — 다만 SPEC 전체의 상태 값은 미달 조건이
+있는 그대로 `implemented` 로 둔다. 후속 리듬 SPEC(카드 t502)이 AC-016 을
+재시도할 책임을 받는다; 이 SPEC 을 재오픈하지 않고 **새 SPEC**으로 분리한
+것은 리드의 명시 결정(진행 범위: 구조 복원 — 음악적 리듬 표현은 설계 의도에
+없던 축)이다.
+
+**sync_commit_sha: pending-backfill**(이 커밋 자신 — 자기참조 placeholder,
+`git log -1 --format=%H` 로 실제 값 확인)
+
+**AC 탈리 (acceptance.md SSOT, 16개, 기계 판정 §E.2 각 마일스톤 절 인용)**
+
+| AC | 판정 | 근거 |
+|---|---|---|
+| AC-LDRENDER-001 | PASS | M7 Part B, 8곡 전부 LIT<3 위반 0/120 큐(`measure_m7_dsp_8songs.py`) |
+| AC-LDRENDER-002 | PASS | M2, "다섯 조건 전부 성립"(progress.md:233) |
+| AC-LDRENDER-003 | PASS | M3, 단일 레이어 리그 바이트 동일(progress.md:433 절, `ac003_byte_diff.py`) |
+| AC-LDRENDER-004 | PASS | M4+M7 재측정, 8곡 전부 색 2~3종·색변화 1회 이상(M7 Part B 표) |
+| AC-LDRENDER-005 | PASS | M4, `test_song_cue_color_emission.py`/`test_song_cue_white_preset_t453.py` 회귀 재사용 |
+| AC-LDRENDER-006 | PASS(디머 축만, 명시 축소) | M5 완료(결정 g), `measure_m5_a_non_accent_zero.json` 8곡 위반 0건 — **색·포지션·페이저 축은 미검증**(acceptance.md 자체가 이 범위 축소를 승인, 2026-10-03 HISTORY) |
+| AC-LDRENDER-007 | PASS | M7 Part B, 액센트 상승 8/8(`measure_m7_dsp_8songs.py`) |
+| AC-LDRENDER-008 | PASS | M6 §1, `fx.permitted` 원인을 "잰 값" 등급으로 확정(가짜 콘솔 경로 부재, 코드 판독+실측 인용) |
+| AC-LDRENDER-009 | PASS(기계 증거만) | M7 Part B, fx 요청곡 7/8 전부 송신≥1줄(Rain 은 요청 0건 n/a) — 효과가 무대에서 실제로 보이는지의 실기 육안 확인은 M7 §Gaps 가 명시한 대로 미수행 |
+| AC-LDRENDER-010 | PASS | M6c, `test_phaser_pregen.py`/`test_phaser_pregen_wiring.py` + 실기 Store 확인(`m6c_send_run1/result.json`) |
+| AC-LDRENDER-011 | PASS | M6 §4, `test_fx_report_counts_t501_m6.py`(8개) |
+| AC-LDRENDER-012 | PASS | M7 Part A, `test_gate_layer_count_matches_an_independent_ac001_recount` 교차검증 |
+| AC-LDRENDER-013 | PASS | M7 Part A, `test_rain_before_fix_warns_on_all_three_axes`(progress.md:51) |
+| AC-LDRENDER-014 | PASS | M7 Part A, `test_palette_mode_na_skips_color_count_check`(progress.md:53) |
+| AC-LDRENDER-015 | 불기록(unrecorded) | M7 §Gaps 가 t498 재현 스크립트 재실행을 명시하지 않음 — 전체 pytest 회귀(+17, 0 regressed)는 AC-015 의 대체 증거가 아니라 일반 회귀 증거다. **발명하지 않고 미기록으로 둔다** |
+| AC-LDRENDER-016 | **FAIL** | 감독 육안 판정 1~2점/5점(통과선 3, 2026-10-03) — progress.md "AC-016 실기 준비·쓰기" 절 |
+
+**b12_self_test_a/b/c**: (a) `grep -c LDRENDER CHANGELOG.md` 사전 실행 결과
+0 — 중복 없음 확인 후 CHANGELOG 추가. (b) `grep -oE 'AC-([A-Z0-9]+-)*[0-9]+'
+acceptance.md | sort -u | wc -l` → 32줄(짧은형 `AC-001`~`AC-016` 16개 +
+긴형 `AC-LDRENDER-001`~`AC-LDRENDER-016` 16개, 같은 16개 AC 를 본문/헤딩에서
+이중 표기) — distinct AC **개수는 16**, 위 탈리 표가 16행과 일치. (c) 파일
+경로 전부 `ls` 로 확인(CHANGELOG.md, 본 progress.md, `.moai/reports/t501/sync.md`).
+
+**changelog_entry_position**: `## [Unreleased]` → `### Added` 절, 최상단
+(가장 최근 추가).
+
+**frontmatter_status_transitions.spec_md**: `in-progress` → `implemented`
+(DoD 미충족, AC-016 FAIL — `completed` 로 전이하지 않음). `updated:
+2026-10-03`.
+
+**canary_compliance_check**: 해당 없음 — 이 SPEC 은 전향적 정책을 정의하지
+않는다.

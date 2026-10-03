@@ -2,7 +2,7 @@
 id: SPEC-LDRENDER-001
 title: "송신 층 연출 복원 — 층별 렌더링"
 version: "0.2.0"
-status: in-progress
+status: implemented
 created: 2026-10-01
 updated: 2026-10-03
 author: jaihyun
