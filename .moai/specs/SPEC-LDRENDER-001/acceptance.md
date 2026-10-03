@@ -39,12 +39,14 @@
 - **Then** `modulate` 경로는 이 SPEC 적용 전후 바이트 동일하고(단, 보조색 줄이 **추가**되는 것은 의도된 변화이므로 "값 줄 추가분 제외하고 바이트 동일" 기준으로 비교), `single`/`per_chorus` 는 `_section_palette_choice` 가 낸 값을 그대로 옮긴 결과와 일치한다
 - **측정**: `uv run pytest server/tests/test_song_cue_color_emission.py server/tests/test_song_cue_white_preset_t453.py -q`(SPEC-COPILOT-COLORMODE-001 회귀 스위트 포함)
 
-## AC-LDRENDER-006 — 효과 기구가 비액센트 큐의 모든 값 줄(디머·색·포지션·페이저)에서 빠진다 [REQ-LDRENDER-007]
+## AC-LDRENDER-006 — 효과 기구의 디머가 비액센트 큐에서 그룹 주소로 0 처리된다(리드 결정 g, outcome-equivalent — 디머 축만) [REQ-LDRENDER-007]
 
-- **Given** BLIND/STROBE/HAZE 역할(`effect`)이 해석된 층 매핑
-- **When** 비액센트 구간 큐가 공유하는 `fids` 선택과, 그 `fids` 로부터 파생되는 **4종 값 줄 전부**(전체 기구 디머, `_song_color_value_lines` 의 색 줄, `position_cue_bundle` 의 포지션 프리셋 줄, `_phaser_cue_value_lines` 의 페이저 recall 줄)를 각각 검사하면
-- **Then** 4종 값 줄 전부에서 그 선택 집합에 `effect` 역할 그룹의 기구가 포함되지 않는다(8곡 전부 — 현재 86대 전체 묶음에 효과 기구가 끼어 있는 P3′ 위반이 해소됨; 디머 줄만 좁히고 색/포지션/페이저 줄이 여전히 effect 기구를 겨냥하는 상태는 FAIL)
-- **측정**: 제품화 게이트의 "비액센트 큐 4종 값 줄의 `fids` ∩ effect 그룹 = ∅" 산출(각 값 줄 종류별로 개별 assert) + `uv run pytest server/tests/test_layer_mapping_effect_role.py server/tests/test_song_cue_color_emission.py -q`(새 테스트 케이스로 색/포지션/페이저 라인의 effect 제외를 추가 단언)
+> **리드 결정 (g)(2026-10-01) 반영 — spec.md REQ-007 의 outcome-equivalent 전환에 맞춘 범위 축소.** 원래 문면("4종 값 줄 전부에서 effect 기구가 빠진다")은 공유 `fids` 자체에서의 fid 수준 뺄셈을 전제했으나, 그 경로는 그룹 멤버십 판독 수단 부재로 구현 불가로 확정됐다(progress.md §M5 블로커). 이 AC 는 실제 구현(그룹 주소 override, 디머만 0)이 실제로 보장하는 것만 PASS 조건으로 삼는다 — 색·포지션·페이저 축은 **미검증**으로 명시(아래 Then 끝 문장).
+
+- **Given** BLIND/STROBE/HAZE 역할(`effect`)이 해석된 층 매핑, 비액센트 구간 큐의 송신 명령 목록(`reviewed_song_commands` 출력)
+- **When** 그 명령 목록에서 (1) 전체 기구 디머 줄 뒤에 오는 역할 디머 줄 구간을 펼치고, (2) `_song_color_value_lines`/`position_cue_bundle`/`_phaser_cue_value_lines` 가 겨냥하는 공유 `fids` 선택을 각각 검사하면
+- **Then** (1) effect 역할로 매핑된 **모든** 콘솔 그룹 번호(`_effect_group_numbers`)에 대해 `Group <n> ; Attribute 'Dimmer' At 0` 줄이 비액센트 큐마다 정확히 한 번 존재한다(액센트 큐는 그 액센트가 겨냥하는 그룹만 제외, 복귀 큐는 복귀-0 중복 방지로 같은 그룹을 제외 — 둘 다 PASS 조건의 일부다, 중복 문자열이 나면 FAIL), (2) HAZE 그룹도 포함된다(Dimmer 애트리뷰트가 없어 무해, Block/Release 안전 큐와 충돌 없음 확인됨). **디머 축 밖은 이 AC 의 PASS 조건이 아니다** — 색·포지션·페이저 줄이 겨냥하는 공유 `fids` 는 여전히 effect 기구를 포함한 86대 전체일 수 있으며, 이것은 이 AC 의 결함이 아니라 REQ-007 의 명시된 범위 밖 잔여다(spec.md REQ-007 참조, 발명으로 메우지 않음)
+- **측정**: `.moai/reports/t501/measure_m5_8songs.py` → `measure_m5_a_non_accent_zero.json`(8곡 전부 비액센트 큐의 effect 그룹 디머>0 위반 0건) + `measure_m5_b_accent_rising.json`(액센트 큐 8/8 상승 — AC-007 과 공유 증거) + `uv run pytest server/tests/test_song_cue_effect_zero_t501_m5.py -q`(20개, `_effect_group_numbers`/`_effect_dimmer_zero_lines`/통합 줄 순서·중복 가드 단언)
 
 ## AC-LDRENDER-007 — 블라인더 액센트는 상승이다, 하강이 아니다 [REQ-LDRENDER-008]
 
