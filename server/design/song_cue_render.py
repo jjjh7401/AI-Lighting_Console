@@ -485,7 +485,7 @@ def _phaser_label_for_cue(cue) -> str | None:
     제외한다 — 페이저는 보이는 연출이므로 암전 이동에 실을 이유가 없다.
     블랙아웃 큐(``dimmer.blackout`` 또는 key_pct 없음/0)도 제외한다 —
     페이저 recall이 프로그래머 Dimmer 값을 되살려 의도한 암전을 깰 수
-    있다(``_back_layer_value_lines``와 같은 안전 규율, key_pct<=0 가드).
+    있다(``_role_dimmer_value_lines``와 같은 안전 규율, key_pct<=0 가드).
     """
     if cue.kind != "section":
         return None
@@ -519,7 +519,17 @@ def _phaser_cue_value_lines(
     T11 프로브 §4] 이 recall을 담아 **저장한 큐**가 프리셋 참조를 보존하는지
     (참조 vs 평탄화)는 여전히 프로토콜로 판독 불가 — 곡 큐 재생의 육안
     확인이 남은 마지막 조각이다.
-    """
+
+    SPEC-LDRENDER-001 M6(REQ-LDRENDER-010, t501) — ``cue.fx.permitted``(설계
+    층 효과 허용값, ``_fx_data``/``energy._fx_axes`` 가 D레벨 예산으로 좁힌
+    값)가 **비어 있으면** 라벨이 해석되고 콘솔 풀에서 슬롯을 찾았어도 recall
+    을 내지 않는다 — 효과 요청(``cue.fx.requested``)은 있지만 그 큐의 D레벨
+    예산이 0이면(F3, §3 표) "허용되지 않은 효과"이므로 송신하지 않는다.
+    이전에는 이 함수가 ``cue.fx`` 축을 전혀 읽지 않아(잰 값: t499 §3
+    P5a′·spec.md REQ-010) 송신 여부가 오직 라벨 매칭·풀 해석에만 의존했다
+    — 이 가드가 그 빠진 연결을 닫는다."""
+    if not cue.fx.permitted:
+        return ()
     label = _phaser_label_for_cue(cue)
     if label is None:
         return ()
@@ -528,6 +538,37 @@ def _phaser_cue_value_lines(
         return ()
     pool_no, slot = resolved
     return (_preset_recall_command(pool_no, fids, slot),)
+
+
+def _fx_report_counts(bundle, phaser_slots: Mapping[str, tuple[int, int]]) -> tuple[int, int, int]:
+    """SPEC-LDRENDER-001 M6(REQ-LDRENDER-012) — 한 곡의 효과 3계 수치
+    ``(requested, permitted, sent)``.
+
+    - ``requested``: 설계 층이 요청한 효과 이름 수의 합(``cue.fx.requested``,
+      구간 FX 아크가 제안한 것 — D레벨 예산과 무관).
+    - ``permitted``: D레벨 예산이 실제로 허용한 효과 수의 합
+      (``cue.fx.permitted``, ``energy._fx_axes`` 가 좁힌 값).
+    - ``sent``: 송신기가 실제로 페이저 recall 줄을 낸 큐 수 —
+      ``_phaser_cue_value_lines``의 게이트(REQ-010, 위 참조)를 **값 줄을
+      만들지 않고** 그대로 재현한다(``fids`` 없이 판정 가능 — recall 문자열
+      자체는 필요 없고 "냈는가/안 냈는가"만 필요하므로, 더미 fids로
+      ``_phaser_cue_value_lines`` 를 또 부르지 않는다). 이 셈이 그 함수의
+      게이트와 어긋나면 보고가 실제 송신과 다른 숫자를 주장하게 된다 —
+      두 곳이 갈라지면 한쪽만 고쳐지는 실수를 막기 위해 조건을 바이트
+      단위로 맞춰 둔다.
+    """
+    requested = 0
+    permitted = 0
+    sent = 0
+    for cue in bundle.cues:
+        requested += len(cue.fx.requested)
+        permitted += len(cue.fx.permitted)
+        if not cue.fx.permitted:
+            continue
+        label = _phaser_label_for_cue(cue)
+        if label is not None and phaser_slots.get(label) is not None:
+            sent += 1
+    return requested, permitted, sent
 
 
 #: 카드 t453 — 흰색 큐가 부르는 콘솔 컬러 프리셋 라벨(감독 결정 2026-09-27:
@@ -545,12 +586,130 @@ _WHITE_NAME_BY_RGB: dict[tuple[int, int, int], str] = {
 }
 
 
+#: SPEC-LDRENDER-001 M3 후속(t501, 카드 t501) — 역할별 디머/색 값 줄을 내는
+#: 이 다섯 함수(``_white_palette_name``·``_role_color_value_lines``·
+#: ``_song_color_value_lines``·``_role_dimmer_value_lines``·
+#: ``_effect_dimmer_zero_lines``, 마지막은 M5 추가)가 공유하는
+#: 허용 kind 집합. ``climax_return``은 AC-LDRENDER-001 이 "구간 큐 전부"
+#: 요구에서 **명시 예외하지 않는** 유일한 비-section kind 다(명시 예외는
+#: 블랙아웃 큐 ``cue.dimmer.blackout`` 과 MIB 사전이동 큐
+#: ``kind == "mib_premove"`` 둘뿐 — acceptance.md AC-001 본문). 이 집합은
+#: ``ComposedBundle.timed_cues``(song_cue_composer.py:506-512, "시각을 갖고
+#: 콘솔 타이밍에 실리는 큐")가 쓰는 두 kind 와 바이트 동일하다.
+#:
+#: climax_return 의 dimmer/color 필드를 이 함수들이 재사용해도 되는 이유 —
+#: ``_climax_return()``(song_cue_composer.py:1024-1049)이
+#: ``dataclasses.replace(climax, kind="climax_return", ...)`` 로 climax 큐를
+#: 복제할 때 ``dimmer``·``color`` 필드는 교체 인자로 주지 **않는다**(교체
+#: 안 한 필드는 원본 참조 그대로 남는 ``dataclasses.replace`` 의미론) — 즉
+#: climax_return 의 ``cue.dimmer``/``cue.color`` 는 그 climax 큐 자신의 값과
+#: 바이트 동일하다. 이 함수들이 climax_return 에도 역할별 줄을 내는 것은
+#: 그래서 **새 값을 발명하는 게 아니라 climax 큐 자신이 이미 가진 값을
+#: 그대로 재사용**하는 것이다.
+#:
+#: 결함(M4 보고서 §4 Gaps 1, `.moai/reports/t501/M4.md`): ``position_cue_bundle``
+#: (``server/spatial/mib.py:143-181``)의 전체 기구 디머 줄(``plan.dimmer``,
+#: ``reviewed_song_commands`` 의 ``dimmer = cue.dimmer.key_pct``)은 kind 와
+#: 무관하게 항상 나간다 — climax_return 에도 나가 전체 기구를 ``key_pct``
+#: 하나로 되감는다. 이 재동기화 자체는 막을 수 없다(climax_return 이 저장된
+#: 큐로 존재하려면 ``preset_no``·``dimmer`` 중 최소 하나가 non-None 이어야
+#: 하고, ``position.stored`` 는 ``None`` 으로 고정이므로 ``dimmer`` 가 비면
+#: 그 큐 자체가 생성되지 않는다). 역할별 델타 줄이 **뒤따르지 않으면**
+#: back/mover/side/wash 가 전부 key_pct 값으로 뭉개져
+#: ``ldrender_gate.layer_diversity`` 가 재는 LIT 버킷이 무너진다(실측:
+#: `.moai/reports/t501/M3b.md` §2).
+#:
+#: ``_climax_return()``의 독스트링("포지션·색·효과는 다시 싣지 않는다")은
+#: **조립기(compose) 층의 데이터 모델**을 말한다 — climax_return 의 필드가
+#: climax 큐와 바이트 동일하게 "새로 계산되지 않는다"는 뜻이지, 송신기
+#: (render) 층이 그 값을 명령으로 **내는지 여부**를 규정하지 않는다. 포지션은
+#: 여전히 재송신하지 않는다(``position.stored=None`` 이 preset_no 를 None
+#: 으로 만든다, 변경 없음). 효과(fx)도 재송신하지 않는다 — ``_climax_return()``
+#: 이 ``fx=CueFxData(...)`` 를 **복사가 아니라 명시적으로 빈 값으로 교체**하기
+#: 때문이다(dimmer/color 와 다른 축 — 복사된 값이 없으니 재사용할 것도 없다).
+_ROLE_VALUE_LINE_KINDS: frozenset[str] = frozenset({"section", "climax_return"})
+
+
 def _white_palette_name(cue) -> str | None:
-    """구간 큐의 주색이 표준 팔레트 흰색 둘 중 하나면 그 이름, 아니면 None."""
-    if cue.kind != "section" or not cue.color.palette:
+    """구간 큐(및 climax_return, `_ROLE_VALUE_LINE_KINDS` 참조)의 주색이
+    표준 팔레트 흰색 둘 중 하나면 그 이름, 아니면 None."""
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS or not cue.color.palette:
         return None
     rgb = _COLOR_NAMES.resolve_color_name(cue.color.palette[0])
     return None if rgb is None else _WHITE_NAME_BY_RGB.get(rgb)
+
+
+#: SPEC-LDRENDER-001 M4(REQ-LDRENDER-004, 감독 결정 3) — 층→색 배정 축.
+#: `back`+`mover` = 지배색(`palette[0]`, 이미 전체 기구 베이스라인 줄로
+#: 나간다 — 델타 불필요). `side`+`wash` = 보조색(`palette[1]`). `key` 는
+#: 표준 팔레트 기존 웜화이트 항목(새 RGB 발명 금지, §4b C3). 이 델타
+#: 순회에 `back`/`mover`가 없는 이유 — 베이스라인이 이미 지배색이라 같은
+#: 값을 또 내면 §D5(REQ-006)가 금지하는 "같은 값 두 줄"이 된다. `effect`가
+#: 없는 이유 — R3(REQ-LDRENDER-007, HARD)가 비액센트 큐의 **어떤** 값
+#: 줄에도 effect 역할 그룹 기구를 금지한다(`_DIMMER_DELTA_EXCLUDED_ROLES`와
+#: 같은 구조적 가드 — M5 를 기다리지 않는다).
+_COLOR_ACCENT_ROLES: tuple[str, ...] = ("side", "wash")
+
+
+def _role_color_value_lines(
+    cue,
+    layer_mapping: Sequence[Mapping[str, object]],
+    palette: Sequence[str],
+    dominant_rgb: tuple[int, int, int],
+) -> tuple[str, ...]:
+    """REQ-LDRENDER-004 — 역할별 델타 색 줄(`_role_dimmer_value_lines`와 같은
+    그룹-주소 패턴, fid 불요·RG5). 베이스라인 전체 기구 색 줄 **뒤**에 와서
+    콘솔 last-wins 로 역할별 그룹만 덮어쓴다.
+
+    REQ-004 본문의 "팔레트가 2개 이상의 색을 담고 있으면"을 그대로
+    지킨다 — `len(palette) < 2`(단색 팔레트)이면 역할 배정 자체를 하지
+    않는다(오늘처럼 베이스라인 한 줄만, 지어내지 않는다). `len(palette) > 2`
+    여도 3번째 이후 색은 쓰지 않는다(§6.3 동시성 상한).
+
+    **중복 줄 가드(REQ-004/REQ-006, §D5)**: 보조색이 지배색과 같아지면
+    (`color_usage="single"`) `side`/`wash` 델타를 **내지 않는다** — 베이스
+    라인이 이미 그 값이므로 같은 값을 두 줄로 중복 발화하지 않는다. `key`
+    도 지배색이 이미 웜화이트면 같은 이유로 생략한다. REQ-006 이 말하는
+    "별도 분기 불필요"가 바로 이 값-비교 생략이다(새 분기를 만들지 않았다).
+
+    **§6.3 집계 플래그(spec.md §3.2 [HARD])**: `key` 의 웜화이트는 이 SPEC
+    이 §6.3 "최대 2개(지배 1 + 액센트 1)" 집계 밖(중립 기준광)으로 읽는다
+    — 그래서 한 큐가 동시에 3색(지배·보조·웜화이트)을 낼 수 있어도 §6.3
+    위반이 아니다. 이 읽음은 유일한 해석이 아니라고 spec.md 가 명시
+    플래그했다(재확인 여지).
+
+    **climax_return(t501 M3 후속)**: `_ROLE_VALUE_LINE_KINDS` 에 포함돼
+    `cue.kind == "climax_return"` 인 큐도 이 함수를 통과한다 — `palette`가
+    climax 큐 자신의 값과 바이트 동일하므로(위 상수 독스트링 참조) 같은
+    역할별 델타 줄을 낸다."""
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS or len(palette) < 2:
+        return ()
+    role_numbers = _role_group_numbers(layer_mapping)
+    lines: list[str] = []
+    accent_rgb = _COLOR_NAMES.resolve_color_name(palette[1])
+    if accent_rgb is not None and accent_rgb != dominant_rgb:
+        for role in _COLOR_ACCENT_ROLES:
+            group_no = role_numbers.get(role)
+            if group_no is None:
+                continue
+            lines.append(_group_color_apply_command(group_no, accent_rgb))
+    warm_white_rgb = _COLOR_NAMES.resolve_color_name("Warm White")
+    if warm_white_rgb is not None and warm_white_rgb != dominant_rgb:
+        key_group_no = role_numbers.get("key")
+        if key_group_no is not None:
+            lines.append(_group_color_apply_command(key_group_no, warm_white_rgb))
+    return tuple(lines)
+
+
+def _group_color_apply_command(group_no: int, rgb: tuple[int, int, int]) -> str:
+    """`_color_apply_command`의 그룹-주소 쌍둥이 — fid 선택 대신 `Group <n>`
+    (`_role_dimmer_value_lines`의 `Group <n> ; Attribute 'Dimmer' ...`와 같은
+    문법 축, RG5 — 그룹 멤버십 fid 를 몰라도 그룹 번호만으로 값을 낸다)."""
+    r, g, b = rgb
+    return (
+        f"Group {group_no} ; Attribute 'ColorRGB_R' At {r} ; "
+        f"Attribute 'ColorRGB_G' At {g} ; Attribute 'ColorRGB_B' At {b}"
+    )
 
 
 def _song_color_value_lines(
@@ -558,6 +717,7 @@ def _song_color_value_lines(
     fids: Sequence[int],
     w_fids: frozenset[int] = frozenset(),
     white_presets: Mapping[str, tuple[int, int] | str] | None = None,
+    layer_mapping: Sequence[Mapping[str, object]] = (),
 ) -> tuple[tuple[str, ...], str | None]:
     """SPEC-LDDESIGN-001 M2 — 큐의 팔레트 주색을 콘솔 값 라인으로 낸다.
 
@@ -565,12 +725,27 @@ def _song_color_value_lines(
     경로는 색을 한 줄도 보내지 않았다(`reports/lddesign-m2-cue-path/`)
     — 설계층은 팔레트를 들고 있는데 명령 생성기가 떨어뜨렸다.
 
-    주색만 낸다. 보조색·유보색·언더페인팅은 M3(컬러 규칙)의 몫이고,
-    이 자리에서 지어내면 그 규칙이 도착했을 때 두 출처가 생긴다.
+    SPEC-LDRENDER-001 M4(REQ-LDRENDER-004~006) — 이제 주색(베이스라인,
+    전체 기구) **+** 역할별 배정(`back`+`mover`=지배색, `side`+`wash`=
+    보조색, `key`=웜화이트)을 함께 낸다. 보조색 배정은 ``layer_mapping``이
+    역할을 해석했을 때만 나간다(``_role_color_value_lines``, 위 참조) —
+    ``layer_mapping=()``(기본값, 레거시 호출부)이면 오늘처럼 주색 한 줄만
+    나가 바이트 동일하다.
 
     MIB 사전이동 큐(``kind == "mib_premove"``)는 건너뛴다 — 어둠 속 이동
     큐라 색 값이 공연에 보이지 않고, 사전에 색까지 얹을지는 아직 안 잰
-    별도 판단이다.
+    별도 판단이다. 블랙아웃 큐(``cue.dimmer.blackout``)도 이 함수가 걸러내지
+    않지만 ``cue.color.palette``가 비어 있어 두 번째 가드에서 빈 결과로
+    자연히 빠진다.
+
+    SPEC-LDRENDER-001 M3 후속(t501) — climax_return 큐(``kind ==
+    "climax_return"``)도 이 함수를 통과한다(``_ROLE_VALUE_LINE_KINDS`` 참조).
+    MIB 사전이동과 달리 climax_return 은 **암전이 아니라 무대가 계속 보이는
+    큐**이고, ``cue.color.palette`` 가 그 직전 climax 큐와 바이트 동일하므로
+    같은 베이스라인+역할별 색 줄을 다시 낸다 — 콘솔 트래킹에 맡기는 대신
+    명시적으로 재단언해, ``position_cue_bundle`` 이 그 큐에 항상 내보내는
+    전체 기구 디머 재동기화(아래 ``_role_dimmer_value_lines`` 참조)와 짝을
+    맞춘다(M4 결함 보고 `.moai/reports/t501/M4.md` §4 Gaps 1).
 
     카드 t430 — ``w_fids``(W 채널 확인 기구, 기본 빈 집합)에 든 fid는
     ``fids``에서 빼고 별도 줄로 낸다: 오늘과 같은 R/G/B 줄에
@@ -586,9 +761,10 @@ def _song_color_value_lines(
     값이 없는 기구는 앞 줄의 RGB 흰색을 그대로 받는다. 다음 큐의 W 기구 줄이
     늘 ``W At 0``을 적으므로 프리셋이 켠 W 는 다음 색으로 새지 않는다. 사유가
     오면 프리셋 줄 없이 오늘 줄만 내고 그 사유를 돌려준다(지어내지 않는다).
-    ``None``(판독 안 함)이면 t430 동작 그대로다.
+    ``None``(판독 안 함)이면 t430 동작 그대로다. 역할별 배정 줄은 이 실패
+    여부와 무관하게 항상 시도한다(w_fids/화이트 프리셋 축과 별개 축이다).
     """
-    if cue.kind != "section":
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS:
         return (), None
     palette = cue.color.palette
     if not palette:
@@ -597,51 +773,201 @@ def _song_color_value_lines(
     rgb = _COLOR_NAMES.resolve_color_name(name)
     if rgb is None:
         return (), f"Q{cue.cue_number:g} {cue.cue_name!r}의 색 {name!r}은 표준 팔레트 10색에 없음"
+    failure: str | None = None
     if not w_fids:
-        return (_color_apply_command(fids, rgb),), None
-    rgb_only_fids = [fid for fid in fids if fid not in w_fids]
-    w_only_fids = [fid for fid in fids if fid in w_fids]
-    lines: list[str] = []
-    if rgb_only_fids:
-        lines.append(_color_apply_command(rgb_only_fids, rgb))
-    if w_only_fids:
-        lines.append(_color_apply_command(w_only_fids, rgb) + " ; Attribute 'ColorRGB_W' At 0")
-    white = _white_palette_name(cue)
-    if white is None or white_presets is None or not w_only_fids:
-        return tuple(lines), None
-    resolved = white_presets.get(white)
-    if not isinstance(resolved, tuple):
-        reason = resolved or f"{white} 프리셋 판독 결과 없음"
-        return tuple(lines), f"Q{cue.cue_number:g} {cue.cue_name!r} 흰색 프리셋 미사용: {reason}"
-    pool_no, slot = resolved
-    lines.append(_preset_recall_command(pool_no, w_only_fids, slot))
-    return tuple(lines), None
+        lines: list[str] = [_color_apply_command(fids, rgb)]
+    else:
+        rgb_only_fids = [fid for fid in fids if fid not in w_fids]
+        w_only_fids = [fid for fid in fids if fid in w_fids]
+        lines = []
+        if rgb_only_fids:
+            lines.append(_color_apply_command(rgb_only_fids, rgb))
+        if w_only_fids:
+            lines.append(_color_apply_command(w_only_fids, rgb) + " ; Attribute 'ColorRGB_W' At 0")
+        white = _white_palette_name(cue)
+        if white is not None and white_presets is not None and w_only_fids:
+            resolved = white_presets.get(white)
+            if not isinstance(resolved, tuple):
+                reason = resolved or f"{white} 프리셋 판독 결과 없음"
+                failure = f"Q{cue.cue_number:g} {cue.cue_name!r} 흰색 프리셋 미사용: {reason}"
+            else:
+                pool_no, slot = resolved
+                lines.append(_preset_recall_command(pool_no, w_only_fids, slot))
+    lines.extend(_role_color_value_lines(cue, layer_mapping, palette, rgb))
+    return tuple(lines), failure
 
 
-def _back_layer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
-    """결함 6 후속 (priority 6): Front/Back 분리 연출 — the director-confirmed
-    'back' role group adds ONE group-addressed dimmer line to every LIT
-    section cue, at 80% of the key level (the same key→back ratio the
-    composer's layered-rig path uses). The group NUMBER is console-addressable
-    without membership knowledge (RG5 — fids are never claimed); blackouts and
-    MIB pre-moves stay untouched. The line comes AFTER the all-fixture key
-    dimmer, so the console's last-wins programmer order lowers only the back
-    group."""
-    back_no = next(
-        (
-            entry["group_no"]
-            for entry in layer_mapping
-            if entry.get("role") == "back" and isinstance(entry.get("group_no"), int)
-        ),
-        None,
-    )
-    if back_no is None or cue.kind != "section":
+#: SPEC-LDRENDER-001 REQ-LDRENDER-001/REQ-LDRENDER-007 — 역할마다 독립된 그룹
+#: 주소 디머 줄을 낼 때, 이 두 역할은 그 "역할별 델타" 순회에서 제외한다:
+#:   - ``key``  — 이미 전체 기구 키 디머 줄(공유 `fids`)로 나가 있다. 델타가
+#:     아니라 베이스라인이라 역할 줄로 또 내면 중복이다.
+#:   - ``effect`` — R3(REQ-LDRENDER-007)가 비액센트 큐의 **어떤** 값 줄에도
+#:     effect 역할 그룹 기구가 실리지 않기를 요구한다(HARD, spec.md §3.1).
+#:     M5 가 공유 `fids`에서 effect 기구를 빼는 일을 아직 하지 않았더라도,
+#:     이 그룹-주소 델타 경로가 `role_pct["effect"]`를 읽어 값을 내보내면
+#:     공유 `fids` 제외와 무관하게 R3 를 어기게 된다 — 그래서 이 제외는
+#:     M5 를 기다리지 않고 여기서 구조적으로 막는다. (현재 `_dimmer_data`는
+#:     `role_pct`에 `effect` 키를 애초에 채우지 않으므로 이 가드는 방어적
+#:     이중 장치다 — 호출자가 실수로 채워도 R3 는 깨지지 않는다.)
+_DIMMER_DELTA_EXCLUDED_ROLES = frozenset({"key", "effect"})
+
+
+def _role_group_numbers(layer_mapping: Sequence[Mapping[str, object]]) -> dict[str, int]:
+    """역할 → 그룹 번호, 마지막으로 일치한 항목이 이긴다.
+
+    side/wash/mover 는 한 역할에 여러 콘솔 그룹(-L/-R/-ALL)이 매칭될 수 있다
+    (카드 t379 실측). `session.py::_confirm_song_layer_mapping`이 만드는
+    `declared_layers` 딕셔너리 컴프리헨션(`RigProfile.layers.mapping`이
+    `has_layer()`로 보는 그 그룹)과 **같은 동점 규율**(이터레이션 순서상 마지막
+    항목이 이긴다, M2 progress.md "여러 그룹이 한 역할에 매칭될 때" 절)을 여기서도
+    써야 `has_layer("side")`가 참인 리그에서 렌더러가 실제로 다른 그룹을
+    겨냥하는 불일치를 막는다."""
+    numbers: dict[str, int] = {}
+    for entry in layer_mapping:
+        role = entry.get("role")
+        group_no = entry.get("group_no")
+        if isinstance(role, str) and isinstance(group_no, int):
+            numbers[role] = group_no
+    return numbers
+
+
+def _role_dimmer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
+    """REQ-LDRENDER-001 — 매핑된 모든 역할을 순회하는 다중 역할 디머 값 줄.
+
+    결함 6 의 ``_back_layer_value_lines``(``role == "back"`` 단일 분기)의
+    일반화다. 역할마다 독립된 ``Group <n>`` 주소로 값을 낸다 — fid 집합이
+    필요 없다(RG5, plan.md §B 위험 2). 줄은 전체 기구 키 디머 줄 **뒤**에
+    오므로 콘솔의 last-wins 프로그래머 순서가 역할별 그룹만 내린다.
+
+    ``cue.dimmer.role_pct``에 값이 없는 역할(아직 산출 규칙이 없는 side/wash/
+    mover 등, M3.md §미해결)은 조용히 건너뛴다 — 발명하지 않는다. 블랙아웃·
+    MIB 사전이동 큐는 손대지 않는다(``kind not in _ROLE_VALUE_LINE_KINDS``
+    또는 key_pct<=0 가드, 기존 ``_back_layer_value_lines``와 같은 안전 규율).
+
+    SPEC-LDRENDER-001 M3 후속(t501) — climax_return 큐도 이 함수를 통과한다
+    (``_ROLE_VALUE_LINE_KINDS`` 참조). ``position_cue_bundle``의 전체 기구
+    키 디머 줄은 climax_return 에도 kind 와 무관하게 늘 나가(막을 수 없다,
+    위 상수 독스트링 참조) 전체 기구를 ``key_pct`` 하나로 되감는데, 이 함수가
+    여기서 멈추면 그 되감김을 아무도 바로잡지 않아 back/mover/side/wash 가
+    전부 같은 값으로 뭉개진다(``ldrender_gate.layer_diversity`` LIT 버킷
+    붕괴, AC-LDRENDER-001 FAIL — 실측 `.moai/reports/t501/M4.md` §4 Gaps 1).
+    climax_return 의 ``role_pct`` 는 그 climax 큐 자신의 값과 바이트
+    동일하므로(위 상수 독스트링), 이 함수를 통과시키는 것은 그 climax 큐가
+    이미 냈던 것과 **같은 값**을 다시 내려 덮어쓰는 것뿐이다."""
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS:
         return ()
     key_pct = cue.dimmer.key_pct
     if key_pct is None or key_pct <= 0:
         return ()
-    back_pct = cue.dimmer.back_pct if cue.dimmer.back_pct is not None else key_pct * 0.8
-    return (f"Group {back_no} ; Attribute 'Dimmer' At {back_pct:g}",)
+    role_pct = cue.dimmer.role_pct
+    lines: list[str] = []
+    for role, group_no in _role_group_numbers(layer_mapping).items():
+        if role in _DIMMER_DELTA_EXCLUDED_ROLES:
+            continue
+        pct = role_pct.get(role)
+        if pct is None:
+            continue
+        lines.append(f"Group {group_no} ; Attribute 'Dimmer' At {pct:g}")
+    return tuple(lines)
+
+
+#: SPEC-LDRENDER-001 M5(REQ-LDRENDER-007/008, 카드 t501, 리드 결정 g — 2026-10-01).
+#:
+#: **왜 공유 `fids` 가 아니라 그룹 주소인가** — REQ-007 본문은 "비액센트 큐가
+#: 공유하는 `fids` 선택 자체"에서 effect 기구를 빼라고 요구하지만(spec.md
+#: §3.3), 그 멤버십(어느 fid 가 BLIND/STROBE/HAZE 그룹에 속하는지)을 읽을
+#: production-safe 경로가 이 저장소 어디에도 없다 — 2차(GROUPGEN SPEC M0 +
+#: 이 SPEC 자신의 M2 `_layer_mapping_from_group_children` 독스트링)로 반증됐다
+#: (`.moai/reports/t501/M5.md` §2-4, progress.md §M5 블로커 절). 리드 결정
+#: (g)는 그 fid 뺄셈 대신 **그룹 주소**로 같은 결과(비액센트 큐에서 효과
+#: 기구가 어둡다)를 낸다 — `_role_dimmer_value_lines`/`_group_color_apply_command`
+#: 가 이미 쓰는 RG5 패턴(그룹 멤버십 fid 를 몰라도 그룹 번호만으로 값을
+#: 낸다)과 같은 축이다. 이것은 REQ-007 문면의 **직역이 아니라 outcome-equivalent
+#: 해석**이다(명시 플래그, `.moai/reports/t501/M5b.md` §해석 노트 참조) — 공유
+#: `fids` 자체(색·포지션·페이저 줄이 겨냥하는 선택)는 여전히 86대 전체를 들고
+#: 있다. 문구 쪽 수정이 필요하면 sync 단계에서 manager-spec 이 처리한다(이
+#: 함수는 spec.md 본문을 고치지 않는다).
+def _effect_group_numbers(layer_mapping: Sequence[Mapping[str, object]]) -> tuple[int, ...]:
+    """역할이 ``effect``인 **모든** 그룹 번호(정렬, 중복 제거).
+
+    `_role_group_numbers`의 "마지막 항목이 이긴다" 단일값 규율과 다르다 —
+    BLIND/STROBE/HAZE 는 전부 역할 `"effect"`로 매칭되는 **서로 다른** 콘솔
+    그룹이라(`rig._LAYER_GROUP_ALIASES["effect"]`, 세 이름 전부 정확 일치) 하나로
+    접으면 둘을 잃는다. 결정적 순서(그룹 번호 오름차순)로 돌려줘 호출자의 값
+    줄 순서가 매 실행 바이트 동일하다."""
+    numbers: set[int] = set()
+    for entry in layer_mapping:
+        role = entry.get("role")
+        group_no = entry.get("group_no")
+        if role == "effect" and isinstance(group_no, int) and not isinstance(group_no, bool):
+            numbers.add(group_no)
+    return tuple(sorted(numbers))
+
+
+def _effect_dimmer_zero_lines(
+    cue,
+    layer_mapping: Sequence[Mapping[str, object]],
+    previous_fixture=None,
+) -> tuple[str, ...]:
+    """비액센트 큐에서 effect 역할 그룹(BLIND/STROBE/HAZE)을 전체 기구 디머
+    줄 **뒤**에 0 으로 내린다(REQ-LDRENDER-007, M5 리드 결정 g).
+
+    **HAZE 를 빼지 않는 이유(요청 캡션 — 해소됨, 충돌 없음)**: spec.md REQ-007
+    본문은 HAZE 도 BLIND/STROBE 와 같은 제외 대상이라 명시한다("HAZE 는 ...
+    공유 fids 제외 대상이되, 곡 시작/종료 안전 큐(Block/Release)에서는 명시적으로
+    관리된다"). 그 Block/Release 안전 큐는 **이 송신 경로가 아니라** 별도
+    시스템(큐-시트 트래킹 메타데이터, `server/design/cue_sheet_edit.py`
+    `TRACKING_VALUES`, SPEC-LDDESIGN-001 REQ-053/054)의 몫이고, 이
+    `reviewed_song_commands` 송신 경로에는 그 트래킹 필드를 쓰는 코드가 전혀
+    없다(grep 재확인, `.moai/reports/t501/M5b.md` §HAZE 절) — 두 축이 겹치지
+    않으므로 충돌이 없다. 또한 실측(t241/verdict.md §2) — 헤이저(Look Unique
+    2.1, Mode 0 2ch)는 애초에 `Dimmer` 애트리뷰트가 **없다**(채널은 Haze1·
+    Blower1 뿐). 그래서 `Group <n(HAZE)> ; Attribute 'Dimmer' At 0` 은 그
+    기구에 아무 애트리뷰트도 겨누지 못하는 무해한 명령이다 — 오늘도 이미
+    전체 기구 디머 줄(`Fixture 1+2+...+86 ; Attribute 'Dimmer' At <v>`, HAZE
+    2대 포함)이 같은 방식으로 HAZE 에 가닿아 왔고 사고 보고가 없다(같은
+    무해성의 선례). BLIND/STROBE 는 각각 Dimmer 애트리뷰트가 있다
+    (t241/verdict.md: BLIND ✓, STROBE ✓) — 둘 다 실제로 꺼진다.
+
+    **액센트 큐**(``cue.accent_fixture is not None``): 그 액센트가 겨냥하는
+    그룹은 이 함수가 건너뛴다 — 그 그룹은 `_accent_fixture_value_lines`가
+    상승 액센트 값을 낸다("그 그룹엔 액센트 값만 낸다", 리드 결정 g). 액센트가
+    안 겨누는 다른 effect 그룹(예: BLIND 가 액센트일 때 STROBE/HAZE)은 이
+    큐에서도 그대로 0 을 낸다 — 콘솔 트래킹에 맡기지 않고 매 큐 명시적으로
+    재단언한다(`_song_color_value_lines`의 climax_return 재단언과 같은 규율).
+
+    **복귀 큐(``previous_fixture``, 리드 결정 범위를 넘는 추가 가드)**: 이 큐가
+    액센트가 없고(``cue.accent_fixture is None``) 앞 큐가 블라인더를 켜 놓았으면
+    (``previous_fixture is not None``), `_accent_fixture_value_lines`가 그
+    그룹에 독립적으로 이미 ``Group <n> ; Attribute 'Dimmer' At 0``(복귀 줄, "오늘과
+    같은 0", 배차서 요구사항 1)을 낸다 — 이 함수가 **같은 그룹에 같은 값의 줄을
+    또 내면** 문자열이 중복된다(배차서 요구사항 1 "Value lines must remain
+    unique strings"). 그래서 그 그룹은 여기서도 건너뛴다 — 복귀 큐의 "At 0"은
+    정확히 한 줄(액센트 경로의 줄)로만 난다. 배차서 문면은 액센트 큐만
+    명시했지만(§비액센트/액센트 이분), 이 복귀-큐 가드는 그 문면이 요구한
+    "고유 문자열" 불변식을 복귀 큐에도 일관되게 적용한 것이다(§M5b.md §해석
+    노트에 별도로 플래그).
+
+    **중복 줄 가드**: `_effect_group_numbers`가 그룹 번호를 집합으로 모아
+    중복을 미리 없애므로, 같은 호출 안에서는 항상 서로 다른 그룹 번호를
+    겨눈다 — 여러 effect 그룹이 있어도 같은 문자열이 두 번 나오지 않는다."""
+    if cue.kind not in _ROLE_VALUE_LINE_KINDS:
+        return ()
+    key_pct = cue.dimmer.key_pct
+    if key_pct is None or key_pct <= 0:
+        return ()
+    accent_group_no = cue.accent_fixture.group_no if cue.accent_fixture is not None else None
+    return_group_no = (
+        previous_fixture.group_no
+        if cue.accent_fixture is None and previous_fixture is not None
+        else None
+    )
+    lines: list[str] = []
+    for group_no in _effect_group_numbers(layer_mapping):
+        if group_no in (accent_group_no, return_group_no):
+            continue
+        lines.append(f"Group {group_no} ; Attribute 'Dimmer' At 0")
+    return tuple(lines)
 
 
 def _accent_fixture_value_lines(cue, previous_fixture) -> tuple[str, ...]:
@@ -1025,12 +1351,20 @@ def reviewed_song_commands(
         if cue.position.stored is not None:
             preset_no = position_slots[cue.position.stored]
         dimmer = cue.dimmer.key_pct
-        color_lines, color_failure = _song_color_value_lines(cue, fids, w_fids, white_presets)
+        color_lines, color_failure = _song_color_value_lines(
+            cue, fids, w_fids, white_presets, layer_mapping
+        )
         if color_failure is not None:
             color_failures[f"{cue.cue_number:g}"] = color_failure
         if preset_no is None and dimmer is None:
             continue
         accent_lines = _accent_fixture_value_lines(cue, previous_fixture)
+        # SPEC-LDRENDER-001 M5(t501) — `previous_fixture`는 아직 이 cue 로
+        # 갱신하기 전(앞 cue 의 액센트)이다. effect-zero 줄은 `accent_lines`와
+        # 같은 "복귀 그룹" 읽음을 공유해야 중복 "At 0" 줄이 안 생긴다(아래
+        # `_effect_dimmer_zero_lines` 독스트링 §복귀 큐 가드) — 그래서 `previous_fixture`
+        # 재할당 **전**에 계산한다.
+        effect_zero_lines = _effect_dimmer_zero_lines(cue, layer_mapping, previous_fixture)
         previous_fixture = cue.accent_fixture
         plan = PositionCuePlan(
             cue_no=cue.cue_number,
@@ -1047,7 +1381,8 @@ def reviewed_song_commands(
                 fids,
                 extra_value_lines=(
                     *color_lines,
-                    *_back_layer_value_lines(cue, layer_mapping),
+                    *_role_dimmer_value_lines(cue, layer_mapping),
+                    *effect_zero_lines,
                     *_phaser_cue_value_lines(cue, fids, phaser_slots),
                     *accent_lines,
                 ),

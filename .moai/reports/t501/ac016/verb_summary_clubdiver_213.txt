@@ -1,0 +1,24 @@
+파일: .moai/reports/t501/ac016/rehearse_clubdiver_213/approval_request_1.txt (252줄)
+--- 동사 줄 머리 집계(배차서 지정 8종) ---
+  Store: 15
+  Delete: 0
+  Overwrite: 0
+  SaveShow: 0
+  Label: 0
+  Copy: 0
+  Move: 0
+  Assign: 1
+  위험 동사(Store/Assign 밖) 발견: 없음
+--- 줄 머리에 있지만 8종 동사가 아닌 토큰(참고) ---
+  Group: 140
+  Fixture: 52
+  Set: 29
+  ClearAll: 14
+  ChangeDestination: 1
+--- 손댄 번호(종류별 집합) ---
+  Sequence: ['213']
+  Cue: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '12.5', '13']
+  Timecode: ['13']
+  Preset (pool.no): ['2.21', '2.22', '2.23', '2.24', '2.25', '2.26', '2.28', '2.30', '4.11', '4.9', '21.8']
+  Group: ['3', '4', '7', '10', '13', '14', '15', '16']
+  Fixture: 서로 다른 조합 15개, 등장한 기구 번호 합집합 86개

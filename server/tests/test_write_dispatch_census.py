@@ -109,6 +109,14 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
         "SPEC-COPILOT-WRITEGATE-001 의 번들 위험 선언(risk=)이 붙었다 "
         "(카드 t317: 2026-09-07 실측이 잰 것은 prepare_songcue 가 아니라 이 자리였다)"
     ),
+    ("server/web/session.py", "_pregenerate_missing_phasers", 0): (
+        "SPEC-LDRENDER-001 M6(REQ-LDRENDER-011, 카드 t501) — 풀에서 못 찾은 "
+        "카탈로그 페이저를 build_fx_preset_bundle 로 사전 생성해 Store Preset "
+        "<풀>.<슬롯> 1건을 보낸다. _song_finalize 의 director-approve 루프 "
+        "안에서만 호출되고(유일 호출부), BatchRisk(kind='song_design_fx_pregen') "
+        "선언(risk=)이 붙어 _dispatch_declared 를 거친다 — 새 무승인 실행 표면 "
+        "아님(plan.md §D)"
+    ),
     # 카드 t320 — 아래 열 자리는 `session.py` 안이라 `tools.py` 의 클로저를 직접
     # 못 부르고 `ToolRegistry.dispatch` 를 지난다. 그래서 봉합은 `_dispatch_declared`
     # 로 걸고, 선언 문면은 `write_reason.showfile_write_risk` 가 **나갈 명령**에서

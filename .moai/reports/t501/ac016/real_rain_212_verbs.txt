@@ -1,0 +1,24 @@
+파일: .moai/reports/t501/ac016/real_rain_212_denyall/approval_request_1.txt (237줄)
+--- 동사 줄 머리 집계(배차서 지정 8종) ---
+  Store: 14
+  Delete: 0
+  Overwrite: 0
+  SaveShow: 0
+  Label: 0
+  Copy: 0
+  Move: 0
+  Assign: 1
+  위험 동사(Store/Assign 밖) 발견: 없음
+--- 줄 머리에 있지만 8종 동사가 아닌 토큰(참고) ---
+  Group: 130
+  Fixture: 51
+  Set: 27
+  ClearAll: 13
+  ChangeDestination: 1
+--- 손댄 번호(종류별 집합) ---
+  Sequence: ['212']
+  Cue: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '11.5', '12']
+  Timecode: ['12']
+  Preset (pool.no): ['2.21', '2.22', '2.23', '2.24', '2.25', '2.26', '2.28', '2.30']
+  Group: ['3', '4', '7', '10', '13', '14', '15', '16']
+  Fixture: 서로 다른 조합 14개, 등장한 기구 번호 합집합 86개

@@ -1,0 +1,28 @@
+{
+ "song": "Rain.mp3",
+ "sequence": "212",
+ "timecode": "12",
+ "dsp_seconds": 3.19,
+ "analysis_bpm": 76.01351351351367,
+ "analysis_n_sections": 12,
+ "color_count": 2,
+ "color_change_count": 5,
+ "n_section_cues": 13,
+ "n_cues_lit_lt_3": 0,
+ "failing_cues": [],
+ "fx_requested": 0,
+ "fx_hinted": 11,
+ "effect_lines_sent": 0,
+ "n_non_accent_cues": 12,
+ "non_accent_effect_violations": {
+  "BLIND": 0,
+  "STROBE": 0,
+  "HAZE": 0
+ },
+ "n_accent_cues": 1,
+ "n_accent_rises": 1,
+ "gate_warns": true,
+ "gate_violations": [
+  "효과 요청 0건 · 페이저 제안 11큐 → 송신 효과 줄 0"
+ ]
+}

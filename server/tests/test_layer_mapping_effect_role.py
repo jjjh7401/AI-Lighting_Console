@@ -34,8 +34,8 @@ MOVER-*/WASH-* 는 접미사가 붙어 있어 여전히
 
 from __future__ import annotations
 
-from server.design.rig import _LAYER_GROUP_ALIASES
-from server.web.session import _layer_mapping_from_group_children
+from server.design.rig import _LAYER_GROUP_ALIASES, RIG_LAYER_ROLES
+from server.web.session import _LAYER_ROLE_LABELS, _layer_mapping_from_group_children
 
 # 카드 t379 실측 — 이 리그의 DataPool/Groups 그룹 이름 전수.
 _MEASURED_GROUP_NAMES = (
@@ -116,14 +116,74 @@ class TestEffectRoleNowInfersFromThisRigsGroupNames:
         mapping = _layer_mapping_from_group_children(_payload(("BLINDER",)))
         assert [entry["role"] for entry in mapping] == ["effect"]
 
-    def test_mover_and_wash_groups_remain_unmatched_documented_residual(self):
-        """MOVER-*/WASH-* 는 접미사 때문에 여전히 미판독 — 잔여로 명시 고정."""
+    def test_mover_and_wash_and_side_groups_now_match_via_prefix_token(self):
+        """의도적 뒤집음 — 카드 t501(SPEC-LDRENDER-001 M2, REQ-LDRENDER-002).
+
+        고치기 전 이 테스트(`test_mover_and_wash_groups_remain_unmatched_
+        documented_residual`)는 MOVER-*/WASH-* 가 접미사 때문에 미판독으로
+        남는 것을 "잔여"로 명시 고정했다. 감독 결정 1(2026-10-01)이 RG5-1
+        접두 토큰 매칭을 확정하면서 그 잔여가 해소됐다 — 이 단언은 이제
+        **거짓이 된다**(REQ-002 본문이 명시적으로 예고한 뒤집음). 조용히
+        깨뜨리지 않고 이름·단언·독스트링을 모두 갱신한다. SIDE-* 도 함께
+        매칭된다(SIDE 는 원래 이 테스트의 잔여 목록에 없었지만 같은 접두
+        토큰 메커니즘을 공유하므로 여기서 함께 양성으로 확인한다).
+        """
         mapping = _layer_mapping_from_group_children(_payload(_MEASURED_GROUP_NAMES))
-        matched_names = {entry["group_name"] for entry in mapping}
-        residual = {"MOVER-U", "MOVER-D", "MOVER-ALL", "WASH-U", "WASH-D", "WASH-ALL"}
-        assert not (residual & matched_names), f"예상 밖으로 판독됨: {residual & matched_names}"
+        roles_by_group = {entry["group_name"]: entry["role"] for entry in mapping}
+        now_matched = {"MOVER-U", "MOVER-D", "MOVER-ALL", "WASH-U", "WASH-D", "WASH-ALL"}
+        still_residual = now_matched - roles_by_group.keys()
+        assert now_matched <= roles_by_group.keys(), f"여전히 미판독: {still_residual}"
+        for name in ("MOVER-U", "MOVER-D", "MOVER-ALL"):
+            assert roles_by_group[name] == "mover", f"{name} 판독: {roles_by_group[name]}"
+        for name in ("WASH-U", "WASH-D", "WASH-ALL"):
+            assert roles_by_group[name] == "wash", f"{name} 판독: {roles_by_group[name]}"
+        for name in ("SIDE-L", "SIDE-R", "SIDE-ALL"):
+            assert roles_by_group[name] == "side", f"{name} 판독: {roles_by_group[name]}"
+
+    def test_prefix_token_matching_rejects_lookalikes_no_substring_guessing(self):
+        """RG5 불변식 — 하이픈 없는 이름과 접두 토큰이 다른 이름은 여전히
+        매칭되지 않는다(REQ-002 AC-002 조건 4)."""
+        mapping = _layer_mapping_from_group_children(_payload(("SIDEWALK", "XSIDE-L", "SIDES-L")))
+        assert mapping == []
+
+    def test_last_matching_group_in_iteration_order_wins_the_role(self):
+        """REQ-LDRENDER-002 ⑤ — 여러 그룹이 한 역할에 매칭될 때의 동점 규율.
+
+        production 경로(`session.py::_confirm_song_layer_mapping`)는 이
+        함수가 낸 리스트를 `{role: (group_no,) for entry in layer_mapping
+        if ...}` 딕셔너리 컴프리헨션으로 `declared_layers` 로 접는다 — 이
+        컴프리헨션은 **이터레이션 순서상 마지막 항목이 이긴다**(기존 동작,
+        이 카드가 바꾸지 않는다). 이 리그의 측정된 그룹 순서
+        (`_MEASURED_GROUP_NAMES`, 카드 t379)에서는 SIDE-L → SIDE-R →
+        SIDE-ALL 순이라 SIDE-ALL 이 마지막이고, 그래서 `side` 역할은 별도
+        분기 없이 자연히 SIDE-ALL 의 그룹 번호를 받는다(WASH/MOVER 도 같은
+        순서 — 각 계열의 `-ALL` 이 마지막).
+        """
+        mapping = _layer_mapping_from_group_children(_payload(_MEASURED_GROUP_NAMES))
+        declared_layers = {
+            str(entry["role"]): (int(entry["group_no"]),)
+            for entry in mapping
+            if entry.get("role") and isinstance(entry.get("group_no"), int)
+        }
+        assert declared_layers["side"] == (_MEASURED_GROUP_NAMES.index("SIDE-ALL") + 1,)
+        assert declared_layers["wash"] == (_MEASURED_GROUP_NAMES.index("WASH-ALL") + 1,)
+        assert declared_layers["mover"] == (_MEASURED_GROUP_NAMES.index("MOVER-ALL") + 1,)
 
     def test_alias_table_matching_stays_exact_no_substring_guessing(self):
         """RG5 정책 불변식 — "MOVERHEAD" 같은 유사 문자열이 실수로 안 걸리는지."""
         assert "mover" not in _LAYER_GROUP_ALIASES["effect"]
         assert "wash" not in _LAYER_GROUP_ALIASES["effect"]
+
+    def test_every_rig_layer_role_has_a_confirmation_card_label(self):
+        """카드 t501 M2 ④ — 실측으로 잡힌 실제 영향에 대한 회귀 잠금.
+
+        `_LAYER_ROLE_LABELS` 가 `RIG_LAYER_ROLES` 전 역할을 커버하지 못하면
+        `_confirm_song_layer_mapping` 의 확인 카드 문구 조립이 KeyError 로
+        죽는다(이 카드에서 side/wash/mover 추가 직후 실측: test_song_
+        readback_props_t479.py 등 4건이 이 경로로 떨어졌었다). 이 테스트는
+        그 사고가 재발하지 않도록 두 집합의 포함 관계를 직접 고정한다 —
+        has_layer() 호출부(§B 위험 7 (d))는 "back" 만 읽어 안전했지만, 이
+        라벨 표는 해석된 역할 전부를 순회하므로 다른 종류의 소비자다.
+        """
+        missing = set(RIG_LAYER_ROLES) - _LAYER_ROLE_LABELS.keys()
+        assert not missing, f"라벨 누락 역할: {missing}"

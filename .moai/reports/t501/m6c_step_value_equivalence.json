@@ -1,0 +1,142 @@
+[
+  {
+    "label": "Drop Slam",
+    "steps": [
+      {
+        "step": 1,
+        "before": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 0,
+          "ColorRGB_B": 0,
+          "Dimmer": 100
+        },
+        "after": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 0,
+          "ColorRGB_B": 0,
+          "Dimmer": 100
+        },
+        "match": true
+      },
+      {
+        "step": 2,
+        "before": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 0,
+          "ColorRGB_B": 0,
+          "Dimmer": 0
+        },
+        "after": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 0,
+          "ColorRGB_B": 0,
+          "Dimmer": 0
+        },
+        "match": true
+      }
+    ]
+  },
+  {
+    "label": "Breathe Warm",
+    "steps": [
+      {
+        "step": 1,
+        "before": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 75,
+          "ColorRGB_B": 40
+        },
+        "after": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 75,
+          "ColorRGB_B": 40
+        },
+        "match": true
+      },
+      {
+        "step": 2,
+        "before": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 55,
+          "ColorRGB_B": 5
+        },
+        "after": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 55,
+          "ColorRGB_B": 5
+        },
+        "match": true
+      }
+    ]
+  },
+  {
+    "label": "Breathe Cool",
+    "steps": [
+      {
+        "step": 1,
+        "before": {
+          "ColorRGB_R": 85,
+          "ColorRGB_G": 95,
+          "ColorRGB_B": 100
+        },
+        "after": {
+          "ColorRGB_R": 85,
+          "ColorRGB_G": 95,
+          "ColorRGB_B": 100
+        },
+        "match": true
+      },
+      {
+        "step": 2,
+        "before": {
+          "ColorRGB_R": 5,
+          "ColorRGB_G": 20,
+          "ColorRGB_B": 100
+        },
+        "after": {
+          "ColorRGB_R": 5,
+          "ColorRGB_G": 20,
+          "ColorRGB_B": 100
+        },
+        "match": true
+      }
+    ]
+  },
+  {
+    "label": "Finale Slam",
+    "steps": [
+      {
+        "step": 1,
+        "before": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 75,
+          "ColorRGB_B": 40,
+          "Dimmer": 100
+        },
+        "after": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 75,
+          "ColorRGB_B": 40,
+          "Dimmer": 100
+        },
+        "match": true
+      },
+      {
+        "step": 2,
+        "before": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 0,
+          "ColorRGB_B": 0,
+          "Dimmer": 0
+        },
+        "after": {
+          "ColorRGB_R": 100,
+          "ColorRGB_G": 0,
+          "ColorRGB_B": 0,
+          "Dimmer": 0
+        },
+        "match": true
+      }
+    ]
+  }
+]

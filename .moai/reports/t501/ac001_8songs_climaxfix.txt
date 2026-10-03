@@ -1,0 +1,8 @@
+Club Diver: 구간 큐 14 LIT>=3 14 LIT<3 0 색 4 효과줄 0 경고 True
+Cut and Run: 구간 큐 18 LIT>=3 18 LIT<3 0 색 3 효과줄 0 경고 True
+Ice cream: 구간 큐 8 LIT>=3 8 LIT<3 0 색 4 효과줄 0 경고 True
+Morning: 구간 큐 14 LIT>=3 14 LIT<3 0 색 3 효과줄 0 경고 True
+Rain: 구간 큐 13 LIT>=3 13 LIT<3 0 색 3 효과줄 0 경고 False
+Too Cool: 구간 큐 24 LIT>=3 24 LIT<3 0 색 4 효과줄 0 경고 True
+scott-buckley-neon: 구간 큐 18 LIT>=3 18 LIT<3 0 색 4 효과줄 0 경고 True
+걸그룹DinoDino_C_max최고품질: 구간 큐 11 LIT>=3 11 LIT<3 0 색 4 효과줄 0 경고 True

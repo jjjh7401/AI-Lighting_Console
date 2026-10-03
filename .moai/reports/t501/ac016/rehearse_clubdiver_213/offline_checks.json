@@ -1,0 +1,26 @@
+{
+ "song": "Club Diver.mp3",
+ "sequence": "213",
+ "timecode": "13",
+ "dsp_seconds": 2.64,
+ "analysis_bpm": 139.67483108108198,
+ "analysis_n_sections": 13,
+ "color_count": 3,
+ "color_change_count": 5,
+ "n_section_cues": 14,
+ "n_cues_lit_lt_3": 0,
+ "failing_cues": [],
+ "fx_requested": 12,
+ "fx_hinted": 12,
+ "effect_lines_sent": 11,
+ "n_non_accent_cues": 13,
+ "non_accent_effect_violations": {
+  "BLIND": 0,
+  "STROBE": 0,
+  "HAZE": 0
+ },
+ "n_accent_cues": 1,
+ "n_accent_rises": 1,
+ "gate_warns": false,
+ "gate_violations": []
+}

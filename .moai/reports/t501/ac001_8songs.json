@@ -1,0 +1,166 @@
+[
+ {
+  "song": "Club Diver",
+  "n_section_cues": 14,
+  "n_cues_lit_ge_3": 13,
+  "n_cues_lit_lt_3": 1,
+  "failing_cues": [
+   [
+    "12.5",
+    2
+   ]
+  ],
+  "color_count": 4,
+  "effect_lines_sent": 0,
+  "fx_requested": 12,
+  "warns": true,
+  "violations": [
+   "색 수 4개(기준 2~3)",
+   "LIT 층 3 미만인 구간 큐 1개: 12.5",
+   "효과 요청 12건 · 페이저 제안 0큐 → 송신 효과 줄 0"
+  ]
+ },
+ {
+  "song": "Cut and Run",
+  "n_section_cues": 18,
+  "n_cues_lit_ge_3": 17,
+  "n_cues_lit_lt_3": 1,
+  "failing_cues": [
+   [
+    "16.5",
+    2
+   ]
+  ],
+  "color_count": 3,
+  "effect_lines_sent": 0,
+  "fx_requested": 16,
+  "warns": true,
+  "violations": [
+   "LIT 층 3 미만인 구간 큐 1개: 16.5",
+   "효과 요청 16건 · 페이저 제안 0큐 → 송신 효과 줄 0"
+  ]
+ },
+ {
+  "song": "Ice cream",
+  "n_section_cues": 8,
+  "n_cues_lit_ge_3": 7,
+  "n_cues_lit_lt_3": 1,
+  "failing_cues": [
+   [
+    "6.5",
+    2
+   ]
+  ],
+  "color_count": 4,
+  "effect_lines_sent": 0,
+  "fx_requested": 6,
+  "warns": true,
+  "violations": [
+   "색 수 4개(기준 2~3)",
+   "LIT 층 3 미만인 구간 큐 1개: 6.5",
+   "효과 요청 6건 · 페이저 제안 0큐 → 송신 효과 줄 0"
+  ]
+ },
+ {
+  "song": "Morning",
+  "n_section_cues": 14,
+  "n_cues_lit_ge_3": 13,
+  "n_cues_lit_lt_3": 1,
+  "failing_cues": [
+   [
+    "12.5",
+    2
+   ]
+  ],
+  "color_count": 3,
+  "effect_lines_sent": 0,
+  "fx_requested": 12,
+  "warns": true,
+  "violations": [
+   "LIT 층 3 미만인 구간 큐 1개: 12.5",
+   "효과 요청 12건 · 페이저 제안 0큐 → 송신 효과 줄 0"
+  ]
+ },
+ {
+  "song": "Rain",
+  "n_section_cues": 13,
+  "n_cues_lit_ge_3": 12,
+  "n_cues_lit_lt_3": 1,
+  "failing_cues": [
+   [
+    "11.5",
+    2
+   ]
+  ],
+  "color_count": 3,
+  "effect_lines_sent": 0,
+  "fx_requested": 0,
+  "warns": true,
+  "violations": [
+   "LIT 층 3 미만인 구간 큐 1개: 11.5"
+  ]
+ },
+ {
+  "song": "Too Cool",
+  "n_section_cues": 24,
+  "n_cues_lit_ge_3": 23,
+  "n_cues_lit_lt_3": 1,
+  "failing_cues": [
+   [
+    "18.5",
+    2
+   ]
+  ],
+  "color_count": 4,
+  "effect_lines_sent": 0,
+  "fx_requested": 36,
+  "warns": true,
+  "violations": [
+   "색 수 4개(기준 2~3)",
+   "LIT 층 3 미만인 구간 큐 1개: 18.5",
+   "효과 요청 36건 · 페이저 제안 0큐 → 송신 효과 줄 0"
+  ]
+ },
+ {
+  "song": "scott-buckley-neon",
+  "n_section_cues": 18,
+  "n_cues_lit_ge_3": 17,
+  "n_cues_lit_lt_3": 1,
+  "failing_cues": [
+   [
+    "16.5",
+    2
+   ]
+  ],
+  "color_count": 4,
+  "effect_lines_sent": 0,
+  "fx_requested": 16,
+  "warns": true,
+  "violations": [
+   "색 수 4개(기준 2~3)",
+   "LIT 층 3 미만인 구간 큐 1개: 16.5",
+   "효과 요청 16건 · 페이저 제안 0큐 → 송신 효과 줄 0"
+  ]
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질",
+  "n_section_cues": 11,
+  "n_cues_lit_ge_3": 10,
+  "n_cues_lit_lt_3": 1,
+  "failing_cues": [
+   [
+    "3.5",
+    2
+   ]
+  ],
+  "color_count": 4,
+  "effect_lines_sent": 0,
+  "fx_requested": 9,
+  "warns": true,
+  "violations": [
+   "색 수 4개(기준 2~3)",
+   "LIT 층 3 미만인 구간 큐 1개: 3.5",
+   "효과 요청 9건 · 페이저 제안 0큐 → 송신 효과 줄 0"
+  ]
+ }
+]

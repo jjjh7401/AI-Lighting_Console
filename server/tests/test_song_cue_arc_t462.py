@@ -190,9 +190,16 @@ class _Stub:
     def __init__(self) -> None:
         self._last_phaser_failures: dict[str, str] = {}
         self._last_color_failures: dict[str, str] = {}
+        self._last_phaser_slots: dict[str, tuple[int, int]] = {}
 
     def _phaser_slots_for_bundle(self, bundle):
         return {}, {}
+
+    def _pregenerate_missing_phasers(self, bundle, resolved, failed):
+        # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011, t501) — this accent-ladder
+        # stub never has phasers to resolve; see test_song_cue_color_emission's
+        # twin stub for the same rationale.
+        return resolved, failed
 
     def _resolve_position_preset_labels(self, labels, *, start, span, pool_no=None):
         return {label: start + BASIC_POSITION_SEQUENCE.index(label) for label in labels}

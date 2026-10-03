@@ -1,0 +1,125 @@
+lines rehearsal=224 real=119
+after fixture-set normalisation: only_rehearsal=117 only_real=12
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 40
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 40
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 56
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 56
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 56
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 90 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 20
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 4 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 3 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+  UNEXPLAINED rehearsal-only: Group 7 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 10 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 13 ; Attribute 'Dimmer' At 80
+  UNEXPLAINED rehearsal-only: Group 14 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 15 ; Attribute 'Dimmer' At 0
+  UNEXPLAINED rehearsal-only: Group 16 ; Attribute 'Dimmer' At 0
+real-only lines: W-channel=12 other=0
+W line tails: Counter({"Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorRGB_W' At 0": 12})
+W fixture set used 12x: count=28 ids=[521, 522, 523, 524, 525, 526, 527, 528, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 421, 422, 423, 424, 425, 426, 427, 428, 429, 430]
+rehearsal fixture sets: [(2, [20, 26], 38)]
+real non-W fixture sets: [(86, 25), (58, 12)]
+VERDICT all diff lines explained by fixture-set + W-channel: False

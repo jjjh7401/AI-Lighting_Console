@@ -1,0 +1,17 @@
+Rain 실측 BLIND/STROBE/HAZE fid 12대: [601, 602, 603, 604, 605, 606, 611, 612, 613, 614, 621, 622]
+
+patch_records() 결과 12건 중 처음 3건:
+  {'fid': 601, 'type_name': 'CuePix Blinder WW2', 'capabilities': ['effect']}
+  {'fid': 602, 'type_name': 'CuePix Blinder WW2', 'capabilities': ['effect']}
+  {'fid': 603, 'type_name': 'CuePix Blinder WW2', 'capabilities': ['effect']}
+
+이 레코드들에 실제로 실린 capabilities 전체 집합: ['effect']
+"effect" 가 포함되는가: True
+
+rig.inventory.has_capability("effect") = True
+rig.inventory.capability_fids = {'effect': frozenset({611, 612, 613, 614, 601, 602, 603, 604, 605, 606})}
+
+_fx_axes(budget=10, rig) = 10 (M1 에서는 0 이었다 — 이 리그가 effect 능력을 선언하는 기구(BLIND·STROBE 의 Dimmer)를 가진 상태로 재측정)
+
+=== 결론 ===
+M6 처방 확인됨 — "effect" 가 capability_fids 에 나타나고(BLIND·STROBE 의 Dimmer 선언으로), has_capability("effect")=True, _fx_axes 가 더 이상 무조건 0을 돌려주지 않는다(예산이 있으면 양수). HAZE(Dimmer 없음)는 effect 를 단독 선언하지 못하지만 같은 그룹에 BLIND/STROBE 가 있어 리그 전체 has_capability 는 True 다.

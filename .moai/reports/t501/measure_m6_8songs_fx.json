@@ -1,0 +1,82 @@
+[
+ {
+  "song": "Club Diver",
+  "fx_requested": 12,
+  "fx_permitted": 0,
+  "fx_sent_by_gate_count": 0,
+  "recall_lines_in_commands": 13,
+  "n_section_cues": 14,
+  "n_cues_lit_ge_3": 14,
+  "color_count": 4
+ },
+ {
+  "song": "Cut and Run",
+  "fx_requested": 16,
+  "fx_permitted": 0,
+  "fx_sent_by_gate_count": 0,
+  "recall_lines_in_commands": 17,
+  "n_section_cues": 18,
+  "n_cues_lit_ge_3": 18,
+  "color_count": 3
+ },
+ {
+  "song": "Ice cream",
+  "fx_requested": 6,
+  "fx_permitted": 0,
+  "fx_sent_by_gate_count": 0,
+  "recall_lines_in_commands": 7,
+  "n_section_cues": 8,
+  "n_cues_lit_ge_3": 8,
+  "color_count": 4
+ },
+ {
+  "song": "Morning",
+  "fx_requested": 12,
+  "fx_permitted": 0,
+  "fx_sent_by_gate_count": 0,
+  "recall_lines_in_commands": 13,
+  "n_section_cues": 14,
+  "n_cues_lit_ge_3": 14,
+  "color_count": 3
+ },
+ {
+  "song": "Rain",
+  "fx_requested": 0,
+  "fx_permitted": 0,
+  "fx_sent_by_gate_count": 0,
+  "recall_lines_in_commands": 12,
+  "n_section_cues": 13,
+  "n_cues_lit_ge_3": 13,
+  "color_count": 3
+ },
+ {
+  "song": "Too Cool",
+  "fx_requested": 36,
+  "fx_permitted": 0,
+  "fx_sent_by_gate_count": 0,
+  "recall_lines_in_commands": 23,
+  "n_section_cues": 24,
+  "n_cues_lit_ge_3": 24,
+  "color_count": 4
+ },
+ {
+  "song": "scott-buckley-neon",
+  "fx_requested": 16,
+  "fx_permitted": 0,
+  "fx_sent_by_gate_count": 0,
+  "recall_lines_in_commands": 17,
+  "n_section_cues": 18,
+  "n_cues_lit_ge_3": 18,
+  "color_count": 4
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질",
+  "fx_requested": 9,
+  "fx_permitted": 0,
+  "fx_sent_by_gate_count": 0,
+  "recall_lines_in_commands": 10,
+  "n_section_cues": 11,
+  "n_cues_lit_ge_3": 11,
+  "color_count": 4
+ }
+]

@@ -1,4 +1,4 @@
-# 곡 단위 조명연출 표준 초안 (Song Lighting Design Standard, v0.4)
+# 곡 단위 조명연출 표준 초안 (Song Lighting Design Standard, v0.5)
 
 > SPEC-COPILOT-SONGSTD-001의 1단계 산출물. 근거는
 > `.moai/specs/SPEC-COPILOT-SONGSTD-001/research.md` (출처 포함 80+ 사실,
@@ -73,7 +73,7 @@
   한 사전이 D레벨·색 성향·포지션 후보를 함께 낸다 (예: "웅장한 피날레" →
   D5 + 블루 쿨 볼드 + Ring In; "잔잔한 발라드" → D2 + 블루/웜화이트 + Vocal DSC).
 
-## 2c. 리그 프로파일 계층 — 규칙은 장비와 디자인 위에서만 성립한다 (v0.3)
+## 2c. 리그 프로파일 계층 — 규칙은 장비와 디자인 위에서만 성립한다 (v0.5)
 
 음악이 "무엇을 말할지"를 정하면, 리그가 "무엇을 말할 수 있는지"를 정한다.
 표준의 모든 규칙은 리그 프로파일에 조건화된다:
@@ -82,7 +82,7 @@
 RigProfile:
   inventory:  타입별 수량·능력 (스팟/워시/빔/블라인더/스트로브,
               줌 범위, 컬러 시스템, 고보/프리즘 유무)   ← 패치에서 판독
-  layers:     역할층 → 그룹 매핑 (key/back/effect/audience)  ← 조명 디자인
+  layers:     역할층 → 그룹 매핑 (key/back/effect/audience/side/wash/mover)  ← 조명 디자인
   geometry:   배치 분류(일자/링/사각/…)·무게중심·지배축     ← 좌표에서 유도
   scale:      무대 치수 → 상수 비례화 (Vocal 오프셋, Ring reach 등)
 ```
@@ -102,6 +102,16 @@ RigProfile:
 - **RG5. 층 매핑의 출처.** layers는 ①운영자 선언(카드/설정) ②그룹
   이름 휴리스틱(Front/Back/House 등 — 기존 rig 대시보드 그룹 활용)
   ③미지정 시 "단일층 리그"로 축퇴 — 순서로 결정한다. 추측 실행 금지.
+- **RG5-1. 역할 어휘 확장 — side/wash/mover (2026-10-01, 감독 결정 1, SPEC-LDRENDER-001).**
+  층 역할은 더 이상 key/back/effect/audience 네 개로 닫혀 있지 않다 — 무빙·워시·
+  사이드 전용 그룹을 쓰는 리그를 위해 `side`/`wash`/`mover` 세 역할을 추가한다.
+  그룹 이름 해석은 RG5의 "그룹 이름 휴리스틱"에 **접두 토큰 매칭**을 더한다 —
+  그룹 이름을 첫 하이픈에서 잘라 그 앞 토큰이 정확히 `SIDE`/`WASH`/`MOVER` 일 때만
+  해당 역할로 인식한다(`SIDE-L`/`SIDE-R`/`SIDE-ALL` → `side`,
+  `WASH-U`/`WASH-D`/`WASH-ALL` → `wash`, `MOVER-U`/`MOVER-D`/`MOVER-ALL` → `mover`).
+  부분 문자열 추측은 여전히 금지한다 — 하이픈이 없는 이름(`SIDEWALK`)이나
+  접두 토큰이 정확히 일치하지 않는 이름(`XSIDE-L`, `SIDES-L`)은 매칭하지 않는다.
+  기존 네 역할의 정확 일치(exact-match) 동작은 바이트 동일하게 유지된다.
 - **RG6. 예산의 장비 의존.** 순간 액션 예산(X1)·동시 이펙트 축 수(F3)는
   해당 능력 픽스처 수가 임계 미만이면 자동 축소된다 (4대 리그의 블라인더
   예산 ≠ 40대 리그).

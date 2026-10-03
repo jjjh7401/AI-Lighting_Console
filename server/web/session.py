@@ -69,11 +69,24 @@ from server.design.interview import (
     DirectorInterview,
     UnresolvedAnswer,
 )
+from server.design.ldrender_gate import GateResult as LdrenderGateResult
+from server.design.ldrender_gate import (
+    evaluate as ldrender_gate_evaluate,
+)
+from server.design.ldrender_gate import (
+    gate_cues_from_commands,
+)
 from server.design.phaser_catalog import (  # 카드 t480 — 자리만 옮김
     _PHASER_LABEL_POOL_NAME,
     COLOR_PHASER_SEQUENCE,
     COMBO_PHASER_SEQUENCE,
     DIMMER_PHASER_SEQUENCE,
+)
+from server.design.phaser_pregen import (  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011)
+    PhaserPregenError,
+    pool_name_for_label,
+    pregenerate_phaser_bundle,
+    presets_section_from_pool_children,
 )
 from server.design.preset_names import (
     NAME_AMBIGUOUS,
@@ -88,7 +101,7 @@ from server.design.profile import (
     parse_sheet_bpm,
     resolve_bpm,
 )
-from server.design.rig import _LAYER_GROUP_ALIASES, build_rig_profile
+from server.design.rig import build_rig_profile, resolve_layer_role
 from server.design.rig_capability_read import (
     DesignRigRead,
     read_design_rig,
@@ -129,6 +142,7 @@ from server.design.song_cue_render import (  # 카드 t480 — 자리만 옮김 
     _color_apply_command,
     _confirmed_section_names,
     _direct_position_intent,
+    _fx_report_counts,
     _infer_confirmed_role,
     _phaser_label_for_cue,
     _preset_recall_command,
@@ -151,6 +165,7 @@ from server.design.song_plan import (
     apply_cue_sheet_section,
     apply_cue_sheet_view,
 )
+from server.fx.instantiate import FxInstantiationError  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011)
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
 from server.looks.songcue import (
@@ -621,15 +636,34 @@ _REQUERY_OPTIONS_DEFAULT: tuple[str, ...] = (
 _SONG_REQUERY_CANCEL = re.compile(r"^\s*(취소|중단|그만|cancel)\s*$", re.IGNORECASE)
 
 # Korean role labels for the one-time rig-layer confirmation card (결함 6).
+#
+# 카드 t501(SPEC-LDRENDER-001 M2 ④) — side/wash/mover 추가 후 실측으로 잡힌
+# 실제 영향: `_confirm_song_layer_mapping` 의 확인 카드 문구 조립
+# (`_LAYER_ROLE_LABELS[str(entry['role'])]`)이 새 역할에 대해 KeyError 로
+# 죽었다(test_song_readback_props_t479.py 등 4건 — SIDE-L/SIDE-R 를 포함한
+# 리그 그룹으로 송신을 재현하는 회귀가 전부 실패). has_layer() 호출부(§B
+# 위험 7 (d))는 "back" 만 읽어 안전했지만, 이 라벨 표는 **모든** 해석된
+# 역할을 순회해 조립하므로 네 역할 밖을 만나면 즉시 깨진다 — 이 표가 바로
+# 그 "예상 밖 영향"이었다.
 _LAYER_ROLE_LABELS: dict[str, str] = {
     "key": "Key/Front",
     "back": "Back",
     "effect": "Effect/Beam",
     "audience": "Audience",
+    "side": "Side",
+    "wash": "Wash",
+    "mover": "Mover",
 }
 
+# 카드 t501(SPEC-LDRENDER-001 M3④) — M2 가 역할을 key/back/effect/audience
+# 네 개에서 일곱 개(side/wash/mover 추가)로 넓혔는데, 이 문구는 그 전 네
+# 역할만 나열하고 있었다. 단일 레이어 축퇴 상태에서는 **일곱 전부**가
+# 미검증이므로(매핑이 비면 `_role_dimmer_value_lines`가 어떤 역할에도 줄을
+# 못 낸다, AC-LDRENDER-003), 넷만 적힌 문구는 이제 부정확하다 — 셋을
+# 추가해 바로잡는다(판단 기록: M3.md "_SINGLE_LAYER_WARNING 판정").
 _SINGLE_LAYER_WARNING = (
-    "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다."
+    "단일 레이어 계획입니다. Front/Back/Beam/Audience/Side/Wash/Mover 분리 연출은 "
+    "검증되지 않았습니다."
 )
 
 
@@ -698,6 +732,40 @@ def _arc_note(bundle) -> str:
     return " 절정 연출 미반영: " + "; ".join(notes) + "."
 
 
+def _fx_report_note(bundle, phaser_slots: Mapping[str, tuple[int, int]]) -> str:
+    """SPEC-LDRENDER-001 M6(REQ-LDRENDER-012, t501) — 효과 요청/허용/송신
+    3계 수치를 최종 회신에 노출한다. 요청이 0건(이 곡이 효과를 요청하지
+    않음)이면 빈 문자열 — 효과와 무관한 곡의 회신에 "효과: 0 · 0 · 0"을
+    끼워 넣지 않는다. 숫자 산출은 ``_phaser_failure_note``/
+    ``_color_failure_note``/``_arc_note``와 같은 관행(지어내지 않고 정직하게
+    고지)이며, ``song_cue_render._fx_report_counts``(그 모듈이 "sent" 를
+    ``_phaser_cue_value_lines``의 REQ-010 게이트와 바이트 단위로 맞춰 둔
+    이유는 그 함수 독스트링 참조)를 그대로 위임한다."""
+    if bundle is None:
+        return ""
+    requested, permitted, sent = _fx_report_counts(bundle, phaser_slots)
+    if requested == 0:
+        return ""
+    return f" 효과: 요청 {requested} · 허용 {permitted} · 송신 {sent}."
+
+
+def _ldrender_gate_note(result: LdrenderGateResult | None) -> str:
+    """SPEC-LDRENDER-001 M7(REQ-LDRENDER-014, t501) — 콘솔에 쓰기 직전인
+    송신 명령 목록이 연출 판독 게이트(`ldrender_gate.evaluate()`, M1 이
+    제품화·M7 이 배선)에 걸리면 비차단 경고를 최종 회신에 노출한다.
+
+    경고는 송신을 막지 않는다(SPEC-LDDESIGN-001 REQ-052 의 헤드룸 경고
+    선례를 따르는 축 — 이 SPEC 자신의 `_phaser_failure_note`/
+    `_color_failure_note`/`_arc_note`/`_fx_report_note`(M5/M6)와 같은 "지어
+    내지 않고 정직하게 고지" 관행으로 노출면만 재사용한다, 새 채널을 만들지
+    않는다). 걸리는 축이 없으면(``result is None`` 또는 `result.warns`가
+    거짓) 빈 문자열 — 문제없는 곡의 회신에 "연출 경고: 없음"을 끼워 넣지
+    않는다."""
+    if result is None or not result.warns:
+        return ""
+    return " 연출 경고: " + "; ".join(result.violations) + "."
+
+
 #: 카드 t311 — 좌표 판독이 실패한 **두 갈래**. 문면이 아니라 코드다:
 #: 조준 핸들러와 곡 디자인이 같은 실패에 서로 다른 문장을 쓴다.
 _COORD_GAP_UNREADABLE = "unreadable"
@@ -746,10 +814,19 @@ def _requery_card_options(
 
 def _layer_mapping_from_group_children(payload: object) -> list[dict[str, object]]:
     """Role → group-number mapping inferred from console group NAMES, using
-    the same exact-match alias table as ``server.design.rig`` (RG5: no
-    substring guessing). Group MEMBERSHIP is not readable from the console
-    (the drilldown wall), so this records which group carries a role — it
-    never claims to know the member fixtures."""
+    the same resolver as ``server.design.rig`` (``resolve_layer_role`` —
+    exact-match first, then RG5-1 hyphen-prefix-token match for
+    side/wash/mover; RG5: no substring guessing). Group MEMBERSHIP is not
+    readable from the console (the drilldown wall), so this records which
+    group carries a role — it never claims to know the member fixtures.
+
+    카드 t501(SPEC-LDRENDER-001 M2) — 한 그룹 이름은 역할을 **최대 1개**만
+    받는다(`resolve_layer_role` 이 `None`이 아닌 첫 매치를 돌려준다). 같은
+    역할에 여러 그룹이 매칭되면(`SIDE-L`/`SIDE-R`/`SIDE-ALL` 전부 `side`)
+    이 함수는 매칭된 **전부**를 리스트에 싣는다 — role→group_no 로 하나만
+    남기는 것은 이 함수를 부르는 `_confirm_song_layer_mapping`(호출부, 역할
+    -> 그룹번호 dict 컴프리헨션)의 "이터레이션 순서상 마지막 항목이 이긴다"
+    의미론이다(이 함수 자체는 바꾸지 않는다, REQ-LDRENDER-002 ⑤)."""
     if not isinstance(payload, Mapping):
         return []
     children = payload.get("children")
@@ -763,10 +840,9 @@ def _layer_mapping_from_group_children(payload: object) -> list[dict[str, object
         number = child.get("i") if isinstance(child.get("i"), int) else child.get("no")
         if not name or not isinstance(number, int):
             continue
-        key = name.strip().casefold()
-        for role, aliases in _LAYER_GROUP_ALIASES.items():
-            if key in aliases:
-                mapping.append({"role": role, "group_no": number, "group_name": name})
+        role = resolve_layer_role(name)
+        if role is not None:
+            mapping.append({"role": role, "group_no": number, "group_name": name})
     return mapping
 
 
@@ -1359,8 +1435,11 @@ def _song_cue_sheet_section_fields(
         # 둘 중 하나를 고르면 그것은 계산이 아니라 추측이다.
         trans = "SNAP" if fade_seconds == 0 else "FADE"
 
-    # 이 큐가 **그룹 번호로 지목하는** 콘솔 그룹. `_back_layer_value_lines` 와
-    # 같은 조건이다: 불이 켜진 구간 큐에만 back 역할 그룹 줄이 붙는다.
+    # 이 큐가 **그룹 번호로 지목하는** 콘솔 그룹. `_role_dimmer_value_lines`
+    # (SPEC-LDRENDER-001 M3 — 구 `_back_layer_value_lines`)와 같은 조건이다:
+    # 불이 켜진 구간 큐에만 back 역할 그룹 줄이 붙는다. 이 필드(업로드 길
+    # CUE-EX 큐시트 표시용)는 여전히 back 전용이다 — side/wash/mover 로
+    # 넓히는 것은 이 SPEC 의 송신 경로(reviewed_song_commands) 범위 밖이다.
     fixture_groups = (
         tuple(
             str(entry["group_name"])
@@ -3766,6 +3845,18 @@ class ChatSession:
         # ``_reviewed_song_commands``'s existing call sites/signature.
         self._last_phaser_failures: dict[str, str] = {}
         self._last_color_failures: dict[str, str] = {}
+        # SPEC-LDRENDER-001 M6(REQ-LDRENDER-012, t501) — last reviewed-command
+        # build's RESOLVED phaser labels (label -> (pool_no, slot)), after any
+        # M6 pre-generation (REQ-011) merged in. Stashed the same way as the
+        # two dicts above, so `_fx_report_note` can compute the "sent" count
+        # without threading a new return value through `_reviewed_song_commands`.
+        self._last_phaser_slots: dict[str, tuple[int, int]] = {}
+        # SPEC-LDRENDER-001 M7(REQ-LDRENDER-013/014, t501) — last reviewed-
+        # command build's gate verdict (`ldrender_gate.evaluate()`). Stashed
+        # the same way as the dicts above, so `_ldrender_gate_note` can
+        # surface the non-blocking warning in the final reply without
+        # threading a new return value through `_reviewed_song_commands`.
+        self._last_gate_result: LdrenderGateResult | None = None
         # Rolling transcript of prior turns (user instruction + assistant reply),
         # replayed to the model so context survives across turns for EVERY
         # conversation, not just the layout special-cases. Bounded to the last
@@ -7056,7 +7147,17 @@ class ChatSession:
         bundle = composition.bundle
         if bundle is None:
             return ()
-        phaser_slots, self._last_phaser_failures = self._phaser_slots_for_bundle(bundle)
+        phaser_slots, phaser_failures = self._phaser_slots_for_bundle(bundle)
+        # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011, t501) — 미해석 라벨 중 그
+        # 큐의 D레벨 예산이 실제로 효과를 허용한 것만 사전 생성을 시도한다
+        # (아래 메서드 독스트링 참조). 승인은 호출자(이 메서드의 유일한
+        # 호출부, `_song_finalize` 의 승인 루프)가 이미 director approve 를
+        # 받은 뒤라 안전하고, 생성 자체도 기존 `run_commands` -> `gate.screen()`
+        # 를 한 번 더 거친다(plan.md §D "단일 관문 무변경").
+        phaser_slots, self._last_phaser_failures = self._pregenerate_missing_phasers(
+            bundle, phaser_slots, phaser_failures
+        )
+        self._last_phaser_slots = dict(phaser_slots)
         # 카드 t232 — 번호 참조를 라벨로 확인한다. 큐가 부르는 포지션 라벨을
         # 한 번에 모아 풀을 1회 판독으로 슬롯을 찾는다(`_phaser_slots_for_
         # bundle`과 같은 배치 규율) — `preset_start + index`는 그 슬롯이
@@ -7116,6 +7217,91 @@ class ChatSession:
                 failed[label] = f"'{label}' 페이저 프리셋을 콘솔에서 찾지 못했습니다"
             else:
                 resolved[label] = slot
+        return resolved, failed
+
+    def _pregenerate_missing_phasers(
+        self,
+        bundle,
+        resolved: dict[str, tuple[int, int]],
+        failed: dict[str, str],
+    ) -> tuple[dict[str, tuple[int, int]], dict[str, str]]:
+        """SPEC-LDRENDER-001 M6(REQ-LDRENDER-011, t501) — 풀에서 못 찾은
+        카탈로그 페이저를 ``server/fx/instantiate.py`` 의 기존 저작 경로
+        (``build_fx_preset_bundle``/``select_preset_number``, 둘 다 재사용 —
+        ``server/design/phaser_pregen.py`` 참조)로 사전 생성하고, **기존**
+        승인 게이트(``run_commands`` -> ``gate.screen()``)로 보낸다. 새
+        무승인 실행 표면을 만들지 않는다(plan.md §D).
+
+        오직 그 큐의 D레벨 예산이 실제로 효과를 허용한(``cue.fx.permitted``
+        비어있지 않음, REQ-LDRENDER-010 게이트와 같은 전제) 라벨만 시도한다
+        — 예산이 0인 큐가 제안한 라벨까지 생성하면 아무도 recall하지 않을
+        프리셋으로 콘솔 풀만 채운다. 충돌(이미 점유된 번호)은
+        ``select_preset_number``/``FxInstantiationError`` 가 던지는 FXLIB
+        기존 사유 코드(``PRESET_OCCUPIED`` 등, REQ-FXLIB-012 (c))를 그대로
+        ``failed``에 남긴다 — 새 충돌 검사를 쓰지 않고, 점유된 슬롯을
+        덮어쓰지 않는다.
+        """
+        wanted = {
+            label
+            for cue in bundle.cues
+            if cue.fx.permitted and (label := _phaser_label_for_cue(cue)) is not None
+        }
+        pending = sorted(label for label in wanted if label in failed)
+        if not pending:
+            return resolved, failed
+        resolved = dict(resolved)
+        failed = dict(failed)
+        preset_pools_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        for label in pending:
+            try:
+                pool_name = pool_name_for_label(label)
+            except PhaserPregenError as error:
+                failed[label] = str(error)
+                continue
+            probe_slug = pool_name.lower().replace(" ", "")
+            pool_no = self._resolve_named_pool_no(
+                pool_name, probe_id=f"phaser-pregen-pool-{probe_slug}"
+            )
+            if pool_no is None:
+                failed[label] = f"'{pool_name}' 풀을 못 찾아 '{label}' 페이저를 생성할 수 없습니다"
+                continue
+            children = self._paged_pool_children(
+                f"{preset_pools_root}/{pool_no}", probe_id=f"phaser-pregen-slots-{probe_slug}"
+            )
+            if children is None:
+                failed[label] = (
+                    f"Preset {pool_no}.x 를 못 읽어 '{label}' 페이저를 생성할 수 없습니다"
+                )
+                continue
+            presets_section = presets_section_from_pool_children(children)
+            try:
+                plan = pregenerate_phaser_bundle(
+                    label, presets_section=presets_section, preset_pool=pool_no
+                )
+            except (PhaserPregenError, FxInstantiationError) as error:
+                failed[label] = str(error)
+                continue
+            pregen_risk = BatchRisk(
+                reason=(
+                    f"'{label}' 카탈로그 페이저 사전 생성 — 제안된 라벨이 콘솔 풀에 없어 "
+                    "REQ-LDRENDER-011 경로로 생성(FXGEN/FXLIB 기존 저작 경로 재사용)"
+                ),
+                kind="song_design_fx_pregen",
+            )
+            executed = self._dispatch_declared(
+                ToolCall(
+                    id=f"song-design-phaser-pregen-{probe_slug}-{plan.preset}",
+                    name="run_commands",
+                    arguments={"commands": list(plan.commands)},
+                ),
+                risk=pregen_risk,
+            )
+            if executed.result.is_error:
+                detail = executed.result.content
+                failed[label] = f"'{label}' 페이저 사전 생성 명령이 거부됐습니다: {detail}"
+                continue
+            resolved[label] = (pool_no, plan.preset)
+            failed.pop(label, None)
         return resolved, failed
 
     def _reviewed_song_timing_commands(
@@ -7690,8 +7876,9 @@ class ChatSession:
                         QuestionOption(label="단일 레이어로 진행"),
                     ),
                     why=(
-                        "레이어 매핑이 없으면 Front/Back/Beam/Audience 분리 연출은 "
-                        "검증되지 않은 단일 레이어 계획으로 표시됩니다."
+                        # 카드 t501 M3④ — _SINGLE_LAYER_WARNING 과 같은 판정(위).
+                        "레이어 매핑이 없으면 Front/Back/Beam/Audience/Side/Wash/Mover "
+                        "분리 연출은 검증되지 않은 단일 레이어 계획으로 표시됩니다."
                     ),
                 )
                 if answer and "사용" in answer:
@@ -9836,6 +10023,38 @@ class ChatSession:
                 return self._pointing_refusal(
                     f"리뷰 번들을 실행 명령으로 만들 수 없습니다: {error}"
                 )
+            # SPEC-LDRENDER-001 M7(REQ-LDRENDER-013/014, t501) — 콘솔에 쓰기
+            # 직전(`run_commands` 디스패치 바로 전)인 이 송신 명령 목록을
+            # 연출 판독 게이트에 돌린다. 문자열을 다시 파싱하는 것은 "이미
+            # 조립된 값을 재계산"이 아니라 "실제로 나갈 명령 그 자체를
+            # 검사"하는 것이다(gate_cues_from_commands 독스트링 참조) — 이
+            # 게이트는 송신을 막지 않는다(`_ldrender_gate_note`가 비차단
+            # 경고로만 노출, 아래 §4 결과 소비).
+            gate_bundle = approved_composition.bundle
+            if gate_bundle is not None:
+                fx_requested_total, _fx_permitted_total, _fx_sent_total = _fx_report_counts(
+                    gate_bundle, self._last_phaser_slots
+                )
+                fx_hinted_total = sum(
+                    1 for cue in gate_bundle.cues if _phaser_label_for_cue(cue) is not None
+                )
+                effect_role_mapped = any(
+                    entry.get("role") == "effect" for entry in state.layer_mapping
+                )
+                gate_cues = gate_cues_from_commands(
+                    commands, gate_bundle.cues, layer_mapping=state.layer_mapping
+                )
+                self._last_gate_result = ldrender_gate_evaluate(
+                    gate_cues,
+                    sent_lines=commands,
+                    fx_requested=fx_requested_total,
+                    fx_hinted=fx_hinted_total,
+                    palette_mode=str(_record_value(state.records, Q2B_COLOR_USAGE, "modulate")),
+                    warm_white_rgb=_COLOR_NAMES.resolve_color_name("Warm White"),
+                    effect_role_mapped=effect_role_mapped,
+                )
+            else:
+                self._last_gate_result = None
             # SPEC-COPILOT-WRITEGATE-001 — 감독이 실제로 쓰는 곡 흐름이 여기서
             # 나간다(업로드 → 분석 → 확인 → 인터뷰 → 이 번들). 2026-09-07
             # 브라우저 실측에서 `Store Sequence 210 Cue 1..4` 와
@@ -9937,6 +10156,8 @@ class ChatSession:
                     f"{_phaser_failure_note(self._last_phaser_failures)}"
                     f"{_color_failure_note(self._last_color_failures)}"
                     f"{_arc_note(approved_composition.bundle)}"
+                    f"{_fx_report_note(approved_composition.bundle, self._last_phaser_slots)}"
+                    f"{_ldrender_gate_note(self._last_gate_result)}"
                 ),
                 command_outcomes=tuple(executed.command_outcomes),
                 retries_used=0,
@@ -9961,6 +10182,8 @@ class ChatSession:
                 f"{_phaser_failure_note(self._last_phaser_failures)}"
                 f"{_color_failure_note(self._last_color_failures)}"
                 f"{_arc_note(approved_composition.bundle)}"
+                f"{_fx_report_note(approved_composition.bundle, self._last_phaser_slots)}"
+                f"{_ldrender_gate_note(self._last_gate_result)}"
             ),
             command_outcomes=tuple(executed.command_outcomes),
             retries_used=0,

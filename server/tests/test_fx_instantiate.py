@@ -647,6 +647,101 @@ def test_duplicate_exempt_lines_do_not_trigger_the_in_bundle_guard():
 
 
 # =============================================================================
+# Card t501 M6c (lead decision C) — `Fx.compound_step_values`, an AUTHORING
+# choice for how a step's values become text. `_guard_collision` is untouched
+# throughout this section — every assertion below proves the guard's judgment
+# is the same; only the TEXT a step produces changes.
+# =============================================================================
+
+
+def test_compound_step_values_joins_a_multi_attribute_step_into_one_chained_line():
+    fx = Fx(
+        fx_id="compound_fixture",
+        display_name="Compound Fixture",
+        pattern="chase",
+        steps=(
+            FxStep(values=(StepValue("ColorRGB_R", 100), StepValue("Dimmer", 100))),
+            FxStep(values=(StepValue("ColorRGB_R", 100), StepValue("Dimmer", 0))),
+        ),
+        speed=30,
+        compound_step_values=True,
+    )
+    commands = build_fx_bundle(fx, group=11, sequence=12).commands
+    assert "Attribute 'ColorRGB_R' At 100 ; Attribute 'Dimmer' At 100" in commands
+    assert "Attribute 'ColorRGB_R' At 100 ; Attribute 'Dimmer' At 0" in commands
+    # the per-attribute form never appears once compounded
+    assert "Attribute 'ColorRGB_R' At 100" not in commands
+    assert "Attribute 'Dimmer' At 100" not in commands
+
+
+def test_compound_step_values_false_keeps_the_per_attribute_form_and_still_collides():
+    # The same two steps WITHOUT the flag: the ColorRGB_R line repeats across
+    # steps (channel alone, not the step's full value set) and the guard
+    # refuses exactly as it did before this card.
+    fx = Fx(
+        fx_id="compound_fixture_off",
+        display_name="Compound Fixture Off",
+        pattern="chase",
+        steps=(
+            FxStep(values=(StepValue("ColorRGB_R", 100), StepValue("Dimmer", 100))),
+            FxStep(values=(StepValue("ColorRGB_R", 100), StepValue("Dimmer", 0))),
+        ),
+        speed=30,
+        # compound_step_values left at its default (False).
+    )
+    with pytest.raises(FxInstantiationError) as excinfo:
+        build_fx_bundle(fx, group=11, sequence=12)
+    assert excinfo.value.reason == VALUE_LINE_COLLISION
+    assert "Attribute 'ColorRGB_R' At 100" in str(excinfo.value)
+
+
+def test_compound_step_values_does_not_touch_a_single_attribute_step():
+    # A step carrying only one attribute has nothing to chain — the flag is a
+    # no-op, which is why the dimmer-only catalog family never needs it.
+    fx = Fx(
+        fx_id="compound_single_attr",
+        display_name="Compound Single Attr",
+        pattern="pulse",
+        steps=(
+            FxStep(values=(StepValue("Dimmer", 30),)),
+            FxStep(values=(StepValue("Dimmer", 70),)),
+        ),
+        speed=30,
+        compound_step_values=True,
+    )
+    on = build_fx_bundle(fx, group=11, sequence=12).commands
+    off = build_fx_bundle(
+        Fx(**{**vars(fx), "compound_step_values": False}), group=11, sequence=13
+    ).commands
+    # drop the Store/Label lines (they carry the sequence number) before comparing
+    assert [c for c in on if not c.startswith(("Store", "Label"))] == [
+        c for c in off if not c.startswith(("Store", "Label"))
+    ]
+
+
+def test_compound_step_values_still_refuses_a_genuinely_identical_step_pair():
+    # Proves `_guard_collision` is unchanged: when the FULL compound text of
+    # two steps is identical (not merely one shared channel), the guard still
+    # refuses it. The fix changes what text a step produces, never whether a
+    # repeated line is tolerated.
+    fx = Fx(
+        fx_id="compound_true_duplicate",
+        display_name="Compound True Duplicate",
+        pattern="chase",
+        steps=(
+            FxStep(values=(StepValue("ColorRGB_R", 100), StepValue("Dimmer", 50))),
+            FxStep(values=(StepValue("ColorRGB_R", 100), StepValue("Dimmer", 50))),
+        ),
+        speed=30,
+        compound_step_values=True,
+    )
+    with pytest.raises(FxInstantiationError) as excinfo:
+        build_fx_bundle(fx, group=11, sequence=12)
+    assert excinfo.value.reason == VALUE_LINE_COLLISION
+    assert "Attribute 'ColorRGB_R' At 100 ; Attribute 'Dimmer' At 50" in str(excinfo.value)
+
+
+# =============================================================================
 # AC-FXLIB-009 (b) — the cross-call (instruction-scoped) collision
 # =============================================================================
 

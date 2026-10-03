@@ -1,0 +1,74 @@
+[
+ {
+  "song": "Club Diver",
+  "n_non_accent_cues": 13,
+  "violations_per_group": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  }
+ },
+ {
+  "song": "Cut and Run",
+  "n_non_accent_cues": 17,
+  "violations_per_group": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  }
+ },
+ {
+  "song": "Ice cream",
+  "n_non_accent_cues": 7,
+  "violations_per_group": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  }
+ },
+ {
+  "song": "Morning",
+  "n_non_accent_cues": 13,
+  "violations_per_group": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  }
+ },
+ {
+  "song": "Rain",
+  "n_non_accent_cues": 12,
+  "violations_per_group": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  }
+ },
+ {
+  "song": "Too Cool",
+  "n_non_accent_cues": 23,
+  "violations_per_group": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  }
+ },
+ {
+  "song": "scott-buckley-neon",
+  "n_non_accent_cues": 17,
+  "violations_per_group": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  }
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질",
+  "n_non_accent_cues": 10,
+  "violations_per_group": {
+   "BLIND": 0,
+   "STROBE": 0,
+   "HAZE": 0
+  }
+ }
+]

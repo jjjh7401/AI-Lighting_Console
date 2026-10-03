@@ -1,0 +1,66 @@
+[
+ {
+  "song": "Club Diver",
+  "n_section_cues": 14,
+  "n_cues_lit_ge_3": 14,
+  "n_cues_lit_lt_3": 0,
+  "color_count": 4,
+  "color_change_count": 5
+ },
+ {
+  "song": "Cut and Run",
+  "n_section_cues": 18,
+  "n_cues_lit_ge_3": 18,
+  "n_cues_lit_lt_3": 0,
+  "color_count": 3,
+  "color_change_count": 11
+ },
+ {
+  "song": "Ice cream",
+  "n_section_cues": 8,
+  "n_cues_lit_ge_3": 8,
+  "n_cues_lit_lt_3": 0,
+  "color_count": 4,
+  "color_change_count": 4
+ },
+ {
+  "song": "Morning",
+  "n_section_cues": 14,
+  "n_cues_lit_ge_3": 14,
+  "n_cues_lit_lt_3": 0,
+  "color_count": 3,
+  "color_change_count": 3
+ },
+ {
+  "song": "Rain",
+  "n_section_cues": 13,
+  "n_cues_lit_ge_3": 13,
+  "n_cues_lit_lt_3": 0,
+  "color_count": 3,
+  "color_change_count": 5
+ },
+ {
+  "song": "Too Cool",
+  "n_section_cues": 24,
+  "n_cues_lit_ge_3": 24,
+  "n_cues_lit_lt_3": 0,
+  "color_count": 4,
+  "color_change_count": 8
+ },
+ {
+  "song": "scott-buckley-neon",
+  "n_section_cues": 18,
+  "n_cues_lit_ge_3": 18,
+  "n_cues_lit_lt_3": 0,
+  "color_count": 4,
+  "color_change_count": 7
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질",
+  "n_section_cues": 11,
+  "n_cues_lit_ge_3": 11,
+  "n_cues_lit_lt_3": 0,
+  "color_count": 4,
+  "color_change_count": 5
+ }
+]

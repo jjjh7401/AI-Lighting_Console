@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Protocol
 from server.concept.session_bridge import (
     build_concept_report,
 )
+from server.design import color_names as _COLOR_NAMES
 from server.design.capability_verdict import group_capability_source
 from server.design.console_slots import (
     paged_pool_children,
@@ -34,6 +35,13 @@ from server.design.console_slots import (
     resolve_position_preset_labels,
 )
 from server.design.interview import Q2B_COLOR_USAGE
+from server.design.ldrender_gate import GateResult as LdrenderGateResult
+from server.design.ldrender_gate import (
+    evaluate as ldrender_gate_evaluate,
+)
+from server.design.ldrender_gate import (
+    gate_cues_from_commands,
+)
 from server.design.override_look import (
     DEFAULT_OVERRIDE_SLOTS,
     OverrideLookError,
@@ -45,6 +53,7 @@ from server.design.rig_capability_read import RIG_GAP_UNREADABLE, read_design_ri
 from server.design.song_cue_composer import compose_song_cue_bundle
 from server.design.song_cue_render import (
     _blinder_group_no,
+    _fx_report_counts,
     _phaser_label_for_cue,
     reviewed_song_commands,
     reviewed_song_timing,
@@ -3469,6 +3478,27 @@ def build_toolset(
             timing = reviewed_song_timing(bundle, sequence_number, timing_request, axes=axes)
         except (SpatialPointingError, ValueError) as error:
             return _error_result(call, f"song cue list cannot be built: {error}")
+        # SPEC-LDRENDER-001 M7(REQ-LDRENDER-013/014, t501) — 업로드 길도 곡을
+        # 콘솔에 보낸다(session.py 의 대화 길과 같은 `reviewed_song_commands`
+        # 산출물) — 쓰기 직전 같은 비차단 연출 게이트를 돌린다. 이 경로는
+        # (아직) 층 매핑 확인 UX 가 없어 `layer_mapping=()`(위 호출)이고,
+        # 그래서 역할별 LIT 층 축은 구조적으로 거의 항상 걸린다 — 거짓
+        # 경보가 아니라 "이 경로는 아직 다중 역할 렌더링을 안 받는다"는
+        # 정확한 신호다(REQ-003 — 단일 레이어 리그는 오늘과 바이트 동일).
+        fx_requested_total, _fx_permitted_total, _fx_sent_total = _fx_report_counts(
+            bundle, phaser_slots
+        )
+        fx_hinted_total = sum(1 for cue in bundle.cues if _phaser_label_for_cue(cue) is not None)
+        gate_cues = gate_cues_from_commands(cue_commands, bundle.cues, layer_mapping=())
+        gate_result: LdrenderGateResult = ldrender_gate_evaluate(
+            gate_cues,
+            sent_lines=cue_commands,
+            fx_requested=fx_requested_total,
+            fx_hinted=fx_hinted_total,
+            palette_mode=str(_interview_record_value(records, Q2B_COLOR_USAGE, "modulate")),
+            warm_white_rgb=_COLOR_NAMES.resolve_color_name("Warm White"),
+            effect_role_mapped=False,
+        )
         notes = [
             palette_source.notice(),
             position_disabled_reason,
@@ -3476,6 +3506,7 @@ def build_toolset(
             *(f"색 미반영 큐 {cue}: {reason}" for cue, reason in color_failures.items()),
             *(f"페이저 미반영: {reason}" for reason in phaser_failures.values()),
             *(f"절정 연출 미반영: {note}" for note in bundle.arc_notes),
+            *(("연출 경고: " + "; ".join(gate_result.violations),) if gate_result.warns else ()),
         ]
         timing_commands = () if timing is None else timing.commands
         timing_payload = {

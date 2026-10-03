@@ -1,0 +1,35 @@
+{
+ "is_error": false,
+ "content": "{\"all_ok\": true, \"commands\": [{\"command\": \"ChangeDestination Root\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Group 1\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_G' At 90\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_B' At 100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At 100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_G' At 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_B' At 70\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Accel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 1 At Decel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Accel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Step 2 At Decel -100\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Phase 0\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_G' At Phase 120\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_B' At Phase 240\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Store Preset 4.9 'Wave CM' /Universal\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"Label Preset 4.9 'Wave CM'\", \"status\": \"executed_ok\", \"detail\": \"OK\"}, {\"command\": \"ClearAll\", \"status\": \"executed_ok\", \"detail\": \"OK\"}]}",
+ "approval_requests": [
+  {
+   "commands": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 1",
+    "Attribute 'ColorRGB_R' At 0",
+    "Attribute 'ColorRGB_G' At 90",
+    "Attribute 'ColorRGB_B' At 100",
+    "Step 2",
+    "Attribute 'ColorRGB_R' At 100",
+    "Attribute 'ColorRGB_G' At 0",
+    "Attribute 'ColorRGB_B' At 70",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'ColorRGB_R' At Phase 0",
+    "Attribute 'ColorRGB_G' At Phase 120",
+    "Attribute 'ColorRGB_B' At Phase 240",
+    "Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30",
+    "Store Preset 4.9 'Wave CM' /Universal",
+    "Label Preset 4.9 'Wave CM'",
+    "ClearAll"
+   ],
+   "approved": true
+  }
+ ],
+ "skipped_backups": [
+  "SaveShow skipped (supervisor)"
+ ]
+}
