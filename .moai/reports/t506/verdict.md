@@ -125,3 +125,41 @@
 - 리허설 v2(`rehearse_v2/`): 3묶음 경로 끝까지, 이벤트 3.
 - 실기 전부-거절 v2(`live_denyall_v2/`): 슬롯 15 부재 · 시퀀스 9 꺼짐 · 풀 1·2·7·8·9·11·12·13·14. 감사 로그 기준 명령 실행 0, 거절 3, 읽기만, SaveShow 0.
 - 작은따옴표 형태(`Store Type 'CmdSubTrack'`, `Store Property 'Time' 1 …`)는 MA 테스트에는 없다. 앱이 이미 쓰는 `Set … Property 'Name' '…'` 은 1회차에서 OK 였다. 하지만 나머지 두 형태를 콘솔이 받는지는 v2 가 처음 잰다.
+
+## 8. v3 — 잔여물 Timecode 14 이어 쓰기 (v2 를 대체, 재승인 요청)
+
+리드 판독(2026-10-05)의 제안을 받아 v2 를 v3 로 바꿨다. 다만 트랙 주소 하나는 리드 판독과 다르게 쟀다.
+
+### 트랙 명령 주소 — 상태 경로 번호가 아니라 `NO` 를 쓴다
+
+`props …/Timecodes/<n>/1/<i>|NAME,NO,INDEX,TARGET` (`r5_track_numbers.txt`):
+
+| 오브젝트 | 상태 경로 i | `NO` | `TARGET` |
+|---|---|---|---|
+| TC14 Marker | 1 | **0** | — |
+| TC14 Track `<T215 SCRATCH DELETABLE>` | 2 | **1** | `Sequence 9` |
+| TC12 Marker | 1 | **0** | — |
+| TC12 Track `<Sequence 212>` | 2 | **1** | — |
+
+- 1회차 `Assign Sequence 9 At Timecode 14.1.1` 은 Marker 를 건드리지 않고 Track 을 만들었다. 그 Track 이 `NO 1` 이다.
+- 그래서 명령 주소 `14.1.1` 은 Track 을 가리킨다고 판단한다. 리드가 제안한 `.1.2` 는 `NO 2`, 곧 없는 트랙을 겨눈다.
+- 이것은 판독에서 이끈 판단이다. `Store Type … 14.1.1.1` 이 TimeRange 아래에 CmdSubTrack 을 만드는지는 v3 실행이 처음 잰다. 아래 「cd 직전 되읽기」 안전장치가 틀린 경우를 막는다.
+
+### 무엇이 바뀌었나
+
+- 새 슬롯을 만들지 않는다. TC14 를 이어 쓴다. 쓰기는 14줄에서 10줄로 줄고, 새 잔여물이 생기지 않는다.
+- 주소를 하드코딩하지 않는다. 송신 직전에 `TC14/1` 의 자식에서 `TARGET == "Sequence 9"` 인 Track 을 찾아 그 `NO` 로 주소를 만든다. 실기 전부-거절에서 찾은 값: `{i: 2, no: 1}`.
+- 준비를 둘로 나눴다. A(`Duration` · `Store Type 'CmdSubTrack'`) 뒤에 TimeRange 아래를 되읽는다. 자식이 정확히 `[CmdSubTrack]` 일 때만 B(`cd` · 이벤트 3 · `cd root`)를 보낸다.
+- 큰따옴표는 없다.
+- 사전 확인: TC14 이름 `T506 TCPROBE` · Sequence 9 트랙 존재 · TimeRange 자식 0 · 시퀀스 9 꺼짐. 하나라도 어긋나면 쓰지 않는다.
+- 되읽은 이벤트가 3개가 아니면 재생하지 않고 해제만 한다(v1 과 같다).
+
+### 리허설·전부-거절
+
+| 단계 | 명령 | 관측 |
+|---|---|---|
+| 리허설 v3 | `tc_probe_v3.py rehearse_v3 --rehearse` | 4묶음 경로 끝까지. 트랙 `{i:2,no:1}` · A 뒤 `[CmdSubTrack]` · 이벤트 3 |
+| 안전장치 리허설 | CmdSubTrack 이 안 생기는 가짜 콘솔 (`rehearse_v3_guard.txt`) | `stopped before cd: TimeRange children []`. 나간 줄은 A 의 2줄뿐 |
+| 실기 전부-거절 v3 | `tc_probe_v3.py live_denyall_v3` | 사전 확인 모두 성립. 감사 로그 기준 명령 실행 0, 거절 4, 읽기만(props 3 · state 3), SaveShow 0 |
+
+명령 파일: `commands_for_approval_v3.txt` (4묶음 10줄). v2(`commands_for_approval_v2.txt`)는 쓰지 않는다.

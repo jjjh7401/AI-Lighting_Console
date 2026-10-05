@@ -1,0 +1,6 @@
+{"ts": "2026-10-05T05:30:31.212762+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/14 NAME,DURATION", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:30:31.213646+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/14/1/2 NO,TARGET", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:30:31.213742+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:30:31.213985+00:00", "event": "approved", "commands": ["Set Timecode 14 Property 'Duration' 5 'AutoStop' 0", "Store Type 'CmdSubTrack' Timecode 14.1.1.1"], "held": ["Set Timecode 14 Property 'Duration' 5 'AutoStop' 0", "Store Type 'CmdSubTrack' Timecode 14.1.1.1"], "kind": "t506_probe"}
+{"ts": "2026-10-05T05:30:31.214098+00:00", "event": "executed", "command": "Set Timecode 14 Property 'Duration' 5 'AutoStop' 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:30:31.214180+00:00", "event": "executed", "command": "Store Type 'CmdSubTrack' Timecode 14.1.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

@@ -1,0 +1,76 @@
+{
+  "slot": 14,
+  "sequence": 9,
+  "event_times": [
+    1,
+    2,
+    3
+  ],
+  "bundles": {
+    "prep_a": false,
+    "prep_b": false,
+    "play": false,
+    "release": false
+  },
+  "tc_name": "T506 TCPROBE",
+  "track": {
+    "i": 2,
+    "no": 1
+  },
+  "seq9_off_before": true,
+  "planned": {
+    "prep_a": [
+      "Set Timecode 14 Property 'Duration' 5 'AutoStop' 0",
+      "Store Type 'CmdSubTrack' Timecode 14.1.1.1"
+    ],
+    "prep_b": [
+      "cd Timecode 14.1.1.1.1",
+      "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+      "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+      "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+      "cd root"
+    ],
+    "play": [
+      "Go Timecode 14"
+    ],
+    "release": [
+      "Off Timecode 14",
+      "Off Sequence 9"
+    ]
+  },
+  "verdict": "deny-all: approval texts recorded, nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Timecode 14 Property 'Duration' 5 'AutoStop' 0",
+        "Store Type 'CmdSubTrack' Timecode 14.1.1.1"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "cd Timecode 14.1.1.1.1",
+        "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+        "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+        "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Go Timecode 14"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Timecode 14",
+        "Off Sequence 9"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

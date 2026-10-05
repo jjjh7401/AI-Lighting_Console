@@ -1,0 +1,32 @@
+[
+  {
+    "commands": [
+      "Set Timecode 14 Property 'Duration' 5 'AutoStop' 0",
+      "Store Type 'CmdSubTrack' Timecode 14.1.1.1"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "cd Timecode 14.1.1.1.1",
+      "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+      "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+      "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+      "cd root"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Go Timecode 14"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Timecode 14",
+      "Off Sequence 9"
+    ],
+    "approved": false
+  }
+]
