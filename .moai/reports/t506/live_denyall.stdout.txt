@@ -1,0 +1,66 @@
+{"step": "pre_pool", "t": 0.067, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes", "ok": true, "payload": {"children": [{"class": "Timecode", "i": 1, "name": "DinoSync Timecode"}, {"class": "Timecode", "i": 2, "name": "DinoFull Timecode"}, {"class": "Timecode", "i": 7, "name": "Synth Test Timecode"}, {"class": "Timecode", "i": 8, "name": "Notice Test Timecode"}, {"class": "Timecode", "i": 9, "name": "Sequence 210 Timecode"}, {"class": "Timecode", "i": 11, "name": "Sequence 211 Timecode"}, {"class": "Timecode", "i": 12, "name": "Sequence 212 Timecode"}, {"class": "Timecode", "i":
+{"step": "pre_slot_negative_control", "t": 0.133, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/14", "ok": false, "error": "path segment not found: '14' (in ShowData/DataPools/Default/Timecodes/14)"}
+{"step": "pre_seq9", "t": 0.199, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"id": "gate-4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}, {"n": "CUENO", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}}
+{"step": "prep", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "Store Timecode 14", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 14 Property 'Name' 'T506 TCPROBE'", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Set Timecode 14 Property \"Duration\" 5 \"AutoStop\" 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Timecode 14.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign Sequence 9 At Ti
+{"step": "play", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "Go Timecode 14", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "release", "t": 0.267, "kind": "screen", "cleared": false, "commands": [{"command": "Off Timecode 14", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}, {"command": "Off Sequence 9", "reasons": ["reference-invoking command"]}]}
+{
+  "slot": 14,
+  "sequence": 9,
+  "event_times": [
+    1,
+    2,
+    3
+  ],
+  "bundles": {
+    "prep": false,
+    "play": false,
+    "release": false
+  },
+  "pre_pool_numbers": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    11,
+    12,
+    13
+  ],
+  "slot_absent": true,
+  "seq9_off_before": true,
+  "verdict": "prep not executed (denied or failed)",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 14",
+        "Set Timecode 14 Property 'Name' 'T506 TCPROBE'",
+        "Set Timecode 14 Property \"Duration\" 5 \"AutoStop\" 0",
+        "Store Timecode 14.1",
+        "Assign Sequence 9 At Timecode 14.1.1",
+        "Store Type \"CmdSubTrack\" Timecode 14.1.1.1",
+        "cd Timecode 14.1.1.1.1",
+        "Store Property \"Time\" 1 \"AbsTime\" 1 \"Token\" \"Go+\"",
+        "Store Property \"Time\" 2 \"AbsTime\" 2 \"Token\" \"Go+\"",
+        "Store Property \"Time\" 3 \"AbsTime\" 3 \"Token\" \"Go+\"",
+        "cd root"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Go Timecode 14"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Timecode 14",
+        "Off Sequence 9"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

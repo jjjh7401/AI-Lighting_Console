@@ -1,0 +1,31 @@
+[
+  {
+    "commands": [
+      "Store Timecode 15",
+      "Set Timecode 15 Property 'Name' 'T506 TCPROBE'",
+      "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0",
+      "Store Timecode 15.1",
+      "Assign Sequence 9 At Timecode 15.1.1",
+      "Store Type 'CmdSubTrack' Timecode 15.1.1.1",
+      "cd Timecode 15.1.1.1.1",
+      "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+      "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+      "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+      "cd root"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Go Timecode 15"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Timecode 15",
+      "Off Sequence 9"
+    ],
+    "approved": true
+  }
+]

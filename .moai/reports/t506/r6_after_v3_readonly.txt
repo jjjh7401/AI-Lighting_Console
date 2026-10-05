@@ -1,0 +1,20 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/9|NAME,NO,INDEX,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props ff0078da NAME,NO,INDEX,CURRENTCUE ShowData/DataPools/Default/Sequences/9"
+<<< {"id": "ff0078da", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T215 SCRATCH DELETABLE"}, {"n": "NO", "ok": true, "t": "number", "v": "9"}, {"n": "INDEX", "ok": true, "t": "number", "v": "9"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 4.3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/4|NAME,NO,INDEX,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props e353844e NAME,NO,INDEX,CURRENTCUE ShowData/DataPools/Default/Sequences/4"
+<<< {"id": "e353844e", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "eset1Fade"}, {"n": "NO", "ok": true, "t": "number", "v": "4"}, {"n": "INDEX", "ok": true, "t": "number", "v": "4"}, {"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/212|NAME,NO,INDEX,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 28761b2d NAME,NO,INDEX,CURRENTCUE ShowData/DataPools/Default/Sequences/212"
+<<< {"id": "28761b2d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/212", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Sequence 212"}, {"n": "NO", "ok": true, "t": "number", "v": "212"}, {"n": "INDEX", "ok": true, "t": "number", "v": "212"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 212.3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/14/1/2|NAME,NO,TARGET
+    wire: Plugin "CopilotResponder" "props 59c24cb6 NAME,NO,TARGET ShowData/DataPools/Default/Timecodes/14/1/2"
+<<< {"id": "59c24cb6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "<T215 SCRATCH DELETABLE>"}, {"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "TARGET", "ok": true, "t": "userdata", "v": "Sequence 9"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/14|NAME,CURSOR
+    wire: Plugin "CopilotResponder" "props c441a2c2 NAME,CURSOR ShowData/DataPools/Default/Timecodes/14"
+<<< {"id": "c441a2c2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T506 TCPROBE"}, {"n": "CURSOR", "ok": true, "t": "string", "v": "4.77"}], "truncated": false, "v": 1}

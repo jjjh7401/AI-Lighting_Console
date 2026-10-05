@@ -1,0 +1,338 @@
+{
+  "slot": 14,
+  "sequence": 9,
+  "event_times": [
+    1,
+    2,
+    3
+  ],
+  "bundles": {
+    "prep_a": true,
+    "prep_b": true,
+    "play": true,
+    "release": true
+  },
+  "tc_name": "T506 TCPROBE",
+  "track": {
+    "i": 2,
+    "no": 1
+  },
+  "seq9_off_before": true,
+  "planned": {
+    "prep_a": [
+      "Set Timecode 14 Property 'Duration' 5 'AutoStop' 0",
+      "Store Type 'CmdSubTrack' Timecode 14.1.1.1"
+    ],
+    "prep_b": [
+      "cd Timecode 14.1.1.1.1",
+      "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+      "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+      "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+      "cd root"
+    ],
+    "play": [
+      "Go Timecode 14"
+    ],
+    "release": [
+      "Off Timecode 14",
+      "Off Sequence 9"
+    ]
+  },
+  "post_a_children": [
+    "CmdSubTrack"
+  ],
+  "events_found": 3,
+  "samples": [
+    {
+      "t_from_go": [
+        0.0,
+        0.0
+      ],
+      "currentcue": null,
+      "cursor": "0.00"
+    },
+    {
+      "t_from_go": [
+        0.155,
+        0.155
+      ],
+      "currentcue": null,
+      "cursor": "0.16"
+    },
+    {
+      "t_from_go": [
+        0.31,
+        0.31
+      ],
+      "currentcue": null,
+      "cursor": "0.31"
+    },
+    {
+      "t_from_go": [
+        0.463,
+        0.464
+      ],
+      "currentcue": null,
+      "cursor": "0.46"
+    },
+    {
+      "t_from_go": [
+        0.618,
+        0.619
+      ],
+      "currentcue": null,
+      "cursor": "0.62"
+    },
+    {
+      "t_from_go": [
+        0.772,
+        0.772
+      ],
+      "currentcue": null,
+      "cursor": "0.77"
+    },
+    {
+      "t_from_go": [
+        0.923,
+        0.924
+      ],
+      "currentcue": null,
+      "cursor": "0.92"
+    },
+    {
+      "t_from_go": [
+        1.078,
+        1.078
+      ],
+      "currentcue": "Sequence 9.1",
+      "cursor": "1.08"
+    },
+    {
+      "t_from_go": [
+        1.232,
+        1.232
+      ],
+      "currentcue": "Sequence 9.1",
+      "cursor": "1.23"
+    },
+    {
+      "t_from_go": [
+        1.386,
+        1.387
+      ],
+      "currentcue": "Sequence 9.1",
+      "cursor": "1.39"
+    },
+    {
+      "t_from_go": [
+        1.541,
+        1.542
+      ],
+      "currentcue": "Sequence 9.1",
+      "cursor": "1.54"
+    },
+    {
+      "t_from_go": [
+        1.694,
+        1.694
+      ],
+      "currentcue": "Sequence 9.1",
+      "cursor": "1.69"
+    },
+    {
+      "t_from_go": [
+        1.848,
+        1.849
+      ],
+      "currentcue": "Sequence 9.1",
+      "cursor": "1.85"
+    },
+    {
+      "t_from_go": [
+        2.003,
+        2.004
+      ],
+      "currentcue": "Sequence 9.2",
+      "cursor": "2.00"
+    },
+    {
+      "t_from_go": [
+        2.153,
+        2.154
+      ],
+      "currentcue": "Sequence 9.2",
+      "cursor": "2.15"
+    },
+    {
+      "t_from_go": [
+        2.307,
+        2.309
+      ],
+      "currentcue": "Sequence 9.2",
+      "cursor": "2.31"
+    },
+    {
+      "t_from_go": [
+        2.462,
+        2.464
+      ],
+      "currentcue": "Sequence 9.2",
+      "cursor": "2.46"
+    },
+    {
+      "t_from_go": [
+        2.613,
+        2.614
+      ],
+      "currentcue": "Sequence 9.2",
+      "cursor": "2.61"
+    },
+    {
+      "t_from_go": [
+        2.768,
+        2.769
+      ],
+      "currentcue": "Sequence 9.2",
+      "cursor": "2.77"
+    },
+    {
+      "t_from_go": [
+        2.923,
+        2.924
+      ],
+      "currentcue": "Sequence 9.2",
+      "cursor": "2.92"
+    },
+    {
+      "t_from_go": [
+        3.078,
+        3.079
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "3.08"
+    },
+    {
+      "t_from_go": [
+        3.228,
+        3.229
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "3.23"
+    },
+    {
+      "t_from_go": [
+        3.383,
+        3.385
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "3.38"
+    },
+    {
+      "t_from_go": [
+        3.538,
+        3.539
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "3.54"
+    },
+    {
+      "t_from_go": [
+        3.692,
+        3.693
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "3.69"
+    },
+    {
+      "t_from_go": [
+        3.845,
+        3.846
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "3.85"
+    },
+    {
+      "t_from_go": [
+        3.996,
+        3.997
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "4.00"
+    },
+    {
+      "t_from_go": [
+        4.151,
+        4.152
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "4.15"
+    },
+    {
+      "t_from_go": [
+        4.305,
+        4.307
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "4.31"
+    },
+    {
+      "t_from_go": [
+        4.459,
+        4.459
+      ],
+      "currentcue": "Sequence 9.3",
+      "cursor": "4.46"
+    }
+  ],
+  "verdict": "rehearsal — script path only",
+  "fake_sent": [
+    "Set Timecode 14 Property 'Duration' 5 'AutoStop' 0",
+    "Store Type 'CmdSubTrack' Timecode 14.1.1.1",
+    "cd Timecode 14.1.1.1.1",
+    "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+    "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+    "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+    "cd root",
+    "Go Timecode 14",
+    "Off Timecode 14",
+    "Off Sequence 9"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Timecode 14 Property 'Duration' 5 'AutoStop' 0",
+        "Store Type 'CmdSubTrack' Timecode 14.1.1.1"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "cd Timecode 14.1.1.1.1",
+        "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+        "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+        "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go Timecode 14"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Timecode 14",
+        "Off Sequence 9"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

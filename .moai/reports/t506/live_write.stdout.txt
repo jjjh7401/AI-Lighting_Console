@@ -1,0 +1,62 @@
+{"step": "pre_pool", "t": 0.061, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes", "ok": true, "payload": {"children": [{"class": "Timecode", "i": 1, "name": "DinoSync Timecode"}, {"class": "Timecode", "i": 2, "name": "DinoFull Timecode"}, {"class": "Timecode", "i": 7, "name": "Synth Test Timecode"}, {"class": "Timecode", "i": 8, "name": "Notice Test Timecode"}, {"class": "Timecode", "i": 9, "name": "Sequence 210 Timecode"}, {"class": "Timecode", "i": 11, "name": "Sequence 211 Timecode"}, {"class": "Timecode", "i": 12, "name": "Sequence 212 Timecode"}, {"class": "Timecode", "i":
+{"step": "pre_slot_negative_control", "t": 0.127, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/14", "ok": false, "error": "path segment not found: '14' (in ShowData/DataPools/Default/Timecodes/14)"}
+{"step": "pre_seq9", "t": 0.194, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"id": "gate-4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}, {"n": "CUENO", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}}
+{"step": "prep", "t": 0.194, "kind": "screen", "cleared": true, "commands": [{"command": "Store Timecode 14", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 14 Property 'Name' 'T506 TCPROBE'", "reasons": []}, {"command": "Set Timecode 14 Property \"Duration\" 5 \"AutoStop\" 0", "reasons": []}, {"command": "Store Timecode 14.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign Sequence 9 At Timecode 14.1.1", "reasons": ["blacklisted command (matches closed-set entry 'Assign Sequence')
+{"step": "prep", "t": 0.261, "kind": "exec", "command": "Store Timecode 14", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.327, "kind": "exec", "command": "Set Timecode 14 Property 'Name' 'T506 TCPROBE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.327, "kind": "exec", "command": "Set Timecode 14 Property \"Duration\" 5 \"AutoStop\" 0", "fired": true, "ok": false, "detail": "cannot wrap command for result capture: command must not contain a double quote (\"): 'Set Timecode 14 Property \"Duration\" 5 \"AutoStop\" 0'"}
+{"step": "prep", "t": 0.393, "kind": "exec", "command": "Store Timecode 14.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.46, "kind": "exec", "command": "Assign Sequence 9 At Timecode 14.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.46, "kind": "exec", "command": "Store Type \"CmdSubTrack\" Timecode 14.1.1.1", "fired": true, "ok": false, "detail": "cannot wrap command for result capture: command must not contain a double quote (\"): 'Store Type \"CmdSubTrack\" Timecode 14.1.1.1'"}
+{"step": "prep", "t": 0.528, "kind": "exec", "command": "cd Timecode 14.1.1.1.1", "fired": true, "ok": false, "detail": "Failed"}
+{"step": "prep", "t": 0.528, "kind": "exec", "command": "Store Property \"Time\" 1 \"AbsTime\" 1 \"Token\" \"Go+\"", "fired": false, "detail": "cd 실패로 보류"}
+{"step": "prep", "t": 0.528, "kind": "exec", "command": "Store Property \"Time\" 2 \"AbsTime\" 2 \"Token\" \"Go+\"", "fired": false, "detail": "cd 실패로 보류"}
+{"step": "prep", "t": 0.528, "kind": "exec", "command": "Store Property \"Time\" 3 \"AbsTime\" 3 \"Token\" \"Go+\"", "fired": false, "detail": "cd 실패로 보류"}
+{"step": "prep", "t": 0.594, "kind": "exec", "command": "cd root", "fired": true, "ok": true, "detail": "OK"}
+{
+  "slot": 14,
+  "sequence": 9,
+  "event_times": [
+    1,
+    2,
+    3
+  ],
+  "bundles": {
+    "prep": false
+  },
+  "pre_pool_numbers": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    11,
+    12,
+    13
+  ],
+  "slot_absent": true,
+  "seq9_off_before": true,
+  "verdict": "prep not executed (denied or failed)",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 14",
+        "Set Timecode 14 Property 'Name' 'T506 TCPROBE'",
+        "Set Timecode 14 Property \"Duration\" 5 \"AutoStop\" 0",
+        "Store Timecode 14.1",
+        "Assign Sequence 9 At Timecode 14.1.1",
+        "Store Type \"CmdSubTrack\" Timecode 14.1.1.1",
+        "cd Timecode 14.1.1.1.1",
+        "Store Property \"Time\" 1 \"AbsTime\" 1 \"Token\" \"Go+\"",
+        "Store Property \"Time\" 2 \"AbsTime\" 2 \"Token\" \"Go+\"",
+        "Store Property \"Time\" 3 \"AbsTime\" 3 \"Token\" \"Go+\"",
+        "cd root"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

@@ -1,0 +1,28 @@
+
+>>> props:ShowData/DataPools/Default/Timecodes/14/1/1|NAME,NO,INDEX
+    wire: Plugin "CopilotResponder" "props 0100c8ae NAME,NO,INDEX ShowData/DataPools/Default/Timecodes/14/1/1"
+<<< {"id": "0100c8ae", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Marker"}, {"n": "NO", "ok": true, "t": "number", "v": "0"}, {"n": "INDEX", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/14/1/2|NAME,NO,INDEX,TARGET
+    wire: Plugin "CopilotResponder" "props 62e354bf NAME,NO,INDEX,TARGET ShowData/DataPools/Default/Timecodes/14/1/2"
+<<< {"id": "62e354bf", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "<T215 SCRATCH DELETABLE>"}, {"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}, {"n": "TARGET", "ok": true, "t": "userdata", "v": "Sequence 9"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/14/1|NAME,NO,INDEX
+    wire: Plugin "CopilotResponder" "props cf59f370 NAME,NO,INDEX ShowData/DataPools/Default/Timecodes/14/1"
+<<< {"id": "cf59f370", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "TrackGroup 1"}, {"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/14/1/2/1|NAME,NO,INDEX,START,DURATION
+    wire: Plugin "CopilotResponder" "props 886df4bc NAME,NO,INDEX,START,DURATION ShowData/DataPools/Default/Timecodes/14/1/2/1"
+<<< {"id": "886df4bc", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "TimeRange 1"}, {"e": "property not readable: NO", "n": "NO", "ok": false}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}, {"n": "START", "ok": true, "t": "number", "v": "0"}, {"n": "DURATION", "ok": true, "t": "string", "v": "0.00>"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/14/1/2/1
+    wire: Plugin "CopilotResponder" "state a26d881a ShowData/DataPools/Default/Timecodes/14/1/2/1"
+<<< {"children": [], "id": "a26d881a", "kind": "state", "node": {"childCount": 0, "class": "TimeRange", "enumeration": "ok", "name": "TimeRange 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1/2/1", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/12/1/1|NAME,NO,INDEX
+    wire: Plugin "CopilotResponder" "props 963382e3 NAME,NO,INDEX ShowData/DataPools/Default/Timecodes/12/1/1"
+<<< {"id": "963382e3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/12/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Marker"}, {"n": "NO", "ok": true, "t": "number", "v": "0"}, {"n": "INDEX", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/12/1/2|NAME,NO,INDEX
+    wire: Plugin "CopilotResponder" "props 82d35c6d NAME,NO,INDEX ShowData/DataPools/Default/Timecodes/12/1/2"
+<<< {"id": "82d35c6d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/12/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "<Sequence 212>"}, {"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}

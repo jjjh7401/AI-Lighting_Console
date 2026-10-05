@@ -1,0 +1,28 @@
+
+>>> state:ShowData/DataPools/Default/Timecodes
+    wire: Plugin "CopilotResponder" "state 9c9a5199 ShowData/DataPools/Default/Timecodes"
+<<< {"children": [{"class": "Timecode", "i": 1, "name": "DinoSync Timecode"}, {"class": "Timecode", "i": 2, "name": "DinoFull Timecode"}, {"class": "Timecode", "i": 7, "name": "Synth Test Timecode"}, {"class": "Timecode", "i": 8, "name": "Notice Test Timecode"}, {"class": "Timecode", "i": 9, "name": "Sequence 210 Timecode"}, {"class": "Timecode", "i": 11, "name": "Sequence 211 Timecode"}, {"class": "Timecode", "i": 12, "name": "Sequence 212 Timecode"}, {"class": "Timecode", "i": 13, "name": "Sequence 213 Timecode"}, {"class": "Timecode", "i": 14, "name": "T506 TCPROBE"}], "id": "9c9a5199", "kind": "state", "node": {"childCount": 9, "class": "Timecodes", "enumeration": "ok", "name": "Timecodes"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/14|NAME,DURATION,CURSOR,LOOPMODE
+    wire: Plugin "CopilotResponder" "props 7181d3c8 NAME,DURATION,CURSOR,LOOPMODE ShowData/DataPools/Default/Timecodes/14"
+<<< {"id": "7181d3c8", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T506 TCPROBE"}, {"n": "DURATION", "ok": true, "t": "string", "v": "0.00"}, {"n": "CURSOR", "ok": true, "t": "string", "v": "0.00"}, {"n": "LOOPMODE", "ok": true, "t": "string", "v": "Off"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/14
+    wire: Plugin "CopilotResponder" "state 3c7340d5 ShowData/DataPools/Default/Timecodes/14"
+<<< {"children": [{"class": "TrackGroup", "i": 1, "name": "TrackGroup 1"}], "id": "3c7340d5", "kind": "state", "node": {"childCount": 1, "class": "Timecode", "enumeration": "ok", "name": "T506 TCPROBE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/14/1
+    wire: Plugin "CopilotResponder" "state 4eaf3374 ShowData/DataPools/Default/Timecodes/14/1"
+<<< {"children": [{"class": "MarkerTrack", "i": 1, "name": "Marker"}, {"class": "Track", "i": 2, "name": "<T215 SCRATCH DELETABLE>"}], "id": "4eaf3374", "kind": "state", "node": {"childCount": 2, "class": "TrackGroup", "enumeration": "ok", "name": "TrackGroup 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/14/1/1
+    wire: Plugin "CopilotResponder" "state 029db1d7 ShowData/DataPools/Default/Timecodes/14/1/1"
+<<< {"children": [], "id": "029db1d7", "kind": "state", "node": {"childCount": 0, "class": "MarkerTrack", "enumeration": "ok", "name": "Marker"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1/1", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/9|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props fc8e1f66 CURRENTCUE ShowData/DataPools/Default/Sequences/9"
+<<< {"id": "fc8e1f66", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/14/1/2
+    wire: Plugin "CopilotResponder" "state 60eae2cf ShowData/DataPools/Default/Timecodes/14/1/2"
+<<< {"children": [{"class": "TimeRange", "i": 1, "name": "TimeRange 1"}], "id": "60eae2cf", "kind": "state", "node": {"childCount": 1, "class": "Track", "enumeration": "ok", "name": "<T215 SCRATCH DELETABLE>"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/14/1/2", "truncated": false, "v": 1}
