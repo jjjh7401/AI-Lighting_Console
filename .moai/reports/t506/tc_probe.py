@@ -40,7 +40,7 @@ from server.safety.console import ExecOutcome, LinkTimeouts, StateQueryError  # 
 from server.safety.gate import BatchRisk, SafetyGate  # noqa: E402
 from server.safety.ruleset import load_ruleset  # noqa: E402
 
-SLOT = 14
+SLOT = 15  # v2: 14 는 1회차(따옴표 정지)의 잔여물로 남아 있다 — 삭제 금지라 새 슬롯
 SEQ = 9
 TC_NAME = "T506 TCPROBE"
 EVENT_TIMES = (1, 2, 3)
@@ -54,12 +54,13 @@ SEQ_PATH = f"ShowData/DataPools/Default/Sequences/{SEQ}"
 PREP = [
     f"Store Timecode {SLOT}",
     f"Set Timecode {SLOT} Property 'Name' '{TC_NAME}'",
-    f'Set Timecode {SLOT} Property "Duration" 5 "AutoStop" 0',
+    f"Set Timecode {SLOT} Property 'Duration' 5 'AutoStop' 0",
     f"Store Timecode {SLOT}.1",
     f"Assign Sequence {SEQ} At Timecode {SLOT}.1.1",
-    f'Store Type "CmdSubTrack" Timecode {SLOT}.1.1.1',
+    f"Store Type 'CmdSubTrack' Timecode {SLOT}.1.1.1",
     f"cd Timecode {SLOT}.1.1.1.1",
-    *[f'Store Property "Time" {t} "AbsTime" {t} "Token" "Go+"' for t in EVENT_TIMES],
+    # 큰따옴표는 앱 프로토콜이 송신 전에 거절한다(server/bridge/protocol.py:125-130) — 작은따옴표.
+    *[f"Store Property 'Time' {t} 'AbsTime' {t} 'Token' 'Go+'" for t in EVENT_TIMES],
     "cd root",
 ]
 PLAY = [f"Go Timecode {SLOT}"]
@@ -68,7 +69,7 @@ BUNDLES = (("prep", PREP), ("play", PLAY), ("release", RELEASE))
 
 # 묶음 전체를 승인 대상으로 선언한다 — 분류가 「안전」으로 본 줄이 전부-거절 실행에서
 # 혼자 나가는 일을 막는다(게이트는 묶음 단위 전부-아니면-0).
-RISK = BatchRisk(reason="t506 타임코드 프로브 — 빈 슬롯 14 생성·이벤트 3개·재생", kind="t506_probe")
+RISK = BatchRisk(reason="t506 타임코드 프로브 — 빈 슬롯 15 생성·이벤트 3개·재생", kind="t506_probe")
 
 
 # ---------------------------------------------------------------- 승인 통로
@@ -106,11 +107,13 @@ class FakeConsole:
 
     def execute(self, command: str) -> ExecOutcome:
         self.sent.append(command)
+        if '"' in command:  # 실제 앱 프로토콜과 같이 송신 전 거절(protocol.py:125-130)
+            return ExecOutcome(status="failed", detail="fake: double quote rejected")
         if command == f"Store Timecode {SLOT}":
             self.tc_exists = True
         elif command.startswith("cd "):
             self.cwd = command[3:]
-        elif command.startswith('Store Property "Time"'):
+        elif command.startswith("Store Property 'Time'"):
             if self.cwd != f"Timecode {SLOT}.1.1.1.1":
                 return ExecOutcome(status="failed", detail="fake: not in subtrack")
             self.events.append(float(command.split()[3]))

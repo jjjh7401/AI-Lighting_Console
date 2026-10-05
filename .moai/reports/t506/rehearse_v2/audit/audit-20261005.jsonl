@@ -1,0 +1,85 @@
+{"ts": "2026-10-05T05:27:11.588489+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE,CUENO", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.588789+00:00", "event": "approved", "commands": ["Store Timecode 15", "Set Timecode 15 Property 'Name' 'T506 TCPROBE'", "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0", "Store Timecode 15.1", "Assign Sequence 9 At Timecode 15.1.1", "Store Type 'CmdSubTrack' Timecode 15.1.1.1", "cd Timecode 15.1.1.1.1", "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'", "cd root"], "held": ["Store Timecode 15", "Set Timecode 15 Property 'Name' 'T506 TCPROBE'", "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0", "Store Timecode 15.1", "Assign Sequence 9 At Timecode 15.1.1", "Store Type 'CmdSubTrack' Timecode 15.1.1.1", "cd Timecode 15.1.1.1.1", "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'", "cd root"], "kind": "t506_probe"}
+{"ts": "2026-10-05T05:27:11.588927+00:00", "event": "executed", "command": "Store Timecode 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589011+00:00", "event": "executed", "command": "Set Timecode 15 Property 'Name' 'T506 TCPROBE'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589083+00:00", "event": "executed", "command": "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589223+00:00", "event": "executed", "command": "Store Timecode 15.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589327+00:00", "event": "executed", "command": "Assign Sequence 9 At Timecode 15.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589407+00:00", "event": "executed", "command": "Store Type 'CmdSubTrack' Timecode 15.1.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589477+00:00", "event": "executed", "command": "cd Timecode 15.1.1.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589549+00:00", "event": "executed", "command": "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589614+00:00", "event": "executed", "command": "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589677+00:00", "event": "executed", "command": "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589740+00:00", "event": "executed", "command": "cd root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.589949+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15/1/2 NAME,TARGET", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.590201+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/1", "kind": "introspect_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.590262+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/1 NAME,TIME,ABSTIME,TOKEN,CUEDESTINATION", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.590323+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/2 NAME,TIME,ABSTIME,TOKEN,CUEDESTINATION", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.590381+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/3 NAME,TIME,ABSTIME,TOKEN,CUEDESTINATION", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.590492+00:00", "event": "approved", "commands": ["Go Timecode 15"], "held": ["Go Timecode 15"], "kind": "t506_probe"}
+{"ts": "2026-10-05T05:27:11.590572+00:00", "event": "executed", "command": "Go Timecode 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:11.590637+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.590698+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.745672+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.746005+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.898684+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:11.899049+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.053707+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.054078+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.206640+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.207028+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.361621+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.361993+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.516638+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.516925+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.671658+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.671929+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.826616+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.826973+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.981613+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:12.981958+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.136618+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.136998+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.291638+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.291959+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.446653+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.446965+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.599010+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.599306+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.752896+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.753203+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.907903+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:13.908212+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.062921+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.063238+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.217956+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.218443+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.371611+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.371931+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.526631+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.526938+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.681601+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.681905+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.836627+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.836985+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.991608+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:14.991982+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.146613+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.146916+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.301633+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.301967+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.456666+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.457094+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.608075+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.608428+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.761618+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.761966+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.916629+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:15.917330+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:16.068065+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:16.068386+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:16.221684+00:00", "event": "approved", "commands": ["Off Timecode 15", "Off Sequence 9"], "held": ["Off Timecode 15", "Off Sequence 9"], "kind": "t506_probe"}
+{"ts": "2026-10-05T05:27:16.222062+00:00", "event": "executed", "command": "Off Timecode 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:16.222275+00:00", "event": "executed", "command": "Off Sequence 9", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-05T05:27:16.222395+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/9 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-05T05:27:16.222485+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/15 CURSOR,NAME,DURATION", "kind": "props_query", "ok": true, "detail": ""}

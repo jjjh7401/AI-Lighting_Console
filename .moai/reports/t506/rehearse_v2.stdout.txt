@@ -1,0 +1,194 @@
+{"step": "pre_pool", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes", "node": {"childCount": 0}, "children": [], "fake": true}}
+{"step": "pre_slot_negative_control", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": false, "error": "path segment not found: '15' (in ShowData/DataPools/Default/Timecodes/15)"}
+{"step": "pre_seq9", "t": 0.001, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}, {"n": "CUENO", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "prep", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Store Timecode 15", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 15 Property 'Name' 'T506 TCPROBE'", "reasons": []}, {"command": "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0", "reasons": []}, {"command": "Store Timecode 15.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign Sequence 9 At Timecode 15.1.1", "reasons": ["blacklisted command (matches closed-set entry 'Assign Sequence')"]},
+{"step": "prep", "t": 0.001, "kind": "exec", "command": "Store Timecode 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.001, "kind": "exec", "command": "Set Timecode 15 Property 'Name' 'T506 TCPROBE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "Store Timecode 15.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "Assign Sequence 9 At Timecode 15.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "Store Type 'CmdSubTrack' Timecode 15.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "cd Timecode 15.1.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "prep", "t": 0.002, "kind": "exec", "command": "cd root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_prep_tc", "t": 0.002, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "node": {"childCount": 0}, "children": [], "fake": true}}
+{"step": "post_prep_trackgroup", "t": 0.002, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/15/1", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1", "node": {"childCount": 2}, "children": [{"class": "MarkerTrack", "i": 1, "name": "MarkerTrack"}, {"class": "Track", "i": 2, "name": "Track"}], "fake": true}}
+{"step": "post_prep_track_props", "t": 0.002, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15/1/2", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1/2", "reads": [{"n": "NAME", "ok": true, "v": "fake"}, {"n": "TARGET", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "post_prep_track", "t": 0.002, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/15/1/2", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1/2", "node": {"childCount": 1}, "children": [{"class": "TimeRange", "i": 1, "name": "TimeRange"}], "fake": true}}
+{"step": "post_prep_timerange", "t": 0.002, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1", "node": {"childCount": 1}, "children": [{"class": "CmdSubTrack", "i": 1, "name": "CmdSubTrack"}], "fake": true}}
+{"step": "post_prep_subtrack", "t": 0.003, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1", "node": {"childCount": 3}, "children": [{"class": "CmdEvent", "i": 1, "name": "CmdEvent"}, {"class": "CmdEvent", "i": 2, "name": "CmdEvent"}, {"class": "CmdEvent", "i": 3, "name": "CmdEvent"}], "fake": true}}
+{"step": "post_prep_event_fields", "t": 0.003, "kind": "introspect_path", "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/1"}
+{"step": "post_prep_event_fields", "t": 0.003, "kind": "introspect", "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/1", "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/1", "fields": [], "fake": true}}
+{"step": "post_prep_event", "t": 0.003, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/1", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/1", "reads": [{"n": "NAME", "ok": true, "v": "fake"}, {"n": "TIME", "ok": true, "v": "fake"}, {"n": "ABSTIME", "ok": true, "v": "fake"}, {"n": "TOKEN", "ok": true, "v": "fake"}, {"n": "CUEDESTINATION", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "post_prep_event", "t": 0.003, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/2", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/2", "reads": [{"n": "NAME", "ok": true, "v": "fake"}, {"n": "TIME", "ok": true, "v": "fake"}, {"n": "ABSTIME", "ok": true, "v": "fake"}, {"n": "TOKEN", "ok": true, "v": "fake"}, {"n": "CUEDESTINATION", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "post_prep_event", "t": 0.003, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/3", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15/1/2/1/1/3", "reads": [{"n": "NAME", "ok": true, "v": "fake"}, {"n": "TIME", "ok": true, "v": "fake"}, {"n": "ABSTIME", "ok": true, "v": "fake"}, {"n": "TOKEN", "ok": true, "v": "fake"}, {"n": "CUEDESTINATION", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "play", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Go Timecode 15", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "play", "t": 0.003, "kind": "exec", "command": "Go Timecode 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "sample_seq", "t": 0.003, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}], "fake": true}}
+{"step": "sample_tc", "t": 0.003, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "0.00"}], "fake": true}}
+{"step": "sample_seq", "t": 0.158, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}], "fake": true}}
+{"step": "sample_tc", "t": 0.158, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "0.16"}], "fake": true}}
+{"step": "sample_seq", "t": 0.311, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}], "fake": true}}
+{"step": "sample_tc", "t": 0.312, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "0.31"}], "fake": true}}
+{"step": "sample_seq", "t": 0.466, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}], "fake": true}}
+{"step": "sample_tc", "t": 0.467, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "0.46"}], "fake": true}}
+{"step": "sample_seq", "t": 0.619, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}], "fake": true}}
+{"step": "sample_tc", "t": 0.62, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "0.62"}], "fake": true}}
+{"step": "sample_seq", "t": 0.774, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}], "fake": true}}
+{"step": "sample_tc", "t": 0.775, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "0.77"}], "fake": true}}
+{"step": "sample_seq", "t": 0.929, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}], "fake": true}}
+{"step": "sample_tc", "t": 0.929, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "0.93"}], "fake": true}}
+{"step": "sample_seq", "t": 1.084, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.1"}], "fake": true}}
+{"step": "sample_tc", "t": 1.085, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "1.08"}], "fake": true}}
+{"step": "sample_seq", "t": 1.239, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.1"}], "fake": true}}
+{"step": "sample_tc", "t": 1.24, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "1.24"}], "fake": true}}
+{"step": "sample_seq", "t": 1.394, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.1"}], "fake": true}}
+{"step": "sample_tc", "t": 1.395, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "1.39"}], "fake": true}}
+{"step": "sample_seq", "t": 1.549, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.1"}], "fake": true}}
+{"step": "sample_tc", "t": 1.55, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "1.55"}], "fake": true}}
+{"step": "sample_seq", "t": 1.704, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.1"}], "fake": true}}
+{"step": "sample_tc", "t": 1.705, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "1.70"}], "fake": true}}
+{"step": "sample_seq", "t": 1.859, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.1"}], "fake": true}}
+{"step": "sample_tc", "t": 1.86, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "1.86"}], "fake": true}}
+{"step": "sample_seq", "t": 2.012, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.2"}], "fake": true}}
+{"step": "sample_tc", "t": 2.012, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "2.01"}], "fake": true}}
+{"step": "sample_seq", "t": 2.166, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.2"}], "fake": true}}
+{"step": "sample_tc", "t": 2.166, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "2.16"}], "fake": true}}
+{"step": "sample_seq", "t": 2.321, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.2"}], "fake": true}}
+{"step": "sample_tc", "t": 2.321, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "2.32"}], "fake": true}}
+{"step": "sample_seq", "t": 2.476, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.2"}], "fake": true}}
+{"step": "sample_tc", "t": 2.476, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "2.47"}], "fake": true}}
+{"step": "sample_seq", "t": 2.631, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.2"}], "fake": true}}
+{"step": "sample_tc", "t": 2.631, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "2.63"}], "fake": true}}
+{"step": "sample_seq", "t": 2.784, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.2"}], "fake": true}}
+{"step": "sample_tc", "t": 2.784, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "2.78"}], "fake": true}}
+{"step": "sample_seq", "t": 2.939, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.2"}], "fake": true}}
+{"step": "sample_tc", "t": 2.94, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "2.94"}], "fake": true}}
+{"step": "sample_seq", "t": 3.094, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 3.094, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "3.09"}], "fake": true}}
+{"step": "sample_seq", "t": 3.249, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 3.25, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "3.25"}], "fake": true}}
+{"step": "sample_seq", "t": 3.404, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 3.404, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "3.40"}], "fake": true}}
+{"step": "sample_seq", "t": 3.559, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 3.559, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "3.56"}], "fake": true}}
+{"step": "sample_seq", "t": 3.714, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 3.714, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "3.71"}], "fake": true}}
+{"step": "sample_seq", "t": 3.869, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 3.87, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "3.87"}], "fake": true}}
+{"step": "sample_seq", "t": 4.021, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 4.021, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "4.02"}], "fake": true}}
+{"step": "sample_seq", "t": 4.174, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 4.174, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "4.17"}], "fake": true}}
+{"step": "sample_seq", "t": 4.33, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 4.33, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "4.33"}], "fake": true}}
+{"step": "sample_seq", "t": 4.481, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": true, "v": "Sequence 9.3"}], "fake": true}}
+{"step": "sample_tc", "t": 4.481, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "4.48"}], "fake": true}}
+{"step": "release", "t": 4.634, "kind": "screen", "cleared": true, "commands": [{"command": "Off Timecode 15", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}, {"command": "Off Sequence 9", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 9': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "release", "t": 4.635, "kind": "exec", "command": "Off Timecode 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "release", "t": 4.635, "kind": "exec", "command": "Off Sequence 9", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_release_seq9", "t": 4.635, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/9", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/9", "reads": [{"n": "CURRENTCUE", "ok": false, "e": "property not readable: CURRENTCUE"}], "fake": true}}
+{"step": "post_release_tc", "t": 4.635, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/15", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Timecodes/15", "reads": [{"n": "CURSOR", "ok": true, "v": "0.00"}, {"n": "NAME", "ok": true, "v": "fake"}, {"n": "DURATION", "ok": true, "v": "fake"}], "fake": true}}
+{
+  "slot": 15,
+  "sequence": 9,
+  "event_times": [
+    1,
+    2,
+    3
+  ],
+  "bundles": {
+    "prep": true,
+    "play": true,
+    "release": true
+  },
+  "pre_pool_numbers": [],
+  "slot_absent": true,
+  "seq9_off_before": true,
+  "events_found": 3,
+  "verdict": "rehearsal — script path only",
+  "fake_sent": [
+    "Store Timecode 15",
+    "Set Timecode 15 Property 'Name' 'T506 TCPROBE'",
+    "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0",
+    "Store Timecode 15.1",
+    "Assign Sequence 9 At Timecode 15.1.1",
+    "Store Type 'CmdSubTrack' Timecode 15.1.1.1",
+    "cd Timecode 15.1.1.1.1",
+    "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+    "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+    "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+    "cd root",
+    "Go Timecode 15",
+    "Off Timecode 15",
+    "Off Sequence 9"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 15",
+        "Set Timecode 15 Property 'Name' 'T506 TCPROBE'",
+        "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0",
+        "Store Timecode 15.1",
+        "Assign Sequence 9 At Timecode 15.1.1",
+        "Store Type 'CmdSubTrack' Timecode 15.1.1.1",
+        "cd Timecode 15.1.1.1.1",
+        "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+        "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+        "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go Timecode 15"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Timecode 15",
+        "Off Sequence 9"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}
+SAMPLE {"t_from_go": [0.0, 0.0], "currentcue": null, "cursor": "0.00"}
+SAMPLE {"t_from_go": [0.155, 0.155], "currentcue": null, "cursor": "0.16"}
+SAMPLE {"t_from_go": [0.308, 0.309], "currentcue": null, "cursor": "0.31"}
+SAMPLE {"t_from_go": [0.463, 0.464], "currentcue": null, "cursor": "0.46"}
+SAMPLE {"t_from_go": [0.616, 0.617], "currentcue": null, "cursor": "0.62"}
+SAMPLE {"t_from_go": [0.771, 0.772], "currentcue": null, "cursor": "0.77"}
+SAMPLE {"t_from_go": [0.926, 0.926], "currentcue": null, "cursor": "0.93"}
+SAMPLE {"t_from_go": [1.081, 1.082], "currentcue": "Sequence 9.1", "cursor": "1.08"}
+SAMPLE {"t_from_go": [1.236, 1.237], "currentcue": "Sequence 9.1", "cursor": "1.24"}
+SAMPLE {"t_from_go": [1.391, 1.392], "currentcue": "Sequence 9.1", "cursor": "1.39"}
+SAMPLE {"t_from_go": [1.546, 1.547], "currentcue": "Sequence 9.1", "cursor": "1.55"}
+SAMPLE {"t_from_go": [1.701, 1.702], "currentcue": "Sequence 9.1", "cursor": "1.70"}
+SAMPLE {"t_from_go": [1.856, 1.857], "currentcue": "Sequence 9.1", "cursor": "1.86"}
+SAMPLE {"t_from_go": [2.008, 2.009], "currentcue": "Sequence 9.2", "cursor": "2.01"}
+SAMPLE {"t_from_go": [2.162, 2.163], "currentcue": "Sequence 9.2", "cursor": "2.16"}
+SAMPLE {"t_from_go": [2.317, 2.318], "currentcue": "Sequence 9.2", "cursor": "2.32"}
+SAMPLE {"t_from_go": [2.472, 2.473], "currentcue": "Sequence 9.2", "cursor": "2.47"}
+SAMPLE {"t_from_go": [2.627, 2.628], "currentcue": "Sequence 9.2", "cursor": "2.63"}
+SAMPLE {"t_from_go": [2.781, 2.781], "currentcue": "Sequence 9.2", "cursor": "2.78"}
+SAMPLE {"t_from_go": [2.936, 2.937], "currentcue": "Sequence 9.2", "cursor": "2.94"}
+SAMPLE {"t_from_go": [3.091, 3.091], "currentcue": "Sequence 9.3", "cursor": "3.09"}
+SAMPLE {"t_from_go": [3.246, 3.247], "currentcue": "Sequence 9.3", "cursor": "3.25"}
+SAMPLE {"t_from_go": [3.401, 3.402], "currentcue": "Sequence 9.3", "cursor": "3.40"}
+SAMPLE {"t_from_go": [3.556, 3.556], "currentcue": "Sequence 9.3", "cursor": "3.56"}
+SAMPLE {"t_from_go": [3.711, 3.711], "currentcue": "Sequence 9.3", "cursor": "3.71"}
+SAMPLE {"t_from_go": [3.866, 3.867], "currentcue": "Sequence 9.3", "cursor": "3.87"}
+SAMPLE {"t_from_go": [4.017, 4.018], "currentcue": "Sequence 9.3", "cursor": "4.02"}
+SAMPLE {"t_from_go": [4.171, 4.171], "currentcue": "Sequence 9.3", "cursor": "4.17"}
+SAMPLE {"t_from_go": [4.326, 4.327], "currentcue": "Sequence 9.3", "cursor": "4.33"}
+SAMPLE {"t_from_go": [4.477, 4.478], "currentcue": "Sequence 9.3", "cursor": "4.48"}

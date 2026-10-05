@@ -1,7 +1,7 @@
 # t506 판정서 — 타임코드 재생 실기 가능성 확인
 
 카드 t506 · 레인 lane-3 · 워크트리 `.claude/worktrees/t506` · 브랜치 `WT-timecode-probe` (기준 `c11bc540`)
-상태: **정지점 — 실기 쓰기 승인 대기** (2026-10-05). 콘솔 쓰기 0건, 쇼 저장 0건.
+상태: **1회차 실기 정지 → v2 재승인 대기** (2026-10-05). 1회차는 감독 승인(리드 경유)으로 한 번 실행했다. 준비 묶음 도중 안전장치가 걸려 멈췄고, 재생은 하지 않았다(§6). 쇼 저장 0건.
 
 ## 요약
 
@@ -83,3 +83,45 @@
 - 실기 콘솔의 grandMA3 버전은 재지 않았다. 응답기 1.6.5 만 확인했다. MA 테스트는 설치본 2.4.2 기준이다.
 - `Store Timecode 14.1` 이 트랙 그룹 안에 Marker 트랙을 자동으로 만드는지(그러면 `.1.1` 이 Marker 를 가리킬 수 있다)는 MA 테스트 형태를 그대로 따랐을 뿐 확인하지 않았다. 준비 직후 되읽기가 이것을 드러낸다. Track 대상이 시퀀스 9가 아니면 재생 묶음을 보내기 전에 판정으로 적는다.
 - 이벤트 수 상한은 이번 프로브(3개)로는 답할 수 없다. 리듬 층(곡당 수백 개)을 위해서는 승인 후 별도 단계가 필요하다.
+
+## 6. 1회차 실기 실행 — 준비 묶음에서 정지 (2026-10-05, 감독 승인·리드 경유)
+
+명령: `tc_probe.py .moai/reports/t506/live_write --approve .moai/reports/t506/live_denyall` (헤드 `b4feadd3`, 승인 문면과 글자 일치 1/1).
+사전 확인: 슬롯 14 부재 · 시퀀스 9 꺼짐 — 둘 다 성립. SaveShow 는 「기록만」 1회(`live_write/result.json` `skipped_saveshow`).
+
+| 줄 | 콘솔 송신 | 결과 |
+|---|---|---|
+| `Store Timecode 14` | 보냄 | OK |
+| `Set Timecode 14 Property 'Name' 'T506 TCPROBE'` | 보냄 | OK |
+| `Set Timecode 14 Property "Duration" 5 "AutoStop" 0` | **앱이 송신 전 거절** | `command must not contain a double quote (")` |
+| `Store Timecode 14.1` | 보냄 | OK |
+| `Assign Sequence 9 At Timecode 14.1.1` | 보냄 | OK |
+| `Store Type "CmdSubTrack" Timecode 14.1.1.1` | **앱이 송신 전 거절** | 같은 사유 |
+| `cd Timecode 14.1.1.1.1` | 보냄 | Failed (하위 트랙이 없다) |
+| `Store Property "Time" 1/2/3 …` ×3 | **보내지 않음** | 안전장치: `cd` 실패 시 보류 |
+| `cd root` | 보냄 | OK |
+
+- 재생·해제 묶음은 보내지 않았다(준비 실패 → 정지). **9.1/9.2/9.3 관측값 없음.**
+- 원인: `server/bridge/protocol.py:125-130` `_validate_rest` 가 큰따옴표를 거절한다. 큰따옴표는 MA3 의 따옴표로 감싼 플러그인 인자를 끊는다. 코드 주석이 작은따옴표로 바꿔 쓰라고 안내한다. 거절은 OSC 송신 전에 일어난다.
+- 리허설이 이것을 못 잡은 이유: 1회차 가짜 콘솔은 게이트 아래 프로토콜 층을 흉내 내지 않았다. v2 가짜 콘솔은 큰따옴표를 같은 방식으로 거절한다.
+
+### 잔여물 (읽기 전용 확인, `live_write_residue_readonly.txt`)
+
+- `Timecodes/14` 「T506 TCPROBE」 — `DURATION 0.00` · `CURSOR 0.00` · `LOOPMODE Off`
+  - `14/1` TrackGroup → 자식 `MarkerTrack "Marker"`(i=1) + `Track "<T215 SCRATCH DELETABLE>"`(i=2)
+  - `14/1/2` → `TimeRange 1`(자동 생성), 그 아래는 읽지 않았다
+- 시퀀스 9: `CURRENTCUE` 읽기 불가 = 꺼짐(재생하지 않았다).
+- 명령줄 문맥은 `cd root` OK 로 루트에 돌려 놓았다.
+- 삭제는 하지 않는다(카드 금지). 정리는 운영자 몫.
+
+### 새로 안 것
+
+- `Assign Sequence 9 At Timecode 14.1.1` 은 Track 과 `TimeRange 1` 을 자동으로 만든다. 그 Track 은 Marker 다음 자식(i=2)이다. 그래서 상태 경로 번호(`14/1/2`)와 명령 주소(`14.1.1`)가 다르다. 명령 주소가 Marker 를 세지 않는지는 아직 모른다. v2 의 `Store Type … 15.1.1.1` 이 이것을 가른다. 이벤트가 엉뚱한 곳에 생기면 「되읽은 이벤트 3개」 안전장치가 재생을 막는다.
+
+## 7. v2 수정안 — 재승인 요청
+
+- 슬롯 **15**(14 는 1회차 잔여물이고 삭제 금지). 큰따옴표 → 작은따옴표. 그 밖의 줄·순서·안전장치는 같다.
+- 명령 파일: `commands_for_approval_v2.txt` (3묶음 14줄).
+- 리허설 v2(`rehearse_v2/`): 3묶음 경로 끝까지, 이벤트 3.
+- 실기 전부-거절 v2(`live_denyall_v2/`): 슬롯 15 부재 · 시퀀스 9 꺼짐 · 풀 1·2·7·8·9·11·12·13·14. 감사 로그 기준 명령 실행 0, 거절 3, 읽기만, SaveShow 0.
+- 작은따옴표 형태(`Store Type 'CmdSubTrack'`, `Store Property 'Time' 1 …`)는 MA 테스트에는 없다. 앱이 이미 쓰는 `Set … Property 'Name' '…'` 은 1회차에서 OK 였다. 하지만 나머지 두 형태를 콘솔이 받는지는 v2 가 처음 잰다.

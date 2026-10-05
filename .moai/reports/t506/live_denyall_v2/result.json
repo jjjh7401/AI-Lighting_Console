@@ -1,0 +1,61 @@
+{
+  "slot": 15,
+  "sequence": 9,
+  "event_times": [
+    1,
+    2,
+    3
+  ],
+  "bundles": {
+    "prep": false,
+    "play": false,
+    "release": false
+  },
+  "pre_pool_numbers": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    11,
+    12,
+    13,
+    14
+  ],
+  "slot_absent": true,
+  "seq9_off_before": true,
+  "verdict": "prep not executed (denied or failed)",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 15",
+        "Set Timecode 15 Property 'Name' 'T506 TCPROBE'",
+        "Set Timecode 15 Property 'Duration' 5 'AutoStop' 0",
+        "Store Timecode 15.1",
+        "Assign Sequence 9 At Timecode 15.1.1",
+        "Store Type 'CmdSubTrack' Timecode 15.1.1.1",
+        "cd Timecode 15.1.1.1.1",
+        "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+        "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+        "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Go Timecode 15"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Timecode 15",
+        "Off Sequence 9"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}
