@@ -1,0 +1,98 @@
+[
+ {
+  "song": "Rain.mp3",
+  "app_bpm": 76.01,
+  "confidence": 0.957,
+  "ac_bpm": 0.781,
+  "ac_half": 0.781,
+  "ac_double": 0.743,
+  "perc_onsets_per_beat": 5.42,
+  "kick_interval_bpm": 193.97,
+  "retrack_start_x2": 152.03,
+  "retrack_start_half": 38.01
+ },
+ {
+  "song": "Club Diver.mp3",
+  "app_bpm": 139.67,
+  "confidence": 0.969,
+  "ac_bpm": 0.683,
+  "ac_half": 0.675,
+  "ac_double": 0.633,
+  "perc_onsets_per_beat": 5.09,
+  "kick_interval_bpm": 258.4,
+  "retrack_start_x2": 272.0,
+  "retrack_start_half": 69.84
+ },
+ {
+  "song": "Cut and Run.mp3",
+  "app_bpm": 107.67,
+  "confidence": 0.968,
+  "ac_bpm": 0.583,
+  "ac_half": 0.779,
+  "ac_double": 0.622,
+  "perc_onsets_per_beat": 3.52,
+  "kick_interval_bpm": 206.72,
+  "retrack_start_x2": 215.33,
+  "retrack_start_half": 53.28
+ },
+ {
+  "song": "Ice cream.mp3",
+  "app_bpm": 100.45,
+  "confidence": 0.961,
+  "ac_bpm": 0.752,
+  "ac_half": 0.612,
+  "ac_double": 0.756,
+  "perc_onsets_per_beat": 3.66,
+  "kick_interval_bpm": 193.97,
+  "retrack_start_x2": 200.89,
+  "retrack_start_half": 50.22
+ },
+ {
+  "song": "Morning.mp3",
+  "app_bpm": 117.45,
+  "confidence": 0.963,
+  "ac_bpm": 0.591,
+  "ac_half": 0.507,
+  "ac_double": 0.329,
+  "perc_onsets_per_beat": 2.36,
+  "kick_interval_bpm": 161.5,
+  "retrack_start_x2": 117.45,
+  "retrack_start_half": 59.4
+ },
+ {
+  "song": "Too Cool.mp3",
+  "app_bpm": 161.5,
+  "confidence": 0.977,
+  "ac_bpm": 0.554,
+  "ac_half": 0.537,
+  "ac_double": 0.187,
+  "perc_onsets_per_beat": 1.6,
+  "kick_interval_bpm": 178.21,
+  "retrack_start_x2": 161.5,
+  "retrack_start_half": 79.51
+ },
+ {
+  "song": "scott-buckley-neon.mp3",
+  "app_bpm": 120.19,
+  "confidence": 0.978,
+  "ac_bpm": 0.807,
+  "ac_half": 0.865,
+  "ac_double": 0.794,
+  "perc_onsets_per_beat": 3.52,
+  "kick_interval_bpm": 234.91,
+  "retrack_start_x2": 234.91,
+  "retrack_start_half": 60.09
+ },
+ {
+  "song": "걸그룹DinoDino_C_max최고품질.wav",
+  "app_bpm": 126.05,
+  "confidence": 0.974,
+  "ac_bpm": 0.711,
+  "ac_half": 0.713,
+  "ac_double": 0.694,
+  "perc_onsets_per_beat": 2.95,
+  "kick_interval_bpm": 246.09,
+  "retrack_start_x2": 258.4,
+  "retrack_start_half": 63.8
+ }
+]
