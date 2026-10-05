@@ -1,0 +1,4 @@
+40 36 rms odd 0.235 even 0.216 kickE odd 892 even 1167
+odd>even rms pairs 33 of 36
+vocal ratio bars3-42 0.095 bars43-82 0.136
+rms range bars3-82 excl breaks 0.19359330832958221 0.25040343403816223

@@ -1,0 +1,198 @@
+{
+ "audio": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/src/sample music/Club Diver.mp3",
+ "sample_rate": 44100,
+ "duration_s": 145.685,
+ "app_path_bpm": 139.67483108108198,
+ "app_path_confidence": 0.9689849461332691,
+ "n_beats": 331,
+ "pickup_beats_s": [],
+ "downbeat": {
+  "snare_slot_counts": [
+   55.0,
+   45.0,
+   43.0,
+   78.0
+  ],
+  "snare_backbeat_pair_start": 1,
+  "snare_downbeat_candidates": [
+   0,
+   2
+  ],
+  "snare_phase_naive": 0,
+  "chroma_novelty_by_slot": [
+   61.815,
+   54.693,
+   55.249,
+   60.733
+  ],
+  "chroma_phase": 0,
+  "boundary_slot_counts": [
+   0.0,
+   2.0,
+   0.0,
+   10.0
+  ],
+  "boundary_phase": 3,
+  "lowjump_slot_counts": [
+   4.0,
+   3.0,
+   3.0,
+   2.0
+  ],
+  "lowjump_phase": 0,
+  "chosen_phase": 0,
+  "agree_chroma_boundary": false,
+  "chosen_in_snare_candidates": true,
+  "votes": [
+   0,
+   3
+  ]
+ },
+ "n_bars": 83,
+ "n_kick_candidates": 537,
+ "n_snare_candidates": 451,
+ "kick_on_beat_ratio": 0.3165735567970205,
+ "snare_on_beat_ratio": 0.47671840354767187,
+ "boundary_fit": [
+  {
+   "section": "Chorus 1",
+   "boundary_s": 13.096,
+   "nearest_downbeat_s": 13.328,
+   "diff_ms": 232,
+   "diff_beats": 0.54
+  },
+  {
+   "section": "Bridge 1",
+   "boundary_s": 23.382,
+   "nearest_downbeat_s": 23.615,
+   "diff_ms": 233,
+   "diff_beats": 0.54
+  },
+  {
+   "section": "Chorus 2",
+   "boundary_s": 30.871,
+   "nearest_downbeat_s": 30.476,
+   "diff_ms": -395,
+   "diff_beats": -0.92
+  },
+  {
+   "section": "Chorus 3",
+   "boundary_s": 40.519,
+   "nearest_downbeat_s": 40.751,
+   "diff_ms": 232,
+   "diff_beats": 0.54
+  },
+  {
+   "section": "Chorus 4",
+   "boundary_s": 57.655,
+   "nearest_downbeat_s": 57.899,
+   "diff_ms": 244,
+   "diff_beats": 0.57
+  },
+  {
+   "section": "Chorus 5",
+   "boundary_s": 64.54,
+   "nearest_downbeat_s": 64.76,
+   "diff_ms": 220,
+   "diff_beats": 0.51
+  },
+  {
+   "section": "Verse 1",
+   "boundary_s": 74.803,
+   "nearest_downbeat_s": 75.047,
+   "diff_ms": 244,
+   "diff_beats": 0.57
+  },
+  {
+   "section": "Chorus 6",
+   "boundary_s": 85.74,
+   "nearest_downbeat_s": 85.322,
+   "diff_ms": -418,
+   "diff_beats": -0.97
+  },
+  {
+   "section": "Chorus 7",
+   "boundary_s": 95.388,
+   "nearest_downbeat_s": 95.608,
+   "diff_ms": 220,
+   "diff_beats": 0.51
+  },
+  {
+   "section": "Chorus 8",
+   "boundary_s": 112.512,
+   "nearest_downbeat_s": 112.756,
+   "diff_ms": 244,
+   "diff_beats": 0.57
+  },
+  {
+   "section": "Chorus 9",
+   "boundary_s": 122.81,
+   "nearest_downbeat_s": 123.043,
+   "diff_ms": 233,
+   "diff_beats": 0.54
+  },
+  {
+   "section": "Finale",
+   "boundary_s": 136.533,
+   "nearest_downbeat_s": 136.754,
+   "diff_ms": 221,
+   "diff_beats": 0.51
+  }
+ ],
+ "vocal_events": [
+  {
+   "bar": 22,
+   "t": 35.619,
+   "event": "start"
+  },
+  {
+   "bar": 29,
+   "t": 47.613,
+   "event": "end"
+  },
+  {
+   "bar": 33,
+   "t": 54.474,
+   "event": "start"
+  },
+  {
+   "bar": 37,
+   "t": 61.324,
+   "event": "end"
+  },
+  {
+   "bar": 45,
+   "t": 75.047,
+   "event": "start"
+  },
+  {
+   "bar": 47,
+   "t": 78.472,
+   "event": "end"
+  },
+  {
+   "bar": 49,
+   "t": 81.897,
+   "event": "start"
+  },
+  {
+   "bar": 57,
+   "t": 95.608,
+   "event": "end"
+  },
+  {
+   "bar": 62,
+   "t": 104.188,
+   "event": "start"
+  },
+  {
+   "bar": 83,
+   "t": 140.179,
+   "event": "end"
+  }
+ ],
+ "listen": {
+  "beats": "/Users/studiox/Music/AI-Lighting_Console-listen/t505/Club_Diver_beats_clicks_phase0.wav",
+  "kick_snare": "/Users/studiox/Music/AI-Lighting_Console-listen/t505/Club_Diver_kick_snare_clicks.wav"
+ }
+}
