@@ -1,0 +1,139 @@
+---
+id: SPEC-LDRHYTHM-001
+title: "리듬 연출 — 대본 우선 설계(Club Diver)"
+version: "0.1.0"
+status: draft
+created: 2026-10-05
+updated: 2026-10-05
+author: jaihyun
+priority: P1
+phase: "Lighting Copilot v1.2 target"
+module: "docs/proposals/song-structure-lighting-standard.md(M3 버전 올림 대상), server/design/song_cue_render.py, server/spatial/position_fx.py, server/looks/movement.py, server/audio/analyze.py (M4+ 앱 구현 후보 — M1~M3 은 대본·시연·규칙화뿐, 코드 변경 0)"
+lifecycle: spec-anchored
+tags: "rhythm, beat-layer, accent-layer, director-script, bpm-speedmaster, process-gate, club-diver"
+tier: M
+related_specs: [SPEC-LDRENDER-001, SPEC-LDDESIGN-001, SPEC-COPILOT-FXGEN-001, SPEC-COPILOT-FXLIB-001]
+---
+
+# SPEC-LDRHYTHM-001 — 리듬 연출: 대본 우선 설계(Club Diver)
+
+## HISTORY
+
+| 일자 | 내용 |
+|---|---|
+| 2026-10-05 | 최초 작성(카드 t504). 입력: `reports/music-lighting-benchmark-20261003.md`(벤치마크+콘솔 조사) · `reports/rhythm-expression-research-20261003.md`(t502, 코드 판독+빈칸 표) · `.moai/reports/t502/verdict.md` · `.moai/reports/t501/sync.md`(AC-LDRENDER-016 FAIL 1~2점) · `docs/proposals/song-structure-lighting-standard.md`. 감독 결정 4건(2026-10-03, 리드 경유)을 전면 반영. Tier M(아래 §0 근거). **plan만 — 코드 변경 0, 콘솔 접촉 0.** |
+| 2026-10-05 | **plan-audit iteration 1 FAIL(0.75, 통과선 0.80) 대응.** D1(critical) — AC-LDRHYTHM-006(`acceptance.md`)의 측정 커맨드가 SPEC 디렉터리 전체 `*.md`를 스캔해, 감독 결정 원문 인용(`spec.md:32`)과 이 AC 자신의 서술(`acceptance.md`) 때문에 M1 품질과 무관하게 항상 "§10.3" 매치가 남아 영원히 FAIL 하는 결정 불능 criterion 이었다 — 측정 스코프를 M1 실제 산출물 파일 하나(`m1-club-diver-script.md`, `plan.md` M1 §E 가 그 경로를 고정)로 좁히고, "§10 금지목록 4번"을 정확히 인용했는지(양성)와 "§10.3" 오표기가 없는지(음성) 둘 다 보는 양성+음성 복합 검사로 바꿨다. D2(minor, 선택) — REQ-LDRHYTHM-012 한 문장 안에서 shall-주체가 "다음 항목"→"이 plan-phase"로 바뀌던 것을 비요구사항 참고 각주로 분리해 GEARS 단일 주체 골격을 정리했다. REQ/AC 총량(12/11)·ID 추가삭제 없음 — 문면 교정만. |
+| 2026-10-05 | **plan-audit iteration 2 PASS(0.92) + D-NEW-1(major) 대응.** iter1 D1 해소 과정에서 AC-LDRHYTHM-006 의 측정이 "§10 금지목록 4번" 인용/"§10.3" 오표기 문자열 그렙 2건뿐이라, Then 절의 핵심 조건("강조 층은 큰 히트에만 배치")을 실제로 검사하지 않는 구멍이 남아 있었다(인용만 1회 정확히 하고 나머지 배치가 느슨해도 기계적으로 PASS). `plan.md` M1 산출물에 **닫힌 어휘 2열**("층": 박자\|강조, "모멘트유형": 코러스진입\|드롭\|마지막코러스\|기타)을 가진 6칸 표 형식을 신설해 배치 조건을 기계로 셀 수 있게 하고, `acceptance.md` AC-LDRHYTHM-006 을 자매 AC(003~005)와 같은 "오프라인 검사" 패턴으로 재작성 — 층=강조인 행 전수를 모멘트유형 열과 대조해 닫힌 집합 밖(기타 포함)이면 위반으로 집계(위반 수=0 이어야 PASS), 기존 양성/음성 그렙 2건은 유지. "그 항목들은 전부"의 지시 대상을 "층 열 값이 강조인 행 전체"로 명시해 지시어 모호성도 해소. 모멘트유형 라벨의 진실성(그 순간이 실제 큰 히트인지)은 기계 검사가 아니라 M1 감독 검토의 몫임을 양쪽 문서에 명시(REQ-LDRHYTHM-011 과 일치). REQ/AC 총량(12/11)·ID 추가삭제 없음 — M1 표 형식 신설 + AC-006 측정 재작성뿐. |
+| 2026-10-05 | **plan-audit iteration 3 FAIL(0.80, blocking) + D-NEW-2(major, 회귀) 대응.** iter2 가 `plan.md` M1 의 표 형식을 6칸(시각/층/모멘트유형/연출/잇는 방식/이유)으로 바꿨는데, REQ-LDRHYTHM-003(`spec.md`)과 AC-LDRHYTHM-003(`acceptance.md`)은 여전히 옛 4칸("음악 순간/놓는 연출/잇는 방식/이유")을 서술해, M1 이 plan.md 대로 6칸 표를 쓰면 AC-003 의 글자 그대로 조건을 만족하는 칸 이름이 하나도 없는 모순이 생겼다 — D-NEW-1 해소가 낳은 전형적 회귀. REQ-003·AC-003 둘 다 plan.md 의 6칸 이름·닫힌 어휘(층: 박자\|강조, 모멘트유형: 코러스진입\|드롭\|마지막코러스\|기타)와 동일하게 교정하면서, "곡의 어느 순간인지→무엇을 두는지→앞 장면과 어떻게 잇는지→왜 그런지"라는 원래 4단계 의도는 유지했다. 감독 결정 원문(`spec.md:34`, verbatim)은 손대지 않았다 — `grep -n "음악 순간\|놓는 연출\|네 칸\|앞 장면과 잇는 방식" spec.md plan.md acceptance.md progress.md` 로 전수 재확인한 결과 그 verbatim 인용 1건만 남고 나머지 모든 참조가 교정됐다. REQ/AC 총량(12/11)·ID 변경 없음. |
+| 2026-10-05 | **리드 PR #550 판독 — M2 승인 단위를 묶음 파일 1회 승인으로.** 구간 안 박자 층 이벤트 하나하나를 감독이 개별로 승인해야 한다는 옛 서술은 운영상 불가능하다는 지적 — 박자 층은 곡당 수백 개 이벤트라, 그 서술대로면 감독이 수백 번 승인해야 한다. t498(`real_console.py`/`classify_diff.py`)·t501 AC-016(`.moai/reports/t501/ac016/real_song.py`/`classify_diff.py`)이 쓴 흐름으로 교체했다: 구간(또는 묶음) 단위 커맨드 파일 → 가짜 콘솔 리허설 → 감독이 그 바이트 동일 파일을 **1회** 승인 → 송신. 시연 로그는 묶음 단위로 남기고, 실기 재생 후 감독이 대본의 각 줄에 「어울림/아님」을 표시해 M3 가 쓰는 줄 단위 증거를 남긴다. `spec.md:62`(REQ-001)·`spec.md:128`·`plan.md:36,59,60,79` 를 교정했고, `(REQ-003)`/`(REQ-004)`로 잘못 인용됐던 두 곳(`spec.md:128`, `plan.md:36`)을 승인 절차를 실제로 정의하는 REQ-001 인용으로 바로잡았다. 감독 결정 원문("쓰기는 감독 승인")은 손대지 않았다 — 배치 승인도 감독 승인이다. 네 산출물 전수 재확인 결과 이 교정 전 표현의 잔존 0건. REQ/AC 총량(12/11)·ID 변경 없음. |
+
+## §0. Tier 선택 근거
+
+**Tier M.** 이 SPEC 자신의 M1~M3 산출물(대본·시연 로그·규칙화된 문서 교정)은 코드를 만들지 않아 Tier S 범위이지만, M4+ 로 넘어가는 순간 건드릴 파일이 4개 모듈(`song_cue_render.py`/`position_fx.py`/`movement.py`/`analyze.py`) 이상으로 퍼지고 REQ/AC 수가 Tier S 상한(각 8개)을 넘는다 — 그러나 M4+ 자체는 이 SPEC 이 지금 구현하는 범위가 아니라 **후보**(§3.6)로만 기록하므로 L 급 산출물(design.md·research.md)은 과하다. REQ 12개·AC 11개로 Tier M 상한(각 16개) 안에 든다.
+
+## 감독 결정 (원문, 2026-10-03, 리드 경유)
+
+> 리듬 연출 SPEC plan(SPEC-LDRHYTHM-001) — 감독 결정 2026-10-03 4건: (1) 순서 = 대본 먼저: M1 Club Diver 연출 대본(시간순 음악 순간→놓는 연출→앞 장면과 잇는 방식→이유, 코드 0) 감독 검토 → M2 대본을 손으로 콘솔 시연(쓰기는 감독 승인) → M3 감독이 어울린다 한 대본의 규칙을 표준·SPEC 으로 → M4 이후 앱 구현. M1~M3 통과 전 앱 코드 금지 (2) 첫 곡 Club Diver (3) 두 층: 박자 층 = 킥·스네어·마디마다 디머 펄스·체이스 한 칸·색/위치 한 단계를 타임코드 이벤트로(곡당 수백 개 허용), 강조 층 = 스트로브·블라인더는 큰 히트에만(표준 §10.3 유지) (4) 효과 속도 = 앱 분석 BPM 으로 스피드 마스터(At SpeedMaster 실기 확인됨), 콘솔 오디오 입력 안 씀.
+
+카드 본문이 추가로 적은 **앱 구현 범위 후보**(결정 4건과는 구분 — 후보일 뿐 결정 아님, §3.6 에서 다룬다): 「비트·다운비트·킥 검출(지금 BPM 만 넘김), 타임코드 이벤트 송신(재생 효과 실기 미확인), position_fx 무빙 경로 재사용, 장면 연결 규칙(한두 속성만·큰 순간 전 덜어냄·최대 연출 아끼기)」. 합격 기준은 카드 본문대로 「Club Diver 실기 감독 3점 이상, 기계 점검(순간별·연결)은 사전 체일 뿐」이다.
+
+## 1. 배경 — 작동은 하는데 음악이 아니다, 두 번째 반복
+
+t498(Rain 실기 파일럿, 0/5점)과 t501(SPEC-LDRENDER-001 송신 층 복원 뒤 재실기, AC-LDRENDER-016 **1~2/5점**, 통과선 3점)이 같은 모양의 판정을 두 번 냈다 — 기계 동작(큐 전환·되읽기·기존 쇼 보존)은 PASS, 감독 육안 판정은 FAIL. t501 sync 보고(`.moai/reports/t501/sync.md`)의 감독 판정 원문: 「작동은 한다. 그러나 Verse 하나가 20~30초 이상 단조로운 동작·연출 하나 — 리듬·비트에 따라 빠르고 다채롭게 움직여야 음악 표현이 된다.」
+
+t502 조사(`reports/rhythm-expression-research-20261003.md`, 이하 "리듬 보고서")가 코드 판독으로 확정한 것 [잰 값]:
+- Rain(시퀀스 212): 페이저 송신 **0건** — 큐 안에서 움직이는 것이 아예 없다(§0.2).
+- Club Diver(시퀀스 213): 14큐 중 9큐가 같은 색 파형(Wave CM) 반복, 속도(`speed`) 줄 **0건**, 큐 안 Pan/Tilt 페이저 **0건**(§0.2 표) — `grep -ci speed` 등으로 실측, 위치는 큐 경계의 프리셋 호출로만 바뀐다.
+- 곡 분석은 BPM 숫자 하나만 렌더러에 닿는다 — 비트 시각은 계산한 뒤 버리고(`server/audio/analyze.py:352-354` `librosa.beat.beat_track` 결과가 BPM 계산에만 쓰이고 `AnalysisResult`(`:207-215`)에 필드가 없음), 다운비트 생산자는 `grep -rln "downbeat" server` **0건**(이 plan-phase 에서 재확인 — `.claude/worktrees/t504`에서도 0건). 온셋(`onsets_ms`)은 `AnalysisResult`(`analyze.py:213`, `:375`)에 필드는 있으나 캐시(`analysis.json`) 저장 키는 `sha256, bpm, bpm_source, sections` 뿐으로 온셋이 저장되지 않는다(캐시 실측, `.moai/reports/t499/runs/Club Diver/analysis.json`).
+- 실기 검증된 BPM 속도 무빙 페이저(`server/spatial/position_fx.py:145-177` `_relative_phaser_lines`, `speed_bpm` 인자)와 짜여 있지만 쓰이지 않는 `plan_movement`(`server/looks/movement.py:192`, 호출처는 테스트뿐 — `grep -rln "plan_movement" server` → `movement.py`, `tests/test_looks_library.py`, `tests/test_songcue_movement.py`)가 **이미 저장소에 있는데 곡 렌더러에 연결돼 있지 않다**. 곡 렌더러의 큐 묶음 생성 호출(`server/design/song_cue_render.py:1437` `SongCueSectionBundle(...)`, 이 plan-phase 에서 재확인 — 리듬 보고서가 인용한 `:1102`와 줄 번호가 다르나 동일 호출부)은 `movement` 인자를 넘기지 않는다 — 필드 기본값이 `None`이라(`server/looks/songcue.py:206-211`) 무빙 줄이 생기지 않는다. `songcue.py:210` 주석이 가리키는 `_movement_carrier` 함수는 코드에 없다(`grep -rn "_movement_carrier" server` → 주석 3곳뿐, 함수 정의 없음).
+- 타임코드 재생 모드는 계약에 아직 없다 — `server/director/emit.py:51` `PLAYBACK_MODES = ("manual_go", "trig_time")`(이 plan-phase 에서 재확인), 데이터 모델(`server/design/song_plan.py:61` `TimingMode`)에는 `"timecode"` 리터럴이 있지만 재생 경계에서 쓰이지 않는다.
+
+이 반복(두 번째 "작동은 하지만 음악이 아니다")에 대해 감독이 2026-10-03 내린 결론은 **순서를 바꾸라**는 것이다 — 규칙을 먼저 코드로 만들고 실기에서 판정받는 지금까지의 순서를 뒤집어, **대본(사람이 읽는 연출 각본)을 먼저 확정하고, 감독이 그 대본에 동의한 뒤에야 규칙화하고 코드를 쓴다**. 위 "감독 결정 (원문)" 절 (1)이 이 순서를 정의한다.
+
+## 2. 이 SPEC 의 성격 — 대본·시연·규칙화 3단계, 앱 구현은 다음 SPEC 의 일(M4+)
+
+이 SPEC 의 M1~M3 은 **문서와 콘솔 시연**만 다룬다 — `server/` 아래 어떤 파일도 이 SPEC 의 M1~M3 커밋에서 수정되지 않는다(REQ-002). M4(앱 구현)는 이 SPEC 의 plan-phase 가 "후보 범위"로만 적어 두고(§3.6), 착수 여부·방법은 M3 가 끝난 뒤 별도 run-phase 승인(필요하면 별도 SPEC 분리)을 받는다. 이 분리 자체가 감독 결정 1의 핵심이다 — 코드를 먼저 쓰고 실기로 검증받는 순서를 뒤집어, **감독의 눈이 코드보다 먼저 "무엇이 어울리는가"를 정한다.**
+
+## 3. 요구사항 (GEARS)
+
+### 3.1 R1 — 대본 우선 게이트 (REQ-LDRHYTHM-001~003)
+
+| REQ | 요구사항 | 근거 |
+|---|---|---|
+| REQ-LDRHYTHM-001 | **The** 리듬 연출 작업 **shall** 다음 순서를 따른다: M1(Club Diver 연출 대본, 코드 0) → 감독 검토 → M2(대본을 손으로 콘솔 시연, 쓰기는 **구간/묶음 단위 커맨드 파일 1개를 통째로 1회** 감독 승인 — t498(`real_console.py`/`classify_diff.py`)·t501 AC-016(`.moai/reports/t501/ac016/real_song.py`/`classify_diff.py`)이 쓴 리허설→승인→바이트동일 송신 흐름과 같다, 리드 판독(2026-10-05) 반영) → M3(감독이 "어울린다"고 한 대본의 규칙을 표준 문서·SPEC 으로 옮김) → M4 이후(앱 구현, 별도 승인). 이 순서를 건너뛰거나 뒤섞지 않는다. | 감독 결정 1(원문 위), 리듬 보고서 §6 제안("코드보다 「연출 대본」을 먼저"); 승인 단위 교정: 리드 PR #550 판독 — t498/t501 AC-016 선례 |
+| REQ-LDRHYTHM-002 | [HARD] **While** M1·M2·M3 중 하나라도 감독 승인을 받지 못한 상태인 동안, **어떤** 주체도 `server/` 아래 M4 후보 범위(§3.6)의 앱 코드를 작성하거나 수정하지 **shall not**. 이 게이트는 이 SPEC 자신의 run-phase 착수 시점(이 plan-phase 종료 직후)부터 즉시 적용된다 — "plan 만, run 은 감독 착수 승인 뒤"라는 카드 지시와 별개의, M1~M3 **내부** 순서 게이트다. | 감독 결정 1("M1~M3 통과 전 앱 코드 금지") |
+| REQ-LDRHYTHM-003 | **When** M1 이 착수되면, 산출물 **shall** Club Diver 한 곡의 시간순 표(열: 시각 / 층 / 모멘트유형 / 연출 / 잇는 방식 / 이유 — `plan.md` M1 의 6칸 정의와 동일한 칸 이름·닫힌 어휘, plan-audit iter3 D-NEW-2 반영)이고, 코드 diff 0줄·콘솔 쓰기 커맨드 0건이다 — 리듬 보고서 §6 의 대본 예시("1:02 코러스 진입 히트 → 블라인더 한 번, 무빙 전부 위로 열기 → 프리코러스 마지막 2박을 어둡게 비워 둔 뒤 끊어서 넘김 → 2.3 규칙 3·4")와 같은 형식을 따른다. 곡의 어느 순간인지(시각)→그 순간에 무엇을 두는지(층·모멘트유형·연출)→앞 장면과 어떻게 잇는지(잇는 방식)→왜 그렇게 하는지(이유), 네 질문에 답하는 원래 구조의 의도는 그대로 유지된다. "잇는 방식" 칸은 벤치마크 보고서 §2.3(장면을 잇는 규칙 1~7)의 조항 번호를, "이유" 칸은 §2.1(구간별로 놓는 것) 또는 §2.3 의 조항 번호를 인용한다 — 새 규칙을 이유 없이 발명하지 않는다. | 감독 결정 1, `reports/music-lighting-benchmark-20261003.md` §2.1·§2.3·§6; `plan.md` M1(§E) 6칸 표 정의 |
+
+### 3.2 R2 — 첫 곡 범위 (REQ-LDRHYTHM-004)
+
+| REQ | 요구사항 | 근거 |
+|---|---|---|
+| REQ-LDRHYTHM-004 | **The** M1~M3 의 대본·시연·규칙화 작업 범위 **shall** Club Diver 한 곡으로 한정된다. Rain 등 나머지 7곡은 이 SPEC 의 범위 밖이다(§4 Out of Scope) — Club Diver 는 빠르고 구간이 분명해 박자 표현을 보기 좋다는 감독 선택 기준(리듬 보고서 §6 「감독이 정할 것」 2항)을 따른 결과다. | 감독 결정 2, 벤치마크 보고서 §6 |
+
+### 3.3 R3 — 두 층 모델: 박자 층과 강조 층 (REQ-LDRHYTHM-005~007)
+
+| REQ | 요구사항 | 근거 |
+|---|---|---|
+| REQ-LDRHYTHM-005 | **The** 대본(M1)·시연(M2)·규칙화(M3) **shall** 연출을 두 층으로 나눠 기술한다. **박자 층**: 킥·스네어·마디마다 디머 펄스 1개, 체이스(또는 페이저) 한 칸 전진, 색/위치 한 단계 중 하나를 타임코드 이벤트로 기록하며, 곡당 수백 개까지 허용한다(마디·박 단위 분할이지만 콘솔 큐 자체를 쪼개는 것이 아니다 — 타임코드 이벤트가 독립 레인이다, §3.4 와 구분). | 감독 결정 3, 리듬 보고서 §③ 권고(원샷 레인/타임코드로 강조를 얹는 안) |
+| REQ-LDRHYTHM-006 | **The** 대본·시연·규칙화 **shall** **강조 층**(스트로브·블라인더)을 큰 히트(코러스 진입·드롭·마지막 코러스 등)에만 배치한다 — 매 박마다 번쩍이지 않는다. [문서 인용 정정 — 아래 §6 "안 잰 것/정정" 참조] 감독 결정 원문이 "표준 §10.3"으로 지칭한 조항은 표준 문서(`docs/proposals/song-structure-lighting-standard.md`)에 `§10.3`이라는 하위 번호가 없고, 실제로는 **"## 10. 아마추어로 읽히는 것" 목록의 4번 항목**(326~327행, "스트로브는 액센트여야 한다, BPM 카운터가 아니다", 권장 상한 약 4Hz)이다 — 이 REQ 는 그 조항(이하 "§10 금지목록 4번"으로 정확히 지칭)을 그대로 유지한다. | 감독 결정 3, `docs/proposals/song-structure-lighting-standard.md:326-327`(직접 대조 확인, 이 plan-phase 에서 재확인) |
+| REQ-LDRHYTHM-007 | **While** 박자 층과 강조 층이 같은 큐·같은 타임코드 구간에 공존하는 동안, 대본은 **shall** 두 층을 시각적으로 구분해 적는다(예: 박자 층은 표의 "연출" 칸에 약어로, 강조 층은 별도 "강조" 칸 또는 굵게) — M3 가 규칙화할 때 두 층의 구분이 유지돼야 규칙 문서에서도 "매 박 번쩍임"과 "박자 동기 무빙"이 혼동되지 않는다. | 리듬 보고서 §④ 표("박자 표현에 스트로브·디머 번쩍임을 넣을지"는 감독이 정할 것 3항으로 남아 있었으나, 감독 결정 3이 "강조 층 = 스트로브·블라인더는 큰 히트에만"으로 **이미 답했다** — 이 REQ 는 그 답을 두 층 분리 표기로 구현한다) |
+
+### 3.4 R4 — 두 층과 기존 큐 밀도 규칙의 비충돌 (REQ-LDRHYTHM-008)
+
+| REQ | 요구사항 | 근거 |
+|---|---|---|
+| REQ-LDRHYTHM-008 | **The** 박자 층·강조 층 도입 **shall** `docs/proposals/song-structure-lighting-standard.md` §9(큐 밀도, "발사 지점은 프레이즈 단위 4~8마디마다")와 `SPEC-LDDESIGN-001` REQ-036("마디 수로 기계적 분할을 밀도 결정 수단으로 쓰지 않는다")을 바꾸지 않는다 — 두 축은 서로 다르다: §9/REQ-036 은 **룩 전환 간격**(콘솔 큐 자체가 바뀌는 빈도)을 규율하고, 이 SPEC 의 박자 층은 **한 룩이 유지되는 동안의 움직임**(타임코드 이벤트·스피드 마스터 동기 페이저)을 규율한다. 대본·규칙화 산출물은 이 두 축이 같은 수치(예: 큐 수)를 놓고 경쟁하지 않음을 명시한다. | 리듬 보고서 §④ 표(1행: "겉보기 충돌 — 룩 전환 축과 룩 안 움직임 축은 다르다"), §3.1 큐 밀도 비교표(마디 단위 분할 시 112~448개 큐가 되어 REQ-036 위반이라는 판단 — 이 REQ 는 그 방식을 채택하지 않음을 재확인) |
+
+### 3.5 R5 — 효과 속도 출처 (REQ-LDRHYTHM-009~010)
+
+| REQ | 요구사항 | 근거 |
+|---|---|---|
+| REQ-LDRHYTHM-009 | **The** 박자 층의 효과(체이스·페이저) 속도 **shall** 앱이 분석한 곡 BPM 에서 나온 **스피드 마스터**에 결속한다(`Master 3.n At BPM <분석 BPM>` + `Attribute '<a>' At SpeedMaster <n>`) — 페이저마다 고정 `At Speed <리터럴>` 을 박는 방식(선택지 A, 리듬 보고서 §2.3)은 쓰지 않는다. `At SpeedMaster <n>` 결속 자체는 **실기 확인됨**(`.moai/specs/SPEC-COPILOT-FXGEN-001/spec.md:43` V3, 2026-08-15 onPC 2.4.2 오퍼레이터 GUI 관측 — "마스터 BPM 변경이 페이저에 실시간 반영"). **미확인으로 남는 것**: 곡 재생 중 `Master 3.n At BPM <값>` 을 큐 커맨드·매크로로 싣는 구체 방법(리듬 보고서 G9, 아래 §6) — M4+ 가 착수되면 이 확인이 선행 조건이다. | 감독 결정 4, FXGEN spec.md:43, FXLIB spec.md:64(ASSUMPTION-38 GO, Speed 단위 = BPM) |
+| REQ-LDRHYTHM-010 | **The** 박자 층 **shall not** grandMA3 스피드 마스터 16번(콘솔 오디오 입력에서 자동으로 BPM 을 잡는 마스터, help.malighting.com Speed Masters 문서 "Speed master 16 is a BPM master... controlled by incoming audio")을 속도 출처로 쓴다 — 결과가 공연마다 달라 재현·감독 사전 확인이 불가능하기 때문이다(벤치마크 보고서 §4 판단). | 감독 결정 4("콘솔 오디오 입력 안 씀"), 벤치마크 보고서 §4 "판단 — 큐 100개 넘게 박자에 놓을 수 있나" |
+
+### 3.6 R6 — 합격 기준과 M4+ 범위 후보 (REQ-LDRHYTHM-011~012)
+
+| REQ | 요구사항 | 근거 |
+|---|---|---|
+| REQ-LDRHYTHM-011 | [HARD] **The** 이 SPEC 의 합격 기준 **shall** Club Diver 를 실기 콘솔에 올린 **감독 육안 판정 ≥3/5점**(AC-LDRENDER-016 과 같은 척도)이다. 오프라인 기계 점검(순간별 판정 — 구간마다 벤치마크 §2.1 처리와 일치하는지, 연결 판정 — §2.3 규칙 준수 여부, 리듬 보고서 §⑤ R1~R4 류 지표)은 **사전 체(pre-filter)일 뿐**이다 — 기계 점검 전부 PASS 가 이 SPEC 의 완료를 의미하지 **않는다**. t501(AC-LDRENDER-016, 기계 판정 8곡 전부 PASS 인데 실기 1~2점 FAIL)이 바로 이 구분이 왜 필요한지의 증거다. | 카드 완료 조건("Club Diver 실기 감독 3점 이상, 기계 점검은 사전 체일 뿐"), `.moai/reports/t501/sync.md`(AC-016 FAIL 1~2점), 리듬 보고서 §3("곡 전체 판정: 감독이 실기에서 본다. 기계로 대체하지 않는다") |
+| REQ-LDRHYTHM-012 | **The** 다음 항목은 M4+(앱 구현) 단계의 **범위 후보**로만 기록된다 — M3(규칙화)가 Club Diver 대본·시연에서 실제로 필요하다고 확인한 항목만 M4+ 가 채택한다: (a) 비트·다운비트·킥 검출 — 지금은 BPM 숫자 하나만 렌더러에 닿는다(§1 인용, `analyze.py` 비트 시각 미저장·다운비트 생산자 0건, 이 plan-phase 재확인), (b) 타임코드 이벤트 송신 — 문법은 있으나(`song_plan.py:61` `TimingMode`) 재생 경계에서 거부되고(`emit.py:51`), 재생 효과 자체는 실기 미확인(t502 §3.1), (c) `position_fx`/`plan_movement` 무빙 경로를 곡 렌더러에 연결 — 실기 검증된 코드가 이미 있으나 연결이 안 돼 있다(§1 인용), (d) 장면 연결 규칙(한두 속성만 변경·큰 순간 전 덜어냄·최대 연출 아끼기, 벤치마크 §2.3)을 송신기 레벨 검사로 승격. *(참고 — 비요구사항 설명, plan-audit iter1 D2 분리: 이 plan-phase 자신은 네 항목 중 무엇을 실제로 구현할지 확정하지 않는다. 지금 쓰는 것은 "카드가 제시한 후보"이며 "이미 확정된 작업"이 아니다 — 각 항목이 실제로 M4+ 의 REQ 가 될지는 M3 종료 후 재확인한다.)* | 카드 본문("앱 구현 범위 후보"), 리듬 보고서 §1/§2.1/§3.1/빈칸 표(G1·G4·G5·G6·G8·G9) |
+
+## 4. 제외 범위 (Out of Scope)
+
+### Out of Scope — M4+ 앱 구현 자체
+
+REQ-002 가 명시하듯, M1~M3 통과 전에는 어떤 앱 코드도 이 SPEC 의 작업이 아니다. §3.6 의 후보 목록은 "무엇을 적을지"의 기록일 뿐, 이 plan-phase 가 그 구현을 승인하지 않는다.
+
+- `server/audio/analyze.py`(다운비트·킥 검출 추가), `server/design/song_cue_render.py`(움직임 배선), `server/spatial/position_fx.py`/`server/looks/movement.py`(곡 렌더러 연결), `server/director/emit.py`(타임코드 재생 모드 개방) — 전부 M4+ 로 이월.
+
+### Out of Scope — Club Diver 이외의 곡
+
+Rain 을 포함한 나머지 7곡의 대본·시연·규칙화는 이 SPEC 의 범위 밖이다(REQ-004). Rain 의 "페이저 0건" 결함(§1 인용)은 후속 SPEC/카드의 몫이다.
+
+- Rain 및 나머지 6곡의 연출 대본 작성, 해당 곡들의 콘솔 시연.
+
+### Out of Scope — §9 큐 밀도·REQ-036 재협상
+
+REQ-008 이 명시하듯 이 SPEC 은 룩 전환 빈도(§9) 수치를 올리거나 REQ-036 의 "마디 수 기계적 분할 금지"를 재해석하지 않는다. 박자 층은 그 축과 다른 축이다.
+
+- `docs/proposals/song-structure-lighting-standard.md` §9 수치 변경, `SPEC-LDDESIGN-001` REQ-036 재작성.
+
+### Out of Scope — SPEC-LDRENDER-001 이월 항목(R5/R6)
+
+구간 역할별 디머 대역 재산정(R5)과 후렴 상승 사다리·드롭 앞 암전(R6)은 SPEC-LDRENDER-001 §4 가 이미 후속 SPEC 으로 분리해 둔 항목이다. 이 SPEC 은 그 분리를 재론하지 않는다.
+
+- `_dimmer_data`/`_D_LEVEL_ROWS` 로직 변경, 연속 후렴 상승 사다리·눈 리셋 암전 큐 로직.
+
+### Out of Scope — 콘솔 쓰기(이 plan-phase 자신)
+
+이 문서를 작성하는 plan-phase 자신은 콘솔에 어떤 커맨드도 보내지 않는다. M2(손 시연)의 콘솔 쓰기는 이 SPEC 의 run-phase 이후, 구간/묶음 단위 커맨드 파일 1개를 통째로 1회 감독 승인받는 별도 활동이다(REQ-001).
+
+- 이 plan-phase 세션의 콘솔 접촉(조회·쓰기 모두 포함).
+
+## 5. 열린 결정 — 전부 해소(0건), 잔여 플래그만 기록
+
+2026-10-03 감독 결정 4건으로 열린 결정은 없다. 다만 아래는 "결정은 났으나 구현 전 재확인이 필요한" 잔여 플래그다(발명하지 않고 명시만 함):
+
+1. **§10.3 인용 불일치**(REQ-006 각주) — 감독 결정 원문이 가리킨 "표준 §10.3"은 실제로 "## 10." 목록의 4번 항목이다. 조항의 **의미**(스트로브는 액센트, BPM 카운터 아님)는 그대로 유지되므로 재결정 사항이 아니지만, M3 가 표준 문서를 교정할 때 이 호칭을 정확한 위치로 고쳐야 한다.
+2. **G9 — `Master 3.n At BPM` 을 곡 재생 중 싣는 방법 미확인**(REQ-009) — M4+ 가 스피드 마스터 경로를 실제로 구현하기 전에 공식 문서(큐 Command 열) 또는 실기로 확인이 필요하다.
+3. **G5 — Rain 분석 BPM(76.01)의 절반/두 배 오검출 가능성**(§1 인용, 리듬 보고서 §①) — Club Diver 자체의 BPM(139.67, `measured` 소스)은 이번 조사에서 의심 후보로 지목되지 않았으나, M4+ 가 다른 곡으로 확장될 때 참값 대조가 필요하다.
