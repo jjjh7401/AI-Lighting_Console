@@ -12,7 +12,22 @@
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+- run_phase_start_sha: `e7eaf690` (카드 t507, 감독 착수 승인 2026-10-06 — Implementation Kickoff Approval PASS, M1 만)
+- 다운비트 위상 0: 감독이 2026-10-06 t505 클릭 파일로 확인 → 마디 번호·시각은 `reports/clubdiver-music-map-20261005.md` 그대로
+
+### M1 — Club Diver 연출 대본 (2026-10-06, 감독 검토 대기)
+
+- 산출물: `m1-club-diver-script.md`(이 폴더, 유일한 공식 산출물) · 감독 검토용 사본 `reports/clubdiver-script-m1-20261006.html`
+- 코드 diff 0줄 · 콘솔 명령 0건
+- 대본 규모: 표 32행(박자 28 · 강조 4), 박자 층 이벤트 650개(펄스 293 · 체이스 한 칸 316 · 색/위치 한 단계 41), 강조 4곳(19·35·51·67마디)
+- 기계 점검(사전 체일 뿐, 완료 아님 — REQ-011): `python .moai/reports/t507/check_script.py` → `problems 0`, `cite_10_4 5`, 오표기 0, 코드 블록 0. 첫 실행에서 강조 행 굵은 글씨 8건과 21마디 시각 오기 1건을 잡아 고쳤다
+- 판정서: `.moai/reports/t507/verdict.md`
+- 다음: 감독 M1 검토. 통과 전 M2 착수 금지(REQ-001·002)
+
+## §F Phase 4 Mode Selection
+
+- Decision: direct — M1 은 문서 한 개(대본)이고 코드 0이라 서브에이전트를 띄우지 않고 레인이 직접 썼다
+- 입력: tier M · 파일 1(대본) + 사본 1 + 판정서 · 도메인 1(연출 문서) · 코드 0
 
 ## §E.3 Run-phase Audit-Ready Signal
 

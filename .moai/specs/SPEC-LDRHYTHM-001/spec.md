@@ -2,9 +2,9 @@
 id: SPEC-LDRHYTHM-001
 title: "리듬 연출 — 대본 우선 설계(Club Diver)"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-06
 author: jaihyun
 priority: P1
 phase: "Lighting Copilot v1.2 target"
