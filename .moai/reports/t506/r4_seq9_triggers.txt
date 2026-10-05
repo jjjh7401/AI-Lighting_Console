@@ -1,0 +1,16 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/9/3|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 6843af42 NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/9/3"
+<<< {"id": "6843af42", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/9/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T215 SCRATCH"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Go"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/9/4|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 39881065 NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/9/4"
+<<< {"id": "39881065", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/9/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T215 ALT"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Go"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/9/5|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props ec44549c NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/9/5"
+<<< {"id": "ec44549c", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/9/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T215 INDIV"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Go"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/9/6|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 91477538 NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/9/6"
+<<< {"id": "91477538", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/9/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T215 TWOGRP"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Go"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}

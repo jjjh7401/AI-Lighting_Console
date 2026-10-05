@@ -1,0 +1,20 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 16aae720"
+<<< {"id": "16aae720", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/Timecodes
+    wire: Plugin "CopilotResponder" "state 2d43be6e ShowData/DataPools/Default/Timecodes"
+<<< {"children": [{"class": "Timecode", "i": 1, "name": "DinoSync Timecode"}, {"class": "Timecode", "i": 2, "name": "DinoFull Timecode"}, {"class": "Timecode", "i": 7, "name": "Synth Test Timecode"}, {"class": "Timecode", "i": 8, "name": "Notice Test Timecode"}, {"class": "Timecode", "i": 9, "name": "Sequence 210 Timecode"}, {"class": "Timecode", "i": 11, "name": "Sequence 211 Timecode"}, {"class": "Timecode", "i": 12, "name": "Sequence 212 Timecode"}, {"class": "Timecode", "i": 13, "name": "Sequence 213 Timecode"}], "id": "2d43be6e", "kind": "state", "node": {"childCount": 8, "class": "Timecodes", "enumeration": "ok", "name": "Timecodes"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Timecodes/12/1/2/1
+    wire: Plugin "CopilotResponder" "introspect 5120a41c ShowData/DataPools/Default/Timecodes/12/1/2/1"
+<<< {"class": "TimeRange", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "TRACKGROUP", "t": "Handle"}, {"n": "TRACK", "t": "Handle"}, {"n": "START", "t": "Int64SignedTime"}, {"n": "RAWSTART", "t": "Int64"}, {"n": "DURATION", "t": "Int64Time"}, {"n": "OFFSET", "t": "Int64SignedTime"}], "id": "5120a41c", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/12/1/2/1", "source": "property_accessors", "total": 29, "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/12/1/2/1
+    wire: Plugin "CopilotResponder" "state 346c71d1 ShowData/DataPools/Default/Timecodes/12/1/2/1"
+<<< {"children": [], "id": "346c71d1", "kind": "state", "node": {"childCount": 0, "class": "TimeRange", "enumeration": "ok", "name": "TimeRange 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/12/1/2/1", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/212|CURRENTCUE,LOADEDCUE,CUENO,CUENAME,TRIGGER,CUECOMMAND
+    wire: Plugin "CopilotResponder" "props 83181b0f CURRENTCUE,LOADEDCUE,CUENO,CUENAME,TRIGGER,CUECOMMAND ShowData/DataPools/Default/Sequences/212"
+<<< {"id": "83181b0f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/212", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 212.3"}, {"e": "property not readable: LOADEDCUE", "n": "LOADEDCUE", "ok": false}, {"n": "CUENO", "ok": true, "t": "string", "v": "3"}, {"n": "CUENAME", "ok": true, "t": "string", "v": ""}, {"n": "TRIGGER", "ok": true, "t": "string", "v": ""}, {"n": "CUECOMMAND", "ok": true, "t": "string", "v": "Enabled"}], "truncated": false, "v": 1}
