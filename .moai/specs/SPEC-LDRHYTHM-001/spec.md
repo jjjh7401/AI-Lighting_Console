@@ -22,6 +22,7 @@ related_specs: [SPEC-LDRENDER-001, SPEC-LDDESIGN-001, SPEC-COPILOT-FXGEN-001, SP
 | 일자 | 내용 |
 |---|---|
 | 2026-10-05 | 최초 작성(카드 t504). 입력: `reports/music-lighting-benchmark-20261003.md`(벤치마크+콘솔 조사) · `reports/rhythm-expression-research-20261003.md`(t502, 코드 판독+빈칸 표) · `.moai/reports/t502/verdict.md` · `.moai/reports/t501/sync.md`(AC-LDRENDER-016 FAIL 1~2점) · `docs/proposals/song-structure-lighting-standard.md`. 감독 결정 4건(2026-10-03, 리드 경유)을 전면 반영. Tier M(아래 §0 근거). **plan만 — 코드 변경 0, 콘솔 접촉 0.** |
+| 2026-10-05 | **plan-audit iteration 1 FAIL(0.75, 통과선 0.80) 대응.** D1(critical) — AC-LDRHYTHM-006(`acceptance.md`)의 측정 커맨드가 SPEC 디렉터리 전체 `*.md`를 스캔해, 감독 결정 원문 인용(`spec.md:32`)과 이 AC 자신의 서술(`acceptance.md`) 때문에 M1 품질과 무관하게 항상 "§10.3" 매치가 남아 영원히 FAIL 하는 결정 불능 criterion 이었다 — 측정 스코프를 M1 실제 산출물 파일 하나(`m1-club-diver-script.md`, `plan.md` M1 §E 가 그 경로를 고정)로 좁히고, "§10 금지목록 4번"을 정확히 인용했는지(양성)와 "§10.3" 오표기가 없는지(음성) 둘 다 보는 양성+음성 복합 검사로 바꿨다. D2(minor, 선택) — REQ-LDRHYTHM-012 한 문장 안에서 shall-주체가 "다음 항목"→"이 plan-phase"로 바뀌던 것을 비요구사항 참고 각주로 분리해 GEARS 단일 주체 골격을 정리했다. REQ/AC 총량(12/11)·ID 추가삭제 없음 — 문면 교정만. |
 
 ## §0. Tier 선택 근거
 
@@ -92,7 +93,7 @@ t502 조사(`reports/rhythm-expression-research-20261003.md`, 이하 "리듬 보
 | REQ | 요구사항 | 근거 |
 |---|---|---|
 | REQ-LDRHYTHM-011 | [HARD] **The** 이 SPEC 의 합격 기준 **shall** Club Diver 를 실기 콘솔에 올린 **감독 육안 판정 ≥3/5점**(AC-LDRENDER-016 과 같은 척도)이다. 오프라인 기계 점검(순간별 판정 — 구간마다 벤치마크 §2.1 처리와 일치하는지, 연결 판정 — §2.3 규칙 준수 여부, 리듬 보고서 §⑤ R1~R4 류 지표)은 **사전 체(pre-filter)일 뿐**이다 — 기계 점검 전부 PASS 가 이 SPEC 의 완료를 의미하지 **않는다**. t501(AC-LDRENDER-016, 기계 판정 8곡 전부 PASS 인데 실기 1~2점 FAIL)이 바로 이 구분이 왜 필요한지의 증거다. | 카드 완료 조건("Club Diver 실기 감독 3점 이상, 기계 점검은 사전 체일 뿐"), `.moai/reports/t501/sync.md`(AC-016 FAIL 1~2점), 리듬 보고서 §3("곡 전체 판정: 감독이 실기에서 본다. 기계로 대체하지 않는다") |
-| REQ-LDRHYTHM-012 | **The** 다음 항목은 M4+(앱 구현) 단계의 **범위 후보**로만 기록되며, 이 plan-phase 는 그중 무엇을 실제로 구현할지 확정하지 **않는다** — M3(규칙화)가 Club Diver 대본·시연에서 실제로 필요하다고 확인한 항목만 M4+ 가 채택한다: (a) 비트·다운비트·킥 검출 — 지금은 BPM 숫자 하나만 렌더러에 닿는다(§1 인용, `analyze.py` 비트 시각 미저장·다운비트 생산자 0건, 이 plan-phase 재확인), (b) 타임코드 이벤트 송신 — 문법은 있으나(`song_plan.py:61` `TimingMode`) 재생 경계에서 거부되고(`emit.py:51`), 재생 효과 자체는 실기 미확인(t502 §3.1), (c) `position_fx`/`plan_movement` 무빙 경로를 곡 렌더러에 연결 — 실기 검증된 코드가 이미 있으나 연결이 안 돼 있다(§1 인용), (d) 장면 연결 규칙(한두 속성만 변경·큰 순간 전 덜어냄·최대 연출 아끼기, 벤치마크 §2.3)을 송신기 레벨 검사로 승격. 이 네 항목 각각이 실제로 M4+ 의 REQ 가 될지는 M3 종료 후 재확인한다 — 지금 쓰는 것은 "카드가 제시한 후보"이며 "이미 확정된 작업"이 아니다. | 카드 본문("앱 구현 범위 후보"), 리듬 보고서 §1/§2.1/§3.1/빈칸 표(G1·G4·G5·G6·G8·G9) |
+| REQ-LDRHYTHM-012 | **The** 다음 항목은 M4+(앱 구현) 단계의 **범위 후보**로만 기록된다 — M3(규칙화)가 Club Diver 대본·시연에서 실제로 필요하다고 확인한 항목만 M4+ 가 채택한다: (a) 비트·다운비트·킥 검출 — 지금은 BPM 숫자 하나만 렌더러에 닿는다(§1 인용, `analyze.py` 비트 시각 미저장·다운비트 생산자 0건, 이 plan-phase 재확인), (b) 타임코드 이벤트 송신 — 문법은 있으나(`song_plan.py:61` `TimingMode`) 재생 경계에서 거부되고(`emit.py:51`), 재생 효과 자체는 실기 미확인(t502 §3.1), (c) `position_fx`/`plan_movement` 무빙 경로를 곡 렌더러에 연결 — 실기 검증된 코드가 이미 있으나 연결이 안 돼 있다(§1 인용), (d) 장면 연결 규칙(한두 속성만 변경·큰 순간 전 덜어냄·최대 연출 아끼기, 벤치마크 §2.3)을 송신기 레벨 검사로 승격. *(참고 — 비요구사항 설명, plan-audit iter1 D2 분리: 이 plan-phase 자신은 네 항목 중 무엇을 실제로 구현할지 확정하지 않는다. 지금 쓰는 것은 "카드가 제시한 후보"이며 "이미 확정된 작업"이 아니다 — 각 항목이 실제로 M4+ 의 REQ 가 될지는 M3 종료 후 재확인한다.)* | 카드 본문("앱 구현 범위 후보"), 리듬 보고서 §1/§2.1/§3.1/빈칸 표(G1·G4·G5·G6·G8·G9) |
 
 ## 4. 제외 범위 (Out of Scope)
 
