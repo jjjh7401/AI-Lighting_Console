@@ -107,6 +107,42 @@
 - 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/replay_probe.py .moai/reports/t516/replay_live --approve .moai/reports/t516/replay_denyall`
 - 송신 뒤 대조: `uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t516/approval_replay.txt .moai/reports/t516/replay_live/audit`
 
+## 4-3. 다시 보기 결과 — 🔴 조명이 하나도 안 켜졌다 (감독 관찰, 리드 경유)
+
+- 다시 보기는 리드의 「실행」 뒤 1회 돌았다: 13:34:40~13:36:17 KST.
+  - 승인 = 송신 15줄 PASS, SaveShow 송신 0.
+- 그런데 감독이 본 무대에는 내내 조명이 하나도 켜지지 않았다.
+- 원인을 읽기만으로 좁혔다. 새 송신 0, 기록은 `diag1~5.txt`이고 요약 도구는 `show_reads.py`다.
+
+**잰 것**
+
+| 질문 | 읽은 것 | 관측 |
+|---|---|---|
+| ① 재생됐나 | `replay_live/steps.jsonl`, 시퀀스 `CURRENTCUE` | 송신 15줄 모두 detail `OK`. 재생 상태 표본은 없다. 지금 `CURRENTCUE` 220.1·221.3·222.5 — 1회차 끝과 같은 값이라 다시 보기의 Goto 효과는 이 값으로 못 가린다. 1회차에서는 221이 재생 중 `221.1` → 끝난 뒤 `221.3`, 222가 `222.5`로 바뀌었다. **Goto는 큐 포인터를 옮긴다**(1회차 기준) |
+| ② 큐에 값이 들어갔나 | 큐·Part의 자식과 속성(필드 3쪽), `MEMORYFOOTPRINT` | Part 자식은 0개다(219도 같다). 값을 세는 속성은 없다. `MEMORYFOOTPRINT` 비교는 아래와 같다 |
+| | | 빈 Part(OffCue·CueZero, 시퀀스 9·219·220 공통): **2,521B** |
+| | | 우리 큐 Part: **3,132~3,284B**(빈 것보다 611~763B 많다) |
+| | | 219 큐 Part: **14,092~20,384B** · 9번 T215 큐 Part: 6,316B |
+| ③ 그룹 | `Groups/4·13·17·18` | 이름은 BACK·MOVER-ALL·ODD·EVEN으로 맞다. 고정구 수는 응답기로 읽을 수 없다(`COUNT` 0 — 그룹은 늘 0) |
+| ④ 222 밝기 | 승인 파일 222 묶음 | Pan 줄 22, Dimmer 줄 **0** — 시퀀스 222는 밝기를 주지 않는다 |
+| ⑤ 출력 0 요인 | Masters, 시퀀스 설정 | Grand Master 100 · World 100 · Blind 100 · Selected Master 100. 220/221/222와 219의 PRIORITY(LTP)·PLAYBACKMASTER/SPEEDMASTER/RATEMASTER(None)·AUTOSTART/AUTOSTOP(true)·TRACKING·SOFTLTP·OFFWHENOVERRIDDEN은 모두 같다. 큐 TRIGTYPE만 다르다(우리 Go, 219 Time) |
+
+**추정**
+
+- 우리 큐에는 무언가 아주 조금 저장됐다. 내용은 읽을 수 없다.
+  - 값 줄은 「Group 4」와 「Attribute 'Dimmer' At 30」을 따로 보냈다. 룰북 `31_choreography_patterns.md:46-52`의 모양이다.
+  - 219(앱)와 t498은 「Fixture … ; Attribute …」 한 줄 모양이었다.
+  - 이 차이가 원인인지는 재지 않았다.
+- 222의 무빙은 밝기 0인 채 움직였을 가능성이 크다(리드 가설과 같다). 밝기 값 자체는 읽을 수 없다.
+- 무대 화면이나 onPC 출력 쪽 문제일 수도 있다. 219가 지금 켜지는지가 갈림길이다.
+
+**다음 프로브 제안(설계만, 리드에게 보냄)**
+
+- P1: 대조군 `Goto Cue 3 Sequence 219` 8초 → `Off Sequence 219`
+- P2: `Goto Cue 1 Sequence 220` 8초 → `Off Sequence 220`
+- P3: `Goto Cue 1 Sequence 221` 8초 → `Off Sequence 221`
+- 모두 쓰기 0이고, 리드의 「실행」 뒤에만 돌린다.
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
