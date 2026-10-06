@@ -1,0 +1,105 @@
+{"step": "pre_slot", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/228", "ok": false, "error": "path segment not found: '228' (in ShowData/DataPools/Default/Sequences/228)"}
+{"step": "pre_slot", "t": 0.133, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/229", "ok": false, "error": "path segment not found: '229' (in ShowData/DataPools/Default/Sequences/229)"}
+{"step": "pre_slot", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/230", "ok": false, "error": "path segment not found: '230' (in ShowData/DataPools/Default/Sequences/230)"}
+{"step": "pre_slot", "t": 0.266, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/231", "ok": false, "error": "path segment not found: '231' (in ShowData/DataPools/Default/Sequences/231)"}
+{"step": "pre_slot", "t": 0.332, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/232", "ok": false, "error": "path segment not found: '232' (in ShowData/DataPools/Default/Sequences/232)"}
+{"step": "pre_slot", "t": 0.399, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/233", "ok": false, "error": "path segment not found: '233' (in ShowData/DataPools/Default/Sequences/233)"}
+{"step": "store_228", "t": 0.399, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 228 Cue 1 'L0 Static 100'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 228 Property 'Name' 'RHYTHM PROBE v3 - L0 STATIC 100'", "reasons": []}]}
+{"step": "store_228", "t": 0.466, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_228", "t": 0.533, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_228", "t": 0.599, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_228", "t": 0.666, "kind": "exec", "command": "Store Sequence 228 Cue 1 'L0 Static 100'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_228", "t": 0.733, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_228", "t": 0.799, "kind": "exec", "command": "Set Sequence 228 Property 'Name' 'RHYTHM PROBE v3 - L0 STATIC 100'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 0.799, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Attribute 'Dimmer' At Phase 0", "reasons": []}, {"command": "Attribute 'Dimmer' At Speed 112", "reasons": []}, {"command": "Store Sequence 229 Cue 1 'L1 Pulse Speed 112'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 229 Property 'Name' 'RHYTHM PROBE v3 - L1 PULSE SPEED 112'", "reasons": []}]}
+{"step": "store_229", "t": 0.866, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 0.933, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 1.0, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 1.067, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 1.132, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 1.199, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 1.266, "kind": "exec", "command": "Attribute 'Dimmer' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 1.332, "kind": "exec", "command": "Store Sequence 229 Cue 1 'L1 Pulse Speed 112'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 1.4, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_229", "t": 1.466, "kind": "exec", "command": "Set Sequence 229 Property 'Name' 'RHYTHM PROBE v3 - L1 PULSE SPEED 112'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 1.467, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Attribute 'Dimmer' At Phase 0", "reasons": []}, {"command": "Attribute 'Dimmer' At SpeedMaster 15", "reasons": []}, {"command": "Store Sequence 230 Cue 1 'L2 Pulse Speedmaster'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 230 Property 'Name' 'RHYTHM PROBE v3 - L2 PULSE SPEEDMASTER'", "reasons": []}]}
+{"step": "store_230", "t": 1.533, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 1.6, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 1.667, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 1.734, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 1.8, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 1.867, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 1.934, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 2.0, "kind": "exec", "command": "Store Sequence 230 Cue 1 'L2 Pulse Speedmaster'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 2.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_230", "t": 2.133, "kind": "exec", "command": "Set Sequence 230 Property 'Name' 'RHYTHM PROBE v3 - L2 PULSE SPEEDMASTER'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.133, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Attribute 'Dimmer' At Phase 0", "reasons": []}, {"command": "Attribute 'Dimmer' At Measure 2", "reasons": []}, {"command": "Attribute 'Dimmer' At SpeedMaster 15", "reasons": []}, {"command": "Store Sequence 231 Cue 1 'L3 Pulse Speedmaster Measure 2'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 231 Property 'Name' 'RHYTHM PROBE v3 - L3 PULSE SPEEDMASTER MEASURE 2'", "reasons": []}]}
+{"step": "store_231", "t": 2.2, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.267, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.334, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.401, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.466, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.532, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.599, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.666, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.733, "kind": "exec", "command": "Store Sequence 231 Cue 1 'L3 Pulse Speedmaster Measure 2'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.8, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_231", "t": 2.867, "kind": "exec", "command": "Set Sequence 231 Property 'Name' 'RHYTHM PROBE v3 - L3 PULSE SPEEDMASTER MEASURE 2'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 2.868, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.24", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute 'Tilt' At Speed 112", "reasons": []}, {"command": "Store Sequence 232 Cue 1 'L4 Tilt Wave Speed 112'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 232 Property 'Name' 'RHYTHM PROBE v3 - L4 TILT WAVE SPEED 112'", "reasons": []}]}
+{"step": "store_232", "t": 2.933, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.0, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.066, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.133, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.24", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.2, "kind": "exec", "command": "Attribute 'Tilt' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.267, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.334, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.4, "kind": "exec", "command": "Store Sequence 232 Cue 1 'L4 Tilt Wave Speed 112'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.467, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_232", "t": 3.533, "kind": "exec", "command": "Set Sequence 232 Property 'Name' 'RHYTHM PROBE v3 - L4 TILT WAVE SPEED 112'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 3.534, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.24", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute 'Tilt' At SpeedMaster 15", "reasons": []}, {"command": "Store Sequence 233 Cue 1 'L5 Tilt Wave Speedmaster'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 233 Property 'Name' 'RHYTHM PROBE v3 - L5 TILT WAVE SPEEDMASTER'", "reasons": []}]}
+{"step": "store_233", "t": 3.6, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 3.666, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 3.733, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 3.8, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.24", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 3.866, "kind": "exec", "command": "Attribute 'Tilt' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 3.932, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 3.999, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 4.066, "kind": "exec", "command": "Store Sequence 233 Cue 1 'L5 Tilt Wave Speedmaster'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 4.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_233", "t": 4.199, "kind": "exec", "command": "Set Sequence 233 Property 'Name' 'RHYTHM PROBE v3 - L5 TILT WAVE SPEEDMASTER'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 4.199, "say": "L0 — 무빙 501~508 이 100% 로 켜지는가(대조)"}
+{"step": "on_228", "t": 4.267, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 228", "reasons": ["reference-invoking command"]}]}
+{"step": "on_228", "t": 4.334, "kind": "exec", "command": "Goto Cue 1 Sequence 228", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_228", "t": 12.399, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 228", "reasons": ["reference-invoking command"]}]}
+{"step": "off_228", "t": 12.466, "kind": "exec", "command": "Off Sequence 228", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 14.47, "say": "L1 — 켜짐/꺼짐이 1박(약 0.53초)마다 깜빡이는가 (At Speed 112)"}
+{"step": "on_229", "t": 14.532, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 229", "reasons": ["reference-invoking command"]}]}
+{"step": "on_229", "t": 14.599, "kind": "exec", "command": "Goto Cue 1 Sequence 229", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_229", "t": 22.666, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 229", "reasons": ["reference-invoking command"]}]}
+{"step": "off_229", "t": 22.733, "kind": "exec", "command": "Off Sequence 229", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 24.737, "say": "L2 — 같은 깜빡임, 속도만 스피드 마스터 15"}
+{"step": "on_230", "t": 24.799, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 230", "reasons": ["reference-invoking command"]}]}
+{"step": "on_230", "t": 24.865, "kind": "exec", "command": "Goto Cue 1 Sequence 230", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_230", "t": 32.932, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 230", "reasons": ["reference-invoking command"]}]}
+{"step": "off_230", "t": 32.998, "kind": "exec", "command": "Off Sequence 230", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 35.003, "say": "L3 — L2 와 같되 2박에 한 번(느리게)"}
+{"step": "on_231", "t": 35.066, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 231", "reasons": ["reference-invoking command"]}]}
+{"step": "on_231", "t": 35.131, "kind": "exec", "command": "Goto Cue 1 Sequence 231", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_231", "t": 43.2, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 231", "reasons": ["reference-invoking command"]}]}
+{"step": "off_231", "t": 43.265, "kind": "exec", "command": "Off Sequence 231", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 45.27, "say": "L4 — 70% 로 켜진 채 Tilt 가 위아래로 파도처럼 움직이는가 (At Speed 112)"}
+{"step": "on_232", "t": 45.332, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 232", "reasons": ["reference-invoking command"]}]}
+{"step": "on_232", "t": 45.399, "kind": "exec", "command": "Goto Cue 1 Sequence 232", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_232", "t": 53.466, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 232", "reasons": ["reference-invoking command"]}]}
+{"step": "off_232", "t": 53.531, "kind": "exec", "command": "Off Sequence 232", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 55.533, "say": "L5 — L4 와 같은 움직임, 속도만 스피드 마스터 15"}
+{"step": "on_233", "t": 55.599, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 233", "reasons": ["reference-invoking command"]}]}
+{"step": "on_233", "t": 55.664, "kind": "exec", "command": "Goto Cue 1 Sequence 233", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_233", "t": 63.732, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 233", "reasons": ["reference-invoking command"]}]}
+{"step": "off_233", "t": 63.798, "kind": "exec", "command": "Off Sequence 233", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_part_228", "t": 65.865, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/228/3/1", "ok": true, "payload": {"id": "gate-89", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/228/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L0 Static 100"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2976"}], "truncated": false, "v": 1}}
+{"step": "post_part_229", "t": 65.932, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/229/3/1", "ok": true, "payload": {"id": "gate-90", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/229/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L1 Pulse Speed 112"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3016"}], "truncated": false, "v": 1}}
+{"step": "post_part_230", "t": 65.998, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/230/3/1", "ok": true, "payload": {"id": "gate-91", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/230/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L2 Pulse Speedmaster"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3012"}], "truncated": false, "v": 1}}
+{"step": "post_part_231", "t": 66.065, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/231/3/1", "ok": true, "payload": {"id": "gate-92", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/231/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L3 Pulse Speedmaster Measure 2"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3064"}], "truncated": false, "v": 1}}
+{"step": "post_part_232", "t": 66.131, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/232/3/1", "ok": true, "payload": {"id": "gate-93", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/232/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L4 Tilt Wave Speed 112"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3356"}], "truncated": false, "v": 1}}
+{"step": "post_part_233", "t": 66.198, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/233/3/1", "ok": true, "payload": {"id": "gate-94", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/233/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L5 Tilt Wave Speedmaster"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3388"}], "truncated": false, "v": 1}}
