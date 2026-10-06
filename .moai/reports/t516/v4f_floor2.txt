@@ -1,0 +1,28 @@
+
+>>> props:Patch/Stages/1/Fixtures/67|NAME,ROTX,ROTY,ROTZ,DMXINVERTTILT,INVERT3DTILT,OFFSETTILT
+    wire: Plugin "CopilotResponder" "props bb5c3ca5 NAME,ROTX,ROTY,ROTZ,DMXINVERTTILT,INVERT3DTILT,OFFSETTILT Patch/Stages/1/Fixtures/67"
+<<< {"id": "bb5c3ca5", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/67", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "WASH-U 401"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "DMXINVERTTILT", "ok": true, "t": "boolean", "v": "false"}, {"n": "INVERT3DTILT", "ok": true, "t": "boolean", "v": "false"}, {"n": "OFFSETTILT", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/77|NAME,ROTX,ROTY,ROTZ,DMXINVERTTILT,INVERT3DTILT,OFFSETTILT
+    wire: Plugin "CopilotResponder" "props 54962b47 NAME,ROTX,ROTY,ROTZ,DMXINVERTTILT,INVERT3DTILT,OFFSETTILT Patch/Stages/1/Fixtures/77"
+<<< {"id": "54962b47", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/77", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "WASH-D 421"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "DMXINVERTTILT", "ok": true, "t": "boolean", "v": "false"}, {"n": "INVERT3DTILT", "ok": true, "t": "boolean", "v": "false"}, {"n": "OFFSETTILT", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/86|NAME,ROTX,ROTY,ROTZ
+    wire: Plugin "CopilotResponder" "props b9d6f6ff NAME,ROTX,ROTY,ROTZ Patch/Stages/1/Fixtures/86"
+<<< {"id": "b9d6f6ff", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/86", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "WASH-D 430"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/55|NAME,ROTX,ROTY,ROTZ
+    wire: Plugin "CopilotResponder" "props aa782ae9 NAME,ROTX,ROTY,ROTZ Patch/Stages/1/Fixtures/55"
+<<< {"id": "aa782ae9", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "SIDE-L 301"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/58|NAME,ROTX,ROTY,ROTZ
+    wire: Plugin "CopilotResponder" "props d71d5ce1 NAME,ROTX,ROTY,ROTZ Patch/Stages/1/Fixtures/58"
+<<< {"id": "d71d5ce1", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/58", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "SIDE-L 304"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9|NAME,MANUFACTURER,SHORTNAME
+    wire: Plugin "CopilotResponder" "props 1f047008 NAME,MANUFACTURER,SHORTNAME Patch/FixtureTypes/9"
+<<< {"id": "1f047008", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Rush Par 2 RGBW Zoom"}, {"n": "MANUFACTURER", "ok": true, "t": "string", "v": "Martin"}, {"n": "SHORTNAME", "ok": true, "t": "string", "v": "RP2GBWZ5"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/1/1
+    wire: Plugin "CopilotResponder" "state cf000f73 Patch/FixtureTypes/9/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 2, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 3, "name": "Main Module_ColorRGB_B"}, {"class": "DMXChannel", "i": 4, "name": "Main Module_ColorRGB_W"}, {"class": "DMXChannel", "i": 5, "name": "Main Module_Zoom"}, {"class": "DMXChannel", "i": 6, "name": "Main Module_Dimmer"}], "id": "cf000f73", "kind": "state", "node": {"childCount": 6, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/1/1", "truncated": false, "v": 1}

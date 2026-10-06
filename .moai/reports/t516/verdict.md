@@ -279,6 +279,25 @@
 
 - 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v4.py .moai/reports/t516/v4_live --approve .moai/reports/t516/v4_denyall`
 
+## 4-9. v4 보류 — 바닥 기구 판독 (감독 요청, 쓰기 0)
+
+- 감독 요청(원문, 리드 경유): 「시작하기 전에 바닥에 있는 조명장비는 위를 볼 수 있도록 해줘. 바닥 아래로 향하고 있어서 빛을 볼 수가 없어」.
+- 판독(`floor_reads.py` → `v4f_floor.txt`, `v4f_floor2.txt`, `v4f_floor3.txt`, 86대 높이 묶음은 `diag7_patch.txt`):
+
+| 역할 | FID | 유형 | 높이 POSZ | 회전 ROTX/Y/Z | Pan/Tilt |
+|---|---|---|---|---|---|
+| WASH-U | 401~410 | Martin Rush Par 2 RGBW Zoom(유형 9), 모드 `9 channel` | 0.3 | 0/0/0 | 없음 — 채널 Dimmer·Shutter1·RGBW·COLORMIXER·Zoom |
+| WASH-D | 421~430 | 같음 | 0.3 | 0/0/0 | 없음 |
+| HAZE | 621·622 | 유형 15 | 0.2 | — | — |
+| SIDE-L/R | 301~306·311~316 | Aura XB(유형 8) | 1.2·2.6·4.0 | 0/0/0 | 있음 |
+| MOVER-U | 501~508 | MegaPointe(유형 11) | 6.8 | 0/0/0 | 있음 |
+| MOVER-D | 521~528 | Spiider(유형 4) | 6.8 | 0/0/0 | 있음 |
+| BACK | 201~212 | Aura XB(유형 8) | 6.2 | 0/0/0 | 있음 |
+
+- 결론(잰 것): 바닥 기구는 WASH-U/D 20대다. v4 시험 대상(501~508·201)은 바닥이 아니라 높이 6.2~6.8에 걸려 있다. 바닥 워시는 Pan/Tilt 채널이 없어 Tilt 값으로 위를 보게 할 수 없다.
+- 위를 보게 하는 유일한 수단은 패치의 3D 회전(ROTX 등)을 바꾸는 것이다. 기존 패치 객체 20개를 고치는 쓰기라 「새 번호만」 밖이고, 감독 결정이 필요하다. 회전 0 이 3D 화면에서 아래를 향한다는 것은 감독 관찰과 맞지만, 기계로는 안 잰 것이다.
+- v4 승인 파일(`approval_rhythm_probe_v4.txt`, sha256 `3ccc0234…`)은 바꾸지 않았다.
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
