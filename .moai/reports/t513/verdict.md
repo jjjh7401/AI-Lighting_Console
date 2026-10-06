@@ -5,7 +5,9 @@
 - 콘솔: grandMA3 onPC · 응답기 `CopilotResponder` 1.6.5 · 송신 8000 / 수신 9005
 - 음원: `/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3` — 저장소 밖, 커밋 안 함
 
-## 판정: 승인 요청 단계까지 완료 — 실기 쓰기 0, `ClearAll` 송신 0
+## 판정: A안 실기 쓰기 완료 — 승인본 = 송신본 두 단계 모두 PASS, 덮어쓰기·삭제 0 (§7)
+
+(§1~§6 은 승인 요청 시점 기록이다. 그때는 실기 쓰기 0, `ClearAll` 송신 0 이었다.)
 
 🔴 **전제 하나가 실기와 다르다.** 카드는 「211~218·11~18 사용 중」이라 했지만, 지금 콘솔에 떠 있는 쇼에는 시퀀스 211~218·타임코드 11~18 이 **하나도 없다**(run0). t498 이 쓴 211·11, t501 의 213 이 모두 없으므로, 지금 쇼는 그 쓰기들이 저장된 쇼가 아니다(어느 쇼인지는 응답기로 못 읽는다 — t498 §6). 그래도 카드 지시대로 211~218·11~18 대역은 피해서 **시퀀스 219 · 타임코드 19** 를 제안한다.
 
@@ -97,3 +99,25 @@
 ## 6. 산출물
 
 `.moai/reports/t513/` — `run0*` 읽기 · `run1_fake`·`run2_fake` 리허설 · `run3_real_denyall`·`run5_real_denyall_again` 실기 전부-거절 · `run4_preset_pools.txt` · `approve_A_stage1_phasers/` · `approve_B_nophaser/` · 스크립트 `probe_steps.py` `rehearse_song.py` `compare_fake.py` `real_console.py` `control_exec_block.py` `classify_real_vs_fake.py` `reply_notices.py`. 제품 코드 변경 0.
+
+## 7. 실행 (2026-10-06, 감독 A안 승인 · 리드 경유)
+
+| 단계 | 명령 | 결과 | 근거 |
+|---|---|---|---|
+| A1 직전 확인 | `probe_steps.py steps_prewrite.txt` | 219·19·4.9·4.10·21.7 전부 `path segment not found` · 풀은 run0 과 같음 | `run6a_prewrite_check.txt` |
+| A1 쓰기 | `real_console.py song run6_A1 --approve approve_A_stage1_phasers` | 승인 3/3(요청 1~3 = 승인 파일 `cmp` 동일 — 4.10 추정 맞음) · 본 묶음 210줄은 승인 파일에 없어 거절 · 정리 `ClearAll` 가로챔 · `SaveShow` 기록만 3 | `run6_A1.stdout.txt` |
+| A1 대조 | `approval_vs_sent.py run6_A1/approved_combined.txt run6_A1/audit` | 승인 56 = 송신 56 · sha256 동일 · 송신 안 됨 0 · 승인 안 됨 0 · **PASS** | `run6_A1_approval_vs_sent.txt` |
+| A1 되읽기 | `pool_snapshot.py` run6a/run0 대 run6b | 추가: 4.9 Breathe Warm · 4.10 Wave CM · 21.7 Finale Slam 뿐. 제거·이름 변경 0 | `run6c_diff_run0_vs_after_A1.txt` |
+| A2 읽기 | `real_console.py song run7_A2_denyall` | 요청 1건 210줄 = A1 의 거절된 요청 4 와 바이트 동일. 이전 요청 4(201) 대비 제거 0 · 추가 9 전부 페이저 호출(4.9×5 · 4.10×3 · 21.7×1) | `diff_A2_vs_req4.txt` |
+| A3 직전 확인 | `probe_steps.py steps_after_A1.txt` | A1 뒤와 전 풀 동일, 219·19 빔 | `run8a_prewrite_A3.txt` |
+| A3 쓰기 | `real_console.py song run8_A3 --approve run7_A2_denyall/approval_request_1.txt` | 승인 1/1(요청 = 승인 파일 `cmp` 동일) · 정리 `ClearAll` 0 · `SaveShow` 기록만 1 · 앱 되읽기 「검증 완료: DataPool/Sequences/219, DataPool/Timecodes/19」 | `run8_A3.stdout.txt`, `run8_A3/replies.json` |
+| A3 대조 | `approval_vs_sent.py run7_A2_denyall/approval_request_1.txt run8_A3/audit` | 승인 210 = 송신 210 · sha256 `639a8f2e…` 동일 · **PASS** | `run8_A3_approval_vs_sent.txt` |
+| A3 되읽기 | `pool_snapshot.py` run8a 대 run8b(시퀀스 2쪽까지) | 추가: 시퀀스 219(Intro~Finale 11큐 + OffCue·CueZero) · 타임코드 19 「Sequence 219 Timecode」. 그 밖 제거·변경 0 | `run8b_after_A3.txt` |
+
+- 앱 회신의 확인 포인트: 「절정 연출 미반영: blinder_six_row_absent」(t498 발견 4 와 같은 갈래) · 린트 5건(G1 1 · V1 4) — 연출 판정은 감독 몫
+- 🔴 **쇼 저장 안 함.** 앱은 `SaveShow` 를 한 줄도 보내지 않았다. 감독이 콘솔에서 복사본에 직접 저장해야 쓰기가 남는다(t498 소실 전례)
+
+### 콘솔에 남은 것
+
+- 시퀀스 219 「Sequence 219」 큐 11개 · 타임코드 19 「Sequence 219 Timecode」 · 프리셋 4.9 Breathe Warm · 4.10 Wave CM · 21.7 Finale Slam
+- 안 잰 것: 큐 안의 값(밝기·색·포지션·페이저 참조 보존) — 응답기로 못 읽는다. 재생·육안은 감독 몫

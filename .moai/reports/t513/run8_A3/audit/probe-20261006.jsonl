@@ -1,0 +1,567 @@
+{"ts": "2026-10-06T01:53:31.884493+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:31.951269+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/20", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.018431+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/21", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.085026+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/22", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.151583+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/23", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.218333+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/24", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.285106+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/25", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.351815+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/26", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.417799+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/27", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.484892+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/28", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.551713+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/29", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.618259+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/30", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.684839+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/31", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.751833+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/32", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.818471+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/33", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.884787+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/34", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:32.951321+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/35", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.018538+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/36", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.085123+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/37", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.152151+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/38", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.218443+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/39", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.285134+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/40", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.351931+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/41", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.417851+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/42", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.484880+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/43", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.551176+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/44", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.618227+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/45", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.684716+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/46", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.751777+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/47", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.818373+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/48", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.885165+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/49", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:33.951636+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/50", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.018141+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/51", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.084668+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/52", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.151689+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/53", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.218399+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/54", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.284235+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/55", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.351692+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/56", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.418399+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/57", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.484897+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/58", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.551649+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/59", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.618208+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/60", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.684916+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/61", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.751169+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/62", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.818049+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/63", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.884819+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/64", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:34.951940+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/65", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.018218+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/66", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.084788+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.150860+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/68", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.218658+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/69", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.284313+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/70", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.351934+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/71", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.418621+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/72", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.484317+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/73", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.551680+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/74", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.617700+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/75", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.684762+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/76", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.750935+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/77", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.818229+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/78", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.884543+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/79", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:35.951469+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/80", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:36.018366+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/81", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:36.085049+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/82", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:36.151694+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/83", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:36.218506+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/84", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:36.284925+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/85", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:36.351849+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/86", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.151356+00:00", "event": "executed", "command": "DataPool/Sequences/219", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T01:53:42.218224+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.284089+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.350786+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/19", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.417857+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/20", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.484555+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/21", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.550695+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/22", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.618196+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/23", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.684438+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/24", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.751248+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/25", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.817257+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/26", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.884413+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/27", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:42.950810+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/28", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.018154+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/29", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.085183+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/30", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.151399+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/31", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.218129+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/32", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.284142+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/33", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.351188+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/34", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.417987+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/35", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.484464+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/36", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.550841+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/37", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.617590+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/38", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.684141+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/39", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.751143+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/40", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.817801+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/41", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.883881+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/42", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:43.951553+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/43", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.017693+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/44", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.084475+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/45", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.150863+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/46", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.217752+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/47", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.284045+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/48", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.351038+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/49", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.417827+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/50", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.484011+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/51", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.550534+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/52", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.617440+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/53", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.685031+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/54", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.750835+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/55", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.817968+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/56", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.884783+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/57", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:44.951161+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/58", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.018076+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/59", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.084056+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/60", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.150852+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/61", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.217192+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/62", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.284048+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/63", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.350828+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/64", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.417640+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/65", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.484049+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/66", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.551520+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.617449+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/68", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.684401+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/69", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.751222+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/70", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.817384+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/71", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.884426+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/72", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:45.950376+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/73", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.017897+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/74", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.084864+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/75", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.150991+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/76", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.217715+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/77", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.284313+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/78", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.350941+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/79", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.417538+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/80", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.484433+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/81", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.550786+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/82", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.617707+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/83", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.683984+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/84", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.750675+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/85", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:46.817760+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/86", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:52.626995+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:52.684063+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/1 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:52.750870+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/2 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:52.817495+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/3 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:52.883945+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/4 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:52.950226+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/5 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.017777+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/6 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.084549+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/7 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.151230+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/8 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.217738+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/9 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.284489+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/10 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.350984+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/11 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.417486+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/12 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.484325+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/13 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.551121+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/14 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.617478+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/15 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.684330+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/16 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.750927+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/17 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.817350+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/18 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.883706+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/19 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:53.950805+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/20 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.017901+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/21 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.084316+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/22 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.150829+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/23 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.217659+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/24 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.284697+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/25 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.350998+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/26 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.416969+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/27 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.484089+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/28 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.550115+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/29 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.617944+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/30 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.683682+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/31 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.750563+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/32 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.817358+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/33 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.883983+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/34 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:54.950064+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/35 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.017466+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/36 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.083726+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/37 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.150798+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/38 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.217484+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/39 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.284172+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/40 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.350610+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/41 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.417163+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/42 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.484047+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/43 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.550885+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/44 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.617958+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/45 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.683917+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/46 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.750674+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/47 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.818341+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/48 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.884341+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/49 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:55.950591+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/50 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.017306+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/51 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.084309+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/52 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.150711+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/53 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.217268+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/54 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.284113+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/55 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.350532+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/56 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.417608+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/57 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.484629+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/58 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.550997+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/59 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.617475+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/60 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.684101+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/61 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.750551+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/62 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.817390+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/63 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.883379+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/64 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:56.950050+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/65 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.017178+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/66 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.084334+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.151076+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/68 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.217223+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/69 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.283813+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/70 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.350347+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/71 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.417180+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/72 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.484335+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/73 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.550203+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/74 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.617018+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/75 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.683363+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/76 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.750586+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/77 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.817729+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/78 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.884029+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/79 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:57.950611+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/80 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.017346+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/81 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.084223+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/82 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.150660+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/83 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.216971+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/84 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.283439+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/85 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.350640+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/86 FID", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.417453+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.483712+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.550821+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/1 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.617715+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/2 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.684307+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.751224+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/4 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.817049+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/5 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.884312+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:58.950663+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.017149+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/1 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.083814+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/2 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.150089+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/3 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.216757+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.283850+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.349911+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.416799+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/1 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.484001+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/2 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.550755+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.616956+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.683949+00:00", "event": "executed", "command": "Patch/FixtureTypes/15/DMXModes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.750457+00:00", "event": "executed", "command": "Patch/FixtureTypes/15/DMXModes/1 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.817219+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.883816+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:53:59.950181+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.016936+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/2 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.084777+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.150463+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.216826+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.283448+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/2 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.350407+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/3 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.417184+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/4 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.484009+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/5 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.550142+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/6 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.616584+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/7 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.683859+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/8 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.750505+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/9 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.817342+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/10 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.884935+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:00.950545+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.017566+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.084605+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/2 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.151934+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/3 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.217128+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/4 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.284098+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/5 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.350523+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/6 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.417334+00:00", "event": "executed", "command": "Patch/FixtureTypes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.484140+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.550577+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/1 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.617518+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2 TotalFootprint", "kind": "property_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.684362+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.751430+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.817773+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:01.951690+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.017330+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.150622+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.216756+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/3/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.350808+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.416672+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/4/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.549694+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/5", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.617038+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/5/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.750008+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/6", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.817336+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/6/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:02.950598+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/7", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.017141+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/7/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.150604+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/8", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.217760+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/8/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.350599+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/9", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.417112+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/9/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.550124+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/10", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.630500+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/10/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.750176+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/11", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.816934+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/11/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:03.950327+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/12", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.016941+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/12/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.150278+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.216925+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.283987+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.416396+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.483793+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.617548+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.683687+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/3/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.817206+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:04.883775+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/4/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.017034+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.083833+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.150629+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.283751+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.349726+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.483580+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.550284+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/3/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.683090+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.750845+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/4/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.883816+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/5", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:05.949768+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/5/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.083609+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/6", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.150512+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/6/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.283804+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/7", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.350236+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/7/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.483572+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/8", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.550015+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/8/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.683449+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/9", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.750423+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/9/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.883670+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/10", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:06.950221+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/10/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.083072+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/11", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.150693+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/11/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.283373+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/12", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.351109+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/12/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.483920+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/13", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.550003+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/13/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.683487+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/14", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.750252+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/14/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.883860+00:00", "event": "executed", "command": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:07.950379+00:00", "event": "executed", "command": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.016836+00:00", "event": "executed", "command": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.150462+00:00", "event": "executed", "command": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.216973+00:00", "event": "executed", "command": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.383402+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.449947+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.516102+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.583632+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.650005+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.784394+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.850233+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:08.982865+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.050025+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.183357+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.249939+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/4/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.316795+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/4/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.450383+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/5", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.517174+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/5/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.650448+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/6", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.717224+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/6/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.850464+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/7", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:09.916585+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/7/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.049599+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/8", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.116837+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/8/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.250390+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/9", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.316671+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/9/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.449768+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/10", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.516848+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/10/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.650728+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/11", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.716908+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/11/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.849760+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/12", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:10.916469+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/12/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.049934+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/13", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.116800+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/13/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.250162+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/14", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.316380+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/14/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.450168+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/15", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.516256+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/15/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.649566+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/16", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.716836+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/16/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.850051+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/17", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:11.917512+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/17/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.050104+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/18", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.116301+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/18/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.250129+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/19", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.316934+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/19/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.450090+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/20", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.516529+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/20/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.650304+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/21", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.717555+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/21/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.850248+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/22", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:12.917536+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/22/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.050035+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/23", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.116926+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/23/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.250147+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/24", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.317057+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/24/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.450397+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/25", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.516738+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/25/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.650215+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/26", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.717867+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/26/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.850986+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/27", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:13.916903+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/27/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.049448+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/28", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.116582+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/28/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.250138+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/29", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.317023+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/29/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.449818+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/30", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.516375+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/30/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.649306+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/31", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.715932+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/31/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.849961+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/32", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:14.916573+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/32/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.083293+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.150055+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.216593+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.283443+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.416279+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.483066+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.616515+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.682957+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/3/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.816911+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:15.883319+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/4/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.016742+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/5", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.083185+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/5/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.216684+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/6", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.282987+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/6/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.416483+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/7", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.483033+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/7/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.616802+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/8", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.683052+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/8/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.816198+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/9", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.883176+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/9/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:16.949914+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/9/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.083177+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/10", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.150082+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/10/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.283184+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/11", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.350021+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/11/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.482623+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/12", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.549843+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/12/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.683182+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/13", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.749144+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/13/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.883064+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/14", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:17.949780+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/14/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.083087+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/15", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.149733+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/15/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.282992+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/16", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.349645+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/16/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.482337+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/17", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.549592+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/17/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.683117+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/18", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.749796+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/18/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.883430+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/19", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:18.949111+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/19/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.083067+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/20", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.149755+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/20/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.283087+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/21", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.349165+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/21/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.482998+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/22", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.549658+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/22/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.683102+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/23", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.749790+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/23/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.882982+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/24", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:19.949378+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/24/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.082967+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/25", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.149605+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/25/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.283129+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/26", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.349693+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/26/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.483225+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.549601+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.616286+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.682334+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.749751+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.882326+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:20.949965+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.083345+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.149686+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.283097+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.349071+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/4/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.482497+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/5", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.549026+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/5/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.683045+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/6", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.749873+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/6/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.883741+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/7", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:21.950146+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/7/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.015719+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/7/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.149474+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/8", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.216420+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/8/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.349898+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/9", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.416184+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/9/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.550205+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/10", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.615888+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/10/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.749310+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/11", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.815435+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/11/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:22.949446+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/12", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.016098+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/12/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.083043+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/12/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.216340+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/13", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.283012+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/13/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.416171+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/14", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.483410+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/14/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.616517+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/15", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.683072+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/15/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.817147+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/16", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:23.883427+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/16/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.016516+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/17", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.083377+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/17/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.216465+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/18", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.283000+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/18/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.416097+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/19", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.483146+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/19/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.616287+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/20", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.682830+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/20/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.749623+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/20/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.882789+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/21", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:24.949373+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/21/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.082789+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/22", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.149569+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/22/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.216022+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/22/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.349632+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/23", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.415984+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/23/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.549897+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.616218+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.682511+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.816098+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:25.883305+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.016402+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.083097+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/3/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.216142+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.282833+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/4/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.416137+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/5", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.483306+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/5/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.616164+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/6", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.683060+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/6/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.816396+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:26.882509+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:27.015702+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/8", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:27.083104+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/8/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:27.216121+00:00", "event": "executed", "command": "DataPool/Groups", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:27.282834+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:27.348844+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:27.416215+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:27.483073+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:27.550183+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:33.415758+00:00", "event": "executed", "command": "Patch/FixtureTypes/10/DMXModes/3/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:34.416114+00:00", "event": "executed", "command": "Patch/FixtureTypes/13/DMXModes/4/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:34.882716+00:00", "event": "executed", "command": "Patch/FixtureTypes/14/DMXModes/3/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:35.215440+00:00", "event": "executed", "command": "Patch/FixtureTypes/15/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:35.415103+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:35.482066+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:35.548998+00:00", "event": "executed", "command": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:36.182376+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:36.249043+00:00", "event": "executed", "command": "Patch/FixtureTypes/4/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:36.849353+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:36.916248+00:00", "event": "executed", "command": "Patch/FixtureTypes/8/DMXModes/1/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:38.581584+00:00", "event": "executed", "command": "Patch/FixtureTypes/9/DMXModes/2/DMXChannels", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:39.982807+00:00", "event": "executed", "command": "DataPool/Timecodes/19", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T01:54:40.048987+00:00", "event": "executed", "command": "DataPool/Sequences/219", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T01:54:40.115650+00:00", "event": "executed", "command": "DataPool/Sequences/219", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T01:54:40.182405+00:00", "event": "executed", "command": "DataPool/PresetPools", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:40.248961+00:00", "event": "executed", "command": "DataPool/PresetPools/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:40.315791+00:00", "event": "executed", "command": "DataPool/PresetPools", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:40.382015+00:00", "event": "executed", "command": "DataPool/PresetPools/21", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:40.449105+00:00", "event": "executed", "command": "DataPool/PresetPools", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:40.515811+00:00", "event": "executed", "command": "DataPool/PresetPools/4", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:40.582660+00:00", "event": "executed", "command": "DataPool/PresetPools/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:40.649111+00:00", "event": "executed", "command": "DataPool/PresetPools/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:54.715244+00:00", "event": "executed", "command": "DataPool/Sequences/219", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T01:54:54.781902+00:00", "event": "executed", "command": "DataPool/Timecodes/19", "kind": "state_query", "ok": true, "detail": ""}

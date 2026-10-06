@@ -1,0 +1,10 @@
+state:ShowData/DataPools/Default/Sequences
+state:ShowData/DataPools/Default/Timecodes
+state:ShowData/DataPools/Default/PresetPools/4
+state:ShowData/DataPools/Default/PresetPools/21
+state:ShowData/DataPools/Default/PresetPools/2
+state:ShowData/DataPools/Default/PresetPools/2@10
+state:ShowData/DataPools/Default/Groups
+state:ShowData/DataPools/Default/Sequences/219
+state:ShowData/DataPools/Default/Timecodes/19
+state:ShowData/DataPools/Default/Sequences@18
