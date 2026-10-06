@@ -15,7 +15,9 @@ for body in re.findall(r"<<< (.*)", Path(sys.argv[1]).read_text("utf-8")):
     data = json.loads(body)
     if data.get("kind") != "props":
         continue
-    rows.append({r["n"]: (r.get("v") if r.get("ok") else f"!{r.get('e', '')[:20]}") for r in data["reads"]})
+    rows.append(
+        {r["n"]: (r.get("v") if r.get("ok") else f"!{r.get('e', '')[:20]}") for r in data["reads"]}
+    )
 
 by_role: dict[str, list[dict]] = defaultdict(list)
 for row in rows:
