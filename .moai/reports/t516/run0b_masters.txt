@@ -1,0 +1,72 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 08970ce6"
+<<< {"id": "08970ce6", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> props:ShowData/Masters/3/1|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props cb1aed3c NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/1"
+<<< {"id": "cb1aed3c", "kind": "props", "ok": true, "path": "ShowData/Masters/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed1"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/2|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props 9b9e0f4e NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/2"
+<<< {"id": "9b9e0f4e", "kind": "props", "ok": true, "path": "ShowData/Masters/3/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed2"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/3|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props bbb617d0 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/3"
+<<< {"id": "bbb617d0", "kind": "props", "ok": true, "path": "ShowData/Masters/3/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed3"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/4|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props 52cbc371 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/4"
+<<< {"id": "52cbc371", "kind": "props", "ok": true, "path": "ShowData/Masters/3/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed4"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/5|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props c1095c93 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/5"
+<<< {"id": "c1095c93", "kind": "props", "ok": true, "path": "ShowData/Masters/3/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed5"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/6|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props 1b899876 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/6"
+<<< {"id": "1b899876", "kind": "props", "ok": true, "path": "ShowData/Masters/3/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed6"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/7|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props 1e2fde28 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/7"
+<<< {"id": "1e2fde28", "kind": "props", "ok": true, "path": "ShowData/Masters/3/7", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed7"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/8|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props e9b32d16 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/8"
+<<< {"id": "e9b32d16", "kind": "props", "ok": true, "path": "ShowData/Masters/3/8", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed8"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/9|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props 544bbc5f NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/9"
+<<< {"id": "544bbc5f", "kind": "props", "ok": true, "path": "ShowData/Masters/3/9", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed9"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/10|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props 1c66fbf9 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/10"
+<<< {"id": "1c66fbf9", "kind": "props", "ok": true, "path": "ShowData/Masters/3/10", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed10"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/11|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props e2dc8c74 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/11"
+<<< {"id": "e2dc8c74", "kind": "props", "ok": true, "path": "ShowData/Masters/3/11", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed11"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/12|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props ae953c80 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/12"
+<<< {"id": "ae953c80", "kind": "props", "ok": true, "path": "ShowData/Masters/3/12", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed12"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/13|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props 7b621216 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/13"
+<<< {"id": "7b621216", "kind": "props", "ok": true, "path": "ShowData/Masters/3/13", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed13"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/14|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props bd5f4437 NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/14"
+<<< {"id": "bd5f4437", "kind": "props", "ok": true, "path": "ShowData/Masters/3/14", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed14"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/15|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props b7d2969b NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/15"
+<<< {"id": "b7d2969b", "kind": "props", "ok": true, "path": "ShowData/Masters/3/15", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed15"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/3/16|NAME,NORMEDVALUE,SPEEDSCALE,NOTE
+    wire: Plugin "CopilotResponder" "props 05d59d6f NAME,NORMEDVALUE,SPEEDSCALE,NOTE ShowData/Masters/3/16"
+<<< {"id": "05d59d6f", "kind": "props", "ok": true, "path": "ShowData/Masters/3/16", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "BPM"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "51"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences@17
+    wire: Plugin "CopilotResponder" "state 72d56a97 ShowData/DataPools/Default/Sequences offset=17"
+<<< {"children": [{"class": "Sequence", "i": 1999, "name": "Sequence 1999"}, {"class": "Sequence", "i": 2000, "name": "Sequence 2000"}], "id": "72d56a97", "kind": "state", "node": {"childCount": 19, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 17, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": false, "v": 1}

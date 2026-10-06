@@ -1,0 +1,40 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping ca5a96c3"
+<<< {"id": "ca5a96c3", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/Sequences
+    wire: Plugin "CopilotResponder" "state 197b12d6 ShowData/DataPools/Default/Sequences"
+<<< {"children": [{"class": "Sequence", "i": 1, "name": "Default"}, {"class": "Sequence", "i": 2, "name": "Sugar"}, {"class": "Sequence", "i": 3, "name": "Sugar r3"}, {"class": "Sequence", "i": 4, "name": "eset1Fade"}, {"class": "Sequence", "i": 5, "name": "Synth Test"}, {"class": "Sequence", "i": 6, "name": "Notice Test"}, {"class": "Sequence", "i": 7, "name": "VerifyA"}, {"class": "Sequence", "i": 8, "name": "VerifyB4x"}, {"class": "Sequence", "i": 9, "name": "T215 SCRATCH DELETABLE"}, {"class": "Sequence", "i": 10, "name": "VerifyC4x"}, {"class": "Sequence", "i": 11, "name": "chase-horizontal"}, {"class": "Sequence", "i": 12, "name": "chase-bounce-run"}, {"class": "Sequence", "i": 13, "name": "DinoSync"}, {"class": "Sequence", "i": 14, "name": "DinoDino"}, {"class": "Sequence", "i": 15, "name": "DinoFull"}, {"class": "Sequence", "i": 210, "name": "Sequence 210"}, {"class": "Sequence", "i": 219, "name": "LOVE ATTACK - OLD APP"}], "id": "197b12d6", "kind": "state", "node": {"childCount": 19, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes
+    wire: Plugin "CopilotResponder" "state 37de4206 ShowData/DataPools/Default/Timecodes"
+<<< {"children": [{"class": "Timecode", "i": 1, "name": "DinoSync Timecode"}, {"class": "Timecode", "i": 2, "name": "DinoFull Timecode"}, {"class": "Timecode", "i": 7, "name": "Synth Test Timecode"}, {"class": "Timecode", "i": 8, "name": "Notice Test Timecode"}, {"class": "Timecode", "i": 9, "name": "Sequence 210 Timecode"}, {"class": "Timecode", "i": 19, "name": "LOVE ATTACK - OLD APP TC"}], "id": "37de4206", "kind": "state", "node": {"childCount": 6, "class": "Timecodes", "enumeration": "ok", "name": "Timecodes"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes", "truncated": false, "v": 1}
+
+>>> state:ShowData/Masters/3
+    wire: Plugin "CopilotResponder" "state 31137aa1 ShowData/Masters/3"
+<<< {"children": [{"class": "MasterSpeed", "i": 1, "name": "Speed1"}, {"class": "MasterSpeed", "i": 2, "name": "Speed2"}, {"class": "MasterSpeed", "i": 3, "name": "Speed3"}, {"class": "MasterSpeed", "i": 4, "name": "Speed4"}, {"class": "MasterSpeed", "i": 5, "name": "Speed5"}, {"class": "MasterSpeed", "i": 6, "name": "Speed6"}, {"class": "MasterSpeed", "i": 7, "name": "Speed7"}, {"class": "MasterSpeed", "i": 8, "name": "Speed8"}, {"class": "MasterSpeed", "i": 9, "name": "Speed9"}, {"class": "MasterSpeed", "i": 10, "name": "Speed10"}, {"class": "MasterSpeed", "i": 11, "name": "Speed11"}, {"class": "MasterSpeed", "i": 12, "name": "Speed12"}, {"class": "MasterSpeed", "i": 13, "name": "Speed13"}, {"class": "MasterSpeed", "i": 14, "name": "Speed14"}, {"class": "MasterSpeed", "i": 15, "name": "Speed15"}, {"class": "MasterSpeed", "i": 16, "name": "BPM"}], "id": "31137aa1", "kind": "state", "node": {"childCount": 16, "class": "MasterPoolSpeed", "enumeration": "ok", "name": "Speed"}, "offset": 0, "ok": true, "path": "ShowData/Masters/3", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/Masters/3/1
+    wire: Plugin "CopilotResponder" "introspect e7d678f4 ShowData/Masters/3/1"
+<<< {"class": "MasterSpeed", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "NORMEDVALUE", "t": "Int32"}, {"n": "FADERENABLE", "t": "UInt32"}, {"n": "SPEEDSCALE", "t": "Int8"}, {"n": "LEARNRESPECTSSPEEDSCALE", "t": "UInt32"}, {"n": "AUTOINCREASESPEEDSCALE", "t": "UInt32"}, {"n": "LEARNMODE", "t": "UInt8"}], "id": "e7d678f4", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/Masters/3/1", "source": "property_accessors", "total": 26, "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/220
+    wire: Plugin "CopilotResponder" "state d4b79eb3 ShowData/DataPools/Default/Sequences/220"
+<<< {"error": "path segment not found: '220' (in ShowData/DataPools/Default/Sequences/220)", "id": "d4b79eb3", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/220", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/221
+    wire: Plugin "CopilotResponder" "state fa28cce6 ShowData/DataPools/Default/Sequences/221"
+<<< {"error": "path segment not found: '221' (in ShowData/DataPools/Default/Sequences/221)", "id": "fa28cce6", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/221", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/222
+    wire: Plugin "CopilotResponder" "state c499d635 ShowData/DataPools/Default/Sequences/222"
+<<< {"error": "path segment not found: '222' (in ShowData/DataPools/Default/Sequences/222)", "id": "c499d635", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/222", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/20
+    wire: Plugin "CopilotResponder" "state 7f81a7c8 ShowData/DataPools/Default/Timecodes/20"
+<<< {"error": "path segment not found: '20' (in ShowData/DataPools/Default/Timecodes/20)", "id": "7f81a7c8", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Timecodes/20", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Groups
+    wire: Plugin "CopilotResponder" "state 8aed03cc ShowData/DataPools/Default/Groups"
+<<< {"children": [{"class": "Group", "i": 1, "name": "ALL"}, {"class": "Group", "i": 2, "name": "KEY"}, {"class": "Group", "i": 3, "name": "FOH"}, {"class": "Group", "i": 4, "name": "BACK"}, {"class": "Group", "i": 5, "name": "SIDE-L"}, {"class": "Group", "i": 6, "name": "SIDE-R"}, {"class": "Group", "i": 7, "name": "SIDE-ALL"}, {"class": "Group", "i": 8, "name": "WASH-U"}, {"class": "Group", "i": 9, "name": "WASH-D"}, {"class": "Group", "i": 10, "name": "WASH-ALL"}, {"class": "Group", "i": 11, "name": "MOVER-U"}, {"class": "Group", "i": 12, "name": "MOVER-D"}, {"class": "Group", "i": 13, "name": "MOVER-ALL"}, {"class": "Group", "i": 14, "name": "BLIND"}, {"class": "Group", "i": 15, "name": "STROBE"}, {"class": "Group", "i": 16, "name": "HAZE"}, {"class": "Group", "i": 17, "name": "ODD"}, {"class": "Group", "i": 18, "name": "EVEN"}], "id": "8aed03cc", "kind": "state", "node": {"childCount": 18, "class": "Groups", "enumeration": "ok", "name": "Groups"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups", "truncated": false, "v": 1}

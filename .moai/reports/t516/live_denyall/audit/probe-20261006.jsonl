@@ -1,0 +1,17 @@
+{"ts": "2026-10-06T03:42:34.490233+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:42:34.556849+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:34.622897+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:34.689859+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/222", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:34.756511+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:34.889536+00:00", "event": "executed", "command": "DataPool/Sequences/221", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:34.956448+00:00", "event": "executed", "command": "DataPool/Sequences/220", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.024035+00:00", "event": "executed", "command": "DataPool/Sequences/221", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.090008+00:00", "event": "executed", "command": "DataPool/Sequences/221", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.157170+00:00", "event": "executed", "command": "DataPool/Sequences/221", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.223449+00:00", "event": "executed", "command": "DataPool/Sequences/221", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.290163+00:00", "event": "executed", "command": "DataPool/Sequences/222", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.356881+00:00", "event": "executed", "command": "DataPool/Sequences/222", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.423002+00:00", "event": "executed", "command": "DataPool/Sequences/222", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.490007+00:00", "event": "executed", "command": "DataPool/Sequences/222", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.556506+00:00", "event": "executed", "command": "DataPool/Sequences/222", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-06T03:42:35.622847+00:00", "event": "executed", "command": "DataPool/Sequences/222", "kind": "state_query", "ok": false, "detail": ""}
