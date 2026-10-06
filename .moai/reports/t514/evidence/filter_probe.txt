@@ -1,0 +1,5 @@
+start rows=61 off=0
+pulse off: rows=41 off=20
+only pulse off-&gt;all off: rows=0 off=67
+strobe only on: rows=2
+all on: rows=61 off=0
