@@ -1,0 +1,25 @@
+{"step": "pre_seq_228", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/228", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/228", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v3 - L0 STATIC 100"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_229", "t": 0.133, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/229", "ok": true, "payload": {"id": "gate-3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/229", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v3 - L1 PULSE SPEED 112"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_230", "t": 0.199, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/230", "ok": true, "payload": {"id": "gate-4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/230", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v3 - L2 PULSE SPEEDMASTER"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_231", "t": 0.265, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/231", "ok": true, "payload": {"id": "gate-5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/231", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v3 - L3 PULSE SPEEDMASTER MEASURE 2"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_232", "t": 0.332, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/232", "ok": true, "payload": {"id": "gate-6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/232", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v3 - L4 TILT WAVE SPEED 112"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_233", "t": 0.399, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/233", "ok": true, "payload": {"id": "gate-7", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/233", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v3 - L5 TILT WAVE SPEEDMASTER"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 0.399, "say": "L0 — 무빙 501~508 이 100% 로 켜지는가(대조)"}
+{"step": "on_228", "t": 0.466, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 228", "reasons": ["reference-invoking command"]}]}
+{"step": "off_228", "t": 0.533, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 228", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.533, "say": "L1 — 켜짐/꺼짐이 1박(약 0.53초)마다 깜빡이는가 (At Speed 112)"}
+{"step": "on_229", "t": 0.599, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 229", "reasons": ["reference-invoking command"]}]}
+{"step": "off_229", "t": 0.666, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 229", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.666, "say": "L2 — 같은 깜빡임, 속도만 스피드 마스터 15"}
+{"step": "on_230", "t": 0.733, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 230", "reasons": ["reference-invoking command"]}]}
+{"step": "off_230", "t": 0.8, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 230", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.8, "say": "L3 — L2 와 같되 2박에 한 번(느리게)"}
+{"step": "on_231", "t": 0.867, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 231", "reasons": ["reference-invoking command"]}]}
+{"step": "off_231", "t": 0.933, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 231", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.933, "say": "L4 — 70% 로 켜진 채 Tilt 가 위아래로 파도처럼 움직이는가 (At Speed 112)"}
+{"step": "on_232", "t": 1.001, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 232", "reasons": ["reference-invoking command"]}]}
+{"step": "off_232", "t": 1.068, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 232", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.068, "say": "L5 — L4 와 같은 움직임, 속도만 스피드 마스터 15"}
+{"step": "on_233", "t": 1.134, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 233", "reasons": ["reference-invoking command"]}]}
+{"step": "off_233", "t": 1.199, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 233", "reasons": ["reference-invoking command"]}]}
+{"verdict": "deny-all: approval texts recorded, nothing sent", "pre_names": {"228": "RHYTHM PROBE v3 - L0 STATIC 100", "229": "RHYTHM PROBE v3 - L1 PULSE SPEED 112", "230": "RHYTHM PROBE v3 - L2 PULSE SPEEDMASTER", "231": "RHYTHM PROBE v3 - L3 PULSE SPEEDMASTER MEASURE 2", "232": "RHYTHM PROBE v3 - L4 TILT WAVE SPEED 112", "233": "RHYTHM PROBE v3 - L5 TILT WAVE SPEEDMASTER"}}

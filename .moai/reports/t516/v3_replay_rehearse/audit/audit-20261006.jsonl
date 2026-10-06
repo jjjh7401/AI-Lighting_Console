@@ -1,0 +1,30 @@
+{"ts": "2026-10-06T05:19:41.881901+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/228 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T05:19:41.883060+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/229 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T05:19:41.883244+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/230 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T05:19:41.883352+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/231 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T05:19:41.883449+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/232 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T05:19:41.883543+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/233 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T05:19:41.883846+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 228"], "held": ["Goto Cue 1 Sequence 228"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.884043+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 228", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.884213+00:00", "event": "approved", "commands": ["Off Sequence 228"], "held": ["Off Sequence 228"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.884339+00:00", "event": "executed", "command": "Off Sequence 228", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.884580+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 229"], "held": ["Goto Cue 1 Sequence 229"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.884718+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 229", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.884827+00:00", "event": "approved", "commands": ["Off Sequence 229"], "held": ["Off Sequence 229"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.884910+00:00", "event": "executed", "command": "Off Sequence 229", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.885002+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 230"], "held": ["Goto Cue 1 Sequence 230"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.885078+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 230", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.885163+00:00", "event": "approved", "commands": ["Off Sequence 230"], "held": ["Off Sequence 230"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.885237+00:00", "event": "executed", "command": "Off Sequence 230", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.885323+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 231"], "held": ["Goto Cue 1 Sequence 231"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.885397+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 231", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.885485+00:00", "event": "approved", "commands": ["Off Sequence 231"], "held": ["Off Sequence 231"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.885570+00:00", "event": "executed", "command": "Off Sequence 231", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.885654+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 232"], "held": ["Goto Cue 1 Sequence 232"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.885725+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 232", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.885811+00:00", "event": "approved", "commands": ["Off Sequence 232"], "held": ["Off Sequence 232"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.885911+00:00", "event": "executed", "command": "Off Sequence 232", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.885992+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 233"], "held": ["Goto Cue 1 Sequence 233"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.886057+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 233", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T05:19:41.886130+00:00", "event": "approved", "commands": ["Off Sequence 233"], "held": ["Off Sequence 233"], "kind": "t516_replay_v3"}
+{"ts": "2026-10-06T05:19:41.886197+00:00", "event": "executed", "command": "Off Sequence 233", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
