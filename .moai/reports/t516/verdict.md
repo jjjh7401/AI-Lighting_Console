@@ -189,6 +189,50 @@
   - A가 꺼지고 B/C가 켜지는데 박자·모양 큐만 어두우면, 다음 의심은 이 줄들이다.
 - 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v2.py .moai/reports/t516/v2_live --master 15 --approve .moai/reports/t516/v2_denyall`
 
+## 4-5. v2 실기 1회 결과와 읽기 진단 6~12
+
+- v2는 리드 "실행" 뒤 1회 돌렸다(커밋 `fdefdf82`): 승인 = 송신 119줄 PASS, A/B/C 큐 Part 크기 모두 3132B.
+- 감독 관찰(리드 경유, 원문): 「내가 본 건 227만 불이 켜졌다는 거야. 하지만 8대 조명장비만 불이 들어오고 어떤 변화도 없었어」.
+  - 223·224·225(BACK A/B/C)와 226(박자)은 보이지 않았다. 227은 16대 중 8대만 켜졌고 움직임은 없었다.
+  - 감독이 그룹 4가 뒤쪽 12대를 고르는 것을 확인했다. 그룹 구성원 문제는 아니다.
+- 읽기 진단(쓰기 0, `diag6.txt`~`diag12.txt`, 패치 표 `diag7_patch_table.txt`):
+  - 86대 모두 `VISIBLE3D` true, 패치 충돌 0, DMX 주소 겹침 0.
+  - Shutter 기본값은 Aura XB·Spiider·MegaPointe 모두 열림 범위다. 셔터는 원인이 아니다.
+  - 디머 채널 구성:
+
+| 역할 | 기종 | 디머(기본값) |
+|---|---|---|
+| BACK 201~212 | Aura XB | Aura_Dimmer 0, Main Module_Dimmer 0 |
+| MOVER-D 521~528 | Spiider | RGBW Cluster_Dimmer FF, Main Dimmer FF, Dimmer2 0 |
+| MOVER-U 501~508 | MegaPointe | 디머 1개, 기본값 0 |
+
+- 🔴 **가설(안 잰 것)**: 디머가 여러 개인 기종(Aura XB·Spiider)은 `Attribute 'Dimmer'` 한 줄로 전부 열리지 않을 수 있다. 「8대만 켜짐」과 BACK이 어두운 것을 설명할 수 있다. 측정한 적은 없고, v3 결과가 나온 뒤 별도 확인 항목으로 다룬다(리드 지시 2026-10-06).
+
+## 4-6. 프로브 v3 — 사다리 (감독 승인 2026-10-06, 실행 신호 대기)
+
+- 목적: 우리가 저장한 페이저가 실기에서 도는지, 어느 단계에서 끊기는지 가른다.
+- 대상은 디머가 하나인 무빙 MOVER-U 501~508만이다. 각 단계는 따로 시퀀스, 8초 켜고 끈 뒤 2초. 이름 `RHYTHM PROBE v3 - <단계>`.
+
+| 단계 | 시퀀스 | 내용 |
+|---|---|---|
+| L0 | 228 | Dimmer 100 정적(대조군) |
+| L1 | 229 | Dimmer 0 → `Step 2` → 100 → `At Phase 0` → `At Speed 112` |
+| L2 | 230 | L1에서 속도 줄만 `At SpeedMaster 15` |
+| L3 | 231 | L2 + `At Measure 2`(Measure → SpeedMaster 순서, `server/fx/instantiate.py` `_timing_lines`) |
+| L4 | 232 | Dimmer 70 + position_fx wave 줄: `At Preset 2.24`(Center) → Tilt `At Relative 12` → `At Phase 0 Thru 360` → `At Speed 112` |
+| L5 | 233 | L4에서 속도만 `At SpeedMaster 15` |
+
+- 페이저 줄 순서는 FXGEN 코드에서 옮긴 것이다. 실기에서 도는지는 이번 실행이 첫 측정이다.
+- 빈 번호 판독(`v3_slots_readonly.txt`): Sequence 228~233 모두 `path segment not found`.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`v3_rehearse`) | 묶음 18개 끝까지 |
+| 실기 전부-거절(`v3_denyall`) | 요청 18건, 승인 0, 감사 로그 executed 0행 · 요청 문면 = 리허설 True |
+| 승인 파일 | `approval_rhythm_probe_v3.txt` 69줄, sha256 `ab34e24d4c373c1ddbbf4fcbd4d47d058caf31b432b7092f62bd135a1e432b0c` · t512 대조(리허설 audit) PASS · SaveShow·Delete·Remove 0 |
+
+- 감독 승인 2026-10-06(리드 경유). 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v3.py .moai/reports/t516/v3_live --approve .moai/reports/t516/v3_denyall`
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
