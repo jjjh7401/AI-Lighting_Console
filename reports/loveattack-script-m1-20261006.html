@@ -1,0 +1,179 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LOVE ATTACK 연출 대본</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;
+--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Pretendard",system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+--max-width:1100px;--radius-panel:12px}
+body{margin:0;background:var(--ivory);color:var(--slate);font:15px/1.7 var(--sans)}
+main{max-width:var(--max-width);margin:0 auto;padding:32px 16px 80px}
+h1{font-size:26px;line-height:1.35} h2{margin-top:44px;border-bottom:2px solid var(--oat);padding-bottom:6px}
+code{font:13px var(--mono);background:var(--g100);padding:1px 5px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0} table{border-collapse:collapse;width:100%;background:var(--paper);font-size:13.5px}
+th,td{border:1px solid var(--g300);padding:6px 8px;text-align:left;vertical-align:top} th{background:var(--g100);white-space:nowrap}
+tr.acc td{background:#F9E1DA}
+.lead{background:var(--paper);border-left:4px solid var(--clay);border-radius:var(--radius-panel);padding:8px 18px;margin:20px 0}
+svg{width:100%;height:auto;background:var(--paper);border-radius:var(--radius-panel);border:1.5px solid var(--g300);margin:12px 0}
+svg .ax{font-size:11px;fill:var(--g700)} hr{border:0;border-top:1px solid var(--g300);margin:32px 0}
+@media print{body{background:#fff} .tw{overflow:visible}}
+</style></head><body><main>
+<h1>SPEC-LDRHYTHM-001 M1 — LOVE ATTACK(리센느) 연출 대본 (초안, 감독 검토 대기)</h1>
+<ul><li>카드: t511 · 작성 2026-10-06 · 기준 트리 <code>origin/main</code> <code>cea25c04</code></li><li>성격: 사람이 읽는 연출 각본이다. 코드 0줄, 콘솔 명령 0건.</li><li>곡: LOVE ATTACK — 112.35 BPM, 박 1개 = 0.534초, 마디 1개 = 2.136초. 음악은 약 2:59(179초)에 끝나고, 파일 끝 18초는 무음이다.</li><li>음악 근거: <code>reports/loveattack-music-map-20261006.md</code>(t509)의 잰 값. 다운비트 위상 1, 63~66마디 비트 드롭, 18·46마디 후렴 진입 첫 박은 감독이 2026-10-06 귀로 확인했다. 마디 번호와 시각은 그 보고서와 같다.</li><li>킥 위치: <code>.moai/reports/t511/evidence/kick_slots.txt</code>(t509 마디표의 킥 후보 칸을 구간별로 센 것). 벌스와 코러스는 1·2·4박이 강하고(0.71~0.93) 3박은 약하다(0.25~0.60). 드롭은 1·3박(1.00)이다. 인트로 B는 4박(1.00)이다.</li><li>인용 규칙: "잇는 방식" 칸은 벤치마크 보고서 <code>reports/music-lighting-benchmark-20261003.md</code> §2.3(장면을 잇는 규칙 1~7)의 번호를 적는다. "이유" 칸은 §2.1(구간별로 놓는 것)·§2.3, 또는 곡 조사 <code>reports/loveattack-song-research-20261006.md</code> §3(뜻과 콘셉트)·§4(시각 콘셉트)를 인용한다. 강조 층의 근거는 표준 문서(<code>docs/proposals/song-structure-lighting-standard.md</code>) "## 10." 목록 4번이며, 이 대본은 그것을 <strong>§10 금지목록 4번</strong>이라 부른다.</li></ul>
+<hr>
+
+<div class="lead">
+<p><strong>이 문서는 무엇인가요?</strong> 리센느 「LOVE ATTACK」 한 곡에 조명을 어떻게 놓을지 적은 <b>연출 대본</b>이에요.
+코드도, 콘솔 명령도 없어요. 감독님이 읽고 "이대로 콘솔에 올려 보자" 또는 "여기는 바꾸자"를 정하는 문서예요.</p>
+<p><strong>두 층으로 나눠 읽으면 쉬워요.</strong> <b>박자 층</b>은 한 장면 안에서 박에 맞춰 움직이는 것(펄스, 체이스 한 칸, 색·위치 한 단계)이고,
+<b>강조 층</b>은 블라인더·스트로브처럼 큰 순간에만 쓰는 것이에요. 표에서 분홍 줄이 강조 층이에요.</p>
+<p><strong>예를 들면</strong> — 14~17마디(0:29~0:37)는 노래가 점점 차오르는 빌드업이에요. 대본은 여기서 무빙 체이스를 마디마다 두 배씩 빠르게 하다가,
+17마디 3·4박에서 모든 움직임을 끊고 비워요. 그리고 18마디 첫 박(0:37.9, 감독님이 귀로 확인한 자리)에서 블라인더를 한 번 터뜨리고 핑크로 바꿔요.</p>
+<p><strong>앱이 지금 만드는 것과 다른 점</strong> — 지금 앱은 후렴 하나를 30초 넘게 한 장면으로 둬요. 이 대본은 같은 동작을 8마디(약 17초)보다 길게 반복하지 않고,
+펄스는 실제 킥이 오는 박의 역광에만 줘요.</p>
+</div>
+
+<h2>1. 이 곡의 뼈대 (t509 잰 값)</h2>
+<div class='tw'><table><thead><tr><th>순간</th><th>마디</th><th>시각</th><th>잰 값</th></tr></thead><tbody><tr><td>디스토션 기타 인트로</td><td>앞박~2</td><td>0:00.0</td><td>화성 고역 비율 0.075~0.108</td></tr><tr><td>드럼머신 등장</td><td>3~6</td><td>0:05.8</td><td>저역 0.44 → 0.99배, 4박 킥</td></tr><tr><td>벌스 1(메인 멜로디)</td><td>7~13</td><td>0:14.4</td><td>화성 0.45 → 0.98배, 음량 144%</td></tr><tr><td>프리코러스 1(빌드업)</td><td>14~17</td><td>0:29.4</td><td>타악 0.78 → 1.37배, 4마디 연속 상승</td></tr><tr><td><strong>코러스 1 진입</strong></td><td>18</td><td>0:37.9</td><td>저역 4.45배, 드럼 비중 마디 최고</td></tr><tr><td>코러스 1 끝 → 킥 멈춤</td><td>32 → 33</td><td>1:07.9 → 1:10.1</td><td>타악 0.70 → 0.43배, 저역 0.25배</td></tr><tr><td>벌스 2</td><td>34~41</td><td>1:12.2</td><td>타악 0.98~1.27배</td></tr><tr><td>프리코러스 2(빌드업)</td><td>42~45</td><td>1:29.4</td><td>저역 0.40배로 비웠다가 1.46배로</td></tr><tr><td><strong>코러스 2 진입</strong></td><td>46</td><td>1:37.9</td><td>저역 4.46배</td></tr><tr><td>코러스 2 끝 → 킥 멈춤</td><td>60 → 61</td><td>2:07.9 → 2:10.1</td><td>저역 0.24배</td></tr><tr><td>브릿지 진입</td><td>62</td><td>2:12.2</td><td>음량 78%</td></tr><tr><td><strong>비트 드롭</strong></td><td>63~66</td><td>2:14.4</td><td>보컬 대역 0.03~0.04, 저역 1.43~2.01배</td></tr><tr><td>덜어냄</td><td>67</td><td>2:22.9</td><td>음량 79%, 화성 0.52배</td></tr><tr><td><strong>마지막 코러스 — 한 박 당긴 히트</strong></td><td>67마디 4박</td><td>2:24.5</td><td>저역 원 에너지가 144.57초에 시작</td></tr><tr><td>마지막 코러스 안의 상승</td><td>69~70</td><td>2:27.2</td><td>음량 123% · 119%</td></tr><tr><td>킥 멈춤 → 음악 끝</td><td>82 → 약 179초</td><td>2:55.1 → 2:59</td><td>저역 0.23배, 179초 이후 무음</td></tr></tbody></table></div>
+<p>대본의 방향은 다섯 가지다.</p>
+<ol><li><strong>강조는 네 곳만 쓰고, 갈수록 커진다.</strong> 18 &lt; 46 &lt; 63 &lt; 67마디 4박 순서다. 이유는 §3 뒤 "강조 크기 순서"에 적었다.</li><li><strong>펄스는 잰 킥 박에만, 역광(BACK)이나 무빙에만 준다.</strong> 워시 전체를 박마다 출렁이지 않는다.</li><li><strong>같은 박자 동작은 8마디를 넘기지 않는다.</strong> 4마디 또는 8마디마다 한 가지를 바꾼다.</li><li><strong>큰 순간 직전 1박을 비운다.</strong> 17마디 3·4박, 45마디 4박, 62마디 4박, 67마디 1~3박이다. 빌드업에서는 체이스를 점점 빠르게 한다.</li><li><strong>색은 "물들이듯" 번져서 바뀐다.</strong> 곡 조사 §3의 핵심 이미지가 "세상을 물들임"이다. 다만 히트에서는 끊어서 바꾼다(§2.3 규칙 2).</li></ol>
+<hr>
+<svg viewBox='0 0 820 260' role='img' aria-label='LOVE ATTACK 곡 흐름과 강조 위치'>
+<rect x='30.0' y='94.2' width='8.3' height='105.8' fill='var(--olive)'><title>1마디 1.5초</title></rect>
+<rect x='39.3' y='106.4' width='8.3' height='93.6' fill='var(--olive)'><title>2마디 3.7초</title></rect>
+<rect x='48.5' y='115.8' width='8.3' height='84.2' fill='var(--olive)'><title>3마디 5.8초</title></rect>
+<rect x='57.8' y='118.4' width='8.3' height='81.6' fill='var(--olive)'><title>4마디 7.9초</title></rect>
+<rect x='67.1' y='114.5' width='8.3' height='85.5' fill='var(--olive)'><title>5마디 10.1초</title></rect>
+<rect x='76.3' y='113.1' width='8.3' height='86.9' fill='var(--olive)'><title>6마디 12.2초</title></rect>
+<rect x='85.6' y='75.6' width='8.3' height='124.4' fill='var(--olive)'><title>7마디 14.4초</title></rect>
+<text x='90.2' y='214' text-anchor='middle' class='ax'>7</text>
+<rect x='94.9' y='76.4' width='8.3' height='123.6' fill='var(--olive)'><title>8마디 16.5초</title></rect>
+<rect x='104.1' y='71.9' width='8.3' height='128.1' fill='var(--olive)'><title>9마디 18.6초</title></rect>
+<rect x='113.4' y='78.8' width='8.3' height='121.2' fill='var(--olive)'><title>10마디 20.8초</title></rect>
+<rect x='122.7' y='78.0' width='8.3' height='122.0' fill='var(--olive)'><title>11마디 22.9초</title></rect>
+<rect x='132.0' y='78.5' width='8.3' height='121.5' fill='var(--olive)'><title>12마디 25.1초</title></rect>
+<rect x='141.2' y='84.2' width='8.3' height='115.8' fill='var(--olive)'><title>13마디 27.2초</title></rect>
+<rect x='150.5' y='101.5' width='8.3' height='98.5' fill='#A7B98A'><title>14마디 29.4초</title></rect>
+<text x='155.1' y='214' text-anchor='middle' class='ax'>14</text>
+<rect x='159.8' y='94.2' width='8.3' height='105.8' fill='#A7B98A'><title>15마디 31.5초</title></rect>
+<rect x='169.0' y='82.8' width='8.3' height='117.2' fill='#A7B98A'><title>16마디 33.6초</title></rect>
+<rect x='178.3' y='67.6' width='8.3' height='132.4' fill='#A7B98A'><title>17마디 35.8초</title></rect>
+<rect x='187.6' y='80.4' width='8.3' height='119.6' fill='var(--olive)'><title>18마디 37.9초</title></rect>
+<polygon points='192.2,74.4 186.2,62.4 198.2,62.4' fill='#C0392B'/>
+<text x='192.2' y='58.4' text-anchor='middle' class='ax'>18 코러스진입</text>
+<text x='192.2' y='214' text-anchor='middle' class='ax'>18</text>
+<rect x='196.8' y='63.3' width='8.3' height='136.7' fill='var(--olive)'><title>19마디 40.1초</title></rect>
+<rect x='206.1' y='66.7' width='8.3' height='133.3' fill='var(--olive)'><title>20마디 42.2초</title></rect>
+<rect x='215.4' y='64.1' width='8.3' height='135.9' fill='var(--olive)'><title>21마디 44.4초</title></rect>
+<rect x='224.6' y='64.5' width='8.3' height='135.5' fill='var(--olive)'><title>22마디 46.5초</title></rect>
+<rect x='233.9' y='63.9' width='8.3' height='136.1' fill='var(--olive)'><title>23마디 48.6초</title></rect>
+<rect x='243.2' y='63.3' width='8.3' height='136.7' fill='var(--olive)'><title>24마디 50.8초</title></rect>
+<rect x='252.4' y='55.2' width='8.3' height='144.8' fill='var(--olive)'><title>25마디 52.9초</title></rect>
+<rect x='261.7' y='60.5' width='8.3' height='139.5' fill='var(--olive)'><title>26마디 55.1초</title></rect>
+<rect x='271.0' y='63.6' width='8.3' height='136.4' fill='var(--olive)'><title>27마디 57.2초</title></rect>
+<rect x='280.2' y='66.5' width='8.3' height='133.5' fill='var(--olive)'><title>28마디 59.4초</title></rect>
+<rect x='289.5' y='62.2' width='8.3' height='137.8' fill='var(--olive)'><title>29마디 61.5초</title></rect>
+<rect x='298.8' y='60.2' width='8.3' height='139.8' fill='var(--olive)'><title>30마디 63.7초</title></rect>
+<rect x='308.0' y='64.2' width='8.3' height='135.8' fill='var(--olive)'><title>31마디 65.8초</title></rect>
+<rect x='317.3' y='54.3' width='8.3' height='145.7' fill='var(--olive)'><title>32마디 67.9초</title></rect>
+<rect x='326.6' y='57.3' width='8.3' height='142.7' fill='var(--clay)'><title>33마디 70.1초</title></rect>
+<text x='331.2' y='214' text-anchor='middle' class='ax'>33</text>
+<rect x='335.9' y='78.1' width='8.3' height='121.9' fill='var(--olive)'><title>34마디 72.2초</title></rect>
+<rect x='345.1' y='77.7' width='8.3' height='122.3' fill='var(--olive)'><title>35마디 74.4초</title></rect>
+<rect x='354.4' y='79.0' width='8.3' height='121.0' fill='var(--olive)'><title>36마디 76.5초</title></rect>
+<rect x='363.7' y='81.0' width='8.3' height='119.0' fill='var(--olive)'><title>37마디 78.6초</title></rect>
+<rect x='372.9' y='91.1' width='8.3' height='108.9' fill='var(--olive)'><title>38마디 80.8초</title></rect>
+<rect x='382.2' y='76.6' width='8.3' height='123.4' fill='var(--olive)'><title>39마디 82.9초</title></rect>
+<rect x='391.5' y='86.1' width='8.3' height='113.9' fill='var(--olive)'><title>40마디 85.1초</title></rect>
+<rect x='400.7' y='80.4' width='8.3' height='119.6' fill='var(--olive)'><title>41마디 87.2초</title></rect>
+<rect x='410.0' y='91.6' width='8.3' height='108.4' fill='#A7B98A'><title>42마디 89.4초</title></rect>
+<text x='414.6' y='214' text-anchor='middle' class='ax'>42</text>
+<rect x='419.3' y='86.3' width='8.3' height='113.7' fill='#A7B98A'><title>43마디 91.5초</title></rect>
+<rect x='428.5' y='78.4' width='8.3' height='121.6' fill='#A7B98A'><title>44마디 93.7초</title></rect>
+<rect x='437.8' y='65.8' width='8.3' height='134.2' fill='#A7B98A'><title>45마디 95.8초</title></rect>
+<rect x='447.1' y='73.2' width='8.3' height='126.8' fill='var(--olive)'><title>46마디 97.9초</title></rect>
+<polygon points='451.7,67.2 445.7,55.2 457.7,55.2' fill='#C0392B'/>
+<text x='451.7' y='51.2' text-anchor='middle' class='ax'>46 코러스진입</text>
+<text x='451.7' y='214' text-anchor='middle' class='ax'>46</text>
+<rect x='456.3' y='64.0' width='8.3' height='136.0' fill='var(--olive)'><title>47마디 100.1초</title></rect>
+<rect x='465.6' y='62.0' width='8.3' height='138.0' fill='var(--olive)'><title>48마디 102.2초</title></rect>
+<rect x='474.9' y='61.3' width='8.3' height='138.7' fill='var(--olive)'><title>49마디 104.4초</title></rect>
+<rect x='484.1' y='64.7' width='8.3' height='135.3' fill='var(--olive)'><title>50마디 106.5초</title></rect>
+<rect x='493.4' y='63.5' width='8.3' height='136.5' fill='var(--olive)'><title>51마디 108.6초</title></rect>
+<rect x='502.7' y='60.4' width='8.3' height='139.6' fill='var(--olive)'><title>52마디 110.8초</title></rect>
+<rect x='512.0' y='53.2' width='8.3' height='146.8' fill='var(--olive)'><title>53마디 112.9초</title></rect>
+<rect x='521.2' y='60.6' width='8.3' height='139.4' fill='var(--olive)'><title>54마디 115.1초</title></rect>
+<rect x='530.5' y='61.9' width='8.3' height='138.1' fill='var(--olive)'><title>55마디 117.2초</title></rect>
+<rect x='539.8' y='64.7' width='8.3' height='135.3' fill='var(--olive)'><title>56마디 119.4초</title></rect>
+<rect x='549.0' y='61.6' width='8.3' height='138.4' fill='var(--olive)'><title>57마디 121.5초</title></rect>
+<rect x='558.3' y='60.5' width='8.3' height='139.5' fill='var(--olive)'><title>58마디 123.6초</title></rect>
+<rect x='567.6' y='63.0' width='8.3' height='137.0' fill='var(--olive)'><title>59마디 125.8초</title></rect>
+<rect x='576.8' y='52.5' width='8.3' height='147.5' fill='var(--olive)'><title>60마디 127.9초</title></rect>
+<rect x='586.1' y='52.5' width='8.3' height='147.5' fill='var(--clay)'><title>61마디 130.1초</title></rect>
+<text x='590.7' y='214' text-anchor='middle' class='ax'>61</text>
+<rect x='595.4' y='85.2' width='8.3' height='114.8' fill='var(--olive)'><title>62마디 132.2초</title></rect>
+<rect x='604.6' y='78.0' width='8.3' height='122.0' fill='var(--olive)'><title>63마디 134.4초</title></rect>
+<polygon points='609.3,72.0 603.3,60.0 615.3,60.0' fill='#C0392B'/>
+<text x='609.3' y='56.0' text-anchor='middle' class='ax'>63 드롭·스트로브</text>
+<text x='609.3' y='214' text-anchor='middle' class='ax'>63</text>
+<rect x='613.9' y='75.9' width='8.3' height='124.1' fill='var(--olive)'><title>64마디 136.5초</title></rect>
+<rect x='623.2' y='75.9' width='8.3' height='124.1' fill='var(--olive)'><title>65마디 138.6초</title></rect>
+<rect x='632.4' y='84.3' width='8.3' height='115.7' fill='var(--olive)'><title>66마디 140.8초</title></rect>
+<rect x='641.7' y='104.8' width='8.3' height='95.2' fill='var(--clay)'><title>67마디 142.9초</title></rect>
+<polygon points='646.3,98.8 640.3,86.8 652.3,86.8' fill='#C0392B'/>
+<text x='646.3' y='82.8' text-anchor='middle' class='ax'>67 마지막코러스(4박)</text>
+<text x='646.3' y='214' text-anchor='middle' class='ax'>67</text>
+<rect x='651.0' y='89.6' width='8.3' height='110.4' fill='var(--olive)'><title>68마디 145.1초</title></rect>
+<rect x='660.2' y='73.8' width='8.3' height='126.2' fill='var(--olive)'><title>69마디 147.2초</title></rect>
+<rect x='669.5' y='59.5' width='8.3' height='140.5' fill='var(--olive)'><title>70마디 149.4초</title></rect>
+<rect x='678.8' y='66.7' width='8.3' height='133.3' fill='var(--olive)'><title>71마디 151.5초</title></rect>
+<rect x='688.0' y='64.6' width='8.3' height='135.4' fill='var(--olive)'><title>72마디 153.6초</title></rect>
+<rect x='697.3' y='67.0' width='8.3' height='133.0' fill='var(--olive)'><title>73마디 155.8초</title></rect>
+<rect x='706.6' y='57.2' width='8.3' height='142.8' fill='var(--olive)'><title>74마디 157.9초</title></rect>
+<rect x='715.9' y='59.0' width='8.3' height='141.0' fill='var(--olive)'><title>75마디 160.1초</title></rect>
+<rect x='725.1' y='54.7' width='8.3' height='145.3' fill='var(--olive)'><title>76마디 162.2초</title></rect>
+<rect x='734.4' y='60.2' width='8.3' height='139.8' fill='var(--olive)'><title>77마디 164.4초</title></rect>
+<rect x='743.7' y='59.6' width='8.3' height='140.4' fill='var(--olive)'><title>78마디 166.5초</title></rect>
+<rect x='752.9' y='53.8' width='8.3' height='146.2' fill='var(--olive)'><title>79마디 168.6초</title></rect>
+<rect x='762.2' y='58.8' width='8.3' height='141.2' fill='var(--olive)'><title>80마디 170.8초</title></rect>
+<rect x='771.5' y='75.2' width='8.3' height='124.8' fill='var(--olive)'><title>81마디 172.9초</title></rect>
+<rect x='780.7' y='61.5' width='8.3' height='138.5' fill='var(--clay)'><title>82마디 175.1초</title></rect>
+<text x='785.4' y='214' text-anchor='middle' class='ax'>82</text>
+<text x='410.0' y='234' text-anchor='middle' class='ax'>마디 번호 · 연두 = 빌드업 · 주황 = 비우는 마디 · 빨간 삼각형 = 강조(블라인더·스트로브)</text></svg>
+<h2>2. 재료</h2>
+<p><strong>박자 층</strong> — 행마다 셋 중 하나로 적는다. <strong>킥/스네어 펄스</strong>(역광이나 무빙을 킥 박에 올렸다 반 박 안에 내림), <strong>체이스 한 칸</strong>(ODD/EVEN 또는 좌/우를 한 칸씩 번갈아), <strong>색/위치 한 단계</strong>(색이나 무빙 위치를 한 칸 옮김, 장면이 바뀌는 지점 포함).</p>
+<p><strong>강조 층</strong> — BLIND(그룹 14)·STROBE(그룹 15). 표에서는 연출·잇는 방식·이유 칸을 굵게 적어 박자 층과 구분한다.</p>
+<p><strong>리그 그룹</strong>(t498 run0에서 읽은 것): ALL 1 · KEY 2 · FOH 3 · BACK 4 · SIDE-L 5 · SIDE-R 6 · SIDE-ALL 7 · WASH-U 8 · WASH-D 9 · WASH-ALL 10 · MOVER-U 11 · MOVER-D 12 · MOVER-ALL 13 · BLIND 14 · STROBE 15 · HAZE 16 · ODD 17 · EVEN 18. HAZE는 쓰지 않는다.</p>
+<p><strong>색</strong> — 다섯 가지다(§2.3 규칙 7, 3~5색). 파스텔 셋(라벤더·핑크·피치)은 곡 조사 §4의 "멤버 전원 파스텔 톤 매칭 의상"에서 왔다. 차가운 화이트는 인트로·브릿지의 기타 질감에 쓴다. 블라인더 흰색은 강조 층에서만 쓴다. 정확한 값은 전체가 끝난 뒤 조정한다는 감독 지시(2026-09-28)에 따라 이름만 정한다.</p>
+<p><strong>얼굴 빛</strong> — FOH는 벌스 1부터 끝까지 다섯 명에게 고르게 켜 둔다. 펄스나 체이스에는 쓰지 않는다.</p>
+<p><strong>효과 속도</strong> — 박자 층이 페이저를 쓰면 속도는 스피드 마스터에 묶고, 값은 앱 분석 BPM 112.35다(감독 결정 4). 콘솔 오디오 입력 마스터는 쓰지 않는다.</p>
+<hr>
+<h2>3. 대본</h2>
+<p>표기: "N~M마디 1·2·4박"은 그 범위 마디마다 그 박들에 같은 동작을 한다는 뜻이다. 강조 층 행은 연출·잇는 방식·이유 칸이 굵다.</p>
+<div class='tw'><table><thead><tr><th>시각</th><th>층</th><th>모멘트유형</th><th>연출</th><th>잇는 방식</th><th>이유</th></tr></thead><tbody><tr><td>0:00.0 (앞박~2마디)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 시작 장면. BACK 차가운 화이트 30%로 실루엣만 보인다. WASH와 FOH는 꺼 둔다. MOVER-ALL은 바닥 쪽 좁은 고정 빔이다</td><td>첫 장면이라 이어 받을 앞 장면이 없다</td><td>디스토션 기타 인트로(잰 값). 곡 조사 §3 "숨은 자아의 발견" — 처음에는 감춰 둔다</td></tr><tr><td>0:00.0 (앞박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — 시작 히트(저역 1.89배)에 BACK 한 번, 1회</td><td>§2.3 규칙 1 — 밝기 한 속성만 움직인다</td><td>곡의 첫 소리가 타격이다(잰 값). §2.3 규칙 1 — 첫 타격에 밝기 하나만 맞춘다</td></tr><tr><td>0:05.8~0:14.4 (3~6마디 4박, 4회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK 역광만, 마디 4박에 한 번씩</td><td>§2.3 규칙 5 — 색과 무빙 위치는 시작 장면 그대로 둔다</td><td>드럼머신 등장(잰 값). 인트로 B의 킥은 4박(1.00)이다. §2.1 벌스 — 절제된 효과로 시작한다</td></tr><tr><td>0:10.1 (5마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — MOVER-ALL을 바닥에서 무대 중간 높이로 한 칸 올린다</td><td>§2.3 규칙 1 — 위치만 바꾼다</td><td>4마디 펄스만 반복하지 않도록 중간에 한 번 바꾼다. §2.1 벌스 — 느린 움직임</td></tr><tr><td>0:14.4 (7마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 벌스 1 장면. WASH-ALL 라벤더 40%가 2마디에 걸쳐 번지듯 켜지고, FOH 얼굴 빛이 켜진다. BACK은 차가운 화이트에서 라벤더로 바뀐다</td><td>§2.3 규칙 2 — 극적인 전환이라 크로스페이드로 넘긴다</td><td>메인 멜로디 시작(잰 값). 곡 조사 §3 "세상을 물들임"·§4 파스텔 톤. §2.1 벌스 — 가수 얼굴이 보이게</td></tr><tr><td>0:14.4~0:22.9 (7~10마디 1·2·4박, 12회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK 역광만, 킥 박에 60%까지</td><td>§2.3 규칙 5 — WASH와 FOH는 고정</td><td>§2.1 벌스 — 절제된 효과. 벌스 1의 킥은 1·2·4박(0.71~0.86)이다</td></tr><tr><td>0:22.9~0:29.4 (11~13마디 2·4박, 6회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — SIDE-L의 ODD와 SIDE-R의 EVEN을 2·4박에 번갈아 켠다. 펄스는 멈춘다</td><td>§2.3 규칙 1 — 움직임을 펄스에서 체이스로 하나만 바꾼다</td><td>4마디마다 박자 동작을 바꾼다. §2.1 벌스</td></tr><tr><td>0:29.4 (14마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — WASH를 25%로 낮추고 SIDE 체이스를 멈춘다. FOH는 유지한다</td><td>§2.3 규칙 3 — 빌드업 앞에서 한 번 덜어낸다</td><td>프리코러스 진입, 음량 83%(잰 값). §2.1 프리코러스 — 조금씩 더해 기대를 쌓는다</td></tr><tr><td>0:29.4~0:36.9 (14~17마디, 1+2+4+4회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — MOVER-ALL의 ODD/EVEN을 점점 빠르게 번갈아 켠다. 14마디는 1박만, 15마디는 1·3박, 16마디는 매 박, 17마디 1·2박은 반 박마다</td><td>§2.3 규칙 1 — 속도 한 가지만 올린다</td><td>4마디 연속 상승(타악 0.78 → 1.37배, 잰 값)에 맞춰 체이스 속도도 두 배씩 올린다. §2.1 프리코러스</td></tr><tr><td>0:36.9 (17마디 3박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 멈춤 — 3·4박 동안 모든 박자 층을 끈다. WASH는 10%, MOVER-ALL은 위쪽 한 점에 모은 고정 빔이다</td><td>§2.3 규칙 3 — 큰 순간 직전에 덜어낸다</td><td>후렴 진입 직전 2박을 비워야 18마디 히트가 산다. §2.3 규칙 3 — 잠깐 멈춤이 다음 히트를 더 세게 만든다</td></tr><tr class='acc'><td>0:37.9 (18마디 1박)</td><td>강조</td><td>코러스진입</td><td><strong>BLIND 한 번 60% — 1박 동안 켜고 반 박 안에 끈다. STROBE는 쓰지 않는다</strong></td><td><strong>§2.3 규칙 2 — 히트라서 끊어서 넘긴다</strong></td><td><strong>코러스 1 진입, 저역 4.45배(잰 값)이고 감독이 귀로 첫 박을 확인했다. §10 금지목록 4번 — 강조는 큰 히트에만 쓴다. 네 번 중 첫 번째라 가장 작게 둔다(§2.3 규칙 4)</strong></td></tr><tr><td>0:37.9 (18마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — WASH-ALL을 핑크 70%로 끊어서 바꾸고, MOVER-U를 위로 연다</td><td>§2.3 규칙 1 — 색과 위치, 두 속성까지만 바꾼다</td><td>§2.1 코러스 — 장면을 연다. 곡 조사 §3 — 후렴 훅은 "갑작스럽고 압도적인 끌림의 순간"이다</td></tr><tr><td>0:37.9~0:55.1 (18~25마디 1·2·4박, 24회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK 역광만, 킥 박에 100%까지. WASH는 고정이다</td><td>§2.3 규칙 5 — 18마디에 연 색과 위치를 유지한다</td><td>코러스 1의 킥은 1·2·4박(0.80~0.93)이다. 코러스 진입에서 드럼이 포인트다(잰 값). §2.1 코러스 — 역광을 강하게</td></tr><tr><td>0:46.5 (22마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — WASH가 핑크에서 피치로 1마디에 걸쳐 번진다</td><td>§2.3 규칙 1 — 색만 바꾼다</td><td>8마디 펄스 블록 안에서 4마디째에 한 번 바꾼다. 곡 조사 §3 "물들임"</td></tr><tr><td>0:55.1~1:07.9 (26~31마디 1·2·4박, 18회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — 대상을 BACK에서 MOVER-U로 옮긴다. 무빙 빔이 킥 박에 밝아진다</td><td>§2.3 규칙 1 — 펄스 대상 하나만 바꾼다</td><td>같은 동작을 8마디 넘게 반복하지 않는다. §2.1 코러스 — 효과를 넓게</td></tr><tr><td>0:55.1~1:07.9 (26~31마디 2박 반, 6회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — MOVER-U의 ODD/EVEN을 2박 반(2.3칸)에 한 번씩 번갈아 바꾼다</td><td>§2.3 규칙 5 — 색은 피치로 유지한다</td><td>코러스 1의 2박 반 킥 후보(0.67)를 따라 엇박을 하나 보탠다. §2.1 코러스 — 효과를 넓게</td></tr><tr><td>1:03.7 (30마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — MOVER-U 위치를 한 칸 옮긴다(위 → 무대 쪽 사선)</td><td>§2.3 규칙 1 — 위치만 바꾼다</td><td>코러스 끝을 앞두고 장면을 한 번 바꾼다. §2.3 규칙 5 — 색은 유지하고 위치만 바꿔 변화로 읽히게 한다</td></tr><tr><td>1:07.9 (32마디 1박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 줄임 — 1박에만 한 번 켜고 체이스를 멈춘다</td><td>§2.3 규칙 3 — 덜어내기 시작한다</td><td>32마디부터 드럼이 얇아진다(타악 0.70배, 잰 값). §2.3 규칙 3 — 숨 고르기 전에 미리 덜어낸다</td></tr><tr><td>1:10.1 (33마디 1박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 멈춤 — 모든 박자 층을 끈다. WASH는 피치에서 라벤더로 1마디에 걸쳐 번지고, 밝기는 40%로 내려간다</td><td>§2.3 규칙 5 — FOH와 MOVER 위치는 유지한다</td><td>후렴 끝 킥 멈춤 1마디(저역 0.25배, 잰 값). §2.1 브레이크다운 — 움직임을 줄이고 숨을 고른다</td></tr><tr><td>1:12.2 (34마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 벌스 2 장면. WASH 라벤더 35%, MOVER-U를 내리고 MOVER-D를 무대 쪽으로 향하게 한다</td><td>§2.3 규칙 1 — 위치 하나만 바꾼다. 색은 33마디의 라벤더를 이어 받는다</td><td>§2.1 벌스 — 절제. 1절과 다른 무빙 높이로 구분한다</td></tr><tr><td>1:12.2~1:20.8 (34~37마디 1·2·4박, 12회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK 역광만, 80%까지</td><td>§2.3 규칙 5</td><td>벌스 2는 1절보다 드럼이 앞에 있다(타악 0.98~1.27배, 잰 값). 킥은 1·2·4박(0.75~0.88)이다. §2.1 벌스 — 절제하되 1절보다 조금 더</td></tr><tr><td>1:16.5 (36마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — MOVER-D 위치를 한 칸 옮긴다</td><td>§2.3 규칙 1</td><td>4마디 블록 안에서 한 번 바꾼다. §2.1 벌스 — 느린 움직임</td></tr><tr><td>1:20.8~1:29.4 (38~41마디 2·4박, 8회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — SIDE-L/SIDE-R을 2·4박에 번갈아 켠다. 펄스는 멈춘다</td><td>§2.3 규칙 1 — 펄스를 체이스로 바꾼다</td><td>4마디마다 동작을 바꾼다. §2.1 벌스 — 절제된 효과</td></tr><tr><td>1:29.4 (42마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — WASH를 25%로 낮추고 펄스를 끈다. FOH는 유지한다</td><td>§2.3 규칙 3 — 빌드업 앞에서 덜어낸다</td><td>프리코러스 2 진입. 저역을 0.40배로 비운 2마디다(잰 값). §2.1 프리코러스</td></tr><tr><td>1:29.4~1:33.7 (42~43마디 2·4박, 4회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — SIDE만 2·4박에 번갈아 켠다</td><td>§2.3 규칙 1 — 움직임 하나만 남긴다</td><td>비운 저역 위에 가벼운 움직임만 둔다. §2.1 프리코러스 — 조금씩 더해 기대를 쌓는다</td></tr><tr><td>1:33.7~1:37.4 (44~45마디, 4+6회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — MOVER-ALL의 ODD/EVEN. 44마디는 매 박, 45마디 1~3박은 반 박마다</td><td>§2.3 규칙 1 — 속도만 올린다</td><td>저역 1.23 → 1.46배 상승(잰 값). §2.1 프리코러스</td></tr><tr><td>1:37.4 (45마디 4박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 당김. 체이스를 끊고, MOVER-ALL을 한 박 일찍 위로 활짝 연다. 다른 것은 모두 멈춘다</td><td>§2.3 규칙 3 — 직전 1박을 비우되, 무빙만 먼저 움직여 히트를 예고한다</td><td>18마디 진입과 다르게 들어가 같은 장면이 반복되지 않게 한다. §2.1 프리코러스</td></tr><tr class='acc'><td>1:37.9 (46마디 1박)</td><td>강조</td><td>코러스진입</td><td><strong>BLIND 한 번 100% — 1박. STROBE는 쓰지 않는다</strong></td><td><strong>§2.3 규칙 2 — 끊어서 넘긴다</strong></td><td><strong>코러스 2 진입, 저역 4.46배(잰 값)이고 감독이 첫 박을 확인했다. §10 금지목록 4번. 18마디보다 크게 둔다 — 곡이 올라가는 흐름(§2.3 규칙 4)</strong></td></tr><tr><td>1:37.9 (46마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — WASH-ALL을 핑크 80%로 끊어서 바꾼다. MOVER는 45마디 4박에 이미 열려 있다</td><td>§2.3 규칙 1 — 색 하나만 바꾼다</td><td>§2.1 코러스. 곡 조사 §3 — 갑작스러운 끌림의 순간</td></tr><tr><td>1:37.9~1:55.1 (46~53마디 1·2·4박, 24회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK과 MOVER-ALL을 함께, 킥 박에. WASH는 고정이다</td><td>§2.3 규칙 5</td><td>코러스 2의 킥은 1·2·4박(0.80~0.93)이다. 코러스 1보다 펄스 대상을 넓힌다. §2.3 규칙 4 — 곡이 올라가는 흐름</td></tr><tr><td>1:46.5 (50마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — WASH가 핑크에서 피치로 번진다</td><td>§2.3 규칙 1</td><td>8마디 블록 안에서 4마디째에 바꾼다. 곡 조사 §3 "물들임"</td></tr><tr><td>1:55.1~2:07.9 (54~59마디 1·2·4박, 18회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK만, 킥 박에</td><td>§2.3 규칙 5</td><td>MOVER를 체이스로 넘기면서 펄스 대상을 줄인다. §2.3 규칙 1 — 한 번에 한두 속성만</td></tr><tr><td>1:55.1~2:07.9 (54~59마디 1·2·2박 반·4박, 24회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — MOVER-ALL의 ODD/EVEN을 킥 박과 2박 반에 번갈아 켠다</td><td>§2.3 규칙 1 — 무빙 동작을 펄스에서 체이스로 바꾼다</td><td>코러스 2의 2박 반 킥 후보(0.87)를 따른다. §2.1 코러스 — 체이스를 빠르게</td></tr><tr><td>1:59.4 · 2:03.6 (56·58마디 1박, 2회)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — MOVER-ALL 위치를 좌우 사선으로 한 칸씩 옮긴다</td><td>§2.3 규칙 1</td><td>체이스 블록 안에서 위치를 바꾼다. §2.1 코러스 — 효과를 넓게</td></tr><tr><td>2:07.9 (60마디 1박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 줄임 — 1박에만, 체이스 멈춤</td><td>§2.3 규칙 3</td><td>코러스 2 끝, 드럼이 얇아진다(타악 0.79배, 잰 값). §2.3 규칙 3</td></tr><tr><td>2:10.1 (61마디 1박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 멈춤 — 모든 박자 층을 끈다. WASH도 끄고 FOH 얼굴 빛만 남긴다. 33마디보다 깊게 비운다</td><td>§2.3 규칙 3 — 다음이 브릿지와 드롭이라 더 비운다</td><td>킥 멈춤 1마디(저역 0.24배, 잰 값). §2.1 브레이크다운</td></tr><tr><td>2:12.2 (62마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 브릿지 장면. BACK 차가운 화이트 30% 실루엣과 바닥 쪽 고정 빔 MOVER-ALL로 인트로 장면을 다시 쓴다</td><td>§2.3 규칙 2 — 장면 전환이라 2박 크로스페이드로 넘긴다</td><td>§2.1 브릿지 — 색을 확 바꿔 꺾임을 표시한다. 인트로의 차가운 질감으로 돌아간다</td></tr><tr><td>2:12.2~2:13.3 (62마디 1·2박, 2회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK 1·2박</td><td>§2.3 규칙 5</td><td>브릿지에도 박을 남겨 드롭 전까지 흐름이 끊기지 않게 한다. §2.3 규칙 5 — 일부 속성은 유지한다</td></tr><tr><td>2:13.8 (62마디 4박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 멈춤 — 4박 한 박을 완전히 비운다</td><td>§2.3 규칙 3 — 큰 순간 직전에 덜어낸다</td><td>드롭 직전 1박 당김. §2.3 규칙 3 — 큰 순간 직전에 덜어낸다</td></tr><tr class='acc'><td>2:14.4 (63마디 1박)</td><td>강조</td><td>드롭</td><td><strong>STROBE 2박 버스트 — 박마다 한 번(초당 1.9회, 4Hz 이하). BLIND는 쓰지 않는다</strong></td><td><strong>§2.3 규칙 2 — 끊어서 넘긴다</strong></td><td><strong>비트 드롭(감독 귀 확인). 노래가 빠지고 저음 비트만 남는 자리다(보컬 대역 0.03~0.04, 잰 값). §10 금지목록 4번 — 스트로브는 강조이지 박자 계수기가 아니다. 그래서 2박만 쓴다. 스트로브를 이 곡에서 처음 꺼낸다(§2.3 규칙 4)</strong></td></tr><tr><td>2:14.4 (63마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — SIDE-L은 라벤더, SIDE-R은 핑크로 좌우가 다른 색이 된다. MOVER-ALL은 위로 연다. WASH는 꺼진 채 둔다</td><td>§2.3 규칙 1 — 색과 위치 두 속성까지</td><td>곡 조사 §3 "화학적인 끌림·완벽한 합" — 두 색이 마주 선다. §2.1 드롭 — 아껴 둔 큰 연출</td></tr><tr><td>2:14.4~2:22.9 (63~66마디 1·3박, 8회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK, 1·3박</td><td>§2.3 규칙 5</td><td>드롭의 킥은 1·3박(1.00)이다. 코러스와 다른 박에 쳐서 구간을 구분한다. §2.1 드롭</td></tr><tr><td>2:14.4~2:18.6 (63~64마디 반 박, 16회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — MOVER-ALL의 ODD/EVEN을 반 박마다</td><td>§2.3 규칙 1 — 무빙 속도만 올린다</td><td>노래 없는 저음 비트 구간이라 움직임이 앞에 나선다. 저역 1.43~2.01배(잰 값). §2.1 드롭 — 아껴 둔 큰 연출</td></tr><tr><td>2:18.6~2:22.9 (65~66마디 매 박, 8회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — SIDE-L과 SIDE-R을 매 박 거울처럼 번갈아 켠다. 무빙 체이스는 멈춘다</td><td>§2.3 규칙 1 — 체이스 대상을 바꾼다</td><td>드롭 4마디 안에서 2마디째에 바꾼다. 곡 조사 §3 "완벽한 합" — 좌우 대칭</td></tr><tr><td>2:22.9 (67마디 1박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 멈춤 — 1~3박 동안 모든 박자 층을 끈다. FOH 얼굴 빛과 BACK 차가운 화이트 20%만 남긴다</td><td>§2.3 규칙 3 — 마지막 코러스 직전에 덜어낸다</td><td>덜어냄 마디(음량 79%, 화성 0.52배, 잰 값). 곡 조사 §3 "숨은 자아의 발견" — 얼굴만 남겨 드러낸다</td></tr><tr class='acc'><td>2:24.5 (67마디 4박)</td><td>강조</td><td>마지막코러스</td><td><strong>BLIND 한 번 100%, 그리고 STROBE 1마디 버스트 — 68마디 4박까지 박마다 한 번 4회(초당 1.9회, 4Hz 이하). 곡에서 가장 큰 강조다</strong></td><td><strong>§2.3 규칙 2 — 끊어서 넘긴다. 음악처럼 한 박 당겨 들어간다</strong></td><td><strong>마지막 코러스 히트가 한 박 앞에서 시작한다(144.57초, 잰 값). §2.3 규칙 4 — 아껴 둔 가장 큰 연출을 여기서 쓴다. §10 금지목록 4번 — 버스트는 1마디로 끝낸다</strong></td></tr><tr><td>2:24.5 (67마디 4박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 라벤더(SIDE)·핑크(WASH)·피치(BACK)를 한 무대에 함께 켠다. MOVER-ALL은 가장 넓은 각도로 연다</td><td>§2.3 규칙 1 — 색과 위치 두 속성까지</td><td>곡 조사 §3 "걸음마다 빛남"·"세상을 물들임" — 지금까지 쓴 색이 한꺼번에 퍼진다. §2.1 마지막 코러스</td></tr><tr><td>2:25.1~2:42.2 (68~75마디 1·2·4박, 24회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK과 MOVER-ALL을 함께, 킥 박에</td><td>§2.3 규칙 5 — 67마디 4박에 연 세 색을 유지한다</td><td>마지막 코러스의 킥은 1·2·4박(0.71~0.86)이다. §2.1 마지막 코러스</td></tr><tr><td>2:27.2 (69마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — MOVER-ALL을 관객 쪽으로 한 칸 더 연다</td><td>§2.3 규칙 1 — 위치만 바꾼다</td><td>마지막 코러스 안에서 음량이 다시 오른다(123%, 잰 값). §2.3 규칙 4 — 끝까지 올라가는 흐름</td></tr><tr><td>2:33.6 (72마디 1박)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 세 색의 자리를 한 칸씩 돌린다(SIDE 핑크 · WASH 피치 · BACK 라벤더)</td><td>§2.3 규칙 1 — 색만 바꾼다</td><td>8마디 블록 안에서 4마디째에 바꾼다. 곡 조사 §3 "물들임"</td></tr><tr><td>2:42.2~2:55.1 (76~81마디 1·2·4박, 18회)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 — BACK만</td><td>§2.3 규칙 5</td><td>MOVER를 체이스로 넘기면서 펄스 대상을 줄인다. §2.3 규칙 1 — 한 번에 한두 속성만</td></tr><tr><td>2:42.2~2:55.1 (76~81마디 반 박, 48회)</td><td>박자</td><td>기타</td><td>체이스 한 칸 — MOVER-ALL의 ODD/EVEN을 반 박마다. 곡에서 가장 빠르다</td><td>§2.3 규칙 1 — 무빙 속도만 올린다</td><td>§2.1 마지막 코러스 — 가장 큰 연출. 빠르기를 마지막 6마디까지 아꼈다(§2.3 규칙 4)</td></tr><tr><td>2:46.5 · 2:50.8 (78·80마디 1박, 2회)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 세 색의 자리를 한 칸씩 더 돌린다</td><td>§2.3 규칙 1</td><td>체이스 블록 안에서 색을 바꾼다. 곡 조사 §3 "물들임"</td></tr><tr><td>2:55.1 (82마디 1박)</td><td>박자</td><td>기타</td><td>킥/스네어 펄스 멈춤 — 모든 박자 층을 끈다. 세 색과 FOH는 그대로 둔다</td><td>§2.3 규칙 5 — 색은 유지하고 움직임만 멈춘다</td><td>킥 멈춤, 저역 0.23배(잰 값). §2.1 아웃트로 — 안정된 상태로 돌아온다</td></tr><tr><td>2:59.0 (179초)</td><td>박자</td><td>기타</td><td>색/위치 한 단계 — 3초 페이드로 완전히 어둡게 한다. 그 뒤 197초까지 어둠을 유지하고, 새 장면을 두지 않는다</td><td>§2.3 규칙 2 — 끝은 크로스페이드로 넘긴다</td><td>음악이 끝나고 18초는 무음이다(잰 값). §2.1 아웃트로</td></tr></tbody></table></div>
+<h3>강조 크기 순서</h3>
+<div class='tw'><table><thead><tr><th>순서</th><th>위치</th><th>쓰는 것</th><th>이유</th></tr></thead><tbody><tr><td>1(가장 작음)</td><td>18마디 0:37.9 코러스진입</td><td>BLIND 60% 1박</td><td>첫 후렴이다. 곡이 올라가는 흐름을 남기려고 가장 작게 둔다(§2.3 규칙 4)</td></tr><tr><td>2</td><td>46마디 1:37.9 코러스진입</td><td>BLIND 100% 1박</td><td>두 번째 후렴이다. 18마디와 같은 히트(저역 4.46배)지만 한 단계 키운다</td></tr><tr><td>3</td><td>63마디 2:14.4 드롭</td><td>STROBE 2박</td><td>노래가 빠지는 비트 드롭이다. 스트로브를 처음 꺼낸다. 블라인더를 쓰지 않아 46마디와 다른 종류의 강조로 구분한다</td></tr><tr><td>4(가장 큼)</td><td>67마디 4박 2:24.5 마지막코러스</td><td>BLIND 100% + STROBE 1마디(4회)</td><td>마지막 코러스의 당긴 히트다. 아껴 둔 두 장비를 함께, 가장 길게 쓴다(§2.3 규칙 4)</td></tr></tbody></table></div>
+<p>스트로브는 두 곳에서만, 박마다 한 번(112.35 BPM에서 초당 1.9회)으로 표준 권장 상한(약 4Hz)보다 낮게 둔다.</p>
+<hr>
+<h2>4. 세는 방법 — 박자 층 이벤트는 큐가 아니다</h2>
+<p>박자 층 이벤트와 콘솔 큐는 서로 다른 수다. 표준 문서 §9의 "큐"(곡당 약 10, 프레이즈 단위 4~8마디)는 <strong>룩이 바뀌는 횟수</strong>를 세고, 박자 층은 <strong>한 룩 안에서 생기는 움직임</strong>을 센다(REQ-LDRHYTHM-008). 이 대본의 박자 층 이벤트를 콘솔 큐 수로 더하지 않는다. 수는 <code>.moai/reports/t511/count_script.py</code>가 대본 표에서 직접 센다.</p>
+<div class='tw'><table><thead><tr><th>항목</th><th>수</th><th>무엇을 세나</th></tr></thead><tbody><tr><td>킥/스네어 펄스</td><td>173</td><td>박자 층 이벤트</td></tr><tr><td>체이스 한 칸</td><td>141</td><td>박자 층 이벤트</td></tr><tr><td>색/위치 한 단계</td><td>23</td><td>박자 층 이벤트(장면이 바뀌는 지점 포함)</td></tr><tr><td><strong>박자 층 합계</strong></td><td><strong>337</strong></td><td>곡당 수백 개를 허용한 감독 결정 3의 범위 안이다</td></tr><tr><td>강조 층</td><td>4</td><td>18마디 · 46마디 · 63마디 · 67마디 4박</td></tr></tbody></table></div>
+<hr>
+<h2>5. 기존 앱 연출(t510) 대 이 대본</h2>
+<p>기존 앱 연출의 수치는 <code>reports/loveattack-baseline-20261006.md</code>(가짜 콘솔 송신 기준)에서, 이 대본의 수치는 <code>count_script.py</code>가 위 표에서 셌다.</p>
+<div class='tw'><table><thead><tr><th>항목</th><th>기존 앱 연출(t510, 가짜 콘솔)</th><th>이 대본</th></tr></thead><tbody><tr><td>장면 수</td><td>큐 11개</td><td>색/위치가 바뀌는 지점 21곳</td></tr><tr><td>장면이 가장 오래 그대로인 시간</td><td>34.2초(Chorus 2), 후렴 셋이 모두 30초 넘음</td><td>17.2초</td></tr><tr><td>장면 안의 움직임</td><td>없음 — 페이저 제안 9큐, 송신 0줄, 속도 줄 0</td><td>박자 층 이벤트 337개(펄스·체이스·한 단계), 킥 박에 맞춤</td></tr><tr><td>강조 위치</td><td>Chorus 3(144.3초) BLIND 80 1.1초 한 번</td><td>18마디 BLIND 60 · 46마디 BLIND 100 · 63마디 STROBE 2박 · 67마디 4박 BLIND 100 + STROBE 1마디</td></tr><tr><td>후렴 진입 시각</td><td>앱 경계 37.5 · 97.5 · 144.3초(실제 첫 박보다 0.4~0.8초 이름)</td><td>37.9 · 97.9초(감독 귀 확인 첫 박) · 144.5초(당긴 히트, 잰 값)</td></tr><tr><td>무음 179~197초</td><td>Finale 큐, 디머 100</td><td>179초에 3초 페이드 → 어둠 유지</td></tr></tbody></table></div>
+<hr>
+
+<div class="lead"><p><strong>감독님이 봐 주실 것</strong></p><ol>
+<li>강조 네 곳의 크기 순서 — 18마디(블라인더 60%) &lt; 46마디(블라인더 100%) &lt; 63마디(스트로브 2박) &lt; 67마디 4박(블라인더 + 스트로브 1마디).</li>
+<li>63마디 드롭에 블라인더 없이 스트로브만 쓴 것이 맞는지.</li>
+<li>76~81마디의 반 박 체이스(0.27초 간격)가 너무 빠르지 않은지.</li>
+<li>파스텔 세 색(라벤더·핑크·피치)과 차가운 화이트의 흐름이 곡과 어울리는지. 정확한 색 값은 나중에 맞춰요.</li>
+<li>각 줄에 "어울릴 것 같다 / 아니다"를 표시해 주시면 M2 손 시연의 순서를 정할 때 써요.</li>
+</ol></div>
+
+<h2>6. 이 대본이 정하지 않은 것 (감독 검토 때 볼 것)</h2>
+<ul><li><strong>강조 크기 순서</strong>(§3 뒤 표). 특히 63마디 드롭에 블라인더 없이 스트로브만 쓴 것이 맞는지.</li><li><strong>76~81마디 반 박 체이스(48회)의 속도.</strong> 0.27초 간격이다. 너무 빠르면 1·2·4박으로 낮춘다.</li><li><strong>색의 실제 값.</strong> 이름만 정했다. 파스텔 세 색과 차가운 화이트의 정확한 값은 전체가 끝난 뒤 조정한다.</li><li><strong>박마다 생기는 이벤트를 무엇으로 낼지.</strong> M2에서 정할 방법 문제다. 대본의 내용은 바뀌지 않는다(판정서 §4).</li></ul>
+</main></body></html>

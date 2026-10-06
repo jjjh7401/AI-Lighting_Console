@@ -12,7 +12,23 @@
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+- run_phase_start_sha: `cea25c04` (카드 t511, 감독 착수 승인 2026-10-06 — M1 만)
+- 감독 귀 확인 2026-10-06: t509 다운비트 위상 1 · 63~66마디 비트 드롭 · 후렴 진입 18·46마디 첫 박 → 마디·시각은 `reports/loveattack-music-map-20261006.md` 그대로
+- 참고(비채택): Club Diver 대본 초안 PR #553(t507, 미머지) — 형식만 참고, 내용은 옮기지 않음
+
+### M1 — LOVE ATTACK 연출 대본 (2026-10-06, 감독 검토 대기)
+
+- 산출물: `m1-love-attack-script.md`(이 폴더, 유일한 공식 산출물) · 감독 검토용 사본 `reports/loveattack-script-m1-20261006.html`
+- 코드 diff 0줄 · 콘솔 명령 0건
+- 대본 규모: 표 55행(박자 51 · 강조 4), 박자 층 이벤트 337개(펄스 173 · 체이스 한 칸 141 · 색/위치 한 단계 23), 강조 4곳(18·46·63마디, 67마디 4박)
+- 기계 점검(사전 체일 뿐, 완료 아님 — REQ-011): `python .moai/reports/t511/count_script.py` → `problems 0`, `cite_10_4 5`, 오표기 0, 코드 블록 0, 이유 칸 인용 누락 0, 약점 ①②③ 통과. 첫 실행에서 이유 칸 인용 누락 21행과 강조 직전 비움 판정 창 문제 1건을 잡아 고쳤다
+- 판정서: `.moai/reports/t511/verdict.md`
+- 다음: 감독 M1 검토. 통과 전 M2 착수 금지(REQ-001·002). M2 첫 송신 전 AC-LDRHYTHM-012 측정 도구 필요(plan.md §D)
+
+## §F Phase 4 Mode Selection
+
+- Decision: direct — M1 은 문서 한 개(대본)이고 코드 0이라 서브에이전트를 띄우지 않고 레인이 직접 썼다
+- 입력: tier M · 파일 1(대본) + 사본 1 + 판정서 · 도메인 1(연출 문서) · 코드 0
 
 ## §E.3 Run-phase Audit-Ready Signal
 

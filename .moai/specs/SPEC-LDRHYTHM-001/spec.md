@@ -2,7 +2,7 @@
 id: SPEC-LDRHYTHM-001
 title: "리듬 연출 — 대본 우선 설계(LOVE ATTACK)"
 version: "0.2.0"
-status: draft
+status: in-progress
 created: 2026-10-05
 updated: 2026-10-06
 author: jaihyun
