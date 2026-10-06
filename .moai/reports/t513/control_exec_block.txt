@@ -1,0 +1,2 @@
+patched=False wire_sends=1 outcome=ExecOutcome(status='unconfirmed', detail='no result confirmation within 0.2s (send loss and feedback loss are indistinguishable)', sends=())
+patched=True wire_sends=0 outcome=ExecOutcome(status='failed', detail='t513 deny-all: not sent to console', sends=())

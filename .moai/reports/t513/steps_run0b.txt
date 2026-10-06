@@ -1,0 +1,7 @@
+props:ShowData/DataPools/Default/Sequences/210|NO,NAME
+props:ShowData/DataPools/Default/Sequences/2000|NO,NAME
+props:ShowData/DataPools/Default/Timecodes/9|NO,NAME
+state:ShowData/DataPools/Default/Sequences/211
+state:ShowData/DataPools/Default/Sequences/219
+state:ShowData/DataPools/Default/Timecodes/11
+state:ShowData/DataPools/Default/Timecodes/19
