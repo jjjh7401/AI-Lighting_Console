@@ -1,7 +1,9 @@
 """t511 대본(stdin)의 표 행을 종류별로 센다. 전체와 0~25마디(시작 시각 0:55.1 이하) 두 범위.
 
-사용(측정 대상 5e064752 = t514 수정본): git show origin/WT-loveattack-m1:.moai/specs/SPEC-LDRHYTHM-001/m1-love-attack-script.md \
-        | python3 .moai/reports/t515/count_kinds.py
+측정 대상: origin/WT-loveattack-m1 5e064752 (t514 수정본)
+    git show origin/WT-loveattack-m1:.moai/specs/SPEC-LDRHYTHM-001/m1-love-attack-script.md \
+        > script.md
+    python3 .moai/reports/t515/count_kinds.py < script.md
 """
 
 import collections
