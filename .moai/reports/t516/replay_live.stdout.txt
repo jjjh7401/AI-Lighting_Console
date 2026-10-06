@@ -1,0 +1,46 @@
+{"step": "pre_seq_220", "t": 0.065, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - OVERLAP SCENE"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_221", "t": 0.132, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - SPEEDMASTER MEASURE"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_222", "t": 0.198, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/222", "ok": true, "payload": {"id": "gate-4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/222", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - NEW SHAPES"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 0.198, "say": "① Speed15 BPM 표시가 112.35 인지"}
+{"step": "bpm", "t": 0.199, "kind": "screen", "cleared": true, "commands": [{"command": "Master 3.15 At BPM 112.35", "reasons": []}]}
+{"step": "bpm", "t": 0.266, "kind": "exec", "command": "Master 3.15 At BPM 112.35", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 2.27, "say": "⑤ BACK 30% 켜짐"}
+{"step": "scene_on", "t": 2.333, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 220", "reasons": ["reference-invoking command"]}]}
+{"step": "scene_on", "t": 2.399, "kind": "exec", "command": "Goto Cue 1 Sequence 220", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 3.401, "say": "⑤ BACK 이 1박마다 깜빡임(장면 위에 박자)"}
+{"step": "beat_on", "t": 3.466, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "beat_on", "t": 3.532, "kind": "exec", "command": "Goto Cue 1 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 7.533, "say": "⑤ 깜빡임이 멈추고 BACK 30% 로 돌아오는지"}
+{"step": "beat_off", "t": 7.598, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "beat_off", "t": 7.665, "kind": "exec", "command": "Off Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "scene_off", "t": 11.734, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 220", "reasons": ["reference-invoking command"]}]}
+{"step": "scene_off", "t": 11.798, "kind": "exec", "command": "Off Sequence 220", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 13.803, "say": "② Measure 1 — 1박에 한 번(8초에 약 15번)"}
+{"step": "measure_1", "t": 13.865, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_1", "t": 13.932, "kind": "exec", "command": "Goto Cue 1 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 23.937, "say": "② Measure 2 — 2박에 한 번(약 7번)"}
+{"step": "measure_2", "t": 23.998, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_2", "t": 24.064, "kind": "exec", "command": "Goto Cue 2 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 34.066, "say": "② Measure 0.5 — 반 박에 한 번(약 30번)"}
+{"step": "measure_3", "t": 34.131, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_3", "t": 34.197, "kind": "exec", "command": "Goto Cue 3 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "measure_off", "t": 44.263, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_off", "t": 44.33, "kind": "exec", "command": "Off Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 46.334, "say": "③ 팬 웨이브 — 줄지어 따라가는 파도, 2박 한 바퀴"}
+{"step": "shape_1", "t": 46.399, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_1", "t": 46.464, "kind": "exec", "command": "Goto Cue 1 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 56.464, "say": "③ 엇갈린 팬 웨이브 — ODD/EVEN 반대, 1박"}
+{"step": "shape_2", "t": 56.529, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_2", "t": 56.596, "kind": "exec", "command": "Goto Cue 2 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 66.601, "say": "③ 가속 스윕 4박"}
+{"step": "shape_3", "t": 66.664, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_3", "t": 66.728, "kind": "exec", "command": "Goto Cue 3 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 76.733, "say": "③ 가속 스윕 2박"}
+{"step": "shape_4", "t": 76.795, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 4 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_4", "t": 76.862, "kind": "exec", "command": "Goto Cue 4 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 86.867, "say": "③ 가속 스윕 1박"}
+{"step": "shape_5", "t": 86.928, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 5 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_5", "t": 86.994, "kind": "exec", "command": "Goto Cue 5 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "shape_off", "t": 97.06, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_off", "t": 97.127, "kind": "exec", "command": "Off Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"bundles": {"bpm": true, "scene_on": true, "beat_on": true, "beat_off": true, "scene_off": true, "measure_1": true, "measure_2": true, "measure_3": true, "measure_off": true, "shape_1": true, "shape_2": true, "shape_3": true, "shape_4": true, "shape_5": true, "shape_off": true}, "marks": [{"label": "bpm", "t": 0.07}, {"label": "scene_on", "t": 2.2}, {"label": "beat_on", "t": 3.33}, {"label": "beat_off", "t": 7.47}, {"label": "scene_off", "t": 11.6}, {"label": "measure_1", "t": 13.73}, {"label": "measure_2", "t": 23.87}, {"label": "measure_3", "t": 34.0}, {"label": "measure_off", "t": 44.13}, {"label": "shape_1", "t": 46.27}, {"label": "shape_2", "t": 56.4}, {"label": "shape_3", "t": 66.53}, {"label": "shape_4", "t": 76.66}, {"label": "shape_5", "t": 86.8}, {"label": "shape_off", "t": 96.93}], "pre_names": {"220": "RHYTHM PROBE - OVERLAP SCENE", "221": "RHYTHM PROBE - SPEEDMASTER MEASURE", "222": "RHYTHM PROBE - NEW SHAPES"}, "verdict": "replayed — ②③⑤ and ① display by director watch", "preflight": "responder_ok", "approval_requests": [{"commands": ["Master 3.15 At BPM 112.35"], "approved": true}, {"commands": ["Goto Cue 1 Sequence 220"], "approved": true}, {"commands": ["Goto Cue 1 Sequence 221"], "approved": true}, {"commands": ["Off Sequence 221"], "approved": true}, {"commands": ["Off Sequence 220"], "approved": true}, {"commands": ["Goto Cue 1 Sequence 221"], "approved": true}, {"commands": ["Goto Cue 2 Sequence 221"], "approved": true}, {"commands": ["Goto Cue 3 Sequence 221"], "approved": true}, {"commands": ["Off Sequence 221"], "approved": true}, {"commands": ["Goto Cue 1 Sequence 222"], "approved": true}, {"commands": ["Goto Cue 2 Sequence 222"], "approved": true}, {"commands": ["Goto Cue 3 Sequence 222"], "approved": true}, {"commands": ["Goto Cue 4 Sequence 222"], "approved": true}, {"commands": ["Goto Cue 5 Sequence 222"], "approved": true}, {"commands": ["Off Sequence 222"], "approved": true}], "skipped_saveshow": ["SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)", "SaveShow skipped (supervisor)"]}

@@ -1,0 +1,15 @@
+Master 3.15 At BPM 112.35
+Goto Cue 1 Sequence 220
+Goto Cue 1 Sequence 221
+Off Sequence 221
+Off Sequence 220
+Goto Cue 1 Sequence 221
+Goto Cue 2 Sequence 221
+Goto Cue 3 Sequence 221
+Off Sequence 221
+Goto Cue 1 Sequence 222
+Goto Cue 2 Sequence 222
+Goto Cue 3 Sequence 222
+Goto Cue 4 Sequence 222
+Goto Cue 5 Sequence 222
+Off Sequence 222
