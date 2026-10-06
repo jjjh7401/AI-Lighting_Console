@@ -1,0 +1,28 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/210|NO,NAME
+    wire: Plugin "CopilotResponder" "props ad5a19da NO,NAME ShowData/DataPools/Default/Sequences/210"
+<<< {"id": "ad5a19da", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/210", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "210"}, {"n": "NAME", "ok": true, "t": "string", "v": "Sequence 210"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/2000|NO,NAME
+    wire: Plugin "CopilotResponder" "props 1868a199 NO,NAME ShowData/DataPools/Default/Sequences/2000"
+<<< {"id": "1868a199", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/2000", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "2000"}, {"n": "NAME", "ok": true, "t": "string", "v": "Sequence 2000"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/9|NO,NAME
+    wire: Plugin "CopilotResponder" "props 2e01dc06 NO,NAME ShowData/DataPools/Default/Timecodes/9"
+<<< {"id": "2e01dc06", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/9", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "9"}, {"n": "NAME", "ok": true, "t": "string", "v": "Sequence 210 Timecode"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/211
+    wire: Plugin "CopilotResponder" "state ac75f8a5 ShowData/DataPools/Default/Sequences/211"
+<<< {"error": "path segment not found: '211' (in ShowData/DataPools/Default/Sequences/211)", "id": "ac75f8a5", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/211", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/219
+    wire: Plugin "CopilotResponder" "state 1b10d80e ShowData/DataPools/Default/Sequences/219"
+<<< {"error": "path segment not found: '219' (in ShowData/DataPools/Default/Sequences/219)", "id": "1b10d80e", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/219", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/11
+    wire: Plugin "CopilotResponder" "state 906d0d26 ShowData/DataPools/Default/Timecodes/11"
+<<< {"error": "path segment not found: '11' (in ShowData/DataPools/Default/Timecodes/11)", "id": "906d0d26", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Timecodes/11", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/19
+    wire: Plugin "CopilotResponder" "state 870fc062 ShowData/DataPools/Default/Timecodes/19"
+<<< {"error": "path segment not found: '19' (in ShowData/DataPools/Default/Timecodes/19)", "id": "870fc062", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Timecodes/19", "v": 1}

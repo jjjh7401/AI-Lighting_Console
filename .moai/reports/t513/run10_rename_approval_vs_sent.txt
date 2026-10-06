@@ -1,0 +1,14 @@
+approval file      : .moai/reports/t513/approve_rename.txt
+  raw sha256       : 52b4893a8371795da31a6b6942df3e9e77edff76a10071789fd66e9b80a96db6
+  raw == canonical : True
+  canonical lines  : 2
+  canonical sha256 : 52b4893a8371795da31a6b6942df3e9e77edff76a10071789fd66e9b80a96db6
+sent source        : .moai/reports/t513/run10_rename/audit (files: ['audit-20261006.jsonl'])
+  window           : since=None until=None
+  send rows        : 2 by kind {'command': 2}
+  rebuilt sha256   : 52b4893a8371795da31a6b6942df3e9e77edff76a10071789fd66e9b80a96db6
+WARN sends not ok  : 0
+(1) sha256 equal                         : True
+(2) 송신 안 됨 (sent, not in approval)    : 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: PASS

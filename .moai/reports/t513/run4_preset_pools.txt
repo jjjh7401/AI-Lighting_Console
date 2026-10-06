@@ -1,0 +1,20 @@
+
+>>> state:ShowData/DataPools/Default/PresetPools
+    wire: Plugin "CopilotResponder" "state e10621c5 ShowData/DataPools/Default/PresetPools"
+<<< {"children": [{"class": "Presets", "i": 1, "name": "Dimmer"}, {"class": "Presets", "i": 2, "name": "Position"}, {"class": "Presets", "i": 3, "name": "Gobo"}, {"class": "Presets", "i": 4, "name": "Color"}, {"class": "Presets", "i": 5, "name": "Beam"}, {"class": "Presets", "i": 6, "name": "Focus"}, {"class": "Presets", "i": 7, "name": "Control"}, {"class": "Presets", "i": 8, "name": "Shapers"}, {"class": "Presets", "i": 9, "name": "Video"}, {"class": "Presets", "i": 21, "name": "All 1"}, {"class": "Presets", "i": 22, "name": "All 2"}, {"class": "Presets", "i": 23, "name": "All 3"}, {"class": "Presets", "i": 24, "name": "All 4"}, {"class": "Presets", "i": 25, "name": "All 5"}], "id": "e10621c5", "kind": "state", "node": {"childCount": 14, "class": "PresetPools", "enumeration": "ok", "name": "PresetPools"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/4
+    wire: Plugin "CopilotResponder" "state 806f3db4 ShowData/DataPools/Default/PresetPools/4"
+<<< {"children": [{"class": "Preset", "i": 1, "name": "골드 앰버 (=P1)"}, {"class": "Preset", "i": 2, "name": "핫 핑크 (=P4)"}, {"class": "Preset", "i": 3, "name": "딥 퍼플 (=P5)"}, {"class": "Preset", "i": 4, "name": "터쿼이즈 (=P6)"}, {"class": "Preset", "i": 5, "name": "선셋 오렌지 (=P7)"}, {"class": "Preset", "i": 6, "name": "딥 블루"}, {"class": "Preset", "i": 7, "name": "웜 화이트 (=P2)"}, {"class": "Preset", "i": 8, "name": "뉴트럴 화이트 (=P3)"}, {"class": "Preset", "i": 32, "name": "Preset 32"}], "id": "806f3db4", "kind": "state", "node": {"childCount": 9, "class": "Presets", "enumeration": "ok", "name": "Color"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/4", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/21
+    wire: Plugin "CopilotResponder" "state dbd89e99 ShowData/DataPools/Default/PresetPools/21"
+<<< {"children": [{"class": "Preset", "i": 1, "name": "DIM-PULSE"}, {"class": "Preset", "i": 2, "name": "PT-CIRCLE"}, {"class": "Preset", "i": 3, "name": "DIM-CHASE"}, {"class": "Preset", "i": 4, "name": "DIM-BREATHE"}, {"class": "Preset", "i": 5, "name": "TILT-SWEEP"}, {"class": "Preset", "i": 6, "name": "DIM-TWINKLE"}], "id": "dbd89e99", "kind": "state", "node": {"childCount": 6, "class": "Presets", "enumeration": "ok", "name": "All 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/4/9
+    wire: Plugin "CopilotResponder" "state 1436467c ShowData/DataPools/Default/PresetPools/4/9"
+<<< {"error": "path segment not found: '9' (in ShowData/DataPools/Default/PresetPools/4/9)", "id": "1436467c", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/PresetPools/4/9", "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/21/7
+    wire: Plugin "CopilotResponder" "state e20ef81e ShowData/DataPools/Default/PresetPools/21/7"
+<<< {"error": "path segment not found: '7' (in ShowData/DataPools/Default/PresetPools/21/7)", "id": "e20ef81e", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/PresetPools/21/7", "v": 1}

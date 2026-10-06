@@ -1,0 +1,11 @@
+lines run1 190 t510 190
+approved==sent True
+run1==run2 True
+diff_lines_vs_t510_after_renumber 0
+lines naming 219 / Timecode 19: 36
+   Store Sequence 219 Cue 1 'Intro' CueFade 4.27247
+   Store Sequence 219 Cue 2 'Verse 1' CueFade 0.801088
+   Store Sequence 219 Cue 3 'Verse 2' CueFade 1.60218
+   Store Sequence 219 Cue 4 'Chorus 1' CueFade 0.267029
+   Store Sequence 219 Cue 5 'Verse 3' CueFade 0.801088
+   Store Sequence 219 Cue 6 'Verse 4' CueFade 0.801088

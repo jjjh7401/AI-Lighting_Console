@@ -1,0 +1,17 @@
+ChangeDestination Root
+ClearAll
+Group 1
+Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40
+Step 2
+Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; Attribute 'ColorRGB_B' At 5
+Step 1 At Accel -100
+Step 1 At Decel -100
+Step 2 At Accel -100
+Step 2 At Decel -100
+Attribute 'ColorRGB_R' At Phase 0
+Attribute 'ColorRGB_G' At Phase 0
+Attribute 'ColorRGB_B' At Phase 0
+Attribute 'ColorRGB_R' At Speed 30 ; Attribute 'ColorRGB_G' At Speed 30 ; Attribute 'ColorRGB_B' At Speed 30
+Store Preset 4.9 'Breathe Warm' /Universal
+Label Preset 4.9 'Breathe Warm'
+ClearAll

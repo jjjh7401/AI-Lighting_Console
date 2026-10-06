@@ -1,0 +1,120 @@
+[
+ {
+  "step": "before",
+  "path": "ShowData/DataPools/Default/Sequences/219",
+  "reply": {
+   "id": "gate-1",
+   "kind": "props",
+   "ok": true,
+   "path": "ShowData/DataPools/Default/Sequences/219",
+   "reads": [
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "219"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "Sequence 219"
+    }
+   ],
+   "truncated": false,
+   "v": 1
+  }
+ },
+ {
+  "step": "before",
+  "path": "ShowData/DataPools/Default/Timecodes/19",
+  "reply": {
+   "id": "gate-2",
+   "kind": "props",
+   "ok": true,
+   "path": "ShowData/DataPools/Default/Timecodes/19",
+   "reads": [
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "19"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "Sequence 219 Timecode"
+    }
+   ],
+   "truncated": false,
+   "v": 1
+  }
+ },
+ {
+  "step": "screen",
+  "cleared": false
+ },
+ {
+  "step": "exec",
+  "command": "Set Sequence 219 Property 'Name' 'LOVE ATTACK - OLD APP'",
+  "fired": false
+ },
+ {
+  "step": "exec",
+  "command": "Set Timecode 19 Property 'Name' 'LOVE ATTACK - OLD APP TC'",
+  "fired": false
+ },
+ {
+  "step": "after",
+  "path": "ShowData/DataPools/Default/Sequences/219",
+  "reply": {
+   "id": "gate-3",
+   "kind": "props",
+   "ok": true,
+   "path": "ShowData/DataPools/Default/Sequences/219",
+   "reads": [
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "219"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "Sequence 219"
+    }
+   ],
+   "truncated": false,
+   "v": 1
+  }
+ },
+ {
+  "step": "after",
+  "path": "ShowData/DataPools/Default/Timecodes/19",
+  "reply": {
+   "id": "gate-4",
+   "kind": "props",
+   "ok": true,
+   "path": "ShowData/DataPools/Default/Timecodes/19",
+   "reads": [
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "19"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "Sequence 219 Timecode"
+    }
+   ],
+   "truncated": false,
+   "v": 1
+  }
+ }
+]

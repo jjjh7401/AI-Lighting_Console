@@ -1,0 +1,6 @@
+DIFF ShowData/DataPools/Default/Groups: removed=[] added=[]
+DIFF ShowData/DataPools/Default/PresetPools/2: removed=[] added=[]
+DIFF ShowData/DataPools/Default/PresetPools/21: removed=[] added=[(1, 'DIM-PULSE'), (2, 'PT-CIRCLE'), (3, 'DIM-CHASE'), (4, 'DIM-BREATHE'), (5, 'TILT-SWEEP'), (6, 'DIM-TWINKLE'), (7, 'Finale Slam')]
+DIFF ShowData/DataPools/Default/PresetPools/4: removed=[] added=[(1, '골드 앰버 (=P1)'), (2, '핫 핑크 (=P4)'), (3, '딥 퍼플 (=P5)'), (4, '터쿼이즈 (=P6)'), (5, '선셋 오렌지 (=P7)'), (6, '딥 블루'), (7, '웜 화이트 (=P2)'), (8, '뉴트럴 화이트 (=P3)'), (9, 'Breathe Warm'), (10, 'Wave CM'), (32, 'Preset 32')]
+DIFF ShowData/DataPools/Default/Sequences: removed=[] added=[]
+DIFF ShowData/DataPools/Default/Timecodes: removed=[] added=[]

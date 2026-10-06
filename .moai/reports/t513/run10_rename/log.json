@@ -1,0 +1,124 @@
+[
+ {
+  "step": "before",
+  "path": "ShowData/DataPools/Default/Sequences/219",
+  "reply": {
+   "id": "gate-1",
+   "kind": "props",
+   "ok": true,
+   "path": "ShowData/DataPools/Default/Sequences/219",
+   "reads": [
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "219"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "Sequence 219"
+    }
+   ],
+   "truncated": false,
+   "v": 1
+  }
+ },
+ {
+  "step": "before",
+  "path": "ShowData/DataPools/Default/Timecodes/19",
+  "reply": {
+   "id": "gate-2",
+   "kind": "props",
+   "ok": true,
+   "path": "ShowData/DataPools/Default/Timecodes/19",
+   "reads": [
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "19"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "Sequence 219 Timecode"
+    }
+   ],
+   "truncated": false,
+   "v": 1
+  }
+ },
+ {
+  "step": "screen",
+  "cleared": true
+ },
+ {
+  "step": "exec",
+  "command": "Set Sequence 219 Property 'Name' 'LOVE ATTACK - OLD APP'",
+  "fired": true,
+  "ok": true,
+  "detail": "OK"
+ },
+ {
+  "step": "exec",
+  "command": "Set Timecode 19 Property 'Name' 'LOVE ATTACK - OLD APP TC'",
+  "fired": true,
+  "ok": true,
+  "detail": "OK"
+ },
+ {
+  "step": "after",
+  "path": "ShowData/DataPools/Default/Sequences/219",
+  "reply": {
+   "id": "gate-5",
+   "kind": "props",
+   "ok": true,
+   "path": "ShowData/DataPools/Default/Sequences/219",
+   "reads": [
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "219"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "LOVE ATTACK - OLD APP"
+    }
+   ],
+   "truncated": false,
+   "v": 1
+  }
+ },
+ {
+  "step": "after",
+  "path": "ShowData/DataPools/Default/Timecodes/19",
+  "reply": {
+   "id": "gate-6",
+   "kind": "props",
+   "ok": true,
+   "path": "ShowData/DataPools/Default/Timecodes/19",
+   "reads": [
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "19"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "LOVE ATTACK - OLD APP TC"
+    }
+   ],
+   "truncated": false,
+   "v": 1
+  }
+ }
+]

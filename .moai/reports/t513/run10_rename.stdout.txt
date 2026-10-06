@@ -1,0 +1,5 @@
+mode=pinned cleared=True approval_requests=1 approved=1 fired=2 ok=2 skipped_saveshow=1
+before ['Sequences', '219'] {'NO': '219', 'NAME': 'Sequence 219'}
+before ['Timecodes', '19'] {'NO': '19', 'NAME': 'Sequence 219 Timecode'}
+after ['Sequences', '219'] {'NO': '219', 'NAME': 'LOVE ATTACK - OLD APP'}
+after ['Timecodes', '19'] {'NO': '19', 'NAME': 'LOVE ATTACK - OLD APP TC'}
