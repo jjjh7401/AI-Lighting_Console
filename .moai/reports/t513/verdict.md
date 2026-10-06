@@ -1,4 +1,4 @@
-# t513 판정서 — LOVE ATTACK 기존 앱 연출 실기 승인 파일 준비 (실기 쓰기 0)
+# t513 판정서 — LOVE ATTACK 기존 앱 연출 실기 반영 (A안: 페이저 3개 + 시퀀스 219 · 타임코드 19)
 
 - 카드: t513 · SPEC-LDRHYTHM-001 AC-010 준비 · 브랜치 `WT-baseline-live` · 워크트리 `.claude/worktrees/t513`
 - base: `origin/main` `cea25c04` (`git merge-base --is-ancestor cea25c04 HEAD` 성공). t510 base `e7eaf690` 이후 `server/ src/ ui/ pyproject.toml uv.lock` 변경 0(`git diff --stat` 빈 출력) — 앱은 t510 과 같다
