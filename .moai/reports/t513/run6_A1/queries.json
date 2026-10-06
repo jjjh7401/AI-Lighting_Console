@@ -1,0 +1,8891 @@
+[
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures"
+  ],
+  "ok": true,
+  "children": 19
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/20"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/21"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/22"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/23"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/24"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/25"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/26"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/27"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/28"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/29"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/30"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/31"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/32"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/33"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/34"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/35"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/36"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/37"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/38"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/39"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/40"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/41"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/42"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/43"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/44"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/45"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/46"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/47"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/48"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/49"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/50"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/51"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/52"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/53"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/54"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/55"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/56"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/57"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/58"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/59"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/60"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/61"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/62"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/63"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/64"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/65"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/66"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/67"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/68"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/69"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/70"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/71"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/72"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/73"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/74"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/75"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/76"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/77"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/78"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/79"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/80"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/81"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/82"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/83"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/84"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/85"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/86"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/1",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/2",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/3",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/4",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/5",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/6",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/7",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/8",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/9",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/10",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/11",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/12",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/13",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/14",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/15",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/16",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/17",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/18",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/19",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/20",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/21",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/22",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/23",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/24",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/25",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/26",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/27",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/28",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/29",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/30",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/31",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/32",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/33",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/34",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/35",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/36",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/37",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/38",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/39",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/40",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/41",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/42",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/43",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/44",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/45",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/46",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/47",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/48",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/49",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/50",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/51",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/52",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/53",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/54",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/55",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/56",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/57",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/58",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/59",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/60",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/61",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/62",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/63",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/64",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/65",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/66",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/67",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/68",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/69",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/70",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/71",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/72",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/73",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/74",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/75",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/76",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/77",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/78",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/79",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/80",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/81",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/82",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/83",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/84",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/85",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/86",
+   "('fid', 'posx', 'posy', 'posz')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/Sequences/219"
+  ],
+  "error": "path segment not found: '219' (in DataPool/Sequences/219)"
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures"
+  ],
+  "ok": true,
+  "children": 18
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/19"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/20"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/21"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/22"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/23"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/24"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/25"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/26"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/27"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/28"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/29"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/30"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/31"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/32"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/33"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/34"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/35"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/36"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/37"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/38"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/39"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/40"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/41"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/42"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/43"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/44"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/45"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/46"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/47"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/48"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/49"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/50"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/51"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/52"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/53"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/54"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/55"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/56"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/57"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/58"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/59"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/60"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/61"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/62"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/63"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/64"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/65"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/66"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/67"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/68"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/69"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/70"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/71"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/72"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/73"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/74"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/75"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/76"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/77"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/78"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/79"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/80"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/81"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/82"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/83"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/84"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/85"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures/86"
+  ],
+  "ok": true,
+  "children": 0
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/1",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/2",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/3",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/4",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/5",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/6",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/7",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/8",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/9",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/10",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/11",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/12",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/13",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/14",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/15",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/16",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/17",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/18",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/19",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/20",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/21",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/22",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/23",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/24",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/25",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/26",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/27",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/28",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/29",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/30",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/31",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/32",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/33",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/34",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/35",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/36",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/37",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/38",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/39",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/40",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/41",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/42",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/43",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/44",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/45",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/46",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/47",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/48",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/49",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/50",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/51",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/52",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/53",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/54",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/55",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/56",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/57",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/58",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/59",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/60",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/61",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/62",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/63",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/64",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/65",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/66",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/67",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/68",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/69",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/70",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/71",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/72",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/73",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/74",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/75",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/76",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/77",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/78",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/79",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/80",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/81",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/82",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/83",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/84",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/85",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/86",
+   "('Patch', 'FixtureType', 'Mode', 'Name')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures"
+  ],
+  "ok": true,
+  "children": 18
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/1",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/2",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/3",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/4",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/5",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/6",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/7",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/8",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/9",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/10",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/11",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/12",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/13",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/14",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/15",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/16",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/17",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/18",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/19",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/20",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/21",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/22",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/23",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/24",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/25",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/26",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/27",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/28",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/29",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/30",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/31",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/32",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/33",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/34",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/35",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/36",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/37",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/38",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/39",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/40",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/41",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/42",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/43",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/44",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/45",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/46",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/47",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/48",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/49",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/50",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/51",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/52",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/53",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/54",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/55",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/56",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/57",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/58",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/59",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/60",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/61",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/62",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/63",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/64",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/65",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/66",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/67",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/68",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/69",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/70",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/71",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/72",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/73",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/74",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/75",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/76",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/77",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/78",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/79",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/80",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/81",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/82",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/83",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/84",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/85",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/Stages/1/Fixtures/86",
+   "FID"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes"
+  ],
+  "ok": true,
+  "children": 5
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/1",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/2",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/4",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/5",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/1",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/2",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/3",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/1",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/2",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/2",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes"
+  ],
+  "ok": true,
+  "children": 10
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/2",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/3",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/4",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/5",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/6",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/7",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/8",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/9",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/10",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes"
+  ],
+  "ok": true,
+  "children": 6
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/2",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/3",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/4",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/5",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/6",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/1",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_property",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2",
+   "TotalFootprint"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels"
+  ],
+  "ok": true,
+  "children": 12
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/1/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/2"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/2/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/2/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/3"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/3/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/3/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/4"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/4/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/4/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/5"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/5/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/5/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/6"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/6/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/6/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/7"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/7/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/7/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/8"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/8/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/8/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/9"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/9/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/9/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/10"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/10/1"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/10/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/11"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/11/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/11/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/12"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/12/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels/12/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/1/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/2"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/2/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/2/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/3"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/3/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/3/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/4"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/4/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels/4/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/1/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/2"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/2/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/2/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/3"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/3/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/3/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/4"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/4/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/4/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/5"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/5/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/5/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/6"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/6/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/6/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/7"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/7/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/7/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/8"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/8/1"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/8/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/9"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/9/1"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/9/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/10"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/10/1"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/10/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/11"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/11/1"
+  ],
+  "ok": true,
+  "children": 12
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/11/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/12"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/12/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/12/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/13"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/13/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/13/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/14"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/14/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels/14/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/1/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/2"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/2/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1/DMXChannels/2/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/1/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/4"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/4/1"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/4/1"
+  ],
+  "ok": true,
+  "children": 13
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/4/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/5"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/5/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/5/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/6"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/6/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/6/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/7"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/7/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/7/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/8"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/8/1"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/8/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/9"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/9/1"
+  ],
+  "ok": true,
+  "children": 5
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/9/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/10"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/10/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/10/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/11"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/11/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/11/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/12"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/12/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/12/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/13"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/13/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/13/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/14"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/14/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/14/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/15"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/15/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/15/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/16"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/16/1"
+  ],
+  "ok": true,
+  "children": 5
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/16/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/17"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/17/1"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/17/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/18"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/18/1"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/18/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/19"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/19/1"
+  ],
+  "ok": true,
+  "children": 5
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/19/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/20"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/20/1"
+  ],
+  "ok": true,
+  "children": 5
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/20/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/21"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/21/1"
+  ],
+  "ok": true,
+  "children": 5
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/21/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/22"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/22/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/22/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/23"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/23/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/23/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/24"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/24/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/24/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/25"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/25/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/25/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/26"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/26/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/26/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/27"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/27/1"
+  ],
+  "ok": true,
+  "children": 12
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/27/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/28"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/28/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/28/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/29"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/29/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/29/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/30"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/30/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/30/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/31"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/31/1"
+  ],
+  "ok": true,
+  "children": 8
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/31/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/32"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/32/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/32/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 11
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/1/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/2"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/2/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/2/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/3"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/3/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/3/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/4"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/4/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/4/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/5"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/5/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/5/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/6"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/6/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/6/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/7"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/7/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/7/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/8"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/8/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/8/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/9"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/9/1"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/9/1"
+  ],
+  "ok": true,
+  "children": 8
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/9/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/10"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/10/1"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/10/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/11"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/11/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/11/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/12"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/12/1"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/12/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/13"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/13/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/13/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/14"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/14/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/14/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/15"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/15/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/15/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/16"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/16/1"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/16/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/17"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/17/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/17/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/18"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/18/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/18/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/19"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/19/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/19/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/20"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/20/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/20/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/21"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/21/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/21/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/22"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/22/1"
+  ],
+  "ok": true,
+  "children": 8
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/22/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/23"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/23/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/23/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/24"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/24/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/24/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/25"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/25/1"
+  ],
+  "ok": true,
+  "children": 8
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/25/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/26"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/26/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels/26/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 16
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 6
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/1/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/2"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/2/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/2/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/3/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/4"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/4/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/4/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/5"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/5/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/5/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/6"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/6/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/6/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/7"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/7/1"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/7/1"
+  ],
+  "ok": true,
+  "children": 6
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/7/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/8"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/8/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/8/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/9"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/9/1"
+  ],
+  "ok": true,
+  "children": 5
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/9/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/10"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/10/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/10/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/11"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/11/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/11/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/12"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/12/1"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/12/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/12/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/13"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/13/1"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/13/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/14"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/14/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/14/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/15"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/15/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/15/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/16"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/16/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/16/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/17"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/17/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/17/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/18"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/18/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/18/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/19"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/19/1"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/19/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/20"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/20/1"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/20/1"
+  ],
+  "ok": true,
+  "children": 3
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/20/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/21"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/21/1"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/21/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/22"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/22/1"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/22/1"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/22/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/23"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/23/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels/23/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels"
+  ],
+  "ok": true,
+  "children": 8
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/1/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/1/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1"
+  ],
+  "ok": true,
+  "children": 9
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/2/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/3"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/3/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/3/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/4"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/4/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/4/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/5"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/5/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/5/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/6"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/6/1"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/6/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1"
+  ],
+  "ok": true,
+  "children": 5
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/7/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/8"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/8/1"
+  ],
+  "ok": true,
+  "children": 1
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels/8/1/1",
+   "('ATTRIBUTE', 'DMXFROM', 'DMXTO', 'PHYSICALFROM', 'PHYSICALTO', 'DEFAULT')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/Groups"
+  ],
+  "ok": true,
+  "children": 18
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures"
+  ],
+  "ok": true,
+  "children": 18
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures"
+  ],
+  "ok": true,
+  "children": 18
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures"
+  ],
+  "ok": true,
+  "children": 18
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures"
+  ],
+  "ok": true,
+  "children": 18
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/Stages/1/Fixtures"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/1",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/2",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/3",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/4",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/5",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/6",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/7",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/8",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/9",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/10",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/11",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/12",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/13",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/14",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/15",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/16",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/17",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/18",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/19",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/20",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/21",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/22",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/23",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/24",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/25",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/26",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/27",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/28",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/29",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/30",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/31",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/32",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/33",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/34",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/35",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/36",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/37",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/38",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/39",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/40",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/41",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/42",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/43",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/44",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/45",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/46",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/47",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/48",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/49",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/50",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/51",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/52",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/53",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/54",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/55",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/56",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/57",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/58",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/59",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/60",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/61",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/62",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/63",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/64",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/65",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/66",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/67",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/68",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/69",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/70",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/71",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/72",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/73",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/74",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/75",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/76",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/77",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/78",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/79",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/80",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/81",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/82",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/83",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/84",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/85",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/86",
+   "('fid',)"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/1",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/10/DMXModes/3/DMXChannels"
+  ],
+  "ok": true,
+  "children": 12
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/2",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/3",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/4",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/5",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/6",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/7",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/8",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/9",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/10",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/11",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/12",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/13",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/14",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/15",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/13/DMXModes/4/DMXChannels"
+  ],
+  "ok": true,
+  "children": 4
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/16",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/17",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/18",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/19",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/20",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/21",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/14/DMXModes/3/DMXChannels"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/22",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/23",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/24",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/25",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/15/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/26",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/27",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/11/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 2
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/28",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/29",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/30",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/31",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/32",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/33",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/34",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/35",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 15
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/4/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 11
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/36",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/37",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/38",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/39",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/40",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/41",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/42",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/43",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 16
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/8/DMXModes/1/DMXChannels"
+  ],
+  "ok": true,
+  "children": 7
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/44",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/45",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/46",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/47",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/48",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/49",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/50",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/51",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/52",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/53",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/54",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/55",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/56",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/57",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/58",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/59",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/60",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/61",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/62",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/63",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/64",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/65",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/66",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/67",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "Patch/FixtureTypes/9/DMXModes/2/DMXChannels"
+  ],
+  "ok": true,
+  "children": 8
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/68",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/69",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/70",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/71",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/72",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/73",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/74",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/75",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/76",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/77",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/78",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/79",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/80",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/81",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/82",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/83",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/84",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/85",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_properties",
+  "args": [
+   "Patch/Stages/1/Fixtures/86",
+   "('FixtureType', 'Mode')"
+  ],
+  "ok": true,
+  "children": null
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/Timecodes/19"
+  ],
+  "error": "path segment not found: '19' (in DataPool/Timecodes/19)"
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/Sequences/219"
+  ],
+  "error": "path segment not found: '219' (in DataPool/Sequences/219)"
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/Sequences/219"
+  ],
+  "error": "path segment not found: '219' (in DataPool/Sequences/219)"
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools/4"
+  ],
+  "ok": true,
+  "children": 9
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools/4"
+  ],
+  "ok": true,
+  "children": 9
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools/21"
+  ],
+  "ok": true,
+  "children": 6
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools/4"
+  ],
+  "ok": true,
+  "children": 9
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools/21"
+  ],
+  "ok": true,
+  "children": 6
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools"
+  ],
+  "ok": true,
+  "children": 14
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools/4"
+  ],
+  "ok": true,
+  "children": 10
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools/2"
+  ],
+  "ok": true,
+  "children": 10
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/PresetPools/2"
+  ],
+  "ok": true,
+  "children": 6
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/Sequences/229"
+  ],
+  "error": "path segment not found: '229' (in DataPool/Sequences/229)"
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/Sequences/239"
+  ],
+  "error": "path segment not found: '239' (in DataPool/Sequences/239)"
+ },
+ {
+  "op": "query_state",
+  "args": [
+   "DataPool/Sequences/249"
+  ],
+  "error": "path segment not found: '249' (in DataPool/Sequences/249)"
+ }
+]
