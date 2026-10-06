@@ -1,0 +1,64 @@
+
+>>> state:Patch/FixtureTypes/11/6/1/1@30
+    wire: Plugin "CopilotResponder" "state b2341ca0 Patch/FixtureTypes/11/6/1/1 offset=30"
+<<< {"children": [{"class": "DMXChannel", "i": 31, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 32, "name": "Main Module_Dimmer"}], "id": "b2341ca0", "kind": "state", "node": {"childCount": 32, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 30, "ok": true, "path": "Patch/FixtureTypes/11/6/1/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/1|NAME,DEFAULT,DEFAULTCHANNELFUNCTION,HIGHLIGHT,LOWLIGHT
+    wire: Plugin "CopilotResponder" "props 4210f71d NAME,DEFAULT,DEFAULTCHANNELFUNCTION,HIGHLIGHT,LOWLIGHT Patch/FixtureTypes/8/6/1/1/1"
+<<< {"id": "4210f71d", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Aura_Shutter1"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<161616>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Shutter1.Shutter1 1"}, {"n": "HIGHLIGHT", "ok": true, "t": "number", "v": "1447446"}, {"n": "LOWLIGHT", "ok": true, "t": "number", "v": "2147483647"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/2|NAME,DEFAULT,DEFAULTCHANNELFUNCTION
+    wire: Plugin "CopilotResponder" "props 82c1b9cc NAME,DEFAULT,DEFAULTCHANNELFUNCTION Patch/FixtureTypes/8/6/1/1/2"
+<<< {"id": "82c1b9cc", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Aura_Dimmer"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Dimmer.Dimmer 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/7|NAME,DEFAULT,DEFAULTCHANNELFUNCTION,HIGHLIGHT,LOWLIGHT
+    wire: Plugin "CopilotResponder" "props 78ae20b7 NAME,DEFAULT,DEFAULTCHANNELFUNCTION,HIGHLIGHT,LOWLIGHT Patch/FixtureTypes/8/6/1/1/7"
+<<< {"id": "78ae20b7", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/7", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Shutter1"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<161616>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Shutter1.Shutter1 1"}, {"n": "HIGHLIGHT", "ok": true, "t": "number", "v": "1447446"}, {"n": "LOWLIGHT", "ok": true, "t": "number", "v": "2147483647"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/8|NAME,DEFAULT,DEFAULTCHANNELFUNCTION
+    wire: Plugin "CopilotResponder" "props cfaecb4c NAME,DEFAULT,DEFAULTCHANNELFUNCTION Patch/FixtureTypes/8/6/1/1/8"
+<<< {"id": "cfaecb4c", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/8", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Dimmer"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Dimmer.Dimmer 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/1/1/1|NAME,DMXFROM,DMXTO,DEFAULT
+    wire: Plugin "CopilotResponder" "props 3ea7354e NAME,DMXFROM,DMXTO,DEFAULT Patch/FixtureTypes/8/6/1/1/1/1/1"
+<<< {"id": "3ea7354e", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Shutter1 1"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "1579032"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "1447446"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/1/1/1/1|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 4c4e35d1 NAME,DMXFROM,DMXTO Patch/FixtureTypes/8/6/1/1/1/1/1/1"
+<<< {"id": "4c4e35d1", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/1/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "closed"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "1250067"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/1/1/1/2|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 567283d0 NAME,DMXFROM,DMXTO Patch/FixtureTypes/8/6/1/1/1/1/1/2"
+<<< {"id": "567283d0", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/1/1/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "open"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "1315860"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "1579032"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/5|NAME,DEFAULT,DEFAULTCHANNELFUNCTION
+    wire: Plugin "CopilotResponder" "props aae36039 NAME,DEFAULT,DEFAULTCHANNELFUNCTION Patch/FixtureTypes/4/6/1/1/5"
+<<< {"id": "aae36039", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RGBW Cluster_Dimmer"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<FFFFFF>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Dimmer.Dimmer 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/22|NAME,DEFAULT,DEFAULTCHANNELFUNCTION,HIGHLIGHT
+    wire: Plugin "CopilotResponder" "props 3c85c961 NAME,DEFAULT,DEFAULTCHANNELFUNCTION,HIGHLIGHT Patch/FixtureTypes/4/6/1/1/22"
+<<< {"id": "3c85c961", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/22", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Shutter1"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<303030>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Shutter1.Shutter1 1"}, {"n": "HIGHLIGHT", "ok": true, "t": "number", "v": "3158064"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/23|NAME,DEFAULT,DEFAULTCHANNELFUNCTION
+    wire: Plugin "CopilotResponder" "props e82309e4 NAME,DEFAULT,DEFAULTCHANNELFUNCTION Patch/FixtureTypes/4/6/1/1/23"
+<<< {"id": "e82309e4", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/23", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Dimmer"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<FFFFFF>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Dimmer.Dimmer 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/25|NAME,DEFAULT,DEFAULTCHANNELFUNCTION
+    wire: Plugin "CopilotResponder" "props ff95448a NAME,DEFAULT,DEFAULTCHANNELFUNCTION Patch/FixtureTypes/4/6/1/1/25"
+<<< {"id": "ff95448a", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/25", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Shutter2"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<303030>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Shutter2.Shutter1 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/26|NAME,DEFAULT,DEFAULTCHANNELFUNCTION
+    wire: Plugin "CopilotResponder" "props fc2b0379 NAME,DEFAULT,DEFAULTCHANNELFUNCTION Patch/FixtureTypes/4/6/1/1/26"
+<<< {"id": "fc2b0379", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/26", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Dimmer2"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Dimmer2.Dimmer 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/6/1/1/4|NAME,DEFAULT,DEFAULTCHANNELFUNCTION
+    wire: Plugin "CopilotResponder" "props 28bbabad NAME,DEFAULT,DEFAULTCHANNELFUNCTION Patch/FixtureTypes/11/6/1/1/4"
+<<< {"id": "28bbabad", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/6/1/1/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_LampControl"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "LampControl.NoFeature 1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/6/1/1/31|NAME,DEFAULT,DEFAULTCHANNELFUNCTION,HIGHLIGHT
+    wire: Plugin "CopilotResponder" "props 6746ddb8 NAME,DEFAULT,DEFAULTCHANNELFUNCTION,HIGHLIGHT Patch/FixtureTypes/11/6/1/1/31"
+<<< {"id": "6746ddb8", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/6/1/1/31", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Shutter1"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<303030>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Shutter1.Shutter1 1"}, {"n": "HIGHLIGHT", "ok": true, "t": "number", "v": "3158064"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/6/1/1/32|NAME,DEFAULT,DEFAULTCHANNELFUNCTION
+    wire: Plugin "CopilotResponder" "props 9836e7ab NAME,DEFAULT,DEFAULTCHANNELFUNCTION Patch/FixtureTypes/11/6/1/1/32"
+<<< {"id": "9836e7ab", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/6/1/1/32", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Dimmer"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}, {"n": "DEFAULTCHANNELFUNCTION", "ok": true, "t": "string", "v": "Dimmer.Dimmer 1"}], "truncated": false, "v": 1}

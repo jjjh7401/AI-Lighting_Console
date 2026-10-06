@@ -1,0 +1,32 @@
+
+>>> state:Patch/FixtureTypes/4/6/1/1/22/1/1
+    wire: Plugin "CopilotResponder" "state 498d5d8c Patch/FixtureTypes/4/6/1/1/22/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "closed"}, {"class": "ChannelSet", "i": 2, "name": "open"}], "id": "498d5d8c", "kind": "state", "node": {"childCount": 2, "class": "ChannelFunction", "enumeration": "ok", "name": "Shutter1 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/22/1/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/22/1/1|NAME,DMXFROM,DMXTO,DEFAULT
+    wire: Plugin "CopilotResponder" "props bf95d08b NAME,DMXFROM,DMXTO,DEFAULT Patch/FixtureTypes/4/6/1/1/22/1/1"
+<<< {"id": "bf95d08b", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/22/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Shutter1 1"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "4144959"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "3158064"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/22/1/1/1|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 646917d5 NAME,DMXFROM,DMXTO Patch/FixtureTypes/4/6/1/1/22/1/1/1"
+<<< {"id": "646917d5", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/22/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "closed"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "2039583"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/22/1/1/2|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 70f72c3e NAME,DMXFROM,DMXTO Patch/FixtureTypes/4/6/1/1/22/1/1/2"
+<<< {"id": "70f72c3e", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/22/1/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "open"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "2105376"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "4144959"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/6/1/1/31/1/1
+    wire: Plugin "CopilotResponder" "state 3f119fae Patch/FixtureTypes/11/6/1/1/31/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "closed"}, {"class": "ChannelSet", "i": 2, "name": "open"}], "id": "3f119fae", "kind": "state", "node": {"childCount": 2, "class": "ChannelFunction", "enumeration": "ok", "name": "Shutter1 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/6/1/1/31/1/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/6/1/1/31/1/1|NAME,DMXFROM,DMXTO,DEFAULT
+    wire: Plugin "CopilotResponder" "props c91f2c0a NAME,DMXFROM,DMXTO,DEFAULT Patch/FixtureTypes/11/6/1/1/31/1/1"
+<<< {"id": "c91f2c0a", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/6/1/1/31/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Shutter1 1"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "4144959"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "3158064"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/6/1/1/31/1/1/1|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 213a4ef2 NAME,DMXFROM,DMXTO Patch/FixtureTypes/11/6/1/1/31/1/1/1"
+<<< {"id": "213a4ef2", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/6/1/1/31/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "closed"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "2039583"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/6/1/1/31/1/1/2|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 80ed8778 NAME,DMXFROM,DMXTO Patch/FixtureTypes/11/6/1/1/31/1/1/2"
+<<< {"id": "80ed8778", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/6/1/1/31/1/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "open"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "2105376"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "4144959"}], "truncated": false, "v": 1}

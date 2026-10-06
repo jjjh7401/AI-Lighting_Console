@@ -1,0 +1,9 @@
+state:Patch/FixtureTypes/8/6/1/1@16
+state:Patch/FixtureTypes/11/6/1/1@15
+state:Patch/FixtureTypes/4/6/1/1@15
+state:Patch/FixtureTypes/8/6/1/1/1
+introspect:Patch/FixtureTypes/8/6/1/1/1
+state:Patch/FixtureTypes/8/6/1/1/1/1
+introspect:Patch/FixtureTypes/8/6/1/1/1/1
+state:Patch/FixtureTypes/8/6/1/1/1/1/1
+introspect:Patch/FixtureTypes/8/6/1/1/1/1/1
