@@ -1,0 +1,7 @@
+cmp run1/console_commands_sent.txt run2/console_commands_sent.txt: identical
+cmp run1/console_commands_approved.txt run2/console_commands_approved.txt: identical
+cmp run1/bundle_full.json run2/bundle_full.json: identical
+cmp run1/cards.json run2/cards.json: identical
+cmp run1/analysis.json run2/analysis.json: identical
+cmp run1/replies.json run2/replies.json: identical
+run2/events.json 도 동일(cmp 출력 없음). run2 디렉터리는 중복이라 지움 — 재실행: rehearse_song.py <음원> run2
