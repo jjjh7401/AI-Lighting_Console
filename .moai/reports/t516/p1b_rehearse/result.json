@@ -1,0 +1,40 @@
+{
+  "stage": "1b",
+  "targets": [
+    401
+  ],
+  "pre": {
+    "401": {
+      "NAME": "fake",
+      "POSZ": "fake",
+      "ROTX": "fake",
+      "ROTY": "fake",
+      "ROTZ": "fake"
+    }
+  },
+  "post": {
+    "401": {
+      "NAME": "fake",
+      "POSZ": "fake",
+      "ROTX": "fake",
+      "ROTY": "fake",
+      "ROTZ": "fake"
+    }
+  },
+  "fired": true,
+  "verdict": "rehearsal: read-back not judged (fake console)",
+  "fake_sent": [
+    "Set Fixture 401 Posz '0'"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Fixture 401 Posz '0'"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)"
+  ]
+}

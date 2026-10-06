@@ -1,0 +1,12 @@
+
+>>> state:Patch/FixtureTypes/9/4
+    wire: Plugin "CopilotResponder" "state 5af9af5d Patch/FixtureTypes/9/4"
+<<< {"children": [{"class": "Model", "i": 1, "name": "Body"}, {"class": "Model", "i": 2, "name": "Beam"}], "id": "5af9af5d", "kind": "state", "node": {"childCount": 2, "class": "Models", "enumeration": "ok", "name": "Models"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/4", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/5
+    wire: Plugin "CopilotResponder" "state 8635524e Patch/FixtureTypes/9/5"
+<<< {"children": [{"class": "Geometry", "i": 1, "name": "Body"}, {"class": "Geometry", "i": 2, "name": "Body#2"}], "id": "8635524e", "kind": "state", "node": {"childCount": 2, "class": "Geometries", "enumeration": "ok", "name": "Geometries"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/5", "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/9/4/1
+    wire: Plugin "CopilotResponder" "introspect c07b83e7 Patch/FixtureTypes/9/4/1"
+<<< {"class": "Model", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "LENGTH", "t": "FloatLength"}, {"n": "WIDTH", "t": "FloatLength"}, {"n": "HEIGHT", "t": "FloatLength"}, {"n": "DIMENSIONSFOLLOWRATIO", "t": "UInt16"}, {"n": "CASTSHADOW", "t": "UInt16"}, {"n": "MESH", "t": "Handle"}, {"n": "FILE", "t": "String"}, {"n": "SVGOFFSETX", "t": "Float"}, {"n": "SVGOFFSETY", "t": "Float"}, {"n": "SVGSIDEOFFSETX", "t": "Float"}, {"n": "SVGSIDEOFFSETY", "t": "Float"}], "id": "c07b83e7", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/4/1", "source": "property_accessors", "total": 31, "truncated": true, "v": 1}

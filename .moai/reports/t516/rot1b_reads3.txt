@@ -1,0 +1,16 @@
+
+>>> props:Patch/FixtureTypes/9/4/1|NAME,LENGTH,WIDTH,HEIGHT,FILE
+    wire: Plugin "CopilotResponder" "props 0ae7f549 NAME,LENGTH,WIDTH,HEIGHT,FILE Patch/FixtureTypes/9/4/1"
+<<< {"id": "0ae7f549", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/4/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Body"}, {"n": "LENGTH", "ok": true, "t": "number", "v": "0.25999999046326"}, {"n": "WIDTH", "ok": true, "t": "number", "v": "0.29300001263618"}, {"n": "HEIGHT", "ok": true, "t": "number", "v": "0.29300001263618"}, {"n": "FILE", "ok": true, "t": "string", "v": "MESH/gdtf_generic/conventional.3ds"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/4/2|NAME,LENGTH,WIDTH,HEIGHT
+    wire: Plugin "CopilotResponder" "props 44184150 NAME,LENGTH,WIDTH,HEIGHT Patch/FixtureTypes/9/4/2"
+<<< {"id": "44184150", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/4/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Beam"}, {"n": "LENGTH", "ok": true, "t": "number", "v": "0.19499999284744"}, {"n": "WIDTH", "ok": true, "t": "number", "v": "0.21979999542236"}, {"n": "HEIGHT", "ok": true, "t": "number", "v": "0.0099999997764826"}], "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/9/5/1
+    wire: Plugin "CopilotResponder" "introspect 4baa562f Patch/FixtureTypes/9/5/1"
+<<< {"class": "Geometry", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "MODEL", "t": "Handle"}, {"n": "POSX", "t": "FloatLength"}, {"n": "POSY", "t": "FloatLength"}, {"n": "POSZ", "t": "FloatLength"}, {"n": "ROTX", "t": "Float"}, {"n": "ROTY", "t": "Float"}, {"n": "ROTZ", "t": "Float"}, {"n": "ROTDIRECT", "t": "Custom"}, {"n": "GRIDAUTO", "t": "UInt32"}, {"n": "GRIDSWAPXY", "t": "UInt32"}, {"n": "GRIDINVX", "t": "UInt32"}], "id": "4baa562f", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/5/1", "source": "property_accessors", "total": 33, "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/5/1
+    wire: Plugin "CopilotResponder" "state 14bcd1f9 Patch/FixtureTypes/9/5/1"
+<<< {"children": [{"class": "Beam", "i": 1, "name": "Main Module"}], "id": "14bcd1f9", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Body"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/5/1", "truncated": false, "v": 1}

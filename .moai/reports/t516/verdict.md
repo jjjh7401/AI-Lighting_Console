@@ -324,6 +324,34 @@
 - 모든 파일의 모든 줄은 `Set Fixture <401~410|421~430> Rotx '180|0'` 꼴이다(정규식 밖 0줄). 쇼 저장 없음. 감독이 저장한다.
 - 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/floor_rotate.py .moai/reports/t516/rot1_live --stage 1 --approve .moai/reports/t516/rot1_denyall`
 
+## 4-11. 회전 1단계 결과와 1b·2단계(바닥에 내려놓기)
+
+- 1단계 실기(`rot1_live`, 리드 "실행"): 401 ROTX 0 → `179.99999860565`, ROTY·ROTZ 0. t512 대조 PASS, SaveShow 0. 콘솔이 `Rotx` 축을 받는다는 것은 이로써 쟀다.
+- 감독 관찰(원문): 「위를 보고 있는데 바닥에 붙어있지 않아」.
+- 계산 근거(실기 판독 `rot1b_reads1~4.txt`):
+  - 401 지금: POSX -5.0, POSY 5.2, POSZ 0.3, ROTX 180.
+  - 유형 9 Body 모델: HEIGHT 0.293 m(LENGTH 0.260, WIDTH 0.293), 메시 `MESH/gdtf_generic/conventional.3ds`.
+  - Body 지오메트리 위치 0/0/0, 그 아래 빔 `Main Module` POSZ -0.2783 m. 몸체가 원점에서 아래로 걸린다. 원점은 몸체 꼭대기, 곧 매다는 지점이다(문서 「insert point is usually its hanging point」와 같다).
+  - Stage 1 POSZ 0.
+  - 계산: X 축 180° 뒤집은 뒤 몸체는 [Posz, Posz + 0.293] 에 있다. 지금은 [0.3, 0.593] 이라 0.3 m 떠 있다. 바닥(Z 0)에 닿는 값은 **Posz = 0** 이다. 몸체 높이는 바닥 접촉값에 들어가지 않고, 꼭대기가 0.293 에 온다는 것만 정한다.
+  - 「바닥 = Z 0」 과 「모델 원점 = 몸체 꼭대기」 는 판독값에서 낸 추론이다. 감독이 3D 에서 본다.
+- 명령 꼴: `Set Fixture <fid> Posz '<v>'`(`tools.py:1773-1781` 실기 측정, 작은따옴표 필수)와 1단계에서 잰 `Set Fixture <fid> Rotx '<v>'`.
+
+| 파일 | 줄 | sha256 | 내용 |
+|---|---|---|---|
+| `approval_floor_1b.txt` | 1 | `9077c5166d2586125a674be9b52653d01d6e1a63354ffb7afe034ae84230fae5` | `Set Fixture 401 Posz '0'` |
+| `approval_floor_1b_revert.txt` | 1 | `f6a6ad988b4d62a92715fc95d0f34adaf34ff32950da9cf710038796a725d6ae` | `Set Fixture 401 Posz '0.3'` |
+| `approval_floor_2.txt` | 38 | `5cac556f477c150c346a0d8ad77b683117b975ac62499dceb830ad38234c564d` | 402~410·421~430 마다 `Rotx '180'` + `Posz '0'` |
+| `approval_floor_2_revert.txt` | 38 | `a718268b9c52462e49f8e6c13b80d17f15ae2f151393d5bc848264d39aea00a8` | 같은 19대 `Rotx '0'` + `Posz '0.3'` |
+
+- 이 표의 2단계 파일이 4-10 의 `approval_floor_rot2.txt`(회전만)를 대신한다. `approval_floor_rot2*.txt` 는 쓰지 않는다.
+- 실행기 `floor_place.py` 는 사전 판독이 기대값과 다르면 보내지 않는다. 1b 는 ROTX 180·POSZ 0.3, 2 는 0/0/0·POSZ 0.3 을 요구한다. 사후에는 ROTX·POSZ 를 되읽어 판정한다(허용 오차 1e-3).
+- 리허설은 네 파일 모두 했다. 전부-거절 실기는 1b·2 만 했다: rejected 1묶음씩, 콘솔 쓰기 0, executed 는 회전·높이 읽기 20행뿐, 요청 문면 = 리허설 True. 1b 사전 판독은 401 POSZ 0.3·ROTX 180 을 통과했다.
+- 되돌리기 두 파일은 전부-거절을 돌릴 수 없다(사전 기대값이 실행 뒤 상태다). 문면은 리허설에서 땄다.
+- 모든 줄이 `Set Fixture <401~410|421~430> (Rotx '180|0' | Posz '0|0.3')` 꼴이다(밖 0줄). 2단계 파일에 401 은 0줄이다. 쇼 저장 없음.
+- 401 을 처음 상태로 완전히 되돌리려면 1b 되돌리기 뒤에 1단계 되돌리기(`approval_floor_rot1_revert.txt`)를 차례로 돌린다.
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/floor_place.py .moai/reports/t516/p1b_live --stage 1b --approve .moai/reports/t516/p1b_denyall`
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
