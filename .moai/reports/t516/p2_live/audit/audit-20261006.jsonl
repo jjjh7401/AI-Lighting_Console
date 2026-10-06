@@ -1,0 +1,77 @@
+{"ts": "2026-10-06T07:28:44.846611+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/68 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:44.913880+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/69 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:44.980508+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/70 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.046590+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/71 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.113985+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/72 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.180507+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/73 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.247148+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/74 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.313716+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/75 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.379716+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/76 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.447196+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/77 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.514066+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/78 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.580767+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/79 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.647356+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/80 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.713690+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/81 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.780447+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/82 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.847307+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/83 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.913258+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/84 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:45.980254+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/85 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:46.046654+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/86 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:46.047558+00:00", "event": "approved", "commands": ["Set Fixture 402 Rotx '180'", "Set Fixture 402 Posz '0'", "Set Fixture 403 Rotx '180'", "Set Fixture 403 Posz '0'", "Set Fixture 404 Rotx '180'", "Set Fixture 404 Posz '0'", "Set Fixture 405 Rotx '180'", "Set Fixture 405 Posz '0'", "Set Fixture 406 Rotx '180'", "Set Fixture 406 Posz '0'", "Set Fixture 407 Rotx '180'", "Set Fixture 407 Posz '0'", "Set Fixture 408 Rotx '180'", "Set Fixture 408 Posz '0'", "Set Fixture 409 Rotx '180'", "Set Fixture 409 Posz '0'", "Set Fixture 410 Rotx '180'", "Set Fixture 410 Posz '0'", "Set Fixture 421 Rotx '180'", "Set Fixture 421 Posz '0'", "Set Fixture 422 Rotx '180'", "Set Fixture 422 Posz '0'", "Set Fixture 423 Rotx '180'", "Set Fixture 423 Posz '0'", "Set Fixture 424 Rotx '180'", "Set Fixture 424 Posz '0'", "Set Fixture 425 Rotx '180'", "Set Fixture 425 Posz '0'", "Set Fixture 426 Rotx '180'", "Set Fixture 426 Posz '0'", "Set Fixture 427 Rotx '180'", "Set Fixture 427 Posz '0'", "Set Fixture 428 Rotx '180'", "Set Fixture 428 Posz '0'", "Set Fixture 429 Rotx '180'", "Set Fixture 429 Posz '0'", "Set Fixture 430 Rotx '180'", "Set Fixture 430 Posz '0'"], "held": ["Set Fixture 402 Rotx '180'", "Set Fixture 402 Posz '0'", "Set Fixture 403 Rotx '180'", "Set Fixture 403 Posz '0'", "Set Fixture 404 Rotx '180'", "Set Fixture 404 Posz '0'", "Set Fixture 405 Rotx '180'", "Set Fixture 405 Posz '0'", "Set Fixture 406 Rotx '180'", "Set Fixture 406 Posz '0'", "Set Fixture 407 Rotx '180'", "Set Fixture 407 Posz '0'", "Set Fixture 408 Rotx '180'", "Set Fixture 408 Posz '0'", "Set Fixture 409 Rotx '180'", "Set Fixture 409 Posz '0'", "Set Fixture 410 Rotx '180'", "Set Fixture 410 Posz '0'", "Set Fixture 421 Rotx '180'", "Set Fixture 421 Posz '0'", "Set Fixture 422 Rotx '180'", "Set Fixture 422 Posz '0'", "Set Fixture 423 Rotx '180'", "Set Fixture 423 Posz '0'", "Set Fixture 424 Rotx '180'", "Set Fixture 424 Posz '0'", "Set Fixture 425 Rotx '180'", "Set Fixture 425 Posz '0'", "Set Fixture 426 Rotx '180'", "Set Fixture 426 Posz '0'", "Set Fixture 427 Rotx '180'", "Set Fixture 427 Posz '0'", "Set Fixture 428 Rotx '180'", "Set Fixture 428 Posz '0'", "Set Fixture 429 Rotx '180'", "Set Fixture 429 Posz '0'", "Set Fixture 430 Rotx '180'", "Set Fixture 430 Posz '0'"], "kind": "t516_floor_place"}
+{"ts": "2026-10-06T07:28:46.113588+00:00", "event": "executed", "command": "Set Fixture 402 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.180548+00:00", "event": "executed", "command": "Set Fixture 402 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.246455+00:00", "event": "executed", "command": "Set Fixture 403 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.313705+00:00", "event": "executed", "command": "Set Fixture 403 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.379854+00:00", "event": "executed", "command": "Set Fixture 404 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.447122+00:00", "event": "executed", "command": "Set Fixture 404 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.513624+00:00", "event": "executed", "command": "Set Fixture 405 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.580133+00:00", "event": "executed", "command": "Set Fixture 405 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.646410+00:00", "event": "executed", "command": "Set Fixture 406 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.713512+00:00", "event": "executed", "command": "Set Fixture 406 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.780289+00:00", "event": "executed", "command": "Set Fixture 407 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.846721+00:00", "event": "executed", "command": "Set Fixture 407 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.913327+00:00", "event": "executed", "command": "Set Fixture 408 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:46.980435+00:00", "event": "executed", "command": "Set Fixture 408 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.047067+00:00", "event": "executed", "command": "Set Fixture 409 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.113591+00:00", "event": "executed", "command": "Set Fixture 409 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.180107+00:00", "event": "executed", "command": "Set Fixture 410 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.246342+00:00", "event": "executed", "command": "Set Fixture 410 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.313748+00:00", "event": "executed", "command": "Set Fixture 421 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.380263+00:00", "event": "executed", "command": "Set Fixture 421 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.447235+00:00", "event": "executed", "command": "Set Fixture 422 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.513558+00:00", "event": "executed", "command": "Set Fixture 422 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.580473+00:00", "event": "executed", "command": "Set Fixture 423 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.646978+00:00", "event": "executed", "command": "Set Fixture 423 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.712876+00:00", "event": "executed", "command": "Set Fixture 424 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.779659+00:00", "event": "executed", "command": "Set Fixture 424 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.846877+00:00", "event": "executed", "command": "Set Fixture 425 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.913252+00:00", "event": "executed", "command": "Set Fixture 425 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:47.979788+00:00", "event": "executed", "command": "Set Fixture 426 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.046870+00:00", "event": "executed", "command": "Set Fixture 426 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.113618+00:00", "event": "executed", "command": "Set Fixture 427 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.180311+00:00", "event": "executed", "command": "Set Fixture 427 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.247022+00:00", "event": "executed", "command": "Set Fixture 428 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.313725+00:00", "event": "executed", "command": "Set Fixture 428 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.380316+00:00", "event": "executed", "command": "Set Fixture 429 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.446715+00:00", "event": "executed", "command": "Set Fixture 429 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.513375+00:00", "event": "executed", "command": "Set Fixture 430 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.580233+00:00", "event": "executed", "command": "Set Fixture 430 Posz '0'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T07:28:48.647127+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/68 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:48.713722+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/69 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:48.779776+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/70 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:48.847562+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/71 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:48.914043+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/72 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:48.979962+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/73 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.046802+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/74 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.113653+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/75 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.179850+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/76 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.246836+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/77 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.313056+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/78 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.380386+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/79 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.447208+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/80 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.513686+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/81 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.580456+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/82 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.646865+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/83 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.713705+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/84 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.780408+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/85 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T07:28:49.846735+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/86 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}

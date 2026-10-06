@@ -1,0 +1,345 @@
+{
+  "stage": "2",
+  "targets": [
+    402,
+    403,
+    404,
+    405,
+    406,
+    407,
+    408,
+    409,
+    410,
+    421,
+    422,
+    423,
+    424,
+    425,
+    426,
+    427,
+    428,
+    429,
+    430
+  ],
+  "pre": {
+    "402": {
+      "NAME": "WASH-U 402",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "403": {
+      "NAME": "WASH-U 403",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "404": {
+      "NAME": "WASH-U 404",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "405": {
+      "NAME": "WASH-U 405",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "406": {
+      "NAME": "WASH-U 406",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "407": {
+      "NAME": "WASH-U 407",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "408": {
+      "NAME": "WASH-U 408",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "409": {
+      "NAME": "WASH-U 409",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "410": {
+      "NAME": "WASH-U 410",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "421": {
+      "NAME": "WASH-D 421",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "422": {
+      "NAME": "WASH-D 422",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "423": {
+      "NAME": "WASH-D 423",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "424": {
+      "NAME": "WASH-D 424",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "425": {
+      "NAME": "WASH-D 425",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "426": {
+      "NAME": "WASH-D 426",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "427": {
+      "NAME": "WASH-D 427",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "428": {
+      "NAME": "WASH-D 428",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "429": {
+      "NAME": "WASH-D 429",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "430": {
+      "NAME": "WASH-D 430",
+      "POSZ": "0.30000001192093",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "post": {
+    "402": {
+      "NAME": "WASH-U 402",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "403": {
+      "NAME": "WASH-U 403",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "404": {
+      "NAME": "WASH-U 404",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "405": {
+      "NAME": "WASH-U 405",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "406": {
+      "NAME": "WASH-U 406",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "407": {
+      "NAME": "WASH-U 407",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "408": {
+      "NAME": "WASH-U 408",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "409": {
+      "NAME": "WASH-U 409",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "410": {
+      "NAME": "WASH-U 410",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "421": {
+      "NAME": "WASH-D 421",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "422": {
+      "NAME": "WASH-D 422",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "423": {
+      "NAME": "WASH-D 423",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "424": {
+      "NAME": "WASH-D 424",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "425": {
+      "NAME": "WASH-D 425",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "426": {
+      "NAME": "WASH-D 426",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "427": {
+      "NAME": "WASH-D 427",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "428": {
+      "NAME": "WASH-D 428",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "429": {
+      "NAME": "WASH-D 429",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    },
+    "430": {
+      "NAME": "WASH-D 430",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "fired": true,
+  "verdict": "read-back = {'ROTX': 180.0, 'POSZ': 0.0} for all 19",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Fixture 402 Rotx '180'",
+        "Set Fixture 402 Posz '0'",
+        "Set Fixture 403 Rotx '180'",
+        "Set Fixture 403 Posz '0'",
+        "Set Fixture 404 Rotx '180'",
+        "Set Fixture 404 Posz '0'",
+        "Set Fixture 405 Rotx '180'",
+        "Set Fixture 405 Posz '0'",
+        "Set Fixture 406 Rotx '180'",
+        "Set Fixture 406 Posz '0'",
+        "Set Fixture 407 Rotx '180'",
+        "Set Fixture 407 Posz '0'",
+        "Set Fixture 408 Rotx '180'",
+        "Set Fixture 408 Posz '0'",
+        "Set Fixture 409 Rotx '180'",
+        "Set Fixture 409 Posz '0'",
+        "Set Fixture 410 Rotx '180'",
+        "Set Fixture 410 Posz '0'",
+        "Set Fixture 421 Rotx '180'",
+        "Set Fixture 421 Posz '0'",
+        "Set Fixture 422 Rotx '180'",
+        "Set Fixture 422 Posz '0'",
+        "Set Fixture 423 Rotx '180'",
+        "Set Fixture 423 Posz '0'",
+        "Set Fixture 424 Rotx '180'",
+        "Set Fixture 424 Posz '0'",
+        "Set Fixture 425 Rotx '180'",
+        "Set Fixture 425 Posz '0'",
+        "Set Fixture 426 Rotx '180'",
+        "Set Fixture 426 Posz '0'",
+        "Set Fixture 427 Rotx '180'",
+        "Set Fixture 427 Posz '0'",
+        "Set Fixture 428 Rotx '180'",
+        "Set Fixture 428 Posz '0'",
+        "Set Fixture 429 Rotx '180'",
+        "Set Fixture 429 Posz '0'",
+        "Set Fixture 430 Rotx '180'",
+        "Set Fixture 430 Posz '0'"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}
