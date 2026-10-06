@@ -1,0 +1,39 @@
+{
+  "stage": 1,
+  "revert": false,
+  "targets": [
+    401
+  ],
+  "pre": {
+    "401": {
+      "NAME": "fake",
+      "ROTX": "fake",
+      "ROTY": "fake",
+      "ROTZ": "fake"
+    }
+  },
+  "post": {
+    "401": {
+      "NAME": "fake",
+      "ROTX": "fake",
+      "ROTY": "fake",
+      "ROTZ": "fake"
+    }
+  },
+  "fired": true,
+  "verdict": "rehearsal: read-back not judged (fake console)",
+  "fake_sent": [
+    "Set Fixture 401 Rotx '180'"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Fixture 401 Rotx '180'"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)"
+  ]
+}

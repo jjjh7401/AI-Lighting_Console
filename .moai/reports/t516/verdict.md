@@ -298,6 +298,32 @@
 - 위를 보게 하는 유일한 수단은 패치의 3D 회전(ROTX 등)을 바꾸는 것이다. 기존 패치 객체 20개를 고치는 쓰기라 「새 번호만」 밖이고, 감독 결정이 필요하다. 회전 0 이 3D 화면에서 아래를 향한다는 것은 감독 관찰과 맞지만, 기계로는 안 잰 것이다.
 - v4 승인 파일(`approval_rhythm_probe_v4.txt`, sha256 `3ccc0234…`)은 바꾸지 않았다.
 
+## 4-10. 바닥 워시 3D 회전 — 천정 방향 (감독 결정, 승인 요청)
+
+- 감독 결정(리드 경유): 「(바닥 워시 20대를) 천정방향으로 돌려줘」.
+- 문서 근거:
+  - [Position Fixtures in the 3D Space](https://help.malighting.com/grandMA3/2.0/HTML/patch_position_fixtures.html): 「Rot X: rotating the fixture around the fixture's own X-axis. A positive value is rotating the top of the fixture towards downstage.」 / 「New fixtures are always added in the zero point location and with the zero rotation.」
+  - [3D Fixture Setup](https://help.malighting.com/grandMA3/2.0/HTML/qsg_3d_setup.html): 「the fixture's insert point is usually its hanging point」 — 회전 0 은 매달린 자세다.
+  - [Set Keyword](https://help.malighting.com/grandMA3/2.4/HTML/keyword_set.html): `Set [Object_Type] [Number] Property ["Name"] ["Value"]`. Fixture 예시는 없다.
+- 명령 형태: 이 저장소가 실기에서 잰 좌표 쓰기 `Set Fixture <fid> Posx '<v>'`(`server/orchestrator/tools.py:1773-1781`, 룰북 `32_spatial_design.md:123-127`)에서 축 이름만 `Rotx` 로 바꾼다. 값은 작은따옴표로 싼다.
+- 축과 각도: 회전 0 은 매달린 자세(빔이 아래)다. 문서와 감독 관찰이 같다. X 축 180° 로 뒤집으면 빔이 위를 본다. **추론이고 안 잰 것**이라 두 단계로 나눴다.
+  - 1단계: 401 한 대만 바꾼다. 감독이 3D 화면에서 본다.
+  - 2단계: 나머지 19대를 바꾼다. 1단계를 확인한 뒤에만.
+- `Rotx` 축 이름을 콘솔이 받는지는 안 잰 것이다. 실행하면 바로 ROTX 를 되읽어 판정한다. 받지 않거나 엉뚱한 값이 저장되면 되읽기에서 드러난다.
+- 지금 값(실기 판독, `rot1_denyall`·`rot2_denyall` 의 pre): 20대 모두 ROTX/ROTY/ROTZ = 0.0/0.0/0.0.
+
+| 파일 | 줄 | sha256 | 내용 |
+|---|---|---|---|
+| `approval_floor_rot1.txt` | 1 | `f5f4aa9877f3c48fd9adf6cf4304ebabfd510da16a42c55e1d239526a3fbeb6c` | `Set Fixture 401 Rotx '180'` |
+| `approval_floor_rot1_revert.txt` | 1 | `d838bb1da6edf06829a120420993dbbfcf5f2f8cd3c96056733736852ff0c0aa` | `Set Fixture 401 Rotx '0'` |
+| `approval_floor_rot2.txt` | 19 | `b2fad0dfe95c4197f1597c7d05d20083908aa09859861102e7628229591ca3f5` | 402~410·421~430 `Rotx '180'` |
+| `approval_floor_rot2_revert.txt` | 19 | `87d3ea72c73566fe08af3b7593151c911f615b89038e7d7ecf072e112bddadaa` | 같은 19대 `Rotx '0'` |
+
+- 리허설은 네 파일 모두 했다. 전부-거절 실기는 돌리기 두 파일만 했다: rejected 각 1묶음, 콘솔 쓰기 0, 감사 로그 executed 는 회전 읽기 20행뿐, 요청 문면 = 리허설 True.
+- 되돌리기 파일은 실기 전부-거절을 돌릴 수 없다. 사전 판독이 ROTX 180 을 요구하는데 지금 값이 0 이라 송신 전에 멈춘다. 그래서 문면은 리허설에서 땄다. 실행할 때 사전 판독이 180 이 아니면 멈춘다.
+- 모든 파일의 모든 줄은 `Set Fixture <401~410|421~430> Rotx '180|0'` 꼴이다(정규식 밖 0줄). 쇼 저장 없음. 감독이 저장한다.
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/floor_rotate.py .moai/reports/t516/rot1_live --stage 1 --approve .moai/reports/t516/rot1_denyall`
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.

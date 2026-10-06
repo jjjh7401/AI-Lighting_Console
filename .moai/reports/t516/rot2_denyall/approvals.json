@@ -1,0 +1,26 @@
+[
+  {
+    "commands": [
+      "Set Fixture 402 Rotx '180'",
+      "Set Fixture 403 Rotx '180'",
+      "Set Fixture 404 Rotx '180'",
+      "Set Fixture 405 Rotx '180'",
+      "Set Fixture 406 Rotx '180'",
+      "Set Fixture 407 Rotx '180'",
+      "Set Fixture 408 Rotx '180'",
+      "Set Fixture 409 Rotx '180'",
+      "Set Fixture 410 Rotx '180'",
+      "Set Fixture 421 Rotx '180'",
+      "Set Fixture 422 Rotx '180'",
+      "Set Fixture 423 Rotx '180'",
+      "Set Fixture 424 Rotx '180'",
+      "Set Fixture 425 Rotx '180'",
+      "Set Fixture 426 Rotx '180'",
+      "Set Fixture 427 Rotx '180'",
+      "Set Fixture 428 Rotx '180'",
+      "Set Fixture 429 Rotx '180'",
+      "Set Fixture 430 Rotx '180'"
+    ],
+    "approved": false
+  }
+]
