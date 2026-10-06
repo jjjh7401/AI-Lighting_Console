@@ -1,0 +1,74 @@
+[
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 228"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 228"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 229"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 229"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 230"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 230"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 231"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 231"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 232"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 232"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 233"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 233"
+    ],
+    "approved": true
+  }
+]
