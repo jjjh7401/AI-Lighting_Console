@@ -1,0 +1,422 @@
+{"step": "pre_slot", "t": 0.065, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/220", "ok": false, "error": "path segment not found: '220' (in ShowData/DataPools/Default/Sequences/220)"}
+{"step": "pre_slot", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/221", "ok": false, "error": "path segment not found: '221' (in ShowData/DataPools/Default/Sequences/221)"}
+{"step": "pre_slot", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/222", "ok": false, "error": "path segment not found: '222' (in ShowData/DataPools/Default/Sequences/222)"}
+{"step": "pre_slot", "t": 0.266, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": false, "error": "path segment not found: '20' (in ShowData/DataPools/Default/Timecodes/20)"}
+{"step": "pre_master", "t": 0.332, "kind": "props", "path": "ShowData/Masters/3/15", "ok": true, "payload": {"id": "gate-6", "kind": "props", "ok": true, "path": "ShowData/Masters/3/15", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed15"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}}
+{"step": "bpm", "t": 0.333, "kind": "screen", "cleared": true, "commands": [{"command": "Master 3.15 At BPM 112.35", "reasons": []}]}
+{"step": "bpm", "t": 0.399, "kind": "exec", "command": "Master 3.15 At BPM 112.35", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_master", "t": 0.465, "kind": "props", "path": "ShowData/Masters/3/15", "ok": true, "payload": {"id": "gate-8", "kind": "props", "ok": true, "path": "ShowData/Masters/3/15", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed15"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "69"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}}
+{"step": "seq_scene", "t": 0.466, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 4", "reasons": []}, {"command": "Attribute 'Dimmer' At 30", "reasons": []}, {"command": "Store Sequence 220 Cue 1 'Scene Back 30'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 220 Property 'Name' 'RHYTHM PROBE - OVERLAP SCENE'", "reasons": []}]}
+{"step": "seq_scene", "t": 0.532, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.666, "kind": "exec", "command": "Group 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.732, "kind": "exec", "command": "Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.798, "kind": "exec", "command": "Store Sequence 220 Cue 1 'Scene Back 30'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.865, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.932, "kind": "exec", "command": "Set Sequence 220 Property 'Name' 'RHYTHM PROBE - OVERLAP SCENE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 0.933, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 4", "reasons": []}, {"command": "Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Attribute 'Dimmer' At Measure 1", "reasons": []}, {"command": "Attribute 'Dimmer' At SpeedMaster 15", "reasons": []}, {"command": "Store Sequence 221 Cue 1 'Measure 1'", "reasons": ["blacklisted command (matches closed-set 
+{"step": "seq_beat", "t": 0.999, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.065, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.132, "kind": "exec", "command": "Group 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.199, "kind": "exec", "command": "Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.265, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.332, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.399, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.466, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.532, "kind": "exec", "command": "Store Sequence 221 Cue 1 'Measure 1'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.666, "kind": "exec", "command": "Group 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.733, "kind": "exec", "command": "Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.799, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.865, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.932, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 1.999, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.065, "kind": "exec", "command": "Store Sequence 221 Cue 2 'Measure 2'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.133, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.199, "kind": "exec", "command": "Group 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.265, "kind": "exec", "command": "Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.332, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.399, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.466, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 0.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.532, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.599, "kind": "exec", "command": "Store Sequence 221 Cue 3 'Measure 0.5'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.665, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_beat", "t": 2.732, "kind": "exec", "command": "Set Sequence 221 Property 'Name' 'RHYTHM PROBE - SPEEDMASTER MEASURE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 2.732, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 13", "reasons": []}, {"command": "Attribute 'Pan' At Relative 12", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute 'Pan' At Measure 2", "reasons": []}, {"command": "Attribute 'Pan' At SpeedMaster 15", "reasons": []}, {"command": "Store Sequence 222 Cue 1 'Pan Wave'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}
+{"step": "seq_shape", "t": 2.799, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 2.865, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 2.932, "kind": "exec", "command": "Group 13", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 2.999, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.065, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.132, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.199, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.266, "kind": "exec", "command": "Store Sequence 222 Cue 1 'Pan Wave'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.333, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.399, "kind": "exec", "command": "Group 17", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.466, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.532, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.599, "kind": "exec", "command": "Group 18", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.666, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.733, "kind": "exec", "command": "Attribute 'Pan' At Phase 180", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.8, "kind": "exec", "command": "Group 13", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.866, "kind": "exec", "command": "Attribute 'Pan' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 3.933, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.0, "kind": "exec", "command": "Store Sequence 222 Cue 2 'Crossed Pan Wave'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.133, "kind": "exec", "command": "Group 13", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.199, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.265, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.332, "kind": "exec", "command": "Attribute 'Pan' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.399, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.466, "kind": "exec", "command": "Store Sequence 222 Cue 3 'Sweep M4'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.532, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.6, "kind": "exec", "command": "Group 13", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.666, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.732, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.799, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.865, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.932, "kind": "exec", "command": "Store Sequence 222 Cue 4 'Sweep M2'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 4.998, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 5.065, "kind": "exec", "command": "Group 13", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 5.132, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 5.2, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 5.265, "kind": "exec", "command": "Attribute 'Pan' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 5.333, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 5.399, "kind": "exec", "command": "Store Sequence 222 Cue 5 'Sweep M1'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 5.466, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_shape", "t": 5.532, "kind": "exec", "command": "Set Sequence 222 Property 'Name' 'RHYTHM PROBE - NEW SHAPES'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_seq_220", "t": 5.599, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-85", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - OVERLAP SCENE"}], "truncated": false, "v": 1}}
+{"step": "post_seq_221", "t": 5.666, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-86", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - SPEEDMASTER MEASURE"}], "truncated": false, "v": 1}}
+{"step": "post_seq_222", "t": 5.732, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/222", "ok": true, "payload": {"id": "gate-87", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/222", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - NEW SHAPES"}], "truncated": false, "v": 1}}
+{"step": "tc_a", "t": 5.732, "kind": "screen", "cleared": true, "commands": [{"command": "Store Timecode 20", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 20 Property 'Name' 'RHYTHM PROBE - TWO TRACKS'", "reasons": []}, {"command": "Set Timecode 20 Property 'Duration' 10 'AutoStop' 0", "reasons": []}, {"command": "Store Timecode 20.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign Sequence 220 At Timecode 20.1.1", "reasons": ["blacklisted command (matches closed-set entry 'Assig
+{"step": "tc_a", "t": 5.799, "kind": "exec", "command": "Store Timecode 20", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 5.865, "kind": "exec", "command": "Set Timecode 20 Property 'Name' 'RHYTHM PROBE - TWO TRACKS'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 5.932, "kind": "exec", "command": "Set Timecode 20 Property 'Duration' 10 'AutoStop' 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 6.0, "kind": "exec", "command": "Store Timecode 20.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 6.066, "kind": "exec", "command": "Assign Sequence 220 At Timecode 20.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 6.132, "kind": "exec", "command": "Assign Sequence 221 At Timecode 20.1.2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_a_group", "t": 6.198, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/20/1", "ok": true, "payload": {"children": [{"class": "MarkerTrack", "i": 1, "name": "Marker"}, {"class": "Track", "i": 2, "name": "<RHYTHM PROBE - OVERLAP SCENE>"}, {"class": "Track", "i": 3, "name": "<RHYTHM PROBE - SPEEDMASTER MEASURE>"}], "id": "gate-94", "kind": "state", "node": {"childCount": 3, "class": "TrackGroup", "enumeration": "ok", "name": "TrackGroup 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20/1", "truncated": false, "v": 1}}
+{"step": "post_a_track", "t": 6.265, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20/1/2", "ok": true, "payload": {"id": "gate-95", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20/1/2", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "TARGET", "ok": true, "t": "userdata", "v": "Sequence 220"}], "truncated": false, "v": 1}}
+{"step": "post_a_track", "t": 6.332, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20/1/3", "ok": true, "payload": {"id": "gate-96", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20/1/3", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "2"}, {"n": "TARGET", "ok": true, "t": "userdata", "v": "Sequence 221"}], "truncated": false, "v": 1}}
+{"step": "tc_b", "t": 6.332, "kind": "screen", "cleared": true, "commands": [{"command": "Store Type 'CmdSubTrack' Timecode 20.1.1.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Store Type 'CmdSubTrack' Timecode 20.1.2.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}]}
+{"step": "tc_b", "t": 6.399, "kind": "exec", "command": "Store Type 'CmdSubTrack' Timecode 20.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_b", "t": 6.466, "kind": "exec", "command": "Store Type 'CmdSubTrack' Timecode 20.1.2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_b_range_220", "t": 6.532, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/20/1/2/1", "ok": true, "payload": {"children": [{"class": "CmdSubTrack", "i": 1, "name": "CmdSubTrack 1"}], "id": "gate-99", "kind": "state", "node": {"childCount": 1, "class": "TimeRange", "enumeration": "ok", "name": "TimeRange 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20/1/2/1", "truncated": false, "v": 1}}
+{"step": "post_b_range_221", "t": 6.599, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/20/1/3/1", "ok": true, "payload": {"children": [{"class": "CmdSubTrack", "i": 1, "name": "CmdSubTrack 1"}], "id": "gate-100", "kind": "state", "node": {"childCount": 1, "class": "TimeRange", "enumeration": "ok", "name": "TimeRange 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20/1/3/1", "truncated": false, "v": 1}}
+{"step": "tc_c", "t": 6.599, "kind": "screen", "cleared": true, "commands": [{"command": "cd Timecode 20.1.1.1.1", "reasons": []}, {"command": "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "reasons": []}, {"command": "cd root", "reasons": []}, {"command": "cd Timecode 20.1.2.1.1", "reasons": []}, {"command": "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "reasons": []}, {"command": "cd root", "reasons": []}]}
+{"step": "tc_c", "t": 6.665, "kind": "exec", "command": "cd Timecode 20.1.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 6.732, "kind": "exec", "command": "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 6.798, "kind": "exec", "command": "cd root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 6.865, "kind": "exec", "command": "cd Timecode 20.1.2.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 6.932, "kind": "exec", "command": "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 6.998, "kind": "exec", "command": "cd root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_c_220", "t": 7.065, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/20/1/2/1/1", "ok": true, "payload": {"children": [{"class": "CmdEvent", "i": 1, "name": "Go+"}], "id": "gate-107", "kind": "state", "node": {"childCount": 1, "class": "CmdSubTrack", "enumeration": "ok", "name": "CmdSubTrack 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20/1/2/1/1", "truncated": false, "v": 1}}
+{"step": "post_c_221", "t": 7.131, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/20/1/3/1/1", "ok": true, "payload": {"children": [{"class": "CmdEvent", "i": 1, "name": "Go+"}], "id": "gate-108", "kind": "state", "node": {"childCount": 1, "class": "CmdSubTrack", "enumeration": "ok", "name": "CmdSubTrack 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20/1/3/1/1", "truncated": false, "v": 1}}
+{"step": "play", "t": 7.132, "kind": "screen", "cleared": true, "commands": [{"command": "Go Timecode 20", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "play", "t": 7.199, "kind": "exec", "command": "Go Timecode 20", "fired": true, "ok": true, "detail": "OK"}
+{"step": "sample_seq", "t": 7.265, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-110", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 7.331, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-111", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 7.399, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-112", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "0.20"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 7.666, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-113", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 7.733, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-114", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 7.799, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-115", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "0.60"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 8.065, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-116", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 8.133, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-117", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 8.199, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-118", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "1.00"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 8.467, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-119", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 8.532, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-120", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 8.599, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-121", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "1.40"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 8.865, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-122", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 8.932, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-123", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 8.999, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-124", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "1.80"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 9.265, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-125", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 9.332, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-126", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 9.399, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-127", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "2.20"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 9.666, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-128", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 9.732, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-129", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 9.798, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-130", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "2.60"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 10.065, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-131", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 10.132, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-132", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 10.199, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-133", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "3.00"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 10.465, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-134", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 10.532, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-135", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 10.599, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-136", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "3.40"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 10.865, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-137", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 10.932, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-138", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 10.999, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-139", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "3.80"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 11.265, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-140", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 11.332, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-141", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 11.399, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-142", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "4.20"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 11.665, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-143", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 11.732, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-144", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 11.8, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-145", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "4.60"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 12.068, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-146", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 12.133, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-147", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 12.199, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-148", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "5.00"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 12.465, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-149", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 12.532, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-150", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 12.598, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-151", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "5.40"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 12.866, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-152", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "sample_seq", "t": 12.932, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-153", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.1"}], "truncated": false, "v": 1}}
+{"step": "sample_tc", "t": 12.999, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-154", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "5.80"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 13.201, "say": "⑤ 지금 BACK 은 펄스 중. 박자 시퀀스를 끈다 → 30% 로 돌아오는지 보라"}
+{"step": "beat_off", "t": 13.266, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "beat_off", "t": 13.332, "kind": "exec", "command": "Off Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_off", "t": 17.401, "kind": "screen", "cleared": true, "commands": [{"command": "Off Timecode 20", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}, {"command": "Off Sequence 220", "reasons": ["reference-invoking command"]}]}
+{"step": "tc_off", "t": 17.465, "kind": "exec", "command": "Off Timecode 20", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_off", "t": 17.532, "kind": "exec", "command": "Off Sequence 220", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 17.532, "say": "② Measure 1 — 1박(0.534초)에 한 번 깜빡여야 한다"}
+{"step": "measure_1", "t": 17.599, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_1", "t": 17.665, "kind": "exec", "command": "Goto Cue 1 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 25.668, "say": "② Measure 2 — 2박(1.07초)에 한 번"}
+{"step": "measure_2", "t": 25.731, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_2", "t": 25.798, "kind": "exec", "command": "Goto Cue 2 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 33.802, "say": "② Measure 0.5 — 반 박(0.267초)에 한 번"}
+{"step": "measure_3", "t": 33.865, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_3", "t": 33.932, "kind": "exec", "command": "Goto Cue 3 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "measure_off", "t": 41.998, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_off", "t": 42.064, "kind": "exec", "command": "Off Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 42.064, "say": "③ 팬 웨이브 — 2박 한 바퀴, 무빙이 줄지어 따라감"}
+{"step": "shape_1", "t": 42.131, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_1", "t": 42.197, "kind": "exec", "command": "Goto Cue 1 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 50.201, "say": "③ 엇갈린 팬 웨이브 — ODD/EVEN 반대 방향, 1박 한 바퀴"}
+{"step": "shape_2", "t": 50.265, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_2", "t": 50.331, "kind": "exec", "command": "Goto Cue 2 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 58.335, "say": "③ 가속 스윕 4박"}
+{"step": "shape_3", "t": 58.398, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_3", "t": 58.464, "kind": "exec", "command": "Goto Cue 3 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 66.468, "say": "③ 가속 스윕 2박"}
+{"step": "shape_4", "t": 66.53, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 4 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_4", "t": 66.597, "kind": "exec", "command": "Goto Cue 4 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 74.602, "say": "③ 가속 스윕 1박"}
+{"step": "shape_5", "t": 74.663, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 5 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_5", "t": 74.73, "kind": "exec", "command": "Goto Cue 5 Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "shape_off", "t": 82.796, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_off", "t": 82.863, "kind": "exec", "command": "Off Sequence 222", "fired": true, "ok": true, "detail": "OK"}
+{"step": "end_seq_220", "t": 82.93, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-180", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - OVERLAP SCENE"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}], "truncated": false, "v": 1}}
+{"step": "end_seq_221", "t": 82.996, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-181", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - SPEEDMASTER MEASURE"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.3"}], "truncated": false, "v": 1}}
+{"step": "end_seq_222", "t": 83.062, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/222", "ok": true, "payload": {"id": "gate-182", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/222", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - NEW SHAPES"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 222.5"}], "truncated": false, "v": 1}}
+{"step": "end_tc", "t": 83.13, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": true, "payload": {"id": "gate-183", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/20", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - TWO TRACKS"}, {"n": "CURSOR", "ok": true, "t": "string", "v": "10.00"}], "truncated": false, "v": 1}}
+{
+  "master": 15,
+  "slots": [
+    220,
+    221,
+    222,
+    20
+  ],
+  "bundles": {
+    "bpm": true,
+    "seq_scene": true,
+    "seq_beat": true,
+    "seq_shape": true,
+    "tc_a": true,
+    "tc_b": true,
+    "tc_c": true,
+    "play": true,
+    "beat_off": true,
+    "tc_off": true,
+    "measure_1": true,
+    "measure_2": true,
+    "measure_3": true,
+    "measure_off": true,
+    "shape_1": true,
+    "shape_2": true,
+    "shape_3": true,
+    "shape_4": true,
+    "shape_5": true,
+    "shape_off": true
+  },
+  "pre_master": {
+    "id": "gate-6",
+    "kind": "props",
+    "ok": true,
+    "path": "ShowData/Masters/3/15",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "Speed15"
+      },
+      {
+        "n": "NORMEDVALUE",
+        "ok": true,
+        "t": "number",
+        "v": "50"
+      },
+      {
+        "n": "SPEEDSCALE",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  },
+  "post_master": {
+    "id": "gate-8",
+    "kind": "props",
+    "ok": true,
+    "path": "ShowData/Masters/3/15",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "Speed15"
+      },
+      {
+        "n": "NORMEDVALUE",
+        "ok": true,
+        "t": "number",
+        "v": "69"
+      },
+      {
+        "n": "SPEEDSCALE",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  },
+  "tracks": [
+    {
+      "i": 2,
+      "no": "1",
+      "target": "Sequence 220"
+    },
+    {
+      "i": 3,
+      "no": "2",
+      "target": "Sequence 221"
+    }
+  ],
+  "post_b": {
+    "220": [
+      "CmdSubTrack"
+    ],
+    "221": [
+      "CmdSubTrack"
+    ]
+  },
+  "events": {
+    "220": 1,
+    "221": 1
+  },
+  "samples": [
+    {
+      "t": 0.0,
+      "220": null,
+      "221": null,
+      "cursor": "0.20"
+    },
+    {
+      "t": 0.4,
+      "220": null,
+      "221": null,
+      "cursor": "0.60"
+    },
+    {
+      "t": 0.8,
+      "220": null,
+      "221": null,
+      "cursor": "1.00"
+    },
+    {
+      "t": 1.2,
+      "220": "Sequence 220.1",
+      "221": null,
+      "cursor": "1.40"
+    },
+    {
+      "t": 1.6,
+      "220": "Sequence 220.1",
+      "221": null,
+      "cursor": "1.80"
+    },
+    {
+      "t": 2.0,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "2.20"
+    },
+    {
+      "t": 2.4,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "2.60"
+    },
+    {
+      "t": 2.8,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "3.00"
+    },
+    {
+      "t": 3.2,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "3.40"
+    },
+    {
+      "t": 3.61,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "3.80"
+    },
+    {
+      "t": 4.01,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "4.20"
+    },
+    {
+      "t": 4.41,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "4.60"
+    },
+    {
+      "t": 4.8,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "5.00"
+    },
+    {
+      "t": 5.2,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "5.40"
+    },
+    {
+      "t": 5.6,
+      "220": "Sequence 220.1",
+      "221": "Sequence 221.1",
+      "cursor": "5.80"
+    }
+  ],
+  "verdict": "ran — ① from post_master, ④ from tracks/events/samples, ②③⑤ by human watch",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Master 3.15 At BPM 112.35"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 30",
+        "Store Sequence 220 Cue 1 'Scene Back 30'",
+        "ClearAll",
+        "Set Sequence 220 Property 'Name' 'RHYTHM PROBE - OVERLAP SCENE'"
+      ],
+      "approved": true
+    },

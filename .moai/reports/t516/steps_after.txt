@@ -1,0 +1,11 @@
+ping
+state:ShowData/DataPools/Default/Sequences
+state:ShowData/DataPools/Default/Sequences@17
+state:ShowData/DataPools/Default/Timecodes
+props:ShowData/Masters/3/15|NAME,NORMEDVALUE,SPEEDSCALE
+props:ShowData/DataPools/Default/Sequences/220|NAME,CURRENTCUE
+props:ShowData/DataPools/Default/Sequences/221|NAME,CURRENTCUE
+props:ShowData/DataPools/Default/Sequences/222|NAME,CURRENTCUE
+props:ShowData/DataPools/Default/Timecodes/20|NAME,DURATION,CURSOR
+state:ShowData/DataPools/Default/Sequences/221
+state:ShowData/DataPools/Default/Sequences/222

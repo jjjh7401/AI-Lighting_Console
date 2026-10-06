@@ -65,6 +65,29 @@
 2. **쓰고 남는 것.** 시퀀스 220·221·222, 타임코드 20, 마스터 15의 BPM이 남는다. 지우지 않는다. 쇼 저장은 하지 않으므로 감독이 저장하지 않으면 다시 열 때 사라진다.
 3. **엇갈린 팬 웨이브의 그룹.** ODD 17·EVEN 18이 무빙만 담는지는 확인하지 않았다. 무빙이 아닌 기구는 Pan이 없어 영향이 없을 것으로 본다(추정).
 
+## 4-1. 실기 실행 (감독 승인 2026-10-06, 리드 경유) — 1회
+
+- 실행: `uv run python .moai/reports/t516/rhythm_probe.py .moai/reports/t516/live_write --master 15 --master-props NAME,NORMEDVALUE,SPEEDSCALE --approve .moai/reports/t516/live_denyall`
+  - exit 0, 12:53:53~12:55:16 KST(감사 로그 첫·끝 송신 시각).
+  - 승인 직전 확인: 승인 파일 sha256 `aa0157dd…` 그대로, 헤드 `982f63ed`.
+- 🔴 **실행 시점이 리드의 "감독 준비 완료" 신호보다 앞섰다.** 승인 메시지의 "감독이 지금 콘솔 앞에서 본다"를 준비 완료로 읽고, 볼 화면 안내를 보낸 직후 실행했다. 승인이 1회라 다시 돌리지 않았다. 감독이 화면을 봤는지는 리드에게 물었다.
+
+| 항목 | 기계 측정 | 결과 |
+|---|---|---|
+| 승인 = 송신 (AC-LDRHYTHM-012 방식) | `approval_vs_sent.py approval_rhythm_probe.txt live_write/audit` → 송신 105줄, sha256 같음, 송신 안 됨 0, 승인 안 됨 0, not-ok 0 (`live_write_approval_vs_sent.txt`) | **PASS** |
+| 승인 · 쇼 저장 | 승인 20/20 · SaveShow 송신 0(기록만 20) | 통과 |
+| ① 마스터 BPM | `Masters/3/15` `NORMEDVALUE` 50 → 69, 이름 `Speed15` 그대로. 응답기 속성에 BPM 값이 없다 | 명령은 받아들여졌다. 112.35 소수 여부는 **기계로 판정 불가** → 감독 관찰 |
+| ④ 트랙 둘 | TC20/1 아래 Track 두 개: `NO 1 → Sequence 220`, `NO 2 → Sequence 221`. 두 번째 `Assign … At Timecode 20.1.2`가 새 트랙을 만들었다. CmdSubTrack 각 1, 이벤트 각 1 | **PASS** |
+| ④ 재생 | 0.4초 간격 표본: 220은 커서 1.00~1.40 사이, 221은 1.80~2.20 사이에 큐 1로 들어갔다(이벤트 1초·2초). `CURRENTCUE`는 `Sequence 220.1` / `221.1`로 읽혔다 | **PASS** (정밀도는 표본 간격 0.4초 한계) |
+| 되읽기 (`run1_after_readonly.txt`) | 추가: 시퀀스 220·221·222(이름 `RHYTHM PROBE - …`), 타임코드 20 `RHYTHM PROBE - TWO TRACKS`. 기존 시퀀스·타임코드 목록은 그대로(제거·이름 변경 0). 시퀀스 221 큐 `Measure 1`·`Measure 2`·**`Measure 05`**, 시퀀스 222 큐 5개 | 쓰기 범위 = 승인 범위 |
+| ②③⑤ | 기계 측정 없음 | **감독 관찰 대기** |
+
+새로 안 것:
+
+- **큐 이름에서 점이 빠진다.** `Store Sequence 221 Cue 3 'Measure 0.5'`가 `Measure 05`로 저장됐다. 점이 들어가는 이름은 피해야 한다(M2 대본 큐 이름 규칙에 반영할 것). `At Measure 0.5` 값 자체가 들어갔는지는 읽을 수 없다. Measure 구간 ③이 반 박에 한 번이었는지 감독 관찰로 판정한다.
+- `Off Sequence` 뒤에도 `CURRENTCUE`는 마지막 큐(221.3, 222.5)로 읽힌다. 꺼짐 여부의 계기로 쓸 수 없다.
+- 남은 것(감독이 알고 승인): 시퀀스 220~222, 타임코드 20, 마스터 15 BPM. 쇼는 저장하지 않았다.
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
