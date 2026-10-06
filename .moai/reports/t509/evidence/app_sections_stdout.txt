@@ -1,0 +1,11 @@
+bpm 112.34714673913075 confidence 0.967 sections 10
+ 0    0.00-  13.80 D1 Intro
+ 1   13.80-  28.72 D4 Verse 1
+ 2   28.72-  37.49 D3 Verse 2
+ 3   37.49-  69.54 D5 Chorus 1
+ 4   69.54-  82.37 D4 Verse 3
+ 5   82.37-  97.50 D4 Verse 4
+ 6   97.50- 131.74 D5 Chorus 2
+ 7  131.74- 144.25 D3 Verse 5
+ 8  144.25- 178.91 D5 Chorus 3
+ 9  178.91- 197.16 D1 Finale
