@@ -1,0 +1,20 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/242
+    wire: Plugin "CopilotResponder" "state 25581354 ShowData/DataPools/Default/Sequences/242"
+<<< {"error": "path segment not found: '242' (in ShowData/DataPools/Default/Sequences/242)", "id": "25581354", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/242", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/243
+    wire: Plugin "CopilotResponder" "state 4c96c208 ShowData/DataPools/Default/Sequences/243"
+<<< {"error": "path segment not found: '243' (in ShowData/DataPools/Default/Sequences/243)", "id": "4c96c208", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/243", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/244
+    wire: Plugin "CopilotResponder" "state 04ea41cc ShowData/DataPools/Default/Sequences/244"
+<<< {"error": "path segment not found: '244' (in ShowData/DataPools/Default/Sequences/244)", "id": "04ea41cc", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/244", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/229
+    wire: Plugin "CopilotResponder" "state 95e67c8d ShowData/DataPools/Default/Sequences/229"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "L1 Pulse Speed 112"}], "id": "95e67c8d", "kind": "state", "node": {"childCount": 3, "class": "Sequence", "enumeration": "ok", "name": "RHYTHM PROBE v3 - L1 PULSE SPEED 112"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/229", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/2/24
+    wire: Plugin "CopilotResponder" "state 81ca650f ShowData/DataPools/Default/PresetPools/2/24"
+<<< {"children": [], "id": "81ca650f", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "Center"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/24", "truncated": false, "v": 1}

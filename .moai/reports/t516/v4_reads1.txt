@@ -1,0 +1,48 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping a1c6c96f"
+<<< {"id": "a1c6c96f", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:Patch/Stages/1/Fixtures/43
+    wire: Plugin "CopilotResponder" "state a2149e40 Patch/Stages/1/Fixtures/43"
+<<< {"children": [{"class": "SubFixture", "i": 1, "name": "[Instance2#2]"}], "id": "a2149e40", "kind": "state", "node": {"childCount": 1, "class": "Fixture", "enumeration": "ok", "name": "BACK 201"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/43", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/27
+    wire: Plugin "CopilotResponder" "state ab22311f Patch/Stages/1/Fixtures/27"
+<<< {"children": [], "id": "ab22311f", "kind": "state", "node": {"childCount": 0, "class": "Fixture", "enumeration": "ok", "name": "MOVER-U 501"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/27", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/6/1/1
+    wire: Plugin "CopilotResponder" "state faeb99de Patch/FixtureTypes/8/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Aura_Shutter1"}, {"class": "DMXChannel", "i": 2, "name": "Aura_Dimmer"}, {"class": "DMXChannel", "i": 3, "name": "Aura_COLORMIXER"}, {"class": "DMXChannel", "i": 4, "name": "Aura_ColorRGB_R"}, {"class": "DMXChannel", "i": 5, "name": "Aura_ColorRGB_G"}, {"class": "DMXChannel", "i": 6, "name": "Aura_ColorRGB_B"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_Dimmer"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_Zoom"}, {"class": "DMXChannel", "i": 10, "name": "Yoke_Main Module_Pan"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_Tilt"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_FixtureGlobalReset"}, {"class": "DMXChannel", "i": 13, "name": "Main Module_COLORMIXER"}, {"class": "DMXChannel", "i": 14, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 15, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 16, "name": "Main Module_ColorRGB_B"}], "id": "faeb99de", "kind": "state", "node": {"childCount": 23, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/6/1/1", "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/234
+    wire: Plugin "CopilotResponder" "state 3384ab49 ShowData/DataPools/Default/Sequences/234"
+<<< {"error": "path segment not found: '234' (in ShowData/DataPools/Default/Sequences/234)", "id": "3384ab49", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/234", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/235
+    wire: Plugin "CopilotResponder" "state 1b82cb83 ShowData/DataPools/Default/Sequences/235"
+<<< {"error": "path segment not found: '235' (in ShowData/DataPools/Default/Sequences/235)", "id": "1b82cb83", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/235", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/236
+    wire: Plugin "CopilotResponder" "state 5c9a8fb7 ShowData/DataPools/Default/Sequences/236"
+<<< {"error": "path segment not found: '236' (in ShowData/DataPools/Default/Sequences/236)", "id": "5c9a8fb7", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/236", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/237
+    wire: Plugin "CopilotResponder" "state 897b5320 ShowData/DataPools/Default/Sequences/237"
+<<< {"error": "path segment not found: '237' (in ShowData/DataPools/Default/Sequences/237)", "id": "897b5320", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/237", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/238
+    wire: Plugin "CopilotResponder" "state 0be8b6c4 ShowData/DataPools/Default/Sequences/238"
+<<< {"error": "path segment not found: '238' (in ShowData/DataPools/Default/Sequences/238)", "id": "0be8b6c4", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/238", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/239
+    wire: Plugin "CopilotResponder" "state fe77f066 ShowData/DataPools/Default/Sequences/239"
+<<< {"error": "path segment not found: '239' (in ShowData/DataPools/Default/Sequences/239)", "id": "fe77f066", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/239", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/240
+    wire: Plugin "CopilotResponder" "state cf9be2ee ShowData/DataPools/Default/Sequences/240"
+<<< {"error": "path segment not found: '240' (in ShowData/DataPools/Default/Sequences/240)", "id": "cf9be2ee", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/240", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/241
+    wire: Plugin "CopilotResponder" "state 0078f46a ShowData/DataPools/Default/Sequences/241"
+<<< {"error": "path segment not found: '241' (in ShowData/DataPools/Default/Sequences/241)", "id": "0078f46a", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/241", "v": 1}

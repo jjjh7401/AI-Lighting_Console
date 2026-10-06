@@ -233,6 +233,52 @@
 
 - 감독 승인 2026-10-06(리드 경유). 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v3.py .moai/reports/t516/v3_live --approve .moai/reports/t516/v3_denyall`
 
+## 4-7. v3 실기·다시 보기 결과 (감독 관찰, 리드 경유)
+
+- 실기 1회(`v3_live`, 커밋 `1cba53df`): 승인 = 송신 69줄 PASS, 228~233 저장·이름 확인, Part 2976~3388B, SaveShow 0.
+- 다시 보기 1회(`v3_replay_live`, 커밋 `dbda34f0`): Goto/Off 12줄, 승인 = 송신 PASS.
+- 감독 관찰(원문): 「L0~L2 잘됨. L3 깜박였지만 느리지 않음. L4,L5 틸트는 안되고 팬이 되었으나 수직이라 표시가 나지 않음」.
+
+해석(관찰 = 사람 눈, 기계 증거 없음):
+
+- 페이저 실행, `At Speed 112`, `At SpeedMaster 15` 결속(L2) 모두 보였다. v1/v2 의 「안 켜짐」은 페이저 문제가 아니라, 다중 디머 기구(Aura XB·Spiider)와 가시성 쪽으로 좁혀진다. **가설 유지, 미측정.**
+- 🔴 `At Measure 2` 는 속도를 바꾸지 않았다. 대본의 ½·1·2·4·8박 주기 표현에는 다른 수단이 필요하다.
+  - 공식 문서(Phasers): 「The optional Measure layer defines the number of beats in the repeating phaser loop」.
+  - 가설(안 잰 것): 2단계 페이저의 기본 루프가 이미 2박이라 Measure 2 가 아무것도 바꾸지 않았다. v4 B3/B4(Measure 4/1)로 가른다.
+- 🔴 position_fx wave 줄을 그대로 넣었는데 Tilt 가 아니라 Pan 이 움직였다. 기준 위치(Preset 2.24 Center)가 수직이라 Pan 회전이 보이지 않았다. 룰북 31:66-73 과 33 의 'live-validated' 주장과 다른 결과다.
+  - 프리셋 2.24 내용은 응답기로 읽을 수 없다(`childCount 0`). 프리셋 안에 Pan 페이저가 있을 가능성은 남는다. v4 A 는 프리셋을 쓰지 않는다.
+
+## 4-8. 프로브 v4 설계 (승인 요청, 실행 신호 대기)
+
+- 실기 판독(쓰기 0, `v4_reads1.txt`·`v4_reads2.txt`): Sequence 234~244 모두 `path segment not found`. Fixture 201 아래 SubFixture 1개(`[Instance2#2]`, SUBFIXTUREINDEX 71). 무빙 501 은 SubFixture 0개.
+
+| 묶음 | 시퀀스 | 내용 | 무엇을 가르나 |
+|---|---|---|---|
+| A0 | 234 | Dimmer 70 + `Attribute 'Tilt' At 45` (정적) | 기준이 수직이 아닌지 |
+| A1 | 235 | A0 + `Pan At Relative 30` → Phase 0 Thru 360 → Speed 112 (룰북 모양) | Pan 이 움직이나 |
+| A2 | 236 | 같은 모양을 Tilt 로 | Tilt 가 움직이나 |
+| A3 | 237 | Tilt 2단계(Relative -30 → `Step 2` → Relative 30) | 단계 수가 축을 가르나 |
+| 기준 | 229 | v3 L1 재생만(Goto/Off) | B 비교 기준 |
+| B1 | 238 | Dimmer 2단계 + `At Speed 56` | 절반 빠르기 |
+| B2 | 239 | `At Speed 224` | 두 배 |
+| B3 | 240 | `At Measure 4` + `At SpeedMaster 15` | 마스터 따라가며 느리게 |
+| B4 | 241 | `At Measure 1` + `At SpeedMaster 15` | 마스터 따라가며 빠르게 |
+| D1 | 242 | `Fixture 201 ; Attribute 'Dimmer' At 30` | v2 에서 어두웠던 모양(대조) |
+| D2 | 243 | `Fixture 201.1 ; Attribute 'Dimmer' At 30` | 서브픽스처 디머 |
+| D3 | 244 | 201 과 201.1 둘 다 30 | 두 디머 모두 |
+
+- 제외한 후보: 다른 스피드 마스터에 56.175 BPM. 이미 있는 전역 마스터 값을 바꾸는 쓰기라 「새 번호만」 밖이다. Speed Scale(마스터 배수)은 문서에 있으나 명령줄 문법이 문서에 없다.
+- `Tilt At 45` 의 단위(퍼센트인지 각도인지)는 안 잰 것이다. 룰북 31:37 은 퍼센트라고 적는다.
+- `Fixture 201.1` 이 Aura 쪽인지 Main Module 쪽인지는 안 잰 것이다. D 묶음은 거절돼도 멈추지 않는다.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`v4_rehearse`) | 묶음 35개 끝까지 |
+| 실기 전부-거절(`v4_denyall`) | rejected 35, executed 0 · 요청 문면 = 리허설 True |
+| 승인 파일 | `approval_rhythm_probe_v4.txt` 124줄, sha256 `3ccc02344e36df2569ab58635fc31c37e60b5222e049d6131ad7cfca12037ef8` · t512 대조(리허설) PASS · Save/Delete/Remove/Master 0 · 229 는 Goto/Off 2줄뿐 |
+
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v4.py .moai/reports/t516/v4_live --approve .moai/reports/t516/v4_denyall`
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
