@@ -76,7 +76,7 @@
 |---|---|---|
 | 승인 = 송신 (AC-LDRHYTHM-012 방식) | `approval_vs_sent.py approval_rhythm_probe.txt live_write/audit` → 송신 105줄, sha256 같음, 송신 안 됨 0, 승인 안 됨 0, not-ok 0 (`live_write_approval_vs_sent.txt`) | **PASS** |
 | 승인 · 쇼 저장 | 승인 20/20 · SaveShow 송신 0(기록만 20) | 통과 |
-| ① 마스터 BPM | `Masters/3/15` `NORMEDVALUE` 50 → 69, 이름 `Speed15` 그대로. 응답기 속성에 BPM 값이 없다 | 명령은 받아들여졌다. 112.35 소수 여부는 **기계로 판정 불가** → 감독 관찰 |
+| ① 마스터 BPM | `Masters/3/15` `NORMEDVALUE` 50 → 69, 이름 `Speed15` 그대로. 응답기 속성에 BPM 값이 없다. **감독 관찰(2026-10-06, 리드 경유)**: 감독이 Speed15를 실행기에 걸어 확인했다. 표시는 「Speed15 / 112 *B」, 그 아래 「MST 112 B」 | 명령은 받아들여졌다. **표시 112(반올림 또는 절삭), 내부 값 미판별.** 소수 .35가 내부에 남아 있는지는 기계로도 화면으로도 가릴 수 없다 |
 | ④ 트랙 둘 | TC20/1 아래 Track 두 개: `NO 1 → Sequence 220`, `NO 2 → Sequence 221`. 두 번째 `Assign … At Timecode 20.1.2`가 새 트랙을 만들었다. CmdSubTrack 각 1, 이벤트 각 1 | **PASS** |
 | ④ 재생 | 0.4초 간격 표본: 220은 커서 1.00~1.40 사이, 221은 1.80~2.20 사이에 큐 1로 들어갔다(이벤트 1초·2초). `CURRENTCUE`는 `Sequence 220.1` / `221.1`로 읽혔다 | **PASS** (정밀도는 표본 간격 0.4초 한계) |
 | 되읽기 (`run1_after_readonly.txt`) | 추가: 시퀀스 220·221·222(이름 `RHYTHM PROBE - …`), 타임코드 20 `RHYTHM PROBE - TWO TRACKS`. 기존 시퀀스·타임코드 목록은 그대로(제거·이름 변경 0). 시퀀스 221 큐 `Measure 1`·`Measure 2`·**`Measure 05`**, 시퀀스 222 큐 5개 | 쓰기 범위 = 승인 범위 |
