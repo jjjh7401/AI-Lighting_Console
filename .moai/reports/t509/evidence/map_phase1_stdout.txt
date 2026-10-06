@@ -1,0 +1,194 @@
+{
+ "audio": "/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3",
+ "sample_rate": 44100,
+ "duration_s": 197.161,
+ "app_path_bpm": 112.34714673913075,
+ "app_path_confidence": 0.9673129318451623,
+ "n_beats": 326,
+ "pickup_beats_s": [
+  0.964
+ ],
+ "downbeat": {
+  "snare_slot_counts": [
+   72.0,
+   66.0,
+   69.0,
+   69.0
+  ],
+  "snare_backbeat_pair_start": 0,
+  "snare_downbeat_candidates": [
+   1,
+   3
+  ],
+  "snare_phase_naive": 3,
+  "chroma_novelty_by_slot": [
+   51.461,
+   69.741,
+   39.803,
+   44.83
+  ],
+  "chroma_phase": 1,
+  "boundary_slot_counts": [
+   7.0,
+   1.0,
+   0.0,
+   1.0
+  ],
+  "boundary_phase": 0,
+  "lowjump_slot_counts": [
+   1.0,
+   4.0,
+   2.0,
+   2.0
+  ],
+  "lowjump_phase": 1,
+  "chosen_phase": 1,
+  "agree_chroma_boundary": false,
+  "chosen_in_snare_candidates": true,
+  "votes": [
+   1,
+   0
+  ]
+ },
+ "n_bars": 82,
+ "n_kick_candidates": 535,
+ "n_snare_candidates": 372,
+ "kick_on_beat_ratio": 0.4280373831775701,
+ "snare_on_beat_ratio": 0.7419354838709677,
+ "boundary_fit": [
+  {
+   "section": "Verse 1",
+   "boundary_s": 13.804,
+   "nearest_downbeat_s": 14.362,
+   "diff_ms": 558,
+   "diff_beats": 1.04
+  },
+  {
+   "section": "Verse 2",
+   "boundary_s": 28.723,
+   "nearest_downbeat_s": 29.35,
+   "diff_ms": 627,
+   "diff_beats": 1.17
+  },
+  {
+   "section": "Chorus 1",
+   "boundary_s": 37.489,
+   "nearest_downbeat_s": 37.895,
+   "diff_ms": 406,
+   "diff_beats": 0.76
+  },
+  {
+   "section": "Verse 3",
+   "boundary_s": 69.544,
+   "nearest_downbeat_s": 70.055,
+   "diff_ms": 511,
+   "diff_beats": 0.96
+  },
+  {
+   "section": "Verse 4",
+   "boundary_s": 82.373,
+   "nearest_downbeat_s": 82.942,
+   "diff_ms": 569,
+   "diff_beats": 1.07
+  },
+  {
+   "section": "Chorus 2",
+   "boundary_s": 97.501,
+   "nearest_downbeat_s": 97.93,
+   "diff_ms": 429,
+   "diff_beats": 0.8
+  },
+  {
+   "section": "Verse 5",
+   "boundary_s": 131.738,
+   "nearest_downbeat_s": 132.214,
+   "diff_ms": 476,
+   "diff_beats": 0.89
+  },
+  {
+   "section": "Chorus 3",
+   "boundary_s": 144.254,
+   "nearest_downbeat_s": 145.078,
+   "diff_ms": 824,
+   "diff_beats": 1.54
+  },
+  {
+   "section": "Finale",
+   "boundary_s": 178.91,
+   "nearest_downbeat_s": 175.055,
+   "diff_ms": -3855,
+   "diff_beats": -7.22
+  }
+ ],
+ "vocal_events": [
+  {
+   "bar": 13,
+   "t": 27.225,
+   "event": "start"
+  },
+  {
+   "bar": 14,
+   "t": 29.35,
+   "event": "end"
+  },
+  {
+   "bar": 20,
+   "t": 42.225,
+   "event": "start"
+  },
+  {
+   "bar": 28,
+   "t": 59.362,
+   "event": "end"
+  },
+  {
+   "bar": 30,
+   "t": 63.658,
+   "event": "start"
+  },
+  {
+   "bar": 34,
+   "t": 72.214,
+   "event": "end"
+  },
+  {
+   "bar": 45,
+   "t": 95.794,
+   "event": "start"
+  },
+  {
+   "bar": 55,
+   "t": 117.226,
+   "event": "end"
+  },
+  {
+   "bar": 58,
+   "t": 123.646,
+   "event": "start"
+  },
+  {
+   "bar": 62,
+   "t": 132.214,
+   "event": "end"
+  },
+  {
+   "bar": 67,
+   "t": 142.907,
+   "event": "start"
+  },
+  {
+   "bar": 76,
+   "t": 162.226,
+   "event": "end"
+  },
+  {
+   "bar": 78,
+   "t": 166.51,
+   "event": "start"
+  }
+ ],
+ "listen": {
+  "beats": "/Users/studiox/Music/AI-Lighting_Console-listen/t509/LOVE_ATTACK_beats_clicks_phase1.wav",
+  "kick_snare": "/Users/studiox/Music/AI-Lighting_Console-listen/t509/LOVE_ATTACK_kick_snare_clicks.wav"
+ }
+}

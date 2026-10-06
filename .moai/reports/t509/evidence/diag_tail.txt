@@ -1,0 +1,18 @@
+app beats last 175.06s of 197.16s
+165-167s rms/med 1.12 onsets 1
+167-169s rms/med 1.13 onsets 3
+169-171s rms/med 1.18 onsets 3
+171-173s rms/med 1.14 onsets 3
+173-175s rms/med 1.00 onsets 2
+175-177s rms/med 1.10 onsets 2
+177-179s rms/med 0.85 onsets 1
+179-181s rms/med 0.05 onsets 0
+181-183s rms/med 0.01 onsets 0
+183-185s rms/med 0.02 onsets 0
+185-187s rms/med 0.07 onsets 2
+187-189s rms/med 0.02 onsets 0
+189-191s rms/med 0.00 onsets 0
+191-193s rms/med 0.00 onsets 0
+193-195s rms/med 0.00 onsets 0
+195-197s rms/med 0.00 onsets 0
+tail-only beat_track: 15 beats, bpm 73.83

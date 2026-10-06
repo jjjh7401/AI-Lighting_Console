@@ -1,0 +1,100 @@
+{
+ "audio": "/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3",
+ "bpm": 112.34714673913075,
+ "bpm_confidence": 0.9673129318451623,
+ "boundaries_ms": [
+  0,
+  13804,
+  28723,
+  37489,
+  69544,
+  82373,
+  97501,
+  131738,
+  144254,
+  178910
+ ],
+ "n_onsets": 396,
+ "sections": [
+  {
+   "i": 0,
+   "name": "Intro",
+   "role": "intro",
+   "d": 1,
+   "start_ms": 0,
+   "end_ms": 13804
+  },
+  {
+   "i": 1,
+   "name": "Verse 1",
+   "role": "verse",
+   "d": 4,
+   "start_ms": 13804,
+   "end_ms": 28723
+  },
+  {
+   "i": 2,
+   "name": "Verse 2",
+   "role": "verse",
+   "d": 3,
+   "start_ms": 28723,
+   "end_ms": 37489
+  },
+  {
+   "i": 3,
+   "name": "Chorus 1",
+   "role": "chorus",
+   "d": 5,
+   "start_ms": 37489,
+   "end_ms": 69544
+  },
+  {
+   "i": 4,
+   "name": "Verse 3",
+   "role": "verse",
+   "d": 4,
+   "start_ms": 69544,
+   "end_ms": 82373
+  },
+  {
+   "i": 5,
+   "name": "Verse 4",
+   "role": "verse",
+   "d": 4,
+   "start_ms": 82373,
+   "end_ms": 97501
+  },
+  {
+   "i": 6,
+   "name": "Chorus 2",
+   "role": "chorus",
+   "d": 5,
+   "start_ms": 97501,
+   "end_ms": 131738
+  },
+  {
+   "i": 7,
+   "name": "Verse 5",
+   "role": "verse",
+   "d": 3,
+   "start_ms": 131738,
+   "end_ms": 144254
+  },
+  {
+   "i": 8,
+   "name": "Chorus 3",
+   "role": "chorus",
+   "d": 5,
+   "start_ms": 144254,
+   "end_ms": 178910
+  },
+  {
+   "i": 9,
+   "name": "Finale",
+   "role": "finale",
+   "d": 1,
+   "start_ms": 178910,
+   "end_ms": 197161
+  }
+ ]
+}

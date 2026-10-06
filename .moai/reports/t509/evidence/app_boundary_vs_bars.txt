@@ -1,0 +1,9 @@
+Verse 1 13.804 bar 7 14.362 diff_s -0.56 beats -1.04
+Verse 2 28.723 bar 14 29.35 diff_s -0.63 beats -1.17
+Chorus 1 37.489 bar 18 37.895 diff_s -0.41 beats -0.76
+Verse 3 69.544 bar 33 70.055 diff_s -0.51 beats -0.96
+Verse 4 82.373 bar 39 82.942 diff_s -0.57 beats -1.07
+Chorus 2 97.501 bar 46 97.93 diff_s -0.43 beats -0.8
+Verse 5 131.738 bar 62 132.214 diff_s -0.48 beats -0.89
+Chorus 3 144.254 bar 68 145.078 diff_s -0.82 beats -1.54
+Finale 178.91 beyond beats

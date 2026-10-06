@@ -1,0 +1,4 @@
+start 112.35 -> bpm 112.35 beats 326 | onbeat(±0.1 beat, chance 0.20) low=0.40 hi=0.56 perc=0.65
+start  56.17 -> bpm  56.17 beats 164 | onbeat(±0.1 beat, chance 0.20) low=0.21 hi=0.33 perc=0.34
+start 224.69 -> bpm 224.69 beats 690 | onbeat(±0.1 beat, chance 0.20) low=0.59 hi=0.74 perc=0.81
+start  74.90 -> bpm 112.35 beats 326 | onbeat(±0.1 beat, chance 0.20) low=0.40 hi=0.56 perc=0.65
