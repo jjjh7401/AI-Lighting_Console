@@ -1,0 +1,57 @@
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45
+Store Sequence 245 Cue 1 'E0 Base Tilt 45'
+ClearAll
+Set Sequence 245 Property 'Name' 'RHYTHM PROBE v5 - E0 BASE TILT 45'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70 ; Attribute 'Pan' At -30 ; Attribute 'Tilt' At 45
+Step 2
+Attribute 'Dimmer' At 70 ; Attribute 'Pan' At 30 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Speed 56
+Store Sequence 246 Cue 1 'E1 Pan Absolute Steps Tilt 45'
+ClearAll
+Set Sequence 246 Property 'Name' 'RHYTHM PROBE v5 - E1 PAN ABSOLUTE STEPS TILT 45'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30
+Step 2
+Attribute 'Pan' At Relative 30
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Speed 56
+Store Sequence 247 Cue 1 'E2 Pan Relative Steps Only'
+ClearAll
+Set Sequence 247 Property 'Name' 'RHYTHM PROBE v5 - E2 PAN RELATIVE STEPS ONLY'
+ChangeDestination Root
+ClearAll
+Fixture 201 ; Attribute 'Dimmer' At 100
+Fixture 201.1 ; Attribute 'Dimmer' At 100
+Fixture 301 ; Attribute 'Dimmer' At 100
+Fixture 301.1 ; Attribute 'Dimmer' At 100
+Store Sequence 248 Cue 1 'F1 Aura Dimmer 100'
+ClearAll
+Set Sequence 248 Property 'Name' 'RHYTHM PROBE v5 - F1 AURA DIMMER 100'
+ChangeDestination Root
+ClearAll
+Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100
+Fixture 201.1 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100
+Fixture 301 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100
+Fixture 301.1 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 249 Cue 1 'F2 Aura Dimmer 100 Rgb 100'
+ClearAll
+Set Sequence 249 Property 'Name' 'RHYTHM PROBE v5 - F2 AURA DIMMER 100 RGB 100'
+Goto Cue 1 Sequence 245
+Off Sequence 245
+Goto Cue 1 Sequence 246
+Off Sequence 246
+Goto Cue 1 Sequence 245
+Goto Cue 1 Sequence 247
+Off Sequence 247
+Off Sequence 245
+Goto Cue 1 Sequence 248
+Off Sequence 248
+Goto Cue 1 Sequence 249
+Off Sequence 249

@@ -352,6 +352,49 @@
 - 401 을 처음 상태로 완전히 되돌리려면 1b 되돌리기 뒤에 1단계 되돌리기(`approval_floor_rot1_revert.txt`)를 차례로 돌린다.
 - 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/floor_place.py .moai/reports/t516/p1b_live --stage 1b --approve .moai/reports/t516/p1b_denyall`
 
+## 4-12. 바닥 워시 1b·2단계 결과와 v4 실기·다시 보기
+
+- 1b(`p1b_live`): 401 POSZ 0.3 → 0.0, ROTX 180 유지. 감독 「(401) 바닥에 붙었어, 나머지도 해줘」.
+- 2단계(`p2_live`): 19대 ROTX 0 → 179.99999860565, POSZ 0.3 → 0.0, ROTY·ROTZ 0. 되읽기 일치, t512 PASS(38줄). 쇼는 감독이 저장했다(「쇼 저장했어」).
+- v4 실기(`v4_live`): 승인 = 송신 124줄 PASS, 35묶음 executed. `Fixture 201.1 ;` 서브픽스처 문법을 콘솔이 받았다(D2 저장 executed). 큐 크기: A0 3432 · A1 3216 · A2 3216 · A3 3552 · B1 3016 · B2 3016 · B3 3064 · B4 3060 · D1 2672 · D2 2704 · D3 2684.
+- v4 다시 보기(`v4_replay_live`): Goto/Off 24줄 PASS, 이름 사전 판독 12/12.
+- 감독 관찰(원문): 「235 좌우로 흔들리는 걸 확인 못했어. 수직으로 있어서 좌우 흔들림이 안 보인 것일 수도 있어. 틸트가 조금 되어있으면 확실하게 보일거야. 그리고 242~244까지 조명 켜진거 없어.」 · 「나머지는 모두 확인했어」(리드 정리: 234 켜짐, 236·237 Tilt 움직임, 238 느림·239 빠름·240 느림·241 빠름).
+- 판정(사람 눈 기준):
+  - Tilt 페이저 OK.
+  - `At Speed 56/224` 로 박 길이 조절 OK.
+  - `At Measure 4/1` + `At SpeedMaster 15` 로도 박 길이 조절 OK. v3 L3 의 Measure 2 무변화는 「2단계 페이저의 기본 루프가 이미 2박」 가설과 맞는다.
+  - 미해결 ①: Pan 흔들림이 수직 기준이라 안 보인다. 기준 Tilt 45 가 페이저 큐에 안 들어갔다(A1/A2 크기 216B 감소와 맞음).
+  - 미해결 ②: Aura XB 201 이 서브픽스처까지 Dimmer 30 을 줘도 안 켜진다.
+
+## 4-13. v5 — 미해결 둘만 가르는 최소 시험 (승인 요청, 실행 신호 대기)
+
+- ① 근거: [Programmer Layers](https://help.malighting.com/grandMA3/2.2/HTML/fixture-sheet-dmx-layer.html) 와 검색 요약 「An absolute value can be affected by a value in the Relative layer」. absolute·relative 는 따로 있는 층이다. [Relative Keyword](https://help.malighting.com/grandMA3/2.0/HTML/keyword_relative.html) 는 relative 가 기존 absolute 를 어떻게 하는지 적지 않는다. 「relative 가 absolute 를 지운다」는 문서 근거가 없고, 왜 빠지는지는 안 잰 것이다.
+- ② 실기 판독(`v5_reads1.txt`·`v5_reads2.txt`, 쓰기 0):
+
+| 기종·채널 | DEFAULT |
+|---|---|
+| Aura XB Aura_Dimmer / Main Module_Dimmer | `<000000>` / `<000000>` |
+| Aura XB Aura_ColorRGB_R·G·B / Main Module_ColorRGB_R·G·B | `<FFFFFF>` 모두 |
+| Aura XB Aura_COLORMIXER / Main Module_COLORMIXER | `<000000>` / `<000000>` |
+| Rush Par 2 Dimmer / Shutter1 | `<000000>` / `<0C0C0C>` |
+| Rush Par 2 ColorRGB_R·G·B / W / COLORMIXER | `<FFFFFF>` / `<000000>` / `<000000>` |
+
+  - 「색이 0 이라 검정」 가설은 RGB 로는 맞지 않는다(RGB 기본값 최대).
+  - 앱 Seq 219 는 BACK(201~212 포함 목록)에 `Attribute 'ColorRGB_R' At 5 ; … 'ColorRGB_G' At 20 ; … 'ColorRGB_B' At 100` 같은 색 줄과 `Group 4 ; Attribute 'Dimmer' At 24/72` 를 준다(t513 approve 파일 grep). BACK 이 219 에서 켜졌다는 기록은 없다.
+
+| 시퀀스 | 단계 | 내용 |
+|---|---|---|
+| 245 | E0 | 무빙 501~508 Dimmer 70 + Tilt 45 정적 — 「기울었나」 |
+| 246 | E1 | Pan 2단계 절대값 페이저. 단계마다 Dimmer 70 · Pan -30/30 · Tilt 45 · Speed 56 |
+| 247 | E2 | Pan 2단계 상대값 페이저만. 재생 때 245 를 켜 둔 채 겹친다 |
+| 248 | F1 | 201·201.1·301·301.1 각각 Dimmer 100 |
+| 249 | F2 | F1 + ColorRGB_R/G/B 100 (219 꼴) |
+
+- E1 은 처음 판에서 Dimmer 70 을 단계 앞에 따로 두었다. 그러면 1단계에만 들어가 디머도 단계마다 바뀔 수 있어, 두 단계 줄 안에 Dimmer 70 을 넣도록 고쳐 다시 만들었다(첫 판 승인 파일 sha256 `772eaa38…` 은 폐기, 보내지 않음).
+- 결과: 가짜 콘솔 17묶음 끝까지 · 실기 전부-거절 rejected 17, executed 0 · 요청 문면 = 리허설 True · t512 대조(리허설) PASS · Save/Delete/Remove/Master 0줄.
+- 승인 파일: `approval_rhythm_probe_v5.txt` 57줄, sha256 `cea4f772b698a6a9e5b236bd1b3e779e3fda2cbd6e3e6f8925c7176e26ffc9c4`.
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v5.py .moai/reports/t516/v5_live --approve .moai/reports/t516/v5_denyall`
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
