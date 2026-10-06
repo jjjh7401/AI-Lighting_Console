@@ -1,0 +1,27 @@
+post_seq_223 ShowData/DataPools/Default/Sequences/223 {'NAME': 'RHYTHM PROBE v2 - A GROUP TWO LINE'} 
+post_part_223 ShowData/DataPools/Default/Sequences/223/3/1 {'NAME': 'A Group Two Line', 'MEMORYFOOTPRINT': '3132'}  (+611B over empty)
+post_seq_224 ShowData/DataPools/Default/Sequences/224 {'NAME': 'RHYTHM PROBE v2 - B GROUP ONE LINE'} 
+post_part_224 ShowData/DataPools/Default/Sequences/224/3/1 {'NAME': 'B Group One Line', 'MEMORYFOOTPRINT': '3132'}  (+611B over empty)
+post_seq_225 ShowData/DataPools/Default/Sequences/225 {'NAME': 'RHYTHM PROBE v2 - C FIXTURE LIST'} 
+post_part_225 ShowData/DataPools/Default/Sequences/225/3/1 {'NAME': 'C Fixture List', 'MEMORYFOOTPRINT': '3132'}  (+611B over empty)
+post_seq_226 ShowData/DataPools/Default/Sequences/226 {'NAME': 'RHYTHM PROBE v2 - SPEEDMASTER MEASURE'} 
+post_part_226 ShowData/DataPools/Default/Sequences/226/3/1 {'NAME': 'Measure 1', 'MEMORYFOOTPRINT': '3188'}  (+667B over empty)
+post_seq_227 ShowData/DataPools/Default/Sequences/227 {'NAME': 'RHYTHM PROBE v2 - NEW SHAPES'} 
+post_part_227 ShowData/DataPools/Default/Sequences/227/3/1 {'NAME': 'Pan Wave', 'MEMORYFOOTPRINT': '3732'}  (+1211B over empty)
+SAMPLE {'t': 0.0, '225': 'Sequence 225.1', '226': None, 'cursor': '0.20'}
+SAMPLE {'t': 0.4, '225': 'Sequence 225.1', '226': None, 'cursor': '0.62'}
+SAMPLE {'t': 0.81, '225': 'Sequence 225.1', '226': None, 'cursor': '1.00'}
+SAMPLE {'t': 1.2, '225': 'Sequence 225.1', '226': None, 'cursor': '1.40'}
+SAMPLE {'t': 1.6, '225': 'Sequence 225.1', '226': None, 'cursor': '1.80'}
+SAMPLE {'t': 2.0, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '2.20'}
+SAMPLE {'t': 2.4, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '2.60'}
+SAMPLE {'t': 2.8, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '3.00'}
+SAMPLE {'t': 3.21, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '3.40'}
+SAMPLE {'t': 3.6, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '3.80'}
+SAMPLE {'t': 4.0, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '4.20'}
+SAMPLE {'t': 4.4, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '4.60'}
+SAMPLE {'t': 4.8, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '5.00'}
+SAMPLE {'t': 5.2, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '5.40'}
+SAMPLE {'t': 5.6, '225': 'Sequence 225.1', '226': 'Sequence 226.1', 'cursor': '5.80'}
+first send 2026-10-06T05:01:07.668502+00:00 Master 3.15 At BPM 112.35
+last send 2026-10-06T05:03:21.929217+00:00 Off Sequence 227

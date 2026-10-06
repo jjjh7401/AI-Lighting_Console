@@ -1,0 +1,683 @@
+{
+  "master": 15,
+  "slots": [
+    223,
+    224,
+    225,
+    226,
+    227,
+    "TC21"
+  ],
+  "bundles": {
+    "bpm": true,
+    "seq_a": true,
+    "seq_b": true,
+    "seq_c": true,
+    "seq_beat": true,
+    "seq_shape": true,
+    "tc_a": true,
+    "tc_b": true,
+    "tc_c": true,
+    "ab_a": true,
+    "ab_a_off": true,
+    "ab_b": true,
+    "ab_b_off": true,
+    "ab_c": true,
+    "ab_c_off": true,
+    "play": true,
+    "beat_off": true,
+    "tc_off": true,
+    "measure_1": true,
+    "measure_2": true,
+    "measure_3": true,
+    "measure_off": true,
+    "shape_1": true,
+    "shape_2": true,
+    "shape_3": true,
+    "shape_4": true,
+    "shape_5": true,
+    "shape_off": true
+  },
+  "pre_master": {
+    "id": "gate-8",
+    "kind": "props",
+    "ok": true,
+    "path": "ShowData/Masters/3/15",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "Speed15"
+      },
+      {
+        "n": "NORMEDVALUE",
+        "ok": true,
+        "t": "number",
+        "v": "69"
+      },
+      {
+        "n": "SPEEDSCALE",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  },
+  "planned": {
+    "bpm": [
+      "Master 3.15 At BPM 112.35"
+    ],
+    "seq_a": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 4",
+      "Attribute 'Dimmer' At 30",
+      "Store Sequence 223 Cue 1 'A Group Two Line'",
+      "ClearAll",
+      "Set Sequence 223 Property 'Name' 'RHYTHM PROBE v2 - A GROUP TWO LINE'"
+    ],
+    "seq_b": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 4 ; Attribute 'Dimmer' At 30",
+      "Store Sequence 224 Cue 1 'B Group One Line'",
+      "ClearAll",
+      "Set Sequence 224 Property 'Name' 'RHYTHM PROBE v2 - B GROUP ONE LINE'"
+    ],
+    "seq_c": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30",
+      "Store Sequence 225 Cue 1 'C Fixture List'",
+      "ClearAll",
+      "Set Sequence 225 Property 'Name' 'RHYTHM PROBE v2 - C FIXTURE LIST'"
+    ],
+    "seq_beat": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Attribute 'Dimmer' At Measure 1",
+      "Attribute 'Dimmer' At SpeedMaster 15",
+      "Store Sequence 226 Cue 1 'Measure 1'",
+      "ClearAll",
+      "Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Attribute 'Dimmer' At Measure 2",
+      "Attribute 'Dimmer' At SpeedMaster 15",
+      "Store Sequence 226 Cue 2 'Measure 2'",
+      "ClearAll",
+      "Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Attribute 'Dimmer' At Measure 0.5",
+      "Attribute 'Dimmer' At SpeedMaster 15",
+      "Store Sequence 226 Cue 3 'Measure Half'",
+      "ClearAll",
+      "Set Sequence 226 Property 'Name' 'RHYTHM PROBE v2 - SPEEDMASTER MEASURE'"
+    ],
+    "seq_shape": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 70",
+      "Attribute 'Pan' At Relative 12",
+      "Attribute 'Pan' At Phase 0 Thru 360",
+      "Attribute 'Pan' At Measure 2",
+      "Attribute 'Pan' At SpeedMaster 15",
+      "Store Sequence 227 Cue 1 'Pan Wave'",
+      "ClearAll",
+      "Fixture 501 + 503 + 505 + 507 + 521 + 523 + 525 + 527 ; Attribute 'Dimmer' At 70",
+      "Attribute 'Pan' At Relative 12",
+      "Attribute 'Pan' At Phase 0",
+      "Fixture 502 + 504 + 506 + 508 + 522 + 524 + 526 + 528 ; Attribute 'Dimmer' At 70",
+      "Attribute 'Pan' At Relative 12",
+      "Attribute 'Pan' At Phase 180",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At Measure 1",
+      "Attribute 'Pan' At SpeedMaster 15",
+      "Store Sequence 227 Cue 2 'Crossed Pan Wave'",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 70",
+      "Attribute 'Pan' At Relative 12",
+      "Attribute 'Pan' At Phase 0",
+      "Attribute 'Pan' At Measure 4",
+      "Attribute 'Pan' At SpeedMaster 15",
+      "Store Sequence 227 Cue 3 'Sweep M4'",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 70",
+      "Attribute 'Pan' At Relative 12",
+      "Attribute 'Pan' At Phase 0",
+      "Attribute 'Pan' At Measure 2",
+      "Attribute 'Pan' At SpeedMaster 15",
+      "Store Sequence 227 Cue 4 'Sweep M2'",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 70",
+      "Attribute 'Pan' At Relative 12",
+      "Attribute 'Pan' At Phase 0",
+      "Attribute 'Pan' At Measure 1",
+      "Attribute 'Pan' At SpeedMaster 15",
+      "Store Sequence 227 Cue 5 'Sweep M1'",
+      "ClearAll",
+      "Set Sequence 227 Property 'Name' 'RHYTHM PROBE v2 - NEW SHAPES'"
+    ],
+    "tc_a": [
+      "Store Timecode 21",
+      "Set Timecode 21 Property 'Name' 'RHYTHM PROBE v2 - TWO TRACKS'",
+      "Set Timecode 21 Property 'Duration' 10 'AutoStop' 0",
+      "Store Timecode 21.1",
+      "Assign Sequence 225 At Timecode 21.1.1",
+      "Assign Sequence 226 At Timecode 21.1.2"
+    ],
+    "tc_b": [
+      "Store Type 'CmdSubTrack' Timecode 21.1.1.1",
+      "Store Type 'CmdSubTrack' Timecode 21.1.2.1"
+    ],
+    "tc_c": [
+      "cd Timecode 21.1.1.1.1",
+      "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+      "cd root",
+      "cd Timecode 21.1.2.1.1",
+      "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+      "cd root"
+    ],
+    "ab_a": [
+      "Goto Cue 1 Sequence 223"
+    ],
+    "ab_a_off": [
+      "Off Sequence 223"
+    ],
+    "ab_b": [
+      "Goto Cue 1 Sequence 224"
+    ],
+    "ab_b_off": [
+      "Off Sequence 224"
+    ],
+    "ab_c": [
+      "Goto Cue 1 Sequence 225"
+    ],
+    "ab_c_off": [
+      "Off Sequence 225"
+    ],
+    "play": [
+      "Go Timecode 21"
+    ],
+    "beat_off": [
+      "Off Sequence 226"
+    ],
+    "tc_off": [
+      "Off Timecode 21",
+      "Off Sequence 225"
+    ],
+    "measure_1": [
+      "Goto Cue 1 Sequence 226"
+    ],
+    "measure_2": [
+      "Goto Cue 2 Sequence 226"
+    ],
+    "measure_3": [
+      "Goto Cue 3 Sequence 226"
+    ],
+    "measure_off": [
+      "Off Sequence 226"
+    ],
+    "shape_1": [
+      "Goto Cue 1 Sequence 227"
+    ],
+    "shape_2": [
+      "Goto Cue 2 Sequence 227"
+    ],
+    "shape_3": [
+      "Goto Cue 3 Sequence 227"
+    ],
+    "shape_4": [
+      "Goto Cue 4 Sequence 227"
+    ],
+    "shape_5": [
+      "Goto Cue 5 Sequence 227"
+    ],
+    "shape_off": [
+      "Off Sequence 227"
+    ]
+  },
+  "post_master": {
+    "id": "gate-10",
+    "kind": "props",
+    "ok": true,
+    "path": "ShowData/Masters/3/15",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "Speed15"
+      },
+      {
+        "n": "NORMEDVALUE",
+        "ok": true,
+        "t": "number",
+        "v": "69"
+      },
+      {
+        "n": "SPEEDSCALE",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  },
+  "tracks": [
+    {
+      "i": 2,
+      "no": "1",
+      "target": "Sequence 225"
+    },
+    {
+      "i": 3,
+      "no": "2",
+      "target": "Sequence 226"
+    }
+  ],
+  "post_b": {
+    "225": [
+      "CmdSubTrack"
+    ],
+    "226": [
+      "CmdSubTrack"
+    ]
+  },
+  "events": {
+    "225": 1,
+    "226": 1
+  },
+  "samples": [
+    {
+      "t": 0.0,
+      "225": "Sequence 225.1",
+      "226": null,
+      "cursor": "0.20"
+    },
+    {
+      "t": 0.4,
+      "225": "Sequence 225.1",
+      "226": null,
+      "cursor": "0.62"
+    },
+    {
+      "t": 0.81,
+      "225": "Sequence 225.1",
+      "226": null,
+      "cursor": "1.00"
+    },
+    {
+      "t": 1.2,
+      "225": "Sequence 225.1",
+      "226": null,
+      "cursor": "1.40"
+    },
+    {
+      "t": 1.6,
+      "225": "Sequence 225.1",
+      "226": null,
+      "cursor": "1.80"
+    },
+    {
+      "t": 2.0,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "2.20"
+    },
+    {
+      "t": 2.4,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "2.60"
+    },
+    {
+      "t": 2.8,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "3.00"
+    },
+    {
+      "t": 3.21,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "3.40"
+    },
+    {
+      "t": 3.6,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "3.80"
+    },
+    {
+      "t": 4.0,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "4.20"
+    },
+    {
+      "t": 4.4,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "4.60"
+    },
+    {
+      "t": 4.8,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "5.00"
+    },
+    {
+      "t": 5.2,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "5.40"
+    },
+    {
+      "t": 5.6,
+      "225": "Sequence 225.1",
+      "226": "Sequence 226.1",
+      "cursor": "5.80"
+    }
+  ],
+  "verdict": "ran — A/B/C ②③⑤ by director watch, ④ by samples",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Master 3.15 At BPM 112.35"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 30",
+        "Store Sequence 223 Cue 1 'A Group Two Line'",
+        "ClearAll",
+        "Set Sequence 223 Property 'Name' 'RHYTHM PROBE v2 - A GROUP TWO LINE'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4 ; Attribute 'Dimmer' At 30",
+        "Store Sequence 224 Cue 1 'B Group One Line'",
+        "ClearAll",
+        "Set Sequence 224 Property 'Name' 'RHYTHM PROBE v2 - B GROUP ONE LINE'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30",
+        "Store Sequence 225 Cue 1 'C Fixture List'",
+        "ClearAll",
+        "Set Sequence 225 Property 'Name' 'RHYTHM PROBE v2 - C FIXTURE LIST'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 1",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Sequence 226 Cue 1 'Measure 1'",
+        "ClearAll",
+        "Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 2",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Sequence 226 Cue 2 'Measure 2'",
+        "ClearAll",
+        "Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 0.5",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Sequence 226 Cue 3 'Measure Half'",
+        "ClearAll",
+        "Set Sequence 226 Property 'Name' 'RHYTHM PROBE v2 - SPEEDMASTER MEASURE'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 70",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Measure 2",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 227 Cue 1 'Pan Wave'",
+        "ClearAll",
+        "Fixture 501 + 503 + 505 + 507 + 521 + 523 + 525 + 527 ; Attribute 'Dimmer' At 70",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0",
+        "Fixture 502 + 504 + 506 + 508 + 522 + 524 + 526 + 528 ; Attribute 'Dimmer' At 70",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 180",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At Measure 1",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 227 Cue 2 'Crossed Pan Wave'",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 70",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Pan' At Measure 4",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 227 Cue 3 'Sweep M4'",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 70",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Pan' At Measure 2",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 227 Cue 4 'Sweep M2'",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 70",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Pan' At Measure 1",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 227 Cue 5 'Sweep M1'",
+        "ClearAll",
+        "Set Sequence 227 Property 'Name' 'RHYTHM PROBE v2 - NEW SHAPES'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Store Timecode 21",
+        "Set Timecode 21 Property 'Name' 'RHYTHM PROBE v2 - TWO TRACKS'",
+        "Set Timecode 21 Property 'Duration' 10 'AutoStop' 0",
+        "Store Timecode 21.1",
+        "Assign Sequence 225 At Timecode 21.1.1",
+        "Assign Sequence 226 At Timecode 21.1.2"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Store Type 'CmdSubTrack' Timecode 21.1.1.1",
+        "Store Type 'CmdSubTrack' Timecode 21.1.2.1"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "cd Timecode 21.1.1.1.1",
+        "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'",
+        "cd root",
+        "cd Timecode 21.1.2.1.1",
+        "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 223"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 223"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 224"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 224"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 225"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 225"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go Timecode 21"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 226"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Timecode 21",
+        "Off Sequence 225"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 226"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 226"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 226"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 226"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 227"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 227"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 227"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 4 Sequence 227"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 5 Sequence 227"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 227"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}
