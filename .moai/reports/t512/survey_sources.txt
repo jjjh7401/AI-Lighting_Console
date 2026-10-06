@@ -1,0 +1,21 @@
+t498/run6_rain_real_write/audit/audit-20260928.jsonl
+    478 event/kind/outcome/fired = ('executed', 'props_query', None, None)
+    119 event/kind/outcome/fired = ('executed', 'command', 'ok', None)
+    1 event/kind/outcome/fired = ('approved', 'song_design', None, None)
+    keys: ['command', 'commands', 'detail', 'event', 'held', 'kind', 'ok', 'outcome', 'ts']
+t501/ac016/real_rain_212_write/audit/audit-20261002.jsonl
+    478 event/kind/outcome/fired = ('executed', 'props_query', None, None)
+    237 event/kind/outcome/fired = ('executed', 'command', 'ok', None)
+    1 event/kind/outcome/fired = ('approved', 'song_design', None, None)
+    keys: ['command', 'commands', 'detail', 'event', 'held', 'kind', 'ok', 'outcome', 'ts']
+t506/live_write_v3/audit/audit-20261005.jsonl
+    68 event/kind/outcome/fired = ('executed', 'props_query', None, None)
+    10 event/kind/outcome/fired = ('executed', 'command', 'ok', None)
+    4 event/kind/outcome/fired = ('approved', 't506_probe', None, None)
+    keys: ['command', 'commands', 'detail', 'event', 'held', 'kind', 'ok', 'outcome', 'ts']
+t506/live_write_v3/steps.jsonl
+    68 event/kind/outcome/fired = (None, 'props', None, None)
+    10 event/kind/outcome/fired = (None, 'exec', None, True)
+    4 event/kind/outcome/fired = (None, 'state', None, None)
+    4 event/kind/outcome/fired = (None, 'screen', None, None)
+    keys: ['cleared', 'command', 'commands', 'detail', 'fired', 'kind', 'ok', 'path', 'payload', 'step', 't']
