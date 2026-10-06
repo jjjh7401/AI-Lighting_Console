@@ -1,0 +1,11 @@
+ping
+state:ShowData/DataPools/Default/Sequences@17
+state:ShowData/DataPools/Default/Timecodes
+state:ShowData/DataPools/Default/Sequences/223
+state:ShowData/DataPools/Default/Sequences/224
+state:ShowData/DataPools/Default/Sequences/225
+state:ShowData/DataPools/Default/Sequences/226
+state:ShowData/DataPools/Default/Sequences/227
+state:ShowData/DataPools/Default/Timecodes/21
+props:Patch/Stages/1/Fixtures/1|FID,Name
+state:Patch/Stages/1/Fixtures

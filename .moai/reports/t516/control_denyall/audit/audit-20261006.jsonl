@@ -1,0 +1,9 @@
+{"ts": "2026-10-06T04:41:38.481589+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T04:41:38.548170+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T04:41:38.614858+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/222 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T04:41:38.682541+00:00", "event": "rejected", "commands": ["Goto Cue 1 Sequence 219"], "held": ["Goto Cue 1 Sequence 219"], "kind": "t516_control"}
+{"ts": "2026-10-06T04:41:38.748486+00:00", "event": "rejected", "commands": ["Off Sequence 219"], "held": ["Off Sequence 219"], "kind": "t516_control"}
+{"ts": "2026-10-06T04:41:38.815229+00:00", "event": "rejected", "commands": ["Goto Cue 1 Sequence 220"], "held": ["Goto Cue 1 Sequence 220"], "kind": "t516_control"}
+{"ts": "2026-10-06T04:41:38.881710+00:00", "event": "rejected", "commands": ["Off Sequence 220"], "held": ["Off Sequence 220"], "kind": "t516_control"}
+{"ts": "2026-10-06T04:41:38.949491+00:00", "event": "rejected", "commands": ["Goto Cue 1 Sequence 221"], "held": ["Goto Cue 1 Sequence 221"], "kind": "t516_control"}
+{"ts": "2026-10-06T04:41:39.014765+00:00", "event": "rejected", "commands": ["Off Sequence 221"], "held": ["Off Sequence 221"], "kind": "t516_control"}

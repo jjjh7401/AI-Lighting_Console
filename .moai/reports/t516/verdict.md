@@ -143,6 +143,52 @@
 - P3: `Goto Cue 1 Sequence 221` 8초 → `Off Sequence 221`
 - 모두 쓰기 0이고, 리드의 「실행」 뒤에만 돌린다.
 
+## 4-4. 대조 P1~P3 접음, 프로브 v2 (리드 지시 2026-10-06)
+
+- 대조 재생 P1~P3는 `control_probe.py`로 만들었다. 가짜 콘솔과 전부-거절까지 했다(`approval_control.txt` 6줄).
+  - 처음 판에는 `Goto Cue 3 Sequence 219`라고 적었다. 상태 목록 순번을 큐 번호로 잘못 쓴 것이다. `Goto Cue 1`로 고쳐 다시 만들었다.
+- 그 사이 감독이 시퀀스 219를 콘솔에서 직접 켜 봤고, 켜졌다. 그래서 출력·화면은 정상이고, 원인은 우리 큐 내용이다. P1~P3는 접었다(실행 안 함).
+
+**v2 근거(잰 것)**
+
+- 실기에서 켜진 앱 송신 파일의 줄 모양(`line_shapes.txt`):
+
+| 파일 | 줄 수 | 선택 줄 혼자 | `Group ; Attribute` 한 줄 | `Fixture 목록 ; Attribute` 한 줄 | `Fixture 목록 ; At Preset` 한 줄 | `Attribute`로 시작하는 줄 |
+|---|---|---|---|---|---|---|
+| 219(앱, t513) | 210 | 0 | 110 | 33 | 19 | 0 |
+| t498 run6(앱) | 119 | 0 | 14 | 37 | 12 | 0 |
+| v1 승인 파일 | 105 | 11 | 0 | 0 | 0 | 35 |
+
+  - 단, 앱의 페이저 프리셋 경로(t513 `approve_A_stage1_phasers/approval_request_1.txt`, FXGEN)는 `Group 1`을 혼자 쓰고 `Attribute …` 줄을 잇는다. 이 경로는 FXGEN V1~V7에서 실기 관측으로 확인됐다. 그래서 "선택 줄 혼자"만으로 원인이 확정되지는 않는다.
+- 오늘 실기 패치 판독(`v2_slots_readonly.txt`, `v2_patch_readonly.txt`): 86대.
+  - BACK = 201~212(12대), MOVER-U = 501~508, MOVER-D = 521~528.
+  - 그룹 4·13·17·18의 구성원은 응답기로 읽을 수 없다. 그룹이 비었거나 다를 가능성은 남는다.
+- 빈 번호: 시퀀스 223~227, 타임코드 21 모두 `path segment not found`.
+
+**v2 설계(`rhythm_probe_v2.py`)**
+
+- BACK 30% A/B/C를 시퀀스 셋에 따로 저장한다. 트래킹 섞임이 없다.
+  - A(223): v1 두 줄 모양
+  - B(224): `Group 4 ; Attribute 'Dimmer' At 30`
+  - C(225): `Fixture 201 + … + 212 ; Attribute 'Dimmer' At 30`
+  - 재생은 A → B → C를 8초씩, 사이에 끄고 2초 쉰다.
+- 박자(226)·모양(227)·겹침 장면(=225)은 C 모양으로 저장한다(`Fixture 번호 목록 ; 값` 한 줄 뒤 페이저 줄).
+  - 무빙은 501~508·521~528이다. 엇갈린 웨이브의 ODD/EVEN은 그 16대의 홀·짝 순번이다(그룹 17/18 대신).
+  - 모양 큐마다 `Attribute 'Dimmer' At 70`을 같이 준다.
+- 큐 이름에 점을 쓰지 않는다: `Measure Half`.
+- 이름은 `RHYTHM PROBE v2 - …`이다. v1의 220~222·TC20은 손대지 않는다.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`v2_rehearse`) | 묶음 28개 끝까지 · 트랙 NO1→225·NO2→226 · 이벤트 각 1 |
+| 실기 전부-거절(`v2_denyall`) | 요청 28건, 승인 0 · 감사 로그 `kind: command` 0행, rejected 28 · 마스터 15 `NORMEDVALUE` 69 |
+| 승인 파일 | `approval_rhythm_probe_v2.txt` 119줄, 주석 0, sha256 `187417b118eb77f94f2b7bd30edec6147915467470f8e1d3e3d0c4716457ae89`, 문면 = 리허설 · 리허설 송신과 대조 PASS |
+| 줄 모양(`v2_line_shapes.txt`) | 선택 줄 혼자 1(A의 대조용) · `Group ;` 1(B) · `Fixture 목록 ;` 11 · `Attribute`로 시작하는 줄 31(페이저 단계·타이밍 줄) |
+
+- 남는 의심: 페이저 단계·타이밍 줄 31개는 앞줄의 선택을 이어받는다(FXGEN과 같은 방식).
+  - A가 꺼지고 B/C가 켜지는데 박자·모양 큐만 어두우면, 다음 의심은 이 줄들이다.
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v2.py .moai/reports/t516/v2_live --master 15 --approve .moai/reports/t516/v2_denyall`
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.

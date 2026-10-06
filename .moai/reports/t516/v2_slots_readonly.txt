@@ -1,0 +1,44 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 77a3ebc0"
+<<< {"id": "77a3ebc0", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/Sequences@17
+    wire: Plugin "CopilotResponder" "state ef1fe607 ShowData/DataPools/Default/Sequences offset=17"
+<<< {"children": [{"class": "Sequence", "i": 220, "name": "RHYTHM PROBE - OVERLAP SCENE"}, {"class": "Sequence", "i": 221, "name": "RHYTHM PROBE - SPEEDMASTER MEASURE"}, {"class": "Sequence", "i": 222, "name": "RHYTHM PROBE - NEW SHAPES"}, {"class": "Sequence", "i": 1999, "name": "Sequence 1999"}, {"class": "Sequence", "i": 2000, "name": "Sequence 2000"}], "id": "ef1fe607", "kind": "state", "node": {"childCount": 22, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 17, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes
+    wire: Plugin "CopilotResponder" "state f417a5ef ShowData/DataPools/Default/Timecodes"
+<<< {"children": [{"class": "Timecode", "i": 1, "name": "DinoSync Timecode"}, {"class": "Timecode", "i": 2, "name": "DinoFull Timecode"}, {"class": "Timecode", "i": 7, "name": "Synth Test Timecode"}, {"class": "Timecode", "i": 8, "name": "Notice Test Timecode"}, {"class": "Timecode", "i": 9, "name": "Sequence 210 Timecode"}, {"class": "Timecode", "i": 19, "name": "LOVE ATTACK - OLD APP TC"}, {"class": "Timecode", "i": 20, "name": "RHYTHM PROBE - TWO TRACKS"}], "id": "f417a5ef", "kind": "state", "node": {"childCount": 7, "class": "Timecodes", "enumeration": "ok", "name": "Timecodes"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/223
+    wire: Plugin "CopilotResponder" "state 75497d7f ShowData/DataPools/Default/Sequences/223"
+<<< {"error": "path segment not found: '223' (in ShowData/DataPools/Default/Sequences/223)", "id": "75497d7f", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/223", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/224
+    wire: Plugin "CopilotResponder" "state 41b676e0 ShowData/DataPools/Default/Sequences/224"
+<<< {"error": "path segment not found: '224' (in ShowData/DataPools/Default/Sequences/224)", "id": "41b676e0", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/224", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/225
+    wire: Plugin "CopilotResponder" "state e12f6678 ShowData/DataPools/Default/Sequences/225"
+<<< {"error": "path segment not found: '225' (in ShowData/DataPools/Default/Sequences/225)", "id": "e12f6678", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/225", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/226
+    wire: Plugin "CopilotResponder" "state 6017edbd ShowData/DataPools/Default/Sequences/226"
+<<< {"error": "path segment not found: '226' (in ShowData/DataPools/Default/Sequences/226)", "id": "6017edbd", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/226", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/227
+    wire: Plugin "CopilotResponder" "state c22e5b65 ShowData/DataPools/Default/Sequences/227"
+<<< {"error": "path segment not found: '227' (in ShowData/DataPools/Default/Sequences/227)", "id": "c22e5b65", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/227", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/21
+    wire: Plugin "CopilotResponder" "state 640e7773 ShowData/DataPools/Default/Timecodes/21"
+<<< {"error": "path segment not found: '21' (in ShowData/DataPools/Default/Timecodes/21)", "id": "640e7773", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Timecodes/21", "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/1|FID,Name
+    wire: Plugin "CopilotResponder" "props 6f448b9a FID,Name Patch/Stages/1/Fixtures/1"
+<<< {"id": "6f448b9a", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/1", "reads": [{"n": "FID", "ok": true, "t": "number", "v": "101"}, {"n": "Name", "ok": true, "t": "string", "v": "KEY 101"}], "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures
+    wire: Plugin "CopilotResponder" "state 935474c2 Patch/Stages/1/Fixtures"
+<<< {"children": [{"class": "Fixture", "i": 1, "name": "KEY 101"}, {"class": "Fixture", "i": 2, "name": "KEY 102"}, {"class": "Fixture", "i": 3, "name": "KEY 103"}, {"class": "Fixture", "i": 4, "name": "KEY 104"}, {"class": "Fixture", "i": 5, "name": "KEY 105"}, {"class": "Fixture", "i": 6, "name": "KEY 106"}, {"class": "Fixture", "i": 7, "name": "FOH 111"}, {"class": "Fixture", "i": 8, "name": "FOH 112"}, {"class": "Fixture", "i": 9, "name": "FOH 113"}, {"class": "Fixture", "i": 10, "name": "FOH 114"}, {"class": "Fixture", "i": 11, "name": "FOH 115"}, {"class": "Fixture", "i": 12, "name": "FOH 116"}, {"class": "Fixture", "i": 13, "name": "FOH 117"}, {"class": "Fixture", "i": 14, "name": "FOH 118"}, {"class": "Fixture", "i": 15, "name": "BLIND 601"}, {"class": "Fixture", "i": 16, "name": "BLIND 602"}, {"class": "Fixture", "i": 17, "name": "BLIND 603"}, {"class": "Fixture", "i": 18, "name": "BLIND 604"}], "id": "935474c2", "kind": "state", "node": {"childCount": 86, "class": "Fixtures", "enumeration": "ok", "name": "Fixtures"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures", "truncated": true, "v": 1}

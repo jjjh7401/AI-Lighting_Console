@@ -1,0 +1,10 @@
+== .moai/reports/t516/approval_rhythm_probe_v2.txt (119 lines)
+  lone Group                             1
+  lone Fixture list                      0
+  Group ; Attribute (one line)           1
+  Fixture list ; Attribute (one line)    11
+  Fixture list ; At Preset               0
+  Attribute-first line                   31
+  Step line                              3
+  ClearAll                               16
+  Store Sequence                         11
