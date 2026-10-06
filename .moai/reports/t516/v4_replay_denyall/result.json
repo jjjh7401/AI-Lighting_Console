@@ -1,0 +1,289 @@
+{
+  "bundles": {
+    "on_234": false,
+    "off_234": false,
+    "on_235": false,
+    "off_235": false,
+    "on_236": false,
+    "off_236": false,
+    "on_237": false,
+    "off_237": false,
+    "on_229": false,
+    "off_229": false,
+    "on_238": false,
+    "off_238": false,
+    "on_239": false,
+    "off_239": false,
+    "on_240": false,
+    "off_240": false,
+    "on_241": false,
+    "off_241": false,
+    "on_242": false,
+    "off_242": false,
+    "on_243": false,
+    "off_243": false,
+    "on_244": false,
+    "off_244": false
+  },
+  "marks": [
+    {
+      "label": "on_234",
+      "t": 0.07
+    },
+    {
+      "label": "off_234",
+      "t": 0.13
+    },
+    {
+      "label": "on_235",
+      "t": 0.2
+    },
+    {
+      "label": "off_235",
+      "t": 0.27
+    },
+    {
+      "label": "on_236",
+      "t": 0.33
+    },
+    {
+      "label": "off_236",
+      "t": 0.4
+    },
+    {
+      "label": "on_237",
+      "t": 0.47
+    },
+    {
+      "label": "off_237",
+      "t": 0.53
+    },
+    {
+      "label": "on_229",
+      "t": 0.6
+    },
+    {
+      "label": "off_229",
+      "t": 0.67
+    },
+    {
+      "label": "on_238",
+      "t": 0.73
+    },
+    {
+      "label": "off_238",
+      "t": 0.8
+    },
+    {
+      "label": "on_239",
+      "t": 0.87
+    },
+    {
+      "label": "off_239",
+      "t": 0.93
+    },
+    {
+      "label": "on_240",
+      "t": 1.0
+    },
+    {
+      "label": "off_240",
+      "t": 1.07
+    },
+    {
+      "label": "on_241",
+      "t": 1.13
+    },
+    {
+      "label": "off_241",
+      "t": 1.2
+    },
+    {
+      "label": "on_242",
+      "t": 1.27
+    },
+    {
+      "label": "off_242",
+      "t": 1.33
+    },
+    {
+      "label": "on_243",
+      "t": 1.4
+    },
+    {
+      "label": "off_243",
+      "t": 1.47
+    },
+    {
+      "label": "on_244",
+      "t": 1.53
+    },
+    {
+      "label": "off_244",
+      "t": 1.6
+    }
+  ],
+  "pre_names": {
+    "234": "RHYTHM PROBE v4 - A0 BASE TILT 45",
+    "235": "RHYTHM PROBE v4 - A1 PAN RELATIVE 30",
+    "236": "RHYTHM PROBE v4 - A2 TILT RELATIVE 30",
+    "237": "RHYTHM PROBE v4 - A3 TILT 2 STEPS",
+    "238": "RHYTHM PROBE v4 - B1 PULSE SPEED 56",
+    "239": "RHYTHM PROBE v4 - B2 PULSE SPEED 224",
+    "240": "RHYTHM PROBE v4 - B3 PULSE SPEEDMASTER MEASURE 4",
+    "241": "RHYTHM PROBE v4 - B4 PULSE SPEEDMASTER MEASURE 1",
+    "242": "RHYTHM PROBE v4 - D1 AURA FIXTURE DIMMER",
+    "243": "RHYTHM PROBE v4 - D2 AURA SUBFIXTURE DIMMER",
+    "244": "RHYTHM PROBE v4 - D3 AURA BOTH DIMMERS",
+    "229": "RHYTHM PROBE v3 - L1 PULSE SPEED 112"
+  },
+  "verdict": "deny-all: approval texts recorded, nothing sent",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 234"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 234"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 235"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 235"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 236"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 236"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 237"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 237"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 229"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 229"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 238"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 238"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 239"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 239"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 240"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 240"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 241"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 241"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 242"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 242"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 243"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 243"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 244"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 244"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

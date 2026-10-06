@@ -1,0 +1,48 @@
+{"step": "pre_seq_234", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/234", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/234", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - A0 BASE TILT 45"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_235", "t": 0.133, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/235", "ok": true, "payload": {"id": "gate-3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/235", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - A1 PAN RELATIVE 30"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_236", "t": 0.199, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/236", "ok": true, "payload": {"id": "gate-4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/236", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - A2 TILT RELATIVE 30"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_237", "t": 0.266, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/237", "ok": true, "payload": {"id": "gate-5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/237", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - A3 TILT 2 STEPS"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_238", "t": 0.333, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/238", "ok": true, "payload": {"id": "gate-6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/238", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - B1 PULSE SPEED 56"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_239", "t": 0.399, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/239", "ok": true, "payload": {"id": "gate-7", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/239", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - B2 PULSE SPEED 224"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_240", "t": 0.466, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/240", "ok": true, "payload": {"id": "gate-8", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/240", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - B3 PULSE SPEEDMASTER MEASURE 4"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_241", "t": 0.533, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/241", "ok": true, "payload": {"id": "gate-9", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/241", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - B4 PULSE SPEEDMASTER MEASURE 1"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_242", "t": 0.599, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/242", "ok": true, "payload": {"id": "gate-10", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/242", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - D1 AURA FIXTURE DIMMER"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_243", "t": 0.667, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/243", "ok": true, "payload": {"id": "gate-11", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/243", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - D2 AURA SUBFIXTURE DIMMER"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_244", "t": 0.732, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/244", "ok": true, "payload": {"id": "gate-12", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/244", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v4 - D3 AURA BOTH DIMMERS"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_229", "t": 0.799, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/229", "ok": true, "payload": {"id": "gate-13", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/229", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v3 - L1 PULSE SPEED 112"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 0.799, "say": "A0 — 무빙 501~508 이 70% 로 켜지고 수직이 아닌 기울어진 자리에 섬(움직임 없음)"}
+{"step": "on_234", "t": 0.867, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 234", "reasons": ["reference-invoking command"]}]}
+{"step": "off_234", "t": 0.934, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 234", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.934, "say": "A1 — 기울어진 자리에서 좌우(Pan)로 흔들리는가"}
+{"step": "on_235", "t": 1.001, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 235", "reasons": ["reference-invoking command"]}]}
+{"step": "off_235", "t": 1.066, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 235", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.066, "say": "A2 — 같은 자리에서 위아래(Tilt)로 흔들리는가"}
+{"step": "on_236", "t": 1.133, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 236", "reasons": ["reference-invoking command"]}]}
+{"step": "off_236", "t": 1.199, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 236", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.199, "say": "A3 — 2단계로 만든 Tilt — 위아래로 흔들리는가"}
+{"step": "on_237", "t": 1.266, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 237", "reasons": ["reference-invoking command"]}]}
+{"step": "off_237", "t": 1.332, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 237", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.332, "say": "B 기준 — v3 L1(Speed 112) 깜빡임"}
+{"step": "on_229", "t": 1.4, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 229", "reasons": ["reference-invoking command"]}]}
+{"step": "off_229", "t": 1.466, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 229", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.466, "say": "B1 — 깜빡임이 기준(229)의 절반 빠르기인가"}
+{"step": "on_238", "t": 1.533, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 238", "reasons": ["reference-invoking command"]}]}
+{"step": "off_238", "t": 1.601, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 238", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.601, "say": "B2 — 기준의 두 배 빠르기인가"}
+{"step": "on_239", "t": 1.667, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 239", "reasons": ["reference-invoking command"]}]}
+{"step": "off_239", "t": 1.734, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 239", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.734, "say": "B3 — 스피드 마스터 + Measure 4 — 기준보다 느린가"}
+{"step": "on_240", "t": 1.8, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 240", "reasons": ["reference-invoking command"]}]}
+{"step": "off_240", "t": 1.868, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 240", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.868, "say": "B4 — 스피드 마스터 + Measure 1 — 기준보다 빠른가"}
+{"step": "on_241", "t": 1.933, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 241", "reasons": ["reference-invoking command"]}]}
+{"step": "off_241", "t": 1.999, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 241", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 1.999, "say": "D1 — BACK 201 한 대가 켜지는가(대조, v2 에선 어두웠음)"}
+{"step": "on_242", "t": 2.066, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 242", "reasons": ["reference-invoking command"]}]}
+{"step": "off_242", "t": 2.133, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 242", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 2.133, "say": "D2 — 201.1(서브픽스처)만 30 — 켜지는가"}
+{"step": "on_243", "t": 2.2, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 243", "reasons": ["reference-invoking command"]}]}
+{"step": "off_243", "t": 2.267, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 243", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 2.267, "say": "D3 — 201 과 201.1 둘 다 30 — 켜지는가"}
+{"step": "on_244", "t": 2.333, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 244", "reasons": ["reference-invoking command"]}]}
+{"step": "off_244", "t": 2.401, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 244", "reasons": ["reference-invoking command"]}]}
