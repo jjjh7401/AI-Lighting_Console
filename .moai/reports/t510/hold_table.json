@@ -1,0 +1,420 @@
+{
+ "song_end_s": 197.161,
+ "rows": [
+  {
+   "cue": "1",
+   "name": "Intro",
+   "kind": "section",
+   "d": 1,
+   "trig_s": 0.0,
+   "hold_s": 13.804,
+   "hold_to_song_end": false,
+   "fade_s": 4.27247,
+   "position": "Ring In",
+   "preset": "2.30",
+   "all_dimmer": 30.0,
+   "layer_dimmer": {
+    "BACK": 24.0,
+    "SIDE-ALL": 24.0,
+    "WASH-ALL": 24.0,
+    "MOVER-ALL": 24.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "cyan",
+    "WASH-ALL": "cyan",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": null,
+   "fx_requested": [],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [],
+   "pre_drop_from": null
+  },
+  {
+   "cue": "2",
+   "name": "Verse 1",
+   "kind": "section",
+   "d": 4,
+   "trig_s": 13.804,
+   "hold_s": 14.919,
+   "hold_to_song_end": false,
+   "fade_s": 0.801088,
+   "position": "Home",
+   "preset": "2.21",
+   "all_dimmer": 90.0,
+   "layer_dimmer": {
+    "BACK": 72.0,
+    "SIDE-ALL": 72.0,
+    "WASH-ALL": 72.0,
+    "MOVER-ALL": 72.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "cyan",
+    "WASH-ALL": "cyan",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Breathe Warm",
+   "fx_requested": [
+    "slow pan"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [],
+   "pre_drop_from": null
+  },
+  {
+   "cue": "3",
+   "name": "Verse 2",
+   "kind": "section",
+   "d": 3,
+   "trig_s": 28.723,
+   "hold_s": 8.766,
+   "hold_to_song_end": false,
+   "fade_s": 1.60218,
+   "position": "Vocal DSC",
+   "preset": "2.25",
+   "all_dimmer": 25.0,
+   "layer_dimmer": {
+    "BACK": 20.0,
+    "SIDE-ALL": 20.0,
+    "WASH-ALL": 20.0,
+    "MOVER-ALL": 20.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "cyan",
+    "WASH-ALL": "cyan",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Breathe Warm",
+   "fx_requested": [
+    "slow tilt"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [],
+   "pre_drop_from": 70.0
+  },
+  {
+   "cue": "4",
+   "name": "Chorus 1",
+   "kind": "section",
+   "d": 5,
+   "trig_s": 37.489,
+   "hold_s": 32.055,
+   "hold_to_song_end": false,
+   "fade_s": 0.267029,
+   "position": "Vocal DSC",
+   "preset": "2.25",
+   "all_dimmer": 100.0,
+   "layer_dimmer": {
+    "BACK": 80.0,
+    "SIDE-ALL": 80.0,
+    "WASH-ALL": 80.0,
+    "MOVER-ALL": 80.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "warm white",
+    "WASH-ALL": "warm white",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Wave CM",
+   "fx_requested": [
+    "dimmer chase"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [],
+   "pre_drop_from": null
+  },
+  {
+   "cue": "5",
+   "name": "Verse 3",
+   "kind": "section",
+   "d": 4,
+   "trig_s": 69.544,
+   "hold_s": 12.829,
+   "hold_to_song_end": false,
+   "fade_s": 0.801088,
+   "position": "Center",
+   "preset": "2.24",
+   "all_dimmer": 90.0,
+   "layer_dimmer": {
+    "BACK": 72.0,
+    "SIDE-ALL": 72.0,
+    "WASH-ALL": 72.0,
+    "MOVER-ALL": 72.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "cyan",
+    "WASH-ALL": "cyan",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Breathe Warm",
+   "fx_requested": [
+    "soft wave"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [],
+   "pre_drop_from": null
+  },
+  {
+   "cue": "6",
+   "name": "Verse 4",
+   "kind": "section",
+   "d": 4,
+   "trig_s": 82.373,
+   "hold_s": 15.128,
+   "hold_to_song_end": false,
+   "fade_s": 0.801088,
+   "position": "Wall",
+   "preset": "2.22",
+   "all_dimmer": 25.0,
+   "layer_dimmer": {
+    "BACK": 20.0,
+    "SIDE-ALL": 20.0,
+    "WASH-ALL": 20.0,
+    "MOVER-ALL": 20.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "cyan",
+    "WASH-ALL": "cyan",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Breathe Warm",
+   "fx_requested": [
+    "slow pan"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [],
+   "pre_drop_from": 90.0
+  },
+  {
+   "cue": "7",
+   "name": "Chorus 2",
+   "kind": "section",
+   "d": 5,
+   "trig_s": 97.501,
+   "hold_s": 34.237,
+   "hold_to_song_end": false,
+   "fade_s": 0.267029,
+   "position": "Cross",
+   "preset": "2.28",
+   "all_dimmer": 100.0,
+   "layer_dimmer": {
+    "BACK": 80.0,
+    "SIDE-ALL": 80.0,
+    "WASH-ALL": 80.0,
+    "MOVER-ALL": 80.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "warm white",
+    "WASH-ALL": "warm white",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Wave CM",
+   "fx_requested": [
+    "horizontal chase"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [
+    "moving position hit"
+   ],
+   "pre_drop_from": null
+  },
+  {
+   "cue": "8",
+   "name": "Verse 5",
+   "kind": "section",
+   "d": 3,
+   "trig_s": 131.738,
+   "hold_s": 12.516,
+   "hold_to_song_end": false,
+   "fade_s": 1.60218,
+   "position": "Cross",
+   "preset": "2.28",
+   "all_dimmer": 25.0,
+   "layer_dimmer": {
+    "BACK": 20.0,
+    "SIDE-ALL": 20.0,
+    "WASH-ALL": 20.0,
+    "MOVER-ALL": 20.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "cyan",
+    "WASH-ALL": "cyan",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Breathe Warm",
+   "fx_requested": [
+    "slow tilt"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [],
+   "pre_drop_from": 70.0
+  },
+  {
+   "cue": "9",
+   "name": "Chorus 3",
+   "kind": "section",
+   "d": 5,
+   "trig_s": 144.254,
+   "hold_s": 1.068,
+   "hold_to_song_end": false,
+   "fade_s": 0.267029,
+   "position": "Ring In",
+   "preset": "2.30",
+   "all_dimmer": 100.0,
+   "layer_dimmer": {
+    "BACK": 80.0,
+    "SIDE-ALL": 80.0,
+    "WASH-ALL": 80.0,
+    "MOVER-ALL": 80.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0,
+    "BLIND": 80.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "warm white",
+    "WASH-ALL": "warm white",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Wave CM",
+   "fx_requested": [
+    "bounce chase"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": {
+    "rung": "blinder_or_flash",
+    "group_no": 14,
+    "dimmer_pct": 80.0
+   },
+   "accents": [
+    "climax accent 블루 쿨 볼드"
+   ],
+   "pre_drop_from": null
+  },
+  {
+   "cue": "9.5",
+   "name": "Chorus 3 Return",
+   "kind": "climax_return",
+   "d": 5,
+   "trig_s": 145.322,
+   "hold_s": 33.588,
+   "hold_to_song_end": false,
+   "fade_s": 0.0,
+   "position": null,
+   "preset": null,
+   "all_dimmer": 100.0,
+   "layer_dimmer": {
+    "BACK": 80.0,
+    "SIDE-ALL": 80.0,
+    "WASH-ALL": 80.0,
+    "MOVER-ALL": 80.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0,
+    "BLIND": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "warm white",
+    "WASH-ALL": "warm white",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": null,
+   "fx_requested": [],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [],
+   "pre_drop_from": null
+  },
+  {
+   "cue": "10",
+   "name": "Finale",
+   "kind": "section",
+   "d": 5,
+   "trig_s": 178.91,
+   "hold_s": 18.251,
+   "hold_to_song_end": true,
+   "fade_s": 4.27247,
+   "position": "Audience",
+   "preset": "2.23",
+   "all_dimmer": 100.0,
+   "layer_dimmer": {
+    "BACK": 80.0,
+    "SIDE-ALL": 80.0,
+    "WASH-ALL": 80.0,
+    "MOVER-ALL": 80.0,
+    "BLIND": 0.0,
+    "STROBE": 0.0,
+    "HAZE": 0.0
+   },
+   "all_rgb": "블루",
+   "layer_rgb": {
+    "SIDE-ALL": "warm white",
+    "WASH-ALL": "warm white",
+    "FOH": "warm white"
+   },
+   "stage_layers": 5,
+   "phaser_hint": "Finale Slam",
+   "fx_requested": [
+    "dimmer chase"
+   ],
+   "fx_permitted": [],
+   "accent_fixture": null,
+   "accents": [
+    "white flash"
+   ],
+   "pre_drop_from": null
+  }
+ ],
+ "speed_lines": [],
+ "phaser_lines": []
+}

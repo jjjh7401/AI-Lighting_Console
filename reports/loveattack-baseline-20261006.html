@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LOVE ATTACK 기존 앱 연출 기준선</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Noto+Serif+KR:wght@700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFFFFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;
+--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+--sans:"Noto Sans KR",system-ui,sans-serif;--serif:"Noto Serif KR",Georgia,serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+--max-width:1100px;--radius-panel:12px;--border:1.5px solid var(--g300)}
+body{background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.65;margin:0;padding:24px 16px}
+main{max-width:var(--max-width);margin:0 auto}
+h1{font-family:var(--serif);font-size:1.7rem} h2{font-family:var(--serif);border-bottom:2px solid var(--oat);padding-bottom:4px;margin-top:2.2em}
+.lead{background:var(--g100);border-left:4px solid var(--clay);padding:10px 14px;border-radius:8px}
+.tw{overflow-x:auto;background:var(--paper);border:var(--border);border-radius:var(--radius-panel)}
+table{border-collapse:collapse;width:100%;font-size:.86rem} th,td{padding:6px 8px;border-bottom:1px solid var(--g100);text-align:left;white-space:nowrap}
+th{background:var(--g100)} code{font-family:var(--mono);font-size:.85em;background:var(--g100);padding:1px 4px;border-radius:4px}
+.tag{font-size:.75em;padding:1px 6px;border-radius:10px;margin:0 2px} .tag.m{background:#dfe8d2;color:#3f5326} .tag.e{background:#f6dccf;color:#8a3d22}
+.fig{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:12px;margin:12px 0} .tl{width:100%;height:auto}
+.cap{font-size:.85rem;color:var(--g700);margin:6px 0 0}
+@media print{body{background:#fff}}
+</style></head><body><main>
+<h1>LOVE ATTACK — 기존 앱 연출 기준선 (2026-10-06)</h1>
+<ul><li>카드: t510 · 브랜치 <code>WT-loveattack-base</code> · 기준 <code>origin/main</code> <code>e7eaf690</code> (SPEC-LDRENDER-001 반영판)</li><li>목적: 감독 결정(2026-10-06) 「기존 조명연출과 비교」 — 리듬 대본(t504)과 나란히 볼 <strong>지금 앱의 결과</strong></li><li>콘솔 접촉 0(가짜 콘솔만) · 제품 코드 변경 0 · 음원 미커밋</li><li>표기: <strong><span class="tag m">잰 값</span></strong> 이번 실행 출력 · <strong><span class="tag e">추정</span></strong> 재지 않은 판단</li></ul>
+<h2>1. 어떻게 돌렸나</h2>
+<p class="lead">앱에 노래 파일을 넣고, 앱이 묻는 질문에 미리 정해 둔 답을 넣어 끝까지 돌렸습니다. 명령은 진짜 콘솔이 아니라 컴퓨터 안의 「가짜 콘솔」이 받았습니다 — 무대에 실제로 나간 것은 없습니다.</p>
+<div class="tw"><table><thead><tr><th>항목</th><th>내용</th></tr></thead><tbody>
+<tr><td>경로</td><td>음원 → <code>upload_song_audio</code> → <code>analyse_song_audio</code>(실제 DSP) → 대화 지시문 → 연출 인터뷰 → 리뷰 승인 → 게이트 승인 → 가짜 콘솔. t499 <code>rehearse_song.py</code> 를 그대로 복사(<code>.moai/reports/t510/rehearse_song.py</code>, 머리말만 추가)</td></tr>
+<tr><td>지시문</td><td><code>디자인 큐 시트, 시퀀스 211, 프리셋 21번부터, 타임코드 11</code> (t498·t499 와 같음)</td></tr>
+<tr><td>🔴 인터뷰 답</td><td><strong>고정 답</strong> — t498 Rain·t499 8곡과 같은 7개(확인 · 우주 · 우주 색 조합 · 기본 수락 · Ring In · 우주 컨셉 우선 배치 · 템포 맞춤) + 매핑 「이 매핑 사용」 + 「승인」. 카드 9장, 이 곡에 맞춰 고른 답이 아니다 [잰 값: <code>run1/cards.json</code>]</td></tr>
+<tr><td>기구</td><td>실기 86대 번호(t498 run3 목록). 좌표는 지어낸 값</td></tr>
+<tr><td>승인 = 송신</td><td>승인 미리보기 190줄 = 가짜 콘솔 송신 190줄, 바이트 동일 [잰 값: <code>cmp</code>]</td></tr>
+<tr><td>결정성</td><td>두 번 실행 — 송신 목록·번들·카드 바이트 동일 [잰 값: <code>cmp</code>]</td></tr>
+</tbody></table></div>
+<p>곡 분석 <span class="tag m">잰 값</span>: BPM <strong>112.35</strong>(measured) · 구간 10개(모두 채택) · 곡 길이 <strong>197.16초</strong>(ffprobe 와 분석 마지막 구간 끝 일치).</p>
+<h2>2. 큐 표 <span class="tag m">잰 값</span></h2>
+<p class="lead">큐(cue)는 「한 장면」입니다. 아래 그림은 곡 처음부터 끝까지 장면이 언제 바뀌는지, 한 장면이 얼마나 오래 가는지(유지 시간), 얼마나 밝은지(막대 높이)를 보여 줍니다. 색 띠는 양옆·워시 조명(SIDE·WASH)의 색입니다.</p>
+<figure class="fig"><svg viewBox="0 0 820 230" role="img" aria-label="LOVE ATTACK 큐 타임라인" class="tl"><rect x="30.0" y="114.0" width="53.6" height="36.0" fill="#d97757" opacity="0.54"><title>큐 1 Intro · 0.0s · 유지 13.8s · 디머 30</title></rect><rect x="30.0" y="156" width="53.6" height="10" fill="#13b5d1"/><text x="33.0" y="182" font-size="10.5" fill="#3d3d3a">Intro</text><text x="33.0" y="196" font-size="10" fill="#87867f">13.8s</text><rect x="84.6" y="42.0" width="58.0" height="108.0" fill="#d97757" opacity="0.91"><title>큐 2 Verse 1 · 13.8s · 유지 14.9s · 디머 90</title></rect><rect x="84.6" y="156" width="58.0" height="10" fill="#13b5d1"/><text x="87.6" y="182" font-size="10.5" fill="#3d3d3a">Verse 1</text><text x="87.6" y="196" font-size="10" fill="#87867f">14.9s</text><rect x="143.6" y="120.0" width="33.7" height="30.0" fill="#d97757" opacity="0.51"><title>큐 3 Verse 2 · 28.7s · 유지 8.8s · 디머 25</title></rect><rect x="143.6" y="156" width="33.7" height="10" fill="#13b5d1"/><text x="146.6" y="182" font-size="10.5" fill="#3d3d3a">Verse 2</text><text x="146.6" y="196" font-size="10" fill="#87867f">8.8s</text><rect x="178.3" y="30.0" width="125.8" height="120.0" fill="#d97757" opacity="0.97"><title>큐 4 Chorus 1 · 37.5s · 유지 32.1s · 디머 100</title></rect><rect x="178.3" y="156" width="125.8" height="10" fill="#f1c27d"/><text x="181.3" y="182" font-size="10.5" fill="#3d3d3a">Chorus 1</text><text x="181.3" y="196" font-size="10" fill="#87867f">32.1s</text><rect x="305.1" y="42.0" width="49.8" height="108.0" fill="#d97757" opacity="0.91"><title>큐 5 Verse 3 · 69.5s · 유지 12.8s · 디머 90</title></rect><rect x="305.1" y="156" width="49.8" height="10" fill="#13b5d1"/><text x="308.1" y="182" font-size="10.5" fill="#3d3d3a">Verse 3</text><text x="308.1" y="196" font-size="10" fill="#87867f">12.8s</text><rect x="355.9" y="120.0" width="58.8" height="30.0" fill="#d97757" opacity="0.51"><title>큐 6 Verse 4 · 82.4s · 유지 15.1s · 디머 25</title></rect><rect x="355.9" y="156" width="58.8" height="10" fill="#13b5d1"/><text x="358.9" y="182" font-size="10.5" fill="#3d3d3a">Verse 4</text><text x="358.9" y="196" font-size="10" fill="#87867f">15.1s</text><rect x="415.7" y="30.0" width="134.4" height="120.0" fill="#d97757" opacity="0.97"><title>큐 7 Chorus 2 · 97.5s · 유지 34.2s · 디머 100</title></rect><rect x="415.7" y="156" width="134.4" height="10" fill="#f1c27d"/><text x="418.7" y="182" font-size="10.5" fill="#3d3d3a">Chorus 2</text><text x="418.7" y="196" font-size="10" fill="#87867f">34.2s</text><rect x="551.2" y="120.0" width="48.5" height="30.0" fill="#d97757" opacity="0.51"><title>큐 8 Verse 5 · 131.7s · 유지 12.5s · 디머 25</title></rect><rect x="551.2" y="156" width="48.5" height="10" fill="#13b5d1"/><text x="554.2" y="182" font-size="10.5" fill="#3d3d3a">Verse 5</text><text x="554.2" y="196" font-size="10" fill="#87867f">12.5s</text><rect x="600.7" y="30.0" width="3.2" height="120.0" fill="#d97757" opacity="0.97"><title>큐 9 Chorus 3 · 144.3s · 유지 1.1s · 디머 100</title></rect><rect x="600.7" y="156" width="3.2" height="10" fill="#f1c27d"/><text x="600.7" y="24.0" font-size="11" fill="#b85c3e">블라인더</text><rect x="604.9" y="30.0" width="131.9" height="120.0" fill="#d97757" opacity="0.97"><title>큐 9.5 Chorus 3 Return · 145.3s · 유지 33.6s · 디머 100</title></rect><rect x="604.9" y="156" width="131.9" height="10" fill="#f1c27d"/><text x="607.9" y="182" font-size="10.5" fill="#3d3d3a">C3 복귀</text><text x="607.9" y="196" font-size="10" fill="#87867f">33.6s</text><rect x="737.8" y="30.0" width="71.2" height="120.0" fill="#d97757" opacity="0.97"><title>큐 10 Finale · 178.9s · 유지 18.3s · 디머 100</title></rect><rect x="737.8" y="156" width="71.2" height="10" fill="#f1c27d"/><text x="740.8" y="182" font-size="10.5" fill="#3d3d3a">Finale</text><text x="740.8" y="196" font-size="10" fill="#87867f">18.3s</text><line x1="30.0" y1="20" x2="30.0" y2="150" stroke="#d1cfc5" stroke-dasharray="2 3"/><text x="30.0" y="14" font-size="10" fill="#87867f">0:00</text><line x1="148.7" y1="20" x2="148.7" y2="150" stroke="#d1cfc5" stroke-dasharray="2 3"/><text x="148.7" y="14" font-size="10" fill="#87867f">0:30</text><line x1="267.4" y1="20" x2="267.4" y2="150" stroke="#d1cfc5" stroke-dasharray="2 3"/><text x="267.4" y="14" font-size="10" fill="#87867f">1:00</text><line x1="386.1" y1="20" x2="386.1" y2="150" stroke="#d1cfc5" stroke-dasharray="2 3"/><text x="386.1" y="14" font-size="10" fill="#87867f">1:30</text><line x1="504.7" y1="20" x2="504.7" y2="150" stroke="#d1cfc5" stroke-dasharray="2 3"/><text x="504.7" y="14" font-size="10" fill="#87867f">2:00</text><line x1="623.4" y1="20" x2="623.4" y2="150" stroke="#d1cfc5" stroke-dasharray="2 3"/><text x="623.4" y="14" font-size="10" fill="#87867f">2:30</text><line x1="742.1" y1="20" x2="742.1" y2="150" stroke="#d1cfc5" stroke-dasharray="2 3"/><text x="742.1" y="14" font-size="10" fill="#87867f">3:00</text></svg><p class="cap">막대 높이 = 전체 디머(30~100) · 아래 띠 = SIDE·WASH 색(<span style="color:#13b5d1">■</span> cyan · <span style="color:#f1c27d">■</span> warm white) · 막대 안에서는 아무것도 바뀌지 않습니다(페이저·속도 줄 0).</p></figure>
+<div class="tw"><table><thead><tr><th>큐</th><th>이름</th><th>D</th><th>시각(s)</th><th>유지(s)</th><th>페이드(s)</th><th>포지션(프리셋)</th><th>전체 디머</th><th>BACK/SIDE/WASH/MOVER</th><th>BLIND</th><th>전체 색</th><th>SIDE·WASH 색</th><th>FOH 색</th><th>무대 층</th><th>페이저 제안 → 송신</th><th>효과 요청/허용</th></tr></thead><tbody>
+<tr><td>1</td><td>Intro</td><td>D1</td><td>0.0</td><td>13.8</td><td>4.27</td><td>Ring In(2.30)</td><td>30</td><td>24/24/24/24</td><td>0</td><td>블루</td><td>cyan</td><td>warm white</td><td>5</td><td>— → 0</td><td>0/0</td></tr>
+<tr><td>2</td><td>Verse 1</td><td>D4</td><td>13.8</td><td>14.9</td><td>0.80</td><td>Home(2.21)</td><td>90</td><td>72/72/72/72</td><td>0</td><td>블루</td><td>cyan</td><td>warm white</td><td>5</td><td>Breathe Warm → 0</td><td>1/0</td></tr>
+<tr><td>3</td><td>Verse 2</td><td>D3</td><td>28.7</td><td>8.8</td><td>1.60</td><td>Vocal DSC(2.25)</td><td>25</td><td>20/20/20/20</td><td>0</td><td>블루</td><td>cyan</td><td>warm white</td><td>5</td><td>Breathe Warm → 0</td><td>1/0</td></tr>
+<tr><td>4</td><td>Chorus 1</td><td>D5</td><td>37.5</td><td>32.1</td><td>0.27</td><td>Vocal DSC(2.25)</td><td>100</td><td>80/80/80/80</td><td>0</td><td>블루</td><td>warm white</td><td>warm white</td><td>5</td><td>Wave CM → 0</td><td>1/0</td></tr>
+<tr><td>5</td><td>Verse 3</td><td>D4</td><td>69.5</td><td>12.8</td><td>0.80</td><td>Center(2.24)</td><td>90</td><td>72/72/72/72</td><td>0</td><td>블루</td><td>cyan</td><td>warm white</td><td>5</td><td>Breathe Warm → 0</td><td>1/0</td></tr>
+<tr><td>6</td><td>Verse 4</td><td>D4</td><td>82.4</td><td>15.1</td><td>0.80</td><td>Wall(2.22)</td><td>25</td><td>20/20/20/20</td><td>0</td><td>블루</td><td>cyan</td><td>warm white</td><td>5</td><td>Breathe Warm → 0</td><td>1/0</td></tr>
+<tr><td>7</td><td>Chorus 2</td><td>D5</td><td>97.5</td><td>34.2</td><td>0.27</td><td>Cross(2.28)</td><td>100</td><td>80/80/80/80</td><td>0</td><td>블루</td><td>warm white</td><td>warm white</td><td>5</td><td>Wave CM → 0</td><td>1/0</td></tr>
+<tr><td>8</td><td>Verse 5</td><td>D3</td><td>131.7</td><td>12.5</td><td>1.60</td><td>Cross(2.28)</td><td>25</td><td>20/20/20/20</td><td>0</td><td>블루</td><td>cyan</td><td>warm white</td><td>5</td><td>Breathe Warm → 0</td><td>1/0</td></tr>
+<tr><td>9</td><td>Chorus 3</td><td>D5</td><td>144.3</td><td>1.1</td><td>0.27</td><td>Ring In(2.30)</td><td>100</td><td>80/80/80/80</td><td><strong>80</strong></td><td>블루</td><td>warm white</td><td>warm white</td><td>5</td><td>Wave CM → 0</td><td>1/0</td></tr>
+<tr><td>9.5</td><td>Chorus 3 Return</td><td>D5</td><td>145.3</td><td>33.6</td><td>0.00</td><td>(없음)</td><td>100</td><td>80/80/80/80</td><td>0</td><td>블루</td><td>warm white</td><td>warm white</td><td>5</td><td>— → 0</td><td>0/0</td></tr>
+<tr><td>10</td><td>Finale</td><td>D5</td><td>178.9</td><td>18.3*</td><td>4.27</td><td>Audience(2.23)</td><td>100</td><td>80/80/80/80</td><td>0</td><td>블루</td><td>warm white</td><td>warm white</td><td>5</td><td>Finale Slam → 0</td><td>1/0</td></tr>
+</tbody></table></div>
+<p>읽는 법:</p>
+<ul><li><strong>유지</strong> = 다음 큐 시각 − 이 큐 시각(t502 와 같은 정의). <code>*</code> 마지막 큐는 곡 끝(197.16초)까지.</li><li><strong>전체 디머</strong> = 86대 전체에 먼저 나가는 값. 뒤이어 BACK·SIDE·WASH·MOVER 그룹이 그 0.8배로 덮이고, BLIND·STROBE·HAZE 는 0. 그래서 실제로 전체 값을 받는 것은 KEY·FOH 다.</li><li><strong>색</strong> = 86대 전체 블루 → SIDE·WASH 를 비후렴은 cyan, 후렴은 warm white 로 덮음 → FOH 는 늘 warm white.</li><li><strong>무대 층</strong> = 리그 8그룹(KEY·FOH·BACK·SIDE·WASH·MOVER·BLIND·STROBE) 중 서로 다른 값 묶음 수.</li><li><strong>유지 중 변화</strong>: 큐 안에서 값을 바꾸는 줄(페이저·속도·추가 큐)이 없다. 즉 표의 유지 시간 동안 무대는 한 장면이다.</li></ul>
+<h2>3. 유지 시간 비교 (t502 표와 같은 방식) <span class="tag m">잰 값</span></h2>
+<p class="lead">같은 방법으로 쟀던 Rain·Club Diver 와 나란히 놓았습니다. 숫자가 클수록 한 장면이 오래 멈춰 있다는 뜻입니다.</p>
+<div class="tw"><table><thead><tr><th>곡(시퀀스)</th><th>큐</th><th>최대</th><th>중앙값</th><th>20초 이상</th><th>10초 이상</th><th>출처</th></tr></thead><tbody>
+<tr><td>Rain (212)</td><td>13</td><td>28.5s</td><td>16.6s</td><td>4</td><td>11</td><td>t502 <code>hold_durations.txt</code> (실기 되읽기)</td></tr>
+<tr><td>Club Diver (213)</td><td>14</td><td>17.1s</td><td>10.3s</td><td>0</td><td>8</td><td>같음</td></tr>
+<tr><td><strong>LOVE ATTACK (가짜 콘솔 211)</strong></td><td>11</td><td><strong>34.2s</strong></td><td><strong>14.9s</strong></td><td><strong>3</strong></td><td><strong>8</strong></td><td><code>.moai/reports/t510/hold_table.md</code></td></tr>
+</tbody></table></div>
+<p>LOVE ATTACK 의 큐 유지는 마지막 큐 제외 10개 기준. 20초 이상 셋은 전부 후렴이다: Chorus 1 32.1초 · Chorus 2 34.2초 · Chorus 3 Return 33.6초.</p>
+<p>앱 BPM 112.35 로 환산하면 한 마디 2.14초 → 후렴 하나가 <strong>약 15~16마디 동안 한 장면</strong> [추정: BPM 이 반/두 배로 잘못 잡혔는지는 안 쟀다].</p>
+<h2>4. 축별 요약 <span class="tag m">잰 값</span></h2>
+<p class="lead">조명이 바뀌는 여러 「손잡이」(색·밝기·위치·효과)마다 무엇이 나갔는지 정리했습니다.</p>
+<div class="tw"><table><thead><tr><th>축</th><th>결과</th></tr></thead><tbody>
+<tr><td>큐 수 · 트리거</td><td>11큐(구간 10 + 액센트 복귀 9.5) · 전부 타임코드 11 <code>TrigType Time</code></td></tr>
+<tr><td>색</td><td>송신 RGB 3개: 블루 (5,20,100) · cyan (0,90,100) · warm white (100,75,40). 비후렴↔후렴에서 SIDE·WASH 색만 바뀐다</td></tr>
+<tr><td>층</td><td>전 큐 5층: KEY(전체 디머·블루) · FOH(전체 디머·warm white) · BACK+MOVER(0.8배·블루) · SIDE+WASH(0.8배·cyan/warm white) · BLIND+STROBE(0). Chorus 3 에서는 BLIND 가 80 이 되어 BACK+MOVER 묶음과 같아진다</td></tr>
+<tr><td>디머</td><td>30 → 90 → 25 → 100 → 90 → 25 → 100 → 25 → 100 → 100 → 100. 후렴 이후는 100 고정</td></tr>
+<tr><td>포지션</td><td>프리셋 7종(2.21~2.30 중) 큐 경계에서만 바뀜</td></tr>
+<tr><td>페이저</td><td>제안 9큐(Breathe Warm 5 · Wave CM 3 · Finale Slam 1) → <strong>송신 0줄</strong>. 회신: 「페이저 미배정: … 콘솔에서 찾지 못했습니다」</td></tr>
+<tr><td>속도 줄</td><td>0 (<code>speed</code>·<code>BPM</code> 들어간 송신 줄 없음)</td></tr>
+<tr><td>효과</td><td>요청 9 · 허용 0 · 송신 0</td></tr>
+<tr><td>강조</td><td>블라인더(BLIND) 80 이 Chorus 3 에서 1.1초 → 9.5 에서 페이드 0 으로 꺼짐. 그 밖의 액센트 0</td></tr>
+<tr><td>판정 메모</td><td><code>blinder_six_row_absent</code> (Finale 블라인더 근거 없음) · 린트 L9(9.5 스냅 페이드)</td></tr>
+</tbody></table></div>
+<h2>5. 정본 위반 (t510 <code>readout.py</code>, 송신 층 기준) <span class="tag m">잰 값</span></h2>
+<p class="lead">프로젝트의 조명 연출 기준(정본)에 비춰 어긋난 곳입니다. 숫자는 위반 개수입니다.</p>
+<div class="tw"><table><thead><tr><th>조항</th><th>내용</th></tr></thead><tbody>
+<tr><td>§6 밝기</td><td>Verse 1·Verse 3 디머 90 — verse 대역 25~50 밖</td></tr>
+<tr><td>§6 색</td><td>블루·warm white 가 구간 성격 4종(intro·verse·chorus·finale)에 똑같이 나감</td></tr>
+<tr><td>§6 움직임·효과</td><td>효과 요청 9 · 페이저 제안 9큐 → 송신 0줄</td></tr>
+<tr><td>§6.1 · §6.2 층 · §6.3 색 · §7 상승 · §8 어둠</td><td>위반 0</td></tr>
+</tbody></table></div>
+<h2>6. 한 줄로</h2>
+<p>지금 앱은 LOVE ATTACK 을 <strong>구간마다 한 장면씩 11장면</strong>으로 만든다. 장면 사이로는 디머·포지션·SIDE·WASH 색이 바뀌지만, <strong>장면 안에서는 아무것도 움직이지 않는다</strong> — 후렴 셋은 30초 넘게 한 장면이고, 박자에 맞는 변화(페이저·속도·짧은 큐)는 0줄이다. 리듬 대본과 나란히 볼 기준선은 이 표다.</p>
+<h2>7. 안 잰 것</h2>
+<p class="lead">이 결과를 볼 때 감안해야 할, 이번에 직접 재지 않은 것들입니다.</p>
+<ul><li><strong>실기 콘솔</strong>: 가짜 콘솔 송신만. 가짜 콘솔은 페이저 풀에 답하지 않는다 — 실기 Club Diver(t501, 213)는 <code>At Preset 4.9</code> 페이저 줄 11개가 나갔으므로, <strong>실기에서는 페이저 줄이 0이 아닐 수 있다</strong></li><li>색 W 줄(실기는 RGBW 기구에 W 줄이 더 나간다 — t499), 기구 좌표(지어낸 값), 그룹 구성원(이름 첫 단어로 추정)</li><li>구간 이름(Verse·Chorus)은 앱이 D 레벨로 붙인 것 — 곡의 실제 구조와 대조 안 함</li><li>BPM 112.35 가 맞는지(반/두 배) — 안 쟀다</li><li>다른 인터뷰 답이면 설계가 달라진다. 이 표는 <strong>고정 답에서의 결과</strong>다</li><li>육안 판정 없음</li></ul>
+</main></body></html>
