@@ -100,6 +100,9 @@
 
 `.moai/reports/t513/` — `run0*` 읽기 · `run1_fake`·`run2_fake` 리허설 · `run3_real_denyall`·`run5_real_denyall_again` 실기 전부-거절 · `run4_preset_pools.txt` · `approve_A_stage1_phasers/` · `approve_B_nophaser/` · 스크립트 `probe_steps.py` `rehearse_song.py` `compare_fake.py` `real_console.py` `control_exec_block.py` `classify_real_vs_fake.py` `reply_notices.py`. 제품 코드 변경 0.
 
+- **감사 로그(`run*/audit/`)·이벤트(`run*/events.json`) 원본은 저장소에 없다**(리드 지시). 보관 위치: `/Users/studiox/Documents/Claude/Code/AI-Lighting_Console-evidence/t513/` — 17개, 경로별 sha256 은 `evidence_archive_sha256.txt`(복사 뒤 원본과 대조, 불일치 0). 승인=송신 대조의 결과물(`run*_approval_vs_sent.txt`, `run6_A1/rebuilt_sent.txt`, `run8_A3/rebuilt_sent.txt`)은 저장소에 있다
+- 음원은 저장소 밖(`/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3`), 커밋 0
+
 ## 7. 실행 (2026-10-06, 감독 A안 승인 · 리드 경유)
 
 | 단계 | 명령 | 결과 | 근거 |
