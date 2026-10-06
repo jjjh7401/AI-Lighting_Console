@@ -1,3 +1,4 @@
 # 감사 로그·이벤트 원본은 저장소 밖에 보관한다 — evidence_archive_sha256.txt 참조
 audit/
 events.json
+queries.json
