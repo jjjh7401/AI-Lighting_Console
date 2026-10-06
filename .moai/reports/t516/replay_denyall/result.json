@@ -1,0 +1,181 @@
+{
+  "bundles": {
+    "bpm": false,
+    "scene_on": false,
+    "beat_on": false,
+    "beat_off": false,
+    "scene_off": false,
+    "measure_1": false,
+    "measure_2": false,
+    "measure_3": false,
+    "measure_off": false,
+    "shape_1": false,
+    "shape_2": false,
+    "shape_3": false,
+    "shape_4": false,
+    "shape_5": false,
+    "shape_off": false
+  },
+  "marks": [
+    {
+      "label": "bpm",
+      "t": 0.0
+    },
+    {
+      "label": "scene_on",
+      "t": 0.07
+    },
+    {
+      "label": "beat_on",
+      "t": 0.13
+    },
+    {
+      "label": "beat_off",
+      "t": 0.2
+    },
+    {
+      "label": "scene_off",
+      "t": 0.27
+    },
+    {
+      "label": "measure_1",
+      "t": 0.34
+    },
+    {
+      "label": "measure_2",
+      "t": 0.4
+    },
+    {
+      "label": "measure_3",
+      "t": 0.47
+    },
+    {
+      "label": "measure_off",
+      "t": 0.53
+    },
+    {
+      "label": "shape_1",
+      "t": 0.6
+    },
+    {
+      "label": "shape_2",
+      "t": 0.67
+    },
+    {
+      "label": "shape_3",
+      "t": 0.73
+    },
+    {
+      "label": "shape_4",
+      "t": 0.8
+    },
+    {
+      "label": "shape_5",
+      "t": 0.87
+    },
+    {
+      "label": "shape_off",
+      "t": 0.93
+    }
+  ],
+  "pre_names": {
+    "220": "RHYTHM PROBE - OVERLAP SCENE",
+    "221": "RHYTHM PROBE - SPEEDMASTER MEASURE",
+    "222": "RHYTHM PROBE - NEW SHAPES"
+  },
+  "verdict": "deny-all: approval texts recorded, nothing sent",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Master 3.15 At BPM 112.35"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 220"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 221"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 221"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 220"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 221"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 221"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 221"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 221"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 222"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 222"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 222"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 4 Sequence 222"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 5 Sequence 222"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 222"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

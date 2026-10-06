@@ -88,6 +88,25 @@
 - `Off Sequence` 뒤에도 `CURRENTCUE`는 마지막 큐(221.3, 222.5)로 읽힌다. 꺼짐 여부의 계기로 쓸 수 없다.
 - 남은 것(감독이 알고 승인): 시퀀스 220~222, 타임코드 20, 마스터 15 BPM. 쇼는 저장하지 않았다.
 
+## 4-2. 다시 보기 재생 — 쓰기 없음 (리드 지시 2026-10-06, 실행 신호 대기)
+
+1회차 실행 시간에 감독이 화면을 보지 못했다(리드 확인). 리드 지시로 재생만 하는 판을 만들었다. 실행 신호는 리드가 "실행"이라고 쓴 메시지 하나뿐이다. 그 전에는 실기 승인 모드로 돌리지 않는다.
+
+- 스크립트: `replay_probe.py`. 1회차와 같은 순서·구간 길이에 구간 사이 2초를 둔다. 전체 약 1분 35초.
+- 1회차와 다른 점: 겹침 구간(⑤)을 타임코드 대신 `Goto Cue 1 Sequence 220/221`로 1초·2초에 연다.
+  - 1회차 뒤 타임코드 20의 커서가 10.00(끝)으로 읽혀서, `Go Timecode 20`이 0초부터 다시 도는지 확인되지 않았다.
+  - 트랙 둘(④)은 1회차에서 기계로 PASS했다.
+- 사전 판독: 220·221·222 이름이 `RHYTHM PROBE - …`가 아니면 아무것도 보내지 않고 멈춘다.
+
+| 단계 | 명령 | 관측 |
+|---|---|---|
+| 가짜 콘솔 | `uv run python .moai/reports/t516/replay_probe.py .moai/reports/t516/replay_rehearse --rehearse` → `replay_summary.py` | 묶음 15, 15줄 전부 진행. 금지 동사(Store·Set·Assign·Delete·ClearAll·Save·Copy·Move·Label·Edit) 0. 동사는 `Goto Cue`·`Master 3.15`·`Off Sequence`뿐 |
+| 실기 전부-거절 | `uv run python .moai/reports/t516/replay_probe.py .moai/reports/t516/replay_denyall` | 사전 판독 이름 셋 일치. 승인 요청 15건 15줄, 승인 0. 감사 로그 `kind: command` 0행, `rejected` 15. SaveShow 0 |
+| 승인 파일 | `write_replay_approval.py` | `approval_replay.txt` 15줄, 주석 0, sha256 `c694286e19c2b6619a3087a72e8f486e7e495a362f1d1fb4c49c47b557fc8a03`. 문면이 리허설과 같다 |
+
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/replay_probe.py .moai/reports/t516/replay_live --approve .moai/reports/t516/replay_denyall`
+- 송신 뒤 대조: `uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t516/approval_replay.txt .moai/reports/t516/replay_live/audit`
+
 ## 5. 안 잰 것
 
 - ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
