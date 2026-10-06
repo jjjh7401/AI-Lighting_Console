@@ -1,0 +1,194 @@
+{"step": "pre_slot", "t": 0.065, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/234", "ok": false, "error": "path segment not found: '234' (in ShowData/DataPools/Default/Sequences/234)"}
+{"step": "pre_slot", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/235", "ok": false, "error": "path segment not found: '235' (in ShowData/DataPools/Default/Sequences/235)"}
+{"step": "pre_slot", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/236", "ok": false, "error": "path segment not found: '236' (in ShowData/DataPools/Default/Sequences/236)"}
+{"step": "pre_slot", "t": 0.266, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/237", "ok": false, "error": "path segment not found: '237' (in ShowData/DataPools/Default/Sequences/237)"}
+{"step": "pre_slot", "t": 0.333, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/238", "ok": false, "error": "path segment not found: '238' (in ShowData/DataPools/Default/Sequences/238)"}
+{"step": "pre_slot", "t": 0.399, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/239", "ok": false, "error": "path segment not found: '239' (in ShowData/DataPools/Default/Sequences/239)"}
+{"step": "pre_slot", "t": 0.466, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/240", "ok": false, "error": "path segment not found: '240' (in ShowData/DataPools/Default/Sequences/240)"}
+{"step": "pre_slot", "t": 0.533, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/241", "ok": false, "error": "path segment not found: '241' (in ShowData/DataPools/Default/Sequences/241)"}
+{"step": "pre_slot", "t": 0.599, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/242", "ok": false, "error": "path segment not found: '242' (in ShowData/DataPools/Default/Sequences/242)"}
+{"step": "pre_slot", "t": 0.666, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/243", "ok": false, "error": "path segment not found: '243' (in ShowData/DataPools/Default/Sequences/243)"}
+{"step": "pre_slot", "t": 0.732, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/244", "ok": false, "error": "path segment not found: '244' (in ShowData/DataPools/Default/Sequences/244)"}
+{"step": "store_234", "t": 0.733, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Store Sequence 234 Cue 1 'A0 Base Tilt 45'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequen
+{"step": "store_234", "t": 0.799, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_234", "t": 0.866, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_234", "t": 0.933, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_234", "t": 0.999, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_234", "t": 1.066, "kind": "exec", "command": "Store Sequence 234 Cue 1 'A0 Base Tilt 45'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_234", "t": 1.133, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_234", "t": 1.199, "kind": "exec", "command": "Set Sequence 234 Property 'Name' 'RHYTHM PROBE v4 - A0 BASE TILT 45'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.2, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative 30", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0 Thru 360", "reasons": []}, {"command": "Attrib
+{"step": "store_235", "t": 1.266, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.332, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.399, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.466, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.533, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.599, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.665, "kind": "exec", "command": "Attribute 'Pan' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.733, "kind": "exec", "command": "Store Sequence 235 Cue 1 'A1 Pan Relative 30'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.799, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_235", "t": 1.865, "kind": "exec", "command": "Set Sequence 235 Property 'Name' 'RHYTHM PROBE v4 - A1 PAN RELATIVE 30'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 1.866, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 0 Thru 360", "reasons": []}, {"command": "At
+{"step": "store_236", "t": 1.933, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 1.999, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 2.066, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 2.133, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 2.199, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 2.266, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 2.333, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 2.401, "kind": "exec", "command": "Store Sequence 236 Cue 1 'A2 Tilt Relative 30'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 2.466, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_236", "t": 2.533, "kind": "exec", "command": "Set Sequence 236 Property 'Name' 'RHYTHM PROBE v4 - A2 TILT RELATIVE 30'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 2.533, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 30
+{"step": "store_237", "t": 2.599, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 2.667, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 2.732, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 2.799, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 2.866, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 2.932, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 2.999, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 3.066, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 3.132, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 3.199, "kind": "exec", "command": "Store Sequence 237 Cue 1 'A3 Tilt 2 Steps'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 3.266, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_237", "t": 3.332, "kind": "exec", "command": "Set Sequence 237 Property 'Name' 'RHYTHM PROBE v4 - A3 TILT 2 STEPS'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.333, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Attribute 'Dimmer' At Phase 0", "reasons": []}, {"command": "Attribute 'Dimmer' At Speed 56", "reasons": []}, {"command": "Store Sequence 238 Cue 1 'B1 Pulse Speed 56'", "reasons": ["blacklisted command (m
+{"step": "store_238", "t": 3.399, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.466, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.533, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.599, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.666, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.734, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.799, "kind": "exec", "command": "Attribute 'Dimmer' At Speed 56", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.866, "kind": "exec", "command": "Store Sequence 238 Cue 1 'B1 Pulse Speed 56'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.933, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_238", "t": 3.999, "kind": "exec", "command": "Set Sequence 238 Property 'Name' 'RHYTHM PROBE v4 - B1 PULSE SPEED 56'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Attribute 'Dimmer' At Phase 0", "reasons": []}, {"command": "Attribute 'Dimmer' At Speed 224", "reasons": []}, {"command": "Store Sequence 239 Cue 1 'B2 Pulse Speed 224'", "reasons": ["blacklisted command 
+{"step": "store_239", "t": 4.065, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.199, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.266, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.332, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.399, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.466, "kind": "exec", "command": "Attribute 'Dimmer' At Speed 224", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.532, "kind": "exec", "command": "Store Sequence 239 Cue 1 'B2 Pulse Speed 224'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_239", "t": 4.666, "kind": "exec", "command": "Set Sequence 239 Property 'Name' 'RHYTHM PROBE v4 - B2 PULSE SPEED 224'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 4.666, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Attribute 'Dimmer' At Phase 0", "reasons": []}, {"command": "Attribute 'Dimmer' At Measure 4", "reasons": []}, {"command": "Attribute 'Dimmer' At SpeedMaster 15", "reasons": []}, {"command": "Store Sequenc
+{"step": "store_240", "t": 4.732, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 4.799, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 4.866, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 4.932, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 4.999, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 5.066, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 5.132, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 5.199, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 5.266, "kind": "exec", "command": "Store Sequence 240 Cue 1 'B3 Pulse Speedmaster Measure 4'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 5.332, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_240", "t": 5.4, "kind": "exec", "command": "Set Sequence 240 Property 'Name' 'RHYTHM PROBE v4 - B3 PULSE SPEEDMASTER MEASURE 4'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.4, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Attribute 'Dimmer' At Phase 0", "reasons": []}, {"command": "Attribute 'Dimmer' At Measure 1", "reasons": []}, {"command": "Attribute 'Dimmer' At SpeedMaster 15", "reasons": []}, {"command": "Store Sequence 
+{"step": "store_241", "t": 5.466, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.532, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.605, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.666, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.733, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.798, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.866, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.932, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 5.999, "kind": "exec", "command": "Store Sequence 241 Cue 1 'B4 Pulse Speedmaster Measure 1'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 6.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_241", "t": 6.133, "kind": "exec", "command": "Set Sequence 241 Property 'Name' 'RHYTHM PROBE v4 - B4 PULSE SPEEDMASTER MEASURE 1'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_242", "t": 6.133, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 201 ; Attribute 'Dimmer' At 30", "reasons": []}, {"command": "Store Sequence 242 Cue 1 'D1 Aura Fixture Dimmer'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 242 Property 'Name' 'RHYTHM PROBE v4 - D1 AURA FIXTURE DIMMER'", "reasons": []}]}
+{"step": "store_242", "t": 6.199, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_242", "t": 6.266, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_242", "t": 6.333, "kind": "exec", "command": "Fixture 201 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_242", "t": 6.4, "kind": "exec", "command": "Store Sequence 242 Cue 1 'D1 Aura Fixture Dimmer'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_242", "t": 6.466, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_242", "t": 6.533, "kind": "exec", "command": "Set Sequence 242 Property 'Name' 'RHYTHM PROBE v4 - D1 AURA FIXTURE DIMMER'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_243", "t": 6.533, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 201.1 ; Attribute 'Dimmer' At 30", "reasons": []}, {"command": "Store Sequence 243 Cue 1 'D2 Aura Subfixture Dimmer'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 243 Property 'Name' 'RHYTHM PROBE v4 - D2 AURA SUBFIXTURE DIMMER'", "reasons": []}]}
+{"step": "store_243", "t": 6.599, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_243", "t": 6.666, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_243", "t": 6.732, "kind": "exec", "command": "Fixture 201.1 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_243", "t": 6.799, "kind": "exec", "command": "Store Sequence 243 Cue 1 'D2 Aura Subfixture Dimmer'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_243", "t": 6.865, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_243", "t": 6.933, "kind": "exec", "command": "Set Sequence 243 Property 'Name' 'RHYTHM PROBE v4 - D2 AURA SUBFIXTURE DIMMER'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_244", "t": 6.933, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 201 ; Attribute 'Dimmer' At 30", "reasons": []}, {"command": "Fixture 201.1 ; Attribute 'Dimmer' At 30", "reasons": []}, {"command": "Store Sequence 244 Cue 1 'D3 Aura Both Dimmers'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 244 Property 'Name' 'RHYTHM PROBE v4 - D3 AURA BOTH DIMMERS'", "reasons"
+{"step": "store_244", "t": 6.999, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_244", "t": 7.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_244", "t": 7.133, "kind": "exec", "command": "Fixture 201 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_244", "t": 7.199, "kind": "exec", "command": "Fixture 201.1 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_244", "t": 7.266, "kind": "exec", "command": "Store Sequence 244 Cue 1 'D3 Aura Both Dimmers'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_244", "t": 7.333, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_244", "t": 7.398, "kind": "exec", "command": "Set Sequence 244 Property 'Name' 'RHYTHM PROBE v4 - D3 AURA BOTH DIMMERS'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 7.398, "say": "A0 — 무빙 501~508 이 70% 로 켜지고 수직이 아닌 기울어진 자리에 섬(움직임 없음)"}
+{"step": "on_234", "t": 7.466, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 234", "reasons": ["reference-invoking command"]}]}
+{"step": "on_234", "t": 7.533, "kind": "exec", "command": "Goto Cue 1 Sequence 234", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_234", "t": 15.599, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 234", "reasons": ["reference-invoking command"]}]}
+{"step": "off_234", "t": 15.665, "kind": "exec", "command": "Off Sequence 234", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 17.669, "say": "A1 — 기울어진 자리에서 좌우(Pan)로 흔들리는가"}
+{"step": "on_235", "t": 17.732, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 235", "reasons": ["reference-invoking command"]}]}
+{"step": "on_235", "t": 17.799, "kind": "exec", "command": "Goto Cue 1 Sequence 235", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_235", "t": 25.866, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 235", "reasons": ["reference-invoking command"]}]}
+{"step": "off_235", "t": 25.932, "kind": "exec", "command": "Off Sequence 235", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 27.937, "say": "A2 — 같은 자리에서 위아래(Tilt)로 흔들리는가"}
+{"step": "on_236", "t": 27.998, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 236", "reasons": ["reference-invoking command"]}]}
+{"step": "on_236", "t": 28.065, "kind": "exec", "command": "Goto Cue 1 Sequence 236", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_236", "t": 36.131, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 236", "reasons": ["reference-invoking command"]}]}
+{"step": "off_236", "t": 36.198, "kind": "exec", "command": "Off Sequence 236", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 38.202, "say": "A3 — 2단계로 만든 Tilt — 위아래로 흔들리는가"}
+{"step": "on_237", "t": 38.264, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 237", "reasons": ["reference-invoking command"]}]}
+{"step": "on_237", "t": 38.331, "kind": "exec", "command": "Goto Cue 1 Sequence 237", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_237", "t": 46.398, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 237", "reasons": ["reference-invoking command"]}]}
+{"step": "off_237", "t": 46.465, "kind": "exec", "command": "Off Sequence 237", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 48.468, "say": "B 기준 — v3 L1(Speed 112) 깜빡임"}
+{"step": "on_229", "t": 48.531, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 229", "reasons": ["reference-invoking command"]}]}
+{"step": "on_229", "t": 48.597, "kind": "exec", "command": "Goto Cue 1 Sequence 229", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_229", "t": 56.666, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 229", "reasons": ["reference-invoking command"]}]}
+{"step": "off_229", "t": 56.731, "kind": "exec", "command": "Off Sequence 229", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 58.735, "say": "B1 — 깜빡임이 기준(229)의 절반 빠르기인가"}
+{"step": "on_238", "t": 58.797, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 238", "reasons": ["reference-invoking command"]}]}
+{"step": "on_238", "t": 58.864, "kind": "exec", "command": "Goto Cue 1 Sequence 238", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_238", "t": 66.93, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 238", "reasons": ["reference-invoking command"]}]}
+{"step": "off_238", "t": 66.996, "kind": "exec", "command": "Off Sequence 238", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 69.001, "say": "B2 — 기준의 두 배 빠르기인가"}
+{"step": "on_239", "t": 69.063, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 239", "reasons": ["reference-invoking command"]}]}
+{"step": "on_239", "t": 69.129, "kind": "exec", "command": "Goto Cue 1 Sequence 239", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_239", "t": 77.197, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 239", "reasons": ["reference-invoking command"]}]}
+{"step": "off_239", "t": 77.264, "kind": "exec", "command": "Off Sequence 239", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 79.268, "say": "B3 — 스피드 마스터 + Measure 4 — 기준보다 느린가"}
+{"step": "on_240", "t": 79.329, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 240", "reasons": ["reference-invoking command"]}]}
+{"step": "on_240", "t": 79.396, "kind": "exec", "command": "Goto Cue 1 Sequence 240", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_240", "t": 87.464, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 240", "reasons": ["reference-invoking command"]}]}
+{"step": "off_240", "t": 87.53, "kind": "exec", "command": "Off Sequence 240", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 89.535, "say": "B4 — 스피드 마스터 + Measure 1 — 기준보다 빠른가"}
+{"step": "on_241", "t": 90.739, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 241", "reasons": ["reference-invoking command"]}]}
+{"step": "on_241", "t": 90.806, "kind": "exec", "command": "Goto Cue 1 Sequence 241", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_241", "t": 98.872, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 241", "reasons": ["reference-invoking command"]}]}
+{"step": "off_241", "t": 98.938, "kind": "exec", "command": "Off Sequence 241", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 100.943, "say": "D1 — BACK 201 한 대가 켜지는가(대조, v2 에선 어두웠음)"}
+{"step": "on_242", "t": 101.004, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 242", "reasons": ["reference-invoking command"]}]}
+{"step": "on_242", "t": 101.071, "kind": "exec", "command": "Goto Cue 1 Sequence 242", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_242", "t": 109.137, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 242", "reasons": ["reference-invoking command"]}]}
+{"step": "off_242", "t": 109.204, "kind": "exec", "command": "Off Sequence 242", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 111.209, "say": "D2 — 201.1(서브픽스처)만 30 — 켜지는가"}
+{"step": "on_243", "t": 111.271, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 243", "reasons": ["reference-invoking command"]}]}
+{"step": "on_243", "t": 111.337, "kind": "exec", "command": "Goto Cue 1 Sequence 243", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_243", "t": 119.404, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 243", "reasons": ["reference-invoking command"]}]}
+{"step": "off_243", "t": 119.47, "kind": "exec", "command": "Off Sequence 243", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 121.474, "say": "D3 — 201 과 201.1 둘 다 30 — 켜지는가"}
+{"step": "on_244", "t": 121.537, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 244", "reasons": ["reference-invoking command"]}]}
+{"step": "on_244", "t": 121.604, "kind": "exec", "command": "Goto Cue 1 Sequence 244", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_244", "t": 129.669, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 244", "reasons": ["reference-invoking command"]}]}
+{"step": "off_244", "t": 129.736, "kind": "exec", "command": "Off Sequence 244", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_part_234", "t": 131.803, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/234/3/1", "ok": true, "payload": {"id": "gate-161", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/234/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "A0 Base Tilt 45"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3432"}], "truncated": false, "v": 1}}
+{"step": "post_part_235", "t": 131.87, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/235/3/1", "ok": true, "payload": {"id": "gate-162", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/235/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "A1 Pan Relative 30"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3216"}], "truncated": false, "v": 1}}
+{"step": "post_part_236", "t": 131.937, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/236/3/1", "ok": true, "payload": {"id": "gate-163", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/236/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "A2 Tilt Relative 30"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3216"}], "truncated": false, "v": 1}}
+{"step": "post_part_237", "t": 132.003, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/237/3/1", "ok": true, "payload": {"id": "gate-164", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/237/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "A3 Tilt 2 Steps"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3552"}], "truncated": false, "v": 1}}
+{"step": "post_part_238", "t": 132.069, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/238/3/1", "ok": true, "payload": {"id": "gate-165", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/238/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B1 Pulse Speed 56"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3016"}], "truncated": false, "v": 1}}
+{"step": "post_part_239", "t": 132.137, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/239/3/1", "ok": true, "payload": {"id": "gate-166", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/239/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B2 Pulse Speed 224"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3016"}], "truncated": false, "v": 1}}
+{"step": "post_part_240", "t": 132.203, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/240/3/1", "ok": true, "payload": {"id": "gate-167", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/240/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B3 Pulse Speedmaster Measure 4"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3064"}], "truncated": false, "v": 1}}
+{"step": "post_part_241", "t": 132.269, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/241/3/1", "ok": true, "payload": {"id": "gate-168", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/241/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "B4 Pulse Speedmaster Measure 1"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3060"}], "truncated": false, "v": 1}}
+{"step": "post_part_242", "t": 132.336, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/242/3/1", "ok": true, "payload": {"id": "gate-169", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/242/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "D1 Aura Fixture Dimmer"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2672"}], "truncated": false, "v": 1}}
+{"step": "post_part_243", "t": 132.403, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/243/3/1", "ok": true, "payload": {"id": "gate-170", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/243/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "D2 Aura Subfixture Dimmer"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2704"}], "truncated": false, "v": 1}}
+{"step": "post_part_244", "t": 132.469, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/244/3/1", "ok": true, "payload": {"id": "gate-171", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/244/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "D3 Aura Both Dimmers"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2684"}], "truncated": false, "v": 1}}
+{"verdict": "ran — judge by director watch", "bundles": {"store_234": true, "store_235": true, "store_236": true, "store_237": true, "store_238": true, "store_239": true, "store_240": true, "store_241": true, "store_242": true, "store_243": true, "store_244": true, "on_234": true, "off_234": true, "on_235": true, "off_235": true, "on_236": true, "off_236": true, "on_237": true, "off_237": true, "on_229": true, "off_229": true, "on_238": true, "off_238": true, "on_239": true, "off_239": true, "on_240": true, "off_240": true, "on_241": true, "off_241": true, "on_242": true, "off_242": true, "on_243": true, "off_243": true, "on_244": true, "off_244": true}}

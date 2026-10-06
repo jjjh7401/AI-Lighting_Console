@@ -1,0 +1,477 @@
+{
+  "bundles": {
+    "store_234": true,
+    "store_235": true,
+    "store_236": true,
+    "store_237": true,
+    "store_238": true,
+    "store_239": true,
+    "store_240": true,
+    "store_241": true,
+    "store_242": true,
+    "store_243": true,
+    "store_244": true,
+    "on_234": true,
+    "off_234": true,
+    "on_235": true,
+    "off_235": true,
+    "on_236": true,
+    "off_236": true,
+    "on_237": true,
+    "off_237": true,
+    "on_229": true,
+    "off_229": true,
+    "on_238": true,
+    "off_238": true,
+    "on_239": true,
+    "off_239": true,
+    "on_240": true,
+    "off_240": true,
+    "on_241": true,
+    "off_241": true,
+    "on_242": true,
+    "off_242": true,
+    "on_243": true,
+    "off_243": true,
+    "on_244": true,
+    "off_244": true
+  },
+  "marks": [
+    {
+      "label": "on_234",
+      "t": 0.13
+    },
+    {
+      "label": "off_234",
+      "t": 8.27
+    },
+    {
+      "label": "on_235",
+      "t": 10.4
+    },
+    {
+      "label": "off_235",
+      "t": 18.53
+    },
+    {
+      "label": "on_236",
+      "t": 20.67
+    },
+    {
+      "label": "off_236",
+      "t": 28.8
+    },
+    {
+      "label": "on_237",
+      "t": 30.93
+    },
+    {
+      "label": "off_237",
+      "t": 39.07
+    },
+    {
+      "label": "on_229",
+      "t": 41.2
+    },
+    {
+      "label": "off_229",
+      "t": 49.33
+    },
+    {
+      "label": "on_238",
+      "t": 51.47
+    },
+    {
+      "label": "off_238",
+      "t": 59.6
+    },
+    {
+      "label": "on_239",
+      "t": 61.73
+    },
+    {
+      "label": "off_239",
+      "t": 69.87
+    },
+    {
+      "label": "on_240",
+      "t": 72.0
+    },
+    {
+      "label": "off_240",
+      "t": 80.13
+    },
+    {
+      "label": "on_241",
+      "t": 83.41
+    },
+    {
+      "label": "off_241",
+      "t": 91.54
+    },
+    {
+      "label": "on_242",
+      "t": 93.67
+    },
+    {
+      "label": "off_242",
+      "t": 101.81
+    },
+    {
+      "label": "on_243",
+      "t": 103.94
+    },
+    {
+      "label": "off_243",
+      "t": 112.07
+    },
+    {
+      "label": "on_244",
+      "t": 114.21
+    },
+    {
+      "label": "off_244",
+      "t": 122.34
+    }
+  ],
+  "verdict": "ran — judge by director watch",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Store Sequence 234 Cue 1 'A0 Base Tilt 45'",
+        "ClearAll",
+        "Set Sequence 234 Property 'Name' 'RHYTHM PROBE v4 - A0 BASE TILT 45'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative 30",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Speed 112",
+        "Store Sequence 235 Cue 1 'A1 Pan Relative 30'",
+        "ClearAll",
+        "Set Sequence 235 Property 'Name' 'RHYTHM PROBE v4 - A1 PAN RELATIVE 30'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 236 Cue 1 'A2 Tilt Relative 30'",
+        "ClearAll",
+        "Set Sequence 236 Property 'Name' 'RHYTHM PROBE v4 - A2 TILT RELATIVE 30'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 237 Cue 1 'A3 Tilt 2 Steps'",
+        "ClearAll",
+        "Set Sequence 237 Property 'Name' 'RHYTHM PROBE v4 - A3 TILT 2 STEPS'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Phase 0",
+        "Attribute 'Dimmer' At Speed 56",
+        "Store Sequence 238 Cue 1 'B1 Pulse Speed 56'",
+        "ClearAll",
+        "Set Sequence 238 Property 'Name' 'RHYTHM PROBE v4 - B1 PULSE SPEED 56'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Phase 0",
+        "Attribute 'Dimmer' At Speed 224",
+        "Store Sequence 239 Cue 1 'B2 Pulse Speed 224'",
+        "ClearAll",
+        "Set Sequence 239 Property 'Name' 'RHYTHM PROBE v4 - B2 PULSE SPEED 224'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Phase 0",
+        "Attribute 'Dimmer' At Measure 4",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Sequence 240 Cue 1 'B3 Pulse Speedmaster Measure 4'",
+        "ClearAll",
+        "Set Sequence 240 Property 'Name' 'RHYTHM PROBE v4 - B3 PULSE SPEEDMASTER MEASURE 4'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Phase 0",
+        "Attribute 'Dimmer' At Measure 1",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Sequence 241 Cue 1 'B4 Pulse Speedmaster Measure 1'",
+        "ClearAll",
+        "Set Sequence 241 Property 'Name' 'RHYTHM PROBE v4 - B4 PULSE SPEEDMASTER MEASURE 1'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 30",
+        "Store Sequence 242 Cue 1 'D1 Aura Fixture Dimmer'",
+        "ClearAll",
+        "Set Sequence 242 Property 'Name' 'RHYTHM PROBE v4 - D1 AURA FIXTURE DIMMER'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 30",
+        "Store Sequence 243 Cue 1 'D2 Aura Subfixture Dimmer'",
+        "ClearAll",
+        "Set Sequence 243 Property 'Name' 'RHYTHM PROBE v4 - D2 AURA SUBFIXTURE DIMMER'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 30",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 30",
+        "Store Sequence 244 Cue 1 'D3 Aura Both Dimmers'",
+        "ClearAll",
+        "Set Sequence 244 Property 'Name' 'RHYTHM PROBE v4 - D3 AURA BOTH DIMMERS'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 234"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 234"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 235"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 235"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 236"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 236"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 237"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 237"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 229"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 229"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 238"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 238"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 239"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 239"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 240"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 240"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 241"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 241"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 242"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 242"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 243"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 243"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 244"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 244"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}
