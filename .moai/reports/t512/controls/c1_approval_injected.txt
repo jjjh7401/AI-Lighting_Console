@@ -1,0 +1,19 @@
+# 묶음 1 (2줄)
+Set Timecode 14 Property 'Duration' 5 'AutoStop' 0
+Store Type 'CmdSubTrack' Timecode 14.1.1.1
+
+# 묶음 2 (5줄)
+cd Timecode 14.1.1.1.1
+Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'
+Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'
+Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'
+cd root
+
+# 묶음 3 (1줄)
+Go Timecode 14
+
+Delete Sequence 14
+
+# 묶음 4 (2줄)
+Off Timecode 14
+Off Sequence 9

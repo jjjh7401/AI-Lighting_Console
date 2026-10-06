@@ -1,0 +1,14 @@
+approval file      : t501/ac016/real_clubdiver_213_write/approval_request_1.txt
+  raw sha256       : d0f858d3573bbf45c99e90b30178dc3ff9c0c1b8a6f0ebb3ade945eeeec183ec
+  raw == canonical : True
+  canonical lines  : 266
+  canonical sha256 : d0f858d3573bbf45c99e90b30178dc3ff9c0c1b8a6f0ebb3ade945eeeec183ec
+sent source        : t501/ac016/real_clubdiver_213_write/audit (files: ['audit-20261002.jsonl'])
+  window           : since=None until=None
+  send rows        : 266 by kind {'command': 266}
+  rebuilt sha256   : d0f858d3573bbf45c99e90b30178dc3ff9c0c1b8a6f0ebb3ade945eeeec183ec
+WARN sends not ok  : 0
+(1) sha256 equal                         : True
+(2) 송신 안 됨 (sent, not in approval)    : 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: PASS

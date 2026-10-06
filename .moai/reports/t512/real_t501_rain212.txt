@@ -1,0 +1,14 @@
+approval file      : t501/ac016/real_rain_212_write/approval_request_1.txt
+  raw sha256       : 8896c5c6c763cc8c999eea26ff554f394c84c7178af5e29429f08fbff91bd8e6
+  raw == canonical : True
+  canonical lines  : 237
+  canonical sha256 : 8896c5c6c763cc8c999eea26ff554f394c84c7178af5e29429f08fbff91bd8e6
+sent source        : t501/ac016/real_rain_212_write/audit (files: ['audit-20261002.jsonl'])
+  window           : since=None until=None
+  send rows        : 237 by kind {'command': 237}
+  rebuilt sha256   : 8896c5c6c763cc8c999eea26ff554f394c84c7178af5e29429f08fbff91bd8e6
+WARN sends not ok  : 0
+(1) sha256 equal                         : True
+(2) 송신 안 됨 (sent, not in approval)    : 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: PASS
