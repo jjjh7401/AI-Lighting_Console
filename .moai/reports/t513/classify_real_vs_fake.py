@@ -1,6 +1,7 @@
-"""t513 — 실기 전부-거절 승인 요청 4(본 큐 묶음) 대 가짜 콘솔 송신(run1_fake) 차이 전량 분류.
+"""t513 — 실기 전부-거절 요청 4(본 큐 묶음) 대 가짜 콘솔 송신(run1_fake) 차이 전량 분류.
 
-기구 목록은 `<SET>` 으로 바꿔 비교한다(t498 classify_diff.py 와 같은 방식 — 가짜 좌표 대역은 실기 86대 번호).
+기구 목록은 `<SET>` 으로 바꿔 비교한다(t498 classify_diff.py 와 같은 방식).
+가짜 좌표 대역은 실기 86대 번호다.
 실행: uv run python .moai/reports/t513/classify_real_vs_fake.py
 """
 
