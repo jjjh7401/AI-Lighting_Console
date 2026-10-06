@@ -1,0 +1,5 @@
+mode=deny-all cleared=False approval_requests=1 approved=0 fired=0 ok=0 skipped_saveshow=0
+before ['Sequences', '219'] {'NO': '219', 'NAME': 'Sequence 219'}
+before ['Timecodes', '19'] {'NO': '19', 'NAME': 'Sequence 219 Timecode'}
+after ['Sequences', '219'] {'NO': '219', 'NAME': 'Sequence 219'}
+after ['Timecodes', '19'] {'NO': '19', 'NAME': 'Sequence 219 Timecode'}

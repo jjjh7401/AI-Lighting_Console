@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/219|NO,NAME
+    wire: Plugin "CopilotResponder" "props 542733d4 NO,NAME ShowData/DataPools/Default/Sequences/219"
+<<< {"id": "542733d4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/219", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "219"}, {"n": "NAME", "ok": true, "t": "string", "v": "Sequence 219"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/19|NO,NAME
+    wire: Plugin "CopilotResponder" "props c65471c7 NO,NAME ShowData/DataPools/Default/Timecodes/19"
+<<< {"id": "c65471c7", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/19", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "19"}, {"n": "NAME", "ok": true, "t": "string", "v": "Sequence 219 Timecode"}], "truncated": false, "v": 1}

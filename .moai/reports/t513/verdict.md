@@ -100,7 +100,7 @@
 
 `.moai/reports/t513/` — `run0*` 읽기 · `run1_fake`·`run2_fake` 리허설 · `run3_real_denyall`·`run5_real_denyall_again` 실기 전부-거절 · `run4_preset_pools.txt` · `approve_A_stage1_phasers/` · `approve_B_nophaser/` · 스크립트 `probe_steps.py` `rehearse_song.py` `compare_fake.py` `real_console.py` `control_exec_block.py` `classify_real_vs_fake.py` `reply_notices.py`. 제품 코드 변경 0.
 
-- **감사 로그(`run*/audit/`)·이벤트(`run*/events.json`)·읽기 기록(`run*/queries.json`) 원본은 저장소에 없다**(리드 지시). 보관 위치: `/Users/studiox/Documents/Claude/Code/AI-Lighting_Console-evidence/t513/` — 22개, 경로별 sha256 은 `evidence_archive_sha256.txt`(복사 뒤 원본과 대조, 불일치 0). 승인=송신 대조의 결과물(`run*_approval_vs_sent.txt`, `run6_A1/rebuilt_sent.txt`, `run8_A3/rebuilt_sent.txt`)은 저장소에 있다
+- **감사 로그(`run*/audit/`)·이벤트(`run*/events.json`)·읽기 기록(`run*/queries.json`) 원본은 저장소에 없다**(리드 지시). 보관 위치: `/Users/studiox/Documents/Claude/Code/AI-Lighting_Console-evidence/t513/` — 24개(이름 붙이기 감사 로그 2개 포함), 경로별 sha256 은 `evidence_archive_sha256.txt`(복사 뒤 원본과 대조, 불일치 0). 승인=송신 대조의 결과물(`run*_approval_vs_sent.txt`, `run6_A1/rebuilt_sent.txt`, `run8_A3/rebuilt_sent.txt`)은 저장소에 있다
 - 음원은 저장소 밖(`/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3`), 커밋 0
 
 ## 7. 실행 (2026-10-06, 감독 A안 승인 · 리드 경유)
@@ -124,3 +124,40 @@
 
 - 시퀀스 219 「Sequence 219」 큐 11개 · 타임코드 19 「Sequence 219 Timecode」 · 프리셋 4.9 Breathe Warm · 4.10 Wave CM · 21.7 Finale Slam
 - 안 잰 것: 큐 안의 값(밝기·색·포지션·페이저 참조 보존) — 응답기로 못 읽는다. 재생·육안은 감독 몫
+
+## 7-2. 이름 붙이기 (2026-10-06, 감독 요청 · 리드 경유 — 이 2줄만)
+
+감독은 A3 뒤 쇼를 저장했다(리드 전달). 그 뒤 「시퀀스 만들 때 라벨을 붙여줘. 알아보기 힘들어」.
+
+| 단계 | 명령 | 결과 | 근거 |
+|---|---|---|---|
+| 판독 | `rename_labels.py` 시작부 `props …|NO,NAME` | 시퀀스 219 = `Sequence 219` · 타임코드 19 = `Sequence 219 Timecode` | `run9_rename_denyall.stdout.txt` |
+| 전부-거절 | `uv run python .moai/reports/t513/rename_labels.py .moai/reports/t513/run9_rename_denyall` | 게이트가 승인 요청 1건(2줄)을 냈고 거절 → 송신 0(감사 로그 `kind: command` 0행) · 이름 그대로 | 같은 파일 |
+| 쓰기 | `… rename_labels.py .moai/reports/t513/run10_rename --approve .moai/reports/t513/approve_rename.txt` | 승인 1/1 · 송신 2 · ok 2 · `SaveShow` 기록만 1(송신 0) | `run10_rename.stdout.txt` |
+| 대조 | `approval_vs_sent.py approve_rename.txt run10_rename/audit` | 승인 2 = 송신 2 · sha256 `52b4893a…` 동일 → **PASS** | `run10_rename_approval_vs_sent.txt` |
+| 되읽기 | 같은 실행 끝부 | 시퀀스 219 = **`LOVE ATTACK - OLD APP`** · 타임코드 19 = **`LOVE ATTACK - OLD APP TC`** | `run10_rename.stdout.txt` |
+
+- 보낸 2줄(`approve_rename.txt`): `Set Sequence 219 Property 'Name' 'LOVE ATTACK - OLD APP'` · `Set Timecode 19 Property 'Name' 'LOVE ATTACK - OLD APP TC'`
+- 🔴 이름 바꾸기 뒤 쇼는 다시 저장되지 않았다 — 감독이 다시 저장해야 남는다
+
+## 8. 시퀀스·타임코드 이름 — 지금 앱이 정하는 방식과 규칙 제안
+
+### 지금 (코드 판독, 실기 결과로 확인)
+
+| 대상 | 정하는 곳 | 지금 값 | 실기 확인 |
+|---|---|---|---|
+| 시퀀스 이름 | 곡 경로의 본 큐 묶음에는 시퀀스 이름을 붙이는 줄(`Label Sequence`·`Property 'Name'`)이 **없다**. 이름은 `Store Sequence 219 Cue …` 가 슬롯을 만들 때 콘솔이 붙이는 기본값이다 | `Sequence 219` | A3 요청 210줄 중 이름 줄은 타임코드 1줄뿐(`grep -c`) · 되읽기 `Sequence 219` |
+| 계획 안의 시퀀스 이름 | `server/design/song_cue_render.py:1279` `sequence_name=f"Sequence {sequence_no}"` (같은 파일 `:1451` 도 기본값 동일) | `Sequence 219` | 콘솔로는 안 나가고, 리뷰 문면(`server/web/session.py:1268`)과 타임코드 이름에만 쓰인다 |
+| 타임코드 이름 | `server/looks/songcue.py:634-642` `_timecode_commands` — `Set Timecode <n> Property 'Name' '<sequence_name> Timecode'`, `_ascii_label`(`:683`)이 ASCII 밖 글자와 `'` 를 지운다 | `Sequence 219 Timecode` | 되읽기 일치 |
+| 곡 제목 | 대화 경로는 `song_title = "Design Interview"` 고정(`song_cue_render.py:990`). 업로드 경로만 `upload_song_plan.py` 에서 `song_title`·`sequence_name` 을 바꿀 수 있다 | `Design Interview` | — |
+
+### 규칙 제안
+
+- 시퀀스 이름 = **`<곡명> - <버전>`** (예 `LOVE ATTACK - RHYTHM M2`, 기존 앱 연출은 `LOVE ATTACK - OLD APP`)
+- 타임코드 이름 = 시퀀스 이름 + **` TC`** (지금 접미사 ` Timecode` 를 바꾼다)
+- 고칠 자리(제안, 이 카드에서는 코드 변경 0):
+  1. `song_cue_render.py:1279` — `sequence_name` 을 곡명(업로드한 음원 파일 이름에서 확장자를 뺀 것) + 버전으로 만든다
+  2. 곡 경로 본 큐 묶음에 `Set Sequence <n> Property 'Name' '<이름>'` 1줄을 더한다 — 지금은 없어서 콘솔 기본값이 남는다(fx 경로는 이미 `Label Sequence <n> '<이름>'` 을 쓴다: `server/fx/instantiate.py:674`, `server/web/session.py:3172`)
+  3. `songcue.py:636` 접미사 ` Timecode` → ` TC`
+- 주의: `_ascii_label` 은 한글을 지운다. 한글 곡명은 이름이 비어 대체값(`Timecode <n>`)이 된다 — 한글 곡명을 어떻게 적을지(로마자 표기·영문 제목)는 감독 결정이 필요하다
+- 버전 문자열(`OLD APP`·`RHYTHM M2`)을 누가 정하는지(대화 지시·고정 표)는 정해지지 않았다
