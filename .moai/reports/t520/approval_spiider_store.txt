@@ -1,0 +1,18 @@
+ChangeDestination Root
+ClearAll
+Group 12 ; At 100
+Store Sequence 266 Cue 1 'Group 12 At'
+ClearAll
+Set Sequence 266 Property 'Name' 'FIXTURE PROBE - SPIIDER GROUP 12 AT'
+ChangeDestination Root
+ClearAll
+Fixture 521 Thru 528 ; At 100
+Store Sequence 267 Cue 1 'Spiider Thru At'
+ClearAll
+Set Sequence 267 Property 'Name' 'FIXTURE PROBE - SPIIDER THRU AT'
+ChangeDestination Root
+ClearAll
+Fixture 521 Thru 528 ; At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100
+Store Sequence 268 Cue 1 'Spiider At RGB'
+ClearAll
+Set Sequence 268 Property 'Name' 'FIXTURE PROBE - SPIIDER AT RGB'

@@ -1,0 +1,5 @@
+{"ts": "2026-10-07T06:49:44.418086+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/265 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:49:44.485405+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 265"], "held": ["Goto Cue 1 Sequence 265"], "kind": "t520_fixture_probe"}
+{"ts": "2026-10-07T06:49:44.551426+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 265", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:49:54.619595+00:00", "event": "approved", "commands": ["Off Sequence 265"], "held": ["Off Sequence 265"], "kind": "t520_fixture_probe"}
+{"ts": "2026-10-07T06:49:54.684167+00:00", "event": "executed", "command": "Off Sequence 265", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

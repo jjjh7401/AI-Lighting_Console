@@ -1,0 +1,2445 @@
+ChangeDestination Root
+ClearAll
+Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 0 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 ; Attribute 'Dimmer' At 0
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 201.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 202.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 203.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 204.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 205.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 206.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 207.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 208.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 209.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 210.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 211.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 212.1 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 301 + 302 + 303 + 304 + 305 + 306 + 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 301.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 302.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 303.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 304.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 305.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 306.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 311.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 312.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 313.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 314.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 315.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 316.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 + 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 521.1 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 521.2 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 521.3 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 522.1 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 522.2 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 522.3 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 523.1 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 523.2 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 523.3 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 524.1 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 524.2 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 524.3 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 525.1 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 525.2 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 525.3 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 526.1 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 526.2 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 526.3 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 527.1 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 527.2 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 527.3 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 528.1 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 528.2 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 528.3 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+Fixture 601 + 602 + 603 + 604 + 605 + 606 ; Attribute 'Dimmer' At 0
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+Store Sequence 253 Cue 1 'Intro A' CueFade 0
+ClearAll
+Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 40
+Fixture 111 + 112 + 113 + 114 + 115 + 116 + 117 + 118 ; Attribute 'Dimmer' At 60
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 201.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 202.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 203.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 204.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 205.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 206.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 207.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 208.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 209.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 210.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 211.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 212.1 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+Store Sequence 253 Cue 2 'Verse One' CueFade 4.27
+ClearAll
+Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 25
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+Store Sequence 253 Cue 3 'Pre One' CueFade 0.53
+ClearAll
+Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 10
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+Store Sequence 253 Cue 4 'Pre Gap' CueFade 0
+ClearAll
+Fixture 601 + 602 + 603 + 604 + 605 + 606 ; Attribute 'Dimmer' At 60
+Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 62 ; Attribute 'ColorRGB_B' At 80
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+Store Sequence 253 Cue 5 'Chorus One Hit' CueFade 0
+ClearAll
+Fixture 601 + 602 + 603 + 604 + 605 + 606 ; Attribute 'Dimmer' At 0
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+Store Sequence 253 Cue 6 'Blind Off' CueFade 0.27
+ClearAll
+Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 55
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+Store Sequence 253 Cue 7 'Peach Bleed' CueFade 2.14
+ClearAll
+Set Sequence 253 Property 'Name' 'LOVE ATTACK - RHYTHM M2a B SCENE'
+ChangeDestination Root
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 1 'Intro Back' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 100
+Fixture 201.1 ; Attribute 'Dimmer' At 100
+Fixture 202.1 ; Attribute 'Dimmer' At 100
+Fixture 203.1 ; Attribute 'Dimmer' At 100
+Fixture 204.1 ; Attribute 'Dimmer' At 100
+Fixture 205.1 ; Attribute 'Dimmer' At 100
+Fixture 206.1 ; Attribute 'Dimmer' At 100
+Fixture 207.1 ; Attribute 'Dimmer' At 100
+Fixture 208.1 ; Attribute 'Dimmer' At 100
+Fixture 209.1 ; Attribute 'Dimmer' At 100
+Fixture 210.1 ; Attribute 'Dimmer' At 100
+Fixture 211.1 ; Attribute 'Dimmer' At 100
+Fixture 212.1 ; Attribute 'Dimmer' At 100
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 2 'Start Hit' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 3 'Intro Hold' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 4 'Kick Four' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 5 'Movers Mid' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 6 'Verse Pulse' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 60
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Measure 8
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0 Thru 360
+Attribute 'Tilt' At Measure 8
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Measure 8
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0 Thru 360
+Attribute 'Tilt' At Measure 8
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 7 'Tilt Wave' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 100
+Fixture 311.1 ; Attribute 'Dimmer' At 100
+Fixture 312.1 ; Attribute 'Dimmer' At 100
+Fixture 313.1 ; Attribute 'Dimmer' At 100
+Fixture 314.1 ; Attribute 'Dimmer' At 100
+Fixture 315.1 ; Attribute 'Dimmer' At 100
+Fixture 316.1 ; Attribute 'Dimmer' At 100
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Measure 8
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0 Thru 360
+Attribute 'Tilt' At Measure 8
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Measure 8
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0 Thru 360
+Attribute 'Tilt' At Measure 8
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 8 'Side Chase' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 4
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 4
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 4
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 4
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 9 'Sweep Four' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 10 'Sweep Two' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 1
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 1
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 1
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 1
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 11 'Sweep One' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 0.5
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 0.5
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 0.5
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 0.5
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 12 'Sweep Half' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 13 'Pre Gap' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 75
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 75
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 14 'Chorus Pulse' CueFade 0
+ClearAll
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Fixture 202.1 ; Attribute 'Dimmer' At 30
+Fixture 203.1 ; Attribute 'Dimmer' At 30
+Fixture 204.1 ; Attribute 'Dimmer' At 30
+Fixture 205.1 ; Attribute 'Dimmer' At 30
+Fixture 206.1 ; Attribute 'Dimmer' At 30
+Fixture 207.1 ; Attribute 'Dimmer' At 30
+Fixture 208.1 ; Attribute 'Dimmer' At 30
+Fixture 209.1 ; Attribute 'Dimmer' At 30
+Fixture 210.1 ; Attribute 'Dimmer' At 30
+Fixture 211.1 ; Attribute 'Dimmer' At 30
+Fixture 212.1 ; Attribute 'Dimmer' At 30
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 75
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60
+Step 2
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 201.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 202.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 203.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 204.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 205.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 206.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 207.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 208.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 209.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 210.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 211.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 212.1 ; Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301 + 302 + 303 + 304 + 305 + 306 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 301.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 302.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 303.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 304.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 305.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 306.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311 + 312 + 313 + 314 + 315 + 316 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 311.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 312.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 313.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 314.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 315.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 316.1 ; Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 75
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0 Thru 360
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Fixture 521 + 522 + 523 + 524 + 525 + 526 + 527 + 528 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60
+Attribute 'Pan' At Phase 0
+Attribute 'Pan' At Measure 2
+Attribute 'Pan' At SpeedMaster 15
+Attribute 'Tilt' At Phase 0
+Attribute 'Tilt' At Measure 2
+Attribute 'Tilt' At SpeedMaster 15
+Store Sequence 254 Cue 15 'Pan Wave' CueFade 0
+ClearAll
+Set Sequence 254 Property 'Name' 'LOVE ATTACK - RHYTHM M2a B RHYTHM'
+Store Timecode 23
+Set Timecode 23 Property 'Name' 'LOVE ATTACK - RHYTHM M2a B TC'
+Set Timecode 23 Property 'Duration' 62 'AutoStop' 0
+Store Timecode 23.1
+Assign Sequence 253 At Timecode 23.1.1
+Assign Sequence 254 At Timecode 23.1.2
+Store Type 'CmdSubTrack' Timecode 23.1.1.1
+Store Type 'CmdSubTrack' Timecode 23.1.2.1
+cd Timecode 23.1.1.1.1
+Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'
+Store Property 'Time' 17.36 'AbsTime' 17.36 'Token' 'Go+'
+Store Property 'Time' 32.35 'AbsTime' 32.35 'Token' 'Go+'
+Store Property 'Time' 39.86 'AbsTime' 39.86 'Token' 'Go+'
+Store Property 'Time' 40.9 'AbsTime' 40.9 'Token' 'Go+'
+Store Property 'Time' 41.43 'AbsTime' 41.43 'Token' 'Go+'
+Store Property 'Time' 49.51 'AbsTime' 49.51 'Token' 'Go+'
+cd root
+cd Timecode 23.1.2.1.1
+Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'
+Store Property 'Time' 3.96 'AbsTime' 3.96 'Token' 'Go+'
+Store Property 'Time' 4.5 'AbsTime' 4.5 'Token' 'Go+'
+Store Property 'Time' 8.78 'AbsTime' 8.78 'Token' 'Go+'
+Store Property 'Time' 13.07 'AbsTime' 13.07 'Token' 'Go+'
+Store Property 'Time' 17.36 'AbsTime' 17.36 'Token' 'Go+'
+Store Property 'Time' 19.5 'AbsTime' 19.5 'Token' 'Go+'
+Store Property 'Time' 25.93 'AbsTime' 25.93 'Token' 'Go+'
+Store Property 'Time' 32.35 'AbsTime' 32.35 'Token' 'Go+'
+Store Property 'Time' 34.51 'AbsTime' 34.51 'Token' 'Go+'
+Store Property 'Time' 36.65 'AbsTime' 36.65 'Token' 'Go+'
+Store Property 'Time' 38.79 'AbsTime' 38.79 'Token' 'Go+'
+Store Property 'Time' 39.86 'AbsTime' 39.86 'Token' 'Go+'
+Store Property 'Time' 40.9 'AbsTime' 40.9 'Token' 'Go+'
+Store Property 'Time' 43.08 'AbsTime' 43.08 'Token' 'Go+'
+cd root

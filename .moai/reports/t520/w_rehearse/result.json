@@ -1,0 +1,57 @@
+{
+  "phase": "all",
+  "bundles": {
+    "store_257": true,
+    "on_257": true,
+    "off_257": true
+  },
+  "exec": [
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 10 ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 257 Cue 1 'Wash All 100'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 257 Property 'Name' 'WASH PROBE - GROUP 10 DIMMER 100'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 257",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 257",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase all",
+  "approved": 3,
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "phase": "p265",
+  "bundles": {
+    "off_265": true
+  },
+  "pre_name": "FIXTURE PROBE - WASH 401 ZOOM",
+  "exec": [
+    {
+      "command": "Off Sequence 265",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase p265",
+  "preflight": "responder_ok",
+  "approved": 1,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

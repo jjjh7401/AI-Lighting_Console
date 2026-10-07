@@ -1,0 +1,5 @@
+① 257 Group 12 Dimmer 100 — 감독 「안켜졌어」 (그룹 12 = 위쪽 트러스 노란 8대, 검은 납작한 기구와 번갈아)
+② 258 Fixture 521 Thru 528. Dimmer 100 — 감독 「안켜졌어」
+③ 259 Fixture 521 Thru 528. Dimmer 100 + RGB 100 — 감독 「안켜졌어」
+④ 263 Group 10 Dimmer 100 — 감독 「바닥워시는 켜졌어」
+⑥ 265 Fixture 401 Dimmer 100 Zoom 100 — 감독 「1대만 켜졌어」

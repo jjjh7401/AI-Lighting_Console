@@ -1,0 +1,15 @@
+{
+  "phase": "all",
+  "bundles": {
+    "store_255": false,
+    "store_256": false,
+    "on_255": false,
+    "off_255": false,
+    "on_256": false,
+    "off_256": false
+  },
+  "verdict": "deny-all: approval texts recorded",
+  "preflight": "responder_ok",
+  "approved": 0,
+  "skipped_saveshow": []
+}

@@ -1,0 +1,18 @@
+{"step": "pre_name", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/269", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/269", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 SCENE"}], "truncated": false, "v": 1}}
+{"step": "pre_name", "t": 0.132, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/270", "ok": true, "payload": {"id": "gate-3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/270", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 RHYTHM"}], "truncated": false, "v": 1}}
+{"step": "pre_name", "t": 0.199, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/24", "ok": true, "payload": {"id": "gate-4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 TC"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 0.199, "say": "LOVE ATTACK 0~25마디 — 타임코드 22 시작. 음악은 타임코드 3초에 시작"}
+{"step": "go", "t": 0.2, "kind": "screen", "cleared": true, "commands": [{"command": "Go Timecode 24", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "go", "t": 0.266, "kind": "exec", "command": "Go Timecode 24", "fired": true, "ok": true, "detail": "OK"}
+{"step": "audio_sync_0", "t": 0.333, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/24", "ok": true, "payload": {"id": "gate-6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24", "reads": [{"n": "CURSOR", "ok": true, "t": "string", "v": "1m00.70"}], "truncated": false, "v": 1}}
+Traceback (most recent call last):
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t520/.moai/reports/t520/m2a_play.py", line 253, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t520/.moai/reports/t520/m2a_play.py", line 233, in main
+    result = run(stack.gate, out, deny_all=pinned is None, audio=args.audio)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t520/.moai/reports/t520/m2a_play.py", line 144, in run
+    zeros.append((t0 + t1) / 2 - float(c))
+                                 ^^^^^^^^
+ValueError: could not convert string to float: '1m00.70'

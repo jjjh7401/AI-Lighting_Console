@@ -1,0 +1,20 @@
+{
+  "phase": "p257",
+  "bundles": {
+    "on_257": true
+  },
+  "pre_name": "FIXTURE PROBE - GROUP 12 DIMMER",
+  "exec": [
+    {
+      "command": "Goto Cue 1 Sequence 257",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase p257",
+  "preflight": "responder_ok",
+  "approved": 1,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

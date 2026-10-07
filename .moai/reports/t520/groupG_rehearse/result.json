@@ -1,0 +1,17 @@
+{
+  "bundles": {
+    "store_1": true,
+    "on_1": true,
+    "off_1": true
+  },
+  "line_results": {},
+  "b_slots_taken": [],
+  "verdict": "ran — line results + director watch",
+  "approval_requests": 3,
+  "approved": 3,
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

@@ -1,0 +1,3 @@
+{"ts": "2026-10-07T06:55:34.103554+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/265 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:55:34.171197+00:00", "event": "approved", "commands": ["Off Sequence 265"], "held": ["Off Sequence 265"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:55:34.237188+00:00", "event": "executed", "command": "Off Sequence 265", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

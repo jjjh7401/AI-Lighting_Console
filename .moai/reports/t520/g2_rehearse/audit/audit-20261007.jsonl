@@ -1,0 +1,22 @@
+{"ts": "2026-10-07T05:59:41.948376+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 5 ; Attribute 'Dimmer' At 100", "Store Sequence 255 Cue 1 'Group Five'", "ClearAll", "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'"], "held": ["ChangeDestination Root", "ClearAll", "Group 5 ; Attribute 'Dimmer' At 100", "Store Sequence 255 Cue 1 'Group Five'", "ClearAll", "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'"], "kind": "t520_group_probe2"}
+{"ts": "2026-10-07T05:59:41.948542+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.948631+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.948704+00:00", "event": "executed", "command": "Group 5 ; Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.948770+00:00", "event": "executed", "command": "Store Sequence 255 Cue 1 'Group Five'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.948834+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.948897+00:00", "event": "executed", "command": "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949029+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100", "Store Sequence 256 Cue 1 'Trailing Dot'", "ClearAll", "Set Sequence 256 Property 'Name' 'GROUP PROBE - TRAILING DOT 301-302'"], "held": ["ChangeDestination Root", "ClearAll", "Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100", "Store Sequence 256 Cue 1 'Trailing Dot'", "ClearAll", "Set Sequence 256 Property 'Name' 'GROUP PROBE - TRAILING DOT 301-302'"], "kind": "t520_group_probe2"}
+{"ts": "2026-10-07T05:59:41.949114+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949180+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949241+00:00", "event": "executed", "command": "Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949298+00:00", "event": "executed", "command": "Store Sequence 256 Cue 1 'Trailing Dot'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949361+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949424+00:00", "event": "executed", "command": "Set Sequence 256 Property 'Name' 'GROUP PROBE - TRAILING DOT 301-302'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949507+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 255"], "held": ["Goto Cue 1 Sequence 255"], "kind": "t520_group_probe2"}
+{"ts": "2026-10-07T05:59:41.949585+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 255", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949666+00:00", "event": "approved", "commands": ["Off Sequence 255"], "held": ["Off Sequence 255"], "kind": "t520_group_probe2"}
+{"ts": "2026-10-07T05:59:41.949733+00:00", "event": "executed", "command": "Off Sequence 255", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949804+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 256"], "held": ["Goto Cue 1 Sequence 256"], "kind": "t520_group_probe2"}
+{"ts": "2026-10-07T05:59:41.949865+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 256", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:59:41.949947+00:00", "event": "approved", "commands": ["Off Sequence 256"], "held": ["Off Sequence 256"], "kind": "t520_group_probe2"}
+{"ts": "2026-10-07T05:59:41.950011+00:00", "event": "executed", "command": "Off Sequence 256", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

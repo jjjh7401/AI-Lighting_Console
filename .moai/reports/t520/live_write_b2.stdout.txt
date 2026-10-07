@@ -1,0 +1,609 @@
+{"step": "pre_slot", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/269", "ok": false, "error": "path segment not found: '269' (in ShowData/DataPools/Default/Sequences/269)"}
+{"step": "pre_slot", "t": 0.133, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/270", "ok": false, "error": "path segment not found: '270' (in ShowData/DataPools/Default/Sequences/270)"}
+{"step": "pre_slot", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/24", "ok": false, "error": "path segment not found: '24' (in ShowData/DataPools/Default/Timecodes/24)"}
+{"step": "pre_master", "t": 0.266, "kind": "props", "path": "ShowData/Masters/3/15", "ok": true, "payload": {"id": "gate-5", "kind": "props", "ok": true, "path": "ShowData/Masters/3/15", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed15"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "69"}], "truncated": false, "v": 1}}
+{"step": "seq_scene", "t": 0.267, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 10 ; Attribute 'Dimmer' At 0 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100", "reasons": []}, {"command": "Group 3 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Group 4 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100", "reasons": []}, {"command": "Group 7 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'C
+{"step": "seq_scene", "t": 0.332, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.398, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.466, "kind": "exec", "command": "Group 10 ; Attribute 'Dimmer' At 0 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.534, "kind": "exec", "command": "Group 3 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.604, "kind": "exec", "command": "Group 4 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.667, "kind": "exec", "command": "Group 7 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.733, "kind": "exec", "command": "Group 13 ; At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.799, "kind": "exec", "command": "Group 14 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.865, "kind": "exec", "command": "Group 12 ; Attribute 'Dimmer2' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.932, "kind": "exec", "command": "Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 0.999, "kind": "exec", "command": "Store Sequence 269 Cue 1 'Intro A' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.132, "kind": "exec", "command": "Group 10 ; Attribute 'Dimmer' At 40", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.199, "kind": "exec", "command": "Group 3 ; Attribute 'Dimmer' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.265, "kind": "exec", "command": "Group 4 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.333, "kind": "exec", "command": "Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.4, "kind": "exec", "command": "Store Sequence 269 Cue 2 'Verse One' CueFade 4.27", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.467, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.533, "kind": "exec", "command": "Group 10 ; Attribute 'Dimmer' At 25", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.599, "kind": "exec", "command": "Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.665, "kind": "exec", "command": "Store Sequence 269 Cue 3 'Pre One' CueFade 0.53", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.732, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.799, "kind": "exec", "command": "Group 10 ; Attribute 'Dimmer' At 10", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.865, "kind": "exec", "command": "Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.932, "kind": "exec", "command": "Store Sequence 269 Cue 4 'Pre Gap' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 1.998, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.066, "kind": "exec", "command": "Group 14 ; Attribute 'Dimmer' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.132, "kind": "exec", "command": "Group 10 ; Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 62 ; Attribute 'ColorRGB_B' At 80", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.2, "kind": "exec", "command": "Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.266, "kind": "exec", "command": "Store Sequence 269 Cue 5 'Chorus One Hit' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.333, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.399, "kind": "exec", "command": "Group 14 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.465, "kind": "exec", "command": "Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.532, "kind": "exec", "command": "Store Sequence 269 Cue 6 'Blind Off' CueFade 0.27", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.665, "kind": "exec", "command": "Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 55", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.732, "kind": "exec", "command": "Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.799, "kind": "exec", "command": "Store Sequence 269 Cue 7 'Peach Bleed' CueFade 2.14", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.865, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_scene", "t": 2.932, "kind": "exec", "command": "Set Sequence 269 Property 'Name' 'LOVE ATTACK - RHYTHM M2a B2 SCENE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 2.937, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 4 ; Attribute 'Dimmer' At 30", "reasons": []}, {"command": "Group 5 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Group 6 ; Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "reasons": []}, {"command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "
+{"step": "seq_rhythm", "t": 2.998, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.065, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.132, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.198, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.265, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.332, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.398, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.465, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.532, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.599, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.666, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.733, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.799, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.866, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.932, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 3.999, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.065, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.132, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.199, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.266, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.333, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.399, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.466, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.532, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.598, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.665, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.732, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.798, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.865, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.932, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 4.999, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.065, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.131, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.199, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.265, "kind": "exec", "command": "Store Sequence 270 Cue 1 'Intro Back' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.332, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.4, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.465, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.533, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.599, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.666, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.733, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.799, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.866, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.932, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 5.998, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.065, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.133, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.2, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.266, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.332, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.399, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.465, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.532, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.599, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.665, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.732, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.799, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.866, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.932, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 6.999, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.066, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.133, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.199, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.265, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.332, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.398, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.466, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.533, "kind": "exec", "command": "Store Sequence 270 Cue 2 'Start Hit' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.665, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.732, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.798, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.866, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.931, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 7.998, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.065, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.132, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.2, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.266, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.331, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.398, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.465, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.531, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.599, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.665, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.732, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.798, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.865, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.932, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 8.998, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.066, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.132, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.199, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.265, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.332, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.398, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.465, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.532, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.598, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.666, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.732, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.798, "kind": "exec", "command": "Store Sequence 270 Cue 3 'Intro Hold' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.867, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.931, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 9.998, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.064, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.131, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.198, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.265, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.332, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.4, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.466, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.532, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.598, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.665, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.732, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.798, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.865, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.931, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 10.998, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.065, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.132, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.198, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.264, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.331, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.398, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.466, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.532, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.599, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.665, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.732, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.798, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.865, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.932, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 11.999, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.065, "kind": "exec", "command": "Store Sequence 270 Cue 4 'Kick Four' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.199, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.265, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.333, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.398, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.465, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.531, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.598, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.665, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.731, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.798, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.865, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.932, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 12.998, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.065, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.132, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.198, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.265, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.331, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.398, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.464, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.532, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.598, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.666, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.732, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.798, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.865, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.931, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 13.997, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.065, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.131, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.198, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.265, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.332, "kind": "exec", "command": "Store Sequence 270 Cue 5 'Movers Mid' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.398, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.465, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.531, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.598, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.666, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.732, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.798, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.866, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.932, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 14.999, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.065, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.133, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.198, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.265, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.332, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.399, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.465, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.531, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.598, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.664, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.731, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.798, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.866, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.932, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 15.998, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.067, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.134, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.199, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.265, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.332, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.398, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.466, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.532, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.599, "kind": "exec", "command": "Store Sequence 270 Cue 6 'Verse Pulse' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.666, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.732, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.798, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.865, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.932, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 16.999, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.064, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.131, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.198, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.265, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.332, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.398, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.465, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.532, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.599, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.665, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.732, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.798, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.865, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.932, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 17.997, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.064, "kind": "exec", "command": "Attribute 'Pan' At Measure 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.131, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.198, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.265, "kind": "exec", "command": "Attribute 'Tilt' At Measure 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.331, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.398, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.464, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.531, "kind": "exec", "command": "Attribute 'Pan' At Measure 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.598, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.665, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.731, "kind": "exec", "command": "Attribute 'Tilt' At Measure 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.798, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.865, "kind": "exec", "command": "Store Sequence 270 Cue 7 'Tilt Wave' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.932, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 18.998, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.065, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.131, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.198, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.265, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.332, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.399, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.466, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.533, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.599, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.665, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.732, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.799, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.865, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.93, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 19.998, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.066, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.131, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.198, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.264, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.331, "kind": "exec", "command": "Attribute 'Pan' At Measure 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.398, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.464, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.532, "kind": "exec", "command": "Attribute 'Tilt' At Measure 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.598, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.666, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.732, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.798, "kind": "exec", "command": "Attribute 'Pan' At Measure 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.864, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.931, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 20.999, "kind": "exec", "command": "Attribute 'Tilt' At Measure 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.066, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.132, "kind": "exec", "command": "Store Sequence 270 Cue 8 'Side Chase' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.198, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.265, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.331, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.398, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.465, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.532, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.598, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.664, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.731, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.798, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.864, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.931, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 21.999, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.066, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.132, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.198, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.264, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.331, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.398, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.466, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.531, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.598, "kind": "exec", "command": "Attribute 'Pan' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.665, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.732, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.798, "kind": "exec", "command": "Attribute 'Tilt' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.864, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.931, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 22.997, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.064, "kind": "exec", "command": "Attribute 'Pan' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.131, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.197, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.264, "kind": "exec", "command": "Attribute 'Tilt' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.33, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.397, "kind": "exec", "command": "Store Sequence 270 Cue 9 'Sweep Four' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.464, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.531, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.598, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.664, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.732, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.797, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.864, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.931, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 23.998, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.065, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.132, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.198, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.264, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.331, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.398, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.465, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.531, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.597, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.664, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.731, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.798, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.864, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.932, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 24.999, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.065, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.13, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.197, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.264, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.331, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.398, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.465, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.532, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.598, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.665, "kind": "exec", "command": "Store Sequence 270 Cue 10 'Sweep Two' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.731, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.797, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.864, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.931, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 25.997, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.064, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.13, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.197, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.264, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.33, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.398, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.465, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.531, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.598, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.664, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.731, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.797, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.864, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.93, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 26.997, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.065, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.131, "kind": "exec", "command": "Attribute 'Pan' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.197, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.265, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.331, "kind": "exec", "command": "Attribute 'Tilt' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.399, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.463, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.531, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.598, "kind": "exec", "command": "Attribute 'Pan' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.664, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.73, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.797, "kind": "exec", "command": "Attribute 'Tilt' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.865, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.932, "kind": "exec", "command": "Store Sequence 270 Cue 11 'Sweep One' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 27.997, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.064, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.13, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.197, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.264, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.33, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.397, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.463, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.53, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.597, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.664, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.731, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.797, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.865, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.93, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 28.997, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.064, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.13, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.197, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.264, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.331, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.398, "kind": "exec", "command": "Attribute 'Pan' At Measure 0.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.465, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.531, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.597, "kind": "exec", "command": "Attribute 'Tilt' At Measure 0.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.664, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.731, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.797, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.864, "kind": "exec", "command": "Attribute 'Pan' At Measure 0.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.931, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 29.998, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.064, "kind": "exec", "command": "Attribute 'Tilt' At Measure 0.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.131, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.197, "kind": "exec", "command": "Store Sequence 270 Cue 12 'Sweep Half' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.264, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.33, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.397, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.463, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.53, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.597, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.664, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.731, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.797, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.865, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.931, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 30.998, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.064, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.13, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.197, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.264, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.331, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.397, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.464, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.531, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.597, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.665, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.731, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.797, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.865, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.93, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 31.996, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.064, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.13, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.197, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.264, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.331, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.399, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.464, "kind": "exec", "command": "Store Sequence 270 Cue 13 'Pre Gap' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.53, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.597, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.663, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.73, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.797, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 75", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.863, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.93, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 32.997, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.064, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.13, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.196, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.263, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.33, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.397, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.464, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.53, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.596, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.663, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.73, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.797, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 75", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.864, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.931, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 33.998, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.064, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.13, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.196, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.263, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.33, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.396, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.463, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.53, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.598, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.664, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.731, "kind": "exec", "command": "Store Sequence 270 Cue 14 'Chorus Pulse' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.797, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.863, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.93, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 34.998, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.064, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At -12 ; Attribute 'Tilt' At 75", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.13, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.197, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.264, "kind": "exec", "command": "Group 4 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.33, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.398, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.464, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.532, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.597, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.663, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.73, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.796, "kind": "exec", "command": "Group 6 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.863, "kind": "exec", "command": "Attribute 'Dimmer' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.93, "kind": "exec", "command": "Attribute 'Dimmer' At Measure 4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 35.997, "kind": "exec", "command": "Attribute 'Dimmer' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.063, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At 12 ; Attribute 'Tilt' At 75", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.13, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.197, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.264, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.331, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.398, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.464, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.531, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.598, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.664, "kind": "exec", "command": "Attribute 'Pan' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.73, "kind": "exec", "command": "Attribute 'Pan' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.797, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.863, "kind": "exec", "command": "Attribute 'Tilt' At Measure 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.93, "kind": "exec", "command": "Attribute 'Tilt' At SpeedMaster 15", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 36.997, "kind": "exec", "command": "Store Sequence 270 Cue 15 'Pan Wave' CueFade 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 37.065, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "seq_rhythm", "t": 37.131, "kind": "exec", "command": "Set Sequence 270 Property 'Name' 'LOVE ATTACK - RHYTHM M2a B2 RHYTHM'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_seq_269", "t": 37.197, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/269", "ok": true, "payload": {"id": "gate-559", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/269", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 SCENE"}], "truncated": false, "v": 1}}
+{"step": "post_seq_269_cues", "t": 37.265, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/269", "ok": true, "payload": {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Intro A"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Verse One"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Pre One"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Pre Gap"}, {"class": "Cue", "cueNo": 5, "i": 7, "name": "Chorus One Hit"}, {"class": "Cue", "cueNo": 6, "i": 8, "name": "Blind Off"
+{"step": "post_seq_270", "t": 37.331, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/270", "ok": true, "payload": {"id": "gate-561", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/270", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 RHYTHM"}], "truncated": false, "v": 1}}
+{"step": "post_seq_270_cues", "t": 37.398, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/270", "ok": true, "payload": {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Intro Back"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Start Hit"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Intro Hold"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Kick Four"}, {"class": "Cue", "cueNo": 5, "i": 7, "name": "Movers Mid"}, {"class": "Cue", "cueNo": 6, "i": 8, "name": "Verse 
+{"step": "tc_a", "t": 37.399, "kind": "screen", "cleared": true, "commands": [{"command": "Store Timecode 24", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 24 Property 'Name' 'LOVE ATTACK - RHYTHM M2a B2 TC'", "reasons": []}, {"command": "Set Timecode 24 Property 'Duration' 62 'AutoStop' 0", "reasons": []}, {"command": "Store Timecode 24.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign Sequence 269 At Timecode 24.1.1", "reasons": ["blacklisted command (matches closed-set entry 
+{"step": "tc_a", "t": 37.463, "kind": "exec", "command": "Store Timecode 24", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 37.53, "kind": "exec", "command": "Set Timecode 24 Property 'Name' 'LOVE ATTACK - RHYTHM M2a B2 TC'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 37.597, "kind": "exec", "command": "Set Timecode 24 Property 'Duration' 62 'AutoStop' 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 37.663, "kind": "exec", "command": "Store Timecode 24.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 37.731, "kind": "exec", "command": "Assign Sequence 269 At Timecode 24.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_a", "t": 37.797, "kind": "exec", "command": "Assign Sequence 270 At Timecode 24.1.2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_a_group", "t": 37.864, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/24/1", "ok": true, "payload": {"children": [{"class": "MarkerTrack", "i": 1, "name": "Marker"}, {"class": "Track", "i": 2, "name": "<LOVE ATTACK - RHYTHM M2a B2 SCENE>"}, {"class": "Track", "i": 3, "name": "<LOVE ATTACK - RHYTHM M2a B2 RHYTHM>"}], "id": "gate-569", "kind": "state", "node": {"childCount": 3, "class": "TrackGroup", "enumeration": "ok", "name": "TrackGroup 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24/1", "truncated": false, "v": 1}}
+{"step": "post_a_track", "t": 37.931, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/24/1/2", "ok": true, "payload": {"id": "gate-570", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24/1/2", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "TARGET", "ok": true, "t": "userdata", "v": "Sequence 269"}], "truncated": false, "v": 1}}
+{"step": "post_a_track", "t": 37.997, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/24/1/3", "ok": true, "payload": {"id": "gate-571", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24/1/3", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "2"}, {"n": "TARGET", "ok": true, "t": "userdata", "v": "Sequence 270"}], "truncated": false, "v": 1}}
+{"step": "tc_b", "t": 37.999, "kind": "screen", "cleared": true, "commands": [{"command": "Store Type 'CmdSubTrack' Timecode 24.1.1.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Store Type 'CmdSubTrack' Timecode 24.1.2.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}]}
+{"step": "tc_b", "t": 38.065, "kind": "exec", "command": "Store Type 'CmdSubTrack' Timecode 24.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_b", "t": 38.131, "kind": "exec", "command": "Store Type 'CmdSubTrack' Timecode 24.1.2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_b_269", "t": 38.197, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/24/1/2/1", "ok": true, "payload": {"children": [{"class": "CmdSubTrack", "i": 1, "name": "CmdSubTrack 1"}], "id": "gate-574", "kind": "state", "node": {"childCount": 1, "class": "TimeRange", "enumeration": "ok", "name": "TimeRange 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24/1/2/1", "truncated": false, "v": 1}}
+{"step": "post_b_270", "t": 38.263, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/24/1/3/1", "ok": true, "payload": {"children": [{"class": "CmdSubTrack", "i": 1, "name": "CmdSubTrack 1"}], "id": "gate-575", "kind": "state", "node": {"childCount": 1, "class": "TimeRange", "enumeration": "ok", "name": "TimeRange 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24/1/3/1", "truncated": false, "v": 1}}
+{"step": "tc_c", "t": 38.264, "kind": "screen", "cleared": true, "commands": [{"command": "cd Timecode 24.1.1.1.1", "reasons": []}, {"command": "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'", "reasons": []}, {"command": "Store Property 'Time' 17.36 'AbsTime' 17.36 'Token' 'Go+'", "reasons": []}, {"command": "Store Property 'Time' 32.35 'AbsTime' 32.35 'Token' 'Go+'", "reasons": []}, {"command": "Store Property 'Time' 39.86 'AbsTime' 39.86 'Token' 'Go+'", "reasons": []}, {"command": "Store Property 'Time' 40.9 'AbsTime' 40.9 'Token' 'Go+'", "reasons": []}, {"command": "Store Property 'Time
+{"step": "tc_c", "t": 38.329, "kind": "exec", "command": "cd Timecode 24.1.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.397, "kind": "exec", "command": "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.463, "kind": "exec", "command": "Store Property 'Time' 17.36 'AbsTime' 17.36 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.53, "kind": "exec", "command": "Store Property 'Time' 32.35 'AbsTime' 32.35 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.596, "kind": "exec", "command": "Store Property 'Time' 39.86 'AbsTime' 39.86 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.664, "kind": "exec", "command": "Store Property 'Time' 40.9 'AbsTime' 40.9 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.73, "kind": "exec", "command": "Store Property 'Time' 41.43 'AbsTime' 41.43 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.797, "kind": "exec", "command": "Store Property 'Time' 49.51 'AbsTime' 49.51 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.863, "kind": "exec", "command": "cd root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.93, "kind": "exec", "command": "cd Timecode 24.1.2.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 38.997, "kind": "exec", "command": "Store Property 'Time' 3 'AbsTime' 3 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.064, "kind": "exec", "command": "Store Property 'Time' 3.96 'AbsTime' 3.96 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.13, "kind": "exec", "command": "Store Property 'Time' 4.5 'AbsTime' 4.5 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.197, "kind": "exec", "command": "Store Property 'Time' 8.78 'AbsTime' 8.78 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.264, "kind": "exec", "command": "Store Property 'Time' 13.07 'AbsTime' 13.07 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.33, "kind": "exec", "command": "Store Property 'Time' 17.36 'AbsTime' 17.36 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.398, "kind": "exec", "command": "Store Property 'Time' 19.5 'AbsTime' 19.5 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.464, "kind": "exec", "command": "Store Property 'Time' 25.93 'AbsTime' 25.93 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.53, "kind": "exec", "command": "Store Property 'Time' 32.35 'AbsTime' 32.35 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.597, "kind": "exec", "command": "Store Property 'Time' 34.51 'AbsTime' 34.51 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.663, "kind": "exec", "command": "Store Property 'Time' 36.65 'AbsTime' 36.65 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.73, "kind": "exec", "command": "Store Property 'Time' 38.79 'AbsTime' 38.79 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.796, "kind": "exec", "command": "Store Property 'Time' 39.86 'AbsTime' 39.86 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.863, "kind": "exec", "command": "Store Property 'Time' 40.9 'AbsTime' 40.9 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.93, "kind": "exec", "command": "Store Property 'Time' 43.08 'AbsTime' 43.08 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_c", "t": 39.997, "kind": "exec", "command": "cd root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_c_269", "t": 40.065, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/24/1/2/1/1", "ok": true, "payload": {"children": [{"class": "CmdEvent", "i": 1, "name": "Go+"}, {"class": "CmdEvent", "i": 2, "name": "Go+"}, {"class": "CmdEvent", "i": 3, "name": "Go+"}, {"class": "CmdEvent", "i": 4, "name": "Go+"}, {"class": "CmdEvent", "i": 5, "name": "Go+"}, {"class": "CmdEvent", "i": 6, "name": "Go+"}, {"class": "CmdEvent", "i": 7, "name": "Go+"}], "id": "gate-602", "kind": "state", "node": {"childCount": 7, "class": "CmdSubTrack", "enumeration": "ok", "name": "CmdSubTrack 1
+{"step": "post_c_270", "t": 40.13, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/24/1/3/1/1", "ok": true, "payload": {"children": [{"class": "CmdEvent", "i": 1, "name": "Go+"}, {"class": "CmdEvent", "i": 2, "name": "Go+"}, {"class": "CmdEvent", "i": 3, "name": "Go+"}, {"class": "CmdEvent", "i": 4, "name": "Go+"}, {"class": "CmdEvent", "i": 5, "name": "Go+"}, {"class": "CmdEvent", "i": 6, "name": "Go+"}, {"class": "CmdEvent", "i": 7, "name": "Go+"}, {"class": "CmdEvent", "i": 8, "name": "Go+"}, {"class": "CmdEvent", "i": 9, "name": "Go+"}, {"class": "CmdEvent", "i": 10, "name":
+{"step": "post_tc", "t": 40.196, "kind": "props", "path": "ShowData/DataPools/Default/Timecodes/24", "ok": true, "payload": {"id": "gate-604", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 TC"}, {"n": "DURATION", "ok": true, "t": "string", "v": "1m02.00"}], "truncated": false, "v": 1}}
+{"verdict": "written — events match", "bundles": {"seq_scene": true, "seq_rhythm": true, "tc_a": true, "tc_b": true, "tc_c": true}, "tracks": [{"i": 2, "no": "1", "target": "Sequence 269"}, {"i": 3, "no": "2", "target": "Sequence 270"}], "events": {"269": 7, "270": 15}, "post_seq": {"269": {"name": "LOVE ATTACK - RHYTHM M2a B2 SCENE", "cues": 9}, "270": {"name": "LOVE ATTACK - RHYTHM M2a B2 RHYTHM", "cues": 15}}, "approved": 5}

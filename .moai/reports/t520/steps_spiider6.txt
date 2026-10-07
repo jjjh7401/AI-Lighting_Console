@@ -1,0 +1,15 @@
+ping
+introspect:Patch/FixtureTypes/4/6/1/2/1
+props:Patch/FixtureTypes/4/6/1/2/1|NAME,TYPE,MASTER,FOLLOWER,MODE
+props:Patch/FixtureTypes/4/6/1/2/2|NAME,TYPE,MASTER,FOLLOWER,MODE
+props:Patch/FixtureTypes/4/6/1/2/3|NAME,TYPE,MASTER,FOLLOWER,MODE
+props:Patch/FixtureTypes/4/6/1/2/4|NAME,TYPE,MASTER,FOLLOWER,MODE
+introspect:Patch/FixtureTypes/4/5/2/1/1/1/1
+props:Patch/FixtureTypes/4/5/2/1/1/1/1|NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE
+props:Patch/FixtureTypes/4/5/2/1/1/1/2|NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE
+props:Patch/FixtureTypes/4/5/2/1/1/1/3|NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE
+props:Patch/FixtureTypes/4/5/2/1/1/1/1/1|NAME,DMXOFFSET,DMXBREAK
+props:Patch/FixtureTypes/4/5/2/1/1/1/2/1|NAME,DMXOFFSET,DMXBREAK
+props:Patch/FixtureTypes/4/5/2/1/1/1/3/1|NAME,DMXOFFSET,DMXBREAK
+state:Patch/FixtureTypes/4/6/1/1@25
+props:Patch/FixtureTypes/4/6/1/1/27|NAME,DEFAULT

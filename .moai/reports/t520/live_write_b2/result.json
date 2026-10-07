@@ -1,0 +1,60 @@
+{
+  "slots": [
+    269,
+    270,
+    24
+  ],
+  "bundles": {
+    "seq_scene": true,
+    "seq_rhythm": true,
+    "tc_a": true,
+    "tc_b": true,
+    "tc_c": true
+  },
+  "pre_master_normed": "69",
+  "post_seq": {
+    "269": {
+      "name": "LOVE ATTACK - RHYTHM M2a B2 SCENE",
+      "cues": 9
+    },
+    "270": {
+      "name": "LOVE ATTACK - RHYTHM M2a B2 RHYTHM",
+      "cues": 15
+    }
+  },
+  "tracks": [
+    {
+      "i": 2,
+      "no": "1",
+      "target": "Sequence 269"
+    },
+    {
+      "i": 3,
+      "no": "2",
+      "target": "Sequence 270"
+    }
+  ],
+  "post_b": {
+    "269": [
+      "CmdSubTrack"
+    ],
+    "270": [
+      "CmdSubTrack"
+    ]
+  },
+  "events": {
+    "269": 7,
+    "270": 15
+  },
+  "verdict": "written — events match",
+  "preflight": "responder_ok",
+  "approval_requests": 5,
+  "approved": 5,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

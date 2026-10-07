@@ -1,0 +1,107 @@
+{
+  "phase": "store",
+  "bundles": {
+    "store_266": true,
+    "store_267": true,
+    "store_268": true
+  },
+  "exec": [
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 12 ; At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 266 Cue 1 'Group 12 At'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 266 Property 'Name' 'FIXTURE PROBE - SPIIDER GROUP 12 AT'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 521 Thru 528 ; At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 267 Cue 1 'Spiider Thru At'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 267 Property 'Name' 'FIXTURE PROBE - SPIIDER THRU AT'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 521 Thru 528 ; At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 268 Cue 1 'Spiider At RGB'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 268 Property 'Name' 'FIXTURE PROBE - SPIIDER AT RGB'",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase store",
+  "approved": 3,
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

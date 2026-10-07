@@ -1,0 +1,17 @@
+ping
+state:Patch/FixtureTypes/4/6/1/6
+state:Patch/FixtureTypes/4/6/1/6/1
+state:Patch/FixtureTypes/4/6/1/6/2
+state:Patch/FixtureTypes/4/6/1/6/3
+state:Patch/FixtureTypes/4/6/1/6/4
+props:Patch/FixtureTypes/4/6/1|NAME,GEOMETRY,DMXFOOTPRINT,TOTALFOOTPRINT
+props:Patch/FixtureTypes/4/6/1/1/17|NAME,DEFAULT
+props:Patch/FixtureTypes/4/6/1/1/18|NAME,DEFAULT
+props:Patch/FixtureTypes/4/6/1/1/19|NAME,DEFAULT
+props:Patch/FixtureTypes/4/6/1/1/20|NAME,DEFAULT
+state:Patch/FixtureTypes/4/5/2
+state:Patch/FixtureTypes/4/5/4
+state:Patch/FixtureTypes/4/5/5
+props:Patch/Stages/1/Fixtures/35/1|NAME,SUBFIXTUREINDEX
+props:Patch/Stages/1/Fixtures/35/2|NAME,SUBFIXTUREINDEX
+props:Patch/Stages/1/Fixtures/35/3|NAME,SUBFIXTUREINDEX

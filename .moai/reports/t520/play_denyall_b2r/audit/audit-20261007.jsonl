@@ -1,0 +1,6 @@
+{"ts": "2026-10-07T07:26:25.229809+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/269 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T07:26:25.296497+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/270 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T07:26:25.362508+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/24 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T07:26:25.362826+00:00", "event": "rejected", "commands": ["Top Timecode 24"], "held": ["Top Timecode 24"], "kind": "t520_m2a_play"}
+{"ts": "2026-10-07T07:26:25.362961+00:00", "event": "rejected", "commands": ["Go Timecode 24"], "held": ["Go Timecode 24"], "kind": "t520_m2a_play"}
+{"ts": "2026-10-07T07:26:25.497327+00:00", "event": "rejected", "commands": ["Off Timecode 24", "Off Sequence 269", "Off Sequence 270"], "held": ["Off Timecode 24", "Off Sequence 269", "Off Sequence 270"], "kind": "t520_m2a_play"}

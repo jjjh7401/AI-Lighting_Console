@@ -1,0 +1,140 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 12 ; Attribute 'Dimmer' At 100",
+      "Store Sequence 257 Cue 1 'G12 Dimmer'",
+      "ClearAll",
+      "Set Sequence 257 Property 'Name' 'FIXTURE PROBE - GROUP 12 DIMMER'"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 521 Thru 528. ; Attribute 'Dimmer' At 100",
+      "Store Sequence 258 Cue 1 'Spiider Dot'",
+      "ClearAll",
+      "Set Sequence 258 Property 'Name' 'FIXTURE PROBE - SPIIDER TRAILING DOT'"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 521 Thru 528. ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100",
+      "Store Sequence 259 Cue 1 'Spiider Dot RGB'",
+      "ClearAll",
+      "Set Sequence 259 Property 'Name' 'FIXTURE PROBE - SPIIDER DOT RGB'"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 10 ; Attribute 'Dimmer' At 100",
+      "Store Sequence 263 Cue 1 'G10 Dimmer'",
+      "ClearAll",
+      "Set Sequence 263 Property 'Name' 'FIXTURE PROBE - GROUP 10 DIMMER'"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 10 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorMacro' At 0",
+      "Store Sequence 264 Cue 1 'G10 RGB Macro'",
+      "ClearAll",
+      "Set Sequence 264 Property 'Name' 'FIXTURE PROBE - GROUP 10 RGB MACRO'"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 401 ; Attribute 'Dimmer' At 100 ; Attribute 'Zoom' At 100",
+      "Store Sequence 265 Cue 1 'Wash 401 Zoom'",
+      "ClearAll",
+      "Set Sequence 265 Property 'Name' 'FIXTURE PROBE - WASH 401 ZOOM'"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 257"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Sequence 257"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 258"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Sequence 258"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 259"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Sequence 259"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 263"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Sequence 263"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 264"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Sequence 264"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 265"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Sequence 265"
+    ],
+    "approved": false
+  }
+]

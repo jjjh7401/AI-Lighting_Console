@@ -1,0 +1,15 @@
+approval file      : .moai/reports/t520/control_g_line_removed.txt
+  raw sha256       : 390fc5be2c94fc5a28a7355b869a139b6809029773442974cfe39069b0081332
+  raw == canonical : True
+  canonical lines  : 585
+  canonical sha256 : 390fc5be2c94fc5a28a7355b869a139b6809029773442974cfe39069b0081332
+sent source        : .moai/reports/t520/rehearse_g/audit (files: ['audit-20261007.jsonl'])
+  window           : since=None until=None
+  send rows        : 586 by kind {'command': 586}
+  rebuilt sha256   : 8806c6e71b124d908ae76062cac9c1d7e91100fb62cc0a81323601be430eebc9
+WARN sends not ok  : 0
+(1) sha256 equal                         : False
+(2) 송신 안 됨 (sent, not in approval)    : 1
+  SENT_NOT_APPROVED: Attribute 'Pan' At Measure 8
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: FAIL

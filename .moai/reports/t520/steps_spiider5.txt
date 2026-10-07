@@ -1,0 +1,17 @@
+ping
+state:ShowData/DataPools/Default/Sequences/266
+state:ShowData/DataPools/Default/Sequences/267
+state:ShowData/DataPools/Default/Sequences/268
+state:ShowData/DataPools/Default/Sequences/269
+state:ShowData/DataPools/Default/Sequences/270
+introspect:Patch/FixtureTypes/4/6/1/1/5/1
+introspect:Patch/FixtureTypes/4/6/1/1/5/1/1
+state:Patch/FixtureTypes/4/5/2/1
+state:Patch/FixtureTypes/4/5/2/1/1
+state:Patch/FixtureTypes/4/5/2/1/1/1
+state:Patch/FixtureTypes/4/5/2/1/1/1/1
+state:Patch/FixtureTypes/4/5/4/1
+state:Patch/FixtureTypes/4/5/5/1
+state:Patch/FixtureTypes/4/6/1/2
+props:Patch/Stages/1/Fixtures/35|NAME,SUBFIXTUREINDEX
+introspect:Patch/Stages/1/Fixtures/35

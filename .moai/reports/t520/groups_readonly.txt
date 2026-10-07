@@ -1,0 +1,72 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 87ecfd26"
+<<< {"id": "87ecfd26", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/Groups
+    wire: Plugin "CopilotResponder" "state 0a49e307 ShowData/DataPools/Default/Groups"
+<<< {"children": [{"class": "Group", "i": 1, "name": "ALL"}, {"class": "Group", "i": 2, "name": "KEY"}, {"class": "Group", "i": 3, "name": "FOH"}, {"class": "Group", "i": 4, "name": "BACK"}, {"class": "Group", "i": 5, "name": "SIDE-L"}, {"class": "Group", "i": 6, "name": "SIDE-R"}, {"class": "Group", "i": 7, "name": "SIDE-ALL"}, {"class": "Group", "i": 8, "name": "WASH-U"}, {"class": "Group", "i": 9, "name": "WASH-D"}, {"class": "Group", "i": 10, "name": "WASH-ALL"}, {"class": "Group", "i": 11, "name": "MOVER-U"}, {"class": "Group", "i": 12, "name": "MOVER-D"}, {"class": "Group", "i": 13, "name": "MOVER-ALL"}, {"class": "Group", "i": 14, "name": "BLIND"}, {"class": "Group", "i": 15, "name": "STROBE"}, {"class": "Group", "i": 16, "name": "HAZE"}, {"class": "Group", "i": 17, "name": "ODD"}, {"class": "Group", "i": 18, "name": "EVEN"}], "id": "0a49e307", "kind": "state", "node": {"childCount": 18, "class": "Groups", "enumeration": "ok", "name": "Groups"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Groups/3
+    wire: Plugin "CopilotResponder" "state b3c34cf2 ShowData/DataPools/Default/Groups/3"
+<<< {"children": [], "id": "b3c34cf2", "kind": "state", "node": {"childCount": 0, "class": "Group", "enumeration": "ok", "name": "FOH"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups/3", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Groups/5
+    wire: Plugin "CopilotResponder" "state 17201e7f ShowData/DataPools/Default/Groups/5"
+<<< {"children": [], "id": "17201e7f", "kind": "state", "node": {"childCount": 0, "class": "Group", "enumeration": "ok", "name": "SIDE-L"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups/5", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Groups/10
+    wire: Plugin "CopilotResponder" "state 59ee1f13 ShowData/DataPools/Default/Groups/10"
+<<< {"children": [], "id": "59ee1f13", "kind": "state", "node": {"childCount": 0, "class": "Group", "enumeration": "ok", "name": "WASH-ALL"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups/10", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Groups/11
+    wire: Plugin "CopilotResponder" "state 0c0d4d3b ShowData/DataPools/Default/Groups/11"
+<<< {"children": [], "id": "0c0d4d3b", "kind": "state", "node": {"childCount": 0, "class": "Group", "enumeration": "ok", "name": "MOVER-U"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups/11", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Groups/12
+    wire: Plugin "CopilotResponder" "state 3e698f92 ShowData/DataPools/Default/Groups/12"
+<<< {"children": [], "id": "3e698f92", "kind": "state", "node": {"childCount": 0, "class": "Group", "enumeration": "ok", "name": "MOVER-D"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups/12", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Groups/13
+    wire: Plugin "CopilotResponder" "state 847e79e5 ShowData/DataPools/Default/Groups/13"
+<<< {"children": [], "id": "847e79e5", "kind": "state", "node": {"childCount": 0, "class": "Group", "enumeration": "ok", "name": "MOVER-ALL"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups/13", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Groups/14
+    wire: Plugin "CopilotResponder" "state 87e7109b ShowData/DataPools/Default/Groups/14"
+<<< {"children": [], "id": "87e7109b", "kind": "state", "node": {"childCount": 0, "class": "Group", "enumeration": "ok", "name": "BLIND"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups/14", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Groups/13
+    wire: Plugin "CopilotResponder" "introspect adbd03d8 ShowData/DataPools/Default/Groups/13"
+<<< {"class": "Group", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "adbd03d8", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Groups/13", "source": "property_accessors", "total": 101, "truncated": true, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/13|NAME,COUNT,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 3d7e2a19 NAME,COUNT,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/13"
+<<< {"id": "3d7e2a19", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/13", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-ALL"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1104"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/5|NAME,COUNT,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 812ae36a NAME,COUNT,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/5"
+<<< {"id": "812ae36a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "SIDE-L"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1092"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/12|NAME,COUNT,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 1598e2c4 NAME,COUNT,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/12"
+<<< {"id": "1598e2c4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/12", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1096"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/11|NAME,COUNT,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 12ba7c4a NAME,COUNT,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/11"
+<<< {"id": "12ba7c4a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/11", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1092"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/10|NAME,COUNT,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 7389a7e3 NAME,COUNT,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/10"
+<<< {"id": "7389a7e3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/10", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "WASH-ALL"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1096"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/3|NAME,COUNT,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 63a9ad24 NAME,COUNT,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/3"
+<<< {"id": "63a9ad24", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FOH"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1092"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/14|NAME,COUNT,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 08d88b94 NAME,COUNT,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/14"
+<<< {"id": "08d88b94", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/14", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "BLIND"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1092"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/4|NAME,COUNT,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 0343c868 NAME,COUNT,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/4"
+<<< {"id": "0343c868", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "BACK"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1096"}], "truncated": false, "v": 1}

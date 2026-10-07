@@ -1,0 +1,4 @@
+{"step": "pre_name", "t": 0.065, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/258", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/258", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - SPIIDER TRAILING DOT"}], "truncated": false, "v": 1}}
+{"step": "off_258", "t": 0.133, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 258", "reasons": ["reference-invoking command"]}]}
+{"step": "off_258", "t": 0.199, "kind": "exec", "command": "Off Sequence 258", "fired": true, "ok": true, "detail": "OK"}
+{"verdict": "ran phase p258", "bundles": {"off_258": true}, "pre_name": "FIXTURE PROBE - SPIIDER TRAILING DOT", "exec": [{"command": "Off Sequence 258", "ok": true, "detail": "OK"}], "approved": 1}

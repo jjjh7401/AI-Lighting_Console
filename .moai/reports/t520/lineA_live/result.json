@@ -1,0 +1,43 @@
+{
+  "bundles": {
+    "store_1": true,
+    "store_2": false,
+    "store_3": true,
+    "on_1": true,
+    "off_1": true,
+    "on_2": true,
+    "off_2": true,
+    "on_3": true,
+    "off_3": true
+  },
+  "line_results": {
+    "Fixture 301 + 302 ; Attribute 'Dimmer' At 100": {
+      "ok": true,
+      "detail": "OK"
+    },
+    "Fixture 301.1 + 302.1 ; Attribute 'Dimmer' At 100": {
+      "ok": false,
+      "detail": "Illegal object"
+    },
+    "Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 ": {
+      "ok": true,
+      "detail": "OK"
+    }
+  },
+  "b_slots_taken": [],
+  "verdict": "ran — line results + director watch",
+  "preflight": "responder_ok",
+  "approval_requests": 9,
+  "approved": 9,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

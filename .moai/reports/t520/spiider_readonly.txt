@@ -1,0 +1,72 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping a2fbf4d6"
+<<< {"id": "a2fbf4d6", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:Patch/FixtureTypes/4/6/1/1@15
+    wire: Plugin "CopilotResponder" "state 87ad0fae Patch/FixtureTypes/4/6/1/1 offset=15"
+<<< {"children": [{"class": "DMXChannel", "i": 16, "name": "Main Module_EFFECTWHEEL"}, {"class": "DMXChannel", "i": 17, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 18, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 19, "name": "Main Module_ColorRGB_B"}, {"class": "DMXChannel", "i": 20, "name": "Main Module_ColorRGB_W"}, {"class": "DMXChannel", "i": 21, "name": "Main Module_COLORMIXER2"}, {"class": "DMXChannel", "i": 22, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 23, "name": "Main Module_Dimmer"}, {"class": "DMXChannel", "i": 24, "name": "Main Module_Zoom"}, {"class": "DMXChannel", "i": 25, "name": "Main Module_Shutter2"}, {"class": "DMXChannel", "i": 26, "name": "Main Module_Dimmer2"}], "id": "87ad0fae", "kind": "state", "node": {"childCount": 26, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 15, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6
+    wire: Plugin "CopilotResponder" "state 23c8a012 Patch/FixtureTypes/4/6"
+<<< {"children": [{"class": "DMXMode", "i": 1, "name": "Mode 1"}, {"class": "DMXMode", "i": 2, "name": "Mode 10"}, {"class": "DMXMode", "i": 3, "name": "Mode 2"}, {"class": "DMXMode", "i": 4, "name": "Mode 3"}, {"class": "DMXMode", "i": 5, "name": "Mode 4"}, {"class": "DMXMode", "i": 6, "name": "Mode 5"}, {"class": "DMXMode", "i": 7, "name": "Mode 6"}, {"class": "DMXMode", "i": 8, "name": "Mode 7"}, {"class": "DMXMode", "i": 9, "name": "Mode 8"}, {"class": "DMXMode", "i": 10, "name": "Mode 9"}], "id": "23c8a012", "kind": "state", "node": {"childCount": 10, "class": "DMXModes", "enumeration": "ok", "name": "DMXModes"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4|NAME
+    wire: Plugin "CopilotResponder" "props 53f5a2c7 NAME Patch/FixtureTypes/4"
+<<< {"id": "53f5a2c7", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Robin Spiider"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/1/5
+    wire: Plugin "CopilotResponder" "state d4da712c Patch/FixtureTypes/4/6/1/1/5"
+<<< {"children": [{"class": "LogicalChannel", "i": 1, "name": "Dimmer"}], "id": "d4da712c", "kind": "state", "node": {"childCount": 1, "class": "DMXChannel", "enumeration": "ok", "name": "RGBW Cluster_Dimmer"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/5", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/1/5/1
+    wire: Plugin "CopilotResponder" "state ef1cf691 Patch/FixtureTypes/4/6/1/1/5/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "Dimmer 1"}], "id": "ef1cf691", "kind": "state", "node": {"childCount": 1, "class": "LogicalChannel", "enumeration": "ok", "name": "Dimmer"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/5/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/5/1/1|NAME,ATTRIBUTE,DEFAULT
+    wire: Plugin "CopilotResponder" "props d0e3bc14 NAME,ATTRIBUTE,DEFAULT Patch/FixtureTypes/4/6/1/1/5/1/1"
+<<< {"id": "d0e3bc14", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/5/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Dimmer 1"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Dimmer"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "16777215"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/1|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 5c9514dc NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/1"
+<<< {"id": "5c9514dc", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RGBW Cluster_ColorRGB_R"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<FFFFFF>"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/1/1/1
+    wire: Plugin "CopilotResponder" "state 9ff34c3f Patch/FixtureTypes/4/6/1/1/1/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "ColorRGB_R 1"}], "id": "9ff34c3f", "kind": "state", "node": {"childCount": 1, "class": "LogicalChannel", "enumeration": "ok", "name": "ColorRGB_R"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/1/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/1/1/1|NAME,ATTRIBUTE
+    wire: Plugin "CopilotResponder" "props f9a0978a NAME,ATTRIBUTE Patch/FixtureTypes/4/6/1/1/1/1/1"
+<<< {"id": "f9a0978a", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "ColorRGB_R 1"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "ColorRGB_R"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/7/1/1|NAME,ATTRIBUTE
+    wire: Plugin "CopilotResponder" "props b4293528 NAME,ATTRIBUTE Patch/FixtureTypes/9/6/2/1/7/1/1"
+<<< {"id": "b4293528", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/7/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "ColorMacro 1"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "ColorMacro"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/1/1/1|NAME,ATTRIBUTE
+    wire: Plugin "CopilotResponder" "props 0ab48407 NAME,ATTRIBUTE Patch/FixtureTypes/9/6/2/1/1/1/1"
+<<< {"id": "0ab48407", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Dimmer 1"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Dimmer"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/8/1/1|NAME,ATTRIBUTE
+    wire: Plugin "CopilotResponder" "props 752a06bb NAME,ATTRIBUTE Patch/FixtureTypes/9/6/2/1/8/1/1"
+<<< {"id": "752a06bb", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/8/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Zoom 1"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Zoom"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/258
+    wire: Plugin "CopilotResponder" "state af79b3c1 ShowData/DataPools/Default/Sequences/258"
+<<< {"error": "path segment not found: '258' (in ShowData/DataPools/Default/Sequences/258)", "id": "af79b3c1", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/258", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/259
+    wire: Plugin "CopilotResponder" "state 2dde4945 ShowData/DataPools/Default/Sequences/259"
+<<< {"error": "path segment not found: '259' (in ShowData/DataPools/Default/Sequences/259)", "id": "2dde4945", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/259", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/263
+    wire: Plugin "CopilotResponder" "state 188a5f1d ShowData/DataPools/Default/Sequences/263"
+<<< {"error": "path segment not found: '263' (in ShowData/DataPools/Default/Sequences/263)", "id": "188a5f1d", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/263", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/264
+    wire: Plugin "CopilotResponder" "state db539212 ShowData/DataPools/Default/Sequences/264"
+<<< {"error": "path segment not found: '264' (in ShowData/DataPools/Default/Sequences/264)", "id": "db539212", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/264", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/265
+    wire: Plugin "CopilotResponder" "state 537574fd ShowData/DataPools/Default/Sequences/265"
+<<< {"error": "path segment not found: '265' (in ShowData/DataPools/Default/Sequences/265)", "id": "537574fd", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/265", "v": 1}

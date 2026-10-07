@@ -1,0 +1,4 @@
+ping
+state:Patch/AttributeDefinitions/4/Dimmer2
+props:Patch/AttributeDefinitions/4/Dimmer2|NAME,PRETTY,FEATURE,MAINATTRIBUTE,INDEX
+props:Patch/AttributeDefinitions/4/Dimmer|NAME,PRETTY,FEATURE,INDEX

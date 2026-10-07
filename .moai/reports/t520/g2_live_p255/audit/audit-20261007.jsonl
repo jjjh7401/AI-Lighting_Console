@@ -1,0 +1,5 @@
+{"ts": "2026-10-07T06:02:07.032451+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/255 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:02:07.099927+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 255"], "held": ["Goto Cue 1 Sequence 255"], "kind": "t520_group_probe2"}
+{"ts": "2026-10-07T06:02:07.165640+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 255", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:02:22.232140+00:00", "event": "approved", "commands": ["Off Sequence 255"], "held": ["Off Sequence 255"], "kind": "t520_group_probe2"}
+{"ts": "2026-10-07T06:02:22.298458+00:00", "event": "executed", "command": "Off Sequence 255", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

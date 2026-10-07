@@ -1,0 +1,18 @@
+{
+  "slots": [
+    250,
+    251,
+    22
+  ],
+  "bundles": {
+    "seq_scene": false
+  },
+  "pre_master_normed": "69",
+  "verdict": "seq_scene not executed",
+  "preflight": "responder_ok",
+  "approval_requests": 1,
+  "approved": 1,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

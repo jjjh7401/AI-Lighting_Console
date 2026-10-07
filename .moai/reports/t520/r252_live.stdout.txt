@@ -1,0 +1,7 @@
+{"step": "pre_seq_252", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/252", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/252", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LINE SHAPE PROBE - MAIN SUB LONG"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 5.071, "say": "큐1 — 본체 301·302 만 Dimmer 100(15초)"}
+{"step": "on_252_cue1", "t": 5.133, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 252", "reasons": ["reference-invoking command"]}]}
+{"step": "on_252_cue1", "t": 5.199, "kind": "exec", "command": "Goto Cue 1 Sequence 252", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_252", "t": 20.265, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 252", "reasons": ["reference-invoking command"]}]}
+{"step": "off_252", "t": 20.332, "kind": "exec", "command": "Off Sequence 252", "fired": true, "ok": true, "detail": "OK"}
+{"verdict": "replayed — judge by director watch", "pre_names": {"252": "LINE SHAPE PROBE - MAIN SUB LONG"}}

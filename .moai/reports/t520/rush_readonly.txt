@@ -1,0 +1,44 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 2e68721e"
+<<< {"id": "2e68721e", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:Patch/FixtureTypes/9/6
+    wire: Plugin "CopilotResponder" "state cd828fcd Patch/FixtureTypes/9/6"
+<<< {"children": [{"class": "DMXMode", "i": 1, "name": "5 channel"}, {"class": "DMXMode", "i": 2, "name": "9 channel"}], "id": "cd828fcd", "kind": "state", "node": {"childCount": 2, "class": "DMXModes", "enumeration": "ok", "name": "DMXModes"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/1|NAME
+    wire: Plugin "CopilotResponder" "props c7f54168 NAME Patch/FixtureTypes/9/6/1"
+<<< {"id": "c7f54168", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "5 channel"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2|NAME
+    wire: Plugin "CopilotResponder" "props 85619849 NAME Patch/FixtureTypes/9/6/2"
+<<< {"id": "85619849", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "9 channel"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/2/1
+    wire: Plugin "CopilotResponder" "state e09e01d6 Patch/FixtureTypes/9/6/2/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module#2_Dimmer"}, {"class": "DMXChannel", "i": 2, "name": "Main Module#2_Shutter1"}, {"class": "DMXChannel", "i": 3, "name": "Main Module#2_ColorRGB_R"}, {"class": "DMXChannel", "i": 4, "name": "Main Module#2_ColorRGB_G"}, {"class": "DMXChannel", "i": 5, "name": "Main Module#2_ColorRGB_B"}, {"class": "DMXChannel", "i": 6, "name": "Main Module#2_ColorRGB_W"}, {"class": "DMXChannel", "i": 7, "name": "Main Module#2_COLORMIXER"}, {"class": "DMXChannel", "i": 8, "name": "Main Module#2_Zoom"}], "id": "e09e01d6", "kind": "state", "node": {"childCount": 8, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/3|NAME
+    wire: Plugin "CopilotResponder" "props 1c0fc0b1 NAME Patch/FixtureTypes/9/6/3"
+<<< {"error": "path segment not found: '3' (in Patch/FixtureTypes/9/6/3)", "id": "1c0fc0b1", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/9/6/3", "reads": [], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/3/1
+    wire: Plugin "CopilotResponder" "state 2cbc56d1 Patch/FixtureTypes/9/6/3/1"
+<<< {"error": "path segment not found: '3' (in Patch/FixtureTypes/9/6/3/1)", "id": "2cbc56d1", "kind": "state", "offset": 0, "ok": false, "path": "Patch/FixtureTypes/9/6/3/1", "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/67|NAME,MODE,FIXTURETYPE
+    wire: Plugin "CopilotResponder" "props 38107147 NAME,MODE,FIXTURETYPE Patch/Stages/1/Fixtures/67"
+<<< {"id": "38107147", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/67", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "WASH-U 401"}, {"n": "MODE", "ok": true, "t": "string", "v": "2 9 channel"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 9"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/35|NAME,MODE,FIXTURETYPE
+    wire: Plugin "CopilotResponder" "props ef93dbdf NAME,MODE,FIXTURETYPE Patch/Stages/1/Fixtures/35"
+<<< {"id": "ef93dbdf", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/35", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 521"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/1|NAME,MODE,FIXTURETYPE
+    wire: Plugin "CopilotResponder" "props 89cab1bf NAME,MODE,FIXTURETYPE Patch/Stages/1/Fixtures/1"
+<<< {"id": "89cab1bf", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "KEY 101"}, {"n": "MODE", "ok": true, "t": "string", "v": "3 Direct"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 10"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/7|NAME,MODE,FIXTURETYPE
+    wire: Plugin "CopilotResponder" "props aeb50b39 NAME,MODE,FIXTURETYPE Patch/Stages/1/Fixtures/7"
+<<< {"id": "aeb50b39", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/7", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FOH 111"}, {"n": "MODE", "ok": true, "t": "string", "v": "3 Direct"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 10"}], "truncated": false, "v": 1}

@@ -1,0 +1,30 @@
+{
+  "bundles": {
+    "go": false,
+    "off": false
+  },
+  "pre_names": {
+    "ShowData/DataPools/Default/Sequences/269": "LOVE ATTACK - RHYTHM M2a B2 SCENE",
+    "ShowData/DataPools/Default/Sequences/270": "LOVE ATTACK - RHYTHM M2a B2 RHYTHM",
+    "ShowData/DataPools/Default/Timecodes/24": "LOVE ATTACK - RHYTHM M2a B2 TC"
+  },
+  "verdict": "deny-all: approval texts recorded, nothing sent",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Go Timecode 24"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Timecode 24",
+        "Off Sequence 269",
+        "Off Sequence 270"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}
