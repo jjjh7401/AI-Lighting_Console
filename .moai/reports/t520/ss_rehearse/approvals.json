@@ -1,0 +1,38 @@
+[
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 266"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 266"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 267"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 267"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 268"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 268"
+    ],
+    "approved": true
+  }
+]

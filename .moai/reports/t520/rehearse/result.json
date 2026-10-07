@@ -1,0 +1,60 @@
+{
+  "slots": [
+    250,
+    251,
+    22
+  ],
+  "bundles": {
+    "seq_scene": true,
+    "seq_rhythm": true,
+    "tc_a": true,
+    "tc_b": true,
+    "tc_c": true
+  },
+  "pre_master_normed": "69",
+  "post_seq": {
+    "250": {
+      "name": "fake",
+      "cues": 0
+    },
+    "251": {
+      "name": "fake",
+      "cues": 0
+    }
+  },
+  "tracks": [
+    {
+      "i": 2,
+      "no": "1",
+      "target": "Sequence 250"
+    },
+    {
+      "i": 3,
+      "no": "2",
+      "target": "Sequence 251"
+    }
+  ],
+  "post_b": {
+    "250": [
+      "CmdSubTrack"
+    ],
+    "251": [
+      "CmdSubTrack"
+    ]
+  },
+  "events": {
+    "250": 7,
+    "251": 15
+  },
+  "verdict": "written — events match",
+  "fake_sent": 579,
+  "approval_requests": 5,
+  "approved": 5,
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

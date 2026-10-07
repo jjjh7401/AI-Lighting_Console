@@ -1,0 +1,100 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping ea60406c"
+<<< {"id": "ea60406c", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> props:ShowData/DataPools/Default/Sequences/250|NAME
+    wire: Plugin "CopilotResponder" "props 8b0688ec NAME ShowData/DataPools/Default/Sequences/250"
+<<< {"id": "8b0688ec", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/250", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a SCENE"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/251|NAME
+    wire: Plugin "CopilotResponder" "props 63e1224e NAME ShowData/DataPools/Default/Sequences/251"
+<<< {"error": "path segment not found: '251' (in ShowData/DataPools/Default/Sequences/251)", "id": "63e1224e", "kind": "props", "ok": false, "path": "ShowData/DataPools/Default/Sequences/251", "reads": [], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/252|NAME
+    wire: Plugin "CopilotResponder" "props 354c5a4e NAME ShowData/DataPools/Default/Sequences/252"
+<<< {"id": "354c5a4e", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/252", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LINE SHAPE PROBE - MAIN SUB LONG"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/253|NAME
+    wire: Plugin "CopilotResponder" "props f4063e4c NAME ShowData/DataPools/Default/Sequences/253"
+<<< {"id": "f4063e4c", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/253", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B SCENE"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/254|NAME
+    wire: Plugin "CopilotResponder" "props 4c4375b2 NAME ShowData/DataPools/Default/Sequences/254"
+<<< {"id": "4c4375b2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/254", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B RHYTHM"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/255|NAME
+    wire: Plugin "CopilotResponder" "props 3fc3db1b NAME ShowData/DataPools/Default/Sequences/255"
+<<< {"id": "3fc3db1b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/255", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "GROUP PROBE - GROUP 5 SIDE-L"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/256|NAME
+    wire: Plugin "CopilotResponder" "props 42c34078 NAME ShowData/DataPools/Default/Sequences/256"
+<<< {"id": "42c34078", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/256", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "GROUP PROBE - TRAILING DOT 301-302"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/257|NAME
+    wire: Plugin "CopilotResponder" "props 2fc42302 NAME ShowData/DataPools/Default/Sequences/257"
+<<< {"id": "2fc42302", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/257", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - GROUP 12 DIMMER"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/258|NAME
+    wire: Plugin "CopilotResponder" "props d18d4b06 NAME ShowData/DataPools/Default/Sequences/258"
+<<< {"id": "d18d4b06", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/258", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - SPIIDER TRAILING DOT"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/259|NAME
+    wire: Plugin "CopilotResponder" "props 61040d52 NAME ShowData/DataPools/Default/Sequences/259"
+<<< {"id": "61040d52", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/259", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - SPIIDER DOT RGB"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/260|NAME
+    wire: Plugin "CopilotResponder" "props 3d60d8d8 NAME ShowData/DataPools/Default/Sequences/260"
+<<< {"id": "3d60d8d8", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/260", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "BACK AIM PROBE - PAN 180 TILT 30"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/261|NAME
+    wire: Plugin "CopilotResponder" "props cccd6319 NAME ShowData/DataPools/Default/Sequences/261"
+<<< {"id": "cccd6319", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/261", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "BACK AIM PROBE - PAN 180 TILT 45"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/262|NAME
+    wire: Plugin "CopilotResponder" "props bbbf4c95 NAME ShowData/DataPools/Default/Sequences/262"
+<<< {"id": "bbbf4c95", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/262", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "BACK AIM PROBE - PAN 180 TILT 60"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/263|NAME
+    wire: Plugin "CopilotResponder" "props a20fdf88 NAME ShowData/DataPools/Default/Sequences/263"
+<<< {"id": "a20fdf88", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/263", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - GROUP 10 DIMMER"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/264|NAME
+    wire: Plugin "CopilotResponder" "props c90c90a6 NAME ShowData/DataPools/Default/Sequences/264"
+<<< {"id": "c90c90a6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/264", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - GROUP 10 RGB MACRO"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/265|NAME
+    wire: Plugin "CopilotResponder" "props d5194297 NAME ShowData/DataPools/Default/Sequences/265"
+<<< {"id": "d5194297", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/265", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - WASH 401 ZOOM"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/266|NAME
+    wire: Plugin "CopilotResponder" "props 8abce1d9 NAME ShowData/DataPools/Default/Sequences/266"
+<<< {"error": "path segment not found: '266' (in ShowData/DataPools/Default/Sequences/266)", "id": "8abce1d9", "kind": "props", "ok": false, "path": "ShowData/DataPools/Default/Sequences/266", "reads": [], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/267|NAME
+    wire: Plugin "CopilotResponder" "props ac9f0250 NAME ShowData/DataPools/Default/Sequences/267"
+<<< {"error": "path segment not found: '267' (in ShowData/DataPools/Default/Sequences/267)", "id": "ac9f0250", "kind": "props", "ok": false, "path": "ShowData/DataPools/Default/Sequences/267", "reads": [], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/268|NAME
+    wire: Plugin "CopilotResponder" "props 3950ebff NAME ShowData/DataPools/Default/Sequences/268"
+<<< {"error": "path segment not found: '268' (in ShowData/DataPools/Default/Sequences/268)", "id": "3950ebff", "kind": "props", "ok": false, "path": "ShowData/DataPools/Default/Sequences/268", "reads": [], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/269|NAME
+    wire: Plugin "CopilotResponder" "props f902649b NAME ShowData/DataPools/Default/Sequences/269"
+<<< {"id": "f902649b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/269", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 SCENE"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/270|NAME
+    wire: Plugin "CopilotResponder" "props b07b6222 NAME ShowData/DataPools/Default/Sequences/270"
+<<< {"id": "b07b6222", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/270", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 RHYTHM"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/22|NAME
+    wire: Plugin "CopilotResponder" "props c2e35f9a NAME ShowData/DataPools/Default/Timecodes/22"
+<<< {"error": "path segment not found: '22' (in ShowData/DataPools/Default/Timecodes/22)", "id": "c2e35f9a", "kind": "props", "ok": false, "path": "ShowData/DataPools/Default/Timecodes/22", "reads": [], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/23|NAME
+    wire: Plugin "CopilotResponder" "props 1d09003c NAME ShowData/DataPools/Default/Timecodes/23"
+<<< {"id": "1d09003c", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/23", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B TC"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Timecodes/24|NAME
+    wire: Plugin "CopilotResponder" "props 4b9019b7 NAME ShowData/DataPools/Default/Timecodes/24"
+<<< {"id": "4b9019b7", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/24", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a B2 TC"}], "truncated": false, "v": 1}

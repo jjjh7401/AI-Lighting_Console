@@ -1,0 +1,4 @@
+{"ts": "2026-10-07T05:44:59.606955+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-07T05:44:59.672886+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/250", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-07T05:44:59.739612+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/251", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-07T05:44:59.806712+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/22", "kind": "state_query", "ok": false, "detail": ""}

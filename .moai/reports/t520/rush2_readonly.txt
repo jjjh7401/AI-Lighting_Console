@@ -1,0 +1,56 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 18283d6c"
+<<< {"id": "18283d6c", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:Patch/FixtureTypes/9/6/2/1/2
+    wire: Plugin "CopilotResponder" "state 8bab11ba Patch/FixtureTypes/9/6/2/1/2"
+<<< {"children": [{"class": "LogicalChannel", "i": 1, "name": "Shutter1"}], "id": "8bab11ba", "kind": "state", "node": {"childCount": 1, "class": "DMXChannel", "enumeration": "ok", "name": "Main Module#2_Shutter1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/2|NAME,DEFAULT,HIGHLIGHT
+    wire: Plugin "CopilotResponder" "props 8620d53c NAME,DEFAULT,HIGHLIGHT Patch/FixtureTypes/9/6/2/1/2"
+<<< {"id": "8620d53c", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module#2_Shutter1"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<0C0C0C>"}, {"n": "HIGHLIGHT", "ok": true, "t": "number", "v": "789516"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/2/1/2/1
+    wire: Plugin "CopilotResponder" "state 91b0d40a Patch/FixtureTypes/9/6/2/1/2/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "Shutter1 1"}, {"class": "ChannelFunction", "i": 2, "name": "Shutter1Strobe 2"}, {"class": "ChannelFunction", "i": 3, "name": "Shutter1 3"}, {"class": "ChannelFunction", "i": 4, "name": "Shutter1StrobePulseOpen 4"}, {"class": "ChannelFunction", "i": 5, "name": "Shutter1 5"}, {"class": "ChannelFunction", "i": 6, "name": "Shutter1StrobePulseClose 6"}, {"class": "ChannelFunction", "i": 7, "name": "Shutter1 7"}, {"class": "ChannelFunction", "i": 8, "name": "Shutter1StrobeRandom 8"}, {"class": "ChannelFunction", "i": 9, "name": "Shutter1 9"}], "id": "91b0d40a", "kind": "state", "node": {"childCount": 9, "class": "LogicalChannel", "enumeration": "ok", "name": "Shutter1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/2/1/2/1/1
+    wire: Plugin "CopilotResponder" "state ba43a801 Patch/FixtureTypes/9/6/2/1/2/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "closed"}, {"class": "ChannelSet", "i": 2, "name": "open"}], "id": "ba43a801", "kind": "state", "node": {"childCount": 2, "class": "ChannelFunction", "enumeration": "ok", "name": "Shutter1 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/2/1/1|NAME,DMXFROM,DEFAULT,ATTRIBUTE
+    wire: Plugin "CopilotResponder" "props 185c3984 NAME,DMXFROM,DEFAULT,ATTRIBUTE Patch/FixtureTypes/9/6/2/1/2/1/1"
+<<< {"id": "185c3984", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Shutter1 1"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "789516"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Shutter1"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/2/1/2/1/2
+    wire: Plugin "CopilotResponder" "state fc6fb50a Patch/FixtureTypes/9/6/2/1/2/1/2"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "min Strobe"}, {"class": "ChannelSet", "i": 2, "name": "No Feature"}, {"class": "ChannelSet", "i": 3, "name": "max Strobe"}], "id": "fc6fb50a", "kind": "state", "node": {"childCount": 3, "class": "ChannelFunction", "enumeration": "ok", "name": "Shutter1Strobe 2"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/2", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/2/1/2|NAME,DMXFROM,DEFAULT,ATTRIBUTE
+    wire: Plugin "CopilotResponder" "props 9823e370 NAME,DMXFROM,DEFAULT,ATTRIBUTE Patch/FixtureTypes/9/6/2/1/2/1/2"
+<<< {"id": "9823e370", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Shutter1Strobe 2"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "1048576"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "1048576"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Shutter1Strobe"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/2/1/2/1/3
+    wire: Plugin "CopilotResponder" "state f570465c Patch/FixtureTypes/9/6/2/1/2/1/3"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "open (2)"}], "id": "f570465c", "kind": "state", "node": {"childCount": 1, "class": "ChannelFunction", "enumeration": "ok", "name": "Shutter1 3"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/3", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/2/1/3|NAME,DMXFROM,DEFAULT,ATTRIBUTE
+    wire: Plugin "CopilotResponder" "props d7488353 NAME,DMXFROM,DEFAULT,ATTRIBUTE Patch/FixtureTypes/9/6/2/1/2/1/3"
+<<< {"id": "d7488353", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Shutter1 3"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "8650752"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "8650752"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Shutter1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/2/1/1/1|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props a36f2a7f NAME,DMXFROM,DMXTO Patch/FixtureTypes/9/6/2/1/2/1/1/1"
+<<< {"id": "a36f2a7f", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "closed"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "460551"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/2/1/1/2|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 9c134ede NAME,DMXFROM,DMXTO Patch/FixtureTypes/9/6/2/1/2/1/1/2"
+<<< {"id": "9c134ede", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "open"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "526344"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "986895"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/2/1/1/3|NAME,DMXFROM,DMXTO
+    wire: Plugin "CopilotResponder" "props 8296fd7a NAME,DMXFROM,DMXTO Patch/FixtureTypes/9/6/2/1/2/1/1/3"
+<<< {"error": "path segment not found: '3' (in Patch/FixtureTypes/9/6/2/1/2/1/1/3)", "id": "8296fd7a", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/9/6/2/1/2/1/1/3", "reads": [], "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/9/6/2/1/2/1/1
+    wire: Plugin "CopilotResponder" "introspect 0ce3cd88 Patch/FixtureTypes/9/6/2/1/2/1/1"
+<<< {"class": "ChannelFunction", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "ATTRIBUTE", "t": "Handle"}, {"n": "DMXFROM", "t": "UInt32"}, {"n": "DMXTO", "t": "UInt32"}, {"n": "DEFAULT", "t": "UInt32"}, {"n": "PHYSICALFROM", "t": "Double"}, {"n": "PHYSICALTO", "t": "Double"}, {"n": "REALFADE", "t": "Float"}, {"n": "REALACCELERATION", "t": "Float"}, {"n": "WHEEL", "t": "Handle"}, {"n": "EMITTER", "t": "Handle"}, {"n": "GAMUT", "t": "Handle"}], "id": "0ce3cd88", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/2/1/1", "source": "property_accessors", "total": 41, "truncated": true, "v": 1}

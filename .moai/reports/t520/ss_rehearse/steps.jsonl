@@ -1,0 +1,13 @@
+{"step": "pre_name", "t": 0.001, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/266", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/266", "reads": [{"n": "NAME", "ok": true, "v": "FIXTURE PROBE - SPIIDER GROUP 12 AT"}], "fake": true}}
+{"step": "on_266", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 266", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 266': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_266", "t": 0.001, "kind": "exec", "command": "Goto Cue 1 Sequence 266", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_266", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 266", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 266': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_266", "t": 0.001, "kind": "exec", "command": "Off Sequence 266", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_267", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 267", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 267': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_267", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 267", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_267", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 267", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 267': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_267", "t": 0.002, "kind": "exec", "command": "Off Sequence 267", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_268", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 268", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 268': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_268", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 268", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_268", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 268", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 268': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_268", "t": 0.002, "kind": "exec", "command": "Off Sequence 268", "fired": true, "ok": true, "detail": "OK"}

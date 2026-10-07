@@ -1,0 +1,86 @@
+{
+  "bundles": {
+    "top": true,
+    "go": true,
+    "off": true
+  },
+  "pre_names": {
+    "ShowData/DataPools/Default/Sequences/269": "LOVE ATTACK - RHYTHM M2a B2 SCENE",
+    "ShowData/DataPools/Default/Sequences/270": "LOVE ATTACK - RHYTHM M2a B2 RHYTHM",
+    "ShowData/DataPools/Default/Timecodes/24": "LOVE ATTACK - RHYTHM M2a B2 TC"
+  },
+  "cursor_after_top": "0.00",
+  "samples": [
+    {
+      "t": 0.0,
+      "cursor": "0.00",
+      "269": "fake",
+      "270": "fake"
+    },
+    {
+      "t": 0.51,
+      "cursor": "0.00",
+      "269": "fake",
+      "270": "fake"
+    },
+    {
+      "t": 1.01,
+      "cursor": "0.00",
+      "269": "fake",
+      "270": "fake"
+    },
+    {
+      "t": 1.51,
+      "cursor": "0.00",
+      "269": "fake",
+      "270": "fake"
+    },
+    {
+      "t": 2.02,
+      "cursor": "0.00",
+      "269": "fake",
+      "270": "fake"
+    },
+    {
+      "t": 2.52,
+      "cursor": "0.00",
+      "269": "fake",
+      "270": "fake"
+    }
+  ],
+  "verdict": "played — judge by director watch",
+  "fake_sent": [
+    "Top Timecode 24",
+    "Go Timecode 24",
+    "Off Timecode 24",
+    "Off Sequence 269",
+    "Off Sequence 270"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Top Timecode 24"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go Timecode 24"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Timecode 24",
+        "Off Sequence 269",
+        "Off Sequence 270"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

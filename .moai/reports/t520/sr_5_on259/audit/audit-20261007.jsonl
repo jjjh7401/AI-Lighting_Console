@@ -1,0 +1,3 @@
+{"ts": "2026-10-07T06:54:16.507037+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/259 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:54:16.574173+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 259"], "held": ["Goto Cue 1 Sequence 259"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:54:16.640279+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 259", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

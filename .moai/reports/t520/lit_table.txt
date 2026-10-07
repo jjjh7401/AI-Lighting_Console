@@ -1,0 +1,24 @@
+음악초 | 시퀀스.큐 이름 | 이 큐가 준 디머 | → 그 시각 디머 > 0 인 그룹(누적)
+  0.00 | 254.1 Intro Back | Group 4=30/30, Group 5=0/0, Group 6=0/0 | Group 4(BACK) 30/30
+  0.00 | 253.1 Intro A | Group 10=0.0, Group 3=0.0, Group 13=60.0, Group 14=0.0 | Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+  0.96 | 254.2 Start Hit | Group 4=100/100, Group 5=0/0, Group 6=0/0 | Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 100/100
+  1.50 | 254.3 Intro Hold | Group 4=30/30, Group 5=0/0, Group 6=0/0 | Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+  5.78 | 254.4 Kick Four | Group 4=30/60, Group 5=0/0, Group 6=0/0 | Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/60
+ 10.07 | 254.5 Movers Mid | Group 4=30/60, Group 5=0/0, Group 6=0/0 | Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/60
+ 14.36 | 254.6 Verse Pulse | Group 4=30/60, Group 5=0/0, Group 6=0/0 | Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/60
+ 14.36 | 253.2 Verse One | Group 10=40.0, Group 3=60.0 | Group 10(WASH-ALL) 40.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/60
+ 16.50 | 254.7 Tilt Wave | Group 4=30/60, Group 5=0/0, Group 6=0/0 | Group 10(WASH-ALL) 40.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/60
+ 22.93 | 254.8 Side Chase | Group 4=30/30, Group 5=0/100, Group 6=100/0 | Group 10(WASH-ALL) 40.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30 · Group 5(SIDE-L) 0/100 · Group 6(SIDE-R) 100/0
+ 29.35 | 254.9 Sweep Four | Group 4=30/30, Group 5=0/0, Group 6=0/0 | Group 10(WASH-ALL) 40.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+ 29.35 | 253.3 Pre One | Group 10=25.0 | Group 10(WASH-ALL) 25.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+ 31.51 | 254.10 Sweep Two | Group 4=30/30, Group 5=0/0, Group 6=0/0 | Group 10(WASH-ALL) 25.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+ 33.65 | 254.11 Sweep One | Group 4=30/30, Group 5=0/0, Group 6=0/0 | Group 10(WASH-ALL) 25.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+ 35.79 | 254.12 Sweep Half | Group 4=30/30, Group 5=0/0, Group 6=0/0 | Group 10(WASH-ALL) 25.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+ 36.86 | 254.13 Pre Gap | Group 4=30/30, Group 5=0/0, Group 6=0/0 | Group 10(WASH-ALL) 25.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+ 36.86 | 253.4 Pre Gap | Group 10=10.0 | Group 10(WASH-ALL) 10.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/30
+ 37.90 | 254.14 Chorus Pulse | Group 4=30/100, Group 5=0/0, Group 6=0/0 | Group 10(WASH-ALL) 10.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/100
+ 37.90 | 253.5 Chorus One Hit | Group 14=60.0, Group 10=70.0 | Group 10(WASH-ALL) 70.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 14(BLIND) 60.0 · Group 4(BACK) 30/100
+ 38.43 | 253.6 Blind Off | Group 14=0.0 | Group 10(WASH-ALL) 70.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/100
+ 40.08 | 254.15 Pan Wave | Group 4=30/100, Group 5=0/0, Group 6=0/0 | Group 10(WASH-ALL) 70.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/100
+ 46.51 | 253.7 Peach Bleed |  | Group 10(WASH-ALL) 70.0 · Group 3(FOH) 60.0 · Group 13(MOVER-ALL) 60.0 · Group 4(BACK) 30/100
+디머를 한 번도 안 받는 그룹: KEY(2) · WASH-U/D 개별(8·9) · STROBE(15) · HAZE(16) — 이 묶음 대본에 없음

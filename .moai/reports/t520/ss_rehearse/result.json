@@ -1,0 +1,54 @@
+{
+  "phase": "p266",
+  "bundles": {
+    "on_266": true,
+    "off_266": true,
+    "on_267": true,
+    "off_267": true,
+    "on_268": true,
+    "off_268": true
+  },
+  "pre_name": "FIXTURE PROBE - SPIIDER GROUP 12 AT",
+  "exec": [
+    {
+      "command": "Goto Cue 1 Sequence 266",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 266",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 267",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 267",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 268",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 268",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase p266",
+  "approved": 6,
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

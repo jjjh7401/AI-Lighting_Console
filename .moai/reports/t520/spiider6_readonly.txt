@@ -1,0 +1,60 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 0d3c61f9"
+<<< {"id": "0d3c61f9", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> introspect:Patch/FixtureTypes/4/6/1/2/1
+    wire: Plugin "CopilotResponder" "introspect 1dc0d4a7 Patch/FixtureTypes/4/6/1/2/1"
+<<< {"class": "Relation", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "MASTER", "t": "Handle"}, {"n": "MASTERDIRECT", "t": "Handle"}, {"n": "FOLLOWER", "t": "Handle"}, {"n": "FOLLOWERDIRECT", "t": "Handle"}, {"n": "TYPE", "t": "UInt8"}], "id": "1dc0d4a7", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/2/1", "source": "property_accessors", "total": 20, "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/2/1|NAME,TYPE,MASTER,FOLLOWER,MODE
+    wire: Plugin "CopilotResponder" "props 0bbee753 NAME,TYPE,MASTER,FOLLOWER,MODE Patch/FixtureTypes/4/6/1/2/1"
+<<< {"id": "0bbee753", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "VirtualDimmer"}, {"n": "TYPE", "ok": true, "t": "string", "v": "Multiply"}, {"n": "MASTER", "ok": true, "t": "string", "v": "RGBW Cluster_Dimmer"}, {"n": "FOLLOWER", "ok": true, "t": "string", "v": "RGBW Cluster_ColorRGB_R.ColorRGB_R.ColorRGB_R 1"}, {"e": "property not readable: MODE", "n": "MODE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/2/2|NAME,TYPE,MASTER,FOLLOWER,MODE
+    wire: Plugin "CopilotResponder" "props 4db1f460 NAME,TYPE,MASTER,FOLLOWER,MODE Patch/FixtureTypes/4/6/1/2/2"
+<<< {"id": "4db1f460", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/2/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "VirtualDimmer"}, {"n": "TYPE", "ok": true, "t": "string", "v": "Multiply"}, {"n": "MASTER", "ok": true, "t": "string", "v": "RGBW Cluster_Dimmer"}, {"n": "FOLLOWER", "ok": true, "t": "string", "v": "RGBW Cluster_ColorRGB_G.ColorRGB_G.ColorRGB_G 1"}, {"e": "property not readable: MODE", "n": "MODE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/2/3|NAME,TYPE,MASTER,FOLLOWER,MODE
+    wire: Plugin "CopilotResponder" "props 8097a94b NAME,TYPE,MASTER,FOLLOWER,MODE Patch/FixtureTypes/4/6/1/2/3"
+<<< {"id": "8097a94b", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/2/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "VirtualDimmer"}, {"n": "TYPE", "ok": true, "t": "string", "v": "Multiply"}, {"n": "MASTER", "ok": true, "t": "string", "v": "RGBW Cluster_Dimmer"}, {"n": "FOLLOWER", "ok": true, "t": "string", "v": "RGBW Cluster_ColorRGB_B.ColorRGB_B.ColorRGB_B 1"}, {"e": "property not readable: MODE", "n": "MODE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/2/4|NAME,TYPE,MASTER,FOLLOWER,MODE
+    wire: Plugin "CopilotResponder" "props 4b2d2d22 NAME,TYPE,MASTER,FOLLOWER,MODE Patch/FixtureTypes/4/6/1/2/4"
+<<< {"id": "4b2d2d22", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/2/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "VirtualDimmer"}, {"n": "TYPE", "ok": true, "t": "string", "v": "Multiply"}, {"n": "MASTER", "ok": true, "t": "string", "v": "RGBW Cluster_Dimmer"}, {"n": "FOLLOWER", "ok": true, "t": "string", "v": "RGBW Cluster_ColorRGB_W.ColorRGB_W.ColorRGB_W 1"}, {"e": "property not readable: MODE", "n": "MODE", "ok": false}], "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/4/5/2/1/1/1/1
+    wire: Plugin "CopilotResponder" "introspect d400a49e Patch/FixtureTypes/4/5/2/1/1/1/1"
+<<< {"class": "GeometryReference", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "POSX", "t": "FloatLength"}, {"n": "POSY", "t": "FloatLength"}, {"n": "POSZ", "t": "FloatLength"}, {"n": "ROTX", "t": "Float"}, {"n": "ROTY", "t": "Float"}, {"n": "ROTZ", "t": "Float"}, {"n": "ROTDIRECT", "t": "Custom"}, {"n": "GRIDAUTO", "t": "UInt32"}, {"n": "GRIDSWAPXY", "t": "UInt32"}, {"n": "GRIDINVX", "t": "UInt32"}, {"n": "GRIDINVY", "t": "UInt32"}], "id": "d400a49e", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1/1", "source": "property_accessors", "total": 35, "truncated": true, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/5/2/1/1/1/1|NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE
+    wire: Plugin "CopilotResponder" "props ba3acd6e NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE Patch/FixtureTypes/4/5/2/1/1/1/1"
+<<< {"id": "ba3acd6e", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Instance2#2"}, {"n": "GEOMETRY", "ok": true, "t": "string", "v": "RGBW Cluster"}, {"e": "property not readable: LINKEDGEOMETRY", "n": "LINKEDGEOMETRY", "ok": false}, {"e": "property not readable: REFERENCE", "n": "REFERENCE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/5/2/1/1/1/2|NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE
+    wire: Plugin "CopilotResponder" "props 92f8b75e NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE Patch/FixtureTypes/4/5/2/1/1/1/2"
+<<< {"id": "92f8b75e", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Instance3#2"}, {"n": "GEOMETRY", "ok": true, "t": "string", "v": "RGBW Cluster"}, {"e": "property not readable: LINKEDGEOMETRY", "n": "LINKEDGEOMETRY", "ok": false}, {"e": "property not readable: REFERENCE", "n": "REFERENCE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/5/2/1/1/1/3|NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE
+    wire: Plugin "CopilotResponder" "props 5fc861cd NAME,GEOMETRY,LINKEDGEOMETRY,REFERENCE Patch/FixtureTypes/4/5/2/1/1/1/3"
+<<< {"id": "5fc861cd", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Instance4#2"}, {"n": "GEOMETRY", "ok": true, "t": "string", "v": "RGBW Cluster"}, {"e": "property not readable: LINKEDGEOMETRY", "n": "LINKEDGEOMETRY", "ok": false}, {"e": "property not readable: REFERENCE", "n": "REFERENCE", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/5/2/1/1/1/1/1|NAME,DMXOFFSET,DMXBREAK
+    wire: Plugin "CopilotResponder" "props 92c1f531 NAME,DMXOFFSET,DMXBREAK Patch/FixtureTypes/4/5/2/1/1/1/1/1"
+<<< {"id": "92c1f531", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Break 1 offset"}, {"n": "DMXOFFSET", "ok": true, "t": "string", "v": "8"}, {"n": "DMXBREAK", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/5/2/1/1/1/2/1|NAME,DMXOFFSET,DMXBREAK
+    wire: Plugin "CopilotResponder" "props 0830d7ef NAME,DMXOFFSET,DMXBREAK Patch/FixtureTypes/4/5/2/1/1/1/2/1"
+<<< {"id": "0830d7ef", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Break 1 offset"}, {"n": "DMXOFFSET", "ok": true, "t": "string", "v": "16"}, {"n": "DMXBREAK", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/5/2/1/1/1/3/1|NAME,DMXOFFSET,DMXBREAK
+    wire: Plugin "CopilotResponder" "props 9496ec14 NAME,DMXOFFSET,DMXBREAK Patch/FixtureTypes/4/5/2/1/1/1/3/1"
+<<< {"id": "9496ec14", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Break 1 offset"}, {"n": "DMXOFFSET", "ok": true, "t": "string", "v": "24"}, {"n": "DMXBREAK", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/1@25
+    wire: Plugin "CopilotResponder" "state 215cfe4e Patch/FixtureTypes/4/6/1/1 offset=25"
+<<< {"children": [{"class": "DMXChannel", "i": 26, "name": "Main Module_Dimmer2"}], "id": "215cfe4e", "kind": "state", "node": {"childCount": 26, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 25, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/27|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 9b01f213 NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/27"
+<<< {"error": "path segment not found: '27' (in Patch/FixtureTypes/4/6/1/1/27)", "id": "9b01f213", "kind": "props", "ok": false, "path": "Patch/FixtureTypes/4/6/1/1/27", "reads": [], "truncated": false, "v": 1}

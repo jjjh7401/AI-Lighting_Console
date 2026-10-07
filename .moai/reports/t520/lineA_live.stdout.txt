@@ -1,0 +1,41 @@
+{"step": "pre_b_slot", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/253", "ok": false, "error": "path segment not found: '253' (in ShowData/DataPools/Default/Sequences/253)"}
+{"step": "pre_b_slot", "t": 0.133, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/254", "ok": false, "error": "path segment not found: '254' (in ShowData/DataPools/Default/Sequences/254)"}
+{"step": "pre_b_slot", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/23", "ok": false, "error": "path segment not found: '23' (in ShowData/DataPools/Default/Timecodes/23)"}
+{"step": "pre_slot", "t": 0.266, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/252", "ok": false, "error": "path segment not found: '252' (in ShowData/DataPools/Default/Sequences/252)"}
+{"step": "store_1", "t": 0.266, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 301 + 302 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 252 Cue 1 'Main Only'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 252 Property 'Name' 'LINE SHAPE PROBE - MAIN SUB LONG'", "reasons": []}]}
+{"step": "store_1", "t": 0.332, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.399, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.466, "kind": "exec", "command": "Fixture 301 + 302 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.532, "kind": "exec", "command": "Store Sequence 252 Cue 1 'Main Only'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.666, "kind": "exec", "command": "Set Sequence 252 Property 'Name' 'LINE SHAPE PROBE - MAIN SUB LONG'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_2", "t": 0.666, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 301.1 + 302.1 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 252 Cue 2 'Sub In List'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_2", "t": 0.732, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_2", "t": 0.799, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_2", "t": 0.866, "kind": "exec", "command": "Fixture 301.1 + 302.1 ; Attribute 'Dimmer' At 100", "fired": true, "ok": false, "detail": "Illegal object"}
+{"step": "store_2", "t": 0.934, "kind": "exec", "command": "Store Sequence 252 Cue 2 'Sub In List'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_2", "t": 1.0, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_3", "t": 1.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 + 111 + 112 + 113 + 114 ; Attribute 'Dimmer' At 50", "reasons": []}, {"command": "Store Sequence 252 Cue 3 'Long List 24'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_3", "t": 1.066, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_3", "t": 1.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_3", "t": 1.199, "kind": "exec", "command": "Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 + 111 + 112 + 113 + 114 ; Attribute 'Dimmer' At 50", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_3", "t": 1.265, "kind": "exec", "command": "Store Sequence 252 Cue 3 'Long List 24'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_3", "t": 1.332, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 1.332, "say": "큐 1 — 본체 301·302 만 Dimmer 100. SIDE-L 두 대가 켜지는가"}
+{"step": "on_1", "t": 1.399, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 252", "reasons": ["reference-invoking command"]}]}
+{"step": "on_1", "t": 1.466, "kind": "exec", "command": "Goto Cue 1 Sequence 252", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_1", "t": 9.533, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 252", "reasons": ["reference-invoking command"]}]}
+{"step": "off_1", "t": 9.598, "kind": "exec", "command": "Off Sequence 252", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 11.603, "say": "큐 2 — 점 번호 목록(기계 판정, 눈 판정 안 함)"}
+{"step": "on_2", "t": 11.666, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 252", "reasons": ["reference-invoking command"]}]}
+{"step": "on_2", "t": 11.732, "kind": "exec", "command": "Goto Cue 2 Sequence 252", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_2", "t": 19.799, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 252", "reasons": ["reference-invoking command"]}]}
+{"step": "off_2", "t": 19.865, "kind": "exec", "command": "Off Sequence 252", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 21.867, "say": "큐 3 — 점 없이 24개(기계 판정, 바닥 워시 20대 + FOH 4대가 50%)"}
+{"step": "on_3", "t": 21.932, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 252", "reasons": ["reference-invoking command"]}]}
+{"step": "on_3", "t": 21.999, "kind": "exec", "command": "Goto Cue 3 Sequence 252", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_3", "t": 30.065, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 252", "reasons": ["reference-invoking command"]}]}
+{"step": "off_3", "t": 30.131, "kind": "exec", "command": "Off Sequence 252", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_seq", "t": 32.2, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/252", "ok": true, "payload": {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Main Only"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Sub In List"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Long List 24"}], "id": "gate-34", "kind": "state", "node": {"childCount": 5, "class": "Sequence", "enumeration": "ok", "name": "LINE SHAPE PROBE - MAIN SUB LONG"}, "offset": 0, "ok": true, "path"
+{"step": "post_name", "t": 32.265, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/252", "ok": true, "payload": {"id": "gate-35", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/252", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LINE SHAPE PROBE - MAIN SUB LONG"}], "truncated": false, "v": 1}}
+{"verdict": "ran — line results + director watch", "bundles": {"store_1": true, "store_2": false, "store_3": true, "on_1": true, "off_1": true, "on_2": true, "off_2": true, "on_3": true, "off_3": true}, "line_results": {"Fixture 301 + 302 ; Attribute 'Dimmer' At 100": {"ok": true, "detail": "OK"}, "Fixture 301.1 + 302.1 ; Attribute 'Dimmer' At 100": {"ok": false, "detail": "Illegal object"}, "Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 ": {"ok": true, "detail": "OK"}}, "b_slots_taken": [], "approved": 9}

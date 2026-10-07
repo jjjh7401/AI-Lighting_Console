@@ -1,0 +1,5 @@
+{"step": "pre_name", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/256", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/256", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "GROUP PROBE - TRAILING DOT 301-302"}], "truncated": false, "v": 1}}
+{"step": "on_256", "t": 0.133, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 256", "reasons": ["reference-invoking command"]}]}
+{"step": "on_256", "t": 0.2, "kind": "exec", "command": "Goto Cue 1 Sequence 256", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_256", "t": 15.267, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 256", "reasons": ["reference-invoking command"]}]}
+{"step": "off_256", "t": 15.333, "kind": "exec", "command": "Off Sequence 256", "fired": true, "ok": true, "detail": "OK"}

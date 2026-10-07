@@ -1,0 +1,13 @@
+{"ts": "2026-10-07T07:04:12.480081+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/266 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T07:04:12.481050+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 266"], "held": ["Goto Cue 1 Sequence 266"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T07:04:12.481194+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 266", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T07:04:12.481302+00:00", "event": "approved", "commands": ["Off Sequence 266"], "held": ["Off Sequence 266"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T07:04:12.481392+00:00", "event": "executed", "command": "Off Sequence 266", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T07:04:12.481483+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 267"], "held": ["Goto Cue 1 Sequence 267"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T07:04:12.481561+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 267", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T07:04:12.481653+00:00", "event": "approved", "commands": ["Off Sequence 267"], "held": ["Off Sequence 267"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T07:04:12.481726+00:00", "event": "executed", "command": "Off Sequence 267", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T07:04:12.481810+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 268"], "held": ["Goto Cue 1 Sequence 268"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T07:04:12.481886+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 268", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T07:04:12.481966+00:00", "event": "approved", "commands": ["Off Sequence 268"], "held": ["Off Sequence 268"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T07:04:12.482035+00:00", "event": "executed", "command": "Off Sequence 268", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

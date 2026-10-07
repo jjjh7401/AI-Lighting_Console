@@ -1,0 +1,15 @@
+approval file      : .moai/reports/t520/approval_line_probe.txt
+  raw sha256       : 630f8a0f4ce83f7125158a0ab41cbf05008690475170c83269db2e5deafe4505
+  raw == canonical : True
+  canonical lines  : 22
+  canonical sha256 : 630f8a0f4ce83f7125158a0ab41cbf05008690475170c83269db2e5deafe4505
+sent source        : .moai/reports/t520/lineA_live/audit (files: ['audit-20261007.jsonl'])
+  window           : since=None until=None
+  send rows        : 22 by kind {'command': 22}
+  rebuilt sha256   : 630f8a0f4ce83f7125158a0ab41cbf05008690475170c83269db2e5deafe4505
+WARN sends not ok  : 1
+  not-ok [failed] Fixture 301.1 + 302.1 ; Attribute 'Dimmer' At 100
+(1) sha256 equal                         : True
+(2) 송신 안 됨 (sent, not in approval)    : 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: PASS

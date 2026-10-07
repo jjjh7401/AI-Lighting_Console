@@ -1,0 +1,12 @@
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/257", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/257)"}
+{"step": "store_257", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 10 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 257 Cue 1 'Wash All 100'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 257 Property 'Name' 'WASH PROBE - GROUP 10 DIMMER 100'", "reasons": []}]}
+{"step": "store_257", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_257", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_257", "t": 0.001, "kind": "exec", "command": "Group 10 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_257", "t": 0.001, "kind": "exec", "command": "Store Sequence 257 Cue 1 'Wash All 100'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_257", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_257", "t": 0.002, "kind": "exec", "command": "Set Sequence 257 Property 'Name' 'WASH PROBE - GROUP 10 DIMMER 100'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_257", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 257", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 257': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_257", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 257", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_257", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 257", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 257': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_257", "t": 0.002, "kind": "exec", "command": "Off Sequence 257", "fired": true, "ok": true, "detail": "OK"}

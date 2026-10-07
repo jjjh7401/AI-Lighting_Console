@@ -1,0 +1,25 @@
+audio {'tc_zero_estimates': [-0.0366, -0.0499, -0.033], 'spawned_tc_estimate': 3.002, 'popen_seconds': 0.006, 'cursor_after': '3.05', 'target_tc': 3.0}
+t=  3.03 cursor=3.10 seq 269 -> Sequence 269.1
+t=  3.03 cursor=3.10 seq 270 -> Sequence 270.1
+t=  4.44 cursor=4.50 seq 270 -> Sequence 270.3
+t=  8.64 cursor=8.70 seq 270 -> Sequence 270.4
+t= 13.54 cursor=13.60 seq 270 -> Sequence 270.5
+t= 17.73 cursor=17.80 seq 269 -> Sequence 269.2
+t= 17.73 cursor=17.80 seq 270 -> Sequence 270.6
+t= 19.84 cursor=19.90 seq 270 -> Sequence 270.7
+t= 26.14 cursor=26.20 seq 270 -> Sequence 270.8
+t= 32.44 cursor=32.50 seq 269 -> Sequence 269.3
+t= 32.44 cursor=32.50 seq 270 -> Sequence 270.9
+t= 34.54 cursor=34.60 seq 270 -> Sequence 270.10
+t= 36.63 cursor=36.70 seq 270 -> Sequence 270.11
+t= 38.73 cursor=38.80 seq 270 -> Sequence 270.12
+t= 40.14 cursor=40.20 seq 269 -> Sequence 269.4
+t= 40.14 cursor=40.20 seq 270 -> Sequence 270.13
+t= 40.84 cursor=40.90 seq 269 -> Sequence 269.5
+t= 40.84 cursor=40.90 seq 270 -> Sequence 270.14
+t= 41.54 cursor=41.60 seq 269 -> Sequence 269.6
+t= 42.94 cursor=43.00 seq 270 -> Sequence 270.15
+t= 49.94 cursor=50.00 seq 269 -> Sequence 269.7
+planned TC (scene) [3.0, 17.36, 32.35, 39.86, 40.9, 41.43, 49.51]
+planned TC (rhythm) [3.0, 3.96, 4.5, 8.78, 13.07, 17.36, 19.5, 25.93, 32.35, 34.51, 36.65, 38.79, 39.86, 40.9, 43.08]
+samples 82

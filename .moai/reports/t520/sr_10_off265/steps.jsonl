@@ -1,0 +1,3 @@
+{"step": "pre_name", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/265", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/265", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - WASH 401 ZOOM"}], "truncated": false, "v": 1}}
+{"step": "off_265", "t": 0.134, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 265", "reasons": ["reference-invoking command"]}]}
+{"step": "off_265", "t": 0.2, "kind": "exec", "command": "Off Sequence 265", "fired": true, "ok": true, "detail": "OK"}

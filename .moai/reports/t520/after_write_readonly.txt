@@ -1,0 +1,32 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 029ce4bc"
+<<< {"id": "029ce4bc", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/Sequences/250
+    wire: Plugin "CopilotResponder" "state a235264d ShowData/DataPools/Default/Sequences/250"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Intro A"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Verse One"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Pre One"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "Pre Gap"}, {"class": "Cue", "cueNo": 5, "i": 7, "name": "Chorus One Hit"}, {"class": "Cue", "cueNo": 6, "i": 8, "name": "Blind Off"}, {"class": "Cue", "cueNo": 7, "i": 9, "name": "Peach Bleed"}], "id": "a235264d", "kind": "state", "node": {"childCount": 9, "class": "Sequence", "enumeration": "ok", "name": "LOVE ATTACK - RHYTHM M2a SCENE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/250", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/250|NAME
+    wire: Plugin "CopilotResponder" "props 9c043629 NAME ShowData/DataPools/Default/Sequences/250"
+<<< {"id": "9c043629", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/250", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - RHYTHM M2a SCENE"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/251
+    wire: Plugin "CopilotResponder" "state 8968de98 ShowData/DataPools/Default/Sequences/251"
+<<< {"error": "path segment not found: '251' (in ShowData/DataPools/Default/Sequences/251)", "id": "8968de98", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/251", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/22
+    wire: Plugin "CopilotResponder" "state bd8b72e1 ShowData/DataPools/Default/Timecodes/22"
+<<< {"error": "path segment not found: '22' (in ShowData/DataPools/Default/Timecodes/22)", "id": "bd8b72e1", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Timecodes/22", "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/250/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props fa13c04d NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/250/1"
+<<< {"id": "fa13c04d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/250/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "OffCue"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3065"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/250/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props f3710bf6 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/250/3"
+<<< {"id": "f3710bf6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/250/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Intro A"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "7184"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/250/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props d02e7a57 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/250/3/1"
+<<< {"id": "d02e7a57", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/250/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Intro A"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "6640"}], "truncated": false, "v": 1}

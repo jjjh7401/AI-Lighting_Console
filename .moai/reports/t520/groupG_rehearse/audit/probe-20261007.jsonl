@@ -1,0 +1,2 @@
+{"ts": "2026-10-07T05:57:05.582642+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/255", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-07T05:57:05.584399+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/255", "kind": "state_query", "ok": true, "detail": ""}

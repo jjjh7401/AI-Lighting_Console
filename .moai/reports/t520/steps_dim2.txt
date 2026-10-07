@@ -1,0 +1,15 @@
+ping
+state:Patch/FixtureTypes/4/6/1/1/26
+props:Patch/FixtureTypes/4/6/1/1/26/1|NAME,ATTRIBUTE
+state:Patch/FixtureTypes/4/6/1/1/26/1
+props:Patch/FixtureTypes/4/6/1/1/26/1/1|NAME,ATTRIBUTE,DMXFROM,DMXTO,DEFAULT,PHYSICALFROM,PHYSICALTO
+state:Patch/FixtureTypes/4/6/1/1/26/1/1
+props:Patch/FixtureTypes/4/6/1/1/26/1/1/1|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+props:Patch/FixtureTypes/4/6/1/1/26/1/1/2|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+props:Patch/FixtureTypes/4/6/1/1/26/1/1/3|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+props:Patch/FixtureTypes/4/6/1/1/26/1/2|NAME,ATTRIBUTE,DMXFROM,DMXTO
+props:Patch/FixtureTypes/4/6/1/1/23/1|NAME,ATTRIBUTE
+state:Patch/FixtureTypes/4/6/1/1/23/1/1
+props:Patch/FixtureTypes/4/6/1/1/23/1/1|NAME,ATTRIBUTE,DMXFROM,DMXTO
+props:Patch/FixtureTypes/4/6/1/1/5/1|NAME,ATTRIBUTE
+state:Patch/FixtureTypes/4/1

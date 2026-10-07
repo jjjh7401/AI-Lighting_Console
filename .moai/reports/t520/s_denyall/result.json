@@ -1,0 +1,12 @@
+{
+  "phase": "store",
+  "bundles": {
+    "store_266": false,
+    "store_267": false,
+    "store_268": false
+  },
+  "verdict": "deny-all: approval texts recorded",
+  "preflight": "responder_ok",
+  "approved": 0,
+  "skipped_saveshow": []
+}

@@ -1,0 +1,64 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 5dc046b3"
+<<< {"id": "5dc046b3", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/Sequences/257
+    wire: Plugin "CopilotResponder" "state 015c4fff ShowData/DataPools/Default/Sequences/257"
+<<< {"error": "path segment not found: '257' (in ShowData/DataPools/Default/Sequences/257)", "id": "015c4fff", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/257", "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/1|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 225aedbd NAME,DEFAULT Patch/FixtureTypes/9/6/2/1/1"
+<<< {"id": "225aedbd", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module#2_Dimmer"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/7|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props e9bef10a NAME,DEFAULT Patch/FixtureTypes/9/6/2/1/7"
+<<< {"id": "e9bef10a", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/7", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module#2_COLORMIXER"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/2/1/7/1
+    wire: Plugin "CopilotResponder" "state 17392f50 Patch/FixtureTypes/9/6/2/1/7/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "ColorMacro 1"}, {"class": "ChannelFunction", "i": 2, "name": "ColorMacro 2"}, {"class": "ChannelFunction", "i": 3, "name": "ColorMacro 3"}, {"class": "ChannelFunction", "i": 4, "name": "COLORMIXCYCLE 4"}, {"class": "ChannelFunction", "i": 5, "name": "COLORMIXRANDOM 5"}], "id": "17392f50", "kind": "state", "node": {"childCount": 5, "class": "LogicalChannel", "enumeration": "ok", "name": "COLORMIXER"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/7/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/2/1/7/1/1
+    wire: Plugin "CopilotResponder" "state 9cc79203 Patch/FixtureTypes/9/6/2/1/7/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "Normal"}], "id": "9cc79203", "kind": "state", "node": {"childCount": 1, "class": "ChannelFunction", "enumeration": "ok", "name": "ColorMacro 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/7/1/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/7/1/1|NAME,DMXFROM,DMXTO,DEFAULT,ATTRIBUTE
+    wire: Plugin "CopilotResponder" "props 365630d5 NAME,DMXFROM,DMXTO,DEFAULT,ATTRIBUTE Patch/FixtureTypes/9/6/2/1/7/1/1"
+<<< {"id": "365630d5", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/7/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "ColorMacro 1"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "657930"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "0"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "ColorMacro"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/8|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props a92d9768 NAME,DEFAULT Patch/FixtureTypes/9/6/2/1/8"
+<<< {"id": "a92d9768", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/8", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module#2_Zoom"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<808080>"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/2/1/8/1
+    wire: Plugin "CopilotResponder" "state 9a5d63c7 Patch/FixtureTypes/9/6/2/1/8/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "Zoom 1"}], "id": "9a5d63c7", "kind": "state", "node": {"childCount": 1, "class": "LogicalChannel", "enumeration": "ok", "name": "Zoom"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/8/1", "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/8/1/1|NAME,DMXFROM,DMXTO,DEFAULT,ATTRIBUTE,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props 37380b6e NAME,DMXFROM,DMXTO,DEFAULT,ATTRIBUTE,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/9/6/2/1/8/1/1"
+<<< {"id": "37380b6e", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/8/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Zoom 1"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "16777216"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "8421504"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Zoom"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "60.0"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "10.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/3|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props f3a3713c NAME,DEFAULT Patch/FixtureTypes/9/6/2/1/3"
+<<< {"id": "f3a3713c", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module#2_ColorRGB_R"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<FFFFFF>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/6/2/1/6|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props e17f6edc NAME,DEFAULT Patch/FixtureTypes/9/6/2/1/6"
+<<< {"id": "e17f6edc", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/6/2/1/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module#2_ColorRGB_W"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/67|NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ,BEAMANGLE
+    wire: Plugin "CopilotResponder" "props af01727a NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ,BEAMANGLE Patch/Stages/1/Fixtures/67"
+<<< {"id": "af01727a", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/67", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "WASH-U 401"}, {"n": "POSX", "ok": true, "t": "number", "v": "-5.0"}, {"n": "POSY", "ok": true, "t": "number", "v": "5.1999998092651"}, {"n": "POSZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTX", "ok": true, "t": "number", "v": "179.99999860565"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "BEAMANGLE", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/43|NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ
+    wire: Plugin "CopilotResponder" "props 73185e90 NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ Patch/Stages/1/Fixtures/43"
+<<< {"id": "73185e90", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "BACK 201"}, {"n": "POSX", "ok": true, "t": "number", "v": "-6.0"}, {"n": "POSY", "ok": true, "t": "number", "v": "4.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.1999998092651"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/5|NAME
+    wire: Plugin "CopilotResponder" "props 006e32e5 NAME Patch/FixtureTypes/9/5"
+<<< {"id": "006e32e5", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Geometries"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/5
+    wire: Plugin "CopilotResponder" "state ef5d5218 Patch/FixtureTypes/9/5"
+<<< {"children": [{"class": "Geometry", "i": 1, "name": "Body"}, {"class": "Geometry", "i": 2, "name": "Body#2"}], "id": "ef5d5218", "kind": "state", "node": {"childCount": 2, "class": "Geometries", "enumeration": "ok", "name": "Geometries"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/5", "truncated": false, "v": 1}

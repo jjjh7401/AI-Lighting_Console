@@ -1,0 +1,14 @@
+approval file      : .moai/reports/t520/approval_m2a_play_b2r.txt
+  raw sha256       : 1e12d379a6693966a079306869f77cd1023d801442c1251f88dab02e8652417a
+  raw == canonical : True
+  canonical lines  : 5
+  canonical sha256 : 1e12d379a6693966a079306869f77cd1023d801442c1251f88dab02e8652417a
+sent source        : .moai/reports/t520/play_rehearse_b2r/audit (files: ['audit-20261007.jsonl'])
+  window           : since=None until=None
+  send rows        : 5 by kind {'command': 5}
+  rebuilt sha256   : 1e12d379a6693966a079306869f77cd1023d801442c1251f88dab02e8652417a
+WARN sends not ok  : 0
+(1) sha256 equal                         : True
+(2) 송신 안 됨 (sent, not in approval)    : 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: PASS

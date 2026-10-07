@@ -1,0 +1,16 @@
+ping
+state:ShowData/DataPools/Default/Sequences/257
+props:Patch/FixtureTypes/9/6/2/1/1|NAME,DEFAULT
+props:Patch/FixtureTypes/9/6/2/1/7|NAME,DEFAULT
+state:Patch/FixtureTypes/9/6/2/1/7/1
+state:Patch/FixtureTypes/9/6/2/1/7/1/1
+props:Patch/FixtureTypes/9/6/2/1/7/1/1|NAME,DMXFROM,DMXTO,DEFAULT,ATTRIBUTE
+props:Patch/FixtureTypes/9/6/2/1/8|NAME,DEFAULT
+state:Patch/FixtureTypes/9/6/2/1/8/1
+props:Patch/FixtureTypes/9/6/2/1/8/1/1|NAME,DMXFROM,DMXTO,DEFAULT,ATTRIBUTE,PHYSICALFROM,PHYSICALTO
+props:Patch/FixtureTypes/9/6/2/1/3|NAME,DEFAULT
+props:Patch/FixtureTypes/9/6/2/1/6|NAME,DEFAULT
+props:Patch/Stages/1/Fixtures/67|NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ,BEAMANGLE
+props:Patch/Stages/1/Fixtures/43|NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ
+props:Patch/FixtureTypes/9/5|NAME
+state:Patch/FixtureTypes/9/5
