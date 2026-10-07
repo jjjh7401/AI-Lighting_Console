@@ -590,3 +590,29 @@ uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval
 
 - 앞판(586줄 `e10d4979…`)은 이 판으로 대신한다(git 기록에만 남는다). 실행 명령은 §18 그대로다.
 - 시연 전에 감독 프로그래머에 손 값(Dim 80·Dim2 open)이 남아 있으면 결과가 섞인다 — 리드가 감독에게 Clear 를 안내한다.
+
+## 19. B2 실기 결과와 다시 보기 사고
+
+### 19-1. B2 1회(리드 「실행」, 감독 ClearAll 뒤)
+
+- 쓰기 587줄 모두 OK(not-ok 0) — `Group 13 ; At 60 …` OK, **`Group 12 ; Attribute 'Dimmer2' At 100` OK**(이 꼴의 첫 실기 송신). t512 대조 PASS. 되읽기: Seq 269·270 이름, 큐 7·15, TC24 트랙 NO1→269·NO2→270, 이벤트 7·15.
+- 재생 전부-거절: 이름 3/3, 송신 0, 문면 = `approval_m2a_play_b2.txt`(cmp 같음).
+- 재생(07:20:20.9~07:21:21.5 UTC): 4줄 OK, t512 PASS. 표본: 269.1→269.7, 270.1→270.15 순서대로(`play_live_b2_samples.txt`).
+- **음원/TC(잰 것)**: TC 0초 추정 3회(Go 송신 반환 기준 −0.037·−0.050·−0.033초), 음원 띄운 시각 추정 **TC 3.002초**(목표 3.000), Popen 0.006초, 띄운 직후 CURSOR 3.05(읽기 지연 포함). B 의 3.57초를 고쳤다. `afplay` 소리 지연은 안 잰 것.
+
+### 19-2. 🔴 다시 보기 1회차 — 처음부터 다시 돌지 않았다
+
+- 감독 「다시 보여줘」 → 리드 실행 신호(같은 4줄, 쓰기 0). `Go Timecode 24` 송신 07:22:38.3 UTC, OK.
+- **잰 것**: 바로 읽은 TC24 CURSOR 가 **`1m00.70`**(60.7초)였다. 1회 재생 끝의 `Off Timecode 24` 는 커서를 되감지 않았고, 두 번째 `Go` 는 60.7초부터 이어 갔다. 60.7초 뒤에는 이벤트가 없다.
+- 실행기 결함(내 것): CURSOR 를 `float()` 로만 읽어 `1m00.70` 꼴에서 `ValueError` 로 멈췄다 → **음원을 틀기 전**, **`Off` 묶음을 보내기 전**에 끝났다. `--off-only`(승인된 Off 3줄만)를 더해 07:23:18.7 UTC 에 Off 3줄을 보냈다(모두 OK). 이 회차 송신 4줄(Go 1 + Off 3)을 합쳐 t512 대조 PASS(`play_live_b2_r2_audit`). 커서 읽기는 `tc_seconds()`(`1m00.70` → 60.7)로 고쳤다.
+- 그래서 07:22:38~07:23:18 의 약 40초는 **음악 없이**, TC 60.7초 이후가 켜져 있던 시간이다. 그 사이 무대에 보인 것은 타임코드가 60.7초 시점 상태(장면 269 마지막 큐 7 · 리듬 270 마지막 큐 15)를 다시 잡은 모습일 가능성이 크다(추정 — 이 회차는 CURRENTCUE 표본을 못 남겼다).
+- 다음 다시 보기에는 `Go` 앞에 **`Top Timecode 24`** 를 둔다. [Top Keyword](https://help.malighting.com/grandMA3/2.2/HTML/keyword_top.html): 「The Top keyword is a playback keyword which is used to jump to the beginning of a cue list or to set a timecode marker at the beginning of a timecode show」, 예 `Top Timecode 1`. 우리 콘솔에서는 안 잰 꼴이다 — 실행기가 `Go` 전에 CURSOR 가 0 근처인지 읽고, 아니면 멈추게 한다.
+
+### 19-3. 감독·리드 관찰(원문, 리드 경유) — 다시 보기 1회차 동안
+
+- 감독: 「스파이더 켜졌어」 + 3D 스크린샷 — FOH 줄 빔 8개, 무빙 줄 빔 여러 개(앞쪽 무대 위 둥근 풀), 무대 앞 바닥에 원형 풀 8개.
+- 리드: 색이 거의 흰색으로 보인다.
+- **Spiider 점등**: `Dimmer2` open 줄이 든 B2 로 처음 켜졌다(감독 눈). 위 40초가 마지막 장면을 잡은 상태였다면 장면 큐1 의 `Group 13 ; At 60` + `Group 12 ; Attribute 'Dimmer2' At 100` 이 트래킹으로 이어진 결과다.
+- **색이 흰색인 까닭(설계 대조, 잰 것)**: 마지막 장면 상태에서 켜져 있어야 할 것 — FOH(G3) 60%(색 채널 없는 단색 기구 = 흰빛), MOVER-ALL(G13) 60% **차가운 화이트 85/92/100**(설계가 원래 흰색), WASH(G10) 70% **피치 100/75/55**, BACK 30↔100 라벤더(빔 Tilt 80, 공중). 그러니 FOH 빔 8개·무빙 빔이 흰색인 건 설계대로다. 스크린샷의 「무대 앞 바닥 원형 풀 8개」는 FOH 8대(객석 쪽 위, 바닥을 비춤)로 보인다(추정). 피치여야 할 WASH 는 천정을 향해 바닥 풀이 없다 — 렌즈 색으로만 보인다(추정).
+- **ColorRGB 가 먹히나(유형 판독, 잰 것)**: Rush Par — RGBW·COLORMIXER 속성 `ColorMacro` 기본 0 = 「Normal」, W 기본 0 → RGB 혼합이 정상 경로다. Spiider — 클러스터 `RGBW Cluster_ColorRGB_*`(VirtualDimmer 팔로워)와 `Main Module_ColorRGB_*`, 기본 R·G·B FF·W 00. 다시 보기 1회차는 표본이 없어 그 시각 색 값을 기계로 대조하지 못했다(Gap).
+- 남는 확인(감독 눈): 처음부터 제대로 도는 다시 보기에서 14.4초 WASH 라벤더 번짐, 37.9초 핑크, 46.5초 피치가 보이는지.
