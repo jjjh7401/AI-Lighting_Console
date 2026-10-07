@@ -1,0 +1,14 @@
+approval file      : .moai/reports/t519/approval_back_aim.txt
+  raw sha256       : ae9bff36243288462ab3c8e8ecfc8667670f8b0d02dca162887f13ecbb07a4bf
+  raw == canonical : True
+  canonical lines  : 27
+  canonical sha256 : ae9bff36243288462ab3c8e8ecfc8667670f8b0d02dca162887f13ecbb07a4bf
+sent source        : .moai/reports/t519/aim_live/audit (files: ['audit-20261007.jsonl'])
+  window           : since=None until=None
+  send rows        : 27 by kind {'command': 27}
+  rebuilt sha256   : ae9bff36243288462ab3c8e8ecfc8667670f8b0d02dca162887f13ecbb07a4bf
+WARN sends not ok  : 0
+(1) sha256 equal                         : True
+(2) 송신 안 됨 (sent, not in approval)    : 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: PASS

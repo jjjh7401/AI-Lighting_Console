@@ -175,3 +175,11 @@ POSZ   6.2 vs  1.2
 - 실행(리드 「실행」 뒤에만): `uv run python .moai/reports/t519/back_aim.py .moai/reports/t519/aim_live --approve .moai/reports/t519/aim_denyall`
 - 감독이 고른 각도는 lane-2 t520의 SCENE 시퀀스에 넣는다(리드 배차).
 - 남는 것: Sequence 260~262(`BACK AIM PROBE - …`). 지울지는 리드·감독이 정한다.
+
+### 7-3. 실기 실행 (리드 「실행」, 2026-10-07)
+
+- 실행 전 확인: sha256 `ae9bff36…`가 일치했고, 응답기 포트를 쥔 프로세스는 `app_gma3`뿐이었다.
+- `aim_live`: exit 0. 9묶음이 모두 진행됐다(store 3, Goto/Off 6).
+- 승인 = 송신 대조: `uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t519/approval_back_aim.txt .moai/reports/t519/aim_live/audit` 결과는 송신 27줄, sha256 같음, 송신 안 됨 0, 승인 안 됨 0, not-ok 0으로 **PASS**다(`aim_live_approval_vs_sent.txt`). SaveShow 0.
+- 콘솔에 남은 것: Sequence 260·261·262(`BACK AIM PROBE - PAN 180 TILT 30/45/60`).
+- 감독 관찰: 대기 중이다(리드 경유).
