@@ -1,0 +1,27 @@
+ChangeDestination Root
+ClearAll
+Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 100
+Store Sequence 260 Cue 1 'Pan 180 Tilt 30'
+ClearAll
+Set Sequence 260 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 30'
+ChangeDestination Root
+ClearAll
+Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45
+Fixture 201.1 ; Attribute 'Dimmer' At 100
+Store Sequence 261 Cue 1 'Pan 180 Tilt 45'
+ClearAll
+Set Sequence 261 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 45'
+ChangeDestination Root
+ClearAll
+Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 60
+Fixture 201.1 ; Attribute 'Dimmer' At 100
+Store Sequence 262 Cue 1 'Pan 180 Tilt 60'
+ClearAll
+Set Sequence 262 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 60'
+Goto Cue 1 Sequence 260
+Off Sequence 260
+Goto Cue 1 Sequence 261
+Off Sequence 261
+Goto Cue 1 Sequence 262
+Off Sequence 262

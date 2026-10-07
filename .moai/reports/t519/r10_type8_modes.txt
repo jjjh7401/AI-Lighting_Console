@@ -1,0 +1,12 @@
+
+>>> state:Patch/FixtureTypes/8
+    wire: Plugin "CopilotResponder" "state e3c79a22 Patch/FixtureTypes/8"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "e3c79a22", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Mac Aura XB"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/6
+    wire: Plugin "CopilotResponder" "state 51edaf5b Patch/FixtureTypes/8/6"
+<<< {"children": [{"class": "DMXMode", "i": 1, "name": "Extended - Extended"}, {"class": "DMXMode", "i": 2, "name": "Extended - RAW"}, {"class": "DMXMode", "i": 3, "name": "Extended - RGB"}, {"class": "DMXMode", "i": 4, "name": "Standard - Extended"}, {"class": "DMXMode", "i": 5, "name": "Standard - RAW"}, {"class": "DMXMode", "i": 6, "name": "Standard - RGB"}], "id": "51edaf5b", "kind": "state", "node": {"childCount": 6, "class": "DMXModes", "enumeration": "ok", "name": "DMXModes"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/6", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/6/1
+    wire: Plugin "CopilotResponder" "state 22793f1b Patch/FixtureTypes/8/6/1"
+<<< {"children": [{"class": "DMXChannels", "i": 1, "name": "DMXChannels"}, {"class": "Relations", "i": 2, "name": "Relations"}, {"class": "FTMacros", "i": 3, "name": "FTMacros"}, {"class": "SoftwareVersions", "i": 4, "name": "SoftwareVersions"}, {"class": "FTPresets", "i": 5, "name": "FTPresets"}, {"class": "SubfixtureOverview", "i": 6, "name": "SubfixtureOverview"}], "id": "22793f1b", "kind": "state", "node": {"childCount": 6, "class": "DMXMode", "enumeration": "ok", "name": "Extended - Extended"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/6/1", "truncated": false, "v": 1}

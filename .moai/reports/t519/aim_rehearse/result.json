@@ -1,0 +1,154 @@
+{
+  "bundles": {
+    "store_260": true,
+    "store_261": true,
+    "store_262": true,
+    "on_260": true,
+    "off_260": true,
+    "on_261": true,
+    "off_261": true,
+    "on_262": true,
+    "off_262": true
+  },
+  "marks": [
+    {
+      "label": "on_260",
+      "t": 0.0
+    },
+    {
+      "label": "off_260",
+      "t": 0.0
+    },
+    {
+      "label": "on_261",
+      "t": 0.0
+    },
+    {
+      "label": "off_261",
+      "t": 0.0
+    },
+    {
+      "label": "on_262",
+      "t": 0.0
+    },
+    {
+      "label": "off_262",
+      "t": 0.0
+    }
+  ],
+  "verdict": "ran — judge by director watch",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 30",
+    "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+    "Store Sequence 260 Cue 1 'Pan 180 Tilt 30'",
+    "ClearAll",
+    "Set Sequence 260 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 30'",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+    "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+    "Store Sequence 261 Cue 1 'Pan 180 Tilt 45'",
+    "ClearAll",
+    "Set Sequence 261 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 45'",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 60",
+    "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+    "Store Sequence 262 Cue 1 'Pan 180 Tilt 60'",
+    "ClearAll",
+    "Set Sequence 262 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 60'",
+    "Goto Cue 1 Sequence 260",
+    "Off Sequence 260",
+    "Goto Cue 1 Sequence 261",
+    "Off Sequence 261",
+    "Goto Cue 1 Sequence 262",
+    "Off Sequence 262"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 30",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+        "Store Sequence 260 Cue 1 'Pan 180 Tilt 30'",
+        "ClearAll",
+        "Set Sequence 260 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 30'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+        "Store Sequence 261 Cue 1 'Pan 180 Tilt 45'",
+        "ClearAll",
+        "Set Sequence 261 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 45'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 60",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+        "Store Sequence 262 Cue 1 'Pan 180 Tilt 60'",
+        "ClearAll",
+        "Set Sequence 262 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 60'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 260"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 260"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 261"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 261"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 262"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 262"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

@@ -1,0 +1,12 @@
+
+>>> props:Patch/FixtureTypes/8/6/1/1/10/1/1|NAME,ATTRIBUTE,DMXFROM,DMXTO,DEFAULT,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props 07c34f78 NAME,ATTRIBUTE,DMXFROM,DMXTO,DEFAULT,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/8/6/1/1/10/1/1"
+<<< {"id": "07c34f78", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/10/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Pan 1"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Pan"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "16777216"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "8388736"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "270.0"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "-270.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/11/1/1|NAME,ATTRIBUTE,DMXFROM,DMXTO,DEFAULT,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props d2dea0cf NAME,ATTRIBUTE,DMXFROM,DMXTO,DEFAULT,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/8/6/1/1/11/1/1"
+<<< {"id": "d2dea0cf", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/11/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Tilt 1"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Tilt"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "16777216"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "8388736"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "-116.0"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "116.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/8/6/1/1/9/1/1|NAME,ATTRIBUTE,DEFAULT,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props bb5b8568 NAME,ATTRIBUTE,DEFAULT,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/8/6/1/1/9/1/1"
+<<< {"id": "bb5b8568", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/9/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Zoom 1"}, {"n": "ATTRIBUTE", "ok": true, "t": "string", "v": "Zoom"}, {"n": "DEFAULT", "ok": true, "t": "number", "v": "8421504"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "53.0"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "11.0"}], "truncated": false, "v": 1}
