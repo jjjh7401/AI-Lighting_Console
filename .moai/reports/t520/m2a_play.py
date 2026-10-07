@@ -62,6 +62,10 @@ def retarget() -> None:
         ("go", [f"Go Timecode {TC_NO}"]),
         ("off", [f"Off Timecode {TC_NO}", f"Off Sequence {S_SCENE}", f"Off Sequence {S_RHY}"]),
     ]
+    if gen.TAG == "M2a B2":
+        # 다시 보기 1회차 사고: 1회 재생 끝의 Off 가 커서를 되감지 않아 두 번째 Go 가 TC 60.7초에서 이어 갔다(잰 것).
+        # Top Keyword 문서: 「jump to the beginning … of a timecode show」, 예 `Top Timecode 1` — 우리 콘솔에서는 안 잰 꼴.
+        BUNDLES.insert(0, ("top", [f"Top Timecode {TC_NO}"]))
     tc_probe.RISK = BatchRisk(
         reason=f"t520 M2 묶음 1 재생 — 타임코드 {TC_NO} Go/Off(쓰기 없음)", kind="t520_m2a_play"
     )
@@ -85,7 +89,12 @@ class FakeConsole:
 
     def query_properties(self, path: str, names) -> dict:
         reads = [
-            dict(n=n, ok=True, v=NAMES.get(path, "fake") if n == "NAME" else "fake") for n in names
+            dict(
+                n=n,
+                ok=True,
+                v=NAMES.get(path, "fake") if n == "NAME" else ("0.00" if n == "CURSOR" else "fake"),
+            )
+            for n in names
         ]
         return dict(ok=True, path=path, reads=reads, fake=True)
 
@@ -139,14 +148,24 @@ def run(
         return stop("deny-all: approval texts recorded, nothing sent")
 
     by = dict(BUNDLES)
-    probe.note("watch", say="LOVE ATTACK 0~25마디 — 타임코드 22 시작. 음악은 타임코드 3초에 시작")
+    cursor = lambda label: _value(probe.read_props(label, TC, ["CURSOR"]), "CURSOR")  # noqa: E731
+    if "top" in by:
+        result["bundles"]["top"] = probe.fire("top", by["top"])
+        before = cursor("cursor_after_top")
+        result["cursor_after_top"] = before
+        # 되감기 확인: 0.5초 넘게 남아 있으면 Go 를 보내지 않고 끈다
+        if not result["bundles"]["top"] or before is None or tc_seconds(before) > 0.5:
+            result["bundles"]["off"] = probe.fire("off", by["off"])
+            return stop(f"stopped: cursor not rewound ({before})")
+    probe.note(
+        "watch", say=f"LOVE ATTACK 0~25마디 — 타임코드 {TC_NO} 시작. 음악은 타임코드 3초에 시작"
+    )
     result["bundles"]["go"] = probe.fire("go", by["go"])
     if not result["bundles"]["go"]:
         return stop("go not executed")
     t_go = time.monotonic()
     player = None
     samples = []
-    cursor = lambda label: _value(probe.read_props(label, TC, ["CURSOR"]), "CURSOR")  # noqa: E731
     if audio:
         # 음원 맞추기(B 판 결함 수정): 표본 루프 전에, 타임코드 0초의 이 Mac 시각을 CURSOR 로 추정해 LEAD 에 바로 띄운다.
         # 읽기 한 번의 왕복 중간 시각을 그 CURSOR 값의 시각으로 보고, 세 번 읽어 가운데 값을 쓴다.
@@ -158,6 +177,13 @@ def run(
             if c is not None:
                 zeros.append((t0 + t1) / 2 - tc_seconds(c))
         tc_zero = sorted(zeros)[len(zeros) // 2] if zeros else t_go
+        if not zeros or time.monotonic() - tc_zero > LEAD - 0.5:
+            # 처음부터 돌고 있지 않다(또는 이미 LEAD 근처를 지났다) — 음원을 틀지 않고 끈다
+            result["audio"] = dict(
+                tc_zero_estimates=[round(z - t_go, 4) for z in zeros], skipped=True
+            )
+            result["bundles"]["off"] = probe.fire("off", by["off"])
+            return stop("stopped: timecode not near 0 after Go — audio not started")
         while time.monotonic() < tc_zero + LEAD:
             time.sleep(0.002)
         t_play = time.monotonic()
