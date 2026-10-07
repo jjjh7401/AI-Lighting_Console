@@ -489,3 +489,37 @@ uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval
 - 선택 꼴(`Group 10 ;`)과 속성 꼴은 같다. 다른 것은 값(40·25·10·70 대 100)과 색 줄뿐이다. 재생 표본상 253 큐2~7 은 계획대로 넘어갔다(`play_live_b_samples.txt`).
 - 후보(추정): 천정을 향한 빔이 닿을 면이 없어 3D 에서 렌즈 밝기로만 보이고, 40% 이하에서는 눈에 안 띈다. 70% 핑크는 37.9~55초에 있었으나 감독 관찰 시점과 맞물렸는지는 모른다.
 - 가르는 다음 수(제안): G10 에 Dimmer 40 과 70 핑크 정적 큐를 하나씩(새 시퀀스) — 감독 눈.
+
+## 17. Spiider — 이미 있던 해결 기록(t459·t442)과 프로브 S
+
+### 17-1. 🔴 저장소에 있던 실측을 안 찾고 다시 쟀다
+
+- 감독(원문, 리드 경유): 「이 장비 이전에도 안 들어와서 테스트하고 해결했는데」.
+- `.moai/reports/t459/verdict.md:62-63`(PR #507, 2026-09-27, 감독 확인): 「1차 재생(Q1~Q8, `Attribute 'Dimmer' At 100` 으로 만든 큐): 3D 에서 **아무것도 안 보임**」 · 「대조: 프로그래머 `Fixture 521 Thru 522 ; At 100` → **둘 다 켜짐**. → Spiider 에서 `Attribute 'Dimmer' At 100` 은 불을 켜지 못하고 `At 100` 은 켠다(t442 와 같은 형태)」.
+- `.moai/reports/t442/verdict.md:95`: Spiider 색 시험 공통 앞부분 `Fixture 521 Thru 522 ; At 100 ; ` + 색 줄.
+- 이 카드의 프로브 F·대화형 다시 보기·Spiider 판독(§16)은 이 기록을 먼저 grep 했으면 필요 없던 일이다. 리드는 리드 잘못이라 했고, 나도 프로브를 짜기 전에 `grep -rn Spiider .moai/reports` 를 하지 않았다 — 같은 잘못이다.
+
+### 17-2. 왜 `Attribute 'Dimmer'` 는 안 되고 맨 `At` 은 되나
+
+- 문서(잰 것 아님, 인용): [At Keyword](https://help.malighting.com/grandMA3/2.2/HTML/keyword_at.html) 「If you use the At command without specifying additional attributes, the natural readout of the dimmer of the user profile will be used」 — 맨 `At` 은 디머에 간다는 것만 적고, 디머 채널이 여럿일 때 어떻게 되는지는 적지 않는다.
+- 유형 판독(잰 것, §16·`spiider5/6_readonly.txt`): Spiider 본체(Main Module)에 디머 채널이 둘 — `Main Module_Dimmer`(기본 FF)·`Main Module_Dimmer2`(기본 00) — 이고 논리 속성 이름이 둘 다 `Dimmer` 다. 서브 셋(RGBW Cluster)은 각자 `RGBW Cluster_Dimmer`(기본 FF)가 VirtualDimmer(Multiply) 마스터로 R·G·B·W 를 곱한다.
+- 추정(안 잰 것): `Attribute 'Dimmer' At 100` 은 같은 이름의 두 채널 중 하나(기본 FF 쪽)에만 값을 주고, 기본 00 인 `Dimmer2` 가 0 에 남아 빔이 꺼진 채다. 맨 `At 100` 은 디머 기능 전체(두 채널 + 클러스터)에 값을 준다. 감독이 지금 521 을 손으로 시험하는 중이라, Fixture Sheet 의 `Dimmer2` 값으로 이 추정을 가를 수 있다.
+
+### 17-3. 프로브 S(t459 꼴, 인스턴스별 큐는 뺐다)
+
+| 시퀀스 | 줄 |
+|---|---|
+| 266 'Group 12 At' | `Group 12 ; At 100` |
+| 267 'Spiider Thru At' | `Fixture 521 Thru 528 ; At 100`(뒤 점 없이 — t459 꼴) |
+| 268 'Spiider At RGB' | `Fixture 521 Thru 528 ; At 100 ; Attribute 'ColorRGB_R' At 100 ; …G ; …B` |
+
+- 저장: `spiider_probe.py`(group_probe2 재사용, store 단계). 재생: `step_replay.py --target s`(대화형, 켜진 채 대기 → 리드 「다음」).
+- 승인 파일 `approval_spiider_probe.txt` 24줄(저장 18 + 재생 6), sha256 `5fcc774d65b1a1287c3e32758ba5232084c6770275e4a0d7ef3b7afe8eaa2800`.
+- 가짜 콘솔: 저장 3묶음·재생 6묶음 끝까지. 실기 전부-거절(저장): 요청 3·승인 0, rejected 3, 명령 송신 0, 문면 = 리허설 True(266~268 빔). 재생 6줄은 이름 사전 판독 때문에 저장 뒤에만 전부-거절 가능 — 문면은 리허설에서 땄다. AC-012 리허설(저장·재생 감사 로그 합침) 24줄 PASS.
+- 프로브 S 앞판(인스턴스별 큐 다섯, 266~270)은 만들다가 버렸다(보내지 않음).
+
+### 17-4. B 판에서 바꿀 범위(잰 것, `approval_m2a_batch1_g.txt` grep)
+
+- Spiider 디머에 닿는 줄은 **1줄**: 장면 253 큐1 `Group 13 ; Attribute 'Dimmer' At 60 ; ColorRGB_R 85 ; G 92 ; B 100`(MOVER-ALL — MegaPointe 8 + Spiider 8). → `Group 13 ; At 60 ; ColorRGB…` 로 바꾸면 된다(t442 꼴: 맨 `At` 뒤에 색 줄).
+- 그룹 12 줄 30개는 모두 Pan/Tilt(리듬 254)라 디머와 무관하다. 그룹 11 은 MegaPointe(시연에서 켜짐).
+- Aura XB(BACK G4·SIDE G5/G6)의 `Attribute 'Dimmer'` 줄은 G2 에서 `Group 5 ; Attribute 'Dimmer' At 100` 이 켜졌으므로 그대로 둔다(정적만 확인 — 페이저는 안 잰 것).

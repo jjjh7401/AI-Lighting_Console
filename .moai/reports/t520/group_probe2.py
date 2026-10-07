@@ -58,7 +58,7 @@ def bundles(phase: str) -> list[tuple[str, list[str], float]]:
             [
                 "ChangeDestination Root",
                 "ClearAll",
-                line,
+                *line.split("\n"),  # 값 줄 여러 개는 줄바꿈으로 잇는다(t520 프로브 S ⑤)
                 f"Store Sequence {seq} Cue 1 '{cue}'",
                 "ClearAll",
                 f"Set Sequence {seq} Property 'Name' '{nm}'",

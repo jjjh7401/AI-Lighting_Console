@@ -1,0 +1,6 @@
+Goto Cue 1 Sequence 266
+Off Sequence 266
+Goto Cue 1 Sequence 267
+Off Sequence 267
+Goto Cue 1 Sequence 268
+Off Sequence 268

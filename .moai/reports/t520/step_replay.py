@@ -16,7 +16,15 @@ sys.path.insert(0, ".moai/reports/t506")
 sys.path.insert(0, ".moai/reports/t520")
 import argparse  # noqa: E402
 
-import fixture_probe  # noqa: E402,F401 — PROBES(이름) 를 group_probe2 에 넣는다
+#: --target f(기본) = 프로브 F 257·258·259·263·265 · --target s = 프로브 S 266·267·268
+TARGET = "s" if "--target" in sys.argv and sys.argv[sys.argv.index("--target") + 1] == "s" else "f"
+if "--target" in sys.argv:
+    i = sys.argv.index("--target")
+    del sys.argv[i : i + 2]
+if TARGET == "s":
+    import spiider_probe  # noqa: E402,F401 — PROBES(이름) 를 group_probe2 에 넣는다
+else:
+    import fixture_probe  # noqa: E402,F401
 import group_probe2 as g  # noqa: E402
 import tc_probe  # noqa: E402
 
@@ -25,7 +33,7 @@ from server.safety.gate import BatchRisk  # noqa: E402
 tc_probe.RISK = BatchRisk(
     reason="t520 대화형 다시 보기 — 재생만(쓰기 없음)", kind="t520_step_replay"
 )
-ORDER = [257, 258, 259, 263, 265]
+ORDER = [266, 267, 268] if TARGET == "s" else [257, 258, 259, 263, 265]
 g.PROBES = [p for p in g.PROBES if p[0] in ORDER]
 
 
