@@ -19,12 +19,35 @@
 | AC-LDBEAT-011 | M1~M6(§E) 전체가 완료된 상태 | 전체 REQ 체크리스트(REQ-LDBEAT-001~014)를 검토한다 | 모든 REQ가 추적 가능한 PASS/FAIL 상태를 가지며, FAIL 항목은 0건이거나 명시적으로 PASS-WITH-DEBT로 기록된다. REQ-LDBEAT-013의 새 에미터 하위 작업이 "감독 미확인"으로 생략된 경우, 그 생략과 대안 결정이 `progress.md`에 기록돼 있어야 FAIL이 아닌 것으로 집계된다 | 기계 — `progress.md` §E 평가 매트릭스 완전성 검사 (전체 REQ) |
 | AC-LDBEAT-012 | 기존 `emit.py`의 `PLAYBACK_MODES`와 `CueSheetTimeline` 재생 경로(변경 없음 확인) | 그 두 파일/경로의 diff를 run-phase 종료 시점에 대조한다 | `PLAYBACK_MODES = ("manual_go", "trig_time")`와 `CueSheetTimeline`의 재생 호출 로직에 diff 0줄이다 — (조건부로 신설되는) 박자 격자 전용 새 에미터는 **별도 모듈**에만 존재하고 이 두 파일을 수정하지 않는다 | 기계 — `git diff <base>..<head> -- server/director/emit.py ui/src/components/CueSheetTimeline.tsx` 0줄 확인 (REQ-LDBEAT-013) |
 | AC-LDBEAT-013 | 스피드 마스터 BPM 설정 UI | 그 UI가 렌더된다 | "자동 설정" 문구나 자동 적용 버튼이 없고, "사람이 콘솔에서 직접 설정" 안내가 표시된다 | 기계 — 해당 UI 컴포넌트 텍스트/속성 그렙 (REQ-LDBEAT-014) |
+| AC-LDBEAT-014 | 역할 스코프 편집 요청(예: "MOVER-U만 틸트 웨이브로")이 새 편집 연산에 제출된 상태 | 그 요청이 처리된다 | (a) 화이트리스트 밖 역할명을 지정하면 `_resolve_group_scope`의 알려지지 않은 그룹 거절과 같은 모양(단일-원인 거절 사유 1건, 부분 적용 0건, 콘솔 변경 0건)으로 거절된다. (b) 유효한 역할을 지정하면 그 역할에 매핑된 그룹에만 diff가 생기고, 매핑되지 않은 다른 역할의 그룹에는 diff 0건이다 | 기계 — (a) 존재하지 않는 역할명 입력 → 거절 사유 문자열 1건 + 콘솔 변경 0 확인, (b) 유효 역할 입력 → 매핑된 그룹 diff >0 AND 비매핑 그룹 diff ==0 확인 (REQ-LDBEAT-009) |
+| AC-LDBEAT-015 | 감독이 N≥2개의 격자 칸에 걸친 배치 편집을 구성한 상태 | 그 배치가 콘솔 송신을 위해 승인 요청된다 | 승인 아티팩트(또는 승인 프롬프트)가 정확히 1개 생성된다 — 칸마다 별도 승인 N개가 생성되지 않는다. 그 1개 파일이 배치 전체의 커맨드를 담는다 | 기계 — N≥2 칸 배치 편집 → 승인 아티팩트 생성 count == 1 assert + 그 파일의 커맨드 줄 수가 N칸 전체 커맨드 수의 합과 일치하는지 확인 (REQ-LDBEAT-012) |
+
+## §A.1 REQ → AC 추적 표
+
+plan-audit iter1 D2/D3(Traceability 0.50)의 교정 — REQ-LDBEAT-009·012가 블랭킷 메타 기준(AC-LDBEAT-011, bookkeeping 완전성 검사일 뿐)에만 걸려 있던 것을 각각 전용 AC(AC-LDBEAT-014/015)로 승격했다. 아래 표는 REQ-LDBEAT-001~014 전부가 적어도 하나의 **행위 검증** AC를 갖는다는 것을 한눈에 보인다 — AC-LDBEAT-011은 의도적으로 제외한다(그것은 전체 체크리스트의 bookkeeping 완전성만 검사하고, 개별 REQ의 행위 주장은 검증하지 않는다).
+
+| REQ | 검증 AC |
+|---|---|
+| REQ-LDBEAT-001 | AC-001, AC-009 |
+| REQ-LDBEAT-002 | AC-009 |
+| REQ-LDBEAT-003 | AC-002, AC-009 |
+| REQ-LDBEAT-004 | AC-003 |
+| REQ-LDBEAT-005 | AC-003 |
+| REQ-LDBEAT-006 | AC-007, AC-008 |
+| REQ-LDBEAT-007 | AC-005, AC-010 |
+| REQ-LDBEAT-008 | AC-005, AC-010 |
+| REQ-LDBEAT-009 | **AC-014**(신설) |
+| REQ-LDBEAT-010 | AC-004 |
+| REQ-LDBEAT-011 | AC-006 |
+| REQ-LDBEAT-012 | **AC-015**(신설) |
+| REQ-LDBEAT-013 | AC-012 |
+| REQ-LDBEAT-014 | AC-013 |
 
 ## §B 엣지 케이스
 
 - **M1 프로브 부분 PASS**: 4항목 중 2개만 PASS일 때, M4(송신 와이어링)는 그 2개에만 의존하는 기능만 활성화하고 나머지 2개에 의존하는 기능은 비활성 상태를 유지해야 한다(AC-LDBEAT-009와 같은 패턴을 네 항목 전부에 적용).
 - **곡 전환 중 미저장 편집**: 감독이 LOVE ATTACK에서 격자를 편집하다가 다른 곡으로 전환하면, 미저장 편집은 LOVE ATTACK 쪽에 남아 다른 곡으로 새지 않아야 한다(AC-LDBEAT-008의 변형).
-- **그룹 스코프 편집 + 미확인 모양 조합**: "MOVER-U만 circle로"처럼 그룹 스코프(REQ-LDBEAT-009)와 미확인 모양(REQ-LDBEAT-010)이 같은 요청에 섞이면, 미확인 배지가 먼저 뜨고 M1 프로브 ④가 PASS이기 전에는 전송이 차단된다(AC-LDBEAT-001과 AC-LDBEAT-004의 교차).
+- **그룹 스코프 편집 + 미확인 모양 조합**: "MOVER-U만 circle로"처럼 그룹 스코프(REQ-LDBEAT-009, AC-LDBEAT-014가 그 재사용 자체를 검증)와 미확인 모양(REQ-LDBEAT-010, AC-LDBEAT-004)이 같은 요청에 섞이면, 미확인 배지가 먼저 뜨고 M1 프로브 ④가 PASS이기 전에는 전송이 차단된다(AC-LDBEAT-001과 AC-LDBEAT-004의 교차 — 그룹 스코프 로직 자체의 PASS/FAIL은 AC-LDBEAT-014가 별도로 가른다).
 
 ## §C 인간 판단 항목 (기계로 검사하지 않음)
 
@@ -34,7 +57,7 @@
 
 ## §D Definition of Done
 
-- [ ] REQ-LDBEAT-001~014 전부 `progress.md`에 PASS/FAIL로 기록됨(AC-LDBEAT-011).
+- [ ] REQ-LDBEAT-001~014 전부 `progress.md`에 PASS/FAIL로 기록됨(AC-LDBEAT-011의 bookkeeping 체크) — 그리고 §A.1 추적 표대로 REQ-009/012 각각이 전용 AC(AC-LDBEAT-014/015)의 PASS/FAIL도 가짐(bookkeeping과 행위 검증은 별개).
 - [ ] M1 프로브 4항목(타임코드≥3트랙/단일 그룹 선택 페이저 저장/속성 겹침/circle·발리후) 각각의 결과가 기록됨 — 전부 PASS가 아니어도 되지만, FAIL/미실행 항목에 의존하는 기능은 비활성 상태로 커밋됨.
 - [ ] 격자 편집이 새 서버측 편집 연산을 거치고, 로컬 서버-페이로드 구성 0건으로 확인됨(AC-LDBEAT-005) — 큐 레벨 파서(`parse_cue_sheet_edit_request`)가 격자 경로에 쓰이지 않음.
 - [ ] 승인=송신 비교 로직이 앱 참조 가능 경로로 승격돼 PASS(AC-LDBEAT-006), 신규 비교 **로직** 0개(승격은 로직 재작성이 아니다).

@@ -41,8 +41,8 @@ $ ls .moai/specs/ | grep -iE 'BEAT|RUNBOOK|GRID'
 ## 3. REQ/AC 집계
 
 - `spec.md`: REQ-LDBEAT-001~014, **14개**(오케스트레이터 검토 D1~D3 교정 후에도 불변). 6개 그룹(R1 프로브 게이트 3개·R2 UX/데이터 모델/저장소 3개·R3 새 서버측 편집 연산 3개·R4 미확인 표시 1개·R5 승인=송신 2개·R6 장벽 경계 2개).
-- `acceptance.md`: AC-LDBEAT-001~013, **13개**(불변). Given-When-Then 13건 + 엣지 케이스 3건 + 인간 판단 3건 + DoD 체크 7항목 + 품질 게이트 기준 3항목.
-- Tier M 상한(각 16개) 이내 — REQ 14/16, AC 13/16.
+- `acceptance.md`: AC-LDBEAT-001~015, **15개**(plan-audit iter1 교정으로 AC-014·015 신설 — REQ-009·012 전용). Given-When-Then 15건 + 엣지 케이스 3건 + 인간 판단 3건 + DoD 체크 7항목 + 품질 게이트 기준 3항목.
+- Tier M 상한(각 16개) 이내 — REQ 14/16, AC 15/16.
 - Out of Scope H3 하위헤딩 6개(`### Out of Scope — ...`) 전부 `-` 불릿 포함 — `OutOfScopeRule` 린트 충족(D1 교정으로 첫 섹션명이 "SPEC-LDRHYTHM-001 M4+ 자동 타임코드 재생"에서 "오디오 분석 기반 실시간 타임코드 자동 생성"으로 바뀌었다 — 개수는 그대로 6개).
 
 ## 4. 오케스트레이터 검토 D1~D3 재측정 (2026-10-07, 같은 날 후속, 커밋 전 수정)
@@ -92,7 +92,7 @@ $ sed -n '220,232p' server/design/cue_sheet_edit.py
 ```
 $ sed -n '35,58p' server/design/cue_sheet_edit.py
 ```
-→ 36-53행 `EDITABLE_FIELD_LABELS`: 무드·컬러(주/보조)·조도·무브먼트·이펙트·전환·페이드·노트·트래킹·MIB·페이저·포지션 — 12칸, 전부 **큐 레벨**. 역할(SCENE/BACK PULSE/…)·움직임 모양 어휘·속도·축·위상 필드 없음.
+→ 38-55행(여는 줄 38, 닫는 중괄호 55) `EDITABLE_FIELD_LABELS`: 무드·컬러(주/보조)·조도·무브먼트·이펙트·전환·페이드·노트·트래킹·MIB·페이저·포지션·포지션 번호 — 14칸, 전부 **큐 레벨**. 역할(SCENE/BACK PULSE/…)·움직임 모양 어휘·속도·축·위상 필드 없음. [plan-audit iter1 D4 정정 2026-10-07 — 이전 버전은 "36-53행 12칸"으로 적어 `position_preset_no`(54행)와 닫는 중괄호(55행)를 빠뜨렸다. `grep -n "EDITABLE_FIELD_LABELS\|position_preset_no\|^}"` 재실행으로 범위·개수를 재확정했다.]
 
 **결론**: "그 경로가 격자를 이미 커버한다"는 이전 서술은 틀렸다. 그 파서는 큐 레벨 편집 전용이며 마디 구간·역할 어휘가 전혀 없다.
 
@@ -134,7 +134,7 @@ $ sed -n '1,48p' server/web/timeline_library.py
 
 1. **[결정 필요] 박자 격자의 콘솔 송신에 새 앱측 에미터를 신설할 것인가** (spec.md §5 항목 0, REQ-LDBEAT-013). 이 plan-phase의 권고는 "예, t520이 증명한 커맨드 모양을 포팅"이지만 권고일 뿐이다 — Implementation Kickoff Approval 라운드에서 감독에게 명시적으로 제시하고 확인받아야 한다.
 2. **[M2에서 확정] 박자 격자 데이터를 어디에 저장할 것인가** (spec.md §5 항목 0', REQ-LDBEAT-006). 권고는 "기존 `timeline` 사전에 새 키로 임베드"이지만, 격자가 커지면(26~82마디 전체 + 여러 곡·버전) 독립 저장소가 필요할 수 있다.
-3. 배치 규칙서(`reports/effect-arrangement-rules-20261007.md`)는 카드 t523이 별도 PR로 저장소에 싣는다고 적혀 있다 — 이 SPEC의 run-phase 착수 시점에 t523이 아직 머지되지 않았다면, 절대경로로 직접 읽거나 머지를 기다릴지는 리드/manager-develop의 판단이다(plan.md §B 위험 7에 양쪽 경로를 적어 두었다).
+3. **해소 — t523 PR #566 머지됨**(origin/main `606e516e`, 2026-10-07). 배치 규칙서 `reports/effect-arrangement-rules-20261007.md`(·`.html`)와 원자료 `-research-pro-`·`-research-kpop-`가 main 에 있다(`git ls-tree -r origin/main` 확인). run-phase 는 저장소 경로로 읽는다. (원래 문면: t523 미머지면 절대경로 vs 대기 판단 — plan.md §B 위험 7.)
 4. 격자 블록을 `RunbookMode.tsx`의 다섯 블록 중 정확히 어디에 끼울지(`CueSheetTimeline`과 `SongTimeline` 사이 vs 별도 하위 패널)는 M2 설계 단계에서 감독과 구체 와이어프레임으로 확인하는 것이 낫다 — 이 plan-phase는 "다섯 블록 순서는 보존"만 REQ로 못박았다(REQ-LDBEAT-004).
 
 ## 6. 안 잰 것(이 plan-phase가 측정하지 않은 것)
