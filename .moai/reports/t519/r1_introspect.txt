@@ -1,0 +1,24 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 890d1e12"
+<<< {"id": "890d1e12", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> introspect:Patch/Stages/1/Fixtures/43
+    wire: Plugin "CopilotResponder" "introspect 10543ca2 Patch/Stages/1/Fixtures/43"
+<<< {"class": "Fixture", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "OLDSUBFIXTUREINDEX", "t": "UInt32"}, {"n": "SUBFIXTUREINDEX", "t": "UInt32"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "FIXTURE", "t": "Handle"}, {"n": "STAGE", "t": "Handle"}, {"n": "OFFSETPAN", "t": "Double"}, {"n": "OFFSETTILT", "t": "Double"}, {"n": "PARAMETERCOUNTVIOLATION", "t": "UInt32"}], "id": "10543ca2", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/43", "source": "property_accessors", "total": 108, "truncated": true, "v": 1}
+
+>>> introspect:Patch/Stages/1
+    wire: Plugin "CopilotResponder" "introspect 7b9c2c02 Patch/Stages/1"
+<<< {"class": "Stage", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "POSX", "t": "DoubleLength"}, {"n": "POSY", "t": "DoubleLength"}, {"n": "POSZ", "t": "DoubleLength"}, {"n": "ROTX", "t": "DoubleAngleDegree"}, {"n": "ROTY", "t": "DoubleAngleDegree"}, {"n": "ROTZ", "t": "DoubleAngleDegree"}, {"n": "MINX", "t": "FloatLength"}], "id": "7b9c2c02", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1", "source": "property_accessors", "total": 38, "truncated": true, "v": 1}
+
+>>> state:Patch/Stages/1
+    wire: Plugin "CopilotResponder" "state df0751e5 Patch/Stages/1"
+<<< {"children": [{"class": "Spaces", "i": 1, "name": "Spaces"}, {"class": "Fixtures", "i": 2, "name": "Fixtures"}], "id": "df0751e5", "kind": "state", "node": {"childCount": 2, "class": "Stage", "enumeration": "ok", "name": "Stage 1"}, "offset": 0, "ok": true, "path": "Patch/Stages/1", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/43
+    wire: Plugin "CopilotResponder" "state 10e2555c Patch/Stages/1/Fixtures/43"
+<<< {"children": [{"class": "SubFixture", "i": 1, "name": "[Instance2#2]"}], "id": "10e2555c", "kind": "state", "node": {"childCount": 1, "class": "Fixture", "enumeration": "ok", "name": "BACK 201"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/43", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/55
+    wire: Plugin "CopilotResponder" "state 39991c7f Patch/Stages/1/Fixtures/55"
+<<< {"children": [{"class": "SubFixture", "i": 1, "name": "[Instance2#2]"}], "id": "39991c7f", "kind": "state", "node": {"childCount": 1, "class": "Fixture", "enumeration": "ok", "name": "SIDE-L 301"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/55", "truncated": false, "v": 1}

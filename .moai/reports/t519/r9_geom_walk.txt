@@ -1,0 +1,33 @@
+== FixtureType 8
+{"path": "Patch/FixtureTypes/8/Geometries/1", "class": "Beam", "name": "Aura", "LUMINOUSINTENSITY": "10000.0", "BEAMANGLE": "25.0", "FIELDANGLE": "25.0", "BEAMRADIUS": "0.014999999664724", "BEAMTYPE": "Wash", "LAMPTYPE": "LED", "ISMAINBEAM": "false"}
+{"path": "Patch/FixtureTypes/8/Geometries/2", "class": "Geometry", "name": "Body", "NAME": "Body", "MODEL": null}
+  {"path": "Patch/FixtureTypes/8/Geometries/2/1", "class": "Geometry", "name": "Base_Main Module", "NAME": "Base_Main Module", "MODEL": "FixtureType 8.4.3"}
+    {"path": "Patch/FixtureTypes/8/Geometries/2/1/1", "class": "Axis", "name": "Yoke_Main Module", "NAME": "Yoke_Main Module", "MODEL": "FixtureType 8.4.4"}
+      {"path": "Patch/FixtureTypes/8/Geometries/2/1/1/1", "class": "Axis", "name": "Main Module", "NAME": "Main Module", "MODEL": "FixtureType 8.4.5"}
+        {"path": "Patch/FixtureTypes/8/Geometries/2/1/1/1/1", "class": "GeometryReference", "name": "Instance2#2", "NAME": "Instance2#2", "MODEL": "<ModelRef>"}
+          {"path": "Patch/FixtureTypes/8/Geometries/2/1/1/1/1/1", "class": "Break", "name": "Break 1 offset", "NAME": "Break 1 offset", "MODEL": null}
+{"path": "Patch/FixtureTypes/8/Geometries/3", "class": "Beam", "name": "Aura#2", "LUMINOUSINTENSITY": "10000.0", "BEAMANGLE": "25.0", "FIELDANGLE": "25.0", "BEAMRADIUS": "0.014999999664724", "BEAMTYPE": "Wash", "LAMPTYPE": "LED", "ISMAINBEAM": "false"}
+{"path": "Patch/FixtureTypes/8/Geometries/4", "class": "Geometry", "name": "Body#2", "NAME": "Body#2", "MODEL": null}
+  {"path": "Patch/FixtureTypes/8/Geometries/4/1", "class": "Geometry", "name": "Base_Main Module#2", "NAME": "Base_Main Module#2", "MODEL": "FixtureType 8.4.3"}
+    {"path": "Patch/FixtureTypes/8/Geometries/4/1/1", "class": "Axis", "name": "Yoke_Main Module#2", "NAME": "Yoke_Main Module#2", "MODEL": "FixtureType 8.4.4"}
+      {"path": "Patch/FixtureTypes/8/Geometries/4/1/1/1", "class": "Axis", "name": "Main Module#2", "NAME": "Main Module#2", "MODEL": "FixtureType 8.4.5"}
+        {"path": "Patch/FixtureTypes/8/Geometries/4/1/1/1/1", "class": "GeometryReference", "name": "Instance2#3", "NAME": "Instance2#3", "MODEL": "<ModelRef>"}
+          {"path": "Patch/FixtureTypes/8/Geometries/4/1/1/1/1/1", "class": "Break", "name": "Break 1 offset", "NAME": "Break 1 offset", "MODEL": null}
+{"path": "Patch/FixtureTypes/8/Geometries/5", "class": "Beam", "name": "Aura#3", "LUMINOUSINTENSITY": "10000.0", "BEAMANGLE": "25.0", "FIELDANGLE": "25.0", "BEAMRADIUS": "0.014999999664724", "BEAMTYPE": "Wash", "LAMPTYPE": "LED", "ISMAINBEAM": "false"}
+{"path": "Patch/FixtureTypes/8/Geometries/6", "class": "Geometry", "name": "Body#3", "NAME": "Body#3", "MODEL": null}
+  {"path": "Patch/FixtureTypes/8/Geometries/6/1", "class": "Geometry", "name": "Base_Main Module#3", "NAME": "Base_Main Module#3", "MODEL": "FixtureType 8.4.3"}
+    {"path": "Patch/FixtureTypes/8/Geometries/6/1/1", "class": "Axis", "name": "Yoke_Main Module#3", "NAME": "Yoke_Main Module#3", "MODEL": "FixtureType 8.4.4"}
+      {"path": "Patch/FixtureTypes/8/Geometries/6/1/1/1", "class": "Axis", "name": "Main Module#3", "NAME": "Main Module#3", "MODEL": "FixtureType 8.4.5"}
+        {"path": "Patch/FixtureTypes/8/Geometries/6/1/1/1/1", "class": "GeometryReference", "name": "Instance2", "NAME": "Instance2", "MODEL": "<ModelRef>"}
+          {"path": "Patch/FixtureTypes/8/Geometries/6/1/1/1/1/1", "class": "Break", "name": "Break 1 offset", "NAME": "Break 1 offset", "MODEL": null}
+{"path": "Patch/FixtureTypes/8/Geometries/7", "class": "Geometry", "name": "Body#4", "NAME": "Body#4", "MODEL": null}
+  {"path": "Patch/FixtureTypes/8/Geometries/7/1", "class": "Geometry", "name": "Base_Main Module#4", "NAME": "Base_Main Module#4", "MODEL": "FixtureType 8.4.3"}
+    {"path": "Patch/FixtureTypes/8/Geometries/7/1/1", "class": "Axis", "name": "Yoke_Main Module#4", "NAME": "Yoke_Main Module#4", "MODEL": "FixtureType 8.4.4"}
+      {"path": "Patch/FixtureTypes/8/Geometries/7/1/1/1", "class": "Axis", "name": "Main Module#4", "NAME": "Main Module#4", "MODEL": "FixtureType 8.4.7"}
+        {"path": "Patch/FixtureTypes/8/Geometries/7/1/1/1/1", "class": "Beam", "name": "Beam", "LUMINOUSINTENSITY": "10000.0", "BEAMANGLE": "1.0", "FIELDANGLE": "25.0", "BEAMRADIUS": "0.075499996542931", "BEAMTYPE": "Wash", "LAMPTYPE": "Tungsten", "ISMAINBEAM": "false"}
+== FixtureType 11
+{"path": "Patch/FixtureTypes/11/Geometries/1", "class": "Geometry", "name": "Body", "NAME": "Body", "MODEL": null}
+  {"path": "Patch/FixtureTypes/11/Geometries/1/1", "class": "Geometry", "name": "Base_Main Module", "NAME": "Base_Main Module", "MODEL": "FixtureType 11.4.1"}
+    {"path": "Patch/FixtureTypes/11/Geometries/1/1/1", "class": "Axis", "name": "Yoke_Main Module", "NAME": "Yoke_Main Module", "MODEL": "FixtureType 11.4.2"}
+      {"path": "Patch/FixtureTypes/11/Geometries/1/1/1/1", "class": "Axis", "name": "Main Module", "NAME": "Main Module", "MODEL": "FixtureType 11.4.3"}
+        {"path": "Patch/FixtureTypes/11/Geometries/1/1/1/1/1", "class": "Beam", "name": "Beam", "LUMINOUSINTENSITY": "10000.0", "BEAMANGLE": "1.0", "FIELDANGLE": "25.0", "BEAMRADIUS": "0.022649999707937", "BEAMTYPE": "Spot", "LAMPTYPE": "Tungsten", "ISMAINBEAM": "false"}

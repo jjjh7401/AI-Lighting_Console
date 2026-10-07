@@ -1,0 +1,309 @@
+>>> introspect Plugin "CopilotResponder" "introspect 5b1d4ad1 Patch/Stages/1/Fixtures/43"
+<<< {"class": "Fixture", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "OLDSUBFIXTUREINDEX", "t": "UInt32"}, {"n": "SUBFIXTUREINDEX", "t": "UInt32"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "FIXTURE", "t": "Handle"}, {"n": "STAGE", "t": "Handle"}, {"n": "OFFSETPAN", "t": "Double"}, {"n": "OFFSETTILT", "t": "Double"}, {"n": "PARAMETERCOUNTVIOLATION", "t": "UInt32"}], "id": "5b1d4ad1", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/43", "source": "property_accessors", "total": 108, "truncated": true, "v": 1}
+>>> introspect Plugin "CopilotResponder" "introspect 8faffc20 Patch/Stages/1/Fixtures/43 offset=26"
+<<< {"class": "Fixture", "fields": [{"n": "SUBFXITURECOUNTVIOLATION", "t": "UInt32"}, {"n": "CONFLITEDPATCH", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "FIXTURETYPE", "t": "Handle"}, {"n": "MODE", "t": "Handle"}, {"n": "MODEDIRECT", "t": "Handle"}, {"n": "FID", "t": "UInt32"}, {"n": "IDTYPE", "t": "UInt32"}, {"n": "IDTYPEDIRECT", "t": "UInt32"}, {"n": "CID", "t": "UInt32"}, {"n": "PATCH", "t": "Custom"}, {"n": "LAYER", "t": "Handle"}, {"n": "CLASS", "t": "Handle"}, {"n": "BREAK1", "t": "Custom"}, {"n": "BREAK2", "t": "Custom"}, {"n": "BREAK3", "t": "Custom"}, {"n": "BREAK4", "t": "Custom"}, {"n": "BREAK5", "t": "Custom"}, {"n": "BREAK6", "t": "Custom"}, {"n": "BREAK7", "t": "Custom"}, {"n": "BREAK8", "t": "Custom"}, {"n": "DMXINVERTPAN", "t": "UInt32"}, {"n": "DMXINVERTTILT", "t": "UInt32"}, {"n": "INVERT3DPAN", "t": "UInt32"}, {"n": "INVERT3DTILT", "t": "UInt32"}, {"n": "ENCINVERTPAN", "t": "UInt32"}, {"n": "ENCINVERTTILT", "t": "UInt32"}], "id": "8faffc20", "kind": "introspect", "offset": 26, "ok": true, "path": "Patch/Stages/1/Fixtures/43", "source": "property_accessors", "total": 108, "truncated": true, "v": 1}
+>>> introspect Plugin "CopilotResponder" "introspect 322dc6d3 Patch/Stages/1/Fixtures/43 offset=53"
+<<< {"class": "Fixture", "fields": [{"n": "POSX", "t": "DoubleLength"}, {"n": "POSY", "t": "DoubleLength"}, {"n": "POSZ", "t": "DoubleLength"}, {"n": "ROTX", "t": "DoubleAngleDegree"}, {"n": "ROTY", "t": "DoubleAngleDegree"}, {"n": "ROTZ", "t": "DoubleAngleDegree"}, {"n": "SCALEX", "t": "Float"}, {"n": "SCALEY", "t": "Float"}, {"n": "SCALEZ", "t": "Float"}, {"n": "ROTDIRECT", "t": "Custom"}, {"n": "GELCOLOR", "t": "Custom"}, {"n": "GEL", "t": "Handle"}, {"n": "BEAMANGLE", "t": "Float"}, {"n": "SHAPERPOV", "t": "Float"}, {"n": "SHADOWQUALITY", "t": "UInt32"}, {"n": "CASTSHADOW", "t": "UInt32"}, {"n": "MESHMIRRORX", "t": "UInt32"}, {"n": "FOLLOWTARGET", "t": "UInt32"}, {"n": "SELECTABLE3D", "t": "UInt32"}, {"n": "VISIBLE3D", "t": "UInt32"}, {"n": "MIB", "t": "UInt32"}, {"n": "TARGETSPACE", "t": "Handle"}, {"n": "MOVEMENTSPACE", "t": "Handle"}, {"n": "MASTERREACT", "t": "UInt8"}, {"n": "P1X", "t": "Float"}, {"n": "P1Y", "t": "Float"}, {"n": "P1Z", "t": "Float"}], "id": "322dc6d3", "kind": "introspect", "offset": 53, "ok": true, "path": "Patch/Stages/1/Fixtures/43", "source": "property_accessors", "total": 108, "truncated": true, "v": 1}
+>>> introspect Plugin "CopilotResponder" "introspect 78953ded Patch/Stages/1/Fixtures/43 offset=80"
+<<< {"class": "Fixture", "fields": [{"n": "P1PAN", "t": "Int32"}, {"n": "P1TILT", "t": "Int32"}, {"n": "P2X", "t": "Float"}, {"n": "P2Y", "t": "Float"}, {"n": "P2Z", "t": "Float"}, {"n": "P2PAN", "t": "Int32"}, {"n": "P2TILT", "t": "Int32"}, {"n": "P3X", "t": "Float"}, {"n": "P3Y", "t": "Float"}, {"n": "P3Z", "t": "Float"}, {"n": "P3PAN", "t": "Int32"}, {"n": "P3TILT", "t": "Int32"}, {"n": "P4X", "t": "Float"}, {"n": "P4Y", "t": "Float"}, {"n": "P4Z", "t": "Float"}, {"n": "P4PAN", "t": "Int32"}, {"n": "P4TILT", "t": "Int32"}, {"n": "CHANNELRTCOUNT", "t": "UInt32"}, {"n": "ISMULTIPATCH", "t": "Bool"}, {"n": "MULTIPATCHMAIN", "t": "Custom"}, {"n": "MULTIPATCHCOUNT", "t": "UInt32"}, {"n": "GRIDROTX", "t": "UInt32"}, {"n": "GRIDROTY", "t": "UInt32"}, {"n": "GRIDROTZ", "t": "UInt32"}, {"n": "GRIDINVX", "t": "UInt32"}, {"n": "GRIDINVY", "t": "UInt32"}, {"n": "GRIDINVZ", "t": "UInt32"}, {"n": "MATERIALOVERWRITE", "t": "Handle"}], "id": "78953ded", "kind": "introspect", "offset": 80, "ok": true, "path": "Patch/Stages/1/Fixtures/43", "source": "property_accessors", "total": 108, "truncated": false, "v": 1}
+>>> introspect Plugin "CopilotResponder" "introspect fbbcbb55 Patch/Stages/1/Fixtures/43/1"
+<<< {"class": "SubFixture", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "OLDSUBFIXTUREINDEX", "t": "UInt32"}, {"n": "SUBFIXTUREINDEX", "t": "UInt32"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "FIXTURE", "t": "Handle"}, {"n": "STAGE", "t": "Handle"}, {"n": "OFFSETPAN", "t": "Double"}, {"n": "OFFSETTILT", "t": "Double"}], "id": "fbbcbb55", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/43/1", "source": "property_accessors", "total": 29, "truncated": true, "v": 1}
+>>> introspect Plugin "CopilotResponder" "introspect 04bbf72b Patch/Stages/1/Fixtures/43/1 offset=26"
+<<< {"class": "SubFixture", "fields": [{"n": "PARAMETERCOUNTVIOLATION", "t": "UInt32"}, {"n": "SUBFXITURECOUNTVIOLATION", "t": "UInt32"}, {"n": "CONFLITEDPATCH", "t": "UInt32"}], "id": "04bbf72b", "kind": "introspect", "offset": 26, "ok": true, "path": "Patch/Stages/1/Fixtures/43/1", "source": "property_accessors", "total": 29, "truncated": false, "v": 1}
+>>> introspect Plugin "CopilotResponder" "introspect 3b12282e Patch/Stages/1"
+<<< {"class": "Stage", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "POSX", "t": "DoubleLength"}, {"n": "POSY", "t": "DoubleLength"}, {"n": "POSZ", "t": "DoubleLength"}, {"n": "ROTX", "t": "DoubleAngleDegree"}, {"n": "ROTY", "t": "DoubleAngleDegree"}, {"n": "ROTZ", "t": "DoubleAngleDegree"}, {"n": "MINX", "t": "FloatLength"}], "id": "3b12282e", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1", "source": "property_accessors", "total": 38, "truncated": true, "v": 1}
+>>> introspect Plugin "CopilotResponder" "introspect e18748a4 Patch/Stages/1 offset=27"
+<<< {"class": "Stage", "fields": [{"n": "MAXX", "t": "FloatLength"}, {"n": "MINY", "t": "FloatLength"}, {"n": "MAXY", "t": "FloatLength"}, {"n": "MINZ", "t": "FloatLength"}, {"n": "MAXZ", "t": "FloatLength"}, {"n": "APPEARANCERIGHT", "t": "Handle"}, {"n": "APPEARANCELEFT", "t": "Handle"}, {"n": "APPEARANCEFRONT", "t": "Handle"}, {"n": "APPEARANCEBACK", "t": "Handle"}, {"n": "APPEARANCETOP", "t": "Handle"}, {"n": "APPEARANCEBOTTOM", "t": "Handle"}], "id": "e18748a4", "kind": "introspect", "offset": 27, "ok": true, "path": "Patch/Stages/1", "source": "property_accessors", "total": 38, "truncated": false, "v": 1}
+>>> state Plugin "CopilotResponder" "state 77688a84 Patch/Stages/1/Spaces"
+<<< {"children": [{"class": "Space", "i": 1, "name": "Stage"}], "id": "77688a84", "kind": "state", "node": {"childCount": 1, "class": "Spaces", "enumeration": "ok", "name": "Spaces"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Spaces", "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 8ec5dd2b IGNORENETWORK,STRUCTURELOCKED,SYSTEMLOCKED,LOCK,INDEX,COUNT,NO,USEREXPANDED,FADERENABLED,OWNED,HIDDEN,DEPENDENCYEXPORT,MEMORYFOOTPRINT,NOTE,OLDSUBFIXTUREINDEX,SUBFIXTUREINDEX Patch/Stages/1/Fixtures/43"
+<<< {"id": "8ec5dd2b", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43", "reads": [{"n": "IGNORENETWORK", "ok": true, "t": "boolean", "v": "false"}, {"n": "STRUCTURELOCKED", "ok": true, "t": "boolean", "v": "true"}, {"n": "SYSTEMLOCKED", "ok": true, "t": "boolean", "v": "false"}, {"n": "LOCK", "ok": true, "t": "string", "v": ""}, {"n": "INDEX", "ok": true, "t": "number", "v": "201"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1"}, {"n": "NO", "ok": true, "t": "number", "v": "201"}, {"n": "USEREXPANDED", "ok": true, "t": "boolean", "v": "false"}, {"n": "FADERENABLED", "ok": true, "t": "boolean", "v": "false"}, {"n": "OWNED", "ok": true, "t": "boolean", "v": "false"}, {"n": "HIDDEN", "ok": true, "t": "boolean", "v": "false"}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2264"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "OLDSUBFIXTUREINDEX", "ok": true, "t": "number", "v": "70"}, {"n": "SUBFIXTUREINDEX", "ok": true, "t": "number", "v": "70"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 9c6199fe OFFSETPAN,OFFSETTILT,PARAMETERCOUNTVIOLATION,SUBFXITURECOUNTVIOLATION,CONFLITEDPATCH,NAME,FID,IDTYPE,IDTYPEDIRECT,CID,DMXINVERTPAN,DMXINVERTTILT,INVERT3DPAN,INVERT3DTILT,ENCINVERTPAN,ENCINVERTTILT Patch/Stages/1/Fixtures/43"
+<<< {"id": "9c6199fe", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43", "reads": [{"n": "OFFSETPAN", "ok": true, "t": "number", "v": "0.0"}, {"n": "OFFSETTILT", "ok": true, "t": "number", "v": "0.0"}, {"n": "PARAMETERCOUNTVIOLATION", "ok": true, "t": "boolean", "v": "false"}, {"n": "SUBFXITURECOUNTVIOLATION", "ok": true, "t": "boolean", "v": "false"}, {"n": "CONFLITEDPATCH", "ok": true, "t": "boolean", "v": "false"}, {"n": "NAME", "ok": true, "t": "string", "v": "BACK 201"}, {"n": "FID", "ok": true, "t": "number", "v": "201"}, {"n": "IDTYPE", "ok": true, "t": "string", "v": "Fixture"}, {"n": "IDTYPEDIRECT", "ok": true, "t": "number", "v": "0"}, {"n": "CID", "ok": true, "t": "string", "v": "None"}, {"n": "DMXINVERTPAN", "ok": true, "t": "boolean", "v": "false"}, {"n": "DMXINVERTTILT", "ok": true, "t": "boolean", "v": "false"}, {"n": "INVERT3DPAN", "ok": true, "t": "boolean", "v": "false"}, {"n": "INVERT3DTILT", "ok": true, "t": "boolean", "v": "false"}, {"n": "ENCINVERTPAN", "ok": true, "t": "boolean", "v": "false"}, {"n": "ENCINVERTTILT", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 7827ed0e POSX,POSY,POSZ,ROTX,ROTY,ROTZ,SCALEX,SCALEY,SCALEZ,BEAMANGLE,SHAPERPOV,SHADOWQUALITY,CASTSHADOW,MESHMIRRORX,FOLLOWTARGET,SELECTABLE3D Patch/Stages/1/Fixtures/43"
+<<< {"id": "7827ed0e", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43", "reads": [{"n": "POSX", "ok": true, "t": "number", "v": "-6.0"}, {"n": "POSY", "ok": true, "t": "number", "v": "4.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.1999998092651"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "SCALEX", "ok": true, "t": "number", "v": "1.0"}, {"n": "SCALEY", "ok": true, "t": "number", "v": "1.0"}, {"n": "SCALEZ", "ok": true, "t": "number", "v": "1.0"}, {"n": "BEAMANGLE", "ok": true, "t": "number", "v": "0.0"}, {"n": "SHAPERPOV", "ok": true, "t": "number", "v": "0.0"}, {"n": "SHADOWQUALITY", "ok": true, "t": "number", "v": "3"}, {"n": "CASTSHADOW", "ok": true, "t": "boolean", "v": "false"}, {"n": "MESHMIRRORX", "ok": true, "t": "boolean", "v": "false"}, {"n": "FOLLOWTARGET", "ok": true, "t": "boolean", "v": "false"}, {"n": "SELECTABLE3D", "ok": true, "t": "boolean", "v": "true"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 9b645b1d VISIBLE3D,MIB,MASTERREACT,P1X,P1Y,P1Z,P1PAN,P1TILT,P2X,P2Y,P2Z,P2PAN,P2TILT,P3X,P3Y,P3Z Patch/Stages/1/Fixtures/43"
+<<< {"id": "9b645b1d", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43", "reads": [{"n": "VISIBLE3D", "ok": true, "t": "boolean", "v": "true"}, {"n": "MIB", "ok": true, "t": "boolean", "v": "true"}, {"n": "MASTERREACT", "ok": true, "t": "string", "v": "Grand"}, {"n": "P1X", "ok": true, "t": "number", "v": "0.0"}, {"n": "P1Y", "ok": true, "t": "number", "v": "0.0"}, {"n": "P1Z", "ok": true, "t": "number", "v": "0.0"}, {"n": "P1PAN", "ok": true, "t": "number", "v": "270"}, {"n": "P1TILT", "ok": true, "t": "number", "v": "4294967180"}, {"n": "P2X", "ok": true, "t": "number", "v": "0.0"}, {"n": "P2Y", "ok": true, "t": "number", "v": "0.0"}, {"n": "P2Z", "ok": true, "t": "number", "v": "0.0"}, {"n": "P2PAN", "ok": true, "t": "number", "v": "270"}, {"n": "P2TILT", "ok": true, "t": "number", "v": "4294967180"}, {"n": "P3X", "ok": true, "t": "number", "v": "0.0"}, {"n": "P3Y", "ok": true, "t": "number", "v": "0.0"}, {"n": "P3Z", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props c2cb0504 P3PAN,P3TILT,P4X,P4Y,P4Z,P4PAN,P4TILT,CHANNELRTCOUNT,ISMULTIPATCH,MULTIPATCHCOUNT,GRIDROTX,GRIDROTY,GRIDROTZ,GRIDINVX,GRIDINVY,GRIDINVZ Patch/Stages/1/Fixtures/43"
+<<< {"id": "c2cb0504", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43", "reads": [{"n": "P3PAN", "ok": true, "t": "number", "v": "270"}, {"n": "P3TILT", "ok": true, "t": "number", "v": "4294967180"}, {"n": "P4X", "ok": true, "t": "number", "v": "0.0"}, {"n": "P4Y", "ok": true, "t": "number", "v": "0.0"}, {"n": "P4Z", "ok": true, "t": "number", "v": "0.0"}, {"n": "P4PAN", "ok": true, "t": "number", "v": "270"}, {"n": "P4TILT", "ok": true, "t": "number", "v": "4294967180"}, {"n": "CHANNELRTCOUNT", "ok": true, "t": "number", "v": "23"}, {"n": "ISMULTIPATCH", "ok": true, "t": "boolean", "v": "false"}, {"n": "MULTIPATCHCOUNT", "ok": true, "t": "number", "v": "0"}, {"n": "GRIDROTX", "ok": true, "t": "string", "v": "0°"}, {"n": "GRIDROTY", "ok": true, "t": "string", "v": "0°"}, {"n": "GRIDROTZ", "ok": true, "t": "string", "v": "0°"}, {"n": "GRIDINVX", "ok": true, "t": "boolean", "v": "false"}, {"n": "GRIDINVY", "ok": true, "t": "boolean", "v": "false"}, {"n": "GRIDINVZ", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 457b5984 IGNORENETWORK,STRUCTURELOCKED,SYSTEMLOCKED,LOCK,INDEX,COUNT,NO,USEREXPANDED,FADERENABLED,OWNED,HIDDEN,DEPENDENCYEXPORT,MEMORYFOOTPRINT,NOTE,OLDSUBFIXTUREINDEX,SUBFIXTUREINDEX Patch/Stages/1/Fixtures/55"
+<<< {"id": "457b5984", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55", "reads": [{"n": "IGNORENETWORK", "ok": true, "t": "boolean", "v": "false"}, {"n": "STRUCTURELOCKED", "ok": true, "t": "boolean", "v": "true"}, {"n": "SYSTEMLOCKED", "ok": true, "t": "boolean", "v": "false"}, {"n": "LOCK", "ok": true, "t": "string", "v": ""}, {"n": "INDEX", "ok": true, "t": "number", "v": "301"}, {"n": "COUNT", "ok": true, "t": "number", "v": "1"}, {"n": "NO", "ok": true, "t": "number", "v": "301"}, {"n": "USEREXPANDED", "ok": true, "t": "boolean", "v": "false"}, {"n": "FADERENABLED", "ok": true, "t": "boolean", "v": "false"}, {"n": "OWNED", "ok": true, "t": "boolean", "v": "false"}, {"n": "HIDDEN", "ok": true, "t": "boolean", "v": "false"}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2264"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "OLDSUBFIXTUREINDEX", "ok": true, "t": "number", "v": "94"}, {"n": "SUBFIXTUREINDEX", "ok": true, "t": "number", "v": "94"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props b70abd36 OFFSETPAN,OFFSETTILT,PARAMETERCOUNTVIOLATION,SUBFXITURECOUNTVIOLATION,CONFLITEDPATCH,NAME,FID,IDTYPE,IDTYPEDIRECT,CID,DMXINVERTPAN,DMXINVERTTILT,INVERT3DPAN,INVERT3DTILT,ENCINVERTPAN,ENCINVERTTILT Patch/Stages/1/Fixtures/55"
+<<< {"id": "b70abd36", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55", "reads": [{"n": "OFFSETPAN", "ok": true, "t": "number", "v": "0.0"}, {"n": "OFFSETTILT", "ok": true, "t": "number", "v": "0.0"}, {"n": "PARAMETERCOUNTVIOLATION", "ok": true, "t": "boolean", "v": "false"}, {"n": "SUBFXITURECOUNTVIOLATION", "ok": true, "t": "boolean", "v": "false"}, {"n": "CONFLITEDPATCH", "ok": true, "t": "boolean", "v": "false"}, {"n": "NAME", "ok": true, "t": "string", "v": "SIDE-L 301"}, {"n": "FID", "ok": true, "t": "number", "v": "301"}, {"n": "IDTYPE", "ok": true, "t": "string", "v": "Fixture"}, {"n": "IDTYPEDIRECT", "ok": true, "t": "number", "v": "0"}, {"n": "CID", "ok": true, "t": "string", "v": "None"}, {"n": "DMXINVERTPAN", "ok": true, "t": "boolean", "v": "false"}, {"n": "DMXINVERTTILT", "ok": true, "t": "boolean", "v": "false"}, {"n": "INVERT3DPAN", "ok": true, "t": "boolean", "v": "false"}, {"n": "INVERT3DTILT", "ok": true, "t": "boolean", "v": "false"}, {"n": "ENCINVERTPAN", "ok": true, "t": "boolean", "v": "false"}, {"n": "ENCINVERTTILT", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props aaeaf6c1 POSX,POSY,POSZ,ROTX,ROTY,ROTZ,SCALEX,SCALEY,SCALEZ,BEAMANGLE,SHAPERPOV,SHADOWQUALITY,CASTSHADOW,MESHMIRRORX,FOLLOWTARGET,SELECTABLE3D Patch/Stages/1/Fixtures/55"
+<<< {"id": "aaeaf6c1", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55", "reads": [{"n": "POSX", "ok": true, "t": "number", "v": "-7.0"}, {"n": "POSY", "ok": true, "t": "number", "v": "3.0"}, {"n": "POSZ", "ok": true, "t": "number", "v": "1.2000000476837"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "SCALEX", "ok": true, "t": "number", "v": "1.0"}, {"n": "SCALEY", "ok": true, "t": "number", "v": "1.0"}, {"n": "SCALEZ", "ok": true, "t": "number", "v": "1.0"}, {"n": "BEAMANGLE", "ok": true, "t": "number", "v": "0.0"}, {"n": "SHAPERPOV", "ok": true, "t": "number", "v": "0.0"}, {"n": "SHADOWQUALITY", "ok": true, "t": "number", "v": "3"}, {"n": "CASTSHADOW", "ok": true, "t": "boolean", "v": "false"}, {"n": "MESHMIRRORX", "ok": true, "t": "boolean", "v": "false"}, {"n": "FOLLOWTARGET", "ok": true, "t": "boolean", "v": "false"}, {"n": "SELECTABLE3D", "ok": true, "t": "boolean", "v": "true"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 35b9f115 VISIBLE3D,MIB,MASTERREACT,P1X,P1Y,P1Z,P1PAN,P1TILT,P2X,P2Y,P2Z,P2PAN,P2TILT,P3X,P3Y,P3Z Patch/Stages/1/Fixtures/55"
+<<< {"id": "35b9f115", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55", "reads": [{"n": "VISIBLE3D", "ok": true, "t": "boolean", "v": "true"}, {"n": "MIB", "ok": true, "t": "boolean", "v": "true"}, {"n": "MASTERREACT", "ok": true, "t": "string", "v": "Grand"}, {"n": "P1X", "ok": true, "t": "number", "v": "0.0"}, {"n": "P1Y", "ok": true, "t": "number", "v": "0.0"}, {"n": "P1Z", "ok": true, "t": "number", "v": "0.0"}, {"n": "P1PAN", "ok": true, "t": "number", "v": "270"}, {"n": "P1TILT", "ok": true, "t": "number", "v": "4294967180"}, {"n": "P2X", "ok": true, "t": "number", "v": "0.0"}, {"n": "P2Y", "ok": true, "t": "number", "v": "0.0"}, {"n": "P2Z", "ok": true, "t": "number", "v": "0.0"}, {"n": "P2PAN", "ok": true, "t": "number", "v": "270"}, {"n": "P2TILT", "ok": true, "t": "number", "v": "4294967180"}, {"n": "P3X", "ok": true, "t": "number", "v": "0.0"}, {"n": "P3Y", "ok": true, "t": "number", "v": "0.0"}, {"n": "P3Z", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 6cdd4754 P3PAN,P3TILT,P4X,P4Y,P4Z,P4PAN,P4TILT,CHANNELRTCOUNT,ISMULTIPATCH,MULTIPATCHCOUNT,GRIDROTX,GRIDROTY,GRIDROTZ,GRIDINVX,GRIDINVY,GRIDINVZ Patch/Stages/1/Fixtures/55"
+<<< {"id": "6cdd4754", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55", "reads": [{"n": "P3PAN", "ok": true, "t": "number", "v": "270"}, {"n": "P3TILT", "ok": true, "t": "number", "v": "4294967180"}, {"n": "P4X", "ok": true, "t": "number", "v": "0.0"}, {"n": "P4Y", "ok": true, "t": "number", "v": "0.0"}, {"n": "P4Z", "ok": true, "t": "number", "v": "0.0"}, {"n": "P4PAN", "ok": true, "t": "number", "v": "270"}, {"n": "P4TILT", "ok": true, "t": "number", "v": "4294967180"}, {"n": "CHANNELRTCOUNT", "ok": true, "t": "number", "v": "23"}, {"n": "ISMULTIPATCH", "ok": true, "t": "boolean", "v": "false"}, {"n": "MULTIPATCHCOUNT", "ok": true, "t": "number", "v": "0"}, {"n": "GRIDROTX", "ok": true, "t": "string", "v": "0°"}, {"n": "GRIDROTY", "ok": true, "t": "string", "v": "0°"}, {"n": "GRIDROTZ", "ok": true, "t": "string", "v": "0°"}, {"n": "GRIDINVX", "ok": true, "t": "boolean", "v": "false"}, {"n": "GRIDINVY", "ok": true, "t": "boolean", "v": "false"}, {"n": "GRIDINVZ", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 49badc89 IGNORENETWORK,STRUCTURELOCKED,SYSTEMLOCKED,LOCK,INDEX,COUNT,NO,NAME,USEREXPANDED,FADERENABLED,OWNED,HIDDEN,DEPENDENCYEXPORT,MEMORYFOOTPRINT,NOTE,OLDSUBFIXTUREINDEX Patch/Stages/1/Fixtures/43/1"
+<<< {"id": "49badc89", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43/1", "reads": [{"n": "IGNORENETWORK", "ok": true, "t": "boolean", "v": "false"}, {"n": "STRUCTURELOCKED", "ok": true, "t": "boolean", "v": "true"}, {"n": "SYSTEMLOCKED", "ok": true, "t": "boolean", "v": "false"}, {"n": "LOCK", "ok": true, "t": "string", "v": ""}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "NAME", "ok": true, "t": "string", "v": "[Instance2#2]"}, {"n": "USEREXPANDED", "ok": true, "t": "boolean", "v": "false"}, {"n": "FADERENABLED", "ok": true, "t": "boolean", "v": "false"}, {"n": "OWNED", "ok": true, "t": "boolean", "v": "false"}, {"n": "HIDDEN", "ok": true, "t": "boolean", "v": "false"}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "736"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "OLDSUBFIXTUREINDEX", "ok": true, "t": "number", "v": "71"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 48dfe1eb SUBFIXTUREINDEX,OFFSETPAN,OFFSETTILT,PARAMETERCOUNTVIOLATION,SUBFXITURECOUNTVIOLATION,CONFLITEDPATCH Patch/Stages/1/Fixtures/43/1"
+<<< {"id": "48dfe1eb", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/43/1", "reads": [{"n": "SUBFIXTUREINDEX", "ok": true, "t": "number", "v": "71"}, {"n": "OFFSETPAN", "ok": true, "t": "number", "v": "0.0"}, {"n": "OFFSETTILT", "ok": true, "t": "number", "v": "0.0"}, {"n": "PARAMETERCOUNTVIOLATION", "ok": true, "t": "boolean", "v": "false"}, {"n": "SUBFXITURECOUNTVIOLATION", "ok": true, "t": "boolean", "v": "false"}, {"n": "CONFLITEDPATCH", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props c1adc087 IGNORENETWORK,STRUCTURELOCKED,SYSTEMLOCKED,LOCK,INDEX,COUNT,NO,NAME,USEREXPANDED,FADERENABLED,OWNED,HIDDEN,DEPENDENCYEXPORT,MEMORYFOOTPRINT,NOTE,OLDSUBFIXTUREINDEX Patch/Stages/1/Fixtures/55/1"
+<<< {"id": "c1adc087", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55/1", "reads": [{"n": "IGNORENETWORK", "ok": true, "t": "boolean", "v": "false"}, {"n": "STRUCTURELOCKED", "ok": true, "t": "boolean", "v": "true"}, {"n": "SYSTEMLOCKED", "ok": true, "t": "boolean", "v": "false"}, {"n": "LOCK", "ok": true, "t": "string", "v": ""}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "NAME", "ok": true, "t": "string", "v": "[Instance2#2]"}, {"n": "USEREXPANDED", "ok": true, "t": "boolean", "v": "false"}, {"n": "FADERENABLED", "ok": true, "t": "boolean", "v": "false"}, {"n": "OWNED", "ok": true, "t": "boolean", "v": "false"}, {"n": "HIDDEN", "ok": true, "t": "boolean", "v": "false"}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "736"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "OLDSUBFIXTUREINDEX", "ok": true, "t": "number", "v": "95"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 83de8645 SUBFIXTUREINDEX,OFFSETPAN,OFFSETTILT,PARAMETERCOUNTVIOLATION,SUBFXITURECOUNTVIOLATION,CONFLITEDPATCH Patch/Stages/1/Fixtures/55/1"
+<<< {"id": "83de8645", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/55/1", "reads": [{"n": "SUBFIXTUREINDEX", "ok": true, "t": "number", "v": "95"}, {"n": "OFFSETPAN", "ok": true, "t": "number", "v": "0.0"}, {"n": "OFFSETTILT", "ok": true, "t": "number", "v": "0.0"}, {"n": "PARAMETERCOUNTVIOLATION", "ok": true, "t": "boolean", "v": "false"}, {"n": "SUBFXITURECOUNTVIOLATION", "ok": true, "t": "boolean", "v": "false"}, {"n": "CONFLITEDPATCH", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 4ee6d969 IGNORENETWORK,STRUCTURELOCKED,SYSTEMLOCKED,LOCK,INDEX,COUNT,NO,NAME,USEREXPANDED,FADERENABLED,OWNED,HIDDEN,DEPENDENCYEXPORT,MEMORYFOOTPRINT,NOTE,POSX Patch/Stages/1"
+<<< {"id": "4ee6d969", "kind": "props", "ok": true, "path": "Patch/Stages/1", "reads": [{"n": "IGNORENETWORK", "ok": true, "t": "boolean", "v": "false"}, {"n": "STRUCTURELOCKED", "ok": true, "t": "boolean", "v": "true"}, {"n": "SYSTEMLOCKED", "ok": true, "t": "boolean", "v": "false"}, {"n": "LOCK", "ok": true, "t": "string", "v": "PL"}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}, {"n": "COUNT", "ok": true, "t": "number", "v": "2"}, {"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "NAME", "ok": true, "t": "string", "v": "Stage 1"}, {"n": "USEREXPANDED", "ok": true, "t": "boolean", "v": "false"}, {"n": "FADERENABLED", "ok": true, "t": "boolean", "v": "false"}, {"n": "OWNED", "ok": true, "t": "boolean", "v": "false"}, {"n": "HIDDEN", "ok": true, "t": "boolean", "v": "false"}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "188258"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "POSX", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+>>> props Plugin "CopilotResponder" "props 300bbcac POSY,POSZ,ROTX,ROTY,ROTZ,MINX,MAXX,MINY,MAXY,MINZ,MAXZ Patch/Stages/1"
+<<< {"id": "300bbcac", "kind": "props", "ok": true, "path": "Patch/Stages/1", "reads": [{"n": "POSY", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "MINX", "ok": true, "t": "string", "v": " -15.000"}, {"n": "MAXX", "ok": true, "t": "string", "v": "  15.000"}, {"n": "MINY", "ok": true, "t": "string", "v": " -15.000"}, {"n": "MAXY", "ok": true, "t": "string", "v": "  15.000"}, {"n": "MINZ", "ok": true, "t": "string", "v": "   0.000"}, {"n": "MAXZ", "ok": true, "t": "string", "v": "  15.000"}], "truncated": false, "v": 1}
+
+=== RESULT
+{
+ "201": {
+  "IGNORENETWORK": "false",
+  "STRUCTURELOCKED": "true",
+  "SYSTEMLOCKED": "false",
+  "LOCK": "",
+  "INDEX": "201",
+  "COUNT": "1",
+  "NO": "201",
+  "USEREXPANDED": "false",
+  "FADERENABLED": "false",
+  "OWNED": "false",
+  "HIDDEN": "false",
+  "DEPENDENCYEXPORT": "",
+  "MEMORYFOOTPRINT": "2264",
+  "NOTE": "",
+  "OLDSUBFIXTUREINDEX": "70",
+  "SUBFIXTUREINDEX": "70",
+  "OFFSETPAN": "0.0",
+  "OFFSETTILT": "0.0",
+  "PARAMETERCOUNTVIOLATION": "false",
+  "SUBFXITURECOUNTVIOLATION": "false",
+  "CONFLITEDPATCH": "false",
+  "NAME": "BACK 201",
+  "FID": "201",
+  "IDTYPE": "Fixture",
+  "IDTYPEDIRECT": "0",
+  "CID": "None",
+  "DMXINVERTPAN": "false",
+  "DMXINVERTTILT": "false",
+  "INVERT3DPAN": "false",
+  "INVERT3DTILT": "false",
+  "ENCINVERTPAN": "false",
+  "ENCINVERTTILT": "false",
+  "POSX": "-6.0",
+  "POSY": "4.5",
+  "POSZ": "6.1999998092651",
+  "ROTX": "0.0",
+  "ROTY": "0.0",
+  "ROTZ": "0.0",
+  "SCALEX": "1.0",
+  "SCALEY": "1.0",
+  "SCALEZ": "1.0",
+  "BEAMANGLE": "0.0",
+  "SHAPERPOV": "0.0",
+  "SHADOWQUALITY": "3",
+  "CASTSHADOW": "false",
+  "MESHMIRRORX": "false",
+  "FOLLOWTARGET": "false",
+  "SELECTABLE3D": "true",
+  "VISIBLE3D": "true",
+  "MIB": "true",
+  "MASTERREACT": "Grand",
+  "P1X": "0.0",
+  "P1Y": "0.0",
+  "P1Z": "0.0",
+  "P1PAN": "270",
+  "P1TILT": "4294967180",
+  "P2X": "0.0",
+  "P2Y": "0.0",
+  "P2Z": "0.0",
+  "P2PAN": "270",
+  "P2TILT": "4294967180",
+  "P3X": "0.0",
+  "P3Y": "0.0",
+  "P3Z": "0.0",
+  "P3PAN": "270",
+  "P3TILT": "4294967180",
+  "P4X": "0.0",
+  "P4Y": "0.0",
+  "P4Z": "0.0",
+  "P4PAN": "270",
+  "P4TILT": "4294967180",
+  "CHANNELRTCOUNT": "23",
+  "ISMULTIPATCH": "false",
+  "MULTIPATCHCOUNT": "0",
+  "GRIDROTX": "0°",
+  "GRIDROTY": "0°",
+  "GRIDROTZ": "0°",
+  "GRIDINVX": "false",
+  "GRIDINVY": "false",
+  "GRIDINVZ": "false"
+ },
+ "301": {
+  "IGNORENETWORK": "false",
+  "STRUCTURELOCKED": "true",
+  "SYSTEMLOCKED": "false",
+  "LOCK": "",
+  "INDEX": "301",
+  "COUNT": "1",
+  "NO": "301",
+  "USEREXPANDED": "false",
+  "FADERENABLED": "false",
+  "OWNED": "false",
+  "HIDDEN": "false",
+  "DEPENDENCYEXPORT": "",
+  "MEMORYFOOTPRINT": "2264",
+  "NOTE": "",
+  "OLDSUBFIXTUREINDEX": "94",
+  "SUBFIXTUREINDEX": "94",
+  "OFFSETPAN": "0.0",
+  "OFFSETTILT": "0.0",
+  "PARAMETERCOUNTVIOLATION": "false",
+  "SUBFXITURECOUNTVIOLATION": "false",
+  "CONFLITEDPATCH": "false",
+  "NAME": "SIDE-L 301",
+  "FID": "301",
+  "IDTYPE": "Fixture",
+  "IDTYPEDIRECT": "0",
+  "CID": "None",
+  "DMXINVERTPAN": "false",
+  "DMXINVERTTILT": "false",
+  "INVERT3DPAN": "false",
+  "INVERT3DTILT": "false",
+  "ENCINVERTPAN": "false",
+  "ENCINVERTTILT": "false",
+  "POSX": "-7.0",
+  "POSY": "3.0",
+  "POSZ": "1.2000000476837",
+  "ROTX": "0.0",
+  "ROTY": "0.0",
+  "ROTZ": "0.0",
+  "SCALEX": "1.0",
+  "SCALEY": "1.0",
+  "SCALEZ": "1.0",
+  "BEAMANGLE": "0.0",
+  "SHAPERPOV": "0.0",
+  "SHADOWQUALITY": "3",
+  "CASTSHADOW": "false",
+  "MESHMIRRORX": "false",
+  "FOLLOWTARGET": "false",
+  "SELECTABLE3D": "true",
+  "VISIBLE3D": "true",
+  "MIB": "true",
+  "MASTERREACT": "Grand",
+  "P1X": "0.0",
+  "P1Y": "0.0",
+  "P1Z": "0.0",
+  "P1PAN": "270",
+  "P1TILT": "4294967180",
+  "P2X": "0.0",
+  "P2Y": "0.0",
+  "P2Z": "0.0",
+  "P2PAN": "270",
+  "P2TILT": "4294967180",
+  "P3X": "0.0",
+  "P3Y": "0.0",
+  "P3Z": "0.0",
+  "P3PAN": "270",
+  "P3TILT": "4294967180",
+  "P4X": "0.0",
+  "P4Y": "0.0",
+  "P4Z": "0.0",
+  "P4PAN": "270",
+  "P4TILT": "4294967180",
+  "CHANNELRTCOUNT": "23",
+  "ISMULTIPATCH": "false",
+  "MULTIPATCHCOUNT": "0",
+  "GRIDROTX": "0°",
+  "GRIDROTY": "0°",
+  "GRIDROTZ": "0°",
+  "GRIDINVX": "false",
+  "GRIDINVY": "false",
+  "GRIDINVZ": "false"
+ },
+ "201.sub": {
+  "IGNORENETWORK": "false",
+  "STRUCTURELOCKED": "true",
+  "SYSTEMLOCKED": "false",
+  "LOCK": "",
+  "INDEX": "1",
+  "COUNT": "0",
+  "NO": "1",
+  "NAME": "[Instance2#2]",
+  "USEREXPANDED": "false",
+  "FADERENABLED": "false",
+  "OWNED": "false",
+  "HIDDEN": "false",
+  "DEPENDENCYEXPORT": "",
+  "MEMORYFOOTPRINT": "736",
+  "NOTE": "",
+  "OLDSUBFIXTUREINDEX": "71",
+  "SUBFIXTUREINDEX": "71",
+  "OFFSETPAN": "0.0",
+  "OFFSETTILT": "0.0",
+  "PARAMETERCOUNTVIOLATION": "false",
+  "SUBFXITURECOUNTVIOLATION": "false",
+  "CONFLITEDPATCH": "false"
+ },
+ "301.sub": {
+  "IGNORENETWORK": "false",
+  "STRUCTURELOCKED": "true",
+  "SYSTEMLOCKED": "false",
+  "LOCK": "",
+  "INDEX": "1",
+  "COUNT": "0",
+  "NO": "1",
+  "NAME": "[Instance2#2]",
+  "USEREXPANDED": "false",
+  "FADERENABLED": "false",
+  "OWNED": "false",
+  "HIDDEN": "false",
+  "DEPENDENCYEXPORT": "",
+  "MEMORYFOOTPRINT": "736",
+  "NOTE": "",
+  "OLDSUBFIXTUREINDEX": "95",
+  "SUBFIXTUREINDEX": "95",
+  "OFFSETPAN": "0.0",
+  "OFFSETTILT": "0.0",
+  "PARAMETERCOUNTVIOLATION": "false",
+  "SUBFXITURECOUNTVIOLATION": "false",
+  "CONFLITEDPATCH": "false"
+ },
+ "stage1": {
+  "IGNORENETWORK": "false",
+  "STRUCTURELOCKED": "true",
+  "SYSTEMLOCKED": "false",
+  "LOCK": "PL",
+  "INDEX": "1",
+  "COUNT": "2",
+  "NO": "1",
+  "NAME": "Stage 1",
+  "USEREXPANDED": "false",
+  "FADERENABLED": "false",
+  "OWNED": "false",
+  "HIDDEN": "false",
+  "DEPENDENCYEXPORT": "",
+  "MEMORYFOOTPRINT": "188258",
+  "NOTE": "",
+  "POSX": "0.0",
+  "POSY": "0.0",
+  "POSZ": "0.0",
+  "ROTX": "0.0",
+  "ROTY": "0.0",
+  "ROTZ": "0.0",
+  "MINX": " -15.000",
+  "MAXX": "  15.000",
+  "MINY": " -15.000",
+  "MAXY": "  15.000",
+  "MINZ": "   0.000",
+  "MAXZ": "  15.000"
+ }
+}
+
+=== DIFF 201 vs 301 (fixture)
+INDEX: 201='201' 301='301'
+NO: 201='201' 301='301'
+OLDSUBFIXTUREINDEX: 201='70' 301='94'
+SUBFIXTUREINDEX: 201='70' 301='94'
+NAME: 201='BACK 201' 301='SIDE-L 301'
+FID: 201='201' 301='301'
+POSX: 201='-6.0' 301='-7.0'
+POSY: 201='4.5' 301='3.0'
+POSZ: 201='6.1999998092651' 301='1.2000000476837'
+=== DIFF 201.1 vs 301.1 (subfixture)
+OLDSUBFIXTUREINDEX: 201='71' 301='95'
+SUBFIXTUREINDEX: 201='71' 301='95'

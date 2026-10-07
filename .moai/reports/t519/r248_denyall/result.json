@@ -1,0 +1,36 @@
+{
+  "bundles": {
+    "on_248": false,
+    "off_248": false
+  },
+  "marks": [
+    {
+      "label": "on_248",
+      "t": 0.07
+    },
+    {
+      "label": "off_248",
+      "t": 0.13
+    }
+  ],
+  "pre_names": {
+    "248": "RHYTHM PROBE v5 - F1 AURA DIMMER 100"
+  },
+  "verdict": "deny-all: approval texts recorded, nothing sent",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 248"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 248"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

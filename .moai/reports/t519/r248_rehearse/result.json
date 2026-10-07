@@ -1,0 +1,42 @@
+{
+  "bundles": {
+    "on_248": true,
+    "off_248": true
+  },
+  "marks": [
+    {
+      "label": "on_248",
+      "t": 0.0
+    },
+    {
+      "label": "off_248",
+      "t": 0.0
+    }
+  ],
+  "pre_names": {
+    "248": "fake"
+  },
+  "verdict": "replayed — judge by director watch",
+  "fake_sent": [
+    "Goto Cue 1 Sequence 248",
+    "Off Sequence 248"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 248"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 248"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}
