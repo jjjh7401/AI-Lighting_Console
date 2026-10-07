@@ -341,3 +341,58 @@ ClearAll
 Sources:
 - [Select Fixtures — grandMA3 2.2](https://help.malighting.com/grandMA3/2.2/HTML/operate_select_fixtures.html)
 - [Groups — grandMA3 2.2](https://help.malighting.com/grandMA3/2.2/HTML/qsg_group.html)
+
+## 14. 프로브 G2 결과 → B 재작성(그룹 선택, split_each 폐기)
+
+### 14-1. G2 실기(리드 「실행」 1회, 세 단계)
+
+| 단계 | 줄 | 콘솔 회신 |
+|---|---|---|
+| store | `Group 5 ; Attribute 'Dimmer' At 100` → Store Seq 255 | 모두 OK |
+| store | `Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100` → Store Seq 256 | 모두 OK |
+| p255 · p256 | `Goto Cue 1 Sequence 255/256` 15초 → `Off` | OK |
+
+- t512 대조(단계별 감사 로그를 `g2_live_audit/audit-1·2·3`으로 모음): 송신 16줄, sha256 같음, 어긋남 0, not-ok 0 → **PASS**.
+- 감독 관찰(원문): **「둘 다 켜졌어」**. → 기존 그룹 선택과 뒤 점 선택 모두 Aura XB 서브픽스처 디머까지 연다(잰 것, SIDE-L 301·302 기준).
+- 감독 제안(원문): 「여러대의 장비를 작동하려면 그룹을 만들어서 사용하면 되잖아」. 리드 지시: 그룹이 맞는 묶음은 `Group N ;`, 아니면 `Fixture a Thru b. ;`(이어진 범위 우선), 점 번호 0줄.
+
+### 14-2. B 판 G(`--target b --sub-mode group`)
+
+- 모든 선택이 기존 그룹에 맞아 떨어졌다: Group 3 FOH · 4 BACK · 5 SIDE-L · 6 SIDE-R · 7 SIDE-ALL · 10 WASH-ALL · 11 MOVER-U · 12 MOVER-D · 13 MOVER-ALL · 14 BLIND. 뒤 점 범위 줄은 0줄, `Fixture` 줄 0줄이다. 목록 안 뒤 점 꼴은 만들지 않는다(그룹도 이어진 범위도 아니면 생성기가 멈춘다).
+- 선택 줄 172개(Group 4 ×39, 5·6·11·12 ×30, 10 ×6, 14 ×3, 3 ×2, 7·13 ×1), 그 안의 점 번호 0(`plan_stats.py` — 처음 판이 `Measure 0.5`·이벤트 시각 같은 소수까지 세어 35로 잘못 나와, 선택 줄만 세도록 고쳤다).
+- 줄 수 **586**(v2와 같다 — 선택 꼴만 바뀌었다). BACK Pan 180 · Tilt 80은 `Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80`으로 장면 큐 7개에 있다.
+- 대상 번호는 Seq 253·254·TC 23뿐이다(이름 `'LOVE ATTACK - RHYTHM M2a B …'`). 생성기 기본값은 여전히 v2와 바이트 동일하다.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`rehearse_g`) | 5묶음 끝까지 · 트랙 NO 1→253, NO 2→254 · 이벤트 7·15 |
+| 실기 전부-거절(`live_denyall_g`) | `responder_ok` · 사전 판독 통과(253·254·TC23 빔, 마스터 15 = 69) · 요청 5, 승인 0 · `rejected` 5, 명령 송신 0 · 문면 = 리허설 `True` |
+| AC-012 리허설 | 586줄 **PASS** · 양성 대조(300번째 줄 삭제) **FAIL** |
+| 정적 검사 | 큰따옴표 0 · Save/Delete/Remove/Copy/Move/Edit/Master 0 · 점 번호 선택 0 |
+
+**승인 파일(B·G)**
+
+| 파일 | 줄 | sha256 |
+|---|---|---|
+| `.moai/reports/t520/approval_m2a_batch1_g.txt` | 586 | `8806c6e71b124d908ae76062cac9c1d7e91100fb62cc0a81323601be430eebc9` |
+| `.moai/reports/t520/approval_m2a_play_b.txt`(번호·이름 같아 그대로) | 4 | `2cb3d5dcfa0392bf58dad8f3d218c408bf9b2b9cbfb5833f20d8cfb88960c60d` |
+
+- split_each 판(`approval_m2a_batch1_b.txt`, 2,446줄)은 폐기한다. 기록으로만 남는다.
+
+**실행(리드 「실행」 뒤에만)**
+
+```
+uv run python .moai/reports/t520/m2a_batch1.py .moai/reports/t520/live_write_g --approve .moai/reports/t520/live_denyall_g --target b --sub-mode group
+uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval_m2a_batch1_g.txt .moai/reports/t520/live_write_g/audit
+uv run python .moai/reports/t520/m2a_play.py .moai/reports/t520/play_denyall_b --target b
+uv run python .moai/reports/t520/m2a_play.py .moai/reports/t520/play_live_b --approve .moai/reports/t520/play_denyall_b --target b --audio "/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3"
+uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval_m2a_play_b.txt .moai/reports/t520/play_live_b/audit
+```
+
+**아직 안 잰 것(G)**
+
+- 그룹 구성원: 그룹 이름과 패치 표로 짝지었다. 그룹 4는 감독이 뒤쪽 12대로 확인했고, 그룹 5는 G2로 301·302가 켜졌다. 나머지 그룹이 이름대로 담겼는지는 응답기로 못 읽는다.
+- **그룹으로 준 Pan/Tilt**: 실기 기록에 그룹 + Pan/Tilt 줄이 없다(앱 219는 `Group 13 ; Dimmer`만). 위치 채널이 없는 서브픽스처가 그룹 안에 있어도 오류가 안 나는지, Spiider 위치가 움직이는지 안 잰 것이다.
+- **그룹 + 페이저**: `Group 4 ; Dimmer …` 뒤 `Attribute 'Dimmer' At Phase/Measure/SpeedMaster` 줄이 그룹 전체(서브픽스처 포함)에 걸리는지. t516의 페이저는 `Fixture 501 + … ;` 선택에서만 확인했다.
+- §5의 나머지(한 큐에 선택 여러 개 + `Step 2`, Measure 8·0.5, 트래킹 끊기, 소수 이벤트 시각)는 그대로 미측정이다.
+- 잔여 객체: Seq 250(색·무빙 디머 일부 빠짐) · 252(프로브 A) · 255·256(프로브 G2). 지울지는 감독이 정한다.

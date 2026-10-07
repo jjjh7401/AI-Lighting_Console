@@ -65,7 +65,7 @@ def configure(
     scene: int, rhythm: int, tc: int, tag: str, sub_mode: str, max_list: int | None
 ) -> None:
     global S_SCENE, S_RHY, TC_NO, TAG, SUB_MODE, MAX_LIST, TC, SEQ
-    if sub_mode not in ("mixed", "main_only", "split_list", "split_each"):
+    if sub_mode not in ("mixed", "main_only", "split_list", "split_each", "group"):
         raise ValueError(sub_mode)
     S_SCENE, S_RHY, TC_NO, TAG, SUB_MODE, MAX_LIST = scene, rhythm, tc, tag, sub_mode, max_list
     TC = f"{POOL}/Timecodes/{TC_NO}"
@@ -81,7 +81,9 @@ def add_target_args(parser: argparse.ArgumentParser) -> None:
         "--target", choices=("v2", "b"), default="v2", help="v2 = 250·251·TC22, b = 253·254·TC23"
     )
     parser.add_argument(
-        "--sub-mode", choices=("mixed", "main_only", "split_list", "split_each"), default=None
+        "--sub-mode",
+        choices=("mixed", "main_only", "split_list", "split_each", "group"),
+        default=None,
     )
     parser.add_argument("--max-list", type=int, default=None)
 
@@ -90,7 +92,7 @@ def apply_target(args: argparse.Namespace) -> None:
     if args.target == "b":
         if args.sub_mode in (None, "mixed"):
             raise SystemExit(
-                "--target b 는 --sub-mode main_only|split_list|split_each 를 정해야 한다"
+                "--target b 는 --sub-mode group|main_only|split_list|split_each 를 정해야 한다"
             )
         configure(253, 254, 23, "M2a B", args.sub_mode, args.max_list)
     elif args.sub_mode not in (None, "mixed") or args.max_list:
@@ -162,9 +164,41 @@ def val(ids: list[str], *parts: str) -> V:
     return V(ids, parts)
 
 
+#: SUB_MODE "group" — 기존 그룹 번호(t498 run0 그룹 이름 · 감독이 그룹 4 = 뒤쪽 12대 확인, t516 §4-5).
+#: 프로브 G2: `Group 5 ; Dimmer 100` 과 `Fixture 301 Thru 302. ; Dimmer 100` 둘 다 서브픽스처 디머까지 열었다(감독 「둘 다 켜졌어」).
+#: 열쇠는 본체 번호 집합이다. 그룹 구성원은 응답기로 못 읽으므로 그룹 이름과 패치 표가 근거다.
+GROUP_OF = {
+    frozenset(str(i) for i in range(111, 119)): 3,  # FOH
+    frozenset(str(i) for i in range(201, 213)): 4,  # BACK
+    frozenset(str(i) for i in range(301, 307)): 5,  # SIDE-L
+    frozenset(str(i) for i in range(311, 317)): 6,  # SIDE-R
+    frozenset(str(i) for i in [*range(301, 307), *range(311, 317)]): 7,  # SIDE-ALL
+    frozenset(str(i) for i in [*range(401, 411), *range(421, 431)]): 10,  # WASH-ALL
+    frozenset(str(i) for i in range(501, 509)): 11,  # MOVER-U
+    frozenset(str(i) for i in range(521, 529)): 12,  # MOVER-D
+    frozenset(str(i) for i in [*range(501, 509), *range(521, 529)]): 13,  # MOVER-ALL
+    frozenset(str(i) for i in range(601, 607)): 14,  # BLIND
+}
+
+
+def group_selection(ids: list[str]) -> str:
+    """기존 그룹이 맞으면 `Group N`, 아니면 이어진 범위 `Fixture a Thru b.`(뒤 점 — 본체 + 서브픽스처 전부)."""
+    mains = [int(i) for i in ids if "." not in i]
+    key = frozenset(str(i) for i in mains)
+    if key in GROUP_OF:
+        return f"Group {GROUP_OF[key]}"
+    if mains == list(range(mains[0], mains[-1] + 1)):
+        return f"Fixture {mains[0]} Thru {mains[-1]}."
+    raise ValueError(
+        f"그룹도 이어진 범위도 아닌 선택: {ids}"
+    )  # 목록 안 뒤 점은 안 잰 꼴이라 만들지 않는다
+
+
 def render(v: V, after: tuple[str, ...] = ()) -> list[str]:
     """나뉜 선택마다 `Fixture 목록 ; Attribute …` 한 줄, 그 뒤에 after(페이저 타이밍 — 지금 선택에 붙는다)."""
     out: list[str] = []
+    if SUB_MODE == "group":
+        return [" ; ".join([group_selection(v.ids), *v.parts]), *after]
     ids = v.ids
     position_only = all(p.startswith(("Attribute 'Pan'", "Attribute 'Tilt'")) for p in v.parts)
     if SUB_MODE != "mixed" and position_only:

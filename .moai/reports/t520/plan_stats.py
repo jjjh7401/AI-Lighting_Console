@@ -5,6 +5,7 @@
 
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -15,7 +16,22 @@ sels = [c.split(";")[0] for c in lines if c.startswith("Fixture ")]
 dot_in_list = [s for s in sels if "+" in s and "." in s]
 print("bundles", {label: len(cmds) for label, cmds in plan})
 print("total", len(lines), "sha256", hashlib.sha256(text.encode()).hexdigest())
-print("dot-in-list lines", len(dot_in_list), "max list", max(len(s.split("+")) for s in sels))
+print(
+    "dot-in-list lines",
+    len(dot_in_list),
+    "max list",
+    max((len(s.split("+")) for s in sels), default=0),
+    "fixture lines",
+    len(sels),
+    "group lines",
+    sum(1 for c in lines if c.startswith("Group ")),
+    "dotted ids",
+    sum(
+        1
+        for c in lines
+        if c.startswith(("Group ", "Fixture ")) and re.search(r"\d+\.\d", c.split(";")[0])
+    ),
+)
 print("names", [c for c in lines if "'Name'" in c])
 if len(sys.argv) > 2:
     print("equals", sys.argv[2], text == Path(sys.argv[2]).read_text("utf-8"))
