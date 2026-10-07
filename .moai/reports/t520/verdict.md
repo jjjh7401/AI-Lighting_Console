@@ -566,3 +566,27 @@ uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval
 ```
 
 - 남는 안 잰 것: 그룹 + 페이저 · 그룹 + Pan/Tilt(Spiider 위치가 실제로 움직이는지) · Measure 8·0.5 · 다중 선택 + Step 2 · 트래킹 끊기 · BACK Tilt 80 가시성 · WASH 40% 이하 가시성.
+
+### 18-1. B2 수정 — Spiider `Dimmer2` open(감독 손 시험) · 정정
+
+- 감독 손 시험(원문, 리드 경유): 「딤머2를 켜야되네」 + Fixture Sheet: 521~528 `Dim` 80 공통, `Dim2` 는 손으로 올린 521·526·527·528 만 「open」(켜짐), 522~525 「closed」(꺼짐).
+- 🔴 **정정(내 판독 잘못)**: §16-3·§17-2 에서 「Spiider 디머 셋의 속성 이름이 모두 `Dimmer`」라 적었다. 그건 한 단계 아래 **ChannelFunction** 의 ATTRIBUTE 를 읽은 값이었다. **LogicalChannel** 단계에서 ch26 `Main Module_Dimmer2` 의 속성은 **`Dimmer2`** 다(`dim2_readonly.txt`). 「같은 이름이라 하나에만 걸린다」는 §17-2 추정은 틀렸다 — 속성이 달라서 `Attribute 'Dimmer'` 가 `Dimmer2` 를 안 건드린 것이다.
+- 유형 판독(잰 것): 전역 속성 정의 `Patch/AttributeDefinitions/4/Dimmer2` — NAME `Dimmer2`, PRETTY **`Dim2`**(감독 시트의 칸 이름과 같다), FEATURE `FeatureGroup 1.1`(`Dimmer` 와 같은 디머 기능, INDEX 445). 채널 세트(ch26 `Dimmer 1`): **closed = DMX 0**, No Feature = 1~254, **open = 255**(24비트 표기 16777215~). 기본값 0 = closed.
+- 저장소 근거(잰 것, grep): `.moai/reports/t442/verdict.md:88` 「디머 `Dimmer`·`Dimmer2`」, `t516/verdict.md:230` 「Dimmer2 0」 — 둘째 디머는 이미 기록돼 있었다.
+- 그래서 t459 의 맨 `At 100` 이 켠 까닭(추정): 맨 `At` 은 디머 기능(FeatureGroup 1.1) 전체 — `Dimmer` 와 `Dimmer2` — 에 값을 준다. 100 이면 `Dimmer2` 가 255 = open. 🔴 그러면 B2 의 `Group 13 ; At 60` 은 Spiider `Dimmer2` 를 60%(≈DMX 153, No Feature 구간)로 둘 수 있어 open 이 보장되지 않는다.
+- 수정: 장면 큐1 에 `Group 12 ; Attribute 'Dimmer2' At 100` 을 Spiider(그룹 12)에만 더했다(그룹 13 줄 뒤 — 같은 큐 안에서 뒤 값이 이긴다). MegaPointe 에는 `Dimmer2` 가 없다. `Attribute 'Dimmer2'` 명령 꼴 자체는 실기 송신 기록이 없다(안 잰 것) — 실행 때 콘솔 회신으로 본다.
+- B 그룹판 대비 바뀐 줄(`diff_g_b2.txt`): `Group 13 ; Attribute 'Dimmer' At 60 …` → `Group 13 ; At 60 …` + 새 줄 `Group 12 ; Attribute 'Dimmer2' At 100`. 586 → **587줄**.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`rehearse_b2` 다시) | 5묶음 끝까지 · 이벤트 7·15 |
+| 실기 전부-거절(`live_denyall_b2` 다시) | `responder_ok` · 269·270·TC24 빔 · 마스터 15 = 69 · 요청 5, 승인 0 · `rejected` 5, 명령 송신 0 · 문면 = 리허설 `True` |
+| AC-012 리허설 | 587줄 PASS · 양성 대조(10번째 줄 삭제) FAIL |
+
+| 파일 | 줄 | sha256 |
+|---|---|---|
+| `.moai/reports/t520/approval_m2a_batch1_b2.txt` | 587 | `32b2fe00a63559101ba937ebe326ba2b30c6bdda105bd78659000af5b7256ee4` |
+| `.moai/reports/t520/approval_m2a_play_b2.txt`(그대로) | 4 | `35ab13fae6b73841d099df81759014f36b1288f193a35b9bf04b1c47c56aa96d` |
+
+- 앞판(586줄 `e10d4979…`)은 이 판으로 대신한다(git 기록에만 남는다). 실행 명령은 §18 그대로다.
+- 시연 전에 감독 프로그래머에 손 값(Dim 80·Dim2 open)이 남아 있으면 결과가 섞인다 — 리드가 감독에게 Clear 를 안내한다.

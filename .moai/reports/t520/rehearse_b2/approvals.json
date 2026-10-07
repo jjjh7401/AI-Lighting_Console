@@ -9,6 +9,7 @@
       "Group 7 ; Attribute 'ColorRGB_R' At 72 ; Attribute 'ColorRGB_G' At 60 ; Attribute 'ColorRGB_B' At 100",
       "Group 13 ; At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100",
       "Group 14 ; Attribute 'Dimmer' At 0",
+      "Group 12 ; Attribute 'Dimmer2' At 100",
       "Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80",
       "Store Sequence 269 Cue 1 'Intro A' CueFade 0",
       "ClearAll",

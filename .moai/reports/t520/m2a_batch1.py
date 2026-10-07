@@ -57,6 +57,7 @@ S_SCENE, S_RHY, TC_NO = 250, 251, 22
 TAG = "M2a"
 SUB_MODE = "mixed"
 BARE_AT_GROUPS: set[str] = set()  # 맨 `At` 으로 디머를 줄 그룹(--target b2)
+DIM2_OPEN: list = []  # 장면 큐1 에 더할 Spiider Dimmer2 open 줄(--target b2)
 MAX_LIST: int | None = None
 TC = f"{POOL}/Timecodes/{TC_NO}"
 SEQ = {n: f"{POOL}/Sequences/{n}" for n in (S_SCENE, S_RHY)}
@@ -104,6 +105,10 @@ def apply_target(args: argparse.Namespace) -> None:
         global BARE_AT_GROUPS
         configure(269, 270, 24, "M2a B2", "group", None)
         BARE_AT_GROUPS = {"Group 12", "Group 13"}
+        # Spiider 두 번째 디머 — 감독 손 시험(원문) 「딤머2를 켜야되네」. 유형 판독(dim2_readonly.txt): 논리 채널
+        # `Dimmer2`(PRETTY 「Dim2」, FeatureGroup 1.1), 채널 세트 closed = DMX 0 · No Feature 1~254 · open = 255.
+        # 맨 `At 60` 은 Dimmer2 도 60%(No Feature 구간)로 둘 수 있어, 큐1 에 open(100%)을 Spiider(그룹 12)에만 따로 준다.
+        DIM2_OPEN.append(val(MOV_D, "Attribute 'Dimmer2' At 100"))
     elif args.sub_mode not in (None, "mixed") or args.max_list:
         raise SystemExit("--target v2 는 기록용 — 줄 꼴을 바꾸지 않는다")
 
@@ -421,7 +426,11 @@ def build(tracks: tuple[int, int] = (1, 2)) -> list[tuple[str, list[str]]]:
     scene = ["ChangeDestination Root", "ClearAll"]
     for cue, label, fade, _, _, lines in SCENE:
         scene += [
-            *(line for v in [*lines, BACK_AIM] for line in render(v)),
+            *(
+                line
+                for v in [*lines, *(DIM2_OPEN if cue == 1 else []), BACK_AIM]
+                for line in render(v)
+            ),
             f"Store Sequence {S_SCENE} Cue {cue} '{label}' CueFade {fade:g}",
             "ClearAll",
         ]
