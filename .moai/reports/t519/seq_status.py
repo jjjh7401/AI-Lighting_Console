@@ -16,7 +16,16 @@ from server.bridge.osc import BridgeConfig, OscBridge, QueueFeedbackConsumer  # 
 from server.bridge.protocol import build_props_query, build_state_query  # noqa: E402
 
 POOL = "ShowData/DataPools/Default/Sequences"
-NAMES = ["NAME", "NO", "CURRENTCUE", "LOADEDCUE", "CUENO", "CUENAME", "PRIORITY", "OFFWHENOVERRIDDEN"]
+NAMES = [
+    "NAME",
+    "NO",
+    "CURRENTCUE",
+    "LOADEDCUE",
+    "CUENO",
+    "CUENAME",
+    "PRIORITY",
+    "OFFWHENOVERRIDDEN",
+]
 
 
 def ask(bridge, consumer, build, kind):
@@ -31,7 +40,12 @@ def main():
     with OscBridge(config, consumer=consumer) as bridge:
         children, off = [], 0
         while True:
-            r = ask(bridge, consumer, lambda rid: build_state_query(rid, POOL, off or None), "state")
+            r = ask(
+                bridge,
+                consumer,
+                lambda rid, off=off: build_state_query(rid, POOL, off or None),
+                "state",
+            )
             got = r.get("children") or []
             children += got
             off += len(got)
@@ -40,7 +54,12 @@ def main():
         print(f"children={len(children)} node={r.get('node')}")
         for c in children:
             path = f"{POOL}/{c['i']}"
-            r = ask(bridge, consumer, lambda rid: build_props_query(rid, path, NAMES), "props")
+            r = ask(
+                bridge,
+                consumer,
+                lambda rid, path=path: build_props_query(rid, path, NAMES),
+                "props",
+            )
             vals = {x["n"]: x.get("v") for x in r.get("reads") or []}
             print(json.dumps({"i": c["i"], **vals}, ensure_ascii=False))
 

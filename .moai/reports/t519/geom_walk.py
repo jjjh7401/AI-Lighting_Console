@@ -15,7 +15,15 @@ from probe_readonly import await_  # noqa: E402
 from server.bridge.osc import BridgeConfig, OscBridge, QueueFeedbackConsumer  # noqa: E402
 from server.bridge.protocol import build_props_query, build_state_query  # noqa: E402
 
-BEAM = ["LUMINOUSINTENSITY", "BEAMANGLE", "FIELDANGLE", "BEAMRADIUS", "BEAMTYPE", "LAMPTYPE", "ISMAINBEAM"]
+BEAM = [
+    "LUMINOUSINTENSITY",
+    "BEAMANGLE",
+    "FIELDANGLE",
+    "BEAMRADIUS",
+    "BEAMTYPE",
+    "LAMPTYPE",
+    "ISMAINBEAM",
+]
 GEO = ["NAME", "MODEL"]
 
 
@@ -30,9 +38,19 @@ def walk(bridge, consumer, path, depth):
     for c in r.get("children") or []:
         child = f"{path}/{c['i']}"
         names = BEAM if c["class"] == "Beam" else GEO
-        p = ask(bridge, consumer, lambda rid: build_props_query(rid, child, names), "props")
+        p = ask(
+            bridge,
+            consumer,
+            lambda rid, child=child, names=names: build_props_query(rid, child, names),
+            "props",
+        )
         vals = {x["n"]: x.get("v") for x in p.get("reads") or []}
-        print("  " * depth + json.dumps({"path": child, "class": c["class"], "name": c["name"], **vals}, ensure_ascii=False))
+        print(
+            "  " * depth
+            + json.dumps(
+                {"path": child, "class": c["class"], "name": c["name"], **vals}, ensure_ascii=False
+            )
+        )
         if depth < 8:
             walk(bridge, consumer, child, depth + 1)
 

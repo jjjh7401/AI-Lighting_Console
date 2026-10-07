@@ -2,3 +2,7 @@
 {"ts": "2026-10-07T05:28:30.192240+00:00", "event": "approved", "commands": ["Set Fixture 201 Posz '6.2'"], "held": ["Set Fixture 201 Posz '6.2'"], "kind": "t519_back_place"}
 {"ts": "2026-10-07T05:28:30.192371+00:00", "event": "executed", "command": "Set Fixture 201 Posz '6.2'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
 {"ts": "2026-10-07T05:28:30.192460+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/43 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T05:31:11.574224+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/43 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T05:31:11.574674+00:00", "event": "approved", "commands": ["Set Fixture 201 Posz '6.2'"], "held": ["Set Fixture 201 Posz '6.2'"], "kind": "t519_back_place"}
+{"ts": "2026-10-07T05:31:11.574829+00:00", "event": "executed", "command": "Set Fixture 201 Posz '6.2'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:31:11.574920+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/43 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}

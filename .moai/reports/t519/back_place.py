@@ -41,7 +41,9 @@ _fire = tc_probe.Probe.fire
 
 def _fire_t519(self, label, lines):
     # 감사 로그·승인 요청에 t519 로 남도록 위험 사유만 바꾼다(문면은 floor_place.commands 그대로)
-    tc_probe.RISK = tc_probe.RISK.__class__(reason=f"t519 BACK 높이 시험 {label} — 1대", kind="t519_back_place")
+    tc_probe.RISK = tc_probe.RISK.__class__(
+        reason=f"t519 BACK 높이 시험 {label} — 1대", kind="t519_back_place"
+    )
     return _fire(self, label, lines)
 
 

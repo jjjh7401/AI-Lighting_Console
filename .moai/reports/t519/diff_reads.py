@@ -1,3 +1,4 @@
+# ruff: noqa: E501 — 근거(경로·판독값)를 그대로 싣는 한국어 머리말이라 줄 길이 규칙을 끈다
 """t519 — 읽기 전용(ping/state/introspect/props 만): BACK 201 과 켜지는 SIDE-L 301 의 패치 속성을 전부 읽어 차이를 낸다.
 
 1) introspect 를 페이징해 Fixture·SubFixture·Stage 의 속성 이름 전체를 얻는다
@@ -17,7 +18,11 @@ sys.path.insert(0, ".moai/reports/t506")
 from probe_readonly import await_  # noqa: E402
 
 from server.bridge.osc import BridgeConfig, OscBridge, QueueFeedbackConsumer  # noqa: E402
-from server.bridge.protocol import build_introspect_query, build_props_query, build_state_query  # noqa: E402
+from server.bridge.protocol import (  # noqa: E402
+    build_introspect_query,
+    build_props_query,
+    build_state_query,
+)
 
 SKIP_TYPES = {"Handle", "Custom"}
 BACK, SIDE = "Patch/Stages/1/Fixtures/43", "Patch/Stages/1/Fixtures/55"
@@ -35,7 +40,12 @@ def ask(bridge, consumer, line_fn, kind):
 def fields(bridge, consumer, path):
     out, off = [], 0
     while True:
-        r = ask(bridge, consumer, lambda rid: build_introspect_query(rid, path, off or None), "introspect")
+        r = ask(
+            bridge,
+            consumer,
+            lambda rid, off=off: build_introspect_query(rid, path, off or None),
+            "introspect",
+        )
         got = r.get("fields") or []
         out += got
         off += len(got)
@@ -47,7 +57,9 @@ def read_all(bridge, consumer, path, names):
     vals = {}
     for i in range(0, len(names), 16):
         chunk = names[i : i + 16]
-        r = ask(bridge, consumer, lambda rid: build_props_query(rid, path, chunk), "props")
+        r = ask(
+            bridge, consumer, lambda rid, chunk=chunk: build_props_query(rid, path, chunk), "props"
+        )
         for x in r.get("reads") or []:
             vals[x["n"]] = x.get("v") if x.get("ok") else f"!err {x.get('err')}"
     return vals
@@ -60,7 +72,12 @@ def main():
         fx_names = fields(bridge, consumer, BACK)
         sub_names = fields(bridge, consumer, BACK + "/1")
         stage_names = fields(bridge, consumer, "Patch/Stages/1")
-        ask(bridge, consumer, lambda rid: build_state_query(rid, "Patch/Stages/1/Spaces", None), "state")
+        ask(
+            bridge,
+            consumer,
+            lambda rid: build_state_query(rid, "Patch/Stages/1/Spaces", None),
+            "state",
+        )
         result = {
             "201": read_all(bridge, consumer, BACK, fx_names),
             "301": read_all(bridge, consumer, SIDE, fx_names),
