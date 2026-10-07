@@ -1,0 +1,20 @@
+{
+  "phase": "p257",
+  "bundles": {
+    "on_257": false,
+    "off_257": false,
+    "on_258": false,
+    "off_258": false,
+    "on_259": false,
+    "off_259": false,
+    "on_263": false,
+    "off_263": false,
+    "on_265": false,
+    "off_265": false
+  },
+  "pre_name": "FIXTURE PROBE - GROUP 12 DIMMER",
+  "verdict": "deny-all: approval texts recorded",
+  "preflight": "responder_ok",
+  "approved": 0,
+  "skipped_saveshow": []
+}

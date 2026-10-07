@@ -1,0 +1,4 @@
+{"step": "pre_name", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/259", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/259", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - SPIIDER DOT RGB"}], "truncated": false, "v": 1}}
+{"step": "off_259", "t": 0.133, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 259", "reasons": ["reference-invoking command"]}]}
+{"step": "off_259", "t": 0.2, "kind": "exec", "command": "Off Sequence 259", "fired": true, "ok": true, "detail": "OK"}
+{"verdict": "ran phase p259", "bundles": {"off_259": true}, "pre_name": "FIXTURE PROBE - SPIIDER DOT RGB", "exec": [{"command": "Off Sequence 259", "ok": true, "detail": "OK"}], "approved": 1}

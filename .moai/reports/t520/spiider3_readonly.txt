@@ -1,0 +1,76 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping b79a11aa"
+<<< {"id": "b79a11aa", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> introspect:Patch/FixtureTypes/4/6/1/1/26
+    wire: Plugin "CopilotResponder" "introspect 9b93caea Patch/FixtureTypes/4/6/1/1/26"
+<<< {"class": "DMXChannel", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "NAME", "t": "String"}, {"n": "DMXBREAK", "t": "Int32"}, {"n": "COARSE", "t": "Int32"}, {"n": "FINE", "t": "Int32"}, {"n": "ULTRA", "t": "Int32"}, {"n": "CALCALWAYS", "t": "UInt8"}, {"n": "VIRTUALRESOLUTION", "t": "UInt8"}, {"n": "DEFAULTCHANNELFUNCTION", "t": "Handle"}, {"n": "DEFAULT", "t": "UInt32"}, {"n": "HIGHLIGHT", "t": "UInt32"}, {"n": "LOWLIGHT", "t": "UInt32"}, {"n": "UBER", "t": "Int32"}], "id": "9b93caea", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/26", "source": "property_accessors", "total": 28, "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5
+    wire: Plugin "CopilotResponder" "state a521e9b9 Patch/FixtureTypes/4/5"
+<<< {"children": [{"class": "Beam", "i": 1, "name": "RGBW Cluster"}, {"class": "Geometry", "i": 2, "name": "Body"}, {"class": "Beam", "i": 3, "name": "RGBW Cluster#2"}, {"class": "Geometry", "i": 4, "name": "Body#2"}, {"class": "Geometry", "i": 5, "name": "Body#3"}, {"class": "Beam", "i": 6, "name": "RGB Cluster"}, {"class": "Geometry", "i": 7, "name": "Body#4"}, {"class": "Beam", "i": 8, "name": "RGB Cluster#2"}, {"class": "Geometry", "i": 9, "name": "Body#5"}, {"class": "Beam", "i": 10, "name": "RGBW Cluster#3"}, {"class": "Geometry", "i": 11, "name": "Body#6"}, {"class": "Beam", "i": 12, "name": "RGB Cluster#3"}, {"class": "Geometry", "i": 13, "name": "Body#7"}], "id": "a521e9b9", "kind": "state", "node": {"childCount": 13, "class": "Geometries", "enumeration": "ok", "name": "Geometries"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/1
+    wire: Plugin "CopilotResponder" "state b9a6d8a3 Patch/FixtureTypes/4/5/1"
+<<< {"children": [], "id": "b9a6d8a3", "kind": "state", "node": {"childCount": 0, "class": "Beam", "enumeration": "ok", "name": "RGBW Cluster"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1
+    wire: Plugin "CopilotResponder" "state e3a0d2b1 Patch/FixtureTypes/4/6/1"
+<<< {"children": [{"class": "DMXChannels", "i": 1, "name": "DMXChannels"}, {"class": "Relations", "i": 2, "name": "Relations"}, {"class": "FTMacros", "i": 3, "name": "FTMacros"}, {"class": "SoftwareVersions", "i": 4, "name": "SoftwareVersions"}, {"class": "FTPresets", "i": 5, "name": "FTPresets"}, {"class": "SubfixtureOverview", "i": 6, "name": "SubfixtureOverview"}], "id": "e3a0d2b1", "kind": "state", "node": {"childCount": 6, "class": "DMXMode", "enumeration": "ok", "name": "Mode 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1", "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/4/6/1
+    wire: Plugin "CopilotResponder" "introspect 0320e05c Patch/FixtureTypes/4/6/1"
+<<< {"class": "DMXMode", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TOTALFOOTPRINT", "t": "Int32"}, {"n": "GEOMETRY", "t": "Handle"}, {"n": "GEOMETRYDIRECT", "t": "Handle"}, {"n": "DMXFOOTPRINT", "t": "Custom"}, {"n": "RDMPERSONALITYID", "t": "String"}, {"n": "CONFLICTCOUNT", "t": "UInt32"}, {"n": "CONFLICTSUMMARY", "t": "String"}, {"n": "USED", "t": "UInt32"}, {"n": "XYZ", "t": "UInt32"}, {"n": "XYZPOSSIBLE", "t": "UInt32"}, {"n": "DIVEINTO", "t": "UInt32"}], "id": "0320e05c", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1", "source": "property_accessors", "total": 30, "truncated": true, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/35|NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ,PATCH
+    wire: Plugin "CopilotResponder" "props b1ea58f0 NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ,PATCH Patch/Stages/1/Fixtures/35"
+<<< {"id": "b1ea58f0", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/35", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 521"}, {"n": "POSX", "ok": true, "t": "number", "v": "-5.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "PATCH", "ok": true, "t": "string", "v": "3.001"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/27|NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ,PATCH
+    wire: Plugin "CopilotResponder" "props d8a0c385 NAME,POSX,POSY,POSZ,ROTX,ROTY,ROTZ,PATCH Patch/Stages/1/Fixtures/27"
+<<< {"id": "d8a0c385", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/27", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 501"}, {"n": "POSX", "ok": true, "t": "number", "v": "-1.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "PATCH", "ok": true, "t": "string", "v": "2.001"}], "truncated": false, "v": 1}
+
+>>> introspect:Patch/Stages/1/Fixtures/35/1
+    wire: Plugin "CopilotResponder" "introspect 6d5ad6f6 Patch/Stages/1/Fixtures/35/1"
+<<< {"class": "SubFixture", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "OLDSUBFIXTUREINDEX", "t": "UInt32"}, {"n": "SUBFIXTUREINDEX", "t": "UInt32"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "FIXTURE", "t": "Handle"}, {"n": "STAGE", "t": "Handle"}, {"n": "OFFSETPAN", "t": "Double"}, {"n": "OFFSETTILT", "t": "Double"}], "id": "6d5ad6f6", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/35/1", "source": "property_accessors", "total": 29, "truncated": true, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/10|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props e0683b50 NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/10"
+<<< {"id": "e0683b50", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/10", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_COLORMIXER"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/11|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props ff5a474f NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/11"
+<<< {"id": "ff5a474f", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/11", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_COLORTEMPERATURE"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/12|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 3fc71caf NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/12"
+<<< {"id": "3fc71caf", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/12", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_COLOURPRIORITY"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<2D2D2D>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/13|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 2e5dd0dc NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/13"
+<<< {"id": "2e5dd0dc", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/13", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_PIXELMASK"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/14|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props ad1ffcce NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/14"
+<<< {"id": "ad1ffcce", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/14", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_PIXELMASKINDEXROTATE"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/15|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 4edc8e30 NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/15"
+<<< {"id": "4edc8e30", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/15", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_PIXELMASKSTEPTIME"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/16|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 6c862e0f NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/16"
+<<< {"id": "6c862e0f", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/16", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_EFFECTWHEEL"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/21|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props a0fa6306 NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/21"
+<<< {"id": "a0fa6306", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/21", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_COLORMIXER2"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/24|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props f7bc7090 NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/24"
+<<< {"id": "f7bc7090", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/24", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Zoom"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<800080>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/7|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props b384765d NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/7"
+<<< {"id": "b384765d", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/7", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Tilt"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<800080>"}], "truncated": false, "v": 1}

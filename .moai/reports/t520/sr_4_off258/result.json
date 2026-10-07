@@ -1,0 +1,20 @@
+{
+  "phase": "p258",
+  "bundles": {
+    "off_258": true
+  },
+  "pre_name": "FIXTURE PROBE - SPIIDER TRAILING DOT",
+  "exec": [
+    {
+      "command": "Off Sequence 258",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase p258",
+  "preflight": "responder_ok",
+  "approved": 1,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

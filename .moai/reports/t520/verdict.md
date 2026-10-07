@@ -430,3 +430,62 @@ uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval
 | 켜진 「Key」 | 우리 파일은 KEY 를 안 부른다. FOH 8대(G3, 같은 기종·비슷한 위치)를 「Key」라 불렀을 가능성 — 리드가 감독에게 확인 중 |
 
 - 감독에게 묻는 중(리드): 켜진 「Key」가 FOH 8대였는지, 그룹 10·12 선택 결과. 답이 오면 이 절에 덧붙인다.
+
+## 16. 프로브 F 실기 · 대화형 다시 보기 — Spiider 무점등, Rush Par 점등
+
+### 16-1. 프로브 F 실기(리드 「실행」, 일곱 단계)
+
+- 저장 18줄 중 17줄 OK. **⑤ 값 줄 `Group 10 ; Dimmer 100 ; ColorRGB_R/G/B 100 ; Attribute 'ColorMacro' At 0` 이 `Failed`**(Store 264 는 OK — 큐는 비었거나 일부, 추정). 다른 줄과의 차이는 `ColorMacro` 하나다. 속성 이름은 패치 유형 ChannelFunction 의 ATTRIBUTE 를 읽은 값이었지만, 콘솔 명령줄에서는 받지 않는다(추정, 안 잰 것).
+- 재생 12줄 OK, 이름 사전 판독 6/6. t512 대조(`f_live_audit/audit-1~7`): 송신 48줄, sha256 같음, 어긋남 0 → PASS(not-ok 1 = ⑤ 값 줄).
+
+### 16-2. 대화형 다시 보기(감독 「순서대로 하면서 켜져있을 때 하나씩 물어봐」)
+
+- 실행기 `step_replay.py` — 한 번에 한 줄(`Goto Cue 1 Sequence N` 또는 `Off Sequence N`), 매번 이름 사전 판독. 승인 파일 `approval_step_replay.txt` 10줄 sha256 `82510703951971462243f9be08a714b5f0459d78db05e52da9996963dc06979d`(Goto/Off 만, 전부-거절 10/10 거절·송신 0). ⑤ 264 는 뺐다.
+- 켜진 채로 리드에게 「지금 N 켜짐」 → 리드 「다음」 → Off → 다음 Goto. 10줄 모두 OK, t512 대조(`sr_live_audit/audit-01~10`) PASS.
+
+| 단계 | 줄 | 감독 관찰(원문, 리드 경유) |
+|---|---|---|
+| ① 257 | `Group 12 ; Attribute 'Dimmer' At 100` | 「안켜졌어」(그룹 12 = 위쪽 트러스 노란 8대, 검은 납작한 기구와 번갈아) |
+| ② 258 | `Fixture 521 Thru 528. ; Attribute 'Dimmer' At 100` | 「안켜졌어」 |
+| ③ 259 | ② + `ColorRGB_R/G/B At 100` | 「안켜졌어」 |
+| ④ 263 | `Group 10 ; Attribute 'Dimmer' At 100` | 「바닥워시는 켜졌어」 |
+| ⑥ 265 | `Fixture 401 ; Attribute 'Dimmer' At 100 ; Attribute 'Zoom' At 100` | 「1대만 켜졌어」 |
+
+- 결론(감독 눈): **Spiider 는 그룹·뒤 점·색 명시 어느 것으로도 안 켜진다. Rush Par 는 `Group 10 ; Dimmer 100` 만으로 켜지고, 401 한 대도 켜진다.** 선택 꼴은 원인이 아니다.
+
+### 16-3. 판독(쓰기 0)
+
+**그룹 12 = Spiider 521~528 인가 — 지지(잰 것 + 추정)**
+
+| 번호 | 기종(FixtureType) | 모드 | X | Y | 높이 |
+|---|---|---|---|---|---|
+| 501~508 | 11 `Robin MegaPointe` | 1 Mode 1 | −1.5 ~ 5.5(1.0 간격) | +2.5(무대 뒤쪽) | 6.8 |
+| 521~528 | 4 `Robin Spiider` | 1 Mode 1 | −5.5 ~ 5.5(1.57 간격) | −2.5(무대 앞쪽) | 6.8 |
+| BLIND 601~606(참고, diag7) | 13 | 4 4 channel | −4.5 ~ 4.5(1.8 간격) | −3.2 | 6.5 |
+
+- 두 무빙은 다른 줄(Y 차 5m)이라 서로 번갈아 있지 않다(잰 것, `movers_readonly.txt`). Spiider 줄 사이사이에 납작한 블라인더 6대가 X 로 끼어 있다 → 감독이 본 「노란 8대와 검은 납작한 기구가 번갈아」는 Spiider + BLIND 로 설명된다(추정 — 블라인더가 검은 납작한 모양인지는 3D 를 안 봤다).
+- 그룹 이름 MOVER-D, MEMORYFOOTPRINT 1096(MOVER-U 1092) — 구성원은 못 읽는다(응답기 한계).
+- 3D 모델: Spiider 유형의 Models 는 Body·Base·Yoke·Head·ModelRef·Body#2·Head#2·ModelRef#2·Head#3·Beam(10), MegaPointe 는 Base·Yoke·Head·Beam(4). 「스파이더가 아닌 거 같은」 모양은 이 GDTF 모델 생김새 때문일 수 있다(추정).
+
+**Spiider 가 안 켜지는 까닭 — 좁힌 것(잰 것)과 남은 후보(추정)**
+
+- 빠진 후보(잰 것): 셔터 둘 기본 0x30 = open(32~63) · 색 기본 RGB FF(클러스터·메인 모두, W 00) · COLORMIXER·PIXELMASK·EFFECTWHEEL 기본 00 · Zoom·Tilt 기본 0x80.
+- 모드 「1 Mode 1」 은 49채널(DMXFOOTPRINT 49), 모드 GEOMETRY 「Body」, SubfixtureOverview 에는 FTSubfixture 「Body」 하나뿐이다. 그런데 패치된 521 에는 서브픽스처 셋([Instance2#2]·[Instance3#2]·[Instance4#2], SUBFIXTUREINDEX 39·40·41)이 있다.
+- 지오메트리: 맨 위에 Beam `RGBW Cluster`·`RGBW Cluster#2/#3`·`RGB Cluster`·`#2/#3` 과 Body·Body#2~#7(각각 `Base_Main Module`, `#2`, `#3` …). 모드 1 의 채널 이름은 `RGBW Cluster_*`·`Main Module_*` 뿐 — `#2/#3` 빔과 `RGB Cluster` 빔을 움직이는 채널은 모드 1 에 없다.
+- 디머 셋 — `RGBW Cluster_Dimmer`(기본 FF)·`Main Module_Dimmer`(FF)·`Main Module_Dimmer2`(00) — 속성 이름이 모두 `Dimmer` 다.
+- 남은 후보(추정, 안 잰 것): (가) 3D 에서 빛나는 빔이 모드 1 이 제어하지 않는 지오메트리(#2/#3·RGB Cluster)에 붙어 있다 (나) `Dimmer2`(기본 00)가 메인 빔의 두 번째 디머로 0 에 머문다 — 같은 속성 이름이라 어느 인스턴스에 매였는지 못 읽는다 (다) 이 GDTF 의 3D 표현 자체가 onPC 에서 빔을 안 그린다.
+- 가르는 다음 수(제안): 감독이 콘솔에서 521 하나를 골라 Fixture Sheet 에서 인스턴스별 Dimmer 값(4줄)을 보고 손으로 Dimmer2 를 올려 보기 — 쓰기 없음, 가장 싸다. 또는 같은 위치에 다른 기종으로 바꾸는 패치 수정은 감독 결정.
+
+**첫 시연(253)에서 WASH 가 안 보인 까닭 — 줄 대조(잰 것)와 추정**
+
+| 어디 | WASH 줄 |
+|---|---|
+| 프로브 ④(켜짐) | `Group 10 ; Attribute 'Dimmer' At 100` |
+| 시연 253 큐1 | `Group 10 ; Attribute 'Dimmer' At 0 ; ColorRGB_R 72 ; G 60 ; B 100`(라벤더 미리 색) |
+| 시연 253 큐2(14.4초~, 4.27초 번짐) | `Group 10 ; Attribute 'Dimmer' At 40` |
+| 시연 253 큐3·4 | Dimmer 25 · 10 |
+| 시연 253 큐5(37.9초~) | `Group 10 ; Dimmer 70 ; ColorRGB_R 100 ; G 62 ; B 80`(핑크) |
+
+- 선택 꼴(`Group 10 ;`)과 속성 꼴은 같다. 다른 것은 값(40·25·10·70 대 100)과 색 줄뿐이다. 재생 표본상 253 큐2~7 은 계획대로 넘어갔다(`play_live_b_samples.txt`).
+- 후보(추정): 천정을 향한 빔이 닿을 면이 없어 3D 에서 렌즈 밝기로만 보이고, 40% 이하에서는 눈에 안 띈다. 70% 핑크는 37.9~55초에 있었으나 감독 관찰 시점과 맞물렸는지는 모른다.
+- 가르는 다음 수(제안): G10 에 Dimmer 40 과 70 핑크 정적 큐를 하나씩(새 시퀀스) — 감독 눈.

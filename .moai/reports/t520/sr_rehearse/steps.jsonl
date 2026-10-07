@@ -1,0 +1,21 @@
+{"step": "pre_name", "t": 0.001, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/257", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/257", "reads": [{"n": "NAME", "ok": true, "v": "FIXTURE PROBE - GROUP 12 DIMMER"}], "fake": true}}
+{"step": "on_257", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 257", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 257': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_257", "t": 0.001, "kind": "exec", "command": "Goto Cue 1 Sequence 257", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_257", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 257", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 257': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_257", "t": 0.001, "kind": "exec", "command": "Off Sequence 257", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_258", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 258", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 258': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_258", "t": 0.001, "kind": "exec", "command": "Goto Cue 1 Sequence 258", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_258", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 258", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 258': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_258", "t": 0.001, "kind": "exec", "command": "Off Sequence 258", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_259", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 259", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 259': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_259", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 259", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_259", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 259", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 259': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_259", "t": 0.002, "kind": "exec", "command": "Off Sequence 259", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_263", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 263", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 263': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_263", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 263", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_263", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 263", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 263': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_263", "t": 0.002, "kind": "exec", "command": "Off Sequence 263", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_265", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 265", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 265': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_265", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 265", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_265", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 265", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 265': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_265", "t": 0.002, "kind": "exec", "command": "Off Sequence 265", "fired": true, "ok": true, "detail": "OK"}

@@ -1,0 +1,20 @@
+{
+  "phase": "p263",
+  "bundles": {
+    "on_263": true
+  },
+  "pre_name": "FIXTURE PROBE - GROUP 10 DIMMER",
+  "exec": [
+    {
+      "command": "Goto Cue 1 Sequence 263",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase p263",
+  "preflight": "responder_ok",
+  "approved": 1,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

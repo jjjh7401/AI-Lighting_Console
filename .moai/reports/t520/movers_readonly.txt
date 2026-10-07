@@ -1,0 +1,96 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 081d1273"
+<<< {"id": "081d1273", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> props:Patch/Stages/1/Fixtures/27|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props db65d3b0 NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/27"
+<<< {"id": "db65d3b0", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/27", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 501"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "-1.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/28|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props d2547898 NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/28"
+<<< {"id": "d2547898", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/28", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 502"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "-0.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/29|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props f6f19dca NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/29"
+<<< {"id": "f6f19dca", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/29", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 503"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "0.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/30|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props c683d3ba NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/30"
+<<< {"id": "c683d3ba", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/30", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 504"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "1.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/31|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 2e2f5c0d NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/31"
+<<< {"id": "2e2f5c0d", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/31", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 505"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/32|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 76f4bc2f NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/32"
+<<< {"id": "76f4bc2f", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/32", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 506"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "3.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/33|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 080fdfb6 NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/33"
+<<< {"id": "080fdfb6", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/33", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 507"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "4.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/34|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 123e451b NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/34"
+<<< {"id": "123e451b", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/34", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U 508"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 11"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "5.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/35|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 692240b3 NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/35"
+<<< {"id": "692240b3", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/35", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 521"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "-5.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/36|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 1c6493ed NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/36"
+<<< {"id": "1c6493ed", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/36", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 522"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "-3.9300000667572"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/37|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 3671b315 NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/37"
+<<< {"id": "3671b315", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/37", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 523"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "-2.3599998950958"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/38|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 535a37e1 NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/38"
+<<< {"id": "535a37e1", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/38", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 524"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "-0.79000002145767"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/39|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 27a18a10 NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/39"
+<<< {"id": "27a18a10", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/39", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 525"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "0.79000002145767"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/40|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 8ad5da23 NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/40"
+<<< {"id": "8ad5da23", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/40", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 526"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "2.3599998950958"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/41|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 141992fa NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/41"
+<<< {"id": "141992fa", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/41", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 527"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "3.9300000667572"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/42|NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props bb9b85af NAME,FIXTURETYPE,MODE,POSX,POSY,POSZ Patch/Stages/1/Fixtures/42"
+<<< {"id": "bb9b85af", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/42", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 528"}, {"n": "FIXTURETYPE", "ok": true, "t": "userdata", "v": "FixtureType 4"}, {"n": "MODE", "ok": true, "t": "string", "v": "1 Mode 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "5.5"}, {"n": "POSY", "ok": true, "t": "number", "v": "-2.5"}, {"n": "POSZ", "ok": true, "t": "number", "v": "6.8000001907349"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4|NAME
+    wire: Plugin "CopilotResponder" "props d392f035 NAME Patch/FixtureTypes/4"
+<<< {"id": "d392f035", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Robin Spiider"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11|NAME
+    wire: Plugin "CopilotResponder" "props 46417802 NAME Patch/FixtureTypes/11"
+<<< {"id": "46417802", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Robin MegaPointe"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/4
+    wire: Plugin "CopilotResponder" "state 119336af Patch/FixtureTypes/4/4"
+<<< {"children": [{"class": "Model", "i": 1, "name": "Body"}, {"class": "Model", "i": 2, "name": "Base"}, {"class": "Model", "i": 3, "name": "Yoke"}, {"class": "Model", "i": 4, "name": "Head"}, {"class": "Model", "i": 5, "name": "ModelRef"}, {"class": "Model", "i": 6, "name": "Body#2"}, {"class": "Model", "i": 7, "name": "Head#2"}, {"class": "Model", "i": 8, "name": "ModelRef#2"}, {"class": "Model", "i": 9, "name": "Head#3"}, {"class": "Model", "i": 10, "name": "Beam"}], "id": "119336af", "kind": "state", "node": {"childCount": 10, "class": "Models", "enumeration": "ok", "name": "Models"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/4", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/4
+    wire: Plugin "CopilotResponder" "state 4ba64b55 Patch/FixtureTypes/11/4"
+<<< {"children": [{"class": "Model", "i": 1, "name": "Base"}, {"class": "Model", "i": 2, "name": "Yoke"}, {"class": "Model", "i": 3, "name": "Head"}, {"class": "Model", "i": 4, "name": "Beam"}], "id": "4ba64b55", "kind": "state", "node": {"childCount": 4, "class": "Models", "enumeration": "ok", "name": "Models"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/4", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/5
+    wire: Plugin "CopilotResponder" "state c8e93da2 Patch/FixtureTypes/11/5"
+<<< {"children": [{"class": "Geometry", "i": 1, "name": "Body"}], "id": "c8e93da2", "kind": "state", "node": {"childCount": 1, "class": "Geometries", "enumeration": "ok", "name": "Geometries"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/5", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/11|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 0310a297 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/11"
+<<< {"id": "0310a297", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/11", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1092"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/12|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 1a4711d1 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Groups/12"
+<<< {"id": "1a4711d1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/12", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1096"}], "truncated": false, "v": 1}

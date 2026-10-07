@@ -1,0 +1,11 @@
+{"ts": "2026-10-07T06:51:20.980693+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/257 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:51:21.047822+00:00", "event": "rejected", "commands": ["Goto Cue 1 Sequence 257"], "held": ["Goto Cue 1 Sequence 257"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.114292+00:00", "event": "rejected", "commands": ["Off Sequence 257"], "held": ["Off Sequence 257"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.181380+00:00", "event": "rejected", "commands": ["Goto Cue 1 Sequence 258"], "held": ["Goto Cue 1 Sequence 258"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.248613+00:00", "event": "rejected", "commands": ["Off Sequence 258"], "held": ["Off Sequence 258"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.315253+00:00", "event": "rejected", "commands": ["Goto Cue 1 Sequence 259"], "held": ["Goto Cue 1 Sequence 259"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.381928+00:00", "event": "rejected", "commands": ["Off Sequence 259"], "held": ["Off Sequence 259"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.448530+00:00", "event": "rejected", "commands": ["Goto Cue 1 Sequence 263"], "held": ["Goto Cue 1 Sequence 263"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.513792+00:00", "event": "rejected", "commands": ["Off Sequence 263"], "held": ["Off Sequence 263"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.581061+00:00", "event": "rejected", "commands": ["Goto Cue 1 Sequence 265"], "held": ["Goto Cue 1 Sequence 265"], "kind": "t520_step_replay"}
+{"ts": "2026-10-07T06:51:21.647674+00:00", "event": "rejected", "commands": ["Off Sequence 265"], "held": ["Off Sequence 265"], "kind": "t520_step_replay"}

@@ -1,0 +1,12 @@
+{"step": "pre_name", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/257", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/257", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - GROUP 12 DIMMER"}], "truncated": false, "v": 1}}
+{"step": "on_257", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 257", "reasons": ["reference-invoking command"]}]}
+{"step": "off_257", "t": 0.199, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 257", "reasons": ["reference-invoking command"]}]}
+{"step": "on_258", "t": 0.267, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 258", "reasons": ["reference-invoking command"]}]}
+{"step": "off_258", "t": 0.334, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 258", "reasons": ["reference-invoking command"]}]}
+{"step": "on_259", "t": 0.401, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 259", "reasons": ["reference-invoking command"]}]}
+{"step": "off_259", "t": 0.467, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 259", "reasons": ["reference-invoking command"]}]}
+{"step": "on_263", "t": 0.534, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 263", "reasons": ["reference-invoking command"]}]}
+{"step": "off_263", "t": 0.599, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 263", "reasons": ["reference-invoking command"]}]}
+{"step": "on_265", "t": 0.666, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 265", "reasons": ["reference-invoking command"]}]}
+{"step": "off_265", "t": 0.733, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 265", "reasons": ["reference-invoking command"]}]}
+{"verdict": "deny-all: approval texts recorded", "bundles": {"on_257": false, "off_257": false, "on_258": false, "off_258": false, "on_259": false, "off_259": false, "on_263": false, "off_263": false, "on_265": false, "off_265": false}, "pre_name": "FIXTURE PROBE - GROUP 12 DIMMER", "exec": null, "approved": 0}
