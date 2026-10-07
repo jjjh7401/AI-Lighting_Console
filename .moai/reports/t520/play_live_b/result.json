@@ -1,0 +1,556 @@
+{
+  "bundles": {
+    "go": true,
+    "off": true
+  },
+  "pre_names": {
+    "ShowData/DataPools/Default/Sequences/253": "LOVE ATTACK - RHYTHM M2a B SCENE",
+    "ShowData/DataPools/Default/Sequences/254": "LOVE ATTACK - RHYTHM M2a B RHYTHM",
+    "ShowData/DataPools/Default/Timecodes/23": "LOVE ATTACK - RHYTHM M2a B TC"
+  },
+  "audio": {
+    "spawned_at": 3.567,
+    "cursor_before": "3.57",
+    "cursor_after": "3.63"
+  },
+  "samples": [
+    {
+      "t": 0.0,
+      "cursor": "0.07",
+      "253": null,
+      "254": null
+    },
+    {
+      "t": 0.7,
+      "cursor": "0.77",
+      "253": null,
+      "254": null
+    },
+    {
+      "t": 1.4,
+      "cursor": "1.47",
+      "253": null,
+      "254": null
+    },
+    {
+      "t": 2.1,
+      "cursor": "2.17",
+      "253": null,
+      "254": null
+    },
+    {
+      "t": 2.8,
+      "cursor": "2.87",
+      "253": null,
+      "254": null
+    },
+    {
+      "t": 3.5,
+      "cursor": "3.72",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.1"
+    },
+    {
+      "t": 4.34,
+      "cursor": "4.40",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.3"
+    },
+    {
+      "t": 5.04,
+      "cursor": "5.10",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.3"
+    },
+    {
+      "t": 5.74,
+      "cursor": "5.80",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.3"
+    },
+    {
+      "t": 6.43,
+      "cursor": "6.50",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.3"
+    },
+    {
+      "t": 7.14,
+      "cursor": "7.20",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.3"
+    },
+    {
+      "t": 7.84,
+      "cursor": "7.90",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.3"
+    },
+    {
+      "t": 8.54,
+      "cursor": "8.60",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.3"
+    },
+    {
+      "t": 9.24,
+      "cursor": "9.30",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.4"
+    },
+    {
+      "t": 9.94,
+      "cursor": "10.00",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.4"
+    },
+    {
+      "t": 10.64,
+      "cursor": "10.70",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.4"
+    },
+    {
+      "t": 11.34,
+      "cursor": "11.40",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.4"
+    },
+    {
+      "t": 12.03,
+      "cursor": "12.10",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.4"
+    },
+    {
+      "t": 12.74,
+      "cursor": "12.80",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.4"
+    },
+    {
+      "t": 13.44,
+      "cursor": "13.50",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.5"
+    },
+    {
+      "t": 14.14,
+      "cursor": "14.20",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.5"
+    },
+    {
+      "t": 14.84,
+      "cursor": "14.90",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.5"
+    },
+    {
+      "t": 15.54,
+      "cursor": "15.60",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.5"
+    },
+    {
+      "t": 16.24,
+      "cursor": "16.30",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.5"
+    },
+    {
+      "t": 16.94,
+      "cursor": "17.00",
+      "253": "Sequence 253.1",
+      "254": "Sequence 254.5"
+    },
+    {
+      "t": 17.63,
+      "cursor": "17.70",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.6"
+    },
+    {
+      "t": 18.34,
+      "cursor": "18.40",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.6"
+    },
+    {
+      "t": 19.04,
+      "cursor": "19.10",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.6"
+    },
+    {
+      "t": 19.73,
+      "cursor": "19.80",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 20.43,
+      "cursor": "20.50",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 21.14,
+      "cursor": "21.20",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 21.84,
+      "cursor": "21.90",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 22.53,
+      "cursor": "22.60",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 23.23,
+      "cursor": "23.32",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 23.94,
+      "cursor": "24.00",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 24.64,
+      "cursor": "24.70",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 25.34,
+      "cursor": "25.40",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.7"
+    },
+    {
+      "t": 26.04,
+      "cursor": "26.10",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 26.74,
+      "cursor": "26.80",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 27.43,
+      "cursor": "27.50",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 28.13,
+      "cursor": "28.20",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 28.84,
+      "cursor": "28.90",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 29.54,
+      "cursor": "29.60",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 30.23,
+      "cursor": "30.30",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 30.94,
+      "cursor": "31.00",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 31.64,
+      "cursor": "31.70",
+      "253": "Sequence 253.2",
+      "254": "Sequence 254.8"
+    },
+    {
+      "t": 32.34,
+      "cursor": "32.40",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.9"
+    },
+    {
+      "t": 33.04,
+      "cursor": "33.10",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.9"
+    },
+    {
+      "t": 33.73,
+      "cursor": "33.80",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.9"
+    },
+    {
+      "t": 34.44,
+      "cursor": "34.50",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.10"
+    },
+    {
+      "t": 35.13,
+      "cursor": "35.20",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.10"
+    },
+    {
+      "t": 35.84,
+      "cursor": "35.90",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.10"
+    },
+    {
+      "t": 36.54,
+      "cursor": "36.60",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.11"
+    },
+    {
+      "t": 37.24,
+      "cursor": "37.30",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.11"
+    },
+    {
+      "t": 37.94,
+      "cursor": "38.00",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.11"
+    },
+    {
+      "t": 38.64,
+      "cursor": "38.70",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.12"
+    },
+    {
+      "t": 39.34,
+      "cursor": "39.40",
+      "253": "Sequence 253.3",
+      "254": "Sequence 254.12"
+    },
+    {
+      "t": 40.04,
+      "cursor": "40.10",
+      "253": "Sequence 253.4",
+      "254": "Sequence 254.13"
+    },
+    {
+      "t": 40.73,
+      "cursor": "40.80",
+      "253": "Sequence 253.4",
+      "254": "Sequence 254.14"
+    },
+    {
+      "t": 41.44,
+      "cursor": "41.50",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.14"
+    },
+    {
+      "t": 42.14,
+      "cursor": "42.20",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.14"
+    },
+    {
+      "t": 42.83,
+      "cursor": "42.90",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.14"
+    },
+    {
+      "t": 43.53,
+      "cursor": "43.60",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 44.24,
+      "cursor": "44.30",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 44.93,
+      "cursor": "45.00",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 45.64,
+      "cursor": "45.70",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 46.34,
+      "cursor": "46.40",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 47.03,
+      "cursor": "47.10",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 47.74,
+      "cursor": "47.82",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 48.44,
+      "cursor": "48.50",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 49.13,
+      "cursor": "49.20",
+      "253": "Sequence 253.6",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 49.84,
+      "cursor": "49.90",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 50.54,
+      "cursor": "50.60",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 51.23,
+      "cursor": "51.30",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 51.93,
+      "cursor": "52.00",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 52.63,
+      "cursor": "52.70",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 53.34,
+      "cursor": "53.40",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 54.04,
+      "cursor": "54.12",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 54.74,
+      "cursor": "54.80",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 55.44,
+      "cursor": "55.50",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 56.14,
+      "cursor": "56.20",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 56.84,
+      "cursor": "56.90",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 57.54,
+      "cursor": "57.60",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 58.24,
+      "cursor": "58.30",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 58.94,
+      "cursor": "59.00",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    },
+    {
+      "t": 59.64,
+      "cursor": "59.70",
+      "253": "Sequence 253.7",
+      "254": "Sequence 254.15"
+    }
+  ],
+  "verdict": "played — judge by director watch",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Go Timecode 23"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Timecode 23",
+        "Off Sequence 253",
+        "Off Sequence 254"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

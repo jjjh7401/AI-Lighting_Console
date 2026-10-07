@@ -1,0 +1,5 @@
+{"ts": "2026-10-07T06:07:40.018921+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/253 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:07:40.085423+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/254 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:07:40.152134+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/23 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:07:40.152499+00:00", "event": "rejected", "commands": ["Go Timecode 23"], "held": ["Go Timecode 23"], "kind": "t520_m2a_play"}
+{"ts": "2026-10-07T06:07:40.286269+00:00", "event": "rejected", "commands": ["Off Timecode 23", "Off Sequence 253", "Off Sequence 254"], "held": ["Off Timecode 23", "Off Sequence 253", "Off Sequence 254"], "kind": "t520_m2a_play"}
