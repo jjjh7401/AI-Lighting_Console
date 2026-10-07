@@ -293,3 +293,51 @@ uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval
 - 쓰기 2,446줄이 한 번에 나갈 때 응답기·콘솔이 끝까지 받는지(지금까지 실기 최대 124줄).
 - §5의 나머지(한 큐에 선택 여러 개 + `Step 2`, Measure 8·0.5, 트래킹 끊기, 소수 이벤트 시각)는 그대로 미측정이다.
 - 잔여 객체: Seq 250(색·무빙 디머 일부 빠짐), Seq 252(프로브 A). 지울지는 감독이 정한다.
+
+## 13. split_each 보류 → 그룹 선택 프로브 G (감독 의견 2026-10-07)
+
+- 감독(원문, 리드 경유): 「여러대의 장비를 작동하려면 그룹을 만들어서 사용하면 되잖아」. 앱 Seq 219도 `Group N ; Attribute …` 꼴을 쓴다(t516 `line_shapes.txt`: 219에 110줄).
+- B 판(§12-3, 2,446줄)은 만들어 두었으나 실행 보류다.
+
+### 13-1. 프로브 G — 기존 그룹 5(SIDE-L)로 서브픽스처 디머가 열리나
+
+- `group_probe.py`(프로브 A 실행기 재사용): 새 Seq 255 큐 1 `Group 5 ; Attribute 'Dimmer' At 100` → 5초 여유 → `Goto Cue 1 Sequence 255` 15초 → `Off Sequence 255`. 이름 `'GROUP PROBE - GROUP 5 SIDE-L'`.
+- 그룹 구성원(서브픽스처 포함 여부)은 응답기로 읽을 수 없다(그룹 `COUNT` 늘 0, t516 §4-3). 그래서 감독 눈으로 가른다. 볼 곳은 무대 왼쪽 가장자리 X −7m · 무대 뒤쪽 Y +3m 기둥(301 높이 1.2m, 302 2.6m …).
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`groupG_rehearse`) | 3묶음 끝까지 |
+| 실기 전부-거절(`groupG_denyall`) | 사전 판독 Seq 255 빔 · 요청 3, 승인 0 · `rejected` 3, 명령 송신 0 · 문면 = 리허설 `True` |
+| AC-012 리허설 | 8줄 PASS |
+| 승인 파일 | `approval_group_probe.txt` 8줄, sha256 `a48099b85e96cb936eb2a277a92830fa0d02a7ab9385ea3c893fec42ebf03bfd` |
+
+- 실행(리드 「실행」 뒤에만): `uv run python .moai/reports/t520/group_probe.py .moai/reports/t520/groupG_live --approve .moai/reports/t520/groupG_denyall` → `approval_vs_sent.py approval_group_probe.txt groupG_live/audit`
+
+### 13-2. 초안 — 그룹 5로 안 켜질 때, 서브픽스처까지 담은 새 그룹 (쓰지 않음, 문서 근거만)
+
+**문서 근거**
+
+- [Select Fixtures](https://help.malighting.com/grandMA3/2.2/HTML/operate_select_fixtures.html): 「To select fixture 301 and all its sub-fixtures, type: Fixture 301.」 · 「To select the main fixtures and all sub-fixtures of fixtures 301 thru 303, type: Fixture 301 Thru 303.」 · 따로 친 선택은 누적된다(「Fixture 1 Thru 5」 뒤 「Fixture 9 + 10」이 선택에 더해진다).
+- [Groups](https://help.malighting.com/grandMA3/2.2/HTML/qsg_group.html): 지금 선택에서 `Store Group 1`로 그룹을 만든다. 이 페이지는 서브픽스처 포함·덮어쓰기 옵션을 적지 않는다.
+- 저장소 룰북 `server/rulebook/assets/v2.4.2/00_grammar.md:66`: `Fixture 101 Thru 110` → `Store Group 7` → `Label Group 7 'Vocals'`.
+
+**초안 줄 꼴(번호 `<G>`는 실행 직전 빈 그룹 번호를 읽어 정한다 — 그룹 1~18 사용 중)**
+
+```
+ChangeDestination Root
+ClearAll
+Fixture 301 Thru 306.
+Store Group <G>
+Set Group <G> Property 'Name' 'SIDE-L ALL DIMMERS'
+ClearAll
+```
+
+- 같은 꼴로 BACK `Fixture 201 Thru 212.`, SIDE-R `Fixture 311 Thru 316.`, MOVER-D `Fixture 521 Thru 528.`을 만든다.
+- 뒤 점(`301.`) 선택은 **우리 콘솔에서 안 잰 것**이다. 프로브 A에서 거절된 것은 `+` 목록 안의 점 번호(`301.1 + 302.1`)였고, 뒤 점 꼴은 다른 문법이다.
+- 뒤 점 선택이 받아들여지면 그룹을 만들지 않고 `Fixture 301 Thru 306. ; Attribute 'Dimmer' At 100`처럼 바로 써도 된다. 새 그룹은 감독이 콘솔에서 손으로 다시 쓰기 편하다는 이점이 있다.
+- `Set Group … Property 'Name'`은 시퀀스·타임코드에서만 실기로 확인한 꼴이다. 그룹에서는 안 잰 것이다(대안: 룰북의 `Label Group <G> '…'`).
+- 서브픽스처만 담은 그룹의 `Group N ; Attribute 'Pan'` 같은 줄이 위치 채널 없는 서브픽스처에서 오류를 내는지도 안 잰 것이다.
+
+Sources:
+- [Select Fixtures — grandMA3 2.2](https://help.malighting.com/grandMA3/2.2/HTML/operate_select_fixtures.html)
+- [Groups — grandMA3 2.2](https://help.malighting.com/grandMA3/2.2/HTML/qsg_group.html)

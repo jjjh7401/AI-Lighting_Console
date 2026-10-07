@@ -1,0 +1,15 @@
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/255", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/255)"}
+{"step": "store_1", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 5 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 255 Cue 1 'Group Five'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'", "reasons": []}]}
+{"step": "store_1", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.001, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.001, "kind": "exec", "command": "Store Sequence 255 Cue 1 'Group Five'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_1", "t": 0.001, "kind": "exec", "command": "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.001, "say": "큐 1 — 그룹 5(SIDE-L) Dimmer 100. 무대 왼쪽 뒤 기둥 301·302 가 켜지는가(15초)"}
+{"step": "on_1", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 255", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 255': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_1", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 255", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_1", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 255", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 255': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_1", "t": 0.002, "kind": "exec", "command": "Off Sequence 255", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_seq", "t": 0.002, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/255", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/255", "node": {"childCount": 0}, "children": [], "fake": true}}
+{"step": "post_name", "t": 0.002, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/255", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/255", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
