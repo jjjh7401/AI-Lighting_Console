@@ -1,0 +1,112 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 6a960a29"
+<<< {"id": "6a960a29", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> props:ShowData/DataPools/Default/Groups/1|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props f58b33ac NO,NAME,INDEX ShowData/DataPools/Default/Groups/1"
+<<< {"id": "f58b33ac", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/1", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "1"}, {"n": "NAME", "ok": true, "t": "string", "v": "ALL"}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/2|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props c16eecd4 NO,NAME,INDEX ShowData/DataPools/Default/Groups/2"
+<<< {"id": "c16eecd4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/2", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "2"}, {"n": "NAME", "ok": true, "t": "string", "v": "KEY"}, {"n": "INDEX", "ok": true, "t": "number", "v": "2"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/3|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props b74eadc1 NO,NAME,INDEX ShowData/DataPools/Default/Groups/3"
+<<< {"id": "b74eadc1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/3", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "3"}, {"n": "NAME", "ok": true, "t": "string", "v": "FOH"}, {"n": "INDEX", "ok": true, "t": "number", "v": "3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/4|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props bef2c2f0 NO,NAME,INDEX ShowData/DataPools/Default/Groups/4"
+<<< {"id": "bef2c2f0", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/4", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "4"}, {"n": "NAME", "ok": true, "t": "string", "v": "BACK"}, {"n": "INDEX", "ok": true, "t": "number", "v": "4"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/5|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props f58ac63b NO,NAME,INDEX ShowData/DataPools/Default/Groups/5"
+<<< {"id": "f58ac63b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/5", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "5"}, {"n": "NAME", "ok": true, "t": "string", "v": "SIDE-L"}, {"n": "INDEX", "ok": true, "t": "number", "v": "5"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/6|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 8e1c42e1 NO,NAME,INDEX ShowData/DataPools/Default/Groups/6"
+<<< {"id": "8e1c42e1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/6", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "6"}, {"n": "NAME", "ok": true, "t": "string", "v": "SIDE-R"}, {"n": "INDEX", "ok": true, "t": "number", "v": "6"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/7|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 84cc360a NO,NAME,INDEX ShowData/DataPools/Default/Groups/7"
+<<< {"id": "84cc360a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/7", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "7"}, {"n": "NAME", "ok": true, "t": "string", "v": "SIDE-ALL"}, {"n": "INDEX", "ok": true, "t": "number", "v": "7"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/8|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 178279ca NO,NAME,INDEX ShowData/DataPools/Default/Groups/8"
+<<< {"id": "178279ca", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/8", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "8"}, {"n": "NAME", "ok": true, "t": "string", "v": "WASH-U"}, {"n": "INDEX", "ok": true, "t": "number", "v": "8"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/9|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 84cbe23b NO,NAME,INDEX ShowData/DataPools/Default/Groups/9"
+<<< {"id": "84cbe23b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/9", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "9"}, {"n": "NAME", "ok": true, "t": "string", "v": "WASH-D"}, {"n": "INDEX", "ok": true, "t": "number", "v": "9"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/10|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props a48a4e2b NO,NAME,INDEX ShowData/DataPools/Default/Groups/10"
+<<< {"id": "a48a4e2b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/10", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "10"}, {"n": "NAME", "ok": true, "t": "string", "v": "WASH-ALL"}, {"n": "INDEX", "ok": true, "t": "number", "v": "10"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/11|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 44b52533 NO,NAME,INDEX ShowData/DataPools/Default/Groups/11"
+<<< {"id": "44b52533", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/11", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "11"}, {"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U"}, {"n": "INDEX", "ok": true, "t": "number", "v": "11"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/12|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 3cbc282d NO,NAME,INDEX ShowData/DataPools/Default/Groups/12"
+<<< {"id": "3cbc282d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/12", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "12"}, {"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D"}, {"n": "INDEX", "ok": true, "t": "number", "v": "12"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/13|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 3a719937 NO,NAME,INDEX ShowData/DataPools/Default/Groups/13"
+<<< {"id": "3a719937", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/13", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "13"}, {"n": "NAME", "ok": true, "t": "string", "v": "MOVER-ALL"}, {"n": "INDEX", "ok": true, "t": "number", "v": "13"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/14|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props e6de3fd2 NO,NAME,INDEX ShowData/DataPools/Default/Groups/14"
+<<< {"id": "e6de3fd2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/14", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "14"}, {"n": "NAME", "ok": true, "t": "string", "v": "BLIND"}, {"n": "INDEX", "ok": true, "t": "number", "v": "14"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/15|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 1b428afa NO,NAME,INDEX ShowData/DataPools/Default/Groups/15"
+<<< {"id": "1b428afa", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/15", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "15"}, {"n": "NAME", "ok": true, "t": "string", "v": "STROBE"}, {"n": "INDEX", "ok": true, "t": "number", "v": "15"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/16|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 2ae85fb5 NO,NAME,INDEX ShowData/DataPools/Default/Groups/16"
+<<< {"id": "2ae85fb5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/16", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "16"}, {"n": "NAME", "ok": true, "t": "string", "v": "HAZE"}, {"n": "INDEX", "ok": true, "t": "number", "v": "16"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/17|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 852f33db NO,NAME,INDEX ShowData/DataPools/Default/Groups/17"
+<<< {"id": "852f33db", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/17", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "17"}, {"n": "NAME", "ok": true, "t": "string", "v": "ODD"}, {"n": "INDEX", "ok": true, "t": "number", "v": "17"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/18|NO,NAME,INDEX
+    wire: Plugin "CopilotResponder" "props 03904472 NO,NAME,INDEX ShowData/DataPools/Default/Groups/18"
+<<< {"id": "03904472", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/18", "reads": [{"n": "NO", "ok": true, "t": "number", "v": "18"}, {"n": "NAME", "ok": true, "t": "string", "v": "EVEN"}, {"n": "INDEX", "ok": true, "t": "number", "v": "18"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9
+    wire: Plugin "CopilotResponder" "state 86734487 Patch/FixtureTypes/9"
+<<< {"children": [{"class": "AttributeDefinitions", "i": 1, "name": "AttributeDefinitions"}, {"class": "Wheels", "i": 2, "name": "Wheels"}, {"class": "PhysicalDescriptions", "i": 3, "name": "PhysicalDescriptions"}, {"class": "Models", "i": 4, "name": "Models"}, {"class": "Geometries", "i": 5, "name": "Geometries"}, {"class": "DMXModes", "i": 6, "name": "DMXModes"}, {"class": "Revisions", "i": 7, "name": "Revisions"}, {"class": "Protocols", "i": 8, "name": "Protocols"}], "id": "86734487", "kind": "state", "node": {"childCount": 8, "class": "FixtureType", "enumeration": "ok", "name": "Rush Par 2 RGBW Zoom"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/1/1
+    wire: Plugin "CopilotResponder" "state b18c21d7 Patch/FixtureTypes/9/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 2, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 3, "name": "Main Module_ColorRGB_B"}, {"class": "DMXChannel", "i": 4, "name": "Main Module_ColorRGB_W"}, {"class": "DMXChannel", "i": 5, "name": "Main Module_Zoom"}, {"class": "DMXChannel", "i": 6, "name": "Main Module_Dimmer"}], "id": "b18c21d7", "kind": "state", "node": {"childCount": 6, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/1/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/1/1/2
+    wire: Plugin "CopilotResponder" "state 41f0d131 Patch/FixtureTypes/9/6/1/1/2"
+<<< {"children": [{"class": "LogicalChannel", "i": 1, "name": "ColorRGB_G"}], "id": "41f0d131", "kind": "state", "node": {"childCount": 1, "class": "DMXChannel", "enumeration": "ok", "name": "Main Module_ColorRGB_G"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/1/1/2", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/1/1/2/1
+    wire: Plugin "CopilotResponder" "state ead53fb7 Patch/FixtureTypes/9/6/1/1/2/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "ColorRGB_G 1"}], "id": "ead53fb7", "kind": "state", "node": {"childCount": 1, "class": "LogicalChannel", "enumeration": "ok", "name": "ColorRGB_G"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/1/1/2/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/9/6/1/1/2/1/1
+    wire: Plugin "CopilotResponder" "state c67d0160 Patch/FixtureTypes/9/6/1/1/2/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "min"}, {"class": "ChannelSet", "i": 2, "name": "No Feature"}, {"class": "ChannelSet", "i": 3, "name": "max"}], "id": "c67d0160", "kind": "state", "node": {"childCount": 3, "class": "ChannelFunction", "enumeration": "ok", "name": "ColorRGB_G 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/9/6/1/1/2/1/1", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/35/1
+    wire: Plugin "CopilotResponder" "state c91162d2 Patch/Stages/1/Fixtures/35/1"
+<<< {"children": [], "id": "c91162d2", "kind": "state", "node": {"childCount": 0, "class": "SubFixture", "enumeration": "ok", "name": "[Instance2#2]"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/35/1", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/35/2
+    wire: Plugin "CopilotResponder" "state 1e4c4e71 Patch/Stages/1/Fixtures/35/2"
+<<< {"children": [], "id": "1e4c4e71", "kind": "state", "node": {"childCount": 0, "class": "SubFixture", "enumeration": "ok", "name": "[Instance3#2]"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/35/2", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/35/3
+    wire: Plugin "CopilotResponder" "state e912e47d Patch/Stages/1/Fixtures/35/3"
+<<< {"children": [], "id": "e912e47d", "kind": "state", "node": {"childCount": 0, "class": "SubFixture", "enumeration": "ok", "name": "[Instance4#2]"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/35/3", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/1
+    wire: Plugin "CopilotResponder" "state 122edabd Patch/FixtureTypes/4/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "RGBW Cluster_ColorRGB_R"}, {"class": "DMXChannel", "i": 2, "name": "RGBW Cluster_ColorRGB_G"}, {"class": "DMXChannel", "i": 3, "name": "RGBW Cluster_ColorRGB_B"}, {"class": "DMXChannel", "i": 4, "name": "RGBW Cluster_ColorRGB_W"}, {"class": "DMXChannel", "i": 5, "name": "RGBW Cluster_Dimmer"}, {"class": "DMXChannel", "i": 6, "name": "Yoke_Main Module_Pan"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_Tilt"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_PositionMSpeed"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_FixtureGlobalReset"}, {"class": "DMXChannel", "i": 10, "name": "Main Module_COLORMIXER"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_COLORTEMPERATURE"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_COLOURPRIORITY"}, {"class": "DMXChannel", "i": 13, "name": "Main Module_PIXELMASK"}, {"class": "DMXChannel", "i": 14, "name": "Main Module_PIXELMASKINDEXROTATE"}, {"class": "DMXChannel", "i": 15, "name": "Main Module_PIXELMASKSTEPTIME"}], "id": "122edabd", "kind": "state", "node": {"childCount": 26, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1", "truncated": true, "v": 1}

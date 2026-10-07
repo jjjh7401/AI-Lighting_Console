@@ -1,0 +1,68 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 70abe56a"
+<<< {"id": "70abe56a", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/Sequences/266
+    wire: Plugin "CopilotResponder" "state 6fbb4777 ShowData/DataPools/Default/Sequences/266"
+<<< {"error": "path segment not found: '266' (in ShowData/DataPools/Default/Sequences/266)", "id": "6fbb4777", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/266", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/267
+    wire: Plugin "CopilotResponder" "state 7abd7f5a ShowData/DataPools/Default/Sequences/267"
+<<< {"error": "path segment not found: '267' (in ShowData/DataPools/Default/Sequences/267)", "id": "7abd7f5a", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/267", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/268
+    wire: Plugin "CopilotResponder" "state b48915ac ShowData/DataPools/Default/Sequences/268"
+<<< {"error": "path segment not found: '268' (in ShowData/DataPools/Default/Sequences/268)", "id": "b48915ac", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/268", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/269
+    wire: Plugin "CopilotResponder" "state 93aba386 ShowData/DataPools/Default/Sequences/269"
+<<< {"error": "path segment not found: '269' (in ShowData/DataPools/Default/Sequences/269)", "id": "93aba386", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/269", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/270
+    wire: Plugin "CopilotResponder" "state 5f8ca3ba ShowData/DataPools/Default/Sequences/270"
+<<< {"error": "path segment not found: '270' (in ShowData/DataPools/Default/Sequences/270)", "id": "5f8ca3ba", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/270", "v": 1}
+
+>>> introspect:Patch/FixtureTypes/4/6/1/1/5/1
+    wire: Plugin "CopilotResponder" "introspect 58d99a40 Patch/FixtureTypes/4/6/1/1/5/1"
+<<< {"class": "LogicalChannel", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "NAME", "t": "String"}, {"n": "ATTRIBUTE", "t": "Handle"}, {"n": "SNAP", "t": "UInt32"}, {"n": "MASTER", "t": "UInt32"}, {"n": "MIBFADE", "t": "Int64Time"}, {"n": "MIB", "t": "UInt32"}, {"n": "DMXCHANGETIMELIMIT", "t": "Int64Time"}, {"n": "DMXCURVE", "t": "Handle"}], "id": "58d99a40", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/5/1", "source": "property_accessors", "total": 23, "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/4/6/1/1/5/1/1
+    wire: Plugin "CopilotResponder" "introspect 9a9b9481 Patch/FixtureTypes/4/6/1/1/5/1/1"
+<<< {"class": "ChannelFunction", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "ATTRIBUTE", "t": "Handle"}, {"n": "DMXFROM", "t": "UInt32"}, {"n": "DMXTO", "t": "UInt32"}, {"n": "DEFAULT", "t": "UInt32"}, {"n": "PHYSICALFROM", "t": "Double"}, {"n": "PHYSICALTO", "t": "Double"}, {"n": "REALFADE", "t": "Float"}, {"n": "REALACCELERATION", "t": "Float"}, {"n": "WHEEL", "t": "Handle"}, {"n": "EMITTER", "t": "Handle"}, {"n": "GAMUT", "t": "Handle"}], "id": "9a9b9481", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/5/1/1", "source": "property_accessors", "total": 41, "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/2/1
+    wire: Plugin "CopilotResponder" "state 5c68cf74 Patch/FixtureTypes/4/5/2/1"
+<<< {"children": [{"class": "Axis", "i": 1, "name": "Yoke_Main Module"}], "id": "5c68cf74", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Base_Main Module"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/2/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/2/1/1
+    wire: Plugin "CopilotResponder" "state 8ee2c5a0 Patch/FixtureTypes/4/5/2/1/1"
+<<< {"children": [{"class": "Axis", "i": 1, "name": "Main Module"}], "id": "8ee2c5a0", "kind": "state", "node": {"childCount": 1, "class": "Axis", "enumeration": "ok", "name": "Yoke_Main Module"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/2/1/1/1
+    wire: Plugin "CopilotResponder" "state 265409e3 Patch/FixtureTypes/4/5/2/1/1/1"
+<<< {"children": [{"class": "GeometryReference", "i": 1, "name": "Instance2#2"}, {"class": "GeometryReference", "i": 2, "name": "Instance3#2"}, {"class": "GeometryReference", "i": 3, "name": "Instance4#2"}], "id": "265409e3", "kind": "state", "node": {"childCount": 3, "class": "Axis", "enumeration": "ok", "name": "Main Module"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/2/1/1/1/1
+    wire: Plugin "CopilotResponder" "state 343a8508 Patch/FixtureTypes/4/5/2/1/1/1/1"
+<<< {"children": [{"class": "Break", "i": 1, "name": "Break 1 offset"}], "id": "343a8508", "kind": "state", "node": {"childCount": 1, "class": "GeometryReference", "enumeration": "ok", "name": "Instance2#2"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/2/1/1/1/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/4/1
+    wire: Plugin "CopilotResponder" "state a3db79dd Patch/FixtureTypes/4/5/4/1"
+<<< {"children": [{"class": "Axis", "i": 1, "name": "Yoke_Main Module#2"}], "id": "a3db79dd", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Base_Main Module#2"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/4/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/5/1
+    wire: Plugin "CopilotResponder" "state 5e06f671 Patch/FixtureTypes/4/5/5/1"
+<<< {"children": [{"class": "Axis", "i": 1, "name": "Yoke_Main Module#3"}], "id": "5e06f671", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Base_Main Module#3"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/5/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/2
+    wire: Plugin "CopilotResponder" "state 4ab39809 Patch/FixtureTypes/4/6/1/2"
+<<< {"children": [{"class": "Relation", "i": 1, "name": "VirtualDimmer"}, {"class": "Relation", "i": 2, "name": "VirtualDimmer"}, {"class": "Relation", "i": 3, "name": "VirtualDimmer"}, {"class": "Relation", "i": 4, "name": "VirtualDimmer"}], "id": "4ab39809", "kind": "state", "node": {"childCount": 4, "class": "Relations", "enumeration": "ok", "name": "Relations"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/2", "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/35|NAME,SUBFIXTUREINDEX
+    wire: Plugin "CopilotResponder" "props fc242c69 NAME,SUBFIXTUREINDEX Patch/Stages/1/Fixtures/35"
+<<< {"id": "fc242c69", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/35", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-D 521"}, {"n": "SUBFIXTUREINDEX", "ok": true, "t": "number", "v": "38"}], "truncated": false, "v": 1}
+
+>>> introspect:Patch/Stages/1/Fixtures/35
+    wire: Plugin "CopilotResponder" "introspect 9c9db85e Patch/Stages/1/Fixtures/35"
+<<< {"class": "Fixture", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "OLDSUBFIXTUREINDEX", "t": "UInt32"}, {"n": "SUBFIXTUREINDEX", "t": "UInt32"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "FIXTURE", "t": "Handle"}, {"n": "STAGE", "t": "Handle"}, {"n": "OFFSETPAN", "t": "Double"}, {"n": "OFFSETTILT", "t": "Double"}, {"n": "PARAMETERCOUNTVIOLATION", "t": "UInt32"}], "id": "9c9db85e", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/35", "source": "property_accessors", "total": 108, "truncated": true, "v": 1}

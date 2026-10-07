@@ -1,0 +1,4 @@
+{"step": "pre_name", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/263", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/263", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - GROUP 10 DIMMER"}], "truncated": false, "v": 1}}
+{"step": "off_263", "t": 0.133, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 263", "reasons": ["reference-invoking command"]}]}
+{"step": "off_263", "t": 0.199, "kind": "exec", "command": "Off Sequence 263", "fired": true, "ok": true, "detail": "OK"}
+{"verdict": "ran phase p263", "bundles": {"off_263": true}, "pre_name": "FIXTURE PROBE - GROUP 10 DIMMER", "exec": [{"command": "Off Sequence 263", "ok": true, "detail": "OK"}], "approved": 1}

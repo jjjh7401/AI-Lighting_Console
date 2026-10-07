@@ -1,0 +1,6 @@
+{"step": "pre_name", "t": 0.067, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/257", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/257", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - GROUP 12 DIMMER"}], "truncated": false, "v": 1}}
+{"step": "on_257", "t": 0.133, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 257", "reasons": ["reference-invoking command"]}]}
+{"step": "on_257", "t": 0.199, "kind": "exec", "command": "Goto Cue 1 Sequence 257", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_257", "t": 10.266, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 257", "reasons": ["reference-invoking command"]}]}
+{"step": "off_257", "t": 10.333, "kind": "exec", "command": "Off Sequence 257", "fired": true, "ok": true, "detail": "OK"}
+{"verdict": "ran phase p257", "bundles": {"on_257": true, "off_257": true}, "pre_name": "FIXTURE PROBE - GROUP 12 DIMMER", "exec": [{"command": "Goto Cue 1 Sequence 257", "ok": true, "detail": "OK"}, {"command": "Off Sequence 257", "ok": true, "detail": "OK"}], "approved": 2}

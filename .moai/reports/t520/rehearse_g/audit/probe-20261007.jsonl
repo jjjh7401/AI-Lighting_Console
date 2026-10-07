@@ -1,0 +1,10 @@
+{"ts": "2026-10-07T06:04:03.195541+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/253", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-07T06:04:03.196507+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/254", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-07T06:04:03.196620+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/23", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-07T06:04:03.235099+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/253", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:04:03.235226+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/254", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:04:03.235826+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/23/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:04:03.236573+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/23/1/2/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:04:03.236640+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/23/1/3/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:04:03.238577+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/23/1/2/1/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:04:03.238648+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/23/1/3/1/1", "kind": "state_query", "ok": true, "detail": ""}

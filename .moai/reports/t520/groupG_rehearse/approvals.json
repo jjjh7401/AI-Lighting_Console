@@ -1,0 +1,25 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 5 ; Attribute 'Dimmer' At 100",
+      "Store Sequence 255 Cue 1 'Group Five'",
+      "ClearAll",
+      "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 255"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 255"
+    ],
+    "approved": true
+  }
+]

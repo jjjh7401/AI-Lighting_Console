@@ -1,0 +1,36 @@
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/266", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/266)"}
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/267", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/267)"}
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/268", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/268)"}
+{"step": "store_266", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 12 ; At 100", "reasons": []}, {"command": "Store Sequence 266 Cue 1 'Group 12 At'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 266 Property 'Name' 'FIXTURE PROBE - SPIIDER GROUP 12 AT'", "reasons": []}]}
+{"step": "store_266", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_266", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_266", "t": 0.002, "kind": "exec", "command": "Group 12 ; At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_266", "t": 0.002, "kind": "exec", "command": "Store Sequence 266 Cue 1 'Group 12 At'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_266", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_266", "t": 0.002, "kind": "exec", "command": "Set Sequence 266 Property 'Name' 'FIXTURE PROBE - SPIIDER GROUP 12 AT'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_267", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 521 Thru 528 ; At 100", "reasons": []}, {"command": "Store Sequence 267 Cue 1 'Spiider Thru At'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 267 Property 'Name' 'FIXTURE PROBE - SPIIDER THRU AT'", "reasons": []}]}
+{"step": "store_267", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_267", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_267", "t": 0.002, "kind": "exec", "command": "Fixture 521 Thru 528 ; At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_267", "t": 0.002, "kind": "exec", "command": "Store Sequence 267 Cue 1 'Spiider Thru At'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_267", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_267", "t": 0.003, "kind": "exec", "command": "Set Sequence 267 Property 'Name' 'FIXTURE PROBE - SPIIDER THRU AT'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_268", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 521 Thru 528 ; At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100", "reasons": []}, {"command": "Store Sequence 268 Cue 1 'Spiider At RGB'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 268 Property 'Name' 'FIXTURE PROBE - SPIIDER AT RGB'", "reasons": []}]}
+{"step": "store_268", "t": 0.003, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_268", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_268", "t": 0.003, "kind": "exec", "command": "Fixture 521 Thru 528 ; At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_268", "t": 0.003, "kind": "exec", "command": "Store Sequence 268 Cue 1 'Spiider At RGB'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_268", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_268", "t": 0.003, "kind": "exec", "command": "Set Sequence 268 Property 'Name' 'FIXTURE PROBE - SPIIDER AT RGB'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_266", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 266", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 266': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_266", "t": 0.003, "kind": "exec", "command": "Goto Cue 1 Sequence 266", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_266", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 266", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 266': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_266", "t": 0.004, "kind": "exec", "command": "Off Sequence 266", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_267", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 267", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 267': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_267", "t": 0.004, "kind": "exec", "command": "Goto Cue 1 Sequence 267", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_267", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 267", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 267': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_267", "t": 0.004, "kind": "exec", "command": "Off Sequence 267", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_268", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 268", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 268': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_268", "t": 0.004, "kind": "exec", "command": "Goto Cue 1 Sequence 268", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_268", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 268", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 268': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_268", "t": 0.004, "kind": "exec", "command": "Off Sequence 268", "fired": true, "ok": true, "detail": "OK"}

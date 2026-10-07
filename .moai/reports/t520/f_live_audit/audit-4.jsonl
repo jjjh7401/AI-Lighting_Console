@@ -1,0 +1,5 @@
+{"ts": "2026-10-07T06:48:54.519991+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/259 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T06:48:54.587515+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 259"], "held": ["Goto Cue 1 Sequence 259"], "kind": "t520_fixture_probe"}
+{"ts": "2026-10-07T06:48:54.653397+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 259", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:49:04.720596+00:00", "event": "approved", "commands": ["Off Sequence 259"], "held": ["Off Sequence 259"], "kind": "t520_fixture_probe"}
+{"ts": "2026-10-07T06:49:04.786509+00:00", "event": "executed", "command": "Off Sequence 259", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

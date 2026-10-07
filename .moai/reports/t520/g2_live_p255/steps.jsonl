@@ -1,0 +1,5 @@
+{"step": "pre_name", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/255", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/255", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "GROUP PROBE - GROUP 5 SIDE-L"}], "truncated": false, "v": 1}}
+{"step": "on_255", "t": 0.134, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 255", "reasons": ["reference-invoking command"]}]}
+{"step": "on_255", "t": 0.199, "kind": "exec", "command": "Goto Cue 1 Sequence 255", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_255", "t": 15.266, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 255", "reasons": ["reference-invoking command"]}]}
+{"step": "off_255", "t": 15.332, "kind": "exec", "command": "Off Sequence 255", "fired": true, "ok": true, "detail": "OK"}

@@ -1,0 +1,14 @@
+approval file      : .moai/reports/t520/approval_spiider_probe.txt
+  raw sha256       : 5fcc774d65b1a1287c3e32758ba5232084c6770275e4a0d7ef3b7afe8eaa2800
+  raw == canonical : True
+  canonical lines  : 24
+  canonical sha256 : 5fcc774d65b1a1287c3e32758ba5232084c6770275e4a0d7ef3b7afe8eaa2800
+sent source        : .moai/reports/t520/s_rehearse_audit (files: ['audit-1.jsonl', 'audit-2.jsonl'])
+  window           : since=None until=None
+  send rows        : 24 by kind {'command': 24}
+  rebuilt sha256   : 5fcc774d65b1a1287c3e32758ba5232084c6770275e4a0d7ef3b7afe8eaa2800
+WARN sends not ok  : 0
+(1) sha256 equal                         : True
+(2) 송신 안 됨 (sent, not in approval)    : 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: PASS

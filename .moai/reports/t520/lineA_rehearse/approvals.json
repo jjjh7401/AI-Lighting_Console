@@ -1,0 +1,69 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 301 + 302 ; Attribute 'Dimmer' At 100",
+      "Store Sequence 252 Cue 1 'Main Only'",
+      "ClearAll",
+      "Set Sequence 252 Property 'Name' 'LINE SHAPE PROBE - MAIN SUB LONG'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 301.1 + 302.1 ; Attribute 'Dimmer' At 100",
+      "Store Sequence 252 Cue 2 'Sub In List'",
+      "ClearAll"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 401 + 402 + 403 + 404 + 405 + 406 + 407 + 408 + 409 + 410 + 421 + 422 + 423 + 424 + 425 + 426 + 427 + 428 + 429 + 430 + 111 + 112 + 113 + 114 ; Attribute 'Dimmer' At 50",
+      "Store Sequence 252 Cue 3 'Long List 24'",
+      "ClearAll"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 252"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 252"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 2 Sequence 252"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 252"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 3 Sequence 252"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 252"
+    ],
+    "approved": true
+  }
+]

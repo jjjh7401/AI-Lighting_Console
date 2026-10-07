@@ -1,0 +1,68 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 0e38bd5f"
+<<< {"id": "0e38bd5f", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:Patch/FixtureTypes/4/6/1/6
+    wire: Plugin "CopilotResponder" "state 6822df4c Patch/FixtureTypes/4/6/1/6"
+<<< {"children": [{"class": "FTSubfixture", "i": 1, "name": "Body"}], "id": "6822df4c", "kind": "state", "node": {"childCount": 1, "class": "SubfixtureOverview", "enumeration": "ok", "name": "SubfixtureOverview"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/6", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/6/1
+    wire: Plugin "CopilotResponder" "state 020ca907 Patch/FixtureTypes/4/6/1/6/1"
+<<< {"children": [], "id": "020ca907", "kind": "state", "node": {"childCount": 0, "class": "FTSubfixture", "enumeration": "ok", "name": "Body"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/6/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/6/2
+    wire: Plugin "CopilotResponder" "state 984ace67 Patch/FixtureTypes/4/6/1/6/2"
+<<< {"error": "path segment not found: '2' (in Patch/FixtureTypes/4/6/1/6/2)", "id": "984ace67", "kind": "state", "offset": 0, "ok": false, "path": "Patch/FixtureTypes/4/6/1/6/2", "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/6/3
+    wire: Plugin "CopilotResponder" "state 486ae230 Patch/FixtureTypes/4/6/1/6/3"
+<<< {"error": "path segment not found: '3' (in Patch/FixtureTypes/4/6/1/6/3)", "id": "486ae230", "kind": "state", "offset": 0, "ok": false, "path": "Patch/FixtureTypes/4/6/1/6/3", "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/6/4
+    wire: Plugin "CopilotResponder" "state c30108e9 Patch/FixtureTypes/4/6/1/6/4"
+<<< {"error": "path segment not found: '4' (in Patch/FixtureTypes/4/6/1/6/4)", "id": "c30108e9", "kind": "state", "offset": 0, "ok": false, "path": "Patch/FixtureTypes/4/6/1/6/4", "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1|NAME,GEOMETRY,DMXFOOTPRINT,TOTALFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 13ff53a3 NAME,GEOMETRY,DMXFOOTPRINT,TOTALFOOTPRINT Patch/FixtureTypes/4/6/1"
+<<< {"id": "13ff53a3", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Mode 1"}, {"n": "GEOMETRY", "ok": true, "t": "string", "v": "Body"}, {"n": "DMXFOOTPRINT", "ok": true, "t": "table", "truncated": true, "v": "[{\"maxOffset\":48,\"minOffset\":0,\"size\":49,\"valid\":true},{\"maxOffset\":-1,\"minOffset\":-1,\"size\":1,\"valid\":false},{\"maxOffset\":-1,\"minOffset\":-1,\"size\":1,\"valid\":false},{\"maxOffset\":-1,\"minOffset\":-1,\"size\":1,\"valid\":false}]"}, {"n": "TOTALFOOTPRINT", "ok": true, "t": "number", "v": "49"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/17|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 31610fbe NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/17"
+<<< {"id": "31610fbe", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/17", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_ColorRGB_R"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<FFFFFF>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/18|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 522c9b86 NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/18"
+<<< {"id": "522c9b86", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/18", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_ColorRGB_G"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<FFFFFF>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/19|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props 59eed9e1 NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/19"
+<<< {"id": "59eed9e1", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/19", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_ColorRGB_B"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<FFFFFF>"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/4/6/1/1/20|NAME,DEFAULT
+    wire: Plugin "CopilotResponder" "props a4367a86 NAME,DEFAULT Patch/FixtureTypes/4/6/1/1/20"
+<<< {"id": "a4367a86", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/4/6/1/1/20", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_ColorRGB_W"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}], "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/2
+    wire: Plugin "CopilotResponder" "state 87a7765c Patch/FixtureTypes/4/5/2"
+<<< {"children": [{"class": "Geometry", "i": 1, "name": "Base_Main Module"}], "id": "87a7765c", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Body"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/2", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/4
+    wire: Plugin "CopilotResponder" "state ed2af83f Patch/FixtureTypes/4/5/4"
+<<< {"children": [{"class": "Geometry", "i": 1, "name": "Base_Main Module#2"}], "id": "ed2af83f", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Body#2"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/4", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/5/5
+    wire: Plugin "CopilotResponder" "state 626d1ddd Patch/FixtureTypes/4/5/5"
+<<< {"children": [{"class": "Geometry", "i": 1, "name": "Base_Main Module#3"}], "id": "626d1ddd", "kind": "state", "node": {"childCount": 1, "class": "Geometry", "enumeration": "ok", "name": "Body#3"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/5/5", "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/35/1|NAME,SUBFIXTUREINDEX
+    wire: Plugin "CopilotResponder" "props 95a86c92 NAME,SUBFIXTUREINDEX Patch/Stages/1/Fixtures/35/1"
+<<< {"id": "95a86c92", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/35/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "[Instance2#2]"}, {"n": "SUBFIXTUREINDEX", "ok": true, "t": "number", "v": "39"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/35/2|NAME,SUBFIXTUREINDEX
+    wire: Plugin "CopilotResponder" "props 33e2d6c6 NAME,SUBFIXTUREINDEX Patch/Stages/1/Fixtures/35/2"
+<<< {"id": "33e2d6c6", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/35/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "[Instance3#2]"}, {"n": "SUBFIXTUREINDEX", "ok": true, "t": "number", "v": "40"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1/Fixtures/35/3|NAME,SUBFIXTUREINDEX
+    wire: Plugin "CopilotResponder" "props 04faf206 NAME,SUBFIXTUREINDEX Patch/Stages/1/Fixtures/35/3"
+<<< {"id": "04faf206", "kind": "props", "ok": true, "path": "Patch/Stages/1/Fixtures/35/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "[Instance4#2]"}, {"n": "SUBFIXTUREINDEX", "ok": true, "t": "number", "v": "41"}], "truncated": false, "v": 1}

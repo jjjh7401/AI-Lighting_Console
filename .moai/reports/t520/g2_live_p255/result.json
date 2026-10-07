@@ -1,0 +1,27 @@
+{
+  "phase": "p255",
+  "bundles": {
+    "on_255": true,
+    "off_255": true
+  },
+  "pre_name": "GROUP PROBE - GROUP 5 SIDE-L",
+  "exec": [
+    {
+      "command": "Goto Cue 1 Sequence 255",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 255",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase p255",
+  "preflight": "responder_ok",
+  "approved": 2,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

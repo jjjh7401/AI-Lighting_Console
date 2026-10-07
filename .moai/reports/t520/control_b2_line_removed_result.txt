@@ -1,0 +1,15 @@
+approval file      : .moai/reports/t520/control_b2_line_removed.txt
+  raw sha256       : 04128e0d08fd9ceae27b5efb37ac0797dcd8f7457b0d3c8eea1a3afff733532c
+  raw == canonical : True
+  canonical lines  : 586
+  canonical sha256 : 04128e0d08fd9ceae27b5efb37ac0797dcd8f7457b0d3c8eea1a3afff733532c
+sent source        : .moai/reports/t520/rehearse_b2/audit (files: ['audit-20261007.jsonl'])
+  window           : since=None until=None
+  send rows        : 587 by kind {'command': 587}
+  rebuilt sha256   : 32b2fe00a63559101ba937ebe326ba2b30c6bdda105bd78659000af5b7256ee4
+WARN sends not ok  : 0
+(1) sha256 equal                         : False
+(2) 송신 안 됨 (sent, not in approval)    : 1
+  SENT_NOT_APPROVED: Group 4 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: FAIL

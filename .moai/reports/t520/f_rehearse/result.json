@@ -1,0 +1,287 @@
+{
+  "phase": "all",
+  "bundles": {
+    "store_257": true,
+    "store_258": true,
+    "store_259": true,
+    "store_263": true,
+    "store_264": true,
+    "store_265": true,
+    "on_257": true,
+    "off_257": true,
+    "on_258": true,
+    "off_258": true,
+    "on_259": true,
+    "off_259": true,
+    "on_263": true,
+    "off_263": true,
+    "on_264": true,
+    "off_264": true,
+    "on_265": true,
+    "off_265": true
+  },
+  "exec": [
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 12 ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 257 Cue 1 'G12 Dimmer'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 257 Property 'Name' 'FIXTURE PROBE - GROUP 12 DIMMER'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 521 Thru 528. ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 258 Cue 1 'Spiider Dot'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 258 Property 'Name' 'FIXTURE PROBE - SPIIDER TRAILING DOT'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 521 Thru 528. ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 259 Cue 1 'Spiider Dot RGB'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 259 Property 'Name' 'FIXTURE PROBE - SPIIDER DOT RGB'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 10 ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 263 Cue 1 'G10 Dimmer'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 263 Property 'Name' 'FIXTURE PROBE - GROUP 10 DIMMER'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 10 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorMacro' At 0",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 264 Cue 1 'G10 RGB Macro'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 264 Property 'Name' 'FIXTURE PROBE - GROUP 10 RGB MACRO'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 401 ; Attribute 'Dimmer' At 100 ; Attribute 'Zoom' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 265 Cue 1 'Wash 401 Zoom'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 265 Property 'Name' 'FIXTURE PROBE - WASH 401 ZOOM'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 257",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 257",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 258",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 258",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 259",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 259",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 263",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 263",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 264",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 264",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Goto Cue 1 Sequence 265",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 265",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase all",
+  "approved": 18,
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

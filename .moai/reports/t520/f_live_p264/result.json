@@ -1,0 +1,27 @@
+{
+  "phase": "p264",
+  "bundles": {
+    "on_264": true,
+    "off_264": true
+  },
+  "pre_name": "FIXTURE PROBE - GROUP 10 RGB MACRO",
+  "exec": [
+    {
+      "command": "Goto Cue 1 Sequence 264",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 264",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase p264",
+  "preflight": "responder_ok",
+  "approved": 2,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

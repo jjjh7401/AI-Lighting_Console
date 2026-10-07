@@ -1,0 +1,11 @@
+ping
+state:Patch/FixtureTypes/9/6
+props:Patch/FixtureTypes/9/6/1|NAME
+props:Patch/FixtureTypes/9/6/2|NAME
+state:Patch/FixtureTypes/9/6/2/1
+props:Patch/FixtureTypes/9/6/3|NAME
+state:Patch/FixtureTypes/9/6/3/1
+props:Patch/Stages/1/Fixtures/67|NAME,MODE,FIXTURETYPE
+props:Patch/Stages/1/Fixtures/35|NAME,MODE,FIXTURETYPE
+props:Patch/Stages/1/Fixtures/1|NAME,MODE,FIXTURETYPE
+props:Patch/Stages/1/Fixtures/7|NAME,MODE,FIXTURETYPE

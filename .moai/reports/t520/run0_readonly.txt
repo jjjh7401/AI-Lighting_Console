@@ -1,0 +1,77 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t520
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t520
+Installed 97 packages in 170ms
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping 425b3014"
+<<< {"id": "425b3014", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/Sequences/250
+    wire: Plugin "CopilotResponder" "state 45e70f6d ShowData/DataPools/Default/Sequences/250"
+<<< {"error": "path segment not found: '250' (in ShowData/DataPools/Default/Sequences/250)", "id": "45e70f6d", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/250", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/251
+    wire: Plugin "CopilotResponder" "state 78dbf4a9 ShowData/DataPools/Default/Sequences/251"
+<<< {"error": "path segment not found: '251' (in ShowData/DataPools/Default/Sequences/251)", "id": "78dbf4a9", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/251", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/252
+    wire: Plugin "CopilotResponder" "state 9a3bed04 ShowData/DataPools/Default/Sequences/252"
+<<< {"error": "path segment not found: '252' (in ShowData/DataPools/Default/Sequences/252)", "id": "9a3bed04", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/252", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/22
+    wire: Plugin "CopilotResponder" "state 46cbcf50 ShowData/DataPools/Default/Timecodes/22"
+<<< {"error": "path segment not found: '22' (in ShowData/DataPools/Default/Timecodes/22)", "id": "46cbcf50", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Timecodes/22", "v": 1}
+
+>>> props:ShowData/Masters/3/15|NAME,NORMEDVALUE,SPEEDSCALE
+    wire: Plugin "CopilotResponder" "props e7ceb8e2 NAME,NORMEDVALUE,SPEEDSCALE ShowData/Masters/3/15"
+<<< {"id": "e7ceb8e2", "kind": "props", "ok": true, "path": "ShowData/Masters/3/15", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed15"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "69"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/35
+    wire: Plugin "CopilotResponder" "state 66b586d1 Patch/Stages/1/Fixtures/35"
+<<< {"children": [{"class": "SubFixture", "i": 1, "name": "[Instance2#2]"}, {"class": "SubFixture", "i": 2, "name": "[Instance3#2]"}, {"class": "SubFixture", "i": 3, "name": "[Instance4#2]"}], "id": "66b586d1", "kind": "state", "node": {"childCount": 3, "class": "Fixture", "enumeration": "ok", "name": "MOVER-D 521"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/35", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/55
+    wire: Plugin "CopilotResponder" "state ab7d2a81 Patch/Stages/1/Fixtures/55"
+<<< {"children": [{"class": "SubFixture", "i": 1, "name": "[Instance2#2]"}], "id": "ab7d2a81", "kind": "state", "node": {"childCount": 1, "class": "Fixture", "enumeration": "ok", "name": "SIDE-L 301"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/55", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/61
+    wire: Plugin "CopilotResponder" "state 04f8973c Patch/Stages/1/Fixtures/61"
+<<< {"children": [{"class": "SubFixture", "i": 1, "name": "[Instance2#2]"}], "id": "04f8973c", "kind": "state", "node": {"childCount": 1, "class": "Fixture", "enumeration": "ok", "name": "SIDE-R 311"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/61", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/67
+    wire: Plugin "CopilotResponder" "state 25ebde25 Patch/Stages/1/Fixtures/67"
+<<< {"children": [], "id": "25ebde25", "kind": "state", "node": {"childCount": 0, "class": "Fixture", "enumeration": "ok", "name": "WASH-U 401"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/67", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/15
+    wire: Plugin "CopilotResponder" "state 77230471 Patch/Stages/1/Fixtures/15"
+<<< {"children": [], "id": "77230471", "kind": "state", "node": {"childCount": 0, "class": "Fixture", "enumeration": "ok", "name": "BLIND 601"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/15", "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Fixtures/27
+    wire: Plugin "CopilotResponder" "state c195783c Patch/Stages/1/Fixtures/27"
+<<< {"children": [], "id": "c195783c", "kind": "state", "node": {"childCount": 0, "class": "Fixture", "enumeration": "ok", "name": "MOVER-U 501"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Fixtures/27", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/4/6/1/1
+    wire: Plugin "CopilotResponder" "state 434068a8 Patch/FixtureTypes/4/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "RGBW Cluster_ColorRGB_R"}, {"class": "DMXChannel", "i": 2, "name": "RGBW Cluster_ColorRGB_G"}, {"class": "DMXChannel", "i": 3, "name": "RGBW Cluster_ColorRGB_B"}, {"class": "DMXChannel", "i": 4, "name": "RGBW Cluster_ColorRGB_W"}, {"class": "DMXChannel", "i": 5, "name": "RGBW Cluster_Dimmer"}, {"class": "DMXChannel", "i": 6, "name": "Yoke_Main Module_Pan"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_Tilt"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_PositionMSpeed"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_FixtureGlobalReset"}, {"class": "DMXChannel", "i": 10, "name": "Main Module_COLORMIXER"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_COLORTEMPERATURE"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_COLOURPRIORITY"}, {"class": "DMXChannel", "i": 13, "name": "Main Module_PIXELMASK"}, {"class": "DMXChannel", "i": 14, "name": "Main Module_PIXELMASKINDEXROTATE"}, {"class": "DMXChannel", "i": 15, "name": "Main Module_PIXELMASKSTEPTIME"}], "id": "434068a8", "kind": "state", "node": {"childCount": 26, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/4/6/1/1", "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/6/1/1
+    wire: Plugin "CopilotResponder" "state ab931ed8 Patch/FixtureTypes/11/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Yoke_Main Module_Pan"}, {"class": "DMXChannel", "i": 2, "name": "Main Module_Tilt"}, {"class": "DMXChannel", "i": 3, "name": "Main Module_PositionMSpeed"}, {"class": "DMXChannel", "i": 4, "name": "Main Module_LampControl"}, {"class": "DMXChannel", "i": 5, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 6, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_ColorRGB_B"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_Color1"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_COLORMIXER"}, {"class": "DMXChannel", "i": 10, "name": "Main Module_ColorMixMSpeed"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_ColorMixMSPeed2"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_ZoomMSpeed"}, {"class": "DMXChannel", "i": 13, "name": "Main Module_AnimationWheel1"}, {"class": "DMXChannel", "i": 14, "name": "Main Module_ANIMATIONINDEXROTATE"}, {"class": "DMXChannel", "i": 15, "name": "Main Module_EFFECTMACROS"}], "id": "ab931ed8", "kind": "state", "node": {"childCount": 32, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/6/1/1", "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/13/6/1/1
+    wire: Plugin "CopilotResponder" "state 0cd4cc2c Patch/FixtureTypes/13/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module_Dimmer"}], "id": "0cd4cc2c", "kind": "state", "node": {"childCount": 1, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/13/6/1/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/10/6/1/1
+    wire: Plugin "CopilotResponder" "state bbb1e0a6 Patch/FixtureTypes/10/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Main Module_Dimmer"}], "id": "bbb1e0a6", "kind": "state", "node": {"childCount": 1, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/10/6/1/1", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences
+    wire: Plugin "CopilotResponder" "state 852892ae ShowData/DataPools/Default/Sequences"
+<<< {"children": [{"class": "Sequence", "i": 1, "name": "Default"}, {"class": "Sequence", "i": 2, "name": "Sugar"}, {"class": "Sequence", "i": 3, "name": "Sugar r3"}, {"class": "Sequence", "i": 4, "name": "eset1Fade"}, {"class": "Sequence", "i": 5, "name": "Synth Test"}, {"class": "Sequence", "i": 6, "name": "Notice Test"}, {"class": "Sequence", "i": 7, "name": "VerifyA"}, {"class": "Sequence", "i": 8, "name": "VerifyB4x"}, {"class": "Sequence", "i": 9, "name": "T215 SCRATCH DELETABLE"}, {"class": "Sequence", "i": 10, "name": "VerifyC4x"}, {"class": "Sequence", "i": 11, "name": "chase-horizontal"}, {"class": "Sequence", "i": 12, "name": "chase-bounce-run"}, {"class": "Sequence", "i": 13, "name": "DinoSync"}, {"class": "Sequence", "i": 14, "name": "DinoDino"}, {"class": "Sequence", "i": 15, "name": "DinoFull"}, {"class": "Sequence", "i": 210, "name": "Sequence 210"}, {"class": "Sequence", "i": 219, "name": "LOVE ATTACK - OLD APP"}], "id": "852892ae", "kind": "state", "node": {"childCount": 49, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes
+    wire: Plugin "CopilotResponder" "state fcb29bcb ShowData/DataPools/Default/Timecodes"
+<<< {"children": [{"class": "Timecode", "i": 1, "name": "DinoSync Timecode"}, {"class": "Timecode", "i": 2, "name": "DinoFull Timecode"}, {"class": "Timecode", "i": 7, "name": "Synth Test Timecode"}, {"class": "Timecode", "i": 8, "name": "Notice Test Timecode"}, {"class": "Timecode", "i": 9, "name": "Sequence 210 Timecode"}, {"class": "Timecode", "i": 19, "name": "LOVE ATTACK - OLD APP TC"}, {"class": "Timecode", "i": 20, "name": "RHYTHM PROBE - TWO TRACKS"}, {"class": "Timecode", "i": 21, "name": "RHYTHM PROBE v2 - TWO TRACKS"}], "id": "fcb29bcb", "kind": "state", "node": {"childCount": 8, "class": "Timecodes", "enumeration": "ok", "name": "Timecodes"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes", "truncated": false, "v": 1}

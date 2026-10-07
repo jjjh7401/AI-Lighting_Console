@@ -1,0 +1,11 @@
+{"ts": "2026-10-07T06:41:37.121776+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 10 ; Attribute 'Dimmer' At 100", "Store Sequence 257 Cue 1 'Wash All 100'", "ClearAll", "Set Sequence 257 Property 'Name' 'WASH PROBE - GROUP 10 DIMMER 100'"], "held": ["ChangeDestination Root", "ClearAll", "Group 10 ; Attribute 'Dimmer' At 100", "Store Sequence 257 Cue 1 'Wash All 100'", "ClearAll", "Set Sequence 257 Property 'Name' 'WASH PROBE - GROUP 10 DIMMER 100'"], "kind": "t520_wash_probe"}
+{"ts": "2026-10-07T06:41:37.121965+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:41:37.122059+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:41:37.122140+00:00", "event": "executed", "command": "Group 10 ; Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:41:37.122212+00:00", "event": "executed", "command": "Store Sequence 257 Cue 1 'Wash All 100'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:41:37.122278+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:41:37.122342+00:00", "event": "executed", "command": "Set Sequence 257 Property 'Name' 'WASH PROBE - GROUP 10 DIMMER 100'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:41:37.122437+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 257"], "held": ["Goto Cue 1 Sequence 257"], "kind": "t520_wash_probe"}
+{"ts": "2026-10-07T06:41:37.122512+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 257", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T06:41:37.122599+00:00", "event": "approved", "commands": ["Off Sequence 257"], "held": ["Off Sequence 257"], "kind": "t520_wash_probe"}
+{"ts": "2026-10-07T06:41:37.122672+00:00", "event": "executed", "command": "Off Sequence 257", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

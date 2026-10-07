@@ -1,0 +1,16 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping faa5121e"
+<<< {"id": "faa5121e", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:Patch/AttributeDefinitions/4/Dimmer2
+    wire: Plugin "CopilotResponder" "state fd695e25 Patch/AttributeDefinitions/4/Dimmer2"
+<<< {"children": [], "id": "fd695e25", "kind": "state", "node": {"childCount": 0, "class": "Attribute", "enumeration": "ok", "name": "Dimmer2"}, "offset": 0, "ok": true, "path": "Patch/AttributeDefinitions/4/Dimmer2", "truncated": false, "v": 1}
+
+>>> props:Patch/AttributeDefinitions/4/Dimmer2|NAME,PRETTY,FEATURE,MAINATTRIBUTE,INDEX
+    wire: Plugin "CopilotResponder" "props dfbc6d0e NAME,PRETTY,FEATURE,MAINATTRIBUTE,INDEX Patch/AttributeDefinitions/4/Dimmer2"
+<<< {"id": "dfbc6d0e", "kind": "props", "ok": true, "path": "Patch/AttributeDefinitions/4/Dimmer2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Dimmer2"}, {"n": "PRETTY", "ok": true, "t": "string", "v": "Dim2"}, {"n": "FEATURE", "ok": true, "t": "userdata", "v": "FeatureGroup 1.1"}, {"n": "MAINATTRIBUTE", "ok": true, "t": "number", "v": "-1"}, {"n": "INDEX", "ok": true, "t": "number", "v": "445"}], "truncated": false, "v": 1}
+
+>>> props:Patch/AttributeDefinitions/4/Dimmer|NAME,PRETTY,FEATURE,INDEX
+    wire: Plugin "CopilotResponder" "props c6a29a5f NAME,PRETTY,FEATURE,INDEX Patch/AttributeDefinitions/4/Dimmer"
+<<< {"id": "c6a29a5f", "kind": "props", "ok": true, "path": "Patch/AttributeDefinitions/4/Dimmer", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Dimmer"}, {"n": "PRETTY", "ok": true, "t": "string", "v": "Dim"}, {"n": "FEATURE", "ok": true, "t": "userdata", "v": "FeatureGroup 1.1"}, {"n": "INDEX", "ok": true, "t": "number", "v": "1"}], "truncated": false, "v": 1}

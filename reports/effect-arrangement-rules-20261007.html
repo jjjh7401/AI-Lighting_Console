@@ -1,0 +1,145 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>박자별 효과 배치 규칙</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;--sans:"Pretendard",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--max-width:1080px;--radius-panel:12px;--border:1.5px solid var(--g300)}
+body{background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.65;margin:0;padding:24px 16px}
+main{max-width:var(--max-width);margin:auto}h1{font-size:1.6rem}h2{margin-top:2.2em;border-bottom:2px solid var(--oat);padding-bottom:.3em}
+.lead{background:var(--g100);border-left:4px solid var(--clay);padding:.7em 1em;border-radius:8px}
+.ex{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:.8em 1em;margin:1em 0}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;background:var(--paper);font-size:.88rem;margin:1em 0}
+th,td{border:1px solid var(--g300);padding:6px 8px;vertical-align:top;text-align:left}th{background:var(--oat)}
+code{font-family:var(--mono);background:var(--g100);padding:0 3px;border-radius:4px;font-size:.85em}strong{color:var(--clay-d)}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:1em}
+</style></head><body><main>
+<h1>박자별 효과 배치 규칙 — LOVE ATTACK (감독 확정 2026-10-07)</h1>
+<ul>
+<li>작성: 팩토리 리드 · 2026-10-07 · 기준 <code>origin/main</code> <code>5ccd1d1c</code></li>
+<li>입력: 웹 조사 두 편(<code>reports/effect-arrangement-research-pro-20261007.md</code> 전문가 레이어링, <code>reports/effect-arrangement-research-kpop-20261007.md</code> K팝 음악방송·콘서트), t520 판정서 §20(첫 시연 원인과 역할별 시퀀스 분리안, 브랜치 <code>WT-m2-batch1</code> <code>0c8f8b64</code>), 벤치마크 <code>reports/music-lighting-benchmark-20261003.md</code> §2.3, M1 대본 <code>.moai/specs/SPEC-LDRHYTHM-001/m1-love-attack-script.md</code>, 감독 결정 2026-10-07 두 가지.</li>
+<li>성격: 연출 규칙. 코드 0줄, 콘솔 명령 0건. 2026-10-07 감독이 §5 결정과 함께 확정했다. 다음 단계는 손 시연이 아니라 <strong>앱 런북 모드 구현(새 SPEC)</strong> 이다(§7).</li>
+</ul>
+<h2>0. 한 줄 요약</h2>
+<p class="lead">이 보고서는 「어떤 조명 효과를 음악의 어느 박자에 맡길지」를 정한 규칙이에요. 한 문장으로 줄이면 아래와 같아요.</p>
+<p><strong>박에는 밝기만, 마디에는 위치, 4마디에는 움직임 모양과 색 틴트, 구간에는 팔레트를 맡긴다. 한 역할은 한 시퀀스가 맡고, 장면 위에서 리듬을 타는 층은 보통 둘(드롭·마지막 코러스만 셋), 주인공은 4마디마다 바꾼다.</strong></p>
+<p>첫 시연에서 「팬 이펙트만 나온다」가 된 원인(한 큐에 선택 다섯을 섞어 무빙 페이저만 남음, t520 §20-3)도 같은 구조로 풀린다. 역할마다 시퀀스를 나누면 깜박임·색·움직임이 서로를 덮지 않는다.</p>
+<h2>1. 규칙 아홉 가지</h2>
+<p class="lead">두 웹 조사와 기존 벤치마크에서 나온 원칙을 아홉 개로 묶었어요. <b>HTP</b>(밝기는 겹치면 큰 값이 이김)와 <b>LTP</b>(색·위치는 마지막 값이 이김)는 콘솔이 두 명령이 부딪칠 때 고르는 방식이에요.</p>
+<div class="tw"><table><thead><tr><th>#</th><th>규칙</th><th>근거</th></tr></thead><tbody>
+<tr><td>1</td><td><strong>속성마다 맡는 음악 단위가 다르다.</strong> 박 = 밝기(펄스) · 반 마디~마디 = 위치 끊어 옮기기, 체이스 · 2~4마디 = 움직임 모양, 색 틴트 · 구간 = 팔레트, 밝기 바닥, 빔 폭</td><td>전문가 조사 「속성 × 음악 단위」 표</td></tr>
+<tr><td>2</td><td><strong>위치와 색은 박마다 바꾸지 않는다.</strong> 위치는 다운비트(마디 1박)와 필에서만 끊어 옮기고, 색은 구간·4마디 단위로 번진다</td><td>전문가 조사 · K팝 조사 6·7</td></tr>
+<tr><td>3</td><td><strong>장면 위에서 리듬을 타는 층은 보통 둘, 드롭·마지막 코러스에서만 셋.</strong> 층은 세 종류다 — 펄스(BACK), 체이스(SIDE 또는 무빙 밝기), 움직임(무빙 U·D — 두 무빙은 한 층의 두 목소리)</td><td>전문가 조사 「레이어 예산 2~3」 · 벤치마크 §2.3 규칙 1</td></tr>
+<tr><td>4</td><td><strong>주인공을 4마디마다 바꾼다.</strong> 같은 박자 동작이 8마디를 넘지 않는다(M1 방향 3 유지)</td><td>전문가 조사 「프레이즈마다 주인공 속성 돌리기」 · 감독 결정 ②</td></tr>
+<tr><td>5</td><td><strong>두 무빙은 서로 다르게 움직인다.</strong> 위 무빙(MOVER-U, G11)이 부르면 아래 무빙(MOVER-D, G12)이 다른 모양·다른 축으로 받는다</td><td>전문가 조사 「콜 앤 리스폰스」 · 감독 결정 ②</td></tr>
+<tr><td>6</td><td><strong>정지도 도구다.</strong> 벌스에서는 한쪽 무빙을 세워 두어야 코러스의 움직임이 「풀려나는 것」으로 보인다</td><td>전문가 조사 「대비」 · 벤치마크 §2.3 규칙 3</td></tr>
+<tr><td>7</td><td><strong>얼굴 빛(FOH)은 벌스부터 끝까지 유지한다.</strong> 역광·무빙이 화려해도 얼굴은 밝게</td><td>K팝 조사 5 — 「배경 화려, 얼굴 어둠」이 흔한 실패</td></tr>
+<tr><td>8</td><td><strong>파스텔은 넓게, 원색은 짧게.</strong> 워시는 채도 낮은 파스텔, 큰 순간에만 진한 색을 짧게</td><td>K팝 조사 6</td></tr>
+<tr><td>9</td><td><strong>강조는 한 마디 전에 예고하고 다운비트에 적중한다.</strong> 예고 = 덜어냄(밝기를 낮추고 움직임을 세움) + 다음 색 준비. <strong>스트로브는 필수가 아니다</strong> — 발라드처럼 느린 곡에는 쓰지 않고, 빠른 곡이라도 강하고 임팩트 있는 순간에 한 번 강조하듯만 쓴다(감독 2026-10-07). 쓸 때는 4Hz 이하. 블라인더는 후렴 진입과 엔딩</td><td>K팝 조사 2·3·4 · 벤치마크 §2.3 규칙 3·4 · 감독 결정 ①</td></tr>
+</tbody></table></div>
+<p><strong>겹침 규칙(HTP·LTP)</strong>: 밝기는 두 시퀀스가 겹치면 큰 값이 이긴다(HTP). 색·위치는 마지막에 보낸 값이 이긴다(LTP). 그래서 <strong>색과 위치는 한 그룹당 한 시퀀스만 잡는다.</strong> 장면(SCENE)이 무빙 위치를 잡으면 움직임 시퀀스는 그 위에 상대값(At Relative)만 얹는다.</p>
+<h2>2. 역할별 시퀀스 — 누가 무엇을 맡나</h2>
+<p class="lead"><b>시퀀스</b>(sequence — 큐를 차례로 담은 재생 목록)를 역할마다 하나씩 나눠요. 첫 시연에서는 한 큐에 다섯 그룹을 섞어 넣다가 무빙 움직임만 남았어요. 나누면 서로 덮지 않아요.</p>
+<pre class="mermaid">
+flowchart LR
+  TC[타임코드 하나] --> S[SCENE<br/>색·얼굴 빛·기본 위치]
+  TC --> B[BACK PULSE<br/>킥 박 밝기]
+  TC --> C[SIDE CHASE<br/>번갈이]
+  TC --> U[MOVER-U MOVE<br/>위 무빙 움직임]
+  TC --> D[MOVER-D MOVE<br/>아래 무빙 움직임]
+  TC --> A[ACCENT<br/>블라인더·스트로브]
+</pre>
+<noscript><p>구조: 타임코드 하나가 트랙 여섯을 갖고, 트랙마다 SCENE · BACK PULSE · SIDE CHASE · MOVER-U MOVE · MOVER-D MOVE · ACCENT 시퀀스 하나를 맡아 자기 시각에만 움직인다.</p></noscript>
+<div class="ex"><b>예시 —</b> 18마디(0:37.9) 첫 박에서 SCENE 은 워시를 핑크 70%로 끊어 바꾸고, BACK PULSE 는 킥 박마다 100%로 깜박이기 시작하고, ACCENT 는 블라인더를 2박 동안 100%로 켜요. MOVER-U 는 위로 열린 뒤 19마디부터 팬 웨이브를 시작해요. 네 시퀀스가 같은 순간에 서로 다른 속성만 건드리니 덮어쓰지 않아요.</div>
+<p>t520 §20-4 분리안에 강조 층을 따로 떼어 여섯 역할로 정리했다.</p>
+<div class="tw"><table><thead><tr><th>역할(시퀀스)</th><th>맡는 속성</th><th>그룹(선택 하나)</th><th>바뀌는 단위</th></tr></thead><tbody>
+<tr><td>SCENE</td><td>WASH 색·밝기, FOH 얼굴 빛, 무빙 기본 위치·색</td><td>여럿(정적 값만)</td><td>구간 경계, 4마디 틴트</td></tr>
+<tr><td>BACK PULSE</td><td>BACK 밝기 펄스</td><td>Group 4</td><td>박(킥 1·2·4박, 드롭 1·3박)</td></tr>
+<tr><td>SIDE CHASE</td><td>SIDE-L/R 밝기 번갈이</td><td>Group 7(SIDE-ALL, 위상 0/180) 또는 5·6 따로</td><td>박·반 박</td></tr>
+<tr><td>MOVER-U MOVE</td><td>위 무빙 Pan/Tilt 움직임(필요하면 밝기 체이스)</td><td>Group 11</td><td>4마디마다 모양·속도·축</td></tr>
+<tr><td>MOVER-D MOVE</td><td>아래 무빙 Pan/Tilt 움직임</td><td>Group 12</td><td>4마디마다, U와 다르게</td></tr>
+<tr><td>ACCENT</td><td>BLIND·STROBE</td><td>BLIND·STROBE 그룹</td><td>큰 순간 네 곳만(18·46·63·67마디)</td></tr>
+</tbody></table></div>
+<ul>
+<li>타임코드 하나에 트랙 여섯. 각 트랙은 자기 시퀀스가 바뀌는 시각만 갖는다.</li>
+<li>🔴 실기에서 아직 확인 안 된 것: 타임코드 트랙 3개 이상, 그룹 한 선택 페이저 큐가 저장되는지, 같은 그룹의 다른 속성을 두 시퀀스가 잡을 때 섞이지 않는지(t520 §20-4 프로브 1~4). 앱이 콘솔로 보내기 전에 작은 프로브로 먼저 잰다(새 SPEC 의 선행 확인).</li>
+</ul>
+<h2>3. LOVE ATTACK 구간별 배치 (곡 전체)</h2>
+<p class="lead">곡 전체를 4마디 단위로 훑은 배치표예요. <b>주인공</b>은 그 4마디에 가장 눈에 띄게 리듬을 타는 층, <b>보조</b>는 그 뒤에서 함께 타는 층이에요.</p>
+<p>「주인공」은 그 4마디 동안 가장 눈에 띄게 리듬을 타는 층이다. 무빙 칸의 <code>U / D</code> 는 위 무빙 / 아래 무빙이다.</p>
+<div class="tw"><table><thead><tr><th>마디</th><th>구간</th><th>바닥(SCENE)</th><th>주인공</th><th>보조</th><th>무빙 U / D</th><th>강조</th></tr></thead><tbody>
+<tr><td>앞박~2</td><td>인트로 기타</td><td>BACK 실루엣 30%, 나머지 꺼짐</td><td>—</td><td>—</td><td>둘 다 정지(바닥 쪽 좁은 빔)</td><td>—</td></tr>
+<tr><td>3~6</td><td>드럼머신</td><td>그대로</td><td>BACK 4박 펄스</td><td>—</td><td>5마디 1박에 위치 한 칸 올림, 정지</td><td>—</td></tr>
+<tr><td>7~10</td><td>벌스 1 앞</td><td>라벤더 워시 40% + FOH 켬</td><td>BACK 킥 펄스</td><td>—</td><td>U 정지 / D 느린 틸트 웨이브(한 바퀴 2마디)</td><td>—</td></tr>
+<tr><td>11~13</td><td>벌스 1 뒤</td><td>그대로, 11마디 틴트 한 단계</td><td>SIDE 체이스 2·4박</td><td>—</td><td>U 기울인 자리에서 느린 팬 흔들기 / D 11마디 1박에 새 자리로 옮기고 정지</td><td>—</td></tr>
+<tr><td>14~17</td><td>프리코러스 1</td><td>워시 25%로 덜어냄, FOH 유지</td><td>무빙 가속 스윕 U·D 함께(4박→2박→1박→반 박)</td><td>SIDE 체이스도 함께 빨라짐</td><td>U·D 같은 동작 — 「합」</td><td>17마디 3·4박 전부 비움(예고)</td></tr>
+<tr><td>18~21</td><td>코러스 1 앞</td><td>핑크 70%로 끊어 바꿈, 밝기 올림</td><td>BACK 킥 펄스 100%</td><td>U 팬 웨이브(한 바퀴 2박)</td><td>U 팬 웨이브 / D 위로 연 자리에서 정지</td><td>18마디 BLIND 100% 2박(키움)</td></tr>
+<tr><td>22~25</td><td>코러스 1 뒤</td><td>22마디 핑크→피치 번짐</td><td>BACK 킥 펄스</td><td>D 틸트 웨이브(반대 위상)</td><td>U 정지 / D 틸트 웨이브 — 주고받기</td><td>—</td></tr>
+<tr><td>26~32</td><td>코러스 1 끝</td><td>피치 유지, 30마디 무빙 위치 한 칸</td><td>U 밝기 체이스(킥 박 + 2박 반)</td><td>—</td><td>U 체이스 / D 마디 1박마다 위치 끊어 옮김</td><td>—</td></tr>
+<tr><td>33</td><td>킥 멈춤</td><td>라벤더 40%로 번짐</td><td>전부 멈춤</td><td>—</td><td>정지</td><td>—</td></tr>
+<tr><td>34~37</td><td>벌스 2 앞</td><td>라벤더 35%</td><td>BACK 킥 펄스 80%</td><td>—</td><td>U 정지 / D 서클(한 바퀴 2마디) ⚠</td><td>—</td></tr>
+<tr><td>38~41</td><td>벌스 2 뒤</td><td>38마디 틴트 한 단계</td><td>SIDE 체이스 2·4박</td><td>—</td><td>U 느린 틸트 웨이브 / D 정지 — 1절과 반대로</td><td>—</td></tr>
+<tr><td>42~45</td><td>프리코러스 2</td><td>워시 25%로 덜어냄</td><td>SIDE 체이스 → 44마디부터 무빙 가속 스윕</td><td>—</td><td>U·D 함께, 45마디 4박에 한 박 일찍 활짝</td><td>45마디 4박 당김(예고)</td></tr>
+<tr><td>46~49</td><td>코러스 2 앞</td><td>핑크 80% 끊어 바꿈</td><td>U·D 엇갈린 팬 웨이브(한 바퀴 1박)</td><td>BACK 킥 펄스</td><td>U·D 서로 반대 방향</td><td>46마디 BLIND 100% 1마디(키움)</td></tr>
+<tr><td>50~53</td><td>코러스 2 뒤</td><td>50마디 핑크→피치 번짐</td><td>BACK 킥 펄스</td><td>무빙 축 바꿈: U 틸트 / D 팬</td><td>50마디 1박에 축 교대</td><td>—</td></tr>
+<tr><td>54~60</td><td>코러스 2 끝</td><td>피치 유지, 56·58마디 위치 한 칸</td><td>무빙 밝기 체이스(킥 박 + 2박 반)</td><td>BACK 킥 펄스</td><td>위치만 끊어 옮김</td><td>—</td></tr>
+<tr><td>61</td><td>킥 멈춤(깊게)</td><td>워시 끔, FOH 만</td><td>전부 멈춤</td><td>—</td><td>정지</td><td>—</td></tr>
+<tr><td>62</td><td>브릿지</td><td>인트로 장면 다시(차가운 실루엣)</td><td>BACK 1·2박</td><td>—</td><td>정지, 4박 전부 비움</td><td>—</td></tr>
+<tr><td>63~64</td><td>드롭 앞</td><td>SIDE 라벤더/핑크 좌우 다른 색</td><td>무빙 밝기 체이스 반 박</td><td>BACK 1·3박 펄스</td><td>위로 연 자리</td><td>63마디 STROBE 1마디 박마다(키움)</td></tr>
+<tr><td>65~66</td><td>드롭 뒤</td><td>그대로</td><td>무빙 발리후 ⚠</td><td>SIDE 거울 체이스 매 박</td><td>U·D 발리후</td><td>—</td></tr>
+<tr><td>67</td><td>덜어냄 → 당긴 히트</td><td>1~3박 FOH·BACK 20% 만</td><td>전부 멈춤</td><td>—</td><td>정지</td><td>67마디 4박 BLIND 100% 2박 + STROBE 2마디(가장 큼)</td></tr>
+<tr><td>68~71</td><td>마지막 코러스 앞</td><td>세 색 한 무대</td><td>U 큰 서클 ⚠</td><td>BACK 킥 펄스</td><td>U 큰 서클 / D 틸트 웨이브</td><td>—</td></tr>
+<tr><td>72~75</td><td>마지막 코러스 중</td><td>72마디 세 색 자리 돌림</td><td>U·D 축 교대</td><td>BACK 킥 펄스</td><td>U 틸트 / D 큰 서클 ⚠</td><td>—</td></tr>
+<tr><td>76~81</td><td>마지막 코러스 끝</td><td>78·80마디 색 자리 돌림</td><td>무빙 밝기 체이스 반 박(곡에서 가장 빠름)</td><td>BACK 킥 펄스</td><td>위치 고정</td><td>—</td></tr>
+<tr><td>82~</td><td>킥 멈춤 → 끝</td><td>세 색 유지, 179초부터 3초 페이드</td><td>전부 멈춤</td><td>—</td><td>정지</td><td>—</td></tr>
+</tbody></table></div>
+<p>⚠ = 서클·발리후는 실기 미확인 모양이다(t516 요약표). 35마디 이후에만 두고, 시연 전에 프로브로 확인한다. 0~25마디는 확인된 수단(틸트 웨이브, 기울인 자리 위의 팬 흔들기, 가속, Measure 4/1, At Speed)만 쓴다.</p>
+<p><strong>M1 대본과 달라지는 점</strong></p>
+<div class="tw"><table><thead><tr><th>무엇</th><th>M1 대본</th><th>이 규칙</th></tr></thead><tbody>
+<tr><td>무빙</td><td>MOVER-ALL 이 한 몸으로 움직이는 구간이 많다</td><td>U·D 를 나눠 서로 다르게, 4마디마다 교대(프리코러스만 「합」으로 함께)</td></tr>
+<tr><td>강조</td><td>18 BLIND 60% 1박 · 46 BLIND 100% 1박 · 63 STROBE 2박 · 67 BLIND+STROBE 1마디</td><td>18 100% 2박 · 46 100% 1마디 · 63 STROBE 1마디 · 67 BLIND 2박 + STROBE 2마디. 스트로브는 이 곡에서 63·67 두 곳뿐(빌드업 끝 스트로브는 넣지 않는다). 크기 순서(18&lt;46&lt;63&lt;67)는 그대로</td></tr>
+<tr><td>무빙 밝기 체이스</td><td>26~31·54~59·76~81</td><td>그대로 — 무빙이 움직임 대신 빛으로 리듬을 타는 구간이라 규칙 3에 맞다</td></tr>
+<tr><td>펄스·색</td><td>있음</td><td>그대로(지우지 않는다). 첫 시연에서 안 보인 건 기술 문제(t520 §20-3)</td></tr>
+<tr><td>얼굴 빛</td><td>7마디부터 켬</td><td>그대로, 61·67 덜어냄에서도 끄지 않음</td></tr>
+</tbody></table></div>
+<h2>4. 0~25마디 박자 격자 — 앱 화면이 처음 보여줄 범위</h2>
+<p class="lead">앱 화면에서 처음 보여줄 0~25마디를 역할별로 펼친 격자예요. 한 줄 = 4마디(약 8.5초).</p>
+<p>한 줄이 4마디(약 8.5초)다. 칸은 각 역할 시퀀스가 그 4마디 동안 하는 일이다. 「—」는 그 시퀀스가 쉰다는 뜻이다.</p>
+<div class="tw"><table><thead><tr><th>마디</th><th>SCENE</th><th>BACK PULSE</th><th>SIDE CHASE</th><th>MOVER-U</th><th>MOVER-D</th><th>ACCENT</th></tr></thead><tbody>
+<tr><td>0~2</td><td>BACK 차가운 실루엣 30%</td><td>앞박 1회</td><td>—</td><td>바닥 쪽 좁은 빔, 정지</td><td>바닥 쪽, 정지</td><td>—</td></tr>
+<tr><td>3~6</td><td>그대로</td><td>마디 4박마다</td><td>—</td><td>5마디 1박 위치 한 칸 올림</td><td>5마디 1박 위치 한 칸 올림</td><td>—</td></tr>
+<tr><td>7~10</td><td>라벤더 워시 40%(2마디 번짐) · FOH 켬</td><td>킥 1·2·4박 60%</td><td>—</td><td>정지</td><td>틸트 웨이브, 한 바퀴 2마디, 위상 펼침</td><td>—</td></tr>
+<tr><td>11~13</td><td>틴트 한 단계</td><td>—</td><td>SIDE-L/R 2·4박 번갈이</td><td>기울인 자리에서 느린 팬 흔들기</td><td>11마디 1박 새 자리, 정지</td><td>—</td></tr>
+<tr><td>14~17</td><td>워시 25% 덜어냄</td><td>—</td><td>가속(마디마다 두 배)</td><td>가속 스윕 4박→2박→1박→반 박</td><td>U 와 같은 스윕</td><td>17마디 3·4박 전부 비움(예고)</td></tr>
+<tr><td>18~21</td><td>핑크 70% 끊어 바꿈 · 밝기 올림</td><td>킥 1·2·4박 100%</td><td>—</td><td>18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)</td><td>위로 연 자리, 정지</td><td>18마디 1박 BLIND 100% 2박</td></tr>
+<tr><td>22~25</td><td>22마디 핑크→피치 1마디 번짐</td><td>킥 1·2·4박 100%</td><td>—</td><td>22마디 1박에 멈춰 섬</td><td>22마디부터 틸트 웨이브(한 바퀴 2박)</td><td>—</td></tr>
+</tbody></table></div>
+<p>이 격자에서 장면 위에 리듬을 타는 층은 어느 4마디에서도 둘 이하다(규칙 3). 주인공은 4마디마다 BACK → SIDE → 무빙 → BACK+U → BACK+D 로 바뀐다(규칙 4).</p>
+<h2>5. 감독 결정 (2026-10-07)</h2>
+<p class="lead">2026-10-07 감독이 정한 것들이에요. 원문을 그대로 옮겼어요.</p>
+<div class="tw"><table><thead><tr><th>물음</th><th>결정</th></tr></thead><tbody>
+<tr><td>리듬 타는 층 수</td><td><strong>보통 둘, 드롭·마지막 코러스만 셋</strong> — 권장안 확정</td></tr>
+<tr><td>색 자리표시</td><td><strong>진하게(W 0 + 채도 높은 RGB)</strong> — 색이 보이게만. 최종 색 고르기는 나중</td></tr>
+<tr><td>스트로브</td><td><strong>필수가 아니다.</strong> 원문: 「무조건 스트로버를 쓰는건 아니라는거지. 발라드처럼 느린 노래에는 쓸 필요가 없고 빠른 노래라고 하더라도 무조건 스트로버를 쓰는건 아니거든. 강하고 임팩트가 있는 부분에 한번 강조하듯이 사용하라는 말」 → 빌드업 끝 신규 스트로브는 뺐다</td></tr>
+<tr><td>벌스 무빙</td><td>직접 답 없음 — 초안(한쪽만 느리게, 다른 쪽 정지, 4마디 교대)을 기본값으로 두고, 앱에서 고칠 수 있게 한다</td></tr>
+<tr><td>다음 단계</td><td>원문: 「보고서로 만들 이걸 앱의 런모드에 만들어야 하는 거야. 런모드에서 확인하고 수정작업을 하고 콘솔로 보내도록 하는 거」 → <strong>규칙 확정 → 런북 모드 앱 SPEC 새로.</strong> 손 시연 두 번째 판(t520)은 접는다</td></tr>
+</tbody></table></div>
+<h2>6. 안 잰 것과 남은 위험</h2>
+<p class="lead">재 보지 못한 것을 따로 적어 두었어요 — 확인된 것처럼 읽히지 않게요.</p>
+<ul>
+<li><strong>조사 쪽</strong>: 「콜 앤 리스폰스」 업계 용어 출처, MAtricks + 페이저 결합 공식 문서, 「N마디마다 변주」 수치, 음악방송 조명감독 1차 인터뷰는 확인하지 못했다(두 조사 문서의 「미확인」 절). 규칙 4의 「4마디」는 M1 방향 3과 감독 결정 ②에서 온 값이지 업계 수치가 아니다.</li>
+<li><strong>콘솔 쪽</strong>: 타임코드 트랙 3개 이상, 그룹 한 선택 페이저 저장, 같은 그룹 다른 속성 겹침, 서클·발리후·위상 펼침, 줌·고보·프리즘(빔)은 실기 미확인이다. 빔은 이번 규칙에서 뺐다.</li>
+<li><strong>BACK 방향</strong>: Pan 180 / Tilt 80 은 계산상 객석 위 공중을 비춘다(t519). 펄스를 넣어도 화면에서 덜 보일 수 있다.</li>
+<li><strong>시연 범위</strong>: 0~25마디에는 스트로브가 없다(스트로브는 63·67마디뿐). 실기에서 강조를 볼 때는 드롭·마지막 코러스까지 포함해야 한다.</li>
+</ul>
+<h2>7. 확정 뒤 순서</h2>
+<p class="lead">확정됐으니 이 순서로 레인에 배차해요.</p>
+<ol>
+<li><strong>새 SPEC(plan 만)</strong>: 런북 모드에서 곡의 박자 배치를 보고(역할별 트랙 × 마디 격자), 고치고, 승인을 거쳐 콘솔로 보낸다. 입력은 이 규칙, 기존 런북 모드(<code>ui/src/components/RunbookMode.tsx</code>, 큐시트 초안 편집·「콘솔에 반영」), t516·t520 실기 사실. 큰 장벽 둘 — 앱 재생 계약이 <code>manual_go</code>·<code>trig_time</code> 뿐이라 타임코드를 거절한다(<code>server/director/emit.py:51</code>), 스피드 마스터 BPM 을 곡과 함께 싣는 방법(G9)이 미확인이다. run 은 감독 착수 승인 뒤.</li>
+<li><strong>SPEC-LDRHYTHM-001 M3 기록</strong>: 이 규칙을 M3 규칙으로 SPEC 에 기록하고, 이 보고서와 조사 원자료 두 편을 저장소에 싣는다.</li>
+<li><strong>t520 정리</strong>: 판정서(콘솔 실측 사실)를 main 에 싣고 카드를 닫는다. 콘솔 잔여 객체(Seq 250~270·TC 23·24) 정리는 감독 결정.</li>
+</ol>
+<h2>직접 확인해 볼 것</h2><ul><li>§4 격자에서 어느 4마디든 리듬 타는 칸(BACK·SIDE·무빙)이 둘 이하인지</li><li>§3 강조 칸이 18 &lt; 46 &lt; 63 &lt; 67 순서로 커지고, 스트로브가 63·67 두 곳뿐인지</li><li>⚠ 표시(서클·발리후)가 0~25마디에 없는지</li></ul>
+</main>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});</script>
+</body></html>

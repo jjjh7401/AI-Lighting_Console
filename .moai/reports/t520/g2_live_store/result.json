@@ -1,0 +1,76 @@
+{
+  "phase": "store",
+  "bundles": {
+    "store_255": true,
+    "store_256": true
+  },
+  "exec": [
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 5 ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 255 Cue 1 'Group Five'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 256 Cue 1 'Trailing Dot'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 256 Property 'Name' 'GROUP PROBE - TRAILING DOT 301-302'",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase store",
+  "preflight": "responder_ok",
+  "approved": 2,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

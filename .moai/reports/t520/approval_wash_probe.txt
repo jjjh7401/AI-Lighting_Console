@@ -1,0 +1,8 @@
+ChangeDestination Root
+ClearAll
+Group 10 ; Attribute 'Dimmer' At 100
+Store Sequence 257 Cue 1 'Wash All 100'
+ClearAll
+Set Sequence 257 Property 'Name' 'WASH PROBE - GROUP 10 DIMMER 100'
+Goto Cue 1 Sequence 257
+Off Sequence 257
