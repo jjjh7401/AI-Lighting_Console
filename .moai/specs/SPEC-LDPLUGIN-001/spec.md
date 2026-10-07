@@ -2,9 +2,9 @@
 id: SPEC-LDPLUGIN-001
 title: "Lighting Director 외부 플러그인과 copilot 수신·검토·실행 왕복"
 version: "0.1.0"
-status: in-progress
+status: superseded
 created: 2026-09-13
-updated: 2026-09-15
+updated: 2026-10-07
 author: jaihyun
 priority: P1
 phase: "Lighting Director v1.0 end-to-end target"
@@ -15,6 +15,12 @@ tier: L
 ---
 
 # SPEC-LDPLUGIN-001
+
+## HISTORY
+
+| 날짜 | 내용 |
+|---|---|
+| 2026-10-07 | 상태 정정 in-progress→superseded(카드 t524) — 여섯 자식 SPEC 으로 분할됐다(SPEC-LDRECV-001 spec.md:24, SPEC-LDSTORE-001 spec.md:25). 확인된 자식: LDSTORE·LDCOMPILE·LDRECV·LDEMBED. 분할 목록 원본 `reports/ldplugin-001/split-proposal.md` 은 저장소에 없어 여섯 개 전부를 이름으로 확인하지는 못했다(LDWIRE 는 스스로 원래 여섯에 속하지 않는다고 적음). |
 
 ## 1. 목적과 승인 경계
 
