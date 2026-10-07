@@ -28,11 +28,11 @@ REQ/AC 수 12/12 그대로, 새 ID 0, `status: in-progress` 그대로.
 
 ## 3. 레인이 잡아 고친 것
 
-- **manager-spec 초안의 거짓 사실 1건**: progress.md 에 「t520 판정서는 PR #561 머지 `53a2bd9b` 로 이미 main 에 실렸다」고 적었다. 재보니 `git ls-tree -r --name-only origin/main -- .moai/reports/t520/` → **0건**이고, t520 판정서는 `origin/WT-m2-batch1` 에만 있다. PR #561 은 t516 이다. 「아직 main 에 없다, 반입은 보고서 §7 3번 몫」으로 고쳤다.
+- **manager-spec 초안의 거짓 사실 1건**: progress.md 에 「t520 판정서는 PR #561 머지 `53a2bd9b` 로 이미 main 에 실렸다」고 적었다. 재보니 `git ls-tree -r --name-only origin/main -- .moai/reports/t520/` → **0건**이고, t520 판정서는 `origin/WT-m2-batch1` 에만 있다. PR #561 은 t516 이다. 「아직 main 에 없다, 반입은 보고서 §7 3번 몫」으로 고쳤다. 그 뒤 푸시 직전 재측정에서 t520 이 PR #565(`af3298ff`)로 main 에 머지된 것을 확인해, origin/main 을 이 브랜치에 병합하고 문장을 「PR #565 로 main 에 실렸다」로 다시 고쳤다.
 - **감사 D1(major)**: plan.md M3 첫 문단은 「M2 에서 감독이 줄마다 어울림 표시한 증거」에서 규칙을 뽑는다고 적혀 있는데, 실제 규칙은 조사 두 편 + t520 §20 + M1 대본에서 리드가 정리하고 감독이 확정했다. M3 아래에 정정 메모를 달았다 — **감독 승인 규칙이지 실기 줄 단위로 검증된 규칙은 아니다**, 실기 확인은 t522 몫. 원문 보존.
 
 ## 4. 안 잰 것 · 남은 위험
 
 - D1 정정 메모는 감사 뒤에 추가했다 — 그 메모 자체는 재감사하지 않았다(카드 지시가 감사 1회).
-- 「t520 판정서가 main 에 없다」는 2026-10-07 이 커밋 시점 측정이다. t520 정리 카드가 먼저 머지되면 이 문장은 낡는다.
+- t520 머지 반영 문장은 병합 뒤 다시 쓴 것이라 감사 대상이 아니었다.
 - `server/`·`ui/`·`docs/` 무변경: `git diff --quiet 5ccd1d1c -- server/ ui/ docs/` → exit 0.
