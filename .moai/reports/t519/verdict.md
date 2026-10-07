@@ -183,3 +183,15 @@ POSZ   6.2 vs  1.2
 - 승인 = 송신 대조: `uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t519/approval_back_aim.txt .moai/reports/t519/aim_live/audit` 결과는 송신 27줄, sha256 같음, 송신 안 됨 0, 승인 안 됨 0, not-ok 0으로 **PASS**다(`aim_live_approval_vs_sent.txt`). SaveShow 0.
 - 콘솔에 남은 것: Sequence 260·261·262(`BACK AIM PROBE - PAN 180 TILT 30/45/60`).
 - 감독 관찰: 대기 중이다(리드 경유).
+
+### 7-4. 감독 관찰과 결정값
+
+- 감독 관찰(원문, 리드 경유): 「80도 정도는 되어야겠어」
+- 판독:
+  - 30/45/60은 모두 부족했다.
+  - 방향(Pan 180 = 객석 쪽)은 맞는 것으로 읽는다. 다만 **부호 확인은 감독 관찰로 간접 확인한 것**이다. 감독이 반대 방향을 지적하지 않았다는 데서 낸 판단이고, 기계로 잰 것은 아니다.
+- **결정값: BACK Pan 180 · Tilt 80.** 리드가 lane-2 t520 SCENE에 넘겼다.
+  - Tilt 80은 Aura XB 범위(±116) 안이다.
+  - 계산상 바닥 착지는 Y ≈ 4.5 − 6.2·tan80 ≈ −30.7로, 바닥(±15) 밖이다. 빔이 객석 위 공중으로 뻗는다(추론, 감독이 3D에서 본다).
+- 80도는 이 시험에서 재생해 본 각도가 아니다. t520이 처음 넣는 값이다.
+- 잔류: Sequence 260·261·262(`BACK AIM PROBE - PAN 180 TILT 30/45/60`). 지울지는 리드·감독이 정한다. 쇼에 저장됐는지는 이 레인이 모른다(SaveShow 송신 0).
