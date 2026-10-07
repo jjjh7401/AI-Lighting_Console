@@ -1,0 +1,20 @@
+{
+  "bundles": {
+    "store_1": false,
+    "store_2": false,
+    "store_3": false,
+    "on_1": false,
+    "off_1": false,
+    "on_2": false,
+    "off_2": false,
+    "on_3": false,
+    "off_3": false
+  },
+  "line_results": {},
+  "b_slots_taken": [],
+  "verdict": "deny-all: approval texts recorded",
+  "preflight": "responder_ok",
+  "approval_requests": 9,
+  "approved": 0,
+  "skipped_saveshow": []
+}
