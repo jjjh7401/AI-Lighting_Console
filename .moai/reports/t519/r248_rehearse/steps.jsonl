@@ -1,0 +1,6 @@
+{"step": "pre_seq_248", "t": 0.0, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/248", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/248", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "watch", "t": 0.0, "say": "BACK 201(높이 1.2) 이 보이는가 · 301 대조(20초)"}
+{"step": "on_248", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 248", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 248': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_248", "t": 0.001, "kind": "exec", "command": "Goto Cue 1 Sequence 248", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_248", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 248", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 248': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_248", "t": 0.001, "kind": "exec", "command": "Off Sequence 248", "fired": true, "ok": true, "detail": "OK"}

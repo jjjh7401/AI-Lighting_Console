@@ -1,0 +1,8 @@
+
+>>> state:Patch/FixtureTypes/8/6/1/1
+    wire: Plugin "CopilotResponder" "state 47826e22 Patch/FixtureTypes/8/6/1/1"
+<<< {"children": [{"class": "DMXChannel", "i": 1, "name": "Aura_Shutter1"}, {"class": "DMXChannel", "i": 2, "name": "Aura_Dimmer"}, {"class": "DMXChannel", "i": 3, "name": "Aura_COLORMIXER"}, {"class": "DMXChannel", "i": 4, "name": "Aura_ColorRGB_R"}, {"class": "DMXChannel", "i": 5, "name": "Aura_ColorRGB_G"}, {"class": "DMXChannel", "i": 6, "name": "Aura_ColorRGB_B"}, {"class": "DMXChannel", "i": 7, "name": "Main Module_Shutter1"}, {"class": "DMXChannel", "i": 8, "name": "Main Module_Dimmer"}, {"class": "DMXChannel", "i": 9, "name": "Main Module_Zoom"}, {"class": "DMXChannel", "i": 10, "name": "Yoke_Main Module_Pan"}, {"class": "DMXChannel", "i": 11, "name": "Main Module_Tilt"}, {"class": "DMXChannel", "i": 12, "name": "Main Module_FixtureGlobalReset"}, {"class": "DMXChannel", "i": 13, "name": "Main Module_COLORMIXER"}, {"class": "DMXChannel", "i": 14, "name": "Main Module_ColorRGB_R"}, {"class": "DMXChannel", "i": 15, "name": "Main Module_ColorRGB_G"}, {"class": "DMXChannel", "i": 16, "name": "Main Module_ColorRGB_B"}], "id": "47826e22", "kind": "state", "node": {"childCount": 23, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/6/1/1", "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/6/1/1@40
+    wire: Plugin "CopilotResponder" "state f6b4a3d3 Patch/FixtureTypes/8/6/1/1 offset=40"
+<<< {"children": [], "id": "f6b4a3d3", "kind": "state", "node": {"childCount": 23, "class": "DMXChannels", "enumeration": "ok", "name": "DMXChannels"}, "offset": 40, "ok": true, "path": "Patch/FixtureTypes/8/6/1/1", "truncated": false, "v": 1}

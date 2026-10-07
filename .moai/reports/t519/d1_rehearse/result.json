@@ -1,0 +1,40 @@
+{
+  "stage": "d1",
+  "targets": [
+    201
+  ],
+  "pre": {
+    "201": {
+      "NAME": "fake",
+      "POSZ": "fake",
+      "ROTX": "fake",
+      "ROTY": "fake",
+      "ROTZ": "fake"
+    }
+  },
+  "post": {
+    "201": {
+      "NAME": "fake",
+      "POSZ": "fake",
+      "ROTX": "fake",
+      "ROTY": "fake",
+      "ROTZ": "fake"
+    }
+  },
+  "fired": true,
+  "verdict": "rehearsal: read-back not judged (fake console)",
+  "fake_sent": [
+    "Set Fixture 201 Posz '1.2'"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Fixture 201 Posz '1.2'"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)"
+  ]
+}

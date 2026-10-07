@@ -1,0 +1,38 @@
+{
+  "stage": "d1",
+  "targets": [
+    201
+  ],
+  "pre": {
+    "201": {
+      "NAME": "BACK 201",
+      "POSZ": "6.1999998092651",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "post": {
+    "201": {
+      "NAME": "BACK 201",
+      "POSZ": "1.2000000476837",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "fired": true,
+  "verdict": "read-back = {'ROTX': 0.0, 'POSZ': 1.2} for all 1",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Fixture 201 Posz '1.2'"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

@@ -1,0 +1,2 @@
+{"ts": "2026-10-07T05:28:40.879244+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/43 NAME,POSZ,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T05:28:40.879773+00:00", "event": "rejected", "commands": ["Set Fixture 201 Posz '1.2'"], "held": ["Set Fixture 201 Posz '1.2'"], "kind": "t519_back_place"}

@@ -1,0 +1,8 @@
+
+>>> introspect:Patch/Stages/1/Spaces/1
+    wire: Plugin "CopilotResponder" "introspect b2d1529b Patch/Stages/1/Spaces/1"
+<<< {"class": "Space", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "COLOR", "t": "Custom"}, {"n": "MINX", "t": "FloatLength"}, {"n": "MAXX", "t": "FloatLength"}, {"n": "MINY", "t": "FloatLength"}, {"n": "MAXY", "t": "FloatLength"}, {"n": "MINZ", "t": "FloatLength"}, {"n": "MAXZ", "t": "FloatLength"}], "id": "b2d1529b", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1/Spaces/1", "source": "property_accessors", "total": 27, "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Spaces/1
+    wire: Plugin "CopilotResponder" "state bec325df Patch/Stages/1/Spaces/1"
+<<< {"children": [{"class": "StageElement", "i": 1, "name": "StageElement 1"}], "id": "bec325df", "kind": "state", "node": {"childCount": 1, "class": "Space", "enumeration": "ok", "name": "Stage"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Spaces/1", "truncated": false, "v": 1}

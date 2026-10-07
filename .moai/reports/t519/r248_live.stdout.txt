@@ -1,0 +1,7 @@
+{"step": "pre_seq_248", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/248", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/248", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE v5 - F1 AURA DIMMER 100"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 3.071, "say": "BACK 201(높이 1.2) 이 보이는가 · 301 대조(20초)"}
+{"step": "on_248", "t": 3.133, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 248", "reasons": ["reference-invoking command"]}]}
+{"step": "on_248", "t": 3.2, "kind": "exec", "command": "Goto Cue 1 Sequence 248", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_248", "t": 23.267, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 248", "reasons": ["reference-invoking command"]}]}
+{"step": "off_248", "t": 23.332, "kind": "exec", "command": "Off Sequence 248", "fired": true, "ok": true, "detail": "OK"}
+{"verdict": "replayed — judge by director watch", "pre_names": {"248": "RHYTHM PROBE v5 - F1 AURA DIMMER 100"}}

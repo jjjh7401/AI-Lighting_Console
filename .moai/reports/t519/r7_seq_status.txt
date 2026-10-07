@@ -1,0 +1,50 @@
+children=49 node={'childCount': 49, 'class': 'Sequences', 'enumeration': 'ok', 'name': 'Sequences'}
+{"i": 1, "NAME": "Default", "NO": "1", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 2, "NAME": "Sugar", "NO": "2", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 3, "NAME": "Sugar r3", "NO": "3", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 4, "NAME": "eset1Fade", "NO": "4", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 5, "NAME": "Synth Test", "NO": "5", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 6, "NAME": "Notice Test", "NO": "6", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 7, "NAME": "VerifyA", "NO": "7", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 8, "NAME": "VerifyB4x", "NO": "8", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 9, "NAME": "T215 SCRATCH DELETABLE", "NO": "9", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 10, "NAME": "VerifyC4x", "NO": "10", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 11, "NAME": "chase-horizontal", "NO": "11", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 12, "NAME": "chase-bounce-run", "NO": "12", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 13, "NAME": "DinoSync", "NO": "13", "CURRENTCUE": "Sequence 13.13", "LOADEDCUE": null, "CUENO": "13", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 14, "NAME": "DinoDino", "NO": "14", "CURRENTCUE": "Sequence 13.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 15, "NAME": "DinoFull", "NO": "15", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 210, "NAME": "Sequence 210", "NO": "210", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 219, "NAME": "LOVE ATTACK - OLD APP", "NO": "219", "CURRENTCUE": "Sequence 219.5", "LOADEDCUE": null, "CUENO": "5", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 220, "NAME": "RHYTHM PROBE - OVERLAP SCENE", "NO": "220", "CURRENTCUE": "Sequence 220.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 221, "NAME": "RHYTHM PROBE - SPEEDMASTER MEASURE", "NO": "221", "CURRENTCUE": "Sequence 221.3", "LOADEDCUE": null, "CUENO": "3", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 222, "NAME": "RHYTHM PROBE - NEW SHAPES", "NO": "222", "CURRENTCUE": "Sequence 222.5", "LOADEDCUE": null, "CUENO": "5", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 223, "NAME": "RHYTHM PROBE v2 - A GROUP TWO LINE", "NO": "223", "CURRENTCUE": "Sequence 223.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 224, "NAME": "RHYTHM PROBE v2 - B GROUP ONE LINE", "NO": "224", "CURRENTCUE": "Sequence 224.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 225, "NAME": "RHYTHM PROBE v2 - C FIXTURE LIST", "NO": "225", "CURRENTCUE": "Sequence 225.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 226, "NAME": "RHYTHM PROBE v2 - SPEEDMASTER MEASURE", "NO": "226", "CURRENTCUE": "Sequence 226.3", "LOADEDCUE": null, "CUENO": "3", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 227, "NAME": "RHYTHM PROBE v2 - NEW SHAPES", "NO": "227", "CURRENTCUE": "Sequence 227.5", "LOADEDCUE": null, "CUENO": "5", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 228, "NAME": "RHYTHM PROBE v3 - L0 STATIC 100", "NO": "228", "CURRENTCUE": "Sequence 228.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 229, "NAME": "RHYTHM PROBE v3 - L1 PULSE SPEED 112", "NO": "229", "CURRENTCUE": "Sequence 229.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 230, "NAME": "RHYTHM PROBE v3 - L2 PULSE SPEEDMASTER", "NO": "230", "CURRENTCUE": "Sequence 230.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 231, "NAME": "RHYTHM PROBE v3 - L3 PULSE SPEEDMASTER MEASURE 2", "NO": "231", "CURRENTCUE": "Sequence 231.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 232, "NAME": "RHYTHM PROBE v3 - L4 TILT WAVE SPEED 112", "NO": "232", "CURRENTCUE": "Sequence 232.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 233, "NAME": "RHYTHM PROBE v3 - L5 TILT WAVE SPEEDMASTER", "NO": "233", "CURRENTCUE": "Sequence 233.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 234, "NAME": "RHYTHM PROBE v4 - A0 BASE TILT 45", "NO": "234", "CURRENTCUE": "Sequence 234.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 235, "NAME": "RHYTHM PROBE v4 - A1 PAN RELATIVE 30", "NO": "235", "CURRENTCUE": "Sequence 235.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 236, "NAME": "RHYTHM PROBE v4 - A2 TILT RELATIVE 30", "NO": "236", "CURRENTCUE": "Sequence 236.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 237, "NAME": "RHYTHM PROBE v4 - A3 TILT 2 STEPS", "NO": "237", "CURRENTCUE": "Sequence 237.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 238, "NAME": "RHYTHM PROBE v4 - B1 PULSE SPEED 56", "NO": "238", "CURRENTCUE": "Sequence 238.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 239, "NAME": "RHYTHM PROBE v4 - B2 PULSE SPEED 224", "NO": "239", "CURRENTCUE": "Sequence 239.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 240, "NAME": "RHYTHM PROBE v4 - B3 PULSE SPEEDMASTER MEASURE 4", "NO": "240", "CURRENTCUE": "Sequence 240.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 241, "NAME": "RHYTHM PROBE v4 - B4 PULSE SPEEDMASTER MEASURE 1", "NO": "241", "CURRENTCUE": "Sequence 241.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 242, "NAME": "RHYTHM PROBE v4 - D1 AURA FIXTURE DIMMER", "NO": "242", "CURRENTCUE": "Sequence 242.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 243, "NAME": "RHYTHM PROBE v4 - D2 AURA SUBFIXTURE DIMMER", "NO": "243", "CURRENTCUE": "Sequence 243.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 244, "NAME": "RHYTHM PROBE v4 - D3 AURA BOTH DIMMERS", "NO": "244", "CURRENTCUE": "Sequence 244.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 245, "NAME": "RHYTHM PROBE v5 - E0 BASE TILT 45", "NO": "245", "CURRENTCUE": "Sequence 245.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 246, "NAME": "RHYTHM PROBE v5 - E1 PAN ABSOLUTE STEPS TILT 45", "NO": "246", "CURRENTCUE": "Sequence 246.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 247, "NAME": "RHYTHM PROBE v5 - E2 PAN RELATIVE STEPS ONLY", "NO": "247", "CURRENTCUE": "Sequence 247.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 248, "NAME": "RHYTHM PROBE v5 - F1 AURA DIMMER 100", "NO": "248", "CURRENTCUE": "Sequence 248.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 249, "NAME": "RHYTHM PROBE v5 - F2 AURA DIMMER 100 RGB 100", "NO": "249", "CURRENTCUE": "Sequence 249.1", "LOADEDCUE": null, "CUENO": "1", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 1999, "NAME": "Sequence 1999", "NO": "1999", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}
+{"i": 2000, "NAME": "Sequence 2000", "NO": "2000", "CURRENTCUE": null, "LOADEDCUE": null, "CUENO": "", "CUENAME": "", "PRIORITY": "LTP", "OFFWHENOVERRIDDEN": "true"}

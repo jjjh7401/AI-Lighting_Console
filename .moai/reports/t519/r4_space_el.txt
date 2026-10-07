@@ -1,0 +1,12 @@
+
+>>> props:Patch/Stages/1/Spaces/1|NAME,MINX,MAXX,MINY,MAXY,MINZ,MAXZ,HIDDEN
+    wire: Plugin "CopilotResponder" "props 85b2d04e NAME,MINX,MAXX,MINY,MAXY,MINZ,MAXZ,HIDDEN Patch/Stages/1/Spaces/1"
+<<< {"id": "85b2d04e", "kind": "props", "ok": true, "path": "Patch/Stages/1/Spaces/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Stage"}, {"n": "MINX", "ok": true, "t": "number", "v": "-15.0"}, {"n": "MAXX", "ok": true, "t": "number", "v": "15.0"}, {"n": "MINY", "ok": true, "t": "number", "v": "-15.0"}, {"n": "MAXY", "ok": true, "t": "number", "v": "15.0"}, {"n": "MINZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "MAXZ", "ok": true, "t": "number", "v": "15.0"}, {"n": "HIDDEN", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+
+>>> introspect:Patch/Stages/1/Spaces/1/1
+    wire: Plugin "CopilotResponder" "introspect e6591883 Patch/Stages/1/Spaces/1/1"
+<<< {"class": "StageElement", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "SPACEFLOOR", "t": "UInt32"}, {"n": "P1X", "t": "Float"}, {"n": "P1Y", "t": "Float"}, {"n": "P1Z", "t": "Float"}, {"n": "P2X", "t": "Float"}, {"n": "P2Y", "t": "Float"}, {"n": "P2Z", "t": "Float"}, {"n": "P3X", "t": "Float"}, {"n": "P3Y", "t": "Float"}, {"n": "P3Z", "t": "Float"}, {"n": "P4X", "t": "Float"}, {"n": "P4Y", "t": "Float"}, {"n": "P4Z", "t": "Float"}], "id": "e6591883", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/Stages/1/Spaces/1/1", "source": "property_accessors", "total": 28, "truncated": false, "v": 1}
+
+>>> state:Patch/Stages/1/Spaces/1/1
+    wire: Plugin "CopilotResponder" "state f733f3f6 Patch/Stages/1/Spaces/1/1"
+<<< {"children": [], "id": "f733f3f6", "kind": "state", "node": {"childCount": 0, "class": "StageElement", "enumeration": "ok", "name": "StageElement 1"}, "offset": 0, "ok": true, "path": "Patch/Stages/1/Spaces/1/1", "truncated": false, "v": 1}

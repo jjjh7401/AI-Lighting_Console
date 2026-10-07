@@ -1,0 +1,16 @@
+
+>>> state:Patch/FixtureTypes/8/6/1/1/10
+    wire: Plugin "CopilotResponder" "state 3b5092ef Patch/FixtureTypes/8/6/1/1/10"
+<<< {"children": [{"class": "LogicalChannel", "i": 1, "name": "Pan"}], "id": "3b5092ef", "kind": "state", "node": {"childCount": 1, "class": "DMXChannel", "enumeration": "ok", "name": "Yoke_Main Module_Pan"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/10", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/6/1/1/10/1
+    wire: Plugin "CopilotResponder" "state fbbe0f83 Patch/FixtureTypes/8/6/1/1/10/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "Pan 1"}], "id": "fbbe0f83", "kind": "state", "node": {"childCount": 1, "class": "LogicalChannel", "enumeration": "ok", "name": "Pan"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/10/1", "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/8/6/1/1/10/1/1
+    wire: Plugin "CopilotResponder" "introspect c21a371e Patch/FixtureTypes/8/6/1/1/10/1/1"
+<<< {"class": "ChannelFunction", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "ATTRIBUTE", "t": "Handle"}, {"n": "DMXFROM", "t": "UInt32"}, {"n": "DMXTO", "t": "UInt32"}, {"n": "DEFAULT", "t": "UInt32"}, {"n": "PHYSICALFROM", "t": "Double"}, {"n": "PHYSICALTO", "t": "Double"}, {"n": "REALFADE", "t": "Float"}, {"n": "REALACCELERATION", "t": "Float"}, {"n": "WHEEL", "t": "Handle"}, {"n": "EMITTER", "t": "Handle"}, {"n": "GAMUT", "t": "Handle"}], "id": "c21a371e", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/10/1/1", "source": "property_accessors", "total": 41, "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/8/6/1/1/11/1
+    wire: Plugin "CopilotResponder" "state ef1904aa Patch/FixtureTypes/8/6/1/1/11/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "Tilt 1"}], "id": "ef1904aa", "kind": "state", "node": {"childCount": 1, "class": "LogicalChannel", "enumeration": "ok", "name": "Tilt"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/8/6/1/1/11/1", "truncated": false, "v": 1}

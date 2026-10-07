@@ -1,0 +1,46 @@
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/260", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/260)"}
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/261", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/261)"}
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/262", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/262)"}
+{"step": "store_260", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 30", "reasons": []}, {"command": "Fixture 201.1 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 260 Cue 1 'Pan 180 Tilt 30'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 260 Property 'Name' 'BACK
+{"step": "store_260", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_260", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_260", "t": 0.001, "kind": "exec", "command": "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_260", "t": 0.001, "kind": "exec", "command": "Fixture 201.1 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_260", "t": 0.002, "kind": "exec", "command": "Store Sequence 260 Cue 1 'Pan 180 Tilt 30'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_260", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_260", "t": 0.002, "kind": "exec", "command": "Set Sequence 260 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 30'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_261", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 201.1 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 261 Cue 1 'Pan 180 Tilt 45'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 261 Property 'Name' 'BACK
+{"step": "store_261", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_261", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_261", "t": 0.002, "kind": "exec", "command": "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_261", "t": 0.002, "kind": "exec", "command": "Fixture 201.1 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_261", "t": 0.002, "kind": "exec", "command": "Store Sequence 261 Cue 1 'Pan 180 Tilt 45'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_261", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_261", "t": 0.002, "kind": "exec", "command": "Set Sequence 261 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 45'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_262", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 60", "reasons": []}, {"command": "Fixture 201.1 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 262 Cue 1 'Pan 180 Tilt 60'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 262 Property 'Name' 'BACK
+{"step": "store_262", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_262", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_262", "t": 0.003, "kind": "exec", "command": "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_262", "t": 0.003, "kind": "exec", "command": "Fixture 201.1 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_262", "t": 0.003, "kind": "exec", "command": "Store Sequence 262 Cue 1 'Pan 180 Tilt 60'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_262", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_262", "t": 0.003, "kind": "exec", "command": "Set Sequence 262 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 60'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.003, "say": "260 — 201 이 객석 쪽으로 숙었나(Tilt 30, 계산상 무대 가운데에 떨어짐)"}
+{"step": "on_260", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 260", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 260': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_260", "t": 0.003, "kind": "exec", "command": "Goto Cue 1 Sequence 260", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_260", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 260", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 260': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_260", "t": 0.003, "kind": "exec", "command": "Off Sequence 260", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.003, "say": "261 — 201 이 객석 쪽으로 숙었나(Tilt 45, 계산상 무대 앞쪽에 떨어짐)"}
+{"step": "on_261", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 261", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 261': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_261", "t": 0.003, "kind": "exec", "command": "Goto Cue 1 Sequence 261", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_261", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 261", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 261': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_261", "t": 0.003, "kind": "exec", "command": "Off Sequence 261", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.003, "say": "262 — 201 이 객석 쪽으로 숙었나(Tilt 60, 계산상 객석에 떨어짐)"}
+{"step": "on_262", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 262", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 262': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_262", "t": 0.004, "kind": "exec", "command": "Goto Cue 1 Sequence 262", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_262", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 262", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 262': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_262", "t": 0.004, "kind": "exec", "command": "Off Sequence 262", "fired": true, "ok": true, "detail": "OK"}
+{"step": "post_part_260", "t": 0.004, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/260/3/1", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/260/3/1", "reads": [{"n": "NAME", "ok": true, "v": "fake"}, {"n": "MEMORYFOOTPRINT", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "post_part_261", "t": 0.004, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/261/3/1", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/261/3/1", "reads": [{"n": "NAME", "ok": true, "v": "fake"}, {"n": "MEMORYFOOTPRINT", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "post_part_262", "t": 0.004, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/262/3/1", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/262/3/1", "reads": [{"n": "NAME", "ok": true, "v": "fake"}, {"n": "MEMORYFOOTPRINT", "ok": true, "v": "fake"}], "fake": true}}
+{"verdict": "ran — judge by director watch", "bundles": {"store_260": true, "store_261": true, "store_262": true, "on_260": true, "off_260": true, "on_261": true, "off_261": true, "on_262": true, "off_262": true}}

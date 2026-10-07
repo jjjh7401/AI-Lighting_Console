@@ -1,0 +1,116 @@
+{
+  "bundles": {
+    "store_260": false,
+    "store_261": false,
+    "store_262": false,
+    "on_260": false,
+    "off_260": false,
+    "on_261": false,
+    "off_261": false,
+    "on_262": false,
+    "off_262": false
+  },
+  "marks": [
+    {
+      "label": "on_260",
+      "t": 0.07
+    },
+    {
+      "label": "off_260",
+      "t": 0.13
+    },
+    {
+      "label": "on_261",
+      "t": 0.2
+    },
+    {
+      "label": "off_261",
+      "t": 0.27
+    },
+    {
+      "label": "on_262",
+      "t": 0.33
+    },
+    {
+      "label": "off_262",
+      "t": 0.4
+    }
+  ],
+  "verdict": "deny-all: approval texts recorded",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 30",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+        "Store Sequence 260 Cue 1 'Pan 180 Tilt 30'",
+        "ClearAll",
+        "Set Sequence 260 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 30'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+        "Store Sequence 261 Cue 1 'Pan 180 Tilt 45'",
+        "ClearAll",
+        "Set Sequence 261 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 45'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 60",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+        "Store Sequence 262 Cue 1 'Pan 180 Tilt 60'",
+        "ClearAll",
+        "Set Sequence 262 Property 'Name' 'BACK AIM PROBE - PAN 180 TILT 60'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 260"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 260"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 261"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 261"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 262"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 262"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}
