@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, ".")
 sys.path.insert(0, ".moai/reports/t506")
 sys.path.insert(0, ".moai/reports/t520")
+import m2a_batch1 as gen  # noqa: E402
 import tc_probe  # noqa: E402
 from m2a_batch1 import LEAD, S_RHY, S_SCENE, SEQ, TC, TC_NO, name  # noqa: E402
 from tc_probe import LISTEN_PORT, Probe, RecordingApproval  # noqa: E402
@@ -46,6 +47,24 @@ BUNDLES = [
     ("go", [f"Go Timecode {TC_NO}"]),
     ("off", [f"Off Timecode {TC_NO}", f"Off Sequence {S_SCENE}", f"Off Sequence {S_RHY}"]),
 ]
+
+
+def retarget() -> None:
+    """gen.apply_target() 뒤 번호·이름·묶음을 다시 맞춘다(--target b 면 253·254·TC23)."""
+    global S_SCENE, S_RHY, SEQ, TC, TC_NO, NAMES, BUNDLES
+    S_SCENE, S_RHY, SEQ, TC, TC_NO = gen.S_SCENE, gen.S_RHY, gen.SEQ, gen.TC, gen.TC_NO
+    NAMES = {
+        SEQ[S_SCENE]: gen.name("SCENE").strip("'"),
+        SEQ[S_RHY]: gen.name("RHYTHM").strip("'"),
+        TC: gen.name("TC").strip("'"),
+    }
+    BUNDLES = [
+        ("go", [f"Go Timecode {TC_NO}"]),
+        ("off", [f"Off Timecode {TC_NO}", f"Off Sequence {S_SCENE}", f"Off Sequence {S_RHY}"]),
+    ]
+    tc_probe.RISK = BatchRisk(
+        reason=f"t520 M2 묶음 1 재생 — 타임코드 {TC_NO} Go/Off(쓰기 없음)", kind="t520_m2a_play"
+    )
 
 
 class FakeConsole:
@@ -140,7 +159,11 @@ def main() -> int:
     parser.add_argument("--rehearse", action="store_true")
     parser.add_argument("--approve", default=None)
     parser.add_argument("--audio", default=None)
+    parser.add_argument("--target", choices=("v2", "b"), default="v2")
     args = parser.parse_args()
+    if args.target == "b":
+        gen.configure(253, 254, 23, "M2a B", "main_only", None)  # 재생은 번호·이름만 쓴다
+    retarget()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     skipped: list[str] = []

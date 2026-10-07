@@ -1,0 +1,36 @@
+{
+  "bundles": {
+    "on_252_cue1": false,
+    "off_252": false
+  },
+  "marks": [
+    {
+      "label": "on_252_cue1",
+      "t": 0.07
+    },
+    {
+      "label": "off_252",
+      "t": 0.13
+    }
+  ],
+  "pre_names": {
+    "252": "LINE SHAPE PROBE - MAIN SUB LONG"
+  },
+  "verdict": "deny-all: approval texts recorded, nothing sent",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 252"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 252"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

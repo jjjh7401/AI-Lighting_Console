@@ -1,0 +1,15 @@
+approval file      : .moai/reports/t520/control_b_line_removed.txt
+  raw sha256       : 36f794e0d8986b3792abd61df18fc22bf9f36398a17057857dd172ee8ee6b78f
+  raw == canonical : True
+  canonical lines  : 2445
+  canonical sha256 : 36f794e0d8986b3792abd61df18fc22bf9f36398a17057857dd172ee8ee6b78f
+sent source        : .moai/reports/t520/rehearse_b/audit (files: ['audit-20261007.jsonl'])
+  window           : since=None until=None
+  send rows        : 2446 by kind {'command': 2446}
+  rebuilt sha256   : 42b693ade789052e52b55d5095699bb4bfc65e2b843fa27a245270f4d8a2f5b4
+WARN sends not ok  : 0
+(1) sha256 equal                         : False
+(2) 송신 안 됨 (sent, not in approval)    : 1
+  SENT_NOT_APPROVED: Fixture 302.1 ; Attribute 'Dimmer' At 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: FAIL

@@ -228,3 +228,68 @@ uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval
 ```
 
 - v1 파일(`approval_m2a_batch1.txt`, `live_denyall/`)은 기록으로 남긴다. v1 전부-거절 폴더로는 실행할 수 없다. 문면이 달라 게이트가 거절한다.
+
+## 12. 실기 쓰기 1회 실패 → 프로브 A → B 판(253·254·TC23)
+
+### 12-1. 쓰기 1회(`live_write`, 리드 「실행」 2026-10-07) — 장면 묶음에서 멈춤
+
+- 장면 묶음(39줄)은 승인됐고 모두 나갔다. 그중 4줄이 콘솔 회신 `Illegal object`, 35줄은 OK였다. 실행기는 「묶음 안 모든 줄 OK」일 때만 다음 묶음으로 가게 짜여 있어서, 리듬 251·TC22 묶음은 승인 요청도 하지 않았다. ②③(재생·음원)은 하지 않았다.
+- 실패 4줄은 모두 **서브픽스처 번호(점)가 `+` 목록 안에 든 줄**이다: 큐1 BACK 색(24개), 큐1 SIDE 색(24개), 큐1 무빙 디머 60 + 색(40개), 큐2 BACK 라벤더.
+- 되읽기(`after_write_readonly.txt`): Seq 250 이름·큐 7개 있음, 251·TC22 없음. AC-012 FAIL(송신 39, 승인 안 됨 547, not-ok 4).
+- 🔴 **내 설계 잘못.** t516에서 확인된 점 번호 꼴은 `Fixture 201.1 ;`처럼 혼자 쓴 것뿐이었다. 그걸 `+` 목록으로 넓혀 썼고, §5 "처음 쓰는 조합"에도 적지 않았다. 확인된 꼴을 일반화한 것을 확인된 것처럼 다뤘다.
+- 250은 무빙 디머 60이 빠진 채로 남았을 것이다(추정 — 실패 줄이 통째로 안 들어갔다고 본다). 잔여로 두고 덮어쓰지 않는다.
+
+### 12-2. 원인 가르기
+
+- 실기 기록 전수(`list_shapes.py`: t513 run6/8, t516 v1~v5, t519 aim, 이번): `+` 목록 성공은 1·6·8·12·16·20개, 모두 점 없음. 실패는 24·40개, 모두 점 포함. 기록만으로는 "점"과 "길이"가 겹쳐 못 가른다.
+- **프로브 A**(`line_probe.py`, Seq 252, 승인 파일 22줄 sha256 `630f8a0f…`, 리드 「실행」 1회):
+
+| 큐 | 줄 | 콘솔 회신 |
+|---|---|---|
+| 1 `Main Only` | `Fixture 301 + 302 ; Attribute 'Dimmer' At 100` | OK |
+| 2 `Sub In List` | `Fixture 301.1 + 302.1 ; Attribute 'Dimmer' At 100` | **Illegal object** |
+| 3 `Long List 24` | `Fixture 401 + … + 430 + 111 + 112 + 113 + 114 ; Dimmer 50`(점 없이 24개) | OK |
+
+- t512 대조 PASS(22줄, not-ok 1 = 큐2 줄). 큐 순서는 트래킹 오염을 피하려고 "본체만"을 큐1에 뒀다(리드 승인).
+- 큐1 다시 보기(`replay_252.py`, 2줄 sha256 `3c2f10f7…`, 이름 사전 판독 일치, 전부-거절 뒤 리드 사전 허락으로 1회, t512 PASS). 감독 관찰(원문): **「안켜졌어」**.
+- **판정(잰 것)**: ① 원인은 목록 안의 점 번호다. 길이(24개)는 원인이 아니다. ② Aura XB는 본체 선택만으로 서브픽스처 디머가 열리지 않는다(301·302 Dimmer 100 무점등). → B = `split_each`(리드 확정).
+
+### 12-3. B 판 — 생성기와 결과
+
+- 생성기 `m2a_batch1.py`에 `--target b --sub-mode split_each`를 더했다. 기본값(`--target v2`)은 v2 승인 파일과 바이트 단위로 같다(`plan_stats.py` → `equals … True`, sha256 `7438fc88`).
+- `split_each`: 본체 목록 한 줄 + 점 번호마다 한 줄(`Fixture 201.1 ;` — t516에서 18회 OK인 꼴). 리듬 페이저의 타이밍 줄(Phase·Measure·SpeedMaster)은 그 선택에만 붙으므로 점 번호 줄마다 다시 적는다.
+- **위치(Pan/Tilt)만 담은 줄은 본체에만** 준다. Aura XB의 서브픽스처 채널(`Aura_*`)에는 Pan/Tilt가 없다(`v4_reads1.txt` DMX 채널 목록 — Pan/Tilt는 `Main Module` 쪽에만). t519가 `Fixture 201 ; Pan/Tilt`로 BACK을 실제로 돌렸다. Spiider는 같은 구조로 보고 같은 규칙을 썼다 — Spiider 위치가 본체에 있는지는 안 잰 것이다.
+- 번호·이름: Seq 253 `'LOVE ATTACK - RHYTHM M2a B SCENE'` · Seq 254 `'… M2a B RHYTHM'` · TC 23 `'… M2a B TC'`. BACK Pan 180·Tilt 80은 장면 큐 7개 모두에 그대로 있다.
+- **줄 수 586 → 2,446.** 까닭: Aura XB(BACK 12·SIDE 12)와 Spiider(8 × 3)의 서브픽스처 48개가 한 줄씩 따로 나가고, 리듬 큐 15개마다 BACK·SIDE 서브픽스처 24개 각각에 값 줄 + 타이밍 3줄이 두 단계로 붙는다(장면 39 → 99, 리듬 513 → 2,313).
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`rehearse_b`, `play_rehearse_b`) | 쓰기 5묶음 끝까지, 트랙 NO 1→253·NO 2→254, 이벤트 7·15 · 재생 2묶음 끝까지 |
+| 실기 전부-거절(`live_denyall_b`) | preflight `responder_ok` · 사전 판독 통과(253·254·TC23 빔, 마스터 15 = 69) · 요청 5, 승인 0 · `rejected` 5, 명령 송신 0 · 문면 = 리허설 `True` |
+| AC-012 리허설 | 쓰기 2,446줄 **PASS** · 재생 4줄 **PASS** · 양성 대조(500번째 줄 삭제) **FAIL** |
+| 정적 검사 | 대상 번호는 Seq 253·254·TC 23뿐 · 점 번호가 든 `+` 목록 줄 0 · 큰따옴표 0 · Save/Delete/Remove/Copy/Move/Edit/Master 0 |
+
+**승인 파일(B)**
+
+| 파일 | 줄 | sha256 |
+|---|---|---|
+| `.moai/reports/t520/approval_m2a_batch1_b.txt` | 2446 | `42b693ade789052e52b55d5095699bb4bfc65e2b843fa27a245270f4d8a2f5b4` |
+| `.moai/reports/t520/approval_m2a_play_b.txt` | 4 | `2cb3d5dcfa0392bf58dad8f3d218c408bf9b2b9cbfb5833f20d8cfb88960c60d` |
+
+**실행(리드 「실행」 뒤에만)**
+
+```
+uv run python .moai/reports/t520/m2a_batch1.py .moai/reports/t520/live_write_b --approve .moai/reports/t520/live_denyall_b --target b --sub-mode split_each
+uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval_m2a_batch1_b.txt .moai/reports/t520/live_write_b/audit
+uv run python .moai/reports/t520/m2a_play.py .moai/reports/t520/play_denyall_b --target b
+uv run python .moai/reports/t520/m2a_play.py .moai/reports/t520/play_live_b --approve .moai/reports/t520/play_denyall_b --target b --audio "/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3"
+uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval_m2a_play_b.txt .moai/reports/t520/play_live_b/audit
+```
+
+**아직 안 잰 것(B)**
+
+- 점 번호 한 줄 + 바로 뒤 타이밍 줄(`Fixture 201.1 ; Dimmer …` → `Attribute 'Dimmer' At Phase 0` …)이 페이저를 그 서브픽스처에 거는지. t516의 점 번호 줄은 정적 값만 줬다.
+- Spiider 서브픽스처 디머가 켜지는지, Spiider 위치가 본체에 있는지.
+- 쓰기 2,446줄이 한 번에 나갈 때 응답기·콘솔이 끝까지 받는지(지금까지 실기 최대 124줄).
+- §5의 나머지(한 큐에 선택 여러 개 + `Step 2`, Measure 8·0.5, 트래킹 끊기, 소수 이벤트 시각)는 그대로 미측정이다.
+- 잔여 객체: Seq 250(색·무빙 디머 일부 빠짐), Seq 252(프로브 A). 지울지는 감독이 정한다.

@@ -24,6 +24,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 sys.path.insert(0, ".")
 sys.path.insert(0, ".moai/reports/t506")
@@ -39,18 +40,65 @@ tc_probe.RISK = BatchRisk(
     reason="t520 M2 묶음 1 — 빈 번호 250·251·TC22 생성(LOVE ATTACK 0~25마디)", kind="t520_m2a"
 )
 
-S_SCENE, S_RHY, TC_NO = 250, 251, 22
 LEAD = 3.0  # 타임코드 0초 → 음악 0초 사이 여유
 DURATION = 62  # 3 + 55.08(26마디 1박) + 여유
 SM = "SpeedMaster 15"
 EXPECT_MASTER_NORMED = "69"  # t516 v1 이 112.35 로 바꾼 뒤 값 — 다르면 누가 BPM 을 바꾼 것
 POOL = "ShowData/DataPools/Default"
+
+#: 번호·이름·줄 꼴 — configure() 로 바꾼다. 기본값은 v2(250·251·TC22, 점 번호를 목록에 섞음).
+#: 쓰기 1회(live_write)에서 점 번호가 든 24·40개 목록 줄이 `Illegal object` 로 거절됐다 — 프로브 A 결과로 B 의 꼴을 고른다.
+#:   SUB_MODE "mixed"      : 본체와 점 번호를 한 목록에(v2 — 실기에서 거절됨)
+#:            "main_only"  : 점 번호를 뺀다(본체 선택만으로 서브픽스처 디머까지 열릴 때)
+#:            "split_list" : 본체 목록 한 줄 + 점 번호 목록 한 줄(점 번호 목록이 받아들여질 때)
+#:            "split_each" : 본체 목록 한 줄 + 점 번호 하나씩 한 줄(`Fixture 201.1 ;` — t516 에서 확인된 꼴)
+#:   MAX_LIST : 목록 하나의 최대 개수(None = 제한 없음). 목록 길이가 원인이면 20(실기 성공 최대)으로 둔다.
+S_SCENE, S_RHY, TC_NO = 250, 251, 22
+TAG = "M2a"
+SUB_MODE = "mixed"
+MAX_LIST: int | None = None
 TC = f"{POOL}/Timecodes/{TC_NO}"
 SEQ = {n: f"{POOL}/Sequences/{n}" for n in (S_SCENE, S_RHY)}
 
 
+def configure(
+    scene: int, rhythm: int, tc: int, tag: str, sub_mode: str, max_list: int | None
+) -> None:
+    global S_SCENE, S_RHY, TC_NO, TAG, SUB_MODE, MAX_LIST, TC, SEQ
+    if sub_mode not in ("mixed", "main_only", "split_list", "split_each"):
+        raise ValueError(sub_mode)
+    S_SCENE, S_RHY, TC_NO, TAG, SUB_MODE, MAX_LIST = scene, rhythm, tc, tag, sub_mode, max_list
+    TC = f"{POOL}/Timecodes/{TC_NO}"
+    SEQ = {n: f"{POOL}/Sequences/{n}" for n in (S_SCENE, S_RHY)}
+    tc_probe.RISK = BatchRisk(
+        reason=f"t520 M2 묶음 1 — 빈 번호 {S_SCENE}·{S_RHY}·TC{TC_NO} 생성(LOVE ATTACK 0~25마디)",
+        kind="t520_m2a",
+    )
+
+
+def add_target_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--target", choices=("v2", "b"), default="v2", help="v2 = 250·251·TC22, b = 253·254·TC23"
+    )
+    parser.add_argument(
+        "--sub-mode", choices=("mixed", "main_only", "split_list", "split_each"), default=None
+    )
+    parser.add_argument("--max-list", type=int, default=None)
+
+
+def apply_target(args: argparse.Namespace) -> None:
+    if args.target == "b":
+        if args.sub_mode in (None, "mixed"):
+            raise SystemExit(
+                "--target b 는 --sub-mode main_only|split_list|split_each 를 정해야 한다"
+            )
+        configure(253, 254, 23, "M2a B", args.sub_mode, args.max_list)
+    elif args.sub_mode not in (None, "mixed") or args.max_list:
+        raise SystemExit("--target v2 는 기록용 — 줄 꼴을 바꾸지 않는다")
+
+
 def name(role: str) -> str:
-    return f"'LOVE ATTACK - RHYTHM M2a {role}'"
+    return f"'LOVE ATTACK - RHYTHM {TAG} {role}'"
 
 
 # ---------------------------------------------------------------- 리그(diag7_patch_table.txt · run0_readonly.txt)
@@ -61,13 +109,7 @@ def with_subs(ids: range, subs: int) -> list[str]:
 
 
 BACK = with_subs(range(201, 213), 1)  # Aura XB — 서브픽스처 1(디머 둘)
-# 역광 방향 — 감독 결정 2026-10-07 「80도 정도는 되어야겠어」(t519 시험 Seq 260~262, 객석 = −Y).
-# 줄 꼴은 t519 approval_back_aim.txt 와 같다: 위치는 본체(201)에만, 서브픽스처 없이.
-BACK_AIM = (
-    "Fixture "
-    + " + ".join(str(i) for i in range(201, 213))
-    + " ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80"
-)
+BACK_MAIN = [str(i) for i in range(201, 213)]
 SIDE_L = with_subs(range(301, 307), 1)
 SIDE_R = with_subs(range(311, 317), 1)
 WASH = [str(i) for i in [*range(401, 411), *range(421, 431)]]  # Rush Par 2 — 서브픽스처 없음
@@ -78,8 +120,21 @@ MOV_D = with_subs(range(521, 529), 3)  # Spiider — 서브픽스처 3(디머 �
 MOV_ALL = MOV_U + MOV_D
 
 
-def fx(ids: list[str]) -> str:
-    return "Fixture " + " + ".join(ids)
+def selections(ids: list[str]) -> list[list[str]]:
+    """SUB_MODE·MAX_LIST 대로 선택 목록을 나눈다."""
+    mains = [i for i in ids if "." not in i]
+    subs = [i for i in ids if "." in i]
+    if SUB_MODE == "mixed" or not subs:
+        groups = [ids]
+    elif SUB_MODE == "main_only":
+        groups = [mains]
+    elif SUB_MODE == "split_list":
+        groups = [mains, subs]
+    else:
+        groups = [mains, *([s] for s in subs)]
+    if MAX_LIST:
+        groups = [g[k : k + MAX_LIST] for g in groups for k in range(0, len(g), MAX_LIST)]
+    return groups
 
 
 #: 색 — 이름만 대본에서, 값은 자리표시(감독 지시 2026-09-28: 색 미세 조정은 전체를 마친 뒤)
@@ -96,8 +151,33 @@ def rgb(color: str) -> str:
     return f"Attribute 'ColorRGB_R' At {r} ; Attribute 'ColorRGB_G' At {g} ; Attribute 'ColorRGB_B' At {b}"
 
 
-def val(ids: list[str], *parts: str) -> str:
-    return " ; ".join([fx(ids), *parts])
+class V(NamedTuple):
+    """선택 + 값. 줄로 바꾸는 것은 render() 때 — configure() 뒤의 SUB_MODE·MAX_LIST 를 따른다."""
+
+    ids: list[str]
+    parts: tuple[str, ...]
+
+
+def val(ids: list[str], *parts: str) -> V:
+    return V(ids, parts)
+
+
+def render(v: V, after: tuple[str, ...] = ()) -> list[str]:
+    """나뉜 선택마다 `Fixture 목록 ; Attribute …` 한 줄, 그 뒤에 after(페이저 타이밍 — 지금 선택에 붙는다)."""
+    out: list[str] = []
+    ids = v.ids
+    position_only = all(p.startswith(("Attribute 'Pan'", "Attribute 'Tilt'")) for p in v.parts)
+    if SUB_MODE != "mixed" and position_only:
+        # 위치는 본체에만 — t519 `Fixture 201 ; Pan/Tilt` 로 BACK 이 실제로 돌았다(Spiider 는 안 잰 것)
+        ids = [i for i in ids if "." not in i]
+    for g in selections(ids):
+        out += [" ; ".join(["Fixture " + " + ".join(g), *v.parts]), *after]
+    return out
+
+
+#: 역광 방향 — 감독 결정 2026-10-07 「80도 정도는 되어야겠어」(t519 시험 Seq 260~262, 객석 = −Y).
+#: 줄 꼴은 t519 approval_back_aim.txt 와 같다: 위치는 본체(201)에만, 서브픽스처 없이.
+BACK_AIM = val(BACK_MAIN, "Attribute 'Pan' At 180", "Attribute 'Tilt' At 80")
 
 
 def dim(v: float) -> str:
@@ -259,18 +339,20 @@ def rhythm_cue_lines(state: dict) -> list[str]:
     """한 큐 = 소유 속성 전부를 두 단계로(단계 1 → `Step 2` → 단계 2 + 타이밍)."""
     dims = [("back", BACK), ("side_l", SIDE_L), ("side_r", SIDE_R)]
     movs = [("mov_u", MOV_U), ("mov_d", MOV_D)]
-    lines = [val(ids, dim(state[k][0])) for k, ids in dims]
+    lines: list[str] = []
+    for k, ids in dims:
+        lines += render(val(ids, dim(state[k][0])))
     for k, ids in movs:
         p1, _, t1, _, _, _ = state[k]
-        lines.append(val(ids, f"Attribute 'Pan' At {p1}", f"Attribute 'Tilt' At {t1}"))
+        lines += render(val(ids, f"Attribute 'Pan' At {p1}", f"Attribute 'Tilt' At {t1}"))
     lines.append("Step 2")
     for k, ids in dims:
         _, hi, measure = state[k]
-        lines += [val(ids, dim(hi)), *timing("Dimmer", "0", measure)]
+        lines += render(val(ids, dim(hi)), tuple(timing("Dimmer", "0", measure)))
     for k, ids in movs:
         _, p2, _, t2, phase, measure = state[k]
-        lines.append(val(ids, f"Attribute 'Pan' At {p2}", f"Attribute 'Tilt' At {t2}"))
-        lines += timing("Pan", phase, measure) + timing("Tilt", phase, measure)
+        after = tuple(timing("Pan", phase, measure) + timing("Tilt", phase, measure))
+        lines += render(val(ids, f"Attribute 'Pan' At {p2}", f"Attribute 'Tilt' At {t2}"), after)
     return lines
 
 
@@ -286,8 +368,7 @@ def build(tracks: tuple[int, int] = (1, 2)) -> list[tuple[str, list[str]]]:
     scene = ["ChangeDestination Root", "ClearAll"]
     for cue, label, fade, _, _, lines in SCENE:
         scene += [
-            *lines,
-            BACK_AIM,
+            *(line for v in [*lines, BACK_AIM] for line in render(v)),
             f"Store Sequence {S_SCENE} Cue {cue} '{label}' CueFade {fade:g}",
             "ClearAll",
         ]
@@ -508,7 +589,9 @@ def main() -> int:
     parser.add_argument("--rehearse", action="store_true")
     parser.add_argument("--approve", default=None)
     parser.add_argument("--print-plan", action="store_true", help="콘솔 없이 묶음 문면만 출력")
+    add_target_args(parser)
     args = parser.parse_args()
+    apply_target(args)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     if args.print_plan:
