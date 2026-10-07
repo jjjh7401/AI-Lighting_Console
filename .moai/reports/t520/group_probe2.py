@@ -68,18 +68,21 @@ def bundles(phase: str) -> list[tuple[str, list[str], float]]:
         for seq, cue, line, nm in PROBES
     ]
     play = {
-        seq: [
+        f"p{seq}": [
             (f"on_{seq}", [f"Goto Cue 1 Sequence {seq}"], HOLD),
             (f"off_{seq}", [f"Off Sequence {seq}"], 0.0),
         ]
         for seq, *_ in PROBES
     }
-    return {
-        "store": store,
-        "p255": play[255],
-        "p256": play[256],
-        "all": store + play[255] + play[256],
-    }[phase]
+    if phase == "store":
+        return store
+    if phase == "all":
+        return store + [b for p in play.values() for b in p]
+    return play[phase]
+
+
+def phases() -> tuple[str, ...]:
+    return ("all", "store", *(f"p{seq}" for seq, *_ in PROBES))
 
 
 class FakeConsole:
@@ -167,7 +170,7 @@ def run(gate: SafetyGate, out: Path, phase: str, *, deny_all: bool, pace: bool) 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("out")
-    parser.add_argument("--phase", choices=("all", "store", "p255", "p256"), required=True)
+    parser.add_argument("--phase", choices=phases(), required=True)
     parser.add_argument("--rehearse", action="store_true")
     parser.add_argument("--approve", default=None)
     args = parser.parse_args()
@@ -177,7 +180,7 @@ def main() -> int:
     if args.rehearse:
         from server.safety.backup import BackupManager
 
-        console = FakeConsole(set() if args.phase in ("all", "store") else {255, 256})
+        console = FakeConsole(set() if args.phase in ("all", "store") else {s for s, *_ in PROBES})
         approval = RecordingApproval([cmds for _, cmds, _ in bundles("all")])
         gate = SafetyGate(
             console=console,
