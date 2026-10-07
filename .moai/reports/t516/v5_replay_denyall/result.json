@@ -1,0 +1,150 @@
+{
+  "bundles": {
+    "on_245": false,
+    "off_245": false,
+    "on_246": false,
+    "off_246": false,
+    "base_245": false,
+    "on_247": false,
+    "off_247": false,
+    "base_off_245": false,
+    "on_248": false,
+    "off_248": false,
+    "on_249": false,
+    "off_249": false
+  },
+  "marks": [
+    {
+      "label": "on_245",
+      "t": 0.07
+    },
+    {
+      "label": "off_245",
+      "t": 0.13
+    },
+    {
+      "label": "on_246",
+      "t": 0.2
+    },
+    {
+      "label": "off_246",
+      "t": 0.27
+    },
+    {
+      "label": "base_245",
+      "t": 0.33
+    },
+    {
+      "label": "on_247",
+      "t": 0.4
+    },
+    {
+      "label": "off_247",
+      "t": 0.47
+    },
+    {
+      "label": "base_off_245",
+      "t": 0.53
+    },
+    {
+      "label": "on_248",
+      "t": 0.6
+    },
+    {
+      "label": "off_248",
+      "t": 0.67
+    },
+    {
+      "label": "on_249",
+      "t": 0.73
+    },
+    {
+      "label": "off_249",
+      "t": 0.8
+    }
+  ],
+  "pre_names": {
+    "245": "RHYTHM PROBE v5 - E0 BASE TILT 45",
+    "246": "RHYTHM PROBE v5 - E1 PAN ABSOLUTE STEPS TILT 45",
+    "247": "RHYTHM PROBE v5 - E2 PAN RELATIVE STEPS ONLY",
+    "248": "RHYTHM PROBE v5 - F1 AURA DIMMER 100",
+    "249": "RHYTHM PROBE v5 - F2 AURA DIMMER 100 RGB 100"
+  },
+  "verdict": "deny-all: approval texts recorded, nothing sent",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 246"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 246"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 247"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 247"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 248"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 248"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 249"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 249"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

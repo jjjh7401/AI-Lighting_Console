@@ -1,0 +1,176 @@
+{
+  "bundles": {
+    "on_245": true,
+    "off_245": true,
+    "on_246": true,
+    "off_246": true,
+    "base_245": true,
+    "on_247": true,
+    "off_247": true,
+    "base_off_245": true,
+    "on_248": true,
+    "off_248": true,
+    "on_249": true,
+    "off_249": true
+  },
+  "marks": [
+    {
+      "label": "on_245",
+      "t": 0.0
+    },
+    {
+      "label": "off_245",
+      "t": 0.0
+    },
+    {
+      "label": "on_246",
+      "t": 0.0
+    },
+    {
+      "label": "off_246",
+      "t": 0.0
+    },
+    {
+      "label": "base_245",
+      "t": 0.0
+    },
+    {
+      "label": "on_247",
+      "t": 0.0
+    },
+    {
+      "label": "off_247",
+      "t": 0.0
+    },
+    {
+      "label": "base_off_245",
+      "t": 0.0
+    },
+    {
+      "label": "on_248",
+      "t": 0.0
+    },
+    {
+      "label": "off_248",
+      "t": 0.0
+    },
+    {
+      "label": "on_249",
+      "t": 0.0
+    },
+    {
+      "label": "off_249",
+      "t": 0.0
+    }
+  ],
+  "pre_names": {
+    "245": "fake",
+    "246": "fake",
+    "247": "fake",
+    "248": "fake",
+    "249": "fake"
+  },
+  "verdict": "replayed — judge by director watch",
+  "fake_sent": [
+    "Goto Cue 1 Sequence 245",
+    "Off Sequence 245",
+    "Goto Cue 1 Sequence 246",
+    "Off Sequence 246",
+    "Goto Cue 1 Sequence 245",
+    "Goto Cue 1 Sequence 247",
+    "Off Sequence 247",
+    "Off Sequence 245",
+    "Goto Cue 1 Sequence 248",
+    "Off Sequence 248",
+    "Goto Cue 1 Sequence 249",
+    "Off Sequence 249"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 245"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 245"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 246"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 246"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 245"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 247"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 247"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 245"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 248"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 248"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 249"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 249"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}
