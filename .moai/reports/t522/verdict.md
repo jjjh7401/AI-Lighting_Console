@@ -3,6 +3,19 @@
 - 카드: t522 · 워크트리 `.claude/worktrees/t522`, 브랜치 `WT-runbook-beat`(기준 `5ccd1d1c` = origin/main)
 - 범위: SPEC 문서 3개(spec.md/plan.md/acceptance.md) + progress.md + 이 판정서만. 코드 diff 0줄, 콘솔 명령 0건.
 
+## 0. 판정 — plan-audit PASS (0.86), 감독 착수 승인 대기
+
+| 단계 | 결과 | 근거 |
+|---|---|---|
+| 오케스트레이터 검토 | 결함 3건(D1 타임코드 거짓 전제 · D2 파서 재사용 과대 주장 · D3 저장소 누락) → `01f832a6` 교정 | §4 |
+| plan-auditor iter1 | **FAIL 0.71** — 추적성 0.50(REQ-009·012 전용 AC 없음), module M4/M5 불일치, 인용 범위 | `.moai/reports/plan-audit/SPEC-LDBEAT-001-review-1.md`(gitignore) |
+| 교정 | AC-014·015 신설(AC 13→15), M4 통일, 인용 38-55 → `7c1a5aff` | §3 |
+| plan-auditor iter2 | **PASS 0.86** — 명료성 0.75 · 완결성 1.0 · 시험가능성 0.75 · 추적성 1.0, 필수 기준 7개 전부 PASS | `.moai/reports/plan-audit/SPEC-LDBEAT-001-review-2.md`(gitignore) |
+
+남은 경미 결함 2건(PASS 유지, run 전 손볼 후보): REQ-006·011 에 설명이 섞여 있음 · REQ-010 「M1 PASS 전엔 기본값으로 안 줌」에 전용 AC 없음.
+
+**run 진입 조건**: 감독 착수 승인 + §5 열린 결정 0(새 앱측 타임코드 에미터를 만들지) 확인. 그 전엔 코드 0.
+
 ## 1. 작업 전 확인(실행한 명령 + 핵심 출력)
 
 ```
