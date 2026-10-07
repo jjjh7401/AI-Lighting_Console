@@ -1,0 +1,24 @@
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/255", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/255)"}
+{"step": "pre_slot", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/256", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/256)"}
+{"step": "store_255", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 5 ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 255 Cue 1 'Group Five'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'", "reasons": []}]}
+{"step": "store_255", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_255", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_255", "t": 0.001, "kind": "exec", "command": "Group 5 ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_255", "t": 0.001, "kind": "exec", "command": "Store Sequence 255 Cue 1 'Group Five'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_255", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_255", "t": 0.002, "kind": "exec", "command": "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_256", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 256 Cue 1 'Trailing Dot'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 256 Property 'Name' 'GROUP PROBE - TRAILING DOT 301-302'", "reasons": []}]}
+{"step": "store_256", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_256", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_256", "t": 0.002, "kind": "exec", "command": "Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_256", "t": 0.002, "kind": "exec", "command": "Store Sequence 256 Cue 1 'Trailing Dot'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_256", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_256", "t": 0.002, "kind": "exec", "command": "Set Sequence 256 Property 'Name' 'GROUP PROBE - TRAILING DOT 301-302'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_255", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 255", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 255': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_255", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 255", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_255", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 255", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 255': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_255", "t": 0.002, "kind": "exec", "command": "Off Sequence 255", "fired": true, "ok": true, "detail": "OK"}
+{"step": "on_256", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 256", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 256': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_256", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 256", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_256", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 256", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 256': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_256", "t": 0.003, "kind": "exec", "command": "Off Sequence 256", "fired": true, "ok": true, "detail": "OK"}

@@ -1,0 +1,16 @@
+ChangeDestination Root
+ClearAll
+Group 5 ; Attribute 'Dimmer' At 100
+Store Sequence 255 Cue 1 'Group Five'
+ClearAll
+Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'
+ChangeDestination Root
+ClearAll
+Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100
+Store Sequence 256 Cue 1 'Trailing Dot'
+ClearAll
+Set Sequence 256 Property 'Name' 'GROUP PROBE - TRAILING DOT 301-302'
+Goto Cue 1 Sequence 255
+Off Sequence 255
+Goto Cue 1 Sequence 256
+Off Sequence 256

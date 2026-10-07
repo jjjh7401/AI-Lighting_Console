@@ -1,0 +1,48 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 5 ; Attribute 'Dimmer' At 100",
+      "Store Sequence 255 Cue 1 'Group Five'",
+      "ClearAll",
+      "Set Sequence 255 Property 'Name' 'GROUP PROBE - GROUP 5 SIDE-L'"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 301 Thru 302. ; Attribute 'Dimmer' At 100",
+      "Store Sequence 256 Cue 1 'Trailing Dot'",
+      "ClearAll",
+      "Set Sequence 256 Property 'Name' 'GROUP PROBE - TRAILING DOT 301-302'"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 255"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Sequence 255"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 256"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Sequence 256"
+    ],
+    "approved": false
+  }
+]
