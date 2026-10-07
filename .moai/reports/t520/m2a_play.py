@@ -132,15 +132,31 @@ def run(gate: SafetyGate, out: Path, *, deny_all: bool, audio: str | None) -> di
     player = None
     samples = []
     cursor = lambda label: _value(probe.read_props(label, TC, ["CURSOR"]), "CURSOR")  # noqa: E731
+    if audio:
+        # 음원 맞추기(B 판 결함 수정): 표본 루프 전에, 타임코드 0초의 이 Mac 시각을 CURSOR 로 추정해 LEAD 에 바로 띄운다.
+        # 읽기 한 번의 왕복 중간 시각을 그 CURSOR 값의 시각으로 보고, 세 번 읽어 가운데 값을 쓴다.
+        zeros = []
+        for k in range(3):
+            t0 = time.monotonic()
+            c = cursor(f"audio_sync_{k}")
+            t1 = time.monotonic()
+            if c is not None:
+                zeros.append((t0 + t1) / 2 - float(c))
+        tc_zero = sorted(zeros)[len(zeros) // 2] if zeros else t_go
+        while time.monotonic() < tc_zero + LEAD:
+            time.sleep(0.002)
+        t_play = time.monotonic()
+        player = subprocess.Popen(["afplay", audio])
+        t_spawned = time.monotonic()
+        after = cursor("audio_cursor_after")
+        result["audio"] = dict(
+            tc_zero_estimates=[round(z - t_go, 4) for z in zeros],
+            spawned_tc_estimate=round(t_play - tc_zero, 3),
+            popen_seconds=round(t_spawned - t_play, 4),
+            cursor_after=after,
+            target_tc=LEAD,
+        )
     while (elapsed := time.monotonic() - t_go) < LEAD + MUSIC_END:
-        if audio and player is None and elapsed >= LEAD - 0.02:
-            before = cursor("audio_cursor_before")
-            t_play = time.monotonic() - t_go
-            player = subprocess.Popen(["afplay", audio])
-            after = cursor("audio_cursor_after")
-            result["audio"] = dict(
-                spawned_at=round(t_play, 3), cursor_before=before, cursor_after=after
-            )
         row = dict(t=round(elapsed, 2), cursor=cursor("sample_tc"))
         for s in (S_SCENE, S_RHY):
             row[s] = _value(probe.read_props("sample_seq", SEQ[s], ["CURRENTCUE"]), "CURRENTCUE")
@@ -159,10 +175,12 @@ def main() -> int:
     parser.add_argument("--rehearse", action="store_true")
     parser.add_argument("--approve", default=None)
     parser.add_argument("--audio", default=None)
-    parser.add_argument("--target", choices=("v2", "b"), default="v2")
+    parser.add_argument("--target", choices=("v2", "b", "b2"), default="v2")
     args = parser.parse_args()
     if args.target == "b":
         gen.configure(253, 254, 23, "M2a B", "main_only", None)  # 재생은 번호·이름만 쓴다
+    elif args.target == "b2":
+        gen.configure(269, 270, 24, "M2a B2", "group", None)
     retarget()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

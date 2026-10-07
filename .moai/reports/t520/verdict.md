@@ -523,3 +523,46 @@ uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval
 - Spiider 디머에 닿는 줄은 **1줄**: 장면 253 큐1 `Group 13 ; Attribute 'Dimmer' At 60 ; ColorRGB_R 85 ; G 92 ; B 100`(MOVER-ALL — MegaPointe 8 + Spiider 8). → `Group 13 ; At 60 ; ColorRGB…` 로 바꾸면 된다(t442 꼴: 맨 `At` 뒤에 색 줄).
 - 그룹 12 줄 30개는 모두 Pan/Tilt(리듬 254)라 디머와 무관하다. 그룹 11 은 MegaPointe(시연에서 켜짐).
 - Aura XB(BACK G4·SIDE G5/G6)의 `Attribute 'Dimmer'` 줄은 G2 에서 `Group 5 ; Attribute 'Dimmer' At 100` 이 켜졌으므로 그대로 둔다(정적만 확인 — 페이저는 안 잰 것).
+
+## 18. B v2(B2) — Spiider 맨 `At` 한 줄 + 음원 맞추기 결함 수정
+
+- 리드 지시: 프로브 S 생략(t459·t442 에서 감독이 이미 「맨 At 100 → Spiider 켜짐」을 눈으로 확인). 새 번호 SCENE 269 · RHYTHM 270 · TC 24(253/254/TC23 은 잔여, 덮어쓰기 0). 나머지는 B 그룹판 그대로(WASH 값 포함 — 밝기는 감독이 시연에서 본다).
+
+**쓰기 파일 바뀐 것(잰 것, `diff_g_b2.py` → `diff_g_b2.txt`)** — 번호·이름을 맞춘 뒤 B 그룹판과 다른 줄은 정확히 1줄:
+
+```
+- Group 13 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
++ Group 13 ; At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
+```
+
+- 생성기 `--target b2`: 그룹 선택 + Spiider 가 든 그룹(12·13)의 디머 값만 맨 `At` 으로 바꾼다. 리듬 270 에는 그룹 12·13 디머 줄이 없어(그룹 12 는 Pan/Tilt 만) 바뀐 줄은 장면 큐1 하나다. 기존 v2·B 그룹판·B 재생 파일은 바이트 동일로 다시 나온다(`plan_stats.py equals … True`, 재생 cmp 같음).
+
+**음원 맞추기 결함 수정(`m2a_play.py`)**
+
+- 전: 표본 루프(0.5초 대기 + 읽기 3번)를 돈 뒤에야 LEAD 를 확인해 음원을 띄워 TC 3.57초에 시작했다(§15-1).
+- 후: `Go` 직후, 표본 루프 전에 CURSOR 를 세 번 읽어(읽기 왕복의 가운데 시각 = 그 CURSOR 값) 타임코드 0초의 이 Mac 시각을 추정하고, 그 + LEAD 까지 2ms 간격으로 기다렸다 `afplay` 를 바로 띄운다. 추정값·띄운 TC 추정·Popen 시간·띄운 직후 CURSOR 를 `result.json` 의 `audio` 에 남긴다.
+- 가짜 콘솔 시험(`audio_sync_check.py`, 읽기 왕복 0.03~0.08초를 흉내, 소리 없음): 띄운 TC 추정 3.002·3.001·3.000·3.002·3.002초 — 5/5 가 3.0 ± 0.1 안. 띄운 직후 CURSOR 3.03~3.05(읽기 지연 포함). 🔴 실기 콘솔의 읽기 지연과 `afplay` 의 소리 나기까지 지연은 안 잰 것 — 실행 때 `audio` 기록으로 본다.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`rehearse_b2`, `play_rehearse_b2`) | 쓰기 5묶음 끝까지 · 트랙 NO 1→269, NO 2→270 · 이벤트 7·15 · 재생 2묶음 끝까지 |
+| 실기 전부-거절(`live_denyall_b2`) | `responder_ok` · 사전 판독 통과(269·270·TC24 빔, 마스터 15 = 69) · 요청 5, 승인 0 · `rejected` 5, 명령 송신 0 · 문면 = 리허설 `True` |
+| AC-012 리허설 | 쓰기 586줄 PASS · 재생 4줄 PASS · 양성 대조(10번째 줄 삭제) FAIL |
+| 정적 검사 | 대상 Seq 269·270·TC 24 뿐 · 큰따옴표·Save/Delete/Remove/Copy/Move/Edit/Master 0 |
+
+| 파일 | 줄 | sha256 |
+|---|---|---|
+| `.moai/reports/t520/approval_m2a_batch1_b2.txt` | 586 | `e10d4979bd1bb6e9fa0d4821f3aa8eb72c0293202b3fb65d641082498c8168da` |
+| `.moai/reports/t520/approval_m2a_play_b2.txt` | 4 | `35ab13fae6b73841d099df81759014f36b1288f193a35b9bf04b1c47c56aa96d` |
+
+**실행(리드 「실행」 뒤에만)**
+
+```
+uv run python .moai/reports/t520/m2a_batch1.py .moai/reports/t520/live_write_b2 --approve .moai/reports/t520/live_denyall_b2 --target b2
+uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval_m2a_batch1_b2.txt .moai/reports/t520/live_write_b2/audit
+uv run python .moai/reports/t520/m2a_play.py .moai/reports/t520/play_denyall_b2 --target b2
+uv run python .moai/reports/t520/m2a_play.py .moai/reports/t520/play_live_b2 --approve .moai/reports/t520/play_denyall_b2 --target b2 --audio "/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3"
+uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval_m2a_play_b2.txt .moai/reports/t520/play_live_b2/audit
+```
+
+- 남는 안 잰 것: 그룹 + 페이저 · 그룹 + Pan/Tilt(Spiider 위치가 실제로 움직이는지) · Measure 8·0.5 · 다중 선택 + Step 2 · 트래킹 끊기 · BACK Tilt 80 가시성 · WASH 40% 이하 가시성.

@@ -1,0 +1,15 @@
+approval file      : .moai/reports/t520/control_b2_line_removed.txt
+  raw sha256       : 39cd141aeb51b0ecac01134c32115745647366b4eb17fd70d94ba01e0b14a31b
+  raw == canonical : True
+  canonical lines  : 585
+  canonical sha256 : 39cd141aeb51b0ecac01134c32115745647366b4eb17fd70d94ba01e0b14a31b
+sent source        : .moai/reports/t520/rehearse_b2/audit (files: ['audit-20261007.jsonl'])
+  window           : since=None until=None
+  send rows        : 586 by kind {'command': 586}
+  rebuilt sha256   : e10d4979bd1bb6e9fa0d4821f3aa8eb72c0293202b3fb65d641082498c8168da
+WARN sends not ok  : 0
+(1) sha256 equal                         : False
+(2) 송신 안 됨 (sent, not in approval)    : 1
+  SENT_NOT_APPROVED: Store Sequence 269 Cue 1 'Intro A' CueFade 0
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: FAIL

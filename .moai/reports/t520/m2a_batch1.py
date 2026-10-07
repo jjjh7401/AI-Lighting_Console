@@ -56,6 +56,7 @@ POOL = "ShowData/DataPools/Default"
 S_SCENE, S_RHY, TC_NO = 250, 251, 22
 TAG = "M2a"
 SUB_MODE = "mixed"
+BARE_AT_GROUPS: set[str] = set()  # 맨 `At` 으로 디머를 줄 그룹(--target b2)
 MAX_LIST: int | None = None
 TC = f"{POOL}/Timecodes/{TC_NO}"
 SEQ = {n: f"{POOL}/Sequences/{n}" for n in (S_SCENE, S_RHY)}
@@ -78,7 +79,10 @@ def configure(
 
 def add_target_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--target", choices=("v2", "b"), default="v2", help="v2 = 250·251·TC22, b = 253·254·TC23"
+        "--target",
+        choices=("v2", "b", "b2"),
+        default="v2",
+        help="v2 = 250·251·TC22, b = 253·254·TC23",
     )
     parser.add_argument(
         "--sub-mode",
@@ -95,6 +99,11 @@ def apply_target(args: argparse.Namespace) -> None:
                 "--target b 는 --sub-mode group|main_only|split_list|split_each 를 정해야 한다"
             )
         configure(253, 254, 23, "M2a B", args.sub_mode, args.max_list)
+    elif args.target == "b2":
+        # B v2(리드 지시): 그룹 선택 + Spiider 든 그룹(12·13)의 디머만 맨 `At`, 새 번호 269·270·TC24
+        global BARE_AT_GROUPS
+        configure(269, 270, 24, "M2a B2", "group", None)
+        BARE_AT_GROUPS = {"Group 12", "Group 13"}
     elif args.sub_mode not in (None, "mixed") or args.max_list:
         raise SystemExit("--target v2 는 기록용 — 줄 꼴을 바꾸지 않는다")
 
@@ -198,7 +207,17 @@ def render(v: V, after: tuple[str, ...] = ()) -> list[str]:
     """나뉜 선택마다 `Fixture 목록 ; Attribute …` 한 줄, 그 뒤에 after(페이저 타이밍 — 지금 선택에 붙는다)."""
     out: list[str] = []
     if SUB_MODE == "group":
-        return [" ; ".join([group_selection(v.ids), *v.parts]), *after]
+        sel = group_selection(v.ids)
+        parts = v.parts
+        if sel in BARE_AT_GROUPS:
+            # Spiider 가 든 그룹은 맨 `At` — t459 verdict.md:62-63(감독 확인): `Attribute 'Dimmer' At 100` 은 안 켜지고 `At 100` 은 켠다
+            parts = tuple(
+                p.replace("Attribute 'Dimmer' At ", "At ", 1)
+                if p.startswith("Attribute 'Dimmer' At ")
+                else p
+                for p in parts
+            )
+        return [" ; ".join([sel, *parts]), *after]
     ids = v.ids
     position_only = all(p.startswith(("Attribute 'Pan'", "Attribute 'Tilt'")) for p in v.parts)
     if SUB_MODE != "mixed" and position_only:

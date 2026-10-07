@@ -1,0 +1,4 @@
+lines 586 586
+changed lines 2
+-Group 13 ; Attribute 'Dimmer' At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
++Group 13 ; At 60 ; Attribute 'ColorRGB_R' At 85 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 100
