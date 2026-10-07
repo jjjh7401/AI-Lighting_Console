@@ -1,0 +1,6 @@
+{"ts": "2026-10-07T07:22:38.071823+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/269 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T07:22:38.138350+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/270 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T07:22:38.205667+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/24 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T07:22:38.206012+00:00", "event": "approved", "commands": ["Go Timecode 24"], "held": ["Go Timecode 24"], "kind": "t520_m2a_play"}
+{"ts": "2026-10-07T07:22:38.272020+00:00", "event": "executed", "command": "Go Timecode 24", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T07:22:38.339190+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/24 CURSOR", "kind": "props_query", "ok": true, "detail": ""}

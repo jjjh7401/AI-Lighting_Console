@@ -96,6 +96,15 @@ class FakeConsole:
         return dict(ok=True, path=path, fields=[], fake=True)
 
 
+def tc_seconds(text: str) -> float:
+    """CURSOR 읽기값을 초로. 60초가 넘으면 `1m00.70` 꼴로 온다(t520 다시 보기 1회차에서 잰 것)."""
+    text = str(text).strip()
+    if "m" in text:
+        minutes, seconds = text.split("m", 1)
+        return int(minutes) * 60 + float(seconds)
+    return float(text)
+
+
 def _value(payload: dict | None, key: str):
     for read in (payload or {}).get("reads") or ():
         if read.get("n") == key and read.get("ok"):
@@ -103,7 +112,9 @@ def _value(payload: dict | None, key: str):
     return None
 
 
-def run(gate: SafetyGate, out: Path, *, deny_all: bool, audio: str | None) -> dict:
+def run(
+    gate: SafetyGate, out: Path, *, deny_all: bool, audio: str | None, off_only: bool = False
+) -> dict:
     probe = Probe(gate, out)
     result: dict = dict(bundles={})
 
@@ -118,6 +129,10 @@ def run(gate: SafetyGate, out: Path, *, deny_all: bool, audio: str | None) -> di
     result["pre_names"] = names
     if names != NAMES:
         return stop(f"stopped: names differ {names}")
+    if off_only and not deny_all:
+        # 앞 재생이 Off 전에 멈췄을 때 승인 문면의 Off 묶음만 보낸다(t520 다시 보기 1회차)
+        result["bundles"]["off"] = probe.fire("off", dict(BUNDLES)["off"])
+        return stop("off only")
     if deny_all:
         for label, cmds in BUNDLES:
             result["bundles"][label] = probe.fire(label, cmds)
@@ -141,7 +156,7 @@ def run(gate: SafetyGate, out: Path, *, deny_all: bool, audio: str | None) -> di
             c = cursor(f"audio_sync_{k}")
             t1 = time.monotonic()
             if c is not None:
-                zeros.append((t0 + t1) / 2 - float(c))
+                zeros.append((t0 + t1) / 2 - tc_seconds(c))
         tc_zero = sorted(zeros)[len(zeros) // 2] if zeros else t_go
         while time.monotonic() < tc_zero + LEAD:
             time.sleep(0.002)
@@ -176,6 +191,7 @@ def main() -> int:
     parser.add_argument("--approve", default=None)
     parser.add_argument("--audio", default=None)
     parser.add_argument("--target", choices=("v2", "b", "b2"), default="v2")
+    parser.add_argument("--off-only", action="store_true")
     args = parser.parse_args()
     if args.target == "b":
         gen.configure(253, 254, 23, "M2a B", "main_only", None)  # 재생은 번호·이름만 쓴다
@@ -230,7 +246,9 @@ def main() -> int:
             if health.get("verdict") != "responder_ok":
                 print(json.dumps(dict(preflight=health), ensure_ascii=False, indent=2))
                 return 1
-            result = run(stack.gate, out, deny_all=pinned is None, audio=args.audio)
+            result = run(
+                stack.gate, out, deny_all=pinned is None, audio=args.audio, off_only=args.off_only
+            )
             result["preflight"] = health.get("verdict")
         finally:
             stack.stop()
