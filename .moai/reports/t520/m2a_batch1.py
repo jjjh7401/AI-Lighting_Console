@@ -1,0 +1,577 @@
+# ruff: noqa: E501 — 근거(판독값·인용)를 그대로 싣는 한국어 머리말이라 줄 길이 규칙을 끈다
+"""t520 SPEC-LDRHYTHM-001 M2 묶음 1 — LOVE ATTACK 0~25마디 손 시연 명령(쓰기 판).
+
+대본: .moai/specs/SPEC-LDRHYTHM-001/m1-love-attack-script.md §3 의 0:00.0~0:55.1 행.
+수단: t516 판정서 맨 위 요약표에서 실기로 확인된 것만 쓴다.
+  - 반복 동작 = 2단계 페이저 + `At Measure <박>` + `At SpeedMaster 15`(t516 v3 L2·v4 B3/B4, 마스터 15 = 112.35, 표시 112)
+  - 움직임 = 절대값 2단계 페이저, 단계마다 Pan·Tilt 를 같이 넣는다(t516 v5 E1 246 — 기울인 기준 위 Pan 흔들림 확인)
+  - 장면 경계·강조 = 타임코드 이벤트 Go+(t506 v3 · t516 v1 트랙 둘). 트랙 1 = 장면 250, 트랙 2 = 리듬 251
+  - 다중 디머 기구는 서브픽스처까지 적는다(Aura XB `201 + 201.1`, Spiider `521 + 521.1 + 521.2 + 521.3` — run0_readonly.txt)
+  - 선택+값은 한 줄 모양 `Fixture 목록 ; Attribute …`(t516 §4-4 line_shapes)
+층 소유(같은 속성을 두 시퀀스가 함께 잡지 않게 — 겹침 우선순위는 안 잰 것):
+  - 장면 250: WASH 디머·색 · FOH 디머 · BACK/SIDE/무빙 색 · 무빙 디머 · BLIND 디머
+  - 리듬 251: BACK 디머 · SIDE 디머 · 무빙 Pan/Tilt — 매 큐가 이 속성 전부를 두 단계로 다시 적는다(트래킹으로 앞 큐 페이저가 남지 않게)
+번호: 시퀀스 250·251, 타임코드 22(run0_readonly.txt — 모두 `path segment not found`). 이름 'LOVE ATTACK - RHYTHM M2a <역할>'.
+타임코드 시각 = 음악 시각 + LEAD(3초). 음원 재생은 m2a_play.py 가 맡는다.
+
+실행: uv run python .moai/reports/t520/m2a_batch1.py <출력폴더> [--rehearse | --approve <전부-거절 폴더>]
+🔴 --approve 는 리드의 「실행」 메시지 뒤에만.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, ".")
+sys.path.insert(0, ".moai/reports/t506")
+import tc_probe  # noqa: E402
+from tc_probe import LISTEN_PORT, Probe, RecordingApproval  # noqa: E402
+
+from server.safety.audit import AuditLog  # noqa: E402
+from server.safety.console import ExecOutcome, LinkTimeouts, StateQueryError  # noqa: E402
+from server.safety.gate import BatchRisk, SafetyGate  # noqa: E402
+from server.safety.ruleset import load_ruleset  # noqa: E402
+
+tc_probe.RISK = BatchRisk(
+    reason="t520 M2 묶음 1 — 빈 번호 250·251·TC22 생성(LOVE ATTACK 0~25마디)", kind="t520_m2a"
+)
+
+S_SCENE, S_RHY, TC_NO = 250, 251, 22
+LEAD = 3.0  # 타임코드 0초 → 음악 0초 사이 여유
+DURATION = 62  # 3 + 55.08(26마디 1박) + 여유
+SM = "SpeedMaster 15"
+EXPECT_MASTER_NORMED = "69"  # t516 v1 이 112.35 로 바꾼 뒤 값 — 다르면 누가 BPM 을 바꾼 것
+POOL = "ShowData/DataPools/Default"
+TC = f"{POOL}/Timecodes/{TC_NO}"
+SEQ = {n: f"{POOL}/Sequences/{n}" for n in (S_SCENE, S_RHY)}
+
+
+def name(role: str) -> str:
+    return f"'LOVE ATTACK - RHYTHM M2a {role}'"
+
+
+# ---------------------------------------------------------------- 리그(diag7_patch_table.txt · run0_readonly.txt)
+
+
+def with_subs(ids: range, subs: int) -> list[str]:
+    return [x for i in ids for x in [str(i), *(f"{i}.{k}" for k in range(1, subs + 1))]]
+
+
+BACK = with_subs(range(201, 213), 1)  # Aura XB — 서브픽스처 1(디머 둘)
+SIDE_L = with_subs(range(301, 307), 1)
+SIDE_R = with_subs(range(311, 317), 1)
+WASH = [str(i) for i in [*range(401, 411), *range(421, 431)]]  # Rush Par 2 — 서브픽스처 없음
+FOH = [str(i) for i in range(111, 119)]  # 디머 하나
+BLIND = [str(i) for i in range(601, 607)]  # 디머 하나
+MOV_U = [str(i) for i in range(501, 509)]  # MegaPointe — 서브픽스처 없음
+MOV_D = with_subs(range(521, 529), 3)  # Spiider — 서브픽스처 3(디머 셋)
+MOV_ALL = MOV_U + MOV_D
+
+
+def fx(ids: list[str]) -> str:
+    return "Fixture " + " + ".join(ids)
+
+
+#: 색 — 이름만 대본에서, 값은 자리표시(감독 지시 2026-09-28: 색 미세 조정은 전체를 마친 뒤)
+COLORS = {
+    "cold": (85, 92, 100),
+    "lavender": (72, 60, 100),
+    "pink": (100, 62, 80),
+    "peach": (100, 75, 55),
+}
+
+
+def rgb(color: str) -> str:
+    r, g, b = COLORS[color]
+    return f"Attribute 'ColorRGB_R' At {r} ; Attribute 'ColorRGB_G' At {g} ; Attribute 'ColorRGB_B' At {b}"
+
+
+def val(ids: list[str], *parts: str) -> str:
+    return " ; ".join([fx(ids), *parts])
+
+
+def dim(v: float) -> str:
+    return f"Attribute 'Dimmer' At {v:g}"
+
+
+# ---------------------------------------------------------------- 장면 시퀀스 250 (대본 색/위치 한 단계·강조)
+
+#: (큐, 이름, CueFade 초, 음악 시각 초, 대본 행, 값 줄)
+SCENE: list[tuple[int, str, float, float, str, list[str]]] = [
+    (
+        1,
+        "Intro A",
+        0,
+        0.00,
+        "0:00.0 시작 장면",
+        [
+            val(WASH, dim(0), rgb("lavender")),
+            val(FOH, dim(0)),
+            val(BACK, rgb("cold")),
+            val(SIDE_L + SIDE_R, rgb("lavender")),
+            val(MOV_ALL, dim(60), rgb("cold")),
+            val(BLIND, dim(0)),
+        ],
+    ),
+    (
+        2,
+        "Verse One",
+        4.27,
+        14.36,
+        "0:14.4 벌스 1 장면(2마디 번짐)",
+        [
+            val(WASH, dim(40)),
+            val(FOH, dim(60)),
+            val(BACK, rgb("lavender")),
+        ],
+    ),
+    (3, "Pre One", 0.53, 29.35, "0:29.4 프리코러스 덜어냄", [val(WASH, dim(25))]),
+    (4, "Pre Gap", 0, 36.86, "0:36.9 17마디 3박 비움", [val(WASH, dim(10))]),
+    (
+        5,
+        "Chorus One Hit",
+        0,
+        37.90,
+        "0:37.9 강조 BLIND 60 + WASH 핑크 70",
+        [
+            val(BLIND, dim(60)),
+            val(WASH, dim(70), rgb("pink")),
+        ],
+    ),
+    (6, "Blind Off", 0.27, 38.43, "0:37.9 강조 — 1박 뒤 반 박 안에 끔", [val(BLIND, dim(0))]),
+    (7, "Peach Bleed", 2.14, 46.51, "0:46.5 핑크 → 피치(1마디 번짐)", [val(WASH, rgb("peach"))]),
+]
+
+# ---------------------------------------------------------------- 리듬 시퀀스 251 (펄스·체이스·움직임)
+
+FULL = {
+    "back": (30, 30, "1"),  # (단계1, 단계2, Measure)
+    "side_l": (0, 0, "4"),
+    "side_r": (0, 0, "4"),
+    "mov_u": (0, 0, 15, 15, "0", "2"),  # (Pan1, Pan2, Tilt1, Tilt2, Phase, Measure)
+    "mov_d": (0, 0, 15, 15, "0", "2"),
+}
+
+TILT_WAVE = (0, 0, 33, 57, "0 Thru 360", "8")  # 45 ± 12, 한 바퀴 8박
+
+
+def sweep(measure: str) -> tuple:
+    return (-12, 12, 45, 45, "0", measure)  # 모두 같이 좌우 왕복
+
+
+#: (큐, 이름, 음악 시각 초, 대본 행, 바뀌는 상태)
+RHYTHM: list[tuple[int, str, float, str, dict]] = [
+    (1, "Intro Back", 0.00, "0:00.0 BACK 30 실루엣 · 무빙 바닥 쪽 고정", {}),
+    (2, "Start Hit", 0.96, "0:00.0 시작 히트 BACK 한 번(앞박 0.96초)", {"back": (100, 100, "1")}),
+    (3, "Intro Hold", 1.50, "시작 히트 끝 — BACK 30 으로", {"back": (30, 30, "1")}),
+    (4, "Kick Four", 5.78, "0:05.8 3~6마디 4박 펄스(BACK)", {"back": (30, 60, "4")}),
+    (
+        5,
+        "Movers Mid",
+        10.07,
+        "0:10.1 5마디 무빙 중간 높이로",
+        {"mov_u": (0, 0, 45, 45, "0", "2"), "mov_d": (0, 0, 45, 45, "0", "2")},
+    ),
+    (6, "Verse Pulse", 14.36, "0:14.4 7~10마디 1·2·4박 펄스 60", {"back": (30, 60, "1")}),
+    (
+        7,
+        "Tilt Wave",
+        16.50,
+        "0:16.5 8~13마디 틸트 웨이브 8박",
+        {"mov_u": TILT_WAVE, "mov_d": TILT_WAVE},
+    ),
+    (
+        8,
+        "Side Chase",
+        22.93,
+        "0:22.9 11~13마디 SIDE 2·4박 번갈아 · 펄스 멈춤",
+        {"back": (30, 30, "1"), "side_l": (0, 100, "4"), "side_r": (100, 0, "4")},
+    ),
+    (
+        9,
+        "Sweep Four",
+        29.35,
+        "0:29.4 14마디 가속 스윕 4박 · 체이스·웨이브 멈춤",
+        {"side_l": (0, 0, "4"), "side_r": (0, 0, "4"), "mov_u": sweep("4"), "mov_d": sweep("4")},
+    ),
+    (10, "Sweep Two", 31.51, "15마디 스윕 2박", {"mov_u": sweep("2"), "mov_d": sweep("2")}),
+    (11, "Sweep One", 33.65, "16마디 스윕 1박", {"mov_u": sweep("1"), "mov_d": sweep("1")}),
+    (
+        12,
+        "Sweep Half",
+        35.79,
+        "17마디 1·2박 스윕 반 박",
+        {"mov_u": sweep("0.5"), "mov_d": sweep("0.5")},
+    ),
+    (
+        13,
+        "Pre Gap",
+        36.86,
+        "0:36.9 17마디 3박 — 모두 멈춤, 무빙 위쪽 한 점",
+        {"mov_u": (0, 0, 60, 60, "0", "2"), "mov_d": (0, 0, 60, 60, "0", "2")},
+    ),
+    (
+        14,
+        "Chorus Pulse",
+        37.90,
+        "0:37.9 18~25마디 BACK 펄스 100 · MOVER-U 위로 연다",
+        {"back": (30, 100, "1"), "mov_u": (0, 0, 75, 75, "0", "2")},
+    ),
+    (
+        15,
+        "Pan Wave",
+        40.08,
+        "0:40.1 19~25마디 MOVER-U 팬 웨이브 2박",
+        {"mov_u": (-12, 12, 75, 75, "0 Thru 360", "2")},
+    ),
+]
+
+
+def rhythm_states() -> list[tuple[int, str, float, str, dict]]:
+    """큐마다 앞 상태에 바뀐 것을 얹어 전체 상태를 만든다."""
+    state = dict(FULL)
+    out = []
+    for cue, label, t, row, change in RHYTHM:
+        state = {**state, **change}
+        out.append((cue, label, t, row, dict(state)))
+    return out
+
+
+def timing(attr: str, phase: str, measure: str) -> list[str]:
+    return [
+        f"Attribute '{attr}' At Phase {phase}",
+        f"Attribute '{attr}' At Measure {measure}",
+        f"Attribute '{attr}' At {SM}",
+    ]
+
+
+def rhythm_cue_lines(state: dict) -> list[str]:
+    """한 큐 = 소유 속성 전부를 두 단계로(단계 1 → `Step 2` → 단계 2 + 타이밍)."""
+    dims = [("back", BACK), ("side_l", SIDE_L), ("side_r", SIDE_R)]
+    movs = [("mov_u", MOV_U), ("mov_d", MOV_D)]
+    lines = [val(ids, dim(state[k][0])) for k, ids in dims]
+    for k, ids in movs:
+        p1, _, t1, _, _, _ = state[k]
+        lines.append(val(ids, f"Attribute 'Pan' At {p1}", f"Attribute 'Tilt' At {t1}"))
+    lines.append("Step 2")
+    for k, ids in dims:
+        _, hi, measure = state[k]
+        lines += [val(ids, dim(hi)), *timing("Dimmer", "0", measure)]
+    for k, ids in movs:
+        _, p2, _, t2, phase, measure = state[k]
+        lines.append(val(ids, f"Attribute 'Pan' At {p2}", f"Attribute 'Tilt' At {t2}"))
+        lines += timing("Pan", phase, measure) + timing("Tilt", phase, measure)
+    return lines
+
+
+# ---------------------------------------------------------------- 묶음
+
+
+def tc_time(t: float) -> str:
+    return f"{LEAD + t:.2f}".rstrip("0").rstrip(".")
+
+
+def build(tracks: tuple[int, int] = (1, 2)) -> list[tuple[str, list[str]]]:
+    n_scene, n_rhy = tracks
+    scene = ["ChangeDestination Root", "ClearAll"]
+    for cue, label, fade, _, _, lines in SCENE:
+        scene += [
+            *lines,
+            f"Store Sequence {S_SCENE} Cue {cue} '{label}' CueFade {fade:g}",
+            "ClearAll",
+        ]
+    scene.append(f"Set Sequence {S_SCENE} Property 'Name' {name('SCENE')}")
+    rhy = ["ChangeDestination Root", "ClearAll"]
+    for cue, label, _, _, state in rhythm_states():
+        rhy += [
+            *rhythm_cue_lines(state),
+            f"Store Sequence {S_RHY} Cue {cue} '{label}' CueFade 0",
+            "ClearAll",
+        ]
+    rhy.append(f"Set Sequence {S_RHY} Property 'Name' {name('RHYTHM')}")
+    events = []
+    for no, times in ((n_scene, [s[3] for s in SCENE]), (n_rhy, [r[2] for r in RHYTHM])):
+        events.append(f"cd Timecode {TC_NO}.1.{no}.1.1")
+        events += [
+            f"Store Property 'Time' {tc_time(t)} 'AbsTime' {tc_time(t)} 'Token' 'Go+'"
+            for t in times
+        ]
+        events.append("cd root")
+    return [
+        ("seq_scene", scene),
+        ("seq_rhythm", rhy),
+        (
+            "tc_a",
+            [
+                f"Store Timecode {TC_NO}",
+                f"Set Timecode {TC_NO} Property 'Name' {name('TC')}",
+                f"Set Timecode {TC_NO} Property 'Duration' {DURATION} 'AutoStop' 0",
+                f"Store Timecode {TC_NO}.1",
+                f"Assign Sequence {S_SCENE} At Timecode {TC_NO}.1.1",
+                f"Assign Sequence {S_RHY} At Timecode {TC_NO}.1.2",
+            ],
+        ),
+        ("tc_b", [f"Store Type 'CmdSubTrack' Timecode {TC_NO}.1.{n}.1" for n in (n_scene, n_rhy)]),
+        ("tc_c", events),
+    ]
+
+
+# ---------------------------------------------------------------- 가짜 콘솔(리허설 전용 — t516 v1 모형을 번호만 바꿈)
+
+
+class FakeConsole:
+    """번호 존재·타임코드 트랙 NO·이벤트 수만 흉내 낸다. 페이저·재생 의미론의 증거가 아니다."""
+
+    responder_version = "fake"
+
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+        self.exists: set[str] = set()
+        self.tracks: list[int] = []
+        self.subs: set[int] = set()
+        self.events: dict[int, int] = {}
+        self.cwd = "root"
+
+    def ping(self) -> bool:
+        return True
+
+    def execute(self, command: str) -> ExecOutcome:
+        self.sent.append(command)
+        if '"' in command:
+            return ExecOutcome(status="failed", detail="fake: double quote rejected")
+        words = command.split()
+        if command.startswith("Store Sequence"):
+            self.exists.add(SEQ[int(words[2])])
+        elif command == f"Store Timecode {TC_NO}":
+            self.exists.add(TC)
+        elif command.startswith("Assign Sequence"):
+            self.tracks.append(int(words[2]))
+        elif command.startswith("Store Type 'CmdSubTrack'"):
+            self.subs.add(int(words[-1].split(".")[2]))
+        elif command.startswith("cd "):
+            self.cwd = words[1] if words[1] == "root" else words[2]
+        elif command.startswith("Store Property 'Time'"):
+            no = int(self.cwd.split(".")[2])
+            self.events[no] = self.events.get(no, 0) + 1
+        return ExecOutcome(status="ok", detail="OK")
+
+    def query_state(self, path: str, offset: int = 0) -> dict:
+        if (path in SEQ.values() or path.startswith(TC)) and not any(
+            path.startswith(p) for p in self.exists
+        ):
+            raise StateQueryError(f"path segment not found (in {path})")
+        kids: list[tuple[str, int]] = []
+        if path == f"{TC}/1":
+            kids = [("MarkerTrack", 1)] + [("Track", i + 2) for i in range(len(self.tracks))]
+        elif path.startswith(f"{TC}/1/") and path.count("/") == 6:
+            kids = [("TimeRange", 1)]
+        elif path.startswith(f"{TC}/1/") and path.count("/") == 7:
+            no = int(path.split("/")[6]) - 1
+            kids = [("CmdSubTrack", 1)] if no in self.subs else []
+        elif path.startswith(f"{TC}/1/") and path.count("/") == 8:
+            no = int(path.split("/")[6]) - 1
+            kids = [("CmdEvent", i + 1) for i in range(self.events.get(no, 0))]
+        children = [{"class": c, "i": i, "name": c} for c, i in kids]
+        return dict(
+            ok=True, path=path, node=dict(childCount=len(children)), children=children, fake=True
+        )
+
+    def query_properties(self, path: str, names) -> dict:
+        reads = []
+        for n in names:
+            if path.startswith(f"{TC}/1/") and path.count("/") == 6:
+                idx = int(path.split("/")[6]) - 2
+                v = {"NO": str(idx + 1), "TARGET": f"Sequence {self.tracks[idx]}"}.get(n, "fake")
+            elif n == "NORMEDVALUE":
+                v = EXPECT_MASTER_NORMED
+            else:
+                v = "fake"
+            reads.append(dict(n=n, ok=True, v=v))
+        return dict(ok=True, path=path, reads=reads, fake=True)
+
+    def query_property(self, path: str, name: str) -> dict:
+        return self.query_properties(path, [name])
+
+    def enumerate_fields(self, path: str, offset: int = 0) -> dict:
+        return dict(ok=True, path=path, fields=[], fake=True)
+
+
+# ---------------------------------------------------------------- 진행
+
+
+def _value(payload: dict | None, key: str):
+    for read in (payload or {}).get("reads") or ():
+        if read.get("n") == key and read.get("ok"):
+            return read.get("v")
+    return None
+
+
+def _children(payload: dict | None) -> list[dict]:
+    return [c for c in (payload or {}).get("children") or () if isinstance(c, dict)]
+
+
+def run(gate: SafetyGate, out: Path, *, deny_all: bool) -> dict:
+    probe = Probe(gate, out)
+    result: dict = dict(slots=[S_SCENE, S_RHY, TC_NO], bundles={})
+
+    def stop(reason: str) -> dict:
+        result["verdict"] = reason
+        with (out / "steps.jsonl").open("w", encoding="utf-8") as handle:
+            for row in probe.log:
+                handle.write(json.dumps(row, ensure_ascii=False, default=str) + "\n")
+        return result
+
+    # 사전 판독 — 쓰는 번호가 모두 비었는지, 스피드 마스터 15 가 t516 이 둔 값 그대로인지
+    taken = [p for p in [*SEQ.values(), TC] if probe.read_state("pre_slot", p) is not None]
+    master = _value(
+        probe.read_props("pre_master", "ShowData/Masters/3/15", ["NAME", "NORMEDVALUE"]),
+        "NORMEDVALUE",
+    )
+    result["pre_master_normed"] = master
+    if taken:
+        return stop(f"stopped: slots not empty {taken}")
+    if master != EXPECT_MASTER_NORMED:
+        return stop(f"stopped: Masters/3/15 NORMEDVALUE {master} != {EXPECT_MASTER_NORMED}")
+    plan = build()
+    if deny_all:
+        for label, cmds in plan:
+            result["bundles"][label] = probe.fire(label, cmds)
+        return stop("deny-all: approval texts recorded, nothing written")
+
+    def fire(label: str, cmds: list[str]) -> bool:
+        result["bundles"][label] = ok = probe.fire(label, cmds)
+        return ok
+
+    by = dict(plan)
+    for label in ("seq_scene", "seq_rhythm"):
+        if not fire(label, by[label]):
+            return stop(f"{label} not executed")
+    for n, p in SEQ.items():
+        props = probe.read_props(f"post_seq_{n}", p, ["NAME"])
+        kids = _children(probe.read_state(f"post_seq_{n}_cues", p))
+        result.setdefault("post_seq", {})[n] = dict(
+            name=_value(props, "NAME"), cues=sum(1 for k in kids if k.get("class") == "Cue")
+        )
+    if not fire("tc_a", by["tc_a"]):
+        return stop("tc_a not executed")
+    tracks = []
+    for child in _children(probe.read_state("post_a_group", f"{TC}/1")):
+        if child.get("class") == "Track":
+            props = probe.read_props("post_a_track", f"{TC}/1/{child['i']}", ["NO", "TARGET"])
+            tracks.append(
+                dict(i=child["i"], no=_value(props, "NO"), target=_value(props, "TARGET"))
+            )
+    result["tracks"] = tracks
+    want = {f"Sequence {S_SCENE}", f"Sequence {S_RHY}"}
+    if {t["target"] for t in tracks} != want or len(tracks) != 2:
+        return stop(f"stopped after tc_a: tracks {tracks}")
+    by_target = {t["target"]: t for t in tracks}
+    nos = tuple(int(float(by_target[f"Sequence {s}"]["no"])) for s in (S_SCENE, S_RHY))
+    live = dict(build(nos))  # 트랙 NO 가 1·2 가 아니면 문면이 승인과 달라져 게이트가 거절한다
+    if not fire("tc_b", live["tc_b"]):
+        return stop("tc_b not executed")
+    subs = {}
+    for s in (S_SCENE, S_RHY):
+        kids = _children(
+            probe.read_state(f"post_b_{s}", f"{TC}/1/{by_target[f'Sequence {s}']['i']}/1")
+        )
+        subs[s] = [k.get("class") for k in kids]
+    result["post_b"] = subs
+    if any(v != ["CmdSubTrack"] for v in subs.values()):
+        return stop(f"stopped before cd: {subs}")
+    fire("tc_c", live["tc_c"])
+    want_events = {S_SCENE: len(SCENE), S_RHY: len(RHYTHM)}
+    for s in (S_SCENE, S_RHY):
+        path = f"{TC}/1/{by_target[f'Sequence {s}']['i']}/1/1"
+        result.setdefault("events", {})[s] = len(_children(probe.read_state(f"post_c_{s}", path)))
+    probe.read_props("post_tc", TC, ["NAME", "DURATION"])
+    ok = result["events"] == want_events
+    return stop(
+        "written — events match" if ok else f"written — events {result['events']} != {want_events}"
+    )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("out")
+    parser.add_argument("--rehearse", action="store_true")
+    parser.add_argument("--approve", default=None)
+    parser.add_argument("--print-plan", action="store_true", help="콘솔 없이 묶음 문면만 출력")
+    args = parser.parse_args()
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    if args.print_plan:
+        (out / "plan.json").write_text(json.dumps(build(), ensure_ascii=False, indent=1), "utf-8")
+        return 0
+    skipped: list[str] = []
+    if args.rehearse:
+        from server.safety.backup import BackupManager
+
+        console = FakeConsole()
+        approval = RecordingApproval([cmds for _, cmds in build()])
+        gate = SafetyGate(
+            console=console,
+            audit=AuditLog(out / "audit"),
+            ruleset=load_ruleset(),
+            approval_port=approval,
+            backup=BackupManager(
+                backup_action=lambda: skipped.append("SaveShow skipped (rehearsal)")
+            ),
+        )
+        result = run(gate, out, deny_all=False)
+        result["fake_sent"] = len(console.sent)
+    else:
+        from server.safety.bootstrap import build_console_stack
+        from server.tools.probe_preflight import preflight
+
+        pinned = None
+        if args.approve:
+            requests = json.loads((Path(args.approve) / "approvals.json").read_text("utf-8"))
+            pinned = [r["commands"] for r in requests]
+        approval = RecordingApproval(pinned)
+        stack = build_console_stack(
+            send_host="127.0.0.1",
+            send_port=8000,
+            receive_host="127.0.0.1",
+            receive_port=LISTEN_PORT,
+            approval_port=approval,
+            audit_dir=out / "audit",
+            timeouts=LinkTimeouts(state_query_seconds=6.0),
+            attempt_session_backup=False,
+        )
+        stack.backup._backup_action = lambda: skipped.append("SaveShow skipped (supervisor)")
+        try:
+            health = preflight(
+                stack.gate, receive_host="127.0.0.1", receive_port=LISTEN_PORT, console_port=8000
+            )
+            if health.get("verdict") != "responder_ok":
+                print(json.dumps(dict(preflight=health), ensure_ascii=False, indent=2))
+                return 1
+            result = run(stack.gate, out, deny_all=pinned is None)
+            result["preflight"] = health.get("verdict")
+        finally:
+            stack.stop()
+    result["approval_requests"] = len(approval.requests)
+    result["approved"] = sum(1 for r in approval.requests if r["approved"])
+    result["skipped_saveshow"] = skipped
+    (out / "approvals.json").write_text(
+        json.dumps(approval.requests, ensure_ascii=False, indent=2), "utf-8"
+    )
+    (out / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), "utf-8")
+    print(
+        json.dumps(
+            {
+                k: result.get(k)
+                for k in ("verdict", "bundles", "tracks", "events", "post_seq", "approved")
+            },
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

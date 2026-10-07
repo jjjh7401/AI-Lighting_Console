@@ -1,0 +1,62 @@
+SCENE 250
+1	Intro A	music 0.00	TC 3	fade 0	0:00.0 시작 장면	lines 6
+2	Verse One	music 14.36	TC 17.36	fade 4.27	0:14.4 벌스 1 장면(2마디 번짐)	lines 3
+3	Pre One	music 29.35	TC 32.35	fade 0.53	0:29.4 프리코러스 덜어냄	lines 1
+4	Pre Gap	music 36.86	TC 39.86	fade 0	0:36.9 17마디 3박 비움	lines 1
+5	Chorus One Hit	music 37.90	TC 40.9	fade 0	0:37.9 강조 BLIND 60 + WASH 핑크 70	lines 2
+6	Blind Off	music 38.43	TC 41.43	fade 0.27	0:37.9 강조 — 1박 뒤 반 박 안에 끔	lines 1
+7	Peach Bleed	music 46.51	TC 49.51	fade 2.14	0:46.5 핑크 → 피치(1마디 번짐)	lines 1
+RHYTHM 251
+1	Intro Back	music 0.00	TC 3	0:00.0 BACK 30 실루엣 · 무빙 바닥 쪽 고정	BACK 30/30 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 15/15 Ph 0 M2 | D Pan 0/0 Tilt 15/15 Ph 0 M2
+2	Start Hit	music 0.96	TC 3.96	0:00.0 시작 히트 BACK 한 번(앞박 0.96초)	BACK 100/100 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 15/15 Ph 0 M2 | D Pan 0/0 Tilt 15/15 Ph 0 M2
+3	Intro Hold	music 1.50	TC 4.5	시작 히트 끝 — BACK 30 으로	BACK 30/30 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 15/15 Ph 0 M2 | D Pan 0/0 Tilt 15/15 Ph 0 M2
+4	Kick Four	music 5.78	TC 8.78	0:05.8 3~6마디 4박 펄스(BACK)	BACK 30/60 M4 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 15/15 Ph 0 M2 | D Pan 0/0 Tilt 15/15 Ph 0 M2
+5	Movers Mid	music 10.07	TC 13.07	0:10.1 5마디 무빙 중간 높이로	BACK 30/60 M4 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 45/45 Ph 0 M2 | D Pan 0/0 Tilt 45/45 Ph 0 M2
+6	Verse Pulse	music 14.36	TC 17.36	0:14.4 7~10마디 1·2·4박 펄스 60	BACK 30/60 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 45/45 Ph 0 M2 | D Pan 0/0 Tilt 45/45 Ph 0 M2
+7	Tilt Wave	music 16.50	TC 19.5	0:16.5 8~13마디 틸트 웨이브 8박	BACK 30/60 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 33/57 Ph 0 Thru 360 M8 | D Pan 0/0 Tilt 33/57 Ph 0 Thru 360 M8
+8	Side Chase	music 22.93	TC 25.93	0:22.9 11~13마디 SIDE 2·4박 번갈아 · 펄스 멈춤	BACK 30/30 M1 | SIDE-L 0/100 SIDE-R 100/0 M4 | U Pan 0/0 Tilt 33/57 Ph 0 Thru 360 M8 | D Pan 0/0 Tilt 33/57 Ph 0 Thru 360 M8
+9	Sweep Four	music 29.35	TC 32.35	0:29.4 14마디 가속 스윕 4박 · 체이스·웨이브 멈춤	BACK 30/30 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan -12/12 Tilt 45/45 Ph 0 M4 | D Pan -12/12 Tilt 45/45 Ph 0 M4
+10	Sweep Two	music 31.51	TC 34.51	15마디 스윕 2박	BACK 30/30 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan -12/12 Tilt 45/45 Ph 0 M2 | D Pan -12/12 Tilt 45/45 Ph 0 M2
+11	Sweep One	music 33.65	TC 36.65	16마디 스윕 1박	BACK 30/30 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan -12/12 Tilt 45/45 Ph 0 M1 | D Pan -12/12 Tilt 45/45 Ph 0 M1
+12	Sweep Half	music 35.79	TC 38.79	17마디 1·2박 스윕 반 박	BACK 30/30 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan -12/12 Tilt 45/45 Ph 0 M0.5 | D Pan -12/12 Tilt 45/45 Ph 0 M0.5
+13	Pre Gap	music 36.86	TC 39.86	0:36.9 17마디 3박 — 모두 멈춤, 무빙 위쪽 한 점	BACK 30/30 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 60/60 Ph 0 M2 | D Pan 0/0 Tilt 60/60 Ph 0 M2
+14	Chorus Pulse	music 37.90	TC 40.9	0:37.9 18~25마디 BACK 펄스 100 · MOVER-U 위로 연다	BACK 30/100 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan 0/0 Tilt 75/75 Ph 0 M2 | D Pan 0/0 Tilt 60/60 Ph 0 M2
+15	Pan Wave	music 40.08	TC 43.08	0:40.1 19~25마디 MOVER-U 팬 웨이브 2박	BACK 30/100 M1 | SIDE-L 0/0 SIDE-R 0/0 M4 | U Pan -12/12 Tilt 75/75 Ph 0 Thru 360 M2 | D Pan 0/0 Tilt 60/60 Ph 0 M2
+EXAMPLE rhythm cue 7 lines:
+   Fixture 201 + 201.1 + 202 + 202.1 + 203 + 203.1 + 204 + 204.1 + 205 + 205.1 + 206 + 206.1 + 207 + 207.1 + 208 + 208.1 + 209 + 209.1 + 210 + 210.1 + 211 + 211.1 + 212 + 21
+   Fixture 301 + 301.1 + 302 + 302.1 + 303 + 303.1 + 304 + 304.1 + 305 + 305.1 + 306 + 306.1 ; Attribute 'Dimmer' At 0
+   Fixture 311 + 311.1 + 312 + 312.1 + 313 + 313.1 + 314 + 314.1 + 315 + 315.1 + 316 + 316.1 ; Attribute 'Dimmer' At 0
+   Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33
+   Fixture 521 + 521.1 + 521.2 + 521.3 + 522 + 522.1 + 522.2 + 522.3 + 523 + 523.1 + 523.2 + 523.3 + 524 + 524.1 + 524.2 + 524.3 + 525 + 525.1 + 525.2 + 525.3 + 526 + 526.1 
+   Step 2
+   Fixture 201 + 201.1 + 202 + 202.1 + 203 + 203.1 + 204 + 204.1 + 205 + 205.1 + 206 + 206.1 + 207 + 207.1 + 208 + 208.1 + 209 + 209.1 + 210 + 210.1 + 211 + 211.1 + 212 + 21
+   Attribute 'Dimmer' At Phase 0
+   Attribute 'Dimmer' At Measure 1
+   Attribute 'Dimmer' At SpeedMaster 15
+   Fixture 301 + 301.1 + 302 + 302.1 + 303 + 303.1 + 304 + 304.1 + 305 + 305.1 + 306 + 306.1 ; Attribute 'Dimmer' At 0
+   Attribute 'Dimmer' At Phase 0
+   Attribute 'Dimmer' At Measure 4
+   Attribute 'Dimmer' At SpeedMaster 15
+   Fixture 311 + 311.1 + 312 + 312.1 + 313 + 313.1 + 314 + 314.1 + 315 + 315.1 + 316 + 316.1 ; Attribute 'Dimmer' At 0
+   Attribute 'Dimmer' At Phase 0
+   Attribute 'Dimmer' At Measure 4
+   Attribute 'Dimmer' At SpeedMaster 15
+   Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 57
+   Attribute 'Pan' At Phase 0 Thru 360
+   Attribute 'Pan' At Measure 8
+   Attribute 'Pan' At SpeedMaster 15
+   Attribute 'Tilt' At Phase 0 Thru 360
+   Attribute 'Tilt' At Measure 8
+   Attribute 'Tilt' At SpeedMaster 15
+   Fixture 521 + 521.1 + 521.2 + 521.3 + 522 + 522.1 + 522.2 + 522.3 + 523 + 523.1 + 523.2 + 523.3 + 524 + 524.1 + 524.2 + 524.3 + 525 + 525.1 + 525.2 + 525.3 + 526 + 526.1 
+   Attribute 'Pan' At Phase 0 Thru 360
+   Attribute 'Pan' At Measure 8
+   Attribute 'Pan' At SpeedMaster 15
+   Attribute 'Tilt' At Phase 0 Thru 360
+   Attribute 'Tilt' At Measure 8
+   Attribute 'Tilt' At SpeedMaster 15
+seq_scene 32
+seq_rhythm 513
+tc_a 6
+tc_b 2
+tc_c 26

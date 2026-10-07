@@ -1,0 +1,15 @@
+approval file      : .moai/reports/t520/control_line_removed.txt
+  raw sha256       : 93092c708af3d696f94d35c83511debb8a3e04f86b128ce34971d72f4675566a
+  raw == canonical : True
+  canonical lines  : 578
+  canonical sha256 : 93092c708af3d696f94d35c83511debb8a3e04f86b128ce34971d72f4675566a
+sent source        : .moai/reports/t520/rehearse/audit (files: ['audit-20261007.jsonl'])
+  window           : since=None until=None
+  send rows        : 579 by kind {'command': 579}
+  rebuilt sha256   : ef67a55c9eb17c7ef7d39c7f66fcfca0ef9f1964d3c6f963ce4c60698380f042
+WARN sends not ok  : 0
+(1) sha256 equal                         : False
+(2) 송신 안 됨 (sent, not in approval)    : 1
+  SENT_NOT_APPROVED: Attribute 'Tilt' At SpeedMaster 15
+(3) 승인 안 됨 (approved, not sent)       : 0
+VERDICT AC-LDRHYTHM-012: FAIL
