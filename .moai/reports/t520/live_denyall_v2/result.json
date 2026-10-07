@@ -1,0 +1,20 @@
+{
+  "slots": [
+    250,
+    251,
+    22
+  ],
+  "bundles": {
+    "seq_scene": false,
+    "seq_rhythm": false,
+    "tc_a": false,
+    "tc_b": false,
+    "tc_c": false
+  },
+  "pre_master_normed": "69",
+  "verdict": "deny-all: approval texts recorded, nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": 5,
+  "approved": 0,
+  "skipped_saveshow": []
+}

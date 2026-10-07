@@ -9,7 +9,7 @@
   - 다중 디머 기구는 서브픽스처까지 적는다(Aura XB `201 + 201.1`, Spiider `521 + 521.1 + 521.2 + 521.3` — run0_readonly.txt)
   - 선택+값은 한 줄 모양 `Fixture 목록 ; Attribute …`(t516 §4-4 line_shapes)
 층 소유(같은 속성을 두 시퀀스가 함께 잡지 않게 — 겹침 우선순위는 안 잰 것):
-  - 장면 250: WASH 디머·색 · FOH 디머 · BACK/SIDE/무빙 색 · 무빙 디머 · BLIND 디머
+  - 장면 250: WASH 디머·색 · FOH 디머 · BACK/SIDE/무빙 색 · BACK 위치(Pan 180 · Tilt 80, 모든 큐) · 무빙 디머 · BLIND 디머
   - 리듬 251: BACK 디머 · SIDE 디머 · 무빙 Pan/Tilt — 매 큐가 이 속성 전부를 두 단계로 다시 적는다(트래킹으로 앞 큐 페이저가 남지 않게)
 번호: 시퀀스 250·251, 타임코드 22(run0_readonly.txt — 모두 `path segment not found`). 이름 'LOVE ATTACK - RHYTHM M2a <역할>'.
 타임코드 시각 = 음악 시각 + LEAD(3초). 음원 재생은 m2a_play.py 가 맡는다.
@@ -61,6 +61,13 @@ def with_subs(ids: range, subs: int) -> list[str]:
 
 
 BACK = with_subs(range(201, 213), 1)  # Aura XB — 서브픽스처 1(디머 둘)
+# 역광 방향 — 감독 결정 2026-10-07 「80도 정도는 되어야겠어」(t519 시험 Seq 260~262, 객석 = −Y).
+# 줄 꼴은 t519 approval_back_aim.txt 와 같다: 위치는 본체(201)에만, 서브픽스처 없이.
+BACK_AIM = (
+    "Fixture "
+    + " + ".join(str(i) for i in range(201, 213))
+    + " ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80"
+)
 SIDE_L = with_subs(range(301, 307), 1)
 SIDE_R = with_subs(range(311, 317), 1)
 WASH = [str(i) for i in [*range(401, 411), *range(421, 431)]]  # Rush Par 2 — 서브픽스처 없음
@@ -280,6 +287,7 @@ def build(tracks: tuple[int, int] = (1, 2)) -> list[tuple[str, list[str]]]:
     for cue, label, fade, _, _, lines in SCENE:
         scene += [
             *lines,
+            BACK_AIM,
             f"Store Sequence {S_SCENE} Cue {cue} '{label}' CueFade {fade:g}",
             "ClearAll",
         ]

@@ -55,7 +55,7 @@ EXAMPLE rhythm cue 7 lines:
    Attribute 'Tilt' At Phase 0 Thru 360
    Attribute 'Tilt' At Measure 8
    Attribute 'Tilt' At SpeedMaster 15
-seq_scene 32
+seq_scene 39
 seq_rhythm 513
 tc_a 6
 tc_b 2

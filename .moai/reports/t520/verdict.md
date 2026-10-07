@@ -18,6 +18,8 @@
 | AC-012 리허설 | 쓰기 579줄 **PASS** · 재생 4줄 **PASS** · 양성 대조(승인 파일 100번째 줄 삭제) **FAIL** | `rehearse_approval_vs_sent.txt`, `play_rehearse_approval_vs_sent.txt`, `control_line_removed_result.txt` |
 | BACK 201~212 | 대본대로 넣었다. **무대 화면에서 안 보이는 문제는 미해결(t519)** — 역광 펄스가 이 묶음 박자 층의 큰 몫이라 감독이 보는 그림이 비어 보일 수 있다 | t516 §4-14 |
 
+> **v2(2026-10-07)가 이 판을 대신한다 — §11.** 감독 결정으로 BACK 위치(Pan 180 · Tilt 80)를 장면 시퀀스 모든 큐에 넣었다. 실행에 쓰는 파일은 `approval_m2a_batch1_v2.txt`(586줄, sha256 `7438fc88…`)와 `live_denyall_v2`다. 아래 §1~§10은 v1 기록이고, 차이는 §11에 적었다.
+
 ## 1. 쓴 수단 — t516 요약표에서 확인된 것만
 
 | 대본 종류 | 콘솔 수단 | 근거 |
@@ -184,3 +186,45 @@ uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval
 - 리듬 큐마다 34줄이라 쓰기 파일이 579줄로 길다. 줄 하나가 콘솔에서 실패하면 그 큐 내용이 모자란 채 저장될 수 있다. 실행 판정은 송신 결과(`not-ok` 수)를 함께 본다.
 - 스피드 마스터 15를 누가 바꿔 두었으면 실행기가 멈춘다(의도된 동작). 마스터 BPM이 112인지 112.35인지는 여전히 가릴 수 없다(t516 §4-1).
 - BACK이 안 보이면 0~13마디의 박자 층은 SIDE 체이스(11~13마디)와 무빙 움직임만 남는다.
+
+## 11. v2 — BACK을 객석 쪽으로 기울임 (감독 결정 2026-10-07, 리드 경유)
+
+- 리드 판독 뒤 실행은 보류됐다. 감독 관찰은 「BACK은 켜지지만 빔이 수직 아래라 역광 방향이 아니다」였다.
+- t519 시험(Seq 260~262, `Pan 180 ; Tilt 30/45/60`, 객석 = −Y)을 보고 감독이 정했다(원문): 「80도 정도는 되어야겠어」.
+- 리드 지시: BACK 201~212 기준 위치를 Pan 180 · Tilt 80으로 해서 장면 시퀀스(250) 모든 큐에 넣는다. 줄 꼴은 t519 `approval_back_aim.txt` 그대로, Fixture 목록 한 줄이다. 리듬 251의 BACK은 디머만 맡는다.
+
+**바뀐 것** — 장면 큐 7개마다 `Store` 바로 앞에 한 줄을 더했다:
+
+```
+Fixture 201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211 + 212 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 80
+```
+
+- 위치는 본체(201~212)에만 준다. t519 줄 꼴도 위치는 `Fixture 201`에, 서브픽스처 `201.1`에는 디머만 줬다.
+- v1 대비 `diff`: 더한 줄 7(모두 위 줄과 같음), 지운 줄 0. 장면 묶음 32 → 39줄, 리듬·타임코드 묶음은 그대로다.
+- 이로써 BACK 위치의 주인은 장면 250이다(§2 표에 "BACK 위치"가 더해진다). 리듬 251은 BACK 위치를 건드리지 않는다.
+- Tilt 80이 t519에서 시험한 값(30·45·60)보다 크다. 80에서 빔이 어디로 가는지는 실행 뒤 감독 눈으로 본다.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`rehearse_v2`) | 5묶음 끝까지 · 트랙 NO 1→250, NO 2→251 · 이벤트 7·15 |
+| 실기 전부-거절(`live_denyall_v2`) | preflight `responder_ok` · 사전 판독 통과(250·251·TC22 빔, 마스터 15 = 69) · 요청 5, 승인 0 · 감사 로그 `rejected` 5, `executed`는 `props_query` 1행뿐 · 요청 문면 = 리허설 `True` |
+| AC-012 리허설 | `rehearse_v2_approval_vs_sent.txt` — 586줄, sha256 같음, 송신 안 됨 0 · 승인 안 됨 0 → **PASS** |
+| 양성 대조 | 100번째 줄을 뺀 사본 → **FAIL**(`control_v2_line_removed_result.txt`) |
+
+**승인 파일(v2)**
+
+| 파일 | 줄 | sha256 |
+|---|---|---|
+| `.moai/reports/t520/approval_m2a_batch1_v2.txt` | 586 | `7438fc88400af70c4633700d2b10ffceee925b50dd3982ba39edf4100bb00414` |
+| `.moai/reports/t520/approval_m2a_play.txt`(변화 없음) | 4 | `b7a022403aff28f3f00ffb7f1cac5761765f270c1b39d4f694b219070bf1e22b` |
+
+- 주석·빈 줄·큰따옴표 0줄, `Save`·`Delete`·`Remove`·`Copy`·`Move`·`Edit`·`Master` 줄 0.
+
+**실행(리드 「실행」 뒤에만)** — §6의 1)을 다음으로 바꾼다. 2) 재생은 그대로다:
+
+```
+uv run python .moai/reports/t520/m2a_batch1.py .moai/reports/t520/live_write --approve .moai/reports/t520/live_denyall_v2
+uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t520/approval_m2a_batch1_v2.txt .moai/reports/t520/live_write/audit
+```
+
+- v1 파일(`approval_m2a_batch1.txt`, `live_denyall/`)은 기록으로 남긴다. v1 전부-거절 폴더로는 실행할 수 없다. 문면이 달라 게이트가 거절한다.
