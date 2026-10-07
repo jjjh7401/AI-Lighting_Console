@@ -1,0 +1,5 @@
+{"step": "pre_name", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/259", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/259", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "FIXTURE PROBE - SPIIDER DOT RGB"}], "truncated": false, "v": 1}}
+{"step": "on_259", "t": 0.133, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 259", "reasons": ["reference-invoking command"]}]}
+{"step": "on_259", "t": 0.2, "kind": "exec", "command": "Goto Cue 1 Sequence 259", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_259", "t": 10.267, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 259", "reasons": ["reference-invoking command"]}]}
+{"step": "off_259", "t": 10.333, "kind": "exec", "command": "Off Sequence 259", "fired": true, "ok": true, "detail": "OK"}

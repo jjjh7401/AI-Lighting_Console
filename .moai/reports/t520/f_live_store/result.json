@@ -1,0 +1,204 @@
+{
+  "phase": "store",
+  "bundles": {
+    "store_257": true,
+    "store_258": true,
+    "store_259": true,
+    "store_263": true,
+    "store_264": false,
+    "store_265": true
+  },
+  "exec": [
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 12 ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 257 Cue 1 'G12 Dimmer'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 257 Property 'Name' 'FIXTURE PROBE - GROUP 12 DIMMER'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 521 Thru 528. ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 258 Cue 1 'Spiider Dot'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 258 Property 'Name' 'FIXTURE PROBE - SPIIDER TRAILING DOT'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 521 Thru 528. ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 259 Cue 1 'Spiider Dot RGB'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 259 Property 'Name' 'FIXTURE PROBE - SPIIDER DOT RGB'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 10 ; Attribute 'Dimmer' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 263 Cue 1 'G10 Dimmer'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 263 Property 'Name' 'FIXTURE PROBE - GROUP 10 DIMMER'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Group 10 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'ColorMacro' At 0",
+      "ok": false,
+      "detail": "Failed"
+    },
+    {
+      "command": "Store Sequence 264 Cue 1 'G10 RGB Macro'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 264 Property 'Name' 'FIXTURE PROBE - GROUP 10 RGB MACRO'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ChangeDestination Root",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Fixture 401 ; Attribute 'Dimmer' At 100 ; Attribute 'Zoom' At 100",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Store Sequence 265 Cue 1 'Wash 401 Zoom'",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "ClearAll",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Set Sequence 265 Property 'Name' 'FIXTURE PROBE - WASH 401 ZOOM'",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase store",
+  "preflight": "responder_ok",
+  "approved": 6,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "phase": "p258",
+  "bundles": {
+    "on_258": true,
+    "off_258": true
+  },
+  "pre_name": "FIXTURE PROBE - SPIIDER TRAILING DOT",
+  "exec": [
+    {
+      "command": "Goto Cue 1 Sequence 258",
+      "ok": true,
+      "detail": "OK"
+    },
+    {
+      "command": "Off Sequence 258",
+      "ok": true,
+      "detail": "OK"
+    }
+  ],
+  "verdict": "ran phase p258",
+  "preflight": "responder_ok",
+  "approved": 2,
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}
