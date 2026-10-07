@@ -1,0 +1,30 @@
+== .moai/reports/t513/run7_A2_denyall/approval_request_1.txt (210 lines)
+  lone Group                             0
+  lone Fixture list                      0
+  Group ; Attribute (one line)           110
+  Fixture list ; Attribute (one line)    33
+  Fixture list ; At Preset               19
+  Attribute-first line                   0
+  Step line                              0
+  ClearAll                               11
+  Store Sequence                         11
+== .moai/reports/t498/run6_rain_real_write/approval_request_1.txt (119 lines)
+  lone Group                             0
+  lone Fixture list                      0
+  Group ; Attribute (one line)           14
+  Fixture list ; Attribute (one line)    37
+  Fixture list ; At Preset               12
+  Attribute-first line                   0
+  Step line                              0
+  ClearAll                               13
+  Store Sequence                         13
+== .moai/reports/t516/approval_rhythm_probe.txt (105 lines)
+  lone Group                             11
+  lone Fixture list                      0
+  Group ; Attribute (one line)           0
+  Fixture list ; Attribute (one line)    0
+  Fixture list ; At Preset               0
+  Attribute-first line                   35
+  Step line                              3
+  ClearAll                               12
+  Store Sequence                         9

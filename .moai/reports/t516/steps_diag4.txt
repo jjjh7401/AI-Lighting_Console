@@ -1,0 +1,13 @@
+state:ShowData/DataPools/Default/Sequences/220/1
+state:ShowData/DataPools/Default/Sequences/220/2
+props:ShowData/DataPools/Default/Sequences/220/1/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/220/2/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/219/1/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/219/2/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/9/1/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/9/2/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/219/12/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/219/13/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/220/3|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/219/3|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/220/1|NAME,MEMORYFOOTPRINT

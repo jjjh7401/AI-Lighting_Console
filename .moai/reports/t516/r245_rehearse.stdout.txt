@@ -1,0 +1,7 @@
+{"step": "pre_seq_245", "t": 0.001, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/245", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/245", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "watch", "t": 0.001, "say": "E0 — 무빙 501~508 이 기울어졌는가(15초)"}
+{"step": "on_245", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 245", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 245': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_245", "t": 0.001, "kind": "exec", "command": "Goto Cue 1 Sequence 245", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_245", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 245", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 245': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_245", "t": 0.002, "kind": "exec", "command": "Off Sequence 245", "fired": true, "ok": true, "detail": "OK"}
+{"verdict": "replayed — judge by director watch", "pre_names": {"245": "fake"}}

@@ -1,0 +1,80 @@
+
+>>> introspect:ShowData/DataPools/Default/Sequences/220@27
+    wire: Plugin "CopilotResponder" "introspect 61355723 ShowData/DataPools/Default/Sequences/220 offset=27"
+<<< {"class": "Sequence", "fields": [{"n": "AUTOSTART", "t": "UInt32"}, {"n": "AUTOSTOP", "t": "UInt32"}, {"n": "AUTOFIX", "t": "UInt32"}, {"n": "AUTOSTOMP", "t": "UInt32"}, {"n": "RELEASEFIRSTCUE", "t": "UInt32"}, {"n": "SOFTLTP", "t": "UInt32"}, {"n": "CUECOMMAND", "t": "UInt8"}, {"n": "XFADEMODE", "t": "UInt32"}, {"n": "XFADERELOAD", "t": "UInt32"}, {"n": "SWAPPROTECT", "t": "UInt32"}, {"n": "KILLPROTECT", "t": "UInt32"}, {"n": "USEEXECUTORTIME", "t": "UInt32"}, {"n": "OFFWHENOVERRIDDEN", "t": "UInt32"}, {"n": "SEQUMIB", "t": "UInt8"}, {"n": "SEQUMIBMODE", "t": "UInt8"}, {"n": "AUTOPREPOS", "t": "UInt32"}, {"n": "WRAPAROUND", "t": "UInt32"}, {"n": "RESTARTMODE", "t": "UInt8"}, {"n": "MASTERGOMODE", "t": "UInt8"}, {"n": "SPEEDFROMRATE", "t": "UInt32"}, {"n": "TRACKING", "t": "UInt32"}, {"n": "INCLUDELINKLASTGO", "t": "UInt32"}, {"n": "PRIORITY", "t": "UInt8"}, {"n": "PLAYBACKMASTER", "t": "Custom"}, {"n": "RATEMASTER", "t": "Custom"}, {"n": "SPEEDMASTER", "t": "Custom"}], "id": "61355723", "kind": "introspect", "offset": 27, "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "source": "property_accessors", "total": 65, "truncated": true, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Sequences/220@54
+    wire: Plugin "CopilotResponder" "introspect a7f24477 ShowData/DataPools/Default/Sequences/220 offset=54"
+<<< {"class": "Sequence", "fields": [{"n": "SPEEDSCALE", "t": "Int8"}, {"n": "INPUTFILTER", "t": "Handle"}, {"n": "OUTPUTFILTER", "t": "Handle"}, {"n": "PREFERCUEAPPEARANCE", "t": "UInt32"}, {"n": "EXECUTORDISPLAYMODE", "t": "UInt8"}, {"n": "CUEZEROMODE", "t": "UInt8"}, {"n": "ACTION", "t": "Custom"}, {"n": "TIMINGGOTO", "t": "Int64Time"}, {"n": "TIMINGGOBACK", "t": "Int64Time"}, {"n": "TIMINGGOFAST", "t": "Int64Time"}, {"n": "TIMINGGOBACKFAST", "t": "Int64Time"}], "id": "a7f24477", "kind": "introspect", "offset": 54, "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "source": "property_accessors", "total": 65, "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Groups/4@27
+    wire: Plugin "CopilotResponder" "introspect e3318f91 ShowData/DataPools/Default/Groups/4 offset=27"
+<<< {"class": "Group", "fields": [{"n": "Z", "t": "Int32"}, {"n": "XBLOCK", "t": "Int32"}, {"n": "YBLOCK", "t": "Int32"}, {"n": "ZBLOCK", "t": "Int32"}, {"n": "XGROUP", "t": "Int32"}, {"n": "YGROUP", "t": "Int32"}, {"n": "ZGROUP", "t": "Int32"}, {"n": "XWINGS", "t": "Int32"}, {"n": "YWINGS", "t": "Int32"}, {"n": "ZWINGS", "t": "Int32"}, {"n": "XWIDTH", "t": "Int32"}, {"n": "YWIDTH", "t": "Int32"}, {"n": "ZWIDTH", "t": "Int32"}, {"n": "XSHUFFLE", "t": "UInt32"}, {"n": "YSHUFFLE", "t": "UInt32"}, {"n": "ZSHUFFLE", "t": "UInt32"}, {"n": "XSHIFT", "t": "Int32"}, {"n": "YSHIFT", "t": "Int32"}, {"n": "ZSHIFT", "t": "Int32"}, {"n": "XINV", "t": "UInt32"}, {"n": "XINVB", "t": "UInt32"}, {"n": "XINVG", "t": "UInt32"}, {"n": "XINVW", "t": "UInt32"}, {"n": "YINV", "t": "UInt32"}, {"n": "YINVB", "t": "UInt32"}, {"n": "YINVG", "t": "UInt32"}, {"n": "YINVW", "t": "UInt32"}, {"n": "ZINV", "t": "UInt32"}], "id": "e3318f91", "kind": "introspect", "offset": 27, "ok": true, "path": "ShowData/DataPools/Default/Groups/4", "source": "property_accessors", "total": 101, "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/220/3/1
+    wire: Plugin "CopilotResponder" "state 8270841e ShowData/DataPools/Default/Sequences/220/3/1"
+<<< {"children": [], "id": "8270841e", "kind": "state", "node": {"childCount": 0, "class": "Part", "enumeration": "ok", "name": "Scene Back 30"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/220/3/1", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Sequences/220/3/1
+    wire: Plugin "CopilotResponder" "introspect ea0d31fe ShowData/DataPools/Default/Sequences/220/3/1"
+<<< {"class": "Part", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "ea0d31fe", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/220/3/1", "source": "property_accessors", "total": 195, "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/219/3/1
+    wire: Plugin "CopilotResponder" "state 8224938a ShowData/DataPools/Default/Sequences/219/3/1"
+<<< {"children": [], "id": "8224938a", "kind": "state", "node": {"childCount": 0, "class": "Part", "enumeration": "ok", "name": "Intro"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/219/3/1", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/221/3/1
+    wire: Plugin "CopilotResponder" "state 49334bcb ShowData/DataPools/Default/Sequences/221/3/1"
+<<< {"children": [], "id": "49334bcb", "kind": "state", "node": {"childCount": 0, "class": "Part", "enumeration": "ok", "name": "Measure 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/221/3/1", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/222/3/1
+    wire: Plugin "CopilotResponder" "state 3f2d3f62 ShowData/DataPools/Default/Sequences/222/3/1"
+<<< {"children": [], "id": "3f2d3f62", "kind": "state", "node": {"childCount": 0, "class": "Part", "enumeration": "ok", "name": "Pan Wave"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/222/3/1", "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/1|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props e7eca004 NAME,NORMEDVALUE ShowData/Masters/2/1"
+<<< {"id": "e7eca004", "kind": "props", "ok": true, "path": "ShowData/Masters/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Master"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/2|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props e7ce59fe NAME,NORMEDVALUE ShowData/Masters/2/2"
+<<< {"id": "e7ce59fe", "kind": "props", "ok": true, "path": "ShowData/Masters/2/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "World"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/12|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 99e6688e NAME,NORMEDVALUE ShowData/Masters/2/12"
+<<< {"id": "99e6688e", "kind": "props", "ok": true, "path": "ShowData/Masters/2/12", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Blind"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/1/1|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 5b5a547d NAME,NORMEDVALUE ShowData/Masters/1/1"
+<<< {"id": "5b5a547d", "kind": "props", "ok": true, "path": "ShowData/Masters/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Master"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/219|NAME,CURRENTCUE,LOADEDCUE,TRIGGER,CUENO
+    wire: Plugin "CopilotResponder" "props 838a1c1b NAME,CURRENTCUE,LOADEDCUE,TRIGGER,CUENO ShowData/DataPools/Default/Sequences/219"
+<<< {"id": "838a1c1b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/219", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LOVE ATTACK - OLD APP"}, {"e": "property not readable: CURRENTCUE", "n": "CURRENTCUE", "ok": false}, {"e": "property not readable: LOADEDCUE", "n": "LOADEDCUE", "ok": false}, {"n": "TRIGGER", "ok": true, "t": "string", "v": ""}, {"n": "CUENO", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/220|NAME,CURRENTCUE,LOADEDCUE,TRIGGER,CUENO
+    wire: Plugin "CopilotResponder" "props 8e21111f NAME,CURRENTCUE,LOADEDCUE,TRIGGER,CUENO ShowData/DataPools/Default/Sequences/220"
+<<< {"id": "8e21111f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - OVERLAP SCENE"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 220.1"}, {"e": "property not readable: LOADEDCUE", "n": "LOADEDCUE", "ok": false}, {"n": "TRIGGER", "ok": true, "t": "string", "v": ""}, {"n": "CUENO", "ok": true, "t": "string", "v": "1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/221|NAME,CURRENTCUE,LOADEDCUE,TRIGGER,CUENO
+    wire: Plugin "CopilotResponder" "props bca1c741 NAME,CURRENTCUE,LOADEDCUE,TRIGGER,CUENO ShowData/DataPools/Default/Sequences/221"
+<<< {"id": "bca1c741", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - SPEEDMASTER MEASURE"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.3"}, {"e": "property not readable: LOADEDCUE", "n": "LOADEDCUE", "ok": false}, {"n": "TRIGGER", "ok": true, "t": "string", "v": ""}, {"n": "CUENO", "ok": true, "t": "string", "v": "3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/222|NAME,CURRENTCUE,LOADEDCUE,TRIGGER,CUENO
+    wire: Plugin "CopilotResponder" "props b6b308be NAME,CURRENTCUE,LOADEDCUE,TRIGGER,CUENO ShowData/DataPools/Default/Sequences/222"
+<<< {"id": "b6b308be", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/222", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - NEW SHAPES"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 222.5"}, {"e": "property not readable: LOADEDCUE", "n": "LOADEDCUE", "ok": false}, {"n": "TRIGGER", "ok": true, "t": "string", "v": ""}, {"n": "CUENO", "ok": true, "t": "string", "v": "5"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/4|NAME,COUNT,ACTIVE,X,Y
+    wire: Plugin "CopilotResponder" "props f6625131 NAME,COUNT,ACTIVE,X,Y ShowData/DataPools/Default/Groups/4"
+<<< {"id": "f6625131", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "BACK"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"e": "property not readable: ACTIVE", "n": "ACTIVE", "ok": false}, {"e": "property not readable: X", "n": "X", "ok": false}, {"e": "property not readable: Y", "n": "Y", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/13|NAME,COUNT,ACTIVE,X,Y
+    wire: Plugin "CopilotResponder" "props fb5d4826 NAME,COUNT,ACTIVE,X,Y ShowData/DataPools/Default/Groups/13"
+<<< {"id": "fb5d4826", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/13", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-ALL"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"e": "property not readable: ACTIVE", "n": "ACTIVE", "ok": false}, {"e": "property not readable: X", "n": "X", "ok": false}, {"e": "property not readable: Y", "n": "Y", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/17|NAME,COUNT,ACTIVE,X,Y
+    wire: Plugin "CopilotResponder" "props a97a6b59 NAME,COUNT,ACTIVE,X,Y ShowData/DataPools/Default/Groups/17"
+<<< {"id": "a97a6b59", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/17", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "ODD"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"e": "property not readable: ACTIVE", "n": "ACTIVE", "ok": false}, {"e": "property not readable: X", "n": "X", "ok": false}, {"e": "property not readable: Y", "n": "Y", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/18|NAME,COUNT,ACTIVE,X,Y
+    wire: Plugin "CopilotResponder" "props e0885022 NAME,COUNT,ACTIVE,X,Y ShowData/DataPools/Default/Groups/18"
+<<< {"id": "e0885022", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/18", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "EVEN"}, {"n": "COUNT", "ok": true, "t": "number", "v": "0"}, {"e": "property not readable: ACTIVE", "n": "ACTIVE", "ok": false}, {"e": "property not readable: X", "n": "X", "ok": false}, {"e": "property not readable: Y", "n": "Y", "ok": false}], "truncated": false, "v": 1}

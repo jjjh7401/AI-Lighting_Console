@@ -1,0 +1,161 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 100",
+      "Store Sequence 228 Cue 1 'L0 Static 100'",
+      "ClearAll",
+      "Set Sequence 228 Property 'Name' 'RHYTHM PROBE v3 - L0 STATIC 100'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Attribute 'Dimmer' At Phase 0",
+      "Attribute 'Dimmer' At Speed 112",
+      "Store Sequence 229 Cue 1 'L1 Pulse Speed 112'",
+      "ClearAll",
+      "Set Sequence 229 Property 'Name' 'RHYTHM PROBE v3 - L1 PULSE SPEED 112'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Attribute 'Dimmer' At Phase 0",
+      "Attribute 'Dimmer' At SpeedMaster 15",
+      "Store Sequence 230 Cue 1 'L2 Pulse Speedmaster'",
+      "ClearAll",
+      "Set Sequence 230 Property 'Name' 'RHYTHM PROBE v3 - L2 PULSE SPEEDMASTER'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Attribute 'Dimmer' At Phase 0",
+      "Attribute 'Dimmer' At Measure 2",
+      "Attribute 'Dimmer' At SpeedMaster 15",
+      "Store Sequence 231 Cue 1 'L3 Pulse Speedmaster Measure 2'",
+      "ClearAll",
+      "Set Sequence 231 Property 'Name' 'RHYTHM PROBE v3 - L3 PULSE SPEEDMASTER MEASURE 2'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.24",
+      "Attribute 'Tilt' At Relative 12",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 112",
+      "Store Sequence 232 Cue 1 'L4 Tilt Wave Speed 112'",
+      "ClearAll",
+      "Set Sequence 232 Property 'Name' 'RHYTHM PROBE v3 - L4 TILT WAVE SPEED 112'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.24",
+      "Attribute 'Tilt' At Relative 12",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At SpeedMaster 15",
+      "Store Sequence 233 Cue 1 'L5 Tilt Wave Speedmaster'",
+      "ClearAll",
+      "Set Sequence 233 Property 'Name' 'RHYTHM PROBE v3 - L5 TILT WAVE SPEEDMASTER'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 228"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 228"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 229"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 229"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 230"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 230"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 231"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 231"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 232"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 232"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 233"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 233"
+    ],
+    "approved": true
+  }
+]

@@ -1,0 +1,197 @@
+{
+  "bundles": {
+    "bpm": true,
+    "scene_on": true,
+    "beat_on": true,
+    "beat_off": true,
+    "scene_off": true,
+    "measure_1": true,
+    "measure_2": true,
+    "measure_3": true,
+    "measure_off": true,
+    "shape_1": true,
+    "shape_2": true,
+    "shape_3": true,
+    "shape_4": true,
+    "shape_5": true,
+    "shape_off": true
+  },
+  "marks": [
+    {
+      "label": "bpm",
+      "t": 0.07
+    },
+    {
+      "label": "scene_on",
+      "t": 2.2
+    },
+    {
+      "label": "beat_on",
+      "t": 3.33
+    },
+    {
+      "label": "beat_off",
+      "t": 7.47
+    },
+    {
+      "label": "scene_off",
+      "t": 11.6
+    },
+    {
+      "label": "measure_1",
+      "t": 13.73
+    },
+    {
+      "label": "measure_2",
+      "t": 23.87
+    },
+    {
+      "label": "measure_3",
+      "t": 34.0
+    },
+    {
+      "label": "measure_off",
+      "t": 44.13
+    },
+    {
+      "label": "shape_1",
+      "t": 46.27
+    },
+    {
+      "label": "shape_2",
+      "t": 56.4
+    },
+    {
+      "label": "shape_3",
+      "t": 66.53
+    },
+    {
+      "label": "shape_4",
+      "t": 76.66
+    },
+    {
+      "label": "shape_5",
+      "t": 86.8
+    },
+    {
+      "label": "shape_off",
+      "t": 96.93
+    }
+  ],
+  "pre_names": {
+    "220": "RHYTHM PROBE - OVERLAP SCENE",
+    "221": "RHYTHM PROBE - SPEEDMASTER MEASURE",
+    "222": "RHYTHM PROBE - NEW SHAPES"
+  },
+  "verdict": "replayed — ②③⑤ and ① display by director watch",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Master 3.15 At BPM 112.35"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 220"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 221"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 221"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 220"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 221"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 221"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 221"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 221"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 222"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 222"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 222"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 4 Sequence 222"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 5 Sequence 222"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 222"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

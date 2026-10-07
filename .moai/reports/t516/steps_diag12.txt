@@ -1,0 +1,8 @@
+state:Patch/FixtureTypes/4/6/1/1/22/1/1
+props:Patch/FixtureTypes/4/6/1/1/22/1/1|NAME,DMXFROM,DMXTO,DEFAULT
+props:Patch/FixtureTypes/4/6/1/1/22/1/1/1|NAME,DMXFROM,DMXTO
+props:Patch/FixtureTypes/4/6/1/1/22/1/1/2|NAME,DMXFROM,DMXTO
+state:Patch/FixtureTypes/11/6/1/1/31/1/1
+props:Patch/FixtureTypes/11/6/1/1/31/1/1|NAME,DMXFROM,DMXTO,DEFAULT
+props:Patch/FixtureTypes/11/6/1/1/31/1/1/1|NAME,DMXFROM,DMXTO
+props:Patch/FixtureTypes/11/6/1/1/31/1/1/2|NAME,DMXFROM,DMXTO

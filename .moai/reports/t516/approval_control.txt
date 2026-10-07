@@ -1,0 +1,6 @@
+Goto Cue 1 Sequence 219
+Off Sequence 219
+Goto Cue 1 Sequence 220
+Off Sequence 220
+Goto Cue 1 Sequence 221
+Off Sequence 221

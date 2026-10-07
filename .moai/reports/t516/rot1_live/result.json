@@ -1,0 +1,37 @@
+{
+  "stage": 1,
+  "revert": false,
+  "targets": [
+    401
+  ],
+  "pre": {
+    "401": {
+      "NAME": "WASH-U 401",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "post": {
+    "401": {
+      "NAME": "WASH-U 401",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "fired": true,
+  "verdict": "ROTX read-back = 180 for all 1",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Fixture 401 Rotx '180'"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

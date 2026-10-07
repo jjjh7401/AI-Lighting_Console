@@ -1,0 +1,36 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping fec4d8ab"
+<<< {"id": "fec4d8ab", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}
+
+>>> state:ShowData/DataPools/Default/PresetPools/2
+    wire: Plugin "CopilotResponder" "state bd36a977 ShowData/DataPools/Default/PresetPools/2"
+<<< {"children": [{"class": "Preset", "i": 1, "name": "POS01 보컬 센터 페이스 · 합성좌표"}, {"class": "Preset", "i": 2, "name": "POS02 무대 전체 커버 · 합성좌표"}, {"class": "Preset", "i": 3, "name": "POS03 밴드 라인 백 · 합성좌표"}, {"class": "Preset", "i": 4, "name": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표"}, {"class": "Preset", "i": 5, "name": "POS05 팬아웃 종점 (객석 상단) · 합성좌표"}, {"class": "Preset", "i": 6, "name": "POS06 센터 집중 (브리지) · 합성좌표"}, {"class": "Preset", "i": 21, "name": "Home"}, {"class": "Preset", "i": 22, "name": "Wall"}, {"class": "Preset", "i": 23, "name": "Audience"}, {"class": "Preset", "i": 24, "name": "Center"}], "id": "bd36a977", "kind": "state", "node": {"childCount": 16, "class": "Presets", "enumeration": "ok", "name": "Position"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2", "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/228
+    wire: Plugin "CopilotResponder" "state 28113e9f ShowData/DataPools/Default/Sequences/228"
+<<< {"error": "path segment not found: '228' (in ShowData/DataPools/Default/Sequences/228)", "id": "28113e9f", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/228", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/229
+    wire: Plugin "CopilotResponder" "state 70526a6b ShowData/DataPools/Default/Sequences/229"
+<<< {"error": "path segment not found: '229' (in ShowData/DataPools/Default/Sequences/229)", "id": "70526a6b", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/229", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/230
+    wire: Plugin "CopilotResponder" "state 73903a94 ShowData/DataPools/Default/Sequences/230"
+<<< {"error": "path segment not found: '230' (in ShowData/DataPools/Default/Sequences/230)", "id": "73903a94", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/230", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/231
+    wire: Plugin "CopilotResponder" "state 5fc1aa0d ShowData/DataPools/Default/Sequences/231"
+<<< {"error": "path segment not found: '231' (in ShowData/DataPools/Default/Sequences/231)", "id": "5fc1aa0d", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/231", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/232
+    wire: Plugin "CopilotResponder" "state 05f90912 ShowData/DataPools/Default/Sequences/232"
+<<< {"error": "path segment not found: '232' (in ShowData/DataPools/Default/Sequences/232)", "id": "05f90912", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/232", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/233
+    wire: Plugin "CopilotResponder" "state c2e335f2 ShowData/DataPools/Default/Sequences/233"
+<<< {"error": "path segment not found: '233' (in ShowData/DataPools/Default/Sequences/233)", "id": "c2e335f2", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/233", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences@17
+    wire: Plugin "CopilotResponder" "state a6f81cac ShowData/DataPools/Default/Sequences offset=17"
+<<< {"children": [{"class": "Sequence", "i": 220, "name": "RHYTHM PROBE - OVERLAP SCENE"}, {"class": "Sequence", "i": 221, "name": "RHYTHM PROBE - SPEEDMASTER MEASURE"}, {"class": "Sequence", "i": 222, "name": "RHYTHM PROBE - NEW SHAPES"}, {"class": "Sequence", "i": 223, "name": "RHYTHM PROBE v2 - A GROUP TWO LINE"}, {"class": "Sequence", "i": 224, "name": "RHYTHM PROBE v2 - B GROUP ONE LINE"}, {"class": "Sequence", "i": 225, "name": "RHYTHM PROBE v2 - C FIXTURE LIST"}, {"class": "Sequence", "i": 226, "name": "RHYTHM PROBE v2 - SPEEDMASTER MEASURE"}, {"class": "Sequence", "i": 227, "name": "RHYTHM PROBE v2 - NEW SHAPES"}, {"class": "Sequence", "i": 1999, "name": "Sequence 1999"}, {"class": "Sequence", "i": 2000, "name": "Sequence 2000"}], "id": "a6f81cac", "kind": "state", "node": {"childCount": 27, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 17, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": false, "v": 1}

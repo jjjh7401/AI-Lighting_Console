@@ -1,0 +1,12 @@
+{"step": "pre_seq_220", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - OVERLAP SCENE"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_221", "t": 0.132, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - SPEEDMASTER MEASURE"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_222", "t": 0.199, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/222", "ok": true, "payload": {"id": "gate-4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/222", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - NEW SHAPES"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 0.199, "say": "P1 대조군 — 시퀀스 219 Intro(앱 연출)가 켜지는지"}
+{"step": "p1_on", "t": 0.267, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 219", "reasons": ["reference-invoking command"]}]}
+{"step": "p1_off", "t": 0.332, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 219", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.332, "say": "P2 — 시퀀스 220 BACK 30% 가 켜지는지"}
+{"step": "p2_on", "t": 0.399, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 220", "reasons": ["reference-invoking command"]}]}
+{"step": "p2_off", "t": 0.466, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 220", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.466, "say": "P3 — 시퀀스 221 BACK 이 1박마다 깜빡이는지"}
+{"step": "p3_on", "t": 0.536, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "p3_off", "t": 0.599, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}]}

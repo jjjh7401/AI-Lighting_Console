@@ -1,0 +1,12 @@
+Goto Cue 1 Sequence 228
+Off Sequence 228
+Goto Cue 1 Sequence 229
+Off Sequence 229
+Goto Cue 1 Sequence 230
+Off Sequence 230
+Goto Cue 1 Sequence 231
+Off Sequence 231
+Goto Cue 1 Sequence 232
+Off Sequence 232
+Goto Cue 1 Sequence 233
+Off Sequence 233

@@ -1,0 +1,181 @@
+{"ts": "2026-10-06T03:53:53.229545+00:00", "event": "executed", "command": "ShowData/Masters/3/15 NAME,NORMEDVALUE,SPEEDSCALE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:53:53.230125+00:00", "event": "approved", "commands": ["Master 3.15 At BPM 112.35"], "held": ["Master 3.15 At BPM 112.35"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:53:53.296110+00:00", "event": "executed", "command": "Master 3.15 At BPM 112.35", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.362789+00:00", "event": "executed", "command": "ShowData/Masters/3/15 NAME,NORMEDVALUE,SPEEDSCALE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:53:53.363163+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 4", "Attribute 'Dimmer' At 30", "Store Sequence 220 Cue 1 'Scene Back 30'", "ClearAll", "Set Sequence 220 Property 'Name' 'RHYTHM PROBE - OVERLAP SCENE'"], "held": ["ChangeDestination Root", "ClearAll", "Group 4", "Attribute 'Dimmer' At 30", "Store Sequence 220 Cue 1 'Scene Back 30'", "ClearAll", "Set Sequence 220 Property 'Name' 'RHYTHM PROBE - OVERLAP SCENE'"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:53:53.429448+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.496153+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.562878+00:00", "event": "executed", "command": "Group 4", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.629448+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 30", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.695823+00:00", "event": "executed", "command": "Store Sequence 220 Cue 1 'Scene Back 30'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.762686+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.829607+00:00", "event": "executed", "command": "Set Sequence 220 Property 'Name' 'RHYTHM PROBE - OVERLAP SCENE'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.830289+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 4", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Measure 1", "Attribute 'Dimmer' At SpeedMaster 15", "Store Sequence 221 Cue 1 'Measure 1'", "ClearAll", "Group 4", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Measure 2", "Attribute 'Dimmer' At SpeedMaster 15", "Store Sequence 221 Cue 2 'Measure 2'", "ClearAll", "Group 4", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Measure 0.5", "Attribute 'Dimmer' At SpeedMaster 15", "Store Sequence 221 Cue 3 'Measure 0.5'", "ClearAll", "Set Sequence 221 Property 'Name' 'RHYTHM PROBE - SPEEDMASTER MEASURE'"], "held": ["ChangeDestination Root", "ClearAll", "Group 4", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Measure 1", "Attribute 'Dimmer' At SpeedMaster 15", "Store Sequence 221 Cue 1 'Measure 1'", "ClearAll", "Group 4", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Measure 2", "Attribute 'Dimmer' At SpeedMaster 15", "Store Sequence 221 Cue 2 'Measure 2'", "ClearAll", "Group 4", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Measure 0.5", "Attribute 'Dimmer' At SpeedMaster 15", "Store Sequence 221 Cue 3 'Measure 0.5'", "ClearAll", "Set Sequence 221 Property 'Name' 'RHYTHM PROBE - SPEEDMASTER MEASURE'"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:53:53.896194+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:53.961930+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.029269+00:00", "event": "executed", "command": "Group 4", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.095752+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.162427+00:00", "event": "executed", "command": "Step 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.229488+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.295900+00:00", "event": "executed", "command": "Attribute 'Dimmer' At Measure 1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.362970+00:00", "event": "executed", "command": "Attribute 'Dimmer' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.429458+00:00", "event": "executed", "command": "Store Sequence 221 Cue 1 'Measure 1'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.496208+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.562802+00:00", "event": "executed", "command": "Group 4", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.629511+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.696154+00:00", "event": "executed", "command": "Step 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.762566+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.829232+00:00", "event": "executed", "command": "Attribute 'Dimmer' At Measure 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.895912+00:00", "event": "executed", "command": "Attribute 'Dimmer' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:54.962404+00:00", "event": "executed", "command": "Store Sequence 221 Cue 2 'Measure 2'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.030042+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.096174+00:00", "event": "executed", "command": "Group 4", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.162243+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.229278+00:00", "event": "executed", "command": "Step 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.295873+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.363280+00:00", "event": "executed", "command": "Attribute 'Dimmer' At Measure 0.5", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.429293+00:00", "event": "executed", "command": "Attribute 'Dimmer' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.496038+00:00", "event": "executed", "command": "Store Sequence 221 Cue 3 'Measure 0.5'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.562262+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.628811+00:00", "event": "executed", "command": "Set Sequence 221 Property 'Name' 'RHYTHM PROBE - SPEEDMASTER MEASURE'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.629733+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 13", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0 Thru 360", "Attribute 'Pan' At Measure 2", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 1 'Pan Wave'", "ClearAll", "Group 17", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0", "Group 18", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 180", "Group 13", "Attribute 'Pan' At Measure 1", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 2 'Crossed Pan Wave'", "ClearAll", "Group 13", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0", "Attribute 'Pan' At Measure 4", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 3 'Sweep M4'", "ClearAll", "Group 13", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0", "Attribute 'Pan' At Measure 2", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 4 'Sweep M2'", "ClearAll", "Group 13", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0", "Attribute 'Pan' At Measure 1", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 5 'Sweep M1'", "ClearAll", "Set Sequence 222 Property 'Name' 'RHYTHM PROBE - NEW SHAPES'"], "held": ["ChangeDestination Root", "ClearAll", "Group 13", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0 Thru 360", "Attribute 'Pan' At Measure 2", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 1 'Pan Wave'", "ClearAll", "Group 17", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0", "Group 18", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 180", "Group 13", "Attribute 'Pan' At Measure 1", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 2 'Crossed Pan Wave'", "ClearAll", "Group 13", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0", "Attribute 'Pan' At Measure 4", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 3 'Sweep M4'", "ClearAll", "Group 13", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0", "Attribute 'Pan' At Measure 2", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 4 'Sweep M2'", "ClearAll", "Group 13", "Attribute 'Pan' At Relative 12", "Attribute 'Pan' At Phase 0", "Attribute 'Pan' At Measure 1", "Attribute 'Pan' At SpeedMaster 15", "Store Sequence 222 Cue 5 'Sweep M1'", "ClearAll", "Set Sequence 222 Property 'Name' 'RHYTHM PROBE - NEW SHAPES'"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:53:55.695876+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.762596+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.829277+00:00", "event": "executed", "command": "Group 13", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.896023+00:00", "event": "executed", "command": "Attribute 'Pan' At Relative 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:55.962329+00:00", "event": "executed", "command": "Attribute 'Pan' At Phase 0 Thru 360", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.029481+00:00", "event": "executed", "command": "Attribute 'Pan' At Measure 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.096127+00:00", "event": "executed", "command": "Attribute 'Pan' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.162920+00:00", "event": "executed", "command": "Store Sequence 222 Cue 1 'Pan Wave'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.229661+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.295866+00:00", "event": "executed", "command": "Group 17", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.362794+00:00", "event": "executed", "command": "Attribute 'Pan' At Relative 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.429263+00:00", "event": "executed", "command": "Attribute 'Pan' At Phase 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.496287+00:00", "event": "executed", "command": "Group 18", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.562803+00:00", "event": "executed", "command": "Attribute 'Pan' At Relative 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.629663+00:00", "event": "executed", "command": "Attribute 'Pan' At Phase 180", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.696315+00:00", "event": "executed", "command": "Group 13", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.762648+00:00", "event": "executed", "command": "Attribute 'Pan' At Measure 1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.829364+00:00", "event": "executed", "command": "Attribute 'Pan' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.896307+00:00", "event": "executed", "command": "Store Sequence 222 Cue 2 'Crossed Pan Wave'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:56.962991+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.029567+00:00", "event": "executed", "command": "Group 13", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.095786+00:00", "event": "executed", "command": "Attribute 'Pan' At Relative 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.162341+00:00", "event": "executed", "command": "Attribute 'Pan' At Phase 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.229275+00:00", "event": "executed", "command": "Attribute 'Pan' At Measure 4", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.295981+00:00", "event": "executed", "command": "Attribute 'Pan' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.362940+00:00", "event": "executed", "command": "Store Sequence 222 Cue 3 'Sweep M4'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.428974+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.496216+00:00", "event": "executed", "command": "Group 13", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.562651+00:00", "event": "executed", "command": "Attribute 'Pan' At Relative 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.629019+00:00", "event": "executed", "command": "Attribute 'Pan' At Phase 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.695613+00:00", "event": "executed", "command": "Attribute 'Pan' At Measure 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.762315+00:00", "event": "executed", "command": "Attribute 'Pan' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.829293+00:00", "event": "executed", "command": "Store Sequence 222 Cue 4 'Sweep M2'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.895520+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:57.962493+00:00", "event": "executed", "command": "Group 13", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.028762+00:00", "event": "executed", "command": "Attribute 'Pan' At Relative 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.096372+00:00", "event": "executed", "command": "Attribute 'Pan' At Phase 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.162100+00:00", "event": "executed", "command": "Attribute 'Pan' At Measure 1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.229299+00:00", "event": "executed", "command": "Attribute 'Pan' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.295944+00:00", "event": "executed", "command": "Store Sequence 222 Cue 5 'Sweep M1'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.362777+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.429139+00:00", "event": "executed", "command": "Set Sequence 222 Property 'Name' 'RHYTHM PROBE - NEW SHAPES'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.496014+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:53:58.562763+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:53:58.629209+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/222 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:53:58.629645+00:00", "event": "approved", "commands": ["Store Timecode 20", "Set Timecode 20 Property 'Name' 'RHYTHM PROBE - TWO TRACKS'", "Set Timecode 20 Property 'Duration' 10 'AutoStop' 0", "Store Timecode 20.1", "Assign Sequence 220 At Timecode 20.1.1", "Assign Sequence 221 At Timecode 20.1.2"], "held": ["Store Timecode 20", "Set Timecode 20 Property 'Name' 'RHYTHM PROBE - TWO TRACKS'", "Set Timecode 20 Property 'Duration' 10 'AutoStop' 0", "Store Timecode 20.1", "Assign Sequence 220 At Timecode 20.1.1", "Assign Sequence 221 At Timecode 20.1.2"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:53:58.696082+00:00", "event": "executed", "command": "Store Timecode 20", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.762642+00:00", "event": "executed", "command": "Set Timecode 20 Property 'Name' 'RHYTHM PROBE - TWO TRACKS'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.829042+00:00", "event": "executed", "command": "Set Timecode 20 Property 'Duration' 10 'AutoStop' 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.896373+00:00", "event": "executed", "command": "Store Timecode 20.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:58.962729+00:00", "event": "executed", "command": "Assign Sequence 220 At Timecode 20.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.029312+00:00", "event": "executed", "command": "Assign Sequence 221 At Timecode 20.1.2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.162611+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20/1/2 NO,TARGET", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:53:59.228826+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20/1/3 NO,TARGET", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:53:59.229316+00:00", "event": "approved", "commands": ["Store Type 'CmdSubTrack' Timecode 20.1.1.1", "Store Type 'CmdSubTrack' Timecode 20.1.2.1"], "held": ["Store Type 'CmdSubTrack' Timecode 20.1.1.1", "Store Type 'CmdSubTrack' Timecode 20.1.2.1"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:53:59.295812+00:00", "event": "executed", "command": "Store Type 'CmdSubTrack' Timecode 20.1.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.362696+00:00", "event": "executed", "command": "Store Type 'CmdSubTrack' Timecode 20.1.2.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.496470+00:00", "event": "approved", "commands": ["cd Timecode 20.1.1.1.1", "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "cd root", "cd Timecode 20.1.2.1.1", "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "cd root"], "held": ["cd Timecode 20.1.1.1.1", "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "cd root", "cd Timecode 20.1.2.1.1", "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "cd root"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:53:59.562509+00:00", "event": "executed", "command": "cd Timecode 20.1.1.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.629174+00:00", "event": "executed", "command": "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.695532+00:00", "event": "executed", "command": "cd root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.762471+00:00", "event": "executed", "command": "cd Timecode 20.1.2.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.829169+00:00", "event": "executed", "command": "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:53:59.895693+00:00", "event": "executed", "command": "cd root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:00.028996+00:00", "event": "approved", "commands": ["Go Timecode 20"], "held": ["Go Timecode 20"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:00.095855+00:00", "event": "executed", "command": "Go Timecode 20", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:00.162458+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:00.228637+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:00.295787+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:00.563182+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:00.629740+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:00.696024+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:00.961785+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:01.029526+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:01.095665+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:01.363016+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:01.429275+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:01.495704+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:01.762100+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:01.828549+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:01.895762+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:02.162356+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:02.229230+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:02.295864+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:02.562406+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:02.628843+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:02.695481+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:02.962304+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:03.028958+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:03.095631+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:03.362529+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:03.429292+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:03.495993+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:03.762540+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:03.828627+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:03.895615+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:04.161840+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:04.228946+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:04.295972+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:04.561788+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:04.629028+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:04.696098+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:04.963872+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:05.029355+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:05.095441+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:05.362134+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:05.428946+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:05.495267+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:05.762298+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:05.829135+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:05.895706+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 CURSOR", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:54:06.162988+00:00", "event": "approved", "commands": ["Off Sequence 221"], "held": ["Off Sequence 221"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:06.229195+00:00", "event": "executed", "command": "Off Sequence 221", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:10.297786+00:00", "event": "approved", "commands": ["Off Timecode 20", "Off Sequence 220"], "held": ["Off Timecode 20", "Off Sequence 220"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:10.361981+00:00", "event": "executed", "command": "Off Timecode 20", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:10.428696+00:00", "event": "executed", "command": "Off Sequence 220", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:10.495848+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 221"], "held": ["Goto Cue 1 Sequence 221"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:10.562217+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 221", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:18.628626+00:00", "event": "approved", "commands": ["Goto Cue 2 Sequence 221"], "held": ["Goto Cue 2 Sequence 221"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:18.695046+00:00", "event": "executed", "command": "Goto Cue 2 Sequence 221", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:26.761969+00:00", "event": "approved", "commands": ["Goto Cue 3 Sequence 221"], "held": ["Goto Cue 3 Sequence 221"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:26.828250+00:00", "event": "executed", "command": "Goto Cue 3 Sequence 221", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:34.895244+00:00", "event": "approved", "commands": ["Off Sequence 221"], "held": ["Off Sequence 221"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:34.961085+00:00", "event": "executed", "command": "Off Sequence 221", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:35.028200+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 222"], "held": ["Goto Cue 1 Sequence 222"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:35.094089+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 222", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:43.161838+00:00", "event": "approved", "commands": ["Goto Cue 2 Sequence 222"], "held": ["Goto Cue 2 Sequence 222"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:43.227423+00:00", "event": "executed", "command": "Goto Cue 2 Sequence 222", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:51.295157+00:00", "event": "approved", "commands": ["Goto Cue 3 Sequence 222"], "held": ["Goto Cue 3 Sequence 222"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:51.360352+00:00", "event": "executed", "command": "Goto Cue 3 Sequence 222", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:54:59.427350+00:00", "event": "approved", "commands": ["Goto Cue 4 Sequence 222"], "held": ["Goto Cue 4 Sequence 222"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:54:59.493302+00:00", "event": "executed", "command": "Goto Cue 4 Sequence 222", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:55:07.559864+00:00", "event": "approved", "commands": ["Goto Cue 5 Sequence 222"], "held": ["Goto Cue 5 Sequence 222"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:55:07.626557+00:00", "event": "executed", "command": "Goto Cue 5 Sequence 222", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:55:15.693081+00:00", "event": "approved", "commands": ["Off Sequence 222"], "held": ["Off Sequence 222"], "kind": "t516_probe"}
+{"ts": "2026-10-06T03:55:15.759666+00:00", "event": "executed", "command": "Off Sequence 222", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T03:55:15.826306+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/220 NAME,CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:55:15.892868+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/221 NAME,CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:55:15.958917+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/222 NAME,CURRENTCUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T03:55:16.026295+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/20 NAME,CURSOR", "kind": "props_query", "ok": true, "detail": ""}

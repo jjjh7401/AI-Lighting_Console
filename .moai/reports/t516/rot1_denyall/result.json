@@ -1,0 +1,28 @@
+{
+  "stage": 1,
+  "revert": false,
+  "targets": [
+    401
+  ],
+  "pre": {
+    "401": {
+      "NAME": "WASH-U 401",
+      "ROTX": "0.0",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "post": {},
+  "fired": false,
+  "verdict": "deny-all: approval text recorded",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Fixture 401 Rotx '180'"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

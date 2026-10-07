@@ -1,0 +1,124 @@
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45
+Store Sequence 234 Cue 1 'A0 Base Tilt 45'
+ClearAll
+Set Sequence 234 Property 'Name' 'RHYTHM PROBE v4 - A0 BASE TILT 45'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative 30
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Speed 112
+Store Sequence 235 Cue 1 'A1 Pan Relative 30'
+ClearAll
+Set Sequence 235 Property 'Name' 'RHYTHM PROBE v4 - A1 PAN RELATIVE 30'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30
+Attribute 'Tilt' At Phase 0 Thru 360
+Attribute 'Tilt' At Speed 112
+Store Sequence 236 Cue 1 'A2 Tilt Relative 30'
+ClearAll
+Set Sequence 236 Property 'Name' 'RHYTHM PROBE v4 - A2 TILT RELATIVE 30'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30
+Step 2
+Attribute 'Tilt' At Relative 30
+Attribute 'Tilt' At Phase 0 Thru 360
+Attribute 'Tilt' At Speed 112
+Store Sequence 237 Cue 1 'A3 Tilt 2 Steps'
+ClearAll
+Set Sequence 237 Property 'Name' 'RHYTHM PROBE v4 - A3 TILT 2 STEPS'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0
+Step 2
+Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Speed 56
+Store Sequence 238 Cue 1 'B1 Pulse Speed 56'
+ClearAll
+Set Sequence 238 Property 'Name' 'RHYTHM PROBE v4 - B1 PULSE SPEED 56'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0
+Step 2
+Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Speed 224
+Store Sequence 239 Cue 1 'B2 Pulse Speed 224'
+ClearAll
+Set Sequence 239 Property 'Name' 'RHYTHM PROBE v4 - B2 PULSE SPEED 224'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0
+Step 2
+Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 4
+Attribute 'Dimmer' At SpeedMaster 15
+Store Sequence 240 Cue 1 'B3 Pulse Speedmaster Measure 4'
+ClearAll
+Set Sequence 240 Property 'Name' 'RHYTHM PROBE v4 - B3 PULSE SPEEDMASTER MEASURE 4'
+ChangeDestination Root
+ClearAll
+Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0
+Step 2
+Attribute 'Dimmer' At 100
+Attribute 'Dimmer' At Phase 0
+Attribute 'Dimmer' At Measure 1
+Attribute 'Dimmer' At SpeedMaster 15
+Store Sequence 241 Cue 1 'B4 Pulse Speedmaster Measure 1'
+ClearAll
+Set Sequence 241 Property 'Name' 'RHYTHM PROBE v4 - B4 PULSE SPEEDMASTER MEASURE 1'
+ChangeDestination Root
+ClearAll
+Fixture 201 ; Attribute 'Dimmer' At 30
+Store Sequence 242 Cue 1 'D1 Aura Fixture Dimmer'
+ClearAll
+Set Sequence 242 Property 'Name' 'RHYTHM PROBE v4 - D1 AURA FIXTURE DIMMER'
+ChangeDestination Root
+ClearAll
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Store Sequence 243 Cue 1 'D2 Aura Subfixture Dimmer'
+ClearAll
+Set Sequence 243 Property 'Name' 'RHYTHM PROBE v4 - D2 AURA SUBFIXTURE DIMMER'
+ChangeDestination Root
+ClearAll
+Fixture 201 ; Attribute 'Dimmer' At 30
+Fixture 201.1 ; Attribute 'Dimmer' At 30
+Store Sequence 244 Cue 1 'D3 Aura Both Dimmers'
+ClearAll
+Set Sequence 244 Property 'Name' 'RHYTHM PROBE v4 - D3 AURA BOTH DIMMERS'
+Goto Cue 1 Sequence 234
+Off Sequence 234
+Goto Cue 1 Sequence 235
+Off Sequence 235
+Goto Cue 1 Sequence 236
+Off Sequence 236
+Goto Cue 1 Sequence 237
+Off Sequence 237
+Goto Cue 1 Sequence 229
+Off Sequence 229
+Goto Cue 1 Sequence 238
+Off Sequence 238
+Goto Cue 1 Sequence 239
+Off Sequence 239
+Goto Cue 1 Sequence 240
+Off Sequence 240
+Goto Cue 1 Sequence 241
+Off Sequence 241
+Goto Cue 1 Sequence 242
+Off Sequence 242
+Goto Cue 1 Sequence 243
+Off Sequence 243
+Goto Cue 1 Sequence 244
+Off Sequence 244

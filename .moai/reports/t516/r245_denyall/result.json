@@ -1,0 +1,36 @@
+{
+  "bundles": {
+    "on_245": false,
+    "off_245": false
+  },
+  "marks": [
+    {
+      "label": "on_245",
+      "t": 0.07
+    },
+    {
+      "label": "off_245",
+      "t": 0.13
+    }
+  ],
+  "pre_names": {
+    "245": "RHYTHM PROBE v5 - E0 BASE TILT 45"
+  },
+  "verdict": "deny-all: approval texts recorded, nothing sent",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 245"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

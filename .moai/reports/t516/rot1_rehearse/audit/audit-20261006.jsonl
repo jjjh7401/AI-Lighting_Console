@@ -1,0 +1,8 @@
+{"ts": "2026-10-06T06:37:39.191896+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67 NAME,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T06:37:39.192743+00:00", "event": "approved", "commands": ["Set Fixture 401 Rotx '180'"], "held": ["Set Fixture 401 Rotx '180'"], "kind": "t516_floor_rotate"}
+{"ts": "2026-10-06T06:37:39.192874+00:00", "event": "executed", "command": "Set Fixture 401 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T06:37:39.192953+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67 NAME,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T06:37:46.783426+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67 NAME,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T06:37:46.783795+00:00", "event": "approved", "commands": ["Set Fixture 401 Rotx '180'"], "held": ["Set Fixture 401 Rotx '180'"], "kind": "t516_floor_rotate"}
+{"ts": "2026-10-06T06:37:46.783924+00:00", "event": "executed", "command": "Set Fixture 401 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T06:37:46.784015+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67 NAME,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}

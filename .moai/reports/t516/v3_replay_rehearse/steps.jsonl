@@ -1,0 +1,36 @@
+{"step": "pre_seq_228", "t": 0.001, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/228", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/228", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "pre_seq_229", "t": 0.001, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/229", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/229", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "pre_seq_230", "t": 0.001, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/230", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/230", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "pre_seq_231", "t": 0.002, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/231", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/231", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "pre_seq_232", "t": 0.002, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/232", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/232", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "pre_seq_233", "t": 0.002, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/233", "ok": true, "payload": {"ok": true, "path": "ShowData/DataPools/Default/Sequences/233", "reads": [{"n": "NAME", "ok": true, "v": "fake"}], "fake": true}}
+{"step": "watch", "t": 0.002, "say": "L0 — 무빙 501~508 이 100% 로 켜지는가(대조)"}
+{"step": "on_228", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 228", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 228': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_228", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 228", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_228", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 228", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 228': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_228", "t": 0.003, "kind": "exec", "command": "Off Sequence 228", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.003, "say": "L1 — 켜짐/꺼짐이 1박(약 0.53초)마다 깜빡이는가 (At Speed 112)"}
+{"step": "on_229", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 229", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 229': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_229", "t": 0.003, "kind": "exec", "command": "Goto Cue 1 Sequence 229", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_229", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 229", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 229': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_229", "t": 0.003, "kind": "exec", "command": "Off Sequence 229", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.003, "say": "L2 — 같은 깜빡임, 속도만 스피드 마스터 15"}
+{"step": "on_230", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 230", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 230': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_230", "t": 0.003, "kind": "exec", "command": "Goto Cue 1 Sequence 230", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_230", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 230", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 230': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_230", "t": 0.003, "kind": "exec", "command": "Off Sequence 230", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.003, "say": "L3 — L2 와 같되 2박에 한 번(느리게)"}
+{"step": "on_231", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 231", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 231': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_231", "t": 0.004, "kind": "exec", "command": "Goto Cue 1 Sequence 231", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_231", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 231", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 231': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_231", "t": 0.004, "kind": "exec", "command": "Off Sequence 231", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.004, "say": "L4 — 70% 로 켜진 채 Tilt 가 위아래로 파도처럼 움직이는가 (At Speed 112)"}
+{"step": "on_232", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 232", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 232': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_232", "t": 0.004, "kind": "exec", "command": "Goto Cue 1 Sequence 232", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_232", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 232", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 232': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_232", "t": 0.004, "kind": "exec", "command": "Off Sequence 232", "fired": true, "ok": true, "detail": "OK"}
+{"step": "watch", "t": 0.004, "say": "L5 — L4 와 같은 움직임, 속도만 스피드 마스터 15"}
+{"step": "on_233", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 233", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 233': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "on_233", "t": 0.004, "kind": "exec", "command": "Goto Cue 1 Sequence 233", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_233", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 233", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 233': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_233", "t": 0.004, "kind": "exec", "command": "Off Sequence 233", "fired": true, "ok": true, "detail": "OK"}

@@ -1,0 +1,42 @@
+{
+  "bundles": {
+    "on_245": true,
+    "off_245": true
+  },
+  "marks": [
+    {
+      "label": "on_245",
+      "t": 0.0
+    },
+    {
+      "label": "off_245",
+      "t": 0.0
+    }
+  ],
+  "pre_names": {
+    "245": "fake"
+  },
+  "verdict": "replayed — judge by director watch",
+  "fake_sent": [
+    "Goto Cue 1 Sequence 245",
+    "Off Sequence 245"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 245"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 245"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "stage": "1b",
+  "targets": [
+    401
+  ],
+  "pre": {
+    "401": {
+      "NAME": "WASH-U 401",
+      "POSZ": "0.30000001192093",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "post": {
+    "401": {
+      "NAME": "WASH-U 401",
+      "POSZ": "0.0",
+      "ROTX": "179.99999860565",
+      "ROTY": "0.0",
+      "ROTZ": "0.0"
+    }
+  },
+  "fired": true,
+  "verdict": "read-back = {'ROTX': 180.0, 'POSZ': 0.0} for all 1",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Set Fixture 401 Posz '0'"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

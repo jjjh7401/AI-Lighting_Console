@@ -1,0 +1,12 @@
+Goto Cue 1 Sequence 245
+Off Sequence 245
+Goto Cue 1 Sequence 246
+Off Sequence 246
+Goto Cue 1 Sequence 245
+Goto Cue 1 Sequence 247
+Off Sequence 247
+Off Sequence 245
+Goto Cue 1 Sequence 248
+Off Sequence 248
+Goto Cue 1 Sequence 249
+Off Sequence 249

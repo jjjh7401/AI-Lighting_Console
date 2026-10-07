@@ -1,0 +1,314 @@
+{
+  "bundles": {
+    "on_234": true,
+    "off_234": true,
+    "on_235": true,
+    "off_235": true,
+    "on_236": true,
+    "off_236": true,
+    "on_237": true,
+    "off_237": true,
+    "on_229": true,
+    "off_229": true,
+    "on_238": true,
+    "off_238": true,
+    "on_239": true,
+    "off_239": true,
+    "on_240": true,
+    "off_240": true,
+    "on_241": true,
+    "off_241": true,
+    "on_242": true,
+    "off_242": true,
+    "on_243": true,
+    "off_243": true,
+    "on_244": true,
+    "off_244": true
+  },
+  "marks": [
+    {
+      "label": "on_234",
+      "t": 0.13
+    },
+    {
+      "label": "off_234",
+      "t": 8.26
+    },
+    {
+      "label": "on_235",
+      "t": 10.4
+    },
+    {
+      "label": "off_235",
+      "t": 18.53
+    },
+    {
+      "label": "on_236",
+      "t": 20.66
+    },
+    {
+      "label": "off_236",
+      "t": 28.8
+    },
+    {
+      "label": "on_237",
+      "t": 30.93
+    },
+    {
+      "label": "off_237",
+      "t": 39.06
+    },
+    {
+      "label": "on_229",
+      "t": 41.19
+    },
+    {
+      "label": "off_229",
+      "t": 49.33
+    },
+    {
+      "label": "on_238",
+      "t": 51.46
+    },
+    {
+      "label": "off_238",
+      "t": 59.57
+    },
+    {
+      "label": "on_239",
+      "t": 61.7
+    },
+    {
+      "label": "off_239",
+      "t": 69.84
+    },
+    {
+      "label": "on_240",
+      "t": 71.97
+    },
+    {
+      "label": "off_240",
+      "t": 80.1
+    },
+    {
+      "label": "on_241",
+      "t": 82.24
+    },
+    {
+      "label": "off_241",
+      "t": 90.37
+    },
+    {
+      "label": "on_242",
+      "t": 92.5
+    },
+    {
+      "label": "off_242",
+      "t": 100.63
+    },
+    {
+      "label": "on_243",
+      "t": 102.77
+    },
+    {
+      "label": "off_243",
+      "t": 110.9
+    },
+    {
+      "label": "on_244",
+      "t": 113.03
+    },
+    {
+      "label": "off_244",
+      "t": 121.17
+    }
+  ],
+  "pre_names": {
+    "234": "RHYTHM PROBE v4 - A0 BASE TILT 45",
+    "235": "RHYTHM PROBE v4 - A1 PAN RELATIVE 30",
+    "236": "RHYTHM PROBE v4 - A2 TILT RELATIVE 30",
+    "237": "RHYTHM PROBE v4 - A3 TILT 2 STEPS",
+    "238": "RHYTHM PROBE v4 - B1 PULSE SPEED 56",
+    "239": "RHYTHM PROBE v4 - B2 PULSE SPEED 224",
+    "240": "RHYTHM PROBE v4 - B3 PULSE SPEEDMASTER MEASURE 4",
+    "241": "RHYTHM PROBE v4 - B4 PULSE SPEEDMASTER MEASURE 1",
+    "242": "RHYTHM PROBE v4 - D1 AURA FIXTURE DIMMER",
+    "243": "RHYTHM PROBE v4 - D2 AURA SUBFIXTURE DIMMER",
+    "244": "RHYTHM PROBE v4 - D3 AURA BOTH DIMMERS",
+    "229": "RHYTHM PROBE v3 - L1 PULSE SPEED 112"
+  },
+  "verdict": "replayed — judge by director watch",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 234"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 234"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 235"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 235"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 236"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 236"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 237"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 237"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 229"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 229"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 238"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 238"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 239"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 239"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 240"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 240"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 241"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 241"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 242"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 242"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 243"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 243"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 244"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 244"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

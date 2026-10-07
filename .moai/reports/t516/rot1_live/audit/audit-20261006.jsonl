@@ -1,0 +1,4 @@
+{"ts": "2026-10-06T06:39:40.631235+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67 NAME,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-06T06:39:40.631787+00:00", "event": "approved", "commands": ["Set Fixture 401 Rotx '180'"], "held": ["Set Fixture 401 Rotx '180'"], "kind": "t516_floor_rotate"}
+{"ts": "2026-10-06T06:39:40.697900+00:00", "event": "executed", "command": "Set Fixture 401 Rotx '180'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-06T06:39:40.765269+00:00", "event": "executed", "command": "Patch/Stages/1/Fixtures/67 NAME,ROTX,ROTY,ROTZ", "kind": "props_query", "ok": true, "detail": ""}

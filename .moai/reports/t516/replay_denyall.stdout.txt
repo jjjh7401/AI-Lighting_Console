@@ -1,0 +1,31 @@
+{"step": "pre_seq_220", "t": 0.066, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/220", "ok": true, "payload": {"id": "gate-2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/220", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - OVERLAP SCENE"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_221", "t": 0.133, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/221", "ok": true, "payload": {"id": "gate-3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - SPEEDMASTER MEASURE"}], "truncated": false, "v": 1}}
+{"step": "pre_seq_222", "t": 0.199, "kind": "props", "path": "ShowData/DataPools/Default/Sequences/222", "ok": true, "payload": {"id": "gate-4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/222", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "RHYTHM PROBE - NEW SHAPES"}], "truncated": false, "v": 1}}
+{"step": "watch", "t": 0.199, "say": "① Speed15 BPM 표시가 112.35 인지"}
+{"step": "bpm", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "Master 3.15 At BPM 112.35", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "watch", "t": 0.2, "say": "⑤ BACK 30% 켜짐"}
+{"step": "scene_on", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 220", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.266, "say": "⑤ BACK 이 1박마다 깜빡임(장면 위에 박자)"}
+{"step": "beat_on", "t": 0.333, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.333, "say": "⑤ 깜빡임이 멈추고 BACK 30% 로 돌아오는지"}
+{"step": "beat_off", "t": 0.4, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "scene_off", "t": 0.467, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 220", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.467, "say": "② Measure 1 — 1박에 한 번(8초에 약 15번)"}
+{"step": "measure_1", "t": 0.535, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.535, "say": "② Measure 2 — 2박에 한 번(약 7번)"}
+{"step": "measure_2", "t": 0.6, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 2 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.601, "say": "② Measure 0.5 — 반 박에 한 번(약 30번)"}
+{"step": "measure_3", "t": 0.666, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 3 Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "measure_off", "t": 0.733, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.733, "say": "③ 팬 웨이브 — 줄지어 따라가는 파도, 2박 한 바퀴"}
+{"step": "shape_1", "t": 0.799, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.799, "say": "③ 엇갈린 팬 웨이브 — ODD/EVEN 반대, 1박"}
+{"step": "shape_2", "t": 0.866, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 2 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.866, "say": "③ 가속 스윕 4박"}
+{"step": "shape_3", "t": 0.932, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 3 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.932, "say": "③ 가속 스윕 2박"}
+{"step": "shape_4", "t": 0.999, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 4 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "watch", "t": 0.999, "say": "③ 가속 스윕 1박"}
+{"step": "shape_5", "t": 1.066, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 5 Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"step": "shape_off", "t": 1.133, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 222", "reasons": ["reference-invoking command"]}]}
+{"bundles": {"bpm": false, "scene_on": false, "beat_on": false, "beat_off": false, "scene_off": false, "measure_1": false, "measure_2": false, "measure_3": false, "measure_off": false, "shape_1": false, "shape_2": false, "shape_3": false, "shape_4": false, "shape_5": false, "shape_off": false}, "marks": [{"label": "bpm", "t": 0.0}, {"label": "scene_on", "t": 0.07}, {"label": "beat_on", "t": 0.13}, {"label": "beat_off", "t": 0.2}, {"label": "scene_off", "t": 0.27}, {"label": "measure_1", "t": 0.34}, {"label": "measure_2", "t": 0.4}, {"label": "measure_3", "t": 0.47}, {"label": "measure_off", "t": 0.53}, {"label": "shape_1", "t": 0.6}, {"label": "shape_2", "t": 0.67}, {"label": "shape_3", "t": 0.73}, {"label": "shape_4", "t": 0.8}, {"label": "shape_5", "t": 0.87}, {"label": "shape_off", "t": 0.93}], "pre_names": {"220": "RHYTHM PROBE - OVERLAP SCENE", "221": "RHYTHM PROBE - SPEEDMASTER MEASURE", "222": "RHYTHM PROBE - NEW SHAPES"}, "verdict": "deny-all: approval texts recorded, nothing sent", "preflight": "responder_ok", "approval_requests": [{"commands": ["Master 3.15 At BPM 112.35"], "approved": false}, {"commands": ["Goto Cue 1 Sequence 220"], "approved": false}, {"commands": ["Goto Cue 1 Sequence 221"], "approved": false}, {"commands": ["Off Sequence 221"], "approved": false}, {"commands": ["Off Sequence 220"], "approved": false}, {"commands": ["Goto Cue 1 Sequence 221"], "approved": false}, {"commands": ["Goto Cue 2 Sequence 221"], "approved": false}, {"commands": ["Goto Cue 3 Sequence 221"], "approved": false}, {"commands": ["Off Sequence 221"], "approved": false}, {"commands": ["Goto Cue 1 Sequence 222"], "approved": false}, {"commands": ["Goto Cue 2 Sequence 222"], "approved": false}, {"commands": ["Goto Cue 3 Sequence 222"], "approved": false}, {"commands": ["Goto Cue 4 Sequence 222"], "approved": false}, {"commands": ["Goto Cue 5 Sequence 222"], "approved": false}, {"commands": ["Off Sequence 222"], "approved": false}], "skipped_saveshow": []}

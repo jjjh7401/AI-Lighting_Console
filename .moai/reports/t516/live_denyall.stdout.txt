@@ -1,0 +1,178 @@
+{"step": "pre_slot", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/220", "ok": false, "error": "path segment not found: '220' (in ShowData/DataPools/Default/Sequences/220)"}
+{"step": "pre_slot", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/221", "ok": false, "error": "path segment not found: '221' (in ShowData/DataPools/Default/Sequences/221)"}
+{"step": "pre_slot", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/222", "ok": false, "error": "path segment not found: '222' (in ShowData/DataPools/Default/Sequences/222)"}
+{"step": "pre_slot", "t": 0.265, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/20", "ok": false, "error": "path segment not found: '20' (in ShowData/DataPools/Default/Timecodes/20)"}
+{"step": "pre_master", "t": 0.332, "kind": "props", "path": "ShowData/Masters/3/15", "ok": true, "payload": {"id": "gate-6", "kind": "props", "ok": true, "path": "ShowData/Masters/3/15", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed15"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}, {"n": "SPEEDSCALE", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}}
+{"step": "bpm", "t": 0.332, "kind": "screen", "cleared": false, "commands": [{"command": "Master 3.15 At BPM 112.35", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "seq_scene", "t": 0.333, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 4", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 30", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Sequence 220 Cue 1 'Scene Back 30'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"c
+{"step": "seq_beat", "t": 0.333, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 4", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Step 2", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 100", "reasons": ["bun
+{"step": "seq_shape", "t": 0.334, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 13", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Phase 0 Thru 360", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attrib
+{"step": "tc_a", "t": 0.334, "kind": "screen", "cleared": false, "commands": [{"command": "Store Timecode 20", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 20 Property 'Name' 'RHYTHM PROBE - TWO TRACKS'", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Set Timecode 20 Property 'Duration' 10 'AutoStop' 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Timecode 20.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign Sequ
+{"step": "tc_b", "t": 0.334, "kind": "screen", "cleared": false, "commands": [{"command": "Store Type 'CmdSubTrack' Timecode 20.1.1.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Store Type 'CmdSubTrack' Timecode 20.1.2.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}]}
+{"step": "tc_c", "t": 0.334, "kind": "screen", "cleared": false, "commands": [{"command": "cd Timecode 20.1.1.1.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Property 'Time' 1 'AbsTime' 1 'Token' 'Go+'", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "cd root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "cd Timecode 20.1.2.1.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Property 'Time' 2 'AbsTime' 2 'Token' 'Go+'", "reasons": ["bundle rejected (all-or-noth
+{"step": "play", "t": 0.335, "kind": "screen", "cleared": false, "commands": [{"command": "Go Timecode 20", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "beat_off", "t": 0.399, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 221': state query failed for 'Sequence 221': path segment not found: '221' (in DataPool/Sequences/221)"]}]}
+{"step": "tc_off", "t": 0.466, "kind": "screen", "cleared": false, "commands": [{"command": "Off Timecode 20", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}, {"command": "Off Sequence 220", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 220': state query failed for 'Sequence 220': path segment not found: '220' (in DataPool/Sequences/220)"]}]}
+{"step": "measure_1", "t": 0.534, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 221", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 221': state query failed for 'Sequence 221': path segment not found: '221' (in DataPool/Sequences/221)"]}]}
+{"step": "measure_2", "t": 0.6, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 2 Sequence 221", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 221': state query failed for 'Sequence 221': path segment not found: '221' (in DataPool/Sequences/221)"]}]}
+{"step": "measure_3", "t": 0.667, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 3 Sequence 221", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 221': state query failed for 'Sequence 221': path segment not found: '221' (in DataPool/Sequences/221)"]}]}
+{"step": "measure_off", "t": 0.733, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 221': state query failed for 'Sequence 221': path segment not found: '221' (in DataPool/Sequences/221)"]}]}
+{"step": "shape_1", "t": 0.8, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 222", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 222': state query failed for 'Sequence 222': path segment not found: '222' (in DataPool/Sequences/222)"]}]}
+{"step": "shape_2", "t": 0.867, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 2 Sequence 222", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 222': state query failed for 'Sequence 222': path segment not found: '222' (in DataPool/Sequences/222)"]}]}
+{"step": "shape_3", "t": 0.932, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 3 Sequence 222", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 222': state query failed for 'Sequence 222': path segment not found: '222' (in DataPool/Sequences/222)"]}]}
+{"step": "shape_4", "t": 1.0, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 4 Sequence 222", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 222': state query failed for 'Sequence 222': path segment not found: '222' (in DataPool/Sequences/222)"]}]}
+{"step": "shape_5", "t": 1.066, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 5 Sequence 222", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 222': state query failed for 'Sequence 222': path segment not found: '222' (in DataPool/Sequences/222)"]}]}
+{"step": "shape_off", "t": 1.132, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 222", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 222': state query failed for 'Sequence 222': path segment not found: '222' (in DataPool/Sequences/222)"]}]}
+{
+  "master": 15,
+  "slots": [
+    220,
+    221,
+    222,
+    20
+  ],
+  "bundles": {
+    "bpm": false,
+    "seq_scene": false,
+    "seq_beat": false,
+    "seq_shape": false,
+    "tc_a": false,
+    "tc_b": false,
+    "tc_c": false,
+    "play": false,
+    "beat_off": false,
+    "tc_off": false,
+    "measure_1": false,
+    "measure_2": false,
+    "measure_3": false,
+    "measure_off": false,
+    "shape_1": false,
+    "shape_2": false,
+    "shape_3": false,
+    "shape_4": false,
+    "shape_5": false,
+    "shape_off": false
+  },
+  "pre_master": {
+    "id": "gate-6",
+    "kind": "props",
+    "ok": true,
+    "path": "ShowData/Masters/3/15",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "Speed15"
+      },
+      {
+        "n": "NORMEDVALUE",
+        "ok": true,
+        "t": "number",
+        "v": "50"
+      },
+      {
+        "n": "SPEEDSCALE",
+        "ok": true,
+        "t": "number",
+        "v": "0"
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  },
+  "verdict": "deny-all: approval texts recorded, nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Master 3.15 At BPM 112.35"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 30",
+        "Store Sequence 220 Cue 1 'Scene Back 30'",
+        "ClearAll",
+        "Set Sequence 220 Property 'Name' 'RHYTHM PROBE - OVERLAP SCENE'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 1",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Sequence 221 Cue 1 'Measure 1'",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 2",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Sequence 221 Cue 2 'Measure 2'",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 0.5",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Sequence 221 Cue 3 'Measure 0.5'",
+        "ClearAll",
+        "Set Sequence 221 Property 'Name' 'RHYTHM PROBE - SPEEDMASTER MEASURE'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Measure 2",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 222 Cue 1 'Pan Wave'",
+        "ClearAll",
+        "Group 17",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0",
+        "Group 18",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 180",
+        "Group 13",
+        "Attribute 'Pan' At Measure 1",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 222 Cue 2 'Crossed Pan Wave'",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Pan' At Measure 4",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 222 Cue 3 'Sweep M4'",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Pan' At Measure 2",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Sequence 222 Cue 4 'Sweep M2'",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Pan' At Measure 1",
+        "Attribute 'Pan' At SpeedMaster 15",
+        "Store Se

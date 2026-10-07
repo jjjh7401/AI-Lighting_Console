@@ -1,0 +1,16 @@
+
+>>> props:Patch/FixtureTypes/9/5/1|NAME,TYPE,MODEL,POSX,POSY,POSZ,ROTX,ROTY,ROTZ
+    wire: Plugin "CopilotResponder" "props 92aac91b NAME,TYPE,MODEL,POSX,POSY,POSZ,ROTX,ROTY,ROTZ Patch/FixtureTypes/9/5/1"
+<<< {"id": "92aac91b", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/5/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Body"}, {"n": "TYPE", "ok": true, "t": "string", "v": "Geometry"}, {"n": "MODEL", "ok": true, "t": "userdata", "v": "FixtureType 9.4.1"}, {"n": "POSX", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSY", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSZ", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTX", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTY", "ok": true, "t": "number", "v": "0.0"}, {"n": "ROTZ", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/5/1/1|NAME,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 9218e12f NAME,POSX,POSY,POSZ Patch/FixtureTypes/9/5/1/1"
+<<< {"id": "9218e12f", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/5/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module"}, {"n": "POSX", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSY", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSZ", "ok": true, "t": "number", "v": "-0.27829998731613"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/9/5/2|NAME,TYPE,MODEL,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 6de18969 NAME,TYPE,MODEL,POSX,POSY,POSZ Patch/FixtureTypes/9/5/2"
+<<< {"id": "6de18969", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/9/5/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Body#2"}, {"n": "TYPE", "ok": true, "t": "string", "v": "Geometry"}, {"n": "MODEL", "ok": true, "t": "userdata", "v": "FixtureType 9.4.1"}, {"n": "POSX", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSY", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSZ", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/Stages/1|NAME,POSX,POSY,POSZ
+    wire: Plugin "CopilotResponder" "props 5f2a6635 NAME,POSX,POSY,POSZ Patch/Stages/1"
+<<< {"id": "5f2a6635", "kind": "props", "ok": true, "path": "Patch/Stages/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Stage 1"}, {"n": "POSX", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSY", "ok": true, "t": "number", "v": "0.0"}, {"n": "POSZ", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}

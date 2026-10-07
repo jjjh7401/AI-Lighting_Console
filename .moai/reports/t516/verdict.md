@@ -1,0 +1,469 @@
+# t516 판정서 — 리듬 대본 실기 기술 확인 (능력 프로브 v1~v5, 마감)
+
+- 카드: t516 · 레인 lane-3 · 브랜치 `WT-rhythm-probe` (기준 `f89c31e7`)
+- 범위: 프로브 v1~v5 설계 → 가짜 콘솔 리허설 → 실기 읽기 → 실기 전부-거절 → 승인 → 실기 실행(리드 「실행」 뒤에만) → 감독 관찰.
+- 모든 실기 쓰기는 승인 파일과 송신이 t512 대조로 일치했다(PASS). `server/` 수정 0, 기존 번호 덮어쓰기·삭제 0, 쇼 저장 송신 0(쇼 저장은 감독이 했다).
+- 🔴 v1 1회차는 리드의 「실행」 전에 돌렸다(§4-1). 그 뒤로는 모든 실행이 리드의 「실행」 메시지 뒤였다.
+
+## 요약 — 확인된 것 / 안 된 것 / 다음 카드
+
+출처 갈래: **기계** = 콘솔 되읽기·감사 로그로 잰 것 · **감독** = 감독 눈 관찰(리드 경유, 원문은 각 절) · **추론** = 판독값에서 낸 판단(안 잰 것).
+
+| 항목 | 결과 | 출처 | 근거 절 |
+|---|---|---|---|
+| 페이저 실행(Dimmer 0↔100 2단계) | 됨 | 감독 | 4-7(v3 L1) |
+| `At Speed <bpm>` 이 박자 단위로 돈다(112·56·224) | 됨 — 56 느림, 224 빠름 | 감독 | 4-7, 4-12 |
+| `At SpeedMaster 15` 결속 | 됨 | 감독 | 4-7(v3 L2) |
+| 스피드 마스터 15 BPM 112.35 | 받아들여짐 · 표시 112, 소수 미판별 | 기계 + 감독 | 4-1 |
+| `At Measure` 로 박 길이 조절 | Measure 4(느림)·1(빠름) 됨 · Measure 2 는 무변화 | 감독 | 4-7, 4-12 |
+| └ Measure 2 무변화의 까닭 | 2단계 페이저 기본 루프가 이미 2박 | 추론(4/1 결과와 맞음) | 4-12 |
+| Tilt 페이저 움직임 | 됨 | 감독 | 4-12(v4 236·237) |
+| Pan 흔들림 | 기울인 기준 위에서만 보인다. 절대값 2단계 안에 Tilt 를 넣거나(246), 기준 시퀀스 위에 상대값을 겹치면(247) 됨 | 감독 | 4-14 |
+| └ 한 큐에 기준값 + 상대값 한 단계 | 기준 Tilt 가 빠졌다(크기 216B 감소, 「수직으로 있어서」) · 까닭은 안 잰 것 | 기계(크기) + 감독 | 4-12 |
+| 타임코드 하나에 트랙 둘 | 됨 | 기계 | 4-1 |
+| `Fixture 201.1 ;` 서브픽스처 문법 | 받아들여짐 | 기계 | 4-12 |
+| 바닥 워시 401~410·421~430 천정 방향 + 바닥 접촉 | 됨 — ROTX 180, POSZ 0 | 기계 + 감독 | 4-10, 4-11, 4-12 |
+| BACK 201(Aura XB, 높이 6.2) 무점등 | **안 됨** — 같은 기종 SIDE-L 301(높이 1.2)은 Dimmer 100 만으로 켜짐 → 기종·디머·색이 아니라 BACK 자리(방향·가시성) 문제 | 감독 + 추론 | 4-14 |
+| position_fx `wave` 줄('live-validated') | 🔴 Tilt 줄인데 Pan 이 움직였다 — 저장소 기록과 다르다 | 감독 | 4-7, 4-15 |
+| Tilt 45 의 단위(퍼센트·각도) | 안 잰 것 | — | 4-8 |
+
+**다음 카드(리드 결정)**: BACK 201~212 의 3D 위치·회전·빔 방향 판독 — 바닥 워시처럼 패치 회전 문제일 수 있다.
+- 대상 콘솔: 이 Mac의 grandMA3 onPC다.
+  - 프로브는 `127.0.0.1:8000`으로 보내고 `127.0.0.1:9005`로 받는다(`.moai/reports/t498/probe_readonly.py:55`, `rhythm_probe.py` `build_console_stack`).
+  - 응답기 ping 회신은 `CopilotResponder` `1.6.5`다.
+  - UDP 9005는 onPC(`app_gma3` PID 60211, `*:9005`)와 같이 열려 있지만 회신은 이 프로브로 왔다(`run0_readonly.txt` 첫 줄 pong, `live_denyall` preflight `responder_ok`).
+
+## 1. 무엇을 재나 — 다섯 항목과 묶음
+
+| 항목 | 묶음 | 기계로 읽는 것 | 사람이 보는 것 |
+|---|---|---|---|
+| ① 마스터 BPM 112.35 | `bpm`: `Master 3.15 At BPM 112.35` 한 줄 | `ShowData/Masters/3/15` `NORMEDVALUE`(지금 50)가 바뀌는지 | 스피드 마스터 15의 BPM 표시가 112.35(또는 반올림)인지. 🔴 읽을 수 있는 속성에 BPM 값이 없다(§3). 소수 자리는 사람만 확인할 수 있다 |
+| ② SpeedMaster + Measure | `seq_beat`: 시퀀스 221에 BACK(그룹 4) 밝기 2스텝 페이저 큐 셋. Measure 1·2·0.5, 모두 `At SpeedMaster 15` | 시퀀스 221 이름·큐 저장 | `measure_1~3`에서 BACK이 1박(0.534초)·2박·반 박마다 한 번 깜빡이는지. 큐마다 8초 |
+| ③ 신규 모양 3개 | `seq_shape`: 시퀀스 222에 무빙(그룹 13) Pan 페이저 큐 다섯. 팬 웨이브(위상 0~360, 2박) · 엇갈린 팬 웨이브(ODD 그룹 17 위상 0 / EVEN 그룹 18 위상 180, 1박) · 가속 스윕(위상 0, 4·2·1박) | 시퀀스 222 이름·큐 저장 | `shape_1~5`에서 모양과 빠르기 |
+| ④ 타임코드 하나에 트랙 둘 | `tc_a`(타임코드 20 만들기, 이름, 시퀀스 220·221 배정) → 되읽기 → `tc_b`(CmdSubTrack 둘) → 되읽기 → `tc_c`(트랙마다 Go+ 이벤트 하나, 1초·2초) → `play` | 트랙이 2개인지, 각 트랙의 `NO`·`TARGET`, 서브트랙·이벤트 수, 재생 중 두 시퀀스 `CURRENTCUE`와 타임코드 `CURSOR`(6초 표본) | 1초에 장면, 2초에 박자가 들어오는지 |
+| ⑤ BACK 겹침 | 시퀀스 220이 BACK 30%(`seq_scene`), 시퀀스 221 큐 1이 BACK 펄스. 둘 다 ④의 타임코드로 시작 | — | 2초부터 펄스가 보이는지. `beat_off` 뒤 4초 동안 BACK이 30%로 돌아오는지 |
+
+이름(감독 규칙): 시퀀스 220·221·222와 타임코드 20 모두 `'RHYTHM PROBE - <항목>'`으로 붙인다.
+
+- 실제 이름: `OVERLAP SCENE` · `SPEEDMASTER MEASURE` · `NEW SHAPES` · `TWO TRACKS`.
+- 이름 줄 모양 `Set … Property 'Name' '…'`은 t513에서 실기로 확인한 것이다(`.moai/reports/t513/verdict.md` §7-2).
+
+안전 장치:
+
+- **빈 번호를 다시 읽는다.** 실행 시작에 220·221·222·TC20이 비었는지 다시 읽는다. 하나라도 있으면 아무것도 보내지 않고 멈춘다.
+- **트랙 번호를 다시 읽는다.** `tc_a` 뒤 트랙을 되읽어 두 트랙의 `NO`로 `tc_b`·`tc_c` 주소를 만든다. 예상(1·2)과 다르면 문면이 승인 파일과 달라져 게이트가 거절하고 멈춘다.
+- **이벤트는 확인 뒤에만 쓴다.** CmdSubTrack이 정확히 하나씩일 때만 이벤트를 쓴다. 이벤트가 하나씩일 때만 재생한다(t506 v3와 같은 방식).
+- **묶음은 모두 승인 대상이다.** 모든 묶음을 위험(`BatchRisk kind=t516_probe`)으로 선언했다. 게이트가 안전하다고 본 줄도 승인 없이는 나가지 않는다.
+- **쇼 저장은 보내지 않는다.** 실행 직전 백업(SaveShow)은 기록만 하고 보내지 않는다.
+
+## 2. 가짜 콘솔 리허설
+
+| 무엇 | 명령 | 관측 |
+|---|---|---|
+| 끝까지 진행 | `uv run python .moai/reports/t516/rhythm_probe.py .moai/reports/t516/rehearse --master 15 --master-props NAME,NORMEDVALUE,SPEEDSCALE --rehearse` | exit 0 · 묶음 20개 전부 진행 · 트랙 `NO 1→Sequence 220`·`NO 2→Sequence 221` · 서브트랙 각 1 · 이벤트 각 1 |
+| 승인 = 송신 | `uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t516/approval_rhythm_probe.txt .moai/reports/t516/rehearse/audit` | 송신 105줄 · sha256 같음 · 송신 안 됨 0 · 승인 안 됨 0 · **PASS** (`rehearse_approval_vs_sent.txt`) |
+| 게이트 분류 | `rehearse/steps.jsonl` 집계 | `rehearse_screen_reasons.txt`. `Store Sequence`·`Store Timecode`·`Store Type`·`Assign Sequence`는 금지 목록에 걸린다. `Go/Goto/Off`는 참조 명령으로 분류된다. `Master 3.15 At BPM`·`Set … Property`·`Attribute …`·`cd`·`Store Property`는 사유 0개다. 사유와 무관하게 묶음 단위 승인이 필요하다 |
+
+비교기의 양성 대조가 한 번 실제로 일어났다. 리허설을 같은 폴더에 두 번 돌리자 감사 로그에 210줄이 쌓였고, 비교기가 FAIL(송신 안 됨 105)을 냈다. 폴더를 지우고 다시 돌려서 위 PASS를 얻었다.
+
+가짜 콘솔은 번호 존재와 트랙 `NO`만 흉내 낸다. 페이저·마스터·재생의 의미는 증거가 아니다.
+
+## 3. 실기 읽기 (쓰기 0)
+
+| 무엇 | 명령 | 관측 |
+|---|---|---|
+| 풀·번호 | `uv run python .moai/reports/t513/probe_steps.py .moai/reports/t516/steps_run0.txt` | 시퀀스 1~15·210·219(`LOVE ATTACK - OLD APP`). 2쪽(`@17`)은 1999·2000이다. 타임코드는 1·2·7·8·9·19다. `Sequences/220`·`221`·`222`·`Timecodes/20` 모두 `path segment not found`. 그룹 1~18 이름이 대본 리그와 같다(BACK 4 · MOVER-ALL 13 · ODD 17 · EVEN 18) — `run0_readonly.txt`, `run0b_masters.txt` |
+| 스피드 마스터 | 같은 도구 `steps_run0b.txt` | `Masters/3/1~15` 이름 `Speed1~15`, `NORMEDVALUE 50`, `SPEEDSCALE 0`. `3/16` 이름 `BPM`, `NORMEDVALUE 51`. 속성 목록(`introspect`)에 BPM이나 속도 값 필드가 없다(`NORMEDVALUE` Int32만 있다) |
+| 전부-거절 | `uv run python .moai/reports/t516/rhythm_probe.py .moai/reports/t516/live_denyall --master 15 --master-props NAME,NORMEDVALUE,SPEEDSCALE` | preflight `responder_ok` · 승인 요청 20건 105줄, 승인 0. 감사 로그 `executed/props_query 1` · `rejected/t516_probe 20` · `executed/command 0`. SaveShow 0. 요청 문면이 리허설과 같다(`live==rehearsal True`) |
+
+## 4. 승인 요청
+
+- **승인 파일**: `.moai/reports/t516/approval_rhythm_probe.txt` — 105줄, 주석·빈 줄 0, sha256 `aa0157dded9013aa7ebc36ba52849342366ba1d2965bac512d5f693300af795e`. 묶음 20개를 순서대로 이은 것이다.
+- **실행 명령** (승인 뒤): `uv run python .moai/reports/t516/rhythm_probe.py .moai/reports/t516/live_write --master 15 --master-props NAME,NORMEDVALUE,SPEEDSCALE --approve .moai/reports/t516/live_denyall`
+- **송신 뒤 대조**: `uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t516/approval_rhythm_probe.txt .moai/reports/t516/live_write/audit`
+- 사람이 콘솔 앞에 있어야 한다. 실행은 약 1분 30초다. 재생 6초, 박자 끄기 뒤 4초, Measure 3 × 8초, 모양 5 × 8초.
+
+승인 전에 정할 것(리드·감독):
+
+1. **스피드 마스터 15의 BPM을 바꾸는 것.** 1~15가 모두 기본값(50)이라 어느 것이 쓰이는지 응답기로 가릴 수 없었다. 마지막 번호 15를 골랐다. 실행 뒤 112.35에 그대로 남는다. 되돌리는 줄은 넣지 않았다 — 원래 BPM 값을 읽을 수 없어서다.
+2. **쓰고 남는 것.** 시퀀스 220·221·222, 타임코드 20, 마스터 15의 BPM이 남는다. 지우지 않는다. 쇼 저장은 하지 않으므로 감독이 저장하지 않으면 다시 열 때 사라진다.
+3. **엇갈린 팬 웨이브의 그룹.** ODD 17·EVEN 18이 무빙만 담는지는 확인하지 않았다. 무빙이 아닌 기구는 Pan이 없어 영향이 없을 것으로 본다(추정).
+
+## 4-1. 실기 실행 (감독 승인 2026-10-06, 리드 경유) — 1회
+
+- 실행: `uv run python .moai/reports/t516/rhythm_probe.py .moai/reports/t516/live_write --master 15 --master-props NAME,NORMEDVALUE,SPEEDSCALE --approve .moai/reports/t516/live_denyall`
+  - exit 0, 12:53:53~12:55:16 KST(감사 로그 첫·끝 송신 시각).
+  - 승인 직전 확인: 승인 파일 sha256 `aa0157dd…` 그대로, 헤드 `982f63ed`.
+- 🔴 **실행 시점이 리드의 "감독 준비 완료" 신호보다 앞섰다.** 승인 메시지의 "감독이 지금 콘솔 앞에서 본다"를 준비 완료로 읽고, 볼 화면 안내를 보낸 직후 실행했다. 승인이 1회라 다시 돌리지 않았다. 감독이 화면을 봤는지는 리드에게 물었다.
+
+| 항목 | 기계 측정 | 결과 |
+|---|---|---|
+| 승인 = 송신 (AC-LDRHYTHM-012 방식) | `approval_vs_sent.py approval_rhythm_probe.txt live_write/audit` → 송신 105줄, sha256 같음, 송신 안 됨 0, 승인 안 됨 0, not-ok 0 (`live_write_approval_vs_sent.txt`) | **PASS** |
+| 승인 · 쇼 저장 | 승인 20/20 · SaveShow 송신 0(기록만 20) | 통과 |
+| ① 마스터 BPM | `Masters/3/15` `NORMEDVALUE` 50 → 69, 이름 `Speed15` 그대로. 응답기 속성에 BPM 값이 없다. **감독 관찰(2026-10-06, 리드 경유)**: 감독이 Speed15를 실행기에 걸어 확인했다. 표시는 「Speed15 / 112 *B」, 그 아래 「MST 112 B」 | 명령은 받아들여졌다. **표시 112(반올림 또는 절삭), 내부 값 미판별.** 소수 .35가 내부에 남아 있는지는 기계로도 화면으로도 가릴 수 없다 |
+| ④ 트랙 둘 | TC20/1 아래 Track 두 개: `NO 1 → Sequence 220`, `NO 2 → Sequence 221`. 두 번째 `Assign … At Timecode 20.1.2`가 새 트랙을 만들었다. CmdSubTrack 각 1, 이벤트 각 1 | **PASS** |
+| ④ 재생 | 0.4초 간격 표본: 220은 커서 1.00~1.40 사이, 221은 1.80~2.20 사이에 큐 1로 들어갔다(이벤트 1초·2초). `CURRENTCUE`는 `Sequence 220.1` / `221.1`로 읽혔다 | **PASS** (정밀도는 표본 간격 0.4초 한계) |
+| 되읽기 (`run1_after_readonly.txt`) | 추가: 시퀀스 220·221·222(이름 `RHYTHM PROBE - …`), 타임코드 20 `RHYTHM PROBE - TWO TRACKS`. 기존 시퀀스·타임코드 목록은 그대로(제거·이름 변경 0). 시퀀스 221 큐 `Measure 1`·`Measure 2`·**`Measure 05`**, 시퀀스 222 큐 5개 | 쓰기 범위 = 승인 범위 |
+| ②③⑤ | 기계 측정 없음 | **감독 관찰 대기** |
+
+새로 안 것:
+
+- **큐 이름에서 점이 빠진다.** `Store Sequence 221 Cue 3 'Measure 0.5'`가 `Measure 05`로 저장됐다. 점이 들어가는 이름은 피해야 한다(M2 대본 큐 이름 규칙에 반영할 것). `At Measure 0.5` 값 자체가 들어갔는지는 읽을 수 없다. Measure 구간 ③이 반 박에 한 번이었는지 감독 관찰로 판정한다.
+- `Off Sequence` 뒤에도 `CURRENTCUE`는 마지막 큐(221.3, 222.5)로 읽힌다. 꺼짐 여부의 계기로 쓸 수 없다.
+- 남은 것(감독이 알고 승인): 시퀀스 220~222, 타임코드 20, 마스터 15 BPM. 쇼는 저장하지 않았다.
+
+## 4-2. 다시 보기 재생 — 쓰기 없음 (리드 지시 2026-10-06, 실행 신호 대기)
+
+1회차 실행 시간에 감독이 화면을 보지 못했다(리드 확인). 리드 지시로 재생만 하는 판을 만들었다. 실행 신호는 리드가 "실행"이라고 쓴 메시지 하나뿐이다. 그 전에는 실기 승인 모드로 돌리지 않는다.
+
+- 스크립트: `replay_probe.py`. 1회차와 같은 순서·구간 길이에 구간 사이 2초를 둔다. 전체 약 1분 35초.
+- 1회차와 다른 점: 겹침 구간(⑤)을 타임코드 대신 `Goto Cue 1 Sequence 220/221`로 1초·2초에 연다.
+  - 1회차 뒤 타임코드 20의 커서가 10.00(끝)으로 읽혀서, `Go Timecode 20`이 0초부터 다시 도는지 확인되지 않았다.
+  - 트랙 둘(④)은 1회차에서 기계로 PASS했다.
+- 사전 판독: 220·221·222 이름이 `RHYTHM PROBE - …`가 아니면 아무것도 보내지 않고 멈춘다.
+
+| 단계 | 명령 | 관측 |
+|---|---|---|
+| 가짜 콘솔 | `uv run python .moai/reports/t516/replay_probe.py .moai/reports/t516/replay_rehearse --rehearse` → `replay_summary.py` | 묶음 15, 15줄 전부 진행. 금지 동사(Store·Set·Assign·Delete·ClearAll·Save·Copy·Move·Label·Edit) 0. 동사는 `Goto Cue`·`Master 3.15`·`Off Sequence`뿐 |
+| 실기 전부-거절 | `uv run python .moai/reports/t516/replay_probe.py .moai/reports/t516/replay_denyall` | 사전 판독 이름 셋 일치. 승인 요청 15건 15줄, 승인 0. 감사 로그 `kind: command` 0행, `rejected` 15. SaveShow 0 |
+| 승인 파일 | `write_replay_approval.py` | `approval_replay.txt` 15줄, 주석 0, sha256 `c694286e19c2b6619a3087a72e8f486e7e495a362f1d1fb4c49c47b557fc8a03`. 문면이 리허설과 같다 |
+
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/replay_probe.py .moai/reports/t516/replay_live --approve .moai/reports/t516/replay_denyall`
+- 송신 뒤 대조: `uv run python .moai/reports/t512/approval_vs_sent.py .moai/reports/t516/approval_replay.txt .moai/reports/t516/replay_live/audit`
+
+## 4-3. 다시 보기 결과 — 🔴 조명이 하나도 안 켜졌다 (감독 관찰, 리드 경유)
+
+- 다시 보기는 리드의 「실행」 뒤 1회 돌았다: 13:34:40~13:36:17 KST.
+  - 승인 = 송신 15줄 PASS, SaveShow 송신 0.
+- 그런데 감독이 본 무대에는 내내 조명이 하나도 켜지지 않았다.
+- 원인을 읽기만으로 좁혔다. 새 송신 0, 기록은 `diag1~5.txt`이고 요약 도구는 `show_reads.py`다.
+
+**잰 것**
+
+| 질문 | 읽은 것 | 관측 |
+|---|---|---|
+| ① 재생됐나 | `replay_live/steps.jsonl`, 시퀀스 `CURRENTCUE` | 송신 15줄 모두 detail `OK`. 재생 상태 표본은 없다. 지금 `CURRENTCUE` 220.1·221.3·222.5 — 1회차 끝과 같은 값이라 다시 보기의 Goto 효과는 이 값으로 못 가린다. 1회차에서는 221이 재생 중 `221.1` → 끝난 뒤 `221.3`, 222가 `222.5`로 바뀌었다. **Goto는 큐 포인터를 옮긴다**(1회차 기준) |
+| ② 큐에 값이 들어갔나 | 큐·Part의 자식과 속성(필드 3쪽), `MEMORYFOOTPRINT` | Part 자식은 0개다(219도 같다). 값을 세는 속성은 없다. `MEMORYFOOTPRINT` 비교는 아래와 같다 |
+| | | 빈 Part(OffCue·CueZero, 시퀀스 9·219·220 공통): **2,521B** |
+| | | 우리 큐 Part: **3,132~3,284B**(빈 것보다 611~763B 많다) |
+| | | 219 큐 Part: **14,092~20,384B** · 9번 T215 큐 Part: 6,316B |
+| ③ 그룹 | `Groups/4·13·17·18` | 이름은 BACK·MOVER-ALL·ODD·EVEN으로 맞다. 고정구 수는 응답기로 읽을 수 없다(`COUNT` 0 — 그룹은 늘 0) |
+| ④ 222 밝기 | 승인 파일 222 묶음 | Pan 줄 22, Dimmer 줄 **0** — 시퀀스 222는 밝기를 주지 않는다 |
+| ⑤ 출력 0 요인 | Masters, 시퀀스 설정 | Grand Master 100 · World 100 · Blind 100 · Selected Master 100. 220/221/222와 219의 PRIORITY(LTP)·PLAYBACKMASTER/SPEEDMASTER/RATEMASTER(None)·AUTOSTART/AUTOSTOP(true)·TRACKING·SOFTLTP·OFFWHENOVERRIDDEN은 모두 같다. 큐 TRIGTYPE만 다르다(우리 Go, 219 Time) |
+
+**추정**
+
+- 우리 큐에는 무언가 아주 조금 저장됐다. 내용은 읽을 수 없다.
+  - 값 줄은 「Group 4」와 「Attribute 'Dimmer' At 30」을 따로 보냈다. 룰북 `31_choreography_patterns.md:46-52`의 모양이다.
+  - 219(앱)와 t498은 「Fixture … ; Attribute …」 한 줄 모양이었다.
+  - 이 차이가 원인인지는 재지 않았다.
+- 222의 무빙은 밝기 0인 채 움직였을 가능성이 크다(리드 가설과 같다). 밝기 값 자체는 읽을 수 없다.
+- 무대 화면이나 onPC 출력 쪽 문제일 수도 있다. 219가 지금 켜지는지가 갈림길이다.
+
+**다음 프로브 제안(설계만, 리드에게 보냄)**
+
+- P1: 대조군 `Goto Cue 3 Sequence 219` 8초 → `Off Sequence 219`
+- P2: `Goto Cue 1 Sequence 220` 8초 → `Off Sequence 220`
+- P3: `Goto Cue 1 Sequence 221` 8초 → `Off Sequence 221`
+- 모두 쓰기 0이고, 리드의 「실행」 뒤에만 돌린다.
+
+## 4-4. 대조 P1~P3 접음, 프로브 v2 (리드 지시 2026-10-06)
+
+- 대조 재생 P1~P3는 `control_probe.py`로 만들었다. 가짜 콘솔과 전부-거절까지 했다(`approval_control.txt` 6줄).
+  - 처음 판에는 `Goto Cue 3 Sequence 219`라고 적었다. 상태 목록 순번을 큐 번호로 잘못 쓴 것이다. `Goto Cue 1`로 고쳐 다시 만들었다.
+- 그 사이 감독이 시퀀스 219를 콘솔에서 직접 켜 봤고, 켜졌다. 그래서 출력·화면은 정상이고, 원인은 우리 큐 내용이다. P1~P3는 접었다(실행 안 함).
+
+**v2 근거(잰 것)**
+
+- 실기에서 켜진 앱 송신 파일의 줄 모양(`line_shapes.txt`):
+
+| 파일 | 줄 수 | 선택 줄 혼자 | `Group ; Attribute` 한 줄 | `Fixture 목록 ; Attribute` 한 줄 | `Fixture 목록 ; At Preset` 한 줄 | `Attribute`로 시작하는 줄 |
+|---|---|---|---|---|---|---|
+| 219(앱, t513) | 210 | 0 | 110 | 33 | 19 | 0 |
+| t498 run6(앱) | 119 | 0 | 14 | 37 | 12 | 0 |
+| v1 승인 파일 | 105 | 11 | 0 | 0 | 0 | 35 |
+
+  - 단, 앱의 페이저 프리셋 경로(t513 `approve_A_stage1_phasers/approval_request_1.txt`, FXGEN)는 `Group 1`을 혼자 쓰고 `Attribute …` 줄을 잇는다. 이 경로는 FXGEN V1~V7에서 실기 관측으로 확인됐다. 그래서 "선택 줄 혼자"만으로 원인이 확정되지는 않는다.
+- 오늘 실기 패치 판독(`v2_slots_readonly.txt`, `v2_patch_readonly.txt`): 86대.
+  - BACK = 201~212(12대), MOVER-U = 501~508, MOVER-D = 521~528.
+  - 그룹 4·13·17·18의 구성원은 응답기로 읽을 수 없다. 그룹이 비었거나 다를 가능성은 남는다.
+- 빈 번호: 시퀀스 223~227, 타임코드 21 모두 `path segment not found`.
+
+**v2 설계(`rhythm_probe_v2.py`)**
+
+- BACK 30% A/B/C를 시퀀스 셋에 따로 저장한다. 트래킹 섞임이 없다.
+  - A(223): v1 두 줄 모양
+  - B(224): `Group 4 ; Attribute 'Dimmer' At 30`
+  - C(225): `Fixture 201 + … + 212 ; Attribute 'Dimmer' At 30`
+  - 재생은 A → B → C를 8초씩, 사이에 끄고 2초 쉰다.
+- 박자(226)·모양(227)·겹침 장면(=225)은 C 모양으로 저장한다(`Fixture 번호 목록 ; 값` 한 줄 뒤 페이저 줄).
+  - 무빙은 501~508·521~528이다. 엇갈린 웨이브의 ODD/EVEN은 그 16대의 홀·짝 순번이다(그룹 17/18 대신).
+  - 모양 큐마다 `Attribute 'Dimmer' At 70`을 같이 준다.
+- 큐 이름에 점을 쓰지 않는다: `Measure Half`.
+- 이름은 `RHYTHM PROBE v2 - …`이다. v1의 220~222·TC20은 손대지 않는다.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`v2_rehearse`) | 묶음 28개 끝까지 · 트랙 NO1→225·NO2→226 · 이벤트 각 1 |
+| 실기 전부-거절(`v2_denyall`) | 요청 28건, 승인 0 · 감사 로그 `kind: command` 0행, rejected 28 · 마스터 15 `NORMEDVALUE` 69 |
+| 승인 파일 | `approval_rhythm_probe_v2.txt` 119줄, 주석 0, sha256 `187417b118eb77f94f2b7bd30edec6147915467470f8e1d3e3d0c4716457ae89`, 문면 = 리허설 · 리허설 송신과 대조 PASS |
+| 줄 모양(`v2_line_shapes.txt`) | 선택 줄 혼자 1(A의 대조용) · `Group ;` 1(B) · `Fixture 목록 ;` 11 · `Attribute`로 시작하는 줄 31(페이저 단계·타이밍 줄) |
+
+- 남는 의심: 페이저 단계·타이밍 줄 31개는 앞줄의 선택을 이어받는다(FXGEN과 같은 방식).
+  - A가 꺼지고 B/C가 켜지는데 박자·모양 큐만 어두우면, 다음 의심은 이 줄들이다.
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v2.py .moai/reports/t516/v2_live --master 15 --approve .moai/reports/t516/v2_denyall`
+
+## 4-5. v2 실기 1회 결과와 읽기 진단 6~12
+
+- v2는 리드 "실행" 뒤 1회 돌렸다(커밋 `fdefdf82`): 승인 = 송신 119줄 PASS, A/B/C 큐 Part 크기 모두 3132B.
+- 감독 관찰(리드 경유, 원문): 「내가 본 건 227만 불이 켜졌다는 거야. 하지만 8대 조명장비만 불이 들어오고 어떤 변화도 없었어」.
+  - 223·224·225(BACK A/B/C)와 226(박자)은 보이지 않았다. 227은 16대 중 8대만 켜졌고 움직임은 없었다.
+  - 감독이 그룹 4가 뒤쪽 12대를 고르는 것을 확인했다. 그룹 구성원 문제는 아니다.
+- 읽기 진단(쓰기 0, `diag6.txt`~`diag12.txt`, 패치 표 `diag7_patch_table.txt`):
+  - 86대 모두 `VISIBLE3D` true, 패치 충돌 0, DMX 주소 겹침 0.
+  - Shutter 기본값은 Aura XB·Spiider·MegaPointe 모두 열림 범위다. 셔터는 원인이 아니다.
+  - 디머 채널 구성:
+
+| 역할 | 기종 | 디머(기본값) |
+|---|---|---|
+| BACK 201~212 | Aura XB | Aura_Dimmer 0, Main Module_Dimmer 0 |
+| MOVER-D 521~528 | Spiider | RGBW Cluster_Dimmer FF, Main Dimmer FF, Dimmer2 0 |
+| MOVER-U 501~508 | MegaPointe | 디머 1개, 기본값 0 |
+
+- 🔴 **가설(안 잰 것)**: 디머가 여러 개인 기종(Aura XB·Spiider)은 `Attribute 'Dimmer'` 한 줄로 전부 열리지 않을 수 있다. 「8대만 켜짐」과 BACK이 어두운 것을 설명할 수 있다. 측정한 적은 없고, v3 결과가 나온 뒤 별도 확인 항목으로 다룬다(리드 지시 2026-10-06).
+
+## 4-6. 프로브 v3 — 사다리 (감독 승인 2026-10-06, 실행 신호 대기)
+
+- 목적: 우리가 저장한 페이저가 실기에서 도는지, 어느 단계에서 끊기는지 가른다.
+- 대상은 디머가 하나인 무빙 MOVER-U 501~508만이다. 각 단계는 따로 시퀀스, 8초 켜고 끈 뒤 2초. 이름 `RHYTHM PROBE v3 - <단계>`.
+
+| 단계 | 시퀀스 | 내용 |
+|---|---|---|
+| L0 | 228 | Dimmer 100 정적(대조군) |
+| L1 | 229 | Dimmer 0 → `Step 2` → 100 → `At Phase 0` → `At Speed 112` |
+| L2 | 230 | L1에서 속도 줄만 `At SpeedMaster 15` |
+| L3 | 231 | L2 + `At Measure 2`(Measure → SpeedMaster 순서, `server/fx/instantiate.py` `_timing_lines`) |
+| L4 | 232 | Dimmer 70 + position_fx wave 줄: `At Preset 2.24`(Center) → Tilt `At Relative 12` → `At Phase 0 Thru 360` → `At Speed 112` |
+| L5 | 233 | L4에서 속도만 `At SpeedMaster 15` |
+
+- 페이저 줄 순서는 FXGEN 코드에서 옮긴 것이다. 실기에서 도는지는 이번 실행이 첫 측정이다.
+- 빈 번호 판독(`v3_slots_readonly.txt`): Sequence 228~233 모두 `path segment not found`.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`v3_rehearse`) | 묶음 18개 끝까지 |
+| 실기 전부-거절(`v3_denyall`) | 요청 18건, 승인 0, 감사 로그 executed 0행 · 요청 문면 = 리허설 True |
+| 승인 파일 | `approval_rhythm_probe_v3.txt` 69줄, sha256 `ab34e24d4c373c1ddbbf4fcbd4d47d058caf31b432b7092f62bd135a1e432b0c` · t512 대조(리허설 audit) PASS · SaveShow·Delete·Remove 0 |
+
+- 감독 승인 2026-10-06(리드 경유). 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v3.py .moai/reports/t516/v3_live --approve .moai/reports/t516/v3_denyall`
+
+## 4-7. v3 실기·다시 보기 결과 (감독 관찰, 리드 경유)
+
+- 실기 1회(`v3_live`, 커밋 `1cba53df`): 승인 = 송신 69줄 PASS, 228~233 저장·이름 확인, Part 2976~3388B, SaveShow 0.
+- 다시 보기 1회(`v3_replay_live`, 커밋 `dbda34f0`): Goto/Off 12줄, 승인 = 송신 PASS.
+- 감독 관찰(원문): 「L0~L2 잘됨. L3 깜박였지만 느리지 않음. L4,L5 틸트는 안되고 팬이 되었으나 수직이라 표시가 나지 않음」.
+
+해석(관찰 = 사람 눈, 기계 증거 없음):
+
+- 페이저 실행, `At Speed 112`, `At SpeedMaster 15` 결속(L2) 모두 보였다. v1/v2 의 「안 켜짐」은 페이저 문제가 아니라, 다중 디머 기구(Aura XB·Spiider)와 가시성 쪽으로 좁혀진다. **가설 유지, 미측정.**
+- 🔴 `At Measure 2` 는 속도를 바꾸지 않았다. 대본의 ½·1·2·4·8박 주기 표현에는 다른 수단이 필요하다.
+  - 공식 문서(Phasers): 「The optional Measure layer defines the number of beats in the repeating phaser loop」.
+  - 가설(안 잰 것): 2단계 페이저의 기본 루프가 이미 2박이라 Measure 2 가 아무것도 바꾸지 않았다. v4 B3/B4(Measure 4/1)로 가른다.
+- 🔴 position_fx wave 줄을 그대로 넣었는데 Tilt 가 아니라 Pan 이 움직였다. 기준 위치(Preset 2.24 Center)가 수직이라 Pan 회전이 보이지 않았다. 룰북 31:66-73 과 33 의 'live-validated' 주장과 다른 결과다.
+  - 프리셋 2.24 내용은 응답기로 읽을 수 없다(`childCount 0`). 프리셋 안에 Pan 페이저가 있을 가능성은 남는다. v4 A 는 프리셋을 쓰지 않는다.
+
+## 4-8. 프로브 v4 설계 (승인 요청, 실행 신호 대기)
+
+- 실기 판독(쓰기 0, `v4_reads1.txt`·`v4_reads2.txt`): Sequence 234~244 모두 `path segment not found`. Fixture 201 아래 SubFixture 1개(`[Instance2#2]`, SUBFIXTUREINDEX 71). 무빙 501 은 SubFixture 0개.
+
+| 묶음 | 시퀀스 | 내용 | 무엇을 가르나 |
+|---|---|---|---|
+| A0 | 234 | Dimmer 70 + `Attribute 'Tilt' At 45` (정적) | 기준이 수직이 아닌지 |
+| A1 | 235 | A0 + `Pan At Relative 30` → Phase 0 Thru 360 → Speed 112 (룰북 모양) | Pan 이 움직이나 |
+| A2 | 236 | 같은 모양을 Tilt 로 | Tilt 가 움직이나 |
+| A3 | 237 | Tilt 2단계(Relative -30 → `Step 2` → Relative 30) | 단계 수가 축을 가르나 |
+| 기준 | 229 | v3 L1 재생만(Goto/Off) | B 비교 기준 |
+| B1 | 238 | Dimmer 2단계 + `At Speed 56` | 절반 빠르기 |
+| B2 | 239 | `At Speed 224` | 두 배 |
+| B3 | 240 | `At Measure 4` + `At SpeedMaster 15` | 마스터 따라가며 느리게 |
+| B4 | 241 | `At Measure 1` + `At SpeedMaster 15` | 마스터 따라가며 빠르게 |
+| D1 | 242 | `Fixture 201 ; Attribute 'Dimmer' At 30` | v2 에서 어두웠던 모양(대조) |
+| D2 | 243 | `Fixture 201.1 ; Attribute 'Dimmer' At 30` | 서브픽스처 디머 |
+| D3 | 244 | 201 과 201.1 둘 다 30 | 두 디머 모두 |
+
+- 제외한 후보: 다른 스피드 마스터에 56.175 BPM. 이미 있는 전역 마스터 값을 바꾸는 쓰기라 「새 번호만」 밖이다. Speed Scale(마스터 배수)은 문서에 있으나 명령줄 문법이 문서에 없다.
+- `Tilt At 45` 의 단위(퍼센트인지 각도인지)는 안 잰 것이다. 룰북 31:37 은 퍼센트라고 적는다.
+- `Fixture 201.1` 이 Aura 쪽인지 Main Module 쪽인지는 안 잰 것이다. D 묶음은 거절돼도 멈추지 않는다.
+
+| 단계 | 결과 |
+|---|---|
+| 가짜 콘솔(`v4_rehearse`) | 묶음 35개 끝까지 |
+| 실기 전부-거절(`v4_denyall`) | rejected 35, executed 0 · 요청 문면 = 리허설 True |
+| 승인 파일 | `approval_rhythm_probe_v4.txt` 124줄, sha256 `3ccc02344e36df2569ab58635fc31c37e60b5222e049d6131ad7cfca12037ef8` · t512 대조(리허설) PASS · Save/Delete/Remove/Master 0 · 229 는 Goto/Off 2줄뿐 |
+
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v4.py .moai/reports/t516/v4_live --approve .moai/reports/t516/v4_denyall`
+
+## 4-9. v4 보류 — 바닥 기구 판독 (감독 요청, 쓰기 0)
+
+- 감독 요청(원문, 리드 경유): 「시작하기 전에 바닥에 있는 조명장비는 위를 볼 수 있도록 해줘. 바닥 아래로 향하고 있어서 빛을 볼 수가 없어」.
+- 판독(`floor_reads.py` → `v4f_floor.txt`, `v4f_floor2.txt`, `v4f_floor3.txt`, 86대 높이 묶음은 `diag7_patch.txt`):
+
+| 역할 | FID | 유형 | 높이 POSZ | 회전 ROTX/Y/Z | Pan/Tilt |
+|---|---|---|---|---|---|
+| WASH-U | 401~410 | Martin Rush Par 2 RGBW Zoom(유형 9), 모드 `9 channel` | 0.3 | 0/0/0 | 없음 — 채널 Dimmer·Shutter1·RGBW·COLORMIXER·Zoom |
+| WASH-D | 421~430 | 같음 | 0.3 | 0/0/0 | 없음 |
+| HAZE | 621·622 | 유형 15 | 0.2 | — | — |
+| SIDE-L/R | 301~306·311~316 | Aura XB(유형 8) | 1.2·2.6·4.0 | 0/0/0 | 있음 |
+| MOVER-U | 501~508 | MegaPointe(유형 11) | 6.8 | 0/0/0 | 있음 |
+| MOVER-D | 521~528 | Spiider(유형 4) | 6.8 | 0/0/0 | 있음 |
+| BACK | 201~212 | Aura XB(유형 8) | 6.2 | 0/0/0 | 있음 |
+
+- 결론(잰 것): 바닥 기구는 WASH-U/D 20대다. v4 시험 대상(501~508·201)은 바닥이 아니라 높이 6.2~6.8에 걸려 있다. 바닥 워시는 Pan/Tilt 채널이 없어 Tilt 값으로 위를 보게 할 수 없다.
+- 위를 보게 하는 유일한 수단은 패치의 3D 회전(ROTX 등)을 바꾸는 것이다. 기존 패치 객체 20개를 고치는 쓰기라 「새 번호만」 밖이고, 감독 결정이 필요하다. 회전 0 이 3D 화면에서 아래를 향한다는 것은 감독 관찰과 맞지만, 기계로는 안 잰 것이다.
+- v4 승인 파일(`approval_rhythm_probe_v4.txt`, sha256 `3ccc0234…`)은 바꾸지 않았다.
+
+## 4-10. 바닥 워시 3D 회전 — 천정 방향 (감독 결정, 승인 요청)
+
+- 감독 결정(리드 경유): 「(바닥 워시 20대를) 천정방향으로 돌려줘」.
+- 문서 근거:
+  - [Position Fixtures in the 3D Space](https://help.malighting.com/grandMA3/2.0/HTML/patch_position_fixtures.html): 「Rot X: rotating the fixture around the fixture's own X-axis. A positive value is rotating the top of the fixture towards downstage.」 / 「New fixtures are always added in the zero point location and with the zero rotation.」
+  - [3D Fixture Setup](https://help.malighting.com/grandMA3/2.0/HTML/qsg_3d_setup.html): 「the fixture's insert point is usually its hanging point」 — 회전 0 은 매달린 자세다.
+  - [Set Keyword](https://help.malighting.com/grandMA3/2.4/HTML/keyword_set.html): `Set [Object_Type] [Number] Property ["Name"] ["Value"]`. Fixture 예시는 없다.
+- 명령 형태: 이 저장소가 실기에서 잰 좌표 쓰기 `Set Fixture <fid> Posx '<v>'`(`server/orchestrator/tools.py:1773-1781`, 룰북 `32_spatial_design.md:123-127`)에서 축 이름만 `Rotx` 로 바꾼다. 값은 작은따옴표로 싼다.
+- 축과 각도: 회전 0 은 매달린 자세(빔이 아래)다. 문서와 감독 관찰이 같다. X 축 180° 로 뒤집으면 빔이 위를 본다. **추론이고 안 잰 것**이라 두 단계로 나눴다.
+  - 1단계: 401 한 대만 바꾼다. 감독이 3D 화면에서 본다.
+  - 2단계: 나머지 19대를 바꾼다. 1단계를 확인한 뒤에만.
+- `Rotx` 축 이름을 콘솔이 받는지는 안 잰 것이다. 실행하면 바로 ROTX 를 되읽어 판정한다. 받지 않거나 엉뚱한 값이 저장되면 되읽기에서 드러난다.
+- 지금 값(실기 판독, `rot1_denyall`·`rot2_denyall` 의 pre): 20대 모두 ROTX/ROTY/ROTZ = 0.0/0.0/0.0.
+
+| 파일 | 줄 | sha256 | 내용 |
+|---|---|---|---|
+| `approval_floor_rot1.txt` | 1 | `f5f4aa9877f3c48fd9adf6cf4304ebabfd510da16a42c55e1d239526a3fbeb6c` | `Set Fixture 401 Rotx '180'` |
+| `approval_floor_rot1_revert.txt` | 1 | `d838bb1da6edf06829a120420993dbbfcf5f2f8cd3c96056733736852ff0c0aa` | `Set Fixture 401 Rotx '0'` |
+| `approval_floor_rot2.txt` | 19 | `b2fad0dfe95c4197f1597c7d05d20083908aa09859861102e7628229591ca3f5` | 402~410·421~430 `Rotx '180'` |
+| `approval_floor_rot2_revert.txt` | 19 | `87d3ea72c73566fe08af3b7593151c911f615b89038e7d7ecf072e112bddadaa` | 같은 19대 `Rotx '0'` |
+
+- 리허설은 네 파일 모두 했다. 전부-거절 실기는 돌리기 두 파일만 했다: rejected 각 1묶음, 콘솔 쓰기 0, 감사 로그 executed 는 회전 읽기 20행뿐, 요청 문면 = 리허설 True.
+- 되돌리기 파일은 실기 전부-거절을 돌릴 수 없다. 사전 판독이 ROTX 180 을 요구하는데 지금 값이 0 이라 송신 전에 멈춘다. 그래서 문면은 리허설에서 땄다. 실행할 때 사전 판독이 180 이 아니면 멈춘다.
+- 모든 파일의 모든 줄은 `Set Fixture <401~410|421~430> Rotx '180|0'` 꼴이다(정규식 밖 0줄). 쇼 저장 없음. 감독이 저장한다.
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/floor_rotate.py .moai/reports/t516/rot1_live --stage 1 --approve .moai/reports/t516/rot1_denyall`
+
+## 4-11. 회전 1단계 결과와 1b·2단계(바닥에 내려놓기)
+
+- 1단계 실기(`rot1_live`, 리드 "실행"): 401 ROTX 0 → `179.99999860565`, ROTY·ROTZ 0. t512 대조 PASS, SaveShow 0. 콘솔이 `Rotx` 축을 받는다는 것은 이로써 쟀다.
+- 감독 관찰(원문): 「위를 보고 있는데 바닥에 붙어있지 않아」.
+- 계산 근거(실기 판독 `rot1b_reads1~4.txt`):
+  - 401 지금: POSX -5.0, POSY 5.2, POSZ 0.3, ROTX 180.
+  - 유형 9 Body 모델: HEIGHT 0.293 m(LENGTH 0.260, WIDTH 0.293), 메시 `MESH/gdtf_generic/conventional.3ds`.
+  - Body 지오메트리 위치 0/0/0, 그 아래 빔 `Main Module` POSZ -0.2783 m. 몸체가 원점에서 아래로 걸린다. 원점은 몸체 꼭대기, 곧 매다는 지점이다(문서 「insert point is usually its hanging point」와 같다).
+  - Stage 1 POSZ 0.
+  - 계산: X 축 180° 뒤집은 뒤 몸체는 [Posz, Posz + 0.293] 에 있다. 지금은 [0.3, 0.593] 이라 0.3 m 떠 있다. 바닥(Z 0)에 닿는 값은 **Posz = 0** 이다. 몸체 높이는 바닥 접촉값에 들어가지 않고, 꼭대기가 0.293 에 온다는 것만 정한다.
+  - 「바닥 = Z 0」 과 「모델 원점 = 몸체 꼭대기」 는 판독값에서 낸 추론이다. 감독이 3D 에서 본다.
+- 명령 꼴: `Set Fixture <fid> Posz '<v>'`(`tools.py:1773-1781` 실기 측정, 작은따옴표 필수)와 1단계에서 잰 `Set Fixture <fid> Rotx '<v>'`.
+
+| 파일 | 줄 | sha256 | 내용 |
+|---|---|---|---|
+| `approval_floor_1b.txt` | 1 | `9077c5166d2586125a674be9b52653d01d6e1a63354ffb7afe034ae84230fae5` | `Set Fixture 401 Posz '0'` |
+| `approval_floor_1b_revert.txt` | 1 | `f6a6ad988b4d62a92715fc95d0f34adaf34ff32950da9cf710038796a725d6ae` | `Set Fixture 401 Posz '0.3'` |
+| `approval_floor_2.txt` | 38 | `5cac556f477c150c346a0d8ad77b683117b975ac62499dceb830ad38234c564d` | 402~410·421~430 마다 `Rotx '180'` + `Posz '0'` |
+| `approval_floor_2_revert.txt` | 38 | `a718268b9c52462e49f8e6c13b80d17f15ae2f151393d5bc848264d39aea00a8` | 같은 19대 `Rotx '0'` + `Posz '0.3'` |
+
+- 이 표의 2단계 파일이 4-10 의 `approval_floor_rot2.txt`(회전만)를 대신한다. `approval_floor_rot2*.txt` 는 쓰지 않는다.
+- 실행기 `floor_place.py` 는 사전 판독이 기대값과 다르면 보내지 않는다. 1b 는 ROTX 180·POSZ 0.3, 2 는 0/0/0·POSZ 0.3 을 요구한다. 사후에는 ROTX·POSZ 를 되읽어 판정한다(허용 오차 1e-3).
+- 리허설은 네 파일 모두 했다. 전부-거절 실기는 1b·2 만 했다: rejected 1묶음씩, 콘솔 쓰기 0, executed 는 회전·높이 읽기 20행뿐, 요청 문면 = 리허설 True. 1b 사전 판독은 401 POSZ 0.3·ROTX 180 을 통과했다.
+- 되돌리기 두 파일은 전부-거절을 돌릴 수 없다(사전 기대값이 실행 뒤 상태다). 문면은 리허설에서 땄다.
+- 모든 줄이 `Set Fixture <401~410|421~430> (Rotx '180|0' | Posz '0|0.3')` 꼴이다(밖 0줄). 2단계 파일에 401 은 0줄이다. 쇼 저장 없음.
+- 401 을 처음 상태로 완전히 되돌리려면 1b 되돌리기 뒤에 1단계 되돌리기(`approval_floor_rot1_revert.txt`)를 차례로 돌린다.
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/floor_place.py .moai/reports/t516/p1b_live --stage 1b --approve .moai/reports/t516/p1b_denyall`
+
+## 4-12. 바닥 워시 1b·2단계 결과와 v4 실기·다시 보기
+
+- 1b(`p1b_live`): 401 POSZ 0.3 → 0.0, ROTX 180 유지. 감독 「(401) 바닥에 붙었어, 나머지도 해줘」.
+- 2단계(`p2_live`): 19대 ROTX 0 → 179.99999860565, POSZ 0.3 → 0.0, ROTY·ROTZ 0. 되읽기 일치, t512 PASS(38줄). 쇼는 감독이 저장했다(「쇼 저장했어」).
+- v4 실기(`v4_live`): 승인 = 송신 124줄 PASS, 35묶음 executed. `Fixture 201.1 ;` 서브픽스처 문법을 콘솔이 받았다(D2 저장 executed). 큐 크기: A0 3432 · A1 3216 · A2 3216 · A3 3552 · B1 3016 · B2 3016 · B3 3064 · B4 3060 · D1 2672 · D2 2704 · D3 2684.
+- v4 다시 보기(`v4_replay_live`): Goto/Off 24줄 PASS, 이름 사전 판독 12/12.
+- 감독 관찰(원문): 「235 좌우로 흔들리는 걸 확인 못했어. 수직으로 있어서 좌우 흔들림이 안 보인 것일 수도 있어. 틸트가 조금 되어있으면 확실하게 보일거야. 그리고 242~244까지 조명 켜진거 없어.」 · 「나머지는 모두 확인했어」(리드 정리: 234 켜짐, 236·237 Tilt 움직임, 238 느림·239 빠름·240 느림·241 빠름).
+- 판정(사람 눈 기준):
+  - Tilt 페이저 OK.
+  - `At Speed 56/224` 로 박 길이 조절 OK.
+  - `At Measure 4/1` + `At SpeedMaster 15` 로도 박 길이 조절 OK. v3 L3 의 Measure 2 무변화는 「2단계 페이저의 기본 루프가 이미 2박」 가설과 맞는다.
+  - 미해결 ①: Pan 흔들림이 수직 기준이라 안 보인다. 기준 Tilt 45 가 페이저 큐에 안 들어갔다(A1/A2 크기 216B 감소와 맞음).
+  - 미해결 ②: Aura XB 201 이 서브픽스처까지 Dimmer 30 을 줘도 안 켜진다.
+
+## 4-13. v5 — 미해결 둘만 가르는 최소 시험 (승인 요청, 실행 신호 대기)
+
+- ① 근거: [Programmer Layers](https://help.malighting.com/grandMA3/2.2/HTML/fixture-sheet-dmx-layer.html) 와 검색 요약 「An absolute value can be affected by a value in the Relative layer」. absolute·relative 는 따로 있는 층이다. [Relative Keyword](https://help.malighting.com/grandMA3/2.0/HTML/keyword_relative.html) 는 relative 가 기존 absolute 를 어떻게 하는지 적지 않는다. 「relative 가 absolute 를 지운다」는 문서 근거가 없고, 왜 빠지는지는 안 잰 것이다.
+- ② 실기 판독(`v5_reads1.txt`·`v5_reads2.txt`, 쓰기 0):
+
+| 기종·채널 | DEFAULT |
+|---|---|
+| Aura XB Aura_Dimmer / Main Module_Dimmer | `<000000>` / `<000000>` |
+| Aura XB Aura_ColorRGB_R·G·B / Main Module_ColorRGB_R·G·B | `<FFFFFF>` 모두 |
+| Aura XB Aura_COLORMIXER / Main Module_COLORMIXER | `<000000>` / `<000000>` |
+| Rush Par 2 Dimmer / Shutter1 | `<000000>` / `<0C0C0C>` |
+| Rush Par 2 ColorRGB_R·G·B / W / COLORMIXER | `<FFFFFF>` / `<000000>` / `<000000>` |
+
+  - 「색이 0 이라 검정」 가설은 RGB 로는 맞지 않는다(RGB 기본값 최대).
+  - 앱 Seq 219 는 BACK(201~212 포함 목록)에 `Attribute 'ColorRGB_R' At 5 ; … 'ColorRGB_G' At 20 ; … 'ColorRGB_B' At 100` 같은 색 줄과 `Group 4 ; Attribute 'Dimmer' At 24/72` 를 준다(t513 approve 파일 grep). BACK 이 219 에서 켜졌다는 기록은 없다.
+
+| 시퀀스 | 단계 | 내용 |
+|---|---|---|
+| 245 | E0 | 무빙 501~508 Dimmer 70 + Tilt 45 정적 — 「기울었나」 |
+| 246 | E1 | Pan 2단계 절대값 페이저. 단계마다 Dimmer 70 · Pan -30/30 · Tilt 45 · Speed 56 |
+| 247 | E2 | Pan 2단계 상대값 페이저만. 재생 때 245 를 켜 둔 채 겹친다 |
+| 248 | F1 | 201·201.1·301·301.1 각각 Dimmer 100 |
+| 249 | F2 | F1 + ColorRGB_R/G/B 100 (219 꼴) |
+
+- E1 은 처음 판에서 Dimmer 70 을 단계 앞에 따로 두었다. 그러면 1단계에만 들어가 디머도 단계마다 바뀔 수 있어, 두 단계 줄 안에 Dimmer 70 을 넣도록 고쳐 다시 만들었다(첫 판 승인 파일 sha256 `772eaa38…` 은 폐기, 보내지 않음).
+- 결과: 가짜 콘솔 17묶음 끝까지 · 실기 전부-거절 rejected 17, executed 0 · 요청 문면 = 리허설 True · t512 대조(리허설) PASS · Save/Delete/Remove/Master 0줄.
+- 승인 파일: `approval_rhythm_probe_v5.txt` 57줄, sha256 `cea4f772b698a6a9e5b236bd1b3e779e3fda2cbd6e3e6f8925c7176e26ffc9c4`.
+- 실행(리드 "실행" 뒤에만): `uv run python .moai/reports/t516/rhythm_probe_v5.py .moai/reports/t516/v5_live --approve .moai/reports/t516/v5_denyall`
+
+## 4-14. v5 실기·다시 보기·245 한 번 더
+
+- v5 실기(`v5_live`, 리드 "실행"): 승인 = 송신 57줄 PASS, 17묶음 executed, SaveShow 0. 큐 크기: 245 3432(v4 A0 과 같음) · 246 3588 · 247 3348 · 248 2784 · 249 3140.
+- v5 다시 보기(`v5_replay_live`, 리드 "실행"): Goto/Off 12줄 PASS, 이름 사전 판독 5/5.
+- 245 한 번 더(`r245_live`): `approval_replay_245.txt` 2줄(`Goto Cue 1 Sequence 245` / `Off Sequence 245`, sha256 `3ead9b632ccb278fb2c3dff1cedc761a1292d85876a8794255034fbad80f04e5`), 3초 여유 · 15초 유지. 리드가 「정확히 이 2줄 · 이름 일치 · 전부-거절로 문면 확인」을 조건으로 미리 실행 신호를 줬다. 세 조건을 확인하고 「지금 시작」을 보낸 뒤 돌렸다. 승인 = 송신 PASS, SaveShow 0.
+- 감독 관찰(원문): 「245 기울어져 있어」 → E0 기준 Tilt 45 가 적용됐다(크기 3432B 는 v4 A0 과 같다). 단, Tilt 45 의 단위(퍼센트·각도)는 여전히 안 잰 것이다.
+- 감독 관찰(원문): 「246,247 좌우로 흔들렸어」 → 기울어진 기준 위에서 Pan 흔들림이 두 방식 모두 보였다.
+  - E1(246): Pan 2단계 **절대값** 페이저에 단계마다 Tilt 45 를 함께 넣는 방식.
+  - E2(247): 245(Tilt 45 기준)를 켜 둔 채 Pan 2단계 **상대값** 페이저를 다른 시퀀스로 겹치는 방식.
+  - 그래서 대본에서 기울인 자리의 Pan 흔들림은 둘 중 어느 쪽으로든 낼 수 있다. v4 A1 처럼 기준값과 상대값 한 단계를 한 큐에 넣는 꼴은 기준 Tilt 가 빠졌다(크기 216B 감소, 감독 「수직으로 있어서」). 왜 빠지는지는 안 잰 것이다.
+- 감독 관찰(원문): 「248,249 켜졌는데 역광은 아니고 301도 켜졌어」.
+  - 리드 정리: SIDE-L 301(Aura XB, 높이 1.2)은 Dimmer 100 만으로도 켜졌고(F1), RGB 를 더해도 켜졌다(F2). BACK 201(Aura XB, 높이 6.2)은 F1·F2 모두 안 보였다.
+  - 그래서 BACK 무점등은 기종·디머·색 문제가 아니라 BACK 자리의 문제(방향·가시성)로 좁혀진다. 원인은 안 잰 것이다. 다음 확인은 별도 카드다.
+
+## 4-15. 잔류 객체와 저장소 오류 기록
+
+**콘솔에 남은 것**(감독이 쇼를 저장했으므로 쇼 파일에도 남는다. 지울지는 리드·감독 결정):
+
+| 객체 | 만든 판 | 이름 |
+|---|---|---|
+| Sequence 220~222 | v1 | `RHYTHM PROBE - …` |
+| Timecode 20 | v1 | 트랙 2(220·221) |
+| Sequence 223~227 | v2 | `RHYTHM PROBE v2 - …` |
+| Timecode 21 | v2 | `RHYTHM PROBE v2 - TWO TRACKS`(225·226) |
+| Sequence 228~233 | v3 | `RHYTHM PROBE v3 - …` |
+| Sequence 234~244 | v4 | `RHYTHM PROBE v4 - …` |
+| Sequence 245~249 | v5 | `RHYTHM PROBE v5 - …` |
+| 스피드 마스터 15(`Masters/3/15`) | v1 · v2 | `At BPM 112.35` — 표시 112. 원래 BPM 은 읽을 수 없어 되돌리는 줄이 없다 |
+| 바닥 워시 401~410·421~430 패치 | 회전 1·1b·2단계 | ROTX 180 · POSZ 0(원래 0 · 0.3). 되돌리기 파일 `approval_floor_1b_revert.txt`·`approval_floor_rot1_revert.txt`·`approval_floor_2_revert.txt` |
+
+**저장소 오류 기록(관찰, 고치지 않음 — 이 카드 범위 밖)**:
+
+- `server/spatial/position_fx.py:16-24` 는 base effect(`circle`·`ballyhoo`·`wave`)를 「기준 프리셋 호출 → 그 위에 상대값 페이저」로 만들고, 그 근거를 룰북 `31_choreography_patterns.md` V2 와 운용자 확인(「validated grammar」)으로 적는다. `wave` 가 내는 줄은 `Fixture … ; At Preset 2.<n>` → `Attribute 'Tilt' At Relative 12`(`_WAVE_RELATIVE_TILT`, :89) → `Attribute 'Tilt' At Phase 0 Thru 360`(:107) → `Attribute 'Tilt' At Speed <bpm>` 이다.
+- v3 L4·L5(232·233)는 이 줄을 그대로 보냈다(승인 = 송신 PASS). 감독 관찰(원문): 「L4,L5 틸트는 안되고 팬이 되었으나 수직이라 표시가 나지 않음」 — **Tilt 가 아니라 Pan 이 움직였다.**
+- 프리셋 2.24 내용은 응답기로 읽을 수 없다(`childCount 0`). 프리셋 안에 Pan 페이저가 있을 가능성은 남는다. 확인되기 전까지 이 모양의 'live-validated' 표기는 믿지 않는다.
+
+## 5. 안 잰 것
+
+- ①의 소수 BPM은 기계로 확인할 수 없다. `NORMEDVALUE`가 정수라서다. 사람이 마스터 표시를 본다.
+- ②·③·⑤는 사람 눈으로만 판정한다. 영상이 있으면 더 좋다.
+- `Goto Cue <k> Sequence <n>`은 룰북 문법표(`server/rulebook/assets/v2.4.2/00_grammar.md:48`)에 있지만, 이 저장소의 송신 기록에는 없다.
+- `Store Timecode 20.1`(트랙 그룹 만들기)은 t506 1회차 PREP 모양이다. v3는 잔여물을 썼으므로 두 번째 실기 사용이다.
+- 상대(`At Relative`) Pan 페이저의 기준 위치는 지금 무빙이 가리키는 곳이다. 기준 프리셋을 따로 부르지 않는다.
+
+## 6. 잔여 위험
+
+- 트랙 번호가 1·2가 아니면(예: 둘째 `Assign`이 새 트랙이 아니라 첫 트랙을 바꾸면) `tc_b`가 거절되고 멈춘다. 이것 자체가 ④의 답(트랙 둘이 안 됨)이 된다. 이미 만든 220~222·TC20은 남는다.
+- `Master 3.15 At BPM 112.35`가 실패해도 다음 묶음은 계속 간다. 그때 ②·③은 마스터 15의 지금 속도로 돈다.

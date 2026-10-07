@@ -1,0 +1,5 @@
+{"ts": "2026-10-07T05:13:19.416110+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/245 NAME", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-07T05:13:22.483051+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 245"], "held": ["Goto Cue 1 Sequence 245"], "kind": "t516_replay_v5"}
+{"ts": "2026-10-07T05:13:22.549486+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 245", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-07T05:13:37.616084+00:00", "event": "approved", "commands": ["Off Sequence 245"], "held": ["Off Sequence 245"], "kind": "t516_replay_v5"}
+{"ts": "2026-10-07T05:13:37.682209+00:00", "event": "executed", "command": "Off Sequence 245", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

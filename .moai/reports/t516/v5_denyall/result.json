@@ -1,0 +1,218 @@
+{
+  "bundles": {
+    "store_245": false,
+    "store_246": false,
+    "store_247": false,
+    "store_248": false,
+    "store_249": false,
+    "on_245": false,
+    "off_245": false,
+    "on_246": false,
+    "off_246": false,
+    "base_245": false,
+    "on_247": false,
+    "off_247": false,
+    "base_off_245": false,
+    "on_248": false,
+    "off_248": false,
+    "on_249": false,
+    "off_249": false
+  },
+  "marks": [
+    {
+      "label": "on_245",
+      "t": 0.07
+    },
+    {
+      "label": "off_245",
+      "t": 0.13
+    },
+    {
+      "label": "on_246",
+      "t": 0.2
+    },
+    {
+      "label": "off_246",
+      "t": 0.27
+    },
+    {
+      "label": "base_245",
+      "t": 0.33
+    },
+    {
+      "label": "on_247",
+      "t": 0.4
+    },
+    {
+      "label": "off_247",
+      "t": 0.47
+    },
+    {
+      "label": "base_off_245",
+      "t": 0.53
+    },
+    {
+      "label": "on_248",
+      "t": 0.6
+    },
+    {
+      "label": "off_248",
+      "t": 0.67
+    },
+    {
+      "label": "on_249",
+      "t": 0.73
+    },
+    {
+      "label": "off_249",
+      "t": 0.8
+    }
+  ],
+  "verdict": "deny-all: approval texts recorded",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Store Sequence 245 Cue 1 'E0 Base Tilt 45'",
+        "ClearAll",
+        "Set Sequence 245 Property 'Name' 'RHYTHM PROBE v5 - E0 BASE TILT 45'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70 ; Attribute 'Pan' At -30 ; Attribute 'Tilt' At 45",
+        "Step 2",
+        "Attribute 'Dimmer' At 70 ; Attribute 'Pan' At 30 ; Attribute 'Tilt' At 45",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 246 Cue 1 'E1 Pan Absolute Steps Tilt 45'",
+        "ClearAll",
+        "Set Sequence 246 Property 'Name' 'RHYTHM PROBE v5 - E1 PAN ABSOLUTE STEPS TILT 45'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 247 Cue 1 'E2 Pan Relative Steps Only'",
+        "ClearAll",
+        "Set Sequence 247 Property 'Name' 'RHYTHM PROBE v5 - E2 PAN RELATIVE STEPS ONLY'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 100",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 100",
+        "Fixture 301 ; Attribute 'Dimmer' At 100",
+        "Fixture 301.1 ; Attribute 'Dimmer' At 100",
+        "Store Sequence 248 Cue 1 'F1 Aura Dimmer 100'",
+        "ClearAll",
+        "Set Sequence 248 Property 'Name' 'RHYTHM PROBE v5 - F1 AURA DIMMER 100'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 201 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100",
+        "Fixture 201.1 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100",
+        "Fixture 301 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100",
+        "Fixture 301.1 ; Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100",
+        "Store Sequence 249 Cue 1 'F2 Aura Dimmer 100 Rgb 100'",
+        "ClearAll",
+        "Set Sequence 249 Property 'Name' 'RHYTHM PROBE v5 - F2 AURA DIMMER 100 RGB 100'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 246"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 246"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 247"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 247"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 245"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 248"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 248"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 249"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 249"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}
