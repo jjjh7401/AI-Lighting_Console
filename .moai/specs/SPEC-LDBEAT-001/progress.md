@@ -17,6 +17,38 @@
 
 _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
 
+### M1 — 콘솔 확인 프로브 + 응답기 나눠 읽기 (카드 t531, lane-3, 브랜치 `WT-ldbeat-m1`)
+
+기준 `b52512ee`(origin/main, ed740c12 이후). 측정일 2026-10-10. 실기 쓰기 0건.
+
+**응답기 1.6.6 (REQ-LDBEAT-002(c), AC-LDBEAT-009(b))**
+
+- `82d2b877` — `props <id> <Name> <path> offset=<n>` 엔트리 단위 나눠 읽기. 응답 전체가 `max_payload`(1900) 안에 들도록 엔트리를 담고 `offset`·`total`·`truncated` 를 붙인다. 토큰 없는 요청은 1.6.5 와 바이트 동일.
+- `fef93ed6` — `EXPECTED_RESPONDER_VERSION` 1.6.5→1.6.6, console/lua 지문 재고정.
+- 오프라인 증거: `uv run --quiet pytest server/ -q` → `14555 passed, 35 skipped` @ `fef93ed6` (`.moai/state/verify/t531/full_suite_fef93ed6.txt`). 86개 배열을 나눠 읽어 다시 맞추면 86개 전부 돌아온다(`server/tests/test_lua_responder_props_paging.py`).
+- 실기: **미배치.** `ping` → `1.6.5` (2026-10-10). 배치는 감독 붙여넣기(t104 실측: 재임포트는 OK 를 받고도 안 바뀜). `group_members.py` 는 1.6.5 에서 실행 거부(`.moai/reports/t531/group_members_refusal.txt`). AC-LDBEAT-009(b) 는 **미실행**.
+- 🔴 이 브랜치를 콘솔 1.6.6 배치 전에 main 에 머지하면 게이트가 모든 새 실행을 막는다(`server/safety/gate.py:675`, 버전 불일치).
+
+**프로브 9항목 (REQ-LDBEAT-001~003)** — 설계 `.moai/reports/t531/probe-design.md`, 커밋 `abdd407d`
+
+| 항목 | 프로브 | 가짜 콘솔 리허설 | 실기 전부-거절 | 실기 실행 | 판정 |
+|---|---|---|---|---|---|
+| ① 타임코드 트랙 ≥3(목표 6) | `p1_tc_tracks.py` (TC 30) | exit 0, 막힌 줄 0 | 미실행 | 미실행 | **미실행** |
+| ② Goto 2번 이후·여러 시퀀스 동시 | `p2_goto_multi.py` (쓰기 0) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ③ 프리셋 수정 전파 | `p3_preset_propagation.py` (4.301, 시퀀스 300) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ④ 효과 프리셋의 SM15·Measure | `p4_effect_speedmaster_measure.py` (21.301, 시퀀스 301) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ⑤ 위치 프리셋 위 상대값 | `p5_relative_on_position_preset.py` (시퀀스 302) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ⑥ 타임코드 중간 재생 | `p6_mid_start.py` (TC 31) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ⑦ 큐 하나 그룹 하나 + Step 2 | `p7_single_selection_step2.py` (시퀀스 303, 대조 큐 포함) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ⑧ 같은 그룹 두 시퀀스 분담 | `p8_shared_group_two_sequences.py` (시퀀스 304·305) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ⑨ circle·발리후 | `p9_shapes.py` (시퀀스 306~308) | exit 0 | 미실행 | 미실행 | **미실행** |
+
+- 새 번호 비어 있음 실측: `.moai/reports/t531/r1_free_slots.txt`(실기 읽기). 실행 직전에 다시 읽는다.
+- 실기 쇼 상태(읽기): 시퀀스 1-15·210·219·220-233·1999·2000, 타임코드 1·2·7·8·9·19·20·21 — t520 기록의 시퀀스 250번대·TC 22/23 은 없다(`r0_pools.txt`·`r0b_pools.txt`). Speed15 `NORMEDVALUE` 69.
+- 리허설은 게이트 심사만 증명한다 — 가짜 콘솔은 명령의 콘솔 의미를 흉내 내지 않는다.
+- 미측정 문법: ③ 프리셋 수정 줄, ⑥ `Goto Time 5 Timecode 31`(전례 0 — 거절은 「미확인 — 문법 불명」), ④·⑤·⑨ 그룹 선택 프리셋 호출.
+- **9항목 모두 미실행이므로 REQ-LDBEAT-001 게이트상 M4 송신은 어떤 항목에도 기대지 못한다.**
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
