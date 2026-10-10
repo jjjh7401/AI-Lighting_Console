@@ -1,0 +1,2 @@
+{"step": "off_A2", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 314", "reasons": ["reference-invoking command"]}]}
+{"step": "off_A2", "t": 0.132, "kind": "exec", "command": "Off Sequence 314", "fired": true, "ok": true, "detail": "OK"}

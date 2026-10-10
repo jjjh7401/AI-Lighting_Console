@@ -1,0 +1,12 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/322/6|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 8c432dde NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/322/6"
+<<< {"id": "8c432dde", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/322/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS05 reveal"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Go"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/322/4|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 452bf80a NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/322/4"
+<<< {"id": "452bf80a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/322/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 dark"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Go"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/322|CURRENTCUE,SEQUMIBMODE,WRAPAROUND
+    wire: Plugin "CopilotResponder" "props 55627b53 CURRENTCUE,SEQUMIBMODE,WRAPAROUND ShowData/DataPools/Default/Sequences/322"
+<<< {"id": "55627b53", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/322", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 322.3"}, {"n": "SEQUMIBMODE", "ok": true, "t": "string", "v": "None"}, {"n": "WRAPAROUND", "ok": true, "t": "boolean", "v": "true"}], "truncated": false, "v": 1}

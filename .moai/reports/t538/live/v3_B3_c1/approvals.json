@@ -1,0 +1,30 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.2",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Store Sequence 322 Cue 1 'T538 POS02 lit'",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+      "Store Sequence 322 Cue 2 'T538 dark' CueFade 0.54",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.5",
+      "Store Sequence 322 Cue 2.5 'T538 POS05 reveal Move' CueFade 1",
+      "ClearAll",
+      "Set Cue 2.5 Sequence 322 Property 'TrigType' 'Follow'",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Store Sequence 322 Cue 3 'T538 POS05 reveal' CueFade 0.54",
+      "ClearAll",
+      "Set Sequence 322 Property 'Name' 'T538 - B3 MIB'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 322"
+    ],
+    "approved": true
+  }
+]

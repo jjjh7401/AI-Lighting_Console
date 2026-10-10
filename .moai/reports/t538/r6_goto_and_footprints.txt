@@ -1,0 +1,68 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/310|TIMINGGOTO,TIMINGGOBACK,TIMINGGOFAST,MASTERGOMODE,CUEZEROMODE
+    wire: Plugin "CopilotResponder" "props 6c3ed277 TIMINGGOTO,TIMINGGOBACK,TIMINGGOFAST,MASTERGOMODE,CUEZEROMODE ShowData/DataPools/Default/Sequences/310"
+<<< {"id": "6c3ed277", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/310", "reads": [{"n": "TIMINGGOTO", "ok": true, "t": "string", "v": "Default"}, {"n": "TIMINGGOBACK", "ok": true, "t": "string", "v": "Default"}, {"n": "TIMINGGOFAST", "ok": true, "t": "string", "v": "Default"}, {"n": "MASTERGOMODE", "ok": true, "t": "string", "v": "None"}, {"n": "CUEZEROMODE", "ok": true, "t": "string", "v": "Off"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props e784e812 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"id": "e784e812", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS01 보컬 센터 페이스 · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1568"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/2|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props f072e23f NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/2"
+<<< {"id": "f072e23f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS02 무대 전체 커버 · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2200"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 870458a2 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/3"
+<<< {"id": "870458a2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS03 밴드 라인 백 · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2360"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/4|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 18e1684f NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/4"
+<<< {"id": "18e1684f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2176"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/5|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 5dcfbdc9 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/5"
+<<< {"id": "5dcfbdc9", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS05 팬아웃 종점 (객석 상단) · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2640"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/6|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 3dfb4cfd NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/6"
+<<< {"id": "3dfb4cfd", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS06 센터 집중 (브리지) · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2468"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/21|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 95796ed6 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/21"
+<<< {"id": "95796ed6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/21", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Home"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4096"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/22|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props cf3cd28d NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/22"
+<<< {"id": "cf3cd28d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/22", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Wall"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4144"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/23|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props f34de78b NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/23"
+<<< {"id": "f34de78b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/23", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Audience"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4144"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/24|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 07c0b2a3 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/24"
+<<< {"id": "07c0b2a3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/24", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Center"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4476"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/25|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 068d28a1 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/25"
+<<< {"id": "068d28a1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/25", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Vocal DSC"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4476"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/26|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props d40e3c92 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/26"
+<<< {"id": "d40e3c92", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/26", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Fan Out"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4316"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/27|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 755527fa NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/27"
+<<< {"id": "755527fa", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/27", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Fan In"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4060"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/28|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 8371e563 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/28"
+<<< {"id": "8371e563", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/28", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Cross"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4384"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/29|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 3af299e1 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/29"
+<<< {"id": "3af299e1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/29", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Ring Out"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4060"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/30|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 41a08aaa NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/30"
+<<< {"id": "41a08aaa", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/30", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Ring In"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4476"}], "truncated": false, "v": 1}

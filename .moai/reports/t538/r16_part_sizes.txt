@@ -1,0 +1,32 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/311/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 2d6c3aac NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/311/3/1"
+<<< {"id": "2d6c3aac", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/311/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 - A0 A2 replay"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3216"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/228/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props e15fd0ae NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/228/3/1"
+<<< {"id": "e15fd0ae", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/228/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L0 Static 100"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3072"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/229/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 7287e6f4 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/229/3/1"
+<<< {"id": "7287e6f4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/229/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L1 Pulse Speed 112"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3112"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/232/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 9543522a NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/232/3/1"
+<<< {"id": "9543522a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/232/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L4 Tilt Wave Speed 112"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3644"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/305/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props eb88c510 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/305/3/1"
+<<< {"id": "eb88c510", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/305/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P8 pantilt-only"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3236"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/308/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props db7723f5 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/308/3/1"
+<<< {"id": "db7723f5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/308/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P9 wave"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3216"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/309/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props d820db5b NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/309/3/1"
+<<< {"id": "d820db5b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/309/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P10 dimmer phase spread"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3064"}], "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Sequences/311/3/1
+    wire: Plugin "CopilotResponder" "introspect 10339b41 ShowData/DataPools/Default/Sequences/311/3/1"
+<<< {"class": "Part", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "10339b41", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/311/3/1", "source": "property_accessors", "total": 195, "truncated": true, "v": 1}

@@ -1,0 +1,25 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -12",
+      "Step 2",
+      "Attribute 'Tilt' At Relative 12",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 112",
+      "Store Sequence 314 Cue 1 'T538 - A2 relative 12'",
+      "ClearAll",
+      "Set Sequence 314 Property 'Name' 'T538 - A2 relative 12'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 314"
+    ],
+    "approved": true
+  }
+]

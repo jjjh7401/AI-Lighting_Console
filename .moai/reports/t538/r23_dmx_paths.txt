@@ -1,0 +1,24 @@
+
+>>> state:Patch/DmxUniverses
+    wire: Plugin "CopilotResponder" "state f31568ee Patch/DmxUniverses"
+<<< {"children": [{"class": "DmxUniverse", "i": 1, "name": "DmxUniverse 1"}, {"class": "DmxUniverse", "i": 2, "name": "DmxUniverse 2"}, {"class": "DmxUniverse", "i": 3, "name": "DmxUniverse 3"}, {"class": "DmxUniverse", "i": 4, "name": "DmxUniverse 4"}, {"class": "DmxUniverse", "i": 5, "name": "DmxUniverse 5"}, {"class": "DmxUniverse", "i": 6, "name": "DmxUniverse 6"}, {"class": "DmxUniverse", "i": 7, "name": "DmxUniverse 7"}, {"class": "DmxUniverse", "i": 8, "name": "DmxUniverse 8"}, {"class": "DmxUniverse", "i": 9, "name": "DmxUniverse 9"}, {"class": "DmxUniverse", "i": 10, "name": "DmxUniverse 10"}, {"class": "DmxUniverse", "i": 11, "name": "DmxUniverse 11"}, {"class": "DmxUniverse", "i": 12, "name": "DmxUniverse 12"}, {"class": "DmxUniverse", "i": 13, "name": "DmxUniverse 13"}, {"class": "DmxUniverse", "i": 14, "name": "DmxUniverse 14"}, {"class": "DmxUniverse", "i": 15, "name": "DmxUniverse 15"}, {"class": "DmxUniverse", "i": 16, "name": "DmxUniverse 16"}], "id": "f31568ee", "kind": "state", "node": {"childCount": 1024, "class": "DmxUniverses", "enumeration": "ok", "name": "DmxUniverses"}, "offset": 0, "ok": true, "path": "Patch/DmxUniverses", "truncated": true, "v": 1}
+
+>>> state:Patch/DmxUniverses/2
+    wire: Plugin "CopilotResponder" "state 5e6f2c2f Patch/DmxUniverses/2"
+<<< {"children": [{"class": "DMX", "i": 1, "name": "DMX 2"}], "id": "5e6f2c2f", "kind": "state", "node": {"childCount": 1, "class": "DmxUniverse", "enumeration": "ok", "name": "DmxUniverse 2"}, "offset": 0, "ok": true, "path": "Patch/DmxUniverses/2", "truncated": false, "v": 1}
+
+>>> introspect:Patch/DmxUniverses/2
+    wire: Plugin "CopilotResponder" "introspect cd33cd80 Patch/DmxUniverses/2"
+<<< {"class": "DmxUniverse", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "NAME", "t": "String"}, {"n": "MERGEMODE", "t": "UInt8"}, {"n": "REQUEST", "t": "UInt8"}, {"n": "GRANTED", "t": "UInt8"}, {"n": "PORTOUT", "t": "UInt32"}, {"n": "PORTIN", "t": "UInt32"}, {"n": "PORTRDM", "t": "UInt32"}, {"n": "COARSEPARAMS", "t": "Int32"}], "id": "cd33cd80", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/DmxUniverses/2", "source": "property_accessors", "total": 31, "truncated": true, "v": 1}
+
+>>> state:Patch/RTChannels
+    wire: Plugin "CopilotResponder" "state 66b25d1a Patch/RTChannels"
+<<< {"children": [{"class": "RTChannel", "i": 1, "name": "KEY 101"}], "id": "66b25d1a", "kind": "state", "node": {"childCount": 1, "class": "RTChannels", "enumeration": "ok", "name": "RTChannels"}, "offset": 0, "ok": true, "path": "Patch/RTChannels", "truncated": false, "v": 1}
+
+>>> introspect:Patch/RTChannels
+    wire: Plugin "CopilotResponder" "introspect 3b94b259 Patch/RTChannels"
+<<< {"class": "RTChannels", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}], "id": "3b94b259", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/RTChannels", "source": "property_accessors", "total": 15, "truncated": false, "v": 1}
+
+>>> state:Patch/UIChannels
+    wire: Plugin "CopilotResponder" "state 53ef8a21 Patch/UIChannels"
+<<< {"children": [{"class": "UIChannel", "i": 1, "name": "KEY 101"}], "id": "53ef8a21", "kind": "state", "node": {"childCount": 1, "class": "UIChannels", "enumeration": "ok", "name": "UIChannels"}, "offset": 0, "ok": true, "path": "Patch/UIChannels", "truncated": false, "v": 1}

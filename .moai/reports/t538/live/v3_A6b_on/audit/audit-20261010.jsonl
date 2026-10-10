@@ -1,0 +1,10 @@
+{"ts": "2026-10-10T12:54:14.238550+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11 ; Attribute 'Dimmer' At 70", "At Preset 21.5", "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "ClearAll", "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'"], "held": ["ChangeDestination Root", "ClearAll", "Group 11 ; Attribute 'Dimmer' At 70", "At Preset 21.5", "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "ClearAll", "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'"], "kind": "t531_m1_t538v3"}
+{"ts": "2026-10-10T12:54:14.303716+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T12:54:14.369804+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T12:54:14.437104+00:00", "event": "executed", "command": "Group 11 ; Attribute 'Dimmer' At 70", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T12:54:14.503781+00:00", "event": "executed", "command": "At Preset 21.5", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T12:54:14.570621+00:00", "event": "executed", "command": "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T12:54:14.637113+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T12:54:14.703875+00:00", "event": "executed", "command": "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T12:54:14.770882+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 319"], "held": ["Goto Cue 1 Sequence 319"], "kind": "t531_m1_t538v3"}
+{"ts": "2026-10-10T12:54:14.837035+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 319", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

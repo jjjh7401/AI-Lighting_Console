@@ -1,0 +1,74 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/311", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/311", "ok": false, "error": "path segment not found: '311' (in ShowData/DataPools/Default/Sequences/311)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/312", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/312", "ok": false, "error": "path segment not found: '312' (in ShowData/DataPools/Default/Sequences/312)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/313", "t": 0.2, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/313", "ok": false, "error": "path segment not found: '313' (in ShowData/DataPools/Default/Sequences/313)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/314", "t": 0.266, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/314", "ok": false, "error": "path segment not found: '314' (in ShowData/DataPools/Default/Sequences/314)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/315", "t": 0.333, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/315", "ok": false, "error": "path segment not found: '315' (in ShowData/DataPools/Default/Sequences/315)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/316", "t": 0.399, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/316", "ok": false, "error": "path segment not found: '316' (in ShowData/DataPools/Default/Sequences/316)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/317", "t": 0.466, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/317", "ok": false, "error": "path segment not found: '317' (in ShowData/DataPools/Default/Sequences/317)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/318", "t": 0.533, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/318", "ok": false, "error": "path segment not found: '318' (in ShowData/DataPools/Default/Sequences/318)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/319", "t": 0.599, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/319", "ok": false, "error": "path segment not found: '319' (in ShowData/DataPools/Default/Sequences/319)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/320", "t": 0.666, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/320", "ok": false, "error": "path segment not found: '320' (in ShowData/DataPools/Default/Sequences/320)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/321", "t": 0.733, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/321", "ok": false, "error": "path segment not found: '321' (in ShowData/DataPools/Default/Sequences/321)"}
+{"step": "store_A0", "t": 0.733, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 0 Thru 360", "reasons": []}, {"command": "Att
+{"step": "store_A0", "t": 0.799, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.865, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.933, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.999, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 1.066, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 1.132, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 1.199, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 1.266, "kind": "exec", "command": "Store Sequence 311 Cue 1 'T538 - A0 A2 replay'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 1.332, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 1.399, "kind": "exec", "command": "Set Sequence 311 Property 'Name' 'T538 - A0 A2 replay'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A0", "t": 1.466, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 311", "reasons": ["reference-invoking command"]}]}
+{"step": "play_A0", "t": 1.533, "kind": "exec", "command": "Goto Cue 1 Sequence 311", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T538",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/311",
+    "ShowData/DataPools/Default/Sequences/312",
+    "ShowData/DataPools/Default/Sequences/313",
+    "ShowData/DataPools/Default/Sequences/314",
+    "ShowData/DataPools/Default/Sequences/315",
+    "ShowData/DataPools/Default/Sequences/316",
+    "ShowData/DataPools/Default/Sequences/317",
+    "ShowData/DataPools/Default/Sequences/318",
+    "ShowData/DataPools/Default/Sequences/319",
+    "ShowData/DataPools/Default/Sequences/320",
+    "ShowData/DataPools/Default/Sequences/321"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_A0": true,
+    "play_A0": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 311 Cue 1 'T538 - A0 A2 replay'",
+        "ClearAll",
+        "Set Sequence 311 Property 'Name' 'T538 - A0 A2 replay'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 311"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

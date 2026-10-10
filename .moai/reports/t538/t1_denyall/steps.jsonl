@@ -1,0 +1,2 @@
+{"step": "t1_mspeed", "t": 0.0, "kind": "screen", "cleared": false, "commands": [{"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "t1_clear", "t": 0.0, "kind": "screen", "cleared": false, "commands": [{"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}

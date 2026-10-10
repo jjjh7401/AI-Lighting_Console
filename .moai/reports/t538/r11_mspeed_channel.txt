@@ -1,0 +1,16 @@
+
+>>> state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3
+    wire: Plugin "CopilotResponder" "state c001bf8e Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3"
+<<< {"children": [{"class": "LogicalChannel", "i": 1, "name": "PositionMSpeed"}], "id": "c001bf8e", "kind": "state", "node": {"childCount": 1, "class": "DMXChannel", "enumeration": "ok", "name": "Main Module_PositionMSpeed"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3", "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3
+    wire: Plugin "CopilotResponder" "introspect fa176725 Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3"
+<<< {"class": "DMXChannel", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "NAME", "t": "String"}, {"n": "DMXBREAK", "t": "Int32"}, {"n": "COARSE", "t": "Int32"}, {"n": "FINE", "t": "Int32"}, {"n": "ULTRA", "t": "Int32"}, {"n": "CALCALWAYS", "t": "UInt8"}, {"n": "VIRTUALRESOLUTION", "t": "UInt8"}, {"n": "DEFAULTCHANNELFUNCTION", "t": "Handle"}, {"n": "DEFAULT", "t": "UInt32"}, {"n": "HIGHLIGHT", "t": "UInt32"}, {"n": "LOWLIGHT", "t": "UInt32"}], "id": "fa176725", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3", "source": "property_accessors", "total": 28, "truncated": true, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1
+    wire: Plugin "CopilotResponder" "state adae3cbf Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1"
+<<< {"children": [{"class": "ChannelFunction", "i": 1, "name": "POSITIONMSPEEDTRACK 1"}], "id": "adae3cbf", "kind": "state", "node": {"childCount": 1, "class": "LogicalChannel", "enumeration": "ok", "name": "PositionMSpeed"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1
+    wire: Plugin "CopilotResponder" "state 394538d5 Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1"
+<<< {"children": [{"class": "ChannelSet", "i": 1, "name": "Track 80%"}, {"class": "ChannelSet", "i": 2, "name": "Track 100%"}, {"class": "ChannelSet", "i": 3, "name": "Track 100  1%"}, {"class": "ChannelSet", "i": 4, "name": "min Track"}], "id": "394538d5", "kind": "state", "node": {"childCount": 4, "class": "ChannelFunction", "enumeration": "ok", "name": "POSITIONMSPEEDTRACK 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1", "truncated": false, "v": 1}

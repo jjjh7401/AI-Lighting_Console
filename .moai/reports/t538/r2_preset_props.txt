@@ -1,0 +1,20 @@
+
+>>> introspect:ShowData/DataPools/Default/PresetPools/21/2@27
+    wire: Plugin "CopilotResponder" "introspect 08c3ef88 ShowData/DataPools/Default/PresetPools/21/2 offset=27"
+<<< {"class": "Preset", "fields": [{"n": "Z", "t": "Int32"}, {"n": "XBLOCK", "t": "Int32"}, {"n": "YBLOCK", "t": "Int32"}, {"n": "ZBLOCK", "t": "Int32"}, {"n": "XGROUP", "t": "Int32"}, {"n": "YGROUP", "t": "Int32"}, {"n": "ZGROUP", "t": "Int32"}, {"n": "XWINGS", "t": "Int32"}, {"n": "YWINGS", "t": "Int32"}, {"n": "ZWINGS", "t": "Int32"}, {"n": "XWIDTH", "t": "Int32"}, {"n": "YWIDTH", "t": "Int32"}, {"n": "ZWIDTH", "t": "Int32"}, {"n": "XSHUFFLE", "t": "UInt32"}, {"n": "YSHUFFLE", "t": "UInt32"}, {"n": "ZSHUFFLE", "t": "UInt32"}, {"n": "XSHIFT", "t": "Int32"}, {"n": "YSHIFT", "t": "Int32"}, {"n": "ZSHIFT", "t": "Int32"}, {"n": "XINV", "t": "UInt32"}, {"n": "XINVB", "t": "UInt32"}, {"n": "XINVG", "t": "UInt32"}, {"n": "XINVW", "t": "UInt32"}, {"n": "YINV", "t": "UInt32"}, {"n": "YINVB", "t": "UInt32"}, {"n": "YINVG", "t": "UInt32"}, {"n": "YINVW", "t": "UInt32"}, {"n": "ZINV", "t": "UInt32"}], "id": "08c3ef88", "kind": "introspect", "offset": 27, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/2", "source": "property_accessors", "total": 138, "truncated": true, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/21/2|MEMORYFOOTPRINT,NOTE,DEPENDENCYEXPORT,HASANYMATRICKSDATA
+    wire: Plugin "CopilotResponder" "props 209ab4b0 MEMORYFOOTPRINT,NOTE,DEPENDENCYEXPORT,HASANYMATRICKSDATA ShowData/DataPools/Default/PresetPools/21/2"
+<<< {"id": "209ab4b0", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/2", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2260"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "HASANYMATRICKSDATA", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/21/5|MEMORYFOOTPRINT,NOTE,DEPENDENCYEXPORT,HASANYMATRICKSDATA
+    wire: Plugin "CopilotResponder" "props 84b53418 MEMORYFOOTPRINT,NOTE,DEPENDENCYEXPORT,HASANYMATRICKSDATA ShowData/DataPools/Default/PresetPools/21/5"
+<<< {"id": "84b53418", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/5", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1992"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "HASANYMATRICKSDATA", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/1|MEMORYFOOTPRINT,NOTE,DEPENDENCYEXPORT,HASANYMATRICKSDATA
+    wire: Plugin "CopilotResponder" "props a29463d6 MEMORYFOOTPRINT,NOTE,DEPENDENCYEXPORT,HASANYMATRICKSDATA ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"id": "a29463d6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1568"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "HASANYMATRICKSDATA", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/24|MEMORYFOOTPRINT,NOTE,DEPENDENCYEXPORT,HASANYMATRICKSDATA
+    wire: Plugin "CopilotResponder" "props 79bf3ea1 MEMORYFOOTPRINT,NOTE,DEPENDENCYEXPORT,HASANYMATRICKSDATA ShowData/DataPools/Default/PresetPools/2/24"
+<<< {"id": "79bf3ea1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/24", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4476"}, {"n": "NOTE", "ok": true, "t": "string", "v": ""}, {"n": "DEPENDENCYEXPORT", "ok": true, "t": "string", "v": ""}, {"n": "HASANYMATRICKSDATA", "ok": true, "t": "boolean", "v": "false"}], "truncated": false, "v": 1}

@@ -1,0 +1,18 @@
+{"step": "lit_c1_1", "t": 0.065, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "lit_c1_1", "t": 0.132, "kind": "exec", "command": "Goto Cue 1 Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "dark_move_1", "t": 4.199, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "dark_move_1", "t": 4.265, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "reveal_1", "t": 8.332, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "reveal_1", "t": 8.398, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "lit_c1_2", "t": 12.465, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "lit_c1_2", "t": 12.531, "kind": "exec", "command": "Goto Cue 1 Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "dark_move_2", "t": 16.598, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "dark_move_2", "t": 16.665, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "reveal_2", "t": 20.731, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "reveal_2", "t": 20.798, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "lit_c1_3", "t": 24.865, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "lit_c1_3", "t": 24.931, "kind": "exec", "command": "Goto Cue 1 Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "dark_move_3", "t": 28.999, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "dark_move_3", "t": 29.064, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "reveal_3", "t": 33.132, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "reveal_3", "t": 33.197, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}

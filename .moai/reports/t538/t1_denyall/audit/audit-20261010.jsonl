@@ -1,0 +1,2 @@
+{"ts": "2026-10-10T12:05:29.954616+00:00", "event": "rejected", "commands": ["Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0"], "held": ["Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0"], "kind": "t531_m1_t538-t1"}
+{"ts": "2026-10-10T12:05:29.954843+00:00", "event": "rejected", "commands": ["ClearAll"], "held": ["ClearAll"], "kind": "t531_m1_t538-t1"}

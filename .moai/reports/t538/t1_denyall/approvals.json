@@ -1,0 +1,14 @@
+[
+  {
+    "commands": [
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "ClearAll"
+    ],
+    "approved": false
+  }
+]

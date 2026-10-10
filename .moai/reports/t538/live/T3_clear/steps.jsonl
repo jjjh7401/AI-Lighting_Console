@@ -1,0 +1,2 @@
+{"step": "t3_clear", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "t3_clear", "t": 0.064, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}

@@ -1,0 +1,25 @@
+{"step": "c2_23_1", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c2_23_1", "t": 0.133, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c3_23_1", "t": 3.199, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c3_23_1", "t": 3.265, "kind": "exec", "command": "Goto Cue 3 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c2_23_2", "t": 6.332, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c2_23_2", "t": 6.399, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c3_23_2", "t": 9.466, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c3_23_2", "t": 9.532, "kind": "exec", "command": "Goto Cue 3 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c2_23_3", "t": 12.599, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c2_23_3", "t": 12.665, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c3_23_3", "t": 15.732, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c3_23_3", "t": 15.799, "kind": "exec", "command": "Goto Cue 3 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c3_34_1", "t": 23.866, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c3_34_1", "t": 23.931, "kind": "exec", "command": "Goto Cue 3 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c4_34_1", "t": 26.998, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 4 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c4_34_1", "t": 27.064, "kind": "exec", "command": "Goto Cue 4 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c3_34_2", "t": 30.133, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c3_34_2", "t": 30.199, "kind": "exec", "command": "Goto Cue 3 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c4_34_2", "t": 33.266, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 4 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c4_34_2", "t": 33.331, "kind": "exec", "command": "Goto Cue 4 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c3_34_3", "t": 36.398, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c3_34_3", "t": 36.464, "kind": "exec", "command": "Goto Cue 3 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c4_34_3", "t": 39.531, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 4 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c4_34_3", "t": 39.598, "kind": "exec", "command": "Goto Cue 4 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+[{"label": "c2_23_1", "ok": true, "t": 0.13}, {"label": "c3_23_1", "ok": true, "t": 3.27}, {"label": "c2_23_2", "ok": true, "t": 6.4}, {"label": "c3_23_2", "ok": true, "t": 9.53}, {"label": "c2_23_3", "ok": true, "t": 12.67}, {"label": "c3_23_3", "ok": true, "t": 15.8}, {"label": "c3_34_1", "ok": true, "t": 23.93}, {"label": "c4_34_1", "ok": true, "t": 27.06}, {"label": "c3_34_2", "ok": true, "t": 30.2}, {"label": "c4_34_2", "ok": true, "t": 33.33}, {"label": "c3_34_3", "ok": true, "t": 36.46}, {"label": "c4_34_3", "ok": true, "t": 39.6}]

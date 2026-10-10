@@ -1,0 +1,2 @@
+{"step": "play_B1_c2", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "play_B1_c2", "t": 0.133, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}

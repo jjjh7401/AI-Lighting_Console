@@ -1,0 +1,7 @@
+props:ShowData/Masters/2/1|NAME,NORMEDVALUE
+props:ShowData/Masters/2/6|NAME,NORMEDVALUE
+props:ShowData/Masters/2/8|NAME,NORMEDVALUE
+props:ShowData/Masters/2/10|NAME,NORMEDVALUE
+props:ShowData/Masters/1/6|NAME,NORMEDVALUE
+props:ShowData/Masters/1/7|NAME,NORMEDVALUE
+state:ShowData/UserProfiles/1@15

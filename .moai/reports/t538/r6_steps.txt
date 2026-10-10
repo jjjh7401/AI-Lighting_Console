@@ -1,0 +1,17 @@
+props:ShowData/DataPools/Default/Sequences/310|TIMINGGOTO,TIMINGGOBACK,TIMINGGOFAST,MASTERGOMODE,CUEZEROMODE
+props:ShowData/DataPools/Default/PresetPools/2/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/2|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/3|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/4|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/5|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/6|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/21|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/22|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/23|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/24|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/25|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/26|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/27|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/28|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/29|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/PresetPools/2/30|NAME,MEMORYFOOTPRINT

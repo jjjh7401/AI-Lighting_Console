@@ -1,0 +1,258 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/312", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/312", "ok": false, "error": "path segment not found: '312' (in ShowData/DataPools/Default/Sequences/312)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/313", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/313", "ok": false, "error": "path segment not found: '313' (in ShowData/DataPools/Default/Sequences/313)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/314", "t": 0.198, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/314", "ok": false, "error": "path segment not found: '314' (in ShowData/DataPools/Default/Sequences/314)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/315", "t": 0.265, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/315", "ok": false, "error": "path segment not found: '315' (in ShowData/DataPools/Default/Sequences/315)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/316", "t": 0.332, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/316", "ok": false, "error": "path segment not found: '316' (in ShowData/DataPools/Default/Sequences/316)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/317", "t": 0.399, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/317", "ok": false, "error": "path segment not found: '317' (in ShowData/DataPools/Default/Sequences/317)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/318", "t": 0.465, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/318", "ok": false, "error": "path segment not found: '318' (in ShowData/DataPools/Default/Sequences/318)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/319", "t": 0.539, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/319", "ok": false, "error": "path segment not found: '319' (in ShowData/DataPools/Default/Sequences/319)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/320", "t": 0.598, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/320", "ok": false, "error": "path segment not found: '320' (in ShowData/DataPools/Default/Sequences/320)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/321", "t": 0.665, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/321", "ok": false, "error": "path segment not found: '321' (in ShowData/DataPools/Default/Sequences/321)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/322", "t": 0.732, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/322", "ok": false, "error": "path segment not found: '322' (in ShowData/DataPools/Default/Sequences/322)"}
+{"step": "store_A0", "t": 0.732, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "F
+{"step": "play_A0", "t": 0.799, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 312", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 312': state query failed for 'Sequence 312': path segment not found: '312' (in DataPool/Sequences/312)"]}]}
+{"step": "off_A0", "t": 0.865, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 312", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 312': state query failed for 'Sequence 312': path segment not found: '312' (in DataPool/Sequences/312)"]}]}
+{"step": "store_A1", "t": 0.866, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Tilt' At 45", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Tilt' At Relative -30", "reasons": ["bundle rejected (all-or-nothing,
+{"step": "play_A1", "t": 0.932, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 313", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 313': state query failed for 'Sequence 313': path segment not found: '313' (in DataPool/Sequences/313)"]}]}
+{"step": "off_A1", "t": 0.999, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 313", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 313': state query failed for 'Sequence 313': path segment not found: '313' (in DataPool/Sequences/313)"]}]}
+{"step": "store_A2", "t": 1.0, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fix
+{"step": "play_A2", "t": 1.067, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 314", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 314': state query failed for 'Sequence 314': path segment not found: '314' (in DataPool/Sequences/314)"]}]}
+{"step": "off_A2", "t": 1.133, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 314", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 314': state query failed for 'Sequence 314': path segment not found: '314' (in DataPool/Sequences/314)"]}]}
+{"step": "store_A3", "t": 1.134, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 50
+{"step": "play_A3", "t": 1.199, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 315", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 315': state query failed for 'Sequence 315': path segment not found: '315' (in DataPool/Sequences/315)"]}]}
+{"step": "off_A3", "t": 1.265, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 315", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 315': state query failed for 'Sequence 315': path segment not found: '315' (in DataPool/Sequences/315)"]}]}
+{"step": "store_A4", "t": 1.266, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"co
+{"step": "play_A4", "t": 1.332, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 316", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 316': state query failed for 'Sequence 316': path segment not found: '316' (in DataPool/Sequences/316)"]}]}
+{"step": "off_A4", "t": 1.399, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 316", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 316': state query failed for 'Sequence 316': path segment not found: '316' (in DataPool/Sequences/316)"]}]}
+{"step": "store_A5", "t": 1.4, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fix
+{"step": "play_A5", "t": 1.465, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 317", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 317': state query failed for 'Sequence 317': path segment not found: '317' (in DataPool/Sequences/317)"]}]}
+{"step": "off_A5", "t": 1.532, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 317", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 317': state query failed for 'Sequence 317': path segment not found: '317' (in DataPool/Sequences/317)"]}]}
+{"step": "store_A6a", "t": 1.532, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "At Preset 21.2", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Sequence 318 Cue 1 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "reasons": ["blacklisted command (matches cl
+{"step": "play_A6a", "t": 1.599, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 318", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 318': state query failed for 'Sequence 318': path segment not found: '318' (in DataPool/Sequences/318)"]}]}
+{"step": "off_A6a", "t": 1.665, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 318", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 318': state query failed for 'Sequence 318': path segment not found: '318' (in DataPool/Sequences/318)"]}]}
+{"step": "store_A6b", "t": 1.665, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "At Preset 21.5", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "reasons": ["blacklisted command (matches c
+{"step": "play_A6b", "t": 1.732, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 319", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 319': state query failed for 'Sequence 319': path segment not found: '319' (in DataPool/Sequences/319)"]}]}
+{"step": "off_A6b", "t": 1.799, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 319", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 319': state query failed for 'Sequence 319': path segment not found: '319' (in DataPool/Sequences/319)"]}]}
+{"step": "store_B1", "t": 1.799, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Sequence 320 Cue 1 'T538 POS01'", "reasons": ["blacklisted command (matches closed-set entry '
+{"step": "play_B1_c1", "t": 1.866, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': state query failed for 'Sequence 320': path segment not found: '320' (in DataPool/Sequences/320)"]}]}
+{"step": "play_B1_c2", "t": 1.933, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': state query failed for 'Sequence 320': path segment not found: '320' (in DataPool/Sequences/320)"]}]}
+{"step": "play_B1_c3", "t": 1.998, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 3 Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': state query failed for 'Sequence 320': path segment not found: '320' (in DataPool/Sequences/320)"]}]}
+{"step": "play_B1_c4", "t": 2.066, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 4 Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': state query failed for 'Sequence 320': path segment not found: '320' (in DataPool/Sequences/320)"]}]}
+{"step": "off_B1", "t": 2.132, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': state query failed for 'Sequence 320': path segment not found: '320' (in DataPool/Sequences/320)"]}]}
+{"step": "store_B2", "t": 2.132, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Sequence 321 Cue 1 'T538 POS01' CueFade 1.07", "reasons": ["blacklisted command (matches close
+{"step": "play_B2", "t": 2.199, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 321", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 321': state query failed for 'Sequence 321': path segment not found: '321' (in DataPool/Sequences/321)"]}]}
+{"step": "off_B2", "t": 2.265, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 321", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 321': state query failed for 'Sequence 321': path segment not found: '321' (in DataPool/Sequences/321)"]}]}
+{"step": "store_B3", "t": 2.265, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.2", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Sequ
+{"step": "play_B3_c1", "t": 2.333, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 322", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 322': state query failed for 'Sequence 322': path segment not found: '322' (in DataPool/Sequences/322)"]}]}
+{"step": "play_B3_go_dark", "t": 2.399, "kind": "screen", "cleared": false, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 322': state query failed for 'Sequence 322': path segment not found: '322' (in DataPool/Sequences/322)"]}]}
+{"step": "play_B3_go_reveal", "t": 2.466, "kind": "screen", "cleared": false, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 322': state query failed for 'Sequence 322': path segment not found: '322' (in DataPool/Sequences/322)"]}]}
+{"step": "off_B3", "t": 2.533, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 322", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 322': state query failed for 'Sequence 322': path segment not found: '322' (in DataPool/Sequences/322)"]}]}
+{
+  "item": "T538v2",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/312",
+    "ShowData/DataPools/Default/Sequences/313",
+    "ShowData/DataPools/Default/Sequences/314",
+    "ShowData/DataPools/Default/Sequences/315",
+    "ShowData/DataPools/Default/Sequences/316",
+    "ShowData/DataPools/Default/Sequences/317",
+    "ShowData/DataPools/Default/Sequences/318",
+    "ShowData/DataPools/Default/Sequences/319",
+    "ShowData/DataPools/Default/Sequences/320",
+    "ShowData/DataPools/Default/Sequences/321",
+    "ShowData/DataPools/Default/Sequences/322"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_A0": false,
+    "play_A0": false,
+    "off_A0": false,
+    "store_A1": false,
+    "play_A1": false,
+    "off_A1": false,
+    "store_A2": false,
+    "play_A2": false,
+    "off_A2": false,
+    "store_A3": false,
+    "play_A3": false,
+    "off_A3": false,
+    "store_A4": false,
+    "play_A4": false,
+    "off_A4": false,
+    "store_A5": false,
+    "play_A5": false,
+    "off_A5": false,
+    "store_A6a": false,
+    "play_A6a": false,
+    "off_A6a": false,
+    "store_A6b": false,
+    "play_A6b": false,
+    "off_A6b": false,
+    "store_B1": false,
+    "play_B1_c1": false,
+    "play_B1_c2": false,
+    "play_B1_c3": false,
+    "play_B1_c4": false,
+    "off_B1": false,
+    "store_B2": false,
+    "play_B2": false,
+    "off_B2": false,
+    "store_B3": false,
+    "play_B3_c1": false,
+    "play_B3_go_dark": false,
+    "play_B3_go_reveal": false,
+    "off_B3": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 312 Cue 1 'T538 - A0 two step T4'",
+        "ClearAll",
+        "Set Sequence 312 Property 'Name' 'T538 - A0 two step T4'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 312"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 312"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45",
+        "Group 11 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 313 Cue 1 'T538 - A1 group 11'",
+        "ClearAll",
+        "Set Sequence 313 Property 'Name' 'T538 - A1 group 11'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 313"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 313"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -12",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 12",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 314 Cue 1 'T538 - A2 relative 12'",
+        "ClearAll",
+        "Set Sequence 314 Property 'Name' 'T538 - A2 relative 12'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 314"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 314"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.1",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 315 Cue 1 'T538 - A3 base preset 2-1'",
+        "ClearAll",
+        "Set Sequence 315 Property 'Name' 'T538 - A3 base preset 2-1'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 315"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 315"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 316 Cue 1 'T538 - A4 no base'",
+        "ClearAll",
+        "Set Sequence 316 Property 'Name' 'T538 - A4 no base'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 316"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 316"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 50

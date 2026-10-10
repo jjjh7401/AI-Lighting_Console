@@ -1,0 +1,29 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+      "Step 2",
+      "Attribute 'Pan' At Relative 30",
+      "Attribute 'Tilt' At Relative 30",
+      "Attribute 'Pan' At Phase 0",
+      "Attribute 'Tilt' At Phase 90",
+      "Attribute 'Pan' At Speed 112",
+      "Attribute 'Tilt' At Speed 112",
+      "Store Sequence 317 Cue 1 'T538 - A5 pan tilt circle'",
+      "ClearAll",
+      "Set Sequence 317 Property 'Name' 'T538 - A5 pan tilt circle'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 317"
+    ],
+    "approved": true
+  }
+]

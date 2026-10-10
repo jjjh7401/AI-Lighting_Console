@@ -1,0 +1,116 @@
+{
+  "marks": [
+    {
+      "label": "lit_c1_1",
+      "ok": true,
+      "t": 0.13
+    },
+    {
+      "label": "dark_move_1",
+      "ok": true,
+      "t": 4.27
+    },
+    {
+      "label": "reveal_1",
+      "ok": true,
+      "t": 8.4
+    },
+    {
+      "label": "lit_c1_2",
+      "ok": true,
+      "t": 12.53
+    },
+    {
+      "label": "dark_move_2",
+      "ok": true,
+      "t": 16.66
+    },
+    {
+      "label": "reveal_2",
+      "ok": true,
+      "t": 20.8
+    },
+    {
+      "label": "lit_c1_3",
+      "ok": true,
+      "t": 24.93
+    },
+    {
+      "label": "dark_move_3",
+      "ok": true,
+      "t": 29.06
+    },
+    {
+      "label": "reveal_3",
+      "ok": true,
+      "t": 33.2
+    }
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 322"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go+ Sequence 322"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go+ Sequence 322"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 322"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go+ Sequence 322"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go+ Sequence 322"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 322"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go+ Sequence 322"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go+ Sequence 322"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}
