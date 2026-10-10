@@ -21,7 +21,11 @@ import numpy as np
 import soundfile as sf
 
 sys.path.insert(0, os.getcwd())
-from server.audio.analyze import _HOP_LENGTH, _tempo_from_beat_regression, _tempo_from_beats  # noqa: E402
+from server.audio.analyze import (  # noqa: E402
+    _HOP_LENGTH,
+    _tempo_from_beat_regression,
+    _tempo_from_beats,
+)
 from server.audio.bar_map import _check_bpm_half_double  # noqa: E402
 
 SAMPLE_DIR = "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/src/sample music"
@@ -79,7 +83,8 @@ for path in sys.argv[1:] or SONGS:
     print(
         f"{name:22} {med:8.3f} {reg:8.3f} | {cm.adopted_bpm:9.3f} "
         f"{cm.grid_lock_raw:5.2f}/{cm.grid_lock_half:5.2f}/{cm.grid_lock_double:5.2f} | "
-        f"{cr.adopted_bpm:9.3f} {cr.grid_lock_raw:5.2f}/{cr.grid_lock_half:5.2f}/{cr.grid_lock_double:5.2f} | "
+        f"{cr.adopted_bpm:9.3f} "
+        f"{cr.grid_lock_raw:5.2f}/{cr.grid_lock_half:5.2f}/{cr.grid_lock_double:5.2f} | "
         f"{mid_on:6.2f} {odd_even:8.2f}",
         flush=True,
     )
