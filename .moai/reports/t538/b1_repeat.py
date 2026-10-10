@@ -5,7 +5,7 @@
 승인은 v3 전부-거절 목록(approval_t538_v3.txt 와 같은 문면)에 고정 — 목록 밖 줄이면 게이트가 거절한다.
 
 실행: uv run python .moai/reports/t538/b1_repeat.py <out> [<큐a>-<큐b>x<횟수> ...]
-  인자 없으면 1-2x5(처음 요청). 예: 2-3x3 3-4x3 → 큐2↔큐3 3회, 쉼 5초, 큐3↔큐4 3회. 각 쌍은 b 큐에서 끝난다.
+  인자 없으면 1-2x5(처음 요청). `w<초>` 로 간격을 바꾼다(기본 3초). 예: 2-3x3 3-4x3 → 큐2↔큐3 3회, 쉼 5초, 큐3↔큐4 3회. 각 쌍은 b 큐에서 끝난다.
 """
 
 from __future__ import annotations
@@ -43,7 +43,11 @@ def parse_pairs(args: list[str]) -> list[tuple[int, int, int]]:
 def main() -> int:
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
-    pairs = parse_pairs(sys.argv[2:])
+    global WAIT
+    args = sys.argv[2:]
+    for arg in [a for a in args if a.startswith("w")]:  # 예: w4 → 간격 4초
+        WAIT = float(arg[1:])
+    pairs = parse_pairs([a for a in args if not a.startswith("w")])
     pinned = [
         r["commands"]
         for r in json.loads(Path(".moai/reports/t538/v3_denyall/approvals.json").read_text("utf-8"))
