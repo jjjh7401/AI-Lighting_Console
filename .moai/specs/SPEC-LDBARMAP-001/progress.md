@@ -88,6 +88,21 @@ Preserve 목록 확인: `SPEC-LDRHYTHM-001`·`SPEC-LDBEAT-001` 쪽 파일 미수
 - 대조: 박 326개·112.35 BPM은 지도 보고서 §6 「박 시각 326개」와 같고, phase1 첫 박 넷(1.50·3.66·5.78·7.92초)은 부록 A 1~4마디 다운비트와 일치한다(같은 박 경로라는 확인 — 정답 여부는 감독 귀 확인이 정한다).
 - 미확인: 감독 청취 결과(대기 중).
 
+### SPEC 개정(카드 t530, 2026-10-10) — M2 범위 축소 반영
+
+M1 판정 결과(위 표, AC-LDBARMAP-005/006 FAIL — 세 후보 모두 자체 위상 선택 기준
+다운비트 0/82)에 따른 리드 경유 감독 결정("귀 확인 + 수동 지정 병행")을 spec.md·
+plan.md·acceptance.md에 반영했다 — REQ-LDBARMAP-016(신설, 수동 첫 박 오프셋·정수
+0~3) 추가, REQ-LDBARMAP-004 근거 칸·AC-LDBARMAP-005/006에 "보류 — 감독 귀 확정
+정답 뒤 재설계" 주석 추가(PASS 요구 대상에서 제외, 회귀 추적용 참고 지표로 보존),
+AC-LDBARMAP-016(신설, 오프셋 기반 평가 — M2 실제 통과 기준) 추가, plan.md M1/M2/M3
+갱신(M1 통과 조건 미충족을 그대로 기록 + M2는 그 조건이 아니라 이 감독 결정으로
+진행함을 명시). REQ 15→16개·AC 15→16개(Tier M 상한 16개에 정확히 닿음, 초과 없음).
+version 0.1.2→0.1.3. 코드 변경 0줄 — 이 개정은 plan-phase 문서 3개(spec.md·plan.md·
+acceptance.md)만 다룬다. 커밋: `pending-backfill-SPEC-LDBARMAP-001-t530-amendment`
+(이 줄 자신이 그 커밋 안에 있어 자기 참조가 불가능 — 다음 커밋에서 실제 SHA로
+백필한다, 워크트리 `.claude/worktrees/t530`, 브랜치 `WT-barmap-run`).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
