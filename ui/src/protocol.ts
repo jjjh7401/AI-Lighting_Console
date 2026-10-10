@@ -414,13 +414,47 @@ export interface BeatGridEntry {
   mib_mode: string | null;
 }
 
-/** t532/t537 (SPEC-LDBEAT-001 M2/M7) — 박자 격자 칸 하나. 카드 t537(감독
- * 결정 "전체 화면 + 속성별 값")이 단일 `label` 서술 문자열을 속성별
- * 구조화 필드 다섯 종(`brightness`·`position_preset_no`·`color_preset_no`·
- * `effect_preset_no`·`entry`)으로 바꿨다(REQ-LDBEAT-006(i-1)~(i-7)).
- * `label`은 레거시 호환 + 화면 표시용으로 남는다(삭제하지 않는다,
- * REQ-006(ii-3)) — 그 자유 텍스트를 파싱해 구조화 필드를 역산하는 것은
- * `shall not`이다(REQ-006(ii-2)). */
+/** t548 — REQ-LDBEAT-006(vi-1)~(vi-8). 새 콘솔 프리셋 없이 앱이 커맨드로
+ * 만드는 두 단계 상대 페이저 움직임. `shape`는
+ * `server/spatial/position_fx.py`의 `POSITION_FX_EFFECTS`와 같은 닫힌
+ * 집합("sweep"|"flyout"|"circle"|"ballyhoo"|"wave")이고(vi-2), `axes`가
+ * 움직이는 속성을 명시한다(vi-3, `shape` 이름으로부터의 암묵 추론 없음).
+ * `period_unit`/`period_value`는 음악 단위(박/마디)로만 저장되고 초 단위
+ * 상수는 `shall not`이다(vi-4). `phase_spread`는 `shape`와 독립적으로
+ * 위상 펼침 사용 여부를 기록한다(vi-5). */
+export interface BeatGridAppMovement {
+  shape: "sweep" | "flyout" | "circle" | "ballyhoo" | "wave" | null;
+  axes: ("Pan" | "Tilt")[];
+  period_unit: "beat" | "bar" | null;
+  period_value: number | null;
+  phase_spread: boolean | null;
+}
+
+/** t548 — REQ-LDBEAT-015(g). 감독의 레인 제안표 명시 승인. 셋 다
+ * 채워져야(by/date/source) 승인 예외가 성립한다(REQ-LDBEAT-006(vii-3)). */
+export interface BeatGridEvidenceApproval {
+  by: string | null;
+  date: string | null;
+  source: string | null;
+}
+
+/** t548 — REQ-LDBEAT-006(vii-1)~(vii-3). 칸별 근거 등급. `source_ref`
+ * (§4 배치 규칙서 인용 전용)와는 다른 목적이고 서로의 값을 바꾸지 않는다.
+ * `grade`(증거 강도)와 `approval`(승인 여부)은 독립적인 두 축이다. */
+export interface BeatGridEvidence {
+  grade: "measured" | "measured_other_group" | "name_only" | null;
+  approval: BeatGridEvidenceApproval | null;
+}
+
+/** t532/t537/t548 (SPEC-LDBEAT-001 M2/M7/M8) — 박자 격자 칸 하나. 카드
+ * t537(감독 결정 "전체 화면 + 속성별 값")이 단일 `label` 서술 문자열을
+ * 속성별 구조화 필드 다섯 종(`brightness`·`position_preset_no`·
+ * `color_preset_no`·`effect_preset_no`·`entry`)으로 바꿨다(REQ-LDBEAT-006
+ * (i-1)~(i-7)). 카드 t548이 `app_movement`·`evidence` 두 필드를 추가했다
+ * (REQ-LDBEAT-006(vi)(vii)). `label`은 레거시 호환 + 화면 표시용으로
+ * 남는다(삭제하지 않는다, REQ-006(ii-3)) — 그 자유 텍스트를 파싱해 구조화
+ * 필드를 역산하는 것은 `shall not`이다(REQ-006(ii-2), `app_movement`·
+ * `evidence`에도 같은 금지가 적용된다). */
 export interface BeatGridCue {
   bar: number;
   label: string;
@@ -433,6 +467,10 @@ export interface BeatGridCue {
   /** 이 칸의 값이 비롯된 §4 파일 경로+행 번호(칸당 1개) — REQ-006(i-5).
    * 출처가 없는 값(미정이거나 상대 서술)은 `null`이다. */
   source_ref: string | null;
+  /** 카드 t548, REQ-LDBEAT-006(vi) — 앱 2단계 무빙. 없으면 `null`. */
+  app_movement: BeatGridAppMovement | null;
+  /** 카드 t548, REQ-LDBEAT-006(vii) — 칸별 근거 등급. 없으면 `null`. */
+  evidence: BeatGridEvidence | null;
 }
 
 /** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성

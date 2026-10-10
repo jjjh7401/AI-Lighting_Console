@@ -11,6 +11,7 @@ import {
   PX_PER_BAR,
   UNCONFIRMED_PROBE_STATUS,
   UNSET_FIELD_LABEL,
+  appMovementAxisConflictWarning,
   barRowIndex,
   barToSeconds,
   barToX,
@@ -25,7 +26,9 @@ import {
   deriveSectionBlocks,
   fixtureDisplayColor,
   fixtureDisplayOpacity,
+  formatAppMovementField,
   formatBrightnessField,
+  formatEvidenceField,
   formatFadeBarsField,
   formatPresetField,
   formatSourceRefLabel,
@@ -34,6 +37,7 @@ import {
   isUnconfirmedShapeCue,
   isWriteLocked,
   layerFolderLabel,
+  panOnlyVerticalBaseWarning,
   probeStatusClass,
   projectFixture,
   sceneMemoForBar,
@@ -56,6 +60,8 @@ function cue(bar: number, label: string): BeatGridCue {
     effect_kind: null,
     entry: { fade_bars: null, mib_mode: null },
     source_ref: null,
+    app_movement: null,
+    evidence: null,
   };
 }
 
@@ -748,5 +754,200 @@ describe("barPercentInRange — t537 레이아웃 교정 (SCENE 메모 오버레
 
   it("빈 범위(rangeEnd < rangeStart)는 0 — 나눗셈 오류 없음", () => {
     expect(barPercentInRange(5, 10, 5)).toBe(0);
+  });
+});
+
+describe("formatAppMovementField — t548 REQ-LDBEAT-006(vi)", () => {
+  it("app_movement가 없으면 미정", () => {
+    expect(formatAppMovementField(null)).toBe(UNSET_FIELD_LABEL);
+  });
+
+  it("음악 단위 주기가 있으면 shape·축·주기를 보여준다", () => {
+    expect(
+      formatAppMovementField({
+        shape: "wave",
+        axes: ["Pan"],
+        period_unit: "beat",
+        period_value: 2,
+        phase_spread: null,
+      }),
+    ).toBe("wave · Pan · 2박");
+  });
+
+  it("마디 단위 주기도 같은 꼴로 보여준다", () => {
+    expect(
+      formatAppMovementField({
+        shape: "wave",
+        axes: ["Tilt"],
+        period_unit: "bar",
+        period_value: 2,
+        phase_spread: true,
+      }),
+    ).toBe("wave · Tilt · 2마디");
+  });
+
+  it("축이 둘이면 Pan+Tilt로 합쳐 보여준다", () => {
+    expect(
+      formatAppMovementField({
+        shape: "circle",
+        axes: ["Pan", "Tilt"],
+        period_unit: "beat",
+        period_value: 4,
+        phase_spread: null,
+      }),
+    ).toBe("circle · Pan+Tilt · 4박");
+  });
+
+  it("주기가 미정이면 shape·축만 보여준다(지어내지 않음)", () => {
+    expect(
+      formatAppMovementField({
+        shape: "wave",
+        axes: ["Pan"],
+        period_unit: null,
+        period_value: null,
+        phase_spread: null,
+      }),
+    ).toBe("wave · Pan · 미정");
+  });
+});
+
+describe("formatEvidenceField — t548 REQ-LDBEAT-006(vii)", () => {
+  it("evidence가 없으면 미정", () => {
+    expect(formatEvidenceField(null)).toBe(UNSET_FIELD_LABEL);
+  });
+
+  it("grade만 있고 approval이 없으면 grade만 보여준다", () => {
+    expect(formatEvidenceField({ grade: "name_only", approval: null })).toBe("이름만");
+  });
+
+  it("approval이 채워지면 승인 표시를 덧붙인다", () => {
+    expect(
+      formatEvidenceField({
+        grade: "measured",
+        approval: { by: "supervisor", date: "2026-10-10", source: "x#1" },
+      }),
+    ).toBe("측정 · 승인(2026-10-10)");
+  });
+
+  it("measured_other_group은 '다른 그룹 실측'으로 보여준다", () => {
+    expect(formatEvidenceField({ grade: "measured_other_group", approval: null })).toBe(
+      "다른 그룹 실측",
+    );
+  });
+});
+
+describe("appMovementAxisConflictWarning — t548 AC-LDBEAT-016(t)", () => {
+  function cueWith(overrides: Partial<BeatGridCue>): BeatGridCue {
+    return {
+      bar: 0,
+      label: "x",
+      brightness: { mode: null, value_percent: null, preset_no: null },
+      position_preset_no: null,
+      color_preset_no: null,
+      effect_preset_no: null,
+      effect_kind: null,
+      entry: { fade_bars: null, mib_mode: null },
+      source_ref: null,
+      app_movement: null,
+      evidence: null,
+      ...overrides,
+    };
+  }
+
+  it("app_movement 없으면 충돌 없음", () => {
+    expect(appMovementAxisConflictWarning(cueWith({}))).toBeNull();
+  });
+
+  it("같은 축(Tilt)을 movement와 effect가 함께 움직이면 충돌", () => {
+    const cue = cueWith({
+      app_movement: {
+        shape: "wave",
+        axes: ["Tilt"],
+        period_unit: "beat",
+        period_value: 2,
+        phase_spread: null,
+      },
+      effect_preset_no: "21.9",
+      effect_kind: "position",
+    });
+    expect(appMovementAxisConflictWarning(cue)).not.toBeNull();
+  });
+
+  it("축이 겹치지 않으면(Pan + dimmer 효과) 충돌 없음", () => {
+    const cue = cueWith({
+      app_movement: {
+        shape: "wave",
+        axes: ["Pan"],
+        period_unit: "beat",
+        period_value: 2,
+        phase_spread: null,
+      },
+      effect_preset_no: "21.1",
+      effect_kind: "dimmer",
+    });
+    expect(appMovementAxisConflictWarning(cue)).toBeNull();
+  });
+});
+
+describe("panOnlyVerticalBaseWarning — t548 감독 결정④", () => {
+  function cueWith(overrides: Partial<BeatGridCue>): BeatGridCue {
+    return {
+      bar: 0,
+      label: "x",
+      brightness: { mode: null, value_percent: null, preset_no: null },
+      position_preset_no: null,
+      color_preset_no: null,
+      effect_preset_no: null,
+      effect_kind: null,
+      entry: { fade_bars: null, mib_mode: null },
+      source_ref: null,
+      app_movement: null,
+      evidence: null,
+      ...overrides,
+    };
+  }
+
+  it("Pan 단독 + 기준 위치 없음 → 경고", () => {
+    const cue = cueWith({
+      app_movement: {
+        shape: "wave",
+        axes: ["Pan"],
+        period_unit: null,
+        period_value: null,
+        phase_spread: null,
+      },
+    });
+    expect(panOnlyVerticalBaseWarning(cue)).not.toBeNull();
+  });
+
+  it("Pan 단독 + 기준 위치 있음 → 경고 없음", () => {
+    const cue = cueWith({
+      app_movement: {
+        shape: "wave",
+        axes: ["Pan"],
+        period_unit: "beat",
+        period_value: 2,
+        phase_spread: null,
+      },
+      position_preset_no: "2.1",
+    });
+    expect(panOnlyVerticalBaseWarning(cue)).toBeNull();
+  });
+
+  it("Tilt 단독은 기준 위치가 없어도 경고 없음", () => {
+    const cue = cueWith({
+      app_movement: {
+        shape: "wave",
+        axes: ["Tilt"],
+        period_unit: "bar",
+        period_value: 2,
+        phase_spread: true,
+      },
+    });
+    expect(panOnlyVerticalBaseWarning(cue)).toBeNull();
+  });
+
+  it("app_movement 없으면 경고 없음", () => {
+    expect(panOnlyVerticalBaseWarning(cueWith({}))).toBeNull();
   });
 });

@@ -1,0 +1,224 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/331", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/331", "ok": false, "error": "path segment not found: '331' (in ShowData/DataPools/Default/Sequences/331)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/332", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/332", "ok": false, "error": "path segment not found: '332' (in ShowData/DataPools/Default/Sequences/332)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/333", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/333", "ok": false, "error": "path segment not found: '333' (in ShowData/DataPools/Default/Sequences/333)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/334", "t": 0.265, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/334", "ok": false, "error": "path segment not found: '334' (in ShowData/DataPools/Default/Sequences/334)"}
+{"step": "v0a_dimmer_only", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "v0a_clear", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "v0b_dimmer_and_dimmer2", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer2' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, R
+{"step": "v0b_clear", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "store_D1", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer2' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}
+{"step": "play_D1", "t": 0.333, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 331", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 331': state query failed for 'Sequence 331': path segment not found: '331' (in DataPool/Sequences/331)"]}]}
+{"step": "off_D1", "t": 0.399, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 331", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 331': state query failed for 'Sequence 331': path segment not found: '331' (in DataPool/Sequences/331)"]}]}
+{"step": "store_D2", "t": 0.4, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer2' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, 
+{"step": "play_D2", "t": 0.466, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 332", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 332': state query failed for 'Sequence 332': path segment not found: '332' (in DataPool/Sequences/332)"]}]}
+{"step": "off_D2", "t": 0.533, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 332", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 332': state query failed for 'Sequence 332': path segment not found: '332' (in DataPool/Sequences/332)"]}]}
+{"step": "store_D3", "t": 0.533, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer2' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}
+{"step": "play_D3", "t": 0.599, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 333", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 333': state query failed for 'Sequence 333': path segment not found: '333' (in DataPool/Sequences/333)"]}]}
+{"step": "off_D3", "t": 0.666, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 333", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 333': state query failed for 'Sequence 333': path segment not found: '333' (in DataPool/Sequences/333)"]}]}
+{"step": "store_D4", "t": 0.667, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; Attribute 'Dimmer2' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 12 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}
+{"step": "play_D4", "t": 0.733, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 334", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 334': state query failed for 'Sequence 334': path segment not found: '334' (in DataPool/Sequences/334)"]}]}
+{"step": "off_D4", "t": 0.8, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 334", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 334': state query failed for 'Sequence 334': path segment not found: '334' (in DataPool/Sequences/334)"]}]}
+{
+  "item": "T548",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/331",
+    "ShowData/DataPools/Default/Sequences/332",
+    "ShowData/DataPools/Default/Sequences/333",
+    "ShowData/DataPools/Default/Sequences/334"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "v0a_dimmer_only": false,
+    "v0a_clear": false,
+    "v0b_dimmer_and_dimmer2": false,
+    "v0b_clear": false,
+    "store_D1": false,
+    "play_D1": false,
+    "off_D1": false,
+    "store_D2": false,
+    "play_D2": false,
+    "off_D2": false,
+    "store_D3": false,
+    "play_D3": false,
+    "off_D3": false,
+    "store_D4": false,
+    "play_D4": false,
+    "off_D4": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; At Preset 2.1"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 14",
+        "Store Sequence 331 Cue 1 'T548 - D1 tilt wave 2 bars'",
+        "ClearAll",
+        "Set Sequence 331 Property 'Name' 'T548 - D1 tilt wave 2 bars'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 331"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 331"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Pan' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 332 Cue 1 'T548 - D2 pan wave 2 beats'",
+        "ClearAll",
+        "Set Sequence 332 Property 'Name' 'T548 - D2 pan wave 2 beats'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 332"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 332"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 56",
+        "Store Sequence 333 Cue 1 'T548 - D3 tilt wave 2 beats'",
+        "ClearAll",
+        "Set Sequence 333 Property 'Name' 'T548 - D3 tilt wave 2 beats'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 333"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 333"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Pan' At Relative -30",
+        "Group 12 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 56",
+        "Attribute 'Tilt' At Speed 56",
+        "Store Sequence 334 Cue 1 'T548 - D4 pan tilt circle 2 beats'",
+        "ClearAll",
+        "Set Sequence 334 Property 'Name' 'T548 - D4 pan tilt circle 2 beats'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 334"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 334"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

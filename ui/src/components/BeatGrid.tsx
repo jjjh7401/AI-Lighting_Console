@@ -13,8 +13,10 @@
 import { useMemo, useRef, useState } from "react";
 
 import type {
+  BeatGridAppMovement,
   BeatGridBrightness,
   BeatGridCue,
+  BeatGridEvidence,
   BeatGridSceneMemo,
   BeatGridTrack,
   BeatGridView,
@@ -422,6 +424,67 @@ export function deriveFadeSeconds(fadeBars: number | null, secondsPerBar: number
  * `null`(호출부가 행 자체를 생략하거나 "출처 없음"으로 보여준다). */
 export function formatSourceRefLabel(sourceRef: string | null): string | null {
   return sourceRef;
+}
+
+/** t548 — REQ-LDBEAT-006(vi) 칸 표시. `null`이면 미정. 있으면
+ * `"<shape> · <축(들)> · <주기>"` — 주기가 미정이면("지어내지 않음", 레이블이
+ * 말하지 않은 칸) 그 자리도 `UNSET_FIELD_LABEL`이다. 축이 둘이면
+ * `"Pan+Tilt"`로 합친다(고정 순서, 재배열하지 않는다). */
+export function formatAppMovementField(movement: BeatGridAppMovement | null): string {
+  if (!movement) return UNSET_FIELD_LABEL;
+  const axesLabel = (["Pan", "Tilt"] as const)
+    .filter((axis) => movement.axes.includes(axis))
+    .join("+");
+  const periodLabel =
+    movement.period_unit === "beat"
+      ? `${movement.period_value}박`
+      : movement.period_unit === "bar"
+        ? `${movement.period_value}마디`
+        : UNSET_FIELD_LABEL;
+  return `${movement.shape} · ${axesLabel} · ${periodLabel}`;
+}
+
+/** t548 — REQ-LDBEAT-006(vii) 근거 등급 표시. `grade`만 있으면 그 한국어
+ * 이름, `approval`도 채워져 있으면 승인 날짜를 덧붙인다(REQ-LDBEAT-015
+ * (g) 승인 예외가 성립한 칸을 화면에서도 구분할 수 있게). */
+export function formatEvidenceField(evidence: BeatGridEvidence | null): string {
+  if (!evidence || !evidence.grade) return UNSET_FIELD_LABEL;
+  const gradeLabel: Record<NonNullable<BeatGridEvidence["grade"]>, string> = {
+    measured: "측정",
+    measured_other_group: "다른 그룹 실측",
+    name_only: "이름만",
+  };
+  const base = gradeLabel[evidence.grade];
+  if (evidence.approval?.date) return `${base} · 승인(${evidence.approval.date})`;
+  return base;
+}
+
+/** t548 — AC-LDBEAT-016(t), REQ-LDBEAT-006(vi-7). 한 칸이 `app_movement`와
+ * `effect_preset_no`를 **같은 축**에 동시에 쓰면 거절 플래그를 올린다.
+ * `effect_kind`는 그 효과가 정확히 어느 축을 움직이는지 말하지 않으므로
+ * `"position"`·`"mixed"`는 Pan·Tilt 어느 쪽과도 충돌로 **보수적으로**
+ * 본다 — `"color"`·`"dimmer"`는 축을 움직이지 않아 충돌이 없다(server
+ * `check_app_movement_axis_conflict`와 같은 판정). */
+export function appMovementAxisConflictWarning(cue: BeatGridCue): string | null {
+  const { app_movement: movement, effect_preset_no: effectPresetNo, effect_kind: effectKind } =
+    cue;
+  if (!movement || movement.axes.length === 0) return null;
+  if (effectPresetNo === null) return null;
+  if (effectKind !== "position" && effectKind !== "mixed") return null;
+  return "⚠ 같은 축 충돌";
+}
+
+/** t548 — 감독 결정④(2026-10-10, 리드 경유). Pan 단독 `app_movement`가
+ * `position_preset_no` 없이(기본 위치=수직 중심) 쓰이면 눈에 보이지 않을
+ * 수 있다 — 경고일 뿐 거절은 아니다(server `pan_only_vertical_base_
+ * warning`과 같은 판정, `position_preset_no`가 있는 경우의 "수직인가"
+ * 판정은 이 SPEC의 범위 밖). */
+export function panOnlyVerticalBaseWarning(cue: BeatGridCue): string | null {
+  const movement = cue.app_movement;
+  if (!movement) return null;
+  if (movement.axes.length !== 1 || movement.axes[0] !== "Pan") return null;
+  if (cue.position_preset_no !== null) return null;
+  return "⚠ Pan 단독 움직임이 기본 위치(수직) 중심입니다 — 기울인 위치 프리셋 없이는 눈에 보이지 않을 수 있습니다";
 }
 
 export interface BeatGridCueColorFill {
@@ -941,6 +1004,18 @@ export function BeatGrid({
                           value: selectedCue.effect_kind ? `${effectValue} (${selectedCue.effect_kind})` : effectValue,
                         });
                       }
+                      // t548 — 앱 2단계 무빙(REQ-LDBEAT-006(vi))과 근거 등급(vii)은
+                      // 값이 있는 칸에서만 보인다. 경고 둘은 거절이 아니라 표시다.
+                      if (selectedCue.app_movement) {
+                        rows.push({ field: "앱 무빙", value: formatAppMovementField(selectedCue.app_movement) });
+                      }
+                      if (selectedCue.evidence) {
+                        rows.push({ field: "근거", value: formatEvidenceField(selectedCue.evidence) });
+                      }
+                      const axisConflict = appMovementAxisConflictWarning(selectedCue);
+                      if (axisConflict) rows.push({ field: "같은 축", value: axisConflict });
+                      const panOnly = panOnlyVerticalBaseWarning(selectedCue);
+                      if (panOnly) rows.push({ field: "기준 위치", value: panOnly });
                     }
                     return rows.map((row) => (
                       <div className="beat-grid-cue-field" key={row.field}>

@@ -48,19 +48,25 @@ from server.design.rig import resolve_layer_role
 __all__ = [
     "DEFAULT_BAR_RANGE",
     "LOVE_ATTACK_TITLE",
+    "BeatGridAppMovement",
     "BeatGridBrightness",
     "BeatGridCue",
     "BeatGridEntry",
+    "BeatGridEvidence",
+    "BeatGridEvidenceApproval",
     "BeatGridTrack",
     "BeatGridView",
     "SceneCellAssignment",
     "SceneMemo",
     "attach_beat_grid_default",
     "attach_beat_grid_runtime_extras",
+    "check_app_movement_axis_conflict",
+    "check_evidence_approval",
     "classify_scene_cell_assignment",
     "default_beat_grid",
     "find_overlapping_group_tracks",
     "normalize_beat_grid_cue",
+    "pan_only_vertical_base_warning",
     "validate_beat_grid_tracks",
 ]
 
@@ -74,6 +80,15 @@ EffectKind = Literal["position", "color", "dimmer", "mixed"]
 #: REQ-LDBEAT-006(iv-2) — §4 SCENE 칸 값이 트랙 큐로 옮겨지는지(``"track"``)
 #: 메모로 남는지(``"memo"``).
 SceneCellAssignment = Literal["track", "memo"]
+
+#: REQ-LDBEAT-006(vi-4) — `app_movement`의 한 바퀴 주기는 음악 단위로만
+#: 저장된다(초 단위 상수는 shall not).
+AppMovementPeriodUnit = Literal["beat", "bar"]
+
+#: REQ-LDBEAT-006(vii-2)(plan-audit iteration 1 D1 교정) — 증거 **강도**만
+#: 담는 닫힌 집합. 승인 여부는 별도 `approval` 하위 객체가 담당한다(두 축은
+#: 독립).
+EvidenceGrade = Literal["measured", "measured_other_group", "name_only"]
 
 
 def classify_scene_cell_assignment(
@@ -135,12 +150,55 @@ class BeatGridEntry(TypedDict):
     mib_mode: str | None
 
 
+class BeatGridAppMovement(TypedDict):
+    """REQ-LDBEAT-006(vi-1)~(vi-8), 카드 t548, 감독 결정 2026-10-10/11 —
+    새 콘솔 프리셋 없이 앱이 커맨드로 만드는 두 단계 상대 페이저 움직임.
+    ``effect_preset_no``+``effect_kind``(콘솔에 저장된 효과 프리셋)나
+    ``position_preset_no``(정적 위치 프리셋)와는 구분되는 별도 자리다.
+
+    - ``shape``는 ``server.spatial.position_fx.POSITION_FX_EFFECTS``와
+      **같은** 닫힌 집합이다(vi-2) — 새 모양 이름을 발명하지 않는다.
+    - ``axes``는 움직이는 속성을 명시적으로 담는다(vi-3) — ``shape``
+      이름으로부터의 암묵적 추론은 하지 않는다.
+    - ``period_unit``/``period_value``는 음악 단위(박/마디)로만 저장된다
+      (vi-4) — 초 단위 상수는 `shall not`. 실제 콘솔 Speed는 에미터가
+      그 곡 BPM으로 계산한다(저장 시점 계산 금지).
+    - ``phase_spread``는 ``shape``와 독립적으로 위상 펼침 사용 여부를
+      기록한다(vi-5).
+    """
+
+    shape: str | None
+    axes: tuple[str, ...]
+    period_unit: AppMovementPeriodUnit | None
+    period_value: int | None
+    phase_spread: bool | None
+
+
+class BeatGridEvidenceApproval(TypedDict):
+    """REQ-LDBEAT-006(vii-3), REQ-LDBEAT-015(g) — 감독의 레인 제안표 명시
+    승인. 셋 다 채워져야(by/date/source) 승인 예외가 성립한다."""
+
+    by: str | None
+    date: str | None
+    source: str | None
+
+
+class BeatGridEvidence(TypedDict):
+    """REQ-LDBEAT-006(vii-1)~(vii-3) — 칸별 근거 등급. ``source_ref``
+    (§4 배치 규칙서 인용 전용, REQ-006(i-5))와는 다른 목적이고 서로의 값을
+    바꾸지 않는다. ``grade``(증거 강도)와 ``approval``(승인 여부)은
+    독립적인 두 축이다."""
+
+    grade: EvidenceGrade | None
+    approval: BeatGridEvidenceApproval | None
+
+
 class BeatGridCue(TypedDict):
-    """격자 칸 하나(카드 t537 구조화, REQ-LDBEAT-006(i-1)~(i-7)). 단일
-    ``label`` 서술 문자열이 아니라 속성별 구조화 필드 다섯 종
-    (``brightness``·``position_preset_no``·``color_preset_no``·
-    ``effect_preset_no``·``entry``)으로 저장된다. ``label``은 레거시
-    호환 + 화면 표시용으로 남는다(삭제하지 않는다, REQ-006(ii-3))."""
+    """격자 칸 하나(카드 t537 구조화, REQ-LDBEAT-006(i-1)~(i-7); 카드 t548이
+    ``app_movement``·``evidence`` 추가). 단일 ``label`` 서술 문자열이 아니라
+    속성별 구조화 필드(밝기·위치 프리셋·색 프리셋·효과 프리셋·들어올 때·
+    앱 무빙·근거 등급)로 저장된다. ``label``은 레거시 호환 + 화면
+    표시용으로 남는다(삭제하지 않는다, REQ-006(ii-3))."""
 
     bar: int
     label: str
@@ -153,6 +211,10 @@ class BeatGridCue(TypedDict):
     #: 이 칸의 값이 비롯된 §4 파일 경로+행 번호(칸당 1개) — REQ-006(i-5).
     #: §4 출처가 없는 값(미정이거나 상대 서술)은 `None`이다.
     source_ref: str | None
+    #: 카드 t548, REQ-LDBEAT-006(vi) — 앱 2단계 무빙. 없으면 `None`.
+    app_movement: BeatGridAppMovement | None
+    #: 카드 t548, REQ-LDBEAT-006(vii) — 칸별 근거 등급. 없으면 `None`.
+    evidence: BeatGridEvidence | None
 
 
 class BeatGridTrack(TypedDict):
@@ -303,6 +365,34 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
     )
     raw_entry = raw.get("entry")
     entry_source: Mapping[str, object] = raw_entry if isinstance(raw_entry, Mapping) else {}
+
+    raw_app_movement = raw.get("app_movement")
+    app_movement: BeatGridAppMovement | None = None
+    if isinstance(raw_app_movement, Mapping):
+        app_movement = BeatGridAppMovement(
+            shape=raw_app_movement.get("shape"),  # type: ignore[typeddict-item]
+            axes=tuple(raw_app_movement.get("axes") or ()),  # type: ignore[arg-type]
+            period_unit=raw_app_movement.get("period_unit"),  # type: ignore[typeddict-item]
+            period_value=raw_app_movement.get("period_value"),  # type: ignore[typeddict-item]
+            phase_spread=raw_app_movement.get("phase_spread"),  # type: ignore[typeddict-item]
+        )
+
+    raw_evidence = raw.get("evidence")
+    evidence: BeatGridEvidence | None = None
+    if isinstance(raw_evidence, Mapping):
+        raw_approval = raw_evidence.get("approval")
+        approval: BeatGridEvidenceApproval | None = None
+        if isinstance(raw_approval, Mapping):
+            approval = BeatGridEvidenceApproval(
+                by=raw_approval.get("by"),  # type: ignore[typeddict-item]
+                date=raw_approval.get("date"),  # type: ignore[typeddict-item]
+                source=raw_approval.get("source"),  # type: ignore[typeddict-item]
+            )
+        evidence = BeatGridEvidence(
+            grade=raw_evidence.get("grade"),  # type: ignore[typeddict-item]
+            approval=approval,
+        )
+
     return BeatGridCue(
         bar=int(raw["bar"]),  # type: ignore[arg-type]
         label=str(raw.get("label") or ""),
@@ -320,6 +410,8 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
             mib_mode=entry_source.get("mib_mode"),  # type: ignore[typeddict-item]
         ),
         source_ref=raw.get("source_ref"),  # type: ignore[typeddict-item]
+        app_movement=app_movement,
+        evidence=evidence,
     )
 
 
@@ -475,3 +567,94 @@ def attach_beat_grid_runtime_extras(
     grid["probe_results"] = read_m1_probe_results_from_path(path)
     merged["beat_grid"] = grid
     return merged
+
+
+#: REQ-LDBEAT-006(vi-7) — `effect_kind` 값이 Pan·Tilt 둘 다(또는 어느
+#: 쪽인지 모른다는 뜻의 "mixed") 움직일 수 있다고 보는 보수적 집합. 축을
+#: 안 움직이는 `"color"`/`"dimmer"`는 여기 없다.
+_EFFECT_KINDS_WITH_PAN_TILT_AMBIGUITY: frozenset[str] = frozenset({"position", "mixed"})
+
+
+def check_app_movement_axis_conflict(cue: Mapping[str, object]) -> str | None:
+    """REQ-LDBEAT-006(vi-7), AC-LDBEAT-016(t) — 한 칸이 `app_movement`와
+    `effect_preset_no`(REQ-006(i-3))를 **같은 축**에 동시에 쓰면 거절한다.
+    서로 다른 축(예: 밝기 효과 + 팬 흔들기)은 금지 대상이 아니다.
+
+    `effect_kind`는 그 효과가 정확히 어느 축을 움직이는지 말하지 않는다
+    (콘솔 프리셋 내부는 못 읽는다) — `"position"`·`"mixed"`는 Pan·Tilt
+    어느 쪽이든 움직일 수 있다고 **보수적으로** 보고, `app_movement`의
+    어떤 축과도 충돌로 본다. `"color"`·`"dimmer"`는 축을 움직이지
+    않으므로 충돌이 없다."""
+    movement = cue.get("app_movement")
+    if not isinstance(movement, Mapping):
+        return None
+    axes = set(movement.get("axes") or ())
+    if not axes:
+        return None
+    if cue.get("effect_preset_no") is None:
+        return None
+    effect_kind = cue.get("effect_kind")
+    if effect_kind not in _EFFECT_KINDS_WITH_PAN_TILT_AMBIGUITY:
+        return None
+    return (
+        f"app_movement 축 {sorted(axes)!r}과 effect_preset_no의 효과가 같은 축을 "
+        "움직입니다 — 한 칸에 함께 쓸 수 없습니다(REQ-LDBEAT-006(vi-7))"
+    )
+
+
+def _cell_preset_numbers(cue: Mapping[str, object]) -> tuple[object, ...]:
+    """이 칸이 쓰는 모든 프리셋 **번호** 필드 값(비어있지 않은 것만 걸러내지
+    않고 그대로) — `check_evidence_approval`이 "프리셋 번호가 있는가"를
+    판정하는 데 쓴다."""
+    brightness = cue.get("brightness")
+    brightness_preset_no = brightness.get("preset_no") if isinstance(brightness, Mapping) else None
+    return (
+        brightness_preset_no,
+        cue.get("position_preset_no"),
+        cue.get("color_preset_no"),
+        cue.get("effect_preset_no"),
+    )
+
+
+def check_evidence_approval(cue: Mapping[str, object]) -> str | None:
+    """REQ-LDBEAT-015(f)/(g), REQ-LDBEAT-006(vii-2)(vii-3),
+    AC-LDBEAT-016(o)(p) — 프리셋 **번호**를 하나라도 쓰는 칸은 완전한
+    `evidence.approval`(`by == "supervisor"` + `date` + `source` 셋 다)을
+    갖춰야 한다. `evidence.grade`와는 독립 — `grade`가 `"name_only"`여도
+    `approval`이 채워지면 통과한다(`grade` 자체는 이 검증에 영향을 주지
+    않는다, D1 재구조화)."""
+    if not any(value is not None for value in _cell_preset_numbers(cue)):
+        return None
+    evidence = cue.get("evidence")
+    approval = evidence.get("approval") if isinstance(evidence, Mapping) else None
+    if not isinstance(approval, Mapping):
+        return "프리셋 번호가 있지만 evidence.approval이 없습니다 — REQ-LDBEAT-015(f) 위반"
+    by = approval.get("by")
+    date = approval.get("date")
+    source = approval.get("source")
+    if by != "supervisor" or not date or not source:
+        return "evidence.approval이 불완전합니다(by/date/source 중 누락) — REQ-LDBEAT-015(f) 위반"
+    return None
+
+
+def pan_only_vertical_base_warning(cue: Mapping[str, object]) -> str | None:
+    """감독 결정④(2026-10-10, 리드 경유) — Pan 단독 `app_movement`가
+    `position_preset_no` 없이(REQ-LDBEAT-006(vi-8), 기본 위치=수직 중심)
+    쓰이면 눈에 보이지 않을 수 있다. 거절이 아니라 **경고**다.
+
+    non-null `position_preset_no`가 실제로 "수직"인지 판정하려면 이 SPEC의
+    증거 범위 밖 데이터(그 프리셋이 가리키는 실제 틸트값)가 필요하다 —
+    이 함수는 `position_preset_no is None`인 경우만 다룬다(§5 항목 8
+    미해소분, 범위를 넓히지 않는다)."""
+    movement = cue.get("app_movement")
+    if not isinstance(movement, Mapping):
+        return None
+    axes = set(movement.get("axes") or ())
+    if axes != {"Pan"}:
+        return None
+    if cue.get("position_preset_no") is not None:
+        return None
+    return (
+        "⚠ Pan 단독 움직임이 기본 위치(수직) 중심입니다 — 기울인 위치 프리셋 없이는 "
+        "눈에 보이지 않을 수 있습니다"
+    )
