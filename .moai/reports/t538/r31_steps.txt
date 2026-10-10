@@ -1,0 +1,5 @@
+props:ShowData/DataPools/Default/Sequences/322|CURRENTCUE
+props:ShowData/DataPools/Default/Sequences/322|CURRENTCUE
+props:ShowData/DataPools/Default/Sequences/322|CURRENTCUE
+props:ShowData/DataPools/Default/Sequences/322|CURRENTCUE
+props:ShowData/DataPools/Default/Sequences/322/5|NAME,TRIGTYPE
