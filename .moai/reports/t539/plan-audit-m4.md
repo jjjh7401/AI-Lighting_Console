@@ -86,3 +86,63 @@ Required fix: 별도 카드로 후속 처리 권고.
 4. **D4** — AC-LDBARMAP-010 조건 2의 "재로드 경로"를 구체적 커맨드/함수로 명시한다.
 5. **D5** — `spec.md:35`, `spec.md:160`, `plan.md:70`, `plan.md:79` 네 곳에 "갱신(카드 t539, M4)" 주석을 추가하거나 서술을 확정 상태로 고친다. 특히 `spec.md:35`의 Tier 근거 재검토.
 6. 교정 뒤 REQ-LDBARMAP-010/AC-LDBARMAP-010/§5만 다루는 2차 부분심사(iteration 10)를 재실행한다.
+
+---
+---
+
+# Iteration 2 (부분심사 — 교정 커밋 `3ad00704` 재심사)
+
+대상 커밋: `3ad00704` (`git show 3ad00704`) — iteration 1(위 본문)의 FAIL 대응 D1~D5 교정.
+심사 범위: iteration 1과 동일 범위 **+ 이 교정 커밋이 실제로 건드린 모든 줄**(`acceptance.md` AC-LDBARMAP-010 전체, `plan.md:70`·`:79`, `spec.md:35`(Tier 근거)·`:160`(§5 항목1)·`:179`(REQ-016 근거 칸)·`:188`(§5 권고 출력 모양)·`:197`(`start_beat`)·`:202`(`first_beat_offset`)·HISTORY 신규 단락).
+
+**Verdict: PASS**
+**Overall Score: 0.86** (조화평균, 통과선 0.80 — Tier M)
+
+## Must-Pass 결과 (재확인)
+
+- **[PASS] MP-1** — REQ 16개(`grep -n "^| REQ-LDBARMAP-" spec.md` → 16), AC 16개(`grep -n "^### AC-LDBARMAP-" acceptance.md` → 16) 그대로, 갭·중복 없음. 교정 커밋은 REQ-ID·AC-ID를 신설하지 않았다(AC-010 안에 조건 6을 추가했을 뿐).
+- **[PASS] MP-2** — REQ-LDBARMAP-010(불변, iteration 1에서 이미 PASS)·REQ-LDBARMAP-016(근거 칸만 확장, `shall` 절 불변 — "While...shall", 단일 모달 그대로, `spec.md:104`) 둘 다 요구사항 계층에서 GEARS 단일 모달 유지. AC-LDBARMAP-010(검증 계층)에는 GEARS 패턴 검사를 적용하지 않음(M3 § Scope, iteration 1과 동일 판정).
+- **[PASS] MP-3** — frontmatter 불변(`spec.md:1-16`, `version: "0.1.5"` 그대로 — 같은 날 교정은 버전을 올리지 않는 이 SPEC의 기존 관행과 일치, 카드 t535 iteration 6/7/8 선례와 동일).
+- **[N/A] MP-4** — 불변.
+- **[PASS] MP-5** — 인용 SPEC 셋(`SPEC-LDARRANGE-001`/`SPEC-LDBEAT-001`/`SPEC-LDRHYTHM-001`) 상태 불변, BLOCKING 없음.
+- **[N/A] MP-6** — `grep -n "syscall" spec.md plan.md acceptance.md` → 0건, 불변.
+- **[N/A] MP-7** — `grep -rn '\[NEEDS CLARIFICATION' plan.md research.md` → 0건, 불변.
+
+## D1~D5 재심사 — RESOLVED/UNRESOLVED
+
+| ID | 판정 | 근거(file:line) |
+|---|---|---|
+| D1 | **RESOLVED** | `spec.md:188`(§5 권고 출력 모양 — "`beat_times` 인덱스를 그 마디 박자표 분자로 나눈 나머지, 범위 0~(분자−1)"로 일반화) · `spec.md:157`(`first_beat_offset` 본문 정의, 동일 일반화 + "LOVE ATTACK M2 범위(4/4)에서는 분자=4이므로 mod 4·범위 0~3이 그 인스턴스다") · `spec.md:179`(REQ-LDBARMAP-016 근거 칸 — "이 REQ의 mod 4·0~3은 그 일반화 규칙의 4/4 인스턴스다 — 둘은 상충하지 않는다") · `acceptance.md:129`(AC-010 조건 5 — "이 3/4 픽스처의 first_beat_offset은... 기대 범위는 0~2(박)다"). 세 문서가 모두 같은 "분자로 나눈 나머지" 규칙과 "REQ-016 = 4/4 인스턴스" 설명으로 수렴한다 — 더 이상 충돌이 없다. |
+| D2 | **RESOLVED** | `spec.md:153`(현재 라인 넘버) — `start_beat`가 "1-base(**1~분자**)... LOVE ATTACK 4/4에서는 1~4"로 수정되어 `spec.md:159`(일반화 규칙 "start_beat는 1~분자")와 통일됐다. |
+| D3 | **RESOLVED(조건부 — 아래 NEW-D1 참조)** | `acceptance.md:126` — AC-LDBARMAP-010에 조건 6("인용 추적성") 신설, REQ-LDBARMAP-011의 `shall` 절 내용(LDBEAT REQ-006 인용·LDARRANGE 소비자 명시)을 명시적으로 검증한다. 추적성 공백 자체는 메워졌다 — 다만 그 검증 방식 자체에 새 결함이 있다(NEW-D1). |
+| D4 | **RESOLVED** | `acceptance.md:125` — 조건 2가 "같은 파일 경로로 `SongTimelineStore(path)`를 새로 생성해 `latest`를 읽으면... `SongTimelineLibrary.save(name, timeline)` → `get(entry_id)`"로 구체화됐다. 더 이상 "그 모듈의 재로드 경로"라는 미지정 표현이 없다. |
+| D5 | **RESOLVED(4곳 전부)** | `spec.md:35`(Tier 근거 — "저장 인터페이스는 M4에서 확정됐다... Tier M은 이제 REQ/AC 16개 상한 도달 하나로 유지한다") · `spec.md:160`(§5 항목1 — "이 SPEC(LDBARMAP) 쪽 저장 위치는 M4에서 옵션 A로 확정됐다") · `plan.md:70`(§D — "REQ-LDBARMAP-010은 이제 확정됐지만... 이 분리 자체는 바뀌지 않는다") · `plan.md:79`(§E 위험표 — "M4에서 옵션 A로 확정 완료 — 이 위험 행은... 역사로 보존한다"). 네 곳 모두 더 이상 "저장 인터페이스가 아직 열려 있다"고 단정하지 않는다. |
+
+## 이 교정이 들여온 신규 결함(Regression)
+
+**NEW-D1.** major-GWT-structural-mismatch — `acceptance.md:115-126` — 신설된 조건 6("인용 추적성")은 AC-LDBARMAP-010의 **Given/When**("M4가 구현한 저장 배선 + 임의의 유효한 마디 지도 페이로드가 주어진 상태에서... `timeline["bar_map"]`에 쓰고 곧바로 읽으면")의 논리적 결과가 아니다 — Given은 조건 6이 검사하는 대상(`spec.md` §5 문서 프로즈)을 입력으로 선언하지 않았고, When의 "쓰기→읽기" 행위도 조건 6과 무관하다. 또한 조건 1~5는 전부 서버 런타임 동작(쓰기/읽기/되돌리기/거부/일반화)을 검사하는데, 조건 6은 **정적 문서 grep**(spec.md 파일 내용 검사)이라 M4의 명시 범위("서버 쪽 저장·로드·되돌리기만")에도 들지 않는다. 마지막으로 제시된 검증 커맨드가 `§5 열린 결정 0 범위 안`이라는 조건을 달면서도 `grep -c '...' spec.md`(파일 전체 대상, §5로 범위 제한 안 함)로만 적혀, 그 문자열들이 HISTORY 등 §5 바깥에도 이미 여러 차례 등장하므로(실측: `SongTimelineStore` 등 6건, `SPEC-LDARRANGE-001` 10건, `grep -c` 전체) 이 grep은 §5 안 인용이 사라져도 거의 항상 PASS로 나온다 — 판별력이 약한 검증이다.
+Severity: **major** — Class: **blocking** (조정관 지시 "AC-010's six conditions each testable server-side with units"가 명시한 기준에 조건 6이 미달)
+Required fix: 둘 중 하나 — (a) 조건 6을 AC-LDBARMAP-010에서 분리해 별도 AC(또는 AC-LDBARMAP-011의 재정의)로 옮기고 Given에 "spec.md §5 열린 결정 0 문서가 주어진 상태에서"를 명시, (b) grep 범위를 §5로 한정(예: `sed -n '/^0\. /,/^1\. /p' spec.md | grep -c '...'`)해 §5 밖의 우연한 매치를 배제한다. 둘 다 적용하지 않더라도 이번 iteration의 집계 점수는 통과선을 넘지만, 다음 교정 사이클에서 가볍게 반영할 것을 권고한다.
+
+## Category Scores (재채점)
+
+| Dimension | Score(iter1→iter2) | 근거 |
+|---|---|---|
+| Clarity | 0.50 → **0.75** | D5(4곳) 전부 해소 — 더 이상 "확정 vs 미확정" 모순 없음. 잔여: 조건 6의 "§5 범위 안"이라는 판정에 약간의 판단력이 필요함(NEW-D1) |
+| Completeness | 0.75 → **1.0** | `first_beat_offset`의 비-4/4 단위 정의가 채워졌다(D1) — 범위 안 섹션에 더 이상 빈 핵심 내용 없음 |
+| Testability | 0.50 → **0.75** | D4(재로드 경로 구체화)·D1(조건5 기대범위 명시)로 개선됐으나, 조건 6의 grep이 §5로 범위 제한되지 않아 판별력이 약함(NEW-D1) — "하나의 조건이 완전히 이진 판정 가능하지는 않으나 약간의 해석으로 측정 가능" 밴드 |
+| Traceability | 0.75 → **1.0** | REQ-LDBARMAP-011이 이제 AC-LDBARMAP-010 조건 6으로 실질적으로 검증된다 — Traceability 루브릭("매 REQ가 최소 1개 AC를 가진다")은 그 AC의 검증 품질이 아니라 존재 여부를 보므로 충족 |
+
+**조화평균** = 4 / (1/0.75 + 1/1.0 + 1/0.75 + 1/1.0) = 4 / 4.667 ≈ **0.86** → 통과선 0.80 이상 → **PASS**.
+
+## Stagnation Check
+
+없음 — D1~D5 다섯 결함 모두 iteration 1→2 사이에 실제로 해소됐다("manager-spec made no progress" 신호 없음).
+
+## Recommendation (PASS — 잔여 권고)
+
+PASS이므로 추가 재심사 iteration은 **필수가 아니다**. 다만 아래 1개 항목은 가벼운 후속 수정으로 권고한다(차단 사유 아님, M6 — 긴 선택 항목 목록이 FAIL을 만들지 않는다는 원칙과 동일하게, 이 **blocking** 분류 항목 1개도 집계 점수가 이미 통과선을 넘는 이상 iteration 10을 강제하지 않는다):
+
+1. **NEW-D1** — AC-LDBARMAP-010 조건 6을 Given/When과 정합하게 재배치하거나, grep 범위를 §5로 한정한다. (`acceptance.md:115-126`)
+
+이 외 iteration 1의 D6(정보성)·D7(범위 밖)는 이번 iteration에도 채점 미반영으로 유지한다.
