@@ -1,6 +1,7 @@
-"""M2 — 마디 지도: 자동 비트 격자 + 사람이 지정한 첫 박 오프셋 (SPEC-LDBARMAP-001).
+"""M2/M3 — 마디 지도 + 마디별 변화 이벤트 분류기 (SPEC-LDBARMAP-001).
 
-REQ-LDBARMAP-016 · AC-LDBARMAP-015/016. 세 층으로 나뉜다:
+REQ-LDBARMAP-016(M2) · REQ-LDBARMAP-008(M3) · AC-LDBARMAP-015/016/007. 다섯 층으로
+나뉜다:
 
 1. ``derive_bars`` 순수 함수 시험 — librosa 없이 CI 어디서나 돈다.
 2. ``detect_beat_grid`` 를 in-test 합성 클릭 트랙(알려진 BPM)에 돌리는 CI-safe 시험
@@ -8,8 +9,15 @@ REQ-LDBARMAP-016 · AC-LDBARMAP-015/016. 세 층으로 나뉜다:
 3. LOVE ATTACK **326개 검출 비트 시각 고정 픽스처**(``fixtures/love_attack_beat_grid.json``,
    오디오가 아니라 파생 숫자)로 AC-LDBARMAP-016(다운비트·마디 경계 적중률 ≥90%)을
    ``tools/barmap`` 의 엄격한 순서 대응 채점기로 재현.
-4. 로컬 전용 회귀 — 실제 LOVE ATTACK mp3가 있을 때만(``pytest.skip`` 부재 시 건너뜀),
-   ``detect_beat_grid`` 가 그 픽스처와 같은 숫자를 다시 내는지 확인.
+4. 로컬 전용 회귀(M2) — 실제 LOVE ATTACK mp3가 있을 때만(``pytest.skip`` 부재 시
+   건너뜀), ``detect_beat_grid`` 가 그 픽스처와 같은 숫자를 다시 내는지 확인.
+5. ``classify_bar_events`` 합성 특징 시험(M3, 순수 함수, CI-safe) — 네 종류 각각 +
+   무이벤트.
+6. LOVE ATTACK **부록 A 표 자체를 파싱한 특징 픽스처**(M3, 오디오 아님 — 지도
+   보고서가 이미 커밋한 숫자, ``tools/barmap/ground_truth.parse_bar_features``)로
+   AC-LDBARMAP-007(≥5/7) 재현 + 문턱 ±20% 민감도.
+7. 로컬 전용 회귀(M3) — 실제 LOVE ATTACK mp3가 있을 때만, ``extract_bar_features``
+   가 음량을 재현하고 전체 파이프라인이 AC-007 을 통과하는지 확인.
 
 콘솔 접촉 0건 — 이 파일은 오디오 분석기만 다룬다(REQ-LDBARMAP-001/015).
 """
@@ -23,17 +31,23 @@ from pathlib import Path
 
 import pytest
 
+from server.audio import bar_map as bar_map_module
 from server.audio.analyze import analysis_available
 from server.audio.bar_map import (
+    BarEvent,
+    BarFeatures,
+    BarFeaturesFailure,
     BarMap,
     BarMapFailure,
     BeatGridFailure,
     BeatGridResult,
+    classify_bar_events,
     derive_bars,
     detect_beat_grid,
+    extract_bar_features,
 )
-from tools.barmap.ground_truth import DOWNBEAT_TOLERANCE_SEC, parse_downbeats
-from tools.barmap.scorer import strict_index_hit_rate
+from tools.barmap.ground_truth import DOWNBEAT_TOLERANCE_SEC, parse_bar_features, parse_downbeats
+from tools.barmap.scorer import event_recall, strict_index_hit_rate
 
 pytestmark = pytest.mark.skipif(
     not analysis_available(),
@@ -372,3 +386,250 @@ def test_detect_beat_grid_real_love_attack_matches_fixture_and_ac016() -> None:
     downbeat_sec = [t / 1000.0 for t in bar_map.downbeats_ms]
     hit = strict_index_hit_rate(downbeat_sec, truth_sec, DOWNBEAT_TOLERANCE_SEC)
     assert hit.rate_pct >= AC016_HIT_RATE_THRESHOLD_PCT, str(hit)
+
+
+# ---------------------------------------------------------------------------
+# 5. classify_bar_events — 순수 함수, 합성 특징(M3, 카드 t530).
+# ---------------------------------------------------------------------------
+
+# AC-LDBARMAP-007 — 7개 사건 중 5개 이상(70% 이상) 적중해야 PASS.
+AC007_RECALL_THRESHOLD = 5
+
+
+def test_classify_bar_events_empty_features_returns_empty_list() -> None:
+    assert classify_bar_events([]) == []
+
+
+def test_classify_bar_events_flat_sequence_yields_zero_events() -> None:
+    """무이벤트 — 모든 마디가 중앙값과 같으면(평탄) 어떤 이벤트도 나오지 않는다."""
+    features = [BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0) for i in range(1, 21)]
+    assert classify_bar_events(features) == []
+
+
+def test_classify_bar_events_kick_entry_only() -> None:
+    """저역이 문턱(2.0배) 이상인 마디 하나 — 킥 진입(큰 히트)만 나온다."""
+    features = [BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0) for i in range(1, 6)]
+    features[2] = BarFeatures(bar=3, volume_norm=1.0, low_band_norm=4.0)
+    events = classify_bar_events(features)
+    kick_events = [e for e in events if e.kind == "kick_entry"]
+    assert kick_events == [BarEvent("kick_entry", 3, 3, grade="measured")]
+
+
+def test_classify_bar_events_break_only() -> None:
+    """저역이 문턱(0.45배) 이하인 마디 하나 — 브레이크(킥 멈춤)만 나온다."""
+    features = [BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0) for i in range(1, 6)]
+    features[2] = BarFeatures(bar=3, volume_norm=1.0, low_band_norm=0.1)
+    events = classify_bar_events(features)
+    break_events = [e for e in events if e.kind == "break"]
+    assert break_events == [BarEvent("break", 3, 3, grade="measured")]
+
+
+def test_classify_bar_events_build_anchored_before_kick_entry() -> None:
+    """큰 히트 직전 3마디 이상 연속 상승 — 빌드업 하나가 그 구간으로 나온다.
+
+    bar=8이 큰 히트(저역 4.0배)고, bar 4~7이 음량 연속 상승(0.6→0.7→0.8→0.9).
+    """
+    features = []
+    for i in range(1, 11):
+        features.append(BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0))
+    features[3] = BarFeatures(bar=4, volume_norm=0.6, low_band_norm=1.0)
+    features[4] = BarFeatures(bar=5, volume_norm=0.7, low_band_norm=1.0)
+    features[5] = BarFeatures(bar=6, volume_norm=0.8, low_band_norm=1.0)
+    features[6] = BarFeatures(bar=7, volume_norm=0.9, low_band_norm=1.0)
+    features[7] = BarFeatures(bar=8, volume_norm=1.0, low_band_norm=4.0)
+
+    events = classify_bar_events(features)
+    build_events = [e for e in events if e.kind == "build"]
+    assert build_events == [BarEvent("build", 4, 7, grade="measured")]
+
+
+def test_classify_bar_events_build_requires_minimum_3_bars() -> None:
+    """상승이 2마디뿐이면(문턱 미달) 빌드업으로 치지 않는다."""
+    features = []
+    for i in range(1, 7):
+        features.append(BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0))
+    features[3] = BarFeatures(bar=4, volume_norm=0.8, low_band_norm=1.0)
+    features[4] = BarFeatures(bar=5, volume_norm=0.9, low_band_norm=1.0)
+    features[5] = BarFeatures(bar=6, volume_norm=1.0, low_band_norm=4.0)
+
+    events = classify_bar_events(features)
+    build_events = [e for e in events if e.kind == "build"]
+    assert build_events == []
+
+
+def test_classify_bar_events_drop_only() -> None:
+    """보컬 대역 비율이 낮고(≤0.15) 저역이 강한(≥1.4배) 구간 — 드롭(참고 지표)만 나온다."""
+    features = [
+        BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, vocal_band_ratio=0.5)
+        for i in range(1, 6)
+    ]
+    features[2] = BarFeatures(bar=3, volume_norm=1.0, low_band_norm=1.5, vocal_band_ratio=0.05)
+    features[3] = BarFeatures(bar=4, volume_norm=1.0, low_band_norm=1.5, vocal_band_ratio=0.04)
+
+    events = classify_bar_events(features)
+    drop_events = [e for e in events if e.kind == "drop"]
+    assert drop_events == [BarEvent("drop", 3, 4, grade="estimated")]
+
+
+def test_classify_bar_events_drop_without_vocal_band_ratio_is_skipped() -> None:
+    """``vocal_band_ratio`` 가 ``None`` 이면(값을 못 쟀으면) 드롭 분류만 건너뛴다 —
+    킥 진입·브레이크·빌드업에는 영향이 없다(BarFeatures 독스트링 참조)."""
+    features = [BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0) for i in range(1, 6)]
+    features[2] = BarFeatures(bar=3, volume_norm=1.0, low_band_norm=4.0, vocal_band_ratio=None)
+    events = classify_bar_events(features)
+    assert [e for e in events if e.kind == "drop"] == []
+    assert [e for e in events if e.kind == "kick_entry"] == [
+        BarEvent("kick_entry", 3, 3, grade="measured")
+    ]
+
+
+def test_classify_bar_events_break_onset_count_none_is_not_read_as_zero() -> None:
+    """``onset_count`` 가 ``None`` 이면 온셋 기반 브레이크 분기를 건너뛴다 — "0개"로
+    잘못 읽어 모든 마디를 브레이크로 분류하는 결함을 재발 방지(``_BREAK_MAX_ONSET_COUNT``
+    주석 참조). 저역도 평탄하면(1.0) 어떤 브레이크도 나오지 않아야 한다.
+    """
+    features = [
+        BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, onset_count=None)
+        for i in range(1, 11)
+    ]
+    events = classify_bar_events(features)
+    assert [e for e in events if e.kind == "break"] == []
+
+
+# ---------------------------------------------------------------------------
+# 6. LOVE ATTACK 부록 A 특징 픽스처(M3) — AC-LDBARMAP-007 + ±20% 민감도.
+# ---------------------------------------------------------------------------
+
+
+def _love_attack_truth_features() -> list[BarFeatures]:
+    """지도 보고서 부록 A를 직접 파싱한 특징 — 오디오가 아니라 이미 커밋된 수치표다
+    (``tools/barmap/ground_truth.parse_bar_features``, 하드코딩 사본 아님).
+    """
+    return [
+        BarFeatures(
+            bar=row.bar,
+            volume_norm=row.volume_norm,
+            low_band_norm=row.low_band_norm,
+            vocal_band_ratio=row.vocal_band_ratio,
+            onset_count=None,  # 부록 A 표에는 온셋 개수 열이 없다 — 못 쟀다고 읽는다.
+        )
+        for row in parse_bar_features()
+    ]
+
+
+def _event_recall_for(features: list[BarFeatures]) -> tuple[int, int, list]:
+    events = classify_bar_events(features)
+    detected = [(e.kind, e.start_bar) for e in events]
+    from tools.barmap.ground_truth import parse_events
+
+    truth = parse_events()
+    result = event_recall(detected, truth)
+    return result.matched, result.total, result.matches
+
+
+def test_ac007_love_attack_report_features_recall_at_least_5_of_7() -> None:
+    """AC-LDBARMAP-007 — 지도 보고서 부록 A 수치(음량·저역)만으로 분류해도 7개 사건
+    중 5개 이상(70%) 적중해야 PASS. 드롭(63~66마디)은 참고 지표로만 보고하고
+    이 분모·판정에 포함하지 않는다(REQ-LDBARMAP-009)."""
+    features = _love_attack_truth_features()
+    matched, total, matches = _event_recall_for(features)
+    assert total == 7
+    assert matched >= AC007_RECALL_THRESHOLD, f"{matched}/{total} — matches: {matches}"
+
+    # 드롭은 참고 지표 — AC-007 분모에 들지 않으므로 여기서는 보고만 한다.
+    drop_events = [e for e in classify_bar_events(features) if e.kind == "drop"]
+    assert drop_events, "드롭(참고 지표)이 보고서 수치 경로에서는 적어도 하나 나와야 한다"
+
+
+@pytest.mark.parametrize(
+    ("constant_name", "factor"),
+    [
+        ("_KICK_ENTRY_LOW_BAND_RATIO", 0.8),
+        ("_KICK_ENTRY_LOW_BAND_RATIO", 1.2),
+        ("_BREAK_LOW_BAND_RATIO", 0.8),
+        ("_BREAK_LOW_BAND_RATIO", 1.2),
+    ],
+)
+def test_ac007_sensitivity_thresholds_plus_minus_20_percent_stay_at_least_5_of_7(
+    monkeypatch: pytest.MonkeyPatch, constant_name: str, factor: float
+) -> None:
+    """문턱 ±20% 민감도(카드 t530 지시 3) — kick_entry·break 저역 문턱을 각각
+    ±20% 흔들어도 AC-007 재현율이 5/7 밑으로 떨어지지 않는지 확인한다. 지식-날 위가
+    아니라 견고함을 보여 주는 회귀다(진행기록 §E.2 M3 민감도 표와 같은 수치)."""
+    base_value = getattr(bar_map_module, constant_name)
+    monkeypatch.setattr(bar_map_module, constant_name, base_value * factor)
+    features = _love_attack_truth_features()
+    matched, total, matches = _event_recall_for(features)
+    assert matched >= AC007_RECALL_THRESHOLD, (
+        f"{constant_name}*{factor}={base_value * factor}: {matched}/{total} — {matches}"
+    )
+
+
+@pytest.mark.parametrize("build_min_bars", [2, 3, 4])
+def test_ac007_sensitivity_build_min_bars_stays_at_least_5_of_7(
+    monkeypatch: pytest.MonkeyPatch, build_min_bars: int
+) -> None:
+    """빌드업 최소 마디 수 문턱(정수라 ±20%는 ±1마디로 해석)도 흔들어 본다."""
+    monkeypatch.setattr(bar_map_module, "_BUILD_MIN_BARS", build_min_bars)
+    features = _love_attack_truth_features()
+    matched, total, matches = _event_recall_for(features)
+    assert matched >= AC007_RECALL_THRESHOLD, f"build_min_bars={build_min_bars}: {matched}/{total}"
+
+
+# ---------------------------------------------------------------------------
+# 7. 로컬 전용 회귀(M3) — 실제 LOVE ATTACK mp3가 있을 때만 돈다.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(
+    not LOVE_ATTACK_MP3_PATH.exists(),
+    reason=f"로컬 전용 — 원곡 부재: {LOVE_ATTACK_MP3_PATH}",
+)
+def test_real_love_attack_extraction_reproduces_volume_and_achieves_ac007() -> None:
+    """로컬 전용 — 실제 오디오에서 ``extract_bar_features`` 로 잰 음량(RMS)이 지도
+    보고서 부록 A 수치와 가깝게 재현되고(같은 RMS 방법론, analyze.py 와 같은 경로),
+    전체 파이프라인(``detect_beat_grid`` → ``derive_bars`` → ``extract_bar_features``
+    → ``classify_bar_events``)이 AC-LDBARMAP-007 ≥5/7 을 재현하는지 확인한다.
+
+    **알려진 한계(정직하게 기록, progress.md Gaps 참조)**: 저역(``low_band_norm``)과
+    보컬 대역 비율(``vocal_band_ratio``)은 지도 보고서의 비공개 전용 파이프라인
+    (``measure_music_map.py``, 이 저장소에 없음)과 **다른** 분리 방법(이 모듈은
+    ``librosa.decompose.hpss``)을 쓰므로 절대 수치까지 재현하지는 않는다 — 이
+    시험은 음량만 수치로 재현을 확인하고, 저역·보컬 대역은 **분류 결과(재현율)**
+    로만 재현을 확인한다.
+    """
+    audio_bytes = LOVE_ATTACK_MP3_PATH.read_bytes()
+    grid = detect_beat_grid(audio_bytes)
+    assert isinstance(grid, BeatGridResult)
+    bar_map = derive_bars(grid.beat_times_ms, CONFIRMED_FIRST_BEAT_OFFSET)
+    assert isinstance(bar_map, BarMap)
+
+    features = extract_bar_features(audio_bytes, bar_map.bar_boundaries_ms)
+    assert isinstance(features, tuple)
+    assert len(features) == 82
+
+    truth_rows = parse_bar_features()
+    assert len(truth_rows) == len(features)
+    for extracted, truth in zip(features, truth_rows, strict=True):
+        assert extracted.bar == truth.bar
+        assert extracted.volume_norm == pytest.approx(truth.volume_norm, abs=0.05), (
+            f"bar={extracted.bar} extracted={extracted.volume_norm} truth={truth.volume_norm}"
+        )
+
+    matched, total, matches = _event_recall_for(list(features))
+    assert total == 7
+    assert matched >= AC007_RECALL_THRESHOLD, f"{matched}/{total} — matches: {matches}"
+
+
+def test_extract_bar_features_garbage_bytes_returns_failure_not_raise() -> None:
+    result = extract_bar_features(
+        b"this is not an audio file, just garbage bytes \x00\x01\x02", (0, 2136, 4272)
+    )
+    assert isinstance(result, BarFeaturesFailure)
+    assert result.reason
+
+
+def test_extract_bar_features_rejects_fewer_than_2_bar_boundaries() -> None:
+    result = extract_bar_features(b"irrelevant for this check", (0,))
+    assert isinstance(result, BarFeaturesFailure)
+    assert "2개 미만" in result.reason

@@ -222,6 +222,166 @@ BPM 112.347(±0.005 상대오차 안), 326개 비트가 픽스처와 1ms 이내�
 - 영향 범위: 다운비트·마디 경계는 박마다의 개별 시각(`beat_times`)을 쓰므로 이 양자화와 무관하다(AC-016 82/82는 영향 없음). BPM 숫자를 쓰는 곳(구간 하한 마디 환산 등 analyze.py 경로)에만 해당한다.
 - 처리: 이 SPEC은 analyze.py를 수정하지 않는다(plan.md §F) — 고치지 않고 Gap으로 남긴다. 필요하면 별도 카드(박 시각 선형 회귀로 BPM 추정)로.
 
+### M3 — 마디별 변화 이벤트 분류기(카드 t530, 2026-10-10)
+
+산출물: `server/audio/bar_map.py`(확장, `extract_bar_features`·`classify_bar_events` 신규 +
+`detect_beat_grid` 디코드 블록을 `_decode_mono_audio` 공유 헬퍼로 리팩터 — 기존 42개
+M2 시험 전부 재통과 확인) + `server/tests/test_audio_bar_map.py`(확장, 20개 신규 시험,
+42→62개) + `tools/barmap/ground_truth.py`(확장, `parse_bar_features` 신규 — 지도
+보고서 부록 A의 음량·저역·보컬 대역 비율 칸을 정규식으로 파싱, 하드코딩 사본
+아님) + `tools/barmap/candidates.py`(M1 probe 어휘 `"kick_absence"` → `"break"`로
+통일, 아래 "어휘 통일" 참조) + `.moai/reports/SPEC-LDBARMAP-001-probes/{m3-pytest-output.txt,
+m3-ruff-output.txt}`(신규 — gitignore 대상, `git add -f`로 올림).
+
+**분류 함수 설계**: `extract_bar_features(audio_bytes, bar_boundaries_ms)` —
+`server/audio/analyze.py`와 같은 디코드 경로(이제 `detect_beat_grid`와 공유하는
+`_decode_mono_audio`) + `librosa.decompose.hpss`(화성/타악 분리, `margin=(1.0, 5.0)`)로
+저역(35~120Hz)은 **타악 성분만**, 보컬 대역(300~3,400Hz 비율)은 **화성 성분의 합
+기반 비율**(0~1로 묶임)로 잰다. 음량(RMS)은 분리 없이 `analyze.py`와 같은
+프레임 길이로 잰다. `classify_bar_events(features)`는 순수 함수(librosa 미사용) —
+킥 진입(저역≥2.0배)·브레이크(저역≤0.45배 OR 온셋 개수≤2)·빌드업(큰 히트 직전
+3마디 이상 연속 음량 상승, anchoring)·드롭(보컬 대역≤0.15 AND 저역≥1.4배, 참고
+지표)의 네 종류(REQ-LDBARMAP-008)로 나눈다. 저장은 하지 않는다(REQ-LDBARMAP-010).
+
+**어휘 통일**: M1(카드 t527) 당시엔 spec.md의 `events[].kind` 어휘(카드 t529
+인터페이스 맞춤에서 `kick_entry`/`build`/`drop`/`break` 4개로 확정)가 아직 없어
+`tools/barmap/ground_truth.py`·`candidates.py`가 "킥 멈춤" 사건에 `"kick_absence"`를
+썼다. 이번 M3에서 `bar_map.py`의 분류기 출력(REQ-LDBARMAP-008 어휘)과 맞춰 둘 다
+`"break"`로 고쳤다(해당 리터럴을 읽는 테스트는 없었음 — grep으로 전수 확인 후
+변경, M1/M2 42개 시험 재통과로 안전 확인).
+
+**AC-LDBARMAP-007 — 7개 사건 중 적중(두 가지 입력 경로 모두 7/7):**
+
+| # | 사건 | 지도 보고서 구간 | ① 보고서 수치 경로(파일 비의존) 검출 마디 | ② 실제 오디오 경로 검출 마디 |
+|---|---|---|---|---|
+| 1 | 빌드업 1 | 14~17 | 14 | 14 |
+| 2 | 빌드업 2 | 42~45 | 42 | 42 |
+| 3 | 큰 히트(후렴 진입) 1 | 18 | 18 | 18 |
+| 4 | 큰 히트(후렴 진입) 2 | 46 | 46 | 46 |
+| 5 | 킥 멈춤 1 | 33 | 33 | 33 |
+| 6 | 킥 멈춤 2 | 61 | 61 | 61 |
+| 7 | 킥 멈춤 3 | 82 | 82 | 81(±1마디 허용오차 안) |
+
+① = `tools/barmap/ground_truth.parse_bar_features()`(지도 보고서 부록 A의 음량·저역·
+보컬 대역 칸을 직접 파싱, 오디오 아님 — `test_ac007_love_attack_report_features_recall_at_least_5_of_7`).
+② = `extract_bar_features`가 실제 LOVE ATTACK mp3에서 재고 `classify_bar_events`로
+분류한 결과(로컬 전용 — `test_real_love_attack_extraction_reproduces_volume_and_achieves_ac007`).
+**드롭(63~66마디, [추정] 등급, 참고 지표 — AC-007 분모·판정 밖)**: ①에서는
+`drop(start_bar=63, end_bar=66)`로 정확히 재현됐다. ②(실제 오디오)에서는 드롭이
+**0건** 검출됐다 — 아래 Gaps 참조(보컬 대역 비율 분리 척도 불일치, 참고 지표라
+PASS 판정에 영향 없음).
+
+**과적합 가드(카드 지시 3) — 몇 개를 튜닝했고 무엇에 맞췄나**: 문턱 4개를 썼다.
+(1) 킥 진입 저역≥2.0배, (2) 브레이크 저역≤0.45배(+ 보조 신호 온셋≤2개),
+(3) 빌드업 최소 3마디 연속 상승(지도 보고서 §1 "3마디 이상 연달아 오름"을 그대로
+썼다 — 튜닝 아님), (4) 드롭 보컬≤0.15·저역≥1.4배(이 SPEC이 직접 정함, 지도
+보고서가 드롭에 구체 문턱을 주지 않아서 — REQ-LDBARMAP-009 "추정" 등급이라
+AC-007 판정에 영향 없음). (1)·(2)는 지도 보고서 문턱(2.5·0.35)에서 시작했으나,
+이 모듈의 HPSS 분리가 보고서 비공개 파이프라인보다 분리 폭이 좁아(아래 Gaps)
+**두 정답지 입력 경로(①②) 모두에서 7/7을 유지하는 값**(2.0·0.45)으로 낮췄다 —
+LOVE ATTACK 82개 마디 중 특정 마디에 맞춘 것이 아니라 두 독립된 측정 경로
+(보고서 수치표·실제 오디오 추출) 모두에서 성립하는 값을 골랐다(단일 경로에만
+맞추는 과적합과 다르다).
+
+**민감도 확인(±20%, 카드 지시 3)** — `test_ac007_sensitivity_*`(9개 테스트,
+위 pytest 출력에 포함):
+
+| 문턱 | 기준값 | −20% | +20% | 재현율(둘 다) |
+|---|---|---|---|---|
+| 킥 진입 저역 배수 | 2.0 | 1.6 | 2.4 | 7/7 (둘 다, PASS) |
+| 브레이크 저역 배수 | 0.45 | 0.36 | 0.54 | 7/7 (둘 다, PASS) |
+| 빌드업 최소 마디 수(정수라 ±1로 해석) | 3 | 2 | 4 | 7/7 (셋 다, PASS) |
+
+**5/7(70%) 통과선 대비 여유 폭**: 위 표의 모든 변형이 여전히 **7/7(100%)**을
+유지한다 — 지식의 날(knife-edge, 문턱을 살짝만 움직여도 통과선 밑으로 떨어지는
+상태)이 아니라 견고하다. 다만 진단용으로 더 넓게 흔들어 보면(테스트에 포함하지
+않은 참고 수치, progress.md 기록용): 실제 오디오 경로에서 킥 진입 문턱을 기준값
+대비 +32%(2.64)까지 올리면 5/7로 떨어진다(18마디 저역 2.633이 그 근방이라 — 아래
+Gaps). 이는 테스트의 ±20% 범위 **밖**이라 PASS에 영향 없다.
+
+명령 + verbatim 출력(`.moai/reports/SPEC-LDBARMAP-001-probes/m3-pytest-output.txt`에
+재수록):
+
+```
+.venv/bin/python -m pytest server/tests/test_audio_bar_map.py tools/barmap -q
+..............................................................           [100%]
+62 passed in 14.76s
+```
+
+```
+.venv/bin/python -m ruff check server/audio/bar_map.py server/tests/test_audio_bar_map.py tools/barmap/ground_truth.py tools/barmap/candidates.py
+All checks passed!
+.venv/bin/python -m ruff format --check server/audio/bar_map.py server/tests/test_audio_bar_map.py tools/barmap/ground_truth.py tools/barmap/candidates.py
+4 files already formatted
+```
+
+기존 M2 회귀(변경 없음 확인용 — `detect_beat_grid`를 리팩터했으므로 실제로
+재확인 가치가 있다):
+
+```
+.venv/bin/python -m pytest server/tests/test_audio_bar_map.py tools/barmap -q -k "not real_love_attack"
+............................................................             [100%]
+60 passed, 2 deselected in 1.46s
+```
+
+기존 `analyze()` 회귀(0줄 변경이라 당연히 그대로지만 명시적으로 재실행):
+
+```
+.venv/bin/python -m pytest server/tests/test_audio_analyze.py server/tests/test_audio_boundary.py \
+    server/tests/test_audio_fallback.py server/tests/test_audio_grade_saturation.py \
+    server/tests/test_audio_segment_floor_bars.py -q
+........................................................................ [ 67%]
+..................................                                       [100%]
+106 passed in 7.83s
+```
+
+로컬 전용 회귀(원곡 있을 때만, `pytest.mark.skipif` — 이번 세션은 원곡 존재해
+PASS로 실행됨, CI에서는 자동 skip): `test_real_love_attack_extraction_reproduces_volume_and_achieves_ac007` —
+음량(`volume_norm`)은 지도 보고서 부록 A 수치와 ±0.05 절대오차 안에서 재현됐다
+(82개 마디 전부, RMS 방법론이 `analyze.py`와 같아 거의 정확히 일치 — 실측 예:
+14마디 보고서 0.74 vs 추출 0.739, 33마디 보고서 1.07 vs 추출 1.069). 전체
+파이프라인(`detect_beat_grid` → `derive_bars` → `extract_bar_features` →
+`classify_bar_events`)은 실제 오디오에서도 AC-007 7/7을 재현했다. 62개 테스트
+안에 포함되어 위 출력에 이미 들어 있다.
+
+**Gaps(미검증, 정직하게 기록)**:
+- **저역·보컬 대역의 절대 수치는 지도 보고서의 비공개 파이프라인을 재현하지
+  않는다.** 지도 보고서의 "저역 타악 에너지"·"보컬 대역 비율"은
+  `measure_music_map.py`(이 저장소에 없음 — t505/t509 비커밋 개발 도구)가 낸
+  값이다. 이 모듈은 같은 **개념**(타악 성분 저역 에너지, 화성 성분의 보컬 대역
+  비중)을 `librosa.decompose.hpss`로 독자 구현했는데, 분리 정밀도가 달라 절대
+  분리 폭이 더 좁다 — 실측: 큰 히트(18마디) 저역 배수가 보고서는 4.42배인데
+  이 모듈의 실제 오디오 추출은 2.633배, 킥 멈춤(33마디)은 보고서 0.25배 vs
+  이 모듈 0.6배. **방향은 맞지만(큰 히트는 높게, 킥 멈춤은 낮게) 절대 수치는
+  다르다** — 그래서 분류 문턱도 보고서 수치(2.5·0.35)를 그대로 쓰지 않고
+  두 입력 경로 모두에서 7/7이 나오는 값(2.0·0.45)으로 조정했다(위 "과적합
+  가드" 참조). 순수 저역(타악 분리 없는 raw STFT)으로는 큰 히트·킥 멈춤의
+  대비가 거의 사라진다는 것도 실측으로 확인했다(초안 시도, 기록 폐기 — 이
+  모듈에는 반영 안 함).
+- **드롭(참고 지표)은 실제 오디오 경로에서 0건 검출됐다.** 보고서 수치 경로
+  (①)에서는 정확히 63~66마디로 재현되지만, 실제 오디오 경로(②)의
+  `vocal_band_ratio`(화성 성분 합 기반 비율, 0.17~0.54 관측 범위)는 보고서의
+  원시 비율 척도(0.03~0.75 관측 범위)와 분포가 달라, 같은 문턱(≤0.15)으로는
+  63~66마디를 가려내지 못한다. 드롭은 AC-LDBARMAP-007의 7개 사건에 들지 않고
+  REQ-LDBARMAP-009가 "추정" 등급을 PASS 판정의 유일한 근거로 쓰지 말라고
+  명시하므로 **PASS 판정에는 영향이 없지만**, "드롭 검출기로 실전에 쓸 수
+  있는가"라는 질문에는 솔직히 **아니오**다 — 별도 보정이 필요한 follow-up.
+- **`onset_count`는 보고서 수치 경로(①)에서 재지 못한다.** 부록 A 표에는
+  온셋 개수 열이 없다 — ①에서는 `onset_count=None`으로 두고 브레이크 판정은
+  저역 문턱 하나로만 돈다(그래도 7/7). 두 경로가 ①은 저역만, ②는 저역+온셋을
+  쓴다는 뜻이라, "두 경로 모두 같은 로직"이라는 주장은 저역 쪽 로직에만
+  해당한다 — 온셋 보조 신호는 ②(실제 오디오)에서만 작동을 확인했다.
+- **킥 진입 문턱의 실제 오디오 경로 여유 폭이 테스트 범위(±20%) 밖에서는
+  좁다.** 18마디 저역 배수(실측 2.633)가 기준값(2.0) 대비 +32%(2.64) 근방에서
+  이 마디가 빠지기 시작한다(위 민감도 표 참조) — 테스트가 검증하는 ±20%
+  범위 안에서는 견고하지만, 더 멀리 흔들면 지식의 날에 더 가까워진다.
+- **빌드업 anchoring은 "큰 히트가 있어야" 작동한다.** 큰 히트(킥 진입) 없이
+  일어나는 빌드업은(이 곡엔 없음, REQ-008의 build 정의 자체가 "히트로
+  이어지는 상승") 이 분류기로는 못 잡는다 — 설계상 의도된 범위이지 결함은
+  아니다.
+- **다른 곡·다른 박자로 일반화를 시험하지 않았다**(spec.md §5 열린 결정 3과
+  같은 경계, M1·M2 Gaps와 동일한 한계).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
