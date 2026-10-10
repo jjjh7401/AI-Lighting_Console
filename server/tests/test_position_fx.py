@@ -9,7 +9,11 @@ number offsets into the FX_POSITION_SEQUENCE bank.
 import pytest
 
 from server.spatial.pointing import FX_POSITION_SEQUENCE, SpatialPointingError
-from server.spatial.position_fx import POSITION_FX_EFFECTS, position_fx_commands
+from server.spatial.position_fx import (
+    POSITION_FX_EFFECTS,
+    position_fx_commands,
+    relative_wave_lines,
+)
 
 FIDS = (11, 12, 13)
 START = 41  # bank stored as Preset 2.41..2.50 in FX_POSITION_SEQUENCE order
@@ -213,6 +217,83 @@ class TestRefusals:
     def test_quoted_or_empty_label_is_refused(self, label):
         with pytest.raises(SpatialPointingError, match="empty or carries a quote"):
             build("sweep", label=label)
+
+
+class TestRelativeWaveLinesGeneralization:
+    """Card t548 — REQ-LDBEAT-006(vi-2)(vi-3): ``wave`` generalizes to any
+    non-empty subset of {Pan, Tilt} via an explicit ``axes`` parameter,
+    without inventing a new shape name (감독 결정 2026-10-11 ①)."""
+
+    def test_tilt_only_default_matches_the_pre_generalization_hardcoded_wave(self):
+        # byte-identical to the old hardcoded wave branch (REQ carve-out —
+        # position_fx_commands' own call path is untouched by this change).
+        assert relative_wave_lines(frozenset({"Tilt"}), 60.0) == (
+            "Attribute 'Tilt' At Relative -12",
+            "Step 2",
+            "Attribute 'Tilt' At Relative 12",
+            "Step 1 At Accel -100",
+            "Step 1 At Decel -100",
+            "Step 2 At Accel -100",
+            "Step 2 At Decel -100",
+            "Attribute 'Tilt' At Phase 0 Thru 360",
+            "Attribute 'Tilt' At Speed 60",
+        )
+
+    def test_pan_only_wave_swings_pan_not_tilt(self):
+        lines = relative_wave_lines(frozenset({"Pan"}), 60.0)
+        assert lines == (
+            "Attribute 'Pan' At Relative -12",
+            "Step 2",
+            "Attribute 'Pan' At Relative 12",
+            "Step 1 At Accel -100",
+            "Step 1 At Decel -100",
+            "Step 2 At Accel -100",
+            "Step 2 At Decel -100",
+            "Attribute 'Pan' At Phase 0 Thru 360",
+            "Attribute 'Pan' At Speed 60",
+        )
+        assert not any("Tilt" in line for line in lines)
+
+    def test_pan_and_tilt_wave_swings_both_in_pan_then_tilt_order(self):
+        lines = relative_wave_lines(frozenset({"Pan", "Tilt"}), 56.0)
+        assert lines == (
+            "Attribute 'Pan' At Relative -12",
+            "Attribute 'Tilt' At Relative -12",
+            "Step 2",
+            "Attribute 'Pan' At Relative 12",
+            "Attribute 'Tilt' At Relative 12",
+            "Step 1 At Accel -100",
+            "Step 1 At Decel -100",
+            "Step 2 At Accel -100",
+            "Step 2 At Decel -100",
+            "Attribute 'Pan' At Phase 0 Thru 360",
+            "Attribute 'Tilt' At Phase 0 Thru 360",
+            "Attribute 'Pan' At Speed 56",
+            "Attribute 'Tilt' At Speed 56",
+        )
+
+    def test_phase_spread_false_omits_the_phase_lines_only(self):
+        with_phase = relative_wave_lines(frozenset({"Pan"}), 60.0, phase_spread=True)
+        without_phase = relative_wave_lines(frozenset({"Pan"}), 60.0, phase_spread=False)
+        assert not any("At Phase" in line for line in without_phase)
+        assert len(with_phase) == len(without_phase) + 1
+
+    def test_empty_axes_is_refused(self):
+        with pytest.raises(SpatialPointingError, match="non-empty subset"):
+            relative_wave_lines(frozenset(), 60.0)
+
+    def test_axes_outside_pan_tilt_is_refused(self):
+        with pytest.raises(SpatialPointingError, match="non-empty subset"):
+            relative_wave_lines(frozenset({"Zoom"}), 60.0)
+
+    def test_position_fx_commands_wave_path_is_unaffected(self):
+        # The existing byte-identical snapshot in TestBaseBundles::test_wave_full_bundle
+        # already covers this end-to-end; this test pins the generalization
+        # entry point specifically so a future edit to _relative_phaser_lines
+        # cannot silently drop the delegation to relative_wave_lines.
+        commands = build("wave")
+        assert "Attribute 'Tilt' At Phase 0 Thru 360" in commands
+        assert not any("Pan" in line for line in commands)
 
 
 class TestTwoStepPhaser:

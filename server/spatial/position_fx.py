@@ -44,6 +44,7 @@ from server.spatial.pointing import (
 __all__ = [
     "POSITION_FX_EFFECTS",
     "position_fx_commands",
+    "relative_wave_lines",
     "required_position_labels",
 ]
 
@@ -87,6 +88,12 @@ _AB_CUE_FADE_SECONDS = 2
 _CIRCLE_RELATIVE_PAN = 12
 _CIRCLE_RELATIVE_TILT = 8
 _WAVE_RELATIVE_TILT = 12
+#: Pan-axis magnitude for a Pan-only or Pan+Tilt generalized ``wave``
+#: (REQ-LDBEAT-006(vi-2)(vi-3), card t548, 감독 결정 2026-10-11 ①). No
+#: Pan-specific wave magnitude was ever live-measured (t538 measured only
+#: Tilt, MegaPointe/Group 11) — this reuses the SAME ±12 magnitude as
+#: ``_WAVE_RELATIVE_TILT`` (symmetric placeholder, not a separate readout).
+_WAVE_RELATIVE_PAN = 12
 _BALLY_RELATIVE_PAN = 20
 _BALLY_RELATIVE_TILT = 10
 
@@ -168,6 +175,47 @@ def _two_step_swing(swings: Sequence[tuple[str, int]]) -> list[str]:
     return lines
 
 
+#: REQ-LDBEAT-006(vi-2)(vi-3) 일반화 대상 두 축 — ``relative_wave_lines``의
+#: 결정적 반복 순서(Pan 먼저, Tilt 다음)로 쓴다. 두 곳(스윙 값·Phase·Speed
+#: 줄 생성)이 각자 다시 정렬하면 순서가 어긋날 수 있어 한 곳에 못박는다.
+_WAVE_AXIS_ORDER: tuple[str, ...] = ("Pan", "Tilt")
+
+
+def relative_wave_lines(
+    axes: frozenset[str],
+    speed_bpm: float,
+    *,
+    phase_spread: bool = True,
+) -> tuple[str, ...]:
+    """Generalized relative-phaser body for the base effect ``wave`` — any
+    non-empty subset of ``{"Pan", "Tilt"}`` (REQ-LDBEAT-006(vi-2)(vi-3), card
+    t548, 감독 결정 2026-10-11 ① — 팬 전용 모양을 새로 만들지 않고 기존
+    ``wave``를 ``axes`` 파라미터로 일반화한다).
+
+    ``axes={"Tilt"}``・``phase_spread=True``는 일반화 **이전** 하드코딩된
+    ``wave`` 분기와 바이트 동일하다 — :func:`_relative_phaser_lines`의
+    ``wave`` 가지가 바로 그 조합으로 호출해, ``position_fx_commands``의
+    기존 경로는 이 함수가 생겨도 전혀 바뀌지 않는다.
+
+    ``phase_spread``가 거짓이면 위상 펼침 줄(``At Phase 0 Thru 360``류)을
+    아예 내지 않는다 — REQ-LDBEAT-006(vi-5)가 그 선택을 ``shape``와 독립된
+    칸별 사실로 두기 때문에, 호출자(``app_movement``)가 그 사실을 그대로
+    전달할 수 있어야 한다.
+    """
+    if not axes or not axes <= set(_WAVE_AXIS_ORDER):
+        raise SpatialPointingError(
+            f"wave axes {axes!r} must be a non-empty subset of {_WAVE_AXIS_ORDER!r}"
+        )
+    magnitudes = {"Pan": _WAVE_RELATIVE_PAN, "Tilt": _WAVE_RELATIVE_TILT}
+    ordered = tuple(axis for axis in _WAVE_AXIS_ORDER if axis in axes)
+    speed = _format_speed(speed_bpm)
+    lines = list(_two_step_swing(tuple((axis, magnitudes[axis]) for axis in ordered)))
+    if phase_spread:
+        lines += [f"Attribute '{axis}' At {_PHASE_SPREAD}" for axis in ordered]
+    lines += [f"Attribute '{axis}' At Speed {speed}" for axis in ordered]
+    return tuple(lines)
+
+
 def _relative_phaser_lines(effect: str, speed_bpm: float) -> tuple[str, ...]:
     """The relative-phaser body for one base effect, live-validated shape.
 
@@ -186,11 +234,10 @@ def _relative_phaser_lines(effect: str, speed_bpm: float) -> tuple[str, ...]:
             f"Attribute 'Tilt' At Speed {speed}",
         )
     if effect == "wave":
-        return (
-            *_two_step_swing((("Tilt", _WAVE_RELATIVE_TILT),)),
-            f"Attribute 'Tilt' At {_PHASE_SPREAD}",
-            f"Attribute 'Tilt' At Speed {speed}",
-        )
+        # card t548 — generalized to `relative_wave_lines`; this default call
+        # (Tilt only, phase spread on) reproduces the pre-generalization
+        # hardcoded output byte-for-byte (test_position_fx.py::test_wave_full_bundle).
+        return relative_wave_lines(frozenset({"Tilt"}), speed_bpm, phase_spread=True)
     # ballyhoo — both axes swing, phase fanned per axis, fast by definition.
     bally_speed = _format_speed(speed_bpm * _BALLYHOO_SPEED_FACTOR)
     return (
