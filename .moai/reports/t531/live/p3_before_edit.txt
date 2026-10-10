@@ -1,0 +1,20 @@
+
+>>> state:ShowData/DataPools/Default/PresetPools/4/302
+    wire: Plugin "CopilotResponder" "state 30a3f7f9 ShowData/DataPools/Default/PresetPools/4/302"
+<<< {"children": [], "id": "30a3f7f9", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "LDBEAT M1 - P3 propagation#2"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/4/302", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/4/302|NAME,MEMORYFOOTPRINT,PRESETDATA
+    wire: Plugin "CopilotResponder" "props 1fc464ea NAME,MEMORYFOOTPRINT,PRESETDATA ShowData/DataPools/Default/PresetPools/4/302"
+<<< {"id": "1fc464ea", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/4/302", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P3 propagation#2"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2068"}, {"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/300
+    wire: Plugin "CopilotResponder" "state d08e7542 ShowData/DataPools/Default/Sequences/300"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "LDBEAT M1 - P3 ref cue"}], "id": "d08e7542", "kind": "state", "node": {"childCount": 3, "class": "Sequence", "enumeration": "ok", "name": "LDBEAT M1 - P3 preset propagation"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/300", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/300/3
+    wire: Plugin "CopilotResponder" "state 424fcdd6 ShowData/DataPools/Default/Sequences/300/3"
+<<< {"children": [{"class": "Part", "i": 1, "name": "LDBEAT M1 - P3 ref cue"}], "id": "424fcdd6", "kind": "state", "node": {"childCount": 1, "class": "Cue", "enumeration": "ok", "name": "LDBEAT M1 - P3 ref cue"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/300/3", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/300/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 51d79fc5 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/300/3"
+<<< {"id": "51d79fc5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/300/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P3 ref cue"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4292"}], "truncated": false, "v": 1}

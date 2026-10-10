@@ -1,0 +1,62 @@
+{"step": "pre_free:ShowData/DataPools/Default/PresetPools/4/302", "t": 0.065, "kind": "state", "path": "ShowData/DataPools/Default/PresetPools/4/302", "ok": false, "error": "path segment not found: '302' (in ShowData/DataPools/Default/PresetPools/4/302)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/300", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/300", "ok": false, "error": "path segment not found: '300' (in ShowData/DataPools/Default/Sequences/300)"}
+{"step": "store_preset", "t": 0.132, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 4.9", "reasons": []}, {"command": "Store Preset 4.302", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command": "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_preset", "t": 0.199, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.265, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.332, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.399, "kind": "exec", "command": "At Preset 4.9", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.465, "kind": "exec", "command": "Store Preset 4.302", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.532, "kind": "exec", "command": "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.598, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.599, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 4.302", "reasons": []}, {"command": "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_cue", "t": 0.665, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.732, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.799, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.865, "kind": "exec", "command": "At Preset 4.302", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.932, "kind": "exec", "command": "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.999, "kind": "exec", "command": "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 1.065, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "P3",
+  "free_slots": [
+    "ShowData/DataPools/Default/PresetPools/4/302",
+    "ShowData/DataPools/Default/Sequences/300"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_preset": true,
+    "store_cue": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 4.9",
+        "Store Preset 4.302",
+        "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 4.302",
+        "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
+        "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

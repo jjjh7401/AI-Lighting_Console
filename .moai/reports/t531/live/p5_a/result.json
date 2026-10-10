@@ -1,0 +1,43 @@
+{
+  "item": "P5",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/302"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_cue": true,
+    "play": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 2.1",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Tilt' At Relative 8",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 60",
+        "Attribute 'Tilt' At Speed 60",
+        "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'",
+        "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 302"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}
