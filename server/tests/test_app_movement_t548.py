@@ -151,6 +151,36 @@ class TestAppMovementCommandsAxesGeneralization:
         assert "_seconds" not in source
 
 
+class TestNoHardcodedRigOrPresetLiterals:
+    """AC-LDBEAT-016(s) — REQ-LDBEAT-006(vi-6). ``app_movement`` 구현
+    모듈의 소스에 장비 ID·콘솔 그룹 번호·프리셋 번호 리터럴이 0건."""
+
+    def test_no_love_attack_preset_numbers_in_source(self) -> None:
+        source = inspect.getsource(app_movement_module)
+        for literal in ("21.1", "21.3", "21.5", "1.1", "1.6", "2.1"):
+            assert literal not in source
+
+    def test_no_love_attack_group_names_or_numbers_in_code(self) -> None:
+        # 모듈 독스트링(설계 근거 서술, probe-moverd.md 인용)은 제외하고
+        # — 실제 함수 몸체(로직)에만 리그 전용 그룹 이름이 없는지 본다.
+        for fn in (dimmer_attribute_names, brightness_value_commands, app_movement_commands):
+            source = inspect.getsource(fn)
+            for literal in ("FOH", "BACK", "SIDE-ALL", "MOVER-U", "MOVER-D", "BLIND", "WASH-ALL"):
+                assert literal not in source, f"{fn.__name__} 소스에 {literal!r}"
+
+    def test_no_shape_to_phase_spread_mapping_table_in_source(self) -> None:
+        # AC-LDBEAT-016(r) 검증 수단 — shape마다 phase_spread 값이 하드코딩된
+        # 매핑 딕셔너리가 없다(phase_spread는 전적으로 호출자가 넘기는 칸
+        # 데이터에서 온다, REQ-LDBEAT-006(vi-5)).
+        from server.spatial import position_fx as position_fx_module
+
+        for module in (app_movement_module, position_fx_module):
+            source = inspect.getsource(module)
+            assert "phase_spread_map" not in source
+            assert "shape_phase" not in source
+            assert "SHAPE_PHASE" not in source
+
+
 class TestAppMovementCommandsRefusals:
     _BASE = {
         "shape": "wave",
