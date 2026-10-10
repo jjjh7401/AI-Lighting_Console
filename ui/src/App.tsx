@@ -21,6 +21,7 @@ import {
 } from "react";
 
 import { ApprovalCard } from "./components/ApprovalCard";
+import { BeatGrid } from "./components/BeatGrid";
 import { ChatView } from "./components/ChatView";
 import {
   fetchPresetPool,
@@ -453,6 +454,11 @@ export default function App() {
   // (design.md §6 / D5) — runbookMode's persistence is an explicit,
   // deliberate exception this toggle does not need to repeat.
   const [paperworkMode, setPaperworkMode] = useState(false);
+  // 카드 t537 (REQ-LDBEAT-004(a)(g)) — 박자 격자 전체화면 뷰. 런북 모드
+  // 안쪽의 전환이고, 런북 모드 자체(runbookMode)가 꺼지면 같이 꺼진다
+  // (아래 toggleRunbookMode는 건드리지 않는다 — 이 상태는 이 전환 전용).
+  // paperworkMode와 같은 이유로 세션-휘발성(localStorage 없음).
+  const [beatGridFullscreen, setBeatGridFullscreen] = useState(false);
   // Bumped when the settings panel closes so the onboarding banner re-checks
   // whether a key was just added (and hides itself if so).
   const [settingsRefresh, setSettingsRefresh] = useState(0);
@@ -1061,6 +1067,18 @@ export default function App() {
           >
             {runbookMode ? "✓ 런북 모드" : "런북 모드"}
           </button>
+          {/* 카드 t537 — 런북 모드 안쪽 전환이라 runbookMode가 참일 때만
+              보인다(REQ-LDBEAT-004(a)(g), plan.md M7 (2)). */}
+          {runbookMode && (
+            <button
+              className={`beat-grid-fullscreen-toggle${beatGridFullscreen ? " beat-grid-fullscreen-toggle-active" : ""}`}
+              onClick={() => setBeatGridFullscreen((active) => !active)}
+              aria-label={beatGridFullscreen ? "박자 배치 전체화면 닫기" : "박자 배치 전체화면 열기"}
+              aria-pressed={beatGridFullscreen}
+            >
+              {beatGridFullscreen ? "✓ 박자 배치" : "박자 배치"}
+            </button>
+          )}
           <button
             className={`paperwork-toggle${paperworkMode ? " paperwork-toggle-active" : ""}`}
             onClick={() => setPaperworkMode((active) => !active)}
@@ -1095,7 +1113,21 @@ export default function App() {
           </button>
         </div>
       </header>
-      {runbookMode ? (
+      {runbookMode && beatGridFullscreen ? (
+        // 카드 t537 (REQ-LDBEAT-004(a)(g), plan.md M7 (2)) — 박자 격자는
+        // 기존 5블록 사이에 끼워 넣은 블록이 아니라 런북 모드 안의 **독립
+        // 전체화면 뷰**다. 기존 5블록(헤더·ConceptPanel·CueSheetTimeline·
+        // SongTimeline·RunbookGateBar) 호출 순서는 RunbookMode 안에서 그대로
+        // PRESERVE — 이 분기는 그 블록들을 전부 숨기고 BeatGrid 하나만
+        // 루트로 올린다. 코파일럿 메인 화면(runbookMode 거짓)은 그대로다.
+        <div className="runbook-mode-frame beat-grid-fullscreen-frame">
+          <BeatGrid
+            grid={state.songTimeline.timeline?.beat_grid ?? null}
+            secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
+            sections={state.songTimeline.timeline?.sections}
+          />
+        </div>
+      ) : runbookMode ? (
         <div className="runbook-mode-frame runbook-with-chat">
           <div className="runbook-pane">
             <RunbookMode

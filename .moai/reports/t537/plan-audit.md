@@ -137,3 +137,143 @@ Iteration 1 defect D1~D9 전부 위 "D1~D9 결함별 판정"에서 RESOLVED로 �
 PASS — Must-Pass 7개(MP-1~MP-7) 전부 PASS 또는 N/A, D1~D9 전부 해소, aggregate 0.90은 Tier M 임계 이상이다. N1·N2(optional)는 오케스트레이터 재량으로 다음 plan 개정 시 반영하거나 보류해도 되며, 강제 수정 대상이 아니다. run-phase 착수 전 Implementation Kickoff Approval(감독 승인)은 별도로 필요하다(본 PASS가 그 승인을 대체하지 않음).
 
 커밋 SHA (iteration 2 재감사 대상): 41b4925c (fix) — 직전 638c02ae (iteration 1 FAIL 보고서 커밋) 대비 diff 전수 재독으로 판정.
+
+## Iteration 3 — SCENE 메모·리그 일반화 개정
+
+**대상**: `git diff 10ae09e7 21338bfe -- .moai/specs/SPEC-LDBEAT-001/` (커밋 `21338bfe`, 카드 t537) — iteration 2가 PASS(0.90) 확정한 `(i)~(iii)`/`(a)~(h)` 본문은 건드리지 않은 순수 추가분(spec.md REQ-LDBEAT-006(iv-1)~(iv-4)·(v-1)(v-2) 신설, acceptance.md AC-LDBEAT-016(i)(j)(k)(l)(m) 신설). 코드 변경 0줄(`git diff --stat 10ae09e7 21338bfe` → 4개 문서 파일만, +13/-5) — spec.md/acceptance.md/plan.md/progress.md만.
+
+M1 Context Isolation 선언: 프롬프트에 포함된 작성자 쪽 근거·추론(리드 지시 인용, 감독 원칙 인용, "선택 사항으로 남긴다"는 자체 평가)은 판단에 사용하지 않았다. 아래 모든 판정은 diff가 드러낸 spec.md/acceptance.md/plan.md/progress.md 실제 텍스트와, 그 텍스트가 인용하는 저장소 파일(`server/design/beat_grid.py`, `server/design/beat_grid_data/love_attack.yaml`, `ui/src/protocol.ts`, `ui/src/components/BeatGrid.tsx`, `ui/src/components/BeatGrid.test.tsx`, `server/tests/test_beat_grid_t537.py`, `server/tests/test_beat_grid_t532.py`, `reports/effect-arrangement-rules-20261007.md`)을 직접 읽고 대조해서만 내렸다.
+
+### Must-Pass Results (이 개정분)
+
+- [**PASS**] MP-1 REQ number consistency: `grep -oE '^\| REQ-LDBEAT-[0-9]+' spec.md \| sort -u \| wc -l` → 15, 001~015 연속·중복 없음(불변, 새 REQ-ID 없음).
+- [**PASS**] MP-2 EARS/GEARS Format Compliance: 신설 (iv-1)~(iv-4)·(v-1)(v-2) 6개 서브 레터 전수가 굵은 트리거(`**The**…**shall**`/`**shall not**`, `**While**…**shall**`, `**When**…**shall**`)를 갖는다(`spec.md:101` 직접 재독). 트리거 없는 평서문 0건 — iteration 1/2의 D1(GEARS-MIX) 재발 없음.
+- [**PASS**] MP-3 YAML Frontmatter Validity: `spec.md:1-15` 12개 필드 전부 존재·올바른 타입, `version: "0.3.0"→"0.3.1"` 정확히 증가, `updated: 2026-10-10` 유지.
+- [**N/A**] MP-4 Section 22 Language Neutrality: 단일 프로젝트 SPEC, 멀티언어 툴링 미해당.
+- [**PASS**] MP-5 D7 Cross-SPEC Reconciliation: `related_specs`의 SPEC-LDRHYTHM-001(`status: in-progress`)·SPEC-LDDESIGN-001(`status: completed`)·SPEC-LDRENDER-001(`status: completed`) 전부 재확인 — retired/superseded/archived 0건, BLOCKING 없음.
+- [**N/A**] MP-6 D8 Cross-Platform Discipline: 이 개정분에 `syscall` 언급 0건 — D8-4 자동 PASS.
+- [**N/A**] MP-7 [NEEDS CLARIFICATION] Marker Gate: Tier M이라 `research.md` 자체가 없음(N/A 사유, `ls`로 부재 확인). `grep -rn '\[NEEDS CLARIFICATION' plan.md` 매치 0건.
+
+Must-Pass 7개 전부 PASS 또는 N/A — Firewall에 의한 강제 FAIL은 없다. 그러나 아래 Category Scores가 이 개정분 단독으로 Tier M PASS 임계를 못 넘긴다.
+
+### Category Scores (이 개정분, 0.0-1.0)
+
+| Dimension | Score | 근거 |
+|---|---|---|
+| Clarity | 0.75 | (iv-1)~(v-2) 전수가 단일 해석 가능한 GEARS 문장이다. 다만 D4(아래)가 지적하는 "기계" 라벨 오용이 "무엇이 실제로 검증됐는가"에 대한 해석 모호성을 만든다. |
+| Completeness | 0.75 | HISTORY(`acceptance.md:15`)·DoD 체크리스트(`acceptance.md` §D 2건 추가)·§A.1 매핑 갱신은 모두 들어갔다. 다만 D1(아래) — REQ-LDBEAT-006(iv-3) 전체가 AC-016(i)~(m) 어디에도 없어 커버리지가 완전하지 않다. |
+| Testability | 0.50 | 신설 AC 5개(i~m) 중 3개(k·l·m)의 "검증 수단"(기계) 칸이 실제로 존재하지 않거나(D2) 다른 AC/다른 파일로 잘못 귀속되거나(D3) 수작업 대조를 "기계"로 오표기한다(D4). |
+| Traceability | 0.50 | D1 — REQ-LDBEAT-006(iv-3)이 완전히 미추적(AC 0개). D2 — AC-016(l)이 존재하지 않는 테스트를 인용. D3 — AC-016(m)의 Then 절 일부가 인용된 테스트 클래스 밖(다른 파일)에서만 검증된다. |
+
+조화평균 = 4 / (1/0.75 + 1/0.75 + 1/0.50 + 1/0.50) = 4 / 6.667 ≈ **0.60**. iteration 2가 확정한 전체 문서 점수(0.90)와는 별도로, **이 개정분 자체는 Tier M PASS 임계(0.90대, iteration 2 기준)에 크게 못 미친다.**
+
+### Defects Found (이 개정분)
+
+D1. **REQ-LDBEAT-006(iv-3) 완전 미추적** — `spec.md:101`(iv-3: "**When** (iv-1)의 메모가 화면에 노출되면, UI는 **shall** 그 칸에 명시적 '미정' 표시와 §4 원문 텍스트 + `source_ref`를 함께 보여준다")와 `acceptance.md:36` AC-LDBEAT-016(i)(j)(k)(l)(m) 전체를 대조한 결과, 이 UI 렌더링 요구에 대응하는 AC 서브-레터가 **하나도 없다**(i)=데이터 대조, (j)=트랙 부재, (k)=세 조건, (l)=시그니처, (m)=로더 일반화 — 전부 서버/데이터 레벨이고 UI 렌더링을 다루는 것이 없음). 실제 구현은 존재한다(`ui/src/components/BeatGrid.tsx:1000-1003`, `⚠ {viewBarSceneMemo.text}` + `source_ref` 동시 렌더)지만, 그 구현을 검증하는 어떤 렌더링 단언도 `ui/src/components/BeatGrid.test.tsx`에 없다 — 같은 파일의 `sceneMemoForBar` 유닛 테스트(345-367행)는 데이터 선택 로직만 검증하고 DOM 렌더는 검증하지 않는다(`grep -n "getByText\|⚠" BeatGrid.test.tsx`에 메모 관련 매치 0건, 확인함). — Severity: major — Class: blocking — 수정: AC-LDBEAT-016에 새 하위 시나리오(예: (n), Tier M AC 상한 16개는 "새 AC-ID" 금지이므로 기존 (i)의 Then에 UI 표시절을 추가하거나 §A 보충에 별도 렌더링 체크리스트 항목으로 편입) + `BeatGrid.test.tsx`에 memo가 있을 때 "⚠" 배지·원문 텍스트·`source_ref`가 **함께** 렌더되는지 확인하는 RTL 테스트를 추가한다.
+
+D2. **AC-LDBEAT-016(l)의 "기계" 검증 수단이 실제로 존재하지 않음** — `acceptance.md:36`은 (l)의 검증 수단을 "`inspect.getsource(find_overlapping_group_tracks)`/`inspect.getsource(validate_beat_grid_tracks)` 소스에 `scene_memos` 참조 0건 확인 + 두 함수의 매개변수 목록에 `scene_memos` 부재 확인"이라고 명시한다. `grep -n "scene_memos\|getsource" server/tests/test_beat_grid_t537.py` 전수 재확인 결과, 이 파일에서 `inspect.getsource`를 쓰는 곳은 `test_find_overlapping_group_tracks_has_no_song_specific_branch`(323행) 단 한 곳이고, 그 단언은 리그 전용 리터럴(`"BACK"` 등) 부재만 확인한다 — `scene_memos` 참조·매개변수 부재를 확인하는 코드는 이 파일에도, 저장소 전체 `grep -rn "scene_memos" server/tests/`에도 없다. 실제 코드 속성 자체는 참(수동 재확인: `server/design/beat_grid.py:186` `find_overlapping_group_tracks(group_names: Sequence[str])`, `:226` `validate_beat_grid_tracks`, 둘 다 `scene_memos` 미참조)이지만, AC가 인용한 검증 수단은 **지금 존재하지 않는 테스트를 가리키는 "관측되지 않은 검증" 주장**이다(verification-claim-integrity.md §1.1 surface 2/3에 해당하는 패턴). — Severity: major — Class: blocking — 수정: `TestOverlapIndependentOfCellStructuring`에 `inspect.getsource` 기반의 `scene_memos` 부재 단언을 실제로 추가하거나, (l)의 검증 수단 문구를 지금 존재하는 테스트(`test_overlap_rejection_reads_group_name_only_not_cue_content`, 192-217행 — 이것도 `scene_memos`를 직접 언급하진 않으므로 부분적으로만 대응)로 정정한다.
+
+D3. **AC-LDBEAT-016(m)의 Then 절 일부가 인용된 테스트 밖에서만 검증됨** — `acceptance.md:36` (m)의 Then: "가짜 곡은 그 데이터를 그대로 ... 돌려주고, **미등록 곡은 빈 트랙+"이 곡의 기본값 없음" 안내를 돌려주며**, `find_overlapping_group_tracks` 소스에 리그 전용 리터럴 0건이다" — 검증 수단 칸은 이 전체를 `TestLoaderIsRigAndSongAgnostic`(`server/tests/test_beat_grid_t537.py:277-330`) 하나로 귀속한다. 그런데 그 클래스의 테스트 둘(`test_a_different_songs_registered_data_comes_back_unchanged_by_any_love_attack_logic`·`test_find_overlapping_group_tracks_has_no_song_specific_branch`) 중 "미등록 곡 → 빈 트랙 + 안내" 절을 검증하는 것은 **없다** — 그 동작은 `server/tests/test_beat_grid_t532.py:112,120,285`(AC-LDBEAT-007 소관, 이 개정 이전부터 존재)에서만 검증된다. 동작 자체는 실제로 성립하지만(코드 확인: `beat_grid.py:355-359` `_load_song_default_document`가 `None`이면 `tracks=[]`·`note=_NO_DEFAULT_NOTE`), AC(m)이 자기 완결적으로 인용한 검증 수단은 그 절을 커버하지 못한다. — Severity: major — Class: blocking — 수정: (m)의 검증 수단에 `test_beat_grid_t532.py:112,120,285`를 명시적으로 추가 인용하거나, `TestLoaderIsRigAndSongAgnostic`에 미등록 곡 케이스를 자체 테스트로 복제한다.
+
+D4. **AC-LDBEAT-016(k)의 "기계" 검증이 실제로는 수작업 텍스트 대조이고, REQ-006(iv-2)의 "세 조건" 규칙 자체가 코드로 강제되지 않음** — `acceptance.md:36` (k)의 검증 수단: "기계 — `beat_grid_data/love_attack.yaml`의 세 조건 전수 재검토 주석과 여섯 메모의 사유가 1:1 대응하는지 대조" — 이것은 pytest가 단언할 수 있는 바이너리 조건이 아니라 사람이 YAML 주석(산문)과 메모 사유(산문)를 읽고 대응을 판단하는 절차다. 실제로 `server/design/beat_grid.py` 전체를 재확인한 결과 "그룹 직접 지칭 AND 그룹 번호 확인 AND 기존 큐와 충돌 없음 → 트랙, 아니면 메모"를 계산하는 함수가 **없다** — `_build_track_from_data`/`_build_scene_memo_from_data`는 YAML의 `tracks`/`scene_memos` 섹션을 그대로 옮기기만 한다(244·295·308행). 즉 REQ-LDBEAT-006(iv-2)의 "세 조건" 규칙은 LOVE ATTACK 한 곡에 대해서만 `love_attack.yaml` 작성 시점에 사람이 수동으로 정확히 지켰는지 재검토한 것이고, 다음 곡 추가 시 이 규칙을 지키도록 강제하는 코드는 전혀 없다 — `TestSceneMemos.test_all_six_scene_values_become_memos`(153행)도 "여섯 값 전부가 메모가 된다"는 LOVE ATTACK 1곡의 golden-value만 단언할 뿐, 세 조건의 일반 로직을 파라미터화해 검증하지 않는다. — Severity: minor — Class: blocking(Testability 기준 위반, "기계" 오표기) — 수정: (k)의 검증 수단 표기를 "기계"에서 "수동 검토(사람이 YAML 주석과 메모 사유 대조)"로 정정하거나, 세 조건을 입력으로 받아 트랙/메모 배정을 계산하는 순수 함수를 신설해 파라미터화 테스트를 추가한다.
+
+D5. **(optional, cosmetic)** `server/design/beat_grid_data/love_attack.yaml:107-108`의 주석 "나머지 셋(11~13·18~21·22~25)은 칸 자체가 그룹 이름을 부르지 않는다"가 bar 14(14~17행)를 빠뜨렸다 — 실제로 bar 14의 SCENE 텍스트("워시 25% 덜어냄")도 확인된 트랙 그룹 이름을 직접 부르지 않으므로 같은 분류에 속하고, `acceptance.md:36` AC(k)의 서술은 이미 "11/14/18/22(그룹 미지칭)"로 네 개를 올바르게 묶었다 — YAML 주석 쪽만 "나머지 셋"으로 하나 빠져 있다. — Severity: minor — Class: optional — 수정: YAML 주석을 "나머지 넷(11~13·14~17·18~21·22~25)"으로 교정.
+
+D6. **(optional, cosmetic)** `.moai/specs/SPEC-LDBEAT-001/progress.md`의 이번 개정 후기 항목이 YAML 규칙을 "두 조건 전수 재검토 주석"으로 지칭하는 반면, `spec.md:101` REQ-LDBEAT-006(iv-2)는 같은 규칙을 "세 조건"(그룹 직접 지칭·그룹 번호 확인됨·기존 큐와 충돌 없음)으로 정의한다 — 실질은 같다(이름+확인 두 조건에 충돌-없음을 별도 오버라이드로 얹은 것 = 세 조건의 AND), 용어만 어긋난다. — Severity: minor — Class: optional — 수정: progress.md 문구를 "세 조건"으로 통일하거나 "두 조건 + 충돌 오버라이드 = 세 조건과 동치"임을 한 줄로 명시.
+
+### 체크리스트 항목별 결론 (프롬프트 지정 검사)
+
+- **GEARS 형식(굵은 트리거, 서브-레터당 단언 1개)**: (iv-1)~(v-2) 전수 PASS — MP-2 재확인란 참조. 일부 서브레터(iv-1, v-1)가 한 문장에 두 단언을 묶지만 이는 iteration 1/2가 이미 받아들인 이 SPEC의 기존 스타일(예: (i-5))과 같은 패턴이라 신규 결함으로 잡지 않음(optional 수준).
+- **신설 REQ 서브-절마다 실제로 그것을 검증하는 AC 서브-시나리오가 있는가**: iv-1(부분적으로 i+j)·iv-2(k, 단 D4)·iv-4(l, 단 D2)·v-1/v-2(m, 단 D3) 는 있으나 **iv-3은 없음(D1)**.
+- **인용된 코드 줄번호가 존재하고 주장한 내용과 일치하는가**: `server/design/beat_grid.py:123,138,169,186,244,295,308,316,328`·`ui/src/protocol.ts:442,470` **전수 PASS**(직접 Read로 재확인, 전부 정확히 일치) — 이 부분은 매우 정밀하게 작성됨.
+- **기존 REQ/AC(REQ-004(h), REQ-015(f), AC-016(e)~(h))와의 모순**: 없음 — (iv-4)는 REQ-004(h)와 같은 두 함수를 다른 독립성 축(칸 구조화 vs scene_memos)으로 재확인할 뿐 모순되지 않는다.
+- **AC(m)의 "소스 리터럴 없음" grep의 유효성**: **유효한 검사다(vacuous 아님)** — `find_overlapping_group_tracks`(`beat_grid.py:186-223`)는 실제로 접두사 분리 규칙만 쓰는 순수 일반 코드이고, 리그 전용 분기를 추가하면 이 그렙이 즉시 깨진다(회귀 방지 효과 있음). 단, 문자열을 쪼개 이어붙이는 식으로 쉽게 우회 가능한 신택틱 검사라는 한계는 있다(기존 AC-LDBEAT-005 패턴과 같은 수준의 한계이므로 신규 결함으로는 잡지 않음).
+
+### Verdict (Iteration 3)
+
+**FAIL** — Overall Score(이 개정분): **0.60**. Must-Pass 7개 전부 PASS/N/A이지만, Traceability·Testability가 0.50으로 Tier M 임계에 크게 못 미친다. D1(blocking)은 REQ 서브-절 하나가 완전히 미추적이고, D2·D3(blocking)은 AC가 인용한 "기계" 검증 수단이 실제로는 존재하지 않거나 다른 파일에만 부분적으로 존재하는 **관측되지 않은 검증 주장**이다 — `verification-claim-integrity.md`의 "an actor MUST NOT assert a verification ... it did not actually verify" 원칙에 정면으로 걸리는 패턴이다. D4(blocking, minor severity)는 "기계" 라벨이 붙은 수작업 검토다.
+
+### Regression Check — iteration 2 결함(D1~D9, N1·N2)
+
+iteration 2에서 PASS 처리된 D1~D9 범위(spec.md (i)~(iii)/(a)~(h) 본문)는 이번 diff가 **건드리지 않았다**(git diff 확인, 해당 라인 변경 없음) — RESOLVED 상태 불변, 재발 없음. N1·N2(iteration 2의 optional 잔여)도 이번 diff 범위 밖이라 불변.
+
+### Recommendation (Iteration 3)
+
+1. (최우선, D1) `acceptance.md`의 AC-LDBEAT-016(i) 또는 별도 §A 보충 체크리스트에 REQ-LDBEAT-006(iv-3)의 UI 표시 요구(배지+원문 텍스트+source_ref 동시 노출)를 검증하는 Given/Then/검증수단을 추가하고, `ui/src/components/BeatGrid.test.tsx`에 RTL 렌더링 테스트를 추가한다.
+2. (D2) `AC-LDBEAT-016(l)`이 인용하는 `inspect.getsource` 기반 `scene_memos` 부재 테스트를 `server/tests/test_beat_grid_t537.py`에 실제로 추가하거나, 검증 수단 문구를 지금 존재하는 테스트로 정정한다.
+3. (D3) `AC-LDBEAT-016(m)`의 검증 수단에 `test_beat_grid_t532.py`의 기존 테스트를 명시적으로 추가 인용하거나, `TestLoaderIsRigAndSongAgnostic`에 미등록 곡 케이스를 자체 복제한다.
+4. (D4) `AC-LDBEAT-016(k)`의 "기계" 표기를 정정하거나, 세 조건 배정 로직을 파라미터화 가능한 순수 함수로 추출해 실제 기계 테스트를 추가한다.
+5. (D5·D6, optional) YAML 주석의 "나머지 셋" 누락과 progress.md의 "두 조건"/spec.md의 "세 조건" 용어 불일치를 다음 편집 때 정리한다.
+
+재감사는 위 D1~D4(blocking) 해소분에 한정된 delta 스코프로 충분하다(기존 (i)~(iii)/(a)~(h)는 재검토 불필요).
+
+## Iteration 4 — Iteration 3 D1~D6 delta 재감사
+
+**대상**: `git diff a2e8254b ccb5f6d3 -- .moai/specs/SPEC-LDBEAT-001/ server/design/beat_grid.py server/design/beat_grid_data/love_attack.yaml server/tests/test_beat_grid_t537.py ui/src/components/BeatGrid.tsx ui/src/components/BeatGrid.test.tsx`(커밋 `cd75465b`+`ccb5f6d3`, 카드 t537) — iteration 3 FAIL(0.60)의 D1~D6(D1~D4 blocking, D5~D6 optional)에 대한 delta-scope 재감사(Retry Loop Contract). 통계: `git diff --stat` 8파일, +326/-7 — `.moai/specs/SPEC-LDBEAT-001/{acceptance,progress,spec}.md`(각각 소폭) + `server/design/beat_grid.py`(+33, 신규 순수함수) + `server/design/beat_grid_data/love_attack.yaml`(+1/-1, 주석 정정) + `server/tests/test_beat_grid_t537.py`(+139, 신규 시험) + `ui/src/components/BeatGrid.tsx`(+41, 신규 순수함수) + `ui/src/components/BeatGrid.test.tsx`(+106, 신규 시험 5개).
+
+M1 Context Isolation 선언: 프롬프트에 포함된 커밋 해시 나열·"보강" 서술은 작성자 쪽 주장이므로 판단에 쓰지 않았다. 아래 모든 판정은 diff가 드러낸 실제 텍스트/코드와, 그 코드를 직접 실행한 테스트 결과로만 내렸다 — `uv run --quiet pytest server/tests/test_beat_grid_t532.py server/tests/test_beat_grid_t537.py -q`(47 passed), `cd ui && npx vitest run src/components/BeatGrid.test.tsx`(85 passed), `uv run ruff check`/`ruff format --check`(통과), `cd ui && npx tsc --noEmit`(0 에러)를 이 세션에서 직접 재실행해 확인했다.
+
+### D1~D6 결함별 판정 (iteration 3 delta)
+
+- **D1 (REQ-LDBEAT-006(iv-3) 완전 미추적) — RESOLVED.** `ui/src/components/BeatGrid.tsx:480-497`에 순수함수 `sceneMemoMarkers(memos, visibleBarRange)`를 신설해 "이 마디 한눈에" 패널이 실제로 그리는 배지+§4 원문+`source_ref` derivation을 DOM 없이 단언 가능하게 뽑았고, `BeatGrid.tsx:628`(`viewBarSceneMemo = sceneMemoMarkers(...)[0]`)·`:1037-1040`(`⚠ {viewBarSceneMemo.text}` + `(sourceRef)`)에서 실제 렌더 경로가 이 함수를 그대로 쓴다(직접 Read로 호출 지점 확인). `ui/src/components/BeatGrid.test.tsx:370-473`에 5개 단위시험(전체 범위 6메모 추출·단일 마디로 좁힌 범위·범위 밖 제외·빈 배열·가짜 곡 일반화)을 신설했고 전부 실제로 LOVE ATTACK 메모 텍스트/`source_ref` 리터럴과 바이트 대조한다(vacuous 아님, 직접 재확인) — `npx vitest run`으로 85 passed 재확인(이전 80개에서 5개 증가). `acceptance.md`의 AC-LDBEAT-016(i)도 이 함수·테스트를 명시적으로 인용하도록 교정됐다. 이 REQ 서브-절은 더 이상 미추적이 아니다.
+- **D2 (AC-LDBEAT-016(l) "기계" 검증 수단 부재) — RESOLVED.** `server/tests/test_beat_grid_t537.py:319-334` `test_overlap_functions_have_no_scene_memos_parameter_or_reference`가 실제로 `inspect.signature`/`inspect.getsource`로 `find_overlapping_group_tracks`·`validate_beat_grid_tracks` 둘 다의 매개변수 목록과 소스에서 `scene_memos` 부재를 단언하고, `:336-357` `test_scene_memo_bars_that_coincide_with_existing_cues_do_not_affect_validation`이 LOVE ATTACK 실제 데이터로 메모·큐가 공유하는 마디가 실제로 존재하는지부터 양성 대조(`assert cue_bars_colliding_with_memos, "전제 깨짐..."`)한 뒤 `validate_beat_grid_tracks`가 그대로 PASS함을 확인한다 — 양쪽 다 vacuous-pass 방지 구조를 갖춘 실질 시험이다(직접 코드 재독 확인). `acceptance.md` AC-LDBEAT-016(l)의 검증 수단 문구가 이 두 테스트를 정확히 가리키도록 교정됐다.
+- **D3 (AC-LDBEAT-016(m) 미등록 곡 절 자기완결성 부재) — RESOLVED.** `acceptance.md`의 (m) 검증 수단에 `server/tests/test_beat_grid_t532.py::TestDefaultBeatGrid::test_a_different_song_gets_no_forced_default`가 명시적으로 추가 인용됐다. 그 테스트를 직접 재독(`:109-114`)한 결과 `grid["source"]=="empty"`·`grid["tracks"]==[]`·`grid["note"]=="이 곡의 기본값 없음"`을 정확히 단언하며, 인용된 줄번호("113-114행")가 `grid["tracks"]==[]`(113)·`grid["note"]==...`(114)와 바이트 단위로 일치한다 — AC가 그 테스트를 복제하지 않고 가리킬 뿐이라는 자기 주장도 사실이다(`test_beat_grid_t537.py`에 복제된 미등록 곡 테스트 0건, grep 확인).
+- **D4 (AC-LDBEAT-016(k) "기계" 라벨 오표기 + 세 조건 로직 미강제) — RESOLVED(요구된 두 대안 중 하나 충족, 잔여 관찰 1건).** `server/design/beat_grid.py:79-103`에 순수함수 `classify_scene_cell_assignment(*, named_group, confirmed_track_group_names, group_has_existing_cue_at_bar)`를 신설했고, `server/tests/test_beat_grid_t537.py:185-281` `TestSceneCellAssignmentRule`이 조건별 독립 단위시험 4개(각 조건이 개별로 거짓일 때 "memo", 셋 다 참일 때 "track")와 LOVE ATTACK §4 SCENE 여섯 자리 재도출 대조시험(`test_love_attack_section_4_scene_cells_all_classify_as_memo`, 이 함수의 출력이 `default_beat_grid(LOVE_ATTACK_TITLE)["scene_memos"]`의 bar 집합과 바이트 동일한지 assert)을 신설했다 — 전부 직접 재독·재실행으로 비-vacuous 확인. `acceptance.md`의 (k) 검증 수단 라벨도 "기계"에서 "기계+수동"으로 정정돼 YAML 주석 대조(사람이 읽는 절)와 파라미터화 함수(기계가 검증하는 절)를 분리했다 — iteration 3가 제시한 두 대안("라벨 정정" 또는 "파라미터화 순수함수 신설") 중 **둘 다**를 적용했다. **잔여 관찰(blocking 승격 안 함)**: `classify_scene_cell_assignment`는 `server/design/beat_grid_data/*.yaml` 로더(`_build_track_from_data`/`_build_scene_memo_from_data`) 어디에서도 호출되지 않는다(grep 확인, production 호출 0건) — 다음 곡/리그의 YAML을 작성할 때 이 함수로 세 조건을 기계적으로 강제하는 경로는 아직 없고, LOVE ATTACK 한 곡에 대해서만 "사람이 작성한 YAML이 이 함수의 재도출 결과와 일치한다"는 회귀 방지 테스트가 생겼을 뿐이다 — D4의 명시된 두 대안 중 하나를 충족했으므로 RESOLVED로 판정하되, 이 잔여는 향후 로더 쪽 강제화(M2/M3) 과제로 남는다.
+- **D5 (YAML "나머지 셋"→"나머지 넷", optional) — RESOLVED.** `server/design/beat_grid_data/love_attack.yaml:107-108`의 주석이 "나머지 넷(11~13·14~17·18~21·22~25)"으로 정정됐다(직접 재독 확인) — bar 14 포함.
+- **D6 (progress.md "두 조건"/spec.md "세 조건" 용어 불일치, optional) — RESOLVED(해당 두 파일 한정 — 새 잔여는 아래 N2).** `progress.md:278`("세 조건 모두: (a)(b)(c)")·`spec.md`의 HISTORY 행(세 조건 전수 재검토 주석)이 전부 "세 조건"으로 통일됐다(직접 재독 확인). 단, 이 통일이 가리키는 원본 파일(`love_attack.yaml`)의 주석 자체는 아래 N2에서 보듯 여전히 "두 조건"이다 — D6이 요구한 "progress.md/spec.md" 범위 자체는 충족됐다.
+
+### 새로 발견한 결함 (이번 수정이 들여온 것)
+
+- **N1 (optional, citation drift)** — `spec.md`의 REQ-LDBEAT-006 근거 칸이 인용하는 `server/design/beat_grid.py` 줄번호 9곳(`:123`·`:138`·`:169`·`:186`·`:244`·`:295`·`:308`·`:316`·`:328`)이 전부 현재 실제 위치보다 33줄 적다(이번 수정이 신설한 `classify_scene_cell_assignment`(79-103행, 주석 포함 ~44줄)가 그 앞에 삽입돼 이후 전부가 밀렸다 — 직접 `grep -n`으로 재확인: 실제 위치는 `class SceneMemo`:156·`scene_memos`:171·`_SONG_DEFAULT_FILES`:202·`find_overlapping_group_tracks`:219·`normalize_beat_grid_cue`:277·`_build_track_from_data`:328·`_build_scene_memo_from_data`:341·`_load_song_default_document`:349·`default_beat_grid`:361). 같은 근거 칸의 `server/tests/test_beat_grid_t537.py` 인용 중 `TestLoaderIsRigAndSongAgnostic`(277-328행)도 이번 수정이 그 앞에 `TestSceneCellAssignmentRule`(97줄)과 `TestOverlapIndependentOfCellStructuring`에 테스트 2개(약 35줄)를 추가로 끼워 넣어 실제로는 416-469행으로 139줄 밀렸다(`TestSceneMemos`(149-181행 인용)는 그 앞에 있어 거의 영향받지 않음, 실제 150-183행). iteration 3의 체크리스트가 "인용된 코드 줄번호가 전수 PASS"라고 명시적으로 평가했던 그 정밀성이 이번 수정으로 깨졌다 — 코드/테스트 내용 자체는 전부 맞지만(이 보고서 위 D1~D4 판정에서 직접 재확인), 줄번호는 틀렸다. iteration 1의 D7(656행→655행)과 같은 성격의 사소한 사실 정확성 결함이라 optional로 분류한다 — Severity: minor — Class: optional — Required fix: spec.md REQ-LDBEAT-006 근거 칸의 9+2개 줄번호 인용을 현재 실제 위치로 갱신한다(또는 향후 재발을 줄이려면 줄번호 대신 함수/클래스 이름만 인용하는 패턴으로 바꾼다).
+- **N2 (optional, 잔여 용어 불일치)** — `server/design/beat_grid_data/love_attack.yaml:100`의 주석이 여전히 "아래 "두 조건 모두" 규칙(...)을 2026-10-10 전수 재검토한 결과"라고 적는다 — D5가 같은 주석 블록의 "나머지 셋"→"나머지 넷"은 고쳤지만 그 바로 위 "두 조건"은 고치지 않았다. 동시에 이번 수정에서 `spec.md`의 HISTORY 행은 이 YAML을 "세 조건 전수 재검토 주석"이라고 묘사하도록 고쳐졌다(`git diff a2e8254b ccb5f6d3` 확인) — 그 결과 spec.md가 이제 YAML 파일의 실제 문구와 다른 것을 "사실"로 주장하는 새로운 내부 불일치가 생겼다. 실질 규칙(세 조건의 AND)은 `classify_scene_cell_assignment` 독스트링·`spec.md` REQ-006(iv-2) 본문과 일치하므로 동작에는 영향 없다 — Severity: minor — Class: optional — Required fix: `love_attack.yaml:100`의 "두 조건 모두"를 "세 조건 모두"로 정정한다(D6과 같은 교정을 이 파일에도 적용).
+- **N3 (optional, dead field)** — `SceneMemoMarker.label`(`BeatGrid.tsx:473-478`, 항상 `UNSET_FIELD_LABEL`="미정")이 `BeatGrid.test.tsx`의 5개 신규 단위시험 전부에서 단언되지만, 실제 프로덕션 렌더 지점(`BeatGrid.tsx:1037-1040`, "이 마디 한눈에" 패널)은 `viewBarSceneMemo.text`·`.sourceRef`만 읽고 `.label`은 전혀 참조하지 않는다(grep 확인, `.label` 소비처 0건) — 화면의 "미정" 표시는 `memo.text` 자신이 "배정 미정 — ..."로 시작하는 문구에 의해서, 그리고 곡 전체 지도의 별도 오버레이 배지(`BeatGrid.tsx:704-715`, `grid.scene_memos`를 직접 읽음, `sceneMemoMarkers`를 거치지 않음)의 하드코딩된 "⚠ 미정" 리터럴에 의해서 이루어진다. REQ-LDBEAT-006(iv-3)의 "명시적 '미정' 표시 + §4 원문 + source_ref를 함께 보여준다"는 기능적으로는 충족되지만(두 경로를 합치면 셋 다 화면에 나타난다), AC-LDBEAT-016(i)가 "`sceneMemoMarkers`가 실제로 그리는 것을 단언한다"고 주장하는 것과 달리 `.label` 필드 자체는 그 어떤 렌더에도 쓰이지 않는 죽은 데이터다 — Severity: minor — Class: optional — Required fix(선택): `.label`을 렌더 지점에서 실제로 쓰도록 바꾸거나(예: 리터럴 "⚠" 대신 `{marker.label}` 배지로 교체), 아니면 `SceneMemoMarker`에서 `label` 필드 자체를 제거하고 테스트도 그에 맞춰 축소한다.
+
+### 재검증 (이 세션에서 직접 재실행)
+
+```
+$ uv run --quiet pytest server/tests/test_beat_grid_t532.py server/tests/test_beat_grid_t537.py -q
+47 passed in 0.47s
+$ cd ui && npx vitest run src/components/BeatGrid.test.tsx
+✓ src/components/BeatGrid.test.tsx (85 tests) — Test Files 1 passed (1), Tests 85 passed (85)
+$ uv run ruff check server/design/beat_grid.py server/tests/test_beat_grid_t537.py
+All checks passed!
+$ uv run ruff format --check server/design/beat_grid.py server/tests/test_beat_grid_t537.py
+2 files already formatted
+$ cd ui && npx tsc --noEmit
+(no output — 0 errors)
+```
+
+### Category Scores (이 delta, 0.0-1.0)
+
+| Dimension | Score | 근거 |
+|---|---|---|
+| Clarity | 0.90 | D1~D4가 수정한 AC 본문·신설 순수함수 독스트링 전부 단일 해석 가능. N2의 용어 잔여만 cosmetic 흠으로 남는다. |
+| Completeness | 0.90 | AC-LDBEAT-016(i)(k)(l)(m) 전부 실존하는 검증 수단으로 교정됨. N1의 근거 칸 줄번호 drift만 남는다. |
+| Testability | 0.90 | D1~D4가 지적한 "검증 수단이 실제로 존재하지 않거나 vacuous"였던 자리 전부가 이제 실행·재확인된 non-vacuous 시험으로 교체됨(pytest 47 passed, vitest 85 passed, ruff/tsc 클린). N3는 사용되지 않는 필드를 테스트하는 사소한 과잉이며 테스트 자체의 유효성을 해치지 않는다. |
+| Traceability | 0.85 | REQ-006(iv-3)/(iv-4)/(iv-2)/(v-1)(v-2) → AC-016(i)(l)(k)(m) 매핑이 전부 실제 코드/테스트와 일치. N1(근거 칸 줄번호 9+2곳 drift)만 "실측"이라 자칭한 증거의 정확성을 깎아 Traceability에 가장 직접적으로 반영했다. |
+
+조화평균 = 4 / (1/0.90+1/0.90+1/0.90+1/0.85) = 4 / 4.509 ≈ **0.89**. Tier M plan-auditor PASS threshold(`spec-workflow.md` § SPEC Complexity Tier) 0.80 이상.
+
+### Must-Pass Results (재확인)
+
+- [**PASS**] MP-1: `grep -oE '^\| REQ-LDBEAT-[0-9]+' spec.md | sort -u | wc -l` → 15, 연속·중복 없음 (불변).
+- [**PASS**] MP-2: 이번 수정은 REQ 본문을 건드리지 않았다(spec.md REQ 변경 0 — diff 확인). 기존 (iv-1)~(v-2) 트리거 전부 유지.
+- [**PASS**] MP-3: `version: "0.3.1"` 유지(이번 수정은 REQ/AC 문면이 아니라 검증 수단만 바꿨으므로 버전 불변 — frontmatter 12필드 전부 유지).
+- [**N/A**] MP-4: 단일 프로젝트 SPEC.
+- [**PASS**] MP-5: 참조 SPEC 6개(LDARRANGE/LDBARMAP/LDDESIGN/LDRENDER/LDRHYTHM/자기자신) 상태 재확인 — retired/superseded/archived 0건.
+- [**N/A**] MP-6: `syscall` 매치 0건.
+- [**N/A**] MP-7: Tier M, `research.md` 부재(ls 확인), `plan.md` 매치 0건.
+
+### Verdict (Iteration 4)
+
+**PASS** — Overall Score(이 delta): **0.89** ≥ Tier M 임계 0.80. iteration 3의 blocking 결함 D1~D4 전부 RESOLVED(실행·재확인된 non-vacuous 시험으로 교체 완료), optional D5~D6도 RESOLVED(범위 내). 새로 발견한 N1~N3는 전부 minor severity·optional class(인용 줄번호 drift·YAML 잔여 용어·미사용 필드) — M6 Finding-consumption discipline상 verdict를 뒤집을 근거가 아니다. 다음 plan 개정 또는 run-phase 착수 전 여유가 있을 때 N1/N2(사실 정확성)를 정리하면 되고, N3는 선택 사항이다.
+
+### Regression Check (Iteration 4)
+
+iteration 2가 확정한 (i)~(iii)/(a)~(h) 범위는 이번 diff가 건드리지 않았다(git diff 확인) — 불변, 재발 없음. iteration 3의 D1~D6 전부 위에서 RESOLVED로 확인 — UNRESOLVED 0건. Stagnation 없음(3회 연속 동일 결함 재발 패턴 0건).
+
+### Recommendation (Iteration 4)
+
+PASS — Must-Pass 7개 전부 PASS 또는 N/A, iteration 3 D1~D6 전부 해소, aggregate 0.89는 Tier M 임계(0.80) 이상이다. N1(근거 칸 줄번호 9+2곳 갱신)·N2(`love_attack.yaml:100` "두 조건"→"세 조건")는 선택 사항이며 다음 편집 때 반영해도 된다. run-phase 착수 전 Implementation Kickoff Approval(감독 승인)은 이 PASS가 대체하지 않는다.
+
+커밋 SHA (iteration 4 재감사 대상): `ccb5f6d3`(최종) — 직전 `cd75465b`(시험·순수함수 신설) — 둘 다 직전 `a2e8254b`(iteration 3 FAIL 보고서 커밋) 대비 diff 전수 재독으로 판정.
