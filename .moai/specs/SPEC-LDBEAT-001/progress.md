@@ -475,6 +475,15 @@ $ git diff edc537db -- ui/src/App.tsx
 - **검증**: `pytest server/tests -k "beat_grid or runbook or ldbeat or timeline"` → 207 passed, 2 skipped. 「승인된 12칸 외엔 번호 없음」·「밝기 단일모드」 시험 추가. `ruff check`·`format --check` 통과.
 - **안 잰 것**: 이 번호들이 실제 콘솔에서 의도대로 보이는지(특히 [이름] 8칸과 Group 12 의 21.5·2.1)는 재지 않았다 — 데이터만 바꿨고 콘솔 쓰기 0.
 
+### SPEC 개정 0.3.2 — 앱 2단계 무빙 칸·근거 필드·승인 예외 (카드 t548, lane-3, 브랜치 `WT-ldbeat-app-movers`, plan 만)
+
+감독 결정 2026-10-10 「앱 2단계 무빙으로」. plan 문서만 — 코드 0줄, 콘솔 0건. 작성 manager-spec, 독립 감사 plan-auditor. 감독 승인 전엔 run 하지 않는다.
+
+- **개정 네 가지**: (A) REQ-006 (vi-1)~(vi-7) `app_movement` 큐 필드 — 닫힌 모양 어휘·축·주기(박/마디, 초 금지)·위상 펼침·리그 상수 금지·같은 축 `effect_preset_no` 배타. (B) REQ-015 (g) 감독 승인 예외 — 제안표에서 감독이 명시 승인한 번호만, 승인 기록 필수. (C) REQ-006 (vii) 칸별 근거 필드 `evidence` = `grade`(실측/다른 그룹 실측/이름만/null) + `approval`({by, date, source}/null), `source_ref`(i-5)와 독립. (D) REQ-006 (iv-2) 문면을 t543 역할 매칭 구현에 맞춤. AC-LDBEAT-016 에 하위 (n)~(t). §5 열린 결정 8.
+- **예산**: REQ 15/16, AC 16/16 — 새 ID 0개.
+- **감사**: 1회차 FAIL 0.63 — D1 `grade` 한 필드에 증거 강도와 승인 경로가 섞여 AC(o)/(p)가 같은 8칸에 다른 값을 요구, D2 (vi-5)(vi-6)(vi-7)에 실패하는 AC 없음. 2회차 PASS 1.00(`grade`/`approval` 분리, AC (r)(s)(t) 추가). 보고서 `.moai/reports/t548/plan-audit.md`.
+- **열린 결정(run 전에 감독이 정할 것)**: ① 팬만 흔드는 모양이 `position_fx` 에 없다(`wave` 는 Tilt 만) — 새 모양 vs `wave` 에 축 매개변수. ② 무빙 기준 위치 — `position_fx` 의 라벨 해석 뱅크 프리셋 vs 큐 자신의 `position_preset_no`. ③ MOVER-D(Group 12, Spiider)는 2단계 무빙을 한 번도 안 쟀다 — run 전 프로브 필요.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_

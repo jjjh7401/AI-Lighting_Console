@@ -1,0 +1,112 @@
+# SPEC Review Report: SPEC-LDBEAT-001 (in-place amendment, card t548)
+Iteration: 1/3
+Verdict: FAIL
+Overall Score: 0.63
+
+Scope: this audit covers only the uncommitted diff `git diff -- .moai/specs/SPEC-LDBEAT-001/` (spec.md/plan.md/acceptance.md, version 0.3.1→0.3.2) — the four changes the card claims: (A) REQ-LDBEAT-006(vi-1)~(vi-7) `app_movement`, (B) REQ-LDBEAT-015(g) supervisor-approval exception, (C) REQ-LDBEAT-006(vii-1)~(vii-3) `evidence`, (D) REQ-LDBEAT-006(iv-2) recalibration — plus AC-LDBEAT-016(n)(o)(p)(q), the §A.1 mapping-table update, §5 open-decision item 8, and plan.md §B items 15/16 + M8. Pre-existing (i)~(v)/(a)~(f) text is NOT re-audited except where this change interacts with it.
+
+## Must-Pass Results
+- [PASS] MP-1 REQ number consistency: `grep -cE '^\| REQ-LDBEAT-[0-9]+ ' spec.md` → 15, listed REQ-LDBEAT-001 through 015, no gaps/duplicates. No REQ-ID added by this card (confirmed — card only adds sub-clauses to REQ-006/015).
+- [PASS] MP-2 EARS/GEARS format compliance (requirement layer only): every new sub-clause — (vi-1)~(vi-7) spec.md:102, (vii-1)~(vii-3) spec.md:102, REQ-015(g) spec.md:146, (iv-2) recalibration spec.md:102 — carries a bolded GEARS trigger (`**The**`/`**When**`/`**While**`/`**Where**`) + `**shall**`/`**shall not**`. One soft note (not a format failure, see D4): REQ-015(g) uses `**Where** 감독이 ... 승인하면` for a discrete approval event rather than `**When**`; this loose "Where" usage is a pre-existing house convention in this same document (e.g. spec.md:130 "Where 미리보기가 ... 사용되면"), not a regression this card introduced, so it is reported as D4 (optional) rather than an MP-2 failure.
+- [PASS] MP-3 YAML frontmatter validity: all 12 canonical fields present and correctly typed (spec.md:1-15) — `id`,`title`,`version:"0.3.2"`,`status: in-progress`,`created`,`updated: 2026-10-10`,`author: jaihyun`,`priority: P1`,`phase`,`module`,`lifecycle: spec-anchored`,`tags`. `status` unchanged, HISTORY row added at spec.md:34.
+- [N/A] MP-4 Section 22 language neutrality: single-project (lighting-console) SPEC, no multi-language tooling claim.
+- [PASS] MP-5 D7 cross-SPEC reconciliation: `grep -oE 'SPEC-([A-Z][A-Z0-9]+-)+[0-9]+' spec.md` → SPEC-LDARRANGE-001(draft)/SPEC-LDBARMAP-001(in-progress)/SPEC-LDDESIGN-001(completed)/SPEC-LDRENDER-001(completed)/SPEC-LDRHYTHM-001(in-progress) — none retired/superseded/archived; no BLOCKING finding. (These references are pre-existing, untouched by this diff.)
+- [N/A] MP-6 D8 cross-platform discipline: `grep -c syscall` on spec.md/plan.md/acceptance.md → 0/0/0.
+- [PASS] MP-7 clarification gate: `grep -n '\[NEEDS CLARIFICATION' plan.md` → no match (exit 1); `research.md` does not exist (Tier M input contract — absence expected).
+
+## Category Scores (0.0-1.0, rubric-anchored)
+| Dimension | Score | Rubric Band | Evidence |
+|-----------|-------|-------------|----------|
+| Clarity | 0.50 | 0.50 ("multiple requirements require interpretation; a reasonable engineer might implement them differently than intended" — here literally cannot satisfy both at once) | D1 below: AC-LDBEAT-016(o) and (p) assign contradictory `evidence.grade` values to the same real cells |
+| Completeness | 1.00 | 1.0 | All sections present; frontmatter 12/12; `### Out of Scope — <topic>` H3 headings present (spec.md:150,156,167,174,180,186,192), unchanged by this diff; HISTORY row added (spec.md:34) |
+| Testability | 0.50 | 0.50 ("requires a judgment call to evaluate") | AC(p)'s Given scenario (the 8 name-only cells, acceptance.md "progress.md:471-474") cannot be mechanically judged PASS/FAIL without first resolving which of two contradictory grade values (o) vs (p) demand — see D1 |
+| Traceability | 0.75 | 0.75 ("one REQ sub-clause set is uncovered") | REQ-LDBEAT-006(vi-5)(vi-6)(vi-7) have no AC sub-clause whose Then-clause would FAIL if violated (D2) |
+
+Harmonic mean (per Skeptical Evaluation Stance, `agent-common-protocol.md`): 4 / (1/0.50 + 1/1.00 + 1/0.50 + 1/0.75) = 4 / 6.333 = **0.63** — below the Tier M PASS threshold (0.80).
+
+## Defects Found
+
+D1. **evidence.grade contradiction between AC-LDBEAT-016(o) and (p)** — `acceptance.md` (AC-LDBEAT-016 row, the (o)/(p) Then-clauses) — Severity: critical — Class: blocking
+   - Evidence: AC(o) Then (verbatim): `` `grade == "supervisor_approved"`인 칸은 `date`·`source`가 모두 채워져 있다 — 측정 칸은 `"measured"`/`"measured_other_group"`, 이름만 맞춘 칸은 `"name_only"`다. `` — this classification rule assigns **name-only** cells grade `"name_only"`, full stop.
+   - AC(p) Given (verbatim): `` 배치 규칙서·t525류 실측 어느 쪽에도 숫자가 없는 칸에 감독이 레인 제안표로 번호를 승인한 상태(이미 실측됨 — `.moai/reports/t543/proposal-table.md` 12칸 중 8칸, `progress.md:471-474`). `` — this is, by construction, exactly the 8 name-only cells (verified: `.moai/reports/t543/proposal-table.md` footer states "큐 33개 · 제안한 칸 12개(실측 2 · 다른 그룹에서 잰 실측 2 · 나머지는 이름 후보) · 나머지 120칸은 비움" — 8 of 12 = "나머지는 이름 후보" = name-only; and `progress.md:474` says "8칸은 프리셋 **이름**만 맞춤 후보다").
+   - AC(p) Then (verbatim): `` 그 번호는 PASS한다 — 그 칸의 `evidence.grade`가 `"supervisor_approved"`이고 날짜·표 경로가 채워져 있을 때만 PASS이고, 승인 기록(`evidence`) 없이 번호만 있으면 FAIL이다. `` — this requires those same 8 cells to carry grade `"supervisor_approved"` for PASS.
+   - Contradiction: the same 8 real cells (MOVER-U/MOVER-D effect 21.5, MOVER-U/MOVER-D position 2.1, BACK/SIDE-ALL/BLIND effect+dimmer presets — per `love_attack.yaml:72-77,86-90,93-96,142-143,145-146,155` grading comments) cannot simultaneously satisfy "grade must be `name_only`" (AC-o) and "grade must be `supervisor_approved`" (AC-p). REQ-LDBEAT-006(vii-2)'s own definition compounds this: it defines `"supervisor_approved"` as *"REQ-LDBEAT-015(g)의 승인 예외 경로"* (spec.md:102) — i.e. exactly the pathway these 8 cells took (they have no (f)-qualifying source, so they exist only because of (g)'s exception) — so vii-2's own text sides with AC(p), not AC(o).
+   - Consequence beyond the label mismatch: REQ-LDBEAT-006(vii-3) conditions the mandatory `date`+`source` bookkeeping *only* on `grade == "supervisor_approved"` (`**While** evidence.grade가 "supervisor_approved"인 동안, ... shall ... date ... source ... 함께 가진다`). If an implementer follows AC(o) and labels these 8 cells `"name_only"` (the textually more specific, later-stated rule), vii-3's date/source mandate silently never fires for them — defeating the entire accountability purpose REQ-015(g) and (vii) were introduced to establish (the approval date + lane-proposal-table path becomes optional, not required, for the exact cells that most need it because they lack any other source).
+   - Required fix: resolve the ambiguity explicitly in the REQ/AC text — either (a) make `evidence.grade` capture evidentiary basis only (`measured`/`measured_other_group`/`name_only`) and add a SEPARATE boolean/field (e.g. `evidence.approved_via_g_exception` or reuse `date`/`source` presence as the (g)-exception signal independent of `grade`), amending vii-2/vii-3 accordingly; or (b) make `"supervisor_approved"` the grade these 8 cells actually carry and drop "이름만 맞춘 칸은 `name_only`다" from AC(o)'s Then-clause (reserving `name_only` for a hypothetical future cell that is name-matched but NOT yet supervisor-approved). Either fix must also update `love_attack.yaml`'s current freeform comments (`[이름]` + "감독 승인 2026-10-10") to the single definitive structured value once M8 implements the field.
+
+D2. **REQ-LDBEAT-006(vi-5)/(vi-6)/(vi-7) have no AC sub-clause that would FAIL if violated** — `spec.md:102` (vi-5/vi-6/vi-7) / `acceptance.md` AC-LDBEAT-016(n) — Severity: major — Class: blocking
+   - Evidence: AC(n)'s Then-clause (verbatim): `` `shape`는 닫힌 집합(`"pan_sway"`|`"tilt_wave"`) 중 하나이고, `period_unit`+`period_value`가 음악 단위(박/마디)로만 채워지며 초 단위 숫자는 어디에도 없다, `axes`가 그 칸이 흔드는 속성을 명시한다 — 하나라도 어긋나면 FAIL. `` — this covers only (vi-2) shape vocabulary, (vi-4) musical-unit/no-seconds, and (vi-3) axes presence. AC(n)'s 검증 수단 (verbatim): `` 구현 뒤 `app_movement` 필드 타입 조회 + `grep -rn "fade_seconds\|_seconds" <app_movement 구현 모듈>` 0건 확인 `` — greps only for seconds-patterns.
+   - (vi-5) `phase_spread` (the field must independently record whether moving axes use phase-spread) is never asserted PASS/FAIL anywhere in AC(n) or elsewhere in AC-LDBEAT-016.
+   - (vi-6) ("어떤 장비 ID·콘솔 그룹 번호·프리셋 번호도 코드 상수로 하드코딩되지 않는다") has no analogous check to the one already used for the sibling REQ-006(v-1)(v-2) loader-generalization requirement (`inspect.getsource(find_overlapping_group_tracks)`에 `"BACK"`·`"MOVER-U"` 리터럴 0건 확인, AC-LDBEAT-016(m)) — no such grep is specified for the (to-be-written) `app_movement` implementation module.
+   - (vi-7) (same-axis exclusivity between `app_movement` and `effect_preset_no`) has no assertion anywhere in acceptance.md.
+   - Required fix: extend AC-LDBEAT-016(n)'s Then + 검증 수단 to explicitly assert (i) `phase_spread` is `bool|null` and independently settable from `shape` (not inferred), (ii) a `inspect.getsource`/grep-based literal-freedom check on the `app_movement` implementation module analogous to AC(m)'s loader check, and (iii) a same-axis-conflict rejection test (two fixtures: same-axis conflict → rejected/FAIL; different-axis combination → accepted/PASS).
+
+D3. **REQ-LDBEAT-006(vii-1)'s "`source_ref`는 바뀌지 shall not한다" is asserted in the REQ layer but never tested in the AC layer** — `spec.md:102` (vii-1) / `acceptance.md` AC-LDBEAT-016(o) — Severity: minor — Class: optional
+   - Evidence: AC(o)'s Then only covers `evidence.grade`/`date`/`source` classification (quoted in D1); no assertion that the pre-existing `source_ref` values (verified unchanged in `server/design/beat_grid_data/love_attack.yaml:72,77` etc. and `server/design/beat_grid.py:152-154`) remain untouched once `evidence` is implemented.
+   - Rationale for optional (not blocking): current code/data already demonstrate `source_ref` and the evidentiary grading comments are independent (verified by direct `grep`/`Read` on `love_attack.yaml` and `beat_grid.py` — no overlap today), and plan.md §B item 16 / §D already carry an explicit anti-pattern warning against merging the two fields, so the regression risk this REQ guards against is already flagged elsewhere in the same document even without a dedicated AC assertion.
+   - Suggested fix (non-blocking): add a one-line assertion to AC(o)'s Then/검증 수단 — "the pre-existing `source_ref` values for BACK/MOVER-U/MOVER-D/BLIND cells are byte-identical before and after `evidence` is populated."
+
+D4. **REQ-LDBEAT-015(g) uses `**Where**` for a discrete supervisor-approval event rather than `**When**`** — `spec.md:146` — Severity: minor — Class: optional
+   - Evidence: `` (g) **신설(카드 t548, 감독 결정 2026-10-10 — 승인 예외)**: **Where** 감독이 레인 제안표(...)에서 특정 칸의 프리셋 번호를 명시적으로 승인하면, **The** 그 번호 **shall** ... ``. Per the canonical GEARS rubric (M3), `Where` is reframed as a capability-gate/feature-flag/static-config trigger, not a general "if this event happens" trigger — a discrete supervisor-approval action is closer to `When [trigger]` (event-driven).
+   - Rationale for optional (not blocking / not an MP-2 failure): this document already has an established, pre-existing convention of using `Where` more loosely than the strict capability-gate sense (e.g. spec.md:130 `**Where** 미리보기(Goto Cue/Off Sequence)가 쓰기와 별도로 사용되면`, spec.md: `**Where** songcue의 시퀀스 1개 : 타임코드 1개 구조가 ...`), both of which predate this card and were not flagged as MP-2 failures in prior plan-audit iterations (1-3) that already reached PASS/FAIL verdicts on other grounds. This card's new (g) clause is stylistically consistent with, not a regression from, that house convention.
+   - Suggested fix (non-blocking, house-style cleanup across the whole document, out of this card's scope): consider renaming `Where` triggers that describe discrete events to `When` in a future dedicated style pass.
+
+## Regression Check (Iteration 2+ only)
+N/A — this is iteration 1 of the plan-audit for card t548's in-place amendment.
+
+## Recommendation
+
+FAIL. The amendment is well-cited (every code/line/progress.md reference I spot-checked — `server/design/beat_grid.py:79-117,138-155`, `server/spatial/position_fx.py:51,188-193,224-278`, `server/design/beat_grid_data/love_attack.yaml:115-160`, `progress.md:116,122,123,126,127,464,469-477`, `.moai/reports/t543/proposal-table.md` — resolved to exactly what the SPEC claims, confirming no overstatement of the t538/MOVER-U-only measurement scope and no console-contact/code-diff claims beyond "plan only"), the REQ budget (15/16) and AC budget (16/16) stay within the Tier M ceiling, MP-1/2/3/5/6/7 all PASS or N/A, and the §A.1 traceability table update is mechanically correct. However, a concrete, confirmed logical contradiction (D1) between the two brand-new AC sub-clauses (o) and (p) — over what `evidence.grade` value the exact 8 real cells this card's own worked example cites must carry — makes the REQ-LDBEAT-015(g)/REQ-LDBEAT-006(vii) feature's central accountability mechanism unimplementable as currently specified, and a traceability gap (D2) leaves three of the seven new `app_movement` sub-requirements untestable. Numbered fix instructions for manager-spec:
+
+1. Resolve D1 first (it is the blocking defect): decide whether `evidence.grade` is purely evidentiary-basis (`measured`/`measured_other_group`/`name_only`, with (g)-exception bookkeeping tracked by `date`+`source` presence alone, independent of `grade`) or purely approval-pathway (`supervisor_approved` for every (g)-exception cell, dropping `name_only` as a grade value these particular 8 cells can carry), and rewrite AC-LDBEAT-016(o)'s Then-clause and/or REQ-LDBEAT-006(vii-2)/(vii-3) so the two no longer disagree on the same 8 real cells.
+2. Fix D2: extend AC-LDBEAT-016(n) to cover (vi-5) `phase_spread`, (vi-6) no-hardcoded-literals (mirroring AC(m)'s `inspect.getsource` pattern), and (vi-7) same-axis exclusivity with a concrete FAIL-triggering test case.
+3. D3 and D4 are optional — fix opportunistically, do not let them block the next audit pass.
+4. Re-run plan-audit (iteration 2) scoped to this delta once D1/D2 are addressed; D3/D4 do not require a regression check.
+
+---
+
+# Iteration 2 (2026-10-11)
+Verdict: PASS
+Overall Score: 1.00
+
+Scope: delta-scoped re-audit per the Retry Loop Contract — verifies the iteration-1 defect list (D1-D4) against the CURRENT working-tree files (re-read directly, not assumed), plus a fresh check for regressions the fix itself could introduce (leftover `supervisor_approved` usage, §A.1 table consistency, REQ/AC counts, GEARS format of the rewritten clauses).
+
+## Regression Check (iteration-1 defects)
+
+- D1 (critical, blocking) — **RESOLVED**. Evidence: `spec.md` REQ-LDBEAT-006(vii-2) now reads (verbatim, confirmed by direct `Read`): `` **The** `evidence.grade` **shall** 오직 증거 **강도**만 기록하는 닫힌 집합이다 — `"measured"`/`"measured_other_group"`/`"name_only"` — 또는 `null`. 그 번호가 어떤 경로로 승인됐는지는 **shall not** `grade`에 담기며, 별도 하위 객체 `evidence.approval`(...)이 그 축을 담당한다 ``. REQ-LDBEAT-006(vii-3) now reads: `` **While** 번호가 REQ-LDBEAT-015(g)의 승인 예외 경로로 기본값에 들어간 동안, ... `evidence.approval` **shall** `by == "supervisor"`·`date`·`source` 셋을 모두 채운 non-null 객체다 ``. REQ-LDBEAT-015(g) rewritten to point at `evidence.approval` instead of `grade`. `acceptance.md` AC-LDBEAT-016(o) now tests `grade` ONLY (2 `measured` / 2 `measured_other_group` / 8 `name_only`, matching `.moai/reports/t543/proposal-table.md`'s own footer tally "실측 2 · 다른 그룹에서 잰 실측 2 · 나머지는 이름 후보" — I cross-checked the 12 row numbers #1/#5/#6/#9/#10/#14/#15/#22/#23/#29/#30/#32 cited against the table and they match exactly) and folds in D3 (source_ref byte-identity). AC-LDBEAT-016(p) now tests `approval` ONLY (all 12 cells regardless of `grade`, plus a negative case: an unapproved `name_only` 13th cell must FAIL). The two ACs no longer make any claim about the same field for the same cells — the contradiction is gone.
+- D2 (major, blocking) — **RESOLVED**. New AC-LDBEAT-016(r) tests REQ-LDBEAT-006(vi-5) `phase_spread` (two `"tilt_wave"` fixtures, one `phase_spread=true` one `false`, both must validly coexist — FAIL if `shape`→`phase_spread` is hardcoded). New AC-LDBEAT-016(s) tests REQ-006(vi-6) (no rig/preset-number literals in the `app_movement` implementation module, reusing AC(m)'s `inspect.getsource` grep pattern). New AC-LDBEAT-016(t) tests REQ-006(vi-7) same-axis exclusivity with a positive/negative pair (same-axis Tilt conflict → reject/FAIL; different-axis Pan+brightness combination → PASS). §A.1 table's REQ-LDBEAT-006 row updated to list `(r)(s)(t)` with each sub-clause correctly attributed.
+- D3 (minor, optional) — **RESOLVED** (folded into AC(o), see above: "그 12칸 전부에서 기존 `source_ref` 값(§4 인용이 있는 칸: FOH bar7·BACK bar7/18/22·BLIND bar18)은 `evidence` 도입 전후 바이트 동일이다 — 바뀌었으면 FAIL").
+- D4 (minor, optional) — **LEFT AS-IS**, matching the recommendation (not a regression; `Where`/`When` house-style cleanup was explicitly deferred as out of this card's scope, and I agree with that deferral on re-review — spec.md:130 and the songcue/timecode `Where` clause are the same pre-existing style, untouched by this card).
+
+## New-regression check (did the fix introduce anything new)
+
+- No leftover `"supervisor_approved"` as a live enum value: `grep -n "supervisor_approved"` across all three files returns matches ONLY inside HISTORY entries (spec.md:34-35, acceptance.md:21) and REQ-015(g)'s own rationale column / plan.md M8 step 1, all of which narrate the iteration-1 mistake and its fix in the past tense ("더 이상 ... 동시에 담지 않는다" / "이전 버전의 오기였다") — none appear in a live normative `shall`-clause or AC Then-clause. Confirmed by direct read of every match's surrounding context.
+- REQ/AC budget unchanged: `grep -cE '^\| REQ-LDBEAT-[0-9]+ '` → 15; unique `AC-LDBEAT-[0-9]+` row leaders → 16. Both still within the Tier M ceiling (≤16 each). No new REQ-ID or AC-ID introduced (confirmed: all new coverage lives inside AC-LDBEAT-016's existing lettered sub-scenario scheme, now through `(t)`).
+- GEARS format of the rewritten clauses holds: (vii-2) is `**The** ... **shall** ... **shall not** ...` (Ubiquitous+Unwanted compound, the document's established style); (vii-3) is `**While** ... **The** ... **shall** ... **shall not** ...` (State-driven+Unwanted compound); REQ-015(g) keeps its pre-existing `**Where** ... **The** ... **shall**` form (D4, unchanged).
+- §A.1 table consistency: REQ-LDBEAT-006's row now lists `AC-016(e)(f)(g)(h)(i)(j)(k)(l)(m)(n)(o)(q)(r)(s)(t)` with a parenthetical explicitly attributing `(n)`→(vi-1)~(vi-4), `(o)`→(vii-1)(vii-2), `(q)`→(iv-2), `(r)`→(vi-5), `(s)`→(vi-6), `(t)`→(vi-7). REQ-LDBEAT-015's row lists `AC-016(p)` with `(REQ-015(g)(vii-3) evidence.approval 승인 예외)`. One cosmetic observation (not scored as a defect, see below): `(p)` verifies REQ-LDBEAT-006(vii-3) as well as REQ-LDBEAT-015(g) (per AC(p)'s own 검증 수단 citing both `REQ-LDBEAT-006(vii-3), REQ-LDBEAT-015(g)`), but `(p)` is listed only under the REQ-015 row, not cross-listed under the REQ-006 row. I checked whether this is a new gap or pre-existing convention: the REQ-LDBEAT-015 row has never cross-listed `(e)` either, even though the table's own prose has stated since iteration "D526" that `(e)`"는 REQ-LDBEAT-015(f)와 공유" — so a shared AC being listed under only one of its two REQ rows is this document's established convention, not something this fix newly introduced. Not scored as a defect; noted for completeness.
+- Frontmatter `updated: 2026-10-10` (spec.md:7) is one day behind the newest HISTORY row (2026-10-11, spec.md:35) and today's date. Trivial, does not affect MP-3 (all 12 fields present, correctly typed) — noted as a one-line housekeeping item, not scored.
+
+## Category Scores (0.0-1.0, rubric-anchored)
+| Dimension | Score | Rubric Band | Evidence |
+|-----------|-------|-------------|----------|
+| Clarity | 1.00 | 1.0 | `grade`/`approval` are now two independent, unambiguously-defined axes; every new/rewritten clause has a single interpretation |
+| Completeness | 1.00 | 1.0 | Unchanged from iteration 1 — all sections present, frontmatter 12/12 |
+| Testability | 1.00 | 1.0 | Every new/fixed AC ((o)(p)(r)(s)(t)) is binary-testable with an explicit FAIL condition and, where applicable, a positive/negative pair; no weasel words |
+| Traceability | 1.00 | 1.0 | REQ-LDBEAT-006(vi-1)~(vi-7) and (vii-1)~(vii-3), REQ-LDBEAT-015(g) each now have a dedicated AC sub-clause that would FAIL on violation; §A.1 table updated consistently |
+
+Harmonic mean = 1.00 — well above the Tier M PASS threshold (0.80).
+
+## Must-Pass Results (re-verified against current files)
+- [PASS] MP-1 REQ number consistency: 15 REQ-LDBEAT rows, sequential 001-015, no gaps/duplicates (unchanged).
+- [PASS] MP-2 EARS/GEARS format compliance: rewritten (vii-2)/(vii-3)/REQ-015(g) all carry bolded GEARS triggers; D4's `Where`-vs-`When` note stands as optional, not a format failure.
+- [PASS] MP-3 YAML frontmatter validity: 12/12 fields present and typed; `version: "0.3.2"` unchanged (same amendment); minor `updated` date lag noted above, non-blocking.
+- [N/A] MP-4 language neutrality: single-project SPEC, unchanged.
+- [PASS] MP-5 D7 cross-SPEC reconciliation: cross-referenced SPECs unchanged by this delta (SPEC-LDARRANGE-001 draft / SPEC-LDBARMAP-001 in-progress / SPEC-LDDESIGN-001 completed / SPEC-LDRENDER-001 completed / SPEC-LDRHYTHM-001 in-progress) — no BLOCKING finding.
+- [N/A] MP-6 D8 cross-platform discipline: `grep -c syscall` → 0/0/0 across all three files.
+- [PASS] MP-7 clarification gate: no `[NEEDS CLARIFICATION` markers in plan.md; research.md absent (expected, Tier M).
+
+## Defects Found (iteration 2)
+No blocking defects remain. No defects found at severity ≥ minor.
+
+## Recommendation
+PASS. Both iteration-1 blocking defects (D1 critical, D2 major) are confirmed resolved by direct re-read of the current spec.md/acceptance.md/plan.md — not assumed from the author's description. The fix is precise: it separates `evidence.grade` (evidentiary strength) from `evidence.approval` (sign-off provenance) into two independent, closed, non-contradictory axes, and extends AC-LDBEAT-016 with three new sub-scenarios (r)(s)(t) that give REQ-LDBEAT-006(vi-5)/(vi-6)/(vi-7) FAIL-triggering coverage. REQ/AC budgets remain at 15/16, no new REQ-ID or AC-ID was introduced, and no stray `"supervisor_approved"` usage survives outside historical/rationale narrative. This amendment is ready for its next workflow gate (Implementation Kickoff Approval) from a plan-audit standpoint.
