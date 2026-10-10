@@ -1,0 +1,2 @@
+{"ts": "2026-10-10T06:26:26.668024+00:00", "event": "rejected", "commands": ["Goto Cue 3 Sequence 221", "Goto Cue 3 Sequence 226", "Goto Cue 1 Sequence 11"], "held": ["Goto Cue 3 Sequence 221", "Goto Cue 3 Sequence 226", "Goto Cue 1 Sequence 11"], "kind": "t531_m1_p2"}
+{"ts": "2026-10-10T06:26:26.868260+00:00", "event": "rejected", "commands": ["Off Sequence 221", "Off Sequence 226", "Off Sequence 11"], "held": ["Off Sequence 221", "Off Sequence 226", "Off Sequence 11"], "kind": "t531_m1_p2"}

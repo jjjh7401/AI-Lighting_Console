@@ -1,0 +1,1 @@
+<<< {"id": "ac425a94", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.5"}

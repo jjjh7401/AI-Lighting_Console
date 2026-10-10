@@ -54,7 +54,7 @@
     "play": true,
     "release": true
   },
-  "verdict": "rehearsal ok — preset stored+recalled; 재생 속도 비교는 감독 관찰(마스터 미변경)",
+  "verdict": "ok — preset stored+recalled; 재생 속도 비교는 감독 관찰(마스터 미변경)",
   "fake_sent": [
     "ChangeDestination Root",
     "ClearAll",

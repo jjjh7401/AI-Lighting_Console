@@ -1,0 +1,64 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/304", "t": 0.065, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/304", "ok": false, "error": "path segment not found: '304' (in ShowData/DataPools/Default/Sequences/304)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/305", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/305", "ok": false, "error": "path segment not found: '305' (in ShowData/DataPools/Default/Sequences/305)"}
+{"step": "store_dimmer_seq", "t": 0.132, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 13", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 100", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'", "reasons": ["blacklisted command (matches closed-set entry 'St
+{"step": "store_pantilt_seq", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 13", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 10", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Tilt' At Relative 10", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "St
+{"step": "play_both", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 304", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 304': state query failed for 'Sequence 304': path segment not found: '304' (in DataPool/Sequences/304)"]}, {"command": "Goto Cue 1 Sequence 305", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 305': state query failed for 'Sequence 305': path segment not found: '305' (in DataPool/Sequences/305)"]}]}
+{"step": "release", "t": 0.399, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 304", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 304': state query failed for 'Sequence 304': path segment not found: '304' (in DataPool/Sequences/304)"]}, {"command": "Off Sequence 305", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 305': state query failed for 'Sequence 305': path segment not found: '305' (in DataPool/Sequences/305)"]}]}
+{
+  "item": "P8",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/304",
+    "ShowData/DataPools/Default/Sequences/305"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_dimmer_seq": false,
+    "store_pantilt_seq": false,
+    "play_both": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Dimmer' At 100",
+        "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'",
+        "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Pan' At Relative 10",
+        "Attribute 'Tilt' At Relative 10",
+        "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'",
+        "Set Sequence 305 Property 'Name' 'LDBEAT M1 - P8 pantilt'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 304",
+        "Goto Cue 1 Sequence 305"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 304",
+        "Off Sequence 305"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

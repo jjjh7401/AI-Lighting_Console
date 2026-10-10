@@ -1,0 +1,1648 @@
+-- CopilotResponder - grandMA3 console-side Lua 5.4 responder plugin (M2/M7).
+-- SPEC-COPILOT-MVP-001: REQ-MVP-003 (object-tree state snapshot) +
+-- REQ-MVP-004 (execution result retrieval) + REQ-MVP-019 (plugin deployment).
+-- Target: grandMA3 onPC 2.4.2.
+--
+-- @MX:NOTE: [AUTO] wire protocol v1 - requests arrive as the plugin argument
+--   ("<verb> <id> [rest]"); replies are percent-encoded JSON sent as one OSC
+--   string to /copilot/state (snapshots) or /copilot/feedback (results).
+--   Contract doc: console/lua/PROTOCOL.md (the M3 tool-runner consumes it);
+--   Python twin: server/bridge/protocol.py.
+--
+-- Invocation (rides /copilot/cmd - plan.md SA-5 namespace):
+--   Plugin "CopilotResponder" "ping <id>"
+--   Plugin "CopilotResponder" "state <id> <object-path>"   e.g. DataPool/Sequences
+--   Plugin "CopilotResponder" "prop <id> <object-path> <PropertyName>"
+--   Plugin "CopilotResponder" "props <id> <PropertyName,...> <object-path>"
+--   Plugin "CopilotResponder" "introspect <id> <object-path>"
+--   Plugin "CopilotResponder" "exec <id> <ma3-command>"    e.g. exec 7 List
+--   Plugin "CopilotResponder" "deploy <id> <enc-name> <enc-source>"  (M7 -
+--     both tokens percent-encoded; reviewed source only, see PROTOCOL.md S2)
+-- Fallback when plugin arguments are unavailable: set the user variable
+--   COPILOT_REQ to the request string, then call the plugin without arguments.
+--
+-- Honesty contract (Section B / REQ-MVP-032): this responder replies ONLY to
+-- requests that actually arrive; it keeps no timers, no retries, no resident
+-- loop, and has no side effects beyond the requested Cmd() execution.
+
+-- User-tunable configuration (see console/lua/README.md).
+local CONFIG = {
+    osc_slot = 2, -- row index in the console's OSC settings used for replies (row 2 = Send=Yes; row 1 is Receive-only)
+    state_address = "/copilot/state",
+    feedback_address = "/copilot/feedback",
+    max_children = 24, -- snapshot child cap (UDP payload budget)
+    -- Live-measured 2026-07-24 (onPC 2.4.2): the cmd_keyword transport rides
+    -- the MA3 command line, which silently drops commands past ~2048 bytes -
+    -- Cmd() reports success, so an oversize reply just never leaves the box
+    -- (the DataPool/Macros snapshot with 27 long-named leftover probe macros
+    -- was the reproducer). 1900 keeps payload + 'SendOSC N "<addr>,s,?"'
+    -- wrapper under that limit with margin. Payload sweep: 2000 delivered,
+    -- 2100 dropped.
+    max_payload = 1900, -- max encoded payload length in bytes (MA3 CLI 2048 limit)
+    max_props_names = 16, -- max comma-separated names accepted by props requests
+    max_prop_value = 240, -- max raw bytes per props value before item-level truncation
+    introspect_contrast_names = { "INDEX", "NAME", "NO", "FADER", "CURRENTCUE" },
+    send_variant = "packed", -- "packed" | "args" | "cmd_keyword" (see PROTOCOL.md S5)
+    uservar_name = "COPILOT_REQ",
+}
+
+local M = {
+    NAME = "CopilotResponder",
+    -- 1.1.0: additive deploy verb (M7). 1.2.0: snapshot `i` is the REAL pool
+    -- slot and is omitted when unknown (was the loop position). 1.3.0:
+    -- send_reply tries EVERY send variant, not just the configured one then
+    -- cmd_keyword. 1.4.0: resolve_path resolves "Executor <n>" via the
+    -- native ObjectList() API (SPEC-COPILOT-EXECBODY-001 M6) instead of
+    -- failing with "path segment not found" -- every other path is
+    -- unaffected. 1.4.1: max_payload 4000 -> 1900 -- the cmd_keyword
+    -- transport dies silently past the MA3 ~2048-byte command-line limit
+    -- (live-measured; big snapshots like a 27-macro pool never replied).
+    -- 1.5.0: additive prop verb + Cue child cueNo when the real cue number
+    -- can be read from the cue object; Protocol v1 throughout. 1.6.0:
+    -- snapshot paging -- a state request may carry a trailing "offset=<n>"
+    -- token (0-based children window start); the reply echoes "offset" (0
+    -- when the request carried none) and `truncated` means "more children
+    -- AFTER this window". Old-style requests are byte-for-byte unchanged.
+    -- 1.6.2: additive `offset=<n>` paging on introspect (t104) -- the reply
+    -- now echoes `offset`, and `truncated` means "names remain after this
+    -- window". A request without the token behaves exactly as 1.6.1 did.
+    -- 1.6.1: additive props + introspect read-only discovery verbs
+    -- (SPEC-COPILOT-INTROSPECT-001, PR #23 reland 2026-08-18); introspect
+    -- rejects enumerators missing same-handle prop-readable names. Reland
+    -- carries the PR #23 body's live-verification claims for the PRIOR
+    -- (pre-1.6.0-paging) responder generation only -- this reland has NOT
+    -- been re-verified live against the current responder; re-verify before
+    -- trusting props/introspect in production (T15).
+    -- 1.6.3: additive ROOT_ALIASES entries programmer/programmerpart/
+    -- selection (t235). Purely additive -- every existing path resolves
+    -- byte-identically, and on a console whose Lua lacks those globals the
+    -- guarded alias yields nil and the path fails exactly as in 1.6.2. The
+    -- bump exists so the wire can TELL the two generations apart: a rig
+    -- answering 1.6.2 does not have the aliases no matter what main says.
+    -- 1.6.4: table-valued property reads answer JSON TEXT instead of the
+    -- `table: 0x?` ADDRESS (SPEC-COPILOT-READBACK-001 R1). The reply SHAPE is
+    -- unchanged -- `t` stays "table", `v` stays a string, no sibling field is
+    -- added -- so every existing decode point and consumer is untouched; only
+    -- the CONTENT of `v` changes for table values. The encoder gains what it
+    -- never had: a depth cap, cycle detection, an explicit array/object
+    -- decision (the old `value[1] ~= nil` heuristic silently dropped every
+    -- other key of a hash carrying `[1]`), and STRUCTURAL truncation -- whole
+    -- trailing entries are dropped and the container re-closed, because a
+    -- byte-cut JSON fragment cannot be parsed even when truncation is
+    -- announced. Serialization touches no metamethod (`next`/`rawget`/
+    -- `rawlen` only), so a value carrying `__tostring` no longer turns a
+    -- diagnostic read into console action. NOT live-verified: this bump is
+    -- offline-only; deployment is confirmed BY VERSION -- `ping` must answer
+    -- 1.6.4, and a rig answering 1.6.3 does not carry this change whatever
+    -- main contains (this repo has the live-1.6.1 / main-1.6.2 precedent).
+    -- 1.6.5: every successful `state` reply carries `node.enumeration`
+    -- ("ok" | "failed") - the enumeration-confidence marker
+    -- (SPEC-COPILOT-POOLEMPTY-001). `M.safe_children` already told its three
+    -- branches apart INSIDE the function; the distinction was dropped at the
+    -- return, so an EMPTY pool and a DEAD pool (Children() and Count() both
+    -- failing) left the console as the same payload (`childCount 0`,
+    -- `children []`, `ok true`). Additive: no top-level field changes, wire
+    -- protocol stays 1, and a consumer that never reads the marker sees the
+    -- byte-identical reply plus one extra `node` key. The server relaxes its
+    -- "zero children == unreadable" verdict ONLY when this marker says "ok";
+    -- a reply without it (any responder < 1.6.5) is judged exactly as before.
+    -- NOT live-verified: offline-only bump; deployment is confirmed BY
+    -- VERSION -- `ping` must answer 1.6.5.
+    -- 1.6.6: `props` ? `offset=<n>` ? ? ?(? t531,
+    -- SPEC-LDBEAT-001 M1) -- state/introspect ? ? M.parse_paged_args
+    -- ?. offset ? ? ? ? ? ? ?(? ?
+    -- ok:false), ? ? CONFIG.max_prop_value ? ? ? ? ?
+    -- ?(? ?/? ?-?) ? ? ? ? ?, ?
+    -- ? ? ? ? CONFIG.max_payload ? ? ? ? ?
+    -- (`.moai/reports/t525/verdict.md` S? ? - ? ? ? 2?
+    -- ? ?). offset ? ? ? ? ? ?.
+    -- NOT live-verified: offline-only bump; deployment is confirmed BY
+    -- VERSION -- `ping` must answer 1.6.6.
+    VERSION = "1.6.6",
+    PROTO = 1,
+    CONFIG = CONFIG,
+}
+
+-- @MX:NOTE: [AUTO] M1 adopted exactly one enumerator for v1.6.0:
+--   property_accessors = PropertyCount() + PropertyName(i) + PropertyType(i).
+--   The other M1 ladder candidates stay out of production code.
+-- @MX:SPEC: SPEC-COPILOT-INTROSPECT-001 design.md S5.7 (2026-08-03 GO)
+local INTROSPECT_SOURCE = "property_accessors"
+
+-- -- logging ---------------------------------------------------------------
+
+function M.log(message)
+    -- Percent-encoded payloads are full of '%', so never route them through
+    -- Printf's format path; message must be a plain short string.
+    if type(Printf) == "function" then
+        pcall(Printf, message)
+    end
+end
+
+-- -- JSON encoder (subset: objects, arrays, strings, integers, booleans) ----
+
+local ARRAY_MT = {}
+
+function M.array(t)
+    return setmetatable(t or {}, ARRAY_MT)
+end
+
+local JSON_ESCAPES = {
+    ['"'] = '\\"',
+    ["\\"] = "\\\\",
+    ["\b"] = "\\b",
+    ["\f"] = "\\f",
+    ["\n"] = "\\n",
+    ["\r"] = "\\r",
+    ["\t"] = "\\t",
+}
+
+local function json_escape_char(c)
+    return JSON_ESCAPES[c] or string.format("\\u%04X", string.byte(c))
+end
+
+local function json_string(s)
+    -- Byte-explicit escape class: JSON requires escaping only bytes < 0x20,
+    -- the quote, and the backslash (DEL kept escaped for safety). The former
+    -- '%c' class was locale-dependent and matched C1-range bytes (0x80-0x9F),
+    -- corrupting UTF-8 continuation bytes in non-ASCII replies (M7 fix).
+    return '"' .. s:gsub('[\0-\31"\\\127]', json_escape_char) .. '"'
+end
+
+-- ? ? ? ? (SPEC-COPILOT-READBACK-001 REQ-READBACK-003).
+-- 1.6.3 ? ? ? ? ?: ? ? ? ? ?
+-- ? ? ? ? ?, ? ? ? ?.
+local MAX_JSON_DEPTH = 8
+local DEPTH_MARKER = "<max depth " .. MAX_JSON_DEPTH .. " exceeded>"
+local CYCLE_MARKER = "<cycle>"
+
+-- @MX:ANCHOR: [AUTO] ? ? ? ? ? ? -
+--   `next`/`rawget`/`rawlen` ? ? `pairs`/`#`/`[]`/`tostring` ? ? ?.
+-- @MX:REASON: REQ-READBACK-002 ? ? ?(fan_in >= 3: M.json_encode *
+--   M.json_encode_bounded * M.safe_property ? ? ?). `__index`*
+--   `__tostring`*`__pairs`*`__len` ? ? ? ? ? ?
+--   ? ? - REQ-INTROSPECT-009 ? ? ? ? ? ? ?.
+local function json_key_text(key)
+    local t = type(key)
+    if t == "string" then
+        return key
+    elseif t == "number" then
+        if math.type(key) == "integer" then
+            return string.format("%d", key)
+        end
+        return string.format("%.14g", key)
+    elseif t == "boolean" then
+        return key and "true" or "false"
+    end
+    -- ?/? ? tostring ? ? ? ? __tostring ? ?.
+    return "<" .. t .. ">"
+end
+
+-- ?/? ? ?(REQ-READBACK-004). 1.6.3 ? `value[1] ~= nil`
+-- ? `[1]` ? ? ? ? ? ? ? ?.
+local function is_dense_array(value)
+    local n = rawlen(value)
+    if n == 0 then
+        return false
+    end
+    local count = 0
+    for key in next, value do
+        if math.type(key) ~= "integer" or key < 1 or key > n then
+            return false
+        end
+        count = count + 1
+    end
+    return count == n
+end
+
+-- ? ? ? ? ? - ? ? 1.6.3 ? table.sort(keys) ?
+-- ?, ? ? ? ? ? ? ? ? ?.
+local function sorted_entry_keys(value)
+    local keys, originals = {}, {}
+    for key in next, value do
+        local text = json_key_text(key)
+        if originals[text] == nil then
+            keys[#keys + 1] = text
+            originals[text] = key
+        end
+    end
+    table.sort(keys) -- deterministic output for debugging/diffing
+    return keys, originals
+end
+
+local encode_value
+
+local function encode_table(value, depth, seen)
+    if seen[value] then
+        return json_string(CYCLE_MARKER)
+    end
+    if depth >= MAX_JSON_DEPTH then
+        return json_string(DEPTH_MARKER)
+    end
+    seen[value] = true
+    local out
+    if getmetatable(value) == ARRAY_MT or is_dense_array(value) then
+        local parts = {}
+        for i = 1, rawlen(value) do
+            parts[#parts + 1] = encode_value(rawget(value, i), depth + 1, seen)
+        end
+        out = "[" .. table.concat(parts, ",") .. "]"
+    else
+        local keys, originals = sorted_entry_keys(value)
+        local parts = {}
+        for _, text in ipairs(keys) do
+            parts[#parts + 1] = json_string(text)
+                .. ":"
+                .. encode_value(rawget(value, originals[text]), depth + 1, seen)
+        end
+        out = "{" .. table.concat(parts, ",") .. "}"
+    end
+    seen[value] = nil
+    return out
+end
+
+encode_value = function(value, depth, seen)
+    local t = type(value)
+    if t == "nil" then
+        return "null"
+    elseif t == "boolean" then
+        return value and "true" or "false"
+    elseif t == "number" then
+        if math.type(value) == "integer" then
+            return string.format("%d", value)
+        end
+        return string.format("%.10g", value)
+    elseif t == "string" then
+        return json_string(value)
+    elseif t == "table" then
+        return encode_table(value, depth, seen)
+    end
+    return json_string(tostring(value))
+end
+
+function M.json_encode(value)
+    return encode_value(value, 0, {})
+end
+
+-- ? ? ? ? JSON ? ? ?(REQ-READBACK-005 /
+-- ? t531 offset ? ? ?). ?/? ? ? ? depth-1
+-- ? ? ? ? - `json_encode_bounded`(? ? ?)?
+-- `M.build_props_offset_result`(entry ? offset ?)? ? ?
+-- ? ? ? ?(? ? ? ? ? ?).
+local function table_entry_parts(value)
+    local seen = { [value] = true }
+    local open, close = "{", "}"
+    local entries = {}
+    if getmetatable(value) == ARRAY_MT or is_dense_array(value) then
+        open, close = "[", "]"
+        for i = 1, rawlen(value) do
+            entries[#entries + 1] = encode_value(rawget(value, i), 1, seen)
+        end
+    else
+        local keys, originals = sorted_entry_keys(value)
+        for _, text in ipairs(keys) do
+            entries[#entries + 1] = json_string(text)
+                .. ":"
+                .. encode_value(rawget(value, originals[text]), 1, seen)
+        end
+    end
+    return open, close, entries
+end
+
+-- ? ? (REQ-READBACK-005): ? ? **?** ? ?
+-- ? ?. ? ?(`safe_truncate`)? ? ? ? `{"k00":"VV`
+-- ? ? ? ? ? ? ? ? ? ?. ? ?
+-- ? ? ? ? **? ?**?.
+-- ?: (JSON ?, ? ? ?)
+function M.json_encode_bounded(value, max_len)
+    local full = M.json_encode(value)
+    if #full <= max_len or type(value) ~= "table" then
+        return full, false
+    end
+    local open, close, entries = table_entry_parts(value)
+    local kept, used = {}, #open + #close
+    for _, entry in ipairs(entries) do
+        local extra = #entry + (#kept > 0 and 1 or 0)
+        if used + extra > max_len then
+            break
+        end
+        kept[#kept + 1] = entry
+        used = used + extra
+    end
+    -- ? ? ? ? ? ? ?: ? 2?
+    -- ? ? ? JSON ? ? ? ?.
+    return open .. table.concat(kept, ",") .. close, #kept < #entries
+end
+
+-- -- percent encoding (comma/quote/space-free wire form) --------------------
+
+function M.percent_encode(s)
+    -- Encode every byte outside the unreserved set, including all UTF-8
+    -- bytes: the wire payload stays pure-ASCII and never contains the ','
+    -- delimiter of MA3's packed OSC-send string form.
+    return (s:gsub("[^A-Za-z0-9%-%._~]", function(c)
+        return string.format("%%%02X", string.byte(c))
+    end))
+end
+
+function M.encode_payload(payload)
+    return M.percent_encode(M.json_encode(payload))
+end
+
+function M.percent_decode(s)
+    return (s:gsub("%%(%x%x)", function(hex)
+        return string.char(tonumber(hex, 16))
+    end))
+end
+
+-- -- request parsing --------------------------------------------------------
+
+function M.parse_request(s)
+    if type(s) ~= "string" then
+        return nil, "request must be a string"
+    end
+    local kind, id, rest = s:match("^%s*(%S+)%s+(%S+)%s*(.*)$")
+    if not kind then
+        if s:match("^%s*(%S+)%s*$") then
+            return nil, "missing request id (expected: <verb> <id> [rest])"
+        end
+        return nil, "empty request"
+    end
+    return { kind = kind:lower(), id = id, rest = rest }
+end
+
+function M.parse_props_rest(rest)
+    if type(rest) ~= "string" or rest == "" then
+        return nil, "", "malformed props request (expected: props <id> <PropertyName,...> <path>)"
+    end
+    local name_list, path = rest:match("^(%S+)%s+(.+)$")
+    if not name_list or path == "" then
+        return nil, "", "malformed props request (expected: props <id> <PropertyName,...> <path>)"
+    end
+    local names = M.array({})
+    local seen = {}
+    for name in (name_list .. ","):gmatch("([^,]*),") do
+        if name == "" then
+            return nil, path, "empty property name in props request"
+        end
+        if name:match("%s") then
+            return nil, path, "property names in props request must not contain whitespace"
+        end
+        if not seen[name] then
+            seen[name] = true
+            names[#names + 1] = name
+            if #names > CONFIG.max_props_names then
+                return nil, path, "too many property names in props request (max " .. tostring(CONFIG.max_props_names) .. ")"
+            end
+        end
+    end
+    if #names == 0 then
+        return nil, path, "empty property name list in props request"
+    end
+    return names, path
+end
+
+-- Paged requests (state: responder 1.6.0; introspect: 1.6.2, PROTOCOL.md
+-- S4.2): the rest-of-line may end in one whitespace-separated "offset=<n>"
+-- token, naming the 0-based window start. Paths may contain spaces, so
+-- ONLY a trailing token is recognized; a negative, fractional, or
+-- non-numeric value degrades to 0 (never an error -- the reply's echoed
+-- `offset` tells the caller what was actually used).
+--
+-- One parser for both verbs on purpose: two copies drift, and the day they
+-- drift a caller that pages `state` correctly pages `introspect` into the
+-- path (which is exactly the pre-1.6.2 failure -- an offset token swallowed
+-- by the path resolves to nothing).
+function M.parse_paged_args(rest)
+    local path, raw = rest:match("^(.-)%s+offset=(%S*)%s*$")
+    if not path or path == "" then
+        return rest, 0
+    end
+    local n = tonumber(raw)
+    n = n and math.tointeger(n)
+    if not n or n < 0 then
+        return path, 0
+    end
+    return path, n
+end
+
+-- -- MA3 handle accessors (defensive: exact 2.4.2 surface verified live) ----
+
+function M.safe_name(handle)
+    local ok, value = pcall(function() return handle.name end)
+    if ok and type(value) == "string" and value ~= "" then
+        return value
+    end
+    ok, value = pcall(function() return handle:Get("name") end)
+    if ok and type(value) == "string" and value ~= "" then
+        return value
+    end
+    ok, value = pcall(function() return tostring(handle) end)
+    if ok and type(value) == "string" then
+        return value
+    end
+    return "?"
+end
+
+function M.safe_class(handle)
+    local ok, value = pcall(function() return handle:GetClass() end)
+    if ok and type(value) == "string" and value ~= "" then
+        return value
+    end
+    ok, value = pcall(function() return handle.class end)
+    if ok and type(value) == "string" and value ~= "" then
+        return value
+    end
+    return "?"
+end
+
+-- ? ? ? ? JSON ? ?(REQ-READBACK-001). ?
+-- ? ?: `t` ? ? `"table"`, `v` ? ? ? ?
+-- ? ? ? - ? ? ?(server/bridge/protocol.py)?
+-- ? ? ?. ? ? `tostring` ? ? ? ?
+-- `__tostring` ? ? ?(REQ-READBACK-002).
+local function property_text(value)
+    if type(value) == "table" then
+        return M.json_encode(value)
+    end
+    return tostring(value)
+end
+
+function M.safe_property(handle, property_name)
+    if type(property_name) ~= "string" or property_name == "" then
+        return nil, "empty property name"
+    end
+    -- @MX:WARN: [AUTO] function-valued fields are reported as values of Lua
+    --   type "function"; they are never invoked by discovery reads.
+    -- @MX:REASON: REQ-INTROSPECT-009 read-only boundary; calling a method found
+    --   during introspection would turn a diagnostic read into console action.
+    -- ? ? ? ? ? ? RAW ? - ? ?
+    -- (REQ-READBACK-005)? ? ? ? ? ? ? ?.
+    local ok, value = pcall(function() return handle:Get(property_name) end)
+    if ok and value ~= nil then
+        return property_text(value), nil, type(value), type(value) == "table" and value or nil
+    end
+    ok, value = pcall(function() return handle[property_name] end)
+    if ok and value ~= nil then
+        return property_text(value), nil, type(value), type(value) == "table" and value or nil
+    end
+    return nil, "property not readable: " .. property_name
+end
+
+-- Executor-only: the object (sequence) assigned to this executor, or nil.
+-- Live-verified on 2.4.2 (SPEC-COPILOT-EXECBODY-001 design.md S5.9,
+-- ASSUMPTION-12): `.Object` and both `:Get()` casings return the same handle.
+-- Never derives identity from a display name (AC-EXECBODY-005) - the caller
+-- still confirms GetClass() and reads the number via its own accessor.
+function M.safe_object(handle)
+    local ok, value = pcall(function() return handle.Object end)
+    if ok and value then
+        return value
+    end
+    ok, value = pcall(function() return handle:Get("Object") end)
+    if ok and value then
+        return value
+    end
+    ok, value = pcall(function() return handle:Get("object") end)
+    if ok and value then
+        return value
+    end
+    return nil
+end
+
+-- -- pool-slot resolution (the listing position is NOT an address) -----------
+
+-- @MX:ANCHOR: [AUTO] pool-slot contract - a child's slot is reported ONLY when
+--   it was positively established; an unestablished slot is reported as
+--   *nothing*, never as the child's position in the listing.
+-- @MX:REASON: cross-layer contract boundary (fan_in >= 3: build_snapshot's
+--   wire `i`, server/orchestrator/tools.py `_rig_object` -> the LLM-facing pool
+--   number, server/safety/console.py free-slot + `Delete Plugin <slot>` math).
+--   Children() COMPACTS gaps away, so position N is object N only on a dense
+--   pool; emitting it as an address made the model issue `Group 2 + 3` on a
+--   pool holding 1/5/7 - the console rejected the object AFTER
+--   `ChangeDestination Root` and `ClearAll` had already executed.
+-- @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+
+-- Two independent sources answer "which slot is this child in", in priority
+-- order:
+--   1. the child's OWN index accessor - authoritative, because the object
+--      knows where it lives. Accepted only as a COHERENT SET (see
+--      M.probe_slots), never per child.
+--   2. the listing position - only ever a GUESS, accepted per child solely
+--      when the parent hands this same object back for it (M.slot_confirms).
+-- Source 2 deliberately does NOT get to veto source 1: if Ptr() turned out to
+-- be positional rather than slot-addressed on 2.4.2, a veto would throw away
+-- a CORRECT self-reported slot and re-emit the listing position - the exact
+-- defect, wearing a confirmation badge.
+
+-- Self-index accessors, most authoritative first. Which (if any) exists on
+-- 2.4.2 is unverified - PROTOCOL.md S6 ASSUMPTION-7 - so every form is probed
+-- pcall-guarded and the whole set is sanity-gated before it is believed.
+local SLOT_PROBES = {
+    function(child) return child:Index() end,
+    function(child) return child.index end,
+    function(child) return child.no end,
+    function(child) return child:GetIndex() end,
+    function(child) return child:Get("no") end,
+}
+
+local function as_slot(value)
+    if type(value) == "string" then
+        value = tonumber(value)
+    end
+    if type(value) ~= "number" then
+        return nil
+    end
+    local slot = math.tointeger(value)
+    if slot and slot >= 1 then
+        return slot
+    end
+    return nil
+end
+
+-- Asks the PARENT for a candidate slot and checks that it hands this same
+-- object back - what turns a guessed position into an established slot. A gap
+-- (Ptr returns nil) or a different object both refute the guess.
+function M.slot_confirms(handle, slot, child)
+    local ok, other = pcall(function() return handle:Ptr(slot) end)
+    if not ok or other == nil then
+        return false -- no Ptr, or nothing lives there: nothing established
+    end
+    if other == child then
+        return true
+    end
+    -- Two handles may be distinct wrappers around one console object, so an
+    -- identity miss alone is not a contradiction; name+class equality is the
+    -- fallback (duplicate names inside one pool are the known blind spot).
+    return M.safe_name(other) == M.safe_name(child)
+        and M.safe_class(other) == M.safe_class(child)
+end
+
+-- Self-reported slots for a whole listing, or nil. Accepted only as a coherent
+-- SET: one value per child, each a positive integer, strictly increasing in
+-- listing order. A silent, 0-based, or unordered accessor fails that gate and
+-- is discarded WHOLE - a half-trusted numbering is exactly how a plausible
+-- wrong number gets out.
+function M.probe_slots(children)
+    local slots = {}
+    local previous = 0
+    for i = 1, #children do
+        local value
+        for _, probe in ipairs(SLOT_PROBES) do
+            local ok, raw = pcall(probe, children[i])
+            if ok then
+                value = as_slot(raw)
+                if value then
+                    break
+                end
+            end
+        end
+        if not value or value <= previous then
+            return nil
+        end
+        slots[i] = value
+        previous = value
+    end
+    return slots
+end
+
+local CUE_NO_PROBES = {
+    function(child) return child:Get("No") end,
+}
+
+local function as_cue_no(value)
+    local number
+    if type(value) == "number" then
+        number = value
+    elseif type(value) == "string" then
+        local trimmed = value:gsub("^%s+", ""):gsub("%s+$", "")
+        if not trimmed:match("^%d+%.?%d*$") then
+            return nil
+        end
+        number = tonumber(trimmed)
+    else
+        return nil
+    end
+    if not number or number < 0 then
+        return nil
+    end
+    if number >= 1000 and number % 1 == 0 then
+        return number / 1000
+    end
+    if number < 1000 then
+        return number
+    end
+    return nil
+end
+
+function M.safe_cue_no(child)
+    if M.safe_class(child) ~= "Cue" then
+        return nil
+    end
+    for _, probe in ipairs(CUE_NO_PROBES) do
+        local ok, raw = pcall(probe, child)
+        if ok then
+            local cue_no = as_cue_no(raw)
+            if cue_no then
+                return cue_no
+            end
+        end
+    end
+    return nil
+end
+
+-- Returns an array of { obj = <handle>, slot = <integer|nil> } in console
+-- listing order; `slot` is the real pool slot or nil when it could not be
+-- established. Callers MUST NOT substitute the array position for a nil slot.
+--
+-- SECOND return value (1.6.5, SPEC-COPILOT-POOLEMPTY-001): the enumeration
+-- confidence - "ok" when either accessor path answered (an empty array then
+-- means the pool really IS empty), "failed" when Children() and Count() BOTH
+-- raised (the empty array then means nothing at all). Callers that take only
+-- the first value (`find_child`, `set_plugin_source`) are unaffected - Lua
+-- drops the extra value; only `build_snapshot` reads it, into
+-- `node.enumeration`. The marker is NOT attached to the array itself so that
+-- `#out` and the `[i]` walks stay exactly what they were.
+function M.safe_children(handle)
+    local ok, children = pcall(function() return handle:Children() end)
+    if ok and type(children) == "table" then
+        local probed = M.probe_slots(children)
+        local out = {}
+        for i = 1, #children do
+            local slot = probed and probed[i] or nil
+            if not slot and M.slot_confirms(handle, i, children[i]) then
+                slot = i -- the pool really is dense this far: position IS slot
+            end
+            out[#out + 1] = { obj = children[i], slot = slot }
+        end
+        return out, "ok"
+    end
+    local okc, count = pcall(function() return handle:Count() end)
+    if okc and type(count) == "number" then
+        local out = {}
+        for i = 1, count do
+            local okp, child = pcall(function() return handle:Ptr(i) end)
+            if okp and child then
+                -- This branch ADDRESSES by index: we asked for slot i and the
+                -- console handed an object back, so i is that object's slot.
+                out[#out + 1] = { obj = child, slot = i }
+            end
+        end
+        return out, "ok"
+    end
+    return {}, "failed"
+end
+
+-- -- object-tree path resolution (REQ-MVP-003) ------------------------------
+
+-- Root aliases let paths start at well-known MA3 Lua entry points; unknown
+-- first segments fall back to navigation from Root().
+-- Object-Free API roots this responder can address by name.
+--
+-- Every entry is a GLOBAL CALL guarded by `X and X()` -- an alias can only
+-- exist where the console exposes the global. On a console that does not,
+-- the entry evaluates to nil, the caller falls through to the Root() tree
+-- walk, and the path fails exactly as it does today. Adding an alias
+-- therefore cannot break a console that lacks the function (t235).
+--
+-- programmer/programmerpart/selection were added by t235. Three lanes had
+-- reported `path segment not found: 'Programmer'` and read that as a
+-- structural limit; it was the ABSENCE OF AN ALIAS, not the absence of the
+-- API. MA Lighting's Object-Free API lists Programmer(), ProgrammerPart()
+-- and Selection() alongside Root()/DataPool()/ShowData()/Patch().
+--
+-- ? Unmeasured on this rig: whether THIS console version exposes them, and
+-- whether the returned handle answers Children()/property accessors the way
+-- the reply builders need. Settle the first with `HelpLua` on the console
+-- (it writes grandMA3_lua_functions into gma3_library and touches no
+-- showfile); the second needs this plugin deployed, which is an operator
+-- act. See `.moai/reports/t235/verdict.md`.
+local ROOT_ALIASES = {
+    datapool = function() return DataPool and DataPool() or nil end,
+    root = function() return Root and Root() or nil end,
+    showdata = function() return ShowData and ShowData() or nil end,
+    patch = function() return Patch and Patch() or nil end,
+    programmer = function() return Programmer and Programmer() or nil end,
+    programmerpart = function() return ProgrammerPart and ProgrammerPart() or nil end,
+    selection = function() return Selection and Selection() or nil end,
+}
+
+function M.find_child(handle, segment)
+    local children = M.safe_children(handle)
+    if segment:match("^%d+$") then
+        -- A numeric segment addresses the POOL SLOT - the same number a
+        -- snapshot reports as `i` (PROTOCOL.md S2). It degrades to the legacy
+        -- positional meaning ONLY when no slot at all could be established;
+        -- mixing the two would make 'Groups/5' on a 1/5/7 pool silently
+        -- resolve to the 5th listed object (or, worse, a neighbour).
+        local wanted_slot = tonumber(segment)
+        local any_slot_known = false
+        for _, entry in ipairs(children) do
+            if entry.slot then
+                any_slot_known = true
+                if entry.slot == wanted_slot then
+                    return entry.obj
+                end
+            end
+        end
+        if any_slot_known then
+            return nil -- that slot is empty (a gap), not "the Nth object"
+        end
+        local entry = children[wanted_slot]
+        return entry and entry.obj or nil
+    end
+    local wanted = segment:lower()
+    for _, entry in ipairs(children) do
+        if M.safe_name(entry.obj):lower() == wanted then
+            return entry.obj
+        end
+    end
+    return nil
+end
+
+-- Console-address form (M1/M4/M6, design.md S5.8): "Executor <n>" resolves
+-- directly via the native ObjectList() API instead of a DataPool tree walk.
+-- Executors are paged and DataPool/Executor's pool-slot numbering does NOT
+-- correspond to the console-displayed number (the reverse-address problem
+-- M1 investigated) -- ObjectList("Executor <console_no>")[1] is the API M1's
+-- live probe confirmed resolves the correct object (design.md S5.8/S5.9).
+-- This is the ONLY address form resolve_path special-cases; every other
+-- path still walks the DataPool/Root/ShowData/Patch tree below unchanged.
+local EXECUTOR_ADDRESS_PATTERN = "^Executor%s+(%d+)$"
+
+-- Returns (handle, err, matched). `matched` disambiguates "this path IS an
+-- Executor address" (in which case handle/err is authoritative -- caller
+-- must not fall through to the tree walk) from "not this address form".
+function M.resolve_executor_address(path)
+    local console_no = path:match(EXECUTOR_ADDRESS_PATTERN)
+    if not console_no then
+        return nil, nil, false
+    end
+    local ok, list = pcall(function() return ObjectList("Executor " .. console_no) end)
+    if not ok or type(list) ~= "table" or not list[1] then
+        return nil, string.format("ObjectList('Executor %s') unavailable", console_no), true
+    end
+    local handle = list[1]
+    if M.safe_class(handle) ~= "Executor" then
+        return nil, string.format("ObjectList('Executor %s') did not return an Executor", console_no), true
+    end
+    return handle, nil, true
+end
+
+function M.resolve_path(path)
+    if type(path) ~= "string" or path == "" then
+        return nil, "empty object path"
+    end
+    local executor_handle, executor_err, is_executor_address = M.resolve_executor_address(path)
+    if is_executor_address then
+        return executor_handle, executor_err
+    end
+    local segments = {}
+    for segment in path:gmatch("[^/]+") do
+        segments[#segments + 1] = segment
+    end
+    if #segments == 0 then
+        return nil, "empty object path"
+    end
+    local handle
+    local start_index = 1
+    local alias = ROOT_ALIASES[segments[1]:lower()]
+    if alias then
+        local ok, aliased = pcall(alias)
+        if ok and aliased then
+            handle = aliased
+            start_index = 2
+        end
+    end
+    if not handle then
+        local ok, root = pcall(function() return Root() end)
+        if not ok or not root then
+            return nil, "cannot resolve tree root (Root() unavailable)"
+        end
+        handle = root
+    end
+    for i = start_index, #segments do
+        local child = M.find_child(handle, segments[i])
+        if not child then
+            return nil, string.format("path segment not found: '%s' (in %s)", segments[i], path)
+        end
+        handle = child
+    end
+    return handle
+end
+
+-- -- payload builders --------------------------------------------------------
+
+function M.build_pong(id)
+    return {
+        v = M.PROTO,
+        kind = "pong",
+        id = id,
+        plugin = M.NAME,
+        version = M.VERSION,
+        proto = M.PROTO,
+    }
+end
+
+-- Backs off from a raw byte cut point so a truncation never splits a
+-- multi-byte UTF-8 sequence (a continuation byte lives in 0x80-0xBF).
+local function safe_truncate(s, max_len)
+    if max_len <= 0 then
+        return ""
+    end
+    if #s <= max_len then
+        return s
+    end
+    local cut = max_len
+    while cut > 0 and string.byte(s, cut) >= 0x80 and string.byte(s, cut) < 0xC0 do
+        cut = cut - 1
+    end
+    return s:sub(1, cut)
+end
+
+function M.build_snapshot(id, path, offset)
+    offset = offset or 0
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        local payload = {
+            v = M.PROTO, kind = "state", id = id, path = path,
+            ok = false, error = err, offset = offset,
+        }
+        -- Size guard (M6c-4 fix): the success branch below already bounds
+        -- its reply to CONFIG.max_payload by dropping children; this
+        -- failure branch used to echo the full, unbounded query path
+        -- (sometimes twice, via `err`) with no truncation at all. Apply the
+        -- same UDP-budget guard here by shrinking the echoed error/path
+        -- strings (PROTOCOL.md S4).
+        while #M.encode_payload(payload) > CONFIG.max_payload
+            and (#payload.error > 0 or #payload.path > 0) do
+            if #payload.error > 0 then
+                payload.error = safe_truncate(payload.error, math.floor(#payload.error / 2))
+            elseif #payload.path > 0 then
+                payload.path = safe_truncate(payload.path, math.floor(#payload.path / 2))
+            end
+        end
+        return payload
+    end
+    local children, enumeration = M.safe_children(handle)
+    local total = #children
+    -- Paging window (1.6.0): `offset` is the 0-based start; the window is at
+    -- most CONFIG.max_children wide and empty when offset >= childCount.
+    local first = offset + 1
+    local last = math.min(offset + CONFIG.max_children, total)
+    local items = M.array({})
+    for i = first, last do
+        local entry = children[i]
+        local item = { name = M.safe_name(entry.obj), class = M.safe_class(entry.obj) }
+        -- `i` carries the REAL pool slot and is OMITTED when that slot could
+        -- not be established (PROTOCOL.md S4.2) - a consumer must then resolve
+        -- the number before addressing the object, not count list positions.
+        if entry.slot then
+            item.i = entry.slot
+        end
+        local cue_no = M.safe_cue_no(entry.obj)
+        if cue_no then
+            item.cueNo = cue_no
+        end
+        items[#items + 1] = item
+    end
+    local payload = {
+        v = M.PROTO,
+        kind = "state",
+        id = id,
+        path = path,
+        ok = true,
+        node = {
+            name = M.safe_name(handle),
+            class = M.safe_class(handle),
+            childCount = total,
+            -- 1.6.5 (PROTOCOL.md S4.2): "ok" | "failed" - whether `total`
+            -- came from a successful enumeration. `childCount 0` with "ok"
+            -- is an EMPTY pool; with "failed" it is a pool that could not be
+            -- read, and the two are no longer the same payload.
+            enumeration = enumeration,
+        },
+        children = items,
+        offset = offset,
+        -- `truncated` = children remain AFTER this window (not "the listing
+        -- is partial overall"); on the first window (offset 0) this is the
+        -- exact pre-1.6.0 meaning.
+        truncated = last < total,
+    }
+    -- Executor-only branch (REQ-EXECBODY-003, additive - AC-EXECBODY-004):
+    -- expose the assigned sequence's pool number so a safety-gate caller can
+    -- delegate body lookup to the already-trusted sequence path instead of
+    -- Children() (which an executor never populates). Reuses SLOT_PROBES/
+    -- as_slot - the exact accessors design.md S5.9 confirmed live - never the
+    -- display name (AC-EXECBODY-005). Omitted whenever the identity cannot be
+    -- established, matching the existing child-slot omission convention.
+    if payload.node.class == "Executor" then
+        local assigned = M.safe_object(handle)
+        if assigned and M.safe_class(assigned) == "Sequence" then
+            for _, probe in ipairs(SLOT_PROBES) do
+                local ok, raw = pcall(probe, assigned)
+                if ok then
+                    local slot = as_slot(raw)
+                    if slot then
+                        payload.node.sequenceNo = slot
+                        break
+                    end
+                end
+            end
+        end
+    end
+    -- Size guard: drop trailing children until the encoded payload fits the
+    -- UDP budget (documented in PROTOCOL.md S4).
+    while #M.encode_payload(payload) > CONFIG.max_payload and #items > 0 do
+        table.remove(items)
+        payload.truncated = true
+    end
+    return payload
+end
+
+function M.build_prop_result(id, path, property_name)
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "prop",
+            id = id,
+            ok = false,
+            path = path,
+            property = property_name,
+            error = message,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local value, perr = M.safe_property(handle, property_name)
+    if value == nil then
+        return fail(perr)
+    end
+    return {
+        v = M.PROTO,
+        kind = "prop",
+        id = id,
+        ok = true,
+        path = path,
+        property = property_name,
+        value = value,
+    }
+end
+
+function M.build_props_result(id, path, names)
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "props",
+            id = id,
+            ok = false,
+            path = path,
+            reads = M.array({}),
+            truncated = false,
+            error = message,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local reads = M.array({})
+    for _, name in ipairs(names) do
+        local value, perr, value_type, raw_table = M.safe_property(handle, name)
+        if value == nil then
+            reads[#reads + 1] = { n = name, ok = false, e = perr }
+        else
+            local item = { n = name, ok = true, t = value_type or "?", v = value }
+            if #value > CONFIG.max_prop_value then
+                if raw_table ~= nil then
+                    -- ? ? ? ?(REQ-READBACK-005): ?
+                    -- ? ? ? JSON ? ?.
+                    item.v, item.truncated = M.json_encode_bounded(raw_table, CONFIG.max_prop_value)
+                else
+                    item.v = safe_truncate(value, CONFIG.max_prop_value)
+                    item.truncated = true
+                end
+            end
+            reads[#reads + 1] = item
+        end
+    end
+    local payload = {
+        v = M.PROTO,
+        kind = "props",
+        id = id,
+        ok = true,
+        path = path,
+        reads = reads,
+        truncated = false,
+    }
+    while #M.encode_payload(payload) > CONFIG.max_payload and #reads > 0 do
+        table.remove(reads)
+        -- @MX:ANCHOR: [AUTO] props list truncation signal.
+        -- @MX:REASON: REQ-INTROSPECT-013/014 forbid silently dropping read
+        --   entries when the encoded reply exceeds CONFIG.max_payload.
+        payload.truncated = true
+    end
+    return payload
+end
+
+-- ? ? ? offset ? ? (? t531, `.moai/reports/t525/verdict.md`
+-- S? ? - ? ? ? 2? ? ?). ? `props` ?
+-- (`M.build_props_result`)? `CONFIG.max_prop_value` ? ? ?
+-- ? - ? **? ?**? ? ? ?, ?
+-- ? ?(? ? ?)? `CONFIG.max_payload` ?. ?
+-- offset ? ? ? ? ? ? ? ?
+-- (dispatch ? ? ?).
+function M.build_props_offset_result(id, path, name, offset)
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "props",
+            id = id,
+            ok = false,
+            path = path,
+            reads = M.array({}),
+            truncated = false,
+            error = message,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local value, perr, value_type, raw_table = M.safe_property(handle, name)
+    if value == nil then
+        return fail(perr)
+    end
+    local item
+    if raw_table == nil then
+        -- ?-? ?: offset ? ? ? - ? max_prop_value
+        -- ? ? ?(? ? 4, ? ? ?).
+        item = { n = name, ok = true, t = value_type or "?", v = value }
+        if #value > CONFIG.max_prop_value then
+            item.v = safe_truncate(value, CONFIG.max_prop_value)
+            item.truncated = true
+        end
+    else
+        local open, close, entries = table_entry_parts(raw_table)
+        local total = #entries
+        local start = offset + 1
+        local kept = {}
+        if start <= total then
+            -- ? ? ? **? ?** ? ? ?
+            -- ? ? - ? ? ? ? ? ?
+            -- ? ? ? ? ?. ? ? ? ?
+            -- ? ?(? ?, ? ? + truncated=true).
+            for i = start, total do
+                local candidate = {}
+                for _, e in ipairs(kept) do
+                    candidate[#candidate + 1] = e
+                end
+                candidate[#candidate + 1] = entries[i]
+                local candidate_item = {
+                    n = name,
+                    ok = true,
+                    t = value_type,
+                    v = open .. table.concat(candidate, ",") .. close,
+                    offset = offset,
+                    total = total,
+                    truncated = i < total,
+                }
+                local trial_payload = {
+                    v = M.PROTO,
+                    kind = "props",
+                    id = id,
+                    ok = true,
+                    path = path,
+                    reads = M.array({ candidate_item }),
+                    truncated = false,
+                }
+                if #M.encode_payload(trial_payload) > CONFIG.max_payload then
+                    break
+                end
+                kept = candidate
+                item = candidate_item
+            end
+        end
+        if not item then
+            -- ? ? ? ? ?: offset>=total(? ? ?
+            -- ?) ? ? ? ? ?(? ?). ? ?
+            -- ? ? ?, truncated ? ?.
+            item = {
+                n = name,
+                ok = true,
+                t = value_type,
+                v = open .. close,
+                offset = offset,
+                total = total,
+                truncated = start <= total,
+            }
+        end
+    end
+    return {
+        v = M.PROTO,
+        kind = "props",
+        id = id,
+        ok = true,
+        path = path,
+        reads = M.array({ item }),
+        truncated = false,
+    }
+end
+
+-- @MX:ANCHOR: [AUTO] property_accessors is accepted as a complete set or
+--   rejected as a complete set; partial introspection results are not emitted.
+-- @MX:REASON: REQ-INTROSPECT-004 closes the plausible-partial-answer failure
+--   mode by requiring all adopted enumerator calls to pass the same gate.
+function M.enumerate_property_accessors(handle)
+    local ok_count, raw_count = pcall(function() return handle:PropertyCount() end)
+    if not ok_count then
+        return nil, "property_accessors PropertyCount() failed: " .. tostring(raw_count)
+    end
+    if type(raw_count) == "string" then
+        raw_count = tonumber(raw_count)
+    end
+    local count = math.tointeger(raw_count)
+    if not count or count < 0 then
+        return nil, "property_accessors PropertyCount() did not return a non-negative integer"
+    end
+    local fields = M.array({})
+    -- @MX:NOTE: [AUTO] LIVE M6 fixed the Property* accessor domain:
+    --   valid indices are 0..PropertyCount()-1; index PropertyCount() returns
+    --   nil. A 1-based loop skips field 0 and fails at the count boundary.
+    for i = 0, count - 1 do
+        local ok_name, name = pcall(function() return handle:PropertyName(i) end)
+        local ok_type, value_type = pcall(function() return handle:PropertyType(i) end)
+        if not ok_name or type(name) ~= "string" or name == "" or not ok_type or value_type == nil then
+            return nil, "property_accessors incomplete at index " .. tostring(i)
+        end
+        fields[#fields + 1] = { n = name, t = tostring(value_type) }
+    end
+    return fields, count
+end
+
+local function property_name_key(name)
+    return tostring(name):upper()
+end
+
+function M.missing_introspect_contrast_names(handle, fields)
+    local enumerated = {}
+    for _, field in ipairs(fields) do
+        if type(field.n) == "string" and field.n ~= "" then
+            enumerated[property_name_key(field.n)] = true
+        end
+    end
+    local missing = M.array({})
+    for _, candidate in ipairs(CONFIG.introspect_contrast_names) do
+        local value = M.safe_property(handle, candidate)
+        if value ~= nil and not enumerated[property_name_key(candidate)] then
+            missing[#missing + 1] = candidate
+        end
+    end
+    return missing
+end
+
+function M.build_introspect_result(id, path, offset)
+    offset = offset or 0
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "introspect",
+            id = id,
+            ok = false,
+            path = path,
+            error = message,
+            offset = offset,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local fields, total = M.enumerate_property_accessors(handle)
+    if not fields then
+        return fail(total)
+    end
+    -- @MX:ANCHOR: [AUTO] enumerator adoption gate - contrast the full
+    --   pre-truncation enumerated name set against same-handle prop reads.
+    -- @MX:REASON: REQ-INTROSPECT-004/005 require discarding the whole
+    --   introspect result, not returning plausible partial fields, if an
+    --   independently confirmed readable name is absent from the enumerator.
+    local missing_contrast = M.missing_introspect_contrast_names(handle, fields)
+    if #missing_contrast > 0 then
+        return fail("property_accessors missing independently readable names: " .. table.concat(missing_contrast, ","))
+    end
+    -- Paging window (1.6.2): `offset` is the 0-based start into the FULL
+    -- enumerated name list. Before this, the budget guard below was the only
+    -- bound, so every name past the first window was unreachable on this
+    -- channel -- measured live at 138 properties of which 27 arrived (t95).
+    --
+    -- The window is taken AFTER the contrast gate above, never before: the
+    -- gate contrasts the full pre-window name set against same-handle reads,
+    -- and narrowing it to the window would make it vacuous for any name that
+    -- happens to fall outside the first page.
+    local window = M.array({})
+    for i = offset + 1, #fields do
+        window[#window + 1] = fields[i]
+    end
+    local payload = {
+        v = M.PROTO,
+        kind = "introspect",
+        id = id,
+        ok = true,
+        path = path,
+        class = M.safe_class(handle),
+        source = INTROSPECT_SOURCE,
+        fields = window,
+        total = total,
+        offset = offset,
+        -- Starts at the LONGER encoding (`false`), so the final assignment
+        -- below can only shrink the payload -- never push it back over budget.
+        truncated = false,
+    }
+    -- @MX:ANCHOR: [AUTO] introspect field truncation signal.
+    -- @MX:REASON: REQ-INTROSPECT-013/014/015 require a visible signal while
+    --   preserving the pre-shrink total field count. Paging does not replace
+    --   this guard: a window can still exceed the UDP budget on its own.
+    while #M.encode_payload(payload) > CONFIG.max_payload and #window > 0 do
+        table.remove(window)
+    end
+    -- `truncated` = names remain AFTER this window (state's 1.6.0 wording).
+    -- On the first window this is exactly the pre-1.6.2 meaning, so a caller
+    -- that never sends an offset reads the same signal it always did.
+    payload.truncated = (offset + #window) < total
+    return payload
+end
+
+-- @MX:NOTE: [AUTO] Cmd() result classification is an assumption pending live
+--   2.4.2 verification (PROTOCOL.md S6 ASSUMPTION-3): nil/""/"ok" = success,
+--   any other string = failure with the raw string as the error message.
+local SUCCESS_RESULTS = { [""] = true, ["ok"] = true }
+
+function M.classify_result(result)
+    if result == nil then
+        return true, ""
+    end
+    if type(result) ~= "string" then
+        result = tostring(result)
+    end
+    local normalized = result:lower():gsub("^%s+", ""):gsub("%s+$", "")
+    return SUCCESS_RESULTS[normalized] == true, result
+end
+
+function M.build_exec_result(id, command)
+    local ok, result = pcall(Cmd, command)
+    if not ok then
+        return {
+            v = M.PROTO,
+            kind = "result",
+            id = id,
+            ok = false,
+            error = "lua error: " .. tostring(result),
+        }
+    end
+    local success, raw = M.classify_result(result)
+    if success then
+        return { v = M.PROTO, kind = "result", id = id, ok = true, result = raw }
+    end
+    return { v = M.PROTO, kind = "result", id = id, ok = false, result = raw, error = raw }
+end
+
+-- -- plugin deployment (M7 - REQ-MVP-019, ASSUMPTION-6) -----------------------
+
+-- @MX:WARN: [AUTO] unverified MA3 API surface - plugin-object creation and
+--   Lua-component source assignment are 2.4.2 assumptions (PROTOCOL.md S6
+--   ASSUMPTION-6); every accessor form is pcall-guarded and probed in order
+-- @MX:REASON: no live console was available at M7 implementation time; the
+--   deploy verb is exercised only against the mocked pool surface - verify
+--   on-site with a harmless plugin before relying on deployment
+
+function M.plugin_pool()
+    local ok, pool = pcall(function()
+        return M.find_child(DataPool(), "Plugins")
+    end)
+    if ok and pool then
+        return pool
+    end
+    return nil, "plugin pool not found (DataPool/Plugins)"
+end
+
+local function acquire_child(handle)
+    for _, method_name in ipairs({ "Acquire", "Append" }) do
+        local ok, child = pcall(function()
+            return handle[method_name](handle)
+        end)
+        if ok and child then
+            return child
+        end
+    end
+    return nil
+end
+
+function M.find_or_create_plugin(name)
+    local pool, err = M.plugin_pool()
+    if not pool then
+        return nil, false, err
+    end
+    local existing = M.find_child(pool, name)
+    if existing then
+        return existing, false
+    end
+    local created = acquire_child(pool)
+    if not created then
+        return nil, false, "cannot create plugin object (Acquire/Append probes failed)"
+    end
+    local named = pcall(function()
+        created.name = name
+    end)
+    if not named or M.safe_name(created) ~= name then
+        pcall(function()
+            created:Set("name", name)
+        end)
+    end
+    return created, true
+end
+
+function M.set_plugin_source(plugin, source)
+    local component
+    local children = M.safe_children(plugin)
+    if #children > 0 then
+        component = children[1].obj
+    else
+        component = acquire_child(plugin)
+    end
+    if not component then
+        return false, "cannot create plugin component (Acquire/Append probes failed)"
+    end
+    local setters = {
+        function()
+            component.content = source
+        end,
+        function()
+            component.Content = source
+        end,
+        function()
+            component:Set("content", source)
+        end,
+        function()
+            component:SetContent(source)
+        end,
+    }
+    for _, setter in ipairs(setters) do
+        if pcall(setter) then
+            local readable, value = pcall(function()
+                return component.content or component.Content
+            end)
+            -- Only a CONFIRMED readback (matches what was written) counts as
+            -- success; an unreadable or nil/mismatched readback means this
+            -- accessor form did NOT actually persist the source (M6c-4 fix
+            -- - the prior logic wrongly treated an unconfirmed write, i.e.
+            -- readback returning nil, as success).
+            if readable and value == source then
+                return true
+            end
+        end
+    end
+    return false, "cannot confirm plugin source write (readback did not match any setter form)"
+end
+
+function M.build_deploy_result(id, name, source)
+    local function fail(message)
+        return { v = M.PROTO, kind = "deploy", id = id, ok = false, name = name, error = message }
+    end
+    -- Defense in depth behind the server-side pcall harness: re-compile in
+    -- the REAL console runtime BEFORE touching the plugin pool. The chunk is
+    -- loaded text-only and never called here.
+    local chunk, err = load(source, "=" .. name, "t")
+    if not chunk then
+        return fail("lua compile failed: " .. tostring(err))
+    end
+    local plugin, created, perr = M.find_or_create_plugin(name)
+    if not plugin then
+        return fail(perr)
+    end
+    local ok, serr = M.set_plugin_source(plugin, source)
+    if not ok then
+        return fail(serr)
+    end
+    return { v = M.PROTO, kind = "deploy", id = id, ok = true, name = name, created = created }
+end
+
+-- -- OSC reply transport ------------------------------------------------------
+
+function M.pack_message(address, encoded)
+    return address .. ",s," .. encoded
+end
+
+-- @MX:WARN: [AUTO] unverified MA3 API surface - SendOSCMessage signature and
+--   the SendOSC command keyword are 2.4.2 assumptions (PROTOCOL.md S5
+--   ASSUMPTION-2); every variant is pcall-guarded with a cmd_keyword fallback
+-- @MX:REASON: no live console was available at M2 implementation time; the
+--   semi-automatic AC-MVP-012 round-trip (server/tools/responder_roundtrip.py)
+--   is the designated verification path - adjust CONFIG.send_variant on-site
+function M.send_reply(address, payload)
+    local encoded = M.encode_payload(payload)
+    local senders = {
+        packed = function()
+            SendOSCMessage(CONFIG.osc_slot, M.pack_message(address, encoded))
+        end,
+        args = function()
+            SendOSCMessage(CONFIG.osc_slot, address, encoded)
+        end,
+        cmd_keyword = function()
+            Cmd(string.format('SendOSC %d "%s"', CONFIG.osc_slot, M.pack_message(address, encoded)))
+        end,
+    }
+    -- Try the configured variant first, then EVERY other variant. The old
+    -- code jumped straight to cmd_keyword, so "args" was never attempted --
+    -- if SendOSCMessage exists but wants (slot, address, payload), the reply
+    -- silently died. cmd_keyword stays LAST: Cmd() does not raise on a
+    -- rejected command, so pcall reports success even when the console
+    -- answered "Illegal property" and nothing left the box.
+    local variant = CONFIG.send_variant
+    local tried = {}
+    for _, name in ipairs({ variant, "packed", "args", "cmd_keyword" }) do
+        local sender = senders[name]
+        if sender and not tried[name] then
+            tried[name] = true
+            if pcall(sender) then
+                return true
+            end
+        end
+    end
+    M.log("copilot_responder: OSC reply send failed (check CONFIG.osc_slot / send_variant)")
+    return false
+end
+
+-- -- dispatch ------------------------------------------------------------------
+
+function M.handle_request(request)
+    local parsed, err = M.parse_request(request)
+    if not parsed then
+        local payload = { v = M.PROTO, kind = "error", id = "-", ok = false, error = err }
+        M.send_reply(CONFIG.feedback_address, payload)
+        return payload
+    end
+    local payload
+    if parsed.kind == "ping" then
+        payload = M.build_pong(parsed.id)
+        M.send_reply(CONFIG.feedback_address, payload)
+    elseif parsed.kind == "state" then
+        if parsed.rest == "" then
+            payload = {
+                v = M.PROTO,
+                kind = "state",
+                id = parsed.id,
+                ok = false,
+                error = "missing object path (expected: state <id> <path>)",
+            }
+        else
+            local path, offset = M.parse_paged_args(parsed.rest)
+            payload = M.build_snapshot(parsed.id, path, offset)
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "prop" then
+        local path, property_name = parsed.rest:match("^(.-)%s+(%S+)%s*$")
+        if not path or path == "" then
+            payload = {
+                v = M.PROTO,
+                kind = "prop",
+                id = parsed.id,
+                ok = false,
+                path = "",
+                property = "",
+                error = "malformed prop request (expected: prop <id> <path> <PropertyName>)",
+            }
+        else
+            payload = M.build_prop_result(parsed.id, path, property_name)
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "props" then
+        local names, path, perr = M.parse_props_rest(parsed.rest)
+        if not names then
+            payload = {
+                v = M.PROTO,
+                kind = "props",
+                id = parsed.id,
+                ok = false,
+                path = path or "",
+                reads = M.array({}),
+                truncated = false,
+                error = perr,
+            }
+        else
+            -- offset ? ? (? t531): ? ? path ?
+            -- ? ? - M.parse_paged_args ? state/introspect
+            -- ? ? ? ? ? ? ?. ? ?
+            -- stripped_path ? path ? ? ?(? ? ?
+            -- ? ?) ? ? ? ? ? ?.
+            local stripped_path, offset = M.parse_paged_args(path)
+            local had_offset_token = stripped_path ~= path
+            if had_offset_token and #names > 1 then
+                payload = {
+                    v = M.PROTO,
+                    kind = "props",
+                    id = parsed.id,
+                    ok = false,
+                    path = stripped_path,
+                    reads = M.array({}),
+                    truncated = false,
+                    error = "offset paging takes exactly one property name",
+                }
+            elseif had_offset_token then
+                payload = M.build_props_offset_result(parsed.id, stripped_path, names[1], offset)
+            else
+                payload = M.build_props_result(parsed.id, path, names)
+            end
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "introspect" then
+        if parsed.rest == "" then
+            payload = {
+                v = M.PROTO,
+                kind = "introspect",
+                id = parsed.id,
+                ok = false,
+                path = "",
+                error = "missing object path (expected: introspect <id> <path>)",
+            }
+        else
+            local path, offset = M.parse_paged_args(parsed.rest)
+            payload = M.build_introspect_result(parsed.id, path, offset)
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "exec" then
+        if parsed.rest == "" then
+            payload = {
+                v = M.PROTO,
+                kind = "result",
+                id = parsed.id,
+                ok = false,
+                error = "missing command (expected: exec <id> <command>)",
+            }
+        else
+            payload = M.build_exec_result(parsed.id, parsed.rest)
+        end
+        M.send_reply(CONFIG.feedback_address, payload)
+    elseif parsed.kind == "deploy" then
+        local enc_name, enc_source = parsed.rest:match("^(%S+)%s+(%S+)$")
+        if not enc_name then
+            payload = {
+                v = M.PROTO,
+                kind = "deploy",
+                id = parsed.id,
+                ok = false,
+                error = "malformed deploy request (expected: deploy <id> <enc-name> <enc-source>)",
+            }
+        else
+            payload = M.build_deploy_result(
+                parsed.id,
+                M.percent_decode(enc_name),
+                M.percent_decode(enc_source)
+            )
+        end
+        M.send_reply(CONFIG.feedback_address, payload)
+    else
+        payload = {
+            v = M.PROTO,
+            kind = "error",
+            id = parsed.id,
+            ok = false,
+            error = "unknown request kind: " .. parsed.kind,
+        }
+        M.send_reply(CONFIG.feedback_address, payload)
+    end
+    return payload
+end
+
+-- -- plugin entry point ---------------------------------------------------------
+
+local function main(display_handle, argument)
+    local request = argument
+    if request == nil or request == "" then
+        local ok, value = pcall(function()
+            return GetVar(UserVars(), CONFIG.uservar_name)
+        end)
+        if ok and type(value) == "string" and value ~= "" then
+            request = value
+        end
+    end
+    if request == nil or request == "" then
+        M.log(
+            "copilot_responder v" .. M.VERSION
+                .. ' - no request. Usage: Plugin "CopilotResponder" "ping <id>"'
+        )
+        return
+    end
+    M.handle_request(request)
+end
+
+-- Test hook: inert on the console (COPILOT_TEST_EXPORT is nil there); the
+-- pytest lupa harness sets it before loading this file to reach module internals.
+if COPILOT_TEST_EXPORT then
+    COPILOT_TEST_EXPORT.module = M
+end
+
+return main

@@ -1,0 +1,32 @@
+{"step": "goto_all", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 3 Sequence 221", "reasons": ["reference-invoking command"]}, {"command": "Goto Cue 3 Sequence 226", "reasons": ["reference-invoking command"]}, {"command": "Goto Cue 1 Sequence 11", "reasons": ["reference-invoking command"]}]}
+{"step": "off_all", "t": 0.4, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}, {"command": "Off Sequence 226", "reasons": ["reference-invoking command"]}, {"command": "Off Sequence 11", "reasons": ["reference-invoking command"]}]}
+{
+  "item": "P2",
+  "free_slots": [],
+  "occupied_before": [],
+  "bundles": {
+    "goto_all": false,
+    "off_all": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 221",
+        "Goto Cue 3 Sequence 226",
+        "Goto Cue 1 Sequence 11"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 221",
+        "Off Sequence 226",
+        "Off Sequence 11"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}
