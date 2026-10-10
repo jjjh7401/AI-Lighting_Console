@@ -1,7 +1,8 @@
 """t538 v2 — A 항목을 2단계로 다시 쓴 묶음 + A6·B(문면 그대로, 번호만 옮김).
 
 원인(감독 판정 2026-10-10, 리드 경유): 1단계 상대값은 페이저가 아니다(T3 정지).
-2단계 상대 Tilt + Phase 0 Thru 360 + Speed 112 는 물결로 움직였다(T4, Fixture 501~508 선택, MegaPointe).
+2단계 상대 Tilt + Phase 0 Thru 360 + Speed 112 는 물결로 움직였다
+(T4, Fixture 501~508 선택, MegaPointe).
 그래서 새 양성 대조 A0′ 는 T4 몸통을 시퀀스로 저장한 것이고, A1~A5 는 A0′ 에서 한 가지씩만 바꾼다.
 
 번호 312~322(311 은 1단계 A0 가 쓰고 있다). A6·B 의 문면은 mover_probe.py 와 같고 번호만 다르다.
@@ -24,8 +25,17 @@ GROUP = v1.GROUP
 # v1 의 함수들(_store·_play·plan_b)이 이 사전을 읽으므로 같은 객체를 고쳐 쓴다.
 v1.SEQ.clear()
 v1.SEQ.update(
-    A0=312, A1=313, A2=314, A3=315, A4=316, A5=317,
-    A6a=318, A6b=319, B1=320, B2=321, B3=322,
+    A0=312,
+    A1=313,
+    A2=314,
+    A3=315,
+    A4=316,
+    A5=317,
+    A6a=318,
+    A6b=319,
+    B1=320,
+    B2=321,
+    B3=322,
 )
 SEQ = v1.SEQ
 
@@ -82,12 +92,22 @@ def plan_a() -> list[tuple[str, list[str]]]:
         (
             "A6a",
             "fx preset 21-2 PT-CIRCLE",
-            ["ChangeDestination Root", "ClearAll", f"{GROUP} ; Attribute 'Dimmer' At 70", "At Preset 21.2"],
+            [
+                "ChangeDestination Root",
+                "ClearAll",
+                f"{GROUP} ; Attribute 'Dimmer' At 70",
+                "At Preset 21.2",
+            ],
         ),
         (
             "A6b",
             "fx preset 21-5 TILT-SWEEP",
-            ["ChangeDestination Root", "ClearAll", f"{GROUP} ; Attribute 'Dimmer' At 70", "At Preset 21.5"],
+            [
+                "ChangeDestination Root",
+                "ClearAll",
+                f"{GROUP} ; Attribute 'Dimmer' At 70",
+                "At Preset 21.5",
+            ],
         ),
     ]
     for item, text, body in items:
@@ -108,7 +128,8 @@ if __name__ == "__main__":
             build_plan=build_plan,
             free_slots=[seq_path(n) for n in SEQ.values()],
             extra_notes=[
-                "A0′ = T4(감독 「물결처럼 움직임」) 몸통을 시퀀스로 저장. A0′ 가 안 움직이면 저장·재생 경로 쪽 — 나머지 중단.",
+                "A0′ = T4(감독 「물결처럼 움직임」) 몸통을 시퀀스로 저장. "
+                "A0′ 가 안 움직이면 저장·재생 경로 쪽 — 나머지 중단.",
                 "A6·B 문면은 mover_probe.py 와 같고 번호만 다름.",
             ],
         )

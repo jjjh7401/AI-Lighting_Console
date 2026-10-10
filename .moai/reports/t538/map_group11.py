@@ -4,9 +4,12 @@
 """
 
 import json
+from pathlib import Path
 
-tree = json.load(open(".moai/reports/t525/r4_patch_tree.json", encoding="utf-8"))
-group = json.loads(open(".moai/reports/t538/r3_group11.txt", encoding="utf-8").read().strip().splitlines()[-1])
+tree = json.loads(Path(".moai/reports/t525/r4_patch_tree.json").read_text("utf-8"))
+group = json.loads(
+    Path(".moai/reports/t538/r3_group11.txt").read_text("utf-8").strip().splitlines()[-1]
+)
 wanted = {m["sf_index"] for m in group["members"]}
 
 index = {}

@@ -2,8 +2,14 @@
 
 import difflib
 import json
+from pathlib import Path
 
-load = lambda d: json.load(open(f".moai/reports/t538/{d}/result.json", encoding="utf-8"))["planned"]  # noqa: E731
+
+def load(d: str) -> dict:
+    text = Path(f".moai/reports/t538/{d}/result.json").read_text("utf-8")
+    return json.loads(text)["planned"]
+
+
 v3, v2, t45 = load("v3_rehearse"), load("v2_rehearse"), load("t45_rehearse")
 
 v2_same = all(v3.get(k) == cmds for k, cmds in v2.items())

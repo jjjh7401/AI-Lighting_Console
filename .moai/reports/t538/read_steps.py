@@ -7,13 +7,14 @@
 """
 
 import sys
+from pathlib import Path
 
 sys.path.insert(0, ".moai/reports/t506")
 import probe_readonly  # noqa: E402
 
 steps = [
     line.strip()
-    for line in open(sys.argv[1], encoding="utf-8")
+    for line in Path(sys.argv[1]).read_text("utf-8").splitlines()
     if line.strip() and not line.startswith("#")
 ]
 probe_readonly.main(steps)

@@ -4,8 +4,9 @@
 """
 
 import json
+from pathlib import Path
 
-tree = json.load(open(".moai/reports/t525/r4_patch_tree.json", encoding="utf-8"))
+tree = json.loads(Path(".moai/reports/t525/r4_patch_tree.json").read_text("utf-8"))
 
 
 def walk(nodes):

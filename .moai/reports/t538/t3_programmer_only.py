@@ -6,7 +6,8 @@
 A0 몸통(t516 v4:20-24)과 같은 줄이다. Dimmer 70 은 A0 그대로 둔다(빛이 있어야 보인다).
 새 객체 0 · 쇼 저장 0.
 
-실행: uv run python .moai/reports/t538/t3_programmer_only.py <out> [--rehearse | --approve <dir> --only <묶음>]
+실행: uv run python .moai/reports/t538/t3_programmer_only.py <out>
+      [--rehearse | --approve <dir> --only <묶음>]
 """
 
 from __future__ import annotations

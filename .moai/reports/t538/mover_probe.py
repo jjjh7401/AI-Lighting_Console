@@ -1,6 +1,7 @@
 """t538 — 무빙 움직임 원인 가르기 + 위치 프리셋 큐 무빙 (SPEC-LDBEAT-001 M1 후속).
 
-카드 t538 본문이 정본이다. 알려진 성공 t516 A2(`.moai/reports/t516/approval_rhythm_probe_v4.txt:18-27`,
+카드 t538 본문이 정본이다. 알려진 성공 t516 A2
+(`.moai/reports/t516/approval_rhythm_probe_v4.txt:18-27`,
 감독 「움직임」)를 A0 로 그대로 다시 만들고, A1~A5 는 A0 에서 **한 가지씩만** 바꾼다.
 A6 은 쇼에 이미 있는 효과 프리셋(21.2·21.5)을 불러 보는 두 번째 양성 대조다.
 B 는 위치 프리셋으로 큐를 엮어 무빙을 내는 길이다.
@@ -39,8 +40,17 @@ BEAT = 0.54  # 112 BPM 1박(초)
 TWO_BEATS = 1.07
 
 SEQ = dict(
-    A0=311, A1=312, A2=313, A3=314, A4=315, A5=316,
-    A6a=317, A6b=318, B1=319, B2=320, B3=321,
+    A0=311,
+    A1=312,
+    A2=313,
+    A3=314,
+    A4=315,
+    A5=316,
+    A6a=317,
+    A6b=318,
+    B1=319,
+    B2=320,
+    B3=321,
 )
 
 
@@ -78,7 +88,10 @@ def _a0_body(
 
 def _play(item: str) -> list[tuple[str, list[str]]]:
     no = SEQ[item]
-    return [(f"play_{item}", [f"Goto Cue 1 Sequence {no}"]), (f"off_{item}", [f"Off Sequence {no}"])]
+    return [
+        (f"play_{item}", [f"Goto Cue 1 Sequence {no}"]),
+        (f"off_{item}", [f"Off Sequence {no}"]),
+    ]
 
 
 # ---------------------------------------------------------------- A 페이저
@@ -111,12 +124,22 @@ def plan_a() -> list[tuple[str, list[str]]]:
         (
             "A6a",
             "fx preset 21-2 PT-CIRCLE",
-            ["ChangeDestination Root", "ClearAll", f"{GROUP} ; Attribute 'Dimmer' At 70", "At Preset 21.2"],
+            [
+                "ChangeDestination Root",
+                "ClearAll",
+                f"{GROUP} ; Attribute 'Dimmer' At 70",
+                "At Preset 21.2",
+            ],
         ),
         (
             "A6b",
             "fx preset 21-5 TILT-SWEEP",
-            ["ChangeDestination Root", "ClearAll", f"{GROUP} ; Attribute 'Dimmer' At 70", "At Preset 21.5"],
+            [
+                "ChangeDestination Root",
+                "ClearAll",
+                f"{GROUP} ; Attribute 'Dimmer' At 70",
+                "At Preset 21.5",
+            ],
         ),
     ]
     for item, text, body in items:
@@ -152,7 +175,10 @@ def plan_b() -> list[tuple[str, list[str]]]:
     plan.append(
         (
             "store_B1",
-            [*_b_cue_lines(no), f"Set Sequence {no} Property 'Name' {_name('B1', 'position cues')}"],
+            [
+                *_b_cue_lines(no),
+                f"Set Sequence {no} Property 'Name' {_name('B1', 'position cues')}",
+            ],
         )
     )
     for k in range(1, 5):
@@ -184,7 +210,9 @@ def plan_b() -> list[tuple[str, list[str]]]:
         (
             PositionCuePlan(cue_no=1, name="T538 POS02 lit", preset_no=2, dimmer=70.0),
             PositionCuePlan(cue_no=2, name="T538 dark", dimmer=0.0, fade_seconds=BEAT),
-            PositionCuePlan(cue_no=3, name="T538 POS05 reveal", preset_no=5, dimmer=70.0, fade_seconds=BEAT),
+            PositionCuePlan(
+                cue_no=3, name="T538 POS05 reveal", preset_no=5, dimmer=70.0, fade_seconds=BEAT
+            ),
         )
     )
     body = ["ChangeDestination Root", "ClearAll"]
@@ -215,9 +243,11 @@ if __name__ == "__main__":
             build_plan=build_plan,
             free_slots=[seq_path(n) for n in SEQ.values()],
             extra_notes=[
-                "A0 = t516 A2(v4:18-27) 문면, 시퀀스 번호·이름만 다름. A0 이 안 움직이면 나머지 중단.",
+                "A0 = t516 A2(v4:18-27) 문면, 시퀀스 번호·이름만 다름. "
+                "A0 이 안 움직이면 나머지 중단.",
                 "Group 11 = 501~508(r3_group11_fid.txt).",
-                "21.2/21.5 안의 값·대상 장비는 응답기로 못 읽음(childCount 0, r1). A6 이 안 움직이면 "
+                "21.2/21.5 안의 값·대상 장비는 응답기로 못 읽음(childCount 0, r1). "
+                "A6 이 안 움직이면 "
                 "「프리셋에 501~508 값이 없음」과 「불러도 안 돎」을 가르지 못한다.",
                 "B2 되감기·B3 Go+ Sequence 는 미측정 꼴.",
             ],

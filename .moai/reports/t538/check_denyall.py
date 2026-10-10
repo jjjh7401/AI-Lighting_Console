@@ -25,8 +25,12 @@ audit_rows = []
 for f in sorted((base / "denyall/audit").glob("*")):
     if f.is_file():
         audit_rows += [json.loads(x) for x in f.read_text("utf-8").splitlines() if x.strip()]
-print("audit rows:", len(audit_rows), "| executed rows:",
-      sum(1 for r in audit_rows if str(r.get("outcome", r.get("status", ""))).startswith("exec")))
+print(
+    "audit rows:",
+    len(audit_rows),
+    "| executed rows:",
+    sum(1 for r in audit_rows if str(r.get("outcome", r.get("status", ""))).startswith("exec")),
+)
 
 lines = [c for r in reh for c in r["commands"]]
 banned = [c for c in lines if c.split()[0] in ("SaveShow", "Delete", "Remove", "Master")]

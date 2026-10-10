@@ -1,8 +1,9 @@
 """t538 v3 — 승인 목록 하나로 합친 묶음: T4s·T5s(느린 비교) + v2(A0′~A6·B) + A5b.
 
 리드 지시(2026-10-10):
-- T5 감독 판정 「차이를 모르겠다」 — 112 BPM 은 왕복이 짧아 끝 꺾임이 안 보인다. 그래서 느리게 다시 비교한다.
-  T4s·T5s = T4·T5 와 같고 `Attribute 'Tilt' At Speed 112` → `At Speed 30` 한 줄만 바꾼다. 프로그래머만, Store 0.
+- T5 감독 판정 「차이를 모르겠다」 — 112 BPM 은 왕복이 짧아 끝 꺾임이 안 보인다.
+  그래서 느리게 다시 비교한다. T4s·T5s = T4·T5 와 같고
+  `Attribute 'Tilt' At Speed 112` → `At Speed 30` 한 줄만 바꾼다. 프로그래머만, Store 0.
 - A5(곡선 없음)과 A5b(A5 + 곡선 4줄) 둘 다 넣는다. A5b 는 새 번호 323(B 번호 320~322 는 그대로).
 - A6 포함.
 
@@ -39,7 +40,10 @@ def plan_slow() -> list[tuple[str, list[str]]]:
 
 
 def _a5b_body() -> list[str]:
-    """v2 A5 몸통에 곡선 4줄을 단계 뒤·위상 앞에 끼운다(앱 순서 단계→곡선→위상→속도, instantiate.py:646)."""
+    """v2 A5 몸통에 곡선 4줄을 단계 뒤·위상 앞에 끼운다.
+
+    앱 순서 단계→곡선→위상→속도(instantiate.py:646)를 따른다.
+    """
     a5 = dict(v2.plan_a())["store_A5"][:-3]  # Store / ClearAll / Set Name 제외
     cut = a5.index("Attribute 'Pan' At Phase 0")
     return [*a5[:cut], *t45.CURVE, *a5[cut:]]

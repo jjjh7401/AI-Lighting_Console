@@ -4,7 +4,8 @@
 가르는 것: 어딘가 MSpeed 를 느리게 쥐고 있어 위치 페이저가 멈춰 보이는가(a0-stop-diag.md 후보 ①).
 문법 근거: t464 run21 (Spiider 에서 `Attribute 'PositionMSpeed' At 0` OK).
 
-실행: uv run python .moai/reports/t538/t1_mspeed.py <out> [--rehearse | --approve <dir> --only <묶음>]
+실행: uv run python .moai/reports/t538/t1_mspeed.py <out>
+      [--rehearse | --approve <dir> --only <묶음>]
 """
 
 from __future__ import annotations
