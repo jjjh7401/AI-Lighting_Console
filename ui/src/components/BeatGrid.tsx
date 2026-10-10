@@ -67,6 +67,46 @@ export function clampSkipSeconds(current: number, delta: number, maxSeconds: num
   return Math.max(0, Math.min(maxSeconds, current + delta));
 }
 
+/** 카드 t534 — 마디 하나의 가로 너비(px). 시안(`ldbeat-runbook-ui-proposal-
+ * 20261008.html`)의 "줄이 많아질 때"·"큐 운영" 절이 보여주는 "칸 길이 =
+ * 큐 길이"를 마디 시간축으로 그대로 옮긴 값이다 — 8마디 확대 수준에
+ * 가깝게 고정했다(시안의 확대 단계는 M3 범위). */
+export const PX_PER_BAR = 42;
+
+/** `bar` → 가로 픽셀 좌표. 시간축 레이아웃 전용 순수 함수(상태 없음). */
+export function barToX(bar: number, pxPerBar: number = PX_PER_BAR): number {
+  return bar * pxPerBar;
+}
+
+export interface CueSegment {
+  cue: BeatGridCue;
+  /** 이 칸이 시작하는 마디 — `cue.bar`와 같다. */
+  startBar: number;
+  /** 이 칸이 끝나는 마디(배타적) — 다음 칸이 시작하는 마디, 없으면
+   * `maxBar + 1`(격자 표시 범위 끝까지). */
+  endBar: number;
+}
+
+/** 카드 t534 — 트랙의 칸을 "칸 길이 = 다음 칸까지의 마디 수"로 환산한다
+ * (REQ-LDBEAT-004, 시안 §"큐 운영": "실제 값은 … 들어오는 큐에 저장"과
+ * 같은 원리 — 길이는 다음 칸이 정한다). 지어내지 않음: 칸이 없으면 빈
+ * 배열. */
+export function trackCueSegments(track: BeatGridTrack, maxBar: number): CueSegment[] {
+  return track.cues.map((cue, index) => {
+    const next = track.cues[index + 1];
+    const endBar = next ? next.bar : maxBar + 1;
+    return { cue, startBar: cue.bar, endBar };
+  });
+}
+
+/** 카드 t534 — 칸 내용이 "꺼짐/변화없음"(「—」, 배치 규칙서 관례)인지
+ * 판단한다. 2D 무대 밝기(불/꺼짐)와 전환 판단의 공통 토대 — 수치 디머를
+ * 지어내지 않고, 이미 있는 「—」 표기만 본다. */
+export function cueIsActive(label: string): boolean {
+  const trimmed = label.trim();
+  return trimmed !== "" && trimmed !== "—";
+}
+
 /** 층 역할(`server.design.rig.RIG_LAYER_ROLES`)의 화면 이름표. 트랙 식별자가
  * 아니라 줄 옆의 폴더 이름일 뿐이다(REQ-LDBEAT-004, 카드 t526 교정). */
 export const LAYER_ROLE_FOLDER_LABELS: Readonly<Record<string, string>> = {
@@ -121,7 +161,14 @@ export function isUnconfirmedShapeCue(label: string): boolean {
   return UNCONFIRMED_SHAPE_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()));
 }
 
-export type ProbeStatus = "pass" | "fail" | "미실행";
+/** 카드 t534 — M1(progress.md "### M1 — 콘솔 확인 프로브" 표, 커밋
+ * `46283183`)이 실제로 기록한 중간 상태를 더한 것. 그 표는 9항목 모두
+ * "가짜 콘솔 리허설"(exit 0, 막힌 줄 0)은 통과했지만 "실기 실행"·"판정"은
+ * 전부 "미실행"이다 — `"미실행"` 하나로만 보여주면 리허설 통과 사실이
+ * 사라지고, `"pass"`로 보여주면 실기 미실행인데 통과라고 지어내는 것이
+ * 된다. `"리허설PASS·실기미실행"`은 그 표의 두 칸을 그대로 합친
+ * 이름이다(지어낸 상태가 아니다). */
+export type ProbeStatus = "pass" | "fail" | "미실행" | "리허설PASS·실기미실행";
 
 /** REQ-LDBEAT-001~003의 9항목 — progress.md가 쓰는 같은 순서·같은 9개.
  * `probeResults`에 없는 항목은 "미실행"이 기본이다(한 자리에서 뒤집기 쉽게). */
@@ -157,6 +204,16 @@ export function buildProbeStatusTable(
  * 콘솔 **쓰기**는 잠긴다(미리보기는 이 게이트의 대상이 아니다, 결정⑤). */
 export function isWriteLocked(probes: readonly { status: ProbeStatus }[]): boolean {
   return probes.some((probe) => probe.status !== "pass");
+}
+
+/** 카드 t534 — 프로브 상태 → CSS 클래스 접미사. 네 상태가 전부 다른 자리를
+ * 가진다(`"리허설PASS·실기미실행"`을 `"pending"`과 같이 보여주면 리허설
+ * 통과 사실이 "미실행"과 똑같이 보여서 사라진다). */
+export function probeStatusClass(status: ProbeStatus): "pass" | "fail" | "rehearsal" | "pending" {
+  if (status === "pass") return "pass";
+  if (status === "fail") return "fail";
+  if (status === "리허설PASS·실기미실행") return "rehearsal";
+  return "pending";
 }
 
 /** 곡의 첫 칸인지 — "들어오는 전환" 토글이 비활성화되는 기준(REQ-LDBEAT-004(d)).
@@ -255,6 +312,32 @@ export function fixtureDisplayColor(
   return TRACK_COLOR_PALETTE[index % TRACK_COLOR_PALETTE.length];
 }
 
+/** 소속 미확인/칸 미선언/꺼진 칸일 때 공통으로 쓰는 흐림 값. 수치 디머를
+ * 지어내지 않으므로 "밝기"는 이 한 단계(흐림/보통/최대)뿐이다. */
+const UNCONFIRMED_FIXTURE_OPACITY = 0.45;
+const INACTIVE_FIXTURE_OPACITY = 0.55;
+const ACTIVE_FIXTURE_OPACITY = 1;
+
+/** REQ-LDBEAT-004(f) 확장(카드 t534) — 2D 무대의 "밝기"는 콘솔 디머 수치가
+ * 없으므로(M2/M3 전까지 칸은 문장 하나뿐) 지어내지 않는다. 대신 이미 있는
+ * 실측 정보 두 가지만 흐림 단계로 옮긴다: (1) `fixtureDisplayColor`와 같은
+ * "확인된 소속"인지, (2) `viewBar` 시점 그 트랙의 칸이 `cueIsActive`인지
+ * (「—」=꺼짐, 배치 규칙서 관례 — 지어낸 수치가 아니라 이미 쓰는 표기).
+ * 둘 다 사실일 때만 최대 밝기다. */
+export function fixtureDisplayOpacity(
+  fixture: BeatGridFixturePoint,
+  tracks: readonly BeatGridTrack[],
+  viewBar: number,
+): number {
+  if (!fixture.confirmedGroupName) return UNCONFIRMED_FIXTURE_OPACITY;
+  const confirmedKey = fixture.confirmedGroupName.toUpperCase();
+  const track = tracks.find((t) => t.group_name.toUpperCase() === confirmedKey);
+  if (!track) return UNCONFIRMED_FIXTURE_OPACITY;
+  const cue = cueForBar(track, viewBar);
+  if (!cue) return INACTIVE_FIXTURE_OPACITY;
+  return cueIsActive(cue.label) ? ACTIVE_FIXTURE_OPACITY : INACTIVE_FIXTURE_OPACITY;
+}
+
 export interface BeatGridProps {
   grid: BeatGridView | null | undefined;
   /** 2D 무대 좌표 — 콘솔 접촉 0인 M2는 이 값을 props로만 받는다(살아있는
@@ -331,6 +414,11 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
   const selectedCue = selectedTrack && selected ? cueForBar(selectedTrack, selected.bar) : null;
   const firstCue = selected ? isFirstCueOfSong(selected.bar, grid) : false;
   const viewBar = selected?.bar ?? grid.bar_range.start;
+  // 카드 t534 — 재생 위치를 마디로 환산(음원 동기가 없으면 null, 지어내지
+  // 않음). 플레이헤드 선·"이 마디 한눈에" 둘 다 이 값이 있을 때만 재생
+  // 위치를 반영한다 — 없으면 선택된 칸(or 시작 마디)이 기준이다.
+  const playheadBar = secondsToBar(playbackSeconds, secondsPerBar, maxBar);
+  const laneContentWidth = barToX(maxBar + 1);
 
   const onSelectAudio = (file: File | null) => {
     if (!file) return;
@@ -401,10 +489,32 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
         )}
       </div>
 
-      {/* ② 그룹-트랙 타임라인 — 층 역할 폴더로 묶고, 좌우 스크롤 + 한 화면
+      {/* ② 그룹-트랙 타임라인 — 마디 시간축 위 칸 막대(카드 t534, REQ-LDBEAT-004).
+          곡 전체 지도·자(마디 눈금)는 `.beat-grid-lanes` 스크롤 안에서
+          `position:sticky`로 위에 고정되고, 폴더는 좌우 스크롤 + 한 화면
           고정 높이(REQ-LDBEAT-004(b)). */}
       <div className="beat-grid-body">
         <div className="beat-grid-lanes" role="table" aria-label="콘솔 그룹 트랙 타임라인">
+          {/* 자(마디 눈금) — 세로 스크롤 중에도 위에 고정(시안 `.ruler`). */}
+          <div className="beat-grid-ruler-row">
+            <span className="beat-grid-track-label beat-grid-ruler-corner">마디</span>
+            <div className="beat-grid-ruler" style={{ width: laneContentWidth }}>
+              {Array.from({ length: maxBar - grid.bar_range.start + 1 }, (_, i) => grid.bar_range.start + i).map(
+                (bar) => (
+                  <span
+                    key={bar}
+                    className={`beat-grid-ruler-tick${playheadBar === bar ? " is-playhead" : ""}${
+                      viewBar === bar ? " is-view" : ""
+                    }`}
+                    style={{ left: barToX(bar), width: PX_PER_BAR }}
+                  >
+                    {bar}
+                  </span>
+                ),
+              )}
+            </div>
+          </div>
+
           {folders.map((folder) => {
             const open = isFolderOpen(folder.role);
             return (
@@ -419,6 +529,8 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
                 {open &&
                   folder.tracks.map((track) => {
                     const trackIndex = grid.tracks.indexOf(track);
+                    const segments = trackCueSegments(track, maxBar);
+                    const leadGapEnd = segments[0]?.startBar ?? maxBar + 1;
                     return (
                       <div className="beat-grid-track" role="row" key={`${track.group_name}-${trackIndex}`}>
                         <span className="beat-grid-track-label">
@@ -429,32 +541,71 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
                             </span>
                           )}
                         </span>
-                        <div className="beat-grid-track-cues">
-                          {track.cues.length === 0 && (
+                        <div className="beat-grid-track-cues" style={{ width: laneContentWidth }}>
+                          {segments.length === 0 && (
                             <span className="beat-grid-cue-empty">이 구간에 칸 없음</span>
                           )}
-                          {track.cues.map((cue) => (
-                            <button
-                              type="button"
-                              key={cue.bar}
-                              className={`beat-grid-cue${
-                                selected?.trackIndex === trackIndex && selected.bar === cue.bar
-                                  ? " is-selected"
-                                  : ""
-                              }`}
-                              onClick={() => {
-                                setSelected({ trackIndex, bar: cue.bar });
-                                setTransitionView(false);
-                              }}
+                          {/* 첫 칸 앞의 빈 구간 — "아직 선언 안 됨"을 지어내지 않고 그대로
+                              빈 칸으로 보인다(시안 `.clip.empty`). */}
+                          {leadGapEnd > grid.bar_range.start && (
+                            <span
+                              className="beat-grid-cue beat-grid-cue-gap"
+                              style={{ left: barToX(grid.bar_range.start), width: barToX(leadGapEnd) - barToX(grid.bar_range.start) - 2 }}
                             >
-                              {cue.label}
-                              {isUnconfirmedShapeCue(cue.label) && (
-                                <span className="beat-grid-shape-warn" title="실기 미확인 모양">
-                                  ⚠ 실기 미확인
-                                </span>
-                              )}
-                            </button>
-                          ))}
+                              —
+                            </span>
+                          )}
+                          {segments.map((segment, segIndex) => {
+                            const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
+                            const active = cueIsActive(segment.cue.label);
+                            const hasNext = segIndex < segments.length - 1;
+                            return (
+                              <span key={segment.cue.bar} className="beat-grid-cue-slot">
+                                <button
+                                  type="button"
+                                  className={`beat-grid-cue${isSelected ? " is-selected" : ""}${active ? "" : " is-off"}`}
+                                  style={{
+                                    left: barToX(segment.startBar),
+                                    width: barToX(segment.endBar) - barToX(segment.startBar) - 2,
+                                  }}
+                                  title={`${segment.startBar}~${segment.endBar - 1}마디`}
+                                  onClick={() => {
+                                    setSelected({ trackIndex, bar: segment.cue.bar });
+                                    setTransitionView(false);
+                                  }}
+                                >
+                                  {segment.cue.label}
+                                  {isUnconfirmedShapeCue(segment.cue.label) && (
+                                    <span className="beat-grid-shape-warn" title="실기 미확인 모양">
+                                      ⚠ 실기 미확인
+                                    </span>
+                                  )}
+                                </button>
+                                {hasNext && (
+                                  <button
+                                    type="button"
+                                    className="beat-grid-joint"
+                                    style={{ left: barToX(segment.endBar) }}
+                                    title={`${segment.endBar}마디 이음매 — 전환 편집 열기`}
+                                    onClick={() => {
+                                      const nextCue = segments[segIndex + 1].cue;
+                                      setSelected({ trackIndex, bar: nextCue.bar });
+                                      setTransitionView(true);
+                                    }}
+                                  >
+                                    ◆
+                                  </button>
+                                )}
+                              </span>
+                            );
+                          })}
+                          {playheadBar !== null && (
+                            <span
+                              className="beat-grid-playhead"
+                              style={{ left: barToX(playheadBar) }}
+                              title={`재생 위치 — ${playheadBar}마디`}
+                            />
+                          )}
                         </div>
                       </div>
                     );
@@ -482,6 +633,7 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
                       cy={cy}
                       r={3}
                       fill={fixtureDisplayColor(fixture, grid.tracks)}
+                      opacity={fixtureDisplayOpacity(fixture, grid.tracks, viewBar)}
                     >
                       <title>{`${fixture.name} (fid ${fixture.fid})`}</title>
                     </circle>
@@ -491,7 +643,10 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
             ) : (
               <p className="beat-grid-empty">무대 좌표 미제공 — 콘솔 패치 읽기 경로가 아직 안 배선됨(M2).</p>
             )}
-            <p className="beat-grid-stage-note">위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색</p>
+            <p className="beat-grid-stage-note">
+              위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색 · 밝기 = {viewBar}마디 그 칸이 켜져 있는지
+              (수치 디머는 지어내지 않음, M3 전까지는 켜짐/꺼짐 두 단계)
+            </p>
           </div>
 
           <div className="beat-grid-glance-pane">
@@ -511,46 +666,65 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
             </table>
           </div>
         </div>
-      </div>
 
-      {/* 큐 편집 칸 — M2는 읽기 전용 표시만(REQ-LDBEAT-004(c)(d)). */}
-      {selected && selectedTrack && (
+        {/* 큐 편집 칸 — 시안처럼 "오른쪽 칸에 늘 있음"(선택 전엔 빈 안내).
+            M2/M3 경계: 값 표시는 읽기 전용이고, 밝기/위치/색/들어올 때
+            네 필드를 보여 준다(REQ-LDBEAT-004(c)(d)) — 편집 반영은 M3. */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
-          <header>
-            <span>
-              {selectedTrack.group_name} · {selected.bar}마디
-            </span>
-            <span className="beat-grid-cue-panel-actions">
-              <button
-                type="button"
-                className={`beat-grid-transition-toggle${transitionView ? " is-on" : ""}`}
-                disabled={firstCue}
-                title={firstCue ? "곡 첫 큐 — 들어오는 전환 없음" : undefined}
-                onClick={() => setTransitionView((v) => !v)}
-              >
-                전환
-              </button>
-              <button type="button" aria-label="닫기" onClick={() => setSelected(null)}>
-                ✕
-              </button>
-            </span>
-          </header>
-          {transitionView ? (
-            <div className="beat-grid-transition-view">
-              <p>들어오는 전환 — 페이드 · 트리거 박 · 딜레이 · 트래킹(M3 배선 전까지 읽기 전용)</p>
-            </div>
-          ) : (
-            <div className="beat-grid-cue-view">
-              {roleFieldHints(selectedTrack.layer_role).map((field) => (
-                <div className="beat-grid-cue-field" key={field}>
-                  <span className="beat-grid-cue-field-label">{field}</span>
-                  <span className="beat-grid-cue-field-value">{selectedCue?.label ?? "—"}</span>
+          {selected && selectedTrack ? (
+            <>
+              <header>
+                <span>
+                  {selectedTrack.group_name} · {selected.bar}마디
+                </span>
+                <span className="beat-grid-cue-panel-actions">
+                  <button
+                    type="button"
+                    className={`beat-grid-transition-toggle${transitionView ? " is-on" : ""}`}
+                    disabled={firstCue}
+                    title={firstCue ? "곡 첫 큐 — 들어오는 전환 없음" : undefined}
+                    onClick={() => setTransitionView((v) => !v)}
+                  >
+                    전환
+                  </button>
+                  <button type="button" aria-label="닫기" onClick={() => setSelected(null)}>
+                    ✕
+                  </button>
+                </span>
+              </header>
+              {transitionView ? (
+                <div className="beat-grid-transition-view">
+                  <p>들어오는 전환 — 페이드 · 트리거 박 · 딜레이 · 트래킹(M3 배선 전까지 읽기 전용)</p>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="beat-grid-cue-view">
+                  {roleFieldHints(selectedTrack.layer_role).map((field) => (
+                    <div className="beat-grid-cue-field" key={field}>
+                      <span className="beat-grid-cue-field-label">{field}</span>
+                      <span className="beat-grid-cue-field-value">{selectedCue?.label ?? "—"}</span>
+                    </div>
+                  ))}
+                  <div className="beat-grid-cue-field beat-grid-cue-field-entry">
+                    <span className="beat-grid-cue-field-label">들어올 때</span>
+                    <button
+                      type="button"
+                      className="beat-grid-cue-field-entry-btn"
+                      disabled={firstCue}
+                      onClick={() => setTransitionView(true)}
+                    >
+                      {firstCue ? "곡 첫 큐 — 전환 없음" : "전환 보기 열기 ›"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="beat-grid-empty beat-grid-cue-panel-empty">
+              막대(큐)를 누르면 밝기·위치·색·들어올 때를 여기서 확인합니다.
+            </p>
           )}
         </aside>
-      )}
+      </div>
 
       {/* 하단 명령 입력 — M3 배선 전까지 제출 두 경로 모두 비활성. */}
       <div className="beat-grid-cmd">
@@ -572,7 +746,7 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
         <h5>M1 콘솔 확인 프로브</h5>
         <ul className="beat-grid-probe-list">
           {probes.map((probe) => (
-            <li key={probe.id} className={`beat-grid-probe-${probe.status === "pass" ? "pass" : probe.status === "fail" ? "fail" : "pending"}`}>
+            <li key={probe.id} className={`beat-grid-probe-${probeStatusClass(probe.status)}`}>
               {probe.id}. {probe.label} — {probe.status}
             </li>
           ))}

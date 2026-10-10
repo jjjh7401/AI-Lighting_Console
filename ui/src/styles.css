@@ -4293,17 +4293,65 @@ body {
   font-size: 12px;
 }
 
-/* 한 화면 고정 높이 + 좌우 스크롤 — REQ-LDBEAT-004(b). */
+/* 한 화면 고정 높이 + 좌우 스크롤 — REQ-LDBEAT-004(b). 카드 t534 — 3단
+   (타임라인 | 무대·한눈에 | 큐 편집 칸, 늘 보임)으로 넓혔다(시안의 "오른쪽
+   칸에 늘 있음" 배치). */
 .beat-grid-body {
   display: flex;
   gap: 10px;
-  max-height: 420px;
+  max-height: 460px;
 }
 
 .beat-grid-lanes {
   flex: 2;
   overflow: auto;
   min-width: 0;
+  position: relative;
+}
+
+/* 자(마디 눈금) — 세로 스크롤 중에도 위에 고정(시안 `.ruler`, 카드 t534). */
+.beat-grid-ruler-row {
+  display: flex;
+  align-items: stretch;
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  background: var(--panel);
+}
+
+.beat-grid-ruler-corner {
+  position: sticky;
+  left: 0;
+  z-index: 8;
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+}
+
+.beat-grid-ruler {
+  position: relative;
+  height: 20px;
+  border-bottom: 1px solid #2a2e37;
+}
+
+.beat-grid-ruler-tick {
+  position: absolute;
+  top: 0;
+  height: 20px;
+  font-size: 9.5px;
+  color: var(--muted);
+  border-left: 1px solid #262b35;
+  padding: 2px 3px;
+  box-sizing: border-box;
+}
+
+.beat-grid-ruler-tick.is-view {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.beat-grid-ruler-tick.is-playhead {
+  color: #ffd84d;
 }
 
 .beat-grid-folder-head {
@@ -4323,13 +4371,19 @@ body {
   gap: 8px;
   padding: 2px 0 2px 14px;
   white-space: nowrap;
+  min-height: 30px;
 }
 
+/* 왼쪽 줄 이름 칸 — 가로 스크롤 중에도 왼쪽에 고정(시안 `.lhead`, 카드 t534). */
 .beat-grid-track-label {
   min-width: 90px;
   font-size: 12px;
   color: var(--muted);
   flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: var(--panel);
 }
 
 .beat-grid-unconfirmed-badge {
@@ -4337,10 +4391,16 @@ body {
   margin-left: 4px;
 }
 
+/* 트랙 줄 하나의 칸 레인 — 카드 t534: 칸을 마디 시간축 위 절대 위치 막대로
+   그린다(칸 길이 = 큐 길이). 너비는 인라인 스타일(`laneContentWidth`)로
+   격자 전체 마디 범위에 맞춰 늘어난다. */
 .beat-grid-track-cues {
-  display: flex;
-  gap: 3px;
-  overflow-x: auto;
+  position: relative;
+  height: 26px;
+}
+
+.beat-grid-cue-slot {
+  display: contents;
 }
 
 .beat-grid-cue-empty {
@@ -4349,19 +4409,82 @@ body {
 }
 
 .beat-grid-cue {
-  background: #262b35;
-  border: 1px solid #333945;
+  position: absolute;
+  top: 0;
+  height: 26px;
+  background: #2b3a52;
+  border: 1px solid #3a4a66;
   color: var(--text);
-  font-size: 11px;
-  padding: 3px 6px;
+  font-size: 10.5px;
+  padding: 3px 5px;
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+.beat-grid-cue.is-off {
+  background: #23262d;
+  border-style: dashed;
+  color: var(--muted);
 }
 
 .beat-grid-cue.is-selected {
   border-color: var(--accent);
   background: #2d3a52;
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.beat-grid-cue-gap {
+  position: absolute;
+  top: 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #333945;
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 10.5px;
+  box-sizing: border-box;
+}
+
+/* 이음매(◆) — 칸과 칸이 만나는 자리. 누르면 다음 칸의 "전환" 편집이 바로
+   열린다(시안 §"큐 운영": 이음매 = 전환, 카드 t534). */
+.beat-grid-joint {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #101014;
+  border: 1.5px solid #6a6a78;
+  color: #fff;
+  font-size: 7px;
+  line-height: 9px;
+  text-align: center;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+}
+
+.beat-grid-joint:hover {
+  border-color: #ffd84d;
+}
+
+/* 재생 위치 선 — 음원 동기가 있을 때만(secondsPerBar 없으면 안 그림). */
+.beat-grid-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ffd84d;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .beat-grid-shape-warn {
@@ -4375,7 +4498,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 220px;
+  min-width: 200px;
   overflow: auto;
 }
 
@@ -4411,11 +4534,25 @@ body {
   padding: 2px 4px;
 }
 
+/* 큐 편집 칸 — 카드 t534: 시안처럼 "오른쪽 칸에 늘 있음"으로 바꿨다(이전엔
+   선택했을 때만 화면 맨 아래에 나타났다). `.beat-grid-body`의 세 번째
+   칸이다. */
 .beat-grid-cue-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   border: 1px solid var(--accent);
   border-radius: 6px;
   padding: 8px 10px;
   background: #1a1e28;
+  min-width: 180px;
+  overflow: auto;
+}
+
+.beat-grid-cue-panel-empty {
+  margin: auto 0;
+  text-align: center;
 }
 
 .beat-grid-cue-panel header {
@@ -4449,6 +4586,25 @@ body {
   color: var(--muted);
 }
 
+/* "들어올 때" 필드 — 값이 아니라 전환 보기를 여는 버튼이다(카드 t534:
+   페이드·트리거 박 등은 이미 "전환" 토글이 보여준다, 지어낸 값을 새로
+   만들지 않고 같은 데이터로 연결). */
+.beat-grid-cue-field-entry-btn {
+  background: none;
+  border: 1px solid #3a4a66;
+  color: var(--accent);
+  font-size: 11.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.beat-grid-cue-field-entry-btn:disabled {
+  color: var(--muted);
+  border-color: #2a2e37;
+  cursor: not-allowed;
+}
+
 .beat-grid-cmd {
   display: flex;
   gap: 8px;
@@ -4476,4 +4632,10 @@ body {
 
 .beat-grid-probe-pass {
   color: var(--ok);
+}
+
+/* 카드 t534 — "리허설PASS·실기미실행"은 "미실행"과 같은 회색이 아니라
+   따로 눈에 띄어야 한다(리허설 통과 사실이 묻히면 안 됨). */
+.beat-grid-probe-rehearsal {
+  color: var(--warn);
 }
