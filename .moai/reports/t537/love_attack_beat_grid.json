@@ -1,0 +1,641 @@
+{
+  "song_title": "LOVE ATTACK",
+  "bar_range": {
+    "start": 0,
+    "end": 25
+  },
+  "tracks": [
+    {
+      "group_no": 4,
+      "group_no_confirmed": true,
+      "group_name": "BACK",
+      "layer_role": "back",
+      "cues": [
+        {
+          "bar": 0,
+          "label": "앞박 1회",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 3,
+          "label": "마디 4박마다",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 7,
+          "label": "킥 1·2·4박 60%",
+          "brightness": {
+            "mode": "value",
+            "value_percent": 60,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": "reports/effect-arrangement-rules-20261007.md:106"
+        },
+        {
+          "bar": 11,
+          "label": "—",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 14,
+          "label": "—",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 18,
+          "label": "킥 1·2·4박 100%",
+          "brightness": {
+            "mode": "value",
+            "value_percent": 100,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": "reports/effect-arrangement-rules-20261007.md:109"
+        },
+        {
+          "bar": 22,
+          "label": "킥 1·2·4박 100%",
+          "brightness": {
+            "mode": "value",
+            "value_percent": 100,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": "reports/effect-arrangement-rules-20261007.md:110"
+        }
+      ]
+    },
+    {
+      "group_no": 7,
+      "group_no_confirmed": true,
+      "group_name": "SIDE-ALL",
+      "layer_role": "side",
+      "cues": [
+        {
+          "bar": 0,
+          "label": "—",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 3,
+          "label": "—",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 7,
+          "label": "—",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 11,
+          "label": "SIDE-L/R 2·4박 번갈이",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 14,
+          "label": "가속(마디마다 두 배)",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 18,
+          "label": "—",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 22,
+          "label": "—",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        }
+      ]
+    },
+    {
+      "group_no": 11,
+      "group_no_confirmed": true,
+      "group_name": "MOVER-U",
+      "layer_role": "mover",
+      "cues": [
+        {
+          "bar": 0,
+          "label": "바닥 쪽 좁은 빔, 정지",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 3,
+          "label": "5마디 1박 위치 한 칸 올림",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 7,
+          "label": "정지",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 11,
+          "label": "기울인 자리에서 느린 팬 흔들기",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 14,
+          "label": "가속 스윕 4박→2박→1박→반 박",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 18,
+          "label": "18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 22,
+          "label": "22마디 1박에 멈춰 섬",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        }
+      ]
+    },
+    {
+      "group_no": 12,
+      "group_no_confirmed": true,
+      "group_name": "MOVER-D",
+      "layer_role": "mover",
+      "cues": [
+        {
+          "bar": 0,
+          "label": "바닥 쪽, 정지",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 3,
+          "label": "5마디 1박 위치 한 칸 올림",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 7,
+          "label": "틸트 웨이브, 한 바퀴 2마디, 위상 펼침",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 11,
+          "label": "11마디 1박 새 자리, 정지",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 14,
+          "label": "U 와 같은 스윕",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 18,
+          "label": "위로 연 자리, 정지",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 22,
+          "label": "22마디부터 틸트 웨이브(한 바퀴 2박)",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        }
+      ]
+    },
+    {
+      "group_no": 14,
+      "group_no_confirmed": true,
+      "group_name": "BLIND",
+      "layer_role": "effect",
+      "cues": [
+        {
+          "bar": 17,
+          "label": "17마디 3·4박 전부 비움(예고)",
+          "brightness": {
+            "mode": null,
+            "value_percent": null,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": null
+        },
+        {
+          "bar": 18,
+          "label": "18마디 1박 BLIND 100% 2박",
+          "brightness": {
+            "mode": "value",
+            "value_percent": 100,
+            "preset_no": null
+          },
+          "position_preset_no": null,
+          "color_preset_no": null,
+          "effect_preset_no": null,
+          "effect_kind": null,
+          "entry": {
+            "fade_bars": null,
+            "mib_mode": null
+          },
+          "source_ref": "reports/effect-arrangement-rules-20261007.md:109"
+        }
+      ]
+    },
+    {
+      "group_no": null,
+      "group_no_confirmed": false,
+      "group_name": "STROBE",
+      "layer_role": "effect",
+      "cues": []
+    }
+  ],
+  "scene_memos": [
+    {
+      "bar": 0,
+      "text": "배정 미정 — SCENE 원값 「BACK 차가운 실루엣 30%」",
+      "source_ref": "reports/effect-arrangement-rules-20261007.md:104"
+    },
+    {
+      "bar": 7,
+      "text": "배정 미정 — SCENE 원값 「라벤더 워시 40%(2마디 번짐) · FOH 켬」",
+      "source_ref": "reports/effect-arrangement-rules-20261007.md:106"
+    },
+    {
+      "bar": 11,
+      "text": "배정 미정 — SCENE 원값 「틴트 한 단계」",
+      "source_ref": "reports/effect-arrangement-rules-20261007.md:107"
+    },
+    {
+      "bar": 14,
+      "text": "배정 미정 — SCENE 원값 「워시 25% 덜어냄」",
+      "source_ref": "reports/effect-arrangement-rules-20261007.md:108"
+    },
+    {
+      "bar": 18,
+      "text": "배정 미정 — SCENE 원값 「핑크 70% 끊어 바꿈 · 밝기 올림」",
+      "source_ref": "reports/effect-arrangement-rules-20261007.md:109"
+    },
+    {
+      "bar": 22,
+      "text": "배정 미정 — SCENE 원값 「22마디 핑크→피치 1마디 번짐」",
+      "source_ref": "reports/effect-arrangement-rules-20261007.md:110"
+    }
+  ],
+  "probe_results": {
+    "1": "통과(구조)",
+    "2": "미확인",
+    "3": "부분",
+    "4": "미확인",
+    "5": "움직임 없음",
+    "6": "미확인 — 문법 불명",
+    "7": "부분(결과 기록)",
+    "8": "통과",
+    "9": "wave 움직임 없음 · circle·발리후 미확인"
+  },
+  "source": "love_attack_default",
+  "note": null
+}

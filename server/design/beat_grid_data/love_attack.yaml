@@ -1,0 +1,128 @@
+# LOVE ATTACK 곡의 0~25마디 박자 격자 첫 기본값 — 순수 데이터 파일.
+#
+# 카드 t537(감독 결정 "리그·곡이 바뀌어도 동작해야 한다", 2026-10-10) —
+# 이 리그·이 곡에만 맞는 값(그룹 번호·그룹 이름·트랙 구성·§4 전사값)은
+# 전부 이 파일 하나에만 산다. `server/design/beat_grid.py`의 로더(
+# `default_beat_grid`/`_build_track_from_data`/`normalize_beat_grid_cue`)는
+# 이 파일의 내용을 몰라도 되는 일반 코드다 — 다른 곡·다른 리그의 기본값은
+# 같은 스키마의 새 YAML 파일 하나와 레지스트리 한 줄만 추가하면 된다.
+#
+# 값의 출처: 배치 규칙서 §2(역할별 시퀀스의 그룹 칸)·§4(0~25마디 격자,
+# `reports/effect-arrangement-rules-20261007.md:98-115`), 그룹 번호는
+# 배치 규칙서 §2가 직접 적은 숫자 그대로이거나(BACK·SIDE-ALL·MOVER-U·
+# MOVER-D) `.moai/reports/t525/verdict.md` §②가 실측한 값(BLIND=14).
+# STROBE는 이 plan-phase 증거 어디에도 그룹 번호가 없어 비워 둔다(지어내지
+# 않음).
+#
+# 프리셋 **번호**(브라이트니스 디머·디머 효과 프리셋, position_preset_no,
+# color_preset_no, effect_preset_no)는 §4에 숫자가 전혀 없으므로(REQ-LDBEAT-
+# 015(f)) 모든 큐에서 비워 둔다(이 파일에 아예 적지 않으면 로더가 `None`
+# 으로 채운다) — `reports/ldbeat-runbook-ui-proposal-20261008.html`의 `P`
+# 객체 번호는 그 시안 자신이 지어낸 예시일 뿐 배치 규칙서의 출처가
+# 아니므로 베끼지 않는다.
+source: love_attack_default
+tracks:
+  - group_name: BACK
+    group_no: 4
+    group_no_confirmed: true
+    cues:
+      - bar: 0
+        label: "앞박 1회"
+      - bar: 3
+        label: "마디 4박마다"
+      - bar: 7
+        label: "킥 1·2·4박 60%"
+        brightness: {mode: value, value_percent: 60}
+        source_ref: "reports/effect-arrangement-rules-20261007.md:106"
+      - bar: 11
+        label: "—"
+      - bar: 14
+        label: "—"
+      - bar: 18
+        label: "킥 1·2·4박 100%"
+        brightness: {mode: value, value_percent: 100}
+        source_ref: "reports/effect-arrangement-rules-20261007.md:109"
+      - bar: 22
+        label: "킥 1·2·4박 100%"
+        brightness: {mode: value, value_percent: 100}
+        source_ref: "reports/effect-arrangement-rules-20261007.md:110"
+  - group_name: SIDE-ALL
+    group_no: 7
+    group_no_confirmed: true
+    cues:
+      - {bar: 0, label: "—"}
+      - {bar: 3, label: "—"}
+      - {bar: 7, label: "—"}
+      - {bar: 11, label: "SIDE-L/R 2·4박 번갈이"}
+      - {bar: 14, label: "가속(마디마다 두 배)"}
+      - {bar: 18, label: "—"}
+      - {bar: 22, label: "—"}
+  - group_name: MOVER-U
+    group_no: 11
+    group_no_confirmed: true
+    cues:
+      - {bar: 0, label: "바닥 쪽 좁은 빔, 정지"}
+      - {bar: 3, label: "5마디 1박 위치 한 칸 올림"}
+      - {bar: 7, label: "정지"}
+      - {bar: 11, label: "기울인 자리에서 느린 팬 흔들기"}
+      - {bar: 14, label: "가속 스윕 4박→2박→1박→반 박"}
+      - {bar: 18, label: "18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)"}
+      - {bar: 22, label: "22마디 1박에 멈춰 섬"}
+  - group_name: MOVER-D
+    group_no: 12
+    group_no_confirmed: true
+    cues:
+      - {bar: 0, label: "바닥 쪽, 정지"}
+      - {bar: 3, label: "5마디 1박 위치 한 칸 올림"}
+      - {bar: 7, label: "틸트 웨이브, 한 바퀴 2마디, 위상 펼침"}
+      - {bar: 11, label: "11마디 1박 새 자리, 정지"}
+      - {bar: 14, label: "U 와 같은 스윕"}
+      - {bar: 18, label: "위로 연 자리, 정지"}
+      - {bar: 22, label: "22마디부터 틸트 웨이브(한 바퀴 2박)"}
+  - group_name: BLIND
+    group_no: 14
+    group_no_confirmed: true
+    cues:
+      # ACCENT 열의 0~25마디 구간 실제 발화는 이 둘뿐 — 63·67마디
+      # (스트로브 포함)는 범위 밖(§4 범위, §3 전체 배치).
+      - {bar: 17, label: "17마디 3·4박 전부 비움(예고)"}
+      - bar: 18
+        label: "18마디 1박 BLIND 100% 2박"
+        brightness: {mode: value, value_percent: 100}
+        source_ref: "reports/effect-arrangement-rules-20261007.md:109"
+  - group_name: STROBE
+    group_no: null
+    group_no_confirmed: false
+    # 0~25마디 구간에는 스트로브 발화가 없다(63·67마디부터) — 빈 트랙은
+    # 거짓이 아니라 이 구간의 정확한 모습이다.
+    cues: []
+
+# 카드 t537 ② — 리드 지시(2026-10-10): SCENE 열 값은 역할·효과 혼성이라
+# 트랙으로 못 옮긴다(SCENE 자체가 카드 t526에서 철회된 이름). 아래 "세 조건
+# 모두" 규칙(§4 칸이 그룹을 직접 이름 부르고, 그 그룹 번호가 이미 above
+# tracks에 확인돼 있고, 같은 칸에 이미 있는 큐와 충돌하지 않을 때만 그 트랙에
+# 얹는다 — 하나라도 어긋나면 메모, classify_scene_cell_assignment 참고)을 2026-10-10 전수 재검토한 결과 — 여섯 값 전부가
+# 이 메모로 떨어진다: BACK(bar 0)은 그룹 번호가 확인돼 있지만 그 마디에
+# 이미 펄스 큐("앞박 1회")가 있어 충돌 → 메모. WASH·FOH는 이름이 §4 칸에
+# 나오지만 이 파일의 tracks에 그 그룹 번호가 확인돼 있지 않다(트랙 자체가
+# 없다) → 메모. 나머지 넷(11~13·14~17·18~21·22~25)은 칸 자체가 그룹 이름을
+# 부르지 않는다 → 메모. 추측(지어낸 그룹 배정)은 0건이다.
+scene_memos:
+  - bar: 0
+    text: "배정 미정 — SCENE 원값 「BACK 차가운 실루엣 30%」"
+    source_ref: "reports/effect-arrangement-rules-20261007.md:104"
+  - bar: 7
+    text: "배정 미정 — SCENE 원값 「라벤더 워시 40%(2마디 번짐) · FOH 켬」"
+    source_ref: "reports/effect-arrangement-rules-20261007.md:106"
+  - bar: 11
+    text: "배정 미정 — SCENE 원값 「틴트 한 단계」"
+    source_ref: "reports/effect-arrangement-rules-20261007.md:107"
+  - bar: 14
+    text: "배정 미정 — SCENE 원값 「워시 25% 덜어냄」"
+    source_ref: "reports/effect-arrangement-rules-20261007.md:108"
+  - bar: 18
+    text: "배정 미정 — SCENE 원값 「핑크 70% 끊어 바꿈 · 밝기 올림」"
+    source_ref: "reports/effect-arrangement-rules-20261007.md:109"
+  - bar: 22
+    text: "배정 미정 — SCENE 원값 「22마디 핑크→피치 1마디 번짐」"
+    source_ref: "reports/effect-arrangement-rules-20261007.md:110"

@@ -5,20 +5,30 @@
 // 부른다.
 import { describe, expect, it } from "vitest";
 
-import type { BeatGridCue, BeatGridTrack, BeatGridView } from "../protocol";
+import type { BeatGridCue, BeatGridSceneMemo, BeatGridTrack, BeatGridView } from "../protocol";
 import {
   BEAT_GRID_BAR_ROWS,
   PX_PER_BAR,
+  UNCONFIRMED_PROBE_STATUS,
+  UNSET_FIELD_LABEL,
   barRowIndex,
   barToSeconds,
   barToX,
   buildProbeStatusTable,
   clampSkipSeconds,
   computeStageBounds,
+  barPercentInRange,
+  cueColorFill,
   cueForBar,
   cueIsActive,
+  deriveFadeSeconds,
+  deriveSectionBlocks,
   fixtureDisplayColor,
   fixtureDisplayOpacity,
+  formatBrightnessField,
+  formatFadeBarsField,
+  formatPresetField,
+  formatSourceRefLabel,
   groupTracksByLayerFolder,
   isFirstCueOfSong,
   isUnconfirmedShapeCue,
@@ -26,13 +36,31 @@ import {
   layerFolderLabel,
   probeStatusClass,
   projectFixture,
+  sceneMemoForBar,
+  sceneMemoMarkers,
   secondsToBar,
   trackCueSegments,
   type BeatGridFixturePoint,
 } from "./BeatGrid";
 
+/** 구조화 필드를 전부 미정으로 둔 완전한 모양(레거시 테스트 픽스처용 —
+ * `normalize_beat_grid_cue`가 서버에서 돌려주는 모양과 같다). */
 function cue(bar: number, label: string): BeatGridCue {
-  return { bar, label };
+  return {
+    bar,
+    label,
+    brightness: { mode: null, value_percent: null, preset_no: null },
+    position_preset_no: null,
+    color_preset_no: null,
+    effect_preset_no: null,
+    effect_kind: null,
+    entry: { fade_bars: null, mib_mode: null },
+    source_ref: null,
+  };
+}
+
+function structuredCue(bar: number, overrides: Partial<BeatGridCue> = {}): BeatGridCue {
+  return { ...cue(bar, overrides.label ?? ""), ...overrides };
 }
 
 function track(
@@ -49,6 +77,8 @@ const LOVE_ATTACK_GRID: BeatGridView = {
   bar_range: { start: 0, end: 25 },
   source: "love_attack_default",
   note: null,
+  scene_memos: [],
+  probe_results: {},
   tracks: [
     track("BACK", "back", [cue(0, "앞박 1회"), cue(18, "킥 1·2·4박 100%")]),
     track("SIDE-ALL", "side", [cue(0, "—"), cue(11, "SIDE-L/R 2·4박 번갈이")]),
@@ -187,40 +217,258 @@ describe("isUnconfirmedShapeCue — REQ-LDBEAT-010/AC-LDBEAT-004", () => {
   });
 });
 
-describe("buildProbeStatusTable / isWriteLocked — REQ-LDBEAT-001~003", () => {
-  it("defaults all 9 items to 미실행 when nothing is supplied", () => {
+describe("buildProbeStatusTable / isWriteLocked — REQ-LDBEAT-001~003(b), 카드 t537", () => {
+  it("defaults all 9 items to 미확인 when nothing is supplied — 지어낸 PASS 0건", () => {
     const probes = buildProbeStatusTable();
 
     expect(probes).toHaveLength(9);
-    expect(probes.every((p) => p.status === "미실행")).toBe(true);
+    expect(probes.every((p) => p.status === UNCONFIRMED_PROBE_STATUS)).toBe(true);
     expect(isWriteLocked(probes)).toBe(true);
   });
 
-  it("unlocks only when all 9 items are pass", () => {
-    const allPass = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1, "pass" as const]));
+  it("falls back to 미확인 for any item missing from the supplied record", () => {
+    const partial = { 1: "통과(구조)" };
+    const probes = buildProbeStatusTable(partial);
+
+    expect(probes[0].status).toBe("통과(구조)");
+    expect(probes[1].status).toBe(UNCONFIRMED_PROBE_STATUS);
+  });
+
+  it("unlocks only when all 9 items start with 통과 — progress.md의 실제 판정 문구 그대로", () => {
+    const allPass = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1, "통과(구조)"]));
     const probes = buildProbeStatusTable(allPass);
 
     expect(isWriteLocked(probes)).toBe(false);
   });
 
-  it("stays locked when even one item is not pass", () => {
-    const allPass = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1, "pass" as const]));
-    const probes = buildProbeStatusTable({ ...allPass, 9: "fail" });
+  it("stays locked when even one item is 부분/미확인/움직임 없음 — progress.md의 실제 M1 결과", () => {
+    const mixed = {
+      1: "통과(구조)",
+      2: "미확인",
+      3: "부분",
+      4: "미확인",
+      5: "움직임 없음",
+      6: "미확인 — 문법 불명",
+      7: "부분(결과 기록)",
+      8: "통과",
+      9: "wave 움직임 없음 · circle·발리후 미확인",
+    };
+    const probes = buildProbeStatusTable(mixed);
 
     expect(isWriteLocked(probes)).toBe(true);
   });
 });
 
-describe("probeStatusClass — 카드 t534 (네 상태가 각자 다른 자리)", () => {
-  it("pass/fail/미실행은 그대로", () => {
-    expect(probeStatusClass("pass")).toBe("pass");
-    expect(probeStatusClass("fail")).toBe("fail");
-    expect(probeStatusClass("미실행")).toBe("pending");
+describe("probeStatusClass — 카드 t537 (progress.md 판정 칸의 자유 문자열)", () => {
+  it("통과로 시작하면 pass — 괄호 설명이 붙어도 마찬가지", () => {
+    expect(probeStatusClass("통과")).toBe("pass");
+    expect(probeStatusClass("통과(구조)")).toBe("pass");
+    expect(probeStatusClass("통과(가설 반증)")).toBe("pass");
   });
 
-  it("「리허설PASS·실기미실행」은 「미실행」과 다른 자리(rehearsal) — 섞여 보이면 리허설 통과 사실이 사라진다", () => {
-    expect(probeStatusClass("리허설PASS·실기미실행")).toBe("rehearsal");
-    expect(probeStatusClass("리허설PASS·실기미실행")).not.toBe(probeStatusClass("미실행"));
+  it("정확히 미확인이면 pending", () => {
+    expect(probeStatusClass(UNCONFIRMED_PROBE_STATUS)).toBe("pending");
+  });
+
+  it("그 밖의 모든 상태(부분/움직임 없음/문법 불명 등)는 fail — 아직 쓰기를 열 근거가 아니다", () => {
+    expect(probeStatusClass("부분")).toBe("fail");
+    expect(probeStatusClass("움직임 없음")).toBe("fail");
+    expect(probeStatusClass("미확인 — 문법 불명")).toBe("fail");
+    expect(probeStatusClass("wave 움직임 없음 · circle·발리후 미확인")).toBe("fail");
+  });
+});
+
+describe("구조화 필드 표시 헬퍼 — 카드 t537 (REQ-LDBEAT-006, 미정은 지어내지 않는다)", () => {
+  it("formatBrightnessField — value 모드는 퍼센트", () => {
+    expect(formatBrightnessField({ mode: "value", value_percent: 60, preset_no: null })).toBe("60%");
+  });
+
+  it("formatBrightnessField — mode가 null이면 미정", () => {
+    expect(formatBrightnessField({ mode: null, value_percent: null, preset_no: null })).toBe(
+      UNSET_FIELD_LABEL,
+    );
+  });
+
+  it("formatBrightnessField — 디머 프리셋 모드는 프리셋 번호", () => {
+    expect(
+      formatBrightnessField({ mode: "dimmer_preset", value_percent: null, preset_no: "1.31" }),
+    ).toBe("1.31");
+  });
+
+  it("formatPresetField — null이면 미정, 값이 있으면 그대로", () => {
+    expect(formatPresetField(null)).toBe(UNSET_FIELD_LABEL);
+    expect(formatPresetField("4.21")).toBe("4.21");
+  });
+
+  it("formatFadeBarsField — null이면 미정, 값이 있으면 마디 단위", () => {
+    expect(formatFadeBarsField(null)).toBe(UNSET_FIELD_LABEL);
+    expect(formatFadeBarsField(2)).toBe("2마디");
+    expect(formatFadeBarsField(0)).toBe("0마디"); // 끊어 바꿈(0마디)도 미정과 다르다
+  });
+
+  it("deriveFadeSeconds — 마디 수 × 마디당 초(BPM 파생값, 저장하지 않음)", () => {
+    expect(deriveFadeSeconds(2, 1.5)).toBe(3);
+  });
+
+  it("deriveFadeSeconds — fadeBars나 secondsPerBar가 없으면 null(지어내지 않음)", () => {
+    expect(deriveFadeSeconds(null, 1.5)).toBeNull();
+    expect(deriveFadeSeconds(2, null)).toBeNull();
+    expect(deriveFadeSeconds(2, 0)).toBeNull();
+  });
+
+  it("formatSourceRefLabel — 있으면 그대로, 없으면 null", () => {
+    expect(formatSourceRefLabel("reports/effect-arrangement-rules-20261007.md:106")).toBe(
+      "reports/effect-arrangement-rules-20261007.md:106",
+    );
+    expect(formatSourceRefLabel(null)).toBeNull();
+  });
+});
+
+describe("cueColorFill — plan.md M7 (3) (미정은 중립, 임의 색을 지어내지 않는다)", () => {
+  it("color_preset_no가 없으면 중립(미정)", () => {
+    const result = cueColorFill(structuredCue(0, { color_preset_no: null }));
+    expect(result.isColorUnset).toBe(true);
+    expect(result.background).toBeUndefined();
+  });
+
+  it("color_preset_no는 있지만 아는 색이 없으면 — 역시 중립(지어내지 않음)", () => {
+    const result = cueColorFill(structuredCue(0, { color_preset_no: "4.21" }), {});
+    expect(result.isColorUnset).toBe(true);
+  });
+
+  it("color_preset_no가 실제 색 표에 있으면 그 색을 쓴다", () => {
+    const result = cueColorFill(structuredCue(0, { color_preset_no: "4.21" }), { "4.21": "#ff69b4" });
+    expect(result.isColorUnset).toBe(false);
+    expect(result.background).toBe("#ff69b4");
+  });
+});
+
+describe("sceneMemoForBar — t537 ② 리드 추가 지시 (SCENE 열 값은 메모로만)", () => {
+  const memos: BeatGridSceneMemo[] = [
+    { bar: 0, text: "배정 미정 — SCENE 원값 「BACK 차가운 실루엣 30%」", source_ref: "x:104" },
+    { bar: 7, text: "배정 미정 — SCENE 원값 「라벤더 워시 40%(2마디 번짐) · FOH 켬」", source_ref: "x:106" },
+  ];
+
+  it("그 행(4마디 단위)의 시작 마디에 매달린 메모를 찾는다", () => {
+    expect(sceneMemoForBar(memos, 0)?.bar).toBe(0);
+  });
+
+  it("같은 행의 다른 마디에서도 같은 메모가 보인다", () => {
+    // 7~10 행의 어느 마디(8·9·10)를 봐도 bar=7 메모가 보인다.
+    expect(sceneMemoForBar(memos, 9)?.bar).toBe(7);
+  });
+
+  it("메모가 없는 행은 null — 지어내지 않는다", () => {
+    expect(sceneMemoForBar(memos, 11)).toBeNull();
+  });
+
+  it("표시 범위 밖의 마디는 null", () => {
+    expect(sceneMemoForBar(memos, 99)).toBeNull();
+  });
+});
+
+describe("sceneMemoMarkers — t537 ② plan-audit iteration 3 D1 (렌더 파생 — 미정 배지+§4 원문+source_ref)", () => {
+  // REQ-LDBEAT-006(iv-3) — glance 패널이 실제로 렌더하는 세 요소(⚠ 배지,
+  // §4 원문 텍스트, source_ref)를 DOM 없이도 단언한다(이 프로젝트는
+  // jsdom이 없다). 여섯 값 전부는 `beat_grid_data/love_attack.yaml`의
+  // 실제 SCENE 메모 텍스트·source_ref와 바이트 동일하다.
+  const LOVE_ATTACK_MEMOS: BeatGridSceneMemo[] = [
+    {
+      bar: 0,
+      text: "배정 미정 — SCENE 원값 「BACK 차가운 실루엣 30%」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:104",
+    },
+    {
+      bar: 7,
+      text: "배정 미정 — SCENE 원값 「라벤더 워시 40%(2마디 번짐) · FOH 켬」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:106",
+    },
+    {
+      bar: 11,
+      text: "배정 미정 — SCENE 원값 「틴트 한 단계」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:107",
+    },
+    {
+      bar: 14,
+      text: "배정 미정 — SCENE 원값 「워시 25% 덜어냄」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:108",
+    },
+    {
+      bar: 18,
+      text: "배정 미정 — SCENE 원값 「핑크 70% 끊어 바꿈 · 밝기 올림」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:109",
+    },
+    {
+      bar: 22,
+      text: "배정 미정 — SCENE 원값 「22마디 핑크→피치 1마디 번짐」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:110",
+    },
+  ];
+
+  it("표시 범위 전체(0~25)에서 여섯 메모 전부가 배지+원문+source_ref로 뽑힌다", () => {
+    const markers = sceneMemoMarkers(LOVE_ATTACK_MEMOS, [0, 25]);
+
+    expect(markers.map((marker) => marker.bar)).toEqual([0, 7, 11, 14, 18, 22]);
+    for (const marker of markers) {
+      expect(marker.label).toBe(UNSET_FIELD_LABEL);
+    }
+    expect(markers[0].text).toBe(LOVE_ATTACK_MEMOS[0].text);
+    expect(markers[0].sourceRef).toBe(LOVE_ATTACK_MEMOS[0].source_ref);
+    expect(markers[4].text).toBe(LOVE_ATTACK_MEMOS[4].text);
+    expect(markers[4].sourceRef).toBe(LOVE_ATTACK_MEMOS[4].source_ref);
+  });
+
+  it("단일 마디로 좁힌 범위는 그 마디가 속한 행의 메모 하나만 돌려준다(glance 패널과 같은 호출 모양)", () => {
+    // 9마디는 7~10행에 속한다 — sceneMemoForBar(memos, 9)와 같은 행 규칙.
+    const markers = sceneMemoMarkers(LOVE_ATTACK_MEMOS, [9, 9]);
+
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toEqual({
+      bar: 7,
+      label: UNSET_FIELD_LABEL,
+      text: LOVE_ATTACK_MEMOS[1].text,
+      sourceRef: LOVE_ATTACK_MEMOS[1].source_ref,
+    });
+  });
+
+  it("표시 범위 밖에 걸린 메모는 결과에서 빠진다(추측 0건)", () => {
+    const markers = sceneMemoMarkers(LOVE_ATTACK_MEMOS, [0, 6]);
+
+    expect(markers).toEqual([
+      {
+        bar: 0,
+        label: UNSET_FIELD_LABEL,
+        text: LOVE_ATTACK_MEMOS[0].text,
+        sourceRef: LOVE_ATTACK_MEMOS[0].source_ref,
+      },
+    ]);
+  });
+
+  it("메모가 하나도 없는 곡은 빈 배열이다 — 지어내지 않는다", () => {
+    const noMemoSong: BeatGridSceneMemo[] = [];
+
+    expect(sceneMemoMarkers(noMemoSong, [0, 25])).toEqual([]);
+  });
+
+  it("리그·곡이 전혀 다른 가짜 곡의 메모도 같은 규칙으로 뽑힌다(REQ-LDBEAT-006(v-1)(v-2) — 로더 일반화와 같은 원칙)", () => {
+    const differentFakeSongMemos: BeatGridSceneMemo[] = [
+      {
+        bar: 3,
+        text: "배정 미정 — 다른 곡 SCENE 원값 「테스트 전용 자리」",
+        source_ref: "fake-song-report.md:1",
+      },
+    ];
+
+    const markers = sceneMemoMarkers(differentFakeSongMemos, [0, 10]);
+
+    expect(markers).toEqual([
+      {
+        bar: 3,
+        label: UNSET_FIELD_LABEL,
+        text: "배정 미정 — 다른 곡 SCENE 원값 「테스트 전용 자리」",
+        sourceRef: "fake-song-report.md:1",
+      },
+    ]);
   });
 });
 
@@ -417,5 +665,88 @@ describe("fixtureDisplayOpacity — 카드 t534 (2D 무대 밝기: 실측 on/off
       tracks: [track("BACK", "back", [cue(5, "5마디부터")])],
     };
     expect(fixtureDisplayOpacity(fixture, grid.tracks, 0)).toBeLessThan(1);
+  });
+});
+
+describe("deriveSectionBlocks — t537 레이아웃 교정 (곡 전체 지도 구간 띠, REQ-LDBEAT-004(a))", () => {
+  it("secondsPerBar가 없으면 빈 배열 — 숫자 띠 폴백으로 떨어진다(지어내지 않음)", () => {
+    const sections = [{ label: "INTRO", start_ms: 0 }];
+    expect(deriveSectionBlocks(sections, null, 0, 25)).toEqual([]);
+    expect(deriveSectionBlocks(sections, undefined, 0, 25)).toEqual([]);
+    expect(deriveSectionBlocks(sections, 0, 0, 25)).toEqual([]);
+  });
+
+  it("구간 데이터가 없으면 빈 배열", () => {
+    expect(deriveSectionBlocks([], 1.5, 0, 25)).toEqual([]);
+    expect(deriveSectionBlocks(undefined, 1.5, 0, 25)).toEqual([]);
+  });
+
+  it("start_ms를 secondsPerBar로 마디 위치로 환산하고, 다음 구간 시작까지를 블록으로 묶는다", () => {
+    const sections = [
+      { label: "INTRO", start_ms: 0 },
+      { label: "VERSE", start_ms: 10500 }, // 10.5s / 1.5s = 7마디
+    ];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks).toEqual([
+      { label: "INTRO", startBar: 0, endBar: 7, hex: null },
+      { label: "VERSE", startBar: 7, endBar: 26, hex: null },
+    ]);
+  });
+
+  it("마지막 구간은 표시 범위 끝(rangeEnd+1)까지 이어진다", () => {
+    const sections = [{ label: "INTRO", start_ms: 0 }];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks[0].endBar).toBe(26);
+  });
+
+  it("palette_primary_hex가 있으면 그대로 옮긴다(지어낸 색 없음)", () => {
+    const sections = [{ label: "코러스", start_ms: 0, palette_primary_hex: "#ff69b4" }];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks[0].hex).toBe("#ff69b4");
+  });
+
+  it("palette_primary_hex가 없으면 null(중립) — 임의 색을 지어내지 않는다", () => {
+    const sections = [{ label: "코러스", start_ms: 0 }];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks[0].hex).toBeNull();
+  });
+
+  it("구간 순서가 start_ms 기준으로 뒤섞여 와도 정렬해서 묶는다", () => {
+    const sections = [
+      { label: "VERSE", start_ms: 10500 },
+      { label: "INTRO", start_ms: 0 },
+    ];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks.map((b) => b.label)).toEqual(["INTRO", "VERSE"]);
+  });
+
+  it("표시 범위를 완전히 벗어난 구간은 뺀다", () => {
+    const sections = [
+      { label: "INTRO", start_ms: 0 },
+      { label: "OUTRO", start_ms: 1_000_000 }, // 범위 훨씬 밖
+    ];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 5);
+
+    expect(blocks.map((b) => b.label)).toEqual(["INTRO"]);
+  });
+});
+
+describe("barPercentInRange — t537 레이아웃 교정 (SCENE 메모 오버레이 위치)", () => {
+  it("범위 시작은 0%, 범위를 벗어난 마디는 비례해서 계속 커진다", () => {
+    expect(barPercentInRange(0, 0, 25)).toBe(0);
+  });
+
+  it("범위 중간 마디는 비례 위치", () => {
+    // span = 26 (0~25 포함), bar=13 → 13/26 = 50%
+    expect(barPercentInRange(13, 0, 25)).toBeCloseTo(50, 5);
+  });
+
+  it("빈 범위(rangeEnd < rangeStart)는 0 — 나눗셈 오류 없음", () => {
+    expect(barPercentInRange(5, 10, 5)).toBe(0);
   });
 });

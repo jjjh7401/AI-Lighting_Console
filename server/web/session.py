@@ -36,10 +36,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
+from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_bar_map
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
-from server.design.beat_grid import attach_beat_grid_default
+from server.design.beat_grid import attach_beat_grid_default, attach_beat_grid_runtime_extras
 from server.design.capability_verdict import position_verdict
 from server.design.console_slots import (  # 카드 t480 — 업로드 길 공용 판독기
     paged_pool_children,
@@ -1687,7 +1688,13 @@ def _song_timeline_payload(
         },
         _song_cue_sheet_view_fields(plan),
     )
-    return attach_beat_grid_default(payload)
+    payload = attach_beat_grid_default(payload)
+    # 카드 t537 — M1 9항목 판정을 progress.md에서 그 자리에서 다시 읽어
+    # 최신화한다(REQ-LDBEAT-003(b), 손으로 옮긴 TS 상수를 영구 소스로
+    # 쓰지 않는다). `attach_beat_grid_default`의 "있으면 바이트 그대로
+    # 보존" 계약은 이 단계가 아니라 그 함수 자체가 지킨다 — 여기서는
+    # 매 서빙마다 `probe_results`만 새로 읽어 덮어쓴다.
+    return attach_beat_grid_runtime_extras(payload)
 
 
 def _song_trig_time_token(start_ms: int) -> str:
@@ -8985,6 +8992,65 @@ class ChatSession:
     def redo_timeline_draft(self) -> dict:
         """되돌리기로 물러난 초안을 다시 적용한다 (콘솔·라이브러리 무접촉)."""
         return self._draft_step(redo=True)
+
+    # -- t539 M4 — 마디 지도 저장 (timeline["bar_map"], 콘솔 무접촉) -------------
+
+    def store_timeline_bar_map(self, payload: dict) -> dict:
+        """마디 지도를 초안 타임라인의 ``bar_map`` 키에 쓴다(REQ-LDBARMAP-010,
+        M4 확정 — 옵션 A). 기존 초안 편집 경로(``_draft_history.record``,
+        ``_draft_badge``)를 그대로 재사용한다 — 콘솔에는 아무것도 쓰지 않는다.
+
+        잘못된 페이로드는 검증 단계에서 거절되고(``validate_bar_map``), 타임라인과
+        되돌리기 깊이 둘 다 바뀌지 않는다(AC-LDBARMAP-010 조건 4) — 큐시트 초안
+        편집과 달리 ``_remember_draft_baseline`` 은 부르지 않는다(마디 지도는
+        콘솔 반영 기준본과 무관하다).
+        """
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return chat_response_event(
+                status="ok",
+                summary="마디 지도 저장 불가",
+                text="저장할 타임라인이 아직 없습니다. 콘솔에는 아무것도 쓰지 않았습니다.",
+                commands=[],
+            )
+        reason = validate_bar_map(payload)
+        if reason is not None:
+            return chat_response_event(
+                status="ok",
+                summary="마디 지도 저장 거절",
+                text=(
+                    f"마디 지도를 저장하지 않았습니다 — {reason} 콘솔에는 아무것도 쓰지 않았습니다."
+                ),
+                commands=[],
+            )
+        self._draft_history.record(timeline)
+        updated = attach_bar_map(timeline, payload)
+        updated = self._draft_badge(
+            updated, depth=self._draft_history.depth, report=("마디 지도 저장",)
+        )
+        store.latest = updated
+        self._send(song_timeline_event(timeline=updated))
+        event = chat_response_event(
+            status="ok",
+            summary="마디 지도 저장",
+            text=(
+                "마디 지도를 초안에 저장했습니다 (콘솔 무접촉). "
+                "라이브러리에 남기려면 별도로 저장해야 합니다 — 콘솔 반영은 별도의 승인 경로입니다."
+            ),
+            commands=[],
+        )
+        self._send(event)
+        return event
+
+    def timeline_bar_map(self) -> dict | None:
+        """현재 초안 타임라인의 마디 지도를 읽는다(콘솔 무접촉, fail-open —
+        없거나 유효하지 않으면 ``None``)."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return None
+        return read_bar_map(timeline)
 
     def _setlist_mode(self, text: str) -> InstructionResult | None:
         """셋리스트 모드 (priority 4): allocate library songs to consecutive
