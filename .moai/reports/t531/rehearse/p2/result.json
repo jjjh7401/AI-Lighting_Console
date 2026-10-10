@@ -1,0 +1,56 @@
+{
+  "item": "P2",
+  "free_slots": [],
+  "occupied_before": [],
+  "planned": {
+    "goto_all": [
+      "Goto Cue 3 Sequence 228",
+      "Goto Cue 1 Sequence 11",
+      "Goto Cue 1 Sequence 12"
+    ],
+    "off_all": [
+      "Off Sequence 228",
+      "Off Sequence 11",
+      "Off Sequence 12"
+    ]
+  },
+  "notes": [
+    "쓰기 0 — 기존 시퀀스 228·11·12 의 Goto/Off 뿐.",
+    "228 큐 3 이 실제로 존재하는지는 r0b_pools.txt 에 큐 개수가 안 적혀 있어 미확인 — live 실행 전 `state Sequences/228` 로 큐 수를 먼저 재라."
+  ],
+  "bundles": {
+    "goto_all": true,
+    "off_all": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "Goto Cue 3 Sequence 228",
+    "Goto Cue 1 Sequence 11",
+    "Goto Cue 1 Sequence 12",
+    "Off Sequence 228",
+    "Off Sequence 11",
+    "Off Sequence 12"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 228",
+        "Goto Cue 1 Sequence 11",
+        "Goto Cue 1 Sequence 12"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 228",
+        "Off Sequence 11",
+        "Off Sequence 12"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

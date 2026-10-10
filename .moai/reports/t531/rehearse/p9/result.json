@@ -1,0 +1,202 @@
+{
+  "item": "P9",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/306",
+    "ShowData/DataPools/Default/Sequences/307",
+    "ShowData/DataPools/Default/Sequences/308"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "store_circle": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 13",
+      "Attribute 'Position' At Preset 2.1",
+      "Attribute 'Pan' At Relative 12",
+      "Attribute 'Tilt' At Relative 8",
+      "Attribute 'Pan' At Phase 0",
+      "Attribute 'Tilt' At Phase 90",
+      "Attribute 'Pan' At Speed 60",
+      "Attribute 'Tilt' At Speed 60",
+      "Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'",
+      "Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'",
+      "ClearAll"
+    ],
+    "store_ballyhoo": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 13",
+      "Attribute 'Position' At Preset 2.1",
+      "Attribute 'Pan' At Relative 20",
+      "Attribute 'Tilt' At Relative 10",
+      "Attribute 'Pan' At Phase 0",
+      "Attribute 'Tilt' At Phase 90",
+      "Attribute 'Pan' At Speed 120",
+      "Attribute 'Tilt' At Speed 120",
+      "Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'",
+      "Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'",
+      "ClearAll"
+    ],
+    "store_wave": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 13",
+      "Attribute 'Position' At Preset 2.1",
+      "Attribute 'Tilt' At Relative 12",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 60",
+      "Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'",
+      "Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'",
+      "ClearAll"
+    ],
+    "play_each": [
+      "Goto Cue 1 Sequence 306",
+      "Off Sequence 306",
+      "Goto Cue 1 Sequence 307",
+      "Off Sequence 307",
+      "Goto Cue 1 Sequence 308"
+    ],
+    "release": [
+      "Off Sequence 306",
+      "Off Sequence 307",
+      "Off Sequence 308"
+    ]
+  },
+  "notes": [
+    "position_fx_commands() 는 호출하지 않음(스켈레톤 프리셋·픽스처ID 미확보).",
+    "그 모듈의 측정 상수만 재사용 — 「안 잰 것」: 모듈 함수 자체의 라이브 동작.",
+    "감독 관찰 필수: 세 모양이 서로 다르게 보이는지."
+  ],
+  "bundles": {
+    "store_circle": true,
+    "store_ballyhoo": true,
+    "store_wave": true,
+    "play_each": true,
+    "release": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 13",
+    "Attribute 'Position' At Preset 2.1",
+    "Attribute 'Pan' At Relative 12",
+    "Attribute 'Tilt' At Relative 8",
+    "Attribute 'Pan' At Phase 0",
+    "Attribute 'Tilt' At Phase 90",
+    "Attribute 'Pan' At Speed 60",
+    "Attribute 'Tilt' At Speed 60",
+    "Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'",
+    "Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 13",
+    "Attribute 'Position' At Preset 2.1",
+    "Attribute 'Pan' At Relative 20",
+    "Attribute 'Tilt' At Relative 10",
+    "Attribute 'Pan' At Phase 0",
+    "Attribute 'Tilt' At Phase 90",
+    "Attribute 'Pan' At Speed 120",
+    "Attribute 'Tilt' At Speed 120",
+    "Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'",
+    "Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 13",
+    "Attribute 'Position' At Preset 2.1",
+    "Attribute 'Tilt' At Relative 12",
+    "Attribute 'Tilt' At Phase 0 Thru 360",
+    "Attribute 'Tilt' At Speed 60",
+    "Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'",
+    "Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'",
+    "ClearAll",
+    "Goto Cue 1 Sequence 306",
+    "Off Sequence 306",
+    "Goto Cue 1 Sequence 307",
+    "Off Sequence 307",
+    "Goto Cue 1 Sequence 308",
+    "Off Sequence 306",
+    "Off Sequence 307",
+    "Off Sequence 308"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Position' At Preset 2.1",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Tilt' At Relative 8",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 60",
+        "Attribute 'Tilt' At Speed 60",
+        "Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'",
+        "Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Position' At Preset 2.1",
+        "Attribute 'Pan' At Relative 20",
+        "Attribute 'Tilt' At Relative 10",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 120",
+        "Attribute 'Tilt' At Speed 120",
+        "Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'",
+        "Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 13",
+        "Attribute 'Position' At Preset 2.1",
+        "Attribute 'Tilt' At Relative 12",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 60",
+        "Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'",
+        "Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 306",
+        "Off Sequence 306",
+        "Goto Cue 1 Sequence 307",
+        "Off Sequence 307",
+        "Goto Cue 1 Sequence 308"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 306",
+        "Off Sequence 307",
+        "Off Sequence 308"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

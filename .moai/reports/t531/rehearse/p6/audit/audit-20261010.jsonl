@@ -1,0 +1,17 @@
+{"ts": "2026-10-10T05:59:43.212251+00:00", "event": "approved", "commands": ["Store Timecode 31", "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'", "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0", "Store Timecode 31.1", "Assign Sequence 228 At Timecode 31.1.1", "Store Type 'CmdSubTrack' Timecode 31.1.1.1", "cd Timecode 31.1.1.1.1", "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'", "cd root"], "held": ["Store Timecode 31", "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'", "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0", "Store Timecode 31.1", "Assign Sequence 228 At Timecode 31.1.1", "Store Type 'CmdSubTrack' Timecode 31.1.1.1", "cd Timecode 31.1.1.1.1", "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'", "cd root"], "kind": "t531_m1_p6"}
+{"ts": "2026-10-10T05:59:43.212562+00:00", "event": "executed", "command": "Store Timecode 31", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.212669+00:00", "event": "executed", "command": "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.212766+00:00", "event": "executed", "command": "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.212846+00:00", "event": "executed", "command": "Store Timecode 31.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.212922+00:00", "event": "executed", "command": "Assign Sequence 228 At Timecode 31.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.212994+00:00", "event": "executed", "command": "Store Type 'CmdSubTrack' Timecode 31.1.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.213068+00:00", "event": "executed", "command": "cd Timecode 31.1.1.1.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.213143+00:00", "event": "executed", "command": "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.213208+00:00", "event": "executed", "command": "cd root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.213299+00:00", "event": "approved", "commands": ["Goto Time 5 Timecode 31"], "held": ["Goto Time 5 Timecode 31"], "kind": "t531_m1_p6"}
+{"ts": "2026-10-10T05:59:43.213382+00:00", "event": "executed", "command": "Goto Time 5 Timecode 31", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.213460+00:00", "event": "approved", "commands": ["Go Timecode 31"], "held": ["Go Timecode 31"], "kind": "t531_m1_p6"}
+{"ts": "2026-10-10T05:59:43.213526+00:00", "event": "executed", "command": "Go Timecode 31", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.213620+00:00", "event": "approved", "commands": ["Off Timecode 31", "Off Sequence 228"], "held": ["Off Timecode 31", "Off Sequence 228"], "kind": "t531_m1_p6"}
+{"ts": "2026-10-10T05:59:43.213698+00:00", "event": "executed", "command": "Off Timecode 31", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:43.213766+00:00", "event": "executed", "command": "Off Sequence 228", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

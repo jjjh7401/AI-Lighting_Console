@@ -1,0 +1,152 @@
+{
+  "item": "P7",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/303"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "store_cue1_single": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 4",
+      "Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Store Sequence 303 Cue 1 'LDBEAT M1 - P7 cue1 single-selection step2'",
+      "ClearAll"
+    ],
+    "store_cue2_two_selections": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 4",
+      "Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Group 11",
+      "Attribute 'Pan' At Relative 10",
+      "Step 2",
+      "Attribute 'Pan' At Relative -10",
+      "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'",
+      "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'",
+      "ClearAll"
+    ],
+    "play_cue1": [
+      "Goto Cue 1 Sequence 303"
+    ],
+    "off_cue1": [
+      "Off Sequence 303"
+    ],
+    "play_cue2": [
+      "Goto Cue 2 Sequence 303"
+    ],
+    "release": [
+      "Off Sequence 303"
+    ]
+  },
+  "notes": [
+    "t520 가설(verdict.md:46) 직접 대조 — 같은 시퀀스의 큐1/큐2로 변수를 분리.",
+    "읽기 판정: 큐1 디머 페이저 존재 AND 큐2 디머 페이저 소실+Pan 페이저 존재 → 가설 확인. 그 외 결과는 그대로 기록(확인을 전제하지 않는다).",
+    "감독 관찰: 큐1 재생 시 BACK 깜빡임, 큐2 재생 시 BACK 이 여전히 깜빡이는지."
+  ],
+  "bundles": {
+    "store_cue1_single": true,
+    "store_cue2_two_selections": true,
+    "play_cue1": true,
+    "off_cue1": true,
+    "play_cue2": true,
+    "release": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 4",
+    "Attribute 'Dimmer' At 0",
+    "Step 2",
+    "Attribute 'Dimmer' At 100",
+    "Store Sequence 303 Cue 1 'LDBEAT M1 - P7 cue1 single-selection step2'",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 4",
+    "Attribute 'Dimmer' At 0",
+    "Step 2",
+    "Attribute 'Dimmer' At 100",
+    "Group 11",
+    "Attribute 'Pan' At Relative 10",
+    "Step 2",
+    "Attribute 'Pan' At Relative -10",
+    "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'",
+    "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'",
+    "ClearAll",
+    "Goto Cue 1 Sequence 303",
+    "Off Sequence 303",
+    "Goto Cue 2 Sequence 303",
+    "Off Sequence 303"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Store Sequence 303 Cue 1 'LDBEAT M1 - P7 cue1 single-selection step2'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Group 11",
+        "Attribute 'Pan' At Relative 10",
+        "Step 2",
+        "Attribute 'Pan' At Relative -10",
+        "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'",
+        "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 303"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 303"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 303"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 303"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

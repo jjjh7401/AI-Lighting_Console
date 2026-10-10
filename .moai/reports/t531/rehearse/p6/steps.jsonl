@@ -1,0 +1,18 @@
+{"step": "pre_free:ShowData/DataPools/Default/Timecodes/31", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/31", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Timecodes/31)"}
+{"step": "tc_setup", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Store Timecode 31", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'", "reasons": []}, {"command": "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0", "reasons": []}, {"command": "Store Timecode 31.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign Sequence 228 At Timecode 31.1.1", "reasons": ["blacklisted command (matches closed-set entry 'Assign Sequence')"]}, {"command": "Store Type 'CmdSubTrack' Timecode 31.1.1.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "cd Timecode 31.1.1.1.1", "reasons": []}, {"command": "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'", "reasons": []}, {"command": "cd root", "reasons": []}]}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "Store Timecode 31", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "Store Timecode 31.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "Assign Sequence 228 At Timecode 31.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "Store Type 'CmdSubTrack' Timecode 31.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "cd Timecode 31.1.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.002, "kind": "exec", "command": "cd root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "goto_mid", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Time 5 Timecode 31", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "goto_mid", "t": 0.002, "kind": "exec", "command": "Goto Time 5 Timecode 31", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Go Timecode 31", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "play", "t": 0.002, "kind": "exec", "command": "Go Timecode 31", "fired": true, "ok": true, "detail": "OK"}
+{"step": "release", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Timecode 31", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}, {"command": "Off Sequence 228", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 228': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "release", "t": 0.003, "kind": "exec", "command": "Off Timecode 31", "fired": true, "ok": true, "detail": "OK"}
+{"step": "release", "t": 0.003, "kind": "exec", "command": "Off Sequence 228", "fired": true, "ok": true, "detail": "OK"}
