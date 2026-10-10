@@ -120,8 +120,9 @@ acceptance.md)만 다룬다. 커밋: `2f79fdb045acd9c2d7c922fc4191a0905b0081cf`(
 감독이 위상 클릭 wav를 듣고 phase1을 다운비트 정답으로 확정한 결과를 REQ-LDBARMAP-009
 근거 칸(spec.md)·AC-LDBARMAP-005/006 보류 주석(acceptance.md)·M2 회귀 기준 오프셋
 (plan.md, acceptance.md AC-016)에 반영했다 — REQ·AC 개수·version 변경 없음(여전히
-16/16, 0.1.3). 커밋: `pending-backfill-SPEC-LDBARMAP-001-t530-phase-confirm`(다음
-커밋에서 실제 SHA로 백필).
+16/16, 0.1.3). 커밋: `e376bc169a390c3d710ecf32c6b8a15e63156973`(백필 — 직전 커밋이 자기 자신의
+SHA를 몰라 `pending-backfill-SPEC-LDBARMAP-001-t530-phase-confirm`으로 썼던 것을
+실제 SHA로 교정).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
