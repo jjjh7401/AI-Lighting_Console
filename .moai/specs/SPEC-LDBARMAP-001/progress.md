@@ -65,6 +65,29 @@ Preserve 목록 확인: `SPEC-LDRHYTHM-001`·`SPEC-LDBEAT-001` 쪽 파일 미수
 오디오 비커밋(`git status --porcelain`에 `*.mp3`/`*.wav` 없음), `server/audio/analyze.py`는
 `_tempo_from_beats`만 읽기 전용 import로 호출 — 파일 자체는 안 고침.
 
+### M1 판정 후 감독 결정(2026-10-10, 리드 경유)
+
+- **M1 통과선 미달은 그대로 기록한다**: AC-001~006 전부 PASS인 후보 0개(자기 위상 기준 다운비트 0/82, 세 후보 모두). 박 격자·BPM은 맞았다(위상 1 강제 시 A 82/82, B 80/82).
+- 결정: 「귀 확인 + 수동 지정 병행」 — (1) 위상 후보 4개 클릭 파일을 감독이 듣고 첫 박 위상을 확정, (2) M2 범위 축소: 박 격자는 자동, 마디 첫 박은 사람이 지정(「첫 박 오프셋」 한 값), 자동 위상 선택은 보류.
+- PR #575(M1 결과·도구) 머지 `de5f5fdd`(CI `test` pass, head `c3903b15` 확인 후 별도 호출로 머지).
+
+### 위상 확인용 클릭 파일(저장소 밖, 커밋 안 함)
+
+- 위치: `/Users/studiox/Music/AI-Lighting_Console-listen/t530/`
+- 파일: `LOVE_ATTACK_t530_phase0_40s.wav` · `..._phase1_40s.wav` · `..._phase2_40s.wav` · `..._phase3_40s.wav` (각 앞 40초, 44.1kHz mono, 3,528,044바이트)
+- 내용: 원곡(0.6배 음량) + 마디 첫 박 강한 클릭(1760Hz) + 나머지 박 약한 클릭(880Hz). 위상 규칙은 지도 보고서 §3과 같다 — 박 번호 i에서 (i − phase) % 4 == 0인 박이 첫 박.
+- 명령: `.venv/bin/python tools/barmap/make_phase_clicks.py "/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3" /Users/studiox/Music/AI-Lighting_Console-listen/t530`
+- 출력(그대로):
+  ```
+  beats=326 tempo=112.35 first5=[0.96, 1.5, 2.04, 2.58, 3.11]
+  LOVE_ATTACK_t530_phase0_40s.wav 첫 박(강클릭) 앞 4개=[0.96, 3.11, 5.26, 7.37]
+  LOVE_ATTACK_t530_phase1_40s.wav 첫 박(강클릭) 앞 4개=[1.5, 3.66, 5.78, 7.92]
+  LOVE_ATTACK_t530_phase2_40s.wav 첫 박(강클릭) 앞 4개=[2.04, 4.2, 6.46, 8.45]
+  LOVE_ATTACK_t530_phase3_40s.wav 첫 박(강클릭) 앞 4개=[2.58, 4.73, 6.86, 8.99]
+  ```
+- 대조: 박 326개·112.35 BPM은 지도 보고서 §6 「박 시각 326개」와 같고, phase1 첫 박 넷(1.50·3.66·5.78·7.92초)은 부록 A 1~4마디 다운비트와 일치한다(같은 박 경로라는 확인 — 정답 여부는 감독 귀 확인이 정한다).
+- 미확인: 감독 청취 결과(대기 중).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
