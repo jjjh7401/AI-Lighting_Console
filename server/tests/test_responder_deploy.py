@@ -177,7 +177,7 @@ class TestVersionBump:
         # additive `node.enumeration` ("ok" | "failed") marker to every
         # successful `state` reply so an EMPTY pool and a DEAD pool stop being
         # one payload. Protocol v1 throughout.
-        assert harness.module["VERSION"] == "1.6.5"
+        assert harness.module["VERSION"] == "1.6.6"
         assert harness.module["PROTO"] == 1
 
 

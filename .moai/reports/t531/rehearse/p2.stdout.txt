@@ -1,0 +1,44 @@
+{"step": "goto_all", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 221", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 221': no body fetcher configured — reference bodies unverifiable"]}, {"command": "Goto Cue 3 Sequence 226", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 226': no body fetcher configured — reference bodies unverifiable"]}, {"command": "Goto Cue 1 Sequence 11", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 11': no body fetcher configured — ref
+{"step": "goto_all", "t": 0.001, "kind": "exec", "command": "Goto Cue 3 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "goto_all", "t": 0.001, "kind": "exec", "command": "Goto Cue 3 Sequence 226", "fired": true, "ok": true, "detail": "OK"}
+{"step": "goto_all", "t": 0.001, "kind": "exec", "command": "Goto Cue 1 Sequence 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_all", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 221': no body fetcher configured — reference bodies unverifiable"]}, {"command": "Off Sequence 226", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 226': no body fetcher configured — reference bodies unverifiable"]}, {"command": "Off Sequence 11", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 11': no body fetcher configured — reference bodies unverifi
+{"step": "off_all", "t": 0.001, "kind": "exec", "command": "Off Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_all", "t": 0.001, "kind": "exec", "command": "Off Sequence 226", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_all", "t": 0.001, "kind": "exec", "command": "Off Sequence 11", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "P2",
+  "free_slots": [],
+  "occupied_before": [],
+  "notes": [
+    "쓰기 0 — 기존 시퀀스 221·226·11 의 Goto/Off 뿐.",
+    "큐 수 실측(2026-10-10, r2_seq228.txt): 221·226 = 큐 1~3, 11 = 큐 1, 228 = 큐 1 뿐."
+  ],
+  "bundles": {
+    "goto_all": true,
+    "off_all": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 221",
+        "Goto Cue 3 Sequence 226",
+        "Goto Cue 1 Sequence 11"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 221",
+        "Off Sequence 226",
+        "Off Sequence 11"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

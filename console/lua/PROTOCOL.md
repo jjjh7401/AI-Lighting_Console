@@ -7,6 +7,28 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (responder 1.6.6, SPEC-LDBEAT-001 M1, 카드 t531): `props`
+> gains the SAME trailing `offset=<n>` request token `state`/`introspect`
+> already carry (§2), but it addresses TABLE-VALUED entries, not children or
+> field names. A table-valued read behind `offset=<n>` windows by WHOLE
+> entries (array elements or hash key/value pairs) rather than by
+> `CONFIG.max_prop_value` raw bytes — the item carries additive `offset` and
+> `total` keys, and `truncated` means "entries remain after this window". The
+> token is accepted only when the request names exactly ONE property; two or
+> more names plus the token is `ok:false` (`"offset paging takes exactly one
+> property name"`). A non-table value behind the token degrades to the
+> pre-1.6.6 `max_prop_value` byte-truncation path unchanged — the token simply
+> has no table to window. Motivation is a live measurement
+> (`.moai/reports/t525/verdict.md` §②): a group's `SELECTIONDATA` table
+> property arrived with only its first ~2 members, because
+> `CONFIG.max_prop_value` (240 bytes) cut the raw value before the responder
+> ever sized the reply against `CONFIG.max_payload` — raising
+> `max_prop_value` alone cannot fix this (a single large group still exceeds
+> `max_payload` in one reply), so the fix is windowing, not a wider ceiling. A
+> request without the token is byte-for-byte unchanged. Wire protocol version
+> stays 1. NOT live-verified: offline-only bump; deployment is confirmed BY
+> VERSION — `ping` must answer 1.6.6.
+>
 > Reland note (2026-08-18, SPEC-COPILOT-INTROSPECT-001 / PR #23): the
 > `props`/`introspect` verbs below were re-planted onto the current
 > `main` (1.6.0 paging generation) rather than merged from the original
@@ -120,7 +142,7 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
 | `ping` | `ping <id>` | `/copilot/feedback`, kind=`pong` |
 | `state` | `state <id> <object-path> [offset=<n>]` | `/copilot/state`, kind=`state` |
 | `prop` | `prop <id> <object-path> <PropertyName>` — name is the **last** token; path is everything before it | `/copilot/state`, kind=`prop` |
-| `props` | `props <id> <PropertyName,...> <object-path>` — name list is the **first** rest token; path is the rest of the line | `/copilot/state`, kind=`props` |
+| `props` | `props <id> <PropertyName,...> <object-path> [offset=<n>]` — name list is the **first** rest token; path is the rest of the line (minus the optional trailing offset token) | `/copilot/state`, kind=`props` |
 | `introspect` | `introspect <id> <object-path> [offset=<n>]` | `/copilot/state`, kind=`introspect` |
 | `exec` | `exec <id> <ma3-command>` | `/copilot/feedback`, kind=`result` |
 | `deploy` | `deploy <id> <enc-name> <enc-source>` (M7) | `/copilot/feedback`, kind=`deploy` |
@@ -135,6 +157,15 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
   source (ASSUMPTION-6). The server sends ONLY review-approved source through
   this verb (`server/deploy/pipeline.py`, REQ-MVP-019).
 
+- `props ... offset=<n>` (1.6.6, §4.8 paging): one OPTIONAL trailing
+  whitespace-separated token, parsed exactly like `state`'s (only a trailing
+  token is peeled off the path portion, so paths with spaces survive). Unlike
+  `state`/`introspect`, this token addresses entries WITHIN a single
+  table-valued property, not children or field names, and is accepted only
+  when the request names exactly one property — `props <id> A,B <path>
+  offset=0` is rejected (`ok:false`, two-or-more names), while `props <id> A
+  <path> offset=0` is accepted. A negative, fractional, or non-numeric value
+  degrades to 0, same as `state`/`introspect`.
 - `state ... offset=<n>` (1.6.0, §4.2 paging): one OPTIONAL trailing
   whitespace-separated token; `<n>` is the 0-based `children` window start.
   Because `<object-path>` is rest-of-line (spaces legal), ONLY a trailing
@@ -398,11 +429,12 @@ not read or emit field values for this kind.
   pre-truncation enumerated set omits any same-handle `prop`-readable
   contrast name; the error names missing properties but never includes values.
 
-### 4.8 `props` (bulk property readback — on `/copilot/state`, responder 1.6.0)
+### 4.8 `props` (bulk property readback — on `/copilot/state`, responder 1.6.0; table-value offset paging since 1.6.6)
 
 ```json
 {"v":1,"kind":"props","id":"<id>","ok":true,"path":"DataPool/Sequences/80","reads":[{"n":"CURRENTCUE","ok":true,"t":"string","v":"Sequence 80.3"},{"n":"MISSING","ok":false,"e":"property not readable: MISSING"}],"truncated":false}
 {"v":1,"kind":"props","id":"<id>","ok":false,"path":"...","reads":[],"truncated":false,"error":"malformed props request ..."}
+{"v":1,"kind":"props","id":"<id>","ok":true,"path":"DataPool/Groups/5","reads":[{"n":"SELECTIONDATA","ok":true,"t":"table","v":"[\"Fixture 1\",\"Fixture 2\"]","offset":0,"total":86,"truncated":true}],"truncated":false}
 ```
 
 The responder reads only the names explicitly listed in the request's first
@@ -423,6 +455,42 @@ rest token. It never has an "all field values" mode.
   in `v` — no new field: the encoder replaces a revisited table with `"<cycle>"`
   and a node past depth 8 with `"<max depth 8 exceeded>"`, and truncation is
   STRUCTURAL (whole trailing entries dropped, never a byte cut), so `v` always
+  parses, UNLESS the request carried an `offset=<n>` token (below), in which
+  case the windowing rules replace the ordinary `max_prop_value` rule for that
+  one item.
+- **`offset`/`total` paging on a table-valued item (responder 1.6.6, §2).**
+  `props <id> <PropertyName> <path> offset=<n>` is accepted ONLY when the
+  request names exactly ONE property — two or more names plus the token is
+  rejected at the top level (`ok:false`, `reads:[]`,
+  `error:"offset paging takes exactly one property name"`), never silently
+  ignored. When the named property's value is a table, the item windows by
+  WHOLE entries (array elements in index order, or hash key/value pairs in the
+  same sorted-key order `json_encode` uses) starting at the 0-based `offset`
+  into the full entry list; `v` is a parseable JSON container (`[...]` or
+  `{...}`) holding only that window, and the item carries additive `offset`
+  (the value actually used) and `total` (the full entry count) keys.
+  `truncated:true` means entries remain **after** this window — i.e.
+  `offset + <entries in this window> < total`. The window grows by whole
+  entries only as long as the FULL encoded reply (after percent-encoding)
+  stays within `CONFIG.max_payload`; if even the first entry at `offset`
+  cannot fit, the item carries an empty container (`"[]"`/`"{}"`) and
+  `truncated:true` rather than looping or erroring. `offset >= total` yields
+  an empty container with `truncated:false` (nothing to page to — matches the
+  `state`/`introspect` convention). The item-level `CONFIG.max_prop_value` byte
+  cap does NOT apply on this path; the payload budget is the only bound. A
+  non-table value behind the token ignores it and falls through to the
+  ordinary pre-1.6.6 `max_prop_value` byte-truncation rule unchanged (there is
+  no table to window, so echoing `offset:0` here is NOT required and the
+  responder does not). A request without the token is byte-for-byte unchanged
+  from pre-1.6.6 — the per-item `offset`/`total` keys are additive and appear
+  ONLY on the offset-paged path.
+  Motivation: `.moai/reports/t525/verdict.md` §② measured a group's
+  `SELECTIONDATA` table property arriving with only its first ~2 members
+  (`CONFIG.max_prop_value` = 240 bytes truncated the raw value before the
+  responder ever sized the reply against `CONFIG.max_payload`); raising
+  `max_prop_value` alone cannot fix this because a single large group (e.g.
+  86 fixtures) still exceeds `max_payload` (1900 bytes) in one reply —
+  windowing by whole entries, not a wider per-item ceiling, is required.
   parses. For a wide table, truncation is the expected default path, not an
   exception.
 - If an individual raw value exceeds `CONFIG.max_prop_value` (default 240

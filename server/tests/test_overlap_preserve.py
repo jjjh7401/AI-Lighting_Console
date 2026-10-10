@@ -352,9 +352,14 @@ _CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
 #: → free reading and its negative control (unknown) are the SPEC's own M3.
 #: Deployment is confirmed BY VERSION — `ping` must answer 1.6.5; a rig
 #: answering 1.6.4 does not carry the marker whatever main contains.
+#:
+#: 1.6.6 (SPEC-LDBEAT-001 M1, card t531): additive `props … offset=<n>` entry
+#: paging for table values (group SELECTIONDATA was cut to 2 members at
+#: max_prop_value). A request without the token is byte-identical to 1.6.5.
+#: NOT live-verified; `ping` must answer 1.6.6.
 _CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
-    "console/lua/copilot_responder.lua": "615fdf314d913cf208af479e7cc7116f5de5a224",
-    "console/lua/PROTOCOL.md": "3e97fcda808a1c8e57837240cb557b69acfb5ae4",
+    "console/lua/copilot_responder.lua": "00dd72dcb780de4bf18fd014b60325a3e226c32c",
+    "console/lua/PROTOCOL.md": "2633a3b9a1ac41337cd277a2792ca50c11e6bea4",
 }
 
 #: 2026-08-02 granted exception — the upstream vocabulary extension
