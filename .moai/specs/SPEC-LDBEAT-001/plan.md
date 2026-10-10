@@ -5,7 +5,7 @@
 - **입력(2026-10-07, 카드 t522)**: `reports/effect-arrangement-rules-20261007.md`(규칙 9개·역할별 시퀀스 6개·LOVE ATTACK 전체 배치 §3·0~25마디 격자 §4·감독 결정 §5·안 잰 것 §6) · `ui/src/components/RunbookMode.tsx`(280행, 기존 5블록) · `server/design/cue_sheet_edit.py`(809행, 큐 레벨 파서 `parse_cue_sheet_edit_request:264`(큐 앵커 `_CUE_ANCHOR:227`, 칸 화이트리스트 `EDITABLE_FIELD_LABELS:38-55`)/적용기 `apply_cue_sheet_edit:665`/그룹 스코프 `_GROUP_SCOPE:187`·`_resolve_group_scope:493` — 마디 구간·역할 어휘는 **없음**, D2 재확인) · `server/web/session.py:8467`(`_cue_sheet_draft_edit`, 큐 레벨 편집 요청의 서버 진입점)·`:8498`(거절 사유 예외 패턴)·`:3486`(`SongTimelineStore`)·`:3831,8505`(`TimelineDraftHistory`, 전체-사전 되돌리기 스냅샷) · `server/web/timeline_library.py:48`(`SongTimelineLibrary`, 이름=곡·항목=버전 저장소) · `.moai/specs/SPEC-LDDESIGN-001/spec.md` §3.15(M7, REQ-LDDESIGN-087~095 — 로컬 변형 금지·단일 진실 경로 선례) · `.moai/reports/t512/approval_vs_sent.py`(승인=송신 비교 **로직**, AC-LDRHYTHM-012가 쓰는 것 — 리포트 스크립트, 앱 코드 아님) · `.moai/reports/t516/verdict.md:104,463`·`.moai/reports/t519/verdict.md`·`origin/WT-m2-batch1:.moai/reports/t520/verdict.md:92-94,183-186`(실기 사실 — 타임코드 트랙·이벤트가 **커맨드로** 만들어진다는 증거, §20-4 프로브 1~4 제안).
 - **입력 추가(2026-10-10, 카드 t526)**: `reports/ldbeat-feasibility-roadmap-20261010.md`+`.html`(되는 것·일부만 되는 것·없는 것 7개·안 잰 것 9개·SPEC 진행안·결정 필요 1~5) · `reports/ldbeat-runbook-ui-proposal-20261008.html`(+ `.md`, UI 결정 + 트랙 모양 "정정" 절) · `reports/ldbeat-runbook-mockup-20261008.html`(+ `.md`, 프리셋 아키텍처 + 편집 세 길) · `reports/ldbeat-plan-summary-20261008.md` · `.moai/reports/t525/verdict.md`(읽기 전용 프로브, 콘솔 쓰기 0 — 무대 2D 좌표 실측) · `server/looks/songcue.py:634`(`_timecode_commands` — 타임코드 커맨드 이미 존재, 재확인: `grep -n "^def _timecode_commands" server/looks/songcue.py` → `634`)·`:683`(`_ascii_label` — 영문화 이미 존재, 재확인: `grep -n "^def _ascii_label" server/looks/songcue.py` → `683`) · `server/director/emit.py:51`(`PLAYBACK_MODES`, 재확인: `grep -n "PLAYBACK_MODES" server/director/emit.py` → `51`) · `console/lua/copilot_responder.lua:43`(`max_prop_value = 240`)·`:282`(`json_encode_bounded`)·`:999-1005`(절단 분기) — 모두 이 plan-phase가 Bash로 재확인한 줄 번호.
 - **전제 SPEC**: `SPEC-LDRHYTHM-001`(status: in-progress — M1 감독 통과, M2 손 시연 두 번째 판은 감독 결정으로 접힘, 이 SPEC이 그 M2/M3의 "다음 단계"를 승계), `SPEC-LDDESIGN-001`(completed — M7 PLAN CUE 수정요청 생성기의 REQ-092 패턴을 재사용), `SPEC-LDRENDER-001`(implemented). **새 SPEC(아직 미존재, 카드 t526)**: `SPEC-LDBARMAP-001`(마디 분석)·`SPEC-LDARRANGE-001`(자동 배치) — 둘 다 이 SPEC(LDBEAT) 범위 밖(spec.md §4)이며 `.moai/specs/` 아래 디렉터리가 없다.
-- **범위**: 런북 모드(`RunbookMode.tsx`)에 콘솔 그룹 트랙 × 마디 격자 블록 추가(UI 결정: 한 화면 고정+스크롤, 큐 편집 칸 내부의 "전환" 토글(큐 편집 ↔ 들어오는-전환 편집, 전역 모드 전환이 아님 — plan-audit D7 재검증), 하단 명령창, 우측 편집 칸, 2D 무대 — 콘솔 패치에서 그림, t525) + 새 서버측 편집 연산(기존 큐시트 편집기의 검증 관행 재사용, 로직은 새로 작성, 편집 세 길: 직접 고르기/문장/AI 제안→적용) + 프리셋 아키텍처(종류별 풀, 밝기 단일모드, 앱 번호대 덮어쓰기 경계, 영문 전용 이름) + 승인=송신 비교 로직 재사용(앱 경로로 승격, 쓰기 매번/미리보기 1회) + 콘솔 확인 프로브(M1, 9항목) + 응답기 긴 값 나눠 읽기 확장 + 박자 전용 새 앱측 에미터(확정, `songcue.py` 커맨드 모양 재사용) + 장벽 B(스피드 마스터 BPM 자동 설정)의 범위 경계 결정. 코파일럿 메인 화면·다른 곡의 배치 규칙서 작성·circle/발리후 실기 구현·BPM 자동 설정·오디오 분석 기반 실시간 타임코드 생성·마디 분석(LDBARMAP)·자동 배치 생성(LDARRANGE)은 범위 밖(spec.md §4).
+- **범위**: 런북 모드 안에 콘솔 그룹 트랙 × 마디 격자를 **독립 전체화면 뷰**로 추가(카드 t537, 감독 결정 2026-10-10 「전체 화면 + 속성별 값」 — M2/M2후속이 만든 "기존 5블록 사이의 새 블록" 모양 대신, `App.tsx`의 `runbookMode`가 참인 분기 안에서 전환되는 독립 화면; UI 결정: 한 화면 고정+스크롤, 큐 편집 칸 내부의 "전환" 토글(큐 편집 ↔ 들어오는-전환 편집, 전역 모드 전환이 아님 — plan-audit D7 재검증), 하단 명령창, 우측 편집 칸, 2D 무대 — 콘솔 패치에서 그림, t525) + 격자 칸 데이터의 속성별 구조화(밝기/위치 프리셋/색 프리셋/효과 프리셋/들어올 때, REQ-LDBEAT-006(i-1)~(i-7)·(ii-1)~(ii-5)·(iii), 레거시 `label` 마이그레이션 규칙 포함) + 새 서버측 편집 연산(기존 큐시트 편집기의 검증 관행 재사용, 로직은 새로 작성, 편집 세 길: 직접 고르기/문장/AI 제안→적용) + 프리셋 아키텍처(종류별 풀, 밝기 단일모드, 앱 번호대 덮어쓰기 경계, 영문 전용 이름, LOVE ATTACK 기본값의 "미정" 강제 규칙 REQ-LDBEAT-015(f)) + 승인=송신 비교 로직 재사용(앱 경로로 승격, 쓰기 매번/미리보기 1회) + 콘솔 확인 프로브(M1, 9항목) + M1 판정의 실시간 읽기 배선(REQ-LDBEAT-003(b), 손으로 옮긴 상수 대체) + 응답기 긴 값 나눠 읽기 확장 + 박자 전용 새 앱측 에미터(확정, `songcue.py` 커맨드 모양 재사용) + 장벽 B(스피드 마스터 BPM 자동 설정)의 범위 경계 결정. 코파일럿 **메인** 화면(`runbookMode` 거짓 분기)·다른 곡의 배치 규칙서 작성·circle/발리후 실기 구현·BPM 자동 설정·오디오 분석 기반 실시간 타임코드 생성·마디 분석(LDBARMAP)·자동 배치 생성(LDARRANGE)은 범위 밖(spec.md §4) — `CueSheetTimeline*`·`emit*`·`songcue*`·`cue_sheet_edit*`·`console/lua/**`도 그대로 범위 밖이다(카드 t537이 요구하지 않는 한 손대지 않는다).
 - **진입 조건**: 이 plan-phase 종료 후 Implementation Kickoff Approval(감독 착수 승인) — run-phase는 그 승인 뒤에만 시작한다. **확정된 감독 결정 1~5(spec.md § 확정된 감독 결정)는 이미 2026-10-10에 리드를 통해 받았으므로, 이 승인 라운드는 Tier M 통상 착수 승인이다** — 장벽 A(새 에미터)는 더 이상 별도 확인 라운드가 필요 없다(결정②로 해소). run-phase 진입 후에도 REQ-LDBEAT-001의 내부 게이트(M1 프로브 9항목 각각의 PASS/FAIL)는 M4(콘솔 송신 경로) 착수 여부를 독립적으로 가른다.
 
 ## §B 알려진 위험 (manager-develop 착수 전 필독)
@@ -21,6 +21,9 @@
 9. **[카드 t526] 트랙은 "역할"이 아니라 "콘솔 그룹"이다 — SCENE/BACK PULSE/… 이름을 코드에 박지 마라.** `reports/ldbeat-runbook-ui-proposal-20261008.html`의 "정정" 절이 이전 시안의 여섯 트랙 이름을 "장비와 하는 일을 섞은 임시 이름"으로 자기 철회했다. 트랙 = 콘솔 그룹(줄 하나 = 그룹 하나 = 시퀀스 하나), 층 역할(key/back/side/wash/mover/effect/audience)은 이름표, 펄스·체이스 같은 효과는 큐 안의 내용일 뿐이다. 데이터 모델(M2)에 "SCENE"·"BACK PULSE" 같은 문자열을 트랙 식별자로 하드코딩하면 다른 곡·다른 리그(그룹 구성이 다른)에서 깨진다 — 트랙 식별자는 **콘솔 그룹 번호/이름**이어야 한다(REQ-LDBEAT-004).
 10. **[카드 t526] M1은 코드 diff 0줄 원칙에 응답기 lua 확장이라는 예외를 하나 갖는다.** `console/lua/copilot_responder.lua:43`(`max_prop_value = 240`)이 표 값 속성(`SELECTIONDATA` 등)을 그룹당 앞 2대로 자른다(`.moai/reports/t525/verdict.md` §② 실측) — M1은 이 응답기에 offset 나눠 읽기를 추가해야 그룹 소속 전체가 보인다. 이것은 **앱 코드가 아니라 콘솔 쪽 lua 스크립트**이므로, 수정 전후 기존 응답기 verb(`ping`/`state`/`prop`/`props`/`introspect`)의 동작을 깨지 않는지 회귀 확인이 필요하다 — 긴 값 한도를 "올리는" 것이 아니라 "나눠 읽는" 것으로 고쳐야 한다(응답 전체 한도 `max_payload = 1900`에 걸리므로, `.moai/reports/t525/verdict.md` 잔여 위험).
 11. **[카드 t526] 프리셋 번호대는 "앱 번호대만 덮어쓴다"는 원칙이고, 정확한 범위는 M2/M3의 실측 대상이다.** 로드맵의 예시 번호(위치 `2.61~2.68`, 색 `4.41~`, 디머 `1.21~1.26`/`1.31~1.33`, All `22.x`)를 결정으로 착각해 그대로 하드코딩하면, 실제 쇼 파일에 이미 그 번호가 쓰이고 있을 경우 "쇼에 원래 있던 프리셋은 절대 덮어쓰지 않는다"는 더 상위 규칙(REQ-LDBEAT-015)을 어기게 된다 — M2/M3 착수 시 반드시 실제 쇼 파일의 기존 프리셋 번호 전부를 조회해 충돌 없는 번호대를 재확정한다.
+12. **[신설 — 카드 t537] M2/M2후속(t532/t534)이 만든 "기존 5블록 사이의 블록" 배치는 phase ②의 출발점이 아니라 고칠 대상이다.** `RunbookMode.tsx`에 `<BeatGrid>`를 `CueSheetTimeline`과 `SongTimeline` 사이에 끼워 넣은 현재 구현(`git diff --stat` 확인 가능)은 감독의 새 지시("전체 화면")와 맞지 않는다 — phase ②를 "기존 블록에 살을 붙이는" 작업으로 착각하면 전체화면 독립 뷰 요구(REQ-LDBEAT-004(a)(g))를 못 채운다. `App.tsx`의 `runbookMode` 참 분기 안에 전환 가능한 별도 화면을 만드는 것이 phase ②의 출발점이다.
+13. **[신설 — 카드 t537] `BeatGridCue.label`을 지우는 것과 "구조화 필드로 대체하는 것"은 같지 않다.** 레거시 `{bar, label}` 칸을 읽을 때 구조화 필드를 전부 미정으로 두고 `label`을 그대로 보여주는 것(REQ-LDBEAT-006(ii-1))과, `label` 자유 텍스트를 파싱해 구조화 필드를 **추측**하는 것은 다르다(REQ-LDBEAT-006(ii-2)) — 후자는 금지된 "지어낸 값"이다. M3가 label 파싱기를 만들려는 유혹을 받으면 이 항목을 재확인한다.
+14. **[신설 — 카드 t537 plan-audit D2] §4의 밝기 퍼센트·마디 페이드 힌트를 "SCENE 열이니까 전사 대상 없음"으로 뭉뚱그려 생략하지 마라.** §4에 숫자가 명시된 밝기 퍼센트·페이드 힌트는 SCENE 열에만 있는 것이 아니다 — BACK PULSE 열의 `킥 1·2·4박 60%/100%`(`:106,109,110`)와 ACCENT 열의 `18마디 1박 BLIND 100% 2박`(`:109`)은 전사 대상 큐(BACK·BLIND 트랙)에 **실제로 존재**한다. M7 (1)이 이 넷을 빠뜨리고 "전부 null"로 단순화하면 REQ-LDBEAT-006(i-5)를 위반한다 — M7 데이터 모양 블록(§E M7 (1))의 전사 기대표를 그대로 옮긴다.
 
 ## §C 사전 점검 (M1 착수 직전)
 
@@ -56,7 +59,7 @@ grep -n "ConceptPanel\|CueSheetTimeline\|SongTimeline\|RunbookGateBar" ui/src/co
 
 ## §D 제약 (위반 금지)
 
-- **PRESERVE**: `ui/src/components/CueSheetTimeline.tsx`·`ui/src/components/SongTimeline.tsx`·`ui/src/components/ConceptPanel.tsx`(이 SPEC이 수정하지 않는 기존 블록) · `App.tsx`의 메인 화면 분기(런북 모드가 거짓일 때 렌더되는 부분) · `server/design/cue_sheet_edit.py`의 파서·검증 규칙 본문(값 범위·거절 사유 — 격자 전용 완화나 마디 어휘를 그 파일에 끼워 넣지 않는다, D2) · `server/director/emit.py`의 `PLAYBACK_MODES`(기존 큐시트 재생 경로는 바뀌지 않는다, REQ-LDBEAT-013 — 바뀌는 것은 "새 에미터 모듈이 추가되는가"이지 `PLAYBACK_MODES` 자체가 아니다) · `server/looks/songcue.py`의 기존 함수 본문(새 에미터는 그 커맨드 **모양**을 재사용하되 별도 모듈에 새로 짠다 — songcue 자체를 1:N으로 고치지 않는다).
+- **PRESERVE**: `ui/src/components/CueSheetTimeline.tsx`·`ui/src/components/SongTimeline.tsx`·`ui/src/components/ConceptPanel.tsx`(이 SPEC이 수정하지 않는 기존 블록) · `App.tsx`의 **메인** 화면 분기(`runbookMode`가 거짓일 때 렌더되는 부분 — **카드 t537 교정**: `runbookMode`가 참인 분기 안쪽은 더 이상 전면 PRESERVE가 아니다, REQ-LDBEAT-004(a)(g)가 그 안에 전체화면 전환을 추가하는 것을 허용한다; 참 분기 안에서도 기존 5블록 호출부(헤더·`ConceptPanel`·`CueSheetTimeline`·`SongTimeline`·`RunbookGateBar`)의 호출 순서 자체는 그대로 PRESERVE한다) · `server/design/cue_sheet_edit.py`의 파서·검증 규칙 본문(값 범위·거절 사유 — 격자 전용 완화나 마디 어휘를 그 파일에 끼워 넣지 않는다, D2) · `server/director/emit.py`의 `PLAYBACK_MODES`(기존 큐시트 재생 경로는 바뀌지 않는다, REQ-LDBEAT-013 — 바뀌는 것은 "새 에미터 모듈이 추가되는가"이지 `PLAYBACK_MODES` 자체가 아니다) · `server/looks/songcue.py`의 기존 함수 본문(새 에미터는 그 커맨드 **모양**을 재사용하되 별도 모듈에 새로 짠다 — songcue 자체를 1:N으로 고치지 않는다).
 - 박자 격자의 어떤 편집도 서버 페이로드를 UI가 직접 구성해 새 편집 연산을 거치지 않고 보내는 것을 금지한다(REQ-LDBEAT-008) — AI 제안 경로의 「적용」 클릭도 예외가 아니다. 매 편집 PR에서 `grep -rn "changes\s*=\s*{" ui/src` 류의 자체 점검으로 로컬 구성이 없음을 확인한다.
 - M1 프로브의 콘솔 쓰기는 t516/t519/t520과 같은 절차(가짜 콘솔 리허설 → 실기 읽기 → 실기 전부-거절 → 감독 승인 → 실기 실행)를 따른다 — 생략하거나 축약하지 않는다(REQ-LDBEAT-002). **쓰기는 감독의 명시적 「실행」 신호 뒤에만** 한다 — 미리보기(Goto Cue/Off Sequence) 1회 승인이 쓰기 승인을 대신하지 않는다.
 - M1의 각 프로브는 로드맵 §4의 9항목 중 **정확히 하나**를 가르도록 설계한다 — 여러 항목을 한 번에 섞어 쓰면 결과가 어느 항목에 대한 답인지 불분명해진다(t520 §20-3이 겪은 "선택 다섯을 섞어 원인이 불분명해진" 실수의 반복 금지).
@@ -66,6 +69,8 @@ grep -n "ConceptPanel\|CueSheetTimeline\|SongTimeline\|RunbookGateBar" ui/src/co
 - 격자 데이터를 `SongTimelineStore`/`TimelineDraftHistory`가 다루는 `timeline` 사전 밖의 별도 전역 변수나 파일로 두지 않는다(REQ-LDBEAT-006의 임베드 권고를 M2가 실제로 채택하는 한) — 채택하지 않기로 결정한 경우는 그 결정과 대안 저장소를 `progress.md`에 기록한다.
 - 콘솔 그룹 트랙 식별자를 "SCENE"·"BACK PULSE" 같은 역할·효과 혼성 문자열로 하드코딩하지 않는다(§B 위험 9) — 트랙 식별자는 콘솔 그룹 번호/이름이다.
 - 프리셋 번호대(REQ-LDBEAT-015)를 로드맵의 예시 번호 그대로 하드코딩하지 않는다(§B 위험 11) — M2/M3가 실제 쇼 파일과 대조해 재확정한다.
+- **(카드 t537) LOVE ATTACK 기본값의 큐 레벨 프리셋 번호(밝기/위치/색/효과)를 배치 규칙서·t525류 실측 출처 없이 지어내 채우지 않는다(REQ-LDBEAT-015(f))** — 출처 없는 자리는 `null`(미정)로 남긴다. `reports/ldbeat-runbook-ui-proposal-20261008.html`의 `P` 객체에 적힌 번호(`4.21`·`2.41`·`1.31` 등)는 그 시안 자신이 지어낸 예시일 뿐 배치 규칙서의 출처가 아니므로 그대로 베끼면 이 제약을 어긴다.
+- **(카드 t537) M1 9항목 판정 화면을 손으로 옮긴 TS 상수로 영구히 유지하지 않는다(REQ-LDBEAT-003(b))** — `beatGridM1Probes.ts` 같은 고정 상수는 progress.md가 갱신될 때마다 바로 낡는다; phase ②는 그 표를 읽어 오는 살아있는 경로로 교체한다.
 
 ## §E 마일스톤 (결정 번복 비용 순 — 단, M1은 "작은 프로브로 콘솔 송신을 게이트한다"는 감독 지시에 따라 예외적으로 먼저 둔다)
 
@@ -134,6 +139,24 @@ M2~M4와 독립적으로 추가 가능한 표시 레이어 — 되돌리기 비�
 
 - 스피드 마스터 BPM 설정 UI에 "사람이 콘솔에서 직접 설정" 안내를 단다(REQ-LDBEAT-014) — 자동 설정 기능으로 표시하지 않는다.
 
+### M7 — 전체화면 전환 + 칸 데이터 구조화 + M1 실시간 읽기 (REQ-LDBEAT-004(a)(g)·006(i)~(iii)·003(b)·015(f), 카드 t537, phase ② — **아직 미구현, 명세만**)
+
+M2/M2후속(t532/t534)이 이미 머지한 "기존 5블록 사이의 블록" 구현을 감독의 새 지시("전체 화면 + 속성별 값")에 맞춰 다시 짠다. 결정 번복 비용이 큰 것부터 — 데이터 모양(1)을 먼저 고정해야 그 위에 얹는 화면(2)·렌더 규칙(3)·배선(4)이 흔들리지 않고, 기계적 마무리(5)는 맨 뒤에 둔다.
+
+1. **(가장 비쌈) 칸 데이터를 구조화한다(REQ-LDBEAT-006(i-1)~(i-7)·(ii-1)~(ii-5)·(iii), plan-audit D2/D9 교정)**: `server/design/beat_grid.py`의 `BeatGridCue`를 `{bar, label}`에서 아래 모양으로 확장한다 — D2 교정으로 `entry`는 `fade_seconds`가 아니라 `fade_bars`(마디 수)를 쓰고, D9 교정으로 `effect_preset_no`는 위치 효과 풀 고정이 아니라 `effect_kind`로 풀 종류를 구분한다:
+
+   ```
+   {bar, brightness: {mode: "value"|"dimmer_preset"|"dimmer_effect"|None, value_percent, preset_no}, position_preset_no, color_preset_no, effect_preset_no, effect_kind: "position"|"color"|"dimmer"|"mixed"|None, entry: {fade_bars, mib_mode}, source_ref, label}
+   ```
+
+   `brightness`는 값/디머 프리셋/디머 효과 중 정확히 하나만 쓰는 단일-모드 구분(REQ-LDBEAT-015(c)). `entry.fade_bars`는 마디 수 정수(초 아님) — 기존 `SongTimelineSection.fade_seconds`(`ui/src/protocol.ts:368`)와 다른 단위를 **의도적으로** 쓴다(REQ-LDBEAT-006(i-4); 마디→초 환산은 그 곡 BPM으로 화면 표시 시점에 계산하며 저장하지 않는다). `source_ref`는 그 칸의 값이 비롯된 §4 파일 경로+행 번호(칸당 1개, 문자열 또는 `None`)다. `label`은 레거시 호환 전용 선택 필드로 남긴다. 레거시 칸(구조화 필드 전부 없음) 읽기는 이 필드 전부를 `None`으로 채우고 `label`만 그대로 보여준다 — 파싱·추측 0건(REQ-LDBEAT-006(ii-1)(ii-2)).
+
+   `_love_attack_tracks()`의 기존 30개 큐를 이 모양으로 옮길 때: **(a)** 네 프리셋 **번호** 필드(`brightness`의 디머 프리셋·디머 효과 프리셋 번호, `position_preset_no`, `color_preset_no`, `effect_preset_no`)는 30개 전부 `None`(배치 규칙서 §4에 번호가 없다 — §5 항목 4/§B 위험 11과 같은 "아직 실측 안 됨" 분류, REQ-LDBEAT-015(f)). **(b)** `brightness.value_percent`·`entry.fade_bars`는 §4(`reports/effect-arrangement-rules-20261007.md:98-115`)에 숫자로 적힌 **네 자리만** 전사한다(REQ-LDBEAT-006(i-5)) — BACK(그룹4)@7마디=60%(`:106`)·@18마디=100%(`:109`)·@22마디=100%(`:110`), BLIND(그룹14)@18마디=100%(`:109`), 각각 `source_ref`에 그 행 번호를 남긴다. SCENE 열의 30%·40%·70%·"2마디 번짐"·"끊어 바꿈"·"1마디 번짐"(`:104,106,109,110`)은 SCENE이 트랙에 없어(`_love_attack_tracks()`가 SCENE을 뺀 이유, 이 파일 자체 docstring) 대응 큐가 없으므로 전사하지 않는다 — 나머지 26개 큐의 `value_percent`와 30개 큐 전부의 `fade_bars`는 `None`이다(REQ-LDBEAT-006(i-6)(i-7)). `find_overlapping_group_tracks`/`validate_beat_grid_tracks`는 트랙 레벨만 보므로 수정 불필요(REQ-LDBEAT-004(h)/REQ-LDBEAT-006(iii) 불변, 직접 재확인).
+2. **런북 모드 안의 전체화면 전환을 만든다(REQ-LDBEAT-004(a)(g))**: `App.tsx`의 `runbookMode` 참 분기 안에 전환 가능한 전체화면 모드를 추가한다(트리거의 정확한 UI는 §5 열린 결정 6, M2에서 director와 확정). 기존 5블록(`RunbookMode.tsx`의 헤더·`ConceptPanel`·`CueSheetTimeline`·`SongTimeline`·`RunbookGateBar`) 안에 `<BeatGrid>`를 끼워 넣는 현재 배선은 제거하고, `BeatGrid`를 그 전체화면 모드의 루트 컴포넌트로 승격한다. 코파일럿 **메인** 화면(`runbookMode` 거짓)은 건드리지 않는다.
+3. **칸 편집 UI를 다섯 필드로 분리하고, 막대 채우기 색 규칙을 정한다**: 큐 편집 칸(REQ-LDBEAT-004(c))이 밝기·위치·색·효과·들어올 때를 각각 독립된 자리에 보여준다(같은 문장 네 번 반복하던 M2후속 임시 동작 제거). 막대 채우기 색은 `color_preset_no`가 있으면 그 프리셋의 스웨치 색, **미정(`None`)이면 명시적 중립색(예: 회색 해칭)으로 "안 정해짐"을 그대로 보여준다 — 임의 색을 지어내 칠하지 않는다**(REQ-LDBEAT-015(f)와 같은 원칙을 렌더링에도 적용).
+4. **M1 상태표를 실시간 소스로 바꾼다(REQ-LDBEAT-003(b))**: `ui/src/components/beatGridM1Probes.ts`의 손으로 옮긴 상수 의존을 걷어내고, 서버가 `progress.md`의 M1 표를 파싱해 서빙하거나(권고) 빌드 타임에 그 표를 읽어 생성하는 경로 중 하나로 교체한다. 표가 비어 있거나 파싱 실패 시 "미확인"으로 표시(지어낸 PASS 금지).
+5. **(가장 저렴, 마무리) 시안 대조 캡처 + 차이 목록을 기록한다**: 시안(`reports/ldbeat-runbook-ui-proposal-20261008.html`)과 같은 뷰포트의 헤드리스 캡처를 나란히 찍고, `progress.md`에 차이 목록(남은 격차)을 정직하게 적는다 — t532/t534 선례(`side_by_side.png`)와 같은 방식.
+
 ## §F 안티패턴
 
 - **격자를 편한 대로 로컬 데이터 구조로 직접 콘솔 커맨드에 매핑하지 마라** — REQ-LDBEAT-007/008. 문장 → 새 서버측 편집 연산 → 서버 경로를 거쳐야 한다. AI 제안의 「적용」도 예외가 아니다.
@@ -149,6 +172,12 @@ M2~M4와 독립적으로 추가 가능한 표시 레이어 — 되돌리기 비�
 - **격자 데이터를 `timeline` 사전 밖의 별도 변수로 "임시로" 두고 넘어가지 마라** — REQ-LDBEAT-006/§D. M2에서 저장소 결정을 명시적으로 내리고 기록한다.
 - **프리셋 번호대를 로드맵 예시 그대로 쓰지 마라** — REQ-LDBEAT-015/§B 위험 11. 실제 쇼 파일과 대조해 재확정한다.
 - **마디 분석(SPEC-LDBARMAP-001)이나 자동 배치(SPEC-LDARRANGE-001)를 이 SPEC에서 선구현하지 마라** — spec.md §4. 둘 다 아직 존재하지 않는 별도 SPEC이다.
+- **(카드 t537) 전체화면 전환 요구를 "기존 블록 레이아웃을 조금 키우는 것"으로 축소하지 마라** — REQ-LDBEAT-004(a)(g). 감독 지시는 독립 전체화면 뷰이고, `App.tsx`의 런북 모드 분기 안에 전환이 필요하다. 다만 코파일럿 **메인** 화면(`runbookMode` 거짓)은 여전히 건드리지 않는다.
+- **(카드 t537) `BeatGridCue.label`의 자유 텍스트를 파싱해 구조화 필드(밝기/위치/색/효과)를 역산하지 마라** — REQ-LDBEAT-006(ii-2). 레거시 칸은 구조화 필드를 미정으로 두고 `label`만 그대로 보여준다(REQ-LDBEAT-006(ii-1)).
+- **(카드 t537 plan-audit D2) `entry`에 초 단위 페이드 값을 저장하지 마라** — REQ-LDBEAT-006(i-4). `fade_bars`(마디 수)로만 저장하고, 초 환산은 화면 표시 시점에 BPM으로 계산한다.
+- **(카드 t537 plan-audit D9) `effect_preset_no`를 "위치 효과 풀 전용"으로 못박지 마라** — REQ-LDBEAT-006(i-3). 색·혼합 효과도 같은 필드에 담되 `effect_kind`로 구분한다.
+- **(카드 t537) LOVE ATTACK 기본값의 프리셋 번호를 시안(`ldbeat-runbook-ui-proposal-20261008.html`)의 `P` 객체에서 베껴 쓰지 마라** — REQ-LDBEAT-015(f). 그 객체는 시안 자신이 지어낸 예시이고 배치 규칙서의 출처가 아니다. 출처 없는 자리는 미정(`null`)이다.
+- **(카드 t537) M1 상태표를 또 다른 손-복사 상수로 "다시" 박아 두지 마라** — REQ-LDBEAT-003(b). `beatGridM1Probes.ts`가 겪은 낡음 문제(progress.md 재확인)를 반복하지 않는다 — 살아있는 읽기 경로로 교체한다.
 
 ## §G 교차 참조
 
@@ -170,3 +199,8 @@ M2~M4와 독립적으로 추가 가능한 표시 레이어 — 되돌리기 비�
 - `.moai/reports/t516/verdict.md:104,463`·`.moai/reports/t519/verdict.md`·`origin/WT-m2-batch1:.moai/reports/t520/verdict.md:92-94,183-186` — 실기 사실 출처(타임코드가 커맨드로 만들어진다는 D1 증거 + §20-4 프로브 1~4 제안).
 - `ui/src/components/RunbookMode.tsx`(280행) — 확장 대상 컴포넌트.
 - `SPEC-LDBARMAP-001`·`SPEC-LDARRANGE-001`(가칭, 아직 미존재) — spec.md §4 Out of Scope 교차 참조.
+- `server/design/beat_grid.py`(M2 신설, 커밋 `05ad9ec4`) — `BeatGridCue{bar,label}` 현재 모양(M7이 구조화할 대상), `_love_attack_tracks()`의 30개 큐(배치 규칙서 §2·§4 전사, 프리셋 번호 0개), `find_overlapping_group_tracks`/`validate_beat_grid_tracks`(트랙 레벨만 — M7 영향 없음 확인 대상).
+- `ui/src/protocol.ts:362-399,404-432` — `SongTimelineSection`의 큐 레벨 명명 관례(`movement`/`effect`/`mib_mode`/`fade_seconds`/`position_preset_no`, M7 구조화 필드 명명의 선례)와 현재 `BeatGridCue`/`BeatGridTrack`/`BeatGridView` 모양. **plan-audit D2 이탈 고지**: M7의 `entry`는 이 선례의 `fade_seconds`를 따르지 않고 `fade_bars`(마디 수)를 쓴다 — REQ-LDBEAT-006(i-4) 참조, 의도적 단위 변경이다.
+- `ui/src/components/BeatGrid.tsx`·`RunbookMode.tsx`(M2/M2후속, 커밋 `05ad9ec4`·`7be4785e`) — M7이 다시 짤 "기존 5블록 사이 블록" 현재 배선.
+- `ui/src/components/beatGridM1Probes.ts`(카드 t534 신설) — M7 (4)가 교체할 손-복사 상수(`M1_PROBE_RESULTS_T531`).
+- `.moai/specs/SPEC-LDBEAT-001/progress.md` M2 후속 절 "안 잰 것" — M1 상수 낡음 위험을 그 자신이 이미 적어 둔 기록(REQ-LDBEAT-003(b)의 근거).
