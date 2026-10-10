@@ -80,7 +80,7 @@ class TestLoading:
         assert config["send_variant"] == "packed"
         assert config["max_props_names"] == 16
         assert harness.module["PROTO"] == 1
-        assert harness.module["VERSION"] == "1.6.5"
+        assert harness.module["VERSION"] == "1.6.6"
 
 
 class TestParseRequest:
