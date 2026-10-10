@@ -174,6 +174,16 @@ export interface BeatGridFixturePoint {
   rotx: number;
   roty: number;
   rotz: number;
+  /** 콘솔 SELECTIONDATA로 **확인된** 소속 그룹 이름 — 이름 추정이 아니라
+   * 읽은 값이어야 한다. 없으면(`null`/`undefined`) 미확인이고, 화면은
+   * 반드시 회색이다(REQ-LDBEAT-004(f)). 이 값을 채우는 유일한 근거는
+   * 콘솔 `SELECTIONDATA` 읽기다 — 장비 이름이 그룹 이름과 비슷해 보인다는
+   * 것은 이 필드를 채울 근거가 **아니다**(레인 리뷰 05ad9ec4, 이름 접두
+   * fallback 제거). 지금까지 확인된 그룹은 t525 §② 네 개뿐이고(그룹당
+   * 앞 2대만) `.moai/reports/t525/verdict.md`의 "근거 2 — sf_index → fid
+   * 대응" 표(파일 93~103행, 표 본문 100~103행)가 그 전체 목록이다 — MOVER-ALL(501·502) ·
+   * BACK(201·202) · SIDE-L(301·302) · BLIND(601·602). */
+  confirmedGroupName?: string | null;
 }
 
 interface StageBounds {
@@ -222,10 +232,15 @@ export function projectFixture(
   return { cx, cy };
 }
 
-/** REQ-LDBEAT-004(f) — 그룹 소속이 **확인된** 트랙의 장비만 칠하고, 나머지는
- * 회색(t525 §③ 패턴 — "확인된 것만" 색, 전체 칠하기를 거짓으로 보여주지
- * 않는다). 이름 앞부분 일치는 표시용 보조 수단일 뿐 소속 확인 그 자체가
- * 아니다 — `group_no_confirmed`가 실제 게이트다. */
+/** REQ-LDBEAT-004(f) — 그룹 소속이 **확인된** 장비만 칠하고, 나머지는 회색
+ * (t525 §③ 패턴 — "확인된 것만" 색, 전체 칠하기를 거짓으로 보여주지
+ * 않는다). "확인"의 유일한 근거는 `fixture.confirmedGroupName`(콘솔
+ * SELECTIONDATA에서 읽은 값)이고, 그것이 화면에 떠 있는 어느 트랙의
+ * `group_name`과 **정확히** 일치할 때만 그 트랙 색을 쓴다 — 이름이 비슷해
+ * 보인다는 추론(접두 매칭)은 fallback으로도 쓰지 않는다(레인 리뷰
+ * 05ad9ec4). 이것은 트랙의 `group_no_confirmed`(그룹 **번호** 확인 여부,
+ * 다른 축)와 무관하다 — 번호를 몰라도 SELECTIONDATA가 이름으로 소속을
+ * 확인해 줬다면 그것으로 충분하다. */
 const TRACK_COLOR_PALETTE = ["#4f8cff", "#f85149", "#3fb950", "#d29922", "#b388ff", "#00c2cc"];
 const UNCONFIRMED_FIXTURE_COLOR = "#5a5f6b";
 
@@ -233,11 +248,9 @@ export function fixtureDisplayColor(
   fixture: BeatGridFixturePoint,
   tracks: readonly BeatGridTrack[],
 ): string {
-  const index = tracks.findIndex(
-    (track) =>
-      track.group_no_confirmed &&
-      fixture.name.toUpperCase().startsWith(`${track.group_name.toUpperCase()} `),
-  );
+  if (!fixture.confirmedGroupName) return UNCONFIRMED_FIXTURE_COLOR;
+  const confirmedKey = fixture.confirmedGroupName.toUpperCase();
+  const index = tracks.findIndex((track) => track.group_name.toUpperCase() === confirmedKey);
   if (index < 0) return UNCONFIRMED_FIXTURE_COLOR;
   return TRACK_COLOR_PALETTE[index % TRACK_COLOR_PALETTE.length];
 }

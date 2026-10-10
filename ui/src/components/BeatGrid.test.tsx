@@ -242,12 +242,45 @@ describe("2D stage projection", () => {
     expect(cy).toBeGreaterThanOrEqual(0);
   });
 
-  it("colors a fixture whose name-prefix matches a CONFIRMED track", () => {
-    const color = fixtureDisplayColor(fixtures[0], LOVE_ATTACK_GRID.tracks);
-    expect(color).not.toBe("#5a5f6b");
+  // 레인 리뷰(05ad9ec4) — 이름 접두 일치는 소속 확인이 아니다. 색은
+  // `confirmedGroupName`(콘솔 SELECTIONDATA에서 읽은 값)이 화면의 트랙
+  // `group_name`과 **정확히** 일치할 때만 나온다 — 이름이 비슷해 보인다는
+  // 추론은 fallback으로도 쓰지 않는다. 아래 "BACK 201" 두 시험은 **같은
+  // 장비, 다른 필드**로 대조한다 — 수정 전 구현에서는 첫 시험(이름만
+  // 일치, confirmedGroupName 없음)이 색칠돼 **실패했다**(RED, 레인 리뷰
+  // 코멘트가 지적한 바로 그 결함).
+  it("stays grey for a name-matching fixture with NO confirmed SELECTIONDATA membership — no name fallback", () => {
+    const nameMatchesButUnconfirmed = fixtures[0]; // "BACK 201" — BACK 트랙과 이름만 같다, confirmedGroupName 없음
+    expect(fixtureDisplayColor(nameMatchesButUnconfirmed, LOVE_ATTACK_GRID.tracks)).toBe("#5a5f6b");
   });
 
-  it("greys out a fixture matching only an UNCONFIRMED track (STROBE)", () => {
+  it("colors a fixture whose confirmedGroupName EXACTLY matches a track's group_name", () => {
+    // t525 §② "근거 2 — sf_index → fid 대응"(verdict.md:101) — fid 201은
+    // 콘솔 SELECTIONDATA로 BACK 그룹 소속이 확인됐다.
+    const confirmed: BeatGridFixturePoint = { ...fixtures[0], confirmedGroupName: "BACK" };
+    expect(fixtureDisplayColor(confirmed, LOVE_ATTACK_GRID.tracks)).not.toBe("#5a5f6b");
+  });
+
+  it("greys out a confirmed membership whose group name has no matching track on screen", () => {
+    // t525 §②(verdict.md:100)가 확인한 그룹은 "MOVER-ALL"이지 "MOVER-U"가
+    // 아니다 — LOVE ATTACK 기본 격자에는 MOVER-ALL 트랙이 없으므로(트랙은
+    // MOVER-U/MOVER-D), 이 확인은 화면의 어느 트랙과도 일치하지 않는다.
+    // 이름이 "MOVER-U 501"이라고 해서 MOVER-U 트랙 색을 받지 않는다.
+    const moverAllMember: BeatGridFixturePoint = {
+      fid: 501,
+      name: "MOVER-U 501",
+      x: -1.5,
+      y: 2.5,
+      z: 6.8,
+      rotx: 0,
+      roty: 0,
+      rotz: 0,
+      confirmedGroupName: "MOVER-ALL",
+    };
+    expect(fixtureDisplayColor(moverAllMember, LOVE_ATTACK_GRID.tracks)).toBe("#5a5f6b");
+  });
+
+  it("greys out a fixture with no confirmedGroupName at all", () => {
     const strobeFixture: BeatGridFixturePoint = {
       fid: 611,
       name: "STROBE 611",
