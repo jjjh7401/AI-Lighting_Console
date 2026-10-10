@@ -335,7 +335,9 @@ def detect_events_from_bars(y, sr, downbeats: np.ndarray, hop_length: int) -> li
         if low_norm[i] >= 2.5:
             events.append(("kick_entry", bar_num))
         if low_norm[i] <= 0.35:
-            events.append(("kick_absence", bar_num))
+            # "break" — spec.md §5 열린 결정 0 events[].kind 어휘(카드 t530에서
+            # ground_truth.py 와 통일, M1 당시엔 "kick_absence"를 썼다).
+            events.append(("break", bar_num))
 
     # 빌드업 — 음량이 3마디 이상 연속 상승하는 구간의 시작 마디
     i = 0

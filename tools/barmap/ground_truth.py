@@ -30,7 +30,7 @@ class TruthEvent:
 
     event_id: int
     name: str
-    event_type: str  # "build" | "kick_entry" | "kick_absence"
+    event_type: str  # "build" | "kick_entry" | "break" (REQ-LDBARMAP-008 어휘)
     start_bar: int
     end_bar: int
 
@@ -75,10 +75,73 @@ def parse_downbeats(report_path: Path = DEFAULT_REPORT_PATH) -> list[float]:
     return [downbeat_s for _, downbeat_s in rows]
 
 
+@dataclass(frozen=True)
+class TruthBarFeature:
+    """부록 A 한 마디의 음량·저역·보컬 대역 비율 — M3 분류기의 "실제 오디오에서 잰
+    값과 동급" 입력(REQ-LDBARMAP-008/009 근거). 오디오가 아니라 지도 보고서가
+    이미 측정해 커밋한 숫자다(하드코딩 사본이 아니라 이 파서가 원문에서 직접
+    뽑는다 — ``parse_downbeats`` 와 같은 설계).
+    """
+
+    bar: int
+    volume_norm: float  # 음량(중앙값=1)
+    low_band_norm: float  # 저역(중앙값=1)
+    vocal_band_ratio: float  # 보컬 대역 비율(참고, 0~1)
+
+
+def parse_bar_features(report_path: Path = DEFAULT_REPORT_PATH) -> list[TruthBarFeature]:
+    """부록 A(82마디 표)에서 음량·저역·보컬 대역 비율 칸을 1마디부터 순서대로 뽑는다.
+
+    표 칸 순서(``## 부록 A.`` 머리글 직후 표): 마디 | 다운비트(초) | 구간(앱) |
+    킥 후보 칸 | 스네어·클랩 후보 칸 | 음량(중앙값=1) | 저역(중앙값=1) |
+    보컬 대역 비율(참고) | 순간. 킥/스네어 후보 칸은 공백으로 나뉜 복수 토큰
+    (``"2.1 3.1 4.1"`` 등)이라 바깥쪽 ``|`` 분할로 셀 경계를 잡는다(정규식
+    하나로 전체 행을 파싱하지 않는다 — 토큰 안의 공백이 열 경계를 흐린다).
+    """
+    text = report_path.read_text(encoding="utf-8")
+    marker = "## 부록 A."
+    idx = text.find(marker)
+    if idx < 0:
+        raise ValueError(f"'{marker}' 절을 찾지 못했습니다: {report_path}")
+    section = text[idx:]
+
+    rows: list[TruthBarFeature] = []
+    for line in section.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 8 or not re.fullmatch(r"[0-9]+", cells[0]):
+            continue
+        bar = int(cells[0])
+        volume_norm = float(cells[5])
+        low_band_norm = float(cells[6])
+        vocal_match = re.match(r"[0-9.]+", cells[7])
+        if vocal_match is None:
+            raise ValueError(f"마디 {bar}의 보컬 대역 비율 칸을 파싱하지 못했습니다: {cells[7]!r}")
+        vocal_band_ratio = float(vocal_match.group(0))
+        rows.append(TruthBarFeature(bar, volume_norm, low_band_norm, vocal_band_ratio))
+
+    if not rows:
+        raise ValueError(f"부록 A 표에서 특징 행을 하나도 못 찾았습니다: {report_path}")
+
+    rows.sort(key=lambda row: row.bar)
+    expected = list(range(1, len(rows) + 1))
+    actual_bars = [row.bar for row in rows]
+    if actual_bars != expected:
+        raise ValueError(
+            f"부록 A 마디 번호가 1..{len(rows)} 연속이 아닙니다 — "
+            f"파싱 누락 의심: {actual_bars[:10]}..."
+        )
+    return rows
+
+
 _EVENT_TYPE_KEYWORDS = (
     ("빌드업", "build"),
     ("큰 히트", "kick_entry"),
-    ("킥 멈춤", "kick_absence"),
+    # "break" — spec.md §5 열린 결정 0 events[].kind 어휘(카드 t529 인터페이스 맞춤)와
+    # 맞춘 이름이다. M1 당시(카드 t527)는 그 어휘가 아직 없어 "kick_absence"를
+    # 썼다 — 카드 t530(M3)에서 bar_map.py의 분류기 출력과 맞추며 통일했다.
+    ("킥 멈춤", "break"),
 )
 
 
