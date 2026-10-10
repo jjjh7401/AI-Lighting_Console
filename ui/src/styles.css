@@ -4197,15 +4197,18 @@ body {
 /* t532 (SPEC-LDBEAT-001 M2) — 박자 격자: 콘솔 그룹 트랙 × 마디 격자.
    읽기 전용 블록(M3가 편집을 얹는다) — `CueSheetTimeline`과 `SongTimeline`
    사이의 새 블록, 한 화면 고정 높이 + 좌우 스크롤(REQ-LDBEAT-004(b)). */
+/* t537 레이아웃 교정 — `<BeatGrid>`는 이제 런북 모드 전체화면 루트로만
+   쓰인다(`.beat-grid-fullscreen-frame`, App.tsx). 한 화면 높이를 꽉
+   채우고(REQ-LDBEAT-004(b)) 내부에서만 스크롤한다 — `min-height:0`이
+   없으면 flex 자식은 내용 크기만큼 늘어나 부모의 높이 제약을 무시한다. */
 .beat-grid {
   background: var(--panel);
-  border: 1px solid #2a2e37;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin: 10px 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 10px 12px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .beat-grid-head {
@@ -4235,36 +4238,57 @@ body {
   margin-left: auto;
 }
 
+/* t537 레이아웃 교정 — 시안의 구간 블록 띠(인트로/벌스/코러스…). 구간
+   데이터가 없으면 `BeatGrid.tsx`가 7칸 숫자 띠로 떨어지는데, 그 폴백도
+   같은 `.beat-grid-overview-section` 칸을 재사용한다. */
 .beat-grid-overview {
+  position: relative;
+}
+
+.beat-grid-overview-track {
   display: flex;
   gap: 2px;
 }
 
-.beat-grid-ov-cell {
-  flex: 1;
+.beat-grid-overview-section {
+  flex-grow: 1;
+  flex-basis: 0;
   text-align: center;
   font-size: 10px;
   color: var(--muted);
   background: #1a1d24;
   border-radius: 3px;
-  padding: 2px 0;
+  padding: 4px 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.beat-grid-ov-cell.is-current {
+.beat-grid-overview-section.is-current {
   background: var(--accent);
   color: #fff;
 }
 
-/* t537 ② — SCENE 메모가 걸린 행 표식(역할·효과 혼성이라 트랙에 못 옮긴
-   §4 값이 있다는 뜻, 리드 추가 지시 2026-10-10). */
-.beat-grid-ov-cell.has-scene-memo {
-  box-shadow: inset 0 0 0 1px var(--warn);
+/* t537 ② — SCENE 메모가 걸린 마디 표식(역할·효과 혼성이라 트랙에 못 옮긴
+   §4 값이 있다는 뜻, 리드 추가 지시 2026-10-10). 구간 띠 위에 퍼센트
+   위치로 겹쳐 그린다(flex 레이아웃은 픽셀 경계를 미리 모르므로). */
+.beat-grid-overview-memos {
+  position: relative;
+  height: 0;
 }
 
-.beat-grid-scene-memo-badge {
-  display: block;
+.beat-grid-overview-memo-marker {
+  position: absolute;
+  top: -3px;
+  transform: translateX(-50%);
   font-size: 8.5px;
   color: var(--warn);
+  background: #2a2318;
+  border: 1px solid var(--warn);
+  border-radius: 3px;
+  padding: 0 2px;
+  white-space: nowrap;
+  cursor: default;
 }
 
 .beat-grid-scene-memo-note {
@@ -4320,17 +4344,20 @@ body {
   font-size: 12px;
 }
 
-/* 한 화면 고정 높이 + 좌우 스크롤 — REQ-LDBEAT-004(b). 카드 t534 — 3단
-   (타임라인 | 무대·한눈에 | 큐 편집 칸, 늘 보임)으로 넓혔다(시안의 "오른쪽
-   칸에 늘 있음" 배치). */
-.beat-grid-body {
+/* t537 레이아웃 교정 — 시안의 `.mid`(타임라인 + 오른쪽 큐 편집 칸)와 같은
+   자리. 남은 세로 공간을 전부 쓴다(`flex:1;min-height:0`) — 아래
+   `.beat-grid-insp`(무대·한눈에)가 고정 높이로 따로 있으므로, 이 줄이
+   화면의 "타임라인 영역"을 책임진다(REQ-LDBEAT-004(b), 한 화면 고정 +
+   내부 스크롤). */
+.beat-grid-mid {
   display: flex;
   gap: 10px;
-  max-height: 460px;
+  flex: 1;
+  min-height: 0;
 }
 
 .beat-grid-lanes {
-  flex: 2;
+  flex: 1;
   overflow: auto;
   min-width: 0;
   position: relative;
@@ -4534,12 +4561,29 @@ body {
   font-size: 10px;
 }
 
-.beat-grid-detail {
-  flex: 1;
+/* t537 레이아웃 교정 — 시안의 `.insp`(무대 2D + 이 마디 한눈에, 타임라인
+   아래 고정 높이 띠)와 같은 자리. `.beat-grid-mid` 바로 아래, 명령창
+   바로 위에 온다. */
+.beat-grid-insp {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 280px;
+  min-height: 0;
+}
+
+.beat-grid-stage-pane {
+  flex: 1.2;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 200px;
+  overflow: auto;
+}
+
+.beat-grid-glance-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   overflow: auto;
 }
 
@@ -4553,7 +4597,8 @@ body {
 
 .beat-grid-stage {
   width: 100%;
-  height: 160px;
+  flex: 1;
+  min-height: 0;
   background: #0e0f12;
   border-radius: 6px;
 }
@@ -4575,11 +4620,11 @@ body {
   padding: 2px 4px;
 }
 
-/* 큐 편집 칸 — 카드 t534: 시안처럼 "오른쪽 칸에 늘 있음"으로 바꿨다(이전엔
-   선택했을 때만 화면 맨 아래에 나타났다). `.beat-grid-body`의 세 번째
-   칸이다. */
+/* t537 레이아웃 교정 — 시안의 `.sidepane`(310px 고정폭, 타임라인 바로
+   오른쪽)과 같은 자리·폭. `.beat-grid-mid`의 둘째 칸이라 높이는 그
+   줄(`.beat-grid-lanes`와 같은 높이)만큼 자동으로 늘어난다. */
 .beat-grid-cue-panel {
-  flex: 1;
+  flex: 0 0 310px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -4587,7 +4632,7 @@ body {
   border-radius: 6px;
   padding: 8px 10px;
   background: #1a1e28;
-  min-width: 180px;
+  min-width: 260px;
   overflow: auto;
 }
 

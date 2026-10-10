@@ -347,6 +347,58 @@ $ git diff --stat e0612b8d -- ui/src/components/CueSheetTimeline.tsx 'CueSheetTi
 - **scene_memos 리드 추가 지시의 SPEC 편입 여부** — (5)에 적은 대로 REQ-006 밖의 새 데이터 요소라는 것만 표시했고, spec.md/acceptance.md는 건드리지 않았다 — 다음 라운드의 판단이 필요하다.
 - **콘솔 접촉 0, 실기 확인 0** — M1 읽기 배선이 "진짜 progress.md를 읽는지"는 쟀지만(§검증 `TestLiveProbeReadThroughTheRealSessionWiring`), 그 값 자체가 콘솔 실측과 일치하는지는 M1(카드 t531, lane-3)의 몫이고 이 카드는 그 결과를 "읽는 경로"만 새로 만들었다.
 
+#### t537 ② 레이아웃 교정 — 레인 리뷰 대응 (같은 카드 후속, 커밋 `edc537db` 위)
+
+레인이 `side_by_side.png`를 직접 읽고 지적(2026-10-10): 테스트/tsc/금지경로/리그상수 검사는 전부 PASS했지만(재실행 결과 동일) **레이아웃이 시안과 다르다**(카드 요구 "시안 레이아웃 그대로"). 지적된 5개 격차를 데이터·검증 로직은 그대로 두고(M1 읽기·SCENE 메모·리그 일반화·금지 경로·`App.tsx` 범위 전부 불변) 레이아웃만 고쳤다.
+
+1. **무대(2D)+이 마디 한눈에가 타임라인 오른쪽에 있던 것** → `.beat-grid-body`(3칸 가로 분할: 타임라인|상세|편집칸)를 둘로 쪼갰다. `.beat-grid-mid`(타임라인 + 큐 편집 칸, 시안 `.mid`+`.sidepane`과 같은 자리)와 `.beat-grid-insp`(무대 2D + 이 마디 한눈에, 그 아래 고정 높이 띠, 시안 `.insp`와 같은 자리)로 — 큐 편집 칸은 타임라인 바로 오른쪽, 무대·한눈에 표는 그 아래로 옮겼다.
+2. **뷰포트의 위쪽 30%만 쓰고 나머지가 빈 것** → `.beat-grid`를 `min-height:0;overflow:hidden`으로, `.beat-grid-mid`를 `flex:1;min-height:0`으로 바꿔 `.beat-grid-fullscreen-frame{flex:1}`가 준 전체 높이를 실제로 채우게 했다(헤더/지도/툴바/하단띠/명령창/M1패널은 auto 높이, 타임라인 행만 남는 공간을 전부 먹는다). 내부 스크롤은 `.beat-grid-lanes{overflow:auto}` 그대로.
+3. **곡 전체 지도가 7칸 숫자 띠였던 것** → 새 순수함수 `deriveSectionBlocks`(`BeatGrid.tsx`)가 `timeline.sections`(서버가 이미 보내는 값, `App.tsx`가 `sections` prop으로 새로 넘김)의 `label`+`start_ms`를 그 곡 BPM(`secondsPerBar`)으로 마디 위치 환산해 구간 블록 띠로 그린다(인트로/벌스1/프리코러스1/코러스1 — 아래 캡처로 확인). **에너지 곡선은 그 데이터 자체가 서버 페이로드 어디에도 없어 추가하지 않았다**(지어내지 않음 — 그대로 Gaps에 남김). **"전체 곡 중 지금 보는 범위 강조"도 못 했다** — 전체 곡 길이(마디 수) 데이터가 없어(`bar_count`/`total_duration_ms`가 session.py 어디서도 채워지지 않음, 재확인: `grep -n '"bar_count"' server/web/session.py` → 0건) 지도 자체가 표시 범위(0~25마디)다. 구간 데이터가 없으면(`secondsPerBar` 미확정 등) 기존 7칸 숫자 띠로 조용히 떨어진다(새 시험 `describe("deriveSectionBlocks …")` 7개로 확인, `BeatGrid.test.tsx`).
+4. **편집 칸 빈 상태가 과도하게 길고 비어 있던 것** → 위 1·2의 결과로 자연히 해소 — `.beat-grid-cue-panel`을 `flex:0 0 310px`(시안 `.sidepane` 폭)로 고정하고 `.beat-grid-mid`의 둘째 칸으로 두니, 높이는 타임라인 행과 같아져(flex stretch) 더 이상 화면 전체 높이로 늘어나지 않는다.
+5. **무대(2D)가 작은 점 무더기였던 것** → `.beat-grid-insp`가 고정 높이(280px) 띠를 주고 `.beat-grid-stage{flex:1}`로 그 안을 꽉 채우게 했다(이전엔 `height:160px` 고정값 + 좁은 칸). 좌표·소속은 그대로 `fixtures`/`fixtureDisplayColor`/`fixtureDisplayOpacity`(리그 상수 0, t525 실측 좌표만) — 크기만 키웠다.
+
+**추가/고친 파일**: `ui/src/components/BeatGrid.tsx`(`deriveSectionBlocks`/`barPercentInRange`/`BeatGridSectionLite`/`BeatGridSectionBlock` 신설, `sections` prop 신설, `.beat-grid-body`→`.beat-grid-mid`+`.beat-grid-insp` 재배선, 곡 전체 지도 렌더 교체), `ui/src/components/BeatGrid.test.tsx`(`deriveSectionBlocks` 7개+`barPercentInRange` 3개 신설, 69→80개), `ui/src/App.tsx`(`sections={state.songTimeline.timeline?.sections}` 한 줄 추가, `runbookMode` 분기 안), `ui/src/styles.css`(`.beat-grid-mid`/`.beat-grid-insp`/`.beat-grid-overview-track`/`.beat-grid-overview-section`/`.beat-grid-overview-memos`/`.beat-grid-overview-memo-marker` 신설, `.beat-grid-body`/`.beat-grid-detail`/`.beat-grid-ov-cell` 제거).
+
+**검증(재실행, verbatim)**:
+
+```
+$ uv run --quiet pytest server/tests/test_beat_grid_t532.py server/tests/test_beat_grid_t537.py server/tests/test_beat_grid_probes_t537.py -q
+...................................................
+51 passed in 0.50s
+
+$ uv run ruff check server/design/beat_grid.py server/design/beat_grid_probes.py server/web/session.py server/tests/test_beat_grid_t537.py server/tests/test_beat_grid_probes_t537.py
+All checks passed!
+
+$ uv run ruff format --check <위와 같음>
+5 files already formatted
+
+$ cd ui && npx tsc --noEmit
+(종료 코드 0, 출력 없음)
+
+$ npx vitest run src/components/BeatGrid.test.tsx src/components/RunbookMode.test.tsx src/App.test.tsx
+ ✓ src/components/BeatGrid.test.tsx (80 tests)
+ ✓ src/components/RunbookMode.test.tsx (16 tests)
+ ✓ src/App.test.tsx (30 tests)
+ Test Files  3 passed (3) · Tests  126 passed (126)
+
+$ git diff --stat edc537db -- ui/src/components/CueSheetTimeline.tsx 'CueSheetTimeline*' 'emit*' 'songcue*' 'cue_sheet_edit*' 'console/lua/**'
+(출력 없음 — 금지 파일 0 diff)
+
+$ git diff edc537db -- ui/src/App.tsx
+ (한 줄 — `sections={state.songTimeline.timeline?.sections}`, `runbookMode && beatGridFullscreen` 분기 안)
+```
+
+**캡처 갱신**: `.moai/reports/t537/`의 `implemented_full.png`·`implemented_selected.png`·`side_by_side.png`를 같은 뷰포트(1640×1900/1640×1200)로 덮어썼다. 데이터도 갱신 — `love_attack_sections.json`(신설, 구간 4개: 인트로·벌스1·프리코러스1·코러스1, `_song_timeline_payload` 실제 출력, BPM 120·secondsPerBar=2.0 고정 테스트 픽스처 — 실제 LOVE ATTACK 다중 구간 타임스탬프 데이터는 이 저장소에 아직 없어 레이블만 배치 규칙서 §1/§2 표현을 그대로 썼다). 직접 읽은 결과: 곡 전체 지도에 구간 4개 블록 + 그 위 SCENE 메모 배지 6개 모두 올바른 위치에 겹쳐 보임, 타임라인 행이 전체화면 높이를 채우고 편집 칸이 같은 높이로 오른쪽에 붙음, 무대·한눈에 표가 그 아래 한 띠로 나란히, 선택 캡처에서 편집 칸이 과도하게 길지 않고 내용 높이에 맞게 보임.
+
+**수정된 차이 목록 항목(위 "차이 목록" 절 갱신)**: "전체화면 프레임의 실제 높이 채움"·"무대(2D)가 작은 점 무더기" 두 항목은 이번 교정으로 해소됐다(위 2·5). "곡 전체 지도" 관련 차이는 다음으로 좁혀졌다 — 에너지 곡선·전체 곡 길이 강조 둘은 데이터 부재로 여전히 Gaps(아래). 나머지 항목(값 구조화=읽기전용, 전환 트리거 UI 모양, 예제 모드 불일치, 색 프리셋 실제 표 부재, M2후속이 남긴 차이)은 레이아웃과 무관해 그대로다.
+
+**새로 추가된 안 잰 것(Gaps)**:
+
+- **에너지 곡선 데이터 없음** — 서버 페이로드(`SongTimelineSection`/`SongTimelineView`)에 음량·에너지 수치 필드가 없다. 지어내지 않고 생략했다 — 추가하려면 별도 SPEC(오디오 분석 파이프라인)이 필요하다.
+- **전체 곡 길이(마디 수) 데이터 없음** — `bar_count`/`total_duration_ms`는 타입엔 있지만(LX-SEQ 확장, 선택 필드) `session.py`가 채우는 자리가 없다(`grep` 0건, 위 §검증). 그래서 "전체 곡 중 지금 범위 강조"를 못 하고, 지도 자체가 표시 범위다.
+- **구간 캡처 데이터는 실제 LOVE ATTACK 곡 구조가 아니라 테스트 픽스처** — `love_attack_sections.json`은 4개 구간(인트로/벌스1/프리코러스1/코러스1)뿐이고 BPM 120 고정값을 썼다. 실제 배치 규칙서의 BPM(스피드 마스터 15, 콘솔에서 직접 설정 — REQ-LDBEAT-014)과 전체 구간 구성(인트로/드럼/벌스/프리/코러스/브릿지/드롭/마지막 코러스 등, §3 전체 배치)을 담은 다중 구간 데이터는 이 저장소의 서버 쪽 어디에도 아직 없다 — 메커니즘은 실제 데이터로 증명됐지만(위 §검증), 시각적 완성도는 그 데이터가 채워져야 는다.
+- **뷰포트 고정 높이 체감** — `.beat-grid-mid{flex:1}`이 전체화면 높이를 채운다는 것은 CSS flex 표준 동작 + 캡처(1640×1900 전체페이지, 뷰포트 아님)로 간접 확인했을 뿐, 실제 고정 창 크기(예: 1280×800) 브라우저에서 내부 스크롤이 정확히 어떻게 보이는지는 여전히 직접 안 봤다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_

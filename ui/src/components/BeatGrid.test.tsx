@@ -17,10 +17,12 @@ import {
   buildProbeStatusTable,
   clampSkipSeconds,
   computeStageBounds,
+  barPercentInRange,
   cueColorFill,
   cueForBar,
   cueIsActive,
   deriveFadeSeconds,
+  deriveSectionBlocks,
   fixtureDisplayColor,
   fixtureDisplayOpacity,
   formatBrightnessField,
@@ -557,5 +559,88 @@ describe("fixtureDisplayOpacity — 카드 t534 (2D 무대 밝기: 실측 on/off
       tracks: [track("BACK", "back", [cue(5, "5마디부터")])],
     };
     expect(fixtureDisplayOpacity(fixture, grid.tracks, 0)).toBeLessThan(1);
+  });
+});
+
+describe("deriveSectionBlocks — t537 레이아웃 교정 (곡 전체 지도 구간 띠, REQ-LDBEAT-004(a))", () => {
+  it("secondsPerBar가 없으면 빈 배열 — 숫자 띠 폴백으로 떨어진다(지어내지 않음)", () => {
+    const sections = [{ label: "INTRO", start_ms: 0 }];
+    expect(deriveSectionBlocks(sections, null, 0, 25)).toEqual([]);
+    expect(deriveSectionBlocks(sections, undefined, 0, 25)).toEqual([]);
+    expect(deriveSectionBlocks(sections, 0, 0, 25)).toEqual([]);
+  });
+
+  it("구간 데이터가 없으면 빈 배열", () => {
+    expect(deriveSectionBlocks([], 1.5, 0, 25)).toEqual([]);
+    expect(deriveSectionBlocks(undefined, 1.5, 0, 25)).toEqual([]);
+  });
+
+  it("start_ms를 secondsPerBar로 마디 위치로 환산하고, 다음 구간 시작까지를 블록으로 묶는다", () => {
+    const sections = [
+      { label: "INTRO", start_ms: 0 },
+      { label: "VERSE", start_ms: 10500 }, // 10.5s / 1.5s = 7마디
+    ];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks).toEqual([
+      { label: "INTRO", startBar: 0, endBar: 7, hex: null },
+      { label: "VERSE", startBar: 7, endBar: 26, hex: null },
+    ]);
+  });
+
+  it("마지막 구간은 표시 범위 끝(rangeEnd+1)까지 이어진다", () => {
+    const sections = [{ label: "INTRO", start_ms: 0 }];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks[0].endBar).toBe(26);
+  });
+
+  it("palette_primary_hex가 있으면 그대로 옮긴다(지어낸 색 없음)", () => {
+    const sections = [{ label: "코러스", start_ms: 0, palette_primary_hex: "#ff69b4" }];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks[0].hex).toBe("#ff69b4");
+  });
+
+  it("palette_primary_hex가 없으면 null(중립) — 임의 색을 지어내지 않는다", () => {
+    const sections = [{ label: "코러스", start_ms: 0 }];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks[0].hex).toBeNull();
+  });
+
+  it("구간 순서가 start_ms 기준으로 뒤섞여 와도 정렬해서 묶는다", () => {
+    const sections = [
+      { label: "VERSE", start_ms: 10500 },
+      { label: "INTRO", start_ms: 0 },
+    ];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 25);
+
+    expect(blocks.map((b) => b.label)).toEqual(["INTRO", "VERSE"]);
+  });
+
+  it("표시 범위를 완전히 벗어난 구간은 뺀다", () => {
+    const sections = [
+      { label: "INTRO", start_ms: 0 },
+      { label: "OUTRO", start_ms: 1_000_000 }, // 범위 훨씬 밖
+    ];
+    const blocks = deriveSectionBlocks(sections, 1.5, 0, 5);
+
+    expect(blocks.map((b) => b.label)).toEqual(["INTRO"]);
+  });
+});
+
+describe("barPercentInRange — t537 레이아웃 교정 (SCENE 메모 오버레이 위치)", () => {
+  it("범위 시작은 0%, 범위를 벗어난 마디는 비례해서 계속 커진다", () => {
+    expect(barPercentInRange(0, 0, 25)).toBe(0);
+  });
+
+  it("범위 중간 마디는 비례 위치", () => {
+    // span = 26 (0~25 포함), bar=13 → 13/26 = 50%
+    expect(barPercentInRange(13, 0, 25)).toBeCloseTo(50, 5);
+  });
+
+  it("빈 범위(rangeEnd < rangeStart)는 0 — 나눗셈 오류 없음", () => {
+    expect(barPercentInRange(5, 10, 5)).toBe(0);
   });
 });
