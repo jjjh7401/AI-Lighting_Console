@@ -5,10 +5,11 @@
 
 import json
 import sys
+from pathlib import Path
 
 names = {}
 for path in sys.argv[1:]:
-    for line in open(path, encoding="utf-8"):
+    for line in Path(path).read_text("utf-8").splitlines():
         if not line.startswith("<<< "):
             continue
         j = json.loads(line[4:])
@@ -23,8 +24,20 @@ for path in sys.argv[1:]:
             raw = j.get("fields") or []
             ks = [x if isinstance(x, str) else (x.get("n") or x.get("name")) for x in raw]
             names[tail] = names.get(tail, []) + ks
-            print("introspect", tail, "n", len(ks), "truncated", j.get("truncated"),
-                  "offset", j.get("offset"), "total", j.get("total"), "first", ks[:1])
+            print(
+                "introspect",
+                tail,
+                "n",
+                len(ks),
+                "truncated",
+                j.get("truncated"),
+                "offset",
+                j.get("offset"),
+                "total",
+                j.get("total"),
+                "first",
+                ks[:1],
+            )
         elif kind == "state":
             print("state", tail, j.get("node"), "children", len(j.get("children", [])))
 
@@ -32,5 +45,14 @@ if names:
     ref = next(iter(names))
     base = names[ref]
     for t, ks in names.items():
-        print(t, "vs", ref, "order-equal", ks == base,
-              "+", sorted(set(ks) - set(base)), "-", sorted(set(base) - set(ks)))
+        print(
+            t,
+            "vs",
+            ref,
+            "order-equal",
+            ks == base,
+            "+",
+            sorted(set(ks) - set(base)),
+            "-",
+            sorted(set(base) - set(ks)),
+        )

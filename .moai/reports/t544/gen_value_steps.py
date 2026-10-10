@@ -15,9 +15,7 @@ for line in (HERE / "s2_schema.txt").read_text("utf-8").splitlines():
             if f["n"] not in types:
                 fields.append(f["n"])
                 types[f["n"]] = f["t"]
-(HERE / "s3_fields.txt").write_text(
-    "\n".join(f"{n}\t{types[n]}" for n in fields) + "\n", "utf-8"
-)
+(HERE / "s3_fields.txt").write_text("\n".join(f"{n}\t{types[n]}" for n in fields) + "\n", "utf-8")
 steps = []
 for i in range(1, 7):
     for k in range(0, len(fields), 16):
