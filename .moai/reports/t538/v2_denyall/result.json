@@ -1,0 +1,421 @@
+{
+  "item": "T538v2",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/312",
+    "ShowData/DataPools/Default/Sequences/313",
+    "ShowData/DataPools/Default/Sequences/314",
+    "ShowData/DataPools/Default/Sequences/315",
+    "ShowData/DataPools/Default/Sequences/316",
+    "ShowData/DataPools/Default/Sequences/317",
+    "ShowData/DataPools/Default/Sequences/318",
+    "ShowData/DataPools/Default/Sequences/319",
+    "ShowData/DataPools/Default/Sequences/320",
+    "ShowData/DataPools/Default/Sequences/321",
+    "ShowData/DataPools/Default/Sequences/322"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_A0": false,
+    "play_A0": false,
+    "off_A0": false,
+    "store_A1": false,
+    "play_A1": false,
+    "off_A1": false,
+    "store_A2": false,
+    "play_A2": false,
+    "off_A2": false,
+    "store_A3": false,
+    "play_A3": false,
+    "off_A3": false,
+    "store_A4": false,
+    "play_A4": false,
+    "off_A4": false,
+    "store_A5": false,
+    "play_A5": false,
+    "off_A5": false,
+    "store_A6a": false,
+    "play_A6a": false,
+    "off_A6a": false,
+    "store_A6b": false,
+    "play_A6b": false,
+    "off_A6b": false,
+    "store_B1": false,
+    "play_B1_c1": false,
+    "play_B1_c2": false,
+    "play_B1_c3": false,
+    "play_B1_c4": false,
+    "off_B1": false,
+    "store_B2": false,
+    "play_B2": false,
+    "off_B2": false,
+    "store_B3": false,
+    "play_B3_c1": false,
+    "play_B3_go_dark": false,
+    "play_B3_go_reveal": false,
+    "off_B3": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 312 Cue 1 'T538 - A0 two step T4'",
+        "ClearAll",
+        "Set Sequence 312 Property 'Name' 'T538 - A0 two step T4'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 312"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 312"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45",
+        "Group 11 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 313 Cue 1 'T538 - A1 group 11'",
+        "ClearAll",
+        "Set Sequence 313 Property 'Name' 'T538 - A1 group 11'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 313"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 313"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -12",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 12",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 314 Cue 1 'T538 - A2 relative 12'",
+        "ClearAll",
+        "Set Sequence 314 Property 'Name' 'T538 - A2 relative 12'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 314"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 314"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.1",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 315 Cue 1 'T538 - A3 base preset 2-1'",
+        "ClearAll",
+        "Set Sequence 315 Property 'Name' 'T538 - A3 base preset 2-1'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 315"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 315"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 316 Cue 1 'T538 - A4 no base'",
+        "ClearAll",
+        "Set Sequence 316 Property 'Name' 'T538 - A4 no base'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 316"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 316"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 112",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 317 Cue 1 'T538 - A5 pan tilt circle'",
+        "ClearAll",
+        "Set Sequence 317 Property 'Name' 'T538 - A5 pan tilt circle'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 317"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 317"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "At Preset 21.2",
+        "Store Sequence 318 Cue 1 'T538 - A6a fx preset 21-2 PT-CIRCLE'",
+        "ClearAll",
+        "Set Sequence 318 Property 'Name' 'T538 - A6a fx preset 21-2 PT-CIRCLE'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 318"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 318"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "At Preset 21.5",
+        "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'",
+        "ClearAll",
+        "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 319"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 319"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Store Sequence 320 Cue 1 'T538 POS01'",
+        "ClearAll",
+        "Group 11 ; At Preset 2.4",
+        "Store Sequence 320 Cue 2 'T538 POS04' CueFade 0.54",
+        "ClearAll",
+        "Group 11 ; At Preset 2.5",
+        "Store Sequence 320 Cue 3 'T538 POS05' CueFade 1.07",
+        "ClearAll",
+        "Group 11 ; At Preset 2.3",
+        "Store Sequence 320 Cue 4 'T538 POS03' CueFade 0.54",
+        "ClearAll",
+        "Set Sequence 320 Property 'Name' 'T538 - B1 position cues'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 320"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 4 Sequence 320"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 320"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Store Sequence 321 Cue 1 'T538 POS01' CueFade 1.07",
+        "ClearAll",
+        "Group 11 ; At Preset 2.4",
+        "Store Sequence 321 Cue 2 'T538 POS04' CueFade 0.54",
+        "ClearAll",
+        "Group 11 ; At Preset 2.5",
+        "Store Sequence 321 Cue 3 'T538 POS05' CueFade 1.07",
+        "ClearAll",
+        "Group 11 ; At Preset 2.3",
+        "Store Sequence 321 Cue 4 'T538 POS03' CueFade 0.54",
+        "ClearAll",
+        "Set Cue 1 Sequence 321 Property 'TrigType' 'Follow'",
+        "Set Cue 2 Sequence 321 Property 'TrigType' 'Follow'",
+        "Set Cue 3 Sequence 321 Property 'TrigType' 'Follow'",
+        "Set Cue 4 Sequence 321 Property 'TrigType' 'Follow'",
+        "Set Sequence 321 Property 'Name' 'T538 - B2 follow loop'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 321"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 321"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.2",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Store Sequence 322 Cue 1 'T538 POS02 lit'",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0",
+        "Store Sequence 322 Cue 2 'T538 dark' CueFade 0.54",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.5",
+        "Store Sequence 322 Cue 2.5 'T538 POS05 reveal Move' CueFade 1",
+        "ClearAll",
+        "Set Cue 2.5 Sequence 322 Property 'TrigType' 'Follow'",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Store Sequence 322 Cue 3 'T538 POS05 reveal' CueFade 0.54",
+        "ClearAll",
+        "Set Sequence 322 Property 'Name' 'T538 - B3 MIB'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 322"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Go+ Sequence 322"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Go+ Sequence 322"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 322"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}
