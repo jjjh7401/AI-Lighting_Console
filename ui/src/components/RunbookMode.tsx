@@ -25,6 +25,7 @@ import {
   type CueMonitorState,
   type SongTimelineView,
 } from "../protocol";
+import { BeatGrid, type BeatGridFixturePoint, type ProbeStatus } from "./BeatGrid";
 import { ConceptPanel } from "./ConceptPanel";
 import { CueSheetTimeline } from "./CueSheetTimeline";
 import { RunbookGateBar } from "./RunbookGateBar";
@@ -63,6 +64,12 @@ export interface RunbookModeProps {
   onGeneratorSend?: (text: string, cueNumber: number) => void;
   generatorResponding?: boolean;
   generatorLastAssistantText?: string | null;
+  /** t532 (SPEC-LDBEAT-001 M2) — 박자 격자 블록의 2D 무대 좌표. 콘솔 접촉
+   * 0인 M2는 살아있는 읽기 경로가 없으므로 props로만 받는다(지어내지
+   * 않음) — 넘기지 않으면 격자는 "무대 좌표 미제공"으로 떨어진다. */
+  beatGridFixtures?: BeatGridFixturePoint[];
+  /** M1 프로브 9항목 상태 — 넘기지 않으면 전부 "미실행"(REQ-LDBEAT-003). */
+  beatGridProbeResults?: Readonly<Record<number, ProbeStatus>>;
 }
 
 /**
@@ -202,6 +209,8 @@ export function RunbookMode({
   onGeneratorSend,
   generatorResponding = false,
   generatorLastAssistantText = null,
+  beatGridFixtures,
+  beatGridProbeResults,
 }: RunbookModeProps) {
   const staleSuffix = cueMonitor.stale ? " (오래됨 — 콘솔 연결을 확인하세요)" : "";
 
@@ -243,6 +252,15 @@ export function RunbookMode({
             onRedoDraft={onRedoDraft}
             onSaveDraft={onSaveDraft}
             onApplyDraft={onApplyDraft}
+          />
+          {/* t532 (SPEC-LDBEAT-001 M2) — 콘솔 그룹 트랙 × 마디 격자. 큐시트
+              타임라인(큐 단위)과 곡 설계 대화(SongTimeline) 사이의 새 블록 —
+              기존 5블록 순서는 그대로다(REQ-LDBEAT-004(g)). */}
+          <BeatGrid
+            grid={timeline.beat_grid}
+            fixtures={beatGridFixtures}
+            probeResults={beatGridProbeResults}
+            secondsPerBar={timeline.seconds_per_bar}
           />
           <SongTimeline
             timeline={timeline}
