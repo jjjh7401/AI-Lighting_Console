@@ -1,0 +1,64 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/320/3|NAME,MEMORYFOOTPRINT,REFERENCES
+    wire: Plugin "CopilotResponder" "props 31c66a12 NAME,MEMORYFOOTPRINT,REFERENCES ShowData/DataPools/Default/Sequences/320/3"
+<<< {"id": "31c66a12", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/320/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS01"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3520"}, {"e": "property not readable: REFERENCES", "n": "REFERENCES", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/320/4|NAME,MEMORYFOOTPRINT,REFERENCES
+    wire: Plugin "CopilotResponder" "props 16e16e1b NAME,MEMORYFOOTPRINT,REFERENCES ShowData/DataPools/Default/Sequences/320/4"
+<<< {"id": "16e16e1b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/320/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS04"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3872"}, {"e": "property not readable: REFERENCES", "n": "REFERENCES", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/320/5|NAME,MEMORYFOOTPRINT,REFERENCES
+    wire: Plugin "CopilotResponder" "props 257bdb13 NAME,MEMORYFOOTPRINT,REFERENCES ShowData/DataPools/Default/Sequences/320/5"
+<<< {"id": "257bdb13", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/320/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS05"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3892"}, {"e": "property not readable: REFERENCES", "n": "REFERENCES", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/320/6|NAME,MEMORYFOOTPRINT,REFERENCES
+    wire: Plugin "CopilotResponder" "props d71576b1 NAME,MEMORYFOOTPRINT,REFERENCES ShowData/DataPools/Default/Sequences/320/6"
+<<< {"id": "d71576b1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/320/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS03"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3088"}, {"e": "property not readable: REFERENCES", "n": "REFERENCES", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/320/3/1|NAME,MEMORYFOOTPRINT,REFERENCES
+    wire: Plugin "CopilotResponder" "props 46491d7b NAME,MEMORYFOOTPRINT,REFERENCES ShowData/DataPools/Default/Sequences/320/3/1"
+<<< {"id": "46491d7b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/320/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS01"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2976"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/320/4/1|NAME,MEMORYFOOTPRINT,REFERENCES
+    wire: Plugin "CopilotResponder" "props 19119c3d NAME,MEMORYFOOTPRINT,REFERENCES ShowData/DataPools/Default/Sequences/320/4/1"
+<<< {"id": "19119c3d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/320/4/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS04"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3328"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/320/5/1|NAME,MEMORYFOOTPRINT,REFERENCES
+    wire: Plugin "CopilotResponder" "props b015bc56 NAME,MEMORYFOOTPRINT,REFERENCES ShowData/DataPools/Default/Sequences/320/5/1"
+<<< {"id": "b015bc56", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/320/5/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS05"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3348"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/320/6/1|NAME,MEMORYFOOTPRINT,REFERENCES
+    wire: Plugin "CopilotResponder" "props f099e5d1 NAME,MEMORYFOOTPRINT,REFERENCES ShowData/DataPools/Default/Sequences/320/6/1"
+<<< {"id": "f099e5d1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/320/6/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS03"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2544"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 60deaf05 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/321/3/1"
+<<< {"id": "60deaf05", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS01"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2976"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321/4/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 55a435d5 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/321/4/1"
+<<< {"id": "55a435d5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321/4/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS04"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3328"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321/5/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props f09d8cdf NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/321/5/1"
+<<< {"id": "f09d8cdf", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321/5/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS05"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3348"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321/6/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props a070372d NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/321/6/1"
+<<< {"id": "a070372d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321/6/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS03"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2544"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/322/3/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 4d68b1ff NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/322/3/1"
+<<< {"id": "4d68b1ff", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/322/3/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS02 lit"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2976"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/322/4/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props e173d5d4 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/322/4/1"
+<<< {"id": "e173d5d4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/322/4/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 dark"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2972"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/322/5/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props e277ebae NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/322/5/1"
+<<< {"id": "e277ebae", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/322/5/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS05 reveal Move"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3348"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/322/6/1|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 2b345533 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/322/6/1"
+<<< {"id": "2b345533", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/322/6/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS05 reveal"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2976"}], "truncated": false, "v": 1}

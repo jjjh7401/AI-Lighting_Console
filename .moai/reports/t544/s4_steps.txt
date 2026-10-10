@@ -1,0 +1,10 @@
+props:ShowData/DataPools/Default/PresetPools/2/1|SELECTIONDATA,REFERENCES
+props:ShowData/DataPools/Default/PresetPools/2/2|SELECTIONDATA,REFERENCES
+props:ShowData/DataPools/Default/PresetPools/2/3|SELECTIONDATA,REFERENCES
+props:ShowData/DataPools/Default/PresetPools/2/4|SELECTIONDATA,REFERENCES
+props:ShowData/DataPools/Default/PresetPools/2/5|SELECTIONDATA,REFERENCES
+props:ShowData/DataPools/Default/PresetPools/2/6|SELECTIONDATA,REFERENCES
+props:ShowData/DataPools/Default/Groups/11|NAME,SELECTIONDATA
+state:ShowData/DataPools/Default/Sequences/320
+state:ShowData/DataPools/Default/Sequences/321
+state:ShowData/DataPools/Default/Sequences/322

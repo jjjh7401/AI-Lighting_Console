@@ -1,0 +1,15 @@
+ping
+props:ShowData/DataPools/Default/PresetPools/2/1|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+props:ShowData/DataPools/Default/PresetPools/2/2|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+props:ShowData/DataPools/Default/PresetPools/2/3|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+props:ShowData/DataPools/Default/PresetPools/2/4|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+props:ShowData/DataPools/Default/PresetPools/2/5|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+props:ShowData/DataPools/Default/PresetPools/2/6|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+introspect:ShowData/DataPools/Default/PresetPools/2/1
+introspect:ShowData/DataPools/Default/PresetPools/2/3
+introspect:ShowData/DataPools/Default/PresetPools/2/4
+introspect:ShowData/DataPools/Default/PresetPools/2/5
+state:ShowData/DataPools/Default/PresetPools/2/1
+state:ShowData/DataPools/Default/PresetPools/2/3
+state:ShowData/DataPools/Default/PresetPools/2/4
+state:ShowData/DataPools/Default/PresetPools/2/5
