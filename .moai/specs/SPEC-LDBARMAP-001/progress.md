@@ -6,9 +6,9 @@
 
 ## 작성된 파일
 
-- `.moai/specs/SPEC-LDBARMAP-001/spec.md` — REQ 15개(R1~R5), Out of Scope 5개 H3 섹션, 열린 결정 4개
+- `.moai/specs/SPEC-LDBARMAP-001/spec.md` — REQ 16개(R1~R6, R6은 카드 t530이 신설한 REQ-LDBARMAP-016), Out of Scope 5개 H3 섹션, 열린 결정 4개
 - `.moai/specs/SPEC-LDBARMAP-001/plan.md` — M1~M5 마일스톤(저장 인터페이스 열린 결정을 마일스톤보다 먼저 제시)
-- `.moai/specs/SPEC-LDBARMAP-001/acceptance.md` — AC 15개(Given-When-Then + 수치·단위 + REQ-ID 인용), Definition of Done
+- `.moai/specs/SPEC-LDBARMAP-001/acceptance.md` — AC 16개(Given-When-Then + 수치·단위 + REQ-ID 인용), Definition of Done
 - `.moai/specs/SPEC-LDBARMAP-001/research.md` — 이 plan-phase가 실행한 10개 실측(명령+출력)
 - `.moai/specs/SPEC-LDBARMAP-001/progress.md` — 이 파일
 
@@ -17,6 +17,8 @@
 - iteration 1: FAIL(0.60, 통과선 0.80). `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-1.md`. D1(critical, AC-006 분모 13≠8)·D3(critical, 1마디 밀림 음성 대조군·매칭 방법론 누락)·D2(major, REQ-010/012 이중 모달)·D4(major, AC→REQ 인용 희박 + REQ-001 무검증)·D5(minor, 224.70/224.69 불일치) — 모두 spec.md·acceptance.md에 교정 반영(REQ 14→15, AC 13→15). D6(minor, 선택)은 비용 대비 효과가 낮아 보류.
 - iteration 2: FAIL(0.68, 통과선 0.80). `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-2.md`. D1~D6(iteration 1) 전부 RESOLVED 재확인. iteration 1의 AC-003 신설이 그 뒤 AC 번호를 전부 1씩 밀렸는데 `plan.md`가 반영 못 함 — **D-NEW-1(critical)**: M1(`plan.md:31` AC-001~005→001~006)·M2(`plan.md:38` AC-004/005→005/006)·M3(`plan.md:45-46` AC-006→007, M3 자신이 가리키려던 이벤트 재현율은 007)을 재매핑. **D-NEW-2(minor)**: `acceptance.md` AC-009가 무관한 REQ-008을 인용 — REQ-001(간접)로 재지정. 교정 뒤 spec.md/plan.md/research.md/progress.md 전수 grep 재확인(research.md·progress.md 0건, plan.md 4건 전부 교정). REQ/AC 총량 변경 없음(15/15).
 - iteration 3: **PASS(0.86, 통과선 0.80)**. `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-3.md`(주 체크아웃, gitignore — 1~3행 `Verdict: PASS` / `Overall Score: 0.86`). must-pass 7개 PASS, D-NEW-1/D-NEW-2 RESOLVED 재확인. Implementation Kickoff Approval 가능 판정 — 감독 착수 승인 2026-10-10(M1~M3, 카드 t530).
+- iteration 4(부분, v0.1.3 개정분만 — 카드 t530): FAIL(0.68). `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-4.md`(t530 워크트리, gitignore). D1(must-pass MP-2: REQ-016 굵은 shall 없음)·D2(spec.md §0 REQ/AC 15개 표기 잔존)·D3(progress.md 같은 잔존). 교정 커밋 `e3e63a17`.
+- iteration 5(부분, D1~D3 델타): **PASS(0.95)**. `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-5.md`. D1~D3 RESOLVED, 개정 범위 안 새 결함 0.
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
@@ -64,6 +66,161 @@ AC PASS/FAIL 요약만 반복한다.
 Preserve 목록 확인: `SPEC-LDRHYTHM-001`·`SPEC-LDBEAT-001` 쪽 파일 미수정, 원곡
 오디오 비커밋(`git status --porcelain`에 `*.mp3`/`*.wav` 없음), `server/audio/analyze.py`는
 `_tempo_from_beats`만 읽기 전용 import로 호출 — 파일 자체는 안 고침.
+
+### M1 판정 후 감독 결정(2026-10-10, 리드 경유)
+
+- **M1 통과선 미달은 그대로 기록한다**: AC-001~006 전부 PASS인 후보 0개(자기 위상 기준 다운비트 0/82, 세 후보 모두). 박 격자·BPM은 맞았다(위상 1 강제 시 A 82/82, B 80/82).
+- 결정: 「귀 확인 + 수동 지정 병행」 — (1) 위상 후보 4개 클릭 파일을 감독이 듣고 첫 박 위상을 확정, (2) M2 범위 축소: 박 격자는 자동, 마디 첫 박은 사람이 지정(「첫 박 오프셋」 한 값), 자동 위상 선택은 보류.
+- PR #575(M1 결과·도구) 머지 `de5f5fdd`(CI `test` pass, head `c3903b15` 확인 후 별도 호출로 머지).
+
+### 위상 확인용 클릭 파일(저장소 밖, 커밋 안 함)
+
+- 위치: `/Users/studiox/Music/AI-Lighting_Console-listen/t530/`
+- 파일: `LOVE_ATTACK_t530_phase0_40s.wav` · `..._phase1_40s.wav` · `..._phase2_40s.wav` · `..._phase3_40s.wav` (각 앞 40초, 44.1kHz mono, 3,528,044바이트)
+- 내용: 원곡(0.6배 음량) + 마디 첫 박 강한 클릭(1760Hz) + 나머지 박 약한 클릭(880Hz). 위상 규칙은 지도 보고서 §3과 같다 — 박 번호 i에서 (i − phase) % 4 == 0인 박이 첫 박.
+- 명령: `.venv/bin/python tools/barmap/make_phase_clicks.py "/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3" /Users/studiox/Music/AI-Lighting_Console-listen/t530`
+- 출력(그대로):
+  ```
+  beats=326 tempo=112.35 first5=[0.96, 1.5, 2.04, 2.58, 3.11]
+  LOVE_ATTACK_t530_phase0_40s.wav 첫 박(강클릭) 앞 4개=[0.96, 3.11, 5.26, 7.37]
+  LOVE_ATTACK_t530_phase1_40s.wav 첫 박(강클릭) 앞 4개=[1.5, 3.66, 5.78, 7.92]
+  LOVE_ATTACK_t530_phase2_40s.wav 첫 박(강클릭) 앞 4개=[2.04, 4.2, 6.46, 8.45]
+  LOVE_ATTACK_t530_phase3_40s.wav 첫 박(강클릭) 앞 4개=[2.58, 4.73, 6.86, 8.99]
+  ```
+- 대조: 박 326개·112.35 BPM은 지도 보고서 §6 「박 시각 326개」와 같고, phase1 첫 박 넷(1.50·3.66·5.78·7.92초)은 부록 A 1~4마디 다운비트와 일치한다(같은 박 경로라는 확인 — 정답 여부는 감독 귀 확인이 정한다).
+- **확인됨(2026-10-10)**: 감독 청취 결과 — phase1 채택(아래 "위상 정답 확정" 참조). "미확인: 감독 청취 결과(대기 중)"이던 이전 기록을 이 줄로 교정한다.
+
+### 위상 정답 확정(카드 t530, 2026-10-10)
+
+위상 정답 = **phase1**, 감독 귀 확정 2026-10-10, 근거 t530 클릭 wav
+(`/Users/studiox/Music/AI-Lighting_Console-listen/t530/LOVE_ATTACK_t530_phase0_40s.wav`,
+`..._phase1_40s.wav`, `..._phase2_40s.wav`, `..._phase3_40s.wav`). 후렴 1 진입(0:37.9)에서
+강한 클릭이 "하나"에 떨어지는 것을 들어 확정했다 — 지도 보고서 부록 A의 1마디
+다운비트(1.50초)와 일치한다. 지도 보고서 §6이 **[미확정(귀로)]**로 매겼던 "다운비트
+위상"은 이제 **감독 귀 확정** 등급으로 올라갔다(spec.md REQ-LDBARMAP-009 근거 칸 갱신,
+2026-10-10) — 그 외 "추정" 항목(구간 이름·드롭 63~66마디 등)은 등급 불변. M2 회귀
+기준 오프셋 값은 **1**(REQ-LDBARMAP-016 정본 단위, acceptance.md AC-LDBARMAP-016·
+plan.md M2 참조)로 고정했다. 자동 위상 선택기 재설계는 여전히 **보류**(follow-up) —
+이 확정은 정답지 쪽 불확실성만 없앤다.
+
+### SPEC 개정(카드 t530, 2026-10-10) — M2 범위 축소 반영
+
+M1 판정 결과(위 표, AC-LDBARMAP-005/006 FAIL — 세 후보 모두 자체 위상 선택 기준
+다운비트 0/82)에 따른 리드 경유 감독 결정("귀 확인 + 수동 지정 병행")을 spec.md·
+plan.md·acceptance.md에 반영했다 — REQ-LDBARMAP-016(신설, 수동 첫 박 오프셋·정수
+0~3) 추가, REQ-LDBARMAP-004 근거 칸·AC-LDBARMAP-005/006에 "보류 — 감독 귀 확정
+정답 뒤 재설계" 주석 추가(PASS 요구 대상에서 제외, 회귀 추적용 참고 지표로 보존),
+AC-LDBARMAP-016(신설, 오프셋 기반 평가 — M2 실제 통과 기준) 추가, plan.md M1/M2/M3
+갱신(M1 통과 조건 미충족을 그대로 기록 + M2는 그 조건이 아니라 이 감독 결정으로
+진행함을 명시). REQ 15→16개·AC 15→16개(Tier M 상한 16개에 정확히 닿음, 초과 없음).
+version 0.1.2→0.1.3. 코드 변경 0줄 — 이 개정은 plan-phase 문서 3개(spec.md·plan.md·
+acceptance.md)만 다룬다. 커밋: `2f79fdb045acd9c2d7c922fc4191a0905b0081cf`(백필 —
+직전 커밋이 자기 자신의 SHA를 몰라 `pending-backfill-SPEC-LDBARMAP-001-t530-amendment`로
+썼던 것을 실제 SHA로 교정, 워크트리 `.claude/worktrees/t530`, 브랜치 `WT-barmap-run`).
+
+**같은 개정에 접어 넣은 추가분(위 "위상 정답 확정" 참조, 별도 버전 올리지 않음)**:
+감독이 위상 클릭 wav를 듣고 phase1을 다운비트 정답으로 확정한 결과를 REQ-LDBARMAP-009
+근거 칸(spec.md)·AC-LDBARMAP-005/006 보류 주석(acceptance.md)·M2 회귀 기준 오프셋
+(plan.md, acceptance.md AC-016)에 반영했다 — REQ·AC 개수·version 변경 없음(여전히
+16/16, 0.1.3). 커밋: `e376bc169a390c3d710ecf32c6b8a15e63156973`(백필 — 직전 커밋이 자기 자신의
+SHA를 몰라 `pending-backfill-SPEC-LDBARMAP-001-t530-phase-confirm`으로 썼던 것을
+실제 SHA로 교정).
+
+### M2 — 다운비트·마디 경계 검출기, 사람이 지정한 첫 박 오프셋 기반(카드 t530, 2026-10-10)
+
+산출물: `server/audio/bar_map.py`(신규, `detect_beat_grid`·`derive_bars`, `server/audio/analyze.py`는
+**읽기만** 함 — `_HOP_LENGTH`·`_MIN_DECODED_FRACTION`·`_mp3_length_is_a_bitrate_guess`·
+`_tempo_from_beats`·`analysis_available`·`MANUAL_BPM_FALLBACK_REASON`을 import해 재사용, 파일 자체는
+0줄 수정 — `git diff --stat HEAD -- server/audio/analyze.py` 출력 0줄로 확인) +
+`server/tests/test_audio_bar_map.py`(신규, 42개 테스트) +
+`server/tests/fixtures/love_attack_beat_grid.json`(신규 — LOVE ATTACK 326개 검출 비트
+시각(ms)만 담은 **파생 숫자 픽스처**, 오디오 아님, `detect_beat_grid`가 원곡에서 실제로
+검출한 숫자를 고정한 것) + `.moai/reports/SPEC-LDBARMAP-001-probes/{m2-pytest-output.txt,
+m2-ruff-output.txt}`(신규 — gitignore 대상, `git add -f`로 올림).
+
+**`detect_beat_grid`**: `analyze()`와 같은 디코드 경로(soundfile 읽기 → mono 다운믹스 →
+`librosa.beat.beat_track` hop=512)를 재사용한다. REQ-LDBARMAP-006(절반/두 배 격자 정합도
+비교 + 채택 근거 기록)은 M1 보정 스크립트(`tools/barmap/scorer.py`)의 LOVE ATTACK 전용
+고정 함정 상수(56.175/224.69)에 기대지 않고, 원시 추정치 자신의 절반·두 배와 비교하는
+일반화된 버전으로 production 모듈 안에 별도 구현했다(`_check_bpm_half_double` — 개발
+도구 모듈을 production이 import하지 않는다). 예외를 밖으로 내보내지 않는다(`analyze.py:297`과
+같은 계약) — `BeatGridResult | BeatGridFailure`.
+
+**`derive_bars`**: 순수 함수(librosa 미사용). `beat_times[i]`에서 `(i − offset) % 4 == 0`인
+자리를 다운비트/마디 경계로 삼는다(REQ-LDBARMAP-016). 오프셋 이전 박은 못갖춘마디로
+분류해 마디 번호에서 뺀다(마디 1 = 첫 다운비트, 지도 보고서 부록 A와 일치). 오프셋이
+정수 0~3 범위를 벗어나면 `BarMapFailure`(예외 아님 — `analyze.py`와 같은 "예외를 밖으로
+내보내지 않는다" 원칙을 모듈 전체에 적용, `bool`은 `int`의 서브타입이지만 명시적으로
+거부).
+
+| AC | 상태 | 근거 |
+|---|---|---|
+| AC-LDBARMAP-015 | **PASS** | M2 구현 시점 — 실제 함수 시그니처 검사로 전환. `detect_beat_grid(audio_bytes: bytes)` 단일 인자(완결 바이트열), `derive_bars(beat_times_ms, first_beat_offset)` 둘 다 스트리밍 핸들·콜백 없음(`test_ac015_*` 2건 PASS) |
+| AC-LDBARMAP-016 | **PASS** | 오프셋=1(감독 귀 확정)로 `derive_bars` 후 `tools/barmap/scorer.strict_index_hit_rate`(±60ms, 엄격한 순서 대응)로 채점 — 다운비트 적중률 **82/82(100.0%)**, 마디 경계 적중률(4/4박자라 같은 수열) **82/82(100.0%)**, 둘 다 통과선 90% 이상 |
+| AC-LDBARMAP-014 | **PASS(유지)** | 이 M2 커밋에도 `*.mp3`/`*.wav` 확장자 변경 파일 0건(`git status --short` 확인) |
+
+음성(오프셋) 대조군 — 엄격한 순서 대응이 「잘못된 위상」을 통과시키지 않는지 재확인:
+
+| 오프셋 | 다운비트 적중률 | 기대 | 판정 |
+|---|---|---|---|
+| 0 | 0/82 (0.0%) | <10% | **PASS** |
+| 1(감독 귀 확정) | 82/82 (100.0%) | ≥90% | **PASS**(AC-LDBARMAP-016) |
+| 2 | 0/82 (0.0%) | <10% | **PASS** |
+| 3 | 0/82 (0.0%) | <10% | **PASS** |
+
+명령 + verbatim 출력(`.moai/reports/SPEC-LDBARMAP-001-probes/m2-pytest-output.txt`에 재수록):
+
+```
+.venv/bin/python -m pytest server/tests/test_audio_bar_map.py tools/barmap -q
+..........................................                               [100%]
+42 passed in 2.27s
+```
+
+```
+.venv/bin/python -m ruff check server/audio/bar_map.py server/tests/test_audio_bar_map.py
+All checks passed!
+.venv/bin/python -m ruff format --check server/audio/bar_map.py server/tests/test_audio_bar_map.py
+2 files already formatted
+```
+
+기존 `analyze()` 회귀(변경 없음 확인용 — `server/audio/analyze.py` 0줄 변경이므로 당연히
+그대로지만 명시적으로 재실행):
+
+```
+.venv/bin/python -m pytest server/tests/test_audio_analyze.py server/tests/test_audio_boundary.py \
+    server/tests/test_audio_fallback.py server/tests/test_audio_grade_saturation.py \
+    server/tests/test_audio_segment_floor_bars.py -q
+........................................................................ [ 67%]
+..................................                                       [100%]
+106 passed in 7.83s
+```
+
+로컬 전용 회귀(원곡 있을 때만, `pytest.mark.skipif` — 이번 세션은 원곡 존재해 PASS로
+실행됨, CI에서는 자동 skip): `test_detect_beat_grid_real_love_attack_matches_fixture_and_ac016` —
+실제 `"/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3"`로 다시 재도
+BPM 112.347(±0.005 상대오차 안), 326개 비트가 픽스처와 1ms 이내로 일치, AC-016 재현
+(82/82, 100.0%) — 42개 테스트 안에 포함되어 위 출력에 이미 들어 있다.
+
+**Gaps(미검증, 정직하게 기록)**:
+- REQ-LDBARMAP-006의 절반/두 배 비교 로직이 실제로 "함정을 올바르게 잡는" 경우(진짜
+  절반/두 배 오추정 상황)에 대한 전용 단위시험은 없다 — LOVE ATTACK·합성 클릭 트랙
+  둘 다 함정이 발동하지 않는 사례만 재현했다(`trap_triggered=False`). 완전 주기적인
+  합성 데이터에서는 절반/두 배/원시 격자가 서로 포함 관계라 위상을 쓸어도 적중률이
+  똑같이 1.0이 나오는 구조적 한계 때문에(실측 확인) 함정이 실제로 발동하는 시나리오를
+  결정론적으로 합성하지 못했다 — follow-up.
+- `trap_triggered=True`일 때 `beat_times_ms` 배열 자체를 재구성(resample)하지 않는다 —
+  채택된 BPM과 격자 간격이 불일치할 수 있는 알려진 한계(M1 후보 C의
+  `reconstruct_uniform_grid`처럼 재구성하지 않음). 이 SPEC 범위(LOVE ATTACK, beat_track
+  경로)에서는 함정이 발동하지 않아 실제로 문제가 되지 않았다.
+- AC-LDBARMAP-005/006(검출기 자신의 위상 선택)은 이번에도 보류 상태 그대로다 — M2는
+  다루지 않는다(자동 위상 선택기 재설계는 follow-up).
+
+**리드 재측정 메모(카드 t530, M2 수령 시)** — BPM 값은 프레임 양자화 격자 위의 값이다:
+- 명령: `.venv/bin/python -c "for sr in (22050,44100): f=512/sr; [print(sr,n,round(n*f*1000,2),'ms',round(60/(n*f),3),'BPM') for n in (45,46,47)]"`
+- 출력(발췌): `44100 45 522.45 ms 114.844 BPM` · `44100 46 534.06 ms 112.347 BPM` · `44100 47 545.67 ms 109.957 BPM`
+- 뜻: `_tempo_from_beats`(analyze.py, 박 간격 **중앙값**)는 hop 512 프레임(44.1kHz에서 11.61ms) 단위로 양자화된 간격의 중앙값을 쓰므로, BPM은 109.96 / 112.35 / 114.84처럼 프레임 한 칸씩 띄엄띄엄 나온다. 정답지 112.35도 같은 경로의 값이라 M1/M2의 「BPM 오차 0.003%」는 **순환**이다 — 곡의 참 템포가 112.35라는 증거가 아니다. 합성 테스트가 22050Hz 대신 22×1024Hz를 쓴 것도 이 양자화를 피한 것이다.
+- 영향 범위: 다운비트·마디 경계는 박마다의 개별 시각(`beat_times`)을 쓰므로 이 양자화와 무관하다(AC-016 82/82는 영향 없음). BPM 숫자를 쓰는 곳(구간 하한 마디 환산 등 analyze.py 경로)에만 해당한다.
+- 처리: 이 SPEC은 analyze.py를 수정하지 않는다(plan.md §F) — 고치지 않고 Gap으로 남긴다. 필요하면 별도 카드(박 시각 선형 회귀로 BPM 추정)로.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
