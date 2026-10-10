@@ -135,7 +135,7 @@
 
 1. **존재**: `ls -d .moai/specs/SPEC-LDARRANGE-001` → exit 0(디렉터리 1개).
 2. **소비자 명시**: 이 SPEC `spec.md` §5를 잘라 낸 범위(`sed -n '/^## 5\./,$p' .moai/specs/SPEC-LDBARMAP-001/spec.md`)에서 `grep -c 'SPEC-LDARRANGE-001'` ≥ 1(단위: 줄).
-3. **미러 필드 일치**: 두 SPEC의 §5 범위 각각에서 확정 모양의 필드 이름 8개(`schema_version`·`bpm`·`time_signature`·`first_beat_offset`·`bars[]`·`beats_ms`·`events[]`·`start_beat`)가 모두 1줄 이상 나온다 — 한쪽에만 있는 필드가 0개(단위: 개). 생산자·소비자 문단이 갈라지면 이 검사가 FAIL한다.
+3. **미러 필드 일치**: 두 SPEC의 §5 범위 각각에서 확정 모양의 필드 이름 8개(`schema_version`·`bpm`·`time_signature`·`first_beat_offset`·`bars[]`·`beats_ms`·`events[]`·`start_beat`)가 모두 1줄 이상 나온다 — 한쪽에만 있는 필드가 0개(단위: 개). 생산자·소비자 문단이 갈라지면 이 검사가 FAIL한다. 실행 명령(저장소 루트, 각 파일에 대해): `for f in schema_version bpm time_signature first_beat_offset 'bars\[\]' beats_ms 'events\[\]' start_beat; do sed -n '/^## 5\./,$p' <spec.md> | grep -c "$f"; done` — 출력 8줄이 모두 1 이상.
 
 ### AC-LDBARMAP-012 (REQ-LDBARMAP-014) — 오디오 파일 비커밋
 
