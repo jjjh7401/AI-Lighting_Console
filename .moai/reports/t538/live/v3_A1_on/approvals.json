@@ -1,0 +1,25 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; Attribute 'Tilt' At 45",
+      "Group 11 ; Attribute 'Tilt' At Relative -30",
+      "Step 2",
+      "Attribute 'Tilt' At Relative 30",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 112",
+      "Store Sequence 313 Cue 1 'T538 - A1 group 11'",
+      "ClearAll",
+      "Set Sequence 313 Property 'Name' 'T538 - A1 group 11'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 313"
+    ],
+    "approved": true
+  }
+]
